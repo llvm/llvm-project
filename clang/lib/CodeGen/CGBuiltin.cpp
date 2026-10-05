@@ -3683,7 +3683,7 @@ RValue CodeGenFunction::EmitBuiltinExpr(const GlobalDecl GD, unsigned BuiltinID,
     // Only emit the region markers for sanitizers that honour them. Elsewhere
     // they would just be optimization barriers that no pass ever removes. This
     // lets code guard its uses on __has_builtin alone.
-    SanitizerMask Consumers;
+    SanitizerMask Consumers = SanitizerKind::KernelMemory;
     if (getLangOpts().Sanitize.hasOneOf(Consumers))
       Builder.CreateCall(CGM.getIntrinsic(
           BuiltinIDIfNoAsmLabel ==

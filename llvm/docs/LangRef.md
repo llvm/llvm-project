@@ -28619,3 +28619,16 @@ intersection over predecessors. This makes an in-region instruction always
 dominated by a `llvm.sanitizer.instrumentation.begin`, so any per-function
 sanitizer state set up there is available. A region that is entered on some
 paths but not others is therefore instrumented only where it is unambiguous.
+
+MemorySanitizer supports regions in kernel mode (KMSAN), in functions marked
+with `disable_sanitizer_instrumentation`. The function-level ABI prologue is
+skipped, the MSan context state is fetched at
+`llvm.sanitizer.instrumentation.begin`, and shadow propagation and parameter
+shadow setup are only performed inside regions. Memory written outside a region
+keeps whatever shadow it had, and values computed outside a region are treated
+as fully initialized when they are used inside one. The function's own static
+`alloca`s are the exception: those that are referenced inside a region, or
+whose address escapes, are unpoisoned at every
+`llvm.sanitizer.instrumentation.begin` they dominate. Calls to variadic
+functions inside regions publish the shadow of the variadic arguments;
+`va_start` and `va_copy` are not instrumented in such a function.

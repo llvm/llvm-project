@@ -91,6 +91,39 @@ positives and therefore should be used with care, and only if absolutely
 required; for example for certain code that cannot tolerate any instrumentation
 and resulting side-effects. This attribute overrides `no_sanitize("memory")`.
 
+### Re-enabling Instrumentation in Regions
+
+In KernelMemorySanitizer (KMSAN), a function with
+`__attribute__((disable_sanitizer_instrumentation))` gets neither the function
+prologue nor any instrumentation. Inside such a function, a region delimited by
+`__builtin_sanitizer_instrumentation_begin()` and
+`__builtin_sanitizer_instrumentation_end()` is instrumented again as if the
+function had `-fsanitize=kernel-memory`: shadow is propagated, memory accesses
+are instrumented, and calls publish the shadow of their arguments. Values
+computed outside a region are treated as initialized when used inside it, and
+memory written outside a region keeps its previous shadow, except for the
+function's own local variables that a region can see (they are used inside a
+region, or their address escapes), which are treated as initialized on entry
+to each region. `va_start` and `va_copy` are not instrumented in such a
+function.
+Regions nest, and code reachable without passing through a
+`__builtin_sanitizer_instrumentation_begin()` is not considered to be in a
+region; Clang warns about unbalanced regions with
+`-Wsanitizer-instrumentation-region`.
+
+```c
+__attribute__((disable_sanitizer_instrumentation))
+void handle_irq(struct pt_regs *regs) {
+  enter_irq_context(regs);       // not instrumented
+  __builtin_sanitizer_instrumentation_begin();
+  dispatch_irq(regs);            // instrumented, including the argument shadow
+  __builtin_sanitizer_instrumentation_end();
+  exit_irq_context(regs);        // not instrumented
+}
+```
+
+Userspace MemorySanitizer ignores the builtins.
+
 ### Interaction of Inlining with Disabling Sanitizer Instrumentation
 
 - A `no_sanitize` function will not be inlined heuristically by the compiler into a sanitized function.
