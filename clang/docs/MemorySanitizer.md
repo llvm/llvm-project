@@ -94,6 +94,14 @@ positives and therefore should be used with care, and only if absolutely
 required; for example for certain code that cannot tolerate any instrumentation
 and resulting side-effects. This attribute overrides `no_sanitize("memory")`.
 
+In the context of KernelMemorySanitizer (KMSAN), this attribute skips the standard
+function-level ABI prologue and MSan instrumentation. However,
+`__builtin_sanitizer_instrumentation_begin()` and
+`__builtin_sanitizer_instrumentation_end()` can be used within a function marked
+with this attribute to selectively enable instrumentation for a specific region
+of code. Values computed outside such a region are treated as initialized when
+used inside it, and memory written outside a region keeps its previous shadow.
+
 ### Interaction of Inlining with Disabling Sanitizer Instrumentation
 
 - A `no_sanitize` function will not be inlined heuristically by the compiler into a sanitized function.
