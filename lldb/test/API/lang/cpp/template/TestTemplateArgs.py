@@ -14,6 +14,8 @@ from lldbsuite.test import lldbutil
 @skipIfWasm  # no expression evaluation
 class TemplateArgsTestCase(TestBase):
     SHARED_BUILD_TESTCASE = False
+    TEST_WITH_PDB_DEBUG_INFO = True
+
     def prepareProcess(self):
         self.build()
 

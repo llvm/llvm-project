@@ -1,4 +1,5 @@
 #include "llvm/ExecutionEngine/Orc/ReOptimizeLayer.h"
+#include "llvm/ExecutionEngine/Orc/BindCallControllerHandlerSPS.h"
 #include "llvm/ExecutionEngine/Orc/LookupAndApply.h"
 #include "llvm/ExecutionEngine/Orc/Mangling.h"
 #include "llvm/ExecutionEngine/Orc/Shared/OrcRTBridge.h"
@@ -128,12 +129,11 @@ Error ReOptimizeLayer::addOrcRTLiteSupport(JITDylib &PlatformJD,
 }
 
 Error ReOptimizeLayer::registerRuntimeFunctions(JITDylib &PlatformJD) {
-  ExecutionSession::JITDispatchHandlerAssociationMap WFs;
   using ReoptimizeSPSSig = shared::SPSError(uint64_t, uint32_t);
-  WFs[Mangle("__orc_rt_reoptimize_tag")] =
-      ES.wrapAsyncWithSPS<ReoptimizeSPSSig>(this,
-                                            &ReOptimizeLayer::rt_reoptimize);
-  return ES.registerJITDispatchHandlers(PlatformJD, std::move(WFs));
+  return ES.registerCallControllerHandlers(
+      PlatformJD, bindCallControllerHandlerSPS<ReoptimizeSPSSig>(
+                      SymbolNameSpec::c("__orc_rt_reoptimize_tag"), this,
+                      &ReOptimizeLayer::rt_reoptimize));
 }
 
 void ReOptimizeLayer::emit(std::unique_ptr<MaterializationResponsibility> R,
