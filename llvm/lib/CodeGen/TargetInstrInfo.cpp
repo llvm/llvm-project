@@ -1932,14 +1932,13 @@ TargetInstrInfo::describeLoadedValue(const MachineInstr &MI,
     if (MI.getNumExplicitDefs() != 1)
       return std::nullopt;
 
-    // DW_OP_deref_size needs a known, fixed size that is no larger than the
-    // size of an address.
+    // DW_OP_deref_size needs a known, fixed size that fits in its one-byte
+    // operand and is no larger than the size of an address.
     if (!MMO->getSize().hasValue() || MMO->getSize().isScalable() ||
+        !isUInt<8>(MMO->getSize().getValue().getFixedValue()) ||
         MMO->getSize().getValue().getFixedValue() >
             MF->getDataLayout().getPointerSize())
       return std::nullopt;
-    assert(isUInt<8>(MMO->getSize().getValue().getFixedValue()) &&
-           "DW_OP_deref_size operand must fit in a byte");
 
     // TODO: In what way do we need to take Reg into consideration here?
 
