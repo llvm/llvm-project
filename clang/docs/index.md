@@ -93,6 +93,7 @@ ClangSYCLLinker
 Maintainers
 InternalsManual
 DriverInternals
+UnicodeSupport
 Multilib
 OffloadingDesign
 PCHInternals
@@ -200,6 +201,7 @@ LLVMExceptionHandlingCodeGen
 * {doc}`Maintainers`
 * {doc}`InternalsManual`
 * {doc}`DriverInternals`
+* {doc}`UnicodeSupport`
 * {doc}`Multilib`
 * {doc}`OffloadingDesign`
 * {doc}`PCHInternals`
