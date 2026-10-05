@@ -777,8 +777,7 @@ TEST(IRBuilder, GetSetInsertionPointWithEmptyBasicBlock) {
   Value *DIV = MetadataAsValue::get(C, (Metadata *)nullptr);
   SmallVector<Value *, 3> Args = {DIV, DIV, DIV};
   Builder.CreateCall(DbgDeclare, Args);
-  auto IP = BB->getFirstInsertionPt();
-  Builder.SetInsertPoint(BB.get(), IP);
+  Builder.SetInsertPoint(BB->getFirstInsertionPt());
 }
 
 TEST(AssignmentTrackingTest, InstrMethods) {

@@ -48,15 +48,6 @@ using namespace llvm::VPlanPatternMatch;
 #define LV_NAME "loop-vectorize"
 #define DEBUG_TYPE LV_NAME
 
-#if !defined(NDEBUG) || defined(LLVM_ENABLE_DUMP)
-// It is sometimes necessary to disable printing of metadata in tests in order
-// to avoid non-deterministic behaviour due to metadata introduced by VPlan
-// that wasn't present in the original scalar IR.
-static cl::opt<bool> VPlanPrintMetadata(
-    "vplan-print-metadata", cl::init(true), cl::Hidden,
-    cl::desc("Controls the printing of recipe metadata when debugging."));
-#endif
-
 namespace llvm {
 extern cl::opt<unsigned> ForceTargetInstructionCost;
 } // namespace llvm
@@ -820,8 +811,11 @@ Value *VPInstruction::generate(VPTransformState &State,
                                      vputils::isSingleScalar(getOperand(0)));
     Value *Op1 = State.get(getOperand(1), GenerateSingleScalar);
     Value *Op2 = State.get(getOperand(2), GenerateSingleScalar);
-    return Builder.CreateSelectFMF(Cond, Op1, Op2, getFastMathFlagsOrNone(),
-                                   Name);
+    Value *Sel =
+        Builder.CreateSelectFMF(Cond, Op1, Op2, getFastMathFlagsOrNone(), Name);
+    if (auto *I = dyn_cast<Instruction>(Sel))
+      applyMetadata(*I);
+    return Sel;
   }
   case VPInstruction::ActiveLaneMask:
   case VPInstruction::WideActiveLaneMask: {
@@ -2038,7 +2032,7 @@ void VPIRInstruction::execute(VPTransformState &State) {
          "PHINodes must be handled by VPIRPhi");
   // Advance the insert point after the wrapped IR instruction. This allows
   // interleaving VPIRInstructions and other recipes.
-  State.Builder.SetInsertPoint(I.getParent(), std::next(I.getIterator()));
+  State.Builder.SetInsertPoint(std::next(I.getIterator()));
 }
 
 InstructionCost VPIRInstruction::computeCost(ElementCount VF,
@@ -2079,7 +2073,7 @@ void VPIRPhi::execute(VPTransformState &State) {
 
   // Advance the insert point after the wrapped IR instruction. This allows
   // interleaving VPIRInstructions and other recipes.
-  State.Builder.SetInsertPoint(Phi->getParent(), std::next(Phi->getIterator()));
+  State.Builder.SetInsertPoint(std::next(Phi->getIterator()));
 }
 
 void VPPhiAccessors::removeIncomingValueFor(VPBlockBase *IncomingBlock) const {
@@ -2197,7 +2191,7 @@ void VPIRMetadata::intersect(const VPIRMetadata &Other) {
 #if !defined(NDEBUG) || defined(LLVM_ENABLE_DUMP)
 void VPIRMetadata::print(raw_ostream &O, VPSlotTracker &SlotTracker) const {
   const Module *M = SlotTracker.getModule();
-  if (Metadata.empty() || !M || !VPlanPrintMetadata)
+  if (Metadata.empty() || !M)
     return;
 
   ArrayRef<StringRef> MDNames = SlotTracker.getMDNames();
@@ -2231,7 +2225,7 @@ void VPIRMetadata::print(raw_ostream &O, VPSlotTracker &SlotTracker) const {
       O << Freq.getFrequency() << " (" << PercentStr << "%"
         << (IsEstimated ? ", estimated" : "") << ")";
     } else {
-      Node->printAsOperand(O, M);
+      SlotTracker.printMetadataAsOperand(O, Node);
     }
   });
   O << ")";

@@ -27513,7 +27513,7 @@ SDValue X86TargetLowering::LowerINTRINSIC_WO_CHAIN(SDValue Op,
         SDValue Sae = Op.getOperand(5);
         if (isRoundModeSAE(Sae))
           return DAG.getNode(IntrData->Opc1, dl, MaskVT, Op.getOperand(1),
-                             Op.getOperand(2), CC, Mask, Sae);
+                             Op.getOperand(2), CC, Mask);
         if (!isRoundModeCurDirection(Sae))
           return SDValue();
       }
@@ -27532,7 +27532,7 @@ SDValue X86TargetLowering::LowerINTRINSIC_WO_CHAIN(SDValue Op,
       if (IntrData->Opc1 != 0) {
         SDValue Sae = Op.getOperand(5);
         if (isRoundModeSAE(Sae))
-          Cmp = DAG.getNode(IntrData->Opc1, dl, MVT::v1i1, Src1, Src2, CC, Sae);
+          Cmp = DAG.getNode(IntrData->Opc1, dl, MVT::v1i1, Src1, Src2, CC);
         else if (!isRoundModeCurDirection(Sae))
           return SDValue();
       }
@@ -27619,7 +27619,7 @@ SDValue X86TargetLowering::LowerINTRINSIC_WO_CHAIN(SDValue Op,
                            DAG.getTargetConstant(CondVal, dl, MVT::i8));
       else if (isRoundModeSAE(Sae))
         FCmp = DAG.getNode(X86ISD::FSETCCM_SAE, dl, MVT::v1i1, LHS, RHS,
-                           DAG.getTargetConstant(CondVal, dl, MVT::i8), Sae);
+                           DAG.getTargetConstant(CondVal, dl, MVT::i8));
       else
         return SDValue();
       // Need to fill with zeros to ensure the bitcast will produce zeroes
@@ -34825,14 +34825,15 @@ static SDValue LowerPARTIAL_REDUCE_MLA(SDValue Op,
   if (VT.is512BitVector() && !Has512)
     return splitVectorOp(Op, DAG, DL);
 
-  // The dot products take their i8/i16 elements packed in i32 lanes.
-  LHS = DAG.getBitcast(VT, LHS);
-  RHS = DAG.getBitcast(VT, RHS);
-
-  // Without VLX only the 512-bit EVEX form exists, so use that unless the VEX
-  // encoding is available.
-  if (!VT.is512BitVector() && !Subtarget.hasVLX() && !HasVEX)
-    return getAVX512Node(Opc, DL, VT, {Acc, LHS, RHS}, DAG, Subtarget);
+  // Without VLX only the 512-bit EVEX form exists, so widen to that and extract
+  // unless the VEX encoding is available.
+  if (!VT.is512BitVector() && !Subtarget.hasVLX() && !HasVEX) {
+    Acc = widenSubVector(Acc, false, Subtarget, DAG, DL, 512);
+    LHS = widenSubVector(LHS, false, Subtarget, DAG, DL, 512);
+    RHS = widenSubVector(RHS, false, Subtarget, DAG, DL, 512);
+    SDValue Res = DAG.getNode(Opc, DL, MVT::v16i32, Acc, LHS, RHS);
+    return extractSubVector(Res, 0, DAG, DL, VT.getSizeInBits());
+  }
 
   return DAG.getNode(Opc, DL, VT, Acc, LHS, RHS);
 }
@@ -49145,7 +49146,10 @@ static SDValue combineSelect(SDNode *N, SelectionDAG &DAG,
       SDValue TruncSrc = LHS.getOperand(0);
       EVT TruncSrcVT = TruncSrc.getValueType();
       if (VT == MVT::v16i8 && TruncSrcVT == MVT::v8i64) {
-        return DAG.getNode(X86ISD::VMTRUNC, DL, VT, TruncSrc, RHS, Cond);
+        // VMTRUNC's mask operand must have the same number of elements as
+        // the truncation source (v8i64), not the (wider) v16i8 result.
+        SDValue MaskCond = DAG.getExtractSubvector(DL, MVT::v8i1, Cond, 0);
+        return DAG.getNode(X86ISD::VMTRUNC, DL, VT, TruncSrc, RHS, MaskCond);
       }
     }
   }
@@ -61247,16 +61251,18 @@ static SDValue combineConcatVectorOps(const SDLoc &DL, MVT VT,
       // Attempt to peek through bitcasts and concat the original subvectors.
       EVT SubVT = peekThroughBitcasts(Subs[0]).getValueType();
       if (SubVT.isSimple() && SubVT.isVector()) {
-        MVT ConcatVT =
-            MVT::getVectorVT(SubVT.getSimpleVT().getScalarType(),
-                             SubVT.getVectorElementCount() * Subs.size());
-        for (SDValue &Sub : Subs)
-          Sub = DAG.getBitcast(SubVT, Sub);
-        if (SDValue ConcatSrc = combineConcatVectorOps(DL, ConcatVT, Subs, DAG,
-                                                       Subtarget, Depth + 1))
-          return DAG.getBitcast(VT, ConcatSrc);
-        return DAG.getBitcast(
-            VT, DAG.getNode(ISD::CONCAT_VECTORS, DL, ConcatVT, Subs));
+        EVT ConcatVT = EVT::getVectorVT(
+            *DAG.getContext(), SubVT.getSimpleVT().getScalarType(),
+            SubVT.getVectorElementCount() * Subs.size());
+        if (ConcatVT.isSimple()) {
+          for (SDValue &Sub : Subs)
+            Sub = DAG.getBitcast(SubVT, Sub);
+          if (SDValue ConcatSrc = combineConcatVectorOps(
+                  DL, ConcatVT.getSimpleVT(), Subs, DAG, Subtarget, Depth + 1))
+            return DAG.getBitcast(VT, ConcatSrc);
+          return DAG.getBitcast(
+              VT, DAG.getNode(ISD::CONCAT_VECTORS, DL, ConcatVT, Subs));
+        }
       }
       return DAG.getNode(ISD::CONCAT_VECTORS, DL, VT, Subs);
     };
@@ -61504,12 +61510,13 @@ static SDValue combineConcatVectorOps(const SDLoc &DL, MVT VT,
     case X86ISD::VPERMILPV:
       if (!IsSplat && (VT.is256BitVector() ||
                        (VT.is512BitVector() && Subtarget.useAVX512Regs()))) {
+        MVT IntVT = VT.changeVectorElementTypeToInteger();
         SDValue Concat0 = CombineSubOperand(VT, Ops, 0);
-        SDValue Concat1 = CombineSubOperand(VT, Ops, 1);
+        SDValue Concat1 = CombineSubOperand(IntVT, Ops, 1);
         if (Concat0 || Concat1)
-          return DAG.getNode(Opcode, DL, VT,
-                             Concat0 ? Concat0 : ConcatSubOperand(VT, Ops, 0),
-                             Concat1 ? Concat1 : ConcatSubOperand(VT, Ops, 1));
+          return DAG.getNode(
+              Opcode, DL, VT, Concat0 ? Concat0 : ConcatSubOperand(VT, Ops, 0),
+              Concat1 ? Concat1 : ConcatSubOperand(IntVT, Ops, 1));
       }
       break;
     case X86ISD::PSHUFB:
@@ -64309,7 +64316,7 @@ SDValue X86TargetLowering::expandIndirectJTBranch(const SDLoc &dl,
     // Upon ISEL, the pattern will convert it to jmp with NoTrack prefix.
     SDValue Chain = Value;
     // Jump table debug info is only needed if CodeView is enabled.
-    if (DAG.getTarget().getTargetTriple().isOSBinFormatCOFF())
+    if (M->getTargetTriple().isOSBinFormatCOFF())
       Chain = DAG.getJumpTableDebugInfo(JTI, Chain, dl);
     return DAG.getNode(X86ISD::NT_BRIND, dl, MVT::Other, Chain, Addr);
   }

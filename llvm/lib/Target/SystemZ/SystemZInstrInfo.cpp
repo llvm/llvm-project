@@ -19,7 +19,6 @@
 #include "llvm/CodeGen/LiveInterval.h"
 #include "llvm/CodeGen/LiveIntervals.h"
 #include "llvm/CodeGen/LiveRegUnits.h"
-#include "llvm/CodeGen/LiveVariables.h"
 #include "llvm/CodeGen/MachineBasicBlock.h"
 #include "llvm/CodeGen/MachineFrameInfo.h"
 #include "llvm/CodeGen/MachineFunction.h"
@@ -1083,7 +1082,7 @@ static void transferMIFlag(MachineInstr *OldMI, MachineInstr *NewMI,
 }
 
 MachineInstr *
-SystemZInstrInfo::convertToThreeAddress(MachineInstr &MI, LiveVariables *LV,
+SystemZInstrInfo::convertToThreeAddress(MachineInstr &MI,
                                         LiveIntervals *LIS) const {
   MachineBasicBlock *MBB = MI.getParent();
 
@@ -1117,14 +1116,6 @@ SystemZInstrInfo::convertToThreeAddress(MachineInstr &MI, LiveVariables *LV,
               .addImm(Start)
               .addImm(End + 128)
               .addImm(0);
-      if (LV) {
-        unsigned NumOps = MI.getNumOperands();
-        for (unsigned I = 1; I < NumOps; ++I) {
-          MachineOperand &Op = MI.getOperand(I);
-          if (Op.isReg() && Op.isKill())
-            LV->replaceKillInstruction(Op.getReg(), MI, *MIB);
-        }
-      }
       if (LIS)
         LIS->ReplaceMachineInstrInMaps(MI, *MIB);
       transferDeadCC(&MI, MIB);
