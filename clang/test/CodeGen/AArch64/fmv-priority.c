@@ -16,6 +16,41 @@ __attribute__((target_version("default"))) int fn(void) { return 0; }
 
 int call() { return fn(); }
 
+
+__attribute__((target_version("cssc"))) int priority(void);
+__attribute__((target_version("gcs"))) int priority(void);
+__attribute__((target_version("fp8"))) int priority(void);
+__attribute__((target_version("f8f32mm"))) int priority(void);
+__attribute__((target_version("fp8dot4"))) int priority(void);
+__attribute__((target_version("fp8dot2"))) int priority(void);
+__attribute__((target_version("fp8fma"))) int priority(void);
+__attribute__((target_version("lut"))) int priority(void);
+__attribute__((target_version("faminmax"))) int priority(void);
+__attribute__((target_version("f8f16mm"))) int priority(void);
+__attribute__((target_version("sve2p1"))) int priority(void);
+__attribute__((target_version("sve2p2"))) int priority(void);
+__attribute__((target_version("sve-aes2"))) int priority(void);
+__attribute__((target_version("sve-bfscale"))) int priority(void);
+__attribute__((target_version("sve-f16f32mm"))) int priority(void);
+__attribute__((target_version("ssve-fp8dot4"))) int priority(void);
+__attribute__((target_version("ssve-fp8dot2"))) int priority(void);
+__attribute__((target_version("ssve-fp8fma"))) int priority(void);
+__attribute__((target_version("ssve-bitperm"))) int priority(void);
+__attribute__((target_version("ssve-aes"))) int priority(void);
+__attribute__((target_version("ssve-fexpa"))) int priority(void);
+__attribute__((target_version("sme-f8f32"))) int priority(void);
+__attribute__((target_version("sme-lutv2"))) int priority(void);
+__attribute__((target_version("sme2p1"))) int priority(void);
+__attribute__((target_version("sme2p2"))) int priority(void);
+__attribute__((target_version("sme-f16f16"))) int priority(void);
+__attribute__((target_version("sme-f8f16"))) int priority(void);
+__attribute__((target_version("sme-mop4"))) int priority(void);
+__attribute__((target_version("default"))) int priority(void) { return 0; }
+
+int call_priority(void) {
+  return priority();
+}
+
 // CHECK-LABEL: define dso_local i32 @fn.default(
 // CHECK-SAME: ) #[[ATTR0:[0-9]+]] {
 // CHECK-NEXT:  [[ENTRY:.*:]]
@@ -29,8 +64,21 @@ int call() { return fn(); }
 // CHECK-NEXT:    ret i32 [[CALL]]
 //
 //
-// CHECK-LABEL: define weak_odr ptr @fn.resolver()
-// CHECK-SAME: #[[ATTR_RESOLVER:[0-9]+]] comdat {
+// CHECK-LABEL: define dso_local i32 @priority.default(
+// CHECK-SAME: ) #[[ATTR0]] {
+// CHECK-NEXT:  [[ENTRY:.*:]]
+// CHECK-NEXT:    ret i32 0
+//
+//
+// CHECK-LABEL: define dso_local i32 @call_priority(
+// CHECK-SAME: ) #[[ATTR1]] {
+// CHECK-NEXT:  [[ENTRY:.*:]]
+// CHECK-NEXT:    [[CALL:%.*]] = call i32 @priority()
+// CHECK-NEXT:    ret i32 [[CALL]]
+//
+//
+// CHECK-LABEL: define weak_odr ptr @fn.resolver(
+// CHECK-SAME: ) #[[ATTR4:[0-9]+]] comdat {
 // CHECK-NEXT:  [[RESOLVER_ENTRY:.*:]]
 // CHECK-NEXT:    call void @__init_cpu_features_resolver()
 // CHECK-NEXT:    [[TMP0:%.*]] = load i64, ptr @__aarch64_cpu_features, align 8
@@ -50,4 +98,315 @@ int call() { return fn(); }
 // CHECK-NEXT:    ret ptr @fn._Mrcpc2Msme2
 // CHECK:       [[RESOLVER_ELSE2]]:
 // CHECK-NEXT:    ret ptr @fn.default
+//
+//
+// CHECK-LABEL: define weak_odr ptr @priority.resolver(
+// CHECK-SAME: ) #[[ATTR4]] comdat {
+// CHECK-NEXT:  [[RESOLVER_ENTRY:.*]]:
+// CHECK-NEXT:    call void @__init_cpu_features_resolver()
+// CHECK-NEXT:    [[TMP0:%.*]] = load i64, ptr @__aarch64_cpu_features, align 8
+// CHECK-NEXT:    [[TMP1:%.*]] = and i64 [[TMP0]], 4755805604684038912
+// CHECK-NEXT:    [[TMP2:%.*]] = icmp eq i64 [[TMP1]], 4755805604684038912
+// CHECK-NEXT:    [[TMP3:%.*]] = and i1 true, [[TMP2]]
+// CHECK-NEXT:    br i1 [[TMP3]], label %[[CPU_SUPPORTS_EXTENSION:.*]], label %[[CPU_SUPPORTS_END:.*]]
+// CHECK:       [[CPU_SUPPORTS_EXTENSION]]:
+// CHECK-NEXT:    [[TMP4:%.*]] = load i64, ptr getelementptr inbounds nuw (i8, ptr @__aarch64_cpu_features, i64 8), align 8
+// CHECK-NEXT:    [[TMP5:%.*]] = and i64 [[TMP4]], 512
+// CHECK-NEXT:    [[TMP6:%.*]] = icmp eq i64 [[TMP5]], 512
+// CHECK-NEXT:    br label %[[CPU_SUPPORTS_END]]
+// CHECK:       [[CPU_SUPPORTS_END]]:
+// CHECK-NEXT:    [[TMP7:%.*]] = phi i1 [ false, %[[RESOLVER_ENTRY]] ], [ [[TMP6]], %[[CPU_SUPPORTS_EXTENSION]] ]
+// CHECK-NEXT:    br i1 [[TMP7]], label %[[RESOLVER_RETURN:.*]], label %[[RESOLVER_ELSE:.*]]
+// CHECK:       [[RESOLVER_RETURN]]:
+// CHECK-NEXT:    ret ptr @priority._Msme-mop4
+// CHECK:       [[RESOLVER_ELSE]]:
+// CHECK-NEXT:    [[TMP8:%.*]] = load i64, ptr @__aarch64_cpu_features, align 8
+// CHECK-NEXT:    [[TMP9:%.*]] = and i64 [[TMP8]], 4755805604684055296
+// CHECK-NEXT:    [[TMP10:%.*]] = icmp eq i64 [[TMP9]], 4755805604684055296
+// CHECK-NEXT:    [[TMP11:%.*]] = and i1 true, [[TMP10]]
+// CHECK-NEXT:    br i1 [[TMP11]], label %[[CPU_SUPPORTS_EXTENSION1:.*]], label %[[CPU_SUPPORTS_END2:.*]]
+// CHECK:       [[CPU_SUPPORTS_EXTENSION1]]:
+// CHECK-NEXT:    [[TMP12:%.*]] = load i64, ptr getelementptr inbounds nuw (i8, ptr @__aarch64_cpu_features, i64 8), align 8
+// CHECK-NEXT:    [[TMP13:%.*]] = and i64 [[TMP12]], 16
+// CHECK-NEXT:    [[TMP14:%.*]] = icmp eq i64 [[TMP13]], 16
+// CHECK-NEXT:    br label %[[CPU_SUPPORTS_END2]]
+// CHECK:       [[CPU_SUPPORTS_END2]]:
+// CHECK-NEXT:    [[TMP15:%.*]] = phi i1 [ false, %[[RESOLVER_ELSE]] ], [ [[TMP14]], %[[CPU_SUPPORTS_EXTENSION1]] ]
+// CHECK-NEXT:    br i1 [[TMP15]], label %[[RESOLVER_RETURN3:.*]], label %[[RESOLVER_ELSE4:.*]]
+// CHECK:       [[RESOLVER_RETURN3]]:
+// CHECK-NEXT:    ret ptr @priority._Msme-f8f16
+// CHECK:       [[RESOLVER_ELSE4]]:
+// CHECK-NEXT:    [[TMP16:%.*]] = load i64, ptr @__aarch64_cpu_features, align 8
+// CHECK-NEXT:    [[TMP17:%.*]] = and i64 [[TMP16]], 4755805604684038912
+// CHECK-NEXT:    [[TMP18:%.*]] = icmp eq i64 [[TMP17]], 4755805604684038912
+// CHECK-NEXT:    [[TMP19:%.*]] = and i1 true, [[TMP18]]
+// CHECK-NEXT:    br i1 [[TMP19]], label %[[CPU_SUPPORTS_EXTENSION5:.*]], label %[[CPU_SUPPORTS_END6:.*]]
+// CHECK:       [[CPU_SUPPORTS_EXTENSION5]]:
+// CHECK-NEXT:    [[TMP20:%.*]] = load i64, ptr getelementptr inbounds nuw (i8, ptr @__aarch64_cpu_features, i64 8), align 8
+// CHECK-NEXT:    [[TMP21:%.*]] = and i64 [[TMP20]], 4
+// CHECK-NEXT:    [[TMP22:%.*]] = icmp eq i64 [[TMP21]], 4
+// CHECK-NEXT:    br label %[[CPU_SUPPORTS_END6]]
+// CHECK:       [[CPU_SUPPORTS_END6]]:
+// CHECK-NEXT:    [[TMP23:%.*]] = phi i1 [ false, %[[RESOLVER_ELSE4]] ], [ [[TMP22]], %[[CPU_SUPPORTS_EXTENSION5]] ]
+// CHECK-NEXT:    br i1 [[TMP23]], label %[[RESOLVER_RETURN7:.*]], label %[[RESOLVER_ELSE8:.*]]
+// CHECK:       [[RESOLVER_RETURN7]]:
+// CHECK-NEXT:    ret ptr @priority._Msme-f16f16
+// CHECK:       [[RESOLVER_ELSE8]]:
+// CHECK-NEXT:    [[TMP24:%.*]] = load i64, ptr @__aarch64_cpu_features, align 8
+// CHECK-NEXT:    [[TMP25:%.*]] = and i64 [[TMP24]], 3602884100077191936
+// CHECK-NEXT:    [[TMP26:%.*]] = icmp eq i64 [[TMP25]], 3602884100077191936
+// CHECK-NEXT:    [[TMP27:%.*]] = and i1 true, [[TMP26]]
+// CHECK-NEXT:    br i1 [[TMP27]], label %[[RESOLVER_RETURN9:.*]], label %[[RESOLVER_ELSE10:.*]]
+// CHECK:       [[RESOLVER_RETURN9]]:
+// CHECK-NEXT:    ret ptr @priority._Msme2p2
+// CHECK:       [[RESOLVER_ELSE10]]:
+// CHECK-NEXT:    [[TMP28:%.*]] = load i64, ptr @__aarch64_cpu_features, align 8
+// CHECK-NEXT:    [[TMP29:%.*]] = and i64 [[TMP28]], 1297041090863497984
+// CHECK-NEXT:    [[TMP30:%.*]] = icmp eq i64 [[TMP29]], 1297041090863497984
+// CHECK-NEXT:    [[TMP31:%.*]] = and i1 true, [[TMP30]]
+// CHECK-NEXT:    br i1 [[TMP31]], label %[[RESOLVER_RETURN11:.*]], label %[[RESOLVER_ELSE12:.*]]
+// CHECK:       [[RESOLVER_RETURN11]]:
+// CHECK-NEXT:    ret ptr @priority._Msme2p1
+// CHECK:       [[RESOLVER_ELSE12]]:
+// CHECK-NEXT:    [[TMP32:%.*]] = load i64, ptr @__aarch64_cpu_features, align 8
+// CHECK-NEXT:    [[TMP33:%.*]] = and i64 [[TMP32]], 153126785511392000
+// CHECK-NEXT:    [[TMP34:%.*]] = icmp eq i64 [[TMP33]], 153126785511392000
+// CHECK-NEXT:    [[TMP35:%.*]] = and i1 true, [[TMP34]]
+// CHECK-NEXT:    br i1 [[TMP35]], label %[[RESOLVER_RETURN13:.*]], label %[[RESOLVER_ELSE14:.*]]
+// CHECK:       [[RESOLVER_RETURN13]]:
+// CHECK-NEXT:    ret ptr @priority._Msme-lutv2
+// CHECK:       [[RESOLVER_ELSE14]]:
+// CHECK-NEXT:    [[TMP36:%.*]] = load i64, ptr @__aarch64_cpu_features, align 8
+// CHECK-NEXT:    [[TMP37:%.*]] = and i64 [[TMP36]], 144119590551634688
+// CHECK-NEXT:    [[TMP38:%.*]] = icmp eq i64 [[TMP37]], 144119590551634688
+// CHECK-NEXT:    [[TMP39:%.*]] = and i1 true, [[TMP38]]
+// CHECK-NEXT:    br i1 [[TMP39]], label %[[RESOLVER_RETURN15:.*]], label %[[RESOLVER_ELSE16:.*]]
+// CHECK:       [[RESOLVER_RETURN15]]:
+// CHECK-NEXT:    ret ptr @priority._Msme-f8f32
+// CHECK:       [[RESOLVER_ELSE16]]:
+// CHECK-NEXT:    [[TMP40:%.*]] = load i64, ptr @__aarch64_cpu_features, align 8
+// CHECK-NEXT:    [[TMP41:%.*]] = and i64 [[TMP40]], 144401061233361664
+// CHECK-NEXT:    [[TMP42:%.*]] = icmp eq i64 [[TMP41]], 144401061233361664
+// CHECK-NEXT:    [[TMP43:%.*]] = and i1 true, [[TMP42]]
+// CHECK-NEXT:    br i1 [[TMP43]], label %[[RESOLVER_RETURN17:.*]], label %[[RESOLVER_ELSE18:.*]]
+// CHECK:       [[RESOLVER_RETURN17]]:
+// CHECK-NEXT:    ret ptr @priority._Mssve-fexpa
+// CHECK:       [[RESOLVER_ELSE18]]:
+// CHECK-NEXT:    [[TMP44:%.*]] = load i64, ptr @__aarch64_cpu_features, align 8
+// CHECK-NEXT:    [[TMP45:%.*]] = and i64 [[TMP44]], 144260323745039104
+// CHECK-NEXT:    [[TMP46:%.*]] = icmp eq i64 [[TMP45]], 144260323745039104
+// CHECK-NEXT:    [[TMP47:%.*]] = and i1 true, [[TMP46]]
+// CHECK-NEXT:    br i1 [[TMP47]], label %[[RESOLVER_RETURN19:.*]], label %[[RESOLVER_ELSE20:.*]]
+// CHECK:       [[RESOLVER_RETURN19]]:
+// CHECK-NEXT:    ret ptr @priority._Mssve-aes
+// CHECK:       [[RESOLVER_ELSE20]]:
+// CHECK-NEXT:    [[TMP48:%.*]] = load i64, ptr @__aarch64_cpu_features, align 8
+// CHECK-NEXT:    [[TMP49:%.*]] = and i64 [[TMP48]], 144128382349673216
+// CHECK-NEXT:    [[TMP50:%.*]] = icmp eq i64 [[TMP49]], 144128382349673216
+// CHECK-NEXT:    [[TMP51:%.*]] = and i1 true, [[TMP50]]
+// CHECK-NEXT:    br i1 [[TMP51]], label %[[RESOLVER_RETURN21:.*]], label %[[RESOLVER_ELSE22:.*]]
+// CHECK:       [[RESOLVER_RETURN21]]:
+// CHECK-NEXT:    ret ptr @priority._Mssve-bitperm
+// CHECK:       [[RESOLVER_ELSE22]]:
+// CHECK-NEXT:    [[TMP52:%.*]] = load i64, ptr @__aarch64_cpu_features, align 8
+// CHECK-NEXT:    [[TMP53:%.*]] = and i64 [[TMP52]], 144119723695620864
+// CHECK-NEXT:    [[TMP54:%.*]] = icmp eq i64 [[TMP53]], 144119723695620864
+// CHECK-NEXT:    [[TMP55:%.*]] = and i1 true, [[TMP54]]
+// CHECK-NEXT:    br i1 [[TMP55]], label %[[RESOLVER_RETURN23:.*]], label %[[RESOLVER_ELSE24:.*]]
+// CHECK:       [[RESOLVER_RETURN23]]:
+// CHECK-NEXT:    ret ptr @priority._Mssve-fp8fma
+// CHECK:       [[RESOLVER_ELSE24]]:
+// CHECK-NEXT:    [[TMP56:%.*]] = load i64, ptr @__aarch64_cpu_features, align 8
+// CHECK-NEXT:    [[TMP57:%.*]] = and i64 [[TMP56]], 144154770628756224
+// CHECK-NEXT:    [[TMP58:%.*]] = icmp eq i64 [[TMP57]], 144154770628756224
+// CHECK-NEXT:    [[TMP59:%.*]] = and i1 true, [[TMP58]]
+// CHECK-NEXT:    br i1 [[TMP59]], label %[[RESOLVER_RETURN25:.*]], label %[[RESOLVER_ELSE26:.*]]
+// CHECK:       [[RESOLVER_RETURN25]]:
+// CHECK-NEXT:    ret ptr @priority._Mssve-fp8dot2
+// CHECK:       [[RESOLVER_ELSE26]]:
+// CHECK-NEXT:    [[TMP60:%.*]] = load i64, ptr @__aarch64_cpu_features, align 8
+// CHECK-NEXT:    [[TMP61:%.*]] = and i64 [[TMP60]], 144119594846601984
+// CHECK-NEXT:    [[TMP62:%.*]] = icmp eq i64 [[TMP61]], 144119594846601984
+// CHECK-NEXT:    [[TMP63:%.*]] = and i1 true, [[TMP62]]
+// CHECK-NEXT:    br i1 [[TMP63]], label %[[RESOLVER_RETURN27:.*]], label %[[RESOLVER_ELSE28:.*]]
+// CHECK:       [[RESOLVER_RETURN27]]:
+// CHECK-NEXT:    ret ptr @priority._Mssve-fp8dot4
+// CHECK:       [[RESOLVER_ELSE28]]:
+// CHECK-NEXT:    [[TMP64:%.*]] = load i64, ptr @__aarch64_cpu_features, align 8
+// CHECK-NEXT:    [[TMP65:%.*]] = and i64 [[TMP64]], 4611686019501195520
+// CHECK-NEXT:    [[TMP66:%.*]] = icmp eq i64 [[TMP65]], 4611686019501195520
+// CHECK-NEXT:    [[TMP67:%.*]] = and i1 true, [[TMP66]]
+// CHECK-NEXT:    br i1 [[TMP67]], label %[[CPU_SUPPORTS_EXTENSION29:.*]], label %[[CPU_SUPPORTS_END30:.*]]
+// CHECK:       [[CPU_SUPPORTS_EXTENSION29]]:
+// CHECK-NEXT:    [[TMP68:%.*]] = load i64, ptr getelementptr inbounds nuw (i8, ptr @__aarch64_cpu_features, i64 8), align 8
+// CHECK-NEXT:    [[TMP69:%.*]] = and i64 [[TMP68]], 256
+// CHECK-NEXT:    [[TMP70:%.*]] = icmp eq i64 [[TMP69]], 256
+// CHECK-NEXT:    br label %[[CPU_SUPPORTS_END30]]
+// CHECK:       [[CPU_SUPPORTS_END30]]:
+// CHECK-NEXT:    [[TMP71:%.*]] = phi i1 [ false, %[[RESOLVER_ELSE28]] ], [ [[TMP70]], %[[CPU_SUPPORTS_EXTENSION29]] ]
+// CHECK-NEXT:    br i1 [[TMP71]], label %[[RESOLVER_RETURN31:.*]], label %[[RESOLVER_ELSE32:.*]]
+// CHECK:       [[RESOLVER_RETURN31]]:
+// CHECK-NEXT:    ret ptr @priority._Msve-f16f32mm
+// CHECK:       [[RESOLVER_ELSE32]]:
+// CHECK-NEXT:    [[TMP72:%.*]] = load i64, ptr @__aarch64_cpu_features, align 8
+// CHECK-NEXT:    [[TMP73:%.*]] = and i64 [[TMP72]], 4611686018427387904
+// CHECK-NEXT:    [[TMP74:%.*]] = icmp eq i64 [[TMP73]], 4611686018427387904
+// CHECK-NEXT:    [[TMP75:%.*]] = and i1 true, [[TMP74]]
+// CHECK-NEXT:    br i1 [[TMP75]], label %[[CPU_SUPPORTS_EXTENSION33:.*]], label %[[CPU_SUPPORTS_END34:.*]]
+// CHECK:       [[CPU_SUPPORTS_EXTENSION33]]:
+// CHECK-NEXT:    [[TMP76:%.*]] = load i64, ptr getelementptr inbounds nuw (i8, ptr @__aarch64_cpu_features, i64 8), align 8
+// CHECK-NEXT:    [[TMP77:%.*]] = and i64 [[TMP76]], 128
+// CHECK-NEXT:    [[TMP78:%.*]] = icmp eq i64 [[TMP77]], 128
+// CHECK-NEXT:    br label %[[CPU_SUPPORTS_END34]]
+// CHECK:       [[CPU_SUPPORTS_END34]]:
+// CHECK-NEXT:    [[TMP79:%.*]] = phi i1 [ false, %[[RESOLVER_ELSE32]] ], [ [[TMP78]], %[[CPU_SUPPORTS_EXTENSION33]] ]
+// CHECK-NEXT:    br i1 [[TMP79]], label %[[RESOLVER_RETURN35:.*]], label %[[RESOLVER_ELSE36:.*]]
+// CHECK:       [[RESOLVER_RETURN35]]:
+// CHECK-NEXT:    ret ptr @priority._Msve-bfscale
+// CHECK:       [[RESOLVER_ELSE36]]:
+// CHECK-NEXT:    [[TMP80:%.*]] = load i64, ptr @__aarch64_cpu_features, align 8
+// CHECK-NEXT:    [[TMP81:%.*]] = and i64 [[TMP80]], 4611686018427387904
+// CHECK-NEXT:    [[TMP82:%.*]] = icmp eq i64 [[TMP81]], 4611686018427387904
+// CHECK-NEXT:    [[TMP83:%.*]] = and i1 true, [[TMP82]]
+// CHECK-NEXT:    br i1 [[TMP83]], label %[[CPU_SUPPORTS_EXTENSION37:.*]], label %[[CPU_SUPPORTS_END38:.*]]
+// CHECK:       [[CPU_SUPPORTS_EXTENSION37]]:
+// CHECK-NEXT:    [[TMP84:%.*]] = load i64, ptr getelementptr inbounds nuw (i8, ptr @__aarch64_cpu_features, i64 8), align 8
+// CHECK-NEXT:    [[TMP85:%.*]] = and i64 [[TMP84]], 64
+// CHECK-NEXT:    [[TMP86:%.*]] = icmp eq i64 [[TMP85]], 64
+// CHECK-NEXT:    br label %[[CPU_SUPPORTS_END38]]
+// CHECK:       [[CPU_SUPPORTS_END38]]:
+// CHECK-NEXT:    [[TMP87:%.*]] = phi i1 [ false, %[[RESOLVER_ELSE36]] ], [ [[TMP86]], %[[CPU_SUPPORTS_EXTENSION37]] ]
+// CHECK-NEXT:    br i1 [[TMP87]], label %[[RESOLVER_RETURN39:.*]], label %[[RESOLVER_ELSE40:.*]]
+// CHECK:       [[RESOLVER_RETURN39]]:
+// CHECK-NEXT:    ret ptr @priority._Msve-aes2
+// CHECK:       [[RESOLVER_ELSE40]]:
+// CHECK-NEXT:    [[TMP88:%.*]] = load i64, ptr @__aarch64_cpu_features, align 8
+// CHECK-NEXT:    [[TMP89:%.*]] = and i64 [[TMP88]], 4611686088220672256
+// CHECK-NEXT:    [[TMP90:%.*]] = icmp eq i64 [[TMP89]], 4611686088220672256
+// CHECK-NEXT:    [[TMP91:%.*]] = and i1 true, [[TMP90]]
+// CHECK-NEXT:    br i1 [[TMP91]], label %[[CPU_SUPPORTS_EXTENSION41:.*]], label %[[CPU_SUPPORTS_END42:.*]]
+// CHECK:       [[CPU_SUPPORTS_EXTENSION41]]:
+// CHECK-NEXT:    [[TMP92:%.*]] = load i64, ptr getelementptr inbounds nuw (i8, ptr @__aarch64_cpu_features, i64 8), align 8
+// CHECK-NEXT:    [[TMP93:%.*]] = and i64 [[TMP92]], 3
+// CHECK-NEXT:    [[TMP94:%.*]] = icmp eq i64 [[TMP93]], 3
+// CHECK-NEXT:    br label %[[CPU_SUPPORTS_END42]]
+// CHECK:       [[CPU_SUPPORTS_END42]]:
+// CHECK-NEXT:    [[TMP95:%.*]] = phi i1 [ false, %[[RESOLVER_ELSE40]] ], [ [[TMP94]], %[[CPU_SUPPORTS_EXTENSION41]] ]
+// CHECK-NEXT:    br i1 [[TMP95]], label %[[RESOLVER_RETURN43:.*]], label %[[RESOLVER_ELSE44:.*]]
+// CHECK:       [[RESOLVER_RETURN43]]:
+// CHECK-NEXT:    ret ptr @priority._Msve2p2
+// CHECK:       [[RESOLVER_ELSE44]]:
+// CHECK-NEXT:    [[TMP96:%.*]] = load i64, ptr @__aarch64_cpu_features, align 8
+// CHECK-NEXT:    [[TMP97:%.*]] = and i64 [[TMP96]], 4611686088220672256
+// CHECK-NEXT:    [[TMP98:%.*]] = icmp eq i64 [[TMP97]], 4611686088220672256
+// CHECK-NEXT:    [[TMP99:%.*]] = and i1 true, [[TMP98]]
+// CHECK-NEXT:    br i1 [[TMP99]], label %[[CPU_SUPPORTS_EXTENSION45:.*]], label %[[CPU_SUPPORTS_END46:.*]]
+// CHECK:       [[CPU_SUPPORTS_EXTENSION45]]:
+// CHECK-NEXT:    [[TMP100:%.*]] = load i64, ptr getelementptr inbounds nuw (i8, ptr @__aarch64_cpu_features, i64 8), align 8
+// CHECK-NEXT:    [[TMP101:%.*]] = and i64 [[TMP100]], 1
+// CHECK-NEXT:    [[TMP102:%.*]] = icmp eq i64 [[TMP101]], 1
+// CHECK-NEXT:    br label %[[CPU_SUPPORTS_END46]]
+// CHECK:       [[CPU_SUPPORTS_END46]]:
+// CHECK-NEXT:    [[TMP103:%.*]] = phi i1 [ false, %[[RESOLVER_ELSE44]] ], [ [[TMP102]], %[[CPU_SUPPORTS_EXTENSION45]] ]
+// CHECK-NEXT:    br i1 [[TMP103]], label %[[RESOLVER_RETURN47:.*]], label %[[RESOLVER_ELSE48:.*]]
+// CHECK:       [[RESOLVER_RETURN47]]:
+// CHECK-NEXT:    ret ptr @priority._Msve2p1
+// CHECK:       [[RESOLVER_ELSE48]]:
+// CHECK-NEXT:    [[TMP104:%.*]] = load i64, ptr @__aarch64_cpu_features, align 8
+// CHECK-NEXT:    [[TMP105:%.*]] = and i64 [[TMP104]], 4611686018427405056
+// CHECK-NEXT:    [[TMP106:%.*]] = icmp eq i64 [[TMP105]], 4611686018427405056
+// CHECK-NEXT:    [[TMP107:%.*]] = and i1 true, [[TMP106]]
+// CHECK-NEXT:    br i1 [[TMP107]], label %[[CPU_SUPPORTS_EXTENSION49:.*]], label %[[CPU_SUPPORTS_END50:.*]]
+// CHECK:       [[CPU_SUPPORTS_EXTENSION49]]:
+// CHECK-NEXT:    [[TMP108:%.*]] = load i64, ptr getelementptr inbounds nuw (i8, ptr @__aarch64_cpu_features, i64 8), align 8
+// CHECK-NEXT:    [[TMP109:%.*]] = and i64 [[TMP108]], 32
+// CHECK-NEXT:    [[TMP110:%.*]] = icmp eq i64 [[TMP109]], 32
+// CHECK-NEXT:    br label %[[CPU_SUPPORTS_END50]]
+// CHECK:       [[CPU_SUPPORTS_END50]]:
+// CHECK-NEXT:    [[TMP111:%.*]] = phi i1 [ false, %[[RESOLVER_ELSE48]] ], [ [[TMP110]], %[[CPU_SUPPORTS_EXTENSION49]] ]
+// CHECK-NEXT:    br i1 [[TMP111]], label %[[RESOLVER_RETURN51:.*]], label %[[RESOLVER_ELSE52:.*]]
+// CHECK:       [[RESOLVER_RETURN51]]:
+// CHECK-NEXT:    ret ptr @priority._Mf8f16mm
+// CHECK:       [[RESOLVER_ELSE52]]:
+// CHECK-NEXT:    [[TMP112:%.*]] = load i64, ptr @__aarch64_cpu_features, align 8
+// CHECK-NEXT:    [[TMP113:%.*]] = and i64 [[TMP112]], 4503599627371264
+// CHECK-NEXT:    [[TMP114:%.*]] = icmp eq i64 [[TMP113]], 4503599627371264
+// CHECK-NEXT:    [[TMP115:%.*]] = and i1 true, [[TMP114]]
+// CHECK-NEXT:    br i1 [[TMP115]], label %[[RESOLVER_RETURN53:.*]], label %[[RESOLVER_ELSE54:.*]]
+// CHECK:       [[RESOLVER_RETURN53]]:
+// CHECK-NEXT:    ret ptr @priority._Mfaminmax
+// CHECK:       [[RESOLVER_ELSE54]]:
+// CHECK-NEXT:    [[TMP116:%.*]] = load i64, ptr @__aarch64_cpu_features, align 8
+// CHECK-NEXT:    [[TMP117:%.*]] = and i64 [[TMP116]], 2251799813686016
+// CHECK-NEXT:    [[TMP118:%.*]] = icmp eq i64 [[TMP117]], 2251799813686016
+// CHECK-NEXT:    [[TMP119:%.*]] = and i1 true, [[TMP118]]
+// CHECK-NEXT:    br i1 [[TMP119]], label %[[RESOLVER_RETURN55:.*]], label %[[RESOLVER_ELSE56:.*]]
+// CHECK:       [[RESOLVER_RETURN55]]:
+// CHECK-NEXT:    ret ptr @priority._Mlut
+// CHECK:       [[RESOLVER_ELSE56]]:
+// CHECK-NEXT:    [[TMP120:%.*]] = load i64, ptr @__aarch64_cpu_features, align 8
+// CHECK-NEXT:    [[TMP121:%.*]] = and i64 [[TMP120]], 2147500800
+// CHECK-NEXT:    [[TMP122:%.*]] = icmp eq i64 [[TMP121]], 2147500800
+// CHECK-NEXT:    [[TMP123:%.*]] = and i1 true, [[TMP122]]
+// CHECK-NEXT:    br i1 [[TMP123]], label %[[RESOLVER_RETURN57:.*]], label %[[RESOLVER_ELSE58:.*]]
+// CHECK:       [[RESOLVER_RETURN57]]:
+// CHECK-NEXT:    ret ptr @priority._Mfp8fma
+// CHECK:       [[RESOLVER_ELSE58]]:
+// CHECK-NEXT:    [[TMP124:%.*]] = load i64, ptr @__aarch64_cpu_features, align 8
+// CHECK-NEXT:    [[TMP125:%.*]] = and i64 [[TMP124]], 536888064
+// CHECK-NEXT:    [[TMP126:%.*]] = icmp eq i64 [[TMP125]], 536888064
+// CHECK-NEXT:    [[TMP127:%.*]] = and i1 true, [[TMP126]]
+// CHECK-NEXT:    br i1 [[TMP127]], label %[[RESOLVER_RETURN59:.*]], label %[[RESOLVER_ELSE60:.*]]
+// CHECK:       [[RESOLVER_RETURN59]]:
+// CHECK-NEXT:    ret ptr @priority._Mfp8dot2
+// CHECK:       [[RESOLVER_ELSE60]]:
+// CHECK-NEXT:    [[TMP128:%.*]] = load i64, ptr @__aarch64_cpu_features, align 8
+// CHECK-NEXT:    [[TMP129:%.*]] = and i64 [[TMP128]], 268452608
+// CHECK-NEXT:    [[TMP130:%.*]] = icmp eq i64 [[TMP129]], 268452608
+// CHECK-NEXT:    [[TMP131:%.*]] = and i1 true, [[TMP130]]
+// CHECK-NEXT:    br i1 [[TMP131]], label %[[RESOLVER_RETURN61:.*]], label %[[RESOLVER_ELSE62:.*]]
+// CHECK:       [[RESOLVER_RETURN61]]:
+// CHECK-NEXT:    ret ptr @priority._Mfp8dot4
+// CHECK:       [[RESOLVER_ELSE62]]:
+// CHECK-NEXT:    [[TMP132:%.*]] = load i64, ptr @__aarch64_cpu_features, align 8
+// CHECK-NEXT:    [[TMP133:%.*]] = and i64 [[TMP132]], 33571584
+// CHECK-NEXT:    [[TMP134:%.*]] = icmp eq i64 [[TMP133]], 33571584
+// CHECK-NEXT:    [[TMP135:%.*]] = and i1 true, [[TMP134]]
+// CHECK-NEXT:    br i1 [[TMP135]], label %[[RESOLVER_RETURN63:.*]], label %[[RESOLVER_ELSE64:.*]]
+// CHECK:       [[RESOLVER_RETURN63]]:
+// CHECK-NEXT:    ret ptr @priority._Mf8f32mm
+// CHECK:       [[RESOLVER_ELSE64]]:
+// CHECK-NEXT:    [[TMP136:%.*]] = load i64, ptr @__aarch64_cpu_features, align 8
+// CHECK-NEXT:    [[TMP137:%.*]] = and i64 [[TMP136]], 17152
+// CHECK-NEXT:    [[TMP138:%.*]] = icmp eq i64 [[TMP137]], 17152
+// CHECK-NEXT:    [[TMP139:%.*]] = and i1 true, [[TMP138]]
+// CHECK-NEXT:    br i1 [[TMP139]], label %[[RESOLVER_RETURN65:.*]], label %[[RESOLVER_ELSE66:.*]]
+// CHECK:       [[RESOLVER_RETURN65]]:
+// CHECK-NEXT:    ret ptr @priority._Mfp8
+// CHECK:       [[RESOLVER_ELSE66]]:
+// CHECK-NEXT:    [[TMP140:%.*]] = load i64, ptr @__aarch64_cpu_features, align 8
+// CHECK-NEXT:    [[TMP141:%.*]] = and i64 [[TMP140]], 4611686018427387904
+// CHECK-NEXT:    [[TMP142:%.*]] = icmp eq i64 [[TMP141]], 4611686018427387904
+// CHECK-NEXT:    [[TMP143:%.*]] = and i1 true, [[TMP142]]
+// CHECK-NEXT:    br i1 [[TMP143]], label %[[CPU_SUPPORTS_EXTENSION67:.*]], label %[[CPU_SUPPORTS_END68:.*]]
+// CHECK:       [[CPU_SUPPORTS_EXTENSION67]]:
+// CHECK-NEXT:    [[TMP144:%.*]] = load i64, ptr getelementptr inbounds nuw (i8, ptr @__aarch64_cpu_features, i64 8), align 8
+// CHECK-NEXT:    [[TMP145:%.*]] = and i64 [[TMP144]], 8
+// CHECK-NEXT:    [[TMP146:%.*]] = icmp eq i64 [[TMP145]], 8
+// CHECK-NEXT:    br label %[[CPU_SUPPORTS_END68]]
+// CHECK:       [[CPU_SUPPORTS_END68]]:
+// CHECK-NEXT:    [[TMP147:%.*]] = phi i1 [ false, %[[RESOLVER_ELSE66]] ], [ [[TMP146]], %[[CPU_SUPPORTS_EXTENSION67]] ]
+// CHECK-NEXT:    br i1 [[TMP147]], label %[[RESOLVER_RETURN69:.*]], label %[[RESOLVER_ELSE70:.*]]
+// CHECK:       [[RESOLVER_RETURN69]]:
+// CHECK-NEXT:    ret ptr @priority._Mgcs
+// CHECK:       [[RESOLVER_ELSE70]]:
+// CHECK-NEXT:    [[TMP148:%.*]] = load i64, ptr @__aarch64_cpu_features, align 8
+// CHECK-NEXT:    [[TMP149:%.*]] = and i64 [[TMP148]], 2048
+// CHECK-NEXT:    [[TMP150:%.*]] = icmp eq i64 [[TMP149]], 2048
+// CHECK-NEXT:    [[TMP151:%.*]] = and i1 true, [[TMP150]]
+// CHECK-NEXT:    br i1 [[TMP151]], label %[[RESOLVER_RETURN71:.*]], label %[[RESOLVER_ELSE72:.*]]
+// CHECK:       [[RESOLVER_RETURN71]]:
+// CHECK-NEXT:    ret ptr @priority._Mcssc
+// CHECK:       [[RESOLVER_ELSE72]]:
+// CHECK-NEXT:    ret ptr @priority.default
 //

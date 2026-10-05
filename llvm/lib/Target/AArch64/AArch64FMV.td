@@ -83,6 +83,33 @@ def : FMVExtension<"sve2-sha3", "SVE_SHA3">;
 def : FMVExtension<"sve2-sm4", "SVE_SM4">;
 def : FMVExtension<"wfxt", "WFXT">;
 def : FMVExtension<"cssc", "CSSC">;
+def : FMVExtension<"gcs", "GCS">;
+def : FMVExtension<"fp8", "FP8">;
+def : FMVExtension<"f8f32mm", "F8F32MM">;
+def : FMVExtension<"fp8dot4", "FP8DOT4">;
+def : FMVExtension<"fp8dot2", "FP8DOT2">;
+def : FMVExtension<"fp8fma", "FP8FMA">;
+def : FMVExtension<"lut", "LUT">;
+def : FMVExtension<"faminmax", "FAMINMAX">;
+def : FMVExtension<"f8f16mm", "F8F16MM">;
+def : FMVExtension<"sve2p1", "SVE2P1">;
+def : FMVExtension<"sve2p2", "SVE2P2">;
+def : FMVExtension<"sve-aes2", "SVE_AES2">;
+def : FMVExtension<"sve-bfscale", "SVE_BFSCALE">;
+def : FMVExtension<"sve-f16f32mm", "SVE_F16F32MM">;
+def : FMVExtension<"ssve-fp8dot4", "SSVE_FP8DOT4">;
+def : FMVExtension<"ssve-fp8dot2", "SSVE_FP8DOT2">;
+def : FMVExtension<"ssve-fp8fma", "SSVE_FP8FMA">;
+def : FMVExtension<"ssve-bitperm", "SSVE_BITPERM">;
+def : FMVExtension<"ssve-aes", "SSVE_AES">;
+def : FMVExtension<"ssve-fexpa", "SSVE_FEXPA">;
+def : FMVExtension<"sme-f8f32", "SME_F8F32">;
+def : FMVExtension<"sme-lutv2", "SME_LUTV2">;
+def : FMVExtension<"sme2p1", "SME2P1">;
+def : FMVExtension<"sme2p2", "SME2P2">;
+def : FMVExtension<"sme-f16f16", "SME_F16F16">;
+def : FMVExtension<"sme-f8f16", "SME_F8F16">;
+def : FMVExtension<"sme-mop4", "SME_MOP4">;
 
 // Extensions which allow the user to override version priority.
 // 8-bits allow 256-1 priority levels (excluding all zeros).

@@ -5,8 +5,8 @@
 
 static void __init_cpu_features_constructor(unsigned long hwcap,
                                             const __ifunc_arg_t *arg) {
-  unsigned long long feat = 0;
-#define setCPUFeature(F) feat |= 1ULL << F
+  unsigned long long feat[2] = {0, 0};
+#define setCPUFeature(F) feat[(F) / 64] |= 1ULL << ((F) % 64)
   unsigned long hwcap2 = 0;
   if (hwcap & _IFUNC_ARG_HWCAP)
     hwcap2 = arg->_hwcap2;
@@ -80,6 +80,61 @@ static void __init_cpu_features_constructor(unsigned long hwcap,
     setCPUFeature(FEAT_MOPS);
   if (hwcap2 & HWCAP2_CSSC)
     setCPUFeature(FEAT_CSSC);
+  if ((hwcap2 & HWCAP2_F8CVT) && (hwcap2 & HWCAP2_F8E4M3) &&
+      (hwcap2 & HWCAP2_F8E5M2))
+    setCPUFeature(FEAT_FP8);
+  if (hwcap & HWCAP_F8MM8)
+    setCPUFeature(FEAT_F8F32MM);
+  if (hwcap2 & HWCAP2_F8DP4)
+    setCPUFeature(FEAT_FP8DOT4);
+  if (hwcap2 & HWCAP2_F8DP2)
+    setCPUFeature(FEAT_FP8DOT2);
+  if (hwcap2 & HWCAP2_F8FMA)
+    setCPUFeature(FEAT_FP8FMA);
+  if (hwcap2 & HWCAP2_SME_F8F32)
+    setCPUFeature(FEAT_SME_F8F32);
+  if (hwcap2 & HWCAP2_SME_SF8DP4)
+    setCPUFeature(FEAT_SSVE_FP8DOT4);
+  if (hwcap2 & HWCAP2_SME_SF8FMA)
+    setCPUFeature(FEAT_SSVE_FP8FMA);
+  if (hwcap & HWCAP_SME_SBITPERM)
+    setCPUFeature(FEAT_SSVE_BITPERM);
+  if (hwcap2 & HWCAP2_SME_SF8DP2)
+    setCPUFeature(FEAT_SSVE_FP8DOT2);
+  if (hwcap & HWCAP_SME_AES)
+    setCPUFeature(FEAT_SSVE_AES);
+  if (hwcap & HWCAP_SME_SFEXPA)
+    setCPUFeature(FEAT_SSVE_FEXPA);
+  if (hwcap2 & HWCAP2_LUT)
+    setCPUFeature(FEAT_LUT);
+  if (hwcap2 & HWCAP2_FAMINMAX)
+    setCPUFeature(FEAT_FAMINMAX);
+  if (hwcap2 & HWCAP2_SME_LUTV2)
+    setCPUFeature(FEAT_SME_LUTV2);
+  if (hwcap2 & HWCAP2_SME2P1)
+    setCPUFeature(FEAT_SME2P1);
+  if (hwcap & HWCAP_SME2P2)
+    setCPUFeature(FEAT_SME2P2);
+  if (hwcap2 & HWCAP2_SVE2P1)
+    setCPUFeature(FEAT_SVE2P1);
+  if (hwcap & HWCAP_SVE2P2)
+    setCPUFeature(FEAT_SVE2P2);
+  if (hwcap2 & HWCAP2_SME_F16F16)
+    setCPUFeature(FEAT_SME_F16F16);
+  if (hwcap & HWCAP_GCS)
+    setCPUFeature(FEAT_GCS);
+  if (hwcap2 & HWCAP2_SME_F8F16)
+    setCPUFeature(FEAT_SME_F8F16);
+  if (hwcap & HWCAP_F8MM4)
+    setCPUFeature(FEAT_F8F16MM);
+  if (hwcap & HWCAP_SVE_AES2)
+    setCPUFeature(FEAT_SVE_AES2);
+  if (hwcap & HWCAP_SVE_BFSCALE)
+    setCPUFeature(FEAT_SVE_BFSCALE);
+  if (hwcap & HWCAP_SVE_F16MM)
+    setCPUFeature(FEAT_SVE_F16F32MM);
+  if (hwcap & HWCAP_SME_SMOP4)
+    setCPUFeature(FEAT_SME_MOP4);
   if (hwcap & HWCAP_FP) {
     setCPUFeature(FEAT_FP);
     // FP and AdvSIMD fields have the same value
@@ -101,7 +156,11 @@ static void __init_cpu_features_constructor(unsigned long hwcap,
     setCPUFeature(FEAT_SVE2);
   if (hwcap & HWCAP_SHA3)
     setCPUFeature(FEAT_SHA3);
+  setCPUFeature(FEAT_EXT);
   setCPUFeature(FEAT_INIT);
 
-  __atomic_store_n(&__aarch64_cpu_features.features, feat, __ATOMIC_RELAXED);
+  __atomic_store_n(&__aarch64_cpu_features.features2, feat[1],
+                   __ATOMIC_RELAXED);
+  __atomic_store_n(&__aarch64_cpu_features.features, feat[0],
+                   __ATOMIC_RELEASE);
 }

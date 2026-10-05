@@ -39,8 +39,10 @@ struct CpuInfo;
 #include "llvm/TargetParser/AArch64CPUFeatures.inc"
 #include "llvm/TargetParser/AArch64FeatPriorities.inc"
 
-static_assert(FEAT_MAX < 62,
-              "Number of features in CPUFeatures are limited to 62 entries");
+static_assert(FEAT_MAX <= 128,
+              "Number of features in CPUFeatures is limited to 128 entries");
+static_assert(FEAT_EXT == 62 && FEAT_INIT == 63,
+              "AArch64 CPU feature control bits are part of the runtime ABI");
 
 static_assert(PRIOR_MAX < 120, "FeatPriorities is limited to 120 entries");
 

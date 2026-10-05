@@ -36,7 +36,7 @@ enum CPUFeatures {
   FEAT_CSSC,
   FEAT_SHA2,
   FEAT_SHA3,
-  RESERVED_FEAT_AES, // previously used and now ABI legacy
+  FEAT_FP8,
   FEAT_PMULL,
   FEAT_FP16,
   FEAT_DIT,
@@ -47,45 +47,57 @@ enum CPUFeatures {
   FEAT_RCPC,
   FEAT_RCPC2,
   FEAT_FRINTTS,
-  RESERVED_FEAT_DGH, // previously used and now ABI legacy
+  FEAT_F8F32MM,
   FEAT_I8MM,
   FEAT_BF16,
-  RESERVED_FEAT_EBF16, // previously used and now ABI legacy
-  RESERVED_FEAT_RPRES, // previously used and now ABI legacy
+  FEAT_FP8DOT4,
+  FEAT_FP8DOT2,
   FEAT_SVE,
-  RESERVED_FEAT_SVE_BF16,  // previously used and now ABI legacy
-  RESERVED_FEAT_SVE_EBF16, // previously used and now ABI legacy
-  RESERVED_FEAT_SVE_I8MM,  // previously used and now ABI legacy
+  FEAT_FP8FMA,
+  FEAT_SME_F8F32,
+  FEAT_SSVE_FP8DOT4,
   FEAT_SVE_F32MM,
   FEAT_SVE_F64MM,
   FEAT_SVE2,
-  RESERVED_FEAT_SVE_AES, // previously used and now ABI legacy
+  FEAT_SSVE_FP8FMA,
   FEAT_SVE_PMULL128,
   FEAT_SVE_BITPERM,
   FEAT_SVE_SHA3,
   FEAT_SVE_SM4,
   FEAT_SME,
-  RESERVED_FEAT_MEMTAG, // previously used and now ABI legacy
+  FEAT_SSVE_BITPERM,
   FEAT_MEMTAG2,
-  RESERVED_FEAT_MEMTAG3, // previously used and now ABI legacy
+  FEAT_SSVE_FP8DOT2,
   FEAT_SB,
-  RESERVED_FEAT_PREDRES, // previously used and now ABI legacy
-  RESERVED_FEAT_SSBS,    // previously used and now ABI legacy
+  FEAT_SSVE_AES,
+  FEAT_SSVE_FEXPA,
   FEAT_SSBS2,
   FEAT_BTI,
-  RESERVED_FEAT_LS64,         // previously used and now ABI legacy
-  RESERVED_FEAT_LS64_V,       // previously used and now ABI legacy
-  RESERVED_FEAT_LS64_ACCDATA, // previously used and now ABI legacy
+  FEAT_LUT,
+  FEAT_FAMINMAX,
+  FEAT_SME_LUTV2,
   FEAT_WFXT,
   FEAT_SME_F64,
   FEAT_SME_I64,
   FEAT_SME2,
   FEAT_RCPC3,
   FEAT_MOPS,
-  FEAT_MAX,
+  FEAT_SME2P1,
+  FEAT_SME2P2,
   FEAT_EXT = 62, // Reserved to indicate presence of additional features field
                  // in __aarch64_cpu_features
-  FEAT_INIT      // Used as flag of features initialization completion
+  FEAT_INIT,     // Used as flag of features initialization completion
+  FEAT_SVE2P1,
+  FEAT_SVE2P2,
+  FEAT_SME_F16F16,
+  FEAT_GCS,
+  FEAT_SME_F8F16,
+  FEAT_F8F16MM,
+  FEAT_SVE_AES2,
+  FEAT_SVE_BFSCALE,
+  FEAT_SVE_F16F32MM,
+  FEAT_SME_MOP4,
+  FEAT_MAX
 };
 
 #endif

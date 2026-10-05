@@ -32,5 +32,8 @@ void CONSTRUCTOR_ATTRIBUTE __init_cpu_features(void) {
   if (has_sme)
     feat |= 1ULL << FEAT_SME;
 
-  __atomic_store_n(&__aarch64_cpu_features.features, feat, __ATOMIC_RELAXED);
+  feat |= 1ULL << FEAT_EXT;
+  feat |= 1ULL << FEAT_INIT;
+  __atomic_store_n(&__aarch64_cpu_features.features2, 0, __ATOMIC_RELAXED);
+  __atomic_store_n(&__aarch64_cpu_features.features, feat, __ATOMIC_RELEASE);
 }

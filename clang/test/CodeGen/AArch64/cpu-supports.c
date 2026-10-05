@@ -40,11 +40,28 @@
 // CHECK-NEXT:    store i32 4, ptr [[RETVAL]], align 4
 // CHECK-NEXT:    br label [[RETURN]]
 // CHECK:       if.end6:
+// CHECK-NEXT:    [[TMP12:%.*]] = load i64, ptr @__aarch64_cpu_features, align 8
+// CHECK-NEXT:    [[TMP13:%.*]] = and i64 [[TMP12]], 4611686088220672256
+// CHECK-NEXT:    [[TMP14:%.*]] = icmp eq i64 [[TMP13]], 4611686088220672256
+// CHECK-NEXT:    [[TMP15:%.*]] = and i1 true, [[TMP14]]
+// CHECK-NEXT:    br i1 [[TMP15]], label [[CPU_SUPPORTS_EXTENSION:%.*]], label [[CPU_SUPPORTS_END:%.*]]
+// CHECK:       cpu_supports.extension:
+// CHECK-NEXT:    [[TMP16:%.*]] = load i64, ptr getelementptr inbounds nuw (i8, ptr @__aarch64_cpu_features, i64 8), align 8
+// CHECK-NEXT:    [[TMP17:%.*]] = and i64 [[TMP16]], 1
+// CHECK-NEXT:    [[TMP18:%.*]] = icmp eq i64 [[TMP17]], 1
+// CHECK-NEXT:    br label [[CPU_SUPPORTS_END]]
+// CHECK:       cpu_supports.end:
+// CHECK-NEXT:    [[TMP19:%.*]] = phi i1 [ false, [[IF_END6]] ], [ [[TMP18]], [[CPU_SUPPORTS_EXTENSION]] ]
+// CHECK-NEXT:    br i1 [[TMP19]], label [[IF_THEN7:%.*]], label [[IF_END8:%.*]]
+// CHECK:       if.then7:
+// CHECK-NEXT:    store i32 5, ptr [[RETVAL]], align 4
+// CHECK-NEXT:    br label [[RETURN]]
+// CHECK:       if.end8:
 // CHECK-NEXT:    store i32 0, ptr [[RETVAL]], align 4
 // CHECK-NEXT:    br label [[RETURN]]
 // CHECK:       return:
-// CHECK-NEXT:    [[TMP12:%.*]] = load i32, ptr [[RETVAL]], align 4
-// CHECK-NEXT:    ret i32 [[TMP12]]
+// CHECK-NEXT:    [[TMP20:%.*]] = load i32, ptr [[RETVAL]], align 4
+// CHECK-NEXT:    ret i32 [[TMP20]]
 //
 int main(void) {
   if (__builtin_cpu_supports("sb"))
@@ -59,8 +76,17 @@ int main(void) {
   if (__builtin_cpu_supports("avx2"))
     return 4;
 
+  if (__builtin_cpu_supports("sve2p1"))
+    return 5;
+
   return 0;
 }
 //.
-// CHECK: [[META0:![0-9]+]] = !{!"{{.*}}clang version {{.*}}"}
+// CHECK: [[META0:![0-9]+]] = !{i32 1, !"ptrauth-elf-got", i32 0}
+// CHECK: [[META1:![0-9]+]] = !{i32 1, !"ptrauth-init-fini", i32 0}
+// CHECK: [[META2:![0-9]+]] = !{i32 1, !"ptrauth-init-fini-address-discrimination", i32 0}
+// CHECK: [[META3:![0-9]+]] = !{i32 1, !"ptrauth-sign-personality", i32 0}
+// CHECK: [[META4:![0-9]+]] = !{i32 1, !"aarch64-elf-pauthabi-platform", i32 268435458}
+// CHECK: [[META5:![0-9]+]] = !{i32 1, !"aarch64-elf-pauthabi-version", i32 0}
+// CHECK: [[META6:![0-9]+]] = !{!"{{.*}}clang version {{.*}}"}
 //.

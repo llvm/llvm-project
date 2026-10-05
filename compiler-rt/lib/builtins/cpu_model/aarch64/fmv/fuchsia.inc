@@ -44,6 +44,8 @@ void __init_cpu_features_resolver() {
     setCPUFeature(FEAT_SVE);
 
   setCPUFeature(FEAT_INIT);
+  setCPUFeature(FEAT_EXT);
 
-  __atomic_store_n(&__aarch64_cpu_features.features, feat, __ATOMIC_RELAXED);
+  __atomic_store_n(&__aarch64_cpu_features.features2, 0, __ATOMIC_RELAXED);
+  __atomic_store_n(&__aarch64_cpu_features.features, feat, __ATOMIC_RELEASE);
 }
