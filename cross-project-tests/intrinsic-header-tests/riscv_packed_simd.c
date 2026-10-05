@@ -2439,6 +2439,80 @@ uint32x2_t test_pwsll_s_u32x2_low5(uint16x2_t rs1) {
   return __riscv_pwsll_s_u32x2(rs1, 63);
 }
 
+// CHECK-LABEL: test_pnsrl_s_u8x4:
+// RV32:        pnsrl.bs
+// RV64:        psrl.hs
+// RV64:        pncvt.wb
+uint8x4_t test_pnsrl_s_u8x4(uint16x4_t rs1, unsigned shamt) {
+  return __riscv_pnsrl_s_u8x4(rs1, shamt);
+}
+
+// CHECK-LABEL: test_pnsrl_s_u16x2:
+// RV32:        pnsrl.hs
+// RV64:        psrl.ws
+// RV64:        pncvt.wh
+uint16x2_t test_pnsrl_s_u16x2(uint32x2_t rs1, unsigned shamt) {
+  return __riscv_pnsrl_s_u16x2(rs1, shamt);
+}
+
+// CHECK-LABEL: test_pnsra_s_i8x4:
+// RV32:        pnsra.bs
+// RV64:        psra.hs
+// RV64:        pncvt.wb
+int8x4_t test_pnsra_s_i8x4(int16x4_t rs1, unsigned shamt) {
+  return __riscv_pnsra_s_i8x4(rs1, shamt);
+}
+
+// CHECK-LABEL: test_pnsra_s_i16x2:
+// RV32:        pnsra.hs
+// RV64:        psra.ws
+// RV64:        pncvt.wh
+int16x2_t test_pnsra_s_i16x2(int32x2_t rs1, unsigned shamt) {
+  return __riscv_pnsra_s_i16x2(rs1, shamt);
+}
+
+// CHECK-LABEL: test_pnsrar_s_i8x4:
+// RV32:        pnsrar.bs
+// RV64:        psshar.hs
+// RV64:        pncvt.wb
+int8x4_t test_pnsrar_s_i8x4(int16x4_t rs1, unsigned shamt) {
+  return __riscv_pnsrar_s_i8x4(rs1, shamt);
+}
+
+// CHECK-LABEL: test_pnsrar_s_i16x2:
+// RV32:        pnsrar.hs
+// RV64:        psshar.ws
+// RV64:        pncvt.wh
+int16x2_t test_pnsrar_s_i16x2(int32x2_t rs1, unsigned shamt) {
+  return __riscv_pnsrar_s_i16x2(rs1, shamt);
+}
+
+// Counts that exceed the result width still use the low five bits of shamt.
+// CHECK-LABEL: test_pnsrl_s_u8x4_16:
+// RV32:        li{{[[:space:]]}}a2, 16
+// RV32-NEXT:   pnsrl.bs{{[[:space:]]}}a0, a0, a2
+// RV64:        li{{[[:space:]]}}a1, 16
+// RV64:        psrl.hs{{[[:space:]]}}a0, a0, a1
+uint8x4_t test_pnsrl_s_u8x4_16(uint16x4_t rs1) {
+  return __riscv_pnsrl_s_u8x4(rs1, 16);
+}
+
+// CHECK-LABEL: test_pnsrl_s_u16x2_31:
+// RV32:        pnsrli.h{{[[:space:]]}}a0, a0, 31
+// RV64:        psrli.w{{[[:space:]]}}a0, a0, 31
+uint16x2_t test_pnsrl_s_u16x2_31(uint32x2_t rs1) {
+  return __riscv_pnsrl_s_u16x2(rs1, 31);
+}
+
+// CHECK-LABEL: test_pnsrar_s_i8x4_16:
+// RV32:        li{{[[:space:]]}}a2, 16
+// RV32-NEXT:   pnsrar.bs{{[[:space:]]}}a0, a0, a2
+// RV64:        li{{[[:space:]]}}a1, -16
+// RV64-NEXT:   psshar.hs{{[[:space:]]}}a0, a0, a1
+int8x4_t test_pnsrar_s_i8x4_16(int16x4_t rs1) {
+  return __riscv_pnsrar_s_i8x4(rs1, 16);
+}
+
 // CHECK-LABEL: test_pwadd_i16x4:
 // RV32:        pwadd.b
 // RV64:        zip8p
