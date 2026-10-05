@@ -26,7 +26,7 @@ function(add_orc_rt_unittest test_name)
   target_link_libraries(${test_name} PRIVATE ${ARG_LINK_LIBS})
 endfunction()
 
-if (APPLE OR CMAKE_SYSTEM_NAME STREQUAL "Linux")
+if (ORC_RT_TARGET_POSIX)
   set(ORC_RT_SUPPORT_TEST_SYS_SOURCES
     support/sys/ErrnoTest.cpp
   )
@@ -97,7 +97,7 @@ set(ORC_RT_BEDROCK_TEST_POSIX_SOURCES
   bedrock/sys/posix/SocketTestUtils.cpp
   )
 
-if (APPLE OR CMAKE_SYSTEM_NAME STREQUAL "Linux")
+if (ORC_RT_TARGET_POSIX)
   set(ORC_RT_BEDROCK_TEST_SYS_SOURCES ${ORC_RT_BEDROCK_TEST_POSIX_SOURCES})
 else()
   # No socket helpers or socket transport yet, so the socket tests are not
