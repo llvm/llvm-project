@@ -30633,7 +30633,16 @@ bool SLPVectorizerPass::tryToVectorizeList(ArrayRef<Value *> VL, BoUpSLP &R,
     auto *VecTy = getWidenedType(ScalarTy, VF);
     if (R.getNumberOfParts(VecTy, ScalarTy) == VF)
       continue;
+    // The window revisiting the dependent seeds skipped by the last vectorized
+    // window, 0 if there is none.
+    unsigned RevisitI = 0;
     for (unsigned I = NextInst; I < MaxInst; ++I) {
+      // The skipped seeds are revisited, continue as if they were not skipped.
+      if (RevisitI && I > RevisitI) {
+        I = NextInst - 1;
+        RevisitI = 0;
+        continue;
+      }
       unsigned ActualVF = std::min(MaxInst - I, VF);
 
       if (!hasFullVectorsOrPowerOf2(*TTI, ScalarTy, ActualVF, SLPReVec) &&
@@ -30729,9 +30738,10 @@ bool SLPVectorizerPass::tryToVectorizeList(ArrayRef<Value *> VL, BoUpSLP &R,
 
         R.vectorizeTree();
         // Move to the next bundle. The skipped dependent seeds are fed by the
-        // vectorized lanes now, the next bundle starts from the first of them.
-        I = FirstSkipped ? *FirstSkipped - 1 : I + VF - 1;
-        NextInst = I + 1;
+        // vectorized lanes now, revisit them first.
+        NextInst = I + VF;
+        RevisitI = FirstSkipped.value_or(0);
+        I = FirstSkipped.value_or(NextInst) - 1;
         Changed = true;
       } else {
         R.analyzedBundle(Ops);

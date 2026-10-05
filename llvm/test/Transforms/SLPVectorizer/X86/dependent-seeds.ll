@@ -77,22 +77,19 @@ define void @second_level_seeds_keep_windows(ptr noalias %a, ptr noalias %b, ptr
 ; CHECK-NEXT:    [[PD1:%.*]] = getelementptr i8, ptr [[D]], i64 8
 ; CHECK-NEXT:    store double [[T1]], ptr [[PD1]], align 8
 ; CHECK-NEXT:    [[PA2:%.*]] = getelementptr i8, ptr [[A]], i64 16
-; CHECK-NEXT:    [[A2:%.*]] = load double, ptr [[PA2]], align 8
 ; CHECK-NEXT:    [[PB2:%.*]] = getelementptr i8, ptr [[B]], i64 16
-; CHECK-NEXT:    [[B2:%.*]] = load double, ptr [[PB2]], align 8
-; CHECK-NEXT:    [[TMP9:%.*]] = fadd double [[A2]], [[B2]]
 ; CHECK-NEXT:    [[PC2:%.*]] = getelementptr i8, ptr [[C]], i64 16
 ; CHECK-NEXT:    [[C2:%.*]] = load double, ptr [[PC2]], align 8
-; CHECK-NEXT:    [[T2:%.*]] = fadd double [[TMP9]], [[C2]]
 ; CHECK-NEXT:    [[PD2:%.*]] = getelementptr i8, ptr [[D]], i64 16
+; CHECK-NEXT:    [[TMP6:%.*]] = load <2 x double>, ptr [[PA2]], align 8
+; CHECK-NEXT:    [[TMP7:%.*]] = load <2 x double>, ptr [[PB2]], align 8
+; CHECK-NEXT:    [[TMP8:%.*]] = fadd <2 x double> [[TMP6]], [[TMP7]]
+; CHECK-NEXT:    [[TMP9:%.*]] = extractelement <2 x double> [[TMP8]], i64 0
+; CHECK-NEXT:    [[T2:%.*]] = fadd double [[TMP9]], [[C2]]
 ; CHECK-NEXT:    store double [[T2]], ptr [[PD2]], align 8
-; CHECK-NEXT:    [[PA3:%.*]] = getelementptr i8, ptr [[A]], i64 24
-; CHECK-NEXT:    [[A3:%.*]] = load double, ptr [[PA3]], align 8
-; CHECK-NEXT:    [[PB3:%.*]] = getelementptr i8, ptr [[B]], i64 24
-; CHECK-NEXT:    [[B3:%.*]] = load double, ptr [[PB3]], align 8
-; CHECK-NEXT:    [[TMP10:%.*]] = fadd double [[A3]], [[B3]]
 ; CHECK-NEXT:    [[PC3:%.*]] = getelementptr i8, ptr [[C]], i64 24
 ; CHECK-NEXT:    [[C3:%.*]] = load double, ptr [[PC3]], align 8
+; CHECK-NEXT:    [[TMP10:%.*]] = extractelement <2 x double> [[TMP8]], i64 1
 ; CHECK-NEXT:    [[T3:%.*]] = fadd double [[TMP10]], [[C3]]
 ; CHECK-NEXT:    [[PD3:%.*]] = getelementptr i8, ptr [[D]], i64 24
 ; CHECK-NEXT:    store double [[T3]], ptr [[PD3]], align 8
