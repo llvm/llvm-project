@@ -25,8 +25,8 @@ define tailcc void @with_fp(i64 %a, i64 %b) "frame-pointer"="all" {
 ; CHECK:         movq %rdx, 56(%rbp)
   %x = alloca [2 x i64], align 16
   %y = alloca i64, align 8
-  store volatile i64 %a, ptr %x
-  store volatile i64 %b, ptr %y
+  store volatile i64 %a, ptr %x, align 8
+  store volatile i64 %b, ptr %y, align 8
   musttail call tailcc void @g(i64 %a, i64 %b, i64 %a, i64 %b, i64 %a, i64 %b, i64 %a, i64 %b, i64 %a, i64 %b)
   ret void
 }
@@ -43,8 +43,8 @@ define tailcc void @without_fp(i64 %a, i64 %b) "frame-pointer"="none" {
 ; CHECK:         movq %rdx, 88(%rsp)
   %x = alloca [2 x i64], align 16
   %y = alloca i64, align 8
-  store volatile i64 %a, ptr %x
-  store volatile i64 %b, ptr %y
+  store volatile i64 %a, ptr %x, align 8
+  store volatile i64 %b, ptr %y, align 8
   musttail call tailcc void @g(i64 %a, i64 %b, i64 %a, i64 %b, i64 %a, i64 %b, i64 %a, i64 %b, i64 %a, i64 %b)
   ret void
 }
@@ -69,8 +69,8 @@ define tailcc void @with_fp_large_reserve(i64 %a, i64 %b) "frame-pointer"="all" 
 ; CHECK:         movq %rdx, 120(%rbp)
   %x = alloca [2 x i64], align 16
   %y = alloca i64, align 8
-  store volatile i64 %a, ptr %x
-  store volatile i64 %b, ptr %y
+  store volatile i64 %a, ptr %x, align 8
+  store volatile i64 %b, ptr %y, align 8
   musttail call tailcc void @g18(i64 %a, i64 %b, i64 %a, i64 %b, i64 %a, i64 %b, i64 %a, i64 %b, i64 %a, i64 %b, i64 %a, i64 %b, i64 %a, i64 %b, i64 %a, i64 %b, i64 %a, i64 %b)
   ret void
 }

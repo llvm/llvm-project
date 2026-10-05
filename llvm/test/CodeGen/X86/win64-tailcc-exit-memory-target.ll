@@ -13,10 +13,10 @@ define tailcc void @mem(ptr %p, i64 %a, i64 %b, i64 %c, i64 %d, i64 %e, i64 %f, 
 ; CHECK-NEXT:    addq $104, %rsp
 ; CHECK-NEXT:    .seh_endepilogue
 ; CHECK-NEXT:    rex64 jmpq *%rax # TAILCALL
-  %slot = alloca ptr
-  store ptr %p, ptr %slot
+  %slot = alloca ptr, align 8
+  store ptr %p, ptr %slot, align 8
   call void @use(ptr %slot)
-  %fp = load ptr, ptr %slot
+  %fp = load ptr, ptr %slot, align 8
   musttail call tailcc void %fp(i64 %a, i64 %b, i64 %c, i64 %d, i64 %e, i64 %f)
   ret void
 }

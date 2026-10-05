@@ -77,7 +77,7 @@ def int_target(m):
             body.append("  %%t%d = and i1 %s, %%c%d" % (i, prev, i))
             prev = "%%t%d" % i
     body += ["  %ok = zext i1 " + prev + " to i32",
-             "  store volatile i32 %ok, ptr @args_ok", "  ret void", "}"]
+             "  store volatile i32 %ok, ptr @args_ok, align 4", "  ret void", "}"]
     return "\n".join(body)
 
 
@@ -98,7 +98,7 @@ def dbl_target(ni, nd):
         body.append("  %%u%d = and i1 %s, %%e%d" % (i, prev, i))
         prev = "%%u%d" % i
     body += ["  %ok = zext i1 " + prev + " to i32",
-             "  store volatile i32 %ok, ptr @args_ok", "  ret void", "}"]
+             "  store volatile i32 %ok, ptr @args_ok, align 4", "  ret void", "}"]
     return "\n".join(body)
 
 
@@ -114,7 +114,7 @@ def async_target(m):
         body.append("  %%t%d = and i1 %s, %%c%d" % (i, prev, i))
         prev = "%%t%d" % i
     body += ["  %ok = zext i1 " + prev + " to i32",
-             "  store volatile i32 %ok, ptr @args_ok", "  ret void", "}"]
+             "  store volatile i32 %ok, ptr @args_ok, align 4", "  ret void", "}"]
     return "\n".join(body)
 
 
@@ -129,7 +129,7 @@ def huge_target():
         "  %%b = extractvalue [%d x i64] %%x, %d" % (HUGE, HUGE - 1),
         "  %c = icmp eq i64 %a, 0", "  %d = icmp eq i64 %b, 0",
         "  %t = and i1 %c, %d", "  %ok = zext i1 %t to i32",
-        "  store volatile i32 %ok, ptr @args_ok", "  ret void", "}"])
+        "  store volatile i32 %ok, ptr @args_ok, align 4", "  ret void", "}"])
 
 
 def int_args(case, m, prefix):
@@ -164,29 +164,29 @@ def test_function(case):
     out = ["define %s void @test_%s(%s)%s {" % (cc, case.name, params, attrs),
            "entry:"]
     if case.dynamic:
-        out += ["  %dyn = alloca i8, i64 %p1",
+        out += ["  %dyn = alloca i8, i64 %p1, align 1",
                 "  %al = alloca [4 x i64], align 64",
                 "  call void @use(ptr %dyn)", "  call void @use(ptr %al)"]
     if case.xmm:
-        out.append("  %d = load volatile double, ptr @dval")
+        out.append("  %d = load volatile double, ptr @dval, align 8")
     if case.async_:
         out += ["  %ca = call ptr @llvm.swift.async.context.addr()",
                 "  call void @use(ptr %ca)"]
     for i in sorted(case.hoist):
-        out.append("  %%hold%d = load volatile i64, ptr @hold%d" % (i, i))
+        out.append("  %%hold%d = load volatile i64, ptr @hold%d, align 8" % (i, i))
     if case.noop:
         out.append("  call void @noop()")
     for s_, (kind_, _m) in enumerate(case.paths):
         if kind_ == "mem":
-            out.append("  %%slot%d = alloca ptr" % s_)
-    labels = " ".join("i64 %d, label %%s%d" % (s, s)
-                      for s, _ in enumerate(case.paths)
-                      if case.paths[s][0] != "ret")
-    out.append("  switch i64 %%sel, label %%ret [ %s ]" % labels)
+            out.append("  %%slot%d = alloca ptr, align 8" % s_)
+    labels = ["    i64 %d, label %%s%d" % (s, s)
+              for s, _ in enumerate(case.paths)
+              if case.paths[s][0] != "ret"]
+    out += ["  switch i64 %sel, label %ret ["] + labels + ["  ]"]
     for s, (kind, m) in enumerate(case.paths):
         if kind == "ret":
             continue
-        out.append("s%d:" % s)
+        out += ["", "s%d:" % s]
         callee = None
         if kind == "int" or kind == "mem" or kind == "async":
             defs, args = int_args(case, m, "v%d_" % s)
@@ -212,14 +212,14 @@ def test_function(case):
             args = ["[%d x i64] zeroinitializer" % HUGE]
             callee = "@target_huge"
         if kind == "mem":
-            out += ["  store ptr %s, ptr %%slot%d" % (callee, s),
+            out += ["  store ptr %s, ptr %%slot%d, align 8" % (callee, s),
                     "  call void @use(ptr %%slot%d)" % s,
-                    "  %%fp%d = load ptr, ptr %%slot%d" % (s, s)]
+                    "  %%fp%d = load ptr, ptr %%slot%d, align 8" % (s, s)]
             callee = "%%fp%d" % s
         out.append("  musttail call %s void %s(%s)" % (cc, callee,
                                                        ", ".join(args)))
         out.append("  ret void")
-    out += ["ret:", "  ret void", "}"]
+    out += ["", "ret:", "  ret void", "}"]
     return "\n".join(out)
 
 
@@ -235,13 +235,13 @@ def runner(case):
         args = "ptr swiftasync inttoptr (i64 4660 to ptr), " + args
     return "\n".join([
         "define i32 @run_%s(i32 %%selector) {" % case.name,
-        "  store volatile i32 0, ptr @args_ok",
+        "  store volatile i32 0, ptr @args_ok, align 4",
         '  call void asm sideeffect "%s", "%s"()' % (asm, clob),
         "  call void @RtlCaptureContext(ptr @unwind_expected_context)",
         "  %sel64 = zext i32 %selector to i64",
         "  call %s void @test_%s(%s)" % (case.cc, case.name, args),
         "  call void @RtlCaptureContext(ptr @unwind_actual_context)",
-        "  %ok = load volatile i32, ptr @args_ok",
+        "  %ok = load volatile i32, ptr @args_ok, align 4",
         "  ret i32 %ok", "}"])
 
 
@@ -282,10 +282,9 @@ def emit(filename, title, cases, extra_doc=""):
         for l in extra_doc.split("\n"):
             o.append("; " + l)
     o.append("")
-    o.append("declare void @RtlCaptureContext(ptr)")
+    o += ["declare void @RtlCaptureContext(ptr)", ""]
     if uses_async:
-        o.append("declare ptr @llvm.swift.async.context.addr()")
-    o.append("")
+        o += ["declare ptr @llvm.swift.async.context.addr()", ""]
     o.append("@unwind_expected_context = global [1232 x i8] zeroinitializer, align 16")
     o.append("@unwind_actual_context = global [1232 x i8] zeroinitializer, align 16")
     o.append("@args_ok = global i32 0")
@@ -295,6 +294,7 @@ def emit(filename, title, cases, extra_doc=""):
         o.append("@dval = global double 1.001000e+03")
     o.append("")
     o.append("define void @noop() noinline {\n  ret void\n}")
+    o.append("")
     o.append("define void @use(ptr %p) noinline {\n  ret void\n}")
     o.append("")
     checked = []

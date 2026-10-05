@@ -7,7 +7,9 @@
 ; from just below the return address.
 
 declare tailcc void @g(i64, i64, i64, i64, i64, i64, i64, i64, i64, i64)
+
 declare tailcc void @g2(i64, i64, i64, i64, i64, i64, i64, i64, i64, i64, i64, i64)
+
 declare void @use(ptr)
 
 define tailcc void @gpr(i64 %a, i64 %b, i32 %c) {
@@ -32,14 +34,19 @@ define tailcc void @gpr(i64 %a, i64 %b, i32 %c) {
 ; CHECK-NEXT:    .seh_endepilogue
 ; CHECK-NEXT:    jmp g # TAILCALL
   call void @use(ptr null)
-  switch i32 %c, label %ret [ i32 0, label %big
-                              i32 1, label %mid ]
+  switch i32 %c, label %ret [
+    i32 0, label %big
+    i32 1, label %mid
+  ]
+
 big:
   musttail call tailcc void @g2(i64 %a, i64 %b, i64 %a, i64 %b, i64 %a, i64 %b, i64 %a, i64 %b, i64 %a, i64 %b, i64 %a, i64 %b)
   ret void
+
 mid:
   musttail call tailcc void @g(i64 %a, i64 %b, i64 %a, i64 %b, i64 %a, i64 %b, i64 %a, i64 %b, i64 %a, i64 %b)
   ret void
+
 ret:
   ret void
 }
@@ -59,19 +66,25 @@ define tailcc void @gpr_fp(i64 %a, i64 %b, i32 %c) "frame-pointer"="all" {
 ; CHECK-NEXT:    .seh_endepilogue
 ; CHECK-NEXT:    jmp g # TAILCALL
   call void @use(ptr null)
-  switch i32 %c, label %ret [ i32 0, label %big
-                              i32 1, label %mid ]
+  switch i32 %c, label %ret [
+    i32 0, label %big
+    i32 1, label %mid
+  ]
+
 big:
   musttail call tailcc void @g2(i64 %a, i64 %b, i64 %a, i64 %b, i64 %a, i64 %b, i64 %a, i64 %b, i64 %a, i64 %b, i64 %a, i64 %b)
   ret void
+
 mid:
   musttail call tailcc void @g(i64 %a, i64 %b, i64 %a, i64 %b, i64 %a, i64 %b, i64 %a, i64 %b, i64 %a, i64 %b)
   ret void
+
 ret:
   ret void
 }
 
 declare tailcc void @gd(i64, i64, i64, i64, i64, double, double, double, double)
+
 declare tailcc void @gd2(i64, i64, i64, i64, i64, double, double, double, double, double, double)
 
 ; A callee-saved XMM source is copied to a volatile register before its restore.
@@ -82,14 +95,19 @@ define tailcc void @xmm(i64 %a, double %d, i32 %c) {
 ; CHECK-NEXT:    movsd %xmm0, 120(%rsp)
 ; CHECK-NEXT:    .seh_startepilogue
   call void @use(ptr null)
-  switch i32 %c, label %ret [ i32 0, label %big
-                              i32 1, label %mid ]
+  switch i32 %c, label %ret [
+    i32 0, label %big
+    i32 1, label %mid
+  ]
+
 big:
   musttail call tailcc void @gd2(i64 %a, i64 %a, i64 %a, i64 %a, i64 %a, double %d, double %d, double %d, double %d, double %d, double %d)
   ret void
+
 mid:
   musttail call tailcc void @gd(i64 %a, i64 %a, i64 %a, i64 %a, i64 %a, double %d, double %d, double %d, double %d)
   ret void
+
 ret:
   ret void
 }

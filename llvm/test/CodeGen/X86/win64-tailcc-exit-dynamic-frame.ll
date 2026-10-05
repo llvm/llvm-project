@@ -5,7 +5,9 @@
 ; the exit is the same as for any other frame-pointer frame.
 
 declare tailcc void @g(i64, i64, i64, i64, i64, i64, i64, i64, i64, i64)
+
 declare tailcc void @h(i64, i64, i64, i64, i64, i64, i64)
+
 declare void @use(ptr)
 
 define tailcc void @dyn(i64 %a, i64 %b, i32 %c) {
@@ -27,14 +29,19 @@ define tailcc void @dyn(i64 %a, i64 %b, i32 %c) {
   %y = alloca [4 x i64], align 64
   call void @use(ptr %x)
   call void @use(ptr %y)
-  switch i32 %c, label %ret [ i32 0, label %big
-                              i32 1, label %small ]
+  switch i32 %c, label %ret [
+    i32 0, label %big
+    i32 1, label %small
+  ]
+
 big:
   musttail call tailcc void @g(i64 %a, i64 %b, i64 %a, i64 %b, i64 %a, i64 %b, i64 %a, i64 %b, i64 %a, i64 %b)
   ret void
+
 small:
   musttail call tailcc void @h(i64 %a, i64 %b, i64 %a, i64 %b, i64 %a, i64 %b, i64 %a)
   ret void
+
 ret:
   ret void
 }

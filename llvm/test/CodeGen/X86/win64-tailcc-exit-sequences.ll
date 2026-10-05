@@ -7,6 +7,7 @@
 ; recognised epilogue. The frame here has a 48 byte reserve for tail calls.
 
 declare tailcc void @g(i64, i64, i64, i64, i64, i64, i64, i64, i64, i64)
+
 declare tailcc void @h(i64, i64, i64, i64, i64, i64, i64)
 
 define tailcc void @exits(i64 %a, i64 %b, i32 %c) {
@@ -35,14 +36,19 @@ define tailcc void @exits(i64 %a, i64 %b, i32 %c) {
 ; CHECK-NEXT:    addq $48, %rsp
 ; CHECK-NEXT:    .seh_endepilogue
 ; CHECK-NEXT:    retq $40
-  switch i32 %c, label %ret [ i32 0, label %big
-                              i32 1, label %small ]
+  switch i32 %c, label %ret [
+    i32 0, label %big
+    i32 1, label %small
+  ]
+
 big:
   musttail call tailcc void @g(i64 %a, i64 %b, i64 %a, i64 %b, i64 %a, i64 %b, i64 %a, i64 %b, i64 %a, i64 %b)
   ret void
+
 small:
   musttail call tailcc void @h(i64 %a, i64 %b, i64 %a, i64 %b, i64 %a, i64 %a, i64 %a)
   ret void
+
 ret:
   ret void
 }

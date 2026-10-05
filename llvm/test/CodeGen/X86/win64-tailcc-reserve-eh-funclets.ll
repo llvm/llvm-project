@@ -3,7 +3,9 @@
 ; CHECK: Can't handle guaranteed tail calls that change the stack argument size in a function with EH funclets under win64 yet
 
 declare i32 @__CxxFrameHandler3(...)
+
 declare void @may_throw()
+
 declare tailcc void @g(i64, i64, i64, i64, i64, i64, i64, i64, i64, i64)
 
 define tailcc void @f(i64 %a, i64 %b, i1 %c) personality ptr @__CxxFrameHandler3 {
