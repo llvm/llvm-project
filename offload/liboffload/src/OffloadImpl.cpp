@@ -50,6 +50,12 @@ struct ol_platform_impl_t {
     return llvm::ArrayRef(Devices);
   }
 
+  /// Whether the platform has been initialized and has at least one device.
+  /// Does not trigger initialization.
+  bool isActive() const {
+    return Plugin && Plugin->is_initialized() && Plugin->getNumDevices() > 0;
+  }
+
   /// Direct access to the plugin, may be uninitialized if accessed here.
   std::unique_ptr<GenericPluginTy> Plugin;
 
@@ -461,6 +467,8 @@ Error olGetPlatformInfoImplDetail(ol_platform_handle_t Platform,
   case OL_PLATFORM_INFO_BACKEND: {
     return Info.write<ol_platform_backend_t>(Platform->BackendType);
   }
+  case OL_PLATFORM_INFO_ACTIVE:
+    return Info.write<bool>(Platform->isActive());
   default:
     return createOffloadError(ErrorCode::INVALID_ENUMERATION,
                               "getPlatformInfo enum '%i' is invalid", PropName);
