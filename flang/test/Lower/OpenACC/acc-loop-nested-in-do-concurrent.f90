@@ -27,7 +27,7 @@ end subroutine
 
 ! The outer acc.loop privatizes the DO CONCURRENT index `i`.
 ! CHECK: acc.loop private({{.*}}) control(%[[IARG:[a-z0-9_]+]] : i32)
-! CHECK: %[[IDECL:[0-9]+]]:2 = hlfir.declare %{{[a-z0-9_]+}} {uniq_name = "_QFnested_acc_loop_in_do_concurrentEi"}
+! CHECK: %[[IDECL:[0-9]+]]:2 = hlfir.declare %{{[a-z0-9_]+}} uniq_name("_QFnested_acc_loop_in_do_concurrentEi")
 ! CHECK: fir.store %[[IARG]] to %[[IDECL]]#0 : !fir.ref<i32>
 
 ! The nested acc.loop body reads the outer index from that same storage.
@@ -56,8 +56,8 @@ end subroutine
 
 ! The outer acc.loop privatizes both indices; the nested loop reads both.
 ! CHECK: acc.loop private({{.*}}) control(%{{[a-z0-9_]+}} : i32, %{{[a-z0-9_]+}} : i32)
-! CHECK: %[[MI:[0-9]+]]:2 = hlfir.declare %{{[a-z0-9_]+}} {uniq_name = "_QFmulti_indexEi"}
-! CHECK: %[[MJ:[0-9]+]]:2 = hlfir.declare %{{[a-z0-9_]+}} {uniq_name = "_QFmulti_indexEj"}
+! CHECK: %[[MI:[0-9]+]]:2 = hlfir.declare %{{[a-z0-9_]+}} uniq_name("_QFmulti_indexEi")
+! CHECK: %[[MJ:[0-9]+]]:2 = hlfir.declare %{{[a-z0-9_]+}} uniq_name("_QFmulti_indexEj")
 ! CHECK: acc.loop private({{.*}}) control(%{{[a-z0-9_]+}} : i32)
 ! CHECK: fir.load %[[MI]]#0 : !fir.ref<i32>
 ! CHECK: fir.load %[[MJ]]#0 : !fir.ref<i32>
@@ -83,7 +83,7 @@ end subroutine
 ! The nested loop's lower bound is loaded from the outer index's privatized
 ! storage (the declare inside the outer acc.loop, not the host-level one).
 ! CHECK: acc.loop private({{.*}}) control(%{{[a-z0-9_]+}} : i32)
-! CHECK: %[[BI:[0-9]+]]:2 = hlfir.declare %{{[a-z0-9_]+}} {uniq_name = "_QFouter_index_in_boundsEi"}
+! CHECK: %[[BI:[0-9]+]]:2 = hlfir.declare %{{[a-z0-9_]+}} uniq_name("_QFouter_index_in_boundsEi")
 ! CHECK: %[[LB:[0-9]+]] = fir.load %[[BI]]#0 : !fir.ref<i32>
 ! CHECK: acc.loop private({{.*}}) control(%{{[a-z0-9_]+}} : i32) = (%[[LB]] : i32)
 
@@ -106,7 +106,7 @@ subroutine nested_in_serial(a, n)
 end subroutine
 
 ! CHECK: acc.serial
-! CHECK: %[[SI:[0-9]+]]:2 = hlfir.declare %{{[a-z0-9_]+}} {uniq_name = "_QFnested_in_serialEi"}
+! CHECK: %[[SI:[0-9]+]]:2 = hlfir.declare %{{[a-z0-9_]+}} uniq_name("_QFnested_in_serialEi")
 ! CHECK: acc.loop
 ! CHECK: fir.load %[[SI]]#0 : !fir.ref<i32>
 
@@ -126,7 +126,7 @@ subroutine nested_in_kernels(a, n)
 end subroutine
 
 ! CHECK: acc.kernels
-! CHECK: %[[KI:[0-9]+]]:2 = hlfir.declare %{{[a-z0-9_]+}} {uniq_name = "_QFnested_in_kernelsEi"}
+! CHECK: %[[KI:[0-9]+]]:2 = hlfir.declare %{{[a-z0-9_]+}} uniq_name("_QFnested_in_kernelsEi")
 ! CHECK: acc.loop
 ! CHECK: fir.load %[[KI]]#0 : !fir.ref<i32>
 
@@ -144,7 +144,7 @@ subroutine nested_in_combined(a, n)
 end subroutine
 
 ! CHECK: acc.parallel combined(loop)
-! CHECK: %[[CI:[0-9]+]]:2 = hlfir.declare %{{[a-z0-9_]+}} {uniq_name = "_QFnested_in_combinedEi"}
+! CHECK: %[[CI:[0-9]+]]:2 = hlfir.declare %{{[a-z0-9_]+}} uniq_name("_QFnested_in_combinedEi")
 ! CHECK: acc.loop
 ! CHECK: fir.load %[[CI]]#0 : !fir.ref<i32>
 
@@ -176,10 +176,10 @@ end subroutine
 
 ! Outer acc.loop privatizes i; capture that (dominating) declare.
 ! CHECK: acc.loop private({{.*}}) control(%{{[a-z0-9_]+}} : i32)
-! CHECK: %[[OUTERI:[0-9]+]]:2 = hlfir.declare %{{[a-z0-9_]+}} {uniq_name = "_QFtwo_sibling_nestedEi"}
+! CHECK: %[[OUTERI:[0-9]+]]:2 = hlfir.declare %{{[a-z0-9_]+}} uniq_name("_QFtwo_sibling_nestedEi")
 ! First sibling: the shadowing DO CONCURRENT declares its own i.
 ! CHECK: acc.loop
-! CHECK: hlfir.declare %{{[a-z0-9_]+}} {uniq_name = "_QFtwo_sibling_nestedEi"}
+! CHECK: hlfir.declare %{{[a-z0-9_]+}} uniq_name("_QFtwo_sibling_nestedEi")
 ! Second sibling: b(i) reads the OUTER index storage, not the shadow.
 ! CHECK: acc.loop
 ! CHECK: fir.load %[[OUTERI]]#0 : !fir.ref<i32>

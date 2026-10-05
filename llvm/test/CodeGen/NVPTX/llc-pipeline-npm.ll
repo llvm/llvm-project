@@ -148,8 +148,6 @@
 ; O2-NEXT:     nvptx-address-folder
 ; O2-NEXT:     nvptx-proxyreg-erasure
 ; O2-NEXT:     process-imp-defs
-; O2-NEXT:     unreachable-mbb-elimination
-; O2-NEXT:     require<live-vars>
 ; O2-NEXT:     require<machine-loops>
 ; O2-NEXT:     phi-node-elimination
 ; O2-NEXT:     two-address-instruction
