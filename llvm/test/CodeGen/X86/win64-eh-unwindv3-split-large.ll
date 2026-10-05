@@ -3,6 +3,9 @@
 ; RUN: llc -mtriple=x86_64-unknown-windows-msvc \
 ; RUN:   -x86-wineh-unwindv3-instr-avg-size=100000 -filetype=obj %s -o - \
 ; RUN:   | llvm-readobj --unwind - | FileCheck %s --check-prefix=OBJ
+; RUN: llc -mtriple=x86_64-unknown-windows-msvc \
+; RUN:   -x86-wineh-unwindv3-instr-avg-size=100000 \
+; RUN:   -stop-after=x86-wineh-unwindv3 -o - %s | FileCheck %s --check-prefix=MIR
 
 ; Test V3 *size-based* sub-fragment splitting (the "Unwind v2 style" heuristic).
 ; With a very small distance threshold, every epilog is forced into its own
@@ -27,6 +30,21 @@ declare i32 @c(i32)
 ; CHECK:         .seh_startepilogue
 ; CHECK:         .seh_endepilogue
 ; CHECK:         .seh_endproc
+
+; MIR-LABEL: name:            three_epilogs
+; MIR:         frame-setup SEH_EndPrologue
+; MIR:         frame-destroy SEH_SplitChainedAtEndOfBlock
+; MIR:         frame-destroy SEH_BeginEpilogue
+; MIR-NEXT:    frame-destroy SEH_StackAlloc 40
+; MIR:         frame-destroy SEH_EndEpilogue
+; MIR:         frame-destroy SEH_SplitChainedAtEndOfBlock
+; MIR:         frame-destroy SEH_BeginEpilogue
+; MIR-NEXT:    frame-destroy SEH_StackAlloc 40
+; MIR:         frame-destroy SEH_EndEpilogue
+; MIR:         frame-destroy SEH_SplitChainedAtEndOfBlock
+; MIR:         frame-destroy SEH_BeginEpilogue
+; MIR-NEXT:    frame-destroy SEH_StackAlloc 40
+; MIR:         frame-destroy SEH_EndEpilogue
 
 ; Each epilog ends up in its own fragment with a small, in-range, tail-relative
 ; (negative) EpilogOffset. The main fragment holds the prolog; each subsequent
