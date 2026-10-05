@@ -956,7 +956,7 @@ static void createStoreIntoFrame(IRBuilder<> &Builder, Value *Def,
 
   // For byval arguments, copy the pointed-to value to the frame.
   if (ByValTy) {
-    auto &DL = Builder.GetInsertBlock()->getDataLayout();
+    auto &DL = Builder.getDataLayout();
     auto Size = DL.getTypeStoreSize(ByValTy);
     // Def is a pointer to the byval argument
     Builder.CreateMemCpy(G, SpillAlignment, Def, SpillAlignment, Size);

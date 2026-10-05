@@ -33552,7 +33552,7 @@ Value *AArch64TargetLowering::emitCanLoadSpeculatively(
 
   // Narrow only after the comparison above, so that a size exceeding the
   // address width is not truncated into the accepted range.
-  const DataLayout &DL = Builder.GetInsertBlock()->getDataLayout();
+  const DataLayout &DL = Builder.getDataLayout();
   Type *AddrTy = DL.getAddressType(Ptr->getType());
   Value *SizeAddr = Builder.CreateZExtOrTrunc(SizeInBytes, AddrTy);
 
