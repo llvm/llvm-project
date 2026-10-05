@@ -2443,11 +2443,12 @@ def : ClassPat<V_CMP_CLASS_F64_e64, f64>;
 
 class VOPInfoTable <string Format> : GenericTable {
   let FilterClass = Format # "_Real";
+  let FilterClassField = "IsSingle";
   let CppTypeName = "VOPInfo";
-  let Fields = ["Opcode", "IsSingle"];
+  let Fields = ["Opcode"];
 
   let PrimaryKey = ["Opcode"];
-  let PrimaryKeyName = "get" # Format # "OpcodeHelper";
+  let PrimaryKeyName = "is" # Format # "SingleOpcodeHelper";
 }
 
 def VOP1InfoTable : VOPInfoTable<"VOP1">;
@@ -2480,20 +2481,22 @@ def VOPCAsmOnlyInfoTable : AsmOnlyInfoTable <"VOPC", "VOPC_DPPe_Common">;
 
 def VOPTrue16Table : GenericTable {
   let FilterClass = "VOP_Pseudo";
+  let FilterClassField = "IsTrue16";
   let CppTypeName = "VOPTrue16Info";
-  let Fields = ["Opcode", "IsTrue16"];
+  let Fields = ["Opcode"];
 
   let PrimaryKey = ["Opcode"];
-  let PrimaryKeyName = "getTrue16OpcodeHelper";
+  let PrimaryKeyName = "isTrue16Opcode";
 }
 
 def DPMACCInstructionTable : GenericTable {
   let FilterClass = "VOP_Pseudo";
+  let FilterClassField = "IsDPMACCInstruction";
   let CppTypeName = "DPMACCInstructionInfo";
-  let Fields = ["Opcode", "IsDPMACCInstruction"];
+  let Fields = ["Opcode"];
 
   let PrimaryKey = ["Opcode"];
-  let PrimaryKeyName = "getDPMACCInstructionHelper";
+  let PrimaryKeyName = "isDPMACCInstructionHelper";
 }
 
 // BlockingCycles indicates how many cycles until a new instruction can acquire
