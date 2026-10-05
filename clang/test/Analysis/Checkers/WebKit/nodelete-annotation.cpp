@@ -901,4 +901,13 @@ void [[clang::annotate_type("webkit.nodelete")]] passesListOfTrackedObjects() {
   // expected-warning@-1{{A function 'passesListOfTrackedObjects' has [[clang::annotate_type("webkit.nodelete")]] but it contains code that could destruct an object}}
 }
 
+void [[clang::annotate_type("webkit.nodelete")]] nonDestructiveObjectInBraces() {
+  int x = (ObjectWithConstructor(2.3), 1);
+}
+
+void [[clang::annotate_type("webkit.nodelete")]] destructiveObjectInBraces() {
+  int x = (ObjectWithNonTrivialDestructor(), 1);
+  // expected-warning@-1{{A function 'destructiveObjectInBraces' has [[clang::annotate_type("webkit.nodelete")]] but it contains code that could destruct an object}}
+}
+
 } // namespace std_initializer_list
