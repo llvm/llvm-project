@@ -18,6 +18,7 @@
 #include "llvm/ADT/StringExtras.h"
 #include "llvm/ADT/StringTable.h"
 #include "llvm/Analysis/ValueTracking.h"
+#include "llvm/IR/DiagnosticInfo.h"
 #include "llvm/IR/IntrinsicsSPIRV.h"
 #include <regex>
 #include <string>
@@ -919,6 +920,12 @@ static bool buildAtomicFlagInst(const SPIRV::IncomingCall *Call,
   return true;
 }
 
+static void reportUnsupported(MachineIRBuilder &MIRBuilder, const Twine &Msg) {
+  const Function &F = MIRBuilder.getMF().getFunction();
+  F.getContext().diagnose(
+      DiagnosticInfoUnsupported(F, Msg, MIRBuilder.getDebugLoc()));
+}
+
 /// Helper function for building barriers, i.e., memory/control ordering
 /// operations.
 static bool buildBarrierInst(const SPIRV::IncomingCall *Call, unsigned Opcode,
@@ -945,10 +952,12 @@ static bool buildBarrierInst(const SPIRV::IncomingCall *Call, unsigned Opcode,
     // TODO: Support runtime flags and scopes for OpenCL barriers.
     for (Register Arg : Call->Arguments) {
       const MachineInstr *MI = getDefInstrMaybeConstant(Arg, MRI);
-      if (!MI || MI->getOpcode() != TargetOpcode::G_CONSTANT)
-        report_fatal_error(
-            "sub_group_barrier with non-constant arguments is not supported",
-            false);
+      if (!MI || MI->getOpcode() != TargetOpcode::G_CONSTANT) {
+        reportUnsupported(
+            MIRBuilder,
+            "sub_group_barrier with non-constant arguments is not supported");
+        return false;
+      }
     }
   }
   unsigned MemFlags = getIConstVal(Call->Arguments[0], MRI);
