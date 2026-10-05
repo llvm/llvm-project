@@ -1031,7 +1031,7 @@ InstructionCost TargetTransformInfo::getArithmeticInstrCost(
     unsigned Opcode, Type *Ty, TTI::TargetCostKind CostKind,
     OperandValueInfo Op1Info, OperandValueInfo Op2Info,
     ArrayRef<const Value *> Args, const Instruction *CtxI,
-    const TargetLibraryInfo *TLibInfo) const {
+    const TargetLibraryInfo *TLibInfo, bool LanesExtracted) const {
 
   // Use call cost for frem intructions that have platform specific vector math
   // functions, as those will be replaced with calls later by SelectionDAG or
@@ -1046,7 +1046,7 @@ InstructionCost TargetTransformInfo::getArithmeticInstrCost(
   }
 
   InstructionCost Cost = TTIImpl->getArithmeticInstrCost(
-      Opcode, Ty, CostKind, Op1Info, Op2Info, Args, CtxI);
+      Opcode, Ty, CostKind, Op1Info, Op2Info, Args, CtxI, LanesExtracted);
   assert(Cost >= 0 && "TTI should not produce negative costs!");
   return Cost;
 }

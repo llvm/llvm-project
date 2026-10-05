@@ -284,27 +284,23 @@ define float @dot_i16_window(ptr addrspace(1) %a, ptr addrspace(1) %b, float %ac
 ; GFX1250-NEXT:    global_load_b128 v[6:9], v[2:3], off
 ; GFX1250-NEXT:    s_wait_loadcnt 0x1
 ; GFX1250-NEXT:    s_wait_xcnt 0x1
-; GFX1250-NEXT:    v_ashrrev_i32_e32 v0, 16, v10
+; GFX1250-NEXT:    v_bfe_i32 v0, v10, 0, 16
 ; GFX1250-NEXT:    s_wait_xcnt 0x0
-; GFX1250-NEXT:    v_bfe_i32 v2, v10, 0, 16
-; GFX1250-NEXT:    v_bfe_i32 v5, v11, 0, 16
+; GFX1250-NEXT:    v_dual_ashrrev_i32 v1, 16, v10 :: v_dual_ashrrev_i32 v3, 16, v11
+; GFX1250-NEXT:    v_bfe_i32 v2, v11, 0, 16
 ; GFX1250-NEXT:    s_delay_alu instid0(VALU_DEP_3) | instskip(NEXT) | instid1(VALU_DEP_3)
-; GFX1250-NEXT:    v_cvt_f32_i32_e32 v1, v0
-; GFX1250-NEXT:    v_cvt_f32_i32_e32 v0, v2
-; GFX1250-NEXT:    v_ashrrev_i32_e32 v2, 16, v11
+; GFX1250-NEXT:    v_cvt_f32_i32_e32 v0, v0
+; GFX1250-NEXT:    v_cvt_f32_i32_e32 v1, v1
+; GFX1250-NEXT:    s_delay_alu instid0(VALU_DEP_3) | instskip(SKIP_1) | instid1(VALU_DEP_3)
+; GFX1250-NEXT:    v_cvt_f32_i32_e32 v2, v2
 ; GFX1250-NEXT:    s_wait_loadcnt 0x0
-; GFX1250-NEXT:    s_delay_alu instid0(VALU_DEP_2) | instskip(NEXT) | instid1(VALU_DEP_2)
-; GFX1250-NEXT:    v_pk_mul_f32 v[0:1], v[0:1], v[6:7]
-; GFX1250-NEXT:    v_cvt_f32_i32_e32 v3, v2
-; GFX1250-NEXT:    v_cvt_f32_i32_e32 v2, v5
-; GFX1250-NEXT:    s_delay_alu instid0(VALU_DEP_3) | instskip(NEXT) | instid1(VALU_DEP_2)
-; GFX1250-NEXT:    v_add_f32_e32 v0, v4, v0
-; GFX1250-NEXT:    v_pk_mul_f32 v[2:3], v[2:3], v[8:9]
-; GFX1250-NEXT:    s_delay_alu instid0(VALU_DEP_2) | instskip(NEXT) | instid1(VALU_DEP_1)
-; GFX1250-NEXT:    v_add_f32_e32 v0, v0, v1
-; GFX1250-NEXT:    v_add_f32_e32 v0, v0, v2
+; GFX1250-NEXT:    v_fma_f32 v0, v0, v6, v4
+; GFX1250-NEXT:    s_delay_alu instid0(VALU_DEP_1) | instskip(SKIP_1) | instid1(VALU_DEP_2)
+; GFX1250-NEXT:    v_fmac_f32_e32 v0, v1, v7
+; GFX1250-NEXT:    v_cvt_f32_i32_e32 v1, v3
+; GFX1250-NEXT:    v_fmac_f32_e32 v0, v2, v8
 ; GFX1250-NEXT:    s_delay_alu instid0(VALU_DEP_1)
-; GFX1250-NEXT:    v_add_f32_e32 v0, v0, v3
+; GFX1250-NEXT:    v_fmac_f32_e32 v0, v1, v9
 ; GFX1250-NEXT:    s_set_pc_i64 s[30:31]
 entry:
   %a1 = getelementptr inbounds nuw i8, ptr addrspace(1) %a, i64 2

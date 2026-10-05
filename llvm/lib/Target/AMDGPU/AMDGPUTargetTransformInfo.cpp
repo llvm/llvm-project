@@ -577,7 +577,8 @@ static bool isFusedFMul(const SITargetLowering &TLI, Type *Ty,
 InstructionCost GCNTTIImpl::getArithmeticInstrCost(
     unsigned Opcode, Type *Ty, TTI::TargetCostKind CostKind,
     TTI::OperandValueInfo Op1Info, TTI::OperandValueInfo Op2Info,
-    ArrayRef<const Value *> Args, const Instruction *CtxI) const {
+    ArrayRef<const Value *> Args, const Instruction *CtxI,
+    bool LanesExtracted) const {
 
   // Legalize the type.
   std::pair<InstructionCost, MVT> LT = getTypeLegalizationCost(Ty);
@@ -635,8 +636,11 @@ InstructionCost GCNTTIImpl::getArithmeticInstrCost(
   case ISD::FMUL:
     // Check possible fuse {fadd|fsub}(a,fmul(b,c)) and return zero cost for
     // fmul(b,c) supposing the fadd|fsub will get estimated cost for the whole
-    // fused operation.
-    if (CtxI && CtxI->hasOneUse()) {
+    // fused operation. A vector fmul whose lanes are extracted before the
+    // fadd|fsub fuses only when it is emitted lane by lane.
+    if (CtxI && CtxI->hasOneUse() &&
+        (!LanesExtracted ||
+         getMaximumVF(Ty->getScalarSizeInBits(), Opcode) == 1)) {
       const auto *FAddSub = dyn_cast<BinaryOperator>(*CtxI->user_begin());
       if (FAddSub &&
           (FAddSub->getOpcode() == Instruction::FAdd ||
@@ -726,7 +730,7 @@ InstructionCost GCNTTIImpl::getArithmeticInstrCost(
   }
 
   return BaseT::getArithmeticInstrCost(Opcode, Ty, CostKind, Op1Info, Op2Info,
-                                       Args, CtxI);
+                                       Args, CtxI, LanesExtracted);
 }
 
 // Return true if there's a potential benefit from using v2f16/v2i16

@@ -269,11 +269,12 @@ InstructionCost HexagonTTIImpl::getCmpSelInstrCost(
 InstructionCost HexagonTTIImpl::getArithmeticInstrCost(
     unsigned Opcode, Type *Ty, TTI::TargetCostKind CostKind,
     TTI::OperandValueInfo Op1Info, TTI::OperandValueInfo Op2Info,
-    ArrayRef<const Value *> Args, const Instruction *CtxI) const {
+    ArrayRef<const Value *> Args, const Instruction *CtxI,
+    bool LanesExtracted) const {
   // TODO: Handle more cost kinds.
   if (CostKind != TTI::TCK_RecipThroughput)
-    return BaseT::getArithmeticInstrCost(Opcode, Ty, CostKind, Op1Info,
-                                         Op2Info, Args, CtxI);
+    return BaseT::getArithmeticInstrCost(Opcode, Ty, CostKind, Op1Info, Op2Info,
+                                         Args, CtxI, LanesExtracted);
 
   if (Ty->isVectorTy()) {
     if (!isHVXVectorType(Ty) && Ty->isFPOrFPVectorTy())
@@ -283,7 +284,7 @@ InstructionCost HexagonTTIImpl::getArithmeticInstrCost(
       return LT.first + FloatFactor * getTypeNumElements(Ty);
   }
   return BaseT::getArithmeticInstrCost(Opcode, Ty, CostKind, Op1Info, Op2Info,
-                                       Args, CtxI);
+                                       Args, CtxI, LanesExtracted);
 }
 
 InstructionCost HexagonTTIImpl::getCastInstrCost(unsigned Opcode, Type *DstTy,
