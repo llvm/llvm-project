@@ -73,6 +73,7 @@ body: |
 
 # GCN-LABEL: name: cse_getreg_const_locally
 # GCN-COUNT-1: S_GETREG_B32_const
+# GCN-NOT: S_GETREG_B32_const
 ---
 name: cse_getreg_const_locally
 body: |
@@ -86,6 +87,7 @@ body: |
 
 # GCN-LABEL: name: cse_mbcnt_lo_locally
 # GCN-COUNT-1: V_MBCNT_LO_U32_B32_e32
+# GCN-NOT: V_MBCNT_LO_U32_B32_e32
 ---
 name: cse_mbcnt_lo_locally
 body: |
