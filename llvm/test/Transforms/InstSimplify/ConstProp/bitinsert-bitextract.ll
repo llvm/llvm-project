@@ -115,7 +115,7 @@ define ptr @bitextract_poison_src_ptr() {
   ret ptr %r
 }
 
-; The width of a pointer depends on the data layout.
+; An integer can't be bitcast to a pointer.
 define ptr @neg_bitextract_ptr() {
 ; CHECK-LABEL: define ptr @neg_bitextract_ptr() {
 ; CHECK-NEXT:    [[R:%.*]] = bitextract ptr, b64 1234605616436508552, i32 0
@@ -225,6 +225,14 @@ define b64 @bitinsert_full_width_i64() {
   ret b64 %r
 }
 
+define b64 @bitinsert_full_width_ptr() {
+; CHECK-LABEL: define b64 @bitinsert_full_width_ptr() {
+; CHECK-NEXT:    ret b64 bitcast (ptr @g to b64)
+;
+  %r = bitinsert b64 0, ptr @g, i32 0
+  ret b64 %r
+}
+
 define b32 @bitinsert_full_width_float() {
 ; CHECK-LABEL: define b32 @bitinsert_full_width_float() {
 ; CHECK-NEXT:    ret b32 1065353216
@@ -321,7 +329,7 @@ define b32 @neg_bitinsert_undef_base_poison_val() {
   ret b32 %r
 }
 
-; The width of a pointer depends on the data layout.
+; The value bits are unknown.
 define b128 @neg_bitinsert_ptr() {
 ; CHECK-LABEL: define b128 @neg_bitinsert_ptr() {
 ; CHECK-NEXT:    [[R:%.*]] = bitinsert b128 0, ptr null, i32 0

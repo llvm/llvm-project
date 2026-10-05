@@ -193,7 +193,7 @@ public:
     auto *CVal = dyn_cast<Constant>(Val);
     auto *COffset = dyn_cast<Constant>(Offset);
     if (CBase && CVal && COffset)
-      return ConstantFoldBitInsertInstruction(CBase, CVal, COffset);
+      return ConstantFoldBitInsertOperands(CBase, CVal, COffset, DL);
     return nullptr;
   }
 
@@ -201,7 +201,7 @@ public:
     auto *CSrc = dyn_cast<Constant>(Src);
     auto *COffset = dyn_cast<Constant>(Offset);
     if (CSrc && COffset)
-      return ConstantFoldBitExtractInstruction(Ty, CSrc, COffset);
+      return ConstantFoldBitExtractOperands(Ty, CSrc, COffset, DL);
     return nullptr;
   }
 

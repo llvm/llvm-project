@@ -77,20 +77,6 @@ LLVM_ABI Constant *ConstantFoldExtractValueInstruction(Constant *Agg,
 LLVM_ABI Constant *ConstantFoldInsertValueInstruction(Constant *Agg,
                                                       Constant *Val,
                                                       ArrayRef<unsigned> Idxs);
-
-/// Attempt to constant fold a bitinsert instruction with the specified
-/// operands. The constant result is returned if successful. Otherwise, null is
-/// returned.
-LLVM_ABI Constant *ConstantFoldBitInsertInstruction(Constant *Base,
-                                                    Constant *Val,
-                                                    Constant *Offset);
-
-/// Attempt to constant fold a bitextract instruction with the specified result
-/// type and operands. The constant result is returned if successful.
-/// Otherwise, null is returned.
-LLVM_ABI Constant *ConstantFoldBitExtractInstruction(Type *Ty, Constant *Src,
-                                                     Constant *Offset);
-
 LLVM_ABI Constant *ConstantFoldUnaryInstruction(unsigned Opcode, Constant *V);
 LLVM_ABI Constant *ConstantFoldBinaryInstruction(unsigned Opcode, Constant *V1,
                                                  Constant *V2);
