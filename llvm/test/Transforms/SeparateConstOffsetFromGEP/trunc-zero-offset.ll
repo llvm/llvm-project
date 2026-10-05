@@ -46,3 +46,26 @@ define ptr @sub_trunc_add_zero_offset(ptr %base, i64 %x, i32 %y) {
   %p = getelementptr i8, ptr %base, i32 %index
   ret ptr %p
 }
+
+; Zero offset extraction also works for an inbounds GEP.
+define ptr @sub_trunc_add_zero_offset_inbounds(ptr %base, i64 %x, i32 %y) {
+; SPLIT-LABEL: define ptr @sub_trunc_add_zero_offset_inbounds(
+; SPLIT-SAME: ptr [[BASE:%.*]], i64 [[X:%.*]], i32 [[Y:%.*]]) {
+; SPLIT-NEXT:    [[TMP1:%.*]] = trunc i64 [[X]] to i32
+; SPLIT-NEXT:    [[INDEX2:%.*]] = sub i32 [[Y]], [[TMP1]]
+; SPLIT-NEXT:    [[P:%.*]] = getelementptr i8, ptr [[BASE]], i32 [[INDEX2]]
+; SPLIT-NEXT:    ret ptr [[P]]
+;
+; LOWER-LABEL: define ptr @sub_trunc_add_zero_offset_inbounds(
+; LOWER-SAME: ptr [[BASE:%.*]], i64 [[X:%.*]], i32 [[Y:%.*]]) {
+; LOWER-NEXT:    [[TMP1:%.*]] = trunc i64 [[X]] to i32
+; LOWER-NEXT:    [[INDEX2:%.*]] = sub i32 [[Y]], [[TMP1]]
+; LOWER-NEXT:    [[UGLYGEP:%.*]] = getelementptr i8, ptr [[BASE]], i32 [[INDEX2]]
+; LOWER-NEXT:    ret ptr [[UGLYGEP]]
+;
+  %add = add i64 %x, 4294967296
+  %trunc = trunc i64 %add to i32
+  %index = sub i32 %y, %trunc
+  %p = getelementptr inbounds i8, ptr %base, i32 %index
+  ret ptr %p
+}
