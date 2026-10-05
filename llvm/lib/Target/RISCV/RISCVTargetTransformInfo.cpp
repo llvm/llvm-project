@@ -2524,7 +2524,7 @@ RISCVTTIImpl::getStoreImmCost(Type *Ty, TTI::OperandValueInfo OpInfo,
     // with how we treat scalar constants themselves just above.
     return 1;
 
-  if (OpInfo.isIdentityConstant())
+  if (OpInfo.isIndexVecConstant())
     return getRISCVInstructionCost(RISCV::VID_V, Ty, CostKind);
 
   return getConstantPoolLoadCost(Ty, CostKind);
@@ -2601,7 +2601,7 @@ InstructionCost RISCVTTIImpl::getCmpSelInstrCost(
       // constants in GPRs.
       return 0;
 
-    if (OpInfo.isIdentityConstant())
+    if (OpInfo.isIndexVecConstant())
       return getRISCVInstructionCost(RISCV::VID_V, ValTy, CostKind);
 
     return getConstantPoolLoadCost(ValTy, CostKind);
@@ -3045,7 +3045,7 @@ InstructionCost RISCVTTIImpl::getArithmeticInstrCost(
       // scalar constants in GPRs.
       return 0;
 
-    if (OpInfo.isIdentityConstant())
+    if (OpInfo.isIndexVecConstant())
       return getRISCVInstructionCost(RISCV::VID_V, Ty, CostKind);
 
     return getConstantPoolLoadCost(Ty, CostKind);

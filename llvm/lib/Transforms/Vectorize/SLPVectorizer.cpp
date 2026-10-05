@@ -13705,7 +13705,7 @@ TTI::OperandValueInfo BoUpSLP::getOperandInfo(ArrayRef<Value *> Ops) const {
   if (IsConstant && IsUniform)
     VK = TTI::OK_UniformConstantValue;
   else if (IsIdentity)
-    VK = TTI::OK_IdentityConstantValue;
+    VK = TTI::OK_IndexVecConstantValue;
   else if (IsConstant)
     VK = TTI::OK_NonUniformConstantValue;
   else if (IsUniform)
