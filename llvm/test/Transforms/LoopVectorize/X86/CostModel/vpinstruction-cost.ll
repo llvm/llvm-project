@@ -429,10 +429,10 @@ define void @test_vpinstruction_switch_cost_minsize(ptr noalias %dst) minsize {
 ; CHECK:  Cost of 0 for VF 1: EMIT-SCALAR ir<%iv> = phi [ ir<0>, vector.ph ], [ ir<%iv.next>, loop.latch ]
 ; CHECK:  Cost of 0 for VF 1: EMIT ir<%g.dst> = getelementptr inbounds ir<%dst>, ir<%iv>
 ; CHECK:  Cost of 1 for VF 1: EMIT-SCALAR ir<%l> = load ir<%g.dst>
-; CHECK:  Cost of 1 for VF 1: EMIT switch ir<%l>, ir<-12>, ir<13> (!vplan.prof.estimated estimated {715827883, 715827883, 715827883})
-; CHECK:  Cost of 2 for VF 1: EMIT store ir<0>, ir<%g.dst> (!vplan.execution.frequency 3074457347049914368 (33.33%, estimated))
-; CHECK:  Cost of 2 for VF 1: EMIT store ir<42>, ir<%g.dst> (!vplan.execution.frequency 3074457344902430720 (33.33%, estimated))
-; CHECK:  Cost of 2 for VF 1: EMIT store ir<2>, ir<%g.dst> (!vplan.execution.frequency 3074457344902430720 (33.33%, estimated))
+; CHECK:  Cost of 1 for VF 1: EMIT switch ir<%l>, ir<-12>, ir<13>
+; CHECK:  Cost of 2 for VF 1: EMIT store ir<0>, ir<%g.dst>
+; CHECK:  Cost of 2 for VF 1: EMIT store ir<42>, ir<%g.dst>
+; CHECK:  Cost of 2 for VF 1: EMIT store ir<2>, ir<%g.dst>
 ; CHECK:  Cost of 1 for VF 1: EMIT ir<%iv.next> = add nuw nsw ir<%iv>, ir<1>
 ; CHECK:  Cost of 1 for VF 1: EMIT ir<%ec> = icmp eq ir<%iv.next>, ir<32>
 ; CHECK:  Cost of 1 for VF 1: EMIT branch-on-cond ir<%ec>
@@ -445,11 +445,11 @@ define void @test_vpinstruction_switch_cost_minsize(ptr noalias %dst) minsize {
 ; CHECK:  Cost of 0 for VF 2: EMIT vp<[[VP8:%[0-9]+]]> = or vp<[[VP6]]>, vp<[[VP7]]>
 ; CHECK:  Cost of 1 for VF 2: EMIT vp<[[VP9:%[0-9]+]]> = not vp<[[VP8]]>
 ; CHECK:  Cost of 0 for VF 2: vp<[[VP10:%[0-9]+]]> = vector-pointer i64, ir<%g.dst>, ir<1>
-; CHECK:  Cost of 1 for VF 2: WIDEN store vp<[[VP10]]>, ir<0>, vp<[[VP7]]> (!vplan.execution.frequency 3074457347049914368 (33.33%, estimated))
+; CHECK:  Cost of 1 for VF 2: WIDEN store vp<[[VP10]]>, ir<0>, vp<[[VP7]]>
 ; CHECK:  Cost of 0 for VF 2: vp<[[VP11:%[0-9]+]]> = vector-pointer i64, ir<%g.dst>, ir<1>
-; CHECK:  Cost of 1 for VF 2: WIDEN store vp<[[VP11]]>, ir<42>, vp<[[VP6]]> (!vplan.execution.frequency 3074457344902430720 (33.33%, estimated))
+; CHECK:  Cost of 1 for VF 2: WIDEN store vp<[[VP11]]>, ir<42>, vp<[[VP6]]>
 ; CHECK:  Cost of 0 for VF 2: vp<[[VP12:%[0-9]+]]> = vector-pointer i64, ir<%g.dst>, ir<1>
-; CHECK:  Cost of 1 for VF 2: WIDEN store vp<[[VP12]]>, ir<2>, vp<[[VP9]]> (!vplan.execution.frequency 3074457344902430720 (33.33%, estimated))
+; CHECK:  Cost of 1 for VF 2: WIDEN store vp<[[VP12]]>, ir<2>, vp<[[VP9]]>
 ; CHECK:  Cost of 0 for VF 2: EMIT vp<%index.next> = add nuw vp<[[VP3]]>, vp<[[VP1:%[0-9]+]]>
 ; CHECK:  Cost of 1 for VF 2: EMIT branch-on-count vp<%index.next>, vp<[[VP2:%[0-9]+]]>
 ; CHECK:  Cost of 1 for VF 2: vector loop backedge
@@ -469,11 +469,11 @@ define void @test_vpinstruction_switch_cost_minsize(ptr noalias %dst) minsize {
 ; CHECK:  Cost of 0 for VF 4: EMIT vp<[[VP8]]> = or vp<[[VP6]]>, vp<[[VP7]]>
 ; CHECK:  Cost of 1 for VF 4: EMIT vp<[[VP9]]> = not vp<[[VP8]]>
 ; CHECK:  Cost of 0 for VF 4: vp<[[VP10]]> = vector-pointer i64, ir<%g.dst>, ir<1>
-; CHECK:  Cost of 1 for VF 4: WIDEN store vp<[[VP10]]>, ir<0>, vp<[[VP7]]> (!vplan.execution.frequency 3074457347049914368 (33.33%, estimated))
+; CHECK:  Cost of 1 for VF 4: WIDEN store vp<[[VP10]]>, ir<0>, vp<[[VP7]]>
 ; CHECK:  Cost of 0 for VF 4: vp<[[VP11]]> = vector-pointer i64, ir<%g.dst>, ir<1>
-; CHECK:  Cost of 1 for VF 4: WIDEN store vp<[[VP11]]>, ir<42>, vp<[[VP6]]> (!vplan.execution.frequency 3074457344902430720 (33.33%, estimated))
+; CHECK:  Cost of 1 for VF 4: WIDEN store vp<[[VP11]]>, ir<42>, vp<[[VP6]]>
 ; CHECK:  Cost of 0 for VF 4: vp<[[VP12]]> = vector-pointer i64, ir<%g.dst>, ir<1>
-; CHECK:  Cost of 1 for VF 4: WIDEN store vp<[[VP12]]>, ir<2>, vp<[[VP9]]> (!vplan.execution.frequency 3074457344902430720 (33.33%, estimated))
+; CHECK:  Cost of 1 for VF 4: WIDEN store vp<[[VP12]]>, ir<2>, vp<[[VP9]]>
 ; CHECK:  Cost of 0 for VF 4: EMIT vp<%index.next> = add nuw vp<[[VP3]]>, vp<[[VP1]]>
 ; CHECK:  Cost of 1 for VF 4: EMIT branch-on-count vp<%index.next>, vp<[[VP2]]>
 ; CHECK:  Cost of 1 for VF 4: vector loop backedge

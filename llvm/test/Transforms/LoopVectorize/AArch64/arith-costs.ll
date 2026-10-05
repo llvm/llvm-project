@@ -13,6 +13,7 @@ define void @udiv_rhs_opt_cost(ptr %dst) #0 {
 ; CHECK:  Cost of 5 for VF 4: CLONE ir<%div> = udiv ir<%iv.trunc>, ir<3>
 ; CHECK:  Cost of 0 for VF 4: IR %div = udiv i8 %iv.trunc, 3
 ; CHECK:  Cost of 5 for VF vscale x 1: CLONE ir<%div> = udiv ir<%iv.trunc>, ir<3>
+; CHECK:  Cost of 0 for VF vscale x 1: IR %div = udiv i8 %iv.trunc, 3
 ; CHECK:  Cost of 5 for VF vscale x 2: CLONE ir<%div> = udiv ir<%iv.trunc>, ir<3>
 ; CHECK:  Cost of 0 for VF vscale x 2: IR %div = udiv i8 %iv.trunc, 3
 ; CHECK:  Cost of 5 for VF vscale x 4: CLONE ir<%div> = udiv ir<%iv.trunc>, ir<3>
