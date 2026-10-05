@@ -772,3 +772,81 @@ func.func @shape_cast_split_fills_strided_inner_dim(%arg0: memref<16x1024xbf16>)
   return
 }
 }
+
+// -----
+// %e has two consumers that disagree. The dpas operand layout is mandated by
+// the instruction (inst_data = [8, 16], lane_layout = [1, 16]). The reduction's
+// source layout is derived from its own result: inst_data = [8, 2] is only the
+// smallest legal tile, any multiple is just as legal. A derived demand must lose
+// to a mandated one, whatever the program order. Here the reduction is the
+// nearer consumer and would win on program order alone.
+gpu.module @test {
+// CHECK-LABEL: func.func @reduction_above_dpas(
+// CHECK: %[[EXP:.*]] = math.exp %{{.*}} {layout_result_0 = #xegpu.layout<inst_data = [8, 16], lane_layout = [1, 16], lane_data = [1, 1]>} : vector<8x16xf32>
+// CHECK: vector.multi_reduction <add>, %[[EXP]], %{{.*}} {layout_result_0 = #xegpu.slice<#xegpu.layout<inst_data = [8, 2], lane_layout = [8, 2], lane_data = [1, 1]>, dims = [1]>} [1] : vector<8x16xf32> to vector<8xf32>
+// CHECK: arith.truncf %[[EXP]] {layout_result_0 = #xegpu.layout<inst_data = [8, 16], lane_layout = [1, 16], lane_data = [1, 1]>} : vector<8x16xf32> to vector<8x16xf16>
+func.func @reduction_above_dpas(%src: memref<8x16xf32>, %b: memref<16x16xf16>, %c: memref<8x16xf32>, %red: memref<128xf32>) {
+  %cst = arith.constant dense<0.0> : vector<8xf32>
+  %mask = arith.constant dense<true> : vector<8xi1>
+  %offset = vector.step : vector<8xindex>
+  %ts = xegpu.create_nd_tdesc %src : memref<8x16xf32> -> !xegpu.tensor_desc<8x16xf32>
+  %x = xegpu.load_nd %ts[0, 0] : !xegpu.tensor_desc<8x16xf32> -> vector<8x16xf32>
+  %e = math.exp %x : vector<8x16xf32>
+  %sum = vector.multi_reduction <add>, %e, %cst [1] : vector<8x16xf32> to vector<8xf32>
+  xegpu.store %sum, %red[%offset], %mask : vector<8xf32>, memref<128xf32>, vector<8xindex>, vector<8xi1>
+  %p = arith.truncf %e : vector<8x16xf32> to vector<8x16xf16>
+  %tb = xegpu.create_nd_tdesc %b : memref<16x16xf16> -> !xegpu.tensor_desc<16x16xf16>
+  %vb = xegpu.load_nd %tb[0, 0] : !xegpu.tensor_desc<16x16xf16> -> vector<16x16xf16>
+  %d = xegpu.dpas %p, %vb : vector<8x16xf16>, vector<16x16xf16> -> vector<8x16xf32>
+  %tc = xegpu.create_nd_tdesc %c : memref<8x16xf32> -> !xegpu.tensor_desc<8x16xf32>
+  xegpu.store_nd %d, %tc[0, 0] : vector<8x16xf32>, !xegpu.tensor_desc<8x16xf32>
+  return
+}
+}
+
+// -----
+// Same dataflow as @reduction_above_dpas with the reduction moved below the
+// dpas. The result must be identical: statement order does not pick the layout.
+gpu.module @test {
+// CHECK-LABEL: func.func @reduction_below_dpas(
+// CHECK: %[[EXP:.*]] = math.exp %{{.*}} {layout_result_0 = #xegpu.layout<inst_data = [8, 16], lane_layout = [1, 16], lane_data = [1, 1]>} : vector<8x16xf32>
+// CHECK: arith.truncf %[[EXP]] {layout_result_0 = #xegpu.layout<inst_data = [8, 16], lane_layout = [1, 16], lane_data = [1, 1]>} : vector<8x16xf32> to vector<8x16xf16>
+// CHECK: vector.multi_reduction <add>, %[[EXP]], %{{.*}} {layout_result_0 = #xegpu.slice<#xegpu.layout<inst_data = [8, 2], lane_layout = [8, 2], lane_data = [1, 1]>, dims = [1]>} [1] : vector<8x16xf32> to vector<8xf32>
+func.func @reduction_below_dpas(%src: memref<8x16xf32>, %b: memref<16x16xf16>, %c: memref<8x16xf32>, %red: memref<128xf32>) {
+  %cst = arith.constant dense<0.0> : vector<8xf32>
+  %mask = arith.constant dense<true> : vector<8xi1>
+  %offset = vector.step : vector<8xindex>
+  %ts = xegpu.create_nd_tdesc %src : memref<8x16xf32> -> !xegpu.tensor_desc<8x16xf32>
+  %x = xegpu.load_nd %ts[0, 0] : !xegpu.tensor_desc<8x16xf32> -> vector<8x16xf32>
+  %e = math.exp %x : vector<8x16xf32>
+  %p = arith.truncf %e : vector<8x16xf32> to vector<8x16xf16>
+  %tb = xegpu.create_nd_tdesc %b : memref<16x16xf16> -> !xegpu.tensor_desc<16x16xf16>
+  %vb = xegpu.load_nd %tb[0, 0] : !xegpu.tensor_desc<16x16xf16> -> vector<16x16xf16>
+  %d = xegpu.dpas %p, %vb : vector<8x16xf16>, vector<16x16xf16> -> vector<8x16xf32>
+  %tc = xegpu.create_nd_tdesc %c : memref<8x16xf32> -> !xegpu.tensor_desc<8x16xf32>
+  xegpu.store_nd %d, %tc[0, 0] : vector<8x16xf32>, !xegpu.tensor_desc<8x16xf32>
+  %sum = vector.multi_reduction <add>, %e, %cst [1] : vector<8x16xf32> to vector<8xf32>
+  xegpu.store %sum, %red[%offset], %mask : vector<8xf32>, memref<128xf32>, vector<8xindex>, vector<8xi1>
+  return
+}
+}
+
+// -----
+// A derived demand still applies when nothing mandated opposes it: with the
+// reduction as the only consumer, %e takes the reduction's source layout.
+gpu.module @test {
+// CHECK-LABEL: func.func @reduction_sole_consumer(
+// CHECK: %[[EXP:.*]] = math.exp %{{.*}} {layout_result_0 = #xegpu.layout<inst_data = [8, 2], lane_layout = [8, 2], lane_data = [1, 1]>} : vector<8x16xf32>
+// CHECK: vector.multi_reduction <add>, %[[EXP]], %{{.*}} {layout_result_0 = #xegpu.slice<#xegpu.layout<inst_data = [8, 2], lane_layout = [8, 2], lane_data = [1, 1]>, dims = [1]>} [1] : vector<8x16xf32> to vector<8xf32>
+func.func @reduction_sole_consumer(%src: memref<8x16xf32>, %red: memref<128xf32>) {
+  %cst = arith.constant dense<0.0> : vector<8xf32>
+  %mask = arith.constant dense<true> : vector<8xi1>
+  %offset = vector.step : vector<8xindex>
+  %ts = xegpu.create_nd_tdesc %src : memref<8x16xf32> -> !xegpu.tensor_desc<8x16xf32>
+  %x = xegpu.load_nd %ts[0, 0] : !xegpu.tensor_desc<8x16xf32> -> vector<8x16xf32>
+  %e = math.exp %x : vector<8x16xf32>
+  %sum = vector.multi_reduction <add>, %e, %cst [1] : vector<8x16xf32> to vector<8xf32>
+  xegpu.store %sum, %red[%offset], %mask : vector<8xf32>, memref<128xf32>, vector<8xindex>, vector<8xi1>
+  return
+}
+}
