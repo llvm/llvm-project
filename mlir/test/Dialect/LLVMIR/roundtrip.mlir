@@ -600,10 +600,10 @@ func.func @invariant_load(%ptr : !llvm.ptr) -> i32 {
 
 // CHECK-LABEL: @range_load
 func.func @range_load(%ptr : !llvm.ptr) {
-  // CHECK: llvm.load %{{.+}} range <i32, 0, 10> <alignment = 4> : !llvm.ptr -> i32
-  %0 = llvm.load %ptr range <i32, 0, 10> <alignment = 4> : !llvm.ptr -> i32
-  // CHECK: llvm.load %{{.+}} range <i8, 0, 2> : !llvm.ptr -> vector<2xi8>
-  %1 = llvm.load %ptr range <i8, 0, 2> : !llvm.ptr -> vector<2xi8>
+  // CHECK: llvm.load %{{.+}} range<i32, 0, 10> <alignment = 4> : !llvm.ptr -> i32
+  %0 = llvm.load %ptr range<i32, 0, 10> <alignment = 4> : !llvm.ptr -> i32
+  // CHECK: llvm.load %{{.+}} range<i8, 0, 2> : !llvm.ptr -> vector<2xi8>
+  %1 = llvm.load %ptr range<i8, 0, 2> : !llvm.ptr -> vector<2xi8>
   func.return
 }
 

@@ -185,21 +185,21 @@ func.func @load_unaligned_atomic(%ptr : !llvm.ptr) {
 
 func.func @load_range_non_integer(%ptr : !llvm.ptr) {
   // expected-error@below {{expected range bitwidth to match the integer (element) result type}}
-  %1 = llvm.load %ptr range <i32, 0, 10> : !llvm.ptr -> f32
+  %1 = llvm.load %ptr range<i32, 0, 10> : !llvm.ptr -> f32
 }
 
 // -----
 
 func.func @load_range_bitwidth_mismatch(%ptr : !llvm.ptr) {
   // expected-error@below {{expected range bitwidth to match the integer (element) result type}}
-  %1 = llvm.load %ptr range <i64, 0, 10> : !llvm.ptr -> i32
+  %1 = llvm.load %ptr range<i64, 0, 10> : !llvm.ptr -> i32
 }
 
 // -----
 
 func.func @load_range_empty_or_full(%ptr : !llvm.ptr) {
   // expected-error@below {{expected range to be neither empty nor full}}
-  %1 = llvm.load %ptr range <i32, 5, 5> : !llvm.ptr -> i32
+  %1 = llvm.load %ptr range<i32, 5, 5> : !llvm.ptr -> i32
 }
 
 // -----

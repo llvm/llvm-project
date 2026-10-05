@@ -18,6 +18,7 @@
 #include "mlir/Target/LLVMIR/ModuleImport.h"
 
 #include "llvm/ADT/TypeSwitch.h"
+#include "llvm/IR/ConstantRange.h"
 #include "llvm/IR/Constants.h"
 #include "llvm/IR/InlineAsm.h"
 #include "llvm/IR/Instructions.h"
@@ -257,21 +258,15 @@ static LogicalResult setDereferenceableAttr(const llvm::MDNode *node,
   return success();
 }
 
-/// Fails on multi-range metadata since ConstantRangeAttr holds one range.
+/// Multi-range metadata is imported as the union of its ranges.
 static LogicalResult setRangeAttr(const llvm::MDNode *node, Operation *op) {
-  auto loadOp = dyn_cast<LoadOp>(op);
-  if (!loadOp || node->getNumOperands() != 2)
+  auto iface = dyn_cast<RangeOpInterface>(op);
+  if (!iface)
     return failure();
 
-  auto *lower =
-      llvm::mdconst::dyn_extract<llvm::ConstantInt>(node->getOperand(0));
-  auto *upper =
-      llvm::mdconst::dyn_extract<llvm::ConstantInt>(node->getOperand(1));
-  if (!lower || !upper)
-    return failure();
-
-  loadOp.setRangeAttr(ConstantRangeAttr::get(
-      op->getContext(), lower->getValue(), upper->getValue()));
+  llvm::ConstantRange range = llvm::getConstantRangeFromMetadata(*node);
+  iface.setRange(ConstantRangeAttr::get(op->getContext(), range.getLower(),
+                                        range.getUpper()));
   return success();
 }
 

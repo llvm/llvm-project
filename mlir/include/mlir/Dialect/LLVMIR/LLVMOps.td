@@ -383,7 +383,8 @@ def LLVM_LoadOp : LLVM_MemAccessOpBase<"load",
      DeclareOpInterfaceMethods<MemoryEffectsOpInterface>,
      DeclareOpInterfaceMethods<PromotableMemOpInterface>,
      DeclareOpInterfaceMethods<SafeMemorySlotAccessOpInterface>,
-     DeclareOpInterfaceMethods<DereferenceableOpInterface>]> {
+     DeclareOpInterfaceMethods<DereferenceableOpInterface>,
+     DeclareOpInterfaceMethods<RangeOpInterface>]> {
   dag args = (ins LLVM_AnyPointer:$addr,
               OptionalAttr<I64Attr>:$alignment,
               UnitAttr:$volatile_,
@@ -416,7 +417,7 @@ def LLVM_LoadOp : LLVM_MemAccessOpBase<"load",
     %0 = llvm.load %ptr <nontemporal> : !llvm.ptr -> f32
 
     // A load of an integer known to lie in [0, 10).
-    %0 = llvm.load %ptr range <i32, 0, 10> : !llvm.ptr -> i32
+    %0 = llvm.load %ptr range<i32, 0, 10> : !llvm.ptr -> i32
 
     // An atomic load of an integer variable.
     %0 = llvm.load %ptr atomic monotonic <alignment = 8>
@@ -432,7 +433,7 @@ def LLVM_LoadOp : LLVM_MemAccessOpBase<"load",
     (`invariant` $invariant^)?
     (`invariant_group` $invariantGroup^)?
     (`dereferenceable` `` $dereferenceable^)?
-    (`range` $range^)?
+    (`range` `` $range^)?
     prop-dict
     attr-dict `:` qualified(type($addr)) `->` type($res)
   }];
