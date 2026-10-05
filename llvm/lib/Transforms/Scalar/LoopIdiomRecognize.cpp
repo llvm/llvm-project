@@ -2093,11 +2093,11 @@ public:
       if (OpWidth != WcharSize * 8)
         return false;
 
-      // Don't call `wcslen` if the pointer isn't aligned.
+      // Don't call `wcslen` if the base pointer isn't known to be aligned.
       const DataLayout &DL = LoopLoad->getDataLayout();
       Align WcharAlign = DL.getABITypeAlign(OperandType);
       if (LoopLoad->getAlign() < WcharAlign &&
-          getKnownAlignment(IncPtr, DL, LoopLoad) < WcharAlign)
+          SE->getMinTrailingZeros(LoadBaseEv) < Log2(WcharAlign))
         return false;
     }
 

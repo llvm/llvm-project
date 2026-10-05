@@ -68,6 +68,41 @@ exit:
   ret i64 %i
 }
 
+; Same as `aligned_base`, but the pointer is a phi instead of a GEP on the
+; induction variable. Generate `wcslen`.
+define i64 @aligned_base_ptr_phi(ptr align 4 %p) {
+; CHECK-LABEL: define i64 @aligned_base_ptr_phi(
+; CHECK-SAME: ptr align 4 [[P:%.*]]) {
+; CHECK-NEXT:  [[ENTRY:.*]]:
+; CHECK-NEXT:    [[I_LCSSA:%.*]] = call i64 @wcslen(ptr [[P]])
+; CHECK-NEXT:    br label %[[LOOP:.*]]
+; CHECK:       [[LOOP]]:
+; CHECK-NEXT:    [[I:%.*]] = phi i64 [ 0, %[[ENTRY]] ], [ [[INC:%.*]], %[[LOOP]] ]
+; CHECK-NEXT:    [[P_I:%.*]] = phi ptr [ [[P]], %[[ENTRY]] ], [ [[P_NEXT:%.*]], %[[LOOP]] ]
+; CHECK-NEXT:    [[INC]] = add i64 [[I]], 1
+; CHECK-NEXT:    [[P_NEXT]] = getelementptr i32, ptr [[P_I]], i64 1
+; CHECK-NEXT:    [[CH:%.*]] = load i32, ptr [[P_I]], align 1
+; CHECK-NEXT:    [[CMP:%.*]] = icmp eq i32 [[CH]], 0
+; CHECK-NEXT:    br i1 true, label %[[EXIT:.*]], label %[[LOOP]]
+; CHECK:       [[EXIT]]:
+; CHECK-NEXT:    ret i64 [[I_LCSSA]]
+;
+entry:
+  br label %loop
+
+loop:
+  %i = phi i64 [ 0, %entry ], [ %inc, %loop ]
+  %p_i = phi ptr [ %p, %entry ], [ %p_next, %loop ]
+  %inc = add i64 %i, 1
+  %p_next = getelementptr i32, ptr %p_i, i64 1
+  %ch = load i32, ptr %p_i, align 1
+  %cmp = icmp eq i32 %ch, 0
+  br i1 %cmp, label %exit, label %loop
+
+exit:
+  ret i64 %i
+}
+
 ; The base pointer is not aligned, but the load from it has `align`.
 ; It's UB in the original code and with `wcslen` the same way, so generate a
 ; `wcslen`.
