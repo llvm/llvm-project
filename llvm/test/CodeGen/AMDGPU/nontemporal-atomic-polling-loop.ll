@@ -515,6 +515,128 @@ exit:
   ret i64 %v
 }
 
+; 16 bytes per lane of a 64-byte line, with the flag in the high word of the
+; last lane: the loop polls only the flag word, and the line is reloaded once
+; every flag lane has seen the flag. The reload is not folded into the last
+; poll and its two words become one load.
+define <2 x i64> @poll_ll128_flag_then_line(ptr addrspace(1) %line, i64 %flag) {
+; GFX90A-LABEL: poll_ll128_flag_then_line:
+; GFX90A:       ; %bb.0: ; %entry
+; GFX90A-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+; GFX90A-NEXT:    v_and_b32_e32 v4, 3, v31
+; GFX90A-NEXT:    v_lshlrev_b32_e32 v5, 4, v4
+; GFX90A-NEXT:    v_add_co_u32_e32 v0, vcc, v0, v5
+; GFX90A-NEXT:    v_addc_co_u32_e32 v1, vcc, 0, v1, vcc
+; GFX90A-NEXT:    v_cmp_eq_u32_e64 s[4:5], 3, v4
+; GFX90A-NEXT:  .LBB5_1: ; %loop
+; GFX90A-NEXT:    ; =>This Inner Loop Header: Depth=1
+; GFX90A-NEXT:    global_load_dwordx2 v[4:5], v[0:1], off offset:8 glc slc
+; GFX90A-NEXT:    s_waitcnt vmcnt(0)
+; GFX90A-NEXT:    v_cmp_ne_u64_e32 vcc, v[4:5], v[2:3]
+; GFX90A-NEXT:    s_and_b64 s[6:7], s[4:5], vcc
+; GFX90A-NEXT:    v_cndmask_b32_e64 v4, 0, 1, s[6:7]
+; GFX90A-NEXT:    v_cmp_ne_u32_e32 vcc, 0, v4
+; GFX90A-NEXT:    s_cbranch_vccnz .LBB5_1
+; GFX90A-NEXT:  ; %bb.2: ; %exit
+; GFX90A-NEXT:    global_load_dwordx4 v[0:3], v[0:1], off glc slc
+; GFX90A-NEXT:    s_waitcnt vmcnt(0)
+; GFX90A-NEXT:    s_setpc_b64 s[30:31]
+;
+; GFX942-LABEL: poll_ll128_flag_then_line:
+; GFX942:       ; %bb.0: ; %entry
+; GFX942-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+; GFX942-NEXT:    v_and_b32_e32 v6, 3, v31
+; GFX942-NEXT:    v_lshlrev_b32_e32 v4, 4, v6
+; GFX942-NEXT:    v_mov_b32_e32 v5, 0
+; GFX942-NEXT:    v_lshl_add_u64 v[0:1], v[0:1], 0, v[4:5]
+; GFX942-NEXT:    v_cmp_eq_u32_e64 s[0:1], 3, v6
+; GFX942-NEXT:  .LBB5_1: ; %loop
+; GFX942-NEXT:    ; =>This Inner Loop Header: Depth=1
+; GFX942-NEXT:    global_load_dwordx2 v[4:5], v[0:1], off offset:8 nt
+; GFX942-NEXT:    s_waitcnt vmcnt(0)
+; GFX942-NEXT:    v_cmp_ne_u64_e32 vcc, v[4:5], v[2:3]
+; GFX942-NEXT:    s_and_b64 s[2:3], s[0:1], vcc
+; GFX942-NEXT:    v_cndmask_b32_e64 v4, 0, 1, s[2:3]
+; GFX942-NEXT:    v_cmp_ne_u32_e32 vcc, 0, v4
+; GFX942-NEXT:    s_cbranch_vccnz .LBB5_1
+; GFX942-NEXT:  ; %bb.2: ; %exit
+; GFX942-NEXT:    global_load_dwordx4 v[0:3], v[0:1], off nt
+; GFX942-NEXT:    s_waitcnt vmcnt(0)
+; GFX942-NEXT:    s_setpc_b64 s[30:31]
+;
+; GFX950-LABEL: poll_ll128_flag_then_line:
+; GFX950:       ; %bb.0: ; %entry
+; GFX950-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+; GFX950-NEXT:    v_and_b32_e32 v6, 3, v31
+; GFX950-NEXT:    v_lshlrev_b32_e32 v4, 4, v6
+; GFX950-NEXT:    v_mov_b32_e32 v5, 0
+; GFX950-NEXT:    v_lshl_add_u64 v[0:1], v[0:1], 0, v[4:5]
+; GFX950-NEXT:    v_cmp_eq_u32_e64 s[0:1], 3, v6
+; GFX950-NEXT:    .p2align 5, , 4
+; GFX950-NEXT:  .LBB5_1: ; %loop
+; GFX950-NEXT:    ; =>This Inner Loop Header: Depth=1
+; GFX950-NEXT:    global_load_dwordx2 v[4:5], v[0:1], off offset:8 nt
+; GFX950-NEXT:    s_waitcnt vmcnt(0)
+; GFX950-NEXT:    v_cmp_ne_u64_e32 vcc, v[4:5], v[2:3]
+; GFX950-NEXT:    s_and_b64 s[2:3], s[0:1], vcc
+; GFX950-NEXT:    v_cndmask_b32_e64 v4, 0, 1, s[2:3]
+; GFX950-NEXT:    v_cmp_ne_u32_e32 vcc, 0, v4
+; GFX950-NEXT:    s_cbranch_vccnz .LBB5_1
+; GFX950-NEXT:  ; %bb.2: ; %exit
+; GFX950-NEXT:    global_load_dwordx4 v[0:3], v[0:1], off nt
+; GFX950-NEXT:    s_waitcnt vmcnt(0)
+; GFX950-NEXT:    s_setpc_b64 s[30:31]
+;
+; GFX1250-LABEL: poll_ll128_flag_then_line:
+; GFX1250:       ; %bb.0: ; %entry
+; GFX1250-NEXT:    s_wait_loadcnt_dscnt 0x0
+; GFX1250-NEXT:    s_wait_kmcnt 0x0
+; GFX1250-NEXT:    v_dual_mov_b32 v5, 0 :: v_dual_bitop2_b32 v6, 3, v31 bitop3:0x40
+; GFX1250-NEXT:    s_mov_b32 s1, 0
+; GFX1250-NEXT:    s_delay_alu instid0(VALU_DEP_1) | instskip(SKIP_1) | instid1(VALU_DEP_2)
+; GFX1250-NEXT:    v_lshlrev_b32_e32 v4, 4, v6
+; GFX1250-NEXT:    v_cmp_eq_u32_e32 vcc_lo, 3, v6
+; GFX1250-NEXT:    v_add_nc_u64_e32 v[0:1], v[0:1], v[4:5]
+; GFX1250-NEXT:  .LBB5_1: ; %loop
+; GFX1250-NEXT:    ; =>This Inner Loop Header: Depth=1
+; GFX1250-NEXT:    global_load_b64 v[4:5], v[0:1], off offset:8 th:TH_LOAD_NT
+; GFX1250-NEXT:    s_wait_loadcnt 0x0
+; GFX1250-NEXT:    v_cmp_ne_u64_e64 s0, v[4:5], v[2:3]
+; GFX1250-NEXT:    s_and_b32 s0, vcc_lo, s0
+; GFX1250-NEXT:    s_delay_alu instid0(SALU_CYCLE_1) | instskip(NEXT) | instid1(VALU_DEP_1)
+; GFX1250-NEXT:    v_cndmask_b32_e64 v4, 0, 1, s0
+; GFX1250-NEXT:    v_cmp_ne_u32_e64 s0, 0, v4
+; GFX1250-NEXT:    s_cmp_lg_u64 s[0:1], 0
+; GFX1250-NEXT:    s_cbranch_scc1 .LBB5_1
+; GFX1250-NEXT:  ; %bb.2: ; %exit
+; GFX1250-NEXT:    global_load_b128 v[0:3], v[0:1], off th:TH_LOAD_NT
+; GFX1250-NEXT:    s_wait_loadcnt 0x0
+; GFX1250-NEXT:    s_set_pc_i64 s[30:31]
+entry:
+  %tid = call i32 @llvm.amdgcn.workitem.id.x()
+  %lane = and i32 %tid, 3
+  %idx = zext i32 %lane to i64
+  %p = getelementptr inbounds <2 x i64>, ptr addrspace(1) %line, i64 %idx
+  %pflag = getelementptr inbounds i8, ptr addrspace(1) %p, i64 8
+  %flaglane = icmp eq i32 %lane, 3
+  br label %loop
+
+loop:
+  %f = load atomic i64, ptr addrspace(1) %pflag syncscope("wavefront") monotonic, align 8, !nontemporal !0
+  %stale = icmp ne i64 %f, %flag
+  %need = and i1 %flaglane, %stale
+  %ballot = call i64 @llvm.amdgcn.ballot.i64(i1 %need)
+  %again = icmp ne i64 %ballot, 0
+  br i1 %again, label %loop, label %exit
+
+exit:
+  %v0 = load atomic i64, ptr addrspace(1) %p syncscope("wavefront") monotonic, align 16, !nontemporal !0
+  %v1 = load atomic i64, ptr addrspace(1) %pflag syncscope("wavefront") monotonic, align 8, !nontemporal !0
+  %r0 = insertelement <2 x i64> poison, i64 %v0, i32 0
+  %r1 = insertelement <2 x i64> %r0, i64 %v1, i32 1
+  ret <2 x i64> %r1
+}
+
 ; The writer of an 8-byte-per-lane line: one store per lane.
 define void @store_ll128_lane(ptr addrspace(1) %line, i64 %v) {
 ; GFX90A-LABEL: store_ll128_lane:
