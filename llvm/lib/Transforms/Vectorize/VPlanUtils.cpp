@@ -1102,9 +1102,22 @@ VPValue *VPSCEVExpander::expand(const SCEV *S) {
       Ops.push_back(OpV);
     }
     VPValue *Result = Ops.front();
-    for (VPValue *Op : drop_begin(Ops))
-      Result = Builder.createScalarIntrinsic(IntrinsicID, {Result, Op},
-                                             ResultTy, DL);
+    for (VPValue *Op : drop_begin(Ops)) {
+      if (!ResultTy->isPointerTy()) {
+        Result = Builder.createScalarIntrinsic(IntrinsicID, {Result, Op},
+                                               ResultTy, DL);
+        continue;
+      }
+      // The min/max intrinsics don't support pointer operands, so expand
+      // pointer-typed min/max as cmp + select, matching SCEVExpander.
+      VPValue *Cmp = Builder.createICmp(
+          MinMaxIntrinsic::getPredicate(IntrinsicID), Result, Op, DL);
+      Result = Builder.createSelect(Cmp, Result, Op, DL);
+      Function &F = *Builder.getPlan().getIRFunction();
+      if (MDNode *MD =
+              getExplicitlyUnknownBranchWeightsIfProfiled(F, "scev-expander"))
+        cast<VPInstruction>(Result)->setMetadata(LLVMContext::MD_prof, MD);
+    }
     return Result;
   }
   case scAddRecExpr: {
@@ -1421,8 +1434,7 @@ void vputils::detail::pullOutPermutationsImpl(
 
       VPSingleDefRecipe *Res = BuildPerm(&Def);
       Res->insertAfter(&Def);
-      Def.replaceUsesWithIf(
-          Res, [&Res](VPUser &U, unsigned _) { return &U != Res; });
+      Def.replaceUsesWithIf(Res, [&Res](VPUser &U) { return &U != Res; });
     }
   }
 }
