@@ -1634,6 +1634,8 @@ static bool invalidateRegisterPairing(bool SpillExtendedVolatile,
   return false;
 }
 
+// Returns true if Offset (in bytes) is aligned to the instruction's scale and
+// the scaled immediate is within the instruction's valid range.
 static bool isValidMemOpOffset(const AArch64InstrInfo *TII, unsigned Opcode,
                                int Offset) {
   int64_t MinOff, MaxOff;
@@ -1843,14 +1845,19 @@ void computeCalleeSaveRegisterPairs(const AArch64FrameLowering &AFL,
       case RegPairInfo::PPR:
         break;
       case RegPairInfo::ZPR:
+        // Windows support is possible but the order requirement is reversed.
+        // Also, WinCFI has no support for group ZPR loads/stores yet.
         if (isTargetWindows(MF) || AFI->getPredicateRegForFillSpill() == 0)
           break;
-
+        // We expect to see pairs in decending order (e.g. [z9, z8]).
+        // We ensure this in `orderZPRCalleeSavesForPairs()`. This is required
+        // as (for Linux) StackFillDir is negative (so we start at higher
+        // addresses) and we need to ensure the lower register in the pair has
+        // the lower address to store the registers in the correct order.
         if (((NextReg - AArch64::Z0) % 2 == 0) && (NextReg + 1 == RPI.Reg1)) {
-          // Calculate offset of register pair to see if pair instruction can
-          // be used.
           const int NumRegs = 2;
           int Offset = (ScalableByteOffset + StackFillDir * NumRegs * Scale);
+
           // Note: ST1B has the same offset constraints.
           if (isValidMemOpOffset(TII, AArch64::LD1B_2Z_IMM, Offset))
             RPI.Reg2 = NextReg;
@@ -2153,6 +2160,7 @@ bool AArch64FrameLowering::spillCalleeSavedRegisters(
         MBB.addLiveIn(Reg1);
       if (!MRI.isReserved(Reg2))
         MBB.addLiveIn(Reg2);
+      assert(RPI.Reg2 + 1 == RPI.Reg1 && "Expected reversed ZPR pair");
       MIB.addReg(/*PairRegs*/ AArch64::Z0_Z1 + (RPI.Reg2 - AArch64::Z0));
       MIB.addMemOperand(MF.getMachineMemOperand(
           MachinePointerInfo::getFixedStack(MF, FrameIdxReg2),
@@ -2311,6 +2319,7 @@ bool AArch64FrameLowering::restoreCalleeSavedRegisters(
             .setMIFlags(MachineInstr::FrameDestroy);
       }
       MachineInstrBuilder MIB = BuildMI(MBB, MBBI, DL, TII.get(LdrOpc));
+      assert(RPI.Reg2 + 1 == RPI.Reg1 && "Expected reversed ZPR pair");
       MIB.addReg(/*PairRegs*/ AArch64::Z0_Z1 + (RPI.Reg2 - AArch64::Z0),
                  getDefRegState(true));
       MIB.addMemOperand(MF.getMachineMemOperand(
