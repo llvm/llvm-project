@@ -10,8 +10,9 @@ define i32 @test_call_before_capture(ptr %p) {
 ; CHECK-NEXT:    [[A:%.*]] = alloca i32, align 4
 ; CHECK-NEXT:    store i32 123, ptr [[A]], align 4
 ; CHECK-NEXT:    call void @some_call()
+; CHECK-NEXT:    [[V:%.*]] = load i32, ptr [[A]], align 4
 ; CHECK-NEXT:    call void @capture(ptr [[A]])
-; CHECK-NEXT:    ret i32 123
+; CHECK-NEXT:    ret i32 [[V]]
 ;
   %a = alloca i32
   store i32 123, ptr %a
@@ -83,7 +84,8 @@ define i32 @test_capture_readonly() {
 ; CHECK-NEXT:    [[A:%.*]] = alloca i32, align 4
 ; CHECK-NEXT:    store i32 123, ptr [[A]], align 4
 ; CHECK-NEXT:    call void @capture(ptr readonly [[A]])
-; CHECK-NEXT:    ret i32 123
+; CHECK-NEXT:    [[V:%.*]] = load i32, ptr [[A]], align 4
+; CHECK-NEXT:    ret i32 [[V]]
 ;
   %a = alloca i32
   store i32 123, ptr %a
