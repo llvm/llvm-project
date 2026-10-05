@@ -421,3 +421,53 @@ define i32 @sub_ugt(i32 %a, ptr %p) {
   %r = sub i32 %a, %z
   ret i32 %r
 }
+
+define i32 @add_ugt_other(i32 %a, i32 %x, ptr %p) {
+; X64-LABEL: add_ugt_other:
+; X64:       # %bb.0:
+; X64-NEXT:    xorl %eax, %eax
+; X64-NEXT:    cmpl (%rdx), %edi
+; X64-NEXT:    seta %al
+; X64-NEXT:    addl %esi, %eax
+; X64-NEXT:    retq
+;
+; X86-LABEL: add_ugt_other:
+; X86:       # %bb.0:
+; X86-NEXT:    movl {{[0-9]+}}(%esp), %eax
+; X86-NEXT:    movl (%eax), %ecx
+; X86-NEXT:    xorl %eax, %eax
+; X86-NEXT:    cmpl %ecx, {{[0-9]+}}(%esp)
+; X86-NEXT:    seta %al
+; X86-NEXT:    addl {{[0-9]+}}(%esp), %eax
+; X86-NEXT:    retl
+  %v = load atomic i32, ptr %p seq_cst, align 4
+  %c = icmp ugt i32 %a, %v
+  %z = zext i1 %c to i32
+  %r = add i32 %x, %z
+  ret i32 %r
+}
+
+define i32 @add_ugt_lhs(i32 %a, ptr %p) {
+; X64-LABEL: add_ugt_lhs:
+; X64:       # %bb.0:
+; X64-NEXT:    xorl %eax, %eax
+; X64-NEXT:    cmpl %edi, (%rsi)
+; X64-NEXT:    seta %al
+; X64-NEXT:    addl %edi, %eax
+; X64-NEXT:    retq
+;
+; X86-LABEL: add_ugt_lhs:
+; X86:       # %bb.0:
+; X86-NEXT:    movl {{[0-9]+}}(%esp), %ecx
+; X86-NEXT:    movl {{[0-9]+}}(%esp), %edx
+; X86-NEXT:    xorl %eax, %eax
+; X86-NEXT:    cmpl %ecx, (%edx)
+; X86-NEXT:    seta %al
+; X86-NEXT:    addl %ecx, %eax
+; X86-NEXT:    retl
+  %v = load atomic i32, ptr %p seq_cst, align 4
+  %c = icmp ugt i32 %v, %a
+  %z = zext i1 %c to i32
+  %r = add i32 %a, %z
+  ret i32 %r
+}
