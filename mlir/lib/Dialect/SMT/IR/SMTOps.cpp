@@ -117,7 +117,8 @@ ParseResult EqOp::parse(OpAsmParser &parser, OperationState &result) {
 
 void EqOp::print(OpAsmPrinter &printer) {
   printer << ' ' << getInputs();
-  printer.printOptionalAttrDict(getOperation()->getAttrs());
+  printer.printOptionalAttrDict(
+      getOperation()->getDiscardableAttrDictionary().getValue());
   printer << " : " << getInputs().front().getType();
 }
 
@@ -139,7 +140,8 @@ ParseResult DistinctOp::parse(OpAsmParser &parser, OperationState &result) {
 
 void DistinctOp::print(OpAsmPrinter &printer) {
   printer << ' ' << getInputs();
-  printer.printOptionalAttrDict(getOperation()->getAttrs());
+  printer.printOptionalAttrDict(
+      getOperation()->getDiscardableAttrDictionary().getValue());
   printer << " : " << getInputs().front().getType();
 }
 
@@ -258,7 +260,8 @@ ParseResult RepeatOp::parse(OpAsmParser &parser, OperationState &result) {
 
 void RepeatOp::print(OpAsmPrinter &printer) {
   printer << " " << getCount() << " times " << getInput();
-  printer.printOptionalAttrDict((*this)->getAttrs());
+  printer.printOptionalAttrDict(
+      (*this)->getDiscardableAttrDictionary().getValue());
   printer << " : " << getInput().getType();
 }
 
@@ -295,7 +298,7 @@ OpFoldResult IntConstantOp::fold(FoldAdaptor adaptor) {
 
 void IntConstantOp::print(OpAsmPrinter &p) {
   p << " " << getValue();
-  p.printOptionalAttrDict((*this)->getAttrs(), /*elidedAttrs=*/{"value"});
+  p.printOptionalAttrDict((*this)->getDiscardableAttrDictionary().getValue());
 }
 
 ParseResult IntConstantOp::parse(OpAsmParser &parser, OperationState &result) {

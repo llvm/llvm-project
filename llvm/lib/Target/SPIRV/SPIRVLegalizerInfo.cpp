@@ -226,6 +226,7 @@ SPIRVLegalizerInfo::SPIRVLegalizerInfo(const SPIRVSubtarget &ST) {
     case G_UDIV:
     case G_SDIV:
     case G_FREM:
+    case G_SELECT:
       break;
     default:
       getActionDefinitionsBuilder(Opc)
@@ -246,6 +247,15 @@ SPIRVLegalizerInfo::SPIRVLegalizerInfo(const SPIRVSubtarget &ST) {
       .customFor(allowedVectorTypes)
       .customIf(typeOfLongVectors(0, IsLongVecs))
       .scalarizeIf(numElementsNotPow2(0), 0)
+      .fewerElementsIf(vectorElementCountIsGreaterThan(0, MaxVectorSize),
+                       LegalizeMutations::changeElementCountTo(
+                           0, ElementCount::getFixed(MaxVectorSize)))
+      .custom();
+
+  getActionDefinitionsBuilder(G_SELECT)
+      .customFor(allScalars)
+      .customFor(allowedVectorTypes)
+      .customIf(typeOfLongVectors(0, IsLongVecs))
       .fewerElementsIf(vectorElementCountIsGreaterThan(0, MaxVectorSize),
                        LegalizeMutations::changeElementCountTo(
                            0, ElementCount::getFixed(MaxVectorSize)))
@@ -545,8 +555,8 @@ SPIRVLegalizerInfo::SPIRVLegalizerInfo(const SPIRVSubtarget &ST) {
   MulFix.lower();
 
   getActionDefinitionsBuilder({G_LROUND, G_LLROUND})
-      .legalForCartesianProduct(allFloatScalarsAndVectors,
-                                allIntScalarsAndVectors);
+      .legalForCartesianProduct(allIntScalarsAndVectors,
+                                allFloatScalarsAndVectors);
 
   // FP conversions.
   getActionDefinitionsBuilder({G_FPTRUNC, G_FPEXT})

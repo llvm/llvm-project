@@ -462,7 +462,12 @@ StmtResult Sema::ActOnCompoundStmt(SourceLocation L, SourceLocation R,
   }
 
   // Check for suspicious empty body (null statement) in `for' and `while'
-  // statements.  Don't do anything for template instantiations, this just adds
+  // statements, for example:
+  //
+  //   for (;;); <- warning: for loop has empty body
+  //     foo();
+  //
+  // Don't do anything for template instantiations, this just adds
   // noise.
   if (NumElts != 0 && !CurrentInstantiationScope &&
       getCurCompoundScope().HasEmptyLoopBodies) {
@@ -1814,17 +1819,35 @@ Sema::DiagnoseAssignmentEnum(QualType DstType, QualType SrcType,
       << DstType.getUnqualifiedType();
 }
 
+// Checks for issues that are common to `for`/`while` statements.
+static void CheckLoopBody(Sema &S, Expr *CondExpr, Stmt *Body) {
+  // Check for comma operator misuse.
+  if (CondExpr &&
+      !S.Diags.isIgnored(diag::warn_comma_operator, CondExpr->getExprLoc()))
+    CommaVisitor(S).Visit(CondExpr);
+
+  if (isa<NullStmt>(Body)) {
+    // Tell Sema::ActOnCompoundStmt to perform a check on
+    // this suspicious empty `for`/`while` loop when
+    // processing the compound statement that contains this loop.
+    //
+    // The actual check cannot be done here directly as it may
+    // depend on other statements following the `for`/`while`
+    // loop, in the outer enclosing CompoundStmt; see the
+    // comment in Sema::ActOnCompoundStmt for an example
+    // of when this happens.
+    //
+    // This does not apply for `if` statements and range-`for`
+    // loops which call DiagnoseEmptyStmtBody() directly.
+    S.getCurCompoundScope().setHasEmptyLoopBodies();
+  }
+}
+
 StmtResult Sema::ActOnWhileStmt(SourceLocation WhileLoc,
                                 SourceLocation LParenLoc, ConditionResult Cond,
                                 SourceLocation RParenLoc, Stmt *Body) {
   if (Cond.isInvalid())
     return StmtError();
-
-  auto CondVal = Cond.get();
-
-  if (CondVal.second &&
-      !Diags.isIgnored(diag::warn_comma_operator, CondVal.second->getExprLoc()))
-    CommaVisitor(*this).Visit(CondVal.second);
 
   // OpenACC3.3 2.14.4:
   // The update directive is executable.  It must not appear in place of the
@@ -1835,8 +1858,9 @@ StmtResult Sema::ActOnWhileStmt(SourceLocation WhileLoc,
     Body = new (Context) NullStmt(Body->getBeginLoc());
   }
 
-  if (isa<NullStmt>(Body))
-    getCurCompoundScope().setHasEmptyLoopBodies();
+  auto CondVal = Cond.get();
+
+  CheckLoopBody(*this, CondVal.second, Body);
 
   return WhileStmt::Create(Context, CondVal.first, CondVal.second, Body,
                            WhileLoc, LParenLoc, RParenLoc);
@@ -2320,14 +2344,9 @@ StmtResult Sema::ActOnForStmt(SourceLocation ForLoc, SourceLocation LParenLoc,
                                      Body);
   CheckForRedundantIteration(*this, third.get(), Body);
 
-  if (Second.get().second &&
-      !Diags.isIgnored(diag::warn_comma_operator,
-                       Second.get().second->getExprLoc()))
-    CommaVisitor(*this).Visit(Second.get().second);
+  CheckLoopBody(*this, Second.get().second, Body);
 
-  Expr *Third  = third.release().getAs<Expr>();
-  if (isa<NullStmt>(Body))
-    getCurCompoundScope().setHasEmptyLoopBodies();
+  Expr *Third = third.release().getAs<Expr>();
 
   return new (Context)
       ForStmt(Context, First, Second.get().second, Second.get().first, Third,
@@ -4313,11 +4332,6 @@ StmtResult Sema::BuildReturnStmt(SourceLocation ReturnLoc, Expr *RetValExp,
       }
       RetValExp = Res.getAs<Expr>();
 
-      // A returned HLSL matrix may need its layout reconciled with the
-      // function's row_major/column_major return type.
-      if (getLangOpts().HLSL && RetValExp && RetType->isMatrixType())
-        HLSL().propagateContextualMatrixLayout(RetValExp, RetType);
-
       // If we have a related result type, we need to implicitly
       // convert back to the formal result type.  We can't pretend to
       // initialize the result again --- we might end double-retaining
@@ -4720,9 +4734,42 @@ static bool
 buildCapturedStmtCaptureList(Sema &S, CapturedRegionScopeInfo *RSI,
                              SmallVectorImpl<CapturedStmt::Capture> &Captures,
                              SmallVectorImpl<Expr *> &CaptureInits) {
+  bool HasError = false; // Track if any errors occurred.
+  llvm::SmallPtrSet<VarDecl *, 4> CapturedDecomposed;
   for (const sema::Capture &Cap : RSI->Captures) {
     if (Cap.isInvalid())
       continue;
+
+    ValueDecl *CapVar = nullptr;
+    if (Cap.isVariableCapture()) {
+      CapVar = Cap.getVariable();
+      if (auto *BD = dyn_cast<BindingDecl>(CapVar)) {
+        // Detect structured bindings in OpenMP captured regions.
+        // When a BindingDecl (e.g., 'a' from 'auto [a, b] = p')
+        // is referenced inside an OpenMP region.
+        // isVariableCapturable() in SemaExpr.cpp already resets this to the
+        // DecompositionDecl during per-use expression checking. This runs
+        // later, at region-end (ActOnCapturedRegionEnd), over the
+        // already-built capture list, catching captures added without going
+        // through that per-use path (e.g. via explicit map clauses).
+        if (RSI->CapRegionKind == CR_OpenMP && BD->getHoldingVar()) {
+          S.Diag(Cap.getLocation(), diag::err_capture_tuple_binding_openmp)
+              << CapVar;
+          S.Diag(CapVar->getLocation(), diag::note_entity_declared_at)
+              << CapVar;
+          HasError = true; // Mark error but continue.
+          continue;        // Skip this capture, move to next.
+        }
+        CapVar = cast<VarDecl>(BD->getDecomposedDecl());
+      }
+      if (RSI->CapRegionKind == CR_OpenMP) {
+        if (auto *DD = dyn_cast<DecompositionDecl>(CapVar)) {
+          if (!CapturedDecomposed.insert(DD).second) {
+            continue; // Skip duplicate
+          }
+        }
+      }
+    }
 
     // Form the initializer for the capture.
     ExprResult Init = S.BuildCaptureInit(Cap, Cap.getLocation(),
@@ -4731,32 +4778,38 @@ buildCapturedStmtCaptureList(Sema &S, CapturedRegionScopeInfo *RSI,
     // FIXME: Bail out now if the capture is not used and the initializer has
     // no side-effects.
 
-    // Create a field for this capture.
-    FieldDecl *Field = S.BuildCaptureField(RSI->TheRecordDecl, Cap);
+    // Build the capture field. For OpenMP, pass IsOpenMP=true to handle
+    // DecompositionDecl captures correctly.
+    FieldDecl *Field = S.BuildCaptureField(RSI->TheRecordDecl, Cap,
+                                           RSI->CapRegionKind == CR_OpenMP);
 
     // Add the capture to our list of captures.
     if (Cap.isThisCapture()) {
-      Captures.push_back(CapturedStmt::Capture(Cap.getLocation(),
-                                               CapturedStmt::VCK_This));
+      Captures.push_back(
+          CapturedStmt::Capture(Cap.getLocation(), CapturedStmt::VCK_This));
     } else if (Cap.isVLATypeCapture()) {
       Captures.push_back(
           CapturedStmt::Capture(Cap.getLocation(), CapturedStmt::VCK_VLAType));
     } else {
       assert(Cap.isVariableCapture() && "unknown kind of capture");
 
-      if (S.getLangOpts().OpenMP && RSI->CapRegionKind == CR_OpenMP)
-        S.OpenMP().setOpenMPCaptureKind(Field, Cap.getVariable(),
-                                        RSI->OpenMPLevel);
-
-      Captures.push_back(CapturedStmt::Capture(
-          Cap.getLocation(),
-          Cap.isReferenceCapture() ? CapturedStmt::VCK_ByRef
-                                   : CapturedStmt::VCK_ByCopy,
-          cast<VarDecl>(Cap.getVariable())));
+      if (S.getLangOpts().OpenMP && RSI->CapRegionKind == CR_OpenMP) {
+        const ValueDecl *DSAVar = Cap.getVariable();
+        // DSAs are tracked per binding; a captured DecompositionDecl has no
+        // own DSA entry.
+        if (const auto *DD = dyn_cast<DecompositionDecl>(DSAVar))
+          if (!DD->bindings().empty())
+            DSAVar = *DD->bindings().begin();
+        S.OpenMP().setOpenMPCaptureKind(Field, DSAVar, RSI->OpenMPLevel);
+      }
+      Captures.emplace_back(Cap.getLocation(),
+                            Cap.isReferenceCapture() ? CapturedStmt::VCK_ByRef
+                                                     : CapturedStmt::VCK_ByCopy,
+                            cast<VarDecl>(CapVar));
     }
     CaptureInits.push_back(Init.get());
   }
-  return false;
+  return HasError;
 }
 
 static std::optional<int>

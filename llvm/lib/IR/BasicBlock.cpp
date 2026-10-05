@@ -31,8 +31,8 @@ using namespace llvm;
 STATISTIC(NumInstrRenumberings, "Number of renumberings across all blocks");
 
 DbgMarker *BasicBlock::createMarker(Instruction *I) {
-  if (I->DebugMarker)
-    return I->DebugMarker;
+  if (DbgMarker *Marker = I->getDbgMarker())
+    return Marker;
   DbgMarker *Marker = new DbgMarker();
   Marker->MarkedInstr = I;
   I->DebugMarker = Marker;
@@ -77,7 +77,7 @@ void BasicBlock::convertToNewDbgValues() {
 
     // Create a marker to store DbgRecords in.
     createMarker(&I);
-    DbgMarker *Marker = I.DebugMarker;
+    DbgMarker *Marker = I.getDbgMarker();
 
     for (DbgRecord *DVR : DbgVarRecs)
       Marker->insertDbgRecord(DVR, false);
@@ -94,15 +94,15 @@ bool BasicBlock::convertFromNewDbgValues() {
   // Convert any attached DbgRecords to debug intrinsics and insert ahead of
   // the instruction.
   for (auto &Inst : *this) {
-    if (!Inst.DebugMarker)
+    DbgMarker *Marker = Inst.getDbgMarker();
+    if (!Marker)
       continue;
 
-    DbgMarker &Marker = *Inst.DebugMarker;
-    for (DbgRecord &DR : Marker.getDbgRecordRange())
+    for (DbgRecord &DR : Marker->getDbgRecordRange())
       InstList.insert(Inst.getIterator(),
                       DR.createDebugIntrinsic(getModule(), nullptr));
 
-    Marker.eraseFromParent();
+    Marker->eraseFromParent();
     Modified = true;
   }
 
@@ -116,11 +116,12 @@ bool BasicBlock::convertFromNewDbgValues() {
 #ifndef NDEBUG
 void BasicBlock::dumpDbgValues() const {
   for (auto &Inst : *this) {
-    if (!Inst.DebugMarker)
+    DbgMarker *Marker = Inst.getDbgMarker();
+    if (!Marker)
       continue;
 
-    dbgs() << "@ " << Inst.DebugMarker << " ";
-    Inst.DebugMarker->dump();
+    dbgs() << "@ " << Marker << " ";
+    Marker->dump();
   };
 }
 #endif
@@ -188,11 +189,9 @@ BasicBlock::~BasicBlock() {
 
   assert(getParent() == nullptr && "BasicBlock still linked into the program!");
   dropAllReferences();
-  for (auto &Inst : *this) {
-    if (!Inst.DebugMarker)
-      continue;
-    Inst.DebugMarker->eraseFromParent();
-  }
+  for (auto &Inst : *this)
+    if (DbgMarker *Marker = Inst.getDbgMarker())
+      Marker->eraseFromParent();
   InstList.clear();
 }
 
@@ -667,7 +666,7 @@ void BasicBlock::flushTerminatorDbgRecords() {
 
   // Transfer DbgRecords from the trailing position onto the terminator.
   createMarker(Term);
-  Term->DebugMarker->absorbDebugValues(*TrailingDbgRecords, false);
+  Term->getDbgMarker()->absorbDebugValues(*TrailingDbgRecords, false);
   TrailingDbgRecords->eraseFromParent();
   deleteTrailingDbgRecords();
 }
@@ -720,7 +719,7 @@ void BasicBlock::spliceDebugInfoEmptyBlock(BasicBlock::iterator Dest,
   if (!First->hasDbgRecords())
     return;
 
-  createMarker(Dest)->absorbDebugValues(*First->DebugMarker, InsertAtHead);
+  createMarker(Dest)->absorbDebugValues(*First->getDbgMarker(), InsertAtHead);
 }
 
 void BasicBlock::spliceDebugInfo(BasicBlock::iterator Dest, BasicBlock *Src,
@@ -998,7 +997,7 @@ DbgMarker *BasicBlock::getMarker(InstListType::iterator It) {
     DbgMarker *DM = getTrailingDbgRecords();
     return DM;
   }
-  return It->DebugMarker;
+  return It->getDbgMarker();
 }
 
 void BasicBlock::reinsertInstInDbgRecords(

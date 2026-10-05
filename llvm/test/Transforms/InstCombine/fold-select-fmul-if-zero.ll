@@ -401,7 +401,7 @@ define float @fmul_by_qnan_if_0_oeq_zero_f32(float %x) {
 ; CHECK-NEXT:    ret float [[SCALED_IF_DENORMAL]]
 ;
   %x.is.zero = fcmp oeq float %x, 0.0
-  %scaled.x = fmul float %x, 0x7FF8000000000000
+  %scaled.x = fmul float %x, +qnan
   %scaled.if.denormal = select i1 %x.is.zero, float %scaled.x, float %x
   ret float %scaled.if.denormal
 }

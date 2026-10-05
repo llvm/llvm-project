@@ -113,7 +113,7 @@ define double @fdim_nan1() {
 ; CHECK-LABEL: define double @fdim_nan1() {
 ; CHECK-NEXT:    ret double +qnan
 ;
-  %dim = call double @fdim(double 10.0, double 0x7FF8000000000000)
+  %dim = call double @fdim(double 10.0, double +qnan)
   ret double %dim
 }
 
@@ -122,7 +122,7 @@ define double @fdim_nan2() {
 ; CHECK-LABEL: define double @fdim_nan2() {
 ; CHECK-NEXT:    ret double +qnan
 ;
-  %dim = call double @fdim(double 0x7FF8000000000000, double 1.4)
+  %dim = call double @fdim(double +qnan, double 1.4)
   ret double %dim
 }
 

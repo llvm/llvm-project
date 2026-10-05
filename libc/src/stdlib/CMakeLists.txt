@@ -115,8 +115,18 @@ add_entrypoint_object(
     strfromf.h
   DEPENDS
     .str_from_util
-    libc.src.__support.CPP.limits
-    libc.src.__support.printf_core.error_mapper
+    libc.hdr.types.size_t
+)
+
+add_entrypoint_object(
+  strfromf128
+  SRCS
+    strfromf128.cpp
+  HDRS
+    strfromf128.h
+  DEPENDS
+    .str_from_util
+    libc.hdr.types.size_t
 )
 
 add_entrypoint_object(
@@ -127,8 +137,7 @@ add_entrypoint_object(
     strfromd.h
   DEPENDS
     .str_from_util
-    libc.src.__support.CPP.limits
-    libc.src.__support.printf_core.error_mapper
+    libc.hdr.types.size_t
 )
 
 add_entrypoint_object(
@@ -139,8 +148,7 @@ add_entrypoint_object(
     strfroml.h
   DEPENDS
     .str_from_util
-    libc.src.__support.CPP.limits
-    libc.src.__support.printf_core.error_mapper
+    libc.hdr.types.size_t
 )
 
 add_header_library(
@@ -148,11 +156,17 @@ add_header_library(
   HDRS
     str_from_util.h
   DEPENDS
+    libc.hdr.types.size_t
+    libc.src.__support.CPP.limits
+    libc.src.__support.CPP.type_traits
+    libc.src.__support.libc_errno
+    libc.src.__support.macros.config
     libc.src.__support.printf_core.converter
     libc.src.__support.printf_core.core_structs
+    libc.src.__support.printf_core.error_mapper
     libc.src.__support.printf_core.writer
     libc.src.__support.str_to_integer
-    libc.src.__support.CPP.type_traits
+    libc.src.errno.errno
 )
 
 add_entrypoint_object(
@@ -340,6 +354,7 @@ add_header_library(
     libc.hdr.stdint_proxy
     libc.include.stdlib
     libc.src.__support.CPP.cstddef
+    libc.src.__support.CPP.utility
     libc.src.string.memory_utils.inline_memcpy
 )
 
@@ -408,23 +423,6 @@ add_entrypoint_object(
   DEPENDS
     libc.src.__support.common
     libc.hdr.types.size_t
-)
-
-add_entrypoint_object(
-  mkstemp
-  SRCS
-    mkstemp.cpp
-  HDRS
-    mkstemp.h
-  DEPENDS
-    libc.hdr.errno_macros
-    libc.hdr.fcntl_macros
-    libc.src.__support.OSUtil.linux.syscall_wrappers.getrandom
-    libc.src.__support.OSUtil.linux.syscall_wrappers.open
-    libc.src.__support.common
-    libc.src.__support.libc_errno
-    libc.src.__support.macros.config
-    libc.src.__support.macros.null_check
 )
 
 add_entrypoint_object(
@@ -607,6 +605,34 @@ add_entrypoint_object(
     .${LIBC_TARGET_OS}.realpath
 )
 
+add_entrypoint_object(
+  getloadavg
+  ALIAS
+  DEPENDS
+    .${LIBC_TARGET_OS}.getloadavg
+)
+
+add_entrypoint_object(
+  mkdtemp
+  ALIAS
+  DEPENDS
+    .${LIBC_TARGET_OS}.mkdtemp
+)
+
+add_entrypoint_object(
+  mkostemp
+  ALIAS
+  DEPENDS
+    .${LIBC_TARGET_OS}.mkostemp
+)
+
+add_entrypoint_object(
+  mkstemp
+  ALIAS
+  DEPENDS
+    .${LIBC_TARGET_OS}.mkstemp
+)
+
 if(NOT LLVM_LIBC_FULL_BUILD)
   return()
 endif()
@@ -686,6 +712,13 @@ add_entrypoint_object(
   DEPENDS
     libc.src.errno.errno
     libc.src.__support.str_to_integer
+)
+
+add_entrypoint_object(
+  secure_getenv
+  ALIAS
+  DEPENDS
+    .${LIBC_TARGET_OS}.secure_getenv
 )
 
 add_entrypoint_object(
@@ -853,3 +886,4 @@ add_entrypoint_object(
   DEPENDS
     .${LIBC_TARGET_OS}.system
 )
+

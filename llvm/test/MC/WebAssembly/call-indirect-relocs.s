@@ -69,6 +69,7 @@ empty_fref_table:
 # BIN-NEXT:   - Type:            CUSTOM
 # BIN-NEXT:     Name:            linking
 # BIN-NEXT:     Version:         2
+# BIN-NEXT:     TargetArch:      wasm32
 # BIN-NEXT:     SymbolTable:
 # BIN-NEXT:       - Index:           0
 # BIN-NEXT:         Kind:            FUNCTION

@@ -41,15 +41,11 @@
 using namespace llvm;
 using namespace PatternMatch;
 
-namespace llvm {
-extern cl::opt<bool> ProfcheckDisableMetadataFixes;
-}
-
 /// The specific integer value is used in a context where it is known to be
 /// non-zero.  If this allows us to simplify the computation, do so and return
 /// the new operand, otherwise return null.
 static Value *simplifyValueKnownNonZero(Value *V, InstCombinerImpl &IC,
-                                        Instruction &CxtI) {
+                                        Instruction &CtxI) {
   // If V has multiple uses, then we would have to do more analysis to determine
   // if this is safe.  For example, the use could be in dynamically unreached
   // code.
@@ -70,13 +66,13 @@ static Value *simplifyValueKnownNonZero(Value *V, InstCombinerImpl &IC,
   // inexact.  Similarly for <<.
   BinaryOperator *I = dyn_cast<BinaryOperator>(V);
   if (I && I->isLogicalShift() &&
-      IC.isKnownToBeAPowerOfTwo(I->getOperand(0), false, &CxtI)) {
+      IC.isKnownToBeAPowerOfTwo(I->getOperand(0), false, &CtxI)) {
     // We know that this is an exact/nuw shift and that the input is a
     // non-zero context as well.
     {
       IRBuilderBase::InsertPointGuard Guard(IC.Builder);
       IC.Builder.SetInsertPoint(I);
-      if (Value *V2 = simplifyValueKnownNonZero(I->getOperand(0), IC, CxtI)) {
+      if (Value *V2 = simplifyValueKnownNonZero(I->getOperand(0), IC, CtxI)) {
         IC.replaceOperand(*I, 0, V2);
         MadeChange = true;
       }
@@ -1721,9 +1717,7 @@ Value *InstCombinerImpl::takeLog2(Value *Op, unsigned Depth, bool AssumeNonZero,
       if (Value *LogY =
               takeLog2(SI->getOperand(2), Depth, AssumeNonZero, DoFold))
         return IfFold([&]() {
-          return Builder.CreateSelect(SI->getOperand(0), LogX, LogY, "",
-                                      ProfcheckDisableMetadataFixes ? nullptr
-                                                                    : SI);
+          return Builder.CreateSelect(SI->getOperand(0), LogX, LogY, "", SI);
         });
 
   // log2(umin(X, Y)) -> umin(log2(X), log2(Y))
@@ -1968,8 +1962,21 @@ Instruction *InstCombinerImpl::visitSDiv(BinaryOperator &I) {
     }
   }
 
-  // -X / Y --> -(X / Y)
   Value *Y;
+  // -X / -Y --> X / Y, unless X == INT_MIN and Y == -1.
+  if (Value *NegOp0 = dyn_castNegVal(Op0))
+    if (Value *NegOp1 = dyn_castNegVal(Op1))
+      if (!computeKnownBits(NegOp0, &I)
+               .getSignedMinValue()
+               .isMinSignedValue() ||
+          (match(Op0, m_NSWNeg(m_Value())) &&
+           !computeKnownBits(NegOp1, &I).Zero.isZero())) {
+        auto *BO = BinaryOperator::CreateSDiv(NegOp0, NegOp1);
+        BO->setIsExact(I.isExact());
+        return BO;
+      }
+
+  // -X / Y --> -(X / Y)
   if (match(&I, m_SDiv(m_OneUse(m_NSWNeg(m_Value(X))), m_Value(Y))))
     return BinaryOperator::CreateNSWNeg(
         Builder.CreateSDiv(X, Y, I.getName(), I.isExact()));

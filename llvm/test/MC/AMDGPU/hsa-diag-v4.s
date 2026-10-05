@@ -1,10 +1,10 @@
-// RUN: not llvm-mc --amdhsa-code-object-version=4 -triple=amdgpu8.10-amd-amdhsa -mattr=+xnack %s -filetype=null 2>&1 | FileCheck %s -DMCPU=gfx810 --check-prefixes=ALL,GCN,GFX8,PREGFX10,NOWGP,AMDHSA
-// RUN: not llvm-mc --amdhsa-code-object-version=4 -triple=amdgpu10.10-amd-amdhsa -mattr=+xnack %s -filetype=null 2>&1 | FileCheck %s --check-prefixes=ALL,GCN,GFX10PLUS,GFX10,AMDHSA
+// RUN: not llvm-mc --amdhsa-code-object-version=4 -triple=amdgpu8.10-amd-amdhsa %s -filetype=null 2>&1 | FileCheck %s -DMCPU=gfx810 --check-prefixes=ALL,GCN,GFX8,PREGFX10,NOWGP,AMDHSA
+// RUN: not llvm-mc --amdhsa-code-object-version=4 -triple=amdgpu10.10-amd-amdhsa %s -filetype=null 2>&1 | FileCheck %s --check-prefixes=ALL,GCN,GFX10PLUS,GFX10,AMDHSA
 // RUN: not llvm-mc --amdhsa-code-object-version=4 -triple=amdgpu11.00-amd-amdhsa %s -filetype=null 2>&1 | FileCheck %s --check-prefixes=ALL,GCN,GFX10PLUS,GFX11,AMDHSA
 // RUN: not llvm-mc --amdhsa-code-object-version=4 -triple=amdgpu12.00-amd-amdhsa %s -filetype=null 2>&1 | FileCheck %s -DMCPU=gfx1200 --check-prefixes=ALL,GCN,GFX10PLUS,GFX12,AMDHSA
 // RUN: not llvm-mc --amdhsa-code-object-version=4 -triple=amdgpu11.70-amd-amdhsa %s -filetype=null 2>&1 | FileCheck %s --check-prefixes=ALL,GCN,GFX10PLUS,GFX1170,AMDHSA
-// RUN: not llvm-mc --amdhsa-code-object-version=4 -triple=amdgpu8.10-amd- -mattr=+xnack %s -filetype=null 2>&1 | FileCheck %s --check-prefixes=ALL,GCN,NONAMDHSA
-// RUN: not llvm-mc --amdhsa-code-object-version=4 -triple=amdgpu9.0a-amd-amdhsa -mattr=+xnack %s -filetype=null 2>&1 | FileCheck %s -DMCPU=gfx90a --check-prefixes=ALL,GFX90A,PREGFX10,NOWGP,AMDHSA
+// RUN: not llvm-mc --amdhsa-code-object-version=4 -triple=amdgpu8.10-amd- %s -filetype=null 2>&1 | FileCheck %s --check-prefixes=ALL,GCN,NONAMDHSA
+// RUN: not llvm-mc --amdhsa-code-object-version=4 -triple=amdgpu9.0a-amd-amdhsa %s -filetype=null 2>&1 | FileCheck %s -DMCPU=gfx90a --check-prefixes=ALL,GFX90A,PREGFX10,NOWGP,AMDHSA
 // RUN: not llvm-mc --amdhsa-code-object-version=4 -triple=amdgpu12.50-amd-amdhsa %s -filetype=null 2>&1 | FileCheck %s -DMCPU=gfx1250 --check-prefixes=ALL,GCN,GFX10PLUS,GFX1250,NOWGP,AMDHSA
 
 .text

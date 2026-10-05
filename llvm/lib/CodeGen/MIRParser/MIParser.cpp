@@ -508,6 +508,7 @@ public:
   bool parseSectionID(std::optional<MBBSectionID> &SID);
   bool parseBBID(std::optional<UniqueBBID> &BBID);
   bool parseCallFrameSize(unsigned &CallFrameSize);
+  bool parseMaxBytesForAlignment(unsigned &MaxBytesForAlignment);
   bool parsePrefetchTarget(CallsiteID &Target);
   bool parseOperandsOffset(MachineOperand &Op);
   bool parseIRValue(const Value *&V);
@@ -702,6 +703,21 @@ bool MIParser::parseCallFrameSize(unsigned &CallFrameSize) {
   return false;
 }
 
+// Parse the maximum number of bytes permitted for basic block alignment
+// padding.
+bool MIParser::parseMaxBytesForAlignment(unsigned &MaxBytesForAlignment) {
+  assert(Token.is(MIToken::kw_max_bytes_for_alignment));
+  lex();
+  if (Token.isNot(MIToken::IntegerLiteral) && Token.isNot(MIToken::HexLiteral))
+    return error("expected an integer literal after 'max-bytes-for-alignment'");
+  unsigned Value = 0;
+  if (getUnsigned(Value))
+    return true;
+  MaxBytesForAlignment = Value;
+  lex();
+  return false;
+}
+
 bool MIParser::parsePrefetchTarget(CallsiteID &Target) {
   lex();
   std::optional<UniqueBBID> BBID;
@@ -728,8 +744,10 @@ bool MIParser::parseBasicBlockDefinition(
   bool IsInlineAsmBrIndirectTarget = false;
   bool IsEHFuncletEntry = false;
   bool IsEHScopeEntry = false;
+  bool IsCleanupFuncletEntry = false;
   std::optional<MBBSectionID> SectionID;
   uint64_t Alignment = 0;
+  unsigned MaxBytesForAlignment = 0;
   std::optional<UniqueBBID> BBID;
   unsigned CallFrameSize = 0;
   BasicBlock *BB = nullptr;
@@ -761,8 +779,16 @@ bool MIParser::parseBasicBlockDefinition(
         IsEHScopeEntry = true;
         lex();
         break;
+      case MIToken::kw_cleanup_funclet_entry:
+        IsCleanupFuncletEntry = true;
+        lex();
+        break;
       case MIToken::kw_align:
         if (parseAlignment(Alignment))
+          return true;
+        break;
+      case MIToken::kw_max_bytes_for_alignment:
+        if (parseMaxBytesForAlignment(MaxBytesForAlignment))
           return true;
         break;
       case MIToken::IRBlock:
@@ -810,6 +836,9 @@ bool MIParser::parseBasicBlockDefinition(
                           Twine(ID));
   if (Alignment)
     MBB->setAlignment(Align(Alignment));
+  else if (MaxBytesForAlignment)
+    return error(Loc, "'max-bytes-for-alignment' requires 'align'");
+  MBB->setMaxBytesForAlignment(MaxBytesForAlignment);
   if (MachineBlockAddressTaken)
     MBB->setMachineBlockAddressTaken();
   if (AddressTakenIRBlock)
@@ -818,6 +847,7 @@ bool MIParser::parseBasicBlockDefinition(
   MBB->setIsInlineAsmBrIndirectTarget(IsInlineAsmBrIndirectTarget);
   MBB->setIsEHFuncletEntry(IsEHFuncletEntry);
   MBB->setIsEHScopeEntry(IsEHScopeEntry);
+  MBB->setIsCleanupFuncletEntry(IsCleanupFuncletEntry);
   if (SectionID) {
     MBB->setSectionID(*SectionID);
     MF.setBBSectionsType(BasicBlockSection::List);
@@ -1389,6 +1419,7 @@ bool MIParser::parseInstruction(unsigned &OpCode, unsigned &Flags) {
          Token.is(MIToken::kw_nusw) ||
          Token.is(MIToken::kw_samesign) ||
          Token.is(MIToken::kw_inbounds) ||
+         Token.is(MIToken::kw_nonnull) ||
          Token.is(MIToken::kw_lr_split)) {
     // clang-format on
     // Mine frame and fast math flags
@@ -1432,6 +1463,8 @@ bool MIParser::parseInstruction(unsigned &OpCode, unsigned &Flags) {
       Flags |= MachineInstr::SameSign;
     if (Token.is(MIToken::kw_inbounds))
       Flags |= MachineInstr::InBounds;
+    if (Token.is(MIToken::kw_nonnull))
+      Flags |= MachineInstr::NonNull;
     if (Token.is(MIToken::kw_lr_split))
       Flags |= MachineInstr::LRSplit;
 
@@ -1962,8 +1995,9 @@ static bool verifyScalarSize(uint64_t Size) {
   return Size != 0 && isUInt<16>(Size);
 }
 
-static bool verifyVectorElementCount(uint64_t NumElts) {
-  return NumElts != 0 && isUInt<16>(NumElts);
+static bool verifyVectorElementCount(uint64_t NumElts, bool HasVScale) {
+  // A fixed-length vector needs at least two elements.
+  return NumElts != 0 && (HasVScale || NumElts != 1) && isUInt<16>(NumElts);
 }
 
 static bool verifyAddrSpace(uint64_t AddrSpace) {
@@ -2050,7 +2084,7 @@ bool MIParser::parseLowLevelType(StringRef::iterator Loc, LLT &Ty) {
   if (Token.isNot(MIToken::IntegerLiteral))
     return GetError();
   uint64_t NumElements = Token.integerValue().getZExtValue();
-  if (!verifyVectorElementCount(NumElements))
+  if (!verifyVectorElementCount(NumElements, HasVScale))
     return error("invalid number of vector elements");
 
   lex();

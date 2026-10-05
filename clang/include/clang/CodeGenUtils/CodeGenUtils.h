@@ -10,6 +10,14 @@
 #define LLVM_CLANG_CODEGENUTILS_CODEGENUTILS_H
 
 #include "clang/AST/ASTContext.h"
+#include "clang/Basic/SourceLocation.h"
+
+namespace clang {
+class CallExpr;
+class DiagnosticsEngine;
+class FunctionDecl;
+class LangOptions;
+} // namespace clang
 
 namespace clang::CodeGenUtils {
 /// Check whether we need to initialize any vtable pointers before calling this
@@ -36,7 +44,30 @@ bool hasUnwindExceptions(const LangOptions &LangOpts);
 /// Helper method to check if the underlying ABI is AAPCS
 bool isAAPCS(const TargetInfo &TargetInfo);
 
+/// Return the AST address space of constant literal, which is used to emit
+/// the constant literal as global variable in LLVM IR.
+/// Note: This is not necessarily the address space of the constant literal
+/// in AST. For address space agnostic language, e.g. C++, constant literal
+/// in AST is always in default address space.
+LangAS getGlobalConstantAddressSpace(const LangOptions &LangOpts,
+                                     const TargetInfo &Target);
+
 bool isInitializerOfDynamicClass(const CXXCtorInitializer *BaseInit);
+
+/// Check that a call to a target-specific builtin has the required target
+/// features enabled in the caller, emitting an error diagnostic if not.
+/// \p caller is the FunctionDecl of the enclosing function (may be null).
+void checkTargetFeatures(ASTContext &Ctx, DiagnosticsEngine &Diags,
+                         const LangOptions &LangOpts, const CallExpr *E,
+                         const FunctionDecl *Caller,
+                         const FunctionDecl *TargetDecl);
+
+/// Overload taking a raw source location instead of a CallExpr.
+void checkTargetFeatures(ASTContext &Ctx, DiagnosticsEngine &Diags,
+                         const LangOptions &LangOpts, SourceLocation Loc,
+                         const FunctionDecl *Caller,
+                         const FunctionDecl *TargetDecl);
+
 } // namespace clang::CodeGenUtils
 
 #endif // LLVM_CLANG_CODEGENUTILS_CODEGENUTILS_H

@@ -29,8 +29,9 @@ using namespace mlir;
 namespace fir {
 namespace acc {
 
-std::string FIROpenACCSupportAnalysis::getVariableName(Value v) {
-  return fir::acc::getVariableName(v, /*preferDemangledName=*/true);
+std::string FIROpenACCSupportAnalysis::getVariableName(
+    Value v, mlir::acc::VariableNameConfig config) {
+  return fir::acc::getVariableName(v, config.preferDemangledName);
 }
 
 std::string FIROpenACCSupportAnalysis::getRecipeName(mlir::acc::RecipeKind kind,
@@ -63,7 +64,8 @@ FIROpenACCSupportAnalysis::getTypeSizeAndAlignment(
   if (!dl)
     return std::nullopt;
 
-  if (isa<fir::ReferenceType, fir::HeapType, fir::LLVMPointerType>(ty))
+  if (isa<fir::ReferenceType, fir::PointerType, fir::HeapType,
+          fir::LLVMPointerType>(ty))
     return mlir::acc::getTypeSizeAndAlignment(
         LLVM::LLVMPointerType::get(ty.getContext()), module, *dl, &support);
 
