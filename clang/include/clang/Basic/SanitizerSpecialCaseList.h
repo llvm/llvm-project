@@ -18,16 +18,10 @@
 #include "clang/Basic/Sanitizers.h"
 #include "llvm/ADT/StringRef.h"
 #include "llvm/Support/SpecialCaseList.h"
+#include "llvm/Support/VirtualFileSystemFwd.h"
 #include <memory>
 #include <utility>
 #include <vector>
-
-namespace llvm {
-namespace vfs {
-class FileSystem;
-}
-} // namespace llvm
-
 namespace clang {
 
 class SanitizerSpecialCaseList : public llvm::SpecialCaseList {

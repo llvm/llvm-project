@@ -651,14 +651,22 @@ bool TypeInfer::EnforceVectorSubVectorTypeIs(TypeSetByHwMode &Vec,
   auto IsSubVec = [](MVT B, MVT P) -> bool {
     if (!B.isVector() || !P.isVector())
       return false;
-    // Logically a <4 x i32> is a valid subvector of <n x 4 x i32>
-    // but until there are obvious use-cases for this, keep the
-    // types separate.
-    if (B.isScalableVector() != P.isScalableVector())
+    // You cannot extract a scalable vector from a fixed length vector.
+    // You cannot insert a scalable vector into a fixed length vector.
+    if (B.isScalableVector() && !P.isScalableVector())
       return false;
     if (B.getVectorElementType() != P.getVectorElementType())
       return false;
-    return B.getVectorMinNumElements() < P.getVectorMinNumElements();
+    // If the subvector and vector are both fixed or both scalable, require
+    // the minimum element count to be smaller.
+    if (B.isScalableVector() == P.isScalableVector())
+      return B.getVectorMinNumElements() < P.getVectorMinNumElements();
+
+    // If the subvector is fixed and the vector is scalable, allow the
+    // minimum number of elements to be less than or equal. Note, if vscale is
+    // known to be greater than 1, the subvector could have more than the
+    // minimum number of elements, but that would probably require custom isel.
+    return B.getVectorMinNumElements() <= P.getVectorMinNumElements();
   };
 
   /// Return true if S has no element (vector type) that T is a sub-vector of,

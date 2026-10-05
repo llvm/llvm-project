@@ -12,6 +12,7 @@
 //===----------------------------------------------------------------------===//
 
 #include "llvm/ADT/ArrayRef.h"
+#include "llvm/Support/InitLLVM.h"
 #include <functional>
 
 using namespace llvm;
@@ -24,4 +25,7 @@ extern "C" int
 optMain(int argc, char **argv,
         ArrayRef<std::function<void(PassBuilder &)>> PassBuilderCallbacks);
 
-int main(int argc, char **argv) { return optMain(argc, argv, {}); }
+int main(int argc, char **argv) {
+  InitLLVM X(argc, argv);
+  return optMain(argc, argv, {});
+}

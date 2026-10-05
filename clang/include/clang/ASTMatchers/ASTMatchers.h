@@ -8959,7 +8959,7 @@ AST_MATCHER_P(OMPExecutableDirective, isAllowedToContainClauseKind,
               OpenMPClauseKind, CKind) {
   return llvm::omp::isAllowedClauseForDirective(
       Node.getDirectiveKind(), CKind,
-      Finder->getASTContext().getLangOpts().OpenMP);
+      Finder->getASTContext().getLangOpts().getOpenMPVersion());
 }
 
 /// Matches OpenMP ``from`` clause.

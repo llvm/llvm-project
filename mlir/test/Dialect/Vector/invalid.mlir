@@ -251,6 +251,20 @@ func.func @outerproduct_non_vector_operand(%arg0: f32) {
 
 // -----
 
+func.func @outerproduct_zero_rank_lhs(%arg0: vector<f32>, %arg1: vector<4xf32>) {
+  // expected-error@+1 {{expected 1-d vector for operand #1}}
+  %1 = vector.outerproduct %arg0, %arg1 : vector<f32>, vector<4xf32>
+}
+
+// -----
+
+func.func @outerproduct_zero_rank_rhs(%arg0: vector<4xf32>, %arg1: vector<f32>) {
+  // expected-error@+1 {{expected 1-d vector for operand #2}}
+  %1 = vector.outerproduct %arg0, %arg1 : vector<4xf32>, vector<f32>
+}
+
+// -----
+
 func.func @outerproduct_invalid_kind_attr(%arg0 : vector<[4]xf32>, %arg1 : vector<[8]xf32>) {
   // expected-error@+1 {{expected 'kind' attribute of type CombiningKind (e.g. 'vector.kind<add>')}}
   %0 = vector.outerproduct %arg0, %arg1 {kind = "invalid"} : vector<[4]xf32>, vector<[8]xf32>

@@ -13,13 +13,21 @@
 #include <detail/device_impl.hpp>
 #include <detail/queue_impl.hpp>
 
+#include <cassert>
+
 _LIBSYCL_BEGIN_NAMESPACE_SYCL
 
-queue::queue(const device &syclDevice, const async_handler &asyncHandler,
-             const property_list &propList) {
-  impl = detail::QueueImpl::create(*detail::getSyclObjImpl(syclDevice),
+queue::queue(const context &syclContext, const device &syclDevice,
+             const async_handler &asyncHandler, const property_list &propList) {
+  impl = detail::QueueImpl::create(detail::getSyclObjImpl(syclContext),
+                                   *detail::getSyclObjImpl(syclDevice),
                                    asyncHandler, propList);
 }
+
+queue::queue(const context &syclContext, const device &syclDevice,
+             const property_list &propList)
+    : queue(syclContext, syclDevice,
+            detail::getSyclObjImpl(syclContext)->getAsyncHandler(), propList) {}
 
 backend queue::get_backend() const noexcept { return impl->getBackend(); }
 
@@ -41,32 +49,44 @@ void queue::throw_asynchronous() { impl->throwAsynchronous(); }
 
 event queue::memcpy(void *dest, const void *src, std::size_t numBytes,
                     const std::vector<event> &depEvents) {
-  std::shared_ptr<detail::EventImpl> EventImplPtr =
+  detail::EventImplPtr Event =
       impl->memcpy(dest, src, numBytes, detail::getSyclObjImpls(depEvents));
-  assert(EventImplPtr);
-  return detail::createSyclObjFromImpl<event>(EventImplPtr);
+  assert(Event && "Queue operation must produce an event");
+  return detail::createSyclObjFromImpl<event>(Event);
 }
 
 event queue::prefetch(void *ptr, std::size_t numBytes,
                       const std::vector<event> &depEvents) {
-  std::shared_ptr<detail::EventImpl> EventImplPtr =
+  detail::EventImplPtr Event =
       impl->prefetch(ptr, numBytes, detail::getSyclObjImpls(depEvents));
-  assert(EventImplPtr);
-  return detail::createSyclObjFromImpl<event>(EventImplPtr);
+  assert(Event && "Queue operation must produce an event");
+  return detail::createSyclObjFromImpl<event>(Event);
 }
 
 event queue::getLastEvent() {
   return detail::createSyclObjFromImpl<event>(impl->getLastEvent());
 }
 
-void queue::setKernelParameters(const std::vector<event> &Events,
-                                const detail::UnifiedRangeView &Range) {
-  return impl->setKernelParameters(detail::getSyclObjImpls(Events), Range);
+void queue::setKernelLaunchParams(const std::vector<event> &Events,
+                                  const detail::UnifiedRangeView &Range) {
+  return impl->setKernelLaunchParams(detail::getSyclObjImpls(Events), Range);
 }
 
 void queue::submitKernelImpl(detail::DeviceKernelInfo &KernelInfo,
-                             void *ArgData, size_t ArgSize) {
+                             void *ArgData, std::size_t ArgSize) {
   impl->submitKernelImpl(KernelInfo, ArgData, ArgSize);
+}
+
+event queue::fillImpl(void *Ptr, const void *Pattern, std::size_t PatternSize,
+                      std::size_t Count, const std::vector<event> &DepEvents) {
+  std::shared_ptr<detail::EventImpl> EventImplPtr = impl->fill(
+      Ptr, Pattern, PatternSize, Count, detail::getSyclObjImpls(DepEvents));
+  assert(EventImplPtr);
+  return detail::createSyclObjFromImpl<event>(EventImplPtr);
+}
+
+event queue::submitWithHandler(const detail::TypelessCGF &CGF) {
+  return detail::createSyclObjFromImpl<event>(impl->submitWithHandler(CGF));
 }
 
 _LIBSYCL_END_NAMESPACE_SYCL

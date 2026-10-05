@@ -7,7 +7,7 @@ subroutine sub1()
   integer :: i
   external foo
 ! CHECK:    %[[TRIP:.*]] = fir.alloca i32
-! CHECK:    %[[I_ADDR:.*]] = fir.alloca i32 {bindc_name = "i", {{.*}}}
+! CHECK:    %[[I_ADDR:.*]] = fir.alloca i32 <{bindc_name = "i", {{.*}}}>
 ! CHECK:    %[[I:.*]]:2 = hlfir.declare %[[I_ADDR]]
 
   do i = 1, 3
@@ -65,9 +65,9 @@ subroutine sub2()
   integer :: i, j
   external foo
 ! CHECK:    %[[TRIP:.*]] = fir.alloca i32
-! CHECK:    %[[I_ADDR:.*]] = fir.alloca i32 {bindc_name = "i", {{.*}}}
+! CHECK:    %[[I_ADDR:.*]] = fir.alloca i32 <{bindc_name = "i", {{.*}}}>
 ! CHECK:    %[[I:.*]]:2 = hlfir.declare %[[I_ADDR]]
-! CHECK:    %[[J_ADDR:.*]] = fir.alloca i32 {bindc_name = "j", {{.*}}}
+! CHECK:    %[[J_ADDR:.*]] = fir.alloca i32 <{bindc_name = "j", {{.*}}}>
 ! CHECK:    %[[J:.*]]:2 = hlfir.declare %[[J_ADDR]]
 
   do i = 1, 3

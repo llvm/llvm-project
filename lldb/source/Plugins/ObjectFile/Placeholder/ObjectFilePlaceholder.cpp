@@ -37,9 +37,8 @@ void ObjectFilePlaceholder::CreateSections(
     lldb_private::SectionList &unified_section_list) {
   m_sections_up = std::make_unique<lldb_private::SectionList>();
   auto section_sp = std::make_shared<lldb_private::Section>(
-      GetModule(), this, /*sect_id*/ 0,
-      lldb_private::ConstString(".module_image"), eSectionTypeOther, m_base,
-      m_size, /*file_offset*/ 0, /*file_size*/ 0,
+      GetModule(), this, /*sect_id*/ 0, ".module_image", eSectionTypeOther,
+      m_base, m_size, /*file_offset*/ 0, /*file_size*/ 0,
       /*log2align*/ 0, /*flags*/ 0);
   section_sp->SetPermissions(ePermissionsReadable | ePermissionsExecutable);
   m_sections_up->AddSection(section_sp);

@@ -418,19 +418,6 @@ WebAssemblyTargetInfo::getTargetBuiltins() const {
   return {{&BuiltinStrings, BuiltinInfos}};
 }
 
-void WebAssemblyTargetInfo::adjust(DiagnosticsEngine &Diags, LangOptions &Opts,
-                                   const TargetInfo *Aux) {
-  TargetInfo::adjust(Diags, Opts, Aux);
-  // Turn off POSIXThreads and ThreadModel so that we don't predefine _REENTRANT
-  // or __STDCPP_THREADS__ if we will eventually end up stripping atomics
-  // because they are unsupported.
-  if ((!HasCooperativeThreading && !HasAtomics) || !HasBulkMemory) {
-    Opts.POSIXThreads = false;
-    Opts.setThreadModel(LangOptions::ThreadModelKind::Single);
-    Opts.ThreadsafeStatics = false;
-  }
-}
-
 void WebAssembly32TargetInfo::getTargetDefines(const LangOptions &Opts,
                                                MacroBuilder &Builder) const {
   WebAssemblyTargetInfo::getTargetDefines(Opts, Builder);

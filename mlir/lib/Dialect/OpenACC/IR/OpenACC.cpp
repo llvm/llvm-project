@@ -225,7 +225,7 @@ struct MemRefPointerLikeModel
     if (memrefTy.getRank() != 0)
       return {};
 
-    return memref::LoadOp::create(builder, loc, memrefValue);
+    return memref::LoadOp::create(builder, loc, memrefValue, ValueRange{});
   }
 
   bool genStore(Type pointer, OpBuilder &builder, Location loc,
@@ -279,7 +279,7 @@ struct MemRefPointerLikeModel
     return {};
   }
 
-  bool isDeviceData(Type pointer, Value var) const {
+  bool isDeviceAccessible(Type pointer, Value var) const {
     auto memrefTy = cast<T>(pointer);
     Attribute memSpace = memrefTy.getMemorySpace();
     return isa_and_nonnull<gpu::AddressSpaceAttr>(memSpace);
@@ -387,6 +387,15 @@ struct MemrefAddressOfGlobalModel
   }
 };
 
+struct LLVMAddressOfGlobalModel
+    : public AddressOfGlobalOpInterface::ExternalModel<LLVMAddressOfGlobalModel,
+                                                       LLVM::AddressOfOp> {
+  SymbolRefAttr getSymbol(Operation *op) const {
+    auto addressOfOp = cast<LLVM::AddressOfOp>(op);
+    return addressOfOp.getGlobalNameAttr();
+  }
+};
+
 struct MemrefGlobalVariableModel
     : public GlobalVariableOpInterface::ExternalModel<MemrefGlobalVariableModel,
                                                       memref::GlobalOp> {
@@ -405,11 +414,20 @@ struct MemrefGlobalVariableModel
     return nullptr;
   }
 
-  bool isDeviceData(Operation *op) const {
+  bool isDeviceAccessible(Operation *op) const {
     auto globalOp = cast<memref::GlobalOp>(op);
     Attribute memSpace = globalOp.getType().getMemorySpace();
     return isa_and_nonnull<gpu::AddressSpaceAttr>(memSpace);
   }
+
+  bool isInDeviceMemory(Operation *op) const {
+    // A memref address space models storage that is physically resident on the
+    // device, so a device-accessible global is also in device memory. (There
+    // is no host-shared/migratable address space to exclude here.)
+    return isDeviceAccessible(op);
+  }
+
+  bool isCompilerGenerated(Operation *op) const { return false; }
 };
 
 struct GPULaunchOffloadRegionModel
@@ -516,6 +534,7 @@ void OpenACCDialect::initialize() {
   // Attach operation interfaces
   memref::GetGlobalOp::attachInterface<MemrefAddressOfGlobalModel>(
       *getContext());
+  LLVM::AddressOfOp::attachInterface<LLVMAddressOfGlobalModel>(*getContext());
   memref::GlobalOp::attachInterface<MemrefGlobalVariableModel>(*getContext());
   gpu::LaunchOp::attachInterface<GPULaunchOffloadRegionModel>(*getContext());
 }
@@ -1003,6 +1022,26 @@ static void printVarPtrType(mlir::OpAsmPrinter &p, mlir::Operation *op,
     p.printType(varType);
     p << ")";
   }
+}
+
+// A location cannot be parsed through the generic attribute directive: the
+// generated parser needs a concrete attribute class, while any of the location
+// attributes may appear here.
+static ParseResult parseSourceLocation(mlir::OpAsmParser &parser,
+                                       mlir::LocationAttr &locAttr) {
+  llvm::SMLoc attrLoc = parser.getCurrentLocation();
+  mlir::Attribute attr;
+  if (failed(parser.parseAttribute(attr)))
+    return failure();
+  locAttr = mlir::dyn_cast<mlir::LocationAttr>(attr);
+  if (!locAttr)
+    return parser.emitError(attrLoc, "expected location attribute");
+  return success();
+}
+
+static void printSourceLocation(mlir::OpAsmPrinter &p, mlir::Operation *op,
+                                mlir::LocationAttr locAttr) {
+  p.printAttribute(locAttr);
 }
 
 static ParseResult parseRecipeSym(mlir::OpAsmParser &parser,
@@ -1664,21 +1703,6 @@ void acc::UpdateHostOp::getEffects(
   addOperandEffect<MemoryEffects::Write>(effects, getVarMutable());
 }
 
-template <typename StructureOp>
-static ParseResult parseRegions(OpAsmParser &parser, OperationState &state,
-                                unsigned nRegions = 1) {
-
-  SmallVector<Region *, 2> regions;
-  for (unsigned i = 0; i < nRegions; ++i)
-    regions.push_back(state.addRegion());
-
-  for (Region *region : regions)
-    if (parser.parseRegion(*region, /*arguments=*/{}, /*argTypes=*/{}))
-      return failure();
-
-  return success();
-}
-
 namespace {
 /// Pattern to remove operation without region that have constant false `ifCond`
 /// and remove the condition from the operation if the `ifCond` is a true
@@ -2152,8 +2176,8 @@ static LogicalResult checkDataOperands(Op op,
   for (mlir::Value operand : operands)
     if (!mlir::isa<acc::AttachOp, acc::CopyinOp, acc::CopyoutOp, acc::CreateOp,
                    acc::DeleteOp, acc::DetachOp, acc::DevicePtrOp,
-                   acc::GetDevicePtrOp, acc::NoCreateOp, acc::PresentOp>(
-            operand.getDefiningOp()))
+                   acc::GetDevicePtrOp, acc::NoCreateOp, acc::PresentOp,
+                   acc::MapInfoOp>(operand.getDefiningOp()))
       return op.emitError(
           "expect data entry/exit operation or acc.getdeviceptr "
           "as defining op");
@@ -2408,9 +2432,9 @@ void ParallelOp::build(mlir::OpBuilder &odsBuilder,
       /*numGangsDeviceType=*/nullptr, numWorkers,
       /*numWorkersDeviceType=*/nullptr, vectorLength,
       /*vectorLengthDeviceType=*/nullptr, ifCond, selfCond,
-      /*selfAttr=*/nullptr, reductionOperands, gangPrivateOperands,
+      /*selfAttr=*/false, reductionOperands, gangPrivateOperands,
       gangFirstPrivateOperands, dataClauseOperands,
-      /*defaultAttr=*/nullptr, /*combined=*/nullptr);
+      /*defaultAttr=*/nullptr, /*combined=*/false);
 }
 
 void acc::ParallelOp::addNumWorkersOperand(
@@ -3409,7 +3433,7 @@ LogicalResult acc::HostDataOp::verify() {
   llvm::SmallPtrSet<mlir::Value, 4> seenVars;
   for (mlir::Value operand : getDataClauseOperands()) {
     auto useDeviceOp =
-        mlir::dyn_cast<acc::UseDeviceOp>(operand.getDefiningOp());
+        mlir::dyn_cast_if_present<acc::UseDeviceOp>(operand.getDefiningOp());
     if (!useDeviceOp)
       return emitError("expect data entry operation as defining op");
 
@@ -4277,8 +4301,8 @@ LogicalResult acc::DataOp::verify() {
     if (isa<BlockArgument>(operand) ||
         !mlir::isa<acc::AttachOp, acc::CopyinOp, acc::CopyoutOp, acc::CreateOp,
                    acc::DeleteOp, acc::DetachOp, acc::DevicePtrOp,
-                   acc::GetDevicePtrOp, acc::NoCreateOp, acc::PresentOp>(
-            operand.getDefiningOp()))
+                   acc::GetDevicePtrOp, acc::NoCreateOp, acc::PresentOp,
+                   acc::MapInfoOp>(operand.getDefiningOp()))
       return emitError("expect data entry/exit operation or acc.getdeviceptr "
                        "as defining op");
 
@@ -4450,20 +4474,29 @@ void ExitDataOp::addAsyncOperand(
 void ExitDataOp::addWaitOnly(MLIRContext *context,
                              llvm::ArrayRef<DeviceType> effectiveDeviceTypes) {
   assert(effectiveDeviceTypes.empty());
-  assert(!getWaitAttr());
-  assert(getWaitOperands().empty());
-  assert(!getWaitDevnum());
+
+  if (getWaitAttr())
+    return;
 
   setWaitAttr(mlir::UnitAttr::get(context));
+
+  getWaitDevnumMutable().clear();
+  getWaitOperandsMutable().clear();
 }
 
 void ExitDataOp::addWaitOperands(
     MLIRContext *context, bool hasDevnum, mlir::ValueRange newValues,
     llvm::ArrayRef<DeviceType> effectiveDeviceTypes) {
   assert(effectiveDeviceTypes.empty());
-  assert(!getWaitAttr());
-  assert(getWaitOperands().empty());
-  assert(!getWaitDevnum());
+
+  if (getWaitAttr())
+    return;
+
+  // FIXME: At one point we need to figure out how to support multiple devnums
+  // here.  For now, assert.  Eventually we probably want to make dev-num and
+  // operands work in 'lock-step', so that getWaitDevnum().size() ==
+  // getWaitOperandsMutable().size().
+  assert(!getWaitDevnum() && "Merging devnum not yet implemented");
 
   // if hasDevnum, the first value is the devnum. The 'rest' go into the
   // operands list.
@@ -4501,7 +4534,7 @@ LogicalResult acc::EnterDataOp::verify() {
     return emitError("wait_devnum cannot appear without waitOperands");
 
   for (mlir::Value operand : getDataClauseOperands())
-    if (!mlir::isa<acc::AttachOp, acc::CreateOp, acc::CopyinOp>(
+    if (!mlir::isa<acc::AttachOp, acc::CreateOp, acc::CopyinOp, acc::MapInfoOp>(
             operand.getDefiningOp()))
       return emitError("expect data entry operation as defining op");
 
@@ -4546,20 +4579,29 @@ void EnterDataOp::addAsyncOperand(
 void EnterDataOp::addWaitOnly(MLIRContext *context,
                               llvm::ArrayRef<DeviceType> effectiveDeviceTypes) {
   assert(effectiveDeviceTypes.empty());
-  assert(!getWaitAttr());
-  assert(getWaitOperands().empty());
-  assert(!getWaitDevnum());
+
+  if (getWaitAttr())
+    return;
 
   setWaitAttr(mlir::UnitAttr::get(context));
+
+  getWaitDevnumMutable().clear();
+  getWaitOperandsMutable().clear();
 }
 
 void EnterDataOp::addWaitOperands(
     MLIRContext *context, bool hasDevnum, mlir::ValueRange newValues,
     llvm::ArrayRef<DeviceType> effectiveDeviceTypes) {
   assert(effectiveDeviceTypes.empty());
-  assert(!getWaitAttr());
-  assert(getWaitOperands().empty());
-  assert(!getWaitDevnum());
+
+  if (getWaitAttr())
+    return;
+
+  // FIXME: At one point we need to figure out how to support multiple devnums
+  // here.  For now, assert.  Eventually we probably want to make dev-num and
+  // operands work in 'lock-step', so that getWaitDevnum().size() ==
+  // getWaitOperandsMutable().size().
+  assert(!getWaitDevnum() && "Merging devnum not yet implemented");
 
   // if hasDevnum, the first value is the devnum. The 'rest' go into the
   // operands list.
@@ -4648,8 +4690,8 @@ checkDeclareOperands(Op &op, const mlir::ValueRange &operands,
     if (isa<BlockArgument>(operand) ||
         !mlir::isa<acc::CopyinOp, acc::CopyoutOp, acc::CreateOp,
                    acc::DevicePtrOp, acc::GetDevicePtrOp, acc::PresentOp,
-                   acc::DeclareDeviceResidentOp, acc::DeclareLinkOp>(
-            operand.getDefiningOp()))
+                   acc::DeclareDeviceResidentOp, acc::DeclareLinkOp,
+                   acc::MapInfoOp>(operand.getDefiningOp()))
       return op.emitError(
           "expect valid declare data entry operation or acc.getdeviceptr "
           "as defining op");
@@ -4658,12 +4700,15 @@ checkDeclareOperands(Op &op, const mlir::ValueRange &operands,
     assert(var && "declare operands can only be data entry operations which "
                   "must have var");
     (void)var;
-    std::optional<mlir::acc::DataClause> dataClauseOptional{
-        getDataClause(operand.getDefiningOp())};
-    assert(dataClauseOptional.has_value() &&
-           "declare operands can only be data entry operations which must have "
-           "dataClause");
-    (void)dataClauseOptional;
+    // acc.map_info encodes the clause effects in mapFlags instead.
+    if (!mlir::isa<acc::MapInfoOp>(operand.getDefiningOp())) {
+      std::optional<mlir::acc::DataClause> dataClauseOptional{
+          getDataClause(operand.getDefiningOp())};
+      assert(dataClauseOptional.has_value() &&
+             "declare operands can only be data entry operations which must "
+             "have dataClause");
+      (void)dataClauseOptional;
+    }
   }
 
   return success();
@@ -4741,18 +4786,22 @@ static ParseResult parseBindName(OpAsmParser &parser,
   llvm::SmallVector<mlir::Attribute> deviceStrTypeAttrs;
 
   if (failed(parser.parseCommaSeparatedList([&]() {
+        llvm::SMLoc attrLoc = parser.getCurrentLocation();
         mlir::Attribute newAttr;
         bool isSymbolRefAttr;
-        auto parseResult = parser.parseAttribute(newAttr);
+        if (parser.parseAttribute(newAttr))
+          return failure();
         if (auto symbolRefAttr = dyn_cast<mlir::SymbolRefAttr>(newAttr)) {
           bindIdNameAttrs.push_back(symbolRefAttr);
           isSymbolRefAttr = true;
         } else if (auto stringAttr = dyn_cast<mlir::StringAttr>(newAttr)) {
           bindStrNameAttrs.push_back(stringAttr);
           isSymbolRefAttr = false;
-        }
-        if (parseResult)
+        } else {
+          parser.emitError(attrLoc,
+                           "expected symbol reference or string attribute");
           return failure();
+        }
         if (failed(parser.parseOptionalLSquare())) {
           if (isSymbolRefAttr) {
             deviceIdTypeAttrs.push_back(mlir::acc::DeviceTypeAttr::get(
@@ -5190,8 +5239,8 @@ LogicalResult acc::UpdateOp::verify() {
     return failure();
 
   for (mlir::Value operand : getDataClauseOperands())
-    if (!mlir::isa<acc::UpdateDeviceOp, acc::UpdateHostOp, acc::GetDevicePtrOp>(
-            operand.getDefiningOp()))
+    if (!mlir::isa<acc::UpdateDeviceOp, acc::UpdateHostOp, acc::GetDevicePtrOp,
+                   acc::MapInfoOp>(operand.getDefiningOp()))
       return emitError("expect data entry/exit operation or acc.getdeviceptr "
                        "as defining op");
 
@@ -5341,7 +5390,7 @@ mlir::acc::getVarPtr(mlir::Operation *accDataClauseOp) {
   auto varPtr{llvm::TypeSwitch<mlir::Operation *,
                                mlir::TypedValue<mlir::acc::PointerLikeType>>(
                   accDataClauseOp)
-                  .Case<ACC_DATA_ENTRY_OPS>(
+                  .Case<ACC_DATA_ENTRY_OPS, mlir::acc::MapInfoOp>(
                       [&](auto entry) { return entry.getVarPtr(); })
                   .Case<mlir::acc::CopyoutOp, mlir::acc::UpdateHostOp>(
                       [&](auto exit) { return exit.getVarPtr(); })
@@ -5352,16 +5401,16 @@ mlir::acc::getVarPtr(mlir::Operation *accDataClauseOp) {
 }
 
 mlir::Value mlir::acc::getVar(mlir::Operation *accDataClauseOp) {
-  auto varPtr{
-      llvm::TypeSwitch<mlir::Operation *, mlir::Value>(accDataClauseOp)
-          .Case<ACC_DATA_ENTRY_OPS>([&](auto entry) { return entry.getVar(); })
-          .Default([&](mlir::Operation *) { return mlir::Value(); })};
+  auto varPtr{llvm::TypeSwitch<mlir::Operation *, mlir::Value>(accDataClauseOp)
+                  .Case<ACC_DATA_ENTRY_OPS, mlir::acc::MapInfoOp>(
+                      [&](auto entry) { return entry.getVar(); })
+                  .Default([&](mlir::Operation *) { return mlir::Value(); })};
   return varPtr;
 }
 
 mlir::Type mlir::acc::getVarType(mlir::Operation *accDataClauseOp) {
   auto varType{llvm::TypeSwitch<mlir::Operation *, mlir::Type>(accDataClauseOp)
-                   .Case<ACC_DATA_ENTRY_OPS>(
+                   .Case<ACC_DATA_ENTRY_OPS, mlir::acc::MapInfoOp>(
                        [&](auto entry) { return entry.getVarType(); })
                    .Case<mlir::acc::CopyoutOp, mlir::acc::UpdateHostOp>(
                        [&](auto exit) { return exit.getVarType(); })
@@ -5371,29 +5420,31 @@ mlir::Type mlir::acc::getVarType(mlir::Operation *accDataClauseOp) {
 
 mlir::TypedValue<mlir::acc::PointerLikeType>
 mlir::acc::getAccPtr(mlir::Operation *accDataClauseOp) {
-  auto accPtr{llvm::TypeSwitch<mlir::Operation *,
-                               mlir::TypedValue<mlir::acc::PointerLikeType>>(
-                  accDataClauseOp)
-                  .Case<ACC_DATA_ENTRY_OPS, ACC_DATA_EXIT_OPS>(
-                      [&](auto dataClause) { return dataClause.getAccPtr(); })
-                  .Default([&](mlir::Operation *) {
-                    return mlir::TypedValue<mlir::acc::PointerLikeType>();
-                  })};
+  auto accPtr{
+      llvm::TypeSwitch<mlir::Operation *,
+                       mlir::TypedValue<mlir::acc::PointerLikeType>>(
+          accDataClauseOp)
+          .Case<ACC_DATA_ENTRY_OPS, ACC_DATA_EXIT_OPS, mlir::acc::MapInfoOp>(
+              [&](auto dataClause) { return dataClause.getAccPtr(); })
+          .Default([&](mlir::Operation *) {
+            return mlir::TypedValue<mlir::acc::PointerLikeType>();
+          })};
   return accPtr;
 }
 
 mlir::Value mlir::acc::getAccVar(mlir::Operation *accDataClauseOp) {
-  auto accPtr{llvm::TypeSwitch<mlir::Operation *, mlir::Value>(accDataClauseOp)
-                  .Case<ACC_DATA_ENTRY_OPS, ACC_DATA_EXIT_OPS>(
-                      [&](auto dataClause) { return dataClause.getAccVar(); })
-                  .Default([&](mlir::Operation *) { return mlir::Value(); })};
+  auto accPtr{
+      llvm::TypeSwitch<mlir::Operation *, mlir::Value>(accDataClauseOp)
+          .Case<ACC_DATA_ENTRY_OPS, ACC_DATA_EXIT_OPS, mlir::acc::MapInfoOp>(
+              [&](auto dataClause) { return dataClause.getAccVar(); })
+          .Default([&](mlir::Operation *) { return mlir::Value(); })};
   return accPtr;
 }
 
 mlir::Value mlir::acc::getVarPtrPtr(mlir::Operation *accDataClauseOp) {
   auto varPtrPtr{
       llvm::TypeSwitch<mlir::Operation *, mlir::Value>(accDataClauseOp)
-          .Case<ACC_DATA_ENTRY_OPS>(
+          .Case<ACC_DATA_ENTRY_OPS, mlir::acc::MapInfoOp>(
               [&](auto dataClause) { return dataClause.getVarPtrPtr(); })
           .Default([&](mlir::Operation *) { return mlir::Value(); })};
   return varPtrPtr;
@@ -5404,10 +5455,12 @@ mlir::acc::getBounds(mlir::Operation *accDataClauseOp) {
   mlir::SmallVector<mlir::Value> bounds{
       llvm::TypeSwitch<mlir::Operation *, mlir::SmallVector<mlir::Value>>(
           accDataClauseOp)
-          .Case<ACC_DATA_ENTRY_OPS, ACC_DATA_EXIT_OPS>([&](auto dataClause) {
-            return mlir::SmallVector<mlir::Value>(
-                dataClause.getBounds().begin(), dataClause.getBounds().end());
-          })
+          .Case<ACC_DATA_ENTRY_OPS, ACC_DATA_EXIT_OPS, mlir::acc::MapInfoOp>(
+              [&](auto dataClause) {
+                return mlir::SmallVector<mlir::Value>(
+                    dataClause.getBounds().begin(),
+                    dataClause.getBounds().end());
+              })
           .Default([&](mlir::Operation *) {
             return mlir::SmallVector<mlir::Value, 0>();
           })};
@@ -5447,7 +5500,8 @@ mlir::ArrayAttr mlir::acc::getAsyncOnly(mlir::Operation *accDataClauseOp) {
 std::optional<llvm::StringRef> mlir::acc::getVarName(mlir::Operation *accOp) {
   auto name{
       llvm::TypeSwitch<mlir::Operation *, std::optional<llvm::StringRef>>(accOp)
-          .Case<ACC_DATA_ENTRY_OPS>([&](auto entry) { return entry.getName(); })
+          .Case<ACC_DATA_ENTRY_OPS, mlir::acc::MapInfoOp>(
+              [&](auto entry) { return entry.getName(); })
           .Default([&](mlir::Operation *) -> std::optional<llvm::StringRef> {
             return {};
           })};
@@ -5466,17 +5520,27 @@ mlir::acc::getDataClause(mlir::Operation *accDataEntryOp) {
 }
 
 bool mlir::acc::getImplicitFlag(mlir::Operation *accDataEntryOp) {
-  auto implicit{llvm::TypeSwitch<mlir::Operation *, bool>(accDataEntryOp)
-                    .Case<ACC_DATA_ENTRY_OPS>(
-                        [&](auto entry) { return entry.getImplicit(); })
-                    .Default([&](mlir::Operation *) { return false; })};
-  return implicit;
+  return llvm::TypeSwitch<mlir::Operation *, bool>(accDataEntryOp)
+      .Case<ACC_DATA_ENTRY_OPS>([&](auto entry) { return entry.getImplicit(); })
+      .Case<mlir::acc::MapInfoOp>([&](auto mapInfo) {
+        return bitEnumContainsAny(mapInfo.getMapFlags(),
+                                  mlir::acc::MapFlags::implicit);
+      })
+      .Default([&](mlir::Operation *) { return false; });
+}
+
+bool mlir::acc::getSyntheticFlag(mlir::Operation *accDataClauseOp) {
+  return llvm::TypeSwitch<mlir::Operation *, bool>(accDataClauseOp)
+      .Case<ACC_DATA_CLAUSE_OPS>(
+          [&](auto dataClause) { return dataClause.getSynthetic(); })
+      .Default([&](mlir::Operation *) { return false; });
 }
 
 mlir::ValueRange mlir::acc::getDataOperands(mlir::Operation *accOp) {
   auto dataOperands{
       llvm::TypeSwitch<mlir::Operation *, mlir::ValueRange>(accOp)
-          .Case<ACC_COMPUTE_AND_DATA_CONSTRUCT_OPS>(
+          .Case<ACC_COMPUTE_AND_DATA_CONSTRUCT_OPS,
+                mlir::acc::KernelEnvironmentOp>(
               [&](auto entry) { return entry.getDataClauseOperands(); })
           .Default([&](mlir::Operation *) { return mlir::ValueRange(); })};
   return dataOperands;
@@ -5486,7 +5550,8 @@ mlir::MutableOperandRange
 mlir::acc::getMutableDataOperands(mlir::Operation *accOp) {
   auto dataOperands{
       llvm::TypeSwitch<mlir::Operation *, mlir::MutableOperandRange>(accOp)
-          .Case<ACC_COMPUTE_AND_DATA_CONSTRUCT_OPS>(
+          .Case<ACC_COMPUTE_AND_DATA_CONSTRUCT_OPS,
+                mlir::acc::KernelEnvironmentOp>(
               [&](auto entry) { return entry.getDataClauseOperandsMutable(); })
           .Default([&](mlir::Operation *) { return nullptr; })};
   return dataOperands;

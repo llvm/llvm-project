@@ -112,7 +112,8 @@ public:
     // should not crash when attempting to recover the (unchanged) operation
     // result.
     Value result = rewriter.createOrFold<TestOpInPlaceFold>(
-        op->getLoc(), rewriter.getIntegerType(32), op->getOperand(0));
+        op->getLoc(), rewriter.getIntegerType(32), op->getOperand(0),
+        IntegerAttr{});
     assert(result);
     rewriter.replaceOp(op, result);
     return success();
@@ -2213,6 +2214,15 @@ struct TestTypeConversionDriver
       return IntegerType::get(v.getContext(),
                               intType.getWidth() + incrementAttr.getInt());
     });
+    converter.addConversion(
+        [](Value v, SmallVectorImpl<Type> &) -> std::optional<LogicalResult> {
+          // Test dropping an i1 value used as an SCF condition.
+          Operation *definingOp = v.getDefiningOp();
+          if (!definingOp || !v.getType().isInteger(1) ||
+              !definingOp->hasAttr("drop_i1"))
+            return std::nullopt;
+          return success();
+        });
 
     /// Add the legal set of type materializations.
     converter.addSourceMaterialization([](OpBuilder &builder, Type resultType,

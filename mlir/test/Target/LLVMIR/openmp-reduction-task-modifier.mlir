@@ -159,7 +159,7 @@ llvm.func @empty_sections_task_reduction(%x: !llvm.ptr) {
 // reduction variables must not open a task-reduction scope.
 
 llvm.func @parallel_task_mod_no_reductions() {
-  "omp.parallel"() <{operandSegmentSizes = array<i32: 0, 0, 0, 0, 0, 0>, reduction_mod = #omp<reduction_modifier(task)>}> ({
+  "omp.parallel"() <{operandSegmentSizes = array<i32: 0, 0, 0, 0, 0, 0>, reduction_mod = #omp.reduction_modifier<task>}> ({
     omp.terminator
   }) : () -> ()
   llvm.return
@@ -179,7 +179,7 @@ llvm.func @wsloop_task_mod_no_reductions() {
   %lb = llvm.mlir.constant(1 : i32) : i32
   %ub = llvm.mlir.constant(10 : i32) : i32
   %step = llvm.mlir.constant(1 : i32) : i32
-  "omp.wsloop"() <{operandSegmentSizes = array<i32: 0, 0, 0, 0, 0, 0, 0>, reduction_mod = #omp<reduction_modifier(task)>}> ({
+  "omp.wsloop"() <{operandSegmentSizes = array<i32: 0, 0, 0, 0, 0, 0, 0>, reduction_mod = #omp.reduction_modifier<task>}> ({
     "omp.loop_nest"(%lb, %ub, %step) <{loop_inclusive}> ({
     ^bb0(%iv: i32):
       "omp.yield"() : () -> ()
@@ -201,7 +201,7 @@ llvm.func @wsloop_task_mod_no_reductions() {
 // empty-sections early return tested above.
 
 llvm.func @sections_task_mod_no_reductions() {
-  "omp.sections"() <{operandSegmentSizes = array<i32: 0, 0, 0, 0>, reduction_mod = #omp<reduction_modifier(task)>}> ({
+  "omp.sections"() <{operandSegmentSizes = array<i32: 0, 0, 0, 0>, reduction_mod = #omp.reduction_modifier<task>}> ({
     "omp.section"() ({
       "omp.terminator"() : () -> ()
     }) : () -> ()

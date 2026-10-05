@@ -27,6 +27,7 @@ unittest("AMDGPUTests") {
     "GCNRegPressureTest.cpp",
     "InstSizes.cpp",
     "LiveRegUnits.cpp",
+    "MFMACoExecRules.cpp",
     "PALMetadata.cpp",
     "RCIUpdateReservedRegsTest.cpp",
     "UniformityAnalysisTest.cpp",

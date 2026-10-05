@@ -237,6 +237,23 @@ TEST(SmallVectorTest, MoveConstructNonMoveAssignableFromSmallVectorImpl) {
   EXPECT_EQ(2, To[1].Value);
 }
 
+TEST(SmallVectorTest, MoveConstructNestedNonMoveAssignableElements) {
+  SmallVector<MoveConstructOnly, 2> Inner;
+  Inner.emplace_back(1);
+  Inner.emplace_back(2);
+
+  SmallVector<SmallVector<MoveConstructOnly, 2>, 1> From;
+  From.push_back(std::move(Inner));
+
+  SmallVector<SmallVector<MoveConstructOnly, 2>, 1> To(std::move(From));
+
+  EXPECT_TRUE(From.empty());
+  ASSERT_EQ(1u, To.size());
+  ASSERT_EQ(2u, To[0].size());
+  EXPECT_EQ(1, To[0][0].Value);
+  EXPECT_EQ(2, To[0][1].Value);
+}
+
 // Assert that v contains the specified values, in order.
 template <typename VectorT>
 void assertValuesInOrder(VectorT &v, size_t size, ...) {
