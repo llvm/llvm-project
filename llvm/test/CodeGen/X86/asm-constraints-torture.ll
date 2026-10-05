@@ -8,13 +8,12 @@
 ; RUN: llc -mtriple=x86_64-unknown-linux-gnu --global-isel=false --fast-isel=false --regalloc=fast < %s \
 ; RUN:     | FileCheck --check-prefix=FAST_RA %s
 
-; Combinatorial coverage for "rm"-style inline asm constraints: inputs,
-; outputs, tied read-write operands, mixed with plain "r"/"m" operands and
-; early-clobbers, each with and without enough register pressure to force a
-; fold to memory. TargetLowering::getConstraintPreferences() should keep
-; each "rm" operand in a register when there's no pressure, and
-; RegAllocFast::foldFoldableInlineAsmOperands() (fast RA) /
-; InlineSpiller (greedy RA) should fold it to a stack slot when there is.
+; Combinatorial coverage for "rm" inline asm operands: inputs, outputs, tied
+; read-write operands, and mixes with plain "r"/"m" operands and early-clobber
+; outputs. Each comes without and with pressure from values live across the
+; asm, which the register allocators spill, so every "rm" operand stays in a
+; register. asm-constraints-rm-pressure.ll covers operands that have to be
+; folded to memory.
 
 define dso_local i32 @test_rm_input_no_pressure(ptr noundef readonly captures(none) %foo) local_unnamed_addr {
 ; FAST_ISEL_GREEDY_RA-LABEL: test_rm_input_no_pressure:

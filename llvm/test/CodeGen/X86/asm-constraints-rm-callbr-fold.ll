@@ -2,21 +2,11 @@
 ; RUN: llc -mtriple=x86_64-unknown-linux-gnu --regalloc=fast \
 ; RUN:     -verify-machineinstrs -verify-regalloc < %s | FileCheck %s
 
-; RegAllocFast::foldFoldableInlineAsmOperands() folds this "=&rm" output to
-; memory under the register pressure from the six "r" inputs plus clobbers.
-; Unlike an ordinary instruction, a folded callbr's def is reachable from two
-; different points in the block that follows it: the fallthrough successor
-; (where RegAllocFast inserts an explicit reload right after the asm) and any
-; indirect successor (which has no such reload -- it is a different block,
-; reached by branching out of the asm itself, bypassing the fallthrough
-; instruction stream entirely). This is only correct because the memory
-; write happens as a side effect of executing the folded asm itself, so it is
-; unconditionally visible on every successor path; the indirect block then
-; picks it up via RegAllocFast's ordinary live-in reload (driven by the
-; shared StackSlotForVirtReg entry for %r), the same as any other cross-block
-; virtual register use. Guards against a regression where this only works by
-; accident of shared bookkeeping and silently reads an uninitialized slot on
-; the indirect path.
+; The fast allocator folds this "=&rm" output to a stack slot, since the six
+; "r" inputs and the clobbers leave no register for it. The reload of %r after
+; the callbr only covers the fallthrough path: on the indirect path, %r must
+; come from the slot the asm wrote, which has to be %r's own spill slot, so
+; that the indirect block's ordinary reload of %r finds it.
 define i64 @test_callbr_rm_indirect_use(i64 %a, i64 %b, i64 %c, i64 %d, i64 %e, i64 %f) {
 ; CHECK-LABEL: test_callbr_rm_indirect_use:
 ; CHECK:       # %bb.0: # %entry

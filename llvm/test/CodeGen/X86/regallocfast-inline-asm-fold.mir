@@ -1,0 +1,58 @@
+# RUN: llc -mtriple=x86_64-unknown-linux-gnu -run-pass=regallocfast \
+# RUN:   -verify-machineinstrs %s -o - | FileCheck %s
+
+# The fast register allocator folds a foldable ("rm") inline asm operand to a
+# stack slot when the asm's register operands wouldn't fit otherwise. The
+# clobbers below leave six GPRs. The tied operands haven't been rewritten, so
+# a tied def and its input are different virtual registers: the allocator
+# lowers the tie itself, copying the input into the def's register if the
+# input stays live.
+
+---
+# Five inputs plus the tied pair fit: the input dies, so the def takes over its
+# register.
+name: tied_input_dies
+tracksRegLiveness: true
+body: |
+  bb.0:
+    liveins: $rdi, $rsi, $rdx, $rcx, $r8, $r9
+
+    ; CHECK-LABEL: name: tied_input_dies
+    ; CHECK-NOT: MOV64mr
+    ; CHECK: INLINEASM &"", sideeffect attdialect, regdef:GR64 foldable, def renamable [[REG:\$[a-z0-9]+]], {{.*}}, reguse tiedto:$0, killed renamable [[REG]](tied-def 3)
+    %0:gr64 = COPY $rdi
+    %1:gr64 = COPY $rsi
+    %2:gr64 = COPY $rdx
+    %3:gr64 = COPY $rcx
+    %4:gr64 = COPY $r8
+    %5:gr64 = COPY $r9
+    INLINEASM &"", sideeffect attdialect, regdef:GR64 foldable, def %6:gr64, reguse:GR64, killed %1, reguse:GR64, killed %2, reguse:GR64, killed %3, reguse:GR64, killed %4, reguse:GR64, killed %5, reguse tiedto:$0, killed %0(tied-def 3), clobber, implicit-def early-clobber $rax, clobber, implicit-def early-clobber $rbx, clobber, implicit-def early-clobber $rbp, clobber, implicit-def early-clobber $r10, clobber, implicit-def early-clobber $r11, clobber, implicit-def early-clobber $r12, clobber, implicit-def early-clobber $r13, clobber, implicit-def early-clobber $r14, clobber, implicit-def early-clobber $r15
+    $rax = COPY %6
+    RET 0, $rax
+...
+---
+# The same, except that the input is used after the asm, so it keeps its own
+# register while it's copied into the def's: seven registers. Fold the tied
+# pair instead, storing the input's value to the def's stack slot first.
+name: tied_input_lives
+tracksRegLiveness: true
+body: |
+  bb.0:
+    liveins: $rdi, $rsi, $rdx, $rcx, $r8, $r9
+
+    ; CHECK-LABEL: name: tied_input_lives
+    ; CHECK: MOV64mr %stack.[[SLOT:[0-9]+]], 1, $noreg, 0, $noreg, renamable [[INPUT:\$[a-z0-9]+]]
+    ; CHECK-NEXT: INLINEASM &"", sideeffect mayload maystore attdialect, mem:m, %stack.[[SLOT]], 1, $noreg, 0, $noreg, {{.*}}, mem:m, %stack.[[SLOT]], 1, $noreg, 0, $noreg, clobber,
+    ; CHECK-NEXT: renamable [[DEF:\$[a-z0-9]+]] = MOV64rm %stack.[[SLOT]], 1, $noreg, 0, $noreg
+    ; CHECK-NEXT: ADD64rr killed renamable [[DEF]], killed renamable [[INPUT]]
+    %0:gr64 = COPY $rdi
+    %1:gr64 = COPY $rsi
+    %2:gr64 = COPY $rdx
+    %3:gr64 = COPY $rcx
+    %4:gr64 = COPY $r8
+    %5:gr64 = COPY $r9
+    INLINEASM &"", sideeffect attdialect, regdef:GR64 foldable, def %6:gr64, reguse:GR64, killed %1, reguse:GR64, killed %2, reguse:GR64, killed %3, reguse:GR64, killed %4, reguse:GR64, killed %5, reguse tiedto:$0, %0(tied-def 3), clobber, implicit-def early-clobber $rax, clobber, implicit-def early-clobber $rbx, clobber, implicit-def early-clobber $rbp, clobber, implicit-def early-clobber $r10, clobber, implicit-def early-clobber $r11, clobber, implicit-def early-clobber $r12, clobber, implicit-def early-clobber $r13, clobber, implicit-def early-clobber $r14, clobber, implicit-def early-clobber $r15
+    %7:gr64 = ADD64rr %6, killed %0, implicit-def dead $eflags
+    $rax = COPY %7
+    RET 0, $rax
+...
