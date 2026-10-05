@@ -21,6 +21,15 @@ namespace std::execution {
   inline constexpr parallel_policy par = implementation-defined;
   inline constexpr parallel_unsequenced_policy par_unseq = implementation-defined;
   inline constexpr unsequenced_policy unseq = implementation-defined; // since C++20
+
+  // completion functions, since C++26
+  struct set_value_t;
+  struct set_error_t;
+  struct set_stopped_t;
+
+  inline constexpr set_value_t set_value{};
+  inline constexpr set_error_t set_error{};
+  inline constexpr set_stopped_t set_stopped{};
 }
 
 namespace std {
@@ -36,6 +45,7 @@ namespace std {
 #  include <__cxx03/__config>
 #else
 #  include <__config>
+#  include <__execution/completion_functions.h>
 #  include <__type_traits/is_execution_policy.h>
 #  include <__type_traits/is_same.h>
 #  include <__type_traits/remove_cvref.h>
