@@ -3182,6 +3182,8 @@ SPIRVModuleAnalysis::run(Module &M, ModuleAnalysisManager &MAM) {
                             MachineFunctionAnalysis::Result *MFA =
                                 FAM.getCachedResult<MachineFunctionAnalysis>(
                                     const_cast<Function &>(F));
+                            assert((MFA || F.isDeclaration()) &&
+                                   "Missing MachineFunction for definition");
                             return MFA ? &MFA->getMF() : nullptr;
                           })
       .run(M);
