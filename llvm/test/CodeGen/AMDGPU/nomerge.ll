@@ -1,5 +1,5 @@
-; RUN: llc -mtriple=amdgpu10.30-amd-amdhsa < %s | FileCheck %s
-; RUN: llc -mtriple=amdgpu10.30-amd-amdhsa -global-isel < %s | FileCheck %s
+; RUN: llc -mtriple=amdgpu10.30-amd-amdhsa -global-isel=0 < %s | FileCheck %s
+; RUN: llc -mtriple=amdgpu10.30-amd-amdhsa -global-isel=1 < %s | FileCheck %s
 
 declare void @report() noreturn
 declare void @bar()
