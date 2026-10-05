@@ -22,6 +22,7 @@ bool hasImplicitAddressLocation(const DWARFDie &Die) {
   std::optional<DWARFFormValue> Location = Die.find(dwarf::DW_AT_location);
   if (!Location)
     return false;
+
   std::optional<ArrayRef<uint8_t>> Block = Location->getAsBlock();
   if (!Block)
     return false;
