@@ -943,6 +943,21 @@ void CUDAChecker::Enter(const parser::AssignmentStmt &x) {
         "More than one reference to a CUDA object on the right hand side of the assignment"_err_en_US);
   }
 
+  // An implicit data transfer copies the whole device object to the host, and
+  // the size of an assumed-size array is unknown.
+  if (evaluate::IsCUDADataTransfer(assign->lhs, assign->rhs) &&
+      evaluate::HasCUDAImplicitTransfer(assign->rhs)) {
+    for (const Symbol &sym : evaluate::CollectCudaSymbols(assign->rhs)) {
+      if (evaluate::IsCUDADeviceSymbol(sym) &&
+          IsAssumedSizeArray(sym.GetUltimate())) {
+        context_.Say(lhsLoc,
+            "Implicit data transfer of assumed-size device array '%s' is not supported"_err_en_US,
+            sym.name());
+        break;
+      }
+    }
+  }
+
   if (evaluate::HasCUDADeviceAttrs(assign->lhs) &&
       (evaluate::HasCUDAImplicitTransfer(assign->rhs) &&
           !evaluate::HasOnlyCUDAConstntImplicitTransfer(assign->rhs))) {
