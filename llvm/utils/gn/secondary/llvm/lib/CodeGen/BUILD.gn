@@ -1,3 +1,10 @@
+import("//llvm/utils/TableGen/tablegen.gni")
+
+tablegen("CodeGenOptions") {
+  visibility = [ ":CodeGen" ]
+  args = [ "-gen-opt-parser-defs" ]
+}
+
 static_library("CodeGen") {
   output_name = "LLVMCodeGen"
   public_deps = [
@@ -5,6 +12,7 @@ static_library("CodeGen") {
     "//llvm/include/llvm/Config:llvm-config",
   ]
   deps = [
+    ":CodeGenOptions",
     "//llvm/include/llvm/CodeGen:GenVT",
     "//llvm/lib/Analysis",
     "//llvm/lib/Bitcode/Reader",
@@ -13,6 +21,7 @@ static_library("CodeGen") {
     "//llvm/lib/CodeGenTypes",
     "//llvm/lib/IR",
     "//llvm/lib/MC",
+    "//llvm/lib/Option",
     "//llvm/lib/ProfileData",
     "//llvm/lib/Support",
     "//llvm/lib/Target",
@@ -42,6 +51,7 @@ static_library("CodeGen") {
     "CallingConvLower.cpp",
     "CodeGen.cpp",
     "CodeGenCommonISel.cpp",
+    "CodeGenOptions.cpp",
     "CodeGenPrepare.cpp",
     "CodeGenTargetMachineImpl.cpp",
     "CommandFlags.cpp",

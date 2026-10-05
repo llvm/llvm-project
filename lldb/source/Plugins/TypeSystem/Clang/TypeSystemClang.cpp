@@ -4925,6 +4925,7 @@ lldb::Encoding TypeSystemClang::GetEncoding(lldb::opaque_compiler_type_t type) {
     case clang::BuiltinType::NullPtr:
       return lldb::eEncodingUint;
 
+    case clang::BuiltinType::MetaInfo:
       // HLSL -- Packed Types
 #define HLSL_PACKED_TYPE(Name, Id, SingletonId) case clang::BuiltinType::Id:
 #include "clang/Basic/HLSLPackedTypes.def"
@@ -8533,6 +8534,7 @@ void TypeSystemClang::Dump(llvm::raw_ostream &output, llvm::StringRef filter,
 
   auto consumer =
       clang::CreateASTDumper(output, filter,
+                             /*FilterPath=*/"",
                              /*DumpDecls=*/true,
                              /*Deserialize=*/false,
                              /*DumpLookups=*/false,
