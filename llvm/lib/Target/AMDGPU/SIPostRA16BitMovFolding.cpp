@@ -149,6 +149,7 @@ bool SIPostRA16BitMovFolding::mergeSingleMovB16Pair(MachineInstr &Lo,
 
   // Check that between Lo and Hi, there are no instructions that:
   // - modify Dst32
+  // - write EXEC
   // - modify LoSrc16 or HiSrc16 depending on order (data dependency)
   // We scan from the instruction after the first mov up to (but not including)
   // the second mov.
@@ -166,8 +167,9 @@ bool SIPostRA16BitMovFolding::mergeSingleMovB16Pair(MachineInstr &Lo,
       continue;
     if (Scan.modifiesRegister(Dst32, TRI))
       return false;
-    assert(!Scan.modifiesRegister(AMDGPU::EXEC, TRI) &&
-           "Expect no write on EXEC!");
+    // Don't merge across the WWM enters/exits you get from SGPR spills.
+    if (Scan.modifiesRegister(AMDGPU::EXEC, TRI))
+      return false;
     LoopCnt++;
     if (LoopCnt < UpperBoundCnt &&
         ((FirstSrc16 && Scan.modifiesRegister(FirstSrc16, TRI)) ||
