@@ -9,10 +9,8 @@ define i32 @xor_eq_mask(i8 %x) {
 ; CHECK-LABEL: define i32 @xor_eq_mask(
 ; CHECK-SAME: i8 [[X:%.*]]) {
 ; CHECK-NEXT:  [[ENTRY:.*:]]
-; CHECK-NEXT:    [[XOR:%.*]] = xor i8 [[X]], 3
-; CHECK-NEXT:    [[ZEXT:%.*]] = zext i8 [[XOR]] to i32
-; CHECK-NEXT:    [[SUB:%.*]] = add nsw i32 [[ZEXT]], -1
-; CHECK-NEXT:    [[MASK:%.*]] = ashr i32 [[SUB]], 31
+; CHECK-NEXT:    [[TMP0:%.*]] = icmp eq i8 [[X]], 3
+; CHECK-NEXT:    [[MASK:%.*]] = sext i1 [[TMP0]] to i32
 ; CHECK-NEXT:    ret i32 [[MASK]]
 ;
 entry:
@@ -28,10 +26,8 @@ define i32 @xor_eq_mask_other_constant(i8 %x) {
 ; CHECK-LABEL: define i32 @xor_eq_mask_other_constant(
 ; CHECK-SAME: i8 [[X:%.*]]) {
 ; CHECK-NEXT:  [[ENTRY:.*:]]
-; CHECK-NEXT:    [[XOR:%.*]] = xor i8 [[X]], 42
-; CHECK-NEXT:    [[ZEXT:%.*]] = zext i8 [[XOR]] to i32
-; CHECK-NEXT:    [[SUB:%.*]] = add nsw i32 [[ZEXT]], -1
-; CHECK-NEXT:    [[MASK:%.*]] = ashr i32 [[SUB]], 31
+; CHECK-NEXT:    [[TMP0:%.*]] = icmp eq i8 [[X]], 42
+; CHECK-NEXT:    [[MASK:%.*]] = sext i1 [[TMP0]] to i32
 ; CHECK-NEXT:    ret i32 [[MASK]]
 ;
 entry:
@@ -48,10 +44,8 @@ define i32 @xor_eq_mask_no_nsw(i8 %x) {
 ; CHECK-LABEL: define i32 @xor_eq_mask_no_nsw(
 ; CHECK-SAME: i8 [[X:%.*]]) {
 ; CHECK-NEXT:  [[ENTRY:.*:]]
-; CHECK-NEXT:    [[XOR:%.*]] = xor i8 [[X]], 3
-; CHECK-NEXT:    [[ZEXT:%.*]] = zext i8 [[XOR]] to i32
-; CHECK-NEXT:    [[SUB:%.*]] = add nsw i32 [[ZEXT]], -1
-; CHECK-NEXT:    [[MASK:%.*]] = ashr i32 [[SUB]], 31
+; CHECK-NEXT:    [[TMP0:%.*]] = icmp eq i8 [[X]], 3
+; CHECK-NEXT:    [[MASK:%.*]] = sext i1 [[TMP0]] to i32
 ; CHECK-NEXT:    ret i32 [[MASK]]
 ;
 entry:
@@ -69,9 +63,8 @@ define i32 @xor_eq_mask_xor_multi_use(i8 %x) {
 ; CHECK-NEXT:  [[ENTRY:.*:]]
 ; CHECK-NEXT:    [[XOR:%.*]] = xor i8 [[X]], 3
 ; CHECK-NEXT:    call void @use_i8(i8 [[XOR]])
-; CHECK-NEXT:    [[ZEXT:%.*]] = zext i8 [[XOR]] to i32
-; CHECK-NEXT:    [[SUB:%.*]] = add nsw i32 [[ZEXT]], -1
-; CHECK-NEXT:    [[MASK:%.*]] = ashr i32 [[SUB]], 31
+; CHECK-NEXT:    [[TMP0:%.*]] = icmp eq i8 [[X]], 3
+; CHECK-NEXT:    [[MASK:%.*]] = sext i1 [[TMP0]] to i32
 ; CHECK-NEXT:    ret i32 [[MASK]]
 ;
 entry:
@@ -148,10 +141,8 @@ define <2 x i32> @xor_eq_mask_vec_splat(<2 x i8> %x) {
 ; CHECK-LABEL: define <2 x i32> @xor_eq_mask_vec_splat(
 ; CHECK-SAME: <2 x i8> [[X:%.*]]) {
 ; CHECK-NEXT:  [[ENTRY:.*:]]
-; CHECK-NEXT:    [[XOR:%.*]] = xor <2 x i8> [[X]], splat (i8 3)
-; CHECK-NEXT:    [[ZEXT:%.*]] = zext <2 x i8> [[XOR]] to <2 x i32>
-; CHECK-NEXT:    [[SUB:%.*]] = add nsw <2 x i32> [[ZEXT]], splat (i32 -1)
-; CHECK-NEXT:    [[MASK:%.*]] = ashr <2 x i32> [[SUB]], splat (i32 31)
+; CHECK-NEXT:    [[TMP0:%.*]] = icmp eq <2 x i8> [[X]], splat (i8 3)
+; CHECK-NEXT:    [[MASK:%.*]] = sext <2 x i1> [[TMP0]] to <2 x i32>
 ; CHECK-NEXT:    ret <2 x i32> [[MASK]]
 ;
 entry:
@@ -167,9 +158,8 @@ define i32 @zext_zero_mask(i8 %x) {
 ; CHECK-LABEL: define i32 @zext_zero_mask(
 ; CHECK-SAME: i8 [[X:%.*]]) {
 ; CHECK-NEXT:  [[ENTRY:.*:]]
-; CHECK-NEXT:    [[ZEXT:%.*]] = zext i8 [[X]] to i32
-; CHECK-NEXT:    [[SUB:%.*]] = add nsw i32 [[ZEXT]], -1
-; CHECK-NEXT:    [[MASK:%.*]] = ashr i32 [[SUB]], 31
+; CHECK-NEXT:    [[TMP0:%.*]] = icmp eq i8 [[X]], 0
+; CHECK-NEXT:    [[MASK:%.*]] = sext i1 [[TMP0]] to i32
 ; CHECK-NEXT:    ret i32 [[MASK]]
 ;
 entry:
@@ -183,9 +173,8 @@ define i8 @zext_zero_mask_i4_i8(i4 %x) {
 ; CHECK-LABEL: define i8 @zext_zero_mask_i4_i8(
 ; CHECK-SAME: i4 [[X:%.*]]) {
 ; CHECK-NEXT:  [[ENTRY:.*:]]
-; CHECK-NEXT:    [[ZEXT:%.*]] = zext i4 [[X]] to i8
-; CHECK-NEXT:    [[SUB:%.*]] = add nsw i8 [[ZEXT]], -1
-; CHECK-NEXT:    [[MASK:%.*]] = ashr i8 [[SUB]], 7
+; CHECK-NEXT:    [[TMP0:%.*]] = icmp eq i4 [[X]], 0
+; CHECK-NEXT:    [[MASK:%.*]] = sext i1 [[TMP0]] to i8
 ; CHECK-NEXT:    ret i8 [[MASK]]
 ;
 entry:
@@ -199,9 +188,8 @@ define i8 @zext_zero_mask_i7_i8(i7 %x) {
 ; CHECK-LABEL: define i8 @zext_zero_mask_i7_i8(
 ; CHECK-SAME: i7 [[X:%.*]]) {
 ; CHECK-NEXT:  [[ENTRY:.*:]]
-; CHECK-NEXT:    [[ZEXT:%.*]] = zext i7 [[X]] to i8
-; CHECK-NEXT:    [[SUB:%.*]] = add nsw i8 [[ZEXT]], -1
-; CHECK-NEXT:    [[MASK:%.*]] = ashr i8 [[SUB]], 7
+; CHECK-NEXT:    [[TMP0:%.*]] = icmp eq i7 [[X]], 0
+; CHECK-NEXT:    [[MASK:%.*]] = sext i1 [[TMP0]] to i8
 ; CHECK-NEXT:    ret i8 [[MASK]]
 ;
 entry:
@@ -215,9 +203,8 @@ define <2 x i32> @zext_zero_mask_vec(<2 x i8> %x) {
 ; CHECK-LABEL: define <2 x i32> @zext_zero_mask_vec(
 ; CHECK-SAME: <2 x i8> [[X:%.*]]) {
 ; CHECK-NEXT:  [[ENTRY:.*:]]
-; CHECK-NEXT:    [[ZEXT:%.*]] = zext <2 x i8> [[X]] to <2 x i32>
-; CHECK-NEXT:    [[SUB:%.*]] = add nsw <2 x i32> [[ZEXT]], splat (i32 -1)
-; CHECK-NEXT:    [[MASK:%.*]] = ashr <2 x i32> [[SUB]], splat (i32 31)
+; CHECK-NEXT:    [[TMP0:%.*]] = icmp eq <2 x i8> [[X]], zeroinitializer
+; CHECK-NEXT:    [[MASK:%.*]] = sext <2 x i1> [[TMP0]] to <2 x i32>
 ; CHECK-NEXT:    ret <2 x i32> [[MASK]]
 ;
 entry:
@@ -248,8 +235,8 @@ define i32 @zext_zero_mask_zext_multi_use(i8 %x) {
 ; CHECK-NEXT:  [[ENTRY:.*:]]
 ; CHECK-NEXT:    [[ZEXT:%.*]] = zext i8 [[X]] to i32
 ; CHECK-NEXT:    call void @use_i32(i32 [[ZEXT]])
-; CHECK-NEXT:    [[SUB:%.*]] = add nsw i32 [[ZEXT]], -1
-; CHECK-NEXT:    [[MASK:%.*]] = ashr i32 [[SUB]], 31
+; CHECK-NEXT:    [[TMP0:%.*]] = icmp eq i8 [[X]], 0
+; CHECK-NEXT:    [[MASK:%.*]] = sext i1 [[TMP0]] to i32
 ; CHECK-NEXT:    ret i32 [[MASK]]
 ;
 entry:
