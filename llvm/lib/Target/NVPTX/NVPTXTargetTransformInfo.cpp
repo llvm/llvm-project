@@ -501,7 +501,7 @@ NVPTXTTIImpl::getInstructionCost(const User *U,
 InstructionCost NVPTXTTIImpl::getArithmeticInstrCost(
     unsigned Opcode, Type *Ty, TTI::TargetCostKind CostKind,
     TTI::OperandValueInfo Op1Info, TTI::OperandValueInfo Op2Info,
-    ArrayRef<const Value *> Args, const Instruction *CxtI) const {
+    ArrayRef<const Value *> Args, const Instruction *CtxI) const {
   // Legalize the type.
   std::pair<InstructionCost, MVT> LT = getTypeLegalizationCost(Ty);
 
@@ -670,6 +670,18 @@ void NVPTXTTIImpl::collectKernelLaunchBounds(
     LB.push_back({"maxntidy", MaxNTID[1]});
   if (MaxNTID.size() > 2)
     LB.push_back({"maxntidz", MaxNTID[2]});
+}
+
+// Global addresses can only be materialized if they are in generic global or
+// constant space.
+bool NVPTXTTIImpl::shouldBuildLookupTablesForConstant(Constant *C) const {
+  if (const auto *GV = dyn_cast<GlobalValue>(C)) {
+    const unsigned AS = GV->getAddressSpace();
+    return AS == NVPTXAS::ADDRESS_SPACE_GENERIC ||
+           AS == NVPTXAS::ADDRESS_SPACE_GLOBAL ||
+           AS == NVPTXAS::ADDRESS_SPACE_CONST;
+  }
+  return true;
 }
 
 ValueUniformity NVPTXTTIImpl::getValueUniformity(const Value *V) const {

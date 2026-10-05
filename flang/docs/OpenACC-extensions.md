@@ -8,11 +8,6 @@
 
 # OpenACC Extensions in Flang
 
-```{contents}
----
-local:
----
-```
 
 Flang is more lenient than the OpenACC specification requires for purposes of
 compatibility. This document describes extensions to the OpenACC specification.
@@ -58,6 +53,17 @@ These extensions require no flag.
   `-Wno-portability`).
 
 ## Extensions enabled by default
+
+### `-fopenacc-acc-kernels-do-concurrent-independent` — independent `DO CONCURRENT` in `KERNELS LOOP`
+
+When a `DO CONCURRENT` is associated with a combined OpenACC `KERNELS LOOP`
+construct and no explicit `seq`, `auto`, or `independent` clause is present,
+the iteration-independence assertion of `DO CONCURRENT` is preserved and the
+loop is treated as if the `independent` clause were present.
+
+Disable with
+`-fno-openacc-acc-kernels-do-concurrent-independent` to treat the loop as
+`auto` when no explicit loop parallelism mode is present.
 
 ### `-fopenacc-combined-loop-firstprivate` — combined loop firstprivate
 

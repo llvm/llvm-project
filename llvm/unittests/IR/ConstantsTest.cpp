@@ -263,9 +263,11 @@ TEST(ConstantsTest, AsInstructionsTest) {
   //        not a normal one!
   // CHECK(ConstantExpr::getGetElementPtr(Global, V, false),
   //      "getelementptr ptr, ptr @dummy, i32 1");
+  LLVM_SUPPRESS_DEPRECATED_DECLARATIONS_PUSH
   CHECK(ConstantExpr::getInBoundsGetElementPtr(PointerType::getUnqual(Context),
                                                Global, V),
         "getelementptr inbounds ptr, ptr @dummy, i32 1");
+  LLVM_SUPPRESS_DEPRECATED_DECLARATIONS_POP
 
   CHECK(ConstantExpr::getExtractElement(P6, One),
         "extractelement <2 x i16> " P6STR ", i32 1");
@@ -292,8 +294,7 @@ TEST(ConstantsTest, ReplaceWithConstantTest) {
 
   Constant *Global =
       M->getOrInsertGlobal("dummy", PointerType::getUnqual(Context));
-  Constant *GEP = ConstantExpr::getGetElementPtr(
-      PointerType::getUnqual(Context), Global, One);
+  Constant *GEP = ConstantExpr::getPtrAdd(Global, One);
   EXPECT_DEATH(Global->replaceAllUsesWith(GEP),
                "this->replaceAllUsesWith\\(expr\\(this\\)\\) is NOT valid!");
 }
@@ -360,7 +361,7 @@ TEST(ConstantsTest, GEPReplaceWithConstant) {
   auto *C1 = ConstantInt::get(IntTy, 1);
   auto *Placeholder = new GlobalVariable(
       *M, IntTy, false, GlobalValue::ExternalWeakLinkage, nullptr);
-  auto *GEP = ConstantExpr::getGetElementPtr(IntTy, Placeholder, C1);
+  auto *GEP = ConstantExpr::getPtrAdd(Placeholder, C1);
   ASSERT_EQ(GEP->getOperand(0), Placeholder);
 
   auto *Ref =
@@ -940,6 +941,61 @@ TEST(ConstantsTest, ToConstantRangeConstantByteVector) {
   ASSERT_TRUE(isa<ConstantVector>(CVWithPoison));
   ConstantRange CRPoison = CVWithPoison->toConstantRange();
   EXPECT_EQ(CRPoison, ConstantRange(APInt(7, 10), APInt(7, 21)));
+}
+
+TEST(ConstantsTest, GetElementPtrDataLayout) {
+  LLVMContext Context;
+  DataLayout DL;
+  Module M("", Context);
+
+  Type *I8 = Type::getInt8Ty(Context);
+  Type *I32 = Type::getInt32Ty(Context);
+  Type *I64 = Type::getInt64Ty(Context);
+  Type *I128 = Type::getInt128Ty(Context);
+  Type *A4I32 = ArrayType::get(I32, 4);
+  Constant *I32_10 = ConstantInt::get(I32, 10);
+  Constant *I64_1 = ConstantInt::get(I64, 1);
+  Constant *I64_10 = ConstantInt::get(I64, 10);
+  Constant *I64_40 = ConstantInt::get(I64, 40);
+  Constant *I128_10 = ConstantInt::get(I128, 10);
+  Constant *V2I64_10 =
+      ConstantVector::getSplat(ElementCount::getFixed(2), I64_10);
+  Constant *V2I64_40 =
+      ConstantVector::getSplat(ElementCount::getFixed(2), I64_40);
+
+  Constant *Ptr = M.getOrInsertGlobal("dummy", I8);
+  Constant *PtrVec = ConstantVector::getSplat(ElementCount::getFixed(2), Ptr);
+  Constant *PtrToInt64 = ConstantExpr::getPtrToInt(Ptr, I64);
+  Constant *PtrToInt32 = ConstantExpr::getPtrToInt(Ptr, I32);
+
+  // No-op.
+  EXPECT_EQ(ConstantExpr::getGetElementPtr(DL, I8, Ptr, I64_10),
+            ConstantExpr::getPtrAdd(Ptr, I64_10));
+  // Index type is canonicalized.
+  EXPECT_EQ(ConstantExpr::getGetElementPtr(DL, I8, Ptr, I32_10),
+            ConstantExpr::getPtrAdd(Ptr, I64_10));
+  EXPECT_EQ(ConstantExpr::getGetElementPtr(DL, I8, Ptr, I128_10),
+            ConstantExpr::getPtrAdd(Ptr, I64_10));
+  // Non-i8 base type.
+  EXPECT_EQ(ConstantExpr::getGetElementPtr(DL, I32, Ptr, I64_10),
+            ConstantExpr::getPtrAdd(Ptr, I64_40));
+  // Multiple indices.
+  EXPECT_EQ(ConstantExpr::getGetElementPtr(DL, A4I32, Ptr, {I64_1, I64_10}),
+            ConstantExpr::getPtrAdd(Ptr, ConstantInt::get(I64, 56)));
+  // Vector base pointer, scalar index.
+  EXPECT_EQ(ConstantExpr::getGetElementPtr(DL, I32, PtrVec, I64_10),
+            ConstantExpr::getPtrAdd(PtrVec, I64_40));
+  // Scalar base pointer, vector index
+  EXPECT_EQ(ConstantExpr::getGetElementPtr(DL, I32, Ptr, V2I64_10),
+            ConstantExpr::getPtrAdd(Ptr, V2I64_40));
+  // Vector base pointer, vector index.
+  EXPECT_EQ(ConstantExpr::getGetElementPtr(DL, I32, PtrVec, V2I64_10),
+            ConstantExpr::getPtrAdd(PtrVec, V2I64_40));
+
+  // Can't represent scale * constexpr.
+  EXPECT_EQ(nullptr, ConstantExpr::getGetElementPtr(DL, I32, Ptr, PtrToInt64));
+  // Can't represent sext(constexpr).
+  EXPECT_EQ(nullptr, ConstantExpr::getGetElementPtr(DL, I8, Ptr, PtrToInt32));
 }
 
 } // end anonymous namespace
