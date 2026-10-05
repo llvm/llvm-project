@@ -87,8 +87,7 @@ define signext i32 @select_const_int_pow2_zero(i1 zeroext %a) nounwind {
 define i64 @select_shl_sra(i1 zeroext %c, i32 signext %x) nounwind {
 ; RV32-LABEL: select_shl_sra:
 ; RV32:       # %bb.0:
-; RV32-NEXT:    neg a0, a0
-; RV32-NEXT:    andi a0, a0, 2
+; RV32-NEXT:    slli a0, a0, 1
 ; RV32-NEXT:    sra a0, a1, a0
 ; RV32-NEXT:    srai a1, a0, 31
 ; RV32-NEXT:    ret
@@ -106,8 +105,7 @@ define i64 @select_shl_sra(i1 zeroext %c, i32 signext %x) nounwind {
 ;
 ; RV64-LABEL: select_shl_sra:
 ; RV64:       # %bb.0:
-; RV64-NEXT:    neg a0, a0
-; RV64-NEXT:    andi a0, a0, 2
+; RV64-NEXT:    slli a0, a0, 1
 ; RV64-NEXT:    sra a0, a1, a0
 ; RV64-NEXT:    ret
   %q = sext i32 %x to i64
