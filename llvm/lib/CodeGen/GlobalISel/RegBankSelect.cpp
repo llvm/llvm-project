@@ -1400,7 +1400,7 @@ RegBankSelectImpl::RepairingPlacement::RepairingPlacement(
     RepairingPlacement::RepairingKind Kind)
     // Default is, we are going to insert code to repair OpIdx.
     : Kind(Kind), OpIdx(OpIdx),
-      CanMaterialize(Kind != RepairingKind::Impossible), P(P) {
+      CanMaterialize(Kind != RepairingKind::Impossible), P(P), MFAM(MFAM) {
   const MachineOperand &MO = MI.getOperand(OpIdx);
   assert(MO.isReg() && "Trying to repair a non-reg operand");
 
