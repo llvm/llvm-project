@@ -8721,7 +8721,7 @@ unsigned SITargetLowering::isCFIntrinsic(const SDNode *Intr) const {
 }
 
 bool SITargetLowering::shouldEmitFixup(const GlobalValue *GV) const {
-  const Triple &TT = getTargetMachine().getTargetTriple();
+  const Triple &TT = GV->getParent()->getTargetTriple();
   return (GV->getAddressSpace() == AMDGPUAS::CONSTANT_ADDRESS ||
           GV->getAddressSpace() == AMDGPUAS::CONSTANT_ADDRESS_32BIT) &&
          AMDGPU::shouldEmitConstantsToTextSection(TT);
