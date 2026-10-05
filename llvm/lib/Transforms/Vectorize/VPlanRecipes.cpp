@@ -1789,56 +1789,44 @@ bool VPInstruction::opcodeMayReadOrWriteFromMemory() const {
 
 bool VPInstruction::usesFirstLaneOnly(const VPValue *Op) const {
   assert(is_contained(operands(), Op) && "Op must be an operand of the recipe");
-  if (Instruction::isBinaryOp(getOpcode()) || Instruction::isCast(getOpcode()))
-    return vputils::onlyFirstLaneUsed(this);
-
-  switch (getOpcode()) {
-  default:
-    return false;
-  case Instruction::ExtractElement:
-    return Op == getOperand(1);
-  case Instruction::InsertElement:
-    return Op == getOperand(1) || Op == getOperand(2);
-  case VPInstruction::ExtractLastActive:
-    return Op == getOperand(0);
-  case Instruction::PHI:
-    return true;
-  case Instruction::ExtractValue:
-  case Instruction::FCmp:
-  case Instruction::ICmp:
-  case Instruction::Select:
-  case Instruction::Or:
-  case Instruction::Freeze:
-  case VPInstruction::Not:
-    // TODO: Cover additional opcodes.
-    return vputils::onlyFirstLaneUsed(this);
-  case Instruction::Load:
-  case VPInstruction::ActiveLaneMask:
-  case VPInstruction::WideActiveLaneMask:
-  case VPInstruction::ExplicitVectorLength:
-  case VPInstruction::CanonicalIVIncrementForPart:
-  case VPInstruction::BranchOnCount:
-  case VPInstruction::BranchOnCond:
-  case VPInstruction::BranchOnTwoConds:
-  case VPInstruction::Broadcast:
-  case VPInstruction::Intrinsic:
-  case VPInstruction::ReductionStartVector:
-  case VPInstruction::ResumeForEpilogue:
-  case VPInstruction::WideVectorLoad:
-  case VPInstruction::BuildVector:
-    return true;
-  case VPInstruction::PtrAdd:
-    return Op == getOperand(0) || vputils::onlyFirstLaneUsed(this);
-  case VPInstruction::WidePtrAdd:
-    // WidePtrAdd supports scalar and vector base addresses.
-    return false;
-  case VPInstruction::WideVectorStore:
-    return Op == getOperand(0) || Op == getOperand(1) || Op == getOperand(2);
-  case VPInstruction::ExitingIVValue:
-  case VPInstruction::ExtractLane:
-    return Op == getOperand(0);
+  auto UsesFirstLaneNonRecursively = [&](unsigned Opcode) {
+    switch (Opcode) {
+    default:
+      return false;
+    case Instruction::ExtractElement:
+      return Op == getOperand(1);
+    case Instruction::InsertElement:
+      return Op == getOperand(1) || Op == getOperand(2);
+    case VPInstruction::ExtractLastActive:
+      return Op == getOperand(0);
+    case Instruction::PHI:
+    case Instruction::Load:
+    case VPInstruction::ActiveLaneMask:
+    case VPInstruction::WideActiveLaneMask:
+    case VPInstruction::ExplicitVectorLength:
+    case VPInstruction::CanonicalIVIncrementForPart:
+    case VPInstruction::BranchOnCount:
+    case VPInstruction::BranchOnCond:
+    case VPInstruction::BranchOnTwoConds:
+    case VPInstruction::Broadcast:
+    case VPInstruction::Intrinsic:
+    case VPInstruction::ReductionStartVector:
+    case VPInstruction::ResumeForEpilogue:
+    case VPInstruction::WideVectorLoad:
+    case VPInstruction::BuildVector:
+      return true;
+    case VPInstruction::PtrAdd:
+      return Op == getOperand(0);
+    case VPInstruction::WideVectorStore:
+      return Op == getOperand(0) || Op == getOperand(1) || Op == getOperand(2);
+    case VPInstruction::ExitingIVValue:
+    case VPInstruction::ExtractLane:
+      return Op == getOperand(0);
+    };
   };
-  llvm_unreachable("switch should return");
+  return UsesFirstLaneNonRecursively(getOpcode()) ||
+         (vputils::propagatesFirstLaneUse(this, Op) &&
+          vputils::onlyFirstLaneUsed(this));
 }
 
 bool VPInstruction::usesFirstPartOnly(const VPValue *Op) const {
@@ -5298,6 +5286,8 @@ void VPReductionPHIRecipe::printRecipe(raw_ostream &O, const Twine &Indent,
 
 bool VPBlendRecipe::usesFirstLaneOnly(const VPValue *Op) const {
   assert(is_contained(operands(), Op) && "Op must be an operand of the recipe");
+  assert(vputils::propagatesFirstLaneUse(this, Op) &&
+         "Blend should propagate first lane use");
   return vputils::onlyFirstLaneUsed(this);
 }
 
