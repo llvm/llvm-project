@@ -2297,20 +2297,6 @@ static void computeKnownBitsFromOperator(const Operator *I,
         Known &= Known2.anyextOrTrunc(BitWidth);
         break;
       }
-      case Intrinsic::x86_sse2_pmulh_w:
-      case Intrinsic::x86_avx2_pmulh_w:
-      case Intrinsic::x86_avx512_pmulh_w_512:
-        computeKnownBits(I->getOperand(0), DemandedElts, Known, Q, Depth + 1);
-        computeKnownBits(I->getOperand(1), DemandedElts, Known2, Q, Depth + 1);
-        Known = KnownBits::mulhs(Known, Known2);
-        break;
-      case Intrinsic::x86_sse2_pmulhu_w:
-      case Intrinsic::x86_avx2_pmulhu_w:
-      case Intrinsic::x86_avx512_pmulhu_w_512:
-        computeKnownBits(I->getOperand(0), DemandedElts, Known, Q, Depth + 1);
-        computeKnownBits(I->getOperand(1), DemandedElts, Known2, Q, Depth + 1);
-        Known = KnownBits::mulhu(Known, Known2);
-        break;
       case Intrinsic::x86_sse42_crc32_64_64:
         Known.Zero.setBitsFrom(32);
         break;
@@ -8486,6 +8472,8 @@ bool llvm::intrinsicPropagatesPoison(Intrinsic::ID IID) {
   case Intrinsic::umax:
   case Intrinsic::umin:
   case Intrinsic::scmp:
+  case Intrinsic::smulh:
+  case Intrinsic::umulh:
   case Intrinsic::is_fpclass:
   case Intrinsic::ptrmask:
   case Intrinsic::ucmp:
@@ -10804,6 +10792,14 @@ ConstantRange llvm::computeConstantRange(const Value *V, bool ForSigned,
     ConstantRange SrcCR =
         computeConstantRange(TI->getOperand(0), ForSigned, SQ, Depth + 1);
     CR = SrcCR.truncate(BitWidth);
+  } else if (auto *ZExt = dyn_cast<ZExtInst>(V)) {
+    ConstantRange SrcCR =
+        computeConstantRange(ZExt->getOperand(0), ForSigned, SQ, Depth + 1);
+    CR = SrcCR.zeroExtend(BitWidth);
+  } else if (auto *SExt = dyn_cast<SExtInst>(V)) {
+    ConstantRange SrcCR =
+        computeConstantRange(SExt->getOperand(0), ForSigned, SQ, Depth + 1);
+    CR = SrcCR.signExtend(BitWidth);
   } else if (isa<FPToUIInst>(V) || isa<FPToSIInst>(V)) {
     APInt Lower = APInt(BitWidth, 0);
     APInt Upper = APInt(BitWidth, 0);

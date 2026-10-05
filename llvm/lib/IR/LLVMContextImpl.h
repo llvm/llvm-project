@@ -1560,8 +1560,31 @@ struct MDAttachment {
 /// Head pointer for a Value's ValueHandleBase doubly-linked list, stored in
 /// LLVMContextImpl::ValueHandles. The first node's PrevPtr points to Head, so
 /// relocating the bucket refreshes PrevPtr to the new Head address.
-struct ValueHandleHead {
-  ValueHandleBase *Head = nullptr;
+class ValueHandleHead {
+  // Tag Head with true via PointerIntPair so RemoveFromUseList can
+  // distinguish ValueHandleHead::Head from an untagged ValueHandleBase::Next
+  // when accessed through *PrevPtr.
+  using TaggedPtr = PointerIntPair<ValueHandleBase *, 1, bool>;
+
+  ValueHandleBase *Head =
+      static_cast<ValueHandleBase *>(TaggedPtr(nullptr, true).getOpaqueValue());
+
+public:
+  ValueHandleBase *get() const {
+    return TaggedPtr::getFromOpaqueValue(Head).getPointer();
+  }
+
+  ValueHandleBase **getAddress() { return &Head; }
+
+  // Replace the pointer in *Slot with NewPtr while preserving its tag bit,
+  // and return the old TaggedPtr.
+  static TaggedPtr exchange(ValueHandleBase **Slot, ValueHandleBase *NewPtr) {
+    TaggedPtr Old = TaggedPtr::getFromOpaqueValue(*Slot);
+    TaggedPtr Updated = Old;
+    Updated.setPointer(NewPtr);
+    *Slot = static_cast<ValueHandleBase *>(Updated.getOpaqueValue());
+    return Old;
+  }
 
   ValueHandleHead() = default;
   ValueHandleHead(ValueHandleHead &&Other) noexcept;

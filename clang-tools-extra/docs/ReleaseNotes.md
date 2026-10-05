@@ -218,6 +218,9 @@ infrastructure are described first, followed by tool-specific sections.
   - No longer diagnoses variables declared with `decltype(auto)`, where the
     suggested `const` does not compile.
     
+  - No longer diagnoses parameters of `main`, whose signature is fixed by the
+    standard.
+
 - Fixed an infinite loop in {doc}`misc-multiple-inheritance
   <clang-tidy/checks/misc/multiple-inheritance>` when checking a class that
   inherits from itself or has a circular inheritance graph.
@@ -248,6 +251,10 @@ infrastructure are described first, followed by tool-specific sections.
 - Extend {doc}`modernize-use-nullptr
   <clang-tidy/checks/modernize/use-nullptr>` to turn `decltype(nullptr)` into
   `std::nullptr_t` from `<cstdef>`.
+
+- Improved {doc}`modernize-use-ranges
+  <clang-tidy/checks/modernize/use-ranges>` check by preserving used output
+  iterator results when replacing output algorithms such as `std::copy`.
 
 - Improved {doc}`performance-inefficient-algorithm
   <clang-tidy/checks/performance/inefficient-algorithm>` check to no longer
@@ -318,6 +325,10 @@ infrastructure are described first, followed by tool-specific sections.
 - Fixed {doc}`readability-simplify-boolean-expr
   <clang-tidy/checks/readability/simplify-boolean-expr>` producing invalid
   fixes when applying De Morgan's theorem to overloaded comparison operators.
+
+- Improved {doc}`readability-suspicious-call-argument
+  <clang-tidy/checks/readability/suspicious-call-argument>` check by fixing the
+  default `dist` and `dst` abbreviations of `distance` not being recognized.
 
 - Improved {doc}`readability-trailing-comma
   <clang-tidy/checks/readability/trailing-comma>` check:

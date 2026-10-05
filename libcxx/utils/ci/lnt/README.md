@@ -71,16 +71,17 @@ The `runner` key selects the GitHub Actions runner(s) to benchmark on. When the 
 requires jobs to run in a container, the `container` key provides the image to use. Otherwise,
 the benchmarks run directly on the host.
 
-The `test-config` key selects the Lit testing configuration to benchmark. This is used to e.g.
-select which Standard Library is being measured. The `lit-params` key provides additional lit
-parameters to pass when running the benchmarks.
-
-The `build` key allows providing the CMake cache to use when building the library before running
-the benchmarks. If `build` is not present, building libc++ is skipped for that configuration.
+The `cmake-cache` key provides the CMake cache to use when building libc++ before running the
+benchmarks. The `test-config` key selects the Lit testing configuration used to run the benchmarks
+against that build, and the `lit-params` key provides additional Lit parameters to pass when running
+the benchmarks.
 
 The `coverage` key establishes how far back and at which frequency performance should be measured
 for that configuration. A machine without a `coverage` entry can be defined, but it won't result
 in historical data.
+
+The `pr-benchmarks` key determines whether the machine is used when benchmarking pull requests
+with `/libcxx-bot benchmark`.
 
 ## Running benchmarks locally
 
