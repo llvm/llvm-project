@@ -31,7 +31,7 @@
 // CHECK:   }
 // CHECK: } else {
 // CHECK:   %[[ALLOC:.*]] = fir.allocmem !fir.array<?xf32>, %{{.*}} <{bindc_name = ".tmp", uniq_name = ""}>
-// CHECK:   %[[TEMP:.*]]:2 = hlfir.declare %[[ALLOC]](%{{.*}}) {uniq_name = ".tmp"}
+// CHECK:   %[[TEMP:.*]]:2 = hlfir.declare %[[ALLOC]](%{{.*}}) uniq_name(".tmp")
 // CHECK:   fir.do_loop %{{.*}} = %{{.*}} to %{{.*}} step %{{.*}} unordered {
 // CHECK:     hlfir.designate
 // CHECK:     fir.load
@@ -51,13 +51,13 @@ func.func @_QPcopy_row(%arg0: !fir.ref<!fir.array<?x?xf32>> {fir.bindc_name = "a
   %c1 = arith.constant 1 : index
   %c0 = arith.constant 0 : index
   %0 = fir.dummy_scope : !fir.dscope
-  %1:2 = hlfir.declare %arg1 dummy_scope %0 arg 2 {fortran_attrs = #fir.var_attrs<intent_in>, uniq_name = "_QFcopy_rowEn"} : (!fir.ref<i32>, !fir.dscope) -> (!fir.ref<i32>, !fir.ref<i32>)
-  %2:2 = hlfir.declare %arg2 dummy_scope %0 arg 3 {fortran_attrs = #fir.var_attrs<intent_in>, uniq_name = "_QFcopy_rowEi"} : (!fir.ref<i32>, !fir.dscope) -> (!fir.ref<i32>, !fir.ref<i32>)
-  %3:2 = hlfir.declare %arg3 dummy_scope %0 arg 4 {fortran_attrs = #fir.var_attrs<intent_in>, uniq_name = "_QFcopy_rowEj"} : (!fir.ref<i32>, !fir.dscope) -> (!fir.ref<i32>, !fir.ref<i32>)
-  %4:2 = hlfir.declare %arg4 dummy_scope %0 arg 5 {fortran_attrs = #fir.var_attrs<intent_in>, uniq_name = "_QFcopy_rowElo1"} : (!fir.ref<i32>, !fir.dscope) -> (!fir.ref<i32>, !fir.ref<i32>)
-  %5:2 = hlfir.declare %arg5 dummy_scope %0 arg 6 {fortran_attrs = #fir.var_attrs<intent_in>, uniq_name = "_QFcopy_rowEhi1"} : (!fir.ref<i32>, !fir.dscope) -> (!fir.ref<i32>, !fir.ref<i32>)
-  %6:2 = hlfir.declare %arg6 dummy_scope %0 arg 7 {fortran_attrs = #fir.var_attrs<intent_in>, uniq_name = "_QFcopy_rowElo2"} : (!fir.ref<i32>, !fir.dscope) -> (!fir.ref<i32>, !fir.ref<i32>)
-  %7:2 = hlfir.declare %arg7 dummy_scope %0 arg 8 {fortran_attrs = #fir.var_attrs<intent_in>, uniq_name = "_QFcopy_rowEhi2"} : (!fir.ref<i32>, !fir.dscope) -> (!fir.ref<i32>, !fir.ref<i32>)
+  %1:2 = hlfir.declare %arg1 dummy_scope %0 arg 2 uniq_name("_QFcopy_rowEn") fortran_attrs<intent_in> : (!fir.ref<i32>, !fir.dscope) -> (!fir.ref<i32>, !fir.ref<i32>)
+  %2:2 = hlfir.declare %arg2 dummy_scope %0 arg 3 uniq_name("_QFcopy_rowEi") fortran_attrs<intent_in> : (!fir.ref<i32>, !fir.dscope) -> (!fir.ref<i32>, !fir.ref<i32>)
+  %3:2 = hlfir.declare %arg3 dummy_scope %0 arg 4 uniq_name("_QFcopy_rowEj") fortran_attrs<intent_in> : (!fir.ref<i32>, !fir.dscope) -> (!fir.ref<i32>, !fir.ref<i32>)
+  %4:2 = hlfir.declare %arg4 dummy_scope %0 arg 5 uniq_name("_QFcopy_rowElo1") fortran_attrs<intent_in> : (!fir.ref<i32>, !fir.dscope) -> (!fir.ref<i32>, !fir.ref<i32>)
+  %5:2 = hlfir.declare %arg5 dummy_scope %0 arg 6 uniq_name("_QFcopy_rowEhi1") fortran_attrs<intent_in> : (!fir.ref<i32>, !fir.dscope) -> (!fir.ref<i32>, !fir.ref<i32>)
+  %6:2 = hlfir.declare %arg6 dummy_scope %0 arg 7 uniq_name("_QFcopy_rowElo2") fortran_attrs<intent_in> : (!fir.ref<i32>, !fir.dscope) -> (!fir.ref<i32>, !fir.ref<i32>)
+  %7:2 = hlfir.declare %arg7 dummy_scope %0 arg 8 uniq_name("_QFcopy_rowEhi2") fortran_attrs<intent_in> : (!fir.ref<i32>, !fir.dscope) -> (!fir.ref<i32>, !fir.ref<i32>)
 
   %8 = fir.load %1#0 : !fir.ref<i32>
   %9 = fir.convert %8 : (i32) -> i64
@@ -65,7 +65,7 @@ func.func @_QPcopy_row(%arg0: !fir.ref<!fir.array<?x?xf32>> {fir.bindc_name = "a
   %11 = arith.cmpi sgt, %10, %c0 : index
   %12 = arith.select %11, %10, %c0 : index
   %13 = fir.shape %12, %12 : (index, index) -> !fir.shape<2>
-  %14:2 = hlfir.declare %arg0(%13) dummy_scope %0 arg 1 {fortran_attrs = #fir.var_attrs<intent_inout>, uniq_name = "_QFcopy_rowEa"} : (!fir.ref<!fir.array<?x?xf32>>, !fir.shape<2>, !fir.dscope) -> (!fir.box<!fir.array<?x?xf32>>, !fir.ref<!fir.array<?x?xf32>>)
+  %14:2 = hlfir.declare %arg0(%13) dummy_scope %0 arg 1 uniq_name("_QFcopy_rowEa") fortran_attrs<intent_inout> : (!fir.ref<!fir.array<?x?xf32>>, !fir.shape<2>, !fir.dscope) -> (!fir.box<!fir.array<?x?xf32>>, !fir.ref<!fir.array<?x?xf32>>)
 
   // RHS: a(j, lo2:hi2)
   %15 = fir.load %3#0 : !fir.ref<i32>
