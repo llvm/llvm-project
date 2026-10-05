@@ -36,7 +36,7 @@ using namespace llvm;
 static cl::opt<bool>
     SPVDumpDeps("spv-dump-deps",
                 cl::desc("Dump MIR with SPIR-V dependencies info"),
-                cl::Optional, cl::init(false));
+                cl::init(false));
 
 static cl::list<SPIRV::Capability::Capability>
     AvoidCapabilities("avoid-spirv-capabilities",
@@ -332,6 +332,22 @@ static InstrSignature instrToSignature(const MachineInstr &MI,
   return Signature;
 }
 
+// Operand index of Invoke in device enqueue instructions, 0 if none.
+static unsigned getInvokeOperandIdx(unsigned Opcode) {
+  switch (Opcode) {
+  case SPIRV::OpEnqueueKernel:
+    return 8;
+  case SPIRV::OpGetKernelNDrangeSubGroupCount:
+  case SPIRV::OpGetKernelNDrangeMaxSubGroupSize:
+    return 3;
+  case SPIRV::OpGetKernelWorkGroupSize:
+  case SPIRV::OpGetKernelPreferredWorkGroupSizeMultiple:
+    return 2;
+  default:
+    return 0;
+  }
+}
+
 bool SPIRVModuleAnalysis::isDeclSection(const MachineRegisterInfo &MRI,
                                         const MachineInstr &MI) {
   unsigned Opcode = MI.getOpcode();
@@ -351,15 +367,15 @@ bool SPIRVModuleAnalysis::isDeclSection(const MachineRegisterInfo &MRI,
     // The OpUndef may be a placeholder for a function reference recorded by
     // selectGlobalValue. Skip emitting it if any user consumes it as a
     // function-pointer-like operand (OpConstantFunctionPointerINTEL operand 2,
-    // or OpEnqueueKernel's Invoke operand at index 8). The rewrite happens
-    // in visitFunPtrUse, which aliases the OpUndef's vreg to the function's
-    // global <id>.
+    // or the Invoke operand of a device enqueue instruction). The rewrite
+    // happens in visitFunPtrUse, which aliases the OpUndef's vreg to the
+    // function's global <id>.
     Register DefReg = MI.getOperand(0).getReg();
     if (GR->getFunctionDefinitionByUse(&MI.getOperand(0))) {
       for (MachineInstr &UseMI : MRI.use_instructions(DefReg)) {
         unsigned UseOp = UseMI.getOpcode();
         if (UseOp == SPIRV::OpConstantFunctionPointerINTEL ||
-            UseOp == SPIRV::OpEnqueueKernel) {
+            getInvokeOperandIdx(UseOp)) {
           MAI.setSkipEmission(&MI);
           return false;
         }
@@ -587,11 +603,11 @@ void SPIRVModuleAnalysis::collectDeclarations(const Module &M) {
           if (DefMO.isReg() && isDeclSection(MRI, MI) &&
               !MAI.hasRegisterAlias(MF, DefMO.getReg()))
             visitDecl(MRI, SignatureToGReg, GlobalToGReg, MF, MI);
-          // OpEnqueueKernel is not a decl, but its Invoke operand may be a
-          // function-pointer placeholder OpUndef recorded by selectGlobalValue.
-          // Resolve it to the OpFunction's global <id> via visitFunPtrUse.
-          if (Opcode == SPIRV::OpEnqueueKernel && MI.getNumOperands() > 8) {
-            const MachineOperand &InvokeMO = MI.getOperand(8);
+          // Device enqueue instructions are not decls, but their Invoke
+          // operand may be a function-pointer placeholder OpUndef. Resolve it
+          // to the OpFunction's global <id> via visitFunPtrUse.
+          if (unsigned InvokeIdx = getInvokeOperandIdx(Opcode)) {
+            const MachineOperand &InvokeMO = MI.getOperand(InvokeIdx);
             if (InvokeMO.isReg()) {
               Register InvokeReg = InvokeMO.getReg();
               if (!MAI.hasRegisterAlias(MF, InvokeReg)) {
@@ -1051,6 +1067,11 @@ void RequirementHandler::initAvailableCapabilitiesForVulkan(
                     Capability::StorageImageExtendedFormats,
                     Capability::StorageImageMultisample,
                     Capability::ImageMSArray});
+
+  if (ST.isAtLeastSPIRVVer(VersionTuple(1, 3)) ||
+      ST.canUseExtension(Extension::SPV_KHR_variable_pointers))
+    addAvailableCaps({Capability::VariablePointersStorageBuffer,
+                      Capability::VariablePointers});
 
   // Became core in Vulkan 1.2
   if (ST.isAtLeastSPIRVVer(VersionTuple(1, 5))) {
@@ -1750,6 +1771,10 @@ void addInstrRequirements(const MachineInstr &MI,
   case SPIRV::OpTypeQueue:
   case SPIRV::OpBuildNDRange:
   case SPIRV::OpEnqueueKernel:
+  case SPIRV::OpGetKernelNDrangeSubGroupCount:
+  case SPIRV::OpGetKernelNDrangeMaxSubGroupSize:
+  case SPIRV::OpGetKernelWorkGroupSize:
+  case SPIRV::OpGetKernelPreferredWorkGroupSizeMultiple:
     Reqs.addCapability(SPIRV::Capability::DeviceEnqueue);
     break;
   case SPIRV::OpDecorate:

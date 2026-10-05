@@ -550,11 +550,6 @@ LLVM_ABI Value *createSimpleReduction(IRBuilderBase &B, Value *Src,
                                       RecurKind RdxKind, Value *Mask,
                                       Value *EVL);
 
-/// Create a reduction of the given vector \p Src for a reduction of kind
-/// RecurKind::AnyOf. The start value of the reduction is \p InitVal.
-LLVM_ABI Value *createAnyOfReduction(IRBuilderBase &B, Value *Src,
-                                     Value *InitVal, PHINode *OrigPhi);
-
 /// Create an ordered reduction intrinsic using the given recurrence
 /// kind \p RdxKind.
 LLVM_ABI Value *createOrderedReduction(IRBuilderBase &B, RecurKind RdxKind,

@@ -144,11 +144,7 @@ define i32 @cost_of_exit_branch_and_cond_insts(ptr %a, ptr %b, i1 %c, i16 %x) vs
 ; CHECK-NEXT:    br i1 [[MIN_ITERS_CHECK]], label %[[SCALAR_PH:.*]], label %[[VECTOR_MEMCHECK:.*]]
 ; CHECK:       [[VECTOR_MEMCHECK]]:
 ; CHECK-NEXT:    [[SCEVGEP:%.*]] = getelementptr i8, ptr [[A]], i64 1
-; CHECK-NEXT:    [[TMP3:%.*]] = zext i16 [[X]] to i32
-; CHECK-NEXT:    [[UMAX1:%.*]] = call i32 @llvm.umax.i32(i32 [[TMP3]], i32 111)
-; CHECK-NEXT:    [[TMP4:%.*]] = sub i32 770, [[UMAX1]]
-; CHECK-NEXT:    [[SMAX:%.*]] = call i32 @llvm.smax.i32(i32 [[TMP4]], i32 0)
-; CHECK-NEXT:    [[TMP5:%.*]] = zext nneg i32 [[SMAX]] to i64
+; CHECK-NEXT:    [[TMP5:%.*]] = zext nneg i32 [[SMAX4]] to i64
 ; CHECK-NEXT:    [[TMP6:%.*]] = shl nuw nsw i64 [[TMP5]], 2
 ; CHECK-NEXT:    [[TMP7:%.*]] = add nuw nsw i64 [[TMP6]], 4
 ; CHECK-NEXT:    [[SCEVGEP2:%.*]] = getelementptr i8, ptr [[B]], i64 [[TMP7]]

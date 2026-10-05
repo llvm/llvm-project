@@ -1,4 +1,4 @@
-; RUN: opt -passes=sandbox-vectorizer -sbvec-vec-reg-bits=1024 -disable-output -sbvec-passes="seed-collection<print-region>" -sbvec-collect-seeds=loads %s | FileCheck %s
+; RUN: opt -passes=sandbox-vectorizer -sbvec-vec-reg-bits=1024 -disable-output -sbvec-passes="seed-collection(loads)<print-region>" %s | FileCheck %s
 ; REQUIRES: asserts
 
 ; Check that the seed collector will form a aux region containing the loads.

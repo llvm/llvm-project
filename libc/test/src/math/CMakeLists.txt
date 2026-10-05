@@ -12,22 +12,11 @@ add_fp_unittest(
   DEPENDS
     libc.hdr.errno_macros
     libc.src.math.cosf
+    libc.src.__support.math.cosf_double_eval
+    libc.src.__support.math.cosf_float_eval
+    libc.src.__support.macros.properties.cpu_features
     libc.src.__support.CPP.array
     libc.src.__support.FPUtil.fp_bits
-)
-
-add_fp_unittest(
-  cosf_float_test
-  NEED_MPFR
-  SUITE
-    libc-math-unittests
-  SRCS
-    cosf_float_test.cpp
-  DEPENDS
-    libc.src.__support.math.sincosf_utils
-    libc.src.__support.FPUtil.fp_bits
-  FLAGS
-    FMA_OPT__ONLY
 )
 
 add_fp_unittest(
@@ -105,22 +94,11 @@ add_fp_unittest(
   DEPENDS
     libc.hdr.errno_macros
     libc.src.math.sinf
+    libc.src.__support.math.sinf_double_eval
+    libc.src.__support.math.sinf_float_eval
+    libc.src.__support.macros.properties.cpu_features
     libc.src.__support.CPP.array
     libc.src.__support.FPUtil.fp_bits
-)
-
-add_fp_unittest(
-  sinf_float_test
-  NEED_MPFR
-  SUITE
-    libc-math-unittests
-  SRCS
-    sinf_float_test.cpp
-  DEPENDS
-    libc.src.__support.math.sincosf_utils
-    libc.src.__support.FPUtil.fp_bits
-  FLAGS
-    FMA_OPT__ONLY
 )
 
 add_fp_unittest(
@@ -1357,22 +1335,16 @@ add_fp_unittest(
   SRCS
     expf_test.cpp
   DEPENDS
+    libc.hdr.errno_macros
+    libc.hdr.fenv_macros
     libc.src.errno.errno
     libc.src.math.expf
+    libc.src.__support.math.expf_double_eval
+    libc.src.__support.math.expf_float_eval
+    libc.src.__support.math.expf_integer_eval
     libc.src.__support.FPUtil.fp_bits
 )
 
-add_fp_unittest(
-  expf_static_rounding_test
-  NEED_MPFR
-  SUITE
-    libc-math-unittests
-  SRCS
-    expf_static_rounding_test.cpp
-  DEPENDS
-    libc.src.errno.errno
-    libc.src.__support.FPUtil.fp_bits
-)
 
 add_fp_unittest(
   expf16_test
@@ -1417,8 +1389,12 @@ add_fp_unittest(
   SRCS
     exp2f_test.cpp
   DEPENDS
+    libc.hdr.errno_macros
+    libc.hdr.fenv_macros
     libc.src.errno.errno
     libc.src.math.exp2f
+    libc.src.__support.math.exp2f_double_eval
+    libc.src.__support.math.exp2f_float_eval
     libc.src.__support.FPUtil.fp_bits
 )
 
@@ -1478,8 +1454,12 @@ add_fp_unittest(
   SRCS
     exp10f_test.cpp
   DEPENDS
+    libc.hdr.errno_macros
+    libc.hdr.fenv_macros
     libc.src.errno.errno
     libc.src.math.exp10f
+    libc.src.__support.math.exp10f_double_eval
+    libc.src.__support.math.exp10f_float_eval
     libc.src.__support.FPUtil.fp_bits
 )
 
@@ -3073,6 +3053,8 @@ add_fp_unittest(
     powf_test.cpp
   DEPENDS
     libc.src.math.powf
+    libc.src.__support.math.powf_double_eval
+    libc.src.__support.math.powf_float_eval
     libc.src.__support.FPUtil.fp_bits
 )
 

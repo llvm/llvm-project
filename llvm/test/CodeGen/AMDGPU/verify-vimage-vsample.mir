@@ -34,16 +34,12 @@ body:             |
     ; GFX12-ERR: - instruction: renamable $vgpr26 = IMAGE_SAMPLE_V1_V1_gfx12 killed renamable $vgpr0, killed renamable $sgpr0_sgpr1_sgpr2_sgpr3_sgpr4_sgpr5_sgpr6_sgpr7, killed renamable $sgpr8_sgpr9_sgpr10_sgpr11, 15, 0, 0, 0, 0, 0, 0, 0, -1, implicit $exec :: (dereferenceable load (s128), addrspace 7)
     renamable $vgpr26 = IMAGE_SAMPLE_V1_V1_gfx12 killed renamable $vgpr0, killed renamable $sgpr0_sgpr1_sgpr2_sgpr3_sgpr4_sgpr5_sgpr6_sgpr7, killed renamable $sgpr8_sgpr9_sgpr10_sgpr11, 15, 0, 0, 0, 0, 0, 0, 0, -1, implicit $exec :: (dereferenceable load (s128), addrspace 7)
 
-    ; GFX12-ERR: *** Bad machine code: Operand has incorrect register class. ***
-    ; GFX12-ERR: - instruction: renamable $vgpr27 = IMAGE_SAMPLE_D_V1_V9_gfx12 renamable $vgpr0, renamable $vgpr1, renamable $vgpr2, renamable $vgpr3_vgpr4_vgpr5_vgpr6_vgpr7, renamable $sgpr0_sgpr1_sgpr2_sgpr3_sgpr4_sgpr5_sgpr6_sgpr7, renamable $sgpr8_sgpr9_sgpr10_sgpr11, 1, 2, 0, 0, 0, 0, 0, 0, 0, implicit $exec :: (dereferenceable load (s128), addrspace 7)
     ; GFX12-ERR: *** Bad machine code: Illegal physical register for instruction ***
     ; GFX12-ERR: - instruction: renamable $vgpr27 = IMAGE_SAMPLE_D_V1_V9_gfx12 renamable $vgpr0, renamable $vgpr1, renamable $vgpr2, renamable $vgpr3_vgpr4_vgpr5_vgpr6_vgpr7, renamable $sgpr0_sgpr1_sgpr2_sgpr3_sgpr4_sgpr5_sgpr6_sgpr7, renamable $sgpr8_sgpr9_sgpr10_sgpr11, 1, 2, 0, 0, 0, 0, 0, 0, 0, implicit $exec :: (dereferenceable load (s128), addrspace 7)
     ; GFX12-ERR: - operand 4:   renamable $vgpr3_vgpr4_vgpr5_vgpr6_vgpr7
     ; GFX12-ERR: $vgpr3_vgpr4_vgpr5_vgpr6_vgpr7 is not a VReg_192 register.
     renamable $vgpr27 = IMAGE_SAMPLE_D_V1_V9_gfx12 renamable $vgpr0, renamable $vgpr1, renamable $vgpr2, renamable $vgpr3_vgpr4_vgpr5_vgpr6_vgpr7, renamable $sgpr0_sgpr1_sgpr2_sgpr3_sgpr4_sgpr5_sgpr6_sgpr7, renamable $sgpr8_sgpr9_sgpr10_sgpr11, 1, 2, 0, 0, 0, 0, 0, 0, 0, implicit $exec :: (dereferenceable load (s128), addrspace 7)
 
-    ; GFX12-ERR: *** Bad machine code: Operand has incorrect register class. ***
-    ; GFX12-ERR: - instruction: renamable $vgpr28 = IMAGE_SAMPLE_D_V1_V9_gfx12 renamable $vgpr0, renamable $vgpr1, renamable $vgpr2, renamable $vgpr3_vgpr4_vgpr5_vgpr6_vgpr7_vgpr8_vgpr9, renamable $sgpr0_sgpr1_sgpr2_sgpr3_sgpr4_sgpr5_sgpr6_sgpr7, renamable $sgpr8_sgpr9_sgpr10_sgpr11, 1, 2, 0, 0, 0, 0, 0, 0, 0, implicit $exec :: (dereferenceable load (s128), addrspace 7)
     ; GFX12-ERR: *** Bad machine code: Illegal physical register for instruction ***
     ; GFX12-ERR: - instruction: renamable $vgpr28 = IMAGE_SAMPLE_D_V1_V9_gfx12 renamable $vgpr0, renamable $vgpr1, renamable $vgpr2, renamable $vgpr3_vgpr4_vgpr5_vgpr6_vgpr7_vgpr8_vgpr9, renamable $sgpr0_sgpr1_sgpr2_sgpr3_sgpr4_sgpr5_sgpr6_sgpr7, renamable $sgpr8_sgpr9_sgpr10_sgpr11, 1, 2, 0, 0, 0, 0, 0, 0, 0, implicit $exec :: (dereferenceable load (s128), addrspace 7)
     ; GFX12-ERR: - operand 4:   renamable $vgpr3_vgpr4_vgpr5_vgpr6_vgpr7_vgpr8_vgpr9

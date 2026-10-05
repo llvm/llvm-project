@@ -244,7 +244,7 @@ body:             |
   ; CHECK: bb.0:
   ; CHECK-NEXT:   liveins: $w0, $w1
   ; CHECK-NEXT: {{  $}}
-  ; CHECK-NEXT:   [[COPY:%[0-9]+]]:gpr32common = COPY $w0
+  ; CHECK-NEXT:   [[COPY:%[0-9]+]]:gpr32 = COPY $w0
   ; CHECK-NEXT:   [[COPY1:%[0-9]+]]:gpr32 = COPY $w1
   ; CHECK-NEXT:   [[ADDWrr:%[0-9]+]]:gpr32 = ADDWrr [[COPY]], [[COPY1]]
   ; CHECK-NEXT:   [[MADDWrrr:%[0-9]+]]:gpr32 = MADDWrrr [[COPY]], [[COPY1]], $wzr
@@ -305,12 +305,12 @@ body:             |
   ; CHECK: bb.0:
   ; CHECK-NEXT:   liveins: $w0, $w1
   ; CHECK-NEXT: {{  $}}
-  ; CHECK-NEXT:   [[COPY:%[0-9]+]]:gpr32common = COPY $w0
+  ; CHECK-NEXT:   [[COPY:%[0-9]+]]:gpr32 = COPY $w0
   ; CHECK-NEXT:   [[COPY1:%[0-9]+]]:gpr32 = COPY $w1
   ; CHECK-NEXT:   [[ADDWrr:%[0-9]+]]:gpr32 = ADDWrr [[COPY]], [[COPY1]]
   ; CHECK-NEXT:   [[MADDWrrr:%[0-9]+]]:gpr32 = MADDWrrr [[COPY]], [[COPY1]], $wzr
-  ; CHECK-NEXT:   [[ANDWri:%[0-9]+]]:gpr32common = ANDWri [[COPY1]], 7
-  ; CHECK-NEXT:   $wzr = SUBSWrx [[COPY]], [[ANDWri]], 0, implicit-def $nzcv
+  ; CHECK-NEXT:   [[ANDWri:%[0-9]+]]:gpr32common = ANDWri [[COPY]], 7
+  ; CHECK-NEXT:   $wzr = SUBSWrx [[ANDWri]], [[COPY1]], 0, implicit-def $nzcv
   ; CHECK-NEXT:   [[CSELWr:%[0-9]+]]:gpr32 = CSELWr [[ADDWrr]], [[MADDWrrr]], 11, implicit $nzcv
   ; CHECK-NEXT:   [[ADDWrr1:%[0-9]+]]:gpr32 = ADDWrr killed [[CSELWr]], [[COPY]]
   ; CHECK-NEXT:   $w0 = COPY [[ADDWrr1]]
@@ -367,12 +367,12 @@ body:             |
   ; CHECK: bb.0:
   ; CHECK-NEXT:   liveins: $w0, $w1
   ; CHECK-NEXT: {{  $}}
-  ; CHECK-NEXT:   [[COPY:%[0-9]+]]:gpr32common = COPY $w0
+  ; CHECK-NEXT:   [[COPY:%[0-9]+]]:gpr32 = COPY $w0
   ; CHECK-NEXT:   [[COPY1:%[0-9]+]]:gpr32 = COPY $w1
   ; CHECK-NEXT:   [[ADDWrr:%[0-9]+]]:gpr32 = ADDWrr [[COPY]], [[COPY1]]
   ; CHECK-NEXT:   [[MADDWrrr:%[0-9]+]]:gpr32 = MADDWrrr [[COPY]], [[COPY1]], $wzr
-  ; CHECK-NEXT:   [[SBFMWri:%[0-9]+]]:gpr32common = SBFMWri [[COPY1]], 0, 7
-  ; CHECK-NEXT:   $wzr = SUBSWrx [[COPY]], [[SBFMWri]], 32, implicit-def $nzcv
+  ; CHECK-NEXT:   [[SBFMWri:%[0-9]+]]:gpr32common = SBFMWri [[COPY]], 0, 7
+  ; CHECK-NEXT:   $wzr = SUBSWrx [[SBFMWri]], [[COPY1]], 32, implicit-def $nzcv
   ; CHECK-NEXT:   [[CSELWr:%[0-9]+]]:gpr32 = CSELWr [[ADDWrr]], [[MADDWrrr]], 11, implicit $nzcv
   ; CHECK-NEXT:   [[ADDWrr1:%[0-9]+]]:gpr32 = ADDWrr killed [[CSELWr]], [[COPY]]
   ; CHECK-NEXT:   $w0 = COPY [[ADDWrr1]]
@@ -429,12 +429,12 @@ body:             |
   ; CHECK: bb.0:
   ; CHECK-NEXT:   liveins: $w0, $w1
   ; CHECK-NEXT: {{  $}}
-  ; CHECK-NEXT:   [[COPY:%[0-9]+]]:gpr32common = COPY $w0
+  ; CHECK-NEXT:   [[COPY:%[0-9]+]]:gpr32 = COPY $w0
   ; CHECK-NEXT:   [[COPY1:%[0-9]+]]:gpr32 = COPY $w1
   ; CHECK-NEXT:   [[ADDWrr:%[0-9]+]]:gpr32 = ADDWrr [[COPY]], [[COPY1]]
   ; CHECK-NEXT:   [[MADDWrrr:%[0-9]+]]:gpr32 = MADDWrrr [[COPY]], [[COPY1]], $wzr
-  ; CHECK-NEXT:   [[ANDWri:%[0-9]+]]:gpr32common = ANDWri [[COPY1]], 15
-  ; CHECK-NEXT:   $wzr = SUBSWrx [[COPY]], [[ANDWri]], 8, implicit-def $nzcv
+  ; CHECK-NEXT:   [[ANDWri:%[0-9]+]]:gpr32common = ANDWri [[COPY]], 15
+  ; CHECK-NEXT:   $wzr = SUBSWrx [[ANDWri]], [[COPY1]], 8, implicit-def $nzcv
   ; CHECK-NEXT:   [[CSELWr:%[0-9]+]]:gpr32 = CSELWr [[ADDWrr]], [[MADDWrrr]], 11, implicit $nzcv
   ; CHECK-NEXT:   [[ADDWrr1:%[0-9]+]]:gpr32 = ADDWrr killed [[CSELWr]], [[COPY]]
   ; CHECK-NEXT:   $w0 = COPY [[ADDWrr1]]
@@ -491,12 +491,12 @@ body:             |
   ; CHECK: bb.0:
   ; CHECK-NEXT:   liveins: $w0, $w1
   ; CHECK-NEXT: {{  $}}
-  ; CHECK-NEXT:   [[COPY:%[0-9]+]]:gpr32common = COPY $w0
+  ; CHECK-NEXT:   [[COPY:%[0-9]+]]:gpr32 = COPY $w0
   ; CHECK-NEXT:   [[COPY1:%[0-9]+]]:gpr32 = COPY $w1
   ; CHECK-NEXT:   [[ADDWrr:%[0-9]+]]:gpr32 = ADDWrr [[COPY]], [[COPY1]]
   ; CHECK-NEXT:   [[MADDWrrr:%[0-9]+]]:gpr32 = MADDWrrr [[COPY]], [[COPY1]], $wzr
-  ; CHECK-NEXT:   [[SBFMWri:%[0-9]+]]:gpr32common = SBFMWri [[COPY1]], 0, 15
-  ; CHECK-NEXT:   $wzr = SUBSWrx [[COPY]], [[SBFMWri]], 40, implicit-def $nzcv
+  ; CHECK-NEXT:   [[SBFMWri:%[0-9]+]]:gpr32common = SBFMWri [[COPY]], 0, 15
+  ; CHECK-NEXT:   $wzr = SUBSWrx [[SBFMWri]], [[COPY1]], 40, implicit-def $nzcv
   ; CHECK-NEXT:   [[CSELWr:%[0-9]+]]:gpr32 = CSELWr [[ADDWrr]], [[MADDWrrr]], 11, implicit $nzcv
   ; CHECK-NEXT:   [[ADDWrr1:%[0-9]+]]:gpr32 = ADDWrr killed [[CSELWr]], [[COPY]]
   ; CHECK-NEXT:   $w0 = COPY [[ADDWrr1]]
@@ -553,12 +553,12 @@ body:             |
   ; CHECK: bb.0:
   ; CHECK-NEXT:   liveins: $w0, $w1
   ; CHECK-NEXT: {{  $}}
-  ; CHECK-NEXT:   [[COPY:%[0-9]+]]:gpr32common = COPY $w0
+  ; CHECK-NEXT:   [[COPY:%[0-9]+]]:gpr32 = COPY $w0
   ; CHECK-NEXT:   [[COPY1:%[0-9]+]]:gpr32 = COPY $w1
   ; CHECK-NEXT:   [[ADDWrr:%[0-9]+]]:gpr32 = ADDWrr [[COPY]], [[COPY1]]
   ; CHECK-NEXT:   [[MADDWrrr:%[0-9]+]]:gpr32 = MADDWrrr [[COPY]], [[COPY1]], $wzr
-  ; CHECK-NEXT:   [[SBFMWri:%[0-9]+]]:gpr32common = SBFMWri [[COPY1]], 0, 15
-  ; CHECK-NEXT:   $wzr = SUBSWrr [[COPY]], [[SBFMWri]], implicit-def $nzcv
+  ; CHECK-NEXT:   [[SBFMWri:%[0-9]+]]:gpr32common = SBFMWri [[COPY]], 0, 15
+  ; CHECK-NEXT:   $wzr = SUBSWrr [[SBFMWri]], [[COPY1]], implicit-def $nzcv
   ; CHECK-NEXT:   [[CSELWr:%[0-9]+]]:gpr32 = CSELWr [[ADDWrr]], [[MADDWrrr]], 11, implicit $nzcv
   ; CHECK-NEXT:   [[ADDWrr1:%[0-9]+]]:gpr32 = ADDWrr killed [[CSELWr]], [[COPY]]
   ; CHECK-NEXT:   $w0 = COPY [[ADDWrr1]]

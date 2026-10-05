@@ -13,11 +13,15 @@
 //===----------------------------------------------------------------------===//
 
 #include "mlir/Conversion/AffineToStandard/AffineToStandard.h"
+#include "mlir/Conversion/ConvertToLLVM/ToLLVMPass.h"
 #include "mlir/Conversion/GPUCommon/GPUCommonPass.h"
+#include "mlir/Conversion/GPUToLLVMSPV/GPUToLLVMSPVPass.h"
 #include "mlir/Conversion/MathToXeVM/MathToXeVM.h"
-#include "mlir/Conversion/Passes.h"
+#include "mlir/Conversion/ReconcileUnrealizedCasts/ReconcileUnrealizedCasts.h"
 #include "mlir/Conversion/SCFToControlFlow/SCFToControlFlow.h"
+#include "mlir/Conversion/VectorToLLVM/ConvertVectorToLLVMPass.h"
 #include "mlir/Conversion/VectorToSCF/VectorToSCF.h"
+#include "mlir/Conversion/VectorToXeGPU/VectorToXeGPU.h"
 #include "mlir/Conversion/XeGPUToXeVM/XeGPUToXeVM.h"
 #include "mlir/Conversion/XeVMToLLVM/XeVMToLLVM.h"
 #include "mlir/Dialect/Arith/Transforms/Passes.h"
@@ -180,7 +184,9 @@ void buildPostGPUCommonPassPipeline(
     GpuModuleToBinaryPassOptions gpuToModuleBinOptions;
     gpuToModuleBinOptions.compilationTarget = options.binaryFormat;
     gpuToModuleBinOptions.cmdOptions = options.cmdOptions;
-    pm.addPass(createGpuModuleToBinaryPass(std::move(gpuToModuleBinOptions)));
+    std::string skipTarget("skip");
+    if (options.binaryFormat.compare(skipTarget) != 0)
+      pm.addPass(createGpuModuleToBinaryPass(std::move(gpuToModuleBinOptions)));
   }
 }
 } // namespace
