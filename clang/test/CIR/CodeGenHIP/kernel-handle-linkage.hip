@@ -19,6 +19,15 @@
 // RUN:            -I%S/../CodeGenCUDA/Inputs/ -emit-llvm %s -o - \
 // RUN:   | FileCheck --check-prefixes=PIE,PIE-OGCG %s
 
+// RUN: %clang_cc1 -triple x86_64-unknown-linux-gnu -x hip -fhip-new-launch-api \
+// RUN:            -mrelocation-model static \
+// RUN:            -fclangir -I%S/../CodeGenCUDA/Inputs/ -emit-llvm %s -o - \
+// RUN:   | FileCheck --check-prefix=STATIC %s
+// RUN: %clang_cc1 -triple x86_64-unknown-linux-gnu -x hip -fhip-new-launch-api \
+// RUN:            -mrelocation-model static \
+// RUN:            -I%S/../CodeGenCUDA/Inputs/ -emit-llvm %s -o - \
+// RUN:   | FileCheck --check-prefix=STATIC %s
+
 // The host-side kernel handle takes the linkage of the kernel's device stub and
 // the visibility of the kernel's declaration. Kernels with internal linkage
 // must get an internal handle in every TU that uses them as an external one
@@ -96,6 +105,18 @@ static __global__ void fwd_kernel(int *p) {}
 // LLVM-DAG: @_Z17hidden_ext_kernelPi = external hidden constant ptr, align 8
 // LLVM-DAG: @_ZL20static_hidden_kernelPi = internal constant ptr @_ZL35__device_stub__static_hidden_kernelPi, align 8
 // LLVM-DAG: @_Z15ext_decl_kernelPi = external constant ptr, align 8
+
+// In a non-PIC executable, handles are dso_local, even when only declared, as
+// a handle defined in a shared library is reached through a copy relocation.
+// Internal and hidden handles are implicitly dso_local, so it isn't printed.
+// STATIC-DAG: @_Z10ext_kernelPi = dso_local constant ptr @_Z25__device_stub__ext_kernelPi, align 8
+// STATIC-DAG: @_Z13hidden_kernelPi = hidden constant ptr @_Z28__device_stub__hidden_kernelPi, align 8
+// STATIC-DAG: @_ZL13static_kernelPi = internal constant ptr @_ZL28__device_stub__static_kernelPi, align 8
+// STATIC-DAG: @_Z4tmplIiEvPT_ = linkonce_odr dso_local constant ptr @_Z19__device_stub__tmplIiEvPT_, comdat, align 8
+// STATIC-DAG: @_Z4instIfEvPT_ = weak_odr dso_local constant ptr @_Z19__device_stub__instIfEvPT_, comdat, align 8
+// STATIC-DAG: @_Z9decl_onlyIiEvPT_ = dso_local constant ptr @_Z24__device_stub__decl_onlyIiEvPT_, align 8
+// STATIC-DAG: @_Z17hidden_ext_kernelPi = external hidden constant ptr, align 8
+// STATIC-DAG: @_Z15ext_decl_kernelPi = external dso_local constant ptr, align 8
 
 // Under PIE, a handle defined in the executable can't be replaced by another
 // definition, so CIR marks it dso_local as it would any global variable.
