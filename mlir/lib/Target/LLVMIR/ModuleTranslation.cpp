@@ -1249,7 +1249,7 @@ LogicalResult ModuleTranslation::convertGlobalsAndAliases() {
 
     if (std::optional<mlir::SymbolRefAttr> comdat = op.getComdat()) {
       auto selectorOp = cast<ComdatSelectorOp>(
-          SymbolTable::lookupNearestSymbolFrom(op, *comdat));
+          symbolTable().lookupNearestSymbolFrom(op, *comdat));
       var->setComdat(comdatMapping.lookup(selectorOp));
     }
 
@@ -1742,6 +1742,15 @@ LogicalResult ModuleTranslation::convertOneFunction(LLVMFuncOp func) {
   if (func.getUseSampleProfile())
     llvmFunc->addFnAttr("use-sample-profile");
 
+  if (auto disableTailCalls = func.getDisableTailCalls())
+    llvmFunc->addFnAttr("disable-tail-calls",
+                        llvm::toStringRef(*disableTailCalls));
+
+  if (auto sampleProfileSuffixElisionPolicy =
+          func.getSampleProfileSuffixElisionPolicy())
+    llvmFunc->addFnAttr("sample-profile-suffix-elision-policy",
+                        *sampleProfileSuffixElisionPolicy);
+
   if (auto attr = func.getVscaleRange())
     llvmFunc->addFnAttr(llvm::Attribute::getWithVScaleRangeArgs(
         getLLVMContext(), attr->getMinRange().getInt(),
@@ -2178,7 +2187,7 @@ LogicalResult ModuleTranslation::convertFunctionSignatures() {
     // Convert the comdat attribute.
     if (std::optional<mlir::SymbolRefAttr> comdat = function.getComdat()) {
       auto selectorOp = cast<ComdatSelectorOp>(
-          SymbolTable::lookupNearestSymbolFrom(function, *comdat));
+          symbolTable().lookupNearestSymbolFrom(function, *comdat));
       llvmFunc->setComdat(comdatMapping.lookup(selectorOp));
     }
 
@@ -2329,9 +2338,11 @@ ModuleTranslation::getOrCreateAliasScope(AliasScopeAttr aliasScopeAttr) {
   auto [domainIt, insertedDomain] = aliasDomainMetadataMapping.try_emplace(
       aliasScopeAttr.getDomain(), nullptr);
   if (insertedDomain) {
-    llvm::SmallVector<llvm::Metadata *, 2> operands;
+    llvm::SmallVector<llvm::Metadata *, 3> operands;
     // Placeholder for potential self-reference.
     operands.push_back(dummy.get());
+    operands.push_back(
+        llvm::ConstantAsMetadata::get(llvm::ConstantInt::getFalse(ctx)));
     if (StringAttr description = aliasScopeAttr.getDomain().getDescription())
       operands.push_back(llvm::MDString::get(ctx, description));
     domainIt->second = llvm::MDNode::get(ctx, operands);
@@ -2579,6 +2590,16 @@ SmallVector<llvm::Value *> ModuleTranslation::lookupValues(ValueRange values) {
   for (Value v : values)
     remapped.push_back(lookupValue(v));
   return remapped;
+}
+
+void ModuleTranslation::remapAllValuesWith(llvm::Value *oldValue,
+                                           llvm::Value *newValue) {
+  if (oldValue == newValue)
+    return;
+
+  for (auto &entry : valueMapping)
+    if (entry.second == oldValue)
+      entry.second = newValue;
 }
 
 llvm::OpenMPIRBuilder *ModuleTranslation::getOpenMPBuilder() {

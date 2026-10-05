@@ -408,7 +408,8 @@ bool X86PreTileConfigImpl::runOnMachineFunction(MachineFunction &MF) {
       if (VisitedOrInserted.insert(I).second) {
         auto II = I.MI ? I.MI->getIterator() : I.MBB->instr_begin();
         addFrameReference(BuildMI(*I.MBB, ++II, DL, TII->get(X86::PLDTILECFGV)),
-                          SS);
+                          SS)
+            ->setImplicitPhysRegDefsDead();
       }
     }
   }

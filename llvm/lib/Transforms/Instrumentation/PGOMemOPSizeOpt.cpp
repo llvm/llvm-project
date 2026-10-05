@@ -370,7 +370,7 @@ bool MemOPSizeOpt::perform(MemOp MO) {
   PHINode *PHI = nullptr;
   if (!MemOpTy->isVoidTy()) {
     // Insert a phi for the return values at the merge block.
-    IRBuilder<> IRBM(MergeBB, MergeBB->getFirstNonPHIIt());
+    IRBuilder<> IRBM(MergeBB->getFirstNonPHIIt());
     PHI = IRBM.CreatePHI(MemOpTy, SizeIds.size() + 1, "MemOP.RVMerge");
     MO.I->replaceAllUsesWith(PHI);
     PHI->addIncoming(MO.I, DefaultBB);

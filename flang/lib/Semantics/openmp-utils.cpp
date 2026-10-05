@@ -59,6 +59,33 @@
 namespace Fortran::semantics::omp {
 using namespace Fortran::parser::omp;
 
+static SemanticOverrides *GetSemanticOverridesOrNull(
+    SemanticsContext *semaCtx) {
+  if (semaCtx) {
+    return &semaCtx->GetOmpSemanticOverrides();
+  }
+  return nullptr;
+}
+
+bool IsClauseAllowedOnDirective(llvm::omp::Clause clauseId,
+    llvm::omp::Directive dirId, llvm::omp::Version version,
+    SemanticOverrides *overrides) {
+  if (overrides) {
+    auto f{overrides->allowedClauses.find(clauseId)};
+    if (f != overrides->allowedClauses.end() && f->second.test(dirId)) {
+      return true;
+    }
+  }
+  return llvm::omp::isAllowedClauseForDirective(dirId, clauseId, version);
+}
+
+bool IsClauseAllowedOnDirective(llvm::omp::Clause clauseId,
+    llvm::omp::Directive dirId, llvm::omp::Version version,
+    SemanticsContext *semaCtx) {
+  return IsClauseAllowedOnDirective(
+      clauseId, dirId, version, GetSemanticOverridesOrNull(semaCtx));
+}
+
 const Scope &GetScopingUnit(const Scope &scope) {
   const Scope *iter{&scope};
   for (; !iter->IsTopLevel(); iter = &iter->parent()) {
@@ -922,9 +949,10 @@ bool IsFullUnroll(const parser::OmpDirectiveSpecification &spec) {
   return false;
 }
 
-OmpErrorArgs GetErrorDirectiveArgs(const parser::OmpErrorDirective &errDir) {
+OmpErrorArgs GetErrorDirectiveArgs(
+    const parser::OmpDirectiveSpecification &spec) {
   OmpErrorArgs args;
-  for (const parser::OmpClause &clause : errDir.v.Clauses().v) {
+  for (const parser::OmpClause &clause : spec.Clauses().v) {
     if (const auto *at{std::get_if<parser::OmpClause::At>(&clause.u)}) {
       args.at = at->v.v;
     } else if (const auto *sev{
@@ -936,6 +964,10 @@ OmpErrorArgs GetErrorDirectiveArgs(const parser::OmpErrorDirective &errDir) {
     }
   }
   return args;
+}
+
+OmpErrorArgs GetErrorDirectiveArgs(const parser::OmpErrorDirective &errDir) {
+  return GetErrorDirectiveArgs(errDir.v);
 }
 
 static bool IsTransformableLoop(const parser::OmpDirectiveSpecification &spec) {
@@ -1299,10 +1331,11 @@ std::pair<WithReason<int64_t>, bool> GetAffectedNestDepthWithReason(
     const parser::OmpDirectiveSpecification &spec, llvm::omp::Version version,
     SemanticsContext *semaCtx) {
   llvm::omp::Directive dir{spec.DirId()};
-  bool allowsCollapse{llvm::omp::isAllowedClauseForDirective(
-      dir, llvm::omp::Clause::OMPC_collapse, version)};
-  bool allowsOrdered{llvm::omp::isAllowedClauseForDirective(
-      dir, llvm::omp::Clause::OMPC_ordered, version)};
+  SemanticOverrides *overrides{GetSemanticOverridesOrNull(semaCtx)};
+  bool allowsCollapse{IsClauseAllowedOnDirective(
+      llvm::omp::Clause::OMPC_collapse, dir, version, overrides)};
+  bool allowsOrdered{IsClauseAllowedOnDirective(
+      llvm::omp::Clause::OMPC_ordered, dir, version, overrides)};
 
   if (allowsCollapse || allowsOrdered) {
     auto [ccount, creason]{GetArgumentValueWithReason(
@@ -1528,8 +1561,9 @@ WithReason<int64_t> GetRectangularNestDepthWithReason(
   auto clauseAt{
       llvm::find_if(spec.Clauses().v, [&](const parser::OmpClause &c) {
         llvm::omp::Clause clauseId{c.Id()};
+        SemanticOverrides *overrides{GetSemanticOverridesOrNull(semaCtx)};
         return llvm::is_contained(clauses, clauseId) &&
-            llvm::omp::isAllowedClauseForDirective(dirId, clauseId, version);
+            IsClauseAllowedOnDirective(clauseId, dirId, version, overrides);
       })};
   if (clauseAt != spec.Clauses().v.end()) {
     depth.reason.Say(clauseAt->source,
