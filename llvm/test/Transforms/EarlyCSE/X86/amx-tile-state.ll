@@ -11,9 +11,8 @@ target triple = "x86_64-unknown-linux-gnu"
 define <16 x i32> @cse_row_reads(i32 %row) {
 ; CHECK-LABEL: define <16 x i32> @cse_row_reads(
 ; CHECK-SAME: i32 [[ROW:%.*]]) {
-; CHECK-NEXT:    [[A:%.*]] = call <16 x i32> @llvm.x86.tilemovrow(i8 0, i32 [[ROW]])
 ; CHECK-NEXT:    [[B:%.*]] = call <16 x i32> @llvm.x86.tilemovrow(i8 0, i32 [[ROW]])
-; CHECK-NEXT:    [[R:%.*]] = add <16 x i32> [[A]], [[B]]
+; CHECK-NEXT:    [[R:%.*]] = add <16 x i32> [[B]], [[B]]
 ; CHECK-NEXT:    ret <16 x i32> [[R]]
 ;
   %a = call <16 x i32> @llvm.x86.tilemovrow(i8 0, i32 %row)
@@ -59,8 +58,7 @@ define i64 @forward_across_tile_load(ptr %p, ptr %q) {
 ; CHECK-SAME: ptr [[P:%.*]], ptr [[Q:%.*]]) {
 ; CHECK-NEXT:    store i64 42, ptr [[Q]], align 8
 ; CHECK-NEXT:    call void @llvm.x86.tileloadd64(i8 0, ptr [[P]], i64 64)
-; CHECK-NEXT:    [[V:%.*]] = load i64, ptr [[Q]], align 8
-; CHECK-NEXT:    ret i64 [[V]]
+; CHECK-NEXT:    ret i64 42
 ;
   store i64 42, ptr %q, align 8
   call void @llvm.x86.tileloadd64(i8 0, ptr %p, i64 64)

@@ -12,12 +12,12 @@ define void @hoist_across_tile_loads(ptr %base, ptr %cfg, i64 %n) {
 ; CHECK-LABEL: define void @hoist_across_tile_loads(
 ; CHECK-SAME: ptr [[BASE:%.*]], ptr [[CFG:%.*]], i64 [[N:%.*]]) {
 ; CHECK-NEXT:  [[ENTRY:.*]]:
+; CHECK-NEXT:    [[STEP:%.*]] = load i64, ptr [[CFG]], align 8
 ; CHECK-NEXT:    [[STRIDE_ADDR:%.*]] = getelementptr inbounds i8, ptr [[CFG]], i64 8
+; CHECK-NEXT:    [[STRIDE:%.*]] = load i64, ptr [[STRIDE_ADDR]], align 8
 ; CHECK-NEXT:    br label %[[LOOP:.*]]
 ; CHECK:       [[LOOP]]:
 ; CHECK-NEXT:    [[I:%.*]] = phi i64 [ 0, %[[ENTRY]] ], [ [[I_NEXT:%.*]], %[[LOOP]] ]
-; CHECK-NEXT:    [[STEP:%.*]] = load i64, ptr [[CFG]], align 8
-; CHECK-NEXT:    [[STRIDE:%.*]] = load i64, ptr [[STRIDE_ADDR]], align 8
 ; CHECK-NEXT:    [[OFF:%.*]] = mul i64 [[I]], [[STEP]]
 ; CHECK-NEXT:    [[SRC:%.*]] = getelementptr inbounds i8, ptr [[BASE]], i64 [[OFF]]
 ; CHECK-NEXT:    call void @llvm.x86.tileloadd64(i8 0, ptr [[SRC]], i64 [[STRIDE]])
@@ -52,11 +52,11 @@ define i64 @hoist_across_dot_products(ptr %k.addr, i64 %n) {
 ; CHECK-LABEL: define i64 @hoist_across_dot_products(
 ; CHECK-SAME: ptr [[K_ADDR:%.*]], i64 [[N:%.*]]) {
 ; CHECK-NEXT:  [[ENTRY:.*]]:
+; CHECK-NEXT:    [[K:%.*]] = load i64, ptr [[K_ADDR]], align 8
 ; CHECK-NEXT:    br label %[[LOOP:.*]]
 ; CHECK:       [[LOOP]]:
 ; CHECK-NEXT:    [[I:%.*]] = phi i64 [ 0, %[[ENTRY]] ], [ [[I_NEXT:%.*]], %[[LOOP]] ]
 ; CHECK-NEXT:    [[SUM:%.*]] = phi i64 [ 0, %[[ENTRY]] ], [ [[SUM_NEXT:%.*]], %[[LOOP]] ]
-; CHECK-NEXT:    [[K:%.*]] = load i64, ptr [[K_ADDR]], align 8
 ; CHECK-NEXT:    call void @llvm.x86.tdpbssd(i8 0, i8 1, i8 2)
 ; CHECK-NEXT:    call void @llvm.x86.tilezero(i8 3)
 ; CHECK-NEXT:    [[SUM_NEXT]] = add i64 [[SUM]], [[K]]
