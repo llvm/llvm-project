@@ -2270,8 +2270,8 @@ void SPIRVEmitIntrinsicsImpl::replacePointerOperandWithPtrCast(
   // Emit spv_ptrcast
   SmallVector<Type *, 2> Types = {Pointer->getType(), Pointer->getType()};
   SmallVector<Value *, 2> Args = {Pointer, VMD, B.getInt32(AddressSpace)};
-  auto *PtrCastI = B.CreateIntrinsicWithoutFolding(Intrinsic::spv_ptrcast,
-                                                   {Types}, Args);
+  auto *PtrCastI =
+      B.CreateIntrinsicWithoutFolding(Intrinsic::spv_ptrcast, {Types}, Args);
   I->setOperand(OperandToReplace, PtrCastI);
   // We need to set up a pointee type for the newly created spv_ptrcast.
   GR->buildAssignPtr(B, ExpectedElementType, PtrCastI);
