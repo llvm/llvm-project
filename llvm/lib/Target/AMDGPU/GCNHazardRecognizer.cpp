@@ -3114,25 +3114,16 @@ int GCNHazardRecognizer::checkMFMAPadding(MachineInstr *MI) const {
   if (!SIInstrInfo::isMFMA(*MI) || MFI->getOccupancy() < 2)
     return 0;
 
-  int NeighborMFMALatency = 0;
-  auto IsNeighboringMFMA = [&NeighborMFMALatency,
-                            this](const MachineInstr &MI) {
-    if (!SIInstrInfo::isMFMA(MI))
-      return false;
-
-    NeighborMFMALatency = this->getMFMAPipelineWaitStates(MI);
-    return true;
-  };
-
+  // The ratio scales each neighbor's own pipeline latency, so a longer one
+  // further back can ask for more padding than a shorter one nearby.
   const int MaxMFMAPipelineWaitStates = 16;
-  int WaitStatesSinceNeighborMFMA =
-      getWaitStatesSince(IsNeighboringMFMA, MaxMFMAPipelineWaitStates);
-
-  int NeighborMFMAPaddingNeeded =
-      (NeighborMFMALatency * MFMAPaddingRatio / 100) -
-      WaitStatesSinceNeighborMFMA;
-
-  return std::max(0, NeighborMFMAPaddingNeeded);
+  return getMaxWindowDeficit(
+      MaxMFMAPipelineWaitStates,
+      [this](const MachineInstr &MI) -> std::optional<int> {
+        if (!SIInstrInfo::isMFMA(MI))
+          return std::nullopt;
+        return getMFMAPipelineWaitStates(MI) * MFMAPaddingRatio / 100;
+      });
 }
 
 int GCNHazardRecognizer::checkMAIHazards908(MachineInstr *MI) const {
@@ -3728,15 +3719,6 @@ int GCNHazardRecognizer::checkMAIVALUHazards(MachineInstr *MI) const {
     return true;
   };
 
-  const MachineInstr *DOT = nullptr;
-  auto IsDotWriteFn = [&Reg, &DOT, this](const MachineInstr &MI) {
-    if (!SIInstrInfo::isDOT(MI) ||
-        !TRI.regsOverlap(MI.getOperand(0).getReg(), Reg))
-      return false;
-    DOT = &MI;
-    return true;
-  };
-
   bool DGEMMAfterVALUWrite = false;
   auto IsDGEMMHazard = [&DGEMMAfterVALUWrite, this](const MachineInstr &MI) {
     // Found DGEMM on reverse traversal to def.
@@ -3775,21 +3757,22 @@ int GCNHazardRecognizer::checkMAIVALUHazards(MachineInstr *MI) const {
         continue;
       Reg = Use.getReg();
 
-      DOT = nullptr;
-      int WaitStatesSinceDef = getWaitStatesSinceDef(Reg, IsDotWriteFn,
-                                                     MaxWaitStates);
-      if (DOT) {
-        int NeedWaitStates = 0;
-        if (DOT->getOpcode() == MI->getOpcode()) {
-          if (&Use - &MI->getOperand(0) != SrcCIdx)
-            NeedWaitStates = DotWriteSameDotReadSrcAB;
-        } else {
-          NeedWaitStates = DotWriteDifferentVALURead;
-        }
-
-        int WaitStatesNeededForUse = NeedWaitStates - WaitStatesSinceDef;
-        WaitStatesNeeded = std::max(WaitStatesNeeded, WaitStatesNeededForUse);
-      }
+      // Wait states this read needs after a dot product wrote Reg. The same
+      // opcode forwards its accumulator, so only a different one, or a read
+      // that is not the accumulator, has to wait.
+      bool ReadsAsSrcC = &Use - &MI->getOperand(0) == SrcCIdx;
+      WaitStatesNeeded = std::max(
+          WaitStatesNeeded,
+          getMaxWindowDeficit(
+              std::max(DotWriteSameDotReadSrcAB, DotWriteDifferentVALURead),
+              [&](const MachineInstr &P) -> std::optional<int> {
+                if (!SIInstrInfo::isDOT(P) ||
+                    !TRI.regsOverlap(P.getOperand(0).getReg(), Reg))
+                  return std::nullopt;
+                if (P.getOpcode() != MI->getOpcode())
+                  return DotWriteDifferentVALURead;
+                return ReadsAsSrcC ? 0 : DotWriteSameDotReadSrcAB;
+              }));
 
       // Workaround for HW data hazard bug observed only in GFX90A. When there
       // is a DGEMM instruction in-between a VALU and a VMEM instruction it
@@ -3903,12 +3886,19 @@ int GCNHazardRecognizer::checkMAIVALUHazards(MachineInstr *MI) const {
 
     Reg = Def.getReg();
 
-    DOT = nullptr;
-    int WaitStatesSinceDef = getWaitStatesSinceDef(Reg, IsDotWriteFn,
-                                                   MaxWaitStates);
-    if (DOT && DOT->getOpcode() != MI->getOpcode())
-      WaitStatesNeeded = std::max(WaitStatesNeeded, DotWriteDifferentVALUWrite -
-                                                    WaitStatesSinceDef);
+    // Only a dot product of a different opcode has to land before this write.
+    WaitStatesNeeded =
+        std::max(WaitStatesNeeded,
+                 getMaxWindowDeficit(
+                     DotWriteDifferentVALUWrite,
+                     [&](const MachineInstr &P) -> std::optional<int> {
+                       if (!SIInstrInfo::isDOT(P) ||
+                           !TRI.regsOverlap(P.getOperand(0).getReg(), Reg))
+                         return std::nullopt;
+                       return P.getOpcode() != MI->getOpcode()
+                                  ? DotWriteDifferentVALUWrite
+                                  : 0;
+                     }));
 
     auto MFMAWawWindow = [&](const MachineInstr &Producer) {
       int NeedWaitStates = MaxWaitStates;
@@ -4009,23 +3999,20 @@ bool GCNHazardRecognizer::ShouldPreferAnother(SUnit *SU) const {
   if (!SU->isInstr())
     return false;
 
-  const MachineInstr *MAI = nullptr;
-
-  auto IsMFMAFn = [&MAI](const MachineInstr &MI) {
-    MAI = nullptr;
-    if (SIInstrInfo::isMFMA(MI))
-      MAI = &MI;
-    return MAI != nullptr;
-  };
-
   MachineInstr *MI = SU->getInstr();
-  if (IsMFMAFn(*MI)) {
-    int W = getWaitStatesSince(IsMFMAFn, 16);
-    if (MAI)
-      return W < (int)TSchedModel.computeInstrLatency(MAI);
-  }
+  if (!SIInstrInfo::isMFMA(*MI))
+    return false;
 
-  return false;
+  // Prefer something else while a preceding MFMA is still in flight. Each one
+  // asks for its own latency, so a longer one further back still counts.
+  const int MaxMFMALatency = 16;
+  return getMaxWindowDeficit(
+             MaxMFMALatency,
+             [this](const MachineInstr &P) -> std::optional<int> {
+               if (!SIInstrInfo::isMFMA(P))
+                 return std::nullopt;
+               return static_cast<int>(TSchedModel.computeInstrLatency(&P));
+             }) > 0;
 }
 
 // Adjust global offsets for instructions bundled with S_GETPC_B64 after
