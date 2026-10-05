@@ -168,8 +168,8 @@ alias(
 )
 
 alias(
-  name = "PluginExpressionParserClang",
-  actual = ":PluginsClang",
+    name = "PluginExpressionParserClang",
+    actual = ":PluginsClang",
 )
 
 gentbl_cc_library(
@@ -263,8 +263,8 @@ gentbl_cc_library(
 )
 
 alias(
-  name = "PluginSymbolFileDWARF",
-  actual = ":PluginsClang",
+    name = "PluginSymbolFileDWARF",
+    actual = ":PluginsClang",
 )
 
 cc_library(
@@ -303,8 +303,8 @@ cc_library(
 )
 
 alias(
-  name = "PluginSymbolFileNativePDB",
-  actual = ":PluginsClang",
+    name = "PluginSymbolFileNativePDB",
+    actual = ":PluginsClang",
 )
 
 gentbl_cc_library(
@@ -320,8 +320,8 @@ gentbl_cc_library(
 )
 
 alias(
-  name = "PluginSymbolFilePDB",
-  actual = ":PluginsClang",
+    name = "PluginSymbolFilePDB",
+    actual = ":PluginsClang",
 )
 
 gentbl_cc_library(
