@@ -117,8 +117,10 @@ enum Direction {
 };
 } // namespace MISched
 
-LLVM_ABI extern cl::opt<MISched::Direction> PreRADirection;
-LLVM_ABI extern cl::opt<bool> VerifyScheduling;
+/// Returns -misched-prera-direction.
+LLVM_ABI MISched::Direction getPreRADirection();
+/// Returns whether -verify-misched is set.
+LLVM_ABI bool shouldVerifyScheduling();
 
 #ifndef NDEBUG
 extern cl::opt<bool> ViewMISchedDAGs;

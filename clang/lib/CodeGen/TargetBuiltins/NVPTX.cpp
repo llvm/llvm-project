@@ -1061,6 +1061,31 @@ Value *CodeGenFunction::EmitNVPTXBuiltinExpr(unsigned BuiltinID,
     PZO_CVT(bf16x2_to_e5m2x2_rz_satfinite);
     PZO_CVT(bf16x2_to_e5m2x2_rz_relu_satfinite);
 
+    PZO_CVT(ff_to_e4m3x2_rn_scale_n1_ue8m0);
+    PZO_CVT(ff_to_e4m3x2_rn_relu_scale_n1_ue8m0);
+    PZO_CVT(ff_to_e4m3x2_rz_scale_n1_ue8m0);
+    PZO_CVT(ff_to_e4m3x2_rz_relu_scale_n1_ue8m0);
+    PZO_CVT(ff_to_e5m2x2_rn_scale_n1_ue8m0);
+    PZO_CVT(ff_to_e5m2x2_rn_relu_scale_n1_ue8m0);
+    PZO_CVT(ff_to_e5m2x2_rz_scale_n1_ue8m0);
+    PZO_CVT(ff_to_e5m2x2_rz_relu_scale_n1_ue8m0);
+    PZO_CVT(f16x2_to_e4m3x2_rn_scale_n1_ue8m0);
+    PZO_CVT(f16x2_to_e4m3x2_rn_relu_scale_n1_ue8m0);
+    PZO_CVT(f16x2_to_e4m3x2_rz_scale_n1_ue8m0);
+    PZO_CVT(f16x2_to_e4m3x2_rz_relu_scale_n1_ue8m0);
+    PZO_CVT(f16x2_to_e5m2x2_rn_scale_n1_ue8m0);
+    PZO_CVT(f16x2_to_e5m2x2_rn_relu_scale_n1_ue8m0);
+    PZO_CVT(f16x2_to_e5m2x2_rz_scale_n1_ue8m0);
+    PZO_CVT(f16x2_to_e5m2x2_rz_relu_scale_n1_ue8m0);
+    PZO_CVT(bf16x2_to_e4m3x2_rn_satfinite_scale_n1_ue8m0);
+    PZO_CVT(bf16x2_to_e4m3x2_rn_relu_satfinite_scale_n1_ue8m0);
+    PZO_CVT(bf16x2_to_e4m3x2_rz_satfinite_scale_n1_ue8m0);
+    PZO_CVT(bf16x2_to_e4m3x2_rz_relu_satfinite_scale_n1_ue8m0);
+    PZO_CVT(bf16x2_to_e5m2x2_rn_satfinite_scale_n1_ue8m0);
+    PZO_CVT(bf16x2_to_e5m2x2_rn_relu_satfinite_scale_n1_ue8m0);
+    PZO_CVT(bf16x2_to_e5m2x2_rz_satfinite_scale_n1_ue8m0);
+    PZO_CVT(bf16x2_to_e5m2x2_rz_relu_satfinite_scale_n1_ue8m0);
+
     PZO_CVT(ff_to_e2m3x2_rn_satfinite);
     PZO_CVT(ff_to_e2m3x2_rn_relu_satfinite);
     PZO_CVT(ff_to_e2m3x2_rz_satfinite);
@@ -1086,6 +1111,31 @@ Value *CodeGenFunction::EmitNVPTXBuiltinExpr(unsigned BuiltinID,
     PZO_CVT(bf16x2_to_e3m2x2_rz_satfinite);
     PZO_CVT(bf16x2_to_e3m2x2_rz_relu_satfinite);
 
+    PZO_CVT(ff_to_e2m3x2_rn_satfinite_scale_n1_ue8m0);
+    PZO_CVT(ff_to_e2m3x2_rn_relu_satfinite_scale_n1_ue8m0);
+    PZO_CVT(ff_to_e2m3x2_rz_satfinite_scale_n1_ue8m0);
+    PZO_CVT(ff_to_e2m3x2_rz_relu_satfinite_scale_n1_ue8m0);
+    PZO_CVT(ff_to_e3m2x2_rn_satfinite_scale_n1_ue8m0);
+    PZO_CVT(ff_to_e3m2x2_rn_relu_satfinite_scale_n1_ue8m0);
+    PZO_CVT(ff_to_e3m2x2_rz_satfinite_scale_n1_ue8m0);
+    PZO_CVT(ff_to_e3m2x2_rz_relu_satfinite_scale_n1_ue8m0);
+    PZO_CVT(f16x2_to_e2m3x2_rn_satfinite_scale_n1_ue8m0);
+    PZO_CVT(f16x2_to_e2m3x2_rn_relu_satfinite_scale_n1_ue8m0);
+    PZO_CVT(f16x2_to_e2m3x2_rz_satfinite_scale_n1_ue8m0);
+    PZO_CVT(f16x2_to_e2m3x2_rz_relu_satfinite_scale_n1_ue8m0);
+    PZO_CVT(f16x2_to_e3m2x2_rn_satfinite_scale_n1_ue8m0);
+    PZO_CVT(f16x2_to_e3m2x2_rn_relu_satfinite_scale_n1_ue8m0);
+    PZO_CVT(f16x2_to_e3m2x2_rz_satfinite_scale_n1_ue8m0);
+    PZO_CVT(f16x2_to_e3m2x2_rz_relu_satfinite_scale_n1_ue8m0);
+    PZO_CVT(bf16x2_to_e2m3x2_rn_satfinite_scale_n1_ue8m0);
+    PZO_CVT(bf16x2_to_e2m3x2_rn_relu_satfinite_scale_n1_ue8m0);
+    PZO_CVT(bf16x2_to_e2m3x2_rz_satfinite_scale_n1_ue8m0);
+    PZO_CVT(bf16x2_to_e2m3x2_rz_relu_satfinite_scale_n1_ue8m0);
+    PZO_CVT(bf16x2_to_e3m2x2_rn_satfinite_scale_n1_ue8m0);
+    PZO_CVT(bf16x2_to_e3m2x2_rn_relu_satfinite_scale_n1_ue8m0);
+    PZO_CVT(bf16x2_to_e3m2x2_rz_satfinite_scale_n1_ue8m0);
+    PZO_CVT(bf16x2_to_e3m2x2_rz_relu_satfinite_scale_n1_ue8m0);
+
     PZO_CVT(ff_to_e2m1x2_rn_satfinite);
     PZO_CVT(ff_to_e2m1x2_rn_relu_satfinite);
     PZO_CVT(ff_to_e2m1x2_rz_satfinite);
@@ -1098,6 +1148,19 @@ Value *CodeGenFunction::EmitNVPTXBuiltinExpr(unsigned BuiltinID,
     PZO_CVT(bf16x2_to_e2m1x2_rn_relu_satfinite);
     PZO_CVT(bf16x2_to_e2m1x2_rz_satfinite);
     PZO_CVT(bf16x2_to_e2m1x2_rz_relu_satfinite);
+
+    PZO_CVT(ff_to_e2m1x2_rn_satfinite_scale_n1_ue8m0);
+    PZO_CVT(ff_to_e2m1x2_rn_relu_satfinite_scale_n1_ue8m0);
+    PZO_CVT(ff_to_e2m1x2_rz_satfinite_scale_n1_ue8m0);
+    PZO_CVT(ff_to_e2m1x2_rz_relu_satfinite_scale_n1_ue8m0);
+    PZO_CVT(f16x2_to_e2m1x2_rn_satfinite_scale_n1_ue8m0);
+    PZO_CVT(f16x2_to_e2m1x2_rn_relu_satfinite_scale_n1_ue8m0);
+    PZO_CVT(f16x2_to_e2m1x2_rz_satfinite_scale_n1_ue8m0);
+    PZO_CVT(f16x2_to_e2m1x2_rz_relu_satfinite_scale_n1_ue8m0);
+    PZO_CVT(bf16x2_to_e2m1x2_rn_satfinite_scale_n1_ue8m0);
+    PZO_CVT(bf16x2_to_e2m1x2_rn_relu_satfinite_scale_n1_ue8m0);
+    PZO_CVT(bf16x2_to_e2m1x2_rz_satfinite_scale_n1_ue8m0);
+    PZO_CVT(bf16x2_to_e2m1x2_rz_relu_satfinite_scale_n1_ue8m0);
 
 #undef PZO_CVT
 
