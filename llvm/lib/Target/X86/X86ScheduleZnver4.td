@@ -333,12 +333,10 @@ def Zn4FPAES01 : ProcResGroup<[Zn4FPAES0, Zn4FPAES1]>;
 // *CLM*
 def Zn4FPCLM01 : ProcResGroup<[Zn4FPCLM0, Zn4FPCLM1]>;
 
-// Issue limit for the microcoded masked gather/scatter sequences, whose
-// throughput is set by the microcode sequencer rather than by any pipe they
-// occupy. Abstract rather than a fourth copy of some pipe: it is declared
-// 4-wide only so that round(tput * 4) keeps the measurement's resolution, and
-// is charged separately so that a gather does not falsely serialise unrelated
-// FP work. See the masked gather/scatter section below for the measurements.
+// Microcode issue limit, as measured for the masked gather/scatter sequences.
+// The limit is not specific to them -- any microcoded instruction contends for
+// it -- but only these shapes were measured, so only they are charged here.
+// Abstract rather than a pipe, 4-wide so round(tput * 4) keeps the resolution.
 def Zn4UcodeGS : ProcResource<4>;
 
 //
@@ -525,65 +523,21 @@ defm : Zn4WriteResInt<WriteLoad, [Zn4AGU012, Zn4Load], !add(Znver4Model.LoadLate
 // Does not cost anything by itself, only has latency, matching that of the WriteLoad,
 defm : Zn4WriteResInt<WriteVecMaskedGatherWriteback, [], !add(Znver4Model.LoadLatency, 1), [], 0>;
 
-// AVX-512 masked GATHER / SCATTER. Microcoded, so entries are keyed by
-// (#elements, element width, index width); the two index widths share an entry
-// only where they measure alike. Throughput and latency were measured on
-// Znver4 with every mask bit set, and are accurate to about a cycle; scatter
-// latency is estimated rather than timed. A scatter's mask operand is tied, so
-// that estimate is what the model makes a mask consumer wait for -- a kmov
-// reading the mask after a VPSCATTERQQZ128 stalls behind its 6 cycles -- and
-// it is the one number here that no measurement backs. Znver4Model also backs
-// znver5 and znver6, which run 25-55% faster and are pessimistic here.
-//
-// The FP occupancies are the uops.info Zen4 port distributions for the same
-// encodings, kept at the eligibility they were reported with: a uop restricted
-// to FP1/FP2 is charged to Zn4FPU12 and not to all four pipes, so the model
-// cannot schedule it somewhere the hardware would not. Several of these
-// sequences are genuinely narrow -- a 512-bit VPSCATTERQQ has no FP0-eligible
-// uop at all -- and summing them into Zn4FPU0123 would invent that
-// eligibility. A scatter's element stores are charged to Zn4FPSt, which keeps
-// them subject to the one-FP-store-per-cycle limit; Zn4FP45 then carries only
-// the remaining FP4/5 uops, so the two together come to the measured FP4/5
-// total.
-//
-// Three entries widen their few FP1/FP2 uops to FP1-3 rather than name
-// Zn4FPU12, which works around a tool limitation and is not a claim about the
-// part. llvm-mca does not terminate on a write that holds both Zn4FPU01 and
-// Zn4FPU12: they share FP1 with neither containing the other, and both also
-// overlap Zn4FPU123. Its resource manager settles such an assignment with one
-// greedy pass rather than a matching, so an earlier group takes the only unit
-// a later one still needed and the instruction never becomes issuable. The
-// machine scheduler is unaffected -- llc emits identical code either way.
-// Widening by the one pipe avoids that shape and leaves every modeled
-// throughput here unchanged. Restore the measured Zn4FPU12 eligibility on
-// these three entries once llvm-mca can allocate these groups; see
-// https://github.com/llvm/llvm-project/issues/224248.
-//
-// Those occupancies alone fall short of the measured throughput, so Zn4UcodeGS
-// (declared with the other resources above) carries the fitted residual. It is
-// named to sort last, so adding it renumbers no existing resource.
-//
-// Treating that residual as a serialising limit is what Znver4 measures.
-// Independent gathers do not overlap: with two to five of them in flight, the
-// cost per operation is flat to within 3% -- 17.5 to 17.7 cycles for a 512-bit
-// dword gather, 9.6 to 9.9 for a 512-bit qword one -- where a unit that
-// overlapped them would show the per-operation cost falling as the count rose.
-// A lone gather measures above that plateau, 18.2 and 12.7 cycles, because it
-// is latency-exposed rather than throughput-limited. A gather issued alongside
-// a scatter costs 90-96% of the two added together rather than the larger of
-// the two, so the directions share the limit rather than each having their own.
-//
-// A retune edits only that column for as long as its pressure stays the
-// highest in the entry: throughput is the maximum over resources, so the
-// physical columns are a floor beneath which Zn4UcodeGS cannot reach. The
-// FP4/5 pressure of Zn4WriteVPSCATTERDDZ, for instance, is already 17 cycles,
-// so no value in its last column models that instruction faster than 17. A
-// measurement below an entry's floor needs the physical columns revisited too.
+// AVX-512 masked GATHER / SCATTER: microcoded, so the default vector
+// load/store write is an order of magnitude out. Entries are keyed by
+// (#elements, element width, index width) and were measured on Znver4 with
+// every mask bit set, at unit stride over an L2-resident buffer; scatter
+// latency is estimated, having no result to time.
+// Per-pipe occupancy comes from uops.info and keeps the eligibility reported
+// there, with Zn4UcodeGS carrying the residual the pipes do not explain.
+// Three entries widen FP1/FP2 uops to FP1-3 to dodge an llvm-mca allocation
+// limitation rather than to describe the part; restore them once
+// https://github.com/llvm/llvm-project/issues/224248 is fixed. znver5 and
+// znver6 share this model and run 25-55% faster, so they are pessimistic here.
 
-// Each entry names its own resources, since the FP eligibilities differ from
-// one encoding to the next. The leading columns are the addressing, memory and
-// FP4/5 occupancies; the middle ones the FP0-3 subgroups; the last is always
-// Zn4UcodeGS.
+// Each entry names its own resources, as FP eligibility differs per encoding.
+// Leading columns are addressing, memory and FP4/5 occupancy; middle ones the
+// FP0-3 subgroups; the last is always Zn4UcodeGS.
 class Zn4GSRes<list<ProcResourceKind> res, list<int> cyc, int lat, int uops>
     : SchedWriteRes<res> {
   let ReleaseAtCycles = cyc; let Latency = lat; let NumMicroOps = uops;
@@ -641,19 +595,10 @@ def Zn4WriteVPGATHERDQZ    : Zn4GSRes<[Zn4AGU012, Zn4Load, Zn4FPLd01,
 def : InstRW<[Zn4WriteVPGATHERDQZ, WriteVecMaskedGatherWriteback],
              (instrs VPGATHERDQZrm, VGATHERDPDZrm)>;
 
-// AVX2 (VEX) gathers. AVX2 has no scatter and no VEX form exceeds 8 x i32.
-// Each measures at the throughput of the EVEX entry for its shape, except
-// 8 x i32, which is genuinely cheaper at 8.35 against 9.19 cyc. They are not
-// the same sequences underneath, though: a VEX VPGATHERDD xmm issues eight
-// FP0-3 uops and five FP4/5 where its EVEX counterpart issues five and six. So
-// each VEX form keeps the microcode limit measured for it while carrying the
-// physical occupancy measured for its own encoding.
-//
-// An InstRW replaces the whole Sched<> list, so each one must restate the
-// mask-writeback def that X86InstrSSE.td attaches. That def is
-// encoding-neutral and models the mask clobber at the generic load latency, 5,
-// for VEX and EVEX alike, while the data result these entries measure is 12 to
-// 32; narrowing that gap is future work for both encodings.
+// AVX2 (VEX) gathers. Measured separately rather than sharing the EVEX
+// entries: the port distributions differ, and 8 x i32 is genuinely cheaper
+// (8.35 against 9.19 cyc). Each InstRW must restate the mask-writeback def
+// from X86InstrSSE.td, since an InstRW replaces the whole Sched<> list.
 def Zn4WriteVPGATHERQDX    : Zn4GSRes<[Zn4AGU012, Zn4Load, Zn4FPLd01,
                                        Zn4FPU01, Zn4FPU0123, Zn4FPU123,
                                        Zn4FPU23, Zn4UcodeGS],
@@ -673,11 +618,8 @@ def Zn4WriteVPGATHERDDY    : Zn4GSRes<[Zn4AGU012, Zn4Load, Zn4FPLd01,
                                       [8, 8, 9, 8, 7, 2, 33], 21, 42>;
 def : InstRW<[Zn4WriteVPGATHERDDY, WriteVecMaskedGatherWriteback],
              (instrs VPGATHERDDYrm, VGATHERDPSYrm)>;
-// The VEX form retires one micro-op more than the EVEX form of the same
-// gather: uops.info measures 18 for VPGATHERQQ (XMM, VSIB_XMM, XMM) on Zen 4
-// against 17 for VPGATHERQQ (XMM, K, VSIB_XMM), which Zn4WriteVPGATHERQQZ128
-// carries. The two encodings agree on latency and throughput, so only the
-// micro-op count distinguishes them.
+// The VEX form retires one micro-op more than the EVEX form of this gather
+// (uops.info: 18 against 17); latency and throughput agree.
 def Zn4WriteVPGATHERQQX    : Zn4GSRes<[Zn4AGU012, Zn4Load, Zn4FPLd01,
                                        Zn4FPU01, Zn4FPU0123, Zn4FPU123,
                                        Zn4UcodeGS],
@@ -708,6 +650,10 @@ def Zn4WriteVPSCATTERDDZ128 : Zn4GSRes<[Zn4AGU012, Zn4Store, Zn4FPSt, Zn4FP45,
                                        [4, 4, 4, 6, 2, 1, 33], 9, 27>;
 def : InstRW<[Zn4WriteVPSCATTERDDZ128],
              (instrs VPSCATTERDDZ128mr, VSCATTERDPSZ128mr)>;
+// Zen4 runs this four-lane form faster than the dword-indexed one above, 6.54
+// cyc against 8.33, which inverts the order every other index-width pair here
+// keeps. Both the throughput harness and the PMC counters measure it, so do
+// not level the two residuals.
 def Zn4WriteVPSCATTERQDZ256 : Zn4GSRes<[Zn4AGU012, Zn4Store, Zn4FPSt, Zn4FP45,
                                         Zn4FPU123, Zn4FPU23, Zn4UcodeGS],
                                        [4, 4, 4, 6, 2, 1, 26], 9, 27>;
@@ -719,12 +665,12 @@ def Zn4WriteVPSCATTERDDZ256 : Zn4GSRes<[Zn4AGU012, Zn4Store, Zn4FPSt, Zn4FP45,
                                        [8, 8, 8, 10, 1, 3, 3, 49], 14, 48>;
 def : InstRW<[Zn4WriteVPSCATTERDDZ256],
              (instrs VPSCATTERDDZ256mr, VSCATTERDPSZ256mr)>;
-// Sixteen dword lanes reach memory either as one VPSCATTERDDZ or as two of
-// these, and the two forms have to keep their measured order. Znver4 puts the
-// pair 3% above the single instruction (21.66 cycles against 21.05, one dword
-// lane per cache line); a residual of 46 would put it 11% below instead, which
-// is the wrong side, so the qword-indexed form is fitted against the
-// dword-indexed one rather than on its own.
+// Sixteen dword lanes go either as one VPSCATTERDDZ or two of these. At one
+// dword lane per cache line Znver4 puts the pair 3% above the single (21.66
+// against 21.05 cyc), so this entry is fitted to hold that order rather than
+// to its own throughput -- the only row here not fit to its own measurement,
+// and the only one whose numbers come from that pattern rather than unit
+// stride.
 def Zn4WriteVPSCATTERQDZ    : Zn4GSRes<[Zn4AGU012, Zn4Store, Zn4FPSt, Zn4FP45,
                                         Zn4FPU12, Zn4FPU123, Zn4FPU23,
                                         Zn4UcodeGS],
