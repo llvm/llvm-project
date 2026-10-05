@@ -1825,7 +1825,7 @@ public:
 
   /// Lex all tokens in 'Code' into 'Tokens' as though we were expanding a macro
   /// that expands to 'Code' at location 'Loc'.
-  bool LexTokensInString(SmallVectorImpl<Token> &Tokens, StringRef Code,
+  void LexTokensInString(SmallVectorImpl<Token> &Tokens, StringRef Code,
                          SourceLocation Loc);
 
   /// Lex all tokens for this preprocessor until (and excluding) end of file.

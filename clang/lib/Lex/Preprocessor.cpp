@@ -578,7 +578,7 @@ Module *Preprocessor::getCurrentModuleImplementation() {
   return getHeaderSearchInfo().lookupModule(getLangOpts().ModuleName);
 }
 
-bool Preprocessor::LexTokensInString(SmallVectorImpl<Token> &Tokens,
+void Preprocessor::LexTokensInString(SmallVectorImpl<Token> &Tokens,
                                      StringRef Code, SourceLocation Loc) {
   std::unique_ptr<Lexer> L = Lexer::CreateScratchLexer(Code, Loc, Loc, *this);
   L->LexingInjectedString = true;
@@ -591,8 +591,8 @@ bool Preprocessor::LexTokensInString(SmallVectorImpl<Token> &Tokens,
       // Ignore the return value of HandleEndOfFile(): it tells us whether we
       // should call Lex() again to get the next token, which we don't want to
       // to do here anyway.
-      HandleEndOfFile(Tok, /*isEndOfMacro=*/false);
-      return false;
+      HandleEndOfFile(Tok, /*isEndOfMacro=*/true);
+      return;
     }
   }
 }

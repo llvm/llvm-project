@@ -284,7 +284,7 @@ void Preprocessor::Handle_Pragma(Token &Tok) {
   std::unique_ptr<Lexer> TL =
       Lexer::CreateScratchLexer(StrVal, PragmaLoc, RParenLoc, *this);
 
-  // Ensure that the lexer thinks it is inside a directive, so that end \n will
+  // Ensure that the lexer knows it is inside a directive, so that end \n will
   // return an EOD token.
   TL->ParsingPreprocessorDirective = true;
 

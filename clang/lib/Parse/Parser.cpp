@@ -59,8 +59,7 @@ public:
                                SourceLocation InjectionLoc) override {
     // Collect tokens.
     SmallVector<Token> Tokens;
-    if (P.PP.LexTokensInString(Tokens, Code, InjectionLoc))
-      return ExprError();
+    P.PP.LexTokensInString(Tokens, Code, InjectionLoc);
 
     // Apply replacements.
     for (Token &T : Tokens) {
@@ -89,12 +88,8 @@ public:
     P.ConsumeAnyToken();
     ExprResult Res = P.ParseExpression();
 
-    // We should have parsed exactly one expression; if we still have tokens
-    // left, then there was probably an error; don't diagnose this and just
-    // skip them.
-    while (P.Tok.isNot(tok::eof))
-      P.ConsumeAnyToken();
-
+    // We should have parsed exactly one expression.
+    assert(P.Tok.is(tok::eof));
     assert(P.Tok.getEofData() == &EofMarker);
     return Res;
   }

@@ -252,7 +252,6 @@ Lexer::CreateScratchLexer(StringRef Code, SourceLocation ExpansionLocStart,
                           SourceLocation ExpansionLocEnd, Preprocessor &PP) {
   SourceManager &SM = PP.getSourceManager();
 
-  // Plop the string into a buffer where we can lex it.
   Token TmpTok;
   TmpTok.startToken();
   PP.CreateString(Code, TmpTok);

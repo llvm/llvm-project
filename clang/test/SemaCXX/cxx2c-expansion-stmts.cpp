@@ -1583,3 +1583,15 @@ T tf() {
 
 template long tf<long>();
 }
+
+// Test that the preprocessor doesn't think we left a source file when we reach
+// the end of the string injected for the iterating expansion statement below.
+namespace pragma_assume_nonnull {
+#pragma clang assume_nonnull begin
+void f() {
+  static constexpr Array<int, 3> a;
+  template for (auto x : a)
+    ;
+}
+#pragma clang assume_nonnull end
+}
