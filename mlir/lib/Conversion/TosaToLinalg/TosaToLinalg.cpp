@@ -585,6 +585,9 @@ static Value createLinalgBodyCalculationForElementwiseOp(
     bool bitExtend =
         srcTy.getIntOrFloatBitWidth() < dstTy.getIntOrFloatBitWidth();
 
+    // With `input_unsigned`, the integer input is read as unsigned.
+    bool inputUnsigned = cast<tosa::CastOp>(op).getInputUnsigned();
+
     if (srcTy == dstTy)
       return args.front();
 
@@ -616,6 +619,11 @@ static Value createLinalgBodyCalculationForElementwiseOp(
       return arith::UIToFPOp::create(rewriter, loc, resultTypes[0],
                                      unrealizedCast);
     }
+
+    // Unsigned inputs are converted with UIToFP.
+    if (inputUnsigned && arith::UIToFPOp::areCastCompatible(srcTy, dstTy))
+      return createWithDefaultProperties<arith::UIToFPOp>(rewriter, loc,
+                                                          resultTypes, args);
 
     // All other si-to-fp conversions should be handled by SIToFP.
     if (arith::SIToFPOp::areCastCompatible(srcTy, dstTy))
@@ -732,6 +740,12 @@ static Value createLinalgBodyCalculationForElementwiseOp(
       return arith::CmpIOp::create(rewriter, loc, arith::CmpIPredicate::ne,
                                    args.front(), zero);
     }
+
+    // Unsigned inputs are zero-extended.
+    if (inputUnsigned && isa<IntegerType>(srcTy) && isa<IntegerType>(dstTy) &&
+        bitExtend)
+      return createWithDefaultProperties<arith::ExtUIOp>(rewriter, loc,
+                                                         resultTypes, args);
 
     if (isa<IntegerType>(srcTy) && isa<IntegerType>(dstTy) && bitExtend)
       return arith::ExtSIOp::create(rewriter, loc, resultTypes, args,
