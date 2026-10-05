@@ -31,8 +31,7 @@ static constexpr StringLiteral AllowedRISCVStateCallees[] = {
     "__riscv_restore_8",  "__riscv_restore_9", "__riscv_restore_10",
     "__riscv_restore_11", "__riscv_restore_12"};
 
-void llvm::checkRISCVStateCall(const Function &Caller,
-                               StringRef CalleeName) {
+void llvm::checkRISCVStateCall(const Function &Caller, StringRef CalleeName) {
   if (!RISCVState::hasAttribute(Caller) ||
       is_contained(AllowedRISCVStateCallees, CalleeName))
     return;
