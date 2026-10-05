@@ -20,6 +20,11 @@
 ; RUN: %{cmd} -force-vector-width=16 -epilogue-vectorization-force-VF=8 -enable-vplan-native-path \
 ; RUN: < %s 2>&1 | FileCheck %s --check-prefix=CHECK-OUTER-LOOP
 
+; RUN: %{cmd} -force-vector-width=16 -epilogue-vectorization-force-VF=8 -force-partial-aliasing-vectorization \
+; RUN: -force-target-supports-masked-memory-ops < %s 2>&1 | FileCheck %s --check-prefix=CHECK-ALIAS-MASK
+
+; RUN: %{cmd} -force-vector-width=16 -epilogue-vectorization-force-VF=8 \
+; RUN: -enable-interleaved-mem-accesses=true < %s 2>&1 | FileCheck %s --check-prefix=CHECK-INVALID-INTERLEAVE
 
 define void @test_epilogue_tf(ptr %A, i64 %n, i8 %val) {
 ; CHECK-LABEL: LV: Checking a loop in 'test_epilogue_tf'
@@ -38,17 +43,43 @@ define void @test_epilogue_tf(ptr %A, i64 %n, i8 %val) {
 ; CHECK-INVALID-VFs-LABEL: Checking a loop in 'test_epilogue_tf'
 ; CHECK-INVALID-VFs: remark: <unknown>:0:0: For now, epilogue tail-folding can't be applied when VF of the main loop <= VF of the epilogue
 ;
-
+; CHECK-ALIAS-MASK-LABEL: Checking a loop in 'test_epilogue_tf'
+; CHECK-ALIAS-MASK: remark: <unknown>:0:0: Epilogue tail-folding is not supported with alias masking
+;
 entry:
-  br label %for.body
+  br label %loop
 
-for.body:
-  %iv = phi i64 [ 0, %entry ], [ %iv.next, %for.body ]
+loop:
+  %iv = phi i64 [ 0, %entry ], [ %iv.next, %loop ]
   %arrayidx = getelementptr inbounds i8, ptr %A, i64 %iv
   store i8 %val, ptr %arrayidx, align 1
   %iv.next = add nuw nsw i64 %iv, 1
   %exitcond = icmp ne i64 %iv.next, %n
-  br i1 %exitcond, label %for.body, label %exit
+  br i1 %exitcond, label %loop, label %exit
+
+exit:
+  ret void
+}
+
+; The trip count (64) is a multiple of the main loop VF (16), so the main
+; vector loop executes all iterations and there is nothing left for a
+; tail-folded epilogue.
+; TODO: Update the check once epilogue tail-folding is supported; this case
+; should then be rejected rather than fall back with the "not supported" remark.
+define void @test_no_iterations_left(ptr %A) {
+; CHECK-LABEL: LV: Checking a loop in 'test_no_iterations_left'
+; CHECK: remark: <unknown>:0:0: The epilogue-tail-folding policy prefer-fold-tail is not supported yet, fall back to a normal epilogue
+
+entry:
+  br label %loop
+
+loop:
+  %iv = phi i64 [ 0, %entry ], [ %iv.next, %loop ]
+  %arrayidx = getelementptr inbounds i8, ptr %A, i64 %iv
+  store i8 1, ptr %arrayidx, align 1
+  %iv.next = add nuw nsw i64 %iv, 1
+  %exitcond = icmp ne i64 %iv.next, 64
+  br i1 %exitcond, label %loop, label %exit
 
 exit:
   ret void
@@ -87,17 +118,17 @@ define i32 @opt_for_size(ptr %p, i32 %n, i8 %val) optsize {
 ; CHECK: remark: <unknown>:0:0: Not applying tail-folding to the epilogue, since no epilogue is allowed
 ;
 entry:
-  br label %for.body
+  br label %loop
 
-for.body:
-  %iv = phi i32 [ 0, %entry ], [ %inc, %for.body ]
+loop:
+  %iv = phi i32 [ 0, %entry ], [ %iv.next, %loop ]
   %arrayidx = getelementptr inbounds i8, ptr %p, i32 %iv
   store i8 %val, ptr %arrayidx, align 1
-  %inc = add nsw i32 %iv, 1
-  %exitcond = icmp eq i32 %inc, %n
-  br i1 %exitcond, label %for.end, label %for.body
+  %iv.next = add nsw i32 %iv, 1
+  %exitcond = icmp eq i32 %iv.next, %n
+  br i1 %exitcond, label %exit, label %loop
 
-for.end:
+exit:
   ret i32 0
 }
 
@@ -106,53 +137,99 @@ define i32 @low_tc(ptr %p, i8 %val)  {
 ; CHECK: remark: <unknown>:0:0: Not applying tail-folding to the epilogue, since no epilogue is allowed.
 ;
 entry:
-  br label %for.body
+  br label %loop
 
-for.body:
-  %iv = phi i32 [ 0, %entry ], [ %inc, %for.body ]
+loop:
+  %iv = phi i32 [ 0, %entry ], [ %iv.next, %loop ]
   %arrayidx = getelementptr inbounds i8, ptr %p, i32 %iv
   store i8 %val, ptr %arrayidx, align 1
-  %inc = add nsw i32 %iv, 1
-  %exitcond = icmp eq i32 %inc, 8
-  br i1 %exitcond, label %for.end, label %for.body
+  %iv.next = add nsw i32 %iv, 1
+  %exitcond = icmp eq i32 %iv.next, 8
+  br i1 %exitcond, label %exit, label %loop
 
-for.end:
+exit:
   ret i32 0
 }
 
-define i1 @early_exit(ptr %A, i64 %n, i8 %find) {
+define i64 @find_last_offset_wide_canonical_iv(ptr %A, i64 %n) {
+; CHECK-LABEL: Checking a loop in 'find_last_offset_wide_canonical_iv'
+; CHECK: remark: <unknown>:0:0: Epilogue tail-folding is not supported with reductions
+;
+entry:
+  br label %loop
+
+loop:
+  %iv = phi i64 [ 0, %entry ], [ %iv.next, %loop ]
+  %red = phi i64 [ -1, %entry ], [ %sel, %loop ]
+  %gep = getelementptr inbounds i32, ptr %A, i64 %iv
+  %l = load i32, ptr %gep, align 4
+  %c = icmp eq i32 %l, 11
+  %sel = select i1 %c, i64 %iv, i64 %red
+  %iv.next = add nuw nsw i64 %iv, 1
+  %ec = icmp eq i64 %iv.next, %n
+  br i1 %ec, label %exit, label %loop
+
+exit:
+  ret i64 %sel
+}
+
+define i32 @fixed-order-recurrence(ptr %src) {
+; CHECK-LABEL: Checking a loop in 'fixed-order-recurrence'
+; CHECK: remark: <unknown>:0:0: Epilogue tail-folding is not supported with fixed-order recurrence
+;
+entry:
+  br label %loop
+
+loop:
+  %iv = phi i64 [ 0, %entry ], [ %iv.next, %loop ]
+  %previous = phi i32 [ 0, %entry ], [ %ld, %loop ]
+  %gep = getelementptr inbounds i32, ptr %src, i64 %iv
+  %ld = load i32, ptr %gep, align 4
+  %iv.next = add nuw nsw i64 %iv, 1
+  %exitcond = icmp eq i64 %iv.next, 23
+  br i1 %exitcond, label %exit, label %loop
+
+exit:
+  %result = phi i32 [ %previous, %loop ]
+  ret i32 %result
+}
+
+define i64 @early_exit(ptr dereferenceable(1024) align 8 %src) {
 ; CHECK-DISABLED-EARLY-EXIT-LABEL: LV: Checking a loop in 'early_exit'
 ; CHECK-DISABLED-EARLY-EXIT: remark: <unknown>:0:0: Epilogue tail-folding is not supported yet for early-exit loops
 ;
 entry:
-  br label %for.body
+  br label %loop.header
 
-for.body:
-  %iv = phi i64 [ 0, %entry ], [ %iv.next, %cont ]
-  %arrayidx = getelementptr inbounds i8, ptr %A, i64 %iv
-  %val = load i8, ptr %arrayidx, align 1
-  %exitcond = icmp eq i8 %val, %find
-  br i1 %exitcond, label %exit, label %cont
+loop.header:
+  %iv = phi i64 [ %iv.next, %latch ], [ 0, %entry ]
+  %gep = getelementptr inbounds double, ptr %src, i64 %iv
+  %val = load double, ptr %gep, align 8
+  %neg = fneg double %val
+  %c.1 = fcmp une double %neg, 10.0
+  br i1 %c.1, label %latch, label %early.exit
 
-cont:
-  %iv.next = add nuw nsw i64 %iv, 1
-  %contcond = icmp ne i64 %iv.next, %n
-  br i1 %contcond, label %for.body, label %exit
+latch:
+  %iv.next = add nuw i64 %iv, 1
+  %exit.cond = icmp eq i64 %iv.next, 127
+  br i1 %exit.cond, label %exit, label %loop.header
+
+early.exit:
+  ret i64 %iv
+
 exit:
-  ret i1 %exitcond
+  ret i64 10
 }
 
-; For this function, the check line is not related to epilogue tail-folding, but when vectorizing this case gets supported,
-; the check line should be changed to: Epilogue tail-folding is not supported yet for early-exit loops, same as the case above.
 define void @combined_exit_conditions(ptr align 4 dereferenceable(80) readonly %src, ptr align 4 dereferenceable(80) noalias %dst, ptr align 4 dereferenceable(80) readonly %pred) {
 ; CHECK-DISABLED-EARLY-EXIT-LABEL: LV: Checking a loop in 'combined_exit_conditions'
-; CHECK-DISABLED-EARLY-EXIT: remark: <unknown>:0:0: loop not vectorized: Cannot vectorize uncountable loop
+; CHECK-DISABLED-EARLY-EXIT: remark: <unknown>:0:0: Epilogue tail-folding is not supported yet for early-exit loops
 ;
 entry:
-  br label %for.body
+  br label %loop
 
-for.body:
-  %iv = phi i64 [ 0, %entry ], [ %iv.next, %for.body ]
+loop:
+  %iv = phi i64 [ 0, %entry ], [ %iv.next, %loop ]
   %src.ptr = getelementptr inbounds nuw [4 x i8], ptr %src, i64 %iv
   %data = load i32, ptr %src.ptr, align 4
   %add = add nsw i32 %data, 1
@@ -164,7 +241,37 @@ for.body:
   %iv.next = add nuw nsw i64 %iv, 1
   %counted.cmp = icmp eq i64 %iv.next, 20
   %combined.cond = select i1 %ee.cmp, i1 true, i1 %counted.cmp
-  br i1 %combined.cond, label %exit, label %for.body
+  br i1 %combined.cond, label %exit, label %loop
+
+exit:
+  ret void
+}
+
+@AB = common global [1024 x i32] zeroinitializer, align 4
+@CD = common global [1024 x i32] zeroinitializer, align 4
+define void @test_no_masked_interleave_support() {
+; CHECK-INVALID-INTERLEAVE-LABEL: LV: Checking a loop in 'test_no_masked_interleave_support'
+; CHECK-INVALID-INTERLEAVE: remark: <unknown>:0:0: Epilogue tail-folding is not supported with interleaved accesses when masking them isn't supported
+;
+entry:
+  br label %loop
+
+loop:
+  %iv = phi i64 [ 0, %entry ], [ %iv.next, %loop ]
+  %arrayidx0 = getelementptr inbounds [1024 x i32], ptr @AB, i64 0, i64 %iv
+  %tmp = load i32, ptr %arrayidx0, align 4
+  %tmp1 = or disjoint i64 %iv, 1
+  %arrayidx1 = getelementptr inbounds [1024 x i32], ptr @AB, i64 0, i64 %tmp1
+  %tmp2 = load i32, ptr %arrayidx1, align 4
+  %add = add nsw i32 %tmp, 3
+  %mul = mul nsw i32 %tmp2, 5
+  %arrayidx2 = getelementptr inbounds [1024 x i32], ptr @CD, i64 0, i64 %iv
+  store i32 %add, ptr %arrayidx2, align 4
+  %arrayidx3 = getelementptr inbounds [1024 x i32], ptr @CD, i64 0, i64 %tmp1
+  store i32 %mul, ptr %arrayidx3, align 4
+  %iv.next = add nuw nsw i64 %iv, 2
+  %cmp = icmp slt i64 %iv.next, 1024
+  br i1 %cmp, label %loop, label %exit
 
 exit:
   ret void
@@ -200,4 +307,3 @@ exit:
 
 !1 = distinct !{!1, !2}
 !2 = !{!"llvm.loop.vectorize.enable"}
-

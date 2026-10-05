@@ -34,7 +34,6 @@
 #include "llvm/MC/TargetRegistry.h"
 #include "llvm/Support/Compiler.h"
 #include "llvm/Support/SourceMgr.h"
-#include <sstream>
 
 using namespace llvm;
 

@@ -10,11 +10,11 @@
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef ORC_RT_SERVICE_H
-#define ORC_RT_SERVICE_H
+#ifndef ORC_RT_BEDROCK_SERVICE_H
+#define ORC_RT_BEDROCK_SERVICE_H
 
-#include "orc-rt/bedrock/Error.h"
-#include "orc-rt/bedrock/move_only_function.h"
+#include "orc-rt/support/Error.h"
+#include "orc-rt/support/move_only_function.h"
 
 namespace orc_rt {
 
@@ -56,4 +56,4 @@ public:
 };
 } // namespace orc_rt
 
-#endif // ORC_RT_SERVICE_H
+#endif // ORC_RT_BEDROCK_SERVICE_H

@@ -134,6 +134,38 @@ define <8 x half> @vselect_cmp_v8f16(<8 x half> %a, <8 x half> %b,
   ret <8 x half> %result
 }
 
+; CHECK-LABEL: select_cmp_v8f16:
+; CHECK:       i32.const $push0=, 0
+; CHECK-NEXT:  i32.lt_s $push1=, $0, $pop0
+; CHECK-NEXT:  v128.select $push2=, $1, $2, $pop1
+; CHECK-NEXT:  return $pop2
+define <8 x half> @select_cmp_v8f16(i32 %i, <8 x half> %x,
+                                     <8 x half> %y) {
+  %cond = icmp slt i32 %i, 0
+  %result = select i1 %cond, <8 x half> %x, <8 x half> %y
+  ret <8 x half> %result
+}
+
+; CHECK-LABEL: select_ne_v8f16:
+; CHECK:       v128.select $push0=, $1, $2, $0
+; CHECK-NEXT:  return $pop0
+define <8 x half> @select_ne_v8f16(i32 %i, <8 x half> %x,
+                                    <8 x half> %y) {
+  %cond = icmp ne i32 %i, 0
+  %result = select i1 %cond, <8 x half> %x, <8 x half> %y
+  ret <8 x half> %result
+}
+
+; CHECK-LABEL: select_eq_v8f16:
+; CHECK:       v128.select $push0=, $2, $1, $0
+; CHECK-NEXT:  return $pop0
+define <8 x half> @select_eq_v8f16(i32 %i, <8 x half> %x,
+                                    <8 x half> %y) {
+  %cond = icmp eq i32 %i, 0
+  %result = select i1 %cond, <8 x half> %x, <8 x half> %y
+  ret <8 x half> %result
+}
+
 ; CHECK-LABEL: add_v8f16:
 ; CHECK:       f16x8.add $push0=, $0, $1
 ; CHECK-NEXT:  return $pop0

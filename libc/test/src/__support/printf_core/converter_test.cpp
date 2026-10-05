@@ -14,14 +14,16 @@
 
 class LlvmLibcPrintfConverterTest : public LIBC_NAMESPACE::testing::Test {
 protected:
-  LlvmLibcPrintfConverterTest() : wb(str, sizeof(str) - 1), writer(wb) {}
+  LlvmLibcPrintfConverterTest()
+      : writer(LIBC_NAMESPACE::printf_core::make_drop_overflow_writer(
+            str, sizeof(str) - 1)),
+        wb(writer.get_write_buffer()) {}
 
   char str[60];
-  LIBC_NAMESPACE::printf_core::DropOverflowBuffer wb;
   LIBC_NAMESPACE::printf_core::Writer<LIBC_NAMESPACE::printf_core::Mode<
-      LIBC_NAMESPACE::printf_core::WriteMode::FILL_BUFF_AND_DROP_OVERFLOW>::
-                                          value>
+      LIBC_NAMESPACE::printf_core::OverflowMode::DROP_OVERFLOW>::value>
       writer;
+  LIBC_NAMESPACE::printf_core::WriteBuffer<char> &wb;
 };
 
 TEST_F(LlvmLibcPrintfConverterTest, SimpleRawConversion) {

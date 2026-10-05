@@ -286,8 +286,9 @@ body:             |
     ; CHECK-NEXT: {{  $}}
     ; CHECK-NEXT: %x:_(i64) = COPY $x0
     ; CHECK-NEXT: %lsb:_(i64) = G_CONSTANT i64 5
-    ; CHECK-NEXT: [[C:%[0-9]+]]:_(i64) = G_CONSTANT i64 64
-    ; CHECK-NEXT: %and:_(i64) = G_UBFX %x, %lsb(i64), [[C]]
+    ; CHECK-NEXT: %mask:_(i64) = G_CONSTANT i64 -1
+    ; CHECK-NEXT: %shift:_(i64) = G_LSHR %x, %lsb(i64)
+    ; CHECK-NEXT: %and:_(i64) = G_AND %shift, %mask
     ; CHECK-NEXT: $x0 = COPY %and(i64)
     ; CHECK-NEXT: RET_ReallyLR implicit $x0
     %x:_(i64) = COPY $x0

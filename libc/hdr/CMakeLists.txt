@@ -73,6 +73,22 @@ add_proxy_header_library(
 )
 
 add_proxy_header_library(
+  fnmatch_macros
+  HDRS
+    fnmatch_macros.h
+  FULL_BUILD_DEPENDS
+    libc.include.llvm-libc-macros.fnmatch_macros
+)
+
+add_proxy_header_library(
+  glob_macros
+  HDRS
+    glob_macros.h
+  FULL_BUILD_DEPENDS
+    libc.include.llvm-libc-macros.glob_macros
+)
+
+add_proxy_header_library(
   inet_address_macros
   HDRS
     inet-address-macros.h
@@ -89,11 +105,30 @@ add_proxy_header_library(
 )
 
 add_proxy_header_library(
+  netdb_macros
+  HDRS
+    netdb_macros.h
+  FULL_BUILD_DEPENDS
+    libc.include.llvm-libc-macros.netdb_macros
+)
+
+add_proxy_header_library(
   netinet_in_macros
   HDRS
     netinet_in_macros.h
   FULL_BUILD_DEPENDS
     libc.include.llvm-libc-macros.netinet_in_macros
+)
+
+add_header_library(poll_overlay HDRS poll_overlay.h)
+add_proxy_header_library(
+  poll_macros
+  HDRS
+    poll_macros.h
+  DEPENDS
+    .poll_overlay
+  FULL_BUILD_DEPENDS
+    libc.include.llvm-libc-macros.poll-macros
 )
 
 add_proxy_header_library(
@@ -163,6 +198,14 @@ add_proxy_header_library(
 )
 
 add_proxy_header_library(
+  sys_file_macros
+  HDRS
+    sys_file_macros.h
+  FULL_BUILD_DEPENDS
+    libc.include.llvm-libc-macros.sys_file_macros
+)
+
+add_proxy_header_library(
   sys_ioctl_macros
   HDRS
     sys_ioctl_macros.h
@@ -194,10 +237,13 @@ add_proxy_header_library(
     libc.include.llvm-libc-macros.sys_sem_macros
 )
 
+add_header_library(sys_socket_overlay HDRS sys_socket_overlay.h)
 add_proxy_header_library(
   sys_socket_macros
   HDRS
     sys_socket_macros.h
+  DEPENDS
+    .sys_socket_overlay
   FULL_BUILD_DEPENDS
     libc.include.llvm-libc-macros.sys_socket_macros
 )
@@ -240,6 +286,14 @@ add_proxy_header_library(
     sys_wait_macros.h
   FULL_BUILD_DEPENDS
     libc.include.llvm-libc-macros.sys_wait_macros
+)
+
+add_proxy_header_library(
+  sys_xattr_macros
+  HDRS
+    sys_xattr_macros.h
+  FULL_BUILD_DEPENDS
+    libc.include.llvm-libc-macros.sys_xattr_macros
 )
 
 add_proxy_header_library(

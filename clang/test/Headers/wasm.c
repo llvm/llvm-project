@@ -1234,7 +1234,7 @@ v128_t test_u16x8_ge(v128_t a, v128_t b) {
   return wasm_u16x8_ge(a, b);
 }
 
-// CHECK-LABEL: define hidden range(i32 -1, 1) <4 x i32> @test_i32x4_eq(
+// CHECK-LABEL: define hidden noundef range(i32 -1, 1) <4 x i32> @test_i32x4_eq(
 // CHECK-SAME: <4 x i32> noundef [[A:%.*]], <4 x i32> noundef [[B:%.*]]) local_unnamed_addr #[[ATTR2]] {
 // CHECK-NEXT:  [[ENTRY:.*:]]
 // CHECK-NEXT:    [[CMP_I:%.*]] = icmp eq <4 x i32> [[A]], [[B]]
@@ -1245,7 +1245,7 @@ v128_t test_i32x4_eq(v128_t a, v128_t b) {
   return wasm_i32x4_eq(a, b);
 }
 
-// CHECK-LABEL: define hidden range(i32 -1, 1) <4 x i32> @test_i32x4_ne(
+// CHECK-LABEL: define hidden noundef range(i32 -1, 1) <4 x i32> @test_i32x4_ne(
 // CHECK-SAME: <4 x i32> noundef [[A:%.*]], <4 x i32> noundef [[B:%.*]]) local_unnamed_addr #[[ATTR2]] {
 // CHECK-NEXT:  [[ENTRY:.*:]]
 // CHECK-NEXT:    [[CMP_I:%.*]] = icmp ne <4 x i32> [[A]], [[B]]
@@ -1256,7 +1256,7 @@ v128_t test_i32x4_ne(v128_t a, v128_t b) {
   return wasm_i32x4_ne(a, b);
 }
 
-// CHECK-LABEL: define hidden range(i32 -1, 1) <4 x i32> @test_i32x4_lt(
+// CHECK-LABEL: define hidden noundef range(i32 -1, 1) <4 x i32> @test_i32x4_lt(
 // CHECK-SAME: <4 x i32> noundef [[A:%.*]], <4 x i32> noundef [[B:%.*]]) local_unnamed_addr #[[ATTR2]] {
 // CHECK-NEXT:  [[ENTRY:.*:]]
 // CHECK-NEXT:    [[CMP_I:%.*]] = icmp slt <4 x i32> [[A]], [[B]]
@@ -1267,7 +1267,7 @@ v128_t test_i32x4_lt(v128_t a, v128_t b) {
   return wasm_i32x4_lt(a, b);
 }
 
-// CHECK-LABEL: define hidden range(i32 -1, 1) <4 x i32> @test_u32x4_lt(
+// CHECK-LABEL: define hidden noundef range(i32 -1, 1) <4 x i32> @test_u32x4_lt(
 // CHECK-SAME: <4 x i32> noundef [[A:%.*]], <4 x i32> noundef [[B:%.*]]) local_unnamed_addr #[[ATTR2]] {
 // CHECK-NEXT:  [[ENTRY:.*:]]
 // CHECK-NEXT:    [[CMP_I:%.*]] = icmp ult <4 x i32> [[A]], [[B]]
@@ -1278,7 +1278,7 @@ v128_t test_u32x4_lt(v128_t a, v128_t b) {
   return wasm_u32x4_lt(a, b);
 }
 
-// CHECK-LABEL: define hidden range(i32 -1, 1) <4 x i32> @test_i32x4_gt(
+// CHECK-LABEL: define hidden noundef range(i32 -1, 1) <4 x i32> @test_i32x4_gt(
 // CHECK-SAME: <4 x i32> noundef [[A:%.*]], <4 x i32> noundef [[B:%.*]]) local_unnamed_addr #[[ATTR2]] {
 // CHECK-NEXT:  [[ENTRY:.*:]]
 // CHECK-NEXT:    [[CMP_I:%.*]] = icmp sgt <4 x i32> [[A]], [[B]]
@@ -1289,7 +1289,7 @@ v128_t test_i32x4_gt(v128_t a, v128_t b) {
   return wasm_i32x4_gt(a, b);
 }
 
-// CHECK-LABEL: define hidden range(i32 -1, 1) <4 x i32> @test_u32x4_gt(
+// CHECK-LABEL: define hidden noundef range(i32 -1, 1) <4 x i32> @test_u32x4_gt(
 // CHECK-SAME: <4 x i32> noundef [[A:%.*]], <4 x i32> noundef [[B:%.*]]) local_unnamed_addr #[[ATTR2]] {
 // CHECK-NEXT:  [[ENTRY:.*:]]
 // CHECK-NEXT:    [[CMP_I:%.*]] = icmp ugt <4 x i32> [[A]], [[B]]
@@ -1300,7 +1300,7 @@ v128_t test_u32x4_gt(v128_t a, v128_t b) {
   return wasm_u32x4_gt(a, b);
 }
 
-// CHECK-LABEL: define hidden range(i32 -1, 1) <4 x i32> @test_i32x4_le(
+// CHECK-LABEL: define hidden noundef range(i32 -1, 1) <4 x i32> @test_i32x4_le(
 // CHECK-SAME: <4 x i32> noundef [[A:%.*]], <4 x i32> noundef [[B:%.*]]) local_unnamed_addr #[[ATTR2]] {
 // CHECK-NEXT:  [[ENTRY:.*:]]
 // CHECK-NEXT:    [[CMP_I:%.*]] = icmp sle <4 x i32> [[A]], [[B]]
@@ -1311,7 +1311,7 @@ v128_t test_i32x4_le(v128_t a, v128_t b) {
   return wasm_i32x4_le(a, b);
 }
 
-// CHECK-LABEL: define hidden range(i32 -1, 1) <4 x i32> @test_u32x4_le(
+// CHECK-LABEL: define hidden noundef range(i32 -1, 1) <4 x i32> @test_u32x4_le(
 // CHECK-SAME: <4 x i32> noundef [[A:%.*]], <4 x i32> noundef [[B:%.*]]) local_unnamed_addr #[[ATTR2]] {
 // CHECK-NEXT:  [[ENTRY:.*:]]
 // CHECK-NEXT:    [[CMP_I:%.*]] = icmp ule <4 x i32> [[A]], [[B]]
@@ -1322,7 +1322,7 @@ v128_t test_u32x4_le(v128_t a, v128_t b) {
   return wasm_u32x4_le(a, b);
 }
 
-// CHECK-LABEL: define hidden range(i32 -1, 1) <4 x i32> @test_i32x4_ge(
+// CHECK-LABEL: define hidden noundef range(i32 -1, 1) <4 x i32> @test_i32x4_ge(
 // CHECK-SAME: <4 x i32> noundef [[A:%.*]], <4 x i32> noundef [[B:%.*]]) local_unnamed_addr #[[ATTR2]] {
 // CHECK-NEXT:  [[ENTRY:.*:]]
 // CHECK-NEXT:    [[CMP_I:%.*]] = icmp sge <4 x i32> [[A]], [[B]]
@@ -1333,7 +1333,7 @@ v128_t test_i32x4_ge(v128_t a, v128_t b) {
   return wasm_i32x4_ge(a, b);
 }
 
-// CHECK-LABEL: define hidden range(i32 -1, 1) <4 x i32> @test_u32x4_ge(
+// CHECK-LABEL: define hidden noundef range(i32 -1, 1) <4 x i32> @test_u32x4_ge(
 // CHECK-SAME: <4 x i32> noundef [[A:%.*]], <4 x i32> noundef [[B:%.*]]) local_unnamed_addr #[[ATTR2]] {
 // CHECK-NEXT:  [[ENTRY:.*:]]
 // CHECK-NEXT:    [[CMP_I:%.*]] = icmp uge <4 x i32> [[A]], [[B]]
@@ -1428,7 +1428,7 @@ v128_t test_i64x2_ge(v128_t a, v128_t b) {
   return wasm_i64x2_ge(a, b);
 }
 
-// CHECK-LABEL: define hidden range(i32 -1, 1) <4 x i32> @test_f32x4_eq(
+// CHECK-LABEL: define hidden noundef range(i32 -1, 1) <4 x i32> @test_f32x4_eq(
 // CHECK-SAME: <4 x i32> noundef [[A:%.*]], <4 x i32> noundef [[B:%.*]]) local_unnamed_addr #[[ATTR2]] {
 // CHECK-NEXT:  [[ENTRY:.*:]]
 // CHECK-NEXT:    [[TMP0:%.*]] = bitcast <4 x i32> [[A]] to <4 x float>
@@ -1441,7 +1441,7 @@ v128_t test_f32x4_eq(v128_t a, v128_t b) {
   return wasm_f32x4_eq(a, b);
 }
 
-// CHECK-LABEL: define hidden range(i32 -1, 1) <4 x i32> @test_f32x4_ne(
+// CHECK-LABEL: define hidden noundef range(i32 -1, 1) <4 x i32> @test_f32x4_ne(
 // CHECK-SAME: <4 x i32> noundef [[A:%.*]], <4 x i32> noundef [[B:%.*]]) local_unnamed_addr #[[ATTR2]] {
 // CHECK-NEXT:  [[ENTRY:.*:]]
 // CHECK-NEXT:    [[TMP0:%.*]] = bitcast <4 x i32> [[A]] to <4 x float>
@@ -1454,7 +1454,7 @@ v128_t test_f32x4_ne(v128_t a, v128_t b) {
   return wasm_f32x4_ne(a, b);
 }
 
-// CHECK-LABEL: define hidden range(i32 -1, 1) <4 x i32> @test_f32x4_lt(
+// CHECK-LABEL: define hidden noundef range(i32 -1, 1) <4 x i32> @test_f32x4_lt(
 // CHECK-SAME: <4 x i32> noundef [[A:%.*]], <4 x i32> noundef [[B:%.*]]) local_unnamed_addr #[[ATTR2]] {
 // CHECK-NEXT:  [[ENTRY:.*:]]
 // CHECK-NEXT:    [[TMP0:%.*]] = bitcast <4 x i32> [[A]] to <4 x float>
@@ -1467,7 +1467,7 @@ v128_t test_f32x4_lt(v128_t a, v128_t b) {
   return wasm_f32x4_lt(a, b);
 }
 
-// CHECK-LABEL: define hidden range(i32 -1, 1) <4 x i32> @test_f32x4_gt(
+// CHECK-LABEL: define hidden noundef range(i32 -1, 1) <4 x i32> @test_f32x4_gt(
 // CHECK-SAME: <4 x i32> noundef [[A:%.*]], <4 x i32> noundef [[B:%.*]]) local_unnamed_addr #[[ATTR2]] {
 // CHECK-NEXT:  [[ENTRY:.*:]]
 // CHECK-NEXT:    [[TMP0:%.*]] = bitcast <4 x i32> [[A]] to <4 x float>
@@ -1480,7 +1480,7 @@ v128_t test_f32x4_gt(v128_t a, v128_t b) {
   return wasm_f32x4_gt(a, b);
 }
 
-// CHECK-LABEL: define hidden range(i32 -1, 1) <4 x i32> @test_f32x4_le(
+// CHECK-LABEL: define hidden noundef range(i32 -1, 1) <4 x i32> @test_f32x4_le(
 // CHECK-SAME: <4 x i32> noundef [[A:%.*]], <4 x i32> noundef [[B:%.*]]) local_unnamed_addr #[[ATTR2]] {
 // CHECK-NEXT:  [[ENTRY:.*:]]
 // CHECK-NEXT:    [[TMP0:%.*]] = bitcast <4 x i32> [[A]] to <4 x float>
@@ -1493,7 +1493,7 @@ v128_t test_f32x4_le(v128_t a, v128_t b) {
   return wasm_f32x4_le(a, b);
 }
 
-// CHECK-LABEL: define hidden range(i32 -1, 1) <4 x i32> @test_f32x4_ge(
+// CHECK-LABEL: define hidden noundef range(i32 -1, 1) <4 x i32> @test_f32x4_ge(
 // CHECK-SAME: <4 x i32> noundef [[A:%.*]], <4 x i32> noundef [[B:%.*]]) local_unnamed_addr #[[ATTR2]] {
 // CHECK-NEXT:  [[ENTRY:.*:]]
 // CHECK-NEXT:    [[TMP0:%.*]] = bitcast <4 x i32> [[A]] to <4 x float>

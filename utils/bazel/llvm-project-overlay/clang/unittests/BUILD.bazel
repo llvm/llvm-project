@@ -186,6 +186,7 @@ cc_library(
 
 cc_test(
     name = "analysis_flow_sensitive_tests",
+    size = "medium",
     srcs = glob(
         [
             "Analysis/FlowSensitive/*.cpp",
@@ -193,6 +194,7 @@ cc_test(
         ],
         allow_empty = False,
     ),
+    shard_count = 20,
     deps = [
         "//clang:analysis",
         "//clang:ast",
@@ -252,6 +254,8 @@ cc_test(
         "//clang:lex",
         "//clang:parse",
         "//clang:sema",
+        "//clang:testing",
+        "//llvm:ABI",
         "//llvm:Core",
         "//llvm:Support",
         "//llvm:TargetParser",
@@ -376,6 +380,7 @@ cc_test(
         "//clang:parse",
         "//clang:sema",
         "//clang:tooling",
+        "//llvm:Support",
         "//llvm:TestingAnnotations",
         "//llvm:TestingSupport",
         "//third-party/unittest:gmock",
@@ -756,6 +761,7 @@ cc_test(
         allow_empty = False,
     ),
     deps = [
+        "//clang:ast",
         "//clang:ast_matchers",
         "//clang:basic",
         "//clang:driver",
