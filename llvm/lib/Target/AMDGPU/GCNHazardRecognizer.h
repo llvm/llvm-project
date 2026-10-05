@@ -179,6 +179,12 @@ private:
   /// Wait states required after \p MI, or nullopt if \p MI is not waited for.
   using WindowForFn = function_ref<std::optional<int>(const MachineInstr &)>;
 
+  /// What a distance counts. The WMMA co-execution windows are expressed in
+  /// co-executable VALU instructions rather than wait states, and the
+  /// scheduler keeps a separate history of those, so the unit selects both the
+  /// weight of an instruction and which history is read.
+  enum class DistanceMetric { WaitStates, VALUInstructions };
+
   /// Whether the traversal keeps asking after a match. Nearest prunes the path
   /// a match was found on, which is only sound when every window is the same.
   /// It reduces the calls a predicate sees but does not bound them: another
@@ -189,8 +195,9 @@ private:
   /// preceding the one being checked within \p MaxWindow, which must bound
   /// every window WindowFor can return, and zero if it accepts none. Each
   /// window is paired with the distance to the instruction that supplied it.
-  int getMaxWindowDeficit(int MaxWindow, WindowForFn WindowFor,
-                          MatchScope Scope = MatchScope::All) const;
+  int getMaxWindowDeficit(
+      int MaxWindow, WindowForFn WindowFor, MatchScope Scope = MatchScope::All,
+      DistanceMetric Metric = DistanceMetric::WaitStates) const;
 
   /// Returns the distance in wait states to the closest preceding instruction
   /// \p IsHazard accepts, or nullopt if it accepts none within \p MaxWindow,
@@ -200,10 +207,7 @@ private:
   std::optional<int> getNearestMatchDistance(int MaxWindow,
                                              IsHazardFn IsHazard) const;
 
-  int getWaitStatesSince(IsHazardFn IsHazard, int Limit,
-                         GetNumWaitStatesFn GetNumWaitStates) const;
   int getWaitStatesSince(IsHazardFn IsHazard, int Limit) const;
-  int getWaitStatesSinceVALU(IsHazardFn IsHazard, int Limit) const;
   int getWaitStatesSinceDef(unsigned Reg, IsHazardFn IsHazardDef,
                             int Limit) const;
   int getWaitStatesSinceSetReg(IsHazardFn IsHazard, int Limit) const;
