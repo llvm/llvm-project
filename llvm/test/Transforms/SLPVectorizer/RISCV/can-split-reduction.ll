@@ -195,6 +195,5 @@ entry:
   %or29 = or i64 %or28, %trunc30
   %or30 = or i64 %or29, %trunc31
   %ret = trunc i64 %or30 to i8
-  ;  %ret = add i8 0, %z
   ret i8 %ret
 }
