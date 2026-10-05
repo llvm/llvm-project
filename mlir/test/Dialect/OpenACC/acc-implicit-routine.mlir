@@ -244,7 +244,7 @@ module {
   func.func @test_undefined_callee() {
     %buf = memref.alloca() : memref<f32>
     acc.serial {
-      test.call_and_store @undefined_callee(%buf), %buf {store_before_call = false} : (memref<f32>, memref<f32>) -> ()
+      test.call_and_store @undefined_callee(%buf), %buf <store_before_call = false> : (memref<f32>, memref<f32>) -> ()
       acc.yield
     }
     return

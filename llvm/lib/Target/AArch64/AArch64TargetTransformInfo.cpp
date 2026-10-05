@@ -5567,7 +5567,12 @@ AArch64TTIImpl::getMaskedMemoryOpCost(const MemIntrinsicCostAttributes &MICA,
       return InstructionCost::getInvalid();
 
     // Operation will be split into expand of masked.load
-    MemOpCost *= 2;
+    // Something like:
+    // cntp     x8, p0, p0.s
+    // whilelo  p1.s, xzr, x8
+    // ld1w     { z1.s }, p1/z, [x0]
+    // expand   z1.s, p0, z1.s
+    MemOpCost *= 4;
   }
 
   if (MICA.getID() == Intrinsic::masked_compressstore) {
@@ -5575,12 +5580,11 @@ AArch64TTIImpl::getMaskedMemoryOpCost(const MemIntrinsicCostAttributes &MICA,
       return InstructionCost::getInvalid();
 
     // A compress store lowers to something like:
-    //  ptrue    p1.s
     //  compact  z0.s, p0, z0.s
     //  cntp     x8, p1, p0.s
     //  whilelo  p0.s, xzr, x8
     //  st1w     { z0.s }, p0, [x0]
-    MemOpCost *= 2;
+    MemOpCost *= 4;
   }
 
   // If we need to split the memory operation, we will also need to split the
@@ -5958,6 +5962,18 @@ bool AArch64TTIImpl::isLegalMaskedExpandLoad(Type *DataTy,
          (ST->isSVEorStreamingSVEAvailable() && ST->hasSME2p2());
 }
 
+bool AArch64TTIImpl::isLegalSpeculativeLoad(Type *DataType,
+                                            unsigned AddressSpace) const {
+  // Matches AArch64TargetLowering::emitCanLoadSpeculatively: only address
+  // space 0 and power-of-2 sizes up to the 16-byte MTE tag granule.
+  // TODO: Support scalable vectors.
+  if (AddressSpace != 0)
+    return false;
+  TypeSize Size = DL.getTypeStoreSize(DataType);
+  return !Size.isScalable() && isPowerOf2_64(Size.getFixedValue()) &&
+         Size.getFixedValue() <= 16;
+}
+
 unsigned
 AArch64TTIImpl::getMaxInterleaveFactor(ElementCount VF,
                                        bool HasUnorderedReductions) const {
@@ -6286,6 +6302,9 @@ void AArch64TTIImpl::getUnrollingPreferences(
         return;
       }
 
+      // The cost is only compared against Aarch64ForceUnrollThreshold below.
+      if (Cost >= Aarch64ForceUnrollThreshold)
+        continue;
       SmallVector<const Value *, 4> Operands(I.operand_values());
       Cost += getInstructionCost(&I, Operands,
                                  TargetTransformInfo::TCK_SizeAndLatency);

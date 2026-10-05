@@ -20,10 +20,11 @@ start:
 
 declare i32 @__zos_cxx_personality_v2(...)
 
-; CHECK:      C_WSA64 CATTR ALIGN(2),FILL(0),NOTEXECUTABLE,RMODE(64),PART(.gcc_excepti
-; CHECK-NEXT:                ion_table.fn_with_lpad)
-; CHECK-NEXT: .gcc_exception_table.fn_with_lpad XATTR LINKAGE(XPLINK),REFERENCE(DATA),
-; CHECK-NEXT:                ,SCOPE(SECTION)
+; CHECK:      GCC_except.fn_with_lpad CSECT
+; CHECK-NEXT: C_WSA64 CATTR ALIGN(3),FILL(0),DEFLOAD,NOTEXECUTABLE,RMODE(64),PART(GCC_
+; CHECK-NEXT:                _except.fn_with_lpad)
+; CHECK-NEXT: GCC_except.fn_with_lpad XATTR LINKAGE(XPLINK),REFERENCE(DATA),SCOPE(SECT
+; CHECK-NEXT:                TION)
 ; CHECK-NEXT:  DS 0B
 ; CHECK-NEXT: * @LPStart Encoding = omit
 ; CHECK-NEXT:  DC XL1'FF'

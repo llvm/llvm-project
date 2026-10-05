@@ -116,8 +116,8 @@ public:
     return nullptr;
   }
 
-  Value *FoldGEP(Type *Ty, Value *Ptr, ArrayRef<Value *> IdxList,
-                 GEPNoWrapFlags NW) const override {
+  Value *FoldGEP(const DataLayout &, Type *Ty, Value *Ptr,
+                 ArrayRef<Value *> IdxList, GEPNoWrapFlags NW) const override {
     if (!ConstantExpr::isSupportedGetElementPtr(Ty))
       return nullptr;
 
@@ -185,6 +185,14 @@ public:
     auto *C2 = dyn_cast<Constant>(V2);
     if (C1 && C2)
       return Fold(ConstantExpr::getShuffleVector(C1, C2, Mask));
+    return nullptr;
+  }
+
+  Value *FoldBitInsert(Value *Base, Value *Val, Value *Offset) const override {
+    return nullptr;
+  }
+
+  Value *FoldBitExtract(Type *Ty, Value *Src, Value *Offset) const override {
     return nullptr;
   }
 
