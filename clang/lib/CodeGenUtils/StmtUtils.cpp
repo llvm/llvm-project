@@ -28,8 +28,7 @@ bool checkIfLoopMustProgress(const LangOptions &LangOpts,
   Expr::EvalResult Result;
   bool CondIsConstInt =
       !ControllingExpression ||
-      (!ControllingExpression->containsErrors() &&
-       ControllingExpression->EvaluateAsInt(Result, Ctx) && Result.Val.isInt());
+      (ControllingExpression->EvaluateAsInt(Result, Ctx) && Result.Val.isInt());
 
   bool CondIsTrue = CondIsConstInt && (!ControllingExpression ||
                                        Result.Val.getInt().getBoolValue());

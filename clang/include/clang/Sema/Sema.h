@@ -7641,9 +7641,10 @@ public:
 
   void ActOnStartStmtExpr();
   ExprResult ActOnStmtExpr(Scope *S, SourceLocation LPLoc, Stmt *SubStmt,
-                           SourceLocation RPLoc);
+                           SourceLocation RPLoc, bool HasResult = true);
   ExprResult BuildStmtExpr(SourceLocation LPLoc, Stmt *SubStmt,
-                           SourceLocation RPLoc, unsigned TemplateDepth);
+                           SourceLocation RPLoc, unsigned TemplateDepth,
+                           bool HasResult = true);
   // Handle the final expression in a statement expression.
   ExprResult ActOnStmtExprResult(ExprResult E);
   void ActOnStmtExprError();
