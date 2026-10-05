@@ -7262,9 +7262,6 @@ X86TTIImpl::getGSVectorCost(unsigned Opcode, TTI::TargetCostKind CostKind,
   // operation will use 16 x 64 indices which do not fit in a zmm and needs
   // to split. Also check that the base pointer is the same for all lanes,
   // and that there's at most one variable index.
-  // The index starts out as wide as the pointers being gathered, which is a
-  // property of the address space they live in. Asking the data layout without
-  // one answers for address space 0, which is not necessarily theirs.
   unsigned PtrSizeInBits = DL.getPointerSizeInBits(
       Ptr && Ptr->getType()->isPtrOrPtrVectorTy()
           ? Ptr->getType()->getScalarType()->getPointerAddressSpace()
@@ -7273,7 +7270,7 @@ X86TTIImpl::getGSVectorCost(unsigned Opcode, TTI::TargetCostKind CostKind,
   auto getIndexSizeInBits = [&](const Value *Ptr) {
     unsigned IndexSize = PtrSizeInBits;
     const GetElementPtrInst *GEP = dyn_cast_or_null<GetElementPtrInst>(Ptr);
-    if (IndexSize < 64 || !GEP)
+    if (IndexSize != 64 || !GEP)
       return IndexSize;
 
     unsigned NumOfVarIndices = 0;
@@ -7294,20 +7291,13 @@ X86TTIImpl::getGSVectorCost(unsigned Opcode, TTI::TargetCostKind CostKind,
         continue;
 
       if (++NumOfVarIndices > 1)
-        return IndexSize; // 64
+        return IndexSize;
 
       unsigned IndexBits;
       if (Operand->getType()->isVectorTy()) {
-        // Whether the index reaches the instruction as a dword is a property
-        // of the values it takes, not of how it was written: CodeGen narrows
-        // it when it is representable in a signed dword, which is what the
-        // gather/scatter combine in X86ISelLowering tests with
-        // ComputeNumSignBits. Deciding on the declared width and the
-        // extension opcode instead misses in both directions -- a
-        // zero-extension from a narrow type is representable although it is
-        // not an SExtInst, and an index wider than a pointer is not
-        // representable although it is not exactly 64 bits -- and a constant
-        // vector was not examined at all.
+        // Match the backend: combineGatherScatter narrows an index vector
+        // that is representable in a signed dword, and tests that with
+        // ComputeNumSignBits rather than by declared width and opcode.
         IndexBits = ComputeMaxSignificantBits(Operand, DL);
       } else {
         // A scalar index reaches here from a caller that has not widened the
@@ -7321,11 +7311,11 @@ X86TTIImpl::getGSVectorCost(unsigned Opcode, TTI::TargetCostKind CostKind,
                         : 32;
       }
       if (IndexBits > 32)
-        return IndexSize; // 64
+        return IndexSize;
 
       TypeSize EltSize = DL.getTypeAllocSize(GTI.getIndexedType());
       if (EltSize.isScalable())
-        return IndexSize; // 64
+        return IndexSize;
       uint64_t Stride = EltSize.getFixedValue();
 
       // A stride the scale field encodes -- 1, 2, 4 or 8 -- is applied by the
@@ -7339,7 +7329,7 @@ X86TTIImpl::getGSVectorCost(unsigned Opcode, TTI::TargetCostKind CostKind,
       // stride included, and it is no longer an extension node, which is the
       // route the combine normally narrows through.
       if (IndexBits + Log2_64_Ceil(Stride) > 32)
-        return IndexSize; // 64
+        return IndexSize;
 
       // Two routes remain for that product. A constant index narrows by being
       // folded to its truncated form. Otherwise the combine narrows only
@@ -7353,7 +7343,7 @@ X86TTIImpl::getGSVectorCost(unsigned Opcode, TTI::TargetCostKind CostKind,
       LLVMContext &Ctx = SrcVTy->getContext();
       if (TLI->isTypeLegal(EVT::getVectorVT(Ctx, MVT::i64, VF)) ||
           !TLI->isTypeLegal(EVT::getVectorVT(Ctx, MVT::i32, VF)))
-        return IndexSize; // 64
+        return IndexSize;
     }
 
     // Every index holds the same value in every lane, so the component that
@@ -7364,7 +7354,7 @@ X86TTIImpl::getGSVectorCost(unsigned Opcode, TTI::TargetCostKind CostKind,
     // chase like p[i]->y is otherwise indistinguishable from a uniform base
     // reached through a narrow index.
     if (NumOfVarIndices == 0)
-      return IndexSize; // 64
+      return IndexSize;
 
     return (unsigned)32;
   };
