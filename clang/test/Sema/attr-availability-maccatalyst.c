@@ -17,8 +17,8 @@ void f32(int) __attribute__((availability(maccatalyst,introduced=3.0, obsoleted=
 
 
 void f5(int) __attribute__((availability(maccatalyst,introduced=2.0))) __attribute__((availability(maccatalyst,deprecated=9.0))); // expected-note {{'f5' has been explicitly marked deprecated here}}
-void f6(int) __attribute__((availability(maccatalyst,deprecated=9.0))); // expected-note {{'f6' has been explicitly marked deprecated here}}
-void f6(int) __attribute__((availability(macCatalyst,introduced=2.0)));
+void f6(int) __attribute__((availability(iosmac,deprecated=9.0))); // expected-note {{'f6' has been explicitly marked deprecated here}}
+void f6(int) __attribute__((availability(iOSMac,introduced=2.0)));
 
 void f7(void) // expected-note {{'f7' has been explicitly marked deprecated here}}
 __attribute__((availability(maccatalyst,introduced=3.0, deprecated=4.0)))

@@ -5290,9 +5290,8 @@ ExprResult SemaObjC::ActOnObjCAvailabilityCheckExpr(
     llvm::ArrayRef<AvailabilitySpec> AvailSpecs, SourceLocation AtLoc,
     SourceLocation RParen) {
   ASTContext &Context = getASTContext();
-  auto FindSpecVersion =
-      [&](StringRef Platform,
-          const llvm::Triple::OSType &OS) -> std::optional<VersionTuple> {
+  auto FindSpecVersion = [&](StringRef Platform, const llvm::Triple::OSType &OS)
+      -> std::optional<ObjCAvailabilityCheckExpr::VersionAsWritten> {
     auto Spec = llvm::find_if(AvailSpecs, [&](const AvailabilitySpec &Spec) {
       return Spec.getPlatform() == Platform;
     });
@@ -5317,24 +5316,36 @@ ExprResult SemaObjC::ActOnObjCAvailabilityCheckExpr(
     if (Spec == AvailSpecs.end())
       return std::nullopt;
 
-    return llvm::Triple::getCanonicalVersionForOS(
-        OS, Spec->getVersion(),
-        llvm::Triple::isValidVersionForOS(OS, Spec->getVersion()));
+    return ObjCAvailabilityCheckExpr::VersionAsWritten{
+        llvm::Triple::getCanonicalVersionForOS(
+            OS, Spec->getVersion(),
+            llvm::Triple::isValidVersionForOS(OS, Spec->getVersion())),
+        Spec->getVersion()};
   };
 
-  VersionTuple Version;
+  ObjCAvailabilityCheckExpr::VersionAsWritten Version;
   if (auto MaybeVersion =
           FindSpecVersion(Context.getTargetInfo().getPlatformName(),
                           Context.getTargetInfo().getTriple().getOS()))
     Version = *MaybeVersion;
+
+  ObjCAvailabilityCheckExpr::VersionAsWritten VariantVersion;
+  if (Context.getTargetInfo().hasTargetVariantPlatform()) {
+    const llvm::Triple *VariantTriple =
+        Context.getTargetInfo().getDarwinTargetVariantTriple();
+    if (auto MaybeVariantVersion = FindSpecVersion(
+            Context.getTargetInfo().getTargetVariantPlatform(),
+            VariantTriple ? VariantTriple->getOS() : llvm::Triple::UnknownOS))
+      VariantVersion = *MaybeVariantVersion;
+  }
 
   // The use of `@available` in the enclosing context should be analyzed to
   // warn when it's used inappropriately (i.e. not if(@available)).
   if (FunctionScopeInfo *Context = SemaRef.getCurFunctionAvailabilityContext())
     Context->HasPotentialAvailabilityViolations = true;
 
-  return new (Context)
-      ObjCAvailabilityCheckExpr(Version, AtLoc, RParen, Context.BoolTy);
+  return new (Context) ObjCAvailabilityCheckExpr(Version, VariantVersion, AtLoc,
+                                                 RParen, Context.BoolTy);
 }
 
 /// Prepare a conversion of the given expression to an ObjC object
