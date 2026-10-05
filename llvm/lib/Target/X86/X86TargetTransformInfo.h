@@ -57,9 +57,8 @@ public:
 
   /// \name Vector TTI Implementations
   /// @{
-  
-  TailFoldingStyle
-  getPreferredTailFoldingStyle() const {
+
+  TailFoldingStyle getPreferredTailFoldingStyle() const override {
     return ST->hasAVX512() ? TailFoldingStyle::DataAndControlFlow
                            : TailFoldingStyle::DataWithoutLaneMask;
   }
