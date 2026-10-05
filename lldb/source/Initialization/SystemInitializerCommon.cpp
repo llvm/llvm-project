@@ -98,8 +98,6 @@ llvm::Error SystemInitializerCommon::Initialize() {
 void SystemInitializerCommon::Terminate() {
   LLDB_SCOPED_TIMER();
 
-  StringPool::Terminate();
-
 #if defined(__linux__) || defined(__FreeBSD__) || defined(__NetBSD__) ||       \
     defined(__OpenBSD__)
   ProcessPOSIXLog::Terminate();
@@ -116,4 +114,6 @@ void SystemInitializerCommon::Terminate() {
   FileSystem::Terminate();
   Diagnostics::Terminate();
   LLDBLogChannel::Terminate();
+
+  StringPool::Terminate();
 }

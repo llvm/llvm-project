@@ -19,6 +19,7 @@ TEST(StringPoolTest, InternDeduplicates) {
   StringPool pool;
   std::string a = "foo";
   const char *p1 = pool.Intern(a);
+  // The pool owns a copy, so changing the source does not affect it.
   a[0] = 'x';
   const char *p2 = pool.Intern("foo");
   EXPECT_EQ(p1, p2);
