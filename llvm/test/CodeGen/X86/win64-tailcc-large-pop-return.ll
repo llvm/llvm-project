@@ -8,7 +8,9 @@
 ; padded, is 72008 bytes.
 
 declare void @use(ptr)
+
 declare void @useint(i64)
+
 declare tailcc void @h(i64, i64, i64, i64, i64, i64, i64)
 
 define tailcc void @big([9000 x i64] %a) {
