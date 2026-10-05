@@ -231,11 +231,6 @@ getIteratorRangesForObject(const omp::Object &object,
 void defaultMangler(Fortran::lower::AbstractConverter &converter,
                     std::string &mapperIdName, llvm::StringRef memberName);
 
-mlir::Value genIteratorCoordinate(Fortran::lower::AbstractConverter &converter,
-                                  hlfir::Entity entity,
-                                  llvm::ArrayRef<mlir::Value> ivs,
-                                  mlir::Location loc);
-
 /// Resolve the declare mapper symbol to attach to a mapped object.
 ///
 /// The default mapper path first looks for a user-defined mapper. If none
@@ -256,10 +251,6 @@ mlir::FlatSymbolRefAttr resolveMapperId(
     Fortran::lower::AbstractConverter &converter, mlir::Location loc,
     const omp::Object &object, llvm::StringRef mapperIdName,
     mlir::omp::ClauseMapFlags mapTypeBits, llvm::omp::Directive directive);
-
-std::optional<llvm::SmallVector<mlir::Value>> getIteratorElementIndices(
-    Fortran::lower::AbstractConverter &converter, const omp::Object &object,
-    Fortran::lower::StatementContext &stmtCtx, mlir::Location loc);
 
 /// Walk the already-emitted MLIR parent operations starting from \p op and
 /// collect the implied OpenMP construct traits in outermost-to-innermost

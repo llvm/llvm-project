@@ -416,7 +416,8 @@ static LogicalResult checkImplementationStatus(Operation &op) {
       result = todo("ompx_bare");
   };
   auto checkDepend = [&todo](auto op, LogicalResult &result) {
-    if (!op.getDependVars().empty() || op.getDependKinds())
+    if (!op.getDependVars().empty() || op.getDependKinds() ||
+        !op.getDependIterated().empty() || op.getDependIteratedKinds())
       result = todo("depend");
   };
   auto checkHint = [](auto op, LogicalResult &) {

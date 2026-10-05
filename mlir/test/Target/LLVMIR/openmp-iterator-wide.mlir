@@ -1,5 +1,37 @@
 // RUN: mlir-translate --mlir-to-llvmir %s | FileCheck %s
 
+// Narrowing the lower bound to i64 would turn this empty range into 1:2.
+llvm.func @empty_positive(%x: !llvm.ptr) {
+  %lb = llvm.mlir.constant(18446744073709551617 : i128) : i128
+  %ub = llvm.mlir.constant(2 : i128) : i128
+  %st = llvm.mlir.constant(1 : i128) : i128
+  %it = omp.iterator(%i: i128) = (%lb to %ub step %st) {
+    omp.yield(%x : !llvm.ptr)
+  } -> !omp.iterated<!llvm.ptr>
+  omp.taskwait depend(taskdependin -> %it : !omp.iterated<!llvm.ptr>)
+  llvm.return
+}
+// CHECK-LABEL: define void @empty_positive(
+// CHECK: icmp ult i64 %{{.*}}, 0
+// CHECK: call void @__kmpc_omp_taskwait_deps_51(
+// CHECK-SAME: i32 0, ptr %{{.*}}, i32 0, ptr null, i32 0)
+
+// The negative-step counterpart must also remain empty.
+llvm.func @empty_negative(%x: !llvm.ptr) {
+  %lb = llvm.mlir.constant(2 : i128) : i128
+  %ub = llvm.mlir.constant(18446744073709551617 : i128) : i128
+  %st = llvm.mlir.constant(-1 : i128) : i128
+  %it = omp.iterator(%i: i128) = (%lb to %ub step %st) {
+    omp.yield(%x : !llvm.ptr)
+  } -> !omp.iterated<!llvm.ptr>
+  omp.taskwait depend(taskdependin -> %it : !omp.iterated<!llvm.ptr>)
+  llvm.return
+}
+// CHECK-LABEL: define void @empty_negative(
+// CHECK: icmp ult i64 %{{.*}}, 0
+// CHECK: call void @__kmpc_omp_taskwait_deps_51(
+// CHECK-SAME: i32 0, ptr %{{.*}}, i32 0, ptr null, i32 0)
+
 // Bounds and induction values keep their declared width; only the trip count
 // is converted to i64.
 llvm.func @dynamic(%x: !llvm.ptr, %lb: i128, %ub: i128, %st: i128) {

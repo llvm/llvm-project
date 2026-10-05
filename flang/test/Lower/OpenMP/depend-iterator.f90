@@ -36,7 +36,7 @@ end subroutine
 ! CHECK: %[[DECL_I:.*]]:2 = hlfir.declare %[[MEM_I]]
 ! CHECK: %[[LD_I:.*]] = fir.load %[[DECL_I]]#0 : !fir.ref<i32>
 ! CHECK: %[[IDX_I:.*]] = fir.convert %[[LD_I]] : (i32) -> i64
-! CHECK: %[[COOR_I:.*]] = fir.array_coor %[[A]]#0(%{{.*}}) %[[IDX_I]]
+! CHECK: %[[COOR_I:.*]] = hlfir.designate %[[A]]#0 (%[[IDX_I]])
 ! CHECK: %[[PTR_I:.*]] = fir.convert %[[COOR_I]]
 ! CHECK-SAME: (!fir.ref<i32>) -> !llvm.ptr
 ! CHECK: omp.yield(%[[PTR_I]] : !llvm.ptr)
@@ -80,7 +80,7 @@ end subroutine
 ! CHECK: %[[DECL_I:.*]]:2 = hlfir.declare %[[MEM_I]]
 ! CHECK: %[[LD_I:.*]] = fir.load %[[DECL_I]]#0 : !fir.ref<i32>
 ! CHECK: %[[IDX_I:.*]] = fir.convert %[[LD_I]] : (i32) -> i64
-! CHECK: %[[COOR_I:.*]] = fir.array_coor %[[A]]#0(%{{.*}}) %[[IDX_I]]
+! CHECK: %[[COOR_I:.*]] = hlfir.designate %[[A]]#0 (%[[IDX_I]])
 ! CHECK: %[[PTR_I:.*]] = fir.convert %[[COOR_I]]
 ! CHECK-SAME: (!fir.ref<i32>) -> !llvm.ptr
 ! CHECK: omp.yield(%[[PTR_I]] : !llvm.ptr)
@@ -92,7 +92,7 @@ end subroutine
 ! CHECK: %[[DECL_J:.*]]:2 = hlfir.declare %[[MEM_J]]
 ! CHECK: %[[LD_J:.*]] = fir.load %[[DECL_J]]#0 : !fir.ref<i32>
 ! CHECK: %[[IDX_J:.*]] = fir.convert %[[LD_J]] : (i32) -> i64
-! CHECK: %[[COOR_J:.*]] = fir.array_coor %[[B]]#0(%{{.*}}) %[[IDX_J]]
+! CHECK: %[[COOR_J:.*]] = hlfir.designate %[[B]]#0 (%[[IDX_J]])
 ! CHECK: %[[PTR_J:.*]] = fir.convert %[[COOR_J]]
 ! CHECK-SAME: (!fir.ref<i32>) -> !llvm.ptr
 ! CHECK: omp.yield(%[[PTR_J]] : !llvm.ptr)
@@ -121,8 +121,7 @@ end subroutine
 ! CHECK:   %[[IV_DECL:.*]]:2 = hlfir.declare %[[IV_MEM]] uniq_name("_QQ{{.*}}.omp.iter")
 ! CHECK:   %[[IV_LD:.*]] = fir.load %[[IV_DECL]]#0 : !fir.ref<i32>
 ! CHECK:   %[[IV_I64:.*]] = fir.convert %[[IV_LD]] : (i32) -> i64
-! CHECK:   %[[SHAPE:.*]] = fir.shape %c16 : (index) -> !fir.shape<1>
-! CHECK:   %[[COOR:.*]] = fir.array_coor %[[A]]#0(%[[SHAPE]]) %[[IV_I64]] : (!fir.ref<!fir.array<16xi32>>, !fir.shape<1>, i64) -> !fir.ref<i32>
+! CHECK:   %[[COOR:.*]] = hlfir.designate %[[A]]#0 (%[[IV_I64]])
 ! CHECK:   %[[PTR:.*]] = fir.convert %[[COOR]] : (!fir.ref<i32>) -> !llvm.ptr
 ! CHECK:   omp.yield(%[[PTR]] : !llvm.ptr)
 ! CHECK: } -> !omp.iterated<!llvm.ptr>
@@ -151,8 +150,7 @@ end subroutine
 ! CHECK:   %[[IV0_I64:.*]] = fir.convert %[[IV0_LD]] : (i32) -> i64
 ! CHECK:   %[[IV1_LD:.*]] = fir.load %[[IV1_DECL]]#0 : !fir.ref<i32>
 ! CHECK:   %[[IV1_I64:.*]] = fir.convert %[[IV1_LD]] : (i32) -> i64
-! CHECK:   %[[SHAPE:.*]] = fir.shape %c4, %c6 : (index, index) -> !fir.shape<2>
-! CHECK:   %[[COOR:.*]] = fir.array_coor %{{.*}}(%[[SHAPE]]) %[[IV0_I64]], %[[IV1_I64]] : (!fir.ref<!fir.array<4x6xi32>>, !fir.shape<2>, i64, i64) -> !fir.ref<i32>
+! CHECK:   %[[COOR:.*]] = hlfir.designate %{{.*}} (%[[IV0_I64]], %[[IV1_I64]])
 ! CHECK:   %[[PTR:.*]] = fir.convert %[[COOR]] : (!fir.ref<i32>) -> !llvm.ptr
 ! CHECK:   omp.yield(%[[PTR]] : !llvm.ptr)
 ! CHECK: } -> !omp.iterated<!llvm.ptr>
@@ -209,12 +207,12 @@ end subroutine
 ! CHECK: %[[A:.*]]:2 = hlfir.declare %{{.*}}(%{{.*}}) uniq_name("_QFtask_depend_iterator_multi_objEa")
 ! CHECK: %[[B:.*]]:2 = hlfir.declare %{{.*}}(%{{.*}}) uniq_name("_QFtask_depend_iterator_multi_objEb")
 ! CHECK: %[[IT1:.*]] = omp.iterator(%[[IV1:.*]]: index) = ({{.*}} to {{.*}} step {{.*}}) {
-! CHECK:   %[[COOR1:.*]] = fir.array_coor %[[A]]#0(%{{.*}}) %{{.*}} : (!fir.ref<!fir.array<16xi32>>, !fir.shape<1>, i64) -> !fir.ref<i32>
+! CHECK:   %[[COOR1:.*]] = hlfir.designate %[[A]]#0 (%{{.*}})
 ! CHECK:   %[[PTR1:.*]] = fir.convert %[[COOR1]] : (!fir.ref<i32>) -> !llvm.ptr
 ! CHECK:   omp.yield(%[[PTR1]] : !llvm.ptr)
 ! CHECK: } -> !omp.iterated<!llvm.ptr>
 ! CHECK: %[[IT2:.*]] = omp.iterator(%[[IV2:.*]]: index) = ({{.*}} to {{.*}} step {{.*}}) {
-! CHECK:   %[[COOR2:.*]] = fir.array_coor %[[B]]#0(%{{.*}}) %{{.*}} : (!fir.ref<!fir.array<16xi32>>, !fir.shape<1>, i64) -> !fir.ref<i32>
+! CHECK:   %[[COOR2:.*]] = hlfir.designate %[[B]]#0 (%{{.*}})
 ! CHECK:   %[[PTR2:.*]] = fir.convert %[[COOR2]] : (!fir.ref<i32>) -> !llvm.ptr
 ! CHECK:   omp.yield(%[[PTR2]] : !llvm.ptr)
 ! CHECK: } -> !omp.iterated<!llvm.ptr>
@@ -243,13 +241,13 @@ end subroutine
 ! CHECK:   %[[IV1_DECL:.*]]:2 = hlfir.declare %[[IV1_MEM]]
 ! CHECK:   %[[IV0_LD:.*]] = fir.load %[[IV0_DECL]]#0 : !fir.ref<i32>
 ! CHECK:   %[[C1_I32:.*]] = arith.constant 1 : i32
-! CHECK:   %[[SUB:.*]] = arith.subi %[[IV0_LD]], %[[C1_I32]] : i32
+! CHECK:   %[[SUB:.*]] = arith.subi %[[IV0_LD]], %[[C1_I32]] overflow<nsw> : i32
 ! CHECK:   %[[NOREASSOC:.*]] = hlfir.no_reassoc %[[SUB]] : i32
-! CHECK:   %[[MUL:.*]] = arith.muli %{{.*}}, %[[NOREASSOC]] : i32
+! CHECK:   %[[MUL:.*]] = arith.muli %{{.*}}, %[[NOREASSOC]] overflow<nsw> : i32
 ! CHECK:   %[[IV1_LD:.*]] = fir.load %[[IV1_DECL]]#0 : !fir.ref<i32>
-! CHECK:   %[[ADD:.*]] = arith.addi %[[MUL]], %[[IV1_LD]] : i32
+! CHECK:   %[[ADD:.*]] = arith.addi %[[MUL]], %[[IV1_LD]] overflow<nsw> : i32
 ! CHECK:   %[[IDX:.*]] = fir.convert %[[ADD]] : (i32) -> i64
-! CHECK:   %[[COOR:.*]] = fir.array_coor %[[A]]#0(%{{.*}}) %[[IDX]] : (!fir.ref<!fir.array<16xi32>>, !fir.shape<1>, i64) -> !fir.ref<i32>
+! CHECK:   %[[COOR:.*]] = hlfir.designate %[[A]]#0 (%[[IDX]])
 ! CHECK:   %[[PTR:.*]] = fir.convert %[[COOR]] : (!fir.ref<i32>) -> !llvm.ptr
 ! CHECK:   omp.yield(%[[PTR]] : !llvm.ptr)
 ! CHECK: } -> !omp.iterated<!llvm.ptr>
@@ -270,12 +268,12 @@ end subroutine
 ! CHECK: %[[A:.*]]:2 = hlfir.declare %{{.*}}(%{{.*}}) uniq_name("_QFtask_depend_multi_iter_clausesEa")
 ! CHECK: %[[B:.*]]:2 = hlfir.declare %{{.*}}(%{{.*}}) uniq_name("_QFtask_depend_multi_iter_clausesEb")
 ! CHECK: %[[IT1:.*]] = omp.iterator(%[[IV1:.*]]: index) = ({{.*}} to {{.*}} step {{.*}}) {
-! CHECK:   %[[COOR1:.*]] = fir.array_coor %[[A]]#0(%{{.*}}) %{{.*}} : (!fir.ref<!fir.array<8xi32>>, !fir.shape<1>, i64) -> !fir.ref<i32>
+! CHECK:   %[[COOR1:.*]] = hlfir.designate %[[A]]#0 (%{{.*}})
 ! CHECK:   %[[PTR1:.*]] = fir.convert %[[COOR1]] : (!fir.ref<i32>) -> !llvm.ptr
 ! CHECK:   omp.yield(%[[PTR1]] : !llvm.ptr)
 ! CHECK: } -> !omp.iterated<!llvm.ptr>
 ! CHECK: %[[IT2:.*]] = omp.iterator(%[[IV2:.*]]: index) = ({{.*}} to {{.*}} step {{.*}}) {
-! CHECK:   %[[COOR2:.*]] = fir.array_coor %[[B]]#0(%{{.*}}) %{{.*}} : (!fir.ref<!fir.array<8xi32>>, !fir.shape<1>, i64) -> !fir.ref<i32>
+! CHECK:   %[[COOR2:.*]] = hlfir.designate %[[B]]#0 (%{{.*}})
 ! CHECK:   %[[PTR2:.*]] = fir.convert %[[COOR2]] : (!fir.ref<i32>) -> !llvm.ptr
 ! CHECK:   omp.yield(%[[PTR2]] : !llvm.ptr)
 ! CHECK: } -> !omp.iterated<!llvm.ptr>
@@ -318,7 +316,7 @@ end subroutine
 ! CHECK: %[[A:.*]]:2 = hlfir.declare %{{.*}}(%{{.*}}) uniq_name("_QFtask_depend_iterator_mixed_within_clauseEa")
 ! CHECK: %[[A1:.*]] = hlfir.designate %[[A]]#0 (%{{.*}})  : (!fir.ref<!fir.array<16xi32>>, index) -> !fir.ref<i32>
 ! CHECK: %[[IT:.*]] = omp.iterator(%[[IV:.*]]: index) = ({{.*}} to {{.*}} step {{.*}}) {
-! CHECK:   %[[COOR:.*]] = fir.array_coor %[[A]]#0(%{{.*}}) %{{.*}} : (!fir.ref<!fir.array<16xi32>>, !fir.shape<1>, i64) -> !fir.ref<i32>
+! CHECK:   %[[COOR:.*]] = hlfir.designate %[[A]]#0 (%{{.*}})
 ! CHECK:   %[[PTR:.*]] = fir.convert %[[COOR]] : (!fir.ref<i32>) -> !llvm.ptr
 ! CHECK:   omp.yield(%[[PTR]] : !llvm.ptr)
 ! CHECK: } -> !omp.iterated<!llvm.ptr>
@@ -346,8 +344,7 @@ end subroutine
 ! CHECK:   %[[IV_DECL:.*]]:2 = hlfir.declare %[[IV_MEM]]
 ! CHECK:   %[[IV_LD:.*]] = fir.load %[[IV_DECL]]#0 : !fir.ref<i32>
 ! CHECK:   %[[IV_I64:.*]] = fir.convert %[[IV_LD]] : (i32) -> i64
-! CHECK:   %[[SHAPE:.*]] = fir.shape %c16 : (index) -> !fir.shape<1>
-! CHECK:   %[[COOR:.*]] = fir.array_coor %[[A]]#0(%[[SHAPE]]) %[[IV_I64]] : (!fir.ref<!fir.array<16xi32>>, !fir.shape<1>, i64) -> !fir.ref<i32>
+! CHECK:   %[[COOR:.*]] = hlfir.designate %[[A]]#0 (%[[IV_I64]])
 ! CHECK:   %[[PTR:.*]] = fir.convert %[[COOR]] : (!fir.ref<i32>) -> !llvm.ptr
 ! CHECK:   omp.yield(%[[PTR]] : !llvm.ptr)
 ! CHECK: } -> !omp.iterated<!llvm.ptr>
@@ -373,15 +370,15 @@ end subroutine
 ! CHECK: %[[B:.*]]:2 = hlfir.declare %{{.*}}(%{{.*}}) uniq_name("_QFtarget_depend_iterator_multiEb")
 ! CHECK: %[[C:.*]]:2 = hlfir.declare %{{.*}}(%{{.*}}) uniq_name("_QFtarget_depend_iterator_multiEc")
 ! CHECK: %[[IT1:.*]] = omp.iterator(%{{.*}}: index) = ({{.*}} to {{.*}} step {{.*}}) {
-! CHECK:   %[[COOR1:.*]] = fir.array_coor %[[A]]#0(%{{.*}}) %{{.*}} : (!fir.ref<!fir.array<8xi32>>, !fir.shape<1>, i64) -> !fir.ref<i32>
+! CHECK:   %[[COOR1:.*]] = hlfir.designate %[[A]]#0 (%{{.*}})
 ! CHECK:   omp.yield(%{{.*}} : !llvm.ptr)
 ! CHECK: } -> !omp.iterated<!llvm.ptr>
 ! CHECK: %[[IT2:.*]] = omp.iterator(%{{.*}}: index) = ({{.*}} to {{.*}} step {{.*}}) {
-! CHECK:   %[[COOR2:.*]] = fir.array_coor %[[B]]#0(%{{.*}}) %{{.*}} : (!fir.ref<!fir.array<8xi32>>, !fir.shape<1>, i64) -> !fir.ref<i32>
+! CHECK:   %[[COOR2:.*]] = hlfir.designate %[[B]]#0 (%{{.*}})
 ! CHECK:   omp.yield(%{{.*}} : !llvm.ptr)
 ! CHECK: } -> !omp.iterated<!llvm.ptr>
 ! CHECK: %[[IT3:.*]] = omp.iterator(%{{.*}}: index) = ({{.*}} to {{.*}} step {{.*}}) {
-! CHECK:   %[[COOR3:.*]] = fir.array_coor %[[C]]#0(%{{.*}}) %{{.*}} : (!fir.ref<!fir.array<8xi32>>, !fir.shape<1>, i64) -> !fir.ref<i32>
+! CHECK:   %[[COOR3:.*]] = hlfir.designate %[[C]]#0 (%{{.*}})
 ! CHECK:   omp.yield(%{{.*}} : !llvm.ptr)
 ! CHECK: } -> !omp.iterated<!llvm.ptr>
 ! CHECK: %[[MAP_A:.*]] = omp.map.info var_ptr(%[[A]]#1 : {{.*}}) map_clauses(tofrom) capture(ByRef) bounds({{.*}}) name("a") -> !fir.ref<!fir.array<8xi32>>
@@ -409,8 +406,7 @@ end subroutine
 ! CHECK:   %[[IV_DECL:.*]]:2 = hlfir.declare %[[IV_MEM]]
 ! CHECK:   %[[IV_LD:.*]] = fir.load %[[IV_DECL]]#0 : !fir.ref<i32>
 ! CHECK:   %[[IV_I64:.*]] = fir.convert %[[IV_LD]] : (i32) -> i64
-! CHECK:   %[[SHAPE:.*]] = fir.shape %c16 : (index) -> !fir.shape<1>
-! CHECK:   %[[COOR:.*]] = fir.array_coor %[[A]]#0(%[[SHAPE]]) %[[IV_I64]] : (!fir.ref<!fir.array<16xi32>>, !fir.shape<1>, i64) -> !fir.ref<i32>
+! CHECK:   %[[COOR:.*]] = hlfir.designate %[[A]]#0 (%[[IV_I64]])
 ! CHECK:   %[[PTR:.*]] = fir.convert %[[COOR]] : (!fir.ref<i32>) -> !llvm.ptr
 ! CHECK:   omp.yield(%[[PTR]] : !llvm.ptr)
 ! CHECK: } -> !omp.iterated<!llvm.ptr>
@@ -440,11 +436,11 @@ end subroutine
 ! CHECK:   %[[IV0_LD:.*]] = fir.load %[[IV0_DECL]]#0 : !fir.ref<i32>
 ! CHECK:   %[[SUB:.*]] = arith.subi %[[IV0_LD]], %{{.*}} : i32
 ! CHECK:   %[[NOREASSOC:.*]] = hlfir.no_reassoc %[[SUB]] : i32
-! CHECK:   %[[MUL:.*]] = arith.muli %{{.*}}, %[[NOREASSOC]] : i32
+! CHECK:   %[[MUL:.*]] = arith.muli %{{.*}}, %[[NOREASSOC]] overflow<nsw> : i32
 ! CHECK:   %[[IV1_LD:.*]] = fir.load %[[IV1_DECL]]#0 : !fir.ref<i32>
-! CHECK:   %[[ADD:.*]] = arith.addi %[[MUL]], %[[IV1_LD]] : i32
+! CHECK:   %[[ADD:.*]] = arith.addi %[[MUL]], %[[IV1_LD]] overflow<nsw> : i32
 ! CHECK:   %[[IDX:.*]] = fir.convert %[[ADD]] : (i32) -> i64
-! CHECK:   %[[COOR:.*]] = fir.array_coor %[[A]]#0(%{{.*}}) %[[IDX]] : (!fir.ref<!fir.array<16xi32>>, !fir.shape<1>, i64) -> !fir.ref<i32>
+! CHECK:   %[[COOR:.*]] = hlfir.designate %[[A]]#0 (%[[IDX]])
 ! CHECK:   omp.yield(%{{.*}} : !llvm.ptr)
 ! CHECK: } -> !omp.iterated<!llvm.ptr>
 ! CHECK: %[[MAP:.*]] = omp.map.info var_ptr(%[[A]]#1 : {{.*}}) map_clauses(to) capture(ByRef) bounds({{.*}}) name("a") -> !fir.ref<!fir.array<16xi32>>
@@ -470,8 +466,7 @@ end subroutine
 ! CHECK:   %[[IV_DECL:.*]]:2 = hlfir.declare %[[IV_MEM]]
 ! CHECK:   %[[IV_LD:.*]] = fir.load %[[IV_DECL]]#0 : !fir.ref<i32>
 ! CHECK:   %[[IV_I64:.*]] = fir.convert %[[IV_LD]] : (i32) -> i64
-! CHECK:   %[[SHAPE:.*]] = fir.shape %c16 : (index) -> !fir.shape<1>
-! CHECK:   %[[COOR:.*]] = fir.array_coor %[[A]]#0(%[[SHAPE]]) %[[IV_I64]] : (!fir.ref<!fir.array<16xi32>>, !fir.shape<1>, i64) -> !fir.ref<i32>
+! CHECK:   %[[COOR:.*]] = hlfir.designate %[[A]]#0 (%[[IV_I64]])
 ! CHECK:   %[[PTR:.*]] = fir.convert %[[COOR]] : (!fir.ref<i32>) -> !llvm.ptr
 ! CHECK:   omp.yield(%[[PTR]] : !llvm.ptr)
 ! CHECK: } -> !omp.iterated<!llvm.ptr>
@@ -497,11 +492,11 @@ end subroutine
 ! CHECK: %[[CM1_I32:.*]] = arith.constant -1 : i32
 ! CHECK: %[[STEP:.*]] = fir.convert %[[CM1_I32]] : (i32) -> index
 ! CHECK: %[[IT1:.*]] = omp.iterator(%{{.*}}: index) = (%[[LB]] to %[[UB]] step %[[STEP]]) {
-! CHECK:   %[[COOR1:.*]] = fir.array_coor %[[A]]#0(%{{.*}}) %{{.*}} : (!fir.ref<!fir.array<16xi32>>, !fir.shape<1>, i64) -> !fir.ref<i32>
+! CHECK:   %[[COOR1:.*]] = hlfir.designate %[[A]]#0 (%{{.*}})
 ! CHECK:   omp.yield(%{{.*}} : !llvm.ptr)
 ! CHECK: } -> !omp.iterated<!llvm.ptr>
 ! CHECK: %[[IT2:.*]] = omp.iterator(%{{.*}}: index) = (%[[LB]] to %[[UB]] step %[[STEP]]) {
-! CHECK:   %[[COOR2:.*]] = fir.array_coor %[[B]]#0(%{{.*}}) %{{.*}} : (!fir.ref<!fir.array<16xi32>>, !fir.shape<1>, i64) -> !fir.ref<i32>
+! CHECK:   %[[COOR2:.*]] = hlfir.designate %[[B]]#0 (%{{.*}})
 ! CHECK:   omp.yield(%{{.*}} : !llvm.ptr)
 ! CHECK: } -> !omp.iterated<!llvm.ptr>
 ! CHECK: %[[MAP_A:.*]] = omp.map.info var_ptr(%[[A]]#1 : {{.*}}) map_clauses(from) capture(ByRef) bounds({{.*}}) name("a") -> !fir.ref<!fir.array<16xi32>>
@@ -528,8 +523,7 @@ end subroutine
 ! CHECK:   %[[IV_DECL:.*]]:2 = hlfir.declare %[[IV_MEM]]
 ! CHECK:   %[[IV_LD:.*]] = fir.load %[[IV_DECL]]#0 : !fir.ref<i32>
 ! CHECK:   %[[IV_I64:.*]] = fir.convert %[[IV_LD]] : (i32) -> i64
-! CHECK:   %[[SHAPE:.*]] = fir.shape %c16 : (index) -> !fir.shape<1>
-! CHECK:   %[[COOR:.*]] = fir.array_coor %[[A]]#0(%[[SHAPE]]) %[[IV_I64]] : (!fir.ref<!fir.array<16xi32>>, !fir.shape<1>, i64) -> !fir.ref<i32>
+! CHECK:   %[[COOR:.*]] = hlfir.designate %[[A]]#0 (%[[IV_I64]])
 ! CHECK:   %[[PTR:.*]] = fir.convert %[[COOR]] : (!fir.ref<i32>) -> !llvm.ptr
 ! CHECK:   omp.yield(%[[PTR]] : !llvm.ptr)
 ! CHECK: } -> !omp.iterated<!llvm.ptr>
@@ -554,11 +548,11 @@ end subroutine
 ! CHECK: %[[B:.*]]:2 = hlfir.declare %{{.*}}(%{{.*}}) uniq_name("_QFtarget_update_depend_iterator_multiEb")
 ! CHECK: %[[X:.*]]:2 = hlfir.declare %{{.*}} uniq_name("_QFtarget_update_depend_iterator_multiEx")
 ! CHECK: %[[IT1:.*]] = omp.iterator(%{{.*}}: index) = ({{.*}} to {{.*}} step {{.*}}) {
-! CHECK:   %[[COOR1:.*]] = fir.array_coor %[[A]]#0(%{{.*}}) %{{.*}} : (!fir.ref<!fir.array<8xi32>>, !fir.shape<1>, i64) -> !fir.ref<i32>
+! CHECK:   %[[COOR1:.*]] = hlfir.designate %[[A]]#0 (%{{.*}})
 ! CHECK:   omp.yield(%{{.*}} : !llvm.ptr)
 ! CHECK: } -> !omp.iterated<!llvm.ptr>
 ! CHECK: %[[IT2:.*]] = omp.iterator(%{{.*}}: index) = ({{.*}} to {{.*}} step {{.*}}) {
-! CHECK:   %[[COOR2:.*]] = fir.array_coor %[[B]]#0(%{{.*}}) %{{.*}} : (!fir.ref<!fir.array<8xi32>>, !fir.shape<1>, i64) -> !fir.ref<i32>
+! CHECK:   %[[COOR2:.*]] = hlfir.designate %[[B]]#0 (%{{.*}})
 ! CHECK:   omp.yield(%{{.*}} : !llvm.ptr)
 ! CHECK: } -> !omp.iterated<!llvm.ptr>
 ! CHECK: %[[MAP_A:.*]] = omp.map.info var_ptr(%[[A]]#1 : {{.*}}) map_clauses(to) capture(ByRef) bounds({{.*}}) name("a") -> !fir.ref<!fir.array<8xi32>>

@@ -1048,9 +1048,29 @@ bool ClauseProcessor::processAffinity(
 
         TodoLocators(clauseLocation, objects);
 
-        for (const omp::Object &object : objects) {
+        auto genEntry = [&](const omp::Object &object,
+                            lower::StatementContext &localStmtCtx) {
+          mlir::Value addr =
+              genAffinityAddr(converter, object, localStmtCtx, clauseLocation);
           llvm::SmallVector<mlir::Value> bounds;
           std::stringstream asFortran;
+          fir::factory::AddrAndBoundsInfo info =
+              lower::gatherDataOperandAddrAndBounds<mlir::omp::MapBoundsOp,
+                                                    mlir::omp::MapBoundsType>(
+                  converter, builder, semaCtx, localStmtCtx, *object.sym(),
+                  object.ref(), clauseLocation, asFortran, bounds,
+                  treatIndexAsSection);
+          hlfir::Entity entity{info.addr};
+          mlir::Value len =
+              object.ref() && object.ref()->Rank() == 0
+                  ? genElementSizeInBytes(builder, clauseLocation,
+                                          builder.getDataLayout(), entity)
+                  : genAffinityLen(builder, clauseLocation,
+                                   builder.getDataLayout(), entity, bounds);
+          return makeAffinityEntry(builder, clauseLocation, entryTy, addr, len);
+        };
+
+        for (const omp::Object &object : objects) {
           llvm::SmallVector<IteratorRange> objectRanges =
               getIteratorRangesForObject(object, iteratorRanges);
           if (!objectRanges.empty()) {
@@ -1059,43 +1079,11 @@ bool ClauseProcessor::processAffinity(
                 [&](fir::FirOpBuilder &builder, mlir::Location loc,
                     llvm::ArrayRef<mlir::Value> /*ivs*/) -> mlir::Value {
                   lower::StatementContext iterStmtCtx;
-
-                  if (std::optional<llvm::SmallVector<mlir::Value>>
-                          loweredIndices = getIteratorElementIndices(
-                              converter, object, iterStmtCtx, loc)) {
-                    const Fortran::semantics::Symbol *sym = object.sym();
-                    assert(sym && "expected symbol for iterator object");
-                    fir::factory::AddrAndBoundsInfo info =
-                        Fortran::lower::getDataOperandBaseAddr(
-                            converter, builder, *sym, loc,
-                            /*unwrapFirBox=*/false);
-                    hlfir::Entity entity{info.addr};
-                    mlir::Value iteratedAddr = genIteratorCoordinate(
-                        converter, entity, *loweredIndices, loc);
-                    mlir::Value len = genElementSizeInBytes(
-                        builder, loc, builder.getDataLayout(), entity);
-                    return makeAffinityEntry(builder, loc, entryTy,
-                                             iteratedAddr, len);
-                  }
-
-                  TODO(loc, "object type not supported by iterator modifier");
+                  return genEntry(object, iterStmtCtx);
                 });
             result.iterated.push_back(iterHandle);
           } else {
-            mlir::Value addr =
-                genAffinityAddr(converter, object, stmtCtx, clauseLocation);
-            // get hlfir.declare for length calculation
-            fir::factory::AddrAndBoundsInfo info =
-                lower::gatherDataOperandAddrAndBounds<mlir::omp::MapBoundsOp,
-                                                      mlir::omp::MapBoundsType>(
-                    converter, builder, semaCtx, stmtCtx, *object.sym(),
-                    object.ref(), clauseLocation, asFortran, bounds,
-                    treatIndexAsSection);
-            mlir::Value len =
-                genAffinityLen(builder, clauseLocation, builder.getDataLayout(),
-                               hlfir::Entity{info.addr}, bounds);
-            result.affinityVars.push_back(
-                makeAffinityEntry(builder, clauseLocation, entryTy, addr, len));
+            result.affinityVars.push_back(genEntry(object, stmtCtx));
           }
         }
 
@@ -1519,29 +1507,9 @@ bool ClauseProcessor::processDepend(lower::SymMap &symMap,
             [&](fir::FirOpBuilder &builder, mlir::Location loc,
                 llvm::ArrayRef<mlir::Value> /*ivs*/) -> mlir::Value {
               lower::StatementContext iterStmtCtx;
-              if (std::optional<llvm::SmallVector<mlir::Value>> loweredIndices =
-                      getIteratorElementIndices(converter, object, iterStmtCtx,
-                                                loc)) {
-                const Fortran::semantics::Symbol *sym = object.sym();
-                assert(sym && "expected symbol for iterator object");
-                // genDependVar is not reused here: getIteratorElementIndices
-                // has already lowered each subscript to a FIR-level index
-                // value, so the element coordinate is computed directly from
-                // the base address and those indices rather than re-lowering
-                // the whole designator.
-                fir::factory::AddrAndBoundsInfo info =
-                    Fortran::lower::getDataOperandBaseAddr(
-                        converter, builder, *sym, loc,
-                        /*unwrapFirBox=*/false);
-                hlfir::Entity entity{info.addr};
-                mlir::Value iteratedAddr = genIteratorCoordinate(
-                    converter, entity, *loweredIndices, loc);
-                // Convert to !llvm.ptr for the omp.yield
-                return fir::ConvertOp::create(builder, loc, ptrTy,
-                                              iteratedAddr);
-              }
-
-              TODO(loc, "object type not supported by iterator modifier");
+              mlir::Value addr =
+                  genDependVar(object, converter.getSymbolMap(), iterStmtCtx);
+              return fir::ConvertOp::create(builder, loc, ptrTy, addr);
             });
         result.dependIterated.push_back(iterHandle);
         result.dependIteratedKinds.push_back(dependTypeOperand);

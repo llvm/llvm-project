@@ -14,15 +14,45 @@ subroutine depend_folded(a, m, d, i)
 end subroutine
 
 ! CHECK-LABEL: func.func @_QPdepend_folded(
-! CHECK: omp.iterator(%{{.*}}: index, %{{.*}}: index) =
+! CHECK: %[[A:.*]]:2 = hlfir.declare
+! CHECK-SAME: uniq_name("_QFdepend_foldedEa")
+! CHECK: %[[M:.*]]:2 = hlfir.declare {{.*}}uniq_name("{{.*}}Em")
+! CHECK: %[[ONE:.*]] = arith.constant 1 : i32
+! CHECK: %[[MVAL:.*]] = fir.load %[[M]]#0
+! CHECK: %[[ILB:.*]] = fir.convert %[[ONE]] : (i32) -> index
+! CHECK: %[[IUB:.*]] = fir.convert %[[MVAL]] : (i32) -> index
+! CHECK: %[[ISTEP:.*]] = arith.constant 1 : index
+! CHECK: %[[JONE:.*]] = arith.constant 1 : i32
+! CHECK: %[[TWO:.*]] = arith.constant 2 : i32
+! CHECK: %[[JLB:.*]] = fir.convert %[[JONE]] : (i32) -> index
+! CHECK: %[[JUB:.*]] = fir.convert %[[TWO]] : (i32) -> index
+! CHECK: %[[JSTEP:.*]] = arith.constant 1 : index
+! CHECK: %[[IT_IJ:.*]] = omp.iterator(%{{.*}}: index, %{{.*}}: index) =
+! CHECK-SAME: (%[[ILB]] to %[[IUB]] step %[[ISTEP]],
+! CHECK-SAME: %[[JLB]] to %[[JUB]] step %[[JSTEP]])
 ! CHECK: arith.divsi
 ! CHECK: omp.yield
-! CHECK: omp.iterator(%{{[^,:]+}}: index) =
-! CHECK: omp.yield
-! CHECK: omp.iterator(%{{[^,:]+}}: index) =
-! CHECK: omp.yield
+! CHECK: %[[IT_I:.*]] = omp.iterator(%[[I:.*]]: index) =
+! CHECK-SAME: (%[[ILB]] to %[[IUB]] step %[[ISTEP]])
+! CHECK: %[[FIRST:.*]] = arith.constant 1 : index
+! CHECK: %[[FIXED:.*]] = hlfir.designate %[[A]]#0 (%[[FIRST]])
+! CHECK: %[[FIXED_PTR:.*]] = fir.convert %[[FIXED]]
+! CHECK: omp.yield(%[[FIXED_PTR]] : !llvm.ptr)
+! CHECK: %[[IT_J:.*]] = omp.iterator(%[[J:.*]]: index) =
+! CHECK-SAME: (%[[JLB]] to %[[JUB]] step %[[JSTEP]])
+! CHECK: %[[JVAL:.*]] = fir.convert %[[J]] : (index) -> i32
+! CHECK: fir.store %[[JVAL]] to %[[JMEM:.*]] : !fir.ref<i32>
+! CHECK: %[[JDECL:.*]]:2 = hlfir.declare %[[JMEM]]
+! CHECK: %[[JLOAD:.*]] = fir.load %[[JDECL]]#0
+! CHECK: %[[JIDX:.*]] = fir.convert %[[JLOAD]] : (i32) -> i64
+! CHECK: %[[VARIABLE:.*]] = hlfir.designate %[[A]]#0 (%[[JIDX]])
+! CHECK: %[[VARIABLE_PTR:.*]] = fir.convert %[[VARIABLE]]
+! CHECK: omp.yield(%[[VARIABLE_PTR]] : !llvm.ptr)
 ! CHECK-NOT: omp.iterator
-! CHECK: omp.task
+! CHECK: omp.task depend(
+! CHECK-SAME: %[[IT_IJ]] :
+! CHECK-SAME: %[[IT_I]] :
+! CHECK-SAME: %[[IT_J]] :
 ! CHECK: return
 
 ! The host i in the second clause must not be confused with iterator j.
@@ -48,15 +78,47 @@ subroutine affinity_folded(a, m, d, i)
 end subroutine
 
 ! CHECK-LABEL: func.func @_QPaffinity_folded(
-! CHECK: omp.iterator(%{{.*}}: index, %{{.*}}: index) =
+! CHECK: %[[A:.*]]:2 = hlfir.declare
+! CHECK-SAME: uniq_name("_QFaffinity_foldedEa")
+! CHECK: %[[M:.*]]:2 = hlfir.declare {{.*}}uniq_name("{{.*}}Em")
+! CHECK: %[[ONE:.*]] = arith.constant 1 : i32
+! CHECK: %[[MVAL:.*]] = fir.load %[[M]]#0
+! CHECK: %[[ILB:.*]] = fir.convert %[[ONE]] : (i32) -> index
+! CHECK: %[[IUB:.*]] = fir.convert %[[MVAL]] : (i32) -> index
+! CHECK: %[[ISTEP:.*]] = arith.constant 1 : index
+! CHECK: %[[JONE:.*]] = arith.constant 1 : i32
+! CHECK: %[[TWO:.*]] = arith.constant 2 : i32
+! CHECK: %[[JLB:.*]] = fir.convert %[[JONE]] : (i32) -> index
+! CHECK: %[[JUB:.*]] = fir.convert %[[TWO]] : (i32) -> index
+! CHECK: %[[JSTEP:.*]] = arith.constant 1 : index
+! CHECK: %[[IT_IJ:.*]] = omp.iterator(%{{.*}}: index, %{{.*}}: index) =
+! CHECK-SAME: (%[[ILB]] to %[[IUB]] step %[[ISTEP]],
+! CHECK-SAME: %[[JLB]] to %[[JUB]] step %[[JSTEP]])
 ! CHECK: arith.divsi
 ! CHECK: omp.yield
-! CHECK: omp.iterator(%{{[^,:]+}}: index) =
-! CHECK: omp.yield
-! CHECK: omp.iterator(%{{[^,:]+}}: index) =
-! CHECK: omp.yield
+! CHECK: %[[IT_I:.*]] = omp.iterator(%[[I:.*]]: index) =
+! CHECK-SAME: (%[[ILB]] to %[[IUB]] step %[[ISTEP]])
+! CHECK: %[[FIRST:.*]] = arith.constant 1 : index
+! CHECK: %[[FIXED:.*]] = hlfir.designate %[[A]]#0 (%[[FIRST]])
+! CHECK: %[[FIXED_PTR:.*]] = fir.convert %[[FIXED]]
+! CHECK: %[[FIXED_ENTRY:.*]] = omp.affinity_entry %[[FIXED_PTR]],
+! CHECK: omp.yield(%[[FIXED_ENTRY]] :
+! CHECK: %[[IT_J:.*]] = omp.iterator(%[[J:.*]]: index) =
+! CHECK-SAME: (%[[JLB]] to %[[JUB]] step %[[JSTEP]])
+! CHECK: %[[JVAL:.*]] = fir.convert %[[J]] : (index) -> i32
+! CHECK: fir.store %[[JVAL]] to %[[JMEM:.*]] : !fir.ref<i32>
+! CHECK: %[[JDECL:.*]]:2 = hlfir.declare %[[JMEM]]
+! CHECK: %[[JLOAD:.*]] = fir.load %[[JDECL]]#0
+! CHECK: %[[JIDX:.*]] = fir.convert %[[JLOAD]] : (i32) -> i64
+! CHECK: %[[VARIABLE:.*]] = hlfir.designate %[[A]]#0 (%[[JIDX]])
+! CHECK: %[[VARIABLE_PTR:.*]] = fir.convert %[[VARIABLE]]
+! CHECK: %[[VARIABLE_ENTRY:.*]] = omp.affinity_entry %[[VARIABLE_PTR]],
+! CHECK: omp.yield(%[[VARIABLE_ENTRY]] :
 ! CHECK-NOT: omp.iterator
-! CHECK: omp.task
+! CHECK: omp.task affinity(
+! CHECK-SAME: %[[IT_IJ]] :
+! CHECK-SAME: %[[IT_I]] :
+! CHECK-SAME: %[[IT_J]] :
 ! CHECK: return
 
 ! The host i in the second task must not be confused with iterator j.
