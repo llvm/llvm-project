@@ -5882,7 +5882,7 @@ def INT_PTX_SREG_LANEMASK_GE :
 def INT_PTX_SREG_LANEMASK_GT :
     PTX_READ_SREG_R32<"lanemask_gt", int_nvvm_read_ptx_sreg_lanemask_gt>;
 
-let hasSideEffects = 1, isAsCheapAsAMove = false in {
+let hasSideEffects = 1 in {
   def SREG_CLOCK : PTX_READ_SREG_R32<"clock", int_nvvm_read_ptx_sreg_clock>;
   def SREG_CLOCK64 : PTX_READ_SREG_R64<"clock64", int_nvvm_read_ptx_sreg_clock64>;
   def SREG_GLOBALTIMER : PTX_READ_SREG_R64<"globaltimer", int_nvvm_read_ptx_sreg_globaltimer>;
