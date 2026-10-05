@@ -5297,6 +5297,11 @@ This means that arbitrary integer values stored in pointer-type variables must
 not be passed to these builtins. For those use cases, the builtins can still be
 used, but the operation must be performed on the pointer cast to `uintptr_t`.
 
+Null pointers are considered to be aligned to any requested alignment.
+Therefore, `__builtin_is_aligned` evaluates to true for null pointer
+arguments, and `__builtin_align_up` and `__builtin_align_down` preserve
+the null pointer value.
+
 If Clang can determine that the alignment is not a power of two at compile time,
 it will result in a compilation failure. If the alignment argument is not a
 power of two at run time, the behavior of these builtins is undefined.

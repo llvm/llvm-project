@@ -326,6 +326,10 @@ infrastructure are described first, followed by tool-specific sections.
   <clang-tidy/checks/readability/simplify-boolean-expr>` producing invalid
   fixes when applying De Morgan's theorem to overloaded comparison operators.
 
+- Improved {doc}`readability-suspicious-call-argument
+  <clang-tidy/checks/readability/suspicious-call-argument>` check by fixing the
+  default `dist` and `dst` abbreviations of `distance` not being recognized.
+
 - Improved {doc}`readability-trailing-comma
   <clang-tidy/checks/readability/trailing-comma>` check:
 
