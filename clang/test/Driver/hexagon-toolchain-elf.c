@@ -704,3 +704,17 @@
 // RUN:   %t.o 2>&1 | FileCheck -check-prefix=CHECK-LTO %s
 // CHECK-LTO: "-plugin-opt=thinlto"
 // CHECK-LTO: "-plugin-opt=-enable-matrix"
+
+// -----------------------------------------------------------------------------
+// Versioned ld.lld is recognized as LLD
+// -----------------------------------------------------------------------------
+// RUN: mkdir -p %t
+// RUN: cp %S/Inputs/hexagon_tree/Tools/bin/ld.lld %t/ld.lld-23
+// RUN: %clang -### --target=hexagon-unknown-elf \
+// RUN:   -ccc-install-dir %S/Inputs/hexagon_tree/Tools/bin \
+// RUN:   -mcpu=hexagonv60 --ld-path=%t/ld.lld-23 \
+// RUN:   -nostdlib %s 2>&1 \
+// RUN:   | FileCheck -check-prefix=CHECK-VERSIONED-LLD %s
+// CHECK-VERSIONED-LLD: "{{.*}}ld.lld-23"
+// CHECK-VERSIONED-LLD-NOT: "-march=hexagon"
+// CHECK-VERSIONED-LLD-NOT: "-mcpu=hexagonv60"
