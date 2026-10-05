@@ -248,7 +248,6 @@ private:
 
   uint64_t calculateMaxStackAlign(const MachineFunction &MF) const;
 
-  /// Emit target stack probe as a call to a helper function
   /// Emit the epilogue of a Win64 exit (a return or a guaranteed tail call)
   /// that has to adjust RSP by something other than the frame size, because of
   /// the tail call argument reserve or a tail call that changes the stack
@@ -257,6 +256,7 @@ private:
                             MachineBasicBlock::iterator Terminator,
                             int64_t FPDiff, unsigned SEHFrameOffset) const;
 
+  /// Emit target stack probe as a call to a helper function
   void emitStackProbeCall(
       MachineFunction &MF, MachineBasicBlock &MBB,
       MachineBasicBlock::iterator MBBI, const DebugLoc &DL, bool InProlog,
