@@ -404,7 +404,7 @@ static bool sinkScalarOperands(VPlan &Plan) {
       }
 
       Clone->insertBefore(SinkCandidate);
-      SinkCandidate->replaceUsesWithIf(Clone, [SinkTo](VPUser &U, unsigned) {
+      SinkCandidate->replaceUsesWithIf(Clone, [SinkTo](VPUser &U) {
         return cast<VPRecipeBase>(&U)->getParent() != SinkTo;
       });
     }
@@ -518,7 +518,7 @@ static bool mergeReplicateRegionsIntoSuccessors(VPlan &Plan) {
       VPValue *PredInst1 =
           cast<VPPredInstPHIRecipe>(&Phi1ToMove)->getOperand(0);
       VPValue *Phi1ToMoveV = Phi1ToMove.getVPSingleValue();
-      Phi1ToMoveV->replaceUsesWithIf(PredInst1, [Then2](VPUser &U, unsigned) {
+      Phi1ToMoveV->replaceUsesWithIf(PredInst1, [Then2](VPUser &U) {
         return cast<VPRecipeBase>(&U)->getParent() == Then2;
       });
 
@@ -861,12 +861,11 @@ static void legalizeAndOptimizeInductions(VPlan &Plan) {
       WideIV->replaceAllUsesWith(Steps);
     } else {
       bool HasScalableVF = Plan.hasScalableVF();
-      WideIV->replaceUsesWithIf(Steps,
-                                [WideIV, HasScalableVF](VPUser &U, unsigned) {
-                                  if (HasScalableVF)
-                                    return U.usesFirstLaneOnly(WideIV);
-                                  return U.usesScalars(WideIV);
-                                });
+      WideIV->replaceUsesWithIf(Steps, [WideIV, HasScalableVF](VPUser &U) {
+        if (HasScalableVF)
+          return U.usesFirstLaneOnly(WideIV);
+        return U.usesScalars(WideIV);
+      });
     }
   }
 }
@@ -1664,7 +1663,7 @@ static VPSingleDefRecipe *combineRecipe(VPlan &Plan, VPSingleDefRecipe *Def,
   // Replace uses of a BuildVector by users that only use its first lane with
   // its first operand directly.
   if (match(Def, m_BuildVector())) {
-    Def->replaceUsesWithIf(Def->getOperand(0), [Def](VPUser &U, unsigned) {
+    Def->replaceUsesWithIf(Def->getOperand(0), [Def](VPUser &U) {
       return U.usesFirstLaneOnly(Def);
     });
     return Def;
@@ -1682,7 +1681,7 @@ static VPSingleDefRecipe *combineRecipe(VPlan &Plan, VPSingleDefRecipe *Def,
 
   if (match(Def, m_Broadcast(m_VPValue(X)))) {
     Def->replaceUsesWithIf(
-        X, [Def](const VPUser &U, unsigned) { return U.usesScalars(Def); });
+        X, [Def](const VPUser &U) { return U.usesScalars(Def); });
     return Def;
   }
 
@@ -1727,7 +1726,7 @@ static VPSingleDefRecipe *combineRecipe(VPlan &Plan, VPSingleDefRecipe *Def,
   VPValue *StartV;
   if (match(Def, m_VPInstruction<VPInstruction::ReductionStartVector>(
                      m_VPValue(StartV), m_VPValue(), m_VPValue()))) {
-    Def->replaceUsesWithIf(StartV, [](const VPUser &U, unsigned Idx) {
+    Def->replaceUsesWithIf(StartV, [](const VPUser &U) {
       auto *PhiR = dyn_cast<VPReductionPHIRecipe>(&U);
       return PhiR && PhiR->isInLoop();
     });
@@ -2765,8 +2764,7 @@ void VPlanTransforms::replaceSymbolicStrides(
   assert(!Plan.getVectorLoopRegion() &&
          "expected to run before loop regions are created");
   const auto &[Header, _] = VPBlockUtils::getPlainCFGHeaderAndLatch(Plan);
-  auto CanUseVersionedStride = [&VPDT, Header = Header, &Plan](VPUser &U,
-                                                               unsigned Idx) {
+  auto CanUseVersionedStride = [&VPDT, Header = Header, &Plan](VPUser &U) {
     auto *R = cast<VPRecipeBase>(&U);
     // Skip phis if the loop if loop is not yet guarded.
     if (isa<VPPhiAccessors>(R) &&
@@ -5286,8 +5284,7 @@ static void transformToPartialReduction(const PartialReductionDescriptor &Link,
       SubOpc, {OldStartValue, RdxResult}, VPIRFlags::getDefaultFlags(SubOpc),
       RdxPhi->getDebugLoc());
   RdxResult->replaceUsesWithIf(
-      NewResult,
-      [&NewResult](VPUser &U, unsigned Idx) { return &U != NewResult; });
+      NewResult, [&NewResult](VPUser &U) { return &U != NewResult; });
 }
 
 /// Returns the cost of a link in a partial-reduction chain for a given VF.
