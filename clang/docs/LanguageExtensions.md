@@ -6635,6 +6635,7 @@ A variable that is named in the list is diagnosed with a warning in the
 - is an `inline` variable;
 - is defined as an alias with `__attribute__((alias("...")))` (the string
   belongs to the aliased variable, which is the one to name instead);
+- is defined in a C++20 header unit;
 - is a function-local `static` variable, a static data member, or a variable
   template specialization (an explicit specialization is diagnosed at its
   definition, an implicit one in each translation unit that instantiates it);
@@ -6681,9 +6682,14 @@ module. Retention of a variable to load time depends on the linker retaining
 function definitions from the translation unit that was compiled to preserve
 it, since those functions carry the references that keep the string alive. A
 variable attached to a named module is matched by its module-attached mangled
-name (for example, `export char ver[];` in module `M` is `_ZW1M3ver`). The
-same applies to a precompiled header: the option must be present when the PCH
-is built.
+name (for example, `export char ver[];` in module `M` is `_ZW1M3ver`). A
+variable defined in a header that is included in the global module fragment of
+a module unit is preserved in the object file of that module unit. A header
+unit, in contrast, is not compiled to an object file of its own, so a named
+variable defined in a header unit is diagnosed and is not preserved.
+
+The same applies to a precompiled header as to a module unit: the option must
+be present when the PCH is built.
 
 ### Interaction with `#pragma comment(copyright, ...)`
 

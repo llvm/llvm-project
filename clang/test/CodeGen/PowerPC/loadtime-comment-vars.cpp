@@ -1,4 +1,4 @@
-// Test -mloadtime-comment-vars= IR output for C++ on AIX. Four scenarios
+// Test -mloadtime-comment-vars= IR output for C++ on AIX. Three scenarios
 // are covered, each with its own set of named variables and check prefix:
 //
 //  CHECK     — mangled-name matching: file- and namespace-scope variables
@@ -9,7 +9,8 @@
 //              proves that listed variables of non-plain-char element type
 //              (wchar_t, char16_t, char8_t) and of non-character type are
 //              not preserved and not emitted. Their diagnostic is covered
-//              by the Sema tests and silenced here.
+//              by the Sema tests and silenced here. The names are split
+//              across two occurrences of the option, which are combined.
 //
 //  STORAGE   — storage-duration filtering: thread_local variables are
 //              diagnosed by Sema and receive no metadata; a function-local
@@ -17,9 +18,6 @@
 //
 //  SPACE/DUP — list-parsing edge cases: a name with a leading space matches
 //              nothing; a duplicate name preserves the variable exactly once.
-//  MULTI     — multiple occurrences of the option on the command line combine
-//              the lists; cc1 receives every occurrence in order and combines
-//              them internally.
 //
 // Names used in the matching scenario:
 //
@@ -55,7 +53,8 @@
 //   g()::fn       _ZZ1gvE2fn       function-local static: diagnosed, no metadata
 
 // RUN: %clang_cc1 -std=c++20 -O2 -triple powerpc64-ibm-aix -Wno-loadtime-comment-var \
-// RUN:   -mloadtime-comment-vars=x,_ZN1N1xE,_ZN1NL3ptrE,_ZN1A1xE,_ZN1B3verE,_ZN1C4infoE,not_string,_ZL4wstr,_ZL6u16str,_ZL5u8str,_ZL9sccsid_ce,sccsid_ci,_ZDC1a1b1cE,cver,_ZN12_GLOBAL__N_14anonE,asmid \
+// RUN:   -mloadtime-comment-vars=x,_ZN1N1xE,_ZN1NL3ptrE,_ZN1A1xE,_ZN1B3verE,_ZN1C4infoE,not_string,_ZL4wstr \
+// RUN:   -mloadtime-comment-vars=_ZL6u16str,_ZL5u8str,_ZL9sccsid_ce,sccsid_ci,_ZDC1a1b1cE,cver,_ZN12_GLOBAL__N_14anonE,asmid \
 // RUN:   -emit-llvm -disable-llvm-passes -o %t.ll %s
 // RUN: FileCheck %s < %t.ll
 // RUN: FileCheck %s --check-prefix=NOEMIT < %t.ll
@@ -71,10 +70,6 @@
 // RUN: %clang_cc1 -std=c++20 -O2 -triple powerpc64-ibm-aix \
 // RUN:   -mloadtime-comment-vars=foo,foo \
 // RUN:   -emit-llvm -disable-llvm-passes -o - %s | FileCheck %s --check-prefix=DUP
-
-// RUN: %clang_cc1 -std=c++20 -O2 -triple powerpc64-ibm-aix \
-// RUN:   -mloadtime-comment-vars=foo -mloadtime-comment-vars=bar \
-// RUN:   -emit-llvm -disable-llvm-passes -o - %s | FileCheck %s --check-prefix=MULTI
 
 // ===========================================================================
 // Mangled-name matching
@@ -273,14 +268,3 @@ char bar[] = "@(#) bar";
 // DUP-DAG: @foo = global [9 x i8] c"@(#) foo\00", align {{[0-9]+}}, !loadtime_comment !{{[0-9]+}}
 // DUP-DAG: @bar = global [9 x i8] c"@(#) bar\00", align {{[0-9]+}}{{$}}
 // DUP-DAG: @llvm.compiler.used = appending global [1 x ptr] [ptr @foo], section "llvm.metadata"
-
-// ===========================================================================
-// MULTI option patterns — the option given more than once
-// ===========================================================================
-
-// The option given twice: the lists are combined, so both are preserved.
-// MULTI-DAG: @foo = global [9 x i8] c"@(#) foo\00", align {{[0-9]+}}, !loadtime_comment !{{[0-9]+}}
-// MULTI-DAG: @bar = global [9 x i8] c"@(#) bar\00", align {{[0-9]+}}, !loadtime_comment !{{[0-9]+}}
-// MULTI: @llvm.compiler.used = appending global [2 x ptr]
-// MULTI-SAME: @foo
-// MULTI-SAME: @bar

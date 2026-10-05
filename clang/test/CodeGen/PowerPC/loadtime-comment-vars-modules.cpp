@@ -1,5 +1,5 @@
-// Test -mloadtime-comment-vars= across a C++20 named-module boundary. Six
-// scenarios, each named by its FileCheck or -verify prefix:
+// Test -mloadtime-comment-vars= across C++20 module boundaries. The
+// scenarios are named by their FileCheck or -verify prefixes:
 //
 //   MOD       — the module unit is built to a BMI with the option and then
 //               compiled to IR from the BMI (the two-phase flow build systems
@@ -26,6 +26,15 @@
 //               definitions are diagnosed in this TU, at the pattern location
 //               in the module interface, with a note at the instantiation
 //               point.
+//   GMF +     — a module unit whose global module fragment includes a header
+//   GMFIMPORT   defining internal-linkage variables, built to a BMI with the
+//               option and then compiled to IR from the BMI: the header's
+//               variables are preserved in the module unit's object file.
+//               An importing TU does not emit them.
+//   hu +      — the same header built as a header unit: a header unit has no
+//   HUIMPORT    object file of its own, so the name-matched variables are
+//               diagnosed, and an importing TU that emits one does not
+//               preserve it.
 //
 //   Source      IR symbol        Expected treatment
 //   ------      ---------        ------------------
@@ -39,6 +48,9 @@
 //                                importer that references it
 //   vt<int>     _ZW1M2vtIiE      instantiated in the importer: diagnosed there
 //   S<int>::m   _ZNW1M1SIiE1mE   instantiated in the importer: diagnosed there
+//   hdrid       _ZL5hdrid        defined in ident.h: preserved by a module unit
+//   hdrptr      _ZL6hdrptr       that includes the header in its global module
+//                                fragment; diagnosed in a header unit
 
 // RUN: split-file %s %t
 
@@ -76,6 +88,24 @@
 // RUN:   -mloadtime-comment-vars=_ZW1M2vtIiE,_ZNW1M1SIiE1mE \
 // RUN:   -fsyntax-only -verify %t/use.cpp
 
+// RUN: %clang_cc1 -std=c++20 -triple powerpc64-ibm-aix \
+// RUN:   -mloadtime-comment-vars=_ZL5hdrid,_ZL6hdrptr \
+// RUN:   -emit-module-interface %t/gmf.cppm -o %t/gmf.pcm
+// RUN: %clang_cc1 -std=c++20 -triple powerpc64-ibm-aix \
+// RUN:   -emit-llvm %t/gmf.pcm -o - | FileCheck %s --check-prefix=GMF
+// RUN: %clang_cc1 -std=c++20 -triple powerpc64-ibm-aix \
+// RUN:   -fmodule-file=G=%t/gmf.pcm -mloadtime-comment-vars=_ZL5hdrid,_ZL6hdrptr \
+// RUN:   -emit-llvm %t/use-gmf.cpp -o - | FileCheck %s --check-prefix=GMFIMPORT
+
+// RUN: %clang_cc1 -std=c++20 -triple powerpc64-ibm-aix \
+// RUN:   -mloadtime-comment-vars=_ZL5hdrid,_ZL6hdrptr \
+// RUN:   -emit-header-unit -xc++-user-header %t/ident.h -o %t/ident.pcm \
+// RUN:   -verify=hu
+// RUN: %clang_cc1 -std=c++20 -triple powerpc64-ibm-aix \
+// RUN:   -Wno-experimental-header-units -fmodule-file=%t/ident.pcm \
+// RUN:   -mloadtime-comment-vars=_ZL5hdrid,_ZL6hdrptr \
+// RUN:   -emit-llvm %t/use-hu.cpp -o - | FileCheck %s --check-prefix=HUIMPORT
+
 // The three non-inline variables carry the metadata and are kept in
 // llvm.compiler.used when the module unit is compiled from a BMI that was
 // built with the option. The inline variable is not among them.
@@ -105,6 +135,25 @@
 // IMPORTNOT-NOT: @_ZW1M5build
 // IMPORTNOT-NOT: @_ZL4priv
 
+// The internal-linkage variables from the header included in the global
+// module fragment carry the metadata and are kept in llvm.compiler.used when
+// the module unit is compiled from its BMI.
+// GMF-DAG: @_ZL5hdrid = internal global [15 x i8] c"@(#) header id\00", align 1, !loadtime_comment ![[GMD:[0-9]+]]
+// GMF-DAG: @_ZL6hdrptr = internal global ptr @{{.*}}, align 8, !loadtime_comment ![[GMD]]
+// GMF-DAG: @llvm.compiler.used = appending global [2 x ptr]
+
+// An importer of that module emits neither variable.
+// GMFIMPORT-NOT: @_ZL5hdrid
+// GMFIMPORT-NOT: @_ZL6hdrptr
+// GMFIMPORT-NOT: !loadtime_comment
+
+// An importer of the header unit emits the variable it references as an
+// ordinary definition (the {{$}} anchor proves no metadata) and preserves
+// nothing.
+// HUIMPORT: @_ZL6hdrptr = internal global ptr @{{.*}}, align 8{{$}}
+// HUIMPORT-NOT: !loadtime_comment
+// HUIMPORT-NOT: @llvm.compiler.used
+
 //--- m.cppm
 export module M;
 export char ver[] = "@(#) module ver";
@@ -123,3 +172,24 @@ const char *u2 = S<int>::m; // expected-note {{in instantiation of static data m
 const char *u3 = iv;
 // expected-warning@m.cppm:6 {{'vt<int>' named in '-mloadtime-comment-vars=' is a variable template specialization and will not be preserved}}
 // expected-warning@m.cppm:8 {{'m' named in '-mloadtime-comment-vars=' is a static data member and will not be preserved}}
+
+//--- ident.h
+#ifndef IDENT_H
+#define IDENT_H
+static char hdrid[] = "@(#) header id"; // hu-warning {{'hdrid' named in '-mloadtime-comment-vars=' is defined in a header unit and will not be preserved}}
+static const char *hdrptr = "@(#) header ptr"; // hu-warning {{'hdrptr' named in '-mloadtime-comment-vars=' is defined in a header unit and will not be preserved}}
+#endif
+
+//--- gmf.cppm
+module;
+#include "ident.h"
+export module G;
+export inline void touch_g() {}
+
+//--- use-gmf.cpp
+import G;
+void use_g() { touch_g(); }
+
+//--- use-hu.cpp
+import "ident.h";
+const char *use_hu() { return hdrptr; }

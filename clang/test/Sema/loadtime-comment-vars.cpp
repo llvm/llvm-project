@@ -49,8 +49,8 @@ static thread_local const char *stl = "@(#) stl"; // storage-warning {{'stl' nam
 struct A {
   static thread_local const char *tm;
 };
-// The static-data-member reason outranks the storage-duration one.
-thread_local const char *A::tm = "@(#) tm"; // storage-warning {{'tm' named in '-mloadtime-comment-vars=' is a static data member and will not be preserved}}
+// The storage-duration reason outranks the static-data-member one.
+thread_local const char *A::tm = "@(#) tm"; // storage-warning {{'tm' named in '-mloadtime-comment-vars=' does not have static storage duration and will not be preserved}}
 
 // Function-local static: a name match demonstrates intent, so it is
 // diagnosed rather than silently ignored.

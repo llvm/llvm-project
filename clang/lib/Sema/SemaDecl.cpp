@@ -15488,16 +15488,6 @@ static void processForLoadTimeCommentVar(Sema &S, VarDecl *VD) {
   if (!VD->hasInit() && !VD->hasAttr<AliasAttr>())
     return;
 
-  // Extract the character type a pointer points to or an array holds; it is
-  // null for any other type, which is classified (and diagnosed) below once
-  // the name has matched.
-  QualType Ty = VD->getType();
-  const PointerType *PT = Ty->getAsCanonical<PointerType>();
-  const ArrayType *AT = PT ? nullptr : S.Context.getAsArrayType(Ty);
-  QualType Pointee = PT   ? PT->getPointeeType()
-                     : AT ? AT->getElementType()
-                          : QualType();
-
   // Mangling is comparatively expensive, so first check cheaply whether the
   // source identifier appears in any listed name at all: both the Itanium
   // mangling and an unmangled C name embed the identifier verbatim. A
@@ -15523,8 +15513,23 @@ static void processForLoadTimeCommentVar(Sema &S, VarDecl *VD) {
                           S.LoadTimeCommentVarNameGenerator->getName(VD)))
     return;
 
+  // Extract the character type a pointer points to or an array holds; it is
+  // null for any other type, which is classified (and diagnosed) below.
+  QualType Ty = VD->getType();
+  const PointerType *PT = Ty->getAsCanonical<PointerType>();
+  const ArrayType *AT = PT ? nullptr : S.Context.getAsArrayType(Ty);
+  QualType Pointee = PT   ? PT->getPointeeType()
+                     : AT ? AT->getElementType()
+                          : QualType();
+
+  Module *Mod = S.getCurrentModule();
   std::optional<unsigned> Reason;
-  if (VD->isLocalVarDecl())
+
+  if (VD->getStorageDuration() != SD_Static)
+    // The string must have static storage duration; a thread-local variable
+    // is not preserved.
+    Reason = diag::LoadTimeCommentVarReason::BadStorage;
+  else if (VD->isLocalVarDecl())
     // Only file- and namespace-scope variables are supported. A name match
     // on anything else demonstrates intent (scope participates in the
     // mangled name), so the unsupported kinds are diagnosed rather than
@@ -15544,6 +15549,11 @@ static void processForLoadTimeCommentVar(Sema &S, VarDecl *VD) {
     // An alias has no storage of its own; the string belongs to the
     // aliasee, which is the variable that has to be named.
     Reason = diag::LoadTimeCommentVarReason::Alias;
+  else if (Mod && Mod->isHeaderUnit())
+    // A header unit is not compiled to an object file of its own; a variable
+    // defined in one is only emitted by the translation units that import
+    // it, using the decision made when the header unit was built.
+    Reason = diag::LoadTimeCommentVarReason::HeaderUnit;
   else if (Pointee.isNull() ||
            !S.Context.hasSameUnqualifiedType(Pointee, S.Context.CharTy))
     // Only plain `char` pointers/arrays are supported. A name match on a
@@ -15551,10 +15561,6 @@ static void processForLoadTimeCommentVar(Sema &S, VarDecl *VD) {
     // signed/unsigned character types, ...) still demonstrates intent, so it
     // is diagnosed.
     Reason = diag::LoadTimeCommentVarReason::UnsupportedType;
-  else if (VD->getStorageDuration() != SD_Static)
-    // The string must have static storage duration; a thread-local variable
-    // is not preserved.
-    Reason = diag::LoadTimeCommentVarReason::BadStorage;
   else if (Ty.isVolatileQualified() || Pointee.isVolatileQualified())
     // The intended usage does not intersect with use cases where the character
     // array or the pointer to it is volatile-qualified; such variables are not
@@ -15585,9 +15591,8 @@ static void processForLoadTimeCommentVar(Sema &S, VarDecl *VD) {
   // module-initializer lists, and CheckCompleteVariableDeclaration records
   // only non-discardable variables there. Record an internal-linkage variable
   // so its definition reaches CodeGen in that compilation.
-  if (Module *M = S.getCurrentModule())
-    if (isDiscardableGVALinkage(S.Context.GetGVALinkageForVariable(VD)))
-      S.Context.addModuleInitializer(M, VD);
+  if (Mod && isDiscardableGVALinkage(S.Context.GetGVALinkageForVariable(VD)))
+    S.Context.addModuleInitializer(Mod, VD);
 }
 
 void Sema::ProcessLoadTimeCommentVar(VarDecl *VD) {

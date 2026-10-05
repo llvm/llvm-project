@@ -4199,6 +4199,7 @@ public:
   /// Exposed for instantiated variable definitions, which do not pass
   /// through FinalizeDeclaration.
   void ProcessLoadTimeCommentVar(VarDecl *VD);
+
   /// Lazily created mangler for '-mloadtime-comment-vars=' name matching. Only
   /// allocated if the option is in use.
   std::unique_ptr<ASTNameGenerator> LoadTimeCommentVarNameGenerator;
