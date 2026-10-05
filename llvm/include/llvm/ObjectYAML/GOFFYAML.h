@@ -24,7 +24,7 @@ namespace llvm {
 // to use yaml::IO, we use these structures which are closer to the source.
 namespace GOFFYAML {
 
-// Enum typedefs for YAML representation
+// Enum typedefs for YAML representation.
 LLVM_YAML_STRONG_TYPEDEF(uint8_t, GOFF_ESDSYMBOLTYPE)
 LLVM_YAML_STRONG_TYPEDEF(uint8_t, GOFF_ESDNAMESPACEID)
 LLVM_YAML_STRONG_TYPEDEF(uint8_t, GOFF_ESDAMODE)
