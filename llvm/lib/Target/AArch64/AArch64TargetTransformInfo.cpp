@@ -373,9 +373,6 @@ bool AArch64TTIImpl::isMultiversionedFunction(const Function &F) const {
 /// * The called function sets up new ZA/ZT state into a function that already
 ///   has ZA or ZT state, as that is not valid as per the ACLE.
 ///
-/// If the called function has an `alwaysinline` attribute and any of the above
-/// conditions is true, then an error should be reported.
-///
 /// The compiler should not inline when:
 //
 /// * The called function has fixed-length vectors and the caller is in
