@@ -563,9 +563,7 @@ bool RISCVGatherScatterLoweringImpl::tryCreateStridedLoadStore(
   if (!PtrI)
     return false;
 
-  LLVMContext &Ctx = PtrI->getContext();
-  IRBuilder Builder(Ctx, InstSimplifyFolder(*DL));
-  Builder.SetInsertPoint(PtrI);
+  IRBuilder Builder(PtrI->getIterator(), InstSimplifyFolder(*DL));
 
   Value *BasePtr, *Stride;
   std::tie(BasePtr, Stride) = determineBaseAndStride(PtrI, Builder);
