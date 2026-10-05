@@ -16,8 +16,6 @@
 using llvm::sys::UnicodeCharRange;
 using CharRanges = llvm::sys::UnicodeCharSet::CharRanges;
 
-namespace clang {
-
 // XID_Start
 static constexpr UnicodeCharRange GeneratedXIDStartRangesData[] = {
     {0x0041, 0x005A},   {0x0061, 0x007A},   {0x00AA, 0x00AA},
@@ -255,7 +253,8 @@ static constexpr UnicodeCharRange GeneratedXIDStartRangesData[] = {
     {0x2CEB0, 0x2EBE0}, {0x2EBF0, 0x2EE5D}, {0x2F800, 0x2FA1D},
     {0x30000, 0x3134A}, {0x31350, 0x33479}, {0x3D000, 0x3FC3F},
 };
-extern const CharRanges GeneratedXIDStartRanges = GeneratedXIDStartRangesData;
+extern const CharRanges clang::GeneratedXIDStartRanges =
+    GeneratedXIDStartRangesData;
 
 // XID_Continue, excluding XID_Start
 static constexpr UnicodeCharRange GeneratedXIDContinueRangesData[] = {
@@ -396,7 +395,7 @@ static constexpr UnicodeCharRange GeneratedXIDContinueRangesData[] = {
     {0x1E8D0, 0x1E8D6}, {0x1E944, 0x1E94A}, {0x1E950, 0x1E959},
     {0x1FBF0, 0x1FBF9}, {0xE0100, 0xE01EF},
 };
-extern const CharRanges GeneratedXIDContinueRanges =
+extern const CharRanges clang::GeneratedXIDContinueRanges =
     GeneratedXIDContinueRangesData;
 
 // ID_Compat_Math_Start
@@ -408,8 +407,9 @@ static constexpr UnicodeCharRange
         {0x1D76F, 0x1D76F}, {0x1D789, 0x1D789}, {0x1D7A9, 0x1D7A9},
         {0x1D7C3, 0x1D7C3},
 };
-extern const CharRanges GeneratedMathematicalNotationProfileIDStartRanges =
-    GeneratedMathematicalNotationProfileIDStartRangesData;
+extern const CharRanges
+    clang::GeneratedMathematicalNotationProfileIDStartRanges =
+        GeneratedMathematicalNotationProfileIDStartRangesData;
 
 // ID_Compat_Math_Continue, excluding ID_Compat_Math_Start
 static constexpr UnicodeCharRange
@@ -417,7 +417,6 @@ static constexpr UnicodeCharRange
         {0x00B2, 0x00B3}, {0x00B9, 0x00B9}, {0x2070, 0x2070},
         {0x2074, 0x207E}, {0x2080, 0x208E},
 };
-extern const CharRanges GeneratedMathematicalNotationProfileIDContinueRanges =
-    GeneratedMathematicalNotationProfileIDContinueRangesData;
-
-} // namespace clang
+extern const CharRanges
+    clang::GeneratedMathematicalNotationProfileIDContinueRanges =
+        GeneratedMathematicalNotationProfileIDContinueRangesData;
