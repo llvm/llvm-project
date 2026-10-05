@@ -357,7 +357,7 @@ static RecurrenceDescriptor getMinMaxRecurrence(PHINode *Phi, Loop *TheLoop,
 
   // If the backedge value has more than one use we should consider whether
   // these are actually uses inside the loop.
-  bool BackedgeNumUsesInLoop = count_if(BackedgeValue->users(), [&](User *U) {
+  int BackedgeNumUsesInLoop = count_if(BackedgeValue->users(), [&](User *U) {
     return TheLoop->contains(dyn_cast<Instruction>(U));
   });
 
