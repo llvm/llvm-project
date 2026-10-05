@@ -42,6 +42,26 @@ module {
   // CHECK-NEXT:   cir.return %[[SUM]] : !s32i
   // CHECK-NEXT: }
 
+  // In this unreachable cycle, ^header is the only predecessor of ^body and
+  // ^body the only predecessor of ^header, and ^body passes ^header's own
+  // argument back to it. ^header must not be merged into ^body: %keep would be
+  // replaced by itself, and its use in the call would outlive ^header.
+  cir.func private @use(!s32i)
+  cir.func @no_merge_self_arg_loop(%arg0: !s32i) -> !s32i {
+    cir.return %arg0 : !s32i
+  ^header(%keep: !s32i):
+    cir.call @use(%keep) : (!s32i) -> ()
+    cir.br ^body
+  ^body:
+    cir.br ^header(%keep : !s32i)
+  }
+  // CHECK:      cir.func{{.*}} @no_merge_self_arg_loop(%[[ARG0:.*]]: !s32i) -> !s32i {
+  // CHECK-NEXT:   cir.return %[[ARG0]] : !s32i
+  // CHECK-NEXT: ^[[HEADER:bb[0-9]+]](%[[KEEP:.*]]: !s32i):
+  // CHECK-NEXT:   cir.call @use(%[[KEEP]]) : (!s32i) -> ()
+  // CHECK-NEXT:   cir.br ^[[HEADER]](%[[KEEP]] : !s32i)
+  // CHECK-NEXT: }
+
   cir.func @scope_yield_value_fold() -> !u32i {
     %0 = cir.const #cir.int<7> : !u32i
     %1 = cir.scope {
