@@ -170,7 +170,7 @@ define <8 x i32> @adjacent_loads_different_metadata_widen_v4i32_v8i32(ptr %p) {
 !4 = !{!"Simple C++ TBAA"}
 !5 = !{!6}
 !6 = distinct !{!6, !7, !"scopeA"}
-!7 = distinct !{!7, !"domain"}
+!7 = distinct !{!7, i1 false, !"domain"}
 !8 = !{!9}
 !9 = distinct !{!9, !7, !"scopeB"}
 ;.
@@ -179,7 +179,7 @@ define <8 x i32> @adjacent_loads_different_metadata_widen_v4i32_v8i32(ptr %p) {
 ; CHECK: [[META2]] = !{!"Simple C++ TBAA"}
 ; CHECK: [[META3]] = !{[[META4:![0-9]+]], [[META6:![0-9]+]]}
 ; CHECK: [[META4]] = distinct !{[[META4]], [[META5:![0-9]+]], !"scopeA"}
-; CHECK: [[META5]] = distinct !{[[META5]], !"domain"}
+; CHECK: [[META5]] = distinct !{[[META5]], i1 false, !"domain"}
 ; CHECK: [[META6]] = distinct !{[[META6]], [[META5]], !"scopeB"}
 ; CHECK: [[META7]] = !{}
 ;.
