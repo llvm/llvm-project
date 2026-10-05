@@ -3,6 +3,7 @@
 /* WG14 N3007: Yes
  * Type Inference for object definitions
  */
+
 void test_auto_int(void) {
   auto int auto_int = 12;
 }
@@ -208,4 +209,35 @@ void test_macros(int in_int) {
   _Static_assert(_Generic(b, double : 1));
   _Static_assert(_Generic(c, int : 1));
   _Static_assert(_Generic(result, int : 1));
+}
+
+void test_auto_typedef(void) {
+  typedef int T;
+  {
+    auto T at_local;
+    at_local = 10;
+    _Static_assert(_Generic(at_local, int : 1));
+  }
+  {
+    const auto T at_const = 1;
+    _Static_assert(_Generic(&at_const, const int * : 1));
+  }
+  {
+    auto T a;
+    auto T b;
+    auto T c;
+    a = 1; b = 2; c = 3;
+    _Static_assert(_Generic(a, int : 1));
+    _Static_assert(_Generic(b, int : 1));
+    _Static_assert(_Generic(c, int : 1));
+  }
+  {
+    int T = 7;
+    (void)T;
+  }
+  {
+    auto T at_after_shadow;
+    at_after_shadow = 5;
+    _Static_assert(_Generic(at_after_shadow, int : 1));
+  }
 }

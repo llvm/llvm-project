@@ -1116,8 +1116,11 @@ SystemZInstrInfo::convertToThreeAddress(MachineInstr &MI,
               .addImm(Start)
               .addImm(End + 128)
               .addImm(0);
-      if (LIS)
-        LIS->ReplaceMachineInstrInMaps(MI, *MIB);
+      if (LIS) {
+        SlotIndex Idx = LIS->ReplaceMachineInstrInMaps(MI, *MIB);
+        if (!MIB->definesRegister(SystemZ::CC, /*TRI=*/nullptr))
+          LIS->removePhysRegDefAt(SystemZ::CC, Idx.getRegSlot());
+      }
       transferDeadCC(&MI, MIB);
       return MIB;
     }
