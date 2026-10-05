@@ -4930,7 +4930,7 @@ InstructionCost AArch64TTIImpl::getArithmeticInstrCost(
     unsigned Opcode, Type *Ty, TTI::TargetCostKind CostKind,
     TTI::OperandValueInfo Op1Info, TTI::OperandValueInfo Op2Info,
     ArrayRef<const Value *> Args, const Instruction *CtxI,
-    TTI::ContextUsersHint UsersHint) const {
+    bool LanesExtracted) const {
 
   // The code-generator is currently not able to handle scalable vectors
   // of <vscale x 1 x eltty> yet, so return an invalid cost to avoid selecting
@@ -4949,7 +4949,7 @@ InstructionCost AArch64TTIImpl::getArithmeticInstrCost(
       ISD == ISD::FDIV || ISD == ISD::FREM || ISD == ISD::FNEG)
     if (CostKind != TTI::TCK_RecipThroughput)
       return BaseT::getArithmeticInstrCost(Opcode, Ty, CostKind, Op1Info,
-                                           Op2Info, Args, CtxI, UsersHint);
+                                           Op2Info, Args, CtxI, LanesExtracted);
 
   if (ISD == ISD::FADD || ISD == ISD::FSUB || ISD == ISD::FMUL ||
       ISD == ISD::FDIV || ISD == ISD::FREM) {

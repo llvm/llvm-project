@@ -578,7 +578,7 @@ InstructionCost GCNTTIImpl::getArithmeticInstrCost(
     unsigned Opcode, Type *Ty, TTI::TargetCostKind CostKind,
     TTI::OperandValueInfo Op1Info, TTI::OperandValueInfo Op2Info,
     ArrayRef<const Value *> Args, const Instruction *CtxI,
-    TTI::ContextUsersHint UsersHint) const {
+    bool LanesExtracted) const {
 
   // Legalize the type.
   std::pair<InstructionCost, MVT> LT = getTypeLegalizationCost(Ty);
@@ -639,7 +639,7 @@ InstructionCost GCNTTIImpl::getArithmeticInstrCost(
     // fused operation. A vector fmul whose lanes are extracted before the
     // fadd|fsub fuses only when it is emitted lane by lane.
     if (CtxI && CtxI->hasOneUse() &&
-        (UsersHint == TTI::ContextUsersHint::Kept ||
+        (!LanesExtracted ||
          getMaximumVF(Ty->getScalarSizeInBits(), Opcode) == 1)) {
       const auto *FAddSub = dyn_cast<BinaryOperator>(*CtxI->user_begin());
       if (FAddSub &&
@@ -730,7 +730,7 @@ InstructionCost GCNTTIImpl::getArithmeticInstrCost(
   }
 
   return BaseT::getArithmeticInstrCost(Opcode, Ty, CostKind, Op1Info, Op2Info,
-                                       Args, CtxI, UsersHint);
+                                       Args, CtxI, LanesExtracted);
 }
 
 // Return true if there's a potential benefit from using v2f16/v2i16

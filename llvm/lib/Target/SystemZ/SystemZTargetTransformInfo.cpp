@@ -612,12 +612,12 @@ InstructionCost SystemZTTIImpl::getArithmeticInstrCost(
     unsigned Opcode, Type *Ty, TTI::TargetCostKind CostKind,
     TTI::OperandValueInfo Op1Info, TTI::OperandValueInfo Op2Info,
     ArrayRef<const Value *> Args, const Instruction *CtxI,
-    TTI::ContextUsersHint UsersHint) const {
+    bool LanesExtracted) const {
 
   // TODO: Handle more cost kinds.
   if (CostKind != TTI::TCK_RecipThroughput)
     return BaseT::getArithmeticInstrCost(Opcode, Ty, CostKind, Op1Info, Op2Info,
-                                         Args, CtxI, UsersHint);
+                                         Args, CtxI, LanesExtracted);
   if (CtxI && Ty && !Ty->isVectorTy() && isFoldableRMW(CtxI, Ty))
     return TTI::TCC_Free;
   // TODO: return a good value for BB-VECTORIZER that includes the
@@ -792,7 +792,7 @@ InstructionCost SystemZTTIImpl::getArithmeticInstrCost(
 
   // Fallback to the default implementation.
   return BaseT::getArithmeticInstrCost(Opcode, Ty, CostKind, Op1Info, Op2Info,
-                                       Args, CtxI, UsersHint);
+                                       Args, CtxI, LanesExtracted);
 }
 
 InstructionCost SystemZTTIImpl::getShuffleCost(

@@ -739,7 +739,7 @@ public:
       unsigned Opcode, Type *Ty, TTI::TargetCostKind CostKind,
       TTI::OperandValueInfo Opd1Info, TTI::OperandValueInfo Opd2Info,
       ArrayRef<const Value *> Args, const Instruction *CtxI = nullptr,
-      TTI::ContextUsersHint UsersHint = TTI::ContextUsersHint::Kept) const {
+      bool LanesExtracted = false) const {
     // Widenable conditions will eventually lower into constants, so some
     // operations with them will be trivially optimized away.
     auto IsWidenableCondition = [](const Value *V) {

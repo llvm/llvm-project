@@ -2957,21 +2957,21 @@ InstructionCost RISCVTTIImpl::getArithmeticInstrCost(
     unsigned Opcode, Type *Ty, TTI::TargetCostKind CostKind,
     TTI::OperandValueInfo Op1Info, TTI::OperandValueInfo Op2Info,
     ArrayRef<const Value *> Args, const Instruction *CtxI,
-    TTI::ContextUsersHint UsersHint) const {
+    bool LanesExtracted) const {
 
   // TODO: Handle more cost kinds.
   if (CostKind != TTI::TCK_RecipThroughput)
     return BaseT::getArithmeticInstrCost(Opcode, Ty, CostKind, Op1Info, Op2Info,
-                                         Args, CtxI, UsersHint);
+                                         Args, CtxI, LanesExtracted);
 
   if (isa<FixedVectorType>(Ty) && !ST->useRVVForFixedLengthVectors())
     return BaseT::getArithmeticInstrCost(Opcode, Ty, CostKind, Op1Info, Op2Info,
-                                         Args, CtxI, UsersHint);
+                                         Args, CtxI, LanesExtracted);
 
   // Skip if scalar size of Ty is bigger than ELEN.
   if (isa<VectorType>(Ty) && Ty->getScalarSizeInBits() > ST->getELen())
     return BaseT::getArithmeticInstrCost(Opcode, Ty, CostKind, Op1Info, Op2Info,
-                                         Args, CtxI, UsersHint);
+                                         Args, CtxI, LanesExtracted);
 
   if (std::optional<InstructionCost> CombinedCost =
           getCombinedArithmeticInstructionCost(Opcode, Ty, CostKind, Op1Info,
@@ -2998,7 +2998,7 @@ InstructionCost RISCVTTIImpl::getArithmeticInstrCost(
         return Entry->Cost * LT.first;
 
     return BaseT::getArithmeticInstrCost(Opcode, Ty, CostKind, Op1Info, Op2Info,
-                                         Args, CtxI, UsersHint);
+                                         Args, CtxI, LanesExtracted);
   }
 
   // f16 with zvfhmin and bf16 will be promoted to f32.
@@ -3090,7 +3090,7 @@ InstructionCost RISCVTTIImpl::getArithmeticInstrCost(
     // differentiate them.
     return CastCost + ConstantMatCost +
            BaseT::getArithmeticInstrCost(Opcode, Ty, CostKind, Op1Info, Op2Info,
-                                         Args, CtxI, UsersHint);
+                                         Args, CtxI, LanesExtracted);
   }
 
   InstructionCost InstrCost = getRISCVInstructionCost(Op, LT.second, CostKind);

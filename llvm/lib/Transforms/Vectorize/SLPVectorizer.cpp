@@ -17576,14 +17576,12 @@ BoUpSLP::getEntryCost(const TreeEntry *E, ArrayRef<Value *> VectorizedVals,
       TTI::OperandValueInfo Op1Info = getOperandInfo(E->getOperand(0));
       TTI::OperandValueInfo Op2Info = getOperandInfo(E->getOperand(OpIdx));
       const TreeEntry *UserTE = E->UserTreeIndex.UserTE;
-      TTI::ContextUsersHint UsersHint =
-          UserTE && !UserTE->isGather() && !DeletedNodes.contains(UserTE) &&
-                  !TransformedToGatherNodes.contains(UserTE)
-              ? TTI::ContextUsersHint::Kept
-              : TTI::ContextUsersHint::Extracted;
+      bool LanesExtracted = !UserTE || UserTE->isGather() ||
+                            DeletedNodes.contains(UserTE) ||
+                            TransformedToGatherNodes.contains(UserTE);
       InstructionCost Cost = TTI->getArithmeticInstrCost(
           ShuffleOrOp, VecTy, CostKind, Op1Info, Op2Info, {},
-          VL0->getOpcode() == ShuffleOrOp ? VL0 : nullptr, TLI, UsersHint);
+          VL0->getOpcode() == ShuffleOrOp ? VL0 : nullptr, TLI, LanesExtracted);
       // N columns need N-1 vector combines; price extra columns
       // conservatively, skipping identity-only columns (not combined by
       // codegen).
@@ -17599,7 +17597,8 @@ BoUpSLP::getEntryCost(const TreeEntry *E, ArrayRef<Value *> VectorizedVals,
           Cost += TTI->getArithmeticInstrCost(
               ShuffleOrOp, VecTy, CostKind, {},
               getOperandInfo(E->getOperand(Idx)), {},
-              VL0->getOpcode() == ShuffleOrOp ? VL0 : nullptr, TLI, UsersHint);
+              VL0->getOpcode() == ShuffleOrOp ? VL0 : nullptr, TLI,
+              LanesExtracted);
         }
       }
       return Cost + CommonCost;

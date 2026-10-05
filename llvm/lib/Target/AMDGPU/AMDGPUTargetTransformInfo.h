@@ -170,8 +170,7 @@ public:
       TTI::OperandValueInfo Op1Info = {TTI::OK_AnyValue, TTI::OP_None},
       TTI::OperandValueInfo Op2Info = {TTI::OK_AnyValue, TTI::OP_None},
       ArrayRef<const Value *> Args = {}, const Instruction *CtxI = nullptr,
-      TTI::ContextUsersHint UsersHint =
-          TTI::ContextUsersHint::Kept) const override;
+      bool LanesExtracted = false) const override;
 
   InstructionCost getCFInstrCost(unsigned Opcode, TTI::TargetCostKind CostKind,
                                  const Instruction *I = nullptr) const override;
