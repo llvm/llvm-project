@@ -511,6 +511,7 @@ static int loadImagesOntoDevice(DeviceTy &Device) {
             LaunchInfo.Mode =
                 static_cast<llvm::omp::OMPTgtExecModeFlags>(Cfg.ExecMode);
             LaunchInfo.ReductionDataSize = Cfg.ReductionDataSize;
+            LaunchInfo.StaticBlockMemSize = Kernel->getStaticBlockMemSize();
             // Max = Config.Max > 0 ? min(Config.Max, Device.Max) : Device.Max,
             // further clamped to the kernel function's own driver-reported
             // maximum.

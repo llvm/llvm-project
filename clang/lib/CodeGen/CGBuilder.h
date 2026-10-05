@@ -99,7 +99,7 @@ public:
       : CGBuilderBaseTy(C, llvm::TargetFolder(CGM.getDataLayout()), Inserter),
         TypeCache(CGM) {}
   CGBuilderTy(const CodeGenModule &CGM, llvm::Instruction *I)
-      : CGBuilderBaseTy(I->getParent(), I->getIterator(),
+      : CGBuilderBaseTy(I->getIterator(),
                         llvm::TargetFolder(CGM.getDataLayout())),
         TypeCache(CGM) {}
   CGBuilderTy(const CodeGenModule &CGM, llvm::BasicBlock *BB)

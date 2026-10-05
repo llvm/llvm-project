@@ -2089,6 +2089,15 @@ class RVPBinaryIntrinsic
   def int_riscv_pwsll : RVPWideningShiftIntrinsic;
   def int_riscv_pwsla : RVPWideningShiftIntrinsic;
 
+  // Packed Narrowing Shifts.
+  class RVPNarrowingShiftIntrinsic
+      : DefaultAttrsIntrinsic<[llvm_anyvector_ty],
+                              [llvm_anyvector_ty, llvm_i32_ty],
+                              [IntrNoMem, IntrSpeculatable]>;
+  def int_riscv_pnsrl  : RVPNarrowingShiftIntrinsic;
+  def int_riscv_pnsra  : RVPNarrowingShiftIntrinsic;
+  def int_riscv_pnsrar : RVPNarrowingShiftIntrinsic;
+
   // Packed Saturation.
   class RVPSaturationIntrinsic
       : DefaultAttrsIntrinsic<[llvm_anyvector_ty],
