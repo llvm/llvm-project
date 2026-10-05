@@ -628,9 +628,7 @@ struct OpRef {
     assert(!R.isValue());
     return OpRef(R.OpN & (Undef | Index | HiHalf));
   }
-  static OpRef undef(MVT Ty) {
-    return OpRef(Undef | llvm::to_underlying(Ty.SimpleTy));
-  }
+  static OpRef undef(MVT Ty) { return OpRef(Undef | Ty.SimpleTy); }
 
   // Direct value.
   SDValue OpV = SDValue();
@@ -642,15 +640,13 @@ struct OpRef {
   // If bit 29 is set, it's the low half of the operand.
   unsigned OpN = 0;
 
-  enum : unsigned {
-    Invalid = 0x10000000,
-    LoHalf  = 0x20000000,
-    HiHalf  = 0x40000000,
-    Whole   = LoHalf | HiHalf,
-    Undef   = 0x80000000,
-    Index   = 0x0FFFFFFF,  // Mask of the index value.
-    IndexBits = 28,
-  };
+  static constexpr unsigned Invalid = 0x10000000;
+  static constexpr unsigned LoHalf = 0x20000000;
+  static constexpr unsigned HiHalf = 0x40000000;
+  static constexpr unsigned Whole = LoHalf | HiHalf;
+  static constexpr unsigned Undef = 0x80000000;
+  static constexpr unsigned Index = 0x0FFFFFFF; // Mask of the index value.
+  static constexpr unsigned IndexBits = 28;
 
   LLVM_DUMP_METHOD
   void print(raw_ostream &OS, const SelectionDAG &G) const;

@@ -13,8 +13,6 @@
 #ifndef LLVM_LIB_TARGET_POWERPC_MCTARGETDESC_PPCPREDICATES_H
 #define LLVM_LIB_TARGET_POWERPC_MCTARGETDESC_PPCPREDICATES_H
 
-#include "llvm/ADT/STLForwardCompat.h"
-
 // GCC #defines PPC on Linux but we use it as our namespace name
 #undef PPC
 
@@ -65,14 +63,9 @@ namespace PPC {
     BR_NO_HINT       = 0x0,
     BR_NONTAKEN_HINT = 0x2,
     BR_TAKEN_HINT    = 0x3,
-    BR_HINT_MASK     = 0X3
   };
 
-  inline unsigned operator&(Predicate P, BranchHintBit B) {
-    return llvm::to_underlying(P) & llvm::to_underlying(B);
-  }
-
-  inline unsigned operator&(BranchHintBit B, Predicate P) { return P & B; }
+  constexpr unsigned BR_HINT_MASK = 0x3;
 
   /// Invert the specified predicate.  != -> ==, < -> >=.
   Predicate InvertPredicate(Predicate Opcode);
