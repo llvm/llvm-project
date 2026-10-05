@@ -387,8 +387,11 @@ void ScopDetection::detect(Function &F) {
   if (ReportLevel)
     printLocations(F);
 
-  assert(ValidRegions.size() <= DetectionContextMap.size() &&
-         "Cached more results than valid regions");
+  assert(all_of(ValidRegions,
+                [this](const Region *R) {
+                  return DetectionContextMap.contains(getBBPairForRegion(R));
+                }) &&
+         "Every valid region must have a detection context");
 }
 
 template <class RR, typename... Args>
@@ -1532,7 +1535,7 @@ Region *ScopDetection::expandRegion(Region &R) {
       // far).
       if (LastValidRegion) {
         removeCachedResults(*LastValidRegion);
-        DetectionContextMap.erase(P);
+        DetectionContextMap.erase(getBBPairForRegion(LastValidRegion.get()));
       }
       LastValidRegion = std::move(ExpandedRegion);
 
