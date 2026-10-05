@@ -12151,15 +12151,15 @@ SDValue DAGCombiner::visitFunnelShift(SDNode *N) {
     unsigned C1Expected = IsFSHL ? BitWidth - ShAmt : ShAmt;
 
     if ((sd_match(N0, m_Srl(m_Value(Val), m_SpecificInt(C0Expected))) ||
-         sd_match(N0, m_Node<ISD::FSHR>(m_Value(), m_Value(Val),
-                                        m_SpecificInt(C0Expected))) ||
-         sd_match(N0, m_Node<ISD::FSHL>(m_Value(), m_Value(Val),
-                                        m_SpecificInt(C1Expected)))) &&
+         sd_match(N0,
+                  m_FShR(m_Value(), m_Value(Val), m_SpecificInt(C0Expected))) ||
+         sd_match(
+             N0, m_FShL(m_Value(), m_Value(Val), m_SpecificInt(C1Expected)))) &&
         (sd_match(N1, m_Shl(m_Specific(Val), m_SpecificInt(C1Expected))) ||
-         sd_match(N1, m_Node<ISD::FSHL>(m_Specific(Val), m_Value(),
-                                        m_SpecificInt(C1Expected))) ||
-         sd_match(N1, m_Node<ISD::FSHR>(m_Specific(Val), m_Value(),
-                                        m_SpecificInt(C0Expected)))))
+         sd_match(N1, m_FShL(m_Specific(Val), m_Value(),
+                             m_SpecificInt(C1Expected))) ||
+         sd_match(N1, m_FShR(m_Specific(Val), m_Value(),
+                             m_SpecificInt(C0Expected)))))
       return Val;
 
     // fold (fshl ld1, ld0, c) -> (ld0[ofs]) iff ld0 and ld1 are consecutive.
