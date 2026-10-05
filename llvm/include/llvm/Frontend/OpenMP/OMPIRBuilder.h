@@ -1182,10 +1182,11 @@ private:
   /// \param NeedsLastIter  If true, the last iteration variable is emitted.
   ///
   /// \returns Point where to insert code after the workshare construct.
-  InsertPointOrErrorTy applyWorkshareLoopTarget(
-      DebugLoc DL, CanonicalLoopInfo *CLI, InsertPointTy AllocaIP,
-      omp::WorksharingLoopType LoopType, bool NeedsBarrier, bool NoLoop,
-      bool NeedsLastIter);
+  InsertPointOrErrorTy
+  applyWorkshareLoopTarget(DebugLoc DL, CanonicalLoopInfo *CLI,
+                           InsertPointTy AllocaIP,
+                           omp::WorksharingLoopType LoopType, bool NeedsBarrier,
+                           bool NoLoop, bool NeedsLastIter);
 
   /// Modifies the canonical loop to be a statically-scheduled workshare loop.
   ///

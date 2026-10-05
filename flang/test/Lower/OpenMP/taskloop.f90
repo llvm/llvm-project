@@ -268,7 +268,9 @@ end subroutine omp_taskloop_lastprivate
 subroutine omp_taskloop_first_and_lastprivate()
    integer x
    x = 0
-   ! CHECK:  omp.taskloop.context private(@[[FIRST_LAST_PRIVATE_X]] {{.*}}) {
+   ! CHECK:  omp.taskloop.context private(@[[FIRST_LAST_PRIVATE_X]] {{.*}})
+   ! CHECK-NOT:  private_barrier
+   ! CHECK-SAME:  {
    !$omp taskloop firstprivate(x) lastprivate(x)
    do i = 1, 100
       x = x + 1
