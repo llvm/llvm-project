@@ -9044,7 +9044,7 @@ static void processTypeAttrs(TypeProcessingState &state, QualType &type,
     }
 
     if (attr.isTypeAttr() &&
-        state.getSema().checkCommonAttributeFeatures(attr)) {
+        state.getSema().checkCommonAttributeFeatures(type, attr)) {
       attr.setInvalid();
       continue;
     }
