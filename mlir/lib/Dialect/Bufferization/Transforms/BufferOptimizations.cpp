@@ -437,6 +437,9 @@ struct BufferAllocationLoopHoistingState : BufferAllocationHoistingStateBase {
     if (!dominators->dominates(aliasDominatorBlock, op->getBlock()))
       return true;
     auto loop = dyn_cast<scf::WhileOp>(op);
+    // The alias checks do not cover uses of allocation operands. Hoisting
+    // memref.realloc before a store to its source would leave a use of the
+    // old memref after reallocation.
     if (!loop || !allocValue.getDefiningOp<memref::AllocOp>())
       return false;
     return canHoistFromWhile(loop, aliases);

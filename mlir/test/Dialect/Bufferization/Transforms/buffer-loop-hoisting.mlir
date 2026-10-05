@@ -1013,6 +1013,35 @@ func.func @no_hoist_while_alloca(%condition: i1) {
 
 // -----
 
+// Hoisting realloc before the store would invalidate the store's memref.
+// The loop exits immediately to avoid reusing the source after reallocation.
+// CHECK-LABEL: func @no_hoist_while_realloc(
+// CHECK-SAME: %[[SOURCE:.*]]: memref<1xi32>
+// CHECK-NOT: memref.realloc
+// CHECK: %[[LAST:.*]] = scf.while
+// CHECK-NEXT: memref.store %{{.*}}, %[[SOURCE]][%{{.*}}]
+// CHECK-NEXT: %[[NEW:.*]] = memref.realloc %[[SOURCE]]
+// CHECK-NEXT: scf.condition{{.*}} %[[NEW]]
+// CHECK: %[[VALUE:.*]] = memref.load %[[LAST]]
+// CHECK-NEXT: return %[[VALUE]]
+func.func @no_hoist_while_realloc(%source: memref<1xi32>) -> i32 {
+  %c0 = arith.constant 0 : index
+  %c7 = arith.constant 7 : i32
+  %false = arith.constant false
+  %last = scf.while () : () -> memref<2xi32> {
+    memref.store %c7, %source[%c0] : memref<1xi32>
+    %new = memref.realloc %source : memref<1xi32> to memref<2xi32>
+    scf.condition(%false) %new : memref<2xi32>
+  } do {
+  ^bb0(%current: memref<2xi32>):
+    scf.yield
+  }
+  %value = memref.load %last[%c0] : memref<2xi32>
+  return %value : i32
+}
+
+// -----
+
 // Hoist into the unreachable parent block, then stop the placement walk there.
 // CHECK-LABEL: func @while_unreachable_parent(
 // CHECK: return
