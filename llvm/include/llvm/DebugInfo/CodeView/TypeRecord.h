@@ -502,11 +502,11 @@ public:
 struct UnionRecord : public TagRecord {
   UnionRecord() = default;
   explicit UnionRecord(TypeRecordKind Kind) : TagRecord(Kind) {}
-  UnionRecord(uint16_t MemberCount, ClassOptions Options, TypeIndex FieldList,
+  UnionRecord(uint64_t MemberCount, ClassOptions Options, TypeIndex FieldList,
               uint64_t Size, StringRef Name, StringRef UniqueName)
       : UnionRecord(TypeRecordKind::Union, MemberCount, Options, FieldList,
                     Size, Name, UniqueName) {}
-  UnionRecord(TypeRecordKind Kind, uint16_t MemberCount, ClassOptions Options,
+  UnionRecord(TypeRecordKind Kind, uint64_t MemberCount, ClassOptions Options,
               TypeIndex FieldList, uint64_t Size, StringRef Name,
               StringRef UniqueName)
       : TagRecord(Kind, MemberCount, Options, FieldList, Name, UniqueName),
