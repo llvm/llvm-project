@@ -1,0 +1,139 @@
+! RUN: %python %S/../test_errors.py %s %flang_fc1
+! Inherited specification expressions in separate MODULE PROCEDURE bodies.
+! See lorado issue #4408 and llvm-project PR #228176.
+
+! TODO: This documents bad behavior: the inherited dummy array bound calls a
+! host-only function from host,device code without a device-code diagnostic.
+module inherited_host
+  interface
+    attributes(host,device) module subroutine caller(a)
+      integer :: a(extent())
+    end subroutine
+  end interface
+contains
+  pure integer function extent()
+    extent = 1
+  end function
+end module
+submodule(inherited_host) implementation_host
+contains
+  module procedure caller
+    a = 1
+  end procedure
+end submodule
+
+! TODO: This documents bad behavior: the inherited dummy array bound calls a
+! device-only function from host,device code without a host-code diagnostic.
+module inherited_device
+  interface
+    attributes(host,device) module subroutine caller(a)
+      integer :: a(extent())
+    end subroutine
+  end interface
+contains
+  attributes(device) pure integer function extent()
+    extent = 1
+  end function
+end module
+submodule(inherited_device) implementation_device
+contains
+  module procedure caller
+    a = 1
+  end procedure
+end submodule
+
+! Positive control: a host,device bound function is valid in both contexts.
+module inherited_host_device
+  interface
+    attributes(host,device) module subroutine caller(a)
+      integer :: a(extent())
+    end subroutine
+  end interface
+contains
+  attributes(host,device) pure integer function extent()
+    extent = 1
+  end function
+end module
+submodule(inherited_host_device) implementation_host_device
+contains
+  module procedure caller
+    a = 1
+  end procedure
+end submodule
+
+! TODO: This documents bad behavior: the inherited dummy character length
+! calls a host-only function without a device-code diagnostic.
+module inherited_character
+  interface
+    attributes(host,device) module subroutine caller(a)
+      character(length()) :: a
+    end subroutine
+  end interface
+contains
+  pure integer function length()
+    length = 1
+  end function
+end module
+submodule(inherited_character) implementation_character
+contains
+  module procedure caller
+    a = 'x'
+  end procedure
+end submodule
+
+! TODO: This documents bad behavior: the inherited array result shape calls a
+! host-only function without a device-code diagnostic.
+module inherited_result
+  interface
+    attributes(host,device) module function caller() result(a)
+      integer :: a(extent())
+    end function
+  end interface
+contains
+  pure integer function extent()
+    extent = 1
+  end function
+end module
+submodule(inherited_result) implementation_result
+contains
+  module procedure caller
+    a = 1
+  end procedure
+end submodule
+
+! TODO: This documents bad behavior from PR #228176 discussion_r4168564977:
+! the inherited character result length calls a host-only function from a
+! device-only function without a device-code diagnostic.
+module inherited_spec
+  interface
+    attributes(device) module function from_interface(n) result(r)
+      integer, intent(in) :: n
+      character(host_len(n)) :: r
+    end function
+  end interface
+contains
+  pure integer function host_len(n)
+    integer, intent(in) :: n
+    host_len = n + 1
+  end function
+end module
+submodule(inherited_spec) impl
+contains
+  module procedure from_interface
+    r = 'x'
+  end procedure
+end submodule
+
+! Diagnostic control: a specification expression in an ordinary subprogram
+! is checked for a host-only call in device code.
+module ordinary_spec_control
+contains
+  pure integer function extent()
+    extent = 1
+  end function
+  attributes(host,device) subroutine caller(a)
+    !ERROR: 'extent' may not be called in device code
+    integer :: a(extent())
+    a = 1
+  end subroutine
+end module

@@ -1,0 +1,29 @@
+! RUN: %python %S/../test_errors.py %s %flang_fc1
+! Additional expression-checking gaps collected in lorado issue #4408.
+
+! TODO: This documents bad behavior: an ordinary host subroutine calls a
+! device-only function without a host-code diagnostic.
+module host_direct_audit
+contains
+  attributes(device) integer function d()
+    d = 1
+  end function
+  subroutine caller(i)
+    integer :: i
+    i = d()
+  end subroutine
+end module
+
+! TODO: This documents bad behavior: a host kernel launch configuration calls
+! a device-only function without a host-code diagnostic.
+module host_launch_audit
+contains
+  attributes(global) subroutine kernel()
+  end subroutine
+  attributes(device) integer function d()
+    d = 1
+  end function
+  subroutine caller()
+    call kernel<<<d(),1>>>()
+  end subroutine
+end module
