@@ -806,7 +806,8 @@ void RuntimePointerChecking::groupChecks(
     // equivalence class, the iteration order is deterministic.
     for (auto M : DepCands.members(Access)) {
       for (unsigned Pointer : PositionMap.lookup(M)) {
-        assert(Seen.insert(Pointer).second && "pointer already processed");
+        assert(!Seen.contains(Pointer) && "pointer already processed");
+        Seen.insert(Pointer);
         bool Merged = false;
 
         // Go through all the existing sets and see if we can find one
