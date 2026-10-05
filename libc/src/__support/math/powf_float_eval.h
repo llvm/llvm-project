@@ -70,7 +70,7 @@ namespace powf_internal = LIBC_NAMESPACE::math::powf_internal;
 //   dx = r * m_x - 1 in [-2^-6, 2^-5].
 // Then m_x = (1 + dx) / r, and:
 //   log2(m_x) = log2(1 + dx) - log2(r),
-// where -log2(r) is obtained from the look up table LOG2_R_FF_32 with
+// where -log2(r) is obtained from the lookup table LOG2_R_FF_32 with
 // FloatFloat precision (~48 bits). The computation of dx = r * m_x - 1 is
 // exact.
 //
@@ -100,10 +100,10 @@ namespace powf_internal = LIBC_NAMESPACE::math::powf_internal;
 // exponent lookup tables.
 
 LIBC_INLINE float powf(float x, float y) {
-  using FloatBits = fputil::FPBits<float>;
+  using FPBits = fputil::FPBits<float>;
   using namespace powf_internal;
 
-  FloatBits xbits(x), ybits(y);
+  FPBits xbits(x), ybits(y);
   uint32_t x_u = xbits.uintval();
   uint32_t y_u = ybits.uintval();
   uint32_t y_a = ybits.abs().uintval();
@@ -118,8 +118,8 @@ LIBC_INLINE float powf(float x, float y) {
   uint32_t sign = 0;
   if (LIBC_UNLIKELY(y_a <= powf_internal::Y_LOWER_BOUND ||
                     y_a >= powf_internal::Y_UPPER_BOUND ||
-                    x_u >= FloatBits::inf().uintval() ||
-                    x_u < FloatBits::min_normal().uintval())) {
+                    x_u >= FPBits::inf().uintval() ||
+                    x_u < FPBits::min_normal().uintval())) {
     if (auto r = powf_internal::check_exceptional_cases(x, y, e_x, sign);
         LIBC_UNLIKELY(r.has_value()))
       return r.value();
@@ -128,12 +128,11 @@ LIBC_INLINE float powf(float x, float y) {
   Sign out_sign = (sign == 0) ? Sign::POS : Sign::NEG;
 
   // Extract exponent field and mantissa of x.
-  xbits = FloatBits(x);
-  e_x += xbits.get_biased_exponent() - FloatBits::EXP_BIAS;
+  xbits = FPBits(x);
+  e_x += xbits.get_biased_exponent() - FPBits::EXP_BIAS;
   uint32_t x_mant = xbits.get_mantissa();
-  unsigned idx_x =
-      static_cast<unsigned>(x_mant >> (FloatBits::FRACTION_LEN - 5));
-  FloatBits m_x = FloatBits(x_mant | 0x3f80'0000U);
+  unsigned idx_x = static_cast<unsigned>(x_mant >> (FPBits::FRACTION_LEN - 5));
+  FPBits m_x = FPBits(x_mant | 0x3f80'0000U);
 
   // log2(e) in FloatFloat:
   constexpr fputil::FloatFloat LOG2_E = {0x1.4ae0cp-26f, 0x1.715476p0f};
@@ -158,7 +157,7 @@ LIBC_INLINE float powf(float x, float y) {
 #else  // !LIBC_TARGET_CPU_HAS_FMA_FLOAT
   // Without FMA, split m_x = c + cd where c retains the high 14 bits
   // to perform exact multiplication: r * c - 1.0f and r * cd.
-  float c = FloatBits(m_x.uintval() & 0x3fff'e000U).get_val();
+  float c = FPBits(m_x.uintval() & 0x3fff'e000U).get_val();
   float cd = m_x.get_val() - c;
   float dx_hi = fputil::multiply_add(r, c, -1.0f);
   float dx = fputil::multiply_add(r, cd, dx_hi); // Exact
@@ -238,7 +237,7 @@ LIBC_INLINE float powf(float x, float y) {
     float result = exp2f_eval(rem, static_cast<int>(k));
     float res = cpp::bit_cast<float>(cpp::bit_cast<uint32_t>(result) | sign);
 
-    if (LIBC_UNLIKELY(FloatBits(res).is_normal()))
+    if (LIBC_UNLIKELY(FPBits(res).is_normal()))
       return res;
 
     fputil::set_errno_if_required(ERANGE);
@@ -248,7 +247,7 @@ LIBC_INLINE float powf(float x, float y) {
 
   // Boundary case: k = 128.
   float result = exp2f_eval(rem, static_cast<int>(k));
-  if (LIBC_UNLIKELY(FloatBits(result).is_inf()))
+  if (LIBC_UNLIKELY(FPBits(result).is_inf()))
     return set_overflow(out_sign);
 
   return cpp::bit_cast<float>(cpp::bit_cast<uint32_t>(result) | sign);
