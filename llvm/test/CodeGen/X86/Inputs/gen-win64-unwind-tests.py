@@ -9,8 +9,15 @@ import os
 
 OUT = os.path.join(os.path.dirname(os.path.abspath(__file__)), os.pardir)
 
-GPRS = [("rbx", 0x11), ("rsi", 0x22), ("rdi", 0x33), ("r12", 0x44),
-        ("r13", 0x55), ("r14", 0x66), ("r15", 0x77)]
+GPRS = [
+    ("rbx", 0x11),
+    ("rsi", 0x22),
+    ("rdi", 0x33),
+    ("r12", 0x44),
+    ("r13", 0x55),
+    ("r14", 0x66),
+    ("r15", 0x77),
+]
 
 
 def pat(b):
@@ -34,9 +41,21 @@ def sentinel_asm(skip):
 
 
 class Case:
-    def __init__(self, name, paths, k=3, cc="tailcc", fp=False, noop=False,
-                 dynamic=False, xmm=False, async_=False, large=None,
-                 huge=False, consts=False):
+    def __init__(
+        self,
+        name,
+        paths,
+        k=3,
+        cc="tailcc",
+        fp=False,
+        noop=False,
+        dynamic=False,
+        xmm=False,
+        async_=False,
+        large=None,
+        huge=False,
+        consts=False,
+    ):
         self.name, self.paths, self.k, self.cc = name, paths, k, cc
         self.fp, self.noop, self.dynamic = fp, noop, dynamic
         self.xmm, self.async_, self.large, self.huge = xmm, async_, large, huge
@@ -76,14 +95,20 @@ def int_target(m):
         else:
             body.append("  %%t%d = and i1 %s, %%c%d" % (i, prev, i))
             prev = "%%t%d" % i
-    body += ["  %ok = zext i1 " + prev + " to i32",
-             "  store volatile i32 %ok, ptr @args_ok, align 4", "  ret void", "}"]
+    body += [
+        "  %ok = zext i1 " + prev + " to i32",
+        "  store volatile i32 %ok, ptr @args_ok, align 4",
+        "  ret void",
+        "}",
+    ]
     return "\n".join(body)
 
 
 def dbl_target(ni, nd):
-    args = ", ".join(["i64 %%a%d" % i for i in range(1, ni + 1)] +
-                     ["double %%d%d" % i for i in range(1, nd + 1)])
+    args = ", ".join(
+        ["i64 %%a%d" % i for i in range(1, ni + 1)]
+        + ["double %%d%d" % i for i in range(1, nd + 1)]
+    )
     body = ["define tailcc void @target_d%d_%d(%s) {" % (ni, nd, args)]
     prev = None
     for i in range(1, ni + 1):
@@ -97,24 +122,35 @@ def dbl_target(ni, nd):
         body.append("  %%e%d = fcmp oeq double %%d%d, 1.001000e+03" % (i, i))
         body.append("  %%u%d = and i1 %s, %%e%d" % (i, prev, i))
         prev = "%%u%d" % i
-    body += ["  %ok = zext i1 " + prev + " to i32",
-             "  store volatile i32 %ok, ptr @args_ok, align 4", "  ret void", "}"]
+    body += [
+        "  %ok = zext i1 " + prev + " to i32",
+        "  store volatile i32 %ok, ptr @args_ok, align 4",
+        "  ret void",
+        "}",
+    ]
     return "\n".join(body)
 
 
 def async_target(m):
-    args = ", ".join(["ptr swiftasync %ctx"] +
-                     ["i64 %%a%d" % i for i in range(1, m + 1)])
-    body = ["define swifttailcc void @target_a%d(%s) {" % (m, args),
-            "  %cx = ptrtoint ptr %ctx to i64",
-            "  %c0 = icmp eq i64 %cx, 4660"]
+    args = ", ".join(
+        ["ptr swiftasync %ctx"] + ["i64 %%a%d" % i for i in range(1, m + 1)]
+    )
+    body = [
+        "define swifttailcc void @target_a%d(%s) {" % (m, args),
+        "  %cx = ptrtoint ptr %ctx to i64",
+        "  %c0 = icmp eq i64 %cx, 4660",
+    ]
     prev = "%c0"
     for i in range(1, m + 1):
         body.append("  %%c%d = icmp eq i64 %%a%d, %d" % (i, i, 1000 + i))
         body.append("  %%t%d = and i1 %s, %%c%d" % (i, prev, i))
         prev = "%%t%d" % i
-    body += ["  %ok = zext i1 " + prev + " to i32",
-             "  store volatile i32 %ok, ptr @args_ok, align 4", "  ret void", "}"]
+    body += [
+        "  %ok = zext i1 " + prev + " to i32",
+        "  store volatile i32 %ok, ptr @args_ok, align 4",
+        "  ret void",
+        "}",
+    ]
     return "\n".join(body)
 
 
@@ -123,13 +159,20 @@ BIG = 9000
 
 
 def huge_target():
-    return "\n".join([
-        "define tailcc void @target_huge([%d x i64] %%x) {" % HUGE,
-        "  %%a = extractvalue [%d x i64] %%x, 0" % HUGE,
-        "  %%b = extractvalue [%d x i64] %%x, %d" % (HUGE, HUGE - 1),
-        "  %c = icmp eq i64 %a, 0", "  %d = icmp eq i64 %b, 0",
-        "  %t = and i1 %c, %d", "  %ok = zext i1 %t to i32",
-        "  store volatile i32 %ok, ptr @args_ok, align 4", "  ret void", "}"])
+    return "\n".join(
+        [
+            "define tailcc void @target_huge([%d x i64] %%x) {" % HUGE,
+            "  %%a = extractvalue [%d x i64] %%x, 0" % HUGE,
+            "  %%b = extractvalue [%d x i64] %%x, %d" % (HUGE, HUGE - 1),
+            "  %c = icmp eq i64 %a, 0",
+            "  %d = icmp eq i64 %b, 0",
+            "  %t = and i1 %c, %d",
+            "  %ok = zext i1 %t to i32",
+            "  store volatile i32 %ok, ptr @args_ok, align 4",
+            "  ret void",
+            "}",
+        ]
+    )
 
 
 def int_args(case, m, prefix):
@@ -156,22 +199,27 @@ def test_function(case):
     if case.large is not None:
         params = "i64 %%sel, [%d x i64] %%big" % case.large
     else:
-        params = ", ".join(["i64 %sel"] +
-                           ["i64 %%p%d" % i for i in range(1, case.k + 1)])
+        params = ", ".join(
+            ["i64 %sel"] + ["i64 %%p%d" % i for i in range(1, case.k + 1)]
+        )
     if case.async_:
         params = "ptr swiftasync %ctx, " + params
     attrs = ' "frame-pointer"="all"' if case.fp else ""
-    out = ["define %s void @test_%s(%s)%s {" % (cc, case.name, params, attrs),
-           "entry:"]
+    out = ["define %s void @test_%s(%s)%s {" % (cc, case.name, params, attrs), "entry:"]
     if case.dynamic:
-        out += ["  %dyn = alloca i8, i64 %p1, align 1",
-                "  %al = alloca [4 x i64], align 64",
-                "  call void @use(ptr %dyn)", "  call void @use(ptr %al)"]
+        out += [
+            "  %dyn = alloca i8, i64 %p1, align 1",
+            "  %al = alloca [4 x i64], align 64",
+            "  call void @use(ptr %dyn)",
+            "  call void @use(ptr %al)",
+        ]
     if case.xmm:
         out.append("  %d = load volatile double, ptr @dval, align 8")
     if case.async_:
-        out += ["  %ca = call ptr @llvm.swift.async.context.addr()",
-                "  call void @use(ptr %ca)"]
+        out += [
+            "  %ca = call ptr @llvm.swift.async.context.addr()",
+            "  call void @use(ptr %ca)",
+        ]
     for i in sorted(case.hoist):
         out.append("  %%hold%d = load volatile i64, ptr @hold%d, align 8" % (i, i))
     if case.noop:
@@ -179,9 +227,11 @@ def test_function(case):
     for s_, (kind_, _m) in enumerate(case.paths):
         if kind_ == "mem":
             out.append("  %%slot%d = alloca ptr, align 8" % s_)
-    labels = ["    i64 %d, label %%s%d" % (s, s)
-              for s, _ in enumerate(case.paths)
-              if case.paths[s][0] != "ret"]
+    labels = [
+        "    i64 %d, label %%s%d" % (s, s)
+        for s, _ in enumerate(case.paths)
+        if case.paths[s][0] != "ret"
+    ]
     out += ["  switch i64 %sel, label %ret ["] + labels + ["  ]"]
     for s, (kind, m) in enumerate(case.paths):
         if kind == "ret":
@@ -212,12 +262,13 @@ def test_function(case):
             args = ["[%d x i64] zeroinitializer" % HUGE]
             callee = "@target_huge"
         if kind == "mem":
-            out += ["  store ptr %s, ptr %%slot%d, align 8" % (callee, s),
-                    "  call void @use(ptr %%slot%d)" % s,
-                    "  %%fp%d = load ptr, ptr %%slot%d, align 8" % (s, s)]
+            out += [
+                "  store ptr %s, ptr %%slot%d, align 8" % (callee, s),
+                "  call void @use(ptr %%slot%d)" % s,
+                "  %%fp%d = load ptr, ptr %%slot%d, align 8" % (s, s),
+            ]
             callee = "%%fp%d" % s
-        out.append("  musttail call %s void %s(%s)" % (cc, callee,
-                                                       ", ".join(args)))
+        out.append("  musttail call %s void %s(%s)" % (cc, callee, ", ".join(args)))
         out.append("  ret void")
     out += ["", "ret:", "  ret void", "}"]
     return "\n".join(out)
@@ -229,20 +280,25 @@ def runner(case):
     if case.large is not None:
         args = "i64 %%sel64, [%d x i64] zeroinitializer" % case.large
     else:
-        args = ", ".join(["i64 %sel64"] +
-                         ["i64 %d" % (1000 + i) for i in range(1, case.k + 1)])
+        args = ", ".join(
+            ["i64 %sel64"] + ["i64 %d" % (1000 + i) for i in range(1, case.k + 1)]
+        )
     if case.async_:
         args = "ptr swiftasync inttoptr (i64 4660 to ptr), " + args
-    return "\n".join([
-        "define i32 @run_%s(i32 %%selector) {" % case.name,
-        "  store volatile i32 0, ptr @args_ok, align 4",
-        '  call void asm sideeffect "%s", "%s"()' % (asm, clob),
-        "  call void @RtlCaptureContext(ptr @unwind_expected_context)",
-        "  %sel64 = zext i32 %selector to i64",
-        "  call %s void @test_%s(%s)" % (case.cc, case.name, args),
-        "  call void @RtlCaptureContext(ptr @unwind_actual_context)",
-        "  %ok = load volatile i32, ptr @args_ok, align 4",
-        "  ret i32 %ok", "}"])
+    return "\n".join(
+        [
+            "define i32 @run_%s(i32 %%selector) {" % case.name,
+            "  store volatile i32 0, ptr @args_ok, align 4",
+            '  call void asm sideeffect "%s", "%s"()' % (asm, clob),
+            "  call void @RtlCaptureContext(ptr @unwind_expected_context)",
+            "  %sel64 = zext i32 %selector to i64",
+            "  call %s void @test_%s(%s)" % (case.cc, case.name, args),
+            "  call void @RtlCaptureContext(ptr @unwind_actual_context)",
+            "  %ok = load volatile i32, ptr @args_ok, align 4",
+            "  ret i32 %ok",
+            "}",
+        ]
+    )
 
 
 def emit(filename, title, cases, extra_doc=""):
@@ -264,18 +320,32 @@ def emit(filename, title, cases, extra_doc=""):
     o.append("; REQUIRES: target={{x86_64.*-windows-msvc}}")
     for opt in ("", "-O0 "):
         tag = "O0" if opt else "O2"
-        o.append("; RUN: llc -mtriple=x86_64-pc-windows-msvc %s-filetype=obj %%s -o %%t.%s.obj" % (opt, tag))
-        o.append("; RUN: %%python %%S/Inputs/build-win64-unwind-harness.py %%S/Inputs/win64-unwind-harness.c %%t.%s.obj %%t.%s.exe" % (tag, tag))
+        o.append(
+            "; RUN: llc -mtriple=x86_64-pc-windows-msvc %s-filetype=obj %%s -o %%t.%s.obj"
+            % (opt, tag)
+        )
+        o.append(
+            "; RUN: %%python %%S/Inputs/build-win64-unwind-harness.py %%S/Inputs/win64-unwind-harness.c %%t.%s.obj %%t.%s.exe"
+            % (tag, tag)
+        )
         o.append("; RUN: %%t.%s.exe" % tag)
     o.append("")
-    o.append("; NOTE: Generated by Inputs/gen-win64-unwind-tests.py. Do not edit by hand.")
+    o.append(
+        "; NOTE: Generated by Inputs/gen-win64-unwind-tests.py. Do not edit by hand."
+    )
     o.append("")
     o.append("; " + title)
     o.append(";")
-    o.append("; Run under Windows. The harness (Inputs/win64-unwind-harness.c) runs each")
+    o.append(
+        "; Run under Windows. The harness (Inputs/win64-unwind-harness.c) runs each"
+    )
     o.append("; case to completion, then single-steps it: at each instruction of the")
-    o.append("; function under test, and of the function it tail calls, the unwinder must")
-    o.append("; recover the caller and its nonvolatile registers, and the system exception")
+    o.append(
+        "; function under test, and of the function it tail calls, the unwinder must"
+    )
+    o.append(
+        "; recover the caller and its nonvolatile registers, and the system exception"
+    )
     o.append("; dispatcher must be able to unwind to a handler in the harness.")
     if extra_doc:
         o.append(";")
@@ -323,16 +393,31 @@ def emit(filename, title, cases, extra_doc=""):
     entries = []
     for i, c in enumerate(cases):
         nm = c.name
-        o.append('@.name.%d = private unnamed_addr constant [%d x i8] c"%s\\00"' % (i, len(nm) + 1, nm))
+        o.append(
+            '@.name.%d = private unnamed_addr constant [%d x i8] c"%s\\00"'
+            % (i, len(nm) + 1, nm)
+        )
         mask = sum(1 << s for s, (k, m) in enumerate(c.paths) if k != "ret")
         flags = 1 if c.async_ else 0
-        entries.append("  %%TestCase { ptr @.name.%d, ptr @run_%s, i64 %d, i64 %d, i64 %d }" % (i, nm, len(c.paths), mask, flags))
+        entries.append(
+            "  %%TestCase { ptr @.name.%d, ptr @run_%s, i64 %d, i64 %d, i64 %d }"
+            % (i, nm, len(c.paths), mask, flags)
+        )
     entries.append("  %TestCase zeroinitializer")
-    o.append("@unwind_test_cases = constant [%d x %%TestCase] [\n%s\n]" % (len(entries), ",\n".join(entries)))
+    o.append(
+        "@unwind_test_cases = constant [%d x %%TestCase] [\n%s\n]"
+        % (len(entries), ",\n".join(entries))
+    )
     cl = ["  ptr @%s" % n for n in checked] + ["  ptr null"]
-    o.append("@unwind_checked_functions = constant [%d x ptr] [\n%s\n]" % (len(cl), ",\n".join(cl)))
+    o.append(
+        "@unwind_checked_functions = constant [%d x ptr] [\n%s\n]"
+        % (len(cl), ",\n".join(cl))
+    )
     al = ["  ptr @%s" % n for n in allfns] + ["  ptr null"]
-    o.append("@unwind_all_functions = constant [%d x ptr] [\n%s\n]" % (len(al), ",\n".join(al)))
+    o.append(
+        "@unwind_all_functions = constant [%d x ptr] [\n%s\n]"
+        % (len(al), ",\n".join(al))
+    )
     with open(os.path.join(OUT, filename), "w") as f:
         f.write("\n".join(o) + "\n")
 
@@ -340,37 +425,55 @@ def emit(filename, title, cases, extra_doc=""):
 GROW = [("int", 12), ("int", 10), ("int", 7), ("int", 4), ("ret", 0)]
 SHRINK = [("int", 7), ("int", 11), ("int", 12), ("ret", 0)]
 
-emit("win64-tailcc-unwind-frames.ll",
-     "Unwinding through tail calls that grow and shrink the stack argument area.",
-     [Case("grow_nofp", GROW),
-      Case("grow_fp", GROW, fp=True),
-      Case("grow_csr", GROW, noop=True),
-      Case("grow_csr_fp", GROW, noop=True, fp=True),
-      Case("grow_csr_src", GROW, noop=True, consts=True),
-      Case("grow_csr_src_fp", GROW, noop=True, consts=True, fp=True),
-      Case("grow_dyn", GROW, noop=True, fp=True, dynamic=True),
-      Case("shrink_nofp", SHRINK, k=11),
-      Case("shrink_csr", SHRINK, k=11, noop=True),
-      Case("shrink_fp", SHRINK, k=11, noop=True, fp=True),
-      Case("mem_target", [("mem", 12), ("mem", 10), ("mem", 7), ("ret", 0)], noop=True)],
-     "Selectors go from the tail call that needs the most stack down to one with\nthe same size as the caller's own arguments (growing cases), or from the\nlargest shrink (shrinking cases); the last selector is a return. The csr\ncases keep values in callee-saved registers across a call, including the one\nstored over the caller's return address.")
+emit(
+    "win64-tailcc-unwind-frames.ll",
+    "Unwinding through tail calls that grow and shrink the stack argument area.",
+    [
+        Case("grow_nofp", GROW),
+        Case("grow_fp", GROW, fp=True),
+        Case("grow_csr", GROW, noop=True),
+        Case("grow_csr_fp", GROW, noop=True, fp=True),
+        Case("grow_csr_src", GROW, noop=True, consts=True),
+        Case("grow_csr_src_fp", GROW, noop=True, consts=True, fp=True),
+        Case("grow_dyn", GROW, noop=True, fp=True, dynamic=True),
+        Case("shrink_nofp", SHRINK, k=11),
+        Case("shrink_csr", SHRINK, k=11, noop=True),
+        Case("shrink_fp", SHRINK, k=11, noop=True, fp=True),
+        Case(
+            "mem_target", [("mem", 12), ("mem", 10), ("mem", 7), ("ret", 0)], noop=True
+        ),
+    ],
+    "Selectors go from the tail call that needs the most stack down to one with\nthe same size as the caller's own arguments (growing cases), or from the\nlargest shrink (shrinking cases); the last selector is a return. The csr\ncases keep values in callee-saved registers across a call, including the one\nstored over the caller's return address.",
+)
 
 XMM = [("dbl", (4, 8)), ("dbl", (4, 6)), ("dbl", (4, 3)), ("int", 4), ("ret", 0)]
-emit("win64-tailcc-unwind-xmm.ll",
-     "Unwinding when the argument stored over the return address is in a\n; callee-saved XMM register.",
-     [Case("xmm_nofp", XMM, noop=True, xmm=True),
-      Case("xmm_fp", XMM, noop=True, xmm=True, fp=True)])
+emit(
+    "win64-tailcc-unwind-xmm.ll",
+    "Unwinding when the argument stored over the return address is in a\n; callee-saved XMM register.",
+    [
+        Case("xmm_nofp", XMM, noop=True, xmm=True),
+        Case("xmm_fp", XMM, noop=True, xmm=True, fp=True),
+    ],
+)
 
 ASYNC = [("async", 12), ("async", 10), ("async", 7), ("async", 4), ("ret", 0)]
-emit("win64-tailcc-unwind-swiftasync.ll",
-     "Unwinding through swifttailcc functions with a swiftasync parameter.",
-     [Case("async_nofp", ASYNC, cc="swifttailcc", async_=True, noop=True),
-      Case("async_fp", ASYNC, cc="swifttailcc", async_=True, noop=True, fp=True)])
+emit(
+    "win64-tailcc-unwind-swiftasync.ll",
+    "Unwinding through swifttailcc functions with a swiftasync parameter.",
+    [
+        Case("async_nofp", ASYNC, cc="swifttailcc", async_=True, noop=True),
+        Case("async_fp", ASYNC, cc="swifttailcc", async_=True, noop=True, fp=True),
+    ],
+)
 
-emit("win64-tailcc-unwind-large.ll",
-     "Unwinding when the reserve exceeds a page, and when a function pops more\n; than 65535 bytes on return.",
-     [Case("pop_nofp", [("ret", 0), ("int", 7)], large=BIG),
-      Case("pop_csr", [("ret", 0), ("int", 7)], large=BIG, noop=True),
-      Case("pop_fp", [("ret", 0), ("int", 7)], large=BIG, noop=True, fp=True),
-      Case("reserve_nofp", [("huge", 0), ("ret", 0)]),
-      Case("reserve_fp", [("huge", 0), ("ret", 0)], noop=True, fp=True)])
+emit(
+    "win64-tailcc-unwind-large.ll",
+    "Unwinding when the reserve exceeds a page, and when a function pops more\n; than 65535 bytes on return.",
+    [
+        Case("pop_nofp", [("ret", 0), ("int", 7)], large=BIG),
+        Case("pop_csr", [("ret", 0), ("int", 7)], large=BIG, noop=True),
+        Case("pop_fp", [("ret", 0), ("int", 7)], large=BIG, noop=True, fp=True),
+        Case("reserve_nofp", [("huge", 0), ("ret", 0)]),
+        Case("reserve_fp", [("huge", 0), ("ret", 0)], noop=True, fp=True),
+    ],
+)

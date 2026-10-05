@@ -1912,8 +1912,8 @@ void X86FrameLowering::emitPrologue(MachineFunction &MF,
               .addReg(X86::RAX, RegState::Kill)
               .setMIFlag(MachineInstr::FrameSetup);
         BuildMI(MBB, MBBI, DL,
-                TII.get(X86::getMOVriOpcode(
-                    Is64Bit, TailCallArgReserveSize - (IsRAXAlive ? 8 : 0))),
+                TII.get(X86::getMOVriOpcode(Is64Bit, TailCallArgReserveSize -
+                                                         (IsRAXAlive ? 8 : 0))),
                 X86::RAX)
             .addImm(TailCallArgReserveSize - (IsRAXAlive ? 8 : 0))
             .setMIFlag(MachineInstr::FrameSetup);
