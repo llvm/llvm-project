@@ -77,48 +77,48 @@ Error GOFFDumper::dumpExternalSymbol(ArrayRef<uint8_t> Data) {
   GOFFYAML::ESDRecord Sym;
   // Flattened data contains PTV header (bytes 0-2) + bytes 3-72 (prefix) + name
   // data. Use DataExtractor to read fields with correct endianness (big-endian
-  // for GOFF)
-  DataExtractor DE(Data, false); // false = big-endian
+  // for GOFF).
+  DataExtractor DE(Data, /*IsLittleEndian=*/false);
   DataExtractor::Cursor C(0);
 
-  // Skip PTV header (bytes 0-2)
+  // Skip PTV header (bytes 0-2).
   C.seek(3);
 
   // ESD fields starting from byte 3:
-  // Byte 3: Symbol Type
+  // Byte 3: Symbol Type.
   Sym.SymbolType = DE.getU8(C);
 
-  // Bytes 4-7: ESD ID
+  // Bytes 4-7: ESD ID.
   Sym.ESDID = DE.getU32(C);
 
-  // Bytes 8-11: Parent ESD ID
+  // Bytes 8-11: Parent ESD ID.
   uint32_t ParentEsdId = DE.getU32(C);
   if (ParentEsdId)
     Sym.ParentESDID = ParentEsdId;
 
-  // Skip bytes 12-15
+  // Skip bytes 12-15.
   DE.skip(C, 4);
 
-  // Bytes 16-19: Offset
+  // Bytes 16-19: Offset.
   uint32_t Offset = DE.getU32(C);
   if (Offset)
     Sym.Offset = Offset;
 
-  // Skip bytes 20-23
+  // Skip bytes 20-23.
   DE.skip(C, 4);
 
-  // Bytes 24-27: Length
+  // Bytes 24-27: Length.
   uint32_t Length = DE.getU32(C);
   if (Length)
     Sym.Length = Length;
 
-  // Skip to byte 40
+  // Skip to byte 40.
   C.seek(40);
   uint8_t NameSpace = DE.getU8(C);
   if (NameSpace)
     Sym.NameSpace = NameSpace;
 
-  // Byte 41: Flags
+  // Byte 41: Flags.
   uint8_t Flags = DE.getU8(C);
   bool FillBytePresent = (Flags & 0x80) != 0;
   if (FillBytePresent) {
@@ -128,18 +128,18 @@ Error GOFFDumper::dumpExternalSymbol(ArrayRef<uint8_t> Data) {
     DE.skip(C, 1);
   }
 
-  // Skip 1 byte, then read ADA ESD ID (bytes 44-47)
+  // Skip 1 byte, then read ADA ESD ID (bytes 44-47).
   DE.skip(C, 1);
   uint32_t ADAEsdId = DE.getU32(C);
   if (ADAEsdId)
     Sym.ADAESDID = ADAEsdId;
 
-  // Bytes 48-51: Sort Priority
+  // Bytes 48-51: Sort Priority.
   uint32_t SortPriority = DE.getU32(C);
   if (SortPriority)
     Sym.SortPriority = SortPriority;
 
-  // Skip to behavioral attributes at byte 60
+  // Skip to behavioral attributes at byte 60.
   C.seek(60);
   uint8_t Amode = DE.getU8(C);
   if (Amode)
@@ -192,11 +192,11 @@ Error GOFFDumper::dumpExternalSymbol(ArrayRef<uint8_t> Data) {
   if (Alignment)
     Sym.Alignment = Alignment;
 
-  // Skip 3 bytes to get to name length at byte 70
+  // Skip 3 bytes to get to name length at byte 70.
   DE.skip(C, 3);
   uint16_t NameLength = DE.getU16(C);
   if (NameLength) {
-    // Name data starts at byte 72
+    // Name data starts at byte 72.
     size_t NameOffset = 72;
     if (Data.size() > NameOffset) {
       ArrayRef<uint8_t> NameData = Data.slice(
