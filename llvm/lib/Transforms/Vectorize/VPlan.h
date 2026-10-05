@@ -2880,12 +2880,12 @@ class VPReductionPHIRecipe : public VPHeaderPHIRecipe, public VPIRFlags {
   bool HasUsesOutsideReductionChain;
 
   /// Temporary flag indicating that the FindIV reduction expression has been
-  /// sunk. While this is true, epilogue vectorization is
-  /// disabled to avoid applying the expression twice (once in the main vector
-  /// loop and again in the epilogue), which can produce incorrect results by
-  /// doing the sunk operation twice.
-  /// TODO: Remove this flag once epilogue vectorization properly supports sunk
-  /// FindIV expressions.
+  /// sunk. While this is true, epilogue vectorization is disabled to avoid
+  /// applying the sunk expression twice (once in the main vector loop and again
+  /// in the epilogue), which can produce incorrect results by applying the sunk
+  /// operation twice.
+  /// TODO: Remove this flag once epilogue vectorization properly supports
+  /// sunk FindIV expressions.
   bool ExpressionSunk = false;
 
 public:
