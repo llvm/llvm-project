@@ -6,7 +6,7 @@ target datalayout = "p1:32:32"
 define i64 @bitextract_i64(b64 %x) {
 ; CHECK-LABEL: define i64 @bitextract_i64(
 ; CHECK-SAME: b64 [[X:%.*]]) {
-; CHECK-NEXT:    [[R:%.*]] = bitextract i64, b64 [[X]], i32 0
+; CHECK-NEXT:    [[R:%.*]] = bitcast b64 [[X]] to i64
 ; CHECK-NEXT:    ret i64 [[R]]
 ;
   %r = bitextract i64, b64 %x, i32 0
@@ -16,7 +16,7 @@ define i64 @bitextract_i64(b64 %x) {
 define double @bitextract_double(b64 %x) {
 ; CHECK-LABEL: define double @bitextract_double(
 ; CHECK-SAME: b64 [[X:%.*]]) {
-; CHECK-NEXT:    [[R:%.*]] = bitextract double, b64 [[X]], i32 0
+; CHECK-NEXT:    [[R:%.*]] = bitcast b64 [[X]] to double
 ; CHECK-NEXT:    ret double [[R]]
 ;
   %r = bitextract double, b64 %x, i32 0
@@ -26,7 +26,7 @@ define double @bitextract_double(b64 %x) {
 define ptr @bitextract_ptr(b64 %x) {
 ; CHECK-LABEL: define ptr @bitextract_ptr(
 ; CHECK-SAME: b64 [[X:%.*]]) {
-; CHECK-NEXT:    [[R:%.*]] = bitextract ptr, b64 [[X]], i32 0
+; CHECK-NEXT:    [[R:%.*]] = bitcast b64 [[X]] to ptr
 ; CHECK-NEXT:    ret ptr [[R]]
 ;
   %r = bitextract ptr, b64 %x, i32 0
@@ -36,7 +36,7 @@ define ptr @bitextract_ptr(b64 %x) {
 define ptr addrspace(1) @bitextract_ptr_as1(b32 %x) {
 ; CHECK-LABEL: define ptr addrspace(1) @bitextract_ptr_as1(
 ; CHECK-SAME: b32 [[X:%.*]]) {
-; CHECK-NEXT:    [[R:%.*]] = bitextract ptr addrspace(1), b32 [[X]], i32 0
+; CHECK-NEXT:    [[R:%.*]] = bitcast b32 [[X]] to ptr addrspace(1)
 ; CHECK-NEXT:    ret ptr addrspace(1) [[R]]
 ;
   %r = bitextract ptr addrspace(1), b32 %x, i32 0
@@ -46,7 +46,7 @@ define ptr addrspace(1) @bitextract_ptr_as1(b32 %x) {
 define b64 @bitinsert_i64(b64 %x, i64 %y) {
 ; CHECK-LABEL: define b64 @bitinsert_i64(
 ; CHECK-SAME: b64 [[X:%.*]], i64 [[Y:%.*]]) {
-; CHECK-NEXT:    [[R:%.*]] = bitinsert b64 [[X]], i64 [[Y]], i32 0
+; CHECK-NEXT:    [[R:%.*]] = bitcast i64 [[Y]] to b64
 ; CHECK-NEXT:    ret b64 [[R]]
 ;
   %r = bitinsert b64 %x, i64 %y, i32 0
@@ -56,7 +56,7 @@ define b64 @bitinsert_i64(b64 %x, i64 %y) {
 define b32 @bitinsert_float(b32 %x, float %y) {
 ; CHECK-LABEL: define b32 @bitinsert_float(
 ; CHECK-SAME: b32 [[X:%.*]], float [[Y:%.*]]) {
-; CHECK-NEXT:    [[R:%.*]] = bitinsert b32 [[X]], float [[Y]], i32 0
+; CHECK-NEXT:    [[R:%.*]] = bitcast float [[Y]] to b32
 ; CHECK-NEXT:    ret b32 [[R]]
 ;
   %r = bitinsert b32 %x, float %y, i32 0
@@ -66,7 +66,7 @@ define b32 @bitinsert_float(b32 %x, float %y) {
 define b64 @bitinsert_ptr(b64 %x, ptr %y) {
 ; CHECK-LABEL: define b64 @bitinsert_ptr(
 ; CHECK-SAME: b64 [[X:%.*]], ptr [[Y:%.*]]) {
-; CHECK-NEXT:    [[R:%.*]] = bitinsert b64 [[X]], ptr [[Y]], i32 0
+; CHECK-NEXT:    [[R:%.*]] = bitcast ptr [[Y]] to b64
 ; CHECK-NEXT:    ret b64 [[R]]
 ;
   %r = bitinsert b64 %x, ptr %y, i32 0
@@ -76,9 +76,7 @@ define b64 @bitinsert_ptr(b64 %x, ptr %y) {
 define i8 @bitextract_bitinsert(b32 %x, i8 %y) {
 ; CHECK-LABEL: define i8 @bitextract_bitinsert(
 ; CHECK-SAME: b32 [[X:%.*]], i8 [[Y:%.*]]) {
-; CHECK-NEXT:    [[I:%.*]] = bitinsert b32 [[X]], i8 [[Y]], i32 8
-; CHECK-NEXT:    [[R:%.*]] = bitextract i8, b32 [[I]], i32 8
-; CHECK-NEXT:    ret i8 [[R]]
+; CHECK-NEXT:    ret i8 [[Y]]
 ;
   %i = bitinsert b32 %x, i8 %y, i32 8
   %r = bitextract i8, b32 %i, i32 8
