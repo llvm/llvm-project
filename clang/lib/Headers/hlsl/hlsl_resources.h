@@ -36,6 +36,8 @@ static const uint DEVICE_SCOPE = 0x4;
 #define _HLSL_TEMPLATE_RESOURCE_BARRIER(resource)                              \
   template <typename T> _HLSL_RESOURCE_BARRIER(resource<T>)
 
+// These overloads apply the barrier only to the specified UAV resource.
+// Barrier(uint, uint) applies the barrier to the selected memory types.
 _HLSL_TEMPLATE_RESOURCE_BARRIER(RWTexture1D);
 _HLSL_TEMPLATE_RESOURCE_BARRIER(RWTexture1DArray);
 _HLSL_TEMPLATE_RESOURCE_BARRIER(RWTexture2D);
@@ -49,6 +51,9 @@ _HLSL_TEMPLATE_RESOURCE_BARRIER(ConsumeStructuredBuffer);
 _HLSL_TEMPLATE_RESOURCE_BARRIER(RasterizerOrderedStructuredBuffer);
 _HLSL_RESOURCE_BARRIER(RWByteAddressBuffer);
 _HLSL_RESOURCE_BARRIER(RasterizerOrderedByteAddressBuffer);
+
+// TODO: Add node record overloads when Clang supports node record types.
+// https://github.com/llvm/llvm-project/issues/229258
 
 #undef _HLSL_TEMPLATE_RESOURCE_BARRIER
 #undef _HLSL_RESOURCE_BARRIER

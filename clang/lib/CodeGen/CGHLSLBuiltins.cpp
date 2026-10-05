@@ -15,7 +15,9 @@
 #include "CodeGenFunction.h"
 #include "clang/AST/HLSLResource.h"
 #include "clang/AST/MatrixUtils.h"
+#include "llvm/ADT/STLExtras.h"
 #include "llvm/IR/MatrixBuilder.h"
+#include "llvm/Support/DXILABI.h"
 
 using namespace clang;
 using namespace CodeGen;
@@ -1777,6 +1779,17 @@ Value *CodeGenFunction::EmitHLSLBuiltinExpr(unsigned BuiltinID,
   }
   case Builtin::BI__builtin_hlsl_barrier: {
     Value *SemanticFlags = EmitScalarExpr(E->getArg(1));
+    constexpr uint64_t GroupScope =
+        llvm::to_underlying(llvm::dxil::BarrierSemanticFlag::GroupScope);
+    constexpr uint64_t DeviceScope =
+        llvm::to_underlying(llvm::dxil::BarrierSemanticFlag::DeviceScope);
+    constexpr uint64_t ScopeMask = GroupScope | DeviceScope;
+    auto *SemanticFlagsConstant = cast<llvm::ConstantInt>(SemanticFlags);
+    uint64_t SemanticFlagsValue = SemanticFlagsConstant->getZExtValue();
+    if ((SemanticFlagsValue & ScopeMask) == ScopeMask)
+      SemanticFlags = llvm::ConstantInt::get(SemanticFlags->getType(),
+                                             SemanticFlagsValue & ~GroupScope);
+
     if (E->getArg(0)->getType()->isUnsignedIntegerType()) {
       Value *MemoryFlags = EmitScalarExpr(E->getArg(0));
       Intrinsic::ID ID = CGM.getHLSLRuntime().getBarrierByMemoryTypeIntrinsic();

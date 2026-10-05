@@ -202,11 +202,13 @@ public:
   GENERATE_HLSL_INTRINSIC_FUNCTION(GroupMemoryBarrierWithGroupSync,
                                    group_memory_barrier_with_group_sync)
   llvm::Intrinsic::ID getBarrierByMemoryTypeIntrinsic() {
-    assert(getArch() == llvm::Triple::dxil);
+    assert(getArch() == llvm::Triple::dxil &&
+           "Barrier by memory type is only supported for DXIL");
     return llvm::Intrinsic::dx_barrier_by_memory_type;
   }
   llvm::Intrinsic::ID getBarrierByMemoryHandleIntrinsic() {
-    assert(getArch() == llvm::Triple::dxil);
+    assert(getArch() == llvm::Triple::dxil &&
+           "Barrier by memory handle is only supported for DXIL");
     return llvm::Intrinsic::dx_barrier_by_memory_handle;
   }
   GENERATE_HLSL_INTRINSIC_FUNCTION(GetDimensionsX, resource_getdimensions_x)

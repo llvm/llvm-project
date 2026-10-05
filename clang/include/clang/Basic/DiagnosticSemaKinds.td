@@ -13868,6 +13868,19 @@ def err_hlsl_invalid_barrier_memory_flags: Error<
 def err_hlsl_invalid_barrier_semantic_flags: Error<
   "invalid SemanticFlags for Barrier operation; expected 0 or some "
   "combination of GROUP_SYNC, GROUP_SCOPE, DEVICE_SCOPE flags">;
+def err_hlsl_barrier_group_memory_requires_group: Error<
+  "GROUP_SHARED_MEMORY specified for Barrier operation when context has no "
+  "visible group">;
+def err_hlsl_barrier_node_memory_requires_node: Error<
+  "NODE_INPUT_MEMORY or NODE_OUTPUT_MEMORY may only be specified for Barrier "
+  "operation in a node shader">;
+def err_hlsl_barrier_group_semantic_requires_group: Error<
+  "GROUP_SYNC or GROUP_SCOPE specified for Barrier operation when context has "
+  "no visible group">;
+def err_hlsl_barrier_no_group_scope_memory: Error<
+  "GROUP_SCOPE specified for Barrier operation without applicable memory">;
+def err_hlsl_barrier_no_device_scope_memory: Error<
+  "DEVICE_SCOPE specified for Barrier operation without applicable memory">;
 def err_hlsl_vk_literal_must_contain_constant: Error<"the argument to vk::Literal must be a vk::integral_constant">;
 
 def err_hlsl_invalid_rootsig_value : Error<"value must be in the range [%0, %1]">;

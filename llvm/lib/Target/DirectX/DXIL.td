@@ -1562,7 +1562,7 @@ def CreateHandleFromHeap : DXILOp<218, createHandleFromHeap> {
 }
 
 def BarrierByMemoryType : DXILOp<244, barrierByMemoryType> {
-  let Doc = "inserts a memory barrier by memory type";
+  let Doc = "inserts a memory barrier for the specified memory types";
   let intrinsics = [IntrinSelect<int_dx_barrier_by_memory_type>];
   let arguments = [Int32Ty, Int32Ty];
   let result = VoidTy;
@@ -1570,7 +1570,7 @@ def BarrierByMemoryType : DXILOp<244, barrierByMemoryType> {
 }
 
 def BarrierByMemoryHandle : DXILOp<245, barrierByMemoryHandle> {
-  let Doc = "inserts a memory barrier by resource handle";
+  let Doc = "inserts a memory barrier for the resource identified by a handle";
   let arguments = [HandleTy, Int32Ty];
   let result = VoidTy;
   let stages = [Stages<DXIL1_8, [all_stages]>];
