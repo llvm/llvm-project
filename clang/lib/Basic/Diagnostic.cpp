@@ -218,10 +218,15 @@ DiagnosticsEngine::DiagStateMap::File::lookup(unsigned Offset) const {
 DiagnosticsEngine::DiagStateMap::File *
 DiagnosticsEngine::DiagStateMap::getFile(SourceManager &SrcMgr,
                                          FileID ID) const {
+  if (LastFile && LastFileID == ID)
+    return LastFile;
+
   // Get or insert the File for this ID.
   auto Range = Files.equal_range(ID);
-  if (Range.first != Range.second)
-    return &Range.first->second;
+  if (Range.first != Range.second) {
+    LastFileID = ID;
+    return LastFile = &Range.first->second;
+  }
   auto &F = Files.insert(Range.first, std::make_pair(ID, File()))->second;
 
   // We created a new File; look up the diagnostic state at the start of it and
@@ -241,7 +246,8 @@ DiagnosticsEngine::DiagStateMap::getFile(SourceManager &SrcMgr,
     // end of isBeforeInTranslationUnit for the quirks it deals with.
     F.StateTransitions.push_back({FirstDiagState, 0});
   }
-  return &F;
+  LastFileID = ID;
+  return LastFile = &F;
 }
 
 void DiagnosticsEngine::DiagStateMap::dump(SourceManager &SrcMgr,
