@@ -6,8 +6,7 @@ target datalayout = "p1:128:128:128:64"
 define i64 @ptr_to_byte_to_int(ptr %p) {
 ; CHECK-LABEL: define i64 @ptr_to_byte_to_int(
 ; CHECK-SAME: ptr [[P:%.*]]) {
-; CHECK-NEXT:    [[B:%.*]] = bitcast ptr [[P]] to b64
-; CHECK-NEXT:    [[X:%.*]] = bitcast b64 [[B]] to i64
+; CHECK-NEXT:    [[X:%.*]] = ptrtoaddr ptr [[P]] to i64
 ; CHECK-NEXT:    ret i64 [[X]]
 ;
   %b = bitcast ptr %p to b64
@@ -30,8 +29,7 @@ define ptr @neg_int_to_byte_to_ptr(i64 %i) {
 define <2 x i64> @ptr_to_byte_to_int_vec(<2 x ptr> %p) {
 ; CHECK-LABEL: define <2 x i64> @ptr_to_byte_to_int_vec(
 ; CHECK-SAME: <2 x ptr> [[P:%.*]]) {
-; CHECK-NEXT:    [[B:%.*]] = bitcast <2 x ptr> [[P]] to <2 x b64>
-; CHECK-NEXT:    [[X:%.*]] = bitcast <2 x b64> [[B]] to <2 x i64>
+; CHECK-NEXT:    [[X:%.*]] = ptrtoaddr <2 x ptr> [[P]] to <2 x i64>
 ; CHECK-NEXT:    ret <2 x i64> [[X]]
 ;
   %b = bitcast <2 x ptr> %p to <2 x b64>
@@ -42,8 +40,7 @@ define <2 x i64> @ptr_to_byte_to_int_vec(<2 x ptr> %p) {
 define i64 @ptr_to_byte_vec_to_int(ptr %p) {
 ; CHECK-LABEL: define i64 @ptr_to_byte_vec_to_int(
 ; CHECK-SAME: ptr [[P:%.*]]) {
-; CHECK-NEXT:    [[B:%.*]] = bitcast ptr [[P]] to <2 x b32>
-; CHECK-NEXT:    [[X:%.*]] = bitcast <2 x b32> [[B]] to i64
+; CHECK-NEXT:    [[X:%.*]] = ptrtoaddr ptr [[P]] to i64
 ; CHECK-NEXT:    ret i64 [[X]]
 ;
   %b = bitcast ptr %p to <2 x b32>
@@ -142,8 +139,7 @@ define i64 @neg_byte_to_ptrtoint(b64 %b) {
 define i64 @byte_to_ptrtoaddr(b64 %b) {
 ; CHECK-LABEL: define i64 @byte_to_ptrtoaddr(
 ; CHECK-SAME: b64 [[B:%.*]]) {
-; CHECK-NEXT:    [[P:%.*]] = bitcast b64 [[B]] to ptr
-; CHECK-NEXT:    [[X:%.*]] = ptrtoaddr ptr [[P]] to i64
+; CHECK-NEXT:    [[X:%.*]] = bitcast b64 [[B]] to i64
 ; CHECK-NEXT:    ret i64 [[X]]
 ;
   %p = bitcast b64 %b to ptr
@@ -154,8 +150,7 @@ define i64 @byte_to_ptrtoaddr(b64 %b) {
 define <2 x i64> @byte_to_ptrtoaddr_vec(<2 x b64> %b) {
 ; CHECK-LABEL: define <2 x i64> @byte_to_ptrtoaddr_vec(
 ; CHECK-SAME: <2 x b64> [[B:%.*]]) {
-; CHECK-NEXT:    [[P:%.*]] = bitcast <2 x b64> [[B]] to <2 x ptr>
-; CHECK-NEXT:    [[X:%.*]] = ptrtoaddr <2 x ptr> [[P]] to <2 x i64>
+; CHECK-NEXT:    [[X:%.*]] = bitcast <2 x b64> [[B]] to <2 x i64>
 ; CHECK-NEXT:    ret <2 x i64> [[X]]
 ;
   %p = bitcast <2 x b64> %b to <2 x ptr>
