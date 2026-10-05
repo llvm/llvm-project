@@ -151,21 +151,21 @@ module call_dispatch
 
 ! CHECK-LABEL: func.func @_QMcall_dispatchPcheck_dispatch(
 ! CHECK-SAME:  %[[P:.*]]: !fir.class<!fir.type<_QMcall_dispatchTp1{a:i32,b:i32}>> {fir.bindc_name = "p"}) {
-! CHECK:       %[[P_DECL:.*]]:2 = hlfir.declare %[[P]] dummy_scope %{{[0-9]+}} arg {{[0-9]+}} {uniq_name = "_QMcall_dispatchFcheck_dispatchEp"} : (!fir.class<!fir.type<_QMcall_dispatchTp1{a:i32,b:i32}>>, !fir.dscope) -> (!fir.class<!fir.type<_QMcall_dispatchTp1{a:i32,b:i32}>>, !fir.class<!fir.type<_QMcall_dispatchTp1{a:i32,b:i32}>>)
+! CHECK:       %[[P_DECL:.*]]:2 = hlfir.declare %[[P]] dummy_scope %{{[0-9]+}} arg {{[0-9]+}} uniq_name("_QMcall_dispatchFcheck_dispatchEp") : (!fir.class<!fir.type<_QMcall_dispatchTp1{a:i32,b:i32}>>, !fir.dscope) -> (!fir.class<!fir.type<_QMcall_dispatchTp1{a:i32,b:i32}>>, !fir.class<!fir.type<_QMcall_dispatchTp1{a:i32,b:i32}>>)
 ! CHECK:       fir.dispatch "tbp_nopass"(%[[P_DECL]]#1 : !fir.class<!fir.type<_QMcall_dispatchTp1{a:i32,b:i32}>>){{$}}
-! CHECK:       fir.dispatch "tbp_pass"(%[[P_DECL]]#0 : !fir.class<!fir.type<_QMcall_dispatchTp1{a:i32,b:i32}>>) (%[[P_DECL]]#0 : !fir.class<!fir.type<_QMcall_dispatchTp1{a:i32,b:i32}>>) {pass_arg_pos = 0 : i32}
-! CHECK:       fir.dispatch "tbp_pass_arg0"(%[[P_DECL]]#0 : !fir.class<!fir.type<_QMcall_dispatchTp1{a:i32,b:i32}>>) (%[[P_DECL]]#0 : !fir.class<!fir.type<_QMcall_dispatchTp1{a:i32,b:i32}>>) {pass_arg_pos = 0 : i32}
-! CHECK:       fir.dispatch "tbp_pass_arg1"(%[[P_DECL]]#0 : !fir.class<!fir.type<_QMcall_dispatchTp1{a:i32,b:i32}>>)  (%{{.*}}, %[[P_DECL]]#0 : !fir.ref<i32>, !fir.class<!fir.type<_QMcall_dispatchTp1{a:i32,b:i32}>>) {pass_arg_pos = 1 : i32}
+! CHECK:       fir.dispatch "tbp_pass"(%[[P_DECL]]#0 : !fir.class<!fir.type<_QMcall_dispatchTp1{a:i32,b:i32}>>) (%[[P_DECL]]#0 : !fir.class<!fir.type<_QMcall_dispatchTp1{a:i32,b:i32}>>) pass_arg_pos(0)
+! CHECK:       fir.dispatch "tbp_pass_arg0"(%[[P_DECL]]#0 : !fir.class<!fir.type<_QMcall_dispatchTp1{a:i32,b:i32}>>) (%[[P_DECL]]#0 : !fir.class<!fir.type<_QMcall_dispatchTp1{a:i32,b:i32}>>) pass_arg_pos(0)
+! CHECK:       fir.dispatch "tbp_pass_arg1"(%[[P_DECL]]#0 : !fir.class<!fir.type<_QMcall_dispatchTp1{a:i32,b:i32}>>)  (%{{.*}}, %[[P_DECL]]#0 : !fir.ref<i32>, !fir.class<!fir.type<_QMcall_dispatchTp1{a:i32,b:i32}>>) pass_arg_pos(1)
 
 ! CHECK:       fir.dispatch "proc1"(%[[P_DECL]]#1 : !fir.class<!fir.type<_QMcall_dispatchTp1{a:i32,b:i32}>>){{$}}
-! CHECK:       fir.dispatch "proc2"(%[[P_DECL]]#0 : !fir.class<!fir.type<_QMcall_dispatchTp1{a:i32,b:i32}>>) (%[[P_DECL]]#0 : !fir.class<!fir.type<_QMcall_dispatchTp1{a:i32,b:i32}>>) {pass_arg_pos = 0 : i32}
-! CHECK:       fir.dispatch "proc3"(%[[P_DECL]]#0 : !fir.class<!fir.type<_QMcall_dispatchTp1{a:i32,b:i32}>>) (%[[P_DECL]]#0 : !fir.class<!fir.type<_QMcall_dispatchTp1{a:i32,b:i32}>>) {pass_arg_pos = 0 : i32}
-! CHECK:       fir.dispatch "proc4"(%[[P_DECL]]#0 : !fir.class<!fir.type<_QMcall_dispatchTp1{a:i32,b:i32}>>) (%{{.*}}, %[[P_DECL]]#0 : !fir.ref<i32>, !fir.class<!fir.type<_QMcall_dispatchTp1{a:i32,b:i32}>>) {pass_arg_pos = 1 : i32}
+! CHECK:       fir.dispatch "proc2"(%[[P_DECL]]#0 : !fir.class<!fir.type<_QMcall_dispatchTp1{a:i32,b:i32}>>) (%[[P_DECL]]#0 : !fir.class<!fir.type<_QMcall_dispatchTp1{a:i32,b:i32}>>) pass_arg_pos(0)
+! CHECK:       fir.dispatch "proc3"(%[[P_DECL]]#0 : !fir.class<!fir.type<_QMcall_dispatchTp1{a:i32,b:i32}>>) (%[[P_DECL]]#0 : !fir.class<!fir.type<_QMcall_dispatchTp1{a:i32,b:i32}>>) pass_arg_pos(0)
+! CHECK:       fir.dispatch "proc4"(%[[P_DECL]]#0 : !fir.class<!fir.type<_QMcall_dispatchTp1{a:i32,b:i32}>>) (%{{.*}}, %[[P_DECL]]#0 : !fir.ref<i32>, !fir.class<!fir.type<_QMcall_dispatchTp1{a:i32,b:i32}>>) pass_arg_pos(1)
 
 ! CHECK: %{{.*}} = fir.dispatch "p1_fct1_nopass"(%[[P_DECL]]#1 : !fir.class<!fir.type<_QMcall_dispatchTp1{a:i32,b:i32}>>) -> f32{{$}}
-! CHECK: %{{.*}} = fir.dispatch "p1_fct2"(%[[P_DECL]]#0 : !fir.class<!fir.type<_QMcall_dispatchTp1{a:i32,b:i32}>>) (%[[P_DECL]]#0 : !fir.class<!fir.type<_QMcall_dispatchTp1{a:i32,b:i32}>>) -> f32 {pass_arg_pos = 0 : i32}
-! CHECK: %{{.*}} = fir.dispatch "p1_fct3_arg0"(%[[P_DECL]]#0 : !fir.class<!fir.type<_QMcall_dispatchTp1{a:i32,b:i32}>>) (%[[P_DECL]]#0 : !fir.class<!fir.type<_QMcall_dispatchTp1{a:i32,b:i32}>>) -> f32 {pass_arg_pos = 0 : i32}
-! CHECK: %{{.*}} = fir.dispatch "p1_fct4_arg1"(%[[P_DECL]]#0 : !fir.class<!fir.type<_QMcall_dispatchTp1{a:i32,b:i32}>>) (%{{.*}}, %[[P_DECL]]#0 : !fir.ref<i32>, !fir.class<!fir.type<_QMcall_dispatchTp1{a:i32,b:i32}>>) -> f32 {pass_arg_pos = 1 : i32}
+! CHECK: %{{.*}} = fir.dispatch "p1_fct2"(%[[P_DECL]]#0 : !fir.class<!fir.type<_QMcall_dispatchTp1{a:i32,b:i32}>>) (%[[P_DECL]]#0 : !fir.class<!fir.type<_QMcall_dispatchTp1{a:i32,b:i32}>>) -> f32 pass_arg_pos(0)
+! CHECK: %{{.*}} = fir.dispatch "p1_fct3_arg0"(%[[P_DECL]]#0 : !fir.class<!fir.type<_QMcall_dispatchTp1{a:i32,b:i32}>>) (%[[P_DECL]]#0 : !fir.class<!fir.type<_QMcall_dispatchTp1{a:i32,b:i32}>>) -> f32 pass_arg_pos(0)
+! CHECK: %{{.*}} = fir.dispatch "p1_fct4_arg1"(%[[P_DECL]]#0 : !fir.class<!fir.type<_QMcall_dispatchTp1{a:i32,b:i32}>>) (%{{.*}}, %[[P_DECL]]#0 : !fir.ref<i32>, !fir.class<!fir.type<_QMcall_dispatchTp1{a:i32,b:i32}>>) -> f32 pass_arg_pos(1)
 
   subroutine check_dispatch_deferred(a, x)
     class(a1) :: a
@@ -176,8 +176,8 @@ module call_dispatch
 ! CHECK-LABEL: func.func @_QMcall_dispatchPcheck_dispatch_deferred(
 ! CHECK-SAME: %[[ARG0:.*]]: !fir.class<!fir.type<_QMcall_dispatchTa1{a:f32,b:f32}>> {fir.bindc_name = "a"},
 ! CHECK-SAME: %[[ARG1:.*]]: !fir.box<!fir.array<?xf32>> {fir.bindc_name = "x"}) {
-! CHECK: %[[ARG0_DECL:.*]]:2 = hlfir.declare %[[ARG0]] dummy_scope %{{[0-9]+}} arg {{[0-9]+}} {uniq_name = "_QMcall_dispatchFcheck_dispatch_deferredEa"} : (!fir.class<!fir.type<_QMcall_dispatchTa1{a:f32,b:f32}>>, !fir.dscope) -> (!fir.class<!fir.type<_QMcall_dispatchTa1{a:f32,b:f32}>>, !fir.class<!fir.type<_QMcall_dispatchTa1{a:f32,b:f32}>>)
-! CHECK: %[[ARG1_DECL:.*]]:2 = hlfir.declare %[[ARG1]] dummy_scope %{{[0-9]+}} arg {{[0-9]+}} {uniq_name = "_QMcall_dispatchFcheck_dispatch_deferredEx"} : (!fir.box<!fir.array<?xf32>>, !fir.dscope) -> (!fir.box<!fir.array<?xf32>>, !fir.box<!fir.array<?xf32>>)
+! CHECK: %[[ARG0_DECL:.*]]:2 = hlfir.declare %[[ARG0]] dummy_scope %{{[0-9]+}} arg {{[0-9]+}} uniq_name("_QMcall_dispatchFcheck_dispatch_deferredEa") : (!fir.class<!fir.type<_QMcall_dispatchTa1{a:f32,b:f32}>>, !fir.dscope) -> (!fir.class<!fir.type<_QMcall_dispatchTa1{a:f32,b:f32}>>, !fir.class<!fir.type<_QMcall_dispatchTa1{a:f32,b:f32}>>)
+! CHECK: %[[ARG1_DECL:.*]]:2 = hlfir.declare %[[ARG1]] dummy_scope %{{[0-9]+}} arg {{[0-9]+}} uniq_name("_QMcall_dispatchFcheck_dispatch_deferredEx") : (!fir.box<!fir.array<?xf32>>, !fir.dscope) -> (!fir.box<!fir.array<?xf32>>, !fir.box<!fir.array<?xf32>>)
 ! CHECK: fir.dispatch "nopassd"(%[[ARG0_DECL]]#1 : !fir.class<!fir.type<_QMcall_dispatchTa1{a:f32,b:f32}>>) (%[[ARG1_DECL]]#0 : !fir.box<!fir.array<?xf32>>)
 
     subroutine check_dispatch_scalar_allocatable(p)
@@ -187,10 +187,10 @@ module call_dispatch
 
 ! CHECK-LABEL: func.func @_QMcall_dispatchPcheck_dispatch_scalar_allocatable(
 ! CHECK-SAME: %[[ARG0:.*]]: !fir.ref<!fir.class<!fir.heap<!fir.type<_QMcall_dispatchTp1{a:i32,b:i32}>>>> {fir.bindc_name = "p"}) {
-! CHECK: %[[ARG0_DECL:.*]]:2 = hlfir.declare %[[ARG0]] dummy_scope %{{[0-9]+}} arg {{[0-9]+}} {fortran_attrs = #fir.var_attrs<allocatable>, uniq_name = "_QMcall_dispatchFcheck_dispatch_scalar_allocatableEp"} : (!fir.ref<!fir.class<!fir.heap<!fir.type<_QMcall_dispatchTp1{a:i32,b:i32}>>>>, !fir.dscope) -> (!fir.ref<!fir.class<!fir.heap<!fir.type<_QMcall_dispatchTp1{a:i32,b:i32}>>>>, !fir.ref<!fir.class<!fir.heap<!fir.type<_QMcall_dispatchTp1{a:i32,b:i32}>>>>)
+! CHECK: %[[ARG0_DECL:.*]]:2 = hlfir.declare %[[ARG0]] dummy_scope %{{[0-9]+}} arg {{[0-9]+}} uniq_name("_QMcall_dispatchFcheck_dispatch_scalar_allocatableEp") fortran_attrs<allocatable> : (!fir.ref<!fir.class<!fir.heap<!fir.type<_QMcall_dispatchTp1{a:i32,b:i32}>>>>, !fir.dscope) -> (!fir.ref<!fir.class<!fir.heap<!fir.type<_QMcall_dispatchTp1{a:i32,b:i32}>>>>, !fir.ref<!fir.class<!fir.heap<!fir.type<_QMcall_dispatchTp1{a:i32,b:i32}>>>>)
 ! CHECK: %[[LOAD:.*]] = fir.load %[[ARG0_DECL]]#0 : !fir.ref<!fir.class<!fir.heap<!fir.type<_QMcall_dispatchTp1{a:i32,b:i32}>>>>
 ! CHECK: %[[REBOX:.*]] = fir.rebox %[[LOAD]] : (!fir.class<!fir.heap<!fir.type<_QMcall_dispatchTp1{a:i32,b:i32}>>>) -> !fir.class<!fir.type<_QMcall_dispatchTp1{a:i32,b:i32}>>
-! CHECK: fir.dispatch "tbp_pass"(%[[REBOX]] : !fir.class<!fir.type<_QMcall_dispatchTp1{a:i32,b:i32}>>) (%[[REBOX]] : !fir.class<!fir.type<_QMcall_dispatchTp1{a:i32,b:i32}>>) {pass_arg_pos = 0 : i32}
+! CHECK: fir.dispatch "tbp_pass"(%[[REBOX]] : !fir.class<!fir.type<_QMcall_dispatchTp1{a:i32,b:i32}>>) (%[[REBOX]] : !fir.class<!fir.type<_QMcall_dispatchTp1{a:i32,b:i32}>>) pass_arg_pos(0)
 
     subroutine check_dispatch_scalar_pointer(p)
       class(p1), pointer :: p
@@ -199,10 +199,10 @@ module call_dispatch
 
 ! CHECK-LABEL: func.func @_QMcall_dispatchPcheck_dispatch_scalar_pointer(
 ! CHECK-SAME: %[[ARG0:.*]]: !fir.ref<!fir.class<!fir.ptr<!fir.type<_QMcall_dispatchTp1{a:i32,b:i32}>>>> {fir.bindc_name = "p"}) {
-! CHECK: %[[ARG0_DECL:.*]]:2 = hlfir.declare %[[ARG0]] dummy_scope %{{[0-9]+}} arg {{[0-9]+}} {fortran_attrs = #fir.var_attrs<pointer>, uniq_name = "_QMcall_dispatchFcheck_dispatch_scalar_pointerEp"} : (!fir.ref<!fir.class<!fir.ptr<!fir.type<_QMcall_dispatchTp1{a:i32,b:i32}>>>>, !fir.dscope) -> (!fir.ref<!fir.class<!fir.ptr<!fir.type<_QMcall_dispatchTp1{a:i32,b:i32}>>>>, !fir.ref<!fir.class<!fir.ptr<!fir.type<_QMcall_dispatchTp1{a:i32,b:i32}>>>>)
+! CHECK: %[[ARG0_DECL:.*]]:2 = hlfir.declare %[[ARG0]] dummy_scope %{{[0-9]+}} arg {{[0-9]+}} uniq_name("_QMcall_dispatchFcheck_dispatch_scalar_pointerEp") fortran_attrs<pointer> : (!fir.ref<!fir.class<!fir.ptr<!fir.type<_QMcall_dispatchTp1{a:i32,b:i32}>>>>, !fir.dscope) -> (!fir.ref<!fir.class<!fir.ptr<!fir.type<_QMcall_dispatchTp1{a:i32,b:i32}>>>>, !fir.ref<!fir.class<!fir.ptr<!fir.type<_QMcall_dispatchTp1{a:i32,b:i32}>>>>)
 ! CHECK: %[[LOAD:.*]] = fir.load %[[ARG0_DECL]]#0 : !fir.ref<!fir.class<!fir.ptr<!fir.type<_QMcall_dispatchTp1{a:i32,b:i32}>>>>
 ! CHECK: %[[REBOX:.*]] = fir.rebox %[[LOAD]] : (!fir.class<!fir.ptr<!fir.type<_QMcall_dispatchTp1{a:i32,b:i32}>>>) -> !fir.class<!fir.type<_QMcall_dispatchTp1{a:i32,b:i32}>>
-! CHECK: fir.dispatch "tbp_pass"(%[[REBOX]] : !fir.class<!fir.type<_QMcall_dispatchTp1{a:i32,b:i32}>>) (%[[REBOX]] : !fir.class<!fir.type<_QMcall_dispatchTp1{a:i32,b:i32}>>) {pass_arg_pos = 0 : i32}
+! CHECK: fir.dispatch "tbp_pass"(%[[REBOX]] : !fir.class<!fir.type<_QMcall_dispatchTp1{a:i32,b:i32}>>) (%[[REBOX]] : !fir.class<!fir.type<_QMcall_dispatchTp1{a:i32,b:i32}>>) pass_arg_pos(0)
 
     subroutine check_dispatch_static_array(p, t)
       class(p1) :: p(10)
@@ -220,11 +220,11 @@ module call_dispatch
 ! CHECK-LABEL: func.func @_QMcall_dispatchPcheck_dispatch_static_array(
 ! CHECK-SAME: %[[ARG0:.*]]: !fir.class<!fir.array<10x!fir.type<_QMcall_dispatchTp1{a:i32,b:i32}>>> {fir.bindc_name = "p"},
 ! CHECK-SAME: %[[ARG1:.*]]: !fir.ref<!fir.array<10x!fir.type<_QMcall_dispatchTp1{a:i32,b:i32}>>> {fir.bindc_name = "t"}) {
-! CHECK: %[[ARG0_DECL:.*]]:2 = hlfir.declare %[[ARG0]] dummy_scope %{{[0-9]+}} arg {{[0-9]+}} {uniq_name = "_QMcall_dispatchFcheck_dispatch_static_arrayEp"} : (!fir.class<!fir.array<10x!fir.type<_QMcall_dispatchTp1{a:i32,b:i32}>>>, !fir.dscope) -> (!fir.class<!fir.array<10x!fir.type<_QMcall_dispatchTp1{a:i32,b:i32}>>>, !fir.class<!fir.array<10x!fir.type<_QMcall_dispatchTp1{a:i32,b:i32}>>>)
-! CHECK: %[[ARG1_DECL:.*]]:2 = hlfir.declare %[[ARG1]](%{{.*}}) dummy_scope %{{[0-9]+}} arg {{[0-9]+}} {uniq_name = "_QMcall_dispatchFcheck_dispatch_static_arrayEt"} : (!fir.ref<!fir.array<10x!fir.type<_QMcall_dispatchTp1{a:i32,b:i32}>>>, !fir.shape<1>, !fir.dscope) -> (!fir.ref<!fir.array<10x!fir.type<_QMcall_dispatchTp1{a:i32,b:i32}>>>, !fir.ref<!fir.array<10x!fir.type<_QMcall_dispatchTp1{a:i32,b:i32}>>>)
+! CHECK: %[[ARG0_DECL:.*]]:2 = hlfir.declare %[[ARG0]] dummy_scope %{{[0-9]+}} arg {{[0-9]+}} uniq_name("_QMcall_dispatchFcheck_dispatch_static_arrayEp") : (!fir.class<!fir.array<10x!fir.type<_QMcall_dispatchTp1{a:i32,b:i32}>>>, !fir.dscope) -> (!fir.class<!fir.array<10x!fir.type<_QMcall_dispatchTp1{a:i32,b:i32}>>>, !fir.class<!fir.array<10x!fir.type<_QMcall_dispatchTp1{a:i32,b:i32}>>>)
+! CHECK: %[[ARG1_DECL:.*]]:2 = hlfir.declare %[[ARG1]](%{{.*}}) dummy_scope %{{[0-9]+}} arg {{[0-9]+}} uniq_name("_QMcall_dispatchFcheck_dispatch_static_arrayEt") : (!fir.ref<!fir.array<10x!fir.type<_QMcall_dispatchTp1{a:i32,b:i32}>>>, !fir.shape<1>, !fir.dscope) -> (!fir.ref<!fir.array<10x!fir.type<_QMcall_dispatchTp1{a:i32,b:i32}>>>, !fir.ref<!fir.array<10x!fir.type<_QMcall_dispatchTp1{a:i32,b:i32}>>>)
 ! CHECK: fir.do_loop {{.*}} {
 ! CHECK: %[[DESIGNATE:.*]] = hlfir.designate %[[ARG0_DECL]]#0 (%{{.*}})  : (!fir.class<!fir.array<10x!fir.type<_QMcall_dispatchTp1{a:i32,b:i32}>>>, i64) -> !fir.class<!fir.type<_QMcall_dispatchTp1{a:i32,b:i32}>>
-! CHECK: fir.dispatch "tbp_pass"(%[[DESIGNATE]] : !fir.class<!fir.type<_QMcall_dispatchTp1{a:i32,b:i32}>>) (%[[DESIGNATE]] : !fir.class<!fir.type<_QMcall_dispatchTp1{a:i32,b:i32}>>) {pass_arg_pos = 0 : i32}
+! CHECK: fir.dispatch "tbp_pass"(%[[DESIGNATE]] : !fir.class<!fir.type<_QMcall_dispatchTp1{a:i32,b:i32}>>) (%[[DESIGNATE]] : !fir.class<!fir.type<_QMcall_dispatchTp1{a:i32,b:i32}>>) pass_arg_pos(0)
 
 ! CHECK: fir.do_loop {{.*}} {
 ! CHECK: %[[DESIGNATE:.*]] = hlfir.designate %[[ARG1_DECL]]#0 (%{{.*}})  : (!fir.ref<!fir.array<10x!fir.type<_QMcall_dispatchTp1{a:i32,b:i32}>>>, i64) -> !fir.ref<!fir.type<_QMcall_dispatchTp1{a:i32,b:i32}>>
@@ -248,11 +248,11 @@ module call_dispatch
 ! CHECK-LABEL: func.func @_QMcall_dispatchPcheck_dispatch_dynamic_array(
 ! CHECK-SAME: %[[ARG0:.*]]: !fir.class<!fir.array<?x!fir.type<_QMcall_dispatchTp1{a:i32,b:i32}>>> {fir.bindc_name = "p"},
 ! CHECK-SAME: %[[ARG1:.*]]: !fir.box<!fir.array<?x!fir.type<_QMcall_dispatchTp1{a:i32,b:i32}>>> {fir.bindc_name = "t"}) {
-! CHECK: %[[ARG0_DECL:.*]]:2 = hlfir.declare %[[ARG0]] dummy_scope %{{[0-9]+}} arg {{[0-9]+}} {uniq_name = "_QMcall_dispatchFcheck_dispatch_dynamic_arrayEp"} : (!fir.class<!fir.array<?x!fir.type<_QMcall_dispatchTp1{a:i32,b:i32}>>>, !fir.dscope) -> (!fir.class<!fir.array<?x!fir.type<_QMcall_dispatchTp1{a:i32,b:i32}>>>, !fir.class<!fir.array<?x!fir.type<_QMcall_dispatchTp1{a:i32,b:i32}>>>)
-! CHECK: %[[ARG1_DECL:.*]]:2 = hlfir.declare %[[ARG1]] dummy_scope %{{[0-9]+}} arg {{[0-9]+}} {uniq_name = "_QMcall_dispatchFcheck_dispatch_dynamic_arrayEt"} : (!fir.box<!fir.array<?x!fir.type<_QMcall_dispatchTp1{a:i32,b:i32}>>>, !fir.dscope) -> (!fir.box<!fir.array<?x!fir.type<_QMcall_dispatchTp1{a:i32,b:i32}>>>, !fir.box<!fir.array<?x!fir.type<_QMcall_dispatchTp1{a:i32,b:i32}>>>)
+! CHECK: %[[ARG0_DECL:.*]]:2 = hlfir.declare %[[ARG0]] dummy_scope %{{[0-9]+}} arg {{[0-9]+}} uniq_name("_QMcall_dispatchFcheck_dispatch_dynamic_arrayEp") : (!fir.class<!fir.array<?x!fir.type<_QMcall_dispatchTp1{a:i32,b:i32}>>>, !fir.dscope) -> (!fir.class<!fir.array<?x!fir.type<_QMcall_dispatchTp1{a:i32,b:i32}>>>, !fir.class<!fir.array<?x!fir.type<_QMcall_dispatchTp1{a:i32,b:i32}>>>)
+! CHECK: %[[ARG1_DECL:.*]]:2 = hlfir.declare %[[ARG1]] dummy_scope %{{[0-9]+}} arg {{[0-9]+}} uniq_name("_QMcall_dispatchFcheck_dispatch_dynamic_arrayEt") : (!fir.box<!fir.array<?x!fir.type<_QMcall_dispatchTp1{a:i32,b:i32}>>>, !fir.dscope) -> (!fir.box<!fir.array<?x!fir.type<_QMcall_dispatchTp1{a:i32,b:i32}>>>, !fir.box<!fir.array<?x!fir.type<_QMcall_dispatchTp1{a:i32,b:i32}>>>)
 ! CHECK: fir.do_loop {{.*}} {
 ! CHECK: %[[DESIGNATE:.*]] = hlfir.designate %[[ARG0_DECL]]#0 (%{{.*}})  : (!fir.class<!fir.array<?x!fir.type<_QMcall_dispatchTp1{a:i32,b:i32}>>>, i64) -> !fir.class<!fir.type<_QMcall_dispatchTp1{a:i32,b:i32}>>
-! CHECK: fir.dispatch "tbp_pass"(%[[DESIGNATE]] : !fir.class<!fir.type<_QMcall_dispatchTp1{a:i32,b:i32}>>) (%[[DESIGNATE]] : !fir.class<!fir.type<_QMcall_dispatchTp1{a:i32,b:i32}>>) {pass_arg_pos = 0 : i32}
+! CHECK: fir.dispatch "tbp_pass"(%[[DESIGNATE]] : !fir.class<!fir.type<_QMcall_dispatchTp1{a:i32,b:i32}>>) (%[[DESIGNATE]] : !fir.class<!fir.type<_QMcall_dispatchTp1{a:i32,b:i32}>>) pass_arg_pos(0)
 
 ! CHECK: fir.do_loop {{.*}} {
 ! CHECK: %[[DESIGNATE:.*]] = hlfir.designate %[[ARG1_DECL]]#0 (%{{.*}})  : (!fir.box<!fir.array<?x!fir.type<_QMcall_dispatchTp1{a:i32,b:i32}>>>, i64) -> !fir.ref<!fir.type<_QMcall_dispatchTp1{a:i32,b:i32}>>
@@ -276,12 +276,12 @@ module call_dispatch
 ! CHECK-LABEL: func.func @_QMcall_dispatchPcheck_dispatch_allocatable_array(
 ! CHECK-SAME: %[[ARG0:.*]]: !fir.ref<!fir.class<!fir.heap<!fir.array<?x!fir.type<_QMcall_dispatchTp1{a:i32,b:i32}>>>>> {fir.bindc_name = "p"},
 ! CHECK-SAME: %[[ARG1:.*]]: !fir.ref<!fir.box<!fir.heap<!fir.array<?x!fir.type<_QMcall_dispatchTp1{a:i32,b:i32}>>>>> {fir.bindc_name = "t"}) {
-! CHECK: %[[ARG0_DECL:.*]]:2 = hlfir.declare %[[ARG0]] dummy_scope %{{[0-9]+}} arg {{[0-9]+}} {fortran_attrs = #fir.var_attrs<allocatable>, uniq_name = "_QMcall_dispatchFcheck_dispatch_allocatable_arrayEp"} : (!fir.ref<!fir.class<!fir.heap<!fir.array<?x!fir.type<_QMcall_dispatchTp1{a:i32,b:i32}>>>>>, !fir.dscope) -> (!fir.ref<!fir.class<!fir.heap<!fir.array<?x!fir.type<_QMcall_dispatchTp1{a:i32,b:i32}>>>>>, !fir.ref<!fir.class<!fir.heap<!fir.array<?x!fir.type<_QMcall_dispatchTp1{a:i32,b:i32}>>>>>)
-! CHECK: %[[ARG1_DECL:.*]]:2 = hlfir.declare %[[ARG1]] dummy_scope %{{[0-9]+}} arg {{[0-9]+}} {fortran_attrs = #fir.var_attrs<allocatable>, uniq_name = "_QMcall_dispatchFcheck_dispatch_allocatable_arrayEt"} : (!fir.ref<!fir.box<!fir.heap<!fir.array<?x!fir.type<_QMcall_dispatchTp1{a:i32,b:i32}>>>>>, !fir.dscope) -> (!fir.ref<!fir.box<!fir.heap<!fir.array<?x!fir.type<_QMcall_dispatchTp1{a:i32,b:i32}>>>>>, !fir.ref<!fir.box<!fir.heap<!fir.array<?x!fir.type<_QMcall_dispatchTp1{a:i32,b:i32}>>>>>)
+! CHECK: %[[ARG0_DECL:.*]]:2 = hlfir.declare %[[ARG0]] dummy_scope %{{[0-9]+}} arg {{[0-9]+}} uniq_name("_QMcall_dispatchFcheck_dispatch_allocatable_arrayEp") fortran_attrs<allocatable> : (!fir.ref<!fir.class<!fir.heap<!fir.array<?x!fir.type<_QMcall_dispatchTp1{a:i32,b:i32}>>>>>, !fir.dscope) -> (!fir.ref<!fir.class<!fir.heap<!fir.array<?x!fir.type<_QMcall_dispatchTp1{a:i32,b:i32}>>>>>, !fir.ref<!fir.class<!fir.heap<!fir.array<?x!fir.type<_QMcall_dispatchTp1{a:i32,b:i32}>>>>>)
+! CHECK: %[[ARG1_DECL:.*]]:2 = hlfir.declare %[[ARG1]] dummy_scope %{{[0-9]+}} arg {{[0-9]+}} uniq_name("_QMcall_dispatchFcheck_dispatch_allocatable_arrayEt") fortran_attrs<allocatable> : (!fir.ref<!fir.box<!fir.heap<!fir.array<?x!fir.type<_QMcall_dispatchTp1{a:i32,b:i32}>>>>>, !fir.dscope) -> (!fir.ref<!fir.box<!fir.heap<!fir.array<?x!fir.type<_QMcall_dispatchTp1{a:i32,b:i32}>>>>>, !fir.ref<!fir.box<!fir.heap<!fir.array<?x!fir.type<_QMcall_dispatchTp1{a:i32,b:i32}>>>>>)
 ! CHECK: fir.do_loop {{.*}} {
 ! CHECK: %[[LOAD_ARG0:.*]] = fir.load %[[ARG0_DECL]]#0 : !fir.ref<!fir.class<!fir.heap<!fir.array<?x!fir.type<_QMcall_dispatchTp1{a:i32,b:i32}>>>>>
 ! CHECK: %[[DESIGNATE:.*]] = hlfir.designate %[[LOAD_ARG0]] (%{{.*}})  : (!fir.class<!fir.heap<!fir.array<?x!fir.type<_QMcall_dispatchTp1{a:i32,b:i32}>>>>, i64) -> !fir.class<!fir.type<_QMcall_dispatchTp1{a:i32,b:i32}>>
-! CHECK: fir.dispatch "tbp_pass"(%[[DESIGNATE]] : !fir.class<!fir.type<_QMcall_dispatchTp1{a:i32,b:i32}>>) (%[[DESIGNATE]] : !fir.class<!fir.type<_QMcall_dispatchTp1{a:i32,b:i32}>>) {pass_arg_pos = 0 : i32}
+! CHECK: fir.dispatch "tbp_pass"(%[[DESIGNATE]] : !fir.class<!fir.type<_QMcall_dispatchTp1{a:i32,b:i32}>>) (%[[DESIGNATE]] : !fir.class<!fir.type<_QMcall_dispatchTp1{a:i32,b:i32}>>) pass_arg_pos(0)
 
 ! CHECK: fir.do_loop {{.*}} {
 ! CHECK: %[[LOAD_ARG1:.*]] = fir.load %[[ARG1_DECL]]#0 : !fir.ref<!fir.box<!fir.heap<!fir.array<?x!fir.type<_QMcall_dispatchTp1{a:i32,b:i32}>>>>>
@@ -306,13 +306,13 @@ module call_dispatch
 ! CHECK-LABEL: func.func @_QMcall_dispatchPcheck_dispatch_pointer_array(
 ! CHECK-SAME: %[[ARG0:.*]]: !fir.ref<!fir.class<!fir.ptr<!fir.array<?x!fir.type<_QMcall_dispatchTp1{a:i32,b:i32}>>>>> {fir.bindc_name = "p"},
 ! CHECK-SAME: %[[ARG1:.*]]: !fir.ref<!fir.box<!fir.ptr<!fir.array<?x!fir.type<_QMcall_dispatchTp1{a:i32,b:i32}>>>>> {fir.bindc_name = "t"}) {
-! CHECK: %[[ARG0_DECL:.*]]:2 = hlfir.declare %[[ARG0]] dummy_scope %{{[0-9]+}} arg {{[0-9]+}} {fortran_attrs = #fir.var_attrs<pointer>, uniq_name = "_QMcall_dispatchFcheck_dispatch_pointer_arrayEp"} : (!fir.ref<!fir.class<!fir.ptr<!fir.array<?x!fir.type<_QMcall_dispatchTp1{a:i32,b:i32}>>>>>, !fir.dscope) -> (!fir.ref<!fir.class<!fir.ptr<!fir.array<?x!fir.type<_QMcall_dispatchTp1{a:i32,b:i32}>>>>>, !fir.ref<!fir.class<!fir.ptr<!fir.array<?x!fir.type<_QMcall_dispatchTp1{a:i32,b:i32}>>>>>)
-! CHECK: %[[ARG1_DECL:.*]]:2 = hlfir.declare %[[ARG1]] dummy_scope %{{[0-9]+}} arg {{[0-9]+}} {fortran_attrs = #fir.var_attrs<pointer>, uniq_name = "_QMcall_dispatchFcheck_dispatch_pointer_arrayEt"} : (!fir.ref<!fir.box<!fir.ptr<!fir.array<?x!fir.type<_QMcall_dispatchTp1{a:i32,b:i32}>>>>>, !fir.dscope) -> (!fir.ref<!fir.box<!fir.ptr<!fir.array<?x!fir.type<_QMcall_dispatchTp1{a:i32,b:i32}>>>>>, !fir.ref<!fir.box<!fir.ptr<!fir.array<?x!fir.type<_QMcall_dispatchTp1{a:i32,b:i32}>>>>>)
+! CHECK: %[[ARG0_DECL:.*]]:2 = hlfir.declare %[[ARG0]] dummy_scope %{{[0-9]+}} arg {{[0-9]+}} uniq_name("_QMcall_dispatchFcheck_dispatch_pointer_arrayEp") fortran_attrs<pointer> : (!fir.ref<!fir.class<!fir.ptr<!fir.array<?x!fir.type<_QMcall_dispatchTp1{a:i32,b:i32}>>>>>, !fir.dscope) -> (!fir.ref<!fir.class<!fir.ptr<!fir.array<?x!fir.type<_QMcall_dispatchTp1{a:i32,b:i32}>>>>>, !fir.ref<!fir.class<!fir.ptr<!fir.array<?x!fir.type<_QMcall_dispatchTp1{a:i32,b:i32}>>>>>)
+! CHECK: %[[ARG1_DECL:.*]]:2 = hlfir.declare %[[ARG1]] dummy_scope %{{[0-9]+}} arg {{[0-9]+}} uniq_name("_QMcall_dispatchFcheck_dispatch_pointer_arrayEt") fortran_attrs<pointer> : (!fir.ref<!fir.box<!fir.ptr<!fir.array<?x!fir.type<_QMcall_dispatchTp1{a:i32,b:i32}>>>>>, !fir.dscope) -> (!fir.ref<!fir.box<!fir.ptr<!fir.array<?x!fir.type<_QMcall_dispatchTp1{a:i32,b:i32}>>>>>, !fir.ref<!fir.box<!fir.ptr<!fir.array<?x!fir.type<_QMcall_dispatchTp1{a:i32,b:i32}>>>>>)
 
 ! CHECK: fir.do_loop {{.*}} {
 ! CHECK: %[[LOAD_ARG0:.*]] = fir.load %[[ARG0_DECL]]#0 : !fir.ref<!fir.class<!fir.ptr<!fir.array<?x!fir.type<_QMcall_dispatchTp1{a:i32,b:i32}>>>>>
 ! CHECK: %[[DESIGNATE:.*]] = hlfir.designate %[[LOAD_ARG0]] (%{{.*}})  : (!fir.class<!fir.ptr<!fir.array<?x!fir.type<_QMcall_dispatchTp1{a:i32,b:i32}>>>>, i64) -> !fir.class<!fir.type<_QMcall_dispatchTp1{a:i32,b:i32}>>
-! CHECK: fir.dispatch "tbp_pass"(%[[DESIGNATE]] : !fir.class<!fir.type<_QMcall_dispatchTp1{a:i32,b:i32}>>) (%[[DESIGNATE]] : !fir.class<!fir.type<_QMcall_dispatchTp1{a:i32,b:i32}>>) {pass_arg_pos = 0 : i32}
+! CHECK: fir.dispatch "tbp_pass"(%[[DESIGNATE]] : !fir.class<!fir.type<_QMcall_dispatchTp1{a:i32,b:i32}>>) (%[[DESIGNATE]] : !fir.class<!fir.type<_QMcall_dispatchTp1{a:i32,b:i32}>>) pass_arg_pos(0)
 
 ! CHECK: fir.do_loop {{.*}} {
 ! CHECK: %[[LOAD_ARG1:.*]] = fir.load %[[ARG1_DECL]]#0 : !fir.ref<!fir.box<!fir.ptr<!fir.array<?x!fir.type<_QMcall_dispatchTp1{a:i32,b:i32}>>>>>
@@ -334,13 +334,13 @@ module call_dispatch
 ! CHECK-LABEL: func.func @_QMcall_dispatchPcheck_dispatch_dynamic_array_copy(
 ! CHECK-SAME: %[[ARG0:.*]]: !fir.class<!fir.array<?x!fir.type<_QMcall_dispatchTp1{a:i32,b:i32}>>> {fir.bindc_name = "p"},
 ! CHECK-SAME: %[[ARG1:.*]]: !fir.class<!fir.array<?x!fir.type<_QMcall_dispatchTp1{a:i32,b:i32}>>> {fir.bindc_name = "o"}) {
-! CHECK: %[[ARG1_DECL:.*]]:2 = hlfir.declare %[[ARG1]] dummy_scope %{{[0-9]+}} arg {{[0-9]+}} {uniq_name = "_QMcall_dispatchFcheck_dispatch_dynamic_array_copyEo"} : (!fir.class<!fir.array<?x!fir.type<_QMcall_dispatchTp1{a:i32,b:i32}>>>, !fir.dscope) -> (!fir.class<!fir.array<?x!fir.type<_QMcall_dispatchTp1{a:i32,b:i32}>>>, !fir.class<!fir.array<?x!fir.type<_QMcall_dispatchTp1{a:i32,b:i32}>>>)
-! CHECK: %[[ARG0_DECL:.*]]:2 = hlfir.declare %[[ARG0]] dummy_scope %{{[0-9]+}} arg {{[0-9]+}} {uniq_name = "_QMcall_dispatchFcheck_dispatch_dynamic_array_copyEp"} : (!fir.class<!fir.array<?x!fir.type<_QMcall_dispatchTp1{a:i32,b:i32}>>>, !fir.dscope) -> (!fir.class<!fir.array<?x!fir.type<_QMcall_dispatchTp1{a:i32,b:i32}>>>, !fir.class<!fir.array<?x!fir.type<_QMcall_dispatchTp1{a:i32,b:i32}>>>)
+! CHECK: %[[ARG1_DECL:.*]]:2 = hlfir.declare %[[ARG1]] dummy_scope %{{[0-9]+}} arg {{[0-9]+}} uniq_name("_QMcall_dispatchFcheck_dispatch_dynamic_array_copyEo") : (!fir.class<!fir.array<?x!fir.type<_QMcall_dispatchTp1{a:i32,b:i32}>>>, !fir.dscope) -> (!fir.class<!fir.array<?x!fir.type<_QMcall_dispatchTp1{a:i32,b:i32}>>>, !fir.class<!fir.array<?x!fir.type<_QMcall_dispatchTp1{a:i32,b:i32}>>>)
+! CHECK: %[[ARG0_DECL:.*]]:2 = hlfir.declare %[[ARG0]] dummy_scope %{{[0-9]+}} arg {{[0-9]+}} uniq_name("_QMcall_dispatchFcheck_dispatch_dynamic_array_copyEp") : (!fir.class<!fir.array<?x!fir.type<_QMcall_dispatchTp1{a:i32,b:i32}>>>, !fir.dscope) -> (!fir.class<!fir.array<?x!fir.type<_QMcall_dispatchTp1{a:i32,b:i32}>>>, !fir.class<!fir.array<?x!fir.type<_QMcall_dispatchTp1{a:i32,b:i32}>>>)
 
 ! CHECK: fir.do_loop {{.*}} {
 ! CHECK: %[[DESIGNATE0:.*]] = hlfir.designate %[[ARG0_DECL]]#0 (%{{.*}})  : (!fir.class<!fir.array<?x!fir.type<_QMcall_dispatchTp1{a:i32,b:i32}>>>, i64) -> !fir.class<!fir.type<_QMcall_dispatchTp1{a:i32,b:i32}>>
 ! CHECK: %[[DESIGNATE1:.*]] = hlfir.designate %[[ARG1_DECL]]#0 (%{{.*}})  : (!fir.class<!fir.array<?x!fir.type<_QMcall_dispatchTp1{a:i32,b:i32}>>>, i64) -> !fir.class<!fir.type<_QMcall_dispatchTp1{a:i32,b:i32}>>
-! CHECK: fir.dispatch "pass_with_class_arg"(%[[DESIGNATE0]] : !fir.class<!fir.type<_QMcall_dispatchTp1{a:i32,b:i32}>>) (%[[DESIGNATE0]], %[[DESIGNATE1]] : !fir.class<!fir.type<_QMcall_dispatchTp1{a:i32,b:i32}>>, !fir.class<!fir.type<_QMcall_dispatchTp1{a:i32,b:i32}>>) {pass_arg_pos = 0 : i32}
+! CHECK: fir.dispatch "pass_with_class_arg"(%[[DESIGNATE0]] : !fir.class<!fir.type<_QMcall_dispatchTp1{a:i32,b:i32}>>) (%[[DESIGNATE0]], %[[DESIGNATE1]] : !fir.class<!fir.type<_QMcall_dispatchTp1{a:i32,b:i32}>>, !fir.class<!fir.type<_QMcall_dispatchTp1{a:i32,b:i32}>>) pass_arg_pos(0)
 
 ! ------------------------------------------------------------------------------
 ! Test that direct call is emitted when the type is known

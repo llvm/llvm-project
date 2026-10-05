@@ -37,7 +37,6 @@ Transforms/InstCombine/ffs-1.ll
 Transforms/InstCombine/ffs-i16.ll
 Transforms/InstCombine/fmul.ll
 Transforms/InstCombine/fneg.ll
-Transforms/InstCombine/intrinsic-select.ll
 Transforms/InstCombine/ldexp-ext.ll
 Transforms/InstCombine/ldexp.ll
 Transforms/InstCombine/logical-select.ll
