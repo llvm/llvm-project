@@ -6622,8 +6622,7 @@ OpenMPIRBuilder::InsertPointOrErrorTy OpenMPIRBuilder::applyWorkshareLoopTarget(
     Builder.SetInsertPoint(CLI->getPreheader()->getTerminator());
     Builder.CreateStore(ConstantInt::get(I32Type, 0), PLastIter);
 
-    Builder.SetInsertPoint(CLI->getBody(),
-                           CLI->getBody()->getFirstInsertionPt());
+    Builder.SetInsertPoint(CLI->getBody()->getFirstInsertionPt());
     Value *TripCount = CLI->getTripCount();
     Value *LastIter =
         Builder.CreateSub(TripCount, ConstantInt::get(TripCount->getType(), 1));
