@@ -754,10 +754,9 @@ unsigned GCNHazardRecognizer::PreEmitNoopsCommon(MachineInstr *MI) const {
   if (isRWLane(MI->getOpcode()))
     WaitStates = std::max(WaitStates, checkRWLaneHazards(MI));
 
-  if ((SIInstrInfo::isVALU(*MI, /*AllowLDSDMA=*/true) ||
-       SIInstrInfo::isVMEM(*MI) || SIInstrInfo::isDS(*MI) ||
-       SIInstrInfo::isEXP(*MI)) &&
-      checkMAIVALUHazards(MI) > 0)
+  if (SIInstrInfo::isVALU(*MI, /*AllowLDSDMA=*/true) ||
+      SIInstrInfo::isVMEM(*MI) || SIInstrInfo::isDS(*MI) ||
+      SIInstrInfo::isEXP(*MI))
     WaitStates = std::max(WaitStates, checkMAIVALUHazards(MI));
 
   if (MI->isInlineAsm())
@@ -3288,6 +3287,94 @@ int GCNHazardRecognizer::getMFMAOverlappedSrcCWaitStates(
   }
 }
 
+int GCNHazardRecognizer::getMFMAReadWaitStates(const MachineInstr &Consumer,
+                                               const MachineInstr &Producer,
+                                               Register Reg,
+                                               bool IsSrcC) const {
+  unsigned Opc = Consumer.getOpcode();
+  const int SMFMA4x4WritesVGPROverlappedSrcABWaitStates = 5;
+  const int SMFMA16x16WritesVGPROverlappedSrcABWaitStates = 11;
+  const int SMFMA32x32WritesVGPROverlappedSrcABWaitStates = 19;
+  const int DMFMA4x4WritesVGPROverlappedMFMASrcABWaitStates = 6;
+  const int DMFMA16x16WritesVGPROverlappedMFMASrcABWaitStates = 11;
+  const int GFX950_DMFMA16x16WritesVGPROverlappedMFMASrcABWaitStates = 19;
+  const int DMFMA4x4WritesVGPRFullSrcCWaitStates = 4;
+  const int GFX940_SMFMA4x4WritesVGPRFullSrcCWaitStates = 2;
+
+  bool FullReg = Producer.getOperand(0).getReg() == Reg;
+  unsigned Opc1 = Producer.getOpcode();
+  int NeedWaitStates = 0;
+  if (IsSrcC) {
+    if (!SIInstrInfo::isDGEMM(Opc) &&
+        (!ST.hasGFX940Insts() && SIInstrInfo::isDGEMM(Opc1))) {
+      NeedWaitStates = 0;
+    } else if (FullReg) {
+      if ((Opc == AMDGPU::V_MFMA_F64_4X4X4F64_e64 ||
+           Opc == AMDGPU::V_MFMA_F64_4X4X4F64_vgprcd_e64) &&
+          (Opc1 == AMDGPU::V_MFMA_F64_4X4X4F64_e64 ||
+           Opc1 == AMDGPU::V_MFMA_F64_4X4X4F64_vgprcd_e64))
+        NeedWaitStates = DMFMA4x4WritesVGPRFullSrcCWaitStates;
+      else if (ST.hasGFX940Insts() &&
+               TSchedModel.computeInstrLatency(&Producer) == 2)
+        NeedWaitStates = GFX940_SMFMA4x4WritesVGPRFullSrcCWaitStates;
+
+      // The accumulator forwarding path that allows zero wait states is only
+      // available while the chain stays on a single MFMA. Two different MFMAs
+      // sharing an accumulator need the wait states of a partial overlap.
+      if (ST.hasGFX940Insts() && !isSameMFMA(Opc, Opc1)) {
+        NeedWaitStates =
+            std::max(NeedWaitStates,
+                     getMFMAOverlappedSrcCWaitStates(&Consumer, &Producer));
+      }
+    } else {
+      NeedWaitStates = getMFMAOverlappedSrcCWaitStates(&Consumer, &Producer);
+    }
+  } else {
+    switch (Opc1) {
+    case AMDGPU::V_MFMA_F64_16X16X4F64_e64:
+    case AMDGPU::V_MFMA_F64_16X16X4F64_vgprcd_e64:
+    case AMDGPU::V_MFMA_F64_16X16X4F64_mac_e64:
+    case AMDGPU::V_MFMA_F64_16X16X4F64_mac_vgprcd_e64:
+      NeedWaitStates =
+          ST.hasGFX950Insts()
+              ? GFX950_DMFMA16x16WritesVGPROverlappedMFMASrcABWaitStates
+              : DMFMA16x16WritesVGPROverlappedMFMASrcABWaitStates;
+      break;
+    case AMDGPU::V_MFMA_F64_4X4X4F64_e64:
+    case AMDGPU::V_MFMA_F64_4X4X4F64_vgprcd_e64:
+      NeedWaitStates = DMFMA4x4WritesVGPROverlappedMFMASrcABWaitStates;
+      break;
+    default:
+      int NumPasses = TSchedModel.computeInstrLatency(&Producer);
+
+      if (ST.hasGFX940Insts()) {
+        NeedWaitStates =
+            TII.isXDL(Producer)
+                ? GFX940_XDL_N_PassWritesVGPROverlappedSrcABWaitStates(
+                      NumPasses, ST.hasGFX950Insts())
+                : GFX940_SMFMA_N_PassWritesVGPROverlappedSrcABWaitStates(
+                      NumPasses);
+        break;
+      }
+
+      switch (NumPasses) {
+      case 2:
+        NeedWaitStates = SMFMA4x4WritesVGPROverlappedSrcABWaitStates;
+        break;
+      case 4:
+        llvm_unreachable("unexpected number of passes for mfma");
+      case 8:
+        NeedWaitStates = SMFMA16x16WritesVGPROverlappedSrcABWaitStates;
+        break;
+      case 16:
+      default:
+        NeedWaitStates = SMFMA32x32WritesVGPROverlappedSrcABWaitStates;
+      }
+    }
+  }
+  return NeedWaitStates;
+}
+
 int GCNHazardRecognizer::checkMAIHazards90A(MachineInstr *MI) const {
   int WaitStatesNeeded = 0;
   unsigned Opc = MI->getOpcode();
@@ -3316,14 +3403,6 @@ int GCNHazardRecognizer::checkMAIHazards90A(MachineInstr *MI) const {
   // Loop for both DGEMM and S/HGEMM 2nd instruction.
   for (const MachineOperand &Use : MI->explicit_uses()) {
     const int LegacyVALUNotDotWritesVGPRWaitStates = 2;
-    const int SMFMA4x4WritesVGPROverlappedSrcABWaitStates = 5;
-    const int SMFMA16x16WritesVGPROverlappedSrcABWaitStates = 11;
-    const int SMFMA32x32WritesVGPROverlappedSrcABWaitStates = 19;
-    const int DMFMA4x4WritesVGPROverlappedMFMASrcABWaitStates = 6;
-    const int DMFMA16x16WritesVGPROverlappedMFMASrcABWaitStates = 11;
-    const int GFX950_DMFMA16x16WritesVGPROverlappedMFMASrcABWaitStates = 19;
-    const int DMFMA4x4WritesVGPRFullSrcCWaitStates = 4;
-    const int GFX940_SMFMA4x4WritesVGPRFullSrcCWaitStates = 2;
     const int MaxWaitStates =
         GFX940_XDL_N_PassWritesVGPROverlappedSrcABWaitStates(
             16, ST.hasGFX950Insts());
@@ -3331,15 +3410,12 @@ int GCNHazardRecognizer::checkMAIHazards90A(MachineInstr *MI) const {
     if (!Use.isReg())
       continue;
     Register Reg = Use.getReg();
-    bool FullReg;
     const MachineInstr *MI1;
 
-    auto IsOverlappedMFMAFn = [Reg, &FullReg, &MI1,
-                               this](const MachineInstr &MI) {
+    auto IsOverlappedMFMAFn = [Reg, &MI1, this](const MachineInstr &MI) {
       if (!SIInstrInfo::isMFMA(MI))
         return false;
       Register DstReg = MI.getOperand(0).getReg();
-      FullReg = (DstReg == Reg);
       MI1 = &MI;
       return TRI.regsOverlap(DstReg, Reg);
     };
@@ -3354,75 +3430,8 @@ int GCNHazardRecognizer::checkMAIHazards90A(MachineInstr *MI) const {
       continue;
 
     int OpNo = Use.getOperandNo();
-    unsigned Opc1 = MI1->getOpcode();
-    int NeedWaitStates = 0;
-    if (OpNo == SrcCIdx) {
-      if (!SIInstrInfo::isDGEMM(Opc) &&
-          (!ST.hasGFX940Insts() && SIInstrInfo::isDGEMM(Opc1))) {
-        NeedWaitStates = 0;
-      } else if (FullReg) {
-        if ((Opc == AMDGPU::V_MFMA_F64_4X4X4F64_e64 ||
-             Opc == AMDGPU::V_MFMA_F64_4X4X4F64_vgprcd_e64) &&
-            (Opc1 == AMDGPU::V_MFMA_F64_4X4X4F64_e64 ||
-             Opc1 == AMDGPU::V_MFMA_F64_4X4X4F64_vgprcd_e64))
-          NeedWaitStates = DMFMA4x4WritesVGPRFullSrcCWaitStates;
-        else if (ST.hasGFX940Insts() &&
-                 TSchedModel.computeInstrLatency(MI1) == 2)
-          NeedWaitStates = GFX940_SMFMA4x4WritesVGPRFullSrcCWaitStates;
+    int NeedWaitStates = getMFMAReadWaitStates(*MI, *MI1, Reg, OpNo == SrcCIdx);
 
-        // The accumulator forwarding path that allows zero wait states is only
-        // available while the chain stays on a single MFMA. Two different MFMAs
-        // sharing an accumulator need the wait states of a partial overlap.
-        if (ST.hasGFX940Insts() && !isSameMFMA(Opc, Opc1)) {
-          NeedWaitStates = std::max(NeedWaitStates,
-                                    getMFMAOverlappedSrcCWaitStates(MI, MI1));
-        }
-      } else {
-        NeedWaitStates = getMFMAOverlappedSrcCWaitStates(MI, MI1);
-      }
-    } else {
-      switch (Opc1) {
-      case AMDGPU::V_MFMA_F64_16X16X4F64_e64:
-      case AMDGPU::V_MFMA_F64_16X16X4F64_vgprcd_e64:
-      case AMDGPU::V_MFMA_F64_16X16X4F64_mac_e64:
-      case AMDGPU::V_MFMA_F64_16X16X4F64_mac_vgprcd_e64:
-        NeedWaitStates =
-            ST.hasGFX950Insts()
-                ? GFX950_DMFMA16x16WritesVGPROverlappedMFMASrcABWaitStates
-                : DMFMA16x16WritesVGPROverlappedMFMASrcABWaitStates;
-        break;
-      case AMDGPU::V_MFMA_F64_4X4X4F64_e64:
-      case AMDGPU::V_MFMA_F64_4X4X4F64_vgprcd_e64:
-        NeedWaitStates = DMFMA4x4WritesVGPROverlappedMFMASrcABWaitStates;
-        break;
-      default:
-        int NumPasses = TSchedModel.computeInstrLatency(MI1);
-
-        if (ST.hasGFX940Insts()) {
-          NeedWaitStates =
-              TII.isXDL(*MI1)
-                  ? GFX940_XDL_N_PassWritesVGPROverlappedSrcABWaitStates(
-                        NumPasses, ST.hasGFX950Insts())
-                  : GFX940_SMFMA_N_PassWritesVGPROverlappedSrcABWaitStates(
-                        NumPasses);
-          break;
-        }
-
-        switch (NumPasses) {
-        case 2:
-          NeedWaitStates = SMFMA4x4WritesVGPROverlappedSrcABWaitStates;
-          break;
-        case 4:
-          llvm_unreachable("unexpected number of passes for mfma");
-        case 8:
-          NeedWaitStates = SMFMA16x16WritesVGPROverlappedSrcABWaitStates;
-          break;
-        case 16:
-        default:
-          NeedWaitStates = SMFMA32x32WritesVGPROverlappedSrcABWaitStates;
-        }
-      }
-    }
     assert(NeedWaitStates <= MaxWaitStates &&
            "hazard requirement exceeds the scan window");
     if (WaitStatesNeeded >= NeedWaitStates)
