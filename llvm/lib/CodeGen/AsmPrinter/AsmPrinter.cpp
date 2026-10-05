@@ -2864,8 +2864,7 @@ void AsmPrinter::emitRemarksSection(remarks::RemarkStreamer &RS) {
 
 static uint64_t globalSize(const llvm::GlobalVariable &G) {
   const Constant *Initializer = G.getInitializer();
-  return G.getParent()->getDataLayout().getTypeAllocSize(
-      Initializer->getType());
+  return G.getDataLayout().getTypeAllocSize(Initializer->getType());
 }
 
 static bool shouldTagGlobal(const llvm::GlobalVariable &G) {
