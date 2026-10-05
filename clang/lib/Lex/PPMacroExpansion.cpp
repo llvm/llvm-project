@@ -2040,6 +2040,10 @@ void Preprocessor::ExpandBuiltinMacro(Token &Tok) {
       Diag(getLocForEndOfToken(Tok.getLocation()), diag::err_pp_expected_after)
         << Tok.getKind() << tok::r_paren;
       Diag(LParenLoc, diag::note_matching) << tok::l_paren;
+      // Don't lose an eod, eof, or annotation token while recovering from
+      // a missing ')'. Return it to the caller instead.
+      if (RParen.isOneOf(tok::eof, tok::eod) || RParen.isAnnotation())
+        Tok = RParen;
     }
     return;
   } else if (II == Ident__is_target_arch) {
