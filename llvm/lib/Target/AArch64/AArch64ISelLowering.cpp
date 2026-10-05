@@ -27954,9 +27954,7 @@ static SDValue performSTORECombine(SDNode *N,
       if (ST->isTruncatingStore())
         return DAG.getTruncStore(Chain, DL, Value, Cast, MemVT,
                                  ST->getMemOperand());
-      return DAG.getStore(Chain, DL, Value, Cast, ST->getPointerInfo(),
-                          ST->getBaseAlign(), ST->getMemOperand()->getFlags(),
-                          ST->getAAInfo());
+      return DAG.getStore(Chain, DL, Value, Cast, ST->getMemOperand());
     }
   }
 
