@@ -6,7 +6,9 @@
 ; different stack-argument size, which changes the RSP the unwinder recovers.
 
 declare tailcc void @tailcc_callee()
+
 declare swifttailcc void @swifttailcc_callee()
+
 declare void @c_callee()
 
 define void @call_tailcc() {

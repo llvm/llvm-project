@@ -27,6 +27,7 @@ declare void @RtlCaptureContext(ptr)
 define void @noop() noinline {
   ret void
 }
+
 define void @use(ptr %p) noinline {
   ret void
 }
@@ -46,7 +47,7 @@ define tailcc void @target_i7(i64 %a1, i64 %a2, i64 %a3, i64 %a4, i64 %a5, i64 %
   %c7 = icmp eq i64 %a7, 1007
   %t7 = and i1 %t6, %c7
   %ok = zext i1 %t7 to i32
-  store volatile i32 %ok, ptr @args_ok
+  store volatile i32 %ok, ptr @args_ok, align 4
   ret void
 }
 
@@ -57,115 +58,135 @@ define tailcc void @target_huge([600 x i64] %x) {
   %d = icmp eq i64 %b, 0
   %t = and i1 %c, %d
   %ok = zext i1 %t to i32
-  store volatile i32 %ok, ptr @args_ok
+  store volatile i32 %ok, ptr @args_ok, align 4
   ret void
 }
 
 define tailcc void @test_pop_nofp(i64 %sel, [9000 x i64] %big) {
 entry:
-  switch i64 %sel, label %ret [ i64 1, label %s1 ]
+  switch i64 %sel, label %ret [
+    i64 1, label %s1
+  ]
+
 s1:
   musttail call tailcc void @target_i7(i64 1001, i64 1002, i64 1003, i64 1004, i64 1005, i64 1006, i64 1007)
   ret void
+
 ret:
   ret void
 }
 
 define i32 @run_pop_nofp(i32 %selector) {
-  store volatile i32 0, ptr @args_ok
+  store volatile i32 0, ptr @args_ok, align 4
   call void asm sideeffect "movabsq $$0x1111111111111111, %rbx\0Amovabsq $$0x2222222222222222, %rsi\0Amovabsq $$0x3333333333333333, %rdi\0Amovabsq $$0x4444444444444444, %r12\0Amovabsq $$0x5555555555555555, %r13\0Amovabsq $$0x6666666666666666, %r14\0Amovabsq $$0x7777777777777777, %r15\0Amovabsq $$0x8686868686868686, %rax\0Amovq %rax, %xmm6\0Apunpcklqdq %xmm6, %xmm6\0Amovabsq $$0x8787878787878787, %rax\0Amovq %rax, %xmm7\0Apunpcklqdq %xmm7, %xmm7\0Amovabsq $$0x8888888888888888, %rax\0Amovq %rax, %xmm8\0Apunpcklqdq %xmm8, %xmm8\0Amovabsq $$0x8989898989898989, %rax\0Amovq %rax, %xmm9\0Apunpcklqdq %xmm9, %xmm9\0Amovabsq $$0x8a8a8a8a8a8a8a8a, %rax\0Amovq %rax, %xmm10\0Apunpcklqdq %xmm10, %xmm10\0Amovabsq $$0x8b8b8b8b8b8b8b8b, %rax\0Amovq %rax, %xmm11\0Apunpcklqdq %xmm11, %xmm11\0Amovabsq $$0x8c8c8c8c8c8c8c8c, %rax\0Amovq %rax, %xmm12\0Apunpcklqdq %xmm12, %xmm12\0Amovabsq $$0x8d8d8d8d8d8d8d8d, %rax\0Amovq %rax, %xmm13\0Apunpcklqdq %xmm13, %xmm13\0Amovabsq $$0x8e8e8e8e8e8e8e8e, %rax\0Amovq %rax, %xmm14\0Apunpcklqdq %xmm14, %xmm14\0Amovabsq $$0x8f8f8f8f8f8f8f8f, %rax\0Amovq %rax, %xmm15\0Apunpcklqdq %xmm15, %xmm15", "~{rbx},~{rsi},~{rdi},~{r12},~{r13},~{r14},~{r15},~{xmm6},~{xmm7},~{xmm8},~{xmm9},~{xmm10},~{xmm11},~{xmm12},~{xmm13},~{xmm14},~{xmm15},~{rax},~{dirflag},~{fpsr},~{flags}"()
   call void @RtlCaptureContext(ptr @unwind_expected_context)
   %sel64 = zext i32 %selector to i64
   call tailcc void @test_pop_nofp(i64 %sel64, [9000 x i64] zeroinitializer)
   call void @RtlCaptureContext(ptr @unwind_actual_context)
-  %ok = load volatile i32, ptr @args_ok
+  %ok = load volatile i32, ptr @args_ok, align 4
   ret i32 %ok
 }
 
 define tailcc void @test_pop_csr(i64 %sel, [9000 x i64] %big) {
 entry:
   call void @noop()
-  switch i64 %sel, label %ret [ i64 1, label %s1 ]
+  switch i64 %sel, label %ret [
+    i64 1, label %s1
+  ]
+
 s1:
   musttail call tailcc void @target_i7(i64 1001, i64 1002, i64 1003, i64 1004, i64 1005, i64 1006, i64 1007)
   ret void
+
 ret:
   ret void
 }
 
 define i32 @run_pop_csr(i32 %selector) {
-  store volatile i32 0, ptr @args_ok
+  store volatile i32 0, ptr @args_ok, align 4
   call void asm sideeffect "movabsq $$0x1111111111111111, %rbx\0Amovabsq $$0x2222222222222222, %rsi\0Amovabsq $$0x3333333333333333, %rdi\0Amovabsq $$0x4444444444444444, %r12\0Amovabsq $$0x5555555555555555, %r13\0Amovabsq $$0x6666666666666666, %r14\0Amovabsq $$0x7777777777777777, %r15\0Amovabsq $$0x8686868686868686, %rax\0Amovq %rax, %xmm6\0Apunpcklqdq %xmm6, %xmm6\0Amovabsq $$0x8787878787878787, %rax\0Amovq %rax, %xmm7\0Apunpcklqdq %xmm7, %xmm7\0Amovabsq $$0x8888888888888888, %rax\0Amovq %rax, %xmm8\0Apunpcklqdq %xmm8, %xmm8\0Amovabsq $$0x8989898989898989, %rax\0Amovq %rax, %xmm9\0Apunpcklqdq %xmm9, %xmm9\0Amovabsq $$0x8a8a8a8a8a8a8a8a, %rax\0Amovq %rax, %xmm10\0Apunpcklqdq %xmm10, %xmm10\0Amovabsq $$0x8b8b8b8b8b8b8b8b, %rax\0Amovq %rax, %xmm11\0Apunpcklqdq %xmm11, %xmm11\0Amovabsq $$0x8c8c8c8c8c8c8c8c, %rax\0Amovq %rax, %xmm12\0Apunpcklqdq %xmm12, %xmm12\0Amovabsq $$0x8d8d8d8d8d8d8d8d, %rax\0Amovq %rax, %xmm13\0Apunpcklqdq %xmm13, %xmm13\0Amovabsq $$0x8e8e8e8e8e8e8e8e, %rax\0Amovq %rax, %xmm14\0Apunpcklqdq %xmm14, %xmm14\0Amovabsq $$0x8f8f8f8f8f8f8f8f, %rax\0Amovq %rax, %xmm15\0Apunpcklqdq %xmm15, %xmm15", "~{rbx},~{rsi},~{rdi},~{r12},~{r13},~{r14},~{r15},~{xmm6},~{xmm7},~{xmm8},~{xmm9},~{xmm10},~{xmm11},~{xmm12},~{xmm13},~{xmm14},~{xmm15},~{rax},~{dirflag},~{fpsr},~{flags}"()
   call void @RtlCaptureContext(ptr @unwind_expected_context)
   %sel64 = zext i32 %selector to i64
   call tailcc void @test_pop_csr(i64 %sel64, [9000 x i64] zeroinitializer)
   call void @RtlCaptureContext(ptr @unwind_actual_context)
-  %ok = load volatile i32, ptr @args_ok
+  %ok = load volatile i32, ptr @args_ok, align 4
   ret i32 %ok
 }
 
 define tailcc void @test_pop_fp(i64 %sel, [9000 x i64] %big) "frame-pointer"="all" {
 entry:
   call void @noop()
-  switch i64 %sel, label %ret [ i64 1, label %s1 ]
+  switch i64 %sel, label %ret [
+    i64 1, label %s1
+  ]
+
 s1:
   musttail call tailcc void @target_i7(i64 1001, i64 1002, i64 1003, i64 1004, i64 1005, i64 1006, i64 1007)
   ret void
+
 ret:
   ret void
 }
 
 define i32 @run_pop_fp(i32 %selector) {
-  store volatile i32 0, ptr @args_ok
+  store volatile i32 0, ptr @args_ok, align 4
   call void asm sideeffect "movabsq $$0x1111111111111111, %rbx\0Amovabsq $$0x2222222222222222, %rsi\0Amovabsq $$0x3333333333333333, %rdi\0Amovabsq $$0x4444444444444444, %r12\0Amovabsq $$0x5555555555555555, %r13\0Amovabsq $$0x6666666666666666, %r14\0Amovabsq $$0x7777777777777777, %r15\0Amovabsq $$0x8686868686868686, %rax\0Amovq %rax, %xmm6\0Apunpcklqdq %xmm6, %xmm6\0Amovabsq $$0x8787878787878787, %rax\0Amovq %rax, %xmm7\0Apunpcklqdq %xmm7, %xmm7\0Amovabsq $$0x8888888888888888, %rax\0Amovq %rax, %xmm8\0Apunpcklqdq %xmm8, %xmm8\0Amovabsq $$0x8989898989898989, %rax\0Amovq %rax, %xmm9\0Apunpcklqdq %xmm9, %xmm9\0Amovabsq $$0x8a8a8a8a8a8a8a8a, %rax\0Amovq %rax, %xmm10\0Apunpcklqdq %xmm10, %xmm10\0Amovabsq $$0x8b8b8b8b8b8b8b8b, %rax\0Amovq %rax, %xmm11\0Apunpcklqdq %xmm11, %xmm11\0Amovabsq $$0x8c8c8c8c8c8c8c8c, %rax\0Amovq %rax, %xmm12\0Apunpcklqdq %xmm12, %xmm12\0Amovabsq $$0x8d8d8d8d8d8d8d8d, %rax\0Amovq %rax, %xmm13\0Apunpcklqdq %xmm13, %xmm13\0Amovabsq $$0x8e8e8e8e8e8e8e8e, %rax\0Amovq %rax, %xmm14\0Apunpcklqdq %xmm14, %xmm14\0Amovabsq $$0x8f8f8f8f8f8f8f8f, %rax\0Amovq %rax, %xmm15\0Apunpcklqdq %xmm15, %xmm15", "~{rbx},~{rsi},~{rdi},~{r12},~{r13},~{r14},~{r15},~{xmm6},~{xmm7},~{xmm8},~{xmm9},~{xmm10},~{xmm11},~{xmm12},~{xmm13},~{xmm14},~{xmm15},~{rax},~{dirflag},~{fpsr},~{flags}"()
   call void @RtlCaptureContext(ptr @unwind_expected_context)
   %sel64 = zext i32 %selector to i64
   call tailcc void @test_pop_fp(i64 %sel64, [9000 x i64] zeroinitializer)
   call void @RtlCaptureContext(ptr @unwind_actual_context)
-  %ok = load volatile i32, ptr @args_ok
+  %ok = load volatile i32, ptr @args_ok, align 4
   ret i32 %ok
 }
 
 define tailcc void @test_reserve_nofp(i64 %sel, i64 %p1, i64 %p2, i64 %p3) {
 entry:
-  switch i64 %sel, label %ret [ i64 0, label %s0 ]
+  switch i64 %sel, label %ret [
+    i64 0, label %s0
+  ]
+
 s0:
   musttail call tailcc void @target_huge([600 x i64] zeroinitializer)
   ret void
+
 ret:
   ret void
 }
 
 define i32 @run_reserve_nofp(i32 %selector) {
-  store volatile i32 0, ptr @args_ok
+  store volatile i32 0, ptr @args_ok, align 4
   call void asm sideeffect "movabsq $$0x1111111111111111, %rbx\0Amovabsq $$0x2222222222222222, %rsi\0Amovabsq $$0x3333333333333333, %rdi\0Amovabsq $$0x4444444444444444, %r12\0Amovabsq $$0x5555555555555555, %r13\0Amovabsq $$0x6666666666666666, %r14\0Amovabsq $$0x7777777777777777, %r15\0Amovabsq $$0x8686868686868686, %rax\0Amovq %rax, %xmm6\0Apunpcklqdq %xmm6, %xmm6\0Amovabsq $$0x8787878787878787, %rax\0Amovq %rax, %xmm7\0Apunpcklqdq %xmm7, %xmm7\0Amovabsq $$0x8888888888888888, %rax\0Amovq %rax, %xmm8\0Apunpcklqdq %xmm8, %xmm8\0Amovabsq $$0x8989898989898989, %rax\0Amovq %rax, %xmm9\0Apunpcklqdq %xmm9, %xmm9\0Amovabsq $$0x8a8a8a8a8a8a8a8a, %rax\0Amovq %rax, %xmm10\0Apunpcklqdq %xmm10, %xmm10\0Amovabsq $$0x8b8b8b8b8b8b8b8b, %rax\0Amovq %rax, %xmm11\0Apunpcklqdq %xmm11, %xmm11\0Amovabsq $$0x8c8c8c8c8c8c8c8c, %rax\0Amovq %rax, %xmm12\0Apunpcklqdq %xmm12, %xmm12\0Amovabsq $$0x8d8d8d8d8d8d8d8d, %rax\0Amovq %rax, %xmm13\0Apunpcklqdq %xmm13, %xmm13\0Amovabsq $$0x8e8e8e8e8e8e8e8e, %rax\0Amovq %rax, %xmm14\0Apunpcklqdq %xmm14, %xmm14\0Amovabsq $$0x8f8f8f8f8f8f8f8f, %rax\0Amovq %rax, %xmm15\0Apunpcklqdq %xmm15, %xmm15", "~{rbx},~{rsi},~{rdi},~{r12},~{r13},~{r14},~{r15},~{xmm6},~{xmm7},~{xmm8},~{xmm9},~{xmm10},~{xmm11},~{xmm12},~{xmm13},~{xmm14},~{xmm15},~{rax},~{dirflag},~{fpsr},~{flags}"()
   call void @RtlCaptureContext(ptr @unwind_expected_context)
   %sel64 = zext i32 %selector to i64
   call tailcc void @test_reserve_nofp(i64 %sel64, i64 1001, i64 1002, i64 1003)
   call void @RtlCaptureContext(ptr @unwind_actual_context)
-  %ok = load volatile i32, ptr @args_ok
+  %ok = load volatile i32, ptr @args_ok, align 4
   ret i32 %ok
 }
 
 define tailcc void @test_reserve_fp(i64 %sel, i64 %p1, i64 %p2, i64 %p3) "frame-pointer"="all" {
 entry:
   call void @noop()
-  switch i64 %sel, label %ret [ i64 0, label %s0 ]
+  switch i64 %sel, label %ret [
+    i64 0, label %s0
+  ]
+
 s0:
   musttail call tailcc void @target_huge([600 x i64] zeroinitializer)
   ret void
+
 ret:
   ret void
 }
 
 define i32 @run_reserve_fp(i32 %selector) {
-  store volatile i32 0, ptr @args_ok
+  store volatile i32 0, ptr @args_ok, align 4
   call void asm sideeffect "movabsq $$0x1111111111111111, %rbx\0Amovabsq $$0x2222222222222222, %rsi\0Amovabsq $$0x3333333333333333, %rdi\0Amovabsq $$0x4444444444444444, %r12\0Amovabsq $$0x5555555555555555, %r13\0Amovabsq $$0x6666666666666666, %r14\0Amovabsq $$0x7777777777777777, %r15\0Amovabsq $$0x8686868686868686, %rax\0Amovq %rax, %xmm6\0Apunpcklqdq %xmm6, %xmm6\0Amovabsq $$0x8787878787878787, %rax\0Amovq %rax, %xmm7\0Apunpcklqdq %xmm7, %xmm7\0Amovabsq $$0x8888888888888888, %rax\0Amovq %rax, %xmm8\0Apunpcklqdq %xmm8, %xmm8\0Amovabsq $$0x8989898989898989, %rax\0Amovq %rax, %xmm9\0Apunpcklqdq %xmm9, %xmm9\0Amovabsq $$0x8a8a8a8a8a8a8a8a, %rax\0Amovq %rax, %xmm10\0Apunpcklqdq %xmm10, %xmm10\0Amovabsq $$0x8b8b8b8b8b8b8b8b, %rax\0Amovq %rax, %xmm11\0Apunpcklqdq %xmm11, %xmm11\0Amovabsq $$0x8c8c8c8c8c8c8c8c, %rax\0Amovq %rax, %xmm12\0Apunpcklqdq %xmm12, %xmm12\0Amovabsq $$0x8d8d8d8d8d8d8d8d, %rax\0Amovq %rax, %xmm13\0Apunpcklqdq %xmm13, %xmm13\0Amovabsq $$0x8e8e8e8e8e8e8e8e, %rax\0Amovq %rax, %xmm14\0Apunpcklqdq %xmm14, %xmm14\0Amovabsq $$0x8f8f8f8f8f8f8f8f, %rax\0Amovq %rax, %xmm15\0Apunpcklqdq %xmm15, %xmm15", "~{rbx},~{rsi},~{rdi},~{r12},~{r13},~{r14},~{r15},~{xmm6},~{xmm7},~{xmm8},~{xmm9},~{xmm10},~{xmm11},~{xmm12},~{xmm13},~{xmm14},~{xmm15},~{rax},~{dirflag},~{fpsr},~{flags}"()
   call void @RtlCaptureContext(ptr @unwind_expected_context)
   %sel64 = zext i32 %selector to i64
   call tailcc void @test_reserve_fp(i64 %sel64, i64 1001, i64 1002, i64 1003)
   call void @RtlCaptureContext(ptr @unwind_actual_context)
-  %ok = load volatile i32, ptr @args_ok
+  %ok = load volatile i32, ptr @args_ok, align 4
   ret i32 %ok
 }
 
