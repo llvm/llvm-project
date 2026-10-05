@@ -6351,7 +6351,6 @@ widenDeinterleavedOperations(ArrayRef<Value *> Members, ElementCount WideEC,
     } else {
       NewOperand = widenDeinterleavedOperations(Operands, WideEC, Builder);
     }
-    NewOperand->dump();
     NewOperands.push_back(NewOperand);
   }
 
