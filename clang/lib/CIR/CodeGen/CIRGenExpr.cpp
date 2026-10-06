@@ -2952,6 +2952,15 @@ Address CIRGenFunction::maybeCastStackAddressSpace(
     destAddrSpace = cir::toCIRAddressSpaceAttr(
         getMLIRContext(), cgm.getLangTempAllocaAddressSpace());
 
+  // Resolve the default address space through getTargetAddressSpace, as
+  // classic CodeGen does and as CIRGenTypes::getPointerAddressSpace does for
+  // default pointer types. This is only non-zero for targets where the default
+  // address space is not 0 (e.g. generic for SYCL device code).
+  if (!cir::normalizeDefaultAddressSpace(destAddrSpace))
+    if (unsigned targetAS = getContext().getTargetAddressSpace(LangAS::Default))
+      destAddrSpace =
+          cir::TargetAddressSpaceAttr::get(&getMLIRContext(), targetAS);
+
   mlir::ptr::MemorySpaceAttrInterface srcAddrSpace = getCIRAllocaAddressSpace();
   // Alloca always returns a pointer in alloca address space, which may
   // be different from the type defined by the language. For example,

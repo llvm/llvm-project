@@ -751,8 +751,10 @@ void AggExprEmitter::emitArrayInit(Address destPtr, cir::ArrayType arrayTy,
   const QualType elementPtrType = cgf.getContext().getPointerType(elementType);
 
   const mlir::Type cirElementType = cgf.convertType(elementType);
-  const cir::PointerType cirElementPtrType =
-      builder.getPointerTo(cirElementType);
+  const cir::PointerType cirElementPtrType = builder.getPointerTo(
+      cirElementType,
+      mlir::cast<cir::PointerType>(destPtr.getPointer().getType())
+          .getAddrSpace());
 
   auto begin = cir::CastOp::create(builder, loc, cirElementPtrType,
                                    cir::CastKind::array_to_ptrdecay,
