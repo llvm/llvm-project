@@ -746,7 +746,7 @@ mlir::LogicalResult CIRGenFunction::emitCXXTryStmt(
     // return.  Note that it's illegal to put a return in a
     // constructor function-try-block's catch handler (p14), so this
     // really only applies to destructors.
-    if (doImplicitRethrow && haveInsertPoint())
+    if (doImplicitRethrow && insertionPointIsReachable())
       cgm.getCXXABI().emitRethrow(*this, /*isNoReturn=*/true);
 
     // Fall out through the catch cleanups.

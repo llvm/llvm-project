@@ -104,7 +104,7 @@ struct HasThings : Base {
 // CIR-NEXT:      cir.call @_Z11side_effectv() : () -> ()
 // CIR-NEXT:      cir.yield
 // CIR-NEXT:    } catch all (%[[CATCH_ARG:.*]]: !cir.eh_token {{.*}}) {
-// CIR-NEXT:      %[[CATCH_TOK2:.*]], %[[EX_PTR:.*]] = cir.begin_catch %[[CATCH_ARG]] : !cir.eh_token -> (!cir.catch_token, !cir.ptr<!void>)
+// CIR-NEXT:      %[[CATCH_TOK:.*]], %[[EX_PTR:.*]] = cir.begin_catch %[[CATCH_ARG]] : !cir.eh_token -> (!cir.catch_token, !cir.ptr<!void>)
 // CIR-NEXT:      cir.cleanup.scope {
 // CIR-NEXT:        cir.call @_Z12side_effect2v() : () -> ()
 // CIR-NEXT:        cir.throw
@@ -112,7 +112,7 @@ struct HasThings : Base {
 // CIR-NEXT:      ^bb1:
 // CIR-NEXT:        cir.yield
 // CIR-NEXT:      } cleanup all {
-// CIR-NEXT:        cir.end_catch %[[CATCH_TOK2]] : !cir.catch_token
+// CIR-NEXT:        cir.end_catch %[[CATCH_TOK]] : !cir.catch_token
 // CIR-NEXT:        cir.yield
 // CIR-NEXT:      }
 // CIR-NEXT:      cir.yield
@@ -132,8 +132,8 @@ struct HasThings : Base {
 // LLVM:   call ptr @__cxa_begin_catch(ptr %{{.*}})
 // LLVM:   invoke void @_Z12side_effect2v()
 // LLVM:   invoke void @__cxa_rethrow()
-// LLVM:     unwind label %[[CLEANUP_LPAD2:.*]]
-// LLVM: [[CLEANUP_LPAD2]]:
+// LLVM:     unwind label %[[CLEANUP_LPAD:.*]]
+// LLVM: [[CLEANUP_LPAD]]:
 // LLVM:   landingpad { ptr, i32 }
 // LLVM:     cleanup
 // LLVMCIR:   call void @__cxa_end_catch()
