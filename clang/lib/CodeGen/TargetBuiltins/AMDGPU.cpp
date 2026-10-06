@@ -1035,16 +1035,21 @@ Value *CodeGenFunction::EmitAMDGPUBuiltinExpr(unsigned BuiltinID,
     llvm::Function *F = CGM.getIntrinsic(IID, {Args[0]->getType()});
     return Builder.CreateCall(F, {Args});
   }
+  case AMDGPU::BI__builtin_amdgcn_av_load_b8:
   case AMDGPU::BI__builtin_amdgcn_av_load_b16:
   case AMDGPU::BI__builtin_amdgcn_av_load_b32:
   case AMDGPU::BI__builtin_amdgcn_av_load_b64:
   case AMDGPU::BI__builtin_amdgcn_av_load_b128:
+  case AMDGPU::BI__builtin_amdgcn_av_store_b8:
   case AMDGPU::BI__builtin_amdgcn_av_store_b16:
   case AMDGPU::BI__builtin_amdgcn_av_store_b32:
   case AMDGPU::BI__builtin_amdgcn_av_store_b64:
   case AMDGPU::BI__builtin_amdgcn_av_store_b128: {
     Intrinsic::ID IID;
     switch (BuiltinID) {
+    case AMDGPU::BI__builtin_amdgcn_av_load_b8:
+      IID = Intrinsic::amdgcn_av_load_b8;
+      break;
     case AMDGPU::BI__builtin_amdgcn_av_load_b16:
       IID = Intrinsic::amdgcn_av_load_b16;
       break;
@@ -1056,6 +1061,9 @@ Value *CodeGenFunction::EmitAMDGPUBuiltinExpr(unsigned BuiltinID,
       break;
     case AMDGPU::BI__builtin_amdgcn_av_load_b128:
       IID = Intrinsic::amdgcn_av_load_b128;
+      break;
+    case AMDGPU::BI__builtin_amdgcn_av_store_b8:
+      IID = Intrinsic::amdgcn_av_store_b8;
       break;
     case AMDGPU::BI__builtin_amdgcn_av_store_b16:
       IID = Intrinsic::amdgcn_av_store_b16;

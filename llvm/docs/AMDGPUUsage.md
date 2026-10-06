@@ -2809,6 +2809,10 @@ These intrinsics exist for the following data types:
   - Data Type
   - Load
   - Store
+* - 8 bits
+  - `i8`
+  - `llvm.amdgcn.av.load.b8`
+  - `llvm.amdgcn.av.store.b8`
 * - 16 bits
   - `i16`
   - `llvm.amdgcn.av.load.b16`

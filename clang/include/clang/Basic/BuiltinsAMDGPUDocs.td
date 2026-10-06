@@ -628,6 +628,7 @@ constant.
 }]);
 }
 
+def DocAVLoadB8   : DocAVLoadBase<"8">;
 def DocAVLoadB16  : DocAVLoadBase<"16">;
 def DocAVLoadB32  : DocAVLoadBase<"32">;
 def DocAVLoadB64  : DocAVLoadBase<"64">;
@@ -642,6 +643,7 @@ class DocAVStoreBase<string width> : Documentation {
 }]);
 }
 
+def DocAVStoreB8   : DocAVStoreBase<"8">;
 def DocAVStoreB16  : DocAVStoreBase<"16">;
 def DocAVStoreB32  : DocAVStoreBase<"32">;
 def DocAVStoreB64  : DocAVStoreBase<"64">;

@@ -29,6 +29,20 @@ define void @av_flat_store_b128_bad_metadata(ptr %addr, <4 x i32> %data) {
 }
 
 ; CHECK: the last argument to av load/store intrinsics must be a metadata string
+; CHECK-NEXT: call i8 @llvm.amdgcn.av.load.b8.p1({{.*}})
+define i8 @av_global_load_b8_bad_metadata(ptr addrspace(1) %addr) {
+  %data = call i8 @llvm.amdgcn.av.load.b8.p1(ptr addrspace(1) %addr, metadata i32 0)
+  ret i8 %data
+}
+
+; CHECK: the last argument to av load/store intrinsics must be a metadata string
+; CHECK-NEXT: call void @llvm.amdgcn.av.store.b8.p1({{.*}})
+define void @av_global_store_b8_bad_metadata(ptr addrspace(1) %addr, i8 %data) {
+  call void @llvm.amdgcn.av.store.b8.p1(ptr addrspace(1) %addr, i8 %data, metadata i32 0)
+  ret void
+}
+
+; CHECK: the last argument to av load/store intrinsics must be a metadata string
 ; CHECK-NEXT: call i16 @llvm.amdgcn.av.load.b16.p1({{.*}})
 define i16 @av_global_load_b16_bad_metadata(ptr addrspace(1) %addr) {
   %data = call i16 @llvm.amdgcn.av.load.b16.p1(ptr addrspace(1) %addr, metadata i32 0)

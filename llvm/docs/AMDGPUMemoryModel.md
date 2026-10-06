@@ -155,7 +155,7 @@ the subscope instances of `S` that contain `X`.
 @llvm.amdgcn.av.store.b<N>(%addr, %value, metadata !scope)
 ```
 
-The `@llvm.amdgcn.av.store.b{16,32,64,128}` intrinsics perform a non-atomic
+The `@llvm.amdgcn.av.store.b{8,16,32,64,128}` intrinsics perform a non-atomic
 *store-available* operation on `%addr` with scope `!scope`. See
 {ref}`amdgpu-av-load-store` for details.
 
@@ -181,7 +181,7 @@ that contain `Y`.
 %value = @llvm.amdgcn.av.load.b<N>(%addr, metadata !scope)
 ```
 
-The `@llvm.amdgcn.av.load.b{16,32,64,128}` intrinsics perform a non-atomic *load-visible*
+The `@llvm.amdgcn.av.load.b{8,16,32,64,128}` intrinsics perform a non-atomic *load-visible*
 operation on `%addr` with scope `!scope`. See {ref}`amdgpu-av-load-store` for
 details.
 
