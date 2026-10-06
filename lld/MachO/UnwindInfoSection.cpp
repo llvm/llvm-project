@@ -220,6 +220,22 @@ void UnwindInfoSectionImpl::prepare() {
     }
 }
 
+// arm64e's unwinder expects signed personality pointers.
+static void addPersonalityGotEntry(Symbol *s) {
+  if (config->arch() == AK_arm64e)
+    in.authGot->addEntry(s);
+  else
+    in.got->addEntry(s);
+}
+
+static bool hasPersonalityGotEntry(const Symbol *s) {
+  return config->arch() == AK_arm64e ? in.authGot->contains(s) : s->isInGot();
+}
+
+static uint64_t getPersonalityGotVA(const Symbol *s) {
+  return config->arch() == AK_arm64e ? in.authGot->getVA(s) : s->getGotVA();
+}
+
 // Compact unwind relocations have different semantics, so we handle them in a
 // separate code path from regular relocations. First, we do not wish to add
 // rebase opcodes for __LD,__compact_unwind, because that section doesn't
@@ -283,7 +299,7 @@ void UnwindInfoSectionImpl::prepareRelocations(ConcatInputSection *isec) {
             personalityTable[{defined->isec(), defined->value}];
         if (personality == nullptr) {
           personality = defined;
-          in.got->addEntry(defined);
+          addPersonalityGotEntry(defined);
         } else if (personality != defined) {
           r.referent = personality;
         }
@@ -291,7 +307,7 @@ void UnwindInfoSectionImpl::prepareRelocations(ConcatInputSection *isec) {
       }
 
       assert(isa<DylibSymbol>(s));
-      in.got->addEntry(s);
+      addPersonalityGotEntry(s);
       continue;
     }
 
@@ -308,7 +324,7 @@ void UnwindInfoSectionImpl::prepareRelocations(ConcatInputSection *isec) {
         Defined *const *gotEntry =
             llvm::find_if(referentIsec->symbols, [&](Defined const *d) {
               return d->value == static_cast<uint64_t>(r.getAddend()) &&
-                     d->isInGot();
+                     hasPersonalityGotEntry(d);
             });
         if (gotEntry != referentIsec->symbols.end()) {
           s = *gotEntry;
@@ -322,7 +338,7 @@ void UnwindInfoSectionImpl::prepareRelocations(ConcatInputSection *isec) {
                             /*isReferencedDynamically=*/false,
                             /*noDeadStrip=*/false);
           s->used = true;
-          in.got->addEntry(s);
+          addPersonalityGotEntry(s);
         }
       }
       r.referent = s;
@@ -642,7 +658,7 @@ void UnwindInfoSectionImpl::writeTo(uint8_t *buf) const {
 
   // Personalities
   for (const Symbol *personality : personalities)
-    *i32p++ = personality->getGotVA() - in.header->addr;
+    *i32p++ = getPersonalityGotVA(personality) - in.header->addr;
 
   // FIXME: LD64 checks and warns aboutgaps or overlapse in cuEntries address
   // ranges. We should do the same too
