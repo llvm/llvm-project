@@ -1106,7 +1106,10 @@ TEST_F(ExtractFunctionTest, CFileStructMixedUses) {
 TEST_F(ExtractFunctionTest, CFileModifiedArrayStaysPlainPointer) {
   // Unlike other non-scalar types, an array decays to a pointer on its
   // own wherever it's used, so it needs neither an address-of at the
-  // call site nor a dereference-rewrite of its uses in the body.
+  // call site nor a dereference-rewrite of its uses in the body. The
+  // parameter's own type must be decayed too, though: leaving it as an
+  // array type would print as the uncompilable "int[5] arr" (there's no
+  // special-cased array declarator syntax, unlike C++'s reference case).
   FileName = "a.c";
   Context = File;
   EXPECT_THAT(apply(R"cpp(
@@ -1114,8 +1117,65 @@ TEST_F(ExtractFunctionTest, CFileModifiedArrayStaysPlainPointer) {
          int arr[5];
          [[arr[0] = 1;]]
     })cpp"),
-              AllOf(HasSubstr("arr[0] = 1;"), HasSubstr("extracted(arr)"),
-                    Not(HasSubstr("&arr"))));
+              AllOf(HasSubstr("extracted(int * arr)"), HasSubstr("arr[0] = 1;"),
+                    HasSubstr("extracted(arr)"), Not(HasSubstr("&arr"))));
+}
+
+TEST_F(ExtractFunctionTest, CFileStaticFunctionStaysStatic) {
+  // A free function's own `static` (internal linkage) must carry over to
+  // an extracted sibling, or that sibling would default to external
+  // linkage instead.
+  FileName = "a.c";
+  Context = File;
+  EXPECT_THAT(apply(R"cpp(
+      static void foo() {
+         int j = 0;
+         [[int k = j;]]
+    })cpp"),
+              HasSubstr("static void extracted"));
+}
+
+TEST_F(ExtractFunctionTest, CFileRejectArraySizeof) {
+  // Decaying the array to a pointer parameter would silently change the
+  // meaning of a `sizeof` on it (pointer size instead of array size), so
+  // this is refused rather than risk miscompiling it.
+  FileName = "a.c";
+  Context = File;
+  EXPECT_EQ(apply(R"cpp(
+      void foo() {
+         int arr[5];
+         [[int n = sizeof(arr);]]
+    })cpp"),
+            "fail: Too complex to extract.");
+}
+
+TEST_F(ExtractFunctionTest, CFileRejectArrayAlignof) {
+  // Same hazard as sizeof, and the same UnaryExprOrTypeTraitExpr AST
+  // node: alignof(int) and alignof(int *) aren't guaranteed to match
+  // (and commonly don't, e.g. 4 vs 8 on a typical 64-bit target).
+  FileName = "a.c";
+  Context = File;
+  EXPECT_EQ(apply(R"cpp(
+      void foo() {
+         int arr[5];
+         [[int n = __alignof(arr);]]
+    })cpp"),
+            "fail: Too complex to extract.");
+}
+
+TEST_F(ExtractFunctionTest, CFileRejectArrayTypeof) {
+  // Same hazard again, but via a completely different AST node
+  // (TypeOfExprType, reached through the VarDecl's TypeLoc, not through
+  // any Stmt a plain expression visitor would see): typeof(arr) would
+  // resolve to the decayed pointer type instead of the array type.
+  FileName = "a.c";
+  Context = File;
+  EXPECT_EQ(apply(R"cpp(
+      void foo() {
+         int arr[5];
+         [[__typeof__(arr) copy;]]
+    })cpp"),
+            "fail: Too complex to extract.");
 }
 
 } // namespace

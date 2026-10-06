@@ -486,10 +486,10 @@ struct NewFunction {
   // Render the call for this function.
   std::string renderCall() const;
   // Render the definition for this function.
-  std::string renderDeclaration(FunctionDeclKind K,
-                                const DeclContext &SemanticDC,
-                                const DeclContext &SyntacticDC,
-                                const SourceManager &SM) const;
+  llvm::Expected<std::string> renderDeclaration(FunctionDeclKind K,
+                                                const DeclContext &SemanticDC,
+                                                const DeclContext &SyntacticDC,
+                                                const SourceManager &SM) const;
 
 private:
   std::string
@@ -499,7 +499,7 @@ private:
   std::string renderQualifiers() const;
   std::string renderDeclarationName(FunctionDeclKind K) const;
   // Generate the function body.
-  std::string getFuncBody(const SourceManager &SM) const;
+  llvm::Expected<std::string> getFuncBody(const SourceManager &SM) const;
 };
 
 std::string NewFunction::renderParametersForDeclaration(
@@ -578,10 +578,9 @@ std::string NewFunction::renderCall() const {
                     (SemicolonPolicy.isNeededInOriginalFunction() ? ";" : "")));
 }
 
-std::string NewFunction::renderDeclaration(FunctionDeclKind K,
-                                           const DeclContext &SemanticDC,
-                                           const DeclContext &SyntacticDC,
-                                           const SourceManager &SM) const {
+llvm::Expected<std::string> NewFunction::renderDeclaration(
+    FunctionDeclKind K, const DeclContext &SemanticDC,
+    const DeclContext &SyntacticDC, const SourceManager &SM) const {
   std::string Declaration = std::string(llvm::formatv(
       "{0}{1} {2}({3}){4}", renderSpecifiers(K),
       printType(ReturnType, SyntacticDC), renderDeclarationName(K),
@@ -591,53 +590,55 @@ std::string NewFunction::renderDeclaration(FunctionDeclKind K,
   case ForwardDeclaration:
     return std::string(llvm::formatv("{0};\n", Declaration));
   case OutOfLineDefinition:
-  case InlineDefinition:
-    return std::string(
-        llvm::formatv("{0} {\n{1}\n}\n", Declaration, getFuncBody(SM)));
-    break;
+  case InlineDefinition: {
+    llvm::Expected<std::string> Body = getFuncBody(SM);
+    if (!Body)
+      return Body.takeError();
+    return std::string(llvm::formatv("{0} {\n{1}\n}\n", Declaration, *Body));
+  }
   }
   llvm_unreachable("Unsupported FunctionDeclKind enum");
 }
 
-std::string NewFunction::getFuncBody(const SourceManager &SM) const {
+llvm::Expected<std::string>
+NewFunction::getFuncBody(const SourceManager &SM) const {
   // FIXME: Generate tooling::Replacements instead of std::string to
   // - hoist decls
   // - add return statement
   // - Add semicolon
-  std::string Body;
-  if (PointerRewriteSites.empty()) {
-    Body = toSourceCode(SM, BodyRange).str();
-  } else {
-    // Splice in each site's rewrite, keeping everything else verbatim.
-    auto Sites = PointerRewriteSites;
-    llvm::sort(Sites, [&SM](const auto &A, const auto &B) {
-      return SM.isBeforeInTranslationUnit(A.Loc, B.Loc);
-    });
-    FileID FID = SM.getFileID(BodyRange.getBegin());
-    StringRef Buf = SM.getBufferOrFake(FID).getBuffer();
-    unsigned Cursor = SM.getFileOffset(BodyRange.getBegin());
-    for (const auto &Site : Sites) {
-      unsigned SiteBegin = SM.getFileOffset(Site.Loc);
-      Body += Buf.substr(Cursor, SiteBegin - Cursor);
-      if (Site.DotLoc) {
-        // Leave the identifier itself untouched; turn the member access
-        // that follows it into "->" instead of wrapping in a dereference.
-        Body += Buf.substr(SiteBegin, Site.NameLength);
-        Cursor = SiteBegin + Site.NameLength;
-        unsigned DotOffset = SM.getFileOffset(*Site.DotLoc);
-        Body += Buf.substr(Cursor, DotOffset - Cursor);
-        Body += "->";
-        Cursor = DotOffset + 1;
-      } else {
-        Body += "(*";
-        Body += Buf.substr(SiteBegin, Site.NameLength);
-        Body += ")";
-        Cursor = SiteBegin + Site.NameLength;
-      }
+  std::string Body = toSourceCode(SM, BodyRange).str();
+  if (PointerRewriteSites.empty())
+    return Body + (SemicolonPolicy.isNeededInExtractedFunction() ? ";" : "");
+
+  // Splice in each site's rewrite. These are all independent
+  // insertions/single-token replacements at distinct, non-overlapping
+  // source locations (two DeclRefExprs can't share a location, and a dot
+  // always follows its own identifier), so none of this should actually
+  // be able to fail -- but if that assumption is ever wrong, surface it
+  // as an extraction failure instead of silently emitting broken code.
+  tooling::Replacements Repls;
+  unsigned BodyBeginOffset = SM.getFileOffset(BodyRange.getBegin());
+  for (const auto &Site : PointerRewriteSites) {
+    unsigned SiteOffset = SM.getFileOffset(Site.Loc) - BodyBeginOffset;
+    if (Site.DotLoc) {
+      // Leave the identifier itself untouched; turn the member access
+      // that follows it into "->" instead of wrapping in a dereference.
+      unsigned DotOffset = SM.getFileOffset(*Site.DotLoc) - BodyBeginOffset;
+      if (auto Err = Repls.add(tooling::Replacement("", DotOffset, 1, "->")))
+        return std::move(Err);
+    } else {
+      if (auto Err = Repls.add(tooling::Replacement("", SiteOffset, 0, "(*")))
+        return std::move(Err);
+      if (auto Err = Repls.add(
+              tooling::Replacement("", SiteOffset + Site.NameLength, 0, ")")))
+        return std::move(Err);
     }
-    Body += Buf.substr(Cursor, SM.getFileOffset(BodyRange.getEnd()) - Cursor);
   }
-  return Body + (SemicolonPolicy.isNeededInExtractedFunction() ? ";" : "");
+  llvm::Expected<std::string> NewBody =
+      tooling::applyAllReplacements(Body, Repls);
+  if (!NewBody)
+    return NewBody.takeError();
+  return *NewBody + (SemicolonPolicy.isNeededInExtractedFunction() ? ";" : "");
 }
 
 std::string NewFunction::Parameter::render(const DeclContext *Context) const {
@@ -674,6 +675,17 @@ struct CapturedZoneInfo {
       std::optional<SourceLocation> DotLoc;
     };
     llvm::SmallVector<Occurrence, 1> ZoneOccurrences;
+    // Whether this Decl is ever the direct operand of a trait that
+    // depends on its exact, undecayed type: `sizeof`/`alignof`/`typeof`
+    // and their spelling variants (e.g. `sizeof arr`/`sizeof(arr)`, as
+    // opposed to `sizeof(T)`, which doesn't reference arr's Decl at all).
+    // If this Decl is an array and ends up decaying to a pointer for a C
+    // pointer-adapter parameter (see createParameters), such a use would
+    // silently start reporting the pointer's properties instead of the
+    // array's (e.g. 8 instead of 20 for `sizeof` on a 5-element `int`
+    // array on a 64-bit target), so that decay is refused whenever this
+    // is set.
+    bool HasUnsafeTypeQueryUseInZone = false;
     DeclInformation(const Decl *TheDecl, ZoneRelative DeclaredIn,
                     unsigned DeclIndex)
         : TheDecl(TheDecl), DeclaredIn(DeclaredIn), DeclIndex(DeclIndex){};
@@ -851,6 +863,39 @@ CapturedZoneInfo captureZoneInfo(const ExtractionZone &ExtZone) {
     bool VisitMemberExpr(MemberExpr *ME) {
       if (!ME->isArrow() && isa<DeclRefExpr>(ME->getBase()->IgnoreParens()))
         PendingMemberDotLoc = ME->getOperatorLoc();
+      return true;
+    }
+
+    // Marks D as having an unsafe, type-dependent use in the zone (see
+    // DeclInformation::HasUnsafeTypeQueryUseInZone) if it's reached
+    // through a plain (possibly parenthesized) DeclRefExpr -- e.g. not
+    // through a cast, which would already observe the decayed type rather
+    // than the Decl's own declared type.
+    void markUnsafeTypeQueryOperand(const Expr *E) {
+      if (CurrentLocation != ZoneRelative::Inside)
+        return;
+      if (const auto *DRE = dyn_cast<DeclRefExpr>(E->IgnoreParens()))
+        if (auto *DeclInfo = Info.getDeclInfoFor(DRE->getDecl()))
+          DeclInfo->HasUnsafeTypeQueryUseInZone = true;
+    }
+
+    // Covers sizeof/alignof/__alignof/_Countof and their variants: all
+    // share this one node type, distinguished only by getKind().
+    bool VisitUnaryExprOrTypeTraitExpr(UnaryExprOrTypeTraitExpr *E) {
+      if (!E->isArgumentType())
+        markUnsafeTypeQueryOperand(E->getArgumentExpr());
+      return true;
+    }
+
+    // Covers typeof/typeof_unqual/__typeof__ (decltype itself is C++
+    // only, so can't appear in the C code this matters for, but is
+    // included for completeness/robustness).
+    bool VisitTypeOfExprTypeLoc(TypeOfExprTypeLoc TL) {
+      markUnsafeTypeQueryOperand(TL.getUnderlyingExpr());
+      return true;
+    }
+    bool VisitDecltypeTypeLoc(DecltypeTypeLoc TL) {
+      markUnsafeTypeQueryOperand(TL.getUnderlyingExpr());
       return true;
     }
 
@@ -1144,9 +1189,18 @@ bool createParameters(NewFunction &ExtractedFunc,
     // copied-out body is rewritten into a dereference (see
     // NewFunction::getFuncBody). Array types are the exception: they decay
     // to a pointer on their own wherever they're used, so no rewriting or
-    // address-of is needed for them at all.
+    // address-of is needed for them at all -- except that TypeInfo itself
+    // must be decayed too (NewFunction::Parameter::render() has no special
+    // case for array declarator syntax, so leaving it as an array type
+    // would print as the uncompilable `int[5] name`).
     if (Kind == ParamPassKind::Reference && !LangOpts.CPlusPlus) {
       if (TypeInfo->isArrayType()) {
+        // A decayed pointer no longer reports the array's own size,
+        // alignment, or type: bail out rather than silently break a
+        // sizeof/alignof/typeof (or similar) on it.
+        if (DeclInfo.HasUnsafeTypeQueryUseInZone)
+          return false;
+        TypeInfo = Context.getArrayDecayedType(TypeInfo);
         Kind = ParamPassKind::Value;
       } else {
         // Bail out rather than rewrite a use whose location can't be
@@ -1243,6 +1297,12 @@ llvm::Expected<NewFunction> getExtractedFunction(ExtractionZone &ExtZone,
   ExtractedFunc.DefinitionQualifier = ExtZone.EnclosingFunction->getQualifier();
   ExtractedFunc.Constexpr = ExtZone.EnclosingFunction->getConstexprKind();
 
+  // A free function declared `static` has internal linkage: an extracted
+  // sibling should keep that, or it'd default to external linkage instead.
+  // For a method, this gets overridden just below by the more precise
+  // (and differently-meaning) CXXMethodDecl::isStatic().
+  ExtractedFunc.Static =
+      ExtZone.EnclosingFunction->getStorageClass() == SC_Static;
   if (const auto *Method =
           llvm::dyn_cast<CXXMethodDecl>(ExtZone.EnclosingFunction))
     captureMethodInfo(ExtractedFunc, Method);
@@ -1295,26 +1355,32 @@ tooling::Replacement replaceWithFuncCall(const NewFunction &ExtractedFunc,
       SM, CharSourceRange(ExtractedFunc.BodyRange, false), FuncCall, LangOpts);
 }
 
-tooling::Replacement createFunctionDefinition(const NewFunction &ExtractedFunc,
-                                              const SourceManager &SM) {
+llvm::Expected<tooling::Replacement>
+createFunctionDefinition(const NewFunction &ExtractedFunc,
+                         const SourceManager &SM) {
   FunctionDeclKind DeclKind = InlineDefinition;
   if (ExtractedFunc.ForwardDeclarationPoint)
     DeclKind = OutOfLineDefinition;
-  std::string FunctionDef = ExtractedFunc.renderDeclaration(
+  llvm::Expected<std::string> FunctionDef = ExtractedFunc.renderDeclaration(
       DeclKind, *ExtractedFunc.SemanticDC, *ExtractedFunc.SyntacticDC, SM);
+  if (!FunctionDef)
+    return FunctionDef.takeError();
 
   return tooling::Replacement(SM, ExtractedFunc.DefinitionPoint, 0,
-                              FunctionDef);
+                              *FunctionDef);
 }
 
-tooling::Replacement createForwardDeclaration(const NewFunction &ExtractedFunc,
-                                              const SourceManager &SM) {
-  std::string FunctionDecl = ExtractedFunc.renderDeclaration(
+llvm::Expected<tooling::Replacement>
+createForwardDeclaration(const NewFunction &ExtractedFunc,
+                         const SourceManager &SM) {
+  llvm::Expected<std::string> FunctionDecl = ExtractedFunc.renderDeclaration(
       ForwardDeclaration, *ExtractedFunc.SemanticDC,
       *ExtractedFunc.ForwardDeclarationSyntacticDC, SM);
+  if (!FunctionDecl)
+    return FunctionDecl.takeError();
   SourceLocation DeclPoint = *ExtractedFunc.ForwardDeclarationPoint;
 
-  return tooling::Replacement(SM, DeclPoint, 0, FunctionDecl);
+  return tooling::Replacement(SM, DeclPoint, 0, *FunctionDecl);
 }
 
 // Returns true if ExtZone contains any ReturnStmts.
@@ -1363,7 +1429,10 @@ Expected<Tweak::Effect> ExtractFunction::apply(const Selection &Inputs) {
   if (!ExtractedFunc)
     return ExtractedFunc.takeError();
   tooling::Replacements Edit;
-  if (auto Err = Edit.add(createFunctionDefinition(*ExtractedFunc, SM)))
+  auto FuncDef = createFunctionDefinition(*ExtractedFunc, SM);
+  if (!FuncDef)
+    return FuncDef.takeError();
+  if (auto Err = Edit.add(*FuncDef))
     return std::move(Err);
   if (auto Err = Edit.add(replaceWithFuncCall(*ExtractedFunc, SM, LangOpts)))
     return std::move(Err);
@@ -1372,15 +1441,20 @@ Expected<Tweak::Effect> ExtractFunction::apply(const Selection &Inputs) {
     // If the fwd-declaration goes in the same file, merge into Replacements.
     // Otherwise it needs to be a separate file edit.
     if (SM.isWrittenInSameFile(ExtractedFunc->DefinitionPoint, *FwdLoc)) {
-      if (auto Err = Edit.add(createForwardDeclaration(*ExtractedFunc, SM)))
+      auto FwdDecl = createForwardDeclaration(*ExtractedFunc, SM);
+      if (!FwdDecl)
+        return FwdDecl.takeError();
+      if (auto Err = Edit.add(*FwdDecl))
         return std::move(Err);
     } else {
       auto MultiFileEffect = Effect::mainFileEdit(SM, std::move(Edit));
       if (!MultiFileEffect)
         return MultiFileEffect.takeError();
 
-      tooling::Replacements OtherEdit(
-          createForwardDeclaration(*ExtractedFunc, SM));
+      auto FwdDecl = createForwardDeclaration(*ExtractedFunc, SM);
+      if (!FwdDecl)
+        return FwdDecl.takeError();
+      tooling::Replacements OtherEdit(*FwdDecl);
       if (auto PathAndEdit =
               Tweak::Effect::fileEdit(SM, SM.getFileID(*FwdLoc), OtherEdit))
         MultiFileEffect->ApplyEdits.try_emplace(PathAndEdit->first,
