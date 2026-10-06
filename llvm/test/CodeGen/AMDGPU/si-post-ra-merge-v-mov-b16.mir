@@ -483,8 +483,8 @@ body: |
 ...
 
 ---
-# Positive: a whole-wave region between the two halves saves and restores EXEC,
-# so the merged instruction runs under the same mask both halves did.
+# Allow merging across a WWM exec regrion since the merged instruction does't land
+# in there.
 name: merge_across_wwm_exec_write
 tracksRegLiveness: true
 body:             |
@@ -506,9 +506,7 @@ body:             |
 ...
 
 ---
-# Positive: the shape this comes from in practice -- $vgpr0's halves are 12
-# instructions apart, spanning a whole-wave reload of a VGPR holding SGPR
-# spill lanes.
+# Allow merging accross a WWM SGPR spill reload
 name: merge_across_wwm_sgpr_spill_reload
 tracksRegLiveness: true
 stack:

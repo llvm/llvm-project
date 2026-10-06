@@ -152,11 +152,6 @@ bool SIPostRA16BitMovFolding::mergeSingleMovB16Pair(MachineInstr &Lo,
   // - modify LoSrc16 or HiSrc16 depending on order (data dependency)
   // We scan from the instruction after the first mov up to (but not including)
   // the second mov.
-  //
-  // EXEC writes in between are fine. The only one that occurs here in practice
-  // is the whole-wave region around an SGPR spill reload, which saves and
-  // restores EXEC, so both halves and the merged instruction run under the
-  // same mask.
   MCRegister FirstSrc16 = IsHiFirst ? HiSrc16 : LoSrc16;
   MCRegister FirstDst16 = IsHiFirst ? HiDst : LoDst;
   MCRegister SecondSrc16 = IsHiFirst ? LoSrc16 : HiSrc16;
