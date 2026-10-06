@@ -14,6 +14,7 @@
 #include "InstCombineInternal.h"
 #include "llvm/ADT/SmallBitVector.h"
 #include "llvm/Analysis/ValueTracking.h"
+#include "llvm/Analysis/VectorUtils.h"
 #include "llvm/IR/GetElementPtrTypeIterator.h"
 #include "llvm/IR/IntrinsicInst.h"
 #include "llvm/IR/PatternMatch.h"
@@ -1983,13 +1984,27 @@ Value *InstCombinerImpl::SimplifyDemandedVectorElts(Value *V,
       PoisonElts = PoisonElts2 & PoisonElts3;
       break;
     }
-    case Intrinsic::smulh:
-    case Intrinsic::umulh:
-      simplifyAndSetOp(II, 0, DemandedElts, PoisonElts);
-      simplifyAndSetOp(II, 1, DemandedElts, PoisonElts);
-      PoisonElts = PoisonElts2 | PoisonElts3;
-      break;
     default: {
+      // Handle all trivially vectorizable intrinsics
+      if (isTriviallyVectorizable(II->getIntrinsicID())) {
+        // Simplify all Vector arguments
+        for (unsigned i = 0; i < II->arg_size(); i++) {
+          VectorType *VTy =
+              dyn_cast<VectorType>(II->getArgOperand(i)->getType());
+          if (!VTy)
+            continue;
+
+          assert(VWidth == cast<FixedVectorType>(VTy)->getNumElements() &&
+                 "expected same sized vector as result");
+
+          APInt PoisonEltsOp(VWidth, 0);
+          simplifyAndSetOp(II, i, DemandedElts, PoisonEltsOp);
+
+          // If intrinsic can propagate poison, we pass it forward
+          if (intrinsicPropagatesPoison(II->getIntrinsicID()))
+            PoisonElts |= PoisonEltsOp;
+        }
+      }
       // Handle target specific intrinsics
       std::optional<Value *> V = targetSimplifyDemandedVectorEltsIntrinsic(
           *II, DemandedElts, PoisonElts, PoisonElts2, PoisonElts3,
