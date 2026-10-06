@@ -475,11 +475,6 @@ bool ContinuationIndenter::mustBreak(const LineState &State) {
   const FormatToken &Current = *State.NextToken;
   const FormatToken &Previous = *Current.Previous;
   const auto &CurrentState = State.Stack.back();
-  if (Style.BraceWrapping.BeforeLambdaBody && Current.CanBreakBefore &&
-      Current.is(TT_LambdaLBrace) && Previous.isNot(TT_LineComment)) {
-    auto LambdaBodyLength = getLengthToMatchingParen(Current, State.Stack);
-    return Current.MustBreakBefore || LambdaBodyLength > getColumnLimit(State);
-  }
   if (Style.BraceWrapping.AfterRequiresExpression && Current.CanBreakBefore &&
       Current.is(TT_RequiresExpressionLBrace) &&
       getLengthToMatchingParen(Current, State.Stack) > getColumnLimit(State)) {
@@ -491,6 +486,12 @@ bool ContinuationIndenter::mustBreak(const LineState &State) {
         (Style.BreakBeforeInlineASMColon == FormatStyle::BBIAS_OnlyMultiline &&
          Style.ColumnLimit > 0)))) {
     return true;
+  }
+  if (Style.BraceWrapping.BeforeLambdaBody && Current.CanBreakBefore &&
+      Current.is(TT_LambdaLBrace) && Previous.isNot(TT_LineComment)) {
+    const auto LambdaBodyLength =
+        getLengthToMatchingParen(Current, State.Stack);
+    return LambdaBodyLength > getColumnLimit(State);
   }
   if (CurrentState.BreakBeforeClosingBrace &&
       (Current.closesBlockOrBlockTypeList(Style) ||
@@ -825,10 +826,8 @@ void ContinuationIndenter::addTokenOnCurrentLine(LineState &State, bool DryRun,
     if (Prev->BlockParameterCount == 0)
       return false;
 
-    // If any lambda brace in the argument list has MustBreakBefore set
-    // (e.g. for Allman-style BeforeLambdaBody), the "all arguments on one
-    // line" strategy is impossible, so allow natural line wrapping.
-    for (const auto *Tok = Prev->Next; Tok && Tok != Prev->MatchingParen;
+    // A lambda brace that must break makes the single-line strategy impossible.
+    for (const auto *Tok = &Current; Tok && Tok != Prev->MatchingParen;
          Tok = Tok->Next) {
       if (Tok->is(TT_LambdaLBrace) && Tok->MustBreakBefore)
         return false;

@@ -6238,17 +6238,11 @@ bool TokenAnnotator::mustBreakBefore(AnnotatedLine &Line,
     return true;
   }
 
-  // When BeforeLambdaBody is set, force a break before function argument lambda
-  // braces. This ensures Allman-style formatting is applied even when the
-  // DisallowLineBreaks heuristic would otherwise prevent line breaks in the
-  // parent scope (e.g. with multiple lambdas or a lambda followed by another
-  // argument). Only force the break when the lambda brace will definitely be on
-  // a new line: SLS_None always breaks, and SLS_Empty breaks for non-empty
-  // lambdas. For SLS_Inline/SLS_All, the brace may stay inline for short
-  // lambdas, so we let the runtime decision in mustBreak() handle it.
+  // SLS_Inline and SLS_All may keep short lambdas inline, so the break is
+  // decided later in ContinuationIndenter::mustBreak().
   if (Style.BraceWrapping.BeforeLambdaBody && Right.is(TT_LambdaLBrace) &&
       IsFunctionArgument(Right)) {
-    auto SLS = Style.AllowShortLambdasOnASingleLine;
+    const auto SLS = Style.AllowShortLambdasOnASingleLine;
     if (SLS == FormatStyle::SLS_None ||
         (SLS == FormatStyle::SLS_Empty && !Right.Children.empty())) {
       return true;
