@@ -7705,12 +7705,13 @@ void NVPTXTargetLowering::ReplaceNodeResults(
   }
 }
 
-/// Returns how NVPTX should expand a scalar atomicrmw with the given
-/// instruction and value type.
+/// Returns how NVPTX should expand a scalar atomicrmw.
 static TargetLoweringBase::AtomicExpansionKind
-getScalarAtomicRMWExpansion(const AtomicRMWInst *AI, Type *Ty,
+getScalarAtomicRMWExpansion(AtomicRMWInst::BinOp Op, Type *Ty,
+                            unsigned AddressSpace, const Function &F,
                             const NVPTXSubtarget &STI) {
   using AtomicExpansionKind = TargetLoweringBase::AtomicExpansionKind;
+  assert(!Ty->isVectorTy() && "Expected a scalar atomicrmw type");
 
   // Try to lower LLVM atomicrmw fadd/fsub to PTX atomic.add. Fsub is first
   // expanded to an fadd with a negated operand. This is complicated by the
@@ -7723,21 +7724,17 @@ getScalarAtomicRMWExpansion(const AtomicRMWInst *AI, Type *Ty,
   // atom.add; otherwise, we lower to a CAS loop. But we always allow
   // atomic.add.bf16; even though it never flushes denormals, we never flush
   // bf16 denormals when doing regular arithmetic, even when FTZ is enabled.
-  if (AI->isFloatingPointOperation() &&
-      (AI->getOperation() == AtomicRMWInst::BinOp::FAdd ||
-       AI->getOperation() == AtomicRMWInst::BinOp::FSub)) {
-    const Function *F = AI->getFunction();
-    AtomicExpansionKind ExpansionKind =
-        AI->getOperation() == AtomicRMWInst::BinOp::FSub
-            ? AtomicExpansionKind::Expand
-            : AtomicExpansionKind::None;
+  if (Op == AtomicRMWInst::BinOp::FAdd || Op == AtomicRMWInst::BinOp::FSub) {
+    AtomicExpansionKind ExpansionKind = Op == AtomicRMWInst::BinOp::FSub
+                                            ? AtomicExpansionKind::Expand
+                                            : AtomicExpansionKind::None;
 
     // AllowFTZAtomics forces atom.add regardless of the FTZ mismatch.
     if (Ty->isFloatTy()) {
-      const bool FTZ = F->getDenormalMode(APFloat::IEEEsingle()).Output ==
+      const bool FTZ = F.getDenormalMode(APFloat::IEEEsingle()).Output ==
                        DenormalMode::PreserveSign;
       bool UseNative = AllowFTZAtomics;
-      switch (AI->getPointerAddressSpace()) {
+      switch (AddressSpace) {
       case llvm::ADDRESS_SPACE_GLOBAL:
         UseNative |= FTZ;
         break;
@@ -7753,7 +7750,7 @@ getScalarAtomicRMWExpansion(const AtomicRMWInst *AI, Type *Ty,
     if (Ty->isHalfTy()) {
       // atom.add.f16 never flushes denormals, so it only agrees with a
       // function that is not in FTZ mode for f16.
-      const bool FTZ = F->getDenormalMode(APFloat::IEEEhalf()).Output ==
+      const bool FTZ = F.getDenormalMode(APFloat::IEEEhalf()).Output ==
                        DenormalMode::PreserveSign;
       if ((!FTZ || AllowFTZAtomics) && STI.hasFeature(NVPTX::SM70) &&
           STI.hasFeature(NVPTX::PTX63))
@@ -7768,24 +7765,13 @@ getScalarAtomicRMWExpansion(const AtomicRMWInst *AI, Type *Ty,
   }
 
   // PTX's only atomic fp op is `add`; all other ops expand to a CAS loop.
-  if (AI->isFloatingPointOperation())
+  if (AtomicRMWInst::isFPOperation(Op))
     return AtomicExpansionKind::CmpXChg;
 
-  if (Ty->isVectorTy())
-    return AtomicExpansionKind::CmpXChg;
+  assert(Ty->isIntegerTy() && "Expected an integer atomicrmw type");
+  const unsigned BitWidth = cast<IntegerType>(Ty)->getBitWidth();
 
-  // AtomicExpand casts non-integer xchg operations to the same-width integer
-  // type. When classifying an elementwise xchg, this hook runs before that
-  // cast is performed on the scalar lanes, so account for it here.
-  assert(
-      (Ty->isIntegerTy() || AI->getOperation() == AtomicRMWInst::BinOp::Xchg) &&
-      "Ty should be integer at this point");
-  const unsigned BitWidth =
-      Ty->isIntegerTy()
-          ? cast<IntegerType>(Ty)->getBitWidth()
-          : AI->getDataLayout().getTypeStoreSizeInBits(Ty).getFixedValue();
-
-  switch (AI->getOperation()) {
+  switch (Op) {
   default:
     return AtomicExpansionKind::CmpXChg;
   case AtomicRMWInst::Xchg:
@@ -7794,10 +7780,9 @@ getScalarAtomicRMWExpansion(const AtomicRMWInst *AI, Type *Ty,
     [[fallthrough]];
   case AtomicRMWInst::BinOp::Add:
   case AtomicRMWInst::BinOp::Sub: {
-    AtomicExpansionKind ExpansionKind =
-        AI->getOperation() == AtomicRMWInst::BinOp::Sub
-            ? AtomicExpansionKind::Expand
-            : AtomicExpansionKind::None;
+    AtomicExpansionKind ExpansionKind = Op == AtomicRMWInst::BinOp::Sub
+                                            ? AtomicExpansionKind::Expand
+                                            : AtomicExpansionKind::None;
     switch (BitWidth) {
     case 8:
     case 16:
@@ -7853,28 +7838,42 @@ getScalarAtomicRMWExpansion(const AtomicRMWInst *AI, Type *Ty,
 
 NVPTXTargetLowering::AtomicExpansionKind
 NVPTXTargetLowering::shouldExpandAtomicRMWInIR(const AtomicRMWInst *AI) const {
+  const DataLayout &DL = AI->getDataLayout();
+  AtomicRMWInst::BinOp Op = AI->getOperation();
+
   // TODO: once we support native elementwise vector atoms,
   // return `AtomicExpansionKind::None` to preserve and lower them.
   if (AI->isElementwise()) {
     auto *VecTy = cast<FixedVectorType>(AI->getType());
-    Type *LaneTy = VecTy->getElementType();
+    Type *Ty = VecTy->getElementType();
 
     // Collapse <1 x T> elementwise RMWs to scalar RMWs
     if (VecTy->getNumElements() == 1)
       return AtomicExpansionKind::Expand;
 
-    // If the scalar lane op is natively supported, return Expand so halving
-    // eventually bottoms out at the scalar base case, where this hook returns
-    // None for each scalar lane and the scalar `atom.*` instruction is
-    // preserved.
-    if (getScalarAtomicRMWExpansion(AI, LaneTy, STI) ==
-        AtomicExpansionKind::None)
+    uint64_t VecBytes = DL.getTypeStoreSize(VecTy).getFixedValue();
+    uint64_t VecBits = DL.getTypeStoreSizeInBits(VecTy).getFixedValue();
+
+    // Prefer a single whole-value exchange whenever the vector is a legal
+    // atomic size. AtomicExpand will cast it to the corresponding integer type
+    // and re-query this hook. Otherwise, split it until each piece is legal.
+    if (Op == AtomicRMWInst::BinOp::Xchg)
+      return VecBits <= getMaxAtomicSizeInBitsSupported() &&
+                     AI->getAlign().value() >= VecBytes
+                 ? AtomicExpansionKind::CmpXChg
+                 : AtomicExpansionKind::Expand;
+
+    // If the scalar lane op is natively supported or expands to one, return
+    // Expand so halving eventually bottoms out at the scalar base case. The
+    // latter includes sub and fsub, which expand to add and fadd, respectively.
+    AtomicExpansionKind LaneExpansionKind = getScalarAtomicRMWExpansion(
+        Op, Ty, AI->getPointerAddressSpace(), *AI->getFunction(), STI);
+    if (LaneExpansionKind == AtomicExpansionKind::None ||
+        LaneExpansionKind == AtomicExpansionKind::Expand)
       return AtomicExpansionKind::Expand;
 
     // If the whole vector fits a single native cmpxchg, emit one wide
     // cmpxchg loop at the current width.
-    const DataLayout &DL = AI->getDataLayout();
-    uint64_t VecBits = DL.getTypeStoreSizeInBits(VecTy).getFixedValue();
     if (VecBits <= getMaxAtomicSizeInBitsSupported())
       return AtomicExpansionKind::CmpXChg;
 
@@ -7883,7 +7882,11 @@ NVPTXTargetLowering::shouldExpandAtomicRMWInIR(const AtomicRMWInst *AI) const {
     return AtomicExpansionKind::Expand;
   }
 
-  return getScalarAtomicRMWExpansion(AI, AI->getValOperand()->getType(), STI);
+  Type *Ty = AI->getValOperand()->getType();
+  if (Ty->isVectorTy())
+    return AtomicExpansionKind::CmpXChg;
+  return getScalarAtomicRMWExpansion(Op, Ty, AI->getPointerAddressSpace(),
+                                     *AI->getFunction(), STI);
 }
 
 bool NVPTXTargetLowering::shouldInsertFencesForAtomic(

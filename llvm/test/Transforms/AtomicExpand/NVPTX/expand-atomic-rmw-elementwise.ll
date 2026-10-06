@@ -143,27 +143,40 @@ entry:
   ret <4 x i8> %old
 }
 
-; Non-integer xchg lanes are classified using the integer type to which they
-; will be bitcast, then expanded into native scalar xchg operations.
+; A legal whole-vector xchg is cast to an integer of the same total width.
 define <2 x float> @xchg_v2f32_elementwise(ptr %addr, <2 x float> %val) {
 ; CHECK-LABEL: @xchg_v2f32_elementwise(
 ; CHECK-NEXT:  entry:
-; CHECK-NEXT:    [[LO_VAL:%.*]] = extractelement <2 x float> [[VAL:%.*]], i64 0
-; CHECK-NEXT:    [[HI_VAL:%.*]] = extractelement <2 x float> [[VAL]], i64 1
-; CHECK-NEXT:    [[HI_PTR:%.*]] = getelementptr inbounds float, ptr [[ADDR:%.*]], i64 1
-; CHECK-NEXT:    [[TMP0:%.*]] = bitcast float [[LO_VAL]] to i32
-; CHECK-NEXT:    [[TMP1:%.*]] = atomicrmw xchg ptr [[ADDR]], i32 [[TMP0]] monotonic, align 8
-; CHECK-NEXT:    [[TMP2:%.*]] = bitcast i32 [[TMP1]] to float
-; CHECK-NEXT:    [[TMP3:%.*]] = bitcast float [[HI_VAL]] to i32
-; CHECK-NEXT:    [[TMP4:%.*]] = atomicrmw xchg ptr [[HI_PTR]], i32 [[TMP3]] monotonic, align 4
-; CHECK-NEXT:    [[TMP5:%.*]] = bitcast i32 [[TMP4]] to float
-; CHECK-NEXT:    [[LO_OLD:%.*]] = insertelement <2 x float> poison, float [[TMP2]], i64 0
-; CHECK-NEXT:    [[HI_OLD:%.*]] = insertelement <2 x float> [[LO_OLD]], float [[TMP5]], i64 1
+; CHECK-NEXT:    [[TMP0:%.*]] = bitcast <2 x float> [[VAL:%.*]] to i64
+; CHECK-NEXT:    [[TMP1:%.*]] = atomicrmw xchg ptr [[ADDR:%.*]], i64 [[TMP0]] monotonic, align 8
+; CHECK-NEXT:    [[HI_OLD:%.*]] = bitcast i64 [[TMP1]] to <2 x float>
 ; CHECK-NEXT:    ret <2 x float> [[HI_OLD]]
 ;
 entry:
   %old = atomicrmw elementwise xchg ptr %addr, <2 x float> %val monotonic
   ret <2 x float> %old
+}
+
+; An xchg wider than the target's maximum atomic size is split until each piece
+; can be cast to a legal whole-value integer xchg.
+define <8 x float> @xchg_v8f32_elementwise(ptr %addr, <8 x float> %val) {
+; CHECK-LABEL: @xchg_v8f32_elementwise(
+; CHECK-NEXT:  entry:
+; CHECK-NEXT:    [[LO_VAL:%.*]] = shufflevector <8 x float> [[VAL:%.*]], <8 x float> poison, <4 x i32> <i32 0, i32 1, i32 2, i32 3>
+; CHECK-NEXT:    [[HI_VAL:%.*]] = shufflevector <8 x float> [[VAL]], <8 x float> poison, <4 x i32> <i32 4, i32 5, i32 6, i32 7>
+; CHECK-NEXT:    [[HI_PTR:%.*]] = getelementptr inbounds <4 x float>, ptr [[ADDR:%.*]], i64 1
+; CHECK-NEXT:    [[TMP0:%.*]] = bitcast <4 x float> [[LO_VAL]] to i128
+; CHECK-NEXT:    [[TMP1:%.*]] = atomicrmw xchg ptr [[ADDR]], i128 [[TMP0]] monotonic, align 32
+; CHECK-NEXT:    [[TMP2:%.*]] = bitcast i128 [[TMP1]] to <4 x float>
+; CHECK-NEXT:    [[TMP3:%.*]] = bitcast <4 x float> [[HI_VAL]] to i128
+; CHECK-NEXT:    [[TMP4:%.*]] = atomicrmw xchg ptr [[HI_PTR]], i128 [[TMP3]] monotonic, align 16
+; CHECK-NEXT:    [[TMP5:%.*]] = bitcast i128 [[TMP4]] to <4 x float>
+; CHECK-NEXT:    [[OLD1:%.*]] = shufflevector <4 x float> [[TMP2]], <4 x float> [[TMP5]], <8 x i32> <i32 0, i32 1, i32 2, i32 3, i32 4, i32 5, i32 6, i32 7>
+; CHECK-NEXT:    ret <8 x float> [[OLD1]]
+;
+entry:
+  %old = atomicrmw elementwise xchg ptr %addr, <8 x float> %val monotonic
+  ret <8 x float> %old
 }
 
 ; Partword bitwise vector atomics must bitcast before widening; zext directly
