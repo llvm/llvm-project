@@ -3,6 +3,11 @@
 ; RUN: llc -mtriple=aarch64-apple-ios %s -o - | FileCheck %s --check-prefix=MACHO-NORMAL
 ; RUN: llc -mtriple=aarch64-apple-ios -global-isel %s -o - -aarch64-macho-enable-nonlazybind | FileCheck %s --check-prefix=MACHO-GI
 ; RUN: llc -mtriple=aarch64-apple-ios -global-isel %s -o - | FileCheck %s --check-prefix=MACHO-NORMAL-GI
+; RUN: llc -mtriple=aarch64-apple-ios -O0 %s -o - | FileCheck %s --check-prefixes=MACHO-O0,MACHO-O0-GI
+; RUN: llc -mtriple=aarch64-apple-ios -O0 -fast-isel %s -o - | FileCheck %s --check-prefixes=MACHO-O0,MACHO-O0-FI
+; RUN: llc -mtriple=arm64e-apple-ios %s -o - | FileCheck %s --check-prefixes=ARM64E,ARM64E-SDAG
+; RUN: llc -mtriple=arm64e-apple-ios -global-isel %s -o - | FileCheck %s --check-prefixes=ARM64E,ARM64E-GI
+; RUN: llc -mtriple=arm64e-apple-ios -O0 %s -o - | FileCheck %s --check-prefix=ARM64E-O0
 ; RUN: llc -mtriple=aarch64 -fast-isel %s -o - | FileCheck %s --check-prefixes=ELF,ELF-FI
 ; RUN: llc -mtriple=aarch64 -global-isel %s -o - | FileCheck %s --check-prefixes=ELF,ELF-GI
 ; RUN: llc -mtriple=aarch64 %s -o - | FileCheck %s --check-prefixes=ELF,ELF-SDAG
@@ -98,6 +103,76 @@ define void @test_laziness(ptr %a) nounwind {
 ; MACHO-NORMAL-GI-NEXT:    ret
 ; MACHO-NORMAL-GI-NEXT:    .loh AdrpLdrGot Lloh0, Lloh1
 ;
+; MACHO-O0-GI-LABEL: test_laziness:
+; MACHO-O0-GI:       ; %bb.0:
+; MACHO-O0-GI-NEXT:    sub sp, sp, #32
+; MACHO-O0-GI-NEXT:    stp x29, x30, [sp, #16] ; 16-byte Folded Spill
+; MACHO-O0-GI-NEXT:    str x0, [sp, #8] ; 8-byte Spill
+; MACHO-O0-GI-NEXT:    bl _external
+; MACHO-O0-GI-NEXT:    ldr x0, [sp, #8] ; 8-byte Reload
+; MACHO-O0-GI-NEXT:    mov w8, #1000 ; =0x3e8
+; MACHO-O0-GI-NEXT:    mov w2, w8
+; MACHO-O0-GI-NEXT:    adrp x8, _memset@GOTPAGE
+; MACHO-O0-GI-NEXT:    ldr x8, [x8, _memset@GOTPAGEOFF]
+; MACHO-O0-GI-NEXT:    mov w1, #1 ; =0x1
+; MACHO-O0-GI-NEXT:    blr x8
+; MACHO-O0-GI-NEXT:    ldp x29, x30, [sp, #16] ; 16-byte Folded Reload
+; MACHO-O0-GI-NEXT:    add sp, sp, #32
+; MACHO-O0-GI-NEXT:    ret
+;
+; MACHO-O0-FI-LABEL: test_laziness:
+; MACHO-O0-FI:       ; %bb.0:
+; MACHO-O0-FI-NEXT:    sub sp, sp, #32
+; MACHO-O0-FI-NEXT:    stp x29, x30, [sp, #16] ; 16-byte Folded Spill
+; MACHO-O0-FI-NEXT:    str x0, [sp, #8] ; 8-byte Spill
+; MACHO-O0-FI-NEXT:    bl _external
+; MACHO-O0-FI-NEXT:    ldr x0, [sp, #8] ; 8-byte Reload
+; MACHO-O0-FI-NEXT:    adrp x8, _memset@GOTPAGE
+; MACHO-O0-FI-NEXT:    ldr x8, [x8, _memset@GOTPAGEOFF]
+; MACHO-O0-FI-NEXT:    mov w9, #1000 ; =0x3e8
+; MACHO-O0-FI-NEXT:    mov w2, w9
+; MACHO-O0-FI-NEXT:    mov w1, #1 ; =0x1
+; MACHO-O0-FI-NEXT:    blr x8
+; MACHO-O0-FI-NEXT:    ldp x29, x30, [sp, #16] ; 16-byte Folded Reload
+; MACHO-O0-FI-NEXT:    add sp, sp, #32
+; MACHO-O0-FI-NEXT:    ret
+;
+; ARM64E-LABEL: test_laziness:
+; ARM64E:       ; %bb.0:
+; ARM64E-NEXT:    stp x20, x19, [sp, #-32]! ; 16-byte Folded Spill
+; ARM64E-NEXT:    stp x29, x30, [sp, #16] ; 16-byte Folded Spill
+; ARM64E-NEXT:    mov x19, x0
+; ARM64E-NEXT:    bl _external
+; ARM64E-NEXT:  Lloh0:
+; ARM64E-NEXT:    adrp x8, _memset@GOTPAGE
+; ARM64E-NEXT:  Lloh1:
+; ARM64E-NEXT:    ldr x8, [x8, _memset@GOTPAGEOFF]
+; ARM64E-NEXT:    mov x0, x19
+; ARM64E-NEXT:    mov w1, #1 ; =0x1
+; ARM64E-NEXT:    mov w2, #1000 ; =0x3e8
+; ARM64E-NEXT:    blr x8
+; ARM64E-NEXT:    ldp x29, x30, [sp, #16] ; 16-byte Folded Reload
+; ARM64E-NEXT:    ldp x20, x19, [sp], #32 ; 16-byte Folded Reload
+; ARM64E-NEXT:    ret
+; ARM64E-NEXT:    .loh AdrpLdrGot Lloh0, Lloh1
+;
+; ARM64E-O0-LABEL: test_laziness:
+; ARM64E-O0:       ; %bb.0:
+; ARM64E-O0-NEXT:    sub sp, sp, #32
+; ARM64E-O0-NEXT:    stp x29, x30, [sp, #16] ; 16-byte Folded Spill
+; ARM64E-O0-NEXT:    str x0, [sp, #8] ; 8-byte Spill
+; ARM64E-O0-NEXT:    bl _external
+; ARM64E-O0-NEXT:    ldr x0, [sp, #8] ; 8-byte Reload
+; ARM64E-O0-NEXT:    mov w8, #1000 ; =0x3e8
+; ARM64E-O0-NEXT:    mov x2, x8
+; ARM64E-O0-NEXT:    adrp x8, _memset@GOTPAGE
+; ARM64E-O0-NEXT:    ldr x8, [x8, _memset@GOTPAGEOFF]
+; ARM64E-O0-NEXT:    mov w1, #1 ; =0x1
+; ARM64E-O0-NEXT:    blr x8
+; ARM64E-O0-NEXT:    ldp x29, x30, [sp, #16] ; 16-byte Folded Reload
+; ARM64E-O0-NEXT:    add sp, sp, #32
+; ARM64E-O0-NEXT:    ret
+;
 ; ELF-LABEL: test_laziness:
 ; ELF:       // %bb.0:
 ; ELF-NEXT:    stp x30, x19, [sp, #-16]! // 16-byte Folded Spill
@@ -145,6 +220,18 @@ define void @test_laziness_tail() nounwind {
 ; MACHO-NORMAL-GI:       ; %bb.0:
 ; MACHO-NORMAL-GI-NEXT:    b _external
 ;
+; MACHO-O0-LABEL: test_laziness_tail:
+; MACHO-O0:       ; %bb.0:
+; MACHO-O0-NEXT:    b _external
+;
+; ARM64E-LABEL: test_laziness_tail:
+; ARM64E:       ; %bb.0:
+; ARM64E-NEXT:    b _external
+;
+; ARM64E-O0-LABEL: test_laziness_tail:
+; ARM64E-O0:       ; %bb.0:
+; ARM64E-O0-NEXT:    b _external
+;
 ; ELF-LABEL: test_laziness_tail:
 ; ELF:       // %bb.0:
 ; ELF-NEXT:    adrp x0, :got:external
@@ -171,6 +258,18 @@ define void @test_laziness_local() nounwind {
 ; MACHO-NORMAL-GI:       ; %bb.0:
 ; MACHO-NORMAL-GI-NEXT:    b _local
 ;
+; MACHO-O0-LABEL: test_laziness_local:
+; MACHO-O0:       ; %bb.0:
+; MACHO-O0-NEXT:    b _local
+;
+; ARM64E-LABEL: test_laziness_local:
+; ARM64E:       ; %bb.0:
+; ARM64E-NEXT:    b _local
+;
+; ARM64E-O0-LABEL: test_laziness_local:
+; ARM64E-O0:       ; %bb.0:
+; ARM64E-O0-NEXT:    b _local
+;
 ; ELF-LABEL: test_laziness_local:
 ; ELF:       // %bb.0:
 ; ELF-NEXT:    b local
@@ -183,6 +282,8 @@ declare void @llvm.memset.p0.i64(ptr nocapture writeonly, i8, i64, i1 immarg)
 !llvm.module.flags = !{!0}
 !0 = !{i32 7, !"RtLibUseGOT", i32 1}
 ;; NOTE: These prefixes are unused and the list is autogenerated. Do not add tests below this line:
+; ARM64E-GI: {{.*}}
+; ARM64E-SDAG: {{.*}}
 ; ELF-FI: {{.*}}
 ; ELF-GI: {{.*}}
 ; ELF-SDAG: {{.*}}
