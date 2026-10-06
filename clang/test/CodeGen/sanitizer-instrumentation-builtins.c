@@ -1,5 +1,5 @@
 // Check that the sanitizer region markers lower to their intrinsics under
-// -fsanitize=kernel-memory, kernel-address and address, and with
+// -fsanitize=kernel-memory, kernel-address, address and thread, and with
 // -fsanitize-coverage, and to nothing without a sanitizer that consumes them.
 
 // RUN: %clang_cc1 -triple x86_64-linux-gnu -fsanitize=kernel-memory \
@@ -14,6 +14,8 @@
 // RUN:     -fsanitize-coverage-trace-pc -emit-llvm -disable-llvm-passes -o - %s \
 // RUN:     | FileCheck %s --check-prefix=MARKERS
 // RUN: %clang_cc1 -triple x86_64-linux-gnu -fsanitize=thread \
+// RUN:     -emit-llvm -disable-llvm-passes -o - %s | FileCheck %s --check-prefix=MARKERS
+// RUN: %clang_cc1 -triple x86_64-linux-gnu -fsanitize=null \
 // RUN:     -emit-llvm -disable-llvm-passes -o - %s | FileCheck %s --check-prefix=NONE
 
 #if !__has_builtin(__builtin_sanitizer_instrumentation_begin)

@@ -19,6 +19,9 @@
 // RUN:     -fsanitize-coverage-trace-pc -fsanitize-coverage-trace-cmp \
 // RUN:     -emit-llvm -o - %s \
 // RUN:     | FileCheck %s --check-prefixes=CHECK,KMSAN,KCOV
+// RUN: %clang_cc1 -triple x86_64-linux-gnu -O2 -debug-info-kind=line-tables-only \
+// RUN:     -fsanitize=thread -mllvm -tsan-instrument-func-entry-exit=0 \
+// RUN:     -emit-llvm -o - %s | FileCheck %s --check-prefixes=CHECK,KCSAN
 
 static inline __attribute__((always_inline)) void instrumentation_begin(void) {
   __builtin_sanitizer_instrumentation_begin();
@@ -48,6 +51,7 @@ void noinstr_function(int *p, int x) {
 // KCOV:          call void @__sanitizer_cov_trace_const_cmp4(i32 7,
 // KMSAN:         call { ptr, ptr } @__msan_metadata_ptr_for_load_4(
 // KASAN:         call void @__asan_report_load4(
+// KCSAN:         call void @__tsan_read4(
 // CHECK:         call void @instrumented_callee(
 // CHECK:         call void @llvm.sanitizer.instrumentation.end()
 // CHECK-NOT:     call {{.*}}@__{{msan|asan|tsan|sanitizer_cov}}
