@@ -24,8 +24,6 @@ private:
 public:
   XtensaABIInfo(CodeGen::CodeGenTypes &CGT) : DefaultABIInfo(CGT) {}
 
-  // DefaultABIInfo's classifyReturnType and classifyArgumentType are
-  // non-virtual, but computeInfo is virtual, so we overload it.
   void computeInfo(CGFunctionInfo &FI) const override;
 
   ABIArgInfo classifyArgumentType(QualType Ty, int &ArgGPRsLeft) const;
@@ -70,29 +68,28 @@ ABIArgInfo XtensaABIInfo::classifyArgumentType(QualType Ty,
 
   uint64_t Size = getContext().getTypeSize(Ty);
   uint64_t NeededAlign = getContext().getTypeAlign(Ty);
-  bool MustUseStack = false;
   int NeededArgGPRs = (Size + 31) / 32;
 
   if (NeededAlign == (2 * 32))
     NeededArgGPRs += (ArgGPRsLeft % 2);
 
-  // Put on stack objects which are not fit to 6 registers,
-  // also on stack object which alignment more then 16 bytes and
-  // object with 16-byte alignment if it isn't the first argument.
+  // Push onto the stack objects that do not fit into 6 registers,
+  // also push onto the stack an object with alignment greater than 16 bytes,
+  // and an object with alignment of 16 bytes if it is not the first argument.
   if ((NeededArgGPRs > ArgGPRsLeft) || (NeededAlign > (4 * 32)) ||
       ((ArgGPRsLeft < 6) && (NeededAlign == (4 * 32)))) {
-    MustUseStack = true;
-    NeededArgGPRs = ArgGPRsLeft;
+    ArgGPRsLeft = 0;
+    return getNaturalAlignIndirect(Ty, getDataLayout().getAllocaAddrSpace(),
+                                   /*ByVal=*/true);
   }
   ArgGPRsLeft -= NeededArgGPRs;
 
-  if (!isAggregateTypeForABI(Ty) && !Ty->isVectorType() && !MustUseStack) {
+  if (!isAggregateTypeForABI(Ty) && !Ty->isVectorType()) {
     // Treat an enum type as its underlying type.
     if (const auto *ED = Ty->getAsEnumDecl())
       Ty = ED->getIntegerType();
-    // All integral types are promoted to XLen width, unless passed on the
-    // stack.
-    if (Size < 32 && Ty->isIntegralOrEnumerationType() && !MustUseStack) {
+    // All integral types less then  32-bit width are promoted to 32-bit width.
+    if (Size < 32 && Ty->isIntegralOrEnumerationType()) {
       return extendType(Ty);
     }
     // Assume that type has 32, 64 or 128 bits
@@ -101,7 +98,7 @@ ABIArgInfo XtensaABIInfo::classifyArgumentType(QualType Ty,
 
   // Aggregates which are <= 6*32 will be passed in registers if possible,
   // so coerce to integers.
-  if ((Size <= (MaxNumArgGPRs * 32)) && (!MustUseStack)) {
+  if (Size <= (MaxNumArgGPRs * 32)) {
     if (Size <= 32) {
       return ABIArgInfo::getDirect(llvm::IntegerType::get(getVMContext(), 32));
     } else if (NeededAlign == (2 * 32)) {
@@ -109,12 +106,12 @@ ABIArgInfo XtensaABIInfo::classifyArgumentType(QualType Ty,
           llvm::IntegerType::get(getVMContext(), 64), NeededArgGPRs / 2));
     } else if (NeededAlign == (4 * 32)) {
       return ABIArgInfo::getDirect(llvm::IntegerType::get(getVMContext(), 128));
-    } else {
-      return ABIArgInfo::getDirect(llvm::ArrayType::get(
-          llvm::IntegerType::get(getVMContext(), 32), NeededArgGPRs));
     }
+
+    return ABIArgInfo::getDirect(llvm::ArrayType::get(
+        llvm::IntegerType::get(getVMContext(), 32), NeededArgGPRs));
   }
-#undef MAX_STRUCT_IN_REGS_SIZE
+
   return getNaturalAlignIndirect(Ty, getDataLayout().getAllocaAddrSpace(),
                                  /*ByVal=*/true);
 }
@@ -126,8 +123,8 @@ ABIArgInfo XtensaABIInfo::classifyReturnType(QualType RetTy) const {
   int ArgGPRsLeft = MaxNumRetGPRs;
   auto RetSize = llvm::alignTo(getContext().getTypeSize(RetTy), 32) / 32;
 
-  // The rules for return and argument with type size more then 4 bytes
-  // are the same, so defer to classifyArgumentType.
+  // The rules for return value and for argument with type size more
+  // then 4 bytes are the same, so defer to classifyArgumentType.
   if (RetSize > 1)
     return classifyArgumentType(RetTy, ArgGPRsLeft);
 
