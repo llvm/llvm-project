@@ -807,3 +807,14 @@ ConvergenceControlInst::CreateLoop(BasicBlock &BB,
   auto *Call = CallInst::Create(Fn, {}, {OB}, "", BB.getFirstInsertionPt());
   return cast<ConvergenceControlInst>(Call);
 }
+
+bool llvm::isSpeculativeLoadOracleUse(const Use &U) {
+  auto *II = dyn_cast<IntrinsicInst>(U.getUser());
+  return II && II->getIntrinsicID() == Intrinsic::speculative_load &&
+         II->isArgOperand(&U) && II->getArgOperandNo(&U) == 2;
+}
+
+bool llvm::isSpeculativeLoadOracle(const Function &F) {
+  return F.hasLocalLinkage() && !F.use_empty() &&
+         all_of(F.uses(), isSpeculativeLoadOracleUse);
+}
