@@ -1,5 +1,6 @@
 add_mlir_dialect_library(MLIRMLProgramTransforms
   BufferizableOpInterfaceImpl.cpp
+  ExternalizeLargeConstants.cpp
   PipelineGlobalOps.cpp
 
   ADDITIONAL_HEADER_DIRS
@@ -11,7 +12,10 @@ add_mlir_dialect_library(MLIRMLProgramTransforms
   LINK_LIBS PUBLIC
   MLIRBufferizationDialect
   MLIRBufferizationTransforms
+  MLIRBytecodeWriter
   MLIRIR
   MLIRMLProgramDialect
+  MLIRParser
   MLIRPass
+  MLIRSupport
 )

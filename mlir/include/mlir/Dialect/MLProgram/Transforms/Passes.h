@@ -19,6 +19,15 @@ namespace ml_program {
 #define GEN_PASS_DECL
 #include "mlir/Dialect/MLProgram/Transforms/Passes.h.inc"
 
+/// Repopulate constants in `op` from `externalWeightsModule`.
+LogicalResult repopulateConstants(Operation *op,
+                                  Operation *externalWeightsModule);
+
+/// Externalize constants in `module` to the specified file.
+LogicalResult externalizeConstants(ModuleOp module, int64_t minSize,
+                                   bool dropLocations,
+                                   StringRef outputFilename);
+
 //===----------------------------------------------------------------------===//
 // Registration
 //===----------------------------------------------------------------------===//
