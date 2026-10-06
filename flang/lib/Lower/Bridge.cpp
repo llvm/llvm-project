@@ -4895,7 +4895,7 @@ private:
     llvm::SmallVector<mlir::Attribute> attrList;
     llvm::SmallVector<mlir::Block *> blockList;
     unsigned typeGuardIdx = 0;
-    std::size_t defaultAttrPos = common::numeric_limits<size_t>::max();
+    std::size_t defaultAttrPos = Fortran::common::numeric_limits<size_t>::max();
     bool hasLocalScope = false;
     llvm::SmallVector<const Fortran::semantics::Scope *> typeCaseScopes;
 

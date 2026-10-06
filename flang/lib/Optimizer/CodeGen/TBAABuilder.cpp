@@ -40,7 +40,7 @@ static llvm::cl::opt<bool> perFunctionTBAATrees(
 // the number of TBAA access tag attributes attached to operations.
 // It is set to kTagAttachmentUnlimited by default denoting "no limit".
 static constexpr unsigned kTagAttachmentUnlimited =
-    common::numeric_limits<unsigned>::max();
+    Fortran::common::numeric_limits<unsigned>::max();
 static llvm::cl::opt<unsigned>
     tagAttachmentLimit("tbaa-attach-tag-max", llvm::cl::desc(""),
                        llvm::cl::init(kTagAttachmentUnlimited));
