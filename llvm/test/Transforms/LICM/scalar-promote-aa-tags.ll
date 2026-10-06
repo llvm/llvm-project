@@ -651,8 +651,8 @@ define void @promote_multiple_iterations() {
 ; CHECK-NEXT:    br i1 false, label %[[UNREACHABLE]], label %[[BB_1_LOOPEXIT]]
 ; CHECK:       [[EXIT]]:
 ; CHECK-NEXT:    [[DOTLCSSA:%.*]] = phi i64 [ [[TMP0]], %[[BB_1]] ]
-; CHECK-NEXT:    store ptr @promote_multiple_iterations, ptr [[ADDR]], align 8, !tbaa [[INT_TBAA0]]
 ; CHECK-NEXT:    store i64 [[DOTLCSSA]], ptr [[ADDR]], align 1
+; CHECK-NEXT:    store ptr @promote_multiple_iterations, ptr [[ADDR]], align 8, !tbaa [[INT_TBAA0]]
 ; CHECK-NEXT:    [[VAL:%.*]] = load ptr, ptr [[ADDR]], align 8
 ; CHECK-NEXT:    [[CMP:%.*]] = icmp ne ptr [[VAL]], null
 ; CHECK-NEXT:    call void @llvm.assume(i1 [[CMP]])
