@@ -1688,7 +1688,6 @@ define amdgpu_kernel void @fnge_select_f32_multi_use_regression(float %.i2369) {
 ; GFX7-NEXT:    v_mov_b32_e32 v0, s0
 ; GFX7-NEXT:    v_mul_f32_e64 v0, -s2, v0
 ; GFX7-NEXT:    v_cmp_le_f32_e32 vcc, 0, v0
-; GFX7-NEXT:    s_and_b64 vcc, exec, vcc
 ; GFX7-NEXT:    s_endpgm
 ;
 ; GFX9-LABEL: fnge_select_f32_multi_use_regression:
@@ -1704,7 +1703,6 @@ define amdgpu_kernel void @fnge_select_f32_multi_use_regression(float %.i2369) {
 ; GFX9-NEXT:    v_mov_b32_e32 v0, s0
 ; GFX9-NEXT:    v_mul_f32_e64 v0, -s2, v0
 ; GFX9-NEXT:    v_cmp_le_f32_e32 vcc, 0, v0
-; GFX9-NEXT:    s_and_b64 vcc, exec, vcc
 ; GFX9-NEXT:    s_endpgm
 ;
 ; GFX11-LABEL: fnge_select_f32_multi_use_regression:
@@ -1721,7 +1719,6 @@ define amdgpu_kernel void @fnge_select_f32_multi_use_regression(float %.i2369) {
 ; GFX11-NEXT:    v_mul_f32_e64 v0, -s0, s1
 ; GFX11-NEXT:    s_delay_alu instid0(VALU_DEP_1)
 ; GFX11-NEXT:    v_cmp_le_f32_e32 vcc_lo, 0, v0
-; GFX11-NEXT:    s_and_b32 vcc_lo, exec_lo, vcc_lo
 ; GFX11-NEXT:    s_endpgm
 .entry:
   %i = fcmp uge float %.i2369, 0.000000e+00
