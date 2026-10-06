@@ -25,8 +25,12 @@ namespace AMDGPUMI {
 //   movrel:   load (outs data), (ins offset)      store (ins data, offset)
 //   gpr_idx:  load (outs data), (ins idx, offset) store (ins data, idx, offset)
 class VLoadStoreIdxInst : public MachineInstr {
+  const AMDGPU::VLdStIdxOpcodeInfo &getInfo() const {
+    return *AMDGPU::getVLdStIdxOpcodeInfoByOpcode(getOpcode());
+  }
+
 public:
-  bool isGPRIdx() const;
+  bool isGPRIdx() const { return getInfo().IsGPRIdx; }
 
   MachineOperand &getDataOp() { return getOperand(0); }
   MachineOperand &getIdxOp() {
@@ -43,7 +47,7 @@ public:
     return getOperand(isGPRIdx() ? 2 : 1);
   }
 
-  unsigned getBitWidth() const;
+  unsigned getBitWidth() const { return getInfo().BitWidth; }
 
   static bool classof(const MachineInstr *MI) {
     return AMDGPU::getVLdStIdxOpcodeInfoByOpcode(MI->getOpcode()) != nullptr;
