@@ -6,7 +6,7 @@
 //
 //===----------------------------------------------------------------------===//
 
-// UNSUPPORTED: c++03
+// UNSUPPORTED: c++03, std-at-least-c++23
 
 // <tuple>
 
@@ -42,7 +42,6 @@ void f() {
   // Test that we emit our diagnostic from the library.
   // expected-error@tuple:* 8 {{Attempted construction of reference element binds to a temporary whose lifetime has ended}}
 
-  // Good news everybody! Clang now diagnoses this for us!
   // expected-error@tuple:* 0+ {{reference member '__value_' binds to a temporary object whose lifetime would be shorter than the lifetime of the constructed object}}
 
   {
