@@ -313,7 +313,9 @@ We currently feature 5 implementations:
 - `EmitCModelRunner`. This is another inference implementation. At build time,
   an MLIR pipeline lowers a model expressed in TOSA through EmitC to a C++
   header, which is compiled into LLVM. It does not require TensorFlow at build
-  time. See {ref}`embed-tosa-models` for configuration and model selection.
+  time. We plan for this MLIR-based path to replace the TensorFlow AOT path used
+  by `ReleaseModeModelRunner`. See {ref}`embed-tosa-models` for configuration and
+  model selection.
 - `InteractiveModelRunner`. This is intended for training scenarios where the
   training algorithm drives compilation. This model runner has no special
   dependencies, and relies on I/O pipes to communicate with a separate process,
@@ -654,34 +656,33 @@ For up to date information on custom builds, see the `ml-*`
 ### Embed pre-trained models (aka "release" mode)
 
 Release mode supports two ways to embed models at build time: the MLIR-based
-TOSA-to-EmitC path and the existing TensorFlow AOT path. The MLIR path is an
-alternative today and is intended to become the only supported embedding path
-in the future. The two paths cannot be enabled in the same build.
+TOSA-to-EmitC path and the existing TensorFlow AOT path. The two paths cannot be
+enabled in the same build.
 
 (embed-tosa-models)=
 #### Embed TOSA models with MLIR and EmitC
 
-Supply TOSA models as MLIR files and build `mlir-opt` and `mlir-translate`
-before configuring LLVM. CMake runs the MLIR lowering pipeline, translates the
-resulting EmitC to C++ headers, and compiles those headers into LLVM. The model
-is then available without a TensorFlow runtime dependency.
+Supply TOSA models as textual MLIR or MLIR bytecode files and build `mlir-opt`
+and `mlir-translate` before configuring LLVM. CMake runs the MLIR lowering
+pipeline, translates the resulting EmitC to C++ headers, and compiles those
+headers into LLVM without requiring TensorFlow at build time.
 
 :::{warning}
 Textual TOSA models produced by `tosa-converter-for-tflite` currently use a
 syntax that this MLIR pipeline does not accept. Until the converter is updated,
-export the model as MLIR bytecode (`.bc`), then run
-`mlir-opt model.bc -o model.mlir` to produce a compatible text MLIR file.
+export the model as MLIR bytecode (`.bc`) and use that file directly in
+`LLVM_MLGO_MODELS`. Conversion to textual MLIR is optional.
 :::
 
 Set `LLVM_MLGO_MODELS` to a semicolon-separated list of entries in the form
-`<name>,<path-to-model.mlir>,<type>`. The name is the value of the runtime model
+`<name>,<path-to-model>,<type>`. The name is the value of the runtime model
 selection flag; the type is `inliner` or `regalloc`. Paths may be absolute or
 relative to the source directory for the corresponding LLVM library
 (`llvm/lib/Analysis` for `inliner`, `llvm/lib/CodeGen` for `regalloc`). For
 example:
 
 ```console
-cmake -DLLVM_MLGO_MODELS="size,/absolute/path/to/inliner.mlir,inliner;evict,/absolute/path/to/regalloc.mlir,regalloc" \
+cmake -DLLVM_MLGO_MODELS="size,/absolute/path/to/inliner.mlir,inliner;speed,/absolute/path/to/regalloc.mlir,regalloc" \
   -DLLVM_MLGO_MLIR_OPT=/absolute/path/to/mlir-opt \
   -DLLVM_MLGO_MLIR_TRANSLATE=/absolute/path/to/mlir-translate \
   <...other options...>
