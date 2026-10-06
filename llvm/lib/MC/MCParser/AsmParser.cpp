@@ -2287,6 +2287,9 @@ bool AsmParser::parseAndMatchAndEmitTargetInstruction(ParseStatementInfo &Info,
                                                           Info.ParsedOperands);
   Info.ParseError = ParseHadError;
 
+  std::string MnemonicStr;
+  getTargetParser().canonicalizeMnemonic(Info.ParsedOperands, MnemonicStr);
+
   // Dump the parsed representation, if requested.
   if (getShowParsedOperands()) {
     SmallString<256> Str;
