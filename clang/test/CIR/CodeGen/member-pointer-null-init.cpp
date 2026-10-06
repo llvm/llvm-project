@@ -14,8 +14,45 @@ struct Outer {
   int b;
 };
 
-// Value-init of a heap-allocated struct containing a pointer-to-data-member.
-// The member pointer is null (-1), so the stored constant must carry -1.
+// Arrays of pointer-to-data-member should be all -1s.
+
+// CIR: cir.global "private" internal dso_local @_ZZ12static_slotsvE8fn_slots = #cir.const_array<[#cir.int<-1> : !s64i, #cir.int<-1> : !s64i]> : !cir.array<!s64i x 2>
+// CIR: cir.global external @ns_slots = #cir.const_array<[#cir.int<-1> : !s64i, #cir.int<-1> : !s64i]> : !cir.array<!s64i x 2>
+
+// LLVM-DAG: @_ZZ12static_slotsvE8fn_slots = internal global [2 x i64] [i64 -1, i64 -1]
+// LLVM-DAG: @ns_slots = {{.*}}global [2 x i64] [i64 -1, i64 -1]
+
+int Inner::*ns_slots[2];
+
+void static_slots() {
+  static int Inner::*fn_slots[2];
+  (void)fn_slots;
+}
+
+// CIR: cir.global external @vol_slots = #cir.const_array<[#cir.int<-1> : !s64i, #cir.int<-1> : !s64i]> : !cir.array<!s64i x 2>
+
+// LLVM-DAG: @vol_slots = {{.*}}global [2 x i64] [i64 -1, i64 -1]
+
+volatile int Inner::*vol_slots[2];
+
+// Array of record-types with the member pointer, also should have -1s.
+
+// CIR: cir.global external @rec_slots = #cir.const_array<[#cir.const_record<{#cir.int<-1> : !s64i}> : !rec_Inner, #cir.const_record<{#cir.int<-1> : !s64i}> : !rec_Inner]> : !cir.array<!rec_Inner x 2>
+
+// LLVM-DAG: @rec_slots = {{.*}}global [2 x %struct.Inner] [%struct.Inner { i64 -1 }, %struct.Inner { i64 -1 }]
+
+Inner rec_slots[2];
+
+// A nested (multi-dimensional) array of pointers-to-data-member must have
+// -1 in every innermost element.
+
+// CIR: cir.global external @md_slots = #cir.const_array<[#cir.const_array<[#cir.int<-1> : !s64i, #cir.int<-1> : !s64i, #cir.int<-1> : !s64i]> : !cir.array<!s64i x 3>, #cir.const_array<[#cir.int<-1> : !s64i, #cir.int<-1> : !s64i, #cir.int<-1> : !s64i]> : !cir.array<!s64i x 3>]> : !cir.array<!cir.array<!s64i x 3> x 2>
+
+// LLVM-DAG: @md_slots = {{.*}}global [2 x [3 x i64]] [{{\[3 x i64\]}} [i64 -1, i64 -1, i64 -1], {{\[3 x i64\]}} [i64 -1, i64 -1, i64 -1]]
+
+int Inner::*md_slots[2][3];
+
+// Same with 'new' allocated types.
 
 // CIR-LABEL: cir.func {{.*}}@_Z8make_newv
 // CIR:         [[NULL:%.*]] = cir.const #cir.const_record<{#cir.int<-1> : !s64i}> : !rec_Inner
@@ -31,8 +68,7 @@ struct Outer {
 
 Inner *make_new() { return new Inner(); }
 
-// Partial aggregate init: Inner subobject 'a' is value-initialized because
-// it has no designated initializer.
+// Aggregate init should also get this right.
 
 // CIR-LABEL: cir.func {{.*}}@_Z11runtime_aggi
 // CIR:         cir.const #cir.int<-1> : !s64i
