@@ -6981,11 +6981,6 @@ bool VectorCombine::foldShuffleOfAdjacentLoads(Instruction &I) {
 
   const int NumElts = LoadTy->getNumElements();
 
-  // WideSz = 2 * LoadSz
-  // MaxMaskSize = WideSz * 2 = 4 * LoadSz
-  if (NumElts > INT_MAX / 4)
-    return false;
-
   // Determine which load is at the lower address and confirm the two loads are
   // exactly contiguous. isConsecutiveAccess(A, B) is true only when B directly
   // follows A, so we probe both orderings to also handle the reversed case.
@@ -7029,6 +7024,9 @@ bool VectorCombine::foldShuffleOfAdjacentLoads(Instruction &I) {
     return HighLoadUsers == Shuffles.size();
   };
   if (!AreShufflesOnlyUsersOfLoads())
+    return false;
+
+  if (NumElts > INT_MAX / 2)
     return false;
 
   // The value loaded by either load must not be clobbered in between the loads.
@@ -7079,8 +7077,12 @@ bool VectorCombine::foldShuffleOfAdjacentLoads(Instruction &I) {
     RemapMask(SV, NewMask);
     // LoadSz = initial load size
     // WideSz = 2 * LoadSz
-    // MaxMaskSize = WideSz * 2
-    // Check if MaxMaskSize fits within an integer range.
+    //
+    // Check if WideSz fits within an integer range.
+    //
+    // In theory, MaxMaskSize = WideSz * 2. However, in practice we will never
+    // have such a large mask index because we never index into the poison part
+    // of CreateShuffleVector(WideLoad, Poison, NewMask).
     if (!ShuffleVectorInst::isValidOperands(Poison, Poison, NewMask))
       return false;
     NewCost += TTI.getShuffleCost(TTI::SK_PermuteSingleSrc, SV->getType(),
