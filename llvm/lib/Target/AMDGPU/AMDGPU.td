@@ -2824,7 +2824,7 @@ def isGFX12Only :
 
 def isGFX12Not12_50 :
   Predicate<"Subtarget->getGeneration() == AMDGPUSubtarget::GFX12 && !Subtarget->hasGFX1250Insts()">,
-  AssemblerPredicate<(all_of FeatureGFX12Insts, (not FeatureGFX1250Insts))>;
+  AssemblerPredicate<(all_of FeatureGFX12Insts, (not FeatureGFX13Insts), (not FeatureGFX1250Insts))>;
 
 def isGFX12Plus :
   Predicate<"Subtarget->getGeneration() >= AMDGPUSubtarget::GFX12">,
