@@ -429,8 +429,9 @@ module attributes {transform.with_named_sequence} {
 
 // -----
 
-// Statically empty loops: the sizes are negative constants. The flattened
-// bound must fold to zero and the delinearization basis must stay legal.
+// Statically empty loops (ub < lb): the normalized sizes are negative
+// constants. The flattened bound must fold to zero and the delinearization
+// basis must stay legal.
 func.func @coalesce_empty_static_loops() {
   %c0 = arith.constant 0 : index
   %c1 = arith.constant 1 : index
@@ -456,3 +457,41 @@ module attributes {transform.with_named_sequence} {
 //   CHECK-DAG:   %[[C1:.+]] = arith.constant 1 : index
 //       CHECK:   scf.for %[[IV:.+]] = %[[C0]] to %[[C0]] step %[[C1]]
 //       CHECK:     affine.delinearize_index %[[IV]] into (1, 1)
+
+// -----
+
+// The clamp applies to the normalized size, not to the upper bound: with a
+// non-zero lower bound the size is ub - lb.
+func.func @coalesce_dynamic_bound_nonzero_lb(%arg0 : index) {
+  %c-1 = arith.constant -1 : index
+  %c0 = arith.constant 0 : index
+  %c1 = arith.constant 1 : index
+  %c4 = arith.constant 4 : index
+  scf.for %i = %c-1 to %arg0 step %c1 {
+    scf.for %j = %c0 to %c4 step %c1 {
+      "some_use"(%i, %j) : (index, index) -> ()
+    }
+  } {coalesce}
+  return
+}
+
+module attributes {transform.with_named_sequence} {
+  transform.named_sequence @__transform_main(%arg1: !transform.any_op {transform.readonly}) {
+    %0 = transform.structured.match ops{["scf.for"]} attributes {coalesce} in %arg1 : (!transform.any_op) -> !transform.any_op
+    %1 = transform.cast %0 : !transform.any_op to !transform.op<"scf.for">
+    %2 = transform.loop.coalesce %1 : (!transform.op<"scf.for">) -> (!transform.op<"scf.for">)
+    transform.yield
+  }
+}
+// CHECK-LABEL: func @coalesce_dynamic_bound_nonzero_lb
+//  CHECK-SAME:     %[[ARG0:.+]]: index)
+//   CHECK-DAG:   %[[SIZE:.+]] = affine.apply affine_map<()[s0] -> (s0 + 1)>()[%[[ARG0]]]
+//   CHECK-DAG:   %[[C0:.+]] = arith.constant 0 : index
+//   CHECK-DAG:   %[[C1:.+]] = arith.constant 1 : index
+//       CHECK:   %[[CL:.+]] = arith.maxsi %[[SIZE]], %[[C0]]
+//       CHECK:   %[[B:.+]] = arith.maxsi %[[SIZE]], %[[C1]]
+//       CHECK:   %[[UB:.+]] = affine.apply affine_map<()[s0] -> (s0 * 4)>()[%[[CL]]]
+//       CHECK:   scf.for %[[IV:.+]] = %[[C0]] to %[[UB]] step %[[C1]]
+//       CHECK:     %[[DELIN:.+]]:2 = affine.delinearize_index %[[IV]] into (%[[B]], 4)
+//       CHECK:     %[[I:.+]] = affine.apply affine_map<(d0) -> (d0 - 1)>(%[[DELIN]]#0)
+//       CHECK:     "some_use"(%[[I]], %[[DELIN]]#1)
