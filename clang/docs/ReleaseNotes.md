@@ -624,6 +624,8 @@ features cannot lower the translation-unit ABI level;
   inside a member function call synthesized by ``__builtin_invoke``. (#GH185241)
 - Fixed a crash in ``__builtin_dump_struct`` when ``-Werror`` promotes
   format warnings to errors. (#GH211943)
+- Fixed a crash when `__atomic_always_lock_free` or `__atomic_is_lock_free` is
+  called with a size of zero. (#GH170139, #GH120082)
 - Fixed wrong code generation in `__builtin_clear_padding` wherein the wrong
   bits of the following types were cleared: `_BitInt`, struct bitfields, and
   packed boolean vectors. (#GH215809), (#GH216063), (#GH224033)
