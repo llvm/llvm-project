@@ -88,8 +88,8 @@ inline RT_API_ATTRS T IntMod(T x, T p, const char *sourceFile, int sourceLine) {
 template <typename T> inline RT_API_ATTRS T Scale(T x, std::int64_t p) {
   auto ip{static_cast<int>(p)};
   if (ip != p) {
-    ip = p < 0 ? std::numeric_limits<int>::min()
-               : std::numeric_limits<int>::max();
+    ip = p < 0 ? common::numeric_limits<int>::min()
+               : common::numeric_limits<int>::max();
   }
   return std::ldexp(x, ip); // x*2**p
 }
@@ -190,9 +190,9 @@ inline RT_API_ATTRS CppTypeFor<TypeCategory::Integer, 4> SelectedRealKind(
 template <int PREC, typename T>
 inline RT_API_ATTRS T Nearest(T x, bool positive) {
   if (positive) {
-    return std::nextafter(x, std::numeric_limits<T>::infinity());
+    return std::nextafter(x, common::numeric_limits<T>::infinity());
   } else {
-    return std::nextafter(x, -std::numeric_limits<T>::infinity());
+    return std::nextafter(x, -common::numeric_limits<T>::infinity());
   }
 }
 
@@ -202,9 +202,9 @@ RT_API_ATTRS BTy FPowI(BTy base, ETy exp) {
   if (exp == ETy{0})
     return BTy{1};
   bool isNegativePower{exp < ETy{0}};
-  bool isMinPower{exp == std::numeric_limits<ETy>::min()};
+  bool isMinPower{exp == common::numeric_limits<ETy>::min()};
   if (isMinPower) {
-    exp = std::numeric_limits<ETy>::max();
+    exp = common::numeric_limits<ETy>::max();
   } else if (isNegativePower) {
     exp = -exp;
   }

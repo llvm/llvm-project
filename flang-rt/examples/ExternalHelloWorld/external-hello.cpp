@@ -22,9 +22,9 @@ void output1() {
   IONAME(OutputReal64)(io, 0.0);
   IONAME(OutputReal64)(io, 2.0 / 3.0);
   IONAME(OutputReal64)(io, 1.0e99);
-  IONAME(OutputReal64)(io, std::numeric_limits<double>::infinity());
-  IONAME(OutputReal64)(io, -std::numeric_limits<double>::infinity());
-  IONAME(OutputReal64)(io, std::numeric_limits<double>::quiet_NaN());
+  IONAME(OutputReal64)(io, common::numeric_limits<double>::infinity());
+  IONAME(OutputReal64)(io, -common::numeric_limits<double>::infinity());
+  IONAME(OutputReal64)(io, common::numeric_limits<double>::quiet_NaN());
   IONAME(OutputComplex64)(io, 123.0, -234.0);
   IONAME(OutputLogical)(io, false);
   IONAME(OutputLogical)(io, true);

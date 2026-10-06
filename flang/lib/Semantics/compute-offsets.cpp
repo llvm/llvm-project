@@ -31,7 +31,7 @@ static_assert(sizeof(std::size_t) >= sizeof(std::int64_t),
     "byte sizes and offsets are accumulated in std::size_t and must not be "
     "narrowed");
 static constexpr std::size_t maxStorageSizeInBytes{
-    static_cast<std::size_t>(std::numeric_limits<std::int64_t>::max())};
+    static_cast<std::size_t>(common::numeric_limits<std::int64_t>::max())};
 
 static bool IsTooBig(std::size_t bytes) {
   return bytes > maxStorageSizeInBytes;

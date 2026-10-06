@@ -68,10 +68,10 @@ public:
   static constexpr int partBits{PARTBITS};
   using Part = PART;
   using BigPart = BIGPART;
-  static_assert(std::is_integral_v<Part>);
-  static_assert(std::is_unsigned_v<Part>);
-  static_assert(std::is_integral_v<BigPart>);
-  static_assert(std::is_unsigned_v<BigPart>);
+  static_assert(common::is_integral_v<Part>);
+  static_assert(common::is_unsigned_v<Part>);
+  static_assert(common::is_integral_v<BigPart>);
+  static_assert(common::is_unsigned_v<BigPart>);
   static_assert(CHAR_BIT * sizeof(BigPart) >= 2 * partBits);
   static constexpr bool littleEndian{IS_LITTLE_ENDIAN};
   static constexpr int alignment{ALIGNMENT};
@@ -128,11 +128,12 @@ public:
 
   // C++'s integral types can all be converted to Integer
   // with silent truncation.
-  template <typename INT, typename = std::enable_if_t<std::is_integral_v<INT>>>
+  template <typename INT,
+      typename = std::enable_if_t<common::is_integral_v<INT>>>
   constexpr Integer(INT n) {
     constexpr int nBits = CHAR_BIT * sizeof n;
     if constexpr (nBits < partBits) {
-      if constexpr (std::is_unsigned_v<INT>) {
+      if constexpr (common::is_unsigned_v<INT>) {
         // Zero-extend an unsigned smaller value.
         SetLEPart(0, n);
         for (int j{1}; j < parts; ++j) {
