@@ -3,6 +3,7 @@
 ! __ordinal, holding the 1-based ordinal of the enumerator.
 ! RUN: %flang_fc1 -fenumeration-type -emit-hlfir %s -o - | FileCheck %s
 ! RUN: %flang_fc1 -fenumeration-type -emit-fir %s -o /dev/null
+! RUN: %flang_fc1 -fenumeration-type -emit-fir -mmlir -strict-fir-volatile-verifier %s -o /dev/null
 
 module enum_mod
   enumeration type :: color
@@ -119,6 +120,31 @@ subroutine test_constructor_int8(i)
   c = color(i)
 end subroutine
 
+! A narrower argument is widened to i32 first so the enumerator count cannot
+! wrap in the argument's kind.
+
+! CHECK-LABEL: func.func @_QPtest_constructor_int1(
+! CHECK-SAME: %{{.*}}: !fir.ref<i8>
+subroutine test_constructor_int1(i)
+  use enum_mod
+  integer(1), intent(in) :: i
+  type(color) :: c
+  ! CHECK: %[[I:.*]] = fir.load %{{.*}} : !fir.ref<i8>
+  ! CHECK: %[[ORD:.*]] = fir.convert %[[I]] : (i8) -> i32
+  ! CHECK-DAG: %[[ONE:.*]] = arith.constant 1 : i32
+  ! CHECK-DAG: %[[MAX:.*]] = arith.constant 3 : i32
+  ! CHECK: %[[LOW:.*]] = arith.cmpi slt, %[[ORD]], %[[ONE]] : i32
+  ! CHECK: %[[HIGH:.*]] = arith.cmpi sgt, %[[ORD]], %[[MAX]] : i32
+  ! CHECK: %[[OOR:.*]] = arith.ori %[[LOW]], %[[HIGH]] : i1
+  ! CHECK: fir.if %[[OOR]] {
+  ! CHECK:   fir.call @{{.*}}ReportFatalUserError
+  ! CHECK: }
+  ! CHECK: %[[TMP:.*]]:2 = hlfir.declare %{{.*}} {uniq_name = "ctor.temp"}
+  ! CHECK: %[[F:.*]] = hlfir.designate %[[TMP]]#0{"__ordinal"}
+  ! CHECK: hlfir.assign %[[ORD]] to %[[F]] : i32, !fir.ref<i32>
+  c = color(i)
+end subroutine
+
 ! -----------------------------------------------------------------------------
 !            Test enumeration comparisons (relational operators)
 ! -----------------------------------------------------------------------------
@@ -188,6 +214,25 @@ subroutine test_int_variable(c, arr)
   ! CHECK: hlfir.designate %[[FA]] (%{{.*}})
   ! CHECK: hlfir.yield_element %{{.*}} : i32
   ! CHECK: hlfir.assign %[[EL]] to %[[IARR]]#0
+  iarr = int(arr)
+end subroutine
+
+! The __ordinal designator keeps the VOLATILE qualification of its base.
+
+! CHECK-LABEL: func.func @_QPtest_int_volatile(
+subroutine test_int_volatile(c, arr)
+  use enum_mod
+  type(color), volatile :: c, arr(3)
+  integer :: i, iarr(3)
+  ! CHECK: %[[ARR:.*]]:2 = hlfir.declare %{{.*}}(%[[SHAPE:[0-9]+]]) dummy_scope %{{.*}} {{.*}}uniq_name = "_QFtest_int_volatileEarr"}
+  ! CHECK: %[[C:.*]]:2 = hlfir.declare %{{.*}} {{.*}}uniq_name = "_QFtest_int_volatileEc"}
+  ! CHECK: %[[F:.*]] = hlfir.designate %[[C]]#0{"__ordinal"} {{.*}} -> !fir.ref<i32, volatile>
+  ! CHECK: fir.load %[[F]] : !fir.ref<i32, volatile>
+  i = int(c)
+  ! CHECK: %[[FA:.*]] = hlfir.designate %[[ARR]]#0{"__ordinal"} shape %[[SHAPE]] : {{.*}} -> !fir.box<!fir.array<3xi32>, volatile>
+  ! CHECK: hlfir.elemental %[[SHAPE]] unordered : (!fir.shape<1>) -> !hlfir.expr<3xi32> {
+  ! CHECK: %[[E:.*]] = hlfir.designate %[[FA]] (%{{.*}}) {{.*}} -> !fir.ref<i32, volatile>
+  ! CHECK: fir.load %[[E]] : !fir.ref<i32, volatile>
   iarr = int(arr)
 end subroutine
 
@@ -460,9 +505,20 @@ end subroutine
 ! CHECK-NEXT: fir.has_value
 
 ! CHECK: fir.global internal @[[ARR]] {{.*}}constant : !fir.array<3x!fir.type<_QMenum_modTcolor{__ordinal:i32}>> {
-! CHECK: arith.constant 1 : i32
-! CHECK: fir.insert_value %{{.*}}, [0 : index]
-! CHECK: arith.constant 2 : i32
-! CHECK: fir.insert_value %{{.*}}, [1 : index]
-! CHECK: arith.constant 3 : i32
-! CHECK: fir.insert_value %{{.*}}, [2 : index]
+! CHECK-NEXT: %[[A0:.*]] = fir.undefined !fir.array<3x!fir.type<_QMenum_modTcolor{__ordinal:i32}>>
+! CHECK-NEXT: fir.undefined !fir.type<_QMenum_modTcolor{__ordinal:i32}>
+! CHECK-NEXT: fir.field_index __ordinal
+! CHECK-NEXT: %[[O1:.*]] = arith.constant 1 : i32
+! CHECK-NEXT: %[[E1:.*]] = fir.insert_value %{{.*}}, %[[O1]], ["__ordinal"
+! CHECK-NEXT: %[[A1:.*]] = fir.insert_value %[[A0]], %[[E1]], [0 : index]
+! CHECK-NEXT: fir.undefined !fir.type<_QMenum_modTcolor{__ordinal:i32}>
+! CHECK-NEXT: fir.field_index __ordinal
+! CHECK-NEXT: %[[O2:.*]] = arith.constant 2 : i32
+! CHECK-NEXT: %[[E2:.*]] = fir.insert_value %{{.*}}, %[[O2]], ["__ordinal"
+! CHECK-NEXT: %[[A2:.*]] = fir.insert_value %[[A1]], %[[E2]], [1 : index]
+! CHECK-NEXT: fir.undefined !fir.type<_QMenum_modTcolor{__ordinal:i32}>
+! CHECK-NEXT: fir.field_index __ordinal
+! CHECK-NEXT: %[[O3:.*]] = arith.constant 3 : i32
+! CHECK-NEXT: %[[E3:.*]] = fir.insert_value %{{.*}}, %[[O3]], ["__ordinal"
+! CHECK-NEXT: %[[A3:.*]] = fir.insert_value %[[A2]], %[[E3]], [2 : index]
+! CHECK-NEXT: fir.has_value %[[A3]]

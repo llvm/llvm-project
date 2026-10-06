@@ -1821,6 +1821,10 @@ private:
       hlfir::Entity original =
           narrowing ? gen(narrowing->left()) : gen(ordExpr);
       mlir::Value value = hlfir::loadTrivialScalar(loc, builder, original);
+      // Widen narrow kinds so the enumerator count is representable.
+      if (value.getType().getIntOrFloatBitWidth() <
+          ordTy.getIntOrFloatBitWidth())
+        value = builder.createConvert(loc, ordTy, value);
       mlir::Type valueTy = value.getType();
       int count = ctor.derivedTypeSpec()
                       .typeSymbol()
@@ -1849,23 +1853,23 @@ private:
                                               "ctor.temp");
   }
 
-  // Address the __ordinal component of an enumeration expression as an
-  // INTEGER(4) variable (a strided view for arrays).
-  hlfir::Entity
-  genEnumerationOrdinal(const Fortran::lower::SomeExpr &enumExpr) {
-    mlir::Location loc = getLoc();
-    fir::FirOpBuilder &builder = getBuilder();
-    hlfir::Entity base = hlfir::derefPointersAndAllocatables(
-        loc, builder, hlfir::Entity{gen(enumExpr)});
-    if (!base.isVariable()) {
-      hlfir::AssociateOp associate = hlfir::genAssociateExpr(
-          loc, builder, base, base.getType(), ".enum.tmp");
-      base = hlfir::Entity{associate.getBase()};
-      fir::FirOpBuilder *bldr = &builder;
-      getStmtCtx().attachCleanup(
-          [=]() { hlfir::EndAssociateOp::create(*bldr, loc, associate); });
-    }
-    return Fortran::lower::genEnumerationOrdinalDesignator(loc, builder, base);
+  // Load the __ordinal of a scalar enumeration variable or value.
+  static mlir::Value genEnumerationOrdinalValue(mlir::Location loc,
+                                                fir::FirOpBuilder &builder,
+                                                hlfir::Entity enumVal) {
+    if (enumVal.isVariable())
+      return hlfir::loadTrivialScalar(
+          loc, builder,
+          Fortran::lower::genEnumerationOrdinalDesignator(loc, builder,
+                                                          enumVal));
+    hlfir::AssociateOp associate = hlfir::genAssociateExpr(
+        loc, builder, enumVal, enumVal.getType(), ".enum.tmp");
+    mlir::Value ordinal = hlfir::loadTrivialScalar(
+        loc, builder,
+        Fortran::lower::genEnumerationOrdinalDesignator(
+            loc, builder, hlfir::Entity{associate.getBase()}));
+    hlfir::EndAssociateOp::create(builder, loc, associate);
+    return ordinal;
   }
 
   // Lower INT(enumeration [, KIND]); resType already reflects KIND.
@@ -1875,15 +1879,25 @@ private:
     mlir::Location loc = getLoc();
     fir::FirOpBuilder &builder = getBuilder();
     mlir::Type eleTy = hlfir::getFortranElementType(resType);
-    hlfir::Entity ordinal = genEnumerationOrdinal(enumExpr);
-    if (!ordinal.isArray())
+    hlfir::Entity base = hlfir::derefPointersAndAllocatables(
+        loc, builder, hlfir::Entity{gen(enumExpr)});
+    if (!base.isArray())
       return hlfir::EntityWithAttributes{builder.createConvert(
-          loc, eleTy, hlfir::loadTrivialScalar(loc, builder, ordinal))};
-    mlir::Value shape = hlfir::genShape(loc, builder, ordinal);
+          loc, eleTy, genEnumerationOrdinalValue(loc, builder, base))};
+    // Array values are read element by element (not materialized) so that a
+    // masked WHERE only evaluates the active elements of an elemental.
+    std::optional<hlfir::Entity> ordinals;
+    if (base.isVariable())
+      ordinals =
+          Fortran::lower::genEnumerationOrdinalDesignator(loc, builder, base);
+    mlir::Value shape = hlfir::genShape(loc, builder, base);
     auto kernel = [&](mlir::Location l, fir::FirOpBuilder &b,
                       mlir::ValueRange idx) -> hlfir::Entity {
-      mlir::Value elem = hlfir::loadTrivialScalar(
-          l, b, hlfir::getElementAt(l, b, ordinal, idx));
+      mlir::Value elem =
+          ordinals ? hlfir::loadTrivialScalar(
+                         l, b, hlfir::getElementAt(l, b, *ordinals, idx))
+                   : genEnumerationOrdinalValue(
+                         l, b, hlfir::getElementAt(l, b, base, idx));
       return hlfir::Entity{b.createConvert(l, eleTy, elem)};
     };
     mlir::Value elemental =
@@ -2521,13 +2535,14 @@ hlfir::Entity Fortran::lower::genEnumerationOrdinalDesignator(
   auto recTy = mlir::cast<fir::RecordType>(enumVar.getFortranElementType());
   assert(recTy.getNumFields() == 1 && "expected an enumeration type");
   auto [fieldName, ordTy] = recTy.getTypeList().front();
-  mlir::Type designatorType = builder.getRefType(ordTy);
+  bool isVolatile = fir::isa_volatile_type(enumVar.getType());
+  mlir::Type designatorType = fir::ReferenceType::get(ordTy, isVolatile);
   mlir::Value shape;
   if (enumVar.isArray()) {
     auto seqTy =
         mlir::cast<fir::SequenceType>(enumVar.getElementOrSequenceType());
-    designatorType =
-        fir::BoxType::get(fir::SequenceType::get(seqTy.getShape(), ordTy));
+    designatorType = fir::BoxType::get(
+        fir::SequenceType::get(seqTy.getShape(), ordTy), isVolatile);
     shape = hlfir::genShape(loc, builder, enumVar);
   }
   mlir::Value designate = hlfir::DesignateOp::create(

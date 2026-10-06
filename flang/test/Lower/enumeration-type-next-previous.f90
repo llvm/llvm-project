@@ -201,7 +201,7 @@ subroutine test_previous_pointer_a(p)
   ! CHECK: %[[BOX:.*]] = fir.load %[[P]]#0
   ! CHECK: %[[DIMS:.*]]:3 = fir.box_dims %[[BOX]], %{{.*}}
   ! CHECK: %[[SHAPE:.*]] = fir.shape %[[DIMS]]#1
-  ! CHECK: hlfir.elemental %[[SHAPE]] : (!fir.shape<1>) -> !hlfir.expr<?x!fir.type<_QMenum_np_modTcolor{__ordinal:i32}>> {
+  ! CHECK: hlfir.elemental %[[SHAPE]] unordered : (!fir.shape<1>) -> !hlfir.expr<?x!fir.type<_QMenum_np_modTcolor{__ordinal:i32}>> {
   ! CHECK: %[[ELT:.*]] = hlfir.designate %[[BOX]] (%{{.*}})
   ! CHECK: hlfir.designate %[[ELT]]{"__ordinal"}
   ! CHECK: arith.subi
@@ -212,9 +212,8 @@ end subroutine
 !            Test NEXT() and PREVIOUS() over whole arrays
 ! -----------------------------------------------------------------------------
 
-! An array call is an ordered hlfir.elemental over the record type (no
-! "unordered"): the call may terminate at a boundary, so elements must be
-! evaluated in order and only where needed.
+! An array call with STAT is an ordered hlfir.elemental over the record type
+! (no "unordered"), since STAT is an elemental INTENT(OUT) argument.
 
 ! CHECK-LABEL: func.func @_QPtest_next_array(
 subroutine test_next_array(arr)
@@ -281,8 +280,8 @@ end subroutine
 !            Test NEXT() inside WHERE
 ! -----------------------------------------------------------------------------
 
-! The ordered elemental is only evaluated for elements where the mask is true,
-! so a boundary in a masked-off element does not terminate.
+! Without STAT the call is pure and unordered; WHERE only evaluates it where
+! the mask is true, so a boundary in a masked-off element does not terminate.
 
 ! CHECK-LABEL: func.func @_QPtest_next_where(
 subroutine test_next_where(arr, mask)
@@ -293,10 +292,64 @@ subroutine test_next_where(arr, mask)
   ! CHECK: hlfir.where {
   ! CHECK: } do {
   ! CHECK: hlfir.region_assign {
-  ! CHECK: hlfir.elemental %{{[0-9]+}} : (!fir.shape<1>) -> !hlfir.expr<3x!fir.type<_QMenum_np_modTcolor{__ordinal:i32}>> {
+  ! CHECK: hlfir.elemental %{{[0-9]+}} unordered : (!fir.shape<1>) -> !hlfir.expr<3x!fir.type<_QMenum_np_modTcolor{__ordinal:i32}>> {
   ! CHECK: fir.call @_FortranAReportFatalUserError
   ! CHECK: hlfir.yield_element
   where (mask) narr = next(arr)
+end subroutine
+
+! Composed calls read NEXT element by element (hlfir.apply) instead of
+! materializing it, so WHERE can inline it under the mask.
+
+! CHECK-LABEL: func.func @_QPtest_int_next_where(
+subroutine test_int_next_where(arr, mask)
+  use enum_np_mod
+  type(color), intent(in) :: arr(3)
+  logical, intent(in) :: mask(3)
+  integer :: r(3)
+  ! CHECK: hlfir.region_assign {
+  ! CHECK: %[[N:.*]] = hlfir.elemental %{{[0-9]+}} unordered : (!fir.shape<1>) -> !hlfir.expr<3x!fir.type<_QMenum_np_modTcolor{__ordinal:i32}>> {
+  ! CHECK-NOT: hlfir.associate %[[N]](
+  ! CHECK: hlfir.elemental %{{[0-9]+}} unordered : (!fir.shape<1>) -> !hlfir.expr<3xi32> {
+  ! CHECK: hlfir.apply %[[N]], %{{.*}}
+  ! CHECK: hlfir.yield_element %{{.*}} : i32
+  where (mask) r = int(next(arr))
+end subroutine
+
+! CHECK-LABEL: func.func @_QPtest_next_next_where(
+subroutine test_next_next_where(arr, mask)
+  use enum_np_mod
+  type(color), intent(in) :: arr(3)
+  logical, intent(in) :: mask(3)
+  type(color) :: narr(3)
+  ! CHECK: hlfir.region_assign {
+  ! CHECK: %[[N:.*]] = hlfir.elemental %{{[0-9]+}} unordered : (!fir.shape<1>) -> !hlfir.expr<3x!fir.type<_QMenum_np_modTcolor{__ordinal:i32}>> {
+  ! CHECK-NOT: hlfir.associate %[[N]](
+  ! CHECK: hlfir.elemental %{{[0-9]+}} unordered : (!fir.shape<1>) -> !hlfir.expr<3x!fir.type<_QMenum_np_modTcolor{__ordinal:i32}>> {
+  ! CHECK: hlfir.apply %[[N]], %{{.*}}
+  ! CHECK: hlfir.yield_element
+  where (mask) narr = next(next(arr))
+end subroutine
+
+! An ordered call (STAT present) still reads its argument through hlfir.apply,
+! so nested NEXT calls with STAT stay under the WHERE mask.
+
+! CHECK-LABEL: func.func @_QPtest_next_stat_nested_where(
+subroutine test_next_stat_nested_where(arr, mask)
+  use enum_np_mod
+  type(color), intent(in) :: arr(3)
+  logical, intent(in) :: mask(3)
+  type(color) :: narr(3)
+  integer :: st(3), st2(3)
+  ! CHECK: hlfir.region_assign {
+  ! CHECK: %[[N1:.*]] = hlfir.elemental %{{[0-9]+}} unordered : (!fir.shape<1>) -> !hlfir.expr<3x!fir.type<_QMenum_np_modTcolor{__ordinal:i32}>> {
+  ! CHECK-NOT: hlfir.associate %[[N1]](
+  ! CHECK: %[[N2:.*]] = hlfir.elemental %{{[0-9]+}} : (!fir.shape<1>) -> !hlfir.expr<3x!fir.type<_QMenum_np_modTcolor{__ordinal:i32}>> {
+  ! CHECK: hlfir.apply %[[N1]], %{{.*}}
+  ! CHECK-NOT: hlfir.associate %[[N2]](
+  ! CHECK: hlfir.elemental %{{[0-9]+}} : (!fir.shape<1>) -> !hlfir.expr<3x!fir.type<_QMenum_np_modTcolor{__ordinal:i32}>> {
+  ! CHECK: hlfir.apply %[[N2]], %{{.*}}
+  where (mask) narr = next(next(next(arr), stat=st2), stat=st)
 end subroutine
 
 ! The STAT write is inside the masked elemental, so STAT elements where the

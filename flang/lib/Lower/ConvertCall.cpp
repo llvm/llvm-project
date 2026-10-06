@@ -2479,7 +2479,7 @@ public:
     // call of an impure subprogram or a subprogram with intent(out) or
     // intent(inout) arguments. Note that the scalar arguments are handled
     // above.
-    if (mustBeOrdered) {
+    if (mustBeOrdered && impl().mustEvaluateArrayArgsBeforeCall()) {
       for (auto &preparedActual : loweredActuals) {
         if (preparedActual) {
           if (hlfir::AssociateOp associate =
@@ -2560,6 +2560,8 @@ public:
     });
     return hlfir::EntityWithAttributes{elemental};
   }
+
+  bool mustEvaluateArrayArgsBeforeCall() const { return true; }
 
 private:
   ElementalCallBuilderImpl &impl() {
@@ -2924,9 +2926,8 @@ genEnumOrdinalStep(fir::FirOpBuilder &builder, mlir::Location loc,
   return {result, atBoundary};
 }
 
-// NEXT/PREVIOUS of an F2023 enumeration type. STAT is an elemental INTENT(OUT)
-// argument, and a boundary without STAT is an error stop, so array calls are
-// ordered loops performing these side effects element by element.
+// NEXT/PREVIOUS of an F2023 enumeration type. As elemental intrinsics they are
+// pure; only a present STAT (elemental INTENT(OUT)) forces element order.
 // NOTE: STAT is listed as "scalar", but also as INTENT(OUT) and is in an
 // elemental function.  Taking them together, this means that, by
 // F2023 15.9.1 ¶4, it should be a conforming argument to A.
@@ -2942,9 +2943,17 @@ public:
     mlir::Location loc = callContext.loc;
     fir::FirOpBuilder &builder = callContext.getBuilder();
     hlfir::Entity arg = loweredActuals[0]->getActual(loc, builder);
+    std::optional<hlfir::AssociateOp> associate;
+    if (!arg.isVariable()) {
+      associate = hlfir::genAssociateExpr(loc, builder, arg, arg.getType(),
+                                          ".enum.arg");
+      arg = hlfir::Entity{associate->getBase()};
+    }
     mlir::Value ordinal = hlfir::loadTrivialScalar(
         loc, builder,
         Fortran::lower::genEnumerationOrdinalDesignator(loc, builder, arg));
+    if (associate)
+      hlfir::EndAssociateOp::create(builder, loc, *associate);
     std::pair<mlir::Value, mlir::Value> step = genEnumOrdinalStep(
         builder, loc, ordinal, ordinal.getType(), count, isNext);
     mlir::Value result = step.first;
@@ -2992,6 +3001,8 @@ public:
 
   bool argMayBeModifiedByCall(unsigned argIdx) const { return argIdx == 1; }
   bool canLoadActualArgumentBeforeLoop(unsigned) const { return false; }
+  // STAT (integer) cannot alias A (enumeration): keep A masked/elemental.
+  bool mustEvaluateArrayArgsBeforeCall() const { return false; }
 
   mlir::Value
   computeDynamicCharacterResultLength(Fortran::lower::PreparedActualArguments &,
@@ -3100,7 +3111,7 @@ static std::optional<hlfir::EntityWithAttributes> genEnumerationNextOrPrevious(
                   .enumeratorCount();
   EnumerationStepCallBuilder stepBuilder{count, intrinsic.name == "next"};
   if (callContext.isElementalProcWithArrayArgs())
-    return stepBuilder.genElementalCall(loweredActuals, /*isImpure=*/true,
+    return stepBuilder.genElementalCall(loweredActuals, /*isImpure=*/false,
                                         callContext);
   for (auto &actual : loweredActuals)
     if (actual)
