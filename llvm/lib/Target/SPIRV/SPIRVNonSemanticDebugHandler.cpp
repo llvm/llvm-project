@@ -896,6 +896,8 @@ SPIRVNonSemanticDebugHandler::emitDebugTypeForDerivedType(
     return emitDebugTypePointer(DT, ExtInstSetReg, MAI);
   case dwarf::DW_TAG_typedef:
     return emitDebugTypedef(DT, VoidTypeReg, I32TypeReg, ExtInstSetReg, MAI);
+  case dwarf::DW_TAG_member:
+    return emitDebugTypeMember(DT, VoidTypeReg, I32TypeReg, ExtInstSetReg, MAI);
   default:
     return EmitResult::unsupported();
   }
@@ -1461,15 +1463,16 @@ SPIRVNonSemanticDebugHandler::emitDebugTypeArray(
                   ExtInstSetReg, Ops, MAI));
 }
 
-std::optional<MCRegister> SPIRVNonSemanticDebugHandler::emitDebugTypeMember(
+SPIRVNonSemanticDebugHandler::EmitResult
+SPIRVNonSemanticDebugHandler::emitDebugTypeMember(
     const DIDerivedType *M, MCRegister VoidTypeReg, MCRegister I32TypeReg,
     MCRegister ExtInstSetReg, SPIRV::ModuleAnalysisInfo &MAI) {
   EmitResult Ty = getOrCreateDebugScope(M->getBaseType());
   if (!Ty)
-    return std::nullopt;
+    return Ty;
 
   if (!isUInt<32>(M->getOffsetInBits()) || !isUInt<32>(M->getSizeInBits()))
-    return std::nullopt;
+    return EmitResult::unsupported();
 
   MCRegister NameReg = getCachedOpStringReg(M->getName());
   MCRegister FileStrReg = getCachedScopePathOpStringReg(
@@ -1496,10 +1499,10 @@ std::optional<MCRegister> SPIRVNonSemanticDebugHandler::emitDebugTypeMember(
   // available but is not emitted as the optional Value operand, and under DWARF
   // 5 a static member is tagged DW_TAG_variable, which the caller's member loop
   // skips.
-  return emitExtInst(
+  return EmitResult::emitted(emitExtInst(
       SPIRV::NonSemanticExtInst::DebugTypeMember, VoidTypeReg, ExtInstSetReg,
       {NameReg, Ty.Reg, SrcReg, LineReg, ColReg, OffsetReg, SizeReg, FlagsReg},
-      MAI);
+      MAI));
 }
 
 SPIRVNonSemanticDebugHandler::EmitResult
@@ -1520,9 +1523,9 @@ SPIRVNonSemanticDebugHandler::emitDebugTypeComposite(
     const auto *M = dyn_cast<DIDerivedType>(Element);
     if (!M || M->getTag() != dwarf::DW_TAG_member)
       continue;
-    if (auto MemberReg =
-            emitDebugTypeMember(M, VoidTypeReg, I32TypeReg, ExtInstSetReg, MAI))
-      MemberRegs.push_back(*MemberReg);
+    EmitResult Member = getOrCreateDebugScope(M);
+    if (Member)
+      MemberRegs.push_back(Member.Reg);
   }
 
   MCRegister NameReg = getCachedOpStringReg(CT->getName());
