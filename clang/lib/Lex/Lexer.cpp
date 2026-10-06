@@ -4663,7 +4663,7 @@ LexNextToken:
 const char *Lexer::convertDependencyDirectiveToken(
     const dependency_directives_scan::Token &DDTok, Token &Result) {
   const char *TokPtr = BufferStart + DDTok.Offset;
-  Result = Token::Create(DDTok.Kind, getSourceLocation(TokPtr), DDTok.Length);
+  Result = Token::create(DDTok.Kind, getSourceLocation(TokPtr), DDTok.Length);
   Result.setFlag((Token::TokenFlags)DDTok.Flags);
   if (Result.is(tok::raw_identifier))
     Result.setRawIdentifierData(TokPtr);

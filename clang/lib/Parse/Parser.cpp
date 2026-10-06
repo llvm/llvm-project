@@ -77,7 +77,7 @@ Parser::Parser(Preprocessor &pp, Sema &actions, bool skipFunctionBodies)
       ParsingGenericAssociationType(false), InMessageExpression(false),
       ParsingInObjCContainer(false), TemplateParameterDepth(0) {
   SkipFunctionBodies = pp.isCodeCompletionEnabled() || skipFunctionBodies;
-  Tok = Token::CreateEof();
+  Tok = Token::createEof();
   Actions.CurScope = nullptr;
   NumCachedScopes = 0;
   CurParsedObjCImpl = nullptr;

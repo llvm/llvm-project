@@ -677,7 +677,7 @@ static bool GenerateNewArgTokens(Preprocessor &PP,
         // Add left paren
         if (FoundSeparatorToken) {
           TempToken =
-              Token::Create(tok::l_paren, ArgStartIterator->getLocation());
+              Token::create(tok::l_paren, ArgStartIterator->getLocation());
           NewTokens.push_back(TempToken);
         }
 
@@ -687,7 +687,7 @@ static bool GenerateNewArgTokens(Preprocessor &PP,
         // Add right paren and store the paren locations in ParenHints
         if (FoundSeparatorToken) {
           SourceLocation Loc = PP.getLocForEndOfToken((I - 1)->getLocation());
-          TempToken = Token::Create(tok::r_paren, Loc);
+          TempToken = Token::create(tok::r_paren, Loc);
           NewTokens.push_back(TempToken);
           ParenHints.push_back(SourceRange(ArgStartIterator->getLocation(),
                                            Loc));
@@ -851,7 +851,7 @@ MacroArgs *Preprocessor::ReadMacroCallArgumentList(Token &MacroName,
     }
 
     // Add a marker EOF token to the end of the token list for this argument.
-    Token EOFTok = Token::CreateEof(Tok.getLocation());
+    Token EOFTok = Token::createEof(Tok.getLocation());
     ArgTokens.push_back(EOFTok);
     ++NumActuals;
     if (!ContainsCodeCompletionTok && NumFixedArgsLeft != 0)
@@ -908,7 +908,7 @@ MacroArgs *Preprocessor::ReadMacroCallArgumentList(Token &MacroName,
 
   if (ContainsCodeCompletionTok) {
     // Recover from not-fully-formed macro invocation during code-completion.
-    Token EOFTok = Token::CreateEof(Tok.getLocation());
+    Token EOFTok = Token::createEof(Tok.getLocation());
     for (; NumActuals < MinArgsExpected; ++NumActuals)
       ArgTokens.push_back(EOFTok);
   }
@@ -967,7 +967,7 @@ MacroArgs *Preprocessor::ReadMacroCallArgumentList(Token &MacroName,
 
     // Add a marker EOF token to the end of the token list for this argument.
     SourceLocation EndLoc = Tok.getLocation();
-    Tok = Token::CreateEof(EndLoc);
+    Tok = Token::createEof(EndLoc);
     ArgTokens.push_back(Tok);
 
     // If we expect two arguments, add both as empty.

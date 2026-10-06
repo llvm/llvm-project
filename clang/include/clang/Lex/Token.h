@@ -192,7 +192,7 @@ public:
     Loc = SourceLocation().getRawEncoding();
   }
 
-  static Token Create(tok::TokenKind Kind, SourceLocation Loc,
+  static Token create(tok::TokenKind Kind, SourceLocation Loc,
                       unsigned Length = 0) {
     Token Tok;
     Tok.startToken();
@@ -202,7 +202,7 @@ public:
     return Tok;
   }
 
-  static Token CreateAnnotation(tok::TokenKind Kind, SourceRange Range,
+  static Token createAnnotation(tok::TokenKind Kind, SourceRange Range,
                                 void *Value = nullptr) {
     assert(tok::isAnnotation(Kind) && "Expected an annotation token kind");
     Token Tok;
@@ -213,9 +213,9 @@ public:
     return Tok;
   }
 
-  static Token CreateEof(SourceLocation Loc = SourceLocation(),
+  static Token createEof(SourceLocation Loc = SourceLocation(),
                          const void *Data = nullptr) {
-    Token Tok = Create(tok::eof, Loc);
+    Token Tok = create(tok::eof, Loc);
     Tok.setEofData(Data);
     return Tok;
   }

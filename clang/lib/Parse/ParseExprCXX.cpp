@@ -3711,7 +3711,7 @@ Parser::ParseCXXAmbiguousParenExpression(ParenParseOption &ExprType,
   }
 
   // Create a fake EOF to mark end of Toks buffer.
-  Token AttrEnd = Token::CreateEof(Tok.getLocation(), Toks.data());
+  Token AttrEnd = Token::createEof(Tok.getLocation(), Toks.data());
   Toks.push_back(AttrEnd);
 
   // The current token should go after the cached tokens.

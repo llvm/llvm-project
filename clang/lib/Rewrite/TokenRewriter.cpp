@@ -88,7 +88,7 @@ TokenRewriter::AddTokenBefore(token_iterator I, const char *Val) {
   const char *Spelling;
   // TODO: Form a whole lexer around this and relex the token!  For now, just
   // set kind to tok::unknown.
-  Token Tok = Token::Create(tok::unknown,
+  Token Tok = Token::create(tok::unknown,
                             ScratchBuf->getToken(Val, Len, Spelling), Len);
 
   return AddToken(Tok, RemapIterator(I));

@@ -3281,7 +3281,7 @@ void Parser::ParseLexedObjCMethodDefs(LexedMethod &LM, bool parseMethod) {
   assert(!LM.Toks.empty() && "ParseLexedObjCMethodDef - Empty body!");
   // Store an artificial EOF token to ensure that we don't run off the end of
   // the method's body when we come to parse it.
-  Token Eof = Token::CreateEof(OrigLoc, MCDecl);
+  Token Eof = Token::createEof(OrigLoc, MCDecl);
   LM.Toks.push_back(Eof);
   // Append the current token at the end of the new token stream so that it
   // doesn't get lost.

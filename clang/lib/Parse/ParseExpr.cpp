@@ -341,7 +341,7 @@ Parser::ParseRHSOfBinaryExpression(ExprResult LHS, prec::Level MinPrec) {
       assert(getLangOpts().Reflection);
       if (getLangOpts().Blocks) {
         OpToken.setKind(tok::caret);
-        Token Caret = Token::Create(
+        Token Caret = Token::create(
             tok::caret, OpToken.getLocation().getLocWithOffset(1), 1);
         UnconsumeToken(OpToken);
         PP.EnterToken(Caret, /*IsReinject=*/true);
@@ -3197,10 +3197,10 @@ void Parser::injectEmbedTokens() {
                               Data->BinaryData.size() * 2 - 1);
   unsigned I = 0;
   for (auto &Byte : Data->BinaryData) {
-    Toks[I] = Token::Create(tok::binary_data, Tok.getLocation(), 1);
+    Toks[I] = Token::create(tok::binary_data, Tok.getLocation(), 1);
     Toks[I].setLiteralData(&Byte);
     if (I != ((Data->BinaryData.size() - 1) * 2)) {
-      Toks[I + 1] = Token::Create(tok::comma, Tok.getLocation());
+      Toks[I + 1] = Token::create(tok::comma, Tok.getLocation());
     }
     I += 2;
   }

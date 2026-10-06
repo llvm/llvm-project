@@ -1997,7 +1997,7 @@ void Preprocessor::EnterAnnotationToken(SourceRange Range,
   // FIXME: Produce this as the current token directly, rather than
   // allocating a new token for it.
   auto Tok = std::make_unique<Token[]>(1);
-  Tok[0] = Token::CreateAnnotation(Kind, Range, AnnotationVal);
+  Tok[0] = Token::createAnnotation(Kind, Range, AnnotationVal);
   EnterTokenStream(std::move(Tok), 1, true, /*IsReinject*/ false);
 }
 
@@ -4059,7 +4059,7 @@ void Preprocessor::HandleEmbedDirectiveImpl(
   Data->BinaryData = BinaryContents;
   Data->FileName = FileName;
 
-  Toks[CurIdx++] = Token::CreateAnnotation(tok::annot_embed, HashLoc, Data);
+  Toks[CurIdx++] = Token::createAnnotation(tok::annot_embed, HashLoc, Data);
 
   // Now add the suffix tokens, if any.
   if (Params.MaybeSuffixParam) {
@@ -4285,7 +4285,7 @@ void Preprocessor::HandleCXXImportDirective(Token ImportTok) {
 
     case ImportAction::ModuleBegin:
       // Let the parser know we're textually entering the module.
-      DirToks.push_back(Token::CreateAnnotation(
+      DirToks.push_back(Token::createAnnotation(
           tok::annot_module_begin, SemiLoc, Action.ModuleForHeader));
       [[fallthrough]];
 

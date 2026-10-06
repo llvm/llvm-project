@@ -1115,7 +1115,7 @@ struct PragmaDebugHandler : public PragmaHandler {
         LLVM_BUILTIN_TRAP;
     } else if (II->isStr("parser_crash")) {
       if (!PP.getPreprocessorOpts().DisablePragmaDebugCrash) {
-        Token Crasher = Token::CreateAnnotation(tok::annot_pragma_parser_crash,
+        Token Crasher = Token::createAnnotation(tok::annot_pragma_parser_crash,
                                                 Tok.getLocation());
         PP.EnterToken(Crasher, /*IsReinject*/ false);
       }
@@ -1123,7 +1123,7 @@ struct PragmaDebugHandler : public PragmaHandler {
       std::this_thread::sleep_for(std::chrono::milliseconds(100));
     } else if (II->isStr("dump")) {
       Token DumpAnnot =
-          Token::CreateAnnotation(tok::annot_pragma_dump, Tok.getLocation());
+          Token::createAnnotation(tok::annot_pragma_dump, Tok.getLocation());
       PP.EnterToken(DumpAnnot, /*IsReinject*/false);
     } else if (II->isStr("diag_mapping")) {
       Token DiagName;
@@ -1283,7 +1283,7 @@ struct PragmaDebugHandler : public PragmaHandler {
     SourceLocation NameLoc = Tok.getLocation();
     MutableArrayRef<Token> Toks(
         PP.getPreprocessorAllocator().Allocate<Token>(1), 1);
-    Toks[0] = Token::CreateAnnotation(tok::annot_pragma_captured, NameLoc);
+    Toks[0] = Token::createAnnotation(tok::annot_pragma_captured, NameLoc);
 
     PP.EnterTokenStream(Toks, /*DisableMacroExpansion=*/true,
                         /*IsReinject=*/false);

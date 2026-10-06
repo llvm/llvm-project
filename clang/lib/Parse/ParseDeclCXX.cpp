@@ -3815,7 +3815,7 @@ void Parser::DiagnoseUnexpectedNamespace(NamedDecl *D) {
   // Push '};' onto the token stream to recover.
   PP.EnterToken(Tok, /*IsReinject*/ true);
 
-  Tok = Token::Create(tok::semi, PP.getLocForEndOfToken(PrevTokLocation));
+  Tok = Token::create(tok::semi, PP.getLocForEndOfToken(PrevTokLocation));
   PP.EnterToken(Tok, /*IsReinject*/ true);
 
   Tok.setKind(tok::r_brace);
@@ -4382,12 +4382,12 @@ void Parser::ParseOpenMPAttributeArgs(const IdentifierInfo *AttrName,
     // and push the tokens from it into the cached token stream for a new OpenMP
     // pragma directive.
     Token OMPBeginTok =
-        Token::CreateAnnotation(tok::annot_attr_openmp, Tok.getLocation());
+        Token::createAnnotation(tok::annot_attr_openmp, Tok.getLocation());
     OpenMPTokens.push_back(OMPBeginTok);
 
     ConsumeAndStoreUntil(tok::r_paren, OpenMPTokens, /*StopAtSemi=*/false,
                          /*ConsumeFinalToken*/ false);
-    Token OMPEndTok = Token::CreateAnnotation(tok::annot_pragma_openmp_end,
+    Token OMPEndTok = Token::createAnnotation(tok::annot_pragma_openmp_end,
                                               Tok.getLocation());
     OpenMPTokens.push_back(OMPEndTok);
   } else {
@@ -4889,7 +4889,7 @@ void Parser::ParseMicrosoftUuidAttributeArgs(ParsedAttributes &Attrs) {
     // ActOnStringLiteral() copies the string data into the literal, so it's
     // ok that the Token points to StrBuffer.
     Token Toks[1];
-    Toks[0] = Token::Create(tok::string_literal, StartLoc, StrBuffer.size());
+    Toks[0] = Token::create(tok::string_literal, StartLoc, StrBuffer.size());
     Toks[0].setLiteralData(StrBuffer.data());
     StringLiteral *UuidString =
         cast<StringLiteral>(Actions.ActOnUnevaluatedStringLiteral(Toks).get());

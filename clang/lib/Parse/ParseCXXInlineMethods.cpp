@@ -254,7 +254,7 @@ void Parser::ParseCXXNonStaticMemberInitializer(Decl *VarD) {
 
   // Store an artificial EOF token to ensure that we don't run off the end of
   // the initializer when we come to parse it.
-  Token Eof = Token::CreateEof(Tok.getLocation(), VarD);
+  Token Eof = Token::createEof(Tok.getLocation(), VarD);
   Toks.push_back(Eof);
 }
 
@@ -399,7 +399,7 @@ void Parser::ParseLexedMethodDeclaration(LateParsedMethodDeclaration &LM) {
       // we parse it later on.
       Token LastDefaultArgToken = Toks->back();
       Token DefArgEnd =
-          Token::CreateEof(LastDefaultArgToken.getEndLoc(), Param);
+          Token::createEof(LastDefaultArgToken.getEndLoc(), Param);
       Toks->push_back(DefArgEnd);
 
       // Parse the default argument from its saved token stream.
@@ -476,7 +476,7 @@ void Parser::ParseLexedMethodDeclaration(LateParsedMethodDeclaration &LM) {
     // Add the 'stop' token.
     Token LastExceptionSpecToken = Toks->back();
     Token ExceptionSpecEnd =
-        Token::CreateEof(LastExceptionSpecToken.getEndLoc(), LM.Method);
+        Token::createEof(LastExceptionSpecToken.getEndLoc(), LM.Method);
     Toks->push_back(ExceptionSpecEnd);
 
     // Parse the default argument from its saved token stream.
@@ -570,7 +570,7 @@ void Parser::ParseLexedMethodDef(LexedMethod &LM) {
 
   assert(!LM.Toks.empty() && "Empty body!");
   Token LastBodyToken = LM.Toks.back();
-  Token BodyEnd = Token::CreateEof(LastBodyToken.getEndLoc(), LM.D);
+  Token BodyEnd = Token::createEof(LastBodyToken.getEndLoc(), LM.D);
   LM.Toks.push_back(BodyEnd);
   // Append the current token at the end of the new token stream so that it
   // doesn't get lost.

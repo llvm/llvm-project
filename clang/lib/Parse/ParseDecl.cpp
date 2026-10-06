@@ -4881,7 +4881,7 @@ void Parser::ParseStructDeclaration(
 ParsedAttributes Parser::ParseLexedAttributeTokens(LateParsedAttribute &LPA) {
   // Create a fake EOF so that attribute parsing won't go off the end of the
   // attribute.
-  Token AttrEnd = Token::CreateEof(Tok.getLocation(), LPA.Toks.data());
+  Token AttrEnd = Token::createEof(Tok.getLocation(), LPA.Toks.data());
   LPA.Toks.push_back(AttrEnd);
 
   // Append the current token at the end of the new token stream so that it
@@ -8330,7 +8330,7 @@ TypeResult Parser::ParseTypeFromString(StringRef TypeStr, StringRef Context,
   // Replace the "eod" token with an "eof" token identifying the end of
   // the provided string.
   Token &EndToken = Tokens.back();
-  EndToken = Token::CreateEof(Tok.getLocation(), TypeStr.data());
+  EndToken = Token::createEof(Tok.getLocation(), TypeStr.data());
 
   // Add the current token back.
   Tokens.push_back(Tok);

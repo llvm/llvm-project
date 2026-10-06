@@ -839,7 +839,7 @@ bool TokenLexer::pasteTokens(Token &LHSTok, ArrayRef<Token> TokenStream,
       // a lexer and other overhead.
       PP.IncrementPasteCounter(true);
       Result =
-          Token::Create(tok::raw_identifier, ResultTokLoc, LHSLen + RHSLen);
+          Token::create(tok::raw_identifier, ResultTokLoc, LHSLen + RHSLen);
       Result.setRawIdentifierData(ResultTokStrPtr);
     } else {
       PP.IncrementPasteCounter(false);
