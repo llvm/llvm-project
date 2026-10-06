@@ -56,9 +56,8 @@ const char *__ubsan_default_options()
 }
 }
 
-// The reported values confirm the destination size was the bound applied. Which
-// file reports it differs, as msan supplies its own _chk implementations.
-// CHECK: CHECK failed: {{.*}} (0x10, 0x8)
+// The reported values confirm the destination size was the bound applied.
+// CHECK: CHECK failed: sanitizer_common_interceptors_memintrinsics.inc:{{.*}} (0x10, 0x8)
 
 int main(int argc, char *argv[]) {
   // CHECK-NOT: unreachable
