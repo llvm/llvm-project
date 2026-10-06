@@ -67,8 +67,8 @@ _LIBCPP_BEGIN_EXPLICIT_ABI_ANNOTATIONS
     return false;
   }
 
-  __buffer[__tracer_result - 1] = '\0'; // remove newline from /proc/xyz/comm content
-  const std::string_view __tracer_name(__buffer.data());
+  const std::string_view __tracer_name(
+      __buffer.data(), __tracer_result - 1); // remove newline from /proc/xyz/comm content
 
   // Sniff for known debuggers
   for (auto __i : {"gdb", "gdbserver", "lldb-server"}) {
