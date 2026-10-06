@@ -11,6 +11,7 @@ add_clang_library(clangTidyPerformanceModule STATIC
   ImplicitConversionInLoopCheck.cpp
   InefficientAlgorithmCheck.cpp
   InefficientStringConcatenationCheck.cpp
+  InefficientSubstrCheck.cpp
   InefficientVectorOperationCheck.cpp
   MoveConstArgCheck.cpp
   MoveConstructorInitCheck.cpp
