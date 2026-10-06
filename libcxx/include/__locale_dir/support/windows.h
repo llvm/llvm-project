@@ -175,9 +175,9 @@ _LIBCPP_EXPORTED_FROM_ABI const char* __get_locale_encoding(__locale_t __loc);
 //
 
 // the *_l functions are prefixed on Windows, only available for msvcr80+, VS2005+
+#if defined(_LIBCPP_MSVCRT)
 template <class _FloatT>
 _LIBCPP_HIDE_FROM_ABI _FloatT __str_to_float_c_locale(const char* __nptr, char** __endptr);
-#if defined(_LIBCPP_MSVCRT)
 
 template <>
 inline _LIBCPP_HIDE_FROM_ABI float __str_to_float_c_locale<float>(const char* __nptr, char** __endptr) {
@@ -185,21 +185,29 @@ inline _LIBCPP_HIDE_FROM_ABI float __str_to_float_c_locale<float>(const char* __
 }
 
 template <>
+inline _LIBCPP_HIDE_FROM_ABI double __str_to_float_c_locale<double>(const char* __nptr, char** __endptr) {
+  return ::_strtod_l(__nptr, __endptr, __get_c_locale());
+}
+
+template <>
 inline _LIBCPP_HIDE_FROM_ABI long double __str_to_float_c_locale<long double>(const char* __nptr, char** __endptr) {
   return ::_strtold_l(__nptr, __endptr, __get_c_locale());
 }
 #else
+template <class _FloatT>
+_FloatT __str_to_float_c_locale(const char* __nptr, char** __endptr);
+
 template <>
 _LIBCPP_EXPORTED_FROM_ABI float __str_to_float_c_locale<float>(const char*, char**);
 
 template <>
-_LIBCPP_EXPORTED_FROM_ABI long double __str_to_float_c_locale<long double>(const char*, char**);
-#endif
-
-template <>
-inline _LIBCPP_HIDE_FROM_ABI double __str_to_float_c_locale<double>(const char* __nptr, char** __endptr) {
+_LIBCPP_HIDDEN inline double __str_to_float_c_locale<double>(const char* __nptr, char** __endptr) {
   return ::_strtod_l(__nptr, __endptr, __get_c_locale());
 }
+
+template <>
+_LIBCPP_EXPORTED_FROM_ABI long double __str_to_float_c_locale<long double>(const char*, char**);
+#endif
 
 //
 // Character manipulation functions
