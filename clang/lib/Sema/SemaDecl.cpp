@@ -21141,12 +21141,9 @@ static void CheckForDuplicateEnumValues(Sema &S, ArrayRef<Decl *> Elements,
   }
 }
 
-bool Sema::IsValueInFlagEnum(const EnumDecl *ED, const llvm::APInt &Val,
-                             bool AllowMask) const {
-  assert(ED->isClosedFlag() && "looking for value in non-flag or open enum");
-  assert(ED->isCompleteDefinition() && "expected enum definition");
-
-  auto R = FlagBitsCache.try_emplace(ED);
+static llvm::APInt CacheFlagEnum(const Sema &S, const EnumDecl *ED) {
+  assert(ED->hasAttr<FlagEnumAttr>() && "not a flag-like enum");
+  auto R = S.FlagBitsCache.try_emplace(ED);
   llvm::APInt &FlagBits = R.first->second;
 
   if (R.second) {
@@ -21157,6 +21154,15 @@ bool Sema::IsValueInFlagEnum(const EnumDecl *ED, const llvm::APInt &Val,
         FlagBits = FlagBits.zext(EVal.getBitWidth()) | EVal;
     }
   }
+  return FlagBits;
+}
+
+bool Sema::IsValueInFlagEnum(const EnumDecl *ED, const llvm::APInt &Val,
+                             bool AllowMask) const {
+  assert(ED->isClosedFlag() && "looking for value in non-flag or open enum");
+  assert(ED->isCompleteDefinition() && "expected enum definition");
+
+  llvm::APInt FlagBits = CacheFlagEnum(*this, ED);
 
   // A value is in a flag enum if either its bits are a subset of the enum's
   // flag bits (the first condition) or we are allowing masks and the same is
@@ -21366,6 +21372,10 @@ void Sema::ActOnEnumBody(SourceLocation EnumLoc, SourceRange BraceRange,
 
   CheckForDuplicateEnumValues(*this, Elements, Enum, EnumType);
   CheckForComparisonInEnumInitializer(*this, Enum);
+
+  if (Enum->hasAttr<FlagEnumAttr>()) {
+    (void)CacheFlagEnum(*this, Enum);
+  }
 
   if (Enum->isClosedFlag()) {
     for (Decl *D : Elements) {
