@@ -189,6 +189,9 @@ struct CallGraphReloc {
   // The name that st_name refers to. Empty if the symbol has no name.
   std::string SymbolName;
   int64_t Addend = 0;
+  // The names of the function symbols at the address that the relocation
+  // points to. They can differ from SymbolName, e.g. for a section symbol.
+  SmallVector<std::string, 1> TargetNames;
 };
 
 // A function referenced by a SHT_LLVM_CALL_GRAPH section entry, i.e. the
@@ -5582,15 +5585,36 @@ void ELFDumper<ELFT>::resolveCallGraphRelocations(
     Reloc.SymbolIndex = It->Symbol;
     Reloc.Addend =
         It->Addend.value_or(SignExtend64<AddrBits>(Target.FieldValue));
+    const Elf_Sym *Sym = RelSymOrErr->Sym;
+    if (!Sym)
+      return;
     // Report the name exactly as recorded in st_name. RelSymbol::Name comes
     // from getFullSymbolName(), which synthesizes a name for unnamed
     // STT_SECTION symbols.
-    if (const Elf_Sym *Sym = RelSymOrErr->Sym) {
-      if (Expected<StringRef> NameOrErr = Sym->getName(StrTab))
-        Reloc.SymbolName = NameOrErr->str();
-      else
-        reportUniqueWarning(NameOrErr.takeError());
+    if (Expected<StringRef> NameOrErr = Sym->getName(StrTab))
+      Reloc.SymbolName = NameOrErr->str();
+    else
+      reportUniqueWarning(NameOrErr.takeError());
+
+    // Look up the function symbols at the address that the relocation points
+    // to, i.e. the symbol's value plus the addend within the symbol's section.
+    // An undefined symbol has no such address.
+    Expected<const Elf_Shdr *> SecOrErr =
+        Obj.getSection(*Sym, RelocSymTab, getShndxTable(RelocSymTab));
+    if (!SecOrErr) {
+      reportUniqueWarning(SecOrErr.takeError());
+      return;
     }
+    if (!*SecOrErr)
+      return;
+    uint64_t TargetAddr = Sym->st_value + Reloc.Addend;
+    // Clear the Thumb bit, as for function addresses.
+    if (Obj.getHeader().e_machine == ELF::EM_ARM)
+      TargetAddr &= ~1;
+    for (uint32_t Index :
+         getSymbolIndexesForFunctionAddress(TargetAddr, *SecOrErr))
+      Reloc.TargetNames.push_back(
+          getStaticSymbolName(Index, /*Demangle=*/false));
   };
 
   for (FunctionCallGraphInfo &CGInfo : FuncCGInfos) {
@@ -8518,6 +8542,8 @@ template <class ELFT> void LLVMELFDumper<ELFT>::printCallGraphInfo() {
         W.printHex("Address", FuncEntryPC);
         return;
       }
+      if (!Target.Reloc->TargetNames.empty())
+        W.printList("Names", Target.Reloc->TargetNames);
       DictScope RelocScope(W, "Relocation");
       SmallString<32> TypeName;
       this->Obj.getRelocationTypeName(Target.Reloc->Type, TypeName);

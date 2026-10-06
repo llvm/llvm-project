@@ -496,6 +496,7 @@ Symbols:
 
 # LLVM-ARM-THUMB:      CallGraph [
 # LLVM-ARM-THUMB-NEXT:   Function {
+# LLVM-ARM-THUMB-NEXT:     Names: [foo]
 # LLVM-ARM-THUMB-NEXT:     Relocation {
 # LLVM-ARM-THUMB-NEXT:       Type: R_ARM_ABS32 (2)
 # LLVM-ARM-THUMB-NEXT:       SymbolIndex: 1
@@ -522,6 +523,9 @@ Symbols:
 # JSON-ARM-THUMB:       "CallGraph": [
 # JSON-ARM-THUMB-NEXT:    {
 # JSON-ARM-THUMB-NEXT:      "Function": {
+# JSON-ARM-THUMB-NEXT:        "Names": [
+# JSON-ARM-THUMB-NEXT:          "foo"
+# JSON-ARM-THUMB-NEXT:        ],
 # JSON-ARM-THUMB-NEXT:        "Relocation": {
 # JSON-ARM-THUMB-NEXT:          "Type": {
 # JSON-ARM-THUMB-NEXT:            "Name": "R_ARM_ABS32",
@@ -898,6 +902,7 @@ Symbols:
 
 # LLVM-RELOC-ADDEND:      CallGraph [
 # LLVM-RELOC-ADDEND-NEXT:   Function {
+# LLVM-RELOC-ADDEND-NEXT:     Names: [caller]
 # LLVM-RELOC-ADDEND-NEXT:     Relocation {
 # LLVM-RELOC-ADDEND-NEXT:       Type: R_X86_64_64 (1)
 # LLVM-RELOC-ADDEND-NEXT:       SymbolIndex: 3
@@ -908,6 +913,7 @@ Symbols:
 # LLVM-RELOC-ADDEND-NEXT:     TypeID: 0x7E04A0FB7AD8BCD5
 # LLVM-RELOC-ADDEND-NEXT:     DirectCallees [
 # LLVM-RELOC-ADDEND-NEXT:       {
+# LLVM-RELOC-ADDEND-NEXT:         Names: [local_func]
 # LLVM-RELOC-ADDEND-NEXT:         Relocation {
 # LLVM-RELOC-ADDEND-NEXT:           Type: R_X86_64_64 (1)
 # LLVM-RELOC-ADDEND-NEXT:           SymbolIndex: 1
@@ -925,6 +931,7 @@ Symbols:
 # LLVM-RELOC-ADDEND-NEXT:     IndirectTypeIDs: []
 # LLVM-RELOC-ADDEND-NEXT:   }
 # LLVM-RELOC-ADDEND-NEXT:   Function {
+# LLVM-RELOC-ADDEND-NEXT:     Names: [local_func]
 # LLVM-RELOC-ADDEND-NEXT:     Relocation {
 # LLVM-RELOC-ADDEND-NEXT:       Type: R_X86_64_64 (1)
 # LLVM-RELOC-ADDEND-NEXT:       SymbolIndex: 1
@@ -955,6 +962,9 @@ Symbols:
 # JSON-RELOC-ADDEND:     "CallGraph": [
 # JSON-RELOC-ADDEND-NEXT:       {
 # JSON-RELOC-ADDEND-NEXT:         "Function": {
+# JSON-RELOC-ADDEND-NEXT:           "Names": [
+# JSON-RELOC-ADDEND-NEXT:             "caller"
+# JSON-RELOC-ADDEND-NEXT:           ],
 # JSON-RELOC-ADDEND-NEXT:           "Relocation": {
 # JSON-RELOC-ADDEND-NEXT:             "Type": {
 # JSON-RELOC-ADDEND-NEXT:               "Name": "R_X86_64_64",
@@ -968,6 +978,9 @@ Symbols:
 # JSON-RELOC-ADDEND-NEXT:           "TypeID": 9080559750644022485,
 # JSON-RELOC-ADDEND-NEXT:           "DirectCallees": [
 # JSON-RELOC-ADDEND-NEXT:             {
+# JSON-RELOC-ADDEND-NEXT:               "Names": [
+# JSON-RELOC-ADDEND-NEXT:                 "local_func"
+# JSON-RELOC-ADDEND-NEXT:               ],
 # JSON-RELOC-ADDEND-NEXT:               "Relocation": {
 # JSON-RELOC-ADDEND-NEXT:                 "Type": {
 # JSON-RELOC-ADDEND-NEXT:                   "Name": "R_X86_64_64",
@@ -993,6 +1006,9 @@ Symbols:
 # JSON-RELOC-ADDEND-NEXT:       },
 # JSON-RELOC-ADDEND-NEXT:       {
 # JSON-RELOC-ADDEND-NEXT:         "Function": {
+# JSON-RELOC-ADDEND-NEXT:           "Names": [
+# JSON-RELOC-ADDEND-NEXT:             "local_func"
+# JSON-RELOC-ADDEND-NEXT:           ],
 # JSON-RELOC-ADDEND-NEXT:           "Relocation": {
 # JSON-RELOC-ADDEND-NEXT:             "Type": {
 # JSON-RELOC-ADDEND-NEXT:               "Name": "R_X86_64_64",
@@ -1100,6 +1116,7 @@ Symbols:
 
 # LLVM-REL-ADDEND:      CallGraph [
 # LLVM-REL-ADDEND-NEXT:   Function {
+# LLVM-REL-ADDEND-NEXT:     Names: [caller]
 # LLVM-REL-ADDEND-NEXT:     Relocation {
 # LLVM-REL-ADDEND-NEXT:       Type: R_ARM_ABS32 (2)
 # LLVM-REL-ADDEND-NEXT:       SymbolIndex: 3
@@ -1110,6 +1127,7 @@ Symbols:
 # LLVM-REL-ADDEND-NEXT:     TypeID: 0x7E04A0FB7AD8BCD5
 # LLVM-REL-ADDEND-NEXT:     DirectCallees [
 # LLVM-REL-ADDEND-NEXT:       {
+# LLVM-REL-ADDEND-NEXT:         Names: [local_func]
 # LLVM-REL-ADDEND-NEXT:         Relocation {
 # LLVM-REL-ADDEND-NEXT:           Type: R_ARM_ABS32 (2)
 # LLVM-REL-ADDEND-NEXT:           SymbolIndex: 1
@@ -1127,6 +1145,7 @@ Symbols:
 # LLVM-REL-ADDEND-NEXT:     IndirectTypeIDs: []
 # LLVM-REL-ADDEND-NEXT:   }
 # LLVM-REL-ADDEND-NEXT:   Function {
+# LLVM-REL-ADDEND-NEXT:     Names: [local_func]
 # LLVM-REL-ADDEND-NEXT:     Relocation {
 # LLVM-REL-ADDEND-NEXT:       Type: R_ARM_ABS32 (2)
 # LLVM-REL-ADDEND-NEXT:       SymbolIndex: 1
@@ -1157,6 +1176,9 @@ Symbols:
 # JSON-REL-ADDEND:     "CallGraph": [
 # JSON-REL-ADDEND-NEXT:       {
 # JSON-REL-ADDEND-NEXT:         "Function": {
+# JSON-REL-ADDEND-NEXT:           "Names": [
+# JSON-REL-ADDEND-NEXT:             "caller"
+# JSON-REL-ADDEND-NEXT:           ],
 # JSON-REL-ADDEND-NEXT:           "Relocation": {
 # JSON-REL-ADDEND-NEXT:             "Type": {
 # JSON-REL-ADDEND-NEXT:               "Name": "R_ARM_ABS32",
@@ -1170,6 +1192,9 @@ Symbols:
 # JSON-REL-ADDEND-NEXT:           "TypeID": 9080559750644022485,
 # JSON-REL-ADDEND-NEXT:           "DirectCallees": [
 # JSON-REL-ADDEND-NEXT:             {
+# JSON-REL-ADDEND-NEXT:               "Names": [
+# JSON-REL-ADDEND-NEXT:                 "local_func"
+# JSON-REL-ADDEND-NEXT:               ],
 # JSON-REL-ADDEND-NEXT:               "Relocation": {
 # JSON-REL-ADDEND-NEXT:                 "Type": {
 # JSON-REL-ADDEND-NEXT:                   "Name": "R_ARM_ABS32",
@@ -1195,6 +1220,9 @@ Symbols:
 # JSON-REL-ADDEND-NEXT:       },
 # JSON-REL-ADDEND-NEXT:       {
 # JSON-REL-ADDEND-NEXT:         "Function": {
+# JSON-REL-ADDEND-NEXT:           "Names": [
+# JSON-REL-ADDEND-NEXT:             "local_func"
+# JSON-REL-ADDEND-NEXT:           ],
 # JSON-REL-ADDEND-NEXT:           "Relocation": {
 # JSON-REL-ADDEND-NEXT:             "Type": {
 # JSON-REL-ADDEND-NEXT:               "Name": "R_ARM_ABS32",
@@ -1289,7 +1317,8 @@ Symbols:
 ## Check that SymbolName reports st_name exactly. No name is printed for a
 ## symbol whose st_name is non-zero but refers to an empty string, even for an
 ## STT_SECTION symbol whose section name could otherwise be substituted. Names
-## are not demangled, even with --demangle.
+## still shows the function that such a relocation points to. Neither is
+## demangled, even with --demangle.
 # RUN: yaml2obj --docnum=9 %s -o %t9
 # RUN: llvm-readobj --elf-output-style=LLVM --call-graph-info %t9 2>&1 | \
 # RUN:   FileCheck %s --match-full-lines --implicit-check-not=warning: \
@@ -1301,18 +1330,23 @@ Symbols:
 # RUN:   FileCheck %s --match-full-lines --implicit-check-not=warning: \
 # RUN:     --check-prefix=JSON-RELNAME
 
-# LLVM-RELNAME:           Relocation {
+# LLVM-RELNAME:           Names: [_Z3foov]
+# LLVM-RELNAME-NEXT:      Relocation {
 # LLVM-RELNAME-NEXT:        Type: R_X86_64_64 (1)
 # LLVM-RELNAME-NEXT:        SymbolIndex: 1
 # LLVM-RELNAME-NEXT:        Addend: 16
 # LLVM-RELNAME-NEXT:      }
-# LLVM-RELNAME:           Relocation {
+# LLVM-RELNAME:           Names: [_Z3foov]
+# LLVM-RELNAME-NEXT:      Relocation {
 # LLVM-RELNAME-NEXT:        Type: R_X86_64_64 (1)
 # LLVM-RELNAME-NEXT:        SymbolIndex: 2
 # LLVM-RELNAME-NEXT:        SymbolName: _Z3foov
 # LLVM-RELNAME-NEXT:      }
 
-# JSON-RELNAME:           "Relocation": {
+# JSON-RELNAME:           "Names": [
+# JSON-RELNAME-NEXT:        "_Z3foov"
+# JSON-RELNAME-NEXT:      ],
+# JSON-RELNAME-NEXT:      "Relocation": {
 # JSON-RELNAME-NEXT:        "Type": {
 # JSON-RELNAME-NEXT:          "Name": "R_X86_64_64",
 # JSON-RELNAME-NEXT:          "Value": 1
@@ -1320,7 +1354,10 @@ Symbols:
 # JSON-RELNAME-NEXT:        "SymbolIndex": 1,
 # JSON-RELNAME-NEXT:        "Addend": 16
 # JSON-RELNAME-NEXT:      },
-# JSON-RELNAME:           "Relocation": {
+# JSON-RELNAME:           "Names": [
+# JSON-RELNAME-NEXT:        "_Z3foov"
+# JSON-RELNAME-NEXT:      ],
+# JSON-RELNAME-NEXT:      "Relocation": {
 # JSON-RELNAME-NEXT:        "Type": {
 # JSON-RELNAME-NEXT:          "Name": "R_X86_64_64",
 # JSON-RELNAME-NEXT:          "Value": 1
@@ -1579,6 +1616,7 @@ Symbols:
 
 # LLVM-EXEC-RELOC:      CallGraph [
 # LLVM-EXEC-RELOC-NEXT:   Function {
+# LLVM-EXEC-RELOC-NEXT:     Names: [caller]
 # LLVM-EXEC-RELOC-NEXT:     Relocation {
 # LLVM-EXEC-RELOC-NEXT:       Type: R_X86_64_64 (1)
 # LLVM-EXEC-RELOC-NEXT:       SymbolIndex: 3
@@ -1589,6 +1627,7 @@ Symbols:
 # LLVM-EXEC-RELOC-NEXT:     TypeID: 0x0
 # LLVM-EXEC-RELOC-NEXT:     DirectCallees [
 # LLVM-EXEC-RELOC-NEXT:       {
+# LLVM-EXEC-RELOC-NEXT:         Names: [foo, bar]
 # LLVM-EXEC-RELOC-NEXT:         Relocation {
 # LLVM-EXEC-RELOC-NEXT:           Type: R_X86_64_64 (1)
 # LLVM-EXEC-RELOC-NEXT:           SymbolIndex: 1
@@ -1596,6 +1635,7 @@ Symbols:
 # LLVM-EXEC-RELOC-NEXT:         }
 # LLVM-EXEC-RELOC-NEXT:       }
 # LLVM-EXEC-RELOC-NEXT:       {
+# LLVM-EXEC-RELOC-NEXT:         Names: [foo, bar]
 # LLVM-EXEC-RELOC-NEXT:         Relocation {
 # LLVM-EXEC-RELOC-NEXT:           Type: R_X86_64_64 (1)
 # LLVM-EXEC-RELOC-NEXT:           SymbolIndex: 2
