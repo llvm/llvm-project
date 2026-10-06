@@ -19,8 +19,9 @@ SkipDeclarations = dict()
 # See comment in the header.
 SkipDeclarations["cuchar"] = ["std::mbstate_t", "std::size_t"]
 
-# Not in the synopsis.
-SkipDeclarations["cwchar"] = ["std::FILE"]
+# Not in the synopsis. std::mbstate_t is provided via __fwd/mbstate_t.h which
+# is not directly scanned by the header exportable declarations check.
+SkipDeclarations["cwchar"] = ["std::FILE", "std::mbstate_t"]
 
 # The operators are added for private types like __iom_t10.
 SkipDeclarations["iomanip"] = ["std::operator<<", "std::operator>>"]
