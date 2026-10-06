@@ -920,12 +920,20 @@ InstructionCost RISCVTTIImpl::getShuffleCost(
       if (Mask.size() >= 2) {
         MVT EltTp = LT.second.getVectorElementType();
 
-        // Try the vzip.vv cost first, otherwise use the widening-interleave
-        // cost below.
+        // Try the vzip.vv cost first, otherwise model the shuffle as a
+        // vwaddu.vv/vwmaccu.vx sequence below if the element size < ELEN.
         if (InstructionCost VZipCost =
                 getVZIPCost(Kind, DstTy, SrcTy, Mask, CostKind);
             VZipCost.isValid())
           return VZipCost;
+
+        unsigned Index;
+        if (ST->hasStdExtZvzip() && EltTp.getScalarSizeInBits() != 1 &&
+            ShuffleVectorInst::isDeInterleaveMaskOfFactor(Mask, 2, Index)) {
+          unsigned Opcode = Index == 0 ? RISCV::VUNZIPE_V : RISCV::VUNZIPO_V;
+          if (MVT CostVT = getZvzipVUNZIPCostVT(LT.second); CostVT.isValid())
+            return LT.first * getRISCVInstructionCost(Opcode, CostVT, CostKind);
+        }
 
         // If the size of the element is < ELEN then shuffles of interleaves and
         // deinterleaves of 2 vectors can be lowered into the following
@@ -947,14 +955,6 @@ InstructionCost RISCVTTIImpl::getShuffleCost(
               return LT.first * getRISCVInstructionCost(RISCV::VNSRL_WI,
                                                         LT.second, CostKind);
           }
-        }
-
-        unsigned Index;
-        if (ST->hasStdExtZvzip() && EltTp.getScalarSizeInBits() != 1 &&
-            ShuffleVectorInst::isDeInterleaveMaskOfFactor(Mask, 2, Index)) {
-          unsigned Opcode = Index == 0 ? RISCV::VUNZIPE_V : RISCV::VUNZIPO_V;
-          if (MVT CostVT = getZvzipVUNZIPCostVT(LT.second); CostVT.isValid())
-            return LT.first * getRISCVInstructionCost(Opcode, CostVT, CostKind);
         }
 
         int SubVectorSize;
