@@ -695,9 +695,12 @@ static void prepareSymbolRelocation(Symbol *sym, const InputSection *isec,
   } else if (relocAttrs.hasAttr(RelocAttrBits::UNSIGNED)) {
     // References from thread-local variable sections are treated as offsets
     // relative to the start of the referent section, and therefore have no
-    // need of rebase opcodes.
-    if (!(isThreadLocalVariables(isec->getFlags()) && isa<Defined>(sym)))
-      addNonLazyBindingEntries(sym, isec, r.offset, r.getAddend());
+    // need of rebase opcodes. Authenticated pointers are pointers, not offsets.
+    bool isAuth = relocAttrs.hasAttr(RelocAttrBits::AUTH);
+    if (isAuth ||
+        !(isThreadLocalVariables(isec->getFlags()) && isa<Defined>(sym)))
+      addNonLazyBindingEntries(sym, isec, r.offset, r.getAddend(),
+                               /*forceOutlineAuth=*/isAuth);
   }
 }
 
