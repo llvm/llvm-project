@@ -6017,7 +6017,7 @@ bool AArch64AsmParser::showMatchError(SMLoc Loc, unsigned ErrCode,
   case Match_InvalidMemoryIndexedSImm8:
     return Error(Loc, "index must be an integer in range [-128, 127].");
   case Match_InvalidMemoryIndexedSImm9:
-    return Error(Loc, "index must be an integer in range [-256, 255].");
+    return Error(Loc, "immediate must be an integer in range [-256, 255].");
   case Match_InvalidMemoryIndexed16SImm9:
     return Error(Loc, "index must be a multiple of 16 in range [-4096, 4080].");
   case Match_InvalidMemoryIndexed8SImm10:

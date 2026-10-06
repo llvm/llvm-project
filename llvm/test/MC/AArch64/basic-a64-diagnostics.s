@@ -1984,16 +1984,16 @@ cbz w1, lsl
         sturh w17, [x1, #256]
         ldursw x20, [x1, #256]
         ldur x12, [sp, #256]
-// CHECK-ERROR: error: {{expected|index must be an}} integer in range [-256, 255]
+// CHECK-ERROR: error: {{expected|immediate must be an}} integer in range [-256, 255]
 // CHECK-ERROR-NEXT:        ldurb w2, [sp, #256]
 // CHECK-ERROR-NEXT:                  ^
-// CHECK-ERROR-NEXT: error: {{expected|index must be an}} integer in range [-256, 255]
+// CHECK-ERROR-NEXT: error: {{expected|immediate must be an}} integer in range [-256, 255]
 // CHECK-ERROR-NEXT:         sturh w17, [x1, #256]
 // CHECK-ERROR-NEXT:                    ^
-// CHECK-ERROR-NEXT: error: {{expected|index must be an}} integer in range [-256, 255]
+// CHECK-ERROR-NEXT: error: {{expected|immediate must be an}} integer in range [-256, 255]
 // CHECK-ERROR-NEXT:         ldursw x20, [x1, #256]
 // CHECK-ERROR-NEXT:                     ^
-// CHECK-ERROR-NEXT: error: {{expected|index must be an}} integer in range [-256, 255]
+// CHECK-ERROR-NEXT: error: {{expected|immediate must be an}} integer in range [-256, 255]
 // CHECK-ERROR-NEXT:         ldur x12, [sp, #256]
 // CHECK-ERROR-NEXT:                   ^
 
@@ -2002,19 +2002,19 @@ cbz w1, lsl
         ldursb x9, [sp, #-257]
         ldur w2, [x30, #-257]
         stur q9, [x20, #-257]
-// CHECK-ERROR: error: {{expected|index must be an}} integer in range [-256, 255]
+// CHECK-ERROR: error: {{expected|immediate must be an}} integer in range [-256, 255]
 // CHECK-ERROR-NEXT:         stur h2, [x2, #-257]
 // CHECK-ERROR-NEXT:                  ^
-// CHECK-ERROR-NEXT: error: {{expected|index must be an}} integer in range [-256, 255]
+// CHECK-ERROR-NEXT: error: {{expected|immediate must be an}} integer in range [-256, 255]
 // CHECK-ERROR-NEXT:         stur b2, [x2, #-257]
 // CHECK-ERROR-NEXT:                  ^
-// CHECK-ERROR-NEXT: error: {{expected|index must be an}} integer in range [-256, 255]
+// CHECK-ERROR-NEXT: error: {{expected|immediate must be an}} integer in range [-256, 255]
 // CHECK-ERROR-NEXT:         ldursb x9, [sp, #-257]
 // CHECK-ERROR-NEXT:                    ^
-// CHECK-ERROR-NEXT: error: {{expected|index must be an}} integer in range [-256, 255]
+// CHECK-ERROR-NEXT: error: {{expected|immediate must be an}} integer in range [-256, 255]
 // CHECK-ERROR-NEXT:         ldur w2, [x30, #-257]
 // CHECK-ERROR-NEXT:                  ^
-// CHECK-ERROR-NEXT: error: {{expected|index must be an}} integer in range [-256, 255]
+// CHECK-ERROR-NEXT: error: {{expected|immediate must be an}} integer in range [-256, 255]
 // CHECK-ERROR-NEXT:         stur q9, [x20, #-257]
 // CHECK-ERROR-NEXT:                  ^
 
@@ -2051,22 +2051,22 @@ cbz w1, lsl
         strh w9, [sp], #-257
         str w1, [x19], #256
         str w9, [sp], #-257
-// CHECK-ERROR: error: {{expected|index must be an}} integer in range [-256, 255]
+// CHECK-ERROR: error: {{expected|immediate must be an}} integer in range [-256, 255]
 // CHECK-ERROR-NEXT:         strb w1, [x19], #256
 // CHECK-ERROR-NEXT:                         ^
-// CHECK-ERROR-NEXT: error: {{expected|index must be an}} integer in range [-256, 255]
+// CHECK-ERROR-NEXT: error: {{expected|immediate must be an}} integer in range [-256, 255]
 // CHECK-ERROR-NEXT:         strb w9, [sp], #-257
 // CHECK-ERROR-NEXT:                        ^
-// CHECK-ERROR-NEXT: error: {{expected|index must be an}} integer in range [-256, 255]
+// CHECK-ERROR-NEXT: error: {{expected|immediate must be an}} integer in range [-256, 255]
 // CHECK-ERROR-NEXT:         strh w1, [x19], #256
 // CHECK-ERROR-NEXT:                         ^
-// CHECK-ERROR-NEXT: error: {{expected|index must be an}} integer in range [-256, 255]
+// CHECK-ERROR-NEXT: error: {{expected|immediate must be an}} integer in range [-256, 255]
 // CHECK-ERROR-NEXT:         strh w9, [sp], #-257
 // CHECK-ERROR-NEXT:                        ^
-// CHECK-ERROR-NEXT: error: {{expected|index must be an}} integer in range [-256, 255]
+// CHECK-ERROR-NEXT: error: {{expected|immediate must be an}} integer in range [-256, 255]
 // CHECK-ERROR-NEXT:         str w1, [x19], #256
 // CHECK-ERROR-NEXT:                        ^
-// CHECK-ERROR-NEXT: error: {{expected|index must be an}} integer in range [-256, 255]
+// CHECK-ERROR-NEXT: error: {{expected|immediate must be an}} integer in range [-256, 255]
 // CHECK-ERROR-NEXT:         str w9, [sp], #-257
 // CHECK-ERROR-NEXT:                       ^
 
@@ -2076,22 +2076,22 @@ cbz w1, lsl
         ldrh w9, [sp], #-257
         ldr w1, [x19], #256
         ldr w9, [sp], #-257
-// CHECK-ERROR: error: {{expected|index must be an}} integer in range [-256, 255]
+// CHECK-ERROR: error: {{expected|immediate must be an}} integer in range [-256, 255]
 // CHECK-ERROR-NEXT:         ldrb w1, [x19], #256
 // CHECK-ERROR-NEXT:                         ^
-// CHECK-ERROR-NEXT: error: {{expected|index must be an}} integer in range [-256, 255]
+// CHECK-ERROR-NEXT: error: {{expected|immediate must be an}} integer in range [-256, 255]
 // CHECK-ERROR-NEXT:         ldrb w9, [sp], #-257
 // CHECK-ERROR-NEXT:                        ^
-// CHECK-ERROR-NEXT: error: {{expected|index must be an}} integer in range [-256, 255]
+// CHECK-ERROR-NEXT: error: {{expected|immediate must be an}} integer in range [-256, 255]
 // CHECK-ERROR-NEXT:         ldrh w1, [x19], #256
 // CHECK-ERROR-NEXT:                         ^
-// CHECK-ERROR-NEXT: error: {{expected|index must be an}} integer in range [-256, 255]
+// CHECK-ERROR-NEXT: error: {{expected|immediate must be an}} integer in range [-256, 255]
 // CHECK-ERROR-NEXT:         ldrh w9, [sp], #-257
 // CHECK-ERROR-NEXT:                        ^
-// CHECK-ERROR-NEXT: error: {{expected|index must be an}} integer in range [-256, 255]
+// CHECK-ERROR-NEXT: error: {{expected|immediate must be an}} integer in range [-256, 255]
 // CHECK-ERROR-NEXT:         ldr w1, [x19], #256
 // CHECK-ERROR-NEXT:                        ^
-// CHECK-ERROR-NEXT: error: {{expected|index must be an}} integer in range [-256, 255]
+// CHECK-ERROR-NEXT: error: {{expected|immediate must be an}} integer in range [-256, 255]
 // CHECK-ERROR-NEXT:         ldr w9, [sp], #-257
 // CHECK-ERROR-NEXT:                       ^
 
@@ -2101,22 +2101,22 @@ cbz w1, lsl
         ldrsh x22, [x13], #-257
         ldrsw x2, [x3], #256
         ldrsw x22, [x13], #-257
-// CHECK-ERROR: error: {{expected|index must be an}} integer in range [-256, 255]
+// CHECK-ERROR: error: {{expected|immediate must be an}} integer in range [-256, 255]
 // CHECK-ERROR-NEXT:         ldrsb x2, [x3], #256
 // CHECK-ERROR-NEXT:                         ^
-// CHECK-ERROR-NEXT: error: {{expected|index must be an}} integer in range [-256, 255]
+// CHECK-ERROR-NEXT: error: {{expected|immediate must be an}} integer in range [-256, 255]
 // CHECK-ERROR-NEXT:         ldrsb x22, [x13], #-257
 // CHECK-ERROR-NEXT:                           ^
-// CHECK-ERROR-NEXT: error: {{expected|index must be an}} integer in range [-256, 255]
+// CHECK-ERROR-NEXT: error: {{expected|immediate must be an}} integer in range [-256, 255]
 // CHECK-ERROR-NEXT:         ldrsh x2, [x3], #256
 // CHECK-ERROR-NEXT:                         ^
-// CHECK-ERROR-NEXT: error: {{expected|index must be an}} integer in range [-256, 255]
+// CHECK-ERROR-NEXT: error: {{expected|immediate must be an}} integer in range [-256, 255]
 // CHECK-ERROR-NEXT:         ldrsh x22, [x13], #-257
 // CHECK-ERROR-NEXT:                           ^
-// CHECK-ERROR-NEXT: error: {{expected|index must be an}} integer in range [-256, 255]
+// CHECK-ERROR-NEXT: error: {{expected|immediate must be an}} integer in range [-256, 255]
 // CHECK-ERROR-NEXT:         ldrsw x2, [x3], #256
 // CHECK-ERROR-NEXT:                         ^
-// CHECK-ERROR-NEXT: error: {{expected|index must be an}} integer in range [-256, 255]
+// CHECK-ERROR-NEXT: error: {{expected|immediate must be an}} integer in range [-256, 255]
 // CHECK-ERROR-NEXT:         ldrsw x22, [x13], #-257
 // CHECK-ERROR-NEXT:                           ^
 
@@ -2124,16 +2124,16 @@ cbz w1, lsl
         ldrsb w22, [x13], #-257
         ldrsh w2, [x3], #256
         ldrsh w22, [x13], #-257
-// CHECK-ERROR: error: {{expected|index must be an}} integer in range [-256, 255]
+// CHECK-ERROR: error: {{expected|immediate must be an}} integer in range [-256, 255]
 // CHECK-ERROR-NEXT:         ldrsb w2, [x3], #256
 // CHECK-ERROR-NEXT:                         ^
-// CHECK-ERROR-NEXT: error: {{expected|index must be an}} integer in range [-256, 255]
+// CHECK-ERROR-NEXT: error: {{expected|immediate must be an}} integer in range [-256, 255]
 // CHECK-ERROR-NEXT:         ldrsb w22, [x13], #-257
 // CHECK-ERROR-NEXT:                           ^
-// CHECK-ERROR-NEXT: error: {{expected|index must be an}} integer in range [-256, 255]
+// CHECK-ERROR-NEXT: error: {{expected|immediate must be an}} integer in range [-256, 255]
 // CHECK-ERROR-NEXT:         ldrsh w2, [x3], #256
 // CHECK-ERROR-NEXT:                         ^
-// CHECK-ERROR-NEXT: error: {{expected|index must be an}} integer in range [-256, 255]
+// CHECK-ERROR-NEXT: error: {{expected|immediate must be an}} integer in range [-256, 255]
 // CHECK-ERROR-NEXT:         ldrsh w22, [x13], #-257
 // CHECK-ERROR-NEXT:                           ^
 
@@ -2147,34 +2147,34 @@ cbz w1, lsl
         str d3, [x13], #-257
         str q3, [x3], #256
         str q3, [x13], #-257
-// CHECK-ERROR: error: {{expected|index must be an}} integer in range [-256, 255]
+// CHECK-ERROR: error: {{expected|immediate must be an}} integer in range [-256, 255]
 // CHECK-ERROR-NEXT:         str b3, [x3], #256
 // CHECK-ERROR-NEXT:                       ^
-// CHECK-ERROR-NEXT: error: {{expected|index must be an}} integer in range [-256, 255]
+// CHECK-ERROR-NEXT: error: {{expected|immediate must be an}} integer in range [-256, 255]
 // CHECK-ERROR-NEXT:         str b3, [x13], #-257
 // CHECK-ERROR-NEXT:                        ^
-// CHECK-ERROR-NEXT: error: {{expected|index must be an}} integer in range [-256, 255]
+// CHECK-ERROR-NEXT: error: {{expected|immediate must be an}} integer in range [-256, 255]
 // CHECK-ERROR-NEXT:         str h3, [x3], #256
 // CHECK-ERROR-NEXT:                       ^
-// CHECK-ERROR-NEXT: error: {{expected|index must be an}} integer in range [-256, 255]
+// CHECK-ERROR-NEXT: error: {{expected|immediate must be an}} integer in range [-256, 255]
 // CHECK-ERROR-NEXT:         str h3, [x13], #-257
 // CHECK-ERROR-NEXT:                        ^
-// CHECK-ERROR-NEXT: error: {{expected|index must be an}} integer in range [-256, 255]
+// CHECK-ERROR-NEXT: error: {{expected|immediate must be an}} integer in range [-256, 255]
 // CHECK-ERROR-NEXT:         str s3, [x3], #256
 // CHECK-ERROR-NEXT:                       ^
-// CHECK-ERROR-NEXT: error: {{expected|index must be an}} integer in range [-256, 255]
+// CHECK-ERROR-NEXT: error: {{expected|immediate must be an}} integer in range [-256, 255]
 // CHECK-ERROR-NEXT:         str s3, [x13], #-257
 // CHECK-ERROR-NEXT:                        ^
-// CHECK-ERROR-NEXT: error: {{expected|index must be an}} integer in range [-256, 255]
+// CHECK-ERROR-NEXT: error: {{expected|immediate must be an}} integer in range [-256, 255]
 // CHECK-ERROR-NEXT:         str d3, [x3], #256
 // CHECK-ERROR-NEXT:                       ^
-// CHECK-ERROR-NEXT: error: {{expected|index must be an}} integer in range [-256, 255]
+// CHECK-ERROR-NEXT: error: {{expected|immediate must be an}} integer in range [-256, 255]
 // CHECK-ERROR-NEXT:         str d3, [x13], #-257
 // CHECK-ERROR-NEXT:                        ^
-// CHECK-ERROR-NEXT: error: {{expected|index must be an}} integer in range [-256, 255]
+// CHECK-ERROR-NEXT: error: {{expected|immediate must be an}} integer in range [-256, 255]
 // CHECK-ERROR-NEXT:         str q3, [x3], #256
 // CHECK-ERROR-NEXT:                       ^
-// CHECK-ERROR-NEXT: error: {{expected|index must be an}} integer in range [-256, 255]
+// CHECK-ERROR-NEXT: error: {{expected|immediate must be an}} integer in range [-256, 255]
 // CHECK-ERROR-NEXT:         str q3, [x13], #-257
 // CHECK-ERROR-NEXT:                        ^
 
@@ -2188,34 +2188,34 @@ cbz w1, lsl
         ldr d3, [x13], #-257
         ldr q3, [x3], #256
         ldr q3, [x13], #-257
-// CHECK-ERROR: error: {{expected|index must be an}} integer in range [-256, 255]
+// CHECK-ERROR: error: {{expected|immediate must be an}} integer in range [-256, 255]
 // CHECK-ERROR-NEXT:         ldr b3, [x3], #256
 // CHECK-ERROR-NEXT:                       ^
-// CHECK-ERROR-NEXT: error: {{expected|index must be an}} integer in range [-256, 255]
+// CHECK-ERROR-NEXT: error: {{expected|immediate must be an}} integer in range [-256, 255]
 // CHECK-ERROR-NEXT:         ldr b3, [x13], #-257
 // CHECK-ERROR-NEXT:                        ^
-// CHECK-ERROR-NEXT: error: {{expected|index must be an}} integer in range [-256, 255]
+// CHECK-ERROR-NEXT: error: {{expected|immediate must be an}} integer in range [-256, 255]
 // CHECK-ERROR-NEXT:         ldr h3, [x3], #256
 // CHECK-ERROR-NEXT:                       ^
-// CHECK-ERROR-NEXT: error: {{expected|index must be an}} integer in range [-256, 255]
+// CHECK-ERROR-NEXT: error: {{expected|immediate must be an}} integer in range [-256, 255]
 // CHECK-ERROR-NEXT:         ldr h3, [x13], #-257
 // CHECK-ERROR-NEXT:                        ^
-// CHECK-ERROR-NEXT: error: {{expected|index must be an}} integer in range [-256, 255]
+// CHECK-ERROR-NEXT: error: {{expected|immediate must be an}} integer in range [-256, 255]
 // CHECK-ERROR-NEXT:         ldr s3, [x3], #256
 // CHECK-ERROR-NEXT:                       ^
-// CHECK-ERROR-NEXT: error: {{expected|index must be an}} integer in range [-256, 255]
+// CHECK-ERROR-NEXT: error: {{expected|immediate must be an}} integer in range [-256, 255]
 // CHECK-ERROR-NEXT:         ldr s3, [x13], #-257
 // CHECK-ERROR-NEXT:                        ^
-// CHECK-ERROR-NEXT: error: {{expected|index must be an}} integer in range [-256, 255]
+// CHECK-ERROR-NEXT: error: {{expected|immediate must be an}} integer in range [-256, 255]
 // CHECK-ERROR-NEXT:         ldr d3, [x3], #256
 // CHECK-ERROR-NEXT:                       ^
-// CHECK-ERROR-NEXT: error: {{expected|index must be an}} integer in range [-256, 255]
+// CHECK-ERROR-NEXT: error: {{expected|immediate must be an}} integer in range [-256, 255]
 // CHECK-ERROR-NEXT:         ldr d3, [x13], #-257
 // CHECK-ERROR-NEXT:                        ^
-// CHECK-ERROR-NEXT: error: {{expected|index must be an}} integer in range [-256, 255]
+// CHECK-ERROR-NEXT: error: {{expected|immediate must be an}} integer in range [-256, 255]
 // CHECK-ERROR-NEXT:         ldr q3, [x3], #256
 // CHECK-ERROR-NEXT:                       ^
-// CHECK-ERROR-NEXT: error: {{expected|index must be an}} integer in range [-256, 255]
+// CHECK-ERROR-NEXT: error: {{expected|immediate must be an}} integer in range [-256, 255]
 // CHECK-ERROR-NEXT:         ldr q3, [x13], #-257
 // CHECK-ERROR-NEXT:                        ^
 
@@ -2245,19 +2245,19 @@ cbz w1, lsl
 // CHECK-ERROR: error: invalid operand for instruction
 // CHECK-ERROR-NEXT:         strb w1, [x19, #256]!
 // CHECK-ERROR-NEXT:                             ^
-// CHECK-ERROR-NEXT: error: {{expected|index must be an}} integer in range [-256, 255]
+// CHECK-ERROR-NEXT: error: {{expected|immediate must be an}} integer in range [-256, 255]
 // CHECK-ERROR-NEXT:         strb w9, [sp, #-257]!
 // CHECK-ERROR-NEXT:                  ^
 // CHECK-ERROR-NEXT: error: invalid operand for instruction
 // CHECK-ERROR-NEXT:         strh w1, [x19, #256]!
 // CHECK-ERROR-NEXT:                             ^
-// CHECK-ERROR-NEXT: error: {{expected|index must be an}} integer in range [-256, 255]
+// CHECK-ERROR-NEXT: error: {{expected|immediate must be an}} integer in range [-256, 255]
 // CHECK-ERROR-NEXT:         strh w9, [sp, #-257]!
 // CHECK-ERROR-NEXT:                  ^
 // CHECK-ERROR-NEXT: error: invalid operand for instruction
 // CHECK-ERROR-NEXT:         str w1, [x19, #256]!
 // CHECK-ERROR-NEXT:                            ^
-// CHECK-ERROR-NEXT: error: {{expected|index must be an}} integer in range [-256, 255]
+// CHECK-ERROR-NEXT: error: {{expected|immediate must be an}} integer in range [-256, 255]
 // CHECK-ERROR-NEXT:         str w9, [sp, #-257]!
 // CHECK-ERROR-NEXT:                 ^
 
@@ -2270,19 +2270,19 @@ cbz w1, lsl
 // CHECK-ERROR: error: invalid operand for instruction
 // CHECK-ERROR-NEXT:         ldrb w1, [x19, #256]!
 // CHECK-ERROR-NEXT:                             ^
-// CHECK-ERROR-NEXT: error: {{expected|index must be an}} integer in range [-256, 255]
+// CHECK-ERROR-NEXT: error: {{expected|immediate must be an}} integer in range [-256, 255]
 // CHECK-ERROR-NEXT:         ldrb w9, [sp, #-257]!
 // CHECK-ERROR-NEXT:                  ^
 // CHECK-ERROR-NEXT: error: invalid operand for instruction
 // CHECK-ERROR-NEXT:         ldrh w1, [x19, #256]!
 // CHECK-ERROR-NEXT:                             ^
-// CHECK-ERROR-NEXT: error: {{expected|index must be an}} integer in range [-256, 255]
+// CHECK-ERROR-NEXT: error: {{expected|immediate must be an}} integer in range [-256, 255]
 // CHECK-ERROR-NEXT:         ldrh w9, [sp, #-257]!
 // CHECK-ERROR-NEXT:                  ^
 // CHECK-ERROR-NEXT: error: invalid operand for instruction
 // CHECK-ERROR-NEXT:         ldr w1, [x19, #256]!
 // CHECK-ERROR-NEXT:                            ^
-// CHECK-ERROR-NEXT: error: {{expected|index must be an}} integer in range [-256, 255]
+// CHECK-ERROR-NEXT: error: {{expected|immediate must be an}} integer in range [-256, 255]
 // CHECK-ERROR-NEXT:         ldr w9, [sp, #-257]!
 // CHECK-ERROR-NEXT:                 ^
 
@@ -2295,19 +2295,19 @@ cbz w1, lsl
 // CHECK-ERROR: error: invalid operand for instruction
 // CHECK-ERROR-NEXT:         ldrsb x2, [x3, #256]!
 // CHECK-ERROR-NEXT:                             ^
-// CHECK-ERROR-NEXT: error: {{expected|index must be an}} integer in range [-256, 255]
+// CHECK-ERROR-NEXT: error: {{expected|immediate must be an}} integer in range [-256, 255]
 // CHECK-ERROR-NEXT:         ldrsb x22, [x13, #-257]!
 // CHECK-ERROR-NEXT:                    ^
 // CHECK-ERROR-NEXT: error: invalid operand for instruction
 // CHECK-ERROR-NEXT:         ldrsh x2, [x3, #256]!
 // CHECK-ERROR-NEXT:                             ^
-// CHECK-ERROR-NEXT: error: {{expected|index must be an}} integer in range [-256, 255]
+// CHECK-ERROR-NEXT: error: {{expected|immediate must be an}} integer in range [-256, 255]
 // CHECK-ERROR-NEXT:         ldrsh x22, [x13, #-257]!
 // CHECK-ERROR-NEXT:                    ^
 // CHECK-ERROR-NEXT: error: invalid operand for instruction
 // CHECK-ERROR-NEXT:         ldrsw x2, [x3, #256]!
 // CHECK-ERROR-NEXT:                             ^
-// CHECK-ERROR-NEXT: error: {{expected|index must be an}} integer in range [-256, 255]
+// CHECK-ERROR-NEXT: error: {{expected|immediate must be an}} integer in range [-256, 255]
 // CHECK-ERROR-NEXT:         ldrsw x22, [x13, #-257]!
 // CHECK-ERROR-NEXT:                    ^
 
@@ -2318,13 +2318,13 @@ cbz w1, lsl
 // CHECK-ERROR: error: invalid operand for instruction
 // CHECK-ERROR-NEXT:         ldrsb w2, [x3, #256]!
 // CHECK-ERROR-NEXT:                             ^
-// CHECK-ERROR-NEXT: error: {{expected|index must be an}} integer in range [-256, 255]
+// CHECK-ERROR-NEXT: error: {{expected|immediate must be an}} integer in range [-256, 255]
 // CHECK-ERROR-NEXT:         ldrsb w22, [x13, #-257]!
 // CHECK-ERROR-NEXT:                    ^
 // CHECK-ERROR-NEXT: error: invalid operand for instruction
 // CHECK-ERROR-NEXT:         ldrsh w2, [x3, #256]!
 // CHECK-ERROR-NEXT:                             ^
-// CHECK-ERROR-NEXT: error: {{expected|index must be an}} integer in range [-256, 255]
+// CHECK-ERROR-NEXT: error: {{expected|immediate must be an}} integer in range [-256, 255]
 // CHECK-ERROR-NEXT:         ldrsh w22, [x13, #-257]!
 // CHECK-ERROR-NEXT:                    ^
 
@@ -2339,25 +2339,25 @@ cbz w1, lsl
 // CHECK-ERROR: error: invalid operand for instruction
 // CHECK-ERROR-NEXT:         str b3, [x3, #256]!
 // CHECK-ERROR-NEXT:                           ^
-// CHECK-ERROR-NEXT: error: {{expected|index must be an}} integer in range [-256, 255]
+// CHECK-ERROR-NEXT: error: {{expected|immediate must be an}} integer in range [-256, 255]
 // CHECK-ERROR-NEXT:         str b3, [x13, #-257]!
 // CHECK-ERROR-NEXT:                 ^
 // CHECK-ERROR-NEXT: error: invalid operand for instruction
 // CHECK-ERROR-NEXT:         str h3, [x3, #256]!
 // CHECK-ERROR-NEXT:                           ^
-// CHECK-ERROR-NEXT: error: {{expected|index must be an}} integer in range [-256, 255]
+// CHECK-ERROR-NEXT: error: {{expected|immediate must be an}} integer in range [-256, 255]
 // CHECK-ERROR-NEXT:         str h3, [x13, #-257]!
 // CHECK-ERROR-NEXT:                 ^
 // CHECK-ERROR-NEXT: error: invalid operand for instruction
 // CHECK-ERROR-NEXT:         str s3, [x3, #256]!
 // CHECK-ERROR-NEXT:                           ^
-// CHECK-ERROR-NEXT: error: {{expected|index must be an}} integer in range [-256, 255]
+// CHECK-ERROR-NEXT: error: {{expected|immediate must be an}} integer in range [-256, 255]
 // CHECK-ERROR-NEXT:         str s3, [x13, #-257]!
 // CHECK-ERROR-NEXT:                 ^
 // CHECK-ERROR-NEXT: error: invalid operand for instruction
 // CHECK-ERROR-NEXT:         str d3, [x3, #256]!
 // CHECK-ERROR-NEXT:                           ^
-// CHECK-ERROR-NEXT: error: {{expected|index must be an}} integer in range [-256, 255]
+// CHECK-ERROR-NEXT: error: {{expected|immediate must be an}} integer in range [-256, 255]
 // CHECK-ERROR-NEXT:         str d3, [x13, #-257]!
 // CHECK-ERROR-NEXT:                 ^
 
@@ -2372,25 +2372,25 @@ cbz w1, lsl
 // CHECK-ERROR: error: invalid operand for instruction
 // CHECK-ERROR-NEXT:         ldr b3, [x3, #256]!
 // CHECK-ERROR-NEXT:                           ^
-// CHECK-ERROR-NEXT: error: {{expected|index must be an}} integer in range [-256, 255]
+// CHECK-ERROR-NEXT: error: {{expected|immediate must be an}} integer in range [-256, 255]
 // CHECK-ERROR-NEXT:         ldr b3, [x13, #-257]!
 // CHECK-ERROR-NEXT:                 ^
 // CHECK-ERROR-NEXT: error: invalid operand for instruction
 // CHECK-ERROR-NEXT:         ldr h3, [x3, #256]!
 // CHECK-ERROR-NEXT:                           ^
-// CHECK-ERROR-NEXT: error: {{expected|index must be an}} integer in range [-256, 255]
+// CHECK-ERROR-NEXT: error: {{expected|immediate must be an}} integer in range [-256, 255]
 // CHECK-ERROR-NEXT:         ldr h3, [x13, #-257]!
 // CHECK-ERROR-NEXT:                 ^
 // CHECK-ERROR-NEXT: error: invalid operand for instruction
 // CHECK-ERROR-NEXT:         ldr s3, [x3, #256]!
 // CHECK-ERROR-NEXT:                           ^
-// CHECK-ERROR-NEXT: error: {{expected|index must be an}} integer in range [-256, 255]
+// CHECK-ERROR-NEXT: error: {{expected|immediate must be an}} integer in range [-256, 255]
 // CHECK-ERROR-NEXT:         ldr s3, [x13, #-257]!
 // CHECK-ERROR-NEXT:                 ^
 // CHECK-ERROR-NEXT: error: invalid operand for instruction
 // CHECK-ERROR-NEXT:         ldr d3, [x3, #256]!
 // CHECK-ERROR-NEXT:                           ^
-// CHECK-ERROR-NEXT: error: {{expected|index must be an}} integer in range [-256, 255]
+// CHECK-ERROR-NEXT: error: {{expected|immediate must be an}} integer in range [-256, 255]
 // CHECK-ERROR-NEXT:         ldr d3, [x13, #-257]!
 // CHECK-ERROR-NEXT:                 ^
 
@@ -2402,16 +2402,16 @@ cbz w1, lsl
         sttrh w17, [x1, #256]
         ldtrsw x20, [x1, #256]
         ldtr x12, [sp, #256]
-// CHECK-ERROR: error: {{expected|index must be an}} integer in range [-256, 255]
+// CHECK-ERROR: error: {{expected|immediate must be an}} integer in range [-256, 255]
 // CHECK-ERROR-NEXT:        ldtrb w2, [sp, #256]
 // CHECK-ERROR-NEXT:                  ^
-// CHECK-ERROR-NEXT: error: {{expected|index must be an}} integer in range [-256, 255]
+// CHECK-ERROR-NEXT: error: {{expected|immediate must be an}} integer in range [-256, 255]
 // CHECK-ERROR-NEXT:         sttrh w17, [x1, #256]
 // CHECK-ERROR-NEXT:                    ^
-// CHECK-ERROR-NEXT: error: {{expected|index must be an}} integer in range [-256, 255]
+// CHECK-ERROR-NEXT: error: {{expected|immediate must be an}} integer in range [-256, 255]
 // CHECK-ERROR-NEXT:         ldtrsw x20, [x1, #256]
 // CHECK-ERROR-NEXT:                     ^
-// CHECK-ERROR-NEXT: error: {{expected|index must be an}} integer in range [-256, 255]
+// CHECK-ERROR-NEXT: error: {{expected|immediate must be an}} integer in range [-256, 255]
 // CHECK-ERROR-NEXT:         ldtr x12, [sp, #256]
 // CHECK-ERROR-NEXT:                   ^
 
@@ -2426,10 +2426,10 @@ cbz w1, lsl
 // CHECK-ERROR-NEXT: error: invalid operand for instruction
 // CHECK-ERROR-NEXT:         sttr b2, [x2, #-257]
 // CHECK-ERROR-NEXT:              ^
-// CHECK-ERROR-NEXT: error: {{expected|index must be an}} integer in range [-256, 255]
+// CHECK-ERROR-NEXT: error: {{expected|immediate must be an}} integer in range [-256, 255]
 // CHECK-ERROR-NEXT:         ldtrsb x9, [sp, #-257]
 // CHECK-ERROR-NEXT:                    ^
-// CHECK-ERROR-NEXT: error: {{expected|index must be an}} integer in range [-256, 255]
+// CHECK-ERROR-NEXT: error: {{expected|immediate must be an}} integer in range [-256, 255]
 // CHECK-ERROR-NEXT:         ldtr w2, [x30, #-257]
 // CHECK-ERROR-NEXT:                  ^
 // CHECK-ERROR-NEXT: error: invalid operand for instruction
@@ -2455,19 +2455,19 @@ cbz w1, lsl
         ldr w0, [x4, #16384]
         ldrh w2, [x21, #8192]
         ldrb w3, [x12, #4096]
-// CHECK-ERROR: error: {{expected|index must be an}} integer in range [-256, 255]
+// CHECK-ERROR: error: {{expected|immediate must be an}} integer in range [-256, 255]
 // CHECK-ERROR-NEXT:         ldr q0, [x11, #65536]
 // CHECK-ERROR-NEXT:                 ^
-// CHECK-ERROR-NEXT: error: {{expected|index must be an}} integer in range [-256, 255]
+// CHECK-ERROR-NEXT: error: {{expected|immediate must be an}} integer in range [-256, 255]
 // CHECK-ERROR-NEXT:         ldr x0, [sp, #32768]
 // CHECK-ERROR-NEXT:                 ^
-// CHECK-ERROR-NEXT: error: {{expected|index must be an}} integer in range [-256, 255]
+// CHECK-ERROR-NEXT: error: {{expected|immediate must be an}} integer in range [-256, 255]
 // CHECK-ERROR-NEXT:         ldr w0, [x4, #16384]
 // CHECK-ERROR-NEXT:                 ^
-// CHECK-ERROR-NEXT: error: {{expected|index must be an}} integer in range [-256, 255]
+// CHECK-ERROR-NEXT: error: {{expected|immediate must be an}} integer in range [-256, 255]
 // CHECK-ERROR-NEXT:         ldrh w2, [x21, #8192]
 // CHECK-ERROR-NEXT:                  ^
-// CHECK-ERROR-NEXT: error: {{expected|index must be an}} integer in range [-256, 255]
+// CHECK-ERROR-NEXT: error: {{expected|immediate must be an}} integer in range [-256, 255]
 // CHECK-ERROR-NEXT:         ldrb w3, [x12, #4096]
 // CHECK-ERROR-NEXT:                  ^
 
@@ -2509,7 +2509,7 @@ cbz w1, lsl
 // CHECK-ERROR-AARCH64-NEXT: error: too few operands for instruction
 // CHECK-ERROR-AARCH64-NEXT:         str x5, [x22, #12]
 // CHECK-ERROR-AARCH64-NEXT:                 ^
-// CHECK-ERROR-NEXT: error: {{expected|index must be an}} integer in range [-256, 255]
+// CHECK-ERROR-NEXT: error: {{expected|immediate must be an}} integer in range [-256, 255]
 // CHECK-ERROR-NEXT:         str w7, [x12, #16384]
 // CHECK-ERROR-NEXT:                 ^
 
