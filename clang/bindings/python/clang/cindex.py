@@ -3200,22 +3200,6 @@ class CodeCompletionResult(Structure):
         return CompletionString(self.completionString)
 
 
-class CCRStructure(Structure):
-    _fields_ = [("results", POINTER(CodeCompletionResult)), ("numResults", c_uint)]
-
-    results: NoSliceSequence[CodeCompletionResult]
-    numResults: int
-
-    def __len__(self) -> int:
-        return self.numResults
-
-    def __getitem__(self, key: int) -> CodeCompletionResult:
-        if len(self) <= key:
-            raise IndexError
-
-        return self.results[key]
-
-
 class CodeCompletionResults(Structure):
     _fields_ = [("results", POINTER(CodeCompletionResult)), ("numResults", c_uint)]
 
