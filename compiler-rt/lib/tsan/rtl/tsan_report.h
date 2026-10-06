@@ -111,11 +111,17 @@ struct AddedLocationAddr {
   usize locs_idx = 0;
 };
 
+struct AddedStack {
+  StackTrace stack_trace;
+  bool suppressable = false;
+};
+
 class ReportDesc {
  public:
   ReportType typ = ReportTypeRace;
   uptr tag = kExternalTagNone;
   Vector<ReportStack*> stacks;
+  Vector<AddedStack> added_stacks;
   Vector<ReportMop*> mops;
   Vector<ReportLocation*> locs;
   Vector<AddedLocationAddr> added_location_addrs;
@@ -123,6 +129,7 @@ class ReportDesc {
   Vector<ReportThread*> threads;
   Vector<Tid> unique_tids;
   ReportStack* sleep = nullptr;
+  StackID sleep_stack_id = 0;
   int count = 0;
   int signum = 0;
 
