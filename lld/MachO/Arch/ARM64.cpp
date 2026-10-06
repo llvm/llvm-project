@@ -42,6 +42,9 @@ struct ARM64 : ARM64Common {
   uint32_t getICFSafeThunkSize() const override;
 };
 
+struct ARM64e final : ARM64 {
+  ARM64e();
+};
 } // namespace
 
 // Random notes on reloc types:
@@ -234,5 +237,12 @@ ARM64::ARM64() : ARM64Common(LP64()) {
 
 TargetInfo *macho::createARM64TargetInfo() {
   static ARM64 t;
+  return &t;
+}
+
+ARM64e::ARM64e() { cpuSubtype = CPU_SUBTYPE_ARM64E; }
+
+TargetInfo *macho::createARM64eTargetInfo() {
+  static ARM64e t;
   return &t;
 }

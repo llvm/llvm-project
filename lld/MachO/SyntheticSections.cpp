@@ -103,6 +103,16 @@ static uint32_t cpuSubtype() {
       config->platformInfo.target.MinDeployment >= VersionTuple(10, 5))
     subtype |= CPU_SUBTYPE_LIB64;
 
+  if (config->arch() == AK_arm64e) {
+    // ld64 marks macOS and Mac Catalyst executables with ptrauth ABI version 1.
+    bool isMacExecutable = config->outputType == MH_EXECUTE &&
+                           (config->platform() == PLATFORM_MACOS ||
+                            config->platform() == PLATFORM_MACCATALYST);
+    subtype = CPU_SUBTYPE_ARM64E_WITH_PTRAUTH_VERSION(
+        /*PtrAuthABIVersion=*/isMacExecutable ? 1 : 0,
+        /*PtrAuthKernelABIVersion=*/false);
+  }
+
   return subtype;
 }
 
