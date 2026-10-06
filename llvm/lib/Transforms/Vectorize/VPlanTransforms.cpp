@@ -3959,11 +3959,12 @@ tryToMatchAndCreateMulAccumulateReduction(VPReductionRecipe *Red,
     // reduce.add(ext(mul(ext(A), ext(B))))
     // -> reduce.add(mul(wider_ext(A), wider_ext(B)))
     // The inner extends must either have the same opcode as the outer extend or
-    // be the same, in which case the multiply can never result in a negative
+    // be the same sext, in which case the multiply cannot result in a negative
     // value and the outer extend can be folded away by doing wider
     // extends for the operands of the mul.
     if (Ext0 && Ext1 &&
-        (Ext->getOpcode() == Ext0->getOpcode() || Ext0 == Ext1) &&
+        (Ext->getOpcode() == Ext0->getOpcode() ||
+         (Ext0 == Ext1 && Ext0->getOpcode() == Instruction::SExt)) &&
         Ext0->getOpcode() == Ext1->getOpcode() &&
         IsMulAccValidAndClampRange(Mul, Ext0, Ext1, Ext) && Mul->hasOneUse()) {
       auto *NewExt0 = new VPWidenCastRecipe(
