@@ -58,7 +58,8 @@ define bfloat @cvt_bf16_f16(half %a) {
 ; SM70-LABEL:       cvt_bf16_f16(
 ; SM70-NOFTZ:       cvt.f32.f16 [[EXT:%r[0-9]+]], %rs{{[0-9]+}};
 ; SM70-FTZ:         cvt.ftz.f32.f16 [[EXT:%r[0-9]+]], %rs{{[0-9]+}};
-; SM70-NEXT:        bfe.u32 {{%r[0-9]+}}, [[EXT]], 16, 1;
+; SM70-NEXT:        shr.u32 [[SHIFT:%r[0-9]+]], [[EXT]], 16;
+; SM70-NEXT:        and.b32 {{%r[0-9]+}}, [[SHIFT]], 1;
 ; SM70:             shr.u32 [[RES:%r[0-9]+]], {{%r[0-9]+}}, 16;
 ; SM70-NEXT:        st.param.b16 [func_retval0], [[RES]];
 ; SM70-NEXT:        ret;
@@ -470,7 +471,8 @@ define bfloat @cvt_rn_bf16_f16(half %a) {
 ; SM70:             ld.param.b16 [[RS1:%rs[0-9]+]], [cvt_rn_bf16_f16_param_0];
 ; SM70-NOFTZ-NEXT:  cvt.f32.f16 [[R1:%r[0-9]+]], [[RS1]];
 ; SM70-FTZ-NEXT:    cvt.ftz.f32.f16 [[R1:%r[0-9]+]], [[RS1]];
-; SM70-NEXT:        bfe.u32 [[R2:%r[0-9]+]], [[R1]], 16, 1;
+; SM70-NEXT:        shr.u32 [[SHIFT:%r[0-9]+]], [[R1]], 16;
+; SM70-NEXT:        and.b32 [[R2:%r[0-9]+]], [[SHIFT]], 1;
 ; SM70-NEXT:        add.s32 [[R3:%r[0-9]+]], [[R2]], [[R1]];
 ; SM70-NEXT:        add.s32 [[R4:%r[0-9]+]], [[R3]], 32767;
 ; SM70-NOFTZ-NEXT:  setp.nan.f32 [[P1:%p[0-9]+]], [[R1]], [[R1]];
@@ -502,7 +504,8 @@ define bfloat @cvt_rn_bf16_f16(half %a) {
 define bfloat @fptrunc_rn_bf16_f32(float %a) {
 ; SM70-LABEL:       fptrunc_rn_bf16_f32(
 ; SM70:             ld.param.b32 [[R1:%r[0-9]+]], [fptrunc_rn_bf16_f32_param_0];
-; SM70-NEXT:        bfe.u32 [[R2:%r[0-9]+]], [[R1]], 16, 1;
+; SM70-NEXT:        shr.u32 [[SHIFT:%r[0-9]+]], [[R1]], 16;
+; SM70-NEXT:        and.b32 [[R2:%r[0-9]+]], [[SHIFT]], 1;
 ; SM70-NEXT:        add.s32 [[R3:%r[0-9]+]], [[R2]], [[R1]];
 ; SM70-NEXT:        add.s32 [[R4:%r[0-9]+]], [[R3]], 32767;
 ; SM70-NOFTZ-NEXT:  setp.nan.f32 [[P1:%p[0-9]+]], [[R1]], [[R1]];
@@ -545,7 +548,8 @@ define bfloat @fptrunc_rn_bf16_f64(double %a) {
 ; SM70-NEXT:        selp.b32 [[R5:%r[0-9]+]], [[R1]], [[R3]], [[P2]];
 ; SM70-NEXT:        setp.equ.f64 [[P3:%p[0-9]+]], [[RD1]], [[RD3]];
 ; SM70-NEXT:        selp.b32 [[R6:%r[0-9]+]], [[R1]], [[R5]], [[P3]];
-; SM70-NEXT:        bfe.u32 [[R7:%r[0-9]+]], [[R6]], 16, 1;
+; SM70-NEXT:        shr.u32 [[SHIFT:%r[0-9]+]], [[R6]], 16;
+; SM70-NEXT:        and.b32 [[R7:%r[0-9]+]], [[SHIFT]], 1;
 ; SM70-NEXT:        add.s32 [[R8:%r[0-9]+]], [[R7]], [[R6]];
 ; SM70-NEXT:        add.s32 [[R9:%r[0-9]+]], [[R8]], 32767;
 ; SM70-NEXT:        or.b32 [[R10:%r[0-9]+]], [[R6]], 4194304;
