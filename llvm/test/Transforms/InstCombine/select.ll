@@ -4943,8 +4943,7 @@ define i32 @sequence_select_with_same_cond_true(i1 %c1, i1 %c2){
 define double @sequence_select_with_same_cond_double(double %a, i1 %c1, i1 %c2, double %r1, double %r2){
 ; CHECK-LABEL: define double @sequence_select_with_same_cond_double(
 ; CHECK-SAME: double [[A:%.*]], i1 [[C1:%.*]], i1 [[C2:%.*]], double [[R1:%.*]], double [[R2:%.*]]) {
-; CHECK-NEXT:    [[S1:%.*]] = select i1 [[C1]], double 1.000000e+00, double 0.000000e+00
-; CHECK-NEXT:    [[S2:%.*]] = select i1 [[C2]], double [[S1]], double 2.000000e+00
+; CHECK-NEXT:    [[S2:%.*]] = select i1 [[C2]], double 1.000000e+00, double 2.000000e+00
 ; CHECK-NEXT:    [[S3:%.*]] = select i1 [[C1]], double [[S2]], double 3.000000e+00
 ; CHECK-NEXT:    ret double [[S3]]
 ;
@@ -4961,7 +4960,7 @@ define i32 @sequence_select_with_same_cond_extra_use(i1 %c1, i1 %c2){
 ; CHECK-SAME: i1 [[C1:%.*]], i1 [[C2:%.*]]) {
 ; CHECK-NEXT:    [[S1:%.*]] = select i1 [[C1]], i32 23, i32 45
 ; CHECK-NEXT:    call void @use32(i32 [[S1]])
-; CHECK-NEXT:    [[S2:%.*]] = select i1 [[C2]], i32 666, i32 [[S1]]
+; CHECK-NEXT:    [[S2:%.*]] = select i1 [[C2]], i32 666, i32 45
 ; CHECK-NEXT:    [[S3:%.*]] = select i1 [[C1]], i32 789, i32 [[S2]]
 ; CHECK-NEXT:    ret i32 [[S3]]
 ;
