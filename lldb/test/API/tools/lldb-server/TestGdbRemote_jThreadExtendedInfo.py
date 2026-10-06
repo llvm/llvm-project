@@ -22,7 +22,6 @@ class TestGdbRemote_jThreadExtendedInfo(gdbremote_testcase.GdbRemoteTestCaseBase
         context = self.expect_gdbremote_sequence()
         threads = self.parse_threadinfo_packets(context)
         self.assertEqual(len(threads), 1)
-        print(threads)
         self.test_sequence.add_log_lines(
             [
                 f'read packet: $jThreadExtendedInfo:{{"thread":{threads[0]}}}]#00',
