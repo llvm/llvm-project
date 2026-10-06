@@ -12,11 +12,14 @@
 #include <__algorithm/comp.h>
 #include <__algorithm/comp_ref_type.h>
 #include <__algorithm/iterator_operations.h>
+#include <__algorithm/partial_sort.h>
 #include <__algorithm/sort.h>
 #include <__assert>
+#include <__bit/bit_log2.h>
 #include <__config>
 #include <__debug_utils/randomize_range.h>
 #include <__iterator/iterator_traits.h>
+#include <__type_traits/make_unsigned.h>
 #include <__utility/move.h>
 
 #if !defined(_LIBCPP_HAS_NO_PRAGMA_SYSTEM_HEADER)
@@ -42,6 +45,30 @@ _LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR_SINCE_CXX14 bool __nth_element_find_guar
   }
 }
 
+// The two helpers below only run on inputs that defeat the pivot choice. They are kept out of line so that they
+// don't change how the main loop of __nth_element is compiled.
+template <class _AlgPolicy, class _RandomAccessIterator>
+_LIBCPP_HIDE_FROM_ABI _LIBCPP_NOINLINE _LIBCPP_CONSTEXPR_SINCE_CXX20 void
+__nth_element_break_patterns(_RandomAccessIterator __first, _RandomAccessIterator __last) {
+  using _Ops = _IterOps<_AlgPolicy>;
+  typedef typename iterator_traits<_RandomAccessIterator>::difference_type difference_type;
+  difference_type __len = __last - __first;
+  _Ops::iter_swap(__first, __first + __len / 4);
+  _Ops::iter_swap(__first + __len / 2, __first + (__len / 2 + __len / 8));
+  _Ops::iter_swap(__last - difference_type(1), __last - (difference_type(1) + __len / 4));
+}
+
+template <class _AlgPolicy, class _Compare, class _RandomAccessIterator>
+_LIBCPP_HIDE_FROM_ABI _LIBCPP_NOINLINE _LIBCPP_CONSTEXPR_SINCE_CXX20 void __nth_element_partial_sort(
+    _RandomAccessIterator __first, _RandomAccessIterator __nth, _RandomAccessIterator __last, _Compare __comp) {
+  ++__nth;
+  std::__partial_sort_impl<_AlgPolicy>(__first, __nth, __last, __comp);
+}
+
+// Quickselect with a median-of-3 pivot. A round is bad if it removes less than 1/8 of the range. After two bad
+// rounds in a row, a few elements get swapped to break up patterns that defeat the pivot choice. After log2(n) bad
+// rounds, the rest is finished with a partial sort like std::sort does, so the worst case is O(n log n). The limit is
+// never used for an empty range, which is why log2(0) isn't computed.
 template <class _AlgPolicy, class _Compare, class _RandomAccessIterator>
 _LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR_SINCE_CXX14 void
 // NOLINTNEXTLINE(readability-function-cognitive-complexity)
@@ -52,6 +79,9 @@ __nth_element(
   // _Compare is known to be a reference type
   typedef typename iterator_traits<_RandomAccessIterator>::difference_type difference_type;
   const difference_type __limit = 7;
+  difference_type __bad_allowed = __first == __last ? 0 : std::__bit_log2(std::__to_unsigned_like(__last - __first));
+  difference_type __prev_len    = 0;
+  bool __prev_bad               = false;
   while (true) {
     if (__nth == __last)
       return;
@@ -74,6 +104,16 @@ __nth_element(
       std::__selection_sort<_AlgPolicy, _Compare>(__first, __last, __comp);
       return;
     }
+    bool __bad = __prev_len != 0 && __len > __prev_len - __prev_len / 8;
+    if (__bad) {
+      if (__bad_allowed == 0)
+        break;
+      --__bad_allowed;
+      if (__prev_bad)
+        std::__nth_element_break_patterns<_AlgPolicy>(__first, __last);
+    }
+    __prev_bad = __bad;
+    __prev_len = __len;
     // __len > __limit >= 3
     _RandomAccessIterator __m   = __first + __len / 2;
     _RandomAccessIterator __lm1 = __last;
@@ -224,6 +264,7 @@ __nth_element(
       __first = ++__i;
     }
   }
+  std::__nth_element_partial_sort<_AlgPolicy, _Compare>(__first, __nth, __last, __comp);
 }
 
 template <class _AlgPolicy, class _RandomAccessIterator, class _Compare>
