@@ -180,6 +180,16 @@ add_entrypoint_object(
 )
 
 add_entrypoint_object(
+  __cxa_thread_atexit_impl
+  SRCS
+    __cxa_thread_atexit_impl.cpp
+  HDRS
+    __cxa_thread_atexit_impl.h
+  DEPENDS
+    libc.src.__support.threads.thread
+)
+
+add_entrypoint_object(
   cnd_init
   ALIAS
   DEPENDS
