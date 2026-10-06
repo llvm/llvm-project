@@ -72,6 +72,7 @@
 
 using namespace llvm;
 using namespace llvm::SCEVPatternMatch;
+using namespace llvm::PatternMatch;
 
 #define DEBUG_TYPE "loop-accesses"
 
@@ -3526,8 +3527,7 @@ bool LoopAccessInfo::analyzeLoop(AAResults *AA, const LoopInfo *LI,
     for (Instruction &I : *BB) {
       // Prefetches are optional hints and are dropped by the loop vectorizer.
       // Do not let their pointer operands affect memory dependence analysis.
-      if (PatternMatch::match(&I,
-                              PatternMatch::m_Intrinsic<Intrinsic::prefetch>()))
+      if (match(&I, m_Intrinsic<Intrinsic::prefetch>()))
         continue;
 
       if (auto *Call = dyn_cast<CallBase>(&I)) {
