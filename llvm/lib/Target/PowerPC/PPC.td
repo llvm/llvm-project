@@ -387,7 +387,8 @@ def IsNotBookE  : Predicate<"!Subtarget->isBookE()">;
 def HasOnlyMSYNC : Predicate<"Subtarget->hasOnlyMSYNC()">;
 def HasSYNC   : Predicate<"!Subtarget->hasOnlyMSYNC()">;
 def IsPPC4xx  : Predicate<"Subtarget->isPPC4xx()">;
-def IsPPC6xx  : Predicate<"Subtarget->isPPC6xx()">;
+def IsPPC6xx  : Predicate<"Subtarget->isPPC6xx()">,
+                AssemblerPredicate<(all_of FeaturePPC6xx)>;
 def IsE500  : Predicate<"Subtarget->isE500()">;
 def HasSPE  : Predicate<"Subtarget->hasSPE()">;
 def HasICBT : Predicate<"Subtarget->hasICBT()">;
@@ -676,45 +677,46 @@ def : ProcessorModel<"450", PPC440Model, [Directive440, FeatureISEL,
                                           FeatureFRES, FeatureFRSQRTE,
                                           FeatureICBT, FeatureBookE,
                                           FeatureMSYNC, FeatureMFTB]>;
-def : Processor<"601", G3Itineraries, [Directive601, FeatureFPU]>;
+def : Processor<"601", G3Itineraries, [Directive601, FeatureFPU,
+                                       FeaturePPC6xx]>;
 def : Processor<"602", G3Itineraries, [Directive602, FeatureFPU,
-                                       FeatureMFTB]>;
+                                       FeatureMFTB, FeaturePPC6xx]>;
 def : Processor<"603", G3Itineraries, [Directive603,
                                        FeatureFRES, FeatureFRSQRTE,
-                                       FeatureMFTB]>;
+                                       FeatureMFTB, FeaturePPC6xx]>;
 def : Processor<"603e", G3Itineraries, [Directive603,
                                         FeatureFRES, FeatureFRSQRTE,
-                                        FeatureMFTB]>;
+                                        FeatureMFTB, FeaturePPC6xx]>;
 def : Processor<"603ev", G3Itineraries, [Directive603,
                                          FeatureFRES, FeatureFRSQRTE,
-                                         FeatureMFTB]>;
+                                         FeatureMFTB, FeaturePPC6xx]>;
 def : Processor<"604", G3Itineraries, [Directive604,
                                        FeatureFRES, FeatureFRSQRTE,
-                                       FeatureMFTB]>;
+                                       FeatureMFTB, FeaturePPC6xx]>;
 def : Processor<"604e", G3Itineraries, [Directive604,
                                         FeatureFRES, FeatureFRSQRTE,
-                                        FeatureMFTB]>;
+                                        FeatureMFTB, FeaturePPC6xx]>;
 def : Processor<"620", G3Itineraries, [Directive620,
                                        FeatureFRES, FeatureFRSQRTE,
-                                       FeatureMFTB]>;
+                                       FeatureMFTB, FeaturePPC6xx]>;
 def : Processor<"750", G4Itineraries, [Directive750,
                                        FeatureFRES, FeatureFRSQRTE,
-                                       FeatureMFTB]>;
+                                       FeatureMFTB, FeaturePPC6xx]>;
 def : Processor<"g3", G3Itineraries, [Directive750,
                                       FeatureFRES, FeatureFRSQRTE,
-                                      FeatureMFTB]>;
+                                      FeatureMFTB, FeaturePPC6xx]>;
 def : Processor<"7400", G4Itineraries, [Directive7400, FeatureAltivec,
                                         FeatureFRES, FeatureFRSQRTE,
-                                        FeatureMFTB]>;
+                                        FeatureMFTB, FeaturePPC6xx]>;
 def : Processor<"g4", G4Itineraries, [Directive7400, FeatureAltivec,
                                       FeatureFRES, FeatureFRSQRTE,
-                                      FeatureMFTB]>;
+                                      FeatureMFTB, FeaturePPC6xx]>;
 def : Processor<"7450", G4PlusItineraries, [Directive7400, FeatureAltivec,
                                             FeatureFRES, FeatureFRSQRTE,
-                                            FeatureMFTB]>;
+                                            FeatureMFTB, FeaturePPC6xx]>;
 def : Processor<"g4+", G4PlusItineraries, [Directive7400, FeatureAltivec,
                                            FeatureFRES, FeatureFRSQRTE,
-                                           FeatureMFTB]>;
+                                           FeatureMFTB, FeaturePPC6xx]>;
 
 def : ProcessorModel<"970", G5Model,
                   [Directive970, FeatureAltivec,
