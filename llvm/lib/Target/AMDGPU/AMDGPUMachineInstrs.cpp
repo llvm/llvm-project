@@ -13,26 +13,9 @@
 #include "AMDGPUMachineInstrs.h"
 #include "Utils/AMDGPUBaseInfo.h"
 #include "llvm/CodeGen/MachineInstr.h"
-#include "llvm/Support/ErrorHandling.h"
 
 using namespace llvm;
 using namespace AMDGPUMI;
-
-static const AMDGPU::VLdStIdxOpcodeInfo &getInfo(unsigned Opcode) {
-  const AMDGPU::VLdStIdxOpcodeInfo *Info =
-      AMDGPU::getVLdStIdxOpcodeInfoByOpcode(Opcode);
-  if (!Info)
-    llvm_unreachable("unsupported V_LOAD/STORE_IDX opcode");
-  return *Info;
-}
-
-bool VLoadStoreIdxInst::isGPRIdx() const {
-  return getInfo(getOpcode()).IsGPRIdx;
-}
-
-unsigned VLoadStoreIdxInst::getBitWidth() const {
-  return getInfo(getOpcode()).BitWidth;
-}
 
 int VLoadIdxInst::tryGetOpcodeForBitWidth(unsigned Bits, bool IsGPRIdx) {
   const AMDGPU::VLdStIdxOpcodeInfo *Info =
