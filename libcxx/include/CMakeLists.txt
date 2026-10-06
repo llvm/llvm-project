@@ -368,6 +368,7 @@ set(files
   __exception/operations.h
   __exception/terminate.h
   __execution/execution_policies.h
+  __execution/is_execution_policy.h
   __expected/bad_expected_access.h
   __expected/expected.h
   __expected/unexpect.h
@@ -895,7 +896,6 @@ set(files
   __type_traits/is_empty.h
   __type_traits/is_enum.h
   __type_traits/is_equality_comparable.h
-  __type_traits/is_execution_policy.h
   __type_traits/is_final.h
   __type_traits/is_floating_point.h
   __type_traits/is_function.h

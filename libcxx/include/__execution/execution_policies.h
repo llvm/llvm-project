@@ -10,8 +10,8 @@
 #define _LIBCPP___EXECUTION_EXECUTION_POLICIES_H
 
 #include <__config>
+#include <__execution/is_execution_policy.h>
 #include <__type_traits/integral_constant.h>
-#include <__type_traits/is_execution_policy.h>
 #include <__type_traits/is_same.h>
 
 #if !defined(_LIBCPP_HAS_NO_PRAGMA_SYSTEM_HEADER)
