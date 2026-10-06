@@ -4247,8 +4247,8 @@ SUnit *GenericScheduler::pickNode(bool &IsTopNode) {
   return SU;
 }
 
-/// Clear potentially-stale read-undef flags on subregister defs of \p VRegs in
-/// \p MI, then re-add the ones still valid according to \p LIS. Instructions
+/// Clear potentially-stale read-undef flags on subregister defs of VRegs in
+/// MI, then re-add the ones still valid according to LIS. Instructions
 /// without an affected def are left untouched. The clear must come first
 /// because adjustLaneLiveness only adds flags; the re-add avoids introducing
 /// reads of undefined lanes.
