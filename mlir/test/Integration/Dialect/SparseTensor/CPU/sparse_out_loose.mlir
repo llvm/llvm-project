@@ -18,7 +18,7 @@
 // DEFINE: %{env} =
 //--------------------------------------------------------------------------------------------------
 
-// Write to stdout so that FileCheck verifies both the NSE header and entries.
+// Write to stdout so that FileCheck verifies the entry-count header and entries.
 // REDEFINE: %{env} = TENSOR0=
 // RUN: %{compile} | env %{env} %{run} | FileCheck %s
 // REDEFINE: %{sparsifier_opts} = enable-runtime-library=false
