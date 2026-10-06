@@ -10,6 +10,7 @@
 #include "flang/Common/enum-set.h"
 #include "flang/Common/template.h"
 #include "flang/Parser/parse-tree-visitor.h"
+#include "flang/Parser/tools.h"
 #include "flang/Semantics/semantics.h"
 #include <type_traits>
 
@@ -286,6 +287,9 @@ public:
     return PushConstructName(criticalConstruct);
   }
   bool Pre(const parser::DoConstruct &doConstruct) {
+    if (IsNonBlockDoConstruct(doConstruct)) {
+      return PreNonBlockDoConstruct(doConstruct);
+    }
     const auto &optionalName{std::get<std::optional<parser::Name>>(
         std::get<parser::Statement<parser::NonLabelDoStmt>>(doConstruct.t)
             .statement.t)};
@@ -640,6 +644,36 @@ private:
   bool SwitchToNewScope() {
     PushScope(PopScope().isExteriorGotoFatal);
     return true;
+  }
+
+  // The parser builds a DO construct, with a synthesized END DO statement
+  // that has no source, from a non-block (labeled) DO loop associated with an
+  // OpenACC LOOP or combined construct.  Such a loop may share its terminating
+  // label with enclosing labeled DO statements that are only turned into DO
+  // constructs later by CanonicalizeDo.
+  static bool IsNonBlockDoConstruct(const parser::DoConstruct &doConstruct) {
+    return std::get<parser::Statement<parser::EndDoStmt>>(doConstruct.t)
+        .source.empty();
+  }
+
+  // Analyze a DO construct built from a non-block DO loop as the original
+  // labeled DO statement: it does not open a new scope, and it references
+  // its terminating label.
+  bool PreNonBlockDoConstruct(const parser::DoConstruct &doConstruct) {
+    const auto &doStmt{
+        std::get<parser::Statement<parser::NonLabelDoStmt>>(doConstruct.t)};
+    currentPosition_ = doStmt.source;
+    if (doStmt.label) {
+      AddTargetLabelDefinition(*doStmt.label,
+          ConstructBranchTargetFlags(doStmt), currentScope_,
+          /*isExecutableConstructEndStmt=*/false, currentPosition_);
+    }
+    const auto &block{std::get<parser::Block>(doConstruct.t)};
+    if (auto label{parser::GetFinalLabel(block)}) {
+      AddLabelReferenceFromDoStmt(*label);
+    }
+    Walk(block, *this);
+    return false;
   }
 
   template <typename A> bool PushConstructName(const A &a) {
