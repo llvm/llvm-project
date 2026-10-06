@@ -53,7 +53,9 @@ auto DialectResourceBlobManager::insert(StringRef name,
   // re-attempt insertion until we find one that is unique.
   llvm::SmallString<32> nameStorage(name);
   nameStorage.push_back('_');
-  size_t nameCounter = 1;
+
+  // Resume the numbering from the last counter used for this base name.
+  size_t &nameCounter = nameCounters.try_emplace(name, 1).first->second;
   do {
     Twine(nameCounter++).toVector(nameStorage);
 
