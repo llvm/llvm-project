@@ -85,15 +85,11 @@ TokenRewriter::AddTokenBefore(token_iterator I, const char *Val) {
 
   // Plop the string into the scratch buffer, then create a token for this
   // string.
-  Token Tok;
-  Tok.startToken();
   const char *Spelling;
-  Tok.setLocation(ScratchBuf->getToken(Val, Len, Spelling));
-  Tok.setLength(Len);
-
   // TODO: Form a whole lexer around this and relex the token!  For now, just
   // set kind to tok::unknown.
-  Tok.setKind(tok::unknown);
+  Token Tok = Token::create(tok::unknown,
+                            ScratchBuf->getToken(Val, Len, Spelling), Len);
 
   return AddToken(Tok, RemapIterator(I));
 }

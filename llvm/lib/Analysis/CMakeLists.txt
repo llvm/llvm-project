@@ -160,7 +160,6 @@ add_llvm_component_library(LLVMAnalysis
   StackLifetime.cpp
   StackSafetyAnalysis.cpp
   StructuralHash.cpp
-  SyntheticCountsUtils.cpp
   TFLiteUtils.cpp
   TargetLibraryInfo.cpp
   TargetTransformInfo.cpp
