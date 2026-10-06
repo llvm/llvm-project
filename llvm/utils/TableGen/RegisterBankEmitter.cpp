@@ -23,11 +23,30 @@
 #include "llvm/TableGen/TGTimer.h"
 #include "llvm/TableGen/TableGenBackend.h"
 
+#include <set>
+
 #define DEBUG_TYPE "register-bank-emitter"
 
 using namespace llvm;
 
 namespace {
+struct PartialMappingInfo {
+  size_t StartIdx;
+  size_t Length;
+
+  bool operator==(const PartialMappingInfo &RHS) const {
+    return StartIdx == RHS.StartIdx && Length == RHS.Length;
+  }
+
+  bool operator<(const PartialMappingInfo &RHS) const {
+    if (StartIdx < RHS.StartIdx)
+      return true;
+    if (StartIdx == RHS.StartIdx)
+      return Length < RHS.Length;
+    return false;
+  }
+};
+
 class RegisterBank {
 
   /// A vector of register classes that are included in the register bank.
@@ -38,6 +57,8 @@ private:
 
   /// The register classes that are covered by the register bank.
   RegisterClassesTy RCs;
+
+  std::set<PartialMappingInfo> PartSizeSet;
 
   /// The register class with the largest register size.
   std::vector<const CodeGenRegisterClass *> RCsWithLargestRegSize;
@@ -98,6 +119,45 @@ public:
     RCs.emplace_back(RC);
   }
 
+  std::string getPartialMappingEnumName(const PartialMappingInfo &PM) const {
+    std::string Name;
+    Name.reserve(getName().size() + 7 + std::size("PMI_"));
+    raw_string_ostream OS(Name);
+    OS << "PMI_" << getName();
+    if (PM.StartIdx != 0)
+      OS << PM.StartIdx << '_';
+    OS << PM.Length;
+    return Name;
+  }
+
+  // Initialize partial mapping size info, must be called after
+  // RCs is initialized.
+  void initPartSizeSet() {
+    for (const auto &RC : register_classes()) {
+      for (auto &&[HWMode, RegSI] : RC->RSI) {
+        PartSizeSet.insert({0, RegSI.RegSize});
+      }
+    }
+
+    std::vector<const Record *> ExtraMappings =
+        TheDef.getValueAsListOfDefs("ExtraPartialMappings");
+    for (const auto *ExtraMapping : ExtraMappings) {
+      PartSizeSet.insert({(size_t)ExtraMapping->getValueAsInt("StartIdx"),
+                          (size_t)ExtraMapping->getValueAsInt("Length")});
+    }
+
+    std::vector<const Record *> IgnoredMappings =
+        TheDef.getValueAsListOfDefs("IgnoredPartialMappings");
+    for (const auto *IgnoredMapping : IgnoredMappings) {
+      PartSizeSet.erase({(size_t)IgnoredMapping->getValueAsInt("StartIdx"),
+                         (size_t)IgnoredMapping->getValueAsInt("Length")});
+    }
+  }
+
+  const std::set<PartialMappingInfo> getPartSizeSet() const {
+    return PartSizeSet;
+  }
+
   const CodeGenRegisterClass *getRCWithLargestRegSize(unsigned HwMode) const {
     return RCsWithLargestRegSize[HwMode];
   }
@@ -114,10 +174,14 @@ private:
 
   void emitHeader(raw_ostream &OS, StringRef TargetName,
                   ArrayRef<RegisterBank> Banks);
+  void emitPartialMapDeclaration(raw_ostream &OS, StringRef TargetName,
+                                 ArrayRef<RegisterBank> Banks);
   void emitBaseClassDefinition(raw_ostream &OS, StringRef TargetName,
                                ArrayRef<RegisterBank> Banks);
   void emitBaseClassImplementation(raw_ostream &OS, StringRef TargetName,
                                    ArrayRef<RegisterBank> Banks);
+  void emitPartialMapImplementation(raw_ostream &OS, StringRef TargetName,
+                                    ArrayRef<RegisterBank> Banks);
 
 public:
   RegisterBankEmitter(const RecordKeeper &R) : Target(R), Records(R) {}
@@ -159,6 +223,42 @@ void RegisterBankEmitter::emitBaseClassDefinition(
      << "protected:\n"
      << "  " << TargetName << "GenRegisterBankInfo(unsigned HwMode = 0);\n"
      << "\n";
+
+  emitPartialMapDeclaration(OS, TargetName, Banks);
+}
+
+void RegisterBankEmitter::emitPartialMapDeclaration(
+    raw_ostream &OS, StringRef TargetName, ArrayRef<RegisterBank> Banks) {
+  OS << "protected:\n"
+        "  enum PartialMappingIdx {\n"
+        "    PMI_None = -1,\n";
+  unsigned Idx = 0;
+  for (const auto &Bank : Banks) {
+    OS << '\n';
+    const std::set<PartialMappingInfo> &PartSizeSet = Bank.getPartSizeSet();
+    for (const auto &SI : PartSizeSet) {
+      OS << "    // " << Idx << ": " << Bank.getName() << ' ' << SI.Length
+         << "-bit value.\n";
+      OS << "    " << Bank.getPartialMappingEnumName(SI) << ",\n";
+      ++Idx;
+    }
+    if (!PartSizeSet.empty()) {
+      OS << "    PMI_First" << Bank.getName() << " = "
+         << Bank.getPartialMappingEnumName(*PartSizeSet.begin()) << ",\n"
+         << "    PMI_Last" << Bank.getName() << " = "
+         << Bank.getPartialMappingEnumName(*PartSizeSet.rbegin()) << ",\n";
+    }
+  }
+  OS << "  };\n";
+  OS << "  static const PartialMapping PartMappings[];\n\n";
+
+  OS << "  static bool checkPartialMap(unsigned Idx, unsigned ValStartIdx, \n"
+        "                              unsigned ValLength, const RegisterBank "
+        "&RB);\n";
+  OS << "  static bool checkPartialMappingIdx(PartialMappingIdx FirstAlias,\n"
+        "                                     PartialMappingIdx LastAlias,\n"
+        "                                     ArrayRef<PartialMappingIdx> "
+        "Order);\n";
 }
 
 /// Visit each register class belonging to the given register bank.
@@ -375,6 +475,55 @@ void RegisterBankEmitter::emitBaseClassImplementation(
         "class ID "
         "0x\").concat(llvm::Twine::utohexstr(RegClassID)).str().c_str());\n"
         "}\n";
+
+  emitPartialMapImplementation(OS, TargetName, Banks);
+}
+
+void RegisterBankEmitter::emitPartialMapImplementation(
+    raw_ostream &OS, StringRef TargetName, ArrayRef<RegisterBank> Banks) {
+  OS << "\nconst RegisterBankInfo::PartialMapping\n"
+     << TargetName
+     << "GenRegisterBankInfo::PartMappings[] = {\n"
+        "  // StartIdx, Length, RegBank\n";
+  for (const auto &Bank : Banks) {
+    for (const auto &SI : Bank.getPartSizeSet()) {
+      OS << "  {" << SI.StartIdx << ", " << SI.Length << ", " << TargetName
+         << "::" << Bank.getInstanceVarName() << "},\n";
+    }
+    OS << '\n';
+  }
+  OS << "};\n\n";
+
+  OS << "bool " << TargetName << R"(GenRegisterBankInfo::checkPartialMappingIdx(
+    PartialMappingIdx FirstAlias, PartialMappingIdx LastAlias,
+    ArrayRef<PartialMappingIdx> Order) {
+  if (Order.front() != FirstAlias)
+    return false;
+  if (Order.back() != LastAlias)
+    return false;
+  if (Order.front() > Order.back())
+    return false;
+
+  PartialMappingIdx Previous = Order.front();
+  for (const auto &Current : Order.drop_front()) {
+    if (Previous + 1 != Current)
+      return false;
+    Previous = Current;
+  }
+  return true;
+}
+)";
+
+  OS << "bool " << TargetName <<
+      R"(GenRegisterBankInfo::checkPartialMap(unsigned Idx,
+                                                 unsigned ValStartIdx,
+                                                 unsigned ValLength,
+                                                 const RegisterBank &RB) {
+  const PartialMapping &Map = PartMappings[Idx];
+  return Map.StartIdx == ValStartIdx && Map.Length == ValLength &&
+         Map.RegBank == &RB;
+}
+)";
 }
 
 void RegisterBankEmitter::run(raw_ostream &OS) {
@@ -401,7 +550,8 @@ void RegisterBankEmitter::run(raw_ostream &OS) {
           VisitedRCs);
     }
 
-    Banks.push_back(Bank);
+    Bank.initPartSizeSet();
+    Banks.push_back(std::move(Bank));
   }
 
   if (Banks.empty())
