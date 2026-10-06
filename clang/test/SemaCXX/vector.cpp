@@ -342,6 +342,7 @@ enum E { A };
 #if __cplusplus >= 201103L
 enum class ScopedE { A };
 typedef ScopedE ScopedEnumVector __attribute__((ext_vector_type(4))); // expected-error {{invalid vector element type 'ScopedE'}}
+typedef ScopedE ScopedEnumSizeVector __attribute__((vector_size(16))); // expected-error {{invalid vector element type 'ScopedE'}}
 #endif
 
 template <typename T> struct Vector {
