@@ -73,13 +73,14 @@ define amdgpu_cs ptr addrspace(5) @sponentry_cs_dvgpr_control_flow(i32 %val, ptr
 ; CHECK-NEXT:    scratch_store_b32 off, v0, s33 scope:SCOPE_SYS
 ; CHECK-NEXT:    s_wait_storecnt 0x0
 ; CHECK-NEXT:    v_cmpx_gt_i32_e32 0x43, v0
+; CHECK-NEXT:    s_cbranch_execz .LBB3_2
 ; CHECK-NEXT:  ; %bb.1: ; %if.then
 ; CHECK-NEXT:    s_getreg_b32 s1, hwreg(HW_REG_WAVE_HW_ID2, 8, 2)
 ; CHECK-NEXT:    s_delay_alu instid0(SALU_CYCLE_1) | instskip(SKIP_1) | instid1(SALU_CYCLE_1)
 ; CHECK-NEXT:    s_cmp_lg_u32 0, s1
 ; CHECK-NEXT:    s_cmovk_i32 s1, 0x1c0
 ; CHECK-NEXT:    v_mov_b32_e32 v1, s1
-; CHECK-NEXT:  ; %bb.2: ; %if.end
+; CHECK-NEXT:  .LBB3_2: ; %if.end
 ; CHECK-NEXT:    s_or_b32 exec_lo, exec_lo, s0
 ; CHECK-NEXT:    s_delay_alu instid0(VALU_DEP_1)
 ; CHECK-NEXT:    v_readfirstlane_b32 s0, v1
@@ -208,11 +209,13 @@ define amdgpu_gfx ptr addrspace(5) @sponentry_gfx(i32 %val, ptr addrspace(5) %pt
 ; GISEL-NEXT:    scratch_store_b32 off, v2, s32 offset:4 scope:SCOPE_SYS
 ; GISEL-NEXT:    s_wait_storecnt 0x0
 ; GISEL-NEXT:    v_cmpx_gt_i32_e32 0x43, v2
+; GISEL-NEXT:    s_cbranch_execz .LBB6_2
 ; GISEL-NEXT:  ; %bb.1: ; %if.then
 ; GISEL-NEXT:    s_mov_b32 s1, s32
 ; GISEL-NEXT:    s_wait_alu depctr_sa_sdst(0)
 ; GISEL-NEXT:    v_mov_b32_e32 v0, s1
-; GISEL-NEXT:  ; %bb.2: ; %if.end
+; GISEL-NEXT:  .LBB6_2: ; %if.end
+; GISEL-NEXT:    s_wait_alu depctr_sa_sdst(0)
 ; GISEL-NEXT:    s_or_b32 exec_lo, exec_lo, s0
 ; GISEL-NEXT:    s_setpc_b64 s[30:31]
 entry:
@@ -461,11 +464,13 @@ define amdgpu_cs_chain void @sponentry_cs_chain(i32 %val, ptr addrspace(5) %ptr)
 ; GISEL-NEXT:    scratch_store_b32 off, v8, s32 offset:4 scope:SCOPE_SYS
 ; GISEL-NEXT:    s_wait_storecnt 0x0
 ; GISEL-NEXT:    v_cmpx_gt_i32_e32 0x43, v8
+; GISEL-NEXT:    s_cbranch_execz .LBB10_2
 ; GISEL-NEXT:  ; %bb.1: ; %if.then
 ; GISEL-NEXT:    s_mov_b32 s1, s32
 ; GISEL-NEXT:    s_wait_alu depctr_sa_sdst(0)
 ; GISEL-NEXT:    v_mov_b32_e32 v0, s1
-; GISEL-NEXT:  ; %bb.2: ; %if.end
+; GISEL-NEXT:  .LBB10_2: ; %if.end
+; GISEL-NEXT:    s_wait_alu depctr_sa_sdst(0)
 ; GISEL-NEXT:    s_or_b32 exec_lo, exec_lo, s0
 ; GISEL-NEXT:    scratch_store_b32 v9, v0, off scope:SCOPE_SYS
 ; GISEL-NEXT:    s_wait_storecnt 0x0
