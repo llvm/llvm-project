@@ -1310,9 +1310,8 @@ bool IsTransparentInterveningCode(const parser::ExecutionPartConstruct &x) {
       parser::Unwrap<parser::ContinueStmt>(x);
 }
 
-template <typename T,
-    typename = std::enable_if_t<common::is_arithmetic_v<T>>> WithReason<T>
-    operator+(const WithReason<T> &a, const WithReason<T> &b) {
+template <typename T, typename = std::enable_if_t<common::is_arithmetic_v<T>>>
+WithReason<T> operator+(const WithReason<T> &a, const WithReason<T> &b) {
   if (a.value && b.value) {
     return WithReason<T>{
         *a.value + *b.value, Reason().Append(a.reason).Append(b.reason)};
@@ -1320,9 +1319,8 @@ template <typename T,
   return WithReason<T>();
 }
 
-template <typename T,
-    typename = std::enable_if_t<common::is_arithmetic_v<T>>> WithReason<T>
-    operator+(T a, const WithReason<T> &b) {
+template <typename T, typename = std::enable_if_t<common::is_arithmetic_v<T>>>
+WithReason<T> operator+(T a, const WithReason<T> &b) {
   return WithReason<T>{a, Reason()} + b;
 }
 
