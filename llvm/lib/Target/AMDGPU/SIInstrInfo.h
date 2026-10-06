@@ -308,6 +308,15 @@ public:
                            unsigned ClusterSize,
                            unsigned NumBytes) const override;
 
+  /// Return true if the memory operations described by \p BaseOps1 and
+  /// \p BaseOps2 (as returned by getMemOperandsWithOffsetWidth) address the
+  /// same base. Unlike shouldClusterMemOps, this does not apply the
+  /// MaxMemoryClusterDWords budget, which only bounds pre-RA register pressure.
+  /// Only the first base operand is compared, unlike
+  /// memOpsHaveSameBaseOperands which requires all of them to match.
+  bool memOpsHaveSameBase(ArrayRef<const MachineOperand *> BaseOps1,
+                          ArrayRef<const MachineOperand *> BaseOps2) const;
+
   bool shouldScheduleLoadsNear(SDNode *Load0, SDNode *Load1, int64_t Offset0,
                                int64_t Offset1, unsigned NumLoads) const override;
 

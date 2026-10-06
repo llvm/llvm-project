@@ -696,6 +696,17 @@ static bool memOpsHaveSameBasePtr(const MachineInstr &MI1,
   return Base1 == Base2;
 }
 
+bool SIInstrInfo::memOpsHaveSameBase(
+    ArrayRef<const MachineOperand *> BaseOps1,
+    ArrayRef<const MachineOperand *> BaseOps2) const {
+  // Accesses without base operands (e.g. scratch addressed only by an
+  // immediate offset) share the same implicit base.
+  if (BaseOps1.empty() || BaseOps2.empty())
+    return BaseOps1.empty() && BaseOps2.empty();
+  return memOpsHaveSameBasePtr(*BaseOps1.front()->getParent(), BaseOps1,
+                               *BaseOps2.front()->getParent(), BaseOps2);
+}
+
 bool SIInstrInfo::shouldClusterMemOps(ArrayRef<const MachineOperand *> BaseOps1,
                                       int64_t Offset1, bool OffsetIsScalable1,
                                       ArrayRef<const MachineOperand *> BaseOps2,
@@ -704,19 +715,17 @@ bool SIInstrInfo::shouldClusterMemOps(ArrayRef<const MachineOperand *> BaseOps1,
                                       unsigned NumBytes) const {
   // If the mem ops (to be clustered) do not have the same base ptr, then they
   // should not be clustered
-  unsigned MaxMemoryClusterDWords = DefaultMemoryClusterDWordsLimit;
-  if (!BaseOps1.empty() && !BaseOps2.empty()) {
-    const MachineInstr &FirstLdSt = *BaseOps1.front()->getParent();
-    const MachineInstr &SecondLdSt = *BaseOps2.front()->getParent();
-    if (!memOpsHaveSameBasePtr(FirstLdSt, BaseOps1, SecondLdSt, BaseOps2))
-      return false;
-
-    const SIMachineFunctionInfo *MFI =
-        FirstLdSt.getMF()->getInfo<SIMachineFunctionInfo>();
-    MaxMemoryClusterDWords = MFI->getMaxMemoryClusterDWords();
-  } else if (!BaseOps1.empty() || !BaseOps2.empty()) {
-    // If only one base op is empty, they do not have the same base ptr
+  if (!memOpsHaveSameBase(BaseOps1, BaseOps2))
     return false;
+
+  // Both lists are empty or neither is, so BaseOps1 alone decides whether
+  // there is an instruction to read the budget from.
+  assert(BaseOps1.empty() == BaseOps2.empty());
+  unsigned MaxMemoryClusterDWords = DefaultMemoryClusterDWordsLimit;
+  if (!BaseOps1.empty()) {
+    const MachineFunction *MF = BaseOps1.front()->getParent()->getMF();
+    MaxMemoryClusterDWords =
+        MF->getInfo<SIMachineFunctionInfo>()->getMaxMemoryClusterDWords();
   }
 
   // In order to avoid register pressure, on an average, the number of DWORDS
