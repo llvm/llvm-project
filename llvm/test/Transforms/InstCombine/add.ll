@@ -5330,3 +5330,27 @@ define i32 @zext_add_no_fold_symmetric(i8 %x) {
   %r = add i32 %z, -4
   ret i32 %r
 }
+
+define i32 @csa_add_shl(i32 %x, i32 %y) {
+; CHECK-LABEL: @csa_add_shl(
+; CHECK-NEXT:    [[ADD:%.*]] = add i32 [[X:%.*]], [[Y:%.*]]
+; CHECK-NEXT:    ret i32 [[ADD]]
+;
+  %xor = xor i32 %x, %y
+  %and = and i32 %x, %y
+  %shl = shl i32 %and, 1
+  %add = add i32 %xor, %shl
+  ret i32 %add
+}
+
+define i32 @csa_add_mul(i32 %x, i32 %y) {
+; CHECK-LABEL: @csa_add_mul(
+; CHECK-NEXT:    [[ADD:%.*]] = add i32 [[X:%.*]], [[Y:%.*]]
+; CHECK-NEXT:    ret i32 [[ADD]]
+;
+  %xor = xor i32 %x, %y
+  %and = and i32 %x, %y
+  %mul = mul i32 %and, 2
+  %add = add i32 %xor, %mul
+  ret i32 %add
+}
