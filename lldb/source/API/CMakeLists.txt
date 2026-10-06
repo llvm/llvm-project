@@ -76,6 +76,7 @@ add_lldb_library(liblldb ${liblldb_library_type} ${option_framework}
   SBLanguageRuntime.cpp
   SBLaunchInfo.cpp
   SBLineEntry.cpp
+  SBLineSpec.cpp
   SBListener.cpp
   SBMemoryRegionInfo.cpp
   SBMemoryRegionInfoList.cpp

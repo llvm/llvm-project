@@ -9,6 +9,7 @@
 #include "lldb/API/SBModule.h"
 #include "lldb/API/SBAddress.h"
 #include "lldb/API/SBFileSpec.h"
+#include "lldb/API/SBLineSpec.h"
 #include "lldb/API/SBModuleSpec.h"
 #include "lldb/API/SBProcess.h"
 #include "lldb/API/SBStream.h"
@@ -288,6 +289,25 @@ SBSymbolContextList SBModule::FindCompileUnits(const SBFileSpec &sb_file_spec) {
     module_sp->FindCompileUnits(*sb_file_spec, *sb_sc_list);
   }
   return sb_sc_list;
+}
+
+SBSymbolContextList SBModule::FindSymbolContexts(const SBLineSpec &line_spec) {
+  LLDB_INSTRUMENT_VA(this, line_spec);
+
+  SBSymbolContextList sc_list;
+  const ModuleSP module_sp(GetSP());
+  if (!module_sp || !line_spec.IsValid())
+    return sc_list;
+
+  SBFileSpec file_spec = line_spec.GetFileSpec();
+  if (!file_spec.IsValid())
+    return sc_list;
+
+  // TODO: Pass the column when ResolveSymbolContextsForFileSpec supports it.
+  module_sp->ResolveSymbolContextsForFileSpec(
+      *file_spec, line_spec.GetLine(), line_spec.GetCheckInlines(),
+      lldb::eSymbolContextEverything, *sc_list);
+  return sc_list;
 }
 
 static Symtab *GetUnifiedSymbolTable(const lldb::ModuleSP &module_sp) {
