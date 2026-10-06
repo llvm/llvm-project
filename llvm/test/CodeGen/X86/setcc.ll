@@ -309,20 +309,18 @@ define i16 @shift_and(i16 %a) {
 define i32 @PR55138(i32 %x) {
 ; X86-LABEL: PR55138:
 ; X86:       ## %bb.0:
-; X86-NEXT:    movzbl {{[0-9]+}}(%esp), %ecx
-; X86-NEXT:    andl $15, %ecx
-; X86-NEXT:    movl $27030, %edx ## imm = 0x6996
+; X86-NEXT:    movzwl {{[0-9]+}}(%esp), %ecx
+; X86-NEXT:    movw $27030, %dx ## imm = 0x6996
 ; X86-NEXT:    xorl %eax, %eax
-; X86-NEXT:    btl %ecx, %edx
+; X86-NEXT:    btw %cx, %dx
 ; X86-NEXT:    setb %al
 ; X86-NEXT:    retl
 ;
 ; X64-NOBMI2-LABEL: PR55138:
 ; X64-NOBMI2:       ## %bb.0:
-; X64-NOBMI2-NEXT:    andl $15, %edi
-; X64-NOBMI2-NEXT:    movl $27030, %ecx ## imm = 0x6996
+; X64-NOBMI2-NEXT:    movw $27030, %cx ## imm = 0x6996
 ; X64-NOBMI2-NEXT:    xorl %eax, %eax
-; X64-NOBMI2-NEXT:    btl %edi, %ecx
+; X64-NOBMI2-NEXT:    btw %di, %cx
 ; X64-NOBMI2-NEXT:    setb %al
 ; X64-NOBMI2-NEXT:    retq
 ;
