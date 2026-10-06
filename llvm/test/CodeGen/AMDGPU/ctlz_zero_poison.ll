@@ -610,7 +610,6 @@ define amdgpu_kernel void @v_ctlz_zero_poison_i8_with_select(ptr addrspace(1) no
 ; VI-NEXT:    v_mov_b32_e32 v1, s1
 ; VI-NEXT:    s_waitcnt vmcnt(0)
 ; VI-NEXT:    v_lshlrev_b32_e32 v3, 24, v2
-; VI-NEXT:    v_and_b32_e32 v2, 0xffff, v2
 ; VI-NEXT:    v_ffbh_u32_e32 v3, v3
 ; VI-NEXT:    v_cmp_ne_u32_e32 vcc, 0, v2
 ; VI-NEXT:    v_cndmask_b32_e32 v2, 32, v3, vcc
