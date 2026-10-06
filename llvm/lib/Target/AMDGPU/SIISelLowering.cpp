@@ -21123,8 +21123,15 @@ SITargetLowering::shouldExpandAtomicRMWInIR(const AtomicRMWInst *RMW) const {
   case AtomicRMWInst::USubSat: {
     if (Op == AtomicRMWInst::USubCond && !Subtarget->hasCondSubInsts())
       return AtomicExpansionKind::CmpXChg;
-    if (Op == AtomicRMWInst::USubSat && !Subtarget->hasSubClampInsts())
-      return AtomicExpansionKind::CmpXChg;
+    if (Op == AtomicRMWInst::USubSat) {
+      // The global and buffer forms predate the LDS and flat ones.
+      if (!Subtarget->hasSubClampInsts() ||
+          (AS == AMDGPUAS::LOCAL_ADDRESS &&
+           !Subtarget->hasAtomicDsCondSubClampInsts()) ||
+          (AS == AMDGPUAS::FLAT_ADDRESS &&
+           !Subtarget->hasAtomicCondSubClampFlatInsts()))
+        return AtomicExpansionKind::CmpXChg;
+    }
     if (Op == AtomicRMWInst::USubCond || Op == AtomicRMWInst::USubSat) {
       auto *IT = dyn_cast<IntegerType>(RMW->getType());
       if (!IT || IT->getBitWidth() != 32)
