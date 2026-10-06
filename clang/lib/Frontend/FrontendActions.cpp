@@ -90,9 +90,9 @@ ASTDumpAction::CreateASTConsumer(CompilerInstance &CI, StringRef InFile) {
   CI.getLangOpts().CommentOpts.RetainComments = true;
   const FrontendOptions &Opts = CI.getFrontendOpts();
   return CreateASTDumper(nullptr /*Dump to stdout.*/, Opts.ASTDumpFilter,
-                         Opts.ASTDumpDecls, Opts.ASTDumpAll,
-                         Opts.ASTDumpLookups, Opts.ASTDumpDeclTypes,
-                         Opts.ASTDumpFormat);
+                         Opts.ASTDumpFilterPath, Opts.ASTDumpDecls,
+                         Opts.ASTDumpAll, Opts.ASTDumpLookups,
+                         Opts.ASTDumpDeclTypes, Opts.ASTDumpFormat);
 }
 
 std::unique_ptr<ASTConsumer>

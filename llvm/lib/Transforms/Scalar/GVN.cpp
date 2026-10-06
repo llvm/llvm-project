@@ -2338,7 +2338,13 @@ bool GVNPassImpl::performLoopLoadPRE(LoadInst *Load,
 
   // Make sure the memory at this pointer cannot be freed, therefore we can
   // safely reload from it after clobber.
-  if (LoadPtr->canBeFreed())
+  //
+  // The header load has already dereferenced LoadPtr on this iteration, so
+  // only a deallocation between that load and the reload in LoopBlock can make
+  // the same address unsafe to read again. Check every path between these two
+  // points for an instruction that may deallocate the memory.
+  if (LoadPtr->canBeFreed() &&
+      !willNotFreeBetween(Load, LoopBlock->getTerminator(), DT))
     return false;
 
   // TODO: Support critical edge splitting if blocker has more than 1 successor.
@@ -2951,7 +2957,7 @@ bool GVNPassImpl::findReachingValuesForLoad(
   // Phase 1. First off, look for a local dependency to avoid having to
   // disambiguate between before the load and after the load of the starting
   // block (as the load may be visited from a backedge).
-  do {
+  for (;;) {
     // Scan users of the clobbering memory access.
     if (auto RMV = scanMemoryAccessesUsers(
             Loc, IsInvariantLoad, StartBlock,
@@ -2976,7 +2982,7 @@ bool GVNPassImpl::findReachingValuesForLoad(
     // It may happen that the clobbering memory access does not actually
     // clobber our load location, transition to its defining memory access.
     ClobberMA = cast<MemoryUseOrDef>(ClobberMA)->getDefiningAccess();
-  } while (ClobberMA->getBlock() == StartBlock);
+  }
 
   // Non-local speculations are not allowed under ASan.
   if (L->getFunction()->hasFnAttribute(Attribute::SanitizeAddress) ||
@@ -2991,7 +2997,7 @@ bool GVNPassImpl::findReachingValuesForLoad(
   // visited does get phi-translated.
   DependencyBlockSet Blocks;
   SmallVector<BasicBlock *, 16> InitialWorklist;
-  const DataLayout &DL = L->getModule()->getDataLayout();
+  const DataLayout &DL = L->getDataLayout();
   if (!collectPredecessors(StartBlock,
                            PHITransAddr(L->getPointerOperand(), DL, AC),
                            ClobberMA, Blocks, InitialWorklist))

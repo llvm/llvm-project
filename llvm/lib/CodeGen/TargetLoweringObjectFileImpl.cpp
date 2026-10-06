@@ -858,7 +858,7 @@ static MCSection *selectExplicitSectionGlobal(const GlobalObject *GO,
   // Infer section flags from the section name if we can.
   Kind = getELFKindForNamedSection(SectionName, Kind);
 
-  unsigned Flags = getELFSectionFlags(Kind, TM.getTargetTriple());
+  unsigned Flags = getELFSectionFlags(Kind, GO->getParent()->getTargetTriple());
   auto [Group, IsComdat, ExtraFlags, Type, EntrySize] =
       getGlobalObjectInfo(GO, TM, SectionName, Kind);
   Flags |= ExtraFlags;
@@ -963,7 +963,7 @@ static MCSection *selectELFSectionForGlobal(
 
 MCSection *TargetLoweringObjectFileELF::SelectSectionForGlobal(
     const GlobalObject *GO, SectionKind Kind, const TargetMachine &TM) const {
-  unsigned Flags = getELFSectionFlags(Kind, TM.getTargetTriple());
+  unsigned Flags = getELFSectionFlags(Kind, GO->getParent()->getTargetTriple());
 
   // If we have -ffunction-section or -fdata-section then we should emit the
   // global value to a uniqued section specifically for it.
@@ -983,7 +983,7 @@ MCSection *TargetLoweringObjectFileELF::SelectSectionForGlobal(
 MCSection *TargetLoweringObjectFileELF::getUniqueSectionForFunction(
     const Function &F, const TargetMachine &TM) const {
   SectionKind Kind = SectionKind::getText();
-  unsigned Flags = getELFSectionFlags(Kind, TM.getTargetTriple());
+  unsigned Flags = getELFSectionFlags(Kind, F.getParent()->getTargetTriple());
   // If the function's section names is pre-determined via pragma or a
   // section attribute, call selectExplicitSectionGlobal.
   if (F.hasSection())
@@ -2127,7 +2127,7 @@ MCSection *TargetLoweringObjectFileCOFF::getStaticDtorSection(
 const MCExpr *TargetLoweringObjectFileCOFF::lowerRelativeReference(
     const GlobalValue *LHS, const GlobalValue *RHS, int64_t Addend,
     std::optional<int64_t> PCRelativeOffset, const TargetMachine &TM) const {
-  const Triple &T = TM.getTargetTriple();
+  const Triple &T = LHS->getParent()->getTargetTriple();
   if (T.isOSCygMing())
     return nullptr;
 
@@ -2928,7 +2928,10 @@ MCSection *TargetLoweringObjectFileGOFF::SelectSectionForGlobal(
     const GlobalObject *GO, SectionKind Kind, const TargetMachine &TM) const {
   auto *Symbol = TM.getSymbol(GO);
 
-  if (Kind.isBSS() || Kind.isData() || Kind.isReadOnlyWithRel()) {
+  // Read-only data stays in the code section only if it is local: references
+  // from other translation units are always parts in the WSA.
+  if (Kind.isBSS() || Kind.isData() || Kind.isReadOnlyWithRel() ||
+      (Kind.isReadOnly() && !GO->hasLocalLinkage())) {
     GOFF::ESDBindingScope PRBindingScope =
         GO->hasExternalLinkage()
             ? (GO->hasDefaultVisibility() ? GOFF::ESD_BSC_ImportExport
