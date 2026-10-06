@@ -434,7 +434,7 @@ public:
       : AA(Aa), BatchAA(std::in_place, *Aa), F(Func), SE(Se), TTI(Tti),
         TLI(TLi), LI(Li), DT(Dt), AC(AC), DB(DB), DL(DL), ORE(ORE),
         CostKind(getSLPCostKind(Func)),
-        Builder(Se->getContext(), TargetFolder(*DL)) {
+        Builder(Se->getModule(), TargetFolder(*DL)) {
     CodeMetrics::collectEphemeralValues(F, AC, EphValues);
     // Use the vector register size specified by the target unless overridden
     // by a command-line option.
