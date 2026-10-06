@@ -130,15 +130,11 @@ define <12 x i1> @padding_bits_for_load_no_widen(ptr %p) {
   ret <12 x i1> %s
 }
 
-; Make sure we do not crash when the widened shuffle would have more than
-; INT_MAX elements in the concatenated operand space.
-define <2 x i8> @huge_adjacent_loads_no_widen(ptr %p) {
-; CHECK-LABEL: define <2 x i8> @huge_adjacent_loads_no_widen(
+define <2 x i8> @huge_adjacent_loads_widen_v1073741823i8_v2147483646i8(ptr %p) {
+; CHECK-LABEL: define <2 x i8> @huge_adjacent_loads_widen_v1073741823i8_v2147483646i8(
 ; CHECK-SAME: ptr [[P:%.*]]) {
-; CHECK-NEXT:    [[P_HI:%.*]] = getelementptr inbounds i8, ptr [[P]], i64 1073741823
-; CHECK-NEXT:    [[A:%.*]] = load <1073741823 x i8>, ptr [[P]], align 1073741824
-; CHECK-NEXT:    [[B:%.*]] = load <1073741823 x i8>, ptr [[P_HI]], align 1073741824
-; CHECK-NEXT:    [[S:%.*]] = shufflevector <1073741823 x i8> [[A]], <1073741823 x i8> [[B]], <2 x i32> <i32 0, i32 1>
+; CHECK-NEXT:    [[TMP1:%.*]] = load <2147483646 x i8>, ptr [[P]], align 1073741824
+; CHECK-NEXT:    [[S:%.*]] = shufflevector <2147483646 x i8> [[TMP1]], <2147483646 x i8> poison, <2 x i32> <i32 0, i32 1>
 ; CHECK-NEXT:    ret <2 x i8> [[S]]
 ;
   %p_hi = getelementptr inbounds i8, ptr %p, i64 1073741823
