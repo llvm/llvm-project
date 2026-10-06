@@ -72,7 +72,7 @@ template <typename T> TestLogger &TestLogger::operator<<(T t) {
                 (cpp::is_integral_v<T> && cpp::is_unsigned_v<T> &&
                  (sizeof(T) > sizeof(uint64_t)))) {
     static_assert(sizeof(T) % 8 == 0, "Unsupported size of UInt");
-    const IntegerToString<T, radix::Hex::WithPrefix> buffer(t);
+    const IntegerToString<T, char, radix::Hex::WithPrefix> buffer(t);
     return *this << buffer.view();
   } else {
     return *this << cpp::to_string(t);

@@ -23,7 +23,8 @@ namespace details {
 // Format T as uppercase hexadecimal number with leading zeros.
 template <typename T>
 using ZeroPaddedHexFmt = IntegerToString<
-    T, typename radix::Hex::WithWidth<(sizeof(T) * 2)>::WithPrefix::Uppercase>;
+    T, char,
+    typename radix::Hex::WithWidth<(sizeof(T) * 2)>::WithPrefix::Uppercase>;
 
 } // namespace details
 

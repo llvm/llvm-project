@@ -87,7 +87,7 @@ TYPED_TEST(LlvmLibcUIntClassTest, Multiplication, Types) {
 
 template <typename T> void print(const char *msg, T value) {
   testing::tlog << msg;
-  IntegerToString<T, radix::Hex> buffer(value);
+  IntegerToString<T, char, radix::Hex> buffer(value);
   testing::tlog << buffer.view() << "\n";
 }
 

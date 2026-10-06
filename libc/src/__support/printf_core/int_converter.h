@@ -26,11 +26,11 @@ namespace printf_core {
 
 namespace details {
 
-using HexFmt = IntegerToString<uintmax_t, radix::Hex>;
-using HexFmtUppercase = IntegerToString<uintmax_t, radix::Hex::Uppercase>;
-using OctFmt = IntegerToString<uintmax_t, radix::Oct>;
+using HexFmt = IntegerToString<uintmax_t, char, radix::Hex>;
+using HexFmtUppercase = IntegerToString<uintmax_t, char, radix::Hex::Uppercase>;
+using OctFmt = IntegerToString<uintmax_t, char, radix::Oct>;
 using DecFmt = IntegerToString<uintmax_t>;
-using BinFmt = IntegerToString<uintmax_t, radix::Bin>;
+using BinFmt = IntegerToString<uintmax_t, char, radix::Bin>;
 
 LIBC_INLINE constexpr size_t num_buf_size() {
   cpp::array<size_t, 5> sizes{
