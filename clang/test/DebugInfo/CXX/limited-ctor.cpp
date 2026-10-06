@@ -27,10 +27,9 @@ struct E {
   constexpr E(){};
 } TestE;
 
-// Restored by this revert: a constexpr constructor that is only declared keeps
-// the class exempt from constructor homing. See Aliased below for a case where
-// narrowing the exemption to defined constructors homes the type nowhere.
-// CHECK-DAG: !DICompositeType(tag: DW_TAG_structure_type, name: "DeclaredConstexpr"{{.*}}DIFlagTypePassByValue
+// Declared but not defined constexpr constructor should not emit full debug
+// info.
+// CHECK-DAG: !DICompositeType(tag: DW_TAG_structure_type, name: "DeclaredConstexpr"{{.*}}flags: DIFlagFwdDecl
 struct DeclaredConstexpr {
   constexpr DeclaredConstexpr();
 } TestDeclaredConstexpr;

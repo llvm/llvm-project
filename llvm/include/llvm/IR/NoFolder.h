@@ -75,8 +75,8 @@ public:
     return nullptr;
   }
 
-  Value *FoldGEP(Type *Ty, Value *Ptr, ArrayRef<Value *> IdxList,
-                 GEPNoWrapFlags NW) const override {
+  Value *FoldGEP(const DataLayout &, Type *Ty, Value *Ptr,
+                 ArrayRef<Value *> IdxList, GEPNoWrapFlags NW) const override {
     return nullptr;
   }
 
@@ -106,6 +106,14 @@ public:
 
   Value *FoldShuffleVector(Value *V1, Value *V2,
                            ArrayRef<int> Mask) const override {
+    return nullptr;
+  }
+
+  Value *FoldBitInsert(Value *Base, Value *Val, Value *Offset) const override {
+    return nullptr;
+  }
+
+  Value *FoldBitExtract(Type *Ty, Value *Src, Value *Offset) const override {
     return nullptr;
   }
 

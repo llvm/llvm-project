@@ -200,9 +200,10 @@ void X86AsmPrinter::emitKCFITypeId(const MachineFunction &MF) {
   EmitKCFITypePadding(MF);
   unsigned DestReg = X86::EAX;
 
-  if (F.getParent()->getModuleFlag("kcfi-arity")) {
+  const Module *M = F.getParent();
+  if (M->getModuleFlag("kcfi-arity")) {
     // The ArityToRegMap assumes the 64-bit SysV ABI.
-    [[maybe_unused]] const auto &Triple = MF.getTarget().getTargetTriple();
+    [[maybe_unused]] const auto &Triple = M->getTargetTriple();
     assert(Triple.isX86_64() && !Triple.isOSWindows());
 
     // Determine the function's arity (i.e., the number of arguments) at the ABI
@@ -920,7 +921,7 @@ bool X86AsmPrinter::PrintAsmMemoryOperand(const MachineInstr *MI, unsigned OpNo,
 }
 
 void X86AsmPrinter::emitStartOfAsmFile(Module &M) {
-  const Triple &TT = TM.getTargetTriple();
+  const Triple &TT = M.getTargetTriple();
 
   if (TT.isOSBinFormatELF()) {
     // Assemble feature flags that may require creation of a note section.
@@ -1062,7 +1063,7 @@ static bool usesMSVCFloatingPoint(const Triple &TT, const Module &M) {
 }
 
 void X86AsmPrinter::emitEndOfAsmFile(Module &M) {
-  const Triple &TT = TM.getTargetTriple();
+  const Triple &TT = M.getTargetTriple();
 
   if (TT.isOSBinFormatMachO()) {
     // Mach-O uses non-lazy symbol stubs to encode per-TU information into
@@ -1122,8 +1123,7 @@ void X86AsmPrinter::emitEndOfAsmFile(Module &M) {
       // floating point operations in the program (including calls). A program
       // that only has: `scanf("%f", &global_float);` may fail to trigger this,
       // but oh well...that's a documented issue.
-      StringRef SymbolName =
-          (TT.getArch() == Triple::x86) ? "__fltused" : "_fltused";
+      StringRef SymbolName = TT.isX86_32() ? "__fltused" : "_fltused";
       MCSymbol *S = MMI->getContext().getOrCreateSymbol(SymbolName);
       OutStreamer->emitSymbolAttribute(S, MCSA_Global);
       return;

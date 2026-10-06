@@ -485,7 +485,7 @@ static mlir::Value emitCXXNewAllocSize(CIRGenFunction &cgf, const CXXNewExpr *e,
   // the cookie size would bring the total size >= 0.
   //
   // If the array size is constant, Sema will have prevented negative
-  // values and size overflow.
+  // values.
 
   // Compute the constant factor.
   llvm::APInt arraySizeMultiplier(sizeWidth, 1);
@@ -515,8 +515,8 @@ static mlir::Value emitCXXNewAllocSize(CIRGenFunction &cgf, const CXXNewExpr *e,
           .tryEmitAbstract(arraySize, arraySize->getType());
   if (constNumElements) {
     // Get an APInt from the constant
-    const llvm::APInt &count =
-        mlir::cast<cir::IntAttr>(constNumElements).getValue();
+    auto numEltsAttr = mlir::cast<cir::IntAttr>(constNumElements);
+    const llvm::APInt &count = numEltsAttr.getValue();
 
     [[maybe_unused]] unsigned numElementsWidth = count.getBitWidth();
     bool hasAnyOverflow = false;
@@ -529,7 +529,8 @@ static mlir::Value emitCXXNewAllocSize(CIRGenFunction &cgf, const CXXNewExpr *e,
     // that.  We immediately do the zextOrTrunc below (which should really only
     // do zext, since our assert handles the trunc), but it will make sure the
     // width is correct.
-    assert(!count.isNegative() && "Expected non-negative array size");
+    assert(!(numEltsAttr.isSigned() && count.isNegative()) &&
+           "Expected non-negative array size");
     assert(numElementsWidth <= sizeWidth &&
            "Expected a size_t array size constant");
 
@@ -548,9 +549,7 @@ static mlir::Value emitCXXNewAllocSize(CIRGenFunction &cgf, const CXXNewExpr *e,
     bool overflow;
     llvm::APInt allocationSize =
         adjustedCount.umul_ov(typeSizeMultiplier, overflow);
-
-    // Sema prevents us from hitting this case
-    assert(!overflow && "Overflow in array allocation size");
+    hasAnyOverflow |= overflow;
 
     // Add in the cookie, and check whether it's overflowed.
     if (cookieSize != 0) {
@@ -1532,9 +1531,12 @@ void CIRGenFunction::emitCXXDeleteExpr(const CXXDeleteExpr *e) {
           ptr.getAlignment().alignmentOfArrayElement(elementSize).getQuantity();
     }
 
-    auto deleteParams = cir::UsualDeleteParamsAttr::get(
-        builder.getContext(), udp.Size, align,
-        isTypeAwareAllocation(udp.TypeAwareDelete), udp.DestroyingDelete);
+    cir::UsualDeleteParamsAttr deleteParams;
+    if (udp.Size || align || isTypeAwareAllocation(udp.TypeAwareDelete) ||
+        udp.DestroyingDelete)
+      deleteParams = cir::UsualDeleteParamsAttr::get(
+          builder.getContext(), udp.Size, align,
+          isTypeAwareAllocation(udp.TypeAwareDelete), udp.DestroyingDelete);
 
     // Alignment of the element, used for the 'cookie' later.
     uint64_t elementAlign = cgm.getASTContext()
@@ -1784,7 +1786,7 @@ mlir::Value CIRGenFunction::emitCXXNewExpr(const CXXNewExpr *e) {
     // provides the cleanup region for the deferred destructors.
     mlir::Value isNotNull = builder.createPtrIsNotNull(allocation.getPointer());
 
-    ConditionalEvaluation eval(*this);
+    ConditionalEvaluation eval(*this, getLoc(e->getSourceRange()));
     nullCheckOp =
         cir::IfOp::create(builder, getLoc(e->getSourceRange()), isNotNull,
                           /*withElseRegion=*/false,

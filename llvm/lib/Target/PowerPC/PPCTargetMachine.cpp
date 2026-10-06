@@ -154,7 +154,7 @@ static std::string computeFSAdditions(StringRef FS, CodeGenOptLevel OL,
   std::string FullFS = std::string(FS);
 
   // Make sure 64-bit features are available when CPUname is generic
-  if (TT.getArch() == Triple::ppc64 || TT.getArch() == Triple::ppc64le) {
+  if (TT.isPPC64()) {
     if (!FullFS.empty())
       FullFS = "+64bit," + FullFS;
     else
@@ -515,9 +515,15 @@ void PPCPassConfig::addPreRegAlloc() {
                &PPCVSXFMAMutateID);
   }
 
-  // FIXME: We probably don't need to run this for -fPIE.
-  if (getPPCTargetMachine().isPositionIndependent())
+  // FIXME: We probably don't need to run these for -fPIE.
+  if (getPPCTargetMachine().isPositionIndependent()) {
+    // FIXME: LiveVariables should not be necessary here!
+    // PPCTLSDynamicCallPass uses LiveIntervals which previously dependent on
+    // LiveVariables. This (unnecessary) dependency has been removed now,
+    // however a stage-2 clang build fails without LiveVariables computed here.
+    addPass(&LiveVariablesID);
     addPass(createPPCTLSDynamicCallPass());
+  }
   if (EnableExtraTOCRegDeps)
     addPass(createPPCTOCRegDepsPass());
 
