@@ -1,4 +1,5 @@
 // RUN: %clang_cc1 %s -triple x86_64-unknown-linux-gnu -emit-llvm -fextend-variable-liveness -fsanitize=null -fsanitize-trap=null -o - | FileCheck --check-prefixes=CHECK,NULL --implicit-check-not=ubsantrap %s
+// RUN: %clang_cc1 %s -triple x86_64-unknown-linux-gnu -emit-llvm -fextend-variable-liveness -fsanitize=memory -o - | FileCheck %s --check-prefixes=MEMORY
 // RUN: %clang_cc1 %s -triple x86_64-unknown-linux-gnu -emit-llvm -fextend-variable-liveness -o - | FileCheck %s
 
 // With -fextend-variable-liveness, the compiler previously generated a fake.use of any
@@ -59,3 +60,48 @@ void foo()
 // CHECK-NEXT:  call void (...) @llvm.fake.use(ptr [[VA_FAKE_USE]])
 
 // NULL: declare void @llvm.ubsantrap
+
+
+// MSan regression test from https://github.com/llvm/llvm-project/issues/225425
+// This test (not the tests above) was generated with update_cc_test_checks.py.
+//
+// A fake_use will be inserted for x. Currently, MSan erroneously checks it.
+//
+// MEMORY-LABEL: define dso_local noundef i32 @main(
+// MEMORY-SAME: ) #[[ATTR0:[0-9]+]] {
+// MEMORY-NEXT:  [[ENTRY:.*:]]
+// MEMORY-NEXT:    call void @llvm.donothing()
+// MEMORY-NEXT:    [[RETVAL:%.*]] = alloca i32, align 4
+// MEMORY-NEXT:    [[TMP0:%.*]] = ptrtoint ptr [[RETVAL]] to i64
+// MEMORY-NEXT:    [[TMP1:%.*]] = xor i64 [[TMP0]], 87960930222080
+// MEMORY-NEXT:    [[TMP2:%.*]] = inttoptr i64 [[TMP1]] to ptr
+// MEMORY-NEXT:    call void @llvm.memset.p0.i64(ptr align 4 [[TMP2]], i8 -1, i64 4, i1 false)
+// MEMORY-NEXT:    [[X:%.*]] = alloca i8, align 1
+// MEMORY-NEXT:    [[TMP3:%.*]] = ptrtoint ptr [[RETVAL]] to i64
+// MEMORY-NEXT:    [[TMP4:%.*]] = xor i64 [[TMP3]], 87960930222080
+// MEMORY-NEXT:    [[TMP5:%.*]] = inttoptr i64 [[TMP4]] to ptr
+// MEMORY-NEXT:    store i32 0, ptr [[TMP5]], align 4
+// MEMORY-NEXT:    store i32 0, ptr [[RETVAL]], align 4
+// MEMORY-NEXT:    call void @llvm.lifetime.start.p0(ptr [[X]]) #[[ATTR6:[0-9]+]]
+// MEMORY-NEXT:    [[TMP6:%.*]] = ptrtoint ptr [[X]] to i64
+// MEMORY-NEXT:    [[TMP7:%.*]] = xor i64 [[TMP6]], 87960930222080
+// MEMORY-NEXT:    [[TMP8:%.*]] = inttoptr i64 [[TMP7]] to ptr
+// MEMORY-NEXT:    call void @llvm.memset.p0.i64(ptr align 1 [[TMP8]], i8 -1, i64 1, i1 false)
+// MEMORY-NEXT:    [[FAKE_USE:%.*]] = load i8, ptr [[X]], align 1
+// MEMORY-NEXT:    [[TMP9:%.*]] = ptrtoint ptr [[X]] to i64
+// MEMORY-NEXT:    [[TMP10:%.*]] = xor i64 [[TMP9]], 87960930222080
+// MEMORY-NEXT:    [[TMP11:%.*]] = inttoptr i64 [[TMP10]] to ptr
+// MEMORY-NEXT:    [[_MSLD:%.*]] = load i8, ptr [[TMP11]], align 1
+// MEMORY-NEXT:    [[_MSCMP:%.*]] = icmp ne i8 [[_MSLD]], 0
+// MEMORY-NEXT:    br i1 [[_MSCMP]], label %[[BB12:.*]], label %[[BB13:.*]], !prof [[PROF2:![0-9]+]]
+// MEMORY:       [[BB12]]:
+// MEMORY-NEXT:    call void @__msan_warning_noreturn() #[[ATTR7:[0-9]+]]
+// MEMORY-NEXT:    unreachable
+// MEMORY:       [[BB13]]:
+// MEMORY-NEXT:    notail call void (...) @llvm.fake.use(i8 [[FAKE_USE]]) #[[ATTR6]]
+// MEMORY-NEXT:    call void @llvm.lifetime.end.p0(ptr [[X]]) #[[ATTR6]]
+// MEMORY-NEXT:    ret i32 0
+int main() {
+  unsigned char x;
+  return 0;
+}
