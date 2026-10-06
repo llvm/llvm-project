@@ -774,13 +774,14 @@ public:
     locations.emplace_back(isec, offset);
   }
   void addBinding(const Symbol *dysym, const InputSection *isec,
-                  uint64_t offset, int64_t addend = 0);
+                  uint64_t offset, int64_t addend = 0,
+                  bool forceOutline = false);
 
   void setHasNonWeakDefinition() { hasNonWeakDef = true; }
 
   // Returns an (ordinal, inline addend) tuple used by dyld_chained_ptr_64_bind.
-  std::pair<uint32_t, uint8_t> getBinding(const Symbol *sym,
-                                          int64_t addend) const;
+  std::pair<uint32_t, uint8_t> getBinding(const Symbol *sym, int64_t addend,
+                                          bool forceOutline = false) const;
 
   const std::vector<Location> &getLocations() const { return locations; }
 
@@ -816,8 +817,10 @@ private:
   llvm::MachO::ChainedImportFormat importFormat;
 };
 
-void writeChainedRebase(uint8_t *buf, uint64_t targetVA);
-void writeChainedFixup(uint8_t *buf, const Symbol *sym, int64_t addend);
+void writeChainedRebase(uint8_t *buf, uint64_t targetVA,
+                        const AuthInfo *auth = nullptr);
+void writeChainedFixup(uint8_t *buf, const Symbol *sym, int64_t addend,
+                       const AuthInfo *auth = nullptr);
 
 struct InStruct {
   const uint8_t *bufferStart = nullptr;

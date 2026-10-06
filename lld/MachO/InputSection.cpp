@@ -260,14 +260,15 @@ void ConcatInputSection::writeTo(uint8_t *buf) {
       }
       referentVA = resolveSymbolOffsetVA(referentSym, r.type, r.getAddend());
 
-      if (isThreadLocalVariables(getFlags()) && isa<Defined>(referentSym)) {
-        // References from thread-local variable sections are treated as offsets
-        // relative to the start of the thread-local data memory area, which
-        // is initialized via copying all the TLV data sections (which are all
-        // contiguous).
+      // References from thread-local variable sections are treated as offsets
+      // relative to the start of the thread-local data memory area, which
+      // is initialized via copying all the TLV data sections (which are all
+      // contiguous). Authenticated pointers are pointers, not offsets.
+      if (isThreadLocalVariables(getFlags()) && isa<Defined>(referentSym) &&
+          !target->hasAttr(r.type, RelocAttrBits::AUTH)) {
         referentVA -= firstTLVDataSection->addr;
       } else if (needsFixup) {
-        writeChainedFixup(loc, referentSym, r.getAddend());
+        writeChainedFixup(loc, referentSym, r.getAddend(), r.getAuthInfo());
         continue;
       }
     } else if (auto *referentIsec =
@@ -276,9 +277,15 @@ void ConcatInputSection::writeTo(uint8_t *buf) {
       referentVA = referentIsec->getVA(r.getAddend());
 
       if (needsFixup) {
-        writeChainedRebase(loc, referentVA);
+        writeChainedRebase(loc, referentVA, r.getAuthInfo());
         continue;
       }
+    }
+    // Only a chained fixup can encode an authenticated pointer.
+    if (target->hasAttr(r.type, RelocAttrBits::AUTH)) {
+      error(getLocation(r.offset) +
+            ": authenticated pointer requires chained fixups");
+      continue;
     }
     target->relocateOne(loc, r, referentVA, getVA() + r.offset);
   }

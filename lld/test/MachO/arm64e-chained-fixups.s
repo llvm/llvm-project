@@ -24,7 +24,7 @@
 # RUN: llvm-objdump --macho --chained-fixups %t/macos11.dylib | \
 # RUN:   FileCheck %s --check-prefix=ARM64E
 # RUN: llvm-objdump --macho --dyld-info %t/macos11.dylib | \
-# RUN:   FileCheck %s --check-prefix=PTRS
+# RUN:   FileCheck %s --check-prefix=AUTH
 
 # RUN: %no-fatal-warnings-lld -arch arm64e -platform_version macos 13.0 13.0 \
 # RUN:   -dylib -no_fixup_chains %t/test.o %t/libfoo.dylib \
@@ -35,7 +35,7 @@
 # RUN: llvm-objdump --macho --chained-fixups %t/no-fixup-chains.dylib | \
 # RUN:   FileCheck %s --check-prefix=ARM64E
 # RUN: llvm-objdump --macho --dyld-info %t/no-fixup-chains.dylib | \
-# RUN:   FileCheck %s --check-prefix=PTRS
+# RUN:   FileCheck %s --check-prefix=AUTH
 
 ## arm64e chains pointers with an 8-byte stride; don't suggest the ignored
 ## -no_fixup_chains when two pointers are 4 bytes out of step.
@@ -95,9 +95,11 @@
 # ARM64E:     pointer_format = 1 (DYLD_CHAINED_PTR_ARM64E)
 # USERLAND24: pointer_format = 12 (DYLD_CHAINED_PTR_ARM64E_USERLAND24)
 
-## _local_ptr is a rebase, and _foo_ptr a bind of _foo.
-# PTRS:      __DATA __data 0x{{[0-9A-F]+}} 0x{{[0-9A-F]+}} rebase
-# PTRS-NEXT: __DATA __data 0x{{[0-9A-F]+}} 0x{{[0-9A-F]+}} bind 0x0 libfoo _foo
+## _local_ptr is an authenticated rebase with key IA and diversity 42, and
+## _foo_ptr an authenticated bind with key DA, diversity 7 and address
+## diversity.
+# AUTH:      __DATA __data 0x{{[0-9A-F]+}} 0x8008002A{{[0-9A-F]+}} rebase 0x002A false IA
+# AUTH-NEXT: __DATA __data 0x{{[0-9A-F]+}} 0xC005000700000000 bind 0x0007 true DA 0x0 libfoo _foo
 
 #--- foo.s
 .globl _foo
@@ -117,9 +119,9 @@ _local:
 .p2align 3
 .globl _local_ptr, _foo_ptr
 _local_ptr:
-  .quad _local
+  .quad _local@AUTH(ia,42)
 _foo_ptr:
-  .quad _foo
+  .quad _foo@AUTH(da,7,addr)
 
 .section __DATA,__mod_init_func,mod_init_funcs
 .p2align 3
@@ -135,7 +137,7 @@ _ptr:
 .data
 .p2align 3
 _ptr:
-  .quad _ptr
+  .quad _ptr@AUTH(da,0)
 
 #--- unaligned.s
 .data

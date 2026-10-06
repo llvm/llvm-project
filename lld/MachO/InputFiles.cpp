@@ -505,6 +505,18 @@ static Defined *findSymbolAtOffset(const ConcatInputSection *isec,
   return d;
 }
 
+namespace {
+// The in-object form of the target of an ARM64_RELOC_AUTHENTICATED_POINTER.
+struct AuthEmbeddedPointer {
+  uint64_t addend : 32;
+  uint64_t diversity : 16;
+  uint64_t addrDiv : 1;
+  uint64_t key : 2;
+  uint64_t reserved : 12;
+  uint64_t auth : 1;
+};
+} // namespace
+
 template <class SectionHeader>
 static bool validateRelocationInfo(InputFile *file, const SectionHeader &sec,
                                    relocation_info rel) {
@@ -529,6 +541,14 @@ static bool validateRelocationInfo(InputFile *file, const SectionHeader &sec,
   if (!relocAttrs.hasAttr(static_cast<RelocAttrBits>(1 << rel.r_length))) {
     error(message("has invalid width of " + std::to_string(1 << rel.r_length) +
                   " bytes"));
+  }
+  if (valid && relocAttrs.hasAttr(RelocAttrBits::AUTH)) {
+    auto ptr = bit_cast<AuthEmbeddedPointer>(
+        read64le(file->mb.getBufferStart() + sec.offset + rel.r_address));
+    if (!ptr.auth)
+      error(message("requires bit 63 to be set"));
+    else if (ptr.reserved)
+      error(message("requires bits 51..62 to be zero"));
   }
   return valid;
 }
@@ -589,6 +609,15 @@ void ObjFile::parseRelocations(ArrayRef<SectionHeader> sectionHeaders,
     r.pcrel = relInfo.r_pcrel;
     r.length = relInfo.r_length;
     r.offset = relInfo.r_address;
+
+    if (target->hasAttr(relInfo.r_type, RelocAttrBits::AUTH)) {
+      auto ptr = bit_cast<AuthEmbeddedPointer>(
+          read64le(buf + sec.offset + relInfo.r_address));
+      r.setAuthInfo({static_cast<uint16_t>(ptr.diversity),
+                     static_cast<PtrAuthKey>(ptr.key),
+                     static_cast<bool>(ptr.addrDiv)});
+    }
+
     if (relInfo.r_extern) {
       r.referent = symbols[relInfo.r_symbolnum];
       r.setAddend(isSubtrahend ? 0 : totalAddend);
