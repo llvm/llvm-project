@@ -5,6 +5,64 @@
 // RUN: %clang_cc1 -triple x86_64-unknown-linux-gnu -fexceptions -fcxx-exceptions -emit-llvm %s -o %t.ll
 // RUN: FileCheck --input-file=%t.ll %s --check-prefix=LLVM,OGCG
 
+void mayThrow();
+
+struct S {
+  S(int) {}
+  S();
+  ~S() {}
+};
+
+S::S() try : S(1) {
+  mayThrow();
+} catch (...) {
+}
+
+// CIR: cir.func {{.*}} @_ZN1SC2Ev(
+// CIR:   cir.scope {
+// CIR:     cir.try {
+// CIR:       cir.call @_ZN1SC2Ei(
+// CIR:       cir.cleanup.scope {
+// CIR:         cir.call @_Z8mayThrowv() : () -> ()
+// CIR:         cir.yield
+// CIR:       } cleanup eh {
+// CIR:         cir.call @_ZN1SD2Ev({{.*}}) nothrow
+// CIR:         cir.yield
+// CIR:       }
+// CIR:       cir.yield
+// CIR:     } catch all ({{.*}}: !cir.eh_token{{.*}}) {
+// CIR:       %[[CATCH_TOK:.*]], %[[EXN_PTR:.*]] = cir.begin_catch {{.*}} : !cir.eh_token -> (!cir.catch_token, !cir.ptr<!void>)
+// CIR:       cir.cleanup.scope {
+// CIR:         cir.throw
+// CIR:         cir.unreachable
+// CIR:       ^bb1:
+// CIR:         cir.yield
+// CIR:       } cleanup all {
+// CIR:         cir.end_catch %[[CATCH_TOK]] : !cir.catch_token
+// CIR:         cir.yield
+// CIR:       }
+// CIR:       cir.yield
+// CIR:     }
+// CIR:   }
+// CIR:   cir.return
+// CIR: }
+
+// LLVM: define {{.*}} void @_ZN1SC2Ev(
+// LLVM:   invoke void @_ZN1SC2Ei(
+// LLVM:   invoke void @_Z8mayThrowv()
+// LLVM:   call void @_ZN1SD2Ev({{.*}})
+// LLVM:   call ptr @__cxa_begin_catch(
+// LLVM:   invoke void @__cxa_rethrow()
+// LLVM:     to label %[[UNREACHABLE_DEST:.*]] unwind label %[[CLEANUP_LPAD:.*]]
+// LLVM: [[CLEANUP_LPAD]]:
+// LLVM:   landingpad { ptr, i32 }
+// LLVM:     cleanup
+// LLVMCIR:   call void @__cxa_end_catch()
+// OGCG:   invoke void @__cxa_end_catch()
+// LLVM:   resume { ptr, i32 }
+// LLVM: [[UNREACHABLE_DEST]]:
+// LLVM:   unreachable
+
 struct Ctor {
   Ctor();
 };
@@ -46,12 +104,15 @@ struct HasThings : Base {
 // CIR-NEXT:      cir.call @_Z11side_effectv() : () -> ()
 // CIR-NEXT:      cir.yield
 // CIR-NEXT:    } catch all (%[[CATCH_ARG:.*]]: !cir.eh_token {{.*}}) {
-// CIR-NEXT:      %[[CATCH_TOK:.*]], %[[EX_PTR:.*]] = cir.begin_catch %[[CATCH_ARG]] : !cir.eh_token -> (!cir.catch_token, !cir.ptr<!void>)
+// CIR-NEXT:      %[[CATCH_TOK2:.*]], %[[EX_PTR:.*]] = cir.begin_catch %[[CATCH_ARG]] : !cir.eh_token -> (!cir.catch_token, !cir.ptr<!void>)
 // CIR-NEXT:      cir.cleanup.scope {
 // CIR-NEXT:        cir.call @_Z12side_effect2v() : () -> ()
+// CIR-NEXT:        cir.throw
+// CIR-NEXT:        cir.unreachable
+// CIR-NEXT:      ^bb1:
 // CIR-NEXT:        cir.yield
 // CIR-NEXT:      } cleanup all {
-// CIR-NEXT:        cir.end_catch %[[CATCH_TOK]] : !cir.catch_token
+// CIR-NEXT:        cir.end_catch %[[CATCH_TOK2]] : !cir.catch_token
 // CIR-NEXT:        cir.yield
 // CIR-NEXT:      }
 // CIR-NEXT:      cir.yield
@@ -70,6 +131,11 @@ struct HasThings : Base {
 // LLVM:   invoke void @_Z11side_effectv()
 // LLVM:   call ptr @__cxa_begin_catch(ptr %{{.*}})
 // LLVM:   invoke void @_Z12side_effect2v()
+// LLVM:   invoke void @__cxa_rethrow()
+// LLVM:     unwind label %[[CLEANUP_LPAD2:.*]]
+// LLVM: [[CLEANUP_LPAD2]]:
+// LLVM:   landingpad { ptr, i32 }
+// LLVM:     cleanup
 // LLVMCIR:   call void @__cxa_end_catch()
 // OGCG:   invoke void @__cxa_end_catch()
 };

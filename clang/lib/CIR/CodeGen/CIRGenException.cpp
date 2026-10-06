@@ -609,9 +609,8 @@ void CIRGenFunction::emitBeginCatch(const CXXCatchStmt *catchStmt,
                  catchStmt->getBeginLoc());
 }
 
-mlir::LogicalResult
-CIRGenFunction::emitCXXTryStmt(const CXXTryStmt &s,
-                               cxxTryBodyEmitter &bodyCallback) {
+mlir::LogicalResult CIRGenFunction::emitCXXTryStmt(
+    const CXXTryStmt &s, cxxTryBodyEmitter &bodyCallback, bool isFnTryBlock) {
   mlir::Location loc = getLoc(s.getSourceRange());
 
   // Create a scope to hold try local storage for catch params.
@@ -700,6 +699,12 @@ CIRGenFunction::emitCXXTryStmt(const CXXTryStmt &s,
   tryOp.setHandlerTypesAttr(
       mlir::ArrayAttr::get(&getMLIRContext(), handlerAttrs));
 
+  // Determine if we need an implicit rethrow for all these catch handlers;
+  // see the comment below.
+  const bool doImplicitRethrow =
+      isFnTryBlock && (isa<CXXConstructorDecl>(curCodeDecl) ||
+                       isa<CXXDestructorDecl>(curCodeDecl));
+
   // Emit the catch handler bodies. This has to be done after the try op is
   // created and in place so that we can find the insertion point for the
   // catch parameter alloca.
@@ -736,8 +741,13 @@ CIRGenFunction::emitCXXTryStmt(const CXXTryStmt &s,
     //   The currently handled exception is rethrown if control
     //   reaches the end of a handler of the function-try-block of a
     //   constructor or destructor.
-
-    // TODO(cir): Handle implicit rethrow?
+    //
+    // It is important that we only do this on fallthrough and not on
+    // return.  Note that it's illegal to put a return in a
+    // constructor function-try-block's catch handler (p14), so this
+    // really only applies to destructors.
+    if (doImplicitRethrow && haveInsertPoint())
+      cgm.getCXXABI().emitRethrow(*this, /*isNoReturn=*/true);
 
     // Fall out through the catch cleanups.
     handlerScope.forceCleanup();
