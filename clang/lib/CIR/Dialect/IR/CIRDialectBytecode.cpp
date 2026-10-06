@@ -220,6 +220,15 @@ struct CIRDialectBytecodeInterface : public BytecodeDialectInterface {
                                DialectBytecodeWriter &writer) const override {
     return ::writeAttribute(attr, writer);
   }
+
+  Type readType(DialectBytecodeReader &reader) const override {
+    return ::readType(getContext(), reader);
+  }
+
+  LogicalResult writeType(Type type,
+                          DialectBytecodeWriter &writer) const override {
+    return ::writeType(type, writer);
+  }
 };
 } // namespace
 
