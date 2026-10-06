@@ -14,8 +14,6 @@
 #include "mlir/Dialect/Func/IR/FuncOps.h"
 #include "mlir/IR/BuiltinAttributes.h"
 #include "mlir/IR/Region.h"
-#include "clang/AST/ASTContext.h"
-#include "clang/AST/Mangle.h"
 #include "clang/Basic/Module.h"
 #include "clang/CIR/Dialect/Builder/CIRBaseBuilder.h"
 #include "clang/CIR/Dialect/IR/CIRDialect.h"

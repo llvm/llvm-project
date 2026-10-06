@@ -4186,11 +4186,29 @@ happens-before must be perfectly overlapping to act atomically.
     read-modify-write operation M ({ref}`cmpxchg <i_cmpxchg>` and
     {ref}`atomicrmw <i_atomicrmw>`) reads from a perfectly overlapping
     `monotonic` (or stronger) write W, W must be immediately before M in
-    the relevant modification order. If one atomic read happens before
-    another perfectly overlapping atomic read and both are at least
-    `monotonic`, the later read must not see an earlier value in the
-    address's modification order. This disallows reordering of perfectly
-    overlapping `monotonic` (or stronger) operations. If an address is
+    the relevant modification order.
+
+    Atomic accesses that are `monotonic` (or stronger) satisfy coherence
+    rules. Let the reads R, R1, R2 and the writes W, W1, W2 referenced
+    below be perfectly overlapping atomics with at least `monotonic`
+    memory ordering. Then the following hold:
+    - write-write coherence: If the write W1 happens before the write
+        W2, then W1 is earlier than W2 in the address's modification
+        order.
+    - read-read coherence: If the read R1 happens before the read R2
+        and if R1 reads from the write W, then R2 must not read from
+        writes that are earlier than W in the address's modification
+        order.
+    - read-write coherence: If the read R happens before the write W,
+        then R must not read from W or writes that are later than W in
+        the address's modification order.
+    - write-read coherence: If the write W happens before the read R,
+        then R must not read from writes that are earlier than W in the
+        address's modification order.
+
+    This disallows reordering of perfectly overlapping `monotonic` (or
+    stronger) operations. Note: These coherence rules do not hold for
+    `unordered` atomics. If an address is
     written `monotonic`-ally by one thread, and other threads
     `monotonic`-ally read that address repeatedly with perfectly
     overlapping accesses, the other threads must eventually see
@@ -7399,9 +7417,11 @@ The `name:` field is mandatory. The `configMacros:`, `includePath:`,
 dynamic length and location encoded as an expression.
 The `tag:` field is optional and defaults to `DW_TAG_string_type`. The `name:`,
 `stringLength:`, `stringLengthExpression`, `stringLocationExpression:`,
-`size:`, `align:`, and `encoding:` fields are optional.
+`size:`, `align:`, `encoding:`, and `charType:` fields are optional.
 
 If not present, the `size:` and `align:` fields default to the value zero.
+
+`charType:` specifies a non-default character type.
 
 The length in bits of the string is specified by the first of the following
 fields present:
@@ -7618,17 +7638,32 @@ subset of (or equal to) the set of scopes for that domain in another
 instruction's `noalias` list, then the two memory accesses are assumed not to
 alias.
 
+If a domain is declared as having disjoint scopes, two memory accesses are
+assumed not to alias if they both have entries for that domain in their
+`alias.scope` list and their `alias.scope` lists have no scopes in common for that
+domain. Equivalently, an instruction with a set of scopes from a disjoint-scope
+domain in its `alias.scope` list implicitly has all other scopes in that domain
+in its `noalias` set. This removes the need to spell out the complement of each
+alias scope when there is a set of N objects that mutually don't alias each other,
+simplifying the IR and reducing its size for this straightforward case.
+
 Because scopes in one domain don't affect scopes in other domains, separate
 domains can be used to compose multiple independent noalias sets.  This is
 used for example during inlining.  As the noalias function parameters are
 turned into noalias scope metadata, a new domain is used every time the
 function is inlined.
 
-The metadata identifying each domain is itself a list containing one or two
+The metadata identifying each domain is itself a list containing two or three
 entries. The first entry is the name of the domain. Note that if the name is a
 string then it can be combined across functions and translation units. A
-self-reference can be used to create globally unique domain names. A
-descriptive string may optionally be provided as a second list entry.
+self-reference can be used to create globally unique domain names. The second
+entry is an `i1` constant that marks the domain as having disjoint scopes when
+it is `true`. A descriptive string may optionally be provided as a third list
+entry.
+
+String names should not be used with disjoint-scope domains, as they will be
+uniqued across different invocations of the same function, and this is unlikely
+to be desirable behavior.
 
 The metadata identifying each scope is also itself a list containing two or
 three entries. The first entry is the name of the scope. Note that if the name
@@ -7641,8 +7676,8 @@ For example,
 
 ```llvm
 ; Two scope domains:
-!0 = !{!0}
-!1 = !{!1}
+!0 = !{!0, i1 false}
+!1 = !{!1, i1 false}
 
 ; Some scopes in these domains:
 !2 = !{!2, !0}
@@ -7668,6 +7703,32 @@ store float %2, ptr %arrayidx.i2, align 4, !noalias !6
 ; !alias.scope list):
 %2 = load float, ptr %c, align 4, !alias.scope !6
 store float %0, ptr %arrayidx.i, align 4, !noalias !7
+```
+
+And, with a domain whose scopes are disjoint,
+
+```llvm
+; A domain with disjoint scopes and three scopes within it:
+!0 = !{!0, i1 true, !"disjoint domain"}
+!1 = !{!1, !0}
+!2 = !{!2, !0}
+!3 = !{!3, !0}
+
+; Some scope lists:
+!4 = !{!1}
+!5 = !{!2}
+!6 = !{!2, !3}
+!7 = !{!1, !3}
+
+; These two instructions don't alias, because tagging them with !4 and !5
+; means that they are both tagged with scopes from a disjoint-scope domain (!1
+; and !2, respectively) and have no scopes from that domain in common. This is
+; equivalent to tagging them with !noalias !6 and !noalias !7, respectively:
+%0 = load float, ptr %a, align 4, !alias.scope !4
+store float %0, ptr %b, align 4, !alias.scope !5
+
+; This instruction could be either in scope !1 or !3, so is implicitly !noalias !5.
+%1 = load float, ptr %ac, align 4, !alias.scope !7
 ```
 
 (fpmath-metadata)=
@@ -9184,12 +9245,15 @@ allocation. This information is consumed by the `alloc-token` pass to
 instrument such calls with allocation token IDs.
 
 The metadata contains: string with the type of an allocation, and a boolean
-denoting if the type contains a pointer.
+denoting if the type contains a pointer. Optionally, it contains a string with
+the name of the function containing the allocation.
 
 ```
 call ptr @malloc(i64 64), !alloc_token !0
+call ptr @malloc(i64 64), !alloc_token !1
 
 !0 = !{!"<type-name>", i1 <contains-pointer>}
+!1 = !{!"<type-name>", i1 <contains-pointer>, !"<function-name>"}
 ```
 
 #### '`stack-protector`' Metadata
@@ -13973,9 +14037,13 @@ This instruction requires several arguments:
       the return value of the callee is returned to the caller's caller, even
       if a void return type is in use.
 
-   Both markers imply that the callee does not access allocas, va_args, or
-   byval arguments from the caller. As an exception to that, an alloca or byval
-   argument may be passed to the callee as a byval argument, which can be
+   Both markers imply that the callee does not access any value derived from
+   the caller's stack frame, which is torn down before the callee runs. That
+   covers allocas, va_args, and byval arguments, and equally an address of the
+   frame itself, including pointers returned by intrinsics such as
+   `llvm.frameaddress` with a level of zero, `llvm.localaddress`, or
+   `llvm.stacksave` evaluated in the caller. As an exception, an alloca or
+   byval argument may be passed to the callee as a byval argument, which can be
    dereferenced inside the callee. For example:
 
    ```llvm
@@ -14028,6 +14096,15 @@ This instruction requires several arguments:
    define void @invalid_byval(ptr byval(i64) %x) {
    entry:
      tail call void @take_ptr(ptr %x)
+     ret void
+   }
+
+   ; Invalid (assuming @take_ptr dereferences the pointer), because the frame
+   ; @frameaddress names is torn down before @take_ptr runs.
+   define void @invalid_frameaddress() {
+   entry:
+     %fp = call ptr @llvm.frameaddress.p0(i32 0)
+     tail call void @take_ptr(ptr %fp)
      ret void
    }
    ```
@@ -26257,7 +26334,7 @@ exit:
   ret void
 }
 
-!0 = !{!0} ; domain
+!0 = !{!0, i1 false} ; domain
 !1 = !{!1, !0} ; scope
 !2 = !{!1} ; scope list
 ```
