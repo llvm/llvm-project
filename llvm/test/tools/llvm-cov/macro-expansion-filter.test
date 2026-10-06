@@ -1,0 +1,49 @@
+// Test --ignore-branch-in-macro flag filters macro branches correctly
+//
+// The test binary was compiled with a clang that emits MacroExpansionRegion
+// (Version8 coverage mapping). It contains:
+// - 2 macro calls (MY_ABS, MY_MAX), each producing 2 branches = 4 macro branches
+// - 1 source-level if statement producing 2 branches = 2 source branches
+// - Total: 6 branches without filter, 2 branches with filter
+
+// Test 1: Verify flag is accepted and changes branch count in report
+// RUN: llvm-profdata merge %S/Inputs/macro-filter-test.proftext -o %t.profdata
+// RUN: llvm-cov report %S/Inputs/macro-filter-test.o -instr-profile %t.profdata --show-branch-summary -path-equivalence=/tmp,%S/Inputs | FileCheck %s -check-prefix=WITHOUT-FILTER
+// WITHOUT-FILTER: Branches
+// WITHOUT-FILTER: 6
+
+// RUN: llvm-cov report %S/Inputs/macro-filter-test.o -instr-profile %t.profdata --show-branch-summary --ignore-branch-in-macro -path-equivalence=/tmp,%S/Inputs | FileCheck %s -check-prefix=WITH-FILTER
+// WITH-FILTER: Branches
+// WITH-FILTER: 2
+
+// Test 2: Verify LCOV export filters macro branches
+// RUN: llvm-cov export --format=lcov %S/Inputs/macro-filter-test.o -instr-profile %t.profdata -path-equivalence=/tmp,%S/Inputs | FileCheck %s -check-prefix=LCOV-WITHOUT
+// LCOV-WITHOUT: BRDA:
+// LCOV-WITHOUT: BRDA:
+// LCOV-WITHOUT: BRDA:
+// LCOV-WITHOUT: BRDA:
+// LCOV-WITHOUT: BRDA:
+// LCOV-WITHOUT: BRDA:
+
+// RUN: llvm-cov export --format=lcov --ignore-branch-in-macro %S/Inputs/macro-filter-test.o -instr-profile %t.profdata -path-equivalence=/tmp,%S/Inputs | FileCheck %s -check-prefix=LCOV-WITH
+// LCOV-WITH: BRDA:
+// LCOV-WITH: BRDA:
+// LCOV-WITH-NOT: BRDA:
+
+// Test 3: Verify JSON export filters macro branches
+// RUN: llvm-cov export --format=text %S/Inputs/macro-filter-test.o -instr-profile %t.profdata -path-equivalence=/tmp,%S/Inputs | FileCheck %s -check-prefix=JSON-WITHOUT
+// JSON-WITHOUT: "branches"
+// JSON-WITHOUT: "branches"
+
+// RUN: llvm-cov export --format=text --ignore-branch-in-macro %S/Inputs/macro-filter-test.o -instr-profile %t.profdata -path-equivalence=/tmp,%S/Inputs | FileCheck %s -check-prefix=JSON-WITH
+// JSON-WITH: "branches"
+
+// Test 4: Verify backward compatibility with old binaries (Version7)
+// The branch-macros.o32l was compiled with an older clang (Version7)
+// RUN: llvm-profdata merge %S/Inputs/branch-macros.proftext -o %t.profdata
+// RUN: llvm-cov report --show-branch-summary --ignore-branch-in-macro %S/Inputs/branch-macros.o32l -instr-profile %t.profdata -show-functions -path-equivalence=/tmp,%S/Inputs %S/Inputs/branch-macros.cpp | FileCheck %s -check-prefix=BACKWARD-COMPAT
+// BACKWARD-COMPAT: Name
+// BACKWARD-COMPAT: _Z4funcii
+// BACKWARD-COMPAT: _Z5func2ii
+// BACKWARD-COMPAT: main
+// BACKWARD-COMPAT: TOTAL
