@@ -26,7 +26,7 @@ module attributes {dlti.dl_spec = #dlti.dl_spec<#dlti.dl_entry<!llvm.ptr<272>, d
   fir.type_info @_QMtest_1Tsometype nofinal : !fir.type<_QMtest_1Tsometype{m_array:!fir.array<3xi32>,m_vt1:!fir.box<!fir.heap<!fir.type<_QMtest_1Tt1{name:!fir.char<1,20>,height:f32}>>>,v2:i32,m_alloc:!fir.box<!fir.heap<!fir.array<?xi32>>>,v3:i32,m_first:!fir.box<!fir.heap<!fir.char<1,?>>>,v4:i32,m_p1:!fir.box<!fir.ptr<i32>>,v5:i32,m_p2:!fir.box<!fir.ptr<i32>>,v6:i32,m_p3:!fir.box<!fir.ptr<!fir.array<?xi32>>>,v7:i32}> loc(#loc12)
   func.func @_QQmain() attributes {fir.bindc_name = "test"} {
     %1 = fir.alloca !fir.type<_QFTt_pair{i:i64,x:f64}> {bindc_name = "pair", uniq_name = "_QFEpair"}
-    %2 = fircg.ext_declare %1 {uniq_name = "_QFEpair"} : (!fir.ref<!fir.type<_QFTt_pair{i:i64,x:f64}>>) -> !fir.ref<!fir.type<_QFTt_pair{i:i64,x:f64}>> loc(#loc9)
+    %2 = fircg.ext_declare %1 uniq_name("_QFEpair") : (!fir.ref<!fir.type<_QFTt_pair{i:i64,x:f64}>>) -> !fir.ref<!fir.type<_QFTt_pair{i:i64,x:f64}>> loc(#loc9)
     return
   } loc(#loc10)
 }
