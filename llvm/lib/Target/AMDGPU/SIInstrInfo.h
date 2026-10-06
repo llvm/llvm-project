@@ -208,6 +208,22 @@ private:
   const TargetRegisterClass *
   getDestEquivalentVGPRClass(const MachineInstr &Inst) const;
 
+  /// \returns true if \p Op reads a 16-bit VGPR subregister, e.g. %x.lo16,
+  /// where a 32-bit VGPR of class \p DstRC is expected.
+  bool isNarrowVGPR16SubReg(const MachineOperand &Op,
+                            const TargetRegisterClass *DstRC,
+                            const MachineRegisterInfo &MRI) const;
+
+  /// Replace 16-bit VGPR operand \p Op with a VGPR_32 holding it in lo16. The
+  /// hi16 half is undefined.
+  void widenVGPR16Operand(MachineBasicBlock &MBB, MachineBasicBlock::iterator I,
+                          const DebugLoc &DL, MachineOperand &Op,
+                          MachineRegisterInfo &MRI) const;
+
+  /// Widen 16-bit VGPR subregister operands of a 32-bit VGPR PHI or
+  /// REG_SEQUENCE slot.
+  void legalizeGenericVALUt16(MachineInstr &MI, MachineRegisterInfo &MRI) const;
+
   bool checkInstOffsetsDoNotOverlap(const MachineInstr &MIa,
                                     const MachineInstr &MIb) const;
 

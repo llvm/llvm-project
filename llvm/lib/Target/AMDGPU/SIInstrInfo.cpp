@@ -8175,24 +8175,79 @@ void SIInstrInfo::legalizeOperandsVALUt16(MachineInstr &MI, unsigned OpIdx,
 
   const TargetRegisterClass *CurrSRC =
       RI.getSubRegisterClass(CurrRC, Op.getSubReg());
-  if (RI.getMatchingSuperRegClass(ExpectedRC, CurrSRC, AMDGPU::lo16)) {
-    const DebugLoc &DL = MI.getDebugLoc();
-    Register NewDstReg = MRI.createVirtualRegister(&AMDGPU::VGPR_32RegClass);
-    Register Undef = MRI.createVirtualRegister(&AMDGPU::VGPR_16RegClass);
-    BuildMI(*MBB, MI, DL, get(AMDGPU::IMPLICIT_DEF), Undef);
-    BuildMI(*MBB, MI, DL, get(AMDGPU::REG_SEQUENCE), NewDstReg)
-        .addReg(Op.getReg(), {}, Op.getSubReg())
-        .addImm(AMDGPU::lo16)
-        .addReg(Undef)
-        .addImm(AMDGPU::hi16);
-    Op.setReg(NewDstReg);
-    Op.setSubReg(AMDGPU::NoSubRegister);
-  }
+  if (RI.getMatchingSuperRegClass(ExpectedRC, CurrSRC, AMDGPU::lo16))
+    widenVGPR16Operand(*MBB, MI, MI.getDebugLoc(), Op, MRI);
 }
+
+bool SIInstrInfo::isNarrowVGPR16SubReg(const MachineOperand &Op,
+                                       const TargetRegisterClass *DstRC,
+                                       const MachineRegisterInfo &MRI) const {
+  if (!DstRC || !Op.isReg() || !Op.getReg().isVirtual() || !Op.getSubReg())
+    return false;
+
+  const TargetRegisterClass *SubRC = RI.getSubRegisterClass(
+      RI.getRegClassForReg(MRI, Op.getReg()), Op.getSubReg());
+  return SubRC && RI.isVGPRClass(SubRC) &&
+         RI.getMatchingSuperRegClass(DstRC, SubRC, AMDGPU::lo16);
+}
+
+void SIInstrInfo::widenVGPR16Operand(MachineBasicBlock &MBB,
+                                     MachineBasicBlock::iterator I,
+                                     const DebugLoc &DL, MachineOperand &Op,
+                                     MachineRegisterInfo &MRI) const {
+  Register NewDstReg = MRI.createVirtualRegister(&AMDGPU::VGPR_32RegClass);
+  Register Undef = MRI.createVirtualRegister(&AMDGPU::VGPR_16RegClass);
+  BuildMI(MBB, I, DL, get(AMDGPU::IMPLICIT_DEF), Undef);
+  BuildMI(MBB, I, DL, get(AMDGPU::REG_SEQUENCE), NewDstReg)
+      .addReg(Op.getReg(), {}, Op.getSubReg())
+      .addImm(AMDGPU::lo16)
+      .addReg(Undef)
+      .addImm(AMDGPU::hi16);
+  Op.setReg(NewDstReg);
+  Op.setSubReg(AMDGPU::NoSubRegister);
+}
+
 void SIInstrInfo::legalizeOperandsVALUt16(MachineInstr &MI,
                                           MachineRegisterInfo &MRI) const {
+  if (MI.isPHI() || MI.isRegSequence()) {
+    legalizeGenericVALUt16(MI, MRI);
+    return;
+  }
+
   for (unsigned OpIdx = 0; OpIdx < MI.getNumExplicitOperands(); OpIdx++)
     legalizeOperandsVALUt16(MI, OpIdx, MRI);
+}
+
+// PHI and REG_SEQUENCE operands have no register class, so a 16-bit
+// subregister folded from a v2s copy, e.g. %x.lo16, can land in a 32-bit VGPR
+// PHI or REG_SEQUENCE slot. Widen it so the sizes match.
+void SIInstrInfo::legalizeGenericVALUt16(MachineInstr &MI,
+                                         MachineRegisterInfo &MRI) const {
+  if (!ST.useRealTrue16Insts())
+    return;
+
+  const TargetRegisterClass *DstRC = MRI.getRegClass(MI.getOperand(0).getReg());
+  if (!RI.isVGPRClass(DstRC))
+    return;
+
+  for (unsigned I = 1, E = MI.getNumOperands(); I != E; I += 2) {
+    MachineOperand &Op = MI.getOperand(I);
+
+    // REG_SEQUENCE: the slot's class. PHI: the def's class, widened at the end
+    // of the incoming block.
+    MachineBasicBlock *InsertMBB = MI.getParent();
+    MachineBasicBlock::iterator Insert = MI;
+    const TargetRegisterClass *OpDstRC = DstRC;
+    if (MI.isRegSequence()) {
+      OpDstRC = RI.getSubRegisterClass(DstRC, MI.getOperand(I + 1).getImm());
+    } else {
+      InsertMBB = MI.getOperand(I + 1).getMBB();
+      Insert = InsertMBB->getFirstTerminator();
+    }
+
+    if (isNarrowVGPR16SubReg(Op, OpDstRC, MRI))
+      widenVGPR16Operand(*InsertMBB, Insert, MI.getDebugLoc(), Op, MRI);
+  }
 }
 
 void SIInstrInfo::createWaterFallForSiCall(MachineInstr *MI,
