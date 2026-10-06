@@ -32,6 +32,8 @@ struct InstCombineOptions {
   // Verify that a fix point has been reached after MaxIterations.
   bool VerifyFixpoint = false;
   unsigned MaxIterations = InstCombineDefaultMaxIterations;
+  // The pass runs after loop vectorization.
+  bool PostLoopVectorizer = false;
 
   InstCombineOptions() = default;
 
@@ -42,6 +44,11 @@ struct InstCombineOptions {
 
   InstCombineOptions &setMaxIterations(unsigned Value) {
     MaxIterations = Value;
+    return *this;
+  }
+
+  InstCombineOptions &setPostLoopVectorizer(bool Value) {
+    PostLoopVectorizer = Value;
     return *this;
   }
 };

@@ -84,6 +84,9 @@ public:
 
   const InstCombineCLOptions &CLOpts;
 
+  /// The pass runs after loop vectorization.
+  bool PostLoopVectorizer = false;
+
   /// Perform early cleanup and prepare the InstCombine worklist.
   bool prepareWorklist(Function &F);
 
