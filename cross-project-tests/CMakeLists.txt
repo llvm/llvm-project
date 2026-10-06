@@ -29,6 +29,7 @@ set(CROSS_PROJECT_TEST_DEPS
   llvm-lto2
   llvm-modextract
   llvm-objdump
+  llvm-readobj
   not
   obj2yaml
   split-file

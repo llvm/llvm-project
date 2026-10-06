@@ -400,6 +400,66 @@ class MapInfoFinalizationPass
                     });
   }
 
+  /// An absent optional passed by reference must retain its null address and
+  /// must not cause an allocation or transfer. Descriptor maps handle this when
+  /// expanding the descriptor. For non-descriptor arguments, express absence
+  /// as empty bounds, including a single-element bound for scalar arguments.
+  void genOptionalBounds(mlir::omp::MapInfoOp map, fir::FirOpBuilder &builder) {
+    if (map.getVarPtrPtr() || !map.getMembers().empty() ||
+        map.getMapCaptureType() != mlir::omp::VariableCaptureKind::ByRef ||
+        !fir::factory::isOptionalArgument(map.getVarPtr().getDefiningOp()))
+      return;
+
+    // Array bounds are supplied by lowering. A synthetic scalar bound would
+    // otherwise map only one element of a bounds-free array mapping.
+    if (map.getBounds().empty() &&
+        mlir::isa<fir::SequenceType>(
+            fir::unwrapRefType(map.getVarPtr().getType())))
+      return;
+
+    mlir::OpBuilder::InsertionGuard guard(builder);
+    builder.setInsertionPoint(map);
+    mlir::Location loc = map.getLoc();
+    mlir::Value present = fir::IsPresentOp::create(
+        builder, loc, builder.getI1Type(), map.getVarPtr());
+    auto selectIfPresent = [&](mlir::Value value,
+                               int64_t absent) -> mlir::Value {
+      if (!value)
+        return {};
+      mlir::Value absentValue =
+          builder.createIntegerConstant(loc, value.getType(), absent);
+      return builder.createOrFold<mlir::arith::SelectOp>(loc, present, value,
+                                                         absentValue);
+    };
+
+    llvm::SmallVector<mlir::Value> bounds;
+    if (map.getBounds().empty()) {
+      mlir::Value zero =
+          builder.createIntegerConstant(loc, builder.getIndexType(), 0);
+      mlir::Value one =
+          builder.createIntegerConstant(loc, builder.getIndexType(), 1);
+      mlir::Value upperBound = selectIfPresent(zero, -1);
+      mlir::Value extent = selectIfPresent(one, 0);
+      bounds.push_back(mlir::omp::MapBoundsOp::create(
+          builder, loc, builder.getType<mlir::omp::MapBoundsType>(), zero,
+          upperBound, extent, one,
+          /*stride_in_bytes=*/false, one));
+    } else {
+      for (mlir::Value value : map.getBounds()) {
+        auto bound = value.getDefiningOp<mlir::omp::MapBoundsOp>();
+        // Also clear section offsets so that an absent argument's null base
+        // address is not adjusted when computing the mapped address.
+        mlir::Value lowerBound = selectIfPresent(bound.getLowerBound(), 0);
+        mlir::Value upperBound = selectIfPresent(bound.getUpperBound(), -1);
+        mlir::Value extent = selectIfPresent(bound.getExtent(), 0);
+        bounds.push_back(mlir::omp::MapBoundsOp::create(
+            builder, loc, bound.getType(), lowerBound, upperBound, extent,
+            bound.getStride(), bound.getStrideInBytes(), bound.getStartIdx()));
+      }
+    }
+    map.getBoundsMutable().assign(bounds);
+  }
+
   /// When provided a MapInfoOp containing a descriptor type that
   /// we must expand into multiple maps this function will extract
   /// the value from it and return it, in certain cases we must
@@ -530,7 +590,7 @@ class MapInfoFinalizationPass
         isRefPtee ? parentOp.getMembersIndexAttr() : mlir::ArrayAttr{},
         parentOp.getBounds(),
         /*mapperId=*/mapperId,
-        /*name=*/builder.getStringAttr(""),
+        /*name=*/parentOp.getNameAttr(),
         /*partial_map=*/builder.getBoolAttr(false));
   }
 
@@ -1605,7 +1665,7 @@ class MapInfoFinalizationPass
     // Make sure that updateUseDeviceDescriptorArgs was launched earlier
     auto arg = getUseDeviceAddrBlockArg(mapOp, *targetDataOp.getOperation());
     bool isArgBoxType = mlir::isa<fir::BaseBoxType>(arg.getType());
-    bool useArgLoad =
+    [[maybe_unused]] bool useArgLoad =
         arg.hasOneUse() && mlir::isa<fir::LoadOp>(*arg.use_begin()->getOwner());
     assert((isArgBoxType || useArgLoad) &&
            "Expected either BaseBox item or Load operation");
@@ -1728,6 +1788,8 @@ class MapInfoFinalizationPass
             genOptimizedUseDeviceAddr(builder, targetDataOp, newMapInfo,
                                       module);
           }
+        } else {
+          genOptionalBounds(op, builder);
         }
       });
 

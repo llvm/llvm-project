@@ -24,6 +24,7 @@
 #include "mlir/IR/Value.h"
 #include "mlir/Interfaces/ControlFlowInterfaces.h"
 #include "mlir/Interfaces/SideEffectInterfaces.h"
+#include "llvm/ADT/STLExtras.h"
 #include "llvm/ADT/TypeSwitch.h"
 #include "llvm/Support/Casting.h"
 #include "llvm/Support/CommandLine.h"
@@ -234,9 +235,45 @@ static fir::AliasAnalysis::Source mergeRegionBranchPredecessorSources(
 
   fir::AliasAnalysis::SourceKind mergedKind;
   fir::AliasAnalysis::Source::Attributes mergedAttrs;
-  if (!allKindsSame) {
+  // Every predecessor is a null address, so the join is too. Distinct nulls
+  // and differing attributes still name no object, whether or not the null
+  // is defined inside this branch.
+  bool allNull = llvm::all_of(sources, [](const fir::AliasAnalysis::Source &s) {
+    return s.kind == fir::AliasAnalysis::SourceKind::Null;
+  });
+  if (allNull) {
+    mergedKind = fir::AliasAnalysis::SourceKind::Null;
+    mergedAttrs = allAttrsSame ? sources[0].attributes
+                               : fir::AliasAnalysis::Source::Attributes{};
+  } else if (!allKindsSame) {
+    // A null address names no object. If every other predecessor is an
+    // allocation defined inside this branch, the join is considered an
+    // allocation.
     mergedKind = fir::AliasAnalysis::SourceKind::Unknown;
     mergedAttrs = {};
+    auto branchOp = mlir::dyn_cast<mlir::RegionBranchOpInterface>(
+        mlir::cast<mlir::OpResult>(fallbackValue).getOwner());
+    const fir::AliasAnalysis::Source *allocSrc = nullptr;
+    bool onlyAllocOrNull = branchOp != nullptr;
+    if (branchOp) {
+      for (const fir::AliasAnalysis::Source &src : sources) {
+        if (src.kind == fir::AliasAnalysis::SourceKind::Allocate) {
+          if (!originIsInsideRegionBranch(branchOp, src) ||
+              (allocSrc && allocSrc->attributes != src.attributes)) {
+            onlyAllocOrNull = false;
+            break;
+          }
+          allocSrc = &src;
+        } else if (src.kind != fir::AliasAnalysis::SourceKind::Null) {
+          onlyAllocOrNull = false;
+          break;
+        }
+      }
+    }
+    if (onlyAllocOrNull && allocSrc) {
+      mergedKind = fir::AliasAnalysis::SourceKind::Allocate;
+      mergedAttrs = allocSrc->attributes;
+    }
   } else if (!allAttrsSame) {
     mergedKind = fir::AliasAnalysis::SourceKind::Unknown;
     mergedAttrs = {};
@@ -475,7 +512,8 @@ bool AliasAnalysis::Source::isFortranUserVariable() const {
 }
 
 bool AliasAnalysis::Source::mayBeDummyArgOrHostAssoc() const {
-  return kind != SourceKind::Allocate && kind != SourceKind::Global;
+  return kind != SourceKind::Null && kind != SourceKind::Allocate &&
+         kind != SourceKind::Global;
 }
 
 bool AliasAnalysis::Source::mayBePtrDummyArgOrHostAssoc() const {
@@ -490,7 +528,7 @@ bool AliasAnalysis::Source::mayBePtrDummyArgOrHostAssoc() const {
 }
 
 bool AliasAnalysis::Source::mayBeActualArg() const {
-  return kind != SourceKind::Allocate;
+  return kind != SourceKind::Null && kind != SourceKind::Allocate;
 }
 
 bool AliasAnalysis::Source::mayBeActualArgWithPtr(
@@ -748,6 +786,13 @@ AliasResult AliasAnalysis::alias(Source lhsSrc, Source rhsSrc, mlir::Value lhs,
   // Disambiguate data and descriptors addresses.
   if (noAliasBasedOnType(lhs, rhs))
     return AliasResult::NoAlias;
+
+  // A null address aliases nothing. Same-value pairs already returned
+  // MustAlias above.
+  if (lhsSrc.kind == SourceKind::Null || rhsSrc.kind == SourceKind::Null) {
+    LLVM_DEBUG(llvm::dbgs() << "  no alias: null address\n");
+    return AliasResult::NoAlias;
+  }
 
   // Indirect case currently not handled. Conservatively assume
   // it aliases with everything
@@ -1046,6 +1091,11 @@ ModRefResult AliasAnalysis::getCallModRef(Operation *op, Value var) {
   fir::AliasAnalysis::Source varSrc =
       getSource(var, /*getLastInstantiationPoint=*/true,
                 /*collectScopedOrigins=*/false);
+  // A null address names no object, so a call cannot read or write it.
+  // This includes an absent optional passed as an actual argument: the
+  // corresponding dummy must not be referenced.
+  if (varSrc.kind == fir::AliasAnalysis::SourceKind::Null)
+    return ModRefResult::getNoModRef();
   // If the variable is not a user variable, we cannot safely assume that
   // Fortran semantics apply (e.g., a bare alloca/allocmem result may very well
   // be placed in an allocatable/pointer descriptor and escape).
@@ -1081,18 +1131,48 @@ ModRefResult AliasAnalysis::getCallModRef(Operation *op, Value var) {
         !isSavedLocal(varSrc))
       return ModRefResult::getModAndRef();
   }
-  // 2. Check if the variable is passed via the arguments.
-  for (auto arg : call.getArgs()) {
-    if (fir::conformsWithPassByRef(arg.getType()) && !alias(arg, var).isNo()) {
-      // TODO: intent(in) would allow returning Ref here. This can be obtained
-      // in the func.func attributes for direct calls, but the module lookup is
-      // linear with the number of MLIR symbols, which would introduce a pseudo
-      // quadratic behavior num_calls * num_func.
-      return ModRefResult::getModAndRef();
-    }
+  // 2. Check if the variable is passed via the arguments. A dummy with a
+  // declared intent is a read, a write, or both. intent(out) is a write for
+  // a trivial non-pointer, non-allocatable dummy, and a read and a write
+  // otherwise. An argument with no visible intent stays ModAndRef. The
+  // callee is resolved through the cached symbol table.
+  mlir::func::FuncOp callee;
+  if (std::optional<mlir::SymbolRefAttr> calleeAttr = call.getCallee()) {
+    if (const mlir::SymbolTable *symTab = getNearestSymbolTable(call))
+      callee =
+          symTab->lookup<mlir::func::FuncOp>(calleeAttr->getLeafReference());
   }
-  // The call cannot access the variable.
-  return ModRefResult::getNoModRef();
+  auto args = call.getArgs();
+  const bool intentsAvailable = callee && !callee.isDeclaration() &&
+                                args.size() == callee.getNumArguments();
+  ModRefResult modRef = ModRefResult::getNoModRef();
+  for (auto [idx, arg] : llvm::enumerate(args)) {
+    if (!fir::conformsWithPassByRef(arg.getType()) || alias(arg, var).isNo())
+      continue;
+    if (!intentsAvailable)
+      return ModRefResult::getModAndRef();
+    std::optional<fir::FortranDummyIntent> intent =
+        fir::getFortranDummyIntent(callee, idx);
+    if (!intent || *intent == fir::FortranDummyIntent::InOut)
+      return ModRefResult::getModAndRef();
+    if (*intent == fir::FortranDummyIntent::In) {
+      modRef = modRef.merge(ModRefResult::getRef());
+      continue;
+    }
+    if (*intent == fir::FortranDummyIntent::Out) {
+      // A pure write only for a non-pointer, non-allocatable dummy whose
+      // element type is trivial. An allocatable is read on entry so it can
+      // be deallocated, and finalization of a derived type may read it.
+      mlir::Type ty = callee.getArgument(idx).getType();
+      if (fir::isPointerType(ty) || fir::isAllocatableType(ty) ||
+          !fir::isa_trivial(fir::getFortranElementType(ty)))
+        return ModRefResult::getModAndRef();
+      modRef = modRef.merge(ModRefResult::getMod());
+      continue;
+    }
+    return ModRefResult::getModAndRef();
+  }
+  return modRef;
 }
 
 AliasAnalysis::AliasAnalysis(AliasAnalysisRecursiveEffectsCache &cacheRef)
@@ -1539,11 +1619,20 @@ AliasAnalysis::getSourceImpl(mlir::Value v, bool getLastInstantiationPoint,
           approximateSource = true;
         })
         .Case([&](fir::AbsentOp op) {
-          // Although fir.absent is not a local allocation, we treat it
-          // similarly so that it can be disambiguated that it doesn't alias any
-          // other values. Two entities coming from separate fir.absent ops
-          // also do not alias each other.
-          type = SourceKind::Allocate;
+          // fir.absent lowers to a null pointer. Distinct fir.absent values
+          // do not alias each other.
+          type = SourceKind::Null;
+          breakFromLoop = true;
+        })
+        .Case([&](fir::ZeroOp op) {
+          // Address-typed fir.zero_bits lowers to a null pointer. A zero
+          // value of any other type is not an address.
+          if (fir::isa_ref_type(op.getType())) {
+            type = SourceKind::Null;
+            breakFromLoop = true;
+            return;
+          }
+          defOp = nullptr;
           breakFromLoop = true;
         })
         .Case([&](fir::FortranObjectLoadOpInterface op) {
@@ -1658,8 +1747,9 @@ AliasAnalysis::getSourceImpl(mlir::Value v, bool getLastInstantiationPoint,
                 }
               }
               if (!classified) {
-                if (boxSrc.kind == SourceKind::Allocate) {
-                  type = SourceKind::Allocate;
+                if (boxSrc.kind == SourceKind::Allocate ||
+                    boxSrc.kind == SourceKind::Null) {
+                  type = boxSrc.kind;
                   v = def;
                   defOp = nullptr;
                 } else if (boxSrc.kind == SourceKind::HostAssoc) {

@@ -1188,6 +1188,22 @@ void Verifier::visitDILocation(const DILocation &N) {
     CheckDI(isa<DILocation>(IA), "inlined-at should be a location", &N, IA);
   if (auto *SP = dyn_cast<DISubprogram>(N.getRawScope()))
     CheckDI(SP->isDefinition(), "scope points into the type hierarchy", &N);
+  if (auto *L = N.getRawIRLayers())
+    CheckDI(isa<DILayerLocList>(L), "irlayers must be a DILayerLocList", &N, L);
+}
+
+void Verifier::visitDILayerLoc(const DILayerLoc &N) {
+  CheckDI(isa_and_nonnull<MDString>(N.getRawKind()),
+          "layer kind must be a non-null MDString", &N, N.getRawKind());
+  CheckDI(isa_and_nonnull<DIFile>(N.getRawFile()),
+          "layer file must be a non-null DIFile", &N, N.getRawFile());
+}
+
+void Verifier::visitDILayerLocList(const DILayerLocList &N) {
+  CheckDI(N.getNumLayers() > 0, "DILayerLocList must be non-empty", &N);
+  for (const MDOperand &Op : N.layers())
+    CheckDI(isa_and_nonnull<DILayerLoc>(Op.get()),
+            "DILayerLocList entry must be a DILayerLoc", &N, Op.get());
 }
 
 void Verifier::visitGenericDINode(const GenericDINode &N) {
@@ -1332,6 +1348,9 @@ void Verifier::visitDIStringType(const DIStringType &N) {
   CheckDI(N.getTag() == dwarf::DW_TAG_string_type, "invalid tag", &N);
   CheckDI(!(N.isBigEndian() && N.isLittleEndian()), "has conflicting flags",
           &N);
+  if (N.getRawCharType())
+    CheckDI(isa<DIType>(N.getRawCharType()), "invalid character type", &N,
+            N.getRawCharType());
 }
 
 void Verifier::visitDIDerivedType(const DIDerivedType &N) {
@@ -4305,9 +4324,9 @@ void Verifier::visitCallBase(CallBase &Call) {
   // debug-info-bearing function has a debug location attached to it. Failure to
   // do so causes assertion failures when the inliner sets up inline scope info
   // (Interposable functions are not inlinable, neither are functions without
-  //  definitions.)
+  //  definitions. noipa does not prevent inlining, so it is ignored here.)
   if (Call.getFunction()->getSubprogram() && Call.getCalledFunction() &&
-      !Call.getCalledFunction()->isInterposable() &&
+      !Call.getCalledFunction()->isInterposable(/*CheckNoIPA=*/false) &&
       !Call.getCalledFunction()->isDeclaration() &&
       Call.getCalledFunction()->getSubprogram())
     CheckDI(Call.getDebugLoc(),
@@ -5739,14 +5758,18 @@ void Verifier::visitAliasScopeMetadata(const MDNode *MD) {
   Check(Domain != nullptr, "second scope operand must be MDNode", MD);
 
   unsigned NumDomainOps = Domain->getNumOperands();
-  Check(NumDomainOps >= 1 && NumDomainOps <= 2,
-        "domain must have one or two operands", Domain);
+  Check(NumDomainOps >= 2 && NumDomainOps <= 3,
+        "domain must have two or three operands", Domain);
   Check(Domain->getOperand(0).get() == Domain ||
             isa<MDString>(Domain->getOperand(0)),
         "first domain operand must be self-referential or string", Domain);
-  if (NumDomainOps == 2)
-    Check(isa<MDString>(Domain->getOperand(1)),
-          "second domain operand must be string (if used)", Domain);
+  const auto *Disjoint =
+      mdconst::dyn_extract_or_null<ConstantInt>(Domain->getOperand(1));
+  Check(Disjoint && Disjoint->getBitWidth() == 1,
+        "second domain operand must be an i1 constant", Domain);
+  if (NumDomainOps == 3)
+    Check(isa<MDString>(Domain->getOperand(2)),
+          "third domain operand must be string (if used)", Domain);
 }
 
 void Verifier::visitAliasScopeListMetadata(const MDNode *MD) {
@@ -5802,10 +5825,14 @@ void Verifier::visitCapturesMetadata(Instruction &I, const MDNode *Captures) {
 
 void Verifier::visitAllocTokenMetadata(Instruction &I, MDNode *MD) {
   Check(isa<CallBase>(I), "!alloc_token should only exist on calls", &I);
-  Check(MD->getNumOperands() == 2, "!alloc_token must have 2 operands", MD);
-  Check(isa<MDString>(MD->getOperand(0)), "expected string", MD);
+  Check(MD->getNumOperands() == 2 || MD->getNumOperands() == 3,
+        "!alloc_token must have 2 or 3 operands", MD);
+  Check(isa_and_nonnull<MDString>(MD->getOperand(0)), "expected string", MD);
   Check(mdconst::dyn_extract_or_null<ConstantInt>(MD->getOperand(1)),
         "expected integer constant", MD);
+  if (MD->getNumOperands() == 3)
+    Check(isa_and_nonnull<MDString>(MD->getOperand(2)),
+          "expected function name string", MD);
 }
 
 void Verifier::visitInlineHistoryMetadata(Instruction &I, MDNode *MD) {
