@@ -1,9 +1,5 @@
 # Extended C++03 Support
 
-:::{contents}
-:local: true
-:::
-
 ## Overview
 
 libc++ is an implementation of the C++ standard library targeting C++11 or later.

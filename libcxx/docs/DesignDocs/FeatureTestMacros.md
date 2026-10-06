@@ -1,9 +1,5 @@
 # Feature Test Macros
 
-:::{contents}
-:local: true
-:::
-
 ## Overview
 
 Libc++ implements the C++ feature test macros as specified in the C++20 standard,

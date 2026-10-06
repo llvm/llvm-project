@@ -1,9 +1,5 @@
 # Threading Support API
 
-```{contents}
-:local: true
-```
-
 ## Overview
 
 Libc++ supports using multiple different threading models and configurations
@@ -65,4 +61,3 @@ API but leaves out the implementation.
 
 : This macro is defined when libc++ should use Win32 threads to implement the
   internal threading API.
-

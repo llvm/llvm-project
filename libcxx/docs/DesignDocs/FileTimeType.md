@@ -1,9 +1,5 @@
 # File Time Type
 
-```{contents}
-:local: true
-```
-
 (file-time-type-motivation)=
 
 ## Motivation
