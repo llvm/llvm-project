@@ -74,6 +74,18 @@ protected:
     llvm::sys::path::append(m_tmp_dsym_python_dir, "Python");
     ASSERT_FALSE(llvm::sys::fs::create_directory(m_tmp_dsym_python_dir))
         << "Failed to create test dSYM Python directory.";
+
+    // Create <test-root>/TestFramework.framework
+    m_tmp_framework_dir = m_tmp_root_dir;
+    llvm::sys::path::append(m_tmp_framework_dir, "TestFramework.framework");
+    ASSERT_FALSE(llvm::sys::fs::create_directory(m_tmp_framework_dir))
+        << "Failed to create test framework directory.";
+
+    // Create <test-root>/TestFramework.framework/Resources/Python
+    m_tmp_framework_python_dir = m_tmp_framework_dir;
+    llvm::sys::path::append(m_tmp_framework_python_dir, "Resources", "Python");
+    ASSERT_FALSE(llvm::sys::fs::create_directories(m_tmp_framework_python_dir))
+        << "Failed to create test framework Python directory.";
   };
 
   void TearDown() override {
@@ -92,6 +104,12 @@ protected:
 
   /// <test-root>/.dSYM/Contents/Resources/Python
   llvm::SmallString<128> m_tmp_dsym_python_dir;
+
+  /// <test-root>/TestFramework.framework
+  llvm::SmallString<128> m_tmp_framework_dir;
+
+  /// <test-root>/TestFramework.framework/Resources/Python
+  llvm::SmallString<128> m_tmp_framework_python_dir;
 
   SubsystemRAII<FileSystem, HostInfo, PlatformMacOSX,
                 MockScriptInterpreterPython>
@@ -768,6 +786,65 @@ INSTANTIATE_TEST_SUITE_P(PlatformDarwinLocateWithSpecialCharsTest,
                          PlatformDarwinLocateWithSpecialCharsTestFixture,
                          testing::ValuesIn(std::vector<SpecialCharTestCase>{
                              {' ', '_'}, {'.', '_'}, {'-', '_'}, {'+', 'x'}}));
+
+TEST_F(PlatformDarwinLocateTest,
+       LocateExecutableScriptingResourcesFromFramework_Basic) {
+  // Tests that a script inside <framework>/Resources/Python is found.
+
+  // Create dummy module file at
+  // <test-root>/TestFramework.framework/TestFramework
+  FileSpec module_fspec(CreateFile("TestFramework", m_tmp_framework_dir));
+  ASSERT_TRUE(module_fspec);
+
+  CreateFile("TestFramework.py", m_tmp_framework_python_dir);
+  CreateFile("TestFramework.txt", m_tmp_framework_python_dir);
+
+  StreamString ss;
+  auto fspecs = std::static_pointer_cast<PlatformDarwin>(m_platform_sp)
+                    ->LocateExecutableScriptingResourcesFromFramework(
+                        ss, module_fspec, *m_target_sp,
+                        FileSpec(m_tmp_framework_dir.str()));
+  EXPECT_EQ(fspecs.size(), 1u);
+  EXPECT_EQ(fspecs.begin()->getFirst().GetFilename(), "TestFramework.py");
+}
+
+TEST_F(PlatformDarwinLocateTest,
+       LocateExecutableScriptingResourcesFromFramework_StripExtensions) {
+  // Tests that module names are stripped down until the basename matches
+  // the Python script, same as for dSYMs.
+
+  FileSpec module_fspec(
+      CreateFile("TestFramework.o.1.ext", m_tmp_framework_dir));
+  ASSERT_TRUE(module_fspec);
+
+  CreateFile("TestFramework.py", m_tmp_framework_python_dir);
+
+  StreamString ss;
+  auto fspecs = std::static_pointer_cast<PlatformDarwin>(m_platform_sp)
+                    ->LocateExecutableScriptingResourcesFromFramework(
+                        ss, module_fspec, *m_target_sp,
+                        FileSpec(m_tmp_framework_dir.str()));
+  EXPECT_EQ(fspecs.size(), 1u);
+  EXPECT_EQ(fspecs.begin()->getFirst().GetFilename(), "TestFramework.py");
+}
+
+TEST_F(PlatformDarwinLocateTest,
+       LocateExecutableScriptingResourcesFromFramework_NoMatch) {
+  // Tests that a non-Python resource with a matching stem isn't picked up.
+
+  FileSpec module_fspec(CreateFile("TestFramework", m_tmp_framework_dir));
+  ASSERT_TRUE(module_fspec);
+
+  CreateFile("TestFramework.txt", m_tmp_framework_python_dir);
+  CreateFile("SomeOtherModule.py", m_tmp_framework_python_dir);
+
+  StreamString ss;
+  auto fspecs = std::static_pointer_cast<PlatformDarwin>(m_platform_sp)
+                    ->LocateExecutableScriptingResourcesFromFramework(
+                        ss, module_fspec, *m_target_sp,
+                        FileSpec(m_tmp_framework_dir.str()));
+  EXPECT_EQ(fspecs.size(), 0u);
+}
 
 TEST_F(PlatformDarwinLocateTest, GetSafeAutoLoadPaths) {
   // Tests PlatformDarwin::GetSafeAutoLoadPaths returns a path into the SDK on
