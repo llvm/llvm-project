@@ -175,8 +175,9 @@ the recommended way for users to request to see the values of their variables,
 and to evaluate simple expressions on them.
 
 
-For full or complex expressions (e.g. things involving function calls or
-templates), users should still use the full expression evaluator (`expr`).
+For full or complex expressions (e.g. things involving function calls, templates
+or overloaded operators), users should still use the full expression evaluator
+(`expr`).
 
 
 Currently`dwim-print`(aka `print` or `p`) dispatches expressions consisting only
