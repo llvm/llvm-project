@@ -5,7 +5,7 @@ target datalayout = "e-p:64:64:64-i1:8:8-i8:8:8-i16:16:16-i32:32:32-i64:64:64-f3
 target triple = "x86_64-apple-macosx10.8.0"
 
 
-; CHECK: cost of 1 for VF 1 For instruction:   %conv = fptosi float %tmp to i8
+; CHECK: Cost of 1 for VF 1: EMIT-SCALAR ir<%conv> = fptosi ir<%tmp> to i8
 define void @float_to_sint8_cost(ptr noalias nocapture %a, ptr noalias nocapture readonly %b) {
 entry:
   br label %for.body
