@@ -99,6 +99,13 @@ void CIRGenModule::emitCXXGlobalVarDeclInitFunc(const VarDecl *vd,
                                                 bool performInit) {
   assert(!cir::MissingFeatures::cudaSupport());
 
+  // Classic CodeGen dispatches guarded initialization through
+  // CGCXXABI::EmitGuardedInit, which the Microsoft ABI overrides with a
+  // completely different (bitmask-based "magic statics") guard scheme
+  // instead of the Itanium __cxa_guard_acquire/__cxa_guard_release calls
+  // that emitCXXGuardedInit/LoweringPrepare unconditionally assume here.
+  assert(!cir::MissingFeatures::msabi());
+
   if (addr.hasWeakLinkage() || addr.hasLinkOnceLinkage() ||
       (vd->getTLSKind() == VarDecl::TLS_Dynamic &&
        isTemplateInstantiation(vd->getTemplateSpecializationKind()))) {
