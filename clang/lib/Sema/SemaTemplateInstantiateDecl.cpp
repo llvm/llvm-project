@@ -4569,10 +4569,12 @@ Decl *TemplateDeclInstantiator::VisitOMPDeclareReductionDecl(
       D->getType()->containsUnexpandedParameterPack();
   QualType SubstReductionType;
   if (RequiresInstantiation) {
+    QualType T = SemaRef.SubstType(D->getType(), TemplateArgs, D->getLocation(),
+                                   DeclarationName());
+    if (T.isNull())
+      return nullptr;
     SubstReductionType = SemaRef.OpenMP().ActOnOpenMPDeclareReductionType(
-        D->getLocation(),
-        ParsedType::make(SemaRef.SubstType(
-            D->getType(), TemplateArgs, D->getLocation(), DeclarationName())));
+        D->getLocation(), ParsedType::make(T));
   } else {
     SubstReductionType = D->getType();
   }
@@ -4661,10 +4663,12 @@ TemplateDeclInstantiator::VisitOMPDeclareMapperDecl(OMPDeclareMapperDecl *D) {
   QualType SubstMapperTy;
   DeclarationName VN = D->getVarName();
   if (RequiresInstantiation) {
+    QualType T =
+        SemaRef.SubstType(D->getType(), TemplateArgs, D->getLocation(), VN);
+    if (T.isNull())
+      return nullptr;
     SubstMapperTy = SemaRef.OpenMP().ActOnOpenMPDeclareMapperType(
-        D->getLocation(),
-        ParsedType::make(SemaRef.SubstType(D->getType(), TemplateArgs,
-                                           D->getLocation(), VN)));
+        D->getLocation(), ParsedType::make(T));
   } else {
     SubstMapperTy = D->getType();
   }
