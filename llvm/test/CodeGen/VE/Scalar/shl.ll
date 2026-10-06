@@ -144,7 +144,7 @@ define i64 @shl_u64_var(i64 %0, i64 %1) {
 ; Function Attrs: norecurse nounwind readnone
 define i128 @shl_i128_var(i128 %0, i128 %1) {
 ; CHECK-LABEL: shl_i128_var:
-; CHECK:       .LBB{{[0-9]+}}_2:
+; CHECK:       .LBB{{[0-9]+}}_1:
 ; CHECK-NEXT:    and %s2, %s2, (32)0
 ; CHECK-NEXT:    lea %s3, __ashlti3@lo
 ; CHECK-NEXT:    and %s3, %s3, (32)0
@@ -158,7 +158,7 @@ define i128 @shl_i128_var(i128 %0, i128 %1) {
 ; Function Attrs: norecurse nounwind readnone
 define i128 @shl_u128_var(i128 %0, i128 %1) {
 ; CHECK-LABEL: shl_u128_var:
-; CHECK:       .LBB{{[0-9]+}}_2:
+; CHECK:       .LBB{{[0-9]+}}_1:
 ; CHECK-NEXT:    and %s2, %s2, (32)0
 ; CHECK-NEXT:    lea %s3, __ashlti3@lo
 ; CHECK-NEXT:    and %s3, %s3, (32)0
@@ -272,7 +272,7 @@ define i64 @shl_const_u64(i64 %0) {
 ; Function Attrs: norecurse nounwind readnone
 define i128 @shl_const_i128(i128 %0) {
 ; CHECK-LABEL: shl_const_i128:
-; CHECK:       .LBB{{[0-9]+}}_2:
+; CHECK:       .LBB{{[0-9]+}}_1:
 ; CHECK-NEXT:    and %s2, %s0, (32)0
 ; CHECK-NEXT:    lea %s0, __ashlti3@lo
 ; CHECK-NEXT:    and %s0, %s0, (32)0
@@ -288,7 +288,7 @@ define i128 @shl_const_i128(i128 %0) {
 ; Function Attrs: norecurse nounwind readnone
 define i128 @shl_const_u128(i128 %0) {
 ; CHECK-LABEL: shl_const_u128:
-; CHECK:       .LBB{{[0-9]+}}_2:
+; CHECK:       .LBB{{[0-9]+}}_1:
 ; CHECK-NEXT:    and %s2, %s0, (32)0
 ; CHECK-NEXT:    lea %s0, __ashlti3@lo
 ; CHECK-NEXT:    and %s0, %s0, (32)0

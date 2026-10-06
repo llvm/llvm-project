@@ -15,6 +15,7 @@
 #ifndef LLVM_OPTION_LIBRARYOPTIONS_H
 #define LLVM_OPTION_LIBRARYOPTIONS_H
 
+#include "llvm/ADT/BoolOrDefault.h"
 #include "llvm/ADT/StringExtras.h"
 #include "llvm/Option/Arg.h"
 #include "llvm/Option/OptTable.h"
@@ -35,6 +36,14 @@ inline bool parseArgValue(StringRef S, bool &V) {
     V = false;
   else
     return false;
+  return true;
+}
+
+inline bool parseArgValue(StringRef S, BoolOrDefault &V) {
+  bool B;
+  if (!parseArgValue(S, B))
+    return false;
+  V = B ? BoolOrDefault::True : BoolOrDefault::False;
   return true;
 }
 

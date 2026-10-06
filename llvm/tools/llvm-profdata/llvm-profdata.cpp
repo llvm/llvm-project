@@ -50,15 +50,6 @@
 #include <cmath>
 #include <optional>
 
-#if LLVM_ADDRESS_SANITIZER_BUILD || LLVM_HWADDRESS_SANITIZER_BUILD
-#include <sanitizer/lsan_interface.h>
-static int SkipLeakCheck;
-LLVM_ATTRIBUTE_USED int __lsan_is_turned_off() { return SkipLeakCheck; }
-static void skipLeakCheck() { SkipLeakCheck = 1; }
-#else
-static void skipLeakCheck() {}
-#endif
-
 using namespace llvm;
 using ProfCorrelatorKind = InstrProfCorrelator::ProfCorrelatorKind;
 
@@ -617,12 +608,6 @@ static int reportError(Error E) {
   return 1;
 }
 
-static void exitWithError(Error E, StringRef Whence = "") {
-  reportError(makeError(std::move(E), Whence));
-  skipLeakCheck();
-  ::exit(1);
-}
-
 static Error warnOrErrorGivenError(FailureMode FailMode, std::error_code EC,
                                    StringRef Whence = "") {
   if (FailMode == failIfAnyAreInvalid)
@@ -737,6 +722,11 @@ struct WriterContext {
                MemProfVersionRequested, MemProfFullSchema,
                MemprofGenerateRandomHotness, RandomSeed),
         ErrLock(ErrLock), WriterErrorCodes(WriterErrorCodes) {}
+
+  ~WriterContext() {
+    for (auto &ErrorPair : Errors)
+      consumeError(std::move(ErrorPair.first));
+  }
 };
 
 /// Computer the overlap b/w profile BaseFilename and TestFileName,
@@ -768,7 +758,7 @@ static void overlapInput(const std::string &BaseFilename,
 }
 
 /// Load an input into a writer context.
-static void
+static Error
 loadInput(const WeightedFile &Input, SymbolRemapper *Remapper,
           const InstrProfCorrelator *Correlator, const StringRef ProfiledBinary,
           WriterContext *WC, const object::BuildIDFetcher *BIDFetcher = nullptr,
@@ -783,9 +773,8 @@ loadInput(const WeightedFile &Input, SymbolRemapper *Remapper,
   using ::llvm::memprof::RawMemProfReader;
   if (RawMemProfReader::hasFormat(Input.Filename)) {
     auto ReaderOrErr = RawMemProfReader::create(Input.Filename, ProfiledBinary);
-    if (!ReaderOrErr) {
-      exitWithError(ReaderOrErr.takeError(), Input.Filename);
-    }
+    if (!ReaderOrErr)
+      return makeError(ReaderOrErr.takeError(), Input.Filename);
     std::unique_ptr<RawMemProfReader> Reader = std::move(ReaderOrErr.get());
     // Check if the profile types can be merged, e.g. clang frontend profiles
     // should not be merged with memprof profiles.
@@ -796,7 +785,7 @@ loadInput(const WeightedFile &Input, SymbolRemapper *Remapper,
               "Cannot merge MemProf profile with Clang generated profile.",
               std::error_code()),
           Filename);
-      return;
+      return Error::success();
     }
 
     auto MemProfError = [&](Error E) {
@@ -806,14 +795,14 @@ loadInput(const WeightedFile &Input, SymbolRemapper *Remapper,
     };
 
     WC->Writer.addMemProfData(Reader->takeMemProfData(), MemProfError);
-    return;
+    return Error::success();
   }
 
   using ::llvm::memprof::YAMLMemProfReader;
   if (YAMLMemProfReader::hasFormat(Input.Filename)) {
     auto ReaderOrErr = YAMLMemProfReader::create(Input.Filename);
     if (!ReaderOrErr)
-      exitWithError(ReaderOrErr.takeError(), Input.Filename);
+      return makeError(ReaderOrErr.takeError(), Input.Filename);
     std::unique_ptr<YAMLMemProfReader> Reader = std::move(ReaderOrErr.get());
     // Check if the profile types can be merged, e.g. clang frontend profiles
     // should not be merged with memprof profiles.
@@ -824,7 +813,7 @@ loadInput(const WeightedFile &Input, SymbolRemapper *Remapper,
               "Cannot merge MemProf profile with incompatible profile.",
               std::error_code()),
           Filename);
-      return;
+      return Error::success();
     }
 
     auto MemProfError = [&](Error E) {
@@ -847,7 +836,7 @@ loadInput(const WeightedFile &Input, SymbolRemapper *Remapper,
 
     WC->Writer.addMemProfData(std::move(MemProfData), MemProfError);
     WC->Writer.addDataAccessProfData(std::move(DataAccessProfData));
-    return;
+    return Error::success();
   }
 
   auto FS = vfs::getRealFileSystem();
@@ -883,13 +872,13 @@ loadInput(const WeightedFile &Input, SymbolRemapper *Remapper,
     if (ErrCode != instrprof_error::empty_raw_profile)
       WC->Errors.emplace_back(make_error<InstrProfError>(ErrCode, Msg),
                               Filename);
-    return;
+    return Error::success();
   }
 
   auto Reader = std::move(ReaderOrErr.get());
   if (Error E = WC->Writer.mergeProfileKind(Reader->getProfileKind())) {
     WC->Errors.emplace_back(std::move(E), Filename);
-    return;
+    return Error::success();
   }
 
   for (auto &I : *Reader) {
@@ -930,14 +919,14 @@ loadInput(const WeightedFile &Input, SymbolRemapper *Remapper,
   if (Reader->hasError()) {
     if (Error E = Reader->getError()) {
       WC->Errors.emplace_back(std::move(E), Filename);
-      return;
+      return Error::success();
     }
   }
 
   std::vector<llvm::object::BuildID> BinaryIds;
   if (Error E = Reader->readBinaryIds(BinaryIds)) {
     WC->Errors.emplace_back(std::move(E), Filename);
-    return;
+    return Error::success();
   }
   WC->Writer.addBinaryIds(BinaryIds);
 
@@ -945,16 +934,17 @@ loadInput(const WeightedFile &Input, SymbolRemapper *Remapper,
     WC->Errors.emplace_back(std::move(ReaderWarning->first),
                             ReaderWarning->second);
   }
+  return Error::success();
 }
 
 /// Merge the \p Src writer context into \p Dst.
-static void mergeWriterContexts(WriterContext *Dst, WriterContext *Src) {
+static Error mergeWriterContexts(WriterContext *Dst, WriterContext *Src) {
   for (auto &ErrorPair : Src->Errors)
     Dst->Errors.push_back(std::move(ErrorPair));
   Src->Errors.clear();
 
   if (Error E = Dst->Writer.mergeProfileKind(Src->Writer.getProfileKind()))
-    exitWithError(std::move(E));
+    return makeError(std::move(E));
 
   Dst->Writer.mergeRecordsFromWriter(std::move(Src->Writer), [&](Error E) {
     auto [ErrorCode, Msg] = InstrProfError::take(std::move(E));
@@ -963,6 +953,7 @@ static void mergeWriterContexts(WriterContext *Dst, WriterContext *Src) {
     if (firstTime)
       warn(toString(make_error<InstrProfError>(ErrorCode, Msg)));
   });
+  return Error::success();
 }
 
 static StringRef
@@ -1121,20 +1112,46 @@ static Error mergeInstrProfile(const WeightedFileVector &Inputs,
 
   if (NumThreads == 1) {
     for (const auto &Input : Inputs)
-      loadInput(Input, Remapper, Correlator.get(), ProfiledBinary,
-                Contexts[0].get(), BIDFetcher.get(), &BIDFetcherCorrelateKind);
+      if (Error E = loadInput(Input, Remapper, Correlator.get(), ProfiledBinary,
+                              Contexts[0].get(), BIDFetcher.get(),
+                              &BIDFetcherCorrelateKind))
+        return E;
   } else {
+    Error FatalError = Error::success();
+    auto hasFatalError = [&] {
+      std::unique_lock<std::mutex> ErrGuard{ErrorLock};
+      return static_cast<bool>(FatalError);
+    };
+
     DefaultThreadPool Pool(hardware_concurrency(NumThreads));
+    auto Async = [&](auto F, auto &&...Args) {
+      Pool.async(
+          [&, F](auto &&...InnerArgs) {
+            if (hasFatalError())
+              return;
+            if (Error E = F(std::forward<decltype(InnerArgs)>(InnerArgs)...)) {
+              std::unique_lock<std::mutex> ErrGuard{ErrorLock};
+              if (FatalError)
+                consumeError(std::move(E));
+              else
+                FatalError = std::move(E);
+            }
+          },
+          std::forward<decltype(Args)>(Args)...);
+    };
 
     // Load the inputs in parallel (N/NumThreads serial steps).
     unsigned Ctx = 0;
     for (const auto &Input : Inputs) {
-      Pool.async(loadInput, Input, Remapper, Correlator.get(), ProfiledBinary,
-                 Contexts[Ctx].get(), BIDFetcher.get(),
-                 &BIDFetcherCorrelateKind);
+      if (hasFatalError())
+        break;
+      Async(loadInput, Input, Remapper, Correlator.get(), ProfiledBinary,
+            Contexts[Ctx].get(), BIDFetcher.get(), &BIDFetcherCorrelateKind);
       Ctx = (Ctx + 1) % NumThreads;
     }
     Pool.wait();
+    if (FatalError)
+      return FatalError;
 
     // Merge the writer contexts together (~ lg(NumThreads) serial steps).
     unsigned Mid = Contexts.size() / 2;
@@ -1142,13 +1159,15 @@ static Error mergeInstrProfile(const WeightedFileVector &Inputs,
     assert(Mid > 0 && "Expected more than one context");
     do {
       for (unsigned I = 0; I < Mid; ++I)
-        Pool.async(mergeWriterContexts, Contexts[I].get(),
-                   Contexts[I + Mid].get());
+        Async(mergeWriterContexts, Contexts[I].get(), Contexts[I + Mid].get());
       Pool.wait();
+      if (FatalError)
+        return FatalError;
       if (End & 1) {
-        Pool.async(mergeWriterContexts, Contexts[0].get(),
-                   Contexts[End - 1].get());
+        Async(mergeWriterContexts, Contexts[0].get(), Contexts[End - 1].get());
         Pool.wait();
+        if (FatalError)
+          return FatalError;
       }
       End = Mid;
       Mid /= 2;
@@ -1554,7 +1573,9 @@ static Error supplementInstrProfile(const WeightedFileVector &Inputs,
   SmallSet<instrprof_error, 4> WriterErrorCodes;
   auto WC = std::make_unique<WriterContext>(OutputSparse, ErrorLock,
                                             WriterErrorCodes);
-  loadInput(Inputs[0], nullptr, nullptr, /*ProfiledBinary=*/"", WC.get());
+  if (Error E = loadInput(Inputs[0], nullptr, nullptr, /*ProfiledBinary=*/"",
+                          WC.get()))
+    return E;
   if (!WC->Errors.empty())
     return makeError(std::move(WC->Errors[0].first), InstrFilename);
 
@@ -1965,7 +1986,9 @@ static Error overlapInstrProfile(const std::string &BaseFilename,
     OS << "Sum of edge counts for profile " << TestFilename << " is 0.\n";
     return Error::success();
   }
-  loadInput(WeightedInput, nullptr, nullptr, /*ProfiledBinary=*/"", &Context);
+  if (Error E = loadInput(WeightedInput, nullptr, nullptr,
+                          /*ProfiledBinary=*/"", &Context))
+    return E;
   overlapInput(BaseFilename, TestFilename, &Context, Overlap, FuncFilter, OS,
                IsCS);
   Overlap.dump(OS);
