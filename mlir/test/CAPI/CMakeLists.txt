@@ -49,6 +49,12 @@ _add_capi_test_executable(mlir-capi-ir-test
     MLIRCAPIRegisterEverything
 )
 
+_add_capi_test_executable(mlir-capi-extensible-dialect-test
+  extensible_dialect.c
+  LINK_LIBS PRIVATE
+    MLIRCAPIIR
+)
+
 _add_capi_test_executable(mlir-capi-irdl-test
   irdl.c
   LINK_LIBS PRIVATE
