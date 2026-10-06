@@ -8,7 +8,7 @@ intention of capturing the desires and concerns of the LLVM community, and
 forming them into a plan that can be agreed upon.
 The original author is somewhat naïve in the ways of LLVM so there will
 inevitably be some details that are flawed. You can help - you can edit this
-page (preferably with a Phabricator review for larger changes) or reply to the
+page by submitting a GitHub pull request or reply to the
 `Request For Comments thread
 <http://lists.llvm.org/pipermail/llvm-dev/2019-February/130083.html>`_.
 
