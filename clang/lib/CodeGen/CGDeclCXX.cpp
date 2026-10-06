@@ -180,6 +180,11 @@ void CodeGenFunction::EmitCXXGlobalVarDeclInit(const VarDecl &D,
   const Expr *Init = D.getInit();
   QualType T = D.getType();
 
+  // Emitted in a function synthesized for the variable, which has no declaration
+  // for StartFunction to walk, so this initializer is its own root.
+  if (Init)
+    computeBoundsCheckRequirements(Init, Init->isGLValue());
+
   // The address space of a static local variable (DeclPtr) may be different
   // from the address space of the "this" argument of the constructor. In that
   // case, we need an addrspacecast before calling the constructor.
