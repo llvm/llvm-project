@@ -120,6 +120,9 @@ StringRef ISD::getCondCodeName(ISD::CondCode Operation) {
 std::string SDNode::getOperationName(const SelectionDAG *G) const {
   switch (getOpcode()) {
   default:
+    // If this assert fails, add/remove the newly added/removed opcode from the
+    // switch and update the expected value.
+    static_assert(ISD::BUILTIN_OP_END == 476, "Unexpected number of opcodes");
     if (getOpcode() < ISD::BUILTIN_OP_END)
       return "<<Unknown DAG Node>>";
     if (isMachineOpcode()) {
@@ -630,6 +633,8 @@ std::string SDNode::getOperationName(const SelectionDAG *G) const {
     return "patchpoint";
   case ISD::CLEAR_CACHE:
     return "clear_cache";
+  case ISD::DEACTIVATION_SYMBOL:
+    return "deactivation_symbol";
 
   case ISD::EXPERIMENTAL_VECTOR_HISTOGRAM:
     return "histogram";
