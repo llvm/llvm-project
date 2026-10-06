@@ -12,13 +12,13 @@
 define i32 @test_f32_oeq_q(i32 %a, i32 %b, float %f1, float %f2) #0 {
 ; P8-LABEL: test_f32_oeq_q:
 ; P8:       # %bb.0:
-; P8-NEXT:    fcmpu cr0, f1, f2
+; P8-NEXT:    xscmpudp cr0, f1, f2
 ; P8-NEXT:    iseleq r3, r3, r4
 ; P8-NEXT:    blr
 ;
 ; P9-LABEL: test_f32_oeq_q:
 ; P9:       # %bb.0:
-; P9-NEXT:    fcmpu cr0, f1, f2
+; P9-NEXT:    xscmpudp cr0, f1, f2
 ; P9-NEXT:    iseleq r3, r3, r4
 ; P9-NEXT:    blr
 ;
@@ -37,13 +37,13 @@ define i32 @test_f32_oeq_q(i32 %a, i32 %b, float %f1, float %f2) #0 {
 define i32 @test_f32_ogt_q(i32 %a, i32 %b, float %f1, float %f2) #0 {
 ; P8-LABEL: test_f32_ogt_q:
 ; P8:       # %bb.0:
-; P8-NEXT:    fcmpu cr0, f1, f2
+; P8-NEXT:    xscmpudp cr0, f1, f2
 ; P8-NEXT:    iselgt r3, r3, r4
 ; P8-NEXT:    blr
 ;
 ; P9-LABEL: test_f32_ogt_q:
 ; P9:       # %bb.0:
-; P9-NEXT:    fcmpu cr0, f1, f2
+; P9-NEXT:    xscmpudp cr0, f1, f2
 ; P9-NEXT:    iselgt r3, r3, r4
 ; P9-NEXT:    blr
 ;
@@ -62,14 +62,14 @@ define i32 @test_f32_ogt_q(i32 %a, i32 %b, float %f1, float %f2) #0 {
 define i32 @test_f32_oge_q(i32 %a, i32 %b, float %f1, float %f2) #0 {
 ; P8-LABEL: test_f32_oge_q:
 ; P8:       # %bb.0:
-; P8-NEXT:    fcmpu cr0, f1, f2
+; P8-NEXT:    xscmpudp cr0, f1, f2
 ; P8-NEXT:    crnor 4*cr5+lt, un, lt
 ; P8-NEXT:    isel r3, r3, r4, 4*cr5+lt
 ; P8-NEXT:    blr
 ;
 ; P9-LABEL: test_f32_oge_q:
 ; P9:       # %bb.0:
-; P9-NEXT:    fcmpu cr0, f1, f2
+; P9-NEXT:    xscmpudp cr0, f1, f2
 ; P9-NEXT:    crnor 4*cr5+lt, un, lt
 ; P9-NEXT:    isel r3, r3, r4, 4*cr5+lt
 ; P9-NEXT:    blr
@@ -90,13 +90,13 @@ define i32 @test_f32_oge_q(i32 %a, i32 %b, float %f1, float %f2) #0 {
 define i32 @test_f32_olt_q(i32 %a, i32 %b, float %f1, float %f2) #0 {
 ; P8-LABEL: test_f32_olt_q:
 ; P8:       # %bb.0:
-; P8-NEXT:    fcmpu cr0, f1, f2
+; P8-NEXT:    xscmpudp cr0, f1, f2
 ; P8-NEXT:    isellt r3, r3, r4
 ; P8-NEXT:    blr
 ;
 ; P9-LABEL: test_f32_olt_q:
 ; P9:       # %bb.0:
-; P9-NEXT:    fcmpu cr0, f1, f2
+; P9-NEXT:    xscmpudp cr0, f1, f2
 ; P9-NEXT:    isellt r3, r3, r4
 ; P9-NEXT:    blr
 ;
@@ -115,14 +115,14 @@ define i32 @test_f32_olt_q(i32 %a, i32 %b, float %f1, float %f2) #0 {
 define i32 @test_f32_ole_q(i32 %a, i32 %b, float %f1, float %f2) #0 {
 ; P8-LABEL: test_f32_ole_q:
 ; P8:       # %bb.0:
-; P8-NEXT:    fcmpu cr0, f1, f2
+; P8-NEXT:    xscmpudp cr0, f1, f2
 ; P8-NEXT:    crnor 4*cr5+lt, un, gt
 ; P8-NEXT:    isel r3, r3, r4, 4*cr5+lt
 ; P8-NEXT:    blr
 ;
 ; P9-LABEL: test_f32_ole_q:
 ; P9:       # %bb.0:
-; P9-NEXT:    fcmpu cr0, f1, f2
+; P9-NEXT:    xscmpudp cr0, f1, f2
 ; P9-NEXT:    crnor 4*cr5+lt, un, gt
 ; P9-NEXT:    isel r3, r3, r4, 4*cr5+lt
 ; P9-NEXT:    blr
@@ -143,14 +143,14 @@ define i32 @test_f32_ole_q(i32 %a, i32 %b, float %f1, float %f2) #0 {
 define i32 @test_f32_one_q(i32 %a, i32 %b, float %f1, float %f2) #0 {
 ; P8-LABEL: test_f32_one_q:
 ; P8:       # %bb.0:
-; P8-NEXT:    fcmpu cr0, f1, f2
+; P8-NEXT:    xscmpudp cr0, f1, f2
 ; P8-NEXT:    crnor 4*cr5+lt, un, eq
 ; P8-NEXT:    isel r3, r3, r4, 4*cr5+lt
 ; P8-NEXT:    blr
 ;
 ; P9-LABEL: test_f32_one_q:
 ; P9:       # %bb.0:
-; P9-NEXT:    fcmpu cr0, f1, f2
+; P9-NEXT:    xscmpudp cr0, f1, f2
 ; P9-NEXT:    crnor 4*cr5+lt, un, eq
 ; P9-NEXT:    isel r3, r3, r4, 4*cr5+lt
 ; P9-NEXT:    blr
@@ -171,13 +171,13 @@ define i32 @test_f32_one_q(i32 %a, i32 %b, float %f1, float %f2) #0 {
 define i32 @test_f32_ord_q(i32 %a, i32 %b, float %f1, float %f2) #0 {
 ; P8-LABEL: test_f32_ord_q:
 ; P8:       # %bb.0:
-; P8-NEXT:    fcmpu cr0, f1, f2
+; P8-NEXT:    xscmpudp cr0, f1, f2
 ; P8-NEXT:    isel r3, r4, r3, un
 ; P8-NEXT:    blr
 ;
 ; P9-LABEL: test_f32_ord_q:
 ; P9:       # %bb.0:
-; P9-NEXT:    fcmpu cr0, f1, f2
+; P9-NEXT:    xscmpudp cr0, f1, f2
 ; P9-NEXT:    isel r3, r4, r3, un
 ; P9-NEXT:    blr
 ;
@@ -196,14 +196,14 @@ define i32 @test_f32_ord_q(i32 %a, i32 %b, float %f1, float %f2) #0 {
 define i32 @test_f32_ueq_q(i32 %a, i32 %b, float %f1, float %f2) #0 {
 ; P8-LABEL: test_f32_ueq_q:
 ; P8:       # %bb.0:
-; P8-NEXT:    fcmpu cr0, f1, f2
+; P8-NEXT:    xscmpudp cr0, f1, f2
 ; P8-NEXT:    cror 4*cr5+lt, eq, un
 ; P8-NEXT:    isel r3, r3, r4, 4*cr5+lt
 ; P8-NEXT:    blr
 ;
 ; P9-LABEL: test_f32_ueq_q:
 ; P9:       # %bb.0:
-; P9-NEXT:    fcmpu cr0, f1, f2
+; P9-NEXT:    xscmpudp cr0, f1, f2
 ; P9-NEXT:    cror 4*cr5+lt, eq, un
 ; P9-NEXT:    isel r3, r3, r4, 4*cr5+lt
 ; P9-NEXT:    blr
@@ -224,14 +224,14 @@ define i32 @test_f32_ueq_q(i32 %a, i32 %b, float %f1, float %f2) #0 {
 define i32 @test_f32_ugt_q(i32 %a, i32 %b, float %f1, float %f2) #0 {
 ; P8-LABEL: test_f32_ugt_q:
 ; P8:       # %bb.0:
-; P8-NEXT:    fcmpu cr0, f1, f2
+; P8-NEXT:    xscmpudp cr0, f1, f2
 ; P8-NEXT:    cror 4*cr5+lt, gt, un
 ; P8-NEXT:    isel r3, r3, r4, 4*cr5+lt
 ; P8-NEXT:    blr
 ;
 ; P9-LABEL: test_f32_ugt_q:
 ; P9:       # %bb.0:
-; P9-NEXT:    fcmpu cr0, f1, f2
+; P9-NEXT:    xscmpudp cr0, f1, f2
 ; P9-NEXT:    cror 4*cr5+lt, gt, un
 ; P9-NEXT:    isel r3, r3, r4, 4*cr5+lt
 ; P9-NEXT:    blr
@@ -252,13 +252,13 @@ define i32 @test_f32_ugt_q(i32 %a, i32 %b, float %f1, float %f2) #0 {
 define i32 @test_f32_uge_q(i32 %a, i32 %b, float %f1, float %f2) #0 {
 ; P8-LABEL: test_f32_uge_q:
 ; P8:       # %bb.0:
-; P8-NEXT:    fcmpu cr0, f1, f2
+; P8-NEXT:    xscmpudp cr0, f1, f2
 ; P8-NEXT:    isellt r3, r4, r3
 ; P8-NEXT:    blr
 ;
 ; P9-LABEL: test_f32_uge_q:
 ; P9:       # %bb.0:
-; P9-NEXT:    fcmpu cr0, f1, f2
+; P9-NEXT:    xscmpudp cr0, f1, f2
 ; P9-NEXT:    isellt r3, r4, r3
 ; P9-NEXT:    blr
 ;
@@ -277,14 +277,14 @@ define i32 @test_f32_uge_q(i32 %a, i32 %b, float %f1, float %f2) #0 {
 define i32 @test_f32_ult_q(i32 %a, i32 %b, float %f1, float %f2) #0 {
 ; P8-LABEL: test_f32_ult_q:
 ; P8:       # %bb.0:
-; P8-NEXT:    fcmpu cr0, f1, f2
+; P8-NEXT:    xscmpudp cr0, f1, f2
 ; P8-NEXT:    cror 4*cr5+lt, lt, un
 ; P8-NEXT:    isel r3, r3, r4, 4*cr5+lt
 ; P8-NEXT:    blr
 ;
 ; P9-LABEL: test_f32_ult_q:
 ; P9:       # %bb.0:
-; P9-NEXT:    fcmpu cr0, f1, f2
+; P9-NEXT:    xscmpudp cr0, f1, f2
 ; P9-NEXT:    cror 4*cr5+lt, lt, un
 ; P9-NEXT:    isel r3, r3, r4, 4*cr5+lt
 ; P9-NEXT:    blr
@@ -305,13 +305,13 @@ define i32 @test_f32_ult_q(i32 %a, i32 %b, float %f1, float %f2) #0 {
 define i32 @test_f32_ule_q(i32 %a, i32 %b, float %f1, float %f2) #0 {
 ; P8-LABEL: test_f32_ule_q:
 ; P8:       # %bb.0:
-; P8-NEXT:    fcmpu cr0, f1, f2
+; P8-NEXT:    xscmpudp cr0, f1, f2
 ; P8-NEXT:    iselgt r3, r4, r3
 ; P8-NEXT:    blr
 ;
 ; P9-LABEL: test_f32_ule_q:
 ; P9:       # %bb.0:
-; P9-NEXT:    fcmpu cr0, f1, f2
+; P9-NEXT:    xscmpudp cr0, f1, f2
 ; P9-NEXT:    iselgt r3, r4, r3
 ; P9-NEXT:    blr
 ;
@@ -330,13 +330,13 @@ define i32 @test_f32_ule_q(i32 %a, i32 %b, float %f1, float %f2) #0 {
 define i32 @test_f32_une_q(i32 %a, i32 %b, float %f1, float %f2) #0 {
 ; P8-LABEL: test_f32_une_q:
 ; P8:       # %bb.0:
-; P8-NEXT:    fcmpu cr0, f1, f2
+; P8-NEXT:    xscmpudp cr0, f1, f2
 ; P8-NEXT:    iseleq r3, r4, r3
 ; P8-NEXT:    blr
 ;
 ; P9-LABEL: test_f32_une_q:
 ; P9:       # %bb.0:
-; P9-NEXT:    fcmpu cr0, f1, f2
+; P9-NEXT:    xscmpudp cr0, f1, f2
 ; P9-NEXT:    iseleq r3, r4, r3
 ; P9-NEXT:    blr
 ;
@@ -355,13 +355,13 @@ define i32 @test_f32_une_q(i32 %a, i32 %b, float %f1, float %f2) #0 {
 define i32 @test_f32_uno_q(i32 %a, i32 %b, float %f1, float %f2) #0 {
 ; P8-LABEL: test_f32_uno_q:
 ; P8:       # %bb.0:
-; P8-NEXT:    fcmpu cr0, f1, f2
+; P8-NEXT:    xscmpudp cr0, f1, f2
 ; P8-NEXT:    isel r3, r3, r4, un
 ; P8-NEXT:    blr
 ;
 ; P9-LABEL: test_f32_uno_q:
 ; P9:       # %bb.0:
-; P9-NEXT:    fcmpu cr0, f1, f2
+; P9-NEXT:    xscmpudp cr0, f1, f2
 ; P9-NEXT:    isel r3, r3, r4, un
 ; P9-NEXT:    blr
 ;
@@ -380,13 +380,13 @@ define i32 @test_f32_uno_q(i32 %a, i32 %b, float %f1, float %f2) #0 {
 define i32 @test_f64_oeq_q(i32 %a, i32 %b, double %f1, double %f2) #0 {
 ; P8-LABEL: test_f64_oeq_q:
 ; P8:       # %bb.0:
-; P8-NEXT:    fcmpu cr0, f1, f2
+; P8-NEXT:    xscmpudp cr0, f1, f2
 ; P8-NEXT:    iseleq r3, r3, r4
 ; P8-NEXT:    blr
 ;
 ; P9-LABEL: test_f64_oeq_q:
 ; P9:       # %bb.0:
-; P9-NEXT:    fcmpu cr0, f1, f2
+; P9-NEXT:    xscmpudp cr0, f1, f2
 ; P9-NEXT:    iseleq r3, r3, r4
 ; P9-NEXT:    blr
 ;
@@ -405,13 +405,13 @@ define i32 @test_f64_oeq_q(i32 %a, i32 %b, double %f1, double %f2) #0 {
 define i32 @test_f64_ogt_q(i32 %a, i32 %b, double %f1, double %f2) #0 {
 ; P8-LABEL: test_f64_ogt_q:
 ; P8:       # %bb.0:
-; P8-NEXT:    fcmpu cr0, f1, f2
+; P8-NEXT:    xscmpudp cr0, f1, f2
 ; P8-NEXT:    iselgt r3, r3, r4
 ; P8-NEXT:    blr
 ;
 ; P9-LABEL: test_f64_ogt_q:
 ; P9:       # %bb.0:
-; P9-NEXT:    fcmpu cr0, f1, f2
+; P9-NEXT:    xscmpudp cr0, f1, f2
 ; P9-NEXT:    iselgt r3, r3, r4
 ; P9-NEXT:    blr
 ;
@@ -430,14 +430,14 @@ define i32 @test_f64_ogt_q(i32 %a, i32 %b, double %f1, double %f2) #0 {
 define i32 @test_f64_oge_q(i32 %a, i32 %b, double %f1, double %f2) #0 {
 ; P8-LABEL: test_f64_oge_q:
 ; P8:       # %bb.0:
-; P8-NEXT:    fcmpu cr0, f1, f2
+; P8-NEXT:    xscmpudp cr0, f1, f2
 ; P8-NEXT:    crnor 4*cr5+lt, un, lt
 ; P8-NEXT:    isel r3, r3, r4, 4*cr5+lt
 ; P8-NEXT:    blr
 ;
 ; P9-LABEL: test_f64_oge_q:
 ; P9:       # %bb.0:
-; P9-NEXT:    fcmpu cr0, f1, f2
+; P9-NEXT:    xscmpudp cr0, f1, f2
 ; P9-NEXT:    crnor 4*cr5+lt, un, lt
 ; P9-NEXT:    isel r3, r3, r4, 4*cr5+lt
 ; P9-NEXT:    blr
@@ -458,13 +458,13 @@ define i32 @test_f64_oge_q(i32 %a, i32 %b, double %f1, double %f2) #0 {
 define i32 @test_f64_olt_q(i32 %a, i32 %b, double %f1, double %f2) #0 {
 ; P8-LABEL: test_f64_olt_q:
 ; P8:       # %bb.0:
-; P8-NEXT:    fcmpu cr0, f1, f2
+; P8-NEXT:    xscmpudp cr0, f1, f2
 ; P8-NEXT:    isellt r3, r3, r4
 ; P8-NEXT:    blr
 ;
 ; P9-LABEL: test_f64_olt_q:
 ; P9:       # %bb.0:
-; P9-NEXT:    fcmpu cr0, f1, f2
+; P9-NEXT:    xscmpudp cr0, f1, f2
 ; P9-NEXT:    isellt r3, r3, r4
 ; P9-NEXT:    blr
 ;
@@ -483,14 +483,14 @@ define i32 @test_f64_olt_q(i32 %a, i32 %b, double %f1, double %f2) #0 {
 define i32 @test_f64_ole_q(i32 %a, i32 %b, double %f1, double %f2) #0 {
 ; P8-LABEL: test_f64_ole_q:
 ; P8:       # %bb.0:
-; P8-NEXT:    fcmpu cr0, f1, f2
+; P8-NEXT:    xscmpudp cr0, f1, f2
 ; P8-NEXT:    crnor 4*cr5+lt, un, gt
 ; P8-NEXT:    isel r3, r3, r4, 4*cr5+lt
 ; P8-NEXT:    blr
 ;
 ; P9-LABEL: test_f64_ole_q:
 ; P9:       # %bb.0:
-; P9-NEXT:    fcmpu cr0, f1, f2
+; P9-NEXT:    xscmpudp cr0, f1, f2
 ; P9-NEXT:    crnor 4*cr5+lt, un, gt
 ; P9-NEXT:    isel r3, r3, r4, 4*cr5+lt
 ; P9-NEXT:    blr
@@ -511,14 +511,14 @@ define i32 @test_f64_ole_q(i32 %a, i32 %b, double %f1, double %f2) #0 {
 define i32 @test_f64_one_q(i32 %a, i32 %b, double %f1, double %f2) #0 {
 ; P8-LABEL: test_f64_one_q:
 ; P8:       # %bb.0:
-; P8-NEXT:    fcmpu cr0, f1, f2
+; P8-NEXT:    xscmpudp cr0, f1, f2
 ; P8-NEXT:    crnor 4*cr5+lt, un, eq
 ; P8-NEXT:    isel r3, r3, r4, 4*cr5+lt
 ; P8-NEXT:    blr
 ;
 ; P9-LABEL: test_f64_one_q:
 ; P9:       # %bb.0:
-; P9-NEXT:    fcmpu cr0, f1, f2
+; P9-NEXT:    xscmpudp cr0, f1, f2
 ; P9-NEXT:    crnor 4*cr5+lt, un, eq
 ; P9-NEXT:    isel r3, r3, r4, 4*cr5+lt
 ; P9-NEXT:    blr
@@ -539,13 +539,13 @@ define i32 @test_f64_one_q(i32 %a, i32 %b, double %f1, double %f2) #0 {
 define i32 @test_f64_ord_q(i32 %a, i32 %b, double %f1, double %f2) #0 {
 ; P8-LABEL: test_f64_ord_q:
 ; P8:       # %bb.0:
-; P8-NEXT:    fcmpu cr0, f1, f2
+; P8-NEXT:    xscmpudp cr0, f1, f2
 ; P8-NEXT:    isel r3, r4, r3, un
 ; P8-NEXT:    blr
 ;
 ; P9-LABEL: test_f64_ord_q:
 ; P9:       # %bb.0:
-; P9-NEXT:    fcmpu cr0, f1, f2
+; P9-NEXT:    xscmpudp cr0, f1, f2
 ; P9-NEXT:    isel r3, r4, r3, un
 ; P9-NEXT:    blr
 ;
@@ -564,14 +564,14 @@ define i32 @test_f64_ord_q(i32 %a, i32 %b, double %f1, double %f2) #0 {
 define i32 @test_f64_ueq_q(i32 %a, i32 %b, double %f1, double %f2) #0 {
 ; P8-LABEL: test_f64_ueq_q:
 ; P8:       # %bb.0:
-; P8-NEXT:    fcmpu cr0, f1, f2
+; P8-NEXT:    xscmpudp cr0, f1, f2
 ; P8-NEXT:    cror 4*cr5+lt, eq, un
 ; P8-NEXT:    isel r3, r3, r4, 4*cr5+lt
 ; P8-NEXT:    blr
 ;
 ; P9-LABEL: test_f64_ueq_q:
 ; P9:       # %bb.0:
-; P9-NEXT:    fcmpu cr0, f1, f2
+; P9-NEXT:    xscmpudp cr0, f1, f2
 ; P9-NEXT:    cror 4*cr5+lt, eq, un
 ; P9-NEXT:    isel r3, r3, r4, 4*cr5+lt
 ; P9-NEXT:    blr
@@ -592,14 +592,14 @@ define i32 @test_f64_ueq_q(i32 %a, i32 %b, double %f1, double %f2) #0 {
 define i32 @test_f64_ugt_q(i32 %a, i32 %b, double %f1, double %f2) #0 {
 ; P8-LABEL: test_f64_ugt_q:
 ; P8:       # %bb.0:
-; P8-NEXT:    fcmpu cr0, f1, f2
+; P8-NEXT:    xscmpudp cr0, f1, f2
 ; P8-NEXT:    cror 4*cr5+lt, gt, un
 ; P8-NEXT:    isel r3, r3, r4, 4*cr5+lt
 ; P8-NEXT:    blr
 ;
 ; P9-LABEL: test_f64_ugt_q:
 ; P9:       # %bb.0:
-; P9-NEXT:    fcmpu cr0, f1, f2
+; P9-NEXT:    xscmpudp cr0, f1, f2
 ; P9-NEXT:    cror 4*cr5+lt, gt, un
 ; P9-NEXT:    isel r3, r3, r4, 4*cr5+lt
 ; P9-NEXT:    blr
@@ -620,13 +620,13 @@ define i32 @test_f64_ugt_q(i32 %a, i32 %b, double %f1, double %f2) #0 {
 define i32 @test_f64_uge_q(i32 %a, i32 %b, double %f1, double %f2) #0 {
 ; P8-LABEL: test_f64_uge_q:
 ; P8:       # %bb.0:
-; P8-NEXT:    fcmpu cr0, f1, f2
+; P8-NEXT:    xscmpudp cr0, f1, f2
 ; P8-NEXT:    isellt r3, r4, r3
 ; P8-NEXT:    blr
 ;
 ; P9-LABEL: test_f64_uge_q:
 ; P9:       # %bb.0:
-; P9-NEXT:    fcmpu cr0, f1, f2
+; P9-NEXT:    xscmpudp cr0, f1, f2
 ; P9-NEXT:    isellt r3, r4, r3
 ; P9-NEXT:    blr
 ;
@@ -645,14 +645,14 @@ define i32 @test_f64_uge_q(i32 %a, i32 %b, double %f1, double %f2) #0 {
 define i32 @test_f64_ult_q(i32 %a, i32 %b, double %f1, double %f2) #0 {
 ; P8-LABEL: test_f64_ult_q:
 ; P8:       # %bb.0:
-; P8-NEXT:    fcmpu cr0, f1, f2
+; P8-NEXT:    xscmpudp cr0, f1, f2
 ; P8-NEXT:    cror 4*cr5+lt, lt, un
 ; P8-NEXT:    isel r3, r3, r4, 4*cr5+lt
 ; P8-NEXT:    blr
 ;
 ; P9-LABEL: test_f64_ult_q:
 ; P9:       # %bb.0:
-; P9-NEXT:    fcmpu cr0, f1, f2
+; P9-NEXT:    xscmpudp cr0, f1, f2
 ; P9-NEXT:    cror 4*cr5+lt, lt, un
 ; P9-NEXT:    isel r3, r3, r4, 4*cr5+lt
 ; P9-NEXT:    blr
@@ -673,13 +673,13 @@ define i32 @test_f64_ult_q(i32 %a, i32 %b, double %f1, double %f2) #0 {
 define i32 @test_f64_ule_q(i32 %a, i32 %b, double %f1, double %f2) #0 {
 ; P8-LABEL: test_f64_ule_q:
 ; P8:       # %bb.0:
-; P8-NEXT:    fcmpu cr0, f1, f2
+; P8-NEXT:    xscmpudp cr0, f1, f2
 ; P8-NEXT:    iselgt r3, r4, r3
 ; P8-NEXT:    blr
 ;
 ; P9-LABEL: test_f64_ule_q:
 ; P9:       # %bb.0:
-; P9-NEXT:    fcmpu cr0, f1, f2
+; P9-NEXT:    xscmpudp cr0, f1, f2
 ; P9-NEXT:    iselgt r3, r4, r3
 ; P9-NEXT:    blr
 ;
@@ -698,13 +698,13 @@ define i32 @test_f64_ule_q(i32 %a, i32 %b, double %f1, double %f2) #0 {
 define i32 @test_f64_une_q(i32 %a, i32 %b, double %f1, double %f2) #0 {
 ; P8-LABEL: test_f64_une_q:
 ; P8:       # %bb.0:
-; P8-NEXT:    fcmpu cr0, f1, f2
+; P8-NEXT:    xscmpudp cr0, f1, f2
 ; P8-NEXT:    iseleq r3, r4, r3
 ; P8-NEXT:    blr
 ;
 ; P9-LABEL: test_f64_une_q:
 ; P9:       # %bb.0:
-; P9-NEXT:    fcmpu cr0, f1, f2
+; P9-NEXT:    xscmpudp cr0, f1, f2
 ; P9-NEXT:    iseleq r3, r4, r3
 ; P9-NEXT:    blr
 ;
@@ -723,13 +723,13 @@ define i32 @test_f64_une_q(i32 %a, i32 %b, double %f1, double %f2) #0 {
 define i32 @test_f64_uno_q(i32 %a, i32 %b, double %f1, double %f2) #0 {
 ; P8-LABEL: test_f64_uno_q:
 ; P8:       # %bb.0:
-; P8-NEXT:    fcmpu cr0, f1, f2
+; P8-NEXT:    xscmpudp cr0, f1, f2
 ; P8-NEXT:    isel r3, r3, r4, un
 ; P8-NEXT:    blr
 ;
 ; P9-LABEL: test_f64_uno_q:
 ; P9:       # %bb.0:
-; P9-NEXT:    fcmpu cr0, f1, f2
+; P9-NEXT:    xscmpudp cr0, f1, f2
 ; P9-NEXT:    isel r3, r3, r4, un
 ; P9-NEXT:    blr
 ;
@@ -748,13 +748,13 @@ define i32 @test_f64_uno_q(i32 %a, i32 %b, double %f1, double %f2) #0 {
 define i32 @test_f32_oeq_s(i32 %a, i32 %b, float %f1, float %f2) #0 {
 ; P8-LABEL: test_f32_oeq_s:
 ; P8:       # %bb.0:
-; P8-NEXT:    fcmpo cr0, f1, f2
+; P8-NEXT:    xscmpodp cr0, f1, f2
 ; P8-NEXT:    iseleq r3, r3, r4
 ; P8-NEXT:    blr
 ;
 ; P9-LABEL: test_f32_oeq_s:
 ; P9:       # %bb.0:
-; P9-NEXT:    fcmpo cr0, f1, f2
+; P9-NEXT:    xscmpodp cr0, f1, f2
 ; P9-NEXT:    iseleq r3, r3, r4
 ; P9-NEXT:    blr
 ;
@@ -773,13 +773,13 @@ define i32 @test_f32_oeq_s(i32 %a, i32 %b, float %f1, float %f2) #0 {
 define i32 @test_f32_ogt_s(i32 %a, i32 %b, float %f1, float %f2) #0 {
 ; P8-LABEL: test_f32_ogt_s:
 ; P8:       # %bb.0:
-; P8-NEXT:    fcmpo cr0, f1, f2
+; P8-NEXT:    xscmpodp cr0, f1, f2
 ; P8-NEXT:    iselgt r3, r3, r4
 ; P8-NEXT:    blr
 ;
 ; P9-LABEL: test_f32_ogt_s:
 ; P9:       # %bb.0:
-; P9-NEXT:    fcmpo cr0, f1, f2
+; P9-NEXT:    xscmpodp cr0, f1, f2
 ; P9-NEXT:    iselgt r3, r3, r4
 ; P9-NEXT:    blr
 ;
@@ -798,14 +798,14 @@ define i32 @test_f32_ogt_s(i32 %a, i32 %b, float %f1, float %f2) #0 {
 define i32 @test_f32_oge_s(i32 %a, i32 %b, float %f1, float %f2) #0 {
 ; P8-LABEL: test_f32_oge_s:
 ; P8:       # %bb.0:
-; P8-NEXT:    fcmpo cr0, f1, f2
+; P8-NEXT:    xscmpodp cr0, f1, f2
 ; P8-NEXT:    crnor 4*cr5+lt, un, lt
 ; P8-NEXT:    isel r3, r3, r4, 4*cr5+lt
 ; P8-NEXT:    blr
 ;
 ; P9-LABEL: test_f32_oge_s:
 ; P9:       # %bb.0:
-; P9-NEXT:    fcmpo cr0, f1, f2
+; P9-NEXT:    xscmpodp cr0, f1, f2
 ; P9-NEXT:    crnor 4*cr5+lt, un, lt
 ; P9-NEXT:    isel r3, r3, r4, 4*cr5+lt
 ; P9-NEXT:    blr
@@ -826,13 +826,13 @@ define i32 @test_f32_oge_s(i32 %a, i32 %b, float %f1, float %f2) #0 {
 define i32 @test_f32_olt_s(i32 %a, i32 %b, float %f1, float %f2) #0 {
 ; P8-LABEL: test_f32_olt_s:
 ; P8:       # %bb.0:
-; P8-NEXT:    fcmpo cr0, f1, f2
+; P8-NEXT:    xscmpodp cr0, f1, f2
 ; P8-NEXT:    isellt r3, r3, r4
 ; P8-NEXT:    blr
 ;
 ; P9-LABEL: test_f32_olt_s:
 ; P9:       # %bb.0:
-; P9-NEXT:    fcmpo cr0, f1, f2
+; P9-NEXT:    xscmpodp cr0, f1, f2
 ; P9-NEXT:    isellt r3, r3, r4
 ; P9-NEXT:    blr
 ;
@@ -851,14 +851,14 @@ define i32 @test_f32_olt_s(i32 %a, i32 %b, float %f1, float %f2) #0 {
 define i32 @test_f32_ole_s(i32 %a, i32 %b, float %f1, float %f2) #0 {
 ; P8-LABEL: test_f32_ole_s:
 ; P8:       # %bb.0:
-; P8-NEXT:    fcmpo cr0, f1, f2
+; P8-NEXT:    xscmpodp cr0, f1, f2
 ; P8-NEXT:    crnor 4*cr5+lt, un, gt
 ; P8-NEXT:    isel r3, r3, r4, 4*cr5+lt
 ; P8-NEXT:    blr
 ;
 ; P9-LABEL: test_f32_ole_s:
 ; P9:       # %bb.0:
-; P9-NEXT:    fcmpo cr0, f1, f2
+; P9-NEXT:    xscmpodp cr0, f1, f2
 ; P9-NEXT:    crnor 4*cr5+lt, un, gt
 ; P9-NEXT:    isel r3, r3, r4, 4*cr5+lt
 ; P9-NEXT:    blr
@@ -879,14 +879,14 @@ define i32 @test_f32_ole_s(i32 %a, i32 %b, float %f1, float %f2) #0 {
 define i32 @test_f32_one_s(i32 %a, i32 %b, float %f1, float %f2) #0 {
 ; P8-LABEL: test_f32_one_s:
 ; P8:       # %bb.0:
-; P8-NEXT:    fcmpo cr0, f1, f2
+; P8-NEXT:    xscmpodp cr0, f1, f2
 ; P8-NEXT:    crnor 4*cr5+lt, un, eq
 ; P8-NEXT:    isel r3, r3, r4, 4*cr5+lt
 ; P8-NEXT:    blr
 ;
 ; P9-LABEL: test_f32_one_s:
 ; P9:       # %bb.0:
-; P9-NEXT:    fcmpo cr0, f1, f2
+; P9-NEXT:    xscmpodp cr0, f1, f2
 ; P9-NEXT:    crnor 4*cr5+lt, un, eq
 ; P9-NEXT:    isel r3, r3, r4, 4*cr5+lt
 ; P9-NEXT:    blr
@@ -907,13 +907,13 @@ define i32 @test_f32_one_s(i32 %a, i32 %b, float %f1, float %f2) #0 {
 define i32 @test_f32_ord_s(i32 %a, i32 %b, float %f1, float %f2) #0 {
 ; P8-LABEL: test_f32_ord_s:
 ; P8:       # %bb.0:
-; P8-NEXT:    fcmpo cr0, f1, f2
+; P8-NEXT:    xscmpodp cr0, f1, f2
 ; P8-NEXT:    isel r3, r4, r3, un
 ; P8-NEXT:    blr
 ;
 ; P9-LABEL: test_f32_ord_s:
 ; P9:       # %bb.0:
-; P9-NEXT:    fcmpo cr0, f1, f2
+; P9-NEXT:    xscmpodp cr0, f1, f2
 ; P9-NEXT:    isel r3, r4, r3, un
 ; P9-NEXT:    blr
 ;
@@ -932,14 +932,14 @@ define i32 @test_f32_ord_s(i32 %a, i32 %b, float %f1, float %f2) #0 {
 define i32 @test_f32_ueq_s(i32 %a, i32 %b, float %f1, float %f2) #0 {
 ; P8-LABEL: test_f32_ueq_s:
 ; P8:       # %bb.0:
-; P8-NEXT:    fcmpo cr0, f1, f2
+; P8-NEXT:    xscmpodp cr0, f1, f2
 ; P8-NEXT:    cror 4*cr5+lt, eq, un
 ; P8-NEXT:    isel r3, r3, r4, 4*cr5+lt
 ; P8-NEXT:    blr
 ;
 ; P9-LABEL: test_f32_ueq_s:
 ; P9:       # %bb.0:
-; P9-NEXT:    fcmpo cr0, f1, f2
+; P9-NEXT:    xscmpodp cr0, f1, f2
 ; P9-NEXT:    cror 4*cr5+lt, eq, un
 ; P9-NEXT:    isel r3, r3, r4, 4*cr5+lt
 ; P9-NEXT:    blr
@@ -960,14 +960,14 @@ define i32 @test_f32_ueq_s(i32 %a, i32 %b, float %f1, float %f2) #0 {
 define i32 @test_f32_ugt_s(i32 %a, i32 %b, float %f1, float %f2) #0 {
 ; P8-LABEL: test_f32_ugt_s:
 ; P8:       # %bb.0:
-; P8-NEXT:    fcmpo cr0, f1, f2
+; P8-NEXT:    xscmpodp cr0, f1, f2
 ; P8-NEXT:    cror 4*cr5+lt, gt, un
 ; P8-NEXT:    isel r3, r3, r4, 4*cr5+lt
 ; P8-NEXT:    blr
 ;
 ; P9-LABEL: test_f32_ugt_s:
 ; P9:       # %bb.0:
-; P9-NEXT:    fcmpo cr0, f1, f2
+; P9-NEXT:    xscmpodp cr0, f1, f2
 ; P9-NEXT:    cror 4*cr5+lt, gt, un
 ; P9-NEXT:    isel r3, r3, r4, 4*cr5+lt
 ; P9-NEXT:    blr
@@ -988,13 +988,13 @@ define i32 @test_f32_ugt_s(i32 %a, i32 %b, float %f1, float %f2) #0 {
 define i32 @test_f32_uge_s(i32 %a, i32 %b, float %f1, float %f2) #0 {
 ; P8-LABEL: test_f32_uge_s:
 ; P8:       # %bb.0:
-; P8-NEXT:    fcmpo cr0, f1, f2
+; P8-NEXT:    xscmpodp cr0, f1, f2
 ; P8-NEXT:    isellt r3, r4, r3
 ; P8-NEXT:    blr
 ;
 ; P9-LABEL: test_f32_uge_s:
 ; P9:       # %bb.0:
-; P9-NEXT:    fcmpo cr0, f1, f2
+; P9-NEXT:    xscmpodp cr0, f1, f2
 ; P9-NEXT:    isellt r3, r4, r3
 ; P9-NEXT:    blr
 ;
@@ -1013,14 +1013,14 @@ define i32 @test_f32_uge_s(i32 %a, i32 %b, float %f1, float %f2) #0 {
 define i32 @test_f32_ult_s(i32 %a, i32 %b, float %f1, float %f2) #0 {
 ; P8-LABEL: test_f32_ult_s:
 ; P8:       # %bb.0:
-; P8-NEXT:    fcmpo cr0, f1, f2
+; P8-NEXT:    xscmpodp cr0, f1, f2
 ; P8-NEXT:    cror 4*cr5+lt, lt, un
 ; P8-NEXT:    isel r3, r3, r4, 4*cr5+lt
 ; P8-NEXT:    blr
 ;
 ; P9-LABEL: test_f32_ult_s:
 ; P9:       # %bb.0:
-; P9-NEXT:    fcmpo cr0, f1, f2
+; P9-NEXT:    xscmpodp cr0, f1, f2
 ; P9-NEXT:    cror 4*cr5+lt, lt, un
 ; P9-NEXT:    isel r3, r3, r4, 4*cr5+lt
 ; P9-NEXT:    blr
@@ -1041,13 +1041,13 @@ define i32 @test_f32_ult_s(i32 %a, i32 %b, float %f1, float %f2) #0 {
 define i32 @test_f32_ule_s(i32 %a, i32 %b, float %f1, float %f2) #0 {
 ; P8-LABEL: test_f32_ule_s:
 ; P8:       # %bb.0:
-; P8-NEXT:    fcmpo cr0, f1, f2
+; P8-NEXT:    xscmpodp cr0, f1, f2
 ; P8-NEXT:    iselgt r3, r4, r3
 ; P8-NEXT:    blr
 ;
 ; P9-LABEL: test_f32_ule_s:
 ; P9:       # %bb.0:
-; P9-NEXT:    fcmpo cr0, f1, f2
+; P9-NEXT:    xscmpodp cr0, f1, f2
 ; P9-NEXT:    iselgt r3, r4, r3
 ; P9-NEXT:    blr
 ;
@@ -1066,13 +1066,13 @@ define i32 @test_f32_ule_s(i32 %a, i32 %b, float %f1, float %f2) #0 {
 define i32 @test_f32_une_s(i32 %a, i32 %b, float %f1, float %f2) #0 {
 ; P8-LABEL: test_f32_une_s:
 ; P8:       # %bb.0:
-; P8-NEXT:    fcmpo cr0, f1, f2
+; P8-NEXT:    xscmpodp cr0, f1, f2
 ; P8-NEXT:    iseleq r3, r4, r3
 ; P8-NEXT:    blr
 ;
 ; P9-LABEL: test_f32_une_s:
 ; P9:       # %bb.0:
-; P9-NEXT:    fcmpo cr0, f1, f2
+; P9-NEXT:    xscmpodp cr0, f1, f2
 ; P9-NEXT:    iseleq r3, r4, r3
 ; P9-NEXT:    blr
 ;
@@ -1091,13 +1091,13 @@ define i32 @test_f32_une_s(i32 %a, i32 %b, float %f1, float %f2) #0 {
 define i32 @test_f32_uno_s(i32 %a, i32 %b, float %f1, float %f2) #0 {
 ; P8-LABEL: test_f32_uno_s:
 ; P8:       # %bb.0:
-; P8-NEXT:    fcmpo cr0, f1, f2
+; P8-NEXT:    xscmpodp cr0, f1, f2
 ; P8-NEXT:    isel r3, r3, r4, un
 ; P8-NEXT:    blr
 ;
 ; P9-LABEL: test_f32_uno_s:
 ; P9:       # %bb.0:
-; P9-NEXT:    fcmpo cr0, f1, f2
+; P9-NEXT:    xscmpodp cr0, f1, f2
 ; P9-NEXT:    isel r3, r3, r4, un
 ; P9-NEXT:    blr
 ;
@@ -1116,13 +1116,13 @@ define i32 @test_f32_uno_s(i32 %a, i32 %b, float %f1, float %f2) #0 {
 define i32 @test_f64_oeq_s(i32 %a, i32 %b, double %f1, double %f2) #0 {
 ; P8-LABEL: test_f64_oeq_s:
 ; P8:       # %bb.0:
-; P8-NEXT:    fcmpo cr0, f1, f2
+; P8-NEXT:    xscmpodp cr0, f1, f2
 ; P8-NEXT:    iseleq r3, r3, r4
 ; P8-NEXT:    blr
 ;
 ; P9-LABEL: test_f64_oeq_s:
 ; P9:       # %bb.0:
-; P9-NEXT:    fcmpo cr0, f1, f2
+; P9-NEXT:    xscmpodp cr0, f1, f2
 ; P9-NEXT:    iseleq r3, r3, r4
 ; P9-NEXT:    blr
 ;
@@ -1141,13 +1141,13 @@ define i32 @test_f64_oeq_s(i32 %a, i32 %b, double %f1, double %f2) #0 {
 define i32 @test_f64_ogt_s(i32 %a, i32 %b, double %f1, double %f2) #0 {
 ; P8-LABEL: test_f64_ogt_s:
 ; P8:       # %bb.0:
-; P8-NEXT:    fcmpo cr0, f1, f2
+; P8-NEXT:    xscmpodp cr0, f1, f2
 ; P8-NEXT:    iselgt r3, r3, r4
 ; P8-NEXT:    blr
 ;
 ; P9-LABEL: test_f64_ogt_s:
 ; P9:       # %bb.0:
-; P9-NEXT:    fcmpo cr0, f1, f2
+; P9-NEXT:    xscmpodp cr0, f1, f2
 ; P9-NEXT:    iselgt r3, r3, r4
 ; P9-NEXT:    blr
 ;
@@ -1166,14 +1166,14 @@ define i32 @test_f64_ogt_s(i32 %a, i32 %b, double %f1, double %f2) #0 {
 define i32 @test_f64_oge_s(i32 %a, i32 %b, double %f1, double %f2) #0 {
 ; P8-LABEL: test_f64_oge_s:
 ; P8:       # %bb.0:
-; P8-NEXT:    fcmpo cr0, f1, f2
+; P8-NEXT:    xscmpodp cr0, f1, f2
 ; P8-NEXT:    crnor 4*cr5+lt, un, lt
 ; P8-NEXT:    isel r3, r3, r4, 4*cr5+lt
 ; P8-NEXT:    blr
 ;
 ; P9-LABEL: test_f64_oge_s:
 ; P9:       # %bb.0:
-; P9-NEXT:    fcmpo cr0, f1, f2
+; P9-NEXT:    xscmpodp cr0, f1, f2
 ; P9-NEXT:    crnor 4*cr5+lt, un, lt
 ; P9-NEXT:    isel r3, r3, r4, 4*cr5+lt
 ; P9-NEXT:    blr
@@ -1194,13 +1194,13 @@ define i32 @test_f64_oge_s(i32 %a, i32 %b, double %f1, double %f2) #0 {
 define i32 @test_f64_olt_s(i32 %a, i32 %b, double %f1, double %f2) #0 {
 ; P8-LABEL: test_f64_olt_s:
 ; P8:       # %bb.0:
-; P8-NEXT:    fcmpo cr0, f1, f2
+; P8-NEXT:    xscmpodp cr0, f1, f2
 ; P8-NEXT:    isellt r3, r3, r4
 ; P8-NEXT:    blr
 ;
 ; P9-LABEL: test_f64_olt_s:
 ; P9:       # %bb.0:
-; P9-NEXT:    fcmpo cr0, f1, f2
+; P9-NEXT:    xscmpodp cr0, f1, f2
 ; P9-NEXT:    isellt r3, r3, r4
 ; P9-NEXT:    blr
 ;
@@ -1219,14 +1219,14 @@ define i32 @test_f64_olt_s(i32 %a, i32 %b, double %f1, double %f2) #0 {
 define i32 @test_f64_ole_s(i32 %a, i32 %b, double %f1, double %f2) #0 {
 ; P8-LABEL: test_f64_ole_s:
 ; P8:       # %bb.0:
-; P8-NEXT:    fcmpo cr0, f1, f2
+; P8-NEXT:    xscmpodp cr0, f1, f2
 ; P8-NEXT:    crnor 4*cr5+lt, un, gt
 ; P8-NEXT:    isel r3, r3, r4, 4*cr5+lt
 ; P8-NEXT:    blr
 ;
 ; P9-LABEL: test_f64_ole_s:
 ; P9:       # %bb.0:
-; P9-NEXT:    fcmpo cr0, f1, f2
+; P9-NEXT:    xscmpodp cr0, f1, f2
 ; P9-NEXT:    crnor 4*cr5+lt, un, gt
 ; P9-NEXT:    isel r3, r3, r4, 4*cr5+lt
 ; P9-NEXT:    blr
@@ -1247,14 +1247,14 @@ define i32 @test_f64_ole_s(i32 %a, i32 %b, double %f1, double %f2) #0 {
 define i32 @test_f64_one_s(i32 %a, i32 %b, double %f1, double %f2) #0 {
 ; P8-LABEL: test_f64_one_s:
 ; P8:       # %bb.0:
-; P8-NEXT:    fcmpo cr0, f1, f2
+; P8-NEXT:    xscmpodp cr0, f1, f2
 ; P8-NEXT:    crnor 4*cr5+lt, un, eq
 ; P8-NEXT:    isel r3, r3, r4, 4*cr5+lt
 ; P8-NEXT:    blr
 ;
 ; P9-LABEL: test_f64_one_s:
 ; P9:       # %bb.0:
-; P9-NEXT:    fcmpo cr0, f1, f2
+; P9-NEXT:    xscmpodp cr0, f1, f2
 ; P9-NEXT:    crnor 4*cr5+lt, un, eq
 ; P9-NEXT:    isel r3, r3, r4, 4*cr5+lt
 ; P9-NEXT:    blr
@@ -1275,13 +1275,13 @@ define i32 @test_f64_one_s(i32 %a, i32 %b, double %f1, double %f2) #0 {
 define i32 @test_f64_ord_s(i32 %a, i32 %b, double %f1, double %f2) #0 {
 ; P8-LABEL: test_f64_ord_s:
 ; P8:       # %bb.0:
-; P8-NEXT:    fcmpo cr0, f1, f2
+; P8-NEXT:    xscmpodp cr0, f1, f2
 ; P8-NEXT:    isel r3, r4, r3, un
 ; P8-NEXT:    blr
 ;
 ; P9-LABEL: test_f64_ord_s:
 ; P9:       # %bb.0:
-; P9-NEXT:    fcmpo cr0, f1, f2
+; P9-NEXT:    xscmpodp cr0, f1, f2
 ; P9-NEXT:    isel r3, r4, r3, un
 ; P9-NEXT:    blr
 ;
@@ -1300,14 +1300,14 @@ define i32 @test_f64_ord_s(i32 %a, i32 %b, double %f1, double %f2) #0 {
 define i32 @test_f64_ueq_s(i32 %a, i32 %b, double %f1, double %f2) #0 {
 ; P8-LABEL: test_f64_ueq_s:
 ; P8:       # %bb.0:
-; P8-NEXT:    fcmpo cr0, f1, f2
+; P8-NEXT:    xscmpodp cr0, f1, f2
 ; P8-NEXT:    cror 4*cr5+lt, eq, un
 ; P8-NEXT:    isel r3, r3, r4, 4*cr5+lt
 ; P8-NEXT:    blr
 ;
 ; P9-LABEL: test_f64_ueq_s:
 ; P9:       # %bb.0:
-; P9-NEXT:    fcmpo cr0, f1, f2
+; P9-NEXT:    xscmpodp cr0, f1, f2
 ; P9-NEXT:    cror 4*cr5+lt, eq, un
 ; P9-NEXT:    isel r3, r3, r4, 4*cr5+lt
 ; P9-NEXT:    blr
@@ -1328,14 +1328,14 @@ define i32 @test_f64_ueq_s(i32 %a, i32 %b, double %f1, double %f2) #0 {
 define i32 @test_f64_ugt_s(i32 %a, i32 %b, double %f1, double %f2) #0 {
 ; P8-LABEL: test_f64_ugt_s:
 ; P8:       # %bb.0:
-; P8-NEXT:    fcmpo cr0, f1, f2
+; P8-NEXT:    xscmpodp cr0, f1, f2
 ; P8-NEXT:    cror 4*cr5+lt, gt, un
 ; P8-NEXT:    isel r3, r3, r4, 4*cr5+lt
 ; P8-NEXT:    blr
 ;
 ; P9-LABEL: test_f64_ugt_s:
 ; P9:       # %bb.0:
-; P9-NEXT:    fcmpo cr0, f1, f2
+; P9-NEXT:    xscmpodp cr0, f1, f2
 ; P9-NEXT:    cror 4*cr5+lt, gt, un
 ; P9-NEXT:    isel r3, r3, r4, 4*cr5+lt
 ; P9-NEXT:    blr
@@ -1356,13 +1356,13 @@ define i32 @test_f64_ugt_s(i32 %a, i32 %b, double %f1, double %f2) #0 {
 define i32 @test_f64_uge_s(i32 %a, i32 %b, double %f1, double %f2) #0 {
 ; P8-LABEL: test_f64_uge_s:
 ; P8:       # %bb.0:
-; P8-NEXT:    fcmpo cr0, f1, f2
+; P8-NEXT:    xscmpodp cr0, f1, f2
 ; P8-NEXT:    isellt r3, r4, r3
 ; P8-NEXT:    blr
 ;
 ; P9-LABEL: test_f64_uge_s:
 ; P9:       # %bb.0:
-; P9-NEXT:    fcmpo cr0, f1, f2
+; P9-NEXT:    xscmpodp cr0, f1, f2
 ; P9-NEXT:    isellt r3, r4, r3
 ; P9-NEXT:    blr
 ;
@@ -1381,14 +1381,14 @@ define i32 @test_f64_uge_s(i32 %a, i32 %b, double %f1, double %f2) #0 {
 define i32 @test_f64_ult_s(i32 %a, i32 %b, double %f1, double %f2) #0 {
 ; P8-LABEL: test_f64_ult_s:
 ; P8:       # %bb.0:
-; P8-NEXT:    fcmpo cr0, f1, f2
+; P8-NEXT:    xscmpodp cr0, f1, f2
 ; P8-NEXT:    cror 4*cr5+lt, lt, un
 ; P8-NEXT:    isel r3, r3, r4, 4*cr5+lt
 ; P8-NEXT:    blr
 ;
 ; P9-LABEL: test_f64_ult_s:
 ; P9:       # %bb.0:
-; P9-NEXT:    fcmpo cr0, f1, f2
+; P9-NEXT:    xscmpodp cr0, f1, f2
 ; P9-NEXT:    cror 4*cr5+lt, lt, un
 ; P9-NEXT:    isel r3, r3, r4, 4*cr5+lt
 ; P9-NEXT:    blr
@@ -1409,13 +1409,13 @@ define i32 @test_f64_ult_s(i32 %a, i32 %b, double %f1, double %f2) #0 {
 define i32 @test_f64_ule_s(i32 %a, i32 %b, double %f1, double %f2) #0 {
 ; P8-LABEL: test_f64_ule_s:
 ; P8:       # %bb.0:
-; P8-NEXT:    fcmpo cr0, f1, f2
+; P8-NEXT:    xscmpodp cr0, f1, f2
 ; P8-NEXT:    iselgt r3, r4, r3
 ; P8-NEXT:    blr
 ;
 ; P9-LABEL: test_f64_ule_s:
 ; P9:       # %bb.0:
-; P9-NEXT:    fcmpo cr0, f1, f2
+; P9-NEXT:    xscmpodp cr0, f1, f2
 ; P9-NEXT:    iselgt r3, r4, r3
 ; P9-NEXT:    blr
 ;
@@ -1434,13 +1434,13 @@ define i32 @test_f64_ule_s(i32 %a, i32 %b, double %f1, double %f2) #0 {
 define i32 @test_f64_une_s(i32 %a, i32 %b, double %f1, double %f2) #0 {
 ; P8-LABEL: test_f64_une_s:
 ; P8:       # %bb.0:
-; P8-NEXT:    fcmpo cr0, f1, f2
+; P8-NEXT:    xscmpodp cr0, f1, f2
 ; P8-NEXT:    iseleq r3, r4, r3
 ; P8-NEXT:    blr
 ;
 ; P9-LABEL: test_f64_une_s:
 ; P9:       # %bb.0:
-; P9-NEXT:    fcmpo cr0, f1, f2
+; P9-NEXT:    xscmpodp cr0, f1, f2
 ; P9-NEXT:    iseleq r3, r4, r3
 ; P9-NEXT:    blr
 ;
@@ -1459,13 +1459,13 @@ define i32 @test_f64_une_s(i32 %a, i32 %b, double %f1, double %f2) #0 {
 define i32 @test_f64_uno_s(i32 %a, i32 %b, double %f1, double %f2) #0 {
 ; P8-LABEL: test_f64_uno_s:
 ; P8:       # %bb.0:
-; P8-NEXT:    fcmpo cr0, f1, f2
+; P8-NEXT:    xscmpodp cr0, f1, f2
 ; P8-NEXT:    isel r3, r3, r4, un
 ; P8-NEXT:    blr
 ;
 ; P9-LABEL: test_f64_uno_s:
 ; P9:       # %bb.0:
-; P9-NEXT:    fcmpo cr0, f1, f2
+; P9-NEXT:    xscmpodp cr0, f1, f2
 ; P9-NEXT:    isel r3, r3, r4, un
 ; P9-NEXT:    blr
 ;
@@ -2658,10 +2658,10 @@ define i32 @fcmps_une_f128(fp128 %a, fp128 %b) #0 {
 define i32 @fcmp_olt_ppcf128(ppc_fp128 %a, ppc_fp128 %b) #0 {
 ; P8-LABEL: fcmp_olt_ppcf128:
 ; P8:       # %bb.0:
-; P8-NEXT:    fcmpu cr0, f1, f3
+; P8-NEXT:    xscmpudp cr0, f1, f3
 ; P8-NEXT:    li r3, 1
 ; P8-NEXT:    crandc 4*cr5+gt, lt, eq
-; P8-NEXT:    fcmpu cr1, f2, f4
+; P8-NEXT:    xscmpudp cr1, f2, f4
 ; P8-NEXT:    crand 4*cr5+lt, eq, 4*cr1+lt
 ; P8-NEXT:    crnor 4*cr5+lt, 4*cr5+gt, 4*cr5+lt
 ; P8-NEXT:    isel r3, 0, r3, 4*cr5+lt
@@ -2669,8 +2669,8 @@ define i32 @fcmp_olt_ppcf128(ppc_fp128 %a, ppc_fp128 %b) #0 {
 ;
 ; P9-LABEL: fcmp_olt_ppcf128:
 ; P9:       # %bb.0:
-; P9-NEXT:    fcmpu cr0, f1, f3
-; P9-NEXT:    fcmpu cr1, f2, f4
+; P9-NEXT:    xscmpudp cr0, f1, f3
+; P9-NEXT:    xscmpudp cr1, f2, f4
 ; P9-NEXT:    li r3, 1
 ; P9-NEXT:    crand 4*cr5+lt, eq, 4*cr1+lt
 ; P9-NEXT:    crandc 4*cr5+gt, lt, eq
@@ -2696,10 +2696,10 @@ define i32 @fcmp_olt_ppcf128(ppc_fp128 %a, ppc_fp128 %b) #0 {
 define i32 @fcmp_ole_ppcf128(ppc_fp128 %a, ppc_fp128 %b) #0 {
 ; P8-LABEL: fcmp_ole_ppcf128:
 ; P8:       # %bb.0:
-; P8-NEXT:    fcmpu cr0, f2, f4
+; P8-NEXT:    xscmpudp cr0, f2, f4
 ; P8-NEXT:    li r3, 1
 ; P8-NEXT:    crnor 4*cr5+lt, un, gt
-; P8-NEXT:    fcmpu cr0, f1, f3
+; P8-NEXT:    xscmpudp cr0, f1, f3
 ; P8-NEXT:    crnor 4*cr5+gt, un, gt
 ; P8-NEXT:    crand 4*cr5+lt, eq, 4*cr5+lt
 ; P8-NEXT:    crandc 4*cr5+gt, 4*cr5+gt, eq
@@ -2709,10 +2709,10 @@ define i32 @fcmp_ole_ppcf128(ppc_fp128 %a, ppc_fp128 %b) #0 {
 ;
 ; P9-LABEL: fcmp_ole_ppcf128:
 ; P9:       # %bb.0:
-; P9-NEXT:    fcmpu cr0, f2, f4
+; P9-NEXT:    xscmpudp cr0, f2, f4
 ; P9-NEXT:    li r3, 1
 ; P9-NEXT:    crnor 4*cr5+lt, un, gt
-; P9-NEXT:    fcmpu cr0, f1, f3
+; P9-NEXT:    xscmpudp cr0, f1, f3
 ; P9-NEXT:    crnor 4*cr5+gt, un, gt
 ; P9-NEXT:    crand 4*cr5+lt, eq, 4*cr5+lt
 ; P9-NEXT:    crandc 4*cr5+gt, 4*cr5+gt, eq
@@ -2740,10 +2740,10 @@ define i32 @fcmp_ole_ppcf128(ppc_fp128 %a, ppc_fp128 %b) #0 {
 define i32 @fcmp_ogt_ppcf128(ppc_fp128 %a, ppc_fp128 %b) #0 {
 ; P8-LABEL: fcmp_ogt_ppcf128:
 ; P8:       # %bb.0:
-; P8-NEXT:    fcmpu cr0, f1, f3
+; P8-NEXT:    xscmpudp cr0, f1, f3
 ; P8-NEXT:    li r3, 1
 ; P8-NEXT:    crandc 4*cr5+gt, gt, eq
-; P8-NEXT:    fcmpu cr1, f2, f4
+; P8-NEXT:    xscmpudp cr1, f2, f4
 ; P8-NEXT:    crand 4*cr5+lt, eq, 4*cr1+gt
 ; P8-NEXT:    crnor 4*cr5+lt, 4*cr5+gt, 4*cr5+lt
 ; P8-NEXT:    isel r3, 0, r3, 4*cr5+lt
@@ -2751,8 +2751,8 @@ define i32 @fcmp_ogt_ppcf128(ppc_fp128 %a, ppc_fp128 %b) #0 {
 ;
 ; P9-LABEL: fcmp_ogt_ppcf128:
 ; P9:       # %bb.0:
-; P9-NEXT:    fcmpu cr0, f1, f3
-; P9-NEXT:    fcmpu cr1, f2, f4
+; P9-NEXT:    xscmpudp cr0, f1, f3
+; P9-NEXT:    xscmpudp cr1, f2, f4
 ; P9-NEXT:    li r3, 1
 ; P9-NEXT:    crand 4*cr5+lt, eq, 4*cr1+gt
 ; P9-NEXT:    crandc 4*cr5+gt, gt, eq
@@ -2778,10 +2778,10 @@ define i32 @fcmp_ogt_ppcf128(ppc_fp128 %a, ppc_fp128 %b) #0 {
 define i32 @fcmp_oge_ppcf128(ppc_fp128 %a, ppc_fp128 %b) #0 {
 ; P8-LABEL: fcmp_oge_ppcf128:
 ; P8:       # %bb.0:
-; P8-NEXT:    fcmpu cr0, f2, f4
+; P8-NEXT:    xscmpudp cr0, f2, f4
 ; P8-NEXT:    li r3, 1
 ; P8-NEXT:    crnor 4*cr5+lt, un, lt
-; P8-NEXT:    fcmpu cr0, f1, f3
+; P8-NEXT:    xscmpudp cr0, f1, f3
 ; P8-NEXT:    crnor 4*cr5+gt, un, lt
 ; P8-NEXT:    crand 4*cr5+lt, eq, 4*cr5+lt
 ; P8-NEXT:    crandc 4*cr5+gt, 4*cr5+gt, eq
@@ -2791,10 +2791,10 @@ define i32 @fcmp_oge_ppcf128(ppc_fp128 %a, ppc_fp128 %b) #0 {
 ;
 ; P9-LABEL: fcmp_oge_ppcf128:
 ; P9:       # %bb.0:
-; P9-NEXT:    fcmpu cr0, f2, f4
+; P9-NEXT:    xscmpudp cr0, f2, f4
 ; P9-NEXT:    li r3, 1
 ; P9-NEXT:    crnor 4*cr5+lt, un, lt
-; P9-NEXT:    fcmpu cr0, f1, f3
+; P9-NEXT:    xscmpudp cr0, f1, f3
 ; P9-NEXT:    crnor 4*cr5+gt, un, lt
 ; P9-NEXT:    crand 4*cr5+lt, eq, 4*cr5+lt
 ; P9-NEXT:    crandc 4*cr5+gt, 4*cr5+gt, eq
@@ -2822,10 +2822,10 @@ define i32 @fcmp_oge_ppcf128(ppc_fp128 %a, ppc_fp128 %b) #0 {
 define i32 @fcmp_oeq_ppcf128(ppc_fp128 %a, ppc_fp128 %b) #0 {
 ; P8-LABEL: fcmp_oeq_ppcf128:
 ; P8:       # %bb.0:
-; P8-NEXT:    fcmpu cr0, f1, f3
+; P8-NEXT:    xscmpudp cr0, f1, f3
 ; P8-NEXT:    li r3, 1
 ; P8-NEXT:    crandc 4*cr5+gt, eq, eq
-; P8-NEXT:    fcmpu cr1, f2, f4
+; P8-NEXT:    xscmpudp cr1, f2, f4
 ; P8-NEXT:    crand 4*cr5+lt, eq, 4*cr1+eq
 ; P8-NEXT:    crnor 4*cr5+lt, 4*cr5+gt, 4*cr5+lt
 ; P8-NEXT:    isel r3, 0, r3, 4*cr5+lt
@@ -2833,8 +2833,8 @@ define i32 @fcmp_oeq_ppcf128(ppc_fp128 %a, ppc_fp128 %b) #0 {
 ;
 ; P9-LABEL: fcmp_oeq_ppcf128:
 ; P9:       # %bb.0:
-; P9-NEXT:    fcmpu cr0, f1, f3
-; P9-NEXT:    fcmpu cr1, f2, f4
+; P9-NEXT:    xscmpudp cr0, f1, f3
+; P9-NEXT:    xscmpudp cr1, f2, f4
 ; P9-NEXT:    li r3, 1
 ; P9-NEXT:    crand 4*cr5+lt, eq, 4*cr1+eq
 ; P9-NEXT:    crandc 4*cr5+gt, eq, eq
@@ -2860,10 +2860,10 @@ define i32 @fcmp_oeq_ppcf128(ppc_fp128 %a, ppc_fp128 %b) #0 {
 define i32 @fcmp_one_ppcf128(ppc_fp128 %a, ppc_fp128 %b) #0 {
 ; P8-LABEL: fcmp_one_ppcf128:
 ; P8:       # %bb.0:
-; P8-NEXT:    fcmpu cr0, f2, f4
+; P8-NEXT:    xscmpudp cr0, f2, f4
 ; P8-NEXT:    li r3, 1
 ; P8-NEXT:    crnor 4*cr5+lt, un, eq
-; P8-NEXT:    fcmpu cr0, f1, f3
+; P8-NEXT:    xscmpudp cr0, f1, f3
 ; P8-NEXT:    crnor 4*cr5+gt, un, eq
 ; P8-NEXT:    crand 4*cr5+lt, eq, 4*cr5+lt
 ; P8-NEXT:    crandc 4*cr5+gt, 4*cr5+gt, eq
@@ -2873,10 +2873,10 @@ define i32 @fcmp_one_ppcf128(ppc_fp128 %a, ppc_fp128 %b) #0 {
 ;
 ; P9-LABEL: fcmp_one_ppcf128:
 ; P9:       # %bb.0:
-; P9-NEXT:    fcmpu cr0, f2, f4
+; P9-NEXT:    xscmpudp cr0, f2, f4
 ; P9-NEXT:    li r3, 1
 ; P9-NEXT:    crnor 4*cr5+lt, un, eq
-; P9-NEXT:    fcmpu cr0, f1, f3
+; P9-NEXT:    xscmpudp cr0, f1, f3
 ; P9-NEXT:    crnor 4*cr5+gt, un, eq
 ; P9-NEXT:    crand 4*cr5+lt, eq, 4*cr5+lt
 ; P9-NEXT:    crandc 4*cr5+gt, 4*cr5+gt, eq
@@ -2904,10 +2904,10 @@ define i32 @fcmp_one_ppcf128(ppc_fp128 %a, ppc_fp128 %b) #0 {
 define i32 @fcmp_ult_ppcf128(ppc_fp128 %a, ppc_fp128 %b) #0 {
 ; P8-LABEL: fcmp_ult_ppcf128:
 ; P8:       # %bb.0:
-; P8-NEXT:    fcmpu cr0, f1, f3
+; P8-NEXT:    xscmpudp cr0, f1, f3
 ; P8-NEXT:    li r3, 1
 ; P8-NEXT:    cror 4*cr5+gt, lt, un
-; P8-NEXT:    fcmpu cr1, f2, f4
+; P8-NEXT:    xscmpudp cr1, f2, f4
 ; P8-NEXT:    cror 4*cr5+lt, 4*cr1+lt, 4*cr1+un
 ; P8-NEXT:    crand 4*cr5+lt, eq, 4*cr5+lt
 ; P8-NEXT:    crandc 4*cr5+gt, 4*cr5+gt, eq
@@ -2917,8 +2917,8 @@ define i32 @fcmp_ult_ppcf128(ppc_fp128 %a, ppc_fp128 %b) #0 {
 ;
 ; P9-LABEL: fcmp_ult_ppcf128:
 ; P9:       # %bb.0:
-; P9-NEXT:    fcmpu cr0, f1, f3
-; P9-NEXT:    fcmpu cr1, f2, f4
+; P9-NEXT:    xscmpudp cr0, f1, f3
+; P9-NEXT:    xscmpudp cr1, f2, f4
 ; P9-NEXT:    li r3, 1
 ; P9-NEXT:    cror 4*cr5+lt, 4*cr1+lt, 4*cr1+un
 ; P9-NEXT:    cror 4*cr5+gt, lt, un
@@ -2948,9 +2948,9 @@ define i32 @fcmp_ult_ppcf128(ppc_fp128 %a, ppc_fp128 %b) #0 {
 define i32 @fcmp_ule_ppcf128(ppc_fp128 %a, ppc_fp128 %b) #0 {
 ; P8-LABEL: fcmp_ule_ppcf128:
 ; P8:       # %bb.0:
-; P8-NEXT:    fcmpu cr0, f2, f4
+; P8-NEXT:    xscmpudp cr0, f2, f4
 ; P8-NEXT:    li r3, 1
-; P8-NEXT:    fcmpu cr1, f1, f3
+; P8-NEXT:    xscmpudp cr1, f1, f3
 ; P8-NEXT:    crandc 4*cr5+lt, 4*cr1+eq, gt
 ; P8-NEXT:    crnor 4*cr5+gt, 4*cr1+gt, 4*cr1+eq
 ; P8-NEXT:    crnor 4*cr5+lt, 4*cr5+gt, 4*cr5+lt
@@ -2959,8 +2959,8 @@ define i32 @fcmp_ule_ppcf128(ppc_fp128 %a, ppc_fp128 %b) #0 {
 ;
 ; P9-LABEL: fcmp_ule_ppcf128:
 ; P9:       # %bb.0:
-; P9-NEXT:    fcmpu cr0, f2, f4
-; P9-NEXT:    fcmpu cr1, f1, f3
+; P9-NEXT:    xscmpudp cr0, f2, f4
+; P9-NEXT:    xscmpudp cr1, f1, f3
 ; P9-NEXT:    li r3, 1
 ; P9-NEXT:    crandc 4*cr5+lt, 4*cr1+eq, gt
 ; P9-NEXT:    crnor 4*cr5+gt, 4*cr1+gt, 4*cr1+eq
@@ -2986,10 +2986,10 @@ define i32 @fcmp_ule_ppcf128(ppc_fp128 %a, ppc_fp128 %b) #0 {
 define i32 @fcmp_ugt_ppcf128(ppc_fp128 %a, ppc_fp128 %b) #0 {
 ; P8-LABEL: fcmp_ugt_ppcf128:
 ; P8:       # %bb.0:
-; P8-NEXT:    fcmpu cr0, f1, f3
+; P8-NEXT:    xscmpudp cr0, f1, f3
 ; P8-NEXT:    li r3, 1
 ; P8-NEXT:    cror 4*cr5+gt, gt, un
-; P8-NEXT:    fcmpu cr1, f2, f4
+; P8-NEXT:    xscmpudp cr1, f2, f4
 ; P8-NEXT:    cror 4*cr5+lt, 4*cr1+gt, 4*cr1+un
 ; P8-NEXT:    crand 4*cr5+lt, eq, 4*cr5+lt
 ; P8-NEXT:    crandc 4*cr5+gt, 4*cr5+gt, eq
@@ -2999,8 +2999,8 @@ define i32 @fcmp_ugt_ppcf128(ppc_fp128 %a, ppc_fp128 %b) #0 {
 ;
 ; P9-LABEL: fcmp_ugt_ppcf128:
 ; P9:       # %bb.0:
-; P9-NEXT:    fcmpu cr0, f1, f3
-; P9-NEXT:    fcmpu cr1, f2, f4
+; P9-NEXT:    xscmpudp cr0, f1, f3
+; P9-NEXT:    xscmpudp cr1, f2, f4
 ; P9-NEXT:    li r3, 1
 ; P9-NEXT:    cror 4*cr5+lt, 4*cr1+gt, 4*cr1+un
 ; P9-NEXT:    cror 4*cr5+gt, gt, un
@@ -3030,9 +3030,9 @@ define i32 @fcmp_ugt_ppcf128(ppc_fp128 %a, ppc_fp128 %b) #0 {
 define i32 @fcmp_uge_ppcf128(ppc_fp128 %a, ppc_fp128 %b) #0 {
 ; P8-LABEL: fcmp_uge_ppcf128:
 ; P8:       # %bb.0:
-; P8-NEXT:    fcmpu cr0, f2, f4
+; P8-NEXT:    xscmpudp cr0, f2, f4
 ; P8-NEXT:    li r3, 1
-; P8-NEXT:    fcmpu cr1, f1, f3
+; P8-NEXT:    xscmpudp cr1, f1, f3
 ; P8-NEXT:    crandc 4*cr5+lt, 4*cr1+eq, lt
 ; P8-NEXT:    crnor 4*cr5+gt, 4*cr1+lt, 4*cr1+eq
 ; P8-NEXT:    crnor 4*cr5+lt, 4*cr5+gt, 4*cr5+lt
@@ -3041,8 +3041,8 @@ define i32 @fcmp_uge_ppcf128(ppc_fp128 %a, ppc_fp128 %b) #0 {
 ;
 ; P9-LABEL: fcmp_uge_ppcf128:
 ; P9:       # %bb.0:
-; P9-NEXT:    fcmpu cr0, f2, f4
-; P9-NEXT:    fcmpu cr1, f1, f3
+; P9-NEXT:    xscmpudp cr0, f2, f4
+; P9-NEXT:    xscmpudp cr1, f1, f3
 ; P9-NEXT:    li r3, 1
 ; P9-NEXT:    crandc 4*cr5+lt, 4*cr1+eq, lt
 ; P9-NEXT:    crnor 4*cr5+gt, 4*cr1+lt, 4*cr1+eq
@@ -3068,10 +3068,10 @@ define i32 @fcmp_uge_ppcf128(ppc_fp128 %a, ppc_fp128 %b) #0 {
 define i32 @fcmp_ueq_ppcf128(ppc_fp128 %a, ppc_fp128 %b) #0 {
 ; P8-LABEL: fcmp_ueq_ppcf128:
 ; P8:       # %bb.0:
-; P8-NEXT:    fcmpu cr0, f1, f3
+; P8-NEXT:    xscmpudp cr0, f1, f3
 ; P8-NEXT:    li r3, 1
 ; P8-NEXT:    cror 4*cr5+gt, eq, un
-; P8-NEXT:    fcmpu cr1, f2, f4
+; P8-NEXT:    xscmpudp cr1, f2, f4
 ; P8-NEXT:    cror 4*cr5+lt, 4*cr1+eq, 4*cr1+un
 ; P8-NEXT:    crand 4*cr5+lt, eq, 4*cr5+lt
 ; P8-NEXT:    crandc 4*cr5+gt, 4*cr5+gt, eq
@@ -3081,8 +3081,8 @@ define i32 @fcmp_ueq_ppcf128(ppc_fp128 %a, ppc_fp128 %b) #0 {
 ;
 ; P9-LABEL: fcmp_ueq_ppcf128:
 ; P9:       # %bb.0:
-; P9-NEXT:    fcmpu cr0, f1, f3
-; P9-NEXT:    fcmpu cr1, f2, f4
+; P9-NEXT:    xscmpudp cr0, f1, f3
+; P9-NEXT:    xscmpudp cr1, f2, f4
 ; P9-NEXT:    li r3, 1
 ; P9-NEXT:    cror 4*cr5+lt, 4*cr1+eq, 4*cr1+un
 ; P9-NEXT:    cror 4*cr5+gt, eq, un
@@ -3112,9 +3112,9 @@ define i32 @fcmp_ueq_ppcf128(ppc_fp128 %a, ppc_fp128 %b) #0 {
 define i32 @fcmp_une_ppcf128(ppc_fp128 %a, ppc_fp128 %b) #0 {
 ; P8-LABEL: fcmp_une_ppcf128:
 ; P8:       # %bb.0:
-; P8-NEXT:    fcmpu cr0, f2, f4
+; P8-NEXT:    xscmpudp cr0, f2, f4
 ; P8-NEXT:    li r3, 1
-; P8-NEXT:    fcmpu cr1, f1, f3
+; P8-NEXT:    xscmpudp cr1, f1, f3
 ; P8-NEXT:    crandc 4*cr5+lt, 4*cr1+eq, eq
 ; P8-NEXT:    crandc 4*cr5+lt, 4*cr1+eq, 4*cr5+lt
 ; P8-NEXT:    isel r3, 0, r3, 4*cr5+lt
@@ -3122,8 +3122,8 @@ define i32 @fcmp_une_ppcf128(ppc_fp128 %a, ppc_fp128 %b) #0 {
 ;
 ; P9-LABEL: fcmp_une_ppcf128:
 ; P9:       # %bb.0:
-; P9-NEXT:    fcmpu cr0, f2, f4
-; P9-NEXT:    fcmpu cr1, f1, f3
+; P9-NEXT:    xscmpudp cr0, f2, f4
+; P9-NEXT:    xscmpudp cr1, f1, f3
 ; P9-NEXT:    li r3, 1
 ; P9-NEXT:    crandc 4*cr5+lt, 4*cr1+eq, eq
 ; P9-NEXT:    crandc 4*cr5+lt, 4*cr1+eq, 4*cr5+lt
@@ -3147,10 +3147,10 @@ define i32 @fcmp_une_ppcf128(ppc_fp128 %a, ppc_fp128 %b) #0 {
 define i32 @fcmps_olt_ppcf128(ppc_fp128 %a, ppc_fp128 %b) #0 {
 ; P8-LABEL: fcmps_olt_ppcf128:
 ; P8:       # %bb.0:
-; P8-NEXT:    fcmpo cr0, f1, f3
+; P8-NEXT:    xscmpodp cr0, f1, f3
 ; P8-NEXT:    li r3, 1
 ; P8-NEXT:    crandc 4*cr5+gt, lt, eq
-; P8-NEXT:    fcmpo cr1, f2, f4
+; P8-NEXT:    xscmpodp cr1, f2, f4
 ; P8-NEXT:    crand 4*cr5+lt, eq, 4*cr1+lt
 ; P8-NEXT:    crnor 4*cr5+lt, 4*cr5+gt, 4*cr5+lt
 ; P8-NEXT:    isel r3, 0, r3, 4*cr5+lt
@@ -3158,8 +3158,8 @@ define i32 @fcmps_olt_ppcf128(ppc_fp128 %a, ppc_fp128 %b) #0 {
 ;
 ; P9-LABEL: fcmps_olt_ppcf128:
 ; P9:       # %bb.0:
-; P9-NEXT:    fcmpo cr0, f1, f3
-; P9-NEXT:    fcmpo cr1, f2, f4
+; P9-NEXT:    xscmpodp cr0, f1, f3
+; P9-NEXT:    xscmpodp cr1, f2, f4
 ; P9-NEXT:    li r3, 1
 ; P9-NEXT:    crand 4*cr5+lt, eq, 4*cr1+lt
 ; P9-NEXT:    crandc 4*cr5+gt, lt, eq
@@ -3185,10 +3185,10 @@ define i32 @fcmps_olt_ppcf128(ppc_fp128 %a, ppc_fp128 %b) #0 {
 define i32 @fcmps_ole_ppcf128(ppc_fp128 %a, ppc_fp128 %b) #0 {
 ; P8-LABEL: fcmps_ole_ppcf128:
 ; P8:       # %bb.0:
-; P8-NEXT:    fcmpo cr0, f2, f4
+; P8-NEXT:    xscmpodp cr0, f2, f4
 ; P8-NEXT:    li r3, 1
 ; P8-NEXT:    crnor 4*cr5+lt, un, gt
-; P8-NEXT:    fcmpo cr0, f1, f3
+; P8-NEXT:    xscmpodp cr0, f1, f3
 ; P8-NEXT:    crnor 4*cr5+gt, un, gt
 ; P8-NEXT:    crand 4*cr5+lt, eq, 4*cr5+lt
 ; P8-NEXT:    crandc 4*cr5+gt, 4*cr5+gt, eq
@@ -3198,10 +3198,10 @@ define i32 @fcmps_ole_ppcf128(ppc_fp128 %a, ppc_fp128 %b) #0 {
 ;
 ; P9-LABEL: fcmps_ole_ppcf128:
 ; P9:       # %bb.0:
-; P9-NEXT:    fcmpo cr0, f2, f4
+; P9-NEXT:    xscmpodp cr0, f2, f4
 ; P9-NEXT:    li r3, 1
 ; P9-NEXT:    crnor 4*cr5+lt, un, gt
-; P9-NEXT:    fcmpo cr0, f1, f3
+; P9-NEXT:    xscmpodp cr0, f1, f3
 ; P9-NEXT:    crnor 4*cr5+gt, un, gt
 ; P9-NEXT:    crand 4*cr5+lt, eq, 4*cr5+lt
 ; P9-NEXT:    crandc 4*cr5+gt, 4*cr5+gt, eq
@@ -3229,10 +3229,10 @@ define i32 @fcmps_ole_ppcf128(ppc_fp128 %a, ppc_fp128 %b) #0 {
 define i32 @fcmps_ogt_ppcf128(ppc_fp128 %a, ppc_fp128 %b) #0 {
 ; P8-LABEL: fcmps_ogt_ppcf128:
 ; P8:       # %bb.0:
-; P8-NEXT:    fcmpo cr0, f1, f3
+; P8-NEXT:    xscmpodp cr0, f1, f3
 ; P8-NEXT:    li r3, 1
 ; P8-NEXT:    crandc 4*cr5+gt, gt, eq
-; P8-NEXT:    fcmpo cr1, f2, f4
+; P8-NEXT:    xscmpodp cr1, f2, f4
 ; P8-NEXT:    crand 4*cr5+lt, eq, 4*cr1+gt
 ; P8-NEXT:    crnor 4*cr5+lt, 4*cr5+gt, 4*cr5+lt
 ; P8-NEXT:    isel r3, 0, r3, 4*cr5+lt
@@ -3240,8 +3240,8 @@ define i32 @fcmps_ogt_ppcf128(ppc_fp128 %a, ppc_fp128 %b) #0 {
 ;
 ; P9-LABEL: fcmps_ogt_ppcf128:
 ; P9:       # %bb.0:
-; P9-NEXT:    fcmpo cr0, f1, f3
-; P9-NEXT:    fcmpo cr1, f2, f4
+; P9-NEXT:    xscmpodp cr0, f1, f3
+; P9-NEXT:    xscmpodp cr1, f2, f4
 ; P9-NEXT:    li r3, 1
 ; P9-NEXT:    crand 4*cr5+lt, eq, 4*cr1+gt
 ; P9-NEXT:    crandc 4*cr5+gt, gt, eq
@@ -3267,10 +3267,10 @@ define i32 @fcmps_ogt_ppcf128(ppc_fp128 %a, ppc_fp128 %b) #0 {
 define i32 @fcmps_oge_ppcf128(ppc_fp128 %a, ppc_fp128 %b) #0 {
 ; P8-LABEL: fcmps_oge_ppcf128:
 ; P8:       # %bb.0:
-; P8-NEXT:    fcmpo cr0, f2, f4
+; P8-NEXT:    xscmpodp cr0, f2, f4
 ; P8-NEXT:    li r3, 1
 ; P8-NEXT:    crnor 4*cr5+lt, un, lt
-; P8-NEXT:    fcmpo cr0, f1, f3
+; P8-NEXT:    xscmpodp cr0, f1, f3
 ; P8-NEXT:    crnor 4*cr5+gt, un, lt
 ; P8-NEXT:    crand 4*cr5+lt, eq, 4*cr5+lt
 ; P8-NEXT:    crandc 4*cr5+gt, 4*cr5+gt, eq
@@ -3280,10 +3280,10 @@ define i32 @fcmps_oge_ppcf128(ppc_fp128 %a, ppc_fp128 %b) #0 {
 ;
 ; P9-LABEL: fcmps_oge_ppcf128:
 ; P9:       # %bb.0:
-; P9-NEXT:    fcmpo cr0, f2, f4
+; P9-NEXT:    xscmpodp cr0, f2, f4
 ; P9-NEXT:    li r3, 1
 ; P9-NEXT:    crnor 4*cr5+lt, un, lt
-; P9-NEXT:    fcmpo cr0, f1, f3
+; P9-NEXT:    xscmpodp cr0, f1, f3
 ; P9-NEXT:    crnor 4*cr5+gt, un, lt
 ; P9-NEXT:    crand 4*cr5+lt, eq, 4*cr5+lt
 ; P9-NEXT:    crandc 4*cr5+gt, 4*cr5+gt, eq
@@ -3311,10 +3311,10 @@ define i32 @fcmps_oge_ppcf128(ppc_fp128 %a, ppc_fp128 %b) #0 {
 define i32 @fcmps_oeq_ppcf128(ppc_fp128 %a, ppc_fp128 %b) #0 {
 ; P8-LABEL: fcmps_oeq_ppcf128:
 ; P8:       # %bb.0:
-; P8-NEXT:    fcmpo cr0, f1, f3
+; P8-NEXT:    xscmpodp cr0, f1, f3
 ; P8-NEXT:    li r3, 1
 ; P8-NEXT:    crandc 4*cr5+gt, eq, eq
-; P8-NEXT:    fcmpo cr1, f2, f4
+; P8-NEXT:    xscmpodp cr1, f2, f4
 ; P8-NEXT:    crand 4*cr5+lt, eq, 4*cr1+eq
 ; P8-NEXT:    crnor 4*cr5+lt, 4*cr5+gt, 4*cr5+lt
 ; P8-NEXT:    isel r3, 0, r3, 4*cr5+lt
@@ -3322,8 +3322,8 @@ define i32 @fcmps_oeq_ppcf128(ppc_fp128 %a, ppc_fp128 %b) #0 {
 ;
 ; P9-LABEL: fcmps_oeq_ppcf128:
 ; P9:       # %bb.0:
-; P9-NEXT:    fcmpo cr0, f1, f3
-; P9-NEXT:    fcmpo cr1, f2, f4
+; P9-NEXT:    xscmpodp cr0, f1, f3
+; P9-NEXT:    xscmpodp cr1, f2, f4
 ; P9-NEXT:    li r3, 1
 ; P9-NEXT:    crand 4*cr5+lt, eq, 4*cr1+eq
 ; P9-NEXT:    crandc 4*cr5+gt, eq, eq
@@ -3349,10 +3349,10 @@ define i32 @fcmps_oeq_ppcf128(ppc_fp128 %a, ppc_fp128 %b) #0 {
 define i32 @fcmps_one_ppcf128(ppc_fp128 %a, ppc_fp128 %b) #0 {
 ; P8-LABEL: fcmps_one_ppcf128:
 ; P8:       # %bb.0:
-; P8-NEXT:    fcmpo cr0, f2, f4
+; P8-NEXT:    xscmpodp cr0, f2, f4
 ; P8-NEXT:    li r3, 1
 ; P8-NEXT:    crnor 4*cr5+lt, un, eq
-; P8-NEXT:    fcmpo cr0, f1, f3
+; P8-NEXT:    xscmpodp cr0, f1, f3
 ; P8-NEXT:    crnor 4*cr5+gt, un, eq
 ; P8-NEXT:    crand 4*cr5+lt, eq, 4*cr5+lt
 ; P8-NEXT:    crandc 4*cr5+gt, 4*cr5+gt, eq
@@ -3362,10 +3362,10 @@ define i32 @fcmps_one_ppcf128(ppc_fp128 %a, ppc_fp128 %b) #0 {
 ;
 ; P9-LABEL: fcmps_one_ppcf128:
 ; P9:       # %bb.0:
-; P9-NEXT:    fcmpo cr0, f2, f4
+; P9-NEXT:    xscmpodp cr0, f2, f4
 ; P9-NEXT:    li r3, 1
 ; P9-NEXT:    crnor 4*cr5+lt, un, eq
-; P9-NEXT:    fcmpo cr0, f1, f3
+; P9-NEXT:    xscmpodp cr0, f1, f3
 ; P9-NEXT:    crnor 4*cr5+gt, un, eq
 ; P9-NEXT:    crand 4*cr5+lt, eq, 4*cr5+lt
 ; P9-NEXT:    crandc 4*cr5+gt, 4*cr5+gt, eq
@@ -3393,10 +3393,10 @@ define i32 @fcmps_one_ppcf128(ppc_fp128 %a, ppc_fp128 %b) #0 {
 define i32 @fcmps_ult_ppcf128(ppc_fp128 %a, ppc_fp128 %b) #0 {
 ; P8-LABEL: fcmps_ult_ppcf128:
 ; P8:       # %bb.0:
-; P8-NEXT:    fcmpo cr0, f1, f3
+; P8-NEXT:    xscmpodp cr0, f1, f3
 ; P8-NEXT:    li r3, 1
 ; P8-NEXT:    cror 4*cr5+gt, lt, un
-; P8-NEXT:    fcmpo cr1, f2, f4
+; P8-NEXT:    xscmpodp cr1, f2, f4
 ; P8-NEXT:    cror 4*cr5+lt, 4*cr1+lt, 4*cr1+un
 ; P8-NEXT:    crand 4*cr5+lt, eq, 4*cr5+lt
 ; P8-NEXT:    crandc 4*cr5+gt, 4*cr5+gt, eq
@@ -3406,8 +3406,8 @@ define i32 @fcmps_ult_ppcf128(ppc_fp128 %a, ppc_fp128 %b) #0 {
 ;
 ; P9-LABEL: fcmps_ult_ppcf128:
 ; P9:       # %bb.0:
-; P9-NEXT:    fcmpo cr0, f1, f3
-; P9-NEXT:    fcmpo cr1, f2, f4
+; P9-NEXT:    xscmpodp cr0, f1, f3
+; P9-NEXT:    xscmpodp cr1, f2, f4
 ; P9-NEXT:    li r3, 1
 ; P9-NEXT:    cror 4*cr5+lt, 4*cr1+lt, 4*cr1+un
 ; P9-NEXT:    cror 4*cr5+gt, lt, un
@@ -3437,9 +3437,9 @@ define i32 @fcmps_ult_ppcf128(ppc_fp128 %a, ppc_fp128 %b) #0 {
 define i32 @fcmps_ule_ppcf128(ppc_fp128 %a, ppc_fp128 %b) #0 {
 ; P8-LABEL: fcmps_ule_ppcf128:
 ; P8:       # %bb.0:
-; P8-NEXT:    fcmpo cr0, f2, f4
+; P8-NEXT:    xscmpodp cr0, f2, f4
 ; P8-NEXT:    li r3, 1
-; P8-NEXT:    fcmpo cr1, f1, f3
+; P8-NEXT:    xscmpodp cr1, f1, f3
 ; P8-NEXT:    crandc 4*cr5+lt, 4*cr1+eq, gt
 ; P8-NEXT:    crnor 4*cr5+gt, 4*cr1+gt, 4*cr1+eq
 ; P8-NEXT:    crnor 4*cr5+lt, 4*cr5+gt, 4*cr5+lt
@@ -3448,8 +3448,8 @@ define i32 @fcmps_ule_ppcf128(ppc_fp128 %a, ppc_fp128 %b) #0 {
 ;
 ; P9-LABEL: fcmps_ule_ppcf128:
 ; P9:       # %bb.0:
-; P9-NEXT:    fcmpo cr0, f2, f4
-; P9-NEXT:    fcmpo cr1, f1, f3
+; P9-NEXT:    xscmpodp cr0, f2, f4
+; P9-NEXT:    xscmpodp cr1, f1, f3
 ; P9-NEXT:    li r3, 1
 ; P9-NEXT:    crandc 4*cr5+lt, 4*cr1+eq, gt
 ; P9-NEXT:    crnor 4*cr5+gt, 4*cr1+gt, 4*cr1+eq
@@ -3475,10 +3475,10 @@ define i32 @fcmps_ule_ppcf128(ppc_fp128 %a, ppc_fp128 %b) #0 {
 define i32 @fcmps_ugt_ppcf128(ppc_fp128 %a, ppc_fp128 %b) #0 {
 ; P8-LABEL: fcmps_ugt_ppcf128:
 ; P8:       # %bb.0:
-; P8-NEXT:    fcmpo cr0, f1, f3
+; P8-NEXT:    xscmpodp cr0, f1, f3
 ; P8-NEXT:    li r3, 1
 ; P8-NEXT:    cror 4*cr5+gt, gt, un
-; P8-NEXT:    fcmpo cr1, f2, f4
+; P8-NEXT:    xscmpodp cr1, f2, f4
 ; P8-NEXT:    cror 4*cr5+lt, 4*cr1+gt, 4*cr1+un
 ; P8-NEXT:    crand 4*cr5+lt, eq, 4*cr5+lt
 ; P8-NEXT:    crandc 4*cr5+gt, 4*cr5+gt, eq
@@ -3488,8 +3488,8 @@ define i32 @fcmps_ugt_ppcf128(ppc_fp128 %a, ppc_fp128 %b) #0 {
 ;
 ; P9-LABEL: fcmps_ugt_ppcf128:
 ; P9:       # %bb.0:
-; P9-NEXT:    fcmpo cr0, f1, f3
-; P9-NEXT:    fcmpo cr1, f2, f4
+; P9-NEXT:    xscmpodp cr0, f1, f3
+; P9-NEXT:    xscmpodp cr1, f2, f4
 ; P9-NEXT:    li r3, 1
 ; P9-NEXT:    cror 4*cr5+lt, 4*cr1+gt, 4*cr1+un
 ; P9-NEXT:    cror 4*cr5+gt, gt, un
@@ -3519,9 +3519,9 @@ define i32 @fcmps_ugt_ppcf128(ppc_fp128 %a, ppc_fp128 %b) #0 {
 define i32 @fcmps_uge_ppcf128(ppc_fp128 %a, ppc_fp128 %b) #0 {
 ; P8-LABEL: fcmps_uge_ppcf128:
 ; P8:       # %bb.0:
-; P8-NEXT:    fcmpo cr0, f2, f4
+; P8-NEXT:    xscmpodp cr0, f2, f4
 ; P8-NEXT:    li r3, 1
-; P8-NEXT:    fcmpo cr1, f1, f3
+; P8-NEXT:    xscmpodp cr1, f1, f3
 ; P8-NEXT:    crandc 4*cr5+lt, 4*cr1+eq, lt
 ; P8-NEXT:    crnor 4*cr5+gt, 4*cr1+lt, 4*cr1+eq
 ; P8-NEXT:    crnor 4*cr5+lt, 4*cr5+gt, 4*cr5+lt
@@ -3530,8 +3530,8 @@ define i32 @fcmps_uge_ppcf128(ppc_fp128 %a, ppc_fp128 %b) #0 {
 ;
 ; P9-LABEL: fcmps_uge_ppcf128:
 ; P9:       # %bb.0:
-; P9-NEXT:    fcmpo cr0, f2, f4
-; P9-NEXT:    fcmpo cr1, f1, f3
+; P9-NEXT:    xscmpodp cr0, f2, f4
+; P9-NEXT:    xscmpodp cr1, f1, f3
 ; P9-NEXT:    li r3, 1
 ; P9-NEXT:    crandc 4*cr5+lt, 4*cr1+eq, lt
 ; P9-NEXT:    crnor 4*cr5+gt, 4*cr1+lt, 4*cr1+eq
@@ -3557,10 +3557,10 @@ define i32 @fcmps_uge_ppcf128(ppc_fp128 %a, ppc_fp128 %b) #0 {
 define i32 @fcmps_ueq_ppcf128(ppc_fp128 %a, ppc_fp128 %b) #0 {
 ; P8-LABEL: fcmps_ueq_ppcf128:
 ; P8:       # %bb.0:
-; P8-NEXT:    fcmpo cr0, f1, f3
+; P8-NEXT:    xscmpodp cr0, f1, f3
 ; P8-NEXT:    li r3, 1
 ; P8-NEXT:    cror 4*cr5+gt, eq, un
-; P8-NEXT:    fcmpo cr1, f2, f4
+; P8-NEXT:    xscmpodp cr1, f2, f4
 ; P8-NEXT:    cror 4*cr5+lt, 4*cr1+eq, 4*cr1+un
 ; P8-NEXT:    crand 4*cr5+lt, eq, 4*cr5+lt
 ; P8-NEXT:    crandc 4*cr5+gt, 4*cr5+gt, eq
@@ -3570,8 +3570,8 @@ define i32 @fcmps_ueq_ppcf128(ppc_fp128 %a, ppc_fp128 %b) #0 {
 ;
 ; P9-LABEL: fcmps_ueq_ppcf128:
 ; P9:       # %bb.0:
-; P9-NEXT:    fcmpo cr0, f1, f3
-; P9-NEXT:    fcmpo cr1, f2, f4
+; P9-NEXT:    xscmpodp cr0, f1, f3
+; P9-NEXT:    xscmpodp cr1, f2, f4
 ; P9-NEXT:    li r3, 1
 ; P9-NEXT:    cror 4*cr5+lt, 4*cr1+eq, 4*cr1+un
 ; P9-NEXT:    cror 4*cr5+gt, eq, un
@@ -3601,9 +3601,9 @@ define i32 @fcmps_ueq_ppcf128(ppc_fp128 %a, ppc_fp128 %b) #0 {
 define i32 @fcmps_une_ppcf128(ppc_fp128 %a, ppc_fp128 %b) #0 {
 ; P8-LABEL: fcmps_une_ppcf128:
 ; P8:       # %bb.0:
-; P8-NEXT:    fcmpo cr0, f2, f4
+; P8-NEXT:    xscmpodp cr0, f2, f4
 ; P8-NEXT:    li r3, 1
-; P8-NEXT:    fcmpo cr1, f1, f3
+; P8-NEXT:    xscmpodp cr1, f1, f3
 ; P8-NEXT:    crandc 4*cr5+lt, 4*cr1+eq, eq
 ; P8-NEXT:    crandc 4*cr5+lt, 4*cr1+eq, 4*cr5+lt
 ; P8-NEXT:    isel r3, 0, r3, 4*cr5+lt
@@ -3611,8 +3611,8 @@ define i32 @fcmps_une_ppcf128(ppc_fp128 %a, ppc_fp128 %b) #0 {
 ;
 ; P9-LABEL: fcmps_une_ppcf128:
 ; P9:       # %bb.0:
-; P9-NEXT:    fcmpo cr0, f2, f4
-; P9-NEXT:    fcmpo cr1, f1, f3
+; P9-NEXT:    xscmpodp cr0, f2, f4
+; P9-NEXT:    xscmpodp cr1, f1, f3
 ; P9-NEXT:    li r3, 1
 ; P9-NEXT:    crandc 4*cr5+lt, 4*cr1+eq, eq
 ; P9-NEXT:    crandc 4*cr5+lt, 4*cr1+eq, 4*cr5+lt
