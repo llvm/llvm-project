@@ -5640,7 +5640,7 @@ static Value *simplifyBitInsertInst(Value *Base, Value *Val, Value *Offset,
   auto *CVal = dyn_cast<Constant>(Val);
   auto *COffset = dyn_cast<Constant>(Offset);
   if (CBase && CVal && COffset)
-    if (Constant *C = ConstantFoldBitInsertInstruction(CBase, CVal, COffset))
+    if (Constant *C = ConstantFoldBitInsertOperands(CBase, CVal, COffset, Q.DL))
       return C;
 
   // bitinsert x, y, poison/undef/out_of_range -> poison
@@ -5674,7 +5674,7 @@ static Value *simplifyBitExtractInst(Type *Ty, Value *Src, Value *Offset,
   auto *CSrc = dyn_cast<Constant>(Src);
   auto *COffset = dyn_cast<Constant>(Offset);
   if (CSrc && COffset)
-    if (Constant *C = ConstantFoldBitExtractInstruction(Ty, CSrc, COffset))
+    if (Constant *C = ConstantFoldBitExtractOperands(Ty, CSrc, COffset, Q.DL))
       return C;
 
   // bitextract ty, x, poison/undef/out_of_range -> poison
