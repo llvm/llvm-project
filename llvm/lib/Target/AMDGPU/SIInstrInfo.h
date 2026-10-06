@@ -1198,6 +1198,52 @@ public:
            Opc == AMDGPU::GLOBAL_WBINV;
   }
 
+  /// Load that zero-extends an 8-bit value to 32 bits.
+  static bool isUByteLoad(unsigned Opc) {
+    switch (Opc) {
+    case AMDGPU::BUFFER_LOAD_UBYTE_OFFSET:
+    case AMDGPU::BUFFER_LOAD_UBYTE_OFFEN:
+    case AMDGPU::BUFFER_LOAD_UBYTE_IDXEN:
+    case AMDGPU::BUFFER_LOAD_UBYTE_BOTHEN:
+    case AMDGPU::FLAT_LOAD_UBYTE:
+    case AMDGPU::GLOBAL_LOAD_UBYTE:
+    case AMDGPU::GLOBAL_LOAD_UBYTE_SADDR:
+    case AMDGPU::SCRATCH_LOAD_UBYTE:
+    case AMDGPU::S_BUFFER_LOAD_U8_IMM:
+    case AMDGPU::S_BUFFER_LOAD_U8_SGPR:
+    case AMDGPU::S_BUFFER_LOAD_U8_SGPR_IMM:
+    case AMDGPU::S_LOAD_U8_IMM:
+    case AMDGPU::S_LOAD_U8_SGPR:
+    case AMDGPU::S_LOAD_U8_SGPR_IMM:
+      return true;
+    default:
+      return false;
+    }
+  }
+
+  /// Load that zero-extends a 16-bit value to 32 bits.
+  static bool isUShortLoad(unsigned Opc) {
+    switch (Opc) {
+    case AMDGPU::BUFFER_LOAD_USHORT_OFFSET:
+    case AMDGPU::BUFFER_LOAD_USHORT_OFFEN:
+    case AMDGPU::BUFFER_LOAD_USHORT_IDXEN:
+    case AMDGPU::BUFFER_LOAD_USHORT_BOTHEN:
+    case AMDGPU::FLAT_LOAD_USHORT:
+    case AMDGPU::GLOBAL_LOAD_USHORT:
+    case AMDGPU::GLOBAL_LOAD_USHORT_SADDR:
+    case AMDGPU::SCRATCH_LOAD_USHORT:
+    case AMDGPU::S_BUFFER_LOAD_U16_IMM:
+    case AMDGPU::S_BUFFER_LOAD_U16_SGPR:
+    case AMDGPU::S_BUFFER_LOAD_U16_SGPR_IMM:
+    case AMDGPU::S_LOAD_U16_IMM:
+    case AMDGPU::S_LOAD_U16_SGPR:
+    case AMDGPU::S_LOAD_U16_SGPR_IMM:
+      return true;
+    default:
+      return false;
+    }
+  }
+
   static bool isF16PseudoScalarTrans(unsigned Opcode) {
     return Opcode == AMDGPU::V_S_EXP_F16_e64 ||
            Opcode == AMDGPU::V_S_LOG_F16_e64 ||

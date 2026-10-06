@@ -724,7 +724,6 @@ define amdgpu_kernel void @v_uaddo_i16(ptr addrspace(1) %out, ptr addrspace(1) %
 ; VI-NEXT:    v_mov_b32_e32 v3, s3
 ; VI-NEXT:    s_waitcnt vmcnt(0)
 ; VI-NEXT:    v_add_u32_e32 v5, vcc, v4, v5
-; VI-NEXT:    v_and_b32_e32 v4, 0xffff, v4
 ; VI-NEXT:    v_and_b32_e32 v6, 0xffff, v5
 ; VI-NEXT:    v_cmp_lt_u32_e32 vcc, v6, v4
 ; VI-NEXT:    flat_store_short v[0:1], v5
@@ -741,7 +740,7 @@ define amdgpu_kernel void @v_uaddo_i16(ptr addrspace(1) %out, ptr addrspace(1) %
 ; GFX9-NEXT:    global_load_ushort v2, v0, s[14:15]
 ; GFX9-NEXT:    s_waitcnt vmcnt(0)
 ; GFX9-NEXT:    v_add_u32_e32 v2, v1, v2
-; GFX9-NEXT:    v_cmp_lt_u32_sdwa s[0:1], v2, v1 src0_sel:WORD_0 src1_sel:WORD_0
+; GFX9-NEXT:    v_cmp_lt_u32_sdwa s[0:1], v2, v1 src0_sel:WORD_0 src1_sel:DWORD
 ; GFX9-NEXT:    v_cndmask_b32_e64 v1, 0, 1, s[0:1]
 ; GFX9-NEXT:    global_store_short v0, v2, s[8:9]
 ; GFX9-NEXT:    global_store_byte v0, v1, s[10:11]
@@ -757,7 +756,7 @@ define amdgpu_kernel void @v_uaddo_i16(ptr addrspace(1) %out, ptr addrspace(1) %
 ; GFX10-NEXT:    global_load_ushort v2, v0, s[14:15]
 ; GFX10-NEXT:    s_waitcnt vmcnt(0)
 ; GFX10-NEXT:    v_add_nc_u32_e32 v2, v1, v2
-; GFX10-NEXT:    v_cmp_lt_u32_sdwa s0, v2, v1 src0_sel:WORD_0 src1_sel:WORD_0
+; GFX10-NEXT:    v_cmp_lt_u32_sdwa s0, v2, v1 src0_sel:WORD_0 src1_sel:DWORD
 ; GFX10-NEXT:    v_cndmask_b32_e64 v1, 0, 1, s0
 ; GFX10-NEXT:    global_store_short v0, v2, s[8:9]
 ; GFX10-NEXT:    global_store_byte v0, v1, s[10:11]
