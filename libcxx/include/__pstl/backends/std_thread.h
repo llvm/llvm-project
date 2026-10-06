@@ -71,6 +71,7 @@ struct __cpu_traits<__std_thread_backend_tag> {
     return __reduce(std::move(__first), std::move(__last), std::move(__init));
   }
 
+#  if _LIBCPP_STD_VER >= 20 // TODO: remove once https://github.com/llvm/llvm-project/pull/224356 is merged
   template <class _Value,
             class _RandomAccessIterator,
             class _WorkerPrologue,
@@ -93,6 +94,7 @@ struct __cpu_traits<__std_thread_backend_tag> {
     __worker_epilogue(std::move(__ctx));
     return __empty{};
   }
+#  endif // _LIBCPP_STD_VER >= 20
 
   template <class _RandomAccessIterator, class _Compare, class _LeafSort>
   _LIBCPP_HIDE_FROM_ABI static optional<__empty>
@@ -184,9 +186,11 @@ template <class _ExecutionPolicy>
 struct __transform_binary<__std_thread_backend_tag, _ExecutionPolicy>
     : __cpu_parallel_transform_binary<__std_thread_backend_tag, _ExecutionPolicy> {};
 
+#  if _LIBCPP_STD_VER >= 20 // TODO: remove once https://github.com/llvm/llvm-project/pull/224356 is merged
 template <class _ExecutionPolicy>
 struct __transform_inclusive_scan_init<__std_thread_backend_tag, _ExecutionPolicy>
     : __cpu_parallel_transform_inclusive_scan_init<__std_thread_backend_tag, _ExecutionPolicy> {};
+#  endif // _LIBCPP_STD_VER >= 20
 
 template <class _ExecutionPolicy>
 struct __transform_reduce<__std_thread_backend_tag, _ExecutionPolicy>

@@ -31,7 +31,7 @@
 _LIBCPP_PUSH_MACROS
 #include <__undef_macros>
 
-#if _LIBCPP_STD_VER >= 17
+#if _LIBCPP_STD_VER >= 20 // TODO: should be 17 once https://github.com/llvm/llvm-project/pull/224356 is merged
 
 _LIBCPP_BEGIN_NAMESPACE_STD
 namespace __pstl {
@@ -177,7 +177,7 @@ struct __cpu_parallel_transform_inclusive_scan_init {
 } // namespace __pstl
 _LIBCPP_END_NAMESPACE_STD
 
-#endif // _LIBCPP_STD_VER >= 17
+#endif // _LIBCPP_STD_VER >= 20
 
 _LIBCPP_POP_MACROS
 
