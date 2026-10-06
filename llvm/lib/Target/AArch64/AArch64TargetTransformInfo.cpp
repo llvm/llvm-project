@@ -6759,6 +6759,72 @@ AArch64TTIImpl::getMulAccReductionCost(bool IsUnsigned, unsigned RedOpcode,
                                        CostKind);
 }
 
+InstructionCost AArch64TTIImpl::getFusedReductionCost(
+    unsigned Opcode, VectorType *Ty, ArrayRef<Value *> ReducedVals,
+    TTI::TargetCostKind CostKind,
+    function_ref<InstructionCost(Value *)> GetVectorizedCost) const {
+  if (Opcode != Instruction::Add || ReducedVals.empty())
+    return InstructionCost::getInvalid();
+
+  // Match one reduced lane as mul(ext(a), ext(b)) where both factors use the
+  // same widening extend. Reports the extend signedness, the pre-extension
+  // scalar type, and whether both factors are the same extend value.
+  auto MatchMulAccLane = [](Value *V, bool &ZExt, Type *&SrcTy,
+                            bool &SharedExt) {
+    Value *E0, *E1, *A, *B;
+    if (match(V, m_Mul(m_CombineAnd(m_Value(E0), m_ZExt(m_Value(A))),
+                       m_CombineAnd(m_Value(E1), m_ZExt(m_Value(B))))))
+      ZExt = true;
+    else if (match(V, m_Mul(m_CombineAnd(m_Value(E0), m_SExt(m_Value(A))),
+                            m_CombineAnd(m_Value(E1), m_SExt(m_Value(B))))))
+      ZExt = false;
+    else
+      return false;
+    if (A->getType() != B->getType())
+      return false;
+    SrcTy = A->getType();
+    SharedExt = E0 == E1;
+    return true;
+  };
+  Type *SrcElemTy = nullptr;
+  bool IsZExt = true;
+  bool SameOperands = true;
+  bool IsMulAcc = all_of(ReducedVals, [&](Value *RdxVal) {
+    bool ThisZExt;
+    Type *ThisSrcTy;
+    bool SharedExt;
+    if (!MatchMulAccLane(RdxVal, ThisZExt, ThisSrcTy, SharedExt))
+      return false;
+    SameOperands &= SharedExt;
+    if (!SrcElemTy) {
+      SrcElemTy = ThisSrcTy;
+      IsZExt = ThisZExt;
+      return true;
+    }
+    return SrcElemTy == ThisSrcTy && IsZExt == ThisZExt;
+  });
+  if (!IsMulAcc || !SrcElemTy->isIntegerTy())
+    return InstructionCost::getInvalid();
+
+  Type *ResTy = Ty->getElementType();
+  auto *SrcVecTy = VectorType::get(SrcElemTy, Ty->getElementCount());
+  InstructionCost RedCost =
+      getMulAccReductionCost(IsZExt, Opcode, ResTy, SrcVecTy, CostKind);
+  // The generic cost is the unfused sequence; only a cheaper (dot-product)
+  // lowering folds the multiply and the extends.
+  if (!RedCost.isValid() ||
+      RedCost >= BaseT::getMulAccReductionCost(IsZExt, Opcode, ResTy, SrcVecTy,
+                                               CostKind))
+    return InstructionCost::getInvalid();
+
+  auto *Mul = cast<Instruction>(ReducedVals.front());
+  InstructionCost FoldedCost =
+      GetVectorizedCost(Mul) + GetVectorizedCost(Mul->getOperand(0));
+  if (!SameOperands)
+    FoldedCost += GetVectorizedCost(Mul->getOperand(1));
+  return RedCost - FoldedCost;
+}
+
 InstructionCost
 AArch64TTIImpl::getSpliceCost(VectorType *Tp, int Index,
                               TTI::TargetCostKind CostKind) const {

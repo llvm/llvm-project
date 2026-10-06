@@ -1410,6 +1410,14 @@ InstructionCost TargetTransformInfo::getMulAccReductionCost(
                                          CostKind);
 }
 
+InstructionCost TargetTransformInfo::getFusedReductionCost(
+    unsigned Opcode, VectorType *Ty, ArrayRef<Value *> ReducedVals,
+    TTI::TargetCostKind CostKind,
+    function_ref<InstructionCost(Value *)> GetVectorizedCost) const {
+  return TTIImpl->getFusedReductionCost(Opcode, Ty, ReducedVals, CostKind,
+                                        GetVectorizedCost);
+}
+
 InstructionCost
 TargetTransformInfo::getCostOfKeepingLiveOverCall(ArrayRef<Type *> Tys) const {
   return TTIImpl->getCostOfKeepingLiveOverCall(Tys);

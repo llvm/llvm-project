@@ -505,6 +505,11 @@ public:
       bool IsUnsigned, unsigned RedOpcode, Type *ResTy, VectorType *Ty,
       TTI::TargetCostKind CostKind = TTI::TCK_RecipThroughput) const override;
 
+  InstructionCost getFusedReductionCost(
+      unsigned Opcode, VectorType *Ty, ArrayRef<Value *> ReducedVals,
+      TTI::TargetCostKind CostKind,
+      function_ref<InstructionCost(Value *)> GetVectorizedCost) const override;
+
   InstructionCost
   getShuffleCost(TTI::ShuffleKind Kind, VectorType *DstTy, VectorType *SrcTy,
                  TTI::TargetCostKind CostKind, ArrayRef<int> Mask, int Index,

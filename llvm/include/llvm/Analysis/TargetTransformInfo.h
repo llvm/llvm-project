@@ -1817,6 +1817,19 @@ public:
   getMulAccReductionCost(bool IsUnsigned, unsigned RedOpcode, Type *ResTy,
                          VectorType *Ty, TTI::TargetCostKind CostKind) const;
 
+  /// Calculate the cost of reducing \p ReducedVals with \p Opcode as a vector
+  /// of type \p Ty when the target folds the operations that define the
+  /// reduced values into the reduction (e.g. a dot product), net of the cost
+  /// of those folded operations.
+  /// \p GetVectorizedCost must return the cost the caller counts for the
+  /// vector operation that produces a value, or an invalid cost if the value
+  /// is not produced by a single vector operation.
+  /// \returns an invalid cost if the target has no such fused form.
+  LLVM_ABI InstructionCost getFusedReductionCost(
+      unsigned Opcode, VectorType *Ty, ArrayRef<Value *> ReducedVals,
+      TTI::TargetCostKind CostKind,
+      function_ref<InstructionCost(Value *)> GetVectorizedCost) const;
+
   /// Calculate the cost of an extended reduction pattern, similar to
   /// getArithmeticReductionCost of a reduction with an extension.
   /// This is the cost of as:

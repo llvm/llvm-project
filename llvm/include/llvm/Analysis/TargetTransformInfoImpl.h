@@ -1043,6 +1043,13 @@ public:
     return 1;
   }
 
+  virtual InstructionCost getFusedReductionCost(
+      unsigned Opcode, VectorType *Ty, ArrayRef<Value *> ReducedVals,
+      TTI::TargetCostKind CostKind,
+      function_ref<InstructionCost(Value *)> GetVectorizedCost) const {
+    return InstructionCost::getInvalid();
+  }
+
   virtual InstructionCost
   getCostOfKeepingLiveOverCall(ArrayRef<Type *> Tys) const {
     return 0;
