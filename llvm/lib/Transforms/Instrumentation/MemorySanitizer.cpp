@@ -6131,8 +6131,9 @@ struct MemorySanitizerVisitor : public InstVisitor<MemorySanitizerVisitor> {
     //     notail call void (...) @llvm.fake.use(ptr %z)
     case Intrinsic::fake_use:
       assert(I.getType()->isVoidTy());
-      // fake_uses aren't real, they can't hurt you. Simply ignore them since
-      // the input isn't truly being used, and there is no output.
+      // fake_uses aren't real, they can't hurt you. If the use isn't real, it
+      // can't be a real use-of-uninitialized memory. Silently skip over
+      // fake_use.
       return true;
 
     default:
