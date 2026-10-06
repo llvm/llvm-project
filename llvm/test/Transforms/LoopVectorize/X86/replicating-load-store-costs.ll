@@ -891,9 +891,10 @@ define void @address_use_in_different_block(ptr noalias %dst, ptr %src.0, ptr %s
 ; I32-NEXT:    [[OFFSET:%.*]] = zext i32 [[X_POS]] to i64
 ; I32-NEXT:    br label %[[VECTOR_PH:.*]]
 ; I32:       [[VECTOR_PH]]:
+; I32-NEXT:    [[TMP45:%.*]] = icmp sgt i32 [[X]], 0
 ; I32-NEXT:    br label %[[VECTOR_BODY:.*]]
 ; I32:       [[VECTOR_BODY]]:
-; I32-NEXT:    [[INDEX:%.*]] = phi i64 [ 0, %[[VECTOR_PH]] ], [ [[INDEX_NEXT:%.*]], %[[VECTOR_BODY]] ]
+; I32-NEXT:    [[INDEX:%.*]] = phi i64 [ 0, %[[VECTOR_PH]] ], [ [[INDEX_NEXT:%.*]], %[[LOOP_LATCH2:.*]] ]
 ; I32-NEXT:    [[TMP0:%.*]] = add i64 [[INDEX]], 1
 ; I32-NEXT:    [[TMP1:%.*]] = add i64 [[INDEX]], 2
 ; I32-NEXT:    [[TMP2:%.*]] = add i64 [[INDEX]], 3
@@ -909,6 +910,10 @@ define void @address_use_in_different_block(ptr noalias %dst, ptr %src.0, ptr %s
 ; I32-NEXT:    [[TMP12:%.*]] = load i32, ptr [[TMP8]], align 4
 ; I32-NEXT:    [[TMP13:%.*]] = load i32, ptr [[TMP9]], align 4
 ; I32-NEXT:    [[TMP14:%.*]] = load i32, ptr [[TMP10]], align 4
+; I32-NEXT:    br i1 [[TMP45]], label %[[LOOP_LATCH2]], label %[[THEN1:.*]]
+; I32:       [[THEN1]]:
+; I32-NEXT:    br label %[[LOOP_LATCH2]]
+; I32:       [[LOOP_LATCH2]]:
 ; I32-NEXT:    [[TMP15:%.*]] = sext i32 [[TMP11]] to i64
 ; I32-NEXT:    [[TMP16:%.*]] = sext i32 [[TMP12]] to i64
 ; I32-NEXT:    [[TMP17:%.*]] = sext i32 [[TMP13]] to i64

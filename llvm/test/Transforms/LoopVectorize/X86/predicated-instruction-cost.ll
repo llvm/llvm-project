@@ -416,109 +416,37 @@ attributes #0 = { "target-cpu"="skylake-avx512" }
 define i64 @hoisted_replicate_urem_outside_replicate_region(i64 %x, i1 %c) {
 ; CHECK-LABEL: define i64 @hoisted_replicate_urem_outside_replicate_region(
 ; CHECK-SAME: i64 [[X:%.*]], i1 [[C:%.*]]) {
-; CHECK-NEXT:  [[ENTRY:.*:]]
-; CHECK-NEXT:    br label %[[VECTOR_PH:.*]]
-; CHECK:       [[VECTOR_PH]]:
-; CHECK-NEXT:    [[BROADCAST_SPLATINSERT:%.*]] = insertelement <8 x i1> poison, i1 [[C]], i64 0
-; CHECK-NEXT:    [[BROADCAST_SPLAT:%.*]] = shufflevector <8 x i1> [[BROADCAST_SPLATINSERT]], <8 x i1> poison, <8 x i32> zeroinitializer
-; CHECK-NEXT:    [[BROADCAST_SPLATINSERT1:%.*]] = insertelement <8 x i64> poison, i64 [[X]], i64 0
-; CHECK-NEXT:    [[BROADCAST_SPLAT2:%.*]] = shufflevector <8 x i64> [[BROADCAST_SPLATINSERT1]], <8 x i64> poison, <8 x i32> zeroinitializer
-; CHECK-NEXT:    [[TMP0:%.*]] = icmp eq <8 x i64> [[BROADCAST_SPLAT2]], splat (i64 1)
-; CHECK-NEXT:    [[TMP1:%.*]] = xor <8 x i1> [[TMP0]], splat (i1 true)
-; CHECK-NEXT:    [[TMP2:%.*]] = xor <8 x i1> [[BROADCAST_SPLAT]], splat (i1 true)
-; CHECK-NEXT:    [[TMP4:%.*]] = select <8 x i1> [[TMP1]], <8 x i1> splat (i1 true), <8 x i1> [[TMP2]]
-; CHECK-NEXT:    [[TMP56:%.*]] = extractelement <8 x i1> [[TMP0]], i64 0
-; CHECK-NEXT:    [[PREDPHI:%.*]] = select i1 [[TMP56]], <8 x i32> zeroinitializer, <8 x i32> splat (i32 1)
-; CHECK-NEXT:    [[TMP5:%.*]] = urem <8 x i32> [[PREDPHI]], splat (i32 51)
-; CHECK-NEXT:    [[TMP6:%.*]] = icmp eq <8 x i32> [[TMP5]], zeroinitializer
-; CHECK-NEXT:    [[TMP7:%.*]] = select <8 x i1> [[TMP6]], <8 x i1> [[TMP0]], <8 x i1> zeroinitializer
-; CHECK-NEXT:    [[TMP8:%.*]] = select <8 x i1> [[TMP7]], <8 x i32> splat (i32 1), <8 x i32> zeroinitializer
-; CHECK-NEXT:    [[TMP9:%.*]] = lshr <8 x i32> splat (i32 7), [[TMP8]]
-; CHECK-NEXT:    [[TMP10:%.*]] = zext <8 x i32> [[TMP9]] to <8 x i64>
-; CHECK-NEXT:    br label %[[VECTOR_BODY:.*]]
-; CHECK:       [[VECTOR_BODY]]:
-; CHECK-NEXT:    [[TMP11:%.*]] = extractelement <8 x i1> [[TMP4]], i64 0
-; CHECK-NEXT:    br i1 [[TMP11]], label %[[PRED_SREM_IF:.*]], label %[[PRED_SREM_CONTINUE:.*]]
-; CHECK:       [[PRED_SREM_IF]]:
-; CHECK-NEXT:    [[TMP12:%.*]] = extractelement <8 x i64> [[TMP10]], i64 0
-; CHECK-NEXT:    [[TMP13:%.*]] = srem i64 [[TMP12]], [[X]]
-; CHECK-NEXT:    [[TMP14:%.*]] = insertelement <8 x i64> poison, i64 [[TMP13]], i64 0
-; CHECK-NEXT:    br label %[[PRED_SREM_CONTINUE]]
-; CHECK:       [[PRED_SREM_CONTINUE]]:
-; CHECK-NEXT:    [[TMP15:%.*]] = phi <8 x i64> [ poison, %[[VECTOR_BODY]] ], [ [[TMP14]], %[[PRED_SREM_IF]] ]
-; CHECK-NEXT:    [[TMP16:%.*]] = extractelement <8 x i1> [[TMP4]], i64 1
-; CHECK-NEXT:    br i1 [[TMP16]], label %[[PRED_SREM_IF3:.*]], label %[[PRED_SREM_CONTINUE4:.*]]
-; CHECK:       [[PRED_SREM_IF3]]:
-; CHECK-NEXT:    [[TMP17:%.*]] = extractelement <8 x i64> [[TMP10]], i64 1
-; CHECK-NEXT:    [[TMP18:%.*]] = srem i64 [[TMP17]], [[X]]
-; CHECK-NEXT:    [[TMP19:%.*]] = insertelement <8 x i64> [[TMP15]], i64 [[TMP18]], i64 1
-; CHECK-NEXT:    br label %[[PRED_SREM_CONTINUE4]]
-; CHECK:       [[PRED_SREM_CONTINUE4]]:
-; CHECK-NEXT:    [[TMP20:%.*]] = phi <8 x i64> [ [[TMP15]], %[[PRED_SREM_CONTINUE]] ], [ [[TMP19]], %[[PRED_SREM_IF3]] ]
-; CHECK-NEXT:    [[TMP21:%.*]] = extractelement <8 x i1> [[TMP4]], i64 2
-; CHECK-NEXT:    br i1 [[TMP21]], label %[[PRED_SREM_IF5:.*]], label %[[PRED_SREM_CONTINUE6:.*]]
-; CHECK:       [[PRED_SREM_IF5]]:
-; CHECK-NEXT:    [[TMP22:%.*]] = extractelement <8 x i64> [[TMP10]], i64 2
-; CHECK-NEXT:    [[TMP23:%.*]] = srem i64 [[TMP22]], [[X]]
-; CHECK-NEXT:    [[TMP24:%.*]] = insertelement <8 x i64> [[TMP20]], i64 [[TMP23]], i64 2
-; CHECK-NEXT:    br label %[[PRED_SREM_CONTINUE6]]
-; CHECK:       [[PRED_SREM_CONTINUE6]]:
-; CHECK-NEXT:    [[TMP25:%.*]] = phi <8 x i64> [ [[TMP20]], %[[PRED_SREM_CONTINUE4]] ], [ [[TMP24]], %[[PRED_SREM_IF5]] ]
-; CHECK-NEXT:    [[TMP26:%.*]] = extractelement <8 x i1> [[TMP4]], i64 3
-; CHECK-NEXT:    br i1 [[TMP26]], label %[[PRED_SREM_IF7:.*]], label %[[PRED_SREM_CONTINUE8:.*]]
-; CHECK:       [[PRED_SREM_IF7]]:
-; CHECK-NEXT:    [[TMP27:%.*]] = extractelement <8 x i64> [[TMP10]], i64 3
-; CHECK-NEXT:    [[TMP28:%.*]] = srem i64 [[TMP27]], [[X]]
-; CHECK-NEXT:    [[TMP29:%.*]] = insertelement <8 x i64> [[TMP25]], i64 [[TMP28]], i64 3
-; CHECK-NEXT:    br label %[[PRED_SREM_CONTINUE8]]
+; CHECK-NEXT:  [[PRED_SREM_IF7:.*]]:
+; CHECK-NEXT:    br label %[[PRED_SREM_CONTINUE8:.*]]
 ; CHECK:       [[PRED_SREM_CONTINUE8]]:
-; CHECK-NEXT:    [[TMP30:%.*]] = phi <8 x i64> [ [[TMP25]], %[[PRED_SREM_CONTINUE6]] ], [ [[TMP29]], %[[PRED_SREM_IF7]] ]
-; CHECK-NEXT:    [[TMP31:%.*]] = extractelement <8 x i1> [[TMP4]], i64 4
+; CHECK-NEXT:    [[IV:%.*]] = phi i32 [ 0, %[[PRED_SREM_IF7]] ], [ [[IV_NEXT:%.*]], %[[PRED_SREM_CONTINUE14:.*]] ]
+; CHECK-NEXT:    [[PREV:%.*]] = phi i64 [ 0, %[[PRED_SREM_IF7]] ], [ [[EXT:%.*]], %[[PRED_SREM_CONTINUE14]] ]
+; CHECK-NEXT:    [[TMP31:%.*]] = icmp eq i64 [[X]], 1
 ; CHECK-NEXT:    br i1 [[TMP31]], label %[[PRED_SREM_IF9:.*]], label %[[PRED_SREM_CONTINUE10:.*]]
 ; CHECK:       [[PRED_SREM_IF9]]:
-; CHECK-NEXT:    [[TMP32:%.*]] = extractelement <8 x i64> [[TMP10]], i64 4
-; CHECK-NEXT:    [[TMP33:%.*]] = srem i64 [[TMP32]], [[X]]
-; CHECK-NEXT:    [[TMP34:%.*]] = insertelement <8 x i64> [[TMP30]], i64 [[TMP33]], i64 4
-; CHECK-NEXT:    br label %[[PRED_SREM_CONTINUE10]]
+; CHECK-NEXT:    br i1 [[C]], label %[[PRED_SREM_CONTINUE14]], label %[[PRED_SREM_CONTINUE12:.*]]
 ; CHECK:       [[PRED_SREM_CONTINUE10]]:
-; CHECK-NEXT:    [[TMP35:%.*]] = phi <8 x i64> [ [[TMP30]], %[[PRED_SREM_CONTINUE8]] ], [ [[TMP34]], %[[PRED_SREM_IF9]] ]
-; CHECK-NEXT:    [[TMP36:%.*]] = extractelement <8 x i1> [[TMP4]], i64 5
-; CHECK-NEXT:    br i1 [[TMP36]], label %[[PRED_SREM_IF11:.*]], label %[[PRED_SREM_CONTINUE12:.*]]
-; CHECK:       [[PRED_SREM_IF11]]:
-; CHECK-NEXT:    [[TMP37:%.*]] = extractelement <8 x i64> [[TMP10]], i64 5
-; CHECK-NEXT:    [[TMP38:%.*]] = srem i64 [[TMP37]], [[X]]
-; CHECK-NEXT:    [[TMP39:%.*]] = insertelement <8 x i64> [[TMP35]], i64 [[TMP38]], i64 5
 ; CHECK-NEXT:    br label %[[PRED_SREM_CONTINUE12]]
 ; CHECK:       [[PRED_SREM_CONTINUE12]]:
-; CHECK-NEXT:    [[TMP40:%.*]] = phi <8 x i64> [ [[TMP35]], %[[PRED_SREM_CONTINUE10]] ], [ [[TMP39]], %[[PRED_SREM_IF11]] ]
-; CHECK-NEXT:    [[TMP41:%.*]] = extractelement <8 x i1> [[TMP4]], i64 6
-; CHECK-NEXT:    br i1 [[TMP41]], label %[[PRED_SREM_IF13:.*]], label %[[PRED_SREM_CONTINUE14:.*]]
-; CHECK:       [[PRED_SREM_IF13]]:
-; CHECK-NEXT:    [[TMP42:%.*]] = extractelement <8 x i64> [[TMP10]], i64 6
+; CHECK-NEXT:    [[FLAG:%.*]] = phi i32 [ 1, %[[PRED_SREM_IF9]] ], [ 0, %[[PRED_SREM_CONTINUE10]] ]
+; CHECK-NEXT:    [[VAL:%.*]] = phi i32 [ 0, %[[PRED_SREM_IF9]] ], [ 1, %[[PRED_SREM_CONTINUE10]] ]
+; CHECK-NEXT:    [[UREM:%.*]] = urem i32 [[VAL]], 51
+; CHECK-NEXT:    [[CMP:%.*]] = icmp eq i32 [[UREM]], 0
+; CHECK-NEXT:    [[AMT:%.*]] = select i1 [[CMP]], i32 [[FLAG]], i32 0
+; CHECK-NEXT:    [[SHR:%.*]] = lshr i32 7, [[AMT]]
+; CHECK-NEXT:    [[TMP42:%.*]] = zext i32 [[SHR]] to i64
 ; CHECK-NEXT:    [[TMP43:%.*]] = srem i64 [[TMP42]], [[X]]
-; CHECK-NEXT:    [[TMP44:%.*]] = insertelement <8 x i64> [[TMP40]], i64 [[TMP43]], i64 6
+; CHECK-NEXT:    [[TRUNC:%.*]] = trunc i64 [[TMP43]] to i32
 ; CHECK-NEXT:    br label %[[PRED_SREM_CONTINUE14]]
 ; CHECK:       [[PRED_SREM_CONTINUE14]]:
-; CHECK-NEXT:    [[TMP45:%.*]] = phi <8 x i64> [ [[TMP40]], %[[PRED_SREM_CONTINUE12]] ], [ [[TMP44]], %[[PRED_SREM_IF13]] ]
-; CHECK-NEXT:    [[TMP46:%.*]] = extractelement <8 x i1> [[TMP4]], i64 7
-; CHECK-NEXT:    br i1 [[TMP46]], label %[[PRED_SREM_IF15:.*]], label %[[PRED_SREM_CONTINUE16:.*]]
-; CHECK:       [[PRED_SREM_IF15]]:
-; CHECK-NEXT:    [[TMP47:%.*]] = extractelement <8 x i64> [[TMP10]], i64 7
-; CHECK-NEXT:    [[TMP48:%.*]] = srem i64 [[TMP47]], [[X]]
-; CHECK-NEXT:    [[TMP49:%.*]] = insertelement <8 x i64> [[TMP45]], i64 [[TMP48]], i64 7
-; CHECK-NEXT:    br label %[[PRED_SREM_CONTINUE16]]
-; CHECK:       [[PRED_SREM_CONTINUE16]]:
-; CHECK-NEXT:    [[TMP50:%.*]] = phi <8 x i64> [ [[TMP45]], %[[PRED_SREM_CONTINUE14]] ], [ [[TMP49]], %[[PRED_SREM_IF15]] ]
-; CHECK-NEXT:    [[TMP51:%.*]] = trunc <8 x i64> [[TMP50]] to <8 x i32>
-; CHECK-NEXT:    [[PREDPHI17:%.*]] = select <8 x i1> [[TMP4]], <8 x i32> [[TMP51]], <8 x i32> zeroinitializer
-; CHECK-NEXT:    [[TMP52:%.*]] = sext <8 x i32> [[PREDPHI17]] to <8 x i64>
-; CHECK-NEXT:    br label %[[MIDDLE_BLOCK:.*]]
-; CHECK:       [[MIDDLE_BLOCK]]:
-; CHECK-NEXT:    [[TMP53:%.*]] = shufflevector <8 x i64> zeroinitializer, <8 x i64> [[TMP52]], <8 x i32> <i32 7, i32 8, i32 9, i32 10, i32 11, i32 12, i32 13, i32 14>
-; CHECK-NEXT:    [[TMP54:%.*]] = or <8 x i64> [[TMP53]], [[BROADCAST_SPLAT2]]
-; CHECK-NEXT:    [[TMP55:%.*]] = extractelement <8 x i64> [[TMP54]], i64 7
-; CHECK-NEXT:    br label %[[EXIT:.*]]
+; CHECK-NEXT:    [[RES:%.*]] = phi i32 [ [[TRUNC]], %[[PRED_SREM_CONTINUE12]] ], [ 0, %[[PRED_SREM_IF9]] ]
+; CHECK-NEXT:    [[EXT]] = sext i32 [[RES]] to i64
+; CHECK-NEXT:    [[OR:%.*]] = or i64 [[PREV]], [[X]]
+; CHECK-NEXT:    [[IV_NEXT]] = add i32 [[IV]], 1
+; CHECK-NEXT:    [[EC:%.*]] = icmp eq i32 [[IV_NEXT]], 8
+; CHECK-NEXT:    br i1 [[EC]], label %[[EXIT:.*]], label %[[PRED_SREM_CONTINUE8]]
 ; CHECK:       [[EXIT]]:
+; CHECK-NEXT:    [[TMP55:%.*]] = phi i64 [ [[OR]], %[[PRED_SREM_CONTINUE14]] ]
 ; CHECK-NEXT:    ret i64 [[TMP55]]
 ;
 entry:

@@ -13,13 +13,14 @@ define void @replicating_store_with_phi_addr1(ptr noalias %array, i64 %N, i32 %x
 ; CHECK-NEXT:    call void @init(ptr [[PTR1]], ptr [[PTR2]], ptr [[PTR3]])
 ; CHECK-NEXT:    br label %[[VECTOR_PH:.*]]
 ; CHECK:       [[VECTOR_PH]]:
+; CHECK-NEXT:    [[TMP33:%.*]] = freeze i1 [[COND]]
 ; CHECK-NEXT:    [[BROADCAST_SPLATINSERT:%.*]] = insertelement <16 x ptr> poison, ptr [[PTR1]], i64 0
 ; CHECK-NEXT:    [[BROADCAST_SPLAT:%.*]] = shufflevector <16 x ptr> [[BROADCAST_SPLATINSERT]], <16 x ptr> poison, <16 x i32> zeroinitializer
 ; CHECK-NEXT:    [[BROADCAST_SPLATINSERT1:%.*]] = insertelement <16 x i1> poison, i1 [[COND]], i64 0
 ; CHECK-NEXT:    [[BROADCAST_SPLAT2:%.*]] = shufflevector <16 x i1> [[BROADCAST_SPLATINSERT1]], <16 x i1> poison, <16 x i32> zeroinitializer
 ; CHECK-NEXT:    br label %[[VECTOR_BODY:.*]]
 ; CHECK:       [[VECTOR_BODY]]:
-; CHECK-NEXT:    [[INDEX:%.*]] = phi i64 [ 0, %[[VECTOR_PH]] ], [ [[INDEX_NEXT:%.*]], %[[PRED_STORE_CONTINUE32:.*]] ]
+; CHECK-NEXT:    [[INDEX:%.*]] = phi i64 [ 0, %[[VECTOR_PH]] ], [ [[INDEX_NEXT:%.*]], %[[LOOP_LATCH36:.*]] ]
 ; CHECK-NEXT:    [[TMP0:%.*]] = load ptr, ptr [[ARRAY]], align 8
 ; CHECK-NEXT:    [[TMP1:%.*]] = load i32, ptr [[TMP0]], align 4
 ; CHECK-NEXT:    [[TMP2:%.*]] = load i32, ptr [[TMP0]], align 4
@@ -53,7 +54,11 @@ define void @replicating_store_with_phi_addr1(ptr noalias %array, i64 %N, i32 %x
 ; CHECK-NEXT:    [[TMP30:%.*]] = insertelement <16 x i32> [[TMP29]], i32 [[TMP14]], i64 13
 ; CHECK-NEXT:    [[TMP31:%.*]] = insertelement <16 x i32> [[TMP30]], i32 [[TMP15]], i64 14
 ; CHECK-NEXT:    [[TMP32:%.*]] = insertelement <16 x i32> [[TMP31]], i32 [[TMP16]], i64 15
-; CHECK-NEXT:    [[TMP33:%.*]] = icmp sle <16 x i32> [[TMP32]], zeroinitializer
+; CHECK-NEXT:    [[TMP34:%.*]] = icmp sgt <16 x i32> [[TMP32]], zeroinitializer
+; CHECK-NEXT:    [[TMP83:%.*]] = extractelement <16 x i1> [[TMP34]], i64 0
+; CHECK-NEXT:    br i1 [[TMP83]], label %[[ELSE4:.*]], label %[[THEN3:.*]]
+; CHECK:       [[THEN3]]:
+; CHECK-NEXT:    [[TMP118:%.*]] = xor <16 x i1> [[TMP34]], splat (i1 true)
 ; CHECK-NEXT:    [[TMP35:%.*]] = icmp slt i32 [[X]], [[TMP1]]
 ; CHECK-NEXT:    [[TMP36:%.*]] = icmp slt i32 [[X]], [[TMP2]]
 ; CHECK-NEXT:    [[TMP37:%.*]] = icmp slt i32 [[X]], [[TMP3]]
@@ -102,8 +107,16 @@ define void @replicating_store_with_phi_addr1(ptr noalias %array, i64 %N, i32 %x
 ; CHECK-NEXT:    [[TMP80:%.*]] = insertelement <16 x ptr> [[TMP79]], ptr [[TMP64]], i64 13
 ; CHECK-NEXT:    [[TMP81:%.*]] = insertelement <16 x ptr> [[TMP80]], ptr [[TMP65]], i64 14
 ; CHECK-NEXT:    [[TMP82:%.*]] = insertelement <16 x ptr> [[TMP81]], ptr [[TMP66]], i64 15
-; CHECK-NEXT:    [[TMP84:%.*]] = select <16 x i1> [[TMP33]], <16 x i1> splat (i1 true), <16 x i1> [[BROADCAST_SPLAT2]]
-; CHECK-NEXT:    [[PREDPHI:%.*]] = select <16 x i1> [[TMP33]], <16 x ptr> [[TMP82]], <16 x ptr> [[BROADCAST_SPLAT]]
+; CHECK-NEXT:    br label %[[MERGE_AND_STORE5:.*]]
+; CHECK:       [[ELSE4]]:
+; CHECK-NEXT:    br i1 [[TMP33]], label %[[MERGE_AND_STORE5]], label %[[LOOP_LATCH36]]
+; CHECK:       [[MERGE_AND_STORE5]]:
+; CHECK-NEXT:    [[TMP119:%.*]] = phi <16 x ptr> [ [[TMP82]], %[[THEN3]] ], [ poison, %[[ELSE4]] ]
+; CHECK-NEXT:    [[TMP120:%.*]] = phi <16 x i1> [ zeroinitializer, %[[THEN3]] ], [ [[TMP34]], %[[ELSE4]] ]
+; CHECK-NEXT:    [[TMP121:%.*]] = phi <16 x i1> [ [[TMP118]], %[[THEN3]] ], [ zeroinitializer, %[[ELSE4]] ]
+; CHECK-NEXT:    [[TMP122:%.*]] = select <16 x i1> [[TMP34]], <16 x i1> [[BROADCAST_SPLAT2]], <16 x i1> zeroinitializer
+; CHECK-NEXT:    [[TMP84:%.*]] = or <16 x i1> [[TMP122]], [[TMP121]]
+; CHECK-NEXT:    [[PREDPHI:%.*]] = select <16 x i1> [[TMP120]], <16 x ptr> [[BROADCAST_SPLAT]], <16 x ptr> [[TMP119]]
 ; CHECK-NEXT:    [[TMP85:%.*]] = extractelement <16 x i1> [[TMP84]], i64 0
 ; CHECK-NEXT:    br i1 [[TMP85]], label %[[PRED_STORE_IF:.*]], label %[[PRED_STORE_CONTINUE:.*]]
 ; CHECK:       [[PRED_STORE_IF]]:
@@ -210,12 +223,14 @@ define void @replicating_store_with_phi_addr1(ptr noalias %array, i64 %N, i32 %x
 ; CHECK-NEXT:    br label %[[PRED_STORE_CONTINUE30]]
 ; CHECK:       [[PRED_STORE_CONTINUE30]]:
 ; CHECK-NEXT:    [[TMP115:%.*]] = extractelement <16 x i1> [[TMP84]], i64 15
-; CHECK-NEXT:    br i1 [[TMP115]], label %[[PRED_STORE_IF31:.*]], label %[[PRED_STORE_CONTINUE32]]
+; CHECK-NEXT:    br i1 [[TMP115]], label %[[PRED_STORE_IF31:.*]], label %[[PRED_STORE_CONTINUE32:.*]]
 ; CHECK:       [[PRED_STORE_IF31]]:
 ; CHECK-NEXT:    [[TMP116:%.*]] = extractelement <16 x ptr> [[PREDPHI]], i64 15
 ; CHECK-NEXT:    store i8 0, ptr [[TMP116]], align 1
 ; CHECK-NEXT:    br label %[[PRED_STORE_CONTINUE32]]
 ; CHECK:       [[PRED_STORE_CONTINUE32]]:
+; CHECK-NEXT:    br label %[[LOOP_LATCH36]]
+; CHECK:       [[LOOP_LATCH36]]:
 ; CHECK-NEXT:    [[INDEX_NEXT]] = add nuw i64 [[INDEX]], 16
 ; CHECK-NEXT:    [[TMP117:%.*]] = icmp eq i64 [[INDEX_NEXT]], 96
 ; CHECK-NEXT:    br i1 [[TMP117]], label %[[MIDDLE_BLOCK:.*]], label %[[VECTOR_BODY]], !llvm.loop [[LOOP0:![0-9]+]]
