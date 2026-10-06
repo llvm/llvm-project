@@ -924,17 +924,12 @@ void CIRGenFunction::emitDestructorBody(FunctionArgList &args) {
   // The call to operator delete in a deleting destructor happens
   // outside of the function-try-block, which means it's always
   // possible to delegate the destructor body to the complete
-  // destructor.  Do so.
+  // destructor. enterDtorCleanups does that if necessary.
   if (dtorType == Dtor_Deleting || dtorType == Dtor_VectorDeleting) {
     if (cxxStructorImplicitParamValue && dtorType == Dtor_VectorDeleting)
       cgm.errorNYI(dtor->getSourceRange(), "emitConditionalArrayDtorCall");
     RunCleanupsScope dtorEpilogue(*this);
     enterDtorCleanups(dtor, Dtor_Deleting);
-    if (haveInsertPoint()) {
-      QualType thisTy = dtor->getFunctionObjectParameterType();
-      emitCXXDestructorCall(dtor, Dtor_Complete, /*forVirtualBase=*/false,
-                            /*delegating=*/false, loadCXXThisAddress(), thisTy);
-    }
     return;
   }
 

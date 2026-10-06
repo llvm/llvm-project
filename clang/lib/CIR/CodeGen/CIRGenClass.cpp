@@ -1035,28 +1035,38 @@ public:
 /// destructors on members and base classes in reverse order of their
 /// construction.
 ///
-/// For a deleting destructor, this also handles the case where a destroying
-/// operator delete completely overrides the definition.
+/// For a deleting destructor, this instead pushes the cleanup that calls
+/// operator delete and delegates to the complete destructor. It also handles
+/// the case where a destroying operator delete completely overrides the
+/// definition.
 void CIRGenFunction::enterDtorCleanups(const CXXDestructorDecl *dd,
                                        CXXDtorType dtorType) {
   assert((!dd->isTrivial() || dd->hasAttr<DLLExportAttr>()) &&
          "Should not emit dtor epilogue for non-exported trivial dtor!");
 
-  // The deleting-destructor phase just needs to call the appropriate
-  // operator delete that Sema picked up.
+  // The deleting-destructor phase calls the appropriate operator delete
+  // that Sema picked up.
   if (dtorType == Dtor_Deleting) {
     assert(dd->getOperatorDelete() &&
            "operator delete missing - EnterDtorCleanups");
     if (cxxStructorImplicitParamValue) {
       cgm.errorNYI(dd->getSourceRange(), "deleting destructor with vtt");
+    } else if (dd->getOperatorDelete()->isDestroyingOperatorDelete()) {
+      const CXXRecordDecl *classDecl = dd->getParent();
+      emitDeleteCall(dd->getOperatorDelete(), loadThisForDtorDelete(*this, dd),
+                     getContext().getCanonicalTagType(classDecl));
+      // A destroying operator delete destroys the object itself, so skip
+      // the delegation to the complete destructor below.
+      return;
     } else {
-      if (dd->getOperatorDelete()->isDestroyingOperatorDelete()) {
-        cgm.errorNYI(dd->getSourceRange(),
-                     "deleting destructor with destroying operator delete");
-      } else {
-        ehStack.pushCleanup<CallDtorDelete>(NormalAndEHCleanup);
-      }
+      ehStack.pushCleanup<CallDtorDelete>(NormalAndEHCleanup);
     }
+
+    // Delegate to the complete destructor. operator delete runs when
+    // the caller's cleanup scope exits.
+    QualType thisTy = dd->getFunctionObjectParameterType();
+    emitCXXDestructorCall(dd, Dtor_Complete, /*forVirtualBase=*/false,
+                          /*delegating=*/false, loadCXXThisAddress(), thisTy);
     return;
   }
 
