@@ -291,10 +291,10 @@ static bool foldVGPRCopyIntoRegSequence(MachineInstr &MI,
   if (!TRI->isSGPRClass(MRI.getRegClass(DstReg)))
     return false;
 
-  if (!MRI.hasOneUse(DstReg))
+  if (!MRI.hasOneNonDBGUse(DstReg))
     return false;
 
-  MachineInstr &CopyUse = *MRI.use_instr_begin(DstReg);
+  MachineInstr &CopyUse = *MRI.use_instr_nodbg_begin(DstReg);
   if (!CopyUse.isCopy())
     return false;
 
@@ -316,7 +316,7 @@ static bool foldVGPRCopyIntoRegSequence(MachineInstr &MI,
   if (SubReg != AMDGPU::NoSubRegister)
     return false;
 
-  MRI.setRegClass(DstReg, DstRC);
+  MRI.replaceRegWith(DstReg, CopyUse.getOperand(0).getReg());
 
   // SGPRx = ...
   // SGPRy = REG_SEQUENCE SGPRx, sub0 ...
@@ -326,7 +326,6 @@ static bool foldVGPRCopyIntoRegSequence(MachineInstr &MI,
   // VGPRx = COPY SGPRx
   // VGPRz = REG_SEQUENCE VGPRx, sub0
 
-  MI.getOperand(0).setReg(CopyUse.getOperand(0).getReg());
   bool IsAGPR = TRI->isAGPRClass(DstRC);
 
   for (unsigned I = 1, N = MI.getNumOperands(); I != N; I += 2) {
