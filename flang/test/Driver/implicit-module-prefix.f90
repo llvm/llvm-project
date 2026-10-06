@@ -18,5 +18,6 @@ contains
   end subroutine
 end submodule
 
-! ENABLED-COUNT-1: portability: Assuming a missing MODULE prefix on 'implementation' to repair the separate module procedure interface 'm:implementation' [-Wimplicit-module-prefix]
+! ENABLED: portability: Assuming a missing MODULE prefix on 'implementation' to repair the separate module procedure interface 'm:implementation' [-Wimplicit-module-prefix]
+! ENABLED-NOT: Assuming a missing MODULE prefix
 ! DISABLED-NOT: Assuming a missing MODULE prefix

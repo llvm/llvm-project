@@ -605,7 +605,9 @@ end program
   prefix. Since the extension cannot distinguish a missing prefix from an
   intentionally local procedure with the same name as an ancestor interface,
   it can reject a conforming program when that interface is implemented in a
-  different submodule. This behavior is compatible with gfortran.
+  different submodule. This behavior is compatible with gfortran. Only
+  definitions in the current source are repaired; a module file keeps the
+  interpretation chosen when it was compiled.
 * Old-style `PARAMETER pi=3.14` statement without parentheses
   [-falternative-parameter-statement]
 * `UNSIGNED` type (-funsigned)
