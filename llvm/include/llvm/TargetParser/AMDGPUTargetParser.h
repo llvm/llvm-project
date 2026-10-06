@@ -180,6 +180,14 @@ LLVM_ABI unsigned getVGPRAllocGranule(GPUKind AK, bool IsWave32);
 LLVM_ABI unsigned getVGPRAllocGranule(Triple::SubArchType SubArch,
                                       bool IsWave32);
 
+/// \returns VGPR encoding granularity for \p AK, in registers. \p IsWave32
+/// selects the wavefront size encoded in the kernel descriptor. This can
+/// differ from the allocation granularity and is independent of dynamic
+/// VGPR mode.
+LLVM_ABI unsigned getVGPREncodingGranule(GPUKind AK, bool IsWave32);
+LLVM_ABI unsigned getVGPREncodingGranule(Triple::SubArchType SubArch,
+                                         bool IsWave32);
+
 /// \returns Number of physical VGPRs, i.e. the size of the register file a
 /// work-group's waves share. \p IsWave32 selects the wavefront size.
 LLVM_ABI unsigned getTotalNumVGPRs(GPUKind AK, bool IsWave32);

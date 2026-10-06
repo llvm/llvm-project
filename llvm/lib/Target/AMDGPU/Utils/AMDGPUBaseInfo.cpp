@@ -1308,21 +1308,6 @@ unsigned getVGPRAllocGranule(const MCSubtargetInfo &STI,
   return IsWave32 ? 8 : 4;
 }
 
-unsigned getVGPREncodingGranule(const MCSubtargetInfo &STI,
-                                std::optional<bool> EnableWavefrontSize32) {
-  if (STI.getFeatureBits().test(FeatureGFX90AInsts))
-    return 8;
-
-  bool IsWave32 = EnableWavefrontSize32
-                      ? *EnableWavefrontSize32
-                      : STI.getFeatureBits().test(FeatureWavefrontSize32);
-
-  if (STI.getFeatureBits().test(Feature1024AddressableVGPRs))
-    return IsWave32 ? 16 : 8;
-
-  return IsWave32 ? 8 : 4;
-}
-
 unsigned getArchVGPRAllocGranule() { return 4; }
 
 unsigned getAddressableNumArchVGPRs(const MCSubtargetInfo &STI) {
@@ -1446,8 +1431,11 @@ unsigned getMaxNumVGPRs(const MCSubtargetInfo &STI, unsigned WavesPerEU,
 
 unsigned getEncodedNumVGPRBlocks(const MCSubtargetInfo &STI, unsigned NumVGPRs,
                                  std::optional<bool> EnableWavefrontSize32) {
+  bool IsWave32 = EnableWavefrontSize32.value_or(
+      STI.getFeatureBits().test(FeatureWavefrontSize32));
   return getGranulatedNumRegisterBlocks(
-             NumVGPRs, getVGPREncodingGranule(STI, EnableWavefrontSize32)) -
+             NumVGPRs, AMDGPU::getVGPREncodingGranule(
+                           parseArchAMDGCN(STI.getCPU()), IsWave32)) -
          1;
 }
 
