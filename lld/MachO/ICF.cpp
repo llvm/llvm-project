@@ -585,9 +585,17 @@ Defined *macho::getBodyForThunkFoldedSym(Defined *foldedSym) {
 
   // The symbol of the merged body of the function that the thunk jumps to. This
   // will end up in the final binary.
-  Symbol *targetSym = target->getThunkBranchTarget(thunkBody);
+  Defined *bodySym = cast<Defined>(target->getThunkBranchTarget(thunkBody));
+  if (bodySym->branchExtensionThunk) {
+    InputSection *thunk = bodySym->isec();
+    assert(thunk && !thunk->relocs.empty());
+    const Relocation &r = thunk->relocs.front();
+    assert(r.addend == 0);
+    bodySym = cast<Defined>(cast<Symbol *>(r.referent));
+    assert(!bodySym->branchExtensionThunk);
+  }
 
-  return cast<Defined>(targetSym);
+  return bodySym;
 }
 void macho::foldIdenticalSections(bool onlyCfStrings) {
   TimeTraceScope timeScope("Fold Identical Code Sections");
