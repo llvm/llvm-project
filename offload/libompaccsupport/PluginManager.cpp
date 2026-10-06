@@ -93,9 +93,8 @@ bool PluginManager::initializeDevice(ol_device_handle_t DeviceHandle) {
   }
 
   ol_platform_handle_t PlatformHandle;
-  if (auto Ret = olGetDeviceInfo(DeviceHandle, OL_DEVICE_INFO_PLATFORM,
-                                 sizeof(PlatformHandle), &PlatformHandle);
-      Ret != OL_SUCCESS) {
+  if (olGetDeviceInfo(DeviceHandle, OL_DEVICE_INFO_PLATFORM,
+                      sizeof(PlatformHandle), &PlatformHandle)) {
     REPORT() << "Failed to get platform while initializing device "
              << DeviceHandle;
     return false;
@@ -205,8 +204,7 @@ bool PluginManager::registerImageOnDevice(
 
   ol_platform_handle_t PlatformHandle;
   if (auto Res = olGetDeviceInfo(DeviceHandle, OL_DEVICE_INFO_PLATFORM,
-                                 sizeof(PlatformHandle), &PlatformHandle);
-      Res != OL_SUCCESS) {
+                                 sizeof(PlatformHandle), &PlatformHandle)) {
     REPORT() << "Failed to get platform info for device " << DeviceHandle << ":"
              << Res->Details;
     PlatformHandle = nullptr;
@@ -215,16 +213,14 @@ bool PluginManager::registerImageOnDevice(
   llvm::SmallString<256> PlatformName("Unknown");
   if (PlatformHandle) {
     size_t PlatformNameSize = 0;
-    if (auto Res = olGetPlatformInfoSize(PlatformHandle, OL_PLATFORM_INFO_NAME,
-                                         &PlatformNameSize);
-        Res != OL_SUCCESS)
+    if (olGetPlatformInfoSize(PlatformHandle, OL_PLATFORM_INFO_NAME,
+                              &PlatformNameSize))
       PlatformNameSize = 0;
 
     PlatformName.resize(PlatformNameSize);
     if (PlatformNameSize > 0) {
-      if (auto Res = olGetPlatformInfo(PlatformHandle, OL_PLATFORM_INFO_NAME,
-                                       PlatformNameSize, PlatformName.data());
-          Res != OL_SUCCESS)
+      if (olGetPlatformInfo(PlatformHandle, OL_PLATFORM_INFO_NAME,
+                            PlatformNameSize, PlatformName.data()))
         PlatformName = "Unknown";
     } else
       PlatformName = "Unknown";
