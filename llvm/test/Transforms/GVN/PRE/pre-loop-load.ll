@@ -1027,15 +1027,16 @@ exit:
   ret i32 %x
 }
 
-; TODO: The blocker is two loops deep. Reload in the exit of the loop directly
-; inside the outer loop.
+; The blocker is two loops deep, so the reload goes to the exit of the loop
+; directly inside the outer loop.
 define i32 @test_blocker_in_inner_loop_nested(ptr %p, i1 %inner.back, i1 %mid.back) {
 ; CHECK-LABEL: @test_blocker_in_inner_loop_nested(
 ; CHECK-NEXT:  entry:
+; CHECK-NEXT:    [[X_PRE1:%.*]] = load i32, ptr [[P:%.*]], align 4
 ; CHECK-NEXT:    br label [[LOOP:%.*]]
 ; CHECK:       loop:
-; CHECK-NEXT:    [[IV:%.*]] = phi i32 [ 0, [[ENTRY:%.*]] ], [ [[IV_NEXT:%.*]], [[BACKEDGE:%.*]] ]
-; CHECK-NEXT:    [[X:%.*]] = load i32, ptr [[P:%.*]], align 4
+; CHECK-NEXT:    [[X:%.*]] = phi i32 [ [[X_PRE1]], [[ENTRY:%.*]] ], [ [[X2:%.*]], [[BACKEDGE:%.*]] ]
+; CHECK-NEXT:    [[IV:%.*]] = phi i32 [ 0, [[ENTRY]] ], [ [[IV_NEXT:%.*]], [[BACKEDGE]] ]
 ; CHECK-NEXT:    [[COND:%.*]] = icmp ne i32 [[X]], 0
 ; CHECK-NEXT:    br i1 [[COND]], label [[HOT_PATH:%.*]], label [[COLD_PATH:%.*]]
 ; CHECK:       hot_path:
@@ -1050,8 +1051,10 @@ define i32 @test_blocker_in_inner_loop_nested(ptr %p, i1 %inner.back, i1 %mid.ba
 ; CHECK:       inner_exit:
 ; CHECK-NEXT:    br i1 [[MID_BACK:%.*]], label [[MID_LOOP]], label [[MID_EXIT:%.*]]
 ; CHECK:       mid_exit:
+; CHECK-NEXT:    [[X_PRE:%.*]] = load i32, ptr [[P]], align 4
 ; CHECK-NEXT:    br label [[BACKEDGE]]
 ; CHECK:       backedge:
+; CHECK-NEXT:    [[X2]] = phi i32 [ [[X_PRE]], [[MID_EXIT]] ], [ [[X]], [[HOT_PATH]] ]
 ; CHECK-NEXT:    [[IV_NEXT]] = add i32 [[IV]], [[X]]
 ; CHECK-NEXT:    [[LOOP_COND:%.*]] = icmp ult i32 [[IV_NEXT]], 1000
 ; CHECK-NEXT:    br i1 [[LOOP_COND]], label [[LOOP]], label [[EXIT:%.*]]
@@ -1211,14 +1214,16 @@ exit:
   ret i32 %x
 }
 
-; TODO: PRE into %inner_exit. The inner loop's two exit edges both go there.
+; The inner loop's two exit edges both go to %inner_exit, so the reload goes
+; there.
 define i32 @test_blocker_in_inner_loop_two_exit_edges(ptr %p, i1 %inner.back, i1 %early.exit) {
 ; CHECK-LABEL: @test_blocker_in_inner_loop_two_exit_edges(
 ; CHECK-NEXT:  entry:
+; CHECK-NEXT:    [[X_PRE1:%.*]] = load i32, ptr [[P:%.*]], align 4
 ; CHECK-NEXT:    br label [[LOOP:%.*]]
 ; CHECK:       loop:
-; CHECK-NEXT:    [[IV:%.*]] = phi i32 [ 0, [[ENTRY:%.*]] ], [ [[IV_NEXT:%.*]], [[BACKEDGE:%.*]] ]
-; CHECK-NEXT:    [[X:%.*]] = load i32, ptr [[P:%.*]], align 4
+; CHECK-NEXT:    [[X:%.*]] = phi i32 [ [[X_PRE1]], [[ENTRY:%.*]] ], [ [[X2:%.*]], [[BACKEDGE:%.*]] ]
+; CHECK-NEXT:    [[IV:%.*]] = phi i32 [ 0, [[ENTRY]] ], [ [[IV_NEXT:%.*]], [[BACKEDGE]] ]
 ; CHECK-NEXT:    [[COND:%.*]] = icmp ne i32 [[X]], 0
 ; CHECK-NEXT:    br i1 [[COND]], label [[HOT_PATH:%.*]], label [[INNER_LOOP:%.*]]
 ; CHECK:       hot_path:
@@ -1229,8 +1234,10 @@ define i32 @test_blocker_in_inner_loop_two_exit_edges(ptr %p, i1 %inner.back, i1
 ; CHECK:       inner_latch:
 ; CHECK-NEXT:    br i1 [[INNER_BACK:%.*]], label [[INNER_LOOP]], label [[INNER_EXIT]]
 ; CHECK:       inner_exit:
+; CHECK-NEXT:    [[X_PRE:%.*]] = load i32, ptr [[P]], align 4
 ; CHECK-NEXT:    br label [[BACKEDGE]]
 ; CHECK:       backedge:
+; CHECK-NEXT:    [[X2]] = phi i32 [ [[X_PRE]], [[INNER_EXIT]] ], [ [[X]], [[HOT_PATH]] ]
 ; CHECK-NEXT:    [[IV_NEXT]] = add i32 [[IV]], [[X]]
 ; CHECK-NEXT:    [[LOOP_COND:%.*]] = icmp ult i32 [[IV_NEXT]], 1000
 ; CHECK-NEXT:    br i1 [[LOOP_COND]], label [[LOOP]], label [[EXIT:%.*]]
@@ -1283,16 +1290,17 @@ exit:
 ;     return s;
 ;   }
 ;
-; TODO: The blocker is the store in the inner loop. Reload in the inner loop's
-; exit.
+; The blocker is the store in the inner loop, so the reload goes to the inner
+; loop's exit.
 define i32 @test_aliasing_store_in_inner_loop(ptr %p, ptr %q, i32 %n, i32 %m) {
 ; CHECK-LABEL: @test_aliasing_store_in_inner_loop(
 ; CHECK-NEXT:  entry:
+; CHECK-NEXT:    [[X_PRE1:%.*]] = load i32, ptr [[P:%.*]], align 4
 ; CHECK-NEXT:    br label [[LOOP:%.*]]
 ; CHECK:       loop:
-; CHECK-NEXT:    [[IV:%.*]] = phi i32 [ 0, [[ENTRY:%.*]] ], [ [[IV_NEXT:%.*]], [[BACKEDGE:%.*]] ]
+; CHECK-NEXT:    [[X:%.*]] = phi i32 [ [[X_PRE1]], [[ENTRY:%.*]] ], [ [[X2:%.*]], [[BACKEDGE:%.*]] ]
+; CHECK-NEXT:    [[IV:%.*]] = phi i32 [ 0, [[ENTRY]] ], [ [[IV_NEXT:%.*]], [[BACKEDGE]] ]
 ; CHECK-NEXT:    [[S:%.*]] = phi i32 [ 0, [[ENTRY]] ], [ [[S_NEXT:%.*]], [[BACKEDGE]] ]
-; CHECK-NEXT:    [[X:%.*]] = load i32, ptr [[P:%.*]], align 4
 ; CHECK-NEXT:    [[COND:%.*]] = icmp slt i32 [[X]], 0
 ; CHECK-NEXT:    br i1 [[COND]], label [[INNER_LOOP:%.*]], label [[BACKEDGE]]
 ; CHECK:       inner_loop:
@@ -1306,8 +1314,10 @@ define i32 @test_aliasing_store_in_inner_loop(ptr %p, ptr %q, i32 %n, i32 %m) {
 ; CHECK-NEXT:    [[INNER_COND:%.*]] = icmp slt i32 [[J_NEXT]], [[M:%.*]]
 ; CHECK-NEXT:    br i1 [[INNER_COND]], label [[INNER_LOOP]], label [[INNER_EXIT:%.*]]
 ; CHECK:       inner_exit:
+; CHECK-NEXT:    [[X_PRE:%.*]] = load i32, ptr [[P]], align 4
 ; CHECK-NEXT:    br label [[BACKEDGE]]
 ; CHECK:       backedge:
+; CHECK-NEXT:    [[X2]] = phi i32 [ [[X_PRE]], [[INNER_EXIT]] ], [ [[X]], [[LOOP]] ]
 ; CHECK-NEXT:    [[S_NEXT]] = add i32 [[S]], [[X]]
 ; CHECK-NEXT:    [[IV_NEXT]] = add i32 [[IV]], 1
 ; CHECK-NEXT:    [[LOOP_COND:%.*]] = icmp slt i32 [[IV_NEXT]], [[N:%.*]]

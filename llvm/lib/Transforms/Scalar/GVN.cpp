@@ -2315,23 +2315,41 @@ bool GVNPassImpl::performLoopLoadPRE(LoadInst *Load,
     if (LoopBlock)
       return false;
 
-    // Do not sink into inner loops. This may be non-profitable.
-    if (L != LI->getLoopFor(Blocker))
-      return false;
+    // A reload in a blocker inside an inner loop can run once per inner
+    // iteration, which is more often than L's header. Reload in the exit block
+    // of the inner loop that is directly inside L instead. That exit block is
+    // on every path from the blocker back to L's header and it runs at most
+    // once per iteration of L.
+    BasicBlock *ReloadBB = Blocker;
+    if (const Loop *Inner = LI->getLoopFor(Blocker); Inner != L) {
+      // The blocker is inside Inner, which may itself be nested further down.
+      // Walk parents until Inner is the loop directly inside L that contains
+      // it.
+      while (Inner->getParentLoop() != L)
+        Inner = Inner->getParentLoop();
+
+      // PRE is not performed if the inner loop's exit edges do not all go to
+      // one block, or if that block is not directly inside L, which means it
+      // is the header of a sibling loop, where the reload can run more often
+      // than L's header.
+      ReloadBB = Inner->getUniqueExitBlock();
+      if (!ReloadBB || LI->getLoopFor(ReloadBB) != L)
+        return false;
+    }
 
     // Blocks that dominate the latch execute on every single iteration, maybe
     // except the last one. So PREing into these blocks doesn't make much sense
     // in most cases. But the blocks that do not necessarily execute on each
     // iteration are sometimes much colder than the header, and this is when
     // PRE is potentially profitable.
-    if (DT->dominates(Blocker, Latch))
+    if (DT->dominates(ReloadBB, Latch))
       return false;
 
     // Make sure that the terminator itself doesn't clobber.
-    if (Blocker->getTerminator()->mayWriteToMemory())
+    if (ReloadBB->getTerminator()->mayWriteToMemory())
       return false;
 
-    LoopBlock = Blocker;
+    LoopBlock = ReloadBB;
   }
 
   if (!LoopBlock)
