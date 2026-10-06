@@ -4,7 +4,9 @@
 // The threads come from pthread_create, not thrd_create, so that a failure
 // here is due to call_once alone; thrd_* has its own test.
 
-// UNSUPPORTED: darwin, android, glibc && !glibc-2.28
+// <threads.h> is missing on Darwin and before glibc 2.28.
+// UNSUPPORTED: darwin, glibc && !glibc-2.28
+// https://github.com/llvm/llvm-project/issues/199585
 // UNSUPPORTED: glibc && tsan
 
 #include <pthread.h>

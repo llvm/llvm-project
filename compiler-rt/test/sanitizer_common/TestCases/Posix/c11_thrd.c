@@ -1,7 +1,9 @@
 // RUN: %clang -pthread %s -o %t %if freebsd %{ -lstdthreads %}
 // RUN: %run %t 2>&1 | FileCheck %s
 
-// UNSUPPORTED: darwin, android, glibc && !glibc-2.28
+// <threads.h> is missing on Darwin and before glibc 2.28.
+// UNSUPPORTED: darwin, glibc && !glibc-2.28
+// https://github.com/llvm/llvm-project/issues/199585
 // UNSUPPORTED: glibc && (asan || hwasan || lsan || msan || tsan)
 
 #include <stdatomic.h>
