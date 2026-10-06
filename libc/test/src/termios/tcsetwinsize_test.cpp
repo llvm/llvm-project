@@ -13,6 +13,7 @@
 
 #include "hdr/fcntl_macros.h"
 #include "hdr/types/struct_winsize.h"
+#include "src/__support/CPP/scope.h"
 #include "src/__support/libc_errno.h"
 #include "src/fcntl/open.h"
 #include "src/termios/tcsetwinsize.h"
@@ -35,15 +36,16 @@ TEST_F(LlvmLibcTcSetWinSizeTest, InvalidFileDescriptor) {
 TEST_F(LlvmLibcTcSetWinSizeTest, NonTerminalFileDescriptor) {
   int pipefd[2];
   ASSERT_THAT(LIBC_NAMESPACE::pipe(pipefd), Succeeds(0));
+  LIBC_NAMESPACE::cpp::scope_exit close_pipe([&] {
+    ASSERT_THAT(LIBC_NAMESPACE::close(pipefd[0]), Succeeds(0));
+    ASSERT_THAT(LIBC_NAMESPACE::close(pipefd[1]), Succeeds(0));
+  });
 
   constexpr unsigned short TEST_ROWS = 24;
   constexpr unsigned short TEST_COLS = 80;
   struct winsize ws = {TEST_ROWS, TEST_COLS, 0, 0};
   ASSERT_THAT(LIBC_NAMESPACE::tcsetwinsize(pipefd[0], &ws), Fails(ENOTTY));
   ASSERT_THAT(LIBC_NAMESPACE::tcsetwinsize(pipefd[1], &ws), Fails(ENOTTY));
-
-  ASSERT_THAT(LIBC_NAMESPACE::close(pipefd[0]), Succeeds(0));
-  ASSERT_THAT(LIBC_NAMESPACE::close(pipefd[1]), Succeeds(0));
 }
 
 TEST_F(LlvmLibcTcSetWinSizeTest, TerminalSmokeTest) {
@@ -57,15 +59,32 @@ TEST_F(LlvmLibcTcSetWinSizeTest, TerminalSmokeTest) {
     return;
   }
   ASSERT_ERRNO_SUCCESS();
+  LIBC_NAMESPACE::cpp::scope_exit close_fd(
+      [&] { ASSERT_THAT(LIBC_NAMESPACE::close(fd), Succeeds(0)); });
 
   constexpr unsigned short TEST_ROWS = 30;
   constexpr unsigned short TEST_COLS = 100;
   struct winsize ws = {TEST_ROWS, TEST_COLS, 0, 0};
   int ret = LIBC_NAMESPACE::tcsetwinsize(fd, &ws);
-  if (ret < 0) {
+  if (ret < 0)
     ASSERT_ERRNO_EQ(ENOTTY);
-  } else {
+  else
     ASSERT_ERRNO_SUCCESS();
+}
+
+TEST_F(LlvmLibcTcSetWinSizeTest, NullPointer) {
+  int fd = LIBC_NAMESPACE::open("/dev/ptmx", O_RDWR);
+  if (fd < 0)
+    fd = LIBC_NAMESPACE::open("/dev/tty", O_RDWR);
+
+  if (fd < 0) {
+    // When no terminal is available, gracefully skip the test.
+    libc_errno = 0;
+    return;
   }
-  ASSERT_THAT(LIBC_NAMESPACE::close(fd), Succeeds(0));
+  ASSERT_ERRNO_SUCCESS();
+  LIBC_NAMESPACE::cpp::scope_exit close_fd(
+      [&] { ASSERT_THAT(LIBC_NAMESPACE::close(fd), Succeeds(0)); });
+
+  ASSERT_THAT(LIBC_NAMESPACE::tcsetwinsize(fd, nullptr), Fails(EFAULT));
 }

@@ -18,15 +18,12 @@
 #include "src/__support/common.h"
 #include "src/__support/libc_errno.h"
 #include "src/__support/macros/config.h"
-#include "src/__support/macros/null_check.h"
 
 #include <asm/ioctls.h> // Safe to include without the risk of name pollution.
 
 namespace LIBC_NAMESPACE_DECL {
 
 LLVM_LIBC_FUNCTION(int, tcsetwinsize, (int fd, const struct winsize *ws)) {
-  LIBC_CRASH_ON_NULLPTR(ws);
-
   auto ret = linux_syscalls::ioctl(fd, TIOCSWINSZ, ws);
   if (!ret.has_value()) {
     libc_errno = ret.error();
