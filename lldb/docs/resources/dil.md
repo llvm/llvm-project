@@ -161,7 +161,7 @@ paths) or for evaluating more complex expressions. The single GDB command was
 would just use `p` all the time, including times when it wasn't really necessary
 or even appropriate. `dwim-print` was introduced in an attempt to alleviate this
 problem. "dwim" stands for "do-what-I-mean". `dwim-print` looks at the
-expression and attempts to decide whether it `frame variable` would produce the
+expression and attempts to decide whether `frame variable` would produce the
 same value as the full expression evaluator, and calls the appropriate mechanism
 accordingly. Since `p` was made an alias for `dwim-print`, this went a
 long way towards solving the problem of users running code in the target when
