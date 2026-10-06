@@ -7,8 +7,8 @@
 //   storage — storage duration: thread_local variables, including a
 //             thread_local static data member, are diagnosed; a
 //             namespace-scope variable is accepted without diagnostic.
-//   init    — initializer form: dynamically initialized pointers, and
-//             constant initializers that are not a direct string literal
+//   init    — initializer form: dynamically initialized pointers and
+//             arrays, and constant initializers that are not a direct string literal
 //             (pointer to another global, consteval call, user-defined
 //             literal), are diagnosed. (-std=c++20 for consteval.)
 //   kinds   — unsupported declaration kinds and types: a name-matched
@@ -23,7 +23,7 @@
 // RUN:   -fsyntax-only -verify=storage %s
 
 // RUN: %clang_cc1 -std=c++20 -triple powerpc64-ibm-aix \
-// RUN:   -mloadtime-comment-vars=p_ok,arr_ok,p_dyn,p_ind,p_ce,p_udl \
+// RUN:   -mloadtime-comment-vars=p_ok,arr_ok,p_dyn,arr_dyn,p_ind,p_ce,p_udl \
 // RUN:   -fsyntax-only -verify=init %s
 
 // RUN: %clang_cc1 -std=c++20 -triple powerpc64-ibm-aix \
@@ -54,6 +54,7 @@ thread_local const char *A::tm = "@(#) tm"; // storage-warning {{'tm' named in '
 // ---- init: initializer-form cases --------------------------------------------
 
 const char *make();
+char make_char();
 
 // A pointer bound directly to a string literal is supported; no diagnostic
 // is expected.
@@ -69,6 +70,10 @@ const char src[] = "@(#) src";
 // Dynamic initialization: value set by a start-up constructor; the string
 // would not be present in the object file at load time.
 const char *p_dyn = make(); // init-warning {{'p_dyn' named in '-mloadtime-comment-vars=' is not constant-initialized and will not be preserved}}
+
+// An array whose elements come from a non-constant call is dynamically
+// initialized as well, and is diagnosed for the same reason.
+char arr_dyn[] = {make_char(), '\0'}; // init-warning {{'arr_dyn' named in '-mloadtime-comment-vars=' is not constant-initialized and will not be preserved}}
 
 // This pointer is constant-initialized but bound to another global rather
 // than a string literal, so it is diagnosed.
