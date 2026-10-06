@@ -35,6 +35,8 @@ public:
 
   deque() = default;
   deque(initializer_list<T>) {}
+  explicit deque(size_t count);
+  deque(size_t count, const T &value);
 
   iterator begin();
   const_iterator begin() const;
