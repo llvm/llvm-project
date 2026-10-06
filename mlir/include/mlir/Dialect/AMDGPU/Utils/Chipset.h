@@ -67,7 +67,6 @@ inline bool hasOcpFp8(const Chipset &chipset) {
   return (chipset.majorVersion == 9 && chipset.minorVersion >= 5) ||
          chipset.majorVersion >= 12;
 }
-
 } // namespace mlir::amdgpu
 
 #endif
