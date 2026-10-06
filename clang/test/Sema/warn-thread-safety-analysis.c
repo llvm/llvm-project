@@ -376,6 +376,33 @@ void test_bdev_ops_fail(struct BDevOps *ops, struct BDev *bdev) {
   ops->unlock(bdev); // expected-warning {{releasing mutex 'bdev->lock' that was not held}}
 }
 
+// lock_returned on a function pointer, naming the pointee's parameter.
+struct Mutex *(*bdev_lock_of)(struct BDev *bdev) LOCK_RETURNED(&bdev->lock);
+struct BDevLockOps {
+  struct Mutex *(*lock_of)(struct BDev *bdev) LOCK_RETURNED(&bdev->lock);
+};
+
+void test_bdev_lock_of(struct BDevLockOps *ops, struct BDev *bdev) {
+  mutex_exclusive_lock(bdev_lock_of(bdev));
+  bdev->a = 42;
+  mutex_exclusive_unlock(ops->lock_of(bdev));
+  mutex_exclusive_lock(ops->lock_of(bdev));
+  mutex_exclusive_unlock(&bdev->lock);
+}
+
+void test_bdev_lock_of_fail(struct BDevLockOps *ops, struct BDev *bdev) {
+  mutex_exclusive_lock(&mu1);
+  mutex_exclusive_unlock(ops->lock_of(bdev)); // expected-warning {{releasing mutex 'bdev->lock' that was not held}}
+  mutex_exclusive_unlock(&mu1);
+}
+
+void test_lock_of_param(struct BDev *bdev,
+                        struct Mutex *(*lock_of)(struct BDev *) LOCK_RETURNED(&bdev->lock)) {
+  mutex_exclusive_lock(lock_of(bdev));
+  bdev->a = 42;
+  mutex_exclusive_unlock(&bdev->lock);
+}
+
 // Test unusual trylock patterns
 void do_some_work(void);
 int work_data GUARDED_BY(mu1);
