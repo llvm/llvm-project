@@ -80,6 +80,7 @@ __try.cont:                                       ; preds = %__except, %invoke.c
 ;
 ; CHECK: .seh_handlerdata
 ; CHECK-NEXT: .Luse_both$parent_frame_offset
+; CHECK-NEXT: .Luse_both$parent_frame_align_mask = -1
 ; CHECK-NEXT: .long (.Llsda_end0-.Llsda_begin0)/16
 ; CHECK-NEXT: .Llsda_begin0:
 ; CHECK-NEXT: .long .Ltmp0@IMGREL

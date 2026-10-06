@@ -569,15 +569,22 @@ void WinException::emitCSpecificHandlerTable(const MachineFunction *MF) {
   };
 
   if (!isAArch64) {
-    // Emit a label assignment with the SEH frame offset so we can use it for
-    // llvm.eh.recoverfp.
+    // Emit label assignments with the SEH frame offset and alignment so we can
+    // use it for llvm.eh.recoverfp.
     StringRef FLinkageName =
         GlobalValue::dropLLVMManglingEscape(MF->getFunction().getName());
+
     MCSymbol *ParentFrameOffset =
         Ctx.getOrCreateParentFrameOffsetSymbol(FLinkageName);
     const MCExpr *MCOffset =
         MCConstantExpr::create(FuncInfo.SEHSetFrameOffset, Ctx);
     Asm->OutStreamer->emitAssignment(ParentFrameOffset, MCOffset);
+
+    MCSymbol *ParentFrameAlignMask =
+        Ctx.getOrCreateParentFrameAlignMaskSymbol(FLinkageName);
+    const MCExpr *MCAlignMask =
+        MCConstantExpr::create(FuncInfo.SEHFrameAlignMask, Ctx);
+    Asm->OutStreamer->emitAssignment(ParentFrameAlignMask, MCAlignMask);
   }
 
   // Use the assembler to compute the number of table entries through label
