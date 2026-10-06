@@ -16,7 +16,6 @@ int main() {
   return 0;
 }
 
-// FIXME: Buckets 1, 5 and 12 are never used. See issue #229287.
-// CHECK: findBucket: Size 4 goes to bucket 0
-// CHECK: findBucket: Size 64 goes to bucket 4
-// CHECK: findBucket: Size 8192 goes to bucket 11
+// CHECK: findBucket: Size 4 goes to bucket 1
+// CHECK: findBucket: Size 64 goes to bucket 5
+// CHECK: findBucket: Size 8192 goes to bucket 12
