@@ -673,7 +673,7 @@ static Value *canoncalizeSelectICmpMinMax(const ICmpInst *Cmp, Value *TVal,
   // (X >= Y) ? (X - Y) : 0
   if ((Pred == CmpInst::ICMP_SLT || Pred == CmpInst::ICMP_SLE) &&
       match(FVal, m_NSWSub(m_Specific(CmpLHS), m_Specific(CmpRHS))) &&
-      isGuaranteedNotToBeUndef(CmpLHS, SQ.AC, SQ.CxtI, SQ.DT)) {
+      isGuaranteedNotToBeUndef(CmpLHS, SQ.AC, SQ.CtxI, SQ.DT)) {
     Value *SMin =
         Builder.CreateBinaryIntrinsic(Intrinsic::smin, CmpRHS, CmpLHS);
     return Builder.CreateNSWSub(CmpLHS, SMin);
@@ -749,37 +749,51 @@ static Value *foldSelectICmpMinMax(const ICmpInst *Cmp, Value *TVal,
 ///   Z may be 0 if lshr is missing.
 /// Worst-case scenario is that we will replace 5 instructions with 5 different
 /// instructions, but we got rid of select.
-static Instruction *foldSelectICmpAndAnd(Type *SelType, const ICmpInst *Cmp,
+static Instruction *foldSelectICmpAndAnd(Type *SelType, const Value *Cond,
                                          Value *TVal, Value *FVal,
                                          InstCombiner::BuilderTy &Builder) {
-  if (!(Cmp->hasOneUse() && Cmp->getOperand(0)->hasOneUse() &&
-        Cmp->getPredicate() == ICmpInst::ICMP_EQ &&
-        match(Cmp->getOperand(1), m_Zero()) && match(FVal, m_One())))
+  Value *A, *X, *Y, *Z;
+  CmpPredicate Pred;
+  unsigned NumReplaced = 1 + Cond->hasOneUse();
+  if (match(Cond, m_Trunc(m_Value(X)))) {
+    Y = ConstantInt::get(X->getType(), 1);
+    Pred = ICmpInst::ICMP_NE;
+  } else if (match(Cond,
+                   m_ICmp(Pred, m_And(m_Value(X), m_Value(Y)), m_Zero())) &&
+             ICmpInst::isEquality(Pred)) {
+    NumReplaced +=
+        Cond->hasOneUse() && cast<ICmpInst>(Cond)->getOperand(0)->hasOneUse();
+  } else
+    return nullptr;
+
+  if (Pred == ICmpInst::ICMP_NE)
+    std::swap(TVal, FVal);
+
+  if (!match(FVal, m_One()))
     return nullptr;
 
   // The TrueVal has general form of:  and %B, 1
-  Value *B;
-  if (!match(TVal, m_OneUse(m_And(m_Value(B), m_One()))))
+  if (!match(TVal, m_And(m_Value(A), m_One())))
     return nullptr;
 
-  // Where %B may be optionally shifted:  lshr %X, %Z.
-  Value *X, *Z;
-  const bool HasShift = match(B, m_OneUse(m_LShr(m_Value(X), m_Value(Z))));
+  APInt BitWidth(SelType->getScalarSizeInBits(),
+                 SelType->getScalarSizeInBits());
+  auto TValPattern = m_CombineOr(
+      m_Deferred(X),
+      m_LShr(m_Deferred(X), m_Value(Z, m_SpecificInt_ICMP_ForbidPoison(
+                                           CmpInst::ICMP_ULT, BitWidth))));
 
-  // The shift must be valid.
-  // TODO: This restricts the fold to constant shift amounts. Is there a way to
-  //       handle variable shifts safely? PR47012
-  if (HasShift &&
-      !match(Z, m_SpecificInt_ICMP(CmpInst::ICMP_ULT,
-                                   APInt(SelType->getScalarSizeInBits(),
-                                         SelType->getScalarSizeInBits()))))
-    return nullptr;
+  if (!match(A, TValPattern)) {
+    std::swap(X, Y);
+    if (!match(A, TValPattern))
+      return nullptr;
+  }
 
-  if (!HasShift)
-    X = B;
+  bool HasShift = A != X;
+  if (TVal->hasOneUse())
+    NumReplaced += 1 + (HasShift && A->hasOneUse());
 
-  Value *Y;
-  if (!match(Cmp->getOperand(0), m_c_And(m_Specific(X), m_Value(Y))))
+  if (NumReplaced < (4u - isa<Constant>(Y)))
     return nullptr;
 
   // ((X & Y) == 0) ? ((X >> Z) & 1) : 1 --> (X & (Y | (1 << Z))) != 0
@@ -1872,7 +1886,7 @@ static Value *canonicalizeClampLike(SelectInst &Sel0, ICmpInst &Cmp0,
              m_CombineAnd(m_AnyIntegralConstant(), m_Constant(C0))))
     return nullptr;
 
-  if (!isa<SelectInst>(Sel1)) {
+  if (!match(Sel1, m_SelectLike(m_Value(), m_Value(), m_Value()))) {
     Pred0 = ICmpInst::getInversePredicate(Pred0);
     std::swap(X, Sel1);
   }
@@ -1930,8 +1944,8 @@ static Value *canonicalizeClampLike(SelectInst &Sel0, ICmpInst &Cmp0,
   CmpPredicate Pred1;
   Constant *C2;
   Value *ReplacementLow, *ReplacementHigh;
-  if (!match(Sel1, m_Select(m_Value(Cmp1), m_Value(ReplacementLow),
-                            m_Value(ReplacementHigh))) ||
+  if (!match(Sel1, m_SelectLike(m_Value(Cmp1), m_Value(ReplacementLow),
+                                m_Value(ReplacementHigh))) ||
       !match(Cmp1,
              m_ICmp(Pred1, m_Specific(X),
                     m_CombineAnd(m_AnyIntegralConstant(), m_Constant(C2)))))
@@ -2012,16 +2026,22 @@ static Value *canonicalizeClampLike(SelectInst &Sel0, ICmpInst &Cmp0,
            "Constant folding of ImmConstant cannot fail");
   }
 
+  // We mark the select instructions below as having an unknown profile as it is
+  // not possible to recover profile information from the original selects in
+  // the general case. From them we can only know the probability that we clamp
+  // whereas we need the probabilities for clamping specific to the low end/high
+  // end.
+
   // All good, finally emit the new pattern.
   Value *ShouldReplaceLow = Builder.CreateICmpSLT(X, ThresholdLowIncl);
   Value *ShouldReplaceHigh = Builder.CreateICmpSGE(X, ThresholdHighExcl);
-  Value *MaybeReplacedLow =
-      Builder.CreateSelect(ShouldReplaceLow, ReplacementLow, X);
+  Value *MaybeReplacedLow = Builder.CreateSelectWithUnknownProfile(
+      ShouldReplaceLow, ReplacementLow, X, DEBUG_TYPE);
 
   // Create the final select. If we looked through a truncate above, we will
   // need to retruncate the result.
-  Value *MaybeReplacedHigh = Builder.CreateSelect(
-      ShouldReplaceHigh, ReplacementHigh, MaybeReplacedLow);
+  Value *MaybeReplacedHigh = Builder.CreateSelectWithUnknownProfile(
+      ShouldReplaceHigh, ReplacementHigh, MaybeReplacedLow, DEBUG_TYPE);
   return Builder.CreateTrunc(MaybeReplacedHigh, Sel0.getType());
 }
 
@@ -2448,12 +2468,9 @@ Instruction *InstCombinerImpl::foldSelectInstWithICmp(SelectInst &SI,
     return &SI;
   }
 
-  if (Value *V = foldSelectICmpMinMax(ICI, TrueVal, FalseVal, Builder, SQ))
+  if (Value *V = foldSelectICmpMinMax(ICI, TrueVal, FalseVal, Builder,
+                                      SQ.getWithInstruction(&SI)))
     return replaceInstUsesWith(SI, V);
-
-  if (Instruction *V =
-          foldSelectICmpAndAnd(SI.getType(), ICI, TrueVal, FalseVal, Builder))
-    return V;
 
   if (Value *V = foldSelectICmpAndZeroShl(ICI, TrueVal, FalseVal, Builder))
     return replaceInstUsesWith(SI, V);
@@ -3199,7 +3216,7 @@ static Instruction *foldSelectToPhiImpl(SelectInst &Sel, BasicBlock *BB,
         return nullptr;
   }
 
-  Builder.SetInsertPoint(BB, BB->begin());
+  Builder.SetInsertPoint(BB->begin());
   auto *PN = Builder.CreatePHI(Sel.getType(), Inputs.size());
   for (auto *Pred : predecessors(BB))
     PN->addIncoming(Inputs[Pred], Pred);
@@ -4702,8 +4719,11 @@ Instruction *InstCombinerImpl::visitSelectInst(SelectInst &SI) {
           FMF.setNoNaNs(true);
         if (FCmp->hasNoInfs())
           FMF.setNoInfs(true);
-        Value *NewSel =
-            Builder.CreateSelectFMF(NewCond, FalseVal, TrueVal, FMF);
+        Value *NewSel = Builder.CreateSelectFMF(
+            NewCond, FalseVal, TrueVal, FMF, "",
+            ProfcheckDisableMetadataFixes ? nullptr : &SI);
+        if (auto *NewSI = dyn_cast<SelectInst>(NewSel))
+          NewSI->swapProfMetadata();
         return replaceInstUsesWith(SI, NewSel);
       }
     }
@@ -4911,6 +4931,10 @@ Instruction *InstCombinerImpl::visitSelectInst(SelectInst &SI) {
   if (ICmpInst *ICI = dyn_cast<ICmpInst>(CondVal))
     if (Instruction *Result = foldSelectInstWithICmp(SI, ICI))
       return Result;
+
+  if (Instruction *V =
+          foldSelectICmpAndAnd(SelType, CondVal, TrueVal, FalseVal, Builder))
+    return V;
 
   if (Value *V = foldSelectBitTest(SI, CondVal, TrueVal, FalseVal, Builder, SQ))
     return replaceInstUsesWith(SI, V);

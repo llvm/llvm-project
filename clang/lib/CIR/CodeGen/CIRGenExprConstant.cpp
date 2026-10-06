@@ -286,6 +286,47 @@ setBitfieldInit(CIRGenModule &cgm, const CIRGenRecordLayout &cirLayout,
       field->getType()->isSignedIntegerOrEnumerationType(), info);
 }
 
+// Handle potentially-overlapping field rewrite for the const subobject records.
+mlir::Attribute asBaseSubobject(CIRGenBuilderTy &builder, mlir::Attribute attr,
+                                cir::RecordType baseSubobjTy) {
+  auto typedAttr = mlir::cast<mlir::TypedAttr>(attr);
+  if (typedAttr.getType() == baseSubobjTy)
+    return attr;
+
+  if (mlir::isa<cir::ZeroAttr>(attr))
+    return builder.getZeroInitAttr(baseSubobjTy);
+
+  auto recordAttr = mlir::cast<cir::ConstRecordAttr>(attr);
+  mlir::ArrayAttr members = recordAttr.getMembers();
+  llvm::SmallVector<mlir::Attribute> baseMembers(
+      members.begin(), members.begin() + baseSubobjTy.getNumElements());
+
+  // The base-subobject type is assumed to be a prefix of the complete-object
+  // type (i.e. the complete type minus tail padding). Verify that assumption
+  // holds so a layout change doesn't silently produce a wrong initializer.
+  //
+  // ConstRecordAttr's members skip zero-width bit-fields and store a
+  // bit-field's storage type rather than the bit-field type itself (see
+  // ConstRecordAttr::verify), so baseSubobjTy's raw member list has to be
+  // filtered the same way before comparing against baseMembers index-for-
+  // index.
+  assert(llvm::all_of(
+             llvm::zip_equal(baseMembers,
+                             llvm::map_range(llvm::make_filter_range(
+                                                 baseSubobjTy.getMembers(),
+                                                 cir::memberOwnsBytes),
+                                             cir::memberStorageType)),
+             [](const auto &pair) {
+               auto &[member, baseTy] = pair;
+               return mlir::cast<mlir::TypedAttr>(member).getType() == baseTy;
+             }) &&
+         "base-subobject member type does not match complete-object member "
+         "type at the same index");
+
+  return cir::ConstRecordAttr::get(baseSubobjTy,
+                                   builder.getArrayAttr(baseMembers));
+}
+
 mlir::Attribute buildRecordHelper(ConstantEmitter &emitter,
                                   const RecordDecl *rd,
                                   const RecordDecl *vtableBaseTy,
@@ -338,7 +379,8 @@ mlir::Attribute buildRecordHelper(ConstantEmitter &emitter,
                                    apOp.getNameAttr(), indices);
     }
 
-    for (auto [idx, base] : llvm::enumerate(cxxrd->bases())) {
+    unsigned baseNo = 0;
+    for (const CXXBaseSpecifier &base : cxxrd->bases()) {
       // Our init-list implementation here just skips bases because classic
       // compiler does (see the comment in buildRecord). We perhaps COULD do
       // this, but for now we'll skip them.
@@ -350,10 +392,12 @@ mlir::Attribute buildRecordHelper(ConstantEmitter &emitter,
 
       const auto *baseDecl = base.getType()->castAsCXXRecordDecl();
 
+      unsigned curBaseNo = baseNo++;
+
       if (!cirLayout.hasNonVirtualBaseCIRField(baseDecl))
         continue;
 
-      APValue baseValue = inits.getBase(idx);
+      APValue baseValue = inits.getBase(curBaseNo);
 
       const ASTRecordLayout &derivedLayout =
           cgm.getASTContext().getASTRecordLayout(cxxrd);
@@ -406,11 +450,17 @@ mlir::Attribute buildRecordHelper(ConstantEmitter &emitter,
     if (!eltAttr)
       return {};
 
-    if (field->isBitField())
+    if (field->isBitField()) {
       elements[fieldIdx] = setBitfieldInit(cgm, cirLayout, builder, field,
                                            elements[fieldIdx], eltAttr);
-    else
+    } else {
+      if (field->isPotentiallyOverlapping()) {
+        if (auto expectedTy = mlir::dyn_cast<cir::RecordType>(
+                recordTy.getMembers()[fieldIdx]))
+          eltAttr = asBaseSubobject(builder, eltAttr, expectedTy);
+      }
       elements[fieldIdx] = eltAttr;
+    }
   }
 
   // Anything we haven't initialized, we try to zero init. We could/should
@@ -839,7 +889,9 @@ mlir::Attribute ConstantLValueEmitter::tryEmit() {
   // non-zero null pointer and addrspace casts that aren't trivially
   // represented in LLVM IR.
   mlir::Type destTy = cgm.getTypes().convertTypeForMem(destType);
-  assert(mlir::isa<cir::PointerType>(destTy));
+  assert((mlir::isa<cir::PointerType>(destTy) ||
+          mlir::isa<cir::IntType>(destTy)) &&
+         "constant lvalue destination must be pointer or integer");
 
   // If there's no base at all, this is a null or absolute pointer,
   // possibly cast back to an integer type.
@@ -858,16 +910,25 @@ mlir::Attribute ConstantLValueEmitter::tryEmit() {
   if (!result.hasOffsetApplied)
     value = applyOffset(result).value;
 
-  // Convert to the appropriate type; this could be an lvalue for
-  // an integer. FIXME: performAddrSpaceCast
-  if (mlir::isa<cir::PointerType>(destTy)) {
-    if (auto attr = mlir::dyn_cast<mlir::Attribute>(value))
-      return attr;
-    cgm.errorNYI("ConstantLValueEmitter: non-attribute pointer");
+  // CIR does not yet support signing constant lvalue initializers with pointer
+  // authentication. Classic CodeGen signs the offset-adjusted pointer here
+  // before the final pointer cast or ptrtoint conversion.
+  if (PointerAuthQualifier pointerAuth = destType.getPointerAuth()) {
+    cgm.errorNYI("ConstantLValueEmitter: pointer authentication");
     return {};
   }
 
-  cgm.errorNYI("ConstantLValueEmitter: other?");
+  // Convert to the appropriate type; this could be an lvalue for
+  // an integer. FIXME: performAddrSpaceCast
+  if (auto attr = mlir::dyn_cast<mlir::Attribute>(value)) {
+    if (auto gv = mlir::dyn_cast<cir::GlobalViewAttr>(attr))
+      return cir::GlobalViewAttr::get(destTy, gv.getSymbol(), gv.getIndices());
+
+    if (mlir::isa<cir::PointerType>(destTy))
+      return attr;
+  }
+
+  cgm.errorNYI("ConstantLValueEmitter: non-attribute pointer or integer");
   return {};
 }
 
@@ -902,12 +963,22 @@ ConstantLValueEmitter::tryEmitBase(const APValue::LValueBase &base) {
       // fop.getFunctionType(), so initializers stay valid when a no-prototype
       // FuncOp is later replaced by a prototyped definition with the same
       // symbol. CIR allows the view type to differ from the symbol's type.
-      mlir::Type ptrTy = cgm.getTypes().convertTypeForMem(destType);
-      assert(mlir::isa<cir::PointerType>(ptrTy) &&
-             "function address in constant must be a pointer");
+      mlir::Type destTy = cgm.getTypes().convertTypeForMem(destType);
+      cir::PointerType ptrTy =
+          mlir::isa<cir::PointerType>(destTy)
+              ? mlir::cast<cir::PointerType>(destTy)
+              : cir::PointerType::get(fop.getFunctionType());
+      mlir::StringAttr symName = fop.getSymNameAttr();
+      // On the HIP host, the address of a kernel is the address of its kernel
+      // handle, not of its device stub. CUDA uses the device stub itself as
+      // the kernel handle.
+      if (cgm.getLangOpts().HIP && !cgm.getLangOpts().CUDAIsDevice &&
+          fd->hasAttr<CUDAGlobalAttr>())
+        symName = mlir::cast<cir::GlobalOp>(
+                      cgm.getCUDARuntime().getKernelHandle(fop, fd))
+                      .getSymNameAttr();
       return cir::GlobalViewAttr::get(
-          ptrTy,
-          mlir::FlatSymbolRefAttr::get(mlirContext, fop.getSymNameAttr()));
+          ptrTy, mlir::FlatSymbolRefAttr::get(mlirContext, symName));
     }
 
     if (auto *vd = dyn_cast<VarDecl>(d)) {
@@ -1573,12 +1644,20 @@ mlir::Attribute ConstantEmitter::tryEmitPrivate(const APValue &value,
   case APValue::Matrix:
     cgm.errorNYI("ConstExprEmitter::tryEmitPrivate matrix");
     return {};
+
+  case APValue::Reflection:
+    llvm_unreachable("std::meta::info is consteval-only type");
   }
   llvm_unreachable("Unknown APValue kind");
 }
 
 mlir::Value CIRGenModule::emitNullConstant(QualType t, mlir::Location loc) {
   return builder.getConstant(loc, emitNullConstantAttr(t));
+}
+
+mlir::Value CIRGenModule::getNullPointer(cir::PointerType ptrTy, QualType qt,
+                                         mlir::Location loc) {
+  return getTargetCIRGenInfo().getNullPointer(*this, ptrTy, qt, loc);
 }
 
 mlir::TypedAttr CIRGenModule::emitNullConstantAttr(QualType t) {

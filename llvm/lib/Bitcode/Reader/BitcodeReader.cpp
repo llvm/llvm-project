@@ -483,7 +483,11 @@ BitcodeReaderBase::readNameFromStrtab(ArrayRef<uint64_t> Record) {
   if (!UseStrtab)
     return {"", Record};
   // Invalid reference. Let the caller complain about the record being empty.
-  if (Record[0] + Record[1] > Strtab.size())
+  // Both values are read from the file. Compare without adding them: the sum
+  // wraps for a large strtab_offset, which would pass this check and yield a
+  // StringRef pointing outside the string table.
+  if (Record.size() < 2 || Record[0] > Strtab.size() ||
+      Record[1] > Strtab.size() - Record[0])
     return {"", {}};
   return {StringRef(Strtab.data() + Record[0], Record[1]), Record.slice(2)};
 }
@@ -1765,9 +1769,11 @@ Expected<Value *> BitcodeReader::materializeValue(unsigned StartValID,
           break;
         }
         case Instruction::GetElementPtr:
+          LLVM_SUPPRESS_DEPRECATED_DECLARATIONS_PUSH
           C = ConstantExpr::getGetElementPtr(
               BC->SrcElemTy, ConstOps[0], ArrayRef(ConstOps).drop_front(),
               toGEPNoWrapFlags(BC->Flags), BC->getInRange());
+          LLVM_SUPPRESS_DEPRECATED_DECLARATIONS_POP
           break;
         case Instruction::ExtractElement:
           C = ConstantExpr::getExtractElement(ConstOps[0], ConstOps[1]);
@@ -5643,6 +5649,48 @@ Error BitcodeReader::parseFunctionBody(Function *F) {
       break;
     }
 
+    case bitc::FUNC_CODE_INST_BITINSERT: { // BITINSERT: [opval, opval, opval]
+      unsigned OpNum = 0;
+      Value *Base, *Val, *Offset;
+      unsigned BaseTypeID, ValTypeID, OffsetTypeID;
+      if (getValueTypePair(Record, OpNum, NextValueNo, Base, BaseTypeID,
+                           CurBB) ||
+          getValueTypePair(Record, OpNum, NextValueNo, Val, ValTypeID, CurBB) ||
+          getValueTypePair(Record, OpNum, NextValueNo, Offset, OffsetTypeID,
+                           CurBB))
+        return error("Invalid bitinsert record");
+      if (const char *Reason =
+              BitInsertInst::areInvalidOperands(Base, Val, Offset))
+        return error(Reason);
+      I = BitInsertInst::Create(Base, Val, Offset);
+      ResTypeID = BaseTypeID;
+      InstructionList.push_back(I);
+      break;
+    }
+
+    case bitc::FUNC_CODE_INST_BITEXTRACT: { // BITEXTRACT: [ty, opval, opval]
+      unsigned OpNum = 0;
+      if (Record.empty())
+        return error("Record is empty for bitextract");
+      unsigned TypeID = Record[OpNum++];
+      Type *ResTy = getTypeByID(TypeID);
+      if (!ResTy)
+        return error("Invalid bitextract result type");
+      Value *Src, *Offset;
+      unsigned SrcTypeID, OffsetTypeID;
+      if (getValueTypePair(Record, OpNum, NextValueNo, Src, SrcTypeID, CurBB) ||
+          getValueTypePair(Record, OpNum, NextValueNo, Offset, OffsetTypeID,
+                           CurBB))
+        return error("Invalid bitextract record");
+      if (const char *Reason =
+              BitExtractInst::areInvalidOperands(ResTy, Src, Offset))
+        return error(Reason);
+      I = BitExtractInst::Create(ResTy, Src, Offset);
+      ResTypeID = TypeID;
+      InstructionList.push_back(I);
+      break;
+    }
+
     case bitc::FUNC_CODE_INST_SHUFFLEVEC: {// SHUFFLEVEC: [opval,ty,opval,opval]
       unsigned OpNum = 0;
       Value *Vec1, *Vec2, *Mask;
@@ -6995,6 +7043,15 @@ Error BitcodeReader::parseFunctionBody(Function *F) {
       cast<CallInst>(I)->setAttributes(PAL);
       if (isa<DbgInfoIntrinsic>(I))
         SeenDebugIntrinsic = true;
+      if (auto *Decl = dyn_cast<NoAliasScopeDeclInst>(I)) {
+        unsigned ArgNo = Intrinsic::NoAliasScopeDeclScopeArg;
+        if (auto *ListAsValue =
+                dyn_cast<MetadataAsValue>(Decl->getOperand(ArgNo)))
+          if (auto *List = dyn_cast<MDNode>(ListAsValue->getMetadata()))
+            Decl->setOperand(
+                ArgNo, MetadataAsValue::get(
+                           Context, MDLoader->upgradeAliasScopeList(List)));
+      }
       if (Error Err = propagateAttributeTypes(cast<CallBase>(I), ArgTyIDs)) {
         I->deleteValue();
         return Err;

@@ -74,6 +74,7 @@
 #include "llvm/Transforms/Instrumentation/AddressSanitizer.h"
 #include "llvm/Transforms/Instrumentation/AddressSanitizerOptions.h"
 #include "llvm/Transforms/Instrumentation/BoundsChecking.h"
+#include "llvm/Transforms/Instrumentation/CopyProf.h"
 #include "llvm/Transforms/Instrumentation/DataFlowSanitizer.h"
 #include "llvm/Transforms/Instrumentation/GCOVProfiler.h"
 #include "llvm/Transforms/Instrumentation/HWAddressSanitizer.h"
@@ -111,7 +112,7 @@ using namespace llvm;
 namespace llvm {
 // Experiment to move sanitizers earlier.
 static cl::opt<bool> ClSanitizeOnOptimizerEarlyEP(
-    "sanitizer-early-opt-ep", cl::Optional,
+    "sanitizer-early-opt-ep",
     cl::desc("Insert sanitizers on OptimizerEarlyEP."));
 
 // Experiment to mark cold functions as optsize/minsize/optnone.
@@ -379,22 +380,11 @@ static bool initTargetOptions(const CompilerInstance &CI,
   const auto &TargetOpts = CI.getTargetOpts();
   const auto &LangOpts = CI.getLangOpts();
   const auto &HSOpts = CI.getHeaderSearchOpts();
-  switch (LangOpts.getThreadModel()) {
-  case LangOptions::ThreadModelKind::POSIX:
-    Options.ThreadModel = llvm::ThreadModel::POSIX;
-    break;
-  case LangOptions::ThreadModelKind::Single:
-    Options.ThreadModel = llvm::ThreadModel::Single;
-    break;
-  }
 
   Options.MCOptions.BinutilsVersion =
       llvm::MCTargetOptions::parseBinutilsVersion(CodeGenOpts.BinutilsVersion);
   Options.UseInitArray = CodeGenOpts.UseInitArray;
   Options.MCOptions.DisableIntegratedAS = CodeGenOpts.DisableIntegratedAS;
-
-  // Set EABI version.
-  Options.EABIVersion = TargetOpts.EABIVersion;
 
   if (CodeGenOpts.hasSjLjExceptions())
     Options.ExceptionModel = llvm::ExceptionHandling::SjLj;
@@ -404,6 +394,8 @@ static bool initTargetOptions(const CompilerInstance &CI,
     Options.ExceptionModel = llvm::ExceptionHandling::DwarfCFI;
   if (CodeGenOpts.hasWasmExceptions())
     Options.ExceptionModel = llvm::ExceptionHandling::Wasm;
+  if (CodeGenOpts.hasEmscriptenExceptions())
+    Options.ExceptionModel = llvm::ExceptionHandling::Emscripten;
 
   Options.NoZerosInBSS = CodeGenOpts.NoZeroInitializedInBSS;
 
@@ -447,7 +439,6 @@ static bool initTargetOptions(const CompilerInstance &CI,
   Options.ForceDwarfFrameSection = CodeGenOpts.ForceDwarfFrameSection;
   Options.EmitCallGraphSection = CodeGenOpts.CallGraphSection;
   Options.EmitCallSiteInfo = CodeGenOpts.EmitCallSiteInfo;
-  Options.EnableAIXExtendedAltivecABI = LangOpts.EnableAIXExtendedAltivecABI;
   Options.XRayFunctionIndex = CodeGenOpts.XRayFunctionIndex;
   Options.LoopAlignment = CodeGenOpts.LoopAlignment;
   Options.DebugStrictDwarf = CodeGenOpts.DebugStrictDwarf;
@@ -1069,6 +1060,23 @@ void EmitAssemblyHelper::RunOptimizationPipeline(
               MPM.addPass(InferFunctionAttrsPass());
             }
           });
+
+      if (CodeGenOpts.CopyProf) {
+        // Early pass: insert callbacks into special member functions before the
+        // inliner removes function boundaries.
+        PB.registerPipelineEarlySimplificationEPCallback(
+            [](ModulePassManager &MPM, OptimizationLevel, ThinOrFullLTOPhase) {
+              MPM.addPass(createModuleToFunctionPassAdaptor(CopyProfPass()));
+              MPM.addPass(ModuleCopyProfPass());
+            });
+        // Late pass: to reduce runtime overhead, instrument stores only after
+        // optimizations have been run so only useful stores are instrumented.
+        PB.registerOptimizerLastEPCallback([](ModulePassManager &MPM,
+                                              OptimizationLevel,
+                                              ThinOrFullLTOPhase) {
+          MPM.addPass(createModuleToFunctionPassAdaptor(CopyProfStoresPass()));
+        });
+      }
     }
 
     if (std::optional<GCOVOptions> Options =
@@ -1258,8 +1266,9 @@ void EmitAssemblyHelper::emitAssembly(BackendAction Action,
 
   if (RequiresCodeGen && !TM)
     return;
-  if (TM)
-    TheModule->setDataLayout(TM->createDataLayout());
+  if (TM && TheModule->getDataLayout().isDefault())
+    TheModule->setDataLayout(TheModule->getTargetTriple().computeDataLayout(
+        TM->getTargetABIName(*TheModule)));
 
   // Before executing passes, print the final values of the LLVM options.
   cl::PrintOptionValues();
@@ -1479,8 +1488,7 @@ static void createAndEmbedModuleForDynamicDebugging(
 }
 
 void clang::emitBackendOutput(CompilerInstance &CI, CodeGenOptions &CGOpts,
-                              StringRef TDesc, llvm::Module *M,
-                              BackendAction Action,
+                              llvm::Module *M, BackendAction Action,
                               IntrusiveRefCntPtr<llvm::vfs::FileSystem> VFS,
                               std::unique_ptr<raw_pwrite_stream> OS,
                               BackendConsumer *BC) {
@@ -1554,13 +1562,15 @@ void clang::emitBackendOutput(CompilerInstance &CI, CodeGenOptions &CGOpts,
   EmitAssemblyHelper AsmHelper(CI, CGOpts, M, VFS);
   AsmHelper.emitAssembly(Action, std::move(OS), BC);
 
-  // Verify clang's TargetInfo DataLayout against the LLVM TargetMachine's
-  // DataLayout.
+  // Verify the module's DataLayout against the one the target computes for the
+  // module's ABI. This respects the target-abi module flag rather than assuming
+  // the DataLayout is a fixed property of the target options.
   if (AsmHelper.TM) {
     std::string DLDesc = M->getDataLayout().getStringRepresentation();
-    if (DLDesc != TDesc) {
+    std::string TDesc = M->getTargetTriple().computeDataLayout(
+        AsmHelper.TM->getTargetABIName(*M));
+    if (DLDesc != TDesc)
       Diags.Report(diag::err_data_layout_mismatch) << DLDesc << TDesc;
-    }
   }
 }
 

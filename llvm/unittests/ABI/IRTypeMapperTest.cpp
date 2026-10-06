@@ -71,7 +71,9 @@ TEST_F(IRTypeMapperTest, SVEPredicateVectorMapsToScalableI1Vector) {
 }
 
 TEST_F(IRTypeMapperTest, SVECountMapsToAArch64SVCount) {
-  const llvm::abi::VectorType *SVCount = TB.getSVECountType(llvm::Align(2));
+  const llvm::abi::VectorType *SVCount =
+      TB.getScalablePredicateOrCountVectorType(llvm::Align(2),
+                                               llvm::abi::VectorKind::SVECount);
 
   auto *TET = llvm::dyn_cast<llvm::TargetExtType>(Mapper.convertType(SVCount));
   ASSERT_NE(TET, nullptr);
@@ -95,6 +97,39 @@ TEST_F(IRTypeMapperTest, SVEDataTupleMapsToStructOfVectors) {
   llvm::Type *ExpectedVec = Mapper.convertType(SVInt32);
   for (unsigned I = 0; I < 3; ++I)
     EXPECT_EQ(Struct->getElementType(I), ExpectedVec);
+}
+
+TEST_F(IRTypeMapperTest, SameSizeAtomicMapsToValueType) {
+  const llvm::abi::Type *F32 =
+      TB.getFloatType(llvm::APFloat::IEEEsingle(), llvm::Align(4));
+  const llvm::abi::AtomicType *Atomic =
+      TB.getAtomicType(F32, 32, llvm::Align(4));
+
+  EXPECT_TRUE(Mapper.convertType(Atomic)->isFloatTy());
+}
+
+TEST_F(IRTypeMapperTest, PaddedAtomicMapsToValueAndTailPadding) {
+  const llvm::abi::Type *I8 =
+      TB.getIntegerType(8, llvm::Align(1), /*Signed=*/true);
+  const llvm::abi::RecordType *ThreeBytes = TB.getRecordType(
+      {llvm::abi::FieldInfo(I8, 0), llvm::abi::FieldInfo(I8, 8),
+       llvm::abi::FieldInfo(I8, 16)},
+      llvm::TypeSize::getFixed(24), llvm::Align(1),
+      /*UnadjustedAlign=*/llvm::Align(1));
+  const llvm::abi::AtomicType *Atomic =
+      TB.getAtomicType(ThreeBytes, 32, llvm::Align(4));
+
+  auto *Struct = llvm::dyn_cast<llvm::StructType>(Mapper.convertType(Atomic));
+  ASSERT_NE(Struct, nullptr);
+  ASSERT_EQ(Struct->getNumElements(), 2u);
+  EXPECT_TRUE(Struct->getElementType(0)->isStructTy());
+
+  const auto *Padding =
+      llvm::dyn_cast<llvm::ArrayType>(Struct->getElementType(1));
+  ASSERT_NE(Padding, nullptr);
+  EXPECT_TRUE(Padding->getElementType()->isIntegerTy(8));
+  EXPECT_EQ(Padding->getNumElements(), 1u);
+  EXPECT_EQ(DL.getTypeAllocSize(Struct), llvm::TypeSize::getFixed(32 / 8));
 }
 
 } // namespace

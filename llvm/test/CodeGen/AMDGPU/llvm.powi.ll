@@ -279,8 +279,9 @@ define float @v_powi_f32(float %l, i32 %r) {
 ; GFX11-NEXT:    v_cmp_gt_f32_e32 vcc_lo, 0xc2fc0000, v2
 ; GFX11-NEXT:    v_cndmask_b32_e64 v3, 0, 0x42800000, vcc_lo
 ; GFX11-NEXT:    v_cndmask_b32_e64 v4, 0, 0xffffffc0, vcc_lo
-; GFX11-NEXT:    v_dual_add_f32 v2, v2, v3 :: v_dual_mul_f32 v3, 0.5, v1
-; GFX11-NEXT:    s_delay_alu instid0(VALU_DEP_1) | instskip(NEXT) | instid1(VALU_DEP_1)
+; GFX11-NEXT:    v_add_f32_e32 v2, v2, v3
+; GFX11-NEXT:    v_mul_f32_e32 v3, 0.5, v1
+; GFX11-NEXT:    s_delay_alu instid0(VALU_DEP_2) | instskip(NEXT) | instid1(VALU_DEP_1)
 ; GFX11-NEXT:    v_exp_f32_e32 v2, v2
 ; GFX11-NEXT:    v_trunc_f32_e32 v5, v3
 ; GFX11-NEXT:    s_delay_alu instid0(VALU_DEP_1) | instskip(SKIP_4) | instid1(VALU_DEP_1)

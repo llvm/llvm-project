@@ -28,6 +28,7 @@
 #include <cassert>
 #include <cstring>
 #include <limits>
+#include <list>
 
 namespace llvm::ubi {
 
@@ -918,6 +919,46 @@ class InstExecutor : public InstVisitor<InstExecutor, void>,
     return AnyValue();
   }
 
+  AnyValue callSpeculativeLoadIntrinsic(CallBase &CB, const AnyValue &Ptr,
+                                        const AnyValue &NumBytes) {
+    Type *RetTy = CB.getType();
+    if (Ptr.isPoison()) {
+      reportImmediateUB() << "llvm.speculative.load with poison pointer.";
+      return AnyValue();
+    }
+    if (NumBytes.isPoison()) {
+      reportImmediateUB()
+          << "llvm.speculative.load with poison number of accessible bytes.";
+      return AnyValue();
+    }
+
+    const uint64_t Size = Ctx.getEffectiveTypeStoreSize(RetTy);
+    const APInt &NumBytesInt = NumBytes.asInteger();
+    if (NumBytesInt.ugt(Size)) {
+      reportImmediateUB() << "llvm.speculative.load number of accessible bytes "
+                          << NumBytesInt.getZExtValue()
+                          << " exceeds the loaded size " << Size << ".";
+      return AnyValue();
+    }
+
+    // Only the accessible bytes are read from memory and must be in bounds of
+    // the underlying object. All other bytes are poison.
+    const uint64_t N = NumBytesInt.getZExtValue();
+    SmallVector<Byte> Bytes(Size, Byte::poison());
+    if (N != 0) {
+      const bool FromEnd = cast<ConstantInt>(CB.getArgOperand(1))->isOne();
+      const uint64_t Start = FromEnd ? Size - N : 0;
+      const Pointer &PtrVal = Ptr.asPointer();
+      auto [MO, Offset] =
+          verifyMemAccess(PtrVal.getWithNewAddr(PtrVal.address() + Start), N,
+                          Align(1), /*IsStore=*/false);
+      if (!MO)
+        return AnyValue();
+      copy(MO->getBytes().slice(Offset, N), Bytes.begin() + Start);
+    }
+    return Ctx.fromBytes(Bytes, RetTy);
+  }
+
 public:
   InstExecutor(Context &C, EventHandler &H, Function &F,
                ArrayRef<AnyValue> Args, AnyValue &RetVal)
@@ -1317,6 +1358,22 @@ public:
             }
           });
     }
+    case Intrinsic::smulh:
+    case Intrinsic::umulh:
+      return visitIntBinOpWithResult(
+          RetTy, Args[0], Args[1],
+          [IID](const APInt &LHS, const APInt &RHS) -> AnyValue {
+            return IID == Intrinsic::smulh ? APIntOps::mulhs(LHS, RHS)
+                                           : APIntOps::mulhu(LHS, RHS);
+          });
+    case Intrinsic::pdep:
+    case Intrinsic::pext:
+      return visitIntBinOpWithResult(
+          RetTy, Args[0], Args[1],
+          [IID](const APInt &Val, const APInt &Mask) -> AnyValue {
+            return IID == Intrinsic::pdep ? APIntOps::pdep(Val, Mask)
+                                          : APIntOps::pext(Val, Mask);
+          });
     case Intrinsic::vector_reduce_add:
     case Intrinsic::vector_reduce_mul:
     case Intrinsic::vector_reduce_and:
@@ -1742,6 +1799,14 @@ public:
     case Intrinsic::memset:
     case Intrinsic::memset_inline:
       return callMemSetIntrinsic(CB, Args);
+    case Intrinsic::speculative_load:
+      // TODO: Support the oracle form.
+      if (isa<Function>(CB.getArgOperand(2))) {
+        Handler.onUnrecognizedInstruction(CB);
+        setFailed();
+        return AnyValue();
+      }
+      return callSpeculativeLoadIntrinsic(CB, Args[0], Args[2]);
     case Intrinsic::experimental_noalias_scope_decl:
       // FIXME: Not implemented yet. Currently it acts as a noop.
       return AnyValue();
@@ -1755,10 +1820,12 @@ public:
       if (!isUIntN(RetBW, Vec.size()))
         return AnyValue::poison();
 
-      uint64_t Count = 0;
-      for (const AnyValue &V : Vec) {
+      for (const AnyValue &V : Vec)
         if (V.isPoison())
           return AnyValue::poison();
+
+      uint64_t Count = 0;
+      for (const AnyValue &V : Vec) {
         if (!V.asInteger().isZero())
           break;
         ++Count;
@@ -2473,6 +2540,7 @@ public:
   void visitIntToFPInst(Instruction &I, bool IsSigned) {
     const fltSemantics &DstSem =
         I.getType()->getScalarType()->getFltSemantics();
+    FastMathFlags FMF = cast<FPMathOperator>(I).getFastMathFlags();
 
     visitUnOp(I, [&](const AnyValue &Operand) -> AnyValue {
       if (Operand.isPoison())
@@ -2488,7 +2556,8 @@ public:
       Res.convertFromAPInt(Operand.asInteger(), /*IsSigned=*/IsSigned,
                            Ctx.getCurrentRoundingMode());
 
-      return AnyValue(Res);
+      // We need IsInput=true here because the nsz flag applies to the output.
+      return handleFMFFlags(Res, FMF, /*IsInput=*/true);
     });
   }
 

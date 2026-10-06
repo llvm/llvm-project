@@ -56,8 +56,12 @@ def ACCRecipeBufferization
     yielded fir.box<T> into it so the region yields a reference to a box.
 
     For acc.private, acc.firstprivate, and acc.reduction operations that use a
-    bufferized recipe, the pass allocates a host-side fir.ref<fir.box<T>> before
-    the data op and rewires the data op to use the new memory. Other users of
+    bufferized recipe, the pass allocates a fir.ref<fir.box<T>> and rewires the
+    data op to use the new memory. Device code reads the descriptor through
+    that memory, so it is placed on the same side of the host/device boundary
+    as the descriptor value it holds: next to the variable in general, or in
+    the enclosing compute construct region when the variable is already
+    produced by a data entry operation outside the construct. Other users of
     the original data operation result (outside the paired compute op) are
     updated to load through the reference.
   }];
@@ -95,6 +99,23 @@ def ACCDeclareActionConversion
     and inserts calls to the corresponding recipes.
   }];
   let dependentDialects = ["fir::FIROpsDialect"];
+}
+
+def ACCEraseUnusedKernelAllocations
+    : Pass<"acc-erase-unused-kernel-allocations", "mlir::func::FuncOp"> {
+  let summary = "Erase unused allocations inside acc.compute_region";
+  let description = [{
+    Deletes an allocation inside an acc.compute_region when its storage is
+    never read or written. The allocation may be fir.allocmem, fir.alloca,
+    memref.alloc, or memref.alloca. It may have no uses, or its only uses
+    may be a view of that storage (such as fir.convert), fir.declare, and
+    the matching free (fir.freemem or memref.dealloc). fir.declare's debug
+    effect and the free keep that chain alive through ordinary DCE, so a
+    dynamic allocation would otherwise be lowered to a checked device malloc.
+    A load, store, or other memory use keeps the allocation. An unused
+    private-recipe allocation is deleted the same way as an unused source
+    array.
+  }];
 }
 
 def ACCOptimizeFirstprivateMap
