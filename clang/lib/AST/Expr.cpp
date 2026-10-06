@@ -476,12 +476,16 @@ DeclRefExpr::DeclRefExpr(const ASTContext &Ctx,
   DeclRefExprBits.CapturedByCopyInLambdaWithExplicitObjectParameter = false;
   DeclRefExprBits.NonOdrUseReason = NOUR;
   if (TemplateArgs) {
-    auto Deps = TemplateArgumentDependence::None;
     getTrailingObjects<ASTTemplateKWAndArgsInfo>()->initializeFrom(
-        TemplateKWLoc, *TemplateArgs, getTrailingObjects<TemplateArgumentLoc>(),
-        Deps);
+        TemplateKWLoc, *TemplateArgs,
+        getTrailingObjects<TemplateArgumentLoc>());
+#ifndef NDEBUG
+    auto Deps = TemplateArgumentDependence::None;
+    for (const TemplateArgumentLoc &Loc : TemplateArgs->arguments())
+      Deps |= Loc.getArgument().getDependence();
     assert(!(Deps & TemplateArgumentDependence::Dependent) &&
            "built a DeclRefExpr with dependent template args");
+#endif
   } else if (TemplateKWLoc.isValid()) {
     getTrailingObjects<ASTTemplateKWAndArgsInfo>()->initializeFrom(
         TemplateKWLoc);
@@ -1766,10 +1770,9 @@ MemberExpr::MemberExpr(Expr *Base, bool IsArrow, SourceLocation OperatorLoc,
   if (hasFoundDecl())
     *getTrailingObjects<DeclAccessPair>() = FoundDecl;
   if (TemplateArgs) {
-    auto Deps = TemplateArgumentDependence::None;
     getTrailingObjects<ASTTemplateKWAndArgsInfo>()->initializeFrom(
-        TemplateKWLoc, *TemplateArgs, getTrailingObjects<TemplateArgumentLoc>(),
-        Deps);
+        TemplateKWLoc, *TemplateArgs,
+        getTrailingObjects<TemplateArgumentLoc>());
   } else if (TemplateKWLoc.isValid()) {
     getTrailingObjects<ASTTemplateKWAndArgsInfo>()->initializeFrom(
         TemplateKWLoc);

@@ -1355,6 +1355,13 @@ WebAssemblyTargetLowering::LowerCall(CallLoweringInfo &CLI,
         }
       }
     }
+
+    // A byval argument is copied into this function's stack frame below, and
+    // a tail call releases that frame before the callee reads the copy.
+    if (llvm::any_of(CLI.Outs, [](const ISD::OutputArg &Out) {
+          return Out.Flags.isByVal() && Out.Flags.getByValSize() != 0;
+        }))
+      NoTail("WebAssembly does not support tail calling with byval arguments");
   }
 
   SmallVectorImpl<ISD::InputArg> &Ins = CLI.Ins;
