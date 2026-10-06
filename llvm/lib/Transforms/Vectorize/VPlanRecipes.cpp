@@ -735,7 +735,6 @@ bool VPInstruction::inferGeneratesSingleScalar() const {
   case VPInstruction::BranchOnCount:
   case VPInstruction::CanonicalIVIncrementForPart:
   case VPInstruction::PtrAdd:
-  case VPInstruction::AnyOf:
   case VPInstruction::Not:
     return vputils::onlyFirstLaneUsed(this);
   default:

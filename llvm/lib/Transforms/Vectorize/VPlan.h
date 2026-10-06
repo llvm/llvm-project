@@ -1443,8 +1443,7 @@ private:
 
   /// Returns true if we can generate scalar either because the recipe is known
   /// to generate one or because only its first lane is used.
-  /// TODO: Replace remaining inferred cases with inferGeneratesSingleScalar
-  /// lookup.
+  /// TODO: Replace remaining inferred cases with GeneratesSingleScalar.
   bool inferGeneratesSingleScalar() const;
 
   /// Utility method serving execute: Generates either a single-scalar or vector
