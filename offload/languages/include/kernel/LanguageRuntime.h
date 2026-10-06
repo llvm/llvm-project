@@ -92,6 +92,8 @@ static inline Error_t Memcpy(T *Dst, const T *Src, size_t Size,
 }
 ///}
 
+Error_t Memset(void *DevPtr, int Value, size_t Count);
+
 Error_t DeviceSynchronize();
 
 Error_t GetDevice(int *DeviceNo);
