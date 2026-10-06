@@ -3448,6 +3448,16 @@ void Verifier::visitFunction(const Function &F) {
               "function must have a single !kcfi_type attachment", &F,
               I.second);
         break;
+      case LLVMContext::MD_annotation:
+        if (auto *Tuple = dyn_cast<MDTuple>(I.second);
+            Tuple && Tuple->getNumOperands() > 0 &&
+            Tuple->getOperand(0).equalsStr("unsafe-stack-size"))
+          Check(Tuple->getNumOperands() == 2 &&
+                    mdconst::dyn_extract_or_null<ConstantInt>(
+                        Tuple->getOperand(1)),
+                "unsafe-stack-size annotation must have an integer value", &F,
+                I.second);
+        break;
       }
 
       // Verify the metadata itself.
