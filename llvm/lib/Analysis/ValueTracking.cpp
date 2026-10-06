@@ -727,50 +727,70 @@ bool llvm::isValidAssumeForContext(const Instruction *Inv,
   return false;
 }
 
-bool llvm::willNotFreeBetween(const Instruction *Assume,
-                              const Instruction *CtxI) {
-  // Helper to check if there are any calls in the range that may free memory.
-  unsigned NumChecked = 0;
-  auto hasNoFreeInRange = [&NumChecked](auto Range) {
-    for (const Instruction &I : Range) {
-      if (NumChecked++ > MaxInstrsToCheckForFree)
+static bool hasNoFreeInRange(BasicBlock::const_iterator Begin,
+                             BasicBlock::const_iterator End,
+                             unsigned &NumChecked) {
+  for (const Instruction &I : make_range(Begin, End)) {
+    if (NumChecked++ > MaxInstrsToCheckForFree)
+      return false;
+    if (auto *CB = dyn_cast<CallBase>(&I)) {
+      if (!CB->hasFnAttr(Attribute::NoFree))
         return false;
-
-      if (auto *CB = dyn_cast<CallBase>(&I)) {
-        if (!CB->hasFnAttr(Attribute::NoFree))
-          return false;
-      } else if (I.maySynchronize())
-        return false;
+    } else if (I.maySynchronize()) {
+      return false;
     }
-    return true;
-  };
+  }
+  return true;
+}
 
+bool llvm::willNotFreeBetween(const Instruction *Assume,
+                              const Instruction *CtxI,
+                              const DominatorTree *DT) {
   const BasicBlock *CtxBB = CtxI->getParent();
   const BasicBlock *AssumeBB = Assume->getParent();
+  unsigned NumChecked = 0;
   BasicBlock::const_iterator CtxIter = CtxI->getIterator();
   if (CtxBB == AssumeBB) {
-    // Same block case: check that Assume comes before CtxI.
     if (Assume != CtxI && !Assume->comesBefore(CtxI))
       return false;
-    return hasNoFreeInRange(make_range(Assume->getIterator(), CtxIter));
+    return hasNoFreeInRange(Assume->getIterator(), CtxIter, NumChecked);
   }
+  if (DT && !DT->dominates(Assume, CtxI))
+    return false;
+  if (!hasNoFreeInRange(CtxBB->begin(), CtxIter, NumChecked))
+    return false;
+  if (pred_empty(CtxBB))
+    return false;
 
-  // Handle chain of single-predecessor blocks.
-  const BasicBlock *CurBB = CtxBB;
-  while (true) {
-    if (CurBB == AssumeBB)
-      return hasNoFreeInRange(
-          make_range(Assume->getIterator(), AssumeBB->end()));
+  // Note: CtxBB is NOT pre-inserted into Visited to ensure that loop
+  // backedges returning to CtxBB are enqueued and checked correctly.
+  SmallVector<const BasicBlock *, 16> Worklist(predecessors(CtxBB));
+  SmallPtrSet<const BasicBlock *, 16> Visited;
+  while (!Worklist.empty()) {
+    const BasicBlock *CurBB = Worklist.pop_back_val();
+    if (!Visited.insert(CurBB).second)
+      continue;
 
-    const BasicBlock *PredBB = CurBB->getSinglePredecessor();
-    if (!PredBB)
+    if (CurBB == AssumeBB) {
+      if (!hasNoFreeInRange(Assume->getIterator(), AssumeBB->end(), NumChecked))
+        return false;
+      continue;
+    }
+    assert((!DT || DT->dominates(AssumeBB, CurBB)) &&
+           "Blocks between Assume and CtxI must be dominated by AssumeBB");
+
+    if (pred_empty(CurBB))
       return false;
 
-    if (!hasNoFreeInRange(make_range(CurBB->begin(),
-                                     CurBB == CtxBB ? CtxIter : CurBB->end())))
+    // If CurBB == CtxBB (due to a loop backedge targeting CtxBB), check
+    // instructions from CtxIter to the end of CtxBB (instructions before
+    // CtxIter were checked above). Otherwise, check the entire block.
+    auto StartIt = (CurBB == CtxBB) ? CtxIter : CurBB->begin();
+    if (!hasNoFreeInRange(StartIt, CurBB->end(), NumChecked))
       return false;
-    CurBB = PredBB;
+    append_range(Worklist, predecessors(CurBB));
   }
+  return true;
 }
 
 // TODO: cmpExcludesZero misses many cases where `RHS` is non-constant but
@@ -1899,13 +1919,33 @@ static void computeKnownBitsFromOperator(const Operator *I,
         break;
       }
 
+      case Instruction::And: {
+        // Bits that are zero in the start value stay zero, and bits that are
+        // one in both the start value and the step stay one.
+        KnownBits KnownStep(BitWidth);
+        computeKnownBitsForRecurrenceOperands(P, Start, Step, DemandedElts,
+                                              KnownStart, KnownStep, Q, Depth);
+        Known.Zero |= KnownStart.Zero;
+        Known.One |= KnownStart.One & KnownStep.One;
+        break;
+      }
+
+      case Instruction::Or: {
+        // Bits that are zero in both the start value and the step stay zero,
+        // and bits that are one in the start value stay one.
+        KnownBits KnownStep(BitWidth);
+        computeKnownBitsForRecurrenceOperands(P, Start, Step, DemandedElts,
+                                              KnownStart, KnownStep, Q, Depth);
+        Known.Zero |= KnownStart.Zero & KnownStep.Zero;
+        Known.One |= KnownStart.One;
+        break;
+      }
+
       // Check for operations that have the property that if
       // both their operands have low zero bits, the result
       // will have low zero bits.
       case Instruction::Add:
       case Instruction::Sub:
-      case Instruction::And:
-      case Instruction::Or:
       case Instruction::Mul: {
         // Ok, we have a recurrence of the form {Start,op,Step}. Check for low
         // zero bits.
@@ -2277,20 +2317,6 @@ static void computeKnownBitsFromOperator(const Operator *I,
         Known &= Known2.anyextOrTrunc(BitWidth);
         break;
       }
-      case Intrinsic::x86_sse2_pmulh_w:
-      case Intrinsic::x86_avx2_pmulh_w:
-      case Intrinsic::x86_avx512_pmulh_w_512:
-        computeKnownBits(I->getOperand(0), DemandedElts, Known, Q, Depth + 1);
-        computeKnownBits(I->getOperand(1), DemandedElts, Known2, Q, Depth + 1);
-        Known = KnownBits::mulhs(Known, Known2);
-        break;
-      case Intrinsic::x86_sse2_pmulhu_w:
-      case Intrinsic::x86_avx2_pmulhu_w:
-      case Intrinsic::x86_avx512_pmulhu_w_512:
-        computeKnownBits(I->getOperand(0), DemandedElts, Known, Q, Depth + 1);
-        computeKnownBits(I->getOperand(1), DemandedElts, Known2, Q, Depth + 1);
-        Known = KnownBits::mulhu(Known, Known2);
-        break;
       case Intrinsic::x86_sse42_crc32_64_64:
         Known.Zero.setBitsFrom(32);
         break;
@@ -2354,10 +2380,11 @@ static void computeKnownBitsFromOperator(const Operator *I,
       case Intrinsic::amdgcn_mbcnt_lo: {
         // Wave64 mbcnt_lo returns at most 32 + src1. Otherwise these return at
         // most 31 + src1.
-        Known.Zero.setBitsFrom(
+        KnownBits MbcntKnown(BitWidth);
+        MbcntKnown.Zero.setBitsFrom(
             II->getIntrinsicID() == Intrinsic::amdgcn_mbcnt_lo ? 6 : 5);
         computeKnownBits(I->getOperand(1), Known2, Q, Depth + 1);
-        Known = KnownBits::add(Known, Known2);
+        Known = Known.unionWith(KnownBits::add(MbcntKnown, Known2));
         break;
       }
       case Intrinsic::vscale: {
@@ -6111,9 +6138,29 @@ void computeKnownFPClass(const Value *V, const APInt &DemandedElts,
     break;
   }
   case Instruction::FRem: {
-    const bool WantNan = (InterestedClasses & fcNan) != fcNone;
+    FPClassTest InterestedLHS = fcNone;
+    FPClassTest InterestedRHS = fcNone;
 
-    Known.knownNot(fcInf);
+    // NaN is also generated for frem(Inf, x) and frem(x, 0.0).
+    if (InterestedClasses & fcNan) {
+      InterestedLHS |= fcNan | fcInf;
+      InterestedRHS |= fcNan | fcZero | fcSubnormal;
+    }
+
+    // The sign for frem is the same as the first operand.
+    if (InterestedClasses & (fcPosNormal | fcPosSubnormal))
+      InterestedLHS |= fcPosNormal | fcPosSubnormal;
+    if (InterestedClasses & (fcNegNormal | fcNegSubnormal))
+      InterestedLHS |= fcNegNormal | fcNegSubnormal;
+
+    // A negative zero result requires a negative finite first operand.
+    if (InterestedClasses & fcNegZero)
+      InterestedLHS |= fcNegFinite;
+
+    // A positive zero result can additionally come from a negative finite
+    // result being flushed to positive zero.
+    if (InterestedClasses & fcPosZero)
+      InterestedLHS |= fcPosFinite | fcNegNormal | fcNegSubnormal;
 
     const Function *F = cast<Instruction>(Op)->getFunction();
     DenormalMode Mode =
@@ -6124,37 +6171,25 @@ void computeKnownFPClass(const Value *V, const APInt &DemandedElts,
     if (Op->getOperand(0) == Op->getOperand(1) &&
         isGuaranteedNotToBeUndef(Op->getOperand(0), Q.AC, Q.CtxI, Q.DT)) {
       // X % X is always exactly [+-]0.0 or a NaN.
-      Known.setKnownFPClasses(fcNan | fcZero);
-
-      if (!WantNan)
-        break;
-
+      FPClassTest InterestedSrcs = InterestedLHS | InterestedRHS;
       KnownFPClass KnownSrc;
-      computeKnownFPClass(Op->getOperand(0), DemandedElts,
-                          fcNan | fcInf | fcZero | fcSubnormal, KnownSrc, Q,
-                          Depth + 1);
-
+      if (InterestedSrcs != fcNone)
+        computeKnownFPClass(Op->getOperand(0), DemandedElts, InterestedSrcs,
+                            KnownSrc, Q, Depth + 1);
       Known = KnownFPClass::frem_self(KnownSrc, Mode);
       break;
     }
 
-    const bool WantNegative = (InterestedClasses & fcNegative) != fcNone;
-    const bool WantPositive = (InterestedClasses & fcPositive) != fcNone;
-    if (!WantNan && !WantNegative && !WantPositive)
-      break;
+    KnownFPClass KnownLHS;
+    if (InterestedLHS != fcNone)
+      computeKnownFPClass(Op->getOperand(0), DemandedElts, InterestedLHS,
+                          KnownLHS, Q, Depth + 1);
 
-    KnownFPClass KnownLHS, KnownRHS;
-    computeKnownFPClass(Op->getOperand(1), DemandedElts,
-                        fcNan | fcInf | fcZero | fcNegative, KnownRHS, Q,
-                        Depth + 1);
-
-    bool KnowSomethingUseful = KnownRHS.isKnownNeverNaN() ||
-                               KnownRHS.isKnownNever(fcNegative) ||
-                               KnownRHS.isKnownNever(fcPositive);
-
-    if (KnowSomethingUseful || WantPositive)
-      computeKnownFPClass(Op->getOperand(0), DemandedElts, fcAllFlags, KnownLHS,
-                          Q, Depth + 1);
+    KnownFPClass KnownRHS;
+    // RHS is only useful for refining NaN classes.
+    if (InterestedRHS != fcNone && KnownLHS.isKnownNever(fcSNan))
+      computeKnownFPClass(Op->getOperand(1), DemandedElts, InterestedRHS,
+                          KnownRHS, Q, Depth + 1);
 
     Known = KnownFPClass::frem(KnownLHS, KnownRHS, Mode);
 
@@ -6335,11 +6370,26 @@ void computeKnownFPClass(const Value *V, const APInt &DemandedElts,
       if (const auto *II = dyn_cast<IntrinsicInst>(Src)) {
         switch (II->getIntrinsicID()) {
         case Intrinsic::frexp: {
-          Known.knownNot(fcSubnormal);
+          FPClassTest InterestedSrcs = InterestedClasses;
+
+          // Positive subnormals and negative subnormals could become positive
+          // zero.
+          if (InterestedClasses & fcPosZero)
+            InterestedSrcs |= fcSubnormal;
+
+          // Negative subnormals could become negative zero.
+          if (InterestedClasses & fcNegZero)
+            InterestedSrcs |= fcNegSubnormal;
+
+          if (InterestedClasses & fcPosNormal)
+            InterestedSrcs |= fcPosSubnormal;
+
+          if (InterestedClasses & fcNegNormal)
+            InterestedSrcs |= fcNegSubnormal;
 
           KnownFPClass KnownSrc;
           computeKnownFPClass(II->getArgOperand(0), DemandedElts,
-                              InterestedClasses, KnownSrc, Q, Depth + 1);
+                              InterestedSrcs, KnownSrc, Q, Depth + 1);
 
           const Function *F = cast<Instruction>(Op)->getFunction();
           const fltSemantics &FltSem =
@@ -8158,7 +8208,7 @@ static bool isGuaranteedNotToBeUndefOrPoison(
         isa<ConstantPointerNull>(C) || isa<Function>(C))
       return true;
 
-    if (C->getType()->isVectorTy()) {
+    if (C->getType()->isVectorTy() || C->getType()->isAggregateType()) {
       if (isa<ConstantExpr>(C)) {
         // Scalable vectors can use a ConstantExpr to build a splat.
         if (Constant *SplatC = C->getSplatValue())
@@ -8466,6 +8516,8 @@ bool llvm::intrinsicPropagatesPoison(Intrinsic::ID IID) {
   case Intrinsic::umax:
   case Intrinsic::umin:
   case Intrinsic::scmp:
+  case Intrinsic::smulh:
+  case Intrinsic::umulh:
   case Intrinsic::is_fpclass:
   case Intrinsic::ptrmask:
   case Intrinsic::ucmp:
@@ -10784,6 +10836,14 @@ ConstantRange llvm::computeConstantRange(const Value *V, bool ForSigned,
     ConstantRange SrcCR =
         computeConstantRange(TI->getOperand(0), ForSigned, SQ, Depth + 1);
     CR = SrcCR.truncate(BitWidth);
+  } else if (auto *ZExt = dyn_cast<ZExtInst>(V)) {
+    ConstantRange SrcCR =
+        computeConstantRange(ZExt->getOperand(0), ForSigned, SQ, Depth + 1);
+    CR = SrcCR.zeroExtend(BitWidth);
+  } else if (auto *SExt = dyn_cast<SExtInst>(V)) {
+    ConstantRange SrcCR =
+        computeConstantRange(SExt->getOperand(0), ForSigned, SQ, Depth + 1);
+    CR = SrcCR.signExtend(BitWidth);
   } else if (isa<FPToUIInst>(V) || isa<FPToSIInst>(V)) {
     APInt Lower = APInt(BitWidth, 0);
     APInt Upper = APInt(BitWidth, 0);

@@ -20,6 +20,7 @@
 #include "llvm/CodeGen/MachineInstrBuilder.h"
 #include "llvm/CodeGen/MachineModuleInfo.h"
 #include "llvm/CodeGen/RegisterScavenging.h"
+#include "llvm/IR/Module.h"
 
 using namespace llvm;
 using namespace llvm::AArch64PAuth;
@@ -139,7 +140,7 @@ static void decoratePACWithCFI(MachineBasicBlock &MBB,
   auto &MF = *MBB.getParent();
   auto &MFnI = *MF.getInfo<AArch64FunctionInfo>();
   CFIInstBuilder CFIBuilder(MBB, MBBI, MachineInstr::FrameSetup);
-  const Triple &TT = MF.getTarget().getTargetTriple();
+  const Triple &TT = MF.getFunction().getParent()->getTargetTriple();
 
   if (MFnI.branchProtectionPAuthLR()) {
     switch (CFILLVMSetRASignStateMode) {
@@ -181,7 +182,7 @@ static void emitAUTCFI(MachineBasicBlock &MBB, MachineBasicBlock::iterator MBBI,
   auto &MF = *MBB.getParent();
   auto &MFnI = *MF.getInfo<AArch64FunctionInfo>();
   CFIInstBuilder CFIBuilder(MBB, MBBI, MachineInstr::FrameDestroy);
-  const Triple &TT = MF.getTarget().getTargetTriple();
+  const Triple &TT = MF.getFunction().getParent()->getTargetTriple();
 
   if (MFnI.branchProtectionPAuthLR()) {
     switch (CFILLVMSetRASignStateMode) {

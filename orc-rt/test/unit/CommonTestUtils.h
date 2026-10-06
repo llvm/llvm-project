@@ -29,6 +29,7 @@
 #include <string>
 #include <vector>
 
+#include "ErrorMatchers.h"
 #include "gtest/gtest.h"
 
 namespace orc_rt {
@@ -37,17 +38,20 @@ class Session;
 
 namespace orc_rt::test {
 
-/// Error reporter for tests that expect no errors. Usable both as a plain
-/// error reporter and as a Session error reporter.
+/// Error reporter for tests that expect no errors: any reported error fails
+/// the current test. Usable both as a plain error reporter and as a Session
+/// error reporter.
 ///
 /// This is a function object rather than a pair of overloaded functions so
 /// that it can be passed to templated callable parameters (e.g.
 /// move_only_function's constructor): the name of an overload set can't be
 /// deduced.
 inline constexpr struct NoErrors {
-  void operator()(Error Err) const noexcept { cantFail(std::move(Err)); }
+  void operator()(Error Err) const noexcept {
+    EXPECT_THAT_ERROR(std::move(Err), Succeeded());
+  }
   void operator()(Session &, Error Err) const noexcept {
-    cantFail(std::move(Err));
+    EXPECT_THAT_ERROR(std::move(Err), Succeeded());
   }
 } noErrors;
 

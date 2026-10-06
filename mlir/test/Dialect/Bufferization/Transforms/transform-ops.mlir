@@ -236,3 +236,56 @@ func.func @empty_to_tensor_alloc() -> tensor<2x2xf32> {
   %0 = bufferization.alloc_tensor() : tensor<2x2xf32>
   return %0 : tensor<2x2xf32>
 }
+
+// -----
+
+// The loop's parent block is outside the analysis rooted at the target loop.
+// CHECK-LABEL: func @buffer_loop_hoisting_while_scope_no_exit_alias(
+// CHECK-NOT: memref.alloc
+// CHECK: scf.while
+// CHECK-NEXT: %[[ALLOC:.*]] = memref.alloc()
+// CHECK-NEXT: memref.store {{.*}}, %[[ALLOC]]
+module attributes {transform.with_named_sequence} {
+  transform.named_sequence @__transform_main(%root: !transform.any_op {transform.readonly}) {
+    %loop = transform.structured.match ops{["scf.while"]} in %root : (!transform.any_op) -> !transform.any_op
+    transform.bufferization.buffer_loop_hoisting %loop : !transform.any_op
+    transform.yield
+  }
+  func.func @buffer_loop_hoisting_while_scope_no_exit_alias(%condition: i1, %value: index) {
+    %c0 = arith.constant 0 : index
+    scf.while : () -> () {
+      %buffer = memref.alloc() : memref<1xindex>
+      memref.store %value, %buffer[%c0] : memref<1xindex>
+      scf.condition(%condition)
+    } do {
+      scf.yield
+    }
+    return
+  }
+}
+
+// -----
+
+// The same loop can be crossed when the function is the analysis target.
+// CHECK-LABEL: func @buffer_loop_hoisting_function_scope_no_exit_alias(
+// CHECK: %[[ALLOC:.*]] = memref.alloc()
+// CHECK-NEXT: scf.while
+// CHECK-NEXT: memref.store {{.*}}, %[[ALLOC]]
+module attributes {transform.with_named_sequence} {
+  transform.named_sequence @__transform_main(%root: !transform.any_op {transform.readonly}) {
+    %func = transform.structured.match ops{["func.func"]} in %root : (!transform.any_op) -> !transform.any_op
+    transform.bufferization.buffer_loop_hoisting %func : !transform.any_op
+    transform.yield
+  }
+  func.func @buffer_loop_hoisting_function_scope_no_exit_alias(%condition: i1, %value: index) {
+    %c0 = arith.constant 0 : index
+    scf.while : () -> () {
+      %buffer = memref.alloc() : memref<1xindex>
+      memref.store %value, %buffer[%c0] : memref<1xindex>
+      scf.condition(%condition)
+    } do {
+      scf.yield
+    }
+    return
+  }
+}
