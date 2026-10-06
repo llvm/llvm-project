@@ -148,6 +148,10 @@ bool ICF::equalsConstant(const ConcatInputSection *ia,
       return false;
     if (ra.offset != rb.offset)
       return false;
+    if (ra.hasAuth != rb.hasAuth)
+      return false;
+    if (ra.hasAuth && *ra.getAuthInfo() != *rb.getAuthInfo())
+      return false;
     if (isa<Symbol *>(ra.referent) != isa<Symbol *>(rb.referent))
       return false;
 
