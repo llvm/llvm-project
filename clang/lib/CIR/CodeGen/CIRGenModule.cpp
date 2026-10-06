@@ -1039,7 +1039,7 @@ LangAS CIRGenModule::getGlobalVarAddressSpace(const VarDecl *d) {
 
   if (langOpts.SYCLIsDevice &&
       (!d || d->getType().getAddressSpace() == LangAS::Default))
-    errorNYI("SYCL global address space");
+    return LangAS::sycl_global;
 
   if (langOpts.CUDA && langOpts.CUDAIsDevice) {
     if (d) {
@@ -2300,16 +2300,7 @@ CIRGenModule::getAddrOfConstantStringFromLiteral(const StringLiteral *s,
 }
 
 LangAS CIRGenModule::getGlobalConstantAddressSpace() const {
-  LangAS as =
-      CodeGenUtils::getGlobalConstantAddressSpace(langOpts, getTarget());
-  // CIR cannot represent SYCL address spaces yet.
-  /// TODO: Remove this wrapper once CIR supports the global constant address
-  /// space for SYCL.
-  if (as == LangAS::sycl_global) {
-    errorNYI("SYCL global constant address space");
-    return LangAS::Default;
-  }
-  return as;
+  return CodeGenUtils::getGlobalConstantAddressSpace(langOpts, getTarget());
 }
 
 // TODO(cir): this could be a common AST helper for both CIR and LLVM codegen.

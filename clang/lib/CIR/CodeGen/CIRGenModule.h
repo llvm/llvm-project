@@ -464,11 +464,11 @@ public:
   getAddrOfConstantStringFromLiteral(const StringLiteral *s,
                                      llvm::StringRef name = ".str");
 
-  /// Wrapper around CodeGenUtils::getGlobalConstantAddressSpace, currently
-  /// needed to enforce failure on SYCL modules, for which CIR does not yet
-  /// support the global constant address space.
-  /// TODO: Remove this wrapper once CIR supports the global constant address
-  /// space for SYCL.
+  /// Return the AST address space of constant literal, which is used to emit
+  /// the constant literal as global variable in CIR.
+  /// Note: This is not necessarily the address space of the constant literal
+  /// in AST. For address space agnostic language, e.g. C++, constant literal
+  /// in AST is always in default address space.
   LangAS getGlobalConstantAddressSpace() const;
 
   /// Returns the address space for temporary allocations in the language. This
