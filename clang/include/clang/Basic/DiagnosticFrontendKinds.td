@@ -510,6 +510,9 @@ def warn_hlsl_failed_to_embed_source
 
 def err_data_layout_mismatch : Error<"backend data layout '%0' does not match "
                                      "expected target description '%1'">;
+def err_fe_exception_model_mismatch
+    : Error<"'-exception-model=%0' does not match the module's exception "
+            "model '%1'">;
 def err_failed_to_open_for_embedding
     : Error<"could not open '%0' for embedding">;
 def err_unsupported_cxx_abi_feature
