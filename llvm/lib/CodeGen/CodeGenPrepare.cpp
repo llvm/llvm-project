@@ -8815,8 +8815,6 @@ static bool optimizeBranch(CondBrInst *Branch, const TargetLowering &TLI,
 // Doing so will remove a multiply from the loop, and leave the update as just
 // an add.
 //
-// TODO: Support more cases, such as the address instead of value operand for
-//       strided memory operations.
 static bool strengthReduceVectorPhiUsers(PHINode *Phi, LoopInfo *LI) {
   // We're only interested in header phis in innermost loops.
   // We want a loop with an identifiable preheader and single latch.
