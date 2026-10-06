@@ -474,9 +474,9 @@ SPIRV::Scope::Scope getMemScope(const Triple &TT, LLVMContext &Ctx,
   auto ScopeID = [&](AtomicScope Scope) {
     return Ctx.getOrInsertSyncScopeID(*getAtomicScopeIRString(TT, Scope));
   };
-  static const llvm::SyncScope::ID SubGroup = ScopeID(AtomicScope::Wavefront);
-  static const llvm::SyncScope::ID WorkGroup = ScopeID(AtomicScope::Workgroup);
-  static const llvm::SyncScope::ID Device = ScopeID(AtomicScope::Device);
+  const llvm::SyncScope::ID SubGroup = ScopeID(AtomicScope::Wavefront);
+  const llvm::SyncScope::ID WorkGroup = ScopeID(AtomicScope::Workgroup);
+  const llvm::SyncScope::ID Device = ScopeID(AtomicScope::Device);
 
   if (Id == llvm::SyncScope::SingleThread)
     return SPIRV::Scope::Invocation;
