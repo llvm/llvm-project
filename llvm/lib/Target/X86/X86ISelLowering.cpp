@@ -51330,9 +51330,6 @@ static SDValue combineMul(SDNode *N, SelectionDAG &DAG,
 
   // Optimize a single multiply with constant into two operations in order to
   // implement it with two cheaper instructions, e.g. LEA + SHL, LEA + LEA.
-  if (!Subtarget.getCLOpts().mul_constant_optimization)
-    return SDValue();
-
   // An imul is usually smaller than the alternative sequence.
   if (DAG.getMachineFunction().getFunction().hasMinSize())
     return SDValue();
