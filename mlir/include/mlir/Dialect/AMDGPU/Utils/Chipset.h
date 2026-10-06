@@ -37,7 +37,8 @@ struct Chipset {
   /// failure otherwise.
   ///
   /// \deprecated Use `ROCDL::TargetInfo::get`.
-  LLVM_DEPRECATED("use ROCDL::TargetInfo::get instead", "")
+  LLVM_DEPRECATED_WITH_FIXIT("Chipset struct deprecated",
+                             "use ROCDL::TargetInfo::get instead")
   static FailureOr<Chipset> parse(StringRef name);
 
   std::tuple<unsigned, unsigned, unsigned> asTuple() const {
@@ -60,7 +61,9 @@ struct Chipset {
 /// \deprecated Test `llvm::AMDGPU::FEAT_OCP_FP8_CONVERSION_INSTS` on a
 /// `ROCDL::TargetInfo` instead. This misses gfx11.7, which does have the OCP
 /// fp8 conversions.
-LLVM_DEPRECATED("test FEAT_OCP_FP8_CONVERSION_INSTS on a ROCDL::TargetInfo", "")
+LLVM_DEPRECATED_WITH_FIXIT(
+    "Chipset is deperecated",
+    "test FEAT_OCP_FP8_CONVERSION_INSTS on a ROCDL::TargetInfo")
 inline bool hasOcpFp8(const Chipset &chipset) {
   return (chipset.majorVersion == 9 && chipset.minorVersion >= 5) ||
          chipset.majorVersion >= 12;
