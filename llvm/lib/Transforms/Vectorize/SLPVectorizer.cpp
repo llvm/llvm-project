@@ -17601,7 +17601,6 @@ BoUpSLP::getEntryCost(const TreeEntry *E, ArrayRef<Value *> VectorizedVals,
         assert(StridedLoadTy && "Missing StridedPointerInfo for tree entry.");
         Align CommonAlignment =
             computeCommonAlignment<LoadInst>(UniqueValues.getArrayRef());
-        Type *StrideTy = DL->getIndexType(LI0->getPointerOperand()->getType());
         bool IsReverse =
             !E->ReorderIndices.empty() && isReverseOrder(E->ReorderIndices);
         Value *Stride = getStrideBytesIfConstant(SPtrInfo.StrideVal, ScalarTy,

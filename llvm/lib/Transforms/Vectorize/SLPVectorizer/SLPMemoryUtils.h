@@ -41,7 +41,8 @@ bool arePointersCompatible(Value *Ptr1, Value *Ptr2,
                            const TargetLibraryInfo &TLI, unsigned MaxDepth,
                            bool CompareOpcodes = true);
 
-/// Returns the byte stride if \p Stride is a constant, or nullptr otherwise.
+/// Returns \p Stride scaled by the allocation size of \p ScalarTy, negated if
+/// \p IsReverse is set, or nullptr if \p Stride is not a constant.
 ConstantInt *getStrideBytesIfConstant(Value *Stride, Type *ScalarTy,
                                       const DataLayout &DL,
                                       bool IsReverse = false);
