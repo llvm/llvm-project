@@ -231,10 +231,10 @@ static cl::opt<bool> EnableFixedwidthAutovecInStreamingMode(
 static cl::opt<bool> EnableScalableAutovecInStreamingMode(
     "enable-scalable-autovec-in-streaming-mode", cl::init(false), cl::Hidden);
 
-// Utility class to tell if and how an operation is compatible in a different
-// streaming mode.
+// Enum to record why an operation is incompatible in a different streaming
+// mode.
 enum class StreamingIncompatibility : uint8_t {
-  Compatible = 0,
+  None = 0,
   VScaleDependent = 1 << 0,
   HasIncompatibleInstruction = 1 << 1,
   FullyIncompatible = VScaleDependent | HasIncompatibleInstruction,
@@ -286,7 +286,7 @@ getCompatibilityForChangeToStreamingMode(const Instruction *I) {
       (isa<AllocaInst>(I) && cast<AllocaInst>(I)->isScalable()))
     return StreamingIncompatibility::VScaleDependent;
 
-  return StreamingIncompatibility::Compatible;
+  return StreamingIncompatibility::None;
 }
 
 /// Returns true if the function has explicit operations that can only be
