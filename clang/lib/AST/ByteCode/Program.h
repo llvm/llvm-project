@@ -18,6 +18,7 @@
 #include "Pointer.h"
 #include "PrimType.h"
 #include "Record.h"
+#include "Reflect.h"
 #include "Source.h"
 #include "llvm/ADT/DenseMap.h"
 #include "llvm/Support/Allocator.h"
@@ -80,9 +81,6 @@ public:
   /// Returns or creates a global an creates an index to it.
   UnsignedOrNone getOrCreateGlobal(const ValueDecl *VD,
                                    const Expr *Init = nullptr);
-
-  /// Returns or creates a dummy value for unknown declarations.
-  unsigned getOrCreateDummy(DeclOrExpr D, bool IsConstexprUnknown = false);
 
   /// Creates a global and returns its index.
   UnsignedOrNone createGlobal(const ValueDecl *VD, const Expr *Init,
@@ -210,9 +208,6 @@ private:
 
   /// Mapping from decls to record metadata.
   llvm::DenseMap<const RecordDecl *, Record *> Records;
-
-  /// Dummy parameter to generate pointers from.
-  llvm::DenseMap<const void *, unsigned> DummyVariables;
 
   /// Creates a new descriptor.
   template <typename... Ts> Descriptor *allocateDescriptor(Ts &&...Args) {

@@ -9,31 +9,10 @@
 #include "src/__support/CPP/string_view.h"
 #include "src/__support/CPP/type_traits.h"
 #include "src/string/memory_utils/inline_memcpy.h"
+#include "test/UnitTest/CharLiteralUtils.h"
 #include "test/UnitTest/Test.h"
 
 using TestCharTypes = LIBC_NAMESPACE::testing::TypeList<char, wchar_t>;
-
-template <typename CharT>
-const CharT *chooseLiteral(const char *CharStr, const wchar_t *WCharStr) {
-  if constexpr (LIBC_NAMESPACE::cpp::is_same_v<CharT, char>)
-    return CharStr;
-  else {
-    static_assert(LIBC_NAMESPACE::cpp::is_same_v<CharT, wchar_t>);
-    return WCharStr;
-  }
-}
-
-template <typename CharT>
-CharT chooseLiteral(char CharValue, wchar_t WCharValue) {
-  if constexpr (LIBC_NAMESPACE::cpp::is_same_v<CharT, char>)
-    return CharValue;
-  else {
-    static_assert(LIBC_NAMESPACE::cpp::is_same_v<CharT, wchar_t>);
-    return WCharValue;
-  }
-}
-
-#define ENCODED(CharT, S) chooseLiteral<CharT>(S, L##S)
 
 TYPED_TEST(LlvmLibcStringViewTest, InitializeCheck, TestCharTypes) {
   using CharT = ParamType;

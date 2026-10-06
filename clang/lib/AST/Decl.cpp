@@ -1567,9 +1567,7 @@ LinkageInfo LinkageComputer::computeLVForDecl(const NamedDecl *D,
   //   one such matching entity, the program is ill-formed. Otherwise,
   //   if no matching entity is found, the block scope entity receives
   //   external linkage.
-  if (D->getDeclContext()
-          ->getEnclosingNonExpansionStatementContext()
-          ->isFunctionOrMethod())
+  if (D->getDeclContext()->isFunctionOrMethod())
     return getLVForLocalDecl(D, computation);
 
   // C++ [basic.link]p6:
@@ -2258,8 +2256,8 @@ VarDecl::isThisDeclarationADefinition(ASTContext &C) const {
   // a static data member template outside the containing class?
   if (isStaticDataMember()) {
     if (isOutOfLine() &&
-        !(getCanonicalDecl()->isInline() &&
-          getCanonicalDecl()->isConstexpr()) &&
+        !(getCanonicalDecl()->isInline() && getCanonicalDecl()->isConstexpr() &&
+          !getCanonicalDecl()->isOutOfLine()) &&
         (hasInit() ||
          // If the first declaration is out-of-line, this may be an
          // instantiation of an out-of-line partial specialization of a variable
@@ -2270,7 +2268,7 @@ VarDecl::isThisDeclarationADefinition(ASTContext &C) const {
                     TSK_ExplicitSpecialization) ||
          isa<VarTemplatePartialSpecializationDecl>(this)))
       return Definition;
-    if (!isOutOfLine() && isInline())
+    if (!isOutOfLine() && (isInline() || hasDefiningAttr()))
       return Definition;
     return DeclarationOnly;
   }
@@ -4640,6 +4638,7 @@ unsigned FunctionDecl::getMemoryFunctionKind() const {
   case Builtin::BImemmove:
     return Builtin::BImemmove;
 
+  case Builtin::BI__builtin_strlcpy:
   case Builtin::BIstrlcpy:
   case Builtin::BI__builtin___strlcpy_chk:
     return Builtin::BIstrlcpy;
@@ -4726,6 +4725,8 @@ unsigned FunctionDecl::getMemoryFunctionKind() const {
         return Builtin::BIbcopy;
       if (FnInfo->isStr("strlcat"))
         return Builtin::BIstrlcat;
+      if (FnInfo->isStr("strlcpy"))
+        return Builtin::BIstrlcpy;
     } else if (isInStdNamespace()) {
       if (FnInfo->isStr("free"))
         return Builtin::BIfree;
@@ -4921,7 +4922,13 @@ const FieldDecl *FieldDecl::findCountedByField() const {
   if (!CAT)
     return nullptr;
 
-  const auto *CountDRE = cast<DeclRefExpr>(CAT->getCountExpr());
+  // A late-parsed attribute whose argument was rejected keeps the node with the
+  // raw argument as its count (see Sema::ActOnLateParsedTypeAttrArgument). That
+  // argument may not be a simple declaration reference (e.g. it may be an error
+  // expression or a `sizeof`), in which case it refers to no field.
+  const auto *CountDRE = dyn_cast<DeclRefExpr>(CAT->getCountExpr());
+  if (!CountDRE)
+    return nullptr;
   const auto *CountDecl = CountDRE->getDecl();
   if (const auto *IFD = dyn_cast<IndirectFieldDecl>(CountDecl))
     CountDecl = IFD->getAnonField();
@@ -5935,7 +5942,9 @@ TopLevelStmtDecl *TopLevelStmtDecl::Create(ASTContext &C, Stmt *Statement) {
   SourceLocation Loc = Statement ? Statement->getBeginLoc() : SourceLocation();
   DeclContext *DC = C.getTranslationUnitDecl();
 
-  return new (C, DC) TopLevelStmtDecl(DC, Loc, Statement);
+  auto *D = new (C, DC) TopLevelStmtDecl(DC, Loc, Statement);
+  D->Ordinal = C.NumTopLevelStmtDecls++;
+  return D;
 }
 
 TopLevelStmtDecl *TopLevelStmtDecl::CreateDeserialized(ASTContext &C,

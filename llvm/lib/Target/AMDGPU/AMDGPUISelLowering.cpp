@@ -846,7 +846,14 @@ bool AMDGPUTargetLowering::shouldReduceLoadWidth(
   unsigned AS = MN->getAddressSpace();
   // Do not shrink an aligned scalar load to sub-dword.
   // Scalar engine cannot do sub-dword loads.
-  // TODO: Update this for GFX12 which does have scalar sub-dword loads.
+  // Do not enable for gfx1250+ even though it has sub-dword loads because
+  // this will convert:
+  //   i16 = trunc (zextload i16->i32)
+  // to:
+  //   i16 = (load i16)
+  // This transformation will be reversed by LowerLOAD resulting in an infinite
+  // loop. Also, tablegen already has a pattern to match zextload i16->i32, but
+  // load i16 will not be matched since there is no instruction that does it.
   if (OldSize >= 32 && NewSize < 32 && MN->getAlign() >= Align(4) &&
       (AS == AMDGPUAS::CONSTANT_ADDRESS ||
        AS == AMDGPUAS::CONSTANT_ADDRESS_32BIT ||
@@ -3657,21 +3664,21 @@ SDValue AMDGPUTargetLowering::LowerINT_TO_FP64(SDValue Op, SelectionDAG &DAG,
   return DAG.getNode(ISD::FADD, SL, MVT::f64, LdExp, CvtLo);
 }
 
-SDValue AMDGPUTargetLowering::LowerUINT_TO_FP(SDValue Op,
-                                               SelectionDAG &DAG) const {
-  // TODO: Factor out code common with LowerSINT_TO_FP.
+SDValue AMDGPUTargetLowering::lowerINT_TO_FPImpl(SDValue Op, SelectionDAG &DAG,
+                                                 bool Signed) const {
   EVT DestVT = Op.getValueType();
   SDValue Src = Op.getOperand(0);
   EVT SrcVT = Src.getValueType();
+  unsigned ExtOpc = Signed ? ISD::SIGN_EXTEND : ISD::ZERO_EXTEND;
+  unsigned CvtOpc = Signed ? ISD::SINT_TO_FP : ISD::UINT_TO_FP;
 
   if (SrcVT == MVT::i16) {
     if (DestVT == MVT::f16)
       return Op;
-    SDLoc DL(Op);
 
-    // Promote src to i32
-    SDValue Ext = DAG.getNode(ISD::ZERO_EXTEND, DL, MVT::i32, Src);
-    return DAG.getNode(ISD::UINT_TO_FP, DL, DestVT, Ext);
+    SDLoc DL(Op);
+    SDValue Ext = DAG.getNode(ExtOpc, DL, MVT::i32, Src);
+    return DAG.getNode(CvtOpc, DL, DestVT, Ext);
   }
 
   if (DestVT == MVT::bf16 || DestVT == MVT::f16)
@@ -3681,42 +3688,20 @@ SDValue AMDGPUTargetLowering::LowerUINT_TO_FP(SDValue Op,
     return Op;
 
   if (DestVT == MVT::f32)
-    return LowerINT_TO_FP32(Op, DAG, false);
+    return LowerINT_TO_FP32(Op, DAG, Signed);
 
   assert(DestVT == MVT::f64);
-  return LowerINT_TO_FP64(Op, DAG, false);
+  return LowerINT_TO_FP64(Op, DAG, Signed);
+}
+
+SDValue AMDGPUTargetLowering::LowerUINT_TO_FP(SDValue Op,
+                                              SelectionDAG &DAG) const {
+  return lowerINT_TO_FPImpl(Op, DAG, false);
 }
 
 SDValue AMDGPUTargetLowering::LowerSINT_TO_FP(SDValue Op,
                                               SelectionDAG &DAG) const {
-  EVT DestVT = Op.getValueType();
-
-  SDValue Src = Op.getOperand(0);
-  EVT SrcVT = Src.getValueType();
-
-  if (SrcVT == MVT::i16) {
-    if (DestVT == MVT::f16)
-      return Op;
-
-    SDLoc DL(Op);
-    // Promote src to i32
-    SDValue Ext = DAG.getNode(ISD::SIGN_EXTEND, DL, MVT::i32, Src);
-    return DAG.getNode(ISD::SINT_TO_FP, DL, DestVT, Ext);
-  }
-
-  if (DestVT == MVT::bf16 || DestVT == MVT::f16)
-    return LowerINT_TO_FP16(Op, DAG, DestVT);
-
-  if (SrcVT != MVT::i64)
-    return Op;
-
-  // TODO: Factor out code common with LowerUINT_TO_FP.
-
-  if (DestVT == MVT::f32)
-    return LowerINT_TO_FP32(Op, DAG, true);
-
-  assert(DestVT == MVT::f64);
-  return LowerINT_TO_FP64(Op, DAG, true);
+  return lowerINT_TO_FPImpl(Op, DAG, true);
 }
 
 SDValue AMDGPUTargetLowering::LowerFP_TO_INT64(SDValue Op, SelectionDAG &DAG,
@@ -4109,22 +4094,25 @@ static SDValue simplifyMul24(SDNode *Node24,
 
   APInt Demanded = APInt::getLowBitsSet(LHS.getValueSizeInBits(), 24);
 
-  // First try to simplify using SimplifyMultipleUseDemandedBits which allows
-  // the operands to have other uses, but will only perform simplifications that
-  // involve bypassing some nodes for this user.
+  if (isNullConstant(LHS) || isNullConstant(RHS))
+    return DAG.getConstant(0, SDLoc(Node24), Node24->getValueType(0));
+
+  // First try SimplifyDemandedBits which can simplify the nodes used by our
+  // operands if this node is the only user.
+  if (LHS.hasOneUse() && TLI.SimplifyDemandedBits(LHS, Demanded, DCI))
+    return SDValue(Node24, 0);
+  if (RHS.hasOneUse() && TLI.SimplifyDemandedBits(RHS, Demanded, DCI))
+    return SDValue(Node24, 0);
+
+  // Then try SimplifyMultipleUseDemandedBits which allows the operands to have
+  // other uses, but will only perform simplifications that involve bypassing
+  // some nodes for this user.
   SDValue DemandedLHS = TLI.SimplifyMultipleUseDemandedBits(LHS, Demanded, DAG);
   SDValue DemandedRHS = TLI.SimplifyMultipleUseDemandedBits(RHS, Demanded, DAG);
   if (DemandedLHS || DemandedRHS)
     return DAG.getNode(NewOpcode, SDLoc(Node24), Node24->getVTList(),
                        DemandedLHS ? DemandedLHS : LHS,
                        DemandedRHS ? DemandedRHS : RHS);
-
-  // Now try SimplifyDemandedBits which can simplify the nodes used by our
-  // operands if this node is the only user.
-  if (TLI.SimplifyDemandedBits(LHS, Demanded, DCI))
-    return SDValue(Node24, 0);
-  if (TLI.SimplifyDemandedBits(RHS, Demanded, DCI))
-    return SDValue(Node24, 0);
 
   return SDValue();
 }
@@ -5300,10 +5288,14 @@ SDValue AMDGPUTargetLowering::performFNegCombine(SDNode *N,
   if (!shouldFoldFNegIntoSrc(N, N0))
     return SDValue();
 
+  bool MayIgnoreSignedZeroForAllUses =
+      N0->getFlags().hasNoSignedZeros() ||
+      (N0.hasOneUse() && N->getFlags().hasNoSignedZeros());
+
   SDLoc SL(N);
   switch (Opc) {
   case ISD::FADD: {
-    if (!N0->getFlags().hasNoSignedZeros() && !N->getFlags().hasNoSignedZeros())
+    if (!MayIgnoreSignedZeroForAllUses)
       return SDValue();
 
     // (fneg (fadd x, y)) -> (fadd (fneg x), (fneg y))
@@ -5351,7 +5343,7 @@ SDValue AMDGPUTargetLowering::performFNegCombine(SDNode *N,
   case ISD::FMA:
   case ISD::FMAD: {
     // TODO: handle llvm.amdgcn.fma.legacy
-    if (!N0->getFlags().hasNoSignedZeros() && !N->getFlags().hasNoSignedZeros())
+    if (!MayIgnoreSignedZeroForAllUses)
       return SDValue();
 
     // (fneg (fma x, y, z)) -> (fma x, (fneg y), (fneg z))
@@ -6240,6 +6232,11 @@ void AMDGPUTargetLowering::computeKnownBitsForTargetNode(
       Known.Zero.setHighBits(llvm::countl_zero(MaxValue));
       break;
     }
+    case Intrinsic::amdgcn_readfirstlane:
+    case Intrinsic::amdgcn_readlane:
+      // Result is the data operand's value from some lane.
+      Known = DAG.computeKnownBits(Op.getOperand(1), DemandedElts, Depth + 1);
+      break;
     default:
       break;
     }
