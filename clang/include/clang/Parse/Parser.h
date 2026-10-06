@@ -232,6 +232,16 @@ public:
 /// is replaced with a concrete type (e.g., CountAttributedType).
 struct LateParsedTypeAttribute : public LateParsedAttribute {
 
+  /// The type built for this attribute during type construction, still missing
+  /// the argument that hasn't been parsed yet. Filled in by
+  /// `Parser::ProcessLateParsedTypeAttrCallback` and completed once the
+  /// enclosing scope makes the argument parseable. Null if type construction
+  /// rejected the attribute.
+  ///
+  /// Held as the base class so the parser stays agnostic about which bounds
+  /// attribute this is; Sema dispatches on the concrete kind when completing.
+  BoundsAttributedType *TypeToComplete = nullptr;
+
   explicit LateParsedTypeAttribute(Parser *P, IdentifierInfo &Name,
                                    SourceLocation Loc)
       : LateParsedAttribute(P, Name, Loc, Kind::Type) {}
@@ -279,6 +289,7 @@ class Parser : public CodeCompletionHandler {
 
 public:
   friend class ColonProtectionRAIIObject;
+  friend class GenericAssociationTypeRAIIObject;
   friend class PoisonSEHIdentifiersRAIIObject;
   friend class ParenBraceBracketBalancer;
   friend class BalancedDelimiterTracker;
@@ -1523,6 +1534,11 @@ private:
 
   void ParseLexedTypeAttribute(LateParsedTypeAttribute &LA,
                                ParsedAttributes &OutAttrs);
+
+  /// Complete every late-parsed type attribute queued for the record whose body
+  /// just closed. Consumes and clears \p LateTypeAttrs.
+  void CompleteLateParsedTypeAttributes(
+      SmallVectorImpl<LateParsedTypeAttribute *> &LateTypeAttrs);
 
   /// Parse cached tokens for a late-parsed attribute and return the parsed
   /// attributes. Shared implementation used by both ParseLexedAttribute and
@@ -4497,6 +4513,11 @@ private:
   /// safe in case statements and a few other things.  This is managed by the
   /// ColonProtectionRAIIObject RAII object.
   bool ColonIsSacred;
+
+  // ParsingGenericAssociationType - Currently parsing the typename in
+  // _Generic association. This is to consume the colon if what comes after it
+  // is a type.
+  bool ParsingGenericAssociationType;
 
   /// ParseCXXAmbiguousParenExpression - We have parsed the left paren of a
   /// parenthesized ambiguous type-id. This uses tentative parsing to

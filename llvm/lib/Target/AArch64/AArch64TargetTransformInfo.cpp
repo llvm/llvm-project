@@ -617,9 +617,12 @@ AArch64TTIImpl::getIntrinsicInstrCost(const IntrinsicCostAttributes &ICA,
   // of <vscale x 1 x eltty> yet, so return an invalid cost to avoid selecting
   // it. This change will be removed when code-generation for these types is
   // sufficiently reliable.
+  // Only allow masked ld/st to pass through to getMemIntrinsicInstrCost().
   auto *RetTy = ICA.getReturnType();
   if (auto *VTy = dyn_cast<ScalableVectorType>(RetTy))
-    if (VTy->getElementCount() == ElementCount::getScalable(1))
+    if (VTy->getElementCount() == ElementCount::getScalable(1) &&
+        !is_contained({Intrinsic::masked_load, Intrinsic::masked_store},
+                      ICA.getID()))
       return InstructionCost::getInvalid();
 
   switch (ICA.getID()) {
@@ -4926,26 +4929,26 @@ std::optional<InstructionCost> AArch64TTIImpl::getFP16BF16PromoteCost(
 InstructionCost AArch64TTIImpl::getArithmeticInstrCost(
     unsigned Opcode, Type *Ty, TTI::TargetCostKind CostKind,
     TTI::OperandValueInfo Op1Info, TTI::OperandValueInfo Op2Info,
-    ArrayRef<const Value *> Args, const Instruction *CxtI) const {
+    ArrayRef<const Value *> Args, const Instruction *CtxI) const {
 
   // The code-generator is currently not able to handle scalable vectors
   // of <vscale x 1 x eltty> yet, so return an invalid cost to avoid selecting
-  // it. This change will be removed when code-generation for these types is
-  // sufficiently reliable.
+  // it until all instructions are vetted.
+  int ISD = TLI->InstructionOpcodeToISD(Opcode);
   if (auto *VTy = dyn_cast<ScalableVectorType>(Ty))
     if (VTy->getElementCount() == ElementCount::getScalable(1))
-      return InstructionCost::getInvalid();
+      if (!is_contained({ISD::ADD, ISD::SUB, ISD::MUL}, ISD))
+        return InstructionCost::getInvalid();
 
   // Legalize the type.
   std::pair<InstructionCost, MVT> LT = getTypeLegalizationCost(Ty);
-  int ISD = TLI->InstructionOpcodeToISD(Opcode);
 
   // TODO: Handle more cost kinds for floating point operations.
   if (ISD == ISD::FADD || ISD == ISD::FSUB || ISD == ISD::FMUL ||
       ISD == ISD::FDIV || ISD == ISD::FREM || ISD == ISD::FNEG)
     if (CostKind != TTI::TCK_RecipThroughput)
       return BaseT::getArithmeticInstrCost(Opcode, Ty, CostKind, Op1Info,
-                                           Op2Info, Args, CxtI);
+                                           Op2Info, Args, CtxI);
 
   if (ISD == ISD::FADD || ISD == ISD::FSUB || ISD == ISD::FMUL ||
       ISD == ISD::FDIV || ISD == ISD::FREM) {
@@ -5284,10 +5287,10 @@ InstructionCost AArch64TTIImpl::getArithmeticInstrCost(
     // Scalar fmul(fneg) or fneg(fmul) can be converted to fnmul
     if ((Ty->isFloatTy() || Ty->isDoubleTy() ||
          (Ty->isHalfTy() && ST->hasFullFP16())) &&
-        CxtI &&
-        ((CxtI->hasOneUse() &&
-          match(*CxtI->user_begin(), m_FMul(m_Value(), m_Value()))) ||
-         match(CxtI->getOperand(0), m_FMul(m_Value(), m_Value()))))
+        CtxI &&
+        ((CtxI->hasOneUse() &&
+          match(*CtxI->user_begin(), m_FMul(m_Value(), m_Value()))) ||
+         match(CtxI->getOperand(0), m_FMul(m_Value(), m_Value()))))
       return 0;
     [[fallthrough]];
   case ISD::FADD:
@@ -5550,12 +5553,13 @@ AArch64TTIImpl::getMaskedMemoryOpCost(const MemIntrinsicCostAttributes &MICA,
   if (VT->getElementType()->isIntegerTy(1))
     return InstructionCost::getInvalid();
 
-  // The code-generator is currently not able to handle scalable vectors
-  // of <vscale x 1 x eltty> yet, so return an invalid cost to avoid selecting
-  // it. This change will be removed when code-generation for these types is
-  // sufficiently reliable.
+  // <vscale x 1 x eltty> operations require mask adaptation.
+  // Allow it for normal masked ld/st
   if (VT->getElementCount() == ElementCount::getScalable(1))
-    return InstructionCost::getInvalid();
+    return is_contained({Intrinsic::masked_load, Intrinsic::masked_store},
+                        MICA.getID())
+               ? LT.first + 1
+               : InstructionCost::getInvalid();
 
   InstructionCost MemOpCost = LT.first;
   if (MICA.getID() == Intrinsic::masked_expandload) {
@@ -5563,7 +5567,12 @@ AArch64TTIImpl::getMaskedMemoryOpCost(const MemIntrinsicCostAttributes &MICA,
       return InstructionCost::getInvalid();
 
     // Operation will be split into expand of masked.load
-    MemOpCost *= 2;
+    // Something like:
+    // cntp     x8, p0, p0.s
+    // whilelo  p1.s, xzr, x8
+    // ld1w     { z1.s }, p1/z, [x0]
+    // expand   z1.s, p0, z1.s
+    MemOpCost *= 4;
   }
 
   if (MICA.getID() == Intrinsic::masked_compressstore) {
@@ -5571,12 +5580,11 @@ AArch64TTIImpl::getMaskedMemoryOpCost(const MemIntrinsicCostAttributes &MICA,
       return InstructionCost::getInvalid();
 
     // A compress store lowers to something like:
-    //  ptrue    p1.s
     //  compact  z0.s, p0, z0.s
     //  cntp     x8, p1, p0.s
     //  whilelo  p0.s, xzr, x8
     //  st1w     { z0.s }, p0, [x0]
-    MemOpCost *= 2;
+    MemOpCost *= 4;
   }
 
   // If we need to split the memory operation, we will also need to split the
@@ -5677,17 +5685,24 @@ InstructionCost AArch64TTIImpl::getMemoryOpCost(unsigned Opcode, Type *Ty,
   if (!LT.first.isValid())
     return InstructionCost::getInvalid();
 
-  // The code-generator is currently not able to handle scalable vectors
-  // of <vscale x 1 x eltty> yet, so return an invalid cost to avoid selecting
-  // it. This change will be removed when code-generation for these types is
-  // sufficiently reliable.
-  // We also only support full register predicate loads and stores.
-  if (auto *VTy = dyn_cast<ScalableVectorType>(Ty))
-    if (VTy->getElementCount() == ElementCount::getScalable(1) ||
-        (VTy->getElementType()->isIntegerTy(1) &&
-         !VTy->getElementCount().isKnownMultipleOf(
-             ElementCount::getScalable(16))))
+  if (auto *VTy = dyn_cast<ScalableVectorType>(Ty)) {
+
+    // We only support full register predicate loads and stores.
+    if (VTy->getElementType()->isIntegerTy(1) &&
+        !VTy->getElementCount().isKnownMultipleOf(
+            ElementCount::getScalable(16)))
       return InstructionCost::getInvalid();
+
+    // <vscale x 1 x eltty> operations require crafting a new mask.
+    if (VTy->getElementCount() == ElementCount::getScalable(1)) {
+      Intrinsic::ID IID = Opcode == Instruction::Load ? Intrinsic::masked_load
+                                                      : Intrinsic::masked_store;
+      return getMaskedMemoryOpCost(
+                 MemIntrinsicCostAttributes(IID, Ty, Alignment, AddressSpace),
+                 CostKind) +
+             1;
+    }
+  }
 
   // TODO: consider latency as well for TCK_SizeAndLatency.
   if (CostKind == TTI::TCK_CodeSize || CostKind == TTI::TCK_SizeAndLatency)
@@ -5945,6 +5960,51 @@ bool AArch64TTIImpl::isLegalMaskedExpandLoad(Type *DataTy,
   // expand instruction.
   return (ST->isSVEAvailable() && ST->hasSVE2p2()) ||
          (ST->isSVEorStreamingSVEAvailable() && ST->hasSME2p2());
+}
+
+bool AArch64TTIImpl::isLegalSpeculativeLoad(Type *DataType,
+                                            unsigned AddressSpace) const {
+  // Matches AArch64TargetLowering::emitCanLoadSpeculatively: only address
+  // space 0 and power-of-2 sizes up to the 16-byte MTE tag granule.
+  // TODO: Support scalable vectors.
+  if (AddressSpace != 0)
+    return false;
+  TypeSize Size = DL.getTypeStoreSize(DataType);
+  return !Size.isScalable() && isPowerOf2_64(Size.getFixedValue()) &&
+         Size.getFixedValue() <= 16;
+}
+
+bool AArch64TTIImpl::hasMultiVectorLoadStore(
+    unsigned NumVectors, TTI::MaskSource Mask, VectorType *VectorTy,
+    bool IsStore, std::optional<Instruction::CastOps> CastHint) const {
+  if (NumVectors <= 1 || !ST->enableSubRegLiveness() || !ST->hasSVE2p1())
+    return false;
+
+  // TODO: Support masked multi-vector loads/stores.
+  if (Mask != TTI::MaskSource::None)
+    return false;
+
+  // A null vector type queries whether the target supports multi-vector memory
+  // operations in general.
+  if (!VectorTy)
+    return true;
+
+  if (!isa<ScalableVectorType>(VectorTy))
+    return false;
+
+  // Conservatively, avoid using multi-vector loads when it's possible we could
+  // use extending loads instead. Note: We can ignore stores as we only use
+  // truncating stores when the store vector-width is < a full SVE vector.
+  if (!IsStore &&
+      (CastHint == Instruction::ZExt || CastHint == Instruction::SExt))
+    return false;
+
+  // For unpredicated loads/stores allow any pow-of-two multiple of a vector >=
+  // to a single z-register. We can split operations wider than a single
+  // multi-vector load/store during ISEL.
+  return isPowerOf2_32(NumVectors) &&
+         DL.getTypeSizeInBits(VectorTy).isKnownMultipleOf(
+             AArch64::SVEBitsPerBlock);
 }
 
 unsigned
@@ -6275,6 +6335,9 @@ void AArch64TTIImpl::getUnrollingPreferences(
         return;
       }
 
+      // The cost is only compared against Aarch64ForceUnrollThreshold below.
+      if (Cost >= Aarch64ForceUnrollThreshold)
+        continue;
       SmallVector<const Value *, 4> Operands(I.operand_values());
       Cost += getInstructionCost(&I, Operands,
                                  TargetTransformInfo::TCK_SizeAndLatency);
@@ -6978,7 +7041,7 @@ InstructionCost AArch64TTIImpl::getPartialReductionCost(
 InstructionCost AArch64TTIImpl::getShuffleCost(
     TTI::ShuffleKind Kind, VectorType *DstTy, VectorType *SrcTy,
     TTI::TargetCostKind CostKind, ArrayRef<int> Mask, int Index,
-    VectorType *SubTp, ArrayRef<const Value *> Args, const Instruction *CxtI,
+    VectorType *SubTp, ArrayRef<const Value *> Args, const Instruction *CtxI,
     TTI::VectorInstrContext VIC) const {
   assert((Mask.empty() || DstTy->isScalableTy() ||
           Mask.size() == DstTy->getElementCount().getKnownMinValue()) &&
@@ -7006,7 +7069,7 @@ InstructionCost AArch64TTIImpl::getShuffleCost(
     // store(interleaving-shuffle). The shuffle cost could potentially be free,
     // but we model it with a cost of LT.first so that ST3/ST4 have a higher
     // cost than just the store.
-    if (CxtI && CxtI->hasOneUse() && isa<StoreInst>(*CxtI->user_begin()) &&
+    if (CtxI && CtxI->hasOneUse() && isa<StoreInst>(*CtxI->user_begin()) &&
         (ShuffleVectorInst::isInterleaveMask(
              Mask, 4, SrcTy->getElementCount().getKnownMinValue() * 2) ||
          ShuffleVectorInst::isInterleaveMask(
@@ -7074,7 +7137,7 @@ InstructionCost AArch64TTIImpl::getShuffleCost(
               ? getShuffleCost(NumSources <= 1 ? TTI::SK_PermuteSingleSrc
                                                : TTI::SK_PermuteTwoSrc,
                                NTp, NTp, CostKind, NMask, 0, nullptr, Args,
-                               CxtI)
+                               CtxI)
               : LTNumElts;
       Result.first->second = NCost;
       Cost += NCost;
@@ -7337,7 +7400,7 @@ InstructionCost AArch64TTIImpl::getShuffleCost(
   if (IsExtractSubvector)
     Kind = TTI::SK_ExtractSubvector;
   return BaseT::getShuffleCost(Kind, DstTy, SrcTy, CostKind, Mask, Index, SubTp,
-                               Args, CxtI);
+                               Args, CtxI);
 }
 
 static bool containsDecreasingPointers(Loop *TheLoop,
@@ -7438,6 +7501,44 @@ AArch64TTIImpl::getScalingFactorCost(Type *Ty, GlobalValue *BaseGV,
     // it is not equal to 0 or 1.
     return AM.Scale != 0 && AM.Scale != 1;
   return InstructionCost::getInvalid();
+}
+
+bool AArch64TTIImpl::isLegalAddressingMode(Type *Ty, GlobalValue *BaseGV,
+                                           int64_t BaseOffset, bool HasBaseReg,
+                                           int64_t Scale, unsigned AddrSpace,
+                                           Instruction *I,
+                                           int64_t ScalableOffset) const {
+  LLVMContext &Ctx = Ty->getContext();
+  const AArch64TargetLowering *TLI = getTLI();
+
+  // LSR can make an illegal scalable vector access easier to split and combine
+  // by preferring a base+scalable-offset form. Note: This is an LSR preference
+  // rather than a legal machine addressing mode.
+  if (!BaseGV && !BaseOffset && HasBaseReg && isa<ScalableVectorType>(Ty)) {
+    EVT MemVT = TLI->getValueType(DL, Ty);
+    TargetLowering::LegalizeTypeAction Action = TLI->getTypeAction(Ctx, MemVT);
+
+    // Note: If MemVT cannot be legalized (e.g. no scalable vectors) then
+    // LegalVT could be MVT::Other (which would assert on getStoreSize()).
+    EVT LegalVT = TLI->getLegalTypeToTransformTo(Ctx, MemVT);
+    if (Action == TargetLowering::TypeSplitVector && LegalVT.isScalableVT() &&
+        LegalVT.getVectorElementType() == MemVT.getVectorElementType()) {
+      uint64_t LegalNumBytes = LegalVT.getStoreSize().getKnownMinValue();
+      assert(MemVT.getStoreSize().getKnownMinValue() % LegalNumBytes == 0 &&
+             "expected vector split");
+
+      // Don't prefer scaled access if the type may need splitting. Only the
+      // first access can use the scaled offset. Later accesses need to
+      // materialize a new base + mul vl offset.
+      if (Scale)
+        return false;
+      if (ScalableOffset && ScalableOffset % LegalNumBytes == 0)
+        return true;
+    }
+  }
+
+  return BaseT::isLegalAddressingMode(Ty, BaseGV, BaseOffset, HasBaseReg, Scale,
+                                      AddrSpace, I, ScalableOffset);
 }
 
 bool AArch64TTIImpl::shouldTreatInstructionLikeSelect(

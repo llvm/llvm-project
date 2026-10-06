@@ -8,9 +8,13 @@ set(ORC_RT_HEADERS
     orc-rt-c/support/Compiler.h
     orc-rt-c/support/CoreTypes.h
     orc-rt-c/support/Error.h
+    orc-rt-c/support/LogLevel.h
     orc-rt-c/support/Logging.h
+    orc-rt-c/support/RTTI.h
     orc-rt-c/support/WrapperFunction.h
     orc-rt/bedrock/BootstrapInfo.h
+    orc-rt/bedrock/ConnectionSpec.h
+    orc-rt/bedrock/ConnectorRegistry.h
     orc-rt/bedrock/ExecutorProcessInfo.h
     orc-rt/bedrock/InProcessControllerAccess.h
     orc-rt/bedrock/NativeDylibManager.h
@@ -19,9 +23,11 @@ set(ORC_RT_HEADERS
     orc-rt/bedrock/Session.h
     orc-rt/bedrock/SimpleNativeMemoryMap.h
     orc-rt/bedrock/SimpleSymbolTable.h
+    orc-rt/bedrock/SocketConnector.h
     orc-rt/bedrock/SocketHandle.h
     orc-rt/bedrock/TaskGroup.h
     orc-rt/bedrock/ThreadPoolRunner.h
+    orc-rt/bedrock/VettedPeer.h
     orc-rt/bedrock/sps/AllSPSCI.h
     orc-rt/bedrock/sps/CallSPSCI.h
     orc-rt/bedrock/sps/GDBJITRegistrarSPSCI.h
@@ -29,6 +35,7 @@ set(ORC_RT_HEADERS
     orc-rt/bedrock/sps/NativeDylibManagerSPSCI.h
     orc-rt/bedrock/sps/SimpleNativeMemoryMapSPSCI.h
     orc-rt/bedrock/sps/SimpleRemoteCA.h
+    orc-rt/bedrock/sps/SimpleRemoteCAOverSocket.h
     orc-rt/support/AllocAction.h
     orc-rt/support/BitmaskEnum.h
     orc-rt/support/CCallback.h
@@ -58,6 +65,13 @@ set(ORC_RT_HEADERS
     orc-rt/support/sps/SPSWrapperFunctionBuffer.h
     orc-rt/support/sps/SimplePackedSerialization.h
 )
+
+# Headers for POSIX-only interfaces, installed only where they're implemented.
+if (ORC_RT_TARGET_POSIX)
+  list(APPEND ORC_RT_HEADERS
+    orc-rt/bedrock/sps/DWARFEHFrameRegistrarSPSCI.h
+  )
+endif()
 
 # Headers for Darwin-only interfaces, installed only where they're implemented.
 if (APPLE)
