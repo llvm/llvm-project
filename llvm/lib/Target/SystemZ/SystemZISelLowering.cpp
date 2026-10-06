@@ -11479,35 +11479,52 @@ SDValue SystemZTargetLowering::lowerVECREDUCE_ADD(SDValue Op,
 }
 
 SDValue SystemZTargetLowering::lowerVECREDUCE_MINMAX(SDValue Op,
-                                                      SelectionDAG &DAG) const {
+                                                     SelectionDAG &DAG) const {
   unsigned Opcode = Op.getOpcode();
   EVT VT = Op.getValueType();
   SDValue V = Op.getOperand(0);
   EVT VecVT = V.getValueType();
   SDLoc DL(Op);
 
+  // Pick the elementwise min/max matching the reduction.
   unsigned EltOp;
   switch (Opcode) {
-  case ISD::VECREDUCE_SMIN: EltOp = ISD::SMIN; break;
-  case ISD::VECREDUCE_SMAX: EltOp = ISD::SMAX; break;
-  case ISD::VECREDUCE_UMIN: EltOp = ISD::UMIN; break;
-  case ISD::VECREDUCE_UMAX: EltOp = ISD::UMAX; break;
-  default: llvm_unreachable("Unexpected opcode.");
+  case ISD::VECREDUCE_SMIN:
+    EltOp = ISD::SMIN;
+    break;
+  case ISD::VECREDUCE_SMAX:
+    EltOp = ISD::SMAX;
+    break;
+  case ISD::VECREDUCE_UMIN:
+    EltOp = ISD::UMIN;
+    break;
+  case ISD::VECREDUCE_UMAX:
+    EltOp = ISD::UMAX;
+    break;
+  default:
+    llvm_unreachable("Unexpected opcode.");
   }
 
   unsigned EltBytes = VecVT.getScalarSizeInBits() / 8;
   unsigned NumElts = VecVT.getVectorNumElements();
 
+  // Halve the number of live lanes each step: combine lane I with lane
+  // I + Step. Lane 0 ends up with the result.
   for (unsigned Step = NumElts / 2; Step >= 1; Step /= 2) {
     unsigned ByteShift = Step * EltBytes;
+
+    // Shift left by Step elements (VSLDB works on bytes, hence v16i8).
+    // Other lanes are don't-care.
     SDValue V16i8 = DAG.getBitcast(MVT::v16i8, V);
-    SDValue Shifted16i8 = DAG.getNode(
-        SystemZISD::SHL_DOUBLE, DL, MVT::v16i8, V16i8, V16i8,
-        DAG.getTargetConstant(ByteShift, DL, MVT::i32));
+    SDValue Shifted16i8 =
+        DAG.getNode(SystemZISD::SHL_DOUBLE, DL, MVT::v16i8, V16i8, V16i8,
+                    DAG.getTargetConstant(ByteShift, DL, MVT::i32));
     SDValue Shifted = DAG.getBitcast(VecVT, Shifted16i8);
+
     V = DAG.getNode(EltOp, DL, VecVT, V, Shifted);
   }
 
+  // Return lane 0.
   return DAG.getNode(ISD::EXTRACT_VECTOR_ELT, DL, VT, V,
                      DAG.getConstant(0, DL, MVT::i32));
 }
