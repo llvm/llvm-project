@@ -759,14 +759,28 @@ endfunction()
 #     COMPILE_OPTIONS <list of special compile options for the test>
 #     LINK_LIBRARIES <list of linking libraries for this target>
 #     LOADER_ARGS <list of special args to loaders (like the GPU loader)>
+#     STARTUP <startup object target used when internal startup is disabled>
 #   )
 function(add_libc_hermetic test_name)
   get_fq_target_name(${test_name} fq_target_name)
   get_fq_target_name(${test_name}.libc fq_libc_target_name)
 
+  cmake_parse_arguments(
+    "HERMETIC_TEST"
+    "IS_GPU_BENCHMARK;NO_RUN_POSTBUILD" # Optional arguments
+    "SUITE;CXX_STANDARD;STARTUP" # Single value arguments
+    "SRCS;HDRS;DEPENDS;ARGS;ENV;COMPILE_OPTIONS;LINK_LIBRARIES;LOADER_ARGS" # Multi-value arguments
+    ${ARGN}
+  )
+
   set(startup_target libc.startup.${LIBC_TARGET_OS}.crt1)
   set(startup_target_dep "")
   if(LLVM_LIBC_HERMETIC_TEST_USE_INTERNAL_STARTUP)
+    if(HERMETIC_TEST_STARTUP)
+      message(FATAL_ERROR
+        "Hermetic test ${fq_target_name} provides an external STARTUP target "
+        "while internal startup is enabled.")
+    endif()
     if(NOT TARGET ${startup_target})
       if(LIBC_CMAKE_VERBOSE_LOGGING)
         message(STATUS "Skipping ${fq_target_name} as ${startup_target} is not available on ${LIBC_TARGET_OS}.")
@@ -774,6 +788,12 @@ function(add_libc_hermetic test_name)
       return()
     endif()
     set(startup_target_dep ${startup_target})
+  elseif(HERMETIC_TEST_STARTUP)
+    get_fq_dep_name(startup_target_dep ${HERMETIC_TEST_STARTUP})
+    if(NOT TARGET ${startup_target_dep})
+      message(FATAL_ERROR
+        "Hermetic test ${fq_target_name} startup target ${startup_target_dep} does not exist.")
+    endif()
   endif()
 
   if(NOT startup_target_dep AND NOT LIBC_TEST_LINK_OPTIONS_DEFAULT)
@@ -782,14 +802,6 @@ function(add_libc_hermetic test_name)
     endif()
     return()
   endif()
-
-  cmake_parse_arguments(
-    "HERMETIC_TEST"
-    "IS_GPU_BENCHMARK;NO_RUN_POSTBUILD;C_TEST" # Optional arguments
-    "SUITE;CXX_STANDARD" # Single value arguments
-    "SRCS;HDRS;DEPENDS;ARGS;ENV;COMPILE_OPTIONS;LINK_LIBRARIES;FLAGS;LOADER_ARGS" # Multi-value arguments
-    ${ARGN}
-  )
 
   if(NOT HERMETIC_TEST_SUITE)
     message(FATAL_ERROR "SUITE not specified for ${fq_target_name}")
