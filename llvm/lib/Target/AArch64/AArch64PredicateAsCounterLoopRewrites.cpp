@@ -254,12 +254,11 @@ static bool tryRewriteMaskedLoadUser(Instruction &UserI,
   auto *WideDataTy = VectorType::get(ScalarType, LegalEC * C.VectorScale);
   auto *LegalDataTy = VectorType::get(ScalarType, LegalEC);
 
-  Module *M = II->getModule();
-  FunctionCallee LD1 = Intrinsic::getOrInsertDeclaration(
-      M, getPNLoadStoreIntrinsic(C.VectorScale, /*IsLoad=*/true),
-      {LegalDataTy, II->getArgOperand(0)->getType()});
-  auto *PNLoad =
-      Builder.CreateCall(LD1, {Count, II->getArgOperand(0)}, "pac.ld1");
+  auto *PNLoad = cast<IntrinsicInst>(Builder.CreateIntrinsic(
+      getPNLoadStoreIntrinsic(C.VectorScale, /*IsLoad=*/true),
+      {LegalDataTy, II->getArgOperand(0)->getType()},
+      {Count, II->getArgOperand(0)},
+      /*FMFSource=*/{}, "pn.ld1"));
 
   // Copy pointer parameter attributes.
   for (Attribute ParamAttr : II->getParamAttributes(0))
@@ -268,10 +267,10 @@ static bool tryRewriteMaskedLoadUser(Instruction &UserI,
   // Concatenate all results into the original wide value.
   Value *WideData = PoisonValue::get(WideDataTy);
   for (unsigned Slice = 0; Slice != C.VectorScale; ++Slice) {
-    Value *Part = Builder.CreateExtractValue(PNLoad, Slice, "pac.data");
+    Value *Part = Builder.CreateExtractValue(PNLoad, Slice, "pn.data");
     WideData = Builder.CreateInsertVector(WideDataTy, WideData, Part,
                                           Slice * LegalEC.getKnownMinValue(),
-                                          "pac.vec");
+                                          "pn.vec");
   }
 
   II->replaceAllUsesWith(WideData);
@@ -305,15 +304,13 @@ static bool tryRewriteMaskedStoreUser(Instruction &UserI,
   for (unsigned Slice = 0; Slice != C.VectorScale; ++Slice)
     StoreArgs.push_back(Builder.CreateExtractVector(
         LegalDataTy, II->getArgOperand(0), Slice * LegalEC.getKnownMinValue(),
-        "pac.data"));
+        "pn.data"));
   StoreArgs.push_back(Count);
   StoreArgs.push_back(II->getArgOperand(1));
 
-  Module *M = II->getModule();
-  FunctionCallee ST1 = Intrinsic::getOrInsertDeclaration(
-      M, getPNLoadStoreIntrinsic(C.VectorScale, /*IsLoad=*/false),
-      {LegalDataTy, II->getArgOperand(1)->getType()});
-  auto *PNStore = Builder.CreateCall(ST1, StoreArgs);
+  auto *PNStore = cast<IntrinsicInst>(Builder.CreateIntrinsic(
+      getPNLoadStoreIntrinsic(C.VectorScale, /*IsLoad=*/false),
+      {LegalDataTy, II->getArgOperand(1)->getType()}, StoreArgs));
 
   // Copy pointer parameter attributes.
   for (Attribute ParamAttr : II->getParamAttributes(1))
