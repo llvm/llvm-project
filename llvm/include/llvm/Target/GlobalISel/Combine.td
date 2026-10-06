@@ -1422,12 +1422,14 @@ def xor_of_and_with_same_reg: GICombineRule <
   (apply [{ Helper.applyXorOfAndWithSameReg(*${root}, ${matchinfo}); }])
 >;
 
-// Transform scalar (ptr_add 0, x) -> (int_to_ptr x).
-// Skip a constant offset so const_ptradd_to_i2p / constant_fold_binop can fold
-// (ptr_add 0, C) to a pointer G_CONSTANT instead of G_INTTOPTR of an integer.
+//Transform scalar (ptr_add (G_CONSTANT 0), x) -> (int_to_ptr x).
+// A literal 0 matches through G_INTTOPTR; require G_CONSTANT so
+// G_PTR_ADD(G_INTTOPTR(0), x) stays a G_PTR_ADD.
+// Skip a constant x so const_ptradd_to_i2p folds (ptr_add 0, C).
 def ptr_add_with_zero_scalar: GICombineRule<
   (defs root:$root),
-  (match (G_PTR_ADD $dst, 0, $offset):$root,
+  (match (G_CONSTANT $base, 0),
+         (G_PTR_ADD $dst, $base, $offset):$root,
          [{
            LLT Ty = MRI.getType(${dst}.getReg());
            return Ty.isPointer() &&
