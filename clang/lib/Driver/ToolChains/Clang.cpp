@@ -4257,6 +4257,11 @@ static bool RenderModulesOptions(Compilation &C, const Driver &D,
                      ImplicitModules))
       CmdArgs.push_back("-fmodules-validate-system-headers");
 
+    if (Args.hasFlag(options::OPT_fmodules_validate_directory_dependencies,
+                     options::OPT_fno_modules_validate_directory_dependencies,
+                     false))
+      CmdArgs.push_back("-fmodules-validate-directory-dependencies");
+
     Args.AddLastArg(CmdArgs,
                     options::OPT_fmodules_disable_diagnostic_validation);
   } else {
@@ -4265,6 +4270,8 @@ static bool RenderModulesOptions(Compilation &C, const Driver &D,
     Args.ClaimAllArgs(options::OPT_fmodules_validate_once_per_build_session);
     Args.ClaimAllArgs(options::OPT_fmodules_validate_system_headers);
     Args.ClaimAllArgs(options::OPT_fno_modules_validate_system_headers);
+    Args.ClaimAllArgs(options::OPT_fmodules_validate_directory_dependencies);
+    Args.ClaimAllArgs(options::OPT_fno_modules_validate_directory_dependencies);
     Args.ClaimAllArgs(options::OPT_fmodules_disable_diagnostic_validation);
   }
 

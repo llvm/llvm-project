@@ -29,6 +29,7 @@
 #include "clang/CIR/Dialect/IR/CIRAttrs.h"
 #include "clang/CIR/Dialect/IR/CIRTypes.h"
 #include "clang/CIR/MissingFeatures.h"
+#include "clang/CodeGenUtils/RecordLayoutUtils.h"
 #include "llvm/ADT/ArrayRef.h"
 #include "llvm/ADT/STLExtras.h"
 #include "llvm/Support/ErrorHandling.h"
@@ -1210,7 +1211,8 @@ static mlir::TypedAttr emitNullConstant(CIRGenModule &cgm, const RecordDecl *rd,
 
       const auto *baseDecl = base.getType()->castAsCXXRecordDecl();
       // Ignore empty bases.
-      if (isEmptyRecordForLayout(cgm.getASTContext(), base.getType()) ||
+      if (CodeGenUtils::isEmptyRecordForLayout(cgm.getASTContext(),
+                                               base.getType()) ||
           cgm.getASTContext()
               .getASTRecordLayout(baseDecl)
               .getNonVirtualSize()
@@ -1228,7 +1230,7 @@ static mlir::TypedAttr emitNullConstant(CIRGenModule &cgm, const RecordDecl *rd,
     // Fill in non-bitfields. (Bitfields always use a zero pattern, which we
     // will fill in later.)
     if (!field->isBitField() &&
-        !isEmptyFieldForLayout(cgm.getASTContext(), field)) {
+        !CodeGenUtils::isEmptyFieldForLayout(cgm.getASTContext(), field)) {
       unsigned fieldIndex = layout.getCIRFieldNo(field);
       elements[fieldIndex] = cgm.emitNullConstantAttr(field->getType());
     }
