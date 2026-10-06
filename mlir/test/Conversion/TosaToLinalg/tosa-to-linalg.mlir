@@ -2019,8 +2019,8 @@ func.func @row_gather(%values: tensor<2x5x3xf32>, %indices: tensor<2x2xi32>, %ro
 // Verify i64 indices and the largest valid start row.
 // CHECK-LABEL: @row_gather_i64_boundary_indices
 func.func @row_gather_i64_boundary_indices(%values: tensor<2x5x2xi16>) -> tensor<2x4x2xi16> {
-  // CHECK: %[[INDICES:.+]] = "tosa.const"()
-  // CHECK: %[[ROW_COUNT:.+]] = "tosa.const"()
+  // CHECK: %[[INDICES:.+]] = tosa.const values(dense<{{\[\[}}0, 3], [3, 1]]> : tensor<2x2xi64>) : () -> tensor<2x2xi64>
+  // CHECK: %[[ROW_COUNT:.+]] = tosa.const values(dense<2> : tensor<1xi32>) : () -> tensor<1xi32>
   // CHECK: linalg.generic
   // CHECK:   %[[INDEX:.+]] = tensor.extract %[[INDICES]][{{.+}}] : tensor<2x2xi64>
   // CHECK:   %[[ROW:.+]] = arith.index_cast %[[INDEX]] : i64 to index
