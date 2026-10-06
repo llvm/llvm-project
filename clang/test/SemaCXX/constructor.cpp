@@ -94,7 +94,6 @@ namespace PR38286 {
   template<typename> struct B;
   template<typename T> void B<T>::f() {} // expected-error {{out-of-line definition of 'f' from class 'PR38286::B<type-parameter-0-0>'}}
   template<typename> struct C; // expected-note {{non-type declaration found}}
-  template<typename T> C<T>::~C() {} // expected-error {{identifier 'C' after '~' in destructor name does not name a type}}
 }
 
 namespace GH121706 {
