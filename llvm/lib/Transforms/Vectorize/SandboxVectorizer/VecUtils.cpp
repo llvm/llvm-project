@@ -137,7 +137,7 @@ void VecUtils::DeadInstructionMorgue::collectPotentiallyDeadInstrs(
 template void
     VecUtils::DeadInstructionMorgue::collectPotentiallyDeadInstrs<Value>(
         BndlRef<Value *>);
-template void
+template LLVM_EXPORT_TEMPLATE void
     VecUtils::DeadInstructionMorgue::collectPotentiallyDeadInstrs<Instruction>(
         BndlRef<Instruction *>);
 

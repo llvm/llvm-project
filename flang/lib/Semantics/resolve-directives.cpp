@@ -3519,13 +3519,13 @@ void OmpAttributeVisitor::CheckObjectIsPrivatizable(
   if (SymbolOrEquivalentIsInNamelist(symbol)) {
     context_.Say(name.source,
         "Variable '%s' in NAMELIST cannot be in a %s clause"_err_en_US,
-        name.ToString(), clauseName.str());
+        name.ToString(), clauseName);
   }
 
   if (ultimateSymbol.has<AssocEntityDetails>()) {
     context_.Say(name.source,
         "Variable '%s' in ASSOCIATE cannot be in a %s clause"_err_en_US,
-        name.ToString(), clauseName.str());
+        name.ToString(), clauseName);
   }
 
   if (stmtFunctionExprSymbols_.find(ultimateSymbol) !=
@@ -3533,7 +3533,7 @@ void OmpAttributeVisitor::CheckObjectIsPrivatizable(
     context_.Say(name.source,
         "Variable '%s' in statement function expression cannot be in a "
         "%s clause"_err_en_US,
-        name.ToString(), clauseName.str());
+        name.ToString(), clauseName);
   }
 }
 

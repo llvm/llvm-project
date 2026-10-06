@@ -6,15 +6,15 @@ program nested_where
   ! CHECK:  %[[VAL_1:.*]] = fir.address_of(@_QFEa) : !fir.ref<!fir.array<3xi32>>
   ! CHECK:  %[[VAL_2:.*]] = arith.constant 3 : index
   ! CHECK:  %[[VAL_3:.*]] = fir.shape %[[VAL_2]] : (index) -> !fir.shape<1>
-  ! CHECK:  %[[VAL_4:.*]]:2 = hlfir.declare %[[VAL_1]](%[[VAL_3]]) {uniq_name = "_QFEa"} : (!fir.ref<!fir.array<3xi32>>, !fir.shape<1>) -> (!fir.ref<!fir.array<3xi32>>, !fir.ref<!fir.array<3xi32>>)
+  ! CHECK:  %[[VAL_4:.*]]:2 = hlfir.declare %[[VAL_1]](%[[VAL_3]]) uniq_name("_QFEa") : (!fir.ref<!fir.array<3xi32>>, !fir.shape<1>) -> (!fir.ref<!fir.array<3xi32>>, !fir.ref<!fir.array<3xi32>>)
   ! CHECK:  %[[VAL_5:.*]] = fir.address_of(@_QFEmask1) : !fir.ref<!fir.array<3x!fir.logical<4>>>
   ! CHECK:  %[[VAL_6:.*]] = arith.constant 3 : index
   ! CHECK:  %[[VAL_7:.*]] = fir.shape %[[VAL_6]] : (index) -> !fir.shape<1>
-  ! CHECK:  %[[VAL_8:.*]]:2 = hlfir.declare %[[VAL_5]](%[[VAL_7]]) {uniq_name = "_QFEmask1"} : (!fir.ref<!fir.array<3x!fir.logical<4>>>, !fir.shape<1>) -> (!fir.ref<!fir.array<3x!fir.logical<4>>>, !fir.ref<!fir.array<3x!fir.logical<4>>>)
+  ! CHECK:  %[[VAL_8:.*]]:2 = hlfir.declare %[[VAL_5]](%[[VAL_7]]) uniq_name("_QFEmask1") : (!fir.ref<!fir.array<3x!fir.logical<4>>>, !fir.shape<1>) -> (!fir.ref<!fir.array<3x!fir.logical<4>>>, !fir.ref<!fir.array<3x!fir.logical<4>>>)
   ! CHECK:  %[[VAL_9:.*]] = fir.address_of(@_QFEmask2) : !fir.ref<!fir.array<3x!fir.logical<4>>>
   ! CHECK:  %[[VAL_10:.*]] = arith.constant 3 : index
   ! CHECK:  %[[VAL_11:.*]] = fir.shape %[[VAL_10]] : (index) -> !fir.shape<1>
-  ! CHECK:  %[[VAL_12:.*]]:2 = hlfir.declare %[[VAL_9]](%[[VAL_11]]) {uniq_name = "_QFEmask2"} : (!fir.ref<!fir.array<3x!fir.logical<4>>>, !fir.shape<1>) -> (!fir.ref<!fir.array<3x!fir.logical<4>>>, !fir.ref<!fir.array<3x!fir.logical<4>>>)
+  ! CHECK:  %[[VAL_12:.*]]:2 = hlfir.declare %[[VAL_9]](%[[VAL_11]]) uniq_name("_QFEmask2") : (!fir.ref<!fir.array<3x!fir.logical<4>>>, !fir.shape<1>) -> (!fir.ref<!fir.array<3x!fir.logical<4>>>, !fir.ref<!fir.array<3x!fir.logical<4>>>)
   ! CHECK:  %[[VAL_13:.*]] = arith.constant 1 : i32
   ! CHECK:  %[[VAL_14:.*]] = arith.constant 3 : i32
   ! CHECK:  hlfir.forall lb {
