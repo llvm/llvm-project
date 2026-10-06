@@ -6,51 +6,63 @@
 define void @compress_store(ptr writeonly noalias %dst, ptr readonly %src, i32 %c, i64 %n) {
 ; CHECK-V4-LABEL: define void @compress_store(
 ; CHECK-V4-SAME: ptr noalias writeonly [[DST:%.*]], ptr readonly [[SRC:%.*]], i32 [[C:%.*]], i64 [[N:%.*]]) #[[ATTR0:[0-9]+]] {
-; CHECK-V4-NEXT:  [[ENTRY:.*]]:
+; CHECK-V4-NEXT:  [[ENTRY:.*:]]
+; CHECK-V4-NEXT:    [[MIN_ITERS_CHECK:%.*]] = icmp ult i64 [[N]], 8
+; CHECK-V4-NEXT:    br i1 [[MIN_ITERS_CHECK]], label %[[EXIT:.*]], label %[[VECTOR_PH:.*]]
+; CHECK-V4:       [[VECTOR_PH]]:
+; CHECK-V4-NEXT:    [[TMP0:%.*]] = and i64 [[N]], 7
+; CHECK-V4-NEXT:    [[N_VEC:%.*]] = sub i64 [[N]], [[TMP0]]
+; CHECK-V4-NEXT:    [[BROADCAST_SPLATINSERT:%.*]] = insertelement <8 x i32> poison, i32 [[C]], i64 0
+; CHECK-V4-NEXT:    [[BROADCAST_SPLAT:%.*]] = shufflevector <8 x i32> [[BROADCAST_SPLATINSERT]], <8 x i32> poison, <8 x i32> zeroinitializer
 ; CHECK-V4-NEXT:    br label %[[FOR_BODY:.*]]
 ; CHECK-V4:       [[FOR_BODY]]:
-; CHECK-V4-NEXT:    [[IV:%.*]] = phi i64 [ 0, %[[ENTRY]] ], [ [[IV_NEXT:%.*]], %[[FOR_INC:.*]] ]
-; CHECK-V4-NEXT:    [[IDX:%.*]] = phi i64 [ 0, %[[ENTRY]] ], [ [[IDX_1:%.*]], %[[FOR_INC]] ]
+; CHECK-V4-NEXT:    [[IV:%.*]] = phi i64 [ 0, %[[VECTOR_PH]] ], [ [[INDEX_NEXT:%.*]], %[[FOR_BODY]] ]
+; CHECK-V4-NEXT:    [[IDX:%.*]] = phi i64 [ 0, %[[VECTOR_PH]] ], [ [[CONDITIONAL_STEP:%.*]], %[[FOR_BODY]] ]
 ; CHECK-V4-NEXT:    [[SRC_PTR:%.*]] = getelementptr inbounds i32, ptr [[SRC]], i64 [[IV]]
-; CHECK-V4-NEXT:    [[LOAD_SRC:%.*]] = load i32, ptr [[SRC_PTR]], align 4
-; CHECK-V4-NEXT:    [[CMP:%.*]] = icmp slt i32 [[LOAD_SRC]], [[C]]
-; CHECK-V4-NEXT:    br i1 [[CMP]], label %[[IF_THEN:.*]], label %[[FOR_INC]]
-; CHECK-V4:       [[IF_THEN]]:
+; CHECK-V4-NEXT:    [[WIDE_LOAD:%.*]] = load <8 x i32>, ptr [[SRC_PTR]], align 4
+; CHECK-V4-NEXT:    [[TMP2:%.*]] = icmp slt <8 x i32> [[WIDE_LOAD]], [[BROADCAST_SPLAT]]
 ; CHECK-V4-NEXT:    [[DST_PTR:%.*]] = getelementptr inbounds i32, ptr [[DST]], i64 [[IDX]]
-; CHECK-V4-NEXT:    store i32 [[LOAD_SRC]], ptr [[DST_PTR]], align 4
-; CHECK-V4-NEXT:    [[IDX_NEXT:%.*]] = add nsw i64 [[IDX]], 1
-; CHECK-V4-NEXT:    br label %[[FOR_INC]]
+; CHECK-V4-NEXT:    call void @llvm.masked.compressstore.v8i32.p0(<8 x i32> [[WIDE_LOAD]], ptr align 4 [[DST_PTR]], <8 x i1> [[TMP2]])
+; CHECK-V4-NEXT:    [[TMP4:%.*]] = zext <8 x i1> [[TMP2]] to <8 x i64>
+; CHECK-V4-NEXT:    [[TMP5:%.*]] = call i64 @llvm.vector.reduce.add.v8i64(<8 x i64> [[TMP4]])
+; CHECK-V4-NEXT:    [[CONDITIONAL_STEP]] = add i64 [[IDX]], [[TMP5]]
+; CHECK-V4-NEXT:    [[INDEX_NEXT]] = add nuw i64 [[IV]], 8
+; CHECK-V4-NEXT:    [[TMP6:%.*]] = icmp eq i64 [[INDEX_NEXT]], [[N_VEC]]
+; CHECK-V4-NEXT:    br i1 [[TMP6]], label %[[FOR_INC:.*]], label %[[FOR_BODY]], !llvm.loop [[LOOP0:![0-9]+]]
 ; CHECK-V4:       [[FOR_INC]]:
-; CHECK-V4-NEXT:    [[IDX_1]] = phi i64 [ [[IDX_NEXT]], %[[IF_THEN]] ], [ [[IDX]], %[[FOR_BODY]] ]
-; CHECK-V4-NEXT:    [[IV_NEXT]] = add nuw nsw i64 [[IV]], 1
-; CHECK-V4-NEXT:    [[EXITCOND_NOT:%.*]] = icmp eq i64 [[IV_NEXT]], [[N]]
-; CHECK-V4-NEXT:    br i1 [[EXITCOND_NOT]], label %[[EXIT:.*]], label %[[FOR_BODY]]
+; CHECK-V4-NEXT:    [[CMP_N:%.*]] = icmp eq i64 [[N]], [[N_VEC]]
+; CHECK-V4-NEXT:    br i1 [[CMP_N]], [[EXIT1:label %.*]], label %[[EXIT]]
 ; CHECK-V4:       [[EXIT]]:
-; CHECK-V4-NEXT:    ret void
 ;
 ; CHECK-ICELAKE-LABEL: define void @compress_store(
 ; CHECK-ICELAKE-SAME: ptr noalias writeonly [[DST:%.*]], ptr readonly [[SRC:%.*]], i32 [[C:%.*]], i64 [[N:%.*]]) #[[ATTR0:[0-9]+]] {
-; CHECK-ICELAKE-NEXT:  [[ENTRY:.*]]:
+; CHECK-ICELAKE-NEXT:  [[ENTRY:.*:]]
+; CHECK-ICELAKE-NEXT:    [[MIN_ITERS_CHECK:%.*]] = icmp ult i64 [[N]], 8
+; CHECK-ICELAKE-NEXT:    br i1 [[MIN_ITERS_CHECK]], label %[[EXIT:.*]], label %[[VECTOR_PH:.*]]
+; CHECK-ICELAKE:       [[VECTOR_PH]]:
+; CHECK-ICELAKE-NEXT:    [[TMP0:%.*]] = and i64 [[N]], 7
+; CHECK-ICELAKE-NEXT:    [[N_VEC:%.*]] = sub i64 [[N]], [[TMP0]]
+; CHECK-ICELAKE-NEXT:    [[BROADCAST_SPLATINSERT:%.*]] = insertelement <8 x i32> poison, i32 [[C]], i64 0
+; CHECK-ICELAKE-NEXT:    [[BROADCAST_SPLAT:%.*]] = shufflevector <8 x i32> [[BROADCAST_SPLATINSERT]], <8 x i32> poison, <8 x i32> zeroinitializer
 ; CHECK-ICELAKE-NEXT:    br label %[[FOR_BODY:.*]]
 ; CHECK-ICELAKE:       [[FOR_BODY]]:
-; CHECK-ICELAKE-NEXT:    [[IV:%.*]] = phi i64 [ 0, %[[ENTRY]] ], [ [[IV_NEXT:%.*]], %[[FOR_INC:.*]] ]
-; CHECK-ICELAKE-NEXT:    [[IDX:%.*]] = phi i64 [ 0, %[[ENTRY]] ], [ [[IDX_1:%.*]], %[[FOR_INC]] ]
+; CHECK-ICELAKE-NEXT:    [[IV:%.*]] = phi i64 [ 0, %[[VECTOR_PH]] ], [ [[INDEX_NEXT:%.*]], %[[FOR_BODY]] ]
+; CHECK-ICELAKE-NEXT:    [[IDX:%.*]] = phi i64 [ 0, %[[VECTOR_PH]] ], [ [[CONDITIONAL_STEP:%.*]], %[[FOR_BODY]] ]
 ; CHECK-ICELAKE-NEXT:    [[SRC_PTR:%.*]] = getelementptr inbounds i32, ptr [[SRC]], i64 [[IV]]
-; CHECK-ICELAKE-NEXT:    [[LOAD_SRC:%.*]] = load i32, ptr [[SRC_PTR]], align 4
-; CHECK-ICELAKE-NEXT:    [[CMP:%.*]] = icmp slt i32 [[LOAD_SRC]], [[C]]
-; CHECK-ICELAKE-NEXT:    br i1 [[CMP]], label %[[IF_THEN:.*]], label %[[FOR_INC]]
-; CHECK-ICELAKE:       [[IF_THEN]]:
+; CHECK-ICELAKE-NEXT:    [[WIDE_LOAD:%.*]] = load <8 x i32>, ptr [[SRC_PTR]], align 4
+; CHECK-ICELAKE-NEXT:    [[TMP2:%.*]] = icmp slt <8 x i32> [[WIDE_LOAD]], [[BROADCAST_SPLAT]]
 ; CHECK-ICELAKE-NEXT:    [[DST_PTR:%.*]] = getelementptr inbounds i32, ptr [[DST]], i64 [[IDX]]
-; CHECK-ICELAKE-NEXT:    store i32 [[LOAD_SRC]], ptr [[DST_PTR]], align 4
-; CHECK-ICELAKE-NEXT:    [[IDX_NEXT:%.*]] = add nsw i64 [[IDX]], 1
-; CHECK-ICELAKE-NEXT:    br label %[[FOR_INC]]
+; CHECK-ICELAKE-NEXT:    call void @llvm.masked.compressstore.v8i32.p0(<8 x i32> [[WIDE_LOAD]], ptr align 4 [[DST_PTR]], <8 x i1> [[TMP2]])
+; CHECK-ICELAKE-NEXT:    [[TMP4:%.*]] = zext <8 x i1> [[TMP2]] to <8 x i64>
+; CHECK-ICELAKE-NEXT:    [[TMP5:%.*]] = call i64 @llvm.vector.reduce.add.v8i64(<8 x i64> [[TMP4]])
+; CHECK-ICELAKE-NEXT:    [[CONDITIONAL_STEP]] = add i64 [[IDX]], [[TMP5]]
+; CHECK-ICELAKE-NEXT:    [[INDEX_NEXT]] = add nuw i64 [[IV]], 8
+; CHECK-ICELAKE-NEXT:    [[TMP6:%.*]] = icmp eq i64 [[INDEX_NEXT]], [[N_VEC]]
+; CHECK-ICELAKE-NEXT:    br i1 [[TMP6]], label %[[FOR_INC:.*]], label %[[FOR_BODY]], !llvm.loop [[LOOP0:![0-9]+]]
 ; CHECK-ICELAKE:       [[FOR_INC]]:
-; CHECK-ICELAKE-NEXT:    [[IDX_1]] = phi i64 [ [[IDX_NEXT]], %[[IF_THEN]] ], [ [[IDX]], %[[FOR_BODY]] ]
-; CHECK-ICELAKE-NEXT:    [[IV_NEXT]] = add nuw nsw i64 [[IV]], 1
-; CHECK-ICELAKE-NEXT:    [[EXITCOND_NOT:%.*]] = icmp eq i64 [[IV_NEXT]], [[N]]
-; CHECK-ICELAKE-NEXT:    br i1 [[EXITCOND_NOT]], label %[[EXIT:.*]], label %[[FOR_BODY]]
+; CHECK-ICELAKE-NEXT:    [[CMP_N:%.*]] = icmp eq i64 [[N]], [[N_VEC]]
+; CHECK-ICELAKE-NEXT:    br i1 [[CMP_N]], [[EXIT1:label %.*]], label %[[EXIT]]
 ; CHECK-ICELAKE:       [[EXIT]]:
-; CHECK-ICELAKE-NEXT:    ret void
 ;
 ; CHECK-ZNVER4-LABEL: define void @compress_store(
 ; CHECK-ZNVER4-SAME: ptr noalias writeonly [[DST:%.*]], ptr readonly [[SRC:%.*]], i32 [[C:%.*]], i64 [[N:%.*]]) #[[ATTR0:[0-9]+]] {
@@ -135,7 +147,7 @@ define void @expand_load(ptr noalias %dst, ptr readonly %src, i32 %c, i64 %n) {
 ; CHECK-V4-NEXT:    [[CONDITIONAL_STEP]] = add i64 [[CONDITIONAL_IV]], [[TMP6]]
 ; CHECK-V4-NEXT:    [[INDEX_NEXT]] = add nuw i64 [[INDEX]], 8
 ; CHECK-V4-NEXT:    [[TMP7:%.*]] = icmp eq i64 [[INDEX_NEXT]], [[N_VEC]]
-; CHECK-V4-NEXT:    br i1 [[TMP7]], label %[[MIDDLE_BLOCK:.*]], label %[[VECTOR_BODY]], !llvm.loop [[LOOP0:![0-9]+]]
+; CHECK-V4-NEXT:    br i1 [[TMP7]], label %[[MIDDLE_BLOCK:.*]], label %[[VECTOR_BODY]], !llvm.loop [[LOOP4:![0-9]+]]
 ; CHECK-V4:       [[MIDDLE_BLOCK]]:
 ; CHECK-V4-NEXT:    [[CMP_N:%.*]] = icmp eq i64 [[N]], [[N_VEC]]
 ; CHECK-V4-NEXT:    br i1 [[CMP_N]], [[EXIT:label %.*]], label %[[SCALAR_PH]]
@@ -166,7 +178,7 @@ define void @expand_load(ptr noalias %dst, ptr readonly %src, i32 %c, i64 %n) {
 ; CHECK-ICELAKE-NEXT:    [[CONDITIONAL_STEP]] = add i64 [[CONDITIONAL_IV]], [[TMP6]]
 ; CHECK-ICELAKE-NEXT:    [[INDEX_NEXT]] = add nuw i64 [[INDEX]], 8
 ; CHECK-ICELAKE-NEXT:    [[TMP7:%.*]] = icmp eq i64 [[INDEX_NEXT]], [[N_VEC]]
-; CHECK-ICELAKE-NEXT:    br i1 [[TMP7]], label %[[MIDDLE_BLOCK:.*]], label %[[VECTOR_BODY]], !llvm.loop [[LOOP0:![0-9]+]]
+; CHECK-ICELAKE-NEXT:    br i1 [[TMP7]], label %[[MIDDLE_BLOCK:.*]], label %[[VECTOR_BODY]], !llvm.loop [[LOOP4:![0-9]+]]
 ; CHECK-ICELAKE:       [[MIDDLE_BLOCK]]:
 ; CHECK-ICELAKE-NEXT:    [[CMP_N:%.*]] = icmp eq i64 [[N]], [[N_VEC]]
 ; CHECK-ICELAKE-NEXT:    br i1 [[CMP_N]], [[EXIT:label %.*]], label %[[SCALAR_PH]]
