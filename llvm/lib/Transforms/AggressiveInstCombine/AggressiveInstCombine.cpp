@@ -312,7 +312,7 @@ static bool foldGuardedFunnelShift(Instruction &I, const DominatorTree &DT) {
                          m_SpecificBB(PhiBB), m_SpecificBB(FunnelBB))))
     return false;
 
-  IRBuilder<> Builder(PhiBB, PhiBB->getFirstInsertionPt());
+  IRBuilder<> Builder(PhiBB->getFirstInsertionPt());
 
   if (ShVal0 == ShVal1)
     ++NumGuardedRotates;
