@@ -2270,7 +2270,8 @@ void SPIRVEmitIntrinsicsImpl::replacePointerOperandWithPtrCast(
   // Emit spv_ptrcast
   SmallVector<Type *, 2> Types = {Pointer->getType(), Pointer->getType()};
   SmallVector<Value *, 2> Args = {Pointer, VMD, B.getInt32(AddressSpace)};
-  auto *PtrCastI = B.CreateIntrinsic(Intrinsic::spv_ptrcast, {Types}, Args);
+  auto *PtrCastI =
+      B.CreateIntrinsicWithoutFolding(Intrinsic::spv_ptrcast, {Types}, Args);
   I->setOperand(OperandToReplace, PtrCastI);
   // We need to set up a pointee type for the newly created spv_ptrcast.
   GR->buildAssignPtr(B, ExpectedElementType, PtrCastI);
@@ -2302,6 +2303,12 @@ void SPIRVEmitIntrinsicsImpl::insertPtrCastOrAssignTypeInstr(Instruction *I,
   if (LoadInst *LI = dyn_cast<LoadInst>(I)) {
     Value *Pointer = LI->getPointerOperand();
     Type *OpTy = LI->getType();
+    // If the loaded from pointer carries byref/byval, the dominant type is the
+    // pointee type specified therein, and we should retain it.
+    if (Argument *Arg;
+        (Arg = dyn_cast<Argument>(Pointer)) && hasPointeeTypeAttr(Arg))
+      OpTy = getPointeeTypeByAttr(Arg);
+
     if (auto *PtrTy = dyn_cast<PointerType>(OpTy)) {
       if (Type *ElemTy = GR->findDeducedElementType(LI)) {
         OpTy = getTypedPointerWrapper(ElemTy, PtrTy->getAddressSpace());
@@ -3725,6 +3732,10 @@ void SPIRVEmitIntrinsicsImpl::emitUnstructuredLoopControls(Function &F,
       continue;
 
     BasicBlock *Header = L->getHeader();
+    // OpLoopMerge must immediately precede an OpBranch or OpBranchConditional.
+    // Switches are already lowered to spv_switch + indirectbr at this point.
+    if (!isa<UncondBrInst, CondBrInst>(Header->getTerminator()))
+      continue;
     B.SetInsertPoint(Header->getTerminator());
     auto *MergeAddress = BlockAddress::get(&F, MergeBlock);
     auto *ContinueAddress = BlockAddress::get(&F, Latch);
