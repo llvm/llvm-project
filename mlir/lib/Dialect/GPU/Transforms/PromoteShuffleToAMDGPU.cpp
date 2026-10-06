@@ -93,7 +93,6 @@ struct PromoteShuffleToPermlanePattern
     return success();
   }
 };
-
 } // namespace
 
 void mlir::populateGpuPromoteShuffleToAMDGPUPatterns(
