@@ -964,7 +964,6 @@ llvm::UnrollLoop(Loop *L, UnrollLoopOptions ULO, LoopInfo *LI,
   BasicBlock *LatchBlock = L->getLoopLatch();
   SmallVector<BasicBlock *, 4> ExitBlocks;
   L->getExitBlocks(ExitBlocks);
-  std::vector<BasicBlock *> OriginalLoopBlocks = L->getBlocks();
 
   const unsigned MaxTripCount = SE->getSmallConstantMaxTripCount(L);
   const bool MaxOrZero = SE->isBackedgeTakenCountMaxOrZero(L);
@@ -1193,6 +1192,10 @@ llvm::UnrollLoop(Loop *L, UnrollLoopOptions ULO, LoopInfo *LI,
   LoopBlocksDFS::RPOIterator BlockEnd = DFS.endRPO();
 
   std::vector<BasicBlock*> UnrolledLoopBlocks = L->getBlocks();
+
+  // Snapshot the blocks to be cloned after remainder generation, which may
+  // delete blocks from L, but before cloning adds new blocks to L.
+  const std::vector<BasicBlock *> OriginalLoopBlocks = L->getBlocks();
 
   // Loop Unrolling might create new loops. While we do preserve LoopInfo, we
   // might break loop-simplified form for these loops (as they, e.g., would
