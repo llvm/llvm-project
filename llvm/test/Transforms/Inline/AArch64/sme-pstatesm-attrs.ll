@@ -676,7 +676,7 @@ define void @streaming_caller_to_nonstreaming_alwaysinline_callee_with_single_st
 define void @invoke_opaque_fptr(ptr %fptr) alwaysinline personality ptr null {
 ; CHECK-LABEL: define void @invoke_opaque_fptr
 ; CHECK-SAME: (ptr [[FPTR:%.*]]) #[[ATTR6]] personality ptr null {
-; CHECK-NEXT:    invoke void [[FPTR]]() #[[ATTR12:[0-9]+]]
+; CHECK-NEXT:    invoke void [[FPTR]]() #[[ATTR13:[0-9]+]]
 ; CHECK-NEXT:            to label [[NORMAL_RETURN:%.*]] unwind label [[UNWIND_CLEANUP:%.*]]
 ; CHECK:       normal_return:
 ; CHECK-NEXT:    ret void
@@ -768,16 +768,6 @@ define ptr @vscale_dependent_op(ptr %p, i64 %k) {
   ret ptr %res
 }
 
-define ptr @incompatible_vscale_dependent_operation_sm(ptr %p) "aarch64_pstate_sm_enabled" {
-; CHECK-LABEL: define ptr @incompatible_vscale_dependent_operation_sm
-; CHECK-SAME: (ptr [[P:%.*]]) #[[ATTR2]] {
-; CHECK-NEXT:    [[RES:%.*]] = call ptr @vscale_dependent_op(ptr [[P]], i64 4)
-; CHECK-NEXT:    ret ptr [[RES]]
-;
-  %res = call ptr @vscale_dependent_op(ptr %p, i64 4)
-  ret ptr %res
-}
-
 define ptr @vscale_dependent_op_vl_dependent_args(ptr %p, i64 %k, <vscale x 4 x i32> %other) {
 ; CHECK-LABEL: define ptr @vscale_dependent_op_vl_dependent_args
 ; CHECK-SAME: (ptr [[P:%.*]], i64 [[K:%.*]], <vscale x 4 x i32> [[OTHER:%.*]]) #[[ATTR1]] {
@@ -790,15 +780,21 @@ define ptr @vscale_dependent_op_vl_dependent_args(ptr %p, i64 %k, <vscale x 4 x 
   ret ptr %res
 }
 
-define ptr @compatible_vscale_dependent_operation_sm(ptr %p) "aarch64_pstate_sm_enabled" {
-; CHECK-LABEL: define ptr @compatible_vscale_dependent_operation_sm
-; CHECK-SAME: (ptr [[P:%.*]]) #[[ATTR2]] {
+define void @vscale_dependent_operations(ptr %p, ptr %res1ptr, ptr %res2ptr) "aarch64_pstate_sm_enabled" {
+; CHECK-LABEL: define void @vscale_dependent_operations
+; CHECK-SAME: (ptr [[P:%.*]], ptr [[RES1PTR:%.*]], ptr [[RES2PTR:%.*]]) #[[ATTR2]] {
+; CHECK-NEXT:    [[RES1:%.*]] = call ptr @vscale_dependent_op(ptr [[P]], i64 4)
 ; CHECK-NEXT:    [[RES_I:%.*]] = getelementptr <vscale x 4 x i32>, ptr [[P]], i64 4
 ; CHECK-NEXT:    store <vscale x 4 x i32> zeroinitializer, ptr [[RES_I]], align 16
-; CHECK-NEXT:    ret ptr [[RES_I]]
+; CHECK-NEXT:    store ptr [[RES1]], ptr [[RES1PTR]], align 8
+; CHECK-NEXT:    store ptr [[RES_I]], ptr [[RES2PTR]], align 8
+; CHECK-NEXT:    ret void
 ;
-  %res = call ptr @vscale_dependent_op_vl_dependent_args(ptr %p, i64 4, <vscale x 4 x i32> zeroinitializer)
-  ret ptr %res
+  %res1 = call ptr @vscale_dependent_op(ptr %p, i64 4)
+  %res2 = call ptr @vscale_dependent_op_vl_dependent_args(ptr %p, i64 4, <vscale x 4 x i32> zeroinitializer)
+  store ptr %res1, ptr %res1ptr
+  store ptr %res2, ptr %res2ptr
+  ret void
 }
 
 ; functions with scalable alloca's shouldn't be inlined if the streaming properties don't match
@@ -838,30 +834,37 @@ define i64 @intrinsic_with_scalable_type(ptr %p) {
   ret i64 %res
 }
 
-define i64 @compatible_sve_intrinsic_caller(ptr %p) {
-; CHECK-LABEL: define i64 @compatible_sve_intrinsic_caller
-; CHECK-SAME: (ptr [[P:%.*]]) #[[ATTR1]] {
-; CHECK-NEXT:    [[LD_I:%.*]] = load <vscale x 2 x i64>, ptr [[P]], align 16
-; CHECK-NEXT:    [[RES_I:%.*]] = call i64 @llvm.vector.reduce.add.nxv2i64(<vscale x 2 x i64> [[LD_I]])
-; CHECK-NEXT:    ret i64 [[RES_I]]
+define i64 @intrinsic_with_scalable_type_vscale_must_match(ptr %p, <vscale x 4 x i32> %unused) {
+; CHECK-LABEL: define i64 @intrinsic_with_scalable_type_vscale_must_match
+; CHECK-SAME: (ptr [[P:%.*]], <vscale x 4 x i32> [[UNUSED:%.*]]) #[[ATTR1]] {
+; CHECK-NEXT:    [[LD:%.*]] = load <vscale x 2 x i64>, ptr [[P]], align 16
+; CHECK-NEXT:    [[RES:%.*]] = call i64 @llvm.vector.reduce.add.nxv2i64(<vscale x 2 x i64> [[LD]])
+; CHECK-NEXT:    ret i64 [[RES]]
 ;
-  %res = call i64 @intrinsic_with_scalable_type(ptr %p)
+  %ld = load <vscale x 2 x i64>, ptr %p
+  %res = call i64 @llvm.vector.reduce.add(<vscale x 2 x i64> %ld)
   ret i64 %res
 }
 
-define i64 @incompatible_sve_intrinsic_caller(ptr %p) "aarch64_pstate_sm_enabled" {
-; CHECK-LABEL: define i64 @incompatible_sve_intrinsic_caller
+define i64 @generic_intrinsic_with_scalable_types(ptr %p) "aarch64_pstate_sm_enabled" {
+; CHECK-LABEL: define i64 @generic_intrinsic_with_scalable_types
 ; CHECK-SAME: (ptr [[P:%.*]]) #[[ATTR2]] {
-; CHECK-NEXT:    [[RES:%.*]] = call i64 @intrinsic_with_scalable_type(ptr [[P]])
+; CHECK-NEXT:    [[RES1:%.*]] = call i64 @intrinsic_with_scalable_type(ptr [[P]])
+; CHECK-NEXT:    [[LD_I:%.*]] = load <vscale x 2 x i64>, ptr [[P]], align 16
+; CHECK-NEXT:    [[RES_I:%.*]] = call i64 @llvm.vector.reduce.add.nxv2i64(<vscale x 2 x i64> [[LD_I]])
+; CHECK-NEXT:    [[RES:%.*]] = add i64 [[RES1]], [[RES_I]]
 ; CHECK-NEXT:    ret i64 [[RES]]
 ;
-  %res = call i64 @intrinsic_with_scalable_type(ptr %p)
+  %res1 = call i64 @intrinsic_with_scalable_type(ptr %p)
+  %res2 = call i64 @intrinsic_with_scalable_type_vscale_must_match(ptr %p, <vscale x 4 x i32> zeroinitializer)
+  %res = add i64 %res1, %res2
   ret i64 %res
 }
 
 ;
 ; Don't inline inline-asm when streaming-modes are incompatible, as the asm may
-; contain vscale-dependent instructions.
+; contain instructions that are invalid or may behave differently in the mode of
+; the caller.
 ;
 
 define void @inline_asm() {
@@ -921,7 +924,7 @@ define i64 @incompatible_current_vg_caller() "aarch64_pstate_sm_enabled" {
 }
 
 ;
-; Don't inline NEON intrinsics into streaming mode.
+; Don't inline NEON intrinsics into a streaming mode functions.
 ;
 
 define i32 @neon_intrinsic(<4 x i32> %in) {
@@ -973,16 +976,6 @@ define void @fixed_length_vector_operation_alwaysinline(ptr %p) alwaysinline {
   ret void
 }
 
-define void @fixed_length_vector_operation_caller_force_inline(ptr %p) "aarch64_pstate_sm_enabled" {
-; CHECK-LABEL: define void @fixed_length_vector_operation_caller_force_inline
-; CHECK-SAME: (ptr [[P:%.*]]) #[[ATTR2]] {
-; CHECK-NEXT:    store <4 x i32> zeroinitializer, ptr [[P]], align 16
-; CHECK-NEXT:    ret void
-;
-  call void @fixed_length_vector_operation_alwaysinline(ptr %p)
-  ret void
-}
-
 define void @fixed_length_vector_operation(ptr %p) {
 ; CHECK-LABEL: define void @fixed_length_vector_operation
 ; CHECK-SAME: (ptr [[P:%.*]]) #[[ATTR1]] {
@@ -993,12 +986,14 @@ define void @fixed_length_vector_operation(ptr %p) {
   ret void
 }
 
-define void @fixed_length_vector_operation_caller_dont_inline(ptr %p) "aarch64_pstate_sm_enabled" {
-; CHECK-LABEL: define void @fixed_length_vector_operation_caller_dont_inline
+define void @fixed_length_vector_operations(ptr %p) "aarch64_pstate_sm_enabled" {
+; CHECK-LABEL: define void @fixed_length_vector_operations
 ; CHECK-SAME: (ptr [[P:%.*]]) #[[ATTR2]] {
+; CHECK-NEXT:    store <4 x i32> zeroinitializer, ptr [[P]], align 16
 ; CHECK-NEXT:    call void @fixed_length_vector_operation(ptr [[P]])
 ; CHECK-NEXT:    ret void
 ;
+  call void @fixed_length_vector_operation_alwaysinline(ptr %p)
   call void @fixed_length_vector_operation(ptr %p)
   ret void
 }
@@ -1026,4 +1021,85 @@ define float @incompatible_fp_environment_sm(float %in) strictfp "aarch64_pstate
 ;
   %res = call float @strict_fp(float %in)
   ret float %res
+}
+
+;
+; Test we can inline fixed-length gather/scatter operations into streaming functions,
+; as those can be scalarized by the code-generator.
+;
+
+define void @scatter_fixed_length(ptr %ptr_to_ptrs, ptr %ptr_to_vals) alwaysinline {
+; CHECK-LABEL: define void @scatter_fixed_length
+; CHECK-SAME: (ptr [[PTR_TO_PTRS:%.*]], ptr [[PTR_TO_VALS:%.*]]) #[[ATTR6]] {
+; CHECK-NEXT:    [[PTRS:%.*]] = load <2 x ptr>, ptr [[PTR_TO_PTRS]], align 16
+; CHECK-NEXT:    [[VALS:%.*]] = load <2 x i64>, ptr [[PTR_TO_VALS]], align 16
+; CHECK-NEXT:    call void @llvm.masked.scatter.v2i64.v2p0(<2 x i64> [[VALS]], <2 x ptr> align 8 [[PTRS]], <2 x i1> splat (i1 true))
+; CHECK-NEXT:    ret void
+;
+  %ptrs = load <2 x ptr>, ptr %ptr_to_ptrs
+  %vals = load <2 x i64>, ptr %ptr_to_vals
+  call void @llvm.masked.scatter(<2 x i64> %vals, <2 x ptr> %ptrs, i32 8, <2 x i1> splat(i1 true))
+  ret void
+}
+
+define void @scatter_fixed_length_caller(ptr %ptr_to_ptrs, ptr %ptr_to_vals) "aarch64_pstate_sm_enabled" {
+; CHECK-LABEL: define void @scatter_fixed_length_caller
+; CHECK-SAME: (ptr [[PTR_TO_PTRS:%.*]], ptr [[PTR_TO_VALS:%.*]]) #[[ATTR2]] {
+; CHECK-NEXT:    [[PTRS_I:%.*]] = load <2 x ptr>, ptr [[PTR_TO_PTRS]], align 16
+; CHECK-NEXT:    [[VALS_I:%.*]] = load <2 x i64>, ptr [[PTR_TO_VALS]], align 16
+; CHECK-NEXT:    call void @llvm.masked.scatter.v2i64.v2p0(<2 x i64> [[VALS_I]], <2 x ptr> align 8 [[PTRS_I]], <2 x i1> splat (i1 true))
+; CHECK-NEXT:    ret void
+;
+  call void @scatter_fixed_length(ptr %ptr_to_ptrs, ptr %ptr_to_vals)
+  ret void
+}
+
+;
+; Test that we never inline a scalable gather/scatter operations into a streaming function.
+;
+
+define void @scatter_scalable_length(<vscale x 2 x ptr> %ptrs, <vscale x 2 x i64> %vals) alwaysinline {
+; CHECK-LABEL: define void @scatter_scalable_length
+; CHECK-SAME: (<vscale x 2 x ptr> [[PTRS:%.*]], <vscale x 2 x i64> [[VALS:%.*]]) #[[ATTR6]] {
+; CHECK-NEXT:    call void @llvm.masked.scatter.nxv2i64.nxv2p0(<vscale x 2 x i64> [[VALS]], <vscale x 2 x ptr> align 8 [[PTRS]], <vscale x 2 x i1> splat (i1 true))
+; CHECK-NEXT:    ret void
+;
+  call void @llvm.masked.scatter(<vscale x 2 x i64> %vals, <vscale x 2 x ptr> %ptrs, i32 8, <vscale x 2 x i1> splat(i1 true))
+  ret void
+}
+
+define void @scatter_scalable_length_caller(<vscale x 2 x ptr> %ptrs, <vscale x 2 x i64> %vals) "aarch64_pstate_sm_enabled" {
+; CHECK-LABEL: define void @scatter_scalable_length_caller
+; CHECK-SAME: (<vscale x 2 x ptr> [[PTRS:%.*]], <vscale x 2 x i64> [[VALS:%.*]]) #[[ATTR2]] {
+; CHECK-NEXT:    call void @scatter_scalable_length(<vscale x 2 x ptr> [[PTRS]], <vscale x 2 x i64> [[VALS]])
+; CHECK-NEXT:    ret void
+;
+  call void @scatter_scalable_length(<vscale x 2 x ptr> %ptrs, <vscale x 2 x i64> %vals)
+  ret void
+}
+
+;
+; Test that we inline a function with a call to llvm.vscale() (which takes/returns
+; no scalable vectors) when the function has vl-dependent arguments. The case for
+; non-vl-dependent arguments is already tested above.
+;
+
+define i64 @llvm_vscale_vl_dependent_args(<vscale x 2 x i64> %in) {
+; CHECK-LABEL: define i64 @llvm_vscale_vl_dependent_args
+; CHECK-SAME: (<vscale x 2 x i64> [[IN:%.*]]) #[[ATTR1]] {
+; CHECK-NEXT:    [[RES:%.*]] = call i64 @llvm.vscale.i64()
+; CHECK-NEXT:    ret i64 [[RES]]
+;
+  %res = call i64 @llvm.vscale.i64()
+  ret i64 %res
+}
+
+define i64 @llvm_vscale_vl_dependent_args_caller() "aarch64_pstate_sm_enabled" {
+; CHECK-LABEL: define i64 @llvm_vscale_vl_dependent_args_caller
+; CHECK-SAME: () #[[ATTR2]] {
+; CHECK-NEXT:    [[RES_I:%.*]] = call i64 @llvm.vscale.i64()
+; CHECK-NEXT:    ret i64 [[RES_I]]
+;
+  %res = call i64 @llvm_vscale_vl_dependent_args(<vscale x 2 x i64> zeroinitializer)
+  ret i64 %res
 }
