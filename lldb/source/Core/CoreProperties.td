@@ -30,7 +30,7 @@ let Definition = "modulelist", Path = "symbols" in {
   def EnableLLDBIndexCache: Property<"enable-lldb-index-cache", "Boolean">,
     Global,
     DefaultFalse,
-    Desc<"Enable caching for debug sessions in LLDB. LLDB can cache data for each module for improved performance in subsequent debug sessions.">;
+    Desc<"Enable caching for debug sessions in LLDB. LLDB can cache data for each module for improved performance in subsequent debug sessions.  Modules read out of memory are cached (enabled by default) via the symbols.enable-lldb-index-cache-memory-modules setting.">;
   def EnableLLDBIndexCacheMemoryModules: Property<"enable-lldb-index-cache-memory-modules", "Boolean">,
     Global,
     DefaultTrue,
