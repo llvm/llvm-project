@@ -13,10 +13,12 @@
 
 #include "hdr/errno_macros.h"
 #include "hdr/sys_socket_macros.h"
+#include "hdr/types/struct_in6_addr.h"
 #include "hdr/types/struct_in_addr.h"
 #include "src/__support/endian_internal.h"
 #include "src/__support/libc_errno.h"
 #include "src/arpa/inet/inet_pton.h"
+#include "src/string/memory_utils/inline_memcmp.h"
 #include "test/UnitTest/ErrnoCheckingTest.h"
 #include "test/UnitTest/Test.h"
 
@@ -87,6 +89,156 @@ TEST_F(LlvmLibcInetPtonTest, StrictPosixLeadingZeros) {
   EXPECT_EQ(0, LIBC_NAMESPACE::inet_pton(AF_INET, "192.168.01.1", &addr));
   EXPECT_EQ(0, LIBC_NAMESPACE::inet_pton(AF_INET, "010.0.0.1", &addr));
   EXPECT_EQ(0, LIBC_NAMESPACE::inet_pton(AF_INET, "00.0.0.0", &addr));
+  ASSERT_ERRNO_SUCCESS();
+}
+
+static bool check_ipv6(const struct in6_addr &addr, uint16_t a, uint16_t b,
+                       uint16_t c, uint16_t d, uint16_t e, uint16_t f,
+                       uint16_t g, uint16_t h) {
+  uint16_t words[8] = {a, b, c, d, e, f, g, h};
+  struct in6_addr expected;
+  for (size_t i = 0; i < 8; ++i)
+    expected.s6_addr16[i] = LIBC_NAMESPACE::Endian::to_big_endian(words[i]);
+  return LIBC_NAMESPACE::inline_memcmp(&addr, &expected,
+                                       sizeof(struct in6_addr)) == 0;
+}
+
+TEST_F(LlvmLibcInetPtonTest, ValidIPv6Addresses) {
+  struct in6_addr addr;
+
+  // Unspecified address
+  EXPECT_EQ(1, LIBC_NAMESPACE::inet_pton(AF_INET6, "::", &addr));
+  EXPECT_TRUE(check_ipv6(addr, 0, 0, 0, 0, 0, 0, 0, 0));
+  ASSERT_ERRNO_SUCCESS();
+
+  // Loopback address
+  EXPECT_EQ(1, LIBC_NAMESPACE::inet_pton(AF_INET6, "::1", &addr));
+  EXPECT_TRUE(check_ipv6(addr, 0, 0, 0, 0, 0, 0, 0, 1));
+  ASSERT_ERRNO_SUCCESS();
+
+  // Full 8 groups without compression
+  EXPECT_EQ(1, LIBC_NAMESPACE::inet_pton(
+                   AF_INET6, "2001:0db8:85a3:0000:0000:8a2e:0370:7334", &addr));
+  EXPECT_TRUE(
+      check_ipv6(addr, 0x2001, 0x0db8, 0x85a3, 0, 0, 0x8a2e, 0x0370, 0x7334));
+  ASSERT_ERRNO_SUCCESS();
+
+  // Full 8 groups with varying digit lengths
+  EXPECT_EQ(1, LIBC_NAMESPACE::inet_pton(
+                   AF_INET6, "2001:db8:85a3:0:0:8a2e:370:7334", &addr));
+  EXPECT_TRUE(
+      check_ipv6(addr, 0x2001, 0x0db8, 0x85a3, 0, 0, 0x8a2e, 0x0370, 0x7334));
+  ASSERT_ERRNO_SUCCESS();
+
+  // Compression at beginning
+  EXPECT_EQ(1, LIBC_NAMESPACE::inet_pton(AF_INET6, "::1234", &addr));
+  EXPECT_TRUE(check_ipv6(addr, 0, 0, 0, 0, 0, 0, 0, 0x1234));
+  ASSERT_ERRNO_SUCCESS();
+
+  // Compression at end
+  EXPECT_EQ(1, LIBC_NAMESPACE::inet_pton(AF_INET6, "fe80::", &addr));
+  EXPECT_TRUE(check_ipv6(addr, 0xfe80, 0, 0, 0, 0, 0, 0, 0));
+  ASSERT_ERRNO_SUCCESS();
+
+  // Compression in middle
+  EXPECT_EQ(1, LIBC_NAMESPACE::inet_pton(AF_INET6, "2001:db8::1", &addr));
+  EXPECT_TRUE(check_ipv6(addr, 0x2001, 0x0db8, 0, 0, 0, 0, 0, 1));
+  ASSERT_ERRNO_SUCCESS();
+
+  // Multiple words before and after compression
+  EXPECT_EQ(1, LIBC_NAMESPACE::inet_pton(
+                   AF_INET6, "2001:db8:85a3::8a2e:370:7334", &addr));
+  EXPECT_TRUE(
+      check_ipv6(addr, 0x2001, 0x0db8, 0x85a3, 0, 0, 0x8a2e, 0x0370, 0x7334));
+  ASSERT_ERRNO_SUCCESS();
+
+  // Case insensitivity
+  EXPECT_EQ(1, LIBC_NAMESPACE::inet_pton(AF_INET6, "2001:Db8::AbCd", &addr));
+  EXPECT_TRUE(check_ipv6(addr, 0x2001, 0x0db8, 0, 0, 0, 0, 0, 0xabcd));
+  ASSERT_ERRNO_SUCCESS();
+}
+
+TEST_F(LlvmLibcInetPtonTest, ValidIPv4MappedIPv6Addresses) {
+  struct in6_addr addr;
+
+  // Standard IPv4-mapped address ::ffff:192.168.1.1
+  EXPECT_EQ(1,
+            LIBC_NAMESPACE::inet_pton(AF_INET6, "::ffff:192.168.1.1", &addr));
+  EXPECT_TRUE(check_ipv6(addr, 0, 0, 0, 0, 0, 0xffff, 0xc0a8, 0x0101));
+  ASSERT_ERRNO_SUCCESS();
+
+  // IPv4-compatible address ::192.168.1.1
+  EXPECT_EQ(1, LIBC_NAMESPACE::inet_pton(AF_INET6, "::192.168.1.1", &addr));
+  EXPECT_TRUE(check_ipv6(addr, 0, 0, 0, 0, 0, 0, 0xc0a8, 0x0101));
+  ASSERT_ERRNO_SUCCESS();
+
+  // Mixed prefix with compression: 2001:db8::192.168.1.1
+  EXPECT_EQ(
+      1, LIBC_NAMESPACE::inet_pton(AF_INET6, "2001:db8::192.168.1.1", &addr));
+  EXPECT_TRUE(check_ipv6(addr, 0x2001, 0x0db8, 0, 0, 0, 0, 0xc0a8, 0x0101));
+  ASSERT_ERRNO_SUCCESS();
+
+  // Full 6 words without compression followed by IPv4
+  EXPECT_EQ(
+      1, LIBC_NAMESPACE::inet_pton(AF_INET6, "0:0:0:0:0:0:192.168.1.1", &addr));
+  EXPECT_TRUE(check_ipv6(addr, 0, 0, 0, 0, 0, 0, 0xc0a8, 0x0101));
+  ASSERT_ERRNO_SUCCESS();
+}
+
+TEST_F(LlvmLibcInetPtonTest, InvalidIPv6Formats) {
+  struct in6_addr addr;
+
+  // Empty string
+  EXPECT_EQ(0, LIBC_NAMESPACE::inet_pton(AF_INET6, "", &addr));
+
+  // Colon misuse
+  EXPECT_EQ(0, LIBC_NAMESPACE::inet_pton(AF_INET6, ":", &addr));
+  EXPECT_EQ(0, LIBC_NAMESPACE::inet_pton(AF_INET6, ":::", &addr));
+  EXPECT_EQ(0, LIBC_NAMESPACE::inet_pton(AF_INET6, ":1:2:3:4:5:6:7:8", &addr));
+  EXPECT_EQ(0, LIBC_NAMESPACE::inet_pton(AF_INET6, "1:2:3:4:5:6:7:8:", &addr));
+  EXPECT_EQ(0, LIBC_NAMESPACE::inet_pton(AF_INET6, "1::2:", &addr));
+  EXPECT_EQ(0, LIBC_NAMESPACE::inet_pton(AF_INET6, "1::2::3", &addr));
+
+  // Word count errors
+  EXPECT_EQ(0, LIBC_NAMESPACE::inet_pton(AF_INET6, "1:2:3:4:5:6:7:8:9", &addr));
+  EXPECT_EQ(0, LIBC_NAMESPACE::inet_pton(AF_INET6, "1:2:3:4::5:6:7:8", &addr));
+  EXPECT_EQ(0, LIBC_NAMESPACE::inet_pton(AF_INET6, "1:2:3:4:5:6:7", &addr));
+
+  // Field overflow (> 4 hex digits)
+  EXPECT_EQ(0, LIBC_NAMESPACE::inet_pton(AF_INET6, "12345::1", &addr));
+  EXPECT_EQ(0, LIBC_NAMESPACE::inet_pton(AF_INET6, "00000::1", &addr));
+
+  // Non-hex characters
+  EXPECT_EQ(0, LIBC_NAMESPACE::inet_pton(AF_INET6, "2001:xyz::1", &addr));
+  EXPECT_EQ(0, LIBC_NAMESPACE::inet_pton(AF_INET6, "fe80::1%eth0", &addr));
+
+  // Plain IPv4 without ::
+  EXPECT_EQ(0, LIBC_NAMESPACE::inet_pton(AF_INET6, "192.168.1.1", &addr));
+
+  // Embedded IPv4 errors
+  EXPECT_EQ(0, LIBC_NAMESPACE::inet_pton(AF_INET6, "::ffff:192.168.1", &addr));
+  EXPECT_EQ(0,
+            LIBC_NAMESPACE::inet_pton(AF_INET6, "::ffff:192.168.1.256", &addr));
+  EXPECT_EQ(0,
+            LIBC_NAMESPACE::inet_pton(AF_INET6, "::ffff:192.168.1.1:", &addr));
+  EXPECT_EQ(0,
+            LIBC_NAMESPACE::inet_pton(AF_INET6, "::ffff:192.168.01.1", &addr));
+  EXPECT_EQ(0, LIBC_NAMESPACE::inet_pton(AF_INET6, "1:2:3:4:5:6:7:192.168.1.1",
+                                         &addr));
+  EXPECT_EQ(0, LIBC_NAMESPACE::inet_pton(AF_INET6, "1:2:3:4:5:6::192.168.1.1",
+                                         &addr));
+  EXPECT_EQ(0, LIBC_NAMESPACE::inet_pton(AF_INET6, "1::2.3.4.5:6", &addr));
+  EXPECT_EQ(0, LIBC_NAMESPACE::inet_pton(AF_INET6, "1:2.3.4.5:6", &addr));
+
+  // Hex prefixes and signs
+  EXPECT_EQ(0, LIBC_NAMESPACE::inet_pton(AF_INET6, "0x1234::", &addr));
+  EXPECT_EQ(0, LIBC_NAMESPACE::inet_pton(AF_INET6, "+1234::", &addr));
+  EXPECT_EQ(0, LIBC_NAMESPACE::inet_pton(AF_INET6, "-1234::", &addr));
+  EXPECT_EQ(0, LIBC_NAMESPACE::inet_pton(AF_INET6, "1234g::", &addr));
+
+  // Whitespace
+  EXPECT_EQ(0, LIBC_NAMESPACE::inet_pton(AF_INET6, " ::1", &addr));
+  EXPECT_EQ(0, LIBC_NAMESPACE::inet_pton(AF_INET6, "::1 ", &addr));
   ASSERT_ERRNO_SUCCESS();
 }
 
