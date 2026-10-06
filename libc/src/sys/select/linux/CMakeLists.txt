@@ -6,12 +6,27 @@ add_entrypoint_object(
     ../select.h
   DEPENDS
     libc.hdr.types.fd_set
-    libc.hdr.types.sigset_t
-    libc.hdr.types.size_t
     libc.hdr.types.struct_timespec
     libc.hdr.types.struct_timeval
-    libc.include.sys_syscall
     libc.src.__support.CPP.limits
-    libc.src.__support.OSUtil.osutil
-    libc.src.errno.errno
+    libc.src.__support.OSUtil.linux.syscall_wrappers.pselect6
+    libc.src.__support.common
+    libc.src.__support.libc_errno
+    libc.src.__support.macros.config
+)
+
+add_entrypoint_object(
+  pselect
+  SRCS
+    pselect.cpp
+  HDRS
+    ../pselect.h
+  DEPENDS
+    libc.hdr.types.fd_set
+    libc.hdr.types.sigset_t
+    libc.hdr.types.struct_timespec
+    libc.src.__support.OSUtil.linux.syscall_wrappers.pselect6
+    libc.src.__support.common
+    libc.src.__support.libc_errno
+    libc.src.__support.macros.config
 )

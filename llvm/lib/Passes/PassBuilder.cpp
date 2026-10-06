@@ -314,6 +314,8 @@
 #include "llvm/Transforms/Scalar/FlattenCFG.h"
 #include "llvm/Transforms/Scalar/Float2Int.h"
 #include "llvm/Transforms/Scalar/GVN.h"
+#include "llvm/Transforms/Scalar/GVNHoist.h"
+#include "llvm/Transforms/Scalar/GVNSink.h"
 #include "llvm/Transforms/Scalar/GuardWidening.h"
 #include "llvm/Transforms/Scalar/IVUsersPrinter.h"
 #include "llvm/Transforms/Scalar/IndVarSimplify.h"
@@ -1615,11 +1617,6 @@ parseStructuralHashPrinterPassOptions(StringRef Params) {
   return make_error<StringError>(
       formatv("invalid structural hash printer parameter '{}'", Params).str(),
       inconvertibleErrorCode());
-}
-
-Expected<bool> parseWinEHPrepareOptions(StringRef Params) {
-  return PassBuilder::parseSinglePassOption(Params, "demote-catchswitch-only",
-                                            "WinEHPreparePass");
 }
 
 Expected<GlobalMergeOptions> parseGlobalMergeOptions(StringRef Params) {

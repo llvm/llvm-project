@@ -846,7 +846,14 @@ bool AMDGPUTargetLowering::shouldReduceLoadWidth(
   unsigned AS = MN->getAddressSpace();
   // Do not shrink an aligned scalar load to sub-dword.
   // Scalar engine cannot do sub-dword loads.
-  // TODO: Update this for GFX12 which does have scalar sub-dword loads.
+  // Do not enable for gfx1250+ even though it has sub-dword loads because
+  // this will convert:
+  //   i16 = trunc (zextload i16->i32)
+  // to:
+  //   i16 = (load i16)
+  // This transformation will be reversed by LowerLOAD resulting in an infinite
+  // loop. Also, tablegen already has a pattern to match zextload i16->i32, but
+  // load i16 will not be matched since there is no instruction that does it.
   if (OldSize >= 32 && NewSize < 32 && MN->getAlign() >= Align(4) &&
       (AS == AMDGPUAS::CONSTANT_ADDRESS ||
        AS == AMDGPUAS::CONSTANT_ADDRESS_32BIT ||
@@ -4087,22 +4094,25 @@ static SDValue simplifyMul24(SDNode *Node24,
 
   APInt Demanded = APInt::getLowBitsSet(LHS.getValueSizeInBits(), 24);
 
-  // First try to simplify using SimplifyMultipleUseDemandedBits which allows
-  // the operands to have other uses, but will only perform simplifications that
-  // involve bypassing some nodes for this user.
+  if (isNullConstant(LHS) || isNullConstant(RHS))
+    return DAG.getConstant(0, SDLoc(Node24), Node24->getValueType(0));
+
+  // First try SimplifyDemandedBits which can simplify the nodes used by our
+  // operands if this node is the only user.
+  if (LHS.hasOneUse() && TLI.SimplifyDemandedBits(LHS, Demanded, DCI))
+    return SDValue(Node24, 0);
+  if (RHS.hasOneUse() && TLI.SimplifyDemandedBits(RHS, Demanded, DCI))
+    return SDValue(Node24, 0);
+
+  // Then try SimplifyMultipleUseDemandedBits which allows the operands to have
+  // other uses, but will only perform simplifications that involve bypassing
+  // some nodes for this user.
   SDValue DemandedLHS = TLI.SimplifyMultipleUseDemandedBits(LHS, Demanded, DAG);
   SDValue DemandedRHS = TLI.SimplifyMultipleUseDemandedBits(RHS, Demanded, DAG);
   if (DemandedLHS || DemandedRHS)
     return DAG.getNode(NewOpcode, SDLoc(Node24), Node24->getVTList(),
                        DemandedLHS ? DemandedLHS : LHS,
                        DemandedRHS ? DemandedRHS : RHS);
-
-  // Now try SimplifyDemandedBits which can simplify the nodes used by our
-  // operands if this node is the only user.
-  if (TLI.SimplifyDemandedBits(LHS, Demanded, DCI))
-    return SDValue(Node24, 0);
-  if (TLI.SimplifyDemandedBits(RHS, Demanded, DCI))
-    return SDValue(Node24, 0);
 
   return SDValue();
 }
@@ -6222,6 +6232,11 @@ void AMDGPUTargetLowering::computeKnownBitsForTargetNode(
       Known.Zero.setHighBits(llvm::countl_zero(MaxValue));
       break;
     }
+    case Intrinsic::amdgcn_readfirstlane:
+    case Intrinsic::amdgcn_readlane:
+      // Result is the data operand's value from some lane.
+      Known = DAG.computeKnownBits(Op.getOperand(1), DemandedElts, Depth + 1);
+      break;
     default:
       break;
     }

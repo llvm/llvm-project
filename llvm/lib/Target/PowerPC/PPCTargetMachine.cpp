@@ -154,7 +154,7 @@ static std::string computeFSAdditions(StringRef FS, CodeGenOptLevel OL,
   std::string FullFS = std::string(FS);
 
   // Make sure 64-bit features are available when CPUname is generic
-  if (TT.getArch() == Triple::ppc64 || TT.getArch() == Triple::ppc64le) {
+  if (TT.isPPC64()) {
     if (!FullFS.empty())
       FullFS = "+64bit," + FullFS;
     else
@@ -297,10 +297,8 @@ PPCTargetMachine::PPCTargetMachine(const Target &T, const Triple &TT,
                                    std::optional<Reloc::Model> RM,
                                    std::optional<CodeModel::Model> CM,
                                    CodeGenOptLevel OL, bool JIT)
-    : CodeGenTargetMachineImpl(T,
-                               TT.computeDataLayout(Options.MCOptions.ABIName),
-                               TT, CPU, computeFSAdditions(FS, OL, TT), Options,
-                               getEffectiveRelocModel(TT, RM),
+    : CodeGenTargetMachineImpl(T, TT, CPU, computeFSAdditions(FS, OL, TT),
+                               Options, getEffectiveRelocModel(TT, RM),
                                getEffectivePPCCodeModel(TT, CM, JIT), OL),
       TLOF(createTLOF(getTargetTriple())),
       Endianness(TT.isLittleEndian() ? Endian::LITTLE : Endian::BIG) {
