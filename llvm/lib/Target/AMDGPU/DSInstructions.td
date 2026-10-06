@@ -1887,18 +1887,14 @@ class DS_Real_Base_vi <bits<8> op, DS_Pseudo ps> :
 
 
 multiclass DS_Real_vi <bits<8> op, DS_Pseudo base_pseudo, bit need_gfx9_suffix = true> {
-  // When a GFX9 variant exists, restrict the base variant to GFX8 only to
-  // avoid assembler ambiguity.
-  if !not(need_gfx9_suffix) then {
-    def "" : DS_Real_Base_vi<op, base_pseudo>;
-  }
+  def "" : DS_Real_Base_vi<op, base_pseudo>;
+
+  // The GFX9 variant only differs from the base one in not reading M0, which
+  // is invisible at the MC level, so keep it out of the assembler and
+  // disassembler to avoid ambiguity.
   if need_gfx9_suffix then {
-    def "" : DS_Real_Base_vi<op, base_pseudo> {
-      let AssemblerPredicate = isGFX8Only;
-    }
     def _gfx9 : DS_Real_Base_vi<op, !cast<DS_Pseudo>(!cast<string>(base_pseudo)#"_gfx9")> {
-      let AssemblerPredicate = isGFX9Only;
-      let DecoderNamespace = "GFX9";
+      let isCodeGenOnly = 1;
     }
   }
 
