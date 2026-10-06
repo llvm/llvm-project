@@ -318,10 +318,10 @@ GotSection::GotSection()
 
 void macho::addNonLazyBindingEntries(const Symbol *sym,
                                      const InputSection *isec, uint64_t offset,
-                                     int64_t addend) {
+                                     int64_t addend, bool forceOutlineAuth) {
   if (config->emitChainedFixups) {
     if (needsBinding(sym))
-      in.chainedFixups->addBinding(sym, isec, offset, addend);
+      in.chainedFixups->addBinding(sym, isec, offset, addend, forceOutlineAuth);
     else if (isa<Defined>(sym))
       in.chainedFixups->addRebase(isec, offset);
     else
@@ -368,8 +368,24 @@ static void reportUnencodableRebase(const uint8_t *buf, bool isAddress,
         utohexstr(value) + ") cannot fit in fixup at " + loc);
 }
 
-static void writeArm64eChainedRebase(uint8_t *buf, uint64_t targetVA) {
+static void writeArm64eChainedRebase(uint8_t *buf, uint64_t targetVA,
+                                     const AuthInfo *auth) {
   uint64_t imageBase = in.header->addr;
+  if (auth) {
+    auto *rebase = reinterpret_cast<dyld_chained_ptr_arm64e_auth_rebase *>(buf);
+    uint64_t runtimeOffset = targetVA - imageBase;
+    if (!isUInt<32>(runtimeOffset))
+      reportUnencodableRebase(buf, /*isAddress=*/false, runtimeOffset);
+    rebase->target = runtimeOffset;
+    rebase->diversity = auth->diversity;
+    rebase->addrDiv = auth->addrDiv;
+    rebase->key = auth->key;
+    rebase->next = 0;
+    rebase->bind = 0;
+    rebase->auth = 1;
+    return;
+  }
+
   // USERLAND24 rebases hold an offset from the image base, ARM64E rebases an
   // address.
   uint64_t targetValue =
@@ -393,11 +409,12 @@ static void writeArm64eChainedRebase(uint8_t *buf, uint64_t targetVA) {
                             targetValue);
 }
 
-void macho::writeChainedRebase(uint8_t *buf, uint64_t targetVA) {
+void macho::writeChainedRebase(uint8_t *buf, uint64_t targetVA,
+                               const AuthInfo *auth) {
   assert(config->emitChainedFixups);
   assert(target->wordSize == 8 && "Only 64-bit platforms are supported");
   if (config->arch() == AK_arm64e) {
-    writeArm64eChainedRebase(buf, targetVA);
+    writeArm64eChainedRebase(buf, targetVA, auth);
     return;
   }
   auto *rebase = reinterpret_cast<dyld_chained_ptr_64_rebase *>(buf);
@@ -429,12 +446,38 @@ static void writeArm64eChainedBind(uint8_t *buf, const Symbol *sym,
   bind->auth = 0;
 }
 
-static void writeChainedBind(uint8_t *buf, const Symbol *sym, int64_t addend) {
+// AuthBind is dyld_chained_ptr_arm64e_auth_bind or
+// dyld_chained_ptr_arm64e_auth_bind24, neither of which has room for an
+// addend.
+template <class AuthBind>
+static void writeArm64eChainedAuthBind(uint8_t *buf, const Symbol *sym,
+                                       int64_t addend, const AuthInfo &auth) {
+  auto *bind = reinterpret_cast<AuthBind *>(buf);
+  bind->ordinal =
+      in.chainedFixups->getBinding(sym, addend, /*forceOutline=*/true).first;
+  bind->zero = 0;
+  bind->diversity = auth.diversity;
+  bind->addrDiv = auth.addrDiv;
+  bind->key = auth.key;
+  bind->next = 0;
+  bind->bind = 1;
+  bind->auth = 1;
+}
+
+static void writeChainedBind(uint8_t *buf, const Symbol *sym, int64_t addend,
+                             const AuthInfo *auth) {
   assert(config->emitChainedFixups);
   assert(target->wordSize == 8 && "Only 64-bit platforms are supported");
   if (config->arch() == AK_arm64e) {
-    if (config->chainedFixupsPointerFormat ==
-        DYLD_CHAINED_PTR_ARM64E_USERLAND24)
+    bool isUserland24 = config->chainedFixupsPointerFormat ==
+                        DYLD_CHAINED_PTR_ARM64E_USERLAND24;
+    if (auth && isUserland24)
+      writeArm64eChainedAuthBind<dyld_chained_ptr_arm64e_auth_bind24>(
+          buf, sym, addend, *auth);
+    else if (auth)
+      writeArm64eChainedAuthBind<dyld_chained_ptr_arm64e_auth_bind>(
+          buf, sym, addend, *auth);
+    else if (isUserland24)
       writeArm64eChainedBind<dyld_chained_ptr_arm64e_bind24>(buf, sym, addend);
     else
       writeArm64eChainedBind<dyld_chained_ptr_arm64e_bind>(buf, sym, addend);
@@ -449,11 +492,12 @@ static void writeChainedBind(uint8_t *buf, const Symbol *sym, int64_t addend) {
   bind->bind = 1;
 }
 
-void macho::writeChainedFixup(uint8_t *buf, const Symbol *sym, int64_t addend) {
+void macho::writeChainedFixup(uint8_t *buf, const Symbol *sym, int64_t addend,
+                              const AuthInfo *auth) {
   if (needsBinding(sym))
-    writeChainedBind(buf, sym, addend);
+    writeChainedBind(buf, sym, addend, auth);
   else
-    writeChainedRebase(buf, sym->getVA() + addend);
+    writeChainedRebase(buf, sym->getVA() + addend, auth);
 }
 
 void GotSection::writeTo(uint8_t *buf) const {
@@ -2438,9 +2482,10 @@ bool ChainedFixupsSection::isNeeded() const {
 
 void ChainedFixupsSection::addBinding(const Symbol *sym,
                                       const InputSection *isec, uint64_t offset,
-                                      int64_t addend) {
+                                      int64_t addend, bool forceOutline) {
   locations.emplace_back(isec, offset);
-  int64_t outlineAddend = (addend < 0 || addend > 0xFF) ? addend : 0;
+  int64_t outlineAddend =
+      (forceOutline || addend < 0 || addend > 0xFF) ? addend : 0;
   auto [it, inserted] = bindings.insert(
       {{sym, outlineAddend}, static_cast<uint32_t>(bindings.size())});
 
@@ -2455,8 +2500,10 @@ void ChainedFixupsSection::addBinding(const Symbol *sym,
 }
 
 std::pair<uint32_t, uint8_t>
-ChainedFixupsSection::getBinding(const Symbol *sym, int64_t addend) const {
-  int64_t outlineAddend = (addend < 0 || addend > 0xFF) ? addend : 0;
+ChainedFixupsSection::getBinding(const Symbol *sym, int64_t addend,
+                                 bool forceOutline) const {
+  int64_t outlineAddend =
+      (forceOutline || addend < 0 || addend > 0xFF) ? addend : 0;
   auto it = bindings.find({sym, outlineAddend});
   assert(it != bindings.end() && "binding not found in the imports table");
   if (outlineAddend == 0)
