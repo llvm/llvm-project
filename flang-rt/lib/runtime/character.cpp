@@ -155,6 +155,11 @@ static RT_API_ATTRS void Adjust(CHAR *to, const CHAR *from, std::size_t chars) {
   }
 }
 
+#if defined(__GNUC__)
+#pragma GCC diagnostic push
+#pragma GCC diagnostic ignored "-Wmaybe-uninitialized"
+#endif
+
 template <typename CHAR, bool ADJUSTR>
 static RT_API_ATTRS void AdjustLRHelper(Descriptor &result,
     const Descriptor &string, const Terminator &terminator) {
@@ -182,6 +187,10 @@ static RT_API_ATTRS void AdjustLRHelper(Descriptor &result,
         string.Element<const CHAR>(stringAt), elementBytes >> shift<CHAR>);
   }
 }
+
+#if defined(__GNUC__)
+#pragma GCC diagnostic pop
+#endif
 
 template <bool ADJUSTR>
 RT_API_ATTRS void AdjustLR(Descriptor &result, const Descriptor &string,
@@ -211,6 +220,11 @@ inline RT_API_ATTRS std::size_t LenTrim(const CHAR *x, std::size_t chars) {
   return chars;
 }
 
+#if defined(__GNUC__)
+#pragma GCC diagnostic push
+#pragma GCC diagnostic ignored "-Wmaybe-uninitialized"
+#endif
+
 template <typename INT, typename CHAR>
 static RT_API_ATTRS void LenTrim(Descriptor &result, const Descriptor &string,
     const Terminator &terminator) {
@@ -237,6 +251,10 @@ static RT_API_ATTRS void LenTrim(Descriptor &result, const Descriptor &string,
         LenTrim(string.Element<CHAR>(stringAt), stringElementChars);
   }
 }
+
+#if defined(__GNUC__)
+#pragma GCC diagnostic pop
+#endif
 
 template <typename CHAR>
 static RT_API_ATTRS void LenTrimKind(Descriptor &result,
