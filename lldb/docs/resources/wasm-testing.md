@@ -1,9 +1,10 @@
-# Testing LLDB with WebAssembly
+# Debugging and Testing LLDB with WebAssembly
 
-The LLDB API test suite can compile its test programs to WebAssembly and debug
-them through a standalone Wasm runtime. The runtime executes the module and
-serves a GDB remote stub. LLDB's `wasm` platform launches the runtime, picks a
-free TCP port and connects to the stub on it.
+LLDB debugs WebAssembly through a standalone Wasm runtime. The runtime executes
+the module and serves a GDB remote stub. LLDB's `wasm` platform launches the
+runtime, picks a free TCP port and connects to the stub on it. The LLDB API test
+suite uses the same setup to compile its test programs to WebAssembly and run
+them.
 
 This page covers configuring LLDB and the `wasm` platform. For building a
 runtime, see the runtime's own documentation.
@@ -31,19 +32,14 @@ things supplied:
 - The wasm `compiler-rt` builtins, through `LLDB_TEST_RESOURCE_DIR` pointed at
   the wasi-sdk's clang resource directory.
 
-Either compiler needs the WASI sysroot, through `LLDB_TEST_SYSROOT`.
+Both compilers need the WASI sysroot, passed as `LLDB_TEST_SYSROOT`.
 
 ## Configuring the platform
 
-The `wasm` platform is selected with `--platform-name wasm`. Four global
-settings describe how to invoke the runtime:
-
-| Setting | Meaning |
-| --- | --- |
-| `platform.plugin.wasm.runtime-path` | Path to the runtime binary. A name without a directory separator is looked up in `PATH`. |
-| `platform.plugin.wasm.port-arg` | Argument carrying the GDB remote port. LLDB concatenates the port it chose. |
-| `platform.plugin.wasm.env-arg` | Argument forwarding one environment variable. LLDB concatenates a `key=value` pair, once per variable in the inferior's environment. When empty, no environment is forwarded. |
-| `platform.plugin.wasm.runtime-args` | Extra arguments for the runtime. They precede the port argument. |
+The `wasm` platform is selected with `--platform-name wasm`. The global
+[`platform.plugin.wasm`](/use/settings.md#wasm) settings `runtime-path`,
+`port-arg`, `env-arg` and `runtime-args` describe how to invoke the runtime.
+`env-arg` is optional. Set it to forward the inferior's environment.
 
 LLDB assembles the runtime's command line as:
 
@@ -53,7 +49,8 @@ LLDB assembles the runtime's command line as:
 
 `runtime-args` precedes the port argument, so a runtime that dispatches on a
 leading subcommand names that subcommand there. `port-arg` has to carry the port
-in a single argument, because LLDB concatenates the two.
+in a single argument, because LLDB concatenates the two. `env-arg` is repeated
+once per environment variable, for example `--env=A=1 --env=B=2`.
 
 A runtime's diagnostics share the inferior's standard error, so a verbose
 runtime breaks tests that match program output. Use its quietest logging.
@@ -90,8 +87,11 @@ settings set -- platform.plugin.wasm.env-arg --env=
 ```
 
 :::{note}
-WasmKit's debugger support is behind a package trait. The stub is only served by
-a CLI built with that trait enabled.
+WasmKit's debugger support is behind the `WasmDebuggingSupport` package trait.
+A CLI built without it rejects `--debugger-port` as an unknown option. Build
+with
+`swift build -c release --product wasmkit-cli --traits WasmDebuggingSupport`,
+adding whichever other traits you need.
 :::
 
 ## Running the test suite
@@ -113,5 +113,7 @@ easier if you keep the build configured for the host. There `-C`, `--sysroot`
 and `--resource-dir` replace the three CMake variables. Also pass a separate
 `--build-dir` so Wasm and host inferiors do not share an output directory.
 
-Only the API tests build their inferiors, so this configuration does not affect
-`check-lldb-shell` or `check-lldb-unit`.
+The triple, platform and runtime settings reach only the API tests, so
+`check-lldb-unit` is unaffected and `check-lldb-shell` still builds for the
+host. `LLDB_TEST_SYSROOT` is the exception, since the shell tests also read it
+as their host sysroot. Keep the Wasm sysroot out of a build that runs them.
