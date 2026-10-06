@@ -4042,6 +4042,8 @@ def Weak : InheritableAttr {
   let SimpleHandler = 1;
 }
 
+def : MutualExclusions<[IFunc, Weak]>;
+
 def WeakImport : InheritableAttr {
   let Spellings = [Clang<"weak_import">];
   let Documentation = [Undocumented];
