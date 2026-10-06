@@ -161,6 +161,30 @@ public:
   /// converted result in MFB.
   static bool isValidModFlagBehavior(Metadata *MD, ModFlagBehavior &MFB);
 
+  /// Flags describing the properties of a section declared via the
+  /// `llvm.raw.sections` named metadata. Targets map these onto
+  /// format-specific section flags.
+  enum RawSectionFlags {
+    /// The section occupies memory at load time.
+    RawSectionAlloc = 1 << 0,
+
+    /// The section is writable at runtime. Requires RawSectionAlloc.
+    RawSectionWrite = 1 << 1,
+
+    /// The section is executable. Requires RawSectionAlloc.
+    RawSectionExec = 1 << 2,
+
+    /// The section is excluded from the final link. Must not be combined
+    /// with any other flag.
+    RawSectionExclude = 1 << 3,
+
+    RawSectionFlagsMask = RawSectionAlloc | RawSectionWrite | RawSectionExec |
+        RawSectionExclude
+  };
+
+  /// Checks whether \p Flags is a valid combination of RawSectionFlags.
+  static bool isValidRawSectionFlags(uint64_t Flags);
+
   struct ModuleFlagEntry {
     ModFlagBehavior Behavior;
     MDString *Key;
