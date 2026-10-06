@@ -2927,6 +2927,9 @@ genEnumOrdinalStep(fir::FirOpBuilder &builder, mlir::Location loc,
 // NEXT/PREVIOUS of an F2023 enumeration type. STAT is an elemental INTENT(OUT)
 // argument, and a boundary without STAT is an error stop, so array calls are
 // ordered loops performing these side effects element by element.
+// NOTE: STAT is listed as "scalar", but also as INTENT(OUT) and is in an
+// elemental function.  Taking them together, this means that, by
+// F2023 15.9.1 ¶4, it should be a conforming argument to A.
 class EnumerationStepCallBuilder
     : public ElementalCallBuilder<EnumerationStepCallBuilder> {
 public:
