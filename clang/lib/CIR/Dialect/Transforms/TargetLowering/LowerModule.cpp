@@ -114,6 +114,12 @@ std::unique_ptr<LowerModule> createLowerModule(mlir::ModuleOp module) {
     langOpts.setClangABICompat(static_cast<clang::LangOptions::ClangABI>(
         loweringLangOpts.getClangAbiCompat()));
   }
+  // Some langopts are still not lowered.
+  assert(!cir::MissingFeatures::lowerModuleLangOpts());
+
+  if (auto cxxABI = module->getAttrOfType<mlir::StringAttr>(
+          cir::CIRDialect::getCXXABIAttrName()))
+    langOpts.CXXABI = clang::TargetCXXABI::getKind(cxxABI.getValue());
 
   // FIXME(cir): This just uses the default code generation options. We need to
   // account for custom options.

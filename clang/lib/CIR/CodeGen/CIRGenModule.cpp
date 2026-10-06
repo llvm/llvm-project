@@ -159,6 +159,13 @@ CIRGenModule::CIRGenModule(mlir::MLIRContext &mlirContext,
                      builder.getStringAttr(getTriple().str()));
   theModule->setAttr(cir::CIRDialect::getTargetABIAttrName(),
                      builder.getStringAttr(getTarget().getABI()));
+
+  // If cxxabi was overridden via -fc++-abi, record it.
+  if (langOpts.CXXABI)
+    theModule->setAttr(
+        cir::CIRDialect::getCXXABIAttrName(),
+        builder.getStringAttr(TargetCXXABI::getSpelling(*langOpts.CXXABI)));
+
   if (llvm::VersionTuple sdkVersion = getTarget().getSDKVersion();
       !sdkVersion.empty())
     theModule->setAttr(cir::CIRDialect::getSDKVersionAttrName(),

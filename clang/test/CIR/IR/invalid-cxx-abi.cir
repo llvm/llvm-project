@@ -1,0 +1,20 @@
+// RUN: cir-opt %s -verify-diagnostics -split-input-file
+
+// expected-error@+1 {{unknown C++ ABI 'bla'}}
+module attributes {cir.cxx_abi = "bla"} {
+}
+
+// -----
+
+// expected-error@+1 {{'builtin.module' op expects 'cir.cxx_abi' to be a string}}
+module attributes {cir.cxx_abi = 1 : i32} {
+}
+
+// -----
+
+module {
+  // expected-error@+1 {{'cir.func' op expects 'cir.cxx_abi' attribute to be attached to 'builtin.module'}}
+  cir.func @f() attributes {cir.cxx_abi = "itanium"} {
+    cir.return
+  }
+}

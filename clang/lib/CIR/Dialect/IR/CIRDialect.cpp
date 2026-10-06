@@ -28,6 +28,7 @@
 
 #include "clang/CIR/Dialect/IR/CIROpsDialect.cpp.inc"
 #include "clang/CIR/Dialect/IR/CIROpsEnums.cpp.inc"
+#include "clang/Basic/TargetCXXABI.h"
 #include "clang/CIR/MissingFeatures.h"
 #include "llvm/ADT/SetOperations.h"
 #include "llvm/ADT/SmallSet.h"
@@ -256,6 +257,21 @@ cir::CIRDialect::verifyOperationAttribute(mlir::Operation *op,
   llvm::StringRef attrName = attr.getName().getValue();
   if (isOpenCLVersionAttrName(attrName))
     return verifyOpenCLVersionAttr(op, attr);
+
+  if (attrName == getCXXABIAttrName()) {
+    if (!mlir::isa<mlir::ModuleOp>(op))
+      return op->emitOpError() << "expects '" << getCXXABIAttrName()
+                               << "' attribute to be attached to '"
+                               << mlir::ModuleOp::getOperationName() << "'";
+    auto abi = mlir::dyn_cast<mlir::StringAttr>(attr.getValue());
+    if (!abi)
+      return op->emitOpError()
+             << "expects '" << getCXXABIAttrName() << "' to be a string";
+
+    if (!clang::TargetCXXABI::isABI(abi.getValue()))
+      return op->emitOpError() << "unknown C++ ABI '" << abi.getValue() << "'";
+    return success();
+  }
 
   if (attrName == getOffloadContainerAttrName()) {
     if (!mlir::isa<mlir::UnitAttr>(attr.getValue()))
