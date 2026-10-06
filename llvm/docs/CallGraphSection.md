@@ -21,30 +21,30 @@ Each record in the `.llvm.callgraph` section has the following binary layout:
 
 `llvm-readobj --call-graph-info` prints the records of every `SHT_LLVM_CALL_GRAPH` section in a file. With `--elf-output-style=JSON`, the output is a `CallGraph` array that holds one `Function` object per record. The default `LLVM` output style prints the same fields, with addresses and type IDs in hexadecimal.
 
-In executables and shared objects, functions are identified by their addresses. In relocatable object files the address fields are not final, so each function is identified by the relocation that applies to its address field instead.
+Each function and direct callee is identified by exactly one of `Address` or `Relocation`. If a relocation applies to its address field, as in relocatable object files, `Relocation` describes that relocation. Otherwise, `Address` holds the value stored in the field. Either one may be accompanied by `Names`, the symbolization of that address for human readers.
 
 ### Function Object
 
 | Field                      | Type             | Description |
 | -------------------------- | ---------------- | ----------- |
-| `Names`                    | array of strings | The names of the function symbols at `Address`. Omitted if there are none. Executables and shared objects only. |
-| `Address`                  | integer          | The function entry address. On ARM, the Thumb bit is cleared. Executables and shared objects only. |
-| `Reloc`                    | object           | The relocation that applies to the function entry PC field. See below. Relocatable object files only. |
-| `Offset`                   | integer          | The offset of the function entry PC field within the section. Printed instead of `Reloc` when the relocation cannot be determined. Relocatable object files only. |
+| `Names`                    | array of strings | The symbolization of the function's entry address, similar to what `llvm-symbolizer` shows: the names of the function symbols defined at that address. When `Relocation` is present, the address is where the relocation points: the symbol's value plus the addend, within the symbol's section. For human readers only, so it can differ from the relocation's `SymbolName`, for example when the relocation uses a section symbol. Omitted if there are none, for example when the relocation's symbol is undefined. |
+| `Address`                  | integer          | The value stored in the function entry PC field, which in executables and shared objects is the function's entry address. On ARM, the Thumb bit is cleared. Printed when no relocation applies to the field. |
+| `Relocation`               | object           | The relocation that applies to the function entry PC field. See below. Printed instead of `Address`. |
 | `Version`                  | integer          | The format version. |
 | `IsIndirectTarget`         | boolean          | Whether the function is a potential indirect call target. |
 | `TypeID`                   | integer          | The function type ID. |
 | `NumDirectCallees`         | integer          | The number of entries in `DirectCallees`. |
-| `DirectCallees`            | array of objects | One object per direct callee, identified the same way as the function: by `Names` and `Address`, or by `Reloc` or `Offset`. In executables and shared objects, each callee address is listed once. |
+| `DirectCallees`            | array of objects | One object per direct callee, with the same `Names`, `Address` and `Relocation` fields as the function. Callees identified by `Address` are listed once per address. |
 | `NumIndirectTargetTypeIDs` | integer          | The number of entries in `IndirectTypeIDs`. |
 | `IndirectTypeIDs`          | array of integers | The indirect call target type IDs. |
 
-### Reloc Object
+### Relocation Object
 
 | Field         | Type    | Description |
 | ------------- | ------- | ----------- |
+| `Type`        | object  | The relocation type, with its `Name` (such as `R_X86_64_64`) and numeric `Value`. |
 | `SymbolIndex` | integer | The symbol table index of the relocation's symbol, or 0 if it has none. |
-| `SymbolName`  | string  | The name that the symbol's `st_name` refers to, demangled if `--demangle` is given. Omitted if the symbol has no name, such as an `STT_SECTION` symbol. |
+| `SymbolName`  | string  | The symbol's name exactly as given by `st_name`. Omitted if the symbol has no name, such as an `STT_SECTION` symbol. |
 | `Addend`      | integer | The relocation addend. For relocations without an explicit addend, such as `SHT_REL` relocations, this is the value stored in the field. Omitted if zero. |
 
 ### Examples
@@ -84,31 +84,62 @@ A function in a shared object that calls `foo` and `bar`:
 ]
 ```
 
-A function in a relocatable object file that calls two local functions. The callees are referenced through the section symbol, so they have no `SymbolName`, and the addends give their offsets within the section:
+A function in a relocatable object file that calls a local function `foo`, a global function `bar` and an undefined function `ext`. The relocation for `foo` uses the `.text` section symbol, which has no name, so it has no `SymbolName`, but `Names` still shows `foo`. `ext` is not defined in the file, so it has no `Names`:
 
 ```json
 "CallGraph": [
   {
     "Function": {
-      "Reloc": {
-        "SymbolIndex": 3,
+      "Names": [
+        "caller"
+      ],
+      "Relocation": {
+        "Type": {
+          "Name": "R_X86_64_64",
+          "Value": 1
+        },
+        "SymbolIndex": 6,
         "SymbolName": "caller"
       },
       "Version": 0,
       "IsIndirectTarget": true,
       "TypeID": 9080559750644022485,
-      "NumDirectCallees": 2,
+      "NumDirectCallees": 3,
       "DirectCallees": [
         {
-          "Reloc": {
-            "SymbolIndex": 1,
-            "Addend": 16
+          "Names": [
+            "foo"
+          ],
+          "Relocation": {
+            "Type": {
+              "Name": "R_X86_64_64",
+              "Value": 1
+            },
+            "SymbolIndex": 2,
+            "Addend": 48
           }
         },
         {
-          "Reloc": {
-            "SymbolIndex": 1,
-            "Addend": 24
+          "Names": [
+            "bar"
+          ],
+          "Relocation": {
+            "Type": {
+              "Name": "R_X86_64_64",
+              "Value": 1
+            },
+            "SymbolIndex": 4,
+            "SymbolName": "bar"
+          }
+        },
+        {
+          "Relocation": {
+            "Type": {
+              "Name": "R_X86_64_64",
+              "Value": 1
+            },
+            "SymbolIndex": 7,
+            "SymbolName": "ext"
           }
         }
       ],
