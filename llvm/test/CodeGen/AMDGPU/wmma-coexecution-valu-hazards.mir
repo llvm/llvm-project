@@ -2525,6 +2525,9 @@ body: |
   ; GFX1250-NEXT:   S_BRANCH %bb.3
   ; GFX1250-NEXT: {{  $}}
   ; GFX1250-NEXT: bb.3:
+  ; GFX1250-NEXT:   V_NOP_e32 implicit $exec
+  ; GFX1250-NEXT:   V_NOP_e32 implicit $exec
+  ; GFX1250-NEXT:   V_NOP_e32 implicit $exec
   ; GFX1250-NEXT:   $vgpr32 = V_ADD_F32_e32 $vgpr16, $vgpr33, implicit $mode, implicit $exec
   ; GFX1250-NEXT:   S_ENDPGM 0
   ;
@@ -2555,6 +2558,9 @@ body: |
   ; GFX1251-NEXT:   S_BRANCH %bb.3
   ; GFX1251-NEXT: {{  $}}
   ; GFX1251-NEXT: bb.3:
+  ; GFX1251-NEXT:   V_NOP_e32 implicit $exec
+  ; GFX1251-NEXT:   V_NOP_e32 implicit $exec
+  ; GFX1251-NEXT:   V_NOP_e32 implicit $exec
   ; GFX1251-NEXT:   V_NOP_e32 implicit $exec
   ; GFX1251-NEXT:   V_NOP_e32 implicit $exec
   ; GFX1251-NEXT:   V_NOP_e32 implicit $exec
@@ -2649,6 +2655,8 @@ body: |
   ; GFX1250-NEXT:   V_NOP_e32 implicit $exec
   ; GFX1250-NEXT:   V_NOP_e32 implicit $exec
   ; GFX1250-NEXT:   V_NOP_e32 implicit $exec
+  ; GFX1250-NEXT:   V_NOP_e32 implicit $exec
+  ; GFX1250-NEXT:   V_NOP_e32 implicit $exec
   ; GFX1250-NEXT:   early-clobber $vgpr64_vgpr65_vgpr66_vgpr67_vgpr68_vgpr69_vgpr70_vgpr71 = V_WMMA_F32_16X16X32_BF16_w32_twoaddr $vgpr16_vgpr17_vgpr18_vgpr19_vgpr20_vgpr21_vgpr22_vgpr23, $vgpr8_vgpr9_vgpr10_vgpr11_vgpr12_vgpr13_vgpr14_vgpr15, 8, $vgpr64_vgpr65_vgpr66_vgpr67_vgpr68_vgpr69_vgpr70_vgpr71, 0, 0, 0, 0, implicit $exec
   ; GFX1250-NEXT:   S_ENDPGM 0
   ;
@@ -2673,6 +2681,8 @@ body: |
   ; GFX1251-NEXT:   S_BRANCH %bb.3
   ; GFX1251-NEXT: {{  $}}
   ; GFX1251-NEXT: bb.3:
+  ; GFX1251-NEXT:   V_NOP_e32 implicit $exec
+  ; GFX1251-NEXT:   V_NOP_e32 implicit $exec
   ; GFX1251-NEXT:   V_NOP_e32 implicit $exec
   ; GFX1251-NEXT:   V_NOP_e32 implicit $exec
   ; GFX1251-NEXT:   V_NOP_e32 implicit $exec
@@ -2755,6 +2765,10 @@ body: |
   ; GFX1250-NEXT:   V_NOP_e32 implicit $exec
   ; GFX1250-NEXT:   V_NOP_e32 implicit $exec
   ; GFX1250-NEXT:   V_NOP_e32 implicit $exec
+  ; GFX1250-NEXT:   V_NOP_e32 implicit $exec
+  ; GFX1250-NEXT:   V_NOP_e32 implicit $exec
+  ; GFX1250-NEXT:   V_NOP_e32 implicit $exec
+  ; GFX1250-NEXT:   V_NOP_e32 implicit $exec
   ; GFX1250-NEXT:   $vgpr32 = V_ADD_F32_e32 $vgpr16, $vgpr33, implicit $mode, implicit $exec
   ; GFX1250-NEXT:   S_ENDPGM 0
   ;
@@ -2778,6 +2792,14 @@ body: |
   ; GFX1251-NEXT:   S_BRANCH %bb.3
   ; GFX1251-NEXT: {{  $}}
   ; GFX1251-NEXT: bb.3:
+  ; GFX1251-NEXT:   V_NOP_e32 implicit $exec
+  ; GFX1251-NEXT:   V_NOP_e32 implicit $exec
+  ; GFX1251-NEXT:   V_NOP_e32 implicit $exec
+  ; GFX1251-NEXT:   V_NOP_e32 implicit $exec
+  ; GFX1251-NEXT:   V_NOP_e32 implicit $exec
+  ; GFX1251-NEXT:   V_NOP_e32 implicit $exec
+  ; GFX1251-NEXT:   V_NOP_e32 implicit $exec
+  ; GFX1251-NEXT:   V_NOP_e32 implicit $exec
   ; GFX1251-NEXT:   V_NOP_e32 implicit $exec
   ; GFX1251-NEXT:   V_NOP_e32 implicit $exec
   ; GFX1251-NEXT:   V_NOP_e32 implicit $exec
@@ -2858,10 +2880,6 @@ body: |
   ; GFX1250-NEXT:   V_NOP_e32 implicit $exec
   ; GFX1250-NEXT:   V_NOP_e32 implicit $exec
   ; GFX1250-NEXT:   V_NOP_e32 implicit $exec
-  ; GFX1250-NEXT:   V_NOP_e32 implicit $exec
-  ; GFX1250-NEXT:   V_NOP_e32 implicit $exec
-  ; GFX1250-NEXT:   V_NOP_e32 implicit $exec
-  ; GFX1250-NEXT:   V_NOP_e32 implicit $exec
   ; GFX1250-NEXT:   $vgpr32 = V_ADD_F32_e32 $vgpr16, $vgpr33, implicit $mode, implicit $exec
   ; GFX1250-NEXT:   S_ENDPGM 0
   ;
@@ -2885,14 +2903,6 @@ body: |
   ; GFX1251-NEXT:   S_BRANCH %bb.3
   ; GFX1251-NEXT: {{  $}}
   ; GFX1251-NEXT: bb.3:
-  ; GFX1251-NEXT:   V_NOP_e32 implicit $exec
-  ; GFX1251-NEXT:   V_NOP_e32 implicit $exec
-  ; GFX1251-NEXT:   V_NOP_e32 implicit $exec
-  ; GFX1251-NEXT:   V_NOP_e32 implicit $exec
-  ; GFX1251-NEXT:   V_NOP_e32 implicit $exec
-  ; GFX1251-NEXT:   V_NOP_e32 implicit $exec
-  ; GFX1251-NEXT:   V_NOP_e32 implicit $exec
-  ; GFX1251-NEXT:   V_NOP_e32 implicit $exec
   ; GFX1251-NEXT:   V_NOP_e32 implicit $exec
   ; GFX1251-NEXT:   V_NOP_e32 implicit $exec
   ; GFX1251-NEXT:   V_NOP_e32 implicit $exec
@@ -2976,6 +2986,9 @@ body: |
   ; GFX1250-NEXT: bb.3:
   ; GFX1250-NEXT:   V_NOP_e32 implicit $exec
   ; GFX1250-NEXT:   V_NOP_e32 implicit $exec
+  ; GFX1250-NEXT:   V_NOP_e32 implicit $exec
+  ; GFX1250-NEXT:   V_NOP_e32 implicit $exec
+  ; GFX1250-NEXT:   V_NOP_e32 implicit $exec
   ; GFX1250-NEXT:   $vgpr32 = V_ADD_F32_e32 $vgpr16, $vgpr33, implicit $mode, implicit $exec
   ; GFX1250-NEXT:   S_ENDPGM 0
   ;
@@ -3004,6 +3017,13 @@ body: |
   ; GFX1251-NEXT:   S_BRANCH %bb.3
   ; GFX1251-NEXT: {{  $}}
   ; GFX1251-NEXT: bb.3:
+  ; GFX1251-NEXT:   V_NOP_e32 implicit $exec
+  ; GFX1251-NEXT:   V_NOP_e32 implicit $exec
+  ; GFX1251-NEXT:   V_NOP_e32 implicit $exec
+  ; GFX1251-NEXT:   V_NOP_e32 implicit $exec
+  ; GFX1251-NEXT:   V_NOP_e32 implicit $exec
+  ; GFX1251-NEXT:   V_NOP_e32 implicit $exec
+  ; GFX1251-NEXT:   V_NOP_e32 implicit $exec
   ; GFX1251-NEXT:   V_NOP_e32 implicit $exec
   ; GFX1251-NEXT:   V_NOP_e32 implicit $exec
   ; GFX1251-NEXT:   V_NOP_e32 implicit $exec
@@ -3098,7 +3118,6 @@ body: |
   ; GFX1250-NEXT:   V_NOP_e32 implicit $exec
   ; GFX1250-NEXT:   V_NOP_e32 implicit $exec
   ; GFX1250-NEXT:   V_NOP_e32 implicit $exec
-  ; GFX1250-NEXT:   V_NOP_e32 implicit $exec
   ; GFX1250-NEXT:   $vgpr32 = V_ADD_F32_e32 $vgpr16, $vgpr33, implicit $mode, implicit $exec
   ; GFX1250-NEXT:   S_ENDPGM 0
   ;
@@ -3127,7 +3146,6 @@ body: |
   ; GFX1251-NEXT:   S_BRANCH %bb.3
   ; GFX1251-NEXT: {{  $}}
   ; GFX1251-NEXT: bb.3:
-  ; GFX1251-NEXT:   V_NOP_e32 implicit $exec
   ; GFX1251-NEXT:   V_NOP_e32 implicit $exec
   ; GFX1251-NEXT:   V_NOP_e32 implicit $exec
   ; GFX1251-NEXT:   V_NOP_e32 implicit $exec
@@ -3235,6 +3253,7 @@ body: |
   ; GFX1250-NEXT:   V_NOP_e32 implicit $exec
   ; GFX1250-NEXT:   V_NOP_e32 implicit $exec
   ; GFX1250-NEXT:   V_NOP_e32 implicit $exec
+  ; GFX1250-NEXT:   V_NOP_e32 implicit $exec
   ; GFX1250-NEXT:   $vgpr32 = V_ADD_F32_e32 $vgpr16, $vgpr33, implicit $mode, implicit $exec
   ; GFX1250-NEXT:   S_ENDPGM 0
   ;
@@ -3270,6 +3289,11 @@ body: |
   ; GFX1251-NEXT:   S_BRANCH %bb.4
   ; GFX1251-NEXT: {{  $}}
   ; GFX1251-NEXT: bb.4:
+  ; GFX1251-NEXT:   V_NOP_e32 implicit $exec
+  ; GFX1251-NEXT:   V_NOP_e32 implicit $exec
+  ; GFX1251-NEXT:   V_NOP_e32 implicit $exec
+  ; GFX1251-NEXT:   V_NOP_e32 implicit $exec
+  ; GFX1251-NEXT:   V_NOP_e32 implicit $exec
   ; GFX1251-NEXT:   V_NOP_e32 implicit $exec
   ; GFX1251-NEXT:   V_NOP_e32 implicit $exec
   ; GFX1251-NEXT:   V_NOP_e32 implicit $exec
@@ -3378,6 +3402,9 @@ body: |
   ; GFX1250-NEXT: {{  $}}
   ; GFX1250-NEXT: bb.4:
   ; GFX1250-NEXT:   V_NOP_e32 implicit $exec
+  ; GFX1250-NEXT:   V_NOP_e32 implicit $exec
+  ; GFX1250-NEXT:   V_NOP_e32 implicit $exec
+  ; GFX1250-NEXT:   V_NOP_e32 implicit $exec
   ; GFX1250-NEXT:   $vgpr22 = V_MUL_F32_e32 $sgpr14, $vgpr22, implicit $mode, implicit $exec
   ; GFX1250-NEXT:   S_ENDPGM 0
   ;
@@ -3409,6 +3436,9 @@ body: |
   ; GFX1251-NEXT:   S_BRANCH %bb.4
   ; GFX1251-NEXT: {{  $}}
   ; GFX1251-NEXT: bb.4:
+  ; GFX1251-NEXT:   V_NOP_e32 implicit $exec
+  ; GFX1251-NEXT:   V_NOP_e32 implicit $exec
+  ; GFX1251-NEXT:   V_NOP_e32 implicit $exec
   ; GFX1251-NEXT:   V_NOP_e32 implicit $exec
   ; GFX1251-NEXT:   V_NOP_e32 implicit $exec
   ; GFX1251-NEXT:   V_NOP_e32 implicit $exec
@@ -3629,6 +3659,9 @@ body: |
   ; GFX1250-NEXT:   successors: %bb.1(0x40000000), %bb.3(0x40000000)
   ; GFX1250-NEXT: {{  $}}
   ; GFX1250-NEXT:   V_NOP_e32 implicit $exec
+  ; GFX1250-NEXT:   V_NOP_e32 implicit $exec
+  ; GFX1250-NEXT:   V_NOP_e32 implicit $exec
+  ; GFX1250-NEXT:   V_NOP_e32 implicit $exec
   ; GFX1250-NEXT:   $vgpr32 = V_ADD_F32_e32 $vgpr16, $vgpr33, implicit $mode, implicit $exec
   ; GFX1250-NEXT:   early-clobber $vgpr16_vgpr17_vgpr18_vgpr19_vgpr20_vgpr21_vgpr22_vgpr23 = V_WMMA_F32_16X16X32_BF16_w32_twoaddr $vgpr0_vgpr1_vgpr2_vgpr3_vgpr4_vgpr5_vgpr6_vgpr7, $vgpr8_vgpr9_vgpr10_vgpr11_vgpr12_vgpr13_vgpr14_vgpr15, 8, $vgpr16_vgpr17_vgpr18_vgpr19_vgpr20_vgpr21_vgpr22_vgpr23, 0, 0, 0, 0, implicit $exec
   ; GFX1250-NEXT:   S_CBRANCH_SCC1 %bb.1, implicit undef $scc
@@ -3660,6 +3693,9 @@ body: |
   ; GFX1251-NEXT: bb.2:
   ; GFX1251-NEXT:   successors: %bb.1(0x40000000), %bb.3(0x40000000)
   ; GFX1251-NEXT: {{  $}}
+  ; GFX1251-NEXT:   V_NOP_e32 implicit $exec
+  ; GFX1251-NEXT:   V_NOP_e32 implicit $exec
+  ; GFX1251-NEXT:   V_NOP_e32 implicit $exec
   ; GFX1251-NEXT:   V_NOP_e32 implicit $exec
   ; GFX1251-NEXT:   V_NOP_e32 implicit $exec
   ; GFX1251-NEXT:   V_NOP_e32 implicit $exec
