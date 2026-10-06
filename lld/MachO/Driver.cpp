@@ -1921,6 +1921,7 @@ bool link(ArrayRef<const char *> argsArr, llvm::raw_ostream &stdoutOS,
          ": option unavailable because lld was not built with thread support");
 #endif
   }
+  parallel::strategy = available_concurrency();
   if (auto *arg = args.getLastArg(OPT_threads_eq)) {
     StringRef v(arg->getValue());
     unsigned threads = 0;
