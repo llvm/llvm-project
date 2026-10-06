@@ -60,58 +60,61 @@ module attributes {dlti.dl_spec = #dlti.dl_spec<!llvm.ptr<270> = dense<32> : vec
     }
     return
   }
-  // novariants: runtime select of base/variant address, then indirect call.
+  // novariants: runtime branch between direct calls to the base and the variant.
   // CHECK-LABEL: func.func @omp_dispatch_novariants
   func.func @omp_dispatch_novariants(%cond : i1) {
     // CHECK: omp.dispatch novariants(%[[COND:.*]]) {
     omp.dispatch novariants(%cond) {
-      // CHECK: %[[VARIANT:.*]] = fir.address_of(@_QMfuncsPfoo_variant) : () -> ()
-      %variant = fir.address_of(@_QMfuncsPfoo_variant) : () -> ()
-      // CHECK: %[[BASE:.*]] = fir.address_of(@_QMfuncsPfoo_dispatch) : () -> ()
-      %base = fir.address_of(@_QMfuncsPfoo_dispatch) : () -> ()
-      // CHECK: %[[TARGET:.*]] = arith.select %[[COND]], %[[BASE]], %[[VARIANT]] : () -> ()
-      %target = arith.select %cond, %base, %variant : () -> ()
-      // CHECK: fir.call %[[TARGET]]()
-      fir.call %target() fastmath<contract> : () -> ()
+      // CHECK: fir.if %[[COND]] {
+      fir.if %cond {
+        // CHECK-NEXT: fir.call @_QMfuncsPfoo_dispatch()
+        fir.call @_QMfuncsPfoo_dispatch() fastmath<contract> : () -> ()
+      // CHECK-NEXT: } else {
+      } else {
+        // CHECK-NEXT: fir.call @_QMfuncsPfoo_variant()
+        fir.call @_QMfuncsPfoo_variant() fastmath<contract> : () -> ()
+      }
       // CHECK: omp.terminator
       omp.terminator
     }
     return
   }
-  // nocontext: runtime select of base/variant address, then indirect call.
+  // nocontext: runtime branch between direct calls to the base and the variant.
   // CHECK-LABEL: func.func @omp_dispatch_nocontext
   func.func @omp_dispatch_nocontext(%cond : i1) {
     // CHECK: omp.dispatch nocontext(%[[COND:.*]]) {
     omp.dispatch nocontext(%cond) {
-      // CHECK: %[[VARIANT:.*]] = fir.address_of(@_QMfuncsPfoo_variant) : () -> ()
-      %variant = fir.address_of(@_QMfuncsPfoo_variant) : () -> ()
-      // CHECK: %[[BASE:.*]] = fir.address_of(@_QMfuncsPfoo_dispatch) : () -> ()
-      %base = fir.address_of(@_QMfuncsPfoo_dispatch) : () -> ()
-      // CHECK: %[[TARGET:.*]] = arith.select %[[COND]], %[[BASE]], %[[VARIANT]] : () -> ()
-      %target = arith.select %cond, %base, %variant : () -> ()
-      // CHECK: fir.call %[[TARGET]]()
-      fir.call %target() fastmath<contract> : () -> ()
+      // CHECK: fir.if %[[COND]] {
+      fir.if %cond {
+        // CHECK-NEXT: fir.call @_QMfuncsPfoo_dispatch()
+        fir.call @_QMfuncsPfoo_dispatch() fastmath<contract> : () -> ()
+      // CHECK-NEXT: } else {
+      } else {
+        // CHECK-NEXT: fir.call @_QMfuncsPfoo_variant()
+        fir.call @_QMfuncsPfoo_variant() fastmath<contract> : () -> ()
+      }
       // CHECK: omp.terminator
       omp.terminator
     }
     return
   }
   // nocontext with multiple matching variants: the frontend re-resolves variant
-  // selection with the dispatch construct removed, so the runtime select picks
+  // selection with the dispatch construct removed, so the runtime branch picks
   // between the two variants (device={kind(host)} vs construct={dispatch}),
   // not the base procedure.
   // CHECK-LABEL: func.func @omp_dispatch_nocontext_variant
   func.func @omp_dispatch_nocontext_variant(%cond : i1) {
     // CHECK: omp.dispatch nocontext(%[[COND:.*]]) {
     omp.dispatch nocontext(%cond) {
-      // CHECK: %[[VARIANT:.*]] = fir.address_of(@_QMfuncsPdispatch_variant) : () -> ()
-      %variant = fir.address_of(@_QMfuncsPdispatch_variant) : () -> ()
-      // CHECK: %[[HOST:.*]] = fir.address_of(@_QMfuncsPhost_variant) : () -> ()
-      %host = fir.address_of(@_QMfuncsPhost_variant) : () -> ()
-      // CHECK: %[[TARGET:.*]] = arith.select %[[COND]], %[[HOST]], %[[VARIANT]] : () -> ()
-      %target = arith.select %cond, %host, %variant : () -> ()
-      // CHECK: fir.call %[[TARGET]]()
-      fir.call %target() fastmath<contract> : () -> ()
+      // CHECK: fir.if %[[COND]] {
+      fir.if %cond {
+        // CHECK-NEXT: fir.call @_QMfuncsPhost_variant()
+        fir.call @_QMfuncsPhost_variant() fastmath<contract> : () -> ()
+      // CHECK-NEXT: } else {
+      } else {
+        // CHECK-NEXT: fir.call @_QMfuncsPdispatch_variant()
+        fir.call @_QMfuncsPdispatch_variant() fastmath<contract> : () -> ()
+      }
       // CHECK: omp.terminator
       omp.terminator
     }
@@ -122,19 +125,23 @@ module attributes {dlti.dl_spec = #dlti.dl_spec<!llvm.ptr<270> = dense<32> : vec
   func.func @omp_dispatch_novariants_nocontext(%c1 : i1, %c2 : i1) {
     // CHECK: omp.dispatch nocontext(%[[C2]]) novariants(%[[C1]]) {
     omp.dispatch nocontext(%c2) novariants(%c1) {
-      // CHECK: %[[BOTH_VARIANT:.*]] = fir.address_of(@_QMfuncsPdispatch_variant) : () -> ()
-      %variant = fir.address_of(@_QMfuncsPdispatch_variant) : () -> ()
-      // CHECK: %[[BOTH_HOST:.*]] = fir.address_of(@_QMfuncsPhost_variant) : () -> ()
-      %host = fir.address_of(@_QMfuncsPhost_variant) : () -> ()
-      // CHECK: %[[CONTEXT_TARGET:.*]] = arith.select %[[C2]], %[[BOTH_HOST]], %[[BOTH_VARIANT]] : () -> ()
-      %context_target = arith.select %c2, %host, %variant : () -> ()
-      // CHECK: %[[BOTH_BASE:.*]] = fir.address_of(@_QMfuncsPbase_routine) : () -> ()
-      %base = fir.address_of(@_QMfuncsPbase_routine) : () -> ()
-      // CHECK: %[[BOTH_TARGET:.*]] = arith.select %[[C1]], %[[BOTH_BASE]], %[[CONTEXT_TARGET]] : () -> ()
-      %target = arith.select %c1, %base, %context_target : () -> ()
-      // CHECK-NEXT: fir.call %[[BOTH_TARGET]]()
-      fir.call %target() fastmath<contract> : () -> ()
-      // CHECK-NEXT: omp.terminator
+      // CHECK: fir.if %[[C1]] {
+      fir.if %c1 {
+        // CHECK-NEXT: fir.call @_QMfuncsPbase_routine()
+        fir.call @_QMfuncsPbase_routine() fastmath<contract> : () -> ()
+      // CHECK-NEXT: } else {
+      } else {
+        // CHECK-NEXT: fir.if %[[C2]] {
+        fir.if %c2 {
+          // CHECK-NEXT: fir.call @_QMfuncsPhost_variant()
+          fir.call @_QMfuncsPhost_variant() fastmath<contract> : () -> ()
+        // CHECK-NEXT: } else {
+        } else {
+          // CHECK-NEXT: fir.call @_QMfuncsPdispatch_variant()
+          fir.call @_QMfuncsPdispatch_variant() fastmath<contract> : () -> ()
+        }
+      }
+      // CHECK: omp.terminator
       omp.terminator
     }
     return
