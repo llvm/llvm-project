@@ -3751,6 +3751,11 @@ bool SPIRVEmitIntrinsicsImpl::runOnFunction(Function &Func) {
     return false;
 
   const SPIRVSubtarget &ST = TM.getSubtarget<SPIRVSubtarget>(Func);
+  // LoopSimplify runs after SPIRVPrepareFunctions sorted the blocks, and the
+  // preheaders/dedicated exits it creates can end up before their dominator,
+  // which SPIR-V forbids.
+  if (!ST.isShader())
+    sortBlocks(Func);
   GR = ST.getSPIRVGlobalRegistry();
 
   if (!CurrF)
