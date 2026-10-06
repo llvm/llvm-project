@@ -69,6 +69,31 @@ const Type *TargetInfo::getStructOfTypes(llvm::ArrayRef<const Type *> Elems,
                           /*UnadjustedAlign=*/llvm::Align(1), Pack);
 }
 
+// Returns the alignment of Ty, a type returned by convertTypeForMem, as a
+// member of the struct built there. A packed record has alignment 1. A record
+// that is not packed has the alignment of its most-aligned member. An array has
+// the alignment of its element type.
+static llvm::Align getConvertedAlign(const Type *Ty) {
+  if (const auto *AT = dyn_cast<ArrayType>(Ty))
+    return getConvertedAlign(AT->getElementType());
+
+  const auto *RT = dyn_cast<RecordType>(Ty);
+  if (!RT)
+    return Ty->getAlignment();
+  if (RT->getPacking() == StructPacking::Packed)
+    return llvm::Align(1);
+
+  llvm::Align MaxAlign(1);
+  for (llvm::ArrayRef<FieldInfo> Members :
+       {RT->getFields(), RT->getBaseClasses()}) {
+    for (const FieldInfo &Member : Members) {
+      if (!Member.isEmpty())
+        MaxAlign = std::max(MaxAlign, getConvertedAlign(Member.FieldType));
+    }
+  }
+  return MaxAlign;
+}
+
 const Type *TargetInfo::convertTypeForMem(const Type *Ty) const {
   if (const auto *AT = dyn_cast<ArrayType>(Ty)) {
     if (AT->isMatrixType())
@@ -90,56 +115,77 @@ const Type *TargetInfo::convertTypeForMem(const Type *Ty) const {
   // virtual bases in the future, we'll need explicit handling for that below.
   assert(RT->getNumVirtualBaseClasses() == 0 && "record has a virtual base");
 
-  llvm::SmallVector<FieldInfo, 8> Members;
+  struct ConvertedMember {
+    const Type *Ty;
+    uint64_t Offset;
+    llvm::Align Alignment;
+  };
+  llvm::SmallVector<ConvertedMember, 8> Members;
+  // The record is packed when a member offset or the record size is not a
+  // multiple of the converted alignment.
+  bool Packed = false;
+  llvm::Align MaxAlign(1);
+  auto addMember = [&](const Type *MemberTy, uint64_t Offset) {
+    const Type *ConvertedTy = convertTypeForMem(MemberTy);
+    assert(!ConvertedTy->getSizeInBits().isScalable() &&
+           "scalable member has no fixed offset");
+    llvm::Align Alignment = getConvertedAlign(ConvertedTy);
+    if (Offset % (Alignment.value() * 8) != 0)
+      Packed = true;
+    MaxAlign = std::max(MaxAlign, Alignment);
+    Members.push_back({ConvertedTy, Offset, Alignment});
+  };
   for (const FieldInfo &Base : RT->getBaseClasses()) {
     if (!Base.FieldType->isEmptyRecord())
-      Members.push_back(FieldInfo(Base.FieldType, Base.OffsetInBits));
+      addMember(Base.FieldType, Base.OffsetInBits);
   }
   for (const FieldInfo &Field : RT->getFields()) {
     if (!Field.isEmpty())
-      Members.push_back(FieldInfo(Field.FieldType, Field.OffsetInBits));
+      addMember(Field.FieldType, Field.OffsetInBits);
   }
-  llvm::stable_sort(Members, [](const FieldInfo &A, const FieldInfo &B) {
-    return A.OffsetInBits < B.OffsetInBits;
-  });
+  llvm::stable_sort(Members,
+                    [](const ConvertedMember &A, const ConvertedMember &B) {
+                      return A.Offset < B.Offset;
+                    });
+
+  llvm::TypeSize RecordSize = RT->getSizeInBits();
+  if (RecordSize.isFixed() &&
+      RecordSize.getFixedValue() % (MaxAlign.value() * 8) != 0)
+    Packed = true;
 
   llvm::SmallVector<FieldInfo, 8> Fields;
   uint64_t Current = 0;
-  for (const FieldInfo &Member : Members) {
-    assert(!Member.FieldType->getSizeInBits().isScalable() &&
-           "scalable member has no fixed offset");
-    if (Member.OffsetInBits > Current) {
-      uint64_t AlignBits = Member.FieldType->getAlignment().value() * 8;
-      uint64_t Natural = llvm::alignTo(Current, AlignBits);
-      if (Member.OffsetInBits != Natural) {
-        uint64_t PadBits = Member.OffsetInBits - Current;
-        assert(PadBits % 8 == 0 && "padding is not a whole number of bytes");
-        Fields.emplace_back(getI8Array(PadBits / 8), Current);
-      }
+  // Padding in a packed record is explicit for every gap. Padding in any
+  // other record is explicit only where the converted alignment does not place
+  // the next member.
+  auto needsPadding = [&](uint64_t Offset, llvm::Align MemberAlign) {
+    uint64_t AlignBits = Packed ? 8 : MemberAlign.value() * 8;
+    return Offset != llvm::alignTo(Current, AlignBits);
+  };
+  for (const ConvertedMember &Member : Members) {
+    if (Member.Offset > Current &&
+        needsPadding(Member.Offset, Member.Alignment)) {
+      uint64_t PadBits = Member.Offset - Current;
+      assert(PadBits % 8 == 0 && "padding is not a whole number of bytes");
+      Fields.emplace_back(getI8Array(PadBits / 8), Current);
     }
-    Fields.emplace_back(convertTypeForMem(Member.FieldType),
-                        Member.OffsetInBits);
-    uint64_t End =
-        Member.OffsetInBits + Member.FieldType->getSizeInBits().getFixedValue();
-    if (End > Current)
-      Current = End;
+    Fields.emplace_back(Member.Ty, Member.Offset);
+    Current = std::max(Current, Member.Offset +
+                                    Member.Ty->getSizeInBits().getFixedValue());
   }
 
-  if (RT->getSizeInBits().isFixed()) {
-    uint64_t Size = RT->getSizeInBits().getFixedValue();
-    if (Size > Current) {
-      uint64_t AlignBits = RT->getAlignment().value() * 8;
-      if (Size != llvm::alignTo(Current, AlignBits)) {
-        uint64_t PadBits = Size - Current;
-        assert(PadBits % 8 == 0 &&
-               "tail padding is not a whole number of bytes");
-        Fields.emplace_back(getI8Array(PadBits / 8), Current);
-      }
+  if (RecordSize.isFixed()) {
+    uint64_t Size = RecordSize.getFixedValue();
+    if (Size > Current && needsPadding(Size, MaxAlign)) {
+      uint64_t PadBits = Size - Current;
+      assert(PadBits % 8 == 0 && "tail padding is not a whole number of bytes");
+      Fields.emplace_back(getI8Array(PadBits / 8), Current);
     }
   }
 
-  return TB.getRecordType(Fields, RT->getSizeInBits(), RT->getAlignment(),
-                          RT->getUnadjustedAlignment());
+  StructPacking Pack = Packed ? StructPacking::Packed : StructPacking::Default;
+  return TB.getRecordType(Fields, RecordSize, RT->getAlignment(),
+                          RT->getUnadjustedAlignment(), Pack);
 }
 
 RecordArgABI TargetInfo::getRecordArgABI(const RecordType *RT) const {

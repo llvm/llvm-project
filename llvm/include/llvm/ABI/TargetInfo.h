@@ -107,10 +107,13 @@ protected:
   LLVM_ABI const Type *getI8Array(uint64_t NumBytes) const;
 
   /// In-memory form of \p Ty. A record becomes one field list: non-empty
-  /// bases and fields in offset order, with an array of i8 where a member
-  /// sits at an offset alignment does not account for. A record with a
-  /// virtual base has no layout here. An array is rebuilt when its element
-  /// type changes. Any other type is returned unchanged.
+  /// bases and fields in offset order. Padding is an array of i8. The result
+  /// is packed when a member offset or the record size is not a multiple of
+  /// the converted member alignment, and then every gap is an explicit array.
+  /// Any other record has an array only where that alignment does not already
+  /// produce the gap. A record with a virtual base has no layout here. An
+  /// array is rebuilt when its element type changes. Any other type is
+  /// returned unchanged.
   LLVM_ABI const Type *convertTypeForMem(const Type *Ty) const;
 
   /// A record with one field per element of \p Elems, each at offset 0.

@@ -1321,7 +1321,8 @@ TEST_F(AArch64TargetInfoTest, ClassifyPureScalableStructCoerceAndExpand) {
   const ABIType *Two =
       makeRecord({FieldInfo(FixedSVInt32, 0), FieldInfo(FixedSVFloat64, 256)},
                  512, llvm::Align(16), /*UnadjustedAlign=*/llvm::Align(16));
-  // 8 bytes past the naturally aligned offset of the data vector.
+  // The data vector is 8 bytes past its naturally aligned offset, so the
+  // record is packed. The gap before it and the tail are both i8 arrays.
   const ABIType *Gapped =
       makeRecord({FieldInfo(FixedSVBool, 0), FieldInfo(FixedSVInt32, 320)}, 640,
                  llvm::Align(16), /*UnadjustedAlign=*/llvm::Align(16));
@@ -1369,7 +1370,7 @@ TEST_F(AArch64TargetInfoTest, ClassifyPureScalableStructCoerceAndExpand) {
         FunctionInfo::create(llvm::CallingConv::C, Void, {Gapped});
     TI->computeInfo(*FI);
     const llvm::abi::RecordType *Padded =
-        expectPaddedCoerce(FI->getArgInfo(0).Info, 3);
+        expectPaddedCoerce(FI->getArgInfo(0).Info, 4);
     ASSERT_NE(Padded, nullptr);
     EXPECT_EQ(Padded->getFields()[0].FieldType, FixedSVBool);
     const auto *Pad =
@@ -1378,6 +1379,10 @@ TEST_F(AArch64TargetInfoTest, ClassifyPureScalableStructCoerceAndExpand) {
     EXPECT_EQ(Pad->getNumElements(), 8u);
     EXPECT_EQ(Pad->getElementType()->getSizeInBits().getFixedValue(), 8u);
     EXPECT_EQ(Padded->getFields()[2].FieldType, FixedSVInt32);
+    const auto *Tail =
+        llvm::dyn_cast<llvm::abi::ArrayType>(Padded->getFields()[3].FieldType);
+    ASSERT_NE(Tail, nullptr);
+    EXPECT_EQ(Tail->getNumElements(), 8u);
 
     const auto *Unpadded = llvm::dyn_cast<llvm::abi::RecordType>(
         FI->getArgInfo(0).Info.getUnpaddedCoerceAndExpandType());
@@ -1395,6 +1400,69 @@ TEST_F(AArch64TargetInfoTest, ClassifyPureScalableStructCoerceAndExpand) {
         expectPaddedCoerce(FI->getReturnInfo(), 1);
     ASSERT_NE(Padded, nullptr);
     EXPECT_EQ(Padded->getFields()[0].FieldType, FixedSVInt32);
+  }
+}
+
+// A packed pure scalable record keeps a naturally aligned gap as an explicit
+// i8 array. An over-aligned record keeps its tail the same way.
+TEST_F(AArch64TargetInfoTest, ClassifyPureScalablePackedGapAndOveralign) {
+  std::unique_ptr<TargetInfo> TI =
+      createAArch64TargetInfo(TB, AArch64ABIOptions(AArch64ABIKind::AAPCS));
+
+  const llvm::abi::VectorType *Pred =
+      TB.getVectorType(U8, llvm::ElementCount::getFixed(2), llvm::Align(2),
+                       llvm::abi::VectorKind::SVEPredicate);
+  // Predicate at 0, misaligned data vector at byte 2, naturally aligned data
+  // vector at byte 48, tail predicate at byte 80. Size 96.
+  const ABIType *PackedGap = makeRecord(
+      {FieldInfo(Pred, 0), FieldInfo(FixedSVInt32, 16),
+       FieldInfo(FixedSVInt32, 384), FieldInfo(Pred, 640)},
+      /*SizeBits=*/768, llvm::Align(16), /*UnadjustedAlign=*/llvm::Align(2));
+  const ABIType *Over = makeRecord({FieldInfo(FixedSVInt32, 0)},
+                                   /*SizeBits=*/512, llvm::Align(32),
+                                   /*UnadjustedAlign=*/llvm::Align(16));
+
+  {
+    std::unique_ptr<FunctionInfo> FI =
+        FunctionInfo::create(llvm::CallingConv::C, PackedGap, {PackedGap});
+    TI->computeInfo(*FI);
+    const llvm::abi::RecordType *Padded =
+        expectPaddedCoerce(FI->getArgInfo(0).Info, 6);
+    ASSERT_NE(Padded, nullptr);
+    EXPECT_EQ(Padded->getFields()[0].FieldType, Pred);
+    EXPECT_EQ(Padded->getFields()[1].FieldType, FixedSVInt32);
+    const auto *Gap =
+        llvm::dyn_cast<llvm::abi::ArrayType>(Padded->getFields()[2].FieldType);
+    ASSERT_NE(Gap, nullptr);
+    EXPECT_EQ(Gap->getNumElements(), 14u);
+    EXPECT_EQ(Padded->getFields()[3].FieldType, FixedSVInt32);
+    EXPECT_EQ(Padded->getFields()[4].FieldType, Pred);
+    const auto *Tail =
+        llvm::dyn_cast<llvm::abi::ArrayType>(Padded->getFields()[5].FieldType);
+    ASSERT_NE(Tail, nullptr);
+    EXPECT_EQ(Tail->getNumElements(), 14u);
+
+    const auto *Unpadded = llvm::dyn_cast<llvm::abi::RecordType>(
+        FI->getReturnInfo().getUnpaddedCoerceAndExpandType());
+    ASSERT_NE(Unpadded, nullptr);
+    EXPECT_EQ(Unpadded->getPacking(), StructPacking::Packed);
+    EXPECT_EQ(Unpadded->getNumFields(), 4u);
+  }
+
+  {
+    std::unique_ptr<FunctionInfo> FI =
+        FunctionInfo::create(llvm::CallingConv::C, Over, {Over});
+    TI->computeInfo(*FI);
+    const llvm::abi::RecordType *Padded =
+        expectPaddedCoerce(FI->getReturnInfo(), 2);
+    ASSERT_NE(Padded, nullptr);
+    EXPECT_EQ(Padded->getFields()[0].FieldType, FixedSVInt32);
+    const auto *Tail =
+        llvm::dyn_cast<llvm::abi::ArrayType>(Padded->getFields()[1].FieldType);
+    ASSERT_NE(Tail, nullptr);
+    EXPECT_EQ(Tail->getNumElements(), 32u);
+    expectScalableData(FI->getReturnInfo().getUnpaddedCoerceAndExpandType(),
+                       I32, 4);
   }
 }
 
@@ -1441,6 +1509,28 @@ TEST_F(AArch64TargetInfoTest, ClassifyPureScalableArrayAndBase) {
   ASSERT_NE(Padded, nullptr);
   EXPECT_EQ(Padded->getFields()[0].FieldType, FixedSVInt32);
   EXPECT_EQ(Padded->getFields()[1].FieldType, FixedSVFloat64);
+}
+
+// A zero-length array is empty and does not disqualify a Pure Scalable Type.
+TEST_F(AArch64TargetInfoTest, ClassifyPureScalableZeroLengthArray) {
+  std::unique_ptr<TargetInfo> TI =
+      createAArch64TargetInfo(TB, AArch64ABIOptions(AArch64ABIKind::AAPCS));
+
+  const ABIType *ZeroArray =
+      TB.getArrayType(I32, /*NumElements=*/0, /*SizeInBits=*/0);
+  const ABIType *WithZero =
+      makeRecord({FieldInfo(FixedSVInt32, 0), FieldInfo(ZeroArray, 256)}, 256,
+                 llvm::Align(16), /*UnadjustedAlign=*/llvm::Align(16));
+
+  std::unique_ptr<FunctionInfo> FI =
+      FunctionInfo::create(llvm::CallingConv::C, WithZero, {WithZero});
+  TI->computeInfo(*FI);
+  for (const ArgInfo &Info : {FI->getReturnInfo(), FI->getArgInfo(0).Info}) {
+    const llvm::abi::RecordType *Padded = expectPaddedCoerce(Info, 1);
+    ASSERT_NE(Padded, nullptr);
+    EXPECT_EQ(Padded->getFields()[0].FieldType, FixedSVInt32);
+    expectScalableData(Info.getUnpaddedCoerceAndExpandType(), I32, 4);
+  }
 }
 
 // A Pure Scalable Type that does not fit in the remaining registers is

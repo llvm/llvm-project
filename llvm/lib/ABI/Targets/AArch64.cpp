@@ -473,6 +473,11 @@ bool AArch64TargetInfo::passAsPureScalableType(
     if (RT->isUnion())
       return false;
 
+    // A flexible array member is lowered as a zero-length array, which the
+    // field walk below skips. The member disqualifies a pure scalable type.
+    if (RT->hasFlexibleArrayMember())
+      return false;
+
     // Direct virtual bases are not in getBaseClasses(). A record that has
     // one cannot be passed in registers, and getRecordArgABI rejected it
     // above.
