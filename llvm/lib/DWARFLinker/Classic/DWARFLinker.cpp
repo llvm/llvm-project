@@ -1321,7 +1321,12 @@ void DWARFLinker::DIECloner::cloneExpression(
         // Argument of DW_OP_addrx should be relocated here as it is not
         // processed by applyValidRelocs.
         OutputBuffer.push_back(dwarf::DW_OP_addr);
-        uint64_t LinkedAddress = SA->Address + AddrRelocAdjustment;
+        uint64_t LinkedAddress =
+            SA->Address +
+            File.Addresses
+                ->getAddrIndexRelocAdjustment(Unit.getOrigUnit(), Op,
+                                              Linker.Options.Verbose)
+                .value_or(AddrRelocAdjustment);
         if (IsLittleEndian != sys::IsLittleEndianHost)
           sys::swapByteOrder(LinkedAddress);
         ArrayRef<uint8_t> AddressBytes(
@@ -1355,7 +1360,12 @@ void DWARFLinker::DIECloner::cloneExpression(
 
         if (OutOperandKind) {
           OutputBuffer.push_back(*OutOperandKind);
-          uint64_t LinkedAddress = SA->Address + AddrRelocAdjustment;
+          uint64_t LinkedAddress =
+              SA->Address +
+              File.Addresses
+                  ->getAddrIndexRelocAdjustment(Unit.getOrigUnit(), Op,
+                                                Linker.Options.Verbose)
+                  .value_or(AddrRelocAdjustment);
           if (IsLittleEndian != sys::IsLittleEndianHost)
             sys::swapByteOrder(LinkedAddress);
           ArrayRef<uint8_t> AddressBytes(
@@ -1958,6 +1968,8 @@ DIE *DWARFLinker::DIECloner::cloneDIE(const DWARFDie &InputDIE,
   // accelerator tables too. For now stick with dsymutil's behavior.
   if ((Info.InDebugMap || AttrInfo.HasLowPc || AttrInfo.HasRanges) &&
       Tag != dwarf::DW_TAG_compile_unit &&
+      !(Tag == dwarf::DW_TAG_variable &&
+        hasImplicitAddressLocation(InputDIE)) &&
       getDIENames(InputDIE, AttrInfo, DebugStrPool, File, Unit,
                   Tag != dwarf::DW_TAG_inlined_subroutine)) {
     if (AttrInfo.MangledName && AttrInfo.MangledName != AttrInfo.Name)

@@ -189,6 +189,8 @@ LIBC_INLINE double powf_accurate(float x, float y, double e_x, uint64_t sign) {
 }
 #endif // !LIBC_MATH_HAS_SKIP_ACCURATE_PASS
 
+#if !defined(LIBC_MATH_HAS_SKIP_ACCURATE_PASS) &&                              \
+    !defined(LIBC_MATH_HAS_SMALL_TABLES)
 // Check if x^y is an exact rounding boundary.
 // When x^y = exact_m * 2^exact_exp with exact_m <= 2^25:
 // - exact_m has at most 26 bits, so it fits in double precision without
@@ -229,6 +231,7 @@ check_exact_boundary(float x, float y, uint64_t sign,
   }
   return cpp::nullopt;
 }
+#endif // !LIBC_MATH_HAS_SKIP_ACCURATE_PASS && !LIBC_MATH_HAS_SMALL_TABLES
 
 // Overview of powf(x, y) = x^y computation in double precision:
 //
@@ -293,8 +296,11 @@ LIBC_INLINE float powf(float x, float y) {
       return r.value();
   }
 
+#if !defined(LIBC_MATH_HAS_SKIP_ACCURATE_PASS) &&                              \
+    !defined(LIBC_MATH_HAS_SMALL_TABLES)
   float orig_x_abs = xbits.abs().get_val();
   float orig_y = y;
+#endif // !LIBC_MATH_HAS_SKIP_ACCURATE_PASS && !LIBC_MATH_HAS_SMALL_TABLES
 
   int ex = -FloatBits::EXP_BIAS;
   uint64_t sign = 0;
@@ -414,6 +420,11 @@ LIBC_INLINE float powf(float x, float y) {
         sign;
     double exp2_k = cpp::bit_cast<double>(exp2_k_i);
 
+#ifdef LIBC_MATH_HAS_SKIP_ACCURATE_PASS
+    double pp = fputil::multiply_add(f, poly, 1.0);
+    double r_d = pp * exp2_k;
+    return static_cast<float>(r_d);
+#else // !LIBC_MATH_HAS_SKIP_ACCURATE_PASS
 #ifdef LIBC_TARGET_CPU_HAS_FMA
     // Absorbing +-ERR into 1.0 computes both bounds using two parallel FMAs.
     constexpr double ERR = 0x1.5p-39;
@@ -428,9 +439,6 @@ LIBC_INLINE float powf(float x, float y) {
 
     float res = static_cast<float>(r_d);
 
-#ifdef LIBC_MATH_HAS_SKIP_ACCURATE_PASS
-    return res;
-#else // !LIBC_MATH_HAS_SKIP_ACCURATE_PASS
     // Since 2^k is an exact power of 2, testing if the bounds round to the same
     // float is equivalent to testing the fully scaled bounds.
 #ifdef LIBC_TARGET_CPU_HAS_FMA
@@ -446,9 +454,11 @@ LIBC_INLINE float powf(float x, float y) {
       return res;
 
     // Accurate fallback when Ziv's test fails:
+#ifndef LIBC_MATH_HAS_SMALL_TABLES
     if (auto r = check_exact_boundary(orig_x_abs, orig_y, sign, out_sign);
         LIBC_UNLIKELY(r.has_value()))
       return r.value();
+#endif // !LIBC_MATH_HAS_SMALL_TABLES
 
     double r_dd = powf_accurate(x, y, e_x, sign);
     res = static_cast<float>(r_dd);
@@ -467,9 +477,11 @@ LIBC_INLINE float powf(float x, float y) {
     return powf_internal::set_underflow(out_sign);
 
   // Denormal and underflow path for -155 <= k <= -126:
+#ifndef LIBC_MATH_HAS_SMALL_TABLES
   if (auto r = check_exact_boundary(orig_x_abs, orig_y, sign, out_sign);
       LIBC_UNLIKELY(r.has_value()))
     return r.value();
+#endif // !LIBC_MATH_HAS_SMALL_TABLES
 
   int64_t exp2_k_i = (static_cast<uint64_t>(k + DoubleBits::EXP_BIAS)
                       << DoubleBits::FRACTION_LEN) |

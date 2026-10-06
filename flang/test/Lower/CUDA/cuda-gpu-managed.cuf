@@ -46,7 +46,7 @@ subroutine test_explicit_pinned()
 end subroutine
 
 ! CHECK-LABEL: func.func @_QPtest_explicit_pinned()
-! CHECK: %[[BOX:.*]] = cuf.alloc !fir.box<!fir.heap<!fir.array<?xf32>>> uniq_name("_QFtest_explicit_pinnedEp") {{.*}}bindc_name("p") data_attr(pinned)
+! CHECK: %[[BOX:.*]] = fir.alloca !fir.box<!fir.heap<!fir.array<?xf32>>> <{bindc_name = "p", uniq_name = "_QFtest_explicit_pinnedEp"}>
 ! CHECK: fir.embox {{.*}} allocator_idx(1)
 ! CHECK: %[[BOX_DECL:.*]]:2 = hlfir.declare %[[BOX]] uniq_name("_QFtest_explicit_pinnedEp") fortran_attrs<allocatable> data_attr(#cuf.cuda<pinned>)
 
@@ -117,7 +117,7 @@ end subroutine
 ! CHECK: cuf.alloc !fir.box<!fir.ptr<i32>> {{.*}}bindc_name("p") data_attr(device)
 ! CHECK: cuf.alloc !fir.box<!fir.ptr<i32>> {{.*}}bindc_name("q") data_attr(device)
 ! CHECK: cuf.alloc !fir.box<!fir.heap<f32>> {{.*}}bindc_name("x") data_attr(device)
-! CHECK: cuf.alloc !fir.box<!fir.heap<f32>> {{.*}}bindc_name("y") data_attr(pinned)
+! CHECK: fir.alloca !fir.box<!fir.heap<f32>> <{bindc_name = "y", uniq_name = "_QFtest_scalar_explicit_attrsEy"}>
 ! CHECK: cuf.allocate {{.*}} data_attr(device)
 ! CHECK: cuf.allocate {{.*}} data_attr(pinned)
 ! CHECK: cuf.allocate {{.*}} data_attr(device) pointer
@@ -140,7 +140,7 @@ end subroutine
 ! CHECK: cuf.alloc {{.*}} uniq_name("_QFtest_mixed_allocatablesEa") {{.*}}bindc_name("a") data_attr(managed)
 ! CHECK: cuf.alloc {{.*}} uniq_name("_QFtest_mixed_allocatablesEd") {{.*}}bindc_name("d") data_attr(device)
 ! CHECK: cuf.alloc {{.*}} uniq_name("_QFtest_mixed_allocatablesEm") {{.*}}bindc_name("m") data_attr(managed)
-! CHECK: cuf.alloc {{.*}} uniq_name("_QFtest_mixed_allocatablesEp") {{.*}}bindc_name("p") data_attr(pinned)
+! CHECK: fir.alloca !fir.box<!fir.heap<!fir.array<?xf32>>> <{bindc_name = "p", uniq_name = "_QFtest_mixed_allocatablesEp"}>
 
 ! -----------------------------------------------------------------------------
 ! Test 7: Multi-dimensional allocatable array
