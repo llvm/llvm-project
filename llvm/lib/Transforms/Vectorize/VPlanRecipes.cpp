@@ -605,9 +605,9 @@ Type *VPReplicateRecipe::computeScalarType(const Instruction *I,
   return computeScalarTypeForInstruction(Opcode, Operands);
 }
 
-/// Returns true if VPInstructions with \p Opcode always produce a single
+/// Returns true if VPInstructions with \p Opcode always generates a single
 /// scalar.
-static bool isAlwaysSingleScalar(unsigned Opcode) {
+static bool alwaysGeneratesSingleScalar(unsigned Opcode) {
   switch (Opcode) {
   case Instruction::Load:
   case Instruction::PHI:
@@ -631,10 +631,11 @@ VPInstruction::VPInstruction(unsigned Opcode, ArrayRef<VPValue *> Operands,
           Flags, DL),
       VPIRMetadata(MD), Opcode(Opcode), Name(Name.str()),
       GeneratesSingleScalar(
-          GeneratesSingleScalar.value_or(isAlwaysSingleScalar(Opcode))) {
-  assert((!isAlwaysSingleScalar(Opcode) || this->GeneratesSingleScalar) &&
-         "GeneratesSingleScalar must be set for opcodes that always generate "
-         "a single scalar");
+          GeneratesSingleScalar.value_or(alwaysGeneratesSingleScalar(Opcode))) {
+  assert(
+      (!alwaysGeneratesSingleScalar(Opcode) || this->GeneratesSingleScalar) &&
+      "GeneratesSingleScalar must be set for opcodes that always generate "
+      "a single scalar");
   assert(flagsValidForOpcode(getOpcode()) &&
          "Set flags not supported for the provided opcode");
   assert(hasRequiredFlagsForOpcode(getOpcode(), getScalarType()) &&
@@ -735,7 +736,6 @@ bool VPInstruction::inferGeneratesSingleScalar() const {
   case VPInstruction::BranchOnCount:
   case VPInstruction::CanonicalIVIncrementForPart:
   case VPInstruction::PtrAdd:
-  case VPInstruction::AnyOf:
   case VPInstruction::Not:
     return vputils::onlyFirstLaneUsed(this);
   default:
