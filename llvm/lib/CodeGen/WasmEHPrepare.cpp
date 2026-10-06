@@ -85,8 +85,6 @@ namespace {
 class WasmEHPrepareImpl {
   friend class WasmEHPrepare;
 
-  ExceptionHandling DefaultEH = ExceptionHandling::Default;
-
   Type *LPadContextTy = nullptr; // type of 'struct _Unwind_LandingPadContext'
 
   Function *ThrowF = nullptr;       // wasm.throw() intrinsic
@@ -104,9 +102,8 @@ class WasmEHPrepareImpl {
   void prepareEHPad(BasicBlock *BB, bool NeedPersonality, unsigned Index = 0);
 
 public:
-  WasmEHPrepareImpl(ExceptionHandling DefaultEH) : DefaultEH(DefaultEH) {}
-  WasmEHPrepareImpl(ExceptionHandling DefaultEH, Type *LPadContextTy_)
-      : DefaultEH(DefaultEH), LPadContextTy(LPadContextTy_) {}
+  WasmEHPrepareImpl() = default;
+  WasmEHPrepareImpl(Type *LPadContextTy_) : LPadContextTy(LPadContextTy_) {}
   bool runOnFunction(Function &F);
 };
 
@@ -116,8 +113,7 @@ class WasmEHPrepare : public FunctionPass {
 public:
   static char ID; // Pass identification, replacement for typeid
 
-  WasmEHPrepare(ExceptionHandling DefaultEH = ExceptionHandling::Default)
-      : FunctionPass(ID), P(DefaultEH) {}
+  WasmEHPrepare() : FunctionPass(ID) {}
   bool doInitialization(Module &M) override;
   bool runOnFunction(Function &F) override { return P.runOnFunction(F); }
 
@@ -135,7 +131,7 @@ PreservedAnalyses WasmEHPreparePass::run(Function &F,
   auto *PtrTy = PointerType::get(Context, 0);
   auto *LPadContextTy =
       StructType::get(I32Ty /*lpad_index*/, PtrTy /*lsda*/, I32Ty /*selector*/);
-  WasmEHPrepareImpl P(DefaultEH, LPadContextTy);
+  WasmEHPrepareImpl P(LPadContextTy);
   bool Changed = P.runOnFunction(F);
   return Changed ? PreservedAnalyses::none() : PreservedAnalyses ::all();
 }
@@ -146,9 +142,7 @@ INITIALIZE_PASS_BEGIN(WasmEHPrepare, DEBUG_TYPE,
 INITIALIZE_PASS_END(WasmEHPrepare, DEBUG_TYPE, "Prepare WebAssembly exceptions",
                     false, false)
 
-FunctionPass *llvm::createWasmEHPass(ExceptionHandling DefaultEH) {
-  return new WasmEHPrepare(DefaultEH);
-}
+FunctionPass *llvm::createWasmEHPass() { return new WasmEHPrepare(); }
 
 bool WasmEHPrepare::doInitialization(Module &M) {
   IRBuilder<> IRB(M);
@@ -174,11 +168,7 @@ static void eraseDeadBBsAndChildren(const Container &BBs) {
 }
 
 bool WasmEHPrepareImpl::runOnFunction(Function &F) {
-  // Prefer the "exception-model" module flag, else the TargetOptions default.
-  ExceptionHandling EH = F.getParent()->getExceptionModel();
-  if (EH == ExceptionHandling::Default)
-    EH = DefaultEH;
-  if (EH != ExceptionHandling::Wasm)
+  if (F.getParent()->getExceptionModel() != ExceptionHandling::Wasm)
     return false;
 
   bool Changed = false;
