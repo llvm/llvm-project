@@ -1164,13 +1164,12 @@ void AMDGPUAsmPrinter::emitDVgprSymbol(MachineFunction &MF) {
       unsigned NumBlocks =
           divideCeil(std::max(unsigned(NumVGPRs.getConstant()), 1U), BlockSize);
 
-      if (NumBlocks > AMDGPU::IsaInfo::MaxDynamicVGPRBlocks) {
-        OutContext.reportError(
-            {}, "DVGPR block count " + Twine(NumBlocks) +
-                    " exceeds maximum of " +
-                    Twine(AMDGPU::IsaInfo::MaxDynamicVGPRBlocks) +
-                    " for __dvgpr$ symbol for '" +
-                    Twine(CurrentFnSym->getName()) + "'");
+      if (NumBlocks > AMDGPU::MaxDynamicVGPRBlocks) {
+        OutContext.reportError({}, "DVGPR block count " + Twine(NumBlocks) +
+                                       " exceeds maximum of " +
+                                       Twine(AMDGPU::MaxDynamicVGPRBlocks) +
+                                       " for __dvgpr$ symbol for '" +
+                                       Twine(CurrentFnSym->getName()) + "'");
         return;
       }
       unsigned EncodedNumBlocks = (NumBlocks - 1) << 3;

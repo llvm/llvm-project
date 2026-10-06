@@ -3329,6 +3329,37 @@ TEST(TargetParserTest, testAMDGPUDynamicVGPRAllocGranule) {
             8u);
 }
 
+TEST(TargetParserTest, testAMDGPUDynamicVGPRAddressableNum) {
+  for (auto Kind :
+       {AMDGPU::GK_GFX1200, AMDGPU::GK_GFX1250, AMDGPU::GK_GFX1310}) {
+    SCOPED_TRACE(AMDGPU::getArchNameAMDGCN(Kind).str());
+    for (bool IsWave32 : {false, true}) {
+      EXPECT_EQ(AMDGPU::getAddressableNumVGPRs(Kind, IsWave32, 16), 128u);
+      EXPECT_EQ(AMDGPU::getAddressableNumVGPRs(Kind, IsWave32, 32), 256u);
+    }
+  }
+
+  // Zero selects the static limits, which depend on the wavefront size.
+  EXPECT_EQ(AMDGPU::getAddressableNumVGPRs(AMDGPU::GK_GFX1250, false, 0), 512u);
+  EXPECT_EQ(AMDGPU::getAddressableNumVGPRs(AMDGPU::GK_GFX1250, true, 0), 1024u);
+
+  // gfx90a-family targets always use their unified register file size.
+  for (auto Kind : {AMDGPU::GK_GFX90A, AMDGPU::GK_GFX942, AMDGPU::GK_GFX950}) {
+    SCOPED_TRACE(AMDGPU::getArchNameAMDGCN(Kind).str());
+    for (bool IsWave32 : {false, true}) {
+      EXPECT_EQ(AMDGPU::getAddressableNumVGPRs(Kind, IsWave32, 16), 512u);
+    }
+  }
+
+  EXPECT_EQ(AMDGPU::getAddressableNumVGPRs(Triple::AMDGPUSubArch1200, true, 16),
+            128u);
+  EXPECT_EQ(
+      AMDGPU::getAddressableNumVGPRs(Triple::AMDGPUSubArch1250, false, 32),
+      256u);
+  EXPECT_EQ(AMDGPU::getAddressableNumVGPRs(Triple::AMDGPUSubArch90A, false, 16),
+            512u);
+}
+
 TEST(TargetParserTest, testAMDGPUgetMaxHWAddressableLocalMemorySize) {
   // The addressable cap is a fixed hardware property, independent of how many
   // SIMDs a work-group runs on.
