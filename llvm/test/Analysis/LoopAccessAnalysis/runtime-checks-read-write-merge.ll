@@ -37,6 +37,7 @@ define void @merge_read_write_pointer(ptr %a, ptr %b) {
 ;
 entry:
   br label %loop
+
 loop:
   %iv = phi i64 [0, %entry], [%next, %loop]
   %a0 = getelementptr i32, ptr %a, i64 %iv
@@ -51,6 +52,7 @@ loop:
   %next = add nuw nsw i64 %iv, 1
   %done = icmp eq i64 %next, 32
   br i1 %done, label %exit, label %loop
+
 exit:
   ret void
 }
