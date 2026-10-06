@@ -2534,11 +2534,6 @@ private:
   /// alternative must pay their full price.
   InstructionCost getUnfusedFMulsPenalty(const TreeEntry &TE) const;
 
-  /// Return information about the vector formed for the specified index
-  /// of a vector of (the same) instruction.
-  TargetTransformInfo::OperandValueInfo
-  getOperandInfo(ArrayRef<Value *> Ops) const;
-
   /// \returns the graph entry for the \p Idx operand of the \p E entry.
   const TreeEntry *getOperandEntry(const TreeEntry *E, unsigned Idx) const;
   TreeEntry *getOperandEntry(TreeEntry *E, unsigned Idx) {
@@ -2550,10 +2545,6 @@ private:
   /// load/store node with the reverse order, the root instruction is the last
   /// one.
   Instruction *getRootEntryInstruction(const TreeEntry &Entry) const;
-
-  /// \returns Cast context for the given graph node.
-  TargetTransformInfo::CastContextHint
-  getCastContextHint(const TreeEntry &TE) const;
 
   /// \returns the scale of the given tree entry to the loop iteration.
   /// \p Scalar is the scalar value from the entry, if using the parent for the
@@ -34255,8 +34246,8 @@ private:
                   // reflects all lanes, not a single scalar.
                   InstructionCost MulCost = TTI->getArithmeticInstrCost(
                       Instruction::Mul, VectorTy, CostKind,
-                      R.getOperandInfo(MulTE->getOperand(0)),
-                      R.getOperandInfo(MulTE->getOperand(1)));
+                      TTI::getOperandInfo(MulTE->getOperand(0)),
+                      TTI::getOperandInfo(MulTE->getOperand(1)));
                   InstructionCost TreeExtCost = TTI->getCastInstrCost(
                       Ext0->getOpcode(), VectorTy, SrcVecTy, GetExtCCH(Ext0),
                       CostKind);
