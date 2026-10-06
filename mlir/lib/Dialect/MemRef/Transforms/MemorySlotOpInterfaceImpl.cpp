@@ -177,7 +177,6 @@ struct SubViewOpPromotableModel
     return DeletionKind::Delete;
   }
 };
-
 } // namespace
 
 //===----------------------------------------------------------------------===//

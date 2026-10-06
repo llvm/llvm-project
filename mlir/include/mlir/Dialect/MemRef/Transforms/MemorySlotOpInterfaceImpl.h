@@ -10,7 +10,6 @@
 #define MLIR_DIALECT_MEMREF_TRANSFORMS_MEMORYSLOTOPINTERFACEIMPL_H
 
 namespace mlir {
-
 class DialectRegistry;
 
 namespace memref {
