@@ -517,6 +517,15 @@ void CIRGenFunction::startFunction(GlobalDecl gd, QualType returnType,
   const auto *fd = dyn_cast_or_null<FunctionDecl>(d);
   curFuncDecl = (d ? d->getNonClosureContext() : nullptr);
 
+  // Recursion is disallowed for C++ main, OpenCL, HLSL, SYCL device code and
+  // CUDA/HIP kernels.
+  if (fd &&
+      ((getLangOpts().CPlusPlus && fd->isMain()) || getLangOpts().OpenCL ||
+       getLangOpts().HLSL || getLangOpts().SYCLIsDevice ||
+       (getLangOpts().CUDA && fd->hasAttr<CUDAGlobalAttr>())))
+    fn->setAttr(cir::CIRDialect::getNoRecurseAttrName(),
+                mlir::UnitAttr::get(fn.getContext()));
+
   // This is an artifact of the legacy handling of constrained floating-point
   // modes. The rounding mode and exception behavior tracked in
   // clang::LangOptions don't correspond directly to the representation we
