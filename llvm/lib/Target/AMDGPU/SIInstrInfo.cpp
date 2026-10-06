@@ -308,11 +308,6 @@ bool SIInstrInfo::isSrc1DPPRevOpcode(const GCNSubtarget &ST, uint32_t Opcode) {
 bool SIInstrInfo::resultDependsOnExec(const MachineInstr &MI) const {
   assert(isVALU(MI, /*AllowLDSDMA=*/true));
 
-  // Which lanes are active is part of what such an access does, so its implicit
-  // use of EXEC is not ignorable; otherwise it could move across an EXEC write.
-  if (isa<AMDGPUMI::VLoadStoreIdxInst>(MI))
-    return true;
-
   // If it is convergent it depends on EXEC.
   if (MI.isConvergent())
     return true;
