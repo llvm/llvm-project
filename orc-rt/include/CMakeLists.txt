@@ -67,7 +67,7 @@ set(ORC_RT_HEADERS
 )
 
 # Headers for POSIX-only interfaces, installed only where they're implemented.
-if (APPLE OR CMAKE_SYSTEM_NAME STREQUAL "Linux")
+if (ORC_RT_TARGET_POSIX)
   list(APPEND ORC_RT_HEADERS
     orc-rt/bedrock/sps/DWARFEHFrameRegistrarSPSCI.h
   )

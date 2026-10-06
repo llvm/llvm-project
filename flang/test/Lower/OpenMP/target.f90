@@ -548,10 +548,10 @@ subroutine omp_target_device_addr
    integer, pointer :: a
    !CHECK: %[[VAL_0:.*]] = fir.alloca !fir.box<!fir.ptr<i32>> <{bindc_name = "a", uniq_name = "_QFomp_target_device_addrEa"}>
    !CHECK: %[[VAL_0_DECL:.*]]:2 = hlfir.declare %[[VAL_0]] uniq_name("_QFomp_target_device_addrEa") fortran_attrs<pointer> : (!fir.ref<!fir.box<!fir.ptr<i32>>>) -> (!fir.ref<!fir.box<!fir.ptr<i32>>>, !fir.ref<!fir.box<!fir.ptr<i32>>>)
-   !CHECK: %[[MAP_MEMBERS:.*]] = omp.map.info var_ptr({{.*}} : !fir.ref<!fir.box<!fir.ptr<i32>>>, !fir.box<!fir.ptr<i32>>) map_clauses(tofrom) capture(ByRef) var_ptr_ptr({{.*}} : !fir.llvm_ptr<!fir.ref<i32>>, i32) name("") -> !fir.llvm_ptr<!fir.ref<i32>>
+   !CHECK: %[[MAP_MEMBERS:.*]] = omp.map.info var_ptr({{.*}} : !fir.ref<!fir.box<!fir.ptr<i32>>>, !fir.box<!fir.ptr<i32>>) map_clauses(tofrom) capture(ByRef) var_ptr_ptr({{.*}} : !fir.llvm_ptr<!fir.ref<i32>>, i32) name("a") -> !fir.llvm_ptr<!fir.ref<i32>>
    !CHECK: %[[MAP:.*]] = omp.map.info var_ptr({{.*}} : !fir.ref<!fir.box<!fir.ptr<i32>>>, !fir.box<!fir.ptr<i32>>) map_clauses(always, to) capture(ByRef) members(%[[MAP_MEMBERS]] : [0] : !fir.llvm_ptr<!fir.ref<i32>>) name("a") -> !fir.ref<!fir.box<!fir.ptr<i32>>>
    !CHECK: %[[MAP_ATTACH:.*]] = omp.map.info var_ptr(%{{.*}} : !fir.ref<!fir.box<!fir.ptr<i32>>>, !fir.box<!fir.ptr<i32>>) map_clauses(attach, ref_ptr, ref_ptee) capture(ByRef) var_ptr_ptr(%{{.*}} : !fir.llvm_ptr<!fir.ref<i32>>, i32) name("a") -> !fir.ref<!fir.box<!fir.ptr<i32>>>
-   !CHECK: %[[DEV_ADDR_MEMBERS:.*]] = omp.map.info var_ptr({{.*}} : !fir.ref<!fir.box<!fir.ptr<i32>>>, !fir.box<!fir.ptr<i32>>) map_clauses(return_param) capture(ByRef) var_ptr_ptr({{.*}} : !fir.llvm_ptr<!fir.ref<i32>>, i32) name("") -> !fir.llvm_ptr<!fir.ref<i32>>
+   !CHECK: %[[DEV_ADDR_MEMBERS:.*]] = omp.map.info var_ptr({{.*}} : !fir.ref<!fir.box<!fir.ptr<i32>>>, !fir.box<!fir.ptr<i32>>) map_clauses(return_param) capture(ByRef) var_ptr_ptr({{.*}} : !fir.llvm_ptr<!fir.ref<i32>>, i32) name("a") -> !fir.llvm_ptr<!fir.ref<i32>>
    !CHECK: %[[DEV_ADDR:.*]] = omp.map.info var_ptr({{.*}} : !fir.ref<!fir.box<!fir.ptr<i32>>>, !fir.box<!fir.ptr<i32>>) map_clauses(always, to) capture(ByRef) members(%[[DEV_ADDR_MEMBERS]] : [0] : !fir.llvm_ptr<!fir.ref<i32>>) name("a") -> !fir.ref<!fir.box<!fir.ptr<i32>>>
    !CHECK: %[[DEV_ADDR_ATTACH:.*]] = omp.map.info var_ptr(%{{.*}} : !fir.ref<!fir.box<!fir.ptr<i32>>>, !fir.box<!fir.ptr<i32>>) map_clauses(attach, ref_ptr, ref_ptee) capture(ByRef) var_ptr_ptr(%{{.*}} : !fir.llvm_ptr<!fir.ref<i32>>, i32) name("a") -> !fir.ref<!fir.box<!fir.ptr<i32>>>
    !CHECK: omp.target_data map_entries(%[[MAP]], %[[MAP_ATTACH]], %[[DEV_ADDR_ATTACH]], %[[MAP_MEMBERS]] : {{.*}}) use_device_addr(%[[DEV_ADDR]] -> %[[ARG_0:.*]], %[[DEV_ADDR_MEMBERS]] -> %[[ARG_1:.*]] : {{.*}}) {
@@ -677,8 +677,8 @@ subroutine target_unstructured
    !CHECK-NO-FPRIV: %[[VAL_4:.*]] = omp.map.info var_ptr(%[[VAL_1]]#1 : !fir.ref<i32>, i32) map_clauses(implicit) capture(ByCopy) name("i") -> !fir.ref<i32>
    !CHECK-NO-FPRIV: %[[VAL_5:.*]] = omp.map.info var_ptr(%[[VAL_3]]#1 : !fir.ref<i32>, i32) map_clauses(implicit) capture(ByCopy) name("j") -> !fir.ref<i32>
    !CHECK-NO-FPRIV: omp.target kernel_type(generic) map_entries(%[[VAL_4]] -> %[[VAL_6:.*]], %[[VAL_5]] -> %[[VAL_7:.*]] : !fir.ref<i32>, !fir.ref<i32>) {
-   !CHECK-FPRIV: %[[VAL_4:.*]] = omp.map.info var_ptr(%[[VAL_1]]#0 : !fir.ref<i32>, i32) map_clauses(to) capture(ByCopy) -> !fir.ref<i32>
-   !CHECK-FPRIV: %[[VAL_5:.*]] = omp.map.info var_ptr(%[[VAL_3]]#0 : !fir.ref<i32>, i32) map_clauses(to) capture(ByCopy) -> !fir.ref<i32>
+   !CHECK-FPRIV: %[[VAL_4:.*]] = omp.map.info var_ptr(%[[VAL_1]]#0 : !fir.ref<i32>, i32) map_clauses(to) capture(ByCopy) name("i") -> !fir.ref<i32>
+   !CHECK-FPRIV: %[[VAL_5:.*]] = omp.map.info var_ptr(%[[VAL_3]]#0 : !fir.ref<i32>, i32) map_clauses(to) capture(ByCopy) name("j") -> !fir.ref<i32>
    !CHECK-FPRIV: omp.target kernel_type(generic) map_entries(%[[VAL_4]] -> %[[ARG_0:.*]], %[[VAL_5]] -> %[[ARG_1:.*]] : !fir.ref<i32>, !fir.ref<i32>) private(@{{.*}} %[[VAL_1]]#0 -> %[[ARG_2:.*]] [map_idx=0], @{{.*}} %[[VAL_3]]#0 -> %[[ARG_3:.*]] [map_idx=1] : !fir.ref<i32>, !fir.ref<i32>) {
    !$omp target
       !CHECK-FPRIV: %[[VAL_8:.*]]:2 = hlfir.declare %[[ARG_2]] uniq_name("_QFtarget_unstructuredEi") : (!fir.ref<i32>) -> (!fir.ref<i32>, !fir.ref<i32>)
