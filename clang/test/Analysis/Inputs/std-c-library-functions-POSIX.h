@@ -124,6 +124,10 @@ void *mmap(void *addr, size_t length, int prot, int flags, int fd, off_t offset)
 void *mmap64(void *addr, size_t length, int prot, int flags, int fd, off64_t offset);
 int pipe(int fildes[2]);
 off_t lseek(int fildes, off_t offset, int whence);
+ssize_t pread(int fildes, void *buf, size_t nbyte, off_t offset);
+ssize_t pread64(int fildes, void *buf, size_t nbyte, off64_t offset);
+ssize_t pwrite(int fildes, const void *buf, size_t nbyte, off_t offset);
+ssize_t pwrite64(int fildes, const void *buf, size_t nbyte, off64_t offset);
 ssize_t readlink(const char *restrict path, char *restrict buf, size_t bufsize);
 ssize_t readlinkat(int fd, const char *restrict path, char *restrict buf, size_t bufsize);
 int renameat(int olddirfd, const char *oldpath, int newdirfd, const char *newpath);
