@@ -76,8 +76,8 @@ int llvm_test_dibuilder(void) {
       DIB, Module, "globalClass", 11, "", 0, File, 1, ClassTy, true,
       GlobalClassValueExpr, NULL, 0);
 
-  LLVMMetadataRef Int64Ty =
-      LLVMDIBuilderCreateBasicType(DIB, "Int64", 5, 64, 0, LLVMDIFlagZero);
+  LLVMMetadataRef Int64Ty = LLVMDIBuilderCreateBasicType(
+      DIB, "Int64", 5, 64, LLVMDWARFSignedTypeEncoding, LLVMDIFlagZero);
   LLVMMetadataRef Int64TypeDef =
       LLVMDIBuilderCreateTypedef(DIB, Int64Ty, "int64_t", 7, File, 42, File, 0);
 
