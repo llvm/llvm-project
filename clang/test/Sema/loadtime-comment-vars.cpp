@@ -4,23 +4,22 @@
 // Three scenarios are covered, each with its own set of named variables and
 // its own -verify prefix:
 //
-//   storage — storage duration: thread_local variables and a name-matched
-//             function-local static are diagnosed; a namespace-scope
-//             variable is accepted without diagnostic. Also covers a
-//             name-matched variable of an unsupported (wide character)
-//             type, which is diagnosed.
+//   storage — storage duration: thread_local variables, including a
+//             thread_local static data member, are diagnosed; a
+//             namespace-scope variable is accepted without diagnostic.
 //   init    — initializer form: dynamically initialized pointers, and
 //             constant initializers that are not a direct string literal
 //             (pointer to another global, consteval call, user-defined
 //             literal), are diagnosed. (-std=c++20 for consteval.)
-//   kinds   — unsupported declaration kinds: name-matched static data
-//             members (out-of-line, in-class inline, instantiated from a
-//             class template), variable template specializations
-//             (explicit and implicit), and namespace-scope inline variables
-//             are diagnosed.
+//   kinds   — unsupported declaration kinds and types: a name-matched
+//             function-local static, static data members (out-of-line,
+//             in-class inline, instantiated from a class template), variable
+//             template specializations (explicit and implicit),
+//             namespace-scope inline variables, and a variable of an
+//             unsupported (wide character) type are diagnosed.
 
 // RUN: %clang_cc1 -std=c++20 -triple powerpc64-ibm-aix \
-// RUN:   -mloadtime-comment-vars=keep,_ZN1N2tlE,_ZL3stl,_ZN1A2tmE,_ZZ1fvE2fn,_ZL4wstr \
+// RUN:   -mloadtime-comment-vars=keep,_ZN1N2tlE,_ZL3stl,_ZN1A2tmE \
 // RUN:   -fsyntax-only -verify=storage %s
 
 // RUN: %clang_cc1 -std=c++20 -triple powerpc64-ibm-aix \
@@ -28,7 +27,7 @@
 // RUN:   -fsyntax-only -verify=init %s
 
 // RUN: %clang_cc1 -std=c++20 -triple powerpc64-ibm-aix \
-// RUN:   -mloadtime-comment-vars=_ZN2B23sidE,_ZN2B34isidE,_Z2vtIcE,_Z2vtIiE,_ZN2SCIiE1mE,_ZN1M2ivE \
+// RUN:   -mloadtime-comment-vars=_ZZ1fvE2fn,_ZN2B23sidE,_ZN2B34isidE,_Z2vtIcE,_Z2vtIiE,_ZN2SCIiE1mE,_ZN1M2ivE,_ZL4wstr \
 // RUN:   -fsyntax-only -verify=kinds %s
 
 // ---- storage: storage-duration cases ----------------------------------------
@@ -51,13 +50,6 @@ struct A {
 };
 // The storage-duration reason outranks the static-data-member one.
 thread_local const char *A::tm = "@(#) tm"; // storage-warning {{'tm' named in '-mloadtime-comment-vars=' does not have static storage duration and will not be preserved}}
-
-// Function-local static: a name match demonstrates intent, so it is
-// diagnosed rather than silently ignored.
-void f() { static const char *fn = "@(#) fn"; (void)fn; } // storage-warning {{'fn' named in '-mloadtime-comment-vars=' is a function-local variable and will not be preserved}}
-
-// A name match on a variable of an unsupported type is diagnosed as well.
-static wchar_t wstr[] = L"@(#) w"; // storage-warning {{'wstr' named in '-mloadtime-comment-vars=' does not have a plain char pointer or array type and will not be preserved}}
 
 // ---- init: initializer-form cases --------------------------------------------
 
@@ -94,7 +86,14 @@ typedef __SIZE_TYPE__ size_t;
 constexpr const char *operator""_id(const char *str, size_t) { return str; }
 const char *p_udl = "@(#) udl"_id; // init-warning {{'p_udl' named in '-mloadtime-comment-vars=' is not initialized with a string literal and will not be preserved}}
 
-// ---- kinds: unsupported declaration kinds ------------------------------------
+// ---- kinds: unsupported declaration kinds and types --------------------------
+
+// Function-local static: a name match demonstrates intent, so it is
+// diagnosed rather than silently ignored.
+void f() { static const char *fn = "@(#) fn"; (void)fn; } // kinds-warning {{'fn' named in '-mloadtime-comment-vars=' is a function-local variable and will not be preserved}}
+
+// A name match on a variable of an unsupported type is diagnosed as well.
+static wchar_t wstr[] = L"@(#) w"; // kinds-warning {{'wstr' named in '-mloadtime-comment-vars=' does not have a plain char pointer or array type and will not be preserved}}
 
 // An out-of-line static data member definition is diagnosed.
 struct B2 {

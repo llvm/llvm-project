@@ -15549,10 +15549,12 @@ static void processForLoadTimeCommentVar(Sema &S, VarDecl *VD) {
   else if (VD->isStaticDataMember())
     Reason = diag::LoadTimeCommentVarReason::StaticDataMember;
   else if (VD->isInline())
-    // An inline variable is defined in every translation unit that sees it,
-    // and a module importer re-emits it using the decision made when the
-    // module was built, so the result would depend on option consistency
-    // across compilations.
+    // An inline variable has no strong relationship to any particular
+    // translation unit. It is defined in every one that sees it, and which
+    // definition survives (and whether that one was compiled with the option)
+    // is not under the control of any single compilation. The weak binding is
+    // most noticeable with header units, where the definition is not compiled
+    // to an object file at all.
     Reason = diag::LoadTimeCommentVarReason::Inline;
   else if (VD->hasAttr<AliasAttr>())
     // An alias has no storage of its own; the string belongs to the

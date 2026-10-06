@@ -1,5 +1,6 @@
-// Test -mloadtime-comment-vars= IR output for C++ on AIX. Three scenarios
-// are covered, each with its own set of named variables and check prefix:
+// Test -mloadtime-comment-vars= IR output for C++-specific forms on AIX.
+// Behaviour that is not specific to C++ (storage-duration filtering, list
+// parsing, the option given more than once) is covered by the C tests.
 //
 //  CHECK     — mangled-name matching: file- and namespace-scope variables
 //              receive !loadtime_comment metadata and are added to
@@ -12,14 +13,7 @@
 //              by the Sema tests and silenced here. The names are split
 //              across two occurrences of the option, which are combined.
 //
-//  STORAGE   — storage-duration filtering: thread_local variables are
-//              diagnosed by Sema and receive no metadata; a function-local
-//              static is diagnosed and receives no metadata.
-//
-//  SPACE/DUP — list-parsing edge cases: a name with a leading space matches
-//              nothing; a duplicate name preserves the variable exactly once.
-//
-// Names used in the matching scenario:
+// Names used:
 //
 //   Source        IR symbol                Expected treatment
 //   ------        ---------                ------------------
@@ -41,17 +35,6 @@
 //   sccsid_br     _ZL9sccsid_br            preserved (braced string literal)
 //   [a, b, c]     _ZDC1a1b1cE              preserved (structured binding: the
 //                                          DecompositionDecl owns the storage)
-//
-// Names used in the storage scenario (namespaces and structs are renamed to
-// avoid redefinition against the matching-scenario symbols):
-//
-//   Source        IR symbol        Expected treatment
-//   ------        ---------        ------------------
-//   keep          keep             preserved (file scope, static duration)
-//   S::tl         _ZN1S2tlE        thread_local: diagnosed, no metadata
-//   stl           _ZL3stl          static thread_local: diagnosed, no metadata
-//   T::tm         _ZN1T2tmE        thread_local static data member: diagnosed
-//   g()::fn       _ZZ1gvE2fn       function-local static: diagnosed, no metadata
 
 // RUN: %clang_cc1 -std=c++20 -O2 -triple powerpc64-ibm-aix -Wno-loadtime-comment-var \
 // RUN:   -mloadtime-comment-vars=x,_ZN1N1xE,_ZN1NL3ptrE,_ZN1A1xE,_ZN1B3verE,_ZN1C4infoE,not_string,_ZL4wstr \
@@ -60,20 +43,8 @@
 // RUN: FileCheck %s < %t.ll
 // RUN: FileCheck %s --check-prefix=NOEMIT < %t.ll
 
-// RUN: %clang_cc1 -std=c++20 -triple powerpc64-ibm-aix \
-// RUN:   -mloadtime-comment-vars=keep,_ZN1S2tlE,_ZL3stl,_ZN1T2tmE,_ZZ1gvE2fn \
-// RUN:   -emit-llvm -o - %s | FileCheck %s --check-prefix=STORAGE
-
-// RUN: %clang_cc1 -std=c++20 -O2 -triple powerpc64-ibm-aix \
-// RUN:   "-mloadtime-comment-vars=foo, bar" \
-// RUN:   -emit-llvm -disable-llvm-passes -o - %s | FileCheck %s --check-prefix=SPACE
-
-// RUN: %clang_cc1 -std=c++20 -O2 -triple powerpc64-ibm-aix \
-// RUN:   -mloadtime-comment-vars=foo,foo \
-// RUN:   -emit-llvm -disable-llvm-passes -o - %s | FileCheck %s --check-prefix=DUP
-
 // ===========================================================================
-// Mangled-name matching
+// Sources
 // ===========================================================================
 
 // 1. A file-scope array is not mangled in C++ (the IR name equals the
@@ -149,43 +120,7 @@ char anon[] = "@(#) anon";
 char version[] asm("asmid") = "@(#) asm label";
 
 // ===========================================================================
-// Storage-duration filtering (STORAGE)
-// ===========================================================================
-
-// 14. A file-scope pointer with static storage duration is preserved.
-const char *keep = "@(#) keep";
-
-namespace S {
-// 15. A thread_local variable (N renamed to S to avoid redefinition) is
-//     diagnosed and receives no metadata.
-thread_local const char *tl = "@(#) tl";
-} // namespace S
-
-// 16. The 'static' specifier changes linkage only; the storage duration is
-//     still thread, so this is diagnosed as well.
-static thread_local const char *stl = "@(#) stl";
-
-// 17. A thread_local static data member (A renamed to T) is diagnosed and
-//     receives no metadata.
-struct T {
-  static thread_local const char *tm;
-};
-thread_local const char *T::tm = "@(#) tm";
-
-// 18. Function-local static (f renamed to g) — name-matched, so diagnosed by
-//     Sema (see the Sema tests); receives no metadata either way.
-void g() { static const char *fn = "@(#) fn"; (void)fn; }
-
-// ===========================================================================
-// Sources — list-parsing edge cases (SPACE, DUP)
-// ===========================================================================
-
-// 19. Simple arrays used only by the SPACE/DUP checks.
-char foo[] = "@(#) foo";
-char bar[] = "@(#) bar";
-
-// ===========================================================================
-// CHECK patterns — mangled-name matching
+// CHECK patterns
 // ===========================================================================
 
 // File-scope x and namespace N::x both matched.
@@ -246,31 +181,3 @@ char bar[] = "@(#) bar";
 // NOEMIT-NOT: @_ZL4wstr
 // NOEMIT-NOT: @_ZL6u16str
 // NOEMIT-NOT: @_ZL5u8str
-
-// ===========================================================================
-// STORAGE patterns — thread_local variables get no metadata
-// ===========================================================================
-
-// Only the file-scope static-duration variable is preserved: it has metadata
-// and appears in llvm.compiler.used. The thread_local variables are diagnosed
-// by Sema and receive neither.
-// STORAGE: @keep = {{.*}}!loadtime_comment
-// STORAGE-NOT: @_ZN1S2tlE = {{.*}}!loadtime_comment
-// STORAGE-NOT: @_ZL3stl = {{.*}}!loadtime_comment
-// STORAGE-NOT: @_ZN1T2tmE = {{.*}}!loadtime_comment
-// STORAGE-NOT: @_ZZ1gvE2fn = {{.*}}!loadtime_comment
-// STORAGE: @llvm.compiler.used = appending global [1 x ptr] [ptr @keep], section "llvm.metadata"
-
-// ===========================================================================
-// SPACE/DUP patterns — list-parsing edge cases
-// ===========================================================================
-
-// "foo, bar": leading space means ' bar' matches nothing; only foo is preserved.
-// SPACE-DAG: @foo = global [9 x i8] c"@(#) foo\00", align {{[0-9]+}}, !loadtime_comment !{{[0-9]+}}
-// SPACE-DAG: @bar = global [9 x i8] c"@(#) bar\00", align {{[0-9]+}}{{$}}
-// SPACE-DAG: @llvm.compiler.used = appending global [1 x ptr] [ptr @foo], section "llvm.metadata"
-
-// "foo,foo": duplicate name preserves the variable exactly once.
-// DUP-DAG: @foo = global [9 x i8] c"@(#) foo\00", align {{[0-9]+}}, !loadtime_comment !{{[0-9]+}}
-// DUP-DAG: @bar = global [9 x i8] c"@(#) bar\00", align {{[0-9]+}}{{$}}
-// DUP-DAG: @llvm.compiler.used = appending global [1 x ptr] [ptr @foo], section "llvm.metadata"

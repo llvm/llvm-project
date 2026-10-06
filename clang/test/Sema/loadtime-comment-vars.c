@@ -11,6 +11,7 @@
 //     when the initializer is enclosed in braces; a braced string literal is
 //     accepted without diagnostic
 //   - name-matched variables of an unsupported type (int, unsigned char)
+//   - function-local static (name-matched, so diagnosed rather than ignored)
 //   - variables defined as an alias (array and pointer) are diagnosed, while
 //     naming the aliased variable is accepted without diagnostic
 //   - valid const char array — no diagnostic

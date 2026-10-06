@@ -2,10 +2,8 @@
 // preserve across C++20 module boundaries. The IR produced for these cases is
 // covered by clang/test/CodeGen/PowerPC/loadtime-comment-vars-modules.cpp.
 //
-// Three scenarios are covered, each with its own -verify prefix:
+// Two scenarios are covered, each with its own -verify prefix:
 //
-//   inline — a name-matched inline variable defined in a module unit is
-//            diagnosed when the module unit is compiled.
 //   import — specializations instantiated in an importing TU from the
 //            imported template definitions are diagnosed in that TU, at the
 //            pattern location in the module interface, with a note at the
@@ -15,10 +13,6 @@
 
 // RUN: rm -rf %t
 // RUN: split-file %s %t
-
-// RUN: %clang_cc1 -std=c++20 -triple powerpc64-ibm-aix \
-// RUN:   -mloadtime-comment-vars=_ZW1M2iv \
-// RUN:   -fsyntax-only -verify=inline %t/m.cppm
 
 // RUN: %clang_cc1 -std=c++20 -triple powerpc64-ibm-aix \
 // RUN:   -emit-module-interface %t/m.cppm -o %t/m.pcm
@@ -34,7 +28,6 @@
 
 //--- m.cppm
 export module M;
-export inline const char *iv = "@(#) module inline"; // inline-warning {{'iv' named in '-mloadtime-comment-vars=' is an inline variable and will not be preserved}}
 export template <class T> const char *vt = "@(#) vt";
 export template <class T> struct S { static const char *m; };
 template <class T> const char *S<T>::m = "@(#) sdm";
@@ -43,8 +36,8 @@ template <class T> const char *S<T>::m = "@(#) sdm";
 import M;
 const char *u1 = vt<int>;   // import-note {{in instantiation of variable template specialization 'vt<int>' requested here}}
 const char *u2 = S<int>::m; // import-note {{in instantiation of static data member 'S<int>::m' requested here}}
-// import-warning@m.cppm:3 {{'vt<int>' named in '-mloadtime-comment-vars=' is a variable template specialization and will not be preserved}}
-// import-warning@m.cppm:5 {{'m' named in '-mloadtime-comment-vars=' is a static data member and will not be preserved}}
+// import-warning@m.cppm:2 {{'vt<int>' named in '-mloadtime-comment-vars=' is a variable template specialization and will not be preserved}}
+// import-warning@m.cppm:4 {{'m' named in '-mloadtime-comment-vars=' is a static data member and will not be preserved}}
 
 //--- ident.h
 #ifndef IDENT_H

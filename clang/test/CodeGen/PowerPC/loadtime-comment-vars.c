@@ -1,5 +1,5 @@
-// Test Behavior of -mloadtime-comment-vars= for file-scope variables, in C and in
-// the same source compiled as C++:
+// Test the behavior of -mloadtime-comment-vars= for file-scope variables, in
+// C and in the same source compiled as C++ (CHECK and NOEMIT):
 //   * supported forms (plain-char pointer/array with a string-literal
 //     initializer) named in the list get !loadtime_comment metadata and are
 //     kept alive in llvm.compiler.used, even when otherwise unreferenced;
@@ -9,6 +9,12 @@
 //     silenced here with -Wno-loadtime-comment-var);
 //   * names are matched against the mangled IR name: in C that is the source
 //     identifier; in C++ a file-scope static mangles (sccsid -> _ZL6sccsid).
+//
+//   * STORAGE — storage-duration filtering: a thread-local variable and a
+//     function-local static receive no metadata (their diagnostics are
+//     covered by the Sema tests and silenced here);
+//   * SPACE/DUP — list parsing: a name with a leading space matches nothing,
+//     and a duplicate name preserves the variable exactly once.
 //
 // Non-AIX behavior is covered elsewhere: the driver warns and drops the
 // option (clang/test/Driver/mloadtime-comment-vars.c) and cc1 rejects it
@@ -29,6 +35,11 @@
 // RUN: %clang_cc1 -x c++ -w -O2 -triple powerpc64-ibm-aix -Wno-loadtime-comment-var -mloadtime-comment-vars=_ZL6sccsid,_ZL7version,_ZL12build_number,_ZL14same_copyright,_ZL6active,not_defined_here,_ZL8tdefchar,_ZL4ustr,_ZL4sstr,_ZL6braced -emit-llvm -disable-llvm-passes -o %t-cxx.ll %s
 // RUN: FileCheck %s -DSCCSID=_ZL6sccsid -DVERSION=_ZL7version -DSAME=_ZL14same_copyright -DACTIVE=_ZL6active -DTYPEDEFCHAR=_ZL8tdefchar -DBRACED=_ZL6braced < %t-cxx.ll
 // RUN: FileCheck %s --check-prefix=NOEMIT -DCOPYRIGHT=_ZL9copyright -DBUILDNUM=_ZL12build_number -DBUILDDATA=_ZL10build_data -DUSTR=_ZL4ustr -DSSTR=_ZL4sstr < %t-cxx.ll
+
+// RUN: %clang_cc1 -triple powerpc64-ibm-aix -Wno-loadtime-comment-var -mloadtime-comment-vars=keep,tl,stl,fn -emit-llvm -o - %s | FileCheck %s --check-prefix=STORAGE
+
+// RUN: %clang_cc1 -O2 -triple powerpc64-ibm-aix "-mloadtime-comment-vars=one, two" -emit-llvm -disable-llvm-passes -o - %s | FileCheck %s --check-prefix=SPACE
+// RUN: %clang_cc1 -O2 -triple powerpc64-ibm-aix -mloadtime-comment-vars=one,one -emit-llvm -disable-llvm-passes -o - %s | FileCheck %s --check-prefix=DUP
 
 // 1. A string pointer named in the list is preserved.
 static char *sccsid = "@(#) sccsid Version 1.0";
@@ -74,6 +85,18 @@ static const char *braced = {"@(#) braced"};
 
 void foo() {}
 
+// Sources for the STORAGE scenario. keep has static storage duration and is
+// preserved; the thread-local variables and the function-local static (whose
+// IR name is g.fn) are name-matched but receive no metadata.
+const char *keep = "@(#) keep";
+__thread const char *tl = "@(#) tl";
+static __thread const char *stl = "@(#) stl";
+void g(void) { static const char *fn = "@(#) fn"; (void)fn; }
+
+// Sources for the SPACE and DUP scenarios.
+char one[] = "@(#) one";
+char two[] = "@(#) two";
+
 // Listed, supported variables carry the metadata and stay alive.
 // CHECK-DAG: @[[ACTIVE]] = internal global ptr @[[ACTIVE_STR:.str(\.[0-9]+)?]], align {{[0-9]+}}, !loadtime_comment ![[MD:[0-9]+]]
 // CHECK-DAG: @[[ACTIVE_STR]] = private unnamed_addr constant [19 x i8] c"@(#) active string\00", align {{[0-9]+}}
@@ -106,3 +129,23 @@ void foo() {}
 // NOEMIT-NOT: @[[USTR]]
 // NOEMIT-NOT: @[[SSTR]]
 // NOEMIT-NOT: @not_defined_here
+
+// Storage-duration filtering: only the file-scope static-duration variable
+// has metadata and appears in llvm.compiler.used.
+// STORAGE: @keep = {{.*}}!loadtime_comment
+// STORAGE-NOT: @tl = {{.*}}!loadtime_comment
+// STORAGE-NOT: @stl = {{.*}}!loadtime_comment
+// STORAGE-NOT: @g.fn = {{.*}}!loadtime_comment
+// STORAGE: @llvm.compiler.used = appending global [1 x ptr] [ptr @keep], section "llvm.metadata"
+
+// List parsing, "one, two": the leading space means ' two' matches nothing;
+// only one is preserved (the {{$}} anchor proves two has no metadata).
+// SPACE-DAG: @one = global [9 x i8] c"@(#) one\00", align {{[0-9]+}}, !loadtime_comment !{{[0-9]+}}
+// SPACE-DAG: @two = global [9 x i8] c"@(#) two\00", align {{[0-9]+}}{{$}}
+// SPACE-DAG: @llvm.compiler.used = appending global [1 x ptr] [ptr @one], section "llvm.metadata"
+
+// List parsing, "one,one": a duplicate name preserves the variable exactly
+// once.
+// DUP-DAG: @one = global [9 x i8] c"@(#) one\00", align {{[0-9]+}}, !loadtime_comment !{{[0-9]+}}
+// DUP-DAG: @two = global [9 x i8] c"@(#) two\00", align {{[0-9]+}}{{$}}
+// DUP-DAG: @llvm.compiler.used = appending global [1 x ptr] [ptr @one], section "llvm.metadata"
