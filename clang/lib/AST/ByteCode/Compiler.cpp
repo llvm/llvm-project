@@ -7186,7 +7186,7 @@ bool Compiler<Emitter>::visitBreakStmt(const BreakStmt *S) {
   OptLabelTy TargetLabel = std::nullopt;
   const VariableScope<Emitter> *BreakScope = nullptr;
 
-  if (!S->hasLabelTarget()) {
+  if (!S->isNamed()) {
 
     for (const auto &LI : llvm::reverse(LabelInfoStack)) {
       if (LI.BreakLabel) {
@@ -7229,7 +7229,7 @@ bool Compiler<Emitter>::visitContinueStmt(const ContinueStmt *S) {
   OptLabelTy TargetLabel = std::nullopt;
   const VariableScope<Emitter> *ContinueScope = nullptr;
 
-  if (!S->hasLabelTarget()) {
+  if (!S->isNamed()) {
     for (const auto &LI : llvm::reverse(LabelInfoStack)) {
       if (LI.ContinueLabel) {
         TargetLabel = *LI.ContinueLabel;

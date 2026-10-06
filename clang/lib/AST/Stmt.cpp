@@ -1533,7 +1533,7 @@ const Stmt *LabelStmt::getInnermostLabeledStmt() const {
 }
 
 const Stmt *LoopControlStmt::getNamedLoopOrSwitch() const {
-  assert(hasLabelTarget());
+  assert(isNamed());
   LabelStmt *Label = getLabelDecl()->getStmt();
   return Label ? Label->getInnermostLabeledStmt() : nullptr;
 }
