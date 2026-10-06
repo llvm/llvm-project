@@ -13,7 +13,7 @@ void use_global_lambda() {
   global_lambda();
 }
 
-// CIR: cir.global "private" internal dso_local @global_lambda = #cir.zero : ![[REC_LAM_GLOBAL_LAMBDA:.*]] {alignment = 1 : i64}
+// CIR: cir.global "private" internal dso_local @global_lambda = #cir.zero : ![[REC_LAM_GLOBAL_LAMBDA:.*]] align(1)
 // CIR: cir.func {{.*}} @_Z17use_global_lambdav()
 // CIR:   %[[LAMBDA:.*]] = cir.get_global @global_lambda : !cir.ptr<![[REC_LAM_GLOBAL_LAMBDA]]>
 // CIR:   cir.call @_ZNK3$_0clEv(%[[LAMBDA]]) : (!cir.ptr<![[REC_LAM_GLOBAL_LAMBDA]]> {llvm.align = 1 : i64, llvm.dereferenceable = 1 : i64, llvm.nonnull, llvm.noundef}) -> ()
@@ -158,29 +158,23 @@ auto g() {
 }
 
 // CIR: cir.func {{.*}} @_Z1gv() -> !cir.ptr<!void> attributes {{{.*}}nothrow} {
-// CIR:   %[[COERCE:.*]] = cir.alloca "coerce" {{.*}} : !cir.ptr<![[REC_LAM_G:.*]]>
-// CIR:   %[[RETVAL:.*]] = cir.alloca "__retval" {{.*}} : !cir.ptr<![[REC_LAM_G]]>
+// CIR:   %[[RETVAL:.*]] = cir.alloca "__retval" {{.*}} : !cir.ptr<![[REC_LAM_G:.*]]>
 // CIR:   %[[I_ADDR:.*]] = cir.alloca "i" {{.*}} init : !cir.ptr<!s32i>
 // CIR:   %[[TWELVE:.*]] = cir.const #cir.int<12> : !s32i
 // CIR:   cir.store{{.*}} %[[TWELVE]], %[[I_ADDR]] : !s32i, !cir.ptr<!s32i>
 // CIR:   %[[I_ADDR_ADDR:.*]] = cir.get_member %[[RETVAL]][0] {name = "i"} : !cir.ptr<![[REC_LAM_G]]> -> !cir.ptr<!cir.ptr<!s32i>>
 // CIR:   cir.store{{.*}} %[[I_ADDR]], %[[I_ADDR_ADDR]] : !cir.ptr<!s32i>, !cir.ptr<!cir.ptr<!s32i>>
-// CIR:   %[[LAM:.*]] = cir.load{{.*}} %[[RETVAL]] : !cir.ptr<![[REC_LAM_G]]>, ![[REC_LAM_G]]
-// CIR:   cir.store %[[LAM]], %[[COERCE]] : ![[REC_LAM_G]], !cir.ptr<![[REC_LAM_G]]>
-// CIR:   %[[COERCE_PTR:.*]] = cir.cast bitcast %[[COERCE]] : !cir.ptr<![[REC_LAM_G]]> -> !cir.ptr<!cir.ptr<!void>>
-// CIR:   %[[RET:.*]] = cir.load %[[COERCE_PTR]] : !cir.ptr<!cir.ptr<!void>>, !cir.ptr<!void>
-// CIR:   cir.return %[[RET]] : !cir.ptr<!void>
+// CIR:   %[[RETVAL_PTR:.*]] = cir.cast bitcast %[[RETVAL]] : !cir.ptr<![[REC_LAM_G]]> -> !cir.ptr<!cir.ptr<!void>>
+// CIR-NEXT:   %[[RET:.*]] = cir.load align(8) %[[RETVAL_PTR]] : !cir.ptr<!cir.ptr<!void>>, !cir.ptr<!void>
+// CIR-NEXT:   cir.return %[[RET]] : !cir.ptr<!void>
 
 // LLVM: define dso_local ptr @_Z1gv()
-// LLVM:   %[[COERCE:.*]] = alloca %[[REC_LAM_G:.*]],
-// LLVM:   %[[RETVAL:.*]] = alloca %[[REC_LAM_G]]
+// LLVM:   %[[RETVAL:.*]] = alloca %[[REC_LAM_G:.*]],
 // LLVM:   %[[I:.*]] = alloca i32
 // LLVM:   store i32 12, ptr %[[I]]
 // LLVM:   %[[I_ADDR:.*]] = getelementptr inbounds nuw %[[REC_LAM_G]], ptr %[[RETVAL]], i32 0, i32 0
 // LLVM:   store ptr %[[I]], ptr %[[I_ADDR]]
-// LLVM:   %[[LAM:.*]] = load %[[REC_LAM_G]], ptr %[[RETVAL]]
-// LLVM:   store %[[REC_LAM_G]] %[[LAM]], ptr %[[COERCE]]
-// LLVM:   %[[RET:.*]] = load ptr, ptr %[[COERCE]]
+// LLVM:   %[[RET:.*]] = load ptr, ptr %[[RETVAL]], align 8
 // LLVM:   ret ptr %[[RET]]
 
 // OGCG: define dso_local ptr @_Z1gv()
@@ -204,29 +198,23 @@ auto g2() {
 
 // Should be same as above because of NRVO
 // CIR: cir.func {{.*}} @_Z2g2v() -> !cir.ptr<!void> attributes {{{.*}}nothrow} {
-// CIR:   %[[COERCE:.*]] = cir.alloca "coerce" {{.*}} : !cir.ptr<![[REC_LAM_G2:.*]]>
-// CIR:   %[[RETVAL:.*]] = cir.alloca "__retval" {{.*}} init : !cir.ptr<![[REC_LAM_G2]]>
+// CIR:   %[[RETVAL:.*]] = cir.alloca "__retval" {{.*}} init : !cir.ptr<![[REC_LAM_G2:.*]]>
 // CIR:   %[[I_ADDR:.*]] = cir.alloca "i" {{.*}} init : !cir.ptr<!s32i>
 // CIR:   %[[TWELVE:.*]] = cir.const #cir.int<12> : !s32i
 // CIR:   cir.store{{.*}} %[[TWELVE]], %[[I_ADDR]] : !s32i, !cir.ptr<!s32i>
 // CIR:   %[[I_ADDR_ADDR:.*]] = cir.get_member %[[RETVAL]][0] {name = "i"} : !cir.ptr<![[REC_LAM_G2]]> -> !cir.ptr<!cir.ptr<!s32i>>
 // CIR:   cir.store{{.*}} %[[I_ADDR]], %[[I_ADDR_ADDR]] : !cir.ptr<!s32i>, !cir.ptr<!cir.ptr<!s32i>>
-// CIR:   %[[LAM:.*]] = cir.load{{.*}} %[[RETVAL]] : !cir.ptr<![[REC_LAM_G2]]>, ![[REC_LAM_G2]]
-// CIR:   cir.store %[[LAM]], %[[COERCE]] : ![[REC_LAM_G2]], !cir.ptr<![[REC_LAM_G2]]>
-// CIR:   %[[COERCE_PTR:.*]] = cir.cast bitcast %[[COERCE]] : !cir.ptr<![[REC_LAM_G2]]> -> !cir.ptr<!cir.ptr<!void>>
-// CIR:   %[[RET:.*]] = cir.load %[[COERCE_PTR]] : !cir.ptr<!cir.ptr<!void>>, !cir.ptr<!void>
-// CIR:   cir.return %[[RET]] : !cir.ptr<!void>
+// CIR:   %[[RETVAL_PTR:.*]] = cir.cast bitcast %[[RETVAL]] : !cir.ptr<![[REC_LAM_G2]]> -> !cir.ptr<!cir.ptr<!void>>
+// CIR-NEXT:   %[[RET:.*]] = cir.load align(8) %[[RETVAL_PTR]] : !cir.ptr<!cir.ptr<!void>>, !cir.ptr<!void>
+// CIR-NEXT:   cir.return %[[RET]] : !cir.ptr<!void>
 
 // LLVM: define dso_local ptr @_Z2g2v()
-// LLVM:   %[[COERCE:.*]] = alloca %[[REC_LAM_G:.*]],
-// LLVM:   %[[RETVAL:.*]] = alloca %[[REC_LAM_G]]
+// LLVM:   %[[RETVAL:.*]] = alloca %[[REC_LAM_G:.*]],
 // LLVM:   %[[I:.*]] = alloca i32
 // LLVM:   store i32 12, ptr %[[I]]
 // LLVM:   %[[I_ADDR:.*]] = getelementptr inbounds nuw %[[REC_LAM_G]], ptr %[[RETVAL]], i32 0, i32 0
 // LLVM:   store ptr %[[I]], ptr %[[I_ADDR]]
-// LLVM:   %[[LAM:.*]] = load %[[REC_LAM_G]], ptr %[[RETVAL]]
-// LLVM:   store %[[REC_LAM_G]] %[[LAM]], ptr %[[COERCE]]
-// LLVM:   %[[RET:.*]] = load ptr, ptr %[[COERCE]]
+// LLVM:   %[[RET:.*]] = load ptr, ptr %[[RETVAL]], align 8
 // LLVM:   ret ptr %[[RET]]
 
 // OGCG: define dso_local ptr @_Z2g2v()

@@ -7,9 +7,9 @@
 ; RUN: opt < %s -S -mtriple=x86_64-apple-darwin -passes="print<cost-model>" 2>&1 -disable-output -cost-kind=all -mcpu=skylake  | FileCheck %s --check-prefixes=AVX,SKL
 ; RUN: opt < %s -S -mtriple=x86_64-apple-darwin -passes="print<cost-model>" 2>&1 -disable-output -cost-kind=all -mcpu=knl      | FileCheck %s --check-prefixes=AVX512,AVX512F,KNL
 ; RUN: opt < %s -S -mtriple=x86_64-apple-darwin -passes="print<cost-model>" 2>&1 -disable-output -cost-kind=all -mcpu=skx      | FileCheck %s --check-prefixes=AVX512,AVX512F,SKX
-; RUN: opt < %s -S -mtriple=x86_64-apple-darwin -passes="print<cost-model>" 2>&1 -disable-output -cost-kind=all -mcpu=tigerlake| FileCheck %s --check-prefixes=AVX512,VBMI2
-; RUN: opt < %s -S -mtriple=x86_64-apple-darwin -passes="print<cost-model>" 2>&1 -disable-output -cost-kind=all -mcpu=znver4   | FileCheck %s --check-prefixes=AVX512,VBMI2
-; RUN: opt < %s -S -mtriple=x86_64-apple-darwin -passes="print<cost-model>" 2>&1 -disable-output -cost-kind=all -mcpu=znver5   | FileCheck %s --check-prefixes=AVX512,VBMI2
+; RUN: opt < %s -S -mtriple=x86_64-apple-darwin -passes="print<cost-model>" 2>&1 -disable-output -cost-kind=all -mcpu=tigerlake| FileCheck %s --check-prefixes=AVX512,VBMI2,VBMI2-FAST
+; RUN: opt < %s -S -mtriple=x86_64-apple-darwin -passes="print<cost-model>" 2>&1 -disable-output -cost-kind=all -mcpu=znver4   | FileCheck %s --check-prefixes=AVX512,VBMI2,VBMI2-SLOW
+; RUN: opt < %s -S -mtriple=x86_64-apple-darwin -passes="print<cost-model>" 2>&1 -disable-output -cost-kind=all -mcpu=znver5   | FileCheck %s --check-prefixes=AVX512,VBMI2,VBMI2-FAST
 
 define i32 @masked_load(<1 x i1> %m1, <2 x i1> %m2, <3 x i1> %m3, <4 x i1> %m4, <5 x i1> %m5, <6 x i1> %m6, <7 x i1> %m7, <8 x i1> %m8, <9 x i1> %m9, <10 x i1> %m10, <11 x i1> %m11, <12 x i1> %m12, <13 x i1> %m13, <14 x i1> %m14, <15 x i1> %m15, <16 x i1> %m16, <32 x i1> %m32, <64 x i1> %m64) {
 ; SSE2-LABEL: 'masked_load'
@@ -1710,32 +1710,86 @@ define i32 @masked_compressstore(<1 x i1> %m1, <2 x i1> %m2, <4 x i1> %m4, <8 x 
 ; SKL-NEXT:  Cost Model: Found costs of RThru:27 CodeSize:35 Lat:35 SizeLat:35 for: call void @llvm.masked.compressstore.v8i8.p0(<8 x i8> undef, ptr undef, <8 x i1> %m8)
 ; SKL-NEXT:  Cost Model: Found costs of RThru:0 CodeSize:1 Lat:1 SizeLat:1 for: ret i32 0
 ;
-; AVX512-LABEL: 'masked_compressstore'
-; AVX512-NEXT:  Cost Model: Found costs of RThru:34 CodeSize:42 Lat:42 SizeLat:42 for: call void @llvm.masked.compressstore.v8f64.p0(<8 x double> undef, ptr undef, <8 x i1> %m8)
-; AVX512-NEXT:  Cost Model: Found costs of RThru:16 CodeSize:20 Lat:20 SizeLat:20 for: call void @llvm.masked.compressstore.v4f64.p0(<4 x double> undef, ptr undef, <4 x i1> %m4)
-; AVX512-NEXT:  Cost Model: Found costs of RThru:7 CodeSize:9 Lat:9 SizeLat:9 for: call void @llvm.masked.compressstore.v2f64.p0(<2 x double> undef, ptr undef, <2 x i1> %m2)
-; AVX512-NEXT:  Cost Model: Found costs of RThru:2 CodeSize:3 Lat:3 SizeLat:3 for: call void @llvm.masked.compressstore.v1f64.p0(<1 x double> undef, ptr undef, <1 x i1> %m1)
-; AVX512-NEXT:  Cost Model: Found costs of RThru:69 CodeSize:85 Lat:85 SizeLat:85 for: call void @llvm.masked.compressstore.v16f32.p0(<16 x float> undef, ptr undef, <16 x i1> %m16)
-; AVX512-NEXT:  Cost Model: Found costs of RThru:34 CodeSize:42 Lat:42 SizeLat:42 for: call void @llvm.masked.compressstore.v8f32.p0(<8 x float> undef, ptr undef, <8 x i1> %m8)
-; AVX512-NEXT:  Cost Model: Found costs of RThru:16 CodeSize:20 Lat:20 SizeLat:20 for: call void @llvm.masked.compressstore.v4f32.p0(<4 x float> undef, ptr undef, <4 x i1> %m4)
-; AVX512-NEXT:  Cost Model: Found costs of RThru:7 CodeSize:9 Lat:9 SizeLat:9 for: call void @llvm.masked.compressstore.v2f32.p0(<2 x float> undef, ptr undef, <2 x i1> %m2)
-; AVX512-NEXT:  Cost Model: Found costs of RThru:38 CodeSize:46 Lat:46 SizeLat:46 for: call void @llvm.masked.compressstore.v8i64.p0(<8 x i64> undef, ptr undef, <8 x i1> %m8)
-; AVX512-NEXT:  Cost Model: Found costs of RThru:18 CodeSize:22 Lat:22 SizeLat:22 for: call void @llvm.masked.compressstore.v4i64.p0(<4 x i64> undef, ptr undef, <4 x i1> %m4)
-; AVX512-NEXT:  Cost Model: Found costs of RThru:8 CodeSize:10 Lat:10 SizeLat:10 for: call void @llvm.masked.compressstore.v2i64.p0(<2 x i64> undef, ptr undef, <2 x i1> %m2)
-; AVX512-NEXT:  Cost Model: Found costs of RThru:2 CodeSize:3 Lat:3 SizeLat:3 for: call void @llvm.masked.compressstore.v1i64.p0(<1 x i64> undef, ptr undef, <1 x i1> %m1)
-; AVX512-NEXT:  Cost Model: Found costs of RThru:73 CodeSize:89 Lat:89 SizeLat:89 for: call void @llvm.masked.compressstore.v16i32.p0(<16 x i32> undef, ptr undef, <16 x i1> %m16)
-; AVX512-NEXT:  Cost Model: Found costs of RThru:36 CodeSize:44 Lat:44 SizeLat:44 for: call void @llvm.masked.compressstore.v8i32.p0(<8 x i32> undef, ptr undef, <8 x i1> %m8)
-; AVX512-NEXT:  Cost Model: Found costs of RThru:17 CodeSize:21 Lat:21 SizeLat:21 for: call void @llvm.masked.compressstore.v4i32.p0(<4 x i32> undef, ptr undef, <4 x i1> %m4)
-; AVX512-NEXT:  Cost Model: Found costs of RThru:8 CodeSize:10 Lat:10 SizeLat:10 for: call void @llvm.masked.compressstore.v2i32.p0(<2 x i32> undef, ptr undef, <2 x i1> %m2)
-; AVX512-NEXT:  Cost Model: Found costs of RThru:143 CodeSize:175 Lat:175 SizeLat:175 for: call void @llvm.masked.compressstore.v32i16.p0(<32 x i16> undef, ptr undef, <32 x i1> %m32)
-; AVX512-NEXT:  Cost Model: Found costs of RThru:71 CodeSize:87 Lat:87 SizeLat:87 for: call void @llvm.masked.compressstore.v16i16.p0(<16 x i16> undef, ptr undef, <16 x i1> %m16)
-; AVX512-NEXT:  Cost Model: Found costs of RThru:35 CodeSize:43 Lat:43 SizeLat:43 for: call void @llvm.masked.compressstore.v8i16.p0(<8 x i16> undef, ptr undef, <8 x i1> %m8)
-; AVX512-NEXT:  Cost Model: Found costs of RThru:17 CodeSize:21 Lat:21 SizeLat:21 for: call void @llvm.masked.compressstore.v4i16.p0(<4 x i16> undef, ptr undef, <4 x i1> %m4)
-; AVX512-NEXT:  Cost Model: Found costs of RThru:283 CodeSize:347 Lat:347 SizeLat:347 for: call void @llvm.masked.compressstore.v64i8.p0(<64 x i8> undef, ptr undef, <64 x i1> %m64)
-; AVX512-NEXT:  Cost Model: Found costs of RThru:141 CodeSize:173 Lat:173 SizeLat:173 for: call void @llvm.masked.compressstore.v32i8.p0(<32 x i8> undef, ptr undef, <32 x i1> %m32)
-; AVX512-NEXT:  Cost Model: Found costs of RThru:70 CodeSize:86 Lat:86 SizeLat:86 for: call void @llvm.masked.compressstore.v16i8.p0(<16 x i8> undef, ptr undef, <16 x i1> %m16)
-; AVX512-NEXT:  Cost Model: Found costs of RThru:35 CodeSize:43 Lat:43 SizeLat:43 for: call void @llvm.masked.compressstore.v8i8.p0(<8 x i8> undef, ptr undef, <8 x i1> %m8)
-; AVX512-NEXT:  Cost Model: Found costs of RThru:0 CodeSize:1 Lat:1 SizeLat:1 for: ret i32 0
+; AVX512F-LABEL: 'masked_compressstore'
+; AVX512F-NEXT:  Cost Model: Found costs of RThru:3 CodeSize:1 Lat:12 SizeLat:8 for: call void @llvm.masked.compressstore.v8f64.p0(<8 x double> undef, ptr undef, <8 x i1> %m8)
+; AVX512F-NEXT:  Cost Model: Found costs of RThru:3 CodeSize:1 Lat:11 SizeLat:7 for: call void @llvm.masked.compressstore.v4f64.p0(<4 x double> undef, ptr undef, <4 x i1> %m4)
+; AVX512F-NEXT:  Cost Model: Found costs of RThru:3 CodeSize:1 Lat:10 SizeLat:7 for: call void @llvm.masked.compressstore.v2f64.p0(<2 x double> undef, ptr undef, <2 x i1> %m2)
+; AVX512F-NEXT:  Cost Model: Found costs of RThru:2 CodeSize:3 Lat:3 SizeLat:3 for: call void @llvm.masked.compressstore.v1f64.p0(<1 x double> undef, ptr undef, <1 x i1> %m1)
+; AVX512F-NEXT:  Cost Model: Found costs of RThru:3 CodeSize:1 Lat:12 SizeLat:8 for: call void @llvm.masked.compressstore.v16f32.p0(<16 x float> undef, ptr undef, <16 x i1> %m16)
+; AVX512F-NEXT:  Cost Model: Found costs of RThru:3 CodeSize:1 Lat:11 SizeLat:7 for: call void @llvm.masked.compressstore.v8f32.p0(<8 x float> undef, ptr undef, <8 x i1> %m8)
+; AVX512F-NEXT:  Cost Model: Found costs of RThru:3 CodeSize:1 Lat:10 SizeLat:7 for: call void @llvm.masked.compressstore.v4f32.p0(<4 x float> undef, ptr undef, <4 x i1> %m4)
+; AVX512F-NEXT:  Cost Model: Found costs of RThru:3 CodeSize:1 Lat:10 SizeLat:7 for: call void @llvm.masked.compressstore.v2f32.p0(<2 x float> undef, ptr undef, <2 x i1> %m2)
+; AVX512F-NEXT:  Cost Model: Found costs of RThru:3 CodeSize:1 Lat:12 SizeLat:8 for: call void @llvm.masked.compressstore.v8i64.p0(<8 x i64> undef, ptr undef, <8 x i1> %m8)
+; AVX512F-NEXT:  Cost Model: Found costs of RThru:3 CodeSize:1 Lat:11 SizeLat:7 for: call void @llvm.masked.compressstore.v4i64.p0(<4 x i64> undef, ptr undef, <4 x i1> %m4)
+; AVX512F-NEXT:  Cost Model: Found costs of RThru:3 CodeSize:1 Lat:10 SizeLat:7 for: call void @llvm.masked.compressstore.v2i64.p0(<2 x i64> undef, ptr undef, <2 x i1> %m2)
+; AVX512F-NEXT:  Cost Model: Found costs of RThru:2 CodeSize:3 Lat:3 SizeLat:3 for: call void @llvm.masked.compressstore.v1i64.p0(<1 x i64> undef, ptr undef, <1 x i1> %m1)
+; AVX512F-NEXT:  Cost Model: Found costs of RThru:3 CodeSize:1 Lat:12 SizeLat:8 for: call void @llvm.masked.compressstore.v16i32.p0(<16 x i32> undef, ptr undef, <16 x i1> %m16)
+; AVX512F-NEXT:  Cost Model: Found costs of RThru:3 CodeSize:1 Lat:11 SizeLat:7 for: call void @llvm.masked.compressstore.v8i32.p0(<8 x i32> undef, ptr undef, <8 x i1> %m8)
+; AVX512F-NEXT:  Cost Model: Found costs of RThru:3 CodeSize:1 Lat:10 SizeLat:7 for: call void @llvm.masked.compressstore.v4i32.p0(<4 x i32> undef, ptr undef, <4 x i1> %m4)
+; AVX512F-NEXT:  Cost Model: Found costs of RThru:3 CodeSize:1 Lat:10 SizeLat:7 for: call void @llvm.masked.compressstore.v2i32.p0(<2 x i32> undef, ptr undef, <2 x i1> %m2)
+; AVX512F-NEXT:  Cost Model: Found costs of RThru:143 CodeSize:175 Lat:175 SizeLat:175 for: call void @llvm.masked.compressstore.v32i16.p0(<32 x i16> undef, ptr undef, <32 x i1> %m32)
+; AVX512F-NEXT:  Cost Model: Found costs of RThru:71 CodeSize:87 Lat:87 SizeLat:87 for: call void @llvm.masked.compressstore.v16i16.p0(<16 x i16> undef, ptr undef, <16 x i1> %m16)
+; AVX512F-NEXT:  Cost Model: Found costs of RThru:35 CodeSize:43 Lat:43 SizeLat:43 for: call void @llvm.masked.compressstore.v8i16.p0(<8 x i16> undef, ptr undef, <8 x i1> %m8)
+; AVX512F-NEXT:  Cost Model: Found costs of RThru:17 CodeSize:21 Lat:21 SizeLat:21 for: call void @llvm.masked.compressstore.v4i16.p0(<4 x i16> undef, ptr undef, <4 x i1> %m4)
+; AVX512F-NEXT:  Cost Model: Found costs of RThru:283 CodeSize:347 Lat:347 SizeLat:347 for: call void @llvm.masked.compressstore.v64i8.p0(<64 x i8> undef, ptr undef, <64 x i1> %m64)
+; AVX512F-NEXT:  Cost Model: Found costs of RThru:141 CodeSize:173 Lat:173 SizeLat:173 for: call void @llvm.masked.compressstore.v32i8.p0(<32 x i8> undef, ptr undef, <32 x i1> %m32)
+; AVX512F-NEXT:  Cost Model: Found costs of RThru:70 CodeSize:86 Lat:86 SizeLat:86 for: call void @llvm.masked.compressstore.v16i8.p0(<16 x i8> undef, ptr undef, <16 x i1> %m16)
+; AVX512F-NEXT:  Cost Model: Found costs of RThru:35 CodeSize:43 Lat:43 SizeLat:43 for: call void @llvm.masked.compressstore.v8i8.p0(<8 x i8> undef, ptr undef, <8 x i1> %m8)
+; AVX512F-NEXT:  Cost Model: Found costs of RThru:0 CodeSize:1 Lat:1 SizeLat:1 for: ret i32 0
+;
+; VBMI2-FAST-LABEL: 'masked_compressstore'
+; VBMI2-FAST-NEXT:  Cost Model: Found costs of RThru:3 CodeSize:1 Lat:12 SizeLat:8 for: call void @llvm.masked.compressstore.v8f64.p0(<8 x double> undef, ptr undef, <8 x i1> %m8)
+; VBMI2-FAST-NEXT:  Cost Model: Found costs of RThru:3 CodeSize:1 Lat:11 SizeLat:7 for: call void @llvm.masked.compressstore.v4f64.p0(<4 x double> undef, ptr undef, <4 x i1> %m4)
+; VBMI2-FAST-NEXT:  Cost Model: Found costs of RThru:3 CodeSize:1 Lat:10 SizeLat:7 for: call void @llvm.masked.compressstore.v2f64.p0(<2 x double> undef, ptr undef, <2 x i1> %m2)
+; VBMI2-FAST-NEXT:  Cost Model: Found costs of RThru:2 CodeSize:3 Lat:3 SizeLat:3 for: call void @llvm.masked.compressstore.v1f64.p0(<1 x double> undef, ptr undef, <1 x i1> %m1)
+; VBMI2-FAST-NEXT:  Cost Model: Found costs of RThru:3 CodeSize:1 Lat:12 SizeLat:8 for: call void @llvm.masked.compressstore.v16f32.p0(<16 x float> undef, ptr undef, <16 x i1> %m16)
+; VBMI2-FAST-NEXT:  Cost Model: Found costs of RThru:3 CodeSize:1 Lat:11 SizeLat:7 for: call void @llvm.masked.compressstore.v8f32.p0(<8 x float> undef, ptr undef, <8 x i1> %m8)
+; VBMI2-FAST-NEXT:  Cost Model: Found costs of RThru:3 CodeSize:1 Lat:10 SizeLat:7 for: call void @llvm.masked.compressstore.v4f32.p0(<4 x float> undef, ptr undef, <4 x i1> %m4)
+; VBMI2-FAST-NEXT:  Cost Model: Found costs of RThru:3 CodeSize:1 Lat:10 SizeLat:7 for: call void @llvm.masked.compressstore.v2f32.p0(<2 x float> undef, ptr undef, <2 x i1> %m2)
+; VBMI2-FAST-NEXT:  Cost Model: Found costs of RThru:3 CodeSize:1 Lat:12 SizeLat:8 for: call void @llvm.masked.compressstore.v8i64.p0(<8 x i64> undef, ptr undef, <8 x i1> %m8)
+; VBMI2-FAST-NEXT:  Cost Model: Found costs of RThru:3 CodeSize:1 Lat:11 SizeLat:7 for: call void @llvm.masked.compressstore.v4i64.p0(<4 x i64> undef, ptr undef, <4 x i1> %m4)
+; VBMI2-FAST-NEXT:  Cost Model: Found costs of RThru:3 CodeSize:1 Lat:10 SizeLat:7 for: call void @llvm.masked.compressstore.v2i64.p0(<2 x i64> undef, ptr undef, <2 x i1> %m2)
+; VBMI2-FAST-NEXT:  Cost Model: Found costs of RThru:2 CodeSize:3 Lat:3 SizeLat:3 for: call void @llvm.masked.compressstore.v1i64.p0(<1 x i64> undef, ptr undef, <1 x i1> %m1)
+; VBMI2-FAST-NEXT:  Cost Model: Found costs of RThru:3 CodeSize:1 Lat:12 SizeLat:8 for: call void @llvm.masked.compressstore.v16i32.p0(<16 x i32> undef, ptr undef, <16 x i1> %m16)
+; VBMI2-FAST-NEXT:  Cost Model: Found costs of RThru:3 CodeSize:1 Lat:11 SizeLat:7 for: call void @llvm.masked.compressstore.v8i32.p0(<8 x i32> undef, ptr undef, <8 x i1> %m8)
+; VBMI2-FAST-NEXT:  Cost Model: Found costs of RThru:3 CodeSize:1 Lat:10 SizeLat:7 for: call void @llvm.masked.compressstore.v4i32.p0(<4 x i32> undef, ptr undef, <4 x i1> %m4)
+; VBMI2-FAST-NEXT:  Cost Model: Found costs of RThru:3 CodeSize:1 Lat:10 SizeLat:7 for: call void @llvm.masked.compressstore.v2i32.p0(<2 x i32> undef, ptr undef, <2 x i1> %m2)
+; VBMI2-FAST-NEXT:  Cost Model: Found costs of RThru:3 CodeSize:1 Lat:12 SizeLat:8 for: call void @llvm.masked.compressstore.v32i16.p0(<32 x i16> undef, ptr undef, <32 x i1> %m32)
+; VBMI2-FAST-NEXT:  Cost Model: Found costs of RThru:3 CodeSize:1 Lat:11 SizeLat:7 for: call void @llvm.masked.compressstore.v16i16.p0(<16 x i16> undef, ptr undef, <16 x i1> %m16)
+; VBMI2-FAST-NEXT:  Cost Model: Found costs of RThru:3 CodeSize:1 Lat:10 SizeLat:7 for: call void @llvm.masked.compressstore.v8i16.p0(<8 x i16> undef, ptr undef, <8 x i1> %m8)
+; VBMI2-FAST-NEXT:  Cost Model: Found costs of RThru:3 CodeSize:1 Lat:10 SizeLat:7 for: call void @llvm.masked.compressstore.v4i16.p0(<4 x i16> undef, ptr undef, <4 x i1> %m4)
+; VBMI2-FAST-NEXT:  Cost Model: Found costs of RThru:3 CodeSize:1 Lat:12 SizeLat:8 for: call void @llvm.masked.compressstore.v64i8.p0(<64 x i8> undef, ptr undef, <64 x i1> %m64)
+; VBMI2-FAST-NEXT:  Cost Model: Found costs of RThru:3 CodeSize:1 Lat:11 SizeLat:7 for: call void @llvm.masked.compressstore.v32i8.p0(<32 x i8> undef, ptr undef, <32 x i1> %m32)
+; VBMI2-FAST-NEXT:  Cost Model: Found costs of RThru:3 CodeSize:1 Lat:10 SizeLat:7 for: call void @llvm.masked.compressstore.v16i8.p0(<16 x i8> undef, ptr undef, <16 x i1> %m16)
+; VBMI2-FAST-NEXT:  Cost Model: Found costs of RThru:3 CodeSize:1 Lat:10 SizeLat:7 for: call void @llvm.masked.compressstore.v8i8.p0(<8 x i8> undef, ptr undef, <8 x i1> %m8)
+; VBMI2-FAST-NEXT:  Cost Model: Found costs of RThru:0 CodeSize:1 Lat:1 SizeLat:1 for: ret i32 0
+;
+; VBMI2-SLOW-LABEL: 'masked_compressstore'
+; VBMI2-SLOW-NEXT:  Cost Model: Found costs of RThru:34 CodeSize:42 Lat:42 SizeLat:42 for: call void @llvm.masked.compressstore.v8f64.p0(<8 x double> undef, ptr undef, <8 x i1> %m8)
+; VBMI2-SLOW-NEXT:  Cost Model: Found costs of RThru:16 CodeSize:20 Lat:20 SizeLat:20 for: call void @llvm.masked.compressstore.v4f64.p0(<4 x double> undef, ptr undef, <4 x i1> %m4)
+; VBMI2-SLOW-NEXT:  Cost Model: Found costs of RThru:7 CodeSize:9 Lat:9 SizeLat:9 for: call void @llvm.masked.compressstore.v2f64.p0(<2 x double> undef, ptr undef, <2 x i1> %m2)
+; VBMI2-SLOW-NEXT:  Cost Model: Found costs of RThru:2 CodeSize:3 Lat:3 SizeLat:3 for: call void @llvm.masked.compressstore.v1f64.p0(<1 x double> undef, ptr undef, <1 x i1> %m1)
+; VBMI2-SLOW-NEXT:  Cost Model: Found costs of RThru:69 CodeSize:85 Lat:85 SizeLat:85 for: call void @llvm.masked.compressstore.v16f32.p0(<16 x float> undef, ptr undef, <16 x i1> %m16)
+; VBMI2-SLOW-NEXT:  Cost Model: Found costs of RThru:34 CodeSize:42 Lat:42 SizeLat:42 for: call void @llvm.masked.compressstore.v8f32.p0(<8 x float> undef, ptr undef, <8 x i1> %m8)
+; VBMI2-SLOW-NEXT:  Cost Model: Found costs of RThru:16 CodeSize:20 Lat:20 SizeLat:20 for: call void @llvm.masked.compressstore.v4f32.p0(<4 x float> undef, ptr undef, <4 x i1> %m4)
+; VBMI2-SLOW-NEXT:  Cost Model: Found costs of RThru:7 CodeSize:9 Lat:9 SizeLat:9 for: call void @llvm.masked.compressstore.v2f32.p0(<2 x float> undef, ptr undef, <2 x i1> %m2)
+; VBMI2-SLOW-NEXT:  Cost Model: Found costs of RThru:38 CodeSize:46 Lat:46 SizeLat:46 for: call void @llvm.masked.compressstore.v8i64.p0(<8 x i64> undef, ptr undef, <8 x i1> %m8)
+; VBMI2-SLOW-NEXT:  Cost Model: Found costs of RThru:18 CodeSize:22 Lat:22 SizeLat:22 for: call void @llvm.masked.compressstore.v4i64.p0(<4 x i64> undef, ptr undef, <4 x i1> %m4)
+; VBMI2-SLOW-NEXT:  Cost Model: Found costs of RThru:8 CodeSize:10 Lat:10 SizeLat:10 for: call void @llvm.masked.compressstore.v2i64.p0(<2 x i64> undef, ptr undef, <2 x i1> %m2)
+; VBMI2-SLOW-NEXT:  Cost Model: Found costs of RThru:2 CodeSize:3 Lat:3 SizeLat:3 for: call void @llvm.masked.compressstore.v1i64.p0(<1 x i64> undef, ptr undef, <1 x i1> %m1)
+; VBMI2-SLOW-NEXT:  Cost Model: Found costs of RThru:73 CodeSize:89 Lat:89 SizeLat:89 for: call void @llvm.masked.compressstore.v16i32.p0(<16 x i32> undef, ptr undef, <16 x i1> %m16)
+; VBMI2-SLOW-NEXT:  Cost Model: Found costs of RThru:36 CodeSize:44 Lat:44 SizeLat:44 for: call void @llvm.masked.compressstore.v8i32.p0(<8 x i32> undef, ptr undef, <8 x i1> %m8)
+; VBMI2-SLOW-NEXT:  Cost Model: Found costs of RThru:17 CodeSize:21 Lat:21 SizeLat:21 for: call void @llvm.masked.compressstore.v4i32.p0(<4 x i32> undef, ptr undef, <4 x i1> %m4)
+; VBMI2-SLOW-NEXT:  Cost Model: Found costs of RThru:8 CodeSize:10 Lat:10 SizeLat:10 for: call void @llvm.masked.compressstore.v2i32.p0(<2 x i32> undef, ptr undef, <2 x i1> %m2)
+; VBMI2-SLOW-NEXT:  Cost Model: Found costs of RThru:143 CodeSize:175 Lat:175 SizeLat:175 for: call void @llvm.masked.compressstore.v32i16.p0(<32 x i16> undef, ptr undef, <32 x i1> %m32)
+; VBMI2-SLOW-NEXT:  Cost Model: Found costs of RThru:71 CodeSize:87 Lat:87 SizeLat:87 for: call void @llvm.masked.compressstore.v16i16.p0(<16 x i16> undef, ptr undef, <16 x i1> %m16)
+; VBMI2-SLOW-NEXT:  Cost Model: Found costs of RThru:35 CodeSize:43 Lat:43 SizeLat:43 for: call void @llvm.masked.compressstore.v8i16.p0(<8 x i16> undef, ptr undef, <8 x i1> %m8)
+; VBMI2-SLOW-NEXT:  Cost Model: Found costs of RThru:17 CodeSize:21 Lat:21 SizeLat:21 for: call void @llvm.masked.compressstore.v4i16.p0(<4 x i16> undef, ptr undef, <4 x i1> %m4)
+; VBMI2-SLOW-NEXT:  Cost Model: Found costs of RThru:283 CodeSize:347 Lat:347 SizeLat:347 for: call void @llvm.masked.compressstore.v64i8.p0(<64 x i8> undef, ptr undef, <64 x i1> %m64)
+; VBMI2-SLOW-NEXT:  Cost Model: Found costs of RThru:141 CodeSize:173 Lat:173 SizeLat:173 for: call void @llvm.masked.compressstore.v32i8.p0(<32 x i8> undef, ptr undef, <32 x i1> %m32)
+; VBMI2-SLOW-NEXT:  Cost Model: Found costs of RThru:70 CodeSize:86 Lat:86 SizeLat:86 for: call void @llvm.masked.compressstore.v16i8.p0(<16 x i8> undef, ptr undef, <16 x i1> %m16)
+; VBMI2-SLOW-NEXT:  Cost Model: Found costs of RThru:35 CodeSize:43 Lat:43 SizeLat:43 for: call void @llvm.masked.compressstore.v8i8.p0(<8 x i8> undef, ptr undef, <8 x i1> %m8)
+; VBMI2-SLOW-NEXT:  Cost Model: Found costs of RThru:0 CodeSize:1 Lat:1 SizeLat:1 for: ret i32 0
 ;
   call void @llvm.masked.compressstore.v8f64(<8 x double> undef, ptr undef, <8 x i1> %m8)
   call void @llvm.masked.compressstore.v4f64(<4 x double> undef, ptr undef, <4 x i1> %m4)
