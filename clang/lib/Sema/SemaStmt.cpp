@@ -4096,13 +4096,9 @@ void Sema::ActOnDeferStmtError([[maybe_unused]] Scope *CurScope) {
 
 StmtResult Sema::ActOnEndOfDeferStmt(Stmt *Body, Scope *CurScope) {
   assert(!CurrentDefer.empty() && CurrentDefer.back().first == CurScope);
-
   SourceLocation DeferLoc = CurrentDefer.pop_back_val().second;
   DiagnoseEmptyStmtBody(DeferLoc, Body, diag::warn_empty_defer_body);
-
-  // Check for superfluous nested defer.
   CheckRedundantDeferStmt(*this, Body);
-
   setFunctionHasBranchProtectedScope();
   return DeferStmt::Create(Context, DeferLoc, Body);
 }
