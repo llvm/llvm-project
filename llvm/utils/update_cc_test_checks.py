@@ -28,6 +28,7 @@ import sys
 import tempfile
 
 from UpdateTestChecks import common
+import merge_check_prefixes
 
 SUBST = {
     "%clang": [],
@@ -221,6 +222,12 @@ def config():
         choices=["none", "smart", "all"],
         help="Check global entries (global variables, metadata, attribute sets, ...) for functions",
     )
+    parser.add_argument(
+        "--merge",
+        action="store_true",
+        help="After updating, run merge_check_prefixes.py --split on files with "
+        "conflicting RUN lines, then run merge_check_prefixes.py on all updated files.",
+    )
     parser.add_argument("tests", nargs="+")
     args = common.parse_commandline_args(parser)
     infer_dependent_args(args)
@@ -305,6 +312,14 @@ def exec_run_line(exe):
 
 
 def update_test(ti: common.TestInfo):
+    if ti.args.merge:
+        new_lines = merge_check_prefixes.process_lines(
+            ti.input_lines, ti.path, split=True
+        )
+        if new_lines is not None:
+            ti.input_lines = new_lines
+            ti.run_lines = common.find_run_lines(ti.path, new_lines)
+
     # Build a list of filechecked and non-filechecked RUN lines.
     run_list = []
     line2func_list = collections.defaultdict(list)
@@ -567,8 +582,13 @@ def update_test(ti: common.TestInfo):
             ti.get_checks_for_unused_prefixes(run_list, generated_prefixes)
         )
     common.debug("Writing %d lines to %s..." % (len(output_lines), ti.path))
+    lines_to_write = ["{}\n".format(l) for l in output_lines]
+    if ti.args.merge:
+        merged = merge_check_prefixes.process_lines(lines_to_write, ti.path)
+        if merged is not None:
+            lines_to_write = merged
     with open(ti.path, "wb") as f:
-        f.writelines(["{}\n".format(l).encode("utf-8") for l in output_lines])
+        f.writelines([l.encode("utf-8") for l in lines_to_write])
 
 
 def main():
@@ -589,6 +609,7 @@ def main():
             stderr.write(f"Error: Failed to update test {ti.path}\n")
             print_exc()
             returncode = 1
+            continue
 
     return returncode
 
