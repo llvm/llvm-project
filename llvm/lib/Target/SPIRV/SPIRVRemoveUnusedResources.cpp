@@ -13,6 +13,8 @@
 #include "SPIRV.h"
 #include "llvm/ADT/STLExtras.h"
 #include "llvm/IR/GlobalVariable.h"
+#include "llvm/IR/IntrinsicInst.h"
+#include "llvm/IR/IntrinsicsSPIRV.h"
 #include "llvm/IR/Instructions.h"
 #include "llvm/IR/Module.h"
 #include "llvm/Pass.h"
@@ -27,20 +29,31 @@ static cl::opt<bool> DisableSPIRVRemoveUnusedResources(
     cl::desc("Disable spirv-remove-unused-resources pass"), cl::init(false),
     cl::Hidden);
 
-// Remove module-local globals whose only users, if any, are non-volatile
-// stores.
+static bool isResourceHandleCreation(Intrinsic::ID ID) {
+  return ID == Intrinsic::spv_resource_handlefrombinding ||
+         ID == Intrinsic::spv_resource_handlefromimplicitbinding ||
+         ID == Intrinsic::spv_resource_counterhandlefrombinding ||
+         ID == Intrinsic::spv_resource_counterhandlefromimplicitbinding;
+}
+
+// Remove module-local globals whose only users are non-volatile stores of
+// resource handles.
 static bool removeUnusedResources(Module &M) {
   if (DisableSPIRVRemoveUnusedResources)
     return false;
 
   bool Changed = false;
   for (GlobalVariable &GV : make_early_inc_range(M.globals())) {
-    if (!GV.hasLocalLinkage())
+    if (!GV.hasLocalLinkage() || GV.user_empty())
       continue;
 
     if (!all_of(GV.users(), [&GV](User *U) {
           auto *SI = dyn_cast<StoreInst>(U);
-          return SI && SI->getPointerOperand() == &GV && !SI->isVolatile();
+          if (!SI || SI->getPointerOperand() != &GV || SI->isVolatile())
+            return false;
+
+          auto *II = dyn_cast<IntrinsicInst>(SI->getValueOperand());
+          return II && isResourceHandleCreation(II->getIntrinsicID());
         }))
       continue;
 
