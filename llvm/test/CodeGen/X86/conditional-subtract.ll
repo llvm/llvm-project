@@ -8,10 +8,8 @@ define i64 @conditional_subtract(i64 %x, i64 %q) {
 ; CHECK-LABEL: conditional_subtract:
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    movq %rdi, %rax
-; CHECK-NEXT:    xorl %ecx, %ecx
-; CHECK-NEXT:    cmpq %rsi, %rdi
-; CHECK-NEXT:    cmovaeq %rsi, %rcx
-; CHECK-NEXT:    subq %rcx, %rax
+; CHECK-NEXT:    subq %rsi, %rax
+; CHECK-NEXT:    cmovbq %rdi, %rax
 ; CHECK-NEXT:    retq
   %c = icmp uge i64 %x, %q
   %s = select i1 %c, i64 %q, i64 0
@@ -23,10 +21,8 @@ define i32 @ge32(i32 %x, i32 %q) {
 ; CHECK-LABEL: ge32:
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    movl %edi, %eax
-; CHECK-NEXT:    xorl %ecx, %ecx
-; CHECK-NEXT:    cmpl %esi, %edi
-; CHECK-NEXT:    cmovael %esi, %ecx
-; CHECK-NEXT:    subl %ecx, %eax
+; CHECK-NEXT:    subl %esi, %eax
+; CHECK-NEXT:    cmovbl %edi, %eax
 ; CHECK-NEXT:    retq
   %c = icmp uge i32 %x, %q
   %s = select i1 %c, i32 %q, i32 0
@@ -38,10 +34,8 @@ define i64 @lt64(i64 %x, i64 %q) {
 ; CHECK-LABEL: lt64:
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    movq %rdi, %rax
-; CHECK-NEXT:    xorl %ecx, %ecx
-; CHECK-NEXT:    cmpq %rsi, %rdi
-; CHECK-NEXT:    cmovaeq %rsi, %rcx
-; CHECK-NEXT:    subq %rcx, %rax
+; CHECK-NEXT:    subq %rsi, %rax
+; CHECK-NEXT:    cmovbq %rdi, %rax
 ; CHECK-NEXT:    retq
   %c = icmp ult i64 %x, %q
   %s = select i1 %c, i64 0, i64 %q
@@ -53,10 +47,8 @@ define i64 @gt64(i64 %x, i64 %q) {
 ; CHECK-LABEL: gt64:
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    movq %rdi, %rax
-; CHECK-NEXT:    xorl %ecx, %ecx
-; CHECK-NEXT:    cmpq %rsi, %rdi
-; CHECK-NEXT:    cmovaq %rsi, %rcx
-; CHECK-NEXT:    subq %rcx, %rax
+; CHECK-NEXT:    subq %rsi, %rax
+; CHECK-NEXT:    cmovbeq %rdi, %rax
 ; CHECK-NEXT:    retq
   %c = icmp ugt i64 %x, %q
   %s = select i1 %c, i64 %q, i64 0
@@ -68,10 +60,8 @@ define i64 @le64(i64 %x, i64 %q) {
 ; CHECK-LABEL: le64:
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    movq %rdi, %rax
-; CHECK-NEXT:    xorl %ecx, %ecx
-; CHECK-NEXT:    cmpq %rsi, %rdi
-; CHECK-NEXT:    cmovbeq %rsi, %rcx
-; CHECK-NEXT:    subq %rcx, %rax
+; CHECK-NEXT:    subq %rsi, %rax
+; CHECK-NEXT:    cmovaq %rdi, %rax
 ; CHECK-NEXT:    retq
   %c = icmp ule i64 %x, %q
   %s = select i1 %c, i64 %q, i64 0
@@ -83,10 +73,8 @@ define i64 @below64(i64 %x, i64 %q) {
 ; CHECK-LABEL: below64:
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    movq %rdi, %rax
-; CHECK-NEXT:    xorl %ecx, %ecx
-; CHECK-NEXT:    cmpq %rsi, %rdi
-; CHECK-NEXT:    cmovbq %rsi, %rcx
-; CHECK-NEXT:    subq %rcx, %rax
+; CHECK-NEXT:    subq %rsi, %rax
+; CHECK-NEXT:    cmovaeq %rdi, %rax
 ; CHECK-NEXT:    retq
   %c = icmp ult i64 %x, %q
   %s = select i1 %c, i64 %q, i64 0
@@ -100,10 +88,8 @@ define i32 @slt32_zero_true(i32 %x, i32 %q) {
 ; CHECK-LABEL: slt32_zero_true:
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    movl %edi, %eax
-; CHECK-NEXT:    xorl %ecx, %ecx
-; CHECK-NEXT:    cmpl %esi, %edi
-; CHECK-NEXT:    cmovgel %esi, %ecx
-; CHECK-NEXT:    subl %ecx, %eax
+; CHECK-NEXT:    subl %esi, %eax
+; CHECK-NEXT:    cmovll %edi, %eax
 ; CHECK-NEXT:    retq
   %c = icmp slt i32 %x, %q
   %s = select i1 %c, i32 0, i32 %q
@@ -115,10 +101,8 @@ define i32 @sle32_zero_false(i32 %x, i32 %q) {
 ; CHECK-LABEL: sle32_zero_false:
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    movl %edi, %eax
-; CHECK-NEXT:    xorl %ecx, %ecx
-; CHECK-NEXT:    cmpl %esi, %edi
-; CHECK-NEXT:    cmovlel %esi, %ecx
-; CHECK-NEXT:    subl %ecx, %eax
+; CHECK-NEXT:    subl %esi, %eax
+; CHECK-NEXT:    cmovgl %edi, %eax
 ; CHECK-NEXT:    retq
   %c = icmp sle i32 %x, %q
   %s = select i1 %c, i32 %q, i32 0
@@ -130,10 +114,8 @@ define i64 @sgt64_zero_true(i64 %x, i64 %q) {
 ; CHECK-LABEL: sgt64_zero_true:
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    movq %rdi, %rax
-; CHECK-NEXT:    xorl %ecx, %ecx
-; CHECK-NEXT:    cmpq %rsi, %rdi
-; CHECK-NEXT:    cmovleq %rsi, %rcx
-; CHECK-NEXT:    subq %rcx, %rax
+; CHECK-NEXT:    subq %rsi, %rax
+; CHECK-NEXT:    cmovgq %rdi, %rax
 ; CHECK-NEXT:    retq
   %c = icmp sgt i64 %x, %q
   %s = select i1 %c, i64 0, i64 %q
@@ -145,10 +127,8 @@ define i64 @sge64_zero_false(i64 %x, i64 %q) {
 ; CHECK-LABEL: sge64_zero_false:
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    movq %rdi, %rax
-; CHECK-NEXT:    xorl %ecx, %ecx
-; CHECK-NEXT:    cmpq %rsi, %rdi
-; CHECK-NEXT:    cmovgeq %rsi, %rcx
-; CHECK-NEXT:    subq %rcx, %rax
+; CHECK-NEXT:    subq %rsi, %rax
+; CHECK-NEXT:    cmovlq %rdi, %rax
 ; CHECK-NEXT:    retq
   %c = icmp sge i64 %x, %q
   %s = select i1 %c, i64 %q, i64 0
@@ -162,10 +142,8 @@ define i32 @eq32_zero_false(i32 %x, i32 %q) {
 ; CHECK-LABEL: eq32_zero_false:
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    movl %edi, %eax
-; CHECK-NEXT:    xorl %ecx, %ecx
-; CHECK-NEXT:    cmpl %esi, %edi
-; CHECK-NEXT:    cmovel %esi, %ecx
-; CHECK-NEXT:    subl %ecx, %eax
+; CHECK-NEXT:    subl %esi, %eax
+; CHECK-NEXT:    cmovnel %edi, %eax
 ; CHECK-NEXT:    retq
   %c = icmp eq i32 %x, %q
   %s = select i1 %c, i32 %q, i32 0
@@ -177,10 +155,8 @@ define i64 @eq64_zero_true(i64 %x, i64 %q) {
 ; CHECK-LABEL: eq64_zero_true:
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    movq %rdi, %rax
-; CHECK-NEXT:    xorl %ecx, %ecx
-; CHECK-NEXT:    cmpq %rsi, %rdi
-; CHECK-NEXT:    cmovneq %rsi, %rcx
-; CHECK-NEXT:    subq %rcx, %rax
+; CHECK-NEXT:    subq %rsi, %rax
+; CHECK-NEXT:    cmoveq %rdi, %rax
 ; CHECK-NEXT:    retq
   %c = icmp eq i64 %x, %q
   %s = select i1 %c, i64 0, i64 %q
@@ -192,10 +168,8 @@ define i32 @ne32_zero_true(i32 %x, i32 %q) {
 ; CHECK-LABEL: ne32_zero_true:
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    movl %edi, %eax
-; CHECK-NEXT:    xorl %ecx, %ecx
-; CHECK-NEXT:    cmpl %esi, %edi
-; CHECK-NEXT:    cmovel %esi, %ecx
-; CHECK-NEXT:    subl %ecx, %eax
+; CHECK-NEXT:    subl %esi, %eax
+; CHECK-NEXT:    cmovnel %edi, %eax
 ; CHECK-NEXT:    retq
   %c = icmp ne i32 %x, %q
   %s = select i1 %c, i32 0, i32 %q
@@ -207,10 +181,8 @@ define i64 @ne64_zero_false(i64 %x, i64 %q) {
 ; CHECK-LABEL: ne64_zero_false:
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    movq %rdi, %rax
-; CHECK-NEXT:    xorl %ecx, %ecx
-; CHECK-NEXT:    cmpq %rsi, %rdi
-; CHECK-NEXT:    cmovneq %rsi, %rcx
-; CHECK-NEXT:    subq %rcx, %rax
+; CHECK-NEXT:    subq %rsi, %rax
+; CHECK-NEXT:    cmoveq %rdi, %rax
 ; CHECK-NEXT:    retq
   %c = icmp ne i64 %x, %q
   %s = select i1 %c, i64 %q, i64 0
@@ -224,10 +196,8 @@ define i32 @overflow32_zero_false(i32 %x, i32 %q) {
 ; CHECK-LABEL: overflow32_zero_false:
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    movl %edi, %eax
-; CHECK-NEXT:    xorl %ecx, %ecx
-; CHECK-NEXT:    cmpl %esi, %edi
-; CHECK-NEXT:    cmovol %esi, %ecx
-; CHECK-NEXT:    subl %ecx, %eax
+; CHECK-NEXT:    subl %esi, %eax
+; CHECK-NEXT:    cmovnol %edi, %eax
 ; CHECK-NEXT:    retq
   %pair = call { i32, i1 } @llvm.ssub.with.overflow.i32(i32 %x, i32 %q)
   %c = extractvalue { i32, i1 } %pair, 1
@@ -240,10 +210,8 @@ define i32 @overflow32_zero_true(i32 %x, i32 %q) {
 ; CHECK-LABEL: overflow32_zero_true:
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    movl %edi, %eax
-; CHECK-NEXT:    xorl %ecx, %ecx
-; CHECK-NEXT:    cmpl %esi, %edi
-; CHECK-NEXT:    cmovnol %esi, %ecx
-; CHECK-NEXT:    subl %ecx, %eax
+; CHECK-NEXT:    subl %esi, %eax
+; CHECK-NEXT:    cmovol %edi, %eax
 ; CHECK-NEXT:    retq
   %pair = call { i32, i1 } @llvm.ssub.with.overflow.i32(i32 %x, i32 %q)
   %c = extractvalue { i32, i1 } %pair, 1
@@ -256,10 +224,8 @@ define i64 @overflow64_zero_false(i64 %x, i64 %q) {
 ; CHECK-LABEL: overflow64_zero_false:
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    movq %rdi, %rax
-; CHECK-NEXT:    xorl %ecx, %ecx
-; CHECK-NEXT:    cmpq %rsi, %rdi
-; CHECK-NEXT:    cmovoq %rsi, %rcx
-; CHECK-NEXT:    subq %rcx, %rax
+; CHECK-NEXT:    subq %rsi, %rax
+; CHECK-NEXT:    cmovnoq %rdi, %rax
 ; CHECK-NEXT:    retq
   %pair = call { i64, i1 } @llvm.ssub.with.overflow.i64(i64 %x, i64 %q)
   %c = extractvalue { i64, i1 } %pair, 1
@@ -272,10 +238,8 @@ define i64 @overflow64_zero_true(i64 %x, i64 %q) {
 ; CHECK-LABEL: overflow64_zero_true:
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    movq %rdi, %rax
-; CHECK-NEXT:    xorl %ecx, %ecx
-; CHECK-NEXT:    cmpq %rsi, %rdi
-; CHECK-NEXT:    cmovnoq %rsi, %rcx
-; CHECK-NEXT:    subq %rcx, %rax
+; CHECK-NEXT:    subq %rsi, %rax
+; CHECK-NEXT:    cmovoq %rdi, %rax
 ; CHECK-NEXT:    retq
   %pair = call { i64, i1 } @llvm.ssub.with.overflow.i64(i64 %x, i64 %q)
   %c = extractvalue { i64, i1 } %pair, 1
@@ -289,14 +253,12 @@ define i64 @overflow64_zero_true(i64 %x, i64 %q) {
 define i64 @shared_flags(i64 %x, i64 %q, ptr %out) {
 ; CHECK-LABEL: shared_flags:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    movq %rdi, %rax
 ; CHECK-NEXT:    xorl %ecx, %ecx
-; CHECK-NEXT:    xorl %edi, %edi
-; CHECK-NEXT:    cmpq %rsi, %rax
-; CHECK-NEXT:    setae %dil
-; CHECK-NEXT:    cmovaeq %rsi, %rcx
-; CHECK-NEXT:    movq %rdi, (%rdx)
-; CHECK-NEXT:    subq %rcx, %rax
+; CHECK-NEXT:    movq %rdi, %rax
+; CHECK-NEXT:    subq %rsi, %rax
+; CHECK-NEXT:    setae %cl
+; CHECK-NEXT:    movq %rcx, (%rdx)
+; CHECK-NEXT:    cmovbq %rdi, %rax
 ; CHECK-NEXT:    retq
   %c = icmp uge i64 %x, %q
   %s = select i1 %c, i64 %q, i64 0
@@ -310,11 +272,9 @@ define i64 @shared_difference(i64 %x, i64 %q, ptr %out) {
 ; CHECK-LABEL: shared_difference:
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    movq %rdi, %rax
-; CHECK-NEXT:    xorl %ecx, %ecx
-; CHECK-NEXT:    subq %rsi, %rdi
-; CHECK-NEXT:    cmovaeq %rsi, %rcx
-; CHECK-NEXT:    movq %rdi, (%rdx)
-; CHECK-NEXT:    subq %rcx, %rax
+; CHECK-NEXT:    subq %rsi, %rax
+; CHECK-NEXT:    movq %rax, (%rdx)
+; CHECK-NEXT:    cmovbq %rdi, %rax
 ; CHECK-NEXT:    retq
   %c = icmp uge i64 %x, %q
   %s = select i1 %c, i64 %q, i64 0
@@ -327,14 +287,12 @@ define i64 @shared_difference(i64 %x, i64 %q, ptr %out) {
 define i64 @shared_signed_flags(i64 %x, i64 %q, ptr %out) {
 ; CHECK-LABEL: shared_signed_flags:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    movq %rdi, %rax
 ; CHECK-NEXT:    xorl %ecx, %ecx
-; CHECK-NEXT:    xorl %edi, %edi
-; CHECK-NEXT:    cmpq %rsi, %rax
-; CHECK-NEXT:    setl %dil
-; CHECK-NEXT:    cmovaeq %rsi, %rcx
-; CHECK-NEXT:    movq %rdi, (%rdx)
-; CHECK-NEXT:    subq %rcx, %rax
+; CHECK-NEXT:    movq %rdi, %rax
+; CHECK-NEXT:    subq %rsi, %rax
+; CHECK-NEXT:    setl %cl
+; CHECK-NEXT:    movq %rcx, (%rdx)
+; CHECK-NEXT:    cmovbq %rdi, %rax
 ; CHECK-NEXT:    retq
   %c = icmp uge i64 %x, %q
   %signed = icmp slt i64 %x, %q
@@ -348,14 +306,12 @@ define i64 @shared_signed_flags(i64 %x, i64 %q, ptr %out) {
 define i64 @shared_overflow(i64 %x, i64 %q, ptr %out) {
 ; CHECK-LABEL: shared_overflow:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    movq %rdi, %rax
 ; CHECK-NEXT:    xorl %ecx, %ecx
-; CHECK-NEXT:    xorl %edi, %edi
-; CHECK-NEXT:    cmpq %rsi, %rax
-; CHECK-NEXT:    cmovaeq %rsi, %rcx
-; CHECK-NEXT:    seto %dil
-; CHECK-NEXT:    movq %rdi, (%rdx)
-; CHECK-NEXT:    subq %rcx, %rax
+; CHECK-NEXT:    movq %rdi, %rax
+; CHECK-NEXT:    subq %rsi, %rax
+; CHECK-NEXT:    seto %cl
+; CHECK-NEXT:    movq %rcx, (%rdx)
+; CHECK-NEXT:    cmovbq %rdi, %rax
 ; CHECK-NEXT:    retq
   %c = icmp uge i64 %x, %q
   %s = select i1 %c, i64 %q, i64 0
@@ -373,13 +329,10 @@ define i64 @overflow_shared_results64(i64 %x, i64 %q, ptr %diff_out, ptr %overfl
 ; CHECK-LABEL: overflow_shared_results64:
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    movq %rdi, %rax
-; CHECK-NEXT:    xorl %edi, %edi
-; CHECK-NEXT:    movq %rax, %r8
-; CHECK-NEXT:    subq %rsi, %r8
-; CHECK-NEXT:    movq %r8, (%rdx)
+; CHECK-NEXT:    subq %rsi, %rax
+; CHECK-NEXT:    movq %rax, (%rdx)
 ; CHECK-NEXT:    seto (%rcx)
-; CHECK-NEXT:    cmovoq %rsi, %rdi
-; CHECK-NEXT:    subq %rdi, %rax
+; CHECK-NEXT:    cmovnoq %rdi, %rax
 ; CHECK-NEXT:    retq
   %pair = call { i64, i1 } @llvm.ssub.with.overflow.i64(i64 %x, i64 %q)
   %diff = extractvalue { i64, i1 } %pair, 0
@@ -397,10 +350,8 @@ define i64 @nuw_sub(i64 %x, i64 %q) {
 ; CHECK-LABEL: nuw_sub:
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    movq %rdi, %rax
-; CHECK-NEXT:    xorl %ecx, %ecx
-; CHECK-NEXT:    cmpq %rsi, %rdi
-; CHECK-NEXT:    cmovaeq %rsi, %rcx
-; CHECK-NEXT:    subq %rcx, %rax
+; CHECK-NEXT:    subq %rsi, %rax
+; CHECK-NEXT:    cmovbq %rdi, %rax
 ; CHECK-NEXT:    retq
   %c = icmp uge i64 %x, %q
   %s = select i1 %c, i64 %q, i64 0
@@ -514,11 +465,8 @@ define i64 @constant_q(i64 %x) {
 ; CHECK-LABEL: constant_q:
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    movq %rdi, %rax
-; CHECK-NEXT:    xorl %ecx, %ecx
-; CHECK-NEXT:    cmpq $17, %rdi
-; CHECK-NEXT:    movl $17, %edx
-; CHECK-NEXT:    cmovbq %rcx, %rdx
-; CHECK-NEXT:    subq %rdx, %rax
+; CHECK-NEXT:    subq $17, %rax
+; CHECK-NEXT:    cmovbq %rdi, %rax
 ; CHECK-NEXT:    retq
   %c = icmp uge i64 %x, 17
   %s = select i1 %c, i64 17, i64 0
