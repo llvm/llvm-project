@@ -6,11 +6,11 @@
 define i8 @ucmp_8_8(i8 zeroext %x, i8 zeroext %y) nounwind {
 ; THUMB1-LABEL: ucmp_8_8:
 ; THUMB1:       @ %bb.0:
-; THUMB1-NEXT:    subs r2, r0, r1
-; THUMB1-NEXT:    sbcs r2, r2
 ; THUMB1-NEXT:    cmp r1, r0
-; THUMB1-NEXT:    sbcs r1, r1
-; THUMB1-NEXT:    subs r0, r2, r1
+; THUMB1-NEXT:    mov r2, r0
+; THUMB1-NEXT:    sbcs r2, r1
+; THUMB1-NEXT:    sbcs r0, r2
+; THUMB1-NEXT:    subs r0, r0, r1
 ; THUMB1-NEXT:    bx lr
 ;
 ; THUMB2-LABEL: ucmp_8_8:
@@ -36,11 +36,11 @@ define i8 @ucmp_8_8(i8 zeroext %x, i8 zeroext %y) nounwind {
 define i8 @ucmp_8_16(i16 zeroext %x, i16 zeroext %y) nounwind {
 ; THUMB1-LABEL: ucmp_8_16:
 ; THUMB1:       @ %bb.0:
-; THUMB1-NEXT:    subs r2, r0, r1
-; THUMB1-NEXT:    sbcs r2, r2
 ; THUMB1-NEXT:    cmp r1, r0
-; THUMB1-NEXT:    sbcs r1, r1
-; THUMB1-NEXT:    subs r0, r2, r1
+; THUMB1-NEXT:    mov r2, r0
+; THUMB1-NEXT:    sbcs r2, r1
+; THUMB1-NEXT:    sbcs r0, r2
+; THUMB1-NEXT:    subs r0, r0, r1
 ; THUMB1-NEXT:    bx lr
 ;
 ; THUMB2-LABEL: ucmp_8_16:
@@ -66,11 +66,11 @@ define i8 @ucmp_8_16(i16 zeroext %x, i16 zeroext %y) nounwind {
 define i8 @ucmp_8_32(i32 %x, i32 %y) nounwind {
 ; THUMB1-LABEL: ucmp_8_32:
 ; THUMB1:       @ %bb.0:
-; THUMB1-NEXT:    subs r2, r0, r1
-; THUMB1-NEXT:    sbcs r2, r2
 ; THUMB1-NEXT:    cmp r1, r0
-; THUMB1-NEXT:    sbcs r1, r1
-; THUMB1-NEXT:    subs r0, r2, r1
+; THUMB1-NEXT:    mov r2, r0
+; THUMB1-NEXT:    sbcs r2, r1
+; THUMB1-NEXT:    sbcs r0, r2
+; THUMB1-NEXT:    subs r0, r0, r1
 ; THUMB1-NEXT:    bx lr
 ;
 ; THUMB2-LABEL: ucmp_8_32:
@@ -239,11 +239,11 @@ define i8 @ucmp_8_128(i128 %x, i128 %y) nounwind {
 define i32 @ucmp_32_32(i32 %x, i32 %y) nounwind {
 ; THUMB1-LABEL: ucmp_32_32:
 ; THUMB1:       @ %bb.0:
-; THUMB1-NEXT:    subs r2, r0, r1
-; THUMB1-NEXT:    sbcs r2, r2
 ; THUMB1-NEXT:    cmp r1, r0
-; THUMB1-NEXT:    sbcs r1, r1
-; THUMB1-NEXT:    subs r0, r2, r1
+; THUMB1-NEXT:    mov r2, r0
+; THUMB1-NEXT:    sbcs r2, r1
+; THUMB1-NEXT:    sbcs r0, r2
+; THUMB1-NEXT:    subs r0, r0, r1
 ; THUMB1-NEXT:    bx lr
 ;
 ; THUMB2-LABEL: ucmp_32_32:
