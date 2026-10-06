@@ -1412,6 +1412,14 @@ func.func @test_argmax_invalid_output_shape(%arg0: tensor<1x2x3xf32>) -> tensor<
 
 // -----
 
+func.func @test_argmin_invalid_output_shape(%arg0: tensor<1x2x3xf32>) -> tensor<1x2x3xi32> {
+  // expected-error@+1 {{'tosa.argmin' op expected output shape '2, 3', got '1, 2, 3'}}
+  %0 = tosa.argmin %arg0 axis(0): (tensor<1x2x3xf32>) -> tensor<1x2x3xi32>
+  return %0 : tensor<1x2x3xi32>
+}
+
+// -----
+
 func.func @test_rescale_invalid_input_type(%arg0: tensor<13x21x3xf32>) -> tensor<13x21x3xi32> {
   %multiplier = "tosa.const"() <{values = dense<1073741824> : tensor<1xi32> }> : () -> tensor<1xi32>
   %shift = "tosa.const"() <{values = dense<30> : tensor<1xi8> }> : () -> tensor<1xi8>
@@ -2000,6 +2008,14 @@ func.func @test_maxpool2d_unexpected_output_width(%arg0: tensor<1x32x32x8xf32>) 
 func.func @test_scalar_argmax(%arg0: tensor<i32>) -> tensor<i32> {
   // expected-error@+1 {{'tosa.argmax' op operand #0 must be tosa-conformant tensor of at least rank 1 of number values, but got 'tensor<i32>'}}
   %0 = tosa.argmax %arg0 axis(0) : (tensor<i32>) -> tensor<i32>
+  return %0 : tensor<i32>
+}
+
+// -----
+
+func.func @test_scalar_argmin(%arg0: tensor<i32>) -> tensor<i32> {
+  // expected-error@+1 {{'tosa.argmin' op operand #0 must be tosa-conformant tensor of at least rank 1 of number values, but got 'tensor<i32>'}}
+  %0 = tosa.argmin %arg0 axis(0) : (tensor<i32>) -> tensor<i32>
   return %0 : tensor<i32>
 }
 
