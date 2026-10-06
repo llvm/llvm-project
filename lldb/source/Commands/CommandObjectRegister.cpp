@@ -147,7 +147,6 @@ public:
 
   bool DumpRegisterField(Stream &strm, const RegisterInfo &reg_info,
                          const ValueObjectSP &value_sp,
-                         llvm::StringRef expression_path,
                          size_t reg_name_right_align_at,
                          CommandReturnObject &result) {
     DumpValueObjectOptions options(*value_sp);
@@ -170,9 +169,21 @@ public:
         m_command_options.alternate_name && reg_info.alt_name
             ? reg_info.alt_name
             : reg_info.name;
+
+    StreamString expression_stream;
+    value_sp->GetExpressionPath(expression_stream);
+    llvm::StringRef expression = expression_stream.GetString();
+    expression.consume_front("$");
+    llvm::StringRef expression_path = expression;
+
     strm.Indent();
-    strm.Printf("%*s%s = ", static_cast<int>(reg_name_right_align_at),
-                register_name, expression_path.str().c_str());
+    // Keep the resolved suffix while allowing an alternate register name.
+    if (expression_path.consume_front(reg_info.name))
+      strm.Printf("%*s%s = ", static_cast<int>(reg_name_right_align_at),
+                  register_name, expression_path.str().c_str());
+    else
+      strm.Printf("%*s = ", static_cast<int>(reg_name_right_align_at),
+                  expression.str().c_str());
     strm << value << '\n';
     return true;
   }
@@ -270,7 +281,6 @@ protected:
         struct RegisterArgument {
           const RegisterInfo *reg_info = nullptr;
           ValueObjectSP value_sp;
-          std::string expression_path;
           std::string error;
         };
 
@@ -295,14 +305,12 @@ protected:
               variable_path, eNoDynamicValues,
               StackFrame::eExpressionPathOptionCheckPtrVsMember, variable_sp,
               error, eDILModeLegacy);
-          if (error.Fail() || !argument.value_sp) {
-            if (expression.find_first_of(".[") == llvm::StringRef::npos &&
-                !expression.contains("->"))
-              argument.error =
-                  "Invalid register name '" + expression.str() + "'";
-            else
-              argument.error = error.AsCString("invalid register path");
-          } else if (ValueObject *root = argument.value_sp->GetRoot()) {
+          if (error.Fail())
+            argument.error = error.AsCString();
+          else if (!argument.value_sp)
+            argument.error =
+                "Invalid register expression '" + expression.str() + "'";
+          else if (ValueObject *root = argument.value_sp->GetRoot()) {
             argument.reg_info =
                 reg_ctx->GetRegisterInfoByName(root->GetName().GetStringRef());
           }
@@ -310,23 +318,13 @@ protected:
           if (!argument.reg_info) {
             if (argument.error.empty())
               argument.error =
-                  "Invalid register name '" + expression.str() + "'";
+                  "Invalid register expression '" + expression.str() + "'";
           } else {
-            if (argument.value_sp) {
-              if (argument.value_sp.get() == argument.value_sp->GetRoot()) {
-                argument.value_sp.reset();
-              } else {
-                StreamString expression_stream;
-                argument.value_sp->GetExpressionPath(expression_stream);
-                llvm::StringRef expression_path = expression_stream.GetString();
-                if (!expression_path.consume_front("$") ||
-                    !expression_path.consume_front(argument.reg_info->name)) {
-                  argument.error = "unable to reconstruct register path '" +
-                                   expression.str() + "'";
-                } else {
-                  argument.expression_path = expression_path.str();
-                }
-              }
+            if (argument.value_sp &&
+                argument.value_sp.get() == argument.value_sp->GetRoot()) {
+              // Whole registers use DumpRegister below. Only descendants use
+              // DumpRegisterField.
+              argument.value_sp.reset();
             }
             reg_name_right_align_at =
                 std::max(reg_name_right_align_at,
@@ -354,8 +352,7 @@ protected:
                           argument.reg_info->name);
           } else {
             DumpRegisterField(strm, *argument.reg_info, argument.value_sp,
-                              argument.expression_path, reg_name_right_align_at,
-                              result);
+                              reg_name_right_align_at, result);
           }
         }
         strm.IndentLess();
