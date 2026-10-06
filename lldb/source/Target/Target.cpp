@@ -2468,7 +2468,8 @@ bool Target::ReadPointerFromMemory(const Address &addr, Status &error,
 }
 
 ModuleSP Target::GetOrCreateModule(const ModuleSpec &orig_module_spec,
-                                   bool notify, Status *error_ptr) {
+                                   bool notify, Status *error_ptr,
+                                   bool invoke_symbol_locators) {
   ModuleSP module_sp;
 
   Status error;
@@ -2536,8 +2537,9 @@ ModuleSP Target::GetOrCreateModule(const ModuleSpec &orig_module_spec,
           transformed_spec.GetFileSpec().SetFilename(
                 module_spec.GetFileSpec().GetFilename());
           transformed_spec.SetTarget(shared_from_this());
-          error = ModuleList::GetSharedModule(transformed_spec, module_sp,
-                                              &old_modules, &did_create_module);
+          error = ModuleList::GetSharedModule(
+              transformed_spec, module_sp, &old_modules, &did_create_module,
+              /*invoke_locate_callback=*/true, invoke_symbol_locators);
         }
       }
     }
@@ -2553,11 +2555,12 @@ ModuleSP Target::GetOrCreateModule(const ModuleSpec &orig_module_spec,
       // cache.
       if (module_spec.GetUUID().IsValid()) {
         // We have a UUID, it is OK to check the global module list...
-        error = ModuleList::GetSharedModule(module_spec, module_sp,
-                                            &old_modules, &did_create_module);
+        error = ModuleList::GetSharedModule(
+            module_spec, module_sp, &old_modules, &did_create_module,
+            /*invoke_locate_callback=*/true, invoke_symbol_locators);
       }
 
-      if (!module_sp) {
+      if (!module_sp && invoke_symbol_locators) {
         // The platform is responsible for finding and caching an appropriate
         // module in the shared module cache.
         if (m_platform_sp) {
