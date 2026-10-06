@@ -207,8 +207,9 @@ int useNonThreadSafe() {
 // CIR:   %[[ZERO:.*]] = cir.const #cir.int<0> : !s8i
 // CIR:   %[[CMP:.*]] = cir.cmp eq %[[LOAD_GUARD]], %[[ZERO]] : !s8i
 // CIR:   cir.if %[[CMP]] {
-// CIR:     %[[ONE:.*]] = cir.const #cir.int<1> : !s64i
-// CIR:     cir.store %[[ONE]], %[[GET_GUARD]] : !s64i, !cir.ptr<!s64i>
+// CIR:     %[[GUARD_BYTE:.*]] = cir.cast bitcast %[[GET_GUARD]] : !cir.ptr<!s64i> -> !cir.ptr<!s8i>
+// CIR:     %[[ONE:.*]] = cir.const #cir.int<1> : !s8i
+// CIR:     cir.store %[[ONE]], %[[GUARD_BYTE]] : !s8i, !cir.ptr<!s8i>
 // CIR:     %[[GET_F:.*]] = cir.get_global @_ZN13NonThreadSafeIiE1fE : !cir.ptr<!s32i>
 // CIR:     %[[CALL:.*]] = cir.call @_Z5get_iv() : () -> (!s32i {llvm.noundef})
 // CIR:     cir.store align(4) %[[CALL]], %[[GET_F]] : !s32i, !cir.ptr<!s32i>

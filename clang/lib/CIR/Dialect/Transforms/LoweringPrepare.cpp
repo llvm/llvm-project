@@ -562,18 +562,22 @@ struct LoweringPreparePass
       // For non-local variables, store 1 into the first byte of the guard
       // variable before the object initialization begins so that references
       // to the variable during initialization don't restart initialization.
-      builder.createStore(
-          loc, builder.getConstantInt(loc, guardPtrTy.getPointee(), 1),
-          guardPtr);
+      mlir::Value byteGuardPtr = builder.createBitcast(
+          guardPtr, cir::PointerType::get(builder.getSIntNTy(8)));
+      builder.createStore(loc,
+                          builder.getConstantInt(loc, builder.getSIntNTy(8), 1),
+                          byteGuardPtr);
       emitBody();
     } else {
       emitBody();
       // For local variables, store 1 into the first byte of the guard variable
       // after the object initialization completes so that initialization is
       // retried if initialization is interrupted by an exception.
-      builder.createStore(
-          loc, builder.getConstantInt(loc, guardPtrTy.getPointee(), 1),
-          guardPtr);
+      mlir::Value byteGuardPtr = builder.createBitcast(
+          guardPtr, cir::PointerType::get(builder.getSIntNTy(8)));
+      builder.createStore(loc,
+                          builder.getConstantInt(loc, builder.getSIntNTy(8), 1),
+                          byteGuardPtr);
     }
 
     builder.createYield(loc); // Outermost IfOp
