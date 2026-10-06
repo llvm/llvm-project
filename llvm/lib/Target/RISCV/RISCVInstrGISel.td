@@ -199,7 +199,7 @@ def : GINodeEquiv<G_CLSW , riscv_clsw>;
 // RISCVISD::SW_GUARDED_BRIND.
 def G_SW_GUARDED_BRIND : RISCVGenericInstruction {
   let OutOperandList = (outs);
-  let InOperandList = (ins type0:$target);
+  let InOperandList = (ins ptype0:$target);
   let hasSideEffects = false;
   let isBranch = true;
   let isTerminator = true;

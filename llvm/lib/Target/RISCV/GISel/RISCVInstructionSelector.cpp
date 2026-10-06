@@ -1475,11 +1475,6 @@ bool RISCVInstructionSelector::select(MachineInstr &MI) {
     MI.addOperand(MachineOperand::CreateImm(0));
     constrainSelectedInstRegOperands(MI, TII, TRI, RBI);
     return true;
-  case RISCV::G_SW_GUARDED_BRIND:
-    MI.setDesc(TII.get(RISCV::PseudoBRINDX7));
-    MI.addOperand(MachineOperand::CreateImm(0));
-    constrainSelectedInstRegOperands(MI, TII, TRI, RBI);
-    return true;
   case TargetOpcode::G_SELECT:
     return selectSelect(MI);
   case TargetOpcode::G_FCMP:
