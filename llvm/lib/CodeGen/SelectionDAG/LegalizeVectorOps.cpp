@@ -499,6 +499,10 @@ SDValue VectorLegalizer::LegalizeOp(SDValue Op) {
     EVT VT = Node->getValueType(0);
     unsigned Factor = Node->getNumOperands();
     Action = TLI.getVectorInterleaveAction(Node->getOpcode(), Factor, VT);
+    // Early Custom Lowering causes RISC-V regressions.
+    if (Action == TargetLowering::Custom && VT.isScalableVector()) {
+      Action = TargetLowering::Legal;
+    }
     break;
   }
   case ISD::SMULFIX:
