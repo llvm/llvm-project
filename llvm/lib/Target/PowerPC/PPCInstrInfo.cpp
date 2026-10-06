@@ -4853,14 +4853,22 @@ bool PPCInstrInfo::simplifyToLI(MachineInstr &MI, MachineInstr &DefMI,
         return false;
 
       if (!PostRA) {
-        // If the defining load-immediate has no other uses, we can just replace
-        // the immediate with the new immediate.
-        if (MRI->hasOneUse(DefMI.getOperand(0).getReg()))
+        // If the defining load-immediate has no other non-debug uses, we can
+        // just replace the immediate with the new immediate.
+        Register DefReg = DefMI.getOperand(0).getReg();
+        if (MRI->hasOneNonDBGUse(DefReg)) {
+          if (SExtImm != NewImm)
+            MRI->markUsesInDebugValueAsUndef(DefReg);
           DefMI.getOperand(1).setImm(NewImm);
+        }
 
-        // If we're not using the GPR result of the CR-setting instruction, we
-        // just need to and with zero/non-zero depending on the new immediate.
-        else if (MRI->use_empty(MI.getOperand(0).getReg())) {
+        // If there are no non-debug uses of the GPR result of the CR-setting
+        // instruction, we just need to and with zero/non-zero depending on the
+        // new immediate.
+        else if (Register DstReg = MI.getOperand(0).getReg();
+                 MRI->use_nodbg_empty(DstReg)) {
+          // The replacement preserves the CR result but not the GPR result.
+          MRI->markUsesInDebugValueAsUndef(DstReg);
           if (NewImm) {
             assert(Immediate && "Transformation converted zero to non-zero?");
             NewImm = Immediate;
