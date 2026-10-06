@@ -24,8 +24,8 @@
 
 ## The NOP is still the first instruction, and the backedge must skip it.
 # OBJ-LABEL: <seh_entry>:
-# OBJ-NEXT:  {{[0-9a-f]+}}: nop
-# OBJ-NEXT:  {{[0-9a-f]+}}: b {{.*}} <seh_entry+0x4>
+# OBJ-NEXT:  [[#%x,ENTRY:]]: nop
+# OBJ-NEXT:  [[#ENTRY + 4]]: b 0x[[#ENTRY + 4]] <seh_entry+0x4>
 
 ## No NOP unwind code is needed for padding outside the prologue.
 # UNWIND:      Function: seh_entry
@@ -44,9 +44,9 @@
 # CHECK-NEXT:  ret
 
 # OBJ-LABEL: <seh_inline_asm_entry>:
-# OBJ-NEXT:  {{[0-9a-f]+}}: nop
-# OBJ-NEXT:  {{[0-9a-f]+}}: b {{.*}} <seh_inline_asm_entry+0x4>
-# OBJ-NEXT:  {{[0-9a-f]+}}: ret
+# OBJ-NEXT:  [[#%x,ASM_ENTRY:]]: nop
+# OBJ-NEXT:  [[#ASM_ENTRY + 4]]: b 0x[[#ASM_ENTRY + 4]] <seh_inline_asm_entry+0x4>
+# OBJ-NEXT:  [[#ASM_ENTRY + 8]]: ret
 
 # UNWIND:      Function: seh_inline_asm_entry
 # UNWIND:      Prologue [
@@ -60,7 +60,7 @@
 # CHECK-NEXT:  ret
 
 # OBJ-LABEL: <seh_nonempty_entry>:
-# OBJ-NEXT:  {{[0-9a-f]+}}: ret
+# OBJ-NEXT:  [[#%x,]]: ret
 
 --- |
   define void @meta_entry() "patchable-function"="prologue-short-redirect" {
