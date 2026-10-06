@@ -8,11 +8,6 @@
 //
 // This is the CIR bytecode reader/writer definition file.
 //
-// Without a BytecodeDialectInterface, MLIR falls back to encoding an unknown
-// dialect's attributes and types through their *assembly format*: it embeds
-// the printed text inside the bytecode. That fallback is correct but it is the
-// reason a bytecode file can be larger than the equivalent text.
-//
 // Modelled on mlir/include/mlir/Dialect/LLVMIR/LLVMDialectBytecode.td. Every
 // entry's parameters must appear in the same order as the attribute's get(),
 // because the generated reader feeds them positionally, and each name must
