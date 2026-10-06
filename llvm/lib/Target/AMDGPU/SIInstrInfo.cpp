@@ -23,7 +23,6 @@
 #include "llvm/Analysis/ValueTracking.h"
 #include "llvm/CodeGen/GlobalISel/GenericMachineInstrs.h"
 #include "llvm/CodeGen/LiveIntervals.h"
-#include "llvm/CodeGen/LiveVariables.h"
 #include "llvm/CodeGen/MachineCycleAnalysis.h"
 #include "llvm/CodeGen/MachineDominators.h"
 #include "llvm/CodeGen/MachineFrameInfo.h"
@@ -4353,18 +4352,6 @@ bool SIInstrInfo::areMemAccessesTriviallyDisjoint(const MachineInstr &MIa,
   return false;
 }
 
-static void updateLiveVariables(LiveVariables *LV, MachineInstr &MI,
-                                MachineInstr &NewMI) {
-  if (LV) {
-    unsigned NumOps = MI.getNumOperands();
-    for (unsigned I = 1; I < NumOps; ++I) {
-      MachineOperand &Op = MI.getOperand(I);
-      if (Op.isReg() && Op.isKill())
-        LV->replaceKillInstruction(Op.getReg(), MI, NewMI);
-    }
-  }
-}
-
 static unsigned getNewFMAInst(const GCNSubtarget &ST, unsigned Opc) {
   switch (Opc) {
   case AMDGPU::V_MAC_F16_e32:
@@ -4407,7 +4394,6 @@ struct SIInstrInfo::ThreeAddressUpdates {
 };
 
 MachineInstr *SIInstrInfo::convertToThreeAddress(MachineInstr &MI,
-                                                 LiveVariables *LV,
                                                  LiveIntervals *LIS) const {
   MachineBasicBlock &MBB = *MI.getParent();
   MachineInstr *CandidateMI = &MI;
@@ -4433,7 +4419,6 @@ MachineInstr *SIInstrInfo::convertToThreeAddress(MachineInstr &MI,
         MI.untieRegOperand(MO.getOperandNo());
     }
   } else {
-    updateLiveVariables(LV, MI, *NewMI);
     if (LIS) {
       LIS->ReplaceMachineInstrInMaps(MI, *NewMI);
       // SlotIndex of defs needs to be updated when converting to early-clobber
@@ -4469,8 +4454,6 @@ MachineInstr *SIInstrInfo::convertToThreeAddress(MachineInstr &MI,
       U.RemoveMIUse->getOperand(0).setIsDead(true);
       for (unsigned I = U.RemoveMIUse->getNumOperands() - 1; I != 0; --I)
         U.RemoveMIUse->removeOperand(I);
-      if (LV)
-        LV->getVarInfo(DefReg).AliveBlocks.clear();
     }
 
     if (MI.isBundle()) {
@@ -11660,17 +11643,6 @@ bool SIInstrInfo::optimizeSCC(MachineInstr *SCCValid, MachineInstr *SCCRedefine,
   return true;
 }
 
-static bool foldableSelect(const MachineInstr &Def) {
-  if (Def.getOpcode() != AMDGPU::S_CSELECT_B32 &&
-      Def.getOpcode() != AMDGPU::S_CSELECT_B64)
-    return false;
-  bool Op1IsNonZeroImm =
-      Def.getOperand(1).isImm() && Def.getOperand(1).getImm() != 0;
-  bool Op2IsZeroImm =
-      Def.getOperand(2).isImm() && Def.getOperand(2).getImm() == 0;
-  return Op1IsNonZeroImm && Op2IsZeroImm;
-}
-
 /// If \p Sel is an S_CSELECT* of two different constants A and B, return them,
 /// truncated to the width of the select.
 static std::optional<std::pair<int64_t, int64_t>>
@@ -11681,9 +11653,11 @@ getSelectConstants(const SIInstrInfo &TII, const MachineRegisterInfo &MRI,
     return {};
   std::optional<int64_t> A =
       TII.getImmOrMaterializedImm(MRI, Sel.getOperand(1));
+  if (!A)
+    return {};
   std::optional<int64_t> B =
       TII.getImmOrMaterializedImm(MRI, Sel.getOperand(2));
-  if (!A || !B)
+  if (!B)
     return {};
   if (Opc == AMDGPU::S_CSELECT_B32) {
     A = Lo_32(*A);
@@ -11780,8 +11754,8 @@ bool SIInstrInfo::optimizeCompareInstr(MachineInstr &CmpInstr, Register SrcReg,
 
     // If s_or_b32 result, sY, is unused (i.e. it is effectively a 64-bit
     // s_cmp_lg of a register pair) and the inputs are the hi and lo-halves of a
-    // 64-bit foldableSelect then delete s_or_b32 in the sequence:
-    //    sX = s_cselect_b64 (non-zero imm), 0
+    // 64-bit select then delete s_or_b32 in the sequence:
+    //    sX = s_cselect_b64 A, B  (A != B, one of them 0)
     //    sLo = copy sX.sub0
     //    sHi = copy sX.sub1
     //    sY = s_or_b32 sLo, sHi
@@ -11798,9 +11772,14 @@ bool SIInstrInfo::optimizeCompareInstr(MachineInstr &CmpInstr, Register SrcReg,
             Def1->getOperand(1).getSubReg() == AMDGPU::sub0 &&
             Def2->getOperand(1).getSubReg() == AMDGPU::sub1 &&
             Def1->getOperand(1).getReg() == Def2->getOperand(1).getReg()) {
-          MachineInstr *Select = MRI->getVRegDef(Def1->getOperand(1).getReg());
-          if (Select && foldableSelect(*Select))
-            optimizeSCC(Select, Def, /*NeedInversion=*/false);
+          if (MachineInstr *Select =
+                  MRI->getVRegDef(Def1->getOperand(1).getReg())) {
+            if (auto Consts = getSelectConstants(*this, *MRI, *Select)) {
+              auto [A, B] = *Consts;
+              if (A == 0 || B == 0)
+                optimizeSCC(Select, Def, /*NeedInversion=*/A == 0);
+            }
+          }
         }
       }
     }
