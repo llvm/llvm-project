@@ -164,7 +164,7 @@ bool ShouldReport(ThreadState *thr, ReportType typ) {
 }
 
 ScopedReport::ScopedReport(ReportType typ, uptr tag) {
-  ctx->thread_registry.CheckLocked();
+  CheckedMutex::CheckNoLocks();
   rep_ = New<ReportDesc>();
   rep_->typ = typ;
   rep_->tag = tag;
@@ -256,6 +256,7 @@ void ScopedReport::AddUniqueTid(Tid unique_tid) {
 }
 
 void ScopedReport::AddThread(const ThreadContext* tctx, bool suppressable) {
+  ctx->thread_registry.CheckLocked();
   for (uptr i = 0; i < rep_->threads.Size(); i++) {
     if ((u32)rep_->threads[i]->id == tctx->tid)
       return;
@@ -671,6 +672,7 @@ static bool HandleRacyStacks(ThreadState *thr, VarSizeStackTrace traces[2]) {
 }
 
 bool OutputReport(ThreadState *thr, ScopedReport &srep) {
+  CheckedMutex::CheckNoLocks();
   // These should have been checked in ShouldReport.
   // It's too late to check them here, we have already taken locks.
   CHECK(flags()->report_bugs);
@@ -804,10 +806,6 @@ void ReportRace(ThreadState *thr, RawShadow *shadow_mem, Shadow cur, Shadow old,
   DynamicMutexSet mset1;
   MutexSet *mset[kMop] = {&thr->mset, mset1};
 
-  // Use alloca, because malloc during signal handling deadlocks
-  ScopedReport *rep = (ScopedReport *)__builtin_alloca(sizeof(ScopedReport));
-  // Release locks before symbolizing and outputting the report to avoid
-  // deadlocks.
   {
     // We need to lock the slot during RestoreStack because it protects
     // the slot journal.
@@ -821,24 +819,31 @@ void ReportRace(ThreadState *thr, RawShadow *shadow_mem, Shadow cur, Shadow old,
       StoreShadow(&ctx->last_spurious_race, old.raw());
       return;
     }
+  }
 
-    if (IsFiredSuppression(ctx, rep_typ, traces[1]))
-      return;
+  if (IsFiredSuppression(ctx, rep_typ, traces[1]))
+    return;
 
-    if (HandleRacyStacks(thr, traces))
-      return;
+  if (HandleRacyStacks(thr, traces))
+    return;
 
-    // If any of the accesses has a tag, treat this as an "external" race.
-    uptr tag = kExternalTagNone;
-    for (uptr i = 0; i < kMop; i++) {
-      if (tags[i] != kExternalTagNone) {
-        rep_typ = ReportTypeExternalRace;
-        tag = tags[i];
-        break;
-      }
+  // If any of the accesses has a tag, treat this as an "external" race.
+  uptr tag = kExternalTagNone;
+  for (uptr i = 0; i < kMop; i++) {
+    if (tags[i] != kExternalTagNone) {
+      rep_typ = ReportTypeExternalRace;
+      tag = tags[i];
+      break;
     }
+  }
 
+  // Use alloca, because malloc during signal handling deadlocks
+  ScopedReport* rep = (ScopedReport*)__builtin_alloca(sizeof(ScopedReport));
+  // Release locks before symbolizing and outputting the report to avoid
+  // deadlocks.
+  {
     new (rep) ScopedReport(rep_typ, tag);
+    ThreadRegistryLock l0(&ctx->thread_registry);
     for (uptr i = 0; i < kMop; i++)
       rep->AddMemoryAccess(addr, tags[i], s[i], tids[i], traces[i], mset[i]);
 
