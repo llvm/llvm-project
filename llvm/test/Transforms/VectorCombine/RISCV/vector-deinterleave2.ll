@@ -76,6 +76,33 @@ define <vscale x 4 x i64> @narrow_deinterleave2_nxv4i64(<vscale x 4 x i64> %v, i
   ret <vscale x 4 x i64> %interleaved.vec
 }
 
+define <vscale x 16 x i32> @narrow_deinterleave2_vp_load(ptr %p, i32 %evl) {
+; CHECK-LABEL: define <vscale x 16 x i32> @narrow_deinterleave2_vp_load(
+; CHECK-SAME: ptr [[P:%.*]], i32 [[EVL:%.*]]) #[[ATTR0]] {
+; CHECK-NEXT:    [[LOADED_VAL:%.*]] = call <vscale x 16 x i32> @llvm.vp.load.nxv16i32.p0(ptr [[P]], <vscale x 16 x i1> splat (i1 true), i32 [[EVL]])
+; CHECK-NEXT:    [[TMP1:%.*]] = bitcast <vscale x 16 x i32> [[LOADED_VAL]] to <vscale x 32 x i16>
+; CHECK-NEXT:    [[TMP2:%.*]] = call { <vscale x 16 x i16>, <vscale x 16 x i16> } @llvm.vector.deinterleave2.nxv32i16(<vscale x 32 x i16> [[TMP1]])
+; CHECK-NEXT:    [[TMP3:%.*]] = extractvalue { <vscale x 16 x i16>, <vscale x 16 x i16> } [[TMP2]], 0
+; CHECK-NEXT:    [[MERGE0:%.*]] = bitcast <vscale x 16 x i16> [[TMP3]] to <vscale x 8 x i32>
+; CHECK-NEXT:    [[TMP4:%.*]] = extractvalue { <vscale x 16 x i16>, <vscale x 16 x i16> } [[TMP2]], 1
+; CHECK-NEXT:    [[MERGE1:%.*]] = bitcast <vscale x 16 x i16> [[TMP4]] to <vscale x 8 x i32>
+; CHECK-NEXT:    [[INTERLEAVED_VEC:%.*]] = tail call <vscale x 16 x i32> @llvm.vector.interleave2.nxv16i32(<vscale x 8 x i32> [[MERGE0]], <vscale x 8 x i32> [[MERGE1]])
+; CHECK-NEXT:    ret <vscale x 16 x i32> [[INTERLEAVED_VEC]]
+;
+  %loaded.val = call <vscale x 16 x i32> @llvm.vp.load(ptr %p, <vscale x 16 x i1> splat (i1 true), i32 %evl)
+  %d = tail call { <vscale x 8 x i32>, <vscale x 8 x i32> } @llvm.vector.deinterleave2.nxv16i32(<vscale x 16 x i32> %loaded.val)
+  %f0 = extractvalue { <vscale x 8 x i32>, <vscale x 8 x i32> } %d, 0
+  %f1 = extractvalue { <vscale x 8 x i32>, <vscale x 8 x i32> } %d, 1
+  %low0 = and <vscale x 8 x i32> %f0, splat (i32 65535)
+  %low1 = shl <vscale x 8 x i32> %f1, splat (i32 16)
+  %merge0 = or <vscale x 8 x i32> %low0, %low1
+  %high0 = and <vscale x 8 x i32> %f1, splat (i32 -65536)
+  %high1 = lshr <vscale x 8 x i32> %f0, splat (i32 16)
+  %merge1 = or <vscale x 8 x i32> %high0, %high1
+  %interleaved.vec = tail call <vscale x 16 x i32> @llvm.vector.interleave2.nxv16i32(<vscale x 8 x i32> %merge0, <vscale x 8 x i32> %merge1)
+  ret <vscale x 16 x i32> %interleaved.vec
+}
+
 define <vscale x 16 x i32> @negative_narrow_deinterleave2_incorrect_mask(<vscale x 16 x i32> %v, i32 %evl) {
 ; CHECK-LABEL: define <vscale x 16 x i32> @negative_narrow_deinterleave2_incorrect_mask(
 ; CHECK-SAME: <vscale x 16 x i32> [[V:%.*]], i32 [[EVL:%.*]]) #[[ATTR0]] {
