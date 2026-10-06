@@ -8,10 +8,6 @@
 #
 # This covers the MBB->size() check in the critical path part of
 # MachineCombinerImpl::combineInstructions.
-#
-# FIXME: The CHECK and DEBUG expectations below should be identical. That
-# they are not shows that the existence of debug info affects the generated
-# code.
 
 --- |
   define void @test() !dbg !5 {
@@ -70,8 +66,8 @@ body:             |
   ; DEBUG-NEXT:   successors: %bb.1(0x80000000)
   ; DEBUG-NEXT: {{  $}}
   ; DEBUG-NEXT:   [[FADDSrr4:%[0-9]+]]:fpr32 = nsz reassoc FADDSrr [[COPY1]], [[COPY]], implicit $fpcr
-  ; DEBUG-NEXT:   [[FADDSrr5:%[0-9]+]]:fpr32 = nsz reassoc FADDSrr [[COPY2]], [[COPY2]], implicit $fpcr
-  ; DEBUG-NEXT:   [[FADDSrr6:%[0-9]+]]:fpr32 = nsz reassoc FADDSrr killed [[FADDSrr5]], [[FADDSrr4]], implicit $fpcr
+  ; DEBUG-NEXT:   [[FADDSrr5:%[0-9]+]]:fpr32 = nsz reassoc FADDSrr [[COPY2]], [[FADDSrr4]], implicit $fpcr
+  ; DEBUG-NEXT:   [[FADDSrr6:%[0-9]+]]:fpr32 = nsz reassoc FADDSrr [[FADDSrr5]], [[COPY2]], implicit $fpcr
   ; DEBUG-NEXT:   B %bb.1
   bb.0:
     liveins: $s0, $s1

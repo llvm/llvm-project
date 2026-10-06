@@ -9,10 +9,6 @@
 #
 # This covers the MBB->size() check in the register pressure reduction part of
 # MachineCombinerImpl::combineInstructions.
-#
-# FIXME: The CHECK and DEBUG expectations below should be identical. That
-# they are not shows that the existence of debug info affects the generated
-# code.
 
 --- |
   define void @test() !dbg !5 {
@@ -87,8 +83,8 @@ body:             |
   ; DEBUG-NEXT:   successors: %bb.1(0x80000000)
   ; DEBUG-NEXT: {{  $}}
   ; DEBUG-NEXT:   [[XSADDSP3:%[0-9]+]]:vssrc = nsz reassoc nofpexcept XSADDSP [[COPY]], [[COPY]]
-  ; DEBUG-NEXT:   [[XSMULSP2:%[0-9]+]]:vssrc = nsz reassoc nofpexcept XSMULSP [[COPY1]], [[COPY]]
-  ; DEBUG-NEXT:   [[XSMULSP3:%[0-9]+]]:vssrc = nsz reassoc nofpexcept XSMULSP [[XSADDSP3]], killed [[XSMULSP2]]
+  ; DEBUG-NEXT:   [[XSMULSP2:%[0-9]+]]:vssrc = nsz reassoc nofpexcept XSMULSP [[XSADDSP3]], [[COPY1]]
+  ; DEBUG-NEXT:   [[XSMULSP3:%[0-9]+]]:vssrc = nsz reassoc nofpexcept XSMULSP [[XSMULSP2]], [[COPY]]
   ; DEBUG-NEXT:   B %bb.1
   bb.0:
     liveins: $f2, $x2
