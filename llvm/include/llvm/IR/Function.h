@@ -1040,7 +1040,28 @@ public:
   /// unknown.
   unsigned getVScaleValue() const;
 
+  /// Get the custom code model raw value of this function.
+  unsigned getCodeModelRaw() const {
+    unsigned Data = getGlobalValueSubClassData();
+    return (Data >> CodeModelShift) & CodeModelMask;
+  }
+
+  /// Get the custom code model of this function if it has one.
+  std::optional<CodeModel::Model> getCodeModel() const {
+    unsigned CodeModelData = getCodeModelRaw();
+    if (CodeModelData > 0)
+      return static_cast<CodeModel::Model>(CodeModelData - 1);
+    return {};
+  }
+
+  /// Change the code model for this function.
+  void setCodeModel(CodeModel::Model CM);
+
 private:
+  static const unsigned CodeModelBits = LastCodeModelBit - LastAlignmentBit;
+  static const unsigned CodeModelMask = (1 << CodeModelBits) - 1;
+  static const unsigned CodeModelShift = LastAlignmentBit + 1;
+
   void allocHungoffUselist();
   template<int Idx> void setHungoffOperand(Constant *C);
 
