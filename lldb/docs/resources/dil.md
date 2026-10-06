@@ -1,9 +1,10 @@
 # DIL: The Data Inspection Language
 
 This page explains the Data Inspection Language (DIL) in LLDB. Most of this
-document is intended for LLDB users, from both the command line and through
-IDEs (Integrated Development Environments) via lldb-dap. At the end there is
-some additional information for LLDB developers.
+document is intended for LLDB users, from both the command line and through IDEs
+(Integrated Development Environments), Data Formatters, and other scripting
+affordances (via the SB APIs). At the end there is some additional information
+for LLDB developers.
 
 ## Background: What is DIL and why did we implement it?
 
