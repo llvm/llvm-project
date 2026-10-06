@@ -7,6 +7,10 @@
 ; which SCEV cannot treat as a non-wrapping recurrence.
 ; https://alive2.llvm.org/ce/z/CUWfpR
 
+; shouldChangeType uses these legal integer widths. Without them the fold is
+; skipped, including i32 -> i64.
+target datalayout = "e-m:e-p270:32:32-p271:32:32-p272:64:64-i64:64-i128:128-f80:128-n8:16:32:64-S128"
+
 declare void @use32(i32)
 
 define i64 @sext_add_nsw_of_trunc_nsw(i64 %x) {
