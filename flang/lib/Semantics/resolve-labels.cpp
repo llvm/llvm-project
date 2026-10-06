@@ -662,15 +662,13 @@ private:
     const auto &doStmt{
         std::get<parser::Statement<parser::NonLabelDoStmt>>(doConstruct.t)};
     currentPosition_ = doStmt.source;
-    if (doStmt.label) {
+    if (doStmt.label)
       AddTargetLabelDefinition(*doStmt.label,
           ConstructBranchTargetFlags(doStmt), currentScope_,
           /*isExecutableConstructEndStmt=*/false, currentPosition_);
-    }
     const auto &block{std::get<parser::Block>(doConstruct.t)};
-    if (auto label{parser::GetFinalLabel(block)}) {
+    if (auto label{parser::GetFinalLabel(block)})
       AddLabelReferenceFromDoStmt(*label);
-    }
     Walk(block, *this);
     return false;
   }
