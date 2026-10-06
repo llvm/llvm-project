@@ -3545,31 +3545,6 @@ public:
   ItaniumRTTIBuilder(const ItaniumCXXABI &ABI)
       : CGM(ABI.CGM), VMContext(CGM.getModule().getContext()), CXXABI(ABI) {}
 
-  // Pointer type info flags.
-  enum {
-    /// PTI_Const - Type has const qualifier.
-    PTI_Const = 0x1,
-
-    /// PTI_Volatile - Type has volatile qualifier.
-    PTI_Volatile = 0x2,
-
-    /// PTI_Restrict - Type has restrict qualifier.
-    PTI_Restrict = 0x4,
-
-    /// PTI_Incomplete - Type is incomplete.
-    PTI_Incomplete = 0x8,
-
-    /// PTI_ContainingClassIncomplete - Containing class is incomplete.
-    /// (in pointer to member).
-    PTI_ContainingClassIncomplete = 0x10,
-
-    /// PTI_TransactionSafe - Pointee is transaction_safe function (C++ TM TS).
-    //PTI_TransactionSafe = 0x20,
-
-    /// PTI_Noexcept - Pointee is noexcept function (C++1z).
-    PTI_Noexcept = 0x40,
-  };
-
   // VMI type info flags.
   enum {
     /// VMI_NonDiamondRepeat - Class has non-diamond repeated inheritance.
@@ -3865,43 +3840,6 @@ static bool ShouldUseExternalRTTIDescriptor(CodeGenModule &CGM,
   return false;
 }
 
-/// IsIncompleteClassType - Returns whether the given record type is incomplete.
-static bool IsIncompleteClassType(const RecordType *RecordTy) {
-  return !RecordTy->getDecl()->getDefinitionOrSelf()->isCompleteDefinition();
-}
-
-/// ContainsIncompleteClassType - Returns whether the given type contains an
-/// incomplete class type. This is true if
-///
-///   * The given type is an incomplete class type.
-///   * The given type is a pointer type whose pointee type contains an
-///     incomplete class type.
-///   * The given type is a member pointer type whose class is an incomplete
-///     class type.
-///   * The given type is a member pointer type whoise pointee type contains an
-///     incomplete class type.
-/// is an indirect or direct pointer to an incomplete class type.
-static bool ContainsIncompleteClassType(QualType Ty) {
-  if (const RecordType *RecordTy = dyn_cast<RecordType>(Ty)) {
-    if (IsIncompleteClassType(RecordTy))
-      return true;
-  }
-
-  if (const PointerType *PointerTy = dyn_cast<PointerType>(Ty))
-    return ContainsIncompleteClassType(PointerTy->getPointeeType());
-
-  if (const MemberPointerType *MemberPointerTy =
-      dyn_cast<MemberPointerType>(Ty)) {
-    // Check if the class type is incomplete.
-    if (!MemberPointerTy->getMostRecentCXXRecordDecl()->hasDefinition())
-      return true;
-
-    return ContainsIncompleteClassType(MemberPointerTy->getPointeeType());
-  }
-
-  return false;
-}
-
 // CanUseSingleInheritance - Return whether the given record decl has a "single,
 // public, non-virtual base at offset zero (i.e. the derived class is dynamic
 // iff the base is)", according to Itanium C++ ABI, 2.95p6b.
@@ -4103,7 +4041,7 @@ static llvm::GlobalVariable::LinkageTypes getTypeInfoLinkage(CodeGenModule &CGM,
   //   generated for the incomplete type that will not resolve to the final
   //   complete class RTTI (because the latter need not exist), possibly by
   //   making it a local static object.
-  if (ContainsIncompleteClassType(Ty))
+  if (CodeGenUtils::containsIncompleteClassType(Ty))
     return llvm::GlobalValue::InternalLinkage;
 
   switch (Ty->getLinkage()) {
@@ -4587,42 +4525,13 @@ void ItaniumRTTIBuilder::BuildVMIClassTypeInfo(const CXXRecordDecl *RD) {
   }
 }
 
-/// Compute the flags for a __pbase_type_info, and remove the corresponding
-/// pieces from \p Type.
-static unsigned extractPBaseFlags(ASTContext &Ctx, QualType &Type) {
-  unsigned Flags = 0;
-
-  if (Type.isConstQualified())
-    Flags |= ItaniumRTTIBuilder::PTI_Const;
-  if (Type.isVolatileQualified())
-    Flags |= ItaniumRTTIBuilder::PTI_Volatile;
-  if (Type.isRestrictQualified())
-    Flags |= ItaniumRTTIBuilder::PTI_Restrict;
-  Type = Type.getUnqualifiedType();
-
-  // Itanium C++ ABI 2.9.5p7:
-  //   When the abi::__pbase_type_info is for a direct or indirect pointer to an
-  //   incomplete class type, the incomplete target type flag is set.
-  if (ContainsIncompleteClassType(Type))
-    Flags |= ItaniumRTTIBuilder::PTI_Incomplete;
-
-  if (auto *Proto = Type->getAs<FunctionProtoType>()) {
-    if (Proto->isNothrow()) {
-      Flags |= ItaniumRTTIBuilder::PTI_Noexcept;
-      Type = Ctx.getFunctionTypeWithExceptionSpec(Type, EST_None);
-    }
-  }
-
-  return Flags;
-}
-
 /// BuildPointerTypeInfo - Build an abi::__pointer_type_info struct,
 /// used for pointer types.
 void ItaniumRTTIBuilder::BuildPointerTypeInfo(QualType PointeeTy) {
   // Itanium C++ ABI 2.9.5p7:
   //   __flags is a flag word describing the cv-qualification and other
   //   attributes of the type pointed to
-  unsigned Flags = extractPBaseFlags(CGM.getContext(), PointeeTy);
+  unsigned Flags = CodeGenUtils::extractPBaseFlags(CGM.getContext(), PointeeTy);
 
   llvm::Type *UnsignedIntLTy =
     CGM.getTypes().ConvertType(CGM.getContext().UnsignedIntTy);
@@ -4645,11 +4554,11 @@ ItaniumRTTIBuilder::BuildPointerToMemberTypeInfo(const MemberPointerType *Ty) {
   // Itanium C++ ABI 2.9.5p7:
   //   __flags is a flag word describing the cv-qualification and other
   //   attributes of the type pointed to.
-  unsigned Flags = extractPBaseFlags(CGM.getContext(), PointeeTy);
+  unsigned Flags = CodeGenUtils::extractPBaseFlags(CGM.getContext(), PointeeTy);
 
   const auto *RD = Ty->getMostRecentCXXRecordDecl();
   if (!RD->hasDefinition())
-    Flags |= PTI_ContainingClassIncomplete;
+    Flags |= CodeGenUtils::PTI_ContainingClassIncomplete;
 
   llvm::Type *UnsignedIntLTy =
     CGM.getTypes().ConvertType(CGM.getContext().UnsignedIntTy);

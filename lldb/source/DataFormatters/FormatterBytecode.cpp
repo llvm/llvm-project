@@ -7,6 +7,7 @@
 //===----------------------------------------------------------------------===//
 
 #include "lldb/DataFormatters/FormatterBytecode.h"
+#include "lldb/Symbol/CompilerType.h"
 #include "lldb/Utility/LLDBLog.h"
 #include "lldb/ValueObject/ValueObject.h"
 #include "lldb/ValueObject/ValueObjectConstResult.h"
@@ -204,6 +205,14 @@ static llvm::Error TypeCheck(llvm::ArrayRef<DataStackElement> data,
   if (auto error = TypeCheck(data, type3))
     return error;
   return TypeCheck(data.drop_back(), type1, type2);
+}
+
+static llvm::Error TypeCheck(llvm::ArrayRef<DataStackElement> data,
+                             DataType type1, DataType type2, DataType type3,
+                             DataType type4) {
+  if (auto error = TypeCheck(data, type4))
+    return error;
+  return TypeCheck(data.drop_back(), type1, type2, type3);
 }
 
 /// Wrap the result of a binary operator applied to two APSInts back into a
@@ -746,6 +755,29 @@ llvm::Error Interpret(ControlStack &control, DataStack &data, Signatures sig) {
         auto new_name = data.Pop<std::string>();
         POP_VALOBJ(valobj);
         data.Push(valobj->Clone(new_name));
+        break;
+      }
+      case sel_get_pointee_type: {
+        TYPE_CHECK(Type);
+        auto type = data.Pop<CompilerType>();
+        data.Push(type.GetPointeeType());
+        break;
+      }
+      case sel_get_byte_size: {
+        TYPE_CHECK(Type);
+        auto type = data.Pop<CompilerType>();
+        uint64_t size =
+            llvm::expectedToOptional(type.GetByteSize(nullptr)).value_or(0);
+        data.Push(llvm::APSInt::get(size));
+        break;
+      }
+      case sel_create_child_at_offset: {
+        TYPE_CHECK(Object, String, Integer, Type);
+        auto type = data.Pop<CompilerType>();
+        auto offset = data.Pop<llvm::APSInt>().getLimitedValue(UINT32_MAX);
+        ConstString name(data.Pop<std::string>());
+        POP_VALOBJ(valobj);
+        data.Push(valobj->GetSyntheticChildAtOffset(offset, type, true, name));
         break;
       }
       case sel_strlen: {

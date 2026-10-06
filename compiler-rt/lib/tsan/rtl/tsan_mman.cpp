@@ -187,8 +187,8 @@ static void SignalUnsafeCall(ThreadState *thr, uptr pc) {
   // Release locks before symbolizing and outputting the report to avoid
   // deadlocks.
   {
-    ThreadRegistryLock l(&ctx->thread_registry);
     new (rep) ScopedReport(ReportTypeSignalUnsafe);
+    ThreadRegistryLock l(&ctx->thread_registry);
     rep->AddStack(stack, true);
   }
   OutputReport(thr, *rep);

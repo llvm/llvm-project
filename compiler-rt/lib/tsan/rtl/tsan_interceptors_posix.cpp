@@ -2217,8 +2217,8 @@ static void ReportErrnoSpoiling(ThreadState *thr, uptr pc, int sig) {
   // Release locks before symbolizing and outputting the report to avoid
   // deadlocks.
   {
-    ThreadRegistryLock l(&ctx->thread_registry);
     new (rep) ScopedReport(ReportTypeErrnoInSignal);
+    ThreadRegistryLock l(&ctx->thread_registry);
     rep->SetSigNum(sig);
     suppressed = IsFiredSuppression(ctx, ReportTypeErrnoInSignal, stack);
     if (!suppressed)
