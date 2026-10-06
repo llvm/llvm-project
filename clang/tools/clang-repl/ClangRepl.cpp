@@ -52,8 +52,6 @@ LLVM_ATTRIBUTE_USED int __lsan_is_turned_off() { return 1; }
 
 #define DEBUG_TYPE "clang-repl"
 
-static llvm::cl::opt<bool> HipEnabled("hip", llvm::cl::Hidden);
-static llvm::cl::opt<std::string> RocmPath("rocm-path", llvm::cl::Hidden);
 static llvm::cl::opt<bool> CudaEnabled("cuda", llvm::cl::Hidden);
 static llvm::cl::opt<std::string> CudaPath("cuda-path", llvm::cl::Hidden);
 static llvm::cl::opt<std::string> OffloadArch("offload-arch", llvm::cl::Hidden);
@@ -312,34 +310,24 @@ int main(int argc, const char **argv) {
   IEB->SlabAllocateSize = *SizeOrErr;
   IEB->UseSharedMemory = UseSharedMemory;
 
-  if (HipEnabled && CudaEnabled) {
-    if (HipEnabled.getPosition() > CudaEnabled.getPosition())
-      CudaEnabled = false;
-    else
-      HipEnabled = false;
-  }
-
-  bool DeviceEnabled = HipEnabled || CudaEnabled;
-  clang::OffloadType OffloadKind =
-      HipEnabled ? clang::OffloadType::HIP : clang::OffloadType::CUDA;
-  llvm::StringRef DevicePath = HipEnabled ? RocmPath : CudaPath;
-  // For HIP, let the driver auto-detect the GPU via --offload-arch=native.
-  llvm::StringRef DeviceOffloadArch = !OffloadArch.empty()
-                                          ? llvm::StringRef(OffloadArch)
-                                          : (HipEnabled ? "native" : "sm_35");
   std::unique_ptr<clang::CompilerInstance> DeviceCI;
+  if (CudaEnabled) {
+    if (!CudaPath.empty())
+      CB.SetCudaSDK(CudaPath);
 
-  if (DeviceEnabled) {
-    CB.SetDeviceSDK(OffloadKind, DevicePath);
-    CB.SetOffloadArch(DeviceOffloadArch);
-    DeviceCI = ExitOnErr(CB.CreateDevice(OffloadKind));
+    if (OffloadArch.empty()) {
+      OffloadArch = "sm_35";
+    }
+    CB.SetOffloadArch(OffloadArch);
+
+    DeviceCI = ExitOnErr(CB.CreateCudaDevice());
   }
 
   // FIXME: Investigate if we could use runToolOnCodeWithArgs from tooling. It
   // can replace the boilerplate code for creation of the compiler instance.
   std::unique_ptr<clang::CompilerInstance> CI;
-  if (DeviceEnabled) {
-    CI = ExitOnErr(CB.CreateHost(OffloadKind));
+  if (CudaEnabled) {
+    CI = ExitOnErr(CB.CreateCudaHost());
   } else {
     CI = ExitOnErr(CB.CreateCpp());
   }
@@ -351,33 +339,20 @@ int main(int argc, const char **argv) {
 
   // Load any requested plugins.
   CI->LoadRequestedPlugins();
-  if (DeviceEnabled)
+  if (CudaEnabled)
     DeviceCI->LoadRequestedPlugins();
 
   std::unique_ptr<clang::Interpreter> Interp;
 
-  if (DeviceEnabled) {
-    Interp = ExitOnErr(clang::Interpreter::createWithDevice(
-        OffloadKind, std::move(CI), std::move(DeviceCI)));
+  if (CudaEnabled) {
+    Interp = ExitOnErr(
+        clang::Interpreter::createWithCUDA(std::move(CI), std::move(DeviceCI)));
 
-    if (HipEnabled) {
-      if (RocmPath.empty()) {
-        ExitOnErr(Interp->LoadDynamicLibrary("libamdhip64.so"));
-      } else {
-        auto RocmRuntimeLibPath = RocmPath + "/lib/libamdhip64.so";
-        ExitOnErr(Interp->LoadDynamicLibrary(RocmRuntimeLibPath.c_str()));
-      }
-      llvm::errs()
-          << "HIP environment is initialized but not supported as of now.\n";
-      return EXIT_FAILURE;
-    }
-    if (CudaEnabled) {
-      if (CudaPath.empty()) {
-        ExitOnErr(Interp->LoadDynamicLibrary("libcudart.so"));
-      } else {
-        auto CudaRuntimeLibPath = CudaPath + "/lib/libcudart.so";
-        ExitOnErr(Interp->LoadDynamicLibrary(CudaRuntimeLibPath.c_str()));
-      }
+    if (CudaPath.empty()) {
+      ExitOnErr(Interp->LoadDynamicLibrary("libcudart.so"));
+    } else {
+      auto CudaRuntimeLibPath = CudaPath + "/lib/libcudart.so";
+      ExitOnErr(Interp->LoadDynamicLibrary(CudaRuntimeLibPath.c_str()));
     }
   } else {
     Interp =
