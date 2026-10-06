@@ -1217,7 +1217,7 @@ unsigned fir::RecordType::getFieldIndex(llvm::StringRef ident) {
   for (auto f : llvm::enumerate(getTypeList()))
     if (ident == f.value().first)
       return f.index();
-  return common::numeric_limits<unsigned>::max();
+  return Fortran::common::numeric_limits<unsigned>::max();
 }
 
 //===----------------------------------------------------------------------===//
