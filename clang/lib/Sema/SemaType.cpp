@@ -216,6 +216,9 @@ namespace {
     /// stored in a MacroQualifiedTypeLoc.
     llvm::DenseMap<const MacroQualifiedType *, SourceLocation> LocsForMacros;
 
+    /// Locations of ext_vector_type attributes for fixed-size vectors.
+    llvm::DenseMap<const ExtVectorType *, SourceLocation> LocsForExtVectors;
+
     /// Flag to indicate we parsed a noderef attribute. This is used for
     /// validating that noderef was used on a pointer or array.
     bool parsedNoDeref;
@@ -361,6 +364,15 @@ namespace {
     void setExpansionLocForMacroQualifiedType(const MacroQualifiedType *MQT,
                                               SourceLocation Loc) {
       LocsForMacros[MQT] = Loc;
+    }
+
+    SourceLocation getAttrLocForExtVectorType(const ExtVectorType *T) const {
+      return LocsForExtVectors.lookup(T);
+    }
+
+    void setAttrLocForExtVectorType(const ExtVectorType *T,
+                                    SourceLocation Loc) {
+      LocsForExtVectors[T] = Loc;
     }
 
     void setParsedNoDeref(bool parsed) { parsedNoDeref = parsed; }
@@ -6011,6 +6023,10 @@ namespace {
     // Allow to fill pointee's type locations, e.g.,
     //   int __attr * __attr * __attr *p;
     void VisitPointerTypeLoc(PointerTypeLoc TL) { Visit(TL.getNextTypeLoc()); }
+    void VisitExtVectorTypeLoc(ExtVectorTypeLoc TL) {
+      TL.setNameLoc(State.getAttrLocForExtVectorType(TL.getTypePtr()));
+      Visit(TL.getElementLoc());
+    }
     void VisitTypedefTypeLoc(TypedefTypeLoc TL) {
       if (DS.getTypeSpecType() == TST_typename) {
         TypeSourceInfo *TInfo = nullptr;
@@ -6354,7 +6370,9 @@ namespace {
       TL.setNameLoc(Chunk.Loc);
     }
     void VisitExtVectorTypeLoc(ExtVectorTypeLoc TL) {
-      TL.setNameLoc(Chunk.Loc);
+      SourceLocation AttrLoc =
+          State.getAttrLocForExtVectorType(TL.getTypePtr());
+      TL.setNameLoc(AttrLoc.isValid() ? AttrLoc : Chunk.Loc);
     }
     void VisitAtomicTypeLoc(AtomicTypeLoc TL) {
       fillAtomicQualLoc(TL, Chunk);
@@ -8552,7 +8570,8 @@ static void HandleVectorSizeAttr(QualType &CurType, const ParsedAttr &Attr,
 /// Process the OpenCL-like ext_vector_type attribute when it occurs on
 /// a type.
 static void HandleExtVectorTypeAttr(QualType &CurType, const ParsedAttr &Attr,
-                                    Sema &S) {
+                                    TypeProcessingState &State) {
+  Sema &S = State.getSema();
   // check the attribute arguments.
   if (Attr.getNumArgs() != 1) {
     S.Diag(Attr.getLoc(), diag::err_attribute_wrong_number_arguments) << Attr
@@ -8562,8 +8581,11 @@ static void HandleExtVectorTypeAttr(QualType &CurType, const ParsedAttr &Attr,
 
   Expr *SizeExpr = Attr.getArgAsExpr(0);
   QualType T = S.BuildExtVectorType(CurType, SizeExpr, Attr.getLoc());
-  if (!T.isNull())
+  if (!T.isNull()) {
     CurType = T;
+    if (const auto *VT = dyn_cast<ExtVectorType>(T.getTypePtr()))
+      State.setAttrLocForExtVectorType(VT, Attr.getLoc());
+  }
 }
 
 static bool isPermittedNeonBaseType(QualType &Ty, VectorKind VecKind, Sema &S) {
@@ -9211,7 +9233,7 @@ static void processTypeAttrs(TypeProcessingState &state, QualType &type,
       attr.setUsedAsTypeAttr();
       break;
     case ParsedAttr::AT_ExtVectorType:
-      HandleExtVectorTypeAttr(type, attr, state.getSema());
+      HandleExtVectorTypeAttr(type, attr, state);
       attr.setUsedAsTypeAttr();
       break;
     case ParsedAttr::AT_NeonVectorType:

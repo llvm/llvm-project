@@ -631,6 +631,9 @@ features cannot lower the translation-unit ABI level;
 
 #### Bug Fixes to Attribute Support
 
+- Fixed missing source locations for diagnostics when instantiating
+  `ext_vector_type` with a fixed length and a dependent element type. (#GH229300)
+
 - Fixed crash (assertion) when the `alloc_align` attribute was applied to a declaration whose type has a `FunctionProtoType` but which is not itself a `FunctionDecl`, such as a function-pointer variable. (#GH122058)
 
 - Fixed a crash on `bool` vectors declared with `ext_vector_type` and more than

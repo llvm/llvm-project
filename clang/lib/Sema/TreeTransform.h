@@ -6280,7 +6280,7 @@ QualType TreeTransform<Derived>::TransformDependentSizedExtVectorType(
     NewTL.setNameLoc(TL.getNameLoc());
   } else {
     ExtVectorTypeLoc NewTL = TLB.push<ExtVectorTypeLoc>(Result);
-    NewTL.setNameLoc(TL.getNameLoc());
+    NewTL.setNameLoc(T->getAttributeLoc());
   }
 
   return Result;
@@ -6445,9 +6445,8 @@ QualType TreeTransform<Derived>::TransformExtVectorType(TypeLocBuilder &TLB,
   QualType Result = TL.getType();
   if (getDerived().AlwaysRebuild() ||
       ElementType != T->getElementType()) {
-    Result = getDerived().RebuildExtVectorType(ElementType,
-                                               T->getNumElements(),
-                                               /*FIXME*/ SourceLocation());
+    Result = getDerived().RebuildExtVectorType(ElementType, T->getNumElements(),
+                                               TL.getNameLoc());
     if (Result.isNull())
       return QualType();
   }
