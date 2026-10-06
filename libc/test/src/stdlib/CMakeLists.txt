@@ -195,6 +195,20 @@ add_libc_test(
 )
 
 add_libc_test(
+  strfromf128_test
+  SUITE
+    libc-stdlib-tests
+  SRCS
+    strfromf128_test.cpp
+  DEPENDS
+    libc.src.__support.FPUtil.fp_bits
+    libc.src.__support.macros.properties.architectures
+    libc.src.stdlib.strfromf128
+  COMPILE_OPTIONS
+    ${strfrom_test_copts}
+)
+
+add_libc_test(
   strfromd_test
   SUITE
     libc-stdlib-tests

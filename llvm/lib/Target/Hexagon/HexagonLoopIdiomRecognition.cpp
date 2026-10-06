@@ -1097,7 +1097,7 @@ bool PolynomialMultiplyRecognize::promoteTypes(BasicBlock *LoopB,
       assert(Ty0 == DestTy);
       // In order to create the trunc, P must have the promoted type.
       P->mutateType(Ty0);
-      Value *T = IRBuilder<>(ExitB, End).CreateTrunc(P, PTy);
+      Value *T = IRBuilder<>(End).CreateTrunc(P, PTy);
       // In order for the RAUW to work, the types of P and T must match.
       P->mutateType(PTy);
       P->replaceAllUsesWith(T);

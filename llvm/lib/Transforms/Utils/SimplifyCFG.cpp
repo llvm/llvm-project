@@ -3065,10 +3065,12 @@ public:
 ///     store i32 %add.add5, i32* %arrayidx2
 ///     ...
 ///
-/// \return The pointer to the value of the previous store if the store can be
-///         hoisted into the predecessor block. 0 otherwise.
+/// \return The value from the previous access if the store can be hoisted into
+///         the predecessor block. PreviousAccess is set to that access. Return
+///         null otherwise.
 static Value *isSafeToSpeculateStore(Instruction *I, BasicBlock *BrBB,
-                                     BasicBlock *StoreBB, BasicBlock *EndBB) {
+                                     BasicBlock *StoreBB, BasicBlock *EndBB,
+                                     Instruction *&PreviousAccess) {
   StoreInst *StoreToHoist = dyn_cast<StoreInst>(I);
   if (!StoreToHoist)
     return nullptr;
@@ -3102,9 +3104,11 @@ static Value *isSafeToSpeculateStore(Instruction *I, BasicBlock *BrBB,
       // atomic write.
       if (SI->getPointerOperand() == StorePtr &&
           SI->getValueOperand()->getType() == StoreTy && SI->isSimple() &&
-          SI->getAlign() >= StoreToHoist->getAlign())
+          SI->getAlign() >= StoreToHoist->getAlign()) {
         // Found the previous store, return its value operand.
+        PreviousAccess = SI;
         return SI->getValueOperand();
+      }
       return nullptr; // Unknown store.
     }
 
@@ -3124,6 +3128,7 @@ static Value *isSafeToSpeculateStore(Instruction *I, BasicBlock *BrBB,
              isDereferenceablePointer(StorePtr, StoreTy, LI->getDataLayout(),
                                       /*IgnoreFree=*/true))) {
           // Found a previous load, return it.
+          PreviousAccess = LI;
           return LI;
         }
       }
@@ -3285,6 +3290,7 @@ bool SimplifyCFGOpt::speculativelyExecuteBB(CondBrInst *BI,
   SmallVector<Instruction *, 2> SpeculatedConditionalLoadsStores;
   Value *SpeculatedStoreValue = nullptr;
   StoreInst *SpeculatedStore = nullptr;
+  Instruction *PreviousStoreAccess = nullptr;
   EphemeralValueTracker EphTracker;
   for (Instruction &I : reverse(drop_end(*ThenBB))) {
     // Skip pseudo probes. The consequence is we lose track of the branch
@@ -3323,8 +3329,8 @@ bool SimplifyCFGOpt::speculativelyExecuteBB(CondBrInst *BI,
     if (!IsSafeCheapLoadStore &&
         !isSafeToSpeculativelyExecute(&I, BI, Options.AC) &&
         !(HoistCondStores && !SpeculatedStoreValue &&
-          (SpeculatedStoreValue =
-               isSafeToSpeculateStore(&I, BB, ThenBB, EndBB))))
+          (SpeculatedStoreValue = isSafeToSpeculateStore(&I, BB, ThenBB, EndBB,
+                                                         PreviousStoreAccess))))
       return false;
     if (!IsSafeCheapLoadStore && !SpeculatedStoreValue &&
         computeSpeculationCost(&I, TTI) >
@@ -3426,8 +3432,14 @@ bool SimplifyCFGOpt::speculativelyExecuteBB(CondBrInst *BI,
   for (auto &I : make_early_inc_range(*ThenBB)) {
     if (!SpeculatedStoreValue || &I != SpeculatedStore) {
       I.dropLocation();
+      I.dropUBImplyingAttrsAndMetadata();
+    } else {
+      assert(PreviousStoreAccess && "Missing previous store access");
+      AAMDNodes MergedAA = SpeculatedStore->getAAMetadata().merge(
+          PreviousStoreAccess->getAAMetadata());
+      I.dropUBImplyingAttrsAndMetadata();
+      I.setAAMetadata(MergedAA);
     }
-    I.dropUBImplyingAttrsAndMetadata();
 
     // Drop ephemeral values.
     if (EphTracker.contains(&I)) {
@@ -4550,9 +4562,7 @@ static bool mergeConditionalStoreToAddress(
   Value *QPHI = ensureValueAvailableInSuccessor(QStore->getValueOperand(),
                                                 QStore->getParent(), PPHI);
 
-  BasicBlock::iterator PostBBFirst = PostBB->getFirstInsertionPt();
-  IRBuilder<> QB(PostBB, PostBBFirst);
-  QB.SetCurrentDebugLocation(PostBBFirst->getStableDebugLoc());
+  IRBuilder<> QB(PostBB->getFirstInsertionPt());
 
   InvertPCond ^= (PStore->getParent() != PTB);
   InvertQCond ^= (QStore->getParent() != QTB);
