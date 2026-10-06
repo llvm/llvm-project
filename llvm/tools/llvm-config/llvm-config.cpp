@@ -383,13 +383,13 @@ int main(int argc, char **argv) {
   /// removed or, as in the case of CMake's `BUILD_SHARED_LIBS`, never present
   /// in the first place. This can't be done at configure/build time.
 
-  StringRef SharedExt, SharedVersionedExt, SharedDir, SharedPrefix, StaticExt,
+  StringRef SharedExt, SharedSuffix, SharedDir, SharedPrefix, StaticExt,
       StaticPrefix, StaticDir = "lib";
   std::string DirSep = "/";
   const Triple HostTriple(Triple::normalize(LLVM_HOST_TRIPLE));
   if (HostTriple.isOSWindows()) {
     SharedExt = "dll";
-    SharedVersionedExt = LLVM_DYLIB_VERSION ".dll";
+    SharedSuffix = "-" LLVM_DYLIB_VERSION ".dll";
     if (HostTriple.isOSCygMing()) {
       SharedPrefix = LLVM_SHARED_LIBRARY_PREFIX;
       StaticExt = "a";
@@ -410,14 +410,14 @@ int main(int argc, char **argv) {
     StaticDir = ActiveLibDir;
   } else if (HostTriple.isOSDarwin()) {
     SharedExt = "dylib";
-    SharedVersionedExt = LLVM_DYLIB_VERSION ".dylib";
+    SharedSuffix = ".dylib";
     StaticExt = "a";
     StaticDir = SharedDir = ActiveLibDir;
     StaticPrefix = SharedPrefix = "lib";
   } else {
     // default to the unix values:
     SharedExt = "so";
-    SharedVersionedExt = LLVM_DYLIB_VERSION ".so";
+    SharedSuffix = "-" LLVM_DYLIB_VERSION ".so";
     StaticExt = "a";
     StaticDir = SharedDir = ActiveLibDir;
     StaticPrefix = SharedPrefix = "lib";
@@ -429,8 +429,7 @@ int main(int argc, char **argv) {
   const bool BuiltSharedLibs = !!LLVM_ENABLE_SHARED;
 
   bool DyLibExists = false;
-  const std::string DyLibName =
-      (SharedPrefix + "LLVM-" + SharedVersionedExt).str();
+  const std::string DyLibName = (SharedPrefix + "LLVM" + SharedSuffix).str();
 
   // If LLVM_LINK_DYLIB is ON, the single shared library will be returned
   // for "--libs", etc, if they exist. This behaviour can be overridden with
