@@ -122,6 +122,15 @@ public:
 
   bool supportsLibCall() const override { return false; }
 
+  cir::CallingConv getDeviceKernelCallingConv() const override {
+    return cir::CallingConv::AMDGPUKernel;
+  }
+
+  void setCUDAKernelCallingConvention(const FunctionType *&ft) const override {
+    ft = getABIInfo().cgt.getASTContext().adjustFunctionType(
+        ft, ft->getExtInfo().withCallingConv(CC_DeviceKernel));
+  }
+
   void setTargetAttributes(const clang::Decl *decl, mlir::Operation *global,
                            CIRGenModule &cgm) const override {
     if (auto func = mlir::dyn_cast<cir::FuncOp>(global)) {
