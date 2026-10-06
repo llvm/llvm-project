@@ -17,11 +17,14 @@
 #include "llvm/Support/Path.h"
 #include "llvm/Support/ThreadPool.h"
 #include "llvm/Support/Threading.h"
+#include <mutex>
 #include <numeric>
 
 using namespace llvm;
 
 namespace {
+
+static std::mutex OutsMutex;
 
 /// Helper struct which prints trimmed and aligned columns.
 struct Column {
@@ -463,9 +466,11 @@ void CoverageReport::prepareSingleFileReport(const StringRef Filename,
     auto GroupSummary =
         FunctionCoverageSummary::get(Group, InstantiationSummaries);
 
-    if (Options.Debug)
+    if (Options.Debug) {
+      std::lock_guard<std::mutex> Lock(OutsMutex);
       outs() << "InstantiationGroup: " << GroupSummary.Name << " with "
              << "size = " << Group.size() << "\n";
+    }
 
     FileReport->addFunction(GroupSummary);
   }
