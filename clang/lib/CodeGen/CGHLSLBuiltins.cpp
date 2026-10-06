@@ -1454,13 +1454,17 @@ Value *CodeGenFunction::EmitHLSLBuiltinExpr(unsigned BuiltinID,
         RValFalse.isScalar()
             ? RValFalse.getScalarVal()
             : Builder.CreateLoad(RValFalse.getAggregateAddress(), "false_val");
-    if (auto *VTy = E->getType()->getAs<VectorType>()) {
+
+    unsigned NumElements = 0;
+    if (auto *VTy = E->getType()->getAs<VectorType>())
+      NumElements = VTy->getNumElements();
+    else if (auto *MTy = E->getType()->getAs<ConstantMatrixType>())
+      NumElements = MTy->getNumElementsFlattened();
+    if (NumElements) {
       if (!OpTrue->getType()->isVectorTy())
-        OpTrue =
-            Builder.CreateVectorSplat(VTy->getNumElements(), OpTrue, "splat");
+        OpTrue = Builder.CreateVectorSplat(NumElements, OpTrue, "splat");
       if (!OpFalse->getType()->isVectorTy())
-        OpFalse =
-            Builder.CreateVectorSplat(VTy->getNumElements(), OpFalse, "splat");
+        OpFalse = Builder.CreateVectorSplat(NumElements, OpFalse, "splat");
     }
 
     Value *SelectVal =
