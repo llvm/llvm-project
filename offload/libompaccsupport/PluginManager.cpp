@@ -128,12 +128,10 @@ bool PluginManager::initializeDevice(ol_device_handle_t DeviceHandle) {
 }
 
 void PluginManager::initializeAllDevices() {
-  olIterateDevices(
-      [](ol_device_handle_t Device, void *UserData) {
-        PM->initializeDevice(Device);
-        return true;
-      },
-      nullptr);
+  if (auto Err = iterateDevices(
+          [](ol_device_handle_t Device) { PM->initializeDevice(Device); })) {
+    REPORT() << "Failed to iterate devices: " << toString(std::move(Err));
+  }
   // After all plugins are initialized, register atExit cleanup handlers
   std::atexit([]() {
     // Interop cleanup should be done before the plugins are deinitialized as

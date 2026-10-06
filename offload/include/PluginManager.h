@@ -198,4 +198,19 @@ void deinitRuntime();
 extern PluginManager *PM;
 extern std::atomic<bool> RTLAlive; // Indicates if the RTL has been initialized
 extern std::atomic<int> RTLOngoingSyncs; // Counts ongoing external syncs
+
+// Helper function to iterate over all devices and invoke the provided callback.
+template <typename CallbackTy> llvm::Error iterateDevices(CallbackTy Callback) {
+  ol_device_iterate_cb_t Wrapper = [](ol_device_handle_t Device,
+                                      void *UserData) -> bool {
+    CallbackTy *Unwrapped = static_cast<CallbackTy *>(UserData);
+    (*Unwrapped)(Device);
+    return true;
+  };
+  if (auto Res = olIterateDevices(Wrapper, &Callback))
+    return error::createOffloadError(error::ErrorCode::BACKEND_FAILURE,
+                                     "Failed to iterate devices: %d",
+                                     Res->Details);
+  return llvm::Error::success();
+}
 #endif // OMPTARGET_PLUGIN_MANAGER_H
