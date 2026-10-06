@@ -34,8 +34,7 @@ define void @i64_load_store(ptr noalias %x, i64 %n) {
 ; BEFORE-SCALE-NEXT:      vp<[[VP9:%[0-9]+]]> = vector-pointer inbounds i64, ir<%ptr>, ir<1>
 ; BEFORE-SCALE-NEXT:      WIDEN ir<%ld> = load vp<[[VP9]]>
 ; BEFORE-SCALE-NEXT:      WIDEN ir<%add> = add ir<%ld>, ir<1>
-; BEFORE-SCALE-NEXT:      vp<[[VP10:%[0-9]+]]> = vector-pointer inbounds i64, ir<%ptr>, ir<1>
-; BEFORE-SCALE-NEXT:      WIDEN store vp<[[VP10]]>, ir<%add>
+; BEFORE-SCALE-NEXT:      WIDEN store vp<[[VP9]]>, ir<%add>
 ; BEFORE-SCALE-NEXT:      EMIT vp<%index.next> = add nuw vp<[[VP7]]>, vp<[[VP1]]>
 ; BEFORE-SCALE-NEXT:      EMIT branch-on-count vp<%index.next>, vp<[[VP2]]>
 ; BEFORE-SCALE-NEXT:    No successors
@@ -72,9 +71,8 @@ define void @i64_load_store(ptr noalias %x, i64 %n) {
 ; AFTER-SCALE-NEXT:      EMIT vp<[[VP10:%[0-9]+]]> = wide vector load ir<1>, vp<[[VP9]]>, ir<8>
 ; AFTER-SCALE-NEXT:      EMIT vp<[[VP11:%[0-9]+]]> = extract-vector-for-part vp<[[VP10]]>, ir<0>
 ; AFTER-SCALE-NEXT:      WIDEN ir<%add> = add vp<[[VP11]]>, ir<1>
-; AFTER-SCALE-NEXT:      vp<[[VP12:%[0-9]+]]> = vector-pointer inbounds i64, ir<%ptr>, ir<1>
-; AFTER-SCALE-NEXT:      EMIT vp<[[VP13:%[0-9]+]]> = concat-vectors ir<%add>
-; AFTER-SCALE-NEXT:      EMIT wide vector store ir<1>, vp<[[VP12]]>, ir<8>, vp<[[VP13]]>
+; AFTER-SCALE-NEXT:      EMIT vp<[[VP12:%[0-9]+]]> = concat-vectors ir<%add>
+; AFTER-SCALE-NEXT:      EMIT wide vector store ir<1>, vp<[[VP9]]>, ir<8>, vp<[[VP12]]>
 ; AFTER-SCALE-NEXT:      EMIT vp<%index.next> = add nuw vp<[[VP7]]>, vp<[[VP1]]>
 ; AFTER-SCALE-NEXT:      EMIT branch-on-count vp<%index.next>, vp<[[VP2]]>
 ; AFTER-SCALE-NEXT:    No successors
@@ -117,9 +115,8 @@ define void @i64_load_store(ptr noalias %x, i64 %n) {
 ; AFTER-UNROLL-NEXT:      WIDEN ir<%add>.1 = add vp<[[VP12]]>, ir<1>
 ; AFTER-UNROLL-NEXT:      WIDEN ir<%add>.2 = add vp<[[VP13]]>, ir<1>
 ; AFTER-UNROLL-NEXT:      WIDEN ir<%add>.3 = add vp<[[VP14]]>, ir<1>
-; AFTER-UNROLL-NEXT:      vp<[[VP15:%[0-9]+]]> = vector-pointer inbounds i64, ir<%ptr>, ir<1>
-; AFTER-UNROLL-NEXT:      EMIT vp<[[VP16:%[0-9]+]]> = concat-vectors ir<%add>, ir<%add>.1, ir<%add>.2, ir<%add>.3
-; AFTER-UNROLL-NEXT:      EMIT wide vector store ir<4>, vp<[[VP15]]>, ir<8>, vp<[[VP16]]>
+; AFTER-UNROLL-NEXT:      EMIT vp<[[VP15:%[0-9]+]]> = concat-vectors ir<%add>, ir<%add>.1, ir<%add>.2, ir<%add>.3
+; AFTER-UNROLL-NEXT:      EMIT wide vector store ir<4>, vp<[[VP9]]>, ir<8>, vp<[[VP15]]>
 ; AFTER-UNROLL-NEXT:      EMIT vp<%index.next> = add nuw vp<[[VP7]]>, vp<[[VP1]]>
 ; AFTER-UNROLL-NEXT:      EMIT branch-on-count vp<%index.next>, vp<[[VP2]]>
 ; AFTER-UNROLL-NEXT:    No successors
