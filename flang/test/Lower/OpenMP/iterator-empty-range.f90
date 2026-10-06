@@ -11,10 +11,8 @@ subroutine depend_empty_positive(a, m, d)
 end
 ! CHECK-LABEL: define {{.*}} @depend_empty_positive_(
 ! CHECK: [[M:%.*]] = load i32, ptr
-! CHECK: [[WIDE:%.*]] = sext i32 [[M]] to i64
 ! CHECK: [[EMPTY:%.*]] = icmp slt i32 [[M]], 3
-! CHECK: [[NONEMPTY:%.*]] = add nsw i64 [[WIDE]], -2
-! CHECK: [[COUNT:%.*]] = select i1 [[EMPTY]], i64 0, i64 [[NONEMPTY]]
+! CHECK: [[COUNT:%.*]] = select i1 [[EMPTY]], i64 0, i64 %{{.*}}
 ! CHECK: [[SIZE:%.*]] = mul {{.*}}i64 [[COUNT]], 24
 ! CHECK: [[LIST:%.*]] = {{.*}}call ptr @malloc(i64 [[SIZE]])
 ! CHECK: [[ZERO:%.*]] = icmp eq i64 [[COUNT]], 0
@@ -34,10 +32,8 @@ subroutine affinity_empty_positive(a, m, d)
 end
 ! CHECK-LABEL: define {{.*}} @affinity_empty_positive_(
 ! CHECK: [[M:%.*]] = load i32, ptr
-! CHECK: [[WIDE:%.*]] = sext i32 [[M]] to i64
 ! CHECK: [[EMPTY:%.*]] = icmp slt i32 [[M]], 3
-! CHECK: [[NONEMPTY:%.*]] = add nsw i64 [[WIDE]], -2
-! CHECK: [[COUNT:%.*]] = select i1 [[EMPTY]], i64 0, i64 [[NONEMPTY]]
+! CHECK: [[COUNT:%.*]] = select i1 [[EMPTY]], i64 0, i64 %{{.*}}
 ! CHECK: [[LIST:%.*]] = alloca { i64, i64, i32 }, i64 [[COUNT]]
 ! CHECK: [[ZERO:%.*]] = icmp eq i64 [[COUNT]], 0
 ! CHECK-NEXT: br i1 [[ZERO]], label %[[CONT:[^,]+]], label %[[BODY:.*]]
@@ -56,17 +52,16 @@ subroutine depend_empty_negative(a, m, d)
 end
 ! CHECK-LABEL: define {{.*}} @depend_empty_negative_(
 ! CHECK: [[M:%.*]] = load i32, ptr
-! CHECK: [[WIDE:%.*]] = sext i32 [[M]] to i65
-! CHECK: [[SPAN:%.*]] = sub nsw i65 3, [[WIDE]]
+! CHECK: [[WIDE:%.*]] = sext i32 [[M]] to i33
+! CHECK: [[SPAN:%.*]] = sub nsw i33 3, [[WIDE]]
 ! CHECK: [[EMPTY:%.*]] = icmp sgt i32 [[M]], 3
-! CHECK: [[HALF:%.*]] = lshr i65 [[SPAN]], 1
-! CHECK: [[HALF64:%.*]] = trunc {{.*}}i65 [[HALF]] to i64
-! CHECK: [[NONEMPTY:%.*]] = add i64 [[HALF64]], 1
+! CHECK: [[HALF:%.*]] = lshr i33 [[SPAN]], 1
+! CHECK: [[NONEMPTY33:%.*]] = add {{.*}}i33 [[HALF]], 1
+! CHECK: [[NONEMPTY:%.*]] = zext i33 [[NONEMPTY33]] to i64
 ! CHECK: [[COUNT:%.*]] = select i1 [[EMPTY]], i64 0, i64 [[NONEMPTY]]
 ! CHECK: [[SIZE:%.*]] = mul {{.*}}i64 [[COUNT]], 24
 ! CHECK: [[LIST:%.*]] = {{.*}}call ptr @malloc(i64 [[SIZE]])
-! CHECK: [[ZERO:%.*]] = icmp eq i64 [[COUNT]], 0
-! CHECK-NEXT: br i1 [[ZERO]], label %[[CONT:[^,]+]], label %[[BODY:.*]]
+! CHECK-NEXT: br i1 [[EMPTY]], label %[[CONT:[^,]+]], label %[[BODY:.*]]
 ! CHECK: [[BODY]]:
 ! CHECK: sdiv i32
 ! CHECK: [[CONT]]:
@@ -82,16 +77,15 @@ subroutine affinity_empty_negative(a, m, d)
 end
 ! CHECK-LABEL: define {{.*}} @affinity_empty_negative_(
 ! CHECK: [[M:%.*]] = load i32, ptr
-! CHECK: [[WIDE:%.*]] = sext i32 [[M]] to i65
-! CHECK: [[SPAN:%.*]] = sub nsw i65 3, [[WIDE]]
+! CHECK: [[WIDE:%.*]] = sext i32 [[M]] to i33
+! CHECK: [[SPAN:%.*]] = sub nsw i33 3, [[WIDE]]
 ! CHECK: [[EMPTY:%.*]] = icmp sgt i32 [[M]], 3
-! CHECK: [[HALF:%.*]] = lshr i65 [[SPAN]], 1
-! CHECK: [[HALF64:%.*]] = trunc {{.*}}i65 [[HALF]] to i64
-! CHECK: [[NONEMPTY:%.*]] = add i64 [[HALF64]], 1
+! CHECK: [[HALF:%.*]] = lshr i33 [[SPAN]], 1
+! CHECK: [[NONEMPTY33:%.*]] = add {{.*}}i33 [[HALF]], 1
+! CHECK: [[NONEMPTY:%.*]] = zext i33 [[NONEMPTY33]] to i64
 ! CHECK: [[COUNT:%.*]] = select i1 [[EMPTY]], i64 0, i64 [[NONEMPTY]]
 ! CHECK: [[LIST:%.*]] = alloca { i64, i64, i32 }, i64 [[COUNT]]
-! CHECK: [[ZERO:%.*]] = icmp eq i64 [[COUNT]], 0
-! CHECK-NEXT: br i1 [[ZERO]], label %[[CONT:[^,]+]], label %[[BODY:.*]]
+! CHECK: br i1 [[EMPTY]], label %[[CONT:[^,]+]], label %[[BODY:.*]]
 ! CHECK: [[BODY]]:
 ! CHECK: sdiv i32
 ! CHECK: [[CONT]]:
@@ -109,10 +103,8 @@ end
 ! CHECK-LABEL: define {{.*}} @depend_empty_product_(
 ! CHECK: [[M:%.*]] = load i32, ptr
 ! CHECK: [[N:%.*]] = load i32, ptr
-! CHECK: [[WIDE:%.*]] = sext i32 [[M]] to i64
 ! CHECK: [[EMPTY:%.*]] = icmp slt i32 [[M]], 3
-! CHECK: [[NONEMPTY:%.*]] = add nsw i64 [[WIDE]], -2
-! CHECK: [[COUNT:%.*]] = select i1 [[EMPTY]], i64 0, i64 [[NONEMPTY]]
+! CHECK: [[COUNT:%.*]] = select i1 [[EMPTY]], i64 0, i64 %{{.*}}
 ! CHECK: [[NCOUNT:%.*]] = {{.*}}call i32 @llvm.smax.i32(i32 [[N]], i32 0)
 ! CHECK: [[N64:%.*]] = zext {{.*}}i32 [[NCOUNT]] to i64
 ! CHECK: [[TOTAL:%.*]] = mul {{.*}}i64 [[COUNT]], [[N64]]
@@ -136,10 +128,8 @@ end
 ! CHECK-LABEL: define {{.*}} @affinity_empty_product_(
 ! CHECK: [[M:%.*]] = load i32, ptr
 ! CHECK: [[N:%.*]] = load i32, ptr
-! CHECK: [[WIDE:%.*]] = sext i32 [[M]] to i64
 ! CHECK: [[EMPTY:%.*]] = icmp slt i32 [[M]], 3
-! CHECK: [[NONEMPTY:%.*]] = add nsw i64 [[WIDE]], -2
-! CHECK: [[COUNT:%.*]] = select i1 [[EMPTY]], i64 0, i64 [[NONEMPTY]]
+! CHECK: [[COUNT:%.*]] = select i1 [[EMPTY]], i64 0, i64 %{{.*}}
 ! CHECK: [[NCOUNT:%.*]] = {{.*}}call i32 @llvm.smax.i32(i32 [[N]], i32 0)
 ! CHECK: [[N64:%.*]] = zext {{.*}}i32 [[NCOUNT]] to i64
 ! CHECK: [[TOTAL:%.*]] = mul {{.*}}i64 [[COUNT]], [[N64]]
@@ -280,3 +270,45 @@ end subroutine
 ! CHECK: %[[COUNT:.*]] = trunc i64 %[[TRIPS]] to i32
 ! CHECK: call i32 @__kmpc_omp_task_with_deps(
 ! CHECK-SAME: ptr {{[^,]+}}, i32 {{[^,]+}}, ptr {{[^,]+}}, i32 %[[COUNT]],
+
+! Ranges keep the iterator's kind; narrowing these bounds would empty the range.
+subroutine depend_wide_kind(a)
+  integer :: a(3)
+  integer(16) :: lb, ub
+  lb = 9223372036854775807_16
+  ub = 9223372036854775809_16
+  !$omp task depend(iterator(integer(16) :: i = lb:ub), in: a(i-lb+1))
+  !$omp end task
+end subroutine
+
+! CHECK-LABEL: define {{.*}} @depend_wide_kind_(
+! CHECK: %[[IV:.*]] = phi i64 [ 0, %entry ]
+! CHECK: getelementptr {{.*}}[4 x i8], ptr %{{[0-9]+}}, i64 %[[IV]]
+! CHECK: icmp eq i64 %{{.*}}, 3
+! CHECK: call i32 @__kmpc_omp_task_with_deps(
+! CHECK-SAME: ptr {{[^,]+}}, i32 {{[^,]+}}, ptr {{[^,]+}}, i32 3,
+
+! The step is wider than the iterator's kind; narrowing it would empty {-128}.
+subroutine depend_wide_step(a)
+  integer :: a(-200:200)
+  !$omp task depend(iterator(integer(1) :: i = -128:-1:200), in: a(i))
+  !$omp end task
+end subroutine
+
+! CHECK-LABEL: define {{.*}} @depend_wide_step_(
+! CHECK: getelementptr {{.*}} ptr %{{[0-9]+}}, i64 288
+! CHECK: call i32 @__kmpc_omp_task_with_deps(
+! CHECK-SAME: ptr {{[^,]+}}, i32 {{[^,]+}}, ptr {{[^,]+}}, i32 1,
+
+subroutine affinity_wide_kind(a)
+  integer :: a(3)
+  integer(16) :: lb, ub
+  lb = 9223372036854775807_16
+  ub = 9223372036854775809_16
+  !$omp task affinity(iterator(integer(16) :: i = lb:ub): a(i-lb+1))
+  !$omp end task
+end subroutine
+
+! CHECK-LABEL: define {{.*}} @affinity_wide_kind_(
+! CHECK: call i32 @__kmpc_omp_reg_task_with_affinity(
+! CHECK-SAME: ptr {{[^,]+}}, i32 {{[^,]+}}, ptr {{[^,]+}}, i32 3,

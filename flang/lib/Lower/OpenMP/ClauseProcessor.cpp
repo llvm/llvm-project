@@ -256,23 +256,23 @@ static IteratorRange lowerIteratorRange(
   mlir::Value ubVal =
       fir::getBase(converter.genExprValue(toEvExpr(ubExpr), stmtCtx));
 
-  auto toIndex = [](fir::FirOpBuilder &builder, mlir::Location loc,
-                    mlir::Value v) -> mlir::Value {
-    if (v.getType().isIndex())
-      return v;
-    return fir::ConvertOp::create(builder, loc, builder.getIndexType(), v);
-  };
+  // Begin and end take the iterator's type, but the step keeps its own. Count
+  // in the wider of the two so that neither is narrowed.
+  mlir::Type ivTy = converter.genType(*r.ivSym);
+  mlir::Value stVal =
+      stExpr ? fir::getBase(converter.genExprValue(toEvExpr(*stExpr), stmtCtx))
+             : builder.createIntegerConstant(loc, ivTy, 1);
+  mlir::Type rangeTy = ivTy;
+  if (auto stTy = mlir::dyn_cast<mlir::IntegerType>(stVal.getType()))
+    if (stTy.isSignless() &&
+        stTy.getWidth() > mlir::cast<mlir::IntegerType>(ivTy).getWidth())
+      rangeTy = stTy;
 
-  r.lb = toIndex(builder, loc, lbVal);
-  r.ub = toIndex(builder, loc, ubVal);
-
-  if (stExpr) {
-    mlir::Value stVal =
-        fir::getBase(converter.genExprValue(toEvExpr(*stExpr), stmtCtx));
-    r.step = toIndex(builder, loc, stVal);
-  } else {
-    r.step = mlir::arith::ConstantIndexOp::create(builder, loc, 1);
-  }
+  r.lb = builder.createConvert(loc, rangeTy,
+                               builder.createConvert(loc, ivTy, lbVal));
+  r.ub = builder.createConvert(loc, rangeTy,
+                               builder.createConvert(loc, ivTy, ubVal));
+  r.step = builder.createConvert(loc, rangeTy, stVal);
 
   return r;
 }
@@ -306,8 +306,8 @@ static mlir::Value buildIteratorOp(Fortran::lower::AbstractConverter &converter,
 
   llvm::SmallVector<mlir::Value> ivs;
   ivs.reserve(ranges.size());
-  for (size_t i = 0; i < ranges.size(); ++i)
-    ivs.push_back(body->addArgument(builder.getIndexType(), loc));
+  for (const IteratorRange &r : ranges)
+    ivs.push_back(body->addArgument(r.lb.getType(), loc));
 
   Fortran::lower::SymMap &symMap = converter.getSymbolMap();
   Fortran::lower::SymMapScope scope(symMap);

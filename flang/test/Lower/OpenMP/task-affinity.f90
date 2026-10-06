@@ -273,15 +273,12 @@ end subroutine
 ! CHECK-SAME: uniq_name("_QFaffinity_unused_iteratorEa")
 ! CHECK: %[[M:.*]]:2 = hlfir.declare
 ! CHECK-SAME: uniq_name("_QFaffinity_unused_iteratorEm")
-! CHECK: %[[I_LB32:.*]] = arith.constant 1 : i32
-! CHECK: %[[I_UB32:.*]] = arith.constant 2 : i32
-! CHECK: %[[I_LB:.*]] = fir.convert %[[I_LB32]] : (i32) -> index
-! CHECK: %[[I_UB:.*]] = fir.convert %[[I_UB32]] : (i32) -> index
-! CHECK: %[[I_STEP:.*]] = arith.constant 1 : index
-! CHECK: %[[IT_I:.*]] = omp.iterator(%[[IV_I:.*]]: index) =
+! CHECK: %[[I_LB:.*]] = arith.constant 1 : i32
+! CHECK: %[[I_UB:.*]] = arith.constant 2 : i32
+! CHECK: %[[I_STEP:.*]] = arith.constant 1 : i32
+! CHECK: %[[IT_I:.*]] = omp.iterator(%[[IV_I:.*]]: i32) =
 ! CHECK-SAME: (%[[I_LB]] to %[[I_UB]] step %[[I_STEP]]) {
-! CHECK: %[[V32_I:.*]] = fir.convert %[[IV_I]] : (index) -> i32
-! CHECK: fir.store %[[V32_I]] to %[[MEM_I:.*]] : !fir.ref<i32>
+! CHECK: fir.store %[[IV_I]] to %[[MEM_I:.*]] : !fir.ref<i32>
 ! CHECK: %[[DECL_I:.*]]:2 = hlfir.declare %[[MEM_I]]
 ! CHECK: %[[LD_I:.*]] = fir.load %[[DECL_I]]#0 : !fir.ref<i32>
 ! CHECK: %[[IDX_I:.*]] = fir.convert %[[LD_I]] : (i32) -> i64
@@ -315,20 +312,15 @@ end subroutine
 ! CHECK-SAME: uniq_name("_QFaffinity_per_locatorEc")
 ! CHECK: %[[M:.*]]:2 = hlfir.declare
 ! CHECK-SAME: uniq_name("_QFaffinity_per_locatorEm")
-! CHECK: %[[I_LB32:.*]] = arith.constant 1 : i32
-! CHECK: %[[I_UB32:.*]] = arith.constant 2 : i32
-! CHECK: %[[I_LB:.*]] = fir.convert %[[I_LB32]] : (i32) -> index
-! CHECK: %[[I_UB:.*]] = fir.convert %[[I_UB32]] : (i32) -> index
-! CHECK: %[[I_STEP:.*]] = arith.constant 1 : index
-! CHECK: %[[J_LB32:.*]] = arith.constant 3 : i32
-! CHECK: %[[J_UB32:.*]] = fir.load %[[M]]#0 : !fir.ref<i32>
-! CHECK: %[[J_LB:.*]] = fir.convert %[[J_LB32]] : (i32) -> index
-! CHECK: %[[J_UB:.*]] = fir.convert %[[J_UB32]] : (i32) -> index
-! CHECK: %[[J_STEP:.*]] = arith.constant 1 : index
-! CHECK: %[[IT_I:.*]] = omp.iterator(%[[IV_I:.*]]: index) =
+! CHECK: %[[I_LB:.*]] = arith.constant 1 : i32
+! CHECK: %[[I_UB:.*]] = arith.constant 2 : i32
+! CHECK: %[[I_STEP:.*]] = arith.constant 1 : i32
+! CHECK: %[[J_LB:.*]] = arith.constant 3 : i32
+! CHECK: %[[J_UB:.*]] = fir.load %[[M]]#0 : !fir.ref<i32>
+! CHECK: %[[J_STEP:.*]] = arith.constant 1 : i32
+! CHECK: %[[IT_I:.*]] = omp.iterator(%[[IV_I:.*]]: i32) =
 ! CHECK-SAME: (%[[I_LB]] to %[[I_UB]] step %[[I_STEP]]) {
-! CHECK: %[[V32_I:.*]] = fir.convert %[[IV_I]] : (index) -> i32
-! CHECK: fir.store %[[V32_I]] to %[[MEM_I:.*]] : !fir.ref<i32>
+! CHECK: fir.store %[[IV_I]] to %[[MEM_I:.*]] : !fir.ref<i32>
 ! CHECK: %[[DECL_I:.*]]:2 = hlfir.declare %[[MEM_I]]
 ! CHECK: %[[LD_I:.*]] = fir.load %[[DECL_I]]#0 : !fir.ref<i32>
 ! CHECK: %[[IDX_I:.*]] = fir.convert %[[LD_I]] : (i32) -> i64
@@ -340,10 +332,9 @@ end subroutine
 ! CHECK: omp.yield(%[[ENTRY_I]] :
 ! CHECK-SAME: !omp.affinity_entry_ty<!fir.ref<i8>, i64>)
 ! CHECK: } -> !omp.iterated<!omp.affinity_entry_ty<!fir.ref<i8>, i64>>
-! CHECK: %[[IT_J:.*]] = omp.iterator(%[[IV_J:.*]]: index) =
+! CHECK: %[[IT_J:.*]] = omp.iterator(%[[IV_J:.*]]: i32) =
 ! CHECK-SAME: (%[[J_LB]] to %[[J_UB]] step %[[J_STEP]]) {
-! CHECK: %[[V32_J:.*]] = fir.convert %[[IV_J]] : (index) -> i32
-! CHECK: fir.store %[[V32_J]] to %[[MEM_J:.*]] : !fir.ref<i32>
+! CHECK: fir.store %[[IV_J]] to %[[MEM_J:.*]] : !fir.ref<i32>
 ! CHECK: %[[DECL_J:.*]]:2 = hlfir.declare %[[MEM_J]]
 ! CHECK: %[[LD_J:.*]] = fir.load %[[DECL_J]]#0 : !fir.ref<i32>
 ! CHECK: %[[IDX_J:.*]] = fir.convert %[[LD_J]] : (i32) -> i64
@@ -380,9 +371,8 @@ subroutine task_affinity_iterator_simple()
 end subroutine
 
 ! CHECK-LABEL: func.func @_QPtask_affinity_iterator_simple()
-! CHECK: %[[ITERATED:.*]] = omp.iterator(%[[IV:.*]]: index) = ({{.*}} to {{.*}} step {{.*}}) {
-! CHECK:   %[[IV_I32:.*]] = fir.convert %[[IV]] : (index) -> i32
-! CHECK:   fir.store %[[IV_I32]] to %[[IV_MEM:.*]] : !fir.ref<i32>
+! CHECK: %[[ITERATED:.*]] = omp.iterator(%[[IV:.*]]: i32) = ({{.*}} to {{.*}} step {{.*}}) {
+! CHECK:   fir.store %[[IV]] to %[[IV_MEM:.*]] : !fir.ref<i32>
 ! Iterator IV temp must be named in the compiler-generated namespace ("_QQ"
 ! prefix) so it is not emitted as a bogus user local in DWARF under -g.
 ! CHECK:   %[[IV_DECL:.*]]:2 = hlfir.declare %[[IV_MEM]] uniq_name("_QQ{{.*}}.omp.iter")
@@ -412,9 +402,8 @@ subroutine task_affinity_iterator_nondefault_lb()
 end subroutine
 
 ! CHECK-LABEL: func.func @_QPtask_affinity_iterator_nondefault_lb()
-! CHECK: %[[ITERATED_NDLB:.*]] = omp.iterator(%[[IV_NDLB:.*]]: index) = ({{.*}} to {{.*}} step {{.*}}) {
-! CHECK:   %[[IV_NDLB_I32:.*]] = fir.convert %[[IV_NDLB]] : (index) -> i32
-! CHECK:   fir.store %[[IV_NDLB_I32]] to %[[IV_NDLB_MEM:.*]] : !fir.ref<i32>
+! CHECK: %[[ITERATED_NDLB:.*]] = omp.iterator(%[[IV_NDLB:.*]]: i32) = ({{.*}} to {{.*}} step {{.*}}) {
+! CHECK:   fir.store %[[IV_NDLB]] to %[[IV_NDLB_MEM:.*]] : !fir.ref<i32>
 ! CHECK:   %[[IV_NDLB_DECL:.*]]:2 = hlfir.declare %[[IV_NDLB_MEM]]
 ! CHECK:   %[[IV_NDLB_LD:.*]] = fir.load %[[IV_NDLB_DECL]]#0 : !fir.ref<i32>
 ! CHECK:   %[[IV_NDLB_I64:.*]] = fir.convert %[[IV_NDLB_LD]] : (i32) -> i64
@@ -443,12 +432,10 @@ subroutine task_affinity_iterator_nondefault_lb_2d()
 end subroutine
 
 ! CHECK-LABEL: func.func @_QPtask_affinity_iterator_nondefault_lb_2d()
-! CHECK: %[[ITERATED_NDLB2:.*]] = omp.iterator(%[[IV0_NDLB2:.*]]: index, %[[IV1_NDLB2:.*]]: index) = ({{.*}} to {{.*}} step {{.*}}, {{.*}} to {{.*}} step {{.*}}) {
-! CHECK:   %[[IV0_NDLB2_I32:.*]] = fir.convert %[[IV0_NDLB2]] : (index) -> i32
-! CHECK:   fir.store %[[IV0_NDLB2_I32]] to %[[IV0_NDLB2_MEM:.*]] : !fir.ref<i32>
+! CHECK: %[[ITERATED_NDLB2:.*]] = omp.iterator(%[[IV0_NDLB2:.*]]: i32, %[[IV1_NDLB2:.*]]: i32) = ({{.*}} to {{.*}} step {{.*}}, {{.*}} to {{.*}} step {{.*}}) {
+! CHECK:   fir.store %[[IV0_NDLB2]] to %[[IV0_NDLB2_MEM:.*]] : !fir.ref<i32>
 ! CHECK:   %[[IV0_NDLB2_DECL:.*]]:2 = hlfir.declare %[[IV0_NDLB2_MEM]]
-! CHECK:   %[[IV1_NDLB2_I32:.*]] = fir.convert %[[IV1_NDLB2]] : (index) -> i32
-! CHECK:   fir.store %[[IV1_NDLB2_I32]] to %[[IV1_NDLB2_MEM:.*]] : !fir.ref<i32>
+! CHECK:   fir.store %[[IV1_NDLB2]] to %[[IV1_NDLB2_MEM:.*]] : !fir.ref<i32>
 ! CHECK:   %[[IV1_NDLB2_DECL:.*]]:2 = hlfir.declare %[[IV1_NDLB2_MEM]]
 ! CHECK:   %[[IV0_NDLB2_LD:.*]] = fir.load %[[IV0_NDLB2_DECL]]#0 : !fir.ref<i32>
 ! CHECK:   %[[IV0_NDLB2_I64:.*]] = fir.convert %[[IV0_NDLB2_LD]] : (i32) -> i64
@@ -483,12 +470,10 @@ subroutine task_affinity_iterator_multi_dimension()
 end subroutine
 
 ! CHECK-LABEL: func.func @_QPtask_affinity_iterator_multi_dimension()
-! CHECK: %[[ITER:.*]] = omp.iterator(%[[IV0:.*]]: index, %[[IV1:.*]]: index) = ({{.*}} to {{.*}} step {{.*}}, {{.*}} to {{.*}} step {{.*}}) {
-! CHECK:   %[[IV0_I32:.*]] = fir.convert %[[IV0]] : (index) -> i32
-! CHECK:   fir.store %[[IV0_I32]] to %[[IV0_MEM:.*]] : !fir.ref<i32>
+! CHECK: %[[ITER:.*]] = omp.iterator(%[[IV0:.*]]: i32, %[[IV1:.*]]: i32) = ({{.*}} to {{.*}} step {{.*}}, {{.*}} to {{.*}} step {{.*}}) {
+! CHECK:   fir.store %[[IV0]] to %[[IV0_MEM:.*]] : !fir.ref<i32>
 ! CHECK:   %[[IV0_DECL:.*]]:2 = hlfir.declare %[[IV0_MEM]]
-! CHECK:   %[[IV1_I32:.*]] = fir.convert %[[IV1]] : (index) -> i32
-! CHECK:   fir.store %[[IV1_I32]] to %[[IV1_MEM:.*]] : !fir.ref<i32>
+! CHECK:   fir.store %[[IV1]] to %[[IV1_MEM:.*]] : !fir.ref<i32>
 ! CHECK:   %[[IV1_DECL:.*]]:2 = hlfir.declare %[[IV1_MEM]]
 ! CHECK:   %[[IV0_LD:.*]] = fir.load %[[IV0_DECL]]#0 : !fir.ref<i32>
 ! CHECK:   %[[IV0_I64:.*]] = fir.convert %[[IV0_LD]] : (i32) -> i64
@@ -517,12 +502,10 @@ subroutine task_affinity_iterator_reordered()
 end subroutine
 
 ! CHECK-LABEL: func.func @_QPtask_affinity_iterator_reordered()
-! CHECK: %[[ITER:.*]] = omp.iterator(%[[IV0:.*]]: index, %[[IV1:.*]]: index) = ({{.*}} to {{.*}} step {{.*}}, {{.*}} to {{.*}} step {{.*}}) {
-! CHECK:   %[[RO_IV0_I32:.*]] = fir.convert %[[IV0]] : (index) -> i32
-! CHECK:   fir.store %[[RO_IV0_I32]] to %[[RO_IV0_MEM:.*]] : !fir.ref<i32>
+! CHECK: %[[ITER:.*]] = omp.iterator(%[[IV0:.*]]: i32, %[[IV1:.*]]: i32) = ({{.*}} to {{.*}} step {{.*}}, {{.*}} to {{.*}} step {{.*}}) {
+! CHECK:   fir.store %[[IV0]] to %[[RO_IV0_MEM:.*]] : !fir.ref<i32>
 ! CHECK:   %[[RO_IV0_DECL:.*]]:2 = hlfir.declare %[[RO_IV0_MEM]]
-! CHECK:   %[[RO_IV1_I32:.*]] = fir.convert %[[IV1]] : (index) -> i32
-! CHECK:   fir.store %[[RO_IV1_I32]] to %[[RO_IV1_MEM:.*]] : !fir.ref<i32>
+! CHECK:   fir.store %[[IV1]] to %[[RO_IV1_MEM:.*]] : !fir.ref<i32>
 ! CHECK:   %[[RO_IV1_DECL:.*]]:2 = hlfir.declare %[[RO_IV1_MEM]]
 ! CHECK:   %[[RO_IV1_LD:.*]] = fir.load %[[RO_IV1_DECL]]#0 : !fir.ref<i32>
 ! CHECK:   %[[RO_IV1_I64:.*]] = fir.convert %[[RO_IV1_LD]] : (i32) -> i64
@@ -546,12 +529,10 @@ subroutine task_affinity_iterator_expr_subscript()
 end subroutine
 
 ! CHECK-LABEL: func.func @_QPtask_affinity_iterator_expr_subscript()
-! CHECK: %[[ITER2:.*]] = omp.iterator(%[[IVA:.*]]: index, %[[IVB:.*]]: index) = ({{.*}} to {{.*}} step {{.*}}, {{.*}} to {{.*}} step {{.*}}) {
-! CHECK:   %[[IVA_I32:.*]] = fir.convert %[[IVA]] : (index) -> i32
-! CHECK:   fir.store %[[IVA_I32]] to %[[IVA_MEM:.*]] : !fir.ref<i32>
+! CHECK: %[[ITER2:.*]] = omp.iterator(%[[IVA:.*]]: i32, %[[IVB:.*]]: i32) = ({{.*}} to {{.*}} step {{.*}}, {{.*}} to {{.*}} step {{.*}}) {
+! CHECK:   fir.store %[[IVA]] to %[[IVA_MEM:.*]] : !fir.ref<i32>
 ! CHECK:   %[[IVA_DECL:.*]]:2 = hlfir.declare %[[IVA_MEM]]
-! CHECK:   %[[IVB_I32:.*]] = fir.convert %[[IVB]] : (index) -> i32
-! CHECK:   fir.store %[[IVB_I32]] to %[[IVB_MEM:.*]] : !fir.ref<i32>
+! CHECK:   fir.store %[[IVB]] to %[[IVB_MEM:.*]] : !fir.ref<i32>
 ! CHECK:   %[[IVB_DECL:.*]]:2 = hlfir.declare %[[IVB_MEM]]
 ! CHECK:   %[[IVA_LD:.*]] = fir.load %[[IVA_DECL]]#0 : !fir.ref<i32>
 ! CHECK:   %[[C1_I32:.*]] = arith.constant 1 : i32
@@ -577,12 +558,10 @@ subroutine task_affinity_iterator_section_subscript()
 end subroutine
 
 ! CHECK-LABEL: func.func @_QPtask_affinity_iterator_section_subscript()
-! CHECK: %[[ITER3:.*]] = omp.iterator(%[[IVS0:.*]]: index, %[[IVS1:.*]]: index) = ({{.*}} to {{.*}} step {{.*}}, {{.*}} to {{.*}} step {{.*}}) {
-! CHECK:   %[[IVS0_I32:.*]] = fir.convert %[[IVS0]] : (index) -> i32
-! CHECK:   fir.store %[[IVS0_I32]] to %[[IVS0_MEM:.*]] : !fir.ref<i32>
+! CHECK: %[[ITER3:.*]] = omp.iterator(%[[IVS0:.*]]: i32, %[[IVS1:.*]]: i32) = ({{.*}} to {{.*}} step {{.*}}, {{.*}} to {{.*}} step {{.*}}) {
+! CHECK:   fir.store %[[IVS0]] to %[[IVS0_MEM:.*]] : !fir.ref<i32>
 ! CHECK:   %[[IVS0_DECL:.*]]:2 = hlfir.declare %[[IVS0_MEM]]
-! CHECK:   %[[IVS1_I32:.*]] = fir.convert %[[IVS1]] : (index) -> i32
-! CHECK:   fir.store %[[IVS1_I32]] to %[[IVS1_MEM:.*]] : !fir.ref<i32>
+! CHECK:   fir.store %[[IVS1]] to %[[IVS1_MEM:.*]] : !fir.ref<i32>
 ! CHECK:   %[[IVS1_DECL:.*]]:2 = hlfir.declare %[[IVS1_MEM]]
 ! CHECK:   %[[IVS0_LD:.*]] = fir.load %[[IVS0_DECL]]#0 : !fir.ref<i32>
 ! CHECK:   %[[IVS0_I64:.*]] = fir.convert %[[IVS0_LD]] : (i32) -> i64
@@ -615,9 +594,8 @@ subroutine task_affinity_iterator_section_implicit_lower()
 end subroutine
 
 ! CHECK-LABEL: func.func @_QPtask_affinity_iterator_section_implicit_lower()
-! CHECK: %[[ITER4:.*]] = omp.iterator(%[[IVT0:.*]]: index, %[[IVT1:.*]]: index) = ({{.*}} to {{.*}} step {{.*}}, {{.*}} to {{.*}} step {{.*}}) {
-! CHECK:   %[[IVT1_I32:.*]] = fir.convert %[[IVT1]] : (index) -> i32
-! CHECK:   fir.store %[[IVT1_I32]] to %[[IVT1_MEM:.*]] : !fir.ref<i32>
+! CHECK: %[[ITER4:.*]] = omp.iterator(%[[IVT0:.*]]: i32, %[[IVT1:.*]]: i32) = ({{.*}} to {{.*}} step {{.*}}, {{.*}} to {{.*}} step {{.*}}) {
+! CHECK:   fir.store %[[IVT1]] to %[[IVT1_MEM:.*]] : !fir.ref<i32>
 ! CHECK:   %[[IVT1_DECL:.*]]:2 = hlfir.declare %[[IVT1_MEM]]
 ! CHECK:   %[[C1_IDX:.*]] = arith.constant 1 : index
 ! CHECK:   %[[IVT1_LD:.*]] = fir.load %[[IVT1_DECL]]#0 : !fir.ref<i32>
@@ -643,9 +621,8 @@ subroutine task_affinity_iterator_char_simple()
 end subroutine
 
 ! CHECK-LABEL: func.func @_QPtask_affinity_iterator_char_simple()
-! CHECK: %[[ITER5:.*]] = omp.iterator(%[[IVC:.*]]: index) = ({{.*}} to {{.*}} step {{.*}}) {
-! CHECK:   %[[IVC_I32:.*]] = fir.convert %[[IVC]] : (index) -> i32
-! CHECK:   fir.store %[[IVC_I32]] to %[[IVC_MEM:.*]] : !fir.ref<i32>
+! CHECK: %[[ITER5:.*]] = omp.iterator(%[[IVC:.*]]: i32) = ({{.*}} to {{.*}} step {{.*}}) {
+! CHECK:   fir.store %[[IVC]] to %[[IVC_MEM:.*]] : !fir.ref<i32>
 ! CHECK:   %[[IVC_DECL:.*]]:2 = hlfir.declare %[[IVC_MEM]]
 ! CHECK:   %[[IVC_LD:.*]] = fir.load %[[IVC_DECL]]#0 : !fir.ref<i32>
 ! CHECK:   %[[IVC_I64:.*]] = fir.convert %[[IVC_LD]] : (i32) -> i64
@@ -671,9 +648,8 @@ subroutine task_affinity_iterator_char_expr_subscript()
 end subroutine
 
 ! CHECK-LABEL: func.func @_QPtask_affinity_iterator_char_expr_subscript()
-! CHECK: %[[ITER6:.*]] = omp.iterator(%[[IVC2:.*]]: index) = ({{.*}} to {{.*}} step {{.*}}) {
-! CHECK:   %[[IVC2_I32:.*]] = fir.convert %[[IVC2]] : (index) -> i32
-! CHECK:   fir.store %[[IVC2_I32]] to %[[IVC2_MEM:.*]] : !fir.ref<i32>
+! CHECK: %[[ITER6:.*]] = omp.iterator(%[[IVC2:.*]]: i32) = ({{.*}} to {{.*}} step {{.*}}) {
+! CHECK:   fir.store %[[IVC2]] to %[[IVC2_MEM:.*]] : !fir.ref<i32>
 ! CHECK:   %[[IVC2_DECL:.*]]:2 = hlfir.declare %[[IVC2_MEM]]
 ! CHECK:   %[[IVC2_LD:.*]] = fir.load %[[IVC2_DECL]]#0 : !fir.ref<i32>
 ! CHECK:   %[[C1_I32_6:.*]] = arith.constant 1 : i32
@@ -703,7 +679,7 @@ end subroutine
 
 ! CHECK-LABEL: func.func @_QPtask_affinity_iterator_char_runtime(
 ! CHECK: %[[A:.*]]:2 = hlfir.declare %{{.*}}(%{{.*}}) typeparams %{{.*}} uniq_name("_QFtask_affinity_iterator_char_runtimeEa")
-! CHECK: %[[ITER:.*]] = omp.iterator(%[[IV:.*]]: index) = ({{.*}} to {{.*}} step {{.*}}) {
+! CHECK: %[[ITER:.*]] = omp.iterator(%[[IV:.*]]: i32) = ({{.*}} to {{.*}} step {{.*}}) {
 ! CHECK:   %[[COOR:.*]] = hlfir.designate %[[A]]#0 ({{.*}})
 ! CHECK:   %[[RAW:.*]]:2 = fir.unboxchar %[[COOR]]
 ! CHECK:   %[[ELEM:.*]] = fir.box_elesize %[[A]]#0 : (!fir.box<!fir.array<?x!fir.char<1,?>>>) -> index

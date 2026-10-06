@@ -17,31 +17,26 @@ end subroutine
 ! CHECK: %[[A:.*]]:2 = hlfir.declare
 ! CHECK-SAME: uniq_name("_QFdepend_foldedEa")
 ! CHECK: %[[M:.*]]:2 = hlfir.declare {{.*}}uniq_name("{{.*}}Em")
-! CHECK: %[[ONE:.*]] = arith.constant 1 : i32
-! CHECK: %[[MVAL:.*]] = fir.load %[[M]]#0
-! CHECK: %[[ILB:.*]] = fir.convert %[[ONE]] : (i32) -> index
-! CHECK: %[[IUB:.*]] = fir.convert %[[MVAL]] : (i32) -> index
-! CHECK: %[[ISTEP:.*]] = arith.constant 1 : index
-! CHECK: %[[JONE:.*]] = arith.constant 1 : i32
-! CHECK: %[[TWO:.*]] = arith.constant 2 : i32
-! CHECK: %[[JLB:.*]] = fir.convert %[[JONE]] : (i32) -> index
-! CHECK: %[[JUB:.*]] = fir.convert %[[TWO]] : (i32) -> index
-! CHECK: %[[JSTEP:.*]] = arith.constant 1 : index
-! CHECK: %[[IT_IJ:.*]] = omp.iterator(%{{.*}}: index, %{{.*}}: index) =
+! CHECK: %[[ILB:.*]] = arith.constant 1 : i32
+! CHECK: %[[IUB:.*]] = fir.load %[[M]]#0
+! CHECK: %[[ISTEP:.*]] = arith.constant 1 : i32
+! CHECK: %[[JLB:.*]] = arith.constant 1 : i32
+! CHECK: %[[JUB:.*]] = arith.constant 2 : i32
+! CHECK: %[[JSTEP:.*]] = arith.constant 1 : i32
+! CHECK: %[[IT_IJ:.*]] = omp.iterator(%{{.*}}: i32, %{{.*}}: i32) =
 ! CHECK-SAME: (%[[ILB]] to %[[IUB]] step %[[ISTEP]],
 ! CHECK-SAME: %[[JLB]] to %[[JUB]] step %[[JSTEP]])
 ! CHECK: arith.divsi
 ! CHECK: omp.yield
-! CHECK: %[[IT_I:.*]] = omp.iterator(%[[I:.*]]: index) =
+! CHECK: %[[IT_I:.*]] = omp.iterator(%[[I:.*]]: i32) =
 ! CHECK-SAME: (%[[ILB]] to %[[IUB]] step %[[ISTEP]])
 ! CHECK: %[[FIRST:.*]] = arith.constant 1 : index
 ! CHECK: %[[FIXED:.*]] = hlfir.designate %[[A]]#0 (%[[FIRST]])
 ! CHECK: %[[FIXED_PTR:.*]] = fir.convert %[[FIXED]]
 ! CHECK: omp.yield(%[[FIXED_PTR]] : !llvm.ptr)
-! CHECK: %[[IT_J:.*]] = omp.iterator(%[[J:.*]]: index) =
+! CHECK: %[[IT_J:.*]] = omp.iterator(%[[J:.*]]: i32) =
 ! CHECK-SAME: (%[[JLB]] to %[[JUB]] step %[[JSTEP]])
-! CHECK: %[[JVAL:.*]] = fir.convert %[[J]] : (index) -> i32
-! CHECK: fir.store %[[JVAL]] to %[[JMEM:.*]] : !fir.ref<i32>
+! CHECK: fir.store %[[J]] to %[[JMEM:.*]] : !fir.ref<i32>
 ! CHECK: %[[JDECL:.*]]:2 = hlfir.declare %[[JMEM]]
 ! CHECK: %[[JLOAD:.*]] = fir.load %[[JDECL]]#0
 ! CHECK: %[[JIDX:.*]] = fir.convert %[[JLOAD]] : (i32) -> i64
@@ -64,7 +59,7 @@ subroutine depend_shadowed(a, b, m, i)
 end subroutine
 
 ! CHECK-LABEL: func.func @_QPdepend_shadowed(
-! CHECK: omp.iterator(%{{[^,:]+}}: index) =
+! CHECK: omp.iterator(%{{[^,:]+}}: i32) =
 ! CHECK: omp.yield
 ! CHECK-NOT: omp.iterator
 ! CHECK: omp.task
@@ -81,32 +76,27 @@ end subroutine
 ! CHECK: %[[A:.*]]:2 = hlfir.declare
 ! CHECK-SAME: uniq_name("_QFaffinity_foldedEa")
 ! CHECK: %[[M:.*]]:2 = hlfir.declare {{.*}}uniq_name("{{.*}}Em")
-! CHECK: %[[ONE:.*]] = arith.constant 1 : i32
-! CHECK: %[[MVAL:.*]] = fir.load %[[M]]#0
-! CHECK: %[[ILB:.*]] = fir.convert %[[ONE]] : (i32) -> index
-! CHECK: %[[IUB:.*]] = fir.convert %[[MVAL]] : (i32) -> index
-! CHECK: %[[ISTEP:.*]] = arith.constant 1 : index
-! CHECK: %[[JONE:.*]] = arith.constant 1 : i32
-! CHECK: %[[TWO:.*]] = arith.constant 2 : i32
-! CHECK: %[[JLB:.*]] = fir.convert %[[JONE]] : (i32) -> index
-! CHECK: %[[JUB:.*]] = fir.convert %[[TWO]] : (i32) -> index
-! CHECK: %[[JSTEP:.*]] = arith.constant 1 : index
-! CHECK: %[[IT_IJ:.*]] = omp.iterator(%{{.*}}: index, %{{.*}}: index) =
+! CHECK: %[[ILB:.*]] = arith.constant 1 : i32
+! CHECK: %[[IUB:.*]] = fir.load %[[M]]#0
+! CHECK: %[[ISTEP:.*]] = arith.constant 1 : i32
+! CHECK: %[[JLB:.*]] = arith.constant 1 : i32
+! CHECK: %[[JUB:.*]] = arith.constant 2 : i32
+! CHECK: %[[JSTEP:.*]] = arith.constant 1 : i32
+! CHECK: %[[IT_IJ:.*]] = omp.iterator(%{{.*}}: i32, %{{.*}}: i32) =
 ! CHECK-SAME: (%[[ILB]] to %[[IUB]] step %[[ISTEP]],
 ! CHECK-SAME: %[[JLB]] to %[[JUB]] step %[[JSTEP]])
 ! CHECK: arith.divsi
 ! CHECK: omp.yield
-! CHECK: %[[IT_I:.*]] = omp.iterator(%[[I:.*]]: index) =
+! CHECK: %[[IT_I:.*]] = omp.iterator(%[[I:.*]]: i32) =
 ! CHECK-SAME: (%[[ILB]] to %[[IUB]] step %[[ISTEP]])
 ! CHECK: %[[FIRST:.*]] = arith.constant 1 : index
 ! CHECK: %[[FIXED:.*]] = hlfir.designate %[[A]]#0 (%[[FIRST]])
 ! CHECK: %[[FIXED_PTR:.*]] = fir.convert %[[FIXED]]
 ! CHECK: %[[FIXED_ENTRY:.*]] = omp.affinity_entry %[[FIXED_PTR]],
 ! CHECK: omp.yield(%[[FIXED_ENTRY]] :
-! CHECK: %[[IT_J:.*]] = omp.iterator(%[[J:.*]]: index) =
+! CHECK: %[[IT_J:.*]] = omp.iterator(%[[J:.*]]: i32) =
 ! CHECK-SAME: (%[[JLB]] to %[[JUB]] step %[[JSTEP]])
-! CHECK: %[[JVAL:.*]] = fir.convert %[[J]] : (index) -> i32
-! CHECK: fir.store %[[JVAL]] to %[[JMEM:.*]] : !fir.ref<i32>
+! CHECK: fir.store %[[J]] to %[[JMEM:.*]] : !fir.ref<i32>
 ! CHECK: %[[JDECL:.*]]:2 = hlfir.declare %[[JMEM]]
 ! CHECK: %[[JLOAD:.*]] = fir.load %[[JDECL]]#0
 ! CHECK: %[[JIDX:.*]] = fir.convert %[[JLOAD]] : (i32) -> i64
@@ -132,7 +122,7 @@ subroutine affinity_shadowed(a, b, m, i)
 end subroutine
 
 ! CHECK-LABEL: func.func @_QPaffinity_shadowed(
-! CHECK: omp.iterator(%{{[^,:]+}}: index) =
+! CHECK: omp.iterator(%{{[^,:]+}}: i32) =
 ! CHECK: omp.yield
 ! CHECK-NOT: omp.iterator
 ! CHECK: omp.task
@@ -150,9 +140,9 @@ subroutine depend_equal_designators(a, m)
   !$omp end task
 end
 ! CHECK-LABEL: func.func @_QPdepend_equal_designators(
-! CHECK: omp.iterator(%{{[^:]+}}: index) =
+! CHECK: omp.iterator(%{{[^:]+}}: i32) =
 ! CHECK: omp.yield
-! CHECK: omp.iterator(%{{[^:]+}}: index, %{{[^:]+}}: index) =
+! CHECK: omp.iterator(%{{[^:]+}}: i32, %{{[^:]+}}: i32) =
 ! CHECK: omp.yield
 ! CHECK-NOT: omp.iterator
 ! CHECK: omp.task depend(
@@ -163,9 +153,9 @@ subroutine affinity_equal_designators(a, m)
   !$omp end task
 end
 ! CHECK-LABEL: func.func @_QPaffinity_equal_designators(
-! CHECK: omp.iterator(%{{[^:]+}}: index) =
+! CHECK: omp.iterator(%{{[^:]+}}: i32) =
 ! CHECK: omp.yield
-! CHECK: omp.iterator(%{{[^:]+}}: index, %{{[^:]+}}: index) =
+! CHECK: omp.iterator(%{{[^:]+}}: i32, %{{[^:]+}}: i32) =
 ! CHECK: omp.yield
 ! CHECK-NOT: omp.iterator
 ! CHECK: omp.task affinity(
@@ -178,9 +168,9 @@ subroutine depend_scoped_references(a, m)
   !$omp end task
 end
 ! CHECK-LABEL: func.func @_QPdepend_scoped_references(
-! CHECK: omp.iterator(%{{[^:]+}}: index) =
+! CHECK: omp.iterator(%{{[^:]+}}: i32) =
 ! CHECK: omp.yield
-! CHECK: omp.iterator(%{{[^:]+}}: index) =
+! CHECK: omp.iterator(%{{[^:]+}}: i32) =
 ! CHECK: omp.yield
 ! CHECK: omp.task depend(
 
@@ -197,15 +187,15 @@ subroutine target_folded_reference(a, m)
   !$omp target exit data map(from:a) depend(iterator(i=1:m), in: a(1+0*i))
 end
 ! CHECK-LABEL: func.func @_QPtarget_folded_reference(
-! CHECK: omp.iterator(%{{[^:]+}}: index) =
+! CHECK: omp.iterator(%{{[^:]+}}: i32) =
 ! CHECK: omp.yield
 ! CHECK: omp.target
-! CHECK: omp.iterator(%{{[^:]+}}: index) =
+! CHECK: omp.iterator(%{{[^:]+}}: i32) =
 ! CHECK: omp.yield
 ! CHECK: omp.target_enter_data
-! CHECK: omp.iterator(%{{[^:]+}}: index) =
+! CHECK: omp.iterator(%{{[^:]+}}: i32) =
 ! CHECK: omp.yield
 ! CHECK: omp.target_update
-! CHECK: omp.iterator(%{{[^:]+}}: index) =
+! CHECK: omp.iterator(%{{[^:]+}}: i32) =
 ! CHECK: omp.yield
 ! CHECK: omp.target_exit_data

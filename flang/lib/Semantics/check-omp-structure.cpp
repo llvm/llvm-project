@@ -1569,15 +1569,24 @@ void OmpStructureChecker::CheckIteratorRange(
         "The begin and end expressions in iterator range-specification are "
         "mandatory"_err_en_US);
   }
+  // GetIntValue keeps only the low 64 bits, so skip wider constants.
+  auto getIntValue{[](const auto &e) -> std::optional<int64_t> {
+    if (const auto *expr{GetExpr(nullptr, e)}) {
+      if (auto type{expr->GetType()}; type && type->kind() <= 8) {
+        return evaluate::ToInt64(*expr);
+      }
+    }
+    return std::nullopt;
+  }};
   // [5.2:67:19] In a range-specification, if the step is not specified its
   // value is implicitly defined to be 1.
-  if (auto stepv{step ? GetIntValue(*step) : std::optional<int64_t>{1}}) {
+  if (auto stepv{step ? getIntValue(*step) : std::optional<int64_t>{1}}) {
     if (*stepv == 0) {
       context_.Say(
           x.source, "The step value in the iterator range is 0"_warn_en_US);
     } else if (begin && end) {
-      std::optional<int64_t> beginv{GetIntValue(*begin)};
-      std::optional<int64_t> endv{GetIntValue(*end)};
+      std::optional<int64_t> beginv{getIntValue(*begin)};
+      std::optional<int64_t> endv{getIntValue(*end)};
       if (beginv && endv) {
         if (*stepv > 0 && *beginv > *endv) {
           context_.Say(x.source,
@@ -5266,7 +5275,8 @@ void OmpStructureChecker::Enter(const parser::OmpClause::Depend &x) {
       }
     }
     auto &modifiers{OmpGetModifiers(*taskDep)};
-    if (OmpGetUniqueModifier<parser::OmpIterator>(modifiers)) {
+    if (auto *iter{OmpGetUniqueModifier<parser::OmpIterator>(modifiers)}) {
+      CheckIteratorModifier(*iter);
       if (dir == llvm::omp::OMPD_depobj) {
         context_.Say(GetContext().clauseSource,
             "An iterator-modifier may specify multiple locators, a DEPEND clause on a DEPOBJ construct must only specify one locator"_warn_en_US);

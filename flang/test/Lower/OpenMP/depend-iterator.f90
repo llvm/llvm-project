@@ -24,15 +24,12 @@ end subroutine
 ! CHECK-SAME: uniq_name("_QFdepend_unused_iteratorEa")
 ! CHECK: %[[M:.*]]:2 = hlfir.declare
 ! CHECK-SAME: uniq_name("_QFdepend_unused_iteratorEm")
-! CHECK: %[[I_LB32:.*]] = arith.constant 1 : i32
-! CHECK: %[[I_UB32:.*]] = arith.constant 2 : i32
-! CHECK: %[[I_LB:.*]] = fir.convert %[[I_LB32]] : (i32) -> index
-! CHECK: %[[I_UB:.*]] = fir.convert %[[I_UB32]] : (i32) -> index
-! CHECK: %[[I_STEP:.*]] = arith.constant 1 : index
-! CHECK: %[[IT_I:.*]] = omp.iterator(%[[IV_I:.*]]: index) =
+! CHECK: %[[I_LB:.*]] = arith.constant 1 : i32
+! CHECK: %[[I_UB:.*]] = arith.constant 2 : i32
+! CHECK: %[[I_STEP:.*]] = arith.constant 1 : i32
+! CHECK: %[[IT_I:.*]] = omp.iterator(%[[IV_I:.*]]: i32) =
 ! CHECK-SAME: (%[[I_LB]] to %[[I_UB]] step %[[I_STEP]]) {
-! CHECK: %[[V32_I:.*]] = fir.convert %[[IV_I]] : (index) -> i32
-! CHECK: fir.store %[[V32_I]] to %[[MEM_I:.*]] : !fir.ref<i32>
+! CHECK: fir.store %[[IV_I]] to %[[MEM_I:.*]] : !fir.ref<i32>
 ! CHECK: %[[DECL_I:.*]]:2 = hlfir.declare %[[MEM_I]]
 ! CHECK: %[[LD_I:.*]] = fir.load %[[DECL_I]]#0 : !fir.ref<i32>
 ! CHECK: %[[IDX_I:.*]] = fir.convert %[[LD_I]] : (i32) -> i64
@@ -63,20 +60,15 @@ end subroutine
 ! CHECK-SAME: uniq_name("_QFdepend_per_locatorEc")
 ! CHECK: %[[M:.*]]:2 = hlfir.declare
 ! CHECK-SAME: uniq_name("_QFdepend_per_locatorEm")
-! CHECK: %[[I_LB32:.*]] = arith.constant 1 : i32
-! CHECK: %[[I_UB32:.*]] = arith.constant 2 : i32
-! CHECK: %[[I_LB:.*]] = fir.convert %[[I_LB32]] : (i32) -> index
-! CHECK: %[[I_UB:.*]] = fir.convert %[[I_UB32]] : (i32) -> index
-! CHECK: %[[I_STEP:.*]] = arith.constant 1 : index
-! CHECK: %[[J_LB32:.*]] = arith.constant 3 : i32
-! CHECK: %[[J_UB32:.*]] = fir.load %[[M]]#0 : !fir.ref<i32>
-! CHECK: %[[J_LB:.*]] = fir.convert %[[J_LB32]] : (i32) -> index
-! CHECK: %[[J_UB:.*]] = fir.convert %[[J_UB32]] : (i32) -> index
-! CHECK: %[[J_STEP:.*]] = arith.constant 1 : index
-! CHECK: %[[IT_I:.*]] = omp.iterator(%[[IV_I:.*]]: index) =
+! CHECK: %[[I_LB:.*]] = arith.constant 1 : i32
+! CHECK: %[[I_UB:.*]] = arith.constant 2 : i32
+! CHECK: %[[I_STEP:.*]] = arith.constant 1 : i32
+! CHECK: %[[J_LB:.*]] = arith.constant 3 : i32
+! CHECK: %[[J_UB:.*]] = fir.load %[[M]]#0 : !fir.ref<i32>
+! CHECK: %[[J_STEP:.*]] = arith.constant 1 : i32
+! CHECK: %[[IT_I:.*]] = omp.iterator(%[[IV_I:.*]]: i32) =
 ! CHECK-SAME: (%[[I_LB]] to %[[I_UB]] step %[[I_STEP]]) {
-! CHECK: %[[V32_I:.*]] = fir.convert %[[IV_I]] : (index) -> i32
-! CHECK: fir.store %[[V32_I]] to %[[MEM_I:.*]] : !fir.ref<i32>
+! CHECK: fir.store %[[IV_I]] to %[[MEM_I:.*]] : !fir.ref<i32>
 ! CHECK: %[[DECL_I:.*]]:2 = hlfir.declare %[[MEM_I]]
 ! CHECK: %[[LD_I:.*]] = fir.load %[[DECL_I]]#0 : !fir.ref<i32>
 ! CHECK: %[[IDX_I:.*]] = fir.convert %[[LD_I]] : (i32) -> i64
@@ -85,10 +77,9 @@ end subroutine
 ! CHECK-SAME: (!fir.ref<i32>) -> !llvm.ptr
 ! CHECK: omp.yield(%[[PTR_I]] : !llvm.ptr)
 ! CHECK: } -> !omp.iterated<!llvm.ptr>
-! CHECK: %[[IT_J:.*]] = omp.iterator(%[[IV_J:.*]]: index) =
+! CHECK: %[[IT_J:.*]] = omp.iterator(%[[IV_J:.*]]: i32) =
 ! CHECK-SAME: (%[[J_LB]] to %[[J_UB]] step %[[J_STEP]]) {
-! CHECK: %[[V32_J:.*]] = fir.convert %[[IV_J]] : (index) -> i32
-! CHECK: fir.store %[[V32_J]] to %[[MEM_J:.*]] : !fir.ref<i32>
+! CHECK: fir.store %[[IV_J]] to %[[MEM_J:.*]] : !fir.ref<i32>
 ! CHECK: %[[DECL_J:.*]]:2 = hlfir.declare %[[MEM_J]]
 ! CHECK: %[[LD_J:.*]] = fir.load %[[DECL_J]]#0 : !fir.ref<i32>
 ! CHECK: %[[IDX_J:.*]] = fir.convert %[[LD_J]] : (i32) -> i64
@@ -102,6 +93,28 @@ end subroutine
 ! CHECK-SAME: taskdependin -> %[[IT_I]] : !omp.iterated<!llvm.ptr>,
 ! CHECK-SAME: taskdependin -> %[[IT_J]] : !omp.iterated<!llvm.ptr>) {
 
+! Each range and induction value keeps its own iterator's kind.
+subroutine depend_iterator_kinds(a, n)
+  integer :: a(4, 4)
+  integer(8) :: n
+  !$omp task depend(iterator(integer(8) :: i = 1:n, j = 1:2), in: a(i, j))
+  !$omp end task
+end subroutine
+
+! CHECK-LABEL: func.func @_QPdepend_iterator_kinds(
+! CHECK: %[[N:.*]]:2 = hlfir.declare {{.*}}uniq_name("_QFdepend_iterator_kindsEn")
+! CHECK: %[[I_UB:.*]] = fir.load %[[N]]#0 : !fir.ref<i64>
+! CHECK: %[[I_STEP:.*]] = arith.constant 1 : i64
+! CHECK: %[[I_LB:.*]] = fir.convert %{{.*}} : (i32) -> i64
+! CHECK: %[[J_LB:.*]] = arith.constant 1 : i32
+! CHECK: %[[J_UB:.*]] = arith.constant 2 : i32
+! CHECK: %[[J_STEP:.*]] = arith.constant 1 : i32
+! CHECK: omp.iterator(%[[IV_I:.*]]: i64, %[[IV_J:.*]]: i32) =
+! CHECK-SAME: (%[[I_LB]] to %[[I_UB]] step %[[I_STEP]],
+! CHECK-SAME: %[[J_LB]] to %[[J_UB]] step %[[J_STEP]]) {
+! CHECK: fir.store %[[IV_I]] to %{{.*}} : !fir.ref<i64>
+! CHECK: fir.store %[[IV_J]] to %{{.*}} : !fir.ref<i32>
+
 subroutine task_depend_iterator_simple()
   integer, parameter :: n = 16
   integer :: a(n)
@@ -113,9 +126,8 @@ end subroutine
 
 ! CHECK-LABEL: func.func @_QPtask_depend_iterator_simple()
 ! CHECK: %[[A:.*]]:2 = hlfir.declare %{{.*}}(%{{.*}}) uniq_name("_QFtask_depend_iterator_simpleEa")
-! CHECK: %[[IT:.*]] = omp.iterator(%[[IV:.*]]: index) = ({{.*}} to {{.*}} step {{.*}}) {
-! CHECK:   %[[IV_I32:.*]] = fir.convert %[[IV]] : (index) -> i32
-! CHECK:   fir.store %[[IV_I32]] to %[[IV_MEM:.*]] : !fir.ref<i32>
+! CHECK: %[[IT:.*]] = omp.iterator(%[[IV:.*]]: i32) = ({{.*}} to {{.*}} step {{.*}}) {
+! CHECK:   fir.store %[[IV]] to %[[IV_MEM:.*]] : !fir.ref<i32>
 ! Iterator IV temp must be named in the compiler-generated namespace ("_QQ"
 ! prefix) so it is not emitted as a bogus user local in DWARF under -g.
 ! CHECK:   %[[IV_DECL:.*]]:2 = hlfir.declare %[[IV_MEM]] uniq_name("_QQ{{.*}}.omp.iter")
@@ -139,12 +151,10 @@ subroutine task_depend_iterator_2d()
 end subroutine
 
 ! CHECK-LABEL: func.func @_QPtask_depend_iterator_2d()
-! CHECK: %[[IT:.*]] = omp.iterator(%[[IV0:.*]]: index, %[[IV1:.*]]: index) = ({{.*}} to {{.*}} step {{.*}}, {{.*}} to {{.*}} step {{.*}}) {
-! CHECK:   %[[IV0_I32:.*]] = fir.convert %[[IV0]] : (index) -> i32
-! CHECK:   fir.store %[[IV0_I32]] to %[[IV0_MEM:.*]] : !fir.ref<i32>
+! CHECK: %[[IT:.*]] = omp.iterator(%[[IV0:.*]]: i32, %[[IV1:.*]]: i32) = ({{.*}} to {{.*}} step {{.*}}, {{.*}} to {{.*}} step {{.*}}) {
+! CHECK:   fir.store %[[IV0]] to %[[IV0_MEM:.*]] : !fir.ref<i32>
 ! CHECK:   %[[IV0_DECL:.*]]:2 = hlfir.declare %[[IV0_MEM]]
-! CHECK:   %[[IV1_I32:.*]] = fir.convert %[[IV1]] : (index) -> i32
-! CHECK:   fir.store %[[IV1_I32]] to %[[IV1_MEM:.*]] : !fir.ref<i32>
+! CHECK:   fir.store %[[IV1]] to %[[IV1_MEM:.*]] : !fir.ref<i32>
 ! CHECK:   %[[IV1_DECL:.*]]:2 = hlfir.declare %[[IV1_MEM]]
 ! CHECK:   %[[IV0_LD:.*]] = fir.load %[[IV0_DECL]]#0 : !fir.ref<i32>
 ! CHECK:   %[[IV0_I64:.*]] = fir.convert %[[IV0_LD]] : (i32) -> i64
@@ -168,7 +178,7 @@ end subroutine
 ! CHECK-LABEL: func.func @_QPtask_depend_iterator_mixed()
 ! CHECK: %[[A:.*]]:2 = hlfir.declare %{{.*}}(%{{.*}}) uniq_name("_QFtask_depend_iterator_mixedEa")
 ! CHECK: %[[X:.*]]:2 = hlfir.declare %{{.*}} uniq_name("_QFtask_depend_iterator_mixedEx")
-! CHECK: %[[IT:.*]] = omp.iterator(%[[IV:.*]]: index) = ({{.*}} to {{.*}} step {{.*}}) {
+! CHECK: %[[IT:.*]] = omp.iterator(%[[IV:.*]]: i32) = ({{.*}} to {{.*}} step {{.*}}) {
 ! CHECK:   omp.yield(%{{.*}} : !llvm.ptr)
 ! CHECK: } -> !omp.iterated<!llvm.ptr>
 ! CHECK: omp.task depend(taskdependout -> %[[X]]#0 : !fir.ref<i32>, taskdependin -> %[[IT]] : !omp.iterated<!llvm.ptr>) {
@@ -183,13 +193,10 @@ subroutine task_depend_iterator_step()
 end subroutine
 
 ! CHECK-LABEL: func.func @_QPtask_depend_iterator_step()
-! CHECK: %[[C1_I32:.*]] = arith.constant 1 : i32
-! CHECK: %[[C16_I32:.*]] = arith.constant 16 : i32
-! CHECK: %[[LB:.*]] = fir.convert %[[C1_I32]] : (i32) -> index
-! CHECK: %[[UB:.*]] = fir.convert %[[C16_I32]] : (i32) -> index
-! CHECK: %[[C2_I32:.*]] = arith.constant 2 : i32
-! CHECK: %[[STEP:.*]] = fir.convert %[[C2_I32]] : (i32) -> index
-! CHECK: %[[IT:.*]] = omp.iterator(%[[IV:.*]]: index) = (%[[LB]] to %[[UB]] step %[[STEP]]) {
+! CHECK: %[[LB:.*]] = arith.constant 1 : i32
+! CHECK: %[[UB:.*]] = arith.constant 16 : i32
+! CHECK: %[[STEP:.*]] = arith.constant 2 : i32
+! CHECK: %[[IT:.*]] = omp.iterator(%[[IV:.*]]: i32) = (%[[LB]] to %[[UB]] step %[[STEP]]) {
 ! CHECK:   omp.yield(%{{.*}} : !llvm.ptr)
 ! CHECK: } -> !omp.iterated<!llvm.ptr>
 ! CHECK: omp.task depend(taskdependin -> %[[IT]] : !omp.iterated<!llvm.ptr>) {
@@ -206,12 +213,12 @@ end subroutine
 ! CHECK-LABEL: func.func @_QPtask_depend_iterator_multi_obj()
 ! CHECK: %[[A:.*]]:2 = hlfir.declare %{{.*}}(%{{.*}}) uniq_name("_QFtask_depend_iterator_multi_objEa")
 ! CHECK: %[[B:.*]]:2 = hlfir.declare %{{.*}}(%{{.*}}) uniq_name("_QFtask_depend_iterator_multi_objEb")
-! CHECK: %[[IT1:.*]] = omp.iterator(%[[IV1:.*]]: index) = ({{.*}} to {{.*}} step {{.*}}) {
+! CHECK: %[[IT1:.*]] = omp.iterator(%[[IV1:.*]]: i32) = ({{.*}} to {{.*}} step {{.*}}) {
 ! CHECK:   %[[COOR1:.*]] = hlfir.designate %[[A]]#0 (%{{.*}})
 ! CHECK:   %[[PTR1:.*]] = fir.convert %[[COOR1]] : (!fir.ref<i32>) -> !llvm.ptr
 ! CHECK:   omp.yield(%[[PTR1]] : !llvm.ptr)
 ! CHECK: } -> !omp.iterated<!llvm.ptr>
-! CHECK: %[[IT2:.*]] = omp.iterator(%[[IV2:.*]]: index) = ({{.*}} to {{.*}} step {{.*}}) {
+! CHECK: %[[IT2:.*]] = omp.iterator(%[[IV2:.*]]: i32) = ({{.*}} to {{.*}} step {{.*}}) {
 ! CHECK:   %[[COOR2:.*]] = hlfir.designate %[[B]]#0 (%{{.*}})
 ! CHECK:   %[[PTR2:.*]] = fir.convert %[[COOR2]] : (!fir.ref<i32>) -> !llvm.ptr
 ! CHECK:   omp.yield(%[[PTR2]] : !llvm.ptr)
@@ -232,12 +239,10 @@ end subroutine
 
 ! CHECK-LABEL: func.func @_QPtask_depend_iterator_expr_subscript()
 ! CHECK: %[[A:.*]]:2 = hlfir.declare %{{.*}}(%{{.*}}) uniq_name("_QFtask_depend_iterator_expr_subscriptEa")
-! CHECK: %[[IT:.*]] = omp.iterator(%[[IV0:.*]]: index, %[[IV1:.*]]: index) = ({{.*}} to {{.*}} step {{.*}}, {{.*}} to {{.*}} step {{.*}}) {
-! CHECK:   %[[IV0_I32:.*]] = fir.convert %[[IV0]] : (index) -> i32
-! CHECK:   fir.store %[[IV0_I32]] to %[[IV0_MEM:.*]] : !fir.ref<i32>
+! CHECK: %[[IT:.*]] = omp.iterator(%[[IV0:.*]]: i32, %[[IV1:.*]]: i32) = ({{.*}} to {{.*}} step {{.*}}, {{.*}} to {{.*}} step {{.*}}) {
+! CHECK:   fir.store %[[IV0]] to %[[IV0_MEM:.*]] : !fir.ref<i32>
 ! CHECK:   %[[IV0_DECL:.*]]:2 = hlfir.declare %[[IV0_MEM]]
-! CHECK:   %[[IV1_I32:.*]] = fir.convert %[[IV1]] : (index) -> i32
-! CHECK:   fir.store %[[IV1_I32]] to %[[IV1_MEM:.*]] : !fir.ref<i32>
+! CHECK:   fir.store %[[IV1]] to %[[IV1_MEM:.*]] : !fir.ref<i32>
 ! CHECK:   %[[IV1_DECL:.*]]:2 = hlfir.declare %[[IV1_MEM]]
 ! CHECK:   %[[IV0_LD:.*]] = fir.load %[[IV0_DECL]]#0 : !fir.ref<i32>
 ! CHECK:   %[[C1_I32:.*]] = arith.constant 1 : i32
@@ -267,12 +272,12 @@ end subroutine
 ! CHECK-LABEL: func.func @_QPtask_depend_multi_iter_clauses()
 ! CHECK: %[[A:.*]]:2 = hlfir.declare %{{.*}}(%{{.*}}) uniq_name("_QFtask_depend_multi_iter_clausesEa")
 ! CHECK: %[[B:.*]]:2 = hlfir.declare %{{.*}}(%{{.*}}) uniq_name("_QFtask_depend_multi_iter_clausesEb")
-! CHECK: %[[IT1:.*]] = omp.iterator(%[[IV1:.*]]: index) = ({{.*}} to {{.*}} step {{.*}}) {
+! CHECK: %[[IT1:.*]] = omp.iterator(%[[IV1:.*]]: i32) = ({{.*}} to {{.*}} step {{.*}}) {
 ! CHECK:   %[[COOR1:.*]] = hlfir.designate %[[A]]#0 (%{{.*}})
 ! CHECK:   %[[PTR1:.*]] = fir.convert %[[COOR1]] : (!fir.ref<i32>) -> !llvm.ptr
 ! CHECK:   omp.yield(%[[PTR1]] : !llvm.ptr)
 ! CHECK: } -> !omp.iterated<!llvm.ptr>
-! CHECK: %[[IT2:.*]] = omp.iterator(%[[IV2:.*]]: index) = ({{.*}} to {{.*}} step {{.*}}) {
+! CHECK: %[[IT2:.*]] = omp.iterator(%[[IV2:.*]]: i32) = ({{.*}} to {{.*}} step {{.*}}) {
 ! CHECK:   %[[COOR2:.*]] = hlfir.designate %[[B]]#0 (%{{.*}})
 ! CHECK:   %[[PTR2:.*]] = fir.convert %[[COOR2]] : (!fir.ref<i32>) -> !llvm.ptr
 ! CHECK:   omp.yield(%[[PTR2]] : !llvm.ptr)
@@ -289,13 +294,10 @@ subroutine task_depend_iterator_negative_step()
 end subroutine
 
 ! CHECK-LABEL: func.func @_QPtask_depend_iterator_negative_step()
-! CHECK: %[[C16_I32:.*]] = arith.constant 16 : i32
-! CHECK: %[[C1_I32:.*]] = arith.constant 1 : i32
-! CHECK: %[[LB:.*]] = fir.convert %[[C16_I32]] : (i32) -> index
-! CHECK: %[[UB:.*]] = fir.convert %[[C1_I32]] : (i32) -> index
-! CHECK: %[[CM1_I32:.*]] = arith.constant -1 : i32
-! CHECK: %[[STEP:.*]] = fir.convert %[[CM1_I32]] : (i32) -> index
-! CHECK: %[[IT:.*]] = omp.iterator(%[[IV:.*]]: index) = (%[[LB]] to %[[UB]] step %[[STEP]]) {
+! CHECK: %[[LB:.*]] = arith.constant 16 : i32
+! CHECK: %[[UB:.*]] = arith.constant 1 : i32
+! CHECK: %[[STEP:.*]] = arith.constant -1 : i32
+! CHECK: %[[IT:.*]] = omp.iterator(%[[IV:.*]]: i32) = (%[[LB]] to %[[UB]] step %[[STEP]]) {
 ! CHECK:   omp.yield(%{{.*}} : !llvm.ptr)
 ! CHECK: } -> !omp.iterated<!llvm.ptr>
 ! CHECK: omp.task depend(taskdependin -> %[[IT]] : !omp.iterated<!llvm.ptr>) {
@@ -315,7 +317,7 @@ end subroutine
 ! CHECK-LABEL: func.func @_QPtask_depend_iterator_mixed_within_clause()
 ! CHECK: %[[A:.*]]:2 = hlfir.declare %{{.*}}(%{{.*}}) uniq_name("_QFtask_depend_iterator_mixed_within_clauseEa")
 ! CHECK: %[[A1:.*]] = hlfir.designate %[[A]]#0 (%{{.*}})  : (!fir.ref<!fir.array<16xi32>>, index) -> !fir.ref<i32>
-! CHECK: %[[IT:.*]] = omp.iterator(%[[IV:.*]]: index) = ({{.*}} to {{.*}} step {{.*}}) {
+! CHECK: %[[IT:.*]] = omp.iterator(%[[IV:.*]]: i32) = ({{.*}} to {{.*}} step {{.*}}) {
 ! CHECK:   %[[COOR:.*]] = hlfir.designate %[[A]]#0 (%{{.*}})
 ! CHECK:   %[[PTR:.*]] = fir.convert %[[COOR]] : (!fir.ref<i32>) -> !llvm.ptr
 ! CHECK:   omp.yield(%[[PTR]] : !llvm.ptr)
@@ -338,9 +340,8 @@ end subroutine
 
 ! CHECK-LABEL: func.func @_QPtarget_depend_iterator()
 ! CHECK: %[[A:.*]]:2 = hlfir.declare %{{.*}}(%{{.*}}) uniq_name("_QFtarget_depend_iteratorEa")
-! CHECK: %[[IT:.*]] = omp.iterator(%[[IV:.*]]: index) = ({{.*}} to {{.*}} step {{.*}}) {
-! CHECK:   %[[IV_I32:.*]] = fir.convert %[[IV]] : (index) -> i32
-! CHECK:   fir.store %[[IV_I32]] to %[[IV_MEM:.*]] : !fir.ref<i32>
+! CHECK: %[[IT:.*]] = omp.iterator(%[[IV:.*]]: i32) = ({{.*}} to {{.*}} step {{.*}}) {
+! CHECK:   fir.store %[[IV]] to %[[IV_MEM:.*]] : !fir.ref<i32>
 ! CHECK:   %[[IV_DECL:.*]]:2 = hlfir.declare %[[IV_MEM]]
 ! CHECK:   %[[IV_LD:.*]] = fir.load %[[IV_DECL]]#0 : !fir.ref<i32>
 ! CHECK:   %[[IV_I64:.*]] = fir.convert %[[IV_LD]] : (i32) -> i64
@@ -369,15 +370,15 @@ end subroutine
 ! CHECK: %[[A:.*]]:2 = hlfir.declare %{{.*}}(%{{.*}}) uniq_name("_QFtarget_depend_iterator_multiEa")
 ! CHECK: %[[B:.*]]:2 = hlfir.declare %{{.*}}(%{{.*}}) uniq_name("_QFtarget_depend_iterator_multiEb")
 ! CHECK: %[[C:.*]]:2 = hlfir.declare %{{.*}}(%{{.*}}) uniq_name("_QFtarget_depend_iterator_multiEc")
-! CHECK: %[[IT1:.*]] = omp.iterator(%{{.*}}: index) = ({{.*}} to {{.*}} step {{.*}}) {
+! CHECK: %[[IT1:.*]] = omp.iterator(%{{.*}}: i32) = ({{.*}} to {{.*}} step {{.*}}) {
 ! CHECK:   %[[COOR1:.*]] = hlfir.designate %[[A]]#0 (%{{.*}})
 ! CHECK:   omp.yield(%{{.*}} : !llvm.ptr)
 ! CHECK: } -> !omp.iterated<!llvm.ptr>
-! CHECK: %[[IT2:.*]] = omp.iterator(%{{.*}}: index) = ({{.*}} to {{.*}} step {{.*}}) {
+! CHECK: %[[IT2:.*]] = omp.iterator(%{{.*}}: i32) = ({{.*}} to {{.*}} step {{.*}}) {
 ! CHECK:   %[[COOR2:.*]] = hlfir.designate %[[B]]#0 (%{{.*}})
 ! CHECK:   omp.yield(%{{.*}} : !llvm.ptr)
 ! CHECK: } -> !omp.iterated<!llvm.ptr>
-! CHECK: %[[IT3:.*]] = omp.iterator(%{{.*}}: index) = ({{.*}} to {{.*}} step {{.*}}) {
+! CHECK: %[[IT3:.*]] = omp.iterator(%{{.*}}: i32) = ({{.*}} to {{.*}} step {{.*}}) {
 ! CHECK:   %[[COOR3:.*]] = hlfir.designate %[[C]]#0 (%{{.*}})
 ! CHECK:   omp.yield(%{{.*}} : !llvm.ptr)
 ! CHECK: } -> !omp.iterated<!llvm.ptr>
@@ -400,9 +401,8 @@ end subroutine
 
 ! CHECK-LABEL: func.func @_QPtarget_enter_data_depend_iterator()
 ! CHECK: %[[A:.*]]:2 = hlfir.declare %{{.*}}(%{{.*}}) uniq_name("_QFtarget_enter_data_depend_iteratorEa")
-! CHECK: %[[IT:.*]] = omp.iterator(%[[IV:.*]]: index) = ({{.*}} to {{.*}} step {{.*}}) {
-! CHECK:   %[[IV_I32:.*]] = fir.convert %[[IV]] : (index) -> i32
-! CHECK:   fir.store %[[IV_I32]] to %[[IV_MEM:.*]] : !fir.ref<i32>
+! CHECK: %[[IT:.*]] = omp.iterator(%[[IV:.*]]: i32) = ({{.*}} to {{.*}} step {{.*}}) {
+! CHECK:   fir.store %[[IV]] to %[[IV_MEM:.*]] : !fir.ref<i32>
 ! CHECK:   %[[IV_DECL:.*]]:2 = hlfir.declare %[[IV_MEM]]
 ! CHECK:   %[[IV_LD:.*]] = fir.load %[[IV_DECL]]#0 : !fir.ref<i32>
 ! CHECK:   %[[IV_I64:.*]] = fir.convert %[[IV_LD]] : (i32) -> i64
@@ -426,12 +426,10 @@ end subroutine
 ! CHECK-LABEL: func.func @_QPtarget_enter_data_depend_iterator_expr()
 ! CHECK: %[[A:.*]]:2 = hlfir.declare %{{.*}}(%{{.*}}) uniq_name("_QFtarget_enter_data_depend_iterator_exprEa")
 ! CHECK: %[[A1:.*]] = hlfir.designate %[[A]]#0 (%{{.*}})  : (!fir.ref<!fir.array<16xi32>>, index) -> !fir.ref<i32>
-! CHECK: %[[IT:.*]] = omp.iterator(%[[IV0:.*]]: index, %[[IV1:.*]]: index) = ({{.*}} to {{.*}} step {{.*}}, {{.*}} to {{.*}} step {{.*}}) {
-! CHECK:   %[[IV0_I32:.*]] = fir.convert %[[IV0]] : (index) -> i32
-! CHECK:   fir.store %[[IV0_I32]] to %[[IV0_MEM:.*]] : !fir.ref<i32>
+! CHECK: %[[IT:.*]] = omp.iterator(%[[IV0:.*]]: i32, %[[IV1:.*]]: i32) = ({{.*}} to {{.*}} step {{.*}}, {{.*}} to {{.*}} step {{.*}}) {
+! CHECK:   fir.store %[[IV0]] to %[[IV0_MEM:.*]] : !fir.ref<i32>
 ! CHECK:   %[[IV0_DECL:.*]]:2 = hlfir.declare %[[IV0_MEM]]
-! CHECK:   %[[IV1_I32:.*]] = fir.convert %[[IV1]] : (index) -> i32
-! CHECK:   fir.store %[[IV1_I32]] to %[[IV1_MEM:.*]] : !fir.ref<i32>
+! CHECK:   fir.store %[[IV1]] to %[[IV1_MEM:.*]] : !fir.ref<i32>
 ! CHECK:   %[[IV1_DECL:.*]]:2 = hlfir.declare %[[IV1_MEM]]
 ! CHECK:   %[[IV0_LD:.*]] = fir.load %[[IV0_DECL]]#0 : !fir.ref<i32>
 ! CHECK:   %[[SUB:.*]] = arith.subi %[[IV0_LD]], %{{.*}} : i32
@@ -460,9 +458,8 @@ end subroutine
 
 ! CHECK-LABEL: func.func @_QPtarget_exit_data_depend_iterator()
 ! CHECK: %[[A:.*]]:2 = hlfir.declare %{{.*}}(%{{.*}}) uniq_name("_QFtarget_exit_data_depend_iteratorEa")
-! CHECK: %[[IT:.*]] = omp.iterator(%[[IV:.*]]: index) = ({{.*}} to {{.*}} step {{.*}}) {
-! CHECK:   %[[IV_I32:.*]] = fir.convert %[[IV]] : (index) -> i32
-! CHECK:   fir.store %[[IV_I32]] to %[[IV_MEM:.*]] : !fir.ref<i32>
+! CHECK: %[[IT:.*]] = omp.iterator(%[[IV:.*]]: i32) = ({{.*}} to {{.*}} step {{.*}}) {
+! CHECK:   fir.store %[[IV]] to %[[IV_MEM:.*]] : !fir.ref<i32>
 ! CHECK:   %[[IV_DECL:.*]]:2 = hlfir.declare %[[IV_MEM]]
 ! CHECK:   %[[IV_LD:.*]] = fir.load %[[IV_DECL]]#0 : !fir.ref<i32>
 ! CHECK:   %[[IV_I64:.*]] = fir.convert %[[IV_LD]] : (i32) -> i64
@@ -485,17 +482,14 @@ end subroutine
 ! CHECK-LABEL: func.func @_QPtarget_exit_data_depend_iterator_multi()
 ! CHECK: %[[A:.*]]:2 = hlfir.declare %{{.*}}(%{{.*}}) uniq_name("_QFtarget_exit_data_depend_iterator_multiEa")
 ! CHECK: %[[B:.*]]:2 = hlfir.declare %{{.*}}(%{{.*}}) uniq_name("_QFtarget_exit_data_depend_iterator_multiEb")
-! CHECK: %[[C16_I32:.*]] = arith.constant 16 : i32
-! CHECK: %[[C1_I32:.*]] = arith.constant 1 : i32
-! CHECK: %[[LB:.*]] = fir.convert %[[C16_I32]] : (i32) -> index
-! CHECK: %[[UB:.*]] = fir.convert %[[C1_I32]] : (i32) -> index
-! CHECK: %[[CM1_I32:.*]] = arith.constant -1 : i32
-! CHECK: %[[STEP:.*]] = fir.convert %[[CM1_I32]] : (i32) -> index
-! CHECK: %[[IT1:.*]] = omp.iterator(%{{.*}}: index) = (%[[LB]] to %[[UB]] step %[[STEP]]) {
+! CHECK: %[[LB:.*]] = arith.constant 16 : i32
+! CHECK: %[[UB:.*]] = arith.constant 1 : i32
+! CHECK: %[[STEP:.*]] = arith.constant -1 : i32
+! CHECK: %[[IT1:.*]] = omp.iterator(%{{.*}}: i32) = (%[[LB]] to %[[UB]] step %[[STEP]]) {
 ! CHECK:   %[[COOR1:.*]] = hlfir.designate %[[A]]#0 (%{{.*}})
 ! CHECK:   omp.yield(%{{.*}} : !llvm.ptr)
 ! CHECK: } -> !omp.iterated<!llvm.ptr>
-! CHECK: %[[IT2:.*]] = omp.iterator(%{{.*}}: index) = (%[[LB]] to %[[UB]] step %[[STEP]]) {
+! CHECK: %[[IT2:.*]] = omp.iterator(%{{.*}}: i32) = (%[[LB]] to %[[UB]] step %[[STEP]]) {
 ! CHECK:   %[[COOR2:.*]] = hlfir.designate %[[B]]#0 (%{{.*}})
 ! CHECK:   omp.yield(%{{.*}} : !llvm.ptr)
 ! CHECK: } -> !omp.iterated<!llvm.ptr>
@@ -517,9 +511,8 @@ end subroutine
 
 ! CHECK-LABEL: func.func @_QPtarget_update_depend_iterator()
 ! CHECK: %[[A:.*]]:2 = hlfir.declare %{{.*}}(%{{.*}}) uniq_name("_QFtarget_update_depend_iteratorEa")
-! CHECK: %[[IT:.*]] = omp.iterator(%[[IV:.*]]: index) = ({{.*}} to {{.*}} step {{.*}}) {
-! CHECK:   %[[IV_I32:.*]] = fir.convert %[[IV]] : (index) -> i32
-! CHECK:   fir.store %[[IV_I32]] to %[[IV_MEM:.*]] : !fir.ref<i32>
+! CHECK: %[[IT:.*]] = omp.iterator(%[[IV:.*]]: i32) = ({{.*}} to {{.*}} step {{.*}}) {
+! CHECK:   fir.store %[[IV]] to %[[IV_MEM:.*]] : !fir.ref<i32>
 ! CHECK:   %[[IV_DECL:.*]]:2 = hlfir.declare %[[IV_MEM]]
 ! CHECK:   %[[IV_LD:.*]] = fir.load %[[IV_DECL]]#0 : !fir.ref<i32>
 ! CHECK:   %[[IV_I64:.*]] = fir.convert %[[IV_LD]] : (i32) -> i64
@@ -547,11 +540,11 @@ end subroutine
 ! CHECK: %[[A:.*]]:2 = hlfir.declare %{{.*}}(%{{.*}}) uniq_name("_QFtarget_update_depend_iterator_multiEa")
 ! CHECK: %[[B:.*]]:2 = hlfir.declare %{{.*}}(%{{.*}}) uniq_name("_QFtarget_update_depend_iterator_multiEb")
 ! CHECK: %[[X:.*]]:2 = hlfir.declare %{{.*}} uniq_name("_QFtarget_update_depend_iterator_multiEx")
-! CHECK: %[[IT1:.*]] = omp.iterator(%{{.*}}: index) = ({{.*}} to {{.*}} step {{.*}}) {
+! CHECK: %[[IT1:.*]] = omp.iterator(%{{.*}}: i32) = ({{.*}} to {{.*}} step {{.*}}) {
 ! CHECK:   %[[COOR1:.*]] = hlfir.designate %[[A]]#0 (%{{.*}})
 ! CHECK:   omp.yield(%{{.*}} : !llvm.ptr)
 ! CHECK: } -> !omp.iterated<!llvm.ptr>
-! CHECK: %[[IT2:.*]] = omp.iterator(%{{.*}}: index) = ({{.*}} to {{.*}} step {{.*}}) {
+! CHECK: %[[IT2:.*]] = omp.iterator(%{{.*}}: i32) = ({{.*}} to {{.*}} step {{.*}}) {
 ! CHECK:   %[[COOR2:.*]] = hlfir.designate %[[B]]#0 (%{{.*}})
 ! CHECK:   omp.yield(%{{.*}} : !llvm.ptr)
 ! CHECK: } -> !omp.iterated<!llvm.ptr>
