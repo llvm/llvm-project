@@ -62,47 +62,6 @@ static cl::opt<bool> UsePartialReductionsByDefault(
     cl::desc("Use partial reduction intrinsics for "
              "all supported unordered reductions."));
 
-<<<<<<< HEAD
-/// If the pointer operand \p Addr of a memory access is an affine AddRec
-/// w.r.t. \p L with a constant stride, return the stride in units of
-/// \p AccessTy. Otherwise return std::nullopt.
-static std::optional<int64_t> getConstantStride(VPValue *Addr, Type *AccessTy,
-                                                PredicatedScalarEvolution &PSE,
-                                                const Loop *L) {
-  assert(!hasIrregularType(AccessTy, L->getHeader()->getDataLayout()) &&
-         "should not try to widen irregular types");
-  const SCEV *AddrSCEV = vputils::getSCEVExprForVPValue(Addr, PSE, L);
-  auto *AddRec = dyn_cast<SCEVAddRecExpr>(AddrSCEV);
-  if (!AddRec)
-    return {};
-
-  const auto *Stride = dyn_cast_or_null<SCEVConstant>(
-      getStrideFromAddRec(AddRec, L, AccessTy, /*Ptr=*/nullptr, PSE));
-  if (!Stride)
-    return {};
-
-  return Stride->getAPInt().trySExtValue();
-}
-
-||||||| e6114dbeed42
-/// If the pointer operand \p Addr of a memory access is an affine AddRec
-/// w.r.t. \p L with a constant stride, return the stride in units of
-/// \p AccessTy. Otherwise return std::nullopt.
-static std::optional<int64_t> getConstantStride(VPValue *Addr, Type *AccessTy,
-                                                PredicatedScalarEvolution &PSE,
-                                                const Loop *L) {
-  assert(!hasIrregularType(AccessTy, L->getHeader()->getDataLayout()) &&
-         "should not try to widen irregular types");
-  const SCEV *AddrSCEV = vputils::getSCEVExprForVPValue(Addr, PSE, L);
-  auto *AddRec = dyn_cast<SCEVAddRecExpr>(AddrSCEV);
-  if (!AddRec)
-    return {};
-
-  return getStrideFromAddRec(AddRec, L, AccessTy, /*Ptr=*/nullptr, PSE);
-}
-
-=======
->>>>>>> origin/main
 bool VPlanTransforms::tryToConvertVPInstructionsToVPRecipes(
     VPlan &Plan, const TargetLibraryInfo &TLI, PredicatedScalarEvolution &PSE,
     Loop *OuterLoop) {
