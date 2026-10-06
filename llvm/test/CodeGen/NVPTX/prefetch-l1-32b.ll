@@ -11,7 +11,7 @@ define void @prefetch_global(ptr addrspace(1) %global_ptr) {
 ; CHECK-PTX94-NEXT:    ld.param::func.b64 %rd1, [prefetch_global_param_0];
 ; CHECK-PTX94-NEXT:    prefetch.global.L1::32B.valid_addr [%rd1];
 ; CHECK-PTX94-NEXT:    ret;
-  tail call void @llvm.nvvm.prefetch.global.L1.32B(ptr addrspace(1) %global_ptr)
+  tail call void @llvm.nvvm.prefetch.L1.32B.valid_addr.p1(ptr addrspace(1) %global_ptr)
   ret void
 }
 
@@ -24,7 +24,7 @@ define void @prefetch_generic(ptr addrspace(0) %generic_ptr) {
 ; CHECK-PTX94-NEXT:    ld.param::func.b64 %rd1, [prefetch_generic_param_0];
 ; CHECK-PTX94-NEXT:    prefetch.L1::32B.valid_addr [%rd1];
 ; CHECK-PTX94-NEXT:    ret;
-  tail call void @llvm.nvvm.prefetch.L1.32B(ptr addrspace(0) %generic_ptr)
+  tail call void @llvm.nvvm.prefetch.L1.32B.valid_addr.p0(ptr %generic_ptr)
   ret void
 }
 

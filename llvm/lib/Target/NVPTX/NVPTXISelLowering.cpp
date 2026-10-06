@@ -4777,6 +4777,17 @@ void NVPTXTargetLowering::getTgtMemIntrinsic(
     return;
   }
 
+  case Intrinsic::nvvm_prefetch_L1_32B_valid_addr: {
+    Info.opc = ISD::INTRINSIC_VOID;
+    Info.memVT = MVT::i8;
+    Info.ptrVal = I.getArgOperand(0);
+    Info.offset = 0;
+    Info.flags = MachineMemOperand::MOLoad;
+    Info.align = Align(1);
+    Infos.push_back(Info);
+    return;
+  }
+
   case Intrinsic::nvvm_mbarrier_init: {
     Info.opc = ISD::INTRINSIC_VOID;
     Info.memVT = MVT::i64;
