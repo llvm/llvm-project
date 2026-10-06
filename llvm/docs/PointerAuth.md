@@ -124,7 +124,7 @@ It returns a raw pointer value.  It does **not** check that the
 signature is valid.
 
 `key` should identify a key that is appropriate for `value`, as defined
-by the target-specific [keys](#keys)).
+by the target-specific [keys](#keys).
 
 If `value` is a raw pointer value, it is returned as-is (provided the `key`
 is appropriate for the pointer).
@@ -263,7 +263,7 @@ memory, negating the security benefit provided by pointer authentication.
 To prevent that, the `ptrauth` operand bundle may be used: it guarantees that
 the intermediate call target is kept in a register and never stored to memory.
 This hardening benefit is similar to that provided by
-[`llvm.ptrauth.resign`](#llvm-ptrauth-resign)).
+[`llvm.ptrauth.resign`](#llvm-ptrauth-resign).
 
 Concretely:
 
