@@ -1188,7 +1188,7 @@ static unsigned inlineAsmGetNumRequiredAGPRs(const InlineAsm *IA,
   unsigned AGPRDefCount = 0;
   unsigned AGPRUseCount = 0;
   unsigned MaxPhysReg = 0;
-  const DataLayout &DL = Call.getFunction()->getParent()->getDataLayout();
+  const DataLayout &DL = Call.getFunction()->getDataLayout();
 
   // TODO: Overestimates due to not accounting for tied operands
   for (const InlineAsm::ConstraintInfo &CI : IA->ParseConstraints()) {

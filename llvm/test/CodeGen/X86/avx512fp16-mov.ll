@@ -1640,7 +1640,7 @@ define half @extract_f16_8(<32 x half> %x, i64 %idx) nounwind {
 ; X64-NEXT:    pushq %rbp
 ; X64-NEXT:    movq %rsp, %rbp
 ; X64-NEXT:    andq $-64, %rsp
-; X64-NEXT:    addq $-128, %rsp
+; X64-NEXT:    subq $64, %rsp
 ; X64-NEXT:    andl $31, %edi
 ; X64-NEXT:    vmovaps %zmm0, (%rsp)
 ; X64-NEXT:    vmovsh {{.*#+}} xmm0 = mem[0],zero,zero,zero,zero,zero,zero,zero
@@ -1654,7 +1654,7 @@ define half @extract_f16_8(<32 x half> %x, i64 %idx) nounwind {
 ; X86-NEXT:    pushl %ebp
 ; X86-NEXT:    movl %esp, %ebp
 ; X86-NEXT:    andl $-64, %esp
-; X86-NEXT:    addl $-128, %esp
+; X86-NEXT:    subl $64, %esp
 ; X86-NEXT:    movl 8(%ebp), %eax
 ; X86-NEXT:    andl $31, %eax
 ; X86-NEXT:    vmovaps %zmm0, (%esp)
@@ -1673,7 +1673,7 @@ define half @extract_f16_9(<64 x half> %x, i64 %idx) nounwind {
 ; X64-NEXT:    pushq %rbp
 ; X64-NEXT:    movq %rsp, %rbp
 ; X64-NEXT:    andq $-64, %rsp
-; X64-NEXT:    subq $192, %rsp
+; X64-NEXT:    addq $-128, %rsp
 ; X64-NEXT:    andl $63, %edi
 ; X64-NEXT:    vmovaps %zmm1, {{[0-9]+}}(%rsp)
 ; X64-NEXT:    vmovaps %zmm0, (%rsp)
@@ -1688,7 +1688,7 @@ define half @extract_f16_9(<64 x half> %x, i64 %idx) nounwind {
 ; X86-NEXT:    pushl %ebp
 ; X86-NEXT:    movl %esp, %ebp
 ; X86-NEXT:    andl $-64, %esp
-; X86-NEXT:    subl $192, %esp
+; X86-NEXT:    addl $-128, %esp
 ; X86-NEXT:    movl 8(%ebp), %eax
 ; X86-NEXT:    andl $63, %eax
 ; X86-NEXT:    vmovaps %zmm1, {{[0-9]+}}(%esp)
