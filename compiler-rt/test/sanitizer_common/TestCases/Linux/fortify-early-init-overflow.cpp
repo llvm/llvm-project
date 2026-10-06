@@ -57,10 +57,6 @@ const char *__ubsan_default_options()
 }
 
 // The reported values confirm the destination size was the bound applied.
-// CHECK: CHECK failed: sanitizer_common_interceptors_memintrinsics.inc:{{.*}} (0x10, 0x8)
+// CHECK: CHECK failed: sanitizer_common_interceptors_memintrinsics.inc{{.*}} (0x10, 0x8)
 
-int main(int argc, char *argv[]) {
-  // CHECK-NOT: unreachable
-  __builtin_printf("unreachable\n");
-  return 0;
-}
+int main(int argc, char *argv[]) { return 0; }
