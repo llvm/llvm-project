@@ -3726,8 +3726,7 @@ void SPIRVEmitIntrinsicsImpl::emitUnstructuredLoopControls(Function &F,
 
     BasicBlock *Header = L->getHeader();
     // OpLoopMerge must immediately precede an OpBranch or OpBranchConditional.
-    // A header that ends in a switch (already lowered to spv_switch +
-    // indirectbr here) cannot carry one; the merge would follow the OpSwitch.
+    // Switches are already lowered to spv_switch + indirectbr at this point.
     if (!isa<UncondBrInst, CondBrInst>(Header->getTerminator()))
       continue;
     B.SetInsertPoint(Header->getTerminator());
