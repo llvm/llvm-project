@@ -9,11 +9,43 @@
 // REQUIRES: std-at-least-c++26
 // UNSUPPORTED: libcpp-has-no-experimental-execution
 
-// [exec.set.value], [exec.set.error], [exec.set.stopped]
-
-#include <execution>
+// <execution>
+//
+// namespace std::execution {
+//   struct set_value_t {
+//     template<class Receiver, class... Args>
+//       requires (!is_lvalue_reference_v<Receiver> && !is_const_v<Receiver>) &&
+//                requires(Receiver&& rcvr, Args&&... args) {
+//                  std::forward<Receiver>(rcvr).set_value(std::forward<Args>(args)...);
+//                }
+//     constexpr void operator()(Receiver&& rcvr, Args&&... args) const noexcept;
+//   };
+//
+//   struct set_error_t {
+//     template<class Receiver, class Error>
+//       requires (!is_lvalue_reference_v<Receiver> && !is_const_v<Receiver>) &&
+//                requires(Receiver&& rcvr, Error&& error) {
+//                  std::forward<Receiver>(rcvr).set_error(std::forward<Error>(error));
+//                }
+//     constexpr void operator()(Receiver&& rcvr, Error&& error) const noexcept;
+//   };
+//
+//   struct set_stopped_t {
+//     template<class Receiver>
+//       requires (!is_lvalue_reference_v<Receiver> && !is_const_v<Receiver>) &&
+//                requires(Receiver&& rcvr) {
+//                  std::forward<Receiver>(rcvr).set_stopped();
+//                }
+//     constexpr void operator()(Receiver&& rcvr) const noexcept;
+//   };
+//
+//   inline constexpr set_value_t set_value{};
+//   inline constexpr set_error_t set_error{};
+//   inline constexpr set_stopped_t set_stopped{};
+// }
 
 #include <cassert>
+#include <execution>
 #include <type_traits>
 #include <utility>
 
