@@ -5974,6 +5974,39 @@ bool AArch64TTIImpl::isLegalSpeculativeLoad(Type *DataType,
          Size.getFixedValue() <= 16;
 }
 
+bool AArch64TTIImpl::hasMultiVectorLoadStore(
+    unsigned NumVectors, TTI::MaskSource Mask, VectorType *VectorTy,
+    bool IsStore, std::optional<Instruction::CastOps> CastHint) const {
+  if (NumVectors <= 1 || !ST->enableSubRegLiveness() || !ST->hasSVE2p1())
+    return false;
+
+  // TODO: Support masked multi-vector loads/stores.
+  if (Mask != TTI::MaskSource::None)
+    return false;
+
+  // A null vector type queries whether the target supports multi-vector memory
+  // operations in general.
+  if (!VectorTy)
+    return true;
+
+  if (!isa<ScalableVectorType>(VectorTy))
+    return false;
+
+  // Conservatively, avoid using multi-vector loads when it's possible we could
+  // use extending loads instead. Note: We can ignore stores as we only use
+  // truncating stores when the store vector-width is < a full SVE vector.
+  if (!IsStore &&
+      (CastHint == Instruction::ZExt || CastHint == Instruction::SExt))
+    return false;
+
+  // For unpredicated loads/stores allow any pow-of-two multiple of a vector >=
+  // to a single z-register. We can split operations wider than a single
+  // multi-vector load/store during ISEL.
+  return isPowerOf2_32(NumVectors) &&
+         DL.getTypeSizeInBits(VectorTy).isKnownMultipleOf(
+             AArch64::SVEBitsPerBlock);
+}
+
 unsigned
 AArch64TTIImpl::getMaxInterleaveFactor(ElementCount VF,
                                        bool HasUnorderedReductions) const {

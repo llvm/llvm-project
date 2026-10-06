@@ -27641,10 +27641,12 @@ bool BoUpSLP::BlockScheduling::extendSchedulingRegion(
   BasicBlock::reverse_iterator UpperEnd = BB->rend();
   BasicBlock::iterator DownIter = ScheduleEnd->getIterator();
   BasicBlock::iterator LowerEnd = BB->end();
-  auto IsAssumeLikeIntr = [](const Instruction &I) {
-    if (auto *II = dyn_cast<IntrinsicInst>(&I))
-      return II->isAssumeLikeIntrinsic();
-    return false;
+  // Never skip the looked-for instruction itself: a bundle member may be an
+  // assume-like intrinsic (e.g. a copyable lane), and skipping it makes the
+  // scan miss it and extend the region in the wrong direction.
+  auto IsAssumeLikeIntr = [I](const Instruction &Cur) {
+    auto *II = dyn_cast<IntrinsicInst>(&Cur);
+    return &Cur != I && II && II->isAssumeLikeIntrinsic();
   };
   UpIter = std::find_if_not(UpIter, UpperEnd, IsAssumeLikeIntr);
   DownIter = std::find_if_not(DownIter, LowerEnd, IsAssumeLikeIntr);
