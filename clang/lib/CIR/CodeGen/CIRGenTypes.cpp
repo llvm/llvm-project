@@ -735,7 +735,7 @@ CIRGenTypes::getCIRGenRecordLayout(const RecordDecl *rd) {
 }
 
 bool CIRGenTypes::isZeroInitializable(clang::QualType t) {
-  if (t->getAs<PointerType>())
+  if (t->getAs<PointerType>() || t->isNullPtrType())
     return astContext.getTargetNullPointerValue(t) == 0;
 
   if (const auto *at = astContext.getAsArrayType(t)) {
