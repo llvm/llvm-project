@@ -71,13 +71,26 @@ struct __cpu_traits<__std_thread_backend_tag> {
     return __reduce(std::move(__first), std::move(__last), std::move(__init));
   }
 
-  template <class _Value, class _RandomAccessIterator, class _PartitionScan>
-  _LIBCPP_HIDE_FROM_ABI static optional<__empty>
-  __lookback_scan(_RandomAccessIterator __first, _RandomAccessIterator __last, _PartitionScan __scan) {
+  template <class _Value,
+            class _RandomAccessIterator,
+            class _WorkerPrologue,
+            class _ScanHead,
+            class _ScanMiddle,
+            class _ScanTail,
+            class _WorkerEpilogue>
+  _LIBCPP_HIDE_FROM_ABI static optional<__empty> __lookback_scan(
+      _RandomAccessIterator __first,
+      _RandomAccessIterator __last,
+      _WorkerPrologue __worker_prologue,
+      _ScanHead __scan_head,
+      _ScanMiddle /*__scan_middle*/,
+      _ScanTail /*__scan_tail*/,
+      _WorkerEpilogue __worker_epilogue) {
     if (__first == __last)
       return __empty{}; // nothing to do
-    __decoupled_lookback<_Value> __lookback{0};
-    __scan(__first, __last, 0, __lookback);
+    auto __ctx = __worker_prologue(static_cast<size_t>(__last - __first));
+    __scan_head(__ctx, __first, __last, nullptr);
+    __worker_epilogue(std::move(__ctx));
     return __empty{};
   }
 

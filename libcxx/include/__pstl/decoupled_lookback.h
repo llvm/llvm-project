@@ -98,6 +98,30 @@ private:
   alignas(_Tp) unsigned char __inclusive_prefix_storage[sizeof(_Tp)];
 };
 
+// Calculate an inclusive prefix of a given partition that currently has only an aggregate.
+// Performs reductions of aggregate values until it arrives at a partition with an available prefix.
+// Precondition: __partition->__acquire_available_status() == __decoupled_lookback_status_aggregate_available.
+template <typename _Tp, class _BinaryOperation>
+_LIBCPP_HIDE_FROM_ABI _Tp
+__calculate_inclusive_prefix_of_partition(__decoupled_lookback_partition<_Tp>* __partition, _BinaryOperation __reduce) {
+  // Start at the given partition
+  _Tp __prefix = __partition->__aggregate();
+  while (true) {
+    // Move to the previous partition and check its status.
+    --__partition;
+    unsigned char __status = __partition->__acquire_available_status();
+    if (__status & __decoupled_lookback_status_prefix_available) {
+      // Found a partition with an available prefix - can perform a final reduction and terminate.
+      __prefix = __reduce(__partition->__inclusive_prefix(), std::move(__prefix));
+      break;
+    } else /* if(__status & __decoupled_lookback_status_aggregate_available) */ {
+      // Reduce with another aggregate and continue moving left.
+      __prefix = __reduce(__partition->__aggregate(), std::move(__prefix));
+    }
+  }
+  return __prefix;
+}
+
 template <typename _Tp>
 class _LIBCPP_HIDE_FROM_ABI __decoupled_lookback {
 public:
@@ -120,30 +144,6 @@ public:
 
   _LIBCPP_HIDE_FROM_ABI __decoupled_lookback_partition<_Tp>& __partition(size_t __index) const {
     return __partitions_[__index];
-  }
-
-  // Calculate an exclusive prefix starting at the given partition.
-  // Performs reductions of aggregate values until it arrives at a partition with an available prefix.
-  // Precondition: __partition(__index).status is __decoupled_lookback_status_aggregate_available.
-  template <class _BinaryOperation>
-  _LIBCPP_HIDE_FROM_ABI _Tp __calculate_exclusive_prefix(size_t __index, _BinaryOperation __reduce) {
-    // Start at the given partition
-    _Tp __prefix = __partitions_[__index].__aggregate();
-    while (true) {
-      // Move to the previous partition and check its status.
-      --__index;
-      __decoupled_lookback_partition< _Tp >& __prev_partition = __partitions_[__index];
-      unsigned char __status                                  = __prev_partition.__acquire_available_status();
-      if (__status & __decoupled_lookback_status_prefix_available) {
-        // Found a partition with an available prefix - can perform a final reduction and terminate.
-        __prefix = __reduce(__prev_partition.__inclusive_prefix(), std::move(__prefix));
-        break;
-      } else /* if(__status & __decoupled_lookback_status_aggregate_available) */ {
-        // Reduce with another aggregate and continue moving left.
-        __prefix = __reduce(__prev_partition.__aggregate(), std::move(__prefix));
-      }
-    }
-    return __prefix;
   }
 
 private:

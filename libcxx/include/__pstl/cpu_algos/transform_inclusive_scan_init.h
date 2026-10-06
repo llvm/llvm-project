@@ -55,89 +55,109 @@ struct __cpu_parallel_transform_inclusive_scan_init {
     if constexpr (__is_parallel_execution_policy_v<_RawExecutionPolicy> &&
                   __has_random_access_iterator_category_or_concept<_ForwardIterator1>::value &&
                   __has_random_access_iterator_category_or_concept<_ForwardIterator2>::value) {
-      auto __scan = [&](_ForwardIterator1 __chunk_first,
-                        _ForwardIterator1 __chunk_last,
-                        size_t __chunk_index,
-                        __decoupled_lookback<_Tp>& __lookback) {
+      auto __scan_head =
+          [&](__empty /*__worker_ctx*/,
+              _ForwardIterator1 __chunk_first,
+              _ForwardIterator1 __chunk_last,
+              __decoupled_lookback_partition<_Tp>* __optional_lookback_partition) {
+            // Handling of the first chunk.
+            // It is special because it doesn't have a previous partition and must immediately push its inclusive prefix
+            // once the local reduction is complete.
+            if (__optional_lookback_partition != nullptr) {
+              // Calculate and publish the inclusive prefix only if the storage for this partition exists.
+              // For the edge case when the entire workset consists of a single partition, the lookback will be empty.
+              __optional_lookback_partition->__construct_inclusive_prefix(
+                  std::transform_reduce(__chunk_first, __chunk_last, __init, __reduce, __transform));
+            }
+
+            // Derive the destination iterator for this chunk.
+            _ForwardIterator2 __chunk_result = __result + (__chunk_first - __first);
+
+            // Perform the scanning into the destination.
+            std::transform_inclusive_scan(
+                __chunk_first, __chunk_last, __chunk_result, __reduce, __transform, std::move(__init));
+          };
+
+      auto __scan_middle = [&](__empty /*__worker_ctx*/,
+                               _ForwardIterator1 __chunk_first,
+                               _ForwardIterator1 __chunk_last,
+                               __decoupled_lookback_partition<_Tp>* __lookback_partition) {
+        // General case: a chunk in the middle.
+
+        // Compute and publish the local aggregate.
+        _Tp __aggregate =
+            std::transform_reduce(__chunk_first + 1, __chunk_last, __transform(*__chunk_first), __reduce, __transform);
+        // __decoupled_lookback_partition< _Tp >& __partition = __lookback.__partition(__chunk_index);
+        __lookback_partition->__construct_aggregate(__aggregate);
+
         // Derive the destination iterator for this chunk.
         _ForwardIterator2 __chunk_result = __result + (__chunk_first - __first);
 
-        if (__chunk_index == 0) {
-          // Handling of the first chunk.
-          // It is special because it doesn't have a previous partition and must immediately push its inclusive prefix
-          // once the local reduction is complete.
-
-          if (__chunk_index < __lookback.__size()) {
-            // Calculate and publish the inclusive prefix only if storage for this partition exists.
-            // For the edge case when the entire workset consists of a single partition, the lookback will be empty.
-            __decoupled_lookback_partition< _Tp >& __partition = __lookback.__partition(__chunk_index);
-            __partition.__construct_inclusive_prefix(
-                std::transform_reduce(__chunk_first, __chunk_last, __init, __reduce, __transform));
-          }
-
+        // Depending on the state of the previous chunk, either immediately compute and publish the inclusive prefix, or
+        // first compute the inclusive prefix of the previous partition by ourselves and then compute and publish our
+        // inclusive prefix.
+        __decoupled_lookback_partition< _Tp >* __prev_partition = __lookback_partition - 1;
+        if (__prev_partition->__acquire_available_status() & __decoupled_lookback_status_prefix_available) {
+          // Use the existing inclusive prefix directly (avoid copies)
+          const _Tp& __exclusive_prefix = __prev_partition->__inclusive_prefix();
+          // Calculate and publish the inclusive prefix for the current chunk.
+          __lookback_partition->__construct_inclusive_prefix(__reduce(__exclusive_prefix, std::move(__aggregate)));
           // Perform the scanning into the destination.
           std::transform_inclusive_scan(
-              __chunk_first, __chunk_last, __chunk_result, __reduce, __transform, std::move(__init));
-
-        } else if (__chunk_index < __lookback.__size()) {
-          // General case: a chunk in the middle.
-
-          // Compute and publish the local aggregate.
-          _Tp __aggregate = std::transform_reduce(
-              __chunk_first + 1, __chunk_last, __transform(*__chunk_first), __reduce, __transform);
-          __decoupled_lookback_partition< _Tp >& __partition = __lookback.__partition(__chunk_index);
-          __partition.__construct_aggregate(__aggregate);
-
-          // Depending on the state of the previous chunk,  or
-          size_t __prev_chunk_index = __chunk_index - 1;
-          if (__decoupled_lookback_partition< _Tp >& __prev_partition = __lookback.__partition(__prev_chunk_index);
-              __prev_partition.__acquire_available_status() & __decoupled_lookback_status_prefix_available) {
-            // Use the existing inclusive prefix directly (avoid copies)
-            const _Tp& __exclusive_prefix = __prev_partition.__inclusive_prefix();
-            // Calculate and publish the inclusive prefix for the current chunk.
-            __partition.__construct_inclusive_prefix(__reduce(__exclusive_prefix, std::move(__aggregate)));
-            // Perform the scanning into the destination.
-            std::transform_inclusive_scan(
-                __chunk_first, __chunk_last, __chunk_result, __reduce, __transform, __exclusive_prefix);
-          } else {
-            // Calculate the exclusive prefix starting with the aggregate of the previous chunk.
-            _Tp __exclusive_prefix = __lookback.__calculate_exclusive_prefix(__prev_chunk_index, __reduce);
-            // Calculate and publish the inclusive prefix for the current chunk.
-            __partition.__construct_inclusive_prefix(__reduce(__exclusive_prefix, std::move(__aggregate)));
-            // Perform the scanning into the destination.
-            std::transform_inclusive_scan(
-                __chunk_first, __chunk_last, __chunk_result, __reduce, __transform, std::move(__exclusive_prefix));
-          }
-
+              __chunk_first, __chunk_last, __chunk_result, __reduce, __transform, __exclusive_prefix);
         } else {
-          // Handling of the last chunk (which is also not the first one).
-          // It doesn't have its lookback partition, so get the exclusive prefix from the previous chunk and perform
-          // scanning without publishing the inclusive prefix.
-
-          size_t __prev_chunk_index = __chunk_index - 1;
-          if (__decoupled_lookback_partition<_Tp>& __prev_partition = __lookback.__partition(__prev_chunk_index);
-              __prev_partition.__acquire_available_status() & __decoupled_lookback_status_prefix_available) {
-            //  Perform the scanning using the existing inclusive prefix of the previous chunk.
-            std::transform_inclusive_scan(
-                __chunk_first,
-                __chunk_last,
-                __chunk_result,
-                __reduce,
-                __transform,
-                __prev_partition.__inclusive_prefix());
-          } else {
-            // Calculate the exclusive prefix for the previous chunk and perform the scanning.
-            std::transform_inclusive_scan(
-                __chunk_first,
-                __chunk_last,
-                __chunk_result,
-                __reduce,
-                __transform,
-                __lookback.__calculate_exclusive_prefix(__prev_chunk_index, __reduce));
-          }
+          // Calculate the exclusive prefix starting with the aggregate of the previous chunk.
+          _Tp __exclusive_prefix = __calculate_inclusive_prefix_of_partition(__prev_partition, __reduce);
+          // Calculate and publish the inclusive prefix for the current chunk.
+          __lookback_partition->__construct_inclusive_prefix(__reduce(__exclusive_prefix, std::move(__aggregate)));
+          // Perform the scanning into the destination.
+          std::transform_inclusive_scan(
+              __chunk_first, __chunk_last, __chunk_result, __reduce, __transform, std::move(__exclusive_prefix));
         }
       };
-      auto __ret = __cpu_traits<_Backend>::template __lookback_scan<_Tp>(__first, __last, __scan);
+
+      auto __scan_tail =
+          [&](__empty /*__worker_ctx*/,
+              _ForwardIterator1 __chunk_first,
+              _ForwardIterator1 __chunk_last,
+              __decoupled_lookback_partition<_Tp>* __nonexistent_lookback_partition) {
+            // Handling of the last chunk (which is also not the first one).
+            // It doesn't have its lookback partition, so get the exclusive prefix from the previous chunk and perform
+            // scanning without publishing the inclusive prefix.
+
+            // Derive the destination iterator for this chunk.
+            _ForwardIterator2 __chunk_result = __result + (__chunk_first - __first);
+
+            __decoupled_lookback_partition< _Tp >* __prev_partition = __nonexistent_lookback_partition - 1;
+            if (__prev_partition->__acquire_available_status() & __decoupled_lookback_status_prefix_available) {
+              //  Perform the scanning using the existing inclusive prefix of the previous chunk.
+              std::transform_inclusive_scan(
+                  __chunk_first,
+                  __chunk_last,
+                  __chunk_result,
+                  __reduce,
+                  __transform,
+                  __prev_partition->__inclusive_prefix());
+            } else {
+              // Calculate the exclusive prefix for the previous chunk and perform the scanning.
+              std::transform_inclusive_scan(
+                  __chunk_first,
+                  __chunk_last,
+                  __chunk_result,
+                  __reduce,
+                  __transform,
+                  __calculate_inclusive_prefix_of_partition(__prev_partition, __reduce));
+            }
+          };
+
+      auto __ret = __cpu_traits<_Backend>::template __lookback_scan<_Tp>(
+          __first,
+          __last,
+          [](size_t /*__max_chunk_size*/) { return __empty{}; },
+          __scan_head,
+          __scan_middle,
+          __scan_tail,
+          [](__empty) {});
       if (!__ret)
         return nullopt;
       return __result + (__last - __first);
