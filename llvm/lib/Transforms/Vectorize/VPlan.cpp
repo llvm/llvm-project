@@ -578,7 +578,7 @@ const VPRegionBlock *VPBasicBlock::getEnclosingLoopRegion() const {
   return getEnclosingLoopRegionForRegion(getParent());
 }
 
-static bool hasConditionalTerminator(const VPBasicBlock *VPBB) {
+static bool hasTerminator(const VPBasicBlock *VPBB) {
   if (VPBB->empty()) {
     assert(
         VPBB->getNumSuccessors() < 2 &&
@@ -587,6 +587,8 @@ static bool hasConditionalTerminator(const VPBasicBlock *VPBB) {
   }
 
   const VPRecipeBase *R = &VPBB->back();
+  if (match(R, m_VPInstruction<Instruction::Ret>()))
+    return true;
   [[maybe_unused]] bool IsSwitch =
       isa<VPInstruction>(R) &&
       cast<VPInstruction>(R)->getOpcode() == Instruction::Switch;
@@ -617,13 +619,13 @@ static bool hasConditionalTerminator(const VPBasicBlock *VPBB) {
 }
 
 VPRecipeBase *VPBasicBlock::getTerminator() {
-  if (hasConditionalTerminator(this))
+  if (hasTerminator(this))
     return &back();
   return nullptr;
 }
 
 const VPRecipeBase *VPBasicBlock::getTerminator() const {
-  if (hasConditionalTerminator(this))
+  if (hasTerminator(this))
     return &back();
   return nullptr;
 }
@@ -1072,41 +1074,42 @@ bool VPlan::isOuterLoop() const {
 }
 
 #if !defined(NDEBUG) || defined(LLVM_ENABLE_DUMP)
-void VPlan::printLiveIns(raw_ostream &O) const {
+void VPlan::printLiveIns(raw_ostream &O, const Twine &Indent) const {
   VPSlotTracker SlotTracker(this);
 
   if (!VF.user_empty()) {
-    O << "\nLive-in ";
+    O << '\n' << Indent << "Live-in ";
     VF.printAsOperand(O, SlotTracker);
     O << " = VF";
   }
 
   if (!UF.user_empty()) {
-    O << "\nLive-in ";
+    O << '\n' << Indent << "Live-in ";
     UF.printAsOperand(O, SlotTracker);
     O << " = UF";
   }
 
   if (!VFxUF.user_empty()) {
-    O << "\nLive-in ";
+    O << '\n' << Indent << "Live-in ";
     VFxUF.printAsOperand(O, SlotTracker);
     O << " = VF * UF";
   }
 
   if (!VectorTripCount.user_empty()) {
-    O << "\nLive-in ";
+    O << '\n' << Indent << "Live-in ";
     VectorTripCount.printAsOperand(O, SlotTracker);
     O << " = vector-trip-count";
   }
 
   if (BackedgeTakenCount && !BackedgeTakenCount->user_empty()) {
-    O << "\nLive-in ";
+    O << '\n' << Indent << "Live-in ";
     BackedgeTakenCount->printAsOperand(O, SlotTracker);
     O << " = backedge-taken count";
   }
 
   O << "\n";
   if (TripCount && !TripCount->user_empty()) {
+    O << Indent;
     if (isa<VPIRValue>(TripCount))
       O << "Live-in ";
     TripCount->printAsOperand(O, SlotTracker);
@@ -1116,21 +1119,18 @@ void VPlan::printLiveIns(raw_ostream &O) const {
 }
 
 LLVM_DUMP_METHOD
-void VPlan::print(raw_ostream &O) const {
+void VPlan::print(raw_ostream &O, const Twine &Indent) const {
   VPSlotTracker SlotTracker(this);
-
-  O << "VPlan '" << getName() << "' {";
-
-  printLiveIns(O);
+  O << Indent << "VPlan '" << getName() << "' {";
+  printLiveIns(O, Indent);
 
   ReversePostOrderTraversal<VPBlockShallowTraversalWrapper<const VPBlockBase *>>
       RPOT(getEntry());
   for (const VPBlockBase *Block : RPOT) {
     O << '\n';
-    Block->print(O, "", SlotTracker);
+    Block->print(O, Indent, SlotTracker);
   }
-
-  O << "}\n";
+  O << Indent << "}\n";
 }
 
 std::string VPlan::getName() const {

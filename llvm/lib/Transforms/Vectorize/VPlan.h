@@ -428,6 +428,7 @@ public:
     VPReductionSC,
     VPReplicateSC,
     VPScalarIVStepsSC,
+    VPSpeculativeLoadOracleSC,
     VPVectorPointerSC,
     VPVectorEndPointerSC,
     VPWidenCallSC,
@@ -632,6 +633,7 @@ public:
     case VPRecipeBase::VPReductionSC:
     case VPRecipeBase::VPReplicateSC:
     case VPRecipeBase::VPScalarIVStepsSC:
+    case VPRecipeBase::VPSpeculativeLoadOracleSC:
     case VPRecipeBase::VPVectorPointerSC:
     case VPRecipeBase::VPVectorEndPointerSC:
     case VPRecipeBase::VPWidenCallSC:
@@ -1323,6 +1325,8 @@ public:
     // Represents the incoming loop-invariant alias-mask. All memory accesses
     // in the loop must stay within the active lanes.
     IncomingAliasMask,
+    // Yields a distinct scalar input, bound by its position in the entry block.
+    LiveIn,
     // Increment the canonical IV separately for each unrolled part.
     CanonicalIVIncrementForPart,
     // Abstract instruction that compares two values and branches. This is
@@ -3556,6 +3560,36 @@ public:
   }
 };
 
+/// Defines the oracle function for a @llvm.speculative.load intrinsic call. It
+/// contains a nested VPlan which is used to generate the oracle function,
+/// returning the number of bytes read by the intrinsic. The entry block holds
+/// LiveIn recipes in argument order. The oracle executes with VF=1; its lane
+/// limit is passed as an ordinary argument.
+class VPSpeculativeLoadOracleRecipe : public VPSingleDefRecipe {
+  std::unique_ptr<VPlan> OraclePlan;
+
+public:
+  explicit VPSpeculativeLoadOracleRecipe(std::unique_ptr<VPlan> Oracle);
+
+  VP_CLASSOF_IMPL(VPRecipeBase::VPSpeculativeLoadOracleSC)
+
+  VPSpeculativeLoadOracleRecipe *clone() override;
+  void execute(VPTransformState &State) override;
+
+  InstructionCost computeCost(ElementCount, VPCostContext &) const override {
+    return 0;
+  }
+
+  /// Returns the plan the oracle function is generated from.
+  const VPlan &getOraclePlan() const { return *OraclePlan; }
+
+protected:
+#if !defined(NDEBUG) || defined(LLVM_ENABLE_DUMP)
+  void printRecipe(raw_ostream &O, const Twine &Indent,
+                   VPSlotTracker &Tracker) const override;
+#endif
+};
+
 /// A recipe to combine multiple recipes into a single 'expression' recipe,
 /// which should be considered a single entity for cost-modeling and transforms.
 /// The recipe needs to be 'decomposed', i.e. replaced by its individual
@@ -5188,10 +5222,10 @@ public:
 
 #if !defined(NDEBUG) || defined(LLVM_ENABLE_DUMP)
   /// Print the live-ins of this VPlan to \p O.
-  void printLiveIns(raw_ostream &O) const;
+  void printLiveIns(raw_ostream &O, const Twine &Indent = "") const;
 
   /// Print this VPlan to \p O.
-  LLVM_ABI_FOR_TEST void print(raw_ostream &O) const;
+  LLVM_ABI_FOR_TEST void print(raw_ostream &O, const Twine &Indent = "") const;
 
   /// Print this VPlan in DOT format to \p O.
   LLVM_ABI_FOR_TEST void printDOT(raw_ostream &O) const;

@@ -167,6 +167,9 @@ const SCEV *vputils::getSCEVExprForVPValue(const VPValue *V,
   };
 
   VPValue *LHSVal, *RHSVal;
+  // Broadcast just replicates a scalar, so the SCEV is the same as its operand.
+  if (match(V, m_Broadcast(m_VPValue(LHSVal))))
+    return getSCEVExprForVPValue(LHSVal, PSE, L);
   if (match(V, m_Add(m_VPValue(LHSVal), m_VPValue(RHSVal))))
     return CreateSCEV({LHSVal, RHSVal}, [&](ArrayRef<SCEVUse> Ops) {
       return SE.getAddExpr(Ops[0], Ops[1], SCEV::FlagNone, 0);
@@ -477,8 +480,8 @@ bool vputils::isSingleScalar(const VPValue *VPV) {
             all_of(VPI->operands(), isSingleScalar));
   if (auto *RR = dyn_cast<VPReductionRecipe>(VPV))
     return !RR->isPartialReduction();
-  if (isa<VPVectorPointerRecipe, VPVectorEndPointerRecipe, VPDerivedIVRecipe>(
-          VPV))
+  if (isa<VPVectorPointerRecipe, VPVectorEndPointerRecipe, VPDerivedIVRecipe,
+          VPSpeculativeLoadOracleRecipe>(VPV))
     return true;
   if (auto *Expr = dyn_cast<VPExpressionRecipe>(VPV))
     return Expr->isVectorToScalar();
@@ -612,6 +615,13 @@ VPValue *vputils::findIncomingAliasMask(const VPlan &Plan) {
   for (VPRecipeBase &R : *Plan.getVectorPreheader())
     if (match(&R, m_VPInstruction<VPInstruction::IncomingAliasMask>()))
       return cast<VPInstruction>(&R);
+  return nullptr;
+}
+
+VPSpeculativeLoadOracleRecipe *vputils::findSpeculativeLoadOracle(VPlan &Plan) {
+  for (VPRecipeBase &R : *Plan.getVectorPreheader())
+    if (auto *Oracle = dyn_cast<VPSpeculativeLoadOracleRecipe>(&R))
+      return Oracle;
   return nullptr;
 }
 
