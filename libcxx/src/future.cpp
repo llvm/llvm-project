@@ -133,6 +133,8 @@ future<void>::~future() {
 }
 
 void future<void>::get() {
+  if (__state_ == nullptr)
+    std::__throw_future_error(future_errc::no_state);
   unique_ptr<__shared_count, __release_shared_count> __(__state_);
   __assoc_sub_state* __s = __state_;
   __state_               = nullptr;
