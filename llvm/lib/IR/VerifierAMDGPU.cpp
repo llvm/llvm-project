@@ -70,6 +70,21 @@ void llvm::verifyAMDGPUModuleFlag(VerifierSupport &VS, const MDString *ID,
           "'" + ID->getString() + "' module flag must be 0 or 1");
     return;
   }
+
+  if (FlagName == "lds.size.limit") {
+    Check(MFB == Module::Error,
+          "'" + ID->getString() +
+              "' module flag must use 'error' merge behaviour");
+    ConstantInt *Value =
+        mdconst::dyn_extract_or_null<ConstantInt>(Op->getOperand(2));
+    Check(Value, "'" + ID->getString() +
+                     "' module flag must have a constant integer value");
+    uint64_t Limit = Value->getZExtValue();
+    Check(Value->getType()->isIntegerTy(32) &&
+              (Limit == 65536 || Limit == 131072),
+          "'" + ID->getString() + "' module flag must be i32 65536 or 131072");
+    return;
+  }
 }
 
 // Verify that when a function has !reqd_work_group_size metadata, it also has

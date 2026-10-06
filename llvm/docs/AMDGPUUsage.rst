@@ -1054,6 +1054,17 @@ consumed by the AMDGPU backend during code generation.
        produce an error. Modules with **any** (absent flag) are compatible
        with any setting.
 
+   * - ``amdgpu.lds.size.limit``
+     - ``i32``
+     - Error
+     - Limits the LDS size which one work-group can use. If it is smaller
+       than the hardware maximum, code generation uses it instead. The value
+       is for FullSIMD mode. When not in FullSIMD mode, half of it is
+       available.
+
+       Allowed values are ``65536`` and ``131072``. When the flag is absent,
+       the hardware maximum is used.
+
 .. note::
 
    Frontends that require misaligned-access merging for performance should

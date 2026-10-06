@@ -92,6 +92,9 @@ protected:
   bool ScalarizeGlobal = false;
   const bool BufferOOBRelaxed;
   const bool TBufferOOBRelaxed;
+  /// LDS size limit in bytes from the "amdgpu.lds.size.limit" module flag, 0
+  /// if there is no limit.
+  const unsigned LDSSizeLimit;
 
   /// The maximum number of instructions that may be placed within an S_CLAUSE,
   /// which is one greater than the maximum argument to S_CLAUSE. A value of 0
@@ -121,7 +124,8 @@ public:
       const Triple &TT, StringRef GPU, StringRef FS, const GCNTargetMachine &TM,
       bool BufferOOBRelaxed = false, bool TBufferOOBRelaxed = false,
       AMDGPU::TargetIDSetting XnackSetting = AMDGPU::TargetIDSetting::Any,
-      AMDGPU::TargetIDSetting SramEccSetting = AMDGPU::TargetIDSetting::Any);
+      AMDGPU::TargetIDSetting SramEccSetting = AMDGPU::TargetIDSetting::Any,
+      unsigned LDSSizeLimit = 0);
   ~GCNSubtarget() override;
 
   GCNSubtarget &initializeSubtargetDependencies(const Triple &TT, StringRef GPU,
