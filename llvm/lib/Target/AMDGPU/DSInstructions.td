@@ -1110,7 +1110,7 @@ class DS128Bit8ByteAlignedWritePat<DS_Pseudo inst, ValueType vt, PatFrag frag> :
 >;
 
 multiclass DS64Bit4ByteAlignedPat_mc<ValueType vt> {
-  let OtherPredicates = [LDSRequiresM0Init, isGFX7Plus] in {
+  let SubtargetPredicate = HasUsableDSOffset, OtherPredicates = [LDSRequiresM0Init] in {
     def : DS64Bit4ByteAlignedReadPat<DS_READ2_B32, vt, load_local_m0>;
     def : DS64Bit4ByteAlignedWritePat<DS_WRITE2_B32, vt, store_local_m0>;
   }
@@ -1127,7 +1127,7 @@ multiclass DS64Bit4ByteAlignedPat_mc<ValueType vt> {
 }
 
 multiclass DS128Bit8ByteAlignedPat_mc<ValueType vt> {
-  let OtherPredicates = [LDSRequiresM0Init, isGFX7Plus] in {
+  let SubtargetPredicate = HasUsableDSOffset, OtherPredicates = [LDSRequiresM0Init] in {
     def : DS128Bit8ByteAlignedReadPat<DS_READ2_B64, vt, load_local_m0>;
     def : DS128Bit8ByteAlignedWritePat<DS_WRITE2_B64, vt, store_local_m0>;
   }
