@@ -316,6 +316,7 @@ static bool foldVGPRCopyIntoRegSequence(MachineInstr &MI,
   if (SubReg != AMDGPU::NoSubRegister)
     return false;
 
+  MRI.setRegClass(DstReg, DstRC);
   MRI.replaceRegWith(DstReg, CopyUse.getOperand(0).getReg());
 
   // SGPRx = ...
