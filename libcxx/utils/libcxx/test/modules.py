@@ -19,9 +19,8 @@ SkipDeclarations = dict()
 # See comment in the header.
 SkipDeclarations["cuchar"] = ["std::mbstate_t", "std::size_t"]
 
-# Not in the synopsis. std::mbstate_t is provided via __fwd/mbstate_t.h which
-# is not directly scanned by the header exportable declarations check.
-SkipDeclarations["cwchar"] = ["std::FILE", "std::mbstate_t"]
+# Not in the synopsis.
+SkipDeclarations["cwchar"] = ["std::FILE"]
 
 # The operators are added for private types like __iom_t10.
 SkipDeclarations["iomanip"] = ["std::operator<<", "std::operator>>"]
@@ -89,8 +88,12 @@ ExtraHeader["functional"] = "v1/__compare/compare_three_way.h$"
 ExtraHeader["flat_set"] = "v1/__flat_map/sorted_.+.h$"
 
 # Some C compatibility headers define std::size_t, which is in <__cstddef/size_t.h>
-for header in ("cstdio", "cstdlib", "cstring", "ctime", "cuchar", "cwchar"):
+for header in ("cstdio", "cstdlib", "cstring", "ctime", "cuchar"):
     ExtraHeader[header] = "v1/__cstddef/size_t.h$"
+
+# cwchar also needs __fwd/mbstate_t.h because mbstate_t is provided there
+# rather than directly in wchar.h on most platforms.
+ExtraHeader["cwchar"] = "v1/__cstddef/size_t.h$|v1/__fwd/mbstate_t.h$"
 
 
 # newline needs to be escaped for the module partition output.
