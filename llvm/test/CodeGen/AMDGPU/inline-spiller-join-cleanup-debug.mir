@@ -1,5 +1,5 @@
-# RUN: llc -mtriple=amdgcn-amd-amdhsa -mcpu=gfx950 -run-pass=greedy,virtregrewriter -stress-regalloc=4 -verify-machineinstrs -verify-regalloc -enable-spill-join-cleanup=false %s -o - | FileCheck %s --check-prefixes=CHECK,OFF
-# RUN: llc -mtriple=amdgcn-amd-amdhsa -mcpu=gfx950 -run-pass=greedy,virtregrewriter -stress-regalloc=4 -verify-machineinstrs -verify-regalloc %s -o - | FileCheck %s --check-prefixes=CHECK,ON
+# RUN: llc -mtriple=amdgcn-amd-amdhsa -mcpu=gfx950 -run-pass=greedy,virt-reg-rewriter -stress-regalloc=4 -verify-machineinstrs -verify-regalloc -enable-spill-join-cleanup=false %s -o - | FileCheck %s --check-prefixes=CHECK,OFF
+# RUN: llc -mtriple=amdgcn-amd-amdhsa -mcpu=gfx950 -run-pass=greedy,virt-reg-rewriter -stress-regalloc=4 -verify-machineinstrs -verify-regalloc %s -o - | FileCheck %s --check-prefixes=CHECK,ON
 # RUN: llc -mtriple=amdgcn-amd-amdhsa -mcpu=gfx950 -passes=greedy,virt-reg-rewriter -stress-regalloc=4 -verify-machineinstrs -verify-regalloc -enable-spill-join-cleanup=false %s -o - | FileCheck %s --check-prefixes=CHECK,OFF
 # RUN: llc -mtriple=amdgcn-amd-amdhsa -mcpu=gfx950 -passes=greedy,virt-reg-rewriter -stress-regalloc=4 -verify-machineinstrs -verify-regalloc %s -o - | FileCheck %s --check-prefixes=CHECK,ON
 # The allocator creates a split register with definitions on both incoming
