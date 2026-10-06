@@ -590,7 +590,7 @@ class MapInfoFinalizationPass
         isRefPtee ? parentOp.getMembersIndexAttr() : mlir::ArrayAttr{},
         parentOp.getBounds(),
         /*mapperId=*/mapperId,
-        /*name=*/parentOp.getNameAttr(),
+        /*name=*/builder.getStringAttr(""),
         /*partial_map=*/builder.getBoolAttr(false));
   }
 
