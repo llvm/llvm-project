@@ -10,6 +10,7 @@
 #define LLDB_LLDB_DEFINES_H
 
 #include "lldb/lldb-types.h"
+#include "lldb/lldb-version.h"
 
 #if !defined(INT32_MAX)
 #define INT32_MAX 2147483647
@@ -22,13 +23,6 @@
 #if !defined(UINT64_MAX)
 #define UINT64_MAX 18446744073709551615ULL
 #endif
-
-// LLDB version
-//
-// A build script phase can modify this version number if needed.
-//#define LLDB_VERSION
-//#define LLDB_REVISION
-//#define LLDB_VERSION_STRING
 
 // LLDB defines
 #define LLDB_GENERIC_ERROR UINT32_MAX
