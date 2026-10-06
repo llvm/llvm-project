@@ -73,6 +73,11 @@ class TracePC {
   void HandlePCsInit(const uintptr_t *Start, const uintptr_t *Stop);
   void HandleCallerCallee(uintptr_t Caller, uintptr_t Callee);
   template <class T> void HandleCmp(uintptr_t PC, T Arg1, T Arg2);
+  // Fold a dataflow value observed at a call-argument / return site into the
+  // value profile (trace-args / trace-ret). Loc distinguishes arguments/returns
+  // that share the same PC; Offsets/NumFields (when non-null) decompose a struct.
+  void HandleDataflow(uintptr_t PC, uint32_t Loc, const void *Ptr, uint32_t Size,
+                      const uint64_t *Offsets, uint32_t NumFields);
   size_t GetTotalPCCoverage();
   void SetUseCounters(bool UC) { UseCounters = UC; }
   void SetUseValueProfileMask(uint32_t VPMask) { UseValueProfileMask = VPMask; }
