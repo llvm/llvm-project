@@ -9,14 +9,14 @@ define void @splat_subtree_too_costly(ptr %srcGrid, i64 %idx, double %conv) {
 ; CHECK-NEXT:    [[TMP0:%.*]] = insertelement <2 x double> <double poison, double -0.000000e+00>, double [[CONV:%.*]], i64 0
 ; CHECK-NEXT:    br label [[FOR_BODY:%.*]]
 ; CHECK:       for.body:
+; CHECK-NEXT:    [[ADD68:%.*]] = fadd double [[CONV]], 5.000000e-01
 ; CHECK-NEXT:    [[GEP0:%.*]] = getelementptr [8 x i8], ptr [[SRCGRID:%.*]], i64 [[IDX:%.*]]
 ; CHECK-NEXT:    [[ARRAYIDX269:%.*]] = getelementptr i8, ptr [[GEP0]], i64 88
 ; CHECK-NEXT:    [[TMP1:%.*]] = call <2 x double> @llvm.fmuladd.v2f64(<2 x double> [[TMP0]], <2 x double> <double 4.500000e+00, double 0.000000e+00>, <2 x double> <double 3.000000e+00, double 0.000000e+00>)
-; CHECK-NEXT:    [[ADD68:%.*]] = fadd double [[CONV]], 5.000000e-01
 ; CHECK-NEXT:    [[TMP2:%.*]] = extractelement <2 x double> [[TMP1]], i64 0
 ; CHECK-NEXT:    [[C3:%.*]] = call double @llvm.fmuladd.f64(double [[TMP2]], double 2.000000e+00, double 1.000000e-01)
-; CHECK-NEXT:    [[MUL217:%.*]] = fmul double [[ADD68]], 2.500000e-01
 ; CHECK-NEXT:    [[MUL162:%.*]] = fmul double [[C3]], 1.500000e+00
+; CHECK-NEXT:    [[MUL217:%.*]] = fmul double [[ADD68]], 2.500000e-01
 ; CHECK-NEXT:    [[TMP3:%.*]] = shufflevector <2 x double> [[TMP1]], <2 x double> <double -1.000000e+00, double poison>, <2 x i32> <i32 2, i32 0>
 ; CHECK-NEXT:    [[TMP4:%.*]] = fsub <2 x double> [[TMP1]], [[TMP3]]
 ; CHECK-NEXT:    [[TMP5:%.*]] = call <2 x double> @llvm.fmuladd.v2f64(<2 x double> [[TMP4]], <2 x double> splat (double 4.500000e+00), <2 x double> splat (double 3.000000e+00))

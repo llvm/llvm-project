@@ -524,7 +524,6 @@ public:
   /// replacing \p MI with new instructions, even though this function does not
   /// remove MI.
   virtual MachineInstr *convertToThreeAddress(MachineInstr &MI,
-                                              LiveVariables *LV,
                                               LiveIntervals *LIS) const {
     return nullptr;
   }
@@ -1118,10 +1117,12 @@ public:
   /// (non-PC) registers as offsets or scaling values, which inherently
   /// tags the corresponding MachineOperand with OPERAND_PCREL.
   ///
-  /// @param MO The MachineOperand in question. MO.isReg() should always
-  /// be true.
+  /// @param MI The instruction containing the operand in question.
+  /// @param OpIdx The index of the operand in question. It should always be a
+  /// register operand.
   /// @return Whether this operand is allowed to be used PC-relatively.
-  virtual bool isPCRelRegisterOperandLegal(const MachineOperand &MO) const {
+  virtual bool isPCRelRegisterOperandLegal(const MachineInstr &MI,
+                                           unsigned OpIdx) const {
     return false;
   }
 

@@ -218,6 +218,11 @@ static unsigned getMaxVGPRs(unsigned LDSBytes, const TargetMachine &TM,
       ST.getWavesPerEU(ST.getFlatWorkGroupSizes(F), LDSBytes, F).first,
       DynamicVGPRBlockSize);
 
+  // A DVGPR wave launches with a single VGPR block allocated.
+  if (DynamicVGPRBlockSize != 0 &&
+      AMDGPU::isEntryFunctionCC(F.getCallingConv()))
+    MaxVGPRs = std::min(MaxVGPRs, DynamicVGPRBlockSize);
+
   // A non-entry function has only 32 caller preserved registers.
   // Do not promote alloca which will force spilling unless we know the function
   // will be inlined.
@@ -629,9 +634,8 @@ static Value *promoteAllocaUserToVector(Instruction *Inst, const DataLayout &DL,
                                         function_ref<Value *()> GetCurVal) {
   // Note: we use InstSimplifyFolder because it can leverage the DataLayout
   // to do more folding, especially in the case of vector splats.
-  IRBuilder<InstSimplifyFolder> Builder(Inst->getContext(),
+  IRBuilder<InstSimplifyFolder> Builder(Inst->getIterator(),
                                         InstSimplifyFolder(DL));
-  Builder.SetInsertPoint(Inst);
 
   Type *VecEltTy = AA.Vector.Ty->getElementType();
 
@@ -912,6 +916,27 @@ static BasicBlock::iterator skipToNonAllocaInsertPt(BasicBlock &BB,
   return I;
 }
 
+/// Peel nested aggregates down to a single uniform element type, multiplying
+/// NumElems by the element count of each layer peeled.
+static Type *peelAggregateToElementType(Type *Ty, uint64_t &NumElems) {
+  while (true) {
+    if (auto *ArrayTy = dyn_cast<ArrayType>(Ty)) {
+      NumElems *= ArrayTy->getNumElements();
+      Ty = ArrayTy->getElementType();
+      continue;
+    }
+
+    auto *StructTy = dyn_cast<StructType>(Ty);
+    if (!StructTy || !StructTy->containsHomogeneousTypes())
+      break;
+
+    NumElems *= StructTy->getNumElements();
+    Ty = StructTy->getElementType(0);
+  }
+
+  return Ty;
+}
+
 FixedVectorType *
 AMDGPUPromoteAllocaImpl::getVectorTypeForAlloca(Type *AllocaTy) const {
   if (DisablePromoteAllocaToVector) {
@@ -920,13 +945,9 @@ AMDGPUPromoteAllocaImpl::getVectorTypeForAlloca(Type *AllocaTy) const {
   }
 
   auto *VectorTy = dyn_cast<FixedVectorType>(AllocaTy);
-  if (auto *ArrayTy = dyn_cast<ArrayType>(AllocaTy)) {
+  if (AllocaTy->isAggregateType()) {
     uint64_t NumElems = 1;
-    Type *ElemTy;
-    do {
-      NumElems *= ArrayTy->getNumElements();
-      ElemTy = ArrayTy->getElementType();
-    } while ((ArrayTy = dyn_cast<ArrayType>(ElemTy)));
+    Type *ElemTy = peelAggregateToElementType(AllocaTy, NumElems);
 
     // Check for array of vectors
     auto *InnerVectorTy = dyn_cast<FixedVectorType>(ElemTy);
@@ -1342,7 +1363,6 @@ static bool isCallPromotable(CallInst *CI) {
   case Intrinsic::invariant_start:
   case Intrinsic::invariant_end:
   case Intrinsic::launder_invariant_group:
-  case Intrinsic::strip_invariant_group:
   case Intrinsic::objectsize:
     return true;
   default:
@@ -1749,8 +1769,7 @@ bool AMDGPUPromoteAllocaImpl::tryPromoteAllocaToLDS(
     }
     case Intrinsic::invariant_start:
     case Intrinsic::invariant_end:
-    case Intrinsic::launder_invariant_group:
-    case Intrinsic::strip_invariant_group: {
+    case Intrinsic::launder_invariant_group: {
       assert(Intr->getArgOperand(Intr->arg_size() - 1)->getType() == NewPtrTy &&
              "pointer operand should already have been promoted");
       Function *NewF = Intrinsic::getOrInsertDeclaration(

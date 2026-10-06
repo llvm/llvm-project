@@ -2121,12 +2121,11 @@ defm debug_run_lifetime_safety : BoolFOption<
   NegFlag<SetFalse, [], [CC1Option], "Disable">,
   BothFlags<[], [CC1Option], " lifetime safety analysis for C++. Warnings are still controlled by -Wlifetime-safety. Primarily used to surface crashes or compile-time regressions without showing analysis findings.">>;
 
-defm experimental_lifetime_safety_c : BoolFOption<
-    "experimental-lifetime-safety-c",
-    LangOpts<"EnableLifetimeSafetyInC">, DefaultFalse,
-    PosFlag<SetTrue, [], [CC1Option], "Enable">,
-    NegFlag<SetFalse, [], [CC1Option], "Disable">,
-    BothFlags<[], [CC1Option], " experimental lifetime safety analysis for C">>;
+defm lifetime_safety_c : BoolFOption<
+    "lifetime-safety-c",
+    LangOpts<"EnableLifetimeSafetyInC">, DefaultTrue,
+    NegFlag<SetFalse, [], [ClangOption, CC1Option]>,
+    PosFlag<SetTrue, [], [ClangOption], "Enable lifetime safety analysis for C">>;
 
 def lifetime_safety_max_cfg_blocks
     : Joined<["-"], "lifetime-safety-max-cfg-blocks=">,
@@ -2221,6 +2220,12 @@ defm define_target_os_macros : OptInCC1FFlag<"define-target-os-macros",
 def fparse_all_comments : Flag<["-"], "fparse-all-comments">, Group<f_clang_Group>,
   Visibility<[ClangOption, CC1Option]>,
   MarshallingInfoFlag<LangOpts<"CommentOpts.ParseAllComments">>;
+def fretain_comments : Flag<["-"], "fretain-comments">, Group<f_clang_Group>,
+  Visibility<[ClangOption, CC1Option]>,
+  HelpText<"Retain documentation comments in the AST even when no diagnostic or "
+           "language option would otherwise require them (e.g. for tools that "
+           "query comments after parsing)">,
+  MarshallingInfoFlag<LangOpts<"CommentOpts.RetainComments">>;
 def frecord_command_line : Flag<["-"], "frecord-command-line">,
   DocBrief<[{Generate a section named ".GCC.command.line" containing the
 driver command-line. After linking, the section may contain multiple command
@@ -2661,6 +2666,18 @@ def fmemory_profile_use_EQ : Joined<["-"], "fmemory-profile-use=">,
     MetaVarName<"<pathname>">,
     HelpText<"Use memory profile for profile-guided memory optimization">,
     MarshallingInfoString<CodeGenOpts<"MemoryProfileUsePath">>;
+
+defm copyprof : BoolFOption<"copyprof",
+  CodeGenOpts<"CopyProf">, DefaultFalse,
+  PosFlag<SetTrue, [], [ClangOption, CC1Option], "Enable">,
+  NegFlag<SetFalse, [], [ClangOption], "Disable">,
+  BothFlags<[], [ClangOption], " copy profiling">>;
+def fcopyprof_static_size_threshold_EQ
+    : Joined<["-"], "fcopyprof-static-size-threshold=">,
+      Group<f_Group>, Visibility<[ClangOption, CC1Option]>,
+      MetaVarName<"<N>">,
+      HelpText<"Minimum C++ object size in bytes to enable CopyProf instrumentation (default: 16).">,
+      MarshallingInfoInt<CodeGenOpts<"CopyProfStaticSizeThreshold">, "16">;
 
 // Begin sanitizer flags. These should all be core options exposed in all driver
 // modes.
@@ -3958,7 +3975,7 @@ defm implicit_modules : BoolFOption<"implicit-modules",
           [NoXarchOption], [ClangOption, CLOption]>>;
 def fretain_comments_from_system_headers : Flag<["-"], "fretain-comments-from-system-headers">, Group<f_Group>,
   Visibility<[ClangOption, CC1Option]>,
-  MarshallingInfoFlag<LangOpts<"RetainCommentsFromSystemHeaders">>;
+  MarshallingInfoFlag<LangOpts<"CommentOpts.RetainCommentsFromSystemHeaders">>;
 def fmodule_header : Flag <["-"], "fmodule-header">, Group<f_Group>,
   Visibility<[ClangOption, CLOption]>,
   HelpText<"Build a C++20 Header Unit from a header">;
@@ -5089,10 +5106,10 @@ defm unique_basic_block_section_names : BoolFOption<"unique-basic-block-section-
   NegFlag<SetFalse>>;
 defm unique_internal_linkage_names : BoolFOption<"unique-internal-linkage-names",
   CodeGenOpts<"UniqueInternalLinkageNames">, DefaultFalse,
-  PosFlag<SetTrue, [], [ClangOption, CC1Option],
+  PosFlag<SetTrue, [], [ClangOption, CC1Option, FlangOption, FC1Option],
           "Uniqueify Internal Linkage Symbol Names by appending"
             " the MD5 hash of the module path">,
-  NegFlag<SetFalse>>;
+  NegFlag<SetFalse, [], [ClangOption, CC1Option, FlangOption]>>;
 defm unique_section_names : BoolFOption<"unique-section-names",
   CodeGenOpts<"UniqueSectionNames">, DefaultTrue,
   NegFlag<SetFalse, [], [ClangOption, CC1Option],
@@ -7410,6 +7427,8 @@ def mavx10_1 : Flag<["-"], "mavx10.1">, Group<m_x86_Features_Group>;
 def mno_avx10_1 : Flag<["-"], "mno-avx10.1">, Group<m_x86_Features_Group>;
 def mavx10_2 : Flag<["-"], "mavx10.2">, Group<m_x86_Features_Group>;
 def mno_avx10_2 : Flag<["-"], "mno-avx10.2">, Group<m_x86_Features_Group>;
+def mavx10v2aux : Flag<["-"], "mavx10v2aux">, Group<m_x86_Features_Group>;
+def mno_avx10v2aux : Flag<["-"], "mno-avx10v2aux">, Group<m_x86_Features_Group>;
 def mavx2 : Flag<["-"], "mavx2">, Group<m_x86_Features_Group>;
 def mno_avx2 : Flag<["-"], "mno-avx2">, Group<m_x86_Features_Group>;
 def mavx512f : Flag<["-"], "mavx512f">, Group<m_x86_Features_Group>;
@@ -8645,6 +8664,13 @@ def ast_dump_filter : Separate<["-"], "ast-dump-filter">,
   MarshallingInfoString<FrontendOpts<"ASTDumpFilter">>;
 def ast_dump_filter_EQ : Joined<["-"], "ast-dump-filter=">,
   Alias<ast_dump_filter>;
+def ast_dump_filter_path : Separate<["-"], "ast-dump-filter-path">,
+  MetaVarName<"<path_filter>">,
+  HelpText<"Use with '-ast-dump' or '-ast-print' to dump/print only AST declaration"
+           " nodes whose source file path matches a glob pattern.">,
+  MarshallingInfoString<FrontendOpts<"ASTDumpFilterPath">>;
+def ast_dump_filter_path_EQ : Joined<["-"], "ast-dump-filter-path=">,
+  Alias<ast_dump_filter_path>;
 def fno_modules_global_index : Flag<["-"], "fno-modules-global-index">,
   HelpText<"Do not automatically generate or update the global module index">,
   MarshallingInfoNegativeFlag<FrontendOpts<"UseGlobalModuleIndex">>;
@@ -9842,6 +9868,7 @@ def _SLASH_await : CLFlag<"await">;
 def _SLASH_await_COLON : CLJoined<"await:">;
 def _SLASH_constexpr : CLJoined<"constexpr:">;
 def _SLASH_AI : CLJoinedOrSeparate<"AI">;
+def _SLASH_BE : CLFlag<"BE">;
 def _SLASH_Bt : CLFlag<"Bt">;
 def _SLASH_Bt_plus : CLFlag<"Bt+">;
 def _SLASH_clr : CLJoined<"clr">;
