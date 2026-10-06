@@ -1675,7 +1675,6 @@ void GISelValueTracking::computeKnownFPClass(Register R,
   case TargetOpcode::G_FCEIL:
   case TargetOpcode::G_FRINT:
   case TargetOpcode::G_FNEARBYINT:
-  case TargetOpcode::G_INTRINSIC_FPTRUNC_ROUND:
   case TargetOpcode::G_INTRINSIC_ROUND:
   case TargetOpcode::G_INTRINSIC_ROUNDEVEN:
   case TargetOpcode::G_INTRINSIC_TRUNC: {
@@ -2013,9 +2012,24 @@ void GISelValueTracking::computeKnownFPClass(Register R,
     if (R != MI.getOperand(0).getReg())
       break;
     Register Src = MI.getOperand(2).getReg();
+    FPClassTest InterestedSrcs = InterestedClasses;
+
+    // Positive subnormals and negative subnormals could become positive zero.
+    if (InterestedClasses & fcPosZero)
+      InterestedSrcs |= fcSubnormal;
+
+    // Negative subnormals could become negative zero.
+    if (InterestedClasses & fcNegZero)
+      InterestedSrcs |= fcNegSubnormal;
+
+    if (InterestedClasses & fcPosNormal)
+      InterestedSrcs |= fcPosSubnormal;
+
+    if (InterestedClasses & fcNegNormal)
+      InterestedSrcs |= fcNegSubnormal;
+
     KnownFPClass KnownSrc;
-    computeKnownFPClass(Src, DemandedElts, InterestedClasses, KnownSrc,
-                        Depth + 1);
+    computeKnownFPClass(Src, DemandedElts, InterestedSrcs, KnownSrc, Depth + 1);
     DenormalMode Mode =
         MF->getDenormalMode(getFltSemanticForLLT(DstTy.getScalarType()));
     Known = KnownFPClass::frexp_mant(KnownSrc, Mode);
@@ -2035,7 +2049,8 @@ void GISelValueTracking::computeKnownFPClass(Register R,
     Known = KnownFPClass::fpext(KnownSrc, DstSem, SrcSem);
     break;
   }
-  case TargetOpcode::G_FPTRUNC: {
+  case TargetOpcode::G_FPTRUNC:
+  case TargetOpcode::G_INTRINSIC_FPTRUNC_ROUND: {
     computeKnownFPClassForFPTrunc(MI, DemandedElts, InterestedClasses, Known,
                                   Depth);
     break;

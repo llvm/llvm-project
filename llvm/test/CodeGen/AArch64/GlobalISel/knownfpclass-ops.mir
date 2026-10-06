@@ -108,6 +108,20 @@ body:             |
     %copy:_(s32) = COPY %trunc
 ...
 ---
+# f0x35800000 is 0x1p-20, which is normal in f32 and subnormal in f16.
+# RoundingMode::NearestTiesToEven is encoded as 1 in MIR.
+name:            CstPosNormalFPTruncRound
+body:             |
+  bb.0:
+  ; CHECK-LABEL: name: @CstPosNormalFPTruncRound
+  ; CHECK-NEXT: %src:_ FPClasses:(pnorm) SignBitKnown:0
+  ; CHECK-NEXT: %trunc:_ FPClasses:(pinf zero psub pnorm) SignBitKnown:?
+  ; CHECK-NEXT: %copy:_ FPClasses:(pinf zero psub pnorm) SignBitKnown:?
+    %src:_(s32) = G_FCONSTANT float f0x35800000
+    %trunc:_(s16) = G_INTRINSIC_FPTRUNC_ROUND %src, 1
+    %copy:_(s16) = COPY %trunc
+...
+---
 name:            CstVecZeroFPTrunc
 body:             |
   bb.0:
@@ -614,6 +628,36 @@ body:             |
     %copy:_(s32) = COPY %flog
 ...
 ---
+name:            FExpNegSubnormal
+body:             |
+  bb.0:
+  ; CHECK-LABEL: name: @FExpNegSubnormal
+  ; CHECK-NEXT: %subnormal:_ FPClasses:(psub) SignBitKnown:0
+  ; CHECK-NEXT: %negative_subnormal:_ FPClasses:(nsub) SignBitKnown:1
+  ; CHECK-NEXT: %exp:_ FPClasses:(pnorm) SignBitKnown:0
+  ; CHECK-NEXT: %copy:_ FPClasses:(pnorm) SignBitKnown:0
+    %subnormal:_(s32) = G_FCONSTANT float f0x00000001
+    %negative_subnormal:_(s32) = G_FNEG %subnormal
+    %exp:_(s32) = G_FEXP %negative_subnormal
+    %copy:_(s32) = COPY %exp
+...
+---
+name:            FExp2Positive
+body:             |
+  bb.0:
+  ; CHECK-LABEL: name: @FExp2Positive
+  ; CHECK-NEXT: %ptr:_ FPClasses:(all) SignBitKnown:?
+  ; CHECK-NEXT: %val:_ FPClasses:(all) SignBitKnown:?
+  ; CHECK-NEXT: %positive:_ FPClasses:(pinf pzero psub pnorm) SignBitKnown:0
+  ; CHECK-NEXT: %exp2:_ FPClasses:(pinf pnorm) SignBitKnown:0
+  ; CHECK-NEXT: %copy:_ FPClasses:(pinf pnorm) SignBitKnown:0
+    %ptr:_(p0) = G_IMPLICIT_DEF
+    %val:_(s32) = G_LOAD %ptr(p0) :: (load (s32))
+    %positive:_(s32) = nnan G_FABS %val
+    %exp2:_(s32) = G_FEXP2 %positive
+    %copy:_(s32) = COPY %exp2
+...
+---
 name:            CopyFabs
 body:             |
   bb.0:
@@ -664,6 +708,23 @@ body:             |
     %fabs:_(s32) = G_FABS %val
     %fldexp:_(s32) = G_FLDEXP %fabs, %exp
     %copy:_(s32) = COPY %fldexp
+...
+---
+name:            FFrexp
+body:             |
+  bb.0:
+  ; CHECK-LABEL: name: @FFrexp
+  ; CHECK-NEXT: %ptr:_ FPClasses:(all) SignBitKnown:?
+  ; CHECK-NEXT: %val:_ FPClasses:(all) SignBitKnown:?
+  ; CHECK-NEXT: %fabs:_ FPClasses:(pzero psub pnorm) SignBitKnown:0
+  ; CHECK-NEXT: %frexp_mant:_ FPClasses:(pzero pnorm) SignBitKnown:0
+  ; CHECK-NEXT: %frexp_exp:_ FPClasses:(all) SignBitKnown:?
+  ; CHECK-NEXT: %copy:_ FPClasses:(pzero pnorm) SignBitKnown:0
+    %ptr:_(p0) = G_IMPLICIT_DEF
+    %val:_(s32) = G_LOAD %ptr(p0) :: (load (s32))
+    %fabs:_(s32) = nnan ninf G_FABS %val
+    %frexp_mant:_(s32), %frexp_exp:_(s32) = G_FFREXP %fabs
+    %copy:_(s32) = COPY %frexp_mant
 ...
 ---
 name:            FPowPos

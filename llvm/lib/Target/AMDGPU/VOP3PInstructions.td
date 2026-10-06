@@ -300,12 +300,17 @@ multiclass MadFmaMixFP32Pats<SDPatternOperator fma_like,
               DSTCLAMP.NONE)>;
 }
 
+// The mix instructions round the f32 result again when they write the f16 or
+// bf16 destination, so these folds match a separate convert exactly.
 multiclass MadFmaMixFP16Pats<SDPatternOperator fma_like,
                              Instruction mixlo_inst,
                              Instruction mixhi_inst,
                              ValueType VT = f16,
                              ValueType vecVT = v2f16> {
   defvar VOP3PMadMixModsPat = !if (!eq(VT, bf16), VOP3PMadMixBF16Mods, VOP3PMadMixMods);
+  defvar VOP3PMadMixModsNegPat = !if (!eq(VT, bf16), VOP3PMadMixBF16ModsNeg, VOP3PMadMixModsNeg);
+  defvar OneImm = !if (!eq(VT, bf16), CONST.BF16_ONE, CONST.FP16_ONE);
+  defvar ImmMods = !if (!eq(VT, bf16), !or(SRCMODS.OP_SEL_0, SRCMODS.OP_SEL_1), SRCMODS.OP_SEL_1);
   def : GCNPat <
     (AMDGPUclamp (build_vector
       (VT (fpround (fma_like (f32 (VOP3PMadMixModsPat VT:$lo_src0, i32:$lo_src0_modifiers)),
@@ -341,6 +346,48 @@ multiclass MadFmaMixFP16Pats<SDPatternOperator fma_like,
     (vecVT (mixhi_inst $src0_modifiers, $src0,
                        $src1_modifiers, $src1,
                        (i32 SRCMODS.NEG), (i32 0),
+                       DSTCLAMP.NONE,
+                       VGPR_32:$elt0))
+  >;
+
+  // (fadd x, y) -> (fma x, 1.0, y)
+  def : GCNPat <
+    (VT (fpround (fadd (f32 (VOP3PMadMixModsPat f32:$src0, i32:$src0_modifiers)),
+                       (f32 (VOP3PMadMixModsPat f32:$src1, i32:$src1_modifiers))))),
+    (mixlo_inst $src0_modifiers, $src0,
+                (i32 ImmMods), (i32 OneImm),
+                $src1_modifiers, $src1,
+                DSTCLAMP.NONE,
+                (i32 (IMPLICIT_DEF)))
+  >;
+
+  def : GCNPat <
+    (build_vector VT:$elt0, (VT (fpround (fadd (f32 (VOP3PMadMixModsPat f32:$src0, i32:$src0_modifiers)),
+                                          (f32 (VOP3PMadMixModsPat f32:$src1, i32:$src1_modifiers)))))),
+    (vecVT (mixhi_inst $src0_modifiers, $src0,
+                       (i32 ImmMods), (i32 OneImm),
+                       $src1_modifiers, $src1,
+                       DSTCLAMP.NONE,
+                       VGPR_32:$elt0))
+  >;
+
+  // (fsub x, y) -> (fma (-y), 1.0, x)
+  def : GCNPat <
+    (VT (fpround (fsub (f32 (VOP3PMadMixModsPat f32:$src0, i32:$src0_modifiers)),
+                       (f32 (VOP3PMadMixModsNegPat f32:$src1, i32:$src1_modifiers))))),
+    (mixlo_inst $src1_modifiers, $src1,
+                (i32 ImmMods), (i32 OneImm),
+                $src0_modifiers, $src0,
+                DSTCLAMP.NONE,
+                (i32 (IMPLICIT_DEF)))
+  >;
+
+  def : GCNPat <
+    (build_vector VT:$elt0, (VT (fpround (fsub (f32 (VOP3PMadMixModsPat f32:$src0, i32:$src0_modifiers)),
+                                          (f32 (VOP3PMadMixModsNegPat f32:$src1, i32:$src1_modifiers)))))),
+    (vecVT (mixhi_inst $src1_modifiers, $src1,
+                       (i32 ImmMods), (i32 OneImm),
+                       $src0_modifiers, $src0,
                        DSTCLAMP.NONE,
                        VGPR_32:$elt0))
   >;
@@ -389,12 +436,35 @@ multiclass MadFmaMixFP16Pats_t16<SDPatternOperator fma_like,
                                  ValueType VT = f16,
                                  ValueType vecVT = v2f16> {
   defvar VOP3PMadMixModsPat = !if (!eq(VT, bf16), VOP3PMadMixBF16Mods, VOP3PMadMixMods);
+  defvar VOP3PMadMixModsNegPat = !if (!eq(VT, bf16), VOP3PMadMixBF16ModsNeg, VOP3PMadMixModsNeg);
+  defvar OneImm = !if (!eq(VT, bf16), CONST.BF16_ONE, CONST.FP16_ONE);
+  defvar ImmMods = !if (!eq(VT, bf16), !or(SRCMODS.OP_SEL_0, SRCMODS.OP_SEL_1), SRCMODS.OP_SEL_1);
   def : GCNPat <
     (VT (fpround (fmul (f32 (VOP3PMadMixModsPat f32:$src0, i32:$src0_modifiers)),
                        (f32 (VOP3PMadMixModsPat f32:$src1, i32:$src1_modifiers))))),
     (mix_inst_16 $src0_modifiers, $src0,
                  $src1_modifiers, $src1,
                  (i32 SRCMODS.NEG), (i32 0),
+                 DSTCLAMP.NONE)
+  >;
+
+  // (fadd x, y) -> (fma x, 1.0, y)
+  def : GCNPat <
+    (VT (fpround (fadd (f32 (VOP3PMadMixModsPat f32:$src0, i32:$src0_modifiers)),
+                       (f32 (VOP3PMadMixModsPat f32:$src1, i32:$src1_modifiers))))),
+    (mix_inst_16 $src0_modifiers, $src0,
+                 (i32 ImmMods), (i32 OneImm),
+                 $src1_modifiers, $src1,
+                 DSTCLAMP.NONE)
+  >;
+
+  // (fsub x, y) -> (fma (-y), 1.0, x)
+  def : GCNPat <
+    (VT (fpround (fsub (f32 (VOP3PMadMixModsPat f32:$src0, i32:$src0_modifiers)),
+                       (f32 (VOP3PMadMixModsNegPat f32:$src1, i32:$src1_modifiers))))),
+    (mix_inst_16 $src1_modifiers, $src1,
+                 (i32 ImmMods), (i32 OneImm),
+                 $src0_modifiers, $src0,
                  DSTCLAMP.NONE)
   >;
 
@@ -2173,6 +2243,13 @@ let WaveSizePredicate = isWave32 in {
       defm V_WMMA_I32_16X16X64_IU8_w32      : WMMAInstGFX12<"v_wmma_i32_16x16x64_iu8",      I32_IU8X64_WMMA_w32, "_w32">;
       defm V_WMMA_F32_16X16X32_F16_w32      : WMMAInstGFX12<"v_wmma_f32_16x16x32_f16",      F32_F16X32_WMMA_w32, "_w32">;
       defm V_WMMA_F16_16X16X32_F16_w32      : WMMAInstGFX12<"v_wmma_f16_16x16x32_f16",      F16_F16X32_WMMA_w32, "_w32">;
+
+      defm V_WMMA_F32_16X16X128_F8F6F4         : WMMAInst_SrcFormats_mc<"v_wmma_f32_16x16x128_f8f6f4", "F32_16X16X128_F8F6F4">;
+      defm V_WMMA_SCALE_F32_16X16X128_F8F6F4   : WMMAInst_SrcFormats_mc<"v_wmma_scale_f32_16x16x128_f8f6f4", "F32_16X16X128_F8F6F4_SCALE">;
+      defm V_WMMA_SCALE16_F32_16X16X128_F8F6F4 : WMMAInst_SrcFormats_mc<"v_wmma_scale16_f32_16x16x128_f8f6f4", "F32_16X16X128_F8F6F4_SCALE16">;
+    } // End SubtargetPredicate = HasWMMAN16Insts
+
+    let SubtargetPredicate = HasWMMA16x16x128FP8Insts in {
       defm V_WMMA_F16_16X16X128_FP8_FP8_w32 : WMMAInstGFX12<"v_wmma_f16_16x16x128_fp8_fp8", F16_FP8BF8X128_WMMA_w32, "_w32">;
       defm V_WMMA_F16_16X16X128_FP8_BF8_w32 : WMMAInstGFX12<"v_wmma_f16_16x16x128_fp8_bf8", F16_FP8BF8X128_WMMA_w32, "_w32">;
       defm V_WMMA_F16_16X16X128_BF8_FP8_w32 : WMMAInstGFX12<"v_wmma_f16_16x16x128_bf8_fp8", F16_FP8BF8X128_WMMA_w32, "_w32">;
@@ -2181,11 +2258,7 @@ let WaveSizePredicate = isWave32 in {
       defm V_WMMA_F32_16X16X128_FP8_BF8_w32 : WMMAInstGFX12<"v_wmma_f32_16x16x128_fp8_bf8", F32_FP8BF8X128_WMMA_w32, "_w32">;
       defm V_WMMA_F32_16X16X128_BF8_FP8_w32 : WMMAInstGFX12<"v_wmma_f32_16x16x128_bf8_fp8", F32_FP8BF8X128_WMMA_w32, "_w32">;
       defm V_WMMA_F32_16X16X128_BF8_BF8_w32 : WMMAInstGFX12<"v_wmma_f32_16x16x128_bf8_bf8", F32_FP8BF8X128_WMMA_w32, "_w32">;
-
-      defm V_WMMA_F32_16X16X128_F8F6F4         : WMMAInst_SrcFormats_mc<"v_wmma_f32_16x16x128_f8f6f4", "F32_16X16X128_F8F6F4">;
-      defm V_WMMA_SCALE_F32_16X16X128_F8F6F4   : WMMAInst_SrcFormats_mc<"v_wmma_scale_f32_16x16x128_f8f6f4", "F32_16X16X128_F8F6F4_SCALE">;
-      defm V_WMMA_SCALE16_F32_16X16X128_F8F6F4 : WMMAInst_SrcFormats_mc<"v_wmma_scale16_f32_16x16x128_f8f6f4", "F32_16X16X128_F8F6F4_SCALE16">;
-    } // End SubtargetPredicate = HasWMMAN16Insts
+    } // End SubtargetPredicate = HasWMMA16x16x128FP8Insts
 
     let SubtargetPredicate = HasWMMAF4Insts in {
       defm V_WMMA_F32_32X16X128_F4_w32      : WMMAInstGFX12<"v_wmma_f32_32x16x128_f4",      F32_32X16X128_F4_WMMA_w32, "_w32">;
@@ -2375,6 +2448,15 @@ let SubtargetPredicate = HasWMMAN16Insts in {
   defm : WMMAPat<"V_WMMA_I32_16X16X64_IU8_w32",         int_amdgcn_wmma_i32_16x16x64_iu8,         I32_IU8X64_WMMA_w32>;
   defm : WMMAPat<"V_WMMA_F32_16X16X32_F16_w32",         int_amdgcn_wmma_f32_16x16x32_f16,         F32_F16X32_WMMA_w32>;
   defm : WMMAPat<"V_WMMA_F16_16X16X32_F16_w32",         int_amdgcn_wmma_f16_16x16x32_f16,         F16_F16X32_WMMA_w32>;
+
+  foreach I = ["f8_f8", "f8_f6", "f8_f4", "f6_f8", "f6_f6", "f6_f4", "f4_f8", "f4_f6", "f4_f4"] in {
+    defm : WMMAPat<"V_WMMA_F32_16X16X128_F8F6F4_" # I # "_w32",         int_amdgcn_wmma_f32_16x16x128_f8f6f4,         !cast<VOP3PWMMA_Profile>("F32_16X16X128_F8F6F4_" # I # "_w32")>;
+    defm : WMMAPat<"V_WMMA_SCALE_F32_16X16X128_F8F6F4_" # I # "_w32",   int_amdgcn_wmma_scale_f32_16x16x128_f8f6f4,   !cast<VOP3PWMMA_Profile>("F32_16X16X128_F8F6F4_SCALE_" # I # "_w32")>;
+    defm : WMMAPat<"V_WMMA_SCALE16_F32_16X16X128_F8F6F4_" # I # "_w32", int_amdgcn_wmma_scale16_f32_16x16x128_f8f6f4, !cast<VOP3PWMMA_Profile>("F32_16X16X128_F8F6F4_SCALE16_" # I # "_w32")>;
+  }
+} // End SubtargetPredicate = HasWMMAN16Insts
+
+let SubtargetPredicate = HasWMMA16x16x128FP8Insts in {
   defm : WMMAPat<"V_WMMA_F16_16X16X128_FP8_FP8_w32",    int_amdgcn_wmma_f16_16x16x128_fp8_fp8,    F16_FP8BF8X128_WMMA_w32>;
   defm : WMMAPat<"V_WMMA_F16_16X16X128_FP8_BF8_w32",    int_amdgcn_wmma_f16_16x16x128_fp8_bf8,    F16_FP8BF8X128_WMMA_w32>;
   defm : WMMAPat<"V_WMMA_F16_16X16X128_BF8_FP8_w32",    int_amdgcn_wmma_f16_16x16x128_bf8_fp8,    F16_FP8BF8X128_WMMA_w32>;
@@ -2383,13 +2465,7 @@ let SubtargetPredicate = HasWMMAN16Insts in {
   defm : WMMAPat<"V_WMMA_F32_16X16X128_FP8_BF8_w32",    int_amdgcn_wmma_f32_16x16x128_fp8_bf8,    F32_FP8BF8X128_WMMA_w32>;
   defm : WMMAPat<"V_WMMA_F32_16X16X128_BF8_FP8_w32",    int_amdgcn_wmma_f32_16x16x128_bf8_fp8,    F32_FP8BF8X128_WMMA_w32>;
   defm : WMMAPat<"V_WMMA_F32_16X16X128_BF8_BF8_w32",    int_amdgcn_wmma_f32_16x16x128_bf8_bf8,    F32_FP8BF8X128_WMMA_w32>;
-
-  foreach I = ["f8_f8", "f8_f6", "f8_f4", "f6_f8", "f6_f6", "f6_f4", "f4_f8", "f4_f6", "f4_f4"] in {
-    defm : WMMAPat<"V_WMMA_F32_16X16X128_F8F6F4_" # I # "_w32",         int_amdgcn_wmma_f32_16x16x128_f8f6f4,         !cast<VOP3PWMMA_Profile>("F32_16X16X128_F8F6F4_" # I # "_w32")>;
-    defm : WMMAPat<"V_WMMA_SCALE_F32_16X16X128_F8F6F4_" # I # "_w32",   int_amdgcn_wmma_scale_f32_16x16x128_f8f6f4,   !cast<VOP3PWMMA_Profile>("F32_16X16X128_F8F6F4_SCALE_" # I # "_w32")>;
-    defm : WMMAPat<"V_WMMA_SCALE16_F32_16X16X128_F8F6F4_" # I # "_w32", int_amdgcn_wmma_scale16_f32_16x16x128_f8f6f4, !cast<VOP3PWMMA_Profile>("F32_16X16X128_F8F6F4_SCALE16_" # I # "_w32")>;
-  }
-} // End SubtargetPredicate = HasWMMAN16Insts
+} // End SubtargetPredicate = HasWMMA16x16x128FP8Insts
 
 let SubtargetPredicate = HasWMMAF4Insts in {
   defm : WMMAPat<"V_WMMA_F32_32X16X128_F4_w32",         int_amdgcn_wmma_f32_32x16x128_f4,         F32_32X16X128_F4_WMMA_w32>;

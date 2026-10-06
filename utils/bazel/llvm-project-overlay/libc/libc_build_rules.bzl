@@ -6,6 +6,7 @@
 
 load("@bazel_skylib//lib:paths.bzl", "paths")
 load("@bazel_skylib//lib:selects.bzl", "selects")
+load("@bazel_skylib//rules:run_binary.bzl", "run_binary")
 load("@rules_cc//cc:defs.bzl", "cc_library")
 load(":libc_configure_options.bzl", "LIBC_CONFIGURE_OPTIONS")
 load(":libc_namespace.bzl", "LIBC_NAMESPACE")
@@ -340,18 +341,12 @@ def libc_generated_header(name, hdr, yaml_template, other_srcs = [], proxy = Fal
     """Generates a libc header file from YAML template.
 
     Args:
-      name: Name of the genrule target.
+      name: Name of the target.
       hdr: Path of the header file to generate.
       yaml_template: Path of the YAML template file.
       other_srcs: Other files required to generate the header, if any.
       proxy: Whether this is a proxy header with slightly different generation results.
     """
-    hdrgen = "//libc:hdrgen"
-    cmd = "$(location {hdrgen}) $(location {yaml}) -o $@".format(
-        hdrgen = hdrgen,
-        yaml = yaml_template,
-    ) + (" --proxy" if proxy else "")
-
     if not hdr.startswith("staging/"):
         fail(
             "Generated headers should be placed in a 'staging/' directory " +
@@ -359,12 +354,16 @@ def libc_generated_header(name, hdr, yaml_template, other_srcs = [], proxy = Fal
             "when bootstrapping builds.",
         )
 
-    native.genrule(
+    run_binary(
         name = name,
-        outs = [hdr],
         srcs = [yaml_template] + other_srcs,
-        cmd = cmd,
-        tools = [hdrgen],
+        outs = [hdr],
+        args = [
+            "$(execpath %s)" % yaml_template,
+            "-o",
+            "$(execpath %s)" % hdr,
+        ] + (["--proxy"] if proxy else []),
+        tool = "//libc:hdrgen",
     )
 
 def libc_header_info(

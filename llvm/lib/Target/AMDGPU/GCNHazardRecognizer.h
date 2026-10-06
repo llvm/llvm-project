@@ -231,6 +231,7 @@ private:
   bool isCoexecutionHazardFor(const MachineInstr &I,
                               const MachineInstr &MI) const;
   bool fixShift64HighRegBug(MachineInstr *MI);
+  bool fixVPermPk16Hazard(MachineInstr *MI);
   bool fixVALUMaskWriteHazard(MachineInstr *MI);
   bool fixRequiredExportPriority(MachineInstr *MI);
   bool fixGetRegWaitIdle(MachineInstr *MI);
@@ -238,6 +239,12 @@ private:
   bool fixScratchBaseForwardingHazard(MachineInstr *MI);
   bool fixSetRegMode(MachineInstr *MI);
   bool fixTDM(MachineInstr *MI);
+
+  /// Wait states before \p Consumer may read \p Reg, holding \p Producer's
+  /// result, as srcC if \p IsSrcC or as srcA/srcB otherwise.
+  int getMFMAReadWaitStates(const MachineInstr &Consumer,
+                            const MachineInstr &Producer, Register Reg,
+                            bool IsSrcC) const;
 
   int checkMAIHazards(MachineInstr *MI) const;
   int checkMAIHazards908(MachineInstr *MI) const;

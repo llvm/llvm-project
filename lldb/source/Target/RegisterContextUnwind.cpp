@@ -1644,7 +1644,7 @@ RegisterContextUnwind::GetAbstractRegisterLocation(uint32_t lldb_regnum,
   std::string unwindplan_name;
   if (m_full_unwind_plan_sp) {
     unwindplan_name += "via '";
-    unwindplan_name += m_full_unwind_plan_sp->GetSourceName().AsCString("");
+    unwindplan_name += m_full_unwind_plan_sp->GetSourceName();
     unwindplan_name += "'";
   }
   UNWIND_LOG(log, "no save location for {0} ({1}) {2}", regnum.GetName(),

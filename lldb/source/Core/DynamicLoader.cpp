@@ -105,7 +105,7 @@ ModuleSP DynamicLoader::GetTargetExecutable() {
         if (executable.get() != target.GetExecutableModulePointer()) {
           // Don't load dependent images since we are in dyld where we will
           // know and find out about all images that are loaded
-          target.SetExecutableModule(executable, eLoadDependentsNo);
+          target.RebuildModuleListWithExecutable(executable, eLoadDependentsNo);
         }
       }
     }
@@ -400,6 +400,8 @@ DynamicLoader::LoadBinaryInTarget(Process *process, BinarySpec &bin_spec) {
   if (!target.GetArchitecture().IsValid())
     target.SetArchitecture(bin_spec.module_sp->GetArchitecture());
   target.GetImages().AppendIfNeeded(bin_spec.module_sp, false);
+  if (bin_spec.is_main_executable && !target.GetExecutableModule())
+    target.MarkExecutableModule(bin_spec.module_sp);
 
   bool changed = false;
   if (bin_spec.set_address_in_target) {

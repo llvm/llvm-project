@@ -29,6 +29,7 @@
 #include "MemberPointer.h"
 #include "PrimType.h"
 #include "Program.h"
+#include "Reflect.h"
 #include "State.h"
 #include "clang/AST/ASTContext.h"
 #include "clang/AST/Expr.h"
@@ -3979,7 +3980,7 @@ inline bool AllocN(InterpState &S, CodePtr OpPC, PrimType T, const Expr *Source,
     return false;
 
   SizeT NumElements = S.Stk.pop<SizeT>();
-  if (!CheckArraySize(S, OpPC, &NumElements, primSize(T), IsNoThrow)) {
+  if (!CheckArraySize(S, OpPC, NumElements, primSize(T), IsNoThrow)) {
     if (!IsNoThrow)
       return false;
 
@@ -4021,7 +4022,7 @@ inline bool AllocCN(InterpState &S, CodePtr OpPC, const Descriptor *ElementDesc,
     return false;
 
   SizeT NumElements = S.Stk.pop<SizeT>();
-  if (!CheckArraySize(S, OpPC, &NumElements, ElementDesc->getSize(),
+  if (!CheckArraySize(S, OpPC, NumElements, ElementDesc->getSize(),
                       IsNoThrow)) {
     if (!IsNoThrow)
       return false;
@@ -4184,6 +4185,12 @@ bool DiagTypeid(InterpState &S, CodePtr OpPC);
 inline bool CheckDestruction(InterpState &S, CodePtr OpPC) {
   const auto &Ptr = S.Stk.peek<Pointer>();
   return checkDestructor(S, OpPC, Ptr);
+}
+
+inline bool ReflectValue(InterpState &S, CodePtr OpPC, ReflectionKind Kind,
+                         const void *Operand) {
+  S.Stk.push<Reflect>(Kind, Operand);
+  return true;
 }
 
 inline bool IsBaseClass(InterpState &S) {

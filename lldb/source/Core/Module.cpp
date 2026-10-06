@@ -1447,6 +1447,10 @@ bool Module::SetArchitecture(const ArchSpec &new_arch) {
 
 bool Module::SetLoadAddress(Target &target, lldb::addr_t value,
                             bool value_is_offset, bool &changed) {
+  // Acquire the module mutex so that any re-entrant calls in
+  // ObjectFile::SetLoadAddress already own the recurisve mutex before
+  // acquiring a second lock.
+  std::lock_guard<std::recursive_mutex> guard(m_mutex);
   ObjectFile *object_file = GetObjectFile();
   if (object_file != nullptr) {
     changed = object_file->SetLoadAddress(target, value, value_is_offset);
@@ -1497,6 +1501,11 @@ bool Module::MatchesModuleSpec(const ModuleSpec &module_ref) {
     if (object_name != GetObjectName())
       return false;
   }
+
+  // A module read from memory is the image at the address it was read from.
+  std::optional<lldb::addr_t> load_addr = module_ref.GetLoadAddress();
+  if (load_addr && m_memory_module_addr && *load_addr != *m_memory_module_addr)
+    return false;
   return true;
 }
 
