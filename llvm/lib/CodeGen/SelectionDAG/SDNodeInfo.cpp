@@ -207,7 +207,8 @@ void SDNodeInfo::verifyNode(const SelectionDAG &DAG, const SDNode *N) const {
       unsigned AS = 0;
       if (const auto *MemSD = dyn_cast<MemSDNode>(N))
         AS = MemSD->getAddressSpace();
-      EVT PtrVT = DAG.getTargetLoweringInfo().getPointerTy(DAG.getDataLayout(), AS);
+      EVT PtrVT =
+          DAG.getTargetLoweringInfo().getPointerTy(DAG.getDataLayout(), AS);
       if (VT != PtrVT) {
         SS << Val << " must have pointer type " << PtrVT << ", but has type "
            << VT;
