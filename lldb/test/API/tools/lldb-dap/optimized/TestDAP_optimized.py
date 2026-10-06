@@ -72,6 +72,7 @@ class TestDAP_optimized(DAPTestCaseBase):
         stop_event = session.verify_stopped_on_breakpoint(
             bp_ids, after=ctx.process_event
         )
+        # At -O3 `k` is folded into a constant with no storage.
         k = session.top_frame_from(stop_event).locals["k"]
         session.verify_variable(
             k.variable, ExpectVar(type="int", value="42", read_only=True)
