@@ -1357,7 +1357,6 @@ static bool attrNonNullArgCheck(Sema &S, QualType T, const ParsedAttr &AL,
 
 static void handleNonNullAttr(Sema &S, Decl *D, const ParsedAttr &AL) {
   SmallVector<ParamIdx, 8> NonNullArgs;
-  bool IgnoredAtLeastOnce = false;
   for (unsigned I = 0; I < AL.getNumArgs(); ++I) {
     Expr *Ex = AL.getArgAsExpr(I);
     ParamIdx Idx;
@@ -1372,10 +1371,8 @@ static void handleNonNullAttr(Sema &S, Decl *D, const ParsedAttr &AL) {
         !attrNonNullArgCheck(
             S, getFunctionOrMethodParamType(D, Idx.getASTIndex()), AL,
             Ex->getSourceRange(),
-            getFunctionOrMethodParamRange(D, Idx.getASTIndex()))) {
-      IgnoredAtLeastOnce = true;
+            getFunctionOrMethodParamRange(D, Idx.getASTIndex())))
       continue;
-    }
 
     NonNullArgs.push_back(Idx);
   }
@@ -1387,7 +1384,7 @@ static void handleNonNullAttr(Sema &S, Decl *D, const ParsedAttr &AL) {
   // because that will signal that 'ptr' is nonnull when it's not intended to
   // be marked as such. However, continue on if there is at least one valid
   // parameter index.
-  if (IgnoredAtLeastOnce && NonNullArgs.empty())
+  if (AL.getNumArgs() != 0 && NonNullArgs.empty())
     return;
 
   // If no arguments were specified to __attribute__((nonnull)) then all pointer
