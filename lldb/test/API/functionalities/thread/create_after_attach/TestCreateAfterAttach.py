@@ -20,7 +20,6 @@ class CreateAfterAttachTestCase(TestBase):
         self.break_3 = line_number("main.cpp", "// Set third breakpoint here")
 
     # Occasionally hangs on Windows, may be same as other issues.
-    @skipIfWindows
     @skipIfiOSSimulator
     @expectedFailureNetBSD
     def test_create_after_attach(self):

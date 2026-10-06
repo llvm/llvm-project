@@ -1,4 +1,3 @@
-UNSUPPORTED: system-windows
 
 RUN: not %lldb -b -o 'settings set use-color true' -o 'settings show use-color' -o 'bogus' > %t 2>&1
 RUN: cat -v %t | FileCheck %s --check-prefix COLOR

@@ -1,4 +1,3 @@
-UNSUPPORTED: system-windows
 
 RUN: mkdir -p %t
 RUN: cp %S/Inputs/main.c %t/main.c

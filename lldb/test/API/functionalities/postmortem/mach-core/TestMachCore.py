@@ -15,7 +15,6 @@ class MachCoreTestCase(TestBase):
     # This was originally marked as expected failure on Windows, but it has
     # started timing out instead, so the expectedFailure attribute no longer
     # correctly tracks it: llvm.org/pr37371
-    @skipIfWindows
     def test_selected_thread(self):
         """Test that the right thread is selected after a core is loaded."""
         # Create core form YAML.

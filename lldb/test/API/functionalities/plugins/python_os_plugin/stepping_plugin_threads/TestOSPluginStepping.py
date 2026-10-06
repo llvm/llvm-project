@@ -14,7 +14,6 @@ import lldbsuite.test.lldbutil as lldbutil
 class TestOSPluginStepping(TestBase):
     NO_DEBUG_INFO_TESTCASE = True
 
-    @skipIfWindows
     @skipIf(oslist=["freebsd"], bugnumber="llvm.org/pr48352")
     def test_python_os_plugin(self):
         """Test that stepping works when the OS Plugin doesn't report all
@@ -23,7 +22,6 @@ class TestOSPluginStepping(TestBase):
         self.main_file = lldb.SBFileSpec("main.cpp")
         self.run_python_os_step_missing_thread(False)
 
-    @skipIfWindows
     @skipIf(oslist=["freebsd"], bugnumber="llvm.org/pr48352")
     def test_python_os_plugin_prune(self):
         """Test that pruning the unreported PlanStacks works"""
