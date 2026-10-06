@@ -23,14 +23,13 @@ using namespace Fortran::parser::literals;
 
 namespace Fortran::evaluate {
 
-template <int KIND>
 std::optional<Expr<SubscriptInteger>>
-Expr<Type<TypeCategory::Character, KIND>>::LEN() const {
+Expr<Type<TypeCategory::Character>>::LEN() const {
   using T = std::optional<Expr<SubscriptInteger>>;
   return common::visit(
       common::visitors{
           [](const Constant<Result> &c) -> T {
-            return AsExpr(Constant<SubscriptInteger>{c.LEN()});
+            return MakeSubscriptIntExpr(c.LEN());
           },
           [](const ArrayConstructor<Result> &a) -> T {
             if (const auto *len{a.LEN()}) {
@@ -44,7 +43,7 @@ Expr<Type<TypeCategory::Character, KIND>>::LEN() const {
             return common::visit(
                 [&](const auto &kx) { return kx.LEN(); }, x.left().u);
           },
-          [](const Concat<KIND> &c) -> T {
+          [](const Concat &c) -> T {
             if (auto llen{c.left().LEN()}) {
               if (auto rlen{c.right().LEN()}) {
                 return *std::move(llen) + *std::move(rlen);
@@ -73,7 +72,7 @@ Expr<Type<TypeCategory::Character, KIND>>::LEN() const {
           },
           [](const Designator<Result> &dr) { return dr.LEN(); },
           [](const FunctionRef<Result> &fr) { return fr.LEN(); },
-          [](const SetLength<KIND> &x) -> T { return x.right(); },
+          [](const SetLength &x) -> T { return x.right(); },
       },
       u);
 }
@@ -92,10 +91,16 @@ const typename ExpressionBase<A>::Derived &ExpressionBase<A>::derived() const {
 }
 #endif
 
+template <typename A> int ExpressionBase<A>::kind() const {
+  // Storing/deriving the kind handled by the subclasses
+  return common::visit(
+      [&](const auto &x) -> int { return x.kind(); }, derived().u);
+}
+
 template <typename A>
 std::optional<DynamicType> ExpressionBase<A>::GetType() const {
   if constexpr (IsLengthlessIntrinsicType<Result>) {
-    return Result::GetType();
+    return DynamicType{Result::category, kind()};
   } else {
     return common::visit(
         [&](const auto &x) -> std::optional<DynamicType> {
@@ -154,8 +159,7 @@ bool ConditionalExpr<A>::operator==(const ConditionalExpr &that) const {
       elseValue_ == that.elseValue_;
 }
 
-template <int KIND>
-bool LogicalOperation<KIND>::operator==(const LogicalOperation &that) const {
+bool LogicalOperation::operator==(const LogicalOperation &that) const {
   return logicalOperator == that.logicalOperator && Base::operator==(that);
 }
 
@@ -191,15 +195,13 @@ bool ArrayConstructorValues<R>::operator==(
   return values_ == that.values_;
 }
 
-template <int KIND>
-auto ArrayConstructor<Type<TypeCategory::Character, KIND>>::set_LEN(
+auto ArrayConstructor<Type<TypeCategory::Character>>::set_LEN(
     Expr<SubscriptInteger> &&len) -> ArrayConstructor & {
   length_.emplace(std::move(len));
   return *this;
 }
 
-template <int KIND>
-bool ArrayConstructor<Type<TypeCategory::Character, KIND>>::operator==(
+bool ArrayConstructor<Type<TypeCategory::Character>>::operator==(
     const ArrayConstructor &that) const {
   return length_ == that.length_ &&
       static_cast<const Base &>(*this) == static_cast<const Base &>(that);
@@ -224,57 +226,51 @@ bool StructureConstructor::operator==(const StructureConstructor &that) const {
   return result_ == that.result_ && values_ == that.values_;
 }
 
-template <int KIND>
-bool Expr<Type<TypeCategory::Integer, KIND>>::operator==(
-    const Expr<Type<TypeCategory::Integer, KIND>> &that) const {
-  return u == that.u;
+bool Expr<Type<TypeCategory::Integer>>::operator==(
+    const Expr<Type<TypeCategory::Integer>> &that) const {
+  return kind() == that.kind() && u == that.u;
 }
 
-template <int KIND>
-bool Expr<Type<TypeCategory::Real, KIND>>::operator==(
-    const Expr<Type<TypeCategory::Real, KIND>> &that) const {
-  return u == that.u;
+bool Expr<Type<TypeCategory::Real>>::operator==(
+    const Expr<Type<TypeCategory::Real>> &that) const {
+  return kind() == that.kind() && u == that.u;
 }
 
-template <int KIND>
-bool Expr<Type<TypeCategory::Complex, KIND>>::operator==(
-    const Expr<Type<TypeCategory::Complex, KIND>> &that) const {
-  return u == that.u;
+bool Expr<Type<TypeCategory::Complex>>::operator==(
+    const Expr<Type<TypeCategory::Complex>> &that) const {
+  return kind() == that.kind() && u == that.u;
 }
 
-template <int KIND>
-bool Expr<Type<TypeCategory::Logical, KIND>>::operator==(
-    const Expr<Type<TypeCategory::Logical, KIND>> &that) const {
-  return u == that.u;
+bool Expr<Type<TypeCategory::Logical>>::operator==(
+    const Expr<Type<TypeCategory::Logical>> &that) const {
+  return kind() == that.kind() && u == that.u;
 }
 
-template <int KIND>
-bool Expr<Type<TypeCategory::Character, KIND>>::operator==(
-    const Expr<Type<TypeCategory::Character, KIND>> &that) const {
-  return u == that.u;
+bool Expr<Type<TypeCategory::Character>>::operator==(
+    const Expr<Type<TypeCategory::Character>> &that) const {
+  return kind() == that.kind() && u == that.u;
 }
 
-template <int KIND>
-bool Expr<Type<TypeCategory::Unsigned, KIND>>::operator==(
-    const Expr<Type<TypeCategory::Unsigned, KIND>> &that) const {
-  return u == that.u;
+bool Expr<Type<TypeCategory::Unsigned>>::operator==(
+    const Expr<Type<TypeCategory::Unsigned>> &that) const {
+  return kind() == that.kind() && u == that.u;
 }
 
 template <TypeCategory CAT>
 bool Expr<SomeKind<CAT>>::operator==(const Expr<SomeKind<CAT>> &that) const {
-  return u == that.u;
+  return kind() == that.kind() && u == that.u;
 }
 
 bool Expr<SomeDerived>::operator==(const Expr<SomeDerived> &that) const {
-  return u == that.u;
+  return kind() == that.kind() && u == that.u;
 }
 
 bool Expr<SomeCharacter>::operator==(const Expr<SomeCharacter> &that) const {
-  return u == that.u;
+  return kind() == that.kind() && u == that.u;
 }
 
 bool Expr<SomeType>::operator==(const Expr<SomeType> &that) const {
-  return u == that.u;
+  return kind() == that.kind() && u == that.u;
 }
 
 DynamicType StructureConstructor::GetType() const { return result_.GetType(); }
@@ -366,20 +362,51 @@ void GenericAssignmentWrapper::Deleter(GenericAssignmentWrapper *p) {
   delete p;
 }
 
-template <TypeCategory CAT> int Expr<SomeKind<CAT>>::GetKind() const {
-  return common::visit(
-      [](const auto &kx) { return std::decay_t<decltype(kx)>::Result::kind; },
-      u);
-}
-
-int Expr<SomeCharacter>::GetKind() const {
-  return common::visit(
-      [](const auto &kx) { return std::decay_t<decltype(kx)>::Result::kind; },
-      u);
-}
-
 std::optional<Expr<SubscriptInteger>> Expr<SomeCharacter>::LEN() const {
   return common::visit([](const auto &kx) { return kx.LEN(); }, u);
+}
+
+Parentheses<SomeDerived>::Parentheses(const Expr<SomeDerived> &x)
+    : Base{x.kind(), x} {}
+Parentheses<SomeDerived>::Parentheses(Expr<SomeDerived> &&x)
+    : Base{x.kind(), std::move(x)} {}
+
+ComplexComponent::ComplexComponent(bool isImaginary, const Expr<Operand> &x)
+    : Base{x.kind(), x}, isImaginaryPart{isImaginary} {}
+ComplexComponent::ComplexComponent(bool isImaginary, Expr<Operand> &&x)
+    : Base{x.kind(), std::move(x)}, isImaginaryPart{isImaginary} {}
+
+ComplexConstructor::ComplexConstructor(const Expr<Type<TypeCategory::Real>> &re,
+    const Expr<Type<TypeCategory::Real>> &im)
+    : Base{re.kind(), re, im} {
+  CHECK(re.kind() == im.kind());
+}
+ComplexConstructor::ComplexConstructor(
+    Expr<Type<TypeCategory::Real>> &&re, Expr<Type<TypeCategory::Real>> &&im)
+    : Base{re.kind(), std::move(re), std::move(im)} {
+  CHECK(left().kind() == right().kind());
+}
+
+LogicalOperation::LogicalOperation(
+    LogicalOperator opr, const Expr<Operand> &x, const Expr<Operand> &y)
+    : Base{x.kind(), x, y}, logicalOperator{opr} {
+  CHECK(x.kind() == y.kind());
+}
+LogicalOperation::LogicalOperation(
+    LogicalOperator opr, Expr<Operand> &&x, Expr<Operand> &&y)
+    : Base{x.kind(), std::move(x), std::move(y)}, logicalOperator{opr} {
+  CHECK(x.kind() == y.kind());
+}
+
+Concat::Concat(const Expr<Type<TypeCategory::Character>> &x,
+    const Expr<Type<TypeCategory::Character>> &y)
+    : Base{x.kind(), x, y} {
+  CHECK(x.kind() == y.kind());
+}
+Concat::Concat(Expr<Type<TypeCategory::Character>> &&x,
+    Expr<Type<TypeCategory::Character>> &&y)
+    : Base{x.kind(), std::move(x), std::move(y)} {
+  CHECK(left().kind() == right().kind());
 }
 
 #ifdef _MSC_VER // disable bogus warning about missing definitions

@@ -15,6 +15,10 @@ function(add_flang_unittest test_dirname)
   if (FLANG_PARALLEL_COMPILE_JOBS)
     set_property(TARGET ${test_dirname} PROPERTY JOB_POOL_COMPILE flang_compile_job_pool)
   endif ()
+  
+  if(TARGET flang-generated-object-sizes)
+    add_dependencies(${test_dirname} flang-generated-object-sizes)
+  endif() 
 endfunction()
 
 if (CXX_SUPPORTS_SUGGEST_OVERRIDE_FLAG)
@@ -53,6 +57,10 @@ function(add_flang_nongtest_unittest test_name)
   if(NOT ARG_SLOW_TEST)
     add_dependencies(FlangUnitTests ${test_name}${suffix})
   endif()
+  
+  if(TARGET flang-generated-object-sizes)
+    add_dependencies(${test_name}${suffix} flang-generated-object-sizes)
+  endif() 
 endfunction()
 
 add_subdirectory(Optimizer)

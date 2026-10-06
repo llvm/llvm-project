@@ -860,6 +860,7 @@ matchContiguousImpliedDo(const ImpliedDo &impliedDo, bool isInput) {
   auto toSubscript = [](const Fortran::lower::SomeExpr &expr) {
     return Fortran::evaluate::ConvertToType<
         Fortran::evaluate::SubscriptInteger>(
+        Fortran::evaluate::SubscriptIntegerKind,
         Fortran::evaluate::Expr<Fortran::evaluate::SomeInteger>{
             DEREF(Fortran::evaluate::UnwrapExpr<
                   Fortran::evaluate::Expr<Fortran::evaluate::SomeInteger>>(
@@ -879,7 +880,7 @@ matchContiguousImpliedDo(const ImpliedDo &impliedDo, bool isInput) {
       Fortran::evaluate::AsGenericExpr(Fortran::evaluate::ExtentExpr{lowerSub});
   Fortran::lower::SomeExpr loopStepValue = Fortran::evaluate::AsGenericExpr(
       stepSub ? Fortran::evaluate::ExtentExpr{*stepSub}
-              : Fortran::evaluate::ExtentExpr{1});
+              : Fortran::evaluate::MakeExtentExpr(1));
 
   Fortran::evaluate::Expr<Fortran::evaluate::SubscriptInteger> loopSubExpr =
       toSubscript(Fortran::evaluate::AsGenericExpr(*loopSym).value());

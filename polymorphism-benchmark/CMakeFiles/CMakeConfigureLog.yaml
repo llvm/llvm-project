@@ -1,0 +1,1825 @@
+
+---
+events:
+  -
+    kind: "message-v1"
+    backtrace:
+      - "/usr/share/cmake-3.28/Modules/CMakeDetermineSystem.cmake:233 (message)"
+      - "CMakeLists.txt:2 (project)"
+    message: |
+      The system is: Linux - 4.4.0-26100-Microsoft - x86_64
+  -
+    kind: "message-v1"
+    backtrace:
+      - "/usr/share/cmake-3.28/Modules/CMakeDetermineCompilerId.cmake:17 (message)"
+      - "/usr/share/cmake-3.28/Modules/CMakeDetermineCompilerId.cmake:64 (__determine_compiler_id_test)"
+      - "/usr/share/cmake-3.28/Modules/CMakeDetermineCXXCompiler.cmake:126 (CMAKE_DETERMINE_COMPILER_ID)"
+      - "CMakeLists.txt:2 (project)"
+    message: |
+      Compiling the CXX compiler identification source file "CMakeCXXCompilerId.cpp" succeeded.
+      Compiler: /usr/bin/c++ 
+      Build flags: 
+      Id flags:  
+      
+      The output was:
+      0
+      
+      
+      Compilation of the CXX compiler identification source "CMakeCXXCompilerId.cpp" produced "a.out"
+      
+      The CXX compiler identification is GNU, found in:
+        /home/meinersbur/src/llvm/flangast/_src/polymorphism-benchmark/CMakeFiles/3.28.3/CompilerIdCXX/a.out
+      
+  -
+    kind: "try_compile-v1"
+    backtrace:
+      - "/usr/share/cmake-3.28/Modules/CMakeDetermineCompilerABI.cmake:57 (try_compile)"
+      - "/usr/share/cmake-3.28/Modules/CMakeTestCXXCompiler.cmake:26 (CMAKE_DETERMINE_COMPILER_ABI)"
+      - "CMakeLists.txt:2 (project)"
+    checks:
+      - "Detecting CXX compiler ABI info"
+    directories:
+      source: "/home/meinersbur/src/llvm/flangast/_src/polymorphism-benchmark/CMakeFiles/CMakeScratch/TryCompile-HMcAnz"
+      binary: "/home/meinersbur/src/llvm/flangast/_src/polymorphism-benchmark/CMakeFiles/CMakeScratch/TryCompile-HMcAnz"
+    cmakeVariables:
+      CMAKE_CXX_FLAGS: ""
+      CMAKE_CXX_FLAGS_DEBUG: "-g"
+      CMAKE_EXE_LINKER_FLAGS: ""
+    buildResult:
+      variable: "CMAKE_CXX_ABI_COMPILED"
+      cached: true
+      stdout: |
+        Change Dir: '/home/meinersbur/src/llvm/flangast/_src/polymorphism-benchmark/CMakeFiles/CMakeScratch/TryCompile-HMcAnz'
+        
+        Run Build Command(s): /usr/bin/cmake -E env VERBOSE=1 /usr/bin/gmake -f Makefile cmTC_3181a/fast
+        /usr/bin/gmake  -f CMakeFiles/cmTC_3181a.dir/build.make CMakeFiles/cmTC_3181a.dir/build
+        gmake[1]: Entering directory '/home/meinersbur/src/llvm/flangast/_src/polymorphism-benchmark/CMakeFiles/CMakeScratch/TryCompile-HMcAnz'
+        Building CXX object CMakeFiles/cmTC_3181a.dir/CMakeCXXCompilerABI.cpp.o
+        /usr/bin/c++   -v -o CMakeFiles/cmTC_3181a.dir/CMakeCXXCompilerABI.cpp.o -c /usr/share/cmake-3.28/Modules/CMakeCXXCompilerABI.cpp
+        Using built-in specs.
+        COLLECT_GCC=/usr/bin/c++
+        OFFLOAD_TARGET_NAMES=nvptx-none:amdgcn-amdhsa
+        OFFLOAD_TARGET_DEFAULT=1
+        Target: x86_64-linux-gnu
+        Configured with: ../src/configure -v --with-pkgversion='Ubuntu 13.3.0-6ubuntu2~24.04.1' --with-bugurl=file:///usr/share/doc/gcc-13/README.Bugs --enable-languages=c,ada,c++,go,d,fortran,objc,obj-c++,m2 --prefix=/usr --with-gcc-major-version-only --program-suffix=-13 --program-prefix=x86_64-linux-gnu- --enable-shared --enable-linker-build-id --libexecdir=/usr/libexec --without-included-gettext --enable-threads=posix --libdir=/usr/lib --enable-nls --enable-bootstrap --enable-clocale=gnu --enable-libstdcxx-debug --enable-libstdcxx-time=yes --with-default-libstdcxx-abi=new --enable-libstdcxx-backtrace --enable-gnu-unique-object --disable-vtable-verify --enable-plugin --enable-default-pie --with-system-zlib --enable-libphobos-checking=release --with-target-system-zlib=auto --enable-objc-gc=auto --enable-multiarch --disable-werror --enable-cet --with-arch-32=i686 --with-abi=m64 --with-multilib-list=m32,m64,mx32 --enable-multilib --with-tune=generic --enable-offload-targets=nvptx-none=/build/gcc-13-EldibY/gcc-13-13.3.0/debian/tmp-nvptx/usr,amdgcn-amdhsa=/build/gcc-13-EldibY/gcc-13-13.3.0/debian/tmp-gcn/usr --enable-offload-defaulted --without-cuda-driver --enable-checking=release --build=x86_64-linux-gnu --host=x86_64-linux-gnu --target=x86_64-linux-gnu --with-build-config=bootstrap-lto-lean --enable-link-serialization=2
+        Thread model: posix
+        Supported LTO compression algorithms: zlib zstd
+        gcc version 13.3.0 (Ubuntu 13.3.0-6ubuntu2~24.04.1) 
+        COLLECT_GCC_OPTIONS='-v' '-o' 'CMakeFiles/cmTC_3181a.dir/CMakeCXXCompilerABI.cpp.o' '-c' '-shared-libgcc' '-mtune=generic' '-march=x86-64' '-dumpdir' 'CMakeFiles/cmTC_3181a.dir/'
+         /usr/libexec/gcc/x86_64-linux-gnu/13/cc1plus -quiet -v -imultiarch x86_64-linux-gnu -D_GNU_SOURCE /usr/share/cmake-3.28/Modules/CMakeCXXCompilerABI.cpp -quiet -dumpdir CMakeFiles/cmTC_3181a.dir/ -dumpbase CMakeCXXCompilerABI.cpp.cpp -dumpbase-ext .cpp -mtune=generic -march=x86-64 -version -fasynchronous-unwind-tables -fstack-protector-strong -Wformat -Wformat-security -fstack-clash-protection -fcf-protection -o /tmp/meinersbur/ccHDXLfe.s
+        GNU C++17 (Ubuntu 13.3.0-6ubuntu2~24.04.1) version 13.3.0 (x86_64-linux-gnu)
+        	compiled by GNU C version 13.3.0, GMP version 6.3.0, MPFR version 4.2.1, MPC version 1.3.1, isl version isl-0.26-GMP
+        
+        GGC heuristics: --param ggc-min-expand=100 --param ggc-min-heapsize=131072
+        ignoring duplicate directory "/usr/include/x86_64-linux-gnu/c++/13"
+        ignoring nonexistent directory "/usr/local/include/x86_64-linux-gnu"
+        ignoring nonexistent directory "/usr/local/include"
+        ignoring nonexistent directory "/usr/lib/gcc/x86_64-linux-gnu/13/include-fixed/x86_64-linux-gnu"
+        ignoring nonexistent directory "/usr/lib/gcc/x86_64-linux-gnu/13/include-fixed"
+        #include "..." search starts here:
+        #include <...> search starts here:
+         /usr/include/c++/13
+         /usr/include/x86_64-linux-gnu/c++/13
+         /usr/include/c++/13/backward
+         /usr/lib/gcc/x86_64-linux-gnu/13/include
+         /usr/x86_64-linux-gnu/include
+         /usr/include/x86_64-linux-gnu
+         /usr/include
+        End of search list.
+        Compiler executable checksum: 7896445e4990772fdae9dc0659a99266
+        COLLECT_GCC_OPTIONS='-v' '-o' 'CMakeFiles/cmTC_3181a.dir/CMakeCXXCompilerABI.cpp.o' '-c' '-shared-libgcc' '-mtune=generic' '-march=x86-64' '-dumpdir' 'CMakeFiles/cmTC_3181a.dir/'
+         as -v --64 -o CMakeFiles/cmTC_3181a.dir/CMakeCXXCompilerABI.cpp.o /tmp/meinersbur/ccHDXLfe.s
+        GNU assembler version 2.42 (x86_64-linux-gnu) using BFD version (GNU Binutils for Ubuntu) 2.42
+        COMPILER_PATH=/usr/libexec/gcc/x86_64-linux-gnu/13/:/usr/libexec/gcc/x86_64-linux-gnu/13/:/usr/libexec/gcc/x86_64-linux-gnu/:/usr/lib/gcc/x86_64-linux-gnu/13/:/usr/lib/gcc/x86_64-linux-gnu/
+        LIBRARY_PATH=/usr/lib/gcc/x86_64-linux-gnu/13/:/usr/lib/gcc/x86_64-linux-gnu/13/../../../x86_64-linux-gnu/:/usr/lib/gcc/x86_64-linux-gnu/13/../../../../lib/:/lib/x86_64-linux-gnu/:/lib/../lib/:/usr/lib/x86_64-linux-gnu/:/usr/lib/../lib/:/usr/lib/gcc/x86_64-linux-gnu/13/../../../:/lib/:/usr/lib/
+        COLLECT_GCC_OPTIONS='-v' '-o' 'CMakeFiles/cmTC_3181a.dir/CMakeCXXCompilerABI.cpp.o' '-c' '-shared-libgcc' '-mtune=generic' '-march=x86-64' '-dumpdir' 'CMakeFiles/cmTC_3181a.dir/CMakeCXXCompilerABI.cpp.'
+        Linking CXX executable cmTC_3181a
+        /usr/bin/cmake -E cmake_link_script CMakeFiles/cmTC_3181a.dir/link.txt --verbose=1
+        /usr/bin/c++  -v CMakeFiles/cmTC_3181a.dir/CMakeCXXCompilerABI.cpp.o -o cmTC_3181a 
+        Using built-in specs.
+        COLLECT_GCC=/usr/bin/c++
+        COLLECT_LTO_WRAPPER=/usr/libexec/gcc/x86_64-linux-gnu/13/lto-wrapper
+        OFFLOAD_TARGET_NAMES=nvptx-none:amdgcn-amdhsa
+        OFFLOAD_TARGET_DEFAULT=1
+        Target: x86_64-linux-gnu
+        Configured with: ../src/configure -v --with-pkgversion='Ubuntu 13.3.0-6ubuntu2~24.04.1' --with-bugurl=file:///usr/share/doc/gcc-13/README.Bugs --enable-languages=c,ada,c++,go,d,fortran,objc,obj-c++,m2 --prefix=/usr --with-gcc-major-version-only --program-suffix=-13 --program-prefix=x86_64-linux-gnu- --enable-shared --enable-linker-build-id --libexecdir=/usr/libexec --without-included-gettext --enable-threads=posix --libdir=/usr/lib --enable-nls --enable-bootstrap --enable-clocale=gnu --enable-libstdcxx-debug --enable-libstdcxx-time=yes --with-default-libstdcxx-abi=new --enable-libstdcxx-backtrace --enable-gnu-unique-object --disable-vtable-verify --enable-plugin --enable-default-pie --with-system-zlib --enable-libphobos-checking=release --with-target-system-zlib=auto --enable-objc-gc=auto --enable-multiarch --disable-werror --enable-cet --with-arch-32=i686 --with-abi=m64 --with-multilib-list=m32,m64,mx32 --enable-multilib --with-tune=generic --enable-offload-targets=nvptx-none=/build/gcc-13-EldibY/gcc-13-13.3.0/debian/tmp-nvptx/usr,amdgcn-amdhsa=/build/gcc-13-EldibY/gcc-13-13.3.0/debian/tmp-gcn/usr --enable-offload-defaulted --without-cuda-driver --enable-checking=release --build=x86_64-linux-gnu --host=x86_64-linux-gnu --target=x86_64-linux-gnu --with-build-config=bootstrap-lto-lean --enable-link-serialization=2
+        Thread model: posix
+        Supported LTO compression algorithms: zlib zstd
+        gcc version 13.3.0 (Ubuntu 13.3.0-6ubuntu2~24.04.1) 
+        COMPILER_PATH=/usr/libexec/gcc/x86_64-linux-gnu/13/:/usr/libexec/gcc/x86_64-linux-gnu/13/:/usr/libexec/gcc/x86_64-linux-gnu/:/usr/lib/gcc/x86_64-linux-gnu/13/:/usr/lib/gcc/x86_64-linux-gnu/
+        LIBRARY_PATH=/usr/lib/gcc/x86_64-linux-gnu/13/:/usr/lib/gcc/x86_64-linux-gnu/13/../../../x86_64-linux-gnu/:/usr/lib/gcc/x86_64-linux-gnu/13/../../../../lib/:/lib/x86_64-linux-gnu/:/lib/../lib/:/usr/lib/x86_64-linux-gnu/:/usr/lib/../lib/:/usr/lib/gcc/x86_64-linux-gnu/13/../../../:/lib/:/usr/lib/
+        COLLECT_GCC_OPTIONS='-v' '-o' 'cmTC_3181a' '-shared-libgcc' '-mtune=generic' '-march=x86-64' '-dumpdir' 'cmTC_3181a.'
+         /usr/libexec/gcc/x86_64-linux-gnu/13/collect2 -plugin /usr/libexec/gcc/x86_64-linux-gnu/13/liblto_plugin.so -plugin-opt=/usr/libexec/gcc/x86_64-linux-gnu/13/lto-wrapper -plugin-opt=-fresolution=/tmp/meinersbur/ccA4XIQh.res -plugin-opt=-pass-through=-lgcc_s -plugin-opt=-pass-through=-lgcc -plugin-opt=-pass-through=-lc -plugin-opt=-pass-through=-lgcc_s -plugin-opt=-pass-through=-lgcc --build-id --eh-frame-hdr -m elf_x86_64 --hash-style=gnu --as-needed -dynamic-linker /lib64/ld-linux-x86-64.so.2 -pie -z now -z relro -o cmTC_3181a /usr/lib/gcc/x86_64-linux-gnu/13/../../../x86_64-linux-gnu/Scrt1.o /usr/lib/gcc/x86_64-linux-gnu/13/../../../x86_64-linux-gnu/crti.o /usr/lib/gcc/x86_64-linux-gnu/13/crtbeginS.o -L/usr/lib/gcc/x86_64-linux-gnu/13 -L/usr/lib/gcc/x86_64-linux-gnu/13/../../../x86_64-linux-gnu -L/usr/lib/gcc/x86_64-linux-gnu/13/../../../../lib -L/lib/x86_64-linux-gnu -L/lib/../lib -L/usr/lib/x86_64-linux-gnu -L/usr/lib/../lib -L/usr/lib/gcc/x86_64-linux-gnu/13/../../.. CMakeFiles/cmTC_3181a.dir/CMakeCXXCompilerABI.cpp.o -lstdc++ -lm -lgcc_s -lgcc -lc -lgcc_s -lgcc /usr/lib/gcc/x86_64-linux-gnu/13/crtendS.o /usr/lib/gcc/x86_64-linux-gnu/13/../../../x86_64-linux-gnu/crtn.o
+        COLLECT_GCC_OPTIONS='-v' '-o' 'cmTC_3181a' '-shared-libgcc' '-mtune=generic' '-march=x86-64' '-dumpdir' 'cmTC_3181a.'
+        gmake[1]: Leaving directory '/home/meinersbur/src/llvm/flangast/_src/polymorphism-benchmark/CMakeFiles/CMakeScratch/TryCompile-HMcAnz'
+        
+      exitCode: 0
+  -
+    kind: "message-v1"
+    backtrace:
+      - "/usr/share/cmake-3.28/Modules/CMakeDetermineCompilerABI.cmake:127 (message)"
+      - "/usr/share/cmake-3.28/Modules/CMakeTestCXXCompiler.cmake:26 (CMAKE_DETERMINE_COMPILER_ABI)"
+      - "CMakeLists.txt:2 (project)"
+    message: |
+      Parsed CXX implicit include dir info: rv=done
+        found start of include info
+        found start of implicit include info
+          add: [/usr/include/c++/13]
+          add: [/usr/include/x86_64-linux-gnu/c++/13]
+          add: [/usr/include/c++/13/backward]
+          add: [/usr/lib/gcc/x86_64-linux-gnu/13/include]
+          add: [/usr/x86_64-linux-gnu/include]
+          add: [/usr/include/x86_64-linux-gnu]
+          add: [/usr/include]
+        end of search list found
+        collapse include dir [/usr/include/c++/13] ==> [/usr/include/c++/13]
+        collapse include dir [/usr/include/x86_64-linux-gnu/c++/13] ==> [/usr/include/x86_64-linux-gnu/c++/13]
+        collapse include dir [/usr/include/c++/13/backward] ==> [/usr/include/c++/13/backward]
+        collapse include dir [/usr/lib/gcc/x86_64-linux-gnu/13/include] ==> [/usr/lib/gcc/x86_64-linux-gnu/13/include]
+        collapse include dir [/usr/x86_64-linux-gnu/include] ==> [/usr/x86_64-linux-gnu/include]
+        collapse include dir [/usr/include/x86_64-linux-gnu] ==> [/usr/include/x86_64-linux-gnu]
+        collapse include dir [/usr/include] ==> [/usr/include]
+        implicit include dirs: [/usr/include/c++/13;/usr/include/x86_64-linux-gnu/c++/13;/usr/include/c++/13/backward;/usr/lib/gcc/x86_64-linux-gnu/13/include;/usr/x86_64-linux-gnu/include;/usr/include/x86_64-linux-gnu;/usr/include]
+      
+      
+  -
+    kind: "message-v1"
+    backtrace:
+      - "/usr/share/cmake-3.28/Modules/CMakeDetermineCompilerABI.cmake:159 (message)"
+      - "/usr/share/cmake-3.28/Modules/CMakeTestCXXCompiler.cmake:26 (CMAKE_DETERMINE_COMPILER_ABI)"
+      - "CMakeLists.txt:2 (project)"
+    message: |
+      Parsed CXX implicit link information:
+        link line regex: [^( *|.*[/\\])(ld|CMAKE_LINK_STARTFILE-NOTFOUND|([^/\\]+-)?ld|collect2)[^/\\]*( |$)]
+        ignore line: [Change Dir: '/home/meinersbur/src/llvm/flangast/_src/polymorphism-benchmark/CMakeFiles/CMakeScratch/TryCompile-HMcAnz']
+        ignore line: []
+        ignore line: [Run Build Command(s): /usr/bin/cmake -E env VERBOSE=1 /usr/bin/gmake -f Makefile cmTC_3181a/fast]
+        ignore line: [/usr/bin/gmake  -f CMakeFiles/cmTC_3181a.dir/build.make CMakeFiles/cmTC_3181a.dir/build]
+        ignore line: [gmake[1]: Entering directory '/home/meinersbur/src/llvm/flangast/_src/polymorphism-benchmark/CMakeFiles/CMakeScratch/TryCompile-HMcAnz']
+        ignore line: [Building CXX object CMakeFiles/cmTC_3181a.dir/CMakeCXXCompilerABI.cpp.o]
+        ignore line: [/usr/bin/c++   -v -o CMakeFiles/cmTC_3181a.dir/CMakeCXXCompilerABI.cpp.o -c /usr/share/cmake-3.28/Modules/CMakeCXXCompilerABI.cpp]
+        ignore line: [Using built-in specs.]
+        ignore line: [COLLECT_GCC=/usr/bin/c++]
+        ignore line: [OFFLOAD_TARGET_NAMES=nvptx-none:amdgcn-amdhsa]
+        ignore line: [OFFLOAD_TARGET_DEFAULT=1]
+        ignore line: [Target: x86_64-linux-gnu]
+        ignore line: [Configured with: ../src/configure -v --with-pkgversion='Ubuntu 13.3.0-6ubuntu2~24.04.1' --with-bugurl=file:///usr/share/doc/gcc-13/README.Bugs --enable-languages=c ada c++ go d fortran objc obj-c++ m2 --prefix=/usr --with-gcc-major-version-only --program-suffix=-13 --program-prefix=x86_64-linux-gnu- --enable-shared --enable-linker-build-id --libexecdir=/usr/libexec --without-included-gettext --enable-threads=posix --libdir=/usr/lib --enable-nls --enable-bootstrap --enable-clocale=gnu --enable-libstdcxx-debug --enable-libstdcxx-time=yes --with-default-libstdcxx-abi=new --enable-libstdcxx-backtrace --enable-gnu-unique-object --disable-vtable-verify --enable-plugin --enable-default-pie --with-system-zlib --enable-libphobos-checking=release --with-target-system-zlib=auto --enable-objc-gc=auto --enable-multiarch --disable-werror --enable-cet --with-arch-32=i686 --with-abi=m64 --with-multilib-list=m32 m64 mx32 --enable-multilib --with-tune=generic --enable-offload-targets=nvptx-none=/build/gcc-13-EldibY/gcc-13-13.3.0/debian/tmp-nvptx/usr amdgcn-amdhsa=/build/gcc-13-EldibY/gcc-13-13.3.0/debian/tmp-gcn/usr --enable-offload-defaulted --without-cuda-driver --enable-checking=release --build=x86_64-linux-gnu --host=x86_64-linux-gnu --target=x86_64-linux-gnu --with-build-config=bootstrap-lto-lean --enable-link-serialization=2]
+        ignore line: [Thread model: posix]
+        ignore line: [Supported LTO compression algorithms: zlib zstd]
+        ignore line: [gcc version 13.3.0 (Ubuntu 13.3.0-6ubuntu2~24.04.1) ]
+        ignore line: [COLLECT_GCC_OPTIONS='-v' '-o' 'CMakeFiles/cmTC_3181a.dir/CMakeCXXCompilerABI.cpp.o' '-c' '-shared-libgcc' '-mtune=generic' '-march=x86-64' '-dumpdir' 'CMakeFiles/cmTC_3181a.dir/']
+        ignore line: [ /usr/libexec/gcc/x86_64-linux-gnu/13/cc1plus -quiet -v -imultiarch x86_64-linux-gnu -D_GNU_SOURCE /usr/share/cmake-3.28/Modules/CMakeCXXCompilerABI.cpp -quiet -dumpdir CMakeFiles/cmTC_3181a.dir/ -dumpbase CMakeCXXCompilerABI.cpp.cpp -dumpbase-ext .cpp -mtune=generic -march=x86-64 -version -fasynchronous-unwind-tables -fstack-protector-strong -Wformat -Wformat-security -fstack-clash-protection -fcf-protection -o /tmp/meinersbur/ccHDXLfe.s]
+        ignore line: [GNU C++17 (Ubuntu 13.3.0-6ubuntu2~24.04.1) version 13.3.0 (x86_64-linux-gnu)]
+        ignore line: [	compiled by GNU C version 13.3.0  GMP version 6.3.0  MPFR version 4.2.1  MPC version 1.3.1  isl version isl-0.26-GMP]
+        ignore line: []
+        ignore line: [GGC heuristics: --param ggc-min-expand=100 --param ggc-min-heapsize=131072]
+        ignore line: [ignoring duplicate directory "/usr/include/x86_64-linux-gnu/c++/13"]
+        ignore line: [ignoring nonexistent directory "/usr/local/include/x86_64-linux-gnu"]
+        ignore line: [ignoring nonexistent directory "/usr/local/include"]
+        ignore line: [ignoring nonexistent directory "/usr/lib/gcc/x86_64-linux-gnu/13/include-fixed/x86_64-linux-gnu"]
+        ignore line: [ignoring nonexistent directory "/usr/lib/gcc/x86_64-linux-gnu/13/include-fixed"]
+        ignore line: [#include "..." search starts here:]
+        ignore line: [#include <...> search starts here:]
+        ignore line: [ /usr/include/c++/13]
+        ignore line: [ /usr/include/x86_64-linux-gnu/c++/13]
+        ignore line: [ /usr/include/c++/13/backward]
+        ignore line: [ /usr/lib/gcc/x86_64-linux-gnu/13/include]
+        ignore line: [ /usr/x86_64-linux-gnu/include]
+        ignore line: [ /usr/include/x86_64-linux-gnu]
+        ignore line: [ /usr/include]
+        ignore line: [End of search list.]
+        ignore line: [Compiler executable checksum: 7896445e4990772fdae9dc0659a99266]
+        ignore line: [COLLECT_GCC_OPTIONS='-v' '-o' 'CMakeFiles/cmTC_3181a.dir/CMakeCXXCompilerABI.cpp.o' '-c' '-shared-libgcc' '-mtune=generic' '-march=x86-64' '-dumpdir' 'CMakeFiles/cmTC_3181a.dir/']
+        ignore line: [ as -v --64 -o CMakeFiles/cmTC_3181a.dir/CMakeCXXCompilerABI.cpp.o /tmp/meinersbur/ccHDXLfe.s]
+        ignore line: [GNU assembler version 2.42 (x86_64-linux-gnu) using BFD version (GNU Binutils for Ubuntu) 2.42]
+        ignore line: [COMPILER_PATH=/usr/libexec/gcc/x86_64-linux-gnu/13/:/usr/libexec/gcc/x86_64-linux-gnu/13/:/usr/libexec/gcc/x86_64-linux-gnu/:/usr/lib/gcc/x86_64-linux-gnu/13/:/usr/lib/gcc/x86_64-linux-gnu/]
+        ignore line: [LIBRARY_PATH=/usr/lib/gcc/x86_64-linux-gnu/13/:/usr/lib/gcc/x86_64-linux-gnu/13/../../../x86_64-linux-gnu/:/usr/lib/gcc/x86_64-linux-gnu/13/../../../../lib/:/lib/x86_64-linux-gnu/:/lib/../lib/:/usr/lib/x86_64-linux-gnu/:/usr/lib/../lib/:/usr/lib/gcc/x86_64-linux-gnu/13/../../../:/lib/:/usr/lib/]
+        ignore line: [COLLECT_GCC_OPTIONS='-v' '-o' 'CMakeFiles/cmTC_3181a.dir/CMakeCXXCompilerABI.cpp.o' '-c' '-shared-libgcc' '-mtune=generic' '-march=x86-64' '-dumpdir' 'CMakeFiles/cmTC_3181a.dir/CMakeCXXCompilerABI.cpp.']
+        ignore line: [Linking CXX executable cmTC_3181a]
+        ignore line: [/usr/bin/cmake -E cmake_link_script CMakeFiles/cmTC_3181a.dir/link.txt --verbose=1]
+        ignore line: [/usr/bin/c++  -v CMakeFiles/cmTC_3181a.dir/CMakeCXXCompilerABI.cpp.o -o cmTC_3181a ]
+        ignore line: [Using built-in specs.]
+        ignore line: [COLLECT_GCC=/usr/bin/c++]
+        ignore line: [COLLECT_LTO_WRAPPER=/usr/libexec/gcc/x86_64-linux-gnu/13/lto-wrapper]
+        ignore line: [OFFLOAD_TARGET_NAMES=nvptx-none:amdgcn-amdhsa]
+        ignore line: [OFFLOAD_TARGET_DEFAULT=1]
+        ignore line: [Target: x86_64-linux-gnu]
+        ignore line: [Configured with: ../src/configure -v --with-pkgversion='Ubuntu 13.3.0-6ubuntu2~24.04.1' --with-bugurl=file:///usr/share/doc/gcc-13/README.Bugs --enable-languages=c ada c++ go d fortran objc obj-c++ m2 --prefix=/usr --with-gcc-major-version-only --program-suffix=-13 --program-prefix=x86_64-linux-gnu- --enable-shared --enable-linker-build-id --libexecdir=/usr/libexec --without-included-gettext --enable-threads=posix --libdir=/usr/lib --enable-nls --enable-bootstrap --enable-clocale=gnu --enable-libstdcxx-debug --enable-libstdcxx-time=yes --with-default-libstdcxx-abi=new --enable-libstdcxx-backtrace --enable-gnu-unique-object --disable-vtable-verify --enable-plugin --enable-default-pie --with-system-zlib --enable-libphobos-checking=release --with-target-system-zlib=auto --enable-objc-gc=auto --enable-multiarch --disable-werror --enable-cet --with-arch-32=i686 --with-abi=m64 --with-multilib-list=m32 m64 mx32 --enable-multilib --with-tune=generic --enable-offload-targets=nvptx-none=/build/gcc-13-EldibY/gcc-13-13.3.0/debian/tmp-nvptx/usr amdgcn-amdhsa=/build/gcc-13-EldibY/gcc-13-13.3.0/debian/tmp-gcn/usr --enable-offload-defaulted --without-cuda-driver --enable-checking=release --build=x86_64-linux-gnu --host=x86_64-linux-gnu --target=x86_64-linux-gnu --with-build-config=bootstrap-lto-lean --enable-link-serialization=2]
+        ignore line: [Thread model: posix]
+        ignore line: [Supported LTO compression algorithms: zlib zstd]
+        ignore line: [gcc version 13.3.0 (Ubuntu 13.3.0-6ubuntu2~24.04.1) ]
+        ignore line: [COMPILER_PATH=/usr/libexec/gcc/x86_64-linux-gnu/13/:/usr/libexec/gcc/x86_64-linux-gnu/13/:/usr/libexec/gcc/x86_64-linux-gnu/:/usr/lib/gcc/x86_64-linux-gnu/13/:/usr/lib/gcc/x86_64-linux-gnu/]
+        ignore line: [LIBRARY_PATH=/usr/lib/gcc/x86_64-linux-gnu/13/:/usr/lib/gcc/x86_64-linux-gnu/13/../../../x86_64-linux-gnu/:/usr/lib/gcc/x86_64-linux-gnu/13/../../../../lib/:/lib/x86_64-linux-gnu/:/lib/../lib/:/usr/lib/x86_64-linux-gnu/:/usr/lib/../lib/:/usr/lib/gcc/x86_64-linux-gnu/13/../../../:/lib/:/usr/lib/]
+        ignore line: [COLLECT_GCC_OPTIONS='-v' '-o' 'cmTC_3181a' '-shared-libgcc' '-mtune=generic' '-march=x86-64' '-dumpdir' 'cmTC_3181a.']
+        link line: [ /usr/libexec/gcc/x86_64-linux-gnu/13/collect2 -plugin /usr/libexec/gcc/x86_64-linux-gnu/13/liblto_plugin.so -plugin-opt=/usr/libexec/gcc/x86_64-linux-gnu/13/lto-wrapper -plugin-opt=-fresolution=/tmp/meinersbur/ccA4XIQh.res -plugin-opt=-pass-through=-lgcc_s -plugin-opt=-pass-through=-lgcc -plugin-opt=-pass-through=-lc -plugin-opt=-pass-through=-lgcc_s -plugin-opt=-pass-through=-lgcc --build-id --eh-frame-hdr -m elf_x86_64 --hash-style=gnu --as-needed -dynamic-linker /lib64/ld-linux-x86-64.so.2 -pie -z now -z relro -o cmTC_3181a /usr/lib/gcc/x86_64-linux-gnu/13/../../../x86_64-linux-gnu/Scrt1.o /usr/lib/gcc/x86_64-linux-gnu/13/../../../x86_64-linux-gnu/crti.o /usr/lib/gcc/x86_64-linux-gnu/13/crtbeginS.o -L/usr/lib/gcc/x86_64-linux-gnu/13 -L/usr/lib/gcc/x86_64-linux-gnu/13/../../../x86_64-linux-gnu -L/usr/lib/gcc/x86_64-linux-gnu/13/../../../../lib -L/lib/x86_64-linux-gnu -L/lib/../lib -L/usr/lib/x86_64-linux-gnu -L/usr/lib/../lib -L/usr/lib/gcc/x86_64-linux-gnu/13/../../.. CMakeFiles/cmTC_3181a.dir/CMakeCXXCompilerABI.cpp.o -lstdc++ -lm -lgcc_s -lgcc -lc -lgcc_s -lgcc /usr/lib/gcc/x86_64-linux-gnu/13/crtendS.o /usr/lib/gcc/x86_64-linux-gnu/13/../../../x86_64-linux-gnu/crtn.o]
+          arg [/usr/libexec/gcc/x86_64-linux-gnu/13/collect2] ==> ignore
+          arg [-plugin] ==> ignore
+          arg [/usr/libexec/gcc/x86_64-linux-gnu/13/liblto_plugin.so] ==> ignore
+          arg [-plugin-opt=/usr/libexec/gcc/x86_64-linux-gnu/13/lto-wrapper] ==> ignore
+          arg [-plugin-opt=-fresolution=/tmp/meinersbur/ccA4XIQh.res] ==> ignore
+          arg [-plugin-opt=-pass-through=-lgcc_s] ==> ignore
+          arg [-plugin-opt=-pass-through=-lgcc] ==> ignore
+          arg [-plugin-opt=-pass-through=-lc] ==> ignore
+          arg [-plugin-opt=-pass-through=-lgcc_s] ==> ignore
+          arg [-plugin-opt=-pass-through=-lgcc] ==> ignore
+          arg [--build-id] ==> ignore
+          arg [--eh-frame-hdr] ==> ignore
+          arg [-m] ==> ignore
+          arg [elf_x86_64] ==> ignore
+          arg [--hash-style=gnu] ==> ignore
+          arg [--as-needed] ==> ignore
+          arg [-dynamic-linker] ==> ignore
+          arg [/lib64/ld-linux-x86-64.so.2] ==> ignore
+          arg [-pie] ==> ignore
+          arg [-znow] ==> ignore
+          arg [-zrelro] ==> ignore
+          arg [-o] ==> ignore
+          arg [cmTC_3181a] ==> ignore
+          arg [/usr/lib/gcc/x86_64-linux-gnu/13/../../../x86_64-linux-gnu/Scrt1.o] ==> obj [/usr/lib/gcc/x86_64-linux-gnu/13/../../../x86_64-linux-gnu/Scrt1.o]
+          arg [/usr/lib/gcc/x86_64-linux-gnu/13/../../../x86_64-linux-gnu/crti.o] ==> obj [/usr/lib/gcc/x86_64-linux-gnu/13/../../../x86_64-linux-gnu/crti.o]
+          arg [/usr/lib/gcc/x86_64-linux-gnu/13/crtbeginS.o] ==> obj [/usr/lib/gcc/x86_64-linux-gnu/13/crtbeginS.o]
+          arg [-L/usr/lib/gcc/x86_64-linux-gnu/13] ==> dir [/usr/lib/gcc/x86_64-linux-gnu/13]
+          arg [-L/usr/lib/gcc/x86_64-linux-gnu/13/../../../x86_64-linux-gnu] ==> dir [/usr/lib/gcc/x86_64-linux-gnu/13/../../../x86_64-linux-gnu]
+          arg [-L/usr/lib/gcc/x86_64-linux-gnu/13/../../../../lib] ==> dir [/usr/lib/gcc/x86_64-linux-gnu/13/../../../../lib]
+          arg [-L/lib/x86_64-linux-gnu] ==> dir [/lib/x86_64-linux-gnu]
+          arg [-L/lib/../lib] ==> dir [/lib/../lib]
+          arg [-L/usr/lib/x86_64-linux-gnu] ==> dir [/usr/lib/x86_64-linux-gnu]
+          arg [-L/usr/lib/../lib] ==> dir [/usr/lib/../lib]
+          arg [-L/usr/lib/gcc/x86_64-linux-gnu/13/../../..] ==> dir [/usr/lib/gcc/x86_64-linux-gnu/13/../../..]
+          arg [CMakeFiles/cmTC_3181a.dir/CMakeCXXCompilerABI.cpp.o] ==> ignore
+          arg [-lstdc++] ==> lib [stdc++]
+          arg [-lm] ==> lib [m]
+          arg [-lgcc_s] ==> lib [gcc_s]
+          arg [-lgcc] ==> lib [gcc]
+          arg [-lc] ==> lib [c]
+          arg [-lgcc_s] ==> lib [gcc_s]
+          arg [-lgcc] ==> lib [gcc]
+          arg [/usr/lib/gcc/x86_64-linux-gnu/13/crtendS.o] ==> obj [/usr/lib/gcc/x86_64-linux-gnu/13/crtendS.o]
+          arg [/usr/lib/gcc/x86_64-linux-gnu/13/../../../x86_64-linux-gnu/crtn.o] ==> obj [/usr/lib/gcc/x86_64-linux-gnu/13/../../../x86_64-linux-gnu/crtn.o]
+        collapse obj [/usr/lib/gcc/x86_64-linux-gnu/13/../../../x86_64-linux-gnu/Scrt1.o] ==> [/usr/lib/x86_64-linux-gnu/Scrt1.o]
+        collapse obj [/usr/lib/gcc/x86_64-linux-gnu/13/../../../x86_64-linux-gnu/crti.o] ==> [/usr/lib/x86_64-linux-gnu/crti.o]
+        collapse obj [/usr/lib/gcc/x86_64-linux-gnu/13/../../../x86_64-linux-gnu/crtn.o] ==> [/usr/lib/x86_64-linux-gnu/crtn.o]
+        collapse library dir [/usr/lib/gcc/x86_64-linux-gnu/13] ==> [/usr/lib/gcc/x86_64-linux-gnu/13]
+        collapse library dir [/usr/lib/gcc/x86_64-linux-gnu/13/../../../x86_64-linux-gnu] ==> [/usr/lib/x86_64-linux-gnu]
+        collapse library dir [/usr/lib/gcc/x86_64-linux-gnu/13/../../../../lib] ==> [/usr/lib]
+        collapse library dir [/lib/x86_64-linux-gnu] ==> [/lib/x86_64-linux-gnu]
+        collapse library dir [/lib/../lib] ==> [/lib]
+        collapse library dir [/usr/lib/x86_64-linux-gnu] ==> [/usr/lib/x86_64-linux-gnu]
+        collapse library dir [/usr/lib/../lib] ==> [/usr/lib]
+        collapse library dir [/usr/lib/gcc/x86_64-linux-gnu/13/../../..] ==> [/usr/lib]
+        implicit libs: [stdc++;m;gcc_s;gcc;c;gcc_s;gcc]
+        implicit objs: [/usr/lib/x86_64-linux-gnu/Scrt1.o;/usr/lib/x86_64-linux-gnu/crti.o;/usr/lib/gcc/x86_64-linux-gnu/13/crtbeginS.o;/usr/lib/gcc/x86_64-linux-gnu/13/crtendS.o;/usr/lib/x86_64-linux-gnu/crtn.o]
+        implicit dirs: [/usr/lib/gcc/x86_64-linux-gnu/13;/usr/lib/x86_64-linux-gnu;/usr/lib;/lib/x86_64-linux-gnu;/lib]
+        implicit fwks: []
+      
+      
+  -
+    kind: "try_compile-v1"
+    backtrace:
+      - "/usr/share/cmake-3.28/Modules/CheckLibraryExists.cmake:69 (try_compile)"
+      - "/home/meinersbur/src/llvm/flangast/_src/third-party/benchmark/CMakeLists.txt:136 (check_library_exists)"
+    checks:
+      - "Looking for shm_open in rt"
+    directories:
+      source: "/home/meinersbur/src/llvm/flangast/_src/polymorphism-benchmark/CMakeFiles/CMakeScratch/TryCompile-5U1Uus"
+      binary: "/home/meinersbur/src/llvm/flangast/_src/polymorphism-benchmark/CMakeFiles/CMakeScratch/TryCompile-5U1Uus"
+    cmakeVariables:
+      CMAKE_CXX_FLAGS: ""
+      CMAKE_CXX_FLAGS_DEBUG: "-g"
+      CMAKE_EXE_LINKER_FLAGS: ""
+      CMAKE_MODULE_PATH: "/home/meinersbur/src/llvm/flangast/_src/third-party/benchmark/cmake/Modules;/home/meinersbur/src/llvm/flangast/_src/third-party/benchmark/cmake"
+    buildResult:
+      variable: "HAVE_LIB_RT"
+      cached: true
+      stdout: |
+        Change Dir: '/home/meinersbur/src/llvm/flangast/_src/polymorphism-benchmark/CMakeFiles/CMakeScratch/TryCompile-5U1Uus'
+        
+        Run Build Command(s): /usr/bin/cmake -E env VERBOSE=1 /usr/bin/gmake -f Makefile cmTC_27144/fast
+        /usr/bin/gmake  -f CMakeFiles/cmTC_27144.dir/build.make CMakeFiles/cmTC_27144.dir/build
+        gmake[1]: Entering directory '/home/meinersbur/src/llvm/flangast/_src/polymorphism-benchmark/CMakeFiles/CMakeScratch/TryCompile-5U1Uus'
+        Building CXX object CMakeFiles/cmTC_27144.dir/CheckFunctionExists.cxx.o
+        /usr/bin/c++   -DCHECK_FUNCTION_EXISTS=shm_open -std=c++17 -o CMakeFiles/cmTC_27144.dir/CheckFunctionExists.cxx.o -c /home/meinersbur/src/llvm/flangast/_src/polymorphism-benchmark/CMakeFiles/CMakeScratch/TryCompile-5U1Uus/CheckFunctionExists.cxx
+        Linking CXX executable cmTC_27144
+        /usr/bin/cmake -E cmake_link_script CMakeFiles/cmTC_27144.dir/link.txt --verbose=1
+        /usr/bin/c++  -DCHECK_FUNCTION_EXISTS=shm_open CMakeFiles/cmTC_27144.dir/CheckFunctionExists.cxx.o -o cmTC_27144  -lrt 
+        gmake[1]: Leaving directory '/home/meinersbur/src/llvm/flangast/_src/polymorphism-benchmark/CMakeFiles/CMakeScratch/TryCompile-5U1Uus'
+        
+      exitCode: 0
+  -
+    kind: "try_compile-v1"
+    backtrace:
+      - "/usr/share/cmake-3.28/Modules/Internal/CheckSourceCompiles.cmake:101 (try_compile)"
+      - "/usr/share/cmake-3.28/Modules/Internal/CheckCompilerFlag.cmake:18 (cmake_check_source_compiles)"
+      - "/usr/share/cmake-3.28/Modules/CheckCXXCompilerFlag.cmake:34 (cmake_check_compiler_flag)"
+      - "/home/meinersbur/src/llvm/flangast/_src/third-party/benchmark/cmake/AddCXXCompilerFlag.cmake:34 (check_cxx_compiler_flag)"
+      - "/home/meinersbur/src/llvm/flangast/_src/third-party/benchmark/CMakeLists.txt:194 (add_cxx_compiler_flag)"
+    checks:
+      - "Performing Test HAVE_CXX_FLAG_WALL"
+    directories:
+      source: "/home/meinersbur/src/llvm/flangast/_src/polymorphism-benchmark/CMakeFiles/CMakeScratch/TryCompile-mzwTEL"
+      binary: "/home/meinersbur/src/llvm/flangast/_src/polymorphism-benchmark/CMakeFiles/CMakeScratch/TryCompile-mzwTEL"
+    cmakeVariables:
+      CMAKE_CXX_FLAGS: ""
+      CMAKE_CXX_FLAGS_DEBUG: "-g"
+      CMAKE_EXE_LINKER_FLAGS: ""
+      CMAKE_MODULE_PATH: "/home/meinersbur/src/llvm/flangast/_src/third-party/benchmark/cmake/Modules;/home/meinersbur/src/llvm/flangast/_src/third-party/benchmark/cmake"
+    buildResult:
+      variable: "HAVE_CXX_FLAG_WALL"
+      cached: true
+      stdout: |
+        Change Dir: '/home/meinersbur/src/llvm/flangast/_src/polymorphism-benchmark/CMakeFiles/CMakeScratch/TryCompile-mzwTEL'
+        
+        Run Build Command(s): /usr/bin/cmake -E env VERBOSE=1 /usr/bin/gmake -f Makefile cmTC_217dc/fast
+        /usr/bin/gmake  -f CMakeFiles/cmTC_217dc.dir/build.make CMakeFiles/cmTC_217dc.dir/build
+        gmake[1]: Entering directory '/home/meinersbur/src/llvm/flangast/_src/polymorphism-benchmark/CMakeFiles/CMakeScratch/TryCompile-mzwTEL'
+        Building CXX object CMakeFiles/cmTC_217dc.dir/src.cxx.o
+        /usr/bin/c++ -DHAVE_CXX_FLAG_WALL  -Wall -std=c++17   -Wall -o CMakeFiles/cmTC_217dc.dir/src.cxx.o -c /home/meinersbur/src/llvm/flangast/_src/polymorphism-benchmark/CMakeFiles/CMakeScratch/TryCompile-mzwTEL/src.cxx
+        Linking CXX executable cmTC_217dc
+        /usr/bin/cmake -E cmake_link_script CMakeFiles/cmTC_217dc.dir/link.txt --verbose=1
+        /usr/bin/c++   -Wall CMakeFiles/cmTC_217dc.dir/src.cxx.o -o cmTC_217dc 
+        gmake[1]: Leaving directory '/home/meinersbur/src/llvm/flangast/_src/polymorphism-benchmark/CMakeFiles/CMakeScratch/TryCompile-mzwTEL'
+        
+      exitCode: 0
+  -
+    kind: "try_compile-v1"
+    backtrace:
+      - "/usr/share/cmake-3.28/Modules/Internal/CheckSourceCompiles.cmake:101 (try_compile)"
+      - "/usr/share/cmake-3.28/Modules/Internal/CheckCompilerFlag.cmake:18 (cmake_check_source_compiles)"
+      - "/usr/share/cmake-3.28/Modules/CheckCXXCompilerFlag.cmake:34 (cmake_check_compiler_flag)"
+      - "/home/meinersbur/src/llvm/flangast/_src/third-party/benchmark/cmake/AddCXXCompilerFlag.cmake:34 (check_cxx_compiler_flag)"
+      - "/home/meinersbur/src/llvm/flangast/_src/third-party/benchmark/CMakeLists.txt:195 (add_cxx_compiler_flag)"
+    checks:
+      - "Performing Test HAVE_CXX_FLAG_WEXTRA"
+    directories:
+      source: "/home/meinersbur/src/llvm/flangast/_src/polymorphism-benchmark/CMakeFiles/CMakeScratch/TryCompile-xsSGaM"
+      binary: "/home/meinersbur/src/llvm/flangast/_src/polymorphism-benchmark/CMakeFiles/CMakeScratch/TryCompile-xsSGaM"
+    cmakeVariables:
+      CMAKE_CXX_FLAGS: "  -Wall"
+      CMAKE_CXX_FLAGS_DEBUG: "-g"
+      CMAKE_EXE_LINKER_FLAGS: ""
+      CMAKE_MODULE_PATH: "/home/meinersbur/src/llvm/flangast/_src/third-party/benchmark/cmake/Modules;/home/meinersbur/src/llvm/flangast/_src/third-party/benchmark/cmake"
+    buildResult:
+      variable: "HAVE_CXX_FLAG_WEXTRA"
+      cached: true
+      stdout: |
+        Change Dir: '/home/meinersbur/src/llvm/flangast/_src/polymorphism-benchmark/CMakeFiles/CMakeScratch/TryCompile-xsSGaM'
+        
+        Run Build Command(s): /usr/bin/cmake -E env VERBOSE=1 /usr/bin/gmake -f Makefile cmTC_fd1be/fast
+        /usr/bin/gmake  -f CMakeFiles/cmTC_fd1be.dir/build.make CMakeFiles/cmTC_fd1be.dir/build
+        gmake[1]: Entering directory '/home/meinersbur/src/llvm/flangast/_src/polymorphism-benchmark/CMakeFiles/CMakeScratch/TryCompile-xsSGaM'
+        Building CXX object CMakeFiles/cmTC_fd1be.dir/src.cxx.o
+        /usr/bin/c++ -DHAVE_CXX_FLAG_WEXTRA  -Wall  -Wextra -std=c++17   -Wextra -o CMakeFiles/cmTC_fd1be.dir/src.cxx.o -c /home/meinersbur/src/llvm/flangast/_src/polymorphism-benchmark/CMakeFiles/CMakeScratch/TryCompile-xsSGaM/src.cxx
+        Linking CXX executable cmTC_fd1be
+        /usr/bin/cmake -E cmake_link_script CMakeFiles/cmTC_fd1be.dir/link.txt --verbose=1
+        /usr/bin/c++   -Wall  -Wextra CMakeFiles/cmTC_fd1be.dir/src.cxx.o -o cmTC_fd1be 
+        gmake[1]: Leaving directory '/home/meinersbur/src/llvm/flangast/_src/polymorphism-benchmark/CMakeFiles/CMakeScratch/TryCompile-xsSGaM'
+        
+      exitCode: 0
+  -
+    kind: "try_compile-v1"
+    backtrace:
+      - "/usr/share/cmake-3.28/Modules/Internal/CheckSourceCompiles.cmake:101 (try_compile)"
+      - "/usr/share/cmake-3.28/Modules/Internal/CheckCompilerFlag.cmake:18 (cmake_check_source_compiles)"
+      - "/usr/share/cmake-3.28/Modules/CheckCXXCompilerFlag.cmake:34 (cmake_check_compiler_flag)"
+      - "/home/meinersbur/src/llvm/flangast/_src/third-party/benchmark/cmake/AddCXXCompilerFlag.cmake:34 (check_cxx_compiler_flag)"
+      - "/home/meinersbur/src/llvm/flangast/_src/third-party/benchmark/CMakeLists.txt:196 (add_cxx_compiler_flag)"
+    checks:
+      - "Performing Test HAVE_CXX_FLAG_WSHADOW"
+    directories:
+      source: "/home/meinersbur/src/llvm/flangast/_src/polymorphism-benchmark/CMakeFiles/CMakeScratch/TryCompile-nJGfZF"
+      binary: "/home/meinersbur/src/llvm/flangast/_src/polymorphism-benchmark/CMakeFiles/CMakeScratch/TryCompile-nJGfZF"
+    cmakeVariables:
+      CMAKE_CXX_FLAGS: "  -Wall  -Wextra"
+      CMAKE_CXX_FLAGS_DEBUG: "-g"
+      CMAKE_EXE_LINKER_FLAGS: ""
+      CMAKE_MODULE_PATH: "/home/meinersbur/src/llvm/flangast/_src/third-party/benchmark/cmake/Modules;/home/meinersbur/src/llvm/flangast/_src/third-party/benchmark/cmake"
+    buildResult:
+      variable: "HAVE_CXX_FLAG_WSHADOW"
+      cached: true
+      stdout: |
+        Change Dir: '/home/meinersbur/src/llvm/flangast/_src/polymorphism-benchmark/CMakeFiles/CMakeScratch/TryCompile-nJGfZF'
+        
+        Run Build Command(s): /usr/bin/cmake -E env VERBOSE=1 /usr/bin/gmake -f Makefile cmTC_11595/fast
+        /usr/bin/gmake  -f CMakeFiles/cmTC_11595.dir/build.make CMakeFiles/cmTC_11595.dir/build
+        gmake[1]: Entering directory '/home/meinersbur/src/llvm/flangast/_src/polymorphism-benchmark/CMakeFiles/CMakeScratch/TryCompile-nJGfZF'
+        Building CXX object CMakeFiles/cmTC_11595.dir/src.cxx.o
+        /usr/bin/c++ -DHAVE_CXX_FLAG_WSHADOW  -Wall  -Wextra  -Wshadow -std=c++17   -Wshadow -o CMakeFiles/cmTC_11595.dir/src.cxx.o -c /home/meinersbur/src/llvm/flangast/_src/polymorphism-benchmark/CMakeFiles/CMakeScratch/TryCompile-nJGfZF/src.cxx
+        Linking CXX executable cmTC_11595
+        /usr/bin/cmake -E cmake_link_script CMakeFiles/cmTC_11595.dir/link.txt --verbose=1
+        /usr/bin/c++   -Wall  -Wextra  -Wshadow CMakeFiles/cmTC_11595.dir/src.cxx.o -o cmTC_11595 
+        gmake[1]: Leaving directory '/home/meinersbur/src/llvm/flangast/_src/polymorphism-benchmark/CMakeFiles/CMakeScratch/TryCompile-nJGfZF'
+        
+      exitCode: 0
+  -
+    kind: "try_compile-v1"
+    backtrace:
+      - "/usr/share/cmake-3.28/Modules/Internal/CheckSourceCompiles.cmake:101 (try_compile)"
+      - "/usr/share/cmake-3.28/Modules/Internal/CheckCompilerFlag.cmake:18 (cmake_check_source_compiles)"
+      - "/usr/share/cmake-3.28/Modules/CheckCXXCompilerFlag.cmake:34 (cmake_check_compiler_flag)"
+      - "/home/meinersbur/src/llvm/flangast/_src/third-party/benchmark/cmake/AddCXXCompilerFlag.cmake:34 (check_cxx_compiler_flag)"
+      - "/home/meinersbur/src/llvm/flangast/_src/third-party/benchmark/CMakeLists.txt:197 (add_cxx_compiler_flag)"
+    checks:
+      - "Performing Test HAVE_CXX_FLAG_WFLOAT_EQUAL"
+    directories:
+      source: "/home/meinersbur/src/llvm/flangast/_src/polymorphism-benchmark/CMakeFiles/CMakeScratch/TryCompile-XXNSoj"
+      binary: "/home/meinersbur/src/llvm/flangast/_src/polymorphism-benchmark/CMakeFiles/CMakeScratch/TryCompile-XXNSoj"
+    cmakeVariables:
+      CMAKE_CXX_FLAGS: "  -Wall  -Wextra  -Wshadow"
+      CMAKE_CXX_FLAGS_DEBUG: "-g"
+      CMAKE_EXE_LINKER_FLAGS: ""
+      CMAKE_MODULE_PATH: "/home/meinersbur/src/llvm/flangast/_src/third-party/benchmark/cmake/Modules;/home/meinersbur/src/llvm/flangast/_src/third-party/benchmark/cmake"
+    buildResult:
+      variable: "HAVE_CXX_FLAG_WFLOAT_EQUAL"
+      cached: true
+      stdout: |
+        Change Dir: '/home/meinersbur/src/llvm/flangast/_src/polymorphism-benchmark/CMakeFiles/CMakeScratch/TryCompile-XXNSoj'
+        
+        Run Build Command(s): /usr/bin/cmake -E env VERBOSE=1 /usr/bin/gmake -f Makefile cmTC_b98df/fast
+        /usr/bin/gmake  -f CMakeFiles/cmTC_b98df.dir/build.make CMakeFiles/cmTC_b98df.dir/build
+        gmake[1]: Entering directory '/home/meinersbur/src/llvm/flangast/_src/polymorphism-benchmark/CMakeFiles/CMakeScratch/TryCompile-XXNSoj'
+        Building CXX object CMakeFiles/cmTC_b98df.dir/src.cxx.o
+        /usr/bin/c++ -DHAVE_CXX_FLAG_WFLOAT_EQUAL  -Wall  -Wextra  -Wshadow  -Wfloat-equal -std=c++17   -Wfloat-equal -o CMakeFiles/cmTC_b98df.dir/src.cxx.o -c /home/meinersbur/src/llvm/flangast/_src/polymorphism-benchmark/CMakeFiles/CMakeScratch/TryCompile-XXNSoj/src.cxx
+        Linking CXX executable cmTC_b98df
+        /usr/bin/cmake -E cmake_link_script CMakeFiles/cmTC_b98df.dir/link.txt --verbose=1
+        /usr/bin/c++   -Wall  -Wextra  -Wshadow  -Wfloat-equal CMakeFiles/cmTC_b98df.dir/src.cxx.o -o cmTC_b98df 
+        gmake[1]: Leaving directory '/home/meinersbur/src/llvm/flangast/_src/polymorphism-benchmark/CMakeFiles/CMakeScratch/TryCompile-XXNSoj'
+        
+      exitCode: 0
+  -
+    kind: "try_compile-v1"
+    backtrace:
+      - "/usr/share/cmake-3.28/Modules/Internal/CheckSourceCompiles.cmake:101 (try_compile)"
+      - "/usr/share/cmake-3.28/Modules/Internal/CheckCompilerFlag.cmake:18 (cmake_check_source_compiles)"
+      - "/usr/share/cmake-3.28/Modules/CheckCXXCompilerFlag.cmake:34 (cmake_check_compiler_flag)"
+      - "/home/meinersbur/src/llvm/flangast/_src/third-party/benchmark/cmake/AddCXXCompilerFlag.cmake:34 (check_cxx_compiler_flag)"
+      - "/home/meinersbur/src/llvm/flangast/_src/third-party/benchmark/CMakeLists.txt:198 (add_cxx_compiler_flag)"
+    checks:
+      - "Performing Test HAVE_CXX_FLAG_WOLD_STYLE_CAST"
+    directories:
+      source: "/home/meinersbur/src/llvm/flangast/_src/polymorphism-benchmark/CMakeFiles/CMakeScratch/TryCompile-lYWA3n"
+      binary: "/home/meinersbur/src/llvm/flangast/_src/polymorphism-benchmark/CMakeFiles/CMakeScratch/TryCompile-lYWA3n"
+    cmakeVariables:
+      CMAKE_CXX_FLAGS: "  -Wall  -Wextra  -Wshadow  -Wfloat-equal"
+      CMAKE_CXX_FLAGS_DEBUG: "-g"
+      CMAKE_EXE_LINKER_FLAGS: ""
+      CMAKE_MODULE_PATH: "/home/meinersbur/src/llvm/flangast/_src/third-party/benchmark/cmake/Modules;/home/meinersbur/src/llvm/flangast/_src/third-party/benchmark/cmake"
+    buildResult:
+      variable: "HAVE_CXX_FLAG_WOLD_STYLE_CAST"
+      cached: true
+      stdout: |
+        Change Dir: '/home/meinersbur/src/llvm/flangast/_src/polymorphism-benchmark/CMakeFiles/CMakeScratch/TryCompile-lYWA3n'
+        
+        Run Build Command(s): /usr/bin/cmake -E env VERBOSE=1 /usr/bin/gmake -f Makefile cmTC_11120/fast
+        /usr/bin/gmake  -f CMakeFiles/cmTC_11120.dir/build.make CMakeFiles/cmTC_11120.dir/build
+        gmake[1]: Entering directory '/home/meinersbur/src/llvm/flangast/_src/polymorphism-benchmark/CMakeFiles/CMakeScratch/TryCompile-lYWA3n'
+        Building CXX object CMakeFiles/cmTC_11120.dir/src.cxx.o
+        /usr/bin/c++ -DHAVE_CXX_FLAG_WOLD_STYLE_CAST  -Wall  -Wextra  -Wshadow  -Wfloat-equal  -Wold-style-cast -std=c++17   -Wold-style-cast -o CMakeFiles/cmTC_11120.dir/src.cxx.o -c /home/meinersbur/src/llvm/flangast/_src/polymorphism-benchmark/CMakeFiles/CMakeScratch/TryCompile-lYWA3n/src.cxx
+        Linking CXX executable cmTC_11120
+        /usr/bin/cmake -E cmake_link_script CMakeFiles/cmTC_11120.dir/link.txt --verbose=1
+        /usr/bin/c++   -Wall  -Wextra  -Wshadow  -Wfloat-equal  -Wold-style-cast CMakeFiles/cmTC_11120.dir/src.cxx.o -o cmTC_11120 
+        gmake[1]: Leaving directory '/home/meinersbur/src/llvm/flangast/_src/polymorphism-benchmark/CMakeFiles/CMakeScratch/TryCompile-lYWA3n'
+        
+      exitCode: 0
+  -
+    kind: "try_compile-v1"
+    backtrace:
+      - "/usr/share/cmake-3.28/Modules/Internal/CheckSourceCompiles.cmake:101 (try_compile)"
+      - "/usr/share/cmake-3.28/Modules/Internal/CheckCompilerFlag.cmake:18 (cmake_check_source_compiles)"
+      - "/usr/share/cmake-3.28/Modules/CheckCXXCompilerFlag.cmake:34 (cmake_check_compiler_flag)"
+      - "/home/meinersbur/src/llvm/flangast/_src/third-party/benchmark/cmake/AddCXXCompilerFlag.cmake:34 (check_cxx_compiler_flag)"
+      - "/home/meinersbur/src/llvm/flangast/_src/third-party/benchmark/CMakeLists.txt:199 (add_cxx_compiler_flag)"
+    checks:
+      - "Performing Test HAVE_CXX_FLAG_WCONVERSION"
+    directories:
+      source: "/home/meinersbur/src/llvm/flangast/_src/polymorphism-benchmark/CMakeFiles/CMakeScratch/TryCompile-9HKDuT"
+      binary: "/home/meinersbur/src/llvm/flangast/_src/polymorphism-benchmark/CMakeFiles/CMakeScratch/TryCompile-9HKDuT"
+    cmakeVariables:
+      CMAKE_CXX_FLAGS: "  -Wall  -Wextra  -Wshadow  -Wfloat-equal  -Wold-style-cast"
+      CMAKE_CXX_FLAGS_DEBUG: "-g"
+      CMAKE_EXE_LINKER_FLAGS: ""
+      CMAKE_MODULE_PATH: "/home/meinersbur/src/llvm/flangast/_src/third-party/benchmark/cmake/Modules;/home/meinersbur/src/llvm/flangast/_src/third-party/benchmark/cmake"
+    buildResult:
+      variable: "HAVE_CXX_FLAG_WCONVERSION"
+      cached: true
+      stdout: |
+        Change Dir: '/home/meinersbur/src/llvm/flangast/_src/polymorphism-benchmark/CMakeFiles/CMakeScratch/TryCompile-9HKDuT'
+        
+        Run Build Command(s): /usr/bin/cmake -E env VERBOSE=1 /usr/bin/gmake -f Makefile cmTC_6f857/fast
+        /usr/bin/gmake  -f CMakeFiles/cmTC_6f857.dir/build.make CMakeFiles/cmTC_6f857.dir/build
+        gmake[1]: Entering directory '/home/meinersbur/src/llvm/flangast/_src/polymorphism-benchmark/CMakeFiles/CMakeScratch/TryCompile-9HKDuT'
+        Building CXX object CMakeFiles/cmTC_6f857.dir/src.cxx.o
+        /usr/bin/c++ -DHAVE_CXX_FLAG_WCONVERSION  -Wall  -Wextra  -Wshadow  -Wfloat-equal  -Wold-style-cast  -Wconversion -std=c++17   -Wconversion -o CMakeFiles/cmTC_6f857.dir/src.cxx.o -c /home/meinersbur/src/llvm/flangast/_src/polymorphism-benchmark/CMakeFiles/CMakeScratch/TryCompile-9HKDuT/src.cxx
+        Linking CXX executable cmTC_6f857
+        /usr/bin/cmake -E cmake_link_script CMakeFiles/cmTC_6f857.dir/link.txt --verbose=1
+        /usr/bin/c++   -Wall  -Wextra  -Wshadow  -Wfloat-equal  -Wold-style-cast  -Wconversion CMakeFiles/cmTC_6f857.dir/src.cxx.o -o cmTC_6f857 
+        gmake[1]: Leaving directory '/home/meinersbur/src/llvm/flangast/_src/polymorphism-benchmark/CMakeFiles/CMakeScratch/TryCompile-9HKDuT'
+        
+      exitCode: 0
+  -
+    kind: "try_compile-v1"
+    backtrace:
+      - "/usr/share/cmake-3.28/Modules/Internal/CheckSourceCompiles.cmake:101 (try_compile)"
+      - "/usr/share/cmake-3.28/Modules/Internal/CheckCompilerFlag.cmake:18 (cmake_check_source_compiles)"
+      - "/usr/share/cmake-3.28/Modules/CheckCXXCompilerFlag.cmake:34 (cmake_check_compiler_flag)"
+      - "/home/meinersbur/src/llvm/flangast/_src/third-party/benchmark/cmake/AddCXXCompilerFlag.cmake:34 (check_cxx_compiler_flag)"
+      - "/home/meinersbur/src/llvm/flangast/_src/third-party/benchmark/CMakeLists.txt:200 (add_cxx_compiler_flag)"
+    checks:
+      - "Performing Test HAVE_CXX_FLAG_WFORMAT_2"
+    directories:
+      source: "/home/meinersbur/src/llvm/flangast/_src/polymorphism-benchmark/CMakeFiles/CMakeScratch/TryCompile-V2KaI8"
+      binary: "/home/meinersbur/src/llvm/flangast/_src/polymorphism-benchmark/CMakeFiles/CMakeScratch/TryCompile-V2KaI8"
+    cmakeVariables:
+      CMAKE_CXX_FLAGS: "  -Wall  -Wextra  -Wshadow  -Wfloat-equal  -Wold-style-cast  -Wconversion"
+      CMAKE_CXX_FLAGS_DEBUG: "-g"
+      CMAKE_EXE_LINKER_FLAGS: ""
+      CMAKE_MODULE_PATH: "/home/meinersbur/src/llvm/flangast/_src/third-party/benchmark/cmake/Modules;/home/meinersbur/src/llvm/flangast/_src/third-party/benchmark/cmake"
+    buildResult:
+      variable: "HAVE_CXX_FLAG_WFORMAT_2"
+      cached: true
+      stdout: |
+        Change Dir: '/home/meinersbur/src/llvm/flangast/_src/polymorphism-benchmark/CMakeFiles/CMakeScratch/TryCompile-V2KaI8'
+        
+        Run Build Command(s): /usr/bin/cmake -E env VERBOSE=1 /usr/bin/gmake -f Makefile cmTC_80b6b/fast
+        /usr/bin/gmake  -f CMakeFiles/cmTC_80b6b.dir/build.make CMakeFiles/cmTC_80b6b.dir/build
+        gmake[1]: Entering directory '/home/meinersbur/src/llvm/flangast/_src/polymorphism-benchmark/CMakeFiles/CMakeScratch/TryCompile-V2KaI8'
+        Building CXX object CMakeFiles/cmTC_80b6b.dir/src.cxx.o
+        /usr/bin/c++ -DHAVE_CXX_FLAG_WFORMAT_2  -Wall  -Wextra  -Wshadow  -Wfloat-equal  -Wold-style-cast  -Wconversion  -Wformat=2 -std=c++17   -Wformat=2 -o CMakeFiles/cmTC_80b6b.dir/src.cxx.o -c /home/meinersbur/src/llvm/flangast/_src/polymorphism-benchmark/CMakeFiles/CMakeScratch/TryCompile-V2KaI8/src.cxx
+        Linking CXX executable cmTC_80b6b
+        /usr/bin/cmake -E cmake_link_script CMakeFiles/cmTC_80b6b.dir/link.txt --verbose=1
+        /usr/bin/c++   -Wall  -Wextra  -Wshadow  -Wfloat-equal  -Wold-style-cast  -Wconversion  -Wformat=2 CMakeFiles/cmTC_80b6b.dir/src.cxx.o -o cmTC_80b6b 
+        gmake[1]: Leaving directory '/home/meinersbur/src/llvm/flangast/_src/polymorphism-benchmark/CMakeFiles/CMakeScratch/TryCompile-V2KaI8'
+        
+      exitCode: 0
+  -
+    kind: "try_compile-v1"
+    backtrace:
+      - "/usr/share/cmake-3.28/Modules/Internal/CheckSourceCompiles.cmake:101 (try_compile)"
+      - "/usr/share/cmake-3.28/Modules/Internal/CheckCompilerFlag.cmake:18 (cmake_check_source_compiles)"
+      - "/usr/share/cmake-3.28/Modules/CheckCXXCompilerFlag.cmake:34 (cmake_check_compiler_flag)"
+      - "/home/meinersbur/src/llvm/flangast/_src/third-party/benchmark/cmake/AddCXXCompilerFlag.cmake:34 (check_cxx_compiler_flag)"
+      - "/home/meinersbur/src/llvm/flangast/_src/third-party/benchmark/CMakeLists.txt:206 (add_cxx_compiler_flag)"
+    checks:
+      - "Performing Test HAVE_CXX_FLAG_WSUGGEST_OVERRIDE"
+    directories:
+      source: "/home/meinersbur/src/llvm/flangast/_src/polymorphism-benchmark/CMakeFiles/CMakeScratch/TryCompile-NIQza8"
+      binary: "/home/meinersbur/src/llvm/flangast/_src/polymorphism-benchmark/CMakeFiles/CMakeScratch/TryCompile-NIQza8"
+    cmakeVariables:
+      CMAKE_CXX_FLAGS: "  -Wall  -Wextra  -Wshadow  -Wfloat-equal  -Wold-style-cast  -Wconversion  -Wformat=2"
+      CMAKE_CXX_FLAGS_DEBUG: "-g"
+      CMAKE_EXE_LINKER_FLAGS: ""
+      CMAKE_MODULE_PATH: "/home/meinersbur/src/llvm/flangast/_src/third-party/benchmark/cmake/Modules;/home/meinersbur/src/llvm/flangast/_src/third-party/benchmark/cmake"
+    buildResult:
+      variable: "HAVE_CXX_FLAG_WSUGGEST_OVERRIDE"
+      cached: true
+      stdout: |
+        Change Dir: '/home/meinersbur/src/llvm/flangast/_src/polymorphism-benchmark/CMakeFiles/CMakeScratch/TryCompile-NIQza8'
+        
+        Run Build Command(s): /usr/bin/cmake -E env VERBOSE=1 /usr/bin/gmake -f Makefile cmTC_1d11c/fast
+        /usr/bin/gmake  -f CMakeFiles/cmTC_1d11c.dir/build.make CMakeFiles/cmTC_1d11c.dir/build
+        gmake[1]: Entering directory '/home/meinersbur/src/llvm/flangast/_src/polymorphism-benchmark/CMakeFiles/CMakeScratch/TryCompile-NIQza8'
+        Building CXX object CMakeFiles/cmTC_1d11c.dir/src.cxx.o
+        /usr/bin/c++ -DHAVE_CXX_FLAG_WSUGGEST_OVERRIDE  -Wall  -Wextra  -Wshadow  -Wfloat-equal  -Wold-style-cast  -Wconversion  -Wformat=2  -Wsuggest-override -std=c++17   -Wsuggest-override -o CMakeFiles/cmTC_1d11c.dir/src.cxx.o -c /home/meinersbur/src/llvm/flangast/_src/polymorphism-benchmark/CMakeFiles/CMakeScratch/TryCompile-NIQza8/src.cxx
+        Linking CXX executable cmTC_1d11c
+        /usr/bin/cmake -E cmake_link_script CMakeFiles/cmTC_1d11c.dir/link.txt --verbose=1
+        /usr/bin/c++   -Wall  -Wextra  -Wshadow  -Wfloat-equal  -Wold-style-cast  -Wconversion  -Wformat=2  -Wsuggest-override CMakeFiles/cmTC_1d11c.dir/src.cxx.o -o cmTC_1d11c 
+        gmake[1]: Leaving directory '/home/meinersbur/src/llvm/flangast/_src/polymorphism-benchmark/CMakeFiles/CMakeScratch/TryCompile-NIQza8'
+        
+      exitCode: 0
+  -
+    kind: "try_compile-v1"
+    backtrace:
+      - "/usr/share/cmake-3.28/Modules/Internal/CheckSourceCompiles.cmake:101 (try_compile)"
+      - "/usr/share/cmake-3.28/Modules/Internal/CheckCompilerFlag.cmake:18 (cmake_check_source_compiles)"
+      - "/usr/share/cmake-3.28/Modules/CheckCXXCompilerFlag.cmake:34 (cmake_check_compiler_flag)"
+      - "/home/meinersbur/src/llvm/flangast/_src/third-party/benchmark/cmake/AddCXXCompilerFlag.cmake:34 (check_cxx_compiler_flag)"
+      - "/home/meinersbur/src/llvm/flangast/_src/third-party/benchmark/CMakeLists.txt:208 (add_cxx_compiler_flag)"
+    checks:
+      - "Performing Test HAVE_CXX_FLAG_PEDANTIC"
+    directories:
+      source: "/home/meinersbur/src/llvm/flangast/_src/polymorphism-benchmark/CMakeFiles/CMakeScratch/TryCompile-JWCJnD"
+      binary: "/home/meinersbur/src/llvm/flangast/_src/polymorphism-benchmark/CMakeFiles/CMakeScratch/TryCompile-JWCJnD"
+    cmakeVariables:
+      CMAKE_CXX_FLAGS: "  -Wall  -Wextra  -Wshadow  -Wfloat-equal  -Wold-style-cast  -Wconversion  -Wformat=2  -Wsuggest-override"
+      CMAKE_CXX_FLAGS_DEBUG: "-g"
+      CMAKE_EXE_LINKER_FLAGS: ""
+      CMAKE_MODULE_PATH: "/home/meinersbur/src/llvm/flangast/_src/third-party/benchmark/cmake/Modules;/home/meinersbur/src/llvm/flangast/_src/third-party/benchmark/cmake"
+    buildResult:
+      variable: "HAVE_CXX_FLAG_PEDANTIC"
+      cached: true
+      stdout: |
+        Change Dir: '/home/meinersbur/src/llvm/flangast/_src/polymorphism-benchmark/CMakeFiles/CMakeScratch/TryCompile-JWCJnD'
+        
+        Run Build Command(s): /usr/bin/cmake -E env VERBOSE=1 /usr/bin/gmake -f Makefile cmTC_31081/fast
+        /usr/bin/gmake  -f CMakeFiles/cmTC_31081.dir/build.make CMakeFiles/cmTC_31081.dir/build
+        gmake[1]: Entering directory '/home/meinersbur/src/llvm/flangast/_src/polymorphism-benchmark/CMakeFiles/CMakeScratch/TryCompile-JWCJnD'
+        Building CXX object CMakeFiles/cmTC_31081.dir/src.cxx.o
+        /usr/bin/c++ -DHAVE_CXX_FLAG_PEDANTIC  -Wall  -Wextra  -Wshadow  -Wfloat-equal  -Wold-style-cast  -Wconversion  -Wformat=2  -Wsuggest-override  -pedantic -std=c++17   -pedantic -o CMakeFiles/cmTC_31081.dir/src.cxx.o -c /home/meinersbur/src/llvm/flangast/_src/polymorphism-benchmark/CMakeFiles/CMakeScratch/TryCompile-JWCJnD/src.cxx
+        Linking CXX executable cmTC_31081
+        /usr/bin/cmake -E cmake_link_script CMakeFiles/cmTC_31081.dir/link.txt --verbose=1
+        /usr/bin/c++   -Wall  -Wextra  -Wshadow  -Wfloat-equal  -Wold-style-cast  -Wconversion  -Wformat=2  -Wsuggest-override  -pedantic CMakeFiles/cmTC_31081.dir/src.cxx.o -o cmTC_31081 
+        gmake[1]: Leaving directory '/home/meinersbur/src/llvm/flangast/_src/polymorphism-benchmark/CMakeFiles/CMakeScratch/TryCompile-JWCJnD'
+        
+      exitCode: 0
+  -
+    kind: "try_compile-v1"
+    backtrace:
+      - "/usr/share/cmake-3.28/Modules/Internal/CheckSourceCompiles.cmake:101 (try_compile)"
+      - "/usr/share/cmake-3.28/Modules/Internal/CheckCompilerFlag.cmake:18 (cmake_check_source_compiles)"
+      - "/usr/share/cmake-3.28/Modules/CheckCXXCompilerFlag.cmake:34 (cmake_check_compiler_flag)"
+      - "/home/meinersbur/src/llvm/flangast/_src/third-party/benchmark/cmake/AddCXXCompilerFlag.cmake:34 (check_cxx_compiler_flag)"
+      - "/home/meinersbur/src/llvm/flangast/_src/third-party/benchmark/CMakeLists.txt:209 (add_cxx_compiler_flag)"
+    checks:
+      - "Performing Test HAVE_CXX_FLAG_PEDANTIC_ERRORS"
+    directories:
+      source: "/home/meinersbur/src/llvm/flangast/_src/polymorphism-benchmark/CMakeFiles/CMakeScratch/TryCompile-XbstCe"
+      binary: "/home/meinersbur/src/llvm/flangast/_src/polymorphism-benchmark/CMakeFiles/CMakeScratch/TryCompile-XbstCe"
+    cmakeVariables:
+      CMAKE_CXX_FLAGS: "  -Wall  -Wextra  -Wshadow  -Wfloat-equal  -Wold-style-cast  -Wconversion  -Wformat=2  -Wsuggest-override  -pedantic"
+      CMAKE_CXX_FLAGS_DEBUG: "-g"
+      CMAKE_EXE_LINKER_FLAGS: ""
+      CMAKE_MODULE_PATH: "/home/meinersbur/src/llvm/flangast/_src/third-party/benchmark/cmake/Modules;/home/meinersbur/src/llvm/flangast/_src/third-party/benchmark/cmake"
+    buildResult:
+      variable: "HAVE_CXX_FLAG_PEDANTIC_ERRORS"
+      cached: true
+      stdout: |
+        Change Dir: '/home/meinersbur/src/llvm/flangast/_src/polymorphism-benchmark/CMakeFiles/CMakeScratch/TryCompile-XbstCe'
+        
+        Run Build Command(s): /usr/bin/cmake -E env VERBOSE=1 /usr/bin/gmake -f Makefile cmTC_87bd4/fast
+        /usr/bin/gmake  -f CMakeFiles/cmTC_87bd4.dir/build.make CMakeFiles/cmTC_87bd4.dir/build
+        gmake[1]: Entering directory '/home/meinersbur/src/llvm/flangast/_src/polymorphism-benchmark/CMakeFiles/CMakeScratch/TryCompile-XbstCe'
+        Building CXX object CMakeFiles/cmTC_87bd4.dir/src.cxx.o
+        /usr/bin/c++ -DHAVE_CXX_FLAG_PEDANTIC_ERRORS  -Wall  -Wextra  -Wshadow  -Wfloat-equal  -Wold-style-cast  -Wconversion  -Wformat=2  -Wsuggest-override  -pedantic  -pedantic-errors -std=c++17   -pedantic-errors -o CMakeFiles/cmTC_87bd4.dir/src.cxx.o -c /home/meinersbur/src/llvm/flangast/_src/polymorphism-benchmark/CMakeFiles/CMakeScratch/TryCompile-XbstCe/src.cxx
+        Linking CXX executable cmTC_87bd4
+        /usr/bin/cmake -E cmake_link_script CMakeFiles/cmTC_87bd4.dir/link.txt --verbose=1
+        /usr/bin/c++   -Wall  -Wextra  -Wshadow  -Wfloat-equal  -Wold-style-cast  -Wconversion  -Wformat=2  -Wsuggest-override  -pedantic  -pedantic-errors CMakeFiles/cmTC_87bd4.dir/src.cxx.o -o cmTC_87bd4 
+        gmake[1]: Leaving directory '/home/meinersbur/src/llvm/flangast/_src/polymorphism-benchmark/CMakeFiles/CMakeScratch/TryCompile-XbstCe'
+        
+      exitCode: 0
+  -
+    kind: "try_compile-v1"
+    backtrace:
+      - "/usr/share/cmake-3.28/Modules/Internal/CheckSourceCompiles.cmake:101 (try_compile)"
+      - "/usr/share/cmake-3.28/Modules/Internal/CheckCompilerFlag.cmake:18 (cmake_check_source_compiles)"
+      - "/usr/share/cmake-3.28/Modules/CheckCXXCompilerFlag.cmake:34 (cmake_check_compiler_flag)"
+      - "/home/meinersbur/src/llvm/flangast/_src/third-party/benchmark/cmake/AddCXXCompilerFlag.cmake:34 (check_cxx_compiler_flag)"
+      - "/home/meinersbur/src/llvm/flangast/_src/third-party/benchmark/CMakeLists.txt:210 (add_cxx_compiler_flag)"
+    checks:
+      - "Performing Test HAVE_CXX_FLAG_WSHORTEN_64_TO_32"
+    directories:
+      source: "/home/meinersbur/src/llvm/flangast/_src/polymorphism-benchmark/CMakeFiles/CMakeScratch/TryCompile-ZgcPdJ"
+      binary: "/home/meinersbur/src/llvm/flangast/_src/polymorphism-benchmark/CMakeFiles/CMakeScratch/TryCompile-ZgcPdJ"
+    cmakeVariables:
+      CMAKE_CXX_FLAGS: "  -Wall  -Wextra  -Wshadow  -Wfloat-equal  -Wold-style-cast  -Wconversion  -Wformat=2  -Wsuggest-override  -pedantic  -pedantic-errors"
+      CMAKE_CXX_FLAGS_DEBUG: "-g"
+      CMAKE_EXE_LINKER_FLAGS: ""
+      CMAKE_MODULE_PATH: "/home/meinersbur/src/llvm/flangast/_src/third-party/benchmark/cmake/Modules;/home/meinersbur/src/llvm/flangast/_src/third-party/benchmark/cmake"
+    buildResult:
+      variable: "HAVE_CXX_FLAG_WSHORTEN_64_TO_32"
+      cached: true
+      stdout: |
+        Change Dir: '/home/meinersbur/src/llvm/flangast/_src/polymorphism-benchmark/CMakeFiles/CMakeScratch/TryCompile-ZgcPdJ'
+        
+        Run Build Command(s): /usr/bin/cmake -E env VERBOSE=1 /usr/bin/gmake -f Makefile cmTC_e045a/fast
+        /usr/bin/gmake  -f CMakeFiles/cmTC_e045a.dir/build.make CMakeFiles/cmTC_e045a.dir/build
+        gmake[1]: Entering directory '/home/meinersbur/src/llvm/flangast/_src/polymorphism-benchmark/CMakeFiles/CMakeScratch/TryCompile-ZgcPdJ'
+        Building CXX object CMakeFiles/cmTC_e045a.dir/src.cxx.o
+        /usr/bin/c++ -DHAVE_CXX_FLAG_WSHORTEN_64_TO_32  -Wall  -Wextra  -Wshadow  -Wfloat-equal  -Wold-style-cast  -Wconversion  -Wformat=2  -Wsuggest-override  -pedantic  -pedantic-errors  -Wshorten-64-to-32 -std=c++17   -Wshorten-64-to-32 -o CMakeFiles/cmTC_e045a.dir/src.cxx.o -c /home/meinersbur/src/llvm/flangast/_src/polymorphism-benchmark/CMakeFiles/CMakeScratch/TryCompile-ZgcPdJ/src.cxx
+        c++: error: unrecognized command-line option '-Wshorten-64-to-32'
+        c++: error: unrecognized command-line option '-Wshorten-64-to-32'
+        gmake[1]: *** [CMakeFiles/cmTC_e045a.dir/build.make:78: CMakeFiles/cmTC_e045a.dir/src.cxx.o] Error 1
+        gmake[1]: Leaving directory '/home/meinersbur/src/llvm/flangast/_src/polymorphism-benchmark/CMakeFiles/CMakeScratch/TryCompile-ZgcPdJ'
+        gmake: *** [Makefile:127: cmTC_e045a/fast] Error 2
+        
+      exitCode: 2
+  -
+    kind: "try_compile-v1"
+    backtrace:
+      - "/usr/share/cmake-3.28/Modules/Internal/CheckSourceCompiles.cmake:101 (try_compile)"
+      - "/usr/share/cmake-3.28/Modules/Internal/CheckCompilerFlag.cmake:18 (cmake_check_source_compiles)"
+      - "/usr/share/cmake-3.28/Modules/CheckCXXCompilerFlag.cmake:34 (cmake_check_compiler_flag)"
+      - "/home/meinersbur/src/llvm/flangast/_src/third-party/benchmark/cmake/AddCXXCompilerFlag.cmake:34 (check_cxx_compiler_flag)"
+      - "/home/meinersbur/src/llvm/flangast/_src/third-party/benchmark/CMakeLists.txt:211 (add_cxx_compiler_flag)"
+    checks:
+      - "Performing Test HAVE_CXX_FLAG_FSTRICT_ALIASING"
+    directories:
+      source: "/home/meinersbur/src/llvm/flangast/_src/polymorphism-benchmark/CMakeFiles/CMakeScratch/TryCompile-PzfVzx"
+      binary: "/home/meinersbur/src/llvm/flangast/_src/polymorphism-benchmark/CMakeFiles/CMakeScratch/TryCompile-PzfVzx"
+    cmakeVariables:
+      CMAKE_CXX_FLAGS: "  -Wall  -Wextra  -Wshadow  -Wfloat-equal  -Wold-style-cast  -Wconversion  -Wformat=2  -Wsuggest-override  -pedantic  -pedantic-errors"
+      CMAKE_CXX_FLAGS_DEBUG: "-g"
+      CMAKE_EXE_LINKER_FLAGS: ""
+      CMAKE_MODULE_PATH: "/home/meinersbur/src/llvm/flangast/_src/third-party/benchmark/cmake/Modules;/home/meinersbur/src/llvm/flangast/_src/third-party/benchmark/cmake"
+    buildResult:
+      variable: "HAVE_CXX_FLAG_FSTRICT_ALIASING"
+      cached: true
+      stdout: |
+        Change Dir: '/home/meinersbur/src/llvm/flangast/_src/polymorphism-benchmark/CMakeFiles/CMakeScratch/TryCompile-PzfVzx'
+        
+        Run Build Command(s): /usr/bin/cmake -E env VERBOSE=1 /usr/bin/gmake -f Makefile cmTC_14136/fast
+        /usr/bin/gmake  -f CMakeFiles/cmTC_14136.dir/build.make CMakeFiles/cmTC_14136.dir/build
+        gmake[1]: Entering directory '/home/meinersbur/src/llvm/flangast/_src/polymorphism-benchmark/CMakeFiles/CMakeScratch/TryCompile-PzfVzx'
+        Building CXX object CMakeFiles/cmTC_14136.dir/src.cxx.o
+        /usr/bin/c++ -DHAVE_CXX_FLAG_FSTRICT_ALIASING  -Wall  -Wextra  -Wshadow  -Wfloat-equal  -Wold-style-cast  -Wconversion  -Wformat=2  -Wsuggest-override  -pedantic  -pedantic-errors  -fstrict-aliasing -std=c++17   -fstrict-aliasing -o CMakeFiles/cmTC_14136.dir/src.cxx.o -c /home/meinersbur/src/llvm/flangast/_src/polymorphism-benchmark/CMakeFiles/CMakeScratch/TryCompile-PzfVzx/src.cxx
+        Linking CXX executable cmTC_14136
+        /usr/bin/cmake -E cmake_link_script CMakeFiles/cmTC_14136.dir/link.txt --verbose=1
+        /usr/bin/c++   -Wall  -Wextra  -Wshadow  -Wfloat-equal  -Wold-style-cast  -Wconversion  -Wformat=2  -Wsuggest-override  -pedantic  -pedantic-errors  -fstrict-aliasing CMakeFiles/cmTC_14136.dir/src.cxx.o -o cmTC_14136 
+        gmake[1]: Leaving directory '/home/meinersbur/src/llvm/flangast/_src/polymorphism-benchmark/CMakeFiles/CMakeScratch/TryCompile-PzfVzx'
+        
+      exitCode: 0
+  -
+    kind: "try_compile-v1"
+    backtrace:
+      - "/usr/share/cmake-3.28/Modules/Internal/CheckSourceCompiles.cmake:101 (try_compile)"
+      - "/usr/share/cmake-3.28/Modules/Internal/CheckCompilerFlag.cmake:18 (cmake_check_source_compiles)"
+      - "/usr/share/cmake-3.28/Modules/CheckCXXCompilerFlag.cmake:34 (cmake_check_compiler_flag)"
+      - "/home/meinersbur/src/llvm/flangast/_src/third-party/benchmark/cmake/AddCXXCompilerFlag.cmake:34 (check_cxx_compiler_flag)"
+      - "/home/meinersbur/src/llvm/flangast/_src/third-party/benchmark/CMakeLists.txt:214 (add_cxx_compiler_flag)"
+    checks:
+      - "Performing Test HAVE_CXX_FLAG_WNO_DEPRECATED_DECLARATIONS"
+    directories:
+      source: "/home/meinersbur/src/llvm/flangast/_src/polymorphism-benchmark/CMakeFiles/CMakeScratch/TryCompile-VUreS3"
+      binary: "/home/meinersbur/src/llvm/flangast/_src/polymorphism-benchmark/CMakeFiles/CMakeScratch/TryCompile-VUreS3"
+    cmakeVariables:
+      CMAKE_CXX_FLAGS: "  -Wall  -Wextra  -Wshadow  -Wfloat-equal  -Wold-style-cast  -Wconversion  -Wformat=2  -Wsuggest-override  -pedantic  -pedantic-errors  -fstrict-aliasing"
+      CMAKE_CXX_FLAGS_DEBUG: "-g"
+      CMAKE_EXE_LINKER_FLAGS: ""
+      CMAKE_MODULE_PATH: "/home/meinersbur/src/llvm/flangast/_src/third-party/benchmark/cmake/Modules;/home/meinersbur/src/llvm/flangast/_src/third-party/benchmark/cmake"
+    buildResult:
+      variable: "HAVE_CXX_FLAG_WNO_DEPRECATED_DECLARATIONS"
+      cached: true
+      stdout: |
+        Change Dir: '/home/meinersbur/src/llvm/flangast/_src/polymorphism-benchmark/CMakeFiles/CMakeScratch/TryCompile-VUreS3'
+        
+        Run Build Command(s): /usr/bin/cmake -E env VERBOSE=1 /usr/bin/gmake -f Makefile cmTC_be04a/fast
+        /usr/bin/gmake  -f CMakeFiles/cmTC_be04a.dir/build.make CMakeFiles/cmTC_be04a.dir/build
+        gmake[1]: Entering directory '/home/meinersbur/src/llvm/flangast/_src/polymorphism-benchmark/CMakeFiles/CMakeScratch/TryCompile-VUreS3'
+        Building CXX object CMakeFiles/cmTC_be04a.dir/src.cxx.o
+        /usr/bin/c++ -DHAVE_CXX_FLAG_WNO_DEPRECATED_DECLARATIONS  -Wall  -Wextra  -Wshadow  -Wfloat-equal  -Wold-style-cast  -Wconversion  -Wformat=2  -Wsuggest-override  -pedantic  -pedantic-errors  -fstrict-aliasing  -Wno-deprecated-declarations -std=c++17   -Wno-deprecated-declarations -o CMakeFiles/cmTC_be04a.dir/src.cxx.o -c /home/meinersbur/src/llvm/flangast/_src/polymorphism-benchmark/CMakeFiles/CMakeScratch/TryCompile-VUreS3/src.cxx
+        Linking CXX executable cmTC_be04a
+        /usr/bin/cmake -E cmake_link_script CMakeFiles/cmTC_be04a.dir/link.txt --verbose=1
+        /usr/bin/c++   -Wall  -Wextra  -Wshadow  -Wfloat-equal  -Wold-style-cast  -Wconversion  -Wformat=2  -Wsuggest-override  -pedantic  -pedantic-errors  -fstrict-aliasing  -Wno-deprecated-declarations CMakeFiles/cmTC_be04a.dir/src.cxx.o -o cmTC_be04a 
+        gmake[1]: Leaving directory '/home/meinersbur/src/llvm/flangast/_src/polymorphism-benchmark/CMakeFiles/CMakeScratch/TryCompile-VUreS3'
+        
+      exitCode: 0
+  -
+    kind: "try_compile-v1"
+    backtrace:
+      - "/usr/share/cmake-3.28/Modules/Internal/CheckSourceCompiles.cmake:101 (try_compile)"
+      - "/usr/share/cmake-3.28/Modules/Internal/CheckCompilerFlag.cmake:18 (cmake_check_source_compiles)"
+      - "/usr/share/cmake-3.28/Modules/CheckCXXCompilerFlag.cmake:34 (cmake_check_compiler_flag)"
+      - "/home/meinersbur/src/llvm/flangast/_src/third-party/benchmark/cmake/AddCXXCompilerFlag.cmake:34 (check_cxx_compiler_flag)"
+      - "/home/meinersbur/src/llvm/flangast/_src/third-party/benchmark/CMakeLists.txt:235 (add_cxx_compiler_flag)"
+    checks:
+      - "Performing Test HAVE_CXX_FLAG_WSTRICT_ALIASING"
+    directories:
+      source: "/home/meinersbur/src/llvm/flangast/_src/polymorphism-benchmark/CMakeFiles/CMakeScratch/TryCompile-175ByJ"
+      binary: "/home/meinersbur/src/llvm/flangast/_src/polymorphism-benchmark/CMakeFiles/CMakeScratch/TryCompile-175ByJ"
+    cmakeVariables:
+      CMAKE_CXX_FLAGS: "  -Wall  -Wextra  -Wshadow  -Wfloat-equal  -Wold-style-cast  -Wconversion  -Wformat=2  -Wsuggest-override  -pedantic  -pedantic-errors  -fstrict-aliasing  -Wno-deprecated-declarations"
+      CMAKE_CXX_FLAGS_DEBUG: "-g"
+      CMAKE_EXE_LINKER_FLAGS: ""
+      CMAKE_MODULE_PATH: "/home/meinersbur/src/llvm/flangast/_src/third-party/benchmark/cmake/Modules;/home/meinersbur/src/llvm/flangast/_src/third-party/benchmark/cmake"
+    buildResult:
+      variable: "HAVE_CXX_FLAG_WSTRICT_ALIASING"
+      cached: true
+      stdout: |
+        Change Dir: '/home/meinersbur/src/llvm/flangast/_src/polymorphism-benchmark/CMakeFiles/CMakeScratch/TryCompile-175ByJ'
+        
+        Run Build Command(s): /usr/bin/cmake -E env VERBOSE=1 /usr/bin/gmake -f Makefile cmTC_97a43/fast
+        /usr/bin/gmake  -f CMakeFiles/cmTC_97a43.dir/build.make CMakeFiles/cmTC_97a43.dir/build
+        gmake[1]: Entering directory '/home/meinersbur/src/llvm/flangast/_src/polymorphism-benchmark/CMakeFiles/CMakeScratch/TryCompile-175ByJ'
+        Building CXX object CMakeFiles/cmTC_97a43.dir/src.cxx.o
+        /usr/bin/c++ -DHAVE_CXX_FLAG_WSTRICT_ALIASING  -Wall  -Wextra  -Wshadow  -Wfloat-equal  -Wold-style-cast  -Wconversion  -Wformat=2  -Wsuggest-override  -pedantic  -pedantic-errors  -fstrict-aliasing  -Wno-deprecated-declarations  -Wstrict-aliasing -std=c++17   -Wstrict-aliasing -o CMakeFiles/cmTC_97a43.dir/src.cxx.o -c /home/meinersbur/src/llvm/flangast/_src/polymorphism-benchmark/CMakeFiles/CMakeScratch/TryCompile-175ByJ/src.cxx
+        Linking CXX executable cmTC_97a43
+        /usr/bin/cmake -E cmake_link_script CMakeFiles/cmTC_97a43.dir/link.txt --verbose=1
+        /usr/bin/c++   -Wall  -Wextra  -Wshadow  -Wfloat-equal  -Wold-style-cast  -Wconversion  -Wformat=2  -Wsuggest-override  -pedantic  -pedantic-errors  -fstrict-aliasing  -Wno-deprecated-declarations  -Wstrict-aliasing CMakeFiles/cmTC_97a43.dir/src.cxx.o -o cmTC_97a43 
+        gmake[1]: Leaving directory '/home/meinersbur/src/llvm/flangast/_src/polymorphism-benchmark/CMakeFiles/CMakeScratch/TryCompile-175ByJ'
+        
+      exitCode: 0
+  -
+    kind: "try_compile-v1"
+    backtrace:
+      - "/usr/share/cmake-3.28/Modules/Internal/CheckSourceCompiles.cmake:101 (try_compile)"
+      - "/usr/share/cmake-3.28/Modules/Internal/CheckCompilerFlag.cmake:18 (cmake_check_source_compiles)"
+      - "/usr/share/cmake-3.28/Modules/CheckCXXCompilerFlag.cmake:34 (cmake_check_compiler_flag)"
+      - "/home/meinersbur/src/llvm/flangast/_src/third-party/benchmark/cmake/AddCXXCompilerFlag.cmake:34 (check_cxx_compiler_flag)"
+      - "/home/meinersbur/src/llvm/flangast/_src/third-party/benchmark/CMakeLists.txt:239 (add_cxx_compiler_flag)"
+    checks:
+      - "Performing Test HAVE_CXX_FLAG_WTHREAD_SAFETY"
+    directories:
+      source: "/home/meinersbur/src/llvm/flangast/_src/polymorphism-benchmark/CMakeFiles/CMakeScratch/TryCompile-R6UlwN"
+      binary: "/home/meinersbur/src/llvm/flangast/_src/polymorphism-benchmark/CMakeFiles/CMakeScratch/TryCompile-R6UlwN"
+    cmakeVariables:
+      CMAKE_CXX_FLAGS: "  -Wall  -Wextra  -Wshadow  -Wfloat-equal  -Wold-style-cast  -Wconversion  -Wformat=2  -Wsuggest-override  -pedantic  -pedantic-errors  -fstrict-aliasing  -Wno-deprecated-declarations  -Wstrict-aliasing"
+      CMAKE_CXX_FLAGS_DEBUG: "-g"
+      CMAKE_EXE_LINKER_FLAGS: ""
+      CMAKE_MODULE_PATH: "/home/meinersbur/src/llvm/flangast/_src/third-party/benchmark/cmake/Modules;/home/meinersbur/src/llvm/flangast/_src/third-party/benchmark/cmake"
+    buildResult:
+      variable: "HAVE_CXX_FLAG_WTHREAD_SAFETY"
+      cached: true
+      stdout: |
+        Change Dir: '/home/meinersbur/src/llvm/flangast/_src/polymorphism-benchmark/CMakeFiles/CMakeScratch/TryCompile-R6UlwN'
+        
+        Run Build Command(s): /usr/bin/cmake -E env VERBOSE=1 /usr/bin/gmake -f Makefile cmTC_3e81c/fast
+        /usr/bin/gmake  -f CMakeFiles/cmTC_3e81c.dir/build.make CMakeFiles/cmTC_3e81c.dir/build
+        gmake[1]: Entering directory '/home/meinersbur/src/llvm/flangast/_src/polymorphism-benchmark/CMakeFiles/CMakeScratch/TryCompile-R6UlwN'
+        Building CXX object CMakeFiles/cmTC_3e81c.dir/src.cxx.o
+        /usr/bin/c++ -DHAVE_CXX_FLAG_WTHREAD_SAFETY  -Wall  -Wextra  -Wshadow  -Wfloat-equal  -Wold-style-cast  -Wconversion  -Wformat=2  -Wsuggest-override  -pedantic  -pedantic-errors  -fstrict-aliasing  -Wno-deprecated-declarations  -Wstrict-aliasing  -Wthread-safety -std=c++17   -Wthread-safety -o CMakeFiles/cmTC_3e81c.dir/src.cxx.o -c /home/meinersbur/src/llvm/flangast/_src/polymorphism-benchmark/CMakeFiles/CMakeScratch/TryCompile-R6UlwN/src.cxx
+        c++: error: unrecognized command-line option '-Wthread-safety'
+        c++: error: unrecognized command-line option '-Wthread-safety'
+        gmake[1]: *** [CMakeFiles/cmTC_3e81c.dir/build.make:78: CMakeFiles/cmTC_3e81c.dir/src.cxx.o] Error 1
+        gmake[1]: Leaving directory '/home/meinersbur/src/llvm/flangast/_src/polymorphism-benchmark/CMakeFiles/CMakeScratch/TryCompile-R6UlwN'
+        gmake: *** [Makefile:127: cmTC_3e81c/fast] Error 2
+        
+      exitCode: 2
+  -
+    kind: "try_compile-v1"
+    backtrace:
+      - "/usr/share/cmake-3.28/Modules/Internal/CheckSourceCompiles.cmake:101 (try_compile)"
+      - "/usr/share/cmake-3.28/Modules/Internal/CheckCompilerFlag.cmake:18 (cmake_check_source_compiles)"
+      - "/usr/share/cmake-3.28/Modules/CheckCXXCompilerFlag.cmake:34 (cmake_check_compiler_flag)"
+      - "/home/meinersbur/src/llvm/flangast/_src/third-party/benchmark/cmake/AddCXXCompilerFlag.cmake:34 (check_cxx_compiler_flag)"
+      - "/home/meinersbur/src/llvm/flangast/_src/third-party/benchmark/CMakeLists.txt:290 (add_cxx_compiler_flag)"
+    checks:
+      - "Performing Test HAVE_CXX_FLAG_COVERAGE"
+    directories:
+      source: "/home/meinersbur/src/llvm/flangast/_src/polymorphism-benchmark/CMakeFiles/CMakeScratch/TryCompile-NM8rrX"
+      binary: "/home/meinersbur/src/llvm/flangast/_src/polymorphism-benchmark/CMakeFiles/CMakeScratch/TryCompile-NM8rrX"
+    cmakeVariables:
+      CMAKE_CXX_FLAGS: "  -Wall  -Wextra  -Wshadow  -Wfloat-equal  -Wold-style-cast  -Wconversion  -Wformat=2  -Wsuggest-override  -pedantic  -pedantic-errors  -fstrict-aliasing  -Wno-deprecated-declarations  -Wstrict-aliasing"
+      CMAKE_CXX_FLAGS_DEBUG: "-g"
+      CMAKE_EXE_LINKER_FLAGS: ""
+      CMAKE_MODULE_PATH: "/home/meinersbur/src/llvm/flangast/_src/third-party/benchmark/cmake/Modules;/home/meinersbur/src/llvm/flangast/_src/third-party/benchmark/cmake"
+    buildResult:
+      variable: "HAVE_CXX_FLAG_COVERAGE"
+      cached: true
+      stdout: |
+        Change Dir: '/home/meinersbur/src/llvm/flangast/_src/polymorphism-benchmark/CMakeFiles/CMakeScratch/TryCompile-NM8rrX'
+        
+        Run Build Command(s): /usr/bin/cmake -E env VERBOSE=1 /usr/bin/gmake -f Makefile cmTC_e14e5/fast
+        /usr/bin/gmake  -f CMakeFiles/cmTC_e14e5.dir/build.make CMakeFiles/cmTC_e14e5.dir/build
+        gmake[1]: Entering directory '/home/meinersbur/src/llvm/flangast/_src/polymorphism-benchmark/CMakeFiles/CMakeScratch/TryCompile-NM8rrX'
+        Building CXX object CMakeFiles/cmTC_e14e5.dir/src.cxx.o
+        /usr/bin/c++ -DHAVE_CXX_FLAG_COVERAGE  -Wall  -Wextra  -Wshadow  -Wfloat-equal  -Wold-style-cast  -Wconversion  -Wformat=2  -Wsuggest-override  -pedantic  -pedantic-errors  -fstrict-aliasing  -Wno-deprecated-declarations  -Wstrict-aliasing  --coverage -std=c++17   --coverage -o CMakeFiles/cmTC_e14e5.dir/src.cxx.o -c /home/meinersbur/src/llvm/flangast/_src/polymorphism-benchmark/CMakeFiles/CMakeScratch/TryCompile-NM8rrX/src.cxx
+        Linking CXX executable cmTC_e14e5
+        /usr/bin/cmake -E cmake_link_script CMakeFiles/cmTC_e14e5.dir/link.txt --verbose=1
+        /usr/bin/c++   -Wall  -Wextra  -Wshadow  -Wfloat-equal  -Wold-style-cast  -Wconversion  -Wformat=2  -Wsuggest-override  -pedantic  -pedantic-errors  -fstrict-aliasing  -Wno-deprecated-declarations  -Wstrict-aliasing  --coverage CMakeFiles/cmTC_e14e5.dir/src.cxx.o -o cmTC_e14e5 
+        gmake[1]: Leaving directory '/home/meinersbur/src/llvm/flangast/_src/polymorphism-benchmark/CMakeFiles/CMakeScratch/TryCompile-NM8rrX'
+        
+      exitCode: 0
+  -
+    kind: "try_run-v1"
+    backtrace:
+      - "/home/meinersbur/src/llvm/flangast/_src/third-party/benchmark/cmake/CXXFeatureCheck.cmake:70 (try_run)"
+      - "/home/meinersbur/src/llvm/flangast/_src/third-party/benchmark/CMakeLists.txt:332 (cxx_feature_check)"
+    directories:
+      source: "/home/meinersbur/src/llvm/flangast/_src/polymorphism-benchmark/CMakeFiles/CMakeTmp"
+      binary: "/home/meinersbur/src/llvm/flangast/_src/polymorphism-benchmark/CMakeFiles/CMakeTmp"
+    cmakeVariables:
+      CMAKE_CXX_FLAGS: "  -Wall  -Wextra  -Wshadow  -Wfloat-equal  -Wold-style-cast  -Wconversion  -Wformat=2  -Wsuggest-override  -pedantic  -pedantic-errors  -fstrict-aliasing  -Wno-deprecated-declarations  -Wstrict-aliasing"
+      CMAKE_CXX_FLAGS_DEBUG: "-g"
+      CMAKE_EXE_LINKER_FLAGS: ""
+      CMAKE_MODULE_PATH: "/home/meinersbur/src/llvm/flangast/_src/third-party/benchmark/cmake/Modules;/home/meinersbur/src/llvm/flangast/_src/third-party/benchmark/cmake"
+    buildResult:
+      variable: "COMPILE_STATUS"
+      cached: true
+      stdout: |
+        Change Dir: '/home/meinersbur/src/llvm/flangast/_src/polymorphism-benchmark/CMakeFiles/CMakeTmp'
+        
+        Run Build Command(s): /usr/bin/cmake -E env VERBOSE=1 /usr/bin/gmake -f Makefile cmTC_e0281/fast
+        /usr/bin/gmake  -f CMakeFiles/cmTC_e0281.dir/build.make CMakeFiles/cmTC_e0281.dir/build
+        gmake[1]: Entering directory '/home/meinersbur/src/llvm/flangast/_src/polymorphism-benchmark/CMakeFiles/CMakeTmp'
+        Building CXX object CMakeFiles/cmTC_e0281.dir/steady_clock.cpp.o
+        /usr/bin/c++   -Wall  -Wextra  -Wshadow  -Wfloat-equal  -Wold-style-cast  -Wconversion  -Wformat=2  -Wsuggest-override  -pedantic  -pedantic-errors  -fstrict-aliasing  -Wno-deprecated-declarations  -Wstrict-aliasing  -std=c++17 -o CMakeFiles/cmTC_e0281.dir/steady_clock.cpp.o -c /home/meinersbur/src/llvm/flangast/_src/third-party/benchmark/cmake/steady_clock.cpp
+        Linking CXX executable cmTC_e0281
+        /usr/bin/cmake -E cmake_link_script CMakeFiles/cmTC_e0281.dir/link.txt --verbose=1
+        /usr/bin/c++   -Wall  -Wextra  -Wshadow  -Wfloat-equal  -Wold-style-cast  -Wconversion  -Wformat=2  -Wsuggest-override  -pedantic  -pedantic-errors  -fstrict-aliasing  -Wno-deprecated-declarations  -Wstrict-aliasing  CMakeFiles/cmTC_e0281.dir/steady_clock.cpp.o -o cmTC_e0281 
+        gmake[1]: Leaving directory '/home/meinersbur/src/llvm/flangast/_src/polymorphism-benchmark/CMakeFiles/CMakeTmp'
+        
+      exitCode: 0
+    runResult:
+      variable: "RUN_STATUS"
+      cached: true
+      stdout: |
+      exitCode: 0
+  -
+    kind: "try_compile-v1"
+    backtrace:
+      - "/usr/share/cmake-3.28/Modules/Internal/CheckSourceCompiles.cmake:101 (try_compile)"
+      - "/usr/share/cmake-3.28/Modules/CheckCXXSourceCompiles.cmake:52 (cmake_check_source_compiles)"
+      - "/usr/share/cmake-3.28/Modules/FindThreads.cmake:99 (CHECK_CXX_SOURCE_COMPILES)"
+      - "/usr/share/cmake-3.28/Modules/FindThreads.cmake:163 (_threads_check_libc)"
+      - "/home/meinersbur/src/llvm/flangast/_src/third-party/benchmark/CMakeLists.txt:335 (find_package)"
+    checks:
+      - "Performing Test CMAKE_HAVE_LIBC_PTHREAD"
+    directories:
+      source: "/home/meinersbur/src/llvm/flangast/_src/polymorphism-benchmark/CMakeFiles/CMakeScratch/TryCompile-I010Hy"
+      binary: "/home/meinersbur/src/llvm/flangast/_src/polymorphism-benchmark/CMakeFiles/CMakeScratch/TryCompile-I010Hy"
+    cmakeVariables:
+      CMAKE_CXX_FLAGS: "  -Wall  -Wextra  -Wshadow  -Wfloat-equal  -Wold-style-cast  -Wconversion  -Wformat=2  -Wsuggest-override  -pedantic  -pedantic-errors  -fstrict-aliasing  -Wno-deprecated-declarations  -Wstrict-aliasing"
+      CMAKE_CXX_FLAGS_DEBUG: "-g"
+      CMAKE_EXE_LINKER_FLAGS: ""
+      CMAKE_MODULE_PATH: "/home/meinersbur/src/llvm/flangast/_src/third-party/benchmark/cmake/Modules;/home/meinersbur/src/llvm/flangast/_src/third-party/benchmark/cmake"
+    buildResult:
+      variable: "CMAKE_HAVE_LIBC_PTHREAD"
+      cached: true
+      stdout: |
+        Change Dir: '/home/meinersbur/src/llvm/flangast/_src/polymorphism-benchmark/CMakeFiles/CMakeScratch/TryCompile-I010Hy'
+        
+        Run Build Command(s): /usr/bin/cmake -E env VERBOSE=1 /usr/bin/gmake -f Makefile cmTC_a5f15/fast
+        /usr/bin/gmake  -f CMakeFiles/cmTC_a5f15.dir/build.make CMakeFiles/cmTC_a5f15.dir/build
+        gmake[1]: Entering directory '/home/meinersbur/src/llvm/flangast/_src/polymorphism-benchmark/CMakeFiles/CMakeScratch/TryCompile-I010Hy'
+        Building CXX object CMakeFiles/cmTC_a5f15.dir/src.cxx.o
+        /usr/bin/c++ -DCMAKE_HAVE_LIBC_PTHREAD  -Wall  -Wextra  -Wshadow  -Wfloat-equal  -Wold-style-cast  -Wconversion  -Wformat=2  -Wsuggest-override  -pedantic  -pedantic-errors  -fstrict-aliasing  -Wno-deprecated-declarations  -Wstrict-aliasing  -std=c++17 -o CMakeFiles/cmTC_a5f15.dir/src.cxx.o -c /home/meinersbur/src/llvm/flangast/_src/polymorphism-benchmark/CMakeFiles/CMakeScratch/TryCompile-I010Hy/src.cxx
+        Linking CXX executable cmTC_a5f15
+        /usr/bin/cmake -E cmake_link_script CMakeFiles/cmTC_a5f15.dir/link.txt --verbose=1
+        /usr/bin/c++   -Wall  -Wextra  -Wshadow  -Wfloat-equal  -Wold-style-cast  -Wconversion  -Wformat=2  -Wsuggest-override  -pedantic  -pedantic-errors  -fstrict-aliasing  -Wno-deprecated-declarations  -Wstrict-aliasing  CMakeFiles/cmTC_a5f15.dir/src.cxx.o -o cmTC_a5f15 
+        gmake[1]: Leaving directory '/home/meinersbur/src/llvm/flangast/_src/polymorphism-benchmark/CMakeFiles/CMakeScratch/TryCompile-I010Hy'
+        
+      exitCode: 0
+  -
+    kind: "try_run-v1"
+    backtrace:
+      - "/home/meinersbur/src/llvm/flangast/_src/third-party/benchmark/cmake/CXXFeatureCheck.cmake:70 (try_run)"
+      - "/home/meinersbur/src/llvm/flangast/_src/third-party/benchmark/CMakeLists.txt:336 (cxx_feature_check)"
+    directories:
+      source: "/home/meinersbur/src/llvm/flangast/_src/polymorphism-benchmark/CMakeFiles/CMakeTmp"
+      binary: "/home/meinersbur/src/llvm/flangast/_src/polymorphism-benchmark/CMakeFiles/CMakeTmp"
+    cmakeVariables:
+      CMAKE_CXX_FLAGS: "  -Wall  -Wextra  -Wshadow  -Wfloat-equal  -Wold-style-cast  -Wconversion  -Wformat=2  -Wsuggest-override  -pedantic  -pedantic-errors  -fstrict-aliasing  -Wno-deprecated-declarations  -Wstrict-aliasing"
+      CMAKE_CXX_FLAGS_DEBUG: "-g"
+      CMAKE_EXE_LINKER_FLAGS: ""
+      CMAKE_MODULE_PATH: "/home/meinersbur/src/llvm/flangast/_src/third-party/benchmark/cmake/Modules;/home/meinersbur/src/llvm/flangast/_src/third-party/benchmark/cmake"
+    buildResult:
+      variable: "COMPILE_STATUS"
+      cached: true
+      stdout: |
+        Change Dir: '/home/meinersbur/src/llvm/flangast/_src/polymorphism-benchmark/CMakeFiles/CMakeTmp'
+        
+        Run Build Command(s): /usr/bin/cmake -E env VERBOSE=1 /usr/bin/gmake -f Makefile cmTC_a2dad/fast
+        /usr/bin/gmake  -f CMakeFiles/cmTC_a2dad.dir/build.make CMakeFiles/cmTC_a2dad.dir/build
+        gmake[1]: Entering directory '/home/meinersbur/src/llvm/flangast/_src/polymorphism-benchmark/CMakeFiles/CMakeTmp'
+        Building CXX object CMakeFiles/cmTC_a2dad.dir/pthread_affinity.cpp.o
+        /usr/bin/c++   -Wall  -Wextra  -Wshadow  -Wfloat-equal  -Wold-style-cast  -Wconversion  -Wformat=2  -Wsuggest-override  -pedantic  -pedantic-errors  -fstrict-aliasing  -Wno-deprecated-declarations  -Wstrict-aliasing  -std=c++17 -o CMakeFiles/cmTC_a2dad.dir/pthread_affinity.cpp.o -c /home/meinersbur/src/llvm/flangast/_src/third-party/benchmark/cmake/pthread_affinity.cpp
+        Linking CXX executable cmTC_a2dad
+        /usr/bin/cmake -E cmake_link_script CMakeFiles/cmTC_a2dad.dir/link.txt --verbose=1
+        /usr/bin/c++   -Wall  -Wextra  -Wshadow  -Wfloat-equal  -Wold-style-cast  -Wconversion  -Wformat=2  -Wsuggest-override  -pedantic  -pedantic-errors  -fstrict-aliasing  -Wno-deprecated-declarations  -Wstrict-aliasing  CMakeFiles/cmTC_a2dad.dir/pthread_affinity.cpp.o -o cmTC_a2dad 
+        gmake[1]: Leaving directory '/home/meinersbur/src/llvm/flangast/_src/polymorphism-benchmark/CMakeFiles/CMakeTmp'
+        
+      exitCode: 0
+    runResult:
+      variable: "RUN_STATUS"
+      cached: true
+      stdout: |
+      exitCode: 0
+...
+
+---
+events:
+  -
+    kind: "message-v1"
+    backtrace:
+      - "/usr/share/cmake-3.28/Modules/CMakeDetermineSystem.cmake:233 (message)"
+      - "CMakeLists.txt:2 (project)"
+    message: |
+      The system is: Linux - 4.4.0-26100-Microsoft - x86_64
+  -
+    kind: "message-v1"
+    backtrace:
+      - "/usr/share/cmake-3.28/Modules/CMakeDetermineCompilerId.cmake:17 (message)"
+      - "/usr/share/cmake-3.28/Modules/CMakeDetermineCompilerId.cmake:64 (__determine_compiler_id_test)"
+      - "/usr/share/cmake-3.28/Modules/CMakeDetermineCXXCompiler.cmake:126 (CMAKE_DETERMINE_COMPILER_ID)"
+      - "CMakeLists.txt:2 (project)"
+    message: |
+      Compiling the CXX compiler identification source file "CMakeCXXCompilerId.cpp" succeeded.
+      Compiler: /usr/bin/c++ 
+      Build flags: 
+      Id flags:  
+      
+      The output was:
+      0
+      
+      
+      Compilation of the CXX compiler identification source "CMakeCXXCompilerId.cpp" produced "a.out"
+      
+      The CXX compiler identification is GNU, found in:
+        /home/meinersbur/src/llvm/flangast/_src/polymorphism-benchmark/CMakeFiles/3.28.3/CompilerIdCXX/a.out
+      
+  -
+    kind: "try_compile-v1"
+    backtrace:
+      - "/usr/share/cmake-3.28/Modules/CMakeDetermineCompilerABI.cmake:57 (try_compile)"
+      - "/usr/share/cmake-3.28/Modules/CMakeTestCXXCompiler.cmake:26 (CMAKE_DETERMINE_COMPILER_ABI)"
+      - "CMakeLists.txt:2 (project)"
+    checks:
+      - "Detecting CXX compiler ABI info"
+    directories:
+      source: "/home/meinersbur/src/llvm/flangast/_src/polymorphism-benchmark/CMakeFiles/CMakeScratch/TryCompile-zVzaws"
+      binary: "/home/meinersbur/src/llvm/flangast/_src/polymorphism-benchmark/CMakeFiles/CMakeScratch/TryCompile-zVzaws"
+    cmakeVariables:
+      CMAKE_CXX_FLAGS: ""
+      CMAKE_CXX_FLAGS_DEBUG: "-g"
+      CMAKE_EXE_LINKER_FLAGS: ""
+    buildResult:
+      variable: "CMAKE_CXX_ABI_COMPILED"
+      cached: true
+      stdout: |
+        Change Dir: '/home/meinersbur/src/llvm/flangast/_src/polymorphism-benchmark/CMakeFiles/CMakeScratch/TryCompile-zVzaws'
+        
+        Run Build Command(s): /home/meinersbur/bin/ninja -v cmTC_71a83
+        [ 50%/0.025s :: 1->1->1 (of 2)] /usr/bin/c++   -v -o CMakeFiles/cmTC_71a83.dir/CMakeCXXCompilerABI.cpp.o -c /usr/share/cmake-3.28/Modules/CMakeCXXCompilerABI.cpp
+        Using built-in specs.
+        COLLECT_GCC=/usr/bin/c++
+        OFFLOAD_TARGET_NAMES=nvptx-none:amdgcn-amdhsa
+        OFFLOAD_TARGET_DEFAULT=1
+        Target: x86_64-linux-gnu
+        Configured with: ../src/configure -v --with-pkgversion='Ubuntu 13.3.0-6ubuntu2~24.04.1' --with-bugurl=file:///usr/share/doc/gcc-13/README.Bugs --enable-languages=c,ada,c++,go,d,fortran,objc,obj-c++,m2 --prefix=/usr --with-gcc-major-version-only --program-suffix=-13 --program-prefix=x86_64-linux-gnu- --enable-shared --enable-linker-build-id --libexecdir=/usr/libexec --without-included-gettext --enable-threads=posix --libdir=/usr/lib --enable-nls --enable-bootstrap --enable-clocale=gnu --enable-libstdcxx-debug --enable-libstdcxx-time=yes --with-default-libstdcxx-abi=new --enable-libstdcxx-backtrace --enable-gnu-unique-object --disable-vtable-verify --enable-plugin --enable-default-pie --with-system-zlib --enable-libphobos-checking=release --with-target-system-zlib=auto --enable-objc-gc=auto --enable-multiarch --disable-werror --enable-cet --with-arch-32=i686 --with-abi=m64 --with-multilib-list=m32,m64,mx32 --enable-multilib --with-tune=generic --enable-offload-targets=nvptx-none=/build/gcc-13-EldibY/gcc-13-13.3.0/debian/tmp-nvptx/usr,amdgcn-amdhsa=/build/gcc-13-EldibY/gcc-13-13.3.0/debian/tmp-gcn/usr --enable-offload-defaulted --without-cuda-driver --enable-checking=release --build=x86_64-linux-gnu --host=x86_64-linux-gnu --target=x86_64-linux-gnu --with-build-config=bootstrap-lto-lean --enable-link-serialization=2
+        Thread model: posix
+        Supported LTO compression algorithms: zlib zstd
+        gcc version 13.3.0 (Ubuntu 13.3.0-6ubuntu2~24.04.1) 
+        COLLECT_GCC_OPTIONS='-v' '-o' 'CMakeFiles/cmTC_71a83.dir/CMakeCXXCompilerABI.cpp.o' '-c' '-shared-libgcc' '-mtune=generic' '-march=x86-64' '-dumpdir' 'CMakeFiles/cmTC_71a83.dir/'
+         /usr/libexec/gcc/x86_64-linux-gnu/13/cc1plus -quiet -v -imultiarch x86_64-linux-gnu -D_GNU_SOURCE /usr/share/cmake-3.28/Modules/CMakeCXXCompilerABI.cpp -quiet -dumpdir CMakeFiles/cmTC_71a83.dir/ -dumpbase CMakeCXXCompilerABI.cpp.cpp -dumpbase-ext .cpp -mtune=generic -march=x86-64 -version -fasynchronous-unwind-tables -fstack-protector-strong -Wformat -Wformat-security -fstack-clash-protection -fcf-protection -o /tmp/meinersbur/ccaSJVv4.s
+        GNU C++17 (Ubuntu 13.3.0-6ubuntu2~24.04.1) version 13.3.0 (x86_64-linux-gnu)
+        	compiled by GNU C version 13.3.0, GMP version 6.3.0, MPFR version 4.2.1, MPC version 1.3.1, isl version isl-0.26-GMP
+        
+        GGC heuristics: --param ggc-min-expand=100 --param ggc-min-heapsize=131072
+        ignoring duplicate directory "/usr/include/x86_64-linux-gnu/c++/13"
+        ignoring nonexistent directory "/usr/local/include/x86_64-linux-gnu"
+        ignoring nonexistent directory "/usr/local/include"
+        ignoring nonexistent directory "/usr/lib/gcc/x86_64-linux-gnu/13/include-fixed/x86_64-linux-gnu"
+        ignoring nonexistent directory "/usr/lib/gcc/x86_64-linux-gnu/13/include-fixed"
+        #include "..." search starts here:
+        #include <...> search starts here:
+         /usr/include/c++/13
+         /usr/include/x86_64-linux-gnu/c++/13
+         /usr/include/c++/13/backward
+         /usr/lib/gcc/x86_64-linux-gnu/13/include
+         /usr/x86_64-linux-gnu/include
+         /usr/include/x86_64-linux-gnu
+         /usr/include
+        End of search list.
+        Compiler executable checksum: 7896445e4990772fdae9dc0659a99266
+        COLLECT_GCC_OPTIONS='-v' '-o' 'CMakeFiles/cmTC_71a83.dir/CMakeCXXCompilerABI.cpp.o' '-c' '-shared-libgcc' '-mtune=generic' '-march=x86-64' '-dumpdir' 'CMakeFiles/cmTC_71a83.dir/'
+         as -v --64 -o CMakeFiles/cmTC_71a83.dir/CMakeCXXCompilerABI.cpp.o /tmp/meinersbur/ccaSJVv4.s
+        GNU assembler version 2.42 (x86_64-linux-gnu) using BFD version (GNU Binutils for Ubuntu) 2.42
+        COMPILER_PATH=/usr/libexec/gcc/x86_64-linux-gnu/13/:/usr/libexec/gcc/x86_64-linux-gnu/13/:/usr/libexec/gcc/x86_64-linux-gnu/:/usr/lib/gcc/x86_64-linux-gnu/13/:/usr/lib/gcc/x86_64-linux-gnu/
+        LIBRARY_PATH=/usr/lib/gcc/x86_64-linux-gnu/13/:/usr/lib/gcc/x86_64-linux-gnu/13/../../../x86_64-linux-gnu/:/usr/lib/gcc/x86_64-linux-gnu/13/../../../../lib/:/lib/x86_64-linux-gnu/:/lib/../lib/:/usr/lib/x86_64-linux-gnu/:/usr/lib/../lib/:/usr/lib/gcc/x86_64-linux-gnu/13/../../../:/lib/:/usr/lib/
+        COLLECT_GCC_OPTIONS='-v' '-o' 'CMakeFiles/cmTC_71a83.dir/CMakeCXXCompilerABI.cpp.o' '-c' '-shared-libgcc' '-mtune=generic' '-march=x86-64' '-dumpdir' 'CMakeFiles/cmTC_71a83.dir/CMakeCXXCompilerABI.cpp.'
+        [100%/0.068s :: 0->1->2 (of 2)] : && /usr/bin/c++  -v CMakeFiles/cmTC_71a83.dir/CMakeCXXCompilerABI.cpp.o -o cmTC_71a83   && :
+        Using built-in specs.
+        COLLECT_GCC=/usr/bin/c++
+        COLLECT_LTO_WRAPPER=/usr/libexec/gcc/x86_64-linux-gnu/13/lto-wrapper
+        OFFLOAD_TARGET_NAMES=nvptx-none:amdgcn-amdhsa
+        OFFLOAD_TARGET_DEFAULT=1
+        Target: x86_64-linux-gnu
+        Configured with: ../src/configure -v --with-pkgversion='Ubuntu 13.3.0-6ubuntu2~24.04.1' --with-bugurl=file:///usr/share/doc/gcc-13/README.Bugs --enable-languages=c,ada,c++,go,d,fortran,objc,obj-c++,m2 --prefix=/usr --with-gcc-major-version-only --program-suffix=-13 --program-prefix=x86_64-linux-gnu- --enable-shared --enable-linker-build-id --libexecdir=/usr/libexec --without-included-gettext --enable-threads=posix --libdir=/usr/lib --enable-nls --enable-bootstrap --enable-clocale=gnu --enable-libstdcxx-debug --enable-libstdcxx-time=yes --with-default-libstdcxx-abi=new --enable-libstdcxx-backtrace --enable-gnu-unique-object --disable-vtable-verify --enable-plugin --enable-default-pie --with-system-zlib --enable-libphobos-checking=release --with-target-system-zlib=auto --enable-objc-gc=auto --enable-multiarch --disable-werror --enable-cet --with-arch-32=i686 --with-abi=m64 --with-multilib-list=m32,m64,mx32 --enable-multilib --with-tune=generic --enable-offload-targets=nvptx-none=/build/gcc-13-EldibY/gcc-13-13.3.0/debian/tmp-nvptx/usr,amdgcn-amdhsa=/build/gcc-13-EldibY/gcc-13-13.3.0/debian/tmp-gcn/usr --enable-offload-defaulted --without-cuda-driver --enable-checking=release --build=x86_64-linux-gnu --host=x86_64-linux-gnu --target=x86_64-linux-gnu --with-build-config=bootstrap-lto-lean --enable-link-serialization=2
+        Thread model: posix
+        Supported LTO compression algorithms: zlib zstd
+        gcc version 13.3.0 (Ubuntu 13.3.0-6ubuntu2~24.04.1) 
+        COMPILER_PATH=/usr/libexec/gcc/x86_64-linux-gnu/13/:/usr/libexec/gcc/x86_64-linux-gnu/13/:/usr/libexec/gcc/x86_64-linux-gnu/:/usr/lib/gcc/x86_64-linux-gnu/13/:/usr/lib/gcc/x86_64-linux-gnu/
+        LIBRARY_PATH=/usr/lib/gcc/x86_64-linux-gnu/13/:/usr/lib/gcc/x86_64-linux-gnu/13/../../../x86_64-linux-gnu/:/usr/lib/gcc/x86_64-linux-gnu/13/../../../../lib/:/lib/x86_64-linux-gnu/:/lib/../lib/:/usr/lib/x86_64-linux-gnu/:/usr/lib/../lib/:/usr/lib/gcc/x86_64-linux-gnu/13/../../../:/lib/:/usr/lib/
+        COLLECT_GCC_OPTIONS='-v' '-o' 'cmTC_71a83' '-shared-libgcc' '-mtune=generic' '-march=x86-64' '-dumpdir' 'cmTC_71a83.'
+         /usr/libexec/gcc/x86_64-linux-gnu/13/collect2 -plugin /usr/libexec/gcc/x86_64-linux-gnu/13/liblto_plugin.so -plugin-opt=/usr/libexec/gcc/x86_64-linux-gnu/13/lto-wrapper -plugin-opt=-fresolution=/tmp/meinersbur/cc6yhqmd.res -plugin-opt=-pass-through=-lgcc_s -plugin-opt=-pass-through=-lgcc -plugin-opt=-pass-through=-lc -plugin-opt=-pass-through=-lgcc_s -plugin-opt=-pass-through=-lgcc --build-id --eh-frame-hdr -m elf_x86_64 --hash-style=gnu --as-needed -dynamic-linker /lib64/ld-linux-x86-64.so.2 -pie -z now -z relro -o cmTC_71a83 /usr/lib/gcc/x86_64-linux-gnu/13/../../../x86_64-linux-gnu/Scrt1.o /usr/lib/gcc/x86_64-linux-gnu/13/../../../x86_64-linux-gnu/crti.o /usr/lib/gcc/x86_64-linux-gnu/13/crtbeginS.o -L/usr/lib/gcc/x86_64-linux-gnu/13 -L/usr/lib/gcc/x86_64-linux-gnu/13/../../../x86_64-linux-gnu -L/usr/lib/gcc/x86_64-linux-gnu/13/../../../../lib -L/lib/x86_64-linux-gnu -L/lib/../lib -L/usr/lib/x86_64-linux-gnu -L/usr/lib/../lib -L/usr/lib/gcc/x86_64-linux-gnu/13/../../.. CMakeFiles/cmTC_71a83.dir/CMakeCXXCompilerABI.cpp.o -lstdc++ -lm -lgcc_s -lgcc -lc -lgcc_s -lgcc /usr/lib/gcc/x86_64-linux-gnu/13/crtendS.o /usr/lib/gcc/x86_64-linux-gnu/13/../../../x86_64-linux-gnu/crtn.o
+        COLLECT_GCC_OPTIONS='-v' '-o' 'cmTC_71a83' '-shared-libgcc' '-mtune=generic' '-march=x86-64' '-dumpdir' 'cmTC_71a83.'
+        
+      exitCode: 0
+  -
+    kind: "message-v1"
+    backtrace:
+      - "/usr/share/cmake-3.28/Modules/CMakeDetermineCompilerABI.cmake:127 (message)"
+      - "/usr/share/cmake-3.28/Modules/CMakeTestCXXCompiler.cmake:26 (CMAKE_DETERMINE_COMPILER_ABI)"
+      - "CMakeLists.txt:2 (project)"
+    message: |
+      Parsed CXX implicit include dir info: rv=done
+        found start of include info
+        found start of implicit include info
+          add: [/usr/include/c++/13]
+          add: [/usr/include/x86_64-linux-gnu/c++/13]
+          add: [/usr/include/c++/13/backward]
+          add: [/usr/lib/gcc/x86_64-linux-gnu/13/include]
+          add: [/usr/x86_64-linux-gnu/include]
+          add: [/usr/include/x86_64-linux-gnu]
+          add: [/usr/include]
+        end of search list found
+        collapse include dir [/usr/include/c++/13] ==> [/usr/include/c++/13]
+        collapse include dir [/usr/include/x86_64-linux-gnu/c++/13] ==> [/usr/include/x86_64-linux-gnu/c++/13]
+        collapse include dir [/usr/include/c++/13/backward] ==> [/usr/include/c++/13/backward]
+        collapse include dir [/usr/lib/gcc/x86_64-linux-gnu/13/include] ==> [/usr/lib/gcc/x86_64-linux-gnu/13/include]
+        collapse include dir [/usr/x86_64-linux-gnu/include] ==> [/usr/x86_64-linux-gnu/include]
+        collapse include dir [/usr/include/x86_64-linux-gnu] ==> [/usr/include/x86_64-linux-gnu]
+        collapse include dir [/usr/include] ==> [/usr/include]
+        implicit include dirs: [/usr/include/c++/13;/usr/include/x86_64-linux-gnu/c++/13;/usr/include/c++/13/backward;/usr/lib/gcc/x86_64-linux-gnu/13/include;/usr/x86_64-linux-gnu/include;/usr/include/x86_64-linux-gnu;/usr/include]
+      
+      
+  -
+    kind: "message-v1"
+    backtrace:
+      - "/usr/share/cmake-3.28/Modules/CMakeDetermineCompilerABI.cmake:159 (message)"
+      - "/usr/share/cmake-3.28/Modules/CMakeTestCXXCompiler.cmake:26 (CMAKE_DETERMINE_COMPILER_ABI)"
+      - "CMakeLists.txt:2 (project)"
+    message: |
+      Parsed CXX implicit link information:
+        link line regex: [^( *|.*[/\\])(ld|CMAKE_LINK_STARTFILE-NOTFOUND|([^/\\]+-)?ld|collect2)[^/\\]*( |$)]
+        ignore line: [Change Dir: '/home/meinersbur/src/llvm/flangast/_src/polymorphism-benchmark/CMakeFiles/CMakeScratch/TryCompile-zVzaws']
+        ignore line: []
+        ignore line: [Run Build Command(s): /home/meinersbur/bin/ninja -v cmTC_71a83]
+        ignore line: [[ 50%/0.025s :: 1->1->1 (of 2)] /usr/bin/c++   -v -o CMakeFiles/cmTC_71a83.dir/CMakeCXXCompilerABI.cpp.o -c /usr/share/cmake-3.28/Modules/CMakeCXXCompilerABI.cpp]
+        ignore line: [Using built-in specs.]
+        ignore line: [COLLECT_GCC=/usr/bin/c++]
+        ignore line: [OFFLOAD_TARGET_NAMES=nvptx-none:amdgcn-amdhsa]
+        ignore line: [OFFLOAD_TARGET_DEFAULT=1]
+        ignore line: [Target: x86_64-linux-gnu]
+        ignore line: [Configured with: ../src/configure -v --with-pkgversion='Ubuntu 13.3.0-6ubuntu2~24.04.1' --with-bugurl=file:///usr/share/doc/gcc-13/README.Bugs --enable-languages=c ada c++ go d fortran objc obj-c++ m2 --prefix=/usr --with-gcc-major-version-only --program-suffix=-13 --program-prefix=x86_64-linux-gnu- --enable-shared --enable-linker-build-id --libexecdir=/usr/libexec --without-included-gettext --enable-threads=posix --libdir=/usr/lib --enable-nls --enable-bootstrap --enable-clocale=gnu --enable-libstdcxx-debug --enable-libstdcxx-time=yes --with-default-libstdcxx-abi=new --enable-libstdcxx-backtrace --enable-gnu-unique-object --disable-vtable-verify --enable-plugin --enable-default-pie --with-system-zlib --enable-libphobos-checking=release --with-target-system-zlib=auto --enable-objc-gc=auto --enable-multiarch --disable-werror --enable-cet --with-arch-32=i686 --with-abi=m64 --with-multilib-list=m32 m64 mx32 --enable-multilib --with-tune=generic --enable-offload-targets=nvptx-none=/build/gcc-13-EldibY/gcc-13-13.3.0/debian/tmp-nvptx/usr amdgcn-amdhsa=/build/gcc-13-EldibY/gcc-13-13.3.0/debian/tmp-gcn/usr --enable-offload-defaulted --without-cuda-driver --enable-checking=release --build=x86_64-linux-gnu --host=x86_64-linux-gnu --target=x86_64-linux-gnu --with-build-config=bootstrap-lto-lean --enable-link-serialization=2]
+        ignore line: [Thread model: posix]
+        ignore line: [Supported LTO compression algorithms: zlib zstd]
+        ignore line: [gcc version 13.3.0 (Ubuntu 13.3.0-6ubuntu2~24.04.1) ]
+        ignore line: [COLLECT_GCC_OPTIONS='-v' '-o' 'CMakeFiles/cmTC_71a83.dir/CMakeCXXCompilerABI.cpp.o' '-c' '-shared-libgcc' '-mtune=generic' '-march=x86-64' '-dumpdir' 'CMakeFiles/cmTC_71a83.dir/']
+        ignore line: [ /usr/libexec/gcc/x86_64-linux-gnu/13/cc1plus -quiet -v -imultiarch x86_64-linux-gnu -D_GNU_SOURCE /usr/share/cmake-3.28/Modules/CMakeCXXCompilerABI.cpp -quiet -dumpdir CMakeFiles/cmTC_71a83.dir/ -dumpbase CMakeCXXCompilerABI.cpp.cpp -dumpbase-ext .cpp -mtune=generic -march=x86-64 -version -fasynchronous-unwind-tables -fstack-protector-strong -Wformat -Wformat-security -fstack-clash-protection -fcf-protection -o /tmp/meinersbur/ccaSJVv4.s]
+        ignore line: [GNU C++17 (Ubuntu 13.3.0-6ubuntu2~24.04.1) version 13.3.0 (x86_64-linux-gnu)]
+        ignore line: [	compiled by GNU C version 13.3.0  GMP version 6.3.0  MPFR version 4.2.1  MPC version 1.3.1  isl version isl-0.26-GMP]
+        ignore line: []
+        ignore line: [GGC heuristics: --param ggc-min-expand=100 --param ggc-min-heapsize=131072]
+        ignore line: [ignoring duplicate directory "/usr/include/x86_64-linux-gnu/c++/13"]
+        ignore line: [ignoring nonexistent directory "/usr/local/include/x86_64-linux-gnu"]
+        ignore line: [ignoring nonexistent directory "/usr/local/include"]
+        ignore line: [ignoring nonexistent directory "/usr/lib/gcc/x86_64-linux-gnu/13/include-fixed/x86_64-linux-gnu"]
+        ignore line: [ignoring nonexistent directory "/usr/lib/gcc/x86_64-linux-gnu/13/include-fixed"]
+        ignore line: [#include "..." search starts here:]
+        ignore line: [#include <...> search starts here:]
+        ignore line: [ /usr/include/c++/13]
+        ignore line: [ /usr/include/x86_64-linux-gnu/c++/13]
+        ignore line: [ /usr/include/c++/13/backward]
+        ignore line: [ /usr/lib/gcc/x86_64-linux-gnu/13/include]
+        ignore line: [ /usr/x86_64-linux-gnu/include]
+        ignore line: [ /usr/include/x86_64-linux-gnu]
+        ignore line: [ /usr/include]
+        ignore line: [End of search list.]
+        ignore line: [Compiler executable checksum: 7896445e4990772fdae9dc0659a99266]
+        ignore line: [COLLECT_GCC_OPTIONS='-v' '-o' 'CMakeFiles/cmTC_71a83.dir/CMakeCXXCompilerABI.cpp.o' '-c' '-shared-libgcc' '-mtune=generic' '-march=x86-64' '-dumpdir' 'CMakeFiles/cmTC_71a83.dir/']
+        ignore line: [ as -v --64 -o CMakeFiles/cmTC_71a83.dir/CMakeCXXCompilerABI.cpp.o /tmp/meinersbur/ccaSJVv4.s]
+        ignore line: [GNU assembler version 2.42 (x86_64-linux-gnu) using BFD version (GNU Binutils for Ubuntu) 2.42]
+        ignore line: [COMPILER_PATH=/usr/libexec/gcc/x86_64-linux-gnu/13/:/usr/libexec/gcc/x86_64-linux-gnu/13/:/usr/libexec/gcc/x86_64-linux-gnu/:/usr/lib/gcc/x86_64-linux-gnu/13/:/usr/lib/gcc/x86_64-linux-gnu/]
+        ignore line: [LIBRARY_PATH=/usr/lib/gcc/x86_64-linux-gnu/13/:/usr/lib/gcc/x86_64-linux-gnu/13/../../../x86_64-linux-gnu/:/usr/lib/gcc/x86_64-linux-gnu/13/../../../../lib/:/lib/x86_64-linux-gnu/:/lib/../lib/:/usr/lib/x86_64-linux-gnu/:/usr/lib/../lib/:/usr/lib/gcc/x86_64-linux-gnu/13/../../../:/lib/:/usr/lib/]
+        ignore line: [COLLECT_GCC_OPTIONS='-v' '-o' 'CMakeFiles/cmTC_71a83.dir/CMakeCXXCompilerABI.cpp.o' '-c' '-shared-libgcc' '-mtune=generic' '-march=x86-64' '-dumpdir' 'CMakeFiles/cmTC_71a83.dir/CMakeCXXCompilerABI.cpp.']
+        ignore line: [[100%/0.068s :: 0->1->2 (of 2)] : && /usr/bin/c++  -v CMakeFiles/cmTC_71a83.dir/CMakeCXXCompilerABI.cpp.o -o cmTC_71a83   && :]
+        ignore line: [Using built-in specs.]
+        ignore line: [COLLECT_GCC=/usr/bin/c++]
+        ignore line: [COLLECT_LTO_WRAPPER=/usr/libexec/gcc/x86_64-linux-gnu/13/lto-wrapper]
+        ignore line: [OFFLOAD_TARGET_NAMES=nvptx-none:amdgcn-amdhsa]
+        ignore line: [OFFLOAD_TARGET_DEFAULT=1]
+        ignore line: [Target: x86_64-linux-gnu]
+        ignore line: [Configured with: ../src/configure -v --with-pkgversion='Ubuntu 13.3.0-6ubuntu2~24.04.1' --with-bugurl=file:///usr/share/doc/gcc-13/README.Bugs --enable-languages=c ada c++ go d fortran objc obj-c++ m2 --prefix=/usr --with-gcc-major-version-only --program-suffix=-13 --program-prefix=x86_64-linux-gnu- --enable-shared --enable-linker-build-id --libexecdir=/usr/libexec --without-included-gettext --enable-threads=posix --libdir=/usr/lib --enable-nls --enable-bootstrap --enable-clocale=gnu --enable-libstdcxx-debug --enable-libstdcxx-time=yes --with-default-libstdcxx-abi=new --enable-libstdcxx-backtrace --enable-gnu-unique-object --disable-vtable-verify --enable-plugin --enable-default-pie --with-system-zlib --enable-libphobos-checking=release --with-target-system-zlib=auto --enable-objc-gc=auto --enable-multiarch --disable-werror --enable-cet --with-arch-32=i686 --with-abi=m64 --with-multilib-list=m32 m64 mx32 --enable-multilib --with-tune=generic --enable-offload-targets=nvptx-none=/build/gcc-13-EldibY/gcc-13-13.3.0/debian/tmp-nvptx/usr amdgcn-amdhsa=/build/gcc-13-EldibY/gcc-13-13.3.0/debian/tmp-gcn/usr --enable-offload-defaulted --without-cuda-driver --enable-checking=release --build=x86_64-linux-gnu --host=x86_64-linux-gnu --target=x86_64-linux-gnu --with-build-config=bootstrap-lto-lean --enable-link-serialization=2]
+        ignore line: [Thread model: posix]
+        ignore line: [Supported LTO compression algorithms: zlib zstd]
+        ignore line: [gcc version 13.3.0 (Ubuntu 13.3.0-6ubuntu2~24.04.1) ]
+        ignore line: [COMPILER_PATH=/usr/libexec/gcc/x86_64-linux-gnu/13/:/usr/libexec/gcc/x86_64-linux-gnu/13/:/usr/libexec/gcc/x86_64-linux-gnu/:/usr/lib/gcc/x86_64-linux-gnu/13/:/usr/lib/gcc/x86_64-linux-gnu/]
+        ignore line: [LIBRARY_PATH=/usr/lib/gcc/x86_64-linux-gnu/13/:/usr/lib/gcc/x86_64-linux-gnu/13/../../../x86_64-linux-gnu/:/usr/lib/gcc/x86_64-linux-gnu/13/../../../../lib/:/lib/x86_64-linux-gnu/:/lib/../lib/:/usr/lib/x86_64-linux-gnu/:/usr/lib/../lib/:/usr/lib/gcc/x86_64-linux-gnu/13/../../../:/lib/:/usr/lib/]
+        ignore line: [COLLECT_GCC_OPTIONS='-v' '-o' 'cmTC_71a83' '-shared-libgcc' '-mtune=generic' '-march=x86-64' '-dumpdir' 'cmTC_71a83.']
+        link line: [ /usr/libexec/gcc/x86_64-linux-gnu/13/collect2 -plugin /usr/libexec/gcc/x86_64-linux-gnu/13/liblto_plugin.so -plugin-opt=/usr/libexec/gcc/x86_64-linux-gnu/13/lto-wrapper -plugin-opt=-fresolution=/tmp/meinersbur/cc6yhqmd.res -plugin-opt=-pass-through=-lgcc_s -plugin-opt=-pass-through=-lgcc -plugin-opt=-pass-through=-lc -plugin-opt=-pass-through=-lgcc_s -plugin-opt=-pass-through=-lgcc --build-id --eh-frame-hdr -m elf_x86_64 --hash-style=gnu --as-needed -dynamic-linker /lib64/ld-linux-x86-64.so.2 -pie -z now -z relro -o cmTC_71a83 /usr/lib/gcc/x86_64-linux-gnu/13/../../../x86_64-linux-gnu/Scrt1.o /usr/lib/gcc/x86_64-linux-gnu/13/../../../x86_64-linux-gnu/crti.o /usr/lib/gcc/x86_64-linux-gnu/13/crtbeginS.o -L/usr/lib/gcc/x86_64-linux-gnu/13 -L/usr/lib/gcc/x86_64-linux-gnu/13/../../../x86_64-linux-gnu -L/usr/lib/gcc/x86_64-linux-gnu/13/../../../../lib -L/lib/x86_64-linux-gnu -L/lib/../lib -L/usr/lib/x86_64-linux-gnu -L/usr/lib/../lib -L/usr/lib/gcc/x86_64-linux-gnu/13/../../.. CMakeFiles/cmTC_71a83.dir/CMakeCXXCompilerABI.cpp.o -lstdc++ -lm -lgcc_s -lgcc -lc -lgcc_s -lgcc /usr/lib/gcc/x86_64-linux-gnu/13/crtendS.o /usr/lib/gcc/x86_64-linux-gnu/13/../../../x86_64-linux-gnu/crtn.o]
+          arg [/usr/libexec/gcc/x86_64-linux-gnu/13/collect2] ==> ignore
+          arg [-plugin] ==> ignore
+          arg [/usr/libexec/gcc/x86_64-linux-gnu/13/liblto_plugin.so] ==> ignore
+          arg [-plugin-opt=/usr/libexec/gcc/x86_64-linux-gnu/13/lto-wrapper] ==> ignore
+          arg [-plugin-opt=-fresolution=/tmp/meinersbur/cc6yhqmd.res] ==> ignore
+          arg [-plugin-opt=-pass-through=-lgcc_s] ==> ignore
+          arg [-plugin-opt=-pass-through=-lgcc] ==> ignore
+          arg [-plugin-opt=-pass-through=-lc] ==> ignore
+          arg [-plugin-opt=-pass-through=-lgcc_s] ==> ignore
+          arg [-plugin-opt=-pass-through=-lgcc] ==> ignore
+          arg [--build-id] ==> ignore
+          arg [--eh-frame-hdr] ==> ignore
+          arg [-m] ==> ignore
+          arg [elf_x86_64] ==> ignore
+          arg [--hash-style=gnu] ==> ignore
+          arg [--as-needed] ==> ignore
+          arg [-dynamic-linker] ==> ignore
+          arg [/lib64/ld-linux-x86-64.so.2] ==> ignore
+          arg [-pie] ==> ignore
+          arg [-znow] ==> ignore
+          arg [-zrelro] ==> ignore
+          arg [-o] ==> ignore
+          arg [cmTC_71a83] ==> ignore
+          arg [/usr/lib/gcc/x86_64-linux-gnu/13/../../../x86_64-linux-gnu/Scrt1.o] ==> obj [/usr/lib/gcc/x86_64-linux-gnu/13/../../../x86_64-linux-gnu/Scrt1.o]
+          arg [/usr/lib/gcc/x86_64-linux-gnu/13/../../../x86_64-linux-gnu/crti.o] ==> obj [/usr/lib/gcc/x86_64-linux-gnu/13/../../../x86_64-linux-gnu/crti.o]
+          arg [/usr/lib/gcc/x86_64-linux-gnu/13/crtbeginS.o] ==> obj [/usr/lib/gcc/x86_64-linux-gnu/13/crtbeginS.o]
+          arg [-L/usr/lib/gcc/x86_64-linux-gnu/13] ==> dir [/usr/lib/gcc/x86_64-linux-gnu/13]
+          arg [-L/usr/lib/gcc/x86_64-linux-gnu/13/../../../x86_64-linux-gnu] ==> dir [/usr/lib/gcc/x86_64-linux-gnu/13/../../../x86_64-linux-gnu]
+          arg [-L/usr/lib/gcc/x86_64-linux-gnu/13/../../../../lib] ==> dir [/usr/lib/gcc/x86_64-linux-gnu/13/../../../../lib]
+          arg [-L/lib/x86_64-linux-gnu] ==> dir [/lib/x86_64-linux-gnu]
+          arg [-L/lib/../lib] ==> dir [/lib/../lib]
+          arg [-L/usr/lib/x86_64-linux-gnu] ==> dir [/usr/lib/x86_64-linux-gnu]
+          arg [-L/usr/lib/../lib] ==> dir [/usr/lib/../lib]
+          arg [-L/usr/lib/gcc/x86_64-linux-gnu/13/../../..] ==> dir [/usr/lib/gcc/x86_64-linux-gnu/13/../../..]
+          arg [CMakeFiles/cmTC_71a83.dir/CMakeCXXCompilerABI.cpp.o] ==> ignore
+          arg [-lstdc++] ==> lib [stdc++]
+          arg [-lm] ==> lib [m]
+          arg [-lgcc_s] ==> lib [gcc_s]
+          arg [-lgcc] ==> lib [gcc]
+          arg [-lc] ==> lib [c]
+          arg [-lgcc_s] ==> lib [gcc_s]
+          arg [-lgcc] ==> lib [gcc]
+          arg [/usr/lib/gcc/x86_64-linux-gnu/13/crtendS.o] ==> obj [/usr/lib/gcc/x86_64-linux-gnu/13/crtendS.o]
+          arg [/usr/lib/gcc/x86_64-linux-gnu/13/../../../x86_64-linux-gnu/crtn.o] ==> obj [/usr/lib/gcc/x86_64-linux-gnu/13/../../../x86_64-linux-gnu/crtn.o]
+        collapse obj [/usr/lib/gcc/x86_64-linux-gnu/13/../../../x86_64-linux-gnu/Scrt1.o] ==> [/usr/lib/x86_64-linux-gnu/Scrt1.o]
+        collapse obj [/usr/lib/gcc/x86_64-linux-gnu/13/../../../x86_64-linux-gnu/crti.o] ==> [/usr/lib/x86_64-linux-gnu/crti.o]
+        collapse obj [/usr/lib/gcc/x86_64-linux-gnu/13/../../../x86_64-linux-gnu/crtn.o] ==> [/usr/lib/x86_64-linux-gnu/crtn.o]
+        collapse library dir [/usr/lib/gcc/x86_64-linux-gnu/13] ==> [/usr/lib/gcc/x86_64-linux-gnu/13]
+        collapse library dir [/usr/lib/gcc/x86_64-linux-gnu/13/../../../x86_64-linux-gnu] ==> [/usr/lib/x86_64-linux-gnu]
+        collapse library dir [/usr/lib/gcc/x86_64-linux-gnu/13/../../../../lib] ==> [/usr/lib]
+        collapse library dir [/lib/x86_64-linux-gnu] ==> [/lib/x86_64-linux-gnu]
+        collapse library dir [/lib/../lib] ==> [/lib]
+        collapse library dir [/usr/lib/x86_64-linux-gnu] ==> [/usr/lib/x86_64-linux-gnu]
+        collapse library dir [/usr/lib/../lib] ==> [/usr/lib]
+        collapse library dir [/usr/lib/gcc/x86_64-linux-gnu/13/../../..] ==> [/usr/lib]
+        implicit libs: [stdc++;m;gcc_s;gcc;c;gcc_s;gcc]
+        implicit objs: [/usr/lib/x86_64-linux-gnu/Scrt1.o;/usr/lib/x86_64-linux-gnu/crti.o;/usr/lib/gcc/x86_64-linux-gnu/13/crtbeginS.o;/usr/lib/gcc/x86_64-linux-gnu/13/crtendS.o;/usr/lib/x86_64-linux-gnu/crtn.o]
+        implicit dirs: [/usr/lib/gcc/x86_64-linux-gnu/13;/usr/lib/x86_64-linux-gnu;/usr/lib;/lib/x86_64-linux-gnu;/lib]
+        implicit fwks: []
+      
+      
+  -
+    kind: "try_compile-v1"
+    backtrace:
+      - "/usr/share/cmake-3.28/Modules/CheckLibraryExists.cmake:69 (try_compile)"
+      - "/home/meinersbur/src/llvm/flangast/_src/third-party/benchmark/CMakeLists.txt:136 (check_library_exists)"
+    checks:
+      - "Looking for shm_open in rt"
+    directories:
+      source: "/home/meinersbur/src/llvm/flangast/_src/polymorphism-benchmark/CMakeFiles/CMakeScratch/TryCompile-tE130t"
+      binary: "/home/meinersbur/src/llvm/flangast/_src/polymorphism-benchmark/CMakeFiles/CMakeScratch/TryCompile-tE130t"
+    cmakeVariables:
+      CMAKE_CXX_FLAGS: ""
+      CMAKE_CXX_FLAGS_DEBUG: "-g"
+      CMAKE_EXE_LINKER_FLAGS: ""
+      CMAKE_MODULE_PATH: "/home/meinersbur/src/llvm/flangast/_src/third-party/benchmark/cmake/Modules;/home/meinersbur/src/llvm/flangast/_src/third-party/benchmark/cmake"
+    buildResult:
+      variable: "HAVE_LIB_RT"
+      cached: true
+      stdout: |
+        Change Dir: '/home/meinersbur/src/llvm/flangast/_src/polymorphism-benchmark/CMakeFiles/CMakeScratch/TryCompile-tE130t'
+        
+        Run Build Command(s): /home/meinersbur/bin/ninja -v cmTC_560e2
+        [ 50%/0.026s :: 1->1->1 (of 2)] /usr/bin/c++   -DCHECK_FUNCTION_EXISTS=shm_open -std=c++17 -o CMakeFiles/cmTC_560e2.dir/CheckFunctionExists.cxx.o -c /home/meinersbur/src/llvm/flangast/_src/polymorphism-benchmark/CMakeFiles/CMakeScratch/TryCompile-tE130t/CheckFunctionExists.cxx
+        [100%/0.073s :: 0->1->2 (of 2)] : && /usr/bin/c++ -DCHECK_FUNCTION_EXISTS=shm_open  CMakeFiles/cmTC_560e2.dir/CheckFunctionExists.cxx.o -o cmTC_560e2  -lrt && :
+        
+      exitCode: 0
+  -
+    kind: "try_compile-v1"
+    backtrace:
+      - "/usr/share/cmake-3.28/Modules/Internal/CheckSourceCompiles.cmake:101 (try_compile)"
+      - "/usr/share/cmake-3.28/Modules/Internal/CheckCompilerFlag.cmake:18 (cmake_check_source_compiles)"
+      - "/usr/share/cmake-3.28/Modules/CheckCXXCompilerFlag.cmake:34 (cmake_check_compiler_flag)"
+      - "/home/meinersbur/src/llvm/flangast/_src/third-party/benchmark/cmake/AddCXXCompilerFlag.cmake:34 (check_cxx_compiler_flag)"
+      - "/home/meinersbur/src/llvm/flangast/_src/third-party/benchmark/CMakeLists.txt:194 (add_cxx_compiler_flag)"
+    checks:
+      - "Performing Test HAVE_CXX_FLAG_WALL"
+    directories:
+      source: "/home/meinersbur/src/llvm/flangast/_src/polymorphism-benchmark/CMakeFiles/CMakeScratch/TryCompile-1gMEyZ"
+      binary: "/home/meinersbur/src/llvm/flangast/_src/polymorphism-benchmark/CMakeFiles/CMakeScratch/TryCompile-1gMEyZ"
+    cmakeVariables:
+      CMAKE_CXX_FLAGS: ""
+      CMAKE_CXX_FLAGS_DEBUG: "-g"
+      CMAKE_EXE_LINKER_FLAGS: ""
+      CMAKE_MODULE_PATH: "/home/meinersbur/src/llvm/flangast/_src/third-party/benchmark/cmake/Modules;/home/meinersbur/src/llvm/flangast/_src/third-party/benchmark/cmake"
+    buildResult:
+      variable: "HAVE_CXX_FLAG_WALL"
+      cached: true
+      stdout: |
+        Change Dir: '/home/meinersbur/src/llvm/flangast/_src/polymorphism-benchmark/CMakeFiles/CMakeScratch/TryCompile-1gMEyZ'
+        
+        Run Build Command(s): /home/meinersbur/bin/ninja -v cmTC_5a645
+        [ 50%/0.023s :: 1->1->1 (of 2)] /usr/bin/c++ -DHAVE_CXX_FLAG_WALL  -Wall -std=c++17   -Wall -o CMakeFiles/cmTC_5a645.dir/src.cxx.o -c /home/meinersbur/src/llvm/flangast/_src/polymorphism-benchmark/CMakeFiles/CMakeScratch/TryCompile-1gMEyZ/src.cxx
+        [100%/0.066s :: 0->1->2 (of 2)] : && /usr/bin/c++ -Wall  CMakeFiles/cmTC_5a645.dir/src.cxx.o -o cmTC_5a645   && :
+        
+      exitCode: 0
+  -
+    kind: "try_compile-v1"
+    backtrace:
+      - "/usr/share/cmake-3.28/Modules/Internal/CheckSourceCompiles.cmake:101 (try_compile)"
+      - "/usr/share/cmake-3.28/Modules/Internal/CheckCompilerFlag.cmake:18 (cmake_check_source_compiles)"
+      - "/usr/share/cmake-3.28/Modules/CheckCXXCompilerFlag.cmake:34 (cmake_check_compiler_flag)"
+      - "/home/meinersbur/src/llvm/flangast/_src/third-party/benchmark/cmake/AddCXXCompilerFlag.cmake:34 (check_cxx_compiler_flag)"
+      - "/home/meinersbur/src/llvm/flangast/_src/third-party/benchmark/CMakeLists.txt:195 (add_cxx_compiler_flag)"
+    checks:
+      - "Performing Test HAVE_CXX_FLAG_WEXTRA"
+    directories:
+      source: "/home/meinersbur/src/llvm/flangast/_src/polymorphism-benchmark/CMakeFiles/CMakeScratch/TryCompile-lF1yTW"
+      binary: "/home/meinersbur/src/llvm/flangast/_src/polymorphism-benchmark/CMakeFiles/CMakeScratch/TryCompile-lF1yTW"
+    cmakeVariables:
+      CMAKE_CXX_FLAGS: "  -Wall"
+      CMAKE_CXX_FLAGS_DEBUG: "-g"
+      CMAKE_EXE_LINKER_FLAGS: ""
+      CMAKE_MODULE_PATH: "/home/meinersbur/src/llvm/flangast/_src/third-party/benchmark/cmake/Modules;/home/meinersbur/src/llvm/flangast/_src/third-party/benchmark/cmake"
+    buildResult:
+      variable: "HAVE_CXX_FLAG_WEXTRA"
+      cached: true
+      stdout: |
+        Change Dir: '/home/meinersbur/src/llvm/flangast/_src/polymorphism-benchmark/CMakeFiles/CMakeScratch/TryCompile-lF1yTW'
+        
+        Run Build Command(s): /home/meinersbur/bin/ninja -v cmTC_7bcf2
+        [ 50%/0.022s :: 1->1->1 (of 2)] /usr/bin/c++ -DHAVE_CXX_FLAG_WEXTRA  -Wall  -Wextra -std=c++17   -Wextra -o CMakeFiles/cmTC_7bcf2.dir/src.cxx.o -c /home/meinersbur/src/llvm/flangast/_src/polymorphism-benchmark/CMakeFiles/CMakeScratch/TryCompile-lF1yTW/src.cxx
+        [100%/0.066s :: 0->1->2 (of 2)] : && /usr/bin/c++ -Wall  -Wextra  CMakeFiles/cmTC_7bcf2.dir/src.cxx.o -o cmTC_7bcf2   && :
+        
+      exitCode: 0
+  -
+    kind: "try_compile-v1"
+    backtrace:
+      - "/usr/share/cmake-3.28/Modules/Internal/CheckSourceCompiles.cmake:101 (try_compile)"
+      - "/usr/share/cmake-3.28/Modules/Internal/CheckCompilerFlag.cmake:18 (cmake_check_source_compiles)"
+      - "/usr/share/cmake-3.28/Modules/CheckCXXCompilerFlag.cmake:34 (cmake_check_compiler_flag)"
+      - "/home/meinersbur/src/llvm/flangast/_src/third-party/benchmark/cmake/AddCXXCompilerFlag.cmake:34 (check_cxx_compiler_flag)"
+      - "/home/meinersbur/src/llvm/flangast/_src/third-party/benchmark/CMakeLists.txt:196 (add_cxx_compiler_flag)"
+    checks:
+      - "Performing Test HAVE_CXX_FLAG_WSHADOW"
+    directories:
+      source: "/home/meinersbur/src/llvm/flangast/_src/polymorphism-benchmark/CMakeFiles/CMakeScratch/TryCompile-1QFeLH"
+      binary: "/home/meinersbur/src/llvm/flangast/_src/polymorphism-benchmark/CMakeFiles/CMakeScratch/TryCompile-1QFeLH"
+    cmakeVariables:
+      CMAKE_CXX_FLAGS: "  -Wall  -Wextra"
+      CMAKE_CXX_FLAGS_DEBUG: "-g"
+      CMAKE_EXE_LINKER_FLAGS: ""
+      CMAKE_MODULE_PATH: "/home/meinersbur/src/llvm/flangast/_src/third-party/benchmark/cmake/Modules;/home/meinersbur/src/llvm/flangast/_src/third-party/benchmark/cmake"
+    buildResult:
+      variable: "HAVE_CXX_FLAG_WSHADOW"
+      cached: true
+      stdout: |
+        Change Dir: '/home/meinersbur/src/llvm/flangast/_src/polymorphism-benchmark/CMakeFiles/CMakeScratch/TryCompile-1QFeLH'
+        
+        Run Build Command(s): /home/meinersbur/bin/ninja -v cmTC_b4f22
+        [ 50%/0.023s :: 1->1->1 (of 2)] /usr/bin/c++ -DHAVE_CXX_FLAG_WSHADOW  -Wall  -Wextra  -Wshadow -std=c++17   -Wshadow -o CMakeFiles/cmTC_b4f22.dir/src.cxx.o -c /home/meinersbur/src/llvm/flangast/_src/polymorphism-benchmark/CMakeFiles/CMakeScratch/TryCompile-1QFeLH/src.cxx
+        [100%/0.069s :: 0->1->2 (of 2)] : && /usr/bin/c++ -Wall  -Wextra  -Wshadow  CMakeFiles/cmTC_b4f22.dir/src.cxx.o -o cmTC_b4f22   && :
+        
+      exitCode: 0
+  -
+    kind: "try_compile-v1"
+    backtrace:
+      - "/usr/share/cmake-3.28/Modules/Internal/CheckSourceCompiles.cmake:101 (try_compile)"
+      - "/usr/share/cmake-3.28/Modules/Internal/CheckCompilerFlag.cmake:18 (cmake_check_source_compiles)"
+      - "/usr/share/cmake-3.28/Modules/CheckCXXCompilerFlag.cmake:34 (cmake_check_compiler_flag)"
+      - "/home/meinersbur/src/llvm/flangast/_src/third-party/benchmark/cmake/AddCXXCompilerFlag.cmake:34 (check_cxx_compiler_flag)"
+      - "/home/meinersbur/src/llvm/flangast/_src/third-party/benchmark/CMakeLists.txt:197 (add_cxx_compiler_flag)"
+    checks:
+      - "Performing Test HAVE_CXX_FLAG_WFLOAT_EQUAL"
+    directories:
+      source: "/home/meinersbur/src/llvm/flangast/_src/polymorphism-benchmark/CMakeFiles/CMakeScratch/TryCompile-n6dw4m"
+      binary: "/home/meinersbur/src/llvm/flangast/_src/polymorphism-benchmark/CMakeFiles/CMakeScratch/TryCompile-n6dw4m"
+    cmakeVariables:
+      CMAKE_CXX_FLAGS: "  -Wall  -Wextra  -Wshadow"
+      CMAKE_CXX_FLAGS_DEBUG: "-g"
+      CMAKE_EXE_LINKER_FLAGS: ""
+      CMAKE_MODULE_PATH: "/home/meinersbur/src/llvm/flangast/_src/third-party/benchmark/cmake/Modules;/home/meinersbur/src/llvm/flangast/_src/third-party/benchmark/cmake"
+    buildResult:
+      variable: "HAVE_CXX_FLAG_WFLOAT_EQUAL"
+      cached: true
+      stdout: |
+        Change Dir: '/home/meinersbur/src/llvm/flangast/_src/polymorphism-benchmark/CMakeFiles/CMakeScratch/TryCompile-n6dw4m'
+        
+        Run Build Command(s): /home/meinersbur/bin/ninja -v cmTC_69d9a
+        [ 50%/0.025s :: 1->1->1 (of 2)] /usr/bin/c++ -DHAVE_CXX_FLAG_WFLOAT_EQUAL  -Wall  -Wextra  -Wshadow  -Wfloat-equal -std=c++17   -Wfloat-equal -o CMakeFiles/cmTC_69d9a.dir/src.cxx.o -c /home/meinersbur/src/llvm/flangast/_src/polymorphism-benchmark/CMakeFiles/CMakeScratch/TryCompile-n6dw4m/src.cxx
+        [100%/0.071s :: 0->1->2 (of 2)] : && /usr/bin/c++ -Wall  -Wextra  -Wshadow  -Wfloat-equal  CMakeFiles/cmTC_69d9a.dir/src.cxx.o -o cmTC_69d9a   && :
+        
+      exitCode: 0
+  -
+    kind: "try_compile-v1"
+    backtrace:
+      - "/usr/share/cmake-3.28/Modules/Internal/CheckSourceCompiles.cmake:101 (try_compile)"
+      - "/usr/share/cmake-3.28/Modules/Internal/CheckCompilerFlag.cmake:18 (cmake_check_source_compiles)"
+      - "/usr/share/cmake-3.28/Modules/CheckCXXCompilerFlag.cmake:34 (cmake_check_compiler_flag)"
+      - "/home/meinersbur/src/llvm/flangast/_src/third-party/benchmark/cmake/AddCXXCompilerFlag.cmake:34 (check_cxx_compiler_flag)"
+      - "/home/meinersbur/src/llvm/flangast/_src/third-party/benchmark/CMakeLists.txt:198 (add_cxx_compiler_flag)"
+    checks:
+      - "Performing Test HAVE_CXX_FLAG_WOLD_STYLE_CAST"
+    directories:
+      source: "/home/meinersbur/src/llvm/flangast/_src/polymorphism-benchmark/CMakeFiles/CMakeScratch/TryCompile-F3GhMU"
+      binary: "/home/meinersbur/src/llvm/flangast/_src/polymorphism-benchmark/CMakeFiles/CMakeScratch/TryCompile-F3GhMU"
+    cmakeVariables:
+      CMAKE_CXX_FLAGS: "  -Wall  -Wextra  -Wshadow  -Wfloat-equal"
+      CMAKE_CXX_FLAGS_DEBUG: "-g"
+      CMAKE_EXE_LINKER_FLAGS: ""
+      CMAKE_MODULE_PATH: "/home/meinersbur/src/llvm/flangast/_src/third-party/benchmark/cmake/Modules;/home/meinersbur/src/llvm/flangast/_src/third-party/benchmark/cmake"
+    buildResult:
+      variable: "HAVE_CXX_FLAG_WOLD_STYLE_CAST"
+      cached: true
+      stdout: |
+        Change Dir: '/home/meinersbur/src/llvm/flangast/_src/polymorphism-benchmark/CMakeFiles/CMakeScratch/TryCompile-F3GhMU'
+        
+        Run Build Command(s): /home/meinersbur/bin/ninja -v cmTC_201c7
+        [ 50%/0.023s :: 1->1->1 (of 2)] /usr/bin/c++ -DHAVE_CXX_FLAG_WOLD_STYLE_CAST  -Wall  -Wextra  -Wshadow  -Wfloat-equal  -Wold-style-cast -std=c++17   -Wold-style-cast -o CMakeFiles/cmTC_201c7.dir/src.cxx.o -c /home/meinersbur/src/llvm/flangast/_src/polymorphism-benchmark/CMakeFiles/CMakeScratch/TryCompile-F3GhMU/src.cxx
+        [100%/0.067s :: 0->1->2 (of 2)] : && /usr/bin/c++ -Wall  -Wextra  -Wshadow  -Wfloat-equal  -Wold-style-cast  CMakeFiles/cmTC_201c7.dir/src.cxx.o -o cmTC_201c7   && :
+        
+      exitCode: 0
+  -
+    kind: "try_compile-v1"
+    backtrace:
+      - "/usr/share/cmake-3.28/Modules/Internal/CheckSourceCompiles.cmake:101 (try_compile)"
+      - "/usr/share/cmake-3.28/Modules/Internal/CheckCompilerFlag.cmake:18 (cmake_check_source_compiles)"
+      - "/usr/share/cmake-3.28/Modules/CheckCXXCompilerFlag.cmake:34 (cmake_check_compiler_flag)"
+      - "/home/meinersbur/src/llvm/flangast/_src/third-party/benchmark/cmake/AddCXXCompilerFlag.cmake:34 (check_cxx_compiler_flag)"
+      - "/home/meinersbur/src/llvm/flangast/_src/third-party/benchmark/CMakeLists.txt:199 (add_cxx_compiler_flag)"
+    checks:
+      - "Performing Test HAVE_CXX_FLAG_WCONVERSION"
+    directories:
+      source: "/home/meinersbur/src/llvm/flangast/_src/polymorphism-benchmark/CMakeFiles/CMakeScratch/TryCompile-faH8ex"
+      binary: "/home/meinersbur/src/llvm/flangast/_src/polymorphism-benchmark/CMakeFiles/CMakeScratch/TryCompile-faH8ex"
+    cmakeVariables:
+      CMAKE_CXX_FLAGS: "  -Wall  -Wextra  -Wshadow  -Wfloat-equal  -Wold-style-cast"
+      CMAKE_CXX_FLAGS_DEBUG: "-g"
+      CMAKE_EXE_LINKER_FLAGS: ""
+      CMAKE_MODULE_PATH: "/home/meinersbur/src/llvm/flangast/_src/third-party/benchmark/cmake/Modules;/home/meinersbur/src/llvm/flangast/_src/third-party/benchmark/cmake"
+    buildResult:
+      variable: "HAVE_CXX_FLAG_WCONVERSION"
+      cached: true
+      stdout: |
+        Change Dir: '/home/meinersbur/src/llvm/flangast/_src/polymorphism-benchmark/CMakeFiles/CMakeScratch/TryCompile-faH8ex'
+        
+        Run Build Command(s): /home/meinersbur/bin/ninja -v cmTC_0ec50
+        [ 50%/0.024s :: 1->1->1 (of 2)] /usr/bin/c++ -DHAVE_CXX_FLAG_WCONVERSION  -Wall  -Wextra  -Wshadow  -Wfloat-equal  -Wold-style-cast  -Wconversion -std=c++17   -Wconversion -o CMakeFiles/cmTC_0ec50.dir/src.cxx.o -c /home/meinersbur/src/llvm/flangast/_src/polymorphism-benchmark/CMakeFiles/CMakeScratch/TryCompile-faH8ex/src.cxx
+        [100%/0.067s :: 0->1->2 (of 2)] : && /usr/bin/c++ -Wall  -Wextra  -Wshadow  -Wfloat-equal  -Wold-style-cast  -Wconversion  CMakeFiles/cmTC_0ec50.dir/src.cxx.o -o cmTC_0ec50   && :
+        
+      exitCode: 0
+  -
+    kind: "try_compile-v1"
+    backtrace:
+      - "/usr/share/cmake-3.28/Modules/Internal/CheckSourceCompiles.cmake:101 (try_compile)"
+      - "/usr/share/cmake-3.28/Modules/Internal/CheckCompilerFlag.cmake:18 (cmake_check_source_compiles)"
+      - "/usr/share/cmake-3.28/Modules/CheckCXXCompilerFlag.cmake:34 (cmake_check_compiler_flag)"
+      - "/home/meinersbur/src/llvm/flangast/_src/third-party/benchmark/cmake/AddCXXCompilerFlag.cmake:34 (check_cxx_compiler_flag)"
+      - "/home/meinersbur/src/llvm/flangast/_src/third-party/benchmark/CMakeLists.txt:200 (add_cxx_compiler_flag)"
+    checks:
+      - "Performing Test HAVE_CXX_FLAG_WFORMAT_2"
+    directories:
+      source: "/home/meinersbur/src/llvm/flangast/_src/polymorphism-benchmark/CMakeFiles/CMakeScratch/TryCompile-veTLmH"
+      binary: "/home/meinersbur/src/llvm/flangast/_src/polymorphism-benchmark/CMakeFiles/CMakeScratch/TryCompile-veTLmH"
+    cmakeVariables:
+      CMAKE_CXX_FLAGS: "  -Wall  -Wextra  -Wshadow  -Wfloat-equal  -Wold-style-cast  -Wconversion"
+      CMAKE_CXX_FLAGS_DEBUG: "-g"
+      CMAKE_EXE_LINKER_FLAGS: ""
+      CMAKE_MODULE_PATH: "/home/meinersbur/src/llvm/flangast/_src/third-party/benchmark/cmake/Modules;/home/meinersbur/src/llvm/flangast/_src/third-party/benchmark/cmake"
+    buildResult:
+      variable: "HAVE_CXX_FLAG_WFORMAT_2"
+      cached: true
+      stdout: |
+        Change Dir: '/home/meinersbur/src/llvm/flangast/_src/polymorphism-benchmark/CMakeFiles/CMakeScratch/TryCompile-veTLmH'
+        
+        Run Build Command(s): /home/meinersbur/bin/ninja -v cmTC_7be3f
+        [ 50%/0.027s :: 1->1->1 (of 2)] /usr/bin/c++ -DHAVE_CXX_FLAG_WFORMAT_2  -Wall  -Wextra  -Wshadow  -Wfloat-equal  -Wold-style-cast  -Wconversion  -Wformat=2 -std=c++17   -Wformat=2 -o CMakeFiles/cmTC_7be3f.dir/src.cxx.o -c /home/meinersbur/src/llvm/flangast/_src/polymorphism-benchmark/CMakeFiles/CMakeScratch/TryCompile-veTLmH/src.cxx
+        [100%/0.072s :: 0->1->2 (of 2)] : && /usr/bin/c++ -Wall  -Wextra  -Wshadow  -Wfloat-equal  -Wold-style-cast  -Wconversion  -Wformat=2  CMakeFiles/cmTC_7be3f.dir/src.cxx.o -o cmTC_7be3f   && :
+        
+      exitCode: 0
+  -
+    kind: "try_compile-v1"
+    backtrace:
+      - "/usr/share/cmake-3.28/Modules/Internal/CheckSourceCompiles.cmake:101 (try_compile)"
+      - "/usr/share/cmake-3.28/Modules/Internal/CheckCompilerFlag.cmake:18 (cmake_check_source_compiles)"
+      - "/usr/share/cmake-3.28/Modules/CheckCXXCompilerFlag.cmake:34 (cmake_check_compiler_flag)"
+      - "/home/meinersbur/src/llvm/flangast/_src/third-party/benchmark/cmake/AddCXXCompilerFlag.cmake:34 (check_cxx_compiler_flag)"
+      - "/home/meinersbur/src/llvm/flangast/_src/third-party/benchmark/CMakeLists.txt:206 (add_cxx_compiler_flag)"
+    checks:
+      - "Performing Test HAVE_CXX_FLAG_WSUGGEST_OVERRIDE"
+    directories:
+      source: "/home/meinersbur/src/llvm/flangast/_src/polymorphism-benchmark/CMakeFiles/CMakeScratch/TryCompile-3jGqPC"
+      binary: "/home/meinersbur/src/llvm/flangast/_src/polymorphism-benchmark/CMakeFiles/CMakeScratch/TryCompile-3jGqPC"
+    cmakeVariables:
+      CMAKE_CXX_FLAGS: "  -Wall  -Wextra  -Wshadow  -Wfloat-equal  -Wold-style-cast  -Wconversion  -Wformat=2"
+      CMAKE_CXX_FLAGS_DEBUG: "-g"
+      CMAKE_EXE_LINKER_FLAGS: ""
+      CMAKE_MODULE_PATH: "/home/meinersbur/src/llvm/flangast/_src/third-party/benchmark/cmake/Modules;/home/meinersbur/src/llvm/flangast/_src/third-party/benchmark/cmake"
+    buildResult:
+      variable: "HAVE_CXX_FLAG_WSUGGEST_OVERRIDE"
+      cached: true
+      stdout: |
+        Change Dir: '/home/meinersbur/src/llvm/flangast/_src/polymorphism-benchmark/CMakeFiles/CMakeScratch/TryCompile-3jGqPC'
+        
+        Run Build Command(s): /home/meinersbur/bin/ninja -v cmTC_54a87
+        [ 50%/0.023s :: 1->1->1 (of 2)] /usr/bin/c++ -DHAVE_CXX_FLAG_WSUGGEST_OVERRIDE  -Wall  -Wextra  -Wshadow  -Wfloat-equal  -Wold-style-cast  -Wconversion  -Wformat=2  -Wsuggest-override -std=c++17   -Wsuggest-override -o CMakeFiles/cmTC_54a87.dir/src.cxx.o -c /home/meinersbur/src/llvm/flangast/_src/polymorphism-benchmark/CMakeFiles/CMakeScratch/TryCompile-3jGqPC/src.cxx
+        [100%/0.067s :: 0->1->2 (of 2)] : && /usr/bin/c++ -Wall  -Wextra  -Wshadow  -Wfloat-equal  -Wold-style-cast  -Wconversion  -Wformat=2  -Wsuggest-override  CMakeFiles/cmTC_54a87.dir/src.cxx.o -o cmTC_54a87   && :
+        
+      exitCode: 0
+  -
+    kind: "try_compile-v1"
+    backtrace:
+      - "/usr/share/cmake-3.28/Modules/Internal/CheckSourceCompiles.cmake:101 (try_compile)"
+      - "/usr/share/cmake-3.28/Modules/Internal/CheckCompilerFlag.cmake:18 (cmake_check_source_compiles)"
+      - "/usr/share/cmake-3.28/Modules/CheckCXXCompilerFlag.cmake:34 (cmake_check_compiler_flag)"
+      - "/home/meinersbur/src/llvm/flangast/_src/third-party/benchmark/cmake/AddCXXCompilerFlag.cmake:34 (check_cxx_compiler_flag)"
+      - "/home/meinersbur/src/llvm/flangast/_src/third-party/benchmark/CMakeLists.txt:208 (add_cxx_compiler_flag)"
+    checks:
+      - "Performing Test HAVE_CXX_FLAG_PEDANTIC"
+    directories:
+      source: "/home/meinersbur/src/llvm/flangast/_src/polymorphism-benchmark/CMakeFiles/CMakeScratch/TryCompile-Dak4v1"
+      binary: "/home/meinersbur/src/llvm/flangast/_src/polymorphism-benchmark/CMakeFiles/CMakeScratch/TryCompile-Dak4v1"
+    cmakeVariables:
+      CMAKE_CXX_FLAGS: "  -Wall  -Wextra  -Wshadow  -Wfloat-equal  -Wold-style-cast  -Wconversion  -Wformat=2  -Wsuggest-override"
+      CMAKE_CXX_FLAGS_DEBUG: "-g"
+      CMAKE_EXE_LINKER_FLAGS: ""
+      CMAKE_MODULE_PATH: "/home/meinersbur/src/llvm/flangast/_src/third-party/benchmark/cmake/Modules;/home/meinersbur/src/llvm/flangast/_src/third-party/benchmark/cmake"
+    buildResult:
+      variable: "HAVE_CXX_FLAG_PEDANTIC"
+      cached: true
+      stdout: |
+        Change Dir: '/home/meinersbur/src/llvm/flangast/_src/polymorphism-benchmark/CMakeFiles/CMakeScratch/TryCompile-Dak4v1'
+        
+        Run Build Command(s): /home/meinersbur/bin/ninja -v cmTC_edb09
+        [ 50%/0.023s :: 1->1->1 (of 2)] /usr/bin/c++ -DHAVE_CXX_FLAG_PEDANTIC  -Wall  -Wextra  -Wshadow  -Wfloat-equal  -Wold-style-cast  -Wconversion  -Wformat=2  -Wsuggest-override  -pedantic -std=c++17   -pedantic -o CMakeFiles/cmTC_edb09.dir/src.cxx.o -c /home/meinersbur/src/llvm/flangast/_src/polymorphism-benchmark/CMakeFiles/CMakeScratch/TryCompile-Dak4v1/src.cxx
+        [100%/0.067s :: 0->1->2 (of 2)] : && /usr/bin/c++ -Wall  -Wextra  -Wshadow  -Wfloat-equal  -Wold-style-cast  -Wconversion  -Wformat=2  -Wsuggest-override  -pedantic  CMakeFiles/cmTC_edb09.dir/src.cxx.o -o cmTC_edb09   && :
+        
+      exitCode: 0
+  -
+    kind: "try_compile-v1"
+    backtrace:
+      - "/usr/share/cmake-3.28/Modules/Internal/CheckSourceCompiles.cmake:101 (try_compile)"
+      - "/usr/share/cmake-3.28/Modules/Internal/CheckCompilerFlag.cmake:18 (cmake_check_source_compiles)"
+      - "/usr/share/cmake-3.28/Modules/CheckCXXCompilerFlag.cmake:34 (cmake_check_compiler_flag)"
+      - "/home/meinersbur/src/llvm/flangast/_src/third-party/benchmark/cmake/AddCXXCompilerFlag.cmake:34 (check_cxx_compiler_flag)"
+      - "/home/meinersbur/src/llvm/flangast/_src/third-party/benchmark/CMakeLists.txt:209 (add_cxx_compiler_flag)"
+    checks:
+      - "Performing Test HAVE_CXX_FLAG_PEDANTIC_ERRORS"
+    directories:
+      source: "/home/meinersbur/src/llvm/flangast/_src/polymorphism-benchmark/CMakeFiles/CMakeScratch/TryCompile-lte3pv"
+      binary: "/home/meinersbur/src/llvm/flangast/_src/polymorphism-benchmark/CMakeFiles/CMakeScratch/TryCompile-lte3pv"
+    cmakeVariables:
+      CMAKE_CXX_FLAGS: "  -Wall  -Wextra  -Wshadow  -Wfloat-equal  -Wold-style-cast  -Wconversion  -Wformat=2  -Wsuggest-override  -pedantic"
+      CMAKE_CXX_FLAGS_DEBUG: "-g"
+      CMAKE_EXE_LINKER_FLAGS: ""
+      CMAKE_MODULE_PATH: "/home/meinersbur/src/llvm/flangast/_src/third-party/benchmark/cmake/Modules;/home/meinersbur/src/llvm/flangast/_src/third-party/benchmark/cmake"
+    buildResult:
+      variable: "HAVE_CXX_FLAG_PEDANTIC_ERRORS"
+      cached: true
+      stdout: |
+        Change Dir: '/home/meinersbur/src/llvm/flangast/_src/polymorphism-benchmark/CMakeFiles/CMakeScratch/TryCompile-lte3pv'
+        
+        Run Build Command(s): /home/meinersbur/bin/ninja -v cmTC_efa72
+        [ 50%/0.023s :: 1->1->1 (of 2)] /usr/bin/c++ -DHAVE_CXX_FLAG_PEDANTIC_ERRORS  -Wall  -Wextra  -Wshadow  -Wfloat-equal  -Wold-style-cast  -Wconversion  -Wformat=2  -Wsuggest-override  -pedantic  -pedantic-errors -std=c++17   -pedantic-errors -o CMakeFiles/cmTC_efa72.dir/src.cxx.o -c /home/meinersbur/src/llvm/flangast/_src/polymorphism-benchmark/CMakeFiles/CMakeScratch/TryCompile-lte3pv/src.cxx
+        [100%/0.067s :: 0->1->2 (of 2)] : && /usr/bin/c++ -Wall  -Wextra  -Wshadow  -Wfloat-equal  -Wold-style-cast  -Wconversion  -Wformat=2  -Wsuggest-override  -pedantic  -pedantic-errors  CMakeFiles/cmTC_efa72.dir/src.cxx.o -o cmTC_efa72   && :
+        
+      exitCode: 0
+  -
+    kind: "try_compile-v1"
+    backtrace:
+      - "/usr/share/cmake-3.28/Modules/Internal/CheckSourceCompiles.cmake:101 (try_compile)"
+      - "/usr/share/cmake-3.28/Modules/Internal/CheckCompilerFlag.cmake:18 (cmake_check_source_compiles)"
+      - "/usr/share/cmake-3.28/Modules/CheckCXXCompilerFlag.cmake:34 (cmake_check_compiler_flag)"
+      - "/home/meinersbur/src/llvm/flangast/_src/third-party/benchmark/cmake/AddCXXCompilerFlag.cmake:34 (check_cxx_compiler_flag)"
+      - "/home/meinersbur/src/llvm/flangast/_src/third-party/benchmark/CMakeLists.txt:210 (add_cxx_compiler_flag)"
+    checks:
+      - "Performing Test HAVE_CXX_FLAG_WSHORTEN_64_TO_32"
+    directories:
+      source: "/home/meinersbur/src/llvm/flangast/_src/polymorphism-benchmark/CMakeFiles/CMakeScratch/TryCompile-hV23z3"
+      binary: "/home/meinersbur/src/llvm/flangast/_src/polymorphism-benchmark/CMakeFiles/CMakeScratch/TryCompile-hV23z3"
+    cmakeVariables:
+      CMAKE_CXX_FLAGS: "  -Wall  -Wextra  -Wshadow  -Wfloat-equal  -Wold-style-cast  -Wconversion  -Wformat=2  -Wsuggest-override  -pedantic  -pedantic-errors"
+      CMAKE_CXX_FLAGS_DEBUG: "-g"
+      CMAKE_EXE_LINKER_FLAGS: ""
+      CMAKE_MODULE_PATH: "/home/meinersbur/src/llvm/flangast/_src/third-party/benchmark/cmake/Modules;/home/meinersbur/src/llvm/flangast/_src/third-party/benchmark/cmake"
+    buildResult:
+      variable: "HAVE_CXX_FLAG_WSHORTEN_64_TO_32"
+      cached: true
+      stdout: |
+        Change Dir: '/home/meinersbur/src/llvm/flangast/_src/polymorphism-benchmark/CMakeFiles/CMakeScratch/TryCompile-hV23z3'
+        
+        Run Build Command(s): /home/meinersbur/bin/ninja -v cmTC_63b0a
+        [ 50%/0.015s :: 1->1->1 (of 2)] /usr/bin/c++ -DHAVE_CXX_FLAG_WSHORTEN_64_TO_32  -Wall  -Wextra  -Wshadow  -Wfloat-equal  -Wold-style-cast  -Wconversion  -Wformat=2  -Wsuggest-override  -pedantic  -pedantic-errors  -Wshorten-64-to-32 -std=c++17   -Wshorten-64-to-32 -o CMakeFiles/cmTC_63b0a.dir/src.cxx.o -c /home/meinersbur/src/llvm/flangast/_src/polymorphism-benchmark/CMakeFiles/CMakeScratch/TryCompile-hV23z3/src.cxx
+        FAILED: CMakeFiles/cmTC_63b0a.dir/src.cxx.o 
+        /usr/bin/c++ -DHAVE_CXX_FLAG_WSHORTEN_64_TO_32  -Wall  -Wextra  -Wshadow  -Wfloat-equal  -Wold-style-cast  -Wconversion  -Wformat=2  -Wsuggest-override  -pedantic  -pedantic-errors  -Wshorten-64-to-32 -std=c++17   -Wshorten-64-to-32 -o CMakeFiles/cmTC_63b0a.dir/src.cxx.o -c /home/meinersbur/src/llvm/flangast/_src/polymorphism-benchmark/CMakeFiles/CMakeScratch/TryCompile-hV23z3/src.cxx
+        c++: error: unrecognized command-line option '-Wshorten-64-to-32'
+        c++: error: unrecognized command-line option '-Wshorten-64-to-32'
+        ninja: build stopped: subcommand failed.
+        
+      exitCode: 1
+  -
+    kind: "try_compile-v1"
+    backtrace:
+      - "/usr/share/cmake-3.28/Modules/Internal/CheckSourceCompiles.cmake:101 (try_compile)"
+      - "/usr/share/cmake-3.28/Modules/Internal/CheckCompilerFlag.cmake:18 (cmake_check_source_compiles)"
+      - "/usr/share/cmake-3.28/Modules/CheckCXXCompilerFlag.cmake:34 (cmake_check_compiler_flag)"
+      - "/home/meinersbur/src/llvm/flangast/_src/third-party/benchmark/cmake/AddCXXCompilerFlag.cmake:34 (check_cxx_compiler_flag)"
+      - "/home/meinersbur/src/llvm/flangast/_src/third-party/benchmark/CMakeLists.txt:211 (add_cxx_compiler_flag)"
+    checks:
+      - "Performing Test HAVE_CXX_FLAG_FSTRICT_ALIASING"
+    directories:
+      source: "/home/meinersbur/src/llvm/flangast/_src/polymorphism-benchmark/CMakeFiles/CMakeScratch/TryCompile-1qi7aF"
+      binary: "/home/meinersbur/src/llvm/flangast/_src/polymorphism-benchmark/CMakeFiles/CMakeScratch/TryCompile-1qi7aF"
+    cmakeVariables:
+      CMAKE_CXX_FLAGS: "  -Wall  -Wextra  -Wshadow  -Wfloat-equal  -Wold-style-cast  -Wconversion  -Wformat=2  -Wsuggest-override  -pedantic  -pedantic-errors"
+      CMAKE_CXX_FLAGS_DEBUG: "-g"
+      CMAKE_EXE_LINKER_FLAGS: ""
+      CMAKE_MODULE_PATH: "/home/meinersbur/src/llvm/flangast/_src/third-party/benchmark/cmake/Modules;/home/meinersbur/src/llvm/flangast/_src/third-party/benchmark/cmake"
+    buildResult:
+      variable: "HAVE_CXX_FLAG_FSTRICT_ALIASING"
+      cached: true
+      stdout: |
+        Change Dir: '/home/meinersbur/src/llvm/flangast/_src/polymorphism-benchmark/CMakeFiles/CMakeScratch/TryCompile-1qi7aF'
+        
+        Run Build Command(s): /home/meinersbur/bin/ninja -v cmTC_148f0
+        [ 50%/0.023s :: 1->1->1 (of 2)] /usr/bin/c++ -DHAVE_CXX_FLAG_FSTRICT_ALIASING  -Wall  -Wextra  -Wshadow  -Wfloat-equal  -Wold-style-cast  -Wconversion  -Wformat=2  -Wsuggest-override  -pedantic  -pedantic-errors  -fstrict-aliasing -std=c++17   -fstrict-aliasing -o CMakeFiles/cmTC_148f0.dir/src.cxx.o -c /home/meinersbur/src/llvm/flangast/_src/polymorphism-benchmark/CMakeFiles/CMakeScratch/TryCompile-1qi7aF/src.cxx
+        [100%/0.067s :: 0->1->2 (of 2)] : && /usr/bin/c++ -Wall  -Wextra  -Wshadow  -Wfloat-equal  -Wold-style-cast  -Wconversion  -Wformat=2  -Wsuggest-override  -pedantic  -pedantic-errors  -fstrict-aliasing  CMakeFiles/cmTC_148f0.dir/src.cxx.o -o cmTC_148f0   && :
+        
+      exitCode: 0
+  -
+    kind: "try_compile-v1"
+    backtrace:
+      - "/usr/share/cmake-3.28/Modules/Internal/CheckSourceCompiles.cmake:101 (try_compile)"
+      - "/usr/share/cmake-3.28/Modules/Internal/CheckCompilerFlag.cmake:18 (cmake_check_source_compiles)"
+      - "/usr/share/cmake-3.28/Modules/CheckCXXCompilerFlag.cmake:34 (cmake_check_compiler_flag)"
+      - "/home/meinersbur/src/llvm/flangast/_src/third-party/benchmark/cmake/AddCXXCompilerFlag.cmake:34 (check_cxx_compiler_flag)"
+      - "/home/meinersbur/src/llvm/flangast/_src/third-party/benchmark/CMakeLists.txt:214 (add_cxx_compiler_flag)"
+    checks:
+      - "Performing Test HAVE_CXX_FLAG_WNO_DEPRECATED_DECLARATIONS"
+    directories:
+      source: "/home/meinersbur/src/llvm/flangast/_src/polymorphism-benchmark/CMakeFiles/CMakeScratch/TryCompile-nKZ8xR"
+      binary: "/home/meinersbur/src/llvm/flangast/_src/polymorphism-benchmark/CMakeFiles/CMakeScratch/TryCompile-nKZ8xR"
+    cmakeVariables:
+      CMAKE_CXX_FLAGS: "  -Wall  -Wextra  -Wshadow  -Wfloat-equal  -Wold-style-cast  -Wconversion  -Wformat=2  -Wsuggest-override  -pedantic  -pedantic-errors  -fstrict-aliasing"
+      CMAKE_CXX_FLAGS_DEBUG: "-g"
+      CMAKE_EXE_LINKER_FLAGS: ""
+      CMAKE_MODULE_PATH: "/home/meinersbur/src/llvm/flangast/_src/third-party/benchmark/cmake/Modules;/home/meinersbur/src/llvm/flangast/_src/third-party/benchmark/cmake"
+    buildResult:
+      variable: "HAVE_CXX_FLAG_WNO_DEPRECATED_DECLARATIONS"
+      cached: true
+      stdout: |
+        Change Dir: '/home/meinersbur/src/llvm/flangast/_src/polymorphism-benchmark/CMakeFiles/CMakeScratch/TryCompile-nKZ8xR'
+        
+        Run Build Command(s): /home/meinersbur/bin/ninja -v cmTC_59933
+        [ 50%/0.023s :: 1->1->1 (of 2)] /usr/bin/c++ -DHAVE_CXX_FLAG_WNO_DEPRECATED_DECLARATIONS  -Wall  -Wextra  -Wshadow  -Wfloat-equal  -Wold-style-cast  -Wconversion  -Wformat=2  -Wsuggest-override  -pedantic  -pedantic-errors  -fstrict-aliasing  -Wno-deprecated-declarations -std=c++17   -Wno-deprecated-declarations -o CMakeFiles/cmTC_59933.dir/src.cxx.o -c /home/meinersbur/src/llvm/flangast/_src/polymorphism-benchmark/CMakeFiles/CMakeScratch/TryCompile-nKZ8xR/src.cxx
+        [100%/0.069s :: 0->1->2 (of 2)] : && /usr/bin/c++ -Wall  -Wextra  -Wshadow  -Wfloat-equal  -Wold-style-cast  -Wconversion  -Wformat=2  -Wsuggest-override  -pedantic  -pedantic-errors  -fstrict-aliasing  -Wno-deprecated-declarations  CMakeFiles/cmTC_59933.dir/src.cxx.o -o cmTC_59933   && :
+        
+      exitCode: 0
+  -
+    kind: "try_compile-v1"
+    backtrace:
+      - "/usr/share/cmake-3.28/Modules/Internal/CheckSourceCompiles.cmake:101 (try_compile)"
+      - "/usr/share/cmake-3.28/Modules/Internal/CheckCompilerFlag.cmake:18 (cmake_check_source_compiles)"
+      - "/usr/share/cmake-3.28/Modules/CheckCXXCompilerFlag.cmake:34 (cmake_check_compiler_flag)"
+      - "/home/meinersbur/src/llvm/flangast/_src/third-party/benchmark/cmake/AddCXXCompilerFlag.cmake:34 (check_cxx_compiler_flag)"
+      - "/home/meinersbur/src/llvm/flangast/_src/third-party/benchmark/CMakeLists.txt:235 (add_cxx_compiler_flag)"
+    checks:
+      - "Performing Test HAVE_CXX_FLAG_WSTRICT_ALIASING"
+    directories:
+      source: "/home/meinersbur/src/llvm/flangast/_src/polymorphism-benchmark/CMakeFiles/CMakeScratch/TryCompile-FLZAfz"
+      binary: "/home/meinersbur/src/llvm/flangast/_src/polymorphism-benchmark/CMakeFiles/CMakeScratch/TryCompile-FLZAfz"
+    cmakeVariables:
+      CMAKE_CXX_FLAGS: "  -Wall  -Wextra  -Wshadow  -Wfloat-equal  -Wold-style-cast  -Wconversion  -Wformat=2  -Wsuggest-override  -pedantic  -pedantic-errors  -fstrict-aliasing  -Wno-deprecated-declarations"
+      CMAKE_CXX_FLAGS_DEBUG: "-g"
+      CMAKE_EXE_LINKER_FLAGS: ""
+      CMAKE_MODULE_PATH: "/home/meinersbur/src/llvm/flangast/_src/third-party/benchmark/cmake/Modules;/home/meinersbur/src/llvm/flangast/_src/third-party/benchmark/cmake"
+    buildResult:
+      variable: "HAVE_CXX_FLAG_WSTRICT_ALIASING"
+      cached: true
+      stdout: |
+        Change Dir: '/home/meinersbur/src/llvm/flangast/_src/polymorphism-benchmark/CMakeFiles/CMakeScratch/TryCompile-FLZAfz'
+        
+        Run Build Command(s): /home/meinersbur/bin/ninja -v cmTC_2cfc9
+        [ 50%/0.023s :: 1->1->1 (of 2)] /usr/bin/c++ -DHAVE_CXX_FLAG_WSTRICT_ALIASING  -Wall  -Wextra  -Wshadow  -Wfloat-equal  -Wold-style-cast  -Wconversion  -Wformat=2  -Wsuggest-override  -pedantic  -pedantic-errors  -fstrict-aliasing  -Wno-deprecated-declarations  -Wstrict-aliasing -std=c++17   -Wstrict-aliasing -o CMakeFiles/cmTC_2cfc9.dir/src.cxx.o -c /home/meinersbur/src/llvm/flangast/_src/polymorphism-benchmark/CMakeFiles/CMakeScratch/TryCompile-FLZAfz/src.cxx
+        [100%/0.067s :: 0->1->2 (of 2)] : && /usr/bin/c++ -Wall  -Wextra  -Wshadow  -Wfloat-equal  -Wold-style-cast  -Wconversion  -Wformat=2  -Wsuggest-override  -pedantic  -pedantic-errors  -fstrict-aliasing  -Wno-deprecated-declarations  -Wstrict-aliasing  CMakeFiles/cmTC_2cfc9.dir/src.cxx.o -o cmTC_2cfc9   && :
+        
+      exitCode: 0
+  -
+    kind: "try_compile-v1"
+    backtrace:
+      - "/usr/share/cmake-3.28/Modules/Internal/CheckSourceCompiles.cmake:101 (try_compile)"
+      - "/usr/share/cmake-3.28/Modules/Internal/CheckCompilerFlag.cmake:18 (cmake_check_source_compiles)"
+      - "/usr/share/cmake-3.28/Modules/CheckCXXCompilerFlag.cmake:34 (cmake_check_compiler_flag)"
+      - "/home/meinersbur/src/llvm/flangast/_src/third-party/benchmark/cmake/AddCXXCompilerFlag.cmake:34 (check_cxx_compiler_flag)"
+      - "/home/meinersbur/src/llvm/flangast/_src/third-party/benchmark/CMakeLists.txt:239 (add_cxx_compiler_flag)"
+    checks:
+      - "Performing Test HAVE_CXX_FLAG_WTHREAD_SAFETY"
+    directories:
+      source: "/home/meinersbur/src/llvm/flangast/_src/polymorphism-benchmark/CMakeFiles/CMakeScratch/TryCompile-7LoVgL"
+      binary: "/home/meinersbur/src/llvm/flangast/_src/polymorphism-benchmark/CMakeFiles/CMakeScratch/TryCompile-7LoVgL"
+    cmakeVariables:
+      CMAKE_CXX_FLAGS: "  -Wall  -Wextra  -Wshadow  -Wfloat-equal  -Wold-style-cast  -Wconversion  -Wformat=2  -Wsuggest-override  -pedantic  -pedantic-errors  -fstrict-aliasing  -Wno-deprecated-declarations  -Wstrict-aliasing"
+      CMAKE_CXX_FLAGS_DEBUG: "-g"
+      CMAKE_EXE_LINKER_FLAGS: ""
+      CMAKE_MODULE_PATH: "/home/meinersbur/src/llvm/flangast/_src/third-party/benchmark/cmake/Modules;/home/meinersbur/src/llvm/flangast/_src/third-party/benchmark/cmake"
+    buildResult:
+      variable: "HAVE_CXX_FLAG_WTHREAD_SAFETY"
+      cached: true
+      stdout: |
+        Change Dir: '/home/meinersbur/src/llvm/flangast/_src/polymorphism-benchmark/CMakeFiles/CMakeScratch/TryCompile-7LoVgL'
+        
+        Run Build Command(s): /home/meinersbur/bin/ninja -v cmTC_6a5d6
+        [ 50%/0.013s :: 1->1->1 (of 2)] /usr/bin/c++ -DHAVE_CXX_FLAG_WTHREAD_SAFETY  -Wall  -Wextra  -Wshadow  -Wfloat-equal  -Wold-style-cast  -Wconversion  -Wformat=2  -Wsuggest-override  -pedantic  -pedantic-errors  -fstrict-aliasing  -Wno-deprecated-declarations  -Wstrict-aliasing  -Wthread-safety -std=c++17   -Wthread-safety -o CMakeFiles/cmTC_6a5d6.dir/src.cxx.o -c /home/meinersbur/src/llvm/flangast/_src/polymorphism-benchmark/CMakeFiles/CMakeScratch/TryCompile-7LoVgL/src.cxx
+        FAILED: CMakeFiles/cmTC_6a5d6.dir/src.cxx.o 
+        /usr/bin/c++ -DHAVE_CXX_FLAG_WTHREAD_SAFETY  -Wall  -Wextra  -Wshadow  -Wfloat-equal  -Wold-style-cast  -Wconversion  -Wformat=2  -Wsuggest-override  -pedantic  -pedantic-errors  -fstrict-aliasing  -Wno-deprecated-declarations  -Wstrict-aliasing  -Wthread-safety -std=c++17   -Wthread-safety -o CMakeFiles/cmTC_6a5d6.dir/src.cxx.o -c /home/meinersbur/src/llvm/flangast/_src/polymorphism-benchmark/CMakeFiles/CMakeScratch/TryCompile-7LoVgL/src.cxx
+        c++: error: unrecognized command-line option '-Wthread-safety'
+        c++: error: unrecognized command-line option '-Wthread-safety'
+        ninja: build stopped: subcommand failed.
+        
+      exitCode: 1
+  -
+    kind: "try_compile-v1"
+    backtrace:
+      - "/usr/share/cmake-3.28/Modules/Internal/CheckSourceCompiles.cmake:101 (try_compile)"
+      - "/usr/share/cmake-3.28/Modules/Internal/CheckCompilerFlag.cmake:18 (cmake_check_source_compiles)"
+      - "/usr/share/cmake-3.28/Modules/CheckCXXCompilerFlag.cmake:34 (cmake_check_compiler_flag)"
+      - "/home/meinersbur/src/llvm/flangast/_src/third-party/benchmark/cmake/AddCXXCompilerFlag.cmake:34 (check_cxx_compiler_flag)"
+      - "/home/meinersbur/src/llvm/flangast/_src/third-party/benchmark/CMakeLists.txt:290 (add_cxx_compiler_flag)"
+    checks:
+      - "Performing Test HAVE_CXX_FLAG_COVERAGE"
+    directories:
+      source: "/home/meinersbur/src/llvm/flangast/_src/polymorphism-benchmark/CMakeFiles/CMakeScratch/TryCompile-JnpPkZ"
+      binary: "/home/meinersbur/src/llvm/flangast/_src/polymorphism-benchmark/CMakeFiles/CMakeScratch/TryCompile-JnpPkZ"
+    cmakeVariables:
+      CMAKE_CXX_FLAGS: "  -Wall  -Wextra  -Wshadow  -Wfloat-equal  -Wold-style-cast  -Wconversion  -Wformat=2  -Wsuggest-override  -pedantic  -pedantic-errors  -fstrict-aliasing  -Wno-deprecated-declarations  -Wstrict-aliasing"
+      CMAKE_CXX_FLAGS_DEBUG: "-g"
+      CMAKE_EXE_LINKER_FLAGS: ""
+      CMAKE_MODULE_PATH: "/home/meinersbur/src/llvm/flangast/_src/third-party/benchmark/cmake/Modules;/home/meinersbur/src/llvm/flangast/_src/third-party/benchmark/cmake"
+    buildResult:
+      variable: "HAVE_CXX_FLAG_COVERAGE"
+      cached: true
+      stdout: |
+        Change Dir: '/home/meinersbur/src/llvm/flangast/_src/polymorphism-benchmark/CMakeFiles/CMakeScratch/TryCompile-JnpPkZ'
+        
+        Run Build Command(s): /home/meinersbur/bin/ninja -v cmTC_b896d
+        [ 50%/0.029s :: 1->1->1 (of 2)] /usr/bin/c++ -DHAVE_CXX_FLAG_COVERAGE  -Wall  -Wextra  -Wshadow  -Wfloat-equal  -Wold-style-cast  -Wconversion  -Wformat=2  -Wsuggest-override  -pedantic  -pedantic-errors  -fstrict-aliasing  -Wno-deprecated-declarations  -Wstrict-aliasing  --coverage -std=c++17   --coverage -o CMakeFiles/cmTC_b896d.dir/src.cxx.o -c /home/meinersbur/src/llvm/flangast/_src/polymorphism-benchmark/CMakeFiles/CMakeScratch/TryCompile-JnpPkZ/src.cxx
+        [100%/0.073s :: 0->1->2 (of 2)] : && /usr/bin/c++ -Wall  -Wextra  -Wshadow  -Wfloat-equal  -Wold-style-cast  -Wconversion  -Wformat=2  -Wsuggest-override  -pedantic  -pedantic-errors  -fstrict-aliasing  -Wno-deprecated-declarations  -Wstrict-aliasing  --coverage  CMakeFiles/cmTC_b896d.dir/src.cxx.o -o cmTC_b896d   && :
+        
+      exitCode: 0
+  -
+    kind: "try_run-v1"
+    backtrace:
+      - "/home/meinersbur/src/llvm/flangast/_src/third-party/benchmark/cmake/CXXFeatureCheck.cmake:70 (try_run)"
+      - "/home/meinersbur/src/llvm/flangast/_src/third-party/benchmark/CMakeLists.txt:332 (cxx_feature_check)"
+    directories:
+      source: "/home/meinersbur/src/llvm/flangast/_src/polymorphism-benchmark/CMakeFiles/CMakeTmp"
+      binary: "/home/meinersbur/src/llvm/flangast/_src/polymorphism-benchmark/CMakeFiles/CMakeTmp"
+    cmakeVariables:
+      CMAKE_CXX_FLAGS: "  -Wall  -Wextra  -Wshadow  -Wfloat-equal  -Wold-style-cast  -Wconversion  -Wformat=2  -Wsuggest-override  -pedantic  -pedantic-errors  -fstrict-aliasing  -Wno-deprecated-declarations  -Wstrict-aliasing"
+      CMAKE_CXX_FLAGS_DEBUG: "-g"
+      CMAKE_EXE_LINKER_FLAGS: ""
+      CMAKE_MODULE_PATH: "/home/meinersbur/src/llvm/flangast/_src/third-party/benchmark/cmake/Modules;/home/meinersbur/src/llvm/flangast/_src/third-party/benchmark/cmake"
+    buildResult:
+      variable: "COMPILE_STATUS"
+      cached: true
+      stdout: |
+        Change Dir: '/home/meinersbur/src/llvm/flangast/_src/polymorphism-benchmark/CMakeFiles/CMakeTmp'
+        
+        Run Build Command(s): /home/meinersbur/bin/ninja -v cmTC_7206f
+        [ 50%/0.066s :: 1->1->1 (of 2)] /usr/bin/c++   -Wall  -Wextra  -Wshadow  -Wfloat-equal  -Wold-style-cast  -Wconversion  -Wformat=2  -Wsuggest-override  -pedantic  -pedantic-errors  -fstrict-aliasing  -Wno-deprecated-declarations  -Wstrict-aliasing  -std=c++17 -o CMakeFiles/cmTC_7206f.dir/steady_clock.cpp.o -c /home/meinersbur/src/llvm/flangast/_src/third-party/benchmark/cmake/steady_clock.cpp
+        [100%/0.130s :: 0->1->2 (of 2)] : && /usr/bin/c++ -Wall  -Wextra  -Wshadow  -Wfloat-equal  -Wold-style-cast  -Wconversion  -Wformat=2  -Wsuggest-override  -pedantic  -pedantic-errors  -fstrict-aliasing  -Wno-deprecated-declarations  -Wstrict-aliasing  CMakeFiles/cmTC_7206f.dir/steady_clock.cpp.o -o cmTC_7206f   && :
+        
+      exitCode: 0
+    runResult:
+      variable: "RUN_STATUS"
+      cached: true
+      stdout: |
+      exitCode: 0
+  -
+    kind: "try_compile-v1"
+    backtrace:
+      - "/usr/share/cmake-3.28/Modules/Internal/CheckSourceCompiles.cmake:101 (try_compile)"
+      - "/usr/share/cmake-3.28/Modules/CheckCXXSourceCompiles.cmake:52 (cmake_check_source_compiles)"
+      - "/usr/share/cmake-3.28/Modules/FindThreads.cmake:99 (CHECK_CXX_SOURCE_COMPILES)"
+      - "/usr/share/cmake-3.28/Modules/FindThreads.cmake:163 (_threads_check_libc)"
+      - "/home/meinersbur/src/llvm/flangast/_src/third-party/benchmark/CMakeLists.txt:335 (find_package)"
+    checks:
+      - "Performing Test CMAKE_HAVE_LIBC_PTHREAD"
+    directories:
+      source: "/home/meinersbur/src/llvm/flangast/_src/polymorphism-benchmark/CMakeFiles/CMakeScratch/TryCompile-Oq58gq"
+      binary: "/home/meinersbur/src/llvm/flangast/_src/polymorphism-benchmark/CMakeFiles/CMakeScratch/TryCompile-Oq58gq"
+    cmakeVariables:
+      CMAKE_CXX_FLAGS: "  -Wall  -Wextra  -Wshadow  -Wfloat-equal  -Wold-style-cast  -Wconversion  -Wformat=2  -Wsuggest-override  -pedantic  -pedantic-errors  -fstrict-aliasing  -Wno-deprecated-declarations  -Wstrict-aliasing"
+      CMAKE_CXX_FLAGS_DEBUG: "-g"
+      CMAKE_EXE_LINKER_FLAGS: ""
+      CMAKE_MODULE_PATH: "/home/meinersbur/src/llvm/flangast/_src/third-party/benchmark/cmake/Modules;/home/meinersbur/src/llvm/flangast/_src/third-party/benchmark/cmake"
+    buildResult:
+      variable: "CMAKE_HAVE_LIBC_PTHREAD"
+      cached: true
+      stdout: |
+        Change Dir: '/home/meinersbur/src/llvm/flangast/_src/polymorphism-benchmark/CMakeFiles/CMakeScratch/TryCompile-Oq58gq'
+        
+        Run Build Command(s): /home/meinersbur/bin/ninja -v cmTC_97848
+        [ 50%/0.039s :: 1->1->1 (of 2)] /usr/bin/c++ -DCMAKE_HAVE_LIBC_PTHREAD  -Wall  -Wextra  -Wshadow  -Wfloat-equal  -Wold-style-cast  -Wconversion  -Wformat=2  -Wsuggest-override  -pedantic  -pedantic-errors  -fstrict-aliasing  -Wno-deprecated-declarations  -Wstrict-aliasing  -std=c++17 -o CMakeFiles/cmTC_97848.dir/src.cxx.o -c /home/meinersbur/src/llvm/flangast/_src/polymorphism-benchmark/CMakeFiles/CMakeScratch/TryCompile-Oq58gq/src.cxx
+        [100%/0.086s :: 0->1->2 (of 2)] : && /usr/bin/c++ -Wall  -Wextra  -Wshadow  -Wfloat-equal  -Wold-style-cast  -Wconversion  -Wformat=2  -Wsuggest-override  -pedantic  -pedantic-errors  -fstrict-aliasing  -Wno-deprecated-declarations  -Wstrict-aliasing  CMakeFiles/cmTC_97848.dir/src.cxx.o -o cmTC_97848   && :
+        
+      exitCode: 0
+  -
+    kind: "try_run-v1"
+    backtrace:
+      - "/home/meinersbur/src/llvm/flangast/_src/third-party/benchmark/cmake/CXXFeatureCheck.cmake:70 (try_run)"
+      - "/home/meinersbur/src/llvm/flangast/_src/third-party/benchmark/CMakeLists.txt:336 (cxx_feature_check)"
+    directories:
+      source: "/home/meinersbur/src/llvm/flangast/_src/polymorphism-benchmark/CMakeFiles/CMakeTmp"
+      binary: "/home/meinersbur/src/llvm/flangast/_src/polymorphism-benchmark/CMakeFiles/CMakeTmp"
+    cmakeVariables:
+      CMAKE_CXX_FLAGS: "  -Wall  -Wextra  -Wshadow  -Wfloat-equal  -Wold-style-cast  -Wconversion  -Wformat=2  -Wsuggest-override  -pedantic  -pedantic-errors  -fstrict-aliasing  -Wno-deprecated-declarations  -Wstrict-aliasing"
+      CMAKE_CXX_FLAGS_DEBUG: "-g"
+      CMAKE_EXE_LINKER_FLAGS: ""
+      CMAKE_MODULE_PATH: "/home/meinersbur/src/llvm/flangast/_src/third-party/benchmark/cmake/Modules;/home/meinersbur/src/llvm/flangast/_src/third-party/benchmark/cmake"
+    buildResult:
+      variable: "COMPILE_STATUS"
+      cached: true
+      stdout: |
+        Change Dir: '/home/meinersbur/src/llvm/flangast/_src/polymorphism-benchmark/CMakeFiles/CMakeTmp'
+        
+        Run Build Command(s): /home/meinersbur/bin/ninja -v cmTC_57bac
+        [ 50%/0.042s :: 1->1->1 (of 2)] /usr/bin/c++   -Wall  -Wextra  -Wshadow  -Wfloat-equal  -Wold-style-cast  -Wconversion  -Wformat=2  -Wsuggest-override  -pedantic  -pedantic-errors  -fstrict-aliasing  -Wno-deprecated-declarations  -Wstrict-aliasing  -std=c++17 -o CMakeFiles/cmTC_57bac.dir/pthread_affinity.cpp.o -c /home/meinersbur/src/llvm/flangast/_src/third-party/benchmark/cmake/pthread_affinity.cpp
+        [100%/0.091s :: 0->1->2 (of 2)] : && /usr/bin/c++ -Wall  -Wextra  -Wshadow  -Wfloat-equal  -Wold-style-cast  -Wconversion  -Wformat=2  -Wsuggest-override  -pedantic  -pedantic-errors  -fstrict-aliasing  -Wno-deprecated-declarations  -Wstrict-aliasing  CMakeFiles/cmTC_57bac.dir/pthread_affinity.cpp.o -o cmTC_57bac   && :
+        
+      exitCode: 0
+    runResult:
+      variable: "RUN_STATUS"
+      cached: true
+      stdout: |
+      exitCode: 0
+...

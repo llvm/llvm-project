@@ -3721,8 +3721,8 @@ IntrinsicProcTable::Implementation::HandleEnumerationHuge(
   const semantics::Symbol &ordSym{*ordIter->second};
   StructureConstructor ctor{derived};
   ctor.Add(ordSym,
-      Expr<SomeType>{
-          Expr<SomeInteger>{Expr<Type<TypeCategory::Integer, 4>>{count}}});
+      Expr<SomeType>{Expr<SomeInteger>{
+          MakeConstantExpr<Type<TypeCategory::Integer>>(4, count)}});
   // Build FunctionResult and DummyArguments
   DynamicType enumType{derived};
   characteristics::DummyDataObject ddo{characteristics::TypeAndShape{enumType}};

@@ -316,37 +316,5 @@ public:
 template <typename Target, typename List>
 inline constexpr std::size_t type_index_v = type_index<Target, List>::value;
 
-// Given a VISITOR class of the general form
-//   struct VISITOR {
-//     using Result = ...;
-//     using Types = std::tuple<...>;
-//     template<typename T> Result Test() { ... }
-//   };
-// SearchTypes will traverse the element types in the tuple in order
-// and invoke VISITOR::Test<T>() on each until it returns a value that
-// casts to true.  If no invocation of Test succeeds, SearchTypes will
-// return a default value.
-template <std::size_t J, typename VISITOR>
-common::IfNoLvalue<typename VISITOR::Result, VISITOR> SearchTypesHelper(
-    VISITOR &&visitor, typename VISITOR::Result &&defaultResult) {
-  using Tuple = typename VISITOR::Types;
-  if constexpr (J < std::tuple_size_v<Tuple>) {
-    if (auto result{visitor.template Test<std::tuple_element_t<J, Tuple>>()}) {
-      return result;
-    }
-    return SearchTypesHelper<J + 1, VISITOR>(
-        std::move(visitor), std::move(defaultResult));
-  } else {
-    return std::move(defaultResult);
-  }
-}
-
-template <typename VISITOR>
-common::IfNoLvalue<typename VISITOR::Result, VISITOR> SearchTypes(
-    VISITOR &&visitor,
-    typename VISITOR::Result defaultResult = typename VISITOR::Result{}) {
-  return SearchTypesHelper<0, VISITOR>(
-      std::move(visitor), std::move(defaultResult));
-}
 } // namespace Fortran::common
 #endif // FORTRAN_COMMON_TEMPLATE_H_

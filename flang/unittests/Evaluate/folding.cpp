@@ -1,4 +1,5 @@
 #include "../../lib/Evaluate/host.h"
+#include "flang/Common/type-kinds.h"
 #include "flang/Evaluate/call.h"
 #include "flang/Evaluate/expression.h"
 #include "flang/Evaluate/fold.h"
@@ -15,13 +16,19 @@ using namespace Fortran::evaluate;
 template <typename... T> struct RunOnTypes {};
 template <typename Test, typename... T>
 struct RunOnTypes<Test, std::tuple<T...>> {
-  static void Run() { (..., Test::template Run<T>()); }
+  template <typename U> static void RunOnKinds() {
+    for (int kind : Fortran::common::KindsByType<U::category>::kinds) {
+      Test::template Run<U>(kind);
+    }
+  }
+
+  static void Run() { (..., RunOnKinds<T>()); }
 };
 
 // test for fold.h GetScalarConstantValue function
 struct TestGetScalarConstantValue {
-  template <typename T> static void Run() {
-    Expr<T> exprFullyTyped{Constant<T>{Scalar<T>{}}};
+  template <typename T> static void Run(int kind) {
+    Expr<T> exprFullyTyped{MakeZeroExpr<T>(kind)};
     Expr<SomeKind<T::category>> exprSomeKind{exprFullyTyped};
     Expr<SomeType> exprSomeType{exprSomeKind};
     TEST(GetScalarConstantValue<T>(exprFullyTyped).has_value());
@@ -33,13 +40,15 @@ struct TestGetScalarConstantValue {
 template <typename T>
 Scalar<T> CallHostRt(
     HostRuntimeWrapper func, FoldingContext &context, Scalar<T> x) {
+  const int kind{x.kind()};
   return GetScalarConstantValue<T>(
-      func(context, {AsGenericExpr(Constant<T>{x})}))
+      func(context, {AsGenericExpr(Constant<T>{kind, x})}))
       .value();
 }
 
 void TestHostRuntimeSubnormalFlushing() {
-  using R4 = Type<TypeCategory::Real, 4>;
+  using R4 = TypeKind<TypeCategory::Real, 4>;
+  using FR4 = R4::FortranType;
   if constexpr (std::is_same_v<host::HostType<R4>, float>) {
     Fortran::parser::CharBlock src;
     Fortran::parser::ContextualMessages messages{src, nullptr};
@@ -56,13 +65,14 @@ void TestHostRuntimeSubnormalFlushing() {
     FoldingContext noFlushingContext{messages, defaults, intrinsics,
         noFlushingTargetCharacteristics, languageFeatures, tempNames};
 
-    DynamicType r4{R4{}.GetType()};
+    DynamicType r4{R4::GetType()};
     // Test subnormal argument flushing
     if (auto callable{GetHostRuntimeWrapper("log", r4, {r4})}) {
       // Biggest IEEE 32bits subnormal power of two
-      const Scalar<R4> x1{Scalar<R4>::Word{0x00400000}};
-      Scalar<R4> y1Flushing{CallHostRt<R4>(*callable, flushingContext, x1)};
-      Scalar<R4> y1NoFlushing{CallHostRt<R4>(*callable, noFlushingContext, x1)};
+      const Scalar<FR4> x1{4, Scalar<FR4>::Word{4, 0x00400000}};
+      Scalar<FR4> y1Flushing{CallHostRt<FR4>(*callable, flushingContext, x1)};
+      Scalar<FR4> y1NoFlushing{
+          CallHostRt<FR4>(*callable, noFlushingContext, x1)};
       // We would expect y1Flushing to be NaN, but some libc logf implementation
       // "workaround" subnormal flushing by returning a constant negative
       // results for all subnormal values (-1.03972076416015625e2_4). In case of
