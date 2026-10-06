@@ -266,6 +266,16 @@ module attributes {transform.with_named_sequence} {
 // CHECK-SAME:   outs(%[[IT]] : tensor<8x36x196xf32>)
 // CHECK:         ^bb0(%[[IN:.+]]: f32, %out: f32):
 //      CHECK:     linalg.yield %[[IN]] : f32
+//      CHECK:   } -> tensor<8x36x196xf32>
+//      CHECK:   %[[MATMUL:.+]] = linalg.generic
+// CHECK-SAME:      indexing_maps = [#[[RHSMAP]], #[[LHSMAP]], #[[RESMAP]]]
+// CHECK-SAME:      iterator_types = ["parallel", "parallel", "parallel", "reduction"]
+// CHECK-SAME:   ins(%[[IMG2COL]], %[[CS_FILTER]] : tensor<8x36x196xf32>, tensor<16x36xf32>)
+// CHECK-SAME:   outs(%[[CS_RESULT]] : tensor<8x16x196xf32>)
+//      CHECK:   ^bb0(%[[PIXEL:.+]]: f32, %[[WEIGHT:.+]]: f32, %[[ACC:.+]]: f32):
+//      CHECK:     %[[PRODUCT:.+]] = arith.mulf %[[PIXEL]], %[[WEIGHT]] : f32
+//      CHECK:     %[[SUM:.+]] = arith.addf %[[ACC]], %[[PRODUCT]] : f32
+//      CHECK:     linalg.yield %[[SUM]] : f32
 //      CHECK:   } -> tensor<8x16x196xf32>
 //      CHECK:   %[[CS_FINAL:.+]] = tensor.expand_shape %[[MATMUL]] {{\[}}[0], [1], [2, 3]] output_shape [8, 16, 14, 14] : tensor<8x16x196xf32> into tensor<8x16x14x14xf32>
 //      CHECK:   return %[[CS_FINAL]]
@@ -287,13 +297,69 @@ module attributes {transform.with_named_sequence} {
 
 // -----
 
-// Check that the encoding on the filter (weights) tensor is propagated when applying the transform. 
+//  Im2col maps
+//  CHECK-DAG: #[[MAP:.+]] = affine_map<(d0, d1, d2) -> (d0, d1 floordiv 9, d2 floordiv 14 + (d1 mod 9) floordiv 3, d2 mod 14 + d1 mod 3)>
+//  CHECK-DAG: #[[MAP1:.+]] = affine_map<(d0, d1, d2) -> (d0, d1, d2)>
+
+//  CHECK-DAG: #[[LHSMAP:.+]] = affine_map<(d0, d1, d2, d3) -> (d1, d3)>
+//  CHECK-DAG: #[[RHSMAP:.+]] = affine_map<(d0, d1, d2, d3) -> (d0, d3, d2)>
+//  CHECK-DAG: #[[ZPMAP:.+]] = affine_map<(d0, d1, d2, d3) -> ()>
+//  CHECK-DAG: #[[RESMAP:.+]] = affine_map<(d0, d1, d2, d3) -> (d0, d1, d2)>
+
+//      CHECK: func.func @batch_nchw_conv_q
+// CHECK-SAME: (%[[INPUT:.+]]: tensor<8x4x16x16xi8>, %[[FILTER:.+]]: tensor<16x4x3x3xi8>, %[[INIT:.+]]: tensor<8x16x14x14xi32>, %[[INPUT_ZP:.+]]: i32, %[[FILTER_ZP:.+]]: i32)
+//  CHECK-DAG:   %[[CS_FILTER:.+]] = tensor.collapse_shape %[[FILTER]] {{\[}}[0], [1, 2, 3]] : tensor<16x4x3x3xi8> into tensor<16x36xi8>
+//  CHECK-DAG:   %[[CS_RESULT:.+]] = tensor.collapse_shape %[[INIT]] {{\[}}[0], [1], [2, 3]] : tensor<8x16x14x14xi32> into tensor<8x16x196xi32>
+//      CHECK:   %[[IT:.+]] = tensor.empty() : tensor<8x36x196xi8>
+//      CHECK:   %[[IMG2COL:.+]] = linalg.generic
+// CHECK-SAME:      indexing_maps = [#[[MAP]], #[[MAP1]]]
+// CHECK-SAME:      iterator_types = ["parallel", "parallel", "parallel"]
+// CHECK-SAME:   ins(%[[INPUT]] : tensor<8x4x16x16xi8>)
+// CHECK-SAME:   outs(%[[IT]] : tensor<8x36x196xi8>)
+// CHECK:         ^bb0(%[[IN:.+]]: i8, %out: i8):
+//      CHECK:     linalg.yield %[[IN]] : i8
+//      CHECK:   } -> tensor<8x36x196xi8>
+//      CHECK:   %[[MATMUL:.+]] = linalg.generic
+// CHECK-SAME:      indexing_maps = [#[[RHSMAP]], #[[LHSMAP]], #[[ZPMAP]], #[[ZPMAP]], #[[RESMAP]]]
+// CHECK-SAME:      iterator_types = ["parallel", "parallel", "parallel", "reduction"]
+// CHECK-SAME:   ins(%[[IMG2COL]], %[[CS_FILTER]], %[[INPUT_ZP]], %[[FILTER_ZP]] : tensor<8x36x196xi8>, tensor<16x36xi8>, i32, i32)
+// CHECK-SAME:   outs(%[[CS_RESULT]] : tensor<8x16x196xi32>)
+//      CHECK:   ^bb0(%[[PIXEL:.+]]: i8, %[[WEIGHT:.+]]: i8, %[[PIXEL_ZP:.+]]: i32, %[[WEIGHT_ZP:.+]]: i32, %[[ACC:.+]]: i32):
+//      CHECK:     %[[PIXEL_EXT:.+]] = arith.extsi %[[PIXEL]] : i8 to i32
+//      CHECK:     %[[PIXEL_CENTERED:.+]] = arith.subi %[[PIXEL_EXT]], %[[PIXEL_ZP]] : i32
+//      CHECK:     %[[WEIGHT_EXT:.+]] = arith.extsi %[[WEIGHT]] : i8 to i32
+//      CHECK:     %[[WEIGHT_CENTERED:.+]] = arith.subi %[[WEIGHT_EXT]], %[[WEIGHT_ZP]] : i32
+//      CHECK:     %[[PRODUCT:.+]] = arith.muli %[[PIXEL_CENTERED]], %[[WEIGHT_CENTERED]] : i32
+//      CHECK:     %[[SUM:.+]] = arith.addi %[[ACC]], %[[PRODUCT]] : i32
+//      CHECK:     linalg.yield %[[SUM]] : i32
+//      CHECK:   } -> tensor<8x16x196xi32>
+//      CHECK:   %[[CS_FINAL:.+]] = tensor.expand_shape %[[MATMUL]] {{\[}}[0], [1], [2, 3]] output_shape [8, 16, 14, 14] : tensor<8x16x196xi32> into tensor<8x16x14x14xi32>
+//      CHECK:   return %[[CS_FINAL]]
+func.func @batch_nchw_conv_q(%arg0: tensor<8x4x16x16xi8>, %arg1: tensor<16x4x3x3xi8>, %arg2: tensor<8x16x14x14xi32>, %input_zp: i32, %filter_zp: i32) -> tensor<8x16x14x14xi32> {
+    %0 = linalg.conv_2d_nchw_fchw_q
+      {dilations = dense<1> : tensor<2xi64>, strides = dense<1> : tensor<2xi64> }
+       ins(%arg0, %arg1, %input_zp, %filter_zp: tensor<8x4x16x16xi8>, tensor<16x4x3x3xi8>, i32, i32)
+      outs(%arg2: tensor<8x16x14x14xi32>) -> tensor<8x16x14x14xi32>
+    return %0 : tensor<8x16x14x14xi32>
+}
+
+module attributes {transform.with_named_sequence} {
+  transform.named_sequence @__transform_main(%arg1: !transform.any_op {transform.readonly}) {
+    %0 = transform.structured.match ops{["linalg.conv_2d_nchw_fchw_q"]} in %arg1 : (!transform.any_op) -> !transform.any_op
+    %1:2 = transform.structured.convert_conv2d_to_img2col %0 : (!transform.any_op) -> (!transform.any_op, !transform.any_op)
+    transform.yield
+  }
+}
+
+// -----
+
+// Check that the encoding on the filter (weights) tensor is propagated when applying the transform.
 
 // CHECK: func.func @batch_nchw_conv_with_filter_encoding(%[[INPUT:.+]]: tensor<8x4x16x16xf32>, %[[FILTER:.*]]: tensor<16x4x3x3xf32, 42 : i32>, %[[OUTPUT:.*]]: tensor<8x16x14x14xf32>)
 //  CHECK-DAG: %[[COLLAPSED_FILTER:.+]] = tensor.collapse_shape %[[FILTER]]
   // CHECK-SAME{LITERAL}: [[0], [1, 2, 3]] : tensor<16x4x3x3xf32, 42 : i32> into tensor<16x36xf32, 42 : i32>
 //  CHECK: %[[COL_TENSOR:.+]] = linalg.generic {{.*}} ins(%[[INPUT]] : tensor<8x4x16x16xf32>)
-//  CHECK: %[[MATMUL_RESULT:.+]] = linalg.generic {{.*}} ins(%[[COLLAPSED_FILTER]], %[[COL_TENSOR]] : tensor<16x36xf32, 42 : i32>, tensor<8x36x196xf32>)
+//  CHECK: %[[MATMUL_RESULT:.+]] = linalg.generic {{.*}} ins(%[[COL_TENSOR]], %[[COLLAPSED_FILTER]] : tensor<8x36x196xf32>, tensor<16x36xf32, 42 : i32>)
 func.func @batch_nchw_conv_with_filter_encoding(%arg0: tensor<8x4x16x16xf32>, %arg1: tensor<16x4x3x3xf32, 42 : i32>, %arg2: tensor<8x16x14x14xf32>) -> tensor<8x16x14x14xf32> {
     %0 = linalg.conv_2d_nchw_fchw
       {dilations = dense<1> : tensor<2xi64>, strides = dense<1> : tensor<2xi64> }
@@ -372,7 +438,7 @@ module attributes {transform.with_named_sequence} {
 
 // -----
 
-// Check that the encoding on the filter (weights) tensor is propagated when applying the transform. 
+// Check that the encoding on the filter (weights) tensor is propagated when applying the transform.
 
 // CHECK: func.func @conv_2d_nhwc_fhwc_with_filter_encoding(%[[INPUT:.+]]: tensor<1x16x16x4xf32>, %[[FILTER:.*]]: tensor<16x3x3x4xf32, 42 : i32>, %[[OUTPUT:.*]]: tensor<1x14x14x16xf32>)
 //  CHECK-DAG: %[[COLLAPSED_FILTER:.+]] = tensor.collapse_shape %[[FILTER]]
@@ -614,7 +680,7 @@ module attributes {transform.with_named_sequence} {
 // CHECK-SAME:   ins(%[[INPUT]] : tensor<8x4x16x16xf32>)
 // CHECK-SAME:   outs(%[[IT]] : tensor<8x36x120xf32>)
 //      CHECK:   %[[MATMUL:.+]] = linalg.generic
-// CHECK-SAME:   ins(%[[CS_FILTER]], %[[IMG2COL]] : tensor<16x36xf32>, tensor<8x36x120xf32>)
+// CHECK-SAME:   ins(%[[IMG2COL]], %[[CS_FILTER]] : tensor<8x36x120xf32>, tensor<16x36xf32>)
 // CHECK-SAME:   outs(%[[CS_RESULT]] : tensor<8x16x120xf32>)
 //      CHECK:   %[[CS_FINAL:.+]] = tensor.expand_shape %[[MATMUL]] {{\[}}[0], [1], [2, 3]] output_shape [8, 16, 10, 12] : tensor<8x16x120xf32> into tensor<8x16x10x12xf32>
 //      CHECK:   return %[[CS_FINAL]]
