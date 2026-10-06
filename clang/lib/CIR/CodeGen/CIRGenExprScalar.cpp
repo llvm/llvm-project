@@ -2953,12 +2953,12 @@ mlir::Value ScalarExprEmitter::VisitInitListExpr(InitListExpr *e) {
                                     elements);
   }
 
-  if (numInitElements == 0) {
-    if (e->getType()->isVoidType())
-      return {};
-    // C++11 value-initialization for the scalar.
+  if (e->getType()->isVoidType())
+    return {};
+
+  // C++11 value-initialization for the scalar.
+  if (numInitElements == 0)
     return emitNullValue(e->getType(), cgf.getLoc(e->getExprLoc()));
-  }
 
   return Visit(e->getInit(0));
 }
