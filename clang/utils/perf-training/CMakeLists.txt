@@ -56,8 +56,8 @@ if(LLVM_BUILD_INSTRUMENTED)
     add_custom_target(generate-profdata DEPENDS ${CMAKE_CURRENT_BINARY_DIR}/clang.profdata)
     if (CLANG_PGO_TRAINING_DATA_SOURCE_DIR)
       llvm_ExternalProject_Add(generate-profraw-external ${CLANG_PGO_TRAINING_DATA_SOURCE_DIR}
-              USE_TOOLCHAIN EXLUDE_FROM_ALL NO_INSTALL DEPENDS generate-profraw)
-      add_dependencies(generate-profdata generate-profraw-external)
+              USE_TOOLCHAIN EXLUDE_FROM_ALL NO_INSTALL)
+      add_dependencies(generate-profraw generate-profraw-external)
     endif()
 
     if(NOT LLVM_PROFGEN)
