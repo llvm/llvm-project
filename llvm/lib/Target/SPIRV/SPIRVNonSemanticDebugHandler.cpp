@@ -1302,9 +1302,10 @@ std::optional<MCRegister> SPIRVNonSemanticDebugHandler::emitDebugGlobalVariable(
 
   std::optional<MCRegister> StaticMemberRegOpt;
   if (const DIDerivedType *SM = GV->getStaticDataMemberDeclaration()) {
-    StaticMemberRegOpt = lookupOptReg(DebugScopeRegs, SM);
-    if (!StaticMemberRegOpt)
+    EmitResult StaticMember = getOrCreateDebugScope(SM);
+    if (!StaticMember)
       return std::nullopt;
+    StaticMemberRegOpt = StaticMember.Reg;
   }
 
   MCRegister NameReg = getCachedOpStringReg(GV->getName());
