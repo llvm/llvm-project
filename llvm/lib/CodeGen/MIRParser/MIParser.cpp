@@ -1853,6 +1853,23 @@ bool MIParser::parseSymbolicInlineAsmOperand(unsigned OpIdx,
   // Create the flag with default of 1 operand.
   InlineAsm::Flag F(K, 1);
 
+  // Finish an untied operand, which may end in 'foldable': the register
+  // allocator may fold its register to a stack slot (see
+  // InlineAsm::Flag::setRegMayBeFolded()).
+  auto ParseOptionalFoldable = [&]() {
+    if (Token.is(MIToken::Identifier) && Token.stringValue() == "foldable") {
+      if (K != InlineAsm::Kind::RegDef && K != InlineAsm::Kind::RegUse &&
+          K != InlineAsm::Kind::RegDefEarlyClobber)
+        return error("only a register operand can be 'foldable'");
+
+      F.setRegMayBeFolded(true);
+      lex();
+    }
+
+    Dest = MachineOperand::CreateImm(F);
+    return false;
+  };
+
   // Parse optional tiedto constraint: tiedto:$N.
   if (Token.is(MIToken::Identifier) && Token.stringValue() == "tiedto") {
     lex();
@@ -1873,10 +1890,8 @@ bool MIParser::parseSymbolicInlineAsmOperand(unsigned OpIdx,
   }
 
   // Parse optional constraint after ':'.
-  if (Token.isNot(MIToken::colon)) {
-    Dest = MachineOperand::CreateImm(F);
-    return false;
-  }
+  if (Token.isNot(MIToken::colon))
+    return ParseOptionalFoldable();
 
   lex();
 
@@ -1930,8 +1945,7 @@ bool MIParser::parseSymbolicInlineAsmOperand(unsigned OpIdx,
 
   lex();
 
-  Dest = MachineOperand::CreateImm(F);
-  return false;
+  return ParseOptionalFoldable();
 }
 
 bool MIParser::parseTargetImmMnemonic(const unsigned OpCode,
