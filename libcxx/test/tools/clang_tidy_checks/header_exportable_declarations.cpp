@@ -62,6 +62,8 @@ header_exportable_declarations::header_exportable_declarations(
   case header_exportable_declarations::FileType::CompatModule:
     if (!extra_header_.empty())
       llvm::errs() << "Extra headers are not allowed for modules.\n";
+    else
+      extra_header_ = "$^"; // Use a never matching regex to silence an error message.
     if (Options.get("SkipDeclarations"))
       llvm::errs() << "Modules may not skip declarations.\n";
     if (Options.get("ExtraDeclarations"))
