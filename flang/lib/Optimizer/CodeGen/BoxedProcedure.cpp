@@ -16,7 +16,9 @@
 #include "flang/Optimizer/Dialect/Support/FIRContext.h"
 #include "flang/Optimizer/Support/FatalError.h"
 #include "flang/Optimizer/Support/InternalNames.h"
+#include "mlir/Dialect/GPU/IR/GPUDialect.h"
 #include "mlir/Dialect/LLVMIR/LLVMDialect.h"
+#include "mlir/Dialect/OpenMP/OpenMPInterfaces.h"
 #include "mlir/IR/PatternMatch.h"
 #include "mlir/Pass/Pass.h"
 #include "mlir/Transforms/DialectConversion.h"
@@ -273,14 +275,25 @@ public:
         });
       }
 
-      if (needsExecutableStack)
+      if (needsExecutableStack && !isOffloadTargetDevice(getModule()))
         requestExecutableStack(getModule());
     }
   }
 
 private:
-  /// Set when a stack based trampoline has been emitted.
+  /// Set when a stack based trampoline has been emitted into host code.
   bool needsExecutableStack = false;
+
+  /// An OpenMP target device compilation still contains the host procedures
+  /// until they are filtered out late in the pipeline, so a stack based
+  /// trampoline seen here is not evidence that the device image needs an
+  /// executable stack. Device code cannot jump into its stack anyway.
+  static bool isOffloadTargetDevice(mlir::ModuleOp module) {
+    if (auto offloadMod = llvm::dyn_cast<mlir::omp::OffloadModuleInterface>(
+            module.getOperation()))
+      return offloadMod.getIsTargetDevice();
+    return false;
+  }
 
   /// Trampoline handles collected while processing a function.
   /// Each entry is a Value representing the opaque handle returned
@@ -480,8 +493,10 @@ private:
         } else {
           // Legacy stack-based trampoline path. The thunk is built in the host
           // procedure's stack frame and jumped to, so request an executable
-          // stack.
-          needsExecutableStack = true;
+          // stack, unless this is device code in a nested gpu.module, which
+          // is not part of the host object.
+          if (!embox->getParentOfType<mlir::gpu::GPUModuleOp>())
+            needsExecutableStack = true;
           FirOpBuilder builder(rewriter, module);
           mlir::Type i8Ty{builder.getI8Type()};
           mlir::Type i8Ptr{builder.getRefType(i8Ty)};

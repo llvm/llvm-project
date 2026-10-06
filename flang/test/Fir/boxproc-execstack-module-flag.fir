@@ -111,3 +111,77 @@ module @no_trampoline {
     return
   }
 }
+
+// An OpenMP target device module still holds the host procedures at this
+// point; they are filtered out later, so their stack based trampolines must
+// not mark the device image as needing an executable stack.
+
+// CHECK-LABEL: module @omp_target_device
+// CHECK-NOT:     llvm.module_flags
+// CHECK:         llvm.init.trampoline
+module @omp_target_device attributes {omp.is_target_device = true} {
+  func.func @_QPtest_proc_dummy() {
+    %c0_i32 = arith.constant 0 : i32
+    %0 = fir.alloca i32
+    %1 = fir.alloca tuple<!fir.ref<i32>>
+    %2 = fir.coordinate_of %1, %c0_i32 : (!fir.ref<tuple<!fir.ref<i32>>>, i32) -> !fir.llvm_ptr<!fir.ref<i32>>
+    fir.store %0 to %2 : !fir.llvm_ptr<!fir.ref<i32>>
+    %3 = fir.address_of(@_QFtest_proc_dummyPtest_proc_dummy_a) : (!fir.ref<tuple<!fir.ref<i32>>>) -> ()
+    %4 = fir.emboxproc %3, %1 : ((!fir.ref<tuple<!fir.ref<i32>>>) -> (), !fir.ref<tuple<!fir.ref<i32>>>) -> !fir.boxproc<() -> ()>
+    fir.call @_QPtest_proc_dummy_other(%4) : (!fir.boxproc<() -> ()>) -> ()
+    return
+  }
+  func.func @_QFtest_proc_dummyPtest_proc_dummy_a(%arg0: !fir.ref<tuple<!fir.ref<i32>>> {fir.host_assoc}) {
+    return
+  }
+  func.func private @_QPtest_proc_dummy_other(!fir.boxproc<() -> ()>)
+}
+
+// The host module of an OpenMP offload compilation still gets the flag.
+
+// CHECK-LABEL: module @omp_host
+// CHECK-NEXT:    llvm.module_flags [#llvm.mlir.module_flag<max, "executable-stack", 1 : i32>]
+module @omp_host attributes {omp.is_target_device = false} {
+  func.func @_QPtest_proc_dummy() {
+    %c0_i32 = arith.constant 0 : i32
+    %0 = fir.alloca i32
+    %1 = fir.alloca tuple<!fir.ref<i32>>
+    %2 = fir.coordinate_of %1, %c0_i32 : (!fir.ref<tuple<!fir.ref<i32>>>, i32) -> !fir.llvm_ptr<!fir.ref<i32>>
+    fir.store %0 to %2 : !fir.llvm_ptr<!fir.ref<i32>>
+    %3 = fir.address_of(@_QFtest_proc_dummyPtest_proc_dummy_a) : (!fir.ref<tuple<!fir.ref<i32>>>) -> ()
+    %4 = fir.emboxproc %3, %1 : ((!fir.ref<tuple<!fir.ref<i32>>>) -> (), !fir.ref<tuple<!fir.ref<i32>>>) -> !fir.boxproc<() -> ()>
+    fir.call @_QPtest_proc_dummy_other(%4) : (!fir.boxproc<() -> ()>) -> ()
+    return
+  }
+  func.func @_QFtest_proc_dummyPtest_proc_dummy_a(%arg0: !fir.ref<tuple<!fir.ref<i32>>> {fir.host_assoc}) {
+    return
+  }
+  func.func private @_QPtest_proc_dummy_other(!fir.boxproc<() -> ()>)
+}
+
+// A stack based trampoline in device code of a nested gpu.module does not
+// request an executable stack for the host module.
+
+// CHECK-LABEL: module @gpu_device_code
+// CHECK-NOT:     llvm.module_flags
+// CHECK:         gpu.module @cuda_device_mod
+// CHECK:           llvm.init.trampoline
+module @gpu_device_code attributes {gpu.container_module} {
+  gpu.module @cuda_device_mod {
+    func.func @_QPtest_proc_dummy() {
+      %c0_i32 = arith.constant 0 : i32
+      %0 = fir.alloca i32
+      %1 = fir.alloca tuple<!fir.ref<i32>>
+      %2 = fir.coordinate_of %1, %c0_i32 : (!fir.ref<tuple<!fir.ref<i32>>>, i32) -> !fir.llvm_ptr<!fir.ref<i32>>
+      fir.store %0 to %2 : !fir.llvm_ptr<!fir.ref<i32>>
+      %3 = fir.address_of(@_QFtest_proc_dummyPtest_proc_dummy_a) : (!fir.ref<tuple<!fir.ref<i32>>>) -> ()
+      %4 = fir.emboxproc %3, %1 : ((!fir.ref<tuple<!fir.ref<i32>>>) -> (), !fir.ref<tuple<!fir.ref<i32>>>) -> !fir.boxproc<() -> ()>
+      fir.call @_QPtest_proc_dummy_other(%4) : (!fir.boxproc<() -> ()>) -> ()
+      return
+    }
+    func.func @_QFtest_proc_dummyPtest_proc_dummy_a(%arg0: !fir.ref<tuple<!fir.ref<i32>>> {fir.host_assoc}) {
+      return
+    }
+    func.func private @_QPtest_proc_dummy_other(!fir.boxproc<() -> ()>)
+  }
+}
