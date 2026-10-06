@@ -3,7 +3,7 @@
 // options
 
 // REQUIRES: has_sancovcc,stable-runtime
-// UNSUPPORTED: darwin
+// UNSUPPORTED: darwin, rtsan
 // XFAIL: ubsan,tsan
 // XFAIL: android && asan
 

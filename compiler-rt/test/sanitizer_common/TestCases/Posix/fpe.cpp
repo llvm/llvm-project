@@ -6,6 +6,7 @@
 
 // FIXME: seems to fail on ARM
 // REQUIRES: x86_64-target-arch
+// UNSUPPORTED: rtsan
 #include <assert.h>
 #include <stdio.h>
 #include <sanitizer/asan_interface.h>
