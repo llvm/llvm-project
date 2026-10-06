@@ -495,7 +495,8 @@ public:
 };
 
 // LF_UNION
-struct UnionRecord : public TagRecord {
+class UnionRecord : public TagRecord {
+public:
   UnionRecord() = default;
   explicit UnionRecord(TypeRecordKind Kind) : TagRecord(Kind) {}
   UnionRecord(uint16_t MemberCount, ClassOptions Options, TypeIndex FieldList,
