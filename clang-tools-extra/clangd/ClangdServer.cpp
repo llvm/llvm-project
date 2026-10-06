@@ -62,8 +62,8 @@ namespace clangd {
 namespace {
 
 // Tracks number of times a tweak has been offered.
-static constexpr trace::Metric TweakAvailable(
-    "tweak_available", trace::Metric::Counter, "tweak_id");
+static constexpr trace::Metric
+    TweakAvailable("tweak_available", trace::Metric::Counter, "tweak_id");
 
 // Update the FileIndex with new ASTs and plumb the diagnostics responses.
 struct UpdateIndexCallbacks : public ParsingCallbacks {
@@ -1221,13 +1221,16 @@ void ClangdServer::adjustParseInputs(ParseInputs &Inputs, PathRef File) const {
     return ModulesManager->hasRequiredModules(File);
   };
 
-  Inputs.Opts.SkipPreambleBuild = [&](){
-    switch(SkipPreambleBuild){
+  Inputs.Opts.SkipPreambleBuild = [&]() {
+    switch (SkipPreambleBuild) {
       using enum SkipPreambleBuildPolicy;
 
-      case Never: return false;
-      case Modules: return HasRequiredModules();
-      case Always: return true;
+    case Never:
+      return false;
+    case Modules:
+      return HasRequiredModules();
+    case Always:
+      return true;
     }
   }();
 }
