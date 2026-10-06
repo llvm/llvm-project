@@ -17,6 +17,7 @@
 #include "flang/Common/Fortran-consts.h"
 #include "flang/Common/idioms.h"
 #include "flang/Common/indirection.h"
+#include "flang/Common/numeric-limits.h"
 #include "flang/Common/reference.h"
 #include "flang/Common/visit.h"
 #include "flang/Evaluate/check-expression.h"
@@ -1310,7 +1311,7 @@ bool IsTransparentInterveningCode(const parser::ExecutionPartConstruct &x) {
 }
 
 template <typename T,
-    typename = std::enable_if_t<common::is_arithmetic<T>> WithReason<T>
+    typename = std::enable_if_t<common::is_arithmetic_v<T>>> WithReason<T>
     operator+(const WithReason<T> &a, const WithReason<T> &b) {
   if (a.value && b.value) {
     return WithReason<T>{
@@ -1320,7 +1321,7 @@ template <typename T,
 }
 
 template <typename T,
-    typename = std::enable_if_t<common::is_arithmetic<T>> WithReason<T>
+    typename = std::enable_if_t<common::is_arithmetic_v<T>>> WithReason<T>
     operator+(T a, const WithReason<T> &b) {
   return WithReason<T>{a, Reason()} + b;
 }

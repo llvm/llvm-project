@@ -117,7 +117,7 @@ static void TestVsNative() {
 /// T is the native __(u)int128_t implementation to compare against. It only
 /// executes on platforms with HAS_NATIVE_UINT128_T enabled.
 template <typename T> static void TestNumericLimitsVsNative() {
-  using Std = common::numeric_limits<T>;
+  using Std = std::numeric_limits<T>;
   using Detail = Fortran::common::detail::numeric_limits<T>;
   using Common = Fortran::common::numeric_limits<T>;
 
