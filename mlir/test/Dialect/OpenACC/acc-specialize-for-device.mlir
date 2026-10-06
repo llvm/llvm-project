@@ -301,3 +301,47 @@ func.func @on_device_outside_parallel() {
   }
   return
 }
+
+// acc.on_device(acc_device_not_host) is true on this target, so the else
+// branch inside the compute construct is dropped.
+// CHECK-LABEL: func.func @fold_on_device_if_inside_parallel
+// CHECK:       acc.parallel
+// CHECK-NOT:   scf.if
+// CHECK-NOT:   "test.host"
+// CHECK:       "test.device"() : () -> ()
+// CHECK:       acc.yield
+func.func @fold_on_device_if_inside_parallel() {
+  %not_host = arith.constant 3 : i32
+  acc.parallel {
+    %on_not_host = acc.on_device %not_host : i32 -> i1
+    scf.if %on_not_host {
+      "test.device"() : () -> ()
+    } else {
+      "test.host"() : () -> ()
+    }
+    acc.yield
+  }
+  return
+}
+
+// acc.on_device(acc_device_host) is false on this target, so the then
+// branch inside the compute construct is dropped.
+// CHECK-LABEL: func.func @fold_on_device_if_host_inside_parallel
+// CHECK:       acc.parallel
+// CHECK-NOT:   scf.if
+// CHECK-NOT:   "test.device"
+// CHECK:       "test.host"() : () -> ()
+// CHECK:       acc.yield
+func.func @fold_on_device_if_host_inside_parallel() {
+  %host = arith.constant 2 : i32
+  acc.parallel {
+    %on_host = acc.on_device %host : i32 -> i1
+    scf.if %on_host {
+      "test.device"() : () -> ()
+    } else {
+      "test.host"() : () -> ()
+    }
+    acc.yield
+  }
+  return
+}

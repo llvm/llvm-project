@@ -43,7 +43,8 @@
 //    acc.init, acc.shutdown, acc.set, acc.wait
 //
 // 6. acc.on_device (folded):
-//    acc.on_device with constant device type is folded to a boolean constant.
+//    A constant device type folds to a boolean. Region-branch users of that
+//    value keep only the taken path.
 //
 // Scope of Application:
 // ---------------------
@@ -66,7 +67,9 @@
 #include "mlir/Dialect/OpenACC/Transforms/ACCSpecializePatterns.h"
 #include "mlir/IR/MLIRContext.h"
 #include "mlir/IR/PatternMatch.h"
+#include "mlir/Interfaces/ControlFlowInterfaces.h"
 #include "mlir/Transforms/GreedyPatternRewriteDriver.h"
+#include "llvm/ADT/DenseSet.h"
 
 namespace mlir {
 namespace acc {
@@ -79,6 +82,27 @@ using namespace mlir;
 using namespace mlir::acc;
 
 namespace {
+
+/// Op names of region-branch users of `acc.on_device`. The inlining pattern is
+/// registered for these names and drops the untaken path once the condition is
+/// a constant.
+static llvm::SmallDenseSet<StringRef>
+collectOnDeviceRegionBranchNames(Operation *root) {
+  llvm::SmallDenseSet<StringRef> names;
+  root->walk([&](acc::OnDeviceOp op) {
+    for (Operation *user : op->getUsers()) {
+      if (isa<RegionBranchOpInterface>(user))
+        names.insert(user->getName().getStringRef());
+    }
+  });
+  return names;
+}
+
+static void populateRegionBranchInliningPatterns(
+    RewritePatternSet &patterns, const llvm::SmallDenseSet<StringRef> &names) {
+  for (StringRef name : names)
+    populateRegionBranchOpInterfaceInliningPattern(patterns, name);
+}
 
 /// Fold acc.on_device with a constant device type in device code.
 class FoldAccOnDeviceOpConversion : public OpRewritePattern<acc::OnDeviceOp> {
@@ -122,6 +146,11 @@ public:
     config.setUseTopDownTraversal(true);
 
     if (acc::isSpecializedAccRoutine(func)) {
+      // Replacing acc.on_device with a constant puts these users back on the
+      // worklist. The inlining pattern then keeps the single taken path.
+      llvm::SmallDenseSet<StringRef> regionBranchNames =
+          collectOnDeviceRegionBranchNames(func);
+      populateRegionBranchInliningPatterns(patterns, regionBranchNames);
       // For specialized acc routines, apply patterns to the entire function
       (void)applyPatternsGreedily(func, std::move(patterns), config);
     } else {
@@ -133,8 +162,12 @@ public:
       // regions).
       config.setStrictness(GreedyRewriteStrictness::ExistingOps);
       SmallVector<Operation *> opsToTransform;
+      llvm::SmallDenseSet<StringRef> regionBranchNames;
+      llvm::SmallDenseSet<Operation *> seenRegionBranchOps;
       func.walk([&](Operation *op) {
         if (isa<ACC_COMPUTE_CONSTRUCT_OPS>(op)) {
+          for (StringRef name : collectOnDeviceRegionBranchNames(op))
+            regionBranchNames.insert(name);
           // Walk inside the compute construct and collect ACC ops
           op->walk([&](Operation *innerOp) {
             // Skip the compute construct itself
@@ -142,9 +175,19 @@ public:
               return;
             if (isa<acc::OpenACCDialect>(innerOp->getDialect()))
               opsToTransform.push_back(innerOp);
+            auto onDevice = dyn_cast<acc::OnDeviceOp>(innerOp);
+            if (onDevice) {
+              for (Operation *user : onDevice->getUsers()) {
+                if (!isa<RegionBranchOpInterface>(user))
+                  continue;
+                if (seenRegionBranchOps.insert(user).second)
+                  opsToTransform.push_back(user);
+              }
+            }
           });
         }
       });
+      populateRegionBranchInliningPatterns(patterns, regionBranchNames);
       if (!opsToTransform.empty())
         (void)applyOpPatternsGreedily(opsToTransform, std::move(patterns),
                                       config);
