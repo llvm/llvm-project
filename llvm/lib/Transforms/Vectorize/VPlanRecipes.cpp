@@ -1623,6 +1623,8 @@ InstructionCost VPInstruction::computeCost(ElementCount VF,
     break;
   case Instruction::Alloca:
     assert(VF.isScalar() && "only scalar VF expected");
+    // TODO: Currently matches legacy cost, but should query alloca cost
+    // directly.
     return Ctx.TTI.getArithmeticInstrCost(Instruction::Mul, getScalarType(),
                                           Ctx.CostKind);
   case Instruction::Load:
