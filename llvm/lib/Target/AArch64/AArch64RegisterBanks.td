@@ -13,7 +13,17 @@
 def GPRRegBank : RegisterBank<"GPR", [XSeqPairsClass]>;
 
 /// Floating Point, Vector, Scalable Vector Registers: B, H, S, D, Q, Z.
-def FPRRegBank : RegisterBank<"FPR", [QQQQ, ZPR]>;
+def FPRRegBank : RegisterBank<"FPR", [QQQQ, ZPR]> {
+  let IgnoredPartialMappings = [
+    PartialMapping<8>,
+    PartialMapping<192>,
+    PartialMapping<384>
+  ];
+}
 
 /// Conditional register: NZCV.
-def CCRegBank : RegisterBank<"CC", [CCR]>;
+def CCRegBank : RegisterBank<"CC", [CCR]> {
+  let IgnoredPartialMappings = [
+    PartialMapping<32>
+  ];
+}
