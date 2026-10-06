@@ -1641,8 +1641,7 @@ AMDGPULegalizerInfo::AMDGPULegalizerInfo(const GCNSubtarget &ST_,
          {S32, ConstantPtr, S32, GlobalAlign32},
          {V2S32, ConstantPtr, V2S32, GlobalAlign32},
          {V4S32, ConstantPtr, V4S32, GlobalAlign32},
-         {S64, ConstantPtr, S64, GlobalAlign32},
-         {V2S32, ConstantPtr, V2S32, GlobalAlign32}});
+         {S64, ConstantPtr, S64, GlobalAlign32}});
 
     Actions.legalForTypesWithMemDesc(ST.useRealTrue16Insts(), /* Pred */
                                      {{S16, GlobalPtr, S8, GlobalAlign8},
