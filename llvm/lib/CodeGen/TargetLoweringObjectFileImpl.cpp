@@ -2921,17 +2921,14 @@ MCSection *TargetLoweringObjectFileGOFF::getSectionForLSDA(
                                      WSA);
 }
 
-bool TargetLoweringObjectFileGOFF::isReadOnlyInCodeSection(
-    const GlobalObject *GO) {
-  return GO->hasLocalLinkage();
-}
-
 MCSection *TargetLoweringObjectFileGOFF::SelectSectionForGlobal(
     const GlobalObject *GO, SectionKind Kind, const TargetMachine &TM) const {
   auto *Symbol = TM.getSymbol(GO);
 
+  // Read-only data stays in the code section only if it is local: references
+  // from other translation units are always parts in the WSA.
   if (Kind.isBSS() || Kind.isData() || Kind.isReadOnlyWithRel() ||
-      (Kind.isReadOnly() && !isReadOnlyInCodeSection(GO))) {
+      (Kind.isReadOnly() && !GO->hasLocalLinkage())) {
     GOFF::ESDBindingScope PRBindingScope =
         GO->hasExternalLinkage()
             ? (GO->hasDefaultVisibility() ? GOFF::ESD_BSC_ImportExport

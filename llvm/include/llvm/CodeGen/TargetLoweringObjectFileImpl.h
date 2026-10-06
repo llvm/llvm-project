@@ -331,13 +331,6 @@ public:
 
   void getModuleMetadata(Module &M) override;
 
-  /// Returns true if the global \p GO, whose section kind is read-only, is
-  /// placed into the code section and can therefore be addressed PC-relative.
-  /// This is only the case for local data: references from other translation
-  /// units are always parts in the WSA. (Initializers with relocations are
-  /// already ReadOnlyWithRel, see getKindForGlobal.)
-  static bool isReadOnlyInCodeSection(const GlobalObject *GO);
-
   bool shouldPutJumpTableInFunctionSection(bool UsesLabelDifference,
                                            const Function &F) const override;
   MCSection *getSectionForConstant(const DataLayout &DL, SectionKind Kind,
