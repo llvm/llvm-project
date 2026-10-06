@@ -256,3 +256,9 @@ fmmla v2.4s, v1.16b, v0.16b
 cfltz #1, w0
 // CHECK: [[@LINE-1]]:1: error: instruction requires: cflt
 // CHECK-NEXT: cfltz #1, w0
+
+.arch_extension lsc64b
+.arch_extension nolsc64b
+lda64b x0, [x13]
+// CHECK: [[@LINE-1]]:1: error: instruction requires: lsc64b
+// CHECK-NEXT: lda64b x0, [x13]

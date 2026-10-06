@@ -239,6 +239,8 @@ def HasF16F32MM      : Predicate<"Subtarget->hasF16F32MM()">,
                                  AssemblerPredicateWithAll<(all_of FeatureF16F32MM), "f16f32mm">;
 def HasCFLT          : Predicate<"Subtarget->hasCFLT()">,
                                  AssemblerPredicateWithAll<(all_of FeatureCFLT), "cflt">;
+def HasLSC64B        : Predicate<"Subtarget->hasLSC64B()">,
+                                 AssemblerPredicateWithAll<(all_of FeatureLSC64B), "lsc64b">;
 
 // A subset of SVE(2) instructions are legal in Streaming SVE execution mode,
 // they should be enabled if either has been specified.
@@ -12182,12 +12184,12 @@ foreach i = 0-7 in {
 }
 
 let Predicates = [HasLS64] in {
-  defm LD64B: LoadStore64B<0b101, "ld64b", 1, 0, (ins GPR64sp:$Rn),
+  defm LD64B: LoadStore64B<0b00, 0b101, "ld64b", 1, 0, (ins GPR64sp:$Rn),
                                            (outs GPR64x8:$Rt)>;
-  defm ST64B: LoadStore64B<0b001, "st64b", 0, 1, (ins GPR64x8:$Rt, GPR64sp:$Rn),
+  defm ST64B: LoadStore64B<0b00, 0b001, "st64b", 0, 1, (ins GPR64x8:$Rt, GPR64sp:$Rn),
                                            (outs)>;
-  def ST64BV:   Store64BV<0b011, "st64bv">;
-  def ST64BV0:  Store64BV<0b010, "st64bv0">;
+  def ST64BV:   Store64BV<0b00, 0b011, "st64bv">;
+  def ST64BV0:  Store64BV<0b00, 0b010, "st64bv0">;
 
   class ST64BPattern<Intrinsic intrinsic, Instruction instruction>
     : Pat<(intrinsic GPR64sp:$addr, GPR64:$x0, GPR64:$x1, GPR64:$x2, GPR64:$x3, GPR64:$x4, GPR64:$x5, GPR64:$x6, GPR64:$x7),
@@ -12196,6 +12198,13 @@ let Predicates = [HasLS64] in {
   def : ST64BPattern<int_aarch64_st64b, ST64B>;
   def : ST64BPattern<int_aarch64_st64bv, ST64BV>;
   def : ST64BPattern<int_aarch64_st64bv0, ST64BV0>;
+}
+
+let Predicates = [HasLSC64B] in {
+  defm LDA64B:  LoadStore64B<0b10, 0b101, "lda64b", 1, 0, (ins GPR64sp:$Rn), (outs GPR64x8:$Rt)>;
+  defm STL64B:  LoadStore64B<0b01, 0b001, "stl64b", 0, 1, (ins GPR64x8:$Rt, GPR64sp:$Rn), (outs)>;
+  def STL64BV:  Store64BV<0b01, 0b011, "stl64bv">;
+  def STL64BV0: Store64BV<0b01, 0b010, "stl64bv0">;
 }
 
 let Predicates = [HasMOPS] in {

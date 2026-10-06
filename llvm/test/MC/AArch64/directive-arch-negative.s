@@ -85,3 +85,9 @@
 
 # CHECK: error: instruction requires: cflt
 # CHECK-NEXT:   cfltz #1, w0
+
+	.arch armv9-a+lsc64b+nolsc64b
+        lda64b x0, [x13]
+
+# CHECK: [[@LINE-2]]:9: error: instruction requires: lsc64b
+# CHECK-NEXT:   lda64b x0, [x13]

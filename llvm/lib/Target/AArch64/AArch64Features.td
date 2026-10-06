@@ -624,6 +624,9 @@ def FeatureF16F32MM : ExtensionWithMArch<"f16f32mm", "F16F32MM", "FEAT_F16F32MM"
 def FeatureCFLT : ExtensionWithMArch<"cflt", "CFLT", "FEAT_CFLT",
   "Enable Armv9.8-A Conditional Fault instructions">;
 
+def FeatureLSC64B : ExtensionWithMArch<"lsc64b", "LSC64B", "FEAT_LSC64B",
+  "Enable Armv9.8-A Single-copy atomic 64-byte load/store consistency extension", [FeatureLSCP]>;
+
 //===----------------------------------------------------------------------===//
 //  Future Architecture Technologies
 //===----------------------------------------------------------------------===//

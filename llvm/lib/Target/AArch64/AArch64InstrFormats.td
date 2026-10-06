@@ -12792,13 +12792,15 @@ multiclass STOPregisterLSUI<string asm, string instr> {
                     !cast<Instruction>(instr # "X")>;
 }
 
-class LoadStore64B_base<bits<3> opc, string asm_inst, string asm_ops,
+class LoadStore64B_base<bits<2> ar, bits<3> opc, string asm_inst, string asm_ops,
                         dag iops, dag oops, list<dag> pat>
     : I<oops, iops, asm_inst, asm_ops, "", pat>,
       Sched<[]> /* FIXME: fill in scheduling details once known */ {
   bits<5> Rt;
   bits<5> Rn;
-  let Inst{31-21} = 0b11111000001;
+  let Inst{31-24} = 0b11111000;
+  let Inst{23-22} = ar;
+  let Inst{21}    = 1;
   let Inst{15}    = 1;
   let Inst{14-12} = opc;
   let Inst{11-10} = 0b00;
@@ -12808,24 +12810,24 @@ class LoadStore64B_base<bits<3> opc, string asm_inst, string asm_ops,
   let Predicates = [HasV8_7a];
 }
 
-class LoadStore64B<bits<3> opc, string asm_inst, dag iops, dag oops,
+class LoadStore64B<bits<2> ar, bits<3> opc, string asm_inst, dag iops, dag oops,
                       list<dag> pat = []>
-    : LoadStore64B_base<opc, asm_inst, "\t$Rt, [$Rn]", iops, oops, pat> {
+    : LoadStore64B_base<ar, opc, asm_inst, "\t$Rt, [$Rn]", iops, oops, pat> {
   let Inst{20-16} = 0b11111;
 }
 
-multiclass LoadStore64B<bits<3> opc, string asm_inst,
+multiclass LoadStore64B<bits<2> ar, bits<3> opc, string asm_inst,
                         bit may_load, bit may_store,
                         dag iops, dag oops,
                         list<dag> pat = []> {
   let mayLoad = may_load, mayStore = may_store in
-  def "" : LoadStore64B<opc, asm_inst, iops, oops, pat>;
+  def "" : LoadStore64B<ar, opc, asm_inst, iops, oops, pat>;
   def : InstAlias<asm_inst # "\t$Rt, [$Rn, #0]",
                   (!cast<Instruction>(NAME) GPR64x8:$Rt, GPR64sp:$Rn)>;
 }
 
-class Store64BV<bits<3> opc, string asm_inst, list<dag> pat = []>
-    : LoadStore64B_base<opc, asm_inst, "\t$Rs, $Rt, [$Rn]",
+class Store64BV<bits<2> ar, bits<3> opc, string asm_inst, list<dag> pat = []>
+    : LoadStore64B_base<ar, opc, asm_inst, "\t$Rs, $Rt, [$Rn]",
                        (ins GPR64x8:$Rt, GPR64sp:$Rn), (outs GPR64:$Rs), pat> {
   bits<5> Rs;
   let Inst{20-16} = Rs;
