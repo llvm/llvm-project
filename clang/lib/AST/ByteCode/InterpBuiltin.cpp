@@ -1181,7 +1181,7 @@ static bool interp__builtin_atomic_lock_free(InterpState &S, CodePtr OpPC,
 
   // Check power-of-two.
   CharUnits Size = CharUnits::fromQuantity(SizeVal);
-  if (Size.isPositive() && Size.isPowerOfTwo()) {
+  if (Size.isPowerOfTwo()) {
     // Check against inlining width.
     unsigned InlineWidthBits =
         S.getASTContext().getTargetInfo().getMaxAtomicInlineWidth();
@@ -1239,7 +1239,7 @@ static bool interp__builtin_c11_atomic_is_lock_free(InterpState &S,
     return false;
 
   CharUnits Size = CharUnits::fromQuantity(SizeVal);
-  if (Size.isPositive() && Size.isPowerOfTwo()) {
+  if (Size.isPowerOfTwo()) {
     // Check against inlining width.
     unsigned InlineWidthBits =
         S.getASTContext().getTargetInfo().getMaxAtomicInlineWidth();
