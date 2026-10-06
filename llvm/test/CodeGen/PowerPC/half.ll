@@ -24,10 +24,16 @@ define void @store(half %x, ptr %p) nounwind {
 ; PPC32-NEXT:    sth r3, 0(r4)
 ; PPC32-NEXT:    blr
 ;
-; CHECK-LABEL: store:
-; CHECK:       # %bb.0:
-; CHECK-NEXT:    sth r3, 0(r4)
-; CHECK-NEXT:    blr
+; P8-LABEL: store:
+; P8:       # %bb.0:
+; P8-NEXT:    mffprwz r3, f1
+; P8-NEXT:    sthx r3, 0, r4
+; P8-NEXT:    blr
+;
+; P9-LABEL: store:
+; P9:       # %bb.0:
+; P9-NEXT:    stxsihx f1, 0, r4
+; P9-NEXT:    blr
 ;
 ; SOFT-LABEL: store:
 ; SOFT:       # %bb.0:
@@ -48,10 +54,16 @@ define half @return(ptr %p) nounwind {
 ; PPC32-NEXT:    lhz r3, 0(r3)
 ; PPC32-NEXT:    blr
 ;
-; CHECK-LABEL: return:
-; CHECK:       # %bb.0:
-; CHECK-NEXT:    lhz r3, 0(r3)
-; CHECK-NEXT:    blr
+; P8-LABEL: return:
+; P8:       # %bb.0:
+; P8-NEXT:    lhzx r3, 0, r3
+; P8-NEXT:    mtfprwz f1, r3
+; P8-NEXT:    blr
+;
+; P9-LABEL: return:
+; P9:       # %bb.0:
+; P9-NEXT:    lxsihzx f1, 0, r3
+; P9-NEXT:    blr
 ;
 ; SOFT-LABEL: return:
 ; SOFT:       # %bb.0:
@@ -73,11 +85,19 @@ define void @test_load_store(ptr %in, ptr %out) nounwind {
 ; PPC32-NEXT:    sth r3, 0(r4)
 ; PPC32-NEXT:    blr
 ;
-; CHECK-LABEL: test_load_store:
-; CHECK:       # %bb.0:
-; CHECK-NEXT:    lhz r3, 0(r3)
-; CHECK-NEXT:    sth r3, 0(r4)
-; CHECK-NEXT:    blr
+; P8-LABEL: test_load_store:
+; P8:       # %bb.0:
+; P8-NEXT:    lhzx r3, 0, r3
+; P8-NEXT:    mtfprwz f0, r3
+; P8-NEXT:    mffprwz r3, f0
+; P8-NEXT:    sthx r3, 0, r4
+; P8-NEXT:    blr
+;
+; P9-LABEL: test_load_store:
+; P9:       # %bb.0:
+; P9-NEXT:    lxsihzx f0, 0, r3
+; P9-NEXT:    stxsihx f0, 0, r4
+; P9-NEXT:    blr
 ;
 ; SOFT-LABEL: test_load_store:
 ; SOFT:       # %bb.0:
@@ -151,9 +171,19 @@ define half @from_bits(i16 %x) nounwind {
 ; PPC32:       # %bb.0:
 ; PPC32-NEXT:    blr
 ;
-; CHECK-LABEL: from_bits:
-; CHECK:       # %bb.0:
-; CHECK-NEXT:    blr
+; P8-LABEL: from_bits:
+; P8:       # %bb.0:
+; P8-NEXT:    sth r3, -2(r1)
+; P8-NEXT:    lhz r3, -2(r1)
+; P8-NEXT:    mtfprwz f1, r3
+; P8-NEXT:    blr
+;
+; P9-LABEL: from_bits:
+; P9:       # %bb.0:
+; P9-NEXT:    sth r3, -2(r1)
+; P9-NEXT:    addi r3, r1, -2
+; P9-NEXT:    lxsihzx f1, 0, r3
+; P9-NEXT:    blr
 ;
 ; SOFT-LABEL: from_bits:
 ; SOFT:       # %bb.0:
@@ -171,9 +201,19 @@ define i16 @to_bits(half %x) nounwind {
 ; PPC32:       # %bb.0:
 ; PPC32-NEXT:    blr
 ;
-; CHECK-LABEL: to_bits:
-; CHECK:       # %bb.0:
-; CHECK-NEXT:    blr
+; P8-LABEL: to_bits:
+; P8:       # %bb.0:
+; P8-NEXT:    mffprwz r3, f1
+; P8-NEXT:    sth r3, -2(r1)
+; P8-NEXT:    lhz r3, -2(r1)
+; P8-NEXT:    blr
+;
+; P9-LABEL: to_bits:
+; P9:       # %bb.0:
+; P9-NEXT:    addi r3, r1, -2
+; P9-NEXT:    stxsihx f1, 0, r3
+; P9-NEXT:    lhz r3, -2(r1)
+; P9-NEXT:    blr
 ;
 ; SOFT-LABEL: to_bits:
 ; SOFT:       # %bb.0:
@@ -204,7 +244,8 @@ define float @test_extend32(ptr %addr) nounwind {
 ; P8-NEXT:    mflr r0
 ; P8-NEXT:    stdu r1, -32(r1)
 ; P8-NEXT:    std r0, 48(r1)
-; P8-NEXT:    lhz r3, 0(r3)
+; P8-NEXT:    lhzx r3, 0, r3
+; P8-NEXT:    mtfprwz f1, r3
 ; P8-NEXT:    bl __extendhfsf2
 ; P8-NEXT:    nop
 ; P8-NEXT:    addi r1, r1, 32
@@ -265,7 +306,8 @@ define double @test_extend64(ptr %addr) nounwind {
 ; P8-NEXT:    mflr r0
 ; P8-NEXT:    stdu r1, -32(r1)
 ; P8-NEXT:    std r0, 48(r1)
-; P8-NEXT:    lhz r3, 0(r3)
+; P8-NEXT:    lhzx r3, 0, r3
+; P8-NEXT:    mtfprwz f1, r3
 ; P8-NEXT:    bl __extendhfsf2
 ; P8-NEXT:    nop
 ; P8-NEXT:    addi r1, r1, 32
@@ -335,7 +377,8 @@ define void @test_trunc32(float %in, ptr %addr) nounwind {
 ; P8-NEXT:    mr r30, r4
 ; P8-NEXT:    bl __truncsfhf2
 ; P8-NEXT:    nop
-; P8-NEXT:    sth r3, 0(r30)
+; P8-NEXT:    mffprwz r3, f1
+; P8-NEXT:    sthx r3, 0, r30
 ; P8-NEXT:    addi r1, r1, 48
 ; P8-NEXT:    ld r0, 16(r1)
 ; P8-NEXT:    ld r30, -16(r1) # 8-byte Folded Reload
@@ -409,7 +452,8 @@ define void @test_trunc64(double %in, ptr %addr) nounwind {
 ; P8-NEXT:    mr r30, r4
 ; P8-NEXT:    bl __truncdfhf2
 ; P8-NEXT:    nop
-; P8-NEXT:    sth r3, 0(r30)
+; P8-NEXT:    mffprwz r3, f1
+; P8-NEXT:    sthx r3, 0, r30
 ; P8-NEXT:    addi r1, r1, 48
 ; P8-NEXT:    ld r0, 16(r1)
 ; P8-NEXT:    ld r30, -16(r1) # 8-byte Folded Reload
@@ -476,7 +520,8 @@ define i64 @test_fptosi_i64(ptr %p) nounwind {
 ; P8-NEXT:    mflr r0
 ; P8-NEXT:    stdu r1, -32(r1)
 ; P8-NEXT:    std r0, 48(r1)
-; P8-NEXT:    lhz r3, 0(r3)
+; P8-NEXT:    lhzx r3, 0, r3
+; P8-NEXT:    mtfprwz f1, r3
 ; P8-NEXT:    bl __extendhfsf2
 ; P8-NEXT:    nop
 ; P8-NEXT:    xscvdpsxds f0, f1
@@ -488,8 +533,7 @@ define i64 @test_fptosi_i64(ptr %p) nounwind {
 ;
 ; P9-LABEL: test_fptosi_i64:
 ; P9:       # %bb.0:
-; P9-NEXT:    lhz r3, 0(r3)
-; P9-NEXT:    mtfprwz f0, r3
+; P9-NEXT:    lxsihzx f0, 0, r3
 ; P9-NEXT:    xscvhpdp f0, f0
 ; P9-NEXT:    xscvdpsxds f0, f0
 ; P9-NEXT:    mffprd r3, f0
@@ -537,8 +581,8 @@ define void @test_sitofp_i64(i64 %a, ptr %p) nounwind {
 ; PPC32-NEXT:    stw r0, 20(r1)
 ; PPC32-NEXT:    stw r30, 8(r1) # 4-byte Folded Spill
 ; PPC32-NEXT:    mr r30, r5
-; PPC32-NEXT:    bl __floatdisf
-; PPC32-NEXT:    bl __truncsfhf2
+; PPC32-NEXT:    bl __floatdidf
+; PPC32-NEXT:    bl __truncdfhf2
 ; PPC32-NEXT:    sth r3, 0(r30)
 ; PPC32-NEXT:    lwz r30, 8(r1) # 4-byte Folded Reload
 ; PPC32-NEXT:    lwz r0, 20(r1)
@@ -554,10 +598,11 @@ define void @test_sitofp_i64(i64 %a, ptr %p) nounwind {
 ; P8-NEXT:    mtfprd f0, r3
 ; P8-NEXT:    std r0, 64(r1)
 ; P8-NEXT:    mr r30, r4
-; P8-NEXT:    xscvsxdsp f1, f0
-; P8-NEXT:    bl __truncsfhf2
+; P8-NEXT:    xscvsxddp f1, f0
+; P8-NEXT:    bl __truncdfhf2
 ; P8-NEXT:    nop
-; P8-NEXT:    sth r3, 0(r30)
+; P8-NEXT:    mffprwz r3, f1
+; P8-NEXT:    sthx r3, 0, r30
 ; P8-NEXT:    addi r1, r1, 48
 ; P8-NEXT:    ld r0, 16(r1)
 ; P8-NEXT:    ld r30, -16(r1) # 8-byte Folded Reload
@@ -567,10 +612,9 @@ define void @test_sitofp_i64(i64 %a, ptr %p) nounwind {
 ; P9-LABEL: test_sitofp_i64:
 ; P9:       # %bb.0:
 ; P9-NEXT:    mtfprd f0, r3
-; P9-NEXT:    xscvsxdsp f0, f0
+; P9-NEXT:    xscvsxddp f0, f0
 ; P9-NEXT:    xscvdphp f0, f0
-; P9-NEXT:    mffprwz r3, f0
-; P9-NEXT:    sth r3, 0(r4)
+; P9-NEXT:    stxsihx f0, 0, r4
 ; P9-NEXT:    blr
 ;
 ; SOFT-LABEL: test_sitofp_i64:
@@ -580,10 +624,9 @@ define void @test_sitofp_i64(i64 %a, ptr %p) nounwind {
 ; SOFT-NEXT:    stdu r1, -48(r1)
 ; SOFT-NEXT:    std r0, 64(r1)
 ; SOFT-NEXT:    mr r30, r4
-; SOFT-NEXT:    bl __floatdisf
+; SOFT-NEXT:    bl __floatdidf
 ; SOFT-NEXT:    nop
-; SOFT-NEXT:    clrldi r3, r3, 32
-; SOFT-NEXT:    bl __truncsfhf2
+; SOFT-NEXT:    bl __truncdfhf2
 ; SOFT-NEXT:    nop
 ; SOFT-NEXT:    sth r3, 0(r30)
 ; SOFT-NEXT:    addi r1, r1, 48
@@ -596,24 +639,13 @@ define void @test_sitofp_i64(i64 %a, ptr %p) nounwind {
 ; BE:       # %bb.0:
 ; BE-NEXT:    mflr r0
 ; BE-NEXT:    stdu r1, -144(r1)
-; BE-NEXT:    sradi r5, r3, 53
 ; BE-NEXT:    std r0, 160(r1)
-; BE-NEXT:    addi r5, r5, 1
-; BE-NEXT:    cmpldi r5, 1
-; BE-NEXT:    std r30, 128(r1) # 8-byte Folded Spill
-; BE-NEXT:    mr r30, r4
-; BE-NEXT:    ble cr0, .LBB12_2
-; BE-NEXT:  # %bb.1:
-; BE-NEXT:    clrldi r4, r3, 53
-; BE-NEXT:    addi r4, r4, 2047
-; BE-NEXT:    or r3, r4, r3
-; BE-NEXT:    rldicr r3, r3, 0, 52
-; BE-NEXT:  .LBB12_2:
 ; BE-NEXT:    std r3, 120(r1)
 ; BE-NEXT:    lfd f0, 120(r1)
-; BE-NEXT:    fcfid f0, f0
-; BE-NEXT:    frsp f1, f0
-; BE-NEXT:    bl __truncsfhf2
+; BE-NEXT:    fcfid f1, f0
+; BE-NEXT:    std r30, 128(r1) # 8-byte Folded Spill
+; BE-NEXT:    mr r30, r4
+; BE-NEXT:    bl __truncdfhf2
 ; BE-NEXT:    nop
 ; BE-NEXT:    sth r3, 0(r30)
 ; BE-NEXT:    ld r30, 128(r1) # 8-byte Folded Reload
@@ -644,7 +676,8 @@ define i64 @test_fptoui_i64(ptr %p) nounwind {
 ; P8-NEXT:    mflr r0
 ; P8-NEXT:    stdu r1, -32(r1)
 ; P8-NEXT:    std r0, 48(r1)
-; P8-NEXT:    lhz r3, 0(r3)
+; P8-NEXT:    lhzx r3, 0, r3
+; P8-NEXT:    mtfprwz f1, r3
 ; P8-NEXT:    bl __extendhfsf2
 ; P8-NEXT:    nop
 ; P8-NEXT:    xscvdpuxds f0, f1
@@ -656,8 +689,7 @@ define i64 @test_fptoui_i64(ptr %p) nounwind {
 ;
 ; P9-LABEL: test_fptoui_i64:
 ; P9:       # %bb.0:
-; P9-NEXT:    lhz r3, 0(r3)
-; P9-NEXT:    mtfprwz f0, r3
+; P9-NEXT:    lxsihzx f0, 0, r3
 ; P9-NEXT:    xscvhpdp f0, f0
 ; P9-NEXT:    xscvdpuxds f0, f0
 ; P9-NEXT:    mffprd r3, f0
@@ -737,10 +769,11 @@ define void @test_uitofp_i64(i64 %a, ptr %p) nounwind {
 ; P8-NEXT:    mtfprd f0, r3
 ; P8-NEXT:    std r0, 64(r1)
 ; P8-NEXT:    mr r30, r4
-; P8-NEXT:    xscvuxdsp f1, f0
-; P8-NEXT:    bl __truncsfhf2
+; P8-NEXT:    xscvuxddp f1, f0
+; P8-NEXT:    bl __truncdfhf2
 ; P8-NEXT:    nop
-; P8-NEXT:    sth r3, 0(r30)
+; P8-NEXT:    mffprwz r3, f1
+; P8-NEXT:    sthx r3, 0, r30
 ; P8-NEXT:    addi r1, r1, 48
 ; P8-NEXT:    ld r0, 16(r1)
 ; P8-NEXT:    ld r30, -16(r1) # 8-byte Folded Reload
@@ -750,10 +783,9 @@ define void @test_uitofp_i64(i64 %a, ptr %p) nounwind {
 ; P9-LABEL: test_uitofp_i64:
 ; P9:       # %bb.0:
 ; P9-NEXT:    mtfprd f0, r3
-; P9-NEXT:    xscvuxdsp f0, f0
+; P9-NEXT:    xscvuxddp f0, f0
 ; P9-NEXT:    xscvdphp f0, f0
-; P9-NEXT:    mffprwz r3, f0
-; P9-NEXT:    sth r3, 0(r4)
+; P9-NEXT:    stxsihx f0, 0, r4
 ; P9-NEXT:    blr
 ;
 ; SOFT-LABEL: test_uitofp_i64:
@@ -873,89 +905,71 @@ define <4 x float> @test_extend32_vec4(ptr %p) nounwind {
 ; P8-LABEL: test_extend32_vec4:
 ; P8:       # %bb.0:
 ; P8-NEXT:    mflr r0
-; P8-NEXT:    stdu r1, -144(r1)
-; P8-NEXT:    li r4, 80
-; P8-NEXT:    std r0, 160(r1)
-; P8-NEXT:    std r29, 120(r1) # 8-byte Folded Spill
-; P8-NEXT:    std r30, 128(r1) # 8-byte Folded Spill
+; P8-NEXT:    stdu r1, -112(r1)
+; P8-NEXT:    li r4, 48
+; P8-NEXT:    std r0, 128(r1)
+; P8-NEXT:    stfd f31, 104(r1) # 8-byte Folded Spill
+; P8-NEXT:    stfd f30, 96(r1) # 8-byte Folded Spill
+; P8-NEXT:    stfd f29, 88(r1) # 8-byte Folded Spill
 ; P8-NEXT:    stxvd2x vs62, r1, r4 # 16-byte Folded Spill
-; P8-NEXT:    li r4, 96
+; P8-NEXT:    li r4, 64
 ; P8-NEXT:    stxvd2x vs63, r1, r4 # 16-byte Folded Spill
-; P8-NEXT:    lwz r4, 4(r3)
-; P8-NEXT:    stw r4, 64(r1)
-; P8-NEXT:    lwz r3, 0(r3)
-; P8-NEXT:    stw r3, 48(r1)
-; P8-NEXT:    addi r3, r1, 64
-; P8-NEXT:    lxvd2x vs62, 0, r3
-; P8-NEXT:    addi r3, r1, 48
-; P8-NEXT:    lxvd2x vs0, 0, r3
-; P8-NEXT:    mffprd r30, f0
-; P8-NEXT:    clrldi r3, r30, 48
-; P8-NEXT:    clrlwi r3, r3, 16
+; P8-NEXT:    lhz r4, 4(r3)
+; P8-NEXT:    mtfprwz f31, r4
+; P8-NEXT:    lhz r4, 6(r3)
+; P8-NEXT:    mtfprwz f30, r4
+; P8-NEXT:    lhz r4, 2(r3)
+; P8-NEXT:    lhzx r3, 0, r3
+; P8-NEXT:    mtfprwz f1, r4
+; P8-NEXT:    mtfprwz f29, r3
 ; P8-NEXT:    bl __extendhfsf2
 ; P8-NEXT:    nop
-; P8-NEXT:    mfvsrd r29, vs62
 ; P8-NEXT:    xxlor vs63, f1, f1
-; P8-NEXT:    clrldi r3, r29, 48
-; P8-NEXT:    clrlwi r3, r3, 16
+; P8-NEXT:    fmr f1, f30
 ; P8-NEXT:    bl __extendhfsf2
 ; P8-NEXT:    nop
-; P8-NEXT:    rldicl r3, r30, 48, 48
 ; P8-NEXT:    xxmrghd vs0, vs1, vs63
-; P8-NEXT:    clrlwi r3, r3, 16
+; P8-NEXT:    fmr f1, f31
 ; P8-NEXT:    xvcvdpsp vs62, vs0
 ; P8-NEXT:    bl __extendhfsf2
 ; P8-NEXT:    nop
-; P8-NEXT:    rldicl r3, r29, 48, 48
 ; P8-NEXT:    xxlor vs63, f1, f1
-; P8-NEXT:    clrlwi r3, r3, 16
+; P8-NEXT:    fmr f1, f29
 ; P8-NEXT:    bl __extendhfsf2
 ; P8-NEXT:    nop
-; P8-NEXT:    xxmrghd vs0, vs1, vs63
-; P8-NEXT:    li r3, 96
-; P8-NEXT:    ld r30, 128(r1) # 8-byte Folded Reload
-; P8-NEXT:    ld r29, 120(r1) # 8-byte Folded Reload
+; P8-NEXT:    xxmrghd vs0, vs63, vs1
+; P8-NEXT:    li r3, 64
+; P8-NEXT:    lfd f31, 104(r1) # 8-byte Folded Reload
+; P8-NEXT:    lfd f30, 96(r1) # 8-byte Folded Reload
+; P8-NEXT:    lfd f29, 88(r1) # 8-byte Folded Reload
 ; P8-NEXT:    xvcvdpsp vs34, vs0
 ; P8-NEXT:    lxvd2x vs63, r1, r3 # 16-byte Folded Reload
-; P8-NEXT:    li r3, 80
-; P8-NEXT:    vmrgew v2, v2, v30
+; P8-NEXT:    li r3, 48
+; P8-NEXT:    vmrgew v2, v30, v2
 ; P8-NEXT:    lxvd2x vs62, r1, r3 # 16-byte Folded Reload
-; P8-NEXT:    addi r1, r1, 144
+; P8-NEXT:    addi r1, r1, 112
 ; P8-NEXT:    ld r0, 16(r1)
 ; P8-NEXT:    mtlr r0
 ; P8-NEXT:    blr
 ;
 ; P9-LABEL: test_extend32_vec4:
 ; P9:       # %bb.0:
-; P9-NEXT:    lwz r4, 4(r3)
-; P9-NEXT:    stw r4, -16(r1)
-; P9-NEXT:    lwz r3, 0(r3)
-; P9-NEXT:    lxv vs34, -16(r1)
-; P9-NEXT:    stw r3, -32(r1)
-; P9-NEXT:    li r3, 0
-; P9-NEXT:    lxv vs35, -32(r1)
-; P9-NEXT:    vextuhrx r4, r3, v3
-; P9-NEXT:    vextuhrx r3, r3, v2
-; P9-NEXT:    clrlwi r4, r4, 16
-; P9-NEXT:    clrlwi r3, r3, 16
-; P9-NEXT:    mtfprwz f0, r4
-; P9-NEXT:    mtfprwz f1, r3
-; P9-NEXT:    li r3, 2
-; P9-NEXT:    xscvhpdp f0, f0
+; P9-NEXT:    li r4, 4
+; P9-NEXT:    lxsihzx f3, 0, r3
+; P9-NEXT:    lxsihzx f0, r3, r4
+; P9-NEXT:    li r4, 6
+; P9-NEXT:    lxsihzx f1, r3, r4
+; P9-NEXT:    li r4, 2
+; P9-NEXT:    lxsihzx f2, r3, r4
+; P9-NEXT:    xscvhpdp f2, f2
 ; P9-NEXT:    xscvhpdp f1, f1
-; P9-NEXT:    vextuhrx r4, r3, v3
-; P9-NEXT:    vextuhrx r3, r3, v2
-; P9-NEXT:    clrlwi r4, r4, 16
-; P9-NEXT:    clrlwi r3, r3, 16
-; P9-NEXT:    xxmrghd vs0, vs1, vs0
-; P9-NEXT:    mtfprwz f1, r3
-; P9-NEXT:    xvcvdpsp vs36, vs0
-; P9-NEXT:    mtfprwz f0, r4
 ; P9-NEXT:    xscvhpdp f0, f0
-; P9-NEXT:    xscvhpdp f1, f1
-; P9-NEXT:    xxmrghd vs0, vs1, vs0
-; P9-NEXT:    xvcvdpsp vs34, vs0
-; P9-NEXT:    vmrgew v2, v2, v4
+; P9-NEXT:    xxmrghd vs1, vs1, vs2
+; P9-NEXT:    xvcvdpsp vs34, vs1
+; P9-NEXT:    xscvhpdp f1, f3
+; P9-NEXT:    xxmrghd vs0, vs0, vs1
+; P9-NEXT:    xvcvdpsp vs35, vs0
+; P9-NEXT:    vmrgew v2, v2, v3
 ; P9-NEXT:    blr
 ;
 ; SOFT-LABEL: test_extend32_vec4:
@@ -1078,38 +1092,42 @@ define <4 x double> @test_extend64_vec4(ptr %p) nounwind {
 ; P8:       # %bb.0:
 ; P8-NEXT:    mflr r0
 ; P8-NEXT:    stdu r1, -112(r1)
-; P8-NEXT:    std r0, 128(r1)
 ; P8-NEXT:    li r4, 48
-; P8-NEXT:    std r28, 80(r1) # 8-byte Folded Spill
-; P8-NEXT:    lhz r28, 2(r3)
-; P8-NEXT:    std r29, 88(r1) # 8-byte Folded Spill
-; P8-NEXT:    std r30, 96(r1) # 8-byte Folded Spill
-; P8-NEXT:    lhz r30, 6(r3)
-; P8-NEXT:    lhz r29, 4(r3)
-; P8-NEXT:    lhz r3, 0(r3)
+; P8-NEXT:    std r0, 128(r1)
+; P8-NEXT:    stfd f31, 104(r1) # 8-byte Folded Spill
+; P8-NEXT:    stfd f30, 96(r1) # 8-byte Folded Spill
+; P8-NEXT:    stfd f29, 88(r1) # 8-byte Folded Spill
 ; P8-NEXT:    stxvd2x vs62, r1, r4 # 16-byte Folded Spill
 ; P8-NEXT:    li r4, 64
 ; P8-NEXT:    stxvd2x vs63, r1, r4 # 16-byte Folded Spill
+; P8-NEXT:    lhz r4, 2(r3)
+; P8-NEXT:    mtfprwz f31, r4
+; P8-NEXT:    lhz r4, 6(r3)
+; P8-NEXT:    mtfprwz f30, r4
+; P8-NEXT:    lhz r4, 4(r3)
+; P8-NEXT:    lhzx r3, 0, r3
+; P8-NEXT:    mtfprwz f1, r4
+; P8-NEXT:    mtfprwz f29, r3
 ; P8-NEXT:    bl __extendhfsf2
 ; P8-NEXT:    nop
-; P8-NEXT:    mr r3, r28
 ; P8-NEXT:    xxlor vs63, f1, f1
+; P8-NEXT:    fmr f1, f30
 ; P8-NEXT:    bl __extendhfsf2
 ; P8-NEXT:    nop
-; P8-NEXT:    mr r3, r29
 ; P8-NEXT:    xxmrghd vs63, vs1, vs63
+; P8-NEXT:    fmr f1, f31
 ; P8-NEXT:    bl __extendhfsf2
 ; P8-NEXT:    nop
-; P8-NEXT:    mr r3, r30
 ; P8-NEXT:    xxlor vs62, f1, f1
+; P8-NEXT:    fmr f1, f29
 ; P8-NEXT:    bl __extendhfsf2
 ; P8-NEXT:    nop
 ; P8-NEXT:    li r3, 64
-; P8-NEXT:    vmr v2, v31
-; P8-NEXT:    xxmrghd vs35, vs1, vs62
-; P8-NEXT:    ld r30, 96(r1) # 8-byte Folded Reload
-; P8-NEXT:    ld r29, 88(r1) # 8-byte Folded Reload
-; P8-NEXT:    ld r28, 80(r1) # 8-byte Folded Reload
+; P8-NEXT:    vmr v3, v31
+; P8-NEXT:    xxmrghd vs34, vs62, vs1
+; P8-NEXT:    lfd f31, 104(r1) # 8-byte Folded Reload
+; P8-NEXT:    lfd f30, 96(r1) # 8-byte Folded Reload
+; P8-NEXT:    lfd f29, 88(r1) # 8-byte Folded Reload
 ; P8-NEXT:    lxvd2x vs63, r1, r3 # 16-byte Folded Reload
 ; P8-NEXT:    li r3, 48
 ; P8-NEXT:    lxvd2x vs62, r1, r3 # 16-byte Folded Reload
@@ -1120,20 +1138,19 @@ define <4 x double> @test_extend64_vec4(ptr %p) nounwind {
 ;
 ; P9-LABEL: test_extend64_vec4:
 ; P9:       # %bb.0:
-; P9-NEXT:    lhz r4, 6(r3)
-; P9-NEXT:    lhz r5, 4(r3)
-; P9-NEXT:    lhz r6, 2(r3)
-; P9-NEXT:    lhz r3, 0(r3)
-; P9-NEXT:    mtfprwz f0, r3
-; P9-NEXT:    mtfprwz f1, r6
-; P9-NEXT:    xscvhpdp f0, f0
+; P9-NEXT:    li r4, 2
+; P9-NEXT:    lxsihzx f3, 0, r3
+; P9-NEXT:    lxsihzx f0, r3, r4
+; P9-NEXT:    li r4, 6
+; P9-NEXT:    lxsihzx f1, r3, r4
+; P9-NEXT:    li r4, 4
+; P9-NEXT:    lxsihzx f2, r3, r4
+; P9-NEXT:    xscvhpdp f2, f2
 ; P9-NEXT:    xscvhpdp f1, f1
-; P9-NEXT:    xxmrghd vs34, vs1, vs0
-; P9-NEXT:    mtfprwz f0, r5
-; P9-NEXT:    mtfprwz f1, r4
 ; P9-NEXT:    xscvhpdp f0, f0
-; P9-NEXT:    xscvhpdp f1, f1
-; P9-NEXT:    xxmrghd vs35, vs1, vs0
+; P9-NEXT:    xxmrghd vs35, vs1, vs2
+; P9-NEXT:    xscvhpdp f1, f3
+; P9-NEXT:    xxmrghd vs34, vs0, vs1
 ; P9-NEXT:    blr
 ;
 ; SOFT-LABEL: test_extend64_vec4:
@@ -1279,40 +1296,44 @@ define void @test_trunc32_vec4(<4 x float> %a, ptr %p) nounwind {
 ; P8-NEXT:    xxsldwi vs0, vs34, vs34, 3
 ; P8-NEXT:    li r3, 48
 ; P8-NEXT:    std r0, 128(r1)
-; P8-NEXT:    std r27, 72(r1) # 8-byte Folded Spill
-; P8-NEXT:    std r28, 80(r1) # 8-byte Folded Spill
-; P8-NEXT:    std r29, 88(r1) # 8-byte Folded Spill
-; P8-NEXT:    xscvspdpn f1, vs0
-; P8-NEXT:    std r30, 96(r1) # 8-byte Folded Spill
-; P8-NEXT:    stxvd2x vs63, r1, r3 # 16-byte Folded Spill
+; P8-NEXT:    std r30, 72(r1) # 8-byte Folded Spill
+; P8-NEXT:    stfd f29, 88(r1) # 8-byte Folded Spill
+; P8-NEXT:    stfd f30, 96(r1) # 8-byte Folded Spill
 ; P8-NEXT:    mr r30, r5
+; P8-NEXT:    xscvspdpn f1, vs0
+; P8-NEXT:    stfd f31, 104(r1) # 8-byte Folded Spill
+; P8-NEXT:    stxvd2x vs63, r1, r3 # 16-byte Folded Spill
 ; P8-NEXT:    vmr v31, v2
 ; P8-NEXT:    bl __truncsfhf2
 ; P8-NEXT:    nop
 ; P8-NEXT:    xxswapd vs0, vs63
-; P8-NEXT:    mr r29, r3
+; P8-NEXT:    fmr f31, f1
 ; P8-NEXT:    xscvspdpn f1, vs0
 ; P8-NEXT:    bl __truncsfhf2
 ; P8-NEXT:    nop
 ; P8-NEXT:    xxsldwi vs0, vs63, vs63, 1
-; P8-NEXT:    mr r28, r3
+; P8-NEXT:    fmr f30, f1
 ; P8-NEXT:    xscvspdpn f1, vs0
 ; P8-NEXT:    bl __truncsfhf2
 ; P8-NEXT:    nop
+; P8-NEXT:    fmr f29, f1
 ; P8-NEXT:    xscvspdpn f1, vs63
-; P8-NEXT:    mr r27, r3
 ; P8-NEXT:    bl __truncsfhf2
 ; P8-NEXT:    nop
+; P8-NEXT:    mffprwz r3, f29
+; P8-NEXT:    lfd f29, 88(r1) # 8-byte Folded Reload
+; P8-NEXT:    sth r3, 4(r30)
+; P8-NEXT:    mffprwz r3, f1
 ; P8-NEXT:    sth r3, 6(r30)
+; P8-NEXT:    mffprwz r3, f30
+; P8-NEXT:    lfd f30, 96(r1) # 8-byte Folded Reload
+; P8-NEXT:    sth r3, 2(r30)
+; P8-NEXT:    mffprwz r3, f31
+; P8-NEXT:    lfd f31, 104(r1) # 8-byte Folded Reload
+; P8-NEXT:    sthx r3, 0, r30
 ; P8-NEXT:    li r3, 48
-; P8-NEXT:    sth r27, 4(r30)
-; P8-NEXT:    ld r27, 72(r1) # 8-byte Folded Reload
-; P8-NEXT:    sth r28, 2(r30)
-; P8-NEXT:    sth r29, 0(r30)
-; P8-NEXT:    ld r30, 96(r1) # 8-byte Folded Reload
-; P8-NEXT:    ld r29, 88(r1) # 8-byte Folded Reload
+; P8-NEXT:    ld r30, 72(r1) # 8-byte Folded Reload
 ; P8-NEXT:    lxvd2x vs63, r1, r3 # 16-byte Folded Reload
-; P8-NEXT:    ld r28, 80(r1) # 8-byte Folded Reload
 ; P8-NEXT:    addi r1, r1, 112
 ; P8-NEXT:    ld r0, 16(r1)
 ; P8-NEXT:    mtlr r0
@@ -1321,24 +1342,23 @@ define void @test_trunc32_vec4(<4 x float> %a, ptr %p) nounwind {
 ; P9-LABEL: test_trunc32_vec4:
 ; P9:       # %bb.0:
 ; P9-NEXT:    xxsldwi vs0, vs34, vs34, 3
-; P9-NEXT:    xxsldwi vs1, vs34, vs34, 1
+; P9-NEXT:    xxswapd vs1, vs34
+; P9-NEXT:    xscvspdpn f3, vs34
+; P9-NEXT:    li r3, 6
 ; P9-NEXT:    xscvspdpn f0, vs0
+; P9-NEXT:    xxsldwi vs2, vs34, vs34, 1
 ; P9-NEXT:    xscvspdpn f1, vs1
-; P9-NEXT:    xscvdphp f0, f0
-; P9-NEXT:    mffprwz r3, f0
-; P9-NEXT:    xxswapd vs0, vs34
-; P9-NEXT:    xscvspdpn f0, vs0
+; P9-NEXT:    xscvspdpn f2, vs2
 ; P9-NEXT:    xscvdphp f0, f0
 ; P9-NEXT:    xscvdphp f1, f1
-; P9-NEXT:    mffprwz r4, f1
-; P9-NEXT:    xscvspdpn f1, vs34
-; P9-NEXT:    xscvdphp f1, f1
-; P9-NEXT:    sth r4, 4(r5)
-; P9-NEXT:    mffprwz r4, f0
-; P9-NEXT:    sth r3, 0(r5)
-; P9-NEXT:    sth r4, 2(r5)
-; P9-NEXT:    mffprwz r6, f1
-; P9-NEXT:    sth r6, 6(r5)
+; P9-NEXT:    xscvdphp f2, f2
+; P9-NEXT:    xscvdphp f3, f3
+; P9-NEXT:    stxsihx f3, r5, r3
+; P9-NEXT:    li r3, 4
+; P9-NEXT:    stxsihx f0, 0, r5
+; P9-NEXT:    stxsihx f2, r5, r3
+; P9-NEXT:    li r3, 2
+; P9-NEXT:    stxsihx f1, r5, r3
 ; P9-NEXT:    blr
 ;
 ; SOFT-LABEL: test_trunc32_vec4:
@@ -1477,11 +1497,11 @@ define void @test_trunc64_vec4(<4 x double> %a, ptr %p) nounwind {
 ; P8-NEXT:    li r3, 48
 ; P8-NEXT:    std r0, 144(r1)
 ; P8-NEXT:    xxswapd vs1, vs34
-; P8-NEXT:    std r27, 88(r1) # 8-byte Folded Spill
-; P8-NEXT:    std r28, 96(r1) # 8-byte Folded Spill
-; P8-NEXT:    std r29, 104(r1) # 8-byte Folded Spill
-; P8-NEXT:    std r30, 112(r1) # 8-byte Folded Spill
+; P8-NEXT:    std r30, 88(r1) # 8-byte Folded Spill
+; P8-NEXT:    stfd f29, 104(r1) # 8-byte Folded Spill
+; P8-NEXT:    stfd f30, 112(r1) # 8-byte Folded Spill
 ; P8-NEXT:    mr r30, r7
+; P8-NEXT:    stfd f31, 120(r1) # 8-byte Folded Spill
 ; P8-NEXT:    stxvd2x vs62, r1, r3 # 16-byte Folded Spill
 ; P8-NEXT:    li r3, 64
 ; P8-NEXT:    vmr v30, v2
@@ -1489,29 +1509,33 @@ define void @test_trunc64_vec4(<4 x double> %a, ptr %p) nounwind {
 ; P8-NEXT:    vmr v31, v3
 ; P8-NEXT:    bl __truncdfhf2
 ; P8-NEXT:    nop
+; P8-NEXT:    fmr f31, f1
 ; P8-NEXT:    xxswapd vs1, vs63
-; P8-NEXT:    mr r29, r3
 ; P8-NEXT:    bl __truncdfhf2
 ; P8-NEXT:    nop
+; P8-NEXT:    fmr f30, f1
 ; P8-NEXT:    xxlor f1, vs62, vs62
-; P8-NEXT:    mr r28, r3
 ; P8-NEXT:    bl __truncdfhf2
 ; P8-NEXT:    nop
+; P8-NEXT:    fmr f29, f1
 ; P8-NEXT:    xxlor f1, vs63, vs63
-; P8-NEXT:    mr r27, r3
 ; P8-NEXT:    bl __truncdfhf2
 ; P8-NEXT:    nop
+; P8-NEXT:    mffprwz r3, f29
+; P8-NEXT:    lfd f29, 104(r1) # 8-byte Folded Reload
+; P8-NEXT:    sth r3, 2(r30)
+; P8-NEXT:    mffprwz r3, f1
 ; P8-NEXT:    sth r3, 6(r30)
+; P8-NEXT:    mffprwz r3, f30
+; P8-NEXT:    lfd f30, 112(r1) # 8-byte Folded Reload
+; P8-NEXT:    sth r3, 4(r30)
+; P8-NEXT:    mffprwz r3, f31
+; P8-NEXT:    lfd f31, 120(r1) # 8-byte Folded Reload
+; P8-NEXT:    sthx r3, 0, r30
 ; P8-NEXT:    li r3, 64
-; P8-NEXT:    sth r27, 2(r30)
-; P8-NEXT:    ld r27, 88(r1) # 8-byte Folded Reload
-; P8-NEXT:    sth r28, 4(r30)
-; P8-NEXT:    sth r29, 0(r30)
-; P8-NEXT:    ld r30, 112(r1) # 8-byte Folded Reload
-; P8-NEXT:    ld r29, 104(r1) # 8-byte Folded Reload
+; P8-NEXT:    ld r30, 88(r1) # 8-byte Folded Reload
 ; P8-NEXT:    lxvd2x vs63, r1, r3 # 16-byte Folded Reload
 ; P8-NEXT:    li r3, 48
-; P8-NEXT:    ld r28, 96(r1) # 8-byte Folded Reload
 ; P8-NEXT:    lxvd2x vs62, r1, r3 # 16-byte Folded Reload
 ; P8-NEXT:    addi r1, r1, 128
 ; P8-NEXT:    ld r0, 16(r1)
@@ -1521,19 +1545,18 @@ define void @test_trunc64_vec4(<4 x double> %a, ptr %p) nounwind {
 ; P9-LABEL: test_trunc64_vec4:
 ; P9:       # %bb.0:
 ; P9-NEXT:    xxswapd vs0, vs34
+; P9-NEXT:    xxswapd vs1, vs35
+; P9-NEXT:    li r3, 6
 ; P9-NEXT:    xscvdphp f0, f0
-; P9-NEXT:    mffprwz r3, f0
-; P9-NEXT:    xxswapd vs0, vs35
-; P9-NEXT:    xscvdphp f0, f0
-; P9-NEXT:    xscvdphp f1, vs34
-; P9-NEXT:    mffprwz r4, f1
-; P9-NEXT:    xscvdphp f1, vs35
-; P9-NEXT:    sth r3, 0(r7)
-; P9-NEXT:    sth r4, 2(r7)
-; P9-NEXT:    mffprwz r4, f0
-; P9-NEXT:    sth r4, 4(r7)
-; P9-NEXT:    mffprwz r5, f1
-; P9-NEXT:    sth r5, 6(r7)
+; P9-NEXT:    xscvdphp f1, f1
+; P9-NEXT:    xscvdphp f2, vs34
+; P9-NEXT:    xscvdphp f3, vs35
+; P9-NEXT:    stxsihx f3, r7, r3
+; P9-NEXT:    li r3, 2
+; P9-NEXT:    stxsihx f0, 0, r7
+; P9-NEXT:    stxsihx f2, r7, r3
+; P9-NEXT:    li r3, 4
+; P9-NEXT:    stxsihx f1, r7, r3
 ; P9-NEXT:    blr
 ;
 ; SOFT-LABEL: test_trunc64_vec4:
@@ -1643,9 +1666,8 @@ define float @test_sitofp_fadd_i32(i32 %a, ptr %b) nounwind {
 ; PPC32-NEXT:    lfd f0, 8(r1)
 ; PPC32-NEXT:    lfs f1, .LCPI19_0@l(r3)
 ; PPC32-NEXT:    stfd f31, 24(r1) # 8-byte Folded Spill
-; PPC32-NEXT:    fsub f0, f0, f1
-; PPC32-NEXT:    frsp f1, f0
-; PPC32-NEXT:    bl __truncsfhf2
+; PPC32-NEXT:    fsub f1, f0, f1
+; PPC32-NEXT:    bl __truncdfhf2
 ; PPC32-NEXT:    clrlwi r3, r3, 16
 ; PPC32-NEXT:    bl __extendhfsf2
 ; PPC32-NEXT:    mr r3, r30
@@ -1665,52 +1687,44 @@ define float @test_sitofp_fadd_i32(i32 %a, ptr %b) nounwind {
 ; P8-LABEL: test_sitofp_fadd_i32:
 ; P8:       # %bb.0:
 ; P8-NEXT:    mflr r0
-; P8-NEXT:    std r30, -24(r1) # 8-byte Folded Spill
+; P8-NEXT:    stfd f30, -16(r1) # 8-byte Folded Spill
 ; P8-NEXT:    stfd f31, -8(r1) # 8-byte Folded Spill
-; P8-NEXT:    stdu r1, -64(r1)
+; P8-NEXT:    stdu r1, -48(r1)
 ; P8-NEXT:    mtfprwa f0, r3
-; P8-NEXT:    std r0, 80(r1)
-; P8-NEXT:    lhz r30, 0(r4)
-; P8-NEXT:    xscvsxdsp f1, f0
+; P8-NEXT:    std r0, 64(r1)
+; P8-NEXT:    lhzx r4, 0, r4
+; P8-NEXT:    mtfprwz f31, r4
+; P8-NEXT:    xscvsxddp f1, f0
+; P8-NEXT:    bl __truncdfhf2
+; P8-NEXT:    nop
+; P8-NEXT:    bl __extendhfsf2
+; P8-NEXT:    nop
+; P8-NEXT:    fmr f30, f1
+; P8-NEXT:    fmr f1, f31
+; P8-NEXT:    bl __extendhfsf2
+; P8-NEXT:    nop
+; P8-NEXT:    xsaddsp f1, f1, f30
 ; P8-NEXT:    bl __truncsfhf2
 ; P8-NEXT:    nop
-; P8-NEXT:    clrldi r3, r3, 48
 ; P8-NEXT:    bl __extendhfsf2
 ; P8-NEXT:    nop
-; P8-NEXT:    mr r3, r30
-; P8-NEXT:    fmr f31, f1
-; P8-NEXT:    bl __extendhfsf2
-; P8-NEXT:    nop
-; P8-NEXT:    xsaddsp f1, f1, f31
-; P8-NEXT:    bl __truncsfhf2
-; P8-NEXT:    nop
-; P8-NEXT:    clrldi r3, r3, 48
-; P8-NEXT:    bl __extendhfsf2
-; P8-NEXT:    nop
-; P8-NEXT:    addi r1, r1, 64
+; P8-NEXT:    addi r1, r1, 48
 ; P8-NEXT:    ld r0, 16(r1)
 ; P8-NEXT:    lfd f31, -8(r1) # 8-byte Folded Reload
-; P8-NEXT:    ld r30, -24(r1) # 8-byte Folded Reload
+; P8-NEXT:    lfd f30, -16(r1) # 8-byte Folded Reload
 ; P8-NEXT:    mtlr r0
 ; P8-NEXT:    blr
 ;
 ; P9-LABEL: test_sitofp_fadd_i32:
 ; P9:       # %bb.0:
-; P9-NEXT:    mtfprwa f0, r3
-; P9-NEXT:    lhz r4, 0(r4)
-; P9-NEXT:    xscvsxdsp f0, f0
-; P9-NEXT:    xscvdphp f0, f0
-; P9-NEXT:    mffprwz r3, f0
-; P9-NEXT:    mtfprwz f0, r4
-; P9-NEXT:    clrlwi r3, r3, 16
+; P9-NEXT:    mtfprwa f1, r3
+; P9-NEXT:    lxsihzx f0, 0, r4
+; P9-NEXT:    xscvsxddp f1, f1
+; P9-NEXT:    xscvdphp f1, f1
 ; P9-NEXT:    xscvhpdp f0, f0
-; P9-NEXT:    mtfprwz f1, r3
 ; P9-NEXT:    xscvhpdp f1, f1
 ; P9-NEXT:    xsaddsp f0, f0, f1
 ; P9-NEXT:    xscvdphp f0, f0
-; P9-NEXT:    mffprwz r3, f0
-; P9-NEXT:    clrlwi r3, r3, 16
-; P9-NEXT:    mtfprwz f0, r3
 ; P9-NEXT:    xscvhpdp f1, f0
 ; P9-NEXT:    blr
 ;
@@ -1723,10 +1737,9 @@ define float @test_sitofp_fadd_i32(i32 %a, ptr %b) nounwind {
 ; SOFT-NEXT:    extsw r3, r3
 ; SOFT-NEXT:    std r0, 80(r1)
 ; SOFT-NEXT:    mr r30, r4
-; SOFT-NEXT:    bl __floatsisf
+; SOFT-NEXT:    bl __floatsidf
 ; SOFT-NEXT:    nop
-; SOFT-NEXT:    clrldi r3, r3, 32
-; SOFT-NEXT:    bl __truncsfhf2
+; SOFT-NEXT:    bl __truncdfhf2
 ; SOFT-NEXT:    nop
 ; SOFT-NEXT:    mr r29, r3
 ; SOFT-NEXT:    lhz r3, 0(r30)
@@ -1762,10 +1775,9 @@ define float @test_sitofp_fadd_i32(i32 %a, ptr %b) nounwind {
 ; BE-NEXT:    lhz r30, 0(r4)
 ; BE-NEXT:    std r3, 112(r1)
 ; BE-NEXT:    lfd f0, 112(r1)
-; BE-NEXT:    fcfid f0, f0
+; BE-NEXT:    fcfid f1, f0
 ; BE-NEXT:    stfd f31, 136(r1) # 8-byte Folded Spill
-; BE-NEXT:    frsp f1, f0
-; BE-NEXT:    bl __truncsfhf2
+; BE-NEXT:    bl __truncdfhf2
 ; BE-NEXT:    nop
 ; BE-NEXT:    clrldi r3, r3, 48
 ; BE-NEXT:    bl __extendhfsf2
@@ -1817,14 +1829,17 @@ define half @PR40273(half) nounwind {
 ; P8:       # %bb.0:
 ; P8-NEXT:    mflr r0
 ; P8-NEXT:    stdu r1, -32(r1)
-; P8-NEXT:    clrldi r3, r3, 48
 ; P8-NEXT:    std r0, 48(r1)
 ; P8-NEXT:    bl __extendhfsf2
 ; P8-NEXT:    nop
 ; P8-NEXT:    xxlxor f0, f0, f0
-; P8-NEXT:    li r3, 15360
+; P8-NEXT:    li r3, 2
+; P8-NEXT:    addis r4, r2, .LCPI20_0@toc@ha
 ; P8-NEXT:    fcmpu cr0, f1, f0
+; P8-NEXT:    addi r4, r4, .LCPI20_0@toc@l
 ; P8-NEXT:    iseleq r3, 0, r3
+; P8-NEXT:    lhzx r3, r4, r3
+; P8-NEXT:    mtfprwz f1, r3
 ; P8-NEXT:    addi r1, r1, 32
 ; P8-NEXT:    ld r0, 16(r1)
 ; P8-NEXT:    mtlr r0
@@ -1832,13 +1847,14 @@ define half @PR40273(half) nounwind {
 ;
 ; P9-LABEL: PR40273:
 ; P9:       # %bb.0:
-; P9-NEXT:    clrlwi r3, r3, 16
-; P9-NEXT:    xxlxor f1, f1, f1
-; P9-NEXT:    mtfprwz f0, r3
-; P9-NEXT:    li r3, 15360
-; P9-NEXT:    xscvhpdp f0, f0
-; P9-NEXT:    fcmpu cr0, f0, f1
+; P9-NEXT:    xscvhpdp f1, f1
+; P9-NEXT:    xxlxor f0, f0, f0
+; P9-NEXT:    li r3, 2
+; P9-NEXT:    addis r4, r2, .LCPI20_0@toc@ha
+; P9-NEXT:    addi r4, r4, .LCPI20_0@toc@l
+; P9-NEXT:    fcmpu cr0, f1, f0
 ; P9-NEXT:    iseleq r3, 0, r3
+; P9-NEXT:    lxsihzx f1, r4, r3
 ; P9-NEXT:    blr
 ;
 ; SOFT-LABEL: PR40273:
@@ -1895,7 +1911,9 @@ define half @fabs(half %x) nounwind {
 ;
 ; CHECK-LABEL: fabs:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    clrldi r3, r3, 49
+; CHECK-NEXT:    mffprwz r3, f1
+; CHECK-NEXT:    clrlwi r3, r3, 17
+; CHECK-NEXT:    mtfprwz f1, r3
 ; CHECK-NEXT:    blr
 ;
 ; SOFT-LABEL: fabs:
@@ -1919,9 +1937,12 @@ define half @fcopysign(half %x, half %y) nounwind {
 ;
 ; CHECK-LABEL: fcopysign:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    rotldi r4, r4, 49
-; CHECK-NEXT:    clrldi r3, r3, 49
-; CHECK-NEXT:    rldimi r3, r4, 15, 32
+; CHECK-NEXT:    mffprwz r3, f2
+; CHECK-NEXT:    mffprwz r4, f1
+; CHECK-NEXT:    rlwinm r3, r3, 0, 16, 16
+; CHECK-NEXT:    clrlwi r4, r4, 17
+; CHECK-NEXT:    or r3, r4, r3
+; CHECK-NEXT:    mtfprwz f1, r3
 ; CHECK-NEXT:    blr
 ;
 ; SOFT-LABEL: fcopysign:
