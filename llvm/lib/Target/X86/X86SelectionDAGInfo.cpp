@@ -66,8 +66,6 @@ void X86SelectionDAGInfo::verifyTargetNode(const SelectionDAG &DAG,
   switch (N->getOpcode()) {
   default:
     break;
-  case X86ISD::VP2INTERSECT:
-    // invalid number of results; expected 1, got 2
   case X86ISD::CALL:
   case X86ISD::NT_BRIND:
     // operand #1 must have type i32 (iPTR), but has type i64

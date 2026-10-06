@@ -4214,6 +4214,70 @@ void VPlanTransforms::sinkPredicatedStores(VPlan &Plan,
   }
 }
 
+void VPlanTransforms::widenMemoryAccessesByUF(VPlan &Plan, ElementCount VF,
+                                              unsigned UF,
+                                              const TargetTransformInfo &TTI) {
+  assert(UF > 1 && "Expected plan to have an UF > 1");
+
+  auto m_ContiguousVecPtr = m_VecPtr(m_VPValue(), m_One());
+  for (VPBasicBlock *VPBB : VPBlockUtils::blocksOnly<VPBasicBlock>(
+           vp_depth_first_shallow(Plan.getVectorLoopRegion()->getEntry()))) {
+    for (VPRecipeBase &R : make_early_inc_range(*VPBB)) {
+      VPValue *StoredValue = nullptr;
+      if (!match(&R, m_WidenLoad(m_ContiguousVecPtr)) &&
+          !match(&R, m_WidenStore(m_ContiguousVecPtr, m_VPValue(StoredValue))))
+        continue;
+
+      auto *MemOp = cast<VPWidenMemoryRecipe>(&R);
+      assert(MemOp->isConsecutive() && "Expected consecutive load/store");
+
+      // TODO: Support masked loads/stores. This requires widening the header
+      // mask to the same factor as the memory operation.
+      assert(!MemOp->isMasked() && "Masked accesses are not supported yet");
+
+      Type *AccessType = StoredValue ? StoredValue->getScalarType()
+                                     : R.getVPSingleValue()->getScalarType();
+      bool IsStore = isa<VPWidenStoreRecipe>(MemOp->getAsRecipe());
+      std::optional<Instruction::CastOps> CastHint;
+      VPUser *MaybeCast = IsStore ? StoredValue->getDefiningRecipe()
+                                  : R.getVPSingleValue()->getSingleUser();
+      if (auto *Cast = dyn_cast_if_present<VPWidenCastRecipe>(MaybeCast))
+        CastHint = Cast->getOpcode();
+
+      VectorType *VectorAccessType = VectorType::get(AccessType, VF);
+      if (!TTI.hasMultiVectorLoadStore(
+              /*NumVectors=*/UF, TargetTransformInfo::MaskSource::None,
+              VectorAccessType, IsStore, CastHint))
+        continue;
+
+      DebugLoc DL = R.getDebugLoc();
+      VPValue *Ptr = MemOp->getAddr();
+      VPValue *Align = Plan.getConstantInt(64, MemOp->getAlign().value());
+      VPValue *Multiplier = Plan.getConstantInt(64, 1);
+
+      VPBuilder Builder(VPBB, R.getIterator());
+      if (IsStore) {
+        VPValue *WideStoredValue = Builder.createNaryOp(
+            VPInstruction::ConcatVectors, {StoredValue}, DL);
+        Builder.createNaryOp(VPInstruction::WideVectorStore,
+                             {Multiplier, Ptr, Align, WideStoredValue}, nullptr,
+                             {}, *MemOp, R.getDebugLoc());
+      } else {
+        VPValue *OldLoad = R.getVPSingleValue();
+        VPValue *Load = Builder.createNaryOp(
+            VPInstruction::WideVectorLoad, {Multiplier, Ptr, Align}, nullptr,
+            {}, *MemOp, R.getDebugLoc(), "", OldLoad->getScalarType());
+        VPValue *Extract =
+            Builder.createNaryOp(VPInstruction::ExtractVectorForPart,
+                                 {Load, Plan.getConstantInt(64, 0)}, DL);
+        OldLoad->replaceAllUsesWith(Extract);
+      }
+
+      R.eraseFromParent();
+    }
+  }
+}
+
 /// Returns true if \p V is VPWidenLoadRecipe or VPInterleaveRecipe that can be
 /// converted to a narrower recipe. \p V is used by a wide recipe that feeds a
 /// store interleave group at index \p Idx, \p WideMember0 is the recipe feeding
