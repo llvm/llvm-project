@@ -859,12 +859,15 @@ Value *ConstantOffsetExtractor::removeConstOffset(unsigned ChainIndex) {
     NextInChain = applyCasts(NonDisjointXorConstantBits);
   }
 
-  // If NextInChain is 0 and not the LHS of a sub, we can simplify the
-  // sub-expression to be just TheOther.
-  if (ConstantInt *CI = dyn_cast<ConstantInt>(NextInChain)) {
-    if (CI->isZero() && !(BO->getOpcode() == Instruction::Sub && OpNo == 0))
-      return TheOther;
-  }
+  Value *LHS = OpNo == 0 ? NextInChain : TheOther;
+  Value *RHS = OpNo == 0 ? TheOther : NextInChain;
+
+  // Zero is a right identity for all supported operators, and a left identity
+  // for all except subtraction.
+  if (match(RHS, m_Zero()))
+    return LHS;
+  if (match(LHS, m_Zero()) && BO->getOpcode() != Instruction::Sub)
+    return RHS;
 
   BinaryOperator::BinaryOps NewOp = BO->getOpcode();
   if (BO->getOpcode() == Instruction::Or) {
@@ -884,12 +887,7 @@ Value *ConstantOffsetExtractor::removeConstOffset(unsigned ChainIndex) {
     NewOp = Instruction::Add;
   }
 
-  BinaryOperator *NewBO;
-  if (OpNo == 0) {
-    NewBO = BinaryOperator::Create(NewOp, NextInChain, TheOther, "", IP);
-  } else {
-    NewBO = BinaryOperator::Create(NewOp, TheOther, NextInChain, "", IP);
-  }
+  BinaryOperator *NewBO = BinaryOperator::Create(NewOp, LHS, RHS, "", IP);
   NewBO->takeName(BO);
   return NewBO;
 }

@@ -28,6 +28,7 @@
 #include "clang/Basic/OpenMPKinds.h"
 #include "clang/Basic/SourceManager.h"
 #include "clang/CodeGen/ConstantInitBuilder.h"
+#include "clang/CodeGenUtils/RecordLayoutUtils.h"
 #include "llvm/ADT/ArrayRef.h"
 #include "llvm/ADT/SmallSet.h"
 #include "llvm/ADT/SmallVector.h"
@@ -8937,7 +8938,7 @@ private:
       QualType BaseTy = I.getType();
       const auto *Base = BaseTy->getAsCXXRecordDecl();
       // Ignore empty bases.
-      if (isEmptyRecordForLayout(CGF.getContext(), BaseTy) ||
+      if (CodeGenUtils::isEmptyRecordForLayout(CGF.getContext(), BaseTy) ||
           CGF.getContext()
               .getASTRecordLayout(Base)
               .getNonVirtualSize()
@@ -8951,7 +8952,7 @@ private:
     for (const auto &I : RD->vbases()) {
       QualType BaseTy = I.getType();
       // Ignore empty bases.
-      if (isEmptyRecordForLayout(CGF.getContext(), BaseTy))
+      if (CodeGenUtils::isEmptyRecordForLayout(CGF.getContext(), BaseTy))
         continue;
 
       const auto *Base = BaseTy->getAsCXXRecordDecl();
@@ -8966,7 +8967,7 @@ private:
       // Fill in non-bitfields. (Bitfields always use a zero pattern, which we
       // will fill in later.)
       if (!Field->isBitField() &&
-          !isEmptyFieldForLayout(CGF.getContext(), Field)) {
+          !CodeGenUtils::isEmptyFieldForLayout(CGF.getContext(), Field)) {
         unsigned FieldIndex = RL.getLLVMFieldNo(Field);
         RecordLayout[FieldIndex] = Field;
       }
