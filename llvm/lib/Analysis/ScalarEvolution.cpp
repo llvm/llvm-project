@@ -2977,6 +2977,22 @@ SCEVUse ScalarEvolution::getAddExpr(SmallVectorImpl<SCEVUse> &Ops,
   return {getOrCreateAddExpr(Ops, ComputeFlags(Ops)), UseFlags};
 }
 
+/// Return the canonical node of \p AR if it differs from \p AR only by use
+/// flags on the operands.
+static const SCEVAddRecExpr *
+getCanonicalAddRecWithSameShape(const SCEVAddRecExpr *AR) {
+  if (AR->getCanonical() == AR)
+    return nullptr;
+  auto *Canonical = dyn_cast<SCEVAddRecExpr>(AR->getCanonical());
+  if (!Canonical || Canonical->getLoop() != AR->getLoop() ||
+      Canonical->getNumOperands() != AR->getNumOperands())
+    return nullptr;
+  for (auto [CanonicalOp, Op] : zip(Canonical->operands(), AR->operands()))
+    if (CanonicalOp != Op.getCanonical())
+      return nullptr;
+  return Canonical;
+}
+
 const SCEV *ScalarEvolution::getOrCreateAddExpr(ArrayRef<SCEVUse> Ops,
                                                 SCEVFlags Flags) {
   FoldingSetNodeID ID;
@@ -3019,6 +3035,8 @@ const SCEV *ScalarEvolution::getOrCreateAddRecExpr(ArrayRef<SCEVUse> Ops,
     LoopUsers[L].push_back(S);
     registerUser(S, Ops);
   }
+  if (const SCEVAddRecExpr *Canonical = getCanonicalAddRecWithSameShape(S))
+    Flags |= Canonical->getNoWrapFlags();
   setNoWrapFlags(S, Flags);
   return S;
 }
@@ -3319,8 +3337,13 @@ SCEVUse ScalarEvolution::getMulExpr(SmallVectorImpl<SCEVUse> &Ops,
       SCEVFlags Flags = AddRec->getNoWrapFlags(ComputeFlags({Scale, AddRec}));
 
       for (unsigned i = 0, e = AddRec->getNumOperands(); i != e; ++i) {
+        // The initial product is evaluated on the first loop iteration; the
+        // flags also hold for this specific use.
+        auto StartFlags = i == 0
+                              ? maskFlags(Flags, SCEV::FlagNUW | SCEV::FlagNSW)
+                              : SCEV::FlagNone;
         NewOps.push_back(getMulExpr(Scale, AddRec->getOperand(i),
-                                    SCEV::FlagNone, Depth + 1));
+                                    {SCEV::FlagNone, StartFlags}, Depth + 1));
 
         if (hasFlags(Flags, SCEV::FlagNSW) && !hasFlags(Flags, SCEV::FlagNUW)) {
           ConstantRange NSWRegion = ConstantRange::makeGuaranteedNoWrapRegion(
@@ -6443,6 +6466,9 @@ void ScalarEvolution::setNoWrapFlags(SCEVAddRecExpr *AddRec, SCEVFlags Flags) {
     UnsignedRanges.erase(AddRec);
     SignedRanges.erase(AddRec);
     ConstantMultipleCache.erase(AddRec);
+    if (const SCEVAddRecExpr *Canonical =
+            getCanonicalAddRecWithSameShape(AddRec))
+      setNoWrapFlags(const_cast<SCEVAddRecExpr *>(Canonical), NWFlags);
   }
 }
 
@@ -10222,7 +10248,7 @@ SCEVUse ScalarEvolution::computeSCEVAtScope(const SCEV *V, const Loop *L) {
     // expression has no loop-variant portions.
     for (unsigned i = 0, e = AddRec->getNumOperands(); i != e; ++i) {
       SCEVUse OpAtScope = getSCEVAtScope(AddRec->getOperand(i), L);
-      if (OpAtScope == AddRec->getOperand(i))
+      if (OpAtScope == AddRec->getOperand(i).getPointer())
         continue;
 
       // Okay, at least one of these operands is loop variant but might be
@@ -10952,8 +10978,9 @@ ScalarEvolution::getPredecessorWithUniqueSuccessorForBB(const BasicBlock *BB)
 /// guarding a loop, it can be useful to be a little more general, since a
 /// front-end may have replicated the controlling expression.
 static bool HasSameValue(const SCEV *A, const SCEV *B) {
-  // Quick check to see if they are the same SCEV.
-  if (A == B) return true;
+  // Quick check to see if they are the same SCEV, modulo use-specific flags.
+  if (A == B || A->getCanonical() == B->getCanonical())
+    return true;
 
   auto ComputesEqualValues = [](const Instruction *A, const Instruction *B) {
     // Not all instructions that are "identical" compute the same value.  For

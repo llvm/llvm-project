@@ -59,7 +59,7 @@ define protected amdgpu_kernel void @baseregtest(i32 %n, i32 %lda, i1 %arg) loca
 ; CHECK-NEXT:    br i1 [[ARG:%.*]], label [[EXIT:%.*]], label [[IF_END:%.*]]
 ; CHECK:       if.end:
 ; CHECK-NEXT:    [[TMP0:%.*]] = tail call i32 @foo()
-; CHECK-NEXT:    [[TMP1:%.*]] = shl i32 [[TMP0]], 3
+; CHECK-NEXT:    [[TMP1:%.*]] = shl nsw i32 [[TMP0]], 3
 ; CHECK-NEXT:    [[SCEVGEP:%.*]] = getelementptr i8, ptr addrspace(3) @gVar, i32 [[TMP1]]
 ; CHECK-NEXT:    [[TMP2:%.*]] = shl i32 [[N:%.*]], 3
 ; CHECK-NEXT:    [[TMP3:%.*]] = sext i32 [[TMP0]] to i64

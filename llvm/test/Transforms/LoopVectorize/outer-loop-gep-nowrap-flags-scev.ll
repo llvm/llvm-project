@@ -64,7 +64,7 @@ define void @uncond_inbounds(ptr noalias %A, ptr noalias %B, i64 %N, i64 %M) {
 ; AFTER:    %1 = getelementptr inbounds float, ptr %A, i64 %index
 ; AFTER:    --> {%A,+,16}<%vector.body> U: full-set S: full-set Exits: ((16 * ((-4 + (4 * (%N /u 4))<nuw>) /u 4)) + %A) LoopDispositions: { %vector.body: Computable, %inner.body1: Invariant }
 ; AFTER:    %A.ptr = getelementptr inbounds float, ptr %A, i64 %outer.iv
-; AFTER:    --> {((4 * %bc.resume.val) + %A),+,4}<%outer.header> U: full-set S: full-set Exits: (-4 + (4 * %N) + %A) LoopDispositions: { %outer.header: Computable, %inner.body: Invariant }
+; AFTER:    --> {((4 * %bc.resume.val)<u nsw> + %A),+,4}<%outer.header> U: full-set S: full-set Exits: (-4 + (4 * %N) + %A) LoopDispositions: { %outer.header: Computable, %inner.body: Invariant }
 ; AFTER:    %B.ptr = getelementptr inbounds float, ptr %B, i64 %inner.iv
 ; AFTER:    --> {%B,+,4}<nuw><%inner.body> U: full-set S: full-set Exits: (-4 + (4 * %M) + %B) LoopDispositions: { %inner.body: Computable, %outer.header: Uniform }
 ;
@@ -111,9 +111,9 @@ define void @propagate_through_gep(ptr noalias %A, i64 %N, i64 %M) {
 ; AFTER:    %2 = getelementptr i8, ptr %1, i64 0
 ; AFTER:    --> {%A,+,16}<%vector.body> U: full-set S: full-set Exits: ((16 * ((-4 + (4 * (%N /u 4))<nuw>) /u 4)) + %A) LoopDispositions: { %vector.body: Computable, %inner.body1: Invariant }
 ; AFTER:    %A.ptr = getelementptr inbounds float, ptr %A, i64 %outer.iv
-; AFTER:    --> {((4 * %bc.resume.val) + %A),+,4}<%outer.header> U: full-set S: full-set Exits: (-4 + (4 * %N) + %A) LoopDispositions: { %outer.header: Computable, %inner.body: Invariant }
+; AFTER:    --> {((4 * %bc.resume.val)<u nsw> + %A),+,4}<%outer.header> U: full-set S: full-set Exits: (-4 + (4 * %N) + %A) LoopDispositions: { %outer.header: Computable, %inner.body: Invariant }
 ; AFTER:    %A.ptr.0 = getelementptr i8, ptr %A.ptr, i64 0
-; AFTER:    --> {((4 * %bc.resume.val) + %A),+,4}<%outer.header> U: full-set S: full-set Exits: (-4 + (4 * %N) + %A) LoopDispositions: { %outer.header: Computable, %inner.body: Invariant }
+; AFTER:    --> {((4 * %bc.resume.val)<u nsw> + %A),+,4}<%outer.header> U: full-set S: full-set Exits: (-4 + (4 * %N) + %A) LoopDispositions: { %outer.header: Computable, %inner.body: Invariant }
 ;
 entry:
   br label %outer.header
