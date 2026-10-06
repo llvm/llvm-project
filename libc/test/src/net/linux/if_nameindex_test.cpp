@@ -141,7 +141,7 @@ struct LlvmLibcIfNameIndexSocketTest : public LlvmLibcIfNameIndexTest {
     policy_data.socket_results.push_back(FAKE_SOCKET);
   }
 
-  void TearDown() override {
+  void OnTearDown() override {
     ASSERT_EQ(policy_data.socket_calls.size(), size_t(1));
     ASSERT_EQ(get<0>(policy_data.socket_calls[0]), AF_NETLINK);
     ASSERT_EQ(get<1>(policy_data.socket_calls[0]), SOCK_RAW | SOCK_CLOEXEC);
@@ -151,7 +151,6 @@ struct LlvmLibcIfNameIndexSocketTest : public LlvmLibcIfNameIndexTest {
     ASSERT_EQ(policy_data.close_calls[0], FAKE_SOCKET);
     ASSERT_TRUE(policy_data.sendto_results.empty());
     ASSERT_TRUE(policy_data.recv_results.empty());
-    LlvmLibcIfNameIndexTest::TearDown();
   }
 };
 

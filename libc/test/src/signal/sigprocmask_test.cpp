@@ -26,9 +26,8 @@ public:
     LIBC_NAMESPACE::sigprocmask(0, nullptr, &oldSet);
   }
 
-  void TearDown() override {
+  void OnTearDown() override {
     LIBC_NAMESPACE::sigprocmask(SIG_SETMASK, &oldSet, nullptr);
-    ErrnoCheckingTest::TearDown();
   }
 };
 
