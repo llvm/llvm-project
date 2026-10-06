@@ -11,7 +11,7 @@ module attributes {dlti.dl_spec = #dlti.dl_spec<!llvm.ptr<270> = dense<32> : vec
     %3 = fir.call @_FortranAioBeginExternalListOutput(%c6_i32, %2, %c35_i32) fastmath<contract> : (i32, !fir.ref<i8>, i32) -> !fir.ref<i8>
     %4 = fir.address_of(@_QQclX696E20666F6F5F76617269616E74) : !fir.ref<!fir.char<1,14>>
     %c14 = arith.constant 14 : index
-    %5:2 = hlfir.declare %4 typeparams %c14 {fortran_attrs = #fir.var_attrs<parameter>, uniq_name = "_QQclX696E20666F6F5F76617269616E74"} : (!fir.ref<!fir.char<1,14>>, index) -> (!fir.ref<!fir.char<1,14>>, !fir.ref<!fir.char<1,14>>)
+    %5:2 = hlfir.declare %4 typeparams %c14 uniq_name("_QQclX696E20666F6F5F76617269616E74") fortran_attrs<parameter> : (!fir.ref<!fir.char<1,14>>, index) -> (!fir.ref<!fir.char<1,14>>, !fir.ref<!fir.char<1,14>>)
     %6 = fir.convert %5#0 : (!fir.ref<!fir.char<1,14>>) -> !fir.ref<i8>
     %7 = fir.convert %c14 : (index) -> i64
     %8 = fir.call @_FortranAioOutputAscii(%3, %6, %7) fastmath<contract> : (!fir.ref<i8>, !fir.ref<i8>, i64) -> i1
@@ -28,7 +28,7 @@ module attributes {dlti.dl_spec = #dlti.dl_spec<!llvm.ptr<270> = dense<32> : vec
     %3 = fir.call @_FortranAioBeginExternalListOutput(%c6_i32, %2, %c40_i32) fastmath<contract> : (i32, !fir.ref<i8>, i32) -> !fir.ref<i8>
     %4 = fir.address_of(@_QQclX696E20666F6F5F6469737061746368) : !fir.ref<!fir.char<1,15>>
     %c15 = arith.constant 15 : index
-    %5:2 = hlfir.declare %4 typeparams %c15 {fortran_attrs = #fir.var_attrs<parameter>, uniq_name = "_QQclX696E20666F6F5F6469737061746368"} : (!fir.ref<!fir.char<1,15>>, index) -> (!fir.ref<!fir.char<1,15>>, !fir.ref<!fir.char<1,15>>)
+    %5:2 = hlfir.declare %4 typeparams %c15 uniq_name("_QQclX696E20666F6F5F6469737061746368") fortran_attrs<parameter> : (!fir.ref<!fir.char<1,15>>, index) -> (!fir.ref<!fir.char<1,15>>, !fir.ref<!fir.char<1,15>>)
     %6 = fir.convert %5#0 : (!fir.ref<!fir.char<1,15>>) -> !fir.ref<i8>
     %7 = fir.convert %c15 : (index) -> i64
     %8 = fir.call @_FortranAioOutputAscii(%3, %6, %7) fastmath<contract> : (!fir.ref<i8>, !fir.ref<i8>, i64) -> i1

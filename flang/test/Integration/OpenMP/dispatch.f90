@@ -75,9 +75,9 @@
 !CHECK-SAME: ptr noalias %[[CPLX_ARG:[0-9]+]], ptr noalias %{{[0-9]+}})
 !CHECK: %[[CPLX_LOAD:.*]] = load i32, ptr %[[CPLX_ARG]], align 4
 !CHECK: %[[CPLX_COND:.*]] = icmp ne i32 %[[CPLX_LOAD]], 0
-!CHECK: [[CPLX_VARIANT:omp\.dispatch\.region[0-9]+]]:{{[^,]*$}}
+!CHECK: [[CPLX_VARIANT:omp\.dispatch\.region[0-9]+]]: {{.*}}; preds = %omp.dispatch.region{{$}}
 !CHECK-NEXT: call {{.*}}@_QMfuncsPcomplex_variant()
-!CHECK: [[CPLX_BASE:omp\.dispatch\.region[0-9]+]]:{{[^,]*$}}
+!CHECK: [[CPLX_BASE:omp\.dispatch\.region[0-9]+]]: {{.*}}; preds = %omp.dispatch.region{{$}}
 !CHECK-NEXT: call {{.*}}@_QMfuncsPcomplex_base()
 !CHECK: omp.dispatch.region:
 !CHECK-NEXT: br i1 %[[CPLX_COND]], label %[[CPLX_BASE]], label %[[CPLX_VARIANT]]

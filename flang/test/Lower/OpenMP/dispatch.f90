@@ -210,7 +210,7 @@ integer function test_external_nocontext(cond, value) result(res)
   end interface
 
   !HLFIR: %[[EXT_COND_ADDR:.*]]:2 = hlfir.declare %[[EXT_COND_ARG]]
-  !HLFIR: %[[EXT_RESULT_ADDR:.*]]:2 = hlfir.declare %{{.*}} {uniq_name = "_QFtest_external_nocontextEres"}
+  !HLFIR: %[[EXT_RESULT_ADDR:.*]]:2 = hlfir.declare %{{.*}} uniq_name("_QFtest_external_nocontextEres")
   !HLFIR: %[[EXT_VALUE_ADDR:.*]]:2 = hlfir.declare %[[EXT_VALUE_ARG]]
   !HLFIR: %[[EXT_COND_LOAD:.*]] = fir.load %[[EXT_COND_ADDR]]#0 : !fir.ref<!fir.logical<4>>
   !HLFIR: %[[EXT_NCOND:.*]] = fir.convert %[[EXT_COND_LOAD]] : (!fir.logical<4>) -> i1
@@ -411,7 +411,7 @@ subroutine test_host_association(c1, c2)
     end subroutine
   end interface
 
-  !HLFIR: %[[VALUE:.*]]:2 = hlfir.declare %{{.*}} {uniq_name = "_QFtest_host_associationEvalue"}
+  !HLFIR: %[[VALUE:.*]]:2 = hlfir.declare %{{.*}} uniq_name("_QFtest_host_associationEvalue")
   !HLFIR: %[[TUPLE:.*]] = fir.alloca tuple<!fir.ref<i32>>
   captured = 37
 
