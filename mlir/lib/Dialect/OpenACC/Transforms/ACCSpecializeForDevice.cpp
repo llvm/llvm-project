@@ -141,15 +141,15 @@ public:
 
     RewritePatternSet patterns(&getContext());
     acc::populateACCSpecializeForDevicePatterns(patterns, types);
+    // Replacing acc.on_device with a constant puts these users back on the
+    // worklist. The inlining pattern then keeps the single taken path.
+    llvm::SmallDenseSet<StringRef> regionBranchNames =
+        collectOnDeviceRegionBranchNames(func);
+    populateRegionBranchInliningPatterns(patterns, regionBranchNames);
     GreedyRewriteConfig config;
     config.setUseTopDownTraversal(true);
 
     if (acc::isSpecializedAccRoutine(func)) {
-      // Replacing acc.on_device with a constant puts these users back on the
-      // worklist. The inlining pattern then keeps the single taken path.
-      llvm::SmallDenseSet<StringRef> regionBranchNames =
-          collectOnDeviceRegionBranchNames(func);
-      populateRegionBranchInliningPatterns(patterns, regionBranchNames);
       // For specialized acc routines, apply patterns to the entire function
       (void)applyPatternsGreedily(func, std::move(patterns), config);
     } else {
@@ -161,12 +161,9 @@ public:
       // regions).
       config.setStrictness(GreedyRewriteStrictness::ExistingOps);
       SmallVector<Operation *> opsToTransform;
-      llvm::SmallDenseSet<StringRef> regionBranchNames;
       llvm::SmallDenseSet<Operation *> seenRegionBranchOps;
       func.walk([&](Operation *op) {
         if (isa<ACC_COMPUTE_CONSTRUCT_OPS>(op)) {
-          for (StringRef name : collectOnDeviceRegionBranchNames(op))
-            regionBranchNames.insert(name);
           // Walk inside the compute construct and collect ACC ops
           op->walk([&](Operation *innerOp) {
             // Skip the compute construct itself
@@ -186,7 +183,6 @@ public:
           });
         }
       });
-      populateRegionBranchInliningPatterns(patterns, regionBranchNames);
       if (!opsToTransform.empty())
         (void)applyOpPatternsGreedily(opsToTransform, std::move(patterns),
                                       config);
