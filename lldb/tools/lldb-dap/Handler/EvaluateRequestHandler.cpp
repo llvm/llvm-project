@@ -60,7 +60,7 @@ static lldb::SBValue EvaluateVariableExpression(lldb::SBTarget &target,
     // 'foo->bar' finds the 'bar' variable. It is more reliable than the
     // expression parser in many cases and it is faster.
     value = frame.GetValueForVariablePathWithMode(
-        expression_cstr, lldb::eDILModeLegacy, lldb::eDynamicDontRunTarget);
+        expression_cstr, lldb::eDILModeFull, lldb::eDynamicDontRunTarget);
     if (value || !run_as_expression)
       return value;
 
