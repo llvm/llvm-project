@@ -3055,8 +3055,8 @@ class Type(Structure):
 class OpaqueClangObject:
     """
     A helper for Python objects that mirror opaque types of the C API.
-    It stores opaque pointer returned by the C API, and implements
-    `from_param` function, allowing Python object to be implicitly converted
+    It stores an opaque pointer returned by the C API, and implements a
+    `from_param` method, allowing Python objects to be implicitly converted
     to the stored opaque pointer when it is passed as an argument to the
     C API.
     """
