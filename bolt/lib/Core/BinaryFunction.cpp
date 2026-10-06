@@ -2837,7 +2837,8 @@ private:
     case MCCFIInstruction::OpLLVMVectorRegisters:
     case MCCFIInstruction::OpLLVMVectorOffset:
     case MCCFIInstruction::OpLLVMVectorRegisterMask:
-    case MCCFIInstruction::OpLLVMDefCfaAddressLinear:
+    case MCCFIInstruction::OpLLVMDefCfaAddressScaled:
+    case MCCFIInstruction::OpLLVMDefCfaAddressConstant:
       reportFatalInternalError("saw LLVM-specific pseudo-CFI opcode");
     case MCCFIInstruction::OpRememberState:
     case MCCFIInstruction::OpRestoreState:
@@ -2984,7 +2985,8 @@ struct CFISnapshotDiff : public CFISnapshot {
     case MCCFIInstruction::OpLLVMVectorRegisters:
     case MCCFIInstruction::OpLLVMVectorOffset:
     case MCCFIInstruction::OpLLVMVectorRegisterMask:
-    case MCCFIInstruction::OpLLVMDefCfaAddressLinear:
+    case MCCFIInstruction::OpLLVMDefCfaAddressScaled:
+    case MCCFIInstruction::OpLLVMDefCfaAddressConstant:
       reportFatalInternalError("saw LLVM-specific pseudo-CFI opcode");
     case MCCFIInstruction::OpRememberState:
     case MCCFIInstruction::OpRestoreState:
@@ -3141,7 +3143,8 @@ BinaryFunction::unwindCFIState(int32_t FromState, int32_t ToState,
     case MCCFIInstruction::OpLLVMVectorRegisters:
     case MCCFIInstruction::OpLLVMVectorOffset:
     case MCCFIInstruction::OpLLVMVectorRegisterMask:
-    case MCCFIInstruction::OpLLVMDefCfaAddressLinear:
+    case MCCFIInstruction::OpLLVMDefCfaAddressScaled:
+    case MCCFIInstruction::OpLLVMDefCfaAddressConstant:
       reportFatalInternalError("saw LLVM-specific pseudo-CFI opcode");
     case MCCFIInstruction::OpGnuArgsSize:
       // do not affect CFI state

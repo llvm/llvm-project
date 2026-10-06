@@ -495,7 +495,8 @@ private:
     DK_CFI_ADJUST_CFA_OFFSET,
     DK_CFI_DEF_CFA_REGISTER,
     DK_CFI_LLVM_DEF_ASPACE_CFA,
-    DK_CFI_LLVM_DEF_CFA_ADDRESS_LINEAR,
+    DK_CFI_LLVM_DEF_CFA_ADDRESS_CONSTANT,
+    DK_CFI_LLVM_DEF_CFA_ADDRESS_SCALED,
     DK_CFI_OFFSET,
     DK_CFI_REL_OFFSET,
     DK_CFI_LLVM_REGISTER_PAIR,
@@ -612,7 +613,8 @@ private:
   bool parseDirectiveCFIAdjustCfaOffset(SMLoc DirectiveLoc);
   bool parseDirectiveCFIDefCfaRegister(SMLoc DirectiveLoc);
   bool parseDirectiveCFILLVMDefAspaceCfa(SMLoc DirectiveLoc);
-  bool parseDirectiveCFILLVMDefCfaAddressLinear(SMLoc DirectiveLoc);
+  bool parseDirectiveCFILLVMDefCfaAddressConstant(SMLoc DirectiveLoc);
+  bool parseDirectiveCFILLVMDefCfaAddressScaled(SMLoc DirectiveLoc);
   bool parseDirectiveCFIOffset(SMLoc DirectiveLoc);
   bool parseDirectiveCFIRelOffset(SMLoc DirectiveLoc);
   bool parseDirectiveCFIPersonalityOrLsda(bool IsPersonality);
@@ -2151,8 +2153,10 @@ bool AsmParser::parseStatement(ParseStatementInfo &Info,
       return parseDirectiveCFIDefCfaRegister(IDLoc);
     case DK_CFI_LLVM_DEF_ASPACE_CFA:
       return parseDirectiveCFILLVMDefAspaceCfa(IDLoc);
-    case DK_CFI_LLVM_DEF_CFA_ADDRESS_LINEAR:
-      return parseDirectiveCFILLVMDefCfaAddressLinear(IDLoc);
+    case DK_CFI_LLVM_DEF_CFA_ADDRESS_CONSTANT:
+      return parseDirectiveCFILLVMDefCfaAddressConstant(IDLoc);
+    case DK_CFI_LLVM_DEF_CFA_ADDRESS_SCALED:
+      return parseDirectiveCFILLVMDefCfaAddressScaled(IDLoc);
     case DK_CFI_OFFSET:
       return parseDirectiveCFIOffset(IDLoc);
     case DK_CFI_REL_OFFSET:
@@ -4405,40 +4409,52 @@ bool AsmParser::parseDirectiveCFILLVMDefAspaceCfa(SMLoc DirectiveLoc) {
   return false;
 }
 
-/// parseDirectiveCFILLVMDefCfaAddressLinear
-/// ::= .cfi_llvm_def_cfa_address_linear address_space, offset
-///                                      [, register, deref_size, scale]
-bool AsmParser::parseDirectiveCFILLVMDefCfaAddressLinear(SMLoc DirectiveLoc) {
+/// parseDirectiveCFILLVMDefCfaAddressConstant
+/// ::= .cfi_llvm_def_cfa_address_constant address_space, offset
+bool AsmParser::parseDirectiveCFILLVMDefCfaAddressConstant(SMLoc DirectiveLoc) {
   int64_t AddressSpace, Offset;
   if (parseAbsoluteExpression(AddressSpace) || parseComma() ||
       parseAbsoluteExpression(Offset))
     return true;
   if (!isUInt<32>(AddressSpace))
     return Error(DirectiveLoc, "expected an unsigned CFA address space");
-
-  std::optional<MCCFIInstruction::CfaRegisterTerm> Source;
-  if (getTok().isNot(AsmToken::EndOfStatement)) {
-    int64_t Register, DerefSize, Scale;
-    if (parseComma() || parseRegisterOrRegisterNumber(Register, DirectiveLoc) ||
-        parseComma() || parseAbsoluteExpression(DerefSize) || parseComma() ||
-        parseAbsoluteExpression(Scale))
-      return true;
-    if (!isUInt<32>(Register))
-      return Error(DirectiveLoc, "expected an unsigned CFA register number");
-    if (!isUInt<8>(DerefSize))
-      return Error(DirectiveLoc, "expected an 8-bit CFA dereference size");
-    if (DerefSize == 0)
-      return Error(DirectiveLoc, "expected a nonzero CFA dereference size");
-    if (!isUInt<32>(Scale))
-      return Error(DirectiveLoc, "expected an unsigned CFA scale");
-    Source = MCCFIInstruction::CfaRegisterTerm{static_cast<unsigned>(Register),
-                                               static_cast<unsigned>(DerefSize),
-                                               static_cast<unsigned>(Scale)};
-  }
   if (parseEOL())
     return true;
-  getStreamer().emitCFILLVMDefCfaAddressLinear(AddressSpace, Offset, Source,
-                                               DirectiveLoc);
+
+  getStreamer().emitCFILLVMDefCfaAddressConstant(AddressSpace, Offset,
+                                                 DirectiveLoc);
+  return false;
+}
+
+/// parseDirectiveCFILLVMDefCfaAddressScaled
+/// ::= .cfi_llvm_def_cfa_address_scaled address_space, offset, register,
+///                                      deref_size, scale
+bool AsmParser::parseDirectiveCFILLVMDefCfaAddressScaled(SMLoc DirectiveLoc) {
+  int64_t AddressSpace, Offset, Register, DerefSize, Scale;
+  if (parseAbsoluteExpression(AddressSpace) || parseComma() ||
+      parseAbsoluteExpression(Offset))
+    return true;
+  if (!isUInt<32>(AddressSpace))
+    return Error(DirectiveLoc, "expected an unsigned CFA address space");
+  if (parseComma() || parseRegisterOrRegisterNumber(Register, DirectiveLoc) ||
+      parseComma() || parseAbsoluteExpression(DerefSize) || parseComma() ||
+      parseAbsoluteExpression(Scale))
+    return true;
+  if (!isUInt<32>(Register))
+    return Error(DirectiveLoc, "expected an unsigned CFA register number");
+  if (!isUInt<8>(DerefSize))
+    return Error(DirectiveLoc, "expected an 8-bit CFA dereference size");
+  if (DerefSize == 0)
+    return Error(DirectiveLoc, "expected a nonzero CFA dereference size");
+  if (!isUInt<32>(Scale))
+    return Error(DirectiveLoc, "expected an unsigned CFA scale");
+  if (parseEOL())
+    return true;
+
+  getStreamer().emitCFILLVMDefCfaAddressScaled(
+      AddressSpace, Offset, static_cast<unsigned>(Register),
+      static_cast<unsigned>(DerefSize), static_cast<unsigned>(Scale),
+      DirectiveLoc);
   return false;
 }
 
@@ -5733,8 +5749,10 @@ void AsmParser::initializeDirectiveKindMap() {
   DirectiveKindMap[".cfi_adjust_cfa_offset"] = DK_CFI_ADJUST_CFA_OFFSET;
   DirectiveKindMap[".cfi_def_cfa_register"] = DK_CFI_DEF_CFA_REGISTER;
   DirectiveKindMap[".cfi_llvm_def_aspace_cfa"] = DK_CFI_LLVM_DEF_ASPACE_CFA;
-  DirectiveKindMap[".cfi_llvm_def_cfa_address_linear"] =
-      DK_CFI_LLVM_DEF_CFA_ADDRESS_LINEAR;
+  DirectiveKindMap[".cfi_llvm_def_cfa_address_constant"] =
+      DK_CFI_LLVM_DEF_CFA_ADDRESS_CONSTANT;
+  DirectiveKindMap[".cfi_llvm_def_cfa_address_scaled"] =
+      DK_CFI_LLVM_DEF_CFA_ADDRESS_SCALED;
   DirectiveKindMap[".cfi_offset"] = DK_CFI_OFFSET;
   DirectiveKindMap[".cfi_rel_offset"] = DK_CFI_REL_OFFSET;
   DirectiveKindMap[".cfi_llvm_register_pair"] = DK_CFI_LLVM_REGISTER_PAIR;

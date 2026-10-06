@@ -2713,27 +2713,32 @@ bool MIParser::parseCFIOperand(MachineOperand &Dest) {
     CFIIndex = MF.addFrameInst(MCCFIInstruction::createLLVMDefAspaceCfa(
         nullptr, Reg, Offset, AddressSpace, SMLoc()));
     break;
-  case MIToken::kw_cfi_llvm_def_cfa_address_linear: {
+  case MIToken::kw_cfi_llvm_def_cfa_address_constant:
     if (parseCFIAddressSpace(AddressSpace) ||
         expectAndConsume(MIToken::comma) || parseCFIOffset(Offset))
       return true;
-    std::optional<MCCFIInstruction::CfaRegisterTerm> Source;
-    if (consumeIfPresent(MIToken::comma)) {
-      Source.emplace();
-      if (parseCFIRegister(Source->Register) ||
-          expectAndConsume(MIToken::comma))
-        return true;
-      auto DerefSizeLoc = Token.location();
-      if (parseCFIUnsigned(Source->DerefSize) ||
-          expectAndConsume(MIToken::comma) || parseCFIUnsigned(Source->Scale))
-        return true;
-      if (!isUInt<8>(Source->DerefSize))
-        return error(DerefSizeLoc, "expected an 8-bit CFA dereference size");
-      if (Source->DerefSize == 0)
-        return error(DerefSizeLoc, "expected a nonzero CFA dereference size");
-    }
-    CFIIndex = MF.addFrameInst(MCCFIInstruction::createLLVMDefCfaAddressLinear(
-        nullptr, AddressSpace, Offset, Source));
+    CFIIndex =
+        MF.addFrameInst(MCCFIInstruction::createLLVMDefCfaAddressConstant(
+            nullptr, AddressSpace, Offset));
+    break;
+  case MIToken::kw_cfi_llvm_def_cfa_address_scaled: {
+    unsigned Register, DerefSize, Scale;
+    if (parseCFIAddressSpace(AddressSpace) ||
+        expectAndConsume(MIToken::comma) || parseCFIOffset(Offset) ||
+        expectAndConsume(MIToken::comma) || parseCFIRegister(Register) ||
+        expectAndConsume(MIToken::comma))
+      return true;
+    auto DerefSizeLoc = Token.location();
+    if (parseCFIUnsigned(DerefSize) || expectAndConsume(MIToken::comma) ||
+        parseCFIUnsigned(Scale))
+      return true;
+    if (!isUInt<8>(DerefSize))
+      return error(DerefSizeLoc, "expected an 8-bit CFA dereference size");
+    if (DerefSize == 0)
+      return error(DerefSizeLoc, "expected a nonzero CFA dereference size");
+    CFIIndex = MF.addFrameInst(MCCFIInstruction::createLLVMDefCfaAddressScaled(
+        nullptr, AddressSpace, Offset, Register, DerefSize, Scale));
+
     break;
   }
   case MIToken::kw_cfi_remember_state:
@@ -3231,7 +3236,8 @@ bool MIParser::parseMachineOperand(const unsigned OpCode, const unsigned OpIdx,
   case MIToken::kw_cfi_escape:
   case MIToken::kw_cfi_def_cfa:
   case MIToken::kw_cfi_llvm_def_aspace_cfa:
-  case MIToken::kw_cfi_llvm_def_cfa_address_linear:
+  case MIToken::kw_cfi_llvm_def_cfa_address_constant:
+  case MIToken::kw_cfi_llvm_def_cfa_address_scaled:
   case MIToken::kw_cfi_register:
   case MIToken::kw_cfi_remember_state:
   case MIToken::kw_cfi_restore:

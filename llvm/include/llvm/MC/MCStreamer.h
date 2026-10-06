@@ -1028,9 +1028,12 @@ public:
   virtual void emitCFIDefCfaRegister(int64_t Register, SMLoc Loc = {});
   virtual void emitCFILLVMDefAspaceCfa(int64_t Register, int64_t Offset,
                                        int64_t AddressSpace, SMLoc Loc = {});
-  virtual void emitCFILLVMDefCfaAddressLinear(
-      unsigned AddressSpace, int64_t Offset,
-      std::optional<MCCFIInstruction::CfaRegisterTerm> Source, SMLoc Loc = {});
+  virtual void emitCFILLVMDefCfaAddressConstant(unsigned AddressSpace,
+                                                int64_t Offset, SMLoc Loc = {});
+  virtual void emitCFILLVMDefCfaAddressScaled(unsigned AddressSpace,
+                                              int64_t Offset, unsigned Register,
+                                              unsigned DerefSize,
+                                              unsigned Scale, SMLoc Loc = {});
   virtual void emitCFIOffset(int64_t Register, int64_t Offset, SMLoc Loc = {});
   virtual void emitCFIPersonality(const MCSymbol *Sym, unsigned Encoding);
   virtual void emitCFILsda(const MCSymbol *Sym, unsigned Encoding);
