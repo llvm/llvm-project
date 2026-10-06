@@ -97,6 +97,18 @@ class ACCReg<bits<16> Enc, string n, list<Register> subregs>
 // Mips Hardware Registers
 class HWR<bits<16> Enc, string n> : MipsReg<Enc, n>;
 
+class MipsCP0Reg<bits<5> reg, bits<5> sel, string name>
+    : MipsReg<!or(!shl(reg, 5), sel), name>;
+
+multiclass CP0Registers<int reg, list<string> names = []> {
+  foreach sel = 0-7 in {
+    defvar regName = !if(!lt(sel, !size(names)), names[sel], "");
+    def NAME # !if(!eq(sel, 0), "", "_" # sel)
+        : MipsCP0Reg<reg, sel,
+            !if(!empty(regName), "cop0_" # reg # "_" # sel, regName)>;
+  }
+}
+
 //===----------------------------------------------------------------------===//
 //  Registers
 //===----------------------------------------------------------------------===//
@@ -223,9 +235,50 @@ let Namespace = "Mips" in {
   foreach I = 0-7 in
   def FCC#I : MipsReg<I, "fcc"#I>;
 
-  // COP0 registers.
-  foreach I = 0-31 in
-  def COP0#I : MipsReg<I, ""#I>;
+  // Each COP0 register is identified by its register number and selector.
+  defm COP00  : CP0Registers<0, ["index", "mvpcontrol", "mvpconf0", "mvpconf1"]>;
+  defm COP01  : CP0Registers<1, ["random", "vpecontrol", "vpeconf0", "vpeconf1",
+                                "yqmask", "vpeschedule", "vpeschefback"]>;
+  defm COP02  : CP0Registers<2, ["entrylo0", "tcstatus", "tcbind", "tcrestart",
+                                "tchalt", "tccontext", "tcschedule", "tcschefback"]>;
+  defm COP03  : CP0Registers<3, ["entrylo1"]>;
+  defm COP04  : CP0Registers<4, ["context", "contextconfig", "userlocal"]>;
+  defm COP05  : CP0Registers<5, ["pagemask", "pagegrain", "segctl0", "segctl1",
+                                "segctl2", "pwbase", "pwfield", "pwsize"]>;
+  defm COP06  : CP0Registers<6, ["wired", "srsconf0", "srsconf1", "srsconf2",
+                                "srsconf3", "srsconf4", "pwctl"]>;
+  defm COP07  : CP0Registers<7, ["hwrena"]>;
+  defm COP08  : CP0Registers<8, ["badvaddr", "badinstr", "badinstrp"]>;
+  defm COP09  : CP0Registers<9, ["count"]>;
+  defm COP010 : CP0Registers<10, ["entryhi", "", "", "", "guestctl1", "guestctl2",
+                                 "guestctl3"]>;
+  defm COP011 : CP0Registers<11, ["compare", "", "", "", "guestctl0ext"]>;
+  defm COP012 : CP0Registers<12, ["status", "intctl", "srsctl", "srsmap", "",
+                                 "", "guestctl0", "gtoffset"]>;
+  defm COP013 : CP0Registers<13, ["cause"]>;
+  defm COP014 : CP0Registers<14, ["epc"]>;
+  defm COP015 : CP0Registers<15, ["prid", "ebase", "cdmmbase", "cmgcrbase"]>;
+  defm COP016 : CP0Registers<16, ["config", "config1", "config2", "config3",
+                                 "config4", "config5", "config6", "config7"]>;
+  defm COP017 : CP0Registers<17, ["lladdr", "maar", "maari"]>;
+  defm COP018 : CP0Registers<18, !foreach(I, !range(8), "watchlo" # I)>;
+  defm COP019 : CP0Registers<19, !foreach(I, !range(8), "watchhi" # I)>;
+  defm COP020 : CP0Registers<20, ["xcontext"]>;
+  defm COP021 : CP0Registers<21>;
+  defm COP022 : CP0Registers<22>;
+  defm COP023 : CP0Registers<23, ["debug", "tracecontrol", "tracecontrol2",
+                                 "usertracedata1", "traceibpc", "tracedbpc",
+                                 "debug2"]>;
+  defm COP024 : CP0Registers<24, ["depc", "", "tracecontrol3", "usertracedata2"]>;
+  defm COP025 : CP0Registers<25, ["perfctl0", "perfcnt0", "perfctl1", "perfcnt1",
+                                 "perfctl2", "perfcnt2", "perfctl3", "perfcnt3"]>;
+  defm COP026 : CP0Registers<26, ["errctl"]>;
+  defm COP027 : CP0Registers<27, ["cacheerr"]>;
+  defm COP028 : CP0Registers<28, ["taglo", "datalo"]>;
+  defm COP029 : CP0Registers<29, ["taghi", "datahi"]>;
+  defm COP030 : CP0Registers<30, ["errorepc"]>;
+  defm COP031 : CP0Registers<31, ["desave", "", "kscratch1", "kscratch2",
+                                 "kscratch3", "kscratch4", "kscratch5", "kscratch6"]>;
 
   // COP2 registers.
   foreach I = 0-31 in
@@ -498,8 +551,13 @@ def ACC64DSP : RegisterClass<"Mips", [untyped], 64, (sequence "AC%u", 0, 3)> {
 def DSPCC : RegisterClass<"Mips", [v4i8, v2i16], 32, (add DSPCCond)>;
 
 // Coprocessor 0 registers.
-def COP0 : RegisterClass<"Mips", [i32], 32, (sequence "COP0%u", 0, 31)>,
-           Unallocatable;
+// Ordered by selector, then register number; see MIPS_MC::getCOP0Register.
+def COP0 : RegisterClass<"Mips", [i32], 32, (add
+    (sequence "COP0%u", 0, 31),
+    (sequence "COP0%u_1", 0, 31), (sequence "COP0%u_2", 0, 31),
+    (sequence "COP0%u_3", 0, 31), (sequence "COP0%u_4", 0, 31),
+    (sequence "COP0%u_5", 0, 31), (sequence "COP0%u_6", 0, 31),
+    (sequence "COP0%u_7", 0, 31))>, Unallocatable;
 
 // Coprocessor 2 registers.
 def COP2 : RegisterClass<"Mips", [i32], 32, (sequence "COP2%u", 0, 31)>,
@@ -685,6 +743,7 @@ def HWRegsAsmOperand : MipsAsmRegOperand {
 
 def COP0AsmOperand : MipsAsmRegOperand {
   let Name = "COP0AsmReg";
+  let ParserMethod = "parseCOP0Register";
 }
 
 def COP2AsmOperand : MipsAsmRegOperand {
@@ -753,6 +812,7 @@ def ACC64DSPOpnd : RegisterOperand<ACC64DSP> {
 
 def COP0Opnd : RegisterOperand<COP0> {
   let ParserMatchClass = COP0AsmOperand;
+  let PrintMethod = "printCOP0Operand";
 }
 
 def COP2Opnd : RegisterOperand<COP2> {

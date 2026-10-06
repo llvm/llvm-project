@@ -87,6 +87,8 @@ public:
   static const char *getRegisterName(MCRegister Reg,
                                      unsigned AltIdx = Mips::NoRegAltName);
 
+  void printCOP0Operand(const MCInst *MI, unsigned OpNo,
+                        const MCSubtargetInfo &STI, raw_ostream &O);
   void printRegName(raw_ostream &OS, MCRegister Reg) override;
   void printInst(const MCInst *MI, uint64_t Address, StringRef Annot,
                  const MCSubtargetInfo &STI, raw_ostream &O) override;

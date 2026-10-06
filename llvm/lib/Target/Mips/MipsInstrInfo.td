@@ -1887,6 +1887,18 @@ class SCBase<string opstr, RegisterOperand RO> :
   let Constraints = "$rt = $dst";
 }
 
+class MFC0OP<string asmstr, RegisterOperand RO, RegisterOperand RD> :
+  InstSE<(outs RO:$rt), (ins RD:$cop0),
+         !strconcat(asmstr, "\t$rt, $cop0"), [], FrmFR> {
+  let BaseOpcode = asmstr;
+}
+
+class MTC0OP<string asmstr, RegisterOperand RO, RegisterOperand RD> :
+  InstSE<(outs RO:$cop0), (ins RD:$rt),
+         !strconcat(asmstr, "\t$rt, $cop0"), [], FrmFR> {
+  let BaseOpcode = asmstr;
+}
+
 class MFC3OP<string asmstr, RegisterOperand RO, RegisterOperand RD> :
   InstSE<(outs RO:$rt), (ins RD:$rd, uimm3:$sel),
          !strconcat(asmstr, "\t$rt, $rd, $sel"), [], FrmFR> {
@@ -2474,10 +2486,10 @@ let AdditionalPredicates = [NotInMicroMips] in {
 }
 /// Move Control Registers From/To CPU Registers
 let AdditionalPredicates = [NotInMicroMips] in {
-  def MTC0 : MTC3OP<"mtc0", COP0Opnd, GPR32Opnd>,
-             MFC3OP_FM<0x10, 4, 0>, ISA_MIPS1;
-  def MFC0 : MFC3OP<"mfc0", GPR32Opnd, COP0Opnd>,
-             MFC3OP_FM<0x10, 0, 0>, ISA_MIPS1;
+  def MTC0 : MTC0OP<"mtc0", COP0Opnd, GPR32Opnd>,
+             MFC0OP_FM<4, 0>, ISA_MIPS1;
+  def MFC0 : MFC0OP<"mfc0", GPR32Opnd, COP0Opnd>,
+             MFC0OP_FM<0, 0>, ISA_MIPS1;
   def MFC2 : MFC3OP<"mfc2", GPR32Opnd, COP2Opnd>,
              MFC3OP_FM<0x12, 0, 0>, ISA_MIPS1;
   def MTC2 : MTC3OP<"mtc2", COP2Opnd, GPR32Opnd>,
@@ -2678,14 +2690,14 @@ class HYPCALL_FT<string opstr> :
 }
 
 let AdditionalPredicates = [NotInMicroMips] in {
-  def MFGC0    : MMRel, MFC3OP<"mfgc0", GPR32Opnd, COP0Opnd>,
-                 MFC3OP_FM<0x10, 3, 0>, ISA_MIPS32R5, ASE_VIRT;
-  def MTGC0    : MMRel, MTC3OP<"mtgc0", COP0Opnd, GPR32Opnd>,
-                 MFC3OP_FM<0x10, 3, 2>, ISA_MIPS32R5, ASE_VIRT;
-  def MFHGC0   : MMRel, MFC3OP<"mfhgc0", GPR32Opnd, COP0Opnd>,
-                 MFC3OP_FM<0x10, 3, 4>, ISA_MIPS32R5, ASE_VIRT;
-  def MTHGC0   : MMRel, MTC3OP<"mthgc0", COP0Opnd, GPR32Opnd>,
-                 MFC3OP_FM<0x10, 3, 6>, ISA_MIPS32R5, ASE_VIRT;
+  def MFGC0    : MMRel, MFC0OP<"mfgc0", GPR32Opnd, COP0Opnd>,
+                 MFC0OP_FM<3, 0>, ISA_MIPS32R5, ASE_VIRT;
+  def MTGC0    : MMRel, MTC0OP<"mtgc0", COP0Opnd, GPR32Opnd>,
+                 MFC0OP_FM<3, 2>, ISA_MIPS32R5, ASE_VIRT;
+  def MFHGC0   : MMRel, MFC0OP<"mfhgc0", GPR32Opnd, COP0Opnd>,
+                 MFC0OP_FM<3, 4>, ISA_MIPS32R5, ASE_VIRT;
+  def MTHGC0   : MMRel, MTC0OP<"mthgc0", COP0Opnd, GPR32Opnd>,
+                 MFC0OP_FM<3, 6>, ISA_MIPS32R5, ASE_VIRT;
   def TLBGINV  : MMRel, TLB<"tlbginv">, COP0_TLB_FM<0b001011>,
                  ISA_MIPS32R5, ASE_VIRT;
   def TLBGINVF : MMRel, TLB<"tlbginvf">, COP0_TLB_FM<0b001100>,
@@ -2858,22 +2870,6 @@ let AdditionalPredicates = [NotInMicroMips] in {
 
   defm : OneOrTwoOperandMacroImmediateAlias<"sltu", SLTiu>, ISA_MIPS1, GPR_32;
 
-  def : MipsInstAlias<"mfgc0 $rt, $rd",
-                      (MFGC0 GPR32Opnd:$rt, COP0Opnd:$rd, 0), 0>,
-                      ISA_MIPS32R5, ASE_VIRT;
-  def : MipsInstAlias<"mtgc0 $rt, $rd",
-                      (MTGC0 COP0Opnd:$rd, GPR32Opnd:$rt, 0), 0>,
-                      ISA_MIPS32R5, ASE_VIRT;
-  def : MipsInstAlias<"mfhgc0 $rt, $rd",
-                      (MFHGC0 GPR32Opnd:$rt, COP0Opnd:$rd, 0), 0>,
-                      ISA_MIPS32R5, ASE_VIRT;
-  def : MipsInstAlias<"mthgc0 $rt, $rd",
-                      (MTHGC0 COP0Opnd:$rd, GPR32Opnd:$rt, 0), 0>,
-                      ISA_MIPS32R5, ASE_VIRT;
-  def : MipsInstAlias<"mfc0 $rt, $rd", (MFC0 GPR32Opnd:$rt, COP0Opnd:$rd, 0), 0>,
-        ISA_MIPS1;
-  def : MipsInstAlias<"mtc0 $rt, $rd", (MTC0 COP0Opnd:$rd, GPR32Opnd:$rt, 0), 0>,
-        ISA_MIPS1;
   def : MipsInstAlias<"mfc2 $rt, $rd", (MFC2 GPR32Opnd:$rt, COP2Opnd:$rd, 0), 0>,
         ISA_MIPS1;
   def : MipsInstAlias<"mtc2 $rt, $rd", (MTC2 COP2Opnd:$rd, GPR32Opnd:$rt, 0), 0>,
