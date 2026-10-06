@@ -28,9 +28,12 @@
 
 using namespace llvm;
 
+namespace {
+
 // Map an unsupported integer type to the smallest legal DXIL carrier type.
+// Return nullptr only for non-integer types or already legal integer types.
 static IntegerType *getLegalIntegerType(Type *Ty) {
-  auto *IntTy = dyn_cast<IntegerType>(Ty);
+  IntegerType *IntTy = dyn_cast<IntegerType>(Ty);
   if (!IntTy)
     return nullptr;
 
@@ -42,12 +45,13 @@ static IntegerType *getLegalIntegerType(Type *Ty) {
     return Type::getInt32Ty(Ty->getContext());
   if (Width < 64)
     return Type::getInt64Ty(Ty->getContext());
-  return nullptr;
+  report_fatal_error("DXIL does not support integer types wider than 64 bits",
+                     /*gen_crash_diag=*/false);
 }
 
 enum class IntegerExtension { None, Zero, Sign };
 
-// Zero-extend the low Width bits of a legal-width carrier.
+// Clear all but the low Width bits of a legal-width carrier.
 static Value *maskToIntegerWidth(Value *V, unsigned Width,
                                  IRBuilder<> &Builder) {
   auto *LegalTy = cast<IntegerType>(V->getType());
@@ -109,7 +113,11 @@ getLegalizedIntegerOperand(Value *Operand, IntegerType *LegalTy,
         LegalTy, Extension == IntegerExtension::Sign
                      ? C->getValue().sextOrTrunc(LegalTy->getBitWidth())
                      : C->getValue().zextOrTrunc(LegalTy->getBitWidth()));
-  return Operand->getType() == LegalTy ? Operand : nullptr;
+  if (Operand->getType() == LegalTy)
+    return Operand;
+  report_fatal_error(
+      "DXIL legalization is missing an integer operand replacement",
+      /*gen_crash_diag=*/false);
 }
 
 // bitcast <N x iM> to illegal iK -> extract and pack into an i32/i64 carrier.
@@ -117,12 +125,17 @@ static bool
 legalizeNonStandardIntegerBitCast(BitCastInst &BitCast,
                                   SmallVectorImpl<Instruction *> &ToRemove,
                                   DenseMap<Value *, Value *> &ReplacedValues) {
-  auto *LegalTy = getLegalIntegerType(BitCast.getDestTy());
-  auto *SourceTy = dyn_cast<FixedVectorType>(BitCast.getSrcTy());
-  if (!LegalTy || !SourceTy || !SourceTy->getElementType()->isIntegerTy() ||
-      SourceTy->getPrimitiveSizeInBits() !=
-          BitCast.getDestTy()->getPrimitiveSizeInBits())
+  IntegerType *LegalTy = getLegalIntegerType(BitCast.getDestTy());
+  if (!LegalTy && !getLegalIntegerType(BitCast.getSrcTy()))
     return false;
+  FixedVectorType *SourceTy = dyn_cast<FixedVectorType>(BitCast.getSrcTy());
+  if (!LegalTy || !SourceTy || !SourceTy->getElementType()->isIntegerTy())
+    report_fatal_error(
+        "DXIL legalization does not support this integer bitcast",
+        /*gen_crash_diag=*/false);
+  assert(SourceTy->getPrimitiveSizeInBits() ==
+             BitCast.getDestTy()->getPrimitiveSizeInBits() &&
+         "Bitcast source and destination must have equal sizes");
 
   IRBuilder<> Builder(&BitCast);
   Value *Packed = ConstantInt::get(LegalTy, 0);
@@ -151,9 +164,12 @@ legalizeNonStandardIntegerTrunc(TruncInst &Trunc,
     return false;
 
   IRBuilder<> Builder(&Trunc);
-  Value *Source = ReplacedValues.lookup(Trunc.getOperand(0));
-  if (!Source)
-    Source = Trunc.getOperand(0);
+  Value *Source =
+      LegalSrcTy
+          ? getLegalizedIntegerOperand(Trunc.getOperand(0), LegalSrcTy,
+                                       IntegerExtension::None, Builder,
+                                       ReplacedValues, Trunc.getDataLayout())
+          : Trunc.getOperand(0);
   Type *ResultTy = LegalDstTy ? LegalDstTy : Trunc.getDestTy();
   Value *Replacement = Builder.CreateZExtOrTrunc(Source, ResultTy);
   if (LegalDstTy)
@@ -208,9 +224,6 @@ legalizeNonStandardIntegerBinOp(BinaryOperator &BO,
   Value *RHS =
       getLegalizedIntegerOperand(BO.getOperand(1), LegalTy, RHSExtension,
                                  Builder, ReplacedValues, BO.getDataLayout());
-  if (!LHS || !RHS)
-    return false;
-
   Value *NewBO = Builder.CreateBinOp(BO.getOpcode(), LHS, RHS);
   if (auto *NewBOInst = dyn_cast<BinaryOperator>(NewBO))
     NewBOInst->copyIRFlags(&BO);
@@ -235,9 +248,6 @@ legalizeNonStandardIntegerSelect(SelectInst &Select,
   Value *False = getLegalizedIntegerOperand(
       Select.getFalseValue(), LegalTy, IntegerExtension::None, Builder,
       ReplacedValues, Select.getDataLayout());
-  if (!True || !False)
-    return false;
-
   Value *Replacement = Builder.CreateSelect(Select.getCondition(), True, False,
                                             Select.getName(), &Select);
   if (auto *NewSelect = dyn_cast<SelectInst>(Replacement);
@@ -266,9 +276,6 @@ legalizeNonStandardIntegerICmp(ICmpInst &Cmp,
   Value *RHS =
       getLegalizedIntegerOperand(Cmp.getOperand(1), LegalTy, Extension, Builder,
                                  ReplacedValues, Cmp.getDataLayout());
-  if (!LHS || !RHS)
-    return false;
-
   Cmp.replaceAllUsesWith(Builder.CreateICmp(Cmp.getPredicate(), LHS, RHS));
   ToRemove.push_back(&Cmp);
   return true;
@@ -293,9 +300,6 @@ legalizeNonStandardIntegerCast(CastInst &Cast,
         Source, LegalSrcTy,
         IsSigned ? IntegerExtension::Sign : IntegerExtension::Zero, Builder,
         ReplacedValues, Cast.getDataLayout());
-  if (!Source)
-    return false;
-
   Type *ResultTy = LegalDstTy ? LegalDstTy : Cast.getDestTy();
   Value *Replacement = nullptr;
   switch (Cast.getOpcode()) {
@@ -324,7 +328,7 @@ legalizeNonStandardIntegerCast(CastInst &Cast,
     Replacement = Builder.CreateIntToPtr(Source, ResultTy);
     break;
   default:
-    return false;
+    llvm_unreachable("Unexpected cast opcode with an illegal integer endpoint");
   }
 
   if (LegalDstTy)
@@ -354,6 +358,22 @@ legalizeNonStandardInteger(Instruction &I,
     return legalizeNonStandardIntegerICmp(*Cmp, ToRemove, ReplacedValues);
   if (auto *Cast = dyn_cast<CastInst>(&I))
     return legalizeNonStandardIntegerCast(*Cast, ToRemove, ReplacedValues);
+  if (ReplacedValues.contains(&I) || isa<FreezeInst>(I))
+    return false;
+  if (getLegalIntegerType(I.getType()))
+    report_fatal_error(
+        Twine("DXIL legalization does not support non-standard integer result "
+              "type for instruction '") +
+            I.getOpcodeName() + "'",
+        /*gen_crash_diag=*/false);
+  for (Value *Operand : I.operands())
+    if (getLegalIntegerType(Operand->getType()))
+      report_fatal_error(
+          Twine(
+              "DXIL legalization does not support non-standard integer operand "
+              "type for instruction '") +
+              I.getOpcodeName() + "'",
+          /*gen_crash_diag=*/false);
   return false;
 }
 
@@ -770,7 +790,6 @@ legalizeScalarLoadStoreOnArrays(Instruction &I,
   return true;
 }
 
-namespace {
 class DXILLegalizationPipeline {
 
 public:
