@@ -38,6 +38,7 @@ add_llvm_component_library(LLVMTransformUtils
   HelloWorld.cpp
   InlineFunction.cpp
   InjectTLIMappings.cpp
+  InjectOpenMPVFABIMappings.cpp
   InstructionNamer.cpp
   Instrumentation.cpp
   IntegerDivision.cpp
