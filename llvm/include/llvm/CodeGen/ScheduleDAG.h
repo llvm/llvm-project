@@ -749,7 +749,8 @@ class TargetRegisterInfo;
     std::vector<int> Node2Index;
     /// a set of nodes visited during a DFS traversal.
     BitVector Visited;
-    /// a worklist for use during traversals.
+    /// A worklist for use during traversals. Retained after traversals so must
+    /// be cleared before use.
     std::vector<const SUnit *> WorkList;
     /// Cache of reachability queries. {A, B} -> true if B is reachable from A.
     /// The keys are SUnit NodeNums.

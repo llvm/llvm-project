@@ -477,10 +477,10 @@ void ScheduleDAGTopologicalSort::InitDAGTopologicalSorting() {
 
   unsigned DAGSize = SUnits.size();
 
-  WorkList.reserve(DAGSize);
-  Index2Node.resize(DAGSize);
-  Node2Index.resize(DAGSize);
+ Index2Node.resize(DAGSize);
+ Node2Index.resize(DAGSize);
 
+  WorkList.reserve(DAGSize);
   WorkList.clear();
 
   // Initialize the data structures.
