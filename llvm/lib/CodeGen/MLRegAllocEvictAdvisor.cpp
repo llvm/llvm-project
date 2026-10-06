@@ -570,7 +570,7 @@ public:
              MachineBlockFrequencyInfo *MBFI, MachineLoopInfo *Loops) override {
     if (!Runner)
       return nullptr;
-    if (Log)
+    if (Log && Log->currentContext() != MF.getName())
       Log->switchContext(MF.getName());
     assert(MBFI && Loops &&
            "Invalid provider state: must have analysis available");

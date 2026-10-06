@@ -269,7 +269,7 @@ public:
              SlotIndexes &SI) override {
     if (!Runner)
       return nullptr;
-    if (Log) {
+    if (Log && Log->currentContext() != MF.getName()) {
       Log->switchContext(MF.getName());
     }
     return std::make_unique<DevelopmentModePriorityAdvisor>(
