@@ -32,14 +32,17 @@ meaning of the object, not its implementation.
 LLDB solves this problem by using Data Formatters that take the types in the
 type system and produce an alternate layout for the types that correspond to how
 the class is used (what the user really wants to see), not how it is
-implemented. The path expressions give you access to these re-formatted
-representations. In addition, these re-formatted representations allow LLDB to
-display the dynamic type of an object, not just the static type. But these
-re-formatted representations mean nothing to the underlying source language, so
-you cannot use them in the expression evaluator (which is based on the source
-language). This severely limited the utility of the reformatted values, since
-there was no way to perform logic operations (or other simple expression
-evaluation) on them.
+implemented. These re-formatted representations include [Synthetic
+Children](https://lldb.llvm.org/use/variable.html#synthetic-children), new
+constructs that are not actually part of the original data type, but which
+faciliate showing users what they expect to see. The path expressions give you
+access to these re-formatted representations. In addition, these re-formatted
+representations allow LLDB to display the dynamic type of an object, not just
+the static type. But these re-formatted representations mean nothing to the
+underlying source language, so you cannot use them in the expression evaluator
+(which is based on the source language). This severely limited the utility of
+the reformatted values, since there was no way to perform logic operations (or
+other simple expression evaluation) on them.
 
 The Data Inspection Language (DIL) was designed to solve this problem. As the
 name implies, the DIL is a language that was created specifically to _improve
