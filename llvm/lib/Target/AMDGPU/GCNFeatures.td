@@ -1648,10 +1648,9 @@ def FeatureWaitsBeforeSystemScopeStores : SubtargetFeature<
   "Target requires waits for loads and atomics before system scope stores"
 >;
 
-def FeatureUseAddPC64Inst : SubtargetFeature<"use-add-pc64-inst",
-  "UseAddPC64Inst",
-  "true",
-  "Use s_add_pc_i64 instruction."
+defm UnusableAddPCI64 : AMDGPUSubtargetFeature<"unusable-add-pc-i64",
+  "s_add_pc_i64 instruction is unusable by codegen",
+  GenPredicate=false
 >;
 
 defm GFX1250_STRICT : AMDGPUSubtargetFeature<"gfx1250-strict",
@@ -2592,6 +2591,7 @@ def FeatureISAVersion12_50_STRICT : FeatureSet<
    FeatureNoSleepForever,
    FeatureSlowMaxMinMulI64Insts,
    FeatureSupportsXNACK,
+   FeatureUnusableAddPCI64,
    ])>;
 
 def FeatureISAVersion12_50 : FeatureSet<
@@ -2629,6 +2629,7 @@ def FeatureISAVersion12_50 : FeatureSet<
    FeatureNoSleepForever,
    FeatureSlowMaxMinMulI64Insts,
    FeatureSupportsXNACK,
+   FeatureUnusableAddPCI64,
    ])>;
 
 def FeatureISAVersion12_51 : FeatureSet<
@@ -2662,7 +2663,6 @@ def FeatureISAVersion12_51 : FeatureSet<
    FeatureFP8E5M3Insts,
    FeatureSWMMACGfx1200Insts,
    FeatureSWMMACGfx1250Insts,
-   FeatureUseAddPC64Inst,
    FeatureTransCoexecutionHazard,
    FeatureWMMACoexecutionHazards,
    FeatureDataCacheLineSize128,
@@ -2694,6 +2694,7 @@ def FeatureISAVersion12_5_Generic: FeatureSet<
    FeatureRequiresInitialUnclausedVmem,
    FeatureNeedsTDMDrain,
    FeatureSupportsXNACK,
+   FeatureUnusableAddPCI64,
    ])>;
 
 def FeatureISAVersion13 : FeatureSet<
@@ -2771,7 +2772,8 @@ def FeatureISAVersion13 : FeatureSet<
    FeatureBlock16ConversionScaleInsts,
    FeatureSmemPrefetchInsts,
    FeatureAsyncLoadToLDSInsts,
-   FeatureIndexedResources
+   FeatureIndexedResources,
+   FeatureUnusableAddPCI64,
 ]>;
 
 def FeatureISAVersion13_Generic: FeatureSet<
