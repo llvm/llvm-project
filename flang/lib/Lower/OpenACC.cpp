@@ -1617,7 +1617,8 @@ static void determineDefaultLoopParMode(
     Fortran::lower::AbstractConverter &converter, mlir::acc::LoopOp &loopOp,
     llvm::SmallVector<mlir::Attribute> &seqDeviceTypes,
     llvm::SmallVector<mlir::Attribute> &independentDeviceTypes,
-    llvm::SmallVector<mlir::Attribute> &autoDeviceTypes) {
+    llvm::SmallVector<mlir::Attribute> &autoDeviceTypes,
+    bool kernelsDoConcurrentIsIndependent) {
   auto hasDeviceNone = [](mlir::Attribute attr) -> bool {
     return mlir::dyn_cast<mlir::acc::DeviceTypeAttr>(attr).getValue() ==
            mlir::acc::DeviceType::None;
@@ -1671,8 +1672,15 @@ static void determineDefaultLoopParMode(
     // auto clause.
     assert(mlir::isa_and_present<mlir::acc::KernelsOp>(parentOp) &&
            "Expected kernels construct");
-    autoDeviceTypes.push_back(mlir::acc::DeviceTypeAttr::get(
-        builder.getContext(), mlir::acc::DeviceType::None));
+    // By default, preserve the DO CONCURRENT iteration-independence assertion
+    // when honoring an associated OpenACC kernels loop. An explicit
+    // seq/auto/independent clause has already returned above.
+    if (kernelsDoConcurrentIsIndependent)
+      independentDeviceTypes.push_back(mlir::acc::DeviceTypeAttr::get(
+          builder.getContext(), mlir::acc::DeviceType::None));
+    else
+      autoDeviceTypes.push_back(mlir::acc::DeviceTypeAttr::get(
+          builder.getContext(), mlir::acc::DeviceType::None));
   }
 }
 
@@ -2684,8 +2692,12 @@ static mlir::acc::LoopOp createLoopOp(
         builder.getDenseI32ArrayAttr(tileOperandsSegments));
 
   // Determine the loop's default par mode - either seq, independent, or auto.
+  const bool kernelsDoConcurrentIsIndependent =
+      outerDoConstruct.IsDoConcurrent() &&
+      converter.getLoweringOptions().getOpenACCKernelsDoConcurrentIndependent();
   determineDefaultLoopParMode(converter, loopOp, seqDeviceTypes,
-                              independentDeviceTypes, autoDeviceTypes);
+                              independentDeviceTypes, autoDeviceTypes,
+                              kernelsDoConcurrentIsIndependent);
   if (!seqDeviceTypes.empty())
     loopOp.setSeqAttr(builder.getArrayAttr(seqDeviceTypes));
   if (!independentDeviceTypes.empty())

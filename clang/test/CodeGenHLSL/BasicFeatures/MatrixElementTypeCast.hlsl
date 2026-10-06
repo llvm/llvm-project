@@ -185,18 +185,16 @@ int3x2 elementwise_type_cast4(double3x2 d32) {
 // ROW-CHECK-NEXT:    [[A:%.*]] = alloca [2 x [1 x i32]], align 4
 // ROW-CHECK-NEXT:    [[B:%.*]] = alloca [2 x <1 x i32>], align 4
 // ROW-CHECK-NEXT:    [[AGG_TEMP:%.*]] = alloca [2 x [1 x i32]], align 4
-// ROW-CHECK-NEXT:    [[FLATCAST_TMP:%.*]] = alloca <2 x i32>, align 4
 // ROW-CHECK-NEXT:    call void @llvm.memcpy.p0.p0.i32(ptr align 4 [[A]], ptr align 4 @__const._Z5call2v.A, i32 8, i1 false)
 // ROW-CHECK-NEXT:    call void @llvm.memcpy.p0.p0.i32(ptr align 4 [[AGG_TEMP]], ptr align 4 [[A]], i32 8, i1 false)
 // ROW-CHECK-NEXT:    [[GEP:%.*]] = getelementptr inbounds [2 x [1 x i32]], ptr [[AGG_TEMP]], i32 0, i32 0, i32 0
 // ROW-CHECK-NEXT:    [[GEP1:%.*]] = getelementptr inbounds [2 x [1 x i32]], ptr [[AGG_TEMP]], i32 0, i32 1, i32 0
-// ROW-CHECK-NEXT:    [[TMP1:%.*]] = load <2 x i32>, ptr [[FLATCAST_TMP]], align 4
-// ROW-CHECK-NEXT:    [[TMP2:%.*]] = load i32, ptr [[GEP]], align 4
-// ROW-CHECK-NEXT:    [[TMP3:%.*]] = insertelement <2 x i32> [[TMP1]], i32 [[TMP2]], i64 0
-// ROW-CHECK-NEXT:    [[TMP4:%.*]] = load i32, ptr [[GEP1]], align 4
-// ROW-CHECK-NEXT:    [[TMP5:%.*]] = insertelement <2 x i32> [[TMP3]], i32 [[TMP4]], i64 1
-// ROW-CHECK-NEXT:    [[TMP6:%.*]] = call <2 x i32> @llvm.matrix.transpose.v2i32(<2 x i32> [[TMP5]], i32 2, i32 1)
-// ROW-CHECK-NEXT:    store <2 x i32> [[TMP6]], ptr [[B]], align 4
+// ROW-CHECK-NEXT:    [[TMP1:%.*]] = load i32, ptr [[GEP]], align 4
+// ROW-CHECK-NEXT:    [[TMP2:%.*]] = insertelement <2 x i32> poison, i32 [[TMP1]], i64 0
+// ROW-CHECK-NEXT:    [[TMP3:%.*]] = load i32, ptr [[GEP1]], align 4
+// ROW-CHECK-NEXT:    [[TMP4:%.*]] = insertelement <2 x i32> [[TMP2]], i32 [[TMP3]], i64 1
+// ROW-CHECK-NEXT:    [[TMP5:%.*]] = call <2 x i32> @llvm.matrix.transpose.v2i32(<2 x i32> [[TMP4]], i32 2, i32 1)
+// ROW-CHECK-NEXT:    store <2 x i32> [[TMP5]], ptr [[B]], align 4
 // ROW-CHECK-NEXT:    ret void
 //
 // COL-CHECK-LABEL: define hidden void @_Z5call2v(
@@ -206,17 +204,15 @@ int3x2 elementwise_type_cast4(double3x2 d32) {
 // COL-CHECK-NEXT:    [[A:%.*]] = alloca [2 x [1 x i32]], align 4
 // COL-CHECK-NEXT:    [[B:%.*]] = alloca [1 x <2 x i32>], align 4
 // COL-CHECK-NEXT:    [[AGG_TEMP:%.*]] = alloca [2 x [1 x i32]], align 4
-// COL-CHECK-NEXT:    [[FLATCAST_TMP:%.*]] = alloca <2 x i32>, align 4
 // COL-CHECK-NEXT:    call void @llvm.memcpy.p0.p0.i32(ptr align 4 [[A]], ptr align 4 @__const._Z5call2v.A, i32 8, i1 false)
 // COL-CHECK-NEXT:    call void @llvm.memcpy.p0.p0.i32(ptr align 4 [[AGG_TEMP]], ptr align 4 [[A]], i32 8, i1 false)
 // COL-CHECK-NEXT:    [[GEP:%.*]] = getelementptr inbounds [2 x [1 x i32]], ptr [[AGG_TEMP]], i32 0, i32 0, i32 0
 // COL-CHECK-NEXT:    [[GEP1:%.*]] = getelementptr inbounds [2 x [1 x i32]], ptr [[AGG_TEMP]], i32 0, i32 1, i32 0
-// COL-CHECK-NEXT:    [[TMP1:%.*]] = load <2 x i32>, ptr [[FLATCAST_TMP]], align 4
-// COL-CHECK-NEXT:    [[TMP2:%.*]] = load i32, ptr [[GEP]], align 4
-// COL-CHECK-NEXT:    [[TMP3:%.*]] = insertelement <2 x i32> [[TMP1]], i32 [[TMP2]], i64 0
-// COL-CHECK-NEXT:    [[TMP4:%.*]] = load i32, ptr [[GEP1]], align 4
-// COL-CHECK-NEXT:    [[TMP5:%.*]] = insertelement <2 x i32> [[TMP3]], i32 [[TMP4]], i64 1
-// COL-CHECK-NEXT:    store <2 x i32> [[TMP5]], ptr [[B]], align 4
+// COL-CHECK-NEXT:    [[TMP1:%.*]] = load i32, ptr [[GEP]], align 4
+// COL-CHECK-NEXT:    [[TMP2:%.*]] = insertelement <2 x i32> poison, i32 [[TMP1]], i64 0
+// COL-CHECK-NEXT:    [[TMP3:%.*]] = load i32, ptr [[GEP1]], align 4
+// COL-CHECK-NEXT:    [[TMP4:%.*]] = insertelement <2 x i32> [[TMP2]], i32 [[TMP3]], i64 1
+// COL-CHECK-NEXT:    store <2 x i32> [[TMP4]], ptr [[B]], align 4
 // COL-CHECK-NEXT:    ret void
 //
 void call2() {
@@ -236,19 +232,17 @@ struct S {
 // ROW-CHECK-NEXT:    [[S:%.*]] = alloca [[STRUCT_S:%.*]], align 1
 // ROW-CHECK-NEXT:    [[A:%.*]] = alloca [2 x <1 x i32>], align 4
 // ROW-CHECK-NEXT:    [[AGG_TEMP:%.*]] = alloca [[STRUCT_S]], align 1
-// ROW-CHECK-NEXT:    [[FLATCAST_TMP:%.*]] = alloca <2 x i32>, align 4
 // ROW-CHECK-NEXT:    call void @llvm.memcpy.p0.p0.i32(ptr align 1 [[S]], ptr align 1 @__const._Z5call3v.s, i32 8, i1 false)
 // ROW-CHECK-NEXT:    call void @llvm.memcpy.p0.p0.i32(ptr align 1 [[AGG_TEMP]], ptr align 1 [[S]], i32 8, i1 false)
 // ROW-CHECK-NEXT:    [[GEP:%.*]] = getelementptr inbounds [[STRUCT_S]], ptr [[AGG_TEMP]], i32 0, i32 0
 // ROW-CHECK-NEXT:    [[GEP1:%.*]] = getelementptr inbounds [[STRUCT_S]], ptr [[AGG_TEMP]], i32 0, i32 1
-// ROW-CHECK-NEXT:    [[TMP1:%.*]] = load <2 x i32>, ptr [[FLATCAST_TMP]], align 4
-// ROW-CHECK-NEXT:    [[TMP2:%.*]] = load i32, ptr [[GEP]], align 4
-// ROW-CHECK-NEXT:    [[TMP3:%.*]] = insertelement <2 x i32> [[TMP1]], i32 [[TMP2]], i64 0
-// ROW-CHECK-NEXT:    [[TMP4:%.*]] = load float, ptr [[GEP1]], align 4
-// ROW-CHECK-NEXT:    [[CONV:%.*]] = fptosi float [[TMP4]] to i32
-// ROW-CHECK-NEXT:    [[TMP5:%.*]] = insertelement <2 x i32> [[TMP3]], i32 [[CONV]], i64 1
-// ROW-CHECK-NEXT:    [[TMP6:%.*]] = call <2 x i32> @llvm.matrix.transpose.v2i32(<2 x i32> [[TMP5]], i32 2, i32 1)
-// ROW-CHECK-NEXT:    store <2 x i32> [[TMP6]], ptr [[A]], align 4
+// ROW-CHECK-NEXT:    [[TMP1:%.*]] = load i32, ptr [[GEP]], align 4
+// ROW-CHECK-NEXT:    [[TMP2:%.*]] = insertelement <2 x i32> poison, i32 [[TMP1]], i64 0
+// ROW-CHECK-NEXT:    [[TMP3:%.*]] = load float, ptr [[GEP1]], align 4
+// ROW-CHECK-NEXT:    [[CONV:%.*]] = fptosi float [[TMP3]] to i32
+// ROW-CHECK-NEXT:    [[TMP4:%.*]] = insertelement <2 x i32> [[TMP2]], i32 [[CONV]], i64 1
+// ROW-CHECK-NEXT:    [[TMP5:%.*]] = call <2 x i32> @llvm.matrix.transpose.v2i32(<2 x i32> [[TMP4]], i32 2, i32 1)
+// ROW-CHECK-NEXT:    store <2 x i32> [[TMP5]], ptr [[A]], align 4
 // ROW-CHECK-NEXT:    ret void
 //
 // COL-CHECK-LABEL: define hidden void @_Z5call3v(
@@ -258,18 +252,16 @@ struct S {
 // COL-CHECK-NEXT:    [[S:%.*]] = alloca [[STRUCT_S:%.*]], align 1
 // COL-CHECK-NEXT:    [[A:%.*]] = alloca [1 x <2 x i32>], align 4
 // COL-CHECK-NEXT:    [[AGG_TEMP:%.*]] = alloca [[STRUCT_S]], align 1
-// COL-CHECK-NEXT:    [[FLATCAST_TMP:%.*]] = alloca <2 x i32>, align 4
 // COL-CHECK-NEXT:    call void @llvm.memcpy.p0.p0.i32(ptr align 1 [[S]], ptr align 1 @__const._Z5call3v.s, i32 8, i1 false)
 // COL-CHECK-NEXT:    call void @llvm.memcpy.p0.p0.i32(ptr align 1 [[AGG_TEMP]], ptr align 1 [[S]], i32 8, i1 false)
 // COL-CHECK-NEXT:    [[GEP:%.*]] = getelementptr inbounds [[STRUCT_S]], ptr [[AGG_TEMP]], i32 0, i32 0
 // COL-CHECK-NEXT:    [[GEP1:%.*]] = getelementptr inbounds [[STRUCT_S]], ptr [[AGG_TEMP]], i32 0, i32 1
-// COL-CHECK-NEXT:    [[TMP1:%.*]] = load <2 x i32>, ptr [[FLATCAST_TMP]], align 4
-// COL-CHECK-NEXT:    [[TMP2:%.*]] = load i32, ptr [[GEP]], align 4
-// COL-CHECK-NEXT:    [[TMP3:%.*]] = insertelement <2 x i32> [[TMP1]], i32 [[TMP2]], i64 0
-// COL-CHECK-NEXT:    [[TMP4:%.*]] = load float, ptr [[GEP1]], align 4
-// COL-CHECK-NEXT:    [[CONV:%.*]] = fptosi float [[TMP4]] to i32
-// COL-CHECK-NEXT:    [[TMP5:%.*]] = insertelement <2 x i32> [[TMP3]], i32 [[CONV]], i64 1
-// COL-CHECK-NEXT:    store <2 x i32> [[TMP5]], ptr [[A]], align 4
+// COL-CHECK-NEXT:    [[TMP1:%.*]] = load i32, ptr [[GEP]], align 4
+// COL-CHECK-NEXT:    [[TMP2:%.*]] = insertelement <2 x i32> poison, i32 [[TMP1]], i64 0
+// COL-CHECK-NEXT:    [[TMP3:%.*]] = load float, ptr [[GEP1]], align 4
+// COL-CHECK-NEXT:    [[CONV:%.*]] = fptosi float [[TMP3]] to i32
+// COL-CHECK-NEXT:    [[TMP4:%.*]] = insertelement <2 x i32> [[TMP2]], i32 [[CONV]], i64 1
+// COL-CHECK-NEXT:    store <2 x i32> [[TMP4]], ptr [[A]], align 4
 // COL-CHECK-NEXT:    ret void
 //
 void call3() {
@@ -295,7 +287,6 @@ struct Derived : BFields {
 // ROW-CHECK-NEXT:    [[D_INDIRECT_ADDR:%.*]] = alloca ptr, align 4
 // ROW-CHECK-NEXT:    [[A:%.*]] = alloca [2 x <2 x i32>], align 4
 // ROW-CHECK-NEXT:    [[AGG_TEMP:%.*]] = alloca [[STRUCT_DERIVED:%.*]], align 1
-// ROW-CHECK-NEXT:    [[FLATCAST_TMP:%.*]] = alloca <4 x i32>, align 4
 // ROW-CHECK-NEXT:    store ptr [[D]], ptr [[D_INDIRECT_ADDR]], align 4
 // ROW-CHECK-NEXT:    call void @llvm.memcpy.p0.p0.i32(ptr align 1 [[AGG_TEMP]], ptr align 1 [[D]], i32 19, i1 false)
 // ROW-CHECK-NEXT:    [[GEP:%.*]] = getelementptr inbounds [[STRUCT_DERIVED]], ptr [[AGG_TEMP]], i32 0, i32 0
@@ -303,22 +294,21 @@ struct Derived : BFields {
 // ROW-CHECK-NEXT:    [[GEP1:%.*]] = getelementptr inbounds [[STRUCT_DERIVED]], ptr [[AGG_TEMP]], i32 0, i32 0, i32 0
 // ROW-CHECK-NEXT:    [[GEP2:%.*]] = getelementptr inbounds [[STRUCT_DERIVED]], ptr [[AGG_TEMP]], i32 0, i32 0, i32 2
 // ROW-CHECK-NEXT:    [[GEP3:%.*]] = getelementptr inbounds [[STRUCT_DERIVED]], ptr [[AGG_TEMP]], i32 0, i32 1
-// ROW-CHECK-NEXT:    [[TMP1:%.*]] = load <4 x i32>, ptr [[FLATCAST_TMP]], align 4
-// ROW-CHECK-NEXT:    [[TMP2:%.*]] = load double, ptr [[GEP1]], align 8
-// ROW-CHECK-NEXT:    [[CONV:%.*]] = fptosi double [[TMP2]] to i32
-// ROW-CHECK-NEXT:    [[TMP3:%.*]] = insertelement <4 x i32> [[TMP1]], i32 [[CONV]], i64 0
+// ROW-CHECK-NEXT:    [[TMP1:%.*]] = load double, ptr [[GEP1]], align 8
+// ROW-CHECK-NEXT:    [[CONV:%.*]] = fptosi double [[TMP1]] to i32
+// ROW-CHECK-NEXT:    [[TMP2:%.*]] = insertelement <4 x i32> poison, i32 [[CONV]], i64 0
 // ROW-CHECK-NEXT:    [[BF_LOAD:%.*]] = load i24, ptr [[E]], align 1
 // ROW-CHECK-NEXT:    [[BF_SHL:%.*]] = shl i24 [[BF_LOAD]], 9
 // ROW-CHECK-NEXT:    [[BF_ASHR:%.*]] = ashr i24 [[BF_SHL]], 9
 // ROW-CHECK-NEXT:    [[BF_CAST:%.*]] = sext i24 [[BF_ASHR]] to i32
-// ROW-CHECK-NEXT:    [[TMP4:%.*]] = insertelement <4 x i32> [[TMP3]], i32 [[BF_CAST]], i64 1
-// ROW-CHECK-NEXT:    [[TMP5:%.*]] = load float, ptr [[GEP2]], align 4
-// ROW-CHECK-NEXT:    [[CONV4:%.*]] = fptosi float [[TMP5]] to i32
-// ROW-CHECK-NEXT:    [[TMP6:%.*]] = insertelement <4 x i32> [[TMP4]], i32 [[CONV4]], i64 2
-// ROW-CHECK-NEXT:    [[TMP7:%.*]] = load i32, ptr [[GEP3]], align 4
-// ROW-CHECK-NEXT:    [[TMP8:%.*]] = insertelement <4 x i32> [[TMP6]], i32 [[TMP7]], i64 3
-// ROW-CHECK-NEXT:    [[TMP9:%.*]] = call <4 x i32> @llvm.matrix.transpose.v4i32(<4 x i32> [[TMP8]], i32 2, i32 2)
-// ROW-CHECK-NEXT:    store <4 x i32> [[TMP9]], ptr [[A]], align 4
+// ROW-CHECK-NEXT:    [[TMP3:%.*]] = insertelement <4 x i32> [[TMP2]], i32 [[BF_CAST]], i64 2
+// ROW-CHECK-NEXT:    [[TMP4:%.*]] = load float, ptr [[GEP2]], align 4
+// ROW-CHECK-NEXT:    [[CONV4:%.*]] = fptosi float [[TMP4]] to i32
+// ROW-CHECK-NEXT:    [[TMP5:%.*]] = insertelement <4 x i32> [[TMP3]], i32 [[CONV4]], i64 1
+// ROW-CHECK-NEXT:    [[TMP6:%.*]] = load i32, ptr [[GEP3]], align 4
+// ROW-CHECK-NEXT:    [[TMP7:%.*]] = insertelement <4 x i32> [[TMP5]], i32 [[TMP6]], i64 3
+// ROW-CHECK-NEXT:    [[TMP8:%.*]] = call <4 x i32> @llvm.matrix.transpose.v4i32(<4 x i32> [[TMP7]], i32 2, i32 2)
+// ROW-CHECK-NEXT:    store <4 x i32> [[TMP8]], ptr [[A]], align 4
 // ROW-CHECK-NEXT:    ret void
 //
 // COL-CHECK-LABEL: define hidden void @_Z5call47Derived(
@@ -328,7 +318,6 @@ struct Derived : BFields {
 // COL-CHECK-NEXT:    [[D_INDIRECT_ADDR:%.*]] = alloca ptr, align 4
 // COL-CHECK-NEXT:    [[A:%.*]] = alloca [2 x <2 x i32>], align 4
 // COL-CHECK-NEXT:    [[AGG_TEMP:%.*]] = alloca [[STRUCT_DERIVED:%.*]], align 1
-// COL-CHECK-NEXT:    [[FLATCAST_TMP:%.*]] = alloca <4 x i32>, align 4
 // COL-CHECK-NEXT:    store ptr [[D]], ptr [[D_INDIRECT_ADDR]], align 4
 // COL-CHECK-NEXT:    call void @llvm.memcpy.p0.p0.i32(ptr align 1 [[AGG_TEMP]], ptr align 1 [[D]], i32 19, i1 false)
 // COL-CHECK-NEXT:    [[GEP:%.*]] = getelementptr inbounds [[STRUCT_DERIVED]], ptr [[AGG_TEMP]], i32 0, i32 0
@@ -336,21 +325,20 @@ struct Derived : BFields {
 // COL-CHECK-NEXT:    [[GEP1:%.*]] = getelementptr inbounds [[STRUCT_DERIVED]], ptr [[AGG_TEMP]], i32 0, i32 0, i32 0
 // COL-CHECK-NEXT:    [[GEP2:%.*]] = getelementptr inbounds [[STRUCT_DERIVED]], ptr [[AGG_TEMP]], i32 0, i32 0, i32 2
 // COL-CHECK-NEXT:    [[GEP3:%.*]] = getelementptr inbounds [[STRUCT_DERIVED]], ptr [[AGG_TEMP]], i32 0, i32 1
-// COL-CHECK-NEXT:    [[TMP1:%.*]] = load <4 x i32>, ptr [[FLATCAST_TMP]], align 4
-// COL-CHECK-NEXT:    [[TMP2:%.*]] = load double, ptr [[GEP1]], align 8
-// COL-CHECK-NEXT:    [[CONV:%.*]] = fptosi double [[TMP2]] to i32
-// COL-CHECK-NEXT:    [[TMP3:%.*]] = insertelement <4 x i32> [[TMP1]], i32 [[CONV]], i64 0
+// COL-CHECK-NEXT:    [[TMP1:%.*]] = load double, ptr [[GEP1]], align 8
+// COL-CHECK-NEXT:    [[CONV:%.*]] = fptosi double [[TMP1]] to i32
+// COL-CHECK-NEXT:    [[TMP2:%.*]] = insertelement <4 x i32> poison, i32 [[CONV]], i64 0
 // COL-CHECK-NEXT:    [[BF_LOAD:%.*]] = load i24, ptr [[E]], align 1
 // COL-CHECK-NEXT:    [[BF_SHL:%.*]] = shl i24 [[BF_LOAD]], 9
 // COL-CHECK-NEXT:    [[BF_ASHR:%.*]] = ashr i24 [[BF_SHL]], 9
 // COL-CHECK-NEXT:    [[BF_CAST:%.*]] = sext i24 [[BF_ASHR]] to i32
-// COL-CHECK-NEXT:    [[TMP4:%.*]] = insertelement <4 x i32> [[TMP3]], i32 [[BF_CAST]], i64 2
-// COL-CHECK-NEXT:    [[TMP5:%.*]] = load float, ptr [[GEP2]], align 4
-// COL-CHECK-NEXT:    [[CONV4:%.*]] = fptosi float [[TMP5]] to i32
-// COL-CHECK-NEXT:    [[TMP6:%.*]] = insertelement <4 x i32> [[TMP4]], i32 [[CONV4]], i64 1
-// COL-CHECK-NEXT:    [[TMP7:%.*]] = load i32, ptr [[GEP3]], align 4
-// COL-CHECK-NEXT:    [[TMP8:%.*]] = insertelement <4 x i32> [[TMP6]], i32 [[TMP7]], i64 3
-// COL-CHECK-NEXT:    store <4 x i32> [[TMP8]], ptr [[A]], align 4
+// COL-CHECK-NEXT:    [[TMP3:%.*]] = insertelement <4 x i32> [[TMP2]], i32 [[BF_CAST]], i64 2
+// COL-CHECK-NEXT:    [[TMP4:%.*]] = load float, ptr [[GEP2]], align 4
+// COL-CHECK-NEXT:    [[CONV4:%.*]] = fptosi float [[TMP4]] to i32
+// COL-CHECK-NEXT:    [[TMP5:%.*]] = insertelement <4 x i32> [[TMP3]], i32 [[CONV4]], i64 1
+// COL-CHECK-NEXT:    [[TMP6:%.*]] = load i32, ptr [[GEP3]], align 4
+// COL-CHECK-NEXT:    [[TMP7:%.*]] = insertelement <4 x i32> [[TMP5]], i32 [[TMP6]], i64 3
+// COL-CHECK-NEXT:    store <4 x i32> [[TMP7]], ptr [[A]], align 4
 // COL-CHECK-NEXT:    ret void
 //
 void call4(Derived D) {
@@ -364,29 +352,27 @@ void call4(Derived D) {
 // ROW-CHECK-NEXT:    [[V_ADDR:%.*]] = alloca <4 x float>, align 4
 // ROW-CHECK-NEXT:    [[M:%.*]] = alloca [2 x <2 x float>], align 4
 // ROW-CHECK-NEXT:    [[HLSL_EWCAST_SRC:%.*]] = alloca <4 x float>, align 4
-// ROW-CHECK-NEXT:    [[FLATCAST_TMP:%.*]] = alloca <4 x float>, align 4
 // ROW-CHECK-NEXT:    store <4 x float> [[V]], ptr [[V_ADDR]], align 4
 // ROW-CHECK-NEXT:    [[TMP1:%.*]] = load <4 x float>, ptr [[V_ADDR]], align 4
 // ROW-CHECK-NEXT:    store <4 x float> [[TMP1]], ptr [[HLSL_EWCAST_SRC]], align 4
 // ROW-CHECK-NEXT:    [[VECTOR_GEP:%.*]] = getelementptr inbounds <4 x float>, ptr [[HLSL_EWCAST_SRC]], i32 0
-// ROW-CHECK-NEXT:    [[TMP2:%.*]] = load <4 x float>, ptr [[FLATCAST_TMP]], align 4
-// ROW-CHECK-NEXT:    [[TMP3:%.*]] = load <4 x float>, ptr [[VECTOR_GEP]], align 4
-// ROW-CHECK-NEXT:    [[VECEXT:%.*]] = extractelement <4 x float> [[TMP3]], i32 0
-// ROW-CHECK-NEXT:    [[TMP4:%.*]] = insertelement <4 x float> [[TMP2]], float [[VECEXT]], i64 0
-// ROW-CHECK-NEXT:    [[TMP5:%.*]] = load <4 x float>, ptr [[VECTOR_GEP]], align 4
-// ROW-CHECK-NEXT:    [[VECEXT1:%.*]] = extractelement <4 x float> [[TMP5]], i32 1
-// ROW-CHECK-NEXT:    [[TMP6:%.*]] = insertelement <4 x float> [[TMP4]], float [[VECEXT1]], i64 1
-// ROW-CHECK-NEXT:    [[TMP7:%.*]] = load <4 x float>, ptr [[VECTOR_GEP]], align 4
-// ROW-CHECK-NEXT:    [[VECEXT2:%.*]] = extractelement <4 x float> [[TMP7]], i32 2
-// ROW-CHECK-NEXT:    [[TMP8:%.*]] = insertelement <4 x float> [[TMP6]], float [[VECEXT2]], i64 2
-// ROW-CHECK-NEXT:    [[TMP9:%.*]] = load <4 x float>, ptr [[VECTOR_GEP]], align 4
-// ROW-CHECK-NEXT:    [[VECEXT3:%.*]] = extractelement <4 x float> [[TMP9]], i32 3
-// ROW-CHECK-NEXT:    [[TMP10:%.*]] = insertelement <4 x float> [[TMP8]], float [[VECEXT3]], i64 3
-// ROW-CHECK-NEXT:    [[TMP11:%.*]] = call reassoc nnan ninf nsz arcp afn <4 x float> @llvm.matrix.transpose.v4f32(<4 x float> [[TMP10]], i32 2, i32 2)
-// ROW-CHECK-NEXT:    store <4 x float> [[TMP11]], ptr [[M]], align 4
-// ROW-CHECK-NEXT:    [[TMP12:%.*]] = load <4 x float>, ptr [[M]], align 4
-// ROW-CHECK-NEXT:    [[TMP13:%.*]] = call reassoc nnan ninf nsz arcp afn <4 x float> @llvm.matrix.transpose.v4f32(<4 x float> [[TMP12]], i32 2, i32 2)
-// ROW-CHECK-NEXT:    ret <4 x float> [[TMP13]]
+// ROW-CHECK-NEXT:    [[TMP2:%.*]] = load <4 x float>, ptr [[VECTOR_GEP]], align 4
+// ROW-CHECK-NEXT:    [[VECEXT:%.*]] = extractelement <4 x float> [[TMP2]], i32 0
+// ROW-CHECK-NEXT:    [[TMP3:%.*]] = insertelement <4 x float> poison, float [[VECEXT]], i64 0
+// ROW-CHECK-NEXT:    [[TMP4:%.*]] = load <4 x float>, ptr [[VECTOR_GEP]], align 4
+// ROW-CHECK-NEXT:    [[VECEXT1:%.*]] = extractelement <4 x float> [[TMP4]], i32 1
+// ROW-CHECK-NEXT:    [[TMP5:%.*]] = insertelement <4 x float> [[TMP3]], float [[VECEXT1]], i64 2
+// ROW-CHECK-NEXT:    [[TMP6:%.*]] = load <4 x float>, ptr [[VECTOR_GEP]], align 4
+// ROW-CHECK-NEXT:    [[VECEXT2:%.*]] = extractelement <4 x float> [[TMP6]], i32 2
+// ROW-CHECK-NEXT:    [[TMP7:%.*]] = insertelement <4 x float> [[TMP5]], float [[VECEXT2]], i64 1
+// ROW-CHECK-NEXT:    [[TMP8:%.*]] = load <4 x float>, ptr [[VECTOR_GEP]], align 4
+// ROW-CHECK-NEXT:    [[VECEXT3:%.*]] = extractelement <4 x float> [[TMP8]], i32 3
+// ROW-CHECK-NEXT:    [[TMP9:%.*]] = insertelement <4 x float> [[TMP7]], float [[VECEXT3]], i64 3
+// ROW-CHECK-NEXT:    [[TMP10:%.*]] = call reassoc nnan ninf nsz arcp afn <4 x float> @llvm.matrix.transpose.v4f32(<4 x float> [[TMP9]], i32 2, i32 2)
+// ROW-CHECK-NEXT:    store <4 x float> [[TMP10]], ptr [[M]], align 4
+// ROW-CHECK-NEXT:    [[TMP11:%.*]] = load <4 x float>, ptr [[M]], align 4
+// ROW-CHECK-NEXT:    [[TMP12:%.*]] = call reassoc nnan ninf nsz arcp afn <4 x float> @llvm.matrix.transpose.v4f32(<4 x float> [[TMP11]], i32 2, i32 2)
+// ROW-CHECK-NEXT:    ret <4 x float> [[TMP12]]
 //
 // COL-CHECK-LABEL: define hidden noundef nofpclass(nan inf) <4 x float> @_Z5call5Dv4_f(
 // COL-CHECK-SAME: <4 x float> noundef nofpclass(nan inf) [[V:%.*]]) #[[ATTR0]] {
@@ -395,27 +381,25 @@ void call4(Derived D) {
 // COL-CHECK-NEXT:    [[V_ADDR:%.*]] = alloca <4 x float>, align 4
 // COL-CHECK-NEXT:    [[M:%.*]] = alloca [2 x <2 x float>], align 4
 // COL-CHECK-NEXT:    [[HLSL_EWCAST_SRC:%.*]] = alloca <4 x float>, align 4
-// COL-CHECK-NEXT:    [[FLATCAST_TMP:%.*]] = alloca <4 x float>, align 4
 // COL-CHECK-NEXT:    store <4 x float> [[V]], ptr [[V_ADDR]], align 4
 // COL-CHECK-NEXT:    [[TMP1:%.*]] = load <4 x float>, ptr [[V_ADDR]], align 4
 // COL-CHECK-NEXT:    store <4 x float> [[TMP1]], ptr [[HLSL_EWCAST_SRC]], align 4
 // COL-CHECK-NEXT:    [[VECTOR_GEP:%.*]] = getelementptr inbounds <4 x float>, ptr [[HLSL_EWCAST_SRC]], i32 0
-// COL-CHECK-NEXT:    [[TMP2:%.*]] = load <4 x float>, ptr [[FLATCAST_TMP]], align 4
-// COL-CHECK-NEXT:    [[TMP3:%.*]] = load <4 x float>, ptr [[VECTOR_GEP]], align 4
-// COL-CHECK-NEXT:    [[VECEXT:%.*]] = extractelement <4 x float> [[TMP3]], i32 0
-// COL-CHECK-NEXT:    [[TMP4:%.*]] = insertelement <4 x float> [[TMP2]], float [[VECEXT]], i64 0
-// COL-CHECK-NEXT:    [[TMP5:%.*]] = load <4 x float>, ptr [[VECTOR_GEP]], align 4
-// COL-CHECK-NEXT:    [[VECEXT1:%.*]] = extractelement <4 x float> [[TMP5]], i32 1
-// COL-CHECK-NEXT:    [[TMP6:%.*]] = insertelement <4 x float> [[TMP4]], float [[VECEXT1]], i64 2
-// COL-CHECK-NEXT:    [[TMP7:%.*]] = load <4 x float>, ptr [[VECTOR_GEP]], align 4
-// COL-CHECK-NEXT:    [[VECEXT2:%.*]] = extractelement <4 x float> [[TMP7]], i32 2
-// COL-CHECK-NEXT:    [[TMP8:%.*]] = insertelement <4 x float> [[TMP6]], float [[VECEXT2]], i64 1
-// COL-CHECK-NEXT:    [[TMP9:%.*]] = load <4 x float>, ptr [[VECTOR_GEP]], align 4
-// COL-CHECK-NEXT:    [[VECEXT3:%.*]] = extractelement <4 x float> [[TMP9]], i32 3
-// COL-CHECK-NEXT:    [[TMP10:%.*]] = insertelement <4 x float> [[TMP8]], float [[VECEXT3]], i64 3
-// COL-CHECK-NEXT:    store <4 x float> [[TMP10]], ptr [[M]], align 4
-// COL-CHECK-NEXT:    [[TMP11:%.*]] = load <4 x float>, ptr [[M]], align 4
-// COL-CHECK-NEXT:    ret <4 x float> [[TMP11]]
+// COL-CHECK-NEXT:    [[TMP2:%.*]] = load <4 x float>, ptr [[VECTOR_GEP]], align 4
+// COL-CHECK-NEXT:    [[VECEXT:%.*]] = extractelement <4 x float> [[TMP2]], i32 0
+// COL-CHECK-NEXT:    [[TMP3:%.*]] = insertelement <4 x float> poison, float [[VECEXT]], i64 0
+// COL-CHECK-NEXT:    [[TMP4:%.*]] = load <4 x float>, ptr [[VECTOR_GEP]], align 4
+// COL-CHECK-NEXT:    [[VECEXT1:%.*]] = extractelement <4 x float> [[TMP4]], i32 1
+// COL-CHECK-NEXT:    [[TMP5:%.*]] = insertelement <4 x float> [[TMP3]], float [[VECEXT1]], i64 2
+// COL-CHECK-NEXT:    [[TMP6:%.*]] = load <4 x float>, ptr [[VECTOR_GEP]], align 4
+// COL-CHECK-NEXT:    [[VECEXT2:%.*]] = extractelement <4 x float> [[TMP6]], i32 2
+// COL-CHECK-NEXT:    [[TMP7:%.*]] = insertelement <4 x float> [[TMP5]], float [[VECEXT2]], i64 1
+// COL-CHECK-NEXT:    [[TMP8:%.*]] = load <4 x float>, ptr [[VECTOR_GEP]], align 4
+// COL-CHECK-NEXT:    [[VECEXT3:%.*]] = extractelement <4 x float> [[TMP8]], i32 3
+// COL-CHECK-NEXT:    [[TMP9:%.*]] = insertelement <4 x float> [[TMP7]], float [[VECEXT3]], i64 3
+// COL-CHECK-NEXT:    store <4 x float> [[TMP9]], ptr [[M]], align 4
+// COL-CHECK-NEXT:    [[TMP10:%.*]] = load <4 x float>, ptr [[M]], align 4
+// COL-CHECK-NEXT:    ret <4 x float> [[TMP10]]
 //
 float2x2 call5(float4 v) {
     float2x2 m = (float2x2)v;
