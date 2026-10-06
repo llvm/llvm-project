@@ -1567,3 +1567,97 @@ Sections:
 Symbols:
   - Name:  foo
 ...
+
+## Check that a relocation that applies to an address field is reported outside
+## relocatable object files too, e.g. in a file linked with --emit-relocs.
+## Callees identified by a relocation are listed even if they have the same
+## address.
+# RUN: yaml2obj --docnum=13 %s -o %t13
+# RUN: llvm-readobj --elf-output-style=LLVM --call-graph-info %t13 2>&1 | \
+# RUN:   FileCheck %s --match-full-lines --implicit-check-not=warning: \
+# RUN:     --check-prefix=LLVM-EXEC-RELOC
+
+# LLVM-EXEC-RELOC:      CallGraph [
+# LLVM-EXEC-RELOC-NEXT:   Function {
+# LLVM-EXEC-RELOC-NEXT:     Relocation {
+# LLVM-EXEC-RELOC-NEXT:       Type: R_X86_64_64 (1)
+# LLVM-EXEC-RELOC-NEXT:       SymbolIndex: 3
+# LLVM-EXEC-RELOC-NEXT:       SymbolName: caller
+# LLVM-EXEC-RELOC-NEXT:     }
+# LLVM-EXEC-RELOC-NEXT:     Version: 0
+# LLVM-EXEC-RELOC-NEXT:     IsIndirectTarget: No
+# LLVM-EXEC-RELOC-NEXT:     TypeID: 0x0
+# LLVM-EXEC-RELOC-NEXT:     DirectCallees [
+# LLVM-EXEC-RELOC-NEXT:       {
+# LLVM-EXEC-RELOC-NEXT:         Relocation {
+# LLVM-EXEC-RELOC-NEXT:           Type: R_X86_64_64 (1)
+# LLVM-EXEC-RELOC-NEXT:           SymbolIndex: 1
+# LLVM-EXEC-RELOC-NEXT:           SymbolName: foo
+# LLVM-EXEC-RELOC-NEXT:         }
+# LLVM-EXEC-RELOC-NEXT:       }
+# LLVM-EXEC-RELOC-NEXT:       {
+# LLVM-EXEC-RELOC-NEXT:         Relocation {
+# LLVM-EXEC-RELOC-NEXT:           Type: R_X86_64_64 (1)
+# LLVM-EXEC-RELOC-NEXT:           SymbolIndex: 2
+# LLVM-EXEC-RELOC-NEXT:           SymbolName: bar
+# LLVM-EXEC-RELOC-NEXT:         }
+# LLVM-EXEC-RELOC-NEXT:       }
+# LLVM-EXEC-RELOC-NEXT:     ]
+# LLVM-EXEC-RELOC-NEXT:     IndirectTypeIDs: []
+# LLVM-EXEC-RELOC-NEXT:   }
+# LLVM-EXEC-RELOC-NEXT: ]
+
+--- !ELF
+FileHeader:
+  Class:    ELFCLASS64
+  Data:     ELFDATA2LSB
+  Type:     ET_EXEC
+  Machine:  EM_X86_64
+Sections:
+  - Name:    .text
+    Type:    SHT_PROGBITS
+    Flags:   [ SHF_ALLOC, SHF_EXECINSTR ]
+    Address: 0x1000
+    Size:    0x20
+  - Name:   .llvm.callgraph
+    Type:   SHT_LLVM_CALL_GRAPH
+    Link:   .text
+    ContentArray: [
+      0x00, ## Format Version
+      0x02, ## Flags (HasDirectCallees)
+      ## Offset 0x2
+      0x10, 0x10, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, ## Function address: 0x1010 (caller)
+      0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, ## TypeID
+      0x02, ## NumDirectCallees
+      ## Offset 0x13
+      0x00, 0x10, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, ## Callee 1: 0x1000 (foo)
+      ## Offset 0x1B
+      0x00, 0x10, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00  ## Callee 2: 0x1000 (bar, folded into foo)
+    ]
+  - Name:   .rela.llvm.callgraph
+    Type:   SHT_RELA
+    Info:   .llvm.callgraph
+    Relocations:
+      - Offset:  0x2
+        Symbol:  caller
+        Type:    R_X86_64_64
+      - Offset:  0x13
+        Symbol:  foo
+        Type:    R_X86_64_64
+      - Offset:  0x1B
+        Symbol:  bar
+        Type:    R_X86_64_64
+Symbols:
+  - Name:     foo
+    Type:     STT_FUNC
+    Section:  .text
+    Value:    0x1000
+  - Name:     bar
+    Type:     STT_FUNC
+    Section:  .text
+    Value:    0x1000
+  - Name:     caller
+    Type:     STT_FUNC
+    Section:  .text
+    Value:    0x1010
+...

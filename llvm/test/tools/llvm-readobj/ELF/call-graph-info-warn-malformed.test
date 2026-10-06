@@ -201,8 +201,8 @@ Sections:
 ...
 
 ## Check that a single warning is reported when a SHT_LLVM_CALL_GRAPH section in
-## a relocatable object file has no relocation section, and that each address
-## field is then identified by its offset.
+## a relocatable object file has no relocation section, and that each entry is
+## then identified by the value stored in its address field.
 # RUN: yaml2obj --docnum=6 %s -o %t11
 # RUN: llvm-readobj --elf-output-style=GNU --call-graph-info %t11 2>&1 | count 0
 # RUN: llvm-readobj --elf-output-style=LLVM --call-graph-info %t11 2>&1 | \
@@ -217,33 +217,33 @@ Sections:
 
 # LLVM-MISSING-INFO:      CallGraph [
 # LLVM-MISSING-INFO-NEXT:   Function {
-# LLVM-MISSING-INFO-NEXT:     Offset: 0x2
+# LLVM-MISSING-INFO-NEXT:     Address: 0x0
 # LLVM-MISSING-INFO-NEXT:     Version: 0
 # LLVM-MISSING-INFO-NEXT:     IsIndirectTarget: Yes
 # LLVM-MISSING-INFO-NEXT:     TypeID: 0x0
 # LLVM-MISSING-INFO-NEXT:     DirectCallees [
 # LLVM-MISSING-INFO-NEXT:       {
-# LLVM-MISSING-INFO-NEXT:         Offset: 0x13
+# LLVM-MISSING-INFO-NEXT:         Address: 0x0
 # LLVM-MISSING-INFO-NEXT:       }
 # LLVM-MISSING-INFO-NEXT:     ]
 # LLVM-MISSING-INFO-NEXT:     IndirectTypeIDs: []
 # LLVM-MISSING-INFO-NEXT:   }
 # LLVM-MISSING-INFO-NEXT:   Function {
-# LLVM-MISSING-INFO-NEXT:     Offset: 0x1D
+# LLVM-MISSING-INFO-NEXT:     Address: 0x6
 # LLVM-MISSING-INFO:        Function {
-# LLVM-MISSING-INFO-NEXT:     Offset: 0x38
+# LLVM-MISSING-INFO-NEXT:     Address: 0xA
 
 # JSON-MISSING-INFO:      "Function": {
-# JSON-MISSING-INFO-NEXT:   "Offset": 2,
+# JSON-MISSING-INFO-NEXT:   "Address": 0,
 # JSON-MISSING-INFO:        "DirectCallees": [
 # JSON-MISSING-INFO-NEXT:     {
-# JSON-MISSING-INFO-NEXT:       "Offset": 19
+# JSON-MISSING-INFO-NEXT:       "Address": 0
 # JSON-MISSING-INFO-NEXT:     }
 # JSON-MISSING-INFO-NEXT:   ],
 # JSON-MISSING-INFO:        "Function": {
-# JSON-MISSING-INFO-NEXT:   "Offset": 29,
+# JSON-MISSING-INFO-NEXT:   "Address": 6,
 # JSON-MISSING-INFO:        "Function": {
-# JSON-MISSING-INFO-NEXT:   "Offset": 56,
+# JSON-MISSING-INFO-NEXT:   "Address": 10,
 
 --- !ELF
 FileHeader:
@@ -303,7 +303,8 @@ Symbols:
 ...
 
 ## Check warning when the relocation section linked to SHT_LLVM_CALL_GRAPH has
-## an invalid sh_link. The entry is still dumped and identified by its offset.
+## an invalid sh_link. The entry is still dumped, identified by the value stored
+## in its address field.
 # RUN: yaml2obj --docnum=7 -DLINK=255 -DINFO=.llvm_call_graph %s -o %t13
 # RUN: llvm-readobj --elf-output-style=LLVM --call-graph-info %t13 2>&1 | \
 # RUN:   FileCheck %s -DFILE=%t13 --check-prefixes=INVALID-RELA-LINK,INVALID-RELA-LINK-LLVM
@@ -312,7 +313,7 @@ Symbols:
 
 # INVALID-RELA-LINK: warning: '[[FILE]]': unable to locate a symbol table for SHT_RELA section with index 2: invalid section index: 255
 # INVALID-RELA-LINK-LLVM:      Function {
-# INVALID-RELA-LINK-LLVM-NEXT:   Offset: 0x2
+# INVALID-RELA-LINK-LLVM-NEXT:   Address: 0x0
 
 ## Check warning when getSectionAndRelocations fails to read sections.
 # RUN: yaml2obj --docnum=7 -DLINK=0 -DINFO=255 %s -o %t14
@@ -360,8 +361,8 @@ Symbols:
 ...
 
 ## Check that a warning is reported when more than one relocation, or no
-## relocation, applies to an address field, and that the field is then
-## identified by its offset.
+## relocation, applies to an address field, and that the entry is then
+## identified by the value stored in its address field.
 # RUN: yaml2obj --docnum=8 %s -o %t16
 # RUN: llvm-readobj --elf-output-style=LLVM --call-graph-info %t16 2>&1 | \
 # RUN:   FileCheck %s -DFILE=%t16 --implicit-check-not=warning: \
@@ -376,7 +377,7 @@ Symbols:
 
 # UNRESOLVED:      CallGraph [
 # UNRESOLVED-NEXT:   Function {
-# UNRESOLVED-NEXT:     Offset: 0x2
+# UNRESOLVED-NEXT:     Address: 0x0
 # UNRESOLVED-NEXT:     Version: 0
 
 --- !ELF
