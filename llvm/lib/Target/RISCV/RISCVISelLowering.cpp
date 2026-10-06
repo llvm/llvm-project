@@ -19495,6 +19495,29 @@ static SDValue performSUBCombine(SDNode *N, SelectionDAG &DAG,
     }
   }
 
+  // fold (sub 0, (srl (and X, (1 << ShAmt)), ShAmt)) ->
+  //      (sra (shl X, ShAmt2), bits - 1)
+  // where ShAmt2 = (bits - 1) - ShAmt. This extracts bit ShAmt of X and
+  // sign-extends it across the whole register.
+  {
+    using namespace SDPatternMatch;
+    SDValue X;
+    uint64_t Mask, ShAmt;
+    if (isNullConstant(N0) &&
+        sd_match(N1,
+                 m_OneUse(m_Srl(m_OneUse(m_And(m_Value(X), m_ConstInt(Mask))),
+                                m_ConstInt(ShAmt)))) &&
+        isPowerOf2_64(Mask) && Log2_64(Mask) == ShAmt) {
+      SDLoc DL(N);
+      unsigned Bits = VT.getSizeInBits();
+      unsigned ShAmt2 = Bits - 1 - ShAmt;
+      SDValue Shl = DAG.getNode(ISD::SHL, DL, VT, X,
+                                DAG.getShiftAmountConstant(ShAmt2, VT, DL));
+      return DAG.getNode(ISD::SRA, DL, VT, Shl,
+                         DAG.getShiftAmountConstant(Bits - 1, VT, DL));
+    }
+  }
+
   if (SDValue V = combinePExtWideningSubAcc(N, DAG, Subtarget))
     return V;
   if (SDValue V = combinePExtWideningAddSub(N, DAG, Subtarget))

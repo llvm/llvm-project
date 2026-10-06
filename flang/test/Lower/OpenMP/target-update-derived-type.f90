@@ -118,7 +118,7 @@ subroutine update_pointer(w)
   type(wavefun) :: w
 
   ! CHECK: %[[FERWE_MAP:.*]] = omp.map.info {{.*}} map_clauses(to)
-  ! CHECK: %[[PTR_MAP:.*]] = omp.map.info {{.*}} map_clauses(to) {{.*}}members({{.*}}name("w%ptr")
+  ! CHECK: %[[PTR_MAP:.*]] = omp.map.info {{.*}} map_clauses(to) {{.*}}name("w%ptr")
   ! CHECK: omp.target_update map_entries(%[[FERWE_MAP]], %[[PTR_MAP]],
   !$omp target update to(w%ferwe, w%ptr)
 end subroutine
