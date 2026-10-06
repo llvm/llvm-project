@@ -1427,18 +1427,24 @@ static unsigned getIntrMemWidth(unsigned IntrID) {
   case Intrinsic::amdgcn_global_load_async_to_lds_b32:
   case Intrinsic::amdgcn_cluster_load_async_to_lds_b32:
   case Intrinsic::amdgcn_global_store_async_from_lds_b32:
+  case Intrinsic::amdgcn_cooperative_atomic_load_32x4B:
+  case Intrinsic::amdgcn_cooperative_atomic_store_32x4B:
   case Intrinsic::amdgcn_flat_load_monitor_b32:
   case Intrinsic::amdgcn_global_load_monitor_b32:
     return 32;
   case Intrinsic::amdgcn_global_load_async_to_lds_b64:
   case Intrinsic::amdgcn_cluster_load_async_to_lds_b64:
   case Intrinsic::amdgcn_global_store_async_from_lds_b64:
+  case Intrinsic::amdgcn_cooperative_atomic_load_16x8B:
+  case Intrinsic::amdgcn_cooperative_atomic_store_16x8B:
   case Intrinsic::amdgcn_flat_load_monitor_b64:
   case Intrinsic::amdgcn_global_load_monitor_b64:
     return 64;
   case Intrinsic::amdgcn_global_load_async_to_lds_b128:
   case Intrinsic::amdgcn_cluster_load_async_to_lds_b128:
   case Intrinsic::amdgcn_global_store_async_from_lds_b128:
+  case Intrinsic::amdgcn_cooperative_atomic_load_8x16B:
+  case Intrinsic::amdgcn_cooperative_atomic_store_8x16B:
   case Intrinsic::amdgcn_flat_load_monitor_b128:
   case Intrinsic::amdgcn_global_load_monitor_b128:
     return 128;
