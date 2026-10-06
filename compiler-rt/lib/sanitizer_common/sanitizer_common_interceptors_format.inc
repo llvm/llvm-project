@@ -546,12 +546,12 @@ static void printf_common(void *ctx, const char *format, va_list aq) {
             "%s: WARNING: unexpected format specifier in printf "
             "interceptor: %.*s (reported once per process)\n",
             SanitizerToolName, static_cast<int>(dir.end - dir.begin), dir.begin);
-        auto* stack = new (InternalAlloc(sizeof(BufferedStackTrace)))
-            BufferedStackTrace();
+        InternalMmapVector<BufferedStackTrace> stack_buffer(1);
+        BufferedStackTrace* stack = stack_buffer.data();
+        stack->Reset();
         stack->Unwind(StackTrace::GetCurrentPc(), GET_CURRENT_FRAME(), nullptr,
                       common_flags()->fast_unwind_on_fatal);
         stack->Print();
-        InternalFree(stack);
       }
       break;
     }
