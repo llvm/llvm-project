@@ -51,14 +51,15 @@ LLDB, particularly when that introspection requires evaluating simple
 expressions (which is often the case when data formatters and synthetic children
 are involved).
 
-The full expression evaluator uses Clang to fully parse C++ expressions,
-building up Clang ASTs to represent the expressions and then evaluating these
-Clang ASTs within the current LLDB context, by running code in the target. This
-is a very flexible mechanism, and can have true source language fidelity, but it
-can also be a bit slow.
+The full expression evaluator uses the compiler's language-accurate parser to
+fully parse source-language expressions, building up ASTs to represent the
+expressions and then JIT'ing code for these ASTs and executing it within the
+current LLDB context, by running code in the target. This is a very flexible
+mechanism, and can have true source language fidelity, but it can also be a bit
+slow (and can also affect the program state).
 
-DIL was explicitly designed for speed. It addresses these issues by avoiding
-Clang altogether. Instead, it defines its own simple grammar, AST
+DIL was explicitly designed for speed. It addresses these issues by avoiding the
+compiler altogether. Instead, it defines its own simple grammar, AST
 representation, lexer, parser and interpreter. By working on the reformatted
 values instead of the raw types, the DIL also allows you to not just view but
 write tests and other simple expressions using the values as they are shown to
@@ -79,7 +80,7 @@ supporting such languages as Rust, Swift or Fortran.
 
 The actual formal definition of DIL can be found in an EBNF file in the LLDB
 source code repository in
-[dil-expr-lang.ebnf](https://github.com/llvm/llvm-project/blob/main/lldb/docs/dil-expr-lang.ebnf).
+[dil-expr-lang.ebnf](../../dil-expr-lang.ebnf).
 
 
 Here is a quick summary of the types of expressions DIL can support:
@@ -120,8 +121,8 @@ cases where they will both return apparently valid but DIFFERENT RESULTS. One
 example of this is in the case of operator overloading. If DIL is used in a
 situation where an operator has an overloaded definition, DIL will
 ignore the overloaded definition, and therefore return a result different from
-what you might expect. The full expression evaluator handles operator
-overloading properly.
+what the full expression evaluator would return.
+
 
 Because of this potential for DIL returning a different value than the full
 expression evaluator might, we have been cautious about using the full DIL
@@ -144,22 +145,25 @@ are:
 
 Historically `frame variable` was intended to handle path expressions (including
 re-formatted values), and `expression` was intended to handle any other
-expressions users wanted to evaluate.
+expressions users wanted to evaluate. Also `expression` will run code (in the
+target) if it needs to, whereas `frame variable` will not. In general this meant
+that languages that don't support IR interpretations must always run code in the
+target, which will be slow.
 
 
-`dwim-print` was introduced in 2022.  Before that time, `p` was an abbreviation
+`dwim-print` was introduced in 2022.  Before that time, `p` was an alias
 for `expr`. The problem was that many LLDB users came to LLDB from GDB, where
-there was only one command either for accessing variable values (expression
+users could use one command either for accessing variable values (expression
 paths) or for evaluating more complex expressions. The single GDB command was
 `print`, usually abbreviated `p`. The result of this was that many LLDB users
 would just use `p` all the time, including times when it wasn't really necessary
 or even appropriate. `dwim-print` was introduced in an attempt to alleviate this
 problem. "dwim" stands for "do-what-I-mean". `dwim-print` looks at the
-expression and attempts to decide whether it could/should be handled by `frame
-variable` or whether it really needs the full expression evaluator, and calls
-the appropriate mechanism accordingly.  Since `p` was made an abbreviation for
-`dwim-print`, this went a long way towards solving the problem of users calling
-into the full expression evaluator when they shouldn't.
+expression and attempts to decide whether it `frame variable` would produce the
+same value as the full expression evaluator, and calls the appropriate mechanism
+accordingly. Since `p` was made an alias for `dwim-print`, this went a
+long way towards solving the problem of users running code in the target when
+that was not necessary.
 
 
 After being introduced in 2025, DIL became the default implementation for `frame
@@ -173,10 +177,12 @@ For full or complex expressions (e.g. things involving function calls or
 templates), users should still use the full expression evaluator (`expr`).
 
 
-Currently`dwim-print` (aka `print` or `p`) still dispatches expressions based on
-what the original `frame variable` implementation could handle, not what DIL can
-do. Therefore it is better for users to use either `v` or `expr` to explicitly
-choose the evaluation mechanism they really want.
+Currently`dwim-print`(aka `print` or `p`) dispatches expressions consisting only
+of indentifiers and `.` operators to `frame variable`. It sends everything else
+to the full expression evaluator. Therefore, to avoid the slow path of running
+code in the target (and potentially changing the program state) when it is not
+necessary, it is better for users to use either `v` or `expr` to explicitly, and
+avoid `dwim-print` or `p`.
 
 ### User options and flags to control using DIL
 
