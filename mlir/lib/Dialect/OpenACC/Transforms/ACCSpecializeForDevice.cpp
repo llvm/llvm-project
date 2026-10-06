@@ -82,7 +82,6 @@ using namespace mlir;
 using namespace mlir::acc;
 
 namespace {
-
 /// Op names of region-branch users of `acc.on_device`. The inlining pattern is
 /// registered for these names and drops the untaken path once the condition is
 /// a constant.
