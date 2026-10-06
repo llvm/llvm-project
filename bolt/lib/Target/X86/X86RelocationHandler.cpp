@@ -10,7 +10,6 @@
 //
 //===----------------------------------------------------------------------===//
 
-#include "bolt/Target/X86/X86RelocationHandler.h"
 #include "bolt/Core/Relocation.h"
 #include "llvm/Object/ELF.h"
 #include "llvm/Support/ErrorHandling.h"

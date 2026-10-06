@@ -16,6 +16,7 @@
 
 #include "llvm/MC/MCExpr.h"
 #include "llvm/MC/MCStreamer.h"
+#include <memory>
 
 namespace llvm {
 class MCSymbol;
@@ -220,6 +221,12 @@ inline bool operator<(const Relocation &A, const Relocation &B) {
 inline bool operator<(const Relocation &A, uint64_t B) { return A.Offset < B; }
 
 inline bool operator<(uint64_t A, const Relocation &B) { return A < B.Offset; }
+
+std::unique_ptr<RelocationHandler> createX86RelocationHandler();
+
+std::unique_ptr<RelocationHandler> createAArch64RelocationHandler();
+
+std::unique_ptr<RelocationHandler> createRISCVRelocationHandler(bool Is64Bit);
 
 } // namespace bolt
 } // namespace llvm

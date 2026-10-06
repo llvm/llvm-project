@@ -34,15 +34,6 @@
 #include "bolt/Rewrite/MetadataRewriters.h"
 #include "bolt/RuntimeLibs/HugifyRuntimeLibrary.h"
 #include "bolt/RuntimeLibs/InstrumentationRuntimeLibrary.h"
-#ifdef AARCH64_AVAILABLE
-#include "bolt/Target/AArch64/AArch64RelocationHandler.h"
-#endif
-#ifdef RISCV_AVAILABLE
-#include "bolt/Target/RISCV/RISCVRelocationHandler.h"
-#endif
-#ifdef X86_AVAILABLE
-#include "bolt/Target/X86/X86RelocationHandler.h"
-#endif
 #include "bolt/Utils/CommandLineOpts.h"
 #include "bolt/Utils/Utils.h"
 #include "llvm/ADT/AddressRanges.h"

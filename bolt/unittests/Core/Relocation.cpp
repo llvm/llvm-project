@@ -7,15 +7,6 @@
 //===----------------------------------------------------------------------===//
 
 #include "bolt/Core/Relocation.h"
-#ifdef AARCH64_AVAILABLE
-#include "bolt/Target/AArch64/AArch64RelocationHandler.h"
-#endif
-#ifdef RISCV_AVAILABLE
-#include "bolt/Target/RISCV/RISCVRelocationHandler.h"
-#endif
-#ifdef X86_AVAILABLE
-#include "bolt/Target/X86/X86RelocationHandler.h"
-#endif
 #include "llvm/BinaryFormat/ELF.h"
 #include "gtest/gtest.h"
 

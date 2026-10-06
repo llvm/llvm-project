@@ -10,7 +10,6 @@
 //
 //===----------------------------------------------------------------------===//
 
-#include "bolt/Target/RISCV/RISCVRelocationHandler.h"
 #include "bolt/Core/Relocation.h"
 #include "llvm/Object/ELF.h"
 #include "llvm/Support/ErrorHandling.h"
