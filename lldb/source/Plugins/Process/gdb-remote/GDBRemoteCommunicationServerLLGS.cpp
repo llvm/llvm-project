@@ -4764,11 +4764,12 @@ GDBRemoteCommunicationServerLLGS::Handle_jThreadExtendedInfo(
                                          "a valid 'thread' field");
 
   if (!m_current_process)
-    return SendIllFormedResponse(packet, "no current process");
+    return SendErrorResponse(createStringError("no current process"));
 
   NativeThreadProtocol *thread = m_current_process->GetThreadByID(*thread_id);
   if (!thread)
-    return SendIllFormedResponse(packet, "no thread with specified ID");
+    return SendErrorResponse(
+        createStringErrorV("no thread with specified ID ({0:x})", *thread_id));
 
   StructuredData::ObjectSP ext_info = thread->GetExtendedInfo();
 
