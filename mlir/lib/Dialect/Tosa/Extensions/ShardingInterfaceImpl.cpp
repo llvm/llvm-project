@@ -22,7 +22,6 @@ using namespace mlir::tosa;
 using namespace mlir::shard;
 
 namespace {
-
 // For an output of rank R, use R parallel loops followed by one reduction
 // loop. Right align the input batch dimensions with the output batch loops and
 // map A[..., H, C] to [..., d(R-2), d(R)]. MATMUL maps B[..., C, W] to
