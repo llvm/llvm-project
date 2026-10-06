@@ -14,18 +14,14 @@ define void @init_array_of_ptrs_to_structs(ptr noalias %arc_ptrs, ptr %arc_new, 
 ; CHECK-NEXT:    [[BROADCAST_SPLATINSERT:%.*]] = insertelement <vscale x 2 x i64> poison, i64 [[STEP]], i64 0
 ; CHECK-NEXT:    [[BROADCAST_SPLAT:%.*]] = shufflevector <vscale x 2 x i64> [[BROADCAST_SPLATINSERT]], <vscale x 2 x i64> poison, <vscale x 2 x i32> zeroinitializer
 ; CHECK-NEXT:    [[TMP1:%.*]] = mul <vscale x 2 x i64> [[TMP0]], splat (i64 72)
-; CHECK-NEXT:    [[TMP2:%.*]] = ptrtoint ptr [[ARC_NEW]] to i64
-; CHECK-NEXT:    [[DOTSPLATINSERT:%.*]] = insertelement <vscale x 2 x i64> poison, i64 [[TMP2]], i64 0
-; CHECK-NEXT:    [[DOTSPLAT:%.*]] = shufflevector <vscale x 2 x i64> [[DOTSPLATINSERT]], <vscale x 2 x i64> poison, <vscale x 2 x i32> zeroinitializer
-; CHECK-NEXT:    [[TMP3:%.*]] = add <vscale x 2 x i64> [[TMP1]], [[DOTSPLAT]]
-; CHECK-NEXT:    [[TMP4:%.*]] = inttoptr <vscale x 2 x i64> [[TMP3]] to <vscale x 2 x ptr>
+; CHECK-NEXT:    [[TMP2:%.*]] = getelementptr i8, ptr [[ARC_NEW]], <vscale x 2 x i64> [[TMP1]]
 ; CHECK-NEXT:    [[TMP5:%.*]] = mul i64 [[STEP]], 72
 ; CHECK-NEXT:    [[DOTSPLATINSERT1:%.*]] = insertelement <vscale x 2 x i64> poison, i64 [[TMP5]], i64 0
 ; CHECK-NEXT:    [[DOTSPLAT2:%.*]] = shufflevector <vscale x 2 x i64> [[DOTSPLATINSERT1]], <vscale x 2 x i64> poison, <vscale x 2 x i32> zeroinitializer
 ; CHECK-NEXT:    br label %[[VECTOR_BODY:.*]]
 ; CHECK:       [[VECTOR_BODY]]:
 ; CHECK-NEXT:    [[INDEX:%.*]] = phi i64 [ 0, %[[ENTRY]] ], [ [[INDEX_NEXT:%.*]], %[[VECTOR_BODY]] ]
-; CHECK-NEXT:    [[VEC_LSR_PHI:%.*]] = phi <vscale x 2 x ptr> [ [[TMP4]], %[[ENTRY]] ], [ [[TMP9:%.*]], %[[VECTOR_BODY]] ]
+; CHECK-NEXT:    [[VEC_LSR_PHI:%.*]] = phi <vscale x 2 x ptr> [ [[TMP2]], %[[ENTRY]] ], [ [[TMP9:%.*]], %[[VECTOR_BODY]] ]
 ; CHECK-NEXT:    [[WIDE_GEP:%.*]] = getelementptr inbounds nuw [72 x i8], ptr [[ARC_NEW]], <vscale x 2 x i64> poison
 ; CHECK-NEXT:    [[TMP6:%.*]] = getelementptr inbounds nuw [8 x i8], ptr [[ARC_PTRS]], i64 [[INDEX]]
 ; CHECK-NEXT:    store <vscale x 2 x ptr> [[VEC_LSR_PHI]], ptr [[TMP6]], align 8

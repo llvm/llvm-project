@@ -8803,15 +8803,14 @@ static bool optimizeBranch(CondBrInst *Branch, const TargetLowering &TLI,
 //  %vec.ind.next = add nuw nsw <vscale x 2 x i64> %vec.ind, %elt.cnt.splat
 //
 // We want to change this to:
-//  %base = ptrtoint(%datap) + (<stepvector> * 72)
+//  %base = gep i8, %datap, (<stepvector> * 72)
 //  %stride = splat(elementcount) * 72
 //  vector.body:
-//  %vec.ind = phi <vscale x 2 x i64> [ %base, %entry ],
-//                                    [ %vec.ind.next, %vector.body ]
-//  %data.val = inttoptr %vec.ind
-//  %addr.gep = getelementptr inbounds nuw [8 x i8], ptr %addrp, i64 %index
-//  store <vscale x 2 x ptr> %data.val, ptr %addr.gep, align 8
-//  %vec.ind.next = add nuw nsw <vscale x 2 x i64> %vec.ind, %stride
+//  %vec.lsr.phi = phi <vscale x 2 x ptr> [ %base, %entry ],
+//                                        [ %vec.lsr.next, %vector.body ]
+//  %addr.gep = gep inbounds nuw [8 x i8], ptr %addrp, i64 %index
+//  store <vscale x 2 x ptr> %vec.lsr.phi, ptr %addr.gep, align 8
+//  %vec.lsr.next = gep i8, %vec.lsr.phi, %stride
 //
 // Doing so will remove a multiply from the loop, and leave the update as just
 // an add.
@@ -8843,16 +8842,14 @@ static bool strengthReduceVectorPhiUsers(PHINode *Phi, LoopInfo *LI) {
   if (!match(Step, m_c_Add(m_Specific(Phi), m_Value(LoopStride))))
     return false;
 
+  // Make sure the loop stride matches the pointer stride.
+  auto EltCnt = cast<VectorType>(Phi->getType())->getElementCount();
   const APInt *ShiftAmt = nullptr;
-  Value *ShiftedVScale = nullptr;
+  Value *PtrStride = nullptr;
   if (!match(LoopStride,
              m_Splat(
-                 m_Value(ShiftedVScale, m_Shl(m_VScale(), m_APInt(ShiftAmt))))))
-    return false;
-
-  // Make sure the shift amount matches the minimum element count.
-  auto EltCnt = cast<VectorType>(Phi->getType())->getElementCount();
-  if (1 << ShiftAmt->getZExtValue() != EltCnt.getKnownMinValue())
+                 m_Value(PtrStride, m_Shl(m_VScale(), m_APInt(ShiftAmt))))) ||
+                1ULL << ShiftAmt->getZExtValue() != EltCnt.getKnownMinValue())
     return false;
 
   // Check that the elements are integers equal in size to pointers.
@@ -8866,9 +8863,8 @@ static bool strengthReduceVectorPhiUsers(PHINode *Phi, LoopInfo *LI) {
   // The Step forming the incoming value for the backedge, and a GEP.
   GetElementPtrInst *GEP = nullptr;
   for (User *U : Phi->users()) {
-    Instruction *I = cast<Instruction>(U);
     // Skip over the step, handled above.
-    if (Step == I)
+    if (Step == U)
       continue;
 
     // If we've already found a GEP, bail out.
@@ -8877,7 +8873,7 @@ static bool strengthReduceVectorPhiUsers(PHINode *Phi, LoopInfo *LI) {
       return false;
 
     // We're only interested in single index GEPs
-    GEP = dyn_cast<GetElementPtrInst>(I);
+    GEP = dyn_cast<GetElementPtrInst>(U);
     if (!GEP || GEP->getNumOperands() != 2)
       return false;
   }
@@ -8898,28 +8894,24 @@ static bool strengthReduceVectorPhiUsers(PHINode *Phi, LoopInfo *LI) {
   unsigned Size = DL.getTypeStoreSize(GEP->getResultElementType());
 
   // Multiply the start by the size of the struct, and add the base pointer.
+  Type *Int8Ty = IntegerType::getInt8Ty(ITy->getContext());
   IRBuilder<> Builder(PreHeader->getTerminator());
   Value *StructSize = ConstantInt::get(ITy, APInt(64, Size));
   Value *SizeSplat =
       Builder.CreateVectorSplat(VTy->getElementCount(), StructSize);
   Value *NewStart = Builder.CreateMul(Start, SizeSplat);
-  Base = Builder.CreatePtrToInt(Base, ITy);
-  Base = Builder.CreateVectorSplat(VTy->getElementCount(), Base);
-  NewStart = Builder.CreateAdd(NewStart, Base);
-  NewStart = Builder.CreateIntToPtr(NewStart, GEP->getType());
+  NewStart = Builder.CreateGEP(Int8Ty, Base, NewStart);
 
   // Create a new step based on the total size of all struct addresses per
   // iteration.
-  Value *StructStride = Builder.CreateMul(ShiftedVScale, StructSize);
+  Value *StructStride = Builder.CreateMul(PtrStride, StructSize);
   StructStride =
       Builder.CreateVectorSplat(VTy->getElementCount(), StructStride);
 
   Builder.SetInsertPoint(Phi);
   PHINode *NewPhi = Builder.CreatePHI(GEP->getType(), 2, "vec.lsr.phi");
   Builder.SetInsertPoint(cast<Instruction>(Step));
-  LLVMContext &Ctx = ITy->getContext();
-  StructStride =
-      Builder.CreateGEP(IntegerType::getInt8Ty(Ctx), NewPhi, {StructStride});
+  StructStride = Builder.CreateGEP(Int8Ty, NewPhi, StructStride);
 
   // Set up the new PHI.
   NewPhi->addIncoming(NewStart, PreHeader);
@@ -8963,6 +8955,7 @@ bool CodeGenPrepare::optimizeInst(Instruction *I, ModifyDT &ModifiedDT) {
 
     // Look for simple GEPs on scalable vectors used as data which may
     // introduce unnecessary multiplies in the loop.
+    // TODO: Support fixed vectors too.
     if (P->getType()->isScalableTy())
       AnyChange |= strengthReduceVectorPhiUsers(P, LI);
     return AnyChange;
