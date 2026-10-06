@@ -359,4 +359,59 @@ exit:
   ret void
 }
 
+define void @update_first_elt_of_strided_structs(ptr noalias %struct_ptr, i64 %num, <vscale x 2 x i1> %mask) #0 {
+; CHECK-LABEL: define void @update_first_elt_of_strided_structs(
+; CHECK-SAME: ptr noalias [[STRUCT_PTR:%.*]], i64 [[NUM:%.*]], <vscale x 2 x i1> [[MASK:%.*]]) #[[ATTR0]] {
+; CHECK-NEXT:  [[ENTRY:.*]]:
+; CHECK-NEXT:    [[VSCALE:%.*]] = tail call i64 @llvm.vscale.i64()
+; CHECK-NEXT:    [[STEP:%.*]] = shl nuw nsw i64 [[VSCALE]], 1
+; CHECK-NEXT:    [[DOTNOT:%.*]] = sub nsw i64 0, [[STEP]]
+; CHECK-NEXT:    [[N_VEC:%.*]] = and i64 [[DOTNOT]], [[NUM]]
+; CHECK-NEXT:    [[TMP0:%.*]] = tail call <vscale x 2 x i64> @llvm.stepvector.nxv2i64()
+; CHECK-NEXT:    [[DOTSPLATINSERT:%.*]] = insertelement <vscale x 2 x i64> poison, i64 [[STEP]], i64 0
+; CHECK-NEXT:    [[DOTSPLAT:%.*]] = shufflevector <vscale x 2 x i64> [[DOTSPLATINSERT]], <vscale x 2 x i64> poison, <vscale x 2 x i32> zeroinitializer
+; CHECK-NEXT:    br label %[[VECTOR_BODY:.*]]
+; CHECK:       [[VECTOR_BODY]]:
+; CHECK-NEXT:    [[INDEX:%.*]] = phi i64 [ 0, %[[ENTRY]] ], [ [[INDEX_NEXT:%.*]], %[[VECTOR_BODY]] ]
+; CHECK-NEXT:    [[VEC_IND:%.*]] = phi <vscale x 2 x i64> [ [[TMP0]], %[[ENTRY]] ], [ [[VEC_IND_NEXT:%.*]], %[[VECTOR_BODY]] ]
+; CHECK-NEXT:    [[WIDE_GEP:%.*]] = getelementptr inbounds nuw [72 x i8], ptr [[STRUCT_PTR]], <vscale x 2 x i64> [[VEC_IND]]
+; CHECK-NEXT:    [[DATA:%.*]] = call <vscale x 2 x i64> @llvm.masked.gather.nxv2i64.nxv2p0(<vscale x 2 x ptr> align 8 [[WIDE_GEP]], <vscale x 2 x i1> [[MASK]], <vscale x 2 x i64> poison)
+; CHECK-NEXT:    [[UPDATED:%.*]] = add <vscale x 2 x i64> [[DATA]], splat (i64 1)
+; CHECK-NEXT:    call void @llvm.masked.scatter.nxv2i64.nxv2p0(<vscale x 2 x i64> [[UPDATED]], <vscale x 2 x ptr> align 8 [[WIDE_GEP]], <vscale x 2 x i1> [[MASK]])
+; CHECK-NEXT:    [[TMP1:%.*]] = tail call i64 @llvm.vscale.i64()
+; CHECK-NEXT:    [[TMP2:%.*]] = shl nuw nsw i64 [[TMP1]], 1
+; CHECK-NEXT:    [[INDEX_NEXT]] = add nuw i64 [[INDEX]], [[TMP2]]
+; CHECK-NEXT:    [[VEC_IND_NEXT]] = add nuw nsw <vscale x 2 x i64> [[VEC_IND]], [[DOTSPLAT]]
+; CHECK-NEXT:    [[TMP3:%.*]] = icmp eq i64 [[INDEX_NEXT]], [[N_VEC]]
+; CHECK-NEXT:    br i1 [[TMP3]], label %[[MIDDLE_BLOCK:.*]], label %[[VECTOR_BODY]]
+; CHECK:       [[MIDDLE_BLOCK]]:
+; CHECK-NEXT:    ret void
+;
+entry:
+  %vscale = tail call i64 @llvm.vscale.i64()
+  %step = shl nuw nsw i64 %vscale, 1
+  %min.iters.check = icmp samesign ugt i64 %step, %num
+  %.not = sub nsw i64 0, %step
+  %n.vec = and i64 %.not, %num
+  %2 = tail call <vscale x 2 x i64> @llvm.stepvector.nxv2i64()
+  %broadcast.splatinsert = insertelement <vscale x 2 x i64> poison, i64 %step, i64 0
+  %broadcast.splat = shufflevector <vscale x 2 x i64> %broadcast.splatinsert, <vscale x 2 x i64> poison, <vscale x 2 x i32> zeroinitializer
+  br label %vector.body
+
+vector.body:
+  %index = phi i64 [ 0, %entry ], [ %index.next, %vector.body ]
+  %vec.ind = phi <vscale x 2 x i64> [ %2, %entry ], [ %vec.ind.next, %vector.body ]
+  %wide.gep = getelementptr inbounds nuw [72 x i8], ptr %struct_ptr, <vscale x 2 x i64> %vec.ind
+  %data = call <vscale x 2 x i64> @llvm.masked.gather(<vscale x 2 x ptr> align 8 %wide.gep, <vscale x 2 x i1> %mask, <vscale x 2 x i64> poison)
+  %updated = add <vscale x 2 x i64> %data, splat(i64 1)
+  call void @llvm.masked.scatter(<vscale x 2 x i64> %updated, <vscale x 2 x ptr> align 8 %wide.gep, <vscale x 2 x i1> %mask)
+  %index.next = add nuw i64 %index, %step
+  %vec.ind.next = add nuw nsw <vscale x 2 x i64> %vec.ind, %broadcast.splat
+  %4 = icmp eq i64 %index.next, %n.vec
+  br i1 %4, label %middle.block, label %vector.body
+
+middle.block:
+  ret void
+}
+
 attributes #0 = { nounwind vscale_range(1,16) "target-features"="+sve2" }
