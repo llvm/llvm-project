@@ -2,13 +2,14 @@
 ; RUN: %if spirv-tools %{ llc --verify-machineinstrs --spirv-ext=+SPV_KHR_non_semantic_info -O0 -mtriple=spirv64-unknown-unknown %s -o - -filetype=obj | spirv-val %}
 
 ; Void function types in LLVM metadata may be written as an empty type list (!{}) or with an explicit
-; null return slot (!{null}); both should produce the same SPIR-V DebugTypeFunction (flags + void only).
+; null return slot (!{null}). Those are two DISubroutineType nodes, so each gets its own
+; DebugTypeFunction. Both instructions have the same operands: flags and OpTypeVoid.
 
 ; CHECK: [[ext:%[0-9]+]] = OpExtInstImport "NonSemantic.Shader.DebugInfo.100"
 ; CHECK-DAG: [[type_void:%[0-9]+]] = OpTypeVoid
 ; CHECK-DAG: [[type_int32:%[0-9]+]] = OpTypeInt 32 0
 ; CHECK-DAG: [[flag_zero:%[0-9]+]] = OpConstant [[type_int32]] 0{{$}}
-; CHECK-COUNT-1: OpExtInst [[type_void]] [[ext]] DebugTypeFunction [[flag_zero]] [[type_void]]
+; CHECK-COUNT-2: OpExtInst [[type_void]] [[ext]] DebugTypeFunction [[flag_zero]] [[type_void]]
 
 target triple = "spirv64-unknown-unknown"
 

@@ -348,7 +348,6 @@ void SPIRVNonSemanticDebugHandler::beginModule(Module *M) {
   ScalarTypeCache.clear();
   ScalarConstantCache.clear();
   ConstantValueRegs.clear();
-  DebugTypeFunctionCache.clear();
   DebugOperationCache.clear();
   DebugExpressionCache.clear();
   ModuleScopeIds.clear();
@@ -552,20 +551,6 @@ MCRegister SPIRVNonSemanticDebugHandler::emitExtInst(
   for (MCRegister R : Operands)
     Inst.addOperand(MCOperand::createReg(R));
   emitMCInst(Inst);
-  return Reg;
-}
-
-MCRegister SPIRVNonSemanticDebugHandler::getOrEmitDebugTypeFunction(
-    ArrayRef<MCRegister> Ops, MCRegister VoidTypeReg, MCRegister ExtInstSetReg,
-    SPIRV::ModuleAnalysisInfo &MAI) {
-  auto [It, Inserted] =
-      DebugTypeFunctionCache.try_emplace(SmallVector<MCRegister, 8>(Ops));
-  if (!Inserted)
-    return It->second;
-
-  MCRegister Reg = emitExtInst(SPIRV::NonSemanticExtInst::DebugTypeFunction,
-                               VoidTypeReg, ExtInstSetReg, Ops, MAI);
-  It->second = Reg;
   return Reg;
 }
 
@@ -985,7 +970,8 @@ SPIRVNonSemanticDebugHandler::emitDebugTypeFunctionForSubroutineType(
     }
   }
   return EmitResult::emitted(
-      getOrEmitDebugTypeFunction(Ops, VoidTypeReg, ExtInstSetReg, MAI));
+      emitExtInst(SPIRV::NonSemanticExtInst::DebugTypeFunction, VoidTypeReg,
+                  ExtInstSetReg, Ops, MAI));
 }
 
 // Match SPIRV-LLVM-Translator's selection logic for the Parent operand.
