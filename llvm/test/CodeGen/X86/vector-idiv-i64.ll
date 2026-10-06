@@ -199,30 +199,31 @@ define <4 x i64> @test_sdivv_4i64_notnarrow(<4 x i64> %a, <4 x i64> %b) nounwind
 ; CHECK-LABEL: test_sdivv_4i64_notnarrow:
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    vpsraq $10, %ymm0, %ymm2
-; CHECK-NEXT:    vpsraq $10, %ymm1, %ymm1
-; CHECK-NEXT:    vpabsq %ymm1, %ymm0
-; CHECK-NEXT:    vcvtuqq2pd {ru-sae}, %zmm0, %zmm3
-; CHECK-NEXT:    vbroadcastsd {{.*#+}} zmm4 = [1.0E+0,1.0E+0,1.0E+0,1.0E+0,1.0E+0,1.0E+0,1.0E+0,1.0E+0]
-; CHECK-NEXT:    vdivpd {rd-sae}, %zmm3, %zmm4, %zmm3
-; CHECK-NEXT:    vpabsq %ymm2, %ymm4
-; CHECK-NEXT:    vcvtuqq2pd {rd-sae}, %zmm4, %zmm5
-; CHECK-NEXT:    vmulpd {rd-sae}, %zmm3, %zmm5, %zmm5
+; CHECK-NEXT:    vpsraq $10, %ymm1, %ymm3
+; CHECK-NEXT:    vpabsq %ymm3, %ymm3
+; CHECK-NEXT:    vcvtuqq2pd {ru-sae}, %zmm3, %zmm4
+; CHECK-NEXT:    vbroadcastsd {{.*#+}} zmm5 = [1.0E+0,1.0E+0,1.0E+0,1.0E+0,1.0E+0,1.0E+0,1.0E+0,1.0E+0]
+; CHECK-NEXT:    vdivpd {rd-sae}, %zmm4, %zmm5, %zmm4
+; CHECK-NEXT:    vpabsq %ymm2, %ymm2
+; CHECK-NEXT:    vcvtuqq2pd {rd-sae}, %zmm2, %zmm5
+; CHECK-NEXT:    vmulpd {rd-sae}, %zmm4, %zmm5, %zmm5
 ; CHECK-NEXT:    vcvtpd2uqq {rd-sae}, %zmm5, %zmm5
-; CHECK-NEXT:    vpmullq %ymm0, %ymm5, %ymm6
-; CHECK-NEXT:    vpsubq %ymm6, %ymm4, %ymm4
-; CHECK-NEXT:    vcvtuqq2pd {rd-sae}, %zmm4, %zmm6
-; CHECK-NEXT:    vmulpd {rd-sae}, %zmm3, %zmm6, %zmm3
-; CHECK-NEXT:    vcvtpd2uqq {rd-sae}, %zmm3, %zmm3
-; CHECK-NEXT:    vpaddq %ymm3, %ymm5, %ymm5
-; CHECK-NEXT:    vpmullq %ymm0, %ymm3, %ymm3
-; CHECK-NEXT:    vpsubq %ymm3, %ymm4, %ymm3
-; CHECK-NEXT:    vpcmpnltuq %ymm0, %ymm3, %k0
-; CHECK-NEXT:    vpmovm2q %k0, %ymm0
-; CHECK-NEXT:    vpsubq %ymm0, %ymm5, %ymm0
-; CHECK-NEXT:    vpxor %ymm1, %ymm2, %ymm1
-; CHECK-NEXT:    vpmovq2m %ymm1, %k1
-; CHECK-NEXT:    vpxor %xmm1, %xmm1, %xmm1
-; CHECK-NEXT:    vpsubq %ymm0, %ymm1, %ymm0 {%k1}
+; CHECK-NEXT:    vpmullq %ymm3, %ymm5, %ymm6
+; CHECK-NEXT:    vpsubq %ymm6, %ymm2, %ymm2
+; CHECK-NEXT:    vcvtuqq2pd {rd-sae}, %zmm2, %zmm6
+; CHECK-NEXT:    vmulpd {rd-sae}, %zmm4, %zmm6, %zmm4
+; CHECK-NEXT:    vcvtpd2uqq {rd-sae}, %zmm4, %zmm4
+; CHECK-NEXT:    vpaddq %ymm4, %ymm5, %ymm5
+; CHECK-NEXT:    vpmullq %ymm3, %ymm4, %ymm4
+; CHECK-NEXT:    vpsubq %ymm4, %ymm2, %ymm2
+; CHECK-NEXT:    vpcmpnltuq %ymm3, %ymm2, %k0
+; CHECK-NEXT:    vpmovm2q %k0, %ymm2
+; CHECK-NEXT:    vpsubq %ymm2, %ymm5, %ymm2
+; CHECK-NEXT:    vpxor %ymm1, %ymm0, %ymm0
+; CHECK-NEXT:    vpmovq2m %ymm0, %k1
+; CHECK-NEXT:    vpxor %xmm0, %xmm0, %xmm0
+; CHECK-NEXT:    vpsubq %ymm2, %ymm0, %ymm2 {%k1}
+; CHECK-NEXT:    vmovdqa %ymm2, %ymm0
 ; CHECK-NEXT:    retq
   %aa = ashr <4 x i64> %a, splat (i64 10)
   %bb = ashr <4 x i64> %b, splat (i64 10)

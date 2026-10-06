@@ -935,23 +935,14 @@ define i32 @extractelt_mul_v4i32(<4 x i32> %x) {
 define i32 @extractelt_sdiv_v4i32(<4 x i32> %x) {
 ; RV32NOM-LABEL: extractelt_sdiv_v4i32:
 ; RV32NOM:       # %bb.0:
-; RV32NOM-NEXT:    lui a0, 1044480
-; RV32NOM-NEXT:    vsetivli zero, 4, e32, m1, ta, ma
-; RV32NOM-NEXT:    vmv.s.x v9, a0
 ; RV32NOM-NEXT:    lui a0, %hi(.LCPI46_0)
 ; RV32NOM-NEXT:    addi a0, a0, %lo(.LCPI46_0)
-; RV32NOM-NEXT:    vle32.v v10, (a0)
-; RV32NOM-NEXT:    vsext.vf4 v11, v9
-; RV32NOM-NEXT:    vmulh.vv v9, v8, v10
-; RV32NOM-NEXT:    lui a0, 12320
-; RV32NOM-NEXT:    vand.vv v8, v8, v11
-; RV32NOM-NEXT:    addi a0, a0, 257
-; RV32NOM-NEXT:    vmv.s.x v10, a0
-; RV32NOM-NEXT:    vadd.vv v8, v9, v8
-; RV32NOM-NEXT:    vsext.vf4 v9, v10
-; RV32NOM-NEXT:    vsra.vv v9, v8, v9
-; RV32NOM-NEXT:    vsrl.vi v8, v8, 31
-; RV32NOM-NEXT:    vadd.vv v8, v9, v8
+; RV32NOM-NEXT:    vsetivli zero, 4, e32, m1, ta, ma
+; RV32NOM-NEXT:    vle32.v v9, (a0)
+; RV32NOM-NEXT:    vmulh.vv v8, v8, v9
+; RV32NOM-NEXT:    vsrl.vi v9, v8, 31
+; RV32NOM-NEXT:    vsra.vi v8, v8, 2
+; RV32NOM-NEXT:    vadd.vv v8, v8, v9
 ; RV32NOM-NEXT:    vslidedown.vi v8, v8, 2
 ; RV32NOM-NEXT:    vmv.x.s a0, v8
 ; RV32NOM-NEXT:    ret
@@ -971,22 +962,13 @@ define i32 @extractelt_sdiv_v4i32(<4 x i32> %x) {
 ;
 ; RV64NOM-LABEL: extractelt_sdiv_v4i32:
 ; RV64NOM:       # %bb.0:
-; RV64NOM-NEXT:    lui a0, 1044480
-; RV64NOM-NEXT:    vsetivli zero, 4, e32, m1, ta, ma
-; RV64NOM-NEXT:    vmv.s.x v9, a0
 ; RV64NOM-NEXT:    lui a0, %hi(.LCPI46_0)
 ; RV64NOM-NEXT:    addi a0, a0, %lo(.LCPI46_0)
-; RV64NOM-NEXT:    vle32.v v10, (a0)
-; RV64NOM-NEXT:    vsext.vf4 v11, v9
-; RV64NOM-NEXT:    vmulh.vv v9, v8, v10
-; RV64NOM-NEXT:    lui a0, 12320
-; RV64NOM-NEXT:    vand.vv v8, v8, v11
-; RV64NOM-NEXT:    addi a0, a0, 257
-; RV64NOM-NEXT:    vmv.s.x v10, a0
-; RV64NOM-NEXT:    vadd.vv v8, v9, v8
-; RV64NOM-NEXT:    vsext.vf4 v9, v10
-; RV64NOM-NEXT:    vsra.vv v8, v8, v9
+; RV64NOM-NEXT:    vsetivli zero, 4, e32, m1, ta, ma
+; RV64NOM-NEXT:    vle32.v v9, (a0)
+; RV64NOM-NEXT:    vmulh.vv v8, v8, v9
 ; RV64NOM-NEXT:    vsrl.vi v9, v8, 31
+; RV64NOM-NEXT:    vsra.vi v8, v8, 2
 ; RV64NOM-NEXT:    vadd.vv v8, v8, v9
 ; RV64NOM-NEXT:    vslidedown.vi v8, v8, 2
 ; RV64NOM-NEXT:    vmv.x.s a0, v8
