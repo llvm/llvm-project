@@ -441,6 +441,8 @@ void __tsan_mutex_post_divert(void *addr, unsigned flagz) {
 }
 
 static void ReportMutexHeldWrongContext(ThreadState *thr, uptr pc) {
+  VarSizeStackTrace trace;
+  ObtainCurrentStack(thr, pc, &trace);
   // Use alloca, because malloc during signal handling deadlocks
   ScopedReport *rep = (ScopedReport *)__builtin_alloca(sizeof(ScopedReport));
   // Release locks before symbolizing and outputting the report to avoid
@@ -452,8 +454,6 @@ static void ReportMutexHeldWrongContext(ThreadState *thr, uptr pc) {
       MutexSet::Desc desc = thr->mset.Get(i);
       rep->AddMutex(desc.addr, desc.stack_id);
     }
-    VarSizeStackTrace trace;
-    ObtainCurrentStack(thr, pc, &trace);
     rep->AddStack(trace, true);
   }
   OutputReport(thr, *rep);

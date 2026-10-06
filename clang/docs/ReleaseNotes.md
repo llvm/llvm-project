@@ -283,6 +283,11 @@ features cannot lower the translation-unit ABI level;
   unit to be emitted into the object file, even when they are inlined into all
   callers or are otherwise unused.
 
+- Added a new `-ast-dump-filter-path` option to filter AST dump output
+  based on the source file path of declarations. The filter uses glob-style
+  matching on the presumed source location (accounting for macro expansions
+  and `#line` directives). (#GH194210)
+
 ### Deprecated Compiler Flags
 
 ### Modified Compiler Flags

@@ -112,6 +112,10 @@ infrastructure are described first, followed by tool-specific sections.
   C++20 concepts.
   ([#206875](https://github.com/llvm/llvm-project/issues/206875))
 
+- `clangd-indexer` now reads clangd configuration files (`.clangd` and the
+  user config) by default. Pass `--enable-config=false` to restore the previous
+  behavior.
+
 ### Improvements to clang-doc
 
 ### Improvements to clang-query
