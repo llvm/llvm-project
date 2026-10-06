@@ -13,16 +13,14 @@ define i32 @is_snan_sext_f64(double %x) nounwind {
 ; RV32:       # %bb.0:
 ; RV32-NEXT:    fclass.d a0, fa0
 ; RV32-NEXT:    slli a0, a0, 23
-; RV32-NEXT:    srli a0, a0, 31
-; RV32-NEXT:    neg a0, a0
+; RV32-NEXT:    srai a0, a0, 31
 ; RV32-NEXT:    ret
 ;
 ; RV64-LABEL: is_snan_sext_f64:
 ; RV64:       # %bb.0:
 ; RV64-NEXT:    fclass.d a0, fa0
 ; RV64-NEXT:    slli a0, a0, 55
-; RV64-NEXT:    srli a0, a0, 63
-; RV64-NEXT:    neg a0, a0
+; RV64-NEXT:    srai a0, a0, 63
 ; RV64-NEXT:    ret
   %c = call i1 @llvm.is.fpclass.f64(double %x, i32 1)  ; fcSNan
   %s = select i1 %c, i32 -1, i32 0
@@ -34,16 +32,14 @@ define i32 @is_snan_sext_f32(float %x) nounwind {
 ; RV32:       # %bb.0:
 ; RV32-NEXT:    fclass.s a0, fa0
 ; RV32-NEXT:    slli a0, a0, 23
-; RV32-NEXT:    srli a0, a0, 31
-; RV32-NEXT:    neg a0, a0
+; RV32-NEXT:    srai a0, a0, 31
 ; RV32-NEXT:    ret
 ;
 ; RV64-LABEL: is_snan_sext_f32:
 ; RV64:       # %bb.0:
 ; RV64-NEXT:    fclass.s a0, fa0
 ; RV64-NEXT:    slli a0, a0, 55
-; RV64-NEXT:    srli a0, a0, 63
-; RV64-NEXT:    neg a0, a0
+; RV64-NEXT:    srai a0, a0, 63
 ; RV64-NEXT:    ret
   %c = call i1 @llvm.is.fpclass.f32(float %x, i32 1)  ; fcSNan
   %s = select i1 %c, i32 -1, i32 0
@@ -77,16 +73,14 @@ define i32 @is_posinf_sext_f64(double %x) nounwind {
 ; RV32:       # %bb.0:
 ; RV32-NEXT:    fclass.d a0, fa0
 ; RV32-NEXT:    slli a0, a0, 24
-; RV32-NEXT:    srli a0, a0, 31
-; RV32-NEXT:    neg a0, a0
+; RV32-NEXT:    srai a0, a0, 31
 ; RV32-NEXT:    ret
 ;
 ; RV64-LABEL: is_posinf_sext_f64:
 ; RV64:       # %bb.0:
 ; RV64-NEXT:    fclass.d a0, fa0
 ; RV64-NEXT:    slli a0, a0, 56
-; RV64-NEXT:    srli a0, a0, 63
-; RV64-NEXT:    neg a0, a0
+; RV64-NEXT:    srai a0, a0, 63
 ; RV64-NEXT:    ret
   %c = call i1 @llvm.is.fpclass.f64(double %x, i32 512)  ; fcPosInf
   %s = select i1 %c, i32 -1, i32 0
