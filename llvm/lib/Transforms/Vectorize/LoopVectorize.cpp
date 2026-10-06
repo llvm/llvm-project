@@ -3861,17 +3861,16 @@ LoopVectorizationPlanner::selectInterleaveCount(VPlan &Plan, ElementCount VF,
       for (VPRecipeBase &R : *VPBB) {
         // Assuming that each value will be needed as soon as it's generated the
         // number of stall cycles is one less than the latency.
-        InstructionCost Stalls = R.cost(VF, LatencyCtx) - 1;
-        if (ForceTargetLoadLatency.getNumOccurrences() > 0 &&
-            R.mayReadFromMemory())
-          Stalls = ForceTargetLoadLatency - 1;
+        InstructionCost StallCycles = R.cost(VF, LatencyCtx) - 1;
+        if (ForceTargetLoadLatency > 0 && R.mayReadFromMemory())
+          StallCycles = ForceTargetLoadLatency - 1;
         // Each interleaving above 1 will reduce the stalls by RecipThroughput,
         // so pick the interleaving that will reduce stalls to zero.
         InstructionCost RecipThroughput = R.cost(VF, ThroughputCtx);
-        if (Stalls.isValid() && RecipThroughput.isValid() && Stalls > 0 &&
-            RecipThroughput > 0) {
-          unsigned ThisIC =
-              bit_floor<uint64_t>(1 + (Stalls / RecipThroughput).getValue());
+        if (StallCycles.isValid() && RecipThroughput.isValid() &&
+            StallCycles > 0 && RecipThroughput > 0) {
+          unsigned ThisIC = bit_floor<uint64_t>(
+              1 + (StallCycles / RecipThroughput).getValue());
           StallsIC = std::max(StallsIC, ThisIC);
         }
       }
