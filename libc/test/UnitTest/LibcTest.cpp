@@ -46,7 +46,7 @@ cpp::enable_if_t<(cpp::is_integral_v<T> && (sizeof(T) > sizeof(uint64_t))) ||
                      is_big_int_v<T>,
                  cpp::string>
 describeValue(T Value) {
-  const IntegerToString<T, char, radix::Hex::WithPrefix> buffer(Value);
+  const IntegerToString<T, radix::Hex::WithPrefix> buffer(Value);
   return cpp::string(buffer.view());
 }
 

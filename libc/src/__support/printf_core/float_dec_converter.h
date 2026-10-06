@@ -31,7 +31,7 @@ namespace printf_core {
 
 using DecimalString = IntegerToString<intmax_t>;
 using ExponentString =
-    IntegerToString<intmax_t, char, radix::Dec::WithWidth<2>::WithSign>;
+    IntegerToString<intmax_t, radix::Dec::WithWidth<2>::WithSign>;
 
 // Returns true if value is divisible by 2^p.
 template <typename T>

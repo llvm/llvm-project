@@ -307,7 +307,7 @@ extract_decimal_digit(T &value) {
 }
 
 // See file header for documentation.
-template <typename T, typename CharT = char, typename Fmt = radix::Dec>
+template <typename T, typename Fmt = radix::Dec, typename CharT = char>
 class IntegerToString {
   static_assert(cpp::is_integral_v<T> || is_big_int_v<T>);
   static_assert(cpp::is_same_v<CharT, char> || cpp::is_same_v<CharT, wchar_t>);
