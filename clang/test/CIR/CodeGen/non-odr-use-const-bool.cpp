@@ -21,6 +21,9 @@ void pass_to_call(Foo x) {
 // LLVM-LABEL: define {{.*}} void @_Z12pass_to_call3Foo
 // LLVM:         call void @_Z9take_boolb(i1 {{.*}}true)
 
+// OGCG-LABEL: define {{.*}} void @_Z12pass_to_call3Foo
+// OGCG:         call void @_Z9take_boolb(i1 {{.*}}true)
+
 int use_in_if(Foo x) {
   if (x.flag && side()) return 1;
   return 0;
