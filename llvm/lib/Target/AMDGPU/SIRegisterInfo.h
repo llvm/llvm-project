@@ -340,7 +340,8 @@ public:
   MCRegister findUnusedRegister(const MachineRegisterInfo &MRI,
                                 const TargetRegisterClass *RC,
                                 const MachineFunction &MF,
-                                bool ReserveHighestVGPR = false) const;
+                                bool ReserveHighestVGPR = false,
+                                bool ExcludeCalleeSaved = false) const;
 
   const TargetRegisterClass *getRegClassForReg(const MachineRegisterInfo &MRI,
                                                Register Reg) const;

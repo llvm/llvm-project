@@ -4156,22 +4156,37 @@ bool SIRegisterInfo::opCanUseLiteralConstant(unsigned OpType) const {
 /// Returns a lowest register that is not used at any point in the function.
 ///        If all registers are used, then this function will return
 ///         AMDGPU::NoRegister. If \p ReserveHighestRegister = true, then return
-///         highest unused register.
-MCRegister SIRegisterInfo::findUnusedRegister(
-    const MachineRegisterInfo &MRI, const TargetRegisterClass *RC,
-    const MachineFunction &MF, bool ReserveHighestRegister) const {
-  // Never offer VCC as an unused register.
-  auto isVCC = [](MCRegister Reg) {
-    return Reg == AMDGPU::VCC || Reg == AMDGPU::VCC_LO || Reg == AMDGPU::VCC_HI;
+///         highest unused register. If \p ExcludeCalleeSaved = true, skip
+///         callee-saved registers. Use this when the register is written by
+///         code the callee-saved register handling does not see.
+MCRegister SIRegisterInfo::findUnusedRegister(const MachineRegisterInfo &MRI,
+                                              const TargetRegisterClass *RC,
+                                              const MachineFunction &MF,
+                                              bool ReserveHighestRegister,
+                                              bool ExcludeCalleeSaved) const {
+  LiveRegUnits Preserved(*this);
+  if (ExcludeCalleeSaved) {
+    for (const MCPhysReg *CSR = MRI.getCalleeSavedRegs(); *CSR; ++CSR)
+      Preserved.addReg(*CSR);
+    if (!MF.getInfo<SIMachineFunctionInfo>()->isEntryFunction())
+      Preserved.addReg(getReturnAddressReg(MF));
+  }
+
+  auto IsCandidate = [&](MCRegister Reg) {
+    // Never offer VCC as an unused register.
+    if (Reg == AMDGPU::VCC || Reg == AMDGPU::VCC_LO || Reg == AMDGPU::VCC_HI)
+      return false;
+    return MRI.isAllocatable(Reg) && !MRI.isPhysRegUsed(Reg) &&
+           Preserved.available(Reg);
   };
 
   if (ReserveHighestRegister) {
     for (MCRegister Reg : reverse(*RC))
-      if (MRI.isAllocatable(Reg) && !MRI.isPhysRegUsed(Reg) && !isVCC(Reg))
+      if (IsCandidate(Reg))
         return Reg;
   } else {
     for (MCRegister Reg : *RC)
-      if (MRI.isAllocatable(Reg) && !MRI.isPhysRegUsed(Reg) && !isVCC(Reg))
+      if (IsCandidate(Reg))
         return Reg;
   }
   return MCRegister();
