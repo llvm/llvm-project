@@ -349,6 +349,7 @@ end module
 ! HLFIR-FUNCTION-LABEL: func.func @_QM{{.*}}Ptest_cuda_function()
 ! HLFIR-FUNCTION-NOT: fir.call @_QPisamax(
 ! HLFIR-FUNCTION: %[[RESULT:.*]] = fir.call @_QPisamaxcu({{.*}}) {{.*}} -> i32
+! HLFIR-FUNCTION-NOT: fir.call @_QPisamax(
 ! HLFIR-FUNCTION: hlfir.assign %[[RESULT]] to
 ! HLFIR-FUNCTION-NOT: fir.call @_QPisamax(
 ! HLFIR-FUNCTION: return

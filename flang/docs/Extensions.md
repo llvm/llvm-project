@@ -464,7 +464,9 @@ print *, is_contiguous(a(::2))                   ! prints T in Flang
 * When USE association brings an equivalent external procedure interface
   and a legacy BLAS generic from the intrinsic `cublas` or `cublas_v2`
   module into the same scope under the same local name, Flang selects
-  the intrinsic module's generic, regardless of USE statement order.
+  the intrinsic module's generic, regardless of the order of the two USE
+  statements. A generic already merged from both `cublas` and `cublas_v2`
+  is not covered, including when it is re-exported by another module.
   The generic must contain a same-named host specific with characteristics
   equal to those of the external interface, and at least one specific
   with a CUDA dummy data attribute.

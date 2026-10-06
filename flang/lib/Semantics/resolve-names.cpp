@@ -4304,7 +4304,8 @@ static bool CheckCompatibleDistinctUltimates(SemanticsContext &context,
 // Check whether two symbols identify the same procedure. Otherwise, require
 // matching names and procedure kinds: intrinsic procedures must both be
 // intrinsic, module procedures must identify the same module symbol, and
-// external procedures must have explicit interfaces with equal characteristics.
+// external procedures must both be declared by interface bodies with equal
+// characteristics.
 // For intrinsic-module compatibility rules, a future, separate check could
 // compare the basic shapes of host and CUDA specifics, including dummy argument
 // and result types and ranks, while ignoring CUDA-specific attributes.
