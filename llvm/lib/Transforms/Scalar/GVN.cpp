@@ -3636,36 +3636,33 @@ bool GVNPassImpl::propagateEquality(
 }
 
 bool GVNPassImpl::replaceWithEquivalentCmp(CmpInst *Cmp) {
+  auto FindCmpLeader = [&](CmpInst::Predicate Pred) -> Value * {
+    uint32_t Num = VN.lookupCmp(Cmp->getOpcode(), Pred, Cmp->getOperand(0),
+                                Cmp->getOperand(1));
+    if (Num != 0)
+      return findLeader(Cmp->getParent(), Num);
+    return nullptr;
+  };
+
   // Substitute cmp instruction with not if possible.
-  uint32_t Num = VN.lookupCmp(Cmp->getOpcode(), Cmp->getInversePredicate(),
-                              Cmp->getOperand(0), Cmp->getOperand(1));
-  if (Num != 0) {
-    Value *Repl = findLeader(Cmp->getParent(), Num);
-    if (Repl) {
-      patchReplacementInstruction(Cmp, Repl);
-      BinaryOperator *Not = BinaryOperator::CreateNot(
-          Repl, Repl->getName() + ".not", Cmp->getIterator());
-      Not->setDebugLoc(Cmp->getDebugLoc());
-      Cmp->replaceAllUsesWith(Not);
-      salvageAndRemoveInstruction(Cmp);
-      return true;
-    }
+  if (Value *Repl = FindCmpLeader(Cmp->getInversePredicate())) {
+    patchReplacementInstruction(Cmp, Repl);
+    BinaryOperator *Not = BinaryOperator::CreateNot(
+        Repl, Repl->getName() + ".not", Cmp->getIterator());
+    Not->setDebugLoc(Cmp->getDebugLoc());
+    Cmp->replaceAllUsesWith(Not);
+    salvageAndRemoveInstruction(Cmp);
+    return true;
   }
 
   // Substitute icmp samesign upred with icmp spred
   auto *ICmp = dyn_cast<ICmpInst>(Cmp);
   if (ICmp && ICmp->hasSameSign() && !ICmp->isEquality()) {
-    uint32_t Num = VN.lookupCmp(
-        ICmp->getOpcode(),
-        ICmpInst::getFlippedSignednessPredicate(ICmp->getPredicate()),
-        ICmp->getOperand(0), ICmp->getOperand(1));
-    if (Num != 0) {
-      Value *Repl = findLeader(Cmp->getParent(), Num);
-      if (Repl) {
-        patchAndReplaceAllUsesWith(Cmp, Repl);
-        salvageAndRemoveInstruction(Cmp);
-        return true;
-      }
+    if (Value *Repl = FindCmpLeader(
+            ICmpInst::getFlippedSignednessPredicate(ICmp->getPredicate()))) {
+      patchAndReplaceAllUsesWith(Cmp, Repl);
+      salvageAndRemoveInstruction(Cmp);
+      return true;
     }
   }
   return false;
