@@ -517,53 +517,6 @@ the list is simple, just like above.  In this example, we used the
 if the user does not specify any `.o` files on our command line.  Again, this
 just reduces the amount of checking we have to do.
 
-### Collecting options as a set of flags
-
-Instead of collecting sets of options in a list, it is also possible to gather
-information for enum values in a **bit vector**.  The representation used by the
-{ref}`cl::bits <cl::bits>` class is an `unsigned` integer.  An enum value is represented by a
-0/1 in the enum's ordinal value bit position. 1 indicating that the enum was
-specified, 0 otherwise.  As each specified value is parsed, the resulting enum's
-bit is set in the option's bit vector:
-
-```cpp
-bits |= 1 << (unsigned)enum;
-```
-
-Options that are specified multiple times are redundant.  Any instances after
-the first are discarded.
-
-Reworking the above list example, we could replace {ref}`cl::list <cl::list>` with {ref}`cl::bits <cl::bits>`:
-
-```cpp
-cl::bits<Opts> OptimizationBits(cl::desc("Available Optimizations:"),
-  cl::values(
-    clEnumVal(dce               , "Dead Code Elimination"),
-    clEnumVal(instsimplify      , "Instruction Simplification"),
-   clEnumValN(inlining, "inline", "Procedure Integration"),
-    clEnumVal(strip             , "Strip Symbols")));
-```
-
-To test to see if `instsimplify` was specified, we can use the `cl:bits::isSet`
-function:
-
-```cpp
-if (OptimizationBits.isSet(instsimplify)) {
-  ...
-}
-```
-
-It's also possible to get the raw bit vector using the `cl::bits::getBits`
-function:
-
-```cpp
-unsigned bits = OptimizationBits.getBits();
-```
-
-Finally, if external storage is used, then the location specified must be of
-**type** `unsigned`. In all other ways a {ref}`cl::bits <cl::bits>` option is equivalent to a
-{ref}`cl::list <cl::list>` option.
-
 (additional extra text)=
 
 ### Adding freeform text to help output
@@ -1324,25 +1277,6 @@ argument is the **type** of the external storage, not a boolean value.  For this
 class, the marker type '`bool`' is used to indicate that internal storage
 should be used.
 
-(cl::bits)=
-
-#### The `cl::bits` class
-
-The `cl::bits` class is the class used to represent a list of command line
-options in the form of a bit vector.  It is also a templated class which can
-take up to three arguments:
-
-```cpp
-namespace cl {
-  template <class DataType, class Storage = bool,
-            class ParserClass = parser<DataType> >
-  class bits;
-}
-```
-
-This class works the exact same as the {ref}`cl::list <cl::list>` class, except that the second
-argument must be of **type** `unsigned` if external storage is used.
-
 (cl::alias)=
 
 #### The `cl::alias` class
@@ -1630,3 +1564,39 @@ TODO: complete this section
 :::{todo}
 TODO: fill in this section
 :::
+
+## Declaring a Library's Options in TableGen
+
+A library can declare its options in a `.td` file instead of as `cl::opt` globals.
+`llvm-tblgen -gen-opt-parser-defs` generates a struct with a member per option, the table that parses them, and the hooks through which `cl::ParseCommandLineOptions` parses them and `-help-hidden` lists them.
+
+```text
+include "llvm/Option/LibraryOptions.td"
+
+def FooOptions : OptionsStruct;
+
+defm : BoolField<"enable-foo", "true", "Enable foo">;
+defm threshold : ValueField<"foo-threshold", "unsigned", "8", "The threshold">;
+defm : ValueField<"foo-path", "StringRef", "\"-\"", "The input path">;
+```
+
+The struct is in namespace `llvm` unless the def names another, as in `OptionsStruct<"mlir">`.
+A member is named after its option, `enable_foo` for `-enable-foo`; a named `defm` such as `defm threshold` names it `threshold`.
+`OptionsStruct<prefix = "foo-">` drops that prefix from member names, so `-foo-path` sets `path`.
+
+The `BoolField` is set by `-enable-foo` or `-enable-foo=true|false|1|0`.
+A `ValueField`, of an integer type, `float`, `double`, or `StringRef`, is set by `-foo-threshold=8` or `-foo-threshold 8`.
+An `OptionalBoolField` is a `BoolOrDefault` that stays `Default` unless the option is given, replacing `cl::boolOrDefault`; read it with `valueOr(X, Default)`.
+An `EnumField` maps each of its comma-separated values to an enumerator, replacing `cl::values`: `defm : EnumField<"foo-mode", "FooMode", "FooMode::Fast", "fast,safe", ["FooMode::Fast", "FooMode::Safe"], "The mode">;` accepts `-foo-mode=fast` and `-foo-mode=safe`.
+A `DefaultOnOffField` is a `BoolOrDefault` set by `=Default`, `=Enable`, or `=Disable`.
+Both accept `--` for `-`.
+Only `-help-hidden` lists the options, like `cl::Hidden`.
+
+A default is the member's C++ initializer, so `"\"-\""` initializes `foo_path` to `"-"`.
+A `std::optional` member defaulting to `std::nullopt` tells whether the option was given, which a `cl::opt` asks with `getNumOccurrences()`.
+The header declares the struct after including what the member defaults need, and one source file defines it and registers it with `cl::`.
+
+The library then lists `FooOptionsTableGen` under `DEPENDS` and `Option` under `LINK_COMPONENTS`.
+A library that otherwise needs only `llvm-min-tblgen` sets `LLVM_TABLEGEN_PROJECT` to `LLVM_HEADERS` before its `tablegen()` call, so that its sources need not wait for `llvm-tblgen`.
+Code reads `FooOptions::Global.enable_foo`, the instance the command line sets.
+Keep the header in `lib/`, as private as the `static cl::opt` it replaces; another library that needs a value calls a function or takes a parameter.

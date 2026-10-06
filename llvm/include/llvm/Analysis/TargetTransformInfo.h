@@ -941,6 +941,12 @@ public:
   isLegalMaskedLoad(Type *DataType, Align Alignment, unsigned AddressSpace,
                     MaskKind MaskKind = VariableOrConstantMask) const;
 
+  /// Return true if the target supports speculatively loading \p DataType from
+  /// address space \p AddressSpace, i.e. @llvm.can.load.speculatively can
+  /// return true for the store size of \p DataType.
+  LLVM_ABI bool isLegalSpeculativeLoad(Type *DataType,
+                                       unsigned AddressSpace) const;
+
   /// Return true if the target supports nontemporal store.
   LLVM_ABI bool isLegalNTStore(Type *DataType, Align Alignment) const;
   /// Return true if the target supports nontemporal load.
@@ -1551,6 +1557,10 @@ public:
 
   /// Collect properties of V used in cost analysis, e.g. OP_PowerOf2.
   LLVM_ABI static OperandValueInfo getOperandInfo(const Value *V);
+
+  /// Return information about the vector formed for the specified index
+  /// of a vector of (the same) instruction.
+  LLVM_ABI static OperandValueInfo getOperandInfo(ArrayRef<Value *> Ops);
 
   /// Collect common data between two OperandValueInfo inputs
   LLVM_ABI static OperandValueInfo commonOperandInfo(const Value *X,

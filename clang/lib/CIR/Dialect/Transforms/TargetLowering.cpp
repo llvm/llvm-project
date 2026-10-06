@@ -73,9 +73,9 @@ public:
     mlir::OperationState loweredOpState(op->getLoc(), op->getName());
     loweredOpState.addOperands(operands);
 
-    // Preserve auxiliary metadata verbatim. Convert only inherent TypeAttrs so
-    // address-space-bearing operation semantics (e.g. AllocaOp's allocaType)
-    // stay in sync with the converted result types.
+    // Preserve auxiliary metadata verbatim. Convert only inherent TypeAttrs and
+    // pointer constants so address-space-bearing operation semantics (e.g.
+    // AllocaOp's allocaType) stay in sync with the converted result types.
     loweredOpState.propertiesAttr = op->getPropertiesAsAttribute();
     loweredOpState.addAttributes(op->getDiscardableAttrDictionary().getValue());
 
@@ -101,6 +101,10 @@ public:
           if (auto typeAttr = mlir::dyn_cast<mlir::TypeAttr>(attr))
             attr = mlir::TypeAttr::get(
                 typeConverter->convertType(typeAttr.getValue()));
+          else if (auto ptrAttr = mlir::dyn_cast<cir::ConstPtrAttr>(attr))
+            attr = cir::ConstPtrAttr::get(
+                typeConverter->convertType(ptrAttr.getType()),
+                ptrAttr.getValue());
         });
     rewriter.replaceOp(op, loweredOp);
     return mlir::success();

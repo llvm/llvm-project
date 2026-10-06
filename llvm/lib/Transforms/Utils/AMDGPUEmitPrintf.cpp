@@ -135,14 +135,14 @@ static Value *getStrlenWithNull(IRBuilder<> &Builder, Value *Str) {
   Builder.CreateCondBr(Cmp, WhileDone, While);
 
   // Add one to the computed length.
-  Builder.SetInsertPoint(WhileDone, WhileDone->begin());
+  Builder.SetInsertPoint(WhileDone->begin());
   auto Len = Builder.CreatePtrDiff(PtrPhi, Str);
   Len = Builder.CreateZExt(Len, Int64Ty);
   Len = Builder.CreateAdd(Len, One);
 
   // Final join.
   UncondBrInst::Create(Join, WhileDone);
-  Builder.SetInsertPoint(Join, Join->begin());
+  Builder.SetInsertPoint(Join->begin());
   auto LenPhi = Builder.CreatePHI(Len->getType(), 2);
   LenPhi->addIncoming(Len, WhileDone);
   LenPhi->addIncoming(Zero, Prev);
@@ -350,7 +350,7 @@ static void processConstantStringArg(StringData *SD, IRBuilder<> &Builder,
 }
 
 static Value *processNonStringArg(Value *Arg, IRBuilder<> &Builder) {
-  const DataLayout &DL = Builder.GetInsertBlock()->getDataLayout();
+  const DataLayout &DL = Builder.getDataLayout();
   auto Ty = Arg->getType();
 
   if (auto IntTy = dyn_cast<IntegerType>(Ty)) {

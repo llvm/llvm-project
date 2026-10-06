@@ -901,7 +901,7 @@ define <32 x i16> @_mm512_packus_epi32_manual(<16 x i32> %a, <16 x i32> %b) noun
 ; X86-SSE2-NEXT:    pushl %ebp
 ; X86-SSE2-NEXT:    movl %esp, %ebp
 ; X86-SSE2-NEXT:    andl $-16, %esp
-; X86-SSE2-NEXT:    subl $64, %esp
+; X86-SSE2-NEXT:    subl $48, %esp
 ; X86-SSE2-NEXT:    movdqa %xmm2, %xmm4
 ; X86-SSE2-NEXT:    movdqa %xmm1, %xmm6
 ; X86-SSE2-NEXT:    movdqa %xmm0, %xmm2

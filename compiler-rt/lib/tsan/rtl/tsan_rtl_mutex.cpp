@@ -58,8 +58,8 @@ static void ReportMutexMisuse(ThreadState *thr, uptr pc, ReportType typ,
     return;
   // Use alloca, because malloc during signal handling deadlocks
   ScopedReport *rep = (ScopedReport *)__builtin_alloca(sizeof(ScopedReport));
-  // Take a new scope as Apple platforms require the below locks released
-  // before symbolizing in order to avoid a deadlock
+  // Release locks before symbolizing and outputting the report to avoid
+  // deadlocks.
   {
     ThreadRegistryLock l(&ctx->thread_registry);
     new (rep) ScopedReport(typ);
@@ -68,16 +68,11 @@ static void ReportMutexMisuse(ThreadState *thr, uptr pc, ReportType typ,
     ObtainCurrentStack(thr, pc, &trace);
     rep->AddStack(trace, true);
     rep->AddLocation(addr, 1);
-#if SANITIZER_APPLE
-  }  // Close this scope to release the locks
-#endif
-    OutputReport(thr, *rep);
-
-    // Need to manually destroy this because we used placement new to allocate
-    rep->~ScopedReport();
-#if !SANITIZER_APPLE
   }
-#endif
+  OutputReport(thr, *rep);
+
+  // Need to manually destroy this because we used placement new to allocate
+  rep->~ScopedReport();
 }
 
 static void RecordMutexLock(ThreadState *thr, uptr pc, uptr addr,
@@ -545,8 +540,8 @@ void ReportDeadlock(ThreadState *thr, uptr pc, DDReport *r) {
     return;
   // Use alloca, because malloc during signal handling deadlocks
   ScopedReport *rep = (ScopedReport *)__builtin_alloca(sizeof(ScopedReport));
-  // Take a new scope as Apple platforms require the below locks released
-  // before symbolizing in order to avoid a deadlock
+  // Release locks before symbolizing and outputting the report to avoid
+  // deadlocks.
   {
     ThreadRegistryLock l(&ctx->thread_registry);
     new (rep) ScopedReport(ReportTypeDeadlock);
@@ -570,54 +565,49 @@ void ReportDeadlock(ThreadState *thr, uptr pc, DDReport *r) {
         rep->AddStack(stack, true);
       }
     }
-#if SANITIZER_APPLE
-  }  // Close this scope to release the locks
-#endif
-    OutputReport(thr, *rep);
-
-    // Need to manually destroy this because we used placement new to allocate
-    rep->~ScopedReport();
-#if !SANITIZER_APPLE
   }
-#endif
+  OutputReport(thr, *rep);
+
+  // Need to manually destroy this because we used placement new to allocate
+  rep->~ScopedReport();
 }
 
 void ReportDestroyLocked(ThreadState *thr, uptr pc, uptr addr,
                          FastState last_lock, StackID creation_stack_id) {
-  // Use alloca, because malloc during signal handling deadlocks
-  ScopedReport *rep = (ScopedReport *)__builtin_alloca(sizeof(ScopedReport));
-  // Take a new scope as Apple platforms require the below locks released
-  // before symbolizing in order to avoid a deadlock
+  VarSizeStackTrace last_lock_stack;
   {
     // We need to lock the slot during RestoreStack because it protects
     // the slot journal.
     Lock slot_lock(&ctx->slots[static_cast<uptr>(last_lock.sid())].mtx);
     ThreadRegistryLock l0(&ctx->thread_registry);
     Lock slots_lock(&ctx->slot_mtx);
+    Tid tid;
+    DynamicMutexSet mset;
+    uptr tag;
+    if (!RestoreStack(EventType::kLock, last_lock.sid(), last_lock.epoch(),
+                      addr, 0, kAccessWrite, &tid, &last_lock_stack, mset,
+                      &tag))
+      return;
+  }
+
+  // Use alloca, because malloc during signal handling deadlocks
+  ScopedReport* rep = (ScopedReport*)__builtin_alloca(sizeof(ScopedReport));
+  // Release locks before symbolizing and outputting the report to avoid
+  // deadlocks.
+  {
+    ThreadRegistryLock l0(&ctx->thread_registry);
     new (rep) ScopedReport(ReportTypeMutexDestroyLocked);
     rep->AddMutex(addr, creation_stack_id);
     VarSizeStackTrace trace;
     ObtainCurrentStack(thr, pc, &trace);
     rep->AddStack(trace, true);
-
-    Tid tid;
-    DynamicMutexSet mset;
-    uptr tag;
-    if (!RestoreStack(EventType::kLock, last_lock.sid(), last_lock.epoch(),
-                      addr, 0, kAccessWrite, &tid, &trace, mset, &tag))
-      return;
-    rep->AddStack(trace, true);
+    rep->AddStack(last_lock_stack, true);
     rep->AddLocation(addr, 1);
-#if SANITIZER_APPLE
-  }  // Close this scope to release the locks
-#endif
-    OutputReport(thr, *rep);
-
-    // Need to manually destroy this because we used placement new to allocate
-    rep->~ScopedReport();
-#if !SANITIZER_APPLE
   }
-#endif
+  OutputReport(thr, *rep);
+
+  // Need to manually destroy this because we used placement new to allocate
+  rep->~ScopedReport();
 }
 
 }  // namespace __tsan

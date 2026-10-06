@@ -99,6 +99,7 @@ public:
   void SetVirtualAddressableBits(uint32_t bits);
   uint32_t GetHighmemVirtualAddressableBits() const;
   void SetHighmemVirtualAddressableBits(uint32_t bits);
+  void AddressMaskChangedCallback();
   void SetPythonOSPluginPath(const FileSpec &file);
   bool GetIgnoreBreakpointsInExpressions() const;
   void SetIgnoreBreakpointsInExpressions(bool ignore);
@@ -665,11 +666,12 @@ public:
   ///     been initialized yet.
   ///
   /// \return
-  ///     The cached utility function or null if the platform is not the
-  ///     same as the target's platform.
-  UtilityFunction *GetLoadImageUtilityFunction(
+  ///     The cached utility function, or an Error if the platform is not
+  ///     the same as the target's platform, or if it could not be created.
+  llvm::Expected<UtilityFunction &> GetLoadImageUtilityFunction(
       Platform *platform,
-      llvm::function_ref<std::unique_ptr<UtilityFunction>()> factory);
+      llvm::function_ref<llvm::Expected<std::unique_ptr<UtilityFunction>>()>
+          factory);
 
   /// Get the dynamic loader plug-in for this process.
   ///
@@ -1862,6 +1864,10 @@ public:
         GetPluginName());
     return LLDB_INVALID_ADDRESS;
   }
+
+  /// Determines whether DoAllocateMemory is expected to succeed, without
+  /// running code in the process.
+  virtual bool DoCanAllocateMemory() { return false; }
 
   virtual Status WriteObjectFile(std::vector<ObjectFile::LoadableData> entries);
 
@@ -3589,6 +3595,9 @@ protected:
 
   std::unique_ptr<UtilityFunction> m_dlopen_utility_func_up;
   llvm::once_flag m_dlopen_utility_func_flag_once;
+  /// The error from the one attempt to create m_dlopen_utility_func_up,
+  /// set only if that attempt failed.
+  Status m_dlopen_utility_func_error;
 
   /// Per process source file cache.
   SourceManager::SourceFileCache m_source_file_cache;
