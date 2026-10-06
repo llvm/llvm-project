@@ -6,14 +6,10 @@ define void @test_udiv7_v2i32(ptr %x, ptr %y) nounwind {
 ; X64-LABEL: test_udiv7_v2i32:
 ; X64:       # %bb.0:
 ; X64-NEXT:    movq {{.*#+}} xmm0 = mem[0],zero
-; X64-NEXT:    movdqa {{.*#+}} xmm1 = [613566757,613566757,u,u]
-; X64-NEXT:    movdqa %xmm0, %xmm2
-; X64-NEXT:    pmuludq %xmm1, %xmm2
-; X64-NEXT:    pshufd {{.*#+}} xmm2 = xmm2[1,3,2,3]
-; X64-NEXT:    pshufd {{.*#+}} xmm3 = xmm0[1,1,3,3]
-; X64-NEXT:    pmuludq %xmm1, %xmm3
-; X64-NEXT:    pshufd {{.*#+}} xmm1 = xmm3[1,3,2,3]
-; X64-NEXT:    punpckldq {{.*#+}} xmm2 = xmm2[0],xmm1[0],xmm2[1],xmm1[1]
+; X64-NEXT:    pmuludq %xmm0, %xmm1
+; X64-NEXT:    pshufd {{.*#+}} xmm2 = xmm0[0,1,1,3]
+; X64-NEXT:    pmuludq {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm2 # [613566757,u,613566757,u]
+; X64-NEXT:    shufps {{.*#+}} xmm2 = xmm2[1,3],xmm1[1,3]
 ; X64-NEXT:    psubd %xmm2, %xmm0
 ; X64-NEXT:    psrld $1, %xmm0
 ; X64-NEXT:    paddd %xmm2, %xmm0
@@ -26,15 +22,11 @@ define void @test_udiv7_v2i32(ptr %x, ptr %y) nounwind {
 ; X86-NEXT:    movl {{[0-9]+}}(%esp), %eax
 ; X86-NEXT:    movl {{[0-9]+}}(%esp), %ecx
 ; X86-NEXT:    movq {{.*#+}} xmm0 = mem[0],zero
-; X86-NEXT:    movdqa {{.*#+}} xmm1 = [613566757,613566757,u,u]
+; X86-NEXT:    pmuludq %xmm0, %xmm1
 ; X86-NEXT:    movdqa %xmm0, %xmm2
-; X86-NEXT:    pmuludq %xmm1, %xmm2
-; X86-NEXT:    pshufd {{.*#+}} xmm2 = xmm2[1,3,2,3]
-; X86-NEXT:    movdqa %xmm0, %xmm3
-; X86-NEXT:    shufps {{.*#+}} xmm3 = xmm3[1,1,1,1]
-; X86-NEXT:    pmuludq %xmm1, %xmm3
-; X86-NEXT:    pshufd {{.*#+}} xmm1 = xmm3[1,3,2,3]
-; X86-NEXT:    punpckldq {{.*#+}} xmm2 = xmm2[0],xmm1[0],xmm2[1],xmm1[1]
+; X86-NEXT:    shufps {{.*#+}} xmm2 = xmm2[0,1],xmm0[1,3]
+; X86-NEXT:    pmuludq {{\.?LCPI[0-9]+_[0-9]+}}, %xmm2 # [613566757,u,613566757,u]
+; X86-NEXT:    shufps {{.*#+}} xmm2 = xmm2[1,3],xmm1[1,3]
 ; X86-NEXT:    psubd %xmm2, %xmm0
 ; X86-NEXT:    psrld $1, %xmm0
 ; X86-NEXT:    paddd %xmm2, %xmm0
@@ -51,14 +43,10 @@ define void @test_urem7_v2i32(ptr %x, ptr %y) nounwind {
 ; X64-LABEL: test_urem7_v2i32:
 ; X64:       # %bb.0:
 ; X64-NEXT:    movq {{.*#+}} xmm0 = mem[0],zero
-; X64-NEXT:    movdqa {{.*#+}} xmm1 = [613566757,613566757,u,u]
-; X64-NEXT:    movdqa %xmm0, %xmm2
-; X64-NEXT:    pmuludq %xmm1, %xmm2
-; X64-NEXT:    pshufd {{.*#+}} xmm2 = xmm2[1,3,2,3]
-; X64-NEXT:    pshufd {{.*#+}} xmm3 = xmm0[1,1,3,3]
-; X64-NEXT:    pmuludq %xmm1, %xmm3
-; X64-NEXT:    pshufd {{.*#+}} xmm1 = xmm3[1,3,2,3]
-; X64-NEXT:    punpckldq {{.*#+}} xmm2 = xmm2[0],xmm1[0],xmm2[1],xmm1[1]
+; X64-NEXT:    pmuludq %xmm0, %xmm1
+; X64-NEXT:    pshufd {{.*#+}} xmm2 = xmm0[0,1,1,3]
+; X64-NEXT:    pmuludq {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm2 # [613566757,u,613566757,u]
+; X64-NEXT:    shufps {{.*#+}} xmm2 = xmm2[1,3],xmm1[1,3]
 ; X64-NEXT:    movdqa %xmm0, %xmm1
 ; X64-NEXT:    psubd %xmm2, %xmm1
 ; X64-NEXT:    psrld $1, %xmm1
@@ -76,15 +64,11 @@ define void @test_urem7_v2i32(ptr %x, ptr %y) nounwind {
 ; X86-NEXT:    movl {{[0-9]+}}(%esp), %eax
 ; X86-NEXT:    movl {{[0-9]+}}(%esp), %ecx
 ; X86-NEXT:    movq {{.*#+}} xmm0 = mem[0],zero
-; X86-NEXT:    movdqa {{.*#+}} xmm1 = [613566757,613566757,u,u]
+; X86-NEXT:    pmuludq %xmm0, %xmm1
 ; X86-NEXT:    movdqa %xmm0, %xmm2
-; X86-NEXT:    pmuludq %xmm1, %xmm2
-; X86-NEXT:    pshufd {{.*#+}} xmm2 = xmm2[1,3,2,3]
-; X86-NEXT:    movdqa %xmm0, %xmm3
-; X86-NEXT:    shufps {{.*#+}} xmm3 = xmm3[1,1,1,1]
-; X86-NEXT:    pmuludq %xmm1, %xmm3
-; X86-NEXT:    pshufd {{.*#+}} xmm1 = xmm3[1,3,2,3]
-; X86-NEXT:    punpckldq {{.*#+}} xmm2 = xmm2[0],xmm1[0],xmm2[1],xmm1[1]
+; X86-NEXT:    shufps {{.*#+}} xmm2 = xmm2[0,1],xmm0[1,3]
+; X86-NEXT:    pmuludq {{\.?LCPI[0-9]+_[0-9]+}}, %xmm2 # [613566757,u,613566757,u]
+; X86-NEXT:    shufps {{.*#+}} xmm2 = xmm2[1,3],xmm1[1,3]
 ; X86-NEXT:    movdqa %xmm0, %xmm1
 ; X86-NEXT:    psubd %xmm2, %xmm1
 ; X86-NEXT:    psrld $1, %xmm1
@@ -106,52 +90,44 @@ define void @test_sdiv7_v2i32(ptr %x, ptr %y) nounwind {
 ; X64-LABEL: test_sdiv7_v2i32:
 ; X64:       # %bb.0:
 ; X64-NEXT:    movq {{.*#+}} xmm0 = mem[0],zero
-; X64-NEXT:    movdqa {{.*#+}} xmm1 = [2454267027,2454267027,u,u]
-; X64-NEXT:    movdqa %xmm0, %xmm2
-; X64-NEXT:    pmuludq %xmm1, %xmm2
-; X64-NEXT:    pshufd {{.*#+}} xmm2 = xmm2[1,3,2,3]
-; X64-NEXT:    pshufd {{.*#+}} xmm3 = xmm0[1,1,3,3]
-; X64-NEXT:    pmuludq %xmm1, %xmm3
-; X64-NEXT:    pshufd {{.*#+}} xmm3 = xmm3[1,3,2,3]
-; X64-NEXT:    punpckldq {{.*#+}} xmm2 = xmm2[0],xmm3[0],xmm2[1],xmm3[1]
-; X64-NEXT:    pxor %xmm3, %xmm3
-; X64-NEXT:    pcmpgtd %xmm0, %xmm3
-; X64-NEXT:    pand %xmm1, %xmm3
+; X64-NEXT:    pxor %xmm1, %xmm1
+; X64-NEXT:    pcmpgtd %xmm0, %xmm1
+; X64-NEXT:    pand {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm1
+; X64-NEXT:    paddd %xmm0, %xmm1
+; X64-NEXT:    pmuludq %xmm0, %xmm2
+; X64-NEXT:    pshufd {{.*#+}} xmm3 = xmm0[0,1,1,3]
+; X64-NEXT:    pmuludq {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm3 # [2454267027,u,2454267027,u]
+; X64-NEXT:    shufps {{.*#+}} xmm3 = xmm3[1,3],xmm2[1,3]
+; X64-NEXT:    psubd %xmm1, %xmm3
 ; X64-NEXT:    paddd %xmm0, %xmm3
-; X64-NEXT:    psubd %xmm3, %xmm2
-; X64-NEXT:    paddd %xmm0, %xmm2
-; X64-NEXT:    movdqa %xmm2, %xmm0
+; X64-NEXT:    movdqa %xmm3, %xmm0
 ; X64-NEXT:    psrld $31, %xmm0
-; X64-NEXT:    psrad $2, %xmm2
-; X64-NEXT:    paddd %xmm0, %xmm2
-; X64-NEXT:    movq %xmm2, (%rsi)
+; X64-NEXT:    psrad $2, %xmm3
+; X64-NEXT:    paddd %xmm0, %xmm3
+; X64-NEXT:    movq %xmm3, (%rsi)
 ; X64-NEXT:    retq
 ;
 ; X86-LABEL: test_sdiv7_v2i32:
 ; X86:       # %bb.0:
 ; X86-NEXT:    movl {{[0-9]+}}(%esp), %eax
 ; X86-NEXT:    movl {{[0-9]+}}(%esp), %ecx
-; X86-NEXT:    movq {{.*#+}} xmm1 = mem[0],zero
-; X86-NEXT:    movdqa {{.*#+}} xmm2 = [2454267027,2454267027,u,u]
-; X86-NEXT:    movdqa %xmm1, %xmm0
-; X86-NEXT:    pmuludq %xmm2, %xmm0
-; X86-NEXT:    pshufd {{.*#+}} xmm0 = xmm0[1,3,2,3]
-; X86-NEXT:    movdqa %xmm1, %xmm3
-; X86-NEXT:    shufps {{.*#+}} xmm3 = xmm3[1,1,1,1]
-; X86-NEXT:    pmuludq %xmm2, %xmm3
-; X86-NEXT:    pshufd {{.*#+}} xmm3 = xmm3[1,3,2,3]
-; X86-NEXT:    punpckldq {{.*#+}} xmm0 = xmm0[0],xmm3[0],xmm0[1],xmm3[1]
-; X86-NEXT:    pxor %xmm3, %xmm3
-; X86-NEXT:    pcmpgtd %xmm1, %xmm3
-; X86-NEXT:    pand %xmm2, %xmm3
-; X86-NEXT:    paddd %xmm1, %xmm3
-; X86-NEXT:    psubd %xmm3, %xmm0
-; X86-NEXT:    paddd %xmm1, %xmm0
-; X86-NEXT:    movdqa %xmm0, %xmm1
-; X86-NEXT:    psrld $31, %xmm1
-; X86-NEXT:    psrad $2, %xmm0
-; X86-NEXT:    paddd %xmm1, %xmm0
-; X86-NEXT:    movq %xmm0, (%eax)
+; X86-NEXT:    movq {{.*#+}} xmm0 = mem[0],zero
+; X86-NEXT:    pxor %xmm1, %xmm1
+; X86-NEXT:    pcmpgtd %xmm0, %xmm1
+; X86-NEXT:    pand {{\.?LCPI[0-9]+_[0-9]+}}, %xmm1
+; X86-NEXT:    paddd %xmm0, %xmm1
+; X86-NEXT:    pmuludq %xmm0, %xmm2
+; X86-NEXT:    movdqa %xmm0, %xmm3
+; X86-NEXT:    shufps {{.*#+}} xmm3 = xmm3[0,1],xmm0[1,3]
+; X86-NEXT:    pmuludq {{\.?LCPI[0-9]+_[0-9]+}}, %xmm3 # [2454267027,u,2454267027,u]
+; X86-NEXT:    shufps {{.*#+}} xmm3 = xmm3[1,3],xmm2[1,3]
+; X86-NEXT:    psubd %xmm1, %xmm3
+; X86-NEXT:    paddd %xmm0, %xmm3
+; X86-NEXT:    movdqa %xmm3, %xmm0
+; X86-NEXT:    psrld $31, %xmm0
+; X86-NEXT:    psrad $2, %xmm3
+; X86-NEXT:    paddd %xmm0, %xmm3
+; X86-NEXT:    movq %xmm3, (%eax)
 ; X86-NEXT:    retl
   %a = load <2 x i32>, ptr %x
   %b = sdiv <2 x i32> %a, <i32 7, i32 7>
@@ -163,29 +139,25 @@ define void @test_srem7_v2i32(ptr %x, ptr %y) nounwind {
 ; X64-LABEL: test_srem7_v2i32:
 ; X64:       # %bb.0:
 ; X64-NEXT:    movq {{.*#+}} xmm0 = mem[0],zero
-; X64-NEXT:    movdqa {{.*#+}} xmm1 = [2454267027,2454267027,u,u]
-; X64-NEXT:    movdqa %xmm0, %xmm2
-; X64-NEXT:    pmuludq %xmm1, %xmm2
-; X64-NEXT:    pshufd {{.*#+}} xmm2 = xmm2[1,3,2,3]
-; X64-NEXT:    pshufd {{.*#+}} xmm3 = xmm0[1,1,3,3]
-; X64-NEXT:    pmuludq %xmm1, %xmm3
-; X64-NEXT:    pshufd {{.*#+}} xmm3 = xmm3[1,3,2,3]
-; X64-NEXT:    punpckldq {{.*#+}} xmm2 = xmm2[0],xmm3[0],xmm2[1],xmm3[1]
-; X64-NEXT:    pxor %xmm3, %xmm3
-; X64-NEXT:    pcmpgtd %xmm0, %xmm3
-; X64-NEXT:    pand %xmm1, %xmm3
+; X64-NEXT:    pxor %xmm1, %xmm1
+; X64-NEXT:    pcmpgtd %xmm0, %xmm1
+; X64-NEXT:    pand {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm1
+; X64-NEXT:    paddd %xmm0, %xmm1
+; X64-NEXT:    pmuludq %xmm0, %xmm2
+; X64-NEXT:    pshufd {{.*#+}} xmm3 = xmm0[0,1,1,3]
+; X64-NEXT:    pmuludq {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm3 # [2454267027,u,2454267027,u]
+; X64-NEXT:    shufps {{.*#+}} xmm3 = xmm3[1,3],xmm2[1,3]
+; X64-NEXT:    psubd %xmm1, %xmm3
 ; X64-NEXT:    paddd %xmm0, %xmm3
-; X64-NEXT:    psubd %xmm3, %xmm2
-; X64-NEXT:    paddd %xmm0, %xmm2
-; X64-NEXT:    movdqa %xmm2, %xmm1
+; X64-NEXT:    movdqa %xmm3, %xmm1
 ; X64-NEXT:    psrld $31, %xmm1
-; X64-NEXT:    psrad $2, %xmm2
-; X64-NEXT:    paddd %xmm1, %xmm2
-; X64-NEXT:    movdqa %xmm2, %xmm1
+; X64-NEXT:    psrad $2, %xmm3
+; X64-NEXT:    paddd %xmm1, %xmm3
+; X64-NEXT:    movdqa %xmm3, %xmm1
 ; X64-NEXT:    pslld $3, %xmm1
-; X64-NEXT:    psubd %xmm1, %xmm2
-; X64-NEXT:    paddd %xmm0, %xmm2
-; X64-NEXT:    movq %xmm2, (%rsi)
+; X64-NEXT:    psubd %xmm1, %xmm3
+; X64-NEXT:    paddd %xmm0, %xmm3
+; X64-NEXT:    movq %xmm3, (%rsi)
 ; X64-NEXT:    retq
 ;
 ; X86-LABEL: test_srem7_v2i32:
@@ -193,20 +165,16 @@ define void @test_srem7_v2i32(ptr %x, ptr %y) nounwind {
 ; X86-NEXT:    movl {{[0-9]+}}(%esp), %eax
 ; X86-NEXT:    movl {{[0-9]+}}(%esp), %ecx
 ; X86-NEXT:    movq {{.*#+}} xmm0 = mem[0],zero
-; X86-NEXT:    movdqa {{.*#+}} xmm2 = [2454267027,2454267027,u,u]
+; X86-NEXT:    pxor %xmm2, %xmm2
+; X86-NEXT:    pcmpgtd %xmm0, %xmm2
+; X86-NEXT:    pand {{\.?LCPI[0-9]+_[0-9]+}}, %xmm2
+; X86-NEXT:    paddd %xmm0, %xmm2
+; X86-NEXT:    pmuludq %xmm0, %xmm3
 ; X86-NEXT:    movdqa %xmm0, %xmm1
-; X86-NEXT:    pmuludq %xmm2, %xmm1
-; X86-NEXT:    pshufd {{.*#+}} xmm1 = xmm1[1,3,2,3]
-; X86-NEXT:    movdqa %xmm0, %xmm3
-; X86-NEXT:    shufps {{.*#+}} xmm3 = xmm3[1,1,1,1]
-; X86-NEXT:    pmuludq %xmm2, %xmm3
-; X86-NEXT:    pshufd {{.*#+}} xmm3 = xmm3[1,3,2,3]
-; X86-NEXT:    punpckldq {{.*#+}} xmm1 = xmm1[0],xmm3[0],xmm1[1],xmm3[1]
-; X86-NEXT:    pxor %xmm3, %xmm3
-; X86-NEXT:    pcmpgtd %xmm0, %xmm3
-; X86-NEXT:    pand %xmm2, %xmm3
-; X86-NEXT:    paddd %xmm0, %xmm3
-; X86-NEXT:    psubd %xmm3, %xmm1
+; X86-NEXT:    shufps {{.*#+}} xmm1 = xmm1[0,1],xmm0[1,3]
+; X86-NEXT:    pmuludq {{\.?LCPI[0-9]+_[0-9]+}}, %xmm1 # [2454267027,u,2454267027,u]
+; X86-NEXT:    shufps {{.*#+}} xmm1 = xmm1[1,3],xmm3[1,3]
+; X86-NEXT:    psubd %xmm2, %xmm1
 ; X86-NEXT:    paddd %xmm0, %xmm1
 ; X86-NEXT:    movdqa %xmm1, %xmm2
 ; X86-NEXT:    psrld $31, %xmm2
