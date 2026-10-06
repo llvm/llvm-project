@@ -334,8 +334,9 @@ def Zn4FPAES01 : ProcResGroup<[Zn4FPAES0, Zn4FPAES1]>;
 def Zn4FPCLM01 : ProcResGroup<[Zn4FPCLM0, Zn4FPCLM1]>;
 
 // Microcode issue limit, as measured for the masked gather/scatter sequences.
-// The limit is not specific to them -- any microcoded instruction contends for
-// it -- but only these shapes were measured, so only they are charged here.
+// The mixed-stream runs show a gather and a scatter sharing it. Whether other
+// microcoded instructions contend for the same limit was not measured, and
+// only these shapes are charged here.
 // Abstract rather than a pipe, 4-wide so round(tput * 4) keeps the resolution.
 def Zn4UcodeGS : ProcResource<4>;
 
@@ -524,10 +525,12 @@ defm : Zn4WriteResInt<WriteLoad, [Zn4AGU012, Zn4Load], !add(Znver4Model.LoadLate
 defm : Zn4WriteResInt<WriteVecMaskedGatherWriteback, [], !add(Znver4Model.LoadLatency, 1), [], 0>;
 
 // AVX-512 masked GATHER / SCATTER: microcoded, so the default vector
-// load/store write is an order of magnitude out. Entries are keyed by
-// (#elements, element width, index width) and were measured on Znver4 with
-// every mask bit set, at unit stride over an L2-resident buffer; scatter
-// latency is estimated, having no result to time.
+// load/store write is an order of magnitude out. Records distinguish three
+// dimensions: element count, data width, and index width. They were measured
+// on Znver4 with every mask bit set, at unit stride over an L2-resident
+// buffer, and with a single kxnor writing the mask before each gather or
+// scatter, which is what a vectorised loop emits. Scatter latency is
+// estimated, having no data result to time.
 // Per-pipe occupancy comes from uops.info and keeps the eligibility reported
 // there, with Zn4UcodeGS carrying the residual the pipes do not explain.
 // Three entries widen FP1/FP2 uops to FP1-3 to dodge an llvm-mca allocation
@@ -650,10 +653,12 @@ def Zn4WriteVPSCATTERDDZ128 : Zn4GSRes<[Zn4AGU012, Zn4Store, Zn4FPSt, Zn4FP45,
                                        [4, 4, 4, 6, 2, 1, 33], 9, 27>;
 def : InstRW<[Zn4WriteVPSCATTERDDZ128],
              (instrs VPSCATTERDDZ128mr, VSCATTERDPSZ128mr)>;
-// Faster than the dword-indexed form above, 6.6 cyc against 8.3, inverting the
-// order every other index-width pair keeps. That gap belongs to the single mask
-// reload this table is calibrated on; add a second, redundant reload and the two
-// converge on 7.0. Do not level the residuals against some other sequence.
+// Faster than the dword-indexed form above, 6.5 cyc against 8.3. Both
+// dword-data scatters run that way round -- the eight-lane pair models 11.5
+// against 12.3 -- while the qword-data ones do not. The gap belongs to the
+// single mask write this table is calibrated on; add a second, redundant one
+// and the two converge on 7.0. Do not level the residuals against some other
+// sequence.
 def Zn4WriteVPSCATTERQDZ256 : Zn4GSRes<[Zn4AGU012, Zn4Store, Zn4FPSt, Zn4FP45,
                                         Zn4FPU123, Zn4FPU23, Zn4UcodeGS],
                                        [4, 4, 4, 6, 2, 1, 26], 9, 27>;
