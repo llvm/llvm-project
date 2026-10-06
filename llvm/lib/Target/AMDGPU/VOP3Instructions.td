@@ -747,6 +747,7 @@ def IsPow2Plus1: PatLeaf<(i32 imm), [{
 }]>;
 
 def Log2_32: SDNodeXForm<imm, [{
+  assert(isUInt<32>(N->getZExtValue()));
   uint32_t V = static_cast<uint32_t>(N->getZExtValue());
   return CurDAG->getTargetConstant(Log2_32(V - 1), SDLoc(N), MVT::i32);
 }]>;
