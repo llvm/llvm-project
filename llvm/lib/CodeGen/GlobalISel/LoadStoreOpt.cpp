@@ -861,6 +861,8 @@ bool LoadStoreOptImpl::mergeTruncStore(
   for (auto II = ++LastStore.getReverseIterator();
        II != LastStore.getParent()->rend() && NumInstsChecked < MaxInstsToCheck;
        ++II) {
+    if (II->isDebugInstr())
+      continue;
     NumInstsChecked++;
     GStore *NewStore;
     if ((NewStore = dyn_cast<GStore>(&*II))) {
