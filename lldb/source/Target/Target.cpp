@@ -2528,10 +2528,9 @@ ModuleSP Target::GetOrCreateModule(const ModuleSpec &orig_module_spec,
       // suitable image.
       if (m_image_search_paths.GetSize()) {
         ModuleSpec transformed_spec(module_spec);
-        ConstString transformed_dir;
+        std::string transformed_dir;
         if (m_image_search_paths.RemapPath(
-                ConstString(module_spec.GetFileSpec().GetDirectory()),
-                transformed_dir)) {
+                module_spec.GetFileSpec().GetDirectory(), transformed_dir)) {
           transformed_spec.GetFileSpec().SetDirectory(transformed_dir);
           transformed_spec.GetFileSpec().SetFilename(
                 module_spec.GetFileSpec().GetFilename());

@@ -198,6 +198,16 @@ Makes programs 10x faster by doing Special New Thing.
   enabling Clang or MLIR retains the project's complete build, test, and
   install behavior.
 
+* With `CLANG_ENABLE_CIR=ON` and `mlir` in `LLVM_ENABLE_PROJECTS`,
+  `find_package(Clang)` now looks for the associated MLIR CMake package
+  before importing Clang's targets, so consumers no longer need to call
+  `find_package(MLIR)` themselves and can do so in either order.
+  As a consequence the consumer's project also sees the `MLIR_*` variables and
+  targets, as it already does for Flang. When MLIR is only an implicit ClangIR
+  dependency, its build-tree `MLIRConfig.cmake` now reports the package as not
+  found with an explanatory message instead of succeeding with no targets;
+  such a build never provided a usable MLIR SDK.
+
 * LLVM's documentation has largely been rewritten from [reStructuredText] to
   Markdown, and our Sphinx documentation build now has a hard dependency on the
   [`myst-parser` package]. Vendors packaging LLVM will need to install
