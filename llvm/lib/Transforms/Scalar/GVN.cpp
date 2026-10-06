@@ -274,11 +274,13 @@ public:
   }
 };
 
+class GVNLegacyPass;
+
 /// The core GVN pass object.
 ///
 /// FIXME: We should have a good summary of the GVN algorithm implemented by
 /// this particular pass here.
-class GVNPassImpl {
+class llvm::GVNPassImpl {
   llvm::GVNOptions Options;
 
 public:
@@ -303,8 +305,8 @@ public:
   bool isMemorySSAEnabled() const;
 
 private:
-  friend class llvm::GVNPass;
-  friend class GVNLegacyPass;
+  friend class GVNPass;
+  friend class ::GVNLegacyPass;
 
   MemoryDependenceResults *MD = nullptr;
   DominatorTree *DT = nullptr;
@@ -1192,9 +1194,16 @@ bool GVNPassImpl::isMemorySSAEnabled() const {
   return Options.AllowMemorySSA.value_or(GVNEnableMemorySSA);
 }
 
-PreservedAnalyses GVNPass::run(Function &F, FunctionAnalysisManager &AM) {
-  GVNPassImpl Impl(Options);
+GVNPass::GVNPass(GVNOptions Options)
+    : Impl(std::make_unique<GVNPassImpl>(Options)) {}
 
+GVNPass::~GVNPass() = default;
+
+GVNPass::GVNPass(GVNPass &&) noexcept = default;
+
+GVNPass &GVNPass::operator=(GVNPass &&) noexcept = default;
+
+PreservedAnalyses GVNPass::run(Function &F, FunctionAnalysisManager &AM) {
   // FIXME: The order of evaluation of these 'getResult' calls is very
   // significant! Re-ordering these variables will cause GVN when run alone to
   // be less effective! We should fix memdep and basic-aa to not exhibit this
@@ -1203,19 +1212,19 @@ PreservedAnalyses GVNPass::run(Function &F, FunctionAnalysisManager &AM) {
   auto &DT = AM.getResult<DominatorTreeAnalysis>(F);
   auto &TLI = AM.getResult<TargetLibraryAnalysis>(F);
   auto &AA = AM.getResult<AAManager>(F);
-  auto *MemDep = Impl.isMemDepEnabled()
+  auto *MemDep = Impl->isMemDepEnabled()
                      ? &AM.getResult<MemoryDependenceAnalysis>(F)
                      : nullptr;
   auto &LI = AM.getResult<LoopAnalysis>(F);
   auto *MSSA = AM.getCachedResult<MemorySSAAnalysis>(F);
-  if (Impl.isMemorySSAEnabled() && !MSSA) {
+  if (Impl->isMemorySSAEnabled() && !MSSA) {
     assert(!MemDep &&
            "On-demand computation of MemSSA implies that MemDep is disabled!");
     MSSA = &AM.getResult<MemorySSAAnalysis>(F);
   }
   auto &ORE = AM.getResult<OptimizationRemarkEmitterAnalysis>(F);
-  bool Changed = Impl.run(F, AC, DT, TLI, AA, MemDep, LI, &ORE,
-                          MSSA ? &MSSA->getMSSA() : nullptr);
+  bool Changed = Impl->run(F, AC, DT, TLI, AA, MemDep, LI, &ORE,
+                           MSSA ? &MSSA->getMSSA() : nullptr);
   if (!Changed)
     return PreservedAnalyses::all();
   PreservedAnalyses PA;
@@ -1238,6 +1247,7 @@ void GVNPass::printPipeline(
   static_cast<PassInfoMixin<GVNPass> *>(this)->printPipeline(
       OS, MapClassName2PassName);
 
+  const GVNOptions &Options = Impl->Options;
   OS << '<';
   if (Options.AllowScalarPRE != std::nullopt)
     OS << (*Options.AllowScalarPRE ? "" : "no-") << "scalar-pre;";
