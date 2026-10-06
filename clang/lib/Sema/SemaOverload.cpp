@@ -9228,9 +9228,8 @@ public:
 
   BuiltinCandidateTypeSet(Sema &SemaRef)
       : HasNonRecordTypes(false), HasArithmeticOrEnumeralTypes(false),
-        HasNullPtrType(false), HasReflectionType(false), SemaRef(SemaRef),
-        MayConvertToArithmetic(false), HasNullPtrType(false), SemaRef(SemaRef),
-        Context(SemaRef.Context) {}
+        MayConvertToArithmetic(false), HasNullPtrType(false),
+        HasReflectionType(false), SemaRef(SemaRef), Context(SemaRef.Context) {}
 
   void AddTypesConvertedFrom(QualType Ty,
                              SourceLocation Loc,
