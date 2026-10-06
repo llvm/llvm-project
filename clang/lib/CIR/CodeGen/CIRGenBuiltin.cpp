@@ -2291,8 +2291,39 @@ RValue CIRGenFunction::emitBuiltinExpr(const GlobalDecl &gd, unsigned builtinID,
     mlir::Value result = builder.createMatrixTranspose(loc, matrix);
     return RValue::get(result);
   }
-  case Builtin::BI__builtin_matrix_column_major_load:
-  case Builtin::BI__builtin_matrix_column_major_store:
+  case Builtin::BI__builtin_matrix_column_major_load: {
+    // Emit everything that isn't dependent on the first parameter type
+    mlir::Value stride = emitScalarExpr(e->getArg(3));
+    const QualType resultTy = e->getType();
+    mlir::Type resultType = convertType(resultTy);
+    auto *ptrTy = e->getArg(0)->getType()->getAs<PointerType>();
+    assert(ptrTy && "arg0 must be of pointer type");
+    bool isVolatile = ptrTy->getPointeeType().isVolatileQualified();
+    Address src = emitPointerWithAlignment(e->getArg(0));
+    emitNonNullArgCheck(RValue::get(src.emitRawPointer()),
+                        e->getArg(0)->getType(), e->getArg(0)->getExprLoc(), fd,
+                        0);
+    mlir::Value dataPtr = src.emitRawPointer();
+    mlir::Value result = builder.createMatrixColumnMajorLoad(
+        loc, resultType, dataPtr, stride, isVolatile);
+    return RValue::get(result);
+  }
+  case Builtin::BI__builtin_matrix_column_major_store: {
+    mlir::Value matrix = emitScalarExpr(e->getArg(0));
+    Address dst = emitPointerWithAlignment(e->getArg(1));
+    mlir::Value stride = emitScalarExpr(e->getArg(2));
+
+    auto *ptrTy = e->getArg(1)->getType()->getAs<PointerType>();
+    assert(ptrTy && "arg1 must be of pointer type");
+    bool isVolatile = ptrTy->getPointeeType().isVolatileQualified();
+
+    emitNonNullArgCheck(RValue::get(dst.emitRawPointer()),
+                        e->getArg(1)->getType(), e->getArg(1)->getExprLoc(), fd,
+                        0);
+    builder.createMatrixColumnMajorStore(loc, matrix, dst.emitRawPointer(),
+                                         stride, isVolatile);
+    return RValue::get(nullptr);
+  }
   case Builtin::BI__builtin_masked_load:
   case Builtin::BI__builtin_masked_expand_load:
   case Builtin::BI__builtin_masked_gather:

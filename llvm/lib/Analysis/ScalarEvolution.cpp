@@ -267,18 +267,13 @@ void SCEV::computeAndSetCanonical(ScalarEvolution &SE) {
   // For all other expressions, check whether any immediate operand has a
   // different canonical. Since operands are always created before their parent,
   // their canonical pointers are already set — no recursion needed.
-  bool Changed = false;
-  SmallVector<SCEVUse, 4> CanonOps;
-  for (SCEVUse Op : operands()) {
-    CanonOps.push_back(Op->getCanonical());
-    Changed |= CanonOps.back() != Op;
-  }
-
-  if (!Changed) {
+  if (all_of(operands(), [](SCEVUse Op) { return Op.isCanonical(); })) {
     CanonicalSCEV = this;
     return;
   }
 
+  SmallVector<SCEVUse, 4> CanonOps(
+      map_range(operands(), [](SCEVUse Op) { return Op.getCanonical(); }));
   // Rebuild the expression from the canonical operands, stripping use flags.
   CanonicalSCEV = SE.getWithOperands(this, CanonOps);
 }
@@ -14609,10 +14604,6 @@ bool ScalarEvolution::dominates(const SCEV *S, const BasicBlock *BB) {
 
 bool ScalarEvolution::properlyDominates(const SCEV *S, const BasicBlock *BB) {
   return getBlockDisposition(S, BB) == ProperlyDominatesBlock;
-}
-
-bool ScalarEvolution::hasOperand(const SCEV *S, const SCEV *Op) const {
-  return SCEVExprContains(S, [&](const SCEV *Expr) { return Expr == Op; });
 }
 
 void ScalarEvolution::forgetBackedgeTakenCounts(const Loop *L,

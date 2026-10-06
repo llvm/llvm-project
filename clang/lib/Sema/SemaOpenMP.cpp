@@ -11371,7 +11371,7 @@ static bool checkSimdlenSafelenSpecified(Sema &S,
     // If both simdlen and safelen clauses are specified, the value of the
     // simdlen parameter must be less than or equal to the value of the safelen
     // parameter.
-    if (SimdlenRes > SafelenRes) {
+    if (llvm::APSInt::compareValues(SimdlenRes, SafelenRes) > 0) {
       S.Diag(SimdlenLength->getExprLoc(),
              diag::err_omp_wrong_simdlen_safelen_values)
           << SimdlenLength->getSourceRange() << SafelenLength->getSourceRange();
@@ -23296,11 +23296,16 @@ OMPClause *SemaOpenMP::ActOnOpenMPCopyprivateClause(ArrayRef<Expr *> VarList,
       //  threadprivate or private in the enclosing context.
       if (DVar.CKind == OMPC_unknown) {
         DVar = DSAStack->getImplicitDSA(D, false);
-        if (DVar.CKind == OMPC_shared) {
+        // A data member is private only if an enclosing construct captured it.
+        const bool IsShared = DVar.CKind == OMPC_shared;
+        if (IsShared ||
+            (isa<FieldDecl>(D) && !SemaRef.CurContext->isDependentContext() &&
+             !isOpenMPCapturedDecl(D))) {
           Diag(ELoc, diag::err_omp_required_access)
               << getOpenMPClauseNameForDiag(OMPC_copyprivate)
               << "threadprivate or private in the enclosing context";
-          reportOriginalDsa(SemaRef, DSAStack, D, DVar);
+          if (IsShared)
+            reportOriginalDsa(SemaRef, DSAStack, D, DVar);
           continue;
         }
       }
@@ -23347,10 +23352,13 @@ OMPClause *SemaOpenMP::ActOnOpenMPCopyprivateClause(ArrayRef<Expr *> VarList,
 
     // No need to mark vars as copyprivate, they are already threadprivate or
     // implicitly private.
-    assert(VD || isOpenMPCapturedDecl(D));
+    const bool IsBindingDecl = isa<BindingDecl>(D);
+    assert(VD || IsBindingDecl || SemaRef.CurContext->isDependentContext() ||
+           isOpenMPCapturedDecl(D));
     Vars.push_back(
-        VD ? RefExpr->IgnoreParens()
-           : buildCapture(SemaRef, D, SimpleRefExpr, /*WithInit=*/false));
+        (VD || IsBindingDecl || SemaRef.CurContext->isDependentContext())
+            ? RefExpr->IgnoreParens()
+            : buildCapture(SemaRef, D, SimpleRefExpr, /*WithInit=*/false));
     SrcExprs.push_back(PseudoSrcExpr);
     DstExprs.push_back(PseudoDstExpr);
     AssignmentOps.push_back(AssignmentOp.get());
