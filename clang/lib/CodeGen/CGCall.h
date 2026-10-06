@@ -21,6 +21,7 @@
 #include "clang/AST/CanonicalType.h"
 #include "clang/AST/GlobalDecl.h"
 #include "clang/AST/Type.h"
+#include "clang/Basic/BitmaskEnum.h"
 #include "clang/CodeGen/ModuleLinker.h"
 #include "llvm/ADT/STLForwardCompat.h"
 #include "llvm/IR/Value.h"
@@ -40,22 +41,23 @@ namespace CodeGen {
 
 /// Abstract information about a function or function prototype.
 class CGCalleeInfo {
-  /// The function prototype of the callee.
-  const FunctionProtoType *CalleeProtoTy;
+  /// The function type of the callee.
+  const FunctionType *CalleeFunctionTy;
   /// The function declaration of the callee.
   GlobalDecl CalleeDecl;
 
 public:
-  explicit CGCalleeInfo() : CalleeProtoTy(nullptr) {}
-  CGCalleeInfo(const FunctionProtoType *calleeProtoTy, GlobalDecl calleeDecl)
-      : CalleeProtoTy(calleeProtoTy), CalleeDecl(calleeDecl) {}
-  CGCalleeInfo(const FunctionProtoType *calleeProtoTy)
-      : CalleeProtoTy(calleeProtoTy) {}
+  explicit CGCalleeInfo() : CalleeFunctionTy(nullptr) {}
+  CGCalleeInfo(const FunctionType *calleeFunctionTy, GlobalDecl calleeDecl)
+      : CalleeFunctionTy(calleeFunctionTy), CalleeDecl(calleeDecl) {}
+  CGCalleeInfo(const FunctionType *calleeFunctionTy)
+      : CalleeFunctionTy(calleeFunctionTy) {}
   CGCalleeInfo(GlobalDecl calleeDecl)
-      : CalleeProtoTy(nullptr), CalleeDecl(calleeDecl) {}
+      : CalleeFunctionTy(nullptr), CalleeDecl(calleeDecl) {}
 
+  const FunctionType *getCalleeFunctionType() const { return CalleeFunctionTy; }
   const FunctionProtoType *getCalleeFunctionProtoType() const {
-    return CalleeProtoTy;
+    return dyn_cast_or_null<FunctionProtoType>(CalleeFunctionTy);
   }
   const GlobalDecl getCalleeDecl() const { return CalleeDecl; }
 };
@@ -411,27 +413,8 @@ enum class FnInfoOpts {
   IsInstanceMethod = 1 << 0,
   IsChainCall = 1 << 1,
   IsDelegateCall = 1 << 2,
+  LLVM_MARK_AS_BITMASK_ENUM(/*LargestValue=*/IsDelegateCall)
 };
-
-inline FnInfoOpts operator|(FnInfoOpts A, FnInfoOpts B) {
-  return static_cast<FnInfoOpts>(llvm::to_underlying(A) |
-                                 llvm::to_underlying(B));
-}
-
-inline FnInfoOpts operator&(FnInfoOpts A, FnInfoOpts B) {
-  return static_cast<FnInfoOpts>(llvm::to_underlying(A) &
-                                 llvm::to_underlying(B));
-}
-
-inline FnInfoOpts &operator|=(FnInfoOpts &A, FnInfoOpts B) {
-  A = A | B;
-  return A;
-}
-
-inline FnInfoOpts &operator&=(FnInfoOpts &A, FnInfoOpts B) {
-  A = A & B;
-  return A;
-}
 
 struct DisableDebugLocationUpdates {
   CodeGenFunction &CGF;

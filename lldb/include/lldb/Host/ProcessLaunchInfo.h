@@ -184,7 +184,14 @@ public:
   void SetSTDIOWindowSize(uint16_t cols, uint16_t rows) {
     m_stdio_window_size.cols = cols;
     m_stdio_window_size.rows = rows;
+    m_stdio_window_size_explicit = true;
   }
+
+  bool IsSTDIOWindowSizeExplicit() const {
+    return m_stdio_window_size_explicit;
+  }
+
+  STDIOWindowSize GetSTDIOWindowSize() const { return m_stdio_window_size; }
 
 protected:
   FileSpec m_working_dir;
@@ -199,6 +206,7 @@ protected:
   std::string m_event_data; // A string passed to the plugin launch, having no
                             // meaning to the upper levels of lldb.
   STDIOWindowSize m_stdio_window_size;
+  bool m_stdio_window_size_explicit = false;
 };
 }
 

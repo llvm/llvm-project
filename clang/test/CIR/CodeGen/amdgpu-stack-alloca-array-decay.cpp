@@ -1,12 +1,12 @@
-// RUN: %clang_cc1 -triple amdgcn-amd-amdhsa \
+// RUN: %clang_cc1 -triple amdgpu-amd-amdhsa \
 // RUN:   -fclangir -emit-cir %s -o %t.cir
 // RUN: FileCheck --input-file=%t.cir %s --check-prefix=CIR
 
-// RUN: %clang_cc1 -triple amdgcn-amd-amdhsa \
+// RUN: %clang_cc1 -triple amdgpu-amd-amdhsa \
 // RUN:   -fclangir -emit-llvm %s -o %t.ll
 // RUN: FileCheck --input-file=%t.ll %s --check-prefix=LLVM
 
-// RUN: %clang_cc1 -triple amdgcn-amd-amdhsa \
+// RUN: %clang_cc1 -triple amdgpu-amd-amdhsa \
 // RUN:   -emit-llvm %s -o %t.ll
 // RUN: FileCheck --input-file=%t.ll %s --check-prefix=OGCG
 
@@ -26,8 +26,8 @@ void foo() {
 // CIR:         cir.store{{.*}} %[[DECAY]], %[[TMP]] : !cir.ptr<!s8i>, !cir.ptr<!cir.ptr<!s8i>>
 
 // LLVM-LABEL: define{{.*}} void @_Z3foov()
-// LLVM:         %[[FMT:.*]] = alloca [6 x i8], i64 1, align 1, addrspace(5)
-// LLVM-NEXT:    %[[TMP:.*]] = alloca ptr, i64 1, align 8, addrspace(5)
+// LLVM:         %[[FMT:.*]] = alloca [6 x i8], align 1, addrspace(5)
+// LLVM-NEXT:    %[[TMP:.*]] = alloca ptr, align 8, addrspace(5)
 // LLVM-DAG:     %[[FMT_CAST:.*]] = addrspacecast ptr addrspace(5) %[[FMT]] to ptr
 // LLVM-DAG:     %[[TMP_CAST:.*]] = addrspacecast ptr addrspace(5) %[[TMP]] to ptr
 // LLVM:         %[[DECAY:.*]] = getelementptr {{.*}} ptr %[[FMT_CAST]],

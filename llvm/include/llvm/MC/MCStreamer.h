@@ -294,7 +294,7 @@ protected:
   virtual void emitRawTextImpl(StringRef String);
 
   /// Returns true if the .cv_loc directive is in the right section.
-  bool checkCVLocSection(unsigned FuncId, unsigned FileNo, SMLoc Loc);
+  bool checkCVLocSection(unsigned FuncId, SMLoc Loc);
 
   std::unique_ptr<MCLFIRewriter> LFIRewriter;
 
@@ -365,6 +365,13 @@ public:
   }
 
   bool isInEpilogCFI() const { return CurrentWinEpilog; }
+
+  /// Returns true if a WinCFI prolog has been completed (.seh_endprologue)
+  /// in the current frame.
+  bool isWinCFIPrologEnded() const {
+    return CurrentWinFrameInfo && !CurrentWinFrameInfo->End &&
+           CurrentWinFrameInfo->PrologEnd;
+  }
 
   /// \name Assembly File Formatting.
   /// @{
@@ -520,6 +527,8 @@ public:
                                                    unsigned Minor,
                                                    unsigned Update,
                                                    VersionTuple SDKVersion) {}
+
+  virtual void emitTargetTriple(StringRef TargetTriple) {}
 
   void emitVersionForTarget(const Triple &Target,
                             const VersionTuple &SDKVersion,
@@ -846,7 +855,7 @@ public:
   /// \param MaxBytesToEmit - The maximum numbers of bytes to emit, or 0. If
   /// the alignment cannot be reached in this many bytes, no bytes are
   /// emitted.
-  virtual void emitCodeAlignment(Align Alignment, const MCSubtargetInfo *STI,
+  virtual void emitCodeAlignment(Align Alignment, const MCSubtargetInfo &STI,
                                  unsigned MaxBytesToEmit = 0);
 
   virtual void emitPrefAlign(Align A, const MCSymbol &End, bool EmitNops,
@@ -1055,6 +1064,10 @@ public:
                                 int64_t MaskRegisterSizeInBits, SMLoc Loc = {});
 
   virtual void emitCFINegateRAStateWithPC(SMLoc Loc = {});
+  virtual void emitCFILLVMSetRAState(unsigned State, MCSymbol *PACSym,
+                                     SMLoc Loc = {});
+  virtual void emitCFILLVMSetRAState(unsigned State, int64_t Offset,
+                                     SMLoc Loc = {});
   virtual void emitCFILabelDirective(SMLoc Loc, StringRef Name);
   virtual void emitCFIValOffset(int64_t Register, int64_t Offset,
                                 SMLoc Loc = {});
@@ -1088,6 +1101,9 @@ public:
   void setDefaultWinCFIUnwindVersion(uint8_t V) {
     DefaultWinCFIUnwindVersion = V;
   }
+  uint8_t getDefaultWinCFIUnwindVersion() const {
+    return DefaultWinCFIUnwindVersion;
+  }
   virtual void emitWinEHHandler(const MCSymbol *Sym, bool Unwind, bool Except,
                                 SMLoc Loc = SMLoc());
   virtual void emitWinEHHandlerData(SMLoc Loc = SMLoc());
@@ -1120,6 +1136,22 @@ public:
                                uint64_t Attr, uint64_t Discriminator,
                                const MCPseudoProbeInlineStack &InlineStack,
                                MCSymbol *FnSym);
+
+  /// Enable aligned instruction bundling with the given bundle size, from
+  /// this point onward. Once enabled, bundling cannot be disabled and the
+  /// bundle size cannot be changed. \p Alignment must be within [2, 2^30].
+  /// The default implementations report an error: silently emitting unbundled
+  /// code would defeat the sandboxing schemes bundling exists for.
+  virtual void emitBundleAlignMode(Align Alignment);
+
+  /// The following instructions are a bundle-locked group.
+  ///
+  /// \param AlignToEnd - If true, the bundle-locked group will be aligned to
+  ///                     the end of a bundle.
+  virtual void emitBundleLock(bool AlignToEnd, const MCSubtargetInfo &STI);
+
+  /// Ends a bundle-locked group.
+  virtual void emitBundleUnlock(const MCSubtargetInfo &STI);
 
   /// If this file is backed by a assembly streamer, this dumps the
   /// specified string in the output .s file.  This capability is indicated by

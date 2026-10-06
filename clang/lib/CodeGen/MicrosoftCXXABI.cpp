@@ -1953,13 +1953,14 @@ llvm::GlobalVariable *MicrosoftCXXABI::getAddrOfVTable(const CXXRecordDecl *RD,
   // importing it.  We never reference the RTTI data directly so there is no
   // need to make room for it.
   if (VTableAliasIsRequred) {
-    llvm::Value *GEPIndices[] = {llvm::ConstantInt::get(CGM.Int32Ty, 0),
-                                 llvm::ConstantInt::get(CGM.Int32Ty, 0),
-                                 llvm::ConstantInt::get(CGM.Int32Ty, 1)};
+    llvm::Constant *GEPIndices[] = {llvm::ConstantInt::get(CGM.Int32Ty, 0),
+                                    llvm::ConstantInt::get(CGM.Int32Ty, 0),
+                                    llvm::ConstantInt::get(CGM.Int32Ty, 1)};
     // Create a GEP which points just after the first entry in the VFTable,
     // this should be the location of the first virtual method.
-    llvm::Constant *VTableGEP = llvm::ConstantExpr::getInBoundsGetElementPtr(
-        VTable->getValueType(), VTable, GEPIndices);
+    llvm::Constant *VTableGEP = llvm::ConstantExpr::getGetElementPtr(
+        CGM.getDataLayout(), VTable->getValueType(), VTable, GEPIndices,
+        llvm::GEPNoWrapFlags::inBounds());
     if (llvm::GlobalValue::isWeakForLinker(VFTableLinkage)) {
       VFTableLinkage = llvm::GlobalValue::ExternalLinkage;
       if (C)
@@ -3819,10 +3820,6 @@ llvm::GlobalVariable *MSRTTIBuilder::getClassHierarchyDescriptor() {
   }
   if ((Flags & HasBranchingHierarchy) && RD->getNumVBases() != 0)
     Flags |= HasVirtualBranchingHierarchy;
-  // These gep indices are used to get the address of the first element of the
-  // base class array.
-  llvm::Value *GEPIndices[] = {llvm::ConstantInt::get(CGM.IntTy, 0),
-                               llvm::ConstantInt::get(CGM.IntTy, 0)};
 
   // Forward-declare the class hierarchy descriptor
   auto Type = ABI.getClassHierarchyDescriptorType();
@@ -3839,9 +3836,7 @@ llvm::GlobalVariable *MSRTTIBuilder::getClassHierarchyDescriptor() {
       llvm::ConstantInt::get(CGM.IntTy, 0), // reserved by the runtime
       llvm::ConstantInt::get(CGM.IntTy, Flags),
       llvm::ConstantInt::get(CGM.IntTy, Classes.size()),
-      ABI.getImageRelativeConstant(llvm::ConstantExpr::getInBoundsGetElementPtr(
-          Bases->getValueType(), Bases,
-          llvm::ArrayRef<llvm::Value *>(GEPIndices))),
+      ABI.getImageRelativeConstant(Bases)
   };
   CHD->setInitializer(llvm::ConstantStruct::get(Type, Fields));
   return CHD;
@@ -4207,18 +4202,17 @@ MicrosoftCXXABI::getAddrOfCXXCtorClosure(const CXXConstructorDecl *CD,
   if (SrcVal)
     Args.add(RValue::get(SrcVal), SrcParam->getType());
 
-  // Add the rest of the default arguments.
+  // Get the rest of the default arguments.
   SmallVector<const Stmt *, 4> ArgVec;
-  ArrayRef<ParmVarDecl *> params = CD->parameters().drop_front(IsCopy ? 1 : 0);
-  for (const ParmVarDecl *PD : params) {
-    assert(PD->hasDefaultArg() && "ctor closure lacks default args");
-    ArgVec.push_back(PD->getDefaultArg());
-  }
+  for (const CXXDefaultArgExpr *Expr :
+       CD->getCtorClosureDefaultArgs().drop_front(IsCopy ? 1 : 0))
+    ArgVec.push_back(Expr);
+  assert(ArgVec.size() == CD->getNumParams() - IsCopy);
 
   CodeGenFunction::RunCleanupsScope Cleanups(CGF);
 
   const auto *FPT = CD->getType()->castAs<FunctionProtoType>();
-  CGF.EmitCallArgs(Args, FPT, llvm::ArrayRef(ArgVec), CD, IsCopy ? 1 : 0);
+  CGF.EmitCallArgs(Args, FPT, ArrayRef(ArgVec), CD, IsCopy ? 1 : 0);
 
   // Insert any ABI-specific implicit constructor arguments.
   AddedStructorArgCounts ExtraArgs =
@@ -4230,8 +4224,12 @@ MicrosoftCXXABI::getAddrOfCXXCtorClosure(const CXXConstructorDecl *CD,
       CGM.getAddrOfCXXStructor(GlobalDecl(CD, Ctor_Complete));
   CGCallee Callee =
       CGCallee::forDirect(CalleePtr, GlobalDecl(CD, Ctor_Complete));
+  // Microsoft ABI constructors always use the default method calling
+  // convention (see SemaType.cpp adjustMemberFunctionCC), so no caller
+  // declaration is needed for SysV ABI selection.
   const CGFunctionInfo &CalleeInfo = CGM.getTypes().arrangeCXXConstructorCall(
-      Args, CD, Ctor_Complete, ExtraArgs.Prefix, ExtraArgs.Suffix);
+      Args, CD, Ctor_Complete, ExtraArgs.Prefix, ExtraArgs.Suffix,
+      /*ABIInfoFD=*/nullptr);
   CGF.EmitCall(CalleeInfo, Callee, ReturnValueSlot(), Args);
 
   Cleanups.ForceCleanup();

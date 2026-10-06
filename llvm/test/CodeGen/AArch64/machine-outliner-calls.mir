@@ -1,6 +1,6 @@
-# RUN: llc -mtriple=aarch64--- -run-pass=prologepilog -run-pass=machine-outliner -verify-machineinstrs %s -o - | FileCheck %s
-# RUN: llc -mtriple=aarch64--- -run-pass=prologepilog -run-pass=machine-outliner -verify-machineinstrs %s -o - -debugify-and-strip-all-safe | FileCheck %s
-# RUN: llc -mtriple=aarch64-pc-windows-msvc -run-pass=prologepilog -run-pass=machine-outliner -verify-machineinstrs %s -o - | FileCheck %s -check-prefix=WINDOWS
+# RUN: llc -mtriple=aarch64--- -run-pass=prolog-epilog -run-pass=machine-outliner -verify-machineinstrs %s -o - | FileCheck %s
+# RUN: llc -mtriple=aarch64--- -run-pass=prolog-epilog -run-pass=machine-outliner -verify-machineinstrs %s -o - -debugify-and-strip-all-safe | FileCheck %s
+# RUN: llc -mtriple=aarch64-pc-windows-msvc -run-pass=prolog-epilog -run-pass=machine-outliner -verify-machineinstrs %s -o - | FileCheck %s -check-prefix=WINDOWS
 --- |
   define void @baz() #0 {
     ret void

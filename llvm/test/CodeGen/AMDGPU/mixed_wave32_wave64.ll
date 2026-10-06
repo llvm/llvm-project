@@ -1,5 +1,5 @@
-; RUN: llc -mtriple=amdgcn--amdpal -mcpu=gfx1010 < %s | FileCheck -check-prefixes=GCN %s
-; RUN: llc -mtriple=amdgcn--amdpal -mcpu=gfx1100 < %s | FileCheck -check-prefixes=GCN %s
+; RUN: llc -mtriple=amdgpu10.10--amdpal < %s | FileCheck -check-prefixes=GCN %s
+; RUN: llc -mtriple=amdgpu11.00--amdpal < %s | FileCheck -check-prefixes=GCN %s
 ;
 ; Check that PS is wave64
 ; GCN-LABEL: _amdgpu_ps_main:

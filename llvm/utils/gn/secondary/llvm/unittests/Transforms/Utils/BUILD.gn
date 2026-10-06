@@ -21,6 +21,7 @@ unittest("UtilsTests") {
     "CodeMoverUtilsTest.cpp",
     "DebugSSAUpdaterTest.cpp",
     "DebugifyTest.cpp",
+    "DynamicDebuggingTest.cpp",
     "FunctionComparatorTest.cpp",
     "IntegerDivisionTest.cpp",
     "LocalTest.cpp",

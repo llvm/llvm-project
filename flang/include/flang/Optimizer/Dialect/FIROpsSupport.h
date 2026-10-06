@@ -12,6 +12,7 @@
 #include "flang/Optimizer/Dialect/FIROps.h"
 #include "mlir/Dialect/Func/IR/FuncOps.h"
 #include "mlir/IR/BuiltinOps.h"
+#include "llvm/ADT/APInt.h"
 
 namespace fir {
 
@@ -98,6 +99,16 @@ static constexpr llvm::StringRef getVolatileAttrName() {
   return "fir.volatile";
 }
 
+/// Attribute to mark a dummy data object argument as read-only, i.e. the callee
+/// does not write through this argument. Lowered to the LLVM `readonly`
+/// argument attribute by the FunctionAttr pass. CallInterface currently emits
+/// it for a conservative subset of by-reference INTENT(IN) dummies. The
+/// attribute is shallow: on a reference to a descriptor, it only protects the
+/// descriptor storage and does not imply that the described data is read-only.
+static constexpr llvm::StringRef getReadOnlyAttrName() {
+  return "fir.read_only";
+}
+
 /// Attribute to mark that a function argument is a character dummy procedure.
 /// Character dummy procedure have special ABI constraints.
 static constexpr llvm::StringRef getCharacterProcedureDummyAttrName() {
@@ -119,6 +130,14 @@ static constexpr llvm::StringRef getHostSymbolAttrName() {
   return "fir.host_symbol";
 }
 
+/// Attribute naming the submodule that defines a separate module procedure.
+/// Such a procedure is mangled with the module that declares its interface, so
+/// this is the only record of where it is really defined. It is only set when
+/// full debug information is requested.
+static constexpr llvm::StringRef getDefiningSubmoduleAttrName() {
+  return "fir.defining_submodule";
+}
+
 /// Attribute containing the original name of a function from before the
 /// ExternalNameConverision pass runs
 static constexpr llvm::StringRef getInternalFuncNameAttrName() {
@@ -135,6 +154,15 @@ static constexpr llvm::StringRef getHasLifetimeMarkerAttrName() {
 static constexpr llvm::StringRef getAccessGroupsAttrName() {
   return "access_groups";
 }
+
+/// Attribute holding the unique name of the Fortran entity an allocation
+/// belongs to. It is an inherent attribute of the FIR allocation operations,
+/// and may also be carried by allocation operations of other dialects that
+/// FIR allocations were rewritten into.
+static constexpr llvm::StringRef getUniqNameAttrName() { return "uniq_name"; }
+
+/// Attribute to mark coarray Fortran entities with the CORANK attribute.
+constexpr llvm::StringRef getCorankAttrName() { return "fir.corank"; }
 
 /// Does the function, \p func, have a host-associations tuple argument?
 /// Some internal procedures may have access to host procedure variables.
@@ -175,8 +203,8 @@ bool valueMayHaveFirAttributes(mlir::Value value,
 /// function has any host associations, for example.
 bool anyFuncArgsHaveAttr(mlir::func::FuncOp func, llvm::StringRef attr);
 
-/// Unwrap integer constant from an mlir::Value.
-std::optional<std::int64_t> getIntIfConstant(mlir::Value value);
+/// Unwrap an integer constant from an mlir::Value as an APInt.
+std::optional<llvm::APInt> getIntIfConstant(mlir::Value value);
 
 static constexpr llvm::StringRef getAdaptToByRefAttrName() {
   return "adapt.valuebyref";
@@ -211,6 +239,37 @@ inline mlir::NamedAttribute getAdaptToByRefAttr(Builder &builder) {
 }
 
 bool isDummyArgument(mlir::Value v);
+
+/// Intent of dummy argument `argIdx` when `callee`'s body declares it.
+/// Empty when the body is missing or the dummy has no intent attribute.
+enum class FortranDummyIntent { In, Out, InOut };
+
+inline std::optional<FortranDummyIntent>
+getFortranDummyIntent(mlir::func::FuncOp callee, unsigned argIdx) {
+  if (!callee || argIdx >= callee.getNumArguments())
+    return std::nullopt;
+  // The dummy's fir.declare uses the block argument as its memref.
+  mlir::Value arg = callee.getArgument(argIdx);
+  for (mlir::Operation *user : arg.getUsers()) {
+    auto decl = mlir::dyn_cast<fir::DeclareOp>(user);
+    if (!decl || decl.getMemref() != arg)
+      continue;
+    auto attrs = decl.getFortranAttrs();
+    if (!attrs)
+      continue;
+    using F = FortranVariableFlagsEnum;
+    if (bitEnumContainsAny(*attrs, F::intent_inout) ||
+        (bitEnumContainsAny(*attrs, F::intent_in) &&
+         bitEnumContainsAny(*attrs, F::intent_out)))
+      return FortranDummyIntent::InOut;
+    if (bitEnumContainsAny(*attrs, F::intent_out))
+      return FortranDummyIntent::Out;
+    if (bitEnumContainsAny(*attrs, F::intent_in))
+      return FortranDummyIntent::In;
+    return std::nullopt;
+  }
+  return std::nullopt;
+}
 
 template <fir::FortranProcedureFlagsEnum Flag>
 inline bool hasProcedureAttr(fir::FortranProcedureFlagsEnumAttr flags) {
@@ -256,6 +315,12 @@ bool reboxPreservesContinuity(fir::ReboxOp rebox,
 /// for continuity in the innermost dimension, otherwise,
 /// the checking is done for continuity of the whole result of embox
 bool isContiguousEmbox(fir::EmboxOp embox, bool checkWhole = true);
+
+/// Return true if \p op is nested in code that is offloaded to a device: an
+/// OpenACC compute construct or specialized routine, a CUDA Fortran kernel
+/// loop, a gpu.launch, a gpu.func or a gpu.module. Code there runs on the
+/// device stack, which is far smaller than the host one.
+bool isInOffloadRegion(mlir::Operation *op);
 
 } // namespace fir
 

@@ -60,7 +60,7 @@
 
 // --- C++23 features ---
 
-#if check(auto_cast, 0, 0, 0, 0, 0, 202110, 202110)
+#if check(auto_cast, 202110, 202110, 202110, 202110, 202110, 202110, 202110)
 #error "wrong value for __cpp_auto_cast"
 #endif
 
@@ -85,7 +85,7 @@
 #error "wrong value for __cpp_static_call_operator"
 #endif
 
-#if check(named_character_escapes, 202207, 202207, 202207, 202207, 202207, 202207, 202207)
+#if check(named_character_escapes, 202606, 202606, 202606, 202606, 202606, 202606, 202606)
 #error "wrong value for __cpp_named_character_escapes"
 #endif
 

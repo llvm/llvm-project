@@ -1,5 +1,8 @@
-; RUN: llc -verify-machineinstrs -O0 -mtriple=spirv64-unknown-unknown %s -o - | FileCheck %s --check-prefix=CHECK
-; RUN: %if spirv-tools %{ llc -verify-machineinstrs -O0 -mtriple=spirv64-unknown-unknown %s -o - -filetype=obj | spirv-val %}
+; RUN: llc -verify-machineinstrs -O0 -mtriple=spirv64-unknown-unknown --spirv-ext=+SPV_INTEL_function_pointers %s -o - | FileCheck %s --check-prefix=CHECK
+; RUN: %if spirv-tools %{ llc -verify-machineinstrs -O0 -mtriple=spirv64-unknown-unknown --spirv-ext=+SPV_INTEL_function_pointers %s -o - -filetype=obj | spirv-val %}
+
+; RUN: not llc -verify-machineinstrs -O0 -mtriple=spirv64-unknown-unknown %s -o /dev/null 2>&1 | FileCheck %s --check-prefix=CHECK-ERROR
+; CHECK-ERROR: Function used as a data pointer requires SPV_INTEL_function_pointers extension
 
 ; CHECK: OpCapability Kernel
 ; CHECK-DAG: %[[#typeInt64:]] = OpTypeInt 64 0
@@ -43,6 +46,13 @@
 ; CHECK-DAG: OpName %[[#InvokeKernel5:]] "__device_side_enqueue_block_invoke_5_kernel"
 ; CHECK-DAG: OpName %[[#InvokeKernel6:]] "__device_side_enqueue_block_invoke_6_kernel"
 
+; CHECK-DAG: %[[#InvokeKernel1Ptr:]] = OpConstantFunctionPointerINTEL %[[#]] %[[#InvokeKernel1]]
+; CHECK-DAG: %[[#InvokeKernel2Ptr:]] = OpConstantFunctionPointerINTEL %[[#]] %[[#InvokeKernel2]]
+; CHECK-DAG: %[[#InvokeKernel3Ptr:]] = OpConstantFunctionPointerINTEL %[[#]] %[[#InvokeKernel3]]
+; CHECK-DAG: %[[#InvokeKernel4Ptr:]] = OpConstantFunctionPointerINTEL %[[#]] %[[#InvokeKernel4]]
+; CHECK-DAG: %[[#InvokeKernel5Ptr:]] = OpConstantFunctionPointerINTEL %[[#]] %[[#InvokeKernel5]]
+; CHECK-DAG: %[[#InvokeKernel6Ptr:]] = OpConstantFunctionPointerINTEL %[[#]] %[[#InvokeKernel6]]
+
 ; CHECK-LABEL: ; -- Begin function device_side_enqueue
 
 ; CHECK: %[[#NDRange3sret:]] = OpBuildNDRange %[[#TypeNDRangeStruct]] %[[#]] %[[#]] %[[#]]
@@ -60,7 +70,7 @@
 ;;     const size_t gs[] = {1,2,4};
 ;;
 ;;     // enqueue empty kernel
-; CHECK: %[[#]] = OpEnqueueKernel %[[#typeInt32]] %[[#default_queue:]] %[[#Num1i32]] %[[#NDRange3]] %[[#Num0i32]] %[[#nullPtrEvent]] %[[#nullPtrEvent]] %[[#InvokeKernel1]] %[[#]] %[[#Num16i32]] %[[#Num8i32]]
+; CHECK: %[[#]] = OpEnqueueKernel %[[#typeInt32]] %[[#default_queue:]] %[[#Num1i32]] %[[#NDRange3]] %[[#Num0i32]] %[[#nullPtrEvent]] %[[#nullPtrEvent]] %[[#InvokeKernel1Ptr]] %[[#]] %[[#Num16i32]] %[[#Num8i32]]
 ;;     enqueue_kernel(default_queue,
 ;;             CLK_ENQUEUE_FLAGS_WAIT_KERNEL,
 ;;             ndrange_3D(gs),
@@ -68,7 +78,7 @@
 ;;             ^(){});
 ;;
 ;;     // no events, no var args
-; CHECK: %[[#]] = OpEnqueueKernel %[[#typeInt32]] %[[#default_queue]] %[[#Num0i32]] %[[#]] %[[#Num0i32]] %[[#nullPtrEvent]] %[[#nullPtrEvent]] %[[#InvokeKernel2]] %[[#]] %[[#Num29i32]] %[[#Num8i32]]
+; CHECK: %[[#]] = OpEnqueueKernel %[[#typeInt32]] %[[#default_queue]] %[[#Num0i32]] %[[#]] %[[#Num0i32]] %[[#nullPtrEvent]] %[[#nullPtrEvent]] %[[#InvokeKernel2Ptr]] %[[#]] %[[#Num29i32]] %[[#Num8i32]]
 ;;     enqueue_kernel(default_queue, flags, ndrange,
 ;;             ^(void) {
 ;;             a[i] = c0;
@@ -77,14 +87,14 @@
 ;;     // event, no var args
 ; CHECK: %[[#event1:]] = OpPtrCastToGeneric %[[#typeEventPtr]] %[[#]]
 ; CHECK-NEXT: %[[#event2:]] = OpPtrCastToGeneric %[[#typeEventPtr]] %[[#]]
-; CHECK: %[[#]] = OpEnqueueKernel %[[#typeInt32]] %[[#default_queue]] %[[#Num0i32]] %[[#]] %[[#Num2i32]] %[[#event1]] %[[#event2]] %[[#InvokeKernel3]] %[[#]] %[[#Num36i32]] %[[#Num8i32]]
+; CHECK: %[[#]] = OpEnqueueKernel %[[#typeInt32]] %[[#default_queue]] %[[#Num0i32]] %[[#]] %[[#Num2i32]] %[[#event1]] %[[#event2]] %[[#InvokeKernel3Ptr]] %[[#]] %[[#Num36i32]] %[[#Num8i32]]
 ;;     enqueue_kernel(default_queue, flags, ndrange, 2, &event_wait_list, &clk_event,
 ;;             ^(void) {
 ;;             a[i] = b[i];
 ;;             });
 ;;
 ;;     // events, var arg
-; CHECK: %[[#]] = OpEnqueueKernel %[[#typeInt32]] %[[#default_queue]] %[[#Num0i32]] %[[#]] %[[#Num2i32]] %[[#event_wait_list2:]] %[[#event2]] %[[#InvokeKernel4]] %[[#]] %[[#Num16i32]] %[[#Num8i32]] %[[#]]
+; CHECK: %[[#]] = OpEnqueueKernel %[[#typeInt32]] %[[#default_queue]] %[[#Num0i32]] %[[#]] %[[#Num2i32]] %[[#event_wait_list2:]] %[[#event2]] %[[#InvokeKernel4Ptr]] %[[#]] %[[#Num16i32]] %[[#Num8i32]] %[[#]]
 ;;     char c;
 ;;     enqueue_kernel(default_queue, flags, ndrange, 2, event_wait_list2, &clk_event,
 ;;             ^(local void *p) {
@@ -93,7 +103,7 @@
 ;;             c);
 ;;
 ;;     // no events, three var args
-; CHECK: %[[#]] = OpEnqueueKernel %[[#typeInt32]] %[[#default_queue]] %[[#Num0i32]] %[[#]] %[[#Num0i32]] %[[#nullPtrEvent]] %[[#nullPtrEvent]] %[[#InvokeKernel5]] %[[#]] %[[#Num16i32]] %[[#Num8i32]] %[[#]] %[[#]] %[[#]]
+; CHECK: %[[#]] = OpEnqueueKernel %[[#typeInt32]] %[[#default_queue]] %[[#Num0i32]] %[[#]] %[[#Num0i32]] %[[#nullPtrEvent]] %[[#nullPtrEvent]] %[[#InvokeKernel5Ptr]] %[[#]] %[[#Num16i32]] %[[#Num8i32]] %[[#]] %[[#]] %[[#]]
 ;;     enqueue_kernel(default_queue, flags, ndrange,
 ;;             ^(local void *p1, local void *p2, local void *p3) {
 ;;             return;
@@ -101,7 +111,7 @@
 ;;             101, 102, 104);
 ;;
 ;;     // null event, no var args
-; CHECK: %[[#]] = OpEnqueueKernel %[[#typeInt32]] %[[#default_queue]] %[[#Num0i32]] %[[#]] %[[#Num0i32]] %[[#nullPtrEvent]] %[[#event2]] %[[#InvokeKernel6]] %[[#]] %[[#Num36i32]] %[[#Num8i32]]
+; CHECK: %[[#]] = OpEnqueueKernel %[[#typeInt32]] %[[#default_queue]] %[[#Num0i32]] %[[#]] %[[#Num0i32]] %[[#nullPtrEvent]] %[[#event2]] %[[#InvokeKernel6Ptr]] %[[#]] %[[#Num36i32]] %[[#Num8i32]]
 ;;     enqueue_kernel(default_queue, flags, ndrange, 0, NULL, &clk_event,
 ;;             ^(void) {
 ;;             a[i] = b[i];
@@ -114,6 +124,13 @@
 ; CHECK-DAG: %[[#InvokeKernel4]] = OpFunction %[[#typeVoid]] {{Pure|None}} %[[#typeFnVoidPtrLocal1]]
 ; CHECK-DAG: %[[#InvokeKernel5]] = OpFunction %[[#typeVoid]] {{Pure|None}} %[[#typeFnVoidPtrLocal3]]
 ; CHECK-DAG: %[[#InvokeKernel6]] = OpFunction %[[#typeVoid]] {{Pure|None}} %[[#typeFnVoidPtr]]
+
+; CHECK-LABEL: ; -- Begin function kernel_queries
+; CHECK: %[[#]] = OpGetKernelWorkGroupSize %[[#typeInt32]] %[[#QueryKernelPtr:]] %[[#]] %[[#Num16i32]] %[[#Num8i32]]
+; CHECK: %[[#]] = OpGetKernelPreferredWorkGroupSizeMultiple %[[#typeInt32]] %[[#QueryKernelPtr]] %[[#]] %[[#Num16i32]] %[[#Num8i32]]
+; CHECK: %[[#]] = OpGetKernelNDrangeSubGroupCount %[[#typeInt32]] %[[#]] %[[#QueryKernelPtr]] %[[#]] %[[#Num16i32]] %[[#Num8i32]]
+; CHECK: %[[#]] = OpGetKernelNDrangeMaxSubGroupSize %[[#typeInt32]] %[[#]] %[[#QueryKernelPtr]] %[[#]] %[[#Num16i32]] %[[#Num8i32]]
+; CHECK-NOT: _impl
 target datalayout = "e-i64:64-v16:16-v24:32-v32:32-v48:64-v96:128-v192:256-v256:256-v512:512-v1024:1024-n8:16:32:64-G1"
 target triple = "spirv64-unknown-unknown"
 
@@ -264,6 +281,39 @@ define internal spir_func void @__device_side_enqueue_block_invoke_6(ptr addrspa
 }
 
 define internal spir_kernel void @__device_side_enqueue_block_invoke_6_kernel(ptr addrspace(4) %0) {
+  ret void
+}
+
+
+@__block_literal_global.3 = internal addrspace(1) constant { i32, i32, ptr addrspace(4) } { i32 16, i32 8, ptr addrspace(4) addrspacecast (ptr @__kernel_queries_block_invoke to ptr addrspace(4)) }, align 8
+
+define spir_kernel void @kernel_queries(ptr addrspace(1) align 4 %out) {
+entry:
+  %nd = alloca %struct.ndrange_t, align 8
+  %wgs = call spir_func i32 @__get_kernel_work_group_size_impl(ptr addrspace(4) addrspacecast (ptr @__kernel_queries_block_invoke_kernel to ptr addrspace(4)), ptr addrspace(4) addrspacecast (ptr addrspace(1) @__block_literal_global.3 to ptr addrspace(4)))
+  store i32 %wgs, ptr addrspace(1) %out, align 4
+  %pwgsm = call spir_func i32 @__get_kernel_preferred_work_group_size_multiple_impl(ptr addrspace(4) addrspacecast (ptr @__kernel_queries_block_invoke_kernel to ptr addrspace(4)), ptr addrspace(4) addrspacecast (ptr addrspace(1) @__block_literal_global.3 to ptr addrspace(4)))
+  %p1 = getelementptr inbounds i32, ptr addrspace(1) %out, i64 1
+  store i32 %pwgsm, ptr addrspace(1) %p1, align 4
+  %sgc = call spir_func i32 @__get_kernel_sub_group_count_for_ndrange_impl(ptr %nd, ptr addrspace(4) addrspacecast (ptr @__kernel_queries_block_invoke_kernel to ptr addrspace(4)), ptr addrspace(4) addrspacecast (ptr addrspace(1) @__block_literal_global.3 to ptr addrspace(4)))
+  %p2 = getelementptr inbounds i32, ptr addrspace(1) %out, i64 2
+  store i32 %sgc, ptr addrspace(1) %p2, align 4
+  %msgs = call spir_func i32 @__get_kernel_max_sub_group_size_for_ndrange_impl(ptr %nd, ptr addrspace(4) addrspacecast (ptr @__kernel_queries_block_invoke_kernel to ptr addrspace(4)), ptr addrspace(4) addrspacecast (ptr addrspace(1) @__block_literal_global.3 to ptr addrspace(4)))
+  %p3 = getelementptr inbounds i32, ptr addrspace(1) %out, i64 3
+  store i32 %msgs, ptr addrspace(1) %p3, align 4
+  ret void
+}
+
+declare spir_func i32 @__get_kernel_work_group_size_impl(ptr addrspace(4), ptr addrspace(4))
+declare spir_func i32 @__get_kernel_preferred_work_group_size_multiple_impl(ptr addrspace(4), ptr addrspace(4))
+declare spir_func i32 @__get_kernel_sub_group_count_for_ndrange_impl(ptr, ptr addrspace(4), ptr addrspace(4))
+declare spir_func i32 @__get_kernel_max_sub_group_size_for_ndrange_impl(ptr, ptr addrspace(4), ptr addrspace(4))
+
+define internal spir_func void @__kernel_queries_block_invoke(ptr addrspace(4) %.block_descriptor) {
+  ret void
+}
+
+define internal spir_kernel void @__kernel_queries_block_invoke_kernel(ptr addrspace(4) %0) {
   ret void
 }
 

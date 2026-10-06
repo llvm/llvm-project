@@ -36,7 +36,7 @@
 // CONSTRAINED-NEXT:    [[TMP0:%.*]] = bitcast <4 x half> [[A]] to <4 x i16>
 // CONSTRAINED-NEXT:    [[TMP1:%.*]] = bitcast <4 x i16> [[TMP0]] to <8 x i8>
 // CONSTRAINED-NEXT:    [[TMP2:%.*]] = bitcast <8 x i8> [[TMP1]] to <4 x half>
-// CONSTRAINED-NEXT:    [[VSQRT_I:%.*]] = call <4 x half> @llvm.experimental.constrained.sqrt.v4f16(<4 x half> [[TMP2]], metadata !"round.tonearest", metadata !"fpexcept.maytrap") #[[ATTR2:[0-9]+]]
+// CONSTRAINED-NEXT:    [[VSQRT_I:%.*]] = call <4 x half> @llvm.experimental.constrained.sqrt.v4f16(<4 x half> [[TMP2]], metadata !"round.tonearest", metadata !"fpexcept.strict") #[[ATTR2:[0-9]+]]
 // CONSTRAINED-NEXT:    ret <4 x half> [[VSQRT_I]]
 //
 float16x4_t test_vsqrt_f16(float16x4_t a) {
@@ -58,7 +58,7 @@ float16x4_t test_vsqrt_f16(float16x4_t a) {
 // CONSTRAINED-NEXT:    [[TMP0:%.*]] = bitcast <8 x half> [[A]] to <8 x i16>
 // CONSTRAINED-NEXT:    [[TMP1:%.*]] = bitcast <8 x i16> [[TMP0]] to <16 x i8>
 // CONSTRAINED-NEXT:    [[TMP2:%.*]] = bitcast <16 x i8> [[TMP1]] to <8 x half>
-// CONSTRAINED-NEXT:    [[VSQRT_I:%.*]] = call <8 x half> @llvm.experimental.constrained.sqrt.v8f16(<8 x half> [[TMP2]], metadata !"round.tonearest", metadata !"fpexcept.maytrap") #[[ATTR2]]
+// CONSTRAINED-NEXT:    [[VSQRT_I:%.*]] = call <8 x half> @llvm.experimental.constrained.sqrt.v8f16(<8 x half> [[TMP2]], metadata !"round.tonearest", metadata !"fpexcept.strict") #[[ATTR2]]
 // CONSTRAINED-NEXT:    ret <8 x half> [[VSQRT_I]]
 //
 float16x8_t test_vsqrtq_f16(float16x8_t a) {
@@ -92,7 +92,7 @@ float16x8_t test_vsqrtq_f16(float16x8_t a) {
 // CONSTRAINED-NEXT:    [[TMP6:%.*]] = bitcast <8 x i8> [[TMP3]] to <4 x half>
 // CONSTRAINED-NEXT:    [[TMP7:%.*]] = bitcast <8 x i8> [[TMP4]] to <4 x half>
 // CONSTRAINED-NEXT:    [[TMP8:%.*]] = bitcast <8 x i8> [[TMP5]] to <4 x half>
-// CONSTRAINED-NEXT:    [[TMP9:%.*]] = call <4 x half> @llvm.experimental.constrained.fma.v4f16(<4 x half> [[TMP7]], <4 x half> [[TMP8]], <4 x half> [[TMP6]], metadata !"round.tonearest", metadata !"fpexcept.maytrap") #[[ATTR2]]
+// CONSTRAINED-NEXT:    [[TMP9:%.*]] = call <4 x half> @llvm.experimental.constrained.fma.v4f16(<4 x half> [[TMP7]], <4 x half> [[TMP8]], <4 x half> [[TMP6]], metadata !"round.tonearest", metadata !"fpexcept.strict") #[[ATTR2]]
 // CONSTRAINED-NEXT:    ret <4 x half> [[TMP9]]
 //
 float16x4_t test_vfma_f16(float16x4_t a, float16x4_t b, float16x4_t c) {
@@ -126,7 +126,7 @@ float16x4_t test_vfma_f16(float16x4_t a, float16x4_t b, float16x4_t c) {
 // CONSTRAINED-NEXT:    [[TMP6:%.*]] = bitcast <16 x i8> [[TMP3]] to <8 x half>
 // CONSTRAINED-NEXT:    [[TMP7:%.*]] = bitcast <16 x i8> [[TMP4]] to <8 x half>
 // CONSTRAINED-NEXT:    [[TMP8:%.*]] = bitcast <16 x i8> [[TMP5]] to <8 x half>
-// CONSTRAINED-NEXT:    [[TMP9:%.*]] = call <8 x half> @llvm.experimental.constrained.fma.v8f16(<8 x half> [[TMP7]], <8 x half> [[TMP8]], <8 x half> [[TMP6]], metadata !"round.tonearest", metadata !"fpexcept.maytrap") #[[ATTR2]]
+// CONSTRAINED-NEXT:    [[TMP9:%.*]] = call <8 x half> @llvm.experimental.constrained.fma.v8f16(<8 x half> [[TMP7]], <8 x half> [[TMP8]], <8 x half> [[TMP6]], metadata !"round.tonearest", metadata !"fpexcept.strict") #[[ATTR2]]
 // CONSTRAINED-NEXT:    ret <8 x half> [[TMP9]]
 //
 float16x8_t test_vfmaq_f16(float16x8_t a, float16x8_t b, float16x8_t c) {
@@ -162,7 +162,7 @@ float16x8_t test_vfmaq_f16(float16x8_t a, float16x8_t b, float16x8_t c) {
 // CONSTRAINED-NEXT:    [[TMP6:%.*]] = bitcast <8 x i8> [[TMP3]] to <4 x half>
 // CONSTRAINED-NEXT:    [[TMP7:%.*]] = bitcast <8 x i8> [[TMP4]] to <4 x half>
 // CONSTRAINED-NEXT:    [[TMP8:%.*]] = bitcast <8 x i8> [[TMP5]] to <4 x half>
-// CONSTRAINED-NEXT:    [[TMP9:%.*]] = call <4 x half> @llvm.experimental.constrained.fma.v4f16(<4 x half> [[TMP7]], <4 x half> [[TMP8]], <4 x half> [[TMP6]], metadata !"round.tonearest", metadata !"fpexcept.maytrap") #[[ATTR2]]
+// CONSTRAINED-NEXT:    [[TMP9:%.*]] = call <4 x half> @llvm.experimental.constrained.fma.v4f16(<4 x half> [[TMP7]], <4 x half> [[TMP8]], <4 x half> [[TMP6]], metadata !"round.tonearest", metadata !"fpexcept.strict") #[[ATTR2]]
 // CONSTRAINED-NEXT:    ret <4 x half> [[TMP9]]
 //
 float16x4_t test_vfms_f16(float16x4_t a, float16x4_t b, float16x4_t c) {
@@ -198,7 +198,7 @@ float16x4_t test_vfms_f16(float16x4_t a, float16x4_t b, float16x4_t c) {
 // CONSTRAINED-NEXT:    [[TMP6:%.*]] = bitcast <16 x i8> [[TMP3]] to <8 x half>
 // CONSTRAINED-NEXT:    [[TMP7:%.*]] = bitcast <16 x i8> [[TMP4]] to <8 x half>
 // CONSTRAINED-NEXT:    [[TMP8:%.*]] = bitcast <16 x i8> [[TMP5]] to <8 x half>
-// CONSTRAINED-NEXT:    [[TMP9:%.*]] = call <8 x half> @llvm.experimental.constrained.fma.v8f16(<8 x half> [[TMP7]], <8 x half> [[TMP8]], <8 x half> [[TMP6]], metadata !"round.tonearest", metadata !"fpexcept.maytrap") #[[ATTR2]]
+// CONSTRAINED-NEXT:    [[TMP9:%.*]] = call <8 x half> @llvm.experimental.constrained.fma.v8f16(<8 x half> [[TMP7]], <8 x half> [[TMP8]], <8 x half> [[TMP6]], metadata !"round.tonearest", metadata !"fpexcept.strict") #[[ATTR2]]
 // CONSTRAINED-NEXT:    ret <8 x half> [[TMP9]]
 //
 float16x8_t test_vfmsq_f16(float16x8_t a, float16x8_t b, float16x8_t c) {
@@ -234,7 +234,7 @@ float16x8_t test_vfmsq_f16(float16x8_t a, float16x8_t b, float16x8_t c) {
 // CONSTRAINED-NEXT:    [[LANE:%.*]] = shufflevector <4 x half> [[TMP6]], <4 x half> [[TMP6]], <4 x i32> <i32 3, i32 3, i32 3, i32 3>
 // CONSTRAINED-NEXT:    [[FMLA:%.*]] = bitcast <8 x i8> [[TMP4]] to <4 x half>
 // CONSTRAINED-NEXT:    [[FMLA1:%.*]] = bitcast <8 x i8> [[TMP3]] to <4 x half>
-// CONSTRAINED-NEXT:    [[FMLA2:%.*]] = call <4 x half> @llvm.experimental.constrained.fma.v4f16(<4 x half> [[FMLA]], <4 x half> [[LANE]], <4 x half> [[FMLA1]], metadata !"round.tonearest", metadata !"fpexcept.maytrap") #[[ATTR2]]
+// CONSTRAINED-NEXT:    [[FMLA2:%.*]] = call <4 x half> @llvm.experimental.constrained.fma.v4f16(<4 x half> [[FMLA]], <4 x half> [[LANE]], <4 x half> [[FMLA1]], metadata !"round.tonearest", metadata !"fpexcept.strict") #[[ATTR2]]
 // CONSTRAINED-NEXT:    ret <4 x half> [[FMLA2]]
 //
 float16x4_t test_vfma_lane_f16(float16x4_t a, float16x4_t b, float16x4_t c) {
@@ -270,7 +270,7 @@ float16x4_t test_vfma_lane_f16(float16x4_t a, float16x4_t b, float16x4_t c) {
 // CONSTRAINED-NEXT:    [[LANE:%.*]] = shufflevector <4 x half> [[TMP6]], <4 x half> [[TMP6]], <8 x i32> <i32 3, i32 3, i32 3, i32 3, i32 3, i32 3, i32 3, i32 3>
 // CONSTRAINED-NEXT:    [[FMLA:%.*]] = bitcast <16 x i8> [[TMP4]] to <8 x half>
 // CONSTRAINED-NEXT:    [[FMLA1:%.*]] = bitcast <16 x i8> [[TMP3]] to <8 x half>
-// CONSTRAINED-NEXT:    [[FMLA2:%.*]] = call <8 x half> @llvm.experimental.constrained.fma.v8f16(<8 x half> [[FMLA]], <8 x half> [[LANE]], <8 x half> [[FMLA1]], metadata !"round.tonearest", metadata !"fpexcept.maytrap") #[[ATTR2]]
+// CONSTRAINED-NEXT:    [[FMLA2:%.*]] = call <8 x half> @llvm.experimental.constrained.fma.v8f16(<8 x half> [[FMLA]], <8 x half> [[LANE]], <8 x half> [[FMLA1]], metadata !"round.tonearest", metadata !"fpexcept.strict") #[[ATTR2]]
 // CONSTRAINED-NEXT:    ret <8 x half> [[FMLA2]]
 //
 float16x8_t test_vfmaq_lane_f16(float16x8_t a, float16x8_t b, float16x4_t c) {
@@ -306,7 +306,7 @@ float16x8_t test_vfmaq_lane_f16(float16x8_t a, float16x8_t b, float16x4_t c) {
 // CONSTRAINED-NEXT:    [[TMP7:%.*]] = bitcast <8 x i8> [[TMP4]] to <4 x half>
 // CONSTRAINED-NEXT:    [[TMP8:%.*]] = bitcast <16 x i8> [[TMP5]] to <8 x half>
 // CONSTRAINED-NEXT:    [[LANE:%.*]] = shufflevector <8 x half> [[TMP8]], <8 x half> [[TMP8]], <4 x i32> <i32 7, i32 7, i32 7, i32 7>
-// CONSTRAINED-NEXT:    [[TMP9:%.*]] = call <4 x half> @llvm.experimental.constrained.fma.v4f16(<4 x half> [[LANE]], <4 x half> [[TMP7]], <4 x half> [[TMP6]], metadata !"round.tonearest", metadata !"fpexcept.maytrap") #[[ATTR2]]
+// CONSTRAINED-NEXT:    [[TMP9:%.*]] = call <4 x half> @llvm.experimental.constrained.fma.v4f16(<4 x half> [[LANE]], <4 x half> [[TMP7]], <4 x half> [[TMP6]], metadata !"round.tonearest", metadata !"fpexcept.strict") #[[ATTR2]]
 // CONSTRAINED-NEXT:    ret <4 x half> [[TMP9]]
 //
 float16x4_t test_vfma_laneq_f16(float16x4_t a, float16x4_t b, float16x8_t c) {
@@ -342,7 +342,7 @@ float16x4_t test_vfma_laneq_f16(float16x4_t a, float16x4_t b, float16x8_t c) {
 // CONSTRAINED-NEXT:    [[TMP7:%.*]] = bitcast <16 x i8> [[TMP4]] to <8 x half>
 // CONSTRAINED-NEXT:    [[TMP8:%.*]] = bitcast <16 x i8> [[TMP5]] to <8 x half>
 // CONSTRAINED-NEXT:    [[LANE:%.*]] = shufflevector <8 x half> [[TMP8]], <8 x half> [[TMP8]], <8 x i32> <i32 7, i32 7, i32 7, i32 7, i32 7, i32 7, i32 7, i32 7>
-// CONSTRAINED-NEXT:    [[TMP9:%.*]] = call <8 x half> @llvm.experimental.constrained.fma.v8f16(<8 x half> [[LANE]], <8 x half> [[TMP7]], <8 x half> [[TMP6]], metadata !"round.tonearest", metadata !"fpexcept.maytrap") #[[ATTR2]]
+// CONSTRAINED-NEXT:    [[TMP9:%.*]] = call <8 x half> @llvm.experimental.constrained.fma.v8f16(<8 x half> [[LANE]], <8 x half> [[TMP7]], <8 x half> [[TMP6]], metadata !"round.tonearest", metadata !"fpexcept.strict") #[[ATTR2]]
 // CONSTRAINED-NEXT:    ret <8 x half> [[TMP9]]
 //
 float16x8_t test_vfmaq_laneq_f16(float16x8_t a, float16x8_t b, float16x8_t c) {
@@ -384,7 +384,7 @@ float16x8_t test_vfmaq_laneq_f16(float16x8_t a, float16x8_t b, float16x8_t c) {
 // CONSTRAINED-NEXT:    [[TMP6:%.*]] = bitcast <8 x i8> [[TMP3]] to <4 x half>
 // CONSTRAINED-NEXT:    [[TMP7:%.*]] = bitcast <8 x i8> [[TMP4]] to <4 x half>
 // CONSTRAINED-NEXT:    [[TMP8:%.*]] = bitcast <8 x i8> [[TMP5]] to <4 x half>
-// CONSTRAINED-NEXT:    [[TMP9:%.*]] = call <4 x half> @llvm.experimental.constrained.fma.v4f16(<4 x half> [[TMP7]], <4 x half> [[TMP8]], <4 x half> [[TMP6]], metadata !"round.tonearest", metadata !"fpexcept.maytrap") #[[ATTR2]]
+// CONSTRAINED-NEXT:    [[TMP9:%.*]] = call <4 x half> @llvm.experimental.constrained.fma.v4f16(<4 x half> [[TMP7]], <4 x half> [[TMP8]], <4 x half> [[TMP6]], metadata !"round.tonearest", metadata !"fpexcept.strict") #[[ATTR2]]
 // CONSTRAINED-NEXT:    ret <4 x half> [[TMP9]]
 //
 float16x4_t test_vfma_n_f16(float16x4_t a, float16x4_t b, float16_t c) {
@@ -434,7 +434,7 @@ float16x4_t test_vfma_n_f16(float16x4_t a, float16x4_t b, float16_t c) {
 // CONSTRAINED-NEXT:    [[TMP6:%.*]] = bitcast <16 x i8> [[TMP3]] to <8 x half>
 // CONSTRAINED-NEXT:    [[TMP7:%.*]] = bitcast <16 x i8> [[TMP4]] to <8 x half>
 // CONSTRAINED-NEXT:    [[TMP8:%.*]] = bitcast <16 x i8> [[TMP5]] to <8 x half>
-// CONSTRAINED-NEXT:    [[TMP9:%.*]] = call <8 x half> @llvm.experimental.constrained.fma.v8f16(<8 x half> [[TMP7]], <8 x half> [[TMP8]], <8 x half> [[TMP6]], metadata !"round.tonearest", metadata !"fpexcept.maytrap") #[[ATTR2]]
+// CONSTRAINED-NEXT:    [[TMP9:%.*]] = call <8 x half> @llvm.experimental.constrained.fma.v8f16(<8 x half> [[TMP7]], <8 x half> [[TMP8]], <8 x half> [[TMP6]], metadata !"round.tonearest", metadata !"fpexcept.strict") #[[ATTR2]]
 // CONSTRAINED-NEXT:    ret <8 x half> [[TMP9]]
 //
 float16x8_t test_vfmaq_n_f16(float16x8_t a, float16x8_t b, float16_t c) {
@@ -452,7 +452,7 @@ float16x8_t test_vfmaq_n_f16(float16x8_t a, float16x8_t b, float16_t c) {
 // CONSTRAINED-SAME: half noundef [[A:%.*]], half noundef [[B:%.*]], <4 x half> noundef [[C:%.*]]) #[[ATTR0]] {
 // CONSTRAINED-NEXT:  [[ENTRY:.*:]]
 // CONSTRAINED-NEXT:    [[EXTRACT:%.*]] = extractelement <4 x half> [[C]], i32 3
-// CONSTRAINED-NEXT:    [[TMP0:%.*]] = call half @llvm.experimental.constrained.fma.f16(half [[B]], half [[EXTRACT]], half [[A]], metadata !"round.tonearest", metadata !"fpexcept.maytrap") #[[ATTR2]]
+// CONSTRAINED-NEXT:    [[TMP0:%.*]] = call half @llvm.experimental.constrained.fma.f16(half [[B]], half [[EXTRACT]], half [[A]], metadata !"round.tonearest", metadata !"fpexcept.strict") #[[ATTR2]]
 // CONSTRAINED-NEXT:    ret half [[TMP0]]
 //
 float16_t test_vfmah_lane_f16(float16_t a, float16_t b, float16x4_t c) {
@@ -470,7 +470,7 @@ float16_t test_vfmah_lane_f16(float16_t a, float16_t b, float16x4_t c) {
 // CONSTRAINED-SAME: half noundef [[A:%.*]], half noundef [[B:%.*]], <8 x half> noundef [[C:%.*]]) #[[ATTR0]] {
 // CONSTRAINED-NEXT:  [[ENTRY:.*:]]
 // CONSTRAINED-NEXT:    [[EXTRACT:%.*]] = extractelement <8 x half> [[C]], i32 7
-// CONSTRAINED-NEXT:    [[TMP0:%.*]] = call half @llvm.experimental.constrained.fma.f16(half [[B]], half [[EXTRACT]], half [[A]], metadata !"round.tonearest", metadata !"fpexcept.maytrap") #[[ATTR2]]
+// CONSTRAINED-NEXT:    [[TMP0:%.*]] = call half @llvm.experimental.constrained.fma.f16(half [[B]], half [[EXTRACT]], half [[A]], metadata !"round.tonearest", metadata !"fpexcept.strict") #[[ATTR2]]
 // CONSTRAINED-NEXT:    ret half [[TMP0]]
 //
 float16_t test_vfmah_laneq_f16(float16_t a, float16_t b, float16x8_t c) {
@@ -508,7 +508,7 @@ float16_t test_vfmah_laneq_f16(float16_t a, float16_t b, float16x8_t c) {
 // CONSTRAINED-NEXT:    [[LANE:%.*]] = shufflevector <4 x half> [[TMP6]], <4 x half> [[TMP6]], <4 x i32> <i32 3, i32 3, i32 3, i32 3>
 // CONSTRAINED-NEXT:    [[FMLA:%.*]] = bitcast <8 x i8> [[TMP4]] to <4 x half>
 // CONSTRAINED-NEXT:    [[FMLA1:%.*]] = bitcast <8 x i8> [[TMP3]] to <4 x half>
-// CONSTRAINED-NEXT:    [[FMLA2:%.*]] = call <4 x half> @llvm.experimental.constrained.fma.v4f16(<4 x half> [[FMLA]], <4 x half> [[LANE]], <4 x half> [[FMLA1]], metadata !"round.tonearest", metadata !"fpexcept.maytrap") #[[ATTR2]]
+// CONSTRAINED-NEXT:    [[FMLA2:%.*]] = call <4 x half> @llvm.experimental.constrained.fma.v4f16(<4 x half> [[FMLA]], <4 x half> [[LANE]], <4 x half> [[FMLA1]], metadata !"round.tonearest", metadata !"fpexcept.strict") #[[ATTR2]]
 // CONSTRAINED-NEXT:    ret <4 x half> [[FMLA2]]
 //
 float16x4_t test_vfms_lane_f16(float16x4_t a, float16x4_t b, float16x4_t c) {
@@ -546,7 +546,7 @@ float16x4_t test_vfms_lane_f16(float16x4_t a, float16x4_t b, float16x4_t c) {
 // CONSTRAINED-NEXT:    [[LANE:%.*]] = shufflevector <4 x half> [[TMP6]], <4 x half> [[TMP6]], <8 x i32> <i32 3, i32 3, i32 3, i32 3, i32 3, i32 3, i32 3, i32 3>
 // CONSTRAINED-NEXT:    [[FMLA:%.*]] = bitcast <16 x i8> [[TMP4]] to <8 x half>
 // CONSTRAINED-NEXT:    [[FMLA1:%.*]] = bitcast <16 x i8> [[TMP3]] to <8 x half>
-// CONSTRAINED-NEXT:    [[FMLA2:%.*]] = call <8 x half> @llvm.experimental.constrained.fma.v8f16(<8 x half> [[FMLA]], <8 x half> [[LANE]], <8 x half> [[FMLA1]], metadata !"round.tonearest", metadata !"fpexcept.maytrap") #[[ATTR2]]
+// CONSTRAINED-NEXT:    [[FMLA2:%.*]] = call <8 x half> @llvm.experimental.constrained.fma.v8f16(<8 x half> [[FMLA]], <8 x half> [[LANE]], <8 x half> [[FMLA1]], metadata !"round.tonearest", metadata !"fpexcept.strict") #[[ATTR2]]
 // CONSTRAINED-NEXT:    ret <8 x half> [[FMLA2]]
 //
 float16x8_t test_vfmsq_lane_f16(float16x8_t a, float16x8_t b, float16x4_t c) {
@@ -584,7 +584,7 @@ float16x8_t test_vfmsq_lane_f16(float16x8_t a, float16x8_t b, float16x4_t c) {
 // CONSTRAINED-NEXT:    [[TMP7:%.*]] = bitcast <8 x i8> [[TMP4]] to <4 x half>
 // CONSTRAINED-NEXT:    [[TMP8:%.*]] = bitcast <16 x i8> [[TMP5]] to <8 x half>
 // CONSTRAINED-NEXT:    [[LANE:%.*]] = shufflevector <8 x half> [[TMP8]], <8 x half> [[TMP8]], <4 x i32> <i32 7, i32 7, i32 7, i32 7>
-// CONSTRAINED-NEXT:    [[TMP9:%.*]] = call <4 x half> @llvm.experimental.constrained.fma.v4f16(<4 x half> [[LANE]], <4 x half> [[TMP7]], <4 x half> [[TMP6]], metadata !"round.tonearest", metadata !"fpexcept.maytrap") #[[ATTR2]]
+// CONSTRAINED-NEXT:    [[TMP9:%.*]] = call <4 x half> @llvm.experimental.constrained.fma.v4f16(<4 x half> [[LANE]], <4 x half> [[TMP7]], <4 x half> [[TMP6]], metadata !"round.tonearest", metadata !"fpexcept.strict") #[[ATTR2]]
 // CONSTRAINED-NEXT:    ret <4 x half> [[TMP9]]
 //
 float16x4_t test_vfms_laneq_f16(float16x4_t a, float16x4_t b, float16x8_t c) {
@@ -622,7 +622,7 @@ float16x4_t test_vfms_laneq_f16(float16x4_t a, float16x4_t b, float16x8_t c) {
 // CONSTRAINED-NEXT:    [[TMP7:%.*]] = bitcast <16 x i8> [[TMP4]] to <8 x half>
 // CONSTRAINED-NEXT:    [[TMP8:%.*]] = bitcast <16 x i8> [[TMP5]] to <8 x half>
 // CONSTRAINED-NEXT:    [[LANE:%.*]] = shufflevector <8 x half> [[TMP8]], <8 x half> [[TMP8]], <8 x i32> <i32 7, i32 7, i32 7, i32 7, i32 7, i32 7, i32 7, i32 7>
-// CONSTRAINED-NEXT:    [[TMP9:%.*]] = call <8 x half> @llvm.experimental.constrained.fma.v8f16(<8 x half> [[LANE]], <8 x half> [[TMP7]], <8 x half> [[TMP6]], metadata !"round.tonearest", metadata !"fpexcept.maytrap") #[[ATTR2]]
+// CONSTRAINED-NEXT:    [[TMP9:%.*]] = call <8 x half> @llvm.experimental.constrained.fma.v8f16(<8 x half> [[LANE]], <8 x half> [[TMP7]], <8 x half> [[TMP6]], metadata !"round.tonearest", metadata !"fpexcept.strict") #[[ATTR2]]
 // CONSTRAINED-NEXT:    ret <8 x half> [[TMP9]]
 //
 float16x8_t test_vfmsq_laneq_f16(float16x8_t a, float16x8_t b, float16x8_t c) {
@@ -666,7 +666,7 @@ float16x8_t test_vfmsq_laneq_f16(float16x8_t a, float16x8_t b, float16x8_t c) {
 // CONSTRAINED-NEXT:    [[TMP6:%.*]] = bitcast <8 x i8> [[TMP3]] to <4 x half>
 // CONSTRAINED-NEXT:    [[TMP7:%.*]] = bitcast <8 x i8> [[TMP4]] to <4 x half>
 // CONSTRAINED-NEXT:    [[TMP8:%.*]] = bitcast <8 x i8> [[TMP5]] to <4 x half>
-// CONSTRAINED-NEXT:    [[TMP9:%.*]] = call <4 x half> @llvm.experimental.constrained.fma.v4f16(<4 x half> [[TMP7]], <4 x half> [[TMP8]], <4 x half> [[TMP6]], metadata !"round.tonearest", metadata !"fpexcept.maytrap") #[[ATTR2]]
+// CONSTRAINED-NEXT:    [[TMP9:%.*]] = call <4 x half> @llvm.experimental.constrained.fma.v4f16(<4 x half> [[TMP7]], <4 x half> [[TMP8]], <4 x half> [[TMP6]], metadata !"round.tonearest", metadata !"fpexcept.strict") #[[ATTR2]]
 // CONSTRAINED-NEXT:    ret <4 x half> [[TMP9]]
 //
 float16x4_t test_vfms_n_f16(float16x4_t a, float16x4_t b, float16_t c) {
@@ -718,7 +718,7 @@ float16x4_t test_vfms_n_f16(float16x4_t a, float16x4_t b, float16_t c) {
 // CONSTRAINED-NEXT:    [[TMP6:%.*]] = bitcast <16 x i8> [[TMP3]] to <8 x half>
 // CONSTRAINED-NEXT:    [[TMP7:%.*]] = bitcast <16 x i8> [[TMP4]] to <8 x half>
 // CONSTRAINED-NEXT:    [[TMP8:%.*]] = bitcast <16 x i8> [[TMP5]] to <8 x half>
-// CONSTRAINED-NEXT:    [[TMP9:%.*]] = call <8 x half> @llvm.experimental.constrained.fma.v8f16(<8 x half> [[TMP7]], <8 x half> [[TMP8]], <8 x half> [[TMP6]], metadata !"round.tonearest", metadata !"fpexcept.maytrap") #[[ATTR2]]
+// CONSTRAINED-NEXT:    [[TMP9:%.*]] = call <8 x half> @llvm.experimental.constrained.fma.v8f16(<8 x half> [[TMP7]], <8 x half> [[TMP8]], <8 x half> [[TMP6]], metadata !"round.tonearest", metadata !"fpexcept.strict") #[[ATTR2]]
 // CONSTRAINED-NEXT:    ret <8 x half> [[TMP9]]
 //
 float16x8_t test_vfmsq_n_f16(float16x8_t a, float16x8_t b, float16_t c) {
@@ -742,7 +742,7 @@ float16x8_t test_vfmsq_n_f16(float16x8_t a, float16x8_t b, float16_t c) {
 // CONSTRAINED-NEXT:    [[FNEG:%.*]] = fneg float [[CONV]]
 // CONSTRAINED-NEXT:    [[TMP0:%.*]] = call half @llvm.experimental.constrained.fptrunc.f16.f32(float [[FNEG]], metadata !"round.tonearest", metadata !"fpexcept.strict") #[[ATTR2]]
 // CONSTRAINED-NEXT:    [[EXTRACT:%.*]] = extractelement <4 x half> [[C]], i32 3
-// CONSTRAINED-NEXT:    [[TMP1:%.*]] = call half @llvm.experimental.constrained.fma.f16(half [[TMP0]], half [[EXTRACT]], half [[A]], metadata !"round.tonearest", metadata !"fpexcept.maytrap") #[[ATTR2]]
+// CONSTRAINED-NEXT:    [[TMP1:%.*]] = call half @llvm.experimental.constrained.fma.f16(half [[TMP0]], half [[EXTRACT]], half [[A]], metadata !"round.tonearest", metadata !"fpexcept.strict") #[[ATTR2]]
 // CONSTRAINED-NEXT:    ret half [[TMP1]]
 //
 float16_t test_vfmsh_lane_f16(float16_t a, float16_t b, float16x4_t c) {
@@ -766,7 +766,7 @@ float16_t test_vfmsh_lane_f16(float16_t a, float16_t b, float16x4_t c) {
 // CONSTRAINED-NEXT:    [[FNEG:%.*]] = fneg float [[CONV]]
 // CONSTRAINED-NEXT:    [[TMP0:%.*]] = call half @llvm.experimental.constrained.fptrunc.f16.f32(float [[FNEG]], metadata !"round.tonearest", metadata !"fpexcept.strict") #[[ATTR2]]
 // CONSTRAINED-NEXT:    [[EXTRACT:%.*]] = extractelement <8 x half> [[C]], i32 7
-// CONSTRAINED-NEXT:    [[TMP1:%.*]] = call half @llvm.experimental.constrained.fma.f16(half [[TMP0]], half [[EXTRACT]], half [[A]], metadata !"round.tonearest", metadata !"fpexcept.maytrap") #[[ATTR2]]
+// CONSTRAINED-NEXT:    [[TMP1:%.*]] = call half @llvm.experimental.constrained.fma.f16(half [[TMP0]], half [[EXTRACT]], half [[A]], metadata !"round.tonearest", metadata !"fpexcept.strict") #[[ATTR2]]
 // CONSTRAINED-NEXT:    ret half [[TMP1]]
 //
 float16_t test_vfmsh_laneq_f16(float16_t a, float16_t b, float16x8_t c) {

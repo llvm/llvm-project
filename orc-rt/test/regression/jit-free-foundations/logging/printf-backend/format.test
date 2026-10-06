@@ -1,0 +1,9 @@
+# Check the printf backend's message-line format:
+# "[orc-rt:<category>:<level>] <message>".
+# The format is the same for every level, so checking the error level is
+# sufficient.
+#
+# REQUIRES: orc-rt-log-level-error
+# RUN: orc-rt-log-check 2>&1 | FileCheck %s
+
+# CHECK: [orc-rt:General:ERROR] error message

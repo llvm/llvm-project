@@ -56,14 +56,6 @@
 
 using namespace llvm;
 
-static cl::opt<bool> EnableBranchHint("enable-branch-hint",
-                                      cl::desc("Enable branch hint."),
-                                      cl::init(false), cl::Hidden);
-static cl::opt<unsigned> BranchHintProbabilityThreshold(
-    "branch-hint-probability-threshold",
-    cl::desc("The probability threshold of enabling branch hint."),
-    cl::init(50), cl::Hidden);
-
 namespace {
 
 /// X86MCInstLower - This class is used to lower an MachineInstr into an MCInst.
@@ -1127,7 +1119,7 @@ void X86AsmPrinter::LowerPATCHABLE_EVENT_CALL(const MachineInstr &MI,
   // First we emit the label and the jump.
   auto CurSled = OutContext.createTempSymbol("xray_event_sled_", true);
   OutStreamer->AddComment("# XRay Custom Event Log");
-  OutStreamer->emitCodeAlignment(Align(2), &getSubtargetInfo());
+  OutStreamer->emitCodeAlignment(Align(2), getSubtargetInfo());
   OutStreamer->emitLabel(CurSled);
 
   // Use a two-byte `jmp`. This version of JMP takes an 8-bit relative offset as
@@ -1225,7 +1217,7 @@ void X86AsmPrinter::LowerPATCHABLE_TYPED_EVENT_CALL(const MachineInstr &MI,
   // First we emit the label and the jump.
   auto CurSled = OutContext.createTempSymbol("xray_typed_event_sled_", true);
   OutStreamer->AddComment("# XRay Typed Event Log");
-  OutStreamer->emitCodeAlignment(Align(2), &getSubtargetInfo());
+  OutStreamer->emitCodeAlignment(Align(2), getSubtargetInfo());
   OutStreamer->emitLabel(CurSled);
 
   // Use a two-byte `jmp`. This version of JMP takes an 8-bit relative offset as
@@ -1325,7 +1317,7 @@ void X86AsmPrinter::LowerPATCHABLE_FUNCTION_ENTER(const MachineInstr &MI,
   //   call <relative offset, 32-bits>   // 5 bytes
   //
   auto CurSled = OutContext.createTempSymbol("xray_sled_", true);
-  OutStreamer->emitCodeAlignment(Align(2), &getSubtargetInfo());
+  OutStreamer->emitCodeAlignment(Align(2), getSubtargetInfo());
   OutStreamer->emitLabel(CurSled);
 
   // Use a two-byte `jmp`. This version of JMP takes an 8-bit relative offset as
@@ -1355,7 +1347,7 @@ void X86AsmPrinter::LowerPATCHABLE_RET(const MachineInstr &MI,
   //
   // This just makes sure that the alignment for the next instruction is 2.
   auto CurSled = OutContext.createTempSymbol("xray_sled_", true);
-  OutStreamer->emitCodeAlignment(Align(2), &getSubtargetInfo());
+  OutStreamer->emitCodeAlignment(Align(2), getSubtargetInfo());
   OutStreamer->emitLabel(CurSled);
   unsigned OpCode = MI.getOperand(0).getImm();
   MCInst Ret;
@@ -1408,7 +1400,7 @@ void X86AsmPrinter::LowerPATCHABLE_TAIL_CALL(const MachineInstr &MI,
   // the PATCHABLE_FUNCTION_ENTER case, followed by the lowering of the actual
   // tail call much like how we have it in PATCHABLE_RET.
   auto CurSled = OutContext.createTempSymbol("xray_sled_", true);
-  OutStreamer->emitCodeAlignment(Align(2), &getSubtargetInfo());
+  OutStreamer->emitCodeAlignment(Align(2), getSubtargetInfo());
   OutStreamer->emitLabel(CurSled);
   auto Target = OutContext.createTempSymbol();
 
@@ -1732,7 +1724,7 @@ static void printZeroExtend(const MachineInstr *MI, MCStreamer &OutStreamer,
 
 void X86AsmPrinter::EmitSEHInstruction(const MachineInstr *MI) {
   assert(MF->hasWinCFI() && "SEH_ instruction in function without WinCFI?");
-  assert((getSubtarget().isOSWindows() || getSubtarget().isUEFI()) &&
+  assert(getSubtarget().isOSWindowsOrUEFI() &&
          "SEH_ instruction Windows and UEFI only");
 
   // Use the .cv_fpo directives if we're emitting CodeView on 32-bit x86.
@@ -2652,13 +2644,15 @@ void X86AsmPrinter::emitInstruction(const MachineInstr *MI) {
     // Two instruction prefixes (2EH for branch not-taken and 3EH for branch
     // taken) are used as branch hints. Here we add branch taken prefix for
     // jump instruction with higher probability than threshold.
-    if (getSubtarget().hasBranchHint() && EnableBranchHint) {
+    if (getSubtarget().hasBranchHint() &&
+        getSubtarget().getCLOpts().enable_branch_hint) {
       const MachineBranchProbabilityInfo *MBPI =
           &getAnalysis<MachineBranchProbabilityInfoWrapperPass>().getMBPI();
       MachineBasicBlock *DestBB = MI->getOperand(0).getMBB();
       BranchProbability EdgeProb =
           MBPI->getEdgeProbability(MI->getParent(), DestBB);
-      BranchProbability Threshold(BranchHintProbabilityThreshold, 100);
+      BranchProbability Threshold(
+          getSubtarget().getCLOpts().branch_hint_probability_threshold, 100);
       if (EdgeProb > Threshold)
         EmitAndCountInstruction(MCInstBuilder(X86::DS_PREFIX));
     }

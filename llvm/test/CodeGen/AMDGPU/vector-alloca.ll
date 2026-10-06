@@ -1,9 +1,9 @@
-; RUN: llc -mtriple=amdgcn-- -mcpu=verde -disable-promote-alloca-to-vector -disable-promote-alloca-to-lds < %s | FileCheck -check-prefix=FUNC %s
-; RUN: llc -mtriple=amdgcn-- -mcpu=verde < %s | FileCheck -check-prefix=FUNC %s
-; RUN: llc -mtriple=amdgcn-- -mcpu=tonga -disable-promote-alloca-to-vector -disable-promote-alloca-to-lds < %s | FileCheck -check-prefix=FUNC %s
-; RUN: llc -mtriple=amdgcn-- -mcpu=tonga < %s | FileCheck -check-prefix=FUNC %s
+; RUN: llc -mtriple=amdgpu6.01-- -disable-promote-alloca-to-vector -disable-promote-alloca-to-lds < %s | FileCheck -check-prefix=FUNC %s
+; RUN: llc -mtriple=amdgpu6.01-- < %s | FileCheck -check-prefix=FUNC %s
+; RUN: llc -mtriple=amdgpu8.02-- -disable-promote-alloca-to-vector -disable-promote-alloca-to-lds < %s | FileCheck -check-prefix=FUNC %s
+; RUN: llc -mtriple=amdgpu8.02-- < %s | FileCheck -check-prefix=FUNC %s
 ; RUN: llc -mtriple=r600-- -mcpu=redwood < %s | FileCheck --check-prefixes=EG,FUNC %s
-; RUN: opt -S -mtriple=amdgcn-- -passes='amdgpu-promote-alloca,sroa,instcombine' < %s | FileCheck -check-prefix=OPT %s
+; RUN: opt -S -mtriple=amdgpu-- -passes='amdgpu-promote-alloca,sroa,instcombine' < %s | FileCheck -check-prefix=OPT %s
 
 ; OPT-LABEL: @vector_read(
 ; OPT: %0 = extractelement <4 x i32> <i32 0, i32 1, i32 2, i32 3>, i32 %index

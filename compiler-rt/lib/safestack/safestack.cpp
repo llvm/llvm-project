@@ -30,12 +30,10 @@
 using __sanitizer::atomic_load;
 using __sanitizer::atomic_store;
 using __sanitizer::atomic_uint8_t;
-using __sanitizer::atomic_uintptr_t;
 using __sanitizer::memory_order_acquire;
 using __sanitizer::memory_order_relaxed;
 using __sanitizer::memory_order_release;
 using __sanitizer::proc_yield;
-using __sanitizer::uptr;
 
 // interception.h drags in sanitizer_redefine_builtins.h, which in turn
 // creates references to __sanitizer_internal_memcpy etc.  The interceptors
@@ -168,12 +166,45 @@ void StaticSpinMutex::LockSlow() {
   }
 }
 
+// The signal handler passed to sigaction() for each signal. SA_SIGINFO chooses
+// which of the two are set (handler or action) and since it is only used in the
+// respective interceptor (signal_handler_interceptor
+// / signal_action_interceptor), we can be sure there we're always calling the
+// correct one.
+union SignalHandler {
+  void (*handler)(int);
+  void (*action)(int, siginfo_t*, void*);
+};
+
+// SIG_DFL and SIG_IGN are defined in terms of sa_handler, but since sa_handler
+// and sa_sigaction share storage they are just as valid together with
+// SA_SIGINFO and the kernel treats them the same either way. Hence the check
+// through .handler regardless of which member is in use.
+static bool is_sig_dfl_or_ign(SignalHandler cb) {
+  return cb.handler == SIG_DFL || cb.handler == SIG_IGN;
+}
+
 // sigactions_mu guarantees atomicity of sigaction() and signal() calls.
 // Access to sigactions[] is done with relaxed atomics to avoid data race with
 // the signal handler.
 const int kMaxSignals = 1024;
-static atomic_uintptr_t* sigactions = nullptr;
+static SignalHandler* sigactions = nullptr;
 static StaticSpinMutex sigactions_mu;
+
+static SignalHandler load_signal_handler(int sig) {
+  SignalHandler cb;
+  __atomic_load(&sigactions[sig], &cb, __ATOMIC_RELAXED);
+  return cb;
+}
+
+static void store_signal_handler(int sig, SignalHandler cb) {
+  // We keep sigactions mapped without write permissions to avoid an arbitrary
+  // write trivially corrupting a signal handler pointer.
+  Mprotect(sigactions, kMaxSignals * sizeof(SignalHandler),
+           PROT_READ | PROT_WRITE);
+  __atomic_store(&sigactions[sig], &cb, __ATOMIC_RELAXED);
+  Mprotect(sigactions, kMaxSignals * sizeof(SignalHandler), PROT_READ);
+}
 
 inline void *unsafe_stack_alloc(size_t size, size_t guard) {
   SFS_CHECK(size + guard >= size);
@@ -314,17 +345,11 @@ void thread_cleanup_handler(void *_iter) {
 // Currently, this commit does not yet switch the unsafe stack and just ensures
 // the interceptors work correctly.
 static void signal_handler_interceptor(int signo) {
-  typedef void (*signal_cb)(int x);
-  signal_cb cb =
-      (signal_cb)atomic_load(&sigactions[signo], memory_order_relaxed);
-  cb(signo);
+  load_signal_handler(signo).handler(signo);
 }
 
 static void signal_action_interceptor(int signo, siginfo_t* si, void* uc) {
-  typedef void (*sigaction_cb)(int, void*, void*);
-  sigaction_cb cb =
-      (sigaction_cb)atomic_load(&sigactions[signo], memory_order_relaxed);
-  cb(signo, si, uc);
+  load_signal_handler(signo).action(signo, si, uc);
 }
 
 void EnsureInterceptorsInitialized();
@@ -395,34 +420,27 @@ INTERCEPTOR(int, sigaction, int sig, const struct sigaction* act,
   int res;
   sigactions_mu.Lock();
 
-  void* old_cb = (void*)atomic_load(&sigactions[sig], memory_order_relaxed);
+  SignalHandler old_cb = load_signal_handler(sig);
   struct sigaction new_act;
   struct sigaction* pnew_act = &new_act;
   memcpy(pnew_act, act, sizeof(struct sigaction));
-  uptr cb;
-  uptr new_cb;
 
-  // We first fetch the original sigaction/handler passed to sigaction.
+  // Remember the handler passed by the caller and hand our interceptor to the
+  // kernel in its place. SIG_DFL and SIG_IGN are passed through unchanged.
   if (pnew_act->sa_flags & SA_SIGINFO) {
-    cb = (uptr)pnew_act->sa_sigaction;
-    new_cb = (uptr)signal_action_interceptor;
-  } else {
-    cb = (uptr)pnew_act->sa_handler;
-    new_cb = (uptr)signal_handler_interceptor;
-  }
-
-  if (cb != (uptr)SIG_IGN && cb != (uptr)SIG_DFL) {
-    // We keep sigactions mapped without write permissions to avoid an arbitrary
-    // write trivially corrupting a signal handler pointer.
-    Mprotect(sigactions, kMaxSignals * sizeof(atomic_uintptr_t),
-             PROT_READ | PROT_WRITE);
-    atomic_store(&sigactions[sig], cb, memory_order_relaxed);
-    if (pnew_act->sa_flags & SA_SIGINFO) {
-      pnew_act->sa_sigaction = (decltype(pnew_act->sa_sigaction))new_cb;
-    } else {
-      pnew_act->sa_handler = (decltype(pnew_act->sa_handler))new_cb;
+    SignalHandler cb;
+    cb.action = pnew_act->sa_sigaction;
+    if (!is_sig_dfl_or_ign(cb)) {
+      store_signal_handler(sig, cb);
+      pnew_act->sa_sigaction = signal_action_interceptor;
     }
-    Mprotect(sigactions, kMaxSignals * sizeof(atomic_uintptr_t), PROT_READ);
+  } else {
+    SignalHandler cb;
+    cb.handler = pnew_act->sa_handler;
+    if (!is_sig_dfl_or_ign(cb)) {
+      store_signal_handler(sig, cb);
+      pnew_act->sa_handler = signal_handler_interceptor;
+    }
   }
 
   res = REAL(sigaction)(sig, pnew_act, oldact);
@@ -430,15 +448,12 @@ INTERCEPTOR(int, sigaction, int sig, const struct sigaction* act,
   // If sigaction puts one of our interceptors into oldact, we need to replace
   // that with the actual sigaction/handler set by the caller.
   if (res == 0 && oldact) {
-    void* cb = (oldact->sa_flags & SA_SIGINFO) ? (void*)oldact->sa_sigaction
-                                               : (void*)oldact->sa_handler;
-    if (cb == (void*)signal_action_interceptor ||
-        cb == (void*)signal_handler_interceptor) {
-      if (oldact->sa_flags & SA_SIGINFO) {
-        oldact->sa_sigaction = (decltype(pnew_act->sa_sigaction))old_cb;
-      } else {
-        oldact->sa_handler = (decltype(pnew_act->sa_handler))old_cb;
-      }
+    if (oldact->sa_flags & SA_SIGINFO) {
+      if (oldact->sa_sigaction == signal_action_interceptor)
+        oldact->sa_sigaction = old_cb.action;
+    } else {
+      if (oldact->sa_handler == signal_handler_interceptor)
+        oldact->sa_handler = old_cb.handler;
     }
   }
 
@@ -479,8 +494,8 @@ void EnsureInterceptorsInitialized() {
     return;
 
   sigactions =
-      (atomic_uintptr_t*)Mmap(nullptr, kMaxSignals * sizeof(atomic_uintptr_t),
-                              PROT_READ, MAP_PRIVATE | MAP_ANON, -1, 0);
+      (SignalHandler*)Mmap(nullptr, kMaxSignals * sizeof(SignalHandler),
+                           PROT_READ, MAP_PRIVATE | MAP_ANON, -1, 0);
   SFS_CHECK(sigactions != MAP_FAILED);
 
   // Initialize pthread interceptors for thread allocation

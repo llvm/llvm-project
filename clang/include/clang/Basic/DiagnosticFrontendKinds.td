@@ -146,12 +146,19 @@ def err_fe_action_not_available : Error<
     "action %0 not compiled in">;
 def err_fe_cir_not_built : Error<"clang IR support not available, rebuild "
                                  "clang with -DCLANG_ENABLE_CIR=ON">;
+def err_fe_cir_input_unsupported : Error<
+    "support for ClangIR input is not yet implemented">;
+def err_invalid_cir : Error<"invalid ClangIR input">;
+def err_cir_input_missing_triple : Error<
+    "missing target triple in ClangIR input">;
+def err_cir_input_triple_mismatch : Error<
+    "target triple '%0' of ClangIR input does not match the target '%1'">;
 def err_fe_invalid_multiple_actions : Error<
     "'%0' action ignored; '%1' action specified previously">;
 def err_fe_invalid_alignment : Error<
     "invalid value '%1' in '%0'; alignment must be a power of 2">;
 def err_fe_invalid_exception_model
-   : Error<"invalid exception model '%select{none|sjlj|seh|dwarf|wasm}0' for target '%1'">;
+   : Error<"invalid exception model '%select{default|none|sjlj|seh|dwarf|wasm|emscripten}0' for target '%1'">;
 def err_fe_invalid_source_date_epoch : Error<
     "environment variable 'SOURCE_DATE_EPOCH' ('%0') must be a non-negative decimal integer <= %1">;
 
@@ -366,6 +373,7 @@ def warn_alias_type_mismatch : Warning<
   "alias and aliasee have different types %0 and %1">,
   InGroup<DiagGroup<"attribute-alias">>;
 
+def err_fe_text_encoding_config : Error<"failed to set fexec-charset to '%0'">;
 def warn_atomic_op_misaligned : Warning<
   "misaligned atomic operation may incur "
   "significant performance penalty"
@@ -406,28 +414,67 @@ def warn_profile_data_misexpect : Warning<
   BackendInfo, InGroup<MisExpect>;
 } // end of instrumentation issue category
 
+def warn_cgs_no_proto : Warning<
+  "indirect call to a function with no prototype; generating type metadata for assumed prototype %0 (type string: %1)">,
+  InGroup<DiagGroup<"call-graph-section-no-prototype">>;
+
 def warn_ssaf_extract_tu_summary_file_unknown_output_format :
   Warning<"unknown output summary file format '%0' "
   "specified by '--ssaf-tu-summary-file=%1'">,
-  InGroup<ScalableStaticAnalysisFramework>, DefaultError;
+  InGroup<ScalableStaticAnalysis>, DefaultError;
 
 def warn_ssaf_extract_tu_summary_file_unknown_format :
   Warning<"failed to parse the value of '--ssaf-tu-summary-file=%0' "
   "the value must follow the '<path>.<format>' pattern">,
-  InGroup<ScalableStaticAnalysisFramework>, DefaultError;
+  InGroup<ScalableStaticAnalysis>, DefaultError;
 
 def warn_ssaf_must_enable_summary_extractors :
   Warning<"must enable some summary extractors using the "
         "'--ssaf-extract-summaries=' option">,
-  InGroup<ScalableStaticAnalysisFramework>, DefaultError;
+  InGroup<ScalableStaticAnalysis>, DefaultError;
 
 def warn_ssaf_extract_summary_unknown_extractor_name :
   Warning<"no summary extractor%s0 %plural{1:was|:were}0 registered with name: %1">,
-  InGroup<ScalableStaticAnalysisFramework>, DefaultError;
+  InGroup<ScalableStaticAnalysis>, DefaultError;
 
 def warn_ssaf_write_tu_summary_failed :
   Warning<"failed to write TU summary to '%0': %1">,
-  InGroup<ScalableStaticAnalysisFramework>, DefaultError;
+  InGroup<ScalableStaticAnalysis>, DefaultError;
+
+def warn_ssaf_tu_summary_requires_compilation_unit_id :
+  Warning<"option '--ssaf-tu-summary-file=' requires "
+          "'--ssaf-compilation-unit-id=' to be set">,
+  InGroup<ScalableStaticAnalysis>, DefaultError;
+
+def warn_ssaf_source_transformation_unknown_name :
+  Warning<"no source transformation registered with name: %0">,
+  InGroup<ScalableStaticAnalysis>, DefaultError;
+
+def warn_ssaf_source_transformation_requires :
+  Warning<"option '--ssaf-source-transformation=' requires "
+          "'%select{--ssaf-global-scope-analysis-result=|--ssaf-src-edit-file=|"
+          "--ssaf-transformation-report-file=|--ssaf-compilation-unit-id=|"
+          "--ssaf-link-unit-id=}0' "
+          "to be set">,
+  InGroup<ScalableStaticAnalysis>, DefaultError;
+
+def warn_ssaf_read_wpa_suite_failed :
+  Warning<"failed to read whole-program analysis result from '%0': %1">,
+  InGroup<ScalableStaticAnalysis>, DefaultError;
+
+def warn_ssaf_option_ignored_without_source_transformation :
+  Warning<"option '%select{--ssaf-src-edit-file=|"
+          "--ssaf-transformation-report-file=}0' is ignored without "
+          "'--ssaf-source-transformation='">,
+  InGroup<ScalableStaticAnalysis>, DefaultError;
+
+def warn_ssaf_write_src_edit_failed :
+  Warning<"failed to write source edits to '%0': %1">,
+  InGroup<ScalableStaticAnalysis>, DefaultError;
+
+def warn_ssaf_write_transformation_report_failed :
+  Warning<"failed to write transformation report to '%0': %1">,
+  InGroup<ScalableStaticAnalysis>, DefaultError;
 
 def err_extract_api_ignores_file_not_found :
   Error<"file '%0' specified by '--extract-api-ignores=' not found">, DefaultFatal;
@@ -438,6 +485,10 @@ def warn_missing_symbol_graph_dir : Warning<
 
 def err_ast_action_on_llvm_ir : Error<
   "cannot apply AST actions to LLVM IR file '%0'">,
+  DefaultFatal;
+
+def err_ast_action_on_cir : Error<
+  "cannot apply AST actions to ClangIR file '%0'">,
   DefaultFatal;
 
 def err_invalid_llvm_ir : Error<"invalid LLVM IR input: %0">;
@@ -453,9 +504,15 @@ def warn_hlsl_langstd_minimal :
   Warning<"support for HLSL language version %0 is incomplete, "
           "recommend using %1 instead">,
   InGroup<HLSLDXCCompat>;
+def warn_hlsl_failed_to_embed_source
+    : Warning<"failed to embed source for '%0' into dx.source.contents">,
+      InGroup<HLSLDXCCompat>;
 
 def err_data_layout_mismatch : Error<"backend data layout '%0' does not match "
                                      "expected target description '%1'">;
+def err_fe_exception_model_mismatch
+    : Error<"'-exception-model=%0' does not match the module's exception "
+            "model '%1'">;
 def err_failed_to_open_for_embedding
     : Error<"could not open '%0' for embedding">;
 def err_unsupported_cxx_abi_feature
@@ -512,11 +569,10 @@ def err_member_ptr_requires_complete_type
     : Error<"member pointer representation requires a complete class type for "
             "%0 to perform this expression">;
 
-// ClangIR frontend errors
-def err_cir_to_cir_transform_failed : Error<
-    "CIR-to-CIR transformation failed">, DefaultFatal;
+def warn_dyndbg_unable_to_create_target : Warning<
+    "ignoring -fdynamic-debugging: unable to create target: '%0'">,
+    InGroup<DynamicDebugging>;
 
-def err_cir_verification_failed_pre_passes : Error<
-    "CIR module verification error before running CIR-to-CIR passes">,
-    DefaultFatal;
+def err_dyndbg_no_instrumentation : Error<
+    "'-fdynamic-debugging' unsupported with instrumentation (PGO/code coverage)">;
 }

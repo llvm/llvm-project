@@ -14,5 +14,7 @@
       "linkage": { "type": "None" }
     }
   ],
-  "data": []
+  "data": [],
+  "target_triple": "arm64-apple-macosx",
+  "type": "TUSummary"
 }

@@ -53,7 +53,8 @@ public:
   virtual Value *FoldCmp(CmpInst::Predicate P, Value *LHS,
                          Value *RHS) const = 0;
 
-  virtual Value *FoldGEP(Type *Ty, Value *Ptr, ArrayRef<Value *> IdxList,
+  virtual Value *FoldGEP(const DataLayout &DL, Type *Ty, Value *Ptr,
+                         ArrayRef<Value *> IdxList,
                          GEPNoWrapFlags NW) const = 0;
 
   virtual Value *FoldSelect(Value *C, Value *True, Value *False,
@@ -76,13 +77,14 @@ public:
   virtual Value *FoldCast(Instruction::CastOps Op, Value *V,
                           Type *DestTy) const = 0;
 
-  virtual Value *
-  FoldUnaryIntrinsic(Intrinsic::ID ID, Value *Op, Type *Ty,
-                     FastMathFlags FMF = FastMathFlags()) const = 0;
+  virtual Value *FoldIntrinsic(Intrinsic::ID ID, ArrayRef<Value *> Ops,
+                               Type *Ty, FastMathFlags FMF = {},
+                               Function *CtxF = nullptr) const = 0;
 
-  virtual Value *
-  FoldBinaryIntrinsic(Intrinsic::ID ID, Value *LHS, Value *RHS, Type *Ty,
-                      FastMathFlags FMF = FastMathFlags()) const = 0;
+  virtual Value *FoldBitInsert(Value *Base, Value *Val,
+                               Value *Offset) const = 0;
+
+  virtual Value *FoldBitExtract(Type *Ty, Value *Src, Value *Offset) const = 0;
 
   //===--------------------------------------------------------------------===//
   // Cast/Conversion Operators

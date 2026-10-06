@@ -27,84 +27,193 @@ namespace detail {
 
 class Builder;
 
+template <typename N, typename T>
+using IntegralType = std::enable_if_t<std::is_integral_v<N>, T>;
+
 /// Helper class for dimensions data management.
-template <int Dimensions = 1> class RawArray {
+template <typename Derived, int Dimensions> class IndexSpaceBase {
   static_assert(Dimensions >= 1 && Dimensions <= 3,
-                "RawArray can only be 1, 2, or 3 Dimensional.");
+                "IndexSpaceBase can only be 1, 2, or 3 Dimensional.");
 
 public:
   /// Constructs a one-dimensional instance and assigns the corresponding data
   /// to Dim0 value. Available only if Dimensions = 1.
   template <int N = Dimensions, std::enable_if_t<N == 1, bool> = true>
-  RawArray(size_t Dim0 = 0) : MArray{Dim0} {}
+  IndexSpaceBase(size_t Dim0 = 0) : MArray{Dim0} {}
 
   /// Constructs a two-dimensional instance and assigns the corresponding data.
   /// Available only if Dimensions = 2.
   template <int N = Dimensions, std::enable_if_t<N == 2, bool> = true>
-  RawArray(size_t Dim0, size_t Dim1) : MArray{Dim0, Dim1} {}
+  IndexSpaceBase(size_t Dim0, size_t Dim1) : MArray{Dim0, Dim1} {}
 
   /// Constructs a two-dimensional instance with the zero-initialized
   /// corresponding data. Available only if Dimensions = 2.
   template <int N = Dimensions, std::enable_if_t<N == 2, bool> = true>
-  RawArray() : RawArray(0, 0) {}
+  IndexSpaceBase() : IndexSpaceBase(0, 0) {}
 
   /// Constructs a three-dimensional instance and assigns the corresponding
   /// data. Available only if Dimensions = 3.
   template <int N = Dimensions, std::enable_if_t<N == 3, bool> = true>
-  RawArray(size_t Dim0, size_t Dim1, size_t Dim2) : MArray{Dim0, Dim1, Dim2} {}
+  IndexSpaceBase(size_t Dim0, size_t Dim1, size_t Dim2)
+      : MArray{Dim0, Dim1, Dim2} {}
 
   /// Constructs a three-dimensional instance with the zero-initialized
   /// corresponding data. Available only if Dimensions = 3.
   template <int N = Dimensions, std::enable_if_t<N == 3, bool> = true>
-  RawArray() : RawArray(0, 0, 0) {}
+  IndexSpaceBase() : IndexSpaceBase(0, 0, 0) {}
 
   /// Returns the value for the specified dimension.
   /// Results in undefined behavior if dimension is not in the range [0,
   /// Dimensions).
-  /// \param Dimension the dimension to return the value for.
+  /// \param dimension the dimension to return the value for.
   /// \return the value matching the requested dimension.
-  std::size_t get(int Dimension) const noexcept { return MArray[Dimension]; }
+  std::size_t get(int dimension) const noexcept { return MArray[dimension]; }
 
   /// Returns the value for the specified dimension.
   /// Results in undefined behavior if dimension is not in the range [0,
   /// Dimensions).
-  /// \param Dimension the dimension to return the value for.
+  /// \param dimension the dimension to return the value for.
   /// \return the value matching the requested dimension.
-  std::size_t &operator[](int Dimension) noexcept { return MArray[Dimension]; }
+  std::size_t &operator[](int dimension) noexcept { return MArray[dimension]; }
 
   /// Returns the value for the specified dimension.
   /// Results in undefined behavior if dimension is not in the range [0,
   /// Dimensions).
-  /// \param Dimension the dimension to return the value for.
+  /// \param dimension the dimension to return the value for.
   /// \return the value matching the requested dimension.
-  std::size_t operator[](int Dimension) const noexcept {
-    return MArray[Dimension];
+  std::size_t operator[](int dimension) const noexcept {
+    return MArray[dimension];
   }
 
-  RawArray(const RawArray<Dimensions> &rhs) = default;
-  RawArray(RawArray<Dimensions> &&rhs) = default;
-  RawArray<Dimensions> &operator=(const RawArray<Dimensions> &rhs) = default;
-  RawArray<Dimensions> &operator=(RawArray<Dimensions> &&rhs) = default;
-  ~RawArray() = default;
+  IndexSpaceBase(const IndexSpaceBase<Derived, Dimensions> &rhs) = default;
+  IndexSpaceBase(IndexSpaceBase<Derived, Dimensions> &&rhs) = default;
+  IndexSpaceBase<Derived, Dimensions> &
+  operator=(const IndexSpaceBase<Derived, Dimensions> &rhs) = default;
+  IndexSpaceBase<Derived, Dimensions> &
+  operator=(IndexSpaceBase<Derived, Dimensions> &&rhs) = default;
+  ~IndexSpaceBase() = default;
 
-  friend bool operator==(const RawArray<Dimensions> &lhs,
-                         const RawArray<Dimensions> &rhs) {
-    for (int i = 0; i < Dimensions; ++i) {
-      if (lhs.MArray[i] != rhs.MArray[i]) {
+  friend bool operator==(const IndexSpaceBase<Derived, Dimensions> &lhs,
+                         const IndexSpaceBase<Derived, Dimensions> &rhs) {
+    for (int I = 0; I < Dimensions; ++I)
+      if (lhs.MArray[I] != rhs.MArray[I])
         return false;
-      }
-    }
     return true;
   }
 
-  friend bool operator!=(const RawArray<Dimensions> &lhs,
-                         const RawArray<Dimensions> &rhs) {
+  friend bool operator!=(const IndexSpaceBase<Derived, Dimensions> &lhs,
+                         const IndexSpaceBase<Derived, Dimensions> &rhs) {
     return !(lhs == rhs);
   }
+
+#define _LIBSYCL_GEN_OPT(op)                                                   \
+  friend Derived operator op(const Derived &lhs,                               \
+                             const Derived &rhs) noexcept {                    \
+    Derived Result;                                                            \
+    for (int I = 0; I < Dimensions; ++I)                                       \
+      Result.MArray[I] = lhs.MArray[I] op rhs.MArray[I];                       \
+    return Result;                                                             \
+  }                                                                            \
+                                                                               \
+  template <typename T>                                                        \
+  friend IntegralType<T, Derived> operator op(const Derived &lhs,              \
+                                              const T &rhs) noexcept {         \
+    Derived Result;                                                            \
+    for (int I = 0; I < Dimensions; ++I)                                       \
+      Result.MArray[I] = lhs.MArray[I] op rhs;                                 \
+    return Result;                                                             \
+  }                                                                            \
+                                                                               \
+  template <typename T>                                                        \
+  friend IntegralType<T, Derived> operator op(const T &lhs,                    \
+                                              const Derived &rhs) noexcept {   \
+    Derived Result;                                                            \
+    for (int I = 0; I < Dimensions; ++I)                                       \
+      Result.MArray[I] = lhs op rhs.MArray[I];                                 \
+    return Result;                                                             \
+  }
+
+  _LIBSYCL_GEN_OPT(+)
+  _LIBSYCL_GEN_OPT(-)
+  _LIBSYCL_GEN_OPT(*)
+  _LIBSYCL_GEN_OPT(/)
+  _LIBSYCL_GEN_OPT(%)
+  _LIBSYCL_GEN_OPT(<<)
+  _LIBSYCL_GEN_OPT(>>)
+  _LIBSYCL_GEN_OPT(&)
+  _LIBSYCL_GEN_OPT(|)
+  _LIBSYCL_GEN_OPT(^)
+  _LIBSYCL_GEN_OPT(&&)
+  _LIBSYCL_GEN_OPT(||)
+  _LIBSYCL_GEN_OPT(<)
+  _LIBSYCL_GEN_OPT(>)
+  _LIBSYCL_GEN_OPT(<=)
+  _LIBSYCL_GEN_OPT(>=)
+
+#undef _LIBSYCL_GEN_OPT
+
+#define _LIBSYCL_GEN_OPT(op)                                                   \
+  friend Derived &operator op(Derived &lhs, const Derived &rhs) noexcept {     \
+    for (int I = 0; I < Dimensions; ++I)                                       \
+      lhs.MArray[I] op rhs[I];                                                 \
+    return lhs;                                                                \
+  }                                                                            \
+  template <typename T>                                                        \
+  friend IntegralType<T, Derived> &operator op(Derived &lhs,                   \
+                                               const T &rhs) noexcept {        \
+    for (int I = 0; I < Dimensions; ++I)                                       \
+      lhs.MArray[I] op rhs;                                                    \
+    return lhs;                                                                \
+  }
+
+  _LIBSYCL_GEN_OPT(+=)
+  _LIBSYCL_GEN_OPT(-=)
+  _LIBSYCL_GEN_OPT(*=)
+  _LIBSYCL_GEN_OPT(/=)
+  _LIBSYCL_GEN_OPT(%=)
+  _LIBSYCL_GEN_OPT(<<=)
+  _LIBSYCL_GEN_OPT(>>=)
+  _LIBSYCL_GEN_OPT(&=)
+  _LIBSYCL_GEN_OPT(|=)
+  _LIBSYCL_GEN_OPT(^=)
+
+#undef _LIBSYCL_GEN_OPT
+
+#define _LIBSYCL_GEN_OPT(op)                                                   \
+  friend Derived operator op(const Derived &rhs) noexcept {                    \
+    Derived Result;                                                            \
+    for (int I = 0; I < Dimensions; ++I)                                       \
+      Result.MArray[I] = (op rhs.MArray[I]);                                   \
+    return Result;                                                             \
+  }
+
+  _LIBSYCL_GEN_OPT(+)
+  _LIBSYCL_GEN_OPT(-)
+
+#undef _LIBSYCL_GEN_OPT
+
+#define _LIBSYCL_GEN_OPT(op)                                                   \
+  friend Derived &operator op(Derived &rhs) noexcept {                         \
+    for (int I = 0; I < Dimensions; ++I)                                       \
+      op rhs.MArray[I];                                                        \
+    return rhs;                                                                \
+  }                                                                            \
+  friend Derived operator op(Derived &lhs, int) noexcept {                     \
+    Derived OldLhs(lhs);                                                       \
+    for (int I = 0; I < Dimensions; ++I)                                       \
+      op lhs.MArray[I];                                                        \
+    return OldLhs;                                                             \
+  }
+
+  _LIBSYCL_GEN_OPT(++)
+  _LIBSYCL_GEN_OPT(--)
+
+#undef _LIBSYCL_GEN_OPT
 
 protected:
   size_t MArray[Dimensions];
 };
+
 } // namespace detail
 
 /// SYCL 2020 4.9.1.1. range class.
@@ -112,10 +221,10 @@ protected:
 /// domain of either a single work-group in a parallel dispatch, or the overall
 /// Dimensions of the dispatch.
 template <int Dimensions = 1>
-class range : public detail::RawArray<Dimensions> {
+class range : public detail::IndexSpaceBase<range<Dimensions>, Dimensions> {
   static_assert(Dimensions >= 1 && Dimensions <= 3,
                 "range can only be 1-, 2-, or 3-dimensional.");
-  using Base = detail::RawArray<Dimensions>;
+  using Base = detail::IndexSpaceBase<range<Dimensions>, Dimensions>;
 
 public:
   static constexpr int dimensions = Dimensions;
@@ -142,22 +251,19 @@ public:
       : Base(dim0, dim1, dim2) {}
 
   /*
-  Declared and implemented in detail::RawArray:
+  Declared and implemented in detail::IndexSpaceBase:
       std::size_t get(int dimension) const noexcept;
       std::size_t& operator[](int dimension) noexcept;
       std::size_t operator[](int dimension) const noexcept;
   */
 
-  /// \return the size of the range computed as dimension0*…​*dimensionN.
+  /// \return the size of the range computed as dimension0*...*dimensionN.
   std::size_t size() const noexcept {
-    std::size_t size = 1;
-    for (int i = 0; i < Dimensions; ++i) {
-      size *= Base::MArray[i];
-    }
-    return size;
+    std::size_t Size = 1;
+    for (int I = 0; I < Dimensions; ++I)
+      Size *= Base::MArray[I];
+    return Size;
   }
-
-  // TODO: operators to be added
 };
 
 /// c++ deduction guides.
@@ -173,10 +279,11 @@ template <int Dimensions = 1, bool WithOffset = true> class item;
 /// id<int Dimensions> is a vector of Dimensions that is used to represent an id
 /// into a global or local range. It can be used as an index in an accessor of
 /// the same rank.
-template <int Dimensions = 1> class id : public detail::RawArray<Dimensions> {
+template <int Dimensions = 1>
+class id : public detail::IndexSpaceBase<id<Dimensions>, Dimensions> {
   static_assert(Dimensions >= 1 && Dimensions <= 3,
                 "id can only be 1-, 2-, or 3-dimensional.");
-  using Base = detail::RawArray<Dimensions>;
+  using Base = detail::IndexSpaceBase<id<Dimensions>, Dimensions>;
 
   // Helper class for conversion operator. Void type is not suitable. User
   // cannot even try to get address of the operator PrivateTag(). User
@@ -230,39 +337,67 @@ public:
 
   /// Constructs an id from item.get_id().
   /// Only valid when the template parameter Dimensions is equal to 1.
-  template <int N = Dimensions, std::enable_if_t<N == 1, bool> = true>
-  id(const item<Dimensions> &item) noexcept : Base(item.get_id(0)) {}
+  template <int N = Dimensions, bool WithOffset = true,
+            std::enable_if_t<N == 1, bool> = true>
+  id(const item<Dimensions, WithOffset> &item) noexcept
+      : Base(item.get_id(0)) {}
 
   /// Constructs an id from item.get_id().
   /// Only valid when the template parameter Dimensions is equal to 2.
-  template <int N = Dimensions, std::enable_if_t<N == 2, bool> = true>
-  id(const item<Dimensions> &item) noexcept
+  template <int N = Dimensions, bool WithOffset = true,
+            std::enable_if_t<N == 2, bool> = true>
+  id(const item<Dimensions, WithOffset> &item) noexcept
       : Base(item.get_id(0), item.get_id(1)) {}
 
   /// Constructs an id from item.get_id().
   /// Only valid when the template parameter Dimensions is equal to 3.
-  template <int N = Dimensions, std::enable_if_t<N == 3, bool> = true>
-  id(const item<Dimensions> &item) noexcept
+  template <int N = Dimensions, bool WithOffset = true,
+            std::enable_if_t<N == 3, bool> = true>
+  id(const item<Dimensions, WithOffset> &item) noexcept
       : Base(item.get_id(0), item.get_id(1), item.get_id(2)) {}
 
   /*
-    Declared and implemented in detail::RawArray:
+    Declared and implemented in detail::IndexSpaceBase:
         std::size_t get(int dimension) const noexcept;
         std::size_t& operator[](int dimension) noexcept;
         std::size_t operator[](int dimension) const noexcept;
     */
 
   // Template operator is not allowed because it disables further type
-  //   conversion. For example, the next code will not work in case of template
-  //   conversion:
-  //   int a = id<1>(value);
+  // conversion. For example, the next code will not work in case of template
+  // conversion: int a = id<1>(value);
   /// Returns the same value as get(0).
   ///  Available only when: Dimensions == 1.
   operator EnableIfT<(Dimensions == 1), std::size_t>() const noexcept {
     return Base::get(0);
   }
 
-  // TODO: operators to be added
+// These operators are not a part of SYCL 2020 spec but are needed to avoid
+// ambiguity in case of implicit conversion  id<1> vs size_t. Template operators
+// take precedence over type conversion. In the case of non-template operators,
+// ambiguity appears: "id op size_t" may refer "size_t op size_t" or "id op
+// size_t". In the case of template operators it will be "id op size_t".
+#define _LIBSYCL_GEN_OPT(op)                                                   \
+  template <typename T, int N = Dimensions,                                    \
+            std::enable_if_t<N == 1, bool> = true>                             \
+  detail::IntegralType<T, bool> operator op(const T &rhs) const noexcept {     \
+    if (this->MArray[0] != rhs)                                                \
+      return false op true;                                                    \
+    return true op true;                                                       \
+  }                                                                            \
+  template <typename T, int N = Dimensions,                                    \
+            std::enable_if_t<N == 1, bool> = true>                             \
+  friend detail::IntegralType<T, bool> operator op(                            \
+      const T &lhs, const id<dimensions> &rhs) noexcept {                      \
+    if (lhs != rhs.MArray[0])                                                  \
+      return false op true;                                                    \
+    return true op true;                                                       \
+  }
+
+  _LIBSYCL_GEN_OPT(==)
+  _LIBSYCL_GEN_OPT(!=)
+
+#undef _LIBSYCL_GEN_OPT
 };
 
 /// c++ deduction guides.
@@ -311,7 +446,7 @@ public:
     return !(lhs == rhs);
   }
 
-  /// \return the constituent id representing the work-item’s position in the
+  /// \return the constituent id representing the work-item's position in the
   /// iteration space.
   id<Dimensions> get_id() const noexcept { return MId; }
 
@@ -343,6 +478,7 @@ public:
   /// work-item, if this item represents a global range.
   template <bool HasOffset = WithOffset,
             std::enable_if_t<HasOffset == true, bool> = true>
+  __SYCL2020_DEPRECATED("offsets are deprecated in SYCL2020")
   id<Dimensions> get_offset() const noexcept {
     return MOffset;
   }
@@ -353,9 +489,9 @@ public:
   /// WithOffset == false.
   /// \return an item representing the same information as the object holds but
   /// also includes the offset set to 0.
-  template <bool HasOffset = WithOffset,
-            std::enable_if_t<HasOffset == false, bool> = true>
-  operator item<Dimensions, true>() const noexcept {
+  template <bool HasOffset = WithOffset>
+  operator std::enable_if_t<HasOffset == false, item<Dimensions, true>>()
+      const noexcept {
     return item<Dimensions, true>(MRange, MId, id<Dimensions>{});
   }
 
@@ -368,36 +504,34 @@ public:
   /// \return Return the id as a linear index value.
   std::size_t get_linear_id() const noexcept {
     if constexpr (WithOffset) {
-      if constexpr (1 == Dimensions) {
+      if constexpr (1 == Dimensions)
         return MId[0] - MOffset[0];
-      }
-      if constexpr (2 == Dimensions) {
+      else if constexpr (2 == Dimensions)
         return (MId[0] - MOffset[0]) * MRange[1] + MId[1] - MOffset[1];
-      }
-      return (MId[0] - MOffset[0]) * MRange[1] * MRange[2] +
-             (MId[1] - MOffset[1]) * MRange[2] + MId[2] - MOffset[2];
+      else
+        return (MId[0] - MOffset[0]) * MRange[1] * MRange[2] +
+               (MId[1] - MOffset[1]) * MRange[2] + MId[2] - MOffset[2];
     } else {
-      if constexpr (1 == Dimensions) {
+      if constexpr (1 == Dimensions)
         return MId[0];
-      }
-      if constexpr (2 == Dimensions) {
+      else if constexpr (2 == Dimensions)
         return MId[0] * MRange[1] + MId[1];
-      }
-      return MId[0] * MRange[1] * MRange[2] + MId[1] * MRange[2] + MId[2];
+      else
+        return MId[0] * MRange[1] * MRange[2] + MId[1] * MRange[2] + MId[2];
     }
   }
 
 protected:
   template <bool HasOffset = WithOffset,
             std::enable_if_t<HasOffset == true, bool> = true>
-  item(const sycl::range<Dimensions> &range, const sycl::id<Dimensions> &id,
-       const sycl::id<Dimensions> &offset)
-      : MRange(range), MId(id), MOffset(offset) {}
+  item(const sycl::range<Dimensions> &Range, const sycl::id<Dimensions> &Id,
+       const sycl::id<Dimensions> &Offset)
+      : MRange(Range), MId(Id), MOffset(Offset) {}
 
   template <bool HasOffset = WithOffset,
             std::enable_if_t<HasOffset == false, bool> = true>
-  item(const range<Dimensions> &range, const id<Dimensions> &id)
-      : MRange(range), MId(id), MOffset() {}
+  item(const range<Dimensions> &Range, const id<Dimensions> &Id)
+      : MRange(Range), MId(Id), MOffset() {}
 
 private:
   range<Dimensions> MRange;
@@ -405,6 +539,10 @@ private:
   std::conditional_t<WithOffset, id<Dimensions>, std::monostate> MOffset;
 
   friend class detail::Builder;
+
+  // The conversion to an item with an offset builds an item of another
+  // specialization from its protected constructor.
+  template <int, bool> friend class item;
 };
 
 _LIBSYCL_END_NAMESPACE_SYCL

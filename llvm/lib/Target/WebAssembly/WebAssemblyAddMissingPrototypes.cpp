@@ -19,9 +19,11 @@
 //===----------------------------------------------------------------------===//
 
 #include "WebAssembly.h"
+#include "llvm/IR/Analysis.h"
 #include "llvm/IR/Constants.h"
 #include "llvm/IR/Module.h"
 #include "llvm/IR/Operator.h"
+#include "llvm/IR/PassManager.h"
 #include "llvm/Pass.h"
 #include "llvm/Support/Debug.h"
 #include "llvm/Transforms/Utils/Local.h"
@@ -31,7 +33,7 @@ using namespace llvm;
 #define DEBUG_TYPE "wasm-add-missing-prototypes"
 
 namespace {
-class WebAssemblyAddMissingPrototypes final : public ModulePass {
+class WebAssemblyAddMissingPrototypesLegacy final : public ModulePass {
   StringRef getPassName() const override {
     return "Add prototypes to prototypes-less functions";
   }
@@ -45,19 +47,19 @@ class WebAssemblyAddMissingPrototypes final : public ModulePass {
 
 public:
   static char ID;
-  WebAssemblyAddMissingPrototypes() : ModulePass(ID) {}
+  WebAssemblyAddMissingPrototypesLegacy() : ModulePass(ID) {}
 };
 } // End anonymous namespace
 
-char WebAssemblyAddMissingPrototypes::ID = 0;
-INITIALIZE_PASS(WebAssemblyAddMissingPrototypes, DEBUG_TYPE,
+char WebAssemblyAddMissingPrototypesLegacy::ID = 0;
+INITIALIZE_PASS(WebAssemblyAddMissingPrototypesLegacy, DEBUG_TYPE,
                 "Add prototypes to prototypes-less functions", false, false)
 
-ModulePass *llvm::createWebAssemblyAddMissingPrototypes() {
-  return new WebAssemblyAddMissingPrototypes();
+ModulePass *llvm::createWebAssemblyAddMissingPrototypesLegacyPass() {
+  return new WebAssemblyAddMissingPrototypesLegacy();
 }
 
-bool WebAssemblyAddMissingPrototypes::runOnModule(Module &M) {
+static bool addMissingPrototypes(Module &M) {
   LLVM_DEBUG(dbgs() << "********** Add Missing Prototypes **********\n");
 
   std::vector<std::pair<Function *, Function *>> Replacements;
@@ -150,4 +152,16 @@ bool WebAssemblyAddMissingPrototypes::runOnModule(Module &M) {
   }
 
   return !Replacements.empty();
+}
+
+bool WebAssemblyAddMissingPrototypesLegacy::runOnModule(Module &M) {
+  return addMissingPrototypes(M);
+}
+
+PreservedAnalyses
+WebAssemblyAddMissingPrototypesPass::run(Module &M,
+                                         ModuleAnalysisManager &MAM) {
+  return addMissingPrototypes(M)
+             ? PreservedAnalyses::none().preserveSet<CFGAnalyses>()
+             : PreservedAnalyses::all();
 }

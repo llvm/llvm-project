@@ -317,6 +317,11 @@ public:
     return Invocation->getFrontendOpts();
   }
 
+  ssaf::SSAFOptions &getSSAFOpts() { return Invocation->getSSAFOpts(); }
+  const ssaf::SSAFOptions &getSSAFOpts() const {
+    return Invocation->getSSAFOpts();
+  }
+
   HeaderSearchOptions &getHeaderSearchOpts() {
     return Invocation->getHeaderSearchOpts();
   }
@@ -553,10 +558,7 @@ public:
     return *Context;
   }
 
-  IntrusiveRefCntPtr<ASTContext> getASTContextPtr() const {
-    assert(Context && "Compiler instance has no AST context!");
-    return Context;
-  }
+  IntrusiveRefCntPtr<ASTContext> getASTContextPtr() const;
 
   void resetAndLeakASTContext() {
     llvm::BuryPointer(Context.get());

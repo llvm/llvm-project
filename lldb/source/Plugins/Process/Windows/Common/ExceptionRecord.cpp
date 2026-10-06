@@ -56,7 +56,7 @@ void lldb_private::ExceptionRecord::Dump(llvm::raw_ostream &stream) const {
 
   const int addr_min_width = 2 + 8; // "0x" + 4 address bytes
 
-  const llvm::ArrayRef<unsigned long long> args = GetExceptionArguments();
+  const llvm::ArrayRef<uint64_t> args = GetExceptionArguments();
   switch (GetExceptionValue()) {
   case EXCEPTION_ACCESS_VIOLATION: {
     if (args.size() < 2)

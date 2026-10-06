@@ -14,13 +14,11 @@
 //===----------------------------------------------------------------------===//
 
 #include "flang/Optimizer/Builder/CUDAIntrinsicCall.h"
-#include "flang/Evaluate/common.h"
 #include "flang/Optimizer/Builder/FIRBuilder.h"
 #include "flang/Optimizer/Builder/MutableBox.h"
 #include "flang/Optimizer/Dialect/CUF/CUFOps.h"
 #include "flang/Optimizer/HLFIR/HLFIROps.h"
 #include "flang/Runtime/entry-names.h"
-#include "mlir/Dialect/Index/IR/IndexOps.h"
 #include "mlir/Dialect/SCF/IR/SCF.h"
 #include "mlir/Dialect/Vector/IR/VectorOps.h"
 
@@ -458,6 +456,10 @@ static constexpr IntrinsicHandler cudaHandlers[]{
          &CI::genMatchAnySync),
      {{{"mask", asValue}, {"value", asValue}}},
      /*isElemental=*/false},
+    {"on_device",
+     static_cast<CUDAIntrinsicLibrary::ElementalGenerator>(&CI::genOnDevice),
+     {},
+     /*isElemental=*/false},
     {"syncthreads",
      static_cast<CUDAIntrinsicLibrary::SubroutineGenerator>(
          &CI::genSyncThreads),
@@ -642,28 +644,27 @@ static constexpr IntrinsicHandler cudaHandlers[]{
      {{}},
      /*isElemental=*/false},
 };
+static_assert(fir::isSorted(cudaHandlers) && "map must be sorted");
 
-template <std::size_t N>
-static constexpr bool isSorted(const IntrinsicHandler (&array)[N]) {
-  // Replace by std::sorted when C++20 is default (will be constexpr).
-  const IntrinsicHandler *lastSeen{nullptr};
-  bool isSorted{true};
-  for (const auto &x : array) {
-    if (lastSeen)
-      isSorted &= std::string_view{lastSeen->name} < std::string_view{x.name};
-    lastSeen = &x;
-  }
-  return isSorted;
-}
-static_assert(isSorted(cudaHandlers) && "map must be sorted");
-
-const IntrinsicHandler *findCUDAIntrinsicHandler(llvm::StringRef name) {
+const IntrinsicHandler *findCUDAIntrinsicHandler(llvm::StringRef name,
+                                                 bool isBindcCall) {
+  // cudadevice declares on_device() with bind(c).
+  if (isBindcCall && name != "on_device")
+    return nullptr;
   auto compare = [](const IntrinsicHandler &cudaHandler, llvm::StringRef name) {
     return name.compare(cudaHandler.name) > 0;
   };
   auto result = llvm::lower_bound(cudaHandlers, name, compare);
   return result != std::end(cudaHandlers) && result->name == name ? result
                                                                   : nullptr;
+}
+
+mlir::Value
+CUDAIntrinsicLibrary::genOnDevice(mlir::Type resultType,
+                                  llvm::ArrayRef<mlir::Value> args) {
+  assert(args.empty() && "on_device takes no arguments");
+  mlir::Value onDevice = cuf::OnDeviceOp::create(builder, loc);
+  return builder.createConvert(loc, resultType, onDevice);
 }
 
 static mlir::Value convertPtrToNVVMSpace(fir::FirOpBuilder &builder,
@@ -894,9 +895,13 @@ CUDAIntrinsicLibrary::genAtomicCas(mlir::Type resultType,
           .getResult(0);
   auto cmpxchg = mlir::LLVM::AtomicCmpXchgOp::create(
       builder, loc, address, arg1, arg2, successOrdering, failureOrdering);
-  mlir::Value boolResult =
-      mlir::LLVM::ExtractValueOp::create(builder, loc, cmpxchg, 1);
-  return builder.createConvert(loc, resultType, boolResult);
+  // atomicCAS returns the value originally stored at the address, which is the
+  // first element of the cmpxchg result, not the success flag.
+  mlir::Value oldValue =
+      mlir::LLVM::ExtractValueOp::create(builder, loc, cmpxchg, 0);
+  if (mlir::isa<mlir::Float32Type, mlir::Float64Type>(resultType))
+    return mlir::LLVM::BitcastOp::create(builder, loc, resultType, oldValue);
+  return builder.createConvert(loc, resultType, oldValue);
 }
 
 mlir::Value
@@ -985,7 +990,8 @@ CUDAIntrinsicLibrary::genBarrierArrive(mlir::Type resultType,
   assert(args.size() == 1);
   mlir::Value barrier = convertPtrToNVVMSpace(
       builder, loc, args[0], mlir::NVVM::NVVMMemorySpace::Shared);
-  return mlir::NVVM::MBarrierArriveOp::create(builder, loc, resultType, barrier)
+  return mlir::NVVM::MBarrierArriveOp::create(builder, loc, resultType, barrier,
+                                              /*count=*/nullptr)
       .getResult(0);
 }
 
@@ -1011,7 +1017,8 @@ void CUDAIntrinsicLibrary::genBarrierInit(
   mlir::Value barrier = convertPtrToNVVMSpace(
       builder, loc, fir::getBase(args[0]), mlir::NVVM::NVVMMemorySpace::Shared);
   mlir::NVVM::MBarrierInitOp::create(builder, loc, barrier,
-                                     fir::getBase(args[1]), {});
+                                     fir::getBase(args[1]), /*layout=*/0,
+                                     /*predicate=*/{});
   auto kind = mlir::NVVM::ProxyKindAttr::get(
       builder.getContext(), mlir::NVVM::ProxyKind::async_shared);
   auto space = mlir::NVVM::SharedSpaceAttr::get(

@@ -10,7 +10,7 @@ define i64 @test() {
 ; CHECK:       bb3:
 ; CHECK-NEXT:    [[TMP:%.*]] = phi i32 [ 0, [[BB2:%.*]] ], [ 0, [[BB1:%.*]] ]
 ; CHECK-NEXT:    [[TMP4:%.*]] = phi i32 [ 0, [[BB2]] ], [ 0, [[BB1]] ]
-; CHECK-NEXT:    [[TMP0:%.*]] = insertelement <8 x i32> poison, i32 [[TMP4]], i32 0
+; CHECK-NEXT:    [[TMP0:%.*]] = insertelement <8 x i32> poison, i32 [[TMP4]], i64 0
 ; CHECK-NEXT:    [[TMP1:%.*]] = shufflevector <8 x i32> [[TMP0]], <8 x i32> poison, <8 x i32> zeroinitializer
 ; CHECK-NEXT:    [[TMP2:%.*]] = call i32 @llvm.vector.reduce.mul.v8i32(<8 x i32> [[TMP1]])
 ; CHECK-NEXT:    [[OP_RDX:%.*]] = mul i32 [[TMP2]], [[TMP4]]

@@ -58,7 +58,7 @@ public:
   ///
   /// For an instruction operand, for example, this will return the
   /// instruction.
-  User *getUser() const { return Parent; };
+  User *getUser() const { return Parent; }
 
   LLVM_ABI inline void set(Value *Val);
 

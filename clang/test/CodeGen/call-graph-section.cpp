@@ -12,7 +12,7 @@
 class Cls1 {
 public:
   // FT-LABEL: define {{.*}} ptr @_ZN4Cls18receiverEPcPf(
-  // FT-SAME: {{.*}} !type [[F_TCLS1RECEIVER:![0-9]+]]
+  // FT-SAME: {{.*}} !callgraph [[F_TCLS1RECEIVER:![0-9]+]]
   static int *receiver(char *a, float *b) { return 0; }
 };
 
@@ -21,51 +21,51 @@ public:
   int *(*fp)(char *, float *);
 
   // FT-LABEL: define {{.*}} i32 @_ZN4Cls22f1Ecfd(
-  // FT-SAME: {{.*}} !type [[F_TCLS2F1:![0-9]+]]
+  // FT-SAME: {{.*}} !callgraph [[F_TCLS2F1:![0-9]+]]
   int f1(char a, float b, double c) { return 0; }
 
   // FT-LABEL: define {{.*}} ptr @_ZN4Cls22f2EPcPfPd(
-  // FT-SAME: {{.*}} !type [[F_TCLS2F2:![0-9]+]]
+  // FT-SAME: {{.*}} !callgraph [[F_TCLS2F2:![0-9]+]]
   int *f2(char *a, float *b, double *c) { return 0; }
 
   // FT-LABEL: define {{.*}} void @_ZN4Cls22f3E4Cls1(
-  // FT-SAME: {{.*}} !type [[F_TCLS2F3F4:![0-9]+]]
+  // FT-SAME: {{.*}} !callgraph [[F_TCLS2F3F4:![0-9]+]]
   void f3(Cls1 a) {}
 
   // FT-LABEL: define {{.*}} void @_ZN4Cls22f4E4Cls1(
-  // FT-SAME: {{.*}} !type [[F_TCLS2F3F4]]
+  // FT-SAME: {{.*}} !callgraph [[F_TCLS2F3F4]]
   void f4(const Cls1 a) {}
 
   // FT-LABEL: define {{.*}} void @_ZN4Cls22f5EP4Cls1(
-  // FT-SAME: {{.*}} !type [[F_TCLS2F5:![0-9]+]]
+  // FT-SAME: {{.*}} !callgraph [[F_TCLS2F5:![0-9]+]]
   void f5(Cls1 *a) {}
 
   // FT-LABEL: define {{.*}} void @_ZN4Cls22f6EPK4Cls1(
-  // FT-SAME: {{.*}} !type [[F_TCLS2F6:![0-9]+]]
+  // FT-SAME: {{.*}} !callgraph [[F_TCLS2F6:![0-9]+]]
   void f6(const Cls1 *a) {}
 
   // FT-LABEL: define {{.*}} void @_ZN4Cls22f7ER4Cls1(
-  // FT-SAME: {{.*}} !type [[F_TCLS2F7:![0-9]+]]
+  // FT-SAME: {{.*}} !callgraph [[F_TCLS2F7:![0-9]+]]
   void f7(Cls1 &a) {}
 
   // FT-LABEL: define {{.*}} void @_ZN4Cls22f8ERK4Cls1(
-  // FT-SAME: {{.*}} !type [[F_TCLS2F8:![0-9]+]]
+  // FT-SAME: {{.*}} !callgraph [[F_TCLS2F8:![0-9]+]]
   void f8(const Cls1 &a) {}
 
   // FT-LABEL: define {{.*}} void @_ZNK4Cls22f9Ev(
-  // FT-SAME: {{.*}} !type [[F_TCLS2F9:![0-9]+]]
+  // FT-SAME: {{.*}} !callgraph [[F_TCLS2F9:![0-9]+]]
   void f9() const {}
 };
 
-// FT: [[F_TCLS1RECEIVER]] = !{i64 0, !"_ZTSFPiPcPfE.generalized"}
-// FT: [[F_TCLS2F1]]   = !{i64 0, !"_ZTSFicfdE.generalized"}
-// FT: [[F_TCLS2F2]]   = !{i64 0, !"_ZTSFPiPcPfPdE.generalized"}
-// FT: [[F_TCLS2F3F4]] = !{i64 0, !"_ZTSFv4Cls1E.generalized"}
-// FT: [[F_TCLS2F5]]   = !{i64 0, !"_ZTSFvP4Cls1E.generalized"}
-// FT: [[F_TCLS2F6]]   = !{i64 0, !"_ZTSFvPK4Cls1E.generalized"}
-// FT: [[F_TCLS2F7]]   = !{i64 0, !"_ZTSFvR4Cls1E.generalized"}
-// FT: [[F_TCLS2F8]]   = !{i64 0, !"_ZTSFvRK4Cls1E.generalized"}
-// FT: [[F_TCLS2F9]]   = !{i64 0, !"_ZTSKFvvE.generalized"}
+// FT: [[F_TCLS1RECEIVER]] = !{!"_ZTSFPiPcPfE"}
+// FT: [[F_TCLS2F1]]   = !{!"_ZTSFicfdE"}
+// FT: [[F_TCLS2F2]]   = !{!"_ZTSFPiPcPfPdE"}
+// FT: [[F_TCLS2F3F4]] = !{!"_ZTSFv4Cls1E"}
+// FT: [[F_TCLS2F5]]   = !{!"_ZTSFvP4Cls1E"}
+// FT: [[F_TCLS2F6]]   = !{!"_ZTSFvPK4Cls1E"}
+// FT: [[F_TCLS2F7]]   = !{!"_ZTSFvR4Cls1E"}
+// FT: [[F_TCLS2F8]]   = !{!"_ZTSFvRK4Cls1E"}
+// FT: [[F_TCLS2F9]]   = !{!"_ZTSKFvvE"}
 
 ////////////////////////////////////////////////////////////////////////////////
 // Callsites (check for indirect callsites' callee_type metadata )
@@ -120,28 +120,28 @@ void foo() {
 }
 
 // CST: [[F_TCLS1RECEIVER_CT]] = !{[[F_TCLS1RECEIVER:![0-9]+]]}
-// CST: [[F_TCLS1RECEIVER]] = !{i64 0, !"_ZTSFPiPcPfE.generalized"}
+// CST: [[F_TCLS1RECEIVER]] = !{!"_ZTSFPiPcPfE"}
 
 // CST: [[F_TCLS2F1_CT]] = !{[[F_TCLS2F1:![0-9]+]]}
-// CST: [[F_TCLS2F1]]   = !{i64 0, !"_ZTSFicfdE.generalized"}
+// CST: [[F_TCLS2F1]]   = !{!"_ZTSFicfdE"}
 
 // CST: [[F_TCLS2F2_CT]] = !{[[F_TCLS2F2:![0-9]+]]}
-// CST: [[F_TCLS2F2]]   = !{i64 0, !"_ZTSFPiPcPfPdE.generalized"}
+// CST: [[F_TCLS2F2]]   = !{!"_ZTSFPiPcPfPdE"}
 
 // CST: [[F_TCLS2F3F4_CT]] = !{[[F_TCLS2F3F4:![0-9]+]]}
-// CST: [[F_TCLS2F3F4]] = !{i64 0, !"_ZTSFv4Cls1E.generalized"}
+// CST: [[F_TCLS2F3F4]] = !{!"_ZTSFv4Cls1E"}
 
 // CST: [[F_TCLS2F5_CT]] = !{[[F_TCLS2F5:![0-9]+]]}
-// CST: [[F_TCLS2F5]]   = !{i64 0, !"_ZTSFvP4Cls1E.generalized"}
+// CST: [[F_TCLS2F5]]   = !{!"_ZTSFvP4Cls1E"}
 
 // CST: [[F_TCLS2F6_CT]] = !{[[F_TCLS2F6:![0-9]+]]}
-// CST: [[F_TCLS2F6]]   = !{i64 0, !"_ZTSFvPK4Cls1E.generalized"}
+// CST: [[F_TCLS2F6]]   = !{!"_ZTSFvPK4Cls1E"}
 
 // CST: [[F_TCLS2F7_CT]] = !{[[F_TCLS2F7:![0-9]+]]}
-// CST: [[F_TCLS2F7]]   = !{i64 0, !"_ZTSFvR4Cls1E.generalized"}
+// CST: [[F_TCLS2F7]]   = !{!"_ZTSFvR4Cls1E"}
 
 // CST: [[F_TCLS2F8_CT]] = !{[[F_TCLS2F8:![0-9]+]]}
-// CST: [[F_TCLS2F8]]   = !{i64 0, !"_ZTSFvRK4Cls1E.generalized"}
+// CST: [[F_TCLS2F8]]   = !{!"_ZTSFvRK4Cls1E"}
 
 // CST: [[F_TCLS2F9_CT]] = !{[[F_TCLS2F9:![0-9]+]]}
-// CST: [[F_TCLS2F9]]   = !{i64 0, !"_ZTSKFvvE.generalized"}
+// CST: [[F_TCLS2F9]]   = !{!"_ZTSKFvvE"}

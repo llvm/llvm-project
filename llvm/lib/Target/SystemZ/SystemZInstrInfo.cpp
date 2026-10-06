@@ -19,7 +19,6 @@
 #include "llvm/CodeGen/LiveInterval.h"
 #include "llvm/CodeGen/LiveIntervals.h"
 #include "llvm/CodeGen/LiveRegUnits.h"
-#include "llvm/CodeGen/LiveVariables.h"
 #include "llvm/CodeGen/MachineBasicBlock.h"
 #include "llvm/CodeGen/MachineFrameInfo.h"
 #include "llvm/CodeGen/MachineFunction.h"
@@ -1083,13 +1082,15 @@ static void transferMIFlag(MachineInstr *OldMI, MachineInstr *NewMI,
 }
 
 MachineInstr *
-SystemZInstrInfo::convertToThreeAddress(MachineInstr &MI, LiveVariables *LV,
+SystemZInstrInfo::convertToThreeAddress(MachineInstr &MI,
                                         LiveIntervals *LIS) const {
   MachineBasicBlock *MBB = MI.getParent();
 
   // Try to convert an AND into an RISBG-type instruction.
   // TODO: It might be beneficial to select RISBG and shorten to AND instead.
   if (LogicOp And = interpretAndImmediate(MI.getOpcode())) {
+    if (!MI.registerDefIsDead(SystemZ::CC, /*TRI=*/nullptr))
+      return nullptr;
     uint64_t Imm = MI.getOperand(2).getImm() << And.ImmLSB;
     // AND IMMEDIATE leaves the other bits of the register unchanged.
     Imm |= allOnes(And.RegSize) & ~(allOnes(And.ImmSize) << And.ImmLSB);
@@ -1117,16 +1118,11 @@ SystemZInstrInfo::convertToThreeAddress(MachineInstr &MI, LiveVariables *LV,
               .addImm(Start)
               .addImm(End + 128)
               .addImm(0);
-      if (LV) {
-        unsigned NumOps = MI.getNumOperands();
-        for (unsigned I = 1; I < NumOps; ++I) {
-          MachineOperand &Op = MI.getOperand(I);
-          if (Op.isReg() && Op.isKill())
-            LV->replaceKillInstruction(Op.getReg(), MI, *MIB);
-        }
+      if (LIS) {
+        SlotIndex Idx = LIS->ReplaceMachineInstrInMaps(MI, *MIB);
+        if (!MIB->definesRegister(SystemZ::CC, /*TRI=*/nullptr))
+          LIS->removePhysRegDefAt(SystemZ::CC, Idx.getRegSlot());
       }
-      if (LIS)
-        LIS->ReplaceMachineInstrInMaps(MI, *MIB);
       transferDeadCC(&MI, MIB);
       return MIB;
     }
@@ -1813,18 +1809,28 @@ void SystemZInstrInfo::expandStackGuardPseudo(MachineInstr &MI,
   // Emit an appropriate pseudo for the guard type, which loads the address of
   // said guard into the scratch register AddrReg.
   if (GuardType.empty() || (GuardType == "tls")) {
-    // Emit a load of the TLS block's address
-    BuildMI(MBB, MI, DL, get(SystemZ::LOAD_TLS_BLOCK_ADDR), AddrReg);
-    // Record the appropriate stack guard offset (40 in the tls case).
-    Offset = 40;
+    if (STI.isTargetzOS()) {
+      enum { OFFSET_PSALAA = 0x4B8 };
+      enum { OFFSET_CEELAA_STACK_GUARD = 0x98 };
+      // Load LAA
+      // LLGT <reg>,1208
+      BuildMI(MBB, MI, MI.getDebugLoc(), get(SystemZ::LLGT), AddrReg)
+          .addReg(0)
+          .addImm(OFFSET_PSALAA)
+          .addReg(0);
+      Offset = OFFSET_CEELAA_STACK_GUARD;
+    } else {
+      // Emit a load of the TLS block's address
+      BuildMI(MBB, MI, DL, get(SystemZ::LOAD_TLS_BLOCK_ADDR), AddrReg);
+      // Record the appropriate stack guard offset (40 in the tls case).
+      Offset = 40;
+    }
   } else if (GuardType == "global") {
     // Emit a load of the global stack guard's address
     BuildMI(MBB, MI, DL, get(SystemZ::LOAD_GLOBAL_STACKGUARD_ADDR), AddrReg);
   } else {
-    report_fatal_error(
-        (Twine("unknown stack protector type \"") + GuardType + "\".")
-            .str()
-            .c_str());
+    report_fatal_error(Twine("unknown stack protector type \"") + GuardType +
+                       "\".");
   }
 
   // Construct the appropriate move or compare instruction using the
@@ -2426,10 +2432,21 @@ SystemZInstrInfo::getSerializableDirectMachineOperandTargetFlags() const {
   using namespace SystemZII;
 
   static const std::pair<unsigned, const char *> TargetFlags[] = {
+      {MO_GOT, "systemz-got"},
+      {MO_INDNTPOFF, "systemz-indntpoff"},
       {MO_ADA_DATA_SYMBOL_ADDR, "systemz-ada-datasymboladdr"},
       {MO_ADA_INDIRECT_FUNC_DESC, "systemz-ada-indirectfuncdesc"},
       {MO_ADA_DIRECT_FUNC_DESC, "systemz-ada-directfuncdesc"}};
   return ArrayRef(TargetFlags);
+}
+
+bool SystemZInstrInfo::isSchedulingBoundary(const MachineInstr &MI,
+                                            const MachineBasicBlock *MBB,
+                                            const MachineFunction &MF) const {
+  if (TargetInstrInfo::isSchedulingBoundary(MI, MBB, MF))
+    return true;
+  return MI.getOpcode() == SystemZ::FENCE ||
+         MI.getOpcode() == TargetOpcode::PATCHABLE_FUNCTION_ENTER;
 }
 
 MCInst SystemZInstrInfo::getNop() const {

@@ -54,7 +54,8 @@ constexpr std::size_t s = S<std::size_t>(~0UL)[42]; // both-error {{constexpr va
 constexpr std::size_t ssmall = S<std::size_t>(100)[42];
 
 constexpr std::size_t s5 = S<std::size_t>(1025)[42]; // both-error {{constexpr variable 's5' must be initialized by a constant expression}} \
-                                   // both-note@#alloc {{cannot allocate array; evaluated array bound 1025 exceeds the limit (1024); use '-fconstexpr-steps' to increase this limit}} \
+                                   // both-note@#alloc {{cannot allocate array; evaluated array bound 1025 exceeds the limit (1024)}} \
+                                   // both-note@#alloc {{use -fconstexpr-steps}} \
                                    // both-note@#call {{in call to 'this->alloc.allocate(1025)'}} \
                                    // both-note {{in call}}
 
@@ -62,7 +63,8 @@ constexpr std::size_t s5 = S<std::size_t>(1025)[42]; // both-error {{constexpr v
 
 template <auto N>
 constexpr int stack_array() {
-    [[maybe_unused]] char BIG[N] = {1};  // both-note {{cannot allocate array; evaluated array bound 1025 exceeds the limit (1024)}}
+    [[maybe_unused]] char BIG[N] = {1};  // both-note {{cannot allocate array; evaluated array bound 1025 exceeds the limit (1024)}} \
+                                         // both-note {{use -fconstexpr-steps}}
     return BIG[N-1];
 }
 
@@ -71,3 +73,64 @@ int d = stack_array<1025>();
 constexpr int e = stack_array<1024>();
 constexpr int f = stack_array<1025>(); // both-error {{constexpr variable 'f' must be initialized by a constant expression}} \
                                        // both-note {{in call}}
+
+namespace GH173728 {
+struct T {};
+
+int stmt_expr() { return 1 + ({ T s[0xFFFFFFFFu][0]; 0x97 < 10000; }); }
+#if __SIZEOF_SIZE_T__ == 8
+int stmt_expr_truncated() {
+  return 1 + ({ T s[(1ULL << 33) - 1][0]; 0x97 < 10000; });
+}
+#endif
+
+template <auto N>
+constexpr int default_construct() {
+  T s[N][0]; // #gh173728-construct
+  return 0;
+}
+
+constexpr int construct_ok = default_construct<1024>();
+constexpr int construct_limit = default_construct<1025>(); // both-error {{constexpr variable 'construct_limit' must be initialized by a constant expression}} \
+                                                           // both-note {{in call}}
+// both-note@#gh173728-construct {{cannot allocate array; evaluated array bound 1025 exceeds the limit (1024)}}
+// both-note@#gh173728-construct {{use -fconstexpr-steps}}
+
+#if __SIZEOF_SIZE_T__ == 8
+/// The bytecode interpreter can't allocate this array as it is too big, so it rejects the call without a note.
+constexpr int construct_huge = default_construct<(1ULL << 33) - 1>(); // both-error {{constexpr variable 'construct_huge' must be initialized by a constant expression}} \
+                                                                      // ref-note {{in call}}
+// ref-note@#gh173728-construct {{cannot allocate array; evaluated array bound 8589934591 is too large}}
+#endif
+
+template <typename A>
+constexpr int capture_copy(const A &a) {
+  return [a] { return 0; }(); // #gh173728-capture
+}
+
+constexpr T src_ok[1024][0] = {};
+constexpr T src_limit[1025][0] = {};
+constexpr int capture_ok = capture_copy(src_ok);
+constexpr int capture_limit = capture_copy(src_limit); // both-error {{constexpr variable 'capture_limit' must be initialized by a constant expression}} \
+                                                       // both-note {{in call}}
+// both-note@#gh173728-capture {{cannot allocate array; evaluated array bound 1025 exceeds the limit (1024)}}
+// both-note@#gh173728-capture {{use -fconstexpr-steps}}
+
+template <auto N>
+struct Member {
+  T a[N];
+  constexpr Member() {} // #gh173728-member
+};
+
+constexpr Member<1024> member_ok;
+#if __SIZEOF_SIZE_T__ == 8
+constexpr Member<0xFFFFFFFFu> member_limit; // both-error {{constexpr variable 'member_limit' must be initialized by a constant expression}} \
+                                            // both-note {{in call}}
+// both-note@#gh173728-member {{cannot allocate array; evaluated array bound 4294967295 exceeds the limit (1024)}}
+// both-note@#gh173728-member {{use -fconstexpr-steps}}
+
+constexpr Member<(1ULL << 33) - 1> member_huge; // both-error {{constexpr variable 'member_huge' must be initialized by a constant expression}} \
+                                                // both-note {{in call}}
+// both-note@#gh173728-member {{cannot allocate array; evaluated array bound 8589934591 is too large}}
+#endif
+}

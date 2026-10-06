@@ -7,7 +7,7 @@
 ; innermost loop headers have a greater than or equal to frequency than any
 ; block it dominates.
 
-define void @f(i1 %x) !prof !0 {
+define void @f(i1 %x) vscale_range(2, 1024) !prof !0 {
 ; CHECK-LABEL: define void @f(
 ; CHECK-SAME: i1 [[X:%.*]]) local_unnamed_addr #[[ATTR0:[0-9]+]] {{.*}}{
 ; CHECK-NEXT:  [[ENTRY:.*]]:

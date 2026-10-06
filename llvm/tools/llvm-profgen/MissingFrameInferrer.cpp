@@ -44,8 +44,8 @@ void MissingFrameInferrer::initialize(
     const ContextSampleCounterMap *SampleCounters) {
   // Refine call edges based on LBR samples.
   if (SampleCounters) {
-    std::unordered_map<uint64_t, std::unordered_set<uint64_t>> SampledCalls;
-    std::unordered_map<uint64_t, std::unordered_set<uint64_t>> SampledTailCalls;
+    DenseMap<uint64_t, DenseSet<uint64_t>> SampledCalls;
+    DenseMap<uint64_t, DenseSet<uint64_t>> SampledTailCalls;
 
     // Populate SampledCalls based on static call sites. Similarly to
     // SampledTailCalls.
@@ -72,8 +72,8 @@ void MissingFrameInferrer::initialize(
     }
 
     // Replace static edges with dynamic edges.
-    CallEdges = SampledCalls;
-    TailCallEdges = SampledTailCalls;
+    CallEdges = std::move(SampledCalls);
+    TailCallEdges = std::move(SampledTailCalls);
   }
 
   // Populate function-based edges. This is to speed up address to function
@@ -106,8 +106,7 @@ void MissingFrameInferrer::initialize(
 
 #ifndef NDEBUG
   auto PrintCallTargets =
-      [&](const std::unordered_map<uint64_t, std::unordered_set<uint64_t>>
-              &CallTargets,
+      [&](const DenseMap<uint64_t, DenseSet<uint64_t>> &CallTargets,
           bool IsTailCall) {
         for (const auto &Targets : CallTargets) {
           for (const auto &Target : Targets.second) {
