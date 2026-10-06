@@ -2048,7 +2048,8 @@ private:
   /// Collect operands of \p V for which SCEV expressions should be constructed
   /// first. Returns a SCEV directly if it can be constructed trivially for \p
   /// V.
-  const SCEV *getOperandsToCreate(Value *V, SmallVectorImpl<Value *> &Ops);
+  const SCEV *getOperandsToCreate(Value *V, SmallVectorImpl<Value *> &Ops,
+                                  bool &AddRecPHISlowPath);
 
   /// Returns SCEV for the first operand of a phi if all phi operands have
   /// identical opcodes and operands.
@@ -2057,12 +2058,11 @@ private:
   /// Provide the special handling we need to analyze PHI SCEVs.
   const SCEV *createNodeForPHI(PHINode *PN);
 
-  /// Helper function called from createNodeForPHI.
-  const SCEV *createAddRecFromPHI(PHINode *PN);
+  const SCEV *handleAddRecBackedgeForPHI(PHINode *PN, const SCEV *SymbolicName,
+                                         Value *BEValueV, Value *StartValueV);
 
-  /// A helper function for createAddRecFromPHI to handle simple cases.
-  const SCEV *createSimpleAffineAddRec(PHINode *PN, Value *BEValueV,
-                                            Value *StartValueV);
+  /// Helper function called from createNodeForPHI.
+  const SCEV *createSimpleAffineAddRec(PHINode *PNV);
 
   /// Helper function called from createNodeForPHI.
   const SCEV *createNodeFromSelectLikePHI(PHINode *PN);
@@ -2497,13 +2497,14 @@ private:
   /// add recurrence on the loop \p L.
   bool isAddRecNeverPoison(const Instruction *I, const Loop *L);
 
-  /// Similar to createAddRecFromPHI, but with the additional flexibility of
-  /// suggesting runtime overflow checks in case casts are encountered.
-  /// If successful, the analysis records that for this loop, \p SymbolicPHI,
-  /// which is the UnknownSCEV currently representing the PHI, can be rewritten
-  /// into an AddRec, assuming some predicates; The function then returns the
-  /// AddRec and the predicates as a pair, and caches this pair in
-  /// PredicatedSCEVRewrites.
+  /// Similar to handleAddRecBackedgeForPHI, but with the additional
+  /// flexibility of suggesting runtime overflow checks in case casts are
+  /// encountered. If successful, the analysis records that for this loop,
+  /// \p SymbolicPHI, which is the UnknownSCEV currently representing the PHI,
+  /// can be rewritten into an AddRec, assuming some predicates; The function
+  /// then returns the AddRec and the predicates as a pair, and caches this
+  /// pair in PredicatedSCEVRewrites.
+  ///
   /// If the analysis is not successful, a mapping from the \p SymbolicPHI to
   /// itself (with no predicates) is recorded, and a nullptr with an empty
   /// predicates vector is returned as a pair.
