@@ -7,6 +7,7 @@
 //
 //===----------------------------------------------------------------------===//
 
+// UNSUPPORTED: riscv
 /* RUN: mlir-capi-execution-engine-test 2>&1 | FileCheck %s
  */
 /* REQUIRES: host-supports-jit
