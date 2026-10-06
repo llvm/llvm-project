@@ -6,23 +6,14 @@
 ; Constant signed division/remainder must not unroll vector MUL_LOHI into
 ; scalar i64 MUL_LOHI on 32-bit targets, where i64 is an illegal type.
 
-define <4 x i64> @sdiv_v4i64(<4 x i64> %a) {
+define <4 x i64> @sdiv_v4i64(<4 x i64> %a) nounwind {
 ; AVX2-LABEL: sdiv_v4i64:
 ; AVX2:       # %bb.0:
 ; AVX2-NEXT:    pushl %ebp
-; AVX2-NEXT:    .cfi_def_cfa_offset 8
 ; AVX2-NEXT:    pushl %ebx
-; AVX2-NEXT:    .cfi_def_cfa_offset 12
 ; AVX2-NEXT:    pushl %edi
-; AVX2-NEXT:    .cfi_def_cfa_offset 16
 ; AVX2-NEXT:    pushl %esi
-; AVX2-NEXT:    .cfi_def_cfa_offset 20
 ; AVX2-NEXT:    subl $76, %esp
-; AVX2-NEXT:    .cfi_def_cfa_offset 96
-; AVX2-NEXT:    .cfi_offset %esi, -20
-; AVX2-NEXT:    .cfi_offset %edi, -16
-; AVX2-NEXT:    .cfi_offset %ebx, -12
-; AVX2-NEXT:    .cfi_offset %ebp, -8
 ; AVX2-NEXT:    vmovups %ymm0, {{[-0-9]+}}(%e{{[sb]}}p) # 32-byte Spill
 ; AVX2-NEXT:    vextractps $1, %xmm0, {{[0-9]+}}(%esp)
 ; AVX2-NEXT:    vmovss %xmm0, (%esp)
@@ -69,33 +60,19 @@ define <4 x i64> @sdiv_v4i64(<4 x i64> %a) {
 ; AVX2-NEXT:    vpinsrd $3, %edx, %xmm0, %xmm0
 ; AVX2-NEXT:    vinserti128 $1, {{[-0-9]+}}(%e{{[sb]}}p), %ymm0, %ymm0 # 16-byte Folded Reload
 ; AVX2-NEXT:    addl $76, %esp
-; AVX2-NEXT:    .cfi_def_cfa_offset 20
 ; AVX2-NEXT:    popl %esi
-; AVX2-NEXT:    .cfi_def_cfa_offset 16
 ; AVX2-NEXT:    popl %edi
-; AVX2-NEXT:    .cfi_def_cfa_offset 12
 ; AVX2-NEXT:    popl %ebx
-; AVX2-NEXT:    .cfi_def_cfa_offset 8
 ; AVX2-NEXT:    popl %ebp
-; AVX2-NEXT:    .cfi_def_cfa_offset 4
 ; AVX2-NEXT:    retl
 ;
 ; AVX512F-LABEL: sdiv_v4i64:
 ; AVX512F:       # %bb.0:
 ; AVX512F-NEXT:    pushl %ebp
-; AVX512F-NEXT:    .cfi_def_cfa_offset 8
 ; AVX512F-NEXT:    pushl %ebx
-; AVX512F-NEXT:    .cfi_def_cfa_offset 12
 ; AVX512F-NEXT:    pushl %edi
-; AVX512F-NEXT:    .cfi_def_cfa_offset 16
 ; AVX512F-NEXT:    pushl %esi
-; AVX512F-NEXT:    .cfi_def_cfa_offset 20
 ; AVX512F-NEXT:    subl $76, %esp
-; AVX512F-NEXT:    .cfi_def_cfa_offset 96
-; AVX512F-NEXT:    .cfi_offset %esi, -20
-; AVX512F-NEXT:    .cfi_offset %edi, -16
-; AVX512F-NEXT:    .cfi_offset %ebx, -12
-; AVX512F-NEXT:    .cfi_offset %ebp, -8
 ; AVX512F-NEXT:    vmovups %ymm0, {{[-0-9]+}}(%e{{[sb]}}p) # 32-byte Spill
 ; AVX512F-NEXT:    vextractps $1, %xmm0, {{[0-9]+}}(%esp)
 ; AVX512F-NEXT:    vmovss %xmm0, (%esp)
@@ -142,15 +119,10 @@ define <4 x i64> @sdiv_v4i64(<4 x i64> %a) {
 ; AVX512F-NEXT:    vpinsrd $3, %edx, %xmm0, %xmm0
 ; AVX512F-NEXT:    vinserti128 $1, {{[-0-9]+}}(%e{{[sb]}}p), %ymm0, %ymm0 # 16-byte Folded Reload
 ; AVX512F-NEXT:    addl $76, %esp
-; AVX512F-NEXT:    .cfi_def_cfa_offset 20
 ; AVX512F-NEXT:    popl %esi
-; AVX512F-NEXT:    .cfi_def_cfa_offset 16
 ; AVX512F-NEXT:    popl %edi
-; AVX512F-NEXT:    .cfi_def_cfa_offset 12
 ; AVX512F-NEXT:    popl %ebx
-; AVX512F-NEXT:    .cfi_def_cfa_offset 8
 ; AVX512F-NEXT:    popl %ebp
-; AVX512F-NEXT:    .cfi_def_cfa_offset 4
 ; AVX512F-NEXT:    retl
 ;
 ; AVX512DQ-LABEL: sdiv_v4i64:
@@ -181,23 +153,14 @@ define <4 x i64> @sdiv_v4i64(<4 x i64> %a) {
   ret <4 x i64> %r
 }
 
-define <4 x i64> @srem_v4i64(<4 x i64> %a) {
+define <4 x i64> @srem_v4i64(<4 x i64> %a) nounwind {
 ; AVX2-LABEL: srem_v4i64:
 ; AVX2:       # %bb.0:
 ; AVX2-NEXT:    pushl %ebp
-; AVX2-NEXT:    .cfi_def_cfa_offset 8
 ; AVX2-NEXT:    pushl %ebx
-; AVX2-NEXT:    .cfi_def_cfa_offset 12
 ; AVX2-NEXT:    pushl %edi
-; AVX2-NEXT:    .cfi_def_cfa_offset 16
 ; AVX2-NEXT:    pushl %esi
-; AVX2-NEXT:    .cfi_def_cfa_offset 20
 ; AVX2-NEXT:    subl $76, %esp
-; AVX2-NEXT:    .cfi_def_cfa_offset 96
-; AVX2-NEXT:    .cfi_offset %esi, -20
-; AVX2-NEXT:    .cfi_offset %edi, -16
-; AVX2-NEXT:    .cfi_offset %ebx, -12
-; AVX2-NEXT:    .cfi_offset %ebp, -8
 ; AVX2-NEXT:    vmovups %ymm0, {{[-0-9]+}}(%e{{[sb]}}p) # 32-byte Spill
 ; AVX2-NEXT:    vextractps $1, %xmm0, {{[0-9]+}}(%esp)
 ; AVX2-NEXT:    vmovss %xmm0, (%esp)
@@ -244,33 +207,19 @@ define <4 x i64> @srem_v4i64(<4 x i64> %a) {
 ; AVX2-NEXT:    vpinsrd $3, %edx, %xmm0, %xmm0
 ; AVX2-NEXT:    vinserti128 $1, {{[-0-9]+}}(%e{{[sb]}}p), %ymm0, %ymm0 # 16-byte Folded Reload
 ; AVX2-NEXT:    addl $76, %esp
-; AVX2-NEXT:    .cfi_def_cfa_offset 20
 ; AVX2-NEXT:    popl %esi
-; AVX2-NEXT:    .cfi_def_cfa_offset 16
 ; AVX2-NEXT:    popl %edi
-; AVX2-NEXT:    .cfi_def_cfa_offset 12
 ; AVX2-NEXT:    popl %ebx
-; AVX2-NEXT:    .cfi_def_cfa_offset 8
 ; AVX2-NEXT:    popl %ebp
-; AVX2-NEXT:    .cfi_def_cfa_offset 4
 ; AVX2-NEXT:    retl
 ;
 ; AVX512F-LABEL: srem_v4i64:
 ; AVX512F:       # %bb.0:
 ; AVX512F-NEXT:    pushl %ebp
-; AVX512F-NEXT:    .cfi_def_cfa_offset 8
 ; AVX512F-NEXT:    pushl %ebx
-; AVX512F-NEXT:    .cfi_def_cfa_offset 12
 ; AVX512F-NEXT:    pushl %edi
-; AVX512F-NEXT:    .cfi_def_cfa_offset 16
 ; AVX512F-NEXT:    pushl %esi
-; AVX512F-NEXT:    .cfi_def_cfa_offset 20
 ; AVX512F-NEXT:    subl $76, %esp
-; AVX512F-NEXT:    .cfi_def_cfa_offset 96
-; AVX512F-NEXT:    .cfi_offset %esi, -20
-; AVX512F-NEXT:    .cfi_offset %edi, -16
-; AVX512F-NEXT:    .cfi_offset %ebx, -12
-; AVX512F-NEXT:    .cfi_offset %ebp, -8
 ; AVX512F-NEXT:    vmovups %ymm0, {{[-0-9]+}}(%e{{[sb]}}p) # 32-byte Spill
 ; AVX512F-NEXT:    vextractps $1, %xmm0, {{[0-9]+}}(%esp)
 ; AVX512F-NEXT:    vmovss %xmm0, (%esp)
@@ -317,15 +266,10 @@ define <4 x i64> @srem_v4i64(<4 x i64> %a) {
 ; AVX512F-NEXT:    vpinsrd $3, %edx, %xmm0, %xmm0
 ; AVX512F-NEXT:    vinserti128 $1, {{[-0-9]+}}(%e{{[sb]}}p), %ymm0, %ymm0 # 16-byte Folded Reload
 ; AVX512F-NEXT:    addl $76, %esp
-; AVX512F-NEXT:    .cfi_def_cfa_offset 20
 ; AVX512F-NEXT:    popl %esi
-; AVX512F-NEXT:    .cfi_def_cfa_offset 16
 ; AVX512F-NEXT:    popl %edi
-; AVX512F-NEXT:    .cfi_def_cfa_offset 12
 ; AVX512F-NEXT:    popl %ebx
-; AVX512F-NEXT:    .cfi_def_cfa_offset 8
 ; AVX512F-NEXT:    popl %ebp
-; AVX512F-NEXT:    .cfi_def_cfa_offset 4
 ; AVX512F-NEXT:    retl
 ;
 ; AVX512DQ-LABEL: srem_v4i64:
@@ -358,23 +302,14 @@ define <4 x i64> @srem_v4i64(<4 x i64> %a) {
   ret <4 x i64> %r
 }
 
-define <8 x i64> @sdiv_v8i64(<8 x i64> %a) {
+define <8 x i64> @sdiv_v8i64(<8 x i64> %a) nounwind {
 ; AVX2-LABEL: sdiv_v8i64:
 ; AVX2:       # %bb.0:
 ; AVX2-NEXT:    pushl %ebp
-; AVX2-NEXT:    .cfi_def_cfa_offset 8
 ; AVX2-NEXT:    pushl %ebx
-; AVX2-NEXT:    .cfi_def_cfa_offset 12
 ; AVX2-NEXT:    pushl %edi
-; AVX2-NEXT:    .cfi_def_cfa_offset 16
 ; AVX2-NEXT:    pushl %esi
-; AVX2-NEXT:    .cfi_def_cfa_offset 20
 ; AVX2-NEXT:    subl $156, %esp
-; AVX2-NEXT:    .cfi_def_cfa_offset 176
-; AVX2-NEXT:    .cfi_offset %esi, -20
-; AVX2-NEXT:    .cfi_offset %edi, -16
-; AVX2-NEXT:    .cfi_offset %ebx, -12
-; AVX2-NEXT:    .cfi_offset %ebp, -8
 ; AVX2-NEXT:    vmovups %ymm0, {{[-0-9]+}}(%e{{[sb]}}p) # 32-byte Spill
 ; AVX2-NEXT:    vmovups %ymm1, {{[-0-9]+}}(%e{{[sb]}}p) # 32-byte Spill
 ; AVX2-NEXT:    vextractps $1, %xmm1, {{[0-9]+}}(%esp)
@@ -472,33 +407,19 @@ define <8 x i64> @sdiv_v8i64(<8 x i64> %a) {
 ; AVX2-NEXT:    vinserti128 $1, {{[-0-9]+}}(%e{{[sb]}}p), %ymm0, %ymm1 # 16-byte Folded Reload
 ; AVX2-NEXT:    vmovups {{[-0-9]+}}(%e{{[sb]}}p), %ymm0 # 32-byte Reload
 ; AVX2-NEXT:    addl $156, %esp
-; AVX2-NEXT:    .cfi_def_cfa_offset 20
 ; AVX2-NEXT:    popl %esi
-; AVX2-NEXT:    .cfi_def_cfa_offset 16
 ; AVX2-NEXT:    popl %edi
-; AVX2-NEXT:    .cfi_def_cfa_offset 12
 ; AVX2-NEXT:    popl %ebx
-; AVX2-NEXT:    .cfi_def_cfa_offset 8
 ; AVX2-NEXT:    popl %ebp
-; AVX2-NEXT:    .cfi_def_cfa_offset 4
 ; AVX2-NEXT:    retl
 ;
 ; AVX512F-LABEL: sdiv_v8i64:
 ; AVX512F:       # %bb.0:
 ; AVX512F-NEXT:    pushl %ebp
-; AVX512F-NEXT:    .cfi_def_cfa_offset 8
 ; AVX512F-NEXT:    pushl %ebx
-; AVX512F-NEXT:    .cfi_def_cfa_offset 12
 ; AVX512F-NEXT:    pushl %edi
-; AVX512F-NEXT:    .cfi_def_cfa_offset 16
 ; AVX512F-NEXT:    pushl %esi
-; AVX512F-NEXT:    .cfi_def_cfa_offset 20
 ; AVX512F-NEXT:    subl $188, %esp
-; AVX512F-NEXT:    .cfi_def_cfa_offset 208
-; AVX512F-NEXT:    .cfi_offset %esi, -20
-; AVX512F-NEXT:    .cfi_offset %edi, -16
-; AVX512F-NEXT:    .cfi_offset %ebx, -12
-; AVX512F-NEXT:    .cfi_offset %ebp, -8
 ; AVX512F-NEXT:    vmovups %zmm0, {{[-0-9]+}}(%e{{[sb]}}p) # 64-byte Spill
 ; AVX512F-NEXT:    vextractps $1, %xmm0, {{[0-9]+}}(%esp)
 ; AVX512F-NEXT:    vmovss %xmm0, (%esp)
@@ -596,15 +517,10 @@ define <8 x i64> @sdiv_v8i64(<8 x i64> %a) {
 ; AVX512F-NEXT:    vinserti128 $1, {{[-0-9]+}}(%e{{[sb]}}p), %ymm0, %ymm0 # 16-byte Folded Reload
 ; AVX512F-NEXT:    vinserti64x4 $1, {{[-0-9]+}}(%e{{[sb]}}p), %zmm0, %zmm0 # 32-byte Folded Reload
 ; AVX512F-NEXT:    addl $188, %esp
-; AVX512F-NEXT:    .cfi_def_cfa_offset 20
 ; AVX512F-NEXT:    popl %esi
-; AVX512F-NEXT:    .cfi_def_cfa_offset 16
 ; AVX512F-NEXT:    popl %edi
-; AVX512F-NEXT:    .cfi_def_cfa_offset 12
 ; AVX512F-NEXT:    popl %ebx
-; AVX512F-NEXT:    .cfi_def_cfa_offset 8
 ; AVX512F-NEXT:    popl %ebp
-; AVX512F-NEXT:    .cfi_def_cfa_offset 4
 ; AVX512F-NEXT:    retl
 ;
 ; AVX512DQ-LABEL: sdiv_v8i64:
@@ -635,23 +551,14 @@ define <8 x i64> @sdiv_v8i64(<8 x i64> %a) {
   ret <8 x i64> %r
 }
 
-define <8 x i64> @srem_v8i64(<8 x i64> %a) {
+define <8 x i64> @srem_v8i64(<8 x i64> %a) nounwind {
 ; AVX2-LABEL: srem_v8i64:
 ; AVX2:       # %bb.0:
 ; AVX2-NEXT:    pushl %ebp
-; AVX2-NEXT:    .cfi_def_cfa_offset 8
 ; AVX2-NEXT:    pushl %ebx
-; AVX2-NEXT:    .cfi_def_cfa_offset 12
 ; AVX2-NEXT:    pushl %edi
-; AVX2-NEXT:    .cfi_def_cfa_offset 16
 ; AVX2-NEXT:    pushl %esi
-; AVX2-NEXT:    .cfi_def_cfa_offset 20
 ; AVX2-NEXT:    subl $156, %esp
-; AVX2-NEXT:    .cfi_def_cfa_offset 176
-; AVX2-NEXT:    .cfi_offset %esi, -20
-; AVX2-NEXT:    .cfi_offset %edi, -16
-; AVX2-NEXT:    .cfi_offset %ebx, -12
-; AVX2-NEXT:    .cfi_offset %ebp, -8
 ; AVX2-NEXT:    vmovups %ymm0, {{[-0-9]+}}(%e{{[sb]}}p) # 32-byte Spill
 ; AVX2-NEXT:    vmovups %ymm1, {{[-0-9]+}}(%e{{[sb]}}p) # 32-byte Spill
 ; AVX2-NEXT:    vextractps $1, %xmm1, {{[0-9]+}}(%esp)
@@ -749,33 +656,19 @@ define <8 x i64> @srem_v8i64(<8 x i64> %a) {
 ; AVX2-NEXT:    vinserti128 $1, {{[-0-9]+}}(%e{{[sb]}}p), %ymm0, %ymm1 # 16-byte Folded Reload
 ; AVX2-NEXT:    vmovups {{[-0-9]+}}(%e{{[sb]}}p), %ymm0 # 32-byte Reload
 ; AVX2-NEXT:    addl $156, %esp
-; AVX2-NEXT:    .cfi_def_cfa_offset 20
 ; AVX2-NEXT:    popl %esi
-; AVX2-NEXT:    .cfi_def_cfa_offset 16
 ; AVX2-NEXT:    popl %edi
-; AVX2-NEXT:    .cfi_def_cfa_offset 12
 ; AVX2-NEXT:    popl %ebx
-; AVX2-NEXT:    .cfi_def_cfa_offset 8
 ; AVX2-NEXT:    popl %ebp
-; AVX2-NEXT:    .cfi_def_cfa_offset 4
 ; AVX2-NEXT:    retl
 ;
 ; AVX512F-LABEL: srem_v8i64:
 ; AVX512F:       # %bb.0:
 ; AVX512F-NEXT:    pushl %ebp
-; AVX512F-NEXT:    .cfi_def_cfa_offset 8
 ; AVX512F-NEXT:    pushl %ebx
-; AVX512F-NEXT:    .cfi_def_cfa_offset 12
 ; AVX512F-NEXT:    pushl %edi
-; AVX512F-NEXT:    .cfi_def_cfa_offset 16
 ; AVX512F-NEXT:    pushl %esi
-; AVX512F-NEXT:    .cfi_def_cfa_offset 20
 ; AVX512F-NEXT:    subl $188, %esp
-; AVX512F-NEXT:    .cfi_def_cfa_offset 208
-; AVX512F-NEXT:    .cfi_offset %esi, -20
-; AVX512F-NEXT:    .cfi_offset %edi, -16
-; AVX512F-NEXT:    .cfi_offset %ebx, -12
-; AVX512F-NEXT:    .cfi_offset %ebp, -8
 ; AVX512F-NEXT:    vmovups %zmm0, {{[-0-9]+}}(%e{{[sb]}}p) # 64-byte Spill
 ; AVX512F-NEXT:    vextractps $1, %xmm0, {{[0-9]+}}(%esp)
 ; AVX512F-NEXT:    vmovss %xmm0, (%esp)
@@ -873,15 +766,10 @@ define <8 x i64> @srem_v8i64(<8 x i64> %a) {
 ; AVX512F-NEXT:    vinserti128 $1, {{[-0-9]+}}(%e{{[sb]}}p), %ymm0, %ymm0 # 16-byte Folded Reload
 ; AVX512F-NEXT:    vinserti64x4 $1, {{[-0-9]+}}(%e{{[sb]}}p), %zmm0, %zmm0 # 32-byte Folded Reload
 ; AVX512F-NEXT:    addl $188, %esp
-; AVX512F-NEXT:    .cfi_def_cfa_offset 20
 ; AVX512F-NEXT:    popl %esi
-; AVX512F-NEXT:    .cfi_def_cfa_offset 16
 ; AVX512F-NEXT:    popl %edi
-; AVX512F-NEXT:    .cfi_def_cfa_offset 12
 ; AVX512F-NEXT:    popl %ebx
-; AVX512F-NEXT:    .cfi_def_cfa_offset 8
 ; AVX512F-NEXT:    popl %ebp
-; AVX512F-NEXT:    .cfi_def_cfa_offset 4
 ; AVX512F-NEXT:    retl
 ;
 ; AVX512DQ-LABEL: srem_v8i64:
@@ -914,23 +802,14 @@ define <8 x i64> @srem_v8i64(<8 x i64> %a) {
   ret <8 x i64> %r
 }
 
-define <4 x i64> @sdiv_v4i64_negative(<4 x i64> %a) {
+define <4 x i64> @sdiv_v4i64_negative(<4 x i64> %a) nounwind {
 ; AVX2-LABEL: sdiv_v4i64_negative:
 ; AVX2:       # %bb.0:
 ; AVX2-NEXT:    pushl %ebp
-; AVX2-NEXT:    .cfi_def_cfa_offset 8
 ; AVX2-NEXT:    pushl %ebx
-; AVX2-NEXT:    .cfi_def_cfa_offset 12
 ; AVX2-NEXT:    pushl %edi
-; AVX2-NEXT:    .cfi_def_cfa_offset 16
 ; AVX2-NEXT:    pushl %esi
-; AVX2-NEXT:    .cfi_def_cfa_offset 20
 ; AVX2-NEXT:    subl $76, %esp
-; AVX2-NEXT:    .cfi_def_cfa_offset 96
-; AVX2-NEXT:    .cfi_offset %esi, -20
-; AVX2-NEXT:    .cfi_offset %edi, -16
-; AVX2-NEXT:    .cfi_offset %ebx, -12
-; AVX2-NEXT:    .cfi_offset %ebp, -8
 ; AVX2-NEXT:    vmovups %ymm0, {{[-0-9]+}}(%e{{[sb]}}p) # 32-byte Spill
 ; AVX2-NEXT:    vextractps $1, %xmm0, {{[0-9]+}}(%esp)
 ; AVX2-NEXT:    vmovss %xmm0, (%esp)
@@ -977,33 +856,19 @@ define <4 x i64> @sdiv_v4i64_negative(<4 x i64> %a) {
 ; AVX2-NEXT:    vpinsrd $3, %edx, %xmm0, %xmm0
 ; AVX2-NEXT:    vinserti128 $1, {{[-0-9]+}}(%e{{[sb]}}p), %ymm0, %ymm0 # 16-byte Folded Reload
 ; AVX2-NEXT:    addl $76, %esp
-; AVX2-NEXT:    .cfi_def_cfa_offset 20
 ; AVX2-NEXT:    popl %esi
-; AVX2-NEXT:    .cfi_def_cfa_offset 16
 ; AVX2-NEXT:    popl %edi
-; AVX2-NEXT:    .cfi_def_cfa_offset 12
 ; AVX2-NEXT:    popl %ebx
-; AVX2-NEXT:    .cfi_def_cfa_offset 8
 ; AVX2-NEXT:    popl %ebp
-; AVX2-NEXT:    .cfi_def_cfa_offset 4
 ; AVX2-NEXT:    retl
 ;
 ; AVX512F-LABEL: sdiv_v4i64_negative:
 ; AVX512F:       # %bb.0:
 ; AVX512F-NEXT:    pushl %ebp
-; AVX512F-NEXT:    .cfi_def_cfa_offset 8
 ; AVX512F-NEXT:    pushl %ebx
-; AVX512F-NEXT:    .cfi_def_cfa_offset 12
 ; AVX512F-NEXT:    pushl %edi
-; AVX512F-NEXT:    .cfi_def_cfa_offset 16
 ; AVX512F-NEXT:    pushl %esi
-; AVX512F-NEXT:    .cfi_def_cfa_offset 20
 ; AVX512F-NEXT:    subl $76, %esp
-; AVX512F-NEXT:    .cfi_def_cfa_offset 96
-; AVX512F-NEXT:    .cfi_offset %esi, -20
-; AVX512F-NEXT:    .cfi_offset %edi, -16
-; AVX512F-NEXT:    .cfi_offset %ebx, -12
-; AVX512F-NEXT:    .cfi_offset %ebp, -8
 ; AVX512F-NEXT:    vmovups %ymm0, {{[-0-9]+}}(%e{{[sb]}}p) # 32-byte Spill
 ; AVX512F-NEXT:    vextractps $1, %xmm0, {{[0-9]+}}(%esp)
 ; AVX512F-NEXT:    vmovss %xmm0, (%esp)
@@ -1050,15 +915,10 @@ define <4 x i64> @sdiv_v4i64_negative(<4 x i64> %a) {
 ; AVX512F-NEXT:    vpinsrd $3, %edx, %xmm0, %xmm0
 ; AVX512F-NEXT:    vinserti128 $1, {{[-0-9]+}}(%e{{[sb]}}p), %ymm0, %ymm0 # 16-byte Folded Reload
 ; AVX512F-NEXT:    addl $76, %esp
-; AVX512F-NEXT:    .cfi_def_cfa_offset 20
 ; AVX512F-NEXT:    popl %esi
-; AVX512F-NEXT:    .cfi_def_cfa_offset 16
 ; AVX512F-NEXT:    popl %edi
-; AVX512F-NEXT:    .cfi_def_cfa_offset 12
 ; AVX512F-NEXT:    popl %ebx
-; AVX512F-NEXT:    .cfi_def_cfa_offset 8
 ; AVX512F-NEXT:    popl %ebp
-; AVX512F-NEXT:    .cfi_def_cfa_offset 4
 ; AVX512F-NEXT:    retl
 ;
 ; AVX512DQ-LABEL: sdiv_v4i64_negative:
@@ -1088,23 +948,14 @@ define <4 x i64> @sdiv_v4i64_negative(<4 x i64> %a) {
   ret <4 x i64> %r
 }
 
-define <4 x i64> @srem_v4i64_negative(<4 x i64> %a) {
+define <4 x i64> @srem_v4i64_negative(<4 x i64> %a) nounwind {
 ; AVX2-LABEL: srem_v4i64_negative:
 ; AVX2:       # %bb.0:
 ; AVX2-NEXT:    pushl %ebp
-; AVX2-NEXT:    .cfi_def_cfa_offset 8
 ; AVX2-NEXT:    pushl %ebx
-; AVX2-NEXT:    .cfi_def_cfa_offset 12
 ; AVX2-NEXT:    pushl %edi
-; AVX2-NEXT:    .cfi_def_cfa_offset 16
 ; AVX2-NEXT:    pushl %esi
-; AVX2-NEXT:    .cfi_def_cfa_offset 20
 ; AVX2-NEXT:    subl $76, %esp
-; AVX2-NEXT:    .cfi_def_cfa_offset 96
-; AVX2-NEXT:    .cfi_offset %esi, -20
-; AVX2-NEXT:    .cfi_offset %edi, -16
-; AVX2-NEXT:    .cfi_offset %ebx, -12
-; AVX2-NEXT:    .cfi_offset %ebp, -8
 ; AVX2-NEXT:    vmovups %ymm0, {{[-0-9]+}}(%e{{[sb]}}p) # 32-byte Spill
 ; AVX2-NEXT:    vextractps $1, %xmm0, {{[0-9]+}}(%esp)
 ; AVX2-NEXT:    vmovss %xmm0, (%esp)
@@ -1151,33 +1002,19 @@ define <4 x i64> @srem_v4i64_negative(<4 x i64> %a) {
 ; AVX2-NEXT:    vpinsrd $3, %edx, %xmm0, %xmm0
 ; AVX2-NEXT:    vinserti128 $1, {{[-0-9]+}}(%e{{[sb]}}p), %ymm0, %ymm0 # 16-byte Folded Reload
 ; AVX2-NEXT:    addl $76, %esp
-; AVX2-NEXT:    .cfi_def_cfa_offset 20
 ; AVX2-NEXT:    popl %esi
-; AVX2-NEXT:    .cfi_def_cfa_offset 16
 ; AVX2-NEXT:    popl %edi
-; AVX2-NEXT:    .cfi_def_cfa_offset 12
 ; AVX2-NEXT:    popl %ebx
-; AVX2-NEXT:    .cfi_def_cfa_offset 8
 ; AVX2-NEXT:    popl %ebp
-; AVX2-NEXT:    .cfi_def_cfa_offset 4
 ; AVX2-NEXT:    retl
 ;
 ; AVX512F-LABEL: srem_v4i64_negative:
 ; AVX512F:       # %bb.0:
 ; AVX512F-NEXT:    pushl %ebp
-; AVX512F-NEXT:    .cfi_def_cfa_offset 8
 ; AVX512F-NEXT:    pushl %ebx
-; AVX512F-NEXT:    .cfi_def_cfa_offset 12
 ; AVX512F-NEXT:    pushl %edi
-; AVX512F-NEXT:    .cfi_def_cfa_offset 16
 ; AVX512F-NEXT:    pushl %esi
-; AVX512F-NEXT:    .cfi_def_cfa_offset 20
 ; AVX512F-NEXT:    subl $76, %esp
-; AVX512F-NEXT:    .cfi_def_cfa_offset 96
-; AVX512F-NEXT:    .cfi_offset %esi, -20
-; AVX512F-NEXT:    .cfi_offset %edi, -16
-; AVX512F-NEXT:    .cfi_offset %ebx, -12
-; AVX512F-NEXT:    .cfi_offset %ebp, -8
 ; AVX512F-NEXT:    vmovups %ymm0, {{[-0-9]+}}(%e{{[sb]}}p) # 32-byte Spill
 ; AVX512F-NEXT:    vextractps $1, %xmm0, {{[0-9]+}}(%esp)
 ; AVX512F-NEXT:    vmovss %xmm0, (%esp)
@@ -1224,15 +1061,10 @@ define <4 x i64> @srem_v4i64_negative(<4 x i64> %a) {
 ; AVX512F-NEXT:    vpinsrd $3, %edx, %xmm0, %xmm0
 ; AVX512F-NEXT:    vinserti128 $1, {{[-0-9]+}}(%e{{[sb]}}p), %ymm0, %ymm0 # 16-byte Folded Reload
 ; AVX512F-NEXT:    addl $76, %esp
-; AVX512F-NEXT:    .cfi_def_cfa_offset 20
 ; AVX512F-NEXT:    popl %esi
-; AVX512F-NEXT:    .cfi_def_cfa_offset 16
 ; AVX512F-NEXT:    popl %edi
-; AVX512F-NEXT:    .cfi_def_cfa_offset 12
 ; AVX512F-NEXT:    popl %ebx
-; AVX512F-NEXT:    .cfi_def_cfa_offset 8
 ; AVX512F-NEXT:    popl %ebp
-; AVX512F-NEXT:    .cfi_def_cfa_offset 4
 ; AVX512F-NEXT:    retl
 ;
 ; AVX512DQ-LABEL: srem_v4i64_negative:
@@ -1264,23 +1096,14 @@ define <4 x i64> @srem_v4i64_negative(<4 x i64> %a) {
   ret <4 x i64> %r
 }
 
-define <8 x i64> @sdiv_v8i64_negative(<8 x i64> %a) {
+define <8 x i64> @sdiv_v8i64_negative(<8 x i64> %a) nounwind {
 ; AVX2-LABEL: sdiv_v8i64_negative:
 ; AVX2:       # %bb.0:
 ; AVX2-NEXT:    pushl %ebp
-; AVX2-NEXT:    .cfi_def_cfa_offset 8
 ; AVX2-NEXT:    pushl %ebx
-; AVX2-NEXT:    .cfi_def_cfa_offset 12
 ; AVX2-NEXT:    pushl %edi
-; AVX2-NEXT:    .cfi_def_cfa_offset 16
 ; AVX2-NEXT:    pushl %esi
-; AVX2-NEXT:    .cfi_def_cfa_offset 20
 ; AVX2-NEXT:    subl $156, %esp
-; AVX2-NEXT:    .cfi_def_cfa_offset 176
-; AVX2-NEXT:    .cfi_offset %esi, -20
-; AVX2-NEXT:    .cfi_offset %edi, -16
-; AVX2-NEXT:    .cfi_offset %ebx, -12
-; AVX2-NEXT:    .cfi_offset %ebp, -8
 ; AVX2-NEXT:    vmovups %ymm0, {{[-0-9]+}}(%e{{[sb]}}p) # 32-byte Spill
 ; AVX2-NEXT:    vmovups %ymm1, {{[-0-9]+}}(%e{{[sb]}}p) # 32-byte Spill
 ; AVX2-NEXT:    vextractps $1, %xmm1, {{[0-9]+}}(%esp)
@@ -1378,33 +1201,19 @@ define <8 x i64> @sdiv_v8i64_negative(<8 x i64> %a) {
 ; AVX2-NEXT:    vinserti128 $1, {{[-0-9]+}}(%e{{[sb]}}p), %ymm0, %ymm1 # 16-byte Folded Reload
 ; AVX2-NEXT:    vmovups {{[-0-9]+}}(%e{{[sb]}}p), %ymm0 # 32-byte Reload
 ; AVX2-NEXT:    addl $156, %esp
-; AVX2-NEXT:    .cfi_def_cfa_offset 20
 ; AVX2-NEXT:    popl %esi
-; AVX2-NEXT:    .cfi_def_cfa_offset 16
 ; AVX2-NEXT:    popl %edi
-; AVX2-NEXT:    .cfi_def_cfa_offset 12
 ; AVX2-NEXT:    popl %ebx
-; AVX2-NEXT:    .cfi_def_cfa_offset 8
 ; AVX2-NEXT:    popl %ebp
-; AVX2-NEXT:    .cfi_def_cfa_offset 4
 ; AVX2-NEXT:    retl
 ;
 ; AVX512F-LABEL: sdiv_v8i64_negative:
 ; AVX512F:       # %bb.0:
 ; AVX512F-NEXT:    pushl %ebp
-; AVX512F-NEXT:    .cfi_def_cfa_offset 8
 ; AVX512F-NEXT:    pushl %ebx
-; AVX512F-NEXT:    .cfi_def_cfa_offset 12
 ; AVX512F-NEXT:    pushl %edi
-; AVX512F-NEXT:    .cfi_def_cfa_offset 16
 ; AVX512F-NEXT:    pushl %esi
-; AVX512F-NEXT:    .cfi_def_cfa_offset 20
 ; AVX512F-NEXT:    subl $188, %esp
-; AVX512F-NEXT:    .cfi_def_cfa_offset 208
-; AVX512F-NEXT:    .cfi_offset %esi, -20
-; AVX512F-NEXT:    .cfi_offset %edi, -16
-; AVX512F-NEXT:    .cfi_offset %ebx, -12
-; AVX512F-NEXT:    .cfi_offset %ebp, -8
 ; AVX512F-NEXT:    vmovups %zmm0, {{[-0-9]+}}(%e{{[sb]}}p) # 64-byte Spill
 ; AVX512F-NEXT:    vextractps $1, %xmm0, {{[0-9]+}}(%esp)
 ; AVX512F-NEXT:    vmovss %xmm0, (%esp)
@@ -1502,15 +1311,10 @@ define <8 x i64> @sdiv_v8i64_negative(<8 x i64> %a) {
 ; AVX512F-NEXT:    vinserti128 $1, {{[-0-9]+}}(%e{{[sb]}}p), %ymm0, %ymm0 # 16-byte Folded Reload
 ; AVX512F-NEXT:    vinserti64x4 $1, {{[-0-9]+}}(%e{{[sb]}}p), %zmm0, %zmm0 # 32-byte Folded Reload
 ; AVX512F-NEXT:    addl $188, %esp
-; AVX512F-NEXT:    .cfi_def_cfa_offset 20
 ; AVX512F-NEXT:    popl %esi
-; AVX512F-NEXT:    .cfi_def_cfa_offset 16
 ; AVX512F-NEXT:    popl %edi
-; AVX512F-NEXT:    .cfi_def_cfa_offset 12
 ; AVX512F-NEXT:    popl %ebx
-; AVX512F-NEXT:    .cfi_def_cfa_offset 8
 ; AVX512F-NEXT:    popl %ebp
-; AVX512F-NEXT:    .cfi_def_cfa_offset 4
 ; AVX512F-NEXT:    retl
 ;
 ; AVX512DQ-LABEL: sdiv_v8i64_negative:
@@ -1539,23 +1343,14 @@ define <8 x i64> @sdiv_v8i64_negative(<8 x i64> %a) {
   ret <8 x i64> %r
 }
 
-define <8 x i64> @srem_v8i64_negative(<8 x i64> %a) {
+define <8 x i64> @srem_v8i64_negative(<8 x i64> %a) nounwind {
 ; AVX2-LABEL: srem_v8i64_negative:
 ; AVX2:       # %bb.0:
 ; AVX2-NEXT:    pushl %ebp
-; AVX2-NEXT:    .cfi_def_cfa_offset 8
 ; AVX2-NEXT:    pushl %ebx
-; AVX2-NEXT:    .cfi_def_cfa_offset 12
 ; AVX2-NEXT:    pushl %edi
-; AVX2-NEXT:    .cfi_def_cfa_offset 16
 ; AVX2-NEXT:    pushl %esi
-; AVX2-NEXT:    .cfi_def_cfa_offset 20
 ; AVX2-NEXT:    subl $156, %esp
-; AVX2-NEXT:    .cfi_def_cfa_offset 176
-; AVX2-NEXT:    .cfi_offset %esi, -20
-; AVX2-NEXT:    .cfi_offset %edi, -16
-; AVX2-NEXT:    .cfi_offset %ebx, -12
-; AVX2-NEXT:    .cfi_offset %ebp, -8
 ; AVX2-NEXT:    vmovups %ymm0, {{[-0-9]+}}(%e{{[sb]}}p) # 32-byte Spill
 ; AVX2-NEXT:    vmovups %ymm1, {{[-0-9]+}}(%e{{[sb]}}p) # 32-byte Spill
 ; AVX2-NEXT:    vextractps $1, %xmm1, {{[0-9]+}}(%esp)
@@ -1653,33 +1448,19 @@ define <8 x i64> @srem_v8i64_negative(<8 x i64> %a) {
 ; AVX2-NEXT:    vinserti128 $1, {{[-0-9]+}}(%e{{[sb]}}p), %ymm0, %ymm1 # 16-byte Folded Reload
 ; AVX2-NEXT:    vmovups {{[-0-9]+}}(%e{{[sb]}}p), %ymm0 # 32-byte Reload
 ; AVX2-NEXT:    addl $156, %esp
-; AVX2-NEXT:    .cfi_def_cfa_offset 20
 ; AVX2-NEXT:    popl %esi
-; AVX2-NEXT:    .cfi_def_cfa_offset 16
 ; AVX2-NEXT:    popl %edi
-; AVX2-NEXT:    .cfi_def_cfa_offset 12
 ; AVX2-NEXT:    popl %ebx
-; AVX2-NEXT:    .cfi_def_cfa_offset 8
 ; AVX2-NEXT:    popl %ebp
-; AVX2-NEXT:    .cfi_def_cfa_offset 4
 ; AVX2-NEXT:    retl
 ;
 ; AVX512F-LABEL: srem_v8i64_negative:
 ; AVX512F:       # %bb.0:
 ; AVX512F-NEXT:    pushl %ebp
-; AVX512F-NEXT:    .cfi_def_cfa_offset 8
 ; AVX512F-NEXT:    pushl %ebx
-; AVX512F-NEXT:    .cfi_def_cfa_offset 12
 ; AVX512F-NEXT:    pushl %edi
-; AVX512F-NEXT:    .cfi_def_cfa_offset 16
 ; AVX512F-NEXT:    pushl %esi
-; AVX512F-NEXT:    .cfi_def_cfa_offset 20
 ; AVX512F-NEXT:    subl $188, %esp
-; AVX512F-NEXT:    .cfi_def_cfa_offset 208
-; AVX512F-NEXT:    .cfi_offset %esi, -20
-; AVX512F-NEXT:    .cfi_offset %edi, -16
-; AVX512F-NEXT:    .cfi_offset %ebx, -12
-; AVX512F-NEXT:    .cfi_offset %ebp, -8
 ; AVX512F-NEXT:    vmovups %zmm0, {{[-0-9]+}}(%e{{[sb]}}p) # 64-byte Spill
 ; AVX512F-NEXT:    vextractps $1, %xmm0, {{[0-9]+}}(%esp)
 ; AVX512F-NEXT:    vmovss %xmm0, (%esp)
@@ -1777,15 +1558,10 @@ define <8 x i64> @srem_v8i64_negative(<8 x i64> %a) {
 ; AVX512F-NEXT:    vinserti128 $1, {{[-0-9]+}}(%e{{[sb]}}p), %ymm0, %ymm0 # 16-byte Folded Reload
 ; AVX512F-NEXT:    vinserti64x4 $1, {{[-0-9]+}}(%e{{[sb]}}p), %zmm0, %zmm0 # 32-byte Folded Reload
 ; AVX512F-NEXT:    addl $188, %esp
-; AVX512F-NEXT:    .cfi_def_cfa_offset 20
 ; AVX512F-NEXT:    popl %esi
-; AVX512F-NEXT:    .cfi_def_cfa_offset 16
 ; AVX512F-NEXT:    popl %edi
-; AVX512F-NEXT:    .cfi_def_cfa_offset 12
 ; AVX512F-NEXT:    popl %ebx
-; AVX512F-NEXT:    .cfi_def_cfa_offset 8
 ; AVX512F-NEXT:    popl %ebp
-; AVX512F-NEXT:    .cfi_def_cfa_offset 4
 ; AVX512F-NEXT:    retl
 ;
 ; AVX512DQ-LABEL: srem_v8i64_negative:
