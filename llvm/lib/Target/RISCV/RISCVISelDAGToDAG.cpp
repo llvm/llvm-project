@@ -3701,6 +3701,29 @@ bool RISCVDAGToDAGISel::SelectAddrRegImm(SDValue Addr, SDValue &Base,
   return true;
 }
 
+/// Similar to SelectAddrRegImm, but only matches a register, or a register
+/// plus a simm12 offset. Doesn't match a FrameIndex or global address, since
+/// those aren't valid for the callers of this function (e.g. the target of
+/// an indirect branch).
+bool RISCVDAGToDAGISel::SelectBrindRegImm(SDValue Addr, SDValue &Base,
+                                          SDValue &Offset) {
+  SDLoc DL(Addr);
+  MVT VT = Addr.getSimpleValueType();
+
+  if (CurDAG->isBaseWithConstantOffset(Addr)) {
+    int64_t CVal = cast<ConstantSDNode>(Addr.getOperand(1))->getSExtValue();
+    if (isInt<12>(CVal)) {
+      Base = Addr.getOperand(0);
+      Offset = CurDAG->getSignedTargetConstant(CVal, DL, VT);
+      return true;
+    }
+  }
+
+  Base = Addr;
+  Offset = CurDAG->getTargetConstant(0, DL, VT);
+  return true;
+}
+
 /// Similar to SelectAddrRegImm, except that the offset is a 26-bit signed
 /// immediate. This is used by the Qualcomm Xqcilo large offset load/store
 /// instructions (qc.e.lw/qc.e.sw), whose offset field is 26 bits wide.
