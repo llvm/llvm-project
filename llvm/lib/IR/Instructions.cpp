@@ -1840,6 +1840,10 @@ bool ShuffleVectorInst::isValidOperands(const Value *V1, const Value *V2,
   // Make sure the mask elements make sense.
   int V1Size =
       cast<VectorType>(V1->getType())->getElementCount().getKnownMinValue();
+
+  if (V1Size > (INT_MAX / 2))
+    return false;
+
   for (int Elem : Mask)
     if (Elem != PoisonMaskElem && Elem >= V1Size * 2)
       return false;
