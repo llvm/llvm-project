@@ -9,14 +9,40 @@
 
 // RUN: rm -f %t && %{compile} && FileCheck %s --input-file=%t -check-prefix CHECK-IR && %{run} | FileCheck %s
 
-// End-to-end test for `linalg.matmul` on i8 operands accumulating to i32,
-// lowered via `linalg.pack -> linalg.mmt4d -> linalg.unpack` down to Arm's
-// FEAT_I8MM `smmla`. Packing gives the inner tiles a statically-known shape,
-// so the vectorized `vector.contract` never needs masking, and
-// `linalg.mmt4d`'s RHS is already N-major (that's the "t" in "mmt4d"),
-// exactly what `LowerContractionToNeonI8MMPattern` expects -- no
-// transpose_matmul step needed here, unlike a plain `linalg.matmul`.
+//===----------------------------------------------------------------------===//
+/// HIGH-LEVEL OVERVIEW
+///
+/// End-to-end test for `linalg.matmul` on i8 operands accumulating to i32,
+/// lowered via `linalg.pack -> linalg.mmt4d -> linalg.unpack`
+/// (@matmul_via_mmt4d) down to Arm's FEAT_I8MM `smmla`, cross-checked
+/// against a plain `linalg.matmul` (@matmul).
+///
+/// NOTES ON IMPLEMENTATION
+/// 1. @matmul is only lowered via `-test-lower-to-llvm`, no tiling or
+///    vectorization - it's a reference check, not a lowering path under
+///    test.
+///
+/// 2. FEAT_I8MM's `smmla` consumes the whole K reduction in one instruction,
+///    so the inner tile is (M0, N0, K0) = (4, 4, 8): K0 must be a multiple
+///    of 8, with no further splitting of the reduction needed.
+///
+/// 3. `linalg.mmt4d`'s RHS is already N-major (that's the "t" in "mmt4d"),
+///    exactly what `LowerContractionToNeonI8MMPattern` expects.
+///
+/// 4. Packing gives the inner tiles a statically-known shape, so the
+///    vectorized `vector.contract` never needs masking.
+///
+/// 5. MMT4D and Pack/Unpack are kept in separate functions to isolate their
+///    lowering and lowering configs.
+//===----------------------------------------------------------------------===//
 
+//===----------------------------------------------------------------------===//
+// @main
+//
+// The main entry point that computes matrix multiplication via
+// linalg.mmt4d and linalg.matmul. The output should be independent of the
+// Linalg Op used.
+//===----------------------------------------------------------------------===//
 func.func @main() {
   %A_empty = tensor.empty() : tensor<7x16xi8>
   %B_empty = tensor.empty() : tensor<16x13xi8>
@@ -49,7 +75,7 @@ func.func @main() {
   vector.print str "RESULT FROM linalg.mmt4d:\n"
   call @printMemrefI32(%C_mmt4d_cast) : (tensor<*xi32>) -> ()
 
-  // VARIANT: Matrix multiplication via linalg.matmul (cross-check)
+  // VARIANT: Matrix multiplication via linalg.matmul (reference check)
   // CHECK: Unranked Memref
   // CHECK:  [193,   200,   207,   214,   221,   228,   235,   242,   249,   256,   263,   270,   277]
   // CHECK:  [194,   201,   208,   215,   222,   229,   236,   243,   250,   257,   264,   271,   278]
@@ -66,13 +92,25 @@ func.func @main() {
   return
 }
 
+//===----------------------------------------------------------------------===//
+// @matmul
+//
+// Implements matrix-multiplication via linalg.matmul. Lowered only via
+// `-test-lower-to-llvm` (no tiling, no vectorization): this is a reference
+// check for @matmul_via_mmt4d, not a lowering path under test.
+//===----------------------------------------------------------------------===//
 func.func private @matmul(%A: tensor<7x16xi8>, %B: tensor<16x13xi8>, %C: tensor<7x13xi32>) -> tensor<7x13xi32> {
   %C_matmul = linalg.matmul ins(%A, %B: tensor<7x16xi8>, tensor<16x13xi8>)
                             outs(%C: tensor<7x13xi32>) -> tensor<7x13xi32>
   return %C_matmul : tensor<7x13xi32>
 }
 
-// LHS packed tile: M0=4, K0=8 (K0 must be a multiple of 8 for FEAT_I8MM).
+//===----------------------------------------------------------------------===//
+// @pack_lhs
+//
+// Implements packing for the A matrix (LHS) in matrix multiplication. The
+// inner tile size is fixed: 4 * 8 (K0 must be a multiple of 8 for FEAT_I8MM).
+//===----------------------------------------------------------------------===//
 func.func private @pack_lhs(%A: tensor<7x16xi8>) -> tensor<2x2x4x8xi8> {
   %pad = arith.constant 0 : i8
   %A_pack_empty = tensor.empty() : tensor<2x2x4x8xi8>
@@ -84,7 +122,12 @@ func.func private @pack_lhs(%A: tensor<7x16xi8>) -> tensor<2x2x4x8xi8> {
   return %A_pack : tensor<2x2x4x8xi8>
 }
 
-// RHS packed tile: N0=4, K0=8.
+//===----------------------------------------------------------------------===//
+// @pack_rhs
+//
+// Implements packing for the B matrix (RHS) in matrix multiplication. The
+// inner tile size is fixed: 4 * 8.
+//===----------------------------------------------------------------------===//
 func.func private @pack_rhs(%B: tensor<16x13xi8>) -> tensor<4x2x4x8xi8> {
   %pad = arith.constant 0 : i8
   %B_pack_empty = tensor.empty() : tensor<4x2x4x8xi8>
@@ -97,6 +140,12 @@ func.func private @pack_rhs(%B: tensor<16x13xi8>) -> tensor<4x2x4x8xi8> {
   return %B_pack : tensor<4x2x4x8xi8>
 }
 
+//===----------------------------------------------------------------------===//
+// @pack_acc
+//
+// Implements packing for the C matrix (accumulator) in matrix multiplication.
+// The inner tile size is fixed: 4 * 4.
+//===----------------------------------------------------------------------===//
 func.func private @pack_acc(%C: tensor<7x13xi32>) -> tensor<2x4x4x4xi32> {
   %pad = arith.constant 0 : i32
   %C_pack_empty = tensor.empty() : tensor<2x4x4x4xi32>
@@ -109,6 +158,12 @@ func.func private @pack_acc(%C: tensor<7x13xi32>) -> tensor<2x4x4x4xi32> {
   return %C_pack : tensor<2x4x4x4xi32>
 }
 
+//===----------------------------------------------------------------------===//
+// @unpack_acc
+//
+// Implements unpacking for the C matrix (accumulator) in matrix
+// multiplication. The inner tile size is fixed: 4 * 4.
+//===----------------------------------------------------------------------===//
 func.func private @unpack_acc(%C_packed: tensor<2x4x4x4xi32>) -> tensor<7x13xi32> {
   %C_out_empty = tensor.empty() : tensor<7x13xi32>
   %C_out_unpack = linalg.unpack %C_packed
@@ -119,24 +174,39 @@ func.func private @unpack_acc(%C_packed: tensor<2x4x4x4xi32>) -> tensor<7x13xi32
   return %C_out_unpack: tensor<7x13xi32>
 }
 
+//===----------------------------------------------------------------------===//
+// @matmul_via_mmt4d
+//
+// Implements matrix-multiplication via linalg.mmt4d.
+//===----------------------------------------------------------------------===//
 // CHECK-IR-LABEL: llvm.func @matmul_via_mmt4d
 // CHECK-IR-COUNT-4: arm_neon.intr.smmla
 func.func private @matmul_via_mmt4d(%A: tensor<7x16xi8>, %B: tensor<16x13xi8>, %C: tensor<7x13xi32>) -> tensor<7x13xi32> {
+  // Pack input matrices
   %A_pack = func.call @pack_lhs(%A): (tensor<7x16xi8>) -> tensor<2x2x4x8xi8>
   %B_pack = func.call @pack_rhs(%B): (tensor<16x13xi8>) -> tensor<4x2x4x8xi8>
   %C_pack = func.call @pack_acc(%C): (tensor<7x13xi32>) -> tensor<2x4x4x4xi32>
 
+  // MMT4D
   %mmt4d = linalg.mmt4d ins(%A_pack, %B_pack : tensor<2x2x4x8xi8>, tensor<4x2x4x8xi8>) outs(%C_pack : tensor<2x4x4x4xi32>) -> tensor<2x4x4x4xi32>
 
+  // Unpack the output
   %C_out_unpack = func.call @unpack_acc(%mmt4d) : (tensor<2x4x4x4xi32>) -> tensor<7x13xi32>
   return %C_out_unpack : tensor<7x13xi32>
 }
 
+//===----------------------------------------------------------------------===//
+// TD Sequence
+//===----------------------------------------------------------------------===//
 module @transforms attributes { transform.with_named_sequence } {
   transform.named_sequence @__transform_main(%module: !transform.any_op {transform.consumed}) {
+    //==========================================================================
+    // HANDLE MMT4D
+    //==========================================================================
     %mmt4d = transform.collect_matching @match_mmt4d in %module : (!transform.any_op) -> (!transform.any_op)
     %mmt4d_func = transform.get_parent_op %mmt4d <isolated_from_above> : (!transform.any_op) -> !transform.op<"func.func">
 
+    // Step 1: Tile
     // Tile parallel dims (m, n, k, m0, n0, k0): full inner tiles, one outer
     // iteration at a time.
     %tiled_mmt4d_parallel, %_:4 = transform.structured.tile_using_for %mmt4d tile_sizes [1, 1, 0, 4, 4, 0]
@@ -146,17 +216,20 @@ module @transforms attributes { transform.with_named_sequence } {
     %tiled_mmt4d, %_1:2 = transform.structured.tile_using_for %tiled_mmt4d_parallel tile_sizes [0, 0, 1, 0, 0, 8]
       : (!transform.any_op) -> (!transform.any_op, !transform.any_op, !transform.any_op)
 
+    // Step 2: Vectorize
     // Vectorize directly to a named `vector.contract` (compact 2-operand
     // form) instead of the generic broadcast form, since
     // LowerContractionToNeonI8MMPattern requires LHS/RHS rank <= 2.
     transform.structured.vectorize %tiled_mmt4d create_named_contraction
       vector_sizes [1, 1, 1, 4, 4, 8] : !transform.any_op
 
+    // Step 3: Simplify
     transform.apply_patterns to %mmt4d_func {
       transform.apply_patterns.vector.reduction_to_contract
       transform.apply_patterns.vector.transfer_permutation_patterns
     } : !transform.op<"func.func">
 
+    // Hoisting and LICM - not strictly required
     %mmt4d_func_h = transform.structured.hoist_redundant_vector_transfers %mmt4d_func
       : (!transform.op<"func.func">) -> !transform.op<"func.func">
     %all_loops = transform.structured.match interface{LoopLikeInterface} in %mmt4d_func_h
@@ -164,20 +237,30 @@ module @transforms attributes { transform.with_named_sequence } {
     transform.apply_licm to %all_loops : !transform.any_op
     transform.loop.hoist_loop_invariant_subsets %all_loops : !transform.any_op
 
+    // Simplification
     transform.apply_patterns to %mmt4d_func_h {
       transform.apply_patterns.vector.reduction_to_contract
       transform.apply_patterns.vector.cast_away_vector_leading_one_dim
       transform.apply_patterns.canonicalization
     } : !transform.op<"func.func">
 
+    //==========================================================================
+    // HANDLE PACK + UNPACK
+    //==========================================================================
     %pack = transform.structured.match ops{["linalg.pack"]} in %module : (!transform.any_op) -> !transform.any_op
     %unpack = transform.structured.match ops{["linalg.unpack"]} in %module : (!transform.any_op) -> !transform.any_op
 
+    // 1.1 Tile the linalg.pack Op so that we can decompose it into e.g. tensor.pad
+    //    and other lower-level Ops (see step 2.1)
     %tiled_pack_op_p, %loops_pack:2 = transform.structured.tile_using_for %pack tile_sizes [1, 1]
        : (!transform.any_op) -> (!transform.any_op, !transform.any_op, !transform.any_op)
+
+    // 1.2 Tile the linalg.unpack Op so that we can decompose it into e.g. tensor.pad
+    //    and other lower-level Ops (see step 2.2)
     %tiled_unpack_op_p, %loops_unpack:2 = transform.structured.tile_using_for %unpack tile_sizes [4, 4]
        : (!transform.any_op) -> (!transform.any_op, !transform.any_op, !transform.any_op)
 
+    // 2.1. Decompose tiled PackOp into lower-level Ops + simplify
     %func_op_pack = transform.get_parent_op %tiled_pack_op_p <isolated_from_above> : (!transform.any_op) -> !transform.op<"func.func">
     transform.apply_patterns to %func_op_pack {
       transform.apply_patterns.linalg.decompose_pack_unpack
@@ -188,6 +271,7 @@ module @transforms attributes { transform.with_named_sequence } {
       transform.apply_patterns.canonicalization
     } : !transform.op<"func.func">
 
+    // 2.2. Decompose tiled UnpackOp into lower-level Ops + simplify
     %func_op_unpack = transform.get_parent_op %tiled_unpack_op_p <isolated_from_above> : (!transform.any_op) -> !transform.op<"func.func">
     transform.apply_patterns to %func_op_unpack {
       transform.apply_patterns.linalg.decompose_pack_unpack
@@ -197,9 +281,15 @@ module @transforms attributes { transform.with_named_sequence } {
       transform.apply_patterns.canonicalization
     } : !transform.op<"func.func">
 
+    //==========================================================================
+    // BUFFERIZATION
+    //==========================================================================
     %bufferize = transform.bufferization.one_shot_bufferize %module
       <bufferize_function_boundaries = true> : (!transform.any_op) -> !transform.any_op
 
+    //==========================================================================
+    // SIMPLIFY THE CONTRACT Op
+    //==========================================================================
     %contract = transform.collect_matching @match_contract in %bufferize : (!transform.any_op) -> (!transform.any_op)
     %contract_func = transform.get_parent_op %contract <isolated_from_above> : (!transform.any_op) -> !transform.op<"func.func">
 
@@ -209,7 +299,10 @@ module @transforms attributes { transform.with_named_sequence } {
       transform.apply_patterns.canonicalization
     } : !transform.op<"func.func">
 
-    // Target FEAT_I8MM directly -- by this point the data is packed and
+    //==========================================================================
+    // LOWER CONTRACT TO I8MM
+    //==========================================================================
+    // Target FEAT_I8MM directly - by this point the data is packed and
     // statically shaped, so no masking survives to block the pattern.
     transform.apply_patterns to %contract_func {
       transform.apply_patterns.arm_neon.vector_contract_to_i8mm
@@ -218,6 +311,9 @@ module @transforms attributes { transform.with_named_sequence } {
     transform.yield
   }
 
+  //==========================================================================
+  // TD MATCHERS (helper hooks)
+  //==========================================================================
   transform.named_sequence @match_mmt4d(
       %entry: !transform.any_op {transform.readonly}) -> !transform.any_op {
     transform.match.operation_name %entry ["linalg.mmt4d"] : !transform.any_op
@@ -231,4 +327,7 @@ module @transforms attributes { transform.with_named_sequence } {
   }
 }
 
+//===----------------------------------------------------------------------===//
+// Function signatures
+//===----------------------------------------------------------------------===//
 func.func private @printMemrefI32(%ptr : tensor<*xi32>)
