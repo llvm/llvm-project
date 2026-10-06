@@ -95,7 +95,8 @@ const llvm::abi::Type *ABITypeMapper::mapMemRefType(mlir::MemRefType type) {
     if (auto intAttr = dyn_cast<IntegerAttr>(as))
       addrSpace = intAttr.getInt();
   return builder.getPointerType(sizeInBits.getFixedValue(),
-                                llvm::Align(abiAlign), addrSpace);
+                                llvm::Align(abiAlign), addrSpace,
+                                llvm::abi::PointerFlags::None);
 }
 
 const llvm::abi::Type *ABITypeMapper::mapNoneType(mlir::NoneType type) {

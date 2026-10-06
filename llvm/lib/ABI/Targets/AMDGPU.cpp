@@ -138,9 +138,9 @@ ArgInfo AMDGPUTargetInfo::classifyKernelArgumentType(const Type *Ty) const {
   if (CoerceGenericPtrArgToGlobal) {
     if (const auto *PtrTy = dyn_cast<PointerType>(Ty);
         PtrTy && PtrTy->getAddrSpace() == AMDGPUAS::FLAT_ADDRESS) {
-      const Type *Coerced =
-          TB.getPointerType(PtrTy->getSizeInBits().getFixedValue(),
-                            PtrTy->getAlignment(), AMDGPUAS::GLOBAL_ADDRESS);
+      const Type *Coerced = TB.getPointerType(
+          PtrTy->getSizeInBits().getFixedValue(), PtrTy->getAlignment(),
+          AMDGPUAS::GLOBAL_ADDRESS, PointerFlags::None);
       return ArgInfo::getDirect(Coerced, /*Offset=*/0, /*Align=*/std::nullopt,
                                 /*CanBeFlattened=*/false);
     }

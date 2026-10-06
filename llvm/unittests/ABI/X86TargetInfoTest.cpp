@@ -328,7 +328,9 @@ TEST_F(X86TargetInfoTest, UnionTailPaddingSizesHighHalfFromUnion) {
   const ABIType *U32 = TB.getIntegerType(32, llvm::Align(4), /*Signed=*/false);
   const ABIType *Words = TB.getArrayType(U32, /*NumElements=*/3,
                                          /*SizeInBits=*/96);
-  const ABIType *Ptr = TB.getPointerType(64, llvm::Align(8));
+  const ABIType *Ptr =
+      TB.getPointerType(64, llvm::Align(8), /*Addrspace=*/0,
+                        llvm::abi::PointerFlags::IsPointerOrReference);
   const ABIType *U =
       unionOf({FieldInfo(Words), FieldInfo(Ptr)}, 128, llvm::Align(8));
   llvm::ArrayRef<FieldInfo> Pair = directPair(classifyArg(U, FI, TI));
@@ -344,7 +346,9 @@ TEST_F(X86TargetInfoTest, UnionTailPaddingNarrowsHighHalfToByte) {
   std::unique_ptr<TargetInfo> TI;
   const ABIType *Bytes = TB.getArrayType(I8, /*NumElements=*/9,
                                          /*SizeInBits=*/72);
-  const ABIType *Ptr = TB.getPointerType(64, llvm::Align(8));
+  const ABIType *Ptr =
+      TB.getPointerType(64, llvm::Align(8), /*Addrspace=*/0,
+                        llvm::abi::PointerFlags::IsPointerOrReference);
   const ABIType *U =
       unionOf({FieldInfo(Bytes), FieldInfo(Ptr)}, 128, llvm::Align(8));
   llvm::ArrayRef<FieldInfo> Pair = directPair(classifyArg(U, FI, TI));
@@ -360,7 +364,9 @@ TEST_F(X86TargetInfoTest, UnionTailPaddingKeepsHighHalfPastOneByte) {
   std::unique_ptr<TargetInfo> TI;
   const ABIType *Bytes = TB.getArrayType(I8, /*NumElements=*/10,
                                          /*SizeInBits=*/80);
-  const ABIType *Ptr = TB.getPointerType(64, llvm::Align(8));
+  const ABIType *Ptr =
+      TB.getPointerType(64, llvm::Align(8), /*Addrspace=*/0,
+                        llvm::abi::PointerFlags::IsPointerOrReference);
   const ABIType *U =
       unionOf({FieldInfo(Bytes), FieldInfo(Ptr)}, 128, llvm::Align(8));
   llvm::ArrayRef<FieldInfo> Pair = directPair(classifyArg(U, FI, TI));

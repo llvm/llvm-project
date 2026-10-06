@@ -292,4 +292,75 @@ TEST_F(QualTypeMapperSVETest, PlainVectorIsGeneric) {
   EXPECT_EQ(Int32x4->getSizeInBits(), llvm::TypeSize::getFixed(128));
 }
 
+class QualTypeMapperPointerTest : public ::testing::Test {
+protected:
+  QualTypeMapperPointerTest()
+      : AST(makeInputs()), Mapper(AST.context(), DL, Alloc) {}
+
+  const llvm::abi::PointerType *mapTypedef(StringRef Name) {
+    for (Decl *D : AST.context().getTranslationUnitDecl()->decls())
+      if (const auto *TD = dyn_cast<TypedefNameDecl>(D))
+        if (TD->getName() == Name)
+          return dyn_cast<llvm::abi::PointerType>(
+              Mapper.convertType(TD->getUnderlyingType()));
+    ADD_FAILURE() << "no typedef named " << Name;
+    return nullptr;
+  }
+
+private:
+  static TestInputs makeInputs() {
+    TestInputs Inputs(R"c(
+typedef int *ordinary_pointer_t;
+typedef int &reference_t;
+typedef decltype(nullptr) nullptr_t;
+typedef int __attribute__((address_space(1))) *address_space_pointer_t;
+typedef void (^block_pointer_t)(void);
+typedef id objc_id_t;
+typedef Class objc_class_t;
+typedef SEL objc_selector_t;
+@interface Object
+@end
+typedef Object *objc_object_pointer_t;
+)c");
+    Inputs.Language = TestLanguage::Lang_OBJCXX;
+    Inputs.ExtraArgs = {"-triple", "aarch64-unknown-linux-gnu", "-fblocks"};
+    return Inputs;
+  }
+
+  TestAST AST;
+  llvm::DataLayout DL;
+  llvm::BumpPtrAllocator Alloc;
+  CodeGen::QualTypeMapper Mapper;
+};
+
+TEST_F(QualTypeMapperPointerTest, SourceTypeFlags) {
+  const auto *Ordinary = mapTypedef("ordinary_pointer_t");
+  ASSERT_NE(Ordinary, nullptr);
+  EXPECT_TRUE(Ordinary->isPointerOrReference());
+  EXPECT_FALSE(Ordinary->isPointeeAddressSpaceQualified());
+
+  const auto *Reference = mapTypedef("reference_t");
+  ASSERT_NE(Reference, nullptr);
+  EXPECT_TRUE(Reference->isPointerOrReference());
+  EXPECT_FALSE(Reference->isPointeeAddressSpaceQualified());
+
+  const auto *AddressSpace = mapTypedef("address_space_pointer_t");
+  ASSERT_NE(AddressSpace, nullptr);
+  EXPECT_TRUE(AddressSpace->isPointerOrReference());
+  EXPECT_TRUE(AddressSpace->isPointeeAddressSpaceQualified());
+
+  for (StringRef Name : {"nullptr_t", "block_pointer_t", "objc_id_t",
+                         "objc_class_t", "objc_object_pointer_t"}) {
+    SCOPED_TRACE(Name);
+    const auto *Pointer = mapTypedef(Name);
+    ASSERT_NE(Pointer, nullptr);
+    EXPECT_FALSE(Pointer->isPointerOrReference());
+  }
+
+  // SEL is canonically an ordinary pointer on this target.
+  const auto *Selector = mapTypedef("objc_selector_t");
+  ASSERT_NE(Selector, nullptr);
+  EXPECT_TRUE(Selector->isPointerOrReference());
+}
+
 } // namespace

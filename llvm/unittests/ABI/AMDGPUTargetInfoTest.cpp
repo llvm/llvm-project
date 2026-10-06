@@ -469,7 +469,8 @@ TEST_F(AMDGPUTargetInfoTest, KernelGenericPointerCoercesToGlobalUnderHIP) {
   std::unique_ptr<FunctionInfo> FI;
   std::unique_ptr<TargetInfo> TI = hipTarget();
   const ABIType *GenericPtr =
-      TB.getPointerType(64, llvm::Align(8), llvm::AMDGPUAS::FLAT_ADDRESS);
+      TB.getPointerType(64, llvm::Align(8), llvm::AMDGPUAS::FLAT_ADDRESS,
+                        llvm::abi::PointerFlags::IsPointerOrReference);
   const ArgInfo &Info = classifyKernelArg(GenericPtr, FI, TI);
   expectDirectPointerAS(Info, llvm::AMDGPUAS::GLOBAL_ADDRESS);
   EXPECT_FALSE(Info.getCanBeFlattened());
@@ -480,7 +481,8 @@ TEST_F(AMDGPUTargetInfoTest, KernelGlobalPointerUnchangedUnderHIP) {
   std::unique_ptr<FunctionInfo> FI;
   std::unique_ptr<TargetInfo> TI = hipTarget();
   const ABIType *GlobalPtr =
-      TB.getPointerType(64, llvm::Align(8), llvm::AMDGPUAS::GLOBAL_ADDRESS);
+      TB.getPointerType(64, llvm::Align(8), llvm::AMDGPUAS::GLOBAL_ADDRESS,
+                        llvm::abi::PointerFlags::IsPointerOrReference);
   expectDirectPointerAS(classifyKernelArg(GlobalPtr, FI, TI),
                         llvm::AMDGPUAS::GLOBAL_ADDRESS);
 }
@@ -490,7 +492,8 @@ TEST_F(AMDGPUTargetInfoTest, KernelGenericPointerUnchangedByDefault) {
   std::unique_ptr<FunctionInfo> FI;
   std::unique_ptr<TargetInfo> TI;
   const ABIType *GenericPtr =
-      TB.getPointerType(64, llvm::Align(8), llvm::AMDGPUAS::FLAT_ADDRESS);
+      TB.getPointerType(64, llvm::Align(8), llvm::AMDGPUAS::FLAT_ADDRESS,
+                        llvm::abi::PointerFlags::IsPointerOrReference);
   expectDirectPointerAS(
       classifyArg(GenericPtr, FI, TI, CallingConv::AMDGPU_KERNEL),
       llvm::AMDGPUAS::FLAT_ADDRESS);

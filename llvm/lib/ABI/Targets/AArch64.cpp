@@ -84,6 +84,29 @@ static void reportNYI(StringRef Feature) {
       << " is not yet implemented for AArch64 in the LLVM ABI library.\n";
 }
 
+static bool containsOnlyPointers(const Type *Ty) {
+  while (const auto *AT = dyn_cast<ArrayType>(Ty))
+    Ty = AT->getElementType();
+
+  if (const auto *PT = dyn_cast<PointerType>(Ty))
+    return PT->getSizeInBits().getFixedValue() == 64 &&
+           PT->isPointerOrReference() && !PT->isPointeeAddressSpaceQualified();
+
+  const auto *RT = dyn_cast<RecordType>(Ty);
+  if (!RT || RT->isEmpty())
+    return false;
+
+  for (const FieldInfo &Base : RT->getBaseClasses())
+    if (!containsOnlyPointers(Base.FieldType))
+      return false;
+
+  for (const FieldInfo &Field : RT->getFields())
+    if (!containsOnlyPointers(Field.FieldType))
+      return false;
+
+  return true;
+}
+
 ArgInfo AArch64TargetInfo::classifyReturnType(const Type *RetTy,
                                               bool IsVariadicFn) const {
   if (RetTy->isVoid())
@@ -227,8 +250,37 @@ ArgInfo AArch64TargetInfo::classifyArgumentType(
     return ArgInfo::getDirect(CoerceTy, /*Offset=*/0, llvm::Align(TyAlign));
   }
 
-  reportNYI("Aggregate argument type handling");
-  return ArgInfo::getIgnore();
+  if (Ty->isSVESizelessType()) {
+    reportNYI("Pure scalable aggregate argument type handling");
+    return ArgInfo::getIgnore();
+  }
+
+  // Non-homogeneous aggregates up to 16 bytes are passed directly in registers
+  // or on the stack.
+  if (Size <= 128) {
+    llvm::Align Alignment =
+        Opts.Kind == AArch64ABIKind::AAPCS
+            ? (Ty->getUnadjustedAlignment() < llvm::Align(16) ? llvm::Align(8)
+                                                              : llvm::Align(16))
+            : std::max(Ty->getAlignment(), llvm::Align(Opts.IsILP32 ? 4 : 8));
+    uint64_t AlignmentInBits = Alignment.value() * 8;
+    Size = llvm::alignTo(Size, AlignmentInBits);
+
+    const Type *BaseTy;
+    if ((Size == 64 || Size == 128) && Alignment == llvm::Align(8) &&
+        containsOnlyPointers(Ty))
+      BaseTy = TB.getPointerType(64, llvm::Align(8), /*Addrspace=*/0,
+                                 PointerFlags::None);
+    else
+      BaseTy = TB.getIntegerType(AlignmentInBits, Alignment, /*Signed=*/false);
+
+    if (Size == AlignmentInBits)
+      return ArgInfo::getDirect(BaseTy);
+    return ArgInfo::getDirect(
+        TB.getArrayType(BaseTy, Size / AlignmentInBits, Size));
+  }
+
+  return getNaturalAlignIndirect(Ty, getAllocaAddrSpace(), /*ByVal=*/false);
 }
 
 bool AArch64TargetInfo::passAsAggregateType(const Type *Ty) const {
