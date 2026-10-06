@@ -8009,13 +8009,14 @@ Instruction *NVPTXTargetLowering::emitTrailingFence(IRBuilderBase &Builder,
 
   bool IsEmulated = !STI.hasMemoryOrdering();
   if (CI)
-    IsEmulated |= cast<IntegerType>(CI->getCompareOperand()->getType())
-                      ->getBitWidth() < STI.getMinCmpXchgSizeInBits();
+    IsEmulated |=
+        cast<IntegerType>(CI->getCompareOperand()->getType())->getBitWidth() <
+        STI.getMinCmpXchgSizeInBits();
   else {
     AtomicExpansionKind Expansion = shouldExpandAtomicRMWInIR(RI);
-    IsEmulated |= Expansion == AtomicExpansionKind::CmpXChg ||
-                  (RI->isElementwise() &&
-                   Expansion == AtomicExpansionKind::Expand);
+    IsEmulated |=
+        Expansion == AtomicExpansionKind::CmpXChg ||
+        (RI->isElementwise() && Expansion == AtomicExpansionKind::Expand);
   }
 
   if (isAcquireOrStronger(Ord) && IsEmulated)
