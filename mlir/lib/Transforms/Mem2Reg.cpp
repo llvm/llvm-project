@@ -720,7 +720,7 @@ void MemorySlotPromoter::promoteInRegion(Region *region, Value reachingDef) {
 
     if (info.mergePoints.contains(block)) {
       BlockArgument blockArgument =
-          block->addArgument(slot.elemType, slot.ptr.getLoc());
+          block->addArgument(slot.valueType, slot.ptr.getLoc());
       job.reachingDef = blockArgument;
     }
 
