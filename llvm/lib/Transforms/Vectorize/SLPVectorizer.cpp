@@ -2543,11 +2543,6 @@ private:
   /// alternative must pay their full price.
   InstructionCost getUnfusedFMulsPenalty(const TreeEntry &TE) const;
 
-  /// Return information about the vector formed for the specified index
-  /// of a vector of (the same) instruction.
-  TargetTransformInfo::OperandValueInfo
-  getOperandInfo(ArrayRef<Value *> Ops) const;
-
   /// \returns the graph entry for the \p Idx operand of the \p E entry.
   const TreeEntry *getOperandEntry(const TreeEntry *E, unsigned Idx) const;
   TreeEntry *getOperandEntry(TreeEntry *E, unsigned Idx) {
@@ -10525,9 +10520,9 @@ bool BoUpSLP::canBuildSplitNode(ArrayRef<Value *> VL,
       if (I->isBinaryOp())
         Ops1.push_back(I->getOperand(1));
     }
-    TTI::OperandValueInfo Op0Info = getOperandInfo(Ops0);
+    TTI::OperandValueInfo Op0Info = TTI::getOperandInfo(Ops0);
     TTI::OperandValueInfo Op1Info =
-        Ops1.empty() ? TTI::OperandValueInfo() : getOperandInfo(Ops1);
+        Ops1.empty() ? TTI::OperandValueInfo() : TTI::getOperandInfo(Ops1);
     InstructionCost OriginalVecOpsCost =
         TTI->getArithmeticInstrCost(Opcode0, VecTy, CostKind, Op0Info, Op1Info,
                                     {}, LocalState.getMainOp()) +
@@ -13681,46 +13676,6 @@ static bool isMainInstruction(Instruction *I, Instruction *MainOp,
   return InstructionsState(MainOp, AltOp).getMatchingMainOpOrAltOp(I) == MainOp;
 }
 
-TTI::OperandValueInfo BoUpSLP::getOperandInfo(ArrayRef<Value *> Ops) const {
-  assert(!Ops.empty());
-  const auto *Op0 = Ops.front();
-
-  const bool IsConstant = all_of(Ops, [](Value *V) {
-    // TODO: We should allow undef elements here
-    return isConstant(V) && !isa<UndefValue>(V);
-  });
-  const bool IsUniform = all_of(Ops, [=](Value *V) {
-    // TODO: We should allow undef elements here
-    return V == Op0;
-  });
-  const bool IsPowerOfTwo = all_of(Ops, [](Value *V) {
-    // TODO: We should allow undef elements here
-    if (auto *CI = dyn_cast<ConstantInt>(V))
-      return CI->getValue().isPowerOf2();
-    return false;
-  });
-  const bool IsNegatedPowerOfTwo = all_of(Ops, [](Value *V) {
-    // TODO: We should allow undef elements here
-    if (auto *CI = dyn_cast<ConstantInt>(V))
-      return CI->getValue().isNegatedPowerOf2();
-    return false;
-  });
-
-  TTI::OperandValueKind VK = TTI::OK_AnyValue;
-  if (IsConstant && IsUniform)
-    VK = TTI::OK_UniformConstantValue;
-  else if (IsConstant)
-    VK = TTI::OK_NonUniformConstantValue;
-  else if (IsUniform)
-    VK = TTI::OK_UniformValue;
-
-  TTI::OperandValueProperties VP = TTI::OP_None;
-  VP = IsPowerOfTwo ? TTI::OP_PowerOf2 : VP;
-  VP = IsNegatedPowerOfTwo ? TTI::OP_NegatedPowerOf2 : VP;
-
-  return {VK, VP};
-}
-
 void BoUpSLP::reorderGatherNode(TreeEntry &TE) {
   assert(TE.isGather() && TE.ReorderIndices.empty() &&
          "Expected gather node without reordering.");
@@ -14095,9 +14050,10 @@ bool BoUpSLP::matchesShlZExt(const TreeEntry &TE, OrdersType &Order,
       getCastContextHint(*getOperandEntry(LhsTE, /*Idx=*/0));
   InstructionCost VecCost =
       TTI->getArithmeticReductionCost(Instruction::Or, VecTy, FMF, CostKind) +
-      TTI->getArithmeticInstrCost(
-          Instruction::Shl, VecTy, CostKind, getOperandInfo(LhsTE->Scalars),
-          getOperandInfo(RhsTE->Scalars), {}, TE.getMainOp()) +
+      TTI->getArithmeticInstrCost(Instruction::Shl, VecTy, CostKind,
+                                  TTI::getOperandInfo(LhsTE->Scalars),
+                                  TTI::getOperandInfo(RhsTE->Scalars), {},
+                                  TE.getMainOp()) +
       TTI->getCastInstrCost(
           Instruction::ZExt, VecTy,
           getWidenedType(SrcScalarTy, LhsTE->getVectorFactor()), CastCtx,
@@ -14282,13 +14238,13 @@ bool BoUpSLP::matchesBitPack(const TreeEntry &TE) const {
   InstructionCost VecCost =
       TTI->getArithmeticReductionCost(Instruction::Or, VecTy, FMF, CostKind) +
       TTI->getArithmeticInstrCost(Instruction::Shl, VecTy, CostKind,
-                                  getOperandInfo(LhsTE->Scalars),
-                                  getOperandInfo(ShiftTE->Scalars), /*Args=*/{},
-                                  ShlTE->getMainOp(), TLI);
+                                  TTI::getOperandInfo(LhsTE->Scalars),
+                                  TTI::getOperandInfo(ShiftTE->Scalars),
+                                  /*Args=*/{}, ShlTE->getMainOp(), TLI);
   if (TE.getOpcode() == Instruction::And)
     VecCost += TTI->getArithmeticInstrCost(
-        Instruction::And, VecTy, CostKind, getOperandInfo(ShlTE->Scalars),
-        getOperandInfo(MaskTE->Scalars), /*Args=*/{}, TE.getMainOp(), TLI);
+        Instruction::And, VecTy, CostKind, TTI::getOperandInfo(ShlTE->Scalars),
+        TTI::getOperandInfo(MaskTE->Scalars), /*Args=*/{}, TE.getMainOp(), TLI);
   unsigned ShiftWidth;
   InstructionCost PackCost = getBitPackCost(
       *TTI, VecTy, ScalarTy, *Info, getZExtSrcWidth(*LhsTE),
@@ -14356,8 +14312,8 @@ bool BoUpSLP::matchesInversedZExtSelect(
 
   InstructionCost VecCost = TTI->getCmpSelInstrCost(
       CmpTE->getOpcode(), VecTy, CmpTy, MainPred, CostKind,
-      getOperandInfo(CmpTE->getOperand(0)),
-      getOperandInfo(CmpTE->getOperand(1)), CmpTE->getMainOp());
+      TTI::getOperandInfo(CmpTE->getOperand(0)),
+      TTI::getOperandInfo(CmpTE->getOperand(1)), CmpTE->getMainOp());
   InstructionCost BVCost = getScalarizationOverhead(
       *TTI, SLPReVec, Cmp->getType(), cast<VectorType>(CmpTy),
       APInt::getAllOnes(CmpTE->getVectorFactor()),
@@ -14439,8 +14395,8 @@ bool BoUpSLP::matchesSelectOfBits(const TreeEntry &SelectTE) const {
   FastMathFlags FMF;
   InstructionCost SelectCost =
       TTI->getCmpSelInstrCost(Instruction::Select, VecTy, CmpTy, SelPred,
-                              CostKind, getOperandInfo(Op1TE->Scalars),
-                              getOperandInfo(Op2TE->Scalars),
+                              CostKind, TTI::getOperandInfo(Op1TE->Scalars),
+                              TTI::getOperandInfo(Op2TE->Scalars),
                               SelectTE.getMainOp()) +
       TTI->getArithmeticReductionCost(Instruction::Or, VecTy, FMF, CostKind);
   return BitcastCost <= SelectCost;
@@ -14811,7 +14767,7 @@ void BoUpSLP::transformNodes() {
         InstructionCost OriginalVecCost =
             TTI->getMemoryOpCost(Instruction::Store, VecTy, BaseSI->getAlign(),
                                  BaseSI->getPointerAddressSpace(), CostKind,
-                                 getOperandInfo(E.getOperand(0))) +
+                                 TTI::getOperandInfo(E.getOperand(0))) +
             getShuffleCost(*TTI, TTI::SK_Reverse, VecTy, CostKind, Mask);
         InstructionCost StridedCost = TTI->getMemIntrinsicInstrCost(
             MemIntrinsicCostAttributes(Intrinsic::experimental_vp_strided_store,
@@ -17216,12 +17172,12 @@ BoUpSLP::getEntryCost(const TreeEntry *E, ArrayRef<Value *> VectorizedVals,
         if (match(LHS, m_AllOnes())) {
           ScalarCost = TTI->getArithmeticInstrCost(
               Instruction::Or, LHS->getType(), CostKind,
-              getOperandInfo(VI->getOperand(0)), getOperandInfo(RHS));
+              TTI::getOperandInfo(VI->getOperand(0)), TTI::getOperandInfo(RHS));
         } else if (match(RHS, m_Zero())) {
           // select i1 v, i1 b, i1 false -> and i1 v, i1 b
           ScalarCost = TTI->getArithmeticInstrCost(
               Instruction::And, LHS->getType(), CostKind,
-              getOperandInfo(VI->getOperand(0)), getOperandInfo(LHS));
+              TTI::getOperandInfo(VI->getOperand(0)), TTI::getOperandInfo(LHS));
         }
       }
       if (!ScalarCost.isValid()) {
@@ -17232,9 +17188,9 @@ BoUpSLP::getEntryCost(const TreeEntry *E, ArrayRef<Value *> VectorizedVals,
             ShuffleOrOp == Instruction::Select ? VL0->getOperand(0)->getType()
                                                : VL0->getType(),
             CurrentPred, CostKind,
-            getOperandInfo(
+            TTI::getOperandInfo(
                 VI->getOperand(ShuffleOrOp == Instruction::Select ? 1 : 0)),
-            getOperandInfo(
+            TTI::getOperandInfo(
                 VI->getOperand(ShuffleOrOp == Instruction::Select ? 2 : 1)),
             VI);
       }
@@ -17270,24 +17226,24 @@ BoUpSLP::getEntryCost(const TreeEntry *E, ArrayRef<Value *> VectorizedVals,
           // <VF x i1> b
           if (all_of(LHS, [&](Value *V) { return match(V, m_AllOnes()); })) {
             VecCost = TTI->getArithmeticInstrCost(
-                Instruction::Or, VecTy, CostKind, getOperandInfo(Cond),
-                getOperandInfo(RHS));
+                Instruction::Or, VecTy, CostKind, TTI::getOperandInfo(Cond),
+                TTI::getOperandInfo(RHS));
           } else if (all_of(RHS,
                             [&](Value *V) { return match(V, m_Zero()); })) {
             // select <VF x i1> v, <VF x i1> b, <VF x i1> false -> and <VF x i1>
             // v, <VF x i1> b
             VecCost = TTI->getArithmeticInstrCost(
-                Instruction::And, VecTy, CostKind, getOperandInfo(Cond),
-                getOperandInfo(LHS));
+                Instruction::And, VecTy, CostKind, TTI::getOperandInfo(Cond),
+                TTI::getOperandInfo(LHS));
           }
         }
       }
       if (!VecCost.isValid()) {
         VecCost = TTI->getCmpSelInstrCost(
             E->getOpcode(), VecTy, MaskTy, VecPred, CostKind,
-            getOperandInfo(
+            TTI::getOperandInfo(
                 E->getOperand(ShuffleOrOp == Instruction::Select ? 1 : 0)),
-            getOperandInfo(
+            TTI::getOperandInfo(
                 E->getOperand(ShuffleOrOp == Instruction::Select ? 2 : 1)),
             VL0);
         if (isa<SelectInst>(VL0)) {
@@ -17582,8 +17538,8 @@ BoUpSLP::getEntryCost(const TreeEntry *E, ArrayRef<Value *> VectorizedVals,
           MaskedCost.isValid())
         return MaskedCost + CommonCost;
       unsigned OpIdx = isa<UnaryOperator>(VL0) ? 0 : 1;
-      TTI::OperandValueInfo Op1Info = getOperandInfo(E->getOperand(0));
-      TTI::OperandValueInfo Op2Info = getOperandInfo(E->getOperand(OpIdx));
+      TTI::OperandValueInfo Op1Info = TTI::getOperandInfo(E->getOperand(0));
+      TTI::OperandValueInfo Op2Info = TTI::getOperandInfo(E->getOperand(OpIdx));
       InstructionCost Cost = TTI->getArithmeticInstrCost(
           ShuffleOrOp, VecTy, CostKind, Op1Info, Op2Info, {},
           VL0->getOpcode() == ShuffleOrOp ? VL0 : nullptr, TLI);
@@ -17601,7 +17557,7 @@ BoUpSLP::getEntryCost(const TreeEntry *E, ArrayRef<Value *> VectorizedVals,
           // static properties to model.
           Cost += TTI->getArithmeticInstrCost(
               ShuffleOrOp, VecTy, CostKind, {},
-              getOperandInfo(E->getOperand(Idx)), {},
+              TTI::getOperandInfo(E->getOperand(Idx)), {},
               VL0->getOpcode() == ShuffleOrOp ? VL0 : nullptr, TLI);
         }
       }
@@ -17794,7 +17750,7 @@ BoUpSLP::getEntryCost(const TreeEntry *E, ArrayRef<Value *> VectorizedVals,
               Instruction::Store, VecTy, Factor, {}, BaseSI->getAlign(),
               BaseSI->getPointerAddressSpace(), CostKind);
         } else {
-          TTI::OperandValueInfo OpInfo = getOperandInfo(E->getOperand(0));
+          TTI::OperandValueInfo OpInfo = TTI::getOperandInfo(E->getOperand(0));
           VecStCost = TTI->getMemoryOpCost(
               Instruction::Store, VecTy, BaseSI->getAlign(),
               BaseSI->getPointerAddressSpace(), CostKind, OpInfo);
@@ -17935,9 +17891,11 @@ BoUpSLP::getEntryCost(const TreeEntry *E, ArrayRef<Value *> VectorizedVals,
         // folded column is uniform.
         auto ChainCost = [&](unsigned Opcode) {
           InstructionCost Cost = 0;
-          TTI::OperandValueInfo RunningInfo = getOperandInfo(E->getOperand(0));
+          TTI::OperandValueInfo RunningInfo =
+              TTI::getOperandInfo(E->getOperand(0));
           for (unsigned Idx : seq<unsigned>(1, E->getNumOperands())) {
-            TTI::OperandValueInfo ColInfo = getOperandInfo(E->getOperand(Idx));
+            TTI::OperandValueInfo ColInfo =
+                TTI::getOperandInfo(E->getOperand(Idx));
             if (!RunningInfo.isConstant() || !ColInfo.isConstant())
               Cost += TTIRef.getArithmeticInstrCost(
                   Opcode, VecTy, CostKind, RunningInfo, ColInfo, {},
@@ -17958,8 +17916,8 @@ BoUpSLP::getEntryCost(const TreeEntry *E, ArrayRef<Value *> VectorizedVals,
         VecCost = ChainCost(E->getOpcode()) + ChainCost(E->getAltOpcode());
       } else if (auto *CI0 = dyn_cast<CmpInst>(VL0)) {
         auto *MaskTy = getWidenedType(Builder.getInt1Ty(), VL.size());
-        TTI::OperandValueInfo Op0Info = getOperandInfo(E->getOperand(0));
-        TTI::OperandValueInfo Op1Info = getOperandInfo(E->getOperand(1));
+        TTI::OperandValueInfo Op0Info = TTI::getOperandInfo(E->getOperand(0));
+        TTI::OperandValueInfo Op1Info = TTI::getOperandInfo(E->getOperand(1));
         VecCost = TTIRef.getCmpSelInstrCost(E->getOpcode(), VecTy, MaskTy,
                                             CI0->getPredicate(), CostKind,
                                             Op0Info, Op1Info, VL0);
@@ -26456,6 +26414,8 @@ BoUpSLP::vectorizeTree(const ExtraValueToDebugLocsMap &ExternallyUsedValues,
           auto *I = dyn_cast<Instruction>(Ex);
           ScalarToEEs[Key].try_emplace(I ? I->getParent() : &F->getEntryBlock(),
                                        std::make_pair(Ex, ExV));
+          if (Inst && ExV != Inst && ExV->getType() == Inst->getType())
+            redirectDbgValues(*Inst, *ExV);
         }
         // The then branch of the previous if may produce constants, since 0
         // operand might be a constant.
@@ -32438,9 +32398,8 @@ public:
       return nullptr;
     }
 
-    IRBuilder<TargetFolder> Builder(ReductionRoot->getContext(),
-                                    TargetFolder(DL));
-    Builder.SetInsertPoint(cast<Instruction>(ReductionRoot));
+    IRBuilder<TargetFolder> Builder(
+        cast<Instruction>(ReductionRoot)->getIterator(), TargetFolder(DL));
     // The scalar parts (scaled reused values, their combines) are emitted right
     // before the root; the instruction preceding them is remembered to drop
     // them, if the sign-aware reduction is abandoned.
@@ -32637,6 +32596,9 @@ public:
           // Last chance to try to vectorize alternate node.
           SmallVector<Value *> Op1, Op2;
           BoUpSLP::OrdersType ReorderIndices;
+          // canBuildSplitNode() relies on VectorizableTree(), make sure to
+          // clear here since it may contain leftover state from prior attempts.
+          V.deleteTree();
           if (MainOp && AltOp &&
               V.canBuildSplitNode(Ops, OpS, Op1, Op2, ReorderIndices)) {
             if (LocalReducedVals.empty()) {
@@ -33583,10 +33545,9 @@ public:
     assert(NegatedReducedVals.empty() &&
            "Unexpected negated reduced values in the ordered reduction");
 
-    IRBuilder<TargetFolder> Builder(ReductionRoot->getContext(),
-                                    TargetFolder(DL));
     Instruction *RdxRootInst = cast<Instruction>(ReductionRoot);
-    Builder.SetInsertPoint(RdxRootInst);
+    IRBuilder<TargetFolder> Builder(RdxRootInst->getIterator(),
+                                    TargetFolder(DL));
 
     // Track the reduced values in case if they are replaced by extractelement
     // because of the vectorization.
@@ -35339,17 +35300,31 @@ static bool vectorizePackedAggregate(InsertValueInst *IVI, BoUpSLP &R,
   R.buildTree(Fields, IgnoreList);
   if (R.isTreeTinyAndNotFullyVectorizable(/*ForReduction=*/true))
     return false;
+  if (R.isProfitableToReorder()) {
+    R.reorderTopToBottom();
+    // The root is shuffled back to the order of the fields, its order can be
+    // ignored.
+    R.reorderBottomToTop(/*IgnoreReorder=*/true);
+  }
   R.transformNodes();
   // The fields are not demoted, the bitcast depends on their width.
   InstructionCost TreeCost = R.calculateTreeCostAndTrimNonProfitable(Fields);
   R.buildExternalUses();
-  // The gathered operands of the fields are unpacked better for each pack. The
-  // packs take the lanes in the order of the fields.
-  if (R.hasNonConstantGathers() ||
-      !all_of(enumerate(Fields), [&](const auto &P) {
-        return R.findRootLaneForValue(P.value()) == P.index();
-      }))
+  // The gathered operands of the fields are unpacked better for each pack.
+  if (R.hasNonConstantGathers())
     return false;
+  // The packs take the lanes in the order of the fields.
+  SmallVector<int> OrderMask(Fields.size());
+  SmallBitVector Seen(Fields.size());
+  for (auto [Idx, F] : enumerate(Fields)) {
+    unsigned Lane = R.findRootLaneForValue(F);
+    if (Lane >= Fields.size() || Seen.test(Lane))
+      return false;
+    Seen.set(Lane);
+    OrderMask[Idx] = Lane;
+  }
+  const bool IsIdentity =
+      ShuffleVectorInst::isIdentityMask(OrderMask, OrderMask.size());
 
   const TTI::TargetCostKind CostKind = R.getCostKind();
   const unsigned NumPacks = Packs.size();
@@ -35358,6 +35333,9 @@ static bool vectorizePackedAggregate(InsertValueInst *IVI, BoUpSLP &R,
   InstructionCost PackCost =
       TTI.getCastInstrCost(Instruction::BitCast, PacksTy, FieldsTy,
                            TTI::CastContextHint::None, CostKind);
+  if (!IsIdentity)
+    PackCost += getShuffleCost(TTI, TTI::SK_PermuteSingleSrc,
+                               cast<VectorType>(FieldsTy), CostKind, OrderMask);
   PackCost += TTI.getScalarizationOverhead(
       cast<VectorType>(PacksTy), APInt::getAllOnes(NumPacks),
       /*Insert=*/false, /*Extract=*/true, CostKind);
@@ -35374,6 +35352,8 @@ static bool vectorizePackedAggregate(InsertValueInst *IVI, BoUpSLP &R,
   IRBuilder<TargetFolder> Builder(IVI->getContext(), TargetFolder(DL));
   Builder.SetInsertPoint(IVI);
   Builder.SetCurrentDebugLocation(IVI->getDebugLoc());
+  if (!IsIdentity)
+    Vec = Builder.CreateShuffleVector(Vec, OrderMask);
   Value *Packed = Builder.CreateBitCast(Vec, PacksTy);
   for (auto [Idx, Insert] : enumerate(Inserts))
     cast<InsertValueInst>(Insert)->setOperand(

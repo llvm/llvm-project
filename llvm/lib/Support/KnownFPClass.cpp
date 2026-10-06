@@ -546,7 +546,7 @@ KnownFPClass KnownFPClass::fmul(const KnownFPClass &KnownLHS,
 
   // +X * +Y or -X * -Y => +Q
   // +X * -Y or -X * +Y => -Q
-  Known.propagateXorSign(KnownLHS, KnownRHS);
+  Known.propagateXorSign(KnownLHS, KnownRHS, Mode);
 
   // Inf * Y => Inf or NaN
   if (KnownLHS.isKnownAlways(fcInf | fcNan) ||
@@ -618,7 +618,7 @@ KnownFPClass KnownFPClass::fdiv(const KnownFPClass &KnownLHS,
   //  X / -0.0 => -Inf (or NaN)
   // +X / +Y or -X / -Y => +Q
   // +X / -Y or -X / +Y => -Q
-  Known.propagateXorSign(KnownLHS, KnownRHS);
+  Known.propagateXorSign(KnownLHS, KnownRHS, Mode);
 
   // Normal and subnormal results require two non-zero finite operands.
   if ((KnownLHS.isKnownNever(fcNegNormal | fcNegSubnormal) &&
@@ -745,16 +745,19 @@ KnownFPClass KnownFPClass::exp(const KnownFPClass &KnownSrc) {
 
   Known.propagateNonNaN(KnownSrc);
 
-  if (KnownSrc.cannotBeOrderedLessThanZero()) {
-    // If the source is positive this cannot underflow.
+  // The following deductions assume that exp10(-1.0) = +0.1 and
+  // exp10(+1.0) = +10.0 are both finite normal values.
+
+  // Zero can only be produced if x < -1.0.
+  if (KnownSrc.isKnownNever(fcNegNormal | fcNegInf))
     Known.knownNot(fcPosZero);
 
-    // Cannot introduce denormal values.
+  // Subnormals can only be produced if x < -1.0 and x is finite.
+  if (KnownSrc.isKnownNever(fcNegNormal))
     Known.knownNot(fcPosSubnormal);
-  }
 
-  // If the source is negative, this cannot overflow to infinity.
-  if (KnownSrc.cannotBeOrderedGreaterThanZero())
+  // Infinity can only be produced if x > +1.0.
+  if (KnownSrc.isKnownNever(fcPosNormal | fcPosInf))
     Known.knownNot(fcPosInf);
 
   return Known;
@@ -1038,27 +1041,31 @@ KnownFPClass KnownFPClass::roundToIntegral(const KnownFPClass &KnownSrc,
 KnownFPClass KnownFPClass::frexp_mant(const KnownFPClass &KnownSrc,
                                       DenormalMode Mode) {
   KnownFPClass Known;
+
   Known.knownNot(fcSubnormal);
 
-  if (KnownSrc.isKnownNever(fcNegative))
-    Known.knownNot(fcNegative);
-  else {
-    if (KnownSrc.isKnownNeverLogicalNegZero(Mode))
-      Known.knownNot(fcNegZero);
-    if (KnownSrc.isKnownNever(fcNegInf))
-      Known.knownNot(fcNegInf);
-  }
-
-  if (KnownSrc.isKnownNever(fcPositive))
-    Known.knownNot(fcPositive);
-  else {
-    if (KnownSrc.isKnownNeverLogicalPosZero(Mode))
-      Known.knownNot(fcPosZero);
-    if (KnownSrc.isKnownNever(fcPosInf))
-      Known.knownNot(fcPosInf);
-  }
-
   Known.propagateNonNaN(KnownSrc);
+
+  if (KnownSrc.isKnownNeverPosInfinity())
+    Known.knownNot(fcPosInf);
+
+  if (KnownSrc.isKnownNeverNegInfinity())
+    Known.knownNot(fcNegInf);
+
+  if (KnownSrc.isKnownNeverLogicalPosZero(Mode))
+    Known.knownNot(fcPosZero);
+
+  if (KnownSrc.isKnownNeverLogicalNegZero(Mode))
+    Known.knownNot(fcNegZero);
+
+  // TODO: These deductions can be improved if subnormal inputs are guaranteed
+  // to be flushed to zero.
+  if (KnownSrc.isKnownNever(fcPosNormal | fcPosSubnormal))
+    Known.knownNot(fcPosNormal);
+
+  if (KnownSrc.isKnownNever(fcNegNormal | fcNegSubnormal))
+    Known.knownNot(fcNegNormal);
+
   return Known;
 }
 
