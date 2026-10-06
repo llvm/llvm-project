@@ -5535,6 +5535,24 @@ TEST(HasAncestor, MatchesInImplicitCode) {
         hasAncestor(recordDecl(hasName("A")))))))));
 }
 
+TEST(HasAncestor, MatchesWithMultipleParentsWithoutPointerIdentity) {
+  EXPECT_TRUE(matches(
+      R"cpp(
+template <int i> class Fact {};
+template <class T> class W {};
+template <class T> struct A
+{
+    static void f() {
+        W<Fact<12>> fact12;
+    }
+};
+void f() {
+    A<int>::f();
+    A<double>::f();
+})cpp",
+      integerLiteral(hasAncestor(functionDecl()))));
+}
+
 TEST(HasParent, MatchesOnlyParent) {
   EXPECT_TRUE(matches(
     "void f() { if (true) { int x = 42; } }",
