@@ -667,6 +667,25 @@ mlir::LogicalResult CIRToLLVMLLVMIntrinsicCallOpLowering::matchAndRewrite(
   return mlir::success();
 }
 
+static mlir::Attribute convertMetadataAttr(mlir::Attribute attr) {
+  mlir::MLIRContext *ctx = attr.getContext();
+  if (auto str = mlir::dyn_cast<cir::MDStringAttr>(attr))
+    return mlir::LLVM::MDStringAttr::get(ctx, str.getValue());
+  auto node = mlir::cast<cir::MDNodeAttr>(attr);
+  SmallVector<mlir::Attribute> operands;
+  for (mlir::Attribute operand : node.getOperands())
+    operands.push_back(convertMetadataAttr(operand));
+  return mlir::LLVM::MDNodeAttr::get(ctx, operands);
+}
+
+mlir::LogicalResult CIRToLLVMMetadataAsValueOpLowering::matchAndRewrite(
+    cir::MetadataAsValueOp op, OpAdaptor adaptor,
+    mlir::ConversionPatternRewriter &rewriter) const {
+  rewriter.replaceOpWithNewOp<mlir::LLVM::MetadataAsValueOp>(
+      op, convertMetadataAttr(op.getMetadata()));
+  return mlir::success();
+}
+
 /// BoolAttr visitor.
 mlir::Value CIRAttrToValue::visitCirAttr(cir::BoolAttr boolAttr) {
   mlir::Location loc = parentOp->getLoc();
@@ -4156,6 +4175,9 @@ static void prepareTypeConverter(mlir::LLVMTypeConverter &converter,
   });
   converter.addConversion([&](cir::VoidType type) -> mlir::Type {
     return mlir::LLVM::LLVMVoidType::get(type.getContext());
+  });
+  converter.addConversion([&](cir::MetadataType type) -> mlir::Type {
+    return mlir::LLVM::LLVMMetadataType::get(type.getContext());
   });
 }
 

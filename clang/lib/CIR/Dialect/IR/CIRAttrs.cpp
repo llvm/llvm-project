@@ -1024,6 +1024,19 @@ LogicalResult EhFilterAttr::verify(function_ref<InFlightDiagnostic()> emitError,
 }
 
 //===----------------------------------------------------------------------===//
+// MDNodeAttr definitions
+//===----------------------------------------------------------------------===//
+
+LogicalResult MDNodeAttr::verify(function_ref<InFlightDiagnostic()> emitError,
+                                 ArrayRef<mlir::Attribute> operands) {
+  for (mlir::Attribute operand : operands)
+    if (!mlir::isa<MDStringAttr, MDNodeAttr>(operand))
+      return emitError() << "metadata node operands must be #cir.md_string or "
+                            "#cir.md_node";
+  return success();
+}
+
+//===----------------------------------------------------------------------===//
 // RecordLayout lookup
 //===----------------------------------------------------------------------===//
 
