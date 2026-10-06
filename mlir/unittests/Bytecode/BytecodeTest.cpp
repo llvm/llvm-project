@@ -9,6 +9,7 @@
 #include "mlir/Bytecode/BytecodeReader.h"
 #include "mlir/Bytecode/BytecodeWriter.h"
 #include "mlir/IR/AsmState.h"
+#include "mlir/IR/Builders.h"
 #include "mlir/IR/BuiltinAttributes.h"
 #include "mlir/IR/Diagnostics.h"
 #include "mlir/IR/OpImplementation.h"
@@ -23,6 +24,8 @@
 #include "llvm/Support/raw_ostream.h"
 #include "gmock/gmock.h"
 #include "gtest/gtest.h"
+
+#include <numeric>
 
 using namespace llvm;
 using namespace mlir;
@@ -400,4 +403,52 @@ TEST(Bytecode, LocationElisionPreservesAttributes) {
   auto nameLoc = dyn_cast<NameLoc>(locAttr);
   ASSERT_TRUE(nameLoc);
   EXPECT_EQ(nameLoc.getName().getValue(), "preserve_me");
+}
+
+TEST(Bytecode, UseListEncodingFlags) {
+  // One swapped pair uses inline index-pair storage, three use heap index-pair
+  // storage, and eight force the full-shuffle encoding.
+  for (unsigned numPairs : {1u, 3u, 8u}) {
+    SCOPED_TRACE(numPairs);
+    MLIRContext context;
+    context.allowUnregisteredDialects();
+    Builder builder(&context);
+    Location loc = builder.getUnknownLoc();
+    OwningOpRef<ModuleOp> module = ModuleOp::create(loc);
+
+    OperationState producerState(loc, "test.producer");
+    producerState.addTypes(builder.getI32Type());
+    Operation *producer = Operation::create(producerState);
+    module->getBody()->push_back(producer);
+    Value value = producer->getResult(0);
+    for (unsigned i = 0; i < 16; ++i) {
+      OperationState userState(loc, "test.use");
+      userState.addOperands(value);
+      userState.addAttribute("index", builder.getI32IntegerAttr(i));
+      module->getBody()->push_back(Operation::create(userState));
+    }
+
+    SmallVector<unsigned> permutation(16);
+    std::iota(permutation.begin(), permutation.end(), 0);
+    for (unsigned i = 0; i < numPairs; ++i)
+      std::swap(permutation[2 * i], permutation[2 * i + 1]);
+    value.shuffleUseList(permutation);
+
+    auto getUseOrder = [](Value value) {
+      SmallVector<int64_t> order;
+      for (OpOperand &use : value.getUses())
+        order.push_back(
+            cast<IntegerAttr>(use.getOwner()->getAttr("index")).getInt());
+      return order;
+    };
+    auto expectedOrder = getUseOrder(value);
+
+    std::string bytecode;
+    raw_string_ostream os(bytecode);
+    ASSERT_TRUE(succeeded(writeBytecodeToFile(module.get(), os)));
+    auto roundtripped = parseSourceString<ModuleOp>(bytecode, &context);
+    ASSERT_TRUE(roundtripped);
+    Value parsedValue = roundtripped->getBody()->front().getResult(0);
+    EXPECT_EQ(getUseOrder(parsedValue), expectedOrder);
+  }
 }

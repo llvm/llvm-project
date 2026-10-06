@@ -255,3 +255,47 @@ TEST(PresburgerSpaceTest, mergeAndAlignSymbols) {
   EXPECT_EQ(otherSpace.getId(VarKind::Range, 1),
             Identifier(&otherIdentifiers[4]));
 }
+
+TEST(PresburgerSpaceTest, copyAndMoveIdentifierState) {
+  // Enabled empty storage must stay distinct from disabled empty storage.
+  // Nonempty storage also exercises moving a heap allocation.
+  for (unsigned numDims : {0u, 16u}) {
+    auto space = PresburgerSpace::getSetSpace(numDims);
+    EXPECT_FALSE(space.isUsingIds());
+    space.resetIds();
+    EXPECT_TRUE(space.isUsingIds());
+    EXPECT_EQ(space.getIds().size(), numDims);
+
+    int id = 0;
+    if (numDims)
+      space.setId(VarKind::SetDim, 0, Identifier(&id));
+    auto copy = space;
+    auto moved = std::move(copy);
+    EXPECT_TRUE(moved.isUsingIds());
+    EXPECT_EQ(moved.getIds().size(), numDims);
+    if (numDims)
+      EXPECT_EQ(moved.getId(VarKind::SetDim, 0), Identifier(&id));
+
+    auto assigned = PresburgerSpace::getSetSpace();
+    assigned = space;
+    EXPECT_TRUE(assigned.isUsingIds());
+    EXPECT_EQ(assigned.getIds().size(), numDims);
+    assigned = std::move(moved);
+    EXPECT_TRUE(assigned.isUsingIds());
+    EXPECT_EQ(assigned.getIds().size(), numDims);
+    if (numDims)
+      EXPECT_EQ(assigned.getId(VarKind::SetDim, 0), Identifier(&id));
+
+    assigned.disableIds();
+    EXPECT_FALSE(assigned.isUsingIds());
+    EXPECT_TRUE(space.isUsingIds());
+    assigned.insertVar(VarKind::SetDim, numDims, 32);
+    EXPECT_FALSE(assigned.isUsingIds());
+    assigned.resetIds();
+    EXPECT_TRUE(assigned.isUsingIds());
+    EXPECT_EQ(assigned.getIds().size(), numDims + 32);
+
+    assigned = PresburgerSpace::getSetSpace();
+    EXPECT_FALSE(assigned.isUsingIds());
+  }
+}

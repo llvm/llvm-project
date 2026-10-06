@@ -127,7 +127,7 @@ unsigned PresburgerSpace::insertVar(VarKind kind, unsigned pos, unsigned num) {
 
   // Insert NULL identifiers if `usingIds` and variables inserted are
   // not locals.
-  if (usingIds && kind != VarKind::Local)
+  if (isUsingIds() && kind != VarKind::Local)
     identifiers.insert(identifiers.begin() + absolutePos, num, Identifier());
 
   return absolutePos;
@@ -152,7 +152,7 @@ void PresburgerSpace::removeVarRange(VarKind kind, unsigned varStart,
 
   // Remove identifiers if `usingIds` and variables removed are not
   // locals.
-  if (usingIds && kind != VarKind::Local)
+  if (isUsingIds() && kind != VarKind::Local)
     identifiers.erase(identifiers.begin() + getVarKindOffset(kind) + varStart,
                       identifiers.begin() + getVarKindOffset(kind) + varLimit);
 }
@@ -298,7 +298,7 @@ void PresburgerSpace::setVarSymbolSeparation(unsigned newSymbolCount) {
 }
 
 void PresburgerSpace::mergeAndAlignSymbols(PresburgerSpace &other) {
-  assert(usingIds && other.usingIds &&
+  assert(isUsingIds() && other.isUsingIds() &&
          "Both spaces need to have identifers to merge & align");
 
   // First merge & align identifiers into `other` from `this`.

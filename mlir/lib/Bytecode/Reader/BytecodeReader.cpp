@@ -19,6 +19,7 @@
 #include "mlir/Support/LLVM.h"
 #include "llvm/ADT/ArrayRef.h"
 #include "llvm/ADT/ScopeExit.h"
+#include "llvm/ADT/SmallVectorWithFlags.h"
 #include "llvm/ADT/StringExtras.h"
 #include "llvm/ADT/StringRef.h"
 #include "llvm/Support/Endian.h"
@@ -1802,17 +1803,19 @@ private:
   /// reorder the use-list of a value with respect to the pre-order traversal
   /// ordering.
   struct UseListOrderStorage {
-    UseListOrderStorage(bool isIndexPairEncoding,
-                        SmallVector<unsigned, 4> &&indices)
-        : indices(std::move(indices)),
-          isIndexPairEncoding(isIndexPairEncoding) {};
+    using IndexStorage = llvm::SmallVectorWithFlags<unsigned, 4>;
+
+    UseListOrderStorage(bool isIndexPairEncoding, IndexStorage &&indices)
+        : indices(std::move(indices)) {
+      this->indices.setFlag(0, isIndexPairEncoding);
+    }
     /// The vector containing the information required to reorder the
     /// use-list of a value.
-    SmallVector<unsigned, 4> indices;
+    IndexStorage indices;
 
     /// Whether indices represent a pair of type `(src, dst)` or it is a direct
     /// indexing, such as `dst = order[src]`.
-    bool isIndexPairEncoding;
+    bool isIndexPairEncoding() const { return indices.getFlag(0); }
   };
 
   /// Parse use-list order from bytecode for a range of values if available. The
@@ -2235,7 +2238,7 @@ BytecodeReader::Impl::parseUseListOrderForRange(EncodingReader &reader,
     if (failed(reader.parseVarIntWithFlag(numValues, indexPairEncoding)))
       return failure();
 
-    SmallVector<unsigned, 4> useListOrders;
+    UseListOrderStorage::IndexStorage useListOrders;
     for (size_t idx = 0; idx < numValues; idx++) {
       uint64_t index;
       if (failed(reader.parseVarInt(index)))
@@ -2303,19 +2306,20 @@ LogicalResult BytecodeReader::Impl::sortUseListOrder(Value value) {
   // Pull the custom order info from the map.
   UseListOrderStorage customOrder =
       valueToUseListMap.at(value.getAsOpaquePointer());
-  SmallVector<unsigned, 4> shuffle = std::move(customOrder.indices);
+  bool isIndexPairEncoding = customOrder.isIndexPairEncoding();
+  auto shuffle = std::move(customOrder.indices);
   uint64_t numUses = value.getNumUses();
 
   // If the encoding was a pair of indices `(src, dst)` for every permutation,
   // reconstruct the shuffle vector for every use. Initialize the shuffle vector
   // as identity, and then apply the mapping encoded in the indices.
   // This produces shuffle[oldIdx] = newPos (i.e., old_index -> new_position).
-  if (customOrder.isIndexPairEncoding) {
+  if (isIndexPairEncoding) {
     // Return failure if the number of indices was not representing pairs.
     if (shuffle.size() & 1)
       return failure();
 
-    SmallVector<unsigned, 4> newShuffle(numUses);
+    UseListOrderStorage::IndexStorage newShuffle(numUses);
     size_t idx = 0;
     std::iota(newShuffle.begin(), newShuffle.end(), idx);
     for (idx = 0; idx < shuffle.size(); idx += 2)
@@ -2354,8 +2358,8 @@ LogicalResult BytecodeReader::Impl::sortUseListOrder(Value value) {
   // In both cases, currentOrder[sortedPos].first gives the readerMemIdx for
   // a given sorted position. We fold the permutation inversion for the
   // full-shuffle case directly into the composition to avoid an extra pass.
-  SmallVector<unsigned, 4> finalShuffle(numUses);
-  if (customOrder.isIndexPairEncoding) {
+  UseListOrderStorage::IndexStorage finalShuffle(numUses);
+  if (isIndexPairEncoding) {
     for (size_t writerMemIdx = 0; writerMemIdx < numUses; ++writerMemIdx)
       finalShuffle[currentOrder[shuffle[writerMemIdx]].first] = writerMemIdx;
   } else {

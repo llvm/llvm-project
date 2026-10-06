@@ -15,7 +15,7 @@
 #define MLIR_ANALYSIS_PRESBURGER_PRESBURGERSPACE_H
 
 #include "llvm/ADT/ArrayRef.h"
-#include "llvm/ADT/SmallVector.h"
+#include "llvm/ADT/SmallVectorWithFlags.h"
 #include "llvm/Support/PointerLikeTypeTraits.h"
 #include "llvm/Support/TypeName.h"
 #include "llvm/Support/raw_ostream.h"
@@ -255,19 +255,19 @@ public:
   /// Get the identifier of pos^th variable of the specified kind.
   Identifier getId(VarKind kind, unsigned pos) const {
     assert(kind != VarKind::Local && "Local variables have no identifiers");
-    if (!usingIds)
+    if (!isUsingIds())
       return Identifier();
     return identifiers[getVarKindOffset(kind) + pos];
   }
 
   ArrayRef<Identifier> getIds(VarKind kind) const {
     assert(kind != VarKind::Local && "Local variables have no identifiers");
-    assert(usingIds && "Identifiers not enabled for space");
+    assert(isUsingIds() && "Identifiers not enabled for space");
     return {identifiers.data() + getVarKindOffset(kind), getNumVarKind(kind)};
   }
 
   ArrayRef<Identifier> getIds() const {
-    assert(usingIds && "Identifiers not enabled for space");
+    assert(isUsingIds() && "Identifiers not enabled for space");
     return identifiers;
   }
 
@@ -275,26 +275,26 @@ public:
   /// resetIds if identifiers are not enabled.
   void setId(VarKind kind, unsigned pos, Identifier id) {
     assert(kind != VarKind::Local && "Local variables have no identifiers");
-    if (!usingIds)
+    if (!isUsingIds())
       resetIds();
     identifiers[getVarKindOffset(kind) + pos] = id;
   }
 
   /// Returns if identifiers are being used.
-  bool isUsingIds() const { return usingIds; }
+  bool isUsingIds() const { return identifiers.getFlag(0); }
 
   /// Reset the stored identifiers in the space. Enables `usingIds` if it was
   /// `false` before.
   void resetIds() {
     identifiers.clear();
     identifiers.resize(getNumDimAndSymbolVars());
-    usingIds = true;
+    identifiers.setFlag(0, true);
   }
 
   /// Disable identifiers being stored in space.
   void disableIds() {
     identifiers.clear();
-    usingIds = false;
+    identifiers.setFlag(0, false);
   }
 
   /// Check if the spaces are compatible, and the non-local variables having
@@ -334,13 +334,10 @@ private:
   /// to existentially quantified variables).
   unsigned numLocals;
 
-  /// Stores whether or not identifiers are being used in this space.
-  bool usingIds = false;
-
   /// Stores an identifier for each non-local variable as a `void` pointer.
-  SmallVector<Identifier, 0> identifiers;
+  /// Flag bit 0 stores whether identifiers are enabled for this space.
+  llvm::SmallVectorWithFlags<Identifier, 0> identifiers;
 };
-
 } // namespace presburger
 } // namespace mlir
 
