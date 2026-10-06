@@ -148,3 +148,39 @@ exit:
   %v = load i64, ptr %sel, align 8
   ret i64 %v
 }
+
+; %iv.next is defined before %sel, so reusing it is fine and the address is
+; still sunk.
+define i64 @select_iv_next_before(ptr %p, i1 %c0, i1 %c1) {
+; CHECK-LABEL: define i64 @select_iv_next_before(
+; CHECK-SAME: ptr [[P:%.*]], i1 [[C0:%.*]], i1 [[C1:%.*]]) {
+; CHECK-NEXT:  [[ENTRY:.*]]:
+; CHECK-NEXT:    br label %[[LOOP:.*]]
+; CHECK:       [[LOOP]]:
+; CHECK-NEXT:    [[IV:%.*]] = phi i64 [ 0, %[[ENTRY]] ], [ [[IV_NEXT:%.*]], %[[LOOP]] ]
+; CHECK-NEXT:    [[IV_NEXT]] = add i64 [[IV]], 1
+; CHECK-NEXT:    [[SEL1:%.*]] = select i1 [[C0]], i64 [[IV_NEXT]], i64 0
+; CHECK-NEXT:    br i1 [[C1]], label %[[EXIT:.*]], label %[[LOOP]]
+; CHECK:       [[EXIT]]:
+; CHECK-NEXT:    [[SUNKADDR:%.*]] = mul i64 [[SEL1]], 8
+; CHECK-NEXT:    [[SUNKADDR2:%.*]] = getelementptr i8, ptr [[P]], i64 [[SUNKADDR]]
+; CHECK-NEXT:    [[SUNKADDR3:%.*]] = getelementptr i8, ptr [[SUNKADDR2]], i64 -16
+; CHECK-NEXT:    [[V:%.*]] = load i64, ptr [[SUNKADDR3]], align 8
+; CHECK-NEXT:    ret i64 [[V]]
+;
+entry:
+  br label %loop
+
+loop:
+  %iv = phi i64 [ 0, %entry ], [ %iv.next, %loop ]
+  %iv.next = add i64 %iv, 1
+  %a = getelementptr [8 x i8], ptr %p, i64 %iv
+  %b = getelementptr i8, ptr %a, i64 -8
+  %c = getelementptr [8 x i8], ptr %p, i64 -2
+  %sel = select i1 %c0, ptr %b, ptr %c
+  br i1 %c1, label %exit, label %loop
+
+exit:
+  %v = load i64, ptr %sel, align 8
+  ret i64 %v
+}
