@@ -316,6 +316,12 @@ bool reboxPreservesContinuity(fir::ReboxOp rebox,
 /// the checking is done for continuity of the whole result of embox
 bool isContiguousEmbox(fir::EmboxOp embox, bool checkWhole = true);
 
+/// Return true if \p op is nested in code that is offloaded to a device: an
+/// OpenACC compute construct or specialized routine, a CUDA Fortran kernel
+/// loop, a gpu.launch, a gpu.func or a gpu.module. Code there runs on the
+/// device stack, which is far smaller than the host one.
+bool isInOffloadRegion(mlir::Operation *op);
+
 } // namespace fir
 
 #endif // FORTRAN_OPTIMIZER_DIALECT_FIROPSSUPPORT_H

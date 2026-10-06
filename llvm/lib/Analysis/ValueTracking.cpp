@@ -1919,13 +1919,33 @@ static void computeKnownBitsFromOperator(const Operator *I,
         break;
       }
 
+      case Instruction::And: {
+        // Bits that are zero in the start value stay zero, and bits that are
+        // one in both the start value and the step stay one.
+        KnownBits KnownStep(BitWidth);
+        computeKnownBitsForRecurrenceOperands(P, Start, Step, DemandedElts,
+                                              KnownStart, KnownStep, Q, Depth);
+        Known.Zero |= KnownStart.Zero;
+        Known.One |= KnownStart.One & KnownStep.One;
+        break;
+      }
+
+      case Instruction::Or: {
+        // Bits that are zero in both the start value and the step stay zero,
+        // and bits that are one in the start value stay one.
+        KnownBits KnownStep(BitWidth);
+        computeKnownBitsForRecurrenceOperands(P, Start, Step, DemandedElts,
+                                              KnownStart, KnownStep, Q, Depth);
+        Known.Zero |= KnownStart.Zero & KnownStep.Zero;
+        Known.One |= KnownStart.One;
+        break;
+      }
+
       // Check for operations that have the property that if
       // both their operands have low zero bits, the result
       // will have low zero bits.
       case Instruction::Add:
       case Instruction::Sub:
-      case Instruction::And:
-      case Instruction::Or:
       case Instruction::Mul: {
         // Ok, we have a recurrence of the form {Start,op,Step}. Check for low
         // zero bits.
@@ -2360,10 +2380,11 @@ static void computeKnownBitsFromOperator(const Operator *I,
       case Intrinsic::amdgcn_mbcnt_lo: {
         // Wave64 mbcnt_lo returns at most 32 + src1. Otherwise these return at
         // most 31 + src1.
-        Known.Zero.setBitsFrom(
+        KnownBits MbcntKnown(BitWidth);
+        MbcntKnown.Zero.setBitsFrom(
             II->getIntrinsicID() == Intrinsic::amdgcn_mbcnt_lo ? 6 : 5);
         computeKnownBits(I->getOperand(1), Known2, Q, Depth + 1);
-        Known = KnownBits::add(Known, Known2);
+        Known = Known.unionWith(KnownBits::add(MbcntKnown, Known2));
         break;
       }
       case Intrinsic::vscale: {
@@ -6341,11 +6362,26 @@ void computeKnownFPClass(const Value *V, const APInt &DemandedElts,
       if (const auto *II = dyn_cast<IntrinsicInst>(Src)) {
         switch (II->getIntrinsicID()) {
         case Intrinsic::frexp: {
-          Known.knownNot(fcSubnormal);
+          FPClassTest InterestedSrcs = InterestedClasses;
+
+          // Positive subnormals and negative subnormals could become positive
+          // zero.
+          if (InterestedClasses & fcPosZero)
+            InterestedSrcs |= fcSubnormal;
+
+          // Negative subnormals could become negative zero.
+          if (InterestedClasses & fcNegZero)
+            InterestedSrcs |= fcNegSubnormal;
+
+          if (InterestedClasses & fcPosNormal)
+            InterestedSrcs |= fcPosSubnormal;
+
+          if (InterestedClasses & fcNegNormal)
+            InterestedSrcs |= fcNegSubnormal;
 
           KnownFPClass KnownSrc;
           computeKnownFPClass(II->getArgOperand(0), DemandedElts,
-                              InterestedClasses, KnownSrc, Q, Depth + 1);
+                              InterestedSrcs, KnownSrc, Q, Depth + 1);
 
           const Function *F = cast<Instruction>(Op)->getFunction();
           const fltSemantics &FltSem =
