@@ -1739,25 +1739,36 @@ Error MetadataLoader::MetadataLoaderImpl::parseOneMetadata(
     break;
   }
   case bitc::METADATA_STRING_TYPE: {
-    if (Record.size() > 9 || Record.size() < 8)
+    if (Record.size() > 10 || Record.size() < 8)
       return error("Invalid record");
 
     IsDistinct = Record[0] & 1;
     bool SizeIsMetadata = Record[0] & 2;
-    bool SizeIs8 = Record.size() == 8;
-    // StringLocationExp (i.e. Record[5]) is added at a later time
-    // than the other fields. The code here enables backward compatibility.
-    Metadata *StringLocationExp = SizeIs8 ? nullptr : getMDOrNull(Record[5]);
-    unsigned Offset = SizeIs8 ? 5 : 6;
+    // StringLocationExp (i.e. Record[5]) was added at a later time
+    // than most of the other fields, and CharType (Record[9]) was
+    // added even later.
+    // The code here enables backward compatibility.
+    Metadata *StringLocationExp = nullptr;
+    Metadata *CharType = nullptr;
+
+    bool StringLocPresent = Record.size() > 8;
+    size_t SizeOffset = StringLocPresent ? 6 : 5;
+
     Metadata *SizeInBits =
-        getMetadataOrConstant(SizeIsMetadata, Record[Offset]);
+        getMetadataOrConstant(SizeIsMetadata, Record[SizeOffset]);
+    if (StringLocPresent) {
+      StringLocationExp = getMDOrNull(Record[5]);
+    }
+    if (Record.size() == 10) {
+      CharType = getMDOrNull(Record[9]);
+    }
 
     MetadataList.assignValue(
         GET_OR_DISTINCT(DIStringType,
                         (Context, Record[1], getMDString(Record[2]),
                          getMDOrNull(Record[3]), getMDOrNull(Record[4]),
-                         StringLocationExp, SizeInBits, Record[Offset + 1],
-                         Record[Offset + 2])),
+                         StringLocationExp, SizeInBits, Record[SizeOffset + 1],
+                         Record[SizeOffset + 2], CharType)),
         NextMetadataNo);
     NextMetadataNo++;
     break;
