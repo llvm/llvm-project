@@ -497,59 +497,88 @@ void temporaryInConditionVariable() {
 
 
 // CHECK: void temporaryInForLoopConditionVariable()
+// CHECK:        [B5 (ENTRY)]
+// CHECK-NEXT:     Succs (1): B4
+// CHECK:        [B1]
+// CHECK-NEXT:     1: ForStmt (LoopExit)
+// CHECK-NEXT:     Preds (1): B3
+// CHECK-NEXT:     Succs (1): B0
 // CHECK:        [B2]
-// CXX11-ELIDE-NEXT:     1: C() (CXXConstructExpr, [B2.2], [B2.3], C)
-// CXX11-NOELIDE-NEXT:     1: C() (CXXConstructExpr, [B2.2], C)
-// CXX11-NEXT:     2: [B2.1]
-// CXX11-NEXT:     3: [B2.2] (CXXConstructExpr, [B2.4], C)
-// CXX11-NEXT:     4: C c2 = C();
-// CXX11-NEXT:     5: c2
-// CXX11-NEXT:     6: [B2.5] (ImplicitCastExpr, NoOp, const class C)
-// CXX11-NEXT:     7: [B2.6].operator bool
-// CXX11-NEXT:     8: [B2.6]
-// CXX11-NEXT:     9: [B2.8] (ImplicitCastExpr, UserDefinedConversion, _Bool)
-// CXX11-NEXT:     T: for (...; [B2.9]; )
-// CXX17-NEXT:     1: C() (CXXConstructExpr, [B2.2], C)
-// CXX17-NEXT:     2: C c2 = C();
-// CXX17-NEXT:     3: c2
-// CXX17-NEXT:     4: [B2.3] (ImplicitCastExpr, NoOp, const class C)
-// CXX17-NEXT:     5: [B2.4].operator bool
-// CXX17-NEXT:     6: [B2.4]
-// CXX17-NEXT:     7: [B2.6] (ImplicitCastExpr, UserDefinedConversion, _Bool)
-// CXX17-NEXT:     T: for (...; [B2.7]; )
+// CHECK-NEXT:     Preds (1): B3
+// CHECK-NEXT:     Succs (1): B3
 // CHECK:        [B3]
 // CXX11-ELIDE-NEXT:     1: C() (CXXConstructExpr, [B3.2], [B3.3], C)
 // CXX11-NOELIDE-NEXT:     1: C() (CXXConstructExpr, [B3.2], C)
 // CXX11-NEXT:     2: [B3.1]
 // CXX11-NEXT:     3: [B3.2] (CXXConstructExpr, [B3.4], C)
-// CXX11-NEXT:     4: C c1 = C();
+// CXX11-NEXT:     4: C c2 = C();
+// CXX11-NEXT:     5: c2
+// CXX11-NEXT:     6: [B3.5] (ImplicitCastExpr, NoOp, const class C)
+// CXX11-NEXT:     7: [B3.6].operator bool
+// CXX11-NEXT:     8: [B3.6]
+// CXX11-NEXT:     9: [B3.8] (ImplicitCastExpr, UserDefinedConversion, _Bool)
+// CXX11-NEXT:     T: for (...; [B3.9]; )
 // CXX17-NEXT:     1: C() (CXXConstructExpr, [B3.2], C)
+// CXX17-NEXT:     2: C c2 = C();
+// CXX17-NEXT:     3: c2
+// CXX17-NEXT:     4: [B3.3] (ImplicitCastExpr, NoOp, const class C)
+// CXX17-NEXT:     5: [B3.4].operator bool
+// CXX17-NEXT:     6: [B3.4]
+// CXX17-NEXT:     7: [B3.6] (ImplicitCastExpr, UserDefinedConversion, _Bool)
+// CXX17-NEXT:     T: for (...; [B3.7]; )
+// CHECK-NEXT:     Preds (2): B2 B4
+// CHECK-NEXT:     Succs (2): B2 B1
+// CHECK:        [B4]
+// CXX11-ELIDE-NEXT:     1: C() (CXXConstructExpr, [B4.2], [B4.3], C)
+// CXX11-NOELIDE-NEXT:     1: C() (CXXConstructExpr, [B4.2], C)
+// CXX11-NEXT:     2: [B4.1]
+// CXX11-NEXT:     3: [B4.2] (CXXConstructExpr, [B4.4], C)
+// CXX11-NEXT:     4: C c1 = C();
+// CXX17-NEXT:     1: C() (CXXConstructExpr, [B4.2], C)
 // CXX17-NEXT:     2: C c1 = C();
+// CHECK-NEXT:     Preds (1): B5
+// CHECK-NEXT:     Succs (1): B3
+// CHECK:        [B0 (EXIT)]
+// CHECK-NEXT:     Preds (1): B1
 void temporaryInForLoopConditionVariable() {
   for (C c1 = C(); C c2 = C(); );
 }
 
 
 // CHECK: void temporaryInWhileLoopConditionVariable()
-// CXX11-ELIDE:          1: C() (CXXConstructExpr, [B2.2], [B2.3], C)
-// CXX11-NOELIDE:          1: C() (CXXConstructExpr, [B2.2], C)
-// CXX11-NEXT:     2: [B2.1]
-// CXX11-NEXT:     3: [B2.2] (CXXConstructExpr, [B2.4], C)
+// CHECK:        [B4 (ENTRY)]
+// CHECK-NEXT:     Succs (1): B3
+// CHECK:        [B1]
+// CHECK-NEXT:     1: WhileStmt (LoopExit)
+// CHECK-NEXT:     Preds (1): B3
+// CHECK-NEXT:     Succs (1): B0
+// CHECK:        [B2]
+// CHECK-NEXT:     Preds (1): B3
+// CHECK-NEXT:     Succs (1): B3
+// CHECK:        [B3]
+// CXX11-ELIDE-NEXT:     1: C() (CXXConstructExpr, [B3.2], [B3.3], C)
+// CXX11-NOELIDE-NEXT:     1: C() (CXXConstructExpr, [B3.2], C)
+// CXX11-NEXT:     2: [B3.1]
+// CXX11-NEXT:     3: [B3.2] (CXXConstructExpr, [B3.4], C)
 // CXX11-NEXT:     4: C c = C();
 // CXX11-NEXT:     5: c
-// CXX11-NEXT:     6: [B2.5] (ImplicitCastExpr, NoOp, const class C)
-// CXX11-NEXT:     7: [B2.6].operator bool
-// CXX11-NEXT:     8: [B2.6]
-// CXX11-NEXT:     9: [B2.8] (ImplicitCastExpr, UserDefinedConversion, _Bool)
-// CXX11-NEXT:     T: while [B2.9]
-// CXX17:          1: C() (CXXConstructExpr, [B2.2], C)
+// CXX11-NEXT:     6: [B3.5] (ImplicitCastExpr, NoOp, const class C)
+// CXX11-NEXT:     7: [B3.6].operator bool
+// CXX11-NEXT:     8: [B3.6]
+// CXX11-NEXT:     9: [B3.8] (ImplicitCastExpr, UserDefinedConversion, _Bool)
+// CXX11-NEXT:     T: while [B3.9]
+// CXX17-NEXT:     1: C() (CXXConstructExpr, [B3.2], C)
 // CXX17-NEXT:     2: C c = C();
 // CXX17-NEXT:     3: c
-// CXX17-NEXT:     4: [B2.3] (ImplicitCastExpr, NoOp, const class C)
-// CXX17-NEXT:     5: [B2.4].operator bool
-// CXX17-NEXT:     6: [B2.4]
-// CXX17-NEXT:     7: [B2.6] (ImplicitCastExpr, UserDefinedConversion, _Bool)
-// CXX17-NEXT:     T: while [B2.7]
+// CXX17-NEXT:     4: [B3.3] (ImplicitCastExpr, NoOp, const class C)
+// CXX17-NEXT:     5: [B3.4].operator bool
+// CXX17-NEXT:     6: [B3.4]
+// CXX17-NEXT:     7: [B3.6] (ImplicitCastExpr, UserDefinedConversion, _Bool)
+// CXX17-NEXT:     T: while [B3.7]
+// CHECK-NEXT:     Preds (2): B2 B4
+// CHECK-NEXT:     Succs (2): B2 B1
+// CHECK:        [B0 (EXIT)]
+// CHECK-NEXT:     Preds (1): B1
 void temporaryInWhileLoopConditionVariable() {
   while (C c = C());
 }
