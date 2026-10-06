@@ -3061,9 +3061,12 @@ void LoweringPreparePass::buildCUDARegisterVars(cir::CIRBaseBuilderTy &builder,
 void LoweringPreparePass::runOnOperation() {
   mlirModule = getOperation();
 
-  // CIRGen always sets the triple, so this cannot fail.
   lowerModule = cir::createLowerModule(mlirModule);
-  assert(lowerModule && "requires a module with a triple");
+  if (!lowerModule) {
+    mlirModule.emitError() << getArgument()
+                           << " requires a module with a triple";
+    return signalPassFailure();
+  }
 
   llvm::SmallVector<mlir::Operation *> opsToTransform;
 
