@@ -11,8 +11,15 @@
 
 #include <__atomic/atomic.h>
 #include <__atomic/atomic_sync.h>
+#include <__atomic/memory_order.h>
 #include <__config>
+#include <__cstddef/size_t.h>
 #include <__memory/construct_at.h>
+#include <__new/global_new_delete.h>
+#include <__new/nothrow_t.h>
+#include <__utility/empty.h>
+#include <__utility/forward.h>
+#include <__utility/move.h>
 
 #if !defined(_LIBCPP_HAS_NO_PRAGMA_SYSTEM_HEADER)
 #  pragma GCC system_header
