@@ -200,6 +200,12 @@ ProcessProperties::ProcessProperties(lldb_private::Process *process)
     m_collection_sp->SetValueChangedCallback(
         ePropertyDisableLangRuntimeUnwindPlans,
         [this] { DisableLanguageRuntimeUnwindPlansCallback(); });
+    m_collection_sp->SetValueChangedCallback(
+        ePropertyVirtualAddressableBits,
+        [this] { AddressMaskChangedCallback(); });
+    m_collection_sp->SetValueChangedCallback(
+        ePropertyHighmemVirtualAddressableBits,
+        [this] { AddressMaskChangedCallback(); });
   }
 }
 
@@ -262,6 +268,18 @@ uint32_t ProcessProperties::GetHighmemVirtualAddressableBits() const {
 void ProcessProperties::SetHighmemVirtualAddressableBits(uint32_t bits) {
   const uint32_t idx = ePropertyHighmemVirtualAddressableBits;
   SetPropertyAtIndex(idx, static_cast<uint64_t>(bits));
+}
+
+void ProcessProperties::AddressMaskChangedCallback() {
+  if (!m_process)
+    return;
+  Process::StopLocker stop_locker;
+  if (!stop_locker.TryLock(&m_process->GetRunLock()))
+    return;
+  // Never call this from address-fixing code, which runs while frames are being
+  // constructed.
+  for (ThreadSP thread_sp : m_process->Threads())
+    thread_sp->ClearStackFrames();
 }
 
 void ProcessProperties::SetPythonOSPluginPath(const FileSpec &file) {
@@ -1238,7 +1256,8 @@ bool Process::PruneThreadPlansForTID(lldb::tid_t tid) {
 }
 
 void Process::PruneThreadPlans() {
-  m_thread_plans.Update(GetThreadList(), true, false);
+  UpdateThreadListIfNeeded();
+  m_thread_plans.Update(m_thread_list, true, false);
 }
 
 bool Process::DumpThreadPlansForTID(Stream &strm, lldb::tid_t tid,
@@ -2739,27 +2758,9 @@ addr_t Process::CallocateMemory(size_t size, uint32_t permissions,
 bool Process::CanJIT() {
   if (m_can_jit == eCanJITDontKnow) {
     Log *log = GetLog(LLDBLog::Process);
-    Status err;
-
-    uint64_t allocated_memory = AllocateMemory(
-        8, ePermissionsReadable | ePermissionsWritable | ePermissionsExecutable,
-        err);
-
-    if (err.Success()) {
-      m_can_jit = eCanJITYes;
-      LLDB_LOGF(log,
-                "Process::%s pid %" PRIu64
-                " allocation test passed, CanJIT () is true",
-                __FUNCTION__, GetID());
-    } else {
-      m_can_jit = eCanJITNo;
-      LLDB_LOGF(log,
-                "Process::%s pid %" PRIu64
-                " allocation test failed, CanJIT () is false: %s",
-                __FUNCTION__, GetID(), err.AsCString());
-    }
-
-    DeallocateMemory(allocated_memory);
+    m_can_jit = DoCanAllocateMemory() ? eCanJITYes : eCanJITNo;
+    LLDB_LOGF(log, "Process::%s pid %" PRIu64 " CanJIT () is %s", __FUNCTION__,
+              GetID(), m_can_jit == eCanJITYes ? "true" : "false");
   }
 
   return m_can_jit == eCanJITYes;
@@ -3483,8 +3484,13 @@ void Process::CompleteAttach() {
     }
   }
   if (new_executable_module_sp) {
-    GetTarget().SetExecutableModule(new_executable_module_sp,
-                                    eLoadDependentsNo);
+    // Replacing an executable clears the images, which would drop the
+    // modules the loader already found.
+    if (GetTarget().GetExecutableModulePointer())
+      GetTarget().RebuildModuleListWithExecutable(new_executable_module_sp,
+                                                  eLoadDependentsNo);
+    else
+      GetTarget().MarkExecutableModule(new_executable_module_sp);
     if (log) {
       ModuleSP exe_module_sp = GetTarget().GetExecutableModule();
       LLDB_LOGF(
@@ -5184,7 +5190,7 @@ HandleStoppedEvent(lldb::tid_t thread_id, const ThreadPlanSP &thread_plan_sp,
 ExpressionResults
 Process::RunThreadPlan(ExecutionContext &exe_ctx,
                        lldb::ThreadPlanSP &thread_plan_sp,
-                       const EvaluateExpressionOptions &options,
+                       const EvaluateExpressionOptions &requested_options,
                        DiagnosticManager &diagnostic_manager) {
   ExpressionResults return_value = eExpressionSetupError;
 
@@ -5219,6 +5225,31 @@ Process::RunThreadPlan(ExecutionContext &exe_ctx,
   // Record the thread's id so we can tell when a thread we were using
   // to run the expression exits during the expression evaluation.
   lldb::tid_t expr_thread_id = thread->GetID();
+
+  // Clearing stop-others is a request to run the inferior's other threads, and
+  // it is not the default, so refuse it outright rather than quietly running
+  // single-threaded. Asking for the all-threads retry is refused the same way,
+  // since it resumes those same threads a moment later.
+  EvaluateExpressionOptions options = requested_options;
+  const Policy policy = PolicyStack::Get().Current();
+  if (!policy.capabilities.can_run_all_threads) {
+    if (!options.GetStopOthers()) {
+      diagnostic_manager.PutString(
+          lldb::eSeverityError,
+          "cannot run the process's other threads to evaluate this "
+          "expression: the current context does not allow resuming them");
+      return eExpressionSetupError;
+    }
+    options.SetTryAllThreads(false);
+  } else if (!policy.capabilities.can_try_all_threads) {
+    if (options.GetTryAllThreads()) {
+      diagnostic_manager.PutString(
+          lldb::eSeverityError,
+          "cannot retry this expression with the process's other threads "
+          "running: the current context does not allow that fallback");
+      return eExpressionSetupError;
+    }
+  }
 
   // We need to change some of the thread plan attributes for the thread plan
   // runner.  This will restore them when we are done:
@@ -6667,14 +6698,25 @@ Status Process::UpdateAutomaticSignalFiltering() {
   return Status();
 }
 
-UtilityFunction *Process::GetLoadImageUtilityFunction(
+llvm::Expected<UtilityFunction &> Process::GetLoadImageUtilityFunction(
     Platform *platform,
-    llvm::function_ref<std::unique_ptr<UtilityFunction>()> factory) {
+    llvm::function_ref<llvm::Expected<std::unique_ptr<UtilityFunction>>()>
+        factory) {
   if (platform != GetTarget().GetPlatform().get())
-    return nullptr;
-  llvm::call_once(m_dlopen_utility_func_flag_once,
-                  [&] { m_dlopen_utility_func_up = factory(); });
-  return m_dlopen_utility_func_up.get();
+    return llvm::createStringError(
+        "the platform requesting the load-image utility function is not "
+        "the target's platform");
+  llvm::call_once(m_dlopen_utility_func_flag_once, [&] {
+    llvm::Expected<std::unique_ptr<UtilityFunction>> factory_result = factory();
+    if (factory_result)
+      m_dlopen_utility_func_up = std::move(*factory_result);
+    else
+      m_dlopen_utility_func_error =
+          Status::FromError(factory_result.takeError());
+  });
+  if (m_dlopen_utility_func_up)
+    return *m_dlopen_utility_func_up;
+  return m_dlopen_utility_func_error.ToError();
 }
 
 llvm::Expected<TraceSupportedResponse> Process::TraceSupported() {

@@ -36,9 +36,6 @@ using namespace llvm;
 
 static cl::OptionCategory LoaderCategory("loader options");
 
-static cl::opt<bool> Help("h", cl::desc("Alias for -help"), cl::Hidden,
-                          cl::cat(LoaderCategory));
-
 static cl::opt<unsigned>
     ThreadsX("threads-x", cl::desc("Number of threads in the 'x' dimension"),
              cl::init(1), cl::cat(LoaderCategory));
@@ -198,11 +195,6 @@ int main(int argc, const char **argv, const char **envp) {
       "A utility used to launch unit tests built for a GPU target. This is\n"
       "intended to provide an interface similar to cross-compiling "
       "emulators\n");
-
-  if (Help) {
-    cl::PrintHelpMessage();
-    return EXIT_SUCCESS;
-  }
 
   if (Error Err = loadLLVMOffload())
     handleError(std::move(Err));

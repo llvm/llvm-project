@@ -150,22 +150,29 @@ class MemIntrinsicCostAttributes {
   /// Alignment of single element.
   Align Alignment;
 
+  const Value *StrideVal;
+
 public:
   MemIntrinsicCostAttributes(Intrinsic::ID Id, Type *DataTy, const Value *Ptr,
                              bool VariableMask, Align Alignment,
-                             const Instruction *I = nullptr)
+                             const Instruction *I = nullptr,
+                             const Value *StrideVal = nullptr)
+
       : I(I), Ptr(Ptr), DataTy(DataTy), IID(Id), VariableMask(VariableMask),
-        Alignment(Alignment) {}
+        Alignment(Alignment), StrideVal(StrideVal) {}
 
   MemIntrinsicCostAttributes(Intrinsic::ID Id, Type *DataTy, Align Alignment,
-                             unsigned AddressSpace = 0)
+                             unsigned AddressSpace = 0,
+                             const Value *StrideVal = nullptr)
       : DataTy(DataTy), IID(Id), AddressSpace(AddressSpace),
-        Alignment(Alignment) {}
+        Alignment(Alignment), StrideVal(StrideVal) {}
 
   MemIntrinsicCostAttributes(Intrinsic::ID Id, Type *DataTy, bool VariableMask,
-                             Align Alignment, const Instruction *I = nullptr)
+                             Align Alignment, const Instruction *I = nullptr,
+                             const Value *StrideVal = nullptr)
+
       : I(I), DataTy(DataTy), IID(Id), VariableMask(VariableMask),
-        Alignment(Alignment) {}
+        Alignment(Alignment), StrideVal(StrideVal) {}
 
   Intrinsic::ID getID() const { return IID; }
   const Instruction *getInst() const { return I; }
@@ -174,6 +181,7 @@ public:
   bool getVariableMask() const { return VariableMask; }
   unsigned getAddressSpace() const { return AddressSpace; }
   Align getAlignment() const { return Alignment; }
+  const Value *getStrideVal() const { return StrideVal; }
 };
 
 /// Represents a hint about the context in which a vector instruction or
@@ -933,6 +941,12 @@ public:
   isLegalMaskedLoad(Type *DataType, Align Alignment, unsigned AddressSpace,
                     MaskKind MaskKind = VariableOrConstantMask) const;
 
+  /// Return true if the target supports speculatively loading \p DataType from
+  /// address space \p AddressSpace, i.e. @llvm.can.load.speculatively can
+  /// return true for the store size of \p DataType.
+  LLVM_ABI bool isLegalSpeculativeLoad(Type *DataType,
+                                       unsigned AddressSpace) const;
+
   /// Return true if the target supports nontemporal store.
   LLVM_ABI bool isLegalNTStore(Type *DataType, Align Alignment) const;
   /// Return true if the target supports nontemporal load.
@@ -1544,6 +1558,10 @@ public:
   /// Collect properties of V used in cost analysis, e.g. OP_PowerOf2.
   LLVM_ABI static OperandValueInfo getOperandInfo(const Value *V);
 
+  /// Return information about the vector formed for the specified index
+  /// of a vector of (the same) instruction.
+  LLVM_ABI static OperandValueInfo getOperandInfo(ArrayRef<Value *> Ops);
+
   /// Collect common data between two OperandValueInfo inputs
   LLVM_ABI static OperandValueInfo commonOperandInfo(const Value *X,
                                                      const Value *Y);
@@ -1562,7 +1580,7 @@ public:
   /// \p Args is an optional argument which holds the instruction operands
   /// values so the TTI can analyze those values searching for special
   /// cases or optimizations based on those values.
-  /// \p CxtI is the optional original context instruction, if one exists, to
+  /// \p CtxI is the optional original context instruction, if one exists, to
   /// provide even more information.
   /// \p TLibInfo is used to search for platform specific vector library
   /// functions for instructions that might be converted to calls (e.g. frem).
@@ -1570,7 +1588,7 @@ public:
       unsigned Opcode, Type *Ty, TTI::TargetCostKind CostKind,
       TTI::OperandValueInfo Opd1Info = {TTI::OK_AnyValue, TTI::OP_None},
       TTI::OperandValueInfo Opd2Info = {TTI::OK_AnyValue, TTI::OP_None},
-      ArrayRef<const Value *> Args = {}, const Instruction *CxtI = nullptr,
+      ArrayRef<const Value *> Args = {}, const Instruction *CtxI = nullptr,
       const TargetLibraryInfo *TLibInfo = nullptr) const;
 
   /// Returns the cost estimation for alternating opcode pattern that can be
@@ -1596,7 +1614,7 @@ public:
       ShuffleKind Kind, VectorType *DstTy, VectorType *SrcTy,
       TTI::TargetCostKind CostKind, ArrayRef<int> Mask = {}, int Index = 0,
       VectorType *SubTp = nullptr, ArrayRef<const Value *> Args = {},
-      const Instruction *CxtI = nullptr,
+      const Instruction *CtxI = nullptr,
       TTI::VectorInstrContext VIC = TTI::VectorInstrContext::None) const;
 
   /// Represents a hint about the context in which a cast is used.

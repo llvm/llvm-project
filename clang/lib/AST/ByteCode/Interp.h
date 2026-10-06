@@ -29,6 +29,7 @@
 #include "MemberPointer.h"
 #include "PrimType.h"
 #include "Program.h"
+#include "Reflect.h"
 #include "State.h"
 #include "clang/AST/ASTContext.h"
 #include "clang/AST/Expr.h"
@@ -106,9 +107,6 @@ bool CheckDynamicMemoryAllocation(InterpState &S, CodePtr OpPC);
 /// been heap allocated by us.
 bool CheckDeleteSource(InterpState &S, CodePtr OpPC, const Expr *Source,
                        const Pointer &Ptr);
-
-bool CheckActive(InterpState &S, CodePtr OpPC, const Pointer &Ptr,
-                 AccessKinds AK, bool WillActivate = false);
 
 /// Sets the given integral value to the pointer, which is of
 /// a std::{weak,partial,strong}_ordering type.
@@ -1687,10 +1685,10 @@ bool GetField(InterpState &S, CodePtr OpPC, uint32_t I) {
   if (!Obj.getFieldDesc()->isRecord() && !Obj.isUnknownSizeArray())
     return false;
 
-  const Pointer &Field = Obj.atField(I);
-  if (!CheckLoad(S, OpPC, Field))
+  PtrView FieldPtr = Obj.view().atField(I);
+  if (!CheckLoad(S, OpPC, FieldPtr))
     return false;
-  S.Stk.push<T>(Field.deref<T>());
+  S.Stk.push<T>(FieldPtr.deref<T>());
   return true;
 }
 
@@ -1713,10 +1711,10 @@ bool GetFieldPop(InterpState &S, CodePtr OpPC, uint32_t I) {
   if (!Obj.getFieldDesc()->isRecord() && !Obj.isUnknownSizeArray())
     return false;
 
-  const Pointer &Field = Obj.atField(I);
-  if (!CheckLoad(S, OpPC, Field))
+  PtrView FieldPtr = Obj.view().atField(I);
+  if (!CheckLoad(S, OpPC, FieldPtr))
     return false;
-  S.Stk.push<T>(Field.deref<T>());
+  S.Stk.push<T>(FieldPtr.deref<T>());
   return true;
 }
 
@@ -1731,10 +1729,10 @@ bool GetThisField(InterpState &S, CodePtr OpPC, uint32_t I) {
   if (!This.isBlockPointer())
     return false;
 
-  const Pointer &Field = This.atField(I);
-  if (!CheckLoad(S, OpPC, Field))
+  PtrView FieldPtr = This.view().atField(I);
+  if (!CheckLoad(S, OpPC, FieldPtr))
     return false;
-  S.Stk.push<T>(Field.deref<T>());
+  S.Stk.push<T>(FieldPtr.deref<T>());
   return true;
 }
 
@@ -2223,8 +2221,6 @@ bool Load(InterpState &S, CodePtr OpPC) {
   const Pointer &Ptr = S.Stk.peek<Pointer>();
   if (!CheckLoad(S, OpPC, Ptr))
     return false;
-  if (!Ptr.isReadablePointerType())
-    return false;
   if (!Ptr.canDeref(Name))
     return false;
   S.Stk.push<T>(Ptr.load<T>());
@@ -2235,8 +2231,6 @@ template <PrimType Name, class T = typename PrimConv<Name>::T>
 bool LoadPop(InterpState &S, CodePtr OpPC) {
   const Pointer &Ptr = S.Stk.pop<Pointer>();
   if (!CheckLoad(S, OpPC, Ptr))
-    return false;
-  if (!Ptr.isReadablePointerType())
     return false;
   if (!Ptr.canDeref(Name))
     return false;
@@ -3598,7 +3592,7 @@ inline bool CopyArray(InterpState &S, CodePtr OpPC, uint32_t SrcIndex,
     return false;
 
   for (uint32_t I = 0; I != Size; ++I) {
-    const Pointer &SP = SrcPtr.atIndex(SrcIndex + I);
+    PtrView SP = SrcPtr.view().atIndex(SrcIndex + I);
 
     if (!CheckLoad(S, OpPC, SP))
       return false;
@@ -3640,10 +3634,19 @@ inline bool ArrayDecay(InterpState &S, CodePtr OpPC) {
       return true;
     }
 
-    if (!Ptr.getType()->isArrayType()) {
+    const OpaquePointer &OP = Ptr.asOpaquePointer();
+    if (!OP.getFieldType()->isArrayType()) {
       S.Stk.push<Pointer>(Ptr);
       return true;
     }
+
+    if (OP.isUnknownSizeArray() && OP.PathLength != 0) {
+      S.FFDiag(S.Current->getSource(OpPC),
+               diag::note_constexpr_unsupported_unsized_array);
+      S.Stk.push<Pointer>(Ptr);
+      return true;
+    }
+
     return arrayElemPtrOpaque(S, OpPC, Ptr,
                               APSInt(APInt::getZero(1), /*IsUnsigned=*/true),
                               /*AllowReplace=*/false);
@@ -3977,7 +3980,7 @@ inline bool AllocN(InterpState &S, CodePtr OpPC, PrimType T, const Expr *Source,
     return false;
 
   SizeT NumElements = S.Stk.pop<SizeT>();
-  if (!CheckArraySize(S, OpPC, &NumElements, primSize(T), IsNoThrow)) {
+  if (!CheckArraySize(S, OpPC, NumElements, primSize(T), IsNoThrow)) {
     if (!IsNoThrow)
       return false;
 
@@ -4019,7 +4022,7 @@ inline bool AllocCN(InterpState &S, CodePtr OpPC, const Descriptor *ElementDesc,
     return false;
 
   SizeT NumElements = S.Stk.pop<SizeT>();
-  if (!CheckArraySize(S, OpPC, &NumElements, ElementDesc->getSize(),
+  if (!CheckArraySize(S, OpPC, NumElements, ElementDesc->getSize(),
                       IsNoThrow)) {
     if (!IsNoThrow)
       return false;
@@ -4077,6 +4080,7 @@ bool CheckNewTypeMismatchArray(InterpState &S, CodePtr OpPC, const Expr *E) {
   return CheckNewTypeMismatch(S, OpPC, E, static_cast<uint64_t>(Size));
 }
 bool InvalidNewDeleteExpr(InterpState &S, CodePtr OpPC, const Expr *E);
+bool CheckPlacementNew(InterpState &S, CodePtr OpPC, const Expr *E);
 
 template <PrimType Name, class T = typename PrimConv<Name>::T>
 inline bool BitCastPrim(InterpState &S, CodePtr OpPC, bool TargetIsUCharOrByte,
@@ -4181,6 +4185,12 @@ bool DiagTypeid(InterpState &S, CodePtr OpPC);
 inline bool CheckDestruction(InterpState &S, CodePtr OpPC) {
   const auto &Ptr = S.Stk.peek<Pointer>();
   return checkDestructor(S, OpPC, Ptr);
+}
+
+inline bool ReflectValue(InterpState &S, CodePtr OpPC, ReflectionKind Kind,
+                         const void *Operand) {
+  S.Stk.push<Reflect>(Kind, Operand);
+  return true;
 }
 
 inline bool IsBaseClass(InterpState &S) {

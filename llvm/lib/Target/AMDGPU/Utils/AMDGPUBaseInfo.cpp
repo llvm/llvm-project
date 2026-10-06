@@ -383,12 +383,10 @@ struct MTBUFInfo {
 
 struct SMInfo {
   uint32_t Opcode;
-  bool IsBuffer;
 };
 
 struct VOPInfo {
   uint32_t Opcode;
-  bool IsSingle;
 };
 
 struct VOPC64DPPInfo {
@@ -418,7 +416,6 @@ struct VOPDInfo {
 
 struct VOPTrue16Info {
   uint32_t Opcode;
-  bool IsTrue16;
 };
 
 struct VOPDXYInfo {
@@ -432,7 +429,6 @@ struct VOPDXYInfo {
 
 struct DPMACCInstructionInfo {
   uint32_t Opcode;
-  bool IsDPMACCInstruction;
 };
 
 struct FP4FP8DstByteSelInfo {
@@ -556,23 +552,19 @@ bool getMUBUFTfe(unsigned Opc) {
 }
 
 bool getSMEMIsBuffer(unsigned Opc) {
-  const SMInfo *Info = getSMEMOpcodeHelper(Opc);
-  return Info && Info->IsBuffer;
+  return isSMEMOpcodeHelper(Opc) != nullptr;
 }
 
 bool getVOP1IsSingle(unsigned Opc) {
-  const VOPInfo *Info = getVOP1OpcodeHelper(Opc);
-  return !Info || Info->IsSingle;
+  return isVOP1SingleOpcodeHelper(Opc) != nullptr;
 }
 
 bool getVOP2IsSingle(unsigned Opc) {
-  const VOPInfo *Info = getVOP2OpcodeHelper(Opc);
-  return !Info || Info->IsSingle;
+  return isVOP2SingleOpcodeHelper(Opc) != nullptr;
 }
 
 bool getVOP3IsSingle(unsigned Opc) {
-  const VOPInfo *Info = getVOP3OpcodeHelper(Opc);
-  return !Info || Info->IsSingle;
+  return isVOP3SingleOpcodeHelper(Opc) != nullptr;
 }
 
 bool isVOPC64DPP(unsigned Opc) {
@@ -832,10 +824,7 @@ unsigned getTemporalHintType(const MCInstrDesc TID) {
   return CPol::TH_TYPE_LOAD;
 }
 
-bool isTrue16Inst(unsigned Opc) {
-  const VOPTrue16Info *Info = getTrue16OpcodeHelper(Opc);
-  return Info && Info->IsTrue16;
-}
+bool isTrue16Inst(unsigned Opc) { return isTrue16Opcode(Opc) != nullptr; }
 
 FPType getFPDstSelType(unsigned Opc) {
   const FP4FP8DstByteSelInfo *Info = getFP4FP8DstByteSelHelper(Opc);
@@ -850,8 +839,7 @@ FPType getFPDstSelType(unsigned Opc) {
 }
 
 bool isDPMACCInstruction(unsigned Opc) {
-  const DPMACCInstructionInfo *Info = getDPMACCInstructionHelper(Opc);
-  return Info && Info->IsDPMACCInstruction;
+  return isDPMACCInstructionHelper(Opc) != nullptr;
 }
 
 unsigned mapWMMA2AddrTo3AddrOpcode(unsigned Opc) {
@@ -1530,6 +1518,9 @@ static bool isValidRegPrefix(char C) {
 }
 
 std::tuple<char, unsigned, unsigned> parseAsmPhysRegName(StringRef RegName) {
+  if (RegName.empty())
+    return {};
+
   char Kind = RegName.front();
   if (!isValidRegPrefix(Kind))
     return {};

@@ -948,6 +948,40 @@ def CIR_FenvAttr : CIR_Attr<"Fenv", "fenv"> {
 }
 
 //===----------------------------------------------------------------------===//
+// FastMathFlagsAttr
+//===----------------------------------------------------------------------===//
+
+def CIR_FMFnone     : I32BitEnumAttrCaseNone<"none">;
+def CIR_FMFnnan     : I32BitEnumAttrCaseBit<"nnan", 0>;
+def CIR_FMFninf     : I32BitEnumAttrCaseBit<"ninf", 1>;
+def CIR_FMFnsz      : I32BitEnumAttrCaseBit<"nsz", 2>;
+def CIR_FMFarcp     : I32BitEnumAttrCaseBit<"arcp", 3>;
+def CIR_FMFcontract : I32BitEnumAttrCaseBit<"contract", 4>;
+def CIR_FMFafn      : I32BitEnumAttrCaseBit<"afn", 5>;
+def CIR_FMFreassoc  : I32BitEnumAttrCaseBit<"reassoc", 6>;
+def CIR_FMFfast     : I32BitEnumAttrCaseGroup<"fast", [
+  CIR_FMFnnan, CIR_FMFninf, CIR_FMFnsz, CIR_FMFarcp, CIR_FMFcontract,
+  CIR_FMFafn, CIR_FMFreassoc
+]>;
+
+def CIR_FastMathFlags : CIR_I32BitEnum<
+    "FastMathFlags", "fast-math flags", [
+  CIR_FMFnone, CIR_FMFnnan, CIR_FMFninf, CIR_FMFnsz, CIR_FMFarcp,
+  CIR_FMFcontract, CIR_FMFafn, CIR_FMFreassoc, CIR_FMFfast
+]> {
+  let description = [{
+    Describes fast-math flags for CIR operations. This attribute is shared by
+    operations with floating-point semantics and is not specific to LLVM intrinsic
+    calls.
+  }];
+
+  let separator = ", ";
+  let printBitEnumPrimaryGroups = 1;
+}
+
+def CIR_FastMathFlagsAttr : CIR_EnumAttr<CIR_FastMathFlags, "fastmath">;
+
+//===----------------------------------------------------------------------===//
 // GlobalViewAttr
 //===----------------------------------------------------------------------===//
 
@@ -1390,6 +1424,27 @@ def CIR_VisibilityKind : CIR_I32Enum<"VisibilityKind", "C/C++ visibility", [
   I32EnumCase<"Hidden", 1, "hidden">,
   I32EnumCase<"Protected", 2, "protected">
 ]>;
+
+//===----------------------------------------------------------------------===//
+// UnwindTableKind
+//===----------------------------------------------------------------------===//
+def CIR_UnwindTableKind : CIR_I32Enum<"UnwindTableKind", "Unwind Table Kind", [
+  I32EnumCase<"None", 0, "none">,
+  I32EnumCase<"Sync", 1, "sync">,
+  I32EnumCase<"Async", 2, "async">
+]>;
+
+def CIR_UnwindTableKindAttr : CIR_EnumAttr<CIR_UnwindTableKind, "uwtable"> {
+  let summary = "Encodes the unwind table kind for a function.";
+
+  let description = [{
+    This mirrors the UWTableKindEnum in The LLVM dialect,
+    and is passed through to the llvm dialect. According to the LLVM
+    documentation:
+        The ‘uwtable’ attribute is about the ABI or the user mandating an /
+            entry in the unwind table.
+  }];
+}
 
 //===----------------------------------------------------------------------===//
 // GloblCtorAttr
@@ -2320,8 +2375,8 @@ def CIR_StaticLocalInfoAttr
     Example:
     ```
     cir.global ... @x = ...
-      {static_local_info = #cir.static_local_info<
-         local = true, tls = none, is_inline = false, tsk = undeclared>}
+      static_local_info<local = true, tls = none, is_inline = false,
+                        tsk = undeclared>
     ```
 
     Because it stores plain data rather than a `clang::VarDecl` pointer, it
