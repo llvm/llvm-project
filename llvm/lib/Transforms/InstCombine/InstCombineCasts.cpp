@@ -103,7 +103,7 @@ static Value *EvaluateInDifferentTypeImpl(Value *V, Type *Ty, bool isSigned,
                                               IC, Processed);
     Value *False = EvaluateInDifferentTypeImpl(I->getOperand(2), Ty, isSigned,
                                                IC, Processed);
-    Res = SelectInst::Create(I->getOperand(0), True, False);
+    Res = SelectInst::Create(I->getOperand(0), True, False, "", nullptr, I);
     break;
   }
   case Instruction::PHI: {
