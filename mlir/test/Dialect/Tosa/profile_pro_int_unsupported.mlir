@@ -24,6 +24,13 @@ func.func @test_argmax(%arg0: tensor<14x19xi8>) -> tensor<14xi32> {
 }
 
 // -----
+func.func @test_argmin(%arg0: tensor<14x19xi8>) -> tensor<14xi32> {
+  // expected-error@+1 {{'tosa.argmin' op illegal: requires any of [pro_int] profiles/extensions to be specified in the target environment}}
+  %0 = tosa.argmin %arg0 axis(1) : (tensor<14x19xi8>) -> tensor<14xi32>
+  return %0 : tensor<14xi32>
+}
+
+// -----
 func.func @test_avg_pool2d_adaptive_missing_pro_int(%arg0: tensor<1x7x7x9xi8>, %arg1: tensor<1xi8>, %arg2: tensor<1xi8>) -> tensor<1x7x7x9xi8> {
   %kernel = tosa.const_shape values(dense<[2, 2]> : tensor<2xindex>) : () -> !tosa.shape<2>
   %stride = tosa.const_shape values(dense<[1, 1]> : tensor<2xindex>) : () -> !tosa.shape<2>

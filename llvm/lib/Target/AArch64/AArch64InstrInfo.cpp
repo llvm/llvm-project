@@ -10412,7 +10412,7 @@ enum MachineOutlinerMBBFlags {
 /// gets the small FRAME encoding, and costs one extra instruction.
 static bool isCompactUnwindFrameRecordEnabled(const MachineFunction &MF) {
   return UseCompactUnwindFrameRecordForOutlinedFunctions &&
-         MF.getTarget().getTargetTriple().isOSBinFormatMachO();
+         MF.getFunction().getParent()->getTargetTriple().isOSBinFormatMachO();
 }
 
 /// Return true if the outlined function in \p MBB should save FP and LR as a

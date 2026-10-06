@@ -535,8 +535,8 @@ bool BundleVec::runOnRegion(Region &Rgn, const Analyses &A) {
   Function &F = *SeedSlice[0]->getParent()->getParent();
   IMaps = std::make_unique<InstrMaps>();
   LegalityAnalysis Legality(A.getAA(), A.getScalarEvolution(),
-                            F.getParent()->getDataLayout(), F.getContext(),
-                            *IMaps, Dir);
+                            F.getParent()->getDataLayout(), A.getTTI(),
+                            F.getContext(), *IMaps, Dir);
 
   // TODO: Refactor to remove the unnecessary copy to SeedSliceVals.
   SmallVector<Value *> SeedSliceVals(SeedSlice.begin(), SeedSlice.end());

@@ -71,7 +71,9 @@ TEST_F(IRTypeMapperTest, SVEPredicateVectorMapsToScalableI1Vector) {
 }
 
 TEST_F(IRTypeMapperTest, SVECountMapsToAArch64SVCount) {
-  const llvm::abi::VectorType *SVCount = TB.getSVECountType(llvm::Align(2));
+  const llvm::abi::VectorType *SVCount =
+      TB.getScalablePredicateOrCountVectorType(llvm::Align(2),
+                                               llvm::abi::VectorKind::SVECount);
 
   auto *TET = llvm::dyn_cast<llvm::TargetExtType>(Mapper.convertType(SVCount));
   ASSERT_NE(TET, nullptr);

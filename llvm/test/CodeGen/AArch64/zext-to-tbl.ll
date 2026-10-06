@@ -1965,22 +1965,22 @@ define void @zext_v16i8_to_v16i32_in_loop_scalable_vectors(ptr %src, ptr %dst) {
 ; CHECK-NEXT:    mov x8, xzr
 ; CHECK-NEXT:  LBB19_1: ; %loop
 ; CHECK-NEXT:    ; =>This Inner Loop Header: Depth=1
-; CHECK-NEXT:    ld1b { z0.s }, p0/z, [x0, x8]
 ; CHECK-NEXT:    add x9, x0, x8
+; CHECK-NEXT:    ld1b { z0.s }, p0/z, [x0, x8]
+; CHECK-NEXT:    add x8, x8, #16
 ; CHECK-NEXT:    ld1b { z1.s }, p0/z, [x9, #2, mul vl]
 ; CHECK-NEXT:    ld1b { z2.s }, p0/z, [x9, #3, mul vl]
 ; CHECK-NEXT:    ld1b { z3.s }, p0/z, [x9, #1, mul vl]
-; CHECK-NEXT:    add x9, x1, x8, lsl #2
+; CHECK-NEXT:    cmp x8, #128
 ; CHECK-NEXT:    add z0.s, z0.s, z0.s
 ; CHECK-NEXT:    add z1.s, z1.s, z1.s
 ; CHECK-NEXT:    add z2.s, z2.s, z2.s
 ; CHECK-NEXT:    add z3.s, z3.s, z3.s
-; CHECK-NEXT:    st1w { z0.s }, p0, [x1, x8, lsl #2]
-; CHECK-NEXT:    add x8, x8, #16
-; CHECK-NEXT:    cmp x8, #128
-; CHECK-NEXT:    str z1, [x9, #2, mul vl]
-; CHECK-NEXT:    str z2, [x9, #3, mul vl]
-; CHECK-NEXT:    str z3, [x9, #1, mul vl]
+; CHECK-NEXT:    str z0, [x1]
+; CHECK-NEXT:    str z1, [x1, #2, mul vl]
+; CHECK-NEXT:    str z2, [x1, #3, mul vl]
+; CHECK-NEXT:    str z3, [x1, #1, mul vl]
+; CHECK-NEXT:    add x1, x1, #64
 ; CHECK-NEXT:    b.ne LBB19_1
 ; CHECK-NEXT:  ; %bb.2: ; %exit
 ; CHECK-NEXT:    ret
@@ -1991,22 +1991,22 @@ define void @zext_v16i8_to_v16i32_in_loop_scalable_vectors(ptr %src, ptr %dst) {
 ; CHECK-BE-NEXT:    mov x8, xzr
 ; CHECK-BE-NEXT:  .LBB19_1: // %loop
 ; CHECK-BE-NEXT:    // =>This Inner Loop Header: Depth=1
-; CHECK-BE-NEXT:    ld1b { z0.s }, p0/z, [x0, x8]
 ; CHECK-BE-NEXT:    add x9, x0, x8
+; CHECK-BE-NEXT:    ld1b { z0.s }, p0/z, [x0, x8]
+; CHECK-BE-NEXT:    add x8, x8, #16
 ; CHECK-BE-NEXT:    ld1b { z1.s }, p0/z, [x9, #2, mul vl]
 ; CHECK-BE-NEXT:    ld1b { z2.s }, p0/z, [x9, #3, mul vl]
 ; CHECK-BE-NEXT:    ld1b { z3.s }, p0/z, [x9, #1, mul vl]
-; CHECK-BE-NEXT:    add x9, x1, x8, lsl #2
+; CHECK-BE-NEXT:    cmp x8, #128
 ; CHECK-BE-NEXT:    add z0.s, z0.s, z0.s
 ; CHECK-BE-NEXT:    add z1.s, z1.s, z1.s
 ; CHECK-BE-NEXT:    add z2.s, z2.s, z2.s
 ; CHECK-BE-NEXT:    add z3.s, z3.s, z3.s
-; CHECK-BE-NEXT:    st1w { z0.s }, p0, [x1, x8, lsl #2]
-; CHECK-BE-NEXT:    add x8, x8, #16
-; CHECK-BE-NEXT:    cmp x8, #128
-; CHECK-BE-NEXT:    st1w { z1.s }, p0, [x9, #2, mul vl]
-; CHECK-BE-NEXT:    st1w { z2.s }, p0, [x9, #3, mul vl]
-; CHECK-BE-NEXT:    st1w { z3.s }, p0, [x9, #1, mul vl]
+; CHECK-BE-NEXT:    st1w { z0.s }, p0, [x1]
+; CHECK-BE-NEXT:    st1w { z1.s }, p0, [x1, #2, mul vl]
+; CHECK-BE-NEXT:    st1w { z2.s }, p0, [x1, #3, mul vl]
+; CHECK-BE-NEXT:    st1w { z3.s }, p0, [x1, #1, mul vl]
+; CHECK-BE-NEXT:    add x1, x1, #64
 ; CHECK-BE-NEXT:    b.ne .LBB19_1
 ; CHECK-BE-NEXT:  // %bb.2: // %exit
 ; CHECK-BE-NEXT:    ret

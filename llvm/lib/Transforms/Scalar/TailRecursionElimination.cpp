@@ -54,6 +54,7 @@
 #include "llvm/ADT/SmallPtrSet.h"
 #include "llvm/ADT/Statistic.h"
 #include "llvm/Analysis/BlockFrequencyInfo.h"
+#include "llvm/Analysis/BlockFrequencyInfoImpl.h"
 #include "llvm/Analysis/DomTreeUpdater.h"
 #include "llvm/Analysis/GlobalsModRef.h"
 #include "llvm/Analysis/InstructionSimplify.h"
@@ -74,9 +75,12 @@
 #include "llvm/IR/InstIterator.h"
 #include "llvm/IR/Instructions.h"
 #include "llvm/IR/IntrinsicInst.h"
+#include "llvm/IR/MDBuilder.h"
 #include "llvm/IR/Module.h"
+#include "llvm/IR/ProfDataUtils.h"
 #include "llvm/InitializePasses.h"
 #include "llvm/Pass.h"
+#include "llvm/Support/BlockFrequency.h"
 #include "llvm/Support/CommandLine.h"
 #include "llvm/Support/Debug.h"
 #include "llvm/Support/raw_ostream.h"
@@ -155,10 +159,10 @@ static bool canTRE(Function &F) {
 }
 
 namespace {
-struct AllocaDerivedValueTracker {
+struct LocalStackValueTracker {
   // Start at a root value and walk its use-def chain to mark calls that use the
-  // value or a derived value in AllocaUsers, and places where it may escape in
-  // EscapePoints.
+  // value or a derived value in LocalStackUsers, and places where it may
+  // escape in EscapePoints.
   void walk(Value *Root) {
     SmallVector<Use *, 32> Worklist;
     SmallPtrSet<Use *, 32> Visited;
@@ -181,6 +185,12 @@ struct AllocaDerivedValueTracker {
       case Instruction::Call:
       case Instruction::Invoke: {
         auto &CB = cast<CallBase>(*I);
+        // llvm.stackrestore does not capture its argument, but it is not marked
+        // nocapture because of its unusual memory semantics. Treating it as an
+        // escape would block tail calls after every VLA scope.
+        if (auto *II = dyn_cast<IntrinsicInst>(I);
+            II && II->getIntrinsicID() == Intrinsic::stackrestore)
+          continue;
         // If the alloca-derived argument is passed byval it is not an escape
         // point, or a use of an alloca. Calling with byval copies the contents
         // of the alloca into argument registers or stack slots, which exist
@@ -223,8 +233,8 @@ struct AllocaDerivedValueTracker {
   }
 
   void callUsesLocalStack(CallBase &CB, bool IsNocapture) {
-    // Add it to the list of alloca users.
-    AllocaUsers.insert(&CB);
+    // Add it to the list of calls that use the local stack.
+    LocalStackUsers.insert(&CB);
 
     // If it's nocapture then it can't capture this alloca.
     if (IsNocapture)
@@ -235,26 +245,48 @@ struct AllocaDerivedValueTracker {
       EscapePoints.insert(&CB);
   }
 
-  SmallPtrSet<Instruction *, 32> AllocaUsers;
+  SmallPtrSet<Instruction *, 32> LocalStackUsers;
   SmallPtrSet<Instruction *, 32> EscapePoints;
 };
 } // namespace
+
+/// Returns true if \p II returns an address in the current function's frame.
+static bool returnsCurrentFrameAddress(const IntrinsicInst *II) {
+  if (!II)
+    return false;
+  switch (II->getIntrinsicID()) {
+  case Intrinsic::frameaddress:
+    // A non-zero level refers to a caller's frame, which outlives a tail call.
+    return cast<ConstantInt>(II->getArgOperand(0))->isZero();
+  case Intrinsic::addressofreturnaddress:
+  case Intrinsic::eh_dwarf_cfa:
+  case Intrinsic::localaddress:
+  case Intrinsic::sponentry:
+  case Intrinsic::stackaddress:
+  case Intrinsic::stacksave:
+  case Intrinsic::swift_async_context_addr:
+    return true;
+  default:
+    return false;
+  }
+}
 
 static bool markTails(Function &F, OptimizationRemarkEmitter *ORE,
                       ProfileSummaryInfo *PSI, BlockFrequencyInfo *BFI) {
   if (F.callsFunctionThatReturnsTwice())
     return false;
 
-  // The local stack holds all alloca instructions and all byval arguments.
-  AllocaDerivedValueTracker Tracker;
+  // The local stack holds allocas and byval arguments, and frame-address
+  // intrinsics point into it.
+  LocalStackValueTracker Tracker;
   for (Argument &Arg : F.args()) {
     if (Arg.hasByValAttr())
       Tracker.walk(&Arg);
   }
-  for (auto &BB : F) {
-    for (auto &I : BB)
-      if (AllocaInst *AI = dyn_cast<AllocaInst>(&I))
-        Tracker.walk(AI);
+  for (Instruction &I : instructions(F)) {
+    if (isa<AllocaInst>(&I) ||
+        returnsCurrentFrameAddress(dyn_cast<IntrinsicInst>(&I)))
+      Tracker.walk(&I);
   }
 
   bool Modified = false;
@@ -320,7 +352,7 @@ static bool markTails(Function &F, OptimizationRemarkEmitter *ORE,
         // global anyhow.
         //
         // Note that this runs whether we know an alloca has escaped or not. If
-        // it has, then we can't trust Tracker.AllocaUsers to be accurate.
+        // it has, then we can't trust Tracker.LocalStackUsers to be accurate.
         bool SafeToTail = true;
         for (auto &Arg : CI->args()) {
           if (isa<Constant>(Arg.getUser()))
@@ -343,7 +375,8 @@ static bool markTails(Function &F, OptimizationRemarkEmitter *ORE,
         }
       }
 
-      if (!IsNoTail && Escaped == UNESCAPED && !Tracker.AllocaUsers.count(CI))
+      if (!IsNoTail && Escaped == UNESCAPED &&
+          !Tracker.LocalStackUsers.count(CI))
         DeferredTails.push_back(CI);
     }
 
@@ -474,6 +507,11 @@ class TailRecursionEliminator {
   // Vector of select instructions we insereted. These selects use RetKnownPN
   // to either propagate RetPN or select a new return value.
   SmallVector<SelectInst *, 8> RetSelects;
+
+  // Keep track of the sum of frequencies of blocks that have calls eliminated
+  // so we can synthesize branch weights later that require information on
+  // recursion frequency.
+  uint64_t EliminateBlocksFrequencySum = 0;
 
   // The below are shared state needed when performing accumulator recursion.
   // There values should be populated by insertAccumulator the first time we
@@ -850,6 +888,9 @@ bool TailRecursionEliminator::eliminateCall(CallInst *CI) {
 
   BasicBlock *BB = Ret->getParent();
 
+  if (BFI)
+    EliminateBlocksFrequencySum += BFI->getBlockFreq(BB).getFrequency();
+
   using namespace ore;
   ORE->emit([&]() {
     return OptimizationRemark(DEBUG_TYPE, "tailcall-recursion", CI)
@@ -1041,6 +1082,23 @@ void TailRecursionEliminator::cleanupAndFinalize() {
           }
         }
       }
+    }
+
+    if (BFI) {
+      uint64_t BaseCaseBlocksFrequencySum = 0;
+      for (BasicBlock &BB : F)
+        if (isa<ReturnInst>(BB.getTerminator()))
+          BaseCaseBlocksFrequencySum += BFI->getBlockFreq(&BB).getFrequency();
+
+      if (EliminateBlocksFrequencySum + BaseCaseBlocksFrequencySum == 0)
+        return;
+      SmallVector<uint32_t> Testing = fitWeights({EliminateBlocksFrequencySum, BaseCaseBlocksFrequencySum});
+      MDBuilder MDB(F.getContext());
+      MDNode *BranchWeights = MDB.createBranchWeights(
+          {Testing[0], Testing[1]},
+          false);
+      for (SelectInst *SI : RetSelects)
+        SI->setMetadata(LLVMContext::MD_prof, BranchWeights);
     }
   }
 }

@@ -152,12 +152,16 @@ body:             |
 # virtual registers # to $edi and $esi, so the ranges for argc/argv should
 # not cover the whole BB.
 #
+# They end at 48r rather than at the COPYs that killed them: the rewriter has
+# removed those as identity copies, so canonicalizeIndexes() resolves their
+# indexes back to the last instruction still in the map.
+#
 # CHECKDBG-LABEL: ********** EMITTING LIVE DEBUG VARIABLES **********
 # CHECKDBG-NEXT: !"argc,5"        [0B;0e): 0 Loc0=$edi
 # CHECKDBG-NEXT:         [0B;0e): 0 %bb.0-160B
 # CHECKDBG-NEXT: !"argv,5"        [0B;0e): 0 Loc0=$rsi
 # CHECKDBG-NEXT:         [0B;0e): 0 %bb.0-160B
-# CHECKDBG-NEXT: !"a0,7"  [16r;64r): 0 Loc0=%2
-# CHECKDBG-NEXT:         [16r;64r): 0 %bb.0-160B
-# CHECKDBG-NEXT: !"a1,8"  [32r;80r): 0 Loc0=%3
-# CHECKDBG-NEXT:         [32r;80r): 0 %bb.0-160B
+# CHECKDBG-NEXT: !"a0,7"  [16r;48r): 0 Loc0=%2
+# CHECKDBG-NEXT:         [16r;48r): 0 %bb.0-160B
+# CHECKDBG-NEXT: !"a1,8"  [32r;48r): 0 Loc0=%3
+# CHECKDBG-NEXT:         [32r;48r): 0 %bb.0-160B

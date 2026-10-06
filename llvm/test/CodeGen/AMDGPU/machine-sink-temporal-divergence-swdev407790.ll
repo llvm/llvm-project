@@ -796,14 +796,14 @@ define protected amdgpu_kernel void @kernel_round1_short(ptr addrspace(1) nocapt
 ; CHECK-NEXT:    s_setreg_b32 hwreg(HW_REG_FLAT_SCR_HI), s13
 ; CHECK-NEXT:    s_load_dwordx2 s[54:55], s[8:9], 0x10
 ; CHECK-NEXT:    s_add_u32 s0, s0, s17
-; CHECK-NEXT:    s_mov_b64 s[38:39], s[8:9]
+; CHECK-NEXT:    s_mov_b64 s[48:49], s[8:9]
 ; CHECK-NEXT:    s_addc_u32 s1, s1, 0
 ; CHECK-NEXT:    v_mov_b32_e32 v40, v0
-; CHECK-NEXT:    s_add_u32 s52, s38, 40
+; CHECK-NEXT:    s_add_u32 s52, s48, 40
 ; CHECK-NEXT:    v_mov_b32_e32 v31, v0
 ; CHECK-NEXT:    v_mov_b32_e32 v0, 0
 ; CHECK-NEXT:    s_mov_b32 s33, s16
-; CHECK-NEXT:    s_addc_u32 s53, s39, 0
+; CHECK-NEXT:    s_addc_u32 s53, s49, 0
 ; CHECK-NEXT:    s_mov_b32 s51, s14
 ; CHECK-NEXT:    s_getpc_b64 s[16:17]
 ; CHECK-NEXT:    s_add_u32 s16, s16, _Z13get_global_idj@rel32@lo+4
@@ -815,7 +815,7 @@ define protected amdgpu_kernel void @kernel_round1_short(ptr addrspace(1) nocapt
 ; CHECK-NEXT:    s_mov_b32 s50, s15
 ; CHECK-NEXT:    s_mov_b64 s[34:35], s[10:11]
 ; CHECK-NEXT:    s_mov_b64 s[36:37], s[6:7]
-; CHECK-NEXT:    s_mov_b64 s[48:49], s[4:5]
+; CHECK-NEXT:    s_mov_b64 s[38:39], s[4:5]
 ; CHECK-NEXT:    v_mov_b32_e32 v43, 0
 ; CHECK-NEXT:    s_swappc_b64 s[30:31], s[16:17]
 ; CHECK-NEXT:    v_mov_b32_e32 v42, v0
@@ -824,7 +824,7 @@ define protected amdgpu_kernel void @kernel_round1_short(ptr addrspace(1) nocapt
 ; CHECK-NEXT:    s_getpc_b64 s[16:17]
 ; CHECK-NEXT:    s_add_u32 s16, s16, _Z12get_local_idj@rel32@lo+4
 ; CHECK-NEXT:    s_addc_u32 s17, s17, _Z12get_local_idj@rel32@hi+12
-; CHECK-NEXT:    s_mov_b64 s[4:5], s[48:49]
+; CHECK-NEXT:    s_mov_b64 s[4:5], s[38:39]
 ; CHECK-NEXT:    s_mov_b64 s[6:7], s[36:37]
 ; CHECK-NEXT:    s_mov_b64 s[8:9], s[52:53]
 ; CHECK-NEXT:    s_mov_b64 s[10:11], s[34:35]
@@ -839,7 +839,7 @@ define protected amdgpu_kernel void @kernel_round1_short(ptr addrspace(1) nocapt
 ; CHECK-NEXT:    s_getpc_b64 s[16:17]
 ; CHECK-NEXT:    s_add_u32 s16, s16, _Z7barrierj@rel32@lo+4
 ; CHECK-NEXT:    s_addc_u32 s17, s17, _Z7barrierj@rel32@hi+12
-; CHECK-NEXT:    s_mov_b64 s[4:5], s[48:49]
+; CHECK-NEXT:    s_mov_b64 s[4:5], s[38:39]
 ; CHECK-NEXT:    s_mov_b64 s[6:7], s[36:37]
 ; CHECK-NEXT:    s_mov_b64 s[8:9], s[52:53]
 ; CHECK-NEXT:    s_mov_b64 s[10:11], s[34:35]
@@ -854,7 +854,7 @@ define protected amdgpu_kernel void @kernel_round1_short(ptr addrspace(1) nocapt
 ; CHECK-NEXT:    s_getpc_b64 s[16:17]
 ; CHECK-NEXT:    s_add_u32 s16, s16, _Z3minjj@rel32@lo+4
 ; CHECK-NEXT:    s_addc_u32 s17, s17, _Z3minjj@rel32@hi+12
-; CHECK-NEXT:    s_mov_b64 s[4:5], s[48:49]
+; CHECK-NEXT:    s_mov_b64 s[4:5], s[38:39]
 ; CHECK-NEXT:    v_and_b32_e32 v0, 0x7ffffffc, v0
 ; CHECK-NEXT:    v_and_b32_e32 v1, 28, v1
 ; CHECK-NEXT:    s_mov_b64 s[6:7], s[36:37]
@@ -943,12 +943,12 @@ define protected amdgpu_kernel void @kernel_round1_short(ptr addrspace(1) nocapt
 ; CHECK-NEXT:    ; in Loop: Header=BB1_8 Depth=2
 ; CHECK-NEXT:    v_mov_b32_e32 v31, v40
 ; CHECK-NEXT:    v_mov_b32_e32 v0, 0x3c00
-; CHECK-NEXT:    s_add_u32 s8, s38, 40
-; CHECK-NEXT:    s_addc_u32 s9, s39, 0
+; CHECK-NEXT:    s_add_u32 s8, s48, 40
+; CHECK-NEXT:    s_addc_u32 s9, s49, 0
 ; CHECK-NEXT:    s_getpc_b64 s[16:17]
 ; CHECK-NEXT:    s_add_u32 s16, s16, _Z10atomic_incPU3AS3Vj@rel32@lo+4
 ; CHECK-NEXT:    s_addc_u32 s17, s17, _Z10atomic_incPU3AS3Vj@rel32@hi+12
-; CHECK-NEXT:    s_mov_b64 s[4:5], s[48:49]
+; CHECK-NEXT:    s_mov_b64 s[4:5], s[38:39]
 ; CHECK-NEXT:    s_mov_b64 s[6:7], s[36:37]
 ; CHECK-NEXT:    s_mov_b64 s[10:11], s[34:35]
 ; CHECK-NEXT:    s_mov_b32 s12, s51
@@ -980,12 +980,12 @@ define protected amdgpu_kernel void @kernel_round1_short(ptr addrspace(1) nocapt
 ; CHECK-NEXT:    s_or_b32 exec_lo, exec_lo, s52
 ; CHECK-NEXT:    v_mov_b32_e32 v31, v40
 ; CHECK-NEXT:    v_mov_b32_e32 v0, 1
-; CHECK-NEXT:    s_add_u32 s8, s38, 40
-; CHECK-NEXT:    s_addc_u32 s9, s39, 0
+; CHECK-NEXT:    s_add_u32 s8, s48, 40
+; CHECK-NEXT:    s_addc_u32 s9, s49, 0
 ; CHECK-NEXT:    s_getpc_b64 s[16:17]
 ; CHECK-NEXT:    s_add_u32 s16, s16, _Z7barrierj@rel32@lo+4
 ; CHECK-NEXT:    s_addc_u32 s17, s17, _Z7barrierj@rel32@hi+12
-; CHECK-NEXT:    s_mov_b64 s[4:5], s[48:49]
+; CHECK-NEXT:    s_mov_b64 s[4:5], s[38:39]
 ; CHECK-NEXT:    s_mov_b64 s[6:7], s[36:37]
 ; CHECK-NEXT:    s_mov_b64 s[10:11], s[34:35]
 ; CHECK-NEXT:    s_mov_b32 s12, s51

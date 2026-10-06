@@ -27,7 +27,7 @@ using namespace lldb_private;
 
 #define DEFINE_GPR(reg, alt, generic)                                          \
 {                                                                              \
-  #reg, alt, 8, 0, eEncodingUint, eFormatHexUppercase,                         \
+  #reg, alt, 8, 0, eEncodingUint, eFormatHex,                                  \
       {dwarf_##reg##_x86_64, dwarf_##reg##_x86_64, generic,                    \
         LLDB_INVALID_REGNUM, lldb_##reg##_x86_64 },                            \
         nullptr, nullptr, nullptr,                                             \
@@ -42,7 +42,7 @@ using namespace lldb_private;
 
 #define DEFINE_GPR_PSEUDO_32(reg)                                              \
 {                                                                              \
-  #reg, nullptr, 4, 0, eEncodingUint, eFormatHexUppercase,                     \
+  #reg, nullptr, 4, 0, eEncodingUint, eFormatHex,                              \
       {LLDB_INVALID_REGNUM, LLDB_INVALID_REGNUM, LLDB_INVALID_REGNUM,          \
         LLDB_INVALID_REGNUM, lldb_##reg##_x86_64 },                            \
         nullptr, nullptr, nullptr,                                             \
@@ -50,7 +50,7 @@ using namespace lldb_private;
 
 #define DEFINE_GPR_PSEUDO_16(reg)                                              \
 {                                                                              \
-  #reg, nullptr, 2, 0, eEncodingUint, eFormatHexUppercase,                     \
+  #reg, nullptr, 2, 0, eEncodingUint, eFormatHex,                              \
       {LLDB_INVALID_REGNUM, LLDB_INVALID_REGNUM, LLDB_INVALID_REGNUM,          \
         LLDB_INVALID_REGNUM, lldb_##reg##_x86_64 },                            \
         nullptr, nullptr, nullptr,                                             \
@@ -58,7 +58,7 @@ using namespace lldb_private;
 
 #define DEFINE_GPR_PSEUDO_8(reg)                                               \
 {                                                                              \
-  #reg, nullptr, 1, 0, eEncodingUint, eFormatHexUppercase,                     \
+  #reg, nullptr, 1, 0, eEncodingUint, eFormatHex,                              \
       {LLDB_INVALID_REGNUM, LLDB_INVALID_REGNUM, LLDB_INVALID_REGNUM,          \
         LLDB_INVALID_REGNUM, lldb_##reg##_x86_64 },                            \
         nullptr, nullptr, nullptr,                                             \

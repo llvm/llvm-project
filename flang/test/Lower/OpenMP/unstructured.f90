@@ -62,12 +62,12 @@ end
 ! CHECK-LABEL: func @_QPss3{{.*}} {
 ! CHECK:   omp.parallel private(@{{.*}} %{{.*}}#0 -> %{{.*}} : {{.*}}) {
 ! CHECK:     %[[ALLOCA_K:.*]] = fir.alloca i32 <{bindc_name = "k", pinned}>
-! CHECK:     %[[K_DECL:.*]]:2 = hlfir.declare %[[ALLOCA_K]] {uniq_name = "_QFss3Ek"} : (!fir.ref<i32>) -> (!fir.ref<i32>, !fir.ref<i32>)
+! CHECK:     %[[K_DECL:.*]]:2 = hlfir.declare %[[ALLOCA_K]] uniq_name("_QFss3Ek") : (!fir.ref<i32>) -> (!fir.ref<i32>, !fir.ref<i32>)
 
 ! CHECK:     fir.do_loop
 ! CHECK:       omp.wsloop private(@{{.*}} %{{.*}}#0 -> %[[ALLOCA_2:.*]] : !fir.ref<i32>) {
 ! CHECK:         omp.loop_nest (%[[ARG1:.*]]) : {{.*}} {
-! CHECK:           %[[OMP_LOOP_K_DECL:.*]]:2 = hlfir.declare %[[ALLOCA_2]] {uniq_name = "_QFss3Ek"} : (!fir.ref<i32>) -> (!fir.ref<i32>, !fir.ref<i32>)
+! CHECK:           %[[OMP_LOOP_K_DECL:.*]]:2 = hlfir.declare %[[ALLOCA_2]] uniq_name("_QFss3Ek") : (!fir.ref<i32>) -> (!fir.ref<i32>, !fir.ref<i32>)
 ! CHECK:           hlfir.assign %[[ARG1]] to %[[OMP_LOOP_K_DECL]]#0 : i32, !fir.ref<i32>
 ! CHECK:           @_FortranAioBeginExternalListOutput
 ! CHECK:           %[[LOAD_1:.*]] = fir.load %[[OMP_LOOP_K_DECL]]#0 : !fir.ref<i32>
@@ -78,7 +78,7 @@ end
 
 ! CHECK:       omp.wsloop private(@{{.*}} %{{.*}}#0 -> %[[ALLOCA_1:.*]] : !fir.ref<i32>) {
 ! CHECK:         omp.loop_nest (%[[ARG2:.*]]) : {{.*}} {
-! CHECK:           %[[OMP_LOOP_J_DECL:.*]]:2 = hlfir.declare %[[ALLOCA_1]] {uniq_name = "_QFss3Ej"} : (!fir.ref<i32>) -> (!fir.ref<i32>, !fir.ref<i32>)
+! CHECK:           %[[OMP_LOOP_J_DECL:.*]]:2 = hlfir.declare %[[ALLOCA_1]] uniq_name("_QFss3Ej") : (!fir.ref<i32>) -> (!fir.ref<i32>, !fir.ref<i32>)
 ! CHECK:           hlfir.assign %[[ARG2]] to %[[OMP_LOOP_J_DECL]]#0 : i32, !fir.ref<i32>
 ! CHECK:           scf.execute_region no_inline {
 ! CHECK:             cf.br ^bb1
@@ -129,7 +129,7 @@ end
 ! CHECK:       omp.parallel private(@{{.*}} %{{.*}}#0 -> %{{.*}} : {{.*}}) {
 ! CHECK:         omp.wsloop private(@{{.*}} %{{.*}}#0 -> %[[ALLOCA:.*]] : !fir.ref<i32>) {
 ! CHECK-NEXT:      omp.loop_nest (%[[ARG:.*]]) : {{.*}} {
-! CHECK:             %[[OMP_LOOP_J_DECL:.*]]:2 = hlfir.declare %[[ALLOCA]] {uniq_name = "_QFss4Ej"} : (!fir.ref<i32>) -> (!fir.ref<i32>, !fir.ref<i32>)
+! CHECK:             %[[OMP_LOOP_J_DECL:.*]]:2 = hlfir.declare %[[ALLOCA]] uniq_name("_QFss4Ej") : (!fir.ref<i32>) -> (!fir.ref<i32>, !fir.ref<i32>)
 ! CHECK:             hlfir.assign %[[ARG]] to %[[OMP_LOOP_J_DECL]]#0 : i32, !fir.ref<i32>
 ! CHECK:             %[[COND:.*]] = arith.cmpi eq, %{{.*}}, %{{.*}}
 ! CHECK:             %[[COND_XOR:.*]] = arith.xori %[[COND]], %{{.*}}

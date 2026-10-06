@@ -1322,7 +1322,7 @@ bool WebAssemblyFastISel::selectBitCast(const Instruction *I) {
   MachineBasicBlock::iterator Iter = FuncInfo.InsertPt;
   --Iter;
   assert(Iter->isBitcast());
-  Iter->setPhysRegsDeadExcept(ArrayRef<Register>(), TRI);
+  Iter->setImplicitPhysRegDefsDead();
   updateValueMap(I, Reg);
   return true;
 }

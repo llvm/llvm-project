@@ -253,6 +253,17 @@ void Session::addOnShutdown(OnShutdownFn OnShutdown) {
   OnShutdown();
 }
 
+#if ORC_RT_LOG_ENABLED(Error)
+void Session::logErrors(Session &S, Error Err) noexcept {
+  // Take the message outside ORC_RT_LOG: the os_log backend only evaluates
+  // log arguments if the log type is enabled at runtime, which would leave
+  // Err unchecked otherwise.
+  auto ErrMsg = toString(std::move(Err));
+  ORC_RT_LOG(Error, Session, "Session %p error: " ORC_RT_LOG_PUB_S, &S,
+             ErrMsg.c_str());
+}
+#endif // ORC_RT_LOG_ENABLED(Error)
+
 void Session::appendService(std::unique_ptr<Service> Srv) {
 
   bool ShuttingDown = false;

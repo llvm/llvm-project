@@ -151,6 +151,36 @@ exit:
   ret void
 }
 
+; Test 7: Loop header ending in a switch.
+; OpLoopMerge must immediately precede OpBranch or OpBranchConditional, so no
+; OpLoopMerge may be emitted when the loop header terminates in OpSwitch.
+; CHECK: OpFunction
+; CHECK-NOT: OpLoopMerge
+; CHECK: OpSwitch
+; CHECK-NOT: OpLoopMerge
+; CHECK: OpFunctionEnd
+
+define spir_kernel void @test_switch_header(ptr addrspace(1) %dst) {
+entry:
+  br label %header
+
+header:
+  %i = phi i32 [ 0, %entry ], [ %inc, %latch ]
+  switch i32 %i, label %exit [
+    i32 0, label %latch
+    i32 1, label %latch
+  ]
+
+latch:
+  %ptr = getelementptr inbounds i32, ptr addrspace(1) %dst, i32 %i
+  store i32 %i, ptr addrspace(1) %ptr, align 4
+  %inc = add nuw nsw i32 %i, 1
+  br label %header, !llvm.loop !0
+
+exit:
+  ret void
+}
+
 ; Check that no Intel extension is required.
 ; CHECK-NOT: OpExtension "SPV_INTEL_unstructured_loop_controls"
 ; CHECK-NOT: OpCapability UnstructuredLoopControlsINTEL

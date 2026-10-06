@@ -605,8 +605,9 @@ RISCVLegalizerInfo::RISCVLegalizerInfo(const RISCVSubtarget &ST)
       .libcallFor(ST.is64Bit(), {{s32, s128}, {s64, s128}});
   getActionDefinitionsBuilder(G_FPEXT)
       .legalFor(ST.hasStdExtD(), {{s64, s32}})
-      .legalFor(ST.hasStdExtZfh(), {{s32, s16}})
+      .legalFor(ST.hasStdExtZfhmin(), {{s32, s16}})
       .legalFor(ST.hasStdExtZfh() && ST.hasStdExtD(), {{s64, s16}})
+      .libcallFor(!ST.hasStdExtZfhmin(), {{s32, s16}})
       .libcallFor({{s64, s32}})
       .libcallFor(ST.is64Bit(), {{s128, s32}, {s128, s64}});
 

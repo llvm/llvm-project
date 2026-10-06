@@ -524,7 +524,6 @@ public:
   /// replacing \p MI with new instructions, even though this function does not
   /// remove MI.
   virtual MachineInstr *convertToThreeAddress(MachineInstr &MI,
-                                              LiveVariables *LV,
                                               LiveIntervals *LIS) const {
     return nullptr;
   }

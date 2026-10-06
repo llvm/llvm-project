@@ -1571,7 +1571,8 @@ bool llvm::isAllOnesOrAllOnesSplat(const MachineInstr &MI,
 
 bool llvm::matchUnaryPredicate(
     const MachineRegisterInfo &MRI, Register Reg,
-    std::function<bool(const Constant *ConstVal)> Match, bool AllowUndefs) {
+    llvm::function_ref<bool(const Constant *ConstVal)> Match,
+    bool AllowUndefs) {
 
   const MachineInstr *Def = getDefIgnoringCopies(Reg, MRI);
   if (AllowUndefs && Def->getOpcode() == TargetOpcode::G_IMPLICIT_DEF)

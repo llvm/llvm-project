@@ -759,7 +759,7 @@ void NumericalStabilitySanitizer::createShadowArguments(
       }))
     return;
 
-  IRBuilder<> Builder(&F.getEntryBlock(), F.getEntryBlock().getFirstNonPHIIt());
+  IRBuilder<> Builder(F.getEntryBlock().getFirstNonPHIIt());
   // The function has shadow args if the shadow args tag matches the function
   // address.
   Value *HasShadowArgs = Builder.CreateICmpEQ(
@@ -1662,7 +1662,7 @@ Value *NumericalStabilitySanitizer::createShadowValueWithOperandsAvailable(
   if (auto *Call = dyn_cast<CallInst>(&Inst)) {
     // Insert after the call.
     BasicBlock::iterator It(Inst);
-    IRBuilder<> Builder(Call->getParent(), ++It);
+    IRBuilder<> Builder(++It);
     Builder.SetCurrentDebugLocation(Call->getDebugLoc());
     return handleCallBase(*Call, VT, ExtendedVT, TLI, Map, Builder);
   }

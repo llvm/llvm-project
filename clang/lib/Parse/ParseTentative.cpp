@@ -1555,6 +1555,8 @@ Parser::isCXXDeclarationSpecifier(ImplicitTypenameContext AllowImplicitTypename,
 #include "clang/Basic/OpenCLImageTypes.def"
 #define HLSL_INTANGIBLE_TYPE(Name, Id, SingletonId) case tok::kw_##Name:
 #include "clang/Basic/HLSLIntangibleTypes.def"
+#define HLSL_PACKED_TYPE(Name, Id, SingletonId) case tok::kw_##Name:
+#include "clang/Basic/HLSLPackedTypes.def"
     if (NextToken().is(tok::l_paren))
       return TPResult::Ambiguous;
 
@@ -1564,8 +1566,20 @@ Parser::isCXXDeclarationSpecifier(ImplicitTypenameContext AllowImplicitTypename,
     //     enum E : int { a = 4 }; // enum
     //     enum E : int { 4 };     // bit-field
     //   };
-    if (getLangOpts().CPlusPlus11 && NextToken().is(tok::l_brace))
+    if (getLangOpts().CPlusPlus11 && NextToken().is(tok::l_brace)) {
+      if (ParsingGenericAssociationType) {
+        RevertingTentativeParsingAction PA(*this);
+        ConsumeAnyToken(); // skip keyword
+        ConsumeBrace();    // skip l_brace
+        if (SkipUntil(tok::r_brace, StopBeforeMatch)) {
+          ConsumeBrace(); // skip r_brace
+          if (Tok.is(tok::colon)) {
+            return TPResult::True;
+          }
+        }
+      }
       return BracedCastResult;
+    }
 
     if (isStartOfObjCClassMessageMissingOpenBracket())
       return TPResult::False;
@@ -1685,6 +1699,8 @@ bool Parser::isCXXDeclarationSpecifierAType() {
 #include "clang/Basic/OpenCLImageTypes.def"
 #define HLSL_INTANGIBLE_TYPE(Name, Id, SingletonId) case tok::kw_##Name:
 #include "clang/Basic/HLSLIntangibleTypes.def"
+#define HLSL_PACKED_TYPE(Name, Id, SingletonId) case tok::kw_##Name:
+#include "clang/Basic/HLSLPackedTypes.def"
     return true;
 
   case tok::kw_auto:

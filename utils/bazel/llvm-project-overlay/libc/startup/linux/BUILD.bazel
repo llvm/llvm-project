@@ -54,6 +54,8 @@ libc_startup_library(
         "//libc:__support_macros_config",
         "//libc:__support_osutil_linux_auxv",
         "//libc:__support_osutil_syscall",
+        "//libc:__support_threads_linux_futex_utils",
+        "//libc:__support_threads_linux_tls",
         "//libc:__support_threads_tcb",
         "//libc:__support_threads_thread",
         "//libc:__support_threads_thread_headers",
@@ -76,7 +78,6 @@ libc_startup_library(
     ] + selects.with_or({
         PLATFORM_CPU_X86_64: [
             "//libc/startup/linux/x86_64:irelative",
-            "//libc/startup/linux/x86_64:tls",
         ],
         "//conditions:default": [],
     }),
@@ -91,7 +92,6 @@ merge_relocatable_object(
         PLATFORM_CPU_X86_64: [
             "//libc/startup/linux/x86_64:irelative",
             "//libc/startup/linux/x86_64:start",
-            "//libc/startup/linux/x86_64:tls",
         ],
         "//conditions:default": [],
     }),

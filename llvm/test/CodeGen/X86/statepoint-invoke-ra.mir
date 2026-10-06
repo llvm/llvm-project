@@ -31,7 +31,7 @@
 # CHECK:     EH_LABEL <mcsymbol .Ltmp0>
 # CHECK:     ADJCALLSTACKDOWN64 0, 0, 0, implicit-def dead $rsp, implicit-def dead $eflags, implicit-def dead $ssp, implicit $rsp, implicit $ssp
 # CHECK:     $edi = MOV32r0 implicit-def dead $eflags
-# CHECK:     dead $esi = MOV32r0 implicit-def dead $eflags, implicit-def $rsi
+# CHECK:     $esi = MOV32r0 implicit-def dead $eflags, implicit-def $rsi
 # CHECK:     $ecx = COPY %7
 # CHECK:     $r8d = MOV32r0 implicit-def dead $eflags
 # CHECK:     %37:gr64 = lr-split COPY %38

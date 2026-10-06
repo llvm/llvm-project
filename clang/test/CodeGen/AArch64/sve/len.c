@@ -1,15 +1,17 @@
 // REQUIRES: aarch64-registered-target
 
+// DEFINE: %{optimize} = opt -passes=mem2reg -S
+
 // RUN: %if cir-enabled %{%clang_cc1_cg_arm64_sve                        -fclangir -emit-cir -disable-O0-optnone -o - %s  | FileCheck %s --check-prefixes=C,CIR %}
 // RUN: %if cir-enabled %{%clang_cc1_cg_arm64_sve -DSVE_OVERLOADED_FORMS -fclangir -emit-cir -disable-O0-optnone -o - %s  | FileCheck %s --check-prefixes=C,CIR %}
 
-// RUN: %if cir-enabled %{%clang_cc1_cg_arm64_sve                        -fclangir -emit-llvm -disable-O0-optnone -o - %s         | FileCheck %s --check-prefixes=C,LLVM %}
-// RUN: %if cir-enabled %{%clang_cc1_cg_arm64_sve -DSVE_OVERLOADED_FORMS -fclangir -emit-llvm -disable-O0-optnone -o - %s         | FileCheck %s --check-prefixes=C,LLVM %}
-// RUN: %if cir-enabled %{%clang_cc1_cg_arm64_sve -DSVE_OVERLOADED_FORMS -fclangir -emit-llvm -disable-O0-optnone -o - -x c++ %s  | FileCheck %s --check-prefixes=CPP,LLVM %}
+// RUN: %if cir-enabled %{%clang_cc1_cg_arm64_sve                        -fclangir -emit-llvm -disable-O0-optnone -o - %s         | %{optimize} | FileCheck %s --check-prefixes=C,LLVM %}
+// RUN: %if cir-enabled %{%clang_cc1_cg_arm64_sve -DSVE_OVERLOADED_FORMS -fclangir -emit-llvm -disable-O0-optnone -o - %s         | %{optimize} | FileCheck %s --check-prefixes=C,LLVM %}
+// RUN: %if cir-enabled %{%clang_cc1_cg_arm64_sve -DSVE_OVERLOADED_FORMS -fclangir -emit-llvm -disable-O0-optnone -o - -x c++ %s  | %{optimize} | FileCheck %s --check-prefixes=CPP,LLVM %}
 
-// RUN:                   %clang_cc1_cg_arm64_sve                                  -emit-llvm -disable-O0-optnone -o - %s         | FileCheck %s --check-prefixes=C,LLVM
-// RUN:                   %clang_cc1_cg_arm64_sve -DSVE_OVERLOADED_FORMS           -emit-llvm -disable-O0-optnone -o - %s         | FileCheck %s --check-prefixes=C,LLVM
-// RUN:                   %clang_cc1_cg_arm64_sve -DSVE_OVERLOADED_FORMS           -emit-llvm -disable-O0-optnone -o - -x c++ %s  | FileCheck %s --check-prefixes=CPP,LLVM
+// RUN:                   %clang_cc1_cg_arm64_sve                                  -emit-llvm -disable-O0-optnone -o - %s         | %{optimize} | FileCheck %s --check-prefixes=C,LLVM
+// RUN:                   %clang_cc1_cg_arm64_sve -DSVE_OVERLOADED_FORMS           -emit-llvm -disable-O0-optnone -o - %s         | %{optimize} | FileCheck %s --check-prefixes=C,LLVM
+// RUN:                   %clang_cc1_cg_arm64_sve -DSVE_OVERLOADED_FORMS           -emit-llvm -disable-O0-optnone -o - -x c++ %s  | %{optimize} | FileCheck %s --check-prefixes=CPP,LLVM
 
 //=============================================================================
 // NOTES
@@ -42,6 +44,7 @@ uint64_t test_svlen_u8(svuint8_t op) MODE_ATTR
 
 // LLVM:    [[VSCALE:%.*]] = call i64 @llvm.vscale.i64()
 // LLVM:    [[RES:%.*]] = mul nuw i64 [[VSCALE]], 16
+// LLVM:    ret i64 [[RES]]
   return SVE_ACLE_FUNC(svlen,_u8,,)(op);
 }
 
@@ -55,6 +58,7 @@ uint64_t test_svlen_s8(svint8_t op) MODE_ATTR
 
 // LLVM:    [[VSCALE:%.*]] = call i64 @llvm.vscale.i64()
 // LLVM:    [[RES:%.*]] = mul nuw i64 [[VSCALE]], 16
+// LLVM:    ret i64 [[RES]]
   return SVE_ACLE_FUNC(svlen,_s8,,)(op);
 }
 
@@ -68,6 +72,7 @@ uint64_t test_svlen_u16(svuint16_t op) MODE_ATTR
 
 // LLVM:    [[VSCALE:%.*]] = call i64 @llvm.vscale.i64()
 // LLVM:    [[RES:%.*]] = mul nuw i64 [[VSCALE]], 8
+// LLVM:    ret i64 [[RES]]
   return SVE_ACLE_FUNC(svlen,_u16,,)(op);
 }
 
@@ -81,6 +86,7 @@ uint64_t test_svlen_s16(svint16_t op) MODE_ATTR
 
 // LLVM:    [[VSCALE:%.*]] = call i64 @llvm.vscale.i64()
 // LLVM:    [[RES:%.*]] = mul nuw i64 [[VSCALE]], 8
+// LLVM:    ret i64 [[RES]]
   return SVE_ACLE_FUNC(svlen,_s16,,)(op);
 }
 
@@ -94,6 +100,7 @@ uint64_t test_svlen_f16(svfloat16_t op) MODE_ATTR
 
 // LLVM:    [[VSCALE:%.*]] = call i64 @llvm.vscale.i64()
 // LLVM:    [[RES:%.*]] = mul nuw i64 [[VSCALE]], 8
+// LLVM:    ret i64 [[RES]]
   return SVE_ACLE_FUNC(svlen,_f16,,)(op);
 }
 
@@ -107,6 +114,7 @@ uint64_t test_svlen_bf16(svbfloat16_t op) MODE_ATTR
 
 // LLVM:    [[VSCALE:%.*]] = call i64 @llvm.vscale.i64()
 // LLVM:    [[RES:%.*]] = mul nuw i64 [[VSCALE]], 8
+// LLVM:    ret i64 [[RES]]
   return SVE_ACLE_FUNC(svlen,_bf16,,)(op);
 }
 
@@ -120,6 +128,7 @@ uint64_t test_svlen_u32(svuint32_t op) MODE_ATTR
 
 // LLVM:    [[VSCALE:%.*]] = call i64 @llvm.vscale.i64()
 // LLVM:    [[RES:%.*]] = mul nuw i64  [[VSCALE]], 4
+// LLVM:    ret i64 [[RES]]
   return SVE_ACLE_FUNC(svlen,_u32,,)(op);
 }
 
@@ -133,6 +142,7 @@ uint64_t test_svlen_s32(svint32_t op) MODE_ATTR
 
 // LLVM:    [[VSCALE:%.*]] = call i64 @llvm.vscale.i64()
 // LLVM:    [[RES:%.*]] = mul nuw i64 [[VSCALE]], 4
+// LLVM:    ret i64 [[RES]]
   return SVE_ACLE_FUNC(svlen,_s32,,)(op);
 }
 
@@ -146,6 +156,7 @@ uint64_t test_svlen_f32(svfloat32_t op) MODE_ATTR
 
 // LLVM:    [[VSCALE:%.*]] = call i64 @llvm.vscale.i64()
 // LLVM:    [[RES:%.*]] = mul nuw i64 [[VSCALE]], 4
+// LLVM:    ret i64 [[RES]]
   return SVE_ACLE_FUNC(svlen,_f32,,)(op);
 }
 
@@ -159,6 +170,7 @@ uint64_t test_svlen_u64(svuint64_t op) MODE_ATTR
 
 // LLVM:    [[VSCALE:%.*]] = call i64 @llvm.vscale.i64()
 // LLVM:    [[RES:%.*]] = mul nuw i64  [[VSCALE]], 2
+// LLVM:    ret i64 [[RES]]
   return SVE_ACLE_FUNC(svlen,_u64,,)(op);
 }
 
@@ -172,6 +184,7 @@ uint64_t test_svlen_s64(svint64_t op) MODE_ATTR
 
 // LLVM:    [[VSCALE:%.*]] = call i64 @llvm.vscale.i64()
 // LLVM:    [[RES:%.*]] = mul nuw i64 [[VSCALE]], 2
+// LLVM:    ret i64 [[RES]]
   return SVE_ACLE_FUNC(svlen,_s64,,)(op);
 }
 
@@ -185,5 +198,6 @@ uint64_t test_svlen_f64(svfloat64_t op) MODE_ATTR
 
 // LLVM:    [[VSCALE:%.*]] = call i64 @llvm.vscale.i64()
 // LLVM:    [[RES:%.*]] = mul nuw i64 [[VSCALE]], 2
+// LLVM:    ret i64 [[RES]]
   return SVE_ACLE_FUNC(svlen,_f64,,)(op);
 }

@@ -985,9 +985,13 @@ propagateAllocTokenMetadata(Function *CalledFunc, CallBase &CB,
     if (InlinedFunctionInfo.isSimplified(OrigCall, ClonedCall))
       continue;
     // Fill missing only: never overwrite a more specific token the wrapper
-    // already set on an internal allocation.
-    if (ClonedCall->getMetadata(LLVMContext::MD_alloc_token))
-      continue;
+    // already set on an internal allocation. An unknown type (empty type name
+    // with function name) is not more specific.
+    if (MDNode *MD = ClonedCall->getMetadata(LLVMContext::MD_alloc_token)) {
+      if (MD->getNumOperands() != 3 ||
+          !cast<MDString>(MD->getOperand(0))->getString().empty())
+        continue;
+    }
     ClonedCall->setMetadata(LLVMContext::MD_alloc_token, AllocTokenMD);
   }
 }
@@ -1824,7 +1828,7 @@ static void HandleByValArgumentInit(Type *ByValType, Value *Dst, Value *Src,
                                     BasicBlock *InsertBlock,
                                     InlineFunctionInfo &IFI,
                                     Function *CalledFunc) {
-  IRBuilder<> Builder(InsertBlock, InsertBlock->begin());
+  IRBuilder<> Builder(InsertBlock->begin());
 
   Value *Size =
       Builder.getInt64(M->getDataLayout().getTypeStoreSize(ByValType));
@@ -3156,7 +3160,7 @@ void llvm::InlineFunctionImpl(CallBase &CB, InlineFunctionInfo &IFI,
   // `Caller->isPresplitCoroutine()` would affect AlwaysInliner at O0 only.
   if ((InsertLifetime || Caller->isPresplitCoroutine()) &&
       !IFI.StaticAllocas.empty()) {
-    IRBuilder<> builder(&*FirstNewBlock, FirstNewBlock->begin());
+    IRBuilder<> builder(FirstNewBlock->begin());
     for (AllocaInst *AI : IFI.StaticAllocas) {
       // Don't mark swifterror allocas. They can't have bitcast uses.
       if (AI->isSwiftError())
@@ -3190,8 +3194,8 @@ void llvm::InlineFunctionImpl(CallBase &CB, InlineFunctionInfo &IFI,
   // code with llvm.stacksave/llvm.stackrestore intrinsics.
   if (InlinedFunctionInfo.ContainsDynamicAllocas) {
     // Insert the llvm.stacksave.
-    CallInst *SavedPtr = IRBuilder<>(&*FirstNewBlock, FirstNewBlock->begin())
-                             .CreateStackSave("savedstack");
+    CallInst *SavedPtr =
+        IRBuilder<>(FirstNewBlock->begin()).CreateStackSave("savedstack");
 
     // Insert a call to llvm.stackrestore before any return instructions in the
     // inlined function.

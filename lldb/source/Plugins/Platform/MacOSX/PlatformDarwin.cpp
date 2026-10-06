@@ -1516,20 +1516,6 @@ PlatformDarwin::ResolveSDKPathFromDebugInfo(Module &module) {
   return path_or_err->GetPath();
 }
 
-llvm::Expected<XcodeSDKAndSysroot>
-PlatformDarwin::GetSDKPathFromDebugInfo(CompileUnit &unit) {
-  ModuleSP module_sp = unit.CalculateSymbolContextModule();
-  if (!module_sp)
-    return llvm::createStringError("compile unit has no module");
-  SymbolFile *sym_file = module_sp->GetSymbolFile();
-  if (!sym_file)
-    return llvm::createStringError(
-        llvm::formatv("No symbol file available for module '{0}'",
-                      module_sp->GetFileSpec().GetFilename()));
-
-  return sym_file->ParseXcodeSDK(unit);
-}
-
 llvm::Expected<std::string>
 PlatformDarwin::ResolveSDKPathFromDebugInfo(CompileUnit &unit) {
   auto sdk_or_err = GetSDKPathFromDebugInfo(unit);

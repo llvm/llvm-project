@@ -29,8 +29,10 @@ void f(int n) {
 
   // LLVM: call i1 @llvm.coro.alloc(token %[[COROID]])
 
-  // TODO
-  //__builtin_coro_noop();
+  __builtin_coro_noop();
+  // CIR: %[[NOOP:.*]] = cir.coro.intrinsic.noop() : () -> !cir.ptr<!void>
+
+  // LLVM: %[[NOOP:.*]] = call ptr @llvm.coro.noop()
 
   __builtin_coro_begin(myAlloc(__builtin_coro_size()));
   // TODO(CIR): Support both variants of the coroutine size intrinsic, matching

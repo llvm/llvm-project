@@ -282,6 +282,11 @@ void f(non_input_iterator non_input,
   }
 
   {
+    (void)std::swap_ranges(pol, non_fwd, non_fwd, it); // expected-error@*:* {{static assertion failed: swap_ranges}}
+    (void)std::swap_ranges(pol, it, it, non_fwd);      // expected-error@*:* {{static assertion failed: swap_ranges}}
+  }
+
+  {
     (void)std::transform(pol, non_fwd, non_fwd, out, func); // expected-error@*:* {{static assertion failed: transform}}
     (void)std::transform(pol, it, it, non_fwd, func);       // expected-error@*:* {{static assertion failed: transform}}
     (void)std::transform(pol, it, it, non_output, func);    // expected-error@*:* {{static assertion failed: transform}}

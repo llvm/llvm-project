@@ -37,6 +37,13 @@ mlir::gpu::GPUModuleOp getOrCreateGPUModule(mlir::ModuleOp mod,
 bool isCUDADeviceContext(mlir::Operation *op);
 bool isCUDADeviceContext(mlir::Region &,
                          bool isDoConcurrentOffloadEnabled = false);
+
+/// True when \p op is compiled for device execution: a CUDA device procedure,
+/// a GPU module or launch, or an OpenACC offload region. Host and host_device
+/// procedures return false. Unlike isCUDADeviceContext, gpu.module and
+/// gpu.launch count even without a CUDA procedure attribute, and host_data
+/// does not.
+bool isExecutingOnDevice(mlir::Operation *op);
 bool isRegisteredDeviceGlobal(fir::GlobalOp op);
 bool isRegisteredDeviceAttr(std::optional<cuf::DataAttribute> attr);
 

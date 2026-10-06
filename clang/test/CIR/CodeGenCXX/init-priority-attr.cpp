@@ -39,16 +39,16 @@ A C::a = A();
 
 // Static inside of C.
 // CIR-BEFORE-LPP: cir.global external @_ZN1C1aE = ctor : !rec_A {
-// CIR-BEFORE-LPP: } {alignment = 1 : i64, ast = #cir.var.decl.ast}
+// CIR-BEFORE-LPP: } align(1) ast(#cir.var.decl.ast)
 // CIR-BEFORE-LPP: cir.global external @c = ctor : !rec_C {
-// CIR-BEFORE-LPP: } {alignment = 1 : i64, ast = #cir.var.decl.ast}
+// CIR-BEFORE-LPP: } align(1) ast(#cir.var.decl.ast)
 
 // CIR-BEFORE-LPP: cir.global external @a1 = ctor : !rec_A1 {
-// CIR-BEFORE-LPP: } {alignment = 1 : i64, ast = #cir.var.decl.ast, init_priority = 300 : i32}
+// CIR-BEFORE-LPP: } align(1) ast(#cir.var.decl.ast) init_priority(300)
 // CIR-BEFORE-LPP: cir.global external @a = ctor : !rec_A {
-// CIR-BEFORE-LPP: } {alignment = 1 : i64, ast = #cir.var.decl.ast, init_priority = 300 : i32}
+// CIR-BEFORE-LPP: } align(1) ast(#cir.var.decl.ast) init_priority(300)
 // CIR-BEFORE-LPP: cir.global external @b = ctor : !rec_B {
-// CIR-BEFORE-LPP: } {alignment = 1 : i64, ast = #cir.var.decl.ast, init_priority = 200 : i32}
+// CIR-BEFORE-LPP: } align(1) ast(#cir.var.decl.ast) init_priority(200)
 
 // CIR: cir.global_ctors = [#cir.global_ctor<"_GLOBAL__I_000200", 200>, #cir.global_ctor<"_GLOBAL__I_000300", 300>, #cir.global_ctor<"_GLOBAL__sub_I_[[FILENAME:.*]]", 65535>]
 // CIR-LABEL: cir.func internal private @__cxx_global_var_init() {

@@ -23,7 +23,7 @@ struct CtorDtor {
 // LLVM-BOTH-DAG: @_ZTH6tls_cd = alias void (), ptr @__tls_init
 
 // Wrappers & aliases.
-// CIR:       cir.global internal tls_model = tls_dyn @__tls_guard = #cir.int<0> : !s8i {alignment = 1 : i64}
+// CIR:       cir.global internal tls_model = tls_dyn @__tls_guard = #cir.int<0> : !s8i align(1)
 // CIR-LABEL: cir.func comdat weak_odr private hidden @_ZTW19tls_cd_dyn_not_used() -> !cir.ptr<!rec_CtorDtor> {
 // CIR: cir.call @_ZTH19tls_cd_dyn_not_used() : () -> ()
 // CIR: %[[GET_GLOB:.*]] = cir.get_global thread_local @tls_cd_dyn_not_used : !cir.ptr<!rec_CtorDtor>

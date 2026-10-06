@@ -507,19 +507,17 @@ static bool loadsMayOverlap(
     for (SUnit *JLoad : JLoadPreds) {
       if (ILoad == JLoad) {
         LLVM_DEBUG(
-            dbgs() << "Will not pair SU(" << I.NodeNum << ") with SU("
-                   << J.NodeNum << ")\n"
-                   << "  Fusion would introduce a cyclic dependency with SU("
-                   << ILoad->NodeNum << ")\n");
+            dbgs() << "Will not pair " << I << " with " << J << "\n"
+                   << "  Fusion would introduce a cyclic dependency with "
+                   << *ILoad << "\n");
         return true;
       }
 
       if (!ILoadDeps.contains(JLoad)) {
-        LLVM_DEBUG(dbgs() << "Will not pair SU(" << I.NodeNum << ") with SU("
-                          << J.NodeNum << ")\n"
-                          << "  Fusion may force SU(" << JLoad->NodeNum
-                          << ") to complete its load before dispatching SU("
-                          << ILoad->NodeNum << ")\n");
+        LLVM_DEBUG(dbgs() << "Will not pair " << I << " with " << J << "\n"
+                          << "  Fusion may force " << *JLoad
+                          << " to complete its load before dispatching "
+                          << *ILoad << "\n");
         return true;
       }
     }

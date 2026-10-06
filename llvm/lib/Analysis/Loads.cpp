@@ -54,7 +54,7 @@ static bool isDereferenceableAndAlignedPointerViaAssumption(
           // Dereferenceable information from assumptions is only valid if the
           // value cannot be freed between the assumption and use.
           if (!IsDerefable &&
-              (!PtrCanBeFreed || willNotFreeBetween(Assume, SQ.CtxI)) &&
+              (!PtrCanBeFreed || willNotFreeBetween(Assume, SQ.CtxI, SQ.DT)) &&
               CheckSize(RK))
             IsDerefable = true;
         }
@@ -149,7 +149,7 @@ static bool isDereferenceableAndAlignedPointer(
         DefI = &cast<Argument>(V)->getParent()->getEntryBlock().front();
       }
 
-      if (!SQ.CtxI || !willNotFreeBetween(DefI, SQ.CtxI))
+      if (!SQ.CtxI || !willNotFreeBetween(DefI, SQ.CtxI, SQ.DT))
         return false;
     }
 

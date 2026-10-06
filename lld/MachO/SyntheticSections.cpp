@@ -2055,7 +2055,7 @@ void InitOffsetsSection::setUp() {
         error(isec->getLocation(rel.offset) +
               ": unexpected section relocation");
 
-      Symbol *sym = rel.referent.dyn_cast<Symbol *>();
+      Symbol *sym = dyn_cast<Symbol *>(rel.referent);
       if (auto *undefined = dyn_cast<Undefined>(sym))
         treatUndefinedSymbol(*undefined, isec, rel.offset);
       if (needsBinding(sym))

@@ -174,7 +174,7 @@ inline void AnalysisManager<IRUnitT, ExtraArgTs...>::invalidate(
 
   // Track whether each analysis's result is invalidated in
   // IsResultInvalidated.
-  SmallDenseMap<AnalysisKey *, bool, 8> IsResultInvalidated;
+  SmallDenseMap<AnalysisKey *, bool, 32> IsResultInvalidated;
   Invalidator Inv(IsResultInvalidated, AnalysisResults);
   auto ResultsListI = AnalysisResultLists.find(&IR);
   if (ResultsListI == AnalysisResultLists.end())

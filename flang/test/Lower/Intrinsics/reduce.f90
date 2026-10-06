@@ -65,10 +65,10 @@ end subroutine
 
 ! CHECK-LABEL: func.func @_QMreduce_modPinteger1(
 ! CHECK-SAME: %[[ARG0:.*]]: !fir.box<!fir.array<?xi8>> {fir.bindc_name = "a"}, %[[ARG1:.*]]: !fir.ref<i8> {fir.bindc_name = "id"}
-! CHECK: %[[A:.*]]:2 = hlfir.declare %[[ARG0]] dummy_scope %{{.*}} {fortran_attrs = #fir.var_attrs<intent_in>, uniq_name = "_QMreduce_modFinteger1Ea"} : (!fir.box<!fir.array<?xi8>>, !fir.dscope) -> (!fir.box<!fir.array<?xi8>>, !fir.box<!fir.array<?xi8>>)
-! CHECK: %[[ID:.*]]:2 = hlfir.declare %[[ARG1]] dummy_scope %{{.*}} {uniq_name = "_QMreduce_modFinteger1Eid"} : (!fir.ref<i8>, !fir.dscope) -> (!fir.ref<i8>, !fir.ref<i8>)
+! CHECK: %[[A:.*]]:2 = hlfir.declare %[[ARG0]] dummy_scope %{{.*}} uniq_name("_QMreduce_modFinteger1Ea") fortran_attrs<intent_in> : (!fir.box<!fir.array<?xi8>>, !fir.dscope) -> (!fir.box<!fir.array<?xi8>>, !fir.box<!fir.array<?xi8>>)
+! CHECK: %[[ID:.*]]:2 = hlfir.declare %[[ARG1]] dummy_scope %{{.*}} uniq_name("_QMreduce_modFinteger1Eid") : (!fir.ref<i8>, !fir.dscope) -> (!fir.ref<i8>, !fir.ref<i8>)
 ! CHECK: %[[ALLOC_RES:.*]] = fir.alloca i8 <{bindc_name = "res", uniq_name = "_QMreduce_modFinteger1Eres"}>
-! CHECK: %[[RES:.*]]:2 = hlfir.declare %[[ALLOC_RES]] {uniq_name = "_QMreduce_modFinteger1Eres"} : (!fir.ref<i8>) -> (!fir.ref<i8>, !fir.ref<i8>)
+! CHECK: %[[RES:.*]]:2 = hlfir.declare %[[ALLOC_RES]] uniq_name("_QMreduce_modFinteger1Eres") : (!fir.ref<i8>) -> (!fir.ref<i8>, !fir.ref<i8>)
 ! CHECK: %[[ADDR_OP:.*]] = fir.address_of(@_QMreduce_modPred_int1) : (!fir.ref<i8>, !fir.ref<i8>) -> i8
 ! CHECK: %[[BOX_PROC:.*]] = fir.emboxproc %[[ADDR_OP]] : ((!fir.ref<i8>, !fir.ref<i8>) -> i8) -> !fir.boxproc<() -> ()>
 ! CHECK: %[[MASK:.*]] = fir.absent !fir.box<i1>
@@ -86,7 +86,7 @@ end subroutine
 ! CHECK: %[[MASK_NONE:.*]] = fir.convert %[[MASK]] : (!fir.box<i1>) -> !fir.box<none>
 ! CHECK: %{{.*}} = fir.call @_FortranAReduceInteger1Ref(%[[A_NONE]], %[[BOX_ADDR]], %{{.*}}, %{{.*}}, %c1{{.*}}, %[[MASK_NONE]], %[[ID]]#0, %false{{.*}}) fastmath<contract> : (!fir.box<none>, (!fir.ref<i8>, !fir.ref<i8>) -> !fir.ref<i8>, !fir.ref<i8>, i32, i32, !fir.box<none>, !fir.ref<i8>, i1) -> i8
 ! CHECK: fir.call @_FortranAReduceInteger1Ref(%{{.*}}, %{{.*}}, %{{.*}}, %{{.*}}, %{{.*}}, %{{.*}}, %{{.*}}#0, %true)
-! CHECK: %[[MASK:.*]]:2 = hlfir.declare %{{.*}}(%{{.*}}) {fortran_attrs = #fir.var_attrs<parameter>, uniq_name = "_QQro.3xl4.0"} : (!fir.ref<!fir.array<3x!fir.logical<4>>>, !fir.shape<1>) -> (!fir.ref<!fir.array<3x!fir.logical<4>>>, !fir.ref<!fir.array<3x!fir.logical<4>>>)
+! CHECK: %[[MASK:.*]]:2 = hlfir.declare %{{.*}}(%{{.*}}) uniq_name("_QQro.3xl4.0") fortran_attrs<parameter> : (!fir.ref<!fir.array<3x!fir.logical<4>>>, !fir.shape<1>) -> (!fir.ref<!fir.array<3x!fir.logical<4>>>, !fir.ref<!fir.array<3x!fir.logical<4>>>)
 ! CHECK: %[[SHAPE_C3:.*]] = fir.shape %c3{{.*}} : (index) -> !fir.shape<1>
 ! CHECK: %[[BOXED_MASK:.*]] = fir.embox %[[MASK]]#0(%[[SHAPE_C3]]) : (!fir.ref<!fir.array<3x!fir.logical<4>>>, !fir.shape<1>) -> !fir.box<!fir.array<3x!fir.logical<4>>>
 ! CHECK: %[[CONV_MASK:.*]] = fir.convert %[[BOXED_MASK]] : (!fir.box<!fir.array<3x!fir.logical<4>>>) -> !fir.box<none>

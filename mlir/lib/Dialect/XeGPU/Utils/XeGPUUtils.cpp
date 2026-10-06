@@ -490,6 +490,24 @@ std::optional<std::string> xegpu::getChipStr(Operation *op) {
   return std::nullopt;
 }
 
+FailureOr<int64_t> xegpu::getNumSubgroupsFromBlockSize(Operation *op,
+                                                       int64_t subgroupSize) {
+  auto gpuFunc = op->getParentOfType<gpu::GPUFuncOp>();
+  if (!gpuFunc)
+    return failure();
+  std::optional<ArrayRef<int32_t>> blockSize = gpuFunc.getKnownBlockSize();
+  if (!blockSize)
+    return failure();
+  if (!llvm::all_of(*blockSize, [](int32_t dim) {
+        return dim > 0 && llvm::isPowerOf2_32(dim);
+      }))
+    return failure();
+  int64_t numSubgroups = llvm::product_of(*blockSize) / subgroupSize;
+  if (numSubgroups < 1)
+    return failure();
+  return numSubgroups;
+}
+
 /// Generates element-wise addition ops of two arrays with same length.
 SmallVector<OpFoldResult> xegpu::addElementwise(OpBuilder &builder,
                                                 Location loc,

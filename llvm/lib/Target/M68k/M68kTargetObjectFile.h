@@ -17,9 +17,7 @@
 #include "llvm/CodeGen/TargetLoweringObjectFileImpl.h"
 
 namespace llvm {
-class M68kTargetMachine;
 class M68kELFTargetObjectFile : public TargetLoweringObjectFileELF {
-  const M68kTargetMachine *TM;
   MCSection *SmallDataSection;
   MCSection *SmallBSSSection;
 

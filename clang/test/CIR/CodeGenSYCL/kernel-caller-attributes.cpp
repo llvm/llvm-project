@@ -44,4 +44,4 @@ void test(int *p) {
 // caller must not carry mustprogress; norecurse and sycl-module-id remain. The
 // exact attribute set (which omits mustprogress) is verified here.
 // LLVM-NOMP: define spir_kernel void @_ZTS2KN({{.*}}) #[[KATTR:[0-9]+]]
-// LLVM-NOMP: attributes #[[KATTR]] = { convergent noinline norecurse "sycl-module-id"="{{.*}}kernel-caller-attributes.cpp" }
+// LLVM-NOMP: attributes #[[KATTR]] = { convergent noinline norecurse nounwind "sycl-module-id"="{{.*}}kernel-caller-attributes.cpp" }

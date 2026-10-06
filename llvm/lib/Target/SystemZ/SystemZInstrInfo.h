@@ -283,7 +283,7 @@ public:
       Register DestReg, int FrameIdx, const TargetRegisterClass *RC,
       Register VReg, unsigned SubReg = 0,
       MachineInstr::MIFlag Flags = MachineInstr::NoFlags) const override;
-  MachineInstr *convertToThreeAddress(MachineInstr &MI, LiveVariables *LV,
+  MachineInstr *convertToThreeAddress(MachineInstr &MI,
                                       LiveIntervals *LIS) const override;
 
   bool useMachineCombiner() const override { return true; }

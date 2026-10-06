@@ -657,7 +657,16 @@ bool TypeInfer::EnforceVectorSubVectorTypeIs(TypeSetByHwMode &Vec,
       return false;
     if (B.getVectorElementType() != P.getVectorElementType())
       return false;
-    return B.getVectorMinNumElements() < P.getVectorMinNumElements();
+    // If the subvector and vector are both fixed or both scalable, require
+    // the minimum element count to be smaller.
+    if (B.isScalableVector() == P.isScalableVector())
+      return B.getVectorMinNumElements() < P.getVectorMinNumElements();
+
+    // If the subvector is fixed and the vector is scalable, allow the
+    // minimum number of elements to be less than or equal. Note, if vscale is
+    // known to be greater than 1, the subvector could have more than the
+    // minimum number of elements, but that would probably require custom isel.
+    return B.getVectorMinNumElements() <= P.getVectorMinNumElements();
   };
 
   /// Return true if S has no element (vector type) that T is a sub-vector of,
@@ -4002,8 +4011,12 @@ void CodeGenDAGPatterns::parseInstructionPattern(const CodeGenInstruction &CGI,
 
     // Check that it exists in InstResults.
     auto InstResultIter = InstResults.find(OpName);
-    if (InstResultIter == InstResults.end() || !InstResultIter->second)
-      I.error("Operand $" + OpName + " does not exist in operand list!");
+    if (InstResultIter == InstResults.end() || !InstResultIter->second) {
+      I.dump();
+      PrintFatalError(CGI.TheDef, "In " + CGI.TheDef->getName() +
+                                      ": Operand $" + OpName +
+                                      " does not exist in operand list!");
+    }
 
     TreePatternNodePtr RNode = InstResultIter->second;
     const Record *R = cast<DefInit>(RNode->getLeafValue())->getDef();

@@ -8,6 +8,7 @@
 
 #include "EvalEmitter.h"
 #include "Context.h"
+#include "EvalSettings.h"
 #include "IntegralAP.h"
 #include "Interp.h"
 #include "clang/AST/DeclCXX.h"
@@ -17,11 +18,10 @@
 using namespace clang;
 using namespace clang::interp;
 
-EvalEmitter::EvalEmitter(Context &Ctx, Program &P, State &Parent,
-                         InterpStack &Stk, FrameAllocator &FA,
-                         ConstantExprKind ConstexprKind)
-    : Ctx(Ctx), P(P), S(Parent, P, Stk, FA, Ctx, this), EvalResult(Ctx),
-      ConstexprKind(ConstexprKind) {}
+EvalEmitter::EvalEmitter(Context &Ctx, Program &P, const EvalSettings &Settings,
+                         InterpStack &Stk, FrameAllocator &FA)
+    : Ctx(Ctx), P(P), S(Settings, P, Stk, FA, Ctx, this), EvalResult(Ctx),
+      ConstexprKind(Settings.ConstexprKind) {}
 
 EvalEmitter::EvalEmitter(Context &Ctx, Program &P, Expr::EvalStatus &Status,
                          InterpStack &Stk, FrameAllocator &FA)
@@ -282,16 +282,7 @@ template <> bool EvalEmitter::emitRet<PT_Ptr>(SourceInfo Info) {
 
   // Implicitly convert lvalue to rvalue, if requested.
   if (ConvertResultToRValue) {
-    if (Ptr.isPastEnd())
-      return false;
-
     if (!Ptr.isZero() && !CheckFinalLoad(S, CodePtr(), Ptr))
-      return false;
-
-    // Never allow reading from a non-const pointer, unless the memory
-    // has been created in this evaluation.
-    if (!Ptr.isZero() && !Ptr.isConst() && Ptr.isBlockPointer() &&
-        Ptr.block()->getEvalID() != Ctx.getEvalID())
       return false;
 
     if (!EvalResult.checkLValueFields(S, Ptr, Info, ConstexprKind))

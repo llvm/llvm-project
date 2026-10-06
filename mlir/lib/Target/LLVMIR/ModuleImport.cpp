@@ -577,9 +577,10 @@ ModuleImport::processAliasScopeMetadata(const llvm::MDNode *node) {
   // Helper that creates an alias scope domain attribute.
   auto createAliasScopeDomainOp = [&](const llvm::MDNode *aliasDomain) {
     StringAttr description = nullptr;
-    if (aliasDomain->getNumOperands() >= 2)
-      if (auto *operand = dyn_cast<llvm::MDString>(aliasDomain->getOperand(1)))
-        description = builder.getStringAttr(operand->getString());
+    StringRef descriptionStr =
+        llvm::AliasScopeDomainNode(aliasDomain).getDescription();
+    if (!descriptionStr.empty())
+      description = builder.getStringAttr(descriptionStr);
     Attribute idAttr = getIdAttr(aliasDomain);
     return builder.getAttr<AliasScopeDomainAttr>(idAttr, description);
   };
@@ -598,7 +599,7 @@ ModuleImport::processAliasScopeMetadata(const llvm::MDNode *node) {
           !verifyDescription(scope, 2))
         return emitError(loc) << "unsupported alias scope node: "
                               << diagMD(scope, llvmModule.get());
-      if (!verifySelfRefOrString(domain) || !verifyDescription(domain, 1))
+      if (!verifySelfRefOrString(domain) || !verifyDescription(domain, 2))
         return emitError(loc) << "unsupported alias domain node: "
                               << diagMD(domain, llvmModule.get());
 
@@ -1977,12 +1978,20 @@ FailureOr<Value> ModuleImport::convertConstant(llvm::Constant *constant) {
     // getAsInstruction() does not preserve GEP `inrange`, which exists only on
     // constant expressions. Reattach it to the imported GEPOp.
     if (constExpr->getOpcode() == llvm::Instruction::GetElementPtr) {
+      auto *gepOperator = llvm::cast<llvm::GEPOperator>(constExpr);
       if (std::optional<llvm::ConstantRange> inRange =
-              llvm::cast<llvm::GEPOperator>(constExpr)->getInRange()) {
+              gepOperator->getInRange()) {
         auto gepOp = result.getDefiningOp<GEPOp>();
         assert(gepOp && "expected GEPOp for getelementptr constexpr");
+        // The range is not always built at the index width of the base
+        // pointer (clang uses 32 bits for vtable address points); bring it to
+        // that width, as the textual IR parser does.
+        unsigned indexWidth =
+            llvmModule->getDataLayout().getIndexTypeSizeInBits(
+                gepOperator->getPointerOperandType());
         gepOp.setInrangeAttr(LLVM::ConstantRangeAttr::get(
-            context, inRange->getLower(), inRange->getUpper()));
+            context, inRange->getLower().sextOrTrunc(indexWidth),
+            inRange->getUpper().sextOrTrunc(indexWidth)));
       }
     }
     return result;

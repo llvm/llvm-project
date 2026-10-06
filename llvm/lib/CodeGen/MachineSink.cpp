@@ -2249,7 +2249,7 @@ bool PostRAMachineSinkingImpl::tryToSinkCopy(MachineBasicBlock &CurBB,
   // so that we can directly sink COPY instructions to the successor without
   // adding any new block or branch instruction.
   for (MachineBasicBlock *SI : CurBB.successors())
-    if (!SI->livein_empty() && SI->pred_size() == 1)
+    if (!SI->livein_empty() && SI->pred_size() == 1 && !SI->isEHPad())
       SinkableBBs.insert(SI);
 
   if (SinkableBBs.empty())

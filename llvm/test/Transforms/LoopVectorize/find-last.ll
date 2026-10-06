@@ -21,7 +21,7 @@ define i32 @find_last_with_select(ptr noalias %a, ptr noalias %b) {
 ; CHECK-NEXT:    [[TMP3:%.*]] = icmp sge <4 x i32> [[WIDE_LOAD]], [[WIDE_LOAD1]]
 ; CHECK-NEXT:    [[TMP4:%.*]] = freeze <4 x i1> [[TMP3]]
 ; CHECK-NEXT:    [[TMP5:%.*]] = call i1 @llvm.vector.reduce.or.v4i1(<4 x i1> [[TMP4]])
-; CHECK-NEXT:    [[TMP6]] = select i1 [[TMP5]], <4 x i1> [[TMP3]], <4 x i1> [[TMP0]]
+; CHECK-NEXT:    [[TMP6]] = select i1 [[TMP5]], <4 x i1> [[TMP4]], <4 x i1> [[TMP0]]
 ; CHECK-NEXT:    [[TMP7]] = select i1 [[TMP5]], <4 x i32> [[WIDE_LOAD]], <4 x i32> [[VEC_PHI]]
 ; CHECK-NEXT:    [[INDEX_NEXT]] = add nuw i64 [[INDEX]], 4
 ; CHECK-NEXT:    [[TMP8:%.*]] = icmp eq i64 [[INDEX_NEXT]], 500
@@ -70,7 +70,7 @@ define i32 @find_last_sgt_inverted(ptr noalias %a, ptr noalias %b) {
 ; CHECK-NEXT:    [[TMP3:%.*]] = icmp sle <4 x i32> [[WIDE_LOAD]], [[WIDE_LOAD1]]
 ; CHECK-NEXT:    [[TMP4:%.*]] = freeze <4 x i1> [[TMP3]]
 ; CHECK-NEXT:    [[TMP5:%.*]] = call i1 @llvm.vector.reduce.or.v4i1(<4 x i1> [[TMP4]])
-; CHECK-NEXT:    [[TMP6]] = select i1 [[TMP5]], <4 x i1> [[TMP3]], <4 x i1> [[TMP0]]
+; CHECK-NEXT:    [[TMP6]] = select i1 [[TMP5]], <4 x i1> [[TMP4]], <4 x i1> [[TMP0]]
 ; CHECK-NEXT:    [[TMP7]] = select i1 [[TMP5]], <4 x i32> [[WIDE_LOAD]], <4 x i32> [[VEC_PHI]]
 ; CHECK-NEXT:    [[INDEX_NEXT]] = add nuw i64 [[INDEX]], 4
 ; CHECK-NEXT:    [[TMP8:%.*]] = icmp eq i64 [[INDEX_NEXT]], 500
@@ -119,7 +119,7 @@ define i32 @find_last_ult_inverted(ptr noalias %a, ptr noalias %b) {
 ; CHECK-NEXT:    [[TMP3:%.*]] = icmp uge <4 x i32> [[WIDE_LOAD]], [[WIDE_LOAD1]]
 ; CHECK-NEXT:    [[TMP4:%.*]] = freeze <4 x i1> [[TMP3]]
 ; CHECK-NEXT:    [[TMP5:%.*]] = call i1 @llvm.vector.reduce.or.v4i1(<4 x i1> [[TMP4]])
-; CHECK-NEXT:    [[TMP6]] = select i1 [[TMP5]], <4 x i1> [[TMP3]], <4 x i1> [[TMP0]]
+; CHECK-NEXT:    [[TMP6]] = select i1 [[TMP5]], <4 x i1> [[TMP4]], <4 x i1> [[TMP0]]
 ; CHECK-NEXT:    [[TMP7]] = select i1 [[TMP5]], <4 x i32> [[WIDE_LOAD]], <4 x i32> [[VEC_PHI]]
 ; CHECK-NEXT:    [[INDEX_NEXT]] = add nuw i64 [[INDEX]], 4
 ; CHECK-NEXT:    [[TMP8:%.*]] = icmp eq i64 [[INDEX_NEXT]], 500
@@ -168,7 +168,7 @@ define i32 @find_last_ne_inverted(ptr noalias %a, ptr noalias %b) {
 ; CHECK-NEXT:    [[TMP3:%.*]] = icmp eq <4 x i32> [[WIDE_LOAD]], [[WIDE_LOAD1]]
 ; CHECK-NEXT:    [[TMP4:%.*]] = freeze <4 x i1> [[TMP3]]
 ; CHECK-NEXT:    [[TMP5:%.*]] = call i1 @llvm.vector.reduce.or.v4i1(<4 x i1> [[TMP4]])
-; CHECK-NEXT:    [[TMP6]] = select i1 [[TMP5]], <4 x i1> [[TMP3]], <4 x i1> [[TMP0]]
+; CHECK-NEXT:    [[TMP6]] = select i1 [[TMP5]], <4 x i1> [[TMP4]], <4 x i1> [[TMP0]]
 ; CHECK-NEXT:    [[TMP7]] = select i1 [[TMP5]], <4 x i32> [[WIDE_LOAD]], <4 x i32> [[VEC_PHI]]
 ; CHECK-NEXT:    [[INDEX_NEXT]] = add nuw i64 [[INDEX]], 4
 ; CHECK-NEXT:    [[TMP8:%.*]] = icmp eq i64 [[INDEX_NEXT]], 500
@@ -226,7 +226,7 @@ define i32 @loop_inv_select_condition_issue_182152(i32 %iv.start, i32 %a, i32 %b
 ; CHECK-NEXT:    [[VEC_IND:%.*]] = phi <4 x i32> [ [[INDUCTION]], [[VECTOR_PH]] ], [ [[VEC_IND_NEXT:%.*]], [[LOOP]] ]
 ; CHECK-NEXT:    [[VEC_PHI:%.*]] = phi <4 x i32> [ zeroinitializer, [[VECTOR_PH]] ], [ [[TMP8:%.*]], [[LOOP]] ]
 ; CHECK-NEXT:    [[TMP6:%.*]] = phi <4 x i1> [ zeroinitializer, [[VECTOR_PH]] ], [ [[TMP7:%.*]], [[LOOP]] ]
-; CHECK-NEXT:    [[TMP7]] = select i1 [[TMP5]], <4 x i1> [[TMP3]], <4 x i1> [[TMP6]]
+; CHECK-NEXT:    [[TMP7]] = select i1 [[TMP5]], <4 x i1> [[TMP4]], <4 x i1> [[TMP6]]
 ; CHECK-NEXT:    [[TMP8]] = select i1 [[TMP5]], <4 x i32> [[VEC_IND]], <4 x i32> [[VEC_PHI]]
 ; CHECK-NEXT:    [[INDEX_NEXT]] = add nuw i32 [[INDEX]], 4
 ; CHECK-NEXT:    [[VEC_IND_NEXT]] = add <4 x i32> [[VEC_IND]], splat (i32 4)
@@ -280,7 +280,7 @@ define ptr @loop_inv_select_condition_issue_185682(i32 %a, i32 %b) {
 ; CHECK-NEXT:    [[TMP2:%.*]] = call i1 @llvm.vector.reduce.or.v4i1(<4 x i1> [[TMP1]])
 ; CHECK-NEXT:    br label [[VECTOR_BODY:%.*]]
 ; CHECK:       vector.body:
-; CHECK-NEXT:    [[TMP3:%.*]] = select i1 [[TMP2]], <4 x i1> [[TMP0]], <4 x i1> zeroinitializer
+; CHECK-NEXT:    [[TMP3:%.*]] = select i1 [[TMP2]], <4 x i1> [[TMP1]], <4 x i1> zeroinitializer
 ; CHECK-NEXT:    br label [[MIDDLE_BLOCK:%.*]]
 ; CHECK:       middle.block:
 ; CHECK-NEXT:    [[TMP6:%.*]] = call ptr @llvm.experimental.vector.extract.last.active.v4p0(<4 x ptr> splat (ptr null), <4 x i1> [[TMP3]], ptr null)

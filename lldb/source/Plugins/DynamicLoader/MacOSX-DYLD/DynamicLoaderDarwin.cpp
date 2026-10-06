@@ -626,7 +626,8 @@ void DynamicLoaderDarwin::UpdateSpecialBinariesFromPreloadedModules(
       target.GetImages().AppendIfNeeded(exe_module_sp);
       UpdateImageLoadAddress(exe_module_sp.get(), images[exe_idx].first);
       if (exe_module_sp.get() != target.GetExecutableModulePointer())
-        target.SetExecutableModule(exe_module_sp, eLoadDependentsNo);
+        target.RebuildModuleListWithExecutable(exe_module_sp,
+                                               eLoadDependentsNo);
 
       // Update the target executable's arch if necessary.
       auto exe_triple = exe_module_sp->GetArchitecture().GetTriple();

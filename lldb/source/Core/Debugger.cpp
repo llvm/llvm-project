@@ -578,6 +578,42 @@ llvm::StringRef Debugger::GetShowProgressAnsiSuffix() const {
       idx, g_debugger_properties[idx].default_cstr_value);
 }
 
+llvm::StringRef Debugger::GetLabelAnsiPrefix() const {
+  const uint32_t idx = ePropertyLabelAnsiPrefix;
+  return GetPropertyAtIndexAs<llvm::StringRef>(
+      idx, g_debugger_properties[idx].default_cstr_value);
+}
+
+llvm::StringRef Debugger::GetLabelAnsiSuffix() const {
+  const uint32_t idx = ePropertyLabelAnsiSuffix;
+  return GetPropertyAtIndexAs<llvm::StringRef>(
+      idx, g_debugger_properties[idx].default_cstr_value);
+}
+
+llvm::StringRef Debugger::GetTitleAnsiPrefix() const {
+  const uint32_t idx = ePropertyTitleAnsiPrefix;
+  return GetPropertyAtIndexAs<llvm::StringRef>(
+      idx, g_debugger_properties[idx].default_cstr_value);
+}
+
+llvm::StringRef Debugger::GetTitleAnsiSuffix() const {
+  const uint32_t idx = ePropertyTitleAnsiSuffix;
+  return GetPropertyAtIndexAs<llvm::StringRef>(
+      idx, g_debugger_properties[idx].default_cstr_value);
+}
+
+llvm::StringRef Debugger::GetDividerAnsiPrefix() const {
+  const uint32_t idx = ePropertyDividerAnsiPrefix;
+  return GetPropertyAtIndexAs<llvm::StringRef>(
+      idx, g_debugger_properties[idx].default_cstr_value);
+}
+
+llvm::StringRef Debugger::GetDividerAnsiSuffix() const {
+  const uint32_t idx = ePropertyDividerAnsiSuffix;
+  return GetPropertyAtIndexAs<llvm::StringRef>(
+      idx, g_debugger_properties[idx].default_cstr_value);
+}
+
 bool Debugger::GetShowStatusline() const {
   const uint32_t idx = ePropertyShowStatusline;
   return GetPropertyAtIndexAs<bool>(

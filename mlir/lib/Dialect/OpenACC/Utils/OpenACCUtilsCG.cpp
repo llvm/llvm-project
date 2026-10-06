@@ -223,6 +223,26 @@ void setGPUBlockRedundantAttr(Operation *op) {
                          GPUBlockRedundantAttr::get(op->getContext()));
 }
 
+ChunkSizeAttr getChunkSizeAttr(Operation *op) {
+  return op->getDiscardableAttrOfType<ChunkSizeAttr>(ChunkSizeAttr::name);
+}
+
+bool hasChunkSizeAttr(Operation *op) { return getChunkSizeAttr(op) != nullptr; }
+
+void setChunkSizeAttr(Operation *op, ChunkSizeAttr attr) {
+  op->setDiscardableAttr(ChunkSizeAttr::name, attr);
+}
+
+void setChunkSizeAttr(Operation *op, int64_t chunkSize) {
+  setChunkSizeAttr(op, ChunkSizeAttr::get(op->getContext(), chunkSize));
+}
+
+std::optional<int64_t> getChunkSize(Operation *op) {
+  if (ChunkSizeAttr attr = getChunkSizeAttr(op))
+    return attr.getChunkSize();
+  return std::nullopt;
+}
+
 void copyParDimsAttr(Operation *from, Operation *to) {
   assert(hasParDimsAttr(from) &&
          "expected parallel dimensions attribute to already be set");

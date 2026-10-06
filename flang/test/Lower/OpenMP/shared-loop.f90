@@ -5,7 +5,7 @@
 ! --- is updated.
 ! CHECK-LABEL:  func.func @_QPomploop()
 ! CHECK:    %[[ALLOC_I:.*]] = fir.alloca i32 <{bindc_name = "i", uniq_name = "_QFomploopEi"}>
-! CHECK:    %[[DECL_I:.*]]:2 = hlfir.declare %[[ALLOC_I]] {uniq_name = "_QFomploopEi"} :
+! CHECK:    %[[DECL_I:.*]]:2 = hlfir.declare %[[ALLOC_I]] uniq_name("_QFomploopEi") :
 ! CHECK:    omp.parallel {
 ! CHECK:      omp.sections {
 ! CHECK:        omp.section {
@@ -50,7 +50,7 @@ end subroutine
 ! --- is NOT updated (i is private to the omp.parallel code)
 ! CHECK-LABEL:  func.func @_QPomploop2()
 ! CHECK:    %[[ALLOC_I:.*]] = fir.alloca i32 <{bindc_name = "i", uniq_name = "_QFomploop2Ei"}>
-! CHECK:    %[[DECL_I:.*]]:2 = hlfir.declare %[[ALLOC_I]] {uniq_name = "_QFomploop2Ei"} :
+! CHECK:    %[[DECL_I:.*]]:2 = hlfir.declare %[[ALLOC_I]] uniq_name("_QFomploop2Ei") :
 ! CHECK:    omp.parallel {
 ! CHECK:      %[[ALLOC_PRIV_I:.*]] = fir.alloca i32 <{bindc_name = "i", pinned}>
 ! CHECK:      %[[DECL_PRIV_I:.*]]:2 = hlfir.declare %[[ALLOC_PRIV_I]]
@@ -99,7 +99,7 @@ end subroutine
 ! --- is NOT updated (i is private to the omp.parallel code)
 ! CHECK-LABEL:  func.func @_QPomploop3()
 ! CHECK:    %[[ALLOC_I:.*]] = fir.alloca i32 <{bindc_name = "i", uniq_name = "_QFomploop3Ei"}>
-! CHECK:    %[[DECL_I:.*]]:2 = hlfir.declare %[[ALLOC_I]] {uniq_name = "_QFomploop3Ei"} :
+! CHECK:    %[[DECL_I:.*]]:2 = hlfir.declare %[[ALLOC_I]] uniq_name("_QFomploop3Ei") :
 ! CHECK:    omp.parallel {
 ! CHECK:      %[[ALLOC_PRIV_I:.*]] = fir.alloca i32 <{bindc_name = "i", pinned}>
 ! CHECK:      %[[DECL_PRIV_I:.*]]:2 = hlfir.declare %[[ALLOC_PRIV_I]]

@@ -369,9 +369,15 @@ void RemarkEmittingPolicyFinal::finalize() {
   assert(reportImpl && "reportImpl is not set");
 
   // Take the pending remarks so that a second finalize(), e.g. from the engine
-  // destructor after an explicit call, does not emit them again.
-  llvm::DenseSet<detail::Remark> remarks;
-  remarks.swap(postponedRemarks);
+  // destructor after an explicit call, does not emit them again. IDs are
+  // assigned in creation order; sorting by them keeps the output independent
+  // of the set's hash layout.
+  std::vector<detail::Remark> remarks(postponedRemarks.begin(),
+                                      postponedRemarks.end());
+  postponedRemarks.clear();
+  llvm::sort(remarks, [](const auto &lhs, const auto &rhs) {
+    return lhs.getId().getValue() < rhs.getId().getValue();
+  });
 
   // Build ID -> Remark* lookup for resolving related remark references.
   llvm::DenseMap<uint64_t, const detail::Remark *> idMap;
@@ -389,7 +395,7 @@ void RemarkEmittingPolicyFinal::finalize() {
   // remarks. Child-only remarks are skipped at the top level to avoid
   // duplication.
   for (const auto &remark : remarks) {
-    if (remark.getId() && childIds.count(remark.getId().getValue()))
+    if (remark.getId() && childIds.contains(remark.getId().getValue()))
       continue; // will be printed grouped under its parent
 
     reportImpl(remark);

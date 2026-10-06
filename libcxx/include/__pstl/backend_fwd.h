@@ -155,6 +155,13 @@ struct __search;
 //                       _ForwardIterator2 __first2, _ForwardIterator2 __last2, _BinaryPredicate __pred) const noexcept;
 
 template <class _Backend, class _ExecutionPolicy>
+struct __swap_ranges;
+// template <class _Policy, class _ForwardIterator1, class _ForwardIterator2>
+// optional<_ForwardIterator2>
+// operator()(_Policy&&, _ForwardIterator1 __first1, _ForwardIterator1 __last1,
+//                       _ForwardIterator2 __first2) const noexcept;
+
+template <class _Backend, class _ExecutionPolicy>
 struct __replace;
 // template <class _Policy, class _ForwardIterator, class _Tp>
 // optional<__empty>

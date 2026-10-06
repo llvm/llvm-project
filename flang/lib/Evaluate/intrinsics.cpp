@@ -4479,6 +4479,22 @@ std::string IntrinsicProcTable::GetGenericIntrinsicName(
 std::optional<SpecificCall> IntrinsicProcTable::Probe(
     const CallCharacteristics &call, ActualArguments &arguments,
     FoldingContext &context) const {
+  // Actual arguments may retain designators of named constants for the
+  // benefit of storage association in nonintrinsic calls (see
+  // ArgumentAnalyzer::AnalyzeExprOrWholeAssumedSizeArray).  Intrinsic
+  // matching, argument checking, and the special handlers inspect constant
+  // values structurally, so probe with a folded copy of such arguments.
+  // On success the SpecificCall carries the folded arguments; on failure
+  // the caller's original arguments are left untouched for subsequent
+  // nonintrinsic resolution.  (Note a pre-existing quirk, unchanged here:
+  // Match() moves arguments while rearranging them and can still fail late,
+  // so a failed match can leave a probe's working vector partially moved
+  // from; using a copy confines that to the copy.)
+  if (AnyNamedConstantActualArguments(arguments)) {
+    ActualArguments folded{arguments};
+    FoldNamedConstantActualArguments(context, folded);
+    return DEREF(impl_.get()).Probe(call, folded, context);
+  }
   return DEREF(impl_.get()).Probe(call, arguments, context);
 }
 

@@ -694,12 +694,13 @@ public:
   /// verified correctly, failure otherwise.
   LogicalResult verify();
 
-  /// Register this handler with the given context. This is intended for use
-  /// with the splitAndProcessBuffer function.
-  void registerInContext(MLIRContext *ctx);
+  /// Register this handler with `ctx` and return a scoped registration.
+  /// Destroy the returned handle before either this handler or `ctx`.
+  [[nodiscard]] std::unique_ptr<ScopedDiagnosticHandler>
+  registerInContext(MLIRContext *ctx);
 
 private:
-  /// Process a single diagnostic.
+  /// Process a diagnostic and its notes.
   void process(Diagnostic &diag);
 
   /// Process a LocationAttr diagnostic.

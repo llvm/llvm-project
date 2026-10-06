@@ -32,17 +32,17 @@ define i32 @test_cvt_pk_fp8_f32(float %x, float %y) {
   ; CHECK-NEXT:   [[REG_SEQUENCE:%[0-9]+]]:vgpr_32 = REG_SEQUENCE killed [[V_CVT_PK_FP8_F32_t16_e64_]], %subreg.lo16, killed [[COPY6]], %subreg.hi16
   ; CHECK-NEXT:   [[S_MOV_B32_2:%[0-9]+]]:sreg_32 = S_MOV_B32 7
   ; CHECK-NEXT:   [[V_CMP_NE_U32_e64_:%[0-9]+]]:sreg_32 = V_CMP_NE_U32_e64 killed [[REG_SEQUENCE]], killed [[S_MOV_B32_2]], implicit $exec
-  ; CHECK-NEXT:   [[V_MOV_B32_e32_1:%[0-9]+]]:vgpr_32 = V_MOV_B32_e32 1, implicit $exec
+  ; CHECK-NEXT:   [[S_MOV_B32_3:%[0-9]+]]:sreg_32 = S_MOV_B32 1
   ; CHECK-NEXT:   [[SI_IF:%[0-9]+]]:sreg_32 = SI_IF killed [[V_CMP_NE_U32_e64_]], %bb.2, implicit-def dead $exec, implicit-def dead $scc, implicit $exec
   ; CHECK-NEXT:   S_BRANCH %bb.1
   ; CHECK-NEXT: {{  $}}
   ; CHECK-NEXT: bb.1.a2:
   ; CHECK-NEXT:   successors: %bb.2(0x80000000)
   ; CHECK-NEXT: {{  $}}
-  ; CHECK-NEXT:   [[V_MOV_B32_e32_2:%[0-9]+]]:vgpr_32 = V_MOV_B32_e32 2, implicit $exec
+  ; CHECK-NEXT:   [[S_MOV_B32_4:%[0-9]+]]:sreg_32 = S_MOV_B32 2
   ; CHECK-NEXT: {{  $}}
   ; CHECK-NEXT: bb.2.UnifiedReturnBlock:
-  ; CHECK-NEXT:   [[PHI:%[0-9]+]]:vgpr_32 = PHI [[V_MOV_B32_e32_1]], %bb.0, [[V_MOV_B32_e32_2]], %bb.1
+  ; CHECK-NEXT:   [[PHI:%[0-9]+]]:vgpr_32 = PHI [[S_MOV_B32_3]], %bb.0, [[S_MOV_B32_4]], %bb.1
   ; CHECK-NEXT:   SI_END_CF [[SI_IF]], implicit-def dead $exec, implicit-def dead $scc, implicit $exec
   ; CHECK-NEXT:   $vgpr0 = COPY [[PHI]]
   ; CHECK-NEXT:   SI_RETURN implicit $vgpr0
@@ -90,17 +90,17 @@ define i32 @test_cvt_pk_fp8_f32_e5m3(float %x, float %y) {
   ; CHECK-NEXT:   [[REG_SEQUENCE:%[0-9]+]]:vgpr_32 = REG_SEQUENCE killed [[V_CVT_PK_FP8_F32_gfx1250_t16_e64_]], %subreg.lo16, killed [[COPY6]], %subreg.hi16
   ; CHECK-NEXT:   [[S_MOV_B32_2:%[0-9]+]]:sreg_32 = S_MOV_B32 7
   ; CHECK-NEXT:   [[V_CMP_NE_U32_e64_:%[0-9]+]]:sreg_32 = V_CMP_NE_U32_e64 killed [[REG_SEQUENCE]], killed [[S_MOV_B32_2]], implicit $exec
-  ; CHECK-NEXT:   [[V_MOV_B32_e32_1:%[0-9]+]]:vgpr_32 = V_MOV_B32_e32 1, implicit $exec
+  ; CHECK-NEXT:   [[S_MOV_B32_3:%[0-9]+]]:sreg_32 = S_MOV_B32 1
   ; CHECK-NEXT:   [[SI_IF:%[0-9]+]]:sreg_32 = SI_IF killed [[V_CMP_NE_U32_e64_]], %bb.2, implicit-def dead $exec, implicit-def dead $scc, implicit $exec
   ; CHECK-NEXT:   S_BRANCH %bb.1
   ; CHECK-NEXT: {{  $}}
   ; CHECK-NEXT: bb.1.a2:
   ; CHECK-NEXT:   successors: %bb.2(0x80000000)
   ; CHECK-NEXT: {{  $}}
-  ; CHECK-NEXT:   [[V_MOV_B32_e32_2:%[0-9]+]]:vgpr_32 = V_MOV_B32_e32 2, implicit $exec
+  ; CHECK-NEXT:   [[S_MOV_B32_4:%[0-9]+]]:sreg_32 = S_MOV_B32 2
   ; CHECK-NEXT: {{  $}}
   ; CHECK-NEXT: bb.2.UnifiedReturnBlock:
-  ; CHECK-NEXT:   [[PHI:%[0-9]+]]:vgpr_32 = PHI [[V_MOV_B32_e32_1]], %bb.0, [[V_MOV_B32_e32_2]], %bb.1
+  ; CHECK-NEXT:   [[PHI:%[0-9]+]]:vgpr_32 = PHI [[S_MOV_B32_3]], %bb.0, [[S_MOV_B32_4]], %bb.1
   ; CHECK-NEXT:   SI_END_CF [[SI_IF]], implicit-def dead $exec, implicit-def dead $scc, implicit $exec
   ; CHECK-NEXT:   $vgpr0 = COPY [[PHI]]
   ; CHECK-NEXT:   SI_RETURN implicit $vgpr0

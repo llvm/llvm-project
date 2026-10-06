@@ -295,6 +295,10 @@ public:
         IsFake16 ? AMDGPU::VS_32RegClassID : AMDGPU::VS_16RegClassID, MVT::f16);
   }
 
+  bool isRegOrImmWithFPT16_LO16InputMods() const {
+    return isRegOrImmWithInputMods(AMDGPU::VS_16_LO16RegClassID, MVT::f16);
+  }
+
   bool isRegOrImmWithFP32InputMods() const {
     return isRegOrImmWithInputMods(AMDGPU::VS_32RegClassID, MVT::f32);
   }
@@ -362,6 +366,7 @@ public:
   bool isVRegWithInputMods() const;
   template <bool IsFake16> bool isT16_Lo128VRegWithInputMods() const;
   template <bool IsFake16> bool isT16VRegWithInputMods() const;
+  bool isT16_LO16VRegWithInputMods() const;
 
   bool isSDWAOperand(MVT type) const;
   bool isSDWAFP16Operand() const;
@@ -432,6 +437,10 @@ public:
 
   bool isRegOrInlineNoMods(unsigned RCID, MVT type) const {
     return isRegOrInline(RCID, type) && !hasModifiers();
+  }
+
+  bool isRegOrInlineNoModsTarget(unsigned TargetRCIdx, MVT type) const {
+    return isRegOrInlineTarget(TargetRCIdx, type) && !hasModifiers();
   }
 
   bool isSCSrcB16() const {
@@ -539,7 +548,7 @@ public:
   }
 
   bool isVCSrc_b64() const {
-    return isRegOrInlineNoMods(AMDGPU::VS_64RegClassID, MVT::i64);
+    return isRegOrInlineNoModsTarget(AMDGPU::VS_64_AlignTarget, MVT::i64);
   }
 
   bool isVCSrcT_b16() const {
@@ -565,7 +574,7 @@ public:
   }
 
   bool isVCSrc_f64() const {
-    return isRegOrInlineNoMods(AMDGPU::VS_64RegClassID, MVT::f64);
+    return isRegOrInlineNoModsTarget(AMDGPU::VS_64_AlignTarget, MVT::f64);
   }
 
   bool isVCSrcTBF16() const {
@@ -578,6 +587,10 @@ public:
 
   bool isVCSrcT_bf16() const {
     return isRegOrInlineNoMods(AMDGPU::VS_16RegClassID, MVT::f16);
+  }
+
+  bool isVCSrcTF16_LO16() const {
+    return isRegOrInlineNoMods(AMDGPU::VS_16_LO16RegClassID, MVT::f16);
   }
 
   bool isVCSrcTBF16_Lo128() const {
@@ -650,13 +663,20 @@ public:
     return isVCSrc_f32() || isLiteralImm(MVT::f32) || isExpr();
   }
 
-  bool isVSrc_f64() const { return isVCSrc_f64() || isLiteralImm(MVT::f64); }
+  bool isVSrc_f64() const {
+    return isRegOrInlineNoModsTarget(AMDGPU::VS_64_AlignTarget, MVT::f64) ||
+           isLiteralImm(MVT::f64);
+  }
 
   bool isVSrcT_bf16() const {
     return isVCSrcTBF16() || isLiteralImm(MVT::bf16);
   }
 
   bool isVSrcT_f16() const { return isVCSrcT_f16() || isLiteralImm(MVT::f16); }
+
+  bool isVSrcT_f16_LO16() const {
+    return isVCSrcTF16_LO16() || isLiteralImm(MVT::f16);
+  }
 
   bool isVSrcT_bf16_Lo128() const {
     return isVCSrcTBF16_Lo128() || isLiteralImm(MVT::bf16);
@@ -709,91 +729,91 @@ public:
   bool isVISrcV2F16() const { return isVISrcF16() || isVISrcB32(); }
 
   bool isVISrc_64_bf16() const {
-    return isRegOrInlineNoMods(AMDGPU::VReg_64RegClassID, MVT::bf16);
+    return isRegOrInlineNoModsTarget(AMDGPU::VReg_64_AlignTarget, MVT::bf16);
   }
 
   bool isVISrc_64_f16() const {
-    return isRegOrInlineNoMods(AMDGPU::VReg_64RegClassID, MVT::f16);
+    return isRegOrInlineNoModsTarget(AMDGPU::VReg_64_AlignTarget, MVT::f16);
   }
 
   bool isVISrc_64_b32() const {
-    return isRegOrInlineNoMods(AMDGPU::VReg_64RegClassID, MVT::i32);
+    return isRegOrInlineNoModsTarget(AMDGPU::VReg_64_AlignTarget, MVT::i32);
   }
 
   bool isVISrc_64B64() const {
-    return isRegOrInlineNoMods(AMDGPU::VReg_64RegClassID, MVT::i64);
+    return isRegOrInlineNoModsTarget(AMDGPU::VReg_64_AlignTarget, MVT::i64);
   }
 
   bool isVISrc_64_f64() const {
-    return isRegOrInlineNoMods(AMDGPU::VReg_64RegClassID, MVT::f64);
+    return isRegOrInlineNoModsTarget(AMDGPU::VReg_64_AlignTarget, MVT::f64);
   }
 
   bool isVISrc_64V2FP32() const {
-    return isRegOrInlineNoMods(AMDGPU::VReg_64RegClassID, MVT::f32);
+    return isRegOrInlineNoModsTarget(AMDGPU::VReg_64_AlignTarget, MVT::f32);
   }
 
   bool isVISrc_64V2INT32() const {
-    return isRegOrInlineNoMods(AMDGPU::VReg_64RegClassID, MVT::i32);
+    return isRegOrInlineNoModsTarget(AMDGPU::VReg_64_AlignTarget, MVT::i32);
   }
 
   bool isVISrc_256_b32() const {
-    return isRegOrInlineNoMods(AMDGPU::VReg_256RegClassID, MVT::i32);
+    return isRegOrInlineNoModsTarget(AMDGPU::VReg_256_AlignTarget, MVT::i32);
   }
 
   bool isVISrc_256_f32() const {
-    return isRegOrInlineNoMods(AMDGPU::VReg_256RegClassID, MVT::f32);
+    return isRegOrInlineNoModsTarget(AMDGPU::VReg_256_AlignTarget, MVT::f32);
   }
 
   bool isVISrc_256B64() const {
-    return isRegOrInlineNoMods(AMDGPU::VReg_256RegClassID, MVT::i64);
+    return isRegOrInlineNoModsTarget(AMDGPU::VReg_256_AlignTarget, MVT::i64);
   }
 
   bool isVISrc_256_f64() const {
-    return isRegOrInlineNoMods(AMDGPU::VReg_256RegClassID, MVT::f64);
+    return isRegOrInlineNoModsTarget(AMDGPU::VReg_256_AlignTarget, MVT::f64);
   }
 
   bool isVISrc_512_f64() const {
-    return isRegOrInlineNoMods(AMDGPU::VReg_512RegClassID, MVT::f64);
+    return isRegOrInlineNoModsTarget(AMDGPU::VReg_512_AlignTarget, MVT::f64);
   }
 
   bool isVISrc_128B16() const {
-    return isRegOrInlineNoMods(AMDGPU::VReg_128RegClassID, MVT::i16);
+    return isRegOrInlineNoModsTarget(AMDGPU::VReg_128_AlignTarget, MVT::i16);
   }
 
   bool isVISrc_128V2B16() const { return isVISrc_128B16(); }
 
   bool isVISrc_128_b32() const {
-    return isRegOrInlineNoMods(AMDGPU::VReg_128RegClassID, MVT::i32);
+    return isRegOrInlineNoModsTarget(AMDGPU::VReg_128_AlignTarget, MVT::i32);
   }
 
   bool isVISrc_128_f32() const {
-    return isRegOrInlineNoMods(AMDGPU::VReg_128RegClassID, MVT::f32);
+    return isRegOrInlineNoModsTarget(AMDGPU::VReg_128_AlignTarget, MVT::f32);
   }
 
   bool isVISrc_256V2FP32() const {
-    return isRegOrInlineNoMods(AMDGPU::VReg_256RegClassID, MVT::f32);
+    return isRegOrInlineNoModsTarget(AMDGPU::VReg_256_AlignTarget, MVT::f32);
   }
 
   bool isVISrc_256V2INT32() const {
-    return isRegOrInlineNoMods(AMDGPU::VReg_256RegClassID, MVT::i32);
+    return isRegOrInlineNoModsTarget(AMDGPU::VReg_256_AlignTarget, MVT::i32);
   }
 
   bool isVISrc_512_b32() const {
-    return isRegOrInlineNoMods(AMDGPU::VReg_512RegClassID, MVT::i32);
+    return isRegOrInlineNoModsTarget(AMDGPU::VReg_512_AlignTarget, MVT::i32);
   }
 
   bool isVISrc_512B16() const {
-    return isRegOrInlineNoMods(AMDGPU::VReg_512RegClassID, MVT::i16);
+    return isRegOrInlineNoModsTarget(AMDGPU::VReg_512_AlignTarget, MVT::i16);
   }
 
   bool isVISrc_512V2B16() const { return isVISrc_512B16(); }
 
   bool isVISrc_512_f32() const {
-    return isRegOrInlineNoMods(AMDGPU::VReg_512RegClassID, MVT::f32);
+    return isRegOrInlineNoModsTarget(AMDGPU::VReg_512_AlignTarget, MVT::f32);
   }
 
   bool isVISrc_512F16() const {
-    return isRegOrInlineNoMods(AMDGPU::VReg_512RegClassID, MVT::f16);
+    return isRegOrInlineNoModsTarget(AMDGPU::VReg_512_AlignTarget, MVT::f16);
   }
 
   bool isVISrc_512V2F16() const {
@@ -801,21 +821,21 @@ public:
   }
 
   bool isVISrc_1024_b32() const {
-    return isRegOrInlineNoMods(AMDGPU::VReg_1024RegClassID, MVT::i32);
+    return isRegOrInlineNoModsTarget(AMDGPU::VReg_1024_AlignTarget, MVT::i32);
   }
 
   bool isVISrc_1024B16() const {
-    return isRegOrInlineNoMods(AMDGPU::VReg_1024RegClassID, MVT::i16);
+    return isRegOrInlineNoModsTarget(AMDGPU::VReg_1024_AlignTarget, MVT::i16);
   }
 
   bool isVISrc_1024V2B16() const { return isVISrc_1024B16(); }
 
   bool isVISrc_1024_f32() const {
-    return isRegOrInlineNoMods(AMDGPU::VReg_1024RegClassID, MVT::f32);
+    return isRegOrInlineNoModsTarget(AMDGPU::VReg_1024_AlignTarget, MVT::f32);
   }
 
   bool isVISrc_1024F16() const {
-    return isRegOrInlineNoMods(AMDGPU::VReg_1024RegClassID, MVT::f16);
+    return isRegOrInlineNoModsTarget(AMDGPU::VReg_1024_AlignTarget, MVT::f16);
   }
 
   bool isVISrc_1024V2F16() const {
@@ -843,29 +863,29 @@ public:
   bool isAISrcV2F16() const { return isAISrcF16() || isAISrcB32(); }
 
   bool isAISrc_64B64() const {
-    return isRegOrInlineNoMods(AMDGPU::AReg_64RegClassID, MVT::i64);
+    return isRegOrInlineNoModsTarget(AMDGPU::AReg_64_AlignTarget, MVT::i64);
   }
 
   bool isAISrc_64_f64() const {
-    return isRegOrInlineNoMods(AMDGPU::AReg_64RegClassID, MVT::f64);
+    return isRegOrInlineNoModsTarget(AMDGPU::AReg_64_AlignTarget, MVT::f64);
   }
 
   bool isAISrc_128_b32() const {
-    return isRegOrInlineNoMods(AMDGPU::AReg_128RegClassID, MVT::i32);
+    return isRegOrInlineNoModsTarget(AMDGPU::AReg_128_AlignTarget, MVT::i32);
   }
 
   bool isAISrc_128B16() const {
-    return isRegOrInlineNoMods(AMDGPU::AReg_128RegClassID, MVT::i16);
+    return isRegOrInlineNoModsTarget(AMDGPU::AReg_128_AlignTarget, MVT::i16);
   }
 
   bool isAISrc_128V2B16() const { return isAISrc_128B16(); }
 
   bool isAISrc_128_f32() const {
-    return isRegOrInlineNoMods(AMDGPU::AReg_128RegClassID, MVT::f32);
+    return isRegOrInlineNoModsTarget(AMDGPU::AReg_128_AlignTarget, MVT::f32);
   }
 
   bool isAISrc_128F16() const {
-    return isRegOrInlineNoMods(AMDGPU::AReg_128RegClassID, MVT::f16);
+    return isRegOrInlineNoModsTarget(AMDGPU::AReg_128_AlignTarget, MVT::f16);
   }
 
   bool isAISrc_128V2F16() const {
@@ -873,11 +893,11 @@ public:
   }
 
   bool isVISrc_128_bf16() const {
-    return isRegOrInlineNoMods(AMDGPU::VReg_128RegClassID, MVT::bf16);
+    return isRegOrInlineNoModsTarget(AMDGPU::VReg_128_AlignTarget, MVT::bf16);
   }
 
   bool isVISrc_128_f16() const {
-    return isRegOrInlineNoMods(AMDGPU::VReg_128RegClassID, MVT::f16);
+    return isRegOrInlineNoModsTarget(AMDGPU::VReg_128_AlignTarget, MVT::f16);
   }
 
   bool isVISrc_128V2F16() const {
@@ -885,29 +905,29 @@ public:
   }
 
   bool isAISrc_256B64() const {
-    return isRegOrInlineNoMods(AMDGPU::AReg_256RegClassID, MVT::i64);
+    return isRegOrInlineNoModsTarget(AMDGPU::AReg_256_AlignTarget, MVT::i64);
   }
 
   bool isAISrc_256_f64() const {
-    return isRegOrInlineNoMods(AMDGPU::AReg_256RegClassID, MVT::f64);
+    return isRegOrInlineNoModsTarget(AMDGPU::AReg_256_AlignTarget, MVT::f64);
   }
 
   bool isAISrc_512_b32() const {
-    return isRegOrInlineNoMods(AMDGPU::AReg_512RegClassID, MVT::i32);
+    return isRegOrInlineNoModsTarget(AMDGPU::AReg_512_AlignTarget, MVT::i32);
   }
 
   bool isAISrc_512B16() const {
-    return isRegOrInlineNoMods(AMDGPU::AReg_512RegClassID, MVT::i16);
+    return isRegOrInlineNoModsTarget(AMDGPU::AReg_512_AlignTarget, MVT::i16);
   }
 
   bool isAISrc_512V2B16() const { return isAISrc_512B16(); }
 
   bool isAISrc_512_f32() const {
-    return isRegOrInlineNoMods(AMDGPU::AReg_512RegClassID, MVT::f32);
+    return isRegOrInlineNoModsTarget(AMDGPU::AReg_512_AlignTarget, MVT::f32);
   }
 
   bool isAISrc_512F16() const {
-    return isRegOrInlineNoMods(AMDGPU::AReg_512RegClassID, MVT::f16);
+    return isRegOrInlineNoModsTarget(AMDGPU::AReg_512_AlignTarget, MVT::f16);
   }
 
   bool isAISrc_512V2F16() const {
@@ -915,21 +935,21 @@ public:
   }
 
   bool isAISrc_1024_b32() const {
-    return isRegOrInlineNoMods(AMDGPU::AReg_1024RegClassID, MVT::i32);
+    return isRegOrInlineNoModsTarget(AMDGPU::AReg_1024_AlignTarget, MVT::i32);
   }
 
   bool isAISrc_1024B16() const {
-    return isRegOrInlineNoMods(AMDGPU::AReg_1024RegClassID, MVT::i16);
+    return isRegOrInlineNoModsTarget(AMDGPU::AReg_1024_AlignTarget, MVT::i16);
   }
 
   bool isAISrc_1024V2B16() const { return isAISrc_1024B16(); }
 
   bool isAISrc_1024_f32() const {
-    return isRegOrInlineNoMods(AMDGPU::AReg_1024RegClassID, MVT::f32);
+    return isRegOrInlineNoModsTarget(AMDGPU::AReg_1024_AlignTarget, MVT::f32);
   }
 
   bool isAISrc_1024F16() const {
-    return isRegOrInlineNoMods(AMDGPU::AReg_1024RegClassID, MVT::f16);
+    return isRegOrInlineNoModsTarget(AMDGPU::AReg_1024_AlignTarget, MVT::f16);
   }
 
   bool isAISrc_1024V2F16() const {
@@ -1891,6 +1911,7 @@ private:
   bool validateMonitorSleep(const MCInst &Inst, const OperandVector &Operands);
   bool validateClusterBarrierIsFirst(const MCInst &Inst,
                                      const OperandVector &Operands);
+  bool validateScaleSel(const MCInst &Inst, const OperandVector &Operands);
   unsigned getConstantBusLimit(unsigned Opcode) const;
   bool usesConstantBus(const MCInst &Inst, unsigned OpIdx);
   bool isInlineConstant(const MCInst &Inst, unsigned OpIdx) const;
@@ -2305,6 +2326,10 @@ bool AMDGPUOperand::isT16_Lo128VRegWithInputMods() const {
 template <bool IsFake16> bool AMDGPUOperand::isT16VRegWithInputMods() const {
   return isRegClass(IsFake16 ? AMDGPU::VGPR_32RegClassID
                              : AMDGPU::VGPR_16RegClassID);
+}
+
+bool AMDGPUOperand::isT16_LO16VRegWithInputMods() const {
+  return isRegClass(AMDGPU::VGPR_16_LO16RegClassID);
 }
 
 bool AMDGPUOperand::isSDWAOperand(MVT type) const {
@@ -5741,6 +5766,49 @@ bool AMDGPUAsmParser::validateClusterBarrierIsFirst(
   return false;
 }
 
+bool AMDGPUAsmParser::validateScaleSel(const MCInst &Inst,
+                                       const OperandVector &Operands) {
+  unsigned Opc = Inst.getOpcode();
+  int ScaleSelIdx = AMDGPU::getNamedOperandIdx(Opc, AMDGPU::OpName::scale_sel);
+  if (ScaleSelIdx == -1)
+    return true;
+  int MaxSel = 0;
+  switch (Opc) {
+  case AMDGPU::V_CVT_SCALE_PK16_F16_FP6_e64_gfx1250:
+  case AMDGPU::V_CVT_SCALE_PK16_BF16_FP6_e64_gfx1250:
+  case AMDGPU::V_CVT_SCALE_PK16_F16_BF6_e64_gfx1250:
+  case AMDGPU::V_CVT_SCALE_PK16_BF16_BF6_e64_gfx1250:
+  case AMDGPU::V_CVT_SCALE_PK16_F32_FP6_e64_gfx1250:
+  case AMDGPU::V_CVT_SCALE_PK16_F32_BF6_e64_gfx1250:
+  case AMDGPU::V_CVT_SCALE_PK8_F16_FP4_e64_gfx1250:
+  case AMDGPU::V_CVT_SCALE_PK8_BF16_FP4_e64_gfx1250:
+  case AMDGPU::V_CVT_SCALE_PK8_F32_FP4_e64_gfx1250:
+    MaxSel = 4;
+    break;
+  case AMDGPU::V_CVT_SCALE_PK8_F16_FP8_e64_gfx1250:
+  case AMDGPU::V_CVT_SCALE_PK8_BF16_FP8_e64_gfx1250:
+  case AMDGPU::V_CVT_SCALE_PK8_F16_BF8_e64_gfx1250:
+  case AMDGPU::V_CVT_SCALE_PK8_BF16_BF8_e64_gfx1250:
+  case AMDGPU::V_CVT_SCALE_PK8_F32_FP8_e64_gfx1250:
+  case AMDGPU::V_CVT_SCALE_PK8_F32_BF8_e64_gfx1250:
+    MaxSel = 8;
+    break;
+  default:
+    return true;
+  }
+
+  if (getSTI().hasFeature(AMDGPU::FeatureBlock16ConversionScaleInsts))
+    MaxSel *= 2;
+
+  int ScaleSel = Inst.getOperand(ScaleSelIdx).getImm();
+  if (ScaleSel < MaxSel)
+    return true;
+
+  Error(getOperandLoc(Operands, ScaleSelIdx),
+        "scale_sel maximum supported value is " + Twine(MaxSel - 1));
+  return false;
+}
+
 bool AMDGPUAsmParser::validateInstruction(const MCInst &Inst, SMLoc IDLoc,
                                           const OperandVector &Operands) {
   if (!validateLdsDirect(Inst, Operands))
@@ -5879,6 +5947,9 @@ bool AMDGPUAsmParser::validateInstruction(const MCInst &Inst, SMLoc IDLoc,
     return false;
   }
   if (!validateClusterBarrierIsFirst(Inst, Operands)) {
+    return false;
+  }
+  if (!validateScaleSel(Inst, Operands)) {
     return false;
   }
 
@@ -6392,6 +6463,11 @@ bool AMDGPUAsmParser::ParseDirectiveAMDHSAKernel() {
       EXPR_RESOLVE_OR_ERROR(EvaluatableExpr);
       if (ISA.Major < 10)
         return Error(IDRange.Start, "directive requires gfx10+", IDRange);
+      if (!(getFeatureBits().test(AMDGPU::FeatureSupportsWave32) &&
+            getFeatureBits().test(AMDGPU::FeatureSupportsWave64))) {
+        return Error(IDRange.Start,
+                     "directive unsupported on " + getSTI().getCPU(), IDRange);
+      }
       EnableWavefrontSize32 = Val;
       PARSE_BITS_ENTRY(KD.kernel_code_properties,
                        KERNEL_CODE_PROPERTY_ENABLE_WAVEFRONT_SIZE32, ExprVal,

@@ -28,7 +28,6 @@
 #include "lldb/Utility/FileSpec.h"
 #include "lldb/Utility/StructuredData.h"
 #include "lldb/Utility/Timeout.h"
-#include "lldb/Utility/UnimplementedError.h"
 #include "lldb/Utility/UserIDResolver.h"
 #include "lldb/Utility/XcodeSDK.h"
 #include "lldb/lldb-private-forward.h"
@@ -503,17 +502,14 @@ public:
   // process control.
   virtual lldb::BreakpointSP SetThreadCreationBreakpoint(Target &target);
 
-  // Given a target, find the local SDK directory if one exists on the current
-  // host.
-  virtual lldb_private::ConstString
-  GetSDKDirectory(lldb_private::Target &target) {
-    return lldb_private::ConstString();
-  }
-
   /// Search each CU associated with the specified 'module' for
   /// the SDK paths the CUs were compiled against. In the presence
   /// of different SDKs, we try to pick the most appropriate one
   /// using \ref XcodeSDKAndSysroot::Merge.
+  ///
+  /// Note that a Module's CompileUnits may have been built against
+  /// different SDKs, so this merged result is inherently lossy; use the
+  /// \ref GetSDKPathFromDebugInfo(CompileUnit&) overload for accuracy.
   ///
   /// \param[in] module Module whose debug-info CUs to parse for
   ///                   which SDK they were compiled against.
@@ -521,13 +517,11 @@ public:
   /// \returns If successful, returns a pair of a parsed XcodeSDKAndSysroot
   ///          object and a boolean that is 'true' if we encountered
   ///          a conflicting combination of SDKs when parsing the CUs
-  ///          (e.g., a public and internal SDK).
+  ///          (e.g., a public and internal SDK). Only Darwin SDKs come in
+  ///          public and internal flavors, so the generic implementation
+  ///          never reports a conflict.
   virtual llvm::Expected<std::pair<XcodeSDKAndSysroot, bool>>
-  GetSDKPathFromDebugInfo(Module &module) {
-    return llvm::make_error<UnimplementedError>(
-        llvm::formatv("{0} not implemented for '{1}' platform.",
-                      LLVM_PRETTY_FUNCTION, GetName()));
-  }
+  GetSDKPathFromDebugInfo(Module &module);
 
   /// Returns the full path of the most appropriate SDK for the
   /// specified 'module'. This function gets this path by parsing
@@ -539,11 +533,7 @@ public:
   /// \returns If successful, returns the full path to an
   ///          Xcode SDK.
   virtual llvm::Expected<std::string>
-  ResolveSDKPathFromDebugInfo(Module &module) {
-    return llvm::make_error<UnimplementedError>(
-        llvm::formatv("{0} not implemented for '{1}' platform.",
-                      LLVM_PRETTY_FUNCTION, GetName()));
-  }
+  ResolveSDKPathFromDebugInfo(Module &module);
 
   /// Search CU for the SDK path the CUs was compiled against.
   ///
@@ -551,11 +541,7 @@ public:
   ///
   /// \returns A parsed XcodeSDK object if successful, an Error otherwise.
   virtual llvm::Expected<XcodeSDKAndSysroot>
-  GetSDKPathFromDebugInfo(CompileUnit & /*unit*/) {
-    return llvm::make_error<UnimplementedError>(
-        llvm::formatv("{0} not implemented for '{1}' platform.",
-                      LLVM_PRETTY_FUNCTION, GetName()));
-  }
+  GetSDKPathFromDebugInfo(CompileUnit &unit);
 
   /// Returns the full path of the most appropriate SDK for the
   /// specified compile unit. This function gets this path by parsing
@@ -566,11 +552,7 @@ public:
   /// \returns If successful, returns the full path to an
   ///          Xcode SDK.
   virtual llvm::Expected<std::string>
-  ResolveSDKPathFromDebugInfo(CompileUnit &unit) {
-    return llvm::make_error<UnimplementedError>(
-        llvm::formatv("{0} not implemented for '{1}' platform.",
-                      LLVM_PRETTY_FUNCTION, GetName()));
-  }
+  ResolveSDKPathFromDebugInfo(CompileUnit &unit);
 
   bool IsHost() const {
     return m_is_host; // Is this the default host platform?

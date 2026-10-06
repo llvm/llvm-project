@@ -723,6 +723,10 @@ static LogicalResult verifyAllocateClause(
              << "type mismatch between allocate variable and private variable "
                 "at index "
              << privateIndex;
+    if (allocateVar != privateVar)
+      return op->emitError()
+             << "allocate variable does not match private variable at index "
+             << privateIndex;
 
     if (!privateSyms ||
         static_cast<uint64_t>(privateIndex) >= privateSyms.size())
@@ -3276,7 +3280,8 @@ LogicalResult ScopeOp::verify() {
   if (failed(verifyAllocateClause(
           getOperation(), getAllocateVars(), getAllocatorVars(),
           getAllocateAlignmentsAttr(), getAllocatePrivateIndicesAttr(),
-          getPrivateVars(), getPrivateSymsAttr())))
+          getPrivateVars(), getPrivateSymsAttr(),
+          /*requirePrivateIndices=*/true)))
     return failure();
 
   if (failed(verifyPrivateVarList(*this)))
@@ -5009,7 +5014,7 @@ void TaskwaitOp::build(OpBuilder &builder, OperationState &state,
       /*depend_vars=*/clauses.dependVars,
       /*depend_iterated_kinds=*/makeArrayAttr(ctx, clauses.dependIteratedKinds),
       /*depend_iterated=*/ValueRange(clauses.dependIterated),
-      /*nowait=*/false);
+      /*nowait=*/clauses.nowait);
 }
 
 //===----------------------------------------------------------------------===//

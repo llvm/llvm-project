@@ -131,6 +131,14 @@ mlir::Type convertTypeForLoadStore(const mlir::TypeConverter &converter,
     return mlir::IntegerType::get(type.getContext(),
                                   intTy.getStorageTypeWidth(dataLayout));
 
+  // Convert the Matrix type to a vector type (the value type of
+  // MatrixType), if it points to a array (the memory type of MatrixType).
+  if (auto matrixTy = mlir::dyn_cast<cir::MatrixType>(type)) {
+    uint64_t size = matrixTy.getRowNum() * matrixTy.getColumnNum();
+    mlir::Type elemTy = converter.convertType(matrixTy.getElementType());
+    return mlir::VectorType::get(size, elemTy);
+  }
+
   return convertTypeForMemory(converter, dataLayout, type);
 }
 

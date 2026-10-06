@@ -1,4 +1,4 @@
-; RUN: llc -O0 -mtriple=mipsel-linux-gnu -global-isel -stop-after=irtranslator -verify-machineinstrs %s -o - | FileCheck %s -check-prefixes=MIPS32
+; RUN: llc -O0 -mtriple=mipsel-linux-gnu -global-isel -stop-after=ir-translator -verify-machineinstrs %s -o - | FileCheck %s -check-prefixes=MIPS32
 
 define i64 @i64_reg(i64 %a) {
   ; MIPS32-LABEL: name: i64_reg

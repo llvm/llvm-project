@@ -74,11 +74,12 @@ public:
                                    SourceLocation FreeLoc,
                                    llvm::ArrayRef<const Expr *> ExprChain) {}
 
-  // TODO: Pass the expiry location and aliasing chain like
-  // reportUseAfterScope.
+  // TODO: Report where the object was destroyed when that happens before the
+  // return (inner scopes, temporaries).
   virtual void reportUseAfterReturn(const Expr *IssueExpr,
                                     const Expr *ReturnExpr,
-                                    const Expr *MovedExpr) {}
+                                    const Expr *MovedExpr,
+                                    llvm::ArrayRef<const Expr *> ExprChain) {}
 
   virtual void reportDanglingField(const Expr *IssueExpr,
                                    const FieldDecl *Field,

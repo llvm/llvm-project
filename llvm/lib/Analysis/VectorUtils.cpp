@@ -123,6 +123,8 @@ bool llvm::isTriviallyVectorizable(Intrinsic::ID ID) {
   case Intrinsic::ucmp:
   case Intrinsic::scmp:
   case Intrinsic::clmul:
+  case Intrinsic::pdep:
+  case Intrinsic::pext:
   case Intrinsic::smulh:
   case Intrinsic::umulh:
     return true;

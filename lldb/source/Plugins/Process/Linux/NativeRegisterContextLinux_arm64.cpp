@@ -132,6 +132,8 @@ unsigned int NativeRegisterContextLinux_arm64::GetPtraceSet(
   case RegisterSetType::POE:
     return llvm::ELF::NT_ARM_POE;
   }
+
+  llvm_unreachable("No ptrace set for this RegisterType.");
 }
 
 size_t NativeRegisterContextLinux_arm64::GetSetSize(
@@ -166,6 +168,8 @@ size_t NativeRegisterContextLinux_arm64::GetSetSize(
   case RegisterSetType::POE:
     return sizeof(m_poe_regs);
   }
+
+  llvm_unreachable("No set size for this RegisterType.");
 }
 
 void *NativeRegisterContextLinux_arm64::GetSetBuffer(
@@ -198,6 +202,8 @@ void *NativeRegisterContextLinux_arm64::GetSetBuffer(
   case RegisterSetType::POE:
     return &m_poe_regs;
   }
+
+  llvm_unreachable("No set buffer for this RegisterType.");
 }
 
 // A NativeRegisterContext is constructed per thread, but all threads' registers

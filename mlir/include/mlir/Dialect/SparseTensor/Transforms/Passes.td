@@ -201,6 +201,7 @@ def StageSparseOperations : Pass<"stage-sparse-ops", "func::FuncOp"> {
   }];
   let constructor = "mlir::createStageSparseOperationsPass()";
   let dependentDialects = [
+    "bufferization::BufferizationDialect",
     "sparse_tensor::SparseTensorDialect",
   ];
 }

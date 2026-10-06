@@ -87,7 +87,7 @@ public:
 
   LLVM_ABI explicit RuntimeLibcallsInfo(
       const Triple &TT,
-      ExceptionHandling ExceptionModel = ExceptionHandling::None,
+      ExceptionHandling ExceptionModel = ExceptionHandling::Default,
       FloatABI::ABIType FloatABI = FloatABI::Default, StringRef ABIName = "",
       VectorLibrary VecLib = VectorLibrary::NoLibrary);
 

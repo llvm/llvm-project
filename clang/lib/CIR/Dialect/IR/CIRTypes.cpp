@@ -1627,32 +1627,32 @@ cir::LangAddressSpace cir::toCIRLangAddressSpace(clang::LangAS langAS) {
   case LangAS::Default:
     return LangAddressSpace::Default;
   case LangAS::opencl_global:
+  case LangAS::sycl_global:
     return LangAddressSpace::OffloadGlobal;
   case LangAS::opencl_local:
   case LangAS::cuda_shared:
-    // Local means local among the work-group (OpenCL) or block (CUDA).
+  case LangAS::sycl_local:
+    // Local means local among the work-group (OpenCL, SYCL) or block (CUDA).
     // All threads inside the kernel can access local memory.
     return LangAddressSpace::OffloadLocal;
   case LangAS::cuda_device:
     return LangAddressSpace::OffloadGlobal;
   case LangAS::opencl_constant:
   case LangAS::cuda_constant:
+  case LangAS::sycl_constant:
     return LangAddressSpace::OffloadConstant;
   case LangAS::opencl_private:
+  case LangAS::sycl_private:
     return LangAddressSpace::OffloadPrivate;
   case LangAS::opencl_generic:
+  case LangAS::sycl_generic:
     return LangAddressSpace::OffloadGeneric;
   case LangAS::opencl_global_device:
+  case LangAS::sycl_global_device:
     return LangAddressSpace::OffloadGlobalDevice;
   case LangAS::opencl_global_host:
-    return LangAddressSpace::OffloadGlobalHost;
-  case LangAS::sycl_global:
-  case LangAS::sycl_global_device:
   case LangAS::sycl_global_host:
-  case LangAS::sycl_local:
-  case LangAS::sycl_private:
-  case LangAS::sycl_generic:
-  case LangAS::sycl_constant:
+    return LangAddressSpace::OffloadGlobalHost;
   case LangAS::ptr32_sptr:
   case LangAS::ptr32_uptr:
   case LangAS::ptr64:

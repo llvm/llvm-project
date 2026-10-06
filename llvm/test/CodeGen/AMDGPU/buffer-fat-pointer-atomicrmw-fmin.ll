@@ -5666,11 +5666,10 @@ define <2 x half> @buffer_fat_ptr_agent_atomic_fmin_ret_v2f16__offset__amdgpu_no
 ; GFX942-NEXT:    ; =>This Inner Loop Header: Depth=1
 ; GFX942-NEXT:    v_mov_b32_e32 v5, v0
 ; GFX942-NEXT:    v_pk_max_f16 v0, v5, v5
+; GFX942-NEXT:    v_pk_min_f16 v4, v0, v2
+; GFX942-NEXT:    v_mov_b64_e32 v[0:1], v[4:5]
 ; GFX942-NEXT:    buffer_wbl2 sc1
 ; GFX942-NEXT:    s_waitcnt vmcnt(0)
-; GFX942-NEXT:    v_pk_min_f16 v4, v0, v2
-; GFX942-NEXT:    s_nop 0
-; GFX942-NEXT:    v_mov_b64_e32 v[0:1], v[4:5]
 ; GFX942-NEXT:    buffer_atomic_cmpswap v[0:1], v3, s[0:3], 0 offen offset:1024 sc0
 ; GFX942-NEXT:    s_waitcnt vmcnt(0)
 ; GFX942-NEXT:    buffer_inv sc1
@@ -6071,11 +6070,10 @@ define void @buffer_fat_ptr_agent_atomic_fmin_noret_v2f16__offset__amdgpu_no_fin
 ; GFX942-NEXT:  .LBB17_1: ; %atomicrmw.start
 ; GFX942-NEXT:    ; =>This Inner Loop Header: Depth=1
 ; GFX942-NEXT:    v_pk_max_f16 v0, v1, v1
+; GFX942-NEXT:    v_pk_min_f16 v0, v0, v2
+; GFX942-NEXT:    v_mov_b64_e32 v[4:5], v[0:1]
 ; GFX942-NEXT:    buffer_wbl2 sc1
 ; GFX942-NEXT:    s_waitcnt vmcnt(0)
-; GFX942-NEXT:    v_pk_min_f16 v0, v0, v2
-; GFX942-NEXT:    s_nop 0
-; GFX942-NEXT:    v_mov_b64_e32 v[4:5], v[0:1]
 ; GFX942-NEXT:    buffer_atomic_cmpswap v[4:5], v3, s[0:3], 0 offen offset:1024 sc0
 ; GFX942-NEXT:    s_waitcnt vmcnt(0)
 ; GFX942-NEXT:    buffer_inv sc1
@@ -6597,11 +6595,11 @@ define <2 x half> @buffer_fat_ptr_agent_atomic_fmin_ret_v2f16__offset__waterfall
 ; GFX942-NEXT:    ; =>This Loop Header: Depth=1
 ; GFX942-NEXT:    ; Child Loop BB18_6 Depth 2
 ; GFX942-NEXT:    v_pk_max_f16 v6, v9, v9
-; GFX942-NEXT:    s_mov_b64 s[8:9], exec
 ; GFX942-NEXT:    v_pk_min_f16 v8, v6, v5
+; GFX942-NEXT:    s_mov_b64 s[8:9], exec
+; GFX942-NEXT:    v_mov_b64_e32 v[6:7], v[8:9]
 ; GFX942-NEXT:    buffer_wbl2 sc1
 ; GFX942-NEXT:    s_waitcnt vmcnt(0)
-; GFX942-NEXT:    v_mov_b64_e32 v[6:7], v[8:9]
 ; GFX942-NEXT:  .LBB18_6: ; Parent Loop BB18_5 Depth=1
 ; GFX942-NEXT:    ; => This Inner Loop Header: Depth=2
 ; GFX942-NEXT:    v_readfirstlane_b32 s4, v0

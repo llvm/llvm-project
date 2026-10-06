@@ -22,6 +22,7 @@
 #include "llvm/IR/DebugInfo.h"
 #include "llvm/IR/Instruction.h"
 #include "llvm/IR/PatternMatch.h"
+#include "llvm/IR/ProfDataUtils.h"
 #include "llvm/IR/Type.h"
 #include "llvm/IR/Value.h"
 #include "llvm/Support/KnownBits.h"
@@ -103,7 +104,8 @@ static Value *EvaluateInDifferentTypeImpl(Value *V, Type *Ty, bool isSigned,
                                               IC, Processed);
     Value *False = EvaluateInDifferentTypeImpl(I->getOperand(2), Ty, isSigned,
                                                IC, Processed);
-    Res = SelectInst::Create(I->getOperand(0), True, False);
+    Res = SelectInst::Create(I->getOperand(0), True, False, "", nullptr,
+                             ProfcheckDisableMetadataFixes ? nullptr : I);
     break;
   }
   case Instruction::PHI: {
@@ -754,7 +756,7 @@ static Instruction *foldVecExtTruncToExtElt(TruncInst &Trunc,
   // A badly fit destination size would result in an invalid cast.
   unsigned SrcBits = SrcType->getScalarSizeInBits();
   unsigned DstBits = DstType->getScalarSizeInBits();
-  unsigned TruncRatio = SrcBits / DstBits;
+  uint64_t TruncRatio = SrcBits / DstBits;
   if ((SrcBits % DstBits) != 0)
     return nullptr;
 
@@ -771,6 +773,11 @@ static Instruction *foldVecExtTruncToExtElt(TruncInst &Trunc,
   auto VecElts = VecOpTy->getElementCount();
 
   uint64_t BitCastNumElts = VecElts.getKnownMinValue() * TruncRatio;
+  // Computed in 64-bit above to avoid a 32-bit overflow. Bail out if the
+  // element count exceeds IntegerType::MAX_INT_BITS, as we cannot create a
+  // wider vector type.
+  if (BitCastNumElts > IntegerType::MAX_INT_BITS)
+    return nullptr;
   // Make sure we don't overflow in the calculation of the new index.
   // (VecOpIdx + 1) * TruncRatio should not overflow.
   if (Cst->uge(std::numeric_limits<uint64_t>::max() / TruncRatio))
@@ -795,9 +802,6 @@ static Instruction *foldVecExtTruncToExtElt(TruncInst &Trunc,
     NewIdx = IC.getDataLayout().isBigEndian() ? (NewIdx - IdxOfs)
                                               : (NewIdx + IdxOfs);
   }
-
-  assert(BitCastNumElts <= std::numeric_limits<uint32_t>::max() &&
-         "overflow 32-bits");
 
   auto *BitCastTo =
       VectorType::get(DstType, BitCastNumElts, VecElts.isScalable());
@@ -1253,18 +1257,26 @@ Instruction *InstCombinerImpl::visitTrunc(TruncInst &Trunc) {
 
   // trunc (select(icmp_ult(A, DestTy_umax+1), A, sext(icmp_sgt(A, 0)))) -->
   // trunc (smin(smax(0, A), DestTy_umax))
-  if (SrcTy->isIntegerTy() && isPowerOf2_64(SrcTy->getPrimitiveSizeInBits()) &&
-      isPowerOf2_64(DestTy->getPrimitiveSizeInBits()) &&
-      match(Src, m_OneUse(m_Select(
-                     m_OneUse(m_SpecificICmp(ICmpInst::ICMP_ULT, m_Value(A),
-                                             m_Constant(C))),
-                     m_Deferred(A),
-                     m_OneUse(m_SExt(m_OneUse(m_SpecificICmp(
-                         ICmpInst::ICMP_SGT, m_Deferred(A), m_Zero())))))))) {
-    APInt UpperBound = C->getUniqueInteger();
-    APInt TruncatedMax = APInt::getAllOnes(DestTy->getIntegerBitWidth());
-    TruncatedMax = TruncatedMax.zext(UpperBound.getBitWidth());
-    if (!UpperBound.isZero() && UpperBound - 1 == TruncatedMax) {
+  // Also handle the inverted form:
+  // trunc (select(icmp_ugt(A, DestTy_umax), sext(icmp_sgt(A, 0)), A))
+  CmpPredicate Pred;
+  const APInt *CmpC;
+  Value *TVal, *FVal;
+  if (SrcTy->isIntegerTy() && isPowerOf2_64(SrcWidth) &&
+      isPowerOf2_64(DestWidth) &&
+      match(Src,
+            m_OneUse(m_Select(m_OneUse(m_ICmp(Pred, m_Value(A), m_APInt(CmpC))),
+                              m_Value(TVal), m_Value(FVal))))) {
+    APInt TruncatedMax = APInt::getLowBitsSet(SrcWidth, DestWidth);
+    Value *SExtVal = nullptr;
+    // Check the select arm first so that A is known to have type SrcTy.
+    if (Pred == ICmpInst::ICMP_ULT && TVal == A && *CmpC == TruncatedMax + 1)
+      SExtVal = FVal;
+    else if (Pred == ICmpInst::ICMP_UGT && FVal == A && *CmpC == TruncatedMax)
+      SExtVal = TVal;
+    if (SExtVal &&
+        match(SExtVal, m_OneUse(m_SExt(m_OneUse(m_SpecificICmp(
+                           ICmpInst::ICMP_SGT, m_Specific(A), m_Zero())))))) {
       Value *SMax = Builder.CreateIntrinsic(Intrinsic::smax, {SrcTy},
                                             {ConstantInt::get(SrcTy, 0), A});
       Value *SMin = Builder.CreateIntrinsic(

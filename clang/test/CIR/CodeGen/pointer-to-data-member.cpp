@@ -525,7 +525,6 @@ Inner test_agg_dot(const Outer &o, Inner Outer::*p) {
 // CIR-AFTER:        cir.return
 
 // LLVM-LABEL: define {{.*}} @_Z12test_agg_dotRK5OuterMS_5Inner(
-// LLVM:   %[[COERCE:.*]] = alloca %struct.Inner
 // LLVM:   %[[O_ADDR:.*]] = alloca ptr
 // LLVM:   %[[P_ADDR:.*]] = alloca i64
 // LLVM:   %[[RETVAL_ADDR:.*]] = alloca %struct.Inner, align 4
@@ -535,6 +534,8 @@ Inner test_agg_dot(const Outer &o, Inner Outer::*p) {
 // LLVM:   %[[P:.*]] = load i64, ptr %[[P_ADDR]]
 // LLVM:   %[[RT_MEMBER:.*]] = getelementptr i8, ptr %[[O]], i64 %[[P]]
 // LLVM:   call void @llvm.memcpy.p0.p0.i64(ptr align 4 %[[RETVAL_ADDR]], ptr align 4 %[[RT_MEMBER]], i64 8, i1 false)
+// LLVM-NEXT:   %[[RET:.*]] = load i64, ptr %[[RETVAL_ADDR]], align 4
+// LLVM-NEXT:   ret i64 %[[RET]]
 
 // OGCG-LABEL: define {{.*}} @_Z12test_agg_dotRK5OuterMS_5Inner(
 // OGCG:   %[[RETVAL_ADDR:.*]] = alloca %struct.Inner
@@ -546,6 +547,8 @@ Inner test_agg_dot(const Outer &o, Inner Outer::*p) {
 // OGCG:   %[[P:.*]] = load i64, ptr %[[P_ADDR]]
 // OGCG:   %[[RT_MEMBER:.*]] = getelementptr inbounds i8, ptr %[[O]], i64 %[[P]]
 // OGCG:   call void @llvm.memcpy.p0.p0.i64(ptr align 4 %[[RETVAL_ADDR]], ptr align 4 %[[RT_MEMBER]], i64 8, i1 false)
+// OGCG-NEXT:   %[[RET:.*]] = load i64, ptr %[[RETVAL_ADDR]], align 4
+// OGCG-NEXT:   ret i64 %[[RET]]
 
 Inner test_agg_arrow(const Outer *o, Inner Outer::*p) {
   return o->*p;
@@ -582,7 +585,6 @@ Inner test_agg_arrow(const Outer *o, Inner Outer::*p) {
 // CIR-AFTER:        cir.return
 
 // LLVM-LABEL: define {{.*}} @_Z14test_agg_arrowPK5OuterMS_5Inner(
-// LLVM:   %[[COERCE:.*]] = alloca %struct.Inner
 // LLVM:   %[[O_ADDR:.*]] = alloca ptr
 // LLVM:   %[[P_ADDR:.*]] = alloca i64
 // LLVM:   %[[RETVAL_ADDR:.*]] = alloca %struct.Inner, align 4
@@ -592,6 +594,8 @@ Inner test_agg_arrow(const Outer *o, Inner Outer::*p) {
 // LLVM:   %[[P:.*]] = load i64, ptr %[[P_ADDR]]
 // LLVM:   %[[RT_MEMBER:.*]] = getelementptr i8, ptr %[[O]], i64 %[[P]]
 // LLVM:   call void @llvm.memcpy.p0.p0.i64(ptr align 4 %[[RETVAL_ADDR]], ptr align 4 %[[RT_MEMBER]], i64 8, i1 false)
+// LLVM-NEXT:   %[[RET:.*]] = load i64, ptr %[[RETVAL_ADDR]], align 4
+// LLVM-NEXT:   ret i64 %[[RET]]
 
 // OGCG-LABEL: define {{.*}} @_Z14test_agg_arrowPK5OuterMS_5Inner(
 // OGCG:   %[[RETVAL_ADDR:.*]] = alloca %struct.Inner
@@ -603,3 +607,5 @@ Inner test_agg_arrow(const Outer *o, Inner Outer::*p) {
 // OGCG:   %[[P:.*]] = load i64, ptr %[[P_ADDR]]
 // OGCG:   %[[RT_MEMBER:.*]] = getelementptr inbounds i8, ptr %[[O]], i64 %[[P]]
 // OGCG:   call void @llvm.memcpy.p0.p0.i64(ptr align 4 %[[RETVAL_ADDR]], ptr align 4 %[[RT_MEMBER]], i64 8, i1 false)
+// OGCG-NEXT:   %[[RET:.*]] = load i64, ptr %[[RETVAL_ADDR]], align 4
+// OGCG-NEXT:   ret i64 %[[RET]]

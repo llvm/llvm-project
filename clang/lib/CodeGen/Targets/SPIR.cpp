@@ -11,6 +11,7 @@
 #include "TargetInfo.h"
 #include "clang/AST/DeclCXX.h"
 #include "clang/Basic/LangOptions.h"
+#include "clang/CodeGenUtils/CodeGenUtils.h"
 #include "llvm/IR/DerivedTypes.h"
 #include "llvm/IR/LLVMContext.h"
 
@@ -491,19 +492,7 @@ llvm::Constant *
 CommonSPIRTargetCodeGenInfo::getNullPointer(const CodeGen::CodeGenModule &CGM,
                                             llvm::PointerType *PT,
                                             QualType QT) const {
-  LangAS AS = QT->getUnqualifiedDesugaredType()->isNullPtrType()
-                  ? LangAS::Default
-                  : QT->getPointeeType().getAddressSpace();
-  unsigned ASAsInt = static_cast<unsigned>(AS);
-  unsigned FirstTargetASAsInt =
-      static_cast<unsigned>(LangAS::FirstTargetAddressSpace);
-  unsigned CodeSectionINTELAS = FirstTargetASAsInt + 9;
-  // As per SPV_INTEL_function_pointers, it is illegal to addrspacecast
-  // function pointers to/from the generic AS.
-  bool IsFunctionPtrAS =
-      CGM.getTriple().isSPIRV() && ASAsInt == CodeSectionINTELAS;
-  if (AS == LangAS::Default || AS == LangAS::opencl_generic ||
-      AS == LangAS::opencl_constant || IsFunctionPtrAS)
+  if (!CodeGenUtils::spirNullPointerNeedsGenericCast(QT, CGM.getTriple()))
     return llvm::ConstantPointerNull::get(PT);
 
   auto &Ctx = CGM.getContext();

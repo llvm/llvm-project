@@ -1189,27 +1189,15 @@ define <2 x half> @v_max3_v2f16_maximumnum_maximumnum__v_v_v_0(<2 x half> %a, <2
 ; GFX8-NEXT:    v_or_b32_e32 v0, v0, v1
 ; GFX8-NEXT:    s_setpc_b64 s[30:31]
 ;
-; GFX900-SDAG-LABEL: v_max3_v2f16_maximumnum_maximumnum__v_v_v_0:
-; GFX900-SDAG:       ; %bb.0:
-; GFX900-SDAG-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; GFX900-SDAG-NEXT:    v_pk_max_f16 v1, v1, v1
-; GFX900-SDAG-NEXT:    v_pk_max_f16 v0, v0, v0
-; GFX900-SDAG-NEXT:    v_pk_max_f16 v0, v0, v1
-; GFX900-SDAG-NEXT:    v_pk_max_f16 v1, v2, v2
-; GFX900-SDAG-NEXT:    v_pk_max_f16 v0, v0, v1
-; GFX900-SDAG-NEXT:    s_setpc_b64 s[30:31]
-;
-; GFX950-SDAG-LABEL: v_max3_v2f16_maximumnum_maximumnum__v_v_v_0:
-; GFX950-SDAG:       ; %bb.0:
-; GFX950-SDAG-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; GFX950-SDAG-NEXT:    v_pk_max_f16 v1, v1, v1
-; GFX950-SDAG-NEXT:    v_pk_max_f16 v0, v0, v0
-; GFX950-SDAG-NEXT:    s_nop 0
-; GFX950-SDAG-NEXT:    v_pk_max_f16 v0, v0, v1
-; GFX950-SDAG-NEXT:    v_pk_max_f16 v1, v2, v2
-; GFX950-SDAG-NEXT:    s_nop 0
-; GFX950-SDAG-NEXT:    v_pk_max_f16 v0, v0, v1
-; GFX950-SDAG-NEXT:    s_setpc_b64 s[30:31]
+; GFX9-LABEL: v_max3_v2f16_maximumnum_maximumnum__v_v_v_0:
+; GFX9:       ; %bb.0:
+; GFX9-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+; GFX9-NEXT:    v_pk_max_f16 v1, v1, v1
+; GFX9-NEXT:    v_pk_max_f16 v0, v0, v0
+; GFX9-NEXT:    v_pk_max_f16 v0, v0, v1
+; GFX9-NEXT:    v_pk_max_f16 v1, v2, v2
+; GFX9-NEXT:    v_pk_max_f16 v0, v0, v1
+; GFX9-NEXT:    s_setpc_b64 s[30:31]
 ;
 ; GFX10-LABEL: v_max3_v2f16_maximumnum_maximumnum__v_v_v_0:
 ; GFX10:       ; %bb.0:
@@ -1338,36 +1326,20 @@ define <3 x half> @v_max3_v3f16_maximumnum_maximumnum__v_v_v_0(<3 x half> %a, <3
 ; GFX8-NEXT:    v_or_b32_e32 v0, v0, v2
 ; GFX8-NEXT:    s_setpc_b64 s[30:31]
 ;
-; GFX900-SDAG-LABEL: v_max3_v3f16_maximumnum_maximumnum__v_v_v_0:
-; GFX900-SDAG:       ; %bb.0:
-; GFX900-SDAG-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; GFX900-SDAG-NEXT:    v_pk_max_f16 v2, v2, v2
-; GFX900-SDAG-NEXT:    v_pk_max_f16 v0, v0, v0
-; GFX900-SDAG-NEXT:    v_pk_max_f16 v3, v3, v3
-; GFX900-SDAG-NEXT:    v_pk_max_f16 v1, v1, v1
-; GFX900-SDAG-NEXT:    v_pk_max_f16 v0, v0, v2
-; GFX900-SDAG-NEXT:    v_pk_max_f16 v2, v4, v4
-; GFX900-SDAG-NEXT:    v_pk_max_f16 v1, v1, v3
-; GFX900-SDAG-NEXT:    v_pk_max_f16 v0, v0, v2
-; GFX900-SDAG-NEXT:    v_pk_max_f16 v2, v5, v5
-; GFX900-SDAG-NEXT:    v_pk_max_f16 v1, v1, v2
-; GFX900-SDAG-NEXT:    s_setpc_b64 s[30:31]
-;
-; GFX950-SDAG-LABEL: v_max3_v3f16_maximumnum_maximumnum__v_v_v_0:
-; GFX950-SDAG:       ; %bb.0:
-; GFX950-SDAG-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; GFX950-SDAG-NEXT:    v_pk_max_f16 v2, v2, v2
-; GFX950-SDAG-NEXT:    v_pk_max_f16 v0, v0, v0
-; GFX950-SDAG-NEXT:    v_pk_max_f16 v3, v3, v3
-; GFX950-SDAG-NEXT:    v_pk_max_f16 v1, v1, v1
-; GFX950-SDAG-NEXT:    v_pk_max_f16 v0, v0, v2
-; GFX950-SDAG-NEXT:    v_pk_max_f16 v2, v4, v4
-; GFX950-SDAG-NEXT:    v_pk_max_f16 v1, v1, v3
-; GFX950-SDAG-NEXT:    v_pk_max_f16 v0, v0, v2
-; GFX950-SDAG-NEXT:    v_pk_max_f16 v2, v5, v5
-; GFX950-SDAG-NEXT:    s_nop 0
-; GFX950-SDAG-NEXT:    v_pk_max_f16 v1, v1, v2
-; GFX950-SDAG-NEXT:    s_setpc_b64 s[30:31]
+; GFX9-LABEL: v_max3_v3f16_maximumnum_maximumnum__v_v_v_0:
+; GFX9:       ; %bb.0:
+; GFX9-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+; GFX9-NEXT:    v_pk_max_f16 v2, v2, v2
+; GFX9-NEXT:    v_pk_max_f16 v0, v0, v0
+; GFX9-NEXT:    v_pk_max_f16 v3, v3, v3
+; GFX9-NEXT:    v_pk_max_f16 v1, v1, v1
+; GFX9-NEXT:    v_pk_max_f16 v0, v0, v2
+; GFX9-NEXT:    v_pk_max_f16 v2, v4, v4
+; GFX9-NEXT:    v_pk_max_f16 v1, v1, v3
+; GFX9-NEXT:    v_pk_max_f16 v0, v0, v2
+; GFX9-NEXT:    v_pk_max_f16 v2, v5, v5
+; GFX9-NEXT:    v_pk_max_f16 v1, v1, v2
+; GFX9-NEXT:    s_setpc_b64 s[30:31]
 ;
 ; GFX10-LABEL: v_max3_v3f16_maximumnum_maximumnum__v_v_v_0:
 ; GFX10:       ; %bb.0:
@@ -1541,36 +1513,20 @@ define <4 x half> @v_max3_v4f16_maximumnum_maximumnum__v_v_v_0(<4 x half> %a, <4
 ; GFX8-NEXT:    v_or_b32_e32 v1, v1, v2
 ; GFX8-NEXT:    s_setpc_b64 s[30:31]
 ;
-; GFX900-SDAG-LABEL: v_max3_v4f16_maximumnum_maximumnum__v_v_v_0:
-; GFX900-SDAG:       ; %bb.0:
-; GFX900-SDAG-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; GFX900-SDAG-NEXT:    v_pk_max_f16 v2, v2, v2
-; GFX900-SDAG-NEXT:    v_pk_max_f16 v0, v0, v0
-; GFX900-SDAG-NEXT:    v_pk_max_f16 v3, v3, v3
-; GFX900-SDAG-NEXT:    v_pk_max_f16 v1, v1, v1
-; GFX900-SDAG-NEXT:    v_pk_max_f16 v0, v0, v2
-; GFX900-SDAG-NEXT:    v_pk_max_f16 v2, v4, v4
-; GFX900-SDAG-NEXT:    v_pk_max_f16 v1, v1, v3
-; GFX900-SDAG-NEXT:    v_pk_max_f16 v0, v0, v2
-; GFX900-SDAG-NEXT:    v_pk_max_f16 v2, v5, v5
-; GFX900-SDAG-NEXT:    v_pk_max_f16 v1, v1, v2
-; GFX900-SDAG-NEXT:    s_setpc_b64 s[30:31]
-;
-; GFX950-SDAG-LABEL: v_max3_v4f16_maximumnum_maximumnum__v_v_v_0:
-; GFX950-SDAG:       ; %bb.0:
-; GFX950-SDAG-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; GFX950-SDAG-NEXT:    v_pk_max_f16 v2, v2, v2
-; GFX950-SDAG-NEXT:    v_pk_max_f16 v0, v0, v0
-; GFX950-SDAG-NEXT:    v_pk_max_f16 v3, v3, v3
-; GFX950-SDAG-NEXT:    v_pk_max_f16 v1, v1, v1
-; GFX950-SDAG-NEXT:    v_pk_max_f16 v0, v0, v2
-; GFX950-SDAG-NEXT:    v_pk_max_f16 v2, v4, v4
-; GFX950-SDAG-NEXT:    v_pk_max_f16 v1, v1, v3
-; GFX950-SDAG-NEXT:    v_pk_max_f16 v0, v0, v2
-; GFX950-SDAG-NEXT:    v_pk_max_f16 v2, v5, v5
-; GFX950-SDAG-NEXT:    s_nop 0
-; GFX950-SDAG-NEXT:    v_pk_max_f16 v1, v1, v2
-; GFX950-SDAG-NEXT:    s_setpc_b64 s[30:31]
+; GFX9-LABEL: v_max3_v4f16_maximumnum_maximumnum__v_v_v_0:
+; GFX9:       ; %bb.0:
+; GFX9-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+; GFX9-NEXT:    v_pk_max_f16 v2, v2, v2
+; GFX9-NEXT:    v_pk_max_f16 v0, v0, v0
+; GFX9-NEXT:    v_pk_max_f16 v3, v3, v3
+; GFX9-NEXT:    v_pk_max_f16 v1, v1, v1
+; GFX9-NEXT:    v_pk_max_f16 v0, v0, v2
+; GFX9-NEXT:    v_pk_max_f16 v2, v4, v4
+; GFX9-NEXT:    v_pk_max_f16 v1, v1, v3
+; GFX9-NEXT:    v_pk_max_f16 v0, v0, v2
+; GFX9-NEXT:    v_pk_max_f16 v2, v5, v5
+; GFX9-NEXT:    v_pk_max_f16 v1, v1, v2
+; GFX9-NEXT:    s_setpc_b64 s[30:31]
 ;
 ; GFX10-LABEL: v_max3_v4f16_maximumnum_maximumnum__v_v_v_0:
 ; GFX10:       ; %bb.0:

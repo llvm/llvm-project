@@ -832,7 +832,10 @@ const MCExpr *AMDGPUAsmPrinter::getAmdhsaKernelCodeProperties(
     KernelCodeProperties |=
         amdhsa::KERNEL_CODE_PROPERTY_ENABLE_SGPR_PRIVATE_SEGMENT_SIZE;
   }
-  if (MF.getSubtarget<GCNSubtarget>().isWave32()) {
+  const GCNSubtarget &STM = MF.getSubtarget<GCNSubtarget>();
+  if (STM.isWave32() &&
+      STM.getFeatureBits().test(AMDGPU::FeatureSupportsWave32) &&
+      STM.getFeatureBits().test(AMDGPU::FeatureSupportsWave64)) {
     KernelCodeProperties |=
         amdhsa::KERNEL_CODE_PROPERTY_ENABLE_WAVEFRONT_SIZE32;
   }
@@ -1228,7 +1231,7 @@ void AMDGPUAsmPrinter::initializeTargetID(const Module &M) {
       TSTargetID->setXnackSetting(Setting);
   }
 
-  if (getGlobalSTI()->getFeatureBits().test(AMDGPU::FeatureSupportsSRAMECC)) {
+  if (getGlobalSTI()->getFeatureBits().test(AMDGPU::FeatureSRAMECCOnOffModes)) {
     AMDGPU::TargetIDSetting Setting =
         GCNTargetMachine::getTargetIDSettingFromModuleFlag(M, "amdgpu.sramecc");
     if (Setting != AMDGPU::TargetIDSetting::Any)
@@ -1409,6 +1412,24 @@ void AMDGPUAsmPrinter::getSIProgramInfo(SIProgramInfo &ProgInfo,
         MF.getFunction(), "local memory", MFI->getLDSSize(),
         STM.getAddressableLocalMemorySize(), DS_Error));
   }
+
+  // When dynamic VGPRs are enabled, entry functions are launched with a single
+  // VGPR block. The register allocator enforces this constraint, but we also
+  // need to catch explicit physical registers in inline asm and wave dispatch
+  // VGPR arguments.
+  if (MFI->isDynamicVGPREnabled() &&
+      AMDGPU::isEntryFunctionCC(F.getCallingConv())) {
+    unsigned BlockSize = MFI->getDynamicVGPRBlockSize();
+    uint64_t NumVgpr;
+    if (TryGetMCExprValue(ProgInfo.NumVGPRsForWavesPerEU, NumVgpr) &&
+        NumVgpr > BlockSize) {
+      LLVMContext &Ctx = F.getContext();
+      Ctx.diagnose(DiagnosticInfoResourceLimit(
+          F, "dynamic VGPR entry point vector registers", NumVgpr, BlockSize,
+          DS_Warning, DK_ResourceLimit));
+    }
+  }
+
   // The MCExpr equivalent of getNumSGPRBlocks/getNumVGPRBlocks:
   // (alignTo(max(1u, NumGPR), GPREncodingGranule) / GPREncodingGranule) - 1
   auto GetNumGPRBlocks = [&CreateExpr, &Ctx](const MCExpr *NumGPR,

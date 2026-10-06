@@ -1981,8 +1981,9 @@ private:
 #elif defined(_LIBUNWIND_HAVE_ELF_AUX_INFO)
   static bool checkHasSME() {
     constexpr int hwcap2_sme = (1 << 23);
-    unsigned long hwcap2 = 0;
-    elf_aux_info(AT_HWCAP2, &hwcap2, sizeof(hwcap2));
+    unsigned long hwcap2;
+    if (elf_aux_info(AT_HWCAP2, &hwcap2, sizeof(hwcap2)) != 0)
+      return false;
     return (hwcap2 & hwcap2_sme) != 0;
   }
 #else

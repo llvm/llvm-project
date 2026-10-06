@@ -6355,6 +6355,10 @@ VarTemplateSpecializationDecl *Sema::BuildVarTemplateInstantiation(
   if (Inst.isInvalid())
     return nullptr;
 
+  // A variable template specialization is never a local declaration, so it
+  // must not see the locals of whatever instantiation we are currently in.
+  LocalInstantiationScope Local(*this);
+
   // Instantiate the first declaration of the variable template: for a partial
   // specialization of a static data member template, the first declaration may
   // or may not be the declaration in the class; if it's in the class, we want

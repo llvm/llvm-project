@@ -323,13 +323,13 @@ cir.func @_ZN7DerivedC2Ev(%arg0: !cir.ptr<!rec_Derived>) {
   %0 = cir.alloca !cir.ptr<!rec_Derived>, !cir.ptr<!cir.ptr<!rec_Derived>>, ["this", init]
   cir.store %arg0, %0 : !cir.ptr<!rec_Derived>, !cir.ptr<!cir.ptr<!rec_Derived>>
   %1 = cir.load %0 : !cir.ptr<!cir.ptr<!rec_Derived>>, !cir.ptr<!rec_Derived>
-  %2 = cir.base_class_addr %1 : !cir.ptr<!rec_Derived> nonnull [0] -> !cir.ptr<!rec_Base>
+  %2 = cir.base_class_addr nonnull %1 [0] : !cir.ptr<!rec_Derived> -> !cir.ptr<!rec_Base>
   cir.call @_ZN4BaseC2Ev(%2) : (!cir.ptr<!rec_Base>) -> ()
   cir.cleanup.scope {
     cir.call exception @_Z1fv() : () -> ()
     cir.yield
   } cleanup eh {
-    %3 = cir.base_class_addr %1 : !cir.ptr<!rec_Derived> nonnull [0] -> !cir.ptr<!rec_Base>
+    %3 = cir.base_class_addr nonnull %1 [0] : !cir.ptr<!rec_Derived> -> !cir.ptr<!rec_Base>
     cir.call @_ZN4BaseD2Ev(%3) : (!cir.ptr<!rec_Base>) -> ()
     cir.yield
   }

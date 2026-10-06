@@ -101,6 +101,23 @@ def ACCDeclareActionConversion
   let dependentDialects = ["fir::FIROpsDialect"];
 }
 
+def ACCEraseUnusedKernelAllocations
+    : Pass<"acc-erase-unused-kernel-allocations", "mlir::func::FuncOp"> {
+  let summary = "Erase unused allocations inside acc.compute_region";
+  let description = [{
+    Deletes an allocation inside an acc.compute_region when its storage is
+    never read or written. The allocation may be fir.allocmem, fir.alloca,
+    memref.alloc, or memref.alloca. It may have no uses, or its only uses
+    may be a view of that storage (such as fir.convert), fir.declare, and
+    the matching free (fir.freemem or memref.dealloc). fir.declare's debug
+    effect and the free keep that chain alive through ordinary DCE, so a
+    dynamic allocation would otherwise be lowered to a checked device malloc.
+    A load, store, or other memory use keeps the allocation. An unused
+    private-recipe allocation is deleted the same way as an unused source
+    array.
+  }];
+}
+
 def ACCOptimizeFirstprivateMap
     : Pass<"acc-optimize-firstprivate-map", "mlir::func::FuncOp"> {
   let summary = "Optimize firstprivate mapping";

@@ -2,6 +2,7 @@
 ; RUN: opt -aa-pipeline=tbaa,scoped-noalias-aa,basic-aa -passes='require<aa>,require<target-ir>,require<scalar-evolution>,require<opt-remark-emit>,loop-mssa(licm)' -S %s | FileCheck %s
 
 declare i32 @opaque(i32) memory(argmem: readwrite)
+declare void @llvm.experimental.noalias.scope.decl(metadata)
 
 define i32 @promotable.store_dominates_exit_block(i64 %idx, i1 %c, i1 %c2) {
 ; CHECK-LABEL: define i32 @promotable.store_dominates_exit_block(
@@ -408,13 +409,233 @@ exit:
   ret i32 %res
 }
 
+define i32 @not_promotable.per_iteration_noalias_scope(i64 %idx, i1 %c, i1 %c2) {
+; CHECK-LABEL: define i32 @not_promotable.per_iteration_noalias_scope(
+; CHECK-SAME: i64 [[IDX:%.*]], i1 [[C:%.*]], i1 [[C2:%.*]]) {
+; CHECK-NEXT:  [[ENTRY:.*]]:
+; CHECK-NEXT:    [[PTR:%.*]] = alloca [4 x i32], align 4
+; CHECK-NEXT:    br label %[[LOOP:.*]]
+; CHECK:       [[LOOP]]:
+; CHECK-NEXT:    [[IV:%.*]] = phi i64 [ [[IDX]], %[[ENTRY]] ], [ [[IV_NEXT:%.*]], %[[LATCH:.*]] ]
+; CHECK-NEXT:    call void @llvm.experimental.noalias.scope.decl(metadata [[META8]])
+; CHECK-NEXT:    [[FPTR:%.*]] = getelementptr i32, ptr [[PTR]], i64 [[IV]]
+; CHECK-NEXT:    br i1 [[C]], label %[[IF:.*]], label %[[ELSE:.*]]
+; CHECK:       [[IF]]:
+; CHECK-NEXT:    store i32 42, ptr [[FPTR]], align 4, !alias.scope [[META8]]
+; CHECK-NEXT:    br label %[[LATCH]]
+; CHECK:       [[ELSE]]:
+; CHECK-NEXT:    [[V_INC1:%.*]] = load i32, ptr [[PTR]], align 4, !noalias [[META8]]
+; CHECK-NEXT:    [[V_INC:%.*]] = add i32 [[V_INC1]], 1
+; CHECK-NEXT:    store i32 [[V_INC]], ptr [[PTR]], align 4, !noalias [[META8]]
+; CHECK-NEXT:    br i1 [[C2]], label %[[EXIT:.*]], label %[[LATCH]]
+; CHECK:       [[LATCH]]:
+; CHECK-NEXT:    [[IV_NEXT]] = add i64 [[IV]], 1
+; CHECK-NEXT:    br label %[[LOOP]]
+; CHECK:       [[EXIT]]:
+; CHECK-NEXT:    [[RES:%.*]] = load i32, ptr [[PTR]], align 4
+; CHECK-NEXT:    ret i32 [[RES]]
+;
+entry:
+  %ptr = alloca [4 x i32]
+  br label %loop
+
+loop:
+  %iv = phi i64 [ %idx, %entry ], [ %iv.next, %latch ]
+  call void @llvm.experimental.noalias.scope.decl(metadata !8)
+  %fptr = getelementptr i32, ptr %ptr, i64 %iv
+  br i1 %c, label %if, label %else
+
+if:
+  store i32 42, ptr %fptr, !alias.scope !8
+  br label %latch
+
+else:
+  %v = load i32, ptr %ptr, !noalias !8
+  %v.inc = add i32 %v, 1
+  store i32 %v.inc, ptr %ptr, !noalias !8
+  br i1 %c2, label %exit, label %latch
+
+latch:
+  %iv.next = add i64 %iv, 1
+  br label %loop
+
+exit:
+  %res = load i32, ptr %ptr
+  ret i32 %res
+}
+
+define i32 @promotable.noalias_scope_outside_loop(i64 %idx, i1 %c, i1 %c2) {
+; CHECK-LABEL: define i32 @promotable.noalias_scope_outside_loop(
+; CHECK-SAME: i64 [[IDX:%.*]], i1 [[C:%.*]], i1 [[C2:%.*]]) {
+; CHECK-NEXT:  [[ENTRY:.*]]:
+; CHECK-NEXT:    [[PTR:%.*]] = alloca [4 x i32], align 4
+; CHECK-NEXT:    call void @llvm.experimental.noalias.scope.decl(metadata [[META8]])
+; CHECK-NEXT:    [[PTR_PROMOTED:%.*]] = load i32, ptr [[PTR]], align 4
+; CHECK-NEXT:    br label %[[LOOP:.*]]
+; CHECK:       [[LOOP]]:
+; CHECK-NEXT:    [[V_INC2:%.*]] = phi i32 [ [[PTR_PROMOTED]], %[[ENTRY]] ], [ [[V_INC1:%.*]], %[[LATCH:.*]] ]
+; CHECK-NEXT:    [[IV:%.*]] = phi i64 [ [[IDX]], %[[ENTRY]] ], [ [[IV_NEXT:%.*]], %[[LATCH]] ]
+; CHECK-NEXT:    [[FPTR:%.*]] = getelementptr i32, ptr [[PTR]], i64 [[IV]]
+; CHECK-NEXT:    br i1 [[C]], label %[[IF:.*]], label %[[ELSE:.*]]
+; CHECK:       [[IF]]:
+; CHECK-NEXT:    store i32 42, ptr [[FPTR]], align 4, !alias.scope [[META8]]
+; CHECK-NEXT:    br label %[[LATCH]]
+; CHECK:       [[ELSE]]:
+; CHECK-NEXT:    [[V_INC:%.*]] = add i32 [[V_INC2]], 1
+; CHECK-NEXT:    br i1 [[C2]], label %[[EXIT:.*]], label %[[LATCH]]
+; CHECK:       [[LATCH]]:
+; CHECK-NEXT:    [[V_INC1]] = phi i32 [ [[V_INC]], %[[ELSE]] ], [ [[V_INC2]], %[[IF]] ]
+; CHECK-NEXT:    [[IV_NEXT]] = add i64 [[IV]], 1
+; CHECK-NEXT:    br label %[[LOOP]]
+; CHECK:       [[EXIT]]:
+; CHECK-NEXT:    [[V_INC_LCSSA:%.*]] = phi i32 [ [[V_INC]], %[[ELSE]] ]
+; CHECK-NEXT:    store i32 [[V_INC_LCSSA]], ptr [[PTR]], align 4
+; CHECK-NEXT:    [[RES:%.*]] = load i32, ptr [[PTR]], align 4
+; CHECK-NEXT:    ret i32 [[RES]]
+;
+entry:
+  %ptr = alloca [4 x i32]
+  call void @llvm.experimental.noalias.scope.decl(metadata !8)
+  br label %loop
+
+loop:
+  %iv = phi i64 [ %idx, %entry ], [ %iv.next, %latch ]
+  %fptr = getelementptr i32, ptr %ptr, i64 %iv
+  br i1 %c, label %if, label %else
+
+if:
+  store i32 42, ptr %fptr, !alias.scope !8
+  br label %latch
+
+else:
+  %v = load i32, ptr %ptr, !noalias !8
+  %v.inc = add i32 %v, 1
+  store i32 %v.inc, ptr %ptr, !noalias !8
+  br i1 %c2, label %exit, label %latch
+
+latch:
+  %iv.next = add i64 %iv, 1
+  br label %loop
+
+exit:
+  %res = load i32, ptr %ptr
+  ret i32 %res
+}
+
+define i32 @not_promotable.per_iteration_alias_scope(i64 %idx, i1 %c, i1 %c2) {
+; CHECK-LABEL: define i32 @not_promotable.per_iteration_alias_scope(
+; CHECK-SAME: i64 [[IDX:%.*]], i1 [[C:%.*]], i1 [[C2:%.*]]) {
+; CHECK-NEXT:  [[ENTRY:.*]]:
+; CHECK-NEXT:    [[PTR:%.*]] = alloca [4 x i32], align 4
+; CHECK-NEXT:    br label %[[LOOP:.*]]
+; CHECK:       [[LOOP]]:
+; CHECK-NEXT:    [[IV:%.*]] = phi i64 [ [[IDX]], %[[ENTRY]] ], [ [[IV_NEXT:%.*]], %[[LATCH:.*]] ]
+; CHECK-NEXT:    call void @llvm.experimental.noalias.scope.decl(metadata [[META8]])
+; CHECK-NEXT:    [[FPTR:%.*]] = getelementptr i32, ptr [[PTR]], i64 [[IV]]
+; CHECK-NEXT:    br i1 [[C]], label %[[IF:.*]], label %[[ELSE:.*]]
+; CHECK:       [[IF]]:
+; CHECK-NEXT:    store i32 42, ptr [[FPTR]], align 4, !noalias [[META8]]
+; CHECK-NEXT:    br label %[[LATCH]]
+; CHECK:       [[ELSE]]:
+; CHECK-NEXT:    [[V:%.*]] = load i32, ptr [[PTR]], align 4, !alias.scope [[META8]]
+; CHECK-NEXT:    [[V_INC:%.*]] = add i32 [[V]], 1
+; CHECK-NEXT:    store i32 [[V_INC]], ptr [[PTR]], align 4, !alias.scope [[META8]]
+; CHECK-NEXT:    br i1 [[C2]], label %[[EXIT:.*]], label %[[LATCH]]
+; CHECK:       [[LATCH]]:
+; CHECK-NEXT:    [[IV_NEXT]] = add i64 [[IV]], 1
+; CHECK-NEXT:    br label %[[LOOP]]
+; CHECK:       [[EXIT]]:
+; CHECK-NEXT:    [[RES:%.*]] = load i32, ptr [[PTR]], align 4
+; CHECK-NEXT:    ret i32 [[RES]]
+;
+entry:
+  %ptr = alloca [4 x i32]
+  br label %loop
+
+loop:
+  %iv = phi i64 [ %idx, %entry ], [ %iv.next, %latch ]
+  call void @llvm.experimental.noalias.scope.decl(metadata !8)
+  %fptr = getelementptr i32, ptr %ptr, i64 %iv
+  br i1 %c, label %if, label %else
+
+if:
+  store i32 42, ptr %fptr, !noalias !8
+  br label %latch
+
+else:
+  %v = load i32, ptr %ptr, !alias.scope !8
+  %v.inc = add i32 %v, 1
+  store i32 %v.inc, ptr %ptr, !alias.scope !8
+  br i1 %c2, label %exit, label %latch
+
+latch:
+  %iv.next = add i64 %iv, 1
+  br label %loop
+
+exit:
+  %res = load i32, ptr %ptr
+  ret i32 %res
+}
+
+define i32 @promotable.per_iteration_noalias_scope_with_tbaa(i64 %idx, i1 %c, i1 %c2) {
+; CHECK-LABEL: define i32 @promotable.per_iteration_noalias_scope_with_tbaa(
+; CHECK-SAME: i64 [[IDX:%.*]], i1 [[C:%.*]], i1 [[C2:%.*]]) {
+; CHECK-NEXT:  [[ENTRY:.*]]:
+; CHECK-NEXT:    [[PTR:%.*]] = alloca [4 x i32], align 4
+; CHECK-NEXT:    br label %[[LOOP:.*]]
+; CHECK:       [[LOOP]]:
+; CHECK-NEXT:    [[IV:%.*]] = phi i64 [ [[IDX]], %[[ENTRY]] ], [ [[IV_NEXT:%.*]], %[[LATCH:.*]] ]
+; CHECK-NEXT:    call void @llvm.experimental.noalias.scope.decl(metadata [[META8]])
+; CHECK-NEXT:    [[FPTR:%.*]] = getelementptr float, ptr [[PTR]], i64 [[IV]]
+; CHECK-NEXT:    store float 0.000000e+00, ptr [[FPTR]], align 4, !tbaa [[FLOAT_TBAA4]]
+; CHECK-NEXT:    [[TMP0:%.*]] = load i32, ptr [[PTR]], align 4, !tbaa [[INT_TBAA0]]
+; CHECK-NEXT:    [[V_INC:%.*]] = add i32 [[TMP0]], 1
+; CHECK-NEXT:    store i32 [[V_INC]], ptr [[PTR]], align 4, !tbaa [[INT_TBAA0]]
+; CHECK-NEXT:    br i1 [[C]], label %[[IF:.*]], label %[[LATCH]]
+; CHECK:       [[IF]]:
+; CHECK-NEXT:    store i32 0, ptr [[PTR]], align 4, !tbaa [[INT_TBAA0]], !noalias [[META8]]
+; CHECK-NEXT:    br label %[[LATCH]]
+; CHECK:       [[LATCH]]:
+; CHECK-NEXT:    [[IV_NEXT]] = add i64 [[IV]], 1
+; CHECK-NEXT:    br i1 [[C2]], label %[[EXIT:.*]], label %[[LOOP]]
+; CHECK:       [[EXIT]]:
+; CHECK-NEXT:    [[RES:%.*]] = load i32, ptr [[PTR]], align 4
+; CHECK-NEXT:    ret i32 [[RES]]
+;
+entry:
+  %ptr = alloca [4 x i32]
+  br label %loop
+
+loop:
+  %iv = phi i64 [ %idx, %entry ], [ %iv.next, %latch ]
+  call void @llvm.experimental.noalias.scope.decl(metadata !8)
+  %fptr = getelementptr float, ptr %ptr, i64 %iv
+  store float 0.000000e+00, ptr %fptr, !tbaa !3
+  %v = load i32, ptr %ptr, !tbaa !0
+  %v.inc = add i32 %v, 1
+  store i32 %v.inc, ptr %ptr, !tbaa !0
+  br i1 %c, label %if, label %latch
+
+if:
+  store i32 0, ptr %ptr, !tbaa !0, !noalias !8
+  br label %latch
+
+latch:
+  %iv.next = add i64 %iv, 1
+  br i1 %c2, label %exit, label %loop
+
+exit:
+  %res = load i32, ptr %ptr
+  ret i32 %res
+}
+
 !0 = !{!4, !4, i64 0}
 !1 = !{!"omnipotent char", !2}
 !2 = !{!"Simple C/C++ TBAA"}
 !3 = !{!5, !5, i64 0}
 !4 = !{!"int", !1}
 !5 = !{!"float", !1}
-!6 = !{!6}
+!6 = !{!6, i1 false}
 !7 = !{!7, !6}
 !8 = !{!7}
 !9 = !{!10, !10, i64 0}
@@ -430,5 +651,5 @@ exit:
 ; CHECK: [[META7]] = !{!"unsigned int", [[META2]]}
 ; CHECK: [[META8]] = !{[[META9:![0-9]+]]}
 ; CHECK: [[META9]] = distinct !{[[META9]], [[META10:![0-9]+]]}
-; CHECK: [[META10]] = distinct !{[[META10]]}
+; CHECK: [[META10]] = distinct !{[[META10]], i1 false}
 ;.

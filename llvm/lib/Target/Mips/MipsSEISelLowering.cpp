@@ -154,6 +154,10 @@ MipsSETargetLowering::MipsSETargetLowering(const MipsTargetMachine &TM,
     addMSAFloatType(MVT::v4f32, &Mips::MSA128WRegClass);
     addMSAFloatType(MVT::v2f64, &Mips::MSA128DRegClass);
 
+    // Shuffle half vectors as integers to avoid expanding them through
+    // EXTRACT_VECTOR_ELT and BUILD_VECTOR with an illegal scalar f16 type.
+    setOperationPromotedToType(ISD::VECTOR_SHUFFLE, MVT::v8f16, MVT::v8i16);
+
     // We're using soft promotion for f16, but msa has some instructions for
     // conversion to/from f16. Mark those conversions as custom so we can take
     // advantage of these instructions.
@@ -1555,7 +1559,9 @@ static SDValue lowerDSPIntr(SDValue Op, SelectionDAG &DAG, unsigned Opc) {
 static SDValue lowerMSACopyIntr(SDValue Op, SelectionDAG &DAG, unsigned Opc) {
   SDLoc DL(Op);
   SDValue Vec = Op->getOperand(1);
-  SDValue Idx = Op->getOperand(2);
+  const TargetLowering &TLI = DAG.getTargetLoweringInfo();
+  SDValue Idx = DAG.getZExtOrTrunc(Op->getOperand(2), DL,
+                                   TLI.getVectorIdxTy(DAG.getDataLayout()));
   EVT ResTy = Op->getValueType(0);
   EVT EltTy = Vec->getValueType(0).getVectorElementType();
 

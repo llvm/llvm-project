@@ -55,7 +55,7 @@ class TestDAP_save_core(DAPTestCaseBase):
         """Attach to a saved core and verify the reloaded process state
         matches what was captured live: current frame, thread count,
         module count."""
-        session = self.create_session(adapter=self.create_stdio_debug_adapter())
+        session = self.create_session(adapter=self.create_debug_adapter())
         process_event = session.attach(AttachArgs(coreFile=str(core_path)))
 
         stop_event = session.verify_stopped_on_exception(after=process_event)

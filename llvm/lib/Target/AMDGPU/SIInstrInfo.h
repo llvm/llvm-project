@@ -30,7 +30,6 @@ namespace llvm {
 
 class APInt;
 class GCNSubtarget;
-class LiveVariables;
 class MachineDominatorTree;
 class MachineRegisterInfo;
 class RegScavenger;
@@ -486,7 +485,7 @@ public:
 
   unsigned getMachineCSELookAheadLimit() const override { return 500; }
 
-  MachineInstr *convertToThreeAddress(MachineInstr &MI, LiveVariables *LV,
+  MachineInstr *convertToThreeAddress(MachineInstr &MI,
                                       LiveIntervals *LIS) const override;
 
   bool isSchedulingBoundary(const MachineInstr &MI,
@@ -1199,6 +1198,53 @@ public:
            Opc == AMDGPU::GLOBAL_WBINV;
   }
 
+  static bool isF16PseudoScalarTrans(unsigned Opcode) {
+    return Opcode == AMDGPU::V_S_EXP_F16_e64 ||
+           Opcode == AMDGPU::V_S_LOG_F16_e64 ||
+           Opcode == AMDGPU::V_S_RCP_F16_e64 ||
+           Opcode == AMDGPU::V_S_RSQ_F16_e64 ||
+           Opcode == AMDGPU::V_S_SQRT_F16_e64;
+  }
+
+  static bool isPseudoScalarTrans(unsigned Opcode) {
+    return isF16PseudoScalarTrans(Opcode) ||
+           Opcode == AMDGPU::V_S_EXP_F32_e64 ||
+           Opcode == AMDGPU::V_S_LOG_F32_e64 ||
+           Opcode == AMDGPU::V_S_RCP_F32_e64 ||
+           Opcode == AMDGPU::V_S_RSQ_F32_e64 ||
+           Opcode == AMDGPU::V_S_SQRT_F32_e64;
+  }
+
+  static bool isVPermPk16(unsigned Opcode) {
+    return Opcode == AMDGPU::V_PERM_PK16_B4_U4_e64 ||
+           Opcode == AMDGPU::V_PERM_PK16_B6_U4_e64 ||
+           Opcode == AMDGPU::V_PERM_PK16_B8_U4_e64;
+  }
+
+  // \returns true if \p MI clears the V_PERM_PK16 hazard when it immediately
+  // follows a V_PERM_PK16 (i.e. \p MI is a "safe" instruction).
+  bool isVPermPk16SafeInstr(const MachineInstr &MI) const {
+    unsigned Opc = MI.getOpcode();
+
+    // Only VALU ops issue on the pipe that clears the V_PERM_PK16 hazard.
+    if (!isVALU(MI, /*AllowLDSDMA=*/false))
+      return false;
+    // OP_XDL: matrix (WMMA/SWMMAC/DOT) ops clear the hazard.
+    if (isXDL(MI))
+      return true;
+    // Pseudo-scalar transcendentals (OP32_SCL_T) do NOT clear the hazard.
+    if (isPseudoScalarTrans(Opc))
+      return false;
+
+    // Use the table lookup, not getBlockingCycles(): occupancy is gated off on
+    // gfx1251 but the hazard applies to both gfx1250 and gfx1251. Gfx1250 table
+    // is valid enough for gfx1251 w.r.t. v_perm_pk16 safety check here.
+    // OP_32_T is in the table at 2 and is safe; other table entries (>= 2) are
+    // not.
+    unsigned Cycles = getGFX1250BlockingCyclesTable(MI);
+    return Cycles < 2 || (Cycles == 2 && isTRANS(MI));
+  }
+
   static bool doesNotReadTiedSource(const MachineInstr &MI) {
     return SIInstrFlags::isTiedSourceNotRead(MI);
   }
@@ -1392,6 +1438,12 @@ public:
   /// Return true if this 64-bit VALU instruction has a 32-bit encoding.
   /// This function will return false if you pass it a 32-bit instruction.
   bool hasVALU32BitEncoding(unsigned Opcode) const;
+
+  /// Return true if \p Reg is a lane mask that already has 0 in every bit
+  /// corresponding to a lane that is inactive in EXEC where \p Use executes,
+  /// so that ANDing it with EXEC there would be a no-op. Requires SSA form.
+  bool isMaskedByExec(Register Reg, const MachineInstr &Use,
+                      const MachineRegisterInfo &MRI, unsigned Depth = 0) const;
 
   bool physRegUsesConstantBus(const MachineOperand &Reg) const;
   bool regUsesConstantBus(const MachineOperand &Reg,
@@ -1768,6 +1820,11 @@ public:
                            unsigned *PredCost = nullptr) const override;
 
   unsigned getBlockingCycles(const MachineInstr &MI) const;
+
+  /// GFX1250 blocking-cycles table lookup with no occupancy subtarget gate.
+  /// Returns 0 if \p MI is not in the table. Used as a multi-pass VALU denylist
+  /// (e.g. V_PERM_PK16 hazard) on both gfx1250 and gfx1251.
+  unsigned getGFX1250BlockingCyclesTable(const MachineInstr &MI) const;
 
   const MachineOperand &getCalleeOperand(const MachineInstr &MI) const override;
 

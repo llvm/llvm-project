@@ -68,8 +68,8 @@ module polymorphic_test
 ! CHECK-LABEL: func.func @_QMpolymorphic_testPassign_p1_int(
 ! CHECK-SAME:    %[[ARG0:.*]]: !fir.class<!fir.type<_QMpolymorphic_testTp1{a:i32,b:i32}>> {fir.bindc_name = "lhs"}, %[[ARG1:.*]]: !fir.ref<i32> {fir.bindc_name = "rhs", fir.read_only}
 ! CHECK-SAME:    attributes {fir.proc_attrs = #fir.proc_attrs<elemental, pure>}
-! CHECK:         %[[LHS:.*]]:2 = hlfir.declare %[[ARG0]]{{.*}}{fortran_attrs = #fir.var_attrs<intent_inout>, uniq_name = "_QMpolymorphic_testFassign_p1_intElhs"}
-! CHECK:         %[[RHS:.*]]:2 = hlfir.declare %[[ARG1]]{{.*}}{fortran_attrs = #fir.var_attrs<intent_in>, uniq_name = "_QMpolymorphic_testFassign_p1_intErhs"}
+! CHECK:         %[[LHS:.*]]:2 = hlfir.declare %[[ARG0]]{{.*}}uniq_name("_QMpolymorphic_testFassign_p1_intElhs") fortran_attrs<intent_inout>
+! CHECK:         %[[RHS:.*]]:2 = hlfir.declare %[[ARG1]]{{.*}}uniq_name("_QMpolymorphic_testFassign_p1_intErhs") fortran_attrs<intent_in>
 ! CHECK:         %[[A:.*]] = hlfir.designate %[[LHS]]#0{"a"}
 ! CHECK:         hlfir.assign %{{.*}} to %[[A]]
 ! CHECK:         %[[B:.*]] = hlfir.designate %[[LHS]]#0{"b"}
@@ -82,7 +82,7 @@ module polymorphic_test
 ! CHECK-LABEL: func.func @_QMpolymorphic_testPelemental_fct(
 ! CHECK-SAME:    %[[ARG0:.*]]: !fir.class<!fir.type<_QMpolymorphic_testTp1{a:i32,b:i32}>> {fir.bindc_name = "this"})
 ! CHECK-SAME:    -> i32 attributes {fir.proc_attrs = #fir.proc_attrs<elemental, pure>}
-! CHECK:         %[[THIS:.*]]:2 = hlfir.declare %[[ARG0]]{{.*}}{fortran_attrs = #fir.var_attrs<intent_in>, uniq_name = "_QMpolymorphic_testFelemental_fctEthis"}
+! CHECK:         %[[THIS:.*]]:2 = hlfir.declare %[[ARG0]]{{.*}}uniq_name("_QMpolymorphic_testFelemental_fctEthis") fortran_attrs<intent_in>
 ! CHECK:         %[[A:.*]] = hlfir.designate %[[THIS]]#0{"a"}
 
   elemental subroutine elemental_sub(this)
@@ -113,8 +113,8 @@ module polymorphic_test
 ! CHECK-LABEL: func.func @_QMpolymorphic_testPlt(
 ! CHECK-SAME:    %[[ARG0:.*]]: !fir.ref<i32> {fir.bindc_name = "i", fir.read_only}, %[[ARG1:.*]]: !fir.class<!fir.type<_QMpolymorphic_testTp1{a:i32,b:i32}>> {fir.bindc_name = "poly"})
 ! CHECK-SAME:    -> !fir.logical<4> attributes {fir.proc_attrs = #fir.proc_attrs<elemental, pure>}
-! CHECK:         %[[I:.*]]:2 = hlfir.declare %[[ARG0]]{{.*}}{fortran_attrs = #fir.var_attrs<intent_in>, uniq_name = "_QMpolymorphic_testFltEi"}
-! CHECK:         %[[POLY:.*]]:2 = hlfir.declare %[[ARG1]]{{.*}}{fortran_attrs = #fir.var_attrs<intent_in>, uniq_name = "_QMpolymorphic_testFltEpoly"}
+! CHECK:         %[[I:.*]]:2 = hlfir.declare %[[ARG0]]{{.*}}uniq_name("_QMpolymorphic_testFltEi") fortran_attrs<intent_in>
+! CHECK:         %[[POLY:.*]]:2 = hlfir.declare %[[ARG1]]{{.*}}uniq_name("_QMpolymorphic_testFltEpoly") fortran_attrs<intent_in>
 ! CHECK:         %[[A:.*]] = hlfir.designate %[[POLY]]#0{"a"}
 
   ! Test correct access to polymorphic entity component.
@@ -124,7 +124,7 @@ module polymorphic_test
   end subroutine
 ! CHECK-LABEL: func.func @_QMpolymorphic_testPcomponent_access(
 ! CHECK-SAME:    %[[ARG0:.*]]: !fir.class<!fir.type<_QMpolymorphic_testTp1{a:i32,b:i32}>> {fir.bindc_name = "p"})
-! CHECK:         %[[P:.*]]:2 = hlfir.declare %[[ARG0]]{{.*}}{uniq_name = "_QMpolymorphic_testFcomponent_accessEp"}
+! CHECK:         %[[P:.*]]:2 = hlfir.declare %[[ARG0]]{{.*}}uniq_name("_QMpolymorphic_testFcomponent_accessEp")
 ! CHECK:         %[[A:.*]] = hlfir.designate %[[P]]#0{"a"}   : (!fir.class<!fir.type<_QMpolymorphic_testTp1{a:i32,b:i32}>>) -> !fir.ref<i32>
 ! CHECK:         %[[A_LD:.*]] = fir.load %[[A]] : !fir.ref<i32>
 ! CHECK:         fir.call @_FortranAioOutputInteger32(%{{.*}}, %[[A_LD]]){{.*}}: (!fir.ref<i8>, i32) -> i1
@@ -144,8 +144,8 @@ module polymorphic_test
     call t2%print()
   end subroutine
 ! CHECK-LABEL: func.func @_QMpolymorphic_testPcheck()
-! CHECK:         %[[T1:.*]]:2 = hlfir.declare %{{.*}} {uniq_name = "_QMpolymorphic_testFcheckEt1"}
-! CHECK:         %[[T2:.*]]:2 = hlfir.declare %{{.*}} {uniq_name = "_QMpolymorphic_testFcheckEt2"}
+! CHECK:         %[[T1:.*]]:2 = hlfir.declare %{{.*}} uniq_name("_QMpolymorphic_testFcheckEt1")
+! CHECK:         %[[T2:.*]]:2 = hlfir.declare %{{.*}} uniq_name("_QMpolymorphic_testFcheckEt2")
 ! CHECK:         %[[T1_BOX:.*]] = fir.embox %[[T1]]#0 : (!fir.ref<!fir.type<_QMpolymorphic_testTp1{a:i32,b:i32}>>) -> !fir.box<!fir.type<_QMpolymorphic_testTp1{a:i32,b:i32}>>
 ! CHECK:         %[[T1_CLASS:.*]] = fir.convert %[[T1_BOX]] : (!fir.box<!fir.type<_QMpolymorphic_testTp1{a:i32,b:i32}>>) -> !fir.class<!fir.type<_QMpolymorphic_testTp1{a:i32,b:i32}>>
 ! CHECK:         fir.call @_QMpolymorphic_testPprint(%[[T1_CLASS]])
@@ -159,7 +159,7 @@ module polymorphic_test
     allocate(integer::u)
   end subroutine
 ! CHECK-LABEL: func.func @_QMpolymorphic_testPtest_allocate_unlimited_polymorphic_non_derived()
-! CHECK:         %[[U:.*]]:2 = hlfir.declare %{{.*}} {fortran_attrs = #fir.var_attrs<pointer>, uniq_name = "_QMpolymorphic_testFtest_allocate_unlimited_polymorphic_non_derivedEu"}
+! CHECK:         %[[U:.*]]:2 = hlfir.declare %{{.*}} uniq_name("_QMpolymorphic_testFtest_allocate_unlimited_polymorphic_non_derivedEu") fortran_attrs<pointer>
 ! CHECK:         fir.call @_FortranAPointerNullifyIntrinsic(
 ! CHECK:         %{{.*}} = fir.call @_FortranAPointerAllocate(
 
@@ -174,7 +174,7 @@ module polymorphic_test
     p => test_fct_ret_class()
   end subroutine
 ! CHECK-LABEL: func.func @_QMpolymorphic_testPcall_fct()
-! CHECK:         %[[P:.*]]:2 = hlfir.declare %{{.*}} {fortran_attrs = #fir.var_attrs<pointer>, uniq_name = "_QMpolymorphic_testFcall_fctEp"}
+! CHECK:         %[[P:.*]]:2 = hlfir.declare %{{.*}} uniq_name("_QMpolymorphic_testFcall_fctEp") fortran_attrs<pointer>
 ! CHECK:         %[[CALL:.*]] = fir.call @_QMpolymorphic_testPtest_fct_ret_class() {{.*}}: () -> !fir.class<!fir.ptr<!fir.type<_QMpolymorphic_testTp1{a:i32,b:i32}>>>
 ! CHECK:         fir.store %{{.*}} to %[[P]]#0 : !fir.ref<!fir.class<!fir.ptr<!fir.type<_QMpolymorphic_testTp1{a:i32,b:i32}>>>>
 
@@ -186,7 +186,7 @@ module polymorphic_test
     p%a = [ 1, 2, 3 ]
   end subroutine
 ! CHECK-LABEL: func.func @_QMpolymorphic_testPimplicit_loop_with_polymorphic() {
-! CHECK:         %[[P:.*]]:2 = hlfir.declare %{{.*}} {fortran_attrs = #fir.var_attrs<allocatable>, uniq_name = "_QMpolymorphic_testFimplicit_loop_with_polymorphicEp"}
+! CHECK:         %[[P:.*]]:2 = hlfir.declare %{{.*}} uniq_name("_QMpolymorphic_testFimplicit_loop_with_polymorphicEp") fortran_attrs<allocatable>
 ! CHECK:         %{{.*}} = fir.call @_FortranAAllocatableAllocate(
 ! CHECK:         %[[A:.*]] = hlfir.designate %{{.*}}{"a"}{{.*}} : (!fir.class<!fir.heap<!fir.array<?x!fir.type<_QMpolymorphic_testTp1{a:i32,b:i32}>>>>, !fir.shape<1>) -> !fir.box<!fir.array<?xi32>>
 ! CHECK:         hlfir.assign %{{.*}} to %[[A]]
@@ -213,8 +213,8 @@ module polymorphic_test
   end subroutine
 ! CHECK-LABEL: func.func @_QMpolymorphic_testPnonpolymorphic_to_polymorphic(
 ! CHECK-SAME:    %[[ARG0:.*]]: !fir.ref<!fir.box<!fir.ptr<!fir.array<?x!fir.type<_QMpolymorphic_testFnonpolymorphic_to_polymorphicTp1>>>>> {fir.bindc_name = "p"}, %[[ARG1:.*]]: !fir.class<!fir.array<?x!fir.type<_QMpolymorphic_testFnonpolymorphic_to_polymorphicTp1>>> {fir.bindc_name = "t", fir.target}
-! CHECK:         %[[P:.*]]:2 = hlfir.declare %[[ARG0]]{{.*}}{fortran_attrs = #fir.var_attrs<pointer>, uniq_name = "_QMpolymorphic_testFnonpolymorphic_to_polymorphicEp"}
-! CHECK:         %[[T:.*]]:2 = hlfir.declare %[[ARG1]]{{.*}}{fortran_attrs = #fir.var_attrs<target>, uniq_name = "_QMpolymorphic_testFnonpolymorphic_to_polymorphicEt"}
+! CHECK:         %[[P:.*]]:2 = hlfir.declare %[[ARG0]]{{.*}}uniq_name("_QMpolymorphic_testFnonpolymorphic_to_polymorphicEp") fortran_attrs<pointer>
+! CHECK:         %[[T:.*]]:2 = hlfir.declare %[[ARG1]]{{.*}}uniq_name("_QMpolymorphic_testFnonpolymorphic_to_polymorphicEt") fortran_attrs<target>
 ! CHECK:         %[[REBOX:.*]] = fir.rebox %[[T]]#0 : (!fir.class<!fir.array<?x!fir.type<_QMpolymorphic_testFnonpolymorphic_to_polymorphicTp1>>>) -> !fir.box<!fir.ptr<!fir.array<?x!fir.type<_QMpolymorphic_testFnonpolymorphic_to_polymorphicTp1>>>>
 ! CHECK:         %[[SHIFT:.*]] = fir.shape_shift %{{.*}}, %{{.*}} : (index, index) -> !fir.shapeshift<1>
 ! CHECK:         %[[REMAP:.*]] = fir.rebox %[[REBOX]](%[[SHIFT]]) : (!fir.box<!fir.ptr<!fir.array<?x!fir.type<_QMpolymorphic_testFnonpolymorphic_to_polymorphicTp1>>>>, !fir.shapeshift<1>) -> !fir.box<!fir.ptr<!fir.array<?x!fir.type<_QMpolymorphic_testFnonpolymorphic_to_polymorphicTp1>>>>
@@ -234,7 +234,7 @@ module polymorphic_test
     p => up_ret()
   end subroutine
 ! CHECK-LABEL: func.func @_QMpolymorphic_testPcall_up_ret() {
-! CHECK:         %[[P:.*]]:2 = hlfir.declare %{{.*}} {fortran_attrs = #fir.var_attrs<pointer>, uniq_name = "_QMpolymorphic_testFcall_up_retEp"}
+! CHECK:         %[[P:.*]]:2 = hlfir.declare %{{.*}} uniq_name("_QMpolymorphic_testFcall_up_retEp") fortran_attrs<pointer>
 ! CHECK:         %{{.*}} = fir.call @_QMpolymorphic_testPup_ret() {{.*}}: () -> !fir.class<!fir.ptr<!fir.array<?xnone>>>
 
 
@@ -245,9 +245,9 @@ module polymorphic_test
   end subroutine
 ! CHECK-LABEL: func.func @_QMpolymorphic_testPassociate_up_pointer(
 ! CHECK-SAME:    %[[ARG0:.*]]: !fir.class<!fir.type<_QMpolymorphic_testTr1{rp:!fir.box<!fir.ptr<!fir.array<?xf32>>>}>> {fir.bindc_name = "r"})
-! CHECK:         %[[P:.*]]:2 = hlfir.declare %{{.*}} {fortran_attrs = #fir.var_attrs<pointer>, uniq_name = "_QMpolymorphic_testFassociate_up_pointerEp"}
-! CHECK:         %[[R:.*]]:2 = hlfir.declare %[[ARG0]]{{.*}}{uniq_name = "_QMpolymorphic_testFassociate_up_pointerEr"}
-! CHECK:         %[[RP:.*]] = hlfir.designate %[[R]]#0{"rp"}{{.*}}{fortran_attrs = #fir.var_attrs<pointer>}
+! CHECK:         %[[P:.*]]:2 = hlfir.declare %{{.*}} uniq_name("_QMpolymorphic_testFassociate_up_pointerEp") fortran_attrs<pointer>
+! CHECK:         %[[R:.*]]:2 = hlfir.declare %[[ARG0]]{{.*}}uniq_name("_QMpolymorphic_testFassociate_up_pointerEr")
+! CHECK:         %[[RP:.*]] = hlfir.designate %[[R]]#0{"rp"}{{.*}}fortran_attrs<pointer>
 ! CHECK:         %[[RP_LD:.*]] = fir.load %[[RP]]
 ! CHECK:         %[[REBOX:.*]] = fir.rebox %[[RP_LD]] : (!fir.box<!fir.ptr<!fir.array<?xf32>>>) -> !fir.class<!fir.ptr<!fir.array<?xnone>>>
 ! CHECK:         fir.store %[[REBOX]] to %[[P]]#0
@@ -265,7 +265,7 @@ module polymorphic_test
 ! CHECK-LABEL: func.func @_QMpolymorphic_testPget_tmp(
 ! CHECK-SAME:    %[[ARG0:.*]]: !fir.ref<!fir.char<1,2>>
 ! CHECK-SAME:    %[[ARG1:.*]]: index{{.*}}, %[[ARG2:.*]]: !fir.class<!fir.type<_QMpolymorphic_testTc1{tmp:!fir.char<1,2>}>> {fir.bindc_name = "this"}
-! CHECK:         %[[THIS:.*]]:2 = hlfir.declare %[[ARG2]]{{.*}}{uniq_name = "_QMpolymorphic_testFget_tmpEthis"}
+! CHECK:         %[[THIS:.*]]:2 = hlfir.declare %[[ARG2]]{{.*}}uniq_name("_QMpolymorphic_testFget_tmpEthis")
 ! CHECK:         %[[TMP:.*]] = hlfir.designate %[[THIS]]#0{"tmp"}
 
   subroutine call_get_tmp(c)
@@ -274,7 +274,7 @@ module polymorphic_test
   end subroutine
 ! CHECK-LABEL: func.func @_QMpolymorphic_testPcall_get_tmp(
 ! CHECK-SAME:    %[[ARG0:.*]]: !fir.class<!fir.type<_QMpolymorphic_testTc1{tmp:!fir.char<1,2>}>> {fir.bindc_name = "c"})
-! CHECK:         %[[C:.*]]:2 = hlfir.declare %[[ARG0]]{{.*}}{uniq_name = "_QMpolymorphic_testFcall_get_tmpEc"}
+! CHECK:         %[[C:.*]]:2 = hlfir.declare %[[ARG0]]{{.*}}uniq_name("_QMpolymorphic_testFcall_get_tmpEc")
 ! CHECK:         %{{.*}} = fir.dispatch "get_tmp"(%[[C]]#0
 
 
@@ -301,9 +301,9 @@ module polymorphic_test
     a = p3(b)
   end subroutine
 ! CHECK-LABEL: func.func @_QMpolymorphic_testPderived_type_assignment_with_class()
-! CHECK:         %[[A:.*]]:2 = hlfir.declare %{{.*}} {uniq_name = "_QMpolymorphic_testFderived_type_assignment_with_classEa"}
-! CHECK:         %[[B:.*]]:2 = hlfir.declare %{{.*}} {fortran_attrs = #fir.var_attrs<target>, uniq_name = "_QMpolymorphic_testFderived_type_assignment_with_classEb"}
-! CHECK:         %[[CTOR:.*]]:2 = hlfir.declare %{{.*}} {uniq_name = "ctor.temp"}
+! CHECK:         %[[A:.*]]:2 = hlfir.declare %{{.*}} uniq_name("_QMpolymorphic_testFderived_type_assignment_with_classEa")
+! CHECK:         %[[B:.*]]:2 = hlfir.declare %{{.*}} uniq_name("_QMpolymorphic_testFderived_type_assignment_with_classEb") fortran_attrs<target>
+! CHECK:         %[[CTOR:.*]]:2 = hlfir.declare %{{.*}} uniq_name("ctor.temp")
 ! CHECK:         hlfir.assign %[[CTOR]]#0 to %[[A]]#0
 
   subroutine takes_p1(p)
@@ -328,8 +328,8 @@ module polymorphic_test
   end subroutine
 ! CHECK-LABEL: func.func @_QMpolymorphic_testPpointer_assign_parent(
 ! CHECK-SAME:    %[[ARG0:.*]]: !fir.ref<!fir.type<_QMpolymorphic_testTp2{p1:!fir.type<_QMpolymorphic_testTp1{a:i32,b:i32}>,c:f32}>> {{{.*}}, fir.target}
-! CHECK:         %[[P:.*]]:2 = hlfir.declare %[[ARG0]]{{.*}}{fortran_attrs = #fir.var_attrs<target>, uniq_name = "_QMpolymorphic_testFpointer_assign_parentEp"}
-! CHECK:         %[[TP:.*]]:2 = hlfir.declare %{{.*}} {fortran_attrs = #fir.var_attrs<pointer>, uniq_name = "_QMpolymorphic_testFpointer_assign_parentEtp"}
+! CHECK:         %[[P:.*]]:2 = hlfir.declare %[[ARG0]]{{.*}}uniq_name("_QMpolymorphic_testFpointer_assign_parentEp") fortran_attrs<target>
+! CHECK:         %[[TP:.*]]:2 = hlfir.declare %{{.*}} uniq_name("_QMpolymorphic_testFpointer_assign_parentEtp") fortran_attrs<pointer>
 ! CHECK:         %[[P1:.*]] = hlfir.designate %[[P]]#0{"p1"}
 ! CHECK:         %[[BOX:.*]] = fir.embox %[[P1]] : (!fir.ref<!fir.type<_QMpolymorphic_testTp1{a:i32,b:i32}>>) -> !fir.box<!fir.ptr<!fir.type<_QMpolymorphic_testTp1{a:i32,b:i32}>>>
 ! CHECK:         fir.store %[[BOX]] to %[[TP]]#0
@@ -343,8 +343,8 @@ module polymorphic_test
   end subroutine
 ! CHECK-LABEL: func.func @_QMpolymorphic_testPpointer_assign_non_poly(
 ! CHECK-SAME:    %[[ARG0:.*]]: !fir.class<!fir.type<_QMpolymorphic_testTp1{a:i32,b:i32}>> {{{.*}}, fir.target}
-! CHECK:         %[[P:.*]]:2 = hlfir.declare %[[ARG0]]{{.*}}{fortran_attrs = #fir.var_attrs<target>, uniq_name = "_QMpolymorphic_testFpointer_assign_non_polyEp"}
-! CHECK:         %[[TP:.*]]:2 = hlfir.declare %{{.*}} {fortran_attrs = #fir.var_attrs<pointer>, uniq_name = "_QMpolymorphic_testFpointer_assign_non_polyEtp"}
+! CHECK:         %[[P:.*]]:2 = hlfir.declare %[[ARG0]]{{.*}}uniq_name("_QMpolymorphic_testFpointer_assign_non_polyEp") fortran_attrs<target>
+! CHECK:         %[[TP:.*]]:2 = hlfir.declare %{{.*}} uniq_name("_QMpolymorphic_testFpointer_assign_non_polyEtp") fortran_attrs<pointer>
 ! CHECK:         %[[REBOX:.*]] = fir.rebox %[[P]]#0
 
 
@@ -355,7 +355,7 @@ module polymorphic_test
 ! CHECK-LABEL: func.func @_QMpolymorphic_testPnullify_pointer_array(
 ! CHECK-SAME:    %[[ARG0:.*]]: !fir.ref<!fir.type<_QMpolymorphic_testTp3{p:!fir.class<!fir.ptr<!fir.array<?x!fir.type<_QMpolymorphic_testTp3>>>>}>> {fir.bindc_name = "a"}
 ! CHECK:         %[[A:.*]]:2 = hlfir.declare %[[ARG0]]
-! CHECK:         %[[P:.*]] = hlfir.designate %[[A]]#0{"p"}{{.*}}{fortran_attrs = #fir.var_attrs<pointer>}
+! CHECK:         %[[P:.*]] = hlfir.designate %[[A]]#0{"p"}{{.*}}fortran_attrs<pointer>
 ! CHECK:         fir.call @_FortranAPointerNullifyDerived(
 
 
@@ -422,8 +422,8 @@ module polymorphic_test
     c = t
   end subroutine
 ! CHECK-LABEL: func.func @_QMpolymorphic_testPassign_polymorphic_allocatable() {
-! CHECK:         %[[C:.*]]:2 = hlfir.declare %{{.*}} {fortran_attrs = #fir.var_attrs<allocatable>, uniq_name = "_QMpolymorphic_testFassign_polymorphic_allocatableEc"}
-! CHECK:         %[[T:.*]]:2 = hlfir.declare %{{.*}} {fortran_attrs = #fir.var_attrs<target>, uniq_name = "_QMpolymorphic_testFassign_polymorphic_allocatableEt"}
+! CHECK:         %[[C:.*]]:2 = hlfir.declare %{{.*}} uniq_name("_QMpolymorphic_testFassign_polymorphic_allocatableEc") fortran_attrs<allocatable>
+! CHECK:         %[[T:.*]]:2 = hlfir.declare %{{.*}} uniq_name("_QMpolymorphic_testFassign_polymorphic_allocatableEt") fortran_attrs<target>
 ! CHECK:         hlfir.assign %[[T]]#0 to %[[C]]#0 realloc
 
 
@@ -436,9 +436,9 @@ module polymorphic_test
     q(0:99) => a
   end subroutine
 ! CHECK-LABEL: func.func @_QMpolymorphic_testPpointer_assign_remap() {
-! CHECK:         %[[A:.*]]:2 = hlfir.declare %{{.*}} {fortran_attrs = #fir.var_attrs<pointer>, uniq_name = "_QMpolymorphic_testFpointer_assign_remapEa"}
-! CHECK:         %[[P:.*]]:2 = hlfir.declare %{{.*}} {fortran_attrs = #fir.var_attrs<pointer>, uniq_name = "_QMpolymorphic_testFpointer_assign_remapEp"}
-! CHECK:         %[[Q:.*]]:2 = hlfir.declare %{{.*}} {fortran_attrs = #fir.var_attrs<pointer>, uniq_name = "_QMpolymorphic_testFpointer_assign_remapEq"}
+! CHECK:         %[[A:.*]]:2 = hlfir.declare %{{.*}} uniq_name("_QMpolymorphic_testFpointer_assign_remapEa") fortran_attrs<pointer>
+! CHECK:         %[[P:.*]]:2 = hlfir.declare %{{.*}} uniq_name("_QMpolymorphic_testFpointer_assign_remapEp") fortran_attrs<pointer>
+! CHECK:         %[[Q:.*]]:2 = hlfir.declare %{{.*}} uniq_name("_QMpolymorphic_testFpointer_assign_remapEq") fortran_attrs<pointer>
 
 
   subroutine pointer_assign_lower_bounds()
@@ -448,8 +448,8 @@ module polymorphic_test
     p(-50:) => a
   end subroutine
 ! CHECK-LABEL: func.func @_QMpolymorphic_testPpointer_assign_lower_bounds() {
-! CHECK:         %[[A:.*]]:2 = hlfir.declare %{{.*}} {fortran_attrs = #fir.var_attrs<allocatable, target>, uniq_name = "_QMpolymorphic_testFpointer_assign_lower_boundsEa"}
-! CHECK:         %[[P:.*]]:2 = hlfir.declare %{{.*}} {fortran_attrs = #fir.var_attrs<pointer>, uniq_name = "_QMpolymorphic_testFpointer_assign_lower_boundsEp"}
+! CHECK:         %[[A:.*]]:2 = hlfir.declare %{{.*}} uniq_name("_QMpolymorphic_testFpointer_assign_lower_boundsEa") fortran_attrs<allocatable, target>
+! CHECK:         %[[P:.*]]:2 = hlfir.declare %{{.*}} uniq_name("_QMpolymorphic_testFpointer_assign_lower_boundsEp") fortran_attrs<pointer>
 
 
   subroutine test_elemental_assign()
@@ -457,7 +457,7 @@ module polymorphic_test
     pa = [ 1, 2, 3 ]
   end subroutine
 ! CHECK-LABEL: func.func @_QMpolymorphic_testPtest_elemental_assign() {
-! CHECK:         %[[PA:.*]]:2 = hlfir.declare %{{.*}} {uniq_name = "_QMpolymorphic_testFtest_elemental_assignEpa"}
+! CHECK:         %[[PA:.*]]:2 = hlfir.declare %{{.*}} uniq_name("_QMpolymorphic_testFtest_elemental_assignEpa")
 ! CHECK:         hlfir.region_assign
 
 
@@ -487,7 +487,7 @@ module polymorphic_test
     print *, p%elemental_fct()
   end subroutine
 ! CHECK-LABEL: func.func @_QMpolymorphic_testPtest_elemental_array() {
-! CHECK:         %[[P:.*]]:2 = hlfir.declare %{{.*}} {uniq_name = "_QMpolymorphic_testFtest_elemental_arrayEp"}
+! CHECK:         %[[P:.*]]:2 = hlfir.declare %{{.*}} uniq_name("_QMpolymorphic_testFtest_elemental_arrayEp")
 ! CHECK:         hlfir.elemental
 
   subroutine test_elemental_poly_array(p)
@@ -513,7 +513,7 @@ module polymorphic_test
     call t%elemental_sub_pass(2)
   end subroutine
 ! CHECK-LABEL: func.func @_QMpolymorphic_testPtest_elemental_sub_array() {
-! CHECK:         %[[T:.*]]:2 = hlfir.declare %{{.*}} {uniq_name = "_QMpolymorphic_testFtest_elemental_sub_arrayEt"}
+! CHECK:         %[[T:.*]]:2 = hlfir.declare %{{.*}} uniq_name("_QMpolymorphic_testFtest_elemental_sub_arrayEt")
 
   subroutine test_elemental_sub_poly_array(p)
     class(p1) :: p(10)
@@ -575,8 +575,8 @@ module polymorphic_test
     read(17, 1) p
   end subroutine
 ! CHECK-LABEL: func.func @_QMpolymorphic_testPtest_polymorphic_io() {
-! CHECK:         %[[P:.*]]:2 = hlfir.declare %{{.*}} {fortran_attrs = #fir.var_attrs<pointer>, uniq_name = "_QMpolymorphic_testFtest_polymorphic_ioEp"}
-! CHECK:         %[[T:.*]]:2 = hlfir.declare %{{.*}} {fortran_attrs = #fir.var_attrs<target>, uniq_name = "_QMpolymorphic_testFtest_polymorphic_ioEt"}
+! CHECK:         %[[P:.*]]:2 = hlfir.declare %{{.*}} uniq_name("_QMpolymorphic_testFtest_polymorphic_ioEp") fortran_attrs<pointer>
+! CHECK:         %[[T:.*]]:2 = hlfir.declare %{{.*}} uniq_name("_QMpolymorphic_testFtest_polymorphic_ioEt") fortran_attrs<target>
 ! CHECK:         fir.call @_FortranAioOutputDerivedType(
 
 
@@ -616,7 +616,7 @@ module polymorphic_test
 ! CHECK-LABEL: func.func @_QMpolymorphic_testPrebox_up_to_record_type(
 ! CHECK-SAME:    %[[ARG0:.*]]: !fir.ref<!fir.class<!fir.heap<!fir.array<?x?xnone>>>> {{{.*}}, fir.target}
 ! CHECK:         %[[P:.*]]:2 = hlfir.declare %[[ARG0]]
-! CHECK:         %[[T:.*]]:2 = hlfir.declare %{{.*}} {fortran_attrs = #fir.var_attrs<pointer>, uniq_name = "_QMpolymorphic_testFrebox_up_to_record_typeEt"}
+! CHECK:         %[[T:.*]]:2 = hlfir.declare %{{.*}} uniq_name("_QMpolymorphic_testFrebox_up_to_record_typeEt") fortran_attrs<pointer>
 
 
   subroutine sub_with_poly_optional(a)
@@ -643,7 +643,7 @@ module polymorphic_test
     call sub_with_poly_array_optional(p)
   end subroutine
 ! CHECK-LABEL: func.func @_QMpolymorphic_testPtest_call_with_pointer_to_optional() {
-! CHECK:         %[[P:.*]]:2 = hlfir.declare %{{.*}} {fortran_attrs = #fir.var_attrs<pointer>, uniq_name = "_QMpolymorphic_testFtest_call_with_pointer_to_optionalEp"}
+! CHECK:         %[[P:.*]]:2 = hlfir.declare %{{.*}} uniq_name("_QMpolymorphic_testFtest_call_with_pointer_to_optionalEp") fortran_attrs<pointer>
 ! CHECK:         fir.call @_QMpolymorphic_testPsub_with_poly_array_optional(
 
 
@@ -775,7 +775,7 @@ module polymorphic_test
   end subroutine
 ! CHECK-LABEL: func.func @_QMpolymorphic_testPtest_parent_comp_normal(
 ! CHECK-SAME:    %[[ARG0:.*]]: !fir.class<!fir.type<_QMpolymorphic_testTp2{p1:!fir.type<_QMpolymorphic_testTp1{a:i32,b:i32}>,c:f32}>> {fir.bindc_name = "a"}
-! CHECK:         %[[A:.*]]:2 = hlfir.declare %[[ARG0]]{{.*}}{uniq_name = "_QMpolymorphic_testFtest_parent_comp_normalEa"}
+! CHECK:         %[[A:.*]]:2 = hlfir.declare %[[ARG0]]{{.*}}uniq_name("_QMpolymorphic_testFtest_parent_comp_normalEa")
 ! CHECK:         %[[P1:.*]] = hlfir.designate %[[A]]#0{"p1"}{{.*}} : (!fir.class<!fir.type<_QMpolymorphic_testTp2{p1:!fir.type<_QMpolymorphic_testTp1{a:i32,b:i32}>,c:f32}>>) -> !fir.ref<!fir.type<_QMpolymorphic_testTp1{a:i32,b:i32}>>
 ! CHECK:         %[[P1_BOX:.*]] = fir.embox %[[P1]] : (!fir.ref<!fir.type<_QMpolymorphic_testTp1{a:i32,b:i32}>>) -> !fir.box<!fir.type<_QMpolymorphic_testTp1{a:i32,b:i32}>>
 ! CHECK:         %[[P1_CLASS:.*]] = fir.convert %[[P1_BOX]] : (!fir.box<!fir.type<_QMpolymorphic_testTp1{a:i32,b:i32}>>) -> !fir.class<!fir.type<_QMpolymorphic_testTp1{a:i32,b:i32}>>
@@ -795,7 +795,7 @@ module polymorphic_test
   end subroutine
 ! CHECK-LABEL: func.func @_QMpolymorphic_testPtest_parent_comp_opt(
 ! CHECK-SAME:    %[[ARG0:.*]]: !fir.ref<!fir.box<!fir.heap<!fir.type<_QMpolymorphic_testTp2{p1:!fir.type<_QMpolymorphic_testTp1{a:i32,b:i32}>,c:f32}>>>> {fir.bindc_name = "p"}
-! CHECK:         %[[P:.*]]:2 = hlfir.declare %[[ARG0]]{{.*}}{fortran_attrs = #fir.var_attrs<allocatable>, uniq_name = "_QMpolymorphic_testFtest_parent_comp_optEp"}
+! CHECK:         %[[P:.*]]:2 = hlfir.declare %[[ARG0]]{{.*}}uniq_name("_QMpolymorphic_testFtest_parent_comp_optEp") fortran_attrs<allocatable>
 ! CHECK:         %{{.*}} = fir.call @_FortranAAllocatableAllocate(
 ! CHECK:         %[[P_LD:.*]] = fir.load %[[P]]#0
 ! CHECK:         %[[P_ADDR:.*]] = fir.box_addr %[[P_LD]]

@@ -10,11 +10,13 @@
 #include "flang/Optimizer/Builder/FIRBuilder.h"
 #include "flang/Optimizer/Builder/Todo.h"
 #include "flang/Optimizer/Dialect/CUF/CUFOps.h"
+#include "flang/Optimizer/Dialect/FIROpsSupport.h"
 #include "flang/Optimizer/Dialect/Support/KindMapping.h"
 #include "flang/Optimizer/HLFIR/HLFIROps.h"
 #include "flang/Optimizer/Support/AllocationPolicy.h"
 #include "flang/Optimizer/Support/InternalNames.h"
 #include "mlir/Dialect/Func/IR/FuncOps.h"
+#include "mlir/Dialect/GPU/IR/GPUDialect.h"
 #include "mlir/Dialect/OpenACC/OpenACC.h"
 #include "mlir/IR/SymbolTable.h"
 #include "llvm/ADT/StringSet.h"
@@ -67,6 +69,22 @@ bool cuf::isCUDADeviceContext(mlir::Region &region,
   if (isDoConcurrentOffloadEnabled &&
       region.getParentOfType<fir::DoConcurrentLoopOp>())
     return true;
+  return false;
+}
+
+bool cuf::isExecutingOnDevice(mlir::Operation *op) {
+  if (!op)
+    return false;
+  if (fir::isInOffloadRegion(op))
+    return true;
+  if (auto funcOp = op->getParentOfType<mlir::func::FuncOp>()) {
+    if (auto cudaProcAttr =
+            funcOp.getOperation()->getAttrOfType<cuf::ProcAttributeAttr>(
+                cuf::getProcAttrName())) {
+      return cudaProcAttr.getValue() != cuf::ProcAttribute::Host &&
+             cudaProcAttr.getValue() != cuf::ProcAttribute::HostDevice;
+    }
+  }
   return false;
 }
 

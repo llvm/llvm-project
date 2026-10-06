@@ -87,9 +87,6 @@ private:
   /// Context (and Driver) specific data.
   std::list<L0ContextTy> ContextList;
 
-  // Table containing per-thread information for each Context using TLS.
-  L0ContextTLSTableTy ContextTLSTable;
-
   /// L0 plugin options.
   L0OptionsTy Options;
 
@@ -100,10 +97,6 @@ private:
 public:
   LevelZeroPluginTy() : GenericPluginTy(getTripleArch()) {}
   virtual ~LevelZeroPluginTy() = default;
-
-  L0ContextTLSTy &getContextTLS(ze_context_handle_t Context) {
-    return ContextTLSTable.get(Context);
-  }
 
   const L0OptionsTy &getOptions() { return Options; }
 
@@ -129,7 +122,10 @@ public:
   const char *getName() const override { return GETNAME(TARGET_NAME); }
 
   Expected<bool> isELFCompatible(uint32_t DeviceId,
-                                 StringRef Image) const override;
+                                 StringRef Image) const override {
+    // ELF images are not supported. Images must be SPIR-V or OffloadBinary.
+    return false;
+  }
 
   Error flushQueueImpl(omp_interop_val_t *Interop) override;
   Error syncBarrierImpl(omp_interop_val_t *Interop) override;

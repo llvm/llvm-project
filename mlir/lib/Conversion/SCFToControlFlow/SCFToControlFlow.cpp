@@ -475,7 +475,7 @@ ExecuteRegionLowering::matchAndRewrite(ExecuteRegionOp op,
     if (auto terminator = dyn_cast<scf::YieldOp>(block.getTerminator())) {
       ValueRange terminatorOperands = terminator->getOperands();
       rewriter.setInsertionPointToEnd(&block);
-      cf::BranchOp::create(rewriter, loc, remainingOpsBlock,
+      cf::BranchOp::create(rewriter, terminator.getLoc(), remainingOpsBlock,
                            terminatorOperands);
       rewriter.eraseOp(terminator);
     }
@@ -515,7 +515,9 @@ ParallelLowering::matchAndRewrite(ParallelOp parallelOp,
   for (auto [iv, lower, upper, step] :
        llvm::zip(parallelOp.getInductionVars(), parallelOp.getLowerBound(),
                  parallelOp.getUpperBound(), parallelOp.getStep())) {
-    ForOp forOp = ForOp::create(rewriter, loc, lower, upper, step, iterArgs);
+    ForOp forOp =
+        ForOp::create(rewriter, loc, lower, upper, step, iterArgs,
+                      /*bodyBuilder=*/nullptr, parallelOp.getUnsignedCmp());
     innermostForOp = forOp;
     ivs.push_back(forOp.getInductionVar());
     auto iterRange = forOp.getRegionIterArgs();

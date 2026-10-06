@@ -5712,12 +5712,12 @@ bool MemProfContextDisambiguation::initializeIndirectCallPromotionInfo(
   // when they both have the same root name with "." suffixes stripped.
   // If we pick the wrong one then this could lead to incorrect ICP and calling
   // a memprof clone that we don't actually create (resulting in linker unsats).
-  // What this means is that the GUID of the function (or its PGOFuncName
-  // metadata) *must* match that in the VP metadata to allow promotion.
-  // In practice this should not be a limitation, since local functions should
-  // have PGOFuncName metadata and global function names shouldn't need any
-  // special handling (they should not get the ".llvm.*" suffix that the
-  // canonicalization handling is attempting to strip).
+  // What this means is that the GUID of the function *must* match that in the
+  // VP metadata to allow promotion. In practice this should not be a
+  // limitation, since local functions have a GUID from before they were
+  // promoted and global function names shouldn't need any special handling
+  // (they should not get the ".llvm.*" suffix that the canonicalization
+  // handling is attempting to strip).
   if (Error E = Symtab->create(M, /*InLTO=*/true, /*AddCanonical=*/false)) {
     std::string SymtabFailure = toString(std::move(E));
     M.getContext().emitError("Failed to create symtab: " + SymtabFailure);

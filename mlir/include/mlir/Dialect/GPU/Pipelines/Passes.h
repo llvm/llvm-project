@@ -145,7 +145,10 @@ struct GPUToXeVMPipelineOptions
       llvm::cl::init(false)};
   PassOptions::Option<std::string> binaryFormat{
       *this, "binary-format",
-      llvm::cl::desc("Final GPU binary emission format (e.g. fatbin)"),
+      llvm::cl::desc("Final GPU binary emission format (e.g. fatbin). Valid "
+                     "values are the set of values for the format argument of "
+                     "-gpu-module-to-binary pass plus a special value: skip, "
+                     "which skips invoking -gpu-module-to-binary pass."),
       llvm::cl::init("fatbin")};
   // Options mirroring xevm-attach-target (GpuXeVMAttachTarget).
   PassOptions::Option<std::string> xevmModuleMatcher{

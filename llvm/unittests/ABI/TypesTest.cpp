@@ -210,7 +210,8 @@ TEST_F(ABITypesTest, SVEPredicateVector) {
 }
 
 TEST_F(ABITypesTest, SVECount) {
-  const VectorType *SVCount = TB.getSVECountType(Align(2));
+  const VectorType *SVCount =
+      TB.getScalablePredicateOrCountVectorType(Align(2), VectorKind::SVECount);
 
   EXPECT_TRUE(SVCount->isSVECount());
   EXPECT_TRUE(SVCount->isSVEType());

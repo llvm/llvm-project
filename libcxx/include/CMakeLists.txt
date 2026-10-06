@@ -711,6 +711,7 @@ set(files
   __pstl/cpu_algos/search.h
   __pstl/cpu_algos/search_n.h
   __pstl/cpu_algos/stable_sort.h
+  __pstl/cpu_algos/swap_ranges.h
   __pstl/cpu_algos/transform.h
   __pstl/cpu_algos/transform_reduce.h
   __pstl/cpu_algos/uninitialized_algorithms.h

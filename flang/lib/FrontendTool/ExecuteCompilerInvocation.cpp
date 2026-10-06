@@ -182,7 +182,7 @@ bool executeCompilerInvocation(CompilerInstance *flang) {
   for (const std::string &path :
        flang->getInvocation().getCodeGenOpts().LLVMPassPlugins) {
     if (llvm::Expected<llvm::PassPlugin> passPlugin =
-            llvm::PassPlugin::Load(path)) {
+            llvm::PassPlugin::load(path)) {
       flang->addPassPlugin(std::make_unique<llvm::PassPlugin>(*passPlugin));
     } else {
       unsigned diagID = flang->getDiagnostics().getCustomDiagID(

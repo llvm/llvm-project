@@ -2977,6 +2977,16 @@ bool CastOperation::CheckHLSLCStyleCast(CheckedConversionKind CCK) {
     return true;
   }
 
+  // HLSL includes packed data types that can be converted directly to and from
+  // uint, and with each other
+  if (Self.HLSL().CanPerformPackedTypeCast(SrcExpr.get(), DestType)) {
+    SrcExpr =
+        Self.ImpCastExprToType(SrcExpr.get(), DestType, CK_IntegralCast,
+                               SrcExpr.get()->getValueKind(), nullptr, CCK);
+    Kind = CK_IntegralCast;
+    return true;
+  }
+
   // If the destination is an array, we've exhausted the valid HLSL casts, so we
   // should emit a dignostic and stop processing.
   if (DestType->isArrayType()) {

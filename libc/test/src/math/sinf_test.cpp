@@ -10,6 +10,9 @@
 #include "hdr/math_macros.h"
 #include "hdr/stdint_proxy.h"
 #include "src/__support/FPUtil/FPBits.h"
+#include "src/__support/macros/properties/cpu_features.h"
+#include "src/__support/math/sinf_double_eval.h"
+#include "src/__support/math/sinf_float_eval.h"
 #include "src/math/sinf.h"
 #include "test/UnitTest/FPMatcher.h"
 #include "test/UnitTest/Test.h"
@@ -24,11 +27,29 @@
 #define FP_ASSERT ASSERT_MPFR_MATCH_ALL_ROUNDING
 #endif // LIBC_MATH_HAS_SKIP_ACCURATE_PASS
 
-using LlvmLibcSinfTest = LIBC_NAMESPACE::testing::FPTest<float>;
-
 using LIBC_NAMESPACE::testing::SDCOMP26094_VALUES;
 
 namespace mpfr = LIBC_NAMESPACE::testing::mpfr;
+
+class LlvmLibcSinfTest : public LIBC_NAMESPACE::testing::FPTest<float> {
+public:
+  void test_eval_in_float_range(float (*func)(float), double tolerance,
+                                bool all_rounding) {
+    constexpr uint32_t COUNT = 1'231;
+    constexpr uint32_t STEP = UINT32_MAX / COUNT;
+    for (uint32_t i = 0, v = 0; i <= COUNT; ++i, v += STEP) {
+      float x = FPBits(v).get_val();
+      if (FPBits(v).is_nan() || FPBits(v).is_inf())
+        continue;
+      if (all_rounding) {
+        ASSERT_MPFR_MATCH_ALL_ROUNDING(mpfr::Operation::Sin, x, func(x),
+                                       tolerance);
+      } else {
+        ASSERT_MPFR_MATCH(mpfr::Operation::Sin, x, func(x), tolerance);
+      }
+    }
+  }
+};
 
 TEST_F(LlvmLibcSinfTest, SpecialNumbers) {
   EXPECT_FP_EQ(aNaN, LIBC_NAMESPACE::sinf(aNaN));
@@ -132,3 +153,17 @@ TEST_F(LlvmLibcSinfTest, SDCOMP_26094) {
               TOLERANCE + 0.5);
   }
 }
+
+// Exercise both implementations independently of the configured selector.
+TEST_F(LlvmLibcSinfTest, DoubleEvalInFloatRange) {
+  test_eval_in_float_range(&LIBC_NAMESPACE::math::double_eval::sinf,
+                           TOLERANCE + 0.5,
+                           /*all_rounding=*/TOLERANCE == 0);
+}
+
+#ifdef LIBC_TARGET_CPU_HAS_FMA_FLOAT
+TEST_F(LlvmLibcSinfTest, FloatEvalInFloatRange) {
+  test_eval_in_float_range(&LIBC_NAMESPACE::math::float_eval::sinf, 3.5,
+                           /*all_rounding=*/false);
+}
+#endif // LIBC_TARGET_CPU_HAS_FMA_FLOAT

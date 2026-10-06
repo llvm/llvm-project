@@ -111,6 +111,9 @@ public:
   /// This is a pointer to the current MachineModuleInfo.
   MachineModuleInfo *MMI = nullptr;
 
+  /// The pointer size in bytes for the default address space
+  unsigned PointerSize = 0;
+
   /// This is a pointer to the current MachineDominatorTree.
   MachineDominatorTree *MDT = nullptr;
 
@@ -352,8 +355,8 @@ public:
   /// Return information about data layout.
   const DataLayout &getDataLayout() const;
 
-  /// Return the pointer size from the TargetMachine
-  unsigned getPointerSize() const;
+  /// Return the pointer size in bytes from the target triple.
+  unsigned getPointerSize() const { return PointerSize; }
 
   /// Return information about subtarget.
   const MCSubtargetInfo &getSubtargetInfo() const;

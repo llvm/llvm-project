@@ -926,7 +926,7 @@ else()
 endif()
 
 #TODO(kostyak): add back Android & Fuchsia when the code settles a bit.
-if (SCUDO_STANDALONE_SUPPORTED_ARCH AND
+if (SCUDO_STANDALONE_SUPPORTED_ARCH AND NOT LLVM_USE_SANITIZER AND
     COMPILER_RT_BUILD_SANITIZERS AND
     "scudo_standalone" IN_LIST COMPILER_RT_SANITIZERS_TO_BUILD AND
     OS_NAME MATCHES "Linux" AND

@@ -8,6 +8,7 @@
 
 #include "../TargetLoweringInfo.h"
 #include "clang/CIR/Dialect/IR/CIROpsEnums.h"
+#include "clang/CIR/MissingFeatures.h"
 
 namespace cir {
 
@@ -29,6 +30,9 @@ class SPIRVTargetLoweringInfo : public TargetLoweringInfo {
 public:
   unsigned getTargetAddrSpaceFromCIRAddrSpace(
       cir::LangAddressSpace addrSpace) const override {
+    // TODO(cir): SYCL and CUDA/HIP device code map Default to Generic
+    // (SPIRDefIsGenMap).
+    assert(!cir::MissingFeatures::spirvDefaultIsGenericAddrSpace());
     auto idx = static_cast<unsigned>(addrSpace);
     assert(idx < std::size(SPIRVAddrSpaceMap) &&
            "Unknown CIR address space for SPIR-V target");

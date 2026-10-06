@@ -240,9 +240,6 @@ void clang::CIRGen::setAMDGPUTargetFunctionAttributes(const Decl *decl,
     const bool isHIPKernel =
         cgm.getLangOpts().HIP && fd->hasAttr<CUDAGlobalAttr>();
 
-    if (isHIPKernel)
-      func.setCallingConv(cir::CallingConv::AMDGPUKernel);
-
     handleAMDGPUFlatWorkGroupSizeAttr(fd, func, cgm, builder, isOpenCLKernel,
                                       isHIPKernel);
     handleAMDGPUWavesPerEUAttr(fd, func, cgm, builder);

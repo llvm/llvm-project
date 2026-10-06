@@ -93,7 +93,7 @@ static MachineOperand earlyUseOperand(MachineOperand Op) {
 SystemZTargetLowering::SystemZTargetLowering(const TargetMachine &TM,
                                              const SystemZSubtarget &STI)
     : TargetLowering(TM, STI), Subtarget(STI) {
-  MVT PtrVT = MVT::getIntegerVT(TM.getPointerSizeInBits(0));
+  MVT PtrVT = MVT::i64;
 
   auto *Regs = STI.getSpecialRegisters();
 
@@ -4556,7 +4556,7 @@ SDValue SystemZTargetLowering::lowerVACOPY(SDValue Op,
   SDLoc DL(Op);
 
   uint32_t Sz =
-      Subtarget.isTargetXPLINK64() ? getTargetMachine().getPointerSize(0) : 32;
+      Subtarget.isTargetXPLINK64() ? DAG.getDataLayout().getPointerSize(0) : 32;
   return DAG.getMemcpy(Chain, DL, DstPtr, SrcPtr, DAG.getIntPtrConstant(Sz, DL),
                        Align(8), Align(8), /*isVolatile*/ false,
                        /*AlwaysInline*/ false,
@@ -5108,6 +5108,7 @@ SDValue SystemZTargetLowering::lowerCTPOP(SDValue Op,
       SDValue Tmp = DAG.getSplatBuildVector(MVT::v16i8, DL,
                                             DAG.getConstant(0, DL, MVT::i32));
       Op = DAG.getNode(SystemZISD::VSUM, DL, MVT::v4i32, Op, Tmp);
+      Tmp = DAG.getNode(ISD::BITCAST, DL, MVT::v4i32, Tmp);
       Op = DAG.getNode(SystemZISD::VSUM, DL, VT, Op, Tmp);
       break;
     }

@@ -110,6 +110,19 @@ private:
   const mlir::SymbolTable &symTab;
 };
 
+struct CUFOnDeviceOpConversion
+    : public mlir::OpRewritePattern<cuf::OnDeviceOp> {
+  using OpRewritePattern::OpRewritePattern;
+
+  mlir::LogicalResult
+  matchAndRewrite(cuf::OnDeviceOp op,
+                  mlir::PatternRewriter &rewriter) const override {
+    rewriter.replaceOpWithNewOp<mlir::arith::ConstantOp>(
+        op, rewriter.getBoolAttr(cuf::isExecutingOnDevice(op)));
+    return mlir::success();
+  }
+};
+
 struct CUFDeviceIsActiveOpConversion
     : public mlir::OpRewritePattern<cuf::DeviceIsActiveOp> {
   using OpRewritePattern::OpRewritePattern;
@@ -153,9 +166,11 @@ public:
     mlir::SymbolTable symtab(module);
     target.addLegalDialect<fir::FIROpsDialect, mlir::arith::ArithDialect,
                            mlir::gpu::GPUDialect>();
+    target.addIllegalOp<cuf::OnDeviceOp>();
     patterns.insert<CUFDeviceAddressOpConversion>(patterns.getContext(),
                                                   symtab);
-    patterns.insert<CUFDeviceIsActiveOpConversion>(patterns.getContext());
+    patterns.insert<CUFOnDeviceOpConversion, CUFDeviceIsActiveOpConversion>(
+        patterns.getContext());
     if (mlir::failed(mlir::applyPartialConversion(getOperation(), target,
                                                   std::move(patterns)))) {
       mlir::emitError(mlir::UnknownLoc::get(ctx),

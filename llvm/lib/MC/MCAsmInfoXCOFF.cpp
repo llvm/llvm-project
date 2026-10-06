@@ -7,18 +7,14 @@
 //===----------------------------------------------------------------------===//
 
 #include "llvm/MC/MCAsmInfoXCOFF.h"
+#include "MCCLOptions.h"
 #include "llvm/ADT/StringExtras.h"
 #include "llvm/MC/MCAsmInfo.h"
 #include "llvm/MC/MCSectionXCOFF.h"
-#include "llvm/Support/CommandLine.h"
 #include "llvm/Support/Format.h"
 #include "llvm/Support/raw_ostream.h"
 
 using namespace llvm;
-
-namespace llvm {
-extern cl::opt<cl::boolOrDefault> UseLEB128Directives;
-}
 
 MCAsmInfoXCOFF::MCAsmInfoXCOFF(const MCTargetOptions &Options)
     : MCAsmInfo(Options) {
@@ -27,7 +23,7 @@ MCAsmInfoXCOFF::MCAsmInfoXCOFF(const MCTargetOptions &Options)
 
   InternalSymbolPrefix = "L..";
   SupportsQuotedNames = false;
-  if (UseLEB128Directives == cl::boolOrDefault::BOU_UNSET)
+  if (MCCLOptions::Global.use_leb128_directives == BoolOrDefault::Default)
     HasLEB128Directives = false;
   ZeroDirective = "\t.space\t";
   AsciiDirective = nullptr; // not supported

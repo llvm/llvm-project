@@ -497,6 +497,16 @@ DeduceNonTypeTemplateArgument(Sema &S, TemplateParameterList *TemplateParams,
   if (auto *Expansion = dyn_cast<PackExpansionType>(ParamType))
     ParamType = Expansion->getPattern();
 
+  // FIXME: It's not clear how deduction of a parameter of reference type from
+  // an argument should be performed. For now, we just make the argument have
+  // the same kind of reference type as the parameter.
+  if (ParamType->isReferenceType()) {
+    ValueType = ValueType.getNonReferenceType();
+    ValueType = ParamType->isRValueReferenceType()
+                    ? S.Context.getRValueReferenceType(ValueType)
+                    : S.Context.getLValueReferenceType(ValueType);
+  }
+
   return DeduceTemplateArgumentsByTypeMatch(
       S, TemplateParams, ParamType, ValueType, Info, Deduced,
       TDF_SkipNonDependent | TDF_IgnoreQualifiers,

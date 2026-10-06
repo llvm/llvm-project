@@ -1327,7 +1327,7 @@ def HasStdExtZbkbOrP
 
 // "Y" extension (CHERI support)
 
-def FeatureStdExtY : RISCVExperimentalExtension<0, 98, "'Base Y' (CHERI)">;
+def FeatureStdExtY : RISCVExperimentalExtension<0, 910, "'Base Y' (CHERI)">;
 def HasStdExtY : Predicate<"Subtarget->hasStdExtY()">,
                  AssemblerPredicate<(all_of FeatureStdExtY), "'Base Y' (CHERI)">;
 

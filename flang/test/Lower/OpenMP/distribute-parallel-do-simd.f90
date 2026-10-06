@@ -113,14 +113,14 @@ integer :: x_min,x_max,y_min,y_max
 integer :: i,j
 
 ! CHECK:           omp.target kernel_type(spmd) {{.*}} {
-! CHECK:             %[[X_MAX_MAPPED:.*]]:2 = hlfir.declare %{{.*}} {uniq_name = "{{.*}}x_max"}
+! CHECK:             %[[X_MAX_MAPPED:.*]]:2 = hlfir.declare %{{.*}} uniq_name("{{.*}}x_max")
 ! CHECK:             omp.teams {
 ! CHECK:               omp.parallel {
 ! CHECK:                 omp.distribute {
 ! CHECK:                   omp.wsloop {
 ! CHECK:                     omp.simd private({{.*}}) {
 ! CHECK:                       omp.loop_nest (%[[I_IV:.*]], %[[J_IV:.*]]) : i32 = ({{.*}}) to ({{.*}}) inclusive step ({{.*}}) collapse(2) {
-! CHECK:                         %[[Y_MAX_PRIV:.*]]:2 = hlfir.declare %{{.*}} {uniq_name = "{{.*}}y_max"}
+! CHECK:                         %[[Y_MAX_PRIV:.*]]:2 = hlfir.declare %{{.*}} uniq_name("{{.*}}y_max")
 
 ! CHECK:                         %[[I_UB:.*]] = fir.load %[[X_MAX_MAPPED]]#0 : !fir.ref<i32>
 ! CHECK:                         %[[I_STEP:.*]] = arith.constant 1 : i32
@@ -157,7 +157,7 @@ subroutine target_teams_distribute_parallel_do_simd_linear()
   integer :: iv
 
   ! CHECK: omp.target
-  ! CHECK: %[[IV:.*]]:2 = hlfir.declare %{{.*}} {uniq_name = "_QFtarget_teams_distribute_parallel_do_simd_linearEiv"}
+  ! CHECK: %[[IV:.*]]:2 = hlfir.declare %{{.*}} uniq_name("_QFtarget_teams_distribute_parallel_do_simd_linearEiv")
   ! CHECK: omp.simd private(@_QFtarget_teams_distribute_parallel_do_simd_linearEiv_private_i32 %[[IV]]#0 -> %{{.*}} : !fir.ref<i32>)
   !$omp target teams distribute parallel do simd
   do iv = 1, 10

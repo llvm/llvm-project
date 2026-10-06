@@ -86,7 +86,9 @@ void RISCVTargetStreamer::emitTargetAttributes(const MCSubtargetInfo &STI,
     report_fatal_error(ParseResult.takeError());
   } else {
     auto &ISAInfo = *ParseResult;
-    emitTextAttribute(RISCVAttrs::ARCH, ISAInfo->toString());
+    std::string Arch = ISAInfo->toString();
+    emitTextAttribute(RISCVAttrs::ARCH, Arch);
+    setArchString(Arch);
   }
 
   if (RiscvAbiAttr && STI.hasFeature(RISCV::FeatureStdExtA)) {

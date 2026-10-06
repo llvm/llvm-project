@@ -59,6 +59,64 @@ static cl::opt<bool>
     PrintSDNodeAddrs("print-sdnode-addrs", cl::Hidden,
                      cl::desc("Print addresses of SDNodes when dumping"));
 
+StringRef ISD::getCondCodeName(ISD::CondCode Operation) {
+  switch (Operation) {
+  default:
+    llvm_unreachable("Unknown setcc condition!");
+  case ISD::SETOEQ:
+    return "setoeq";
+  case ISD::SETOGT:
+    return "setogt";
+  case ISD::SETOGE:
+    return "setoge";
+  case ISD::SETOLT:
+    return "setolt";
+  case ISD::SETOLE:
+    return "setole";
+  case ISD::SETONE:
+    return "setone";
+
+  case ISD::SETO:
+    return "seto";
+  case ISD::SETUO:
+    return "setuo";
+  case ISD::SETUEQ:
+    return "setueq";
+  case ISD::SETUGT:
+    return "setugt";
+  case ISD::SETUGE:
+    return "setuge";
+  case ISD::SETULT:
+    return "setult";
+  case ISD::SETULE:
+    return "setule";
+  case ISD::SETUNE:
+    return "setune";
+
+  case ISD::SETEQ:
+    return "seteq";
+  case ISD::SETGT:
+    return "setgt";
+  case ISD::SETGE:
+    return "setge";
+  case ISD::SETLT:
+    return "setlt";
+  case ISD::SETLE:
+    return "setle";
+  case ISD::SETNE:
+    return "setne";
+
+  case ISD::SETTRUE:
+    return "settrue";
+  case ISD::SETTRUE2:
+    return "settrue2";
+  case ISD::SETFALSE:
+    return "setfalse";
+  case ISD::SETFALSE2:
+    return "setfalse2";
+  }
+}
+
 std::string SDNode::getOperationName(const SelectionDAG *G) const {
   switch (getOpcode()) {
   default:
@@ -544,36 +602,7 @@ std::string SDNode::getOperationName(const SelectionDAG *G) const {
     // clang-format on
 
   case ISD::CONDCODE:
-    switch (cast<CondCodeSDNode>(this)->get()) {
-    default: llvm_unreachable("Unknown setcc condition!");
-    case ISD::SETOEQ:                   return "setoeq";
-    case ISD::SETOGT:                   return "setogt";
-    case ISD::SETOGE:                   return "setoge";
-    case ISD::SETOLT:                   return "setolt";
-    case ISD::SETOLE:                   return "setole";
-    case ISD::SETONE:                   return "setone";
-
-    case ISD::SETO:                     return "seto";
-    case ISD::SETUO:                    return "setuo";
-    case ISD::SETUEQ:                   return "setueq";
-    case ISD::SETUGT:                   return "setugt";
-    case ISD::SETUGE:                   return "setuge";
-    case ISD::SETULT:                   return "setult";
-    case ISD::SETULE:                   return "setule";
-    case ISD::SETUNE:                   return "setune";
-
-    case ISD::SETEQ:                    return "seteq";
-    case ISD::SETGT:                    return "setgt";
-    case ISD::SETGE:                    return "setge";
-    case ISD::SETLT:                    return "setlt";
-    case ISD::SETLE:                    return "setle";
-    case ISD::SETNE:                    return "setne";
-
-    case ISD::SETTRUE:                  return "settrue";
-    case ISD::SETTRUE2:                 return "settrue2";
-    case ISD::SETFALSE:                 return "setfalse";
-    case ISD::SETFALSE2:                return "setfalse2";
-    }
+    return ISD::getCondCodeName(cast<CondCodeSDNode>(this)->get()).str();
   case ISD::VECREDUCE_FADD:             return "vecreduce_fadd";
   case ISD::VECREDUCE_SEQ_FADD:         return "vecreduce_seq_fadd";
   case ISD::VECREDUCE_FMUL:             return "vecreduce_fmul";
@@ -1071,6 +1100,9 @@ LLVM_DUMP_METHOD void SDDbgValue::print(raw_ostream &OS) const {
       break;
     case SDDbgOperand::VREG:
       OS << "VREG=" << printReg(Op.getVReg());
+      break;
+    case SDDbgOperand::GLOBALADDR:
+      OS << "GLOBALADDR=" << Op.getGlobal()->getName();
       break;
     }
     Comma = true;

@@ -110,7 +110,7 @@ def collapse(items: Sequence[common.WorkItem]) -> List[common.WorkItem]:
 
 def parse_run_name(title: str) -> Optional[RunName]:
     """
-    Return the information encoded in a worfklow's run-name, or None if it can't be parsed.
+    Return the information encoded in a workflow's run-name, or None if it can't be parsed.
 
     The name has to match the workflow's `run-name` exactly.
     """
@@ -363,7 +363,7 @@ def main(argv: List[str]) -> int:
 
     decisions = decide(items, runs, args.max_in_flight, args.extra_attempts)
 
-    # Warn then we give up for good on a commit/machine pair (because enough attempts have been done).
+    # Warn when we give up for good on a commit/machine pair (because enough attempts have been done).
     for decision in decisions:
         if decision.action == 'skip' and decision.reason.startswith('giving up'):
             logging.warning(f'{decision.item.commit[:12]} on {decision.item.machine}: {decision.reason}')

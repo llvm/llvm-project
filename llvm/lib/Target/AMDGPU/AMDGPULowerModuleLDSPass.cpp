@@ -280,7 +280,7 @@ class AMDGPULowerModuleLDS {
     // codegen would suffice for that, but one would still need to ensure that
     // the variables are allocated in the anticipated order.
     BasicBlock *Entry = &Func->getEntryBlock();
-    IRBuilder<> Builder(Entry, Entry->getFirstNonPHIIt());
+    IRBuilder<> Builder(Entry->getFirstNonPHIIt());
 
     Function *Decl = Intrinsic::getOrInsertDeclaration(
         Func->getParent(), Intrinsic::donothing, {});

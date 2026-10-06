@@ -26,6 +26,7 @@
 #include "clang/AST/Expr.h"
 #include "clang/AST/NestedNameSpecifier.h"
 #include "clang/AST/OperationKinds.h"
+#include "clang/AST/Reflection.h"
 #include "clang/AST/Stmt.h"
 #include "clang/AST/StmtCXX.h"
 #include "clang/AST/TemplateBase.h"
@@ -5559,27 +5560,32 @@ public:
 ///  - a type-id, or
 ///  - an id-expression.
 class CXXReflectExpr : public Expr {
+  friend class ASTStmtReader;
+  friend class ASTStmtWriter;
 
+private:
   // TODO(Reflection): add support for TemplateReference, NamespaceReference and
   // DeclRefExpr
   using operand_type = llvm::PointerUnion<const TypeSourceInfo *>;
 
   SourceLocation CaretCaretLoc;
+  ReflectionKind Kind;
   operand_type Operand;
 
-  CXXReflectExpr(SourceLocation CaretCaretLoc, const TypeSourceInfo *TSI);
+  CXXReflectExpr(ASTContext &C, SourceLocation CaretCaretLoc,
+                 const TypeSourceInfo *TSI);
   CXXReflectExpr(EmptyShell Empty);
 
 public:
   static CXXReflectExpr *Create(ASTContext &C, SourceLocation OperatorLoc,
-                                TypeSourceInfo *TL);
+                                const TypeSourceInfo *TSI);
 
   static CXXReflectExpr *CreateEmpty(ASTContext &C);
 
   SourceLocation getBeginLoc() const LLVM_READONLY {
     return llvm::TypeSwitch<operand_type, SourceLocation>(Operand)
         .Case<const TypeSourceInfo *>(
-            [](auto *Ptr) { return Ptr->getTypeLoc().getBeginLoc(); });
+            [](const auto *Ptr) { return Ptr->getTypeLoc().getBeginLoc(); });
   }
 
   SourceLocation getEndLoc() const LLVM_READONLY {
@@ -5590,6 +5596,11 @@ public:
 
   /// Returns location of the '^^'-operator.
   SourceLocation getOperatorLoc() const { return CaretCaretLoc; }
+  ReflectionKind getKind() const { return Kind; }
+  const void *getOpaqueValue() const { return Operand.getOpaqueValue(); }
+  const TypeSourceInfo *getTypeSourceInfo() const {
+    return cast<const TypeSourceInfo *>(Operand);
+  }
 
   child_range children() {
     // TODO(Reflection)

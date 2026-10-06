@@ -499,21 +499,22 @@ public:
 
   /// Create a single-scalar recipe with \p Opcode and \p Operands without
   /// inserting it.
-  static VPSingleDefRecipe *createSingleScalarOp(unsigned Opcode,
-                                                 ArrayRef<VPValue *> Operands,
-                                                 VPValue *Mask,
-                                                 const VPIRFlags &Flags,
-                                                 const VPIRMetadata &Metadata,
-                                                 DebugLoc DL, Instruction *UV) {
+  static VPSingleDefRecipe *
+  createSingleScalarOp(unsigned Opcode, ArrayRef<VPValue *> Operands,
+                       VPValue *Mask, const VPIRFlags &Flags,
+                       const VPIRMetadata &Metadata, DebugLoc DL,
+                       Type *ResultTy, Instruction *UV) {
     if (Instruction::isCast(Opcode)) {
       assert(!Mask && "Cast cannot be predicated");
       auto *VPI = new VPInstruction(Opcode, Operands, Flags, Metadata, DL,
-                                    UV->getName(), UV->getType());
+                                    UV->getName(), ResultTy);
       VPI->setUnderlyingValue(UV);
       return VPI;
     }
-    return new VPReplicateRecipe(UV, Operands, /*IsSingleScalar=*/true, Mask,
-                                 Flags, Metadata, DL);
+    auto *RepR = new VPReplicateRecipe(UV, Operands, /*IsSingleScalar=*/true,
+                                       Mask, Flags, Metadata, DL);
+    assert(RepR->getScalarType() == ResultTy && "unexpected result type");
+    return RepR;
   }
 
   VPScalarIVStepsRecipe *

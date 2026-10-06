@@ -49,3 +49,14 @@ module {
 cir.global "private" external @bad_func_type : !cir.func<()>
 
 }
+
+// -----
+
+!s32i = !cir.int<s, 32>
+
+module {
+
+// expected-error @below {{custom op 'cir.global' expected string}}
+cir.global external comdat(1) @bad_comdat = #cir.int<42> : !s32i
+
+}

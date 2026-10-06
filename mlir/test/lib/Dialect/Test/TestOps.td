@@ -2386,7 +2386,7 @@ def TestCrashingReturnOp : TEST_Op<"crashing_return", [
        ["getMutableSuccessorOperands"]>,
     Terminator]> {
   let arguments = (ins Variadic<AnyType>:$args, UnitAttr:$valid);
-  let assemblyFormat = "($args^ `:` type($args))? attr-dict";
+  let assemblyFormat = "($args^ `:` type($args))? prop-dict attr-dict";
   let hasVerifier = 1;
 }
 def TestCastOp : TEST_Op<"cast">,
@@ -2733,12 +2733,12 @@ def TestValueWithBoundsOp : TEST_Op<"value_with_bounds", [
     Example:
 
     ```mlir
-    %0 = test.value_with_bounds { min = 4 : index, max = 5 : index}
+    %0 = test.value_with_bounds <min = 4, max = 5>
     ```
   }];
   let arguments = (ins IndexAttr:$min, IndexAttr:$max);
   let results = (outs Index:$result);
-  let assemblyFormat = "attr-dict";
+  let assemblyFormat = "prop-dict attr-dict";
 }
 
 
@@ -3422,12 +3422,12 @@ def TestNVVMRequiresSMArchOrFamilyCondOp :
 
 def TestDefaultStrAttrNoValueOp : TEST_Op<"no_str_value"> {
   let arguments = (ins DefaultValuedAttr<StrAttr, "">:$value);
-  let assemblyFormat = "attr-dict";
+  let assemblyFormat = "prop-dict attr-dict";
 }
 
 def TestDefaultStrAttrHasValueOp : TEST_Op<"has_str_value"> {
   let arguments = (ins DefaultValuedStrAttr<StrAttr, "">:$value);
-  let assemblyFormat = "attr-dict";
+  let assemblyFormat = "prop-dict attr-dict";
 }
 
 def : Pat<(TestDefaultStrAttrNoValueOp $value),
@@ -3463,7 +3463,7 @@ def : Pat<(TestVariadicRewriteSrcOp $arg, $brg, $crg),
 def TestDefaultAttrPrintOp : TEST_Op<"default_value_print"> {
   let arguments = (ins DefaultValuedAttr<I32Attr, "0">:$value_with_default,
                    I32:$operand);
-  let assemblyFormat = "attr-dict $operand";
+  let assemblyFormat = "prop-dict attr-dict $operand";
 }
 
 //===----------------------------------------------------------------------===//
@@ -3554,7 +3554,7 @@ def TestWithBoundsOp : TEST_Op<"with_bounds",
     Example:
 
     ```mlir
-    %0 = test.with_bounds { umin = 4 : index, umax = 5 : index, smin = 4 : index, smax = 5 : index } : index
+    %0 = test.with_bounds <umin = 4 : index, umax = 5 : index, smin = 4 : index, smax = 5 : index> : index
     ```
   }];
 
@@ -3564,7 +3564,7 @@ def TestWithBoundsOp : TEST_Op<"with_bounds",
                        APIntAttr:$smax);
   let results = (outs InferIntRangeType:$fakeVal);
 
-  let assemblyFormat = "attr-dict `:` type($fakeVal)";
+  let assemblyFormat = "prop-dict attr-dict `:` type($fakeVal)";
 }
 
 def TestWithoutBoundsOp : TEST_Op<"without_bounds",
@@ -3615,7 +3615,7 @@ def TestReflectBoundsOp : TEST_Op<"reflect_bounds",
     Example:
 
     ```mlir
-    CHECK: test.reflect_bounds {smax = 7 : index, smin = 0 : index, umax = 7 : index, umin = 0 : index}
+    CHECK: test.reflect_bounds <umin = 0 : index, umax = 7 : index, smin = 0 : index, smax = 7 : index>
     %1 = test.reflect_bounds %0 : index
     ```
   }];
@@ -3627,7 +3627,7 @@ def TestReflectBoundsOp : TEST_Op<"reflect_bounds",
                        OptionalAttr<APIntAttr>:$smax);
   let results = (outs InferIntRangeType:$result);
 
-  let assemblyFormat = "attr-dict $value `:` type($result)";
+  let assemblyFormat = "prop-dict attr-dict $value `:` type($result)";
 }
 
 //===----------------------------------------------------------------------===//
@@ -4430,7 +4430,7 @@ def TestCallAndStoreOp : TEST_Op<"call_and_store",
     Variadic<AnyType>:$results
   );
   let assemblyFormat =
-    "$callee `(` $callee_operands `)` `,` $address attr-dict "
+    "$callee `(` $callee_operands `)` `,` $address prop-dict attr-dict "
     "`:` functional-type(operands, results)";
 }
 
@@ -4448,7 +4448,7 @@ def TestCallOnDeviceOp : TEST_Op<"call_on_device",
   );
   let assemblyFormat =
     "$callee `(` $forwarded_operands `)` `,` $non_forwarded_device_operand "
-    "attr-dict `:` functional-type(operands, results)";
+    "prop-dict attr-dict `:` functional-type(operands, results)";
 }
 
 // A call-like operation whose first result is produced by the operation itself
@@ -4468,7 +4468,7 @@ def TestCallAndProduceOp : TEST_Op<"call_and_produce",
     Variadic<AnyType>:$forwarded
   );
   let assemblyFormat =
-    "$callee `(` $forwarded_operands `)` attr-dict "
+    "$callee `(` $forwarded_operands `)` prop-dict attr-dict "
     "`:` functional-type(operands, results)";
 }
 
@@ -4481,7 +4481,7 @@ def TestStoreWithARegion : TEST_Op<"store_with_a_region",
   );
   let regions = (region AnyRegion:$body);
   let assemblyFormat =
-    "$address attr-dict-with-keyword regions `:` type($address)";
+    "$address prop-dict attr-dict-with-keyword regions `:` type($address)";
 }
 
 def TestStoreWithALoopRegion : TEST_Op<"store_with_a_loop_region",
@@ -4493,7 +4493,7 @@ def TestStoreWithALoopRegion : TEST_Op<"store_with_a_loop_region",
   );
   let regions = (region AnyRegion:$body);
   let assemblyFormat =
-    "$address attr-dict-with-keyword regions `:` type($address)";
+    "$address prop-dict attr-dict-with-keyword regions `:` type($address)";
 }
 
 def TestStoreWithARegionTerminator : TEST_Op<"store_with_a_region_terminator",

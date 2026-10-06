@@ -335,9 +335,7 @@ bool MipsCallLowering::lowerFormalArguments(MachineIRBuilder &MIRBuilder,
   MipsCCState CCInfo(F.getCallingConv(), F.isVarArg(), MF, ArgLocs,
                      F.getContext());
 
-  const MipsTargetMachine &TM =
-      static_cast<const MipsTargetMachine &>(MF.getTarget());
-  const MipsABIInfo &ABI = TM.getABI();
+  const MipsABIInfo &ABI = MF.getSubtarget<MipsSubtarget>().getABI();
   CCInfo.AllocateStack(ABI.GetCalleeAllocdArgSizeInBytes(F.getCallingConv()),
                        Align(1));
 
@@ -411,7 +409,7 @@ bool MipsCallLowering::lowerCall(MachineIRBuilder &MIRBuilder,
   const MipsTargetLowering &TLI = *getTLI<MipsTargetLowering>();
   const MipsTargetMachine &TM =
       static_cast<const MipsTargetMachine &>(MF.getTarget());
-  const MipsABIInfo &ABI = TM.getABI();
+  const MipsABIInfo &ABI = MF.getSubtarget<MipsSubtarget>().getABI();
 
   MachineInstrBuilder CallSeqStart =
       MIRBuilder.buildInstr(Mips::ADJCALLSTACKDOWN);
@@ -421,6 +419,7 @@ bool MipsCallLowering::lowerCall(MachineIRBuilder &MIRBuilder,
 
   MachineInstrBuilder MIB = MIRBuilder.buildInstrNoInsert(
       Info.Callee.isReg() || IsCalleeGlobalPIC ? Mips::JALRPseudo : Mips::JAL);
+  MIB.setOperandDead(0); // implicit-def $ra
   MIB.addDef(Mips::SP, RegState::Implicit);
   if (IsCalleeGlobalPIC) {
     Register CalleeReg =
@@ -478,7 +477,7 @@ bool MipsCallLowering::lowerCall(MachineIRBuilder &MIRBuilder,
     MIRBuilder.buildCopy(
       Register(Mips::GP),
       MF.getInfo<MipsFunctionInfo>()->getGlobalBaseRegForGlobalISel(MF));
-    MIB.addDef(Mips::GP, RegState::Implicit);
+    MIB.addUse(Mips::GP, RegState::Implicit);
   }
   MIRBuilder.insertInstr(MIB);
   if (MIB->getOpcode() == Mips::JALRPseudo) {

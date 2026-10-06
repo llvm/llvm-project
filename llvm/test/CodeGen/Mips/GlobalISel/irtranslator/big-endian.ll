@@ -1,7 +1,7 @@
-; RUN: llc -O0 -mtriple=mips-linux-gnu -global-isel -global-isel-abort=1 -stop-after=irtranslator -verify-machineinstrs %s -o - | FileCheck %s --check-prefixes=CHECK,BE,FP32
-; RUN: llc -O0 -mtriple=mipsel-linux-gnu -global-isel -global-isel-abort=1 -stop-after=irtranslator -verify-machineinstrs %s -o - | FileCheck %s --check-prefixes=CHECK,LE,FP32
-; RUN: llc -O0 -mtriple=mips-linux-gnu -mcpu=mips32r2 -mattr=+fp64 -global-isel -global-isel-abort=1 -stop-after=irtranslator -verify-machineinstrs %s -o - | FileCheck %s --check-prefixes=CHECK,BE,FP64
-; RUN: llc -O0 -mtriple=mipsel-linux-gnu -mcpu=mips32r2 -mattr=+fp64 -global-isel -global-isel-abort=1 -stop-after=irtranslator -verify-machineinstrs %s -o - | FileCheck %s --check-prefixes=CHECK,LE,FP64
+; RUN: llc -O0 -mtriple=mips-linux-gnu -global-isel -global-isel-abort=1 -stop-after=ir-translator -verify-machineinstrs %s -o - | FileCheck %s --check-prefixes=CHECK,BE,FP32
+; RUN: llc -O0 -mtriple=mipsel-linux-gnu -global-isel -global-isel-abort=1 -stop-after=ir-translator -verify-machineinstrs %s -o - | FileCheck %s --check-prefixes=CHECK,LE,FP32
+; RUN: llc -O0 -mtriple=mips-linux-gnu -mcpu=mips32r2 -mattr=+fp64 -global-isel -global-isel-abort=1 -stop-after=ir-translator -verify-machineinstrs %s -o - | FileCheck %s --check-prefixes=CHECK,BE,FP64
+; RUN: llc -O0 -mtriple=mipsel-linux-gnu -mcpu=mips32r2 -mattr=+fp64 -global-isel -global-isel-abort=1 -stop-after=ir-translator -verify-machineinstrs %s -o - | FileCheck %s --check-prefixes=CHECK,LE,FP64
 ; RUN: llc -O0 -mtriple=mips-linux-gnu -global-isel -global-isel-abort=1 -verify-machineinstrs %s -o - > /dev/null
 ; RUN: llc -O0 -mtriple=mips-linux-gnu -mcpu=mips32r2 -mattr=+fp64 -global-isel -global-isel-abort=1 -verify-machineinstrs %s -o - > /dev/null
 

@@ -18,6 +18,8 @@
 
 namespace llvm {
 
+class StringRef;
+
 /// ISD namespace - This namespace contains an enum which represents all of the
 /// SelectionDAG node types and value types.
 ///
@@ -1892,6 +1894,9 @@ inline unsigned getUnorderedFlavor(CondCode Cond) {
 /// Return the operation corresponding to !(X op Y), where 'op' is a valid
 /// SetCC operation.
 LLVM_ABI CondCode getSetCCInverse(CondCode Operation, EVT Type);
+
+/// Return the name of the given condition code, e.g. "setoeq".
+LLVM_ABI StringRef getCondCodeName(CondCode Operation);
 
 inline bool isExtOpcode(unsigned Opcode) {
   return Opcode == ISD::ANY_EXTEND || Opcode == ISD::ZERO_EXTEND ||

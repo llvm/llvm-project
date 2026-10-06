@@ -1354,6 +1354,8 @@ Parser::ParseCastExpression(CastParseKind ParseKind, bool isAddressOfOperand,
 #include "clang/Basic/OpenCLImageTypes.def"
 #define HLSL_INTANGIBLE_TYPE(Name, Id, SingletonId) case tok::kw_##Name:
 #include "clang/Basic/HLSLIntangibleTypes.def"
+#define HLSL_PACKED_TYPE(Name, Id, SingletonId) case tok::kw_##Name:
+#include "clang/Basic/HLSLPackedTypes.def"
   {
     if (!getLangOpts().CPlusPlus) {
       Diag(Tok, diag::err_expected_expression);
@@ -2665,6 +2667,10 @@ Parser::ParseParenExpression(ParenParseOption &ExprType, bool StopIfCastExpr,
                              ParsedType &CastTy, SourceLocation &RParenLoc) {
   assert(Tok.is(tok::l_paren) && "Not a paren expr!");
   ColonProtectionRAIIObject ColonProtection(*this, false);
+  GenericAssociationTypeRAIIObject NotParsingGenericAssociationType(
+      *this,
+      /*Value=*/false);
+
   BalancedDelimiterTracker T(*this, tok::l_paren);
   if (T.consumeOpen())
     return ExprError();
@@ -3105,7 +3111,8 @@ ExprResult Parser::ParseGenericSelectionExpression() {
       DefaultLoc = ConsumeToken();
       Ty = nullptr;
     } else {
-      ColonProtectionRAIIObject X(*this);
+      GenericAssociationTypeRAIIObject X(*this);
+
       TypeResult TR = ParseTypeName(nullptr, DeclaratorContext::Association);
       if (TR.isInvalid()) {
         SkipUntil(tok::r_paren, StopAtSemi);

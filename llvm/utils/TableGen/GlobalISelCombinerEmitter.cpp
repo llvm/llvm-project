@@ -1037,6 +1037,15 @@ bool CombineRuleBuilder::addApplyPattern(std::unique_ptr<Pattern> Pat) {
     return false;
   }
 
+  // GIHasOneUse is a match-only predicate and cannot appear in 'apply'.
+  if (const auto *BP = dyn_cast<BuiltinPattern>(Pat.get())) {
+    if (BP->getBuiltinKind() == BI_HasOneUse) {
+      PrintError("'" + BP->getInstName() +
+                 "' cannot be used in a 'apply' pattern");
+      return false;
+    }
+  }
+
   if (auto *CXXPat = dyn_cast<CXXPattern>(Pat.get()))
     CXXPat->setIsApply();
 
@@ -1051,11 +1060,13 @@ bool CombineRuleBuilder::addMatchPattern(std::unique_ptr<Pattern> Pat) {
     return false;
   }
 
-  // For now, none of the builtins can appear in 'match'.
+  // Most builtins cannot appear in 'match', except GIHasOneUse.
   if (const auto *BP = dyn_cast<BuiltinPattern>(Pat.get())) {
-    PrintError("'" + BP->getInstName() +
-               "' cannot be used in a 'match' pattern");
-    return false;
+    if (BP->getBuiltinKind() != BI_HasOneUse) {
+      PrintError("'" + BP->getInstName() +
+                 "' cannot be used in a 'match' pattern");
+      return false;
+    }
   }
 
   MatchPats[Name] = std::move(Pat);
@@ -1371,6 +1382,9 @@ bool CombineRuleBuilder::checkSemantics() {
       }
       break;
     }
+    case BI_HasOneUse:
+      // GIHasOneUse is a match-only predicate, not valid in apply patterns.
+      break;
     }
   }
 
@@ -1620,8 +1634,12 @@ bool CombineRuleBuilder::emitMatchPattern(CodeExpansions &CE,
 
     if (!emitPatFragMatchPattern(CE, Alts, M, &IM, *PFP, SeenPats))
       return false;
-  } else if (isa<BuiltinPattern>(&IP)) {
-    llvm_unreachable("No match builtins known!");
+  } else if (const auto *BP = dyn_cast<BuiltinPattern>(&IP)) {
+    if (BP->getBuiltinKind() == BI_HasOneUse) {
+      IM.addPredicate<OneUsePredicateMatcher>();
+    } else {
+      llvm_unreachable("No match builtins known!");
+    }
   } else {
     llvm_unreachable("Unknown kind of InstructionPattern!");
   }
@@ -1643,9 +1661,23 @@ bool CombineRuleBuilder::emitMatchPattern(CodeExpansions &CE,
         return false;
       continue;
     }
-    case Pattern::K_Builtin:
+    case Pattern::K_Builtin: {
+      const auto *BP = cast<BuiltinPattern>(Pat.get());
+      if (BP->getBuiltinKind() == BI_HasOneUse) {
+        assert(BP->getNumInstOperands() == 1 && "GIHasOneUse takes 1 operand");
+        StringRef OpName = BP->getOperand(0).getOperandName();
+        const auto *DefPat = MatchOpTable.getDef(OpName);
+        if (!DefPat) {
+          PrintError("GIHasOneUse: operand '" + OpName + "' not defined");
+          return false;
+        }
+        auto &InsnMatcher = M.getInstructionMatcher(DefPat->getName());
+        InsnMatcher.addPredicate<OneUsePredicateMatcher>();
+        continue;
+      }
       PrintError("No known match builtins");
       return false;
+    }
     case Pattern::K_CodeGenInstruction:
       cast<InstructionPattern>(Pat.get())->reportUnreachable(RuleDef.getLoc());
       return false;
@@ -1701,9 +1733,6 @@ bool CombineRuleBuilder::emitMatchPattern(CodeExpansions &CE,
           return false;
         continue;
       }
-      case Pattern::K_Builtin:
-        PrintError("No known match builtins");
-        return false;
       case Pattern::K_CodeGenInstruction:
         cast<InstructionPattern>(Pat.get())->reportUnreachable(
             RuleDef.getLoc());
@@ -2130,16 +2159,26 @@ bool CombineRuleBuilder::emitCodeGenInstructionApplyImmOperand(
     RuleMatcher &M, BuildMIAction &DstMI, const CodeGenInstructionPattern &P,
     const InstructionOperand &O) {
   // If we have a type, we implicitly emit a G_CONSTANT, except for G_CONSTANT
-  // itself where we emit a CImm.
+  // itself (which needs a CImm) and G_FCONSTANT (which needs an FP immediate).
+  // The pattern grammar has no fp literals, so a G_FCONSTANT immediate is an
+  // IEEE bit pattern of the immediate's type (0 is +0.0 for every FP width).
   //
   // No type means we emit a simple imm.
-  // G_CONSTANT is a special case and needs a CImm though so this is likely a
-  // mistake.
+  // G_CONSTANT/G_FCONSTANT are special cases and need a typed immediate
+  // though so this is likely a mistake.
   const bool isGConstant = P.is("G_CONSTANT");
+  const bool isGFConstant = P.is("G_FCONSTANT");
   const auto Ty = O.getType();
   if (!Ty) {
     if (isGConstant) {
       PrintError("'G_CONSTANT' immediate must be typed!");
+      PrintNote("while emitting pattern '" + P.getName() + "' (" +
+                P.getInstName() + ")");
+      return false;
+    }
+
+    if (isGFConstant) {
+      PrintError("'G_FCONSTANT' immediate must be typed!");
       PrintNote("while emitting pattern '" + P.getName() + "' (" +
                 P.getInstName() + ")");
       return false;
@@ -2155,6 +2194,11 @@ bool CombineRuleBuilder::emitCodeGenInstructionApplyImmOperand(
 
   if (isGConstant) {
     DstMI.addRenderer<ImmRenderer>(O.getImmValue(), *ImmTy);
+    return true;
+  }
+
+  if (isGFConstant) {
+    DstMI.addRenderer<ImmRenderer>(O.getImmValue(), *ImmTy, /*IsFP=*/true);
     return true;
   }
 
@@ -2182,6 +2226,9 @@ bool CombineRuleBuilder::emitBuiltinApplyPattern(
       M.addAction<EraseInstAction>(/*InsnID*/ 0);
     return true;
   }
+  case BI_HasOneUse:
+    llvm_unreachable("GIHasOneUse cannot be used in apply patterns!");
+
   case BI_ReplaceReg: {
     StringRef Old = P.getOperand(0).getOperandName();
     StringRef New = P.getOperand(1).getOperandName();

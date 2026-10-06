@@ -75,3 +75,54 @@ cir.func @make_calls() {
 
   cir.return
 }
+
+cir.func @mustProgressFn() attributes {mustprogress} {
+  cir.return
+}
+// CHECK: cir.func @mustProgressFn() attributes {mustprogress} {
+// CHECK:   cir.return
+// CHECK: }
+
+cir.func @noMustProgressFn() {
+  cir.return
+}
+// CHECK: cir.func @noMustProgressFn() {
+// CHECK-NOT: mustprogress
+// CHECK:   cir.return
+// CHECK: }
+
+cir.func no_inline dso_local @mustProgressWithOthers() attributes {mustprogress} {
+  cir.return
+}
+// CHECK: cir.func no_inline dso_local @mustProgressWithOthers() attributes {mustprogress} {
+// CHECK:   cir.return
+// CHECK: }
+
+cir.func @asyncUwtable() attributes {uwtable = #cir.uwtable<async>} {
+  cir.return
+}
+// CHECK: cir.func @asyncUwtable() attributes {uwtable = #cir.uwtable<async>} {
+// CHECK:   cir.return
+// CHECK: }
+
+cir.func @syncUwtable() attributes {uwtable = #cir.uwtable<sync>} {
+  cir.return
+}
+// CHECK: cir.func @syncUwtable() attributes {uwtable = #cir.uwtable<sync>} {
+// CHECK:   cir.return
+// CHECK: }
+
+cir.func @noUwtable() {
+  cir.return
+}
+// CHECK: cir.func @noUwtable() {
+// CHECK-NOT: uwtable
+// CHECK:   cir.return
+// CHECK: }
+
+cir.func no_inline dso_local @uwtableWithOthers() attributes {mustprogress, uwtable = #cir.uwtable<async>} {
+  cir.return
+}
+// CHECK: cir.func no_inline dso_local @uwtableWithOthers() attributes {mustprogress, uwtable = #cir.uwtable<async>} {
+// CHECK:   cir.return
+// CHECK: }

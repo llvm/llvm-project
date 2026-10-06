@@ -266,9 +266,9 @@ bool SPIRVCallLowering::lowerFormalArguments(MachineIRBuilder &MIRBuilder,
 
       if (Arg.hasName())
         buildOpName(VRegs[i][0], Arg.getName(), MIRBuilder);
-      if (isPointerTyOrWrapper(Arg.getType())) {
+      if (isPointerTyOrWrapper(Arg.getType()) && !ST->isShader()) {
         auto DerefBytes = static_cast<unsigned>(Arg.getDereferenceableBytes());
-        if (DerefBytes != 0)
+        if (DerefBytes != 0 && ST->isAtLeastSPIRVVer(VersionTuple(1, 1)))
           buildOpDecorate(VRegs[i][0], MIRBuilder,
                           SPIRV::Decoration::MaxByteOffset, {DerefBytes});
       }

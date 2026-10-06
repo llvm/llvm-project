@@ -424,9 +424,8 @@ public:
       Args.push_back(E);
     else if (Ty->isIntegralOrEnumerationType())
       HandleIntegralOrEnumType(Ty);
-    else if (Ty->isVoidType()) {
-      // Do we need to still run `E`?
-    }
+    // A void expression is not an argument of the call; convertExprToValue
+    // evaluates it before the call instead.
 
     return InterfaceKind::NoAlloc;
   }
@@ -618,6 +617,11 @@ llvm::Expected<Expr *> Interpreter::convertExprToValue(Expr *E) {
     SetValueE =
         S.ActOnCallExpr(Scope, ValuePrintingInfo[InterfaceKind::NoAlloc],
                         E->getBeginLoc(), AdjustedArgs, E->getEndLoc());
+    // A void expression must still be evaluated:
+    // `(E, __clang_Interpreter_SetValueNoAlloc(...))`.
+    if (DesugaredTy->isVoidType() && !SetValueE.isInvalid())
+      SetValueE =
+          S.CreateBuiltinBinOp(E->getEndLoc(), BO_Comma, E, SetValueE.get());
     break;
   }
   default:

@@ -149,6 +149,9 @@ ASTNodeUP DILParser::ParseExpression() { return ParseAssignmentExpression(); }
 //    "*="
 //    "/="
 //    "%="
+//    "&="
+//    "^="
+//    "|="
 //    "<<="
 //    ">>="
 //

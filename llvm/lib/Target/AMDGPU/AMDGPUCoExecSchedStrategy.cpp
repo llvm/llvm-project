@@ -1083,8 +1083,8 @@ void AMDGPUCoExecSchedStrategy::initPolicy(MachineBasicBlock::iterator Begin,
                                            MachineBasicBlock::iterator End,
                                            unsigned NumRegionInstrs) {
   GCNSchedStrategy::initPolicy(Begin, End, NumRegionInstrs);
-  if (PreRADirection == MISched::BottomUp ||
-      PreRADirection == MISched::Bidirectional)
+  if (getPreRADirection() == MISched::BottomUp ||
+      getPreRADirection() == MISched::Bidirectional)
     report_fatal_error("CoExecSchedStrategy only support TopDown scheduling.");
   RegionPolicy.OnlyTopDown = true;
   RegionPolicy.OnlyBottomUp = false;
@@ -1166,8 +1166,7 @@ SUnit *AMDGPUCoExecSchedStrategy::pickNode(bool &IsTopNode) {
   if (SU->isBottomReady())
     Bot.removeReady(SU);
 
-  LLVM_DEBUG(dbgs() << "Scheduling SU(" << SU->NodeNum << ") "
-                    << *SU->getInstr());
+  LLVM_DEBUG(dbgs() << "Scheduling " << *SU << " " << *SU->getInstr());
 
   assert(IsTopNode && "coexec scheduler must only schedule from top boundary");
   return SU;
@@ -1233,7 +1232,7 @@ void AMDGPUCoExecSchedStrategy::dumpPickSummary(SUnit *SU, bool IsTopNode,
   dbgs() << "=== Pick @ Cycle " << Cycle << " ===\n";
 
   const InstructionFlavor Flavor = classifyFlavor(*SU->getInstr(), *SII);
-  dbgs() << "Picked: SU(" << SU->NodeNum << ") ";
+  dbgs() << "Picked: " << *SU << " ";
   SU->getInstr()->print(dbgs(), /*IsStandalone=*/true, /*SkipOpers=*/false,
                         /*SkipDebugLoc=*/true);
   dbgs() << " [" << getFlavorName(Flavor) << "]\n";

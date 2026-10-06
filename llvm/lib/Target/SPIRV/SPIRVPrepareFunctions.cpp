@@ -542,7 +542,7 @@ bool SPIRVPrepareFunctionsImpl::substituteIntrinsicCalls(Function *F) {
           Changed = true;
           break;
         }
-        if (TM.getTargetTriple().getVendor() == Triple::AMD ||
+        if (STI.getTargetTriple().getVendor() == Triple::AMD ||
             any_of(SPVAllowUnknownIntrinsics, [II](auto &&Prefix) {
               if (Prefix.empty())
                 return false;

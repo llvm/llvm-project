@@ -10,6 +10,7 @@
 #include "MCTargetDesc/X86EncodingOptimization.h"
 #include "MCTargetDesc/X86FixupKinds.h"
 #include "MCTargetDesc/X86MCAsmInfo.h"
+#include "MCTargetDesc/X86MCOptions.h"
 #include "llvm/ADT/StringSwitch.h"
 #include "llvm/BinaryFormat/ELF.h"
 #include "llvm/BinaryFormat/MachO.h"
@@ -32,7 +33,6 @@
 #include "llvm/MC/MCTargetOptions.h"
 #include "llvm/MC/MCValue.h"
 #include "llvm/MC/TargetRegistry.h"
-#include "llvm/Support/CommandLine.h"
 #include "llvm/Support/ErrorHandling.h"
 #include "llvm/Support/raw_ostream.h"
 
@@ -45,11 +45,10 @@ private:
   uint8_t AlignBranchKind = 0;
 
 public:
-  void operator=(const std::string &Val) {
-    if (Val.empty())
-      return;
+  X86AlignBranchKind() = default;
+  explicit X86AlignBranchKind(StringRef Val) {
     SmallVector<StringRef, 6> BranchTypes;
-    StringRef(Val).split(BranchTypes, '+', -1, false);
+    Val.split(BranchTypes, '+', -1, false);
     for (auto BranchType : BranchTypes) {
       if (BranchType == "fused")
         addKind(X86::AlignBranchFused);
@@ -75,50 +74,8 @@ public:
   void addKind(X86::AlignBranchBoundaryKind Value) { AlignBranchKind |= Value; }
 };
 
-X86AlignBranchKind X86AlignBranchKindLoc;
-
-cl::opt<unsigned> X86AlignBranchBoundary(
-    "x86-align-branch-boundary", cl::init(0),
-    cl::desc(
-        "Control how the assembler should align branches with NOP. If the "
-        "boundary's size is not 0, it should be a power of 2 and no less "
-        "than 32. Branches will be aligned to prevent from being across or "
-        "against the boundary of specified size. The default value 0 does not "
-        "align branches."));
-
-cl::opt<X86AlignBranchKind, true, cl::parser<std::string>> X86AlignBranch(
-    "x86-align-branch",
-    cl::desc(
-        "Specify types of branches to align (plus separated list of types):"
-             "\njcc      indicates conditional jumps"
-             "\nfused    indicates fused conditional jumps"
-             "\njmp      indicates direct unconditional jumps"
-             "\ncall     indicates direct and indirect calls"
-             "\nret      indicates rets"
-             "\nindirect indicates indirect unconditional jumps"),
-    cl::location(X86AlignBranchKindLoc));
-
-cl::opt<bool> X86AlignBranchWithin32BBoundaries(
-    "x86-branches-within-32B-boundaries", cl::init(false),
-    cl::desc(
-        "Align selected instructions to mitigate negative performance impact "
-        "of Intel's micro code update for errata skx102.  May break "
-        "assumptions about labels corresponding to particular instructions, "
-        "and should be used with caution."));
-
-cl::opt<unsigned> X86PadMaxPrefixSize(
-    "x86-pad-max-prefix-size", cl::init(0),
-    cl::desc("Maximum number of prefixes to use for padding"));
-
-cl::opt<bool> X86PadForAlign(
-    "x86-pad-for-align", cl::init(false), cl::Hidden,
-    cl::desc("Pad previous instructions to implement align directives"));
-
-cl::opt<bool> X86PadForBranchAlign(
-    "x86-pad-for-branch-align", cl::init(true), cl::Hidden,
-    cl::desc("Pad previous instructions to implement branch alignment"));
-
 class X86AsmBackend : public MCAsmBackend {
+  const X86MCOptions &CLOpts;
   const MCSubtargetInfo &STI;
   std::unique_ptr<const MCInstrInfo> MCII;
   X86AlignBranchKind AlignBranchType;
@@ -141,9 +98,9 @@ class X86AsmBackend : public MCAsmBackend {
 
 public:
   X86AsmBackend(const Target &T, const MCSubtargetInfo &STI)
-      : MCAsmBackend(llvm::endianness::little), STI(STI),
-        MCII(T.createMCInstrInfo()) {
-    if (X86AlignBranchWithin32BBoundaries) {
+      : MCAsmBackend(llvm::endianness::little), CLOpts(X86MCOptions::Global),
+        STI(STI), MCII(T.createMCInstrInfo()) {
+    if (CLOpts.branches_within_32B_boundaries) {
       // At the moment, this defaults to aligning fused branches, unconditional
       // jumps, and (unfused) conditional jumps with nops.  Both the
       // instructions aligned and the alignment method (nop vs prefix) may
@@ -154,17 +111,17 @@ public:
       AlignBranchType.addKind(X86::AlignBranchJmp);
     }
     // Allow overriding defaults set by main flag
-    if (X86AlignBranchBoundary.getNumOccurrences())
-      AlignBoundary = assumeAligned(X86AlignBranchBoundary);
-    if (X86AlignBranch.getNumOccurrences())
-      AlignBranchType = X86AlignBranchKindLoc;
-    if (X86PadMaxPrefixSize.getNumOccurrences())
-      TargetPrefixMax = X86PadMaxPrefixSize;
+    if (CLOpts.align_branch_boundary)
+      AlignBoundary = assumeAligned(*CLOpts.align_branch_boundary);
+    if (CLOpts.align_branch)
+      AlignBranchType = X86AlignBranchKind(*CLOpts.align_branch);
+    if (CLOpts.pad_max_prefix_size)
+      TargetPrefixMax = *CLOpts.pad_max_prefix_size;
 
     AllowAutoPadding =
         AlignBoundary != Align(1) && AlignBranchType != X86::AlignBranchNone;
     AllowEnhancedRelaxation =
-        AllowAutoPadding && TargetPrefixMax != 0 && X86PadForBranchAlign;
+        AllowAutoPadding && TargetPrefixMax != 0 && CLOpts.pad_for_branch_align;
     AllowBundling = true;
   }
 
@@ -468,7 +425,7 @@ bool X86AsmBackend::needAlign(const MCInst &Inst) const {
 void X86_MC::emitInstruction(MCObjectStreamer &S, const MCInst &Inst,
                              const MCSubtargetInfo &STI) {
   bool AutoPadding = S.getAllowAutoPadding();
-  if (LLVM_LIKELY(!AutoPadding && !X86PadForAlign)) {
+  if (LLVM_LIKELY(!AutoPadding && !X86MCOptions::Global.pad_for_align)) {
     S.MCObjectStreamer::emitInstruction(Inst, STI);
     return;
   }
@@ -1072,11 +1029,11 @@ bool X86AsmBackend::finishLayout() const {
   // decode limited.  It is often better to reduce the number of instructions
   // (i.e. eliminate nops) even at the cost of increasing the size and
   // complexity of others.
-  if (!X86PadForAlign && !X86PadForBranchAlign)
+  if (!CLOpts.pad_for_align && !CLOpts.pad_for_branch_align)
     return false;
 
   // The processed regions are delimitered by LabeledFragments. -g may have more
-  // MCSymbols and therefore different relaxation results. X86PadForAlign is
+  // MCSymbols and therefore different relaxation results. -x86-pad-for-align is
   // disabled by default to eliminate the -g vs non -g difference.
   DenseSet<MCFragment *> LabeledFragments;
   for (const MCSymbol &S : Asm->symbols())
@@ -1103,14 +1060,14 @@ bool X86AsmBackend::finishLayout() const {
         continue;
       }
 
-      auto canHandle = [](MCFragment &F) -> bool {
+      auto canHandle = [&](MCFragment &F) -> bool {
         switch (F.getKind()) {
         default:
           return false;
         case MCFragment::FT_Align:
-          return X86PadForAlign;
+          return CLOpts.pad_for_align;
         case MCFragment::FT_BoundaryAlign:
-          return X86PadForBranchAlign;
+          return CLOpts.pad_for_branch_align;
         }
       };
       // For any unhandled kind, assume we can't change layout.

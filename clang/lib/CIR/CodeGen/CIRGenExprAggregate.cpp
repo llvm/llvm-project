@@ -18,6 +18,7 @@
 #include "clang/CIR/Dialect/IR/CIRAttrs.h"
 
 #include "clang/AST/Expr.h"
+#include "clang/AST/ExprCXX.h"
 #include "clang/AST/RecordLayout.h"
 #include "clang/AST/StmtVisitor.h"
 #include "clang/CodeGenUtils/ExprUtils.h"
@@ -325,17 +326,18 @@ public:
     Visit(ge->getResultExpr());
   }
   void VisitCoawaitExpr(CoawaitExpr *e) {
-    cgf.cgm.errorNYI(e->getSourceRange(), "AggExprEmitter: VisitCoawaitExpr");
+    cgf.emitCoawaitExpr(*e, dest, dest.isIgnored());
   }
   void VisitCoyieldExpr(CoyieldExpr *e) {
-    cgf.cgm.errorNYI(e->getSourceRange(), "AggExprEmitter: VisitCoyieldExpr");
+    cgf.emitCoyieldExpr(*e, dest, dest.isIgnored());
   }
-  void VisitUnaryCoawait(UnaryOperator *e) {
-    cgf.cgm.errorNYI(e->getSourceRange(), "AggExprEmitter: VisitUnaryCoawait");
-  }
+  void VisitUnaryCoawait(UnaryOperator *e) { Visit(e->getSubExpr()); }
   void VisitUnaryExtension(UnaryOperator *e) { Visit(e->getSubExpr()); }
   void VisitSubstNonTypeTemplateParmExpr(SubstNonTypeTemplateParmExpr *e) {
     Visit(e->getReplacement());
+  }
+  void VisitPackIndexingExpr(PackIndexingExpr *e) {
+    Visit(e->getSelectedExpr());
   }
   void VisitConstantExpr(ConstantExpr *e) {
     ensureDest(cgf.getLoc(e->getSourceRange()), e->getType());
@@ -734,11 +736,11 @@ void AggExprEmitter::emitArrayInit(Address destPtr, cir::ArrayType arrayTy,
   const CharUnits elementAlign =
       destPtr.getAlignment().alignmentOfArrayElement(elementSize);
 
-  // Exception safety requires us to destroy all the already-constructed
-  // members if an initializer throws. For that, we'll need an EH cleanup.
+  // Destroy already-constructed elements if a later initializer throws.
+  // The cleanup is deactivated when this initialization finishes.
   QualType::DestructionKind dtorKind = elementType.isDestructedType();
   Address endOfInit = Address::invalid();
-  assert(!cir::MissingFeatures::cleanupDeactivationScope());
+  CIRGenFunction::CleanupDeactivationScope deactivateCleanups(cgf);
 
   if (dtorKind && cgf.getLangOpts().Exceptions) {
     endOfInit = cgf.createTempAlloca(cirElementPtrType, cgf.getPointerAlign(),

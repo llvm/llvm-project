@@ -58,7 +58,6 @@ add_tablegen(llvm-tblgen LLVM
   InstrInfoEmitter.cpp
   llvm-tblgen.cpp
   MacroFusionPredicatorEmitter.cpp
-  OptionParserEmitter.cpp
   OptionRSTEmitter.cpp
   PseudoLoweringEmitter.cpp
   RegisterBankEmitter.cpp
@@ -66,6 +65,7 @@ add_tablegen(llvm-tblgen LLVM
   SDNodeInfoEmitter.cpp
   SearchableTableEmitter.cpp
   SubtargetEmitter.cpp
+  SystemZInsnDirectiveEmitter.cpp
   WebAssemblyDisassemblerEmitter.cpp
   X86InstrMappingEmitter.cpp
   X86DisassemblerTables.cpp

@@ -26,6 +26,7 @@
 #include "clang/Basic/PrettyStackTrace.h"
 #include "clang/Basic/SourceManager.h"
 #include "clang/Basic/TargetInfo.h"
+#include "clang/CodeGenUtils/StmtUtils.h"
 #include "llvm/ADT/ArrayRef.h"
 #include "llvm/ADT/DenseMap.h"
 #include "llvm/ADT/SmallSet.h"
@@ -858,6 +859,16 @@ void CodeGenFunction::EmitGotoStmt(const GotoStmt &S) {
   if (HaveInsertPoint())
     EmitStopPoint(&S);
 
+  // Reinitialize the variables this goto bypasses, whose scope it re-enters.
+  // Backward gotos reinit here while forward gotos are recorded for
+  // EmitAutoVarAlloca to patch once the alloca exists. Skip when jump sources
+  // are unknown (computed goto); EmitAutoVarAlloca then uses function-scope
+  // init.
+  if (HaveInsertPoint() && !Bypasses.isAlwaysBypassed()) {
+    emitBypassedVarInitsForSource(&S);
+    BypassingForwardJumps.push_back({Builder.GetInsertBlock(), &S});
+  }
+
   ApplyAtomGroup Grp(getDebugInfo());
   EmitBranchThroughCleanup(getJumpDestForLabel(S.getLabel()));
 }
@@ -1024,65 +1035,10 @@ void CodeGenFunction::EmitIfStmt(const IfStmt &S) {
 
 bool CodeGenFunction::checkIfLoopMustProgress(const Expr *ControllingExpression,
                                               bool HasEmptyBody) {
-  if (CGM.getCodeGenOpts().getFiniteLoops() ==
-      CodeGenOptions::FiniteLoopsKind::Never)
-    return false;
-
-  // Now apply rules for plain C (see  6.8.5.6 in C11).
-  // Loops with constant conditions do not have to make progress in any C
-  // version.
-  // As an extension, we consisider loops whose constant expression
-  // can be constant-folded.
-  Expr::EvalResult Result;
-  bool CondIsConstInt =
-      !ControllingExpression ||
-      (ControllingExpression->EvaluateAsInt(Result, getContext()) &&
-       Result.Val.isInt());
-
-  bool CondIsTrue = CondIsConstInt && (!ControllingExpression ||
-                                       Result.Val.getInt().getBoolValue());
-
-  // Loops with non-constant conditions must make progress in C11 and later.
-  if (getLangOpts().C11 && !CondIsConstInt)
-    return true;
-
-  // [C++26][intro.progress] (DR)
-  // The implementation may assume that any thread will eventually do one of the
-  // following:
-  // [...]
-  // - continue execution of a trivial infinite loop ([stmt.iter.general]).
-  if (CGM.getCodeGenOpts().getFiniteLoops() ==
-          CodeGenOptions::FiniteLoopsKind::Always ||
-      getLangOpts().CPlusPlus11) {
-    if (HasEmptyBody && CondIsTrue) {
-      CurFn->removeFnAttr(llvm::Attribute::MustProgress);
-      return false;
-    }
-    return true;
-  }
-  return false;
-}
-
-// [C++26][stmt.iter.general] (DR)
-// A trivially empty iteration statement is an iteration statement matching one
-// of the following forms:
-//  - while ( expression ) ;
-//  - while ( expression ) { }
-//  - do ; while ( expression ) ;
-//  - do { } while ( expression ) ;
-//  - for ( init-statement expression(opt); ) ;
-//  - for ( init-statement expression(opt); ) { }
-template <typename LoopStmt> static bool hasEmptyLoopBody(const LoopStmt &S) {
-  if constexpr (std::is_same_v<LoopStmt, ForStmt>) {
-    if (S.getInc())
-      return false;
-  }
-  const Stmt *Body = S.getBody();
-  if (!Body || isa<NullStmt>(Body))
-    return true;
-  if (const CompoundStmt *Compound = dyn_cast<CompoundStmt>(Body))
-    return Compound->body_empty();
-  return false;
+  return CodeGenUtils::checkIfLoopMustProgress(
+      getLangOpts(), CGM.getCodeGenOpts(), getContext(), ControllingExpression,
+      HasEmptyBody,
+      [this] { CurFn->removeFnAttr(llvm::Attribute::MustProgress); });
 }
 
 void CodeGenFunction::EmitWhileStmt(const WhileStmt &S,
@@ -1127,10 +1083,10 @@ void CodeGenFunction::EmitWhileStmt(const WhileStmt &S,
   llvm::ConstantInt *C = dyn_cast<llvm::ConstantInt>(BoolCondVal);
   bool EmitBoolCondBranch = !C || !C->isOne();
   const SourceRange &R = S.getSourceRange();
-  LoopStack.push(LoopHeader.getBlock(), CGM.getContext(), CGM.getCodeGenOpts(),
-                 WhileAttrs, SourceLocToDebugLoc(R.getBegin()),
-                 SourceLocToDebugLoc(R.getEnd()),
-                 checkIfLoopMustProgress(S.getCond(), hasEmptyLoopBody(S)));
+  LoopStack.push(
+      LoopHeader.getBlock(), CGM.getContext(), CGM.getCodeGenOpts(), WhileAttrs,
+      SourceLocToDebugLoc(R.getBegin()), SourceLocToDebugLoc(R.getEnd()),
+      checkIfLoopMustProgress(S.getCond(), CodeGenUtils::hasEmptyLoopBody(S)));
 
   // As long as the condition is true, go to the loop body.
   llvm::BasicBlock *LoopBody = createBasicBlock("while.body");
@@ -1243,10 +1199,10 @@ void CodeGenFunction::EmitDoStmt(const DoStmt &S,
   bool EmitBoolCondBranch = !C || !C->isZero();
 
   const SourceRange &R = S.getSourceRange();
-  LoopStack.push(LoopBody, CGM.getContext(), CGM.getCodeGenOpts(), DoAttrs,
-                 SourceLocToDebugLoc(R.getBegin()),
-                 SourceLocToDebugLoc(R.getEnd()),
-                 checkIfLoopMustProgress(S.getCond(), hasEmptyLoopBody(S)));
+  LoopStack.push(
+      LoopBody, CGM.getContext(), CGM.getCodeGenOpts(), DoAttrs,
+      SourceLocToDebugLoc(R.getBegin()), SourceLocToDebugLoc(R.getEnd()),
+      checkIfLoopMustProgress(S.getCond(), CodeGenUtils::hasEmptyLoopBody(S)));
 
   auto *LoopFalse = (hasSkipCounter(&S) ? createBasicBlock("do.loopfalse")
                                         : LoopExit.getBlock());
@@ -1310,10 +1266,10 @@ void CodeGenFunction::EmitForStmt(const ForStmt &S,
     ConvergenceTokenStack.push_back(emitConvergenceLoopToken(CondBlock));
 
   const SourceRange &R = S.getSourceRange();
-  LoopStack.push(CondBlock, CGM.getContext(), CGM.getCodeGenOpts(), ForAttrs,
-                 SourceLocToDebugLoc(R.getBegin()),
-                 SourceLocToDebugLoc(R.getEnd()),
-                 checkIfLoopMustProgress(S.getCond(), hasEmptyLoopBody(S)));
+  LoopStack.push(
+      CondBlock, CGM.getContext(), CGM.getCodeGenOpts(), ForAttrs,
+      SourceLocToDebugLoc(R.getBegin()), SourceLocToDebugLoc(R.getEnd()),
+      checkIfLoopMustProgress(S.getCond(), CodeGenUtils::hasEmptyLoopBody(S)));
 
   // Create a cleanup scope for the condition variable cleanups.
   LexicalScope ConditionScope(*this, S.getSourceRange());
@@ -2445,6 +2401,17 @@ void CodeGenFunction::EmitSwitchStmt(const SwitchStmt &S) {
   // explicit case ranges tests can have a place to jump to on
   // failure.
   llvm::BasicBlock *DefaultBlock = createBasicBlock("sw.default");
+
+  // The dispatch is the jump that bypasses any declarations sitting between the
+  // switch and its case labels, so the initialization goes here, ahead of the
+  // switch instruction -- not at the case labels. A case label is also reached
+  // by falling through from the case above it, and that edge bypasses nothing;
+  // initializing there would clobber a variable the previous case had written.
+  // The declarations are inside the body and so have no alloca yet, hence the
+  // patch-it-in-later handling in EmitAutoVarAlloca.
+  if (!Bypasses.isAlwaysBypassed())
+    BypassingForwardJumps.push_back({Builder.GetInsertBlock(), &S});
+
   SwitchInsn = Builder.CreateSwitch(CondV, DefaultBlock);
   addInstToNewSourceAtom(SwitchInsn, CondV);
 
@@ -2889,7 +2856,7 @@ void AsmConstraintsInfo::EmitAsmStmt() {
   if (IsGCCAsmGoto && !CBRRegResults.empty()) {
     for (llvm::BasicBlock *Succ : CBR->getIndirectDests()) {
       llvm::IRBuilderBase::InsertPointGuard IPG(Builder);
-      Builder.SetInsertPoint(Succ, --(Succ->end()));
+      Builder.SetInsertPoint(--(Succ->end()));
       EmitAsmStores(CBRRegResults[Succ]);
     }
   }

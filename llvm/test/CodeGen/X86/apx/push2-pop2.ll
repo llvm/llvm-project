@@ -275,15 +275,15 @@ define void @lea_in_epilog(i1 %arg, ptr %arg1, ptr %arg2, i64 %arg3, i64 %arg4, 
 ; CHECK-NEXT:    push2 %r12, %r13
 ; CHECK-NEXT:    pushq %rbx
 ; CHECK-NEXT:    subq $24, %rsp
-; CHECK-NEXT:    movq %r9, %r14
+; CHECK-NEXT:    movq %r9, %r13
 ; CHECK-NEXT:    movq %rsi, {{[-0-9]+}}(%r{{[sb]}}p) # 8-byte Spill
-; CHECK-NEXT:    addq {{[0-9]+}}(%rsp), %r14
-; CHECK-NEXT:    movq {{[0-9]+}}(%rsp), %r13
-; CHECK-NEXT:    addq %r14, %r13
+; CHECK-NEXT:    addq {{[0-9]+}}(%rsp), %r13
+; CHECK-NEXT:    movq {{[0-9]+}}(%rsp), %r14
+; CHECK-NEXT:    addq %r13, %r14
 ; CHECK-NEXT:    movq {{[0-9]+}}(%rsp), %r15
-; CHECK-NEXT:    addq %r14, %r15
+; CHECK-NEXT:    addq %r13, %r15
 ; CHECK-NEXT:    movq {{[0-9]+}}(%rsp), %rbx
-; CHECK-NEXT:    addq %r14, %rbx
+; CHECK-NEXT:    addq %r13, %rbx
 ; CHECK-NEXT:    xorl %ebp, %ebp
 ; CHECK-NEXT:    xorl %r12d, %r12d
 ; CHECK-NEXT:    movl %edi, {{[-0-9]+}}(%r{{[sb]}}p) # 4-byte Spill
@@ -297,10 +297,10 @@ define void @lea_in_epilog(i1 %arg, ptr %arg1, ptr %arg2, i64 %arg3, i64 %arg4, 
 ; CHECK-NEXT:    callq memcpy@PLT
 ; CHECK-NEXT:    movl {{[-0-9]+}}(%r{{[sb]}}p), %edi # 4-byte Reload
 ; CHECK-NEXT:    movq {{[0-9]+}}(%rsp), %rax
-; CHECK-NEXT:    addq %rax, %r13
+; CHECK-NEXT:    addq %rax, %r14
 ; CHECK-NEXT:    addq %rax, %r15
 ; CHECK-NEXT:    addq %rax, %rbx
-; CHECK-NEXT:    addq %rax, %r14
+; CHECK-NEXT:    addq %rax, %r13
 ; CHECK-NEXT:    addq $8, %rbp
 ; CHECK-NEXT:    testb $1, %dil
 ; CHECK-NEXT:    je .LBB6_2
@@ -327,15 +327,15 @@ define void @lea_in_epilog(i1 %arg, ptr %arg1, ptr %arg2, i64 %arg3, i64 %arg4, 
 ; PPX-NO-NF-NEXT:    push2p %r12, %r13
 ; PPX-NO-NF-NEXT:    pushp %rbx
 ; PPX-NO-NF-NEXT:    subq $24, %rsp
-; PPX-NO-NF-NEXT:    movq %r9, %r14
+; PPX-NO-NF-NEXT:    movq %r9, %r13
 ; PPX-NO-NF-NEXT:    movq %rsi, {{[-0-9]+}}(%r{{[sb]}}p) # 8-byte Spill
-; PPX-NO-NF-NEXT:    addq {{[0-9]+}}(%rsp), %r14
-; PPX-NO-NF-NEXT:    movq {{[0-9]+}}(%rsp), %r13
-; PPX-NO-NF-NEXT:    addq %r14, %r13
+; PPX-NO-NF-NEXT:    addq {{[0-9]+}}(%rsp), %r13
+; PPX-NO-NF-NEXT:    movq {{[0-9]+}}(%rsp), %r14
+; PPX-NO-NF-NEXT:    addq %r13, %r14
 ; PPX-NO-NF-NEXT:    movq {{[0-9]+}}(%rsp), %r15
-; PPX-NO-NF-NEXT:    addq %r14, %r15
+; PPX-NO-NF-NEXT:    addq %r13, %r15
 ; PPX-NO-NF-NEXT:    movq {{[0-9]+}}(%rsp), %rbx
-; PPX-NO-NF-NEXT:    addq %r14, %rbx
+; PPX-NO-NF-NEXT:    addq %r13, %rbx
 ; PPX-NO-NF-NEXT:    xorl %ebp, %ebp
 ; PPX-NO-NF-NEXT:    xorl %r12d, %r12d
 ; PPX-NO-NF-NEXT:    movl %edi, {{[-0-9]+}}(%r{{[sb]}}p) # 4-byte Spill
@@ -349,10 +349,10 @@ define void @lea_in_epilog(i1 %arg, ptr %arg1, ptr %arg2, i64 %arg3, i64 %arg4, 
 ; PPX-NO-NF-NEXT:    callq memcpy@PLT
 ; PPX-NO-NF-NEXT:    movl {{[-0-9]+}}(%r{{[sb]}}p), %edi # 4-byte Reload
 ; PPX-NO-NF-NEXT:    movq {{[0-9]+}}(%rsp), %rax
-; PPX-NO-NF-NEXT:    addq %rax, %r13
+; PPX-NO-NF-NEXT:    addq %rax, %r14
 ; PPX-NO-NF-NEXT:    addq %rax, %r15
 ; PPX-NO-NF-NEXT:    addq %rax, %rbx
-; PPX-NO-NF-NEXT:    addq %rax, %r14
+; PPX-NO-NF-NEXT:    addq %rax, %r13
 ; PPX-NO-NF-NEXT:    addq $8, %rbp
 ; PPX-NO-NF-NEXT:    testb $1, %dil
 ; PPX-NO-NF-NEXT:    je .LBB6_2
@@ -380,33 +380,34 @@ define void @lea_in_epilog(i1 %arg, ptr %arg1, ptr %arg2, i64 %arg3, i64 %arg4, 
 ; FRAME-NEXT:    push2 %r12, %r13
 ; FRAME-NEXT:    pushq %rbx
 ; FRAME-NEXT:    subq $24, %rsp
+; FRAME-NEXT:    movq %r9, %rbx
 ; FRAME-NEXT:    movq %rsi, {{[-0-9]+}}(%r{{[sb]}}p) # 8-byte Spill
-; FRAME-NEXT:    addq 16(%rbp), %r9
-; FRAME-NEXT:    movq 48(%rbp), %rbx
-; FRAME-NEXT:    addq %r9, %rbx
+; FRAME-NEXT:    addq 16(%rbp), %rbx
+; FRAME-NEXT:    movq 48(%rbp), %r15
+; FRAME-NEXT:    addq %rbx, %r15
 ; FRAME-NEXT:    movq 40(%rbp), %r12
-; FRAME-NEXT:    addq %r9, %r12
-; FRAME-NEXT:    movq 32(%rbp), %r15
-; FRAME-NEXT:    addq %r9, %r15
+; FRAME-NEXT:    addq %rbx, %r12
+; FRAME-NEXT:    movq 32(%rbp), %rdx
+; FRAME-NEXT:    addq %rbx, %rdx
 ; FRAME-NEXT:    xorl %r13d, %r13d
 ; FRAME-NEXT:    xorl %r14d, %r14d
 ; FRAME-NEXT:    movl %edi, {{[-0-9]+}}(%r{{[sb]}}p) # 4-byte Spill
 ; FRAME-NEXT:    .p2align 4
 ; FRAME-NEXT:  .LBB6_2: # %bb15
 ; FRAME-NEXT:    # =>This Inner Loop Header: Depth=1
-; FRAME-NEXT:    movq %r9, {{[-0-9]+}}(%r{{[sb]}}p) # 8-byte Spill
+; FRAME-NEXT:    movq %rdx, {{[-0-9]+}}(%r{{[sb]}}p) # 8-byte Spill
 ; FRAME-NEXT:    incq %r14
 ; FRAME-NEXT:    movl $432, %edx # imm = 0x1B0
 ; FRAME-NEXT:    xorl %edi, %edi
 ; FRAME-NEXT:    movq %r12, %rsi
 ; FRAME-NEXT:    callq memcpy@PLT
+; FRAME-NEXT:    movq {{[-0-9]+}}(%r{{[sb]}}p), %rdx # 8-byte Reload
 ; FRAME-NEXT:    movl {{[-0-9]+}}(%r{{[sb]}}p), %edi # 4-byte Reload
-; FRAME-NEXT:    movq {{[-0-9]+}}(%r{{[sb]}}p), %r9 # 8-byte Reload
 ; FRAME-NEXT:    movq 16(%rbp), %rax
-; FRAME-NEXT:    addq %rax, %rbx
-; FRAME-NEXT:    addq %rax, %r12
 ; FRAME-NEXT:    addq %rax, %r15
-; FRAME-NEXT:    addq %rax, %r9
+; FRAME-NEXT:    addq %rax, %r12
+; FRAME-NEXT:    addq %rax, %rdx
+; FRAME-NEXT:    addq %rax, %rbx
 ; FRAME-NEXT:    addq $8, %r13
 ; FRAME-NEXT:    testb $1, %dil
 ; FRAME-NEXT:    je .LBB6_2
@@ -433,15 +434,15 @@ define void @lea_in_epilog(i1 %arg, ptr %arg1, ptr %arg2, i64 %arg3, i64 %arg4, 
 ; PPX-NF-NEXT:    push2p %r12, %r13
 ; PPX-NF-NEXT:    pushp %rbx
 ; PPX-NF-NEXT:    subq $24, %rsp
-; PPX-NF-NEXT:    movq %r9, %r14
+; PPX-NF-NEXT:    movq %r9, %r13
 ; PPX-NF-NEXT:    movq %rsi, {{[-0-9]+}}(%r{{[sb]}}p) # 8-byte Spill
-; PPX-NF-NEXT:    addq {{[0-9]+}}(%rsp), %r14
-; PPX-NF-NEXT:    movq {{[0-9]+}}(%rsp), %r13
-; PPX-NF-NEXT:    addq %r14, %r13
+; PPX-NF-NEXT:    addq {{[0-9]+}}(%rsp), %r13
+; PPX-NF-NEXT:    movq {{[0-9]+}}(%rsp), %r14
+; PPX-NF-NEXT:    addq %r13, %r14
 ; PPX-NF-NEXT:    movq {{[0-9]+}}(%rsp), %r15
-; PPX-NF-NEXT:    addq %r14, %r15
+; PPX-NF-NEXT:    addq %r13, %r15
 ; PPX-NF-NEXT:    movq {{[0-9]+}}(%rsp), %rbx
-; PPX-NF-NEXT:    addq %r14, %rbx
+; PPX-NF-NEXT:    addq %r13, %rbx
 ; PPX-NF-NEXT:    xorl %ebp, %ebp
 ; PPX-NF-NEXT:    xorl %r12d, %r12d
 ; PPX-NF-NEXT:    movl %edi, {{[-0-9]+}}(%r{{[sb]}}p) # 4-byte Spill
@@ -455,10 +456,10 @@ define void @lea_in_epilog(i1 %arg, ptr %arg1, ptr %arg2, i64 %arg3, i64 %arg4, 
 ; PPX-NF-NEXT:    callq memcpy@PLT
 ; PPX-NF-NEXT:    movl {{[-0-9]+}}(%r{{[sb]}}p), %edi # 4-byte Reload
 ; PPX-NF-NEXT:    movq {{[0-9]+}}(%rsp), %rax
-; PPX-NF-NEXT:    addq %rax, %r13
+; PPX-NF-NEXT:    addq %rax, %r14
 ; PPX-NF-NEXT:    addq %rax, %r15
 ; PPX-NF-NEXT:    addq %rax, %rbx
-; PPX-NF-NEXT:    addq %rax, %r14
+; PPX-NF-NEXT:    addq %rax, %r13
 ; PPX-NF-NEXT:    addq $8, %rbp
 ; PPX-NF-NEXT:    testb $1, %dil
 ; PPX-NF-NEXT:    je .LBB6_2

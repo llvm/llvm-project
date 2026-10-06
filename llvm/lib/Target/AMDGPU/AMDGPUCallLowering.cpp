@@ -1654,7 +1654,7 @@ bool AMDGPUCallLowering::lowerCall(MachineIRBuilder &MIRBuilder,
                                Info.CallConv);
 
   auto MIB = MIRBuilder.buildInstrNoInsert(Opc);
-  MIB.addDef(TRI->getReturnAddressReg(MF));
+  MIB.addDef(TRI->getReturnAddressReg(MF), RegState::Dead);
 
   if (!Info.IsConvergent)
     MIB.setMIFlag(MachineInstr::NoConvergent);

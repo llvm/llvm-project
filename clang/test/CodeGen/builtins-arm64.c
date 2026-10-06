@@ -230,8 +230,17 @@ void atomic_store_with_hint(int64_t *a, int64_t b) {
     __builtin_arm_atomic_store_with_hint(a, b, __ATOMIC_RELEASE, HINT_STSHH_STRM);
   // CHECK: store atomic i64 {{.*}}, ptr {{.*}} release, align 8, !mem.cache_hint ![[M3:[0-9]+]]
 
+  __builtin_arm_atomic_store_with_hint(a, b, __ATOMIC_RELAXED, HINT_STCPH);
+  // CHECK: store atomic i64 {{.*}}, ptr {{.*}} monotonic, align 8, !mem.cache_hint ![[M5:[0-9]+]]
+
+  __builtin_arm_atomic_store_with_hint(a, b, __ATOMIC_RELEASE, HINT_SHUH);
+  // CHECK: store atomic i64 {{.*}}, ptr {{.*}} release, align 8, !mem.cache_hint ![[M7:[0-9]+]]
+
+  __builtin_arm_atomic_store_with_hint(a, b, __ATOMIC_SEQ_CST, HINT_SHUH_PH);
+  // CHECK: store atomic i64 {{.*}}, ptr {{.*}} seq_cst, align 8, !mem.cache_hint ![[M9:[0-9]+]]
+
   // Invalid hint should be dropped
-  __builtin_arm_atomic_store_with_hint(a, b, __ATOMIC_RELAXED, 2); // Invalid Hint
+  __builtin_arm_atomic_store_with_hint(a, b, __ATOMIC_RELAXED, 5); // Invalid Hint
   // CHECK: store atomic i64 {{.*}}, ptr {{.*}} monotonic, align 8
 }
 
@@ -240,3 +249,9 @@ void atomic_store_with_hint(int64_t *a, int64_t b) {
 // CHECK: ![[M2]] = !{!"aarch64.mem_hint", i32 0}
 // CHECK: ![[M3]] = !{i32 1, ![[M4:[0-9]+]]}
 // CHECK: ![[M4]] = !{!"aarch64.mem_hint", i32 1}
+// CHECK: ![[M5]] = !{i32 1, ![[M6:[0-9]+]]}
+// CHECK: ![[M6]] = !{!"aarch64.mem_hint", i32 2}
+// CHECK: ![[M7]] = !{i32 1, ![[M8:[0-9]+]]}
+// CHECK: ![[M8]] = !{!"aarch64.mem_hint", i32 3}
+// CHECK: ![[M9]] = !{i32 1, ![[M10:[0-9]+]]}
+// CHECK: ![[M10]] = !{!"aarch64.mem_hint", i32 4}

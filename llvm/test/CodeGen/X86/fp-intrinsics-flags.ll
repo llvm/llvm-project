@@ -39,7 +39,7 @@ entry:
 ; CHECK: [[LD_Fp64m80:%[0-9]+]]:rfp80 = LD_Fp64m80 %stack.0, 1, $noreg, 0, $noreg, implicit-def dead $fpsw, implicit $fpcw :: (load (s64) from %stack.0)
 ; CHECK: FNSTCW16m %stack.1, 1, $noreg, 0, $noreg, implicit-def $fpsw, implicit $fpcw :: (store (s16) into %stack.1)
 ; CHECK: [[MOVZX32rm16_:%[0-9]+]]:gr32 = MOVZX32rm16 %stack.1, 1, $noreg, 0, $noreg :: (load (s16) from %stack.1)
-; CHECK: [[OR32ri:%[0-9]+]]:gr32 = OR32ri killed [[MOVZX32rm16_]], 3072, implicit-def $eflags
+; CHECK: [[OR32ri:%[0-9]+]]:gr32 = OR32ri killed [[MOVZX32rm16_]], 3072, implicit-def dead $eflags
 ; CHECK: [[COPY3:%[0-9]+]]:gr16 = COPY killed [[OR32ri]].sub_16bit
 ; CHECK: MOV16mr %stack.2, 1, $noreg, 0, $noreg, killed [[COPY3]] :: (store (s16) into %stack.2)
 ; CHECK: FLDCW16m %stack.2, 1, $noreg, 0, $noreg, implicit-def $fpsw, implicit-def $fpcw :: (load (s16) from %stack.2)

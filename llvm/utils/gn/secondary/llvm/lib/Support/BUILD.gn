@@ -81,6 +81,7 @@ static_library("Support") {
     "DebugCounter.cpp",
     "DeltaAlgorithm.cpp",
     "DeltaTree.cpp",
+    "DenseMap.cpp",
     "DivisionByConstantInfo.cpp",
     "Driver.cpp",
     "DynamicAPInt.cpp",

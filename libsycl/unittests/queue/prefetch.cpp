@@ -1,9 +1,19 @@
+//===----------------------------------------------------------------------===//
+//
+// Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
+// See https://llvm.org/LICENSE.txt for license information.
+// SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
+//
+//===----------------------------------------------------------------------===//
+
 #include <mock/helpers.hpp>
 
 #include <sycl/__impl/queue.hpp>
 
 #include <gmock/gmock.h>
 #include <gtest/gtest.h>
+
+#include <cstddef>
 
 using namespace sycl;
 using namespace ::testing;
@@ -49,4 +59,22 @@ TEST(Queue, PrefetchZeroBytes) {
 
   event Event = Q.prefetch(nullptr, 0);
   Q.prefetch(nullptr, 0, Event);
+}
+
+TEST(Queue, PrefetchNullptrThrows) {
+  constexpr std::size_t NumBytes = 1024;
+
+  mock::MockWrapper Mock;
+  queue Q;
+
+  EXPECT_CALL(Mock.get(), olMemPrefetch(_, _, _, _, _)).Times(0);
+
+  try {
+    Q.prefetch(nullptr, NumBytes);
+    FAIL() << "Expected sycl::exception";
+  } catch (const sycl::exception &E) {
+    EXPECT_EQ(E.code(), make_error_code(errc::invalid));
+    EXPECT_TRUE(E.has_context());
+    EXPECT_EQ(E.get_context(), Q.get_context());
+  }
 }

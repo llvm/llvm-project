@@ -5329,7 +5329,7 @@ void FragileHazards::emitHazardsInNewBlocks() {
       // call.  If the call throws, then this is sufficient to
       // guarantee correctness as long as it doesn't also write to any
       // locals.
-      Builder.SetInsertPoint(&BB, BI);
+      Builder.SetInsertPoint(BI);
       emitReadHazard(Builder);
     }
   }
@@ -8391,7 +8391,11 @@ CGObjCNonFragileABIMac::EmitSuperClassRef(CodeGenFunction &CGF,
                                      llvm::GlobalValue::PrivateLinkage, ClassGV,
                                      "OBJC_CLASSLIST_SUP_REFS_$_");
     Entry->setAlignment(CGF.getPointerAlign().getAsAlign());
-    Entry->setSection(SectionName);
+    // Loading a reference to a class stub calls objc_loadClassref, which
+    // updates the reference in place. We cannot use the __objc_superrefs
+    // section here because it's a constant section.
+    if (!ID->hasAttr<ObjCClassStubAttr>())
+      Entry->setSection(SectionName);
     CGM.addCompilerUsedGlobal(Entry);
   }
 

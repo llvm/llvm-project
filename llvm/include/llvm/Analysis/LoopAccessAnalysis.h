@@ -47,6 +47,10 @@ struct VectorizerParams {
   /// make more than this number of comparisons.
   LLVM_ABI static unsigned RuntimeMemoryCheckThreshold;
 
+  /// The maximum allowed number of runtime memory checks. Above this many
+  /// checks the vectorizer gives up on the loop.
+  LLVM_ABI static unsigned VectorizeMemoryCheckThreshold;
+
   // When creating runtime checks for nested loops, where possible try to
   // write the checks in a form that allows them to be easily hoisted out of
   // the outermost loop. For example, we can do this by expanding the range of
@@ -327,6 +331,8 @@ public:
 
   const Loop *getInnermostLoop() const { return InnermostLoop; }
 
+  PredicatedScalarEvolution &getPSE() const { return PSE; }
+
   DenseMap<std::pair<const SCEV *, const SCEV *>,
            std::pair<const SCEV *, const SCEV *>> &
   getPointerBounds() {
@@ -564,13 +570,16 @@ public:
     const SCEV *Expr;
     /// True if the pointer expressions needs to be frozen after expansion.
     bool NeedsFreeze;
+    /// True if this entry represents one arm of a forked pointer.
+    bool IsForked;
 
     PointerInfo(Value *PointerValue, const SCEV *Start, const SCEV *End,
                 bool IsWritePtr, unsigned DependencySetId, unsigned AliasSetId,
-                const SCEV *Expr, bool NeedsFreeze)
+                const SCEV *Expr, bool NeedsFreeze, bool IsForked)
         : PointerValue(PointerValue), Start(Start), End(End),
           IsWritePtr(IsWritePtr), DependencySetId(DependencySetId),
-          AliasSetId(AliasSetId), Expr(Expr), NeedsFreeze(NeedsFreeze) {}
+          AliasSetId(AliasSetId), Expr(Expr), NeedsFreeze(NeedsFreeze),
+          IsForked(IsForked) {}
   };
 
   RuntimePointerChecking(MemoryDepChecker &DC, ScalarEvolution *SE,
@@ -596,10 +605,7 @@ public:
   LLVM_ABI bool insert(Loop *Lp, Value *Ptr, const SCEV *PtrExpr,
                        Type *AccessTy, bool WritePtr, unsigned DepSetId,
                        unsigned ASId, PredicatedScalarEvolution &PSE,
-                       bool NeedsFreeze);
-
-  /// No run-time memory checking is necessary.
-  bool empty() const { return Pointers.empty(); }
+                       bool NeedsFreeze, bool IsForked);
 
   /// Generate the checks and store it.  This also performs the grouping
   /// of pointers to reduce the number of memchecks necessary.
@@ -672,6 +678,11 @@ private:
   /// between two different groups. This will clear the CheckingGroups vector
   /// and re-compute it.
   void groupChecks(MemoryDepChecker::DepCandidates &DepCands);
+
+  /// Attempt to merge checking groups that share a base pointer and differ
+  /// by stencil functions of loop-invariant strides. This reduces runtime
+  /// checks for multi-dimensional stencil-like access patterns.
+  void mergeStencilGroups();
 
   /// Generate the checks and return them.
   SmallVector<RuntimePointerCheck, 4> generateChecks();
@@ -769,9 +780,6 @@ public:
 
   /// Returns true if value \p V is loop invariant.
   LLVM_ABI bool isInvariant(Value *V) const;
-
-  unsigned getNumStores() const { return NumStores; }
-  unsigned getNumLoads() const { return NumLoads;}
 
   /// The diagnostics report generated for the analysis.  E.g. why we
   /// couldn't analyze the loop.
@@ -873,9 +881,6 @@ private:
   /// Determines whether we should generate partial runtime checks when not all
   /// memory accesses could be analyzed.
   bool AllowPartial;
-
-  unsigned NumLoads = 0;
-  unsigned NumStores = 0;
 
   /// Cache the result of analyzeLoop.
   bool CanVecMem = false;

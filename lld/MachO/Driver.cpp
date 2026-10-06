@@ -2493,6 +2493,8 @@ bool link(ArrayRef<const char *> argsArr, llvm::raw_ostream &stdoutOS,
       inputFiles.insert(make<OpaqueFile>(MemoryBufferRef(), segName, sectName));
     }
 
+    parseDeferredRelocations();
+
     gatherInputSections();
 
     if (!config->codegenDataGeneratePath.empty())

@@ -13,8 +13,8 @@
 ///
 //===----------------------------------------------------------------------===//
 
-#ifndef _LIBSYCL_DEVICE_KERNEL_INFO
-#define _LIBSYCL_DEVICE_KERNEL_INFO
+#ifndef _LIBSYCL_SRC_DETAIL_DEVICE_KERNEL_INFO_HPP
+#define _LIBSYCL_SRC_DETAIL_DEVICE_KERNEL_INFO_HPP
 
 #include <sycl/__impl/detail/config.hpp>
 
@@ -40,7 +40,7 @@ public:
       : MName(KernelName), MDeviceImage(DeviceImage) {}
 
   /// \return the name of this kernel.
-  std::string_view getName() { return MName; }
+  std::string_view getName() const { return MName; }
 
   /// \return the device image containing the device code of this kernel.
   DeviceImageManager &getDeviceImage() const { return MDeviceImage; }
@@ -54,4 +54,4 @@ private:
 
 _LIBSYCL_END_NAMESPACE_SYCL
 
-#endif // _LIBSYCL_DEVICE_KERNEL_INFO
+#endif // _LIBSYCL_SRC_DETAIL_DEVICE_KERNEL_INFO_HPP

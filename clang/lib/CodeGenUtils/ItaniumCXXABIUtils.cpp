@@ -61,4 +61,56 @@ CharUnits computeOffsetHint(ASTContext &Ctx, const CXXRecordDecl *Src,
   return Offset;
 }
 
+/// Returns whether the given record type is incomplete.
+static bool isIncompleteClassType(const RecordType *RecordTy) {
+  return !RecordTy->getDecl()->getDefinitionOrSelf()->isCompleteDefinition();
+}
+
+bool containsIncompleteClassType(QualType Ty) {
+  if (const auto *RecordTy = dyn_cast<RecordType>(Ty)) {
+    if (isIncompleteClassType(RecordTy))
+      return true;
+  }
+
+  if (const auto *PointerTy = dyn_cast<PointerType>(Ty))
+    return containsIncompleteClassType(PointerTy->getPointeeType());
+
+  if (const auto *MemberPointerTy = dyn_cast<MemberPointerType>(Ty)) {
+    // Check if the class type is incomplete.
+    if (!MemberPointerTy->getMostRecentCXXRecordDecl()->hasDefinition())
+      return true;
+
+    return containsIncompleteClassType(MemberPointerTy->getPointeeType());
+  }
+
+  return false;
+}
+
+unsigned extractPBaseFlags(const ASTContext &Ctx, QualType &Type) {
+  unsigned Flags = 0;
+
+  if (Type.isConstQualified())
+    Flags |= PTI_Const;
+  if (Type.isVolatileQualified())
+    Flags |= PTI_Volatile;
+  if (Type.isRestrictQualified())
+    Flags |= PTI_Restrict;
+  Type = Type.getUnqualifiedType();
+
+  // Itanium C++ ABI 2.9.5p7:
+  //   When the abi::__pbase_type_info is for a direct or indirect pointer to an
+  //   incomplete class type, the incomplete target type flag is set.
+  if (containsIncompleteClassType(Type))
+    Flags |= PTI_Incomplete;
+
+  if (auto *Proto = Type->getAs<FunctionProtoType>()) {
+    if (Proto->isNothrow()) {
+      Flags |= PTI_Noexcept;
+      Type = Ctx.getFunctionTypeWithExceptionSpec(Type, EST_None);
+    }
+  }
+
+  return Flags;
+}
+
 } // namespace clang::CodeGenUtils

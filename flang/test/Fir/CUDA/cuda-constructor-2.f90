@@ -8,7 +8,7 @@ module attributes {dlti.dl_spec = #dlti.dl_spec<#dlti.dl_entry<!llvm.ptr, dense<
   fir.global @_QMmtestsEndev {data_attr = #cuf.cuda<device>} : !fir.box<!fir.heap<!fir.array<?xi32>>> {
     %c0 = arith.constant 0 : index
     %0 = fir.zero_bits !fir.heap<!fir.array<?xi32>>
-    %1 = fircg.ext_embox %0(%c0) {allocator_idx = 2 : i32} : (!fir.heap<!fir.array<?xi32>>, index) -> !fir.box<!fir.heap<!fir.array<?xi32>>>
+    %1 = fircg.ext_embox %0(%c0) allocator_idx(2) : (!fir.heap<!fir.array<?xi32>>, index) -> !fir.box<!fir.heap<!fir.array<?xi32>>>
     fir.has_value %1 : !fir.box<!fir.heap<!fir.array<?xi32>>>
   }
 
@@ -23,7 +23,7 @@ module attributes {dlti.dl_spec = #dlti.dl_spec<#dlti.dl_entry<!llvm.ptr, dense<
     fir.global @_QMmtestsEndev {data_attr = #cuf.cuda<device>} : !fir.box<!fir.heap<!fir.array<?xi32>>> {
       %c0 = arith.constant 0 : index
       %0 = fir.zero_bits !fir.heap<!fir.array<?xi32>>
-      %1 = fircg.ext_embox %0(%c0) {allocator_idx = 2 : i32} : (!fir.heap<!fir.array<?xi32>>, index) -> !fir.box<!fir.heap<!fir.array<?xi32>>>
+      %1 = fircg.ext_embox %0(%c0) allocator_idx(2) : (!fir.heap<!fir.array<?xi32>>, index) -> !fir.box<!fir.heap<!fir.array<?xi32>>>
       fir.has_value %1 : !fir.box<!fir.heap<!fir.array<?xi32>>>
     }
   }
@@ -46,7 +46,7 @@ module attributes {dlti.dl_spec = #dlti.dl_spec<#dlti.dl_entry<!llvm.ptr, dense<
 // NOUNIFIED-DAG: %[[BOX:.*]] = fir.address_of(@_QMmtestsEndev) : !fir.ref<!fir.box<!fir.heap<!fir.array<?xi32>>>>
 // NOUNIFIED-DAG: %[[BOXREF:.*]] = fir.convert %[[BOX]] : (!fir.ref<!fir.box<!fir.heap<!fir.array<?xi32>>>>) -> !fir.ref<i8>
 // NOUNIFIED-DAG: fir.call @_FortranACUFRegisterVariable(%[[MODULE:.*]], %[[BOXREF]], %{{.*}}, %{{.*}})
-// UNIFIED: cuf.register_variable_static @_QMmtestsEn("_QMmtestsEn", 20) {deviceResident}
+// UNIFIED: cuf.register_variable_static @_QMmtestsEn("_QMmtestsEn", 20) deviceResident
 // CHECK-NOT: fir.call @_FortranACUFInitModule
 
 // -----
@@ -86,7 +86,7 @@ module attributes {dlti.dl_spec = #dlti.dl_spec<i8 = dense<8> : vector<2xi64>, i
     %c0 = arith.constant 0 : index
     %0 = fir.zero_bits !fir.heap<!fir.array<?x?x?x?x?xf64>>
     %1 = fir.shape %c0, %c0, %c0, %c0, %c0 : (index, index, index, index, index) -> !fir.shape<5>
-    %2 = fir.embox %0(%1) {allocator_idx = 3 : i32} : (!fir.heap<!fir.array<?x?x?x?x?xf64>>, !fir.shape<5>) -> !fir.box<!fir.heap<!fir.array<?x?x?x?x?xf64>>>
+    %2 = fir.embox %0(%1) allocator_idx(3) : (!fir.heap<!fir.array<?x?x?x?x?xf64>>, !fir.shape<5>) -> !fir.box<!fir.heap<!fir.array<?x?x?x?x?xf64>>>
     fir.has_value %2 : !fir.box<!fir.heap<!fir.array<?x?x?x?x?xf64>>>
   }
   // A kernel and the managed global must be in the gpu.module for
@@ -99,7 +99,7 @@ module attributes {dlti.dl_spec = #dlti.dl_spec<i8 = dense<8> : vector<2xi64>, i
       %c0 = arith.constant 0 : index
       %0 = fir.zero_bits !fir.heap<!fir.array<?x?x?x?x?xf64>>
       %1 = fir.shape %c0, %c0, %c0, %c0, %c0 : (index, index, index, index, index) -> !fir.shape<5>
-      %2 = fir.embox %0(%1) {allocator_idx = 3 : i32} : (!fir.heap<!fir.array<?x?x?x?x?xf64>>, !fir.shape<5>) -> !fir.box<!fir.heap<!fir.array<?x?x?x?x?xf64>>>
+      %2 = fir.embox %0(%1) allocator_idx(3) : (!fir.heap<!fir.array<?x?x?x?x?xf64>>, !fir.shape<5>) -> !fir.box<!fir.heap<!fir.array<?x?x?x?x?xf64>>>
       fir.has_value %2 : !fir.box<!fir.heap<!fir.array<?x?x?x?x?xf64>>>
     }
   }
@@ -111,7 +111,7 @@ module attributes {dlti.dl_spec = #dlti.dl_spec<i8 = dense<8> : vector<2xi64>, i
 // CHECK-NOT: fir.call @_FortranACUFInitModule
 // The device side is a definition, so it must not also be mapped as host
 // memory: that would override the device symbol and break symbol lookups.
-// UNIFIED: cuf.register_variable_static @_QMmEa00("_QMmEa00", 144) {deviceResident}
+// UNIFIED: cuf.register_variable_static @_QMmEa00("_QMmEa00", 144) deviceResident
 
 // -----
 
@@ -247,7 +247,7 @@ module attributes {dlti.dl_spec = #dlti.dl_spec<i8 = dense<8> : vector<2xi64>, i
   fir.global @_QMmtestsEma : !fir.box<!fir.heap<!fir.array<?xi32>>> {
     %c0 = arith.constant 0 : index
     %0 = fir.zero_bits !fir.heap<!fir.array<?xi32>>
-    %1 = fircg.ext_embox %0(%c0) {allocator_idx = 2 : i32} : (!fir.heap<!fir.array<?xi32>>, index) -> !fir.box<!fir.heap<!fir.array<?xi32>>>
+    %1 = fircg.ext_embox %0(%c0) allocator_idx(2) : (!fir.heap<!fir.array<?xi32>>, index) -> !fir.box<!fir.heap<!fir.array<?xi32>>>
     fir.has_value %1 : !fir.box<!fir.heap<!fir.array<?xi32>>>
   }
   gpu.module @cuda_device_mod {
@@ -267,14 +267,14 @@ module attributes {dlti.dl_spec = #dlti.dl_spec<i8 = dense<8> : vector<2xi64>, i
 
 module attributes {dlti.dl_spec = #dlti.dl_spec<i8 = dense<8> : vector<2xi64>, i16 = dense<16> : vector<2xi64>, i1 = dense<8> : vector<2xi64>, !llvm.ptr = dense<64> : vector<4xi64>, f80 = dense<128> : vector<2xi64>, i128 = dense<128> : vector<2xi64>, i64 = dense<64> : vector<2xi64>, !llvm.ptr<271> = dense<32> : vector<4xi64>, !llvm.ptr<272> = dense<64> : vector<4xi64>, f128 = dense<128> : vector<2xi64>, !llvm.ptr<270> = dense<32> : vector<4xi64>, f16 = dense<16> : vector<2xi64>, f64 = dense<64> : vector<2xi64>, i32 = dense<32> : vector<2xi64>, "dlti.stack_alignment" = 128 : i64, "dlti.endianness" = "little">, fir.defaultkind = "a1c4d8i4l4r4", fir.kindmap = "", gpu.container_module, llvm.data_layout = "e-m:e-p270:32:32-p271:32:32-p272:64:64-i64:64-i128:128-f80:128-n8:16:32:64-S128", llvm.target_triple = "x86_64-unknown-linux-gnu"} {
 func.func @_QPsub1() {
-  %0 = cuf.alloc !fir.box<!fir.heap<!fir.array<?xf32>>> {bindc_name = "a", data_attr = #cuf.cuda<device>, uniq_name = "_QFsub1Ea"} -> !fir.ref<!fir.box<!fir.heap<!fir.array<?xf32>>>>
-  %4:2 = hlfir.declare %0 {data_attr = #cuf.cuda<device>, fortran_attrs = #fir.var_attrs<allocatable>, uniq_name = "_QFsub1Ea"} : (!fir.ref<!fir.box<!fir.heap<!fir.array<?xf32>>>>) -> (!fir.ref<!fir.box<!fir.heap<!fir.array<?xf32>>>>, !fir.ref<!fir.box<!fir.heap<!fir.array<?xf32>>>>)
+  %0 = cuf.alloc !fir.box<!fir.heap<!fir.array<?xf32>>> uniq_name("_QFsub1Ea") bindc_name("a") data_attr(device) -> !fir.ref<!fir.box<!fir.heap<!fir.array<?xf32>>>>
+  %4:2 = hlfir.declare %0 uniq_name("_QFsub1Ea") fortran_attrs<allocatable> data_attr(#cuf.cuda<device>) : (!fir.ref<!fir.box<!fir.heap<!fir.array<?xf32>>>>) -> (!fir.ref<!fir.box<!fir.heap<!fir.array<?xf32>>>>, !fir.ref<!fir.box<!fir.heap<!fir.array<?xf32>>>>)
   %c1 = arith.constant 1 : index
   %c10_i32 = arith.constant 10 : i32
   %c0_i32 = arith.constant 0 : i32
-  %9 = cuf.allocate %4#1 : !fir.ref<!fir.box<!fir.heap<!fir.array<?xf32>>>> {data_attr = #cuf.cuda<device>} -> i32
-  %10 = cuf.deallocate %4#1 : !fir.ref<!fir.box<!fir.heap<!fir.array<?xf32>>>> {data_attr = #cuf.cuda<device>} -> i32
-  cuf.free %4#1 : !fir.ref<!fir.box<!fir.heap<!fir.array<?xf32>>>> {data_attr = #cuf.cuda<device>}
+  %9 = cuf.allocate %4#1 : !fir.ref<!fir.box<!fir.heap<!fir.array<?xf32>>>> data_attr(device) -> i32
+  %10 = cuf.deallocate %4#1 : !fir.ref<!fir.box<!fir.heap<!fir.array<?xf32>>>> data_attr(device) -> i32
+  cuf.free %4#1 : !fir.ref<!fir.box<!fir.heap<!fir.array<?xf32>>>> data_attr(device)
   return
 }
 }
@@ -293,7 +293,7 @@ module attributes {dlti.dl_spec = #dlti.dl_spec<!llvm.ptr<270> = dense<32> : vec
     %c0 = arith.constant 0 : index
     %0 = fir.zero_bits !fir.heap<!fir.array<?xf32>>
     %1 = fir.shape %c0 : (index) -> !fir.shape<1>
-    %2 = fir.embox %0(%1) {allocator_idx = 2 : i32} : (!fir.heap<!fir.array<?xf32>>, !fir.shape<1>) -> !fir.box<!fir.heap<!fir.array<?xf32>>>
+    %2 = fir.embox %0(%1) allocator_idx(2) : (!fir.heap<!fir.array<?xf32>>, !fir.shape<1>) -> !fir.box<!fir.heap<!fir.array<?xf32>>>
     fir.has_value %2 : !fir.box<!fir.heap<!fir.array<?xf32>>>
   }
   gpu.module @cuda_device_mod {
@@ -301,7 +301,7 @@ module attributes {dlti.dl_spec = #dlti.dl_spec<!llvm.ptr<270> = dense<32> : vec
       %c0 = arith.constant 0 : index
       %0 = fir.zero_bits !fir.heap<!fir.array<?xf32>>
       %1 = fir.shape %c0 : (index) -> !fir.shape<1>
-      %2 = fir.embox %0(%1) {allocator_idx = 2 : i32} : (!fir.heap<!fir.array<?xf32>>, !fir.shape<1>) -> !fir.box<!fir.heap<!fir.array<?xf32>>>
+      %2 = fir.embox %0(%1) allocator_idx(2) : (!fir.heap<!fir.array<?xf32>>, !fir.shape<1>) -> !fir.box<!fir.heap<!fir.array<?xf32>>>
       fir.has_value %2 : !fir.box<!fir.heap<!fir.array<?xf32>>>
     }
     fir.global @_QMallocmodEac {alignment = 64 : i64, data_attr = #cuf.cuda<constant>} : !fir.array<10xf32> {
@@ -313,8 +313,8 @@ module attributes {dlti.dl_spec = #dlti.dl_spec<!llvm.ptr<270> = dense<32> : vec
 
 // CHECK: llvm.func internal @__cudaFortranConstructor()
 // NOUNIFIED: fir.call @_FortranACUFRegisterVariable
-// UNIFIED: cuf.register_variable_static @_QMallocmodEac("_QMallocmodEac", 40) {deviceResident}
-// UNIFIED: cuf.register_variable_static @_QMallocmodEad("_QMallocmodEad", 48) {deviceResident}
+// UNIFIED: cuf.register_variable_static @_QMallocmodEac("_QMallocmodEac", 40) deviceResident
+// UNIFIED: cuf.register_variable_static @_QMallocmodEad("_QMallocmodEad", 48) deviceResident
 
 // -----
 
@@ -391,7 +391,7 @@ module attributes {dlti.dl_spec = #dlti.dl_spec<#dlti.dl_entry<!llvm.ptr, dense<
 // NOUNIFIED-DAG: %[[SZ8:.*]] = arith.constant 8 : index
 // NOUNIFIED-DAG: %[[SZ8I64:.*]] = fir.convert %[[SZ8]] : (index) -> i64
 // NOUNIFIED-DAG: fir.call @_FortranACUFRegisterVariable(%{{.*}}, %[[TPDEV2]], %{{.*}}, %[[SZ8I64]])
-// UNIFIED: cuf.register_variable_static @_QMtestEtp_dev("_QMtestEtp_dev", 8) {deviceResident}
+// UNIFIED: cuf.register_variable_static @_QMtestEtp_dev("_QMtestEtp_dev", 8) deviceResident
 
 // -----
 
@@ -426,7 +426,7 @@ module attributes {dlti.dl_spec = #dlti.dl_spec<#dlti.dl_entry<!llvm.ptr, dense<
 // NOUNIFIED-DAG: %[[SZ12:.*]] = arith.constant 12 : index
 // NOUNIFIED-DAG: %[[SZ12I64:.*]] = fir.convert %[[SZ12]] : (index) -> i64
 // NOUNIFIED-DAG: fir.call @_FortranACUFRegisterVariable(%{{.*}}, %[[TPPKDEV2]], %{{.*}}, %[[SZ12I64]])
-// UNIFIED: cuf.register_variable_static @_QMtestEtp_packed_dev("_QMtestEtp_packed_dev", 12) {deviceResident}
+// UNIFIED: cuf.register_variable_static @_QMtestEtp_packed_dev("_QMtestEtp_packed_dev", 12) deviceResident
 
 // -----
 

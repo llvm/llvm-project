@@ -196,7 +196,6 @@ public:
                                          SourceLocation Loc);
   // Re-type a layout-adapting matrix builtin call \p E with \p DestType's
   // row_major/column_major sugar so CodeGen lowers it into that layout.
-  void propagateContextualMatrixLayout(Expr *E, QualType DestType);
   bool handleResourceTypeAttr(QualType T, const ParsedAttr &AL);
 
   template <typename T>
@@ -239,6 +238,7 @@ public:
   bool CanPerformScalarCast(QualType SrcTy, QualType DestTy);
   bool CanPerformElementwiseCast(Expr *Src, QualType DestType);
   bool CanPerformAggregateSplatCast(Expr *Src, QualType DestType);
+  bool CanPerformPackedTypeCast(Expr *Src, QualType DestTy);
   ExprResult ActOnOutParamExpr(ParmVarDecl *Param, Expr *Arg);
 
   QualType getInoutParameterType(QualType Ty);

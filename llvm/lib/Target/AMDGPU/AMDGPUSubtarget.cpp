@@ -46,7 +46,9 @@ AMDGPUSubtarget::getMaxLocalMemSizeWithWaveCount(unsigned NWaves,
       std::max(1u, (NWaves * getNumWorkGroupSIMDs()) / WavesPerWorkgroup);
 
   const unsigned Granularity = std::max(LDSAllocationGranularity, 1u);
-  return alignDown(getLocalMemorySize() / WorkGroupsPerCU, Granularity);
+  return alignDown(std::min(getLocalMemorySize() / WorkGroupsPerCU,
+                            getAddressableLocalMemorySize()),
+                   Granularity);
 }
 
 std::pair<unsigned, unsigned> AMDGPUSubtarget::getOccupancyWithWorkGroupSizes(
