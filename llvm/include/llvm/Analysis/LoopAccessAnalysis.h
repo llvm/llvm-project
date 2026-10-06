@@ -833,7 +833,8 @@ private:
   /// Analyze the loop. Returns true if all memory access in the loop can be
   /// vectorized.
   bool analyzeLoop(AAResults *AA, const LoopInfo *LI,
-                   const TargetLibraryInfo *TLI, DominatorTree *DT);
+                   const TargetTransformInfo *TTI, const TargetLibraryInfo *TLI,
+                   DominatorTree *DT);
 
   /// Check if the structure of the loop allows it to be analyzed by this
   /// pass.
