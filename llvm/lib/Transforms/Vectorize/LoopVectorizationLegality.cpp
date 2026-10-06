@@ -1393,6 +1393,23 @@ bool LoopVectorizationLegality::blockCanBePredicated(
   return true;
 }
 
+namespace {
+
+struct GEPAccessDenseMapInfo {
+  using KeyTy = std::pair<GetElementPtrInst *, Type *>;
+
+  static unsigned getHashValue(const KeyTy &Key) {
+    return hash_combine(Key.second, Key.first->getSourceElementType(),
+                        hash_combine_range(Key.first->operand_values()));
+  }
+
+  static bool isEqual(const KeyTy &LHS, const KeyTy &RHS) {
+    return LHS.second == RHS.second && LHS.first->isIdenticalTo(RHS.first);
+  }
+};
+
+} // namespace
+
 bool LoopVectorizationLegality::canVectorizeWithIfConvert() {
   if (!EnableIfConversion) {
     reportVectorizationFailure("If-conversion is disabled",
@@ -1408,31 +1425,51 @@ bool LoopVectorizationLegality::canVectorizeWithIfConvert() {
   // the value's type) unconditionally within the loop header without
   // introducing a new fault.
   SafeAccessesTy SafePointers;
+  ScalarEvolution &SE = *PSE.getSE();
+  SmallDenseMap<GEPAccessDenseMapInfo::KeyTy, Align, 8,
+                GEPAccessDenseMapInfo>
+      SafeAccesses;
 
   // Collect safe addresses.
   for (BasicBlock *BB : TheLoop->blocks()) {
     if (!blockNeedsPredication(BB)) {
       for (Instruction &I : *BB) {
-        if (auto *Ptr = getLoadStorePointerOperand(&I)) {
-          auto [It, Inserted] = SafePointers.try_emplace(
-              std::make_pair(Ptr, getLoadStoreType(&I)),
-              getLoadStoreAlignment(&I));
-          if (!Inserted)
-            It->second = std::max(It->second, getLoadStoreAlignment(&I));
-        }
+        auto *Ptr = getLoadStorePointerOperand(&I);
+        if (!Ptr)
+          continue;
+        auto [PtrIt, PtrInserted] = SafePointers.try_emplace(
+            std::make_pair(Ptr, getLoadStoreType(&I)), getLoadStoreAlignment(&I));
+        if (!PtrInserted)
+          PtrIt->second = std::max(PtrIt->second, getLoadStoreAlignment(&I));
+        auto *GEP = dyn_cast<GetElementPtrInst>(Ptr);
+        Type *Ty = getLoadStoreType(&I);
+        if (!GEP || Ty->isVectorTy())
+          continue;
+        Align Alignment = getLoadStoreAlignment(&I);
+        auto [It, Inserted] = SafeAccesses.try_emplace({GEP, Ty}, Alignment);
+        if (!Inserted)
+          It->second = std::max(It->second, Alignment);
       }
-      continue;
     }
+  }
+
+  for (BasicBlock *BB : TheLoop->blocks()) {
+    if (!blockNeedsPredication(BB))
+      continue;
 
     // For a block which requires predication, a address may be safe to access
     // in the loop w/o predication if we can prove dereferenceability facts
     // sufficient to ensure it'll never fault within the loop. For the moment,
     // we restrict this to loads; stores are more complicated due to
     // concurrency restrictions.
-    ScalarEvolution &SE = *PSE.getSE();
     SmallVector<const SCEVPredicate *, 4> Predicates;
     for (Instruction &I : *BB) {
       LoadInst *LI = dyn_cast<LoadInst>(&I);
+      if (!LI)
+        continue;
+      auto SafeIt = SafePointers.find({LI->getPointerOperand(), LI->getType()});
+      if (SafeIt != SafePointers.end() && SafeIt->second >= LI->getAlign())
+        continue;
 
       // Make sure we can execute all computations feeding into Ptr in the loop
       // w/o triggering UB and that none of the out-of-loop operands are poison.
@@ -1478,14 +1515,22 @@ bool LoopVectorizationLegality::canVectorizeWithIfConvert() {
       // Pass the Predicates pointer to isDereferenceableAndAlignedInLoop so
       // that it will consider loops that need guarding by SCEV checks. The
       // vectoriser will generate these checks if we decide to vectorise.
-      if (LI && !LI->getType()->isVectorTy() && !mustSuppressSpeculation(*LI) &&
-          CanSpeculatePointerOp(LI->getPointerOperand()) &&
-          isDereferenceableAndAlignedInLoop(LI, TheLoop, SE, *DT, AC,
-                                            &Predicates)) {
-        auto [It, Inserted] = SafePointers.try_emplace(
-            std::make_pair(LI->getPointerOperand(), LI->getType()), LI->getAlign());
-        if (!Inserted)
-          It->second = std::max(It->second, LI->getAlign());
+      if (!LI->getType()->isVectorTy() && !mustSuppressSpeculation(*LI)) {
+        // An identical GEP used by an unconditional access is non-poison
+        // and dereferenceable for that access's type and alignment.
+        auto *GEP = dyn_cast<GetElementPtrInst>(LI->getPointerOperand());
+        auto It =
+            GEP ? SafeAccesses.find({GEP, LI->getType()}) : SafeAccesses.end();
+        bool HasSafeAccess =
+            It != SafeAccesses.end() && It->second >= LI->getAlign();
+        if (HasSafeAccess || (CanSpeculatePointerOp(LI->getPointerOperand()) &&
+                              isDereferenceableAndAlignedInLoop(
+                                  LI, TheLoop, SE, *DT, AC, &Predicates))) {
+          auto [PtrIt, PtrInserted] = SafePointers.try_emplace(
+              std::make_pair(LI->getPointerOperand(), LI->getType()), LI->getAlign());
+          if (!PtrInserted)
+            PtrIt->second = std::max(PtrIt->second, LI->getAlign());
+        }
       }
       Predicates.clear();
     }
