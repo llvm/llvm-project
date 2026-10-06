@@ -100,7 +100,7 @@ public:
         // are also not subject to inlining.
         func.setInlineKind(cir::InlineKind::NoInline);
         if (fd->hasAttr<CUDAGlobalAttr>()) {
-          func.setCallingConv(cir::CallingConv::PTXKernel);
+          func.setCallingConv(getDeviceKernelCallingConv());
           assert(!cir::MissingFeatures::opFuncParameterAttributes());
         }
         if (const auto *attr = fd->getAttr<CUDALaunchBoundsAttr>())
