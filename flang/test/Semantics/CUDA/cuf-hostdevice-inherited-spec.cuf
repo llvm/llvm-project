@@ -1,6 +1,6 @@
 ! RUN: %python %S/../test_errors.py %s %flang_fc1
 ! Inherited specification expressions in separate MODULE PROCEDURE bodies.
-! See lorado issue #4408 and llvm-project PR #228176.
+! See llvm-project PR #228176.
 
 ! TODO: This documents bad behavior: the inherited dummy array bound calls a
 ! host-only function from host,device code without a device-code diagnostic.

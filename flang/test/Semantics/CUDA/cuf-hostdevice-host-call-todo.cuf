@@ -1,5 +1,5 @@
 ! RUN: %python %S/../test_errors.py %s %flang_fc1
-! Additional expression-checking gaps collected in lorado issue #4408.
+! Additional expression-checking gaps collected during review of PR #228176.
 
 ! TODO: This documents bad behavior: an ordinary host subroutine calls a
 ! device-only function without a host-code diagnostic.

@@ -180,18 +180,18 @@ contains
     !ERROR: 'host_only' may not be called in device code
     call host_only()
   end subroutine
-  attributes(host,device) subroutine reset_after_guarded_else_if(choose, other)
+  attributes(host,device) subroutine preserve_guarded_else_if(choose, other)
     logical :: choose, other
     if (choose) then
       call both()
     else if (on_device()) then
       call device_only()
     else if (other) then
-      !ERROR: 'host_only' may not be called in device code
       call host_only()
       return
     else
-      !ERROR: 'device_only' may not be called in host code
+      ! TODO: This documents permissive checking: this arm can only run on
+      ! the host, but guard direction is not tracked yet.
       call device_only()
     end if
     !ERROR: 'host_only' may not be called in device code

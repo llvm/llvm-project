@@ -71,7 +71,7 @@ static const llvm::StringSet<> warpFunctions_ = {"match_all_syncjj",
 // These builtin procedures lower to inline pointer operations on either target.
 static const llvm::StringSet<> inlinePointerFunctions_ = {"c_associated_c_ptr",
     "c_associated_c_funptr", "__builtin_c_ptr_eq", "__builtin_c_ptr_ne",
-    "__builtin_c_devptr_eq", "__builtin_c_devptr_ne"};
+    "__builtin_c_devptr_eq", "__builtin_c_devptr_ne", "__builtin_c_funloc"};
 
 enum class CallContext { Device, HostDevice, GuardedHostDevice };
 
@@ -114,7 +114,17 @@ struct DeviceExprChecker
   explicit DeviceExprChecker(SemanticsContext &c, CallContext callContext)
       : Base(*this), context_{c}, callContext_{callContext} {}
   using Base::operator();
-  Result operator()(const evaluate::ProcedureDesignator &x) const {
+  Result operator()(const evaluate::ProcedureRef &x) const {
+    if (auto msg{CheckCallee(x.proc())}) {
+      return msg;
+    }
+    // A procedure passed as an argument is not called. Calls evaluated in
+    // argument expressions still need checking.
+    return (*this)(x.arguments());
+  }
+
+private:
+  Result CheckCallee(const evaluate::ProcedureDesignator &x) const {
     if (IsOnDevice(x)) {
       return {};
     }
@@ -770,24 +780,26 @@ private:
     const auto &condition{std::get<parser::ScalarLogicalExpr>(ifS.statement.t)};
     CheckUnwrappedExpr(context_, ifS.source, condition, callContext_);
     AllowGuardedCalls(condition);
-    const CallContext branchContext{callContext_};
+    CallContext branchContext{callContext_};
     Check(std::get<parser::Block>(ic.t));
     const auto &elseIfBlocks{
         std::get<std::list<parser::IfConstruct::ElseIfBlock>>(ic.t)};
     for (const auto &eib : elseIfBlocks) {
-      // An ELSEIF guard applies to its own arm and its plain ELSE, not to a
-      // later unrelated ELSEIF. Preserve a guard on the initial IF, if any.
+      // Later arms remain under the preceding conditions' guards. Reset any
+      // context changes caused by statements inside the preceding arm.
       callContext_ = branchContext;
       const auto &eIfS{std::get<parser::Statement<parser::ElseIfStmt>>(eib.t)};
       const auto &elseIfCondition{
           std::get<parser::ScalarLogicalExpr>(eIfS.statement.t)};
       CheckUnwrappedExpr(context_, eIfS.source, elseIfCondition, callContext_);
       AllowGuardedCalls(elseIfCondition);
+      branchContext = callContext_;
       Check(std::get<parser::Block>(eib.t));
     }
     const auto &eb{
         std::get<std::optional<parser::IfConstruct::ElseBlock>>(ic.t)};
     if (eb) {
+      callContext_ = branchContext;
       Check(std::get<parser::Block>(eb->t));
     }
     // A return only extends a guard when its arm is associated with ON_DEVICE.
