@@ -56,6 +56,9 @@ public:
 
   bool shouldExpandReduction(const IntrinsicInst *II) const override;
 
+  bool isLegalSpeculativeLoad(Type *DataType,
+                              unsigned AddressSpace) const override;
+
   TTI::MemCmpExpansionOptions
   enableMemCmpExpansion(bool OptSize, bool IsZeroCmp) const override;
 
