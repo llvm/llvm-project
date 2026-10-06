@@ -7494,42 +7494,39 @@ static void preparePlanForEpilogueVectorLoop(
         ReductionPhi->setStartValue(
             PHBuilder.createNaryOp(VPInstruction::Broadcast, ResumeVPV));
         continue;
-      } else {
-        auto *PhiR = dyn_cast<VPReductionPHIRecipe>(&R);
-        if (auto *VPI = dyn_cast<VPInstruction>(PhiR->getStartValue())) {
-          assert(VPI->getOpcode() == VPInstruction::ReductionStartVector &&
-                 "unexpected start value");
-          // Partial sub-reductions always start at 0 and account for the
-          // reduction start value in a final subtraction. Update it to use the
-          // resume value from the main vector loop.
-          if (PhiR->getVFScaleFactor() > 1 &&
-              RecurrenceDescriptor::isSubRecurrenceKind(
-                  PhiR->getRecurrenceKind())) {
-            auto *Sub = cast<VPInstruction>(RdxResult->getSingleUser());
-            assert((Sub->getOpcode() == Instruction::Sub ||
-                    Sub->getOpcode() == Instruction::FSub) &&
-                   "Unexpected opcode");
-            assert(isa<VPIRValue>(Sub->getOperand(0)) &&
-                   "Expected operand to match the original start value of the "
-                   "reduction");
-            // For integer sub-reductions, verify start value is zero.
-            // For FP sub-reductions, verify start value is negative zero.
-            [[maybe_unused]] auto StartValueIsIdentity = [&] {
-              Value *IdentityValue = getRecurrenceIdentity(
-                  PhiR->getRecurrenceKind(), ResumeVPV->getScalarType(),
-                  PhiR->getFastMathFlagsOrNone());
-              auto *StartValue = dyn_cast<VPIRValue>(VPI->getOperand(0));
-              return StartValue && StartValue->getValue() == IdentityValue;
-            };
-            assert(StartValueIsIdentity() &&
-                   "Expected start value for partial sub-reduction to be zero "
-                   "(or negative zero)");
+      }
+      if (auto *VPI = dyn_cast<VPInstruction>(ReductionPhi->getStartValue())) {
+        assert(VPI->getOpcode() == VPInstruction::ReductionStartVector &&
+               "unexpected start value");
+        // Partial sub-reductions always start at 0 and account for the
+        // reduction start value in a final subtraction. Update it to use the
+        // resume value from the main vector loop.
+        if (ReductionPhi->getVFScaleFactor() > 1 &&
+            RecurrenceDescriptor::isSubRecurrenceKind(RK)) {
+          auto *Sub = cast<VPInstruction>(RdxResult->getSingleUser());
+          assert((Sub->getOpcode() == Instruction::Sub ||
+                  Sub->getOpcode() == Instruction::FSub) &&
+                 "Unexpected opcode");
+          assert(isa<VPIRValue>(Sub->getOperand(0)) &&
+                 "Expected operand to match the original start value of the "
+                 "reduction");
+          // For integer sub-reductions, verify start value is zero.
+          // For FP sub-reductions, verify start value is negative zero.
+          [[maybe_unused]] auto StartValueIsIdentity = [&] {
+            Value *IdentityValue =
+                getRecurrenceIdentity(RK, ResumeVPV->getScalarType(),
+                                      ReductionPhi->getFastMathFlagsOrNone());
+            auto *StartValue = dyn_cast<VPIRValue>(VPI->getOperand(0));
+            return StartValue && StartValue->getValue() == IdentityValue;
+          };
+          assert(StartValueIsIdentity() &&
+                 "Expected start value for partial sub-reduction to be zero "
+                 "(or negative zero)");
 
-            Sub->setOperand(0, ResumeVPV);
-          } else
-            VPI->setOperand(0, ResumeVPV);
-          continue;
-        }
+          Sub->setOperand(0, ResumeVPV);
+        } else
+          VPI->setOperand(0, ResumeVPV);
+        continue;
       }
     } else {
       // Retrieve the induction resume value via ResumeForEpilogue.
