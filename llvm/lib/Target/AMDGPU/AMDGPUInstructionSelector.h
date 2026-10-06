@@ -459,6 +459,11 @@ private:
   /// Match either sign or zero extend depending on the \p IsSigned from a
   /// 32-bit value to 64-bits, or \p Reg itself if it is 32-bit.
   Register matchExtendFromS32OrS32(Register Reg, bool IsSigned) const;
+  /// Return an i32 equal to \p Op if it already trivially exists. This includes
+  /// both i32 values themselves, the inputs to extensions from i32, and i64
+  /// values with irrelevant high-halves (they can just be the low half).
+  Register tryNarrowToI32(Register Reg, bool IsSigned,
+                          MachineInstr &InsertPt) const;
   /// Match an any extend from a 32-bit value to 64-bit.
   Register matchAnyExtendFromS32(Register Reg) const;
 
