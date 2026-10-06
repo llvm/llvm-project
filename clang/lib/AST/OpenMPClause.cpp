@@ -3351,14 +3351,14 @@ bool clang::resolveOMPAdjustArgsItem(const OMPAdjustArgsItem &Item,
 
   // A named parameter list item.
   if (const auto *DRE = dyn_cast<DeclRefExpr>(E)) {
-    const auto *PVD = dyn_cast<ParmVarDecl>(DRE->getDecl());
-    if (!PVD)
-      return false;
-    unsigned Index = PVD->getFunctionScopeIndex();
-    if (FD->getNumParams() > Index &&
-        FD->getParamDecl(Index)->getCanonicalDecl() == PVD->getCanonicalDecl())
-      AppendIfInRange(static_cast<int64_t>(Index) + 1);
-    return true;
+    if (const auto *PVD = dyn_cast<ParmVarDecl>(DRE->getDecl())) {
+      unsigned Index = PVD->getFunctionScopeIndex();
+      if (FD->getNumParams() > Index &&
+          FD->getParamDecl(Index)->getCanonicalDecl() ==
+              PVD->getCanonicalDecl())
+        AppendIfInRange(static_cast<int64_t>(Index) + 1);
+      return true;
+    }
   }
 
   // The position of a parameter, given as a constant integer expression.

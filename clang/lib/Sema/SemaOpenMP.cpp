@@ -7915,6 +7915,11 @@ static OMPAdjustArgsVal checkOMPAdjustArgsValue(SemaOpenMP &S, Expr *E,
         << (StrictlyPositive ? 1 : 0) << E->getSourceRange();
     return OMPAdjustArgsVal::Invalid;
   }
+  if (!Result.isRepresentableByInt64()) {
+    S.Diag(E->getExprLoc(), diag::err_omp_large_expression_in_clause)
+        << getOpenMPClauseNameForDiag(OMPC_adjust_args) << E->getSourceRange();
+    return OMPAdjustArgsVal::Invalid;
+  }
   return OMPAdjustArgsVal::Known;
 }
 
@@ -8079,13 +8084,14 @@ void SemaOpenMP::ActOnOpenMPDeclareVariantDirective(
         resolveOMPAdjustArgsItem(Item, FD, FD->getNumParams(), getASTContext(),
                                  Positions);
         for (unsigned Pos : Positions) {
-          if (!FD->getParamDecl(Pos - 1)->getType()->isReferenceType()) {
-            Diag(getOMPAdjustArgsItemLoc(Item, AdjustArgsLoc.isValid()
-                                                   ? AdjustArgsLoc
-                                                   : SR.getBegin()),
-                 diag::err_omp_non_by_ref_need_device_addr_modifier_argument);
-            break; // One diagnostic per written item.
-          }
+          QualType ParamTy = FD->getParamDecl(Pos - 1)->getType();
+          if (ParamTy->isReferenceType() || ParamTy->isDependentType())
+            continue;
+          Diag(getOMPAdjustArgsItemLoc(Item, AdjustArgsLoc.isValid()
+                                                 ? AdjustArgsLoc
+                                                 : SR.getBegin()),
+               diag::err_omp_non_by_ref_need_device_addr_modifier_argument);
+          break; // One diagnostic per written item.
         }
       }
     }

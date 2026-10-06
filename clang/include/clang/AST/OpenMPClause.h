@@ -49,9 +49,9 @@ namespace clang {
 class ASTContext;
 
 /// One item in an OpenMP 'adjust_args' parameter list.
-struct OMPAdjustArgsItem final {
+struct OMPAdjustArgsItem {
   /// One bound of a parameter range.
-  struct Bound final {
+  struct Bound {
     enum BoundKind : uint8_t { Omitted, Expression, NumArgs };
 
     BoundKind Kind = Omitted;

@@ -4814,6 +4814,10 @@ bool Parser::ParseOpenMPAdjustArgsBound(OMPAdjustArgsItem::Bound &Bound) {
     ExprResult E = ParseAssignmentExpression();
     if (E.isInvalid())
       return true;
+    E = Actions.ActOnFinishFullExpr(E.get(), E.get()->getExprLoc(),
+                                    /*DiscardedValue=*/false);
+    if (E.isInvalid())
+      return true;
     Bound.Kind = OMPAdjustArgsItem::Bound::Expression;
     Bound.E = E.get();
     return false;

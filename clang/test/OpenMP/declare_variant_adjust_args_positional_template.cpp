@@ -60,3 +60,28 @@ template void tmpl_offset<1>(int *, int *, ...);
 // expected-error@51 {{argument to 'adjust_args' clause must be a non-negative integer value}}
 // expected-note@+1 {{in instantiation of function template specialization 'tmpl_offset<-1>' requested here}}
 template void tmpl_offset<-1>(int *, int *, ...);
+
+template <typename T>
+void v_tmpl_addr(T aaa);
+
+// A dependent parameter type is checked after substitution.
+// expected-error@+2 {{expected reference type argument on 'adjust_args' clause with 'need_device_addr' modifier}}
+#pragma omp declare variant(v_tmpl_addr<T>) match(construct={dispatch}) \
+  adjust_args(need_device_addr: 1)
+template <typename T>
+void tmpl_addr(T aaa) {}
+
+// A reference specialization is valid.
+template void tmpl_addr<int &>(int &);
+
+// expected-note@+1 {{in instantiation of function template specialization 'tmpl_addr<int>' requested here}}
+template void tmpl_addr<int>(int);
+
+template <int... Ns>
+void v_tmpl_pack(int *aaa, ...);
+
+// expected-error@+2 {{expression contains unexpanded parameter pack 'Ns'}}
+#pragma omp declare variant(v_tmpl_pack<Ns...>) match(construct={dispatch}) \
+  adjust_args(need_device_ptr: Ns)
+template <int... Ns>
+void tmpl_pack(int *aaa, ...) {}

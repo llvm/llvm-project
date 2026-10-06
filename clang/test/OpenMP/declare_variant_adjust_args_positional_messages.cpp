@@ -176,6 +176,11 @@ void h6(int *aaa, int *bbb, ...);
   adjust_args(need_device_ptr: 1.5)
 void h7(int *aaa, int *bbb, ...);
 
+// expected-error@+2 {{argument to 'adjust_args' clause requires a value that can be represented by a 64-bit}}
+#pragma omp declare variant(v1) match(construct={dispatch}) \
+  adjust_args(need_device_ptr: 9223372036854775808ULL)
+void h7_large(int *aaa, int *bbb, ...);
+
 // A position with a dependent type is checked when the template is
 // instantiated.
 template <typename T, T N>
@@ -194,6 +199,12 @@ template void dependent_type<int, 2>(int *, int *, ...);
 #pragma omp declare variant(v1) match(construct={dispatch}) \
   adjust_args(need_device_addr: 1)
 void h8(int *aaa, int *bbb, ...);
+
+constexpr int PositionOne = 1;
+// expected-error@+2 {{expected reference type argument on 'adjust_args' clause with 'need_device_addr' modifier}}
+#pragma omp declare variant(v1) match(construct={dispatch}) \
+  adjust_args(need_device_addr: PositionOne)
+void h8_constant(int *aaa, int *bbb, ...);
 
 // A huge literal upper bound must not turn range resolution into an unbounded
 // loop: out-of-range positions are dropped (OpenMP 6.0 [9.6.2]), not
