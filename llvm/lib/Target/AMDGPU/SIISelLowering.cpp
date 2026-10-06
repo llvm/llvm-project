@@ -21790,3 +21790,18 @@ void SITargetLowering::emitExpandAtomicStore(StoreInst *SI) const {
   llvm_unreachable(
       "Expand Atomic Store only handles SCRATCH -> FLAT conversion");
 }
+
+bool SITargetLowering::hasBitTest(SDValue X, SDValue Y) const {
+  if (X->isDivergent() || Y->isDivergent())
+    return false;
+
+  EVT ScalarType = X.getValueType().getScalarType();
+
+  if (ScalarType != MVT::i32)
+    return false;
+
+  if (!isConstOrConstSplat(Y))
+    return false;
+
+  return true;
+}
