@@ -294,9 +294,9 @@ public:
   /// Later ones are passed to \p HandleOtherPositionals instead of being
   /// reported as multiple subcommands, so that e.g. `foo foo` is subcommand
   /// `foo` with a positional argument `foo`.
-  /// \return The name of the subcommand found. If no subcommand is found,
-  /// this returns an empty StringRef. If multiple subcommands are found, the
-  /// first one is returned.
+  /// \return The name of the subcommand found. If no subcommand is found, or
+  /// if multiple subcommands are found (after \p HandleMultipleSubcommands is
+  /// called), this returns an empty StringRef.
   LLVM_ABI StringRef getSubCommand(
       ArrayRef<OptTable::SubCommand> AllSubCommands,
       std::function<void(ArrayRef<StringRef>)> HandleMultipleSubcommands,

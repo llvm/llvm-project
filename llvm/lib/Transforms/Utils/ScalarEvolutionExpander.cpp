@@ -277,9 +277,9 @@ Value *SCEVExpander::InsertNoopCastOfTo(Value *V, Type *Ty) {
 /// InsertBinop - Insert the specified binary operator, doing a small amount
 /// of work to avoid inserting an obviously redundant operation, and hoisting
 /// to an outer loop when the opportunity is there and it is safe.
-Value *SCEVExpander::InsertBinop(Instruction::BinaryOps Opcode,
-                                 Value *LHS, Value *RHS,
-                                 SCEV::NoWrapFlags Flags, bool IsSafeToHoist) {
+Value *SCEVExpander::InsertBinop(Instruction::BinaryOps Opcode, Value *LHS,
+                                 Value *RHS, SCEVFlags Flags,
+                                 bool IsSafeToHoist) {
   // Fold a binop with constant operands.
   if (Constant *CLHS = dyn_cast<Constant>(LHS))
     if (Constant *CRHS = dyn_cast<Constant>(RHS))
@@ -378,8 +378,7 @@ Value *SCEVExpander::InsertBinop(Instruction::BinaryOps Opcode,
 /// loop-invariant portions of expressions, after considering what
 /// can be folded using target addressing modes.
 ///
-Value *SCEVExpander::expandAddToGEP(SCEVUse Offset, Value *V,
-                                    SCEV::NoWrapFlags Flags) {
+Value *SCEVExpander::expandAddToGEP(SCEVUse Offset, Value *V, SCEVFlags Flags) {
   assert(!isa<Instruction>(V) ||
          SE.DT.dominates(cast<Instruction>(V), &*Builder.GetInsertPoint()));
 
@@ -532,7 +531,7 @@ Value *SCEVExpander::visitAddExpr(SCEVUseT<const SCEVAddExpr *> S) {
   if (match(S, m_scev_URem(m_SCEV(URemLHS), m_SCEV(URemRHS), SE))) {
     Value *LHS = expand(URemLHS);
     Value *RHS = expand(URemRHS);
-    return InsertBinop(Instruction::URem, LHS, RHS, SCEV::FlagAnyWrap,
+    return InsertBinop(Instruction::URem, LHS, RHS, SCEV::FlagNone,
                        /*IsSafeToHoist*/ false);
   }
 
@@ -591,7 +590,7 @@ Value *SCEVExpander::visitAddExpr(SCEVUseT<const SCEVAddExpr *> S) {
     } else if (Op->isNonConstantNegative()) {
       // Instead of doing a negate and add, just do a subtract.
       Value *W = expand(SE.getNegativeSCEV(Op));
-      Sum = InsertBinop(Instruction::Sub, Sum, W, SCEV::FlagAnyWrap,
+      Sum = InsertBinop(Instruction::Sub, Sum, W, SCEV::FlagNone,
                         /*IsSafeToHoist*/ true);
       ++I;
     } else {
@@ -624,7 +623,7 @@ Value *SCEVExpander::visitMulExpr(SCEVUseT<const SCEVMulExpr *> S) {
     unsigned BitWidth = Ty->getScalarSizeInBits();
     APInt Mask(APInt::getBitsSetFrom(BitWidth, ShAmtC));
     Value *Res = InsertBinop(Instruction::And, LHS, ConstantInt::get(Ty, Mask),
-                             SCEV::FlagAnyWrap, /*IsSafeToHoist*/ true);
+                             SCEV::FlagNone, /*IsSafeToHoist*/ true);
     return Res;
   }
 
@@ -668,13 +667,13 @@ Value *SCEVExpander::visitMulExpr(SCEVUseT<const SCEVMulExpr *> S) {
     if (Exponent & 1)
       Result = P;
     for (uint64_t BinExp = 2; BinExp <= Exponent; BinExp <<= 1) {
-      P = InsertBinop(Instruction::Mul, P, P, SCEV::FlagAnyWrap,
+      P = InsertBinop(Instruction::Mul, P, P, SCEV::FlagNone,
                       /*IsSafeToHoist*/ true);
       if (Exponent & BinExp)
-        Result = Result ? InsertBinop(Instruction::Mul, Result, P,
-                                      SCEV::FlagAnyWrap,
-                                      /*IsSafeToHoist*/ true)
-                        : P;
+        Result = Result
+                     ? InsertBinop(Instruction::Mul, Result, P, SCEV::FlagNone,
+                                   /*IsSafeToHoist*/ true)
+                     : P;
     }
 
     I = E;
@@ -689,7 +688,7 @@ Value *SCEVExpander::visitMulExpr(SCEVUseT<const SCEVMulExpr *> S) {
     } else if (I->second->isAllOnesValue()) {
       // Instead of doing a multiply by negative one, just do a negate.
       Prod = InsertBinop(Instruction::Sub, Constant::getNullValue(Ty), Prod,
-                         SCEV::FlagAnyWrap, /*IsSafeToHoist*/ true);
+                         SCEV::FlagNone, /*IsSafeToHoist*/ true);
       ++I;
     } else {
       // A simple mul.
@@ -724,7 +723,7 @@ Value *SCEVExpander::visitUDivExpr(SCEVUseT<const SCEVUDivExpr *> S) {
     if (RHS.isPowerOf2())
       return InsertBinop(Instruction::LShr, LHS,
                          ConstantInt::get(SC->getType(), RHS.logBase2()),
-                         SCEV::FlagAnyWrap, /*IsSafeToHoist*/ true);
+                         SCEV::FlagNone, /*IsSafeToHoist*/ true);
   }
 
   const SCEV *RHSExpr = S->getRHS();
@@ -742,7 +741,7 @@ Value *SCEVExpander::visitUDivExpr(SCEVUseT<const SCEVUDivExpr *> S) {
       RHS = Builder.CreateIntrinsic(RHS->getType(), Intrinsic::umax,
                                     {RHS, ConstantInt::get(RHS->getType(), 1)});
   }
-  return InsertBinop(Instruction::UDiv, LHS, RHS, SCEV::FlagAnyWrap,
+  return InsertBinop(Instruction::UDiv, LHS, RHS, SCEV::FlagNone,
                      /*IsSafeToHoist*/ SE.isKnownNonZero(S->getRHS()));
 }
 
@@ -1146,7 +1145,7 @@ SCEVExpander::getAddRecExprPHILiterally(const SCEVAddRecExpr *Normalized,
 
   // Create the PHI.
   BasicBlock *Header = L->getHeader();
-  Builder.SetInsertPoint(Header, Header->begin());
+  Builder.SetInsertPoint(Header->begin());
   PHINode *PN =
       Builder.CreatePHI(ExpandTy, pred_size(Header), Twine(IVName) + ".iv");
 
@@ -1745,7 +1744,7 @@ Value *SCEVExpander::expand(SCEVUse S) {
     return I->second;
 
   SCEVInsertPointGuard Guard(Builder, this);
-  Builder.SetInsertPoint(InsertPt->getParent(), InsertPt);
+  Builder.SetInsertPoint(InsertPt);
 
   // Expand the expression into instructions.
   Value *V = findExistingExpansionAndDropPoisonFlags(S, &*InsertPt);
@@ -1890,7 +1889,7 @@ void SCEVExpander::replaceCongruentIVInc(
     else
       IP = OrigInc->getNextNode()->getIterator();
 
-    IRBuilder<> Builder(IP->getParent(), IP);
+    IRBuilder<> Builder(IP);
     Builder.SetCurrentDebugLocation(IsomorphicInc->getDebugLoc());
     NewInc =
         Builder.CreateTruncOrBitCast(OrigInc, IsomorphicInc->getType(), IVName);
@@ -1992,8 +1991,7 @@ SCEVExpander::replaceCongruentIVs(Loop *L, const DominatorTree *DT,
     ++NumElim;
     Value *NewIV = OrigPhiRef;
     if (OrigPhiRef->getType() != Phi->getType()) {
-      IRBuilder<> Builder(L->getHeader(),
-                          L->getHeader()->getFirstInsertionPt());
+      IRBuilder<> Builder(L->getHeader()->getFirstInsertionPt());
       Builder.SetCurrentDebugLocation(Phi->getDebugLoc());
       NewIV = Builder.CreateTruncOrBitCast(OrigPhiRef, Phi->getType(), IVName);
     }
@@ -2371,7 +2369,7 @@ Value *SCEVExpander::generateOverflowCheck(const SCEVAddRecExpr *AR,
       OfMul = Builder.CreateExtractValue(Mul, 1, "mul.overflow");
 
       // The type Ty is already encoded in AbsStep.
-      InsertedOverflowChecks[Key] = std::pair<Value *, Value *>(MulV, OfMul);
+      InsertedOverflowChecks[Key] = {MulV, OfMul};
     }
 
     Value *Add = nullptr, *Sub = nullptr;

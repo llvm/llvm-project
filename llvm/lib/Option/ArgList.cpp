@@ -8,6 +8,7 @@
 
 #include "llvm/Option/ArgList.h"
 #include "llvm/ADT/ArrayRef.h"
+#include "llvm/ADT/STLExtras.h"
 #include "llvm/ADT/SmallVector.h"
 #include "llvm/ADT/StringRef.h"
 #include "llvm/ADT/Twine.h"
@@ -215,16 +216,16 @@ StringRef ArgList::getSubCommand(
     if (A->getOption().getKind() != Option::InputClass)
       continue;
 
-    size_t OldSize = SubCommands.size();
-    if (!AllowSubCommandNamesAsPositionals || SubCommands.empty()) {
-      for (const OptTable::SubCommand &CMD : AllSubCommands) {
-        if (StringRef(CMD.Name) == A->getValue())
-          SubCommands.push_back(A->getValue());
-      }
-    }
-
-    if (SubCommands.size() == OldSize)
-      OtherPositionals.push_back(A->getValue());
+    StringRef CmdName = A->getValue();
+    bool IsCandidate =
+        !AllowSubCommandNamesAsPositionals || SubCommands.empty();
+    if (IsCandidate &&
+        llvm::any_of(AllSubCommands, [&](const OptTable::SubCommand &CMD) {
+          return CmdName == CMD.Name;
+        }))
+      SubCommands.push_back(CmdName);
+    else
+      OtherPositionals.push_back(CmdName);
   }
 
   // Invoke callbacks if necessary.

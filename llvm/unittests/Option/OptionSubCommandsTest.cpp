@@ -220,7 +220,7 @@ TYPED_TEST(OptSubCommandTableTest, SubCommandParsing) {
     StringRef SC = AL.getSubCommand(
         T.getSubCommands(), HandleMultipleSubcommands, HandleOtherPositionals);
     EXPECT_TRUE(SC.empty());
-    EXPECT_NE(std::string::npos, ErrMsg.find("Multiple subcommands passed"));
+    EXPECT_EQ(ErrMsg, "Multiple subcommands passed\n\nfoo\nfoo");
   }
 }
 

@@ -15,6 +15,7 @@
 #include "Plugins/TypeSystem/Clang/TypeSystemClang.h"
 #include "lldb/Core/Module.h"
 #include "lldb/Core/PluginManager.h"
+#include "lldb/Expression/Expression.h"
 #include "lldb/Symbol/CompileUnit.h"
 #include "lldb/Symbol/LineTable.h"
 #include "lldb/Symbol/ObjectFile.h"
@@ -25,6 +26,10 @@
 #include "lldb/Utility/LLDBLog.h"
 #include "lldb/Utility/Log.h"
 
+#include "clang/Basic/ABI.h"
+#include "llvm/ADT/DenseMap.h"
+#include "llvm/ADT/STLExtras.h"
+#include "llvm/ADT/SmallVector.h"
 #include "llvm/DebugInfo/CodeView/CVRecord.h"
 #include "llvm/DebugInfo/CodeView/CVTypeVisitor.h"
 #include "llvm/DebugInfo/CodeView/DebugLinesSubsection.h"
@@ -50,6 +55,7 @@
 #include "llvm/Support/Allocator.h"
 #include "llvm/Support/BinaryStreamReader.h"
 #include "llvm/Support/Error.h"
+#include "llvm/Support/ErrorExtras.h"
 #include "llvm/Support/ErrorOr.h"
 #include "llvm/Support/MemoryBuffer.h"
 
@@ -1043,13 +1049,13 @@ VariableSP SymbolFileNativePDB::CreateGlobalVariable(PdbGlobalSymId var_id) {
   if (sym.kind() == S_CONSTANT)
     return CreateConstantSymbol(var_id, sym);
 
+  ModuleSP module_sp = GetObjectFile()->GetModule();
   lldb::ValueType scope = eValueTypeInvalid;
   TypeIndex ti;
   llvm::StringRef name;
   lldb::addr_t addr = 0;
-  uint16_t section = 0;
-  uint32_t offset = 0;
   bool is_external = false;
+  DWARFExpression location_expr;
   switch (sym.kind()) {
   case S_GDATA32:
     is_external = true;
@@ -1065,9 +1071,11 @@ VariableSP SymbolFileNativePDB::CreateGlobalVariable(PdbGlobalSymId var_id) {
     scope = (sym.kind() == S_GDATA32) ? eValueTypeVariableGlobal
                                       : eValueTypeVariableStatic;
     name = ds.Name;
-    section = ds.Segment;
-    offset = ds.DataOffset;
     addr = m_index->MakeVirtualAddress(ds.Segment, ds.DataOffset);
+    if (addr == LLDB_INVALID_ADDRESS)
+      return nullptr;
+    location_expr =
+        MakeGlobalLocationExpression(ds.Segment, ds.DataOffset, module_sp);
     break;
   }
   case S_GTHREAD32:
@@ -1083,10 +1091,12 @@ VariableSP SymbolFileNativePDB::CreateGlobalVariable(PdbGlobalSymId var_id) {
     }
     ti = tlds.Type;
     name = tlds.Name;
-    section = tlds.Segment;
-    offset = tlds.DataOffset;
     addr = m_index->MakeVirtualAddress(tlds.Segment, tlds.DataOffset);
     scope = eValueTypeVariableThreadLocal;
+    if (addr == LLDB_INVALID_ADDRESS)
+      return nullptr;
+    location_expr =
+        MakeGlobalThreadLocalLocationExpression(tlds.DataOffset, module_sp);
     break;
   }
   default:
@@ -1116,10 +1126,7 @@ VariableSP SymbolFileNativePDB::CreateGlobalVariable(PdbGlobalSymId var_id) {
       ast_builder->EnsureVariable(var_id);
   }
 
-  ModuleSP module_sp = GetObjectFile()->GetModule();
-  DWARFExpressionList location(
-      module_sp, MakeGlobalLocationExpression(section, offset, module_sp),
-      nullptr);
+  DWARFExpressionList location(module_sp, location_expr, nullptr);
 
   std::string global_name("::");
   global_name += name;
@@ -1273,6 +1280,13 @@ void SymbolFileNativePDB::AddSymbols(Symtab &symtab) {
   if (!section_list)
     return;
 
+  llvm::DenseMap<lldb::addr_t, llvm::SmallVector<uint32_t, 1>> symbols_by_addr;
+  for (uint32_t i = 0, n = symtab.GetNumSymbols(); i < n; ++i) {
+    Symbol *sym = symtab.SymbolAtIndex(i);
+    if (sym && sym->ValueIsAddress())
+      symbols_by_addr[sym->GetAddressRef().GetFileAddress()].push_back(i);
+  }
+
   PublicSym32 last_sym;
   size_t last_sym_idx = 0;
   lldb::SectionSP section_sp;
@@ -1290,12 +1304,25 @@ void SymbolFileNativePDB::AddSymbols(Symtab &symtab) {
       return;
 
     if (next && last_sym.Segment == next->Segment) {
-      assert(last_sym.Offset <= next->Offset);
+      if (next->Offset < last_sym.Offset) {
+        LLDB_LOG(GetLog(LLDBLog::Symbols),
+                 "Ignoring size estimate for '{0}': segment {1} offset {2} is "
+                 "greater than the following offset {3}",
+                 last_sym.Name, last_sym.Segment, last_sym.Offset,
+                 next->Offset);
+        return;
+      }
       last->SetByteSize(next->Offset - last_sym.Offset);
     } else {
       // the last symbol was the last in its section
-      assert(section_sp->GetByteSize() >= last_sym.Offset);
-      assert(!next || next->Segment > last_sym.Segment);
+      if (section_sp->GetByteSize() < last_sym.Offset) {
+        LLDB_LOG(GetLog(LLDBLog::Symbols),
+                 "Ignoring size estimate for '{0}': segment {1} offset {2} is "
+                 "past the end of section '{3}' (size {4})",
+                 last_sym.Name, last_sym.Segment, last_sym.Offset,
+                 section_sp->GetName(), section_sp->GetByteSize());
+        return;
+      }
       last->SetByteSize(section_sp->GetByteSize() - last_sym.Offset);
     }
   };
@@ -1327,20 +1354,29 @@ void SymbolFileNativePDB::AddSymbols(Symtab &symtab) {
         (pub.Flags & PublicSymFlags::Code) != PublicSymFlags::None)
       type = eSymbolTypeCode;
 
-    last_sym_idx =
-        symtab.AddSymbol(Symbol(/*symID=*/pid,
-                                /*name=*/pub.Name,
-                                /*type=*/type,
-                                /*external=*/true,
-                                /*is_debug=*/true,
-                                /*is_trampoline=*/false,
-                                /*is_artificial=*/false,
-                                /*section_sp=*/section_sp,
-                                /*value=*/pub.Offset,
-                                /*size=*/0,
-                                /*size_is_valid=*/false,
-                                /*contains_linker_annotations=*/false,
-                                /*flags=*/0));
+    Symbol pub_symbol(/*symID=*/pid,
+                      /*name=*/pub.Name,
+                      /*type=*/type,
+                      /*external=*/true,
+                      /*is_debug=*/true,
+                      /*is_trampoline=*/false,
+                      /*is_artificial=*/false,
+                      /*section_sp=*/section_sp,
+                      /*value=*/pub.Offset,
+                      /*size=*/0,
+                      /*size_is_valid=*/false,
+                      /*contains_linker_annotations=*/false,
+                      /*flags=*/0);
+
+    auto it = symbols_by_addr.find(pub_symbol.GetAddressRef().GetFileAddress());
+    if (it != symbols_by_addr.end() &&
+        llvm::any_of(it->second, [&](uint32_t idx) {
+          Symbol *sym = symtab.SymbolAtIndex(idx);
+          return sym && sym->GetMangled() == pub_symbol.GetMangled();
+        }))
+      pub_symbol.SetType(lldb::eSymbolTypeAdditional);
+
+    last_sym_idx = symtab.AddSymbol(pub_symbol);
     last_sym = pub;
   }
 
@@ -3070,28 +3106,6 @@ SymbolFileNativePDB::GetContextForType(TypeIndex ti) {
 }
 
 std::optional<llvm::StringRef>
-SymbolFileNativePDB::FindMangledFunctionName(PdbCompilandSymId func_id) {
-  const CompilandIndexItem *cci =
-      m_index->compilands().GetCompiland(func_id.modi);
-  if (!cci)
-    return std::nullopt;
-
-  CVSymbol sym_record = cci->m_debug_stream.readSymbolAtOffset(func_id.offset);
-  if (sym_record.kind() != S_LPROC32 && sym_record.kind() != S_GPROC32)
-    return std::nullopt;
-
-  ProcSym proc(static_cast<SymbolRecordKind>(sym_record.kind()));
-  if (auto err = SymbolDeserializer::deserializeAs<ProcSym>(sym_record, proc)) {
-    LLDB_LOG_ERROR(GetLog(LLDBLog::Symbols), std::move(err),
-                   "Failed to deserialize ProcSym record: {0}");
-    return std::nullopt;
-  }
-
-  return FindMangledSymbol(SegmentOffset(proc.Segment, proc.CodeOffset),
-                           proc.FunctionType);
-}
-
-std::optional<llvm::StringRef>
 SymbolFileNativePDB::FindMangledSymbol(SegmentOffset so,
                                        TypeIndex function_type) {
   auto symbol = m_index->publics().findByAddress(m_index->symrecords(),
@@ -3148,6 +3162,145 @@ SymbolFileNativePDB::StripMangledFunctionName(const llvm::StringRef mangled,
     return mangled.drop_front();
 
   return mangled;
+}
+
+std::string
+SymbolFileNativePDB::MakeFunctionCallLabel(PdbSymUid uid,
+                                           llvm::StringRef lookup_name) {
+  if (lookup_name.empty())
+    return {};
+
+  lldb::ModuleSP module_sp = m_objfile_sp->GetModule();
+  if (!module_sp)
+    return {};
+
+  // Note, discriminator is added by Clang during mangling.
+  return FunctionCallLabel{/*discriminator=*/{},
+                           /*module_id=*/module_sp->GetID(),
+                           /*symbol_id=*/uid.toOpaqueId(),
+                           /*lookup_name=*/lookup_name}
+      .toString();
+}
+
+std::string SymbolFileNativePDB::GetFunctionCallLabel(PdbCompilandSymId id) {
+  const CompilandIndexItem *cci = m_index->compilands().GetCompiland(id.modi);
+  if (!cci)
+    return {};
+
+  CVSymbol sym_record = cci->m_debug_stream.readSymbolAtOffset(id.offset);
+  if (sym_record.kind() != S_LPROC32 && sym_record.kind() != S_GPROC32)
+    return {};
+
+  ProcSym proc(static_cast<SymbolRecordKind>(sym_record.kind()));
+  if (auto err = SymbolDeserializer::deserializeAs<ProcSym>(sym_record, proc)) {
+    LLDB_LOG_ERROR(GetLog(LLDBLog::Symbols), std::move(err),
+                   "Failed to deserialize ProcSym record: {0}");
+    return {};
+  }
+
+  // Functions with internal linkage have no public symbol, so fall back to the
+  // name in the procedure record.
+  llvm::StringRef lookup_name =
+      FindMangledSymbol(SegmentOffset(proc.Segment, proc.CodeOffset),
+                        proc.FunctionType)
+          .value_or(proc.Name);
+  return MakeFunctionCallLabel(id, lookup_name);
+}
+
+std::string
+SymbolFileNativePDB::GetMethodCallLabel(TypeIndex method_type,
+                                        llvm::StringRef qualified_name) {
+  if (std::optional<PdbCompilandSymId> func_id =
+          FindMethodDefinition(qualified_name, method_type))
+    return GetFunctionCallLabel(*func_id);
+  return {};
+}
+
+std::optional<PdbCompilandSymId>
+SymbolFileNativePDB::FindMethodDefinition(llvm::StringRef qualified_name,
+                                          TypeIndex method_type) {
+  // GSIHashTable leaves its bucket map uninitialized when the table has no
+  // records, so findRecordsByName cannot be called on it.
+  if (m_index->globals().getGlobalsTable().HashRecords.empty())
+    return std::nullopt;
+
+  Log *log = GetLog(LLDBLog::Symbols);
+  for (const auto &[offset, sym] : m_index->globals().findRecordsByName(
+           qualified_name, m_index->symrecords())) {
+    if (sym.kind() != S_PROCREF && sym.kind() != S_LPROCREF)
+      continue;
+    auto ref_or_err = SymbolDeserializer::deserializeAs<ProcRefSym>(sym);
+    if (!ref_or_err) {
+      LLDB_LOG_ERROR(log, ref_or_err.takeError(),
+                     "Failed to deserialize ProcRefSym record: {0}");
+      continue;
+    }
+
+    // Nothing else may have loaded the compiland of the definition yet.
+    CompilandIndexItem &cci =
+        m_index->compilands().GetOrCreateCompiland(ref_or_err->modi());
+    auto iter = cci.m_debug_stream.getSymbolArray().at(ref_or_err->SymOffset);
+    if (iter == cci.m_debug_stream.getSymbolArray().end())
+      continue;
+    if (iter->kind() != S_GPROC32 && iter->kind() != S_LPROC32)
+      continue;
+    auto proc_or_err = SymbolDeserializer::deserializeAs<ProcSym>(*iter);
+    if (!proc_or_err) {
+      LLDB_LOG_ERROR(log, proc_or_err.takeError(),
+                     "Failed to deserialize ProcSym record: {0}");
+      continue;
+    }
+
+    // Overloads share the name, so only the type identifies the definition.
+    if (proc_or_err->FunctionType == method_type)
+      return PdbCompilandSymId(ref_or_err->modi(), ref_or_err->SymOffset);
+  }
+  return std::nullopt;
+}
+
+llvm::Expected<SymbolContext>
+SymbolFileNativePDB::ResolveFunctionCallLabel(FunctionCallLabel &label) {
+  std::lock_guard<std::recursive_mutex> guard(GetModuleMutex());
+
+  // Only complete and base object structors have a procedure record. Closures
+  // and deleting destructors have no debug info.
+  if (llvm::StringRef discriminator = label.discriminator;
+      !discriminator.empty()) {
+    const bool is_ctor = discriminator.consume_front("C");
+    uint64_t kind;
+    bool is_defined = false;
+    if ((is_ctor || discriminator.consume_front("D")) &&
+        llvm::to_integer(discriminator, kind))
+      is_defined = is_ctor ? kind == clang::CXXCtorType::Ctor_Complete ||
+                                 kind == clang::CXXCtorType::Ctor_Base
+                           : kind == clang::CXXDtorType::Dtor_Complete ||
+                                 kind == clang::CXXDtorType::Dtor_Base;
+    if (!is_defined)
+      return llvm::createStringErrorV(
+          "{0} refers to a structor variant without debug info", label);
+  }
+
+  PdbSymUid uid(label.symbol_id);
+  if (uid.kind() != PdbSymUidKind::CompilandSym)
+    return llvm::createStringErrorV("invalid function ID in {0}", label);
+  PdbCompilandSymId func_id = uid.asCompilandSym();
+
+  CompilandIndexItem *cci = m_index->compilands().GetCompiland(func_id.modi);
+  if (!cci)
+    return llvm::createStringErrorV("invalid compiland in {0}", label);
+
+  CompUnitSP comp_unit = GetOrCreateCompileUnit(*cci);
+  if (!comp_unit)
+    return llvm::createStringErrorV("failed to create compile unit for {0}",
+                                    label);
+
+  FunctionSP func = GetOrCreateFunction(func_id, *comp_unit);
+  if (!func)
+    return llvm::createStringErrorV("failed to create function for {0}", label);
+
+  SymbolContext sc;
+  func->CalculateSymbolContext(&sc);
+  return sc;
 }
 
 void SymbolFileNativePDB::CacheUdtDeclarations() {
