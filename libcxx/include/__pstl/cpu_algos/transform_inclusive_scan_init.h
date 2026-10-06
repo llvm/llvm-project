@@ -107,7 +107,7 @@ struct __cpu_parallel_transform_inclusive_scan_init {
               __chunk_first, __chunk_last, __chunk_result, __reduce, __transform, __exclusive_prefix);
         } else {
           // Calculate the exclusive prefix starting with the aggregate of the previous chunk.
-          _Tp __exclusive_prefix = __calculate_inclusive_prefix_of_partition(__prev_partition, __reduce);
+          _Tp __exclusive_prefix = __pstl::__calculate_inclusive_prefix_of_partition(__prev_partition, __reduce);
           // Calculate and publish the inclusive prefix for the current chunk.
           __lookback_partition->__construct_inclusive_prefix(__reduce(__exclusive_prefix, std::move(__aggregate)));
           // Perform the scanning into the destination.
@@ -146,7 +146,7 @@ struct __cpu_parallel_transform_inclusive_scan_init {
                   __chunk_result,
                   __reduce,
                   __transform,
-                  __calculate_inclusive_prefix_of_partition(__prev_partition, __reduce));
+                  __pstl::__calculate_inclusive_prefix_of_partition(__prev_partition, __reduce));
             }
           };
 
