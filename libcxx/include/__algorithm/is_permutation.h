@@ -11,7 +11,11 @@
 #define _LIBCPP___ALGORITHM_IS_PERMUTATION_H
 
 #include <__algorithm/comp.h>
+#include <__algorithm/count_if.h>
+#include <__algorithm/find_if.h>
 #include <__algorithm/iterator_operations.h>
+#include <__algorithm/mismatch.h>
+#include <__algorithm/unwrap_iter.h>
 #include <__config>
 #include <__functional/identity.h>
 #include <__iterator/concepts.h>
@@ -78,32 +82,32 @@ _LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR_SINCE_CXX20 bool __is_permutation_impl(
     _Pred&& __pred,
     _Proj1&& __proj1,
     _Proj2&& __proj2) {
-  using _D1 = __iterator_difference_type<_Iter1>;
+  using _D1   = __iterator_difference_type<_Iter1>;
+  using _Ref1 = typename iterator_traits<_Iter1>::reference;
+  using _Ref2 = typename iterator_traits<_Iter2>::reference;
+  __identity __ident;
 
   for (auto __i = __first1; __i != __last1; ++__i) {
-    //  Have we already counted the number of *__i in [f1, l1)?
-    auto __match = __first1;
-    for (; __match != __i; ++__match) {
-      if (std::__invoke(__pred, std::__invoke(__proj1, *__match), std::__invoke(__proj1, *__i)))
-        break;
-    }
+    _Ref1 __va = *__i;
 
-    if (__match == __i) {
+    //  Have we already counted the number of *__i in [f1, l1)?
+    auto __match_pred = [&](_Ref1 __x) -> bool {
+      return std::__invoke(__pred, std::__invoke(__proj1, __x), std::__invoke(__proj1, __va));
+    };
+    if (std::__find_if(__first1, __i, __match_pred, __ident) == __i) {
       // Count number of *__i in [f2, l2)
-      _D1 __c2 = 0;
-      for (auto __j = __first2; __j != __last2; ++__j) {
-        if (std::__invoke(__pred, std::__invoke(__proj1, *__i), std::__invoke(__proj2, *__j)))
-          ++__c2;
-      }
+      auto __predicate2 = [&](_Ref2 __x) -> bool {
+        return std::__invoke(__pred, std::__invoke(__proj1, __va), std::__invoke(__proj2, __x));
+      };
+      _D1 __c2 = std::__count_if<_AlgPolicy>(__first2, __last2, __predicate2, __ident);
       if (__c2 == 0)
         return false;
 
       // Count number of *__i in [__i, l1) (we can start with 1)
-      _D1 __c1 = 1;
-      for (auto __j = _IterOps<_AlgPolicy>::next(__i); __j != __last1; ++__j) {
-        if (std::__invoke(__pred, std::__invoke(__proj1, *__i), std::__invoke(__proj1, *__j)))
-          ++__c1;
-      }
+      auto __predicate1 = [&](_Ref1 __x) -> bool {
+        return std::__invoke(__pred, std::__invoke(__proj1, __va), std::__invoke(__proj1, __x));
+      };
+      _D1 __c1 = 1 + std::__count_if<_AlgPolicy>(_IterOps<_AlgPolicy>::next(__i), __last1, __predicate1, __ident);
       if (__c1 != __c2)
         return false;
     }
@@ -116,11 +120,12 @@ _LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR_SINCE_CXX20 bool __is_permutation_impl(
 template <class _AlgPolicy, class _ForwardIterator1, class _Sentinel1, class _ForwardIterator2, class _BinaryPredicate>
 [[__nodiscard__]] _LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR_SINCE_CXX20 bool __is_permutation(
     _ForwardIterator1 __first1, _Sentinel1 __last1, _ForwardIterator2 __first2, _BinaryPredicate&& __pred) {
-  // Shorten sequences as much as possible by lopping of any equal prefix.
-  for (; __first1 != __last1; ++__first1, (void)++__first2) {
-    if (!__pred(*__first1, *__first2))
-      break;
-  }
+  // Shorten sequences as much as possible by lopping off any equal prefix (vectorized through std::__mismatch).
+  __identity __proj;
+  auto __result = std::__mismatch(
+      std::__unwrap_iter(__first1), std::__unwrap_iter(__last1), std::__unwrap_iter(__first2), __pred, __proj, __proj);
+  __first1 = std::__rewrap_iter(__first1, __result.first);
+  __first2 = std::__rewrap_iter(__first2, __result.second);
 
   if (__first1 == __last1)
     return true;
@@ -160,13 +165,10 @@ _LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR_SINCE_CXX20 bool __is_permutation(
     _Proj1&& __proj1,
     _Proj2&& __proj2,
     /*_ConstTimeDistance=*/false_type) {
-  // Shorten sequences as much as possible by lopping of any equal prefix.
-  while (__first1 != __last1 && __first2 != __last2) {
-    if (!std::__invoke(__pred, std::__invoke(__proj1, *__first1), std::__invoke(__proj2, *__first2)))
-      break;
-    ++__first1;
-    ++__first2;
-  }
+  // Shorten sequences as much as possible by lopping off any equal prefix.
+  auto __result = std::__mismatch(__first1, __last1, __first2, __last2, __pred, __proj1, __proj2);
+  __first1      = std::move(__result.first);
+  __first2      = std::move(__result.second);
 
   if (__first1 == __last1)
     return __first2 == __last2;
