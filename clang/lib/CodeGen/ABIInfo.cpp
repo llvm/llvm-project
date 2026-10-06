@@ -33,6 +33,10 @@ const CodeGenOptions &ABIInfo::getCodeGenOpts() const {
   return CGT.getCodeGenOpts();
 }
 
+CodeGen::CodeGenTypes &ABIInfo::getCodeGenTypes() const {
+  return CGT;
+}
+
 bool ABIInfo::isAndroid() const { return getTarget().getTriple().isAndroid(); }
 
 bool ABIInfo::isOHOSFamily() const {
