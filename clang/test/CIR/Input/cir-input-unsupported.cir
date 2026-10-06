@@ -1,6 +1,6 @@
 // A .cir input is routed to the ClangIR frontend action instead of being
-// parsed as C. Consuming ClangIR input is not implemented yet, so every CIR
-// action reports a single diagnostic.
+// parsed as C. Only -emit-cir is supported from ClangIR input so far, so every
+// other CIR action reports a single diagnostic.
 
 // RUN: not %clang_cc1 -triple x86_64-unknown-linux-gnu -fclangir -emit-llvm -x cir %s -o - 2>&1 \
 // RUN:   | FileCheck %s --implicit-check-not=error:
@@ -9,8 +9,6 @@
 // RUN: not %clang_cc1 -triple x86_64-unknown-linux-gnu -fclangir -S -x cir %s -o - 2>&1 \
 // RUN:   | FileCheck %s --implicit-check-not=error:
 // RUN: not %clang_cc1 -triple x86_64-unknown-linux-gnu -fclangir -emit-llvm-bc -x cir %s -o /dev/null 2>&1 \
-// RUN:   | FileCheck %s --implicit-check-not=error:
-// RUN: not %clang_cc1 -triple x86_64-unknown-linux-gnu -fclangir -emit-cir -x cir %s -o - 2>&1 \
 // RUN:   | FileCheck %s --implicit-check-not=error:
 
 // ClangIR input implies -fclangir.
@@ -24,7 +22,7 @@
 // CHECK: error: support for ClangIR input is not yet implemented
 
 !s32i = !cir.int<s, 32>
-module {
+module attributes {cir.triple = "x86_64-unknown-linux-gnu"} {
   cir.func @f(%arg0: !s32i) -> !s32i {
     cir.return %arg0 : !s32i
   }

@@ -62,7 +62,7 @@ isWholeBufferTransfer(VectorTransferOpInterface xferOp, const MemorySlot &slot,
     return false;
 
   // Exact type match pins rank/extents/element type/scalable dims.
-  if (xferOp.getVectorType() != slot.elemType)
+  if (xferOp.getVectorType() != slot.valueType)
     return false;
 
   // Access must start at the buffer origin in every dimension.
@@ -235,7 +235,7 @@ struct SubViewOpAliasModel
 
     // The parent slot must promote to a vector (whole-buffer promotion). A
     // scalar (single-element) parent slot cannot be sliced.
-    auto parentVecType = dyn_cast<VectorType>(parentSlot.elemType);
+    auto parentVecType = dyn_cast<VectorType>(parentSlot.valueType);
     if (!parentVecType)
       return;
 
@@ -259,7 +259,7 @@ struct SubViewOpAliasModel
                                      OpBuilder &builder) const {
     auto subView = cast<memref::SubViewOp>(op);
     SmallVector<int64_t> offsets = *getPromotableSubViewOffsets(subView);
-    auto aliasVecType = cast<VectorType>(aliasSlot.elemType);
+    auto aliasVecType = cast<VectorType>(aliasSlot.valueType);
     SmallVector<int64_t> strides(offsets.size(), 1);
     return vector::ExtractStridedSliceOp::create(
                builder, op->getLoc(), slotValue, offsets,

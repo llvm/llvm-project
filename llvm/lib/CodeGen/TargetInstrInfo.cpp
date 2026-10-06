@@ -30,6 +30,7 @@
 #include "llvm/CodeGen/TargetSchedule.h"
 #include "llvm/IR/DataLayout.h"
 #include "llvm/IR/DebugInfoMetadata.h"
+#include "llvm/IR/Module.h"
 #include "llvm/MC/MCAsmInfo.h"
 #include "llvm/MC/MCInstrItineraries.h"
 #include "llvm/Support/CommandLine.h"
@@ -480,7 +481,7 @@ TargetInstrInfo::duplicate(MachineBasicBlock &MBB,
   // CFI instructions are marked as non-duplicable, because Darwin compact
   // unwind info emission can't handle multiple prologue setups.
   assert((!Orig.isNotDuplicable() ||
-          (!MF.getTarget().getTargetTriple().isOSDarwin() &&
+          (!MF.getFunction().getParent()->getTargetTriple().isOSDarwin() &&
            Orig.isCFIInstruction())) &&
          "Instruction cannot be duplicated");
 

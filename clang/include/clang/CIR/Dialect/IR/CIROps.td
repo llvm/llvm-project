@@ -6384,27 +6384,27 @@ def CIR_MatrixColumnMajorLoadOp : CIR_Op<"matrix.column_major_load", [
 ]> {
   let summary = "Matrix column major load";
   let description = [{
-  The `cir.matrix.column_major_load` operation provides a representation for
-  the `__builtin_matrix_column_major_load` builtin and corresponds to the
-  `llvm.matrix.column.major.load` intrinsic in LLVM IR.
+    The `cir.matrix.column_major_load` operation provides a representation for
+    the `__builtin_matrix_column_major_load` builtin and corresponds to the
+    `llvm.matrix.column.major.load` intrinsic in LLVM IR.
 
-  This operation performs a load of any matrix type with a stride to compute
-  the start address of the different columns.
+    This operation performs a load of any matrix type with a stride to compute
+    the start address of the different columns.
 
-  The `stride` argument is the column stride which much be greater than or equal 
-  to `row`, giving the following 2x3 matrix `[[1, 2, 3], [4, 5, 6]]` with a 
-  stride of 2, the result matrix will be `[[1, 3, 5], [2, 4, 6]]`.
+    The `stride` argument is the column stride which much be greater than or equal 
+    to `row`, giving the following 2x3 matrix `[[1, 2, 3], [4, 5, 6]]` with a 
+    stride of 2, the result matrix will be `[[1, 3, 5], [2, 4, 6]]`.
 
-  ```
-  %result = cir.matrix.column_major_load %ptr : <!cir.float>, %stride : !u64i, 
-     !cir.matrix<2 x 3 x !cir.float>
+    ```
+    %result = cir.matrix.column_major_load %ptr : <!cir.float>, %stride : !u64i, 
+      !cir.matrix<2 x 3 x !cir.float>
 
-  %result = cir.matrix.column_major_load %ptr : <!cir.double>, %stride : !u64i,
-     !cir.matrix<5 x 5 x !cir.double>
+    %result = cir.matrix.column_major_load %ptr : <!cir.double>, %stride : !u64i,
+      !cir.matrix<5 x 5 x !cir.double>
 
-  %result = cir.matrix.column_major_load %ptr : <!cir.double>, %stride : !u64i
-     volatile, !cir.matrix<5 x 5 x !cir.double>
-  ```
+    %result = cir.matrix.column_major_load %ptr : <!cir.double>, %stride : !u64i
+      volatile, !cir.matrix<5 x 5 x !cir.double>
+    ```
   }];
 
   let arguments = (ins
