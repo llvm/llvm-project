@@ -49,7 +49,7 @@ let Definition = "modulelist", Path = "symbols" in {
     Desc<"The maximum size for the cache directory in terms of percentage of the available space on the disk. Set to 100 to indicate no limit, 50 to indicate that the cache size will not be left over half the available disk space. A value over 100 will be reduced to 100. A value of 0 disables the percentage size-based pruning.">;
   def LLDBIndexCacheExpirationDays: Property<"lldb-index-cache-expiration-days", "UInt64">,
     Global,
-    DefaultUnsignedValue<31>,
+    DefaultUnsignedValue<7>,
     Desc<"The expiration time in days for a file. When a file hasn't been accessed for the specified amount of days, it is removed from the cache. A value of 0 disables the expiration-based pruning.">;
   def LoadSymbolOnDemand: Property<"load-on-demand", "Boolean">,
     Global,
