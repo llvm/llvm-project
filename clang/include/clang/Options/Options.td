@@ -4824,15 +4824,11 @@ def ftime_trace_verbose : Joined<["-"], "ftime-trace-verbose">, Group<f_Group>,
   MarshallingInfoFlag<FrontendOpts<"TimeTraceVerbose">>;
 def ftime_trace_compress_EQ : Joined<["-"], "ftime-trace-compress=">, Group<f_Group>,
   HelpText<"Compress -ftime-trace output with the specified algorithm">,
-  Values<"none,zstd">,
-  NormalizedValuesScope<"llvm::DebugCompressionType">,
-  NormalizedValues<["None", "Zstd"]>,
+  Values<"none,zstd,infer">,
+  NormalizedValuesScope<"llvm::TimeTraceCompression">,
+  NormalizedValues<["None", "Zstd", "Infer"]>,
   Visibility<[ClangOption, CC1Option, CLOption, DXCOption]>,
-  MarshallingInfoEnum<FrontendOpts<"TimeTraceCompress">, "None">;
-def ftime_trace_compress : Flag<["-"], "ftime-trace-compress">, Group<f_Group>,
-  Alias<ftime_trace_compress_EQ>, AliasArgs<["zstd"]>,
-  HelpText<"Alias for -ftime-trace-compress=zstd">,
-  Visibility<[ClangOption, CC1Option, CLOption, DXCOption]>;
+  MarshallingInfoEnum<FrontendOpts<"TimeTraceCompress">, "Infer">;
 def ftime_trace_EQ : Joined<["-"], "ftime-trace=">, Group<f_Group>,
   HelpText<"Similar to -ftime-trace. Specify the JSON file or a directory which will contain the JSON file">,
   Visibility<[ClangOption, CC1Option, CLOption, DXCOption]>,

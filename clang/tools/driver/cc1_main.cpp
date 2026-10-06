@@ -251,10 +251,14 @@ int cc1_main(ArrayRef<const char *> Argv, const char *Argv0, void *MainAddr) {
                                                   std::move(PCHOps));
 
   if (!Clang->getFrontendOpts().TimeTracePath.empty()) {
+    llvm::TimeTraceCompression Compress =
+        Clang->getFrontendOpts().TimeTraceCompress;
+    if (Compress == llvm::TimeTraceCompression::Infer)
+      Compress = llvm::inferTimeTraceCompressionFromPath(
+          Clang->getFrontendOpts().TimeTracePath);
     llvm::timeTraceProfilerInitialize(
         Clang->getFrontendOpts().TimeTraceGranularity, Argv0,
-        Clang->getFrontendOpts().TimeTraceVerbose,
-        Clang->getFrontendOpts().TimeTraceCompress);
+        Clang->getFrontendOpts().TimeTraceVerbose, Compress);
   }
   // --print-supported-cpus takes priority over the actual compilation.
   if (Clang->getFrontendOpts().PrintSupportedCPUs)
@@ -313,8 +317,12 @@ int cc1_main(ArrayRef<const char *> Argv, const char *Argv0, void *MainAddr) {
   }
 
   if (llvm::timeTraceProfilerEnabled()) {
-    bool Binary = Clang->getFrontendOpts().TimeTraceCompress !=
-                  llvm::DebugCompressionType::None;
+    llvm::TimeTraceCompression Compress =
+        Clang->getFrontendOpts().TimeTraceCompress;
+    if (Compress == llvm::TimeTraceCompression::Infer)
+      Compress = llvm::inferTimeTraceCompressionFromPath(
+          Clang->getFrontendOpts().TimeTracePath);
+    bool Binary = Compress == llvm::TimeTraceCompression::Zstd;
     if (auto profilerOutput = Clang->createOutputFile(
             Clang->getFrontendOpts().TimeTracePath, Binary,
             /*RemoveFileOnSignal=*/false,

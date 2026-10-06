@@ -78,7 +78,6 @@
 
 #include "llvm/ADT/STLFunctionalExtras.h"
 #include "llvm/Support/Compiler.h"
-#include "llvm/Support/Compression.h"
 #include "llvm/Support/Error.h"
 
 namespace llvm {
@@ -96,6 +95,13 @@ enum class TimeTraceEventType {
   // Async events mark asynchronous operations and are specified by the "b"
   // (start) and "e" (end) phase types.
   AsyncEvent
+};
+
+/// Compression mode for time trace output.
+enum class TimeTraceCompression {
+  Infer,
+  None,
+  Zstd,
 };
 
 struct TimeTraceMetadata {
@@ -116,7 +122,7 @@ struct TimeTraceProfilerEntry;
 
 /// Infer the time trace compression format from \p Path based on its file
 /// extension (.zst/.zstd -> Zstd, otherwise None).
-LLVM_ABI DebugCompressionType inferTimeTraceCompressionFromPath(StringRef Path);
+LLVM_ABI TimeTraceCompression inferTimeTraceCompressionFromPath(StringRef Path);
 
 /// Initialize the time trace profiler.
 /// This sets up the global \p TimeTraceProfilerInstance
@@ -124,7 +130,7 @@ LLVM_ABI DebugCompressionType inferTimeTraceCompressionFromPath(StringRef Path);
 LLVM_ABI void timeTraceProfilerInitialize(
     unsigned TimeTraceGranularity, StringRef ProcName,
     bool TimeTraceVerbose = false,
-    DebugCompressionType TimeTraceCompress = DebugCompressionType::None);
+    TimeTraceCompression TimeTraceCompress = TimeTraceCompression::Infer);
 
 /// Cleanup the time trace profiler, if it was initialized.
 LLVM_ABI void timeTraceProfilerCleanup();

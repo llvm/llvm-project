@@ -15,6 +15,10 @@
 //===----------------------------------------------------------------------===//
 
 #include "llvm/Support/TimeProfiler.h"
+#include "llvm/ADT/ScopeExit.h"
+#include "llvm/Support/Compression.h"
+#include "llvm/Support/FileSystem.h"
+#include "llvm/Support/MemoryBuffer.h"
 #include "gtest/gtest.h"
 
 using namespace llvm;
@@ -45,18 +49,18 @@ TEST(TimeProfiler, Scope_Smoke) {
 
 TEST(TimeProfiler, Compression) {
   EXPECT_EQ(inferTimeTraceCompressionFromPath("foo.json"),
-            DebugCompressionType::None);
+            TimeTraceCompression::None);
   EXPECT_EQ(inferTimeTraceCompressionFromPath("foo.json.zst"),
-            DebugCompressionType::Zstd);
+            TimeTraceCompression::Zstd);
   EXPECT_EQ(inferTimeTraceCompressionFromPath("foo.ZSTD"),
-            DebugCompressionType::Zstd);
+            TimeTraceCompression::Zstd);
 
   if (!compression::zstd::isAvailable())
     return;
 
   timeTraceProfilerInitialize(/*TimeTraceGranularity=*/0, "test",
                               /*TimeTraceVerbose=*/false,
-                              DebugCompressionType::Zstd);
+                              TimeTraceCompression::Zstd);
   {
     TimeTraceScope Scope("compressed_event", "compressed_detail");
   }
@@ -69,6 +73,36 @@ TEST(TimeProfiler, Compression) {
   ASSERT_FALSE(CompressedChars.empty());
   // Compressed output must not start with '{'.
   EXPECT_NE(CompressedChars.front(), '{');
+
+  SmallString<128> TempPath;
+  sys::fs::createUniquePath("time-trace-%%%%%%%.json.zst", TempPath, true);
+  llvm::scope_exit CleanupFile([&]() { sys::fs::remove(TempPath); });
+
+  // Default (TimeTraceCompression::Infer) infers Zstd from the .zst extension.
+  timeTraceProfilerInitialize(/*TimeTraceGranularity=*/0, "test");
+  {
+    TimeTraceScope Scope("inferred_event", "inferred_detail");
+  }
+  ASSERT_FALSE(errorToBool(timeTraceProfilerWrite(TempPath, "fallback")));
+  timeTraceProfilerCleanup();
+  auto BufOrErr = MemoryBuffer::getFile(TempPath);
+  ASSERT_TRUE(static_cast<bool>(BufOrErr));
+  ASSERT_FALSE((*BufOrErr)->getBuffer().empty());
+  EXPECT_NE((*BufOrErr)->getBuffer().front(), '{');
+
+  // Explicit TimeTraceCompression::None overrides the .zst extension.
+  timeTraceProfilerInitialize(/*TimeTraceGranularity=*/0, "test",
+                              /*TimeTraceVerbose=*/false,
+                              TimeTraceCompression::None);
+  {
+    TimeTraceScope Scope("uncompressed_event", "uncompressed_detail");
+  }
+  ASSERT_FALSE(errorToBool(timeTraceProfilerWrite(TempPath, "fallback")));
+  timeTraceProfilerCleanup();
+  BufOrErr = MemoryBuffer::getFile(TempPath);
+  ASSERT_TRUE(static_cast<bool>(BufOrErr));
+  ASSERT_FALSE((*BufOrErr)->getBuffer().empty());
+  EXPECT_EQ((*BufOrErr)->getBuffer().front(), '{');
 }
 
 TEST(TimeProfiler, Begin_End_Smoke) {

@@ -5239,8 +5239,13 @@ bool CompilerInvocation::CreateFromArgsImpl(
           llvm::driver::ProfileInstrKind::ProfileNone)
     Diags.Report(diag::err_drv_profile_instrument_use_path_with_no_kind);
 
-  if (Res.getFrontendOpts().TimeTraceCompress ==
-          llvm::DebugCompressionType::Zstd &&
+  llvm::TimeTraceCompression TimeTraceCompress =
+      Res.getFrontendOpts().TimeTraceCompress;
+  if (TimeTraceCompress == llvm::TimeTraceCompression::Infer &&
+      !Res.getFrontendOpts().TimeTracePath.empty())
+    TimeTraceCompress = llvm::inferTimeTraceCompressionFromPath(
+        Res.getFrontendOpts().TimeTracePath);
+  if (TimeTraceCompress == llvm::TimeTraceCompression::Zstd &&
       !llvm::compression::zstd::isAvailable())
     Diags.Report(diag::err_drv_time_trace_compression_unavailable) << "zstd";
 

@@ -16,8 +16,8 @@
 #include "clang/Serialization/ModuleFileExtension.h"
 #include "llvm/ADT/StringRef.h"
 #include "llvm/Support/Compiler.h"
-#include "llvm/Support/Compression.h"
 #include "llvm/Support/MemoryBuffer.h"
+#include "llvm/Support/TimeProfiler.h"
 #include <cassert>
 #include <map>
 #include <memory>
@@ -544,9 +544,9 @@ public:
   LLVM_PREFERRED_TYPE(bool)
   unsigned TimeTraceVerbose : 1;
 
-  /// Compression format for -ftime-trace output.
-  llvm::DebugCompressionType TimeTraceCompress =
-      llvm::DebugCompressionType::None;
+  /// Compression mode for -ftime-trace output.
+  llvm::TimeTraceCompression TimeTraceCompress =
+      llvm::TimeTraceCompression::Infer;
 
   /// Path which stores the output files for -ftime-trace
   std::string TimeTracePath;

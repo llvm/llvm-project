@@ -15,6 +15,7 @@
 #include "llvm/ADT/STLFunctionalExtras.h"
 #include "llvm/ADT/SmallVector.h"
 #include "llvm/ADT/StringMap.h"
+#include "llvm/Support/Compression.h"
 #include "llvm/Support/JSON.h"
 #include "llvm/Support/Path.h"
 #include "llvm/Support/Process.h"
@@ -130,7 +131,7 @@ struct llvm::TimeTraceProfiler {
   TimeTraceProfiler(
       unsigned TimeTraceGranularity = 0, StringRef ProcName = "",
       bool TimeTraceVerbose = false,
-      DebugCompressionType TimeTraceCompress = DebugCompressionType::None)
+      TimeTraceCompression TimeTraceCompress = TimeTraceCompression::Infer)
       : BeginningOfTime(system_clock::now()), StartTime(ClockType::now()),
         ProcName(ProcName), Pid(sys::Process::getProcessId()),
         Tid(llvm::get_threadid()), TimeTraceGranularity(TimeTraceGranularity),
@@ -387,8 +388,8 @@ struct llvm::TimeTraceProfiler {
   // can increase the size of the output by 2-3 times.
   const bool TimeTraceVerbose;
 
-  // Optional compression format for output.
-  DebugCompressionType TimeTraceCompress;
+  // Compression mode for output.
+  TimeTraceCompression TimeTraceCompress;
 };
 
 bool llvm::isTimeTraceVerbose() {
@@ -396,17 +397,17 @@ bool llvm::isTimeTraceVerbose() {
          getTimeTraceProfilerInstance()->TimeTraceVerbose;
 }
 
-DebugCompressionType llvm::inferTimeTraceCompressionFromPath(StringRef Path) {
+TimeTraceCompression llvm::inferTimeTraceCompressionFromPath(StringRef Path) {
   StringRef Ext = llvm::sys::path::extension(Path);
   if (Ext.equals_insensitive(".zst") || Ext.equals_insensitive(".zstd"))
-    return DebugCompressionType::Zstd;
-  return DebugCompressionType::None;
+    return TimeTraceCompression::Zstd;
+  return TimeTraceCompression::None;
 }
 
 void llvm::timeTraceProfilerInitialize(unsigned TimeTraceGranularity,
                                        StringRef ProcName,
                                        bool TimeTraceVerbose,
-                                       DebugCompressionType TimeTraceCompress) {
+                                       TimeTraceCompression TimeTraceCompress) {
   assert(TimeTraceProfilerInstance == nullptr &&
          "Profiler should not be initialized");
   TimeTraceProfilerInstance = new TimeTraceProfiler(
@@ -439,14 +440,14 @@ void llvm::timeTraceProfilerFinishThread() {
 void llvm::timeTraceProfilerWrite(raw_pwrite_stream &OS) {
   assert(TimeTraceProfilerInstance != nullptr &&
          "Profiler object can't be null");
-  DebugCompressionType CompressType =
+  TimeTraceCompression CompressType =
       TimeTraceProfilerInstance->TimeTraceCompress;
-  if (CompressType == DebugCompressionType::None) {
+  if (CompressType != TimeTraceCompression::Zstd) {
     TimeTraceProfilerInstance->write(OS);
     return;
   }
 
-  compression::Format F = compression::formatFor(CompressType);
+  compression::Format F = compression::Format::Zstd;
   if (const char *Reason = compression::getReasonIfUnsupported(F))
     report_fatal_error(Reason);
 
@@ -470,33 +471,33 @@ Error llvm::timeTraceProfilerWrite(StringRef PreferredFileName,
   assert(TimeTraceProfilerInstance != nullptr &&
          "Profiler object can't be null");
 
-  DebugCompressionType CompressType =
+  TimeTraceCompression CompressType =
       TimeTraceProfilerInstance->TimeTraceCompress;
   std::string Path = PreferredFileName.str();
   if (Path.empty()) {
     Path = FallbackFileName == "-" ? "out" : FallbackFileName.str();
     Path += TimeTraceFileExtension;
-    if (CompressType == DebugCompressionType::Zstd)
+    if (CompressType == TimeTraceCompression::Zstd)
       Path += ".zst";
-  } else if (CompressType == DebugCompressionType::None) {
+  } else if (CompressType == TimeTraceCompression::Infer) {
     CompressType = inferTimeTraceCompressionFromPath(Path);
   }
 
-  if (CompressType != DebugCompressionType::None) {
-    if (const char *Reason = compression::getReasonIfUnsupported(
-            compression::formatFor(CompressType)))
+  if (CompressType == TimeTraceCompression::Zstd) {
+    if (const char *Reason =
+            compression::getReasonIfUnsupported(compression::Format::Zstd))
       return createStringError(inconvertibleErrorCode(), Reason);
   }
 
   std::error_code EC;
-  sys::fs::OpenFlags Flags = CompressType == DebugCompressionType::None
-                                 ? sys::fs::OF_TextWithCRLF
-                                 : sys::fs::OF_None;
+  sys::fs::OpenFlags Flags = CompressType == TimeTraceCompression::Zstd
+                                 ? sys::fs::OF_None
+                                 : sys::fs::OF_TextWithCRLF;
   raw_fd_ostream OS(Path, EC, Flags);
   if (EC)
     return createStringError(EC, "Could not open " + Path);
 
-  DebugCompressionType SavedCompress =
+  TimeTraceCompression SavedCompress =
       TimeTraceProfilerInstance->TimeTraceCompress;
   TimeTraceProfilerInstance->TimeTraceCompress = CompressType;
   timeTraceProfilerWrite(OS);

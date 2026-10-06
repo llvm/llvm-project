@@ -7346,28 +7346,31 @@ void Clang::ConstructJob(Compilation &C, const JobAction &JA,
     CmdArgs.push_back(Args.MakeArgString("-ftime-trace=" + Twine(Name)));
     Args.AddLastArg(CmdArgs, options::OPT_ftime_trace_granularity_EQ);
     Args.AddLastArg(CmdArgs, options::OPT_ftime_trace_verbose);
+    llvm::TimeTraceCompression Compress = llvm::TimeTraceCompression::Infer;
     if (const Arg *CompressArg =
             Args.getLastArg(options::OPT_ftime_trace_compress_EQ)) {
       StringRef Value = CompressArg->getValue();
-      if (Value == "none") {
-        // Explicit -ftime-trace-compress=none disables compression (for
-        // example, overriding an earlier -ftime-trace-compress flag or a
-        // .zst/.zstd filename extension); -cc1 defaults to uncompressed output.
-      } else if (Value == "zstd") {
-        if (llvm::compression::zstd::isAvailable())
-          CmdArgs.push_back("-ftime-trace-compress=zstd");
-        else
-          D.Diag(diag::err_drv_time_trace_compression_unavailable) << "zstd";
-      } else {
+      if (Value == "none")
+        Compress = llvm::TimeTraceCompression::None;
+      else if (Value == "zstd")
+        Compress = llvm::TimeTraceCompression::Zstd;
+      else if (Value == "infer")
+        Compress = llvm::TimeTraceCompression::Infer;
+      else
         D.Diag(diag::err_drv_unsupported_option_argument)
             << CompressArg->getSpelling() << Value;
-      }
-    } else if (llvm::inferTimeTraceCompressionFromPath(Name) ==
-               llvm::DebugCompressionType::Zstd) {
+    }
+    if (Compress == llvm::TimeTraceCompression::Infer)
+      Compress = llvm::inferTimeTraceCompressionFromPath(Name);
+    if (Compress == llvm::TimeTraceCompression::Zstd) {
       if (llvm::compression::zstd::isAvailable())
         CmdArgs.push_back("-ftime-trace-compress=zstd");
       else
         D.Diag(diag::err_drv_time_trace_compression_unavailable) << "zstd";
+    } else if (Compress == llvm::TimeTraceCompression::None &&
+               llvm::inferTimeTraceCompressionFromPath(Name) !=
+                   llvm::TimeTraceCompression::None) {
+      CmdArgs.push_back("-ftime-trace-compress=none");
     }
   }
 
@@ -9785,7 +9788,6 @@ void LinkerWrapper::ConstructJob(Compilation &C, const JobAction &JA,
       OPT_ftime_trace_EQ,
       OPT_ftime_trace_granularity_EQ,
       OPT_ftime_trace_verbose,
-      OPT_ftime_trace_compress,
       OPT_ftime_trace_compress_EQ,
       OPT_opt_record_file,
       OPT_opt_record_format,
