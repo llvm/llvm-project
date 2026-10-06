@@ -66,3 +66,30 @@ void ReshapeOp::getCanonicalizationPatterns(RewritePatternSet &results,
   results.add<ReshapeReshapeOptPattern, RedundantReshapeOptPattern,
               FoldConstantReshapeOptPattern>(context);
 }
+
+/// Fold div(x, 1) -> x
+struct SimplifyDivByOne : public mlir::OpRewritePattern<DivOp> {
+  SimplifyDivByOne(mlir::MLIRContext *context)
+      : OpRewritePattern<DivOp>(context, /*benefit=*/1) {}
+
+  mlir::LogicalResult
+  matchAndRewrite(DivOp op, mlir::PatternRewriter &rewriter) const override {
+    // Match only when rhs is a constant equal to 1.
+    auto rhsConstant = op.getRhs().getDefiningOp<ConstantOp>();
+    if (!rhsConstant)
+      return mlir::failure();
+    auto value = rhsConstant.getValue();
+    if (!value.isSplat() || value.getSplatValue<double>() != 1.0)
+      return mlir::failure();
+
+    // Replace toy.div(x, 1) with just x.
+    rewriter.replaceOp(op, op.getLhs());
+    return mlir::success();
+  }
+};
+
+// Register the pattern so the Canonicalizer pass picks it up.
+void DivOp::getCanonicalizationPatterns(mlir::RewritePatternSet &results,
+                                         mlir::MLIRContext *context) {
+  results.add<SimplifyDivByOne>(context);
+}
