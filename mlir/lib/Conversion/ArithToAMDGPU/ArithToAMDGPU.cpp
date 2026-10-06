@@ -32,7 +32,6 @@ using namespace mlir;
 using namespace mlir::amdgpu;
 
 namespace {
-
 struct ArithToAMDGPUConversionPass final
     : impl::ArithToAMDGPUConversionPassBase<ArithToAMDGPUConversionPass> {
   using impl::ArithToAMDGPUConversionPassBase<
@@ -90,7 +89,6 @@ struct ScalingTruncFRewritePattern final
   LogicalResult matchAndRewrite(arith::ScalingTruncFOp op,
                                 PatternRewriter &rewriter) const override;
 };
-
 } // end namespace
 
 static bool isSupportedF8(Type elementType, const ROCDL::TargetInfo &target) {

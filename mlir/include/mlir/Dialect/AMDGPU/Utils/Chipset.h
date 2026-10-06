@@ -13,7 +13,6 @@
 #include <tuple>
 
 namespace mlir::amdgpu {
-
 /// Represents the amdgpu gfx chipset version, e.g., gfx90a, gfx942, gfx1103.
 /// Note that the leading digits form a decimal number, while the last two
 /// digits form a hexadecimal number. For example:

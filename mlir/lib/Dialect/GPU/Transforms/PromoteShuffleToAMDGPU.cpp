@@ -23,7 +23,6 @@
 using namespace mlir;
 
 namespace {
-
 /// Try to promote `gpu.shuffle` to `amdgpu.swizzle_bitmode`, width must be 64
 /// and offset must be a constant integer in the range [0, 31].
 struct PromoteShuffleToSwizzlePattern
