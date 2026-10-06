@@ -689,6 +689,16 @@ class TestXMLRegisterUnion(GDBRemoteTestBase):
             substrs=["use of undeclared identifier '$does_not_exist'"],
         )
 
+        self.runCmd("settings set target.experimental.use-DIL false")
+        try:
+            self.expect(
+                "register read does_not_exist",
+                error=True,
+                substrs=["no register named 'does_not_exist' found in this frame"],
+            )
+        finally:
+            self.runCmd("settings set target.experimental.use-DIL true")
+
         frame = process.GetThreadAtIndex(0).GetFrameAtIndex(0)
         vector = frame.FindRegister("v0")
         self.assertTrue(vector.GetType().IsArrayType())
