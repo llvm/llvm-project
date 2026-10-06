@@ -126,6 +126,29 @@ private:
   llvm::SetVector<const Symbol *> entries;
 };
 
+// The arm64e __auth_got section, whose pointers dyld signs with the IA key
+// and address diversity.
+class AuthGotSection final : public SyntheticSection {
+public:
+  AuthGotSection();
+  ArrayRef<const Symbol *> getEntries() const { return entries; }
+  bool isNeeded() const override { return !entries.empty(); }
+  uint64_t getSize() const override {
+    return entries.size() * target->wordSize;
+  }
+  void writeTo(uint8_t *buf) const override;
+  void addEntry(Symbol *sym);
+  bool contains(const Symbol *sym) const { return indices.contains(sym); }
+  uint64_t getVA(const Symbol *sym) const {
+    return addr + indices.at(sym) * target->wordSize;
+  }
+
+private:
+  // Kept here rather than in Symbol, so that other targets don't pay for it.
+  llvm::DenseMap<const Symbol *, uint32_t> indices;
+  std::vector<const Symbol *> entries;
+};
+
 struct Location {
   const InputSection *isec;
   uint64_t offset;
@@ -837,6 +860,7 @@ struct InStruct {
   LazyBindingSection *lazyBinding = nullptr;
   ExportSection *exports = nullptr;
   GotSection *got = nullptr;
+  AuthGotSection *authGot = nullptr;
   LazyPointerSection *lazyPointers = nullptr;
   StubsSection *stubs = nullptr;
   StubHelperSection *stubHelper = nullptr;

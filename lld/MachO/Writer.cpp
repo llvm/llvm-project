@@ -687,8 +687,12 @@ static void prepareSymbolRelocation(Symbol *sym, const InputSection *isec,
     if (needsBinding(sym))
       in.stubs->addEntry(sym);
   } else if (relocAttrs.hasAttr(RelocAttrBits::GOT)) {
-    if (relocAttrs.hasAttr(RelocAttrBits::POINTER) || needsBinding(sym))
-      addNonLazyPointerEntry(sym);
+    if (relocAttrs.hasAttr(RelocAttrBits::POINTER) || needsBinding(sym)) {
+      if (usesAuthGot(isec))
+        in.authGot->addEntry(sym);
+      else
+        addNonLazyPointerEntry(sym);
+    }
   } else if (relocAttrs.hasAttr(RelocAttrBits::TLV)) {
     if (needsBinding(sym))
       addNonLazyPointerEntry(sym);
@@ -1460,6 +1464,8 @@ void macho::createSyntheticSections() {
   }
   in.exports = make<ExportSection>();
   in.got = make<GotSection>();
+  if (config->arch() == AK_arm64e)
+    in.authGot = make<AuthGotSection>();
   in.stubs = make<StubsSection>();
   in.objcStubs = make<ObjCStubsSection>();
   in.unwindInfo = makeUnwindInfoSection();
