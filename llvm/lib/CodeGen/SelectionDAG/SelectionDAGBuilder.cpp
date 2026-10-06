@@ -12695,9 +12695,9 @@ void SelectionDAGBuilder::lowerWorkItem(SwitchWorkListItem W, Value *Cond,
         // above First + Range.  If the remaining clusters are laid out as an
         // in-range prefix followed by an out-of-range suffix, the suffix has
         // a stable entry block that can be used as the range-failure target.
-	// If the remaining clusters do not have this form, leave
-	// RangeCheckDefault unset so range failures use the normal cluster
-	// continuation.
+        // If the remaining clusters do not have this form, leave
+        // RangeCheckDefault unset so range failures use the normal cluster
+        // continuation.
         if (BTB->First.isZero()) {
           APInt RangeEnd = BTB->First + BTB->Range;
           unsigned FirstUpperOutOfRange = Size;
