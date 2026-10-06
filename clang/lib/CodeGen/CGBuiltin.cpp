@@ -3916,7 +3916,8 @@ RValue CodeGenFunction::EmitBuiltinExpr(const GlobalDecl GD, unsigned BuiltinID,
     SanitizerMask Consumers = SanitizerKind::KernelMemory |
                               SanitizerKind::Address |
                               SanitizerKind::KernelAddress;
-    if (getLangOpts().Sanitize.hasOneOf(Consumers))
+    if (getLangOpts().Sanitize.hasOneOf(Consumers) ||
+        CGM.getCodeGenOpts().hasSanitizeCoverage())
       Builder.CreateCall(CGM.getIntrinsic(
           BuiltinIDIfNoAsmLabel ==
                   Builtin::BI__builtin_sanitizer_instrumentation_begin

@@ -36,6 +36,7 @@
 #include "llvm/TargetParser/Triple.h"
 #include "llvm/Transforms/Utils/BasicBlockUtils.h"
 #include "llvm/Transforms/Utils/EscapeEnumerator.h"
+#include "llvm/Transforms/Utils/Instrumentation.h"
 #include "llvm/Transforms/Utils/ModuleUtils.h"
 
 using namespace llvm;
@@ -635,6 +636,26 @@ static bool shouldInstrumentBlock(const Function &F, const BasicBlock *BB,
          !(isFullPostDominator(BB, PDT) && !BB->getSinglePredecessor());
 }
 
+// Returns the first instruction of \p BB inside a sanitizer instrumentation
+// region before which coverage can be inserted, or nullptr if there is none.
+// The region's begin() marker is skipped: it is the first instruction of the
+// region, but code inserted before it would run outside the region.
+static Instruction *
+getRegionCoveragePoint(BasicBlock &BB,
+                       const SmallPtrSetImpl<const Instruction *> &InRegion) {
+  if (isa<UnreachableInst>(BB.getFirstNonPHIOrDbgOrLifetime()))
+    return nullptr;
+  for (Instruction &I : make_range(BB.getFirstInsertionPt(), BB.end())) {
+    if (!InRegion.contains(&I))
+      continue;
+    if (auto *II = dyn_cast<IntrinsicInst>(&I))
+      if (II->getIntrinsicID() == Intrinsic::sanitizer_instrumentation_begin)
+        continue;
+    return &I;
+  }
+  return nullptr;
+}
+
 // Returns true iff From->To is a backedge.
 // A twist here is that we treat From->To as a backedge if
 //   * To dominates From or
@@ -695,14 +716,27 @@ void ModuleSanitizerCoverage::instrumentFunction(Function &F) {
   // Do not apply any instrumentation for naked functions.
   if (F.hasFnAttribute(Attribute::Naked))
     return;
-  if (F.hasFnAttribute(Attribute::NoSanitizeCoverage))
-    return;
-  if (F.hasFnAttribute(Attribute::DisableSanitizerInstrumentation))
-    return;
+  // Functions that are not instrumented as a whole are still instrumented
+  // inside llvm.sanitizer.instrumentation.begin()/end() regions. There, every
+  // block that reaches a region gets a coverage point right after the point
+  // where it enters the region; function-level instrumentation (entry/exit
+  // callbacks, stack depth, control flow tables) is left out, as it would run
+  // outside of the regions.
+  bool RegionOnly = false;
+  if (F.hasFnAttribute(Attribute::NoSanitizeCoverage) ||
+      F.hasFnAttribute(Attribute::DisableSanitizerInstrumentation)) {
+    if (!hasSanitizerInstrumentationRegions(F))
+      return;
+    RegionOnly = true;
+  }
   if (Options.CoverageType >= SanitizerCoverageOptions::SCK_Edge) {
     SplitAllCriticalEdges(
         F, CriticalEdgeSplittingOptions().setIgnoreUnreachableDests());
   }
+  SmallPtrSet<const Instruction *, 16> InRegion;
+  if (RegionOnly)
+    computeSanitizerInstrumentationRegions(F, InRegion);
+  SmallVector<Instruction *, 16> RegionCoveragePoints;
   SmallVector<Instruction *, 8> IndirCalls;
   SmallVector<BasicBlock *, 16> BlocksToInstrument;
   SmallVector<Instruction *, 8> CmpTraceTargets;
@@ -717,9 +751,17 @@ void ModuleSanitizerCoverage::instrumentFunction(Function &F) {
   bool IsLeafFunc = true;
 
   for (auto &BB : F) {
-    if (shouldInstrumentBlock(F, &BB, DT, PDT, Options))
+    if (RegionOnly) {
+      // Block pruning relies on every block being instrumented, so it is not
+      // applied to region-only functions.
+      if (Instruction *IP = getRegionCoveragePoint(BB, InRegion))
+        RegionCoveragePoints.push_back(IP);
+    } else if (shouldInstrumentBlock(F, &BB, DT, PDT, Options)) {
       BlocksToInstrument.push_back(&BB);
+    }
     for (auto &Inst : BB) {
+      if (RegionOnly && !InRegion.contains(&Inst))
+        continue;
       if (Options.IndirectCalls) {
         CallBase *CB = dyn_cast<CallBase>(&Inst);
         if (CB && CB->isIndirectCall())
@@ -753,7 +795,17 @@ void ModuleSanitizerCoverage::instrumentFunction(Function &F) {
     }
   }
 
-  if (Options.CollectControlFlow)
+  // Coverage is inserted at the start of a block, and the PC table refers to
+  // blocks by address. Start a new block at each region coverage point that is
+  // not already at the start of a block other than the entry block.
+  for (Instruction *IP : RegionCoveragePoints) {
+    BasicBlock *BB = IP->getParent();
+    if (BB->isEntryBlock() || IP != &*BB->getFirstInsertionPt())
+      BB = BB->splitBasicBlock(IP, "sancov.region");
+    BlocksToInstrument.push_back(BB);
+  }
+
+  if (Options.CollectControlFlow && !RegionOnly)
     createFunctionControlFlow(F);
 
   Value *FunctionGateCmp = nullptr;
@@ -765,7 +817,7 @@ void ModuleSanitizerCoverage::instrumentFunction(Function &F) {
   InjectTraceForGep(F, GepTraceTargets);
   InjectTraceForLoadsAndStores(F, Loads, Stores);
 
-  if (Options.TracePCEntryExit)
+  if (Options.TracePCEntryExit && !RegionOnly)
     InjectTraceForExits(F);
 }
 
