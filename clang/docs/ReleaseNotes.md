@@ -649,6 +649,9 @@ features cannot lower the translation-unit ABI level;
 
 #### Bug Fixes to Attribute Support
 
+- `#pragma weak alias = target` no longer makes every later use of `alias`
+  ambiguous when `alias` was already declared: the alias is now attached to the
+  existing declaration, and a definition of `alias` is diagnosed. (#GH35478), (#GH56760)
 - Fixed crash (assertion) when the `alloc_align` attribute was applied to a declaration whose type has a `FunctionProtoType` but which is not itself a `FunctionDecl`, such as a function-pointer variable. (#GH122058)
 
 - Fixed a crash on `bool` vectors declared with `ext_vector_type` and more than
