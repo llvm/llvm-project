@@ -68,15 +68,14 @@ private:
 
 class QualifiedRenameRule final : public SourceChangeRefactoringRule {
 public:
-  static Expected<QualifiedRenameRule> initiate(RefactoringRuleContext &Context,
-                                                std::string OldQualifiedName,
-                                                std::string NewQualifiedName);
+  static Expected<QualifiedRenameRule>
+  initiate(RefactoringRuleContext &Context, const std::string &OldQualifiedName,
+           std::string &&NewQualifiedName);
 
   static const RefactoringDescriptor &describe();
 
 private:
-  QualifiedRenameRule(const NamedDecl *ND,
-                      std::string NewQualifiedName)
+  QualifiedRenameRule(const NamedDecl *ND, std::string &&NewQualifiedName)
       : ND(ND), NewQualifiedName(std::move(NewQualifiedName)) {}
 
   Expected<AtomicChanges>
