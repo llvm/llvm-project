@@ -283,7 +283,7 @@ static void emitOptionsStruct(const Record &Struct,
       PrintFatalError(R->getLoc(),
                       "a member is set by a FlagOrEq or SeparateOrEq");
     StringRef Type = R->getValueAsString("FieldType");
-    if (Kind == "FlagOrEq" && Type != "bool" && Type != "std::optional<bool>")
+    if (Kind == "FlagOrEq" && Type != "bool" && Type != "llvm::BoolOrDefault")
       PrintFatalError(R->getLoc(), "a FlagOrEq sets a bool member");
     Fields.push_back(R);
   }
@@ -307,6 +307,7 @@ static void emitOptionsStruct(const Record &Struct,
 
   StringRef Name = Struct.getName();
   OS << "\n#ifdef OPTIONS_STRUCT_DECL\n#undef OPTIONS_STRUCT_DECL\n";
+  OS << "#include \"llvm/ADT/BoolOrDefault.h\"\n";
   OS << "#include \"llvm/ADT/StringRef.h\"\n\n";
   StringRef Namespace = Struct.getValueAsString("Namespace");
   OS << "namespace llvm {\nnamespace opt {\nclass Arg;\n"
@@ -358,10 +359,12 @@ static void emitOptionsStruct(const Record &Struct,
       OS << "      return false;\n    }\n";
       continue;
     }
-    if (R->getValueAsDef("Kind")->getValueAsString("Name") == "FlagOrEq")
-      OS << "    if (!A.getNumValues()) {\n      " << Member
-         << " = true;\n      return true;\n    }\n";
-    OS << "    return llvm::opt::parseArgValue(A.getValue(), " << Member
+    // A FlagOrEq without a value means =true.
+    StringRef Value =
+        R->getValueAsDef("Kind")->getValueAsString("Name") == "FlagOrEq"
+            ? "A.getNumValues() ? A.getValue() : \"true\""
+            : "A.getValue()";
+    OS << "    return llvm::opt::parseArgValue(" << Value << ", " << Member
        << ");\n";
   }
   OS << "  }\n  llvm_unreachable(\"option without a member\");\n}\n";

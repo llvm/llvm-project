@@ -35,11 +35,12 @@ multiclass BoolField<string name, code default, string help> {
     HelpText<help>;
 }
 
-// A std::optional<bool> member, std::nullopt unless -<name> or
-// -<name>=<true|false|1|0> is given.
+// A BoolOrDefault member, Default unless -<name> or -<name>=<true|false|1|0>
+// is given.
 multiclass OptionalBoolField<string name, string help> {
   def NAME : FlagOrEq<["-", "--"], name>,
-    Field<NAME, "std::optional<bool>", "std::nullopt">, HelpText<help>;
+    Field<NAME, "llvm::BoolOrDefault", "llvm::BoolOrDefault::Default">,
+    HelpText<help>;
 }
 
 // A member of the enumeration <type> set by -<name>=<value> or -<name> <value>,
@@ -52,11 +53,13 @@ multiclass EnumField<string name, string type, code default, string values,
     MetaVarName<"<"#!subst(",", "|", values)#">">, HelpText<help>;
 }
 
-// A std::optional<bool> member, std::nullopt unless -<name>=Enable or
-// -<name>=Disable is given.
+// A BoolOrDefault member, Default unless -<name>=Enable or -<name>=Disable is
+// given.
 multiclass DefaultOnOffField<string name, string help> {
-  defm NAME : EnumField<name, "std::optional<bool>", "std::nullopt",
-    "Default,Enable,Disable", ["std::nullopt", "true", "false"], help>;
+  defm NAME : EnumField<name, "llvm::BoolOrDefault",
+    "llvm::BoolOrDefault::Default", "Default,Enable,Disable",
+    ["llvm::BoolOrDefault::Default", "llvm::BoolOrDefault::True",
+     "llvm::BoolOrDefault::False"], help>;
 }
 
 // A member of the C++ type <type> set by -<name>=<value> or -<name> <value>.

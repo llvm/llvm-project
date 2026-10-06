@@ -147,6 +147,7 @@ CROSS_COMPILATION_RUNTIMES = {
 }
 
 EXCLUDE_WINDOWS = {
+    "CIR",  # The Windows premerge build does not enable CLANG_ENABLE_CIR.
     "cross-project-tests",  # TODO(issues/132797): Tests are failing.
     "openmp",  # TODO(issues/132799): Does not detect perl installation.
     "libc",  # No Windows Support.
