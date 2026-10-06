@@ -49009,15 +49009,15 @@ static SDValue combineSelect(SDNode *N, SelectionDAG &DAG,
       }
     }
 
-    SDValue CondRoot = Cond;
-    while (CondRoot.getOpcode() == ISD::AND ||
-           CondRoot.getOpcode() == ISD::ANY_EXTEND ||
-           CondRoot.getOpcode() == ISD::ZERO_EXTEND ||
-           CondRoot.getOpcode() == ISD::TRUNCATE)
-      CondRoot = CondRoot.getOperand(0);
+    auto IsFromSetCC = [](SDValue V) {
+      while (V.getOpcode() == ISD::AND || V.getOpcode() == ISD::ANY_EXTEND ||
+             V.getOpcode() == ISD::ZERO_EXTEND ||
+             V.getOpcode() == ISD::TRUNCATE)
+        V = V.getOperand(0);
+      return V.getOpcode() == ISD::SETCC || V.getOpcode() == X86ISD::SETCC;
+    };
 
-    if (F16LHS && CondRoot.getOpcode() != ISD::SETCC &&
-        CondRoot.getOpcode() != X86ISD::SETCC) {
+    if (F16LHS && !IsFromSetCC(Cond)) {
       // With FP16, f16 is legal and lowers to a masked VMOVSH.
       if (Subtarget.hasFP16())
         return DAG.getBitcast(
