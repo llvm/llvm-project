@@ -370,8 +370,12 @@ define void @legalize_widen_truncstore_v3i8(ptr addrspace(1) %p, <3 x i32> %v) {
 }
 
 define i32 @scalarize_extracted_vector_load(ptr addrspace(1) %p, i64 %idx) {
-; CHECK-LABEL: scalarize_extracted_vector_load(
-; CHECK:    ld.global.L1::evict_last.b32 %r1, [%rd5];
+; O2-LABEL: scalarize_extracted_vector_load(
+; O2:    ld.global.L1::evict_last.b32 %r1, [%rd5];
+;
+; O0-LABEL: scalarize_extracted_vector_load(
+; O0:    mov.b64 %rd2, %rd3;
+; O0:    ld.global.L1::evict_last.b32 %r1, [%rd6];
   %v = load <4 x i32>, ptr addrspace(1) %p, align 16, !mem.cache_hint !13
   %elt = extractelement <4 x i32> %v, i64 %idx
   ret i32 %elt
