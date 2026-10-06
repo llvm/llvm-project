@@ -446,6 +446,31 @@ function attribute `__attribute__((no_sanitize("coverage")))`. Because this
 attribute may not be supported by other compilers, it is recommended to use it
 together with `__has_feature(coverage_sanitizer)`.
 
+### Re-enabling instrumentation in regions
+
+Inside a function that has `__attribute__((no_sanitize("coverage")))` or
+`__attribute__((disable_sanitizer_instrumentation))`, a region delimited by
+`__builtin_sanitizer_instrumentation_begin()` and
+`__builtin_sanitizer_instrumentation_end()` is instrumented again: every basic
+block that enters a region gets a coverage point right after it does, and
+comparisons, switches, divisions, GEPs, loads, stores and indirect calls in
+regions are traced as requested. Coverage points are not pruned in such
+functions, and the function entry and exit callbacks, stack depth tracing and
+control flow tables are not emitted. Regions nest, and code reachable without
+passing through a `__builtin_sanitizer_instrumentation_begin()` is not
+considered to be in a region.
+
+```c
+__attribute__((no_sanitize("coverage")))
+void mostly_uninstrumented(int x) {
+  ... // not covered
+  __builtin_sanitizer_instrumentation_begin();
+  if (x) // covered, and traced with -fsanitize-coverage=trace-cmp
+    foo();
+  __builtin_sanitizer_instrumentation_end();
+}
+```
+
 ## Disabling instrumentation without source modification
 
 It is sometimes useful to tell SanitizerCoverage to instrument only a subset of the
