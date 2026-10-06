@@ -28,8 +28,6 @@
 //   COMMON_INTERCEPTOR_MEMSET_CHK_IMPL
 //   COMMON_INTERCEPTOR_MEMMOVE_CHK_IMPL
 //   COMMON_INTERCEPTOR_MEMCPY_CHK_IMPL
-// There is no common plain "mempcpy" interceptor to fall back on, so the
-// __mempcpy_chk interceptor is only emitted when a tool defines:
 //   COMMON_INTERCEPTOR_MEMPCPY_CHK_IMPL
 //===----------------------------------------------------------------------===//
 
@@ -147,6 +145,21 @@
         return REAL(__memcpy_chk)(dst, src, size, dst_size);                \
       }                                                                     \
       COMMON_INTERCEPTOR_MEMCPY_IMPL(ctx, dst, src, size);                  \
+    }
+#endif
+
+#ifndef COMMON_INTERCEPTOR_MEMPCPY_CHK_IMPL
+#  define COMMON_INTERCEPTOR_MEMPCPY_CHK_IMPL(ctx, dst, src, size, dst_size) \
+    {                                                                        \
+      if (COMMON_INTERCEPTOR_NOTHING_IS_INITIALIZED) {                       \
+        CHECK_LE(size, dst_size);                                            \
+      } else if (UNLIKELY(size > dst_size)) {                                \
+        return REAL(__mempcpy_chk)(dst, src, size, dst_size);                \
+      }                                                                      \
+      return (char*)([&]() ALWAYS_INLINE -> void* {                          \
+               COMMON_INTERCEPTOR_MEMCPY_IMPL(ctx, dst, src, size);          \
+             }()) +                                                          \
+             size;                                                           \
     }
 #endif
 
@@ -332,8 +345,7 @@ INTERCEPTOR(void*, __memcpy_chk, void* dst, const void* src, usize size,
 #  define INIT___MEMCPY_CHK
 #endif  // SANITIZER_INTERCEPT___MEMCPY_CHK
 
-#if SANITIZER_INTERCEPT___MEMPCPY_CHK && \
-    defined(COMMON_INTERCEPTOR_MEMPCPY_CHK_IMPL)
+#if SANITIZER_INTERCEPT___MEMPCPY_CHK
 INTERCEPTOR(void*, __mempcpy_chk, void* dst, const void* src, usize size,
             usize dst_size) {
   void* ctx;

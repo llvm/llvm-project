@@ -1503,17 +1503,6 @@ int OnExit() {
     return __msan_memcpy(to, from, size);                   \
   }
 
-#define COMMON_INTERCEPTOR_MEMPCPY_CHK_IMPL(ctx, dest, src, n, dest_size) \
-  {                                                                       \
-    (void)ctx;                                                            \
-    if (COMMON_INTERCEPTOR_NOTHING_IS_INITIALIZED) {                      \
-      CHECK_LE(n, dest_size);                                             \
-    } else if (UNLIKELY(n > dest_size)) {                                 \
-      return REAL(__mempcpy_chk)(dest, src, n, dest_size);                \
-    }                                                                     \
-    return (char*)__msan_memcpy(dest, src, n) + n;                        \
-  }
-
 #define COMMON_INTERCEPTOR_COPY_STRING(ctx, to, from, size) \
   do {                                                      \
     GET_STORE_STACK_TRACE;                                  \
