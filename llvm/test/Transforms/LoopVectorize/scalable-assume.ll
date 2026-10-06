@@ -151,10 +151,10 @@ define void @predicated_assume(ptr noalias nocapture readonly %a, ptr noalias no
 ; CHECK-NEXT:    [[INDEX:%.*]] = phi i64 [ 0, %[[VECTOR_PH]] ], [ [[INDEX_NEXT:%.*]], %[[VECTOR_BODY]] ]
 ; CHECK-NEXT:    [[VEC_IND:%.*]] = phi <vscale x 2 x i64> [ [[TMP7]], %[[VECTOR_PH]] ], [ [[VEC_IND_NEXT:%.*]], %[[VECTOR_BODY]] ]
 ; CHECK-NEXT:    [[STEP_ADD:%.*]] = add nuw <vscale x 2 x i64> [[VEC_IND]], [[BROADCAST_SPLAT]]
-; CHECK-NEXT:    [[TMP9:%.*]] = icmp ult <vscale x 2 x i64> [[VEC_IND]], splat (i64 495616)
-; CHECK-NEXT:    [[TMP10:%.*]] = icmp ult <vscale x 2 x i64> [[STEP_ADD]], splat (i64 495616)
-; CHECK-NEXT:    [[PREDPHI:%.*]] = select <vscale x 2 x i1> [[TMP9]], <vscale x 2 x float> splat (float 2.300000e+01), <vscale x 2 x float> splat (float 4.200000e+01)
-; CHECK-NEXT:    [[PREDPHI1:%.*]] = select <vscale x 2 x i1> [[TMP10]], <vscale x 2 x float> splat (float 2.300000e+01), <vscale x 2 x float> splat (float 4.200000e+01)
+; CHECK-NEXT:    [[TMP4:%.*]] = icmp uge <vscale x 2 x i64> [[VEC_IND]], splat (i64 495616)
+; CHECK-NEXT:    [[TMP6:%.*]] = icmp uge <vscale x 2 x i64> [[STEP_ADD]], splat (i64 495616)
+; CHECK-NEXT:    [[PREDPHI:%.*]] = select <vscale x 2 x i1> [[TMP4]], <vscale x 2 x float> splat (float 4.200000e+01), <vscale x 2 x float> splat (float 2.300000e+01)
+; CHECK-NEXT:    [[PREDPHI1:%.*]] = select <vscale x 2 x i1> [[TMP6]], <vscale x 2 x float> splat (float 4.200000e+01), <vscale x 2 x float> splat (float 2.300000e+01)
 ; CHECK-NEXT:    [[TMP11:%.*]] = getelementptr inbounds float, ptr [[A]], i64 [[INDEX]]
 ; CHECK-NEXT:    [[TMP14:%.*]] = getelementptr inbounds float, ptr [[TMP11]], i64 [[TMP5]]
 ; CHECK-NEXT:    [[WIDE_LOAD:%.*]] = load <vscale x 2 x float>, ptr [[TMP11]], align 4

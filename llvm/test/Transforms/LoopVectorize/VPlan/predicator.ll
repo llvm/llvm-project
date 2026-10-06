@@ -14,11 +14,11 @@ define void @diamond_phi(ptr %a) {
 ; CHECK-EMPTY:
 ; CHECK-NEXT:    bb2:
 ; CHECK-NEXT:      EMIT vp<[[VP4:%[0-9]+]]> = not ir<%c0>
-; CHECK-NEXT:      EMIT ir<%add2> = add ir<%iv>, ir<2>, vp<[[VP4]]>
+; CHECK-NEXT:      EMIT ir<%add2> = add ir<%iv>, ir<2>, vp<[[VP4]]> (!vplan.execution.frequency 9223372036854775807 (50%, estimated))
 ; CHECK-NEXT:    Successor(s): bb1
 ; CHECK-EMPTY:
 ; CHECK-NEXT:    bb1:
-; CHECK-NEXT:      EMIT ir<%add1> = add ir<%iv>, ir<1>, ir<%c0>
+; CHECK-NEXT:      EMIT ir<%add1> = add ir<%iv>, ir<1>, ir<%c0> (!vplan.execution.frequency 9223372036854775808 (50%, estimated))
 ; CHECK-NEXT:    Successor(s): bb4
 ; CHECK-EMPTY:
 ; CHECK-NEXT:    bb4:
@@ -78,25 +78,22 @@ define void @mask_reuse(ptr %a) {
 ; CHECK-NEXT:    Successor(s): bb1
 ; CHECK-EMPTY:
 ; CHECK-NEXT:    bb1:
-; CHECK-NEXT:      EMIT ir<%add1> = add ir<%iv>, ir<1>, ir<%c0>
-; CHECK-NEXT:      EMIT ir<%c1> = icmp sle ir<%iv>, ir<1>, ir<%c0>
+; CHECK-NEXT:      EMIT ir<%add1> = add ir<%iv>, ir<1>, ir<%c0> (!vplan.execution.frequency 9223372036854775807 (50%, estimated))
+; CHECK-NEXT:      EMIT ir<%c1> = icmp sle ir<%iv>, ir<1>, ir<%c0> (!vplan.execution.frequency 9223372036854775807 (50%, estimated))
 ; CHECK-NEXT:    Successor(s): bb2
 ; CHECK-EMPTY:
 ; CHECK-NEXT:    bb2:
 ; CHECK-NEXT:      EMIT vp<[[VP4:%[0-9]+]]> = logical-and ir<%c0>, ir<%c1>
-; CHECK-NEXT:      EMIT ir<%add2> = add ir<%iv>, ir<2>, vp<[[VP4]]>
+; CHECK-NEXT:      EMIT ir<%add2> = add ir<%iv>, ir<2>, vp<[[VP4]]> (!vplan.execution.frequency 4611686018427387903 (25%, estimated))
 ; CHECK-NEXT:    Successor(s): bb3
 ; CHECK-EMPTY:
 ; CHECK-NEXT:    bb3:
-; CHECK-NEXT:      EMIT vp<[[VP5:%[0-9]+]]> = not ir<%c1>
-; CHECK-NEXT:      EMIT vp<[[VP6:%[0-9]+]]> = logical-and ir<%c0>, vp<[[VP5]]>
-; CHECK-NEXT:      BLEND ir<%phi3> = ir<%add2>/vp<[[VP4]]> ir<%add1>/vp<[[VP6]]>
-; CHECK-NEXT:      EMIT ir<%add3> = add ir<%phi3>, ir<3>, ir<%c0>
+; CHECK-NEXT:      BLEND ir<%phi3> = ir<%add1>/ir<%c0> ir<%add2>/vp<[[VP4]]>
+; CHECK-NEXT:      EMIT ir<%add3> = add ir<%phi3>, ir<3>, ir<%c0> (!vplan.execution.frequency 9223372036854775807 (50%, estimated))
 ; CHECK-NEXT:    Successor(s): bb4
 ; CHECK-EMPTY:
 ; CHECK-NEXT:    bb4:
-; CHECK-NEXT:      EMIT vp<[[VP7:%[0-9]+]]> = not ir<%c0>
-; CHECK-NEXT:      BLEND ir<%phi4> = ir<%add3>/ir<%c0> ir<%iv>/vp<[[VP7]]>
+; CHECK-NEXT:      BLEND ir<%phi4> = ir<%iv>/ir<true> ir<%add3>/ir<%c0>
 ; CHECK-NEXT:      EMIT store ir<%phi4>, ir<%gep>
 ; CHECK-NEXT:      EMIT ir<%iv.next> = add nuw nsw ir<%iv>, ir<1>
 ; CHECK-NEXT:      EMIT ir<%ec> = icmp eq ir<%iv.next>, ir<128>
@@ -164,31 +161,31 @@ define void @optimized_mask(ptr %a) {
 ; CHECK-EMPTY:
 ; CHECK-NEXT:    bb6:
 ; CHECK-NEXT:      EMIT vp<[[VP4:%[0-9]+]]> = not ir<%c0>
-; CHECK-NEXT:      EMIT ir<%add6> = add ir<%iv>, ir<6>, vp<[[VP4]]>
-; CHECK-NEXT:      EMIT ir<%c6> = icmp sle ir<%iv>, ir<6>, vp<[[VP4]]>
+; CHECK-NEXT:      EMIT ir<%add6> = add ir<%iv>, ir<6>, vp<[[VP4]]> (!vplan.execution.frequency 9223372036854775807 (50%, estimated))
+; CHECK-NEXT:      EMIT ir<%c6> = icmp sle ir<%iv>, ir<6>, vp<[[VP4]]> (!vplan.execution.frequency 9223372036854775807 (50%, estimated))
 ; CHECK-NEXT:    Successor(s): bb1
 ; CHECK-EMPTY:
 ; CHECK-NEXT:    bb1:
-; CHECK-NEXT:      EMIT ir<%c1> = icmp sle ir<%iv>, ir<1>, ir<%c0>
+; CHECK-NEXT:      EMIT ir<%c1> = icmp sle ir<%iv>, ir<1>, ir<%c0> (!vplan.execution.frequency 9223372036854775808 (50%, estimated))
 ; CHECK-NEXT:    Successor(s): bb3
 ; CHECK-EMPTY:
 ; CHECK-NEXT:    bb3:
 ; CHECK-NEXT:      EMIT vp<[[VP5:%[0-9]+]]> = not ir<%c1>
 ; CHECK-NEXT:      EMIT vp<[[VP6:%[0-9]+]]> = logical-and ir<%c0>, vp<[[VP5]]>
-; CHECK-NEXT:      EMIT ir<%add3> = add ir<%iv>, ir<3>, vp<[[VP6]]>
-; CHECK-NEXT:      EMIT ir<%c3> = icmp sle ir<%iv>, ir<3>, vp<[[VP6]]>
+; CHECK-NEXT:      EMIT ir<%add3> = add ir<%iv>, ir<3>, vp<[[VP6]]> (!vplan.execution.frequency 4611686018427387904 (25%, estimated))
+; CHECK-NEXT:      EMIT ir<%c3> = icmp sle ir<%iv>, ir<3>, vp<[[VP6]]> (!vplan.execution.frequency 4611686018427387904 (25%, estimated))
 ; CHECK-NEXT:    Successor(s): bb2
 ; CHECK-EMPTY:
 ; CHECK-NEXT:    bb2:
 ; CHECK-NEXT:      EMIT vp<[[VP7:%[0-9]+]]> = logical-and ir<%c0>, ir<%c1>
-; CHECK-NEXT:      EMIT ir<%add2> = add ir<%iv>, ir<2>, vp<[[VP7]]>
+; CHECK-NEXT:      EMIT ir<%add2> = add ir<%iv>, ir<2>, vp<[[VP7]]> (!vplan.execution.frequency 4611686018427387904 (25%, estimated))
 ; CHECK-NEXT:    Successor(s): bb4
 ; CHECK-EMPTY:
 ; CHECK-NEXT:    bb4:
 ; CHECK-NEXT:      EMIT vp<[[VP8:%[0-9]+]]> = logical-and vp<[[VP6]]>, ir<%c3>
 ; CHECK-NEXT:      EMIT vp<[[VP9:%[0-9]+]]> = or vp<[[VP8]]>, vp<[[VP7]]>
-; CHECK-NEXT:      BLEND ir<%phi4> = ir<%add3>/vp<[[VP8]]> ir<%add2>/vp<[[VP7]]>
-; CHECK-NEXT:      EMIT ir<%add4> = add ir<%phi4>, ir<4>, vp<[[VP9]]>
+; CHECK-NEXT:      BLEND ir<%phi4> = ir<%add3>/vp<[[VP6]]> ir<%add2>/vp<[[VP7]]>
+; CHECK-NEXT:      EMIT ir<%add4> = add ir<%phi4>, ir<4>, vp<[[VP9]]> (!vplan.execution.frequency 6917529027641081856 (37.5%, estimated))
 ; CHECK-NEXT:    Successor(s): bb5
 ; CHECK-EMPTY:
 ; CHECK-NEXT:    bb5:
@@ -197,14 +194,12 @@ define void @optimized_mask(ptr %a) {
 ; CHECK-NEXT:      EMIT vp<[[VP12:%[0-9]+]]> = not ir<%c3>
 ; CHECK-NEXT:      EMIT vp<[[VP13:%[0-9]+]]> = logical-and vp<[[VP6]]>, vp<[[VP12]]>
 ; CHECK-NEXT:      EMIT vp<[[VP14:%[0-9]+]]> = or vp<[[VP11]]>, vp<[[VP13]]>
-; CHECK-NEXT:      BLEND ir<%phi5> = ir<%add6>/vp<[[VP10]]> ir<%add4>/vp<[[VP9]]> ir<%add3>/vp<[[VP13]]>
-; CHECK-NEXT:      EMIT ir<%add5> = add ir<%phi5>, ir<5>, vp<[[VP14]]>
+; CHECK-NEXT:      BLEND ir<%phi5> = ir<%add6>/vp<[[VP4]]> ir<%add3>/vp<[[VP6]]> ir<%add4>/vp<[[VP9]]>
+; CHECK-NEXT:      EMIT ir<%add5> = add ir<%phi5>, ir<5>, vp<[[VP14]]> (!vplan.execution.frequency 13835058055282163711 (75%, estimated))
 ; CHECK-NEXT:    Successor(s): bb7
 ; CHECK-EMPTY:
 ; CHECK-NEXT:    bb7:
-; CHECK-NEXT:      EMIT vp<[[VP15:%[0-9]+]]> = not ir<%c6>
-; CHECK-NEXT:      EMIT vp<[[VP16:%[0-9]+]]> = logical-and vp<[[VP4]]>, vp<[[VP15]]>
-; CHECK-NEXT:      BLEND ir<%phi7> = ir<%add6>/vp<[[VP16]]> ir<%add5>/vp<[[VP14]]>
+; CHECK-NEXT:      BLEND ir<%phi7> = ir<%add6>/vp<[[VP4]]> ir<%add5>/vp<[[VP14]]>
 ; CHECK-NEXT:      EMIT store ir<%phi7>, ir<%gep>
 ; CHECK-NEXT:      EMIT ir<%iv.next> = add nuw nsw ir<%iv>, ir<1>
 ; CHECK-NEXT:      EMIT ir<%ec> = icmp eq ir<%iv.next>, ir<128>
@@ -289,12 +284,12 @@ define void @switch(ptr %a) {
 ; CHECK-EMPTY:
 ; CHECK-NEXT:    bb2:
 ; CHECK-NEXT:      EMIT vp<[[VP4:%[0-9]+]]> = not ir<%c0>
-; CHECK-NEXT:      EMIT ir<%add2> = add ir<%iv>, ir<2>, vp<[[VP4]]>
-; CHECK-NEXT:      EMIT ir<%c2> = icmp sle ir<%iv>, ir<2>, vp<[[VP4]]>
+; CHECK-NEXT:      EMIT ir<%add2> = add ir<%iv>, ir<2>, vp<[[VP4]]> (!vplan.execution.frequency 9223372036854775807 (50%, estimated))
+; CHECK-NEXT:      EMIT ir<%c2> = icmp sle ir<%iv>, ir<2>, vp<[[VP4]]> (!vplan.execution.frequency 9223372036854775807 (50%, estimated))
 ; CHECK-NEXT:    Successor(s): bb1
 ; CHECK-EMPTY:
 ; CHECK-NEXT:    bb1:
-; CHECK-NEXT:      EMIT ir<%add1> = add ir<%iv>, ir<1>, ir<%c0>
+; CHECK-NEXT:      EMIT ir<%add1> = add ir<%iv>, ir<1>, ir<%c0> (!vplan.execution.frequency 9223372036854775808 (50%, estimated))
 ; CHECK-NEXT:    Successor(s): bb3
 ; CHECK-EMPTY:
 ; CHECK-NEXT:    bb3:
@@ -309,18 +304,16 @@ define void @switch(ptr %a) {
 ; CHECK-NEXT:      EMIT vp<[[VP13:%[0-9]+]]> = not vp<[[VP12]]>
 ; CHECK-NEXT:      EMIT vp<[[VP14:%[0-9]+]]> = logical-and ir<%c0>, vp<[[VP13]]>
 ; CHECK-NEXT:      EMIT vp<[[VP15:%[0-9]+]]> = or vp<[[VP5]]>, vp<[[VP11]]>
-; CHECK-NEXT:      BLEND ir<%phi3> = ir<%add2>/vp<[[VP5]]> ir<%add1>/vp<[[VP11]]>
-; CHECK-NEXT:      EMIT ir<%add3> = add ir<%phi3>, ir<3>, vp<[[VP15]]>
+; CHECK-NEXT:      BLEND ir<%phi3> = ir<%add2>/vp<[[VP4]]> ir<%add1>/ir<%c0>
+; CHECK-NEXT:      EMIT ir<%add3> = add ir<%phi3>, ir<3>, vp<[[VP15]]> (!vplan.execution.frequency 9223372036854775807 (50%, estimated))
 ; CHECK-NEXT:    Successor(s): bb4
 ; CHECK-EMPTY:
 ; CHECK-NEXT:    bb4:
-; CHECK-NEXT:      EMIT ir<%add4> = add ir<%iv>, ir<4>, vp<[[VP9]]>
+; CHECK-NEXT:      EMIT ir<%add4> = add ir<%iv>, ir<4>, vp<[[VP9]]> (!vplan.execution.frequency 2305843009213693952 (12.5%, estimated))
 ; CHECK-NEXT:    Successor(s): bb5
 ; CHECK-EMPTY:
 ; CHECK-NEXT:    bb5:
-; CHECK-NEXT:      EMIT vp<[[VP16:%[0-9]+]]> = not ir<%c2>
-; CHECK-NEXT:      EMIT vp<[[VP17:%[0-9]+]]> = logical-and vp<[[VP4]]>, vp<[[VP16]]>
-; CHECK-NEXT:      BLEND ir<%phi5> = ir<%add4>/vp<[[VP9]]> ir<%add3>/vp<[[VP15]]> ir<%add2>/vp<[[VP17]]> ir<%add1>/vp<[[VP14]]>
+; CHECK-NEXT:      BLEND ir<%phi5> = ir<%add2>/vp<[[VP4]]> ir<%add1>/ir<%c0> ir<%add3>/vp<[[VP15]]> ir<%add4>/vp<[[VP9]]>
 ; CHECK-NEXT:      EMIT store ir<%phi5>, ir<%gep>
 ; CHECK-NEXT:      EMIT ir<%iv.next> = add nuw nsw ir<%iv>, ir<1>
 ; CHECK-NEXT:      EMIT ir<%ec> = icmp eq ir<%iv.next>, ir<128>
@@ -405,20 +398,20 @@ define void @diamond_phi2(ptr %a, i1 %c1, i1 %c2) {
 ; CHECK-EMPTY:
 ; CHECK-NEXT:    bb2:
 ; CHECK-NEXT:      EMIT vp<[[VP4:%[0-9]+]]> = not ir<%c0>
-; CHECK-NEXT:      EMIT ir<%add2> = add ir<%iv>, ir<2>, vp<[[VP4]]>
+; CHECK-NEXT:      EMIT ir<%add2> = add ir<%iv>, ir<2>, vp<[[VP4]]> (!vplan.execution.frequency 9223372036854775807 (50%, estimated))
 ; CHECK-NEXT:    Successor(s): bb1
 ; CHECK-EMPTY:
 ; CHECK-NEXT:    bb1:
-; CHECK-NEXT:      EMIT ir<%add1> = add ir<%iv>, ir<1>, ir<%c0>
+; CHECK-NEXT:      EMIT ir<%add1> = add ir<%iv>, ir<1>, ir<%c0> (!vplan.execution.frequency 9223372036854775808 (50%, estimated))
 ; CHECK-NEXT:    Successor(s): bb4
 ; CHECK-EMPTY:
 ; CHECK-NEXT:    bb4:
 ; CHECK-NEXT:      EMIT vp<[[VP5:%[0-9]+]]> = logical-and vp<[[VP4]]>, ir<%c2>
 ; CHECK-NEXT:      EMIT vp<[[VP6:%[0-9]+]]> = logical-and ir<%c0>, ir<%c1>
 ; CHECK-NEXT:      EMIT vp<[[VP7:%[0-9]+]]> = or vp<[[VP5]]>, vp<[[VP6]]>
-; CHECK-NEXT:      BLEND ir<%phi> = ir<%add2>/vp<[[VP5]]> ir<%add1>/vp<[[VP6]]>
+; CHECK-NEXT:      BLEND ir<%phi> = ir<%add2>/vp<[[VP4]]> ir<%add1>/ir<%c0>
 ; CHECK-NEXT:      EMIT ir<%gep> = getelementptr ir<%a>, ir<%iv>
-; CHECK-NEXT:      EMIT store ir<%phi>, ir<%gep>, vp<[[VP7]]>
+; CHECK-NEXT:      EMIT store ir<%phi>, ir<%gep>, vp<[[VP7]]> (!vplan.execution.frequency 9223372036854775807 (50%, estimated))
 ; CHECK-NEXT:    Successor(s): bb5
 ; CHECK-EMPTY:
 ; CHECK-NEXT:    bb5:
@@ -517,9 +510,9 @@ define void @blend_masks(ptr noalias %p, i1 %c0, i1 %c1, i1 %c2, i1 %c3, i1 %c4)
 ; CHECK-NEXT:    bb7:
 ; CHECK-NEXT:      EMIT vp<[[VP15:%[0-9]+]]> = logical-and vp<[[VP9]]>, ir<%c4>
 ; CHECK-NEXT:      EMIT vp<[[VP16:%[0-9]+]]> = or vp<[[VP15]]>, vp<[[VP14]]>
-; CHECK-NEXT:      BLEND ir<%phi> = ir<1>/vp<[[VP15]]> ir<0>/vp<[[VP14]]>
+; CHECK-NEXT:      BLEND ir<%phi> = ir<1>/vp<[[VP9]]> ir<0>/vp<[[VP14]]>
 ; CHECK-NEXT:      EMIT ir<%gep> = getelementptr ir<%p>, ir<%iv>
-; CHECK-NEXT:      EMIT store ir<%phi>, ir<%gep>, vp<[[VP16]]>
+; CHECK-NEXT:      EMIT store ir<%phi>, ir<%gep>, vp<[[VP16]]> (!vplan.execution.frequency 10376293541461622783 (56.25%, estimated))
 ; CHECK-NEXT:    Successor(s): bb8
 ; CHECK-EMPTY:
 ; CHECK-NEXT:    bb8:
@@ -602,8 +595,7 @@ define void @blend_masks_triangle_phi(ptr noalias %p, i1 %c0, i1 %c1) {
 ; CHECK-NEXT:    Successor(s): bb3
 ; CHECK-EMPTY:
 ; CHECK-NEXT:    bb3:
-; CHECK-NEXT:      EMIT vp<[[VP8:%[0-9]+]]> = logical-and ir<%c0>, ir<%c1>
-; CHECK-NEXT:      BLEND ir<%phi> = ir<1>/vp<[[VP7]]> ir<0>/vp<[[VP8]]>
+; CHECK-NEXT:      BLEND ir<%phi> = ir<0>/ir<%c0> ir<1>/vp<[[VP7]]>
 ; CHECK-NEXT:      EMIT ir<%gep> = getelementptr ir<%p>, ir<%iv>
 ; CHECK-NEXT:      EMIT store ir<%phi>, ir<%gep>
 ; CHECK-NEXT:      EMIT ir<%iv.next> = add ir<%iv>, ir<1>
@@ -654,7 +646,7 @@ define void @blend_chain_non_trivial(ptr noalias %a, ptr noalias %b) {
 ; CHECK-NEXT:    Successor(s): if.a
 ; CHECK-EMPTY:
 ; CHECK-NEXT:    if.a:
-; CHECK-NEXT:      EMIT ir<%ca> = icmp sle ir<%iv>, ir<8>, ir<%c0>
+; CHECK-NEXT:      EMIT ir<%ca> = icmp sle ir<%iv>, ir<8>, ir<%c0> (!vplan.execution.frequency 9223372036854775807 (50%, estimated))
 ; CHECK-NEXT:    Successor(s): if.a.inner
 ; CHECK-EMPTY:
 ; CHECK-NEXT:    if.a.inner:
@@ -665,25 +657,23 @@ define void @blend_chain_non_trivial(ptr noalias %a, ptr noalias %b) {
 ; CHECK-NEXT:    Successor(s): merge.a
 ; CHECK-EMPTY:
 ; CHECK-NEXT:    merge.a:
-; CHECK-NEXT:      EMIT vp<[[VP5:%[0-9]+]]> = not ir<%c0>
-; CHECK-NEXT:      BLEND ir<%blend.a> = ir<%v1>/ir<%c0> ir<%v1>/vp<[[VP5]]>
+; CHECK-NEXT:      BLEND ir<%blend.a> = ir<%v1>/ir<true> ir<%v1>/ir<%c0>
 ; CHECK-NEXT:      EMIT ir<%d0> = icmp sgt ir<%iv>, ir<0>
 ; CHECK-NEXT:    Successor(s): if.b
 ; CHECK-EMPTY:
 ; CHECK-NEXT:    if.b:
-; CHECK-NEXT:      EMIT ir<%cb> = icmp sle ir<%iv>, ir<16>, ir<%d0>
+; CHECK-NEXT:      EMIT ir<%cb> = icmp sle ir<%iv>, ir<16>, ir<%d0> (!vplan.execution.frequency 11529215046068469759 (62.5%, estimated))
 ; CHECK-NEXT:    Successor(s): if.b.inner
 ; CHECK-EMPTY:
 ; CHECK-NEXT:    if.b.inner:
-; CHECK-NEXT:      EMIT vp<[[VP6:%[0-9]+]]> = logical-and ir<%d0>, ir<%cb>
+; CHECK-NEXT:      EMIT vp<[[VP5:%[0-9]+]]> = logical-and ir<%d0>, ir<%cb>
 ; CHECK-NEXT:    Successor(s): merge.b.inner
 ; CHECK-EMPTY:
 ; CHECK-NEXT:    merge.b.inner:
 ; CHECK-NEXT:    Successor(s): merge.b
 ; CHECK-EMPTY:
 ; CHECK-NEXT:    merge.b:
-; CHECK-NEXT:      EMIT vp<[[VP7:%[0-9]+]]> = not ir<%d0>
-; CHECK-NEXT:      BLEND ir<%blend.b> = ir<%v2>/ir<%d0> ir<%v2>/vp<[[VP7]]>
+; CHECK-NEXT:      BLEND ir<%blend.b> = ir<%v2>/ir<true> ir<%v2>/ir<%d0>
 ; CHECK-NEXT:      EMIT ir<%sum> = add ir<%blend.a>, ir<%blend.b>
 ; CHECK-NEXT:      EMIT store ir<%sum>, ir<%gep>
 ; CHECK-NEXT:    Successor(s): loop.latch
@@ -859,9 +849,9 @@ define void @phi_doesnt_postdom_incoming(i1 %c1, i1 %c2, i32 %x, i32 %y, ptr %p)
 ; CHECK-NEXT:    C:
 ; CHECK-NEXT:      EMIT vp<[[VP5:%[0-9]+]]> = logical-and ir<%c1>, ir<%c2>
 ; CHECK-NEXT:      EMIT vp<[[VP6:%[0-9]+]]> = or vp<[[VP4]]>, vp<[[VP5]]>
-; CHECK-NEXT:      BLEND ir<%phi> = ir<%y>/vp<[[VP4]]> ir<%x>/vp<[[VP5]]>
+; CHECK-NEXT:      BLEND ir<%phi> = ir<%y>/vp<[[VP4]]> ir<%x>/ir<%c1>
 ; CHECK-NEXT:      EMIT ir<%gep> = getelementptr ir<%p>, ir<%iv>
-; CHECK-NEXT:      EMIT store ir<%phi>, ir<%gep>, vp<[[VP6]]>
+; CHECK-NEXT:      EMIT store ir<%phi>, ir<%gep>, vp<[[VP6]]> (!vplan.execution.frequency 13835058055282163711 (75%, estimated))
 ; CHECK-NEXT:    Successor(s): latch
 ; CHECK-EMPTY:
 ; CHECK-NEXT:    latch:
@@ -923,7 +913,7 @@ define void @phi_switch_same_edge(ptr %p) {
 ; CHECK-NEXT:      EMIT vp<[[VP6:%[0-9]+]]> = or vp<[[VP4]]>, vp<[[VP5]]>
 ; CHECK-NEXT:      EMIT vp<[[VP7:%[0-9]+]]> = not vp<[[VP6]]>
 ; CHECK-NEXT:      EMIT ir<%gep> = getelementptr ir<%p>, ir<%iv>
-; CHECK-NEXT:      EMIT store ir<0>, ir<%gep>, vp<[[VP6]]>
+; CHECK-NEXT:      EMIT store ir<0>, ir<%gep>, vp<[[VP6]]> (!vplan.execution.frequency 12297829379609722879 (66.67%, estimated))
 ; CHECK-NEXT:    Successor(s): latch
 ; CHECK-EMPTY:
 ; CHECK-NEXT:    latch:
