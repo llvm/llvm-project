@@ -3489,7 +3489,8 @@ void AsmMatcherEmitter::run(raw_ostream &OS) {
       }
     }
     if (NumAmbiguous) {
-      Twine Msg = Twine(NumAmbiguous) + " ambiguous matchables found";
+      std::string Msg =
+          (Twine(NumAmbiguous) + " ambiguous matchables found").str();
       if (ErrorOnAmbiguousMatchables)
         PrintFatalError(Msg);
       else
