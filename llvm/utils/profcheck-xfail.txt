@@ -53,7 +53,6 @@ Transforms/InstCombine/select-select.ll
 Transforms/InstCombine/simplify-demanded-fpclass.ll
 Transforms/InstCombine/sink-not-into-another-hand-of-logical-and.ll
 Transforms/InstCombine/sink-not-into-another-hand-of-logical-or.ll
-Transforms/InstCombine/strrchr-3.ll
 Transforms/LoopIdiom/AArch64/byte-compare-index.ll
 Transforms/LoopIdiom/AArch64/find-first-byte-nested.ll
 Transforms/LoopIdiom/AArch64/find-first-byte.ll
