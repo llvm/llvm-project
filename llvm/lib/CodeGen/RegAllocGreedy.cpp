@@ -2959,6 +2959,13 @@ bool RAGreedy::run(MachineFunction &mf) {
   if (!hasVirtRegAlloc())
     return false;
 
+  // Canonicalize LiveDebugVariables' indexes here and again in
+  // emitDebugValues(); those are the only two points where it is clean, as
+  // splitting stales indexes again mid-run. Reclaiming erased entries needs
+  // its own entry point called from both, not a hook in packIndexes(), which
+  // renumberIndexes() also reaches.
+  DebugVars->canonicalizeIndexes(*Indexes);
+
   // Renumber to get accurate and consistent results from
   // SlotIndexes::getApproxInstrDistance.
   Indexes->packIndexes();

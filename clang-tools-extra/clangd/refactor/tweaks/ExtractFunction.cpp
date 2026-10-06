@@ -25,8 +25,9 @@
 // - Only extract statements
 // - Extracts from non-templated free functions only.
 // - Parameters that are never (conservatively) mutated in the extracted
-//   code become const references.
-// - Always passed by l-value reference
+//   code become const references, except scalars (arithmetic, pointer,
+//   enumeration, ...), which are passed by value instead.
+// - Otherwise passed by non-const reference
 // - Void return type
 // - Cannot extract declarations that will be needed in the original function
 //   after extraction.
@@ -991,8 +992,8 @@ CapturedZoneInfo captureZoneInfo(const ExtractionZone &ExtZone) {
 // needed.
 // FIXME: Check if the declaration has a local/anonymous type
 bool createParameters(NewFunction &ExtractedFunc,
-                      const CapturedZoneInfo &CapturedInfo) {
-  // FIXME: Pass non-mutated parameters of built-in type by value.
+                      const CapturedZoneInfo &CapturedInfo,
+                      const ASTContext &Context) {
   for (const auto &KeyVal : CapturedInfo.DeclInfoMap) {
     const auto &DeclInfo = KeyVal.second;
     // If a Decl was Declared in zone and referenced in post zone, it
@@ -1013,16 +1014,27 @@ bool createParameters(NewFunction &ExtractedFunc,
     if (!VD || isa<FunctionDecl>(DeclInfo.TheDecl))
       return false;
     // Parameter qualifiers are same as the Decl's qualifiers.
-    QualType TypeInfo = VD->getType().getNonReferenceType();
-    // Add const if it's not (conservatively) mutated in the zone: it's
-    // still passed by reference to avoid a copy, but the reference doesn't
-    // need to be mutable. Array types are never made const: mutating array
-    // elements through a non-const-ref loop variable or a decayed pointer
-    // argument is common and easy to miss conservatively, so we don't try.
-    if (!DeclInfo.IsPossiblyMutated && !TypeInfo->isArrayType())
-      TypeInfo.addConst();
+    QualType FullTypeInfo = VD->getType();
+    QualType TypeInfo = FullTypeInfo.getNonReferenceType();
     // FIXME: check if parameter will be a non l-value reference.
     bool IsPassedByReference = true;
+    if (!DeclInfo.IsPossiblyMutated) {
+      auto WordSize = Context.getTypeSizeInChars(Context.VoidPtrTy);
+      // A scalar (arithmetic, pointer, enumeration, ...) is at least as
+      // cheap to copy as to pass by reference, and less noisy.
+      if (TypeInfo->isScalarType() && !TypeInfo.isVolatileQualified() &&
+          !FullTypeInfo->isReferenceType() &&
+          Context.getTypeSizeInChars(TypeInfo) <= 2 * WordSize) {
+        IsPassedByReference = false;
+      } else if (!TypeInfo->isArrayType()) {
+        // Still passed by reference to avoid a copy, but the reference
+        // doesn't need to be mutable. Array types are never made const:
+        // mutating array elements through a non-const-ref loop variable
+        // or a decayed pointer argument is common and easy to miss
+        // conservatively, so we don't try.
+        TypeInfo.addConst();
+      }
+    }
     // We use the index of declaration as the ordering priority for parameters.
     ExtractedFunc.Parameters.push_back({std::string(VD->getName()), TypeInfo,
                                         IsPassedByReference,
@@ -1121,7 +1133,8 @@ llvm::Expected<NewFunction> getExtractedFunction(ExtractionZone &ExtZone,
   ExtractedFunc.DefinitionPoint = ExtZone.getInsertionPoint();
 
   ExtractedFunc.CallerReturnsValue = CapturedInfo.AlwaysReturns;
-  if (!createParameters(ExtractedFunc, CapturedInfo) ||
+  if (!createParameters(ExtractedFunc, CapturedInfo,
+                        ExtZone.EnclosingFunction->getASTContext()) ||
       !generateReturnProperties(ExtractedFunc, *ExtZone.EnclosingFunction,
                                 CapturedInfo))
     return error("Too complex to extract.");

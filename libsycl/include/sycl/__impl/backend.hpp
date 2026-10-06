@@ -18,7 +18,6 @@
 
 #include <sycl/__impl/detail/config.hpp>
 
-#include <string_view>
 #include <type_traits>
 
 _LIBSYCL_BEGIN_NAMESPACE_SYCL
