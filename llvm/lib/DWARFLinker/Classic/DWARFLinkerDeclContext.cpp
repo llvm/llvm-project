@@ -66,14 +66,16 @@ DeclContextTree::getChildDeclContext(DeclContext &Context, const DWARFDie &DIE,
   // have a specification or an abstract_origin. We will get the
   // parent context wrong here.
 
+  // The unit root, whatever its tag, passes the root context to its children.
+  if (U.getOrigUnit().getDIEIndex(DIE) == 0)
+    return PointerIntPair<DeclContext *, 1>(&Context);
+
   switch (Tag) {
   default:
     // By default stop gathering child contexts.
     return PointerIntPair<DeclContext *, 1>(nullptr);
   case dwarf::DW_TAG_module:
     break;
-  case dwarf::DW_TAG_compile_unit:
-    return PointerIntPair<DeclContext *, 1>(&Context);
   case dwarf::DW_TAG_subprogram:
     // Do not unique anything inside CU local functions.
     if ((Context.getTag() == dwarf::DW_TAG_namespace ||
