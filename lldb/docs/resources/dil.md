@@ -310,13 +310,20 @@ they use DIL and allow explicitly setting which DILMode to use, rather than
 using the default (eDILModeFull).
 
 
-#### Changes to lldb-dap
+#### Uses of DIL inside lldb-dap
 
-There are several places in lldb-dap that used to directly call the full
-expression evaluator, and which we thought might benefit from trying to call DIL
-first. So we updated the following functions to do exactly that, by calling
-SBFrame::GetValueForVariablePathWithMode first, and falling back on the full
-expression evaluator if that failed:
+There are four places in the lldb-dap code where it calls for expression
+evaluation:
 
-- EvaluateVariableExpression, in EvaluateRequestHandler.cpp
-- SourceBreakpoint::BreakpointHitCallback, in SourceBreakpoint.cpp
+* The static function `EvaluateExpression`, in SetVariableRequestHandler.cpp
+* The `EvaluateVariableExpression`, in EvaluateRequestHandler.cpp
+* `SourceBreakpoint::BreakpointHitCallback` in SourceBreakpoint.cpp
+* `DataBreakpointInfoRequestHandler::Run` in DataBreakpointInfoRequestHandler.cpp
+
+In each of these places, if there's a stack frame, we call DIL via
+`SBFrame::GetValueWithVariablePathWithMode` on the expression, passing
+`eDILModeFull`. If that fails to return a valid value, we fall back on calling
+the full expression evaluator (`SBFrame::EvaluateExpression`). If there's no
+stack frame then we call the expression evaluator directly
+(`SBTarget::EvaluateExpression`).
+
