@@ -783,11 +783,11 @@ bool ScopBuilder::addLoopBoundsToHeaderDomain(
     UnionBackedgeCondition = UnionBackedgeCondition.unite(BackedgeCondition);
   }
 
-  // Parameter values for which a branch condition in the loop is not modeled
-  // correctly. Each of these conditions can affect the domains of the latches
-  // that the loop bounds are derived from, e.g. an exit condition in the
-  // header. The header's domain is used before it is restricted below to the
-  // part in which the loop is bounded.
+  // Collect the parameter values under which the assumptions made for modeling
+  // the branch conditions in the loop do not hold. Each of these conditions can
+  // affect the domains of the latches that the loop bounds are derived from,
+  // e.g. an exit condition in the header. The header's domain is used before it
+  // is restricted below to the part in which the loop is bounded.
   isl::set InvalidLoopCtx = isl::set::empty(HeaderBBDom.get_space().params());
   for (BasicBlock *BB : L->blocks()) {
     isl::set InvalidDomain = InvalidDomainMap.lookup(BB);
