@@ -337,6 +337,16 @@ bool InlineAsmLowering::lowerInlineAsm(
     switch (OpInfo.Type) {
     case InlineAsm::isOutput:
       if (OpInfo.ConstraintType == TargetLowering::C_Memory) {
+        // A direct output is the call's result, with no address to write to.
+        if (!OpInfo.isIndirect) {
+          emitInlineAsmError(MIRBuilder, Call,
+                             "cannot handle direct memory outputs yet for "
+                             "constraint '" +
+                                 Twine(OpInfo.ConstraintCode) + "'",
+                             GetOrCreateVRegs(Call));
+          return true;
+        }
+
         const InlineAsm::ConstraintCode ConstraintID =
             TLI->getInlineAsmMemConstraint(OpInfo.ConstraintCode);
         assert(ConstraintID != InlineAsm::ConstraintCode::Unknown &&
