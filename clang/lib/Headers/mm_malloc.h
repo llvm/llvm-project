@@ -13,7 +13,11 @@
 #include <stdlib.h>
 
 #ifdef _WIN32
-#include <malloc.h>
+# if defined(__MINGW32__)
+#   include <malloc.h>
+# else
+#   include <corecrt_malloc.h>
+# endif
 #else
 #ifndef __cplusplus
 extern int posix_memalign(void **__memptr, size_t __alignment, size_t __size);
