@@ -4832,6 +4832,8 @@ static Value *foldICmpWithLowBitMaskedVal(CmpPredicate Pred, Value *Op0,
 /// a check for a lossy signed truncation.
 /// Folds:   (MaskedBits is a constant.)
 ///   ((%x << MaskedBits) a>> MaskedBits) SrcPred %x
+/// or
+///   (sext (trunc %x to iKeptBits)) SrcPred %x
 /// Into:
 ///   (add %x, (1 << (KeptBits-1))) DstPred (1 << KeptBits)
 /// Where  KeptBits = bitwidth(%x) - MaskedBits
@@ -4839,25 +4841,35 @@ static Value *
 foldICmpWithTruncSignExtendedVal(ICmpInst &I,
                                  InstCombiner::BuilderTy &Builder) {
   CmpPredicate SrcPred;
-  Value *X;
+  Value *X, *Trunc;
+  APInt MaskedBits;
   const APInt *C0, *C1; // FIXME: non-splats, potentially with undef.
   // We are ok with 'shl' having multiple uses, but 'ashr' must be one-use.
-  if (!match(&I, m_c_ICmp(SrcPred,
-                          m_OneUse(m_AShr(m_Shl(m_Value(X), m_APInt(C0)),
-                                          m_APInt(C1))),
-                          m_Deferred(X))))
-    return nullptr;
+  if (match(&I, m_c_ICmp(SrcPred,
+                         m_OneUse(m_AShr(m_Shl(m_Value(X), m_APInt(C0)),
+                                         m_APInt(C1))),
+                         m_Deferred(X)))) {
+    // Potential handling of non-splats: for each element:
+    //  * if both are undef, replace with constant 0.
+    //    Because (1<<0) is OK and is 1, and ((1<<0)>>1) is also OK and is 0.
+    //  * if both are not undef, and are different, bailout.
+    //  * else, only one is undef, then pick the non-undef one.
 
-  // Potential handling of non-splats: for each element:
-  //  * if both are undef, replace with constant 0.
-  //    Because (1<<0) is OK and is 1, and ((1<<0)>>1) is also OK and is 0.
-  //  * if both are not undef, and are different, bailout.
-  //  * else, only one is undef, then pick the non-undef one.
-
-  // The shift amount must be equal.
-  if (*C0 != *C1)
+    // The shift amount must be equal.
+    if (*C0 != *C1)
+      return nullptr;
+    MaskedBits = *C0;
+  } else if (match(&I, m_c_ICmp(SrcPred,
+                                m_OneUse(m_SExt(m_CombineAnd(
+                                    m_Value(Trunc), m_Trunc(m_Value(X))))),
+                                m_Deferred(X)))) {
+    // We are ok with 'trunc' having multiple uses, but 'sext' must be one-use.
+    unsigned XBitWidth = X->getType()->getScalarSizeInBits();
+    MaskedBits =
+        APInt(XBitWidth, XBitWidth - Trunc->getType()->getScalarSizeInBits());
+  } else {
     return nullptr;
-  const APInt &MaskedBits = *C0;
+  }
   assert(MaskedBits != 0 && "shift by zero should be folded away already.");
 
   ICmpInst::Predicate DstPred;
@@ -5860,9 +5872,6 @@ Instruction *InstCombinerImpl::foldICmpBinOp(ICmpInst &I,
 
   if (Instruction *R = foldICmpAndXX(I, Q, *this))
     return R;
-
-  if (Value *V = foldICmpWithTruncSignExtendedVal(I, Builder))
-    return replaceInstUsesWith(I, V);
 
   if (Value *V = foldShiftIntoShiftInAnotherHandOfAndInICmp(I, SQ, Builder))
     return replaceInstUsesWith(I, V);
@@ -8128,6 +8137,11 @@ Instruction *InstCombinerImpl::visitICmpInst(ICmpInst &I) {
   //        intrinsics.
   if (Instruction *Res = foldICmpBinOp(I, Q))
     return Res;
+
+  // Done here rather than in foldICmpBinOp() because it also matches
+  // sext (trunc X), which has no BinaryOperator operand.
+  if (Value *V = foldICmpWithTruncSignExtendedVal(I, Builder))
+    return replaceInstUsesWith(I, V);
 
   if (Instruction *Res = foldICmpInstWithConstant(I))
     return Res;
