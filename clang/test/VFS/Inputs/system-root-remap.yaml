@@ -1,0 +1,12 @@
+{
+  'version': 0,
+  'use-external-names': false,
+  'redirecting-with': 'redirect-only'
+  'roots': [
+    {
+      'name': '/',
+      'type': 'directory-remap',
+      'external-contents': 'EXTERNAL_DIR'
+    }
+  ]
+}
