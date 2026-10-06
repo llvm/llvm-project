@@ -578,6 +578,39 @@ gpu.module @test {
 }
 
 // -----
+// shape_cast split where each subgroup's tile spans both rows, the source must
+// be round-robin [2]/[2], not contiguous [2]/[4].
+gpu.module @test {
+// CHECK-LABEL: gpu.func @shape_cast_split_outer_not_distributed(
+// CHECK: arith.constant {{.*}}layout_result_0 = #xegpu.layout<sg_layout = [2], sg_data = [2]
+  gpu.func @shape_cast_split_outer_not_distributed(%dst: memref<2x4xf32>) kernel {
+    %src = arith.constant dense<0.0> : vector<8xf32>
+    %result = vector.shape_cast %src : vector<8xf32> to vector<2x4xf32>
+    %td = xegpu.create_nd_tdesc %dst : memref<2x4xf32> -> !xegpu.tensor_desc<2x4xf32>
+    xegpu.store_nd %result, %td[0, 0]
+      <{layout = #xegpu.layout<sg_layout = [1, 2], sg_data = [2, 2], order = [0, 1]>}>
+      : vector<2x4xf32>, !xegpu.tensor_desc<2x4xf32>
+    gpu.return
+  }
+}
+
+// -----
+// Case (c): one row per subgroup, columns split once [4]/[2].
+gpu.module @test {
+// CHECK-LABEL: gpu.func @shape_cast_split_one_row_per_sg(
+// CHECK: arith.constant {{.*}}layout_result_0 = #xegpu.layout<sg_layout = [4], sg_data = [2]
+  gpu.func @shape_cast_split_one_row_per_sg(%dst: memref<2x4xf32>) kernel {
+    %src = arith.constant dense<0.0> : vector<8xf32>
+    %result = vector.shape_cast %src : vector<8xf32> to vector<2x4xf32>
+    %td = xegpu.create_nd_tdesc %dst : memref<2x4xf32> -> !xegpu.tensor_desc<2x4xf32>
+    xegpu.store_nd %result, %td[0, 0]
+      <{layout = #xegpu.layout<sg_layout = [2, 2], sg_data = [1, 2]>}>
+      : vector<2x4xf32>, !xegpu.tensor_desc<2x4xf32>
+    gpu.return
+  }
+}
+
+// -----
 gpu.module @test {
 // CHECK-LABEL: gpu.func @shape_cast_collapse_replicated(
 // CHECK: %[[CST:.*]] = arith.constant {layout_result_0 = #xegpu.layout<sg_layout = [2, 1, 2], sg_data = [8, 8, 8]>} dense<0.000000e+00> : vector<16x8x8xf16>
