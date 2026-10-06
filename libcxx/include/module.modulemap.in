@@ -1266,6 +1266,7 @@ module std {
 
   module execution {
     header "execution"
+    header "__execution/execution_policies.h"
     export *
   }
 

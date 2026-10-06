@@ -367,6 +367,7 @@ set(files
   __exception/nested_exception.h
   __exception/operations.h
   __exception/terminate.h
+  __execution/execution_policies.h
   __expected/bad_expected_access.h
   __expected/expected.h
   __expected/unexpect.h
