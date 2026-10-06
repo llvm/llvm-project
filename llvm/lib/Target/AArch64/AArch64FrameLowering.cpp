@@ -2836,12 +2836,13 @@ void AArch64FrameLowering::determineCalleeSaves(MachineFunction &MF,
   AFI->setSVECalleeSavedStackSize(ZPRCSStackSize, alignTo(PPRCSStackSize, 16));
 }
 
-static void orderZPRCalleeSavesForPairs(MachineFunction &MF,
-                                        const TargetRegisterInfo *RegInfo,
-                                        std::vector<CalleeSavedInfo> &CSI) {
-  // Reorder callee-saved ZPRs to maximize pairing which requires
-  // consecutive even/odd registers at even scaled stack offsets.
-  // Additional requirements are checked when the register pairs are formed.
+static void orderZPRCalleeSavesForGroups(MachineFunction &MF,
+                                         const TargetRegisterInfo *RegInfo,
+                                         std::vector<CalleeSavedInfo> &CSI) {
+  // Reorder ZPRs to maximize grouping, quads and pairs.
+  // The main condition we try to satisfy is the offset.
+  // Quads require a scaled offset % 4
+  // Pairs require a scaled offset % 2
   assert(!isTargetWindows(MF) &&
          "ZPR callee-save reordering not supported on Windows");
 
@@ -2866,21 +2867,29 @@ static void orderZPRCalleeSavesForPairs(MachineFunction &MF,
     return A.getReg() < B.getReg();
   });
 
-  SmallVector<std::pair<CalleeSavedInfo, CalleeSavedInfo>> Pairs;
+  SmallVector<std::array<CalleeSavedInfo, 4>> Quads;
+  SmallVector<std::array<CalleeSavedInfo, 2>> Pairs;
   SmallVector<CalleeSavedInfo> Singles;
   for (size_t i = 0; i < ZPRSaves.size();) {
-    if (i + 1 < ZPRSaves.size() &&
-        (ZPRSaves[i].getReg() + 1 == ZPRSaves[i + 1].getReg()) &&
-        (ZPRSaves[i].getReg() - AArch64::Z0) % 2 == 0) {
-      Pairs.emplace_back(ZPRSaves[i], ZPRSaves[i + 1]);
+    if (i + 3 < ZPRSaves.size() &&
+        (ZPRSaves[i].getReg() - AArch64::Z0) % 4 == 0 &&
+        (ZPRSaves[i].getReg() + 3 == ZPRSaves[i + 3].getReg())) {
+      Quads.push_back(
+          {ZPRSaves[i], ZPRSaves[i + 1], ZPRSaves[i + 2], ZPRSaves[i + 3]});
+      i += 4;
+    } else if (i + 1 < ZPRSaves.size() &&
+               (ZPRSaves[i].getReg() - AArch64::Z0) % 2 == 0 &&
+               ZPRSaves[i].getReg() + 1 == ZPRSaves[i + 1].getReg()) {
+      Pairs.push_back({ZPRSaves[i], ZPRSaves[i + 1]});
       i += 2;
     } else {
       Singles.push_back(ZPRSaves[i++]);
     }
   }
 
-  // If the lowest offset is odd, select one register to spill here
-  // so subsequent pairs begin at an even offset.
+  if (Quads.empty() && Pairs.empty())
+    return;
+
   int ZPRByteOffset = AFI->getZPRCalleeSavedStackSize();
   if (!AFI->hasSplitSVEObjects())
     ZPRByteOffset += AFI->getPPRCalleeSavedStackSize();
@@ -2889,39 +2898,67 @@ static void orderZPRCalleeSavesForPairs(MachineFunction &MF,
   const int LowestOffset =
       (ZPRByteOffset / Scale) - static_cast<int>(ZPRSaves.size());
 
-  // Prefer the highest single otherwise split the highest pair.
-  std::optional<CalleeSavedInfo> AlignmentSingle;
-  if (LowestOffset % 2 != 0) {
-    if (!Singles.empty()) {
-      AlignmentSingle = Singles.pop_back_val();
-    } else {
-      assert(!Pairs.empty() && "Expected a ZPR pair to split");
-      auto [Even, Odd] = Pairs.pop_back_val();
-      AlignmentSingle = Odd;
-      Singles.push_back(Even);
+  auto TakeSingle = [&]() -> CalleeSavedInfo {
+    if (!Singles.empty())
+      return Singles.pop_back_val();
+
+    if (!Pairs.empty()) {
+      auto [a, b] = Pairs.pop_back_val();
+      Singles.push_back(a);
+      return b;
     }
+
+    if (!Quads.empty()) {
+      auto [a, b, c, d] = Quads.pop_back_val();
+      Pairs.push_back({a, b});
+      Singles.push_back(c);
+      return d;
+    }
+
+    llvm_unreachable("Register groups exhausted before output was complete");
+  };
+
+  int NumUnassigned = ZPRSaves.size();
+  auto Emit = [&](const CalleeSavedInfo &CS) {
+    // During pair/quad formation, we check for the register groups in reverse
+    // order. This is to ensures that stack indexes remain consistent with the
+    // instruction.
+    CSI[ZPRPositions[--NumUnassigned]] = CS;
+  };
+  //  With an odd offset, the Emit(single) branch will be reached first,
+  //  aligning to an even offset. Then the Emit(pair) branch will be reached,
+  //  aligning to an offset divisible by 4. The algorithm minimally decomposes
+  //  quads/pairs when needed.
+  int Offset = LowestOffset;
+  while (NumUnassigned != 0) {
+    if (Offset % 4 == 0 && !Quads.empty()) {
+      for (const auto &ZReg : Quads.pop_back_val())
+        Emit(ZReg);
+
+      Offset += 4;
+      continue;
+    }
+
+    if (Offset % 2 == 0) {
+      // Two singles can advance an even offset to the quad-aligned
+      // offset, preserve the quad in this case
+      if (Pairs.empty() && Singles.size() < 2 && !Quads.empty()) {
+        const auto &[a, b, c, d] = Quads.pop_back_val();
+        Pairs.push_back({a, b});
+        Pairs.push_back({c, d});
+      }
+
+      if (!Pairs.empty()) {
+        for (const auto &ZReg : Pairs.pop_back_val())
+          Emit(ZReg);
+        Offset += 2;
+        continue;
+      }
+    }
+
+    Emit(TakeSingle());
+    ++Offset;
   }
-
-  if (Pairs.empty())
-    return;
-
-  // Build ZPRs so reverse spill emission processes the leading single first,
-  // followed by the candidate even/odd pairs and remaining singles.
-  SmallVector<CalleeSavedInfo> ZPRSavesInCSIOrder;
-  llvm::append_range(ZPRSavesInCSIOrder, Singles);
-
-  for (const auto &[Even, Odd] : Pairs) {
-    ZPRSavesInCSIOrder.push_back(Odd);
-    ZPRSavesInCSIOrder.push_back(Even);
-  }
-
-  if (AlignmentSingle)
-    ZPRSavesInCSIOrder.push_back(*AlignmentSingle);
-
-  assert(ZPRSavesInCSIOrder.size() == ZPRPositions.size() &&
-         "Reordering should not change the number of ZPR spills");
-  for (auto [Position, CS] : llvm::zip(ZPRPositions, ZPRSavesInCSIOrder))
-    CSI[Position] = CS;
 }
 
 bool AArch64FrameLowering::assignCalleeSavedSpillSlots(
@@ -2960,7 +2997,7 @@ bool AArch64FrameLowering::assignCalleeSavedSpillSlots(
   if (!IsWindows && enableMultiVectorSpillFill(Subtarget, MF))
     // The Windows stack layout is not supported by this reordering function
     // yet.
-    orderZPRCalleeSavesForPairs(MF, RegInfo, CSI);
+    orderZPRCalleeSavesForGroups(MF, RegInfo, CSI);
 
   Register LastReg = 0;
   int HazardSlotIndex = std::numeric_limits<int>::max();
