@@ -401,16 +401,19 @@ bool TargetRegisterInfo::getRegAllocationHints(
     SmallSetVector<MCPhysReg, 16> &Hints, const MachineFunction &MF,
     const VirtRegMap *VRM, const LiveRegMatrix *Matrix) const {
   const MachineRegisterInfo &MRI = MF.getRegInfo();
-  const SmallVector<std::pair<unsigned, Register>, 4> *Hints_MRI =
+  const std::pair<unsigned, SmallVector<Register, 4>> *Hints_MRI =
       MRI.getRegAllocationHints(VirtReg);
 
   if (!Hints_MRI)
     return false;
 
-  for (const auto &[HintType, Reg] : *Hints_MRI) {
-    // Skip over any target hints.
-    if (HintType)
+  // First hint may be a target hint.
+  bool Skip = (Hints_MRI->first != 0);
+  for (auto Reg : Hints_MRI->second) {
+    if (Skip) {
+      Skip = false;
       continue;
+    }
 
     // Target-independent hints are either a physical or a virtual register.
     Register Phys = Reg;
@@ -713,15 +716,6 @@ TargetRegisterInfo::prependOffsetExpression(const DIExpression *Expr,
   return DIExpression::prependOpcodes(Expr, OffsetExpr,
                                       PrependFlags & DIExpression::StackValue,
                                       PrependFlags & DIExpression::EntryValue);
-}
-
-void TargetRegisterInfo::removeIncompatibleHints(
-    MachineRegisterInfo *const MRI) const {
-  const auto &HintTypes = getHintTypesRequiringRegisterClassCompatibility();
-
-  for (const auto &HintType : HintTypes) {
-    MRI->removeIncompatibleHintsOfType(HintType);
-  }
 }
 
 #if !defined(NDEBUG) || defined(LLVM_ENABLE_DUMP)

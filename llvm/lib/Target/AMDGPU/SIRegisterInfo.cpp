@@ -4282,88 +4282,114 @@ bool SIRegisterInfo::getRegAllocationHints(Register VirtReg,
   const MachineRegisterInfo &MRI = MF.getRegInfo();
   const SIRegisterInfo *TRI = ST.getRegisterInfo();
 
-  const SmallVector<std::pair<unsigned, Register>, 4> *VirtRegHints =
-      MRI.getRegAllocationHints(VirtReg);
+  std::pair<unsigned, Register> Hint = MRI.getRegAllocationHint(VirtReg);
 
-  if (!VirtRegHints)
+  switch (Hint.first) {
+  case AMDGPURI::Size32: {
+    Register Paired = Hint.second;
+    assert(Paired);
+    Register PairedPhys;
+    if (Paired.isPhysical()) {
+      PairedPhys =
+          getMatchingSuperReg(Paired, AMDGPU::lo16, &AMDGPU::VGPR_32RegClass);
+    } else if (VRM && VRM->hasPhys(Paired)) {
+      PairedPhys = getMatchingSuperReg(VRM->getPhys(Paired), AMDGPU::lo16,
+                                       &AMDGPU::VGPR_32RegClass);
+    }
+
+    // Prefer the paired physreg.
+    if (PairedPhys)
+      // isLo(Paired) is implicitly true here from the API of
+      // getMatchingSuperReg.
+      Hints.insert(PairedPhys);
     return false;
-
-  for (const auto &[Type, Reg] : *VirtRegHints) {
-    switch (Type) {
-    case AMDGPURI::Size32: {
-      Register Paired = Reg;
-      assert(Paired);
-      Register PairedPhys;
-      if (Paired.isPhysical()) {
-        PairedPhys =
-            getMatchingSuperReg(Paired, AMDGPU::lo16, &AMDGPU::VGPR_32RegClass);
-      } else if (VRM && VRM->hasPhys(Paired)) {
-        PairedPhys = getMatchingSuperReg(VRM->getPhys(Paired), AMDGPU::lo16,
-                                         &AMDGPU::VGPR_32RegClass);
-      }
-
-      // Prefer the paired physreg.
-      if (PairedPhys)
-        // isLo(Paired) is implicitly true here from the API of
-        // getMatchingSuperReg.
-        Hints.insert(PairedPhys);
-      return false;
+  }
+  case AMDGPURI::Size16: {
+    Register Paired = Hint.second;
+    assert(Paired);
+    Register PairedPhys;
+    if (Paired.isPhysical()) {
+      PairedPhys = TRI->getSubReg(Paired, AMDGPU::lo16);
+    } else if (VRM && VRM->hasPhys(Paired)) {
+      PairedPhys = TRI->getSubReg(VRM->getPhys(Paired), AMDGPU::lo16);
     }
-    case AMDGPURI::Size16: {
-      Register Paired = Reg;
-      assert(Paired);
-      Register PairedPhys;
-      if (Paired.isPhysical()) {
-        PairedPhys = TRI->getSubReg(Paired, AMDGPU::lo16);
-      } else if (VRM && VRM->hasPhys(Paired)) {
-        PairedPhys = TRI->getSubReg(VRM->getPhys(Paired), AMDGPU::lo16);
-      }
 
-      // First prefer the paired physreg.
-      if (PairedPhys)
-        Hints.insert(PairedPhys);
-      else {
-        // Add all the lo16 physregs.
-        // When the Paired operand has not yet been assigned a physreg it is
-        // better to try putting VirtReg in a lo16 register, because possibly
-        // later Paired can be assigned to the overlapping register and the COPY
-        // can be eliminated.
-        for (MCPhysReg PhysReg : Order) {
-          if (PhysReg == PairedPhys || AMDGPU::isHi16Reg(PhysReg, *this))
-            continue;
-          if (AMDGPU::VGPR_16RegClass.contains(PhysReg) &&
-              !MRI.isReserved(PhysReg))
-            Hints.insert(PhysReg);
-        }
+    // First prefer the paired physreg.
+    if (PairedPhys)
+      Hints.insert(PairedPhys);
+    else {
+      // Add all the lo16 physregs.
+      // When the Paired operand has not yet been assigned a physreg it is
+      // better to try putting VirtReg in a lo16 register, because possibly
+      // later Paired can be assigned to the overlapping register and the COPY
+      // can be eliminated.
+      for (MCPhysReg PhysReg : Order) {
+        if (PhysReg == PairedPhys || AMDGPU::isHi16Reg(PhysReg, *this))
+          continue;
+        if (AMDGPU::VGPR_16RegClass.contains(PhysReg) &&
+            !MRI.isReserved(PhysReg))
+          Hints.insert(PhysReg);
       }
-      return false;
     }
-    case AMDGPURI::ChainHint: {
+    return false;
+  }
+  default:
+    bool BaseImplRetVal = TargetRegisterInfo::getRegAllocationHints(
+        VirtReg, Order, Hints, MF, VRM);
+    const SIMachineFunctionInfo *MFI = MF.getInfo<SIMachineFunctionInfo>();
+    EquivalenceClasses<Register> &MFMAChainHints = MFI->getMFMAChainHints();
+
+    Register OriginalVirtReg = VRM ? VRM->getOriginal(VirtReg) : VirtReg;
+    if (!MFMAChainHints.contains(OriginalVirtReg))
+      return BaseImplRetVal;
+
+    // For split live ranges, add the current VirtReg to the EquivalenceClass of
+    // its original Register. While there may still be split registers that need
+    // to be added to the EC, that is not an issue. The hints are only added
+    // below if the member has a physical register, and any of those members
+    // would have reached this line and already been added to the
+    // EquivalenceClass.
+    if (OriginalVirtReg != VirtReg)
+      MFMAChainHints.unionSets(OriginalVirtReg, VirtReg);
+
+    auto AddHintIfValid = [&](Register Reg) {
       Register Phys = Reg;
       if (VRM && Phys.isVirtual())
         Phys = VRM->getPhys(Phys);
-
-      // Check that Phys is a valid hint in VirtReg's register class.
-      if (!Phys.isPhysical())
-        continue;
-      if (MRI.isReserved(Phys))
-        continue;
-      // Check that Phys is in the allocation order. We shouldn't heed hints
-      // from VirtReg's register class if they aren't in the allocation order.
-      // The target probably has a reason for removing the register.
+      if (!Phys.isPhysical() || MRI.isReserved(Phys))
+        return;
       if (!is_contained(Order, Phys))
-        continue;
+        return;
+      Hints.insert(Phys);
+    };
 
-      // All clear, tell the register allocator to prefer this register.
-      Hints.insert(Phys.id());
-      continue;
-    }
-    default:
-      continue;
-    }
+    const SIInstrInfo *TII = ST.getInstrInfo();
+    auto AddMFMADstSrc2PartnerHints = [&](Register Reg) {
+      for (const MachineInstr &MI : MRI.reg_nodbg_instructions(Reg)) {
+        if (!SIInstrInfo::isMFMA(MI))
+          continue;
+        const MachineOperand *DstMO =
+            TII->getNamedOperand(MI, AMDGPU::OpName::vdst);
+        const MachineOperand *Src2MO =
+            TII->getNamedOperand(MI, AMDGPU::OpName::src2);
+        if (!Src2MO->isReg())
+          continue;
+        Register DstReg = DstMO->getReg();
+        Register Src2Reg = Src2MO->getReg();
+        if (DstReg == Reg)
+          AddHintIfValid(Src2Reg);
+        else if (Src2Reg == Reg)
+          AddHintIfValid(DstReg);
+      }
+    };
+
+    AddMFMADstSrc2PartnerHints(VirtReg);
+    for (Register Member : MFMAChainHints.members(OriginalVirtReg))
+      if (Member != VirtReg)
+        AddHintIfValid(Member);
+
+    return BaseImplRetVal;
   }
-  return TargetRegisterInfo::getRegAllocationHints(VirtReg, Order, Hints, MF,
-                                                   VRM);
 }
 
 bool SIRegisterInfo::shouldApplyAntiHints(

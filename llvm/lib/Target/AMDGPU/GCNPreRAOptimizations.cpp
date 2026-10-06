@@ -33,6 +33,7 @@
 #include "GCNPreRAOptimizations.h"
 #include "AMDGPU.h"
 #include "GCNSubtarget.h"
+#include "SIMachineFunctionInfo.h"
 #include "SIRegisterInfo.h"
 #include "llvm/ADT/EquivalenceClasses.h"
 #include "llvm/CodeGen/LiveIntervals.h"
@@ -305,7 +306,6 @@ bool GCNPreRAOptimizationsImpl::run(MachineFunction &MF) {
   MRI = &MF.getRegInfo();
   TRI = ST.getRegisterInfo();
 
-  bool Changed = false;
   if (ST.hasMAIInsts()) {
     EquivalenceClasses<Register> MFMAHints;
     for (const MachineBasicBlock &MBB : MF) {
@@ -322,28 +322,58 @@ bool GCNPreRAOptimizationsImpl::run(MachineFunction &MF) {
         Register Src2 = Src2MO->getReg();
         if (!Dst.isVirtual() || !Src2.isVirtual())
           continue;
-        LLVM_DEBUG(dbgs() << "Setting hint for " << MI << " Dst: " << *DstMO
-                          << " Src2: " << *Src2MO << "\n");
+        LLVM_DEBUG(dbgs() << "Adding MFMA chain hint for " << MI << " Dst: "
+                          << *DstMO << " Src2: " << *Src2MO << "\n");
         MFMAHints.unionSets(Dst, Src2);
       }
     }
 
-    for (const EquivalenceClasses<llvm::Register>::ECValue *I : MFMAHints) {
-      if (!I->isLeader())
-        continue;
-
+    auto CheckAllCompatibleRC =
+        [&](const EquivalenceClasses<Register>::ECValue *I) -> bool {
+      assert(I->isLeader());
       for (auto AI = MFMAHints.member_begin(*I), End = MFMAHints.member_end();
            AI != End; ++AI) {
         Register A = *AI;
+        assert(A.isVirtual());
+        const TargetRegisterClass *ARC = MRI->getRegClass(A);
         for (auto BI = std::next(AI); BI != End; ++BI) {
           Register B = *BI;
-          MRI->addRegAllocationHint(A, AMDGPURI::ChainHint, B);
-          MRI->addRegAllocationHint(B, AMDGPURI::ChainHint, A);
+          assert(B.isVirtual());
+          const TargetRegisterClass *BRC = MRI->getRegClass(B);
+
+          if (!TRI->getCommonSubClass(ARC, BRC))
+            return false;
         }
       }
+      return true;
+    };
+
+    EquivalenceClasses<Register> FilteredMFMAHints;
+    auto CopyCompatibleEC =
+        [&](const EquivalenceClasses<Register>::ECValue *I) {
+          auto AI = MFMAHints.member_begin(*I);
+          auto LI = AI;
+
+          FilteredMFMAHints.insert(*LI);
+          ++AI;
+
+          for (auto End = MFMAHints.member_end(); AI != End; ++AI)
+            FilteredMFMAHints.unionSets(*LI, *AI);
+        };
+
+    for (const EquivalenceClasses<Register>::ECValue *I : MFMAHints) {
+      if (!I->isLeader())
+        continue;
+      if (!CheckAllCompatibleRC(I))
+        continue;
+
+      CopyCompatibleEC(I);
     }
+    SIMachineFunctionInfo *MFI = MF.getInfo<SIMachineFunctionInfo>();
+    MFI->setMFMAChainHints(FilteredMFMAHints);
   }
 
+  bool Changed = false;
   for (unsigned I = 0, E = MRI->getNumVirtRegs(); I != E; ++I) {
     Register Reg = Register::index2VirtReg(I);
     if (!LIS->hasInterval(Reg))

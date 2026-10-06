@@ -213,7 +213,7 @@ TEST(AArch64RegAllocationHints, NoDuplicates) {
   MRI.freezeReservedRegs();
 
   Register VirtReg = MRI.createVirtualRegister(&AArch64::GPR64RegClass);
-  MRI.addRegAllocationHint(VirtReg, 0, AArch64::X0);
+  MRI.addRegAllocationHint(VirtReg, AArch64::X0);
 
   ArrayRef<MCPhysReg> Order = AArch64::GPR64RegClass.getRegisters();
   SmallSetVector<MCPhysReg, 16> Hints;

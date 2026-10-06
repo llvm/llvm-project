@@ -8,7 +8,6 @@
 
 #include "llvm/CodeGen/CalcSpillWeights.h"
 #include "llvm/ADT/SmallPtrSet.h"
-#include "llvm/ADT/SmallSet.h"
 #include "llvm/CodeGen/LiveInterval.h"
 #include "llvm/CodeGen/LiveIntervals.h"
 #include "llvm/CodeGen/MachineFunction.h"
@@ -247,6 +246,8 @@ float VirtRegAuxInfo::weightCalcHelper(LiveInterval &LI) {
   unsigned NumInstr = 0; // Number of instructions using LI
   SmallPtrSet<MachineInstr *, 8> Visited;
 
+  std::pair<unsigned, Register> TargetHint = MRI.getRegAllocationHint(LI.reg());
+
   if (LI.isSpillable()) {
     Register Reg = LI.reg();
     Register Original = VRM.getOriginal(Reg);
@@ -345,25 +346,22 @@ float VirtRegAuxInfo::weightCalcHelper(LiveInterval &LI) {
 
   // Pass all the sorted copy hints to mri.
   if (Hint.size()) {
-    // Remove any generic hints if previously added by target.
-    MRI.clearSimpleHints(LI.reg());
+    // Remove a generic hint if previously added by target.
+    if (TargetHint.first == 0 && TargetHint.second)
+      MRI.clearSimpleHint(LI.reg());
 
-    // Don't add any target-type hints again.
-    SmallSet<Register, 4> SkipRegs;
-    if (const auto *RemainingHints = MRI.getRegAllocationHints(LI.reg()))
-      for (const auto &[Type, Reg] : *RemainingHints)
-        SkipRegs.insert(Reg);
-
+    // Don't add the target-type hint again.
+    Register SkipReg = TargetHint.first != 0 ? TargetHint.second : Register();
     SmallVector<CopyHint, 8> RegHints;
     for (const auto &[Reg, Weight] : Hint) {
-      if (!SkipRegs.contains(Reg))
+      if (Reg != SkipReg)
         RegHints.emplace_back(
             Reg, Weight,
             Reg.isPhysical() ? TRI.isCalleeSavedPhysReg(Reg, MF) : false);
     }
     sort(RegHints);
     for (const auto &[Reg, _, __] : RegHints)
-      MRI.addRegAllocationHint(LI.reg(), 0, Reg);
+      MRI.addRegAllocationHint(LI.reg(), Reg);
 
     // Weakly boost the spill weight of hinted registers.
     TotalWeight *= 1.01F;
