@@ -56,14 +56,6 @@
 
 using namespace llvm;
 
-static cl::opt<bool> EnableBranchHint("enable-branch-hint",
-                                      cl::desc("Enable branch hint."),
-                                      cl::init(false), cl::Hidden);
-static cl::opt<unsigned> BranchHintProbabilityThreshold(
-    "branch-hint-probability-threshold",
-    cl::desc("The probability threshold of enabling branch hint."),
-    cl::init(50), cl::Hidden);
-
 namespace {
 
 /// X86MCInstLower - This class is used to lower an MachineInstr into an MCInst.
@@ -2652,13 +2644,15 @@ void X86AsmPrinter::emitInstruction(const MachineInstr *MI) {
     // Two instruction prefixes (2EH for branch not-taken and 3EH for branch
     // taken) are used as branch hints. Here we add branch taken prefix for
     // jump instruction with higher probability than threshold.
-    if (getSubtarget().hasBranchHint() && EnableBranchHint) {
+    if (getSubtarget().hasBranchHint() &&
+        getSubtarget().getCLOpts().enable_branch_hint) {
       const MachineBranchProbabilityInfo *MBPI =
           &getAnalysis<MachineBranchProbabilityInfoWrapperPass>().getMBPI();
       MachineBasicBlock *DestBB = MI->getOperand(0).getMBB();
       BranchProbability EdgeProb =
           MBPI->getEdgeProbability(MI->getParent(), DestBB);
-      BranchProbability Threshold(BranchHintProbabilityThreshold, 100);
+      BranchProbability Threshold(
+          getSubtarget().getCLOpts().branch_hint_probability_threshold, 100);
       if (EdgeProb > Threshold)
         EmitAndCountInstruction(MCInstBuilder(X86::DS_PREFIX));
     }

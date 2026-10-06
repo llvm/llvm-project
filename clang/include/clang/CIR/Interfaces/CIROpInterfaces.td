@@ -48,6 +48,13 @@ let cppNamespace = "::cir" in {
           "operation carries no memory-effects attribute.  Null means the "
           "effects are unknown, not that the callee touches no memory",
           "cir::MemoryEffectsAttr", "getMemoryEffectsAttr", (ins)>,
+      InterfaceMethod<
+          "Set the memory effects of the call operation",
+          "void", "setMemoryEffectsAttr",
+          (ins "cir::MemoryEffectsAttr":$effects), [{}],
+          /*defaultImplementation=*/[{
+            $_op.setMemoryEffectsAttr(effects);
+          }]>,
       InterfaceMethod<[{"Set the inline-kind of a call operation"}],
                       "void", "setInlineKind", 
                       (ins "std::optional<cir::InlineKind>":$kind), [{}], 
@@ -162,7 +169,15 @@ let cppNamespace = "::cir" in {
       InterfaceMethod<"",
       "bool", "hasComdat", (ins), [{}],
       /*defaultImplementation=*/[{
-        return $_op.getComdat();
+        return $_op.getComdat().has_value();
+      }]
+      >,
+      InterfaceMethod<"",
+      "void", "setSelfComdat", (ins), [{}],
+      /*defaultImplementation=*/[{
+        // A special case of Comdat, where we set it to be an empty string,
+        // where the comdat is the comdat group of the current symbol.
+        return $_op.setComdat(::llvm::StringRef(""));
       }]
       >,
       InterfaceMethod<"",

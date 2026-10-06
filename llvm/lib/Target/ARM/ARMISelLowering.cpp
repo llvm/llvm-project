@@ -2842,7 +2842,7 @@ bool ARMTargetLowering::IsEligibleForTailCallOptimization(
   // cannot rely on the linker replacing the tail call with a return.
   if (GlobalAddressSDNode *G = dyn_cast<GlobalAddressSDNode>(Callee)) {
     const GlobalValue *GV = G->getGlobal();
-    const Triple &TT = getTargetMachine().getTargetTriple();
+    const Triple &TT = GV->getParent()->getTargetTriple();
     if (GV->hasExternalWeakLinkage() &&
         (!TT.isOSWindows() || TT.isOSBinFormatELF() ||
          TT.isOSBinFormatMachO())) {
@@ -11751,6 +11751,7 @@ ARMTargetLowering::EmitLowered__chkstk(MachineInstr &MI,
     BuildMI(*MBB, MI, DL, TII.get(ARM::tBL))
         .add(predOps(ARMCC::AL))
         .addExternalSymbol(ChkStk)
+        .setOperandDead(3) // implicit-def $lr
         .addReg(ARM::R4, RegState::Implicit | RegState::Kill)
         .addReg(ARM::R4, RegState::Implicit | RegState::Define)
         .addReg(ARM::R12,
@@ -11767,6 +11768,7 @@ ARMTargetLowering::EmitLowered__chkstk(MachineInstr &MI,
     BuildMI(*MBB, MI, DL, TII.get(gettBLXrOpcode(*MBB->getParent())))
         .add(predOps(ARMCC::AL))
         .addReg(Reg, RegState::Kill)
+        .setOperandDead(3) // implicit-def $lr
         .addReg(ARM::R4, RegState::Implicit | RegState::Kill)
         .addReg(ARM::R4, RegState::Implicit | RegState::Define)
         .addReg(ARM::R12,
@@ -12491,6 +12493,7 @@ void ARMTargetLowering::AdjustInstrPostInstrSelection(MachineInstr &MI,
   MachineOperand &MO = MI.getOperand(ccOutIdx);
   MO.setReg(ARM::CPSR);
   MO.setIsDef(true);
+  MO.setIsDead(deadCPSR);
 }
 
 //===----------------------------------------------------------------------===//
@@ -20707,7 +20710,7 @@ RCPair ARMTargetLowering::getRegForInlineAsmConstraint(
 
   // r14 is an alias of lr.
   if (StringRef("{r14}").equals_insensitive(Constraint))
-    return std::make_pair(unsigned(ARM::LR), getRegClassFor(MVT::i32));
+    Constraint = "{lr}";
 
   auto RCP = TargetLowering::getRegForInlineAsmConstraint(TRI, Constraint, VT);
   if (isIncompatibleReg(RCP.first, VT))
@@ -20901,25 +20904,27 @@ static RTLIB::Libcall getDivRemLibcall(
   return LC;
 }
 
-static TargetLowering::ArgListTy getDivRemArgList(
-    const SDNode *N, LLVMContext *Context, const ARMSubtarget *Subtarget) {
+static TargetLowering::ArgListTy
+getDivRemArgList(const SDNode *N, FunctionType *FuncTy,
+                 const AttributeList &FuncAttrs, RTLIB::LibcallImpl LCImpl) {
   assert((N->getOpcode() == ISD::SDIVREM || N->getOpcode() == ISD::UDIVREM ||
           N->getOpcode() == ISD::SREM    || N->getOpcode() == ISD::UREM) &&
          "Unhandled Opcode in getDivRemArgList");
-  bool isSigned = N->getOpcode() == ISD::SDIVREM ||
-                  N->getOpcode() == ISD::SREM;
-  TargetLowering::ArgListTy Args;
-  for (unsigned i = 0, e = N->getNumOperands(); i != e; ++i) {
-    EVT ArgVT = N->getOperand(i).getValueType();
-    Type *ArgTy = ArgVT.getTypeForEVT(*Context);
-    TargetLowering::ArgListEntry Entry(N->getOperand(i), ArgTy);
-    Entry.IsSExt = isSigned;
-    Entry.IsZExt = !isSigned;
-    Args.push_back(Entry);
+  SDValue Ops[2] = {N->getOperand(0), N->getOperand(1)};
+
+  // The Windows __rt_*div* helpers take the divisor before the dividend.
+  switch (LCImpl) {
+  case RTLIB::impl___rt_sdiv:
+  case RTLIB::impl___rt_udiv:
+  case RTLIB::impl___rt_sdiv64:
+  case RTLIB::impl___rt_udiv64:
+    std::swap(Ops[0], Ops[1]);
+    break;
+  default:
+    break;
   }
-  if (Subtarget->getTargetTriple().isOSWindows() && Args.size() >= 2)
-    std::swap(Args[0], Args[1]);
-  return Args;
+
+  return TargetLowering::getArgListForFunctionType(FuncTy, FuncAttrs, Ops);
 }
 
 SDValue ARMTargetLowering::LowerDivRem(SDValue Op, SelectionDAG &DAG) const {
@@ -20946,8 +20951,6 @@ SDValue ARMTargetLowering::LowerDivRem(SDValue Op, SelectionDAG &DAG) const {
     }
   }
 
-  Type *Ty = VT.getTypeForEVT(*DAG.getContext());
-
   // If the target has hardware divide, use divide + multiply + subtract:
   //     div = a / b
   //     rem = a - b * div
@@ -20971,17 +20974,22 @@ SDValue ARMTargetLowering::LowerDivRem(SDValue Op, SelectionDAG &DAG) const {
   RTLIB::Libcall LC = getDivRemLibcall(Op.getNode(),
                                        VT.getSimpleVT().SimpleTy);
   RTLIB::LibcallImpl LCImpl = DAG.getLibcalls().getLibcallImpl(LC);
+  if (LCImpl == RTLIB::Unsupported)
+    return SDValue();
+
+  auto [FuncTy, FuncAttrs] =
+      DAG.getLibcalls().getRuntimeLibcallsInfo().getFunctionTy(
+          *DAG.getContext(), getTM().getTargetTriple(), DAG.getDataLayout(),
+          LCImpl);
+  Type *RetTy = FuncTy->getReturnType();
 
   SDValue InChain = DAG.getEntryNode();
 
-  TargetLowering::ArgListTy Args = getDivRemArgList(Op.getNode(),
-                                                    DAG.getContext(),
-                                                    Subtarget);
+  TargetLowering::ArgListTy Args =
+      getDivRemArgList(Op.getNode(), FuncTy, FuncAttrs, LCImpl);
 
   SDValue Callee =
       DAG.getExternalSymbol(LCImpl, getPointerTy(DAG.getDataLayout()));
-
-  Type *RetTy = StructType::get(Ty, Ty);
 
   if (getTM().getTargetTriple().isOSWindows())
     InChain = WinDBZCheckDenominator(DAG, Op.getNode(), InChain);
@@ -21011,29 +21019,21 @@ SDValue ARMTargetLowering::LowerREM(SDNode *N, SelectionDAG &DAG) const {
                            Result[0], Result[1]);
   }
 
-  // Build return types (div and rem)
-  std::vector<Type*> RetTyParams;
-  Type *RetTyElement;
-
-  switch (VT.getSimpleVT().SimpleTy) {
-  default: llvm_unreachable("Unexpected request for libcall!");
-  case MVT::i8:   RetTyElement = Type::getInt8Ty(*DAG.getContext());  break;
-  case MVT::i16:  RetTyElement = Type::getInt16Ty(*DAG.getContext()); break;
-  case MVT::i32:  RetTyElement = Type::getInt32Ty(*DAG.getContext()); break;
-  case MVT::i64:  RetTyElement = Type::getInt64Ty(*DAG.getContext()); break;
-  }
-
-  RetTyParams.push_back(RetTyElement);
-  RetTyParams.push_back(RetTyElement);
-  ArrayRef<Type*> ret = ArrayRef<Type*>(RetTyParams);
-  Type *RetTy = StructType::get(*DAG.getContext(), ret);
-
   RTLIB::Libcall LC = getDivRemLibcall(N, N->getValueType(0).getSimpleVT().
                                                              SimpleTy);
   RTLIB::LibcallImpl LCImpl = DAG.getLibcalls().getLibcallImpl(LC);
+  if (LCImpl == RTLIB::Unsupported)
+    return SDValue();
+
+  auto [FuncTy, FuncAttrs] =
+      DAG.getLibcalls().getRuntimeLibcallsInfo().getFunctionTy(
+          *DAG.getContext(), getTM().getTargetTriple(), DAG.getDataLayout(),
+          LCImpl);
+  Type *RetTy = FuncTy->getReturnType();
+
   SDValue InChain = DAG.getEntryNode();
-  TargetLowering::ArgListTy Args = getDivRemArgList(N, DAG.getContext(),
-                                                    Subtarget);
+  TargetLowering::ArgListTy Args =
+      getDivRemArgList(N, FuncTy, FuncAttrs, LCImpl);
   bool isSigned = N->getOpcode() == ISD::SREM;
 
   SDValue Callee =

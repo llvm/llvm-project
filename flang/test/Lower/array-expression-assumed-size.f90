@@ -15,7 +15,7 @@ end subroutine assumed_size_test
 ! CHECK:         %[[SEL:.*]] = arith.select %[[COND]], %[[IDX10]], %[[C0]] : index
 ! CHECK:         %[[EXT:.*]] = fir.assumed_size_extent : index
 ! CHECK:         %[[SHAPE:.*]] = fir.shape %[[SEL]], %[[EXT]] : (index, index) -> !fir.shape<2>
-! CHECK:         %[[DECL:.*]]:2 = hlfir.declare %[[ARG0]](%[[SHAPE]]) dummy_scope %[[SCOPE]] arg 1 {uniq_name = "_QFassumed_size_testEa"} : (!fir.ref<!fir.array<10x?xi32>>, !fir.shape<2>, !fir.dscope) -> (!fir.box<!fir.array<10x?xi32>>, !fir.ref<!fir.array<10x?xi32>>)
+! CHECK:         %[[DECL:.*]]:2 = hlfir.declare %[[ARG0]](%[[SHAPE]]) dummy_scope %[[SCOPE]] arg 1 uniq_name("_QFassumed_size_testEa") : (!fir.ref<!fir.array<10x?xi32>>, !fir.shape<2>, !fir.dscope) -> (!fir.box<!fir.array<10x?xi32>>, !fir.ref<!fir.array<10x?xi32>>)
 ! CHECK:         %[[C1:.*]] = arith.constant 1 : index
 ! CHECK:         %[[C1_0:.*]] = arith.constant 1 : index
 ! CHECK:         %[[C10:.*]] = arith.constant 10 : index
@@ -55,7 +55,7 @@ end subroutine assumed_size_forall_test
 ! CHECK:         %[[SEL:.*]] = arith.select %[[COND]], %[[IDX10]], %[[C0]] : index
 ! CHECK:         %[[EXT:.*]] = fir.assumed_size_extent : index
 ! CHECK:         %[[SHAPE:.*]] = fir.shape %[[SEL]], %[[EXT]] : (index, index) -> !fir.shape<2>
-! CHECK:         %[[DECL:.*]]:2 = hlfir.declare %[[ARG0]](%[[SHAPE]]) dummy_scope %[[SCOPE]] arg 1 {uniq_name = "_QFassumed_size_forall_testEb"} : (!fir.ref<!fir.array<10x?xi32>>, !fir.shape<2>, !fir.dscope) -> (!fir.box<!fir.array<10x?xi32>>, !fir.ref<!fir.array<10x?xi32>>)
+! CHECK:         %[[DECL:.*]]:2 = hlfir.declare %[[ARG0]](%[[SHAPE]]) dummy_scope %[[SCOPE]] arg 1 uniq_name("_QFassumed_size_forall_testEb") : (!fir.ref<!fir.array<10x?xi32>>, !fir.shape<2>, !fir.dscope) -> (!fir.box<!fir.array<10x?xi32>>, !fir.ref<!fir.array<10x?xi32>>)
 ! CHECK:         %[[C2_I32:.*]] = arith.constant 2 : i32
 ! CHECK:         %[[C6_I32:.*]] = arith.constant 6 : i32
 ! CHECK:         hlfir.forall lb {

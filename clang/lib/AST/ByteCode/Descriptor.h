@@ -195,7 +195,7 @@ public:
   QualType getType() const;
   QualType getElemQualType() const;
   QualType getDataType(const ASTContext &Ctx) const;
-  SourceLocation getLocation() const;
+  SourceLocation getLocation() const { return Source.getLocation(); }
   SourceInfo getLoc() const;
 
   const Decl *asDecl() const { return Source.asDecl(); }

@@ -17,6 +17,7 @@
 #include "llvm/ADT/Hashing.h"
 #include "llvm/ADT/Statistic.h"
 #include "llvm/MC/MCInst.h"
+#include "llvm/MCA/Support.h"
 #include "llvm/Support/Debug.h"
 #include "llvm/Support/WithColor.h"
 #include "llvm/Support/raw_ostream.h"
@@ -27,6 +28,8 @@ namespace llvm {
 namespace mca {
 
 char RecycledInstErr::ID = 0;
+
+template class LLVM_EXPORT_TEMPLATE InstructionError<MCInst>;
 
 InstrBuilder::InstrBuilder(const llvm::MCSubtargetInfo &sti,
                            const llvm::MCInstrInfo &mcii,
