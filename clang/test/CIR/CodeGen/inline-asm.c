@@ -9,9 +9,10 @@ __asm__ ("foo1");
 __asm__ ("foo2");
 __asm__ ("foo3");
 // CIR: module{{.*}} cir.module_asm = ["foo1", "foo2", "foo3"]
-// LLVM: module asm "foo1"
-// LLVM-NEXT: module asm "foo2"
-// LLVM-NEXT: module asm "foo3"
+// LLVM: module asm
+// LLVM-NEXT: "foo1"
+// LLVM-NEXT: "foo2"
+// LLVM-NEXT: "foo3"
 
 //      CIR: cir.func{{.*}}@empty1
 //      CIR: cir.asm(x86_att, 

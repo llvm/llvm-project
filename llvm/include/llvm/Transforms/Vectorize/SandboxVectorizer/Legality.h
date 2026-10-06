@@ -14,6 +14,7 @@
 
 #include "llvm/ADT/ArrayRef.h"
 #include "llvm/Analysis/ScalarEvolution.h"
+#include "llvm/Analysis/TargetTransformInfo.h"
 #include "llvm/IR/DataLayout.h"
 #include "llvm/Support/Casting.h"
 #include "llvm/Support/Compiler.h"
@@ -95,6 +96,7 @@ enum class ResultReason {
   DiffBBs,
   RepeatedInstrs,
   NotConsecutive,
+  AlignmentNotSupported,
   CantSchedule,
   Unimplemented,
   Infeasible,
@@ -137,6 +139,8 @@ struct ToStr {
       return "RepeatedInstrs";
     case ResultReason::NotConsecutive:
       return "NotConsecutive";
+    case ResultReason::AlignmentNotSupported:
+      return "AlignmentNotSupported";
     case ResultReason::CantSchedule:
       return "CantSchedule";
     case ResultReason::Unimplemented:
@@ -183,7 +187,7 @@ public:
 
 /// Base class for results with reason.
 class LegalityResultWithReason : public LegalityResult {
-  [[maybe_unused]] ResultReason Reason;
+  ResultReason Reason;
   LegalityResultWithReason(LegalityResultID ID, ResultReason Reason)
       : LegalityResult(ID), Reason(Reason) {}
   friend class Pack; // For constructor.
@@ -322,21 +326,23 @@ class LegalityAnalysis {
   /// Checks opcodes, types and other IR-specifics and returns a ResultReason
   /// object if not vectorizable, or nullptr otherwise.
   std::optional<ResultReason>
-  notVectorizableBasedOnOpcodesAndTypes(ArrayRef<Value *> Bndl);
+  notVectorizableBasedOnOpcodesAndTypes(BndlRef<Value *> Bndl);
 
   ScalarEvolution &SE;
   const DataLayout &DL;
+  TargetTransformInfo &TTI;
   InstrMaps &IMaps;
 
   /// Finds how we can collect the values in \p Bndl from the vectorized or
   /// non-vectorized code. It returns a map of the value we should extract from
   /// and the corresponding shuffle mask we need to use.
-  CollectDescr getHowToCollectValues(ArrayRef<Value *> Bndl) const;
+  CollectDescr getHowToCollectValues(BndlRef<Value *> Bndl) const;
 
 public:
   LegalityAnalysis(AAResults &AA, ScalarEvolution &SE, const DataLayout &DL,
-                   Context &Ctx, InstrMaps &IMaps)
-      : Sched(AA, Ctx), SE(SE), DL(DL), IMaps(IMaps) {}
+                   TargetTransformInfo &TTI, Context &Ctx, InstrMaps &IMaps,
+                   SchedDirection Dir)
+      : Sched(AA, Ctx, Dir), SE(SE), DL(DL), TTI(TTI), IMaps(IMaps) {}
   /// A LegalityResult factory.
   template <typename ResultT, typename... ArgsT>
   ResultT &createLegalityResult(ArgsT &&...Args) {
@@ -347,7 +353,7 @@ public:
 
   /// \returns true if \p Instrs are in different blocks.
   template <typename ValueT>
-  static bool differentBlock(ArrayRef<ValueT *> Instrs) {
+  static bool differentBlock(BndlRef<ValueT *> Instrs) {
     auto *BB0 = cast<Instruction>(Instrs[0])->getParent();
     return any_of(drop_begin(Instrs), [BB0](auto *V) {
       return cast<Instruction>(V)->getParent() != BB0;
@@ -355,16 +361,20 @@ public:
   }
 
   /// \returns true if all values in \p Values are unique.
-  template <typename ValueT> static bool areUnique(ArrayRef<ValueT *> Values) {
+  template <typename ValueT> static bool areUnique(BndlRef<ValueT *> Values) {
     SmallPtrSet<Value *, 8> Unique(llvm::from_range, Values);
     return Unique.size() == Values.size();
   }
+
+  /// \returns true if the alignment of the vector composed of \p Values has
+  /// alignment that is supported by the target.
+  LLVM_ABI bool isAlignmentSupported(ArrayRef<Value *> Values) const;
 
   /// Checks if it's legal to vectorize the instructions in \p Bndl.
   /// \Returns a LegalityResult object owned by LegalityAnalysis.
   /// \p SkipScheduling skips the scheduler check and is only meant for testing.
   // TODO: Try to remove the SkipScheduling argument by refactoring the tests.
-  LLVM_ABI const LegalityResult &canVectorize(ArrayRef<Value *> Bndl,
+  LLVM_ABI const LegalityResult &canVectorize(BndlRef<Value *> Bndl,
                                               bool SkipScheduling = false);
   /// \Returns a Pack with reason 'ForcePackForDebugging'.
   const LegalityResult &getForcedPackForDebugging() {

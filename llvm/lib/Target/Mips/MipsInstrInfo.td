@@ -266,9 +266,6 @@ def HasVirt  : Predicate<"Subtarget->hasVirt()">,
                AssemblerPredicate<(all_of FeatureVirt)>;
 def HasGINV  : Predicate<"Subtarget->hasGINV()">,
                AssemblerPredicate<(all_of FeatureGINV)>;
-// TODO: Add support for FPOpFusion::Standard
-def AllowFPOpFusion : Predicate<"TM.Options.AllowFPOpFusion =="
-                                " FPOpFusion::Fast">;
 //===----------------------------------------------------------------------===//
 // Mips GPR size adjectives.
 // They are mutually exclusive.
@@ -535,10 +532,6 @@ class ABI_N64 {
 
 class ABI_NOT_N64 {
   list<Predicate> AdditionalPredicates = [IsNotN64];
-}
-
-class FPOP_FUSION_FAST {
-  list <Predicate> AdditionalPredicates = [AllowFPOpFusion];
 }
 
 //===----------------------------------------------------------------------===//
@@ -851,6 +844,9 @@ def ConstantImmzAsmOperandClass : AsmOperandClass {
 def Simm19Lsl2AsmOperand
     : SimmLslAsmOperandClass<19, [], 2>;
 
+def Simm18Lsl3AsmOperand
+    : SimmLslAsmOperandClass<18, [], 3>;
+
 def MipsJumpTargetAsmOperand : AsmOperandClass {
   let Name = "JumpTarget";
   let ParserMethod = "parseJumpTarget";
@@ -905,7 +901,7 @@ def simm19_lsl2 : Operand<i32> {
 def simm18_lsl3 : Operand<i32> {
   let EncoderMethod = "getSimm18Lsl3Encoding";
   let DecoderMethod = "DecodeSimm18Lsl3";
-  let ParserMatchClass = MipsJumpTargetAsmOperand;
+  let ParserMatchClass = Simm18Lsl3AsmOperand;
 }
 
 // Zero
@@ -2196,6 +2192,12 @@ let DecoderNamespace = "COP3_" in {
   def SYNC : MMRel, StdMMR6Rel, SYNC_FT<"sync">, SYNC_FM, ISA_MIPS2;
   def SYNCI : MMRel, StdMMR6Rel, SYNCI_FT<"synci", mem_simm16>, SYNCI_FM,
               ISA_MIPS32R2;
+
+  def : MipsInstAlias<"sync_wmb", (SYNC 0x4), 1>, ISA_MIPS32R2;
+  def : MipsInstAlias<"sync_mb", (SYNC 0x10), 1>, ISA_MIPS32R2;
+  def : MipsInstAlias<"sync_acquire", (SYNC 0x11), 1>, ISA_MIPS32R2;
+  def : MipsInstAlias<"sync_release", (SYNC 0x12), 1>, ISA_MIPS32R2;
+  def : MipsInstAlias<"sync_rmb", (SYNC 0x13), 1>, ISA_MIPS32R2;
 }
 
 let AdditionalPredicates = [NotInMicroMips] in {
@@ -2457,9 +2459,9 @@ def PseudoMSUBU : MAddSubPseudo<MSUBU, MipsMSubu>,
 
 let AdditionalPredicates = [NotInMicroMips] in {
   def PseudoSDIV : MultDivPseudo<SDIV, ACC64, GPR32Opnd, MipsDivRem,
-                                 0, 1, 1>, ISA_MIPS1_NOT_32R6_64R6;
+                                 0, 0, 1>, ISA_MIPS1_NOT_32R6_64R6;
   def PseudoUDIV : MultDivPseudo<UDIV, ACC64, GPR32Opnd, MipsDivRemU,
-                                 0, 1, 1>, ISA_MIPS1_NOT_32R6_64R6;
+                                 0, 0, 1>, ISA_MIPS1_NOT_32R6_64R6;
   def RDHWR : MMRel, ReadHardware<GPR32Opnd, HWRegsOpnd>, RDHWR_FM, ISA_MIPS1;
   // TODO: Add '0 < pos+size <= 32' constraint check to ext instruction
   def EXT : MMRel, StdMMR6Rel, ExtBase<"ext", GPR32Opnd, uimm5, uimm5_plus1,
@@ -2514,7 +2516,8 @@ class JALR_HB_DESC_BASE<string instr_asm, RegisterOperand GPROpnd> {
 }
 
 class JR_HB_DESC<RegisterOperand RO> :
-  InstSE<(outs), (ins), "", [], FrmJ>, JR_HB_DESC_BASE<"jr.hb", RO> {
+  InstSE<(outs), (ins), "", [], FrmJ, "jr.hb">,
+  JR_HB_DESC_BASE<"jr.hb", RO> {
   let isBranch=1;
   let isIndirectBranch=1;
   let hasDelaySlot=1;
@@ -2524,8 +2527,8 @@ class JR_HB_DESC<RegisterOperand RO> :
 }
 
 class JALR_HB_DESC<RegisterOperand RO> :
-  InstSE<(outs), (ins), "", [], FrmJ>, JALR_HB_DESC_BASE<"jalr.hb",
-                                                                     RO> {
+  InstSE<(outs), (ins), "", [], FrmJ, "jalr.hb">,
+  JALR_HB_DESC_BASE<"jalr.hb", RO> {
   let isIndirectBranch=1;
   let hasDelaySlot=1;
   bit isCTI = 1;
@@ -2534,8 +2537,9 @@ class JALR_HB_DESC<RegisterOperand RO> :
 class JR_HB_ENC : JR_HB_FM<8>;
 class JALR_HB_ENC : JALR_HB_FM<9>;
 
-def JR_HB : JR_HB_DESC<GPR32Opnd>, JR_HB_ENC, ISA_MIPS32R2_NOT_32R6_64R6;
-def JALR_HB : JALR_HB_DESC<GPR32Opnd>, JALR_HB_ENC, ISA_MIPS32;
+def JR_HB : MMRel, JR_HB_DESC<GPR32Opnd>, JR_HB_ENC,
+            ISA_MIPS32R2_NOT_32R6_64R6;
+def JALR_HB : MMRel, JALR_HB_DESC<GPR32Opnd>, JALR_HB_ENC, ISA_MIPS32;
 
 let AdditionalPredicates = [NotInMicroMips, UseIndirectJumpsHazard] in
   def JALRHBPseudo : JumpLinkRegPseudo<GPR32Opnd, JALR_HB, RA>;
@@ -3022,7 +3026,7 @@ def BLEUL: CondBranchPseudo<"bleul">, ISA_MIPS2_NOT_32R6_64R6;
 def BGEUL: CondBranchPseudo<"bgeul">, ISA_MIPS2_NOT_32R6_64R6;
 def BGTUL: CondBranchPseudo<"bgtul">, ISA_MIPS2_NOT_32R6_64R6;
 
-let isCTI = 1 in
+let hasDelaySlot = 1, isCTI = 1 in
 class CondBranchImmPseudo<string instr_asm> :
   MipsAsmPseudoInst<(outs), (ins GPR32Opnd:$rs, ConstantImm64:$imm, brtarget:$offset),
                     !strconcat(instr_asm, "\t$rs, $imm, $offset")>;

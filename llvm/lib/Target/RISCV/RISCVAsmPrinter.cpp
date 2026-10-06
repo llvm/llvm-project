@@ -11,6 +11,7 @@
 //
 //===----------------------------------------------------------------------===//
 
+#include "RISCVAsmPrinter.h"
 #include "MCTargetDesc/RISCVBaseInfo.h"
 #include "MCTargetDesc/RISCVELFStreamer.h"
 #include "MCTargetDesc/RISCVInstPrinter.h"
@@ -26,7 +27,9 @@
 #include "llvm/ADT/Statistic.h"
 #include "llvm/BinaryFormat/ELF.h"
 #include "llvm/CodeGen/AsmPrinter.h"
+#include "llvm/CodeGen/AsmPrinterAnalysis.h"
 #include "llvm/CodeGen/MachineConstantPool.h"
+#include "llvm/CodeGen/MachineFunctionAnalysisManager.h"
 #include "llvm/CodeGen/MachineInstr.h"
 #include "llvm/CodeGen/MachineModuleInfo.h"
 #include "llvm/IR/Module.h"
@@ -39,6 +42,7 @@
 #include "llvm/MC/MCStreamer.h"
 #include "llvm/MC/MCSymbol.h"
 #include "llvm/MC/TargetRegistry.h"
+#include "llvm/Support/CHERICapabilityFormat.h"
 #include "llvm/Support/Compiler.h"
 #include "llvm/Support/raw_ostream.h"
 #include "llvm/TargetParser/RISCVISAInfo.h"
@@ -50,10 +54,6 @@ using namespace llvm;
 
 STATISTIC(RISCVNumInstrsCompressed,
           "Number of RISC-V Compressed instructions emitted");
-
-namespace llvm {
-extern const SubtargetFeatureKV RISCVFeatureKV[RISCV::NumSubtargetFeatures];
-} // namespace llvm
 
 namespace {
 class RISCVAsmPrinter : public AsmPrinter {
@@ -117,7 +117,8 @@ public:
   void emitEndOfAsmFile(Module &M) override;
 
   void emitFunctionEntryLabel() override;
-  bool emitDirectiveOptionArch();
+  bool emitTargetFeaturePush(const MCSubtargetInfo &STI) override;
+  void emitTargetFeaturePop(const MCSubtargetInfo &STI, bool DidPush) override;
 
   void emitNoteGnuProperty(const Module &M);
 
@@ -135,6 +136,9 @@ private:
   void emitSled(const MachineInstr *MI, SledKind Kind);
 
   void lowerToMCInst(const MachineInstr *MI, MCInst &OutMI);
+
+  MaybeAlign
+  getRequiredGlobalAlignmentGranule(const GlobalVariable &GV) override;
 };
 } // namespace
 
@@ -292,7 +296,7 @@ void RISCVAsmPrinter::emitLpadAlignedCall(const MachineInstr &MI) {
              HasRelax = MCSTI.hasFeature(RISCV::FeatureRelax);
 
   if (HasZca)
-    OutStreamer->emitCodeAlignment(Align(4), &MCSTI);
+    OutStreamer->emitCodeAlignment(Align(4), MCSTI);
 
   if (OutStreamer->hasRawTextSupport()) {
     // Assembly path: wrap call with .option push/exact/pop and emit LPAD
@@ -392,6 +396,17 @@ void RISCVAsmPrinter::emitInstruction(const MachineInstr *MI) {
   }
 
   switch (MI->getOpcode()) {
+  case RISCV::PseudoTAILX7: {
+    // Lower to PseudoTAILReg with X7 as the register operand.
+    MCOperand SymOp;
+    lowerOperand(MI->getOperand(0), SymOp);
+    MCInst TmpInst;
+    TmpInst.setOpcode(RISCV::PseudoTAILReg);
+    TmpInst.addOperand(SymOp);
+    TmpInst.addOperand(MCOperand::createReg(RISCV::X7));
+    EmitToStreamer(*OutStreamer, TmpInst);
+    return;
+  }
   case RISCV::HWASAN_CHECK_MEMACCESS_SHORTGRANULES:
     LowerHWASAN_CHECK_MEMACCESS(*MI);
     return;
@@ -527,35 +542,44 @@ bool RISCVAsmPrinter::PrintAsmMemoryOperand(const MachineInstr *MI,
   return false;
 }
 
-bool RISCVAsmPrinter::emitDirectiveOptionArch() {
+bool RISCVAsmPrinter::emitTargetFeaturePush(const MCSubtargetInfo &STI) {
   RISCVTargetStreamer &RTS = getTargetStreamer();
   SmallVector<RISCVOptionArchArg> NeedEmitStdOptionArgs;
   const MCSubtargetInfo &MCSTI = TM.getMCSubtargetInfo();
-  for (const auto &Feature : RISCVFeatureKV) {
-    if (STI->hasFeature(Feature.Value) == MCSTI.hasFeature(Feature.Value))
+  for (const auto &Feature : MCSTI.getAllProcessorFeatures()) {
+    if (STI.hasFeature(Feature.Value) == MCSTI.hasFeature(Feature.Value))
       continue;
 
-    if (!llvm::RISCVISAInfo::isSupportedExtensionFeature(Feature.Key))
+    if (!llvm::RISCVISAInfo::isSupportedExtensionFeature(Feature.key()))
       continue;
 
-    auto Delta = STI->hasFeature(Feature.Value) ? RISCVOptionArchArgType::Plus
-                                                : RISCVOptionArchArgType::Minus;
-    NeedEmitStdOptionArgs.emplace_back(Delta, Feature.Key);
+    auto Delta = STI.hasFeature(Feature.Value) ? RISCVOptionArchArgType::Plus
+                                               : RISCVOptionArchArgType::Minus;
+    StringRef ExtName = Feature.key();
+    ExtName.consume_front("experimental-");
+    NeedEmitStdOptionArgs.emplace_back(Delta, ExtName.str());
   }
   if (!NeedEmitStdOptionArgs.empty()) {
     RTS.emitDirectiveOptionPush();
     RTS.emitDirectiveOptionArch(NeedEmitStdOptionArgs);
+    RTS.setArchString(
+        cantFail(RISCVFeatures::parseFeatureBits(STI))->toString());
     return true;
   }
 
   return false;
 }
 
+void RISCVAsmPrinter::emitTargetFeaturePop(const MCSubtargetInfo &STI,
+                                           bool DidPush) {
+  if (DidPush)
+    getTargetStreamer().emitDirectiveOptionPop();
+}
+
 bool RISCVAsmPrinter::runOnMachineFunction(MachineFunction &MF) {
   STI = &MF.getSubtarget<RISCVSubtarget>();
-  RISCVTargetStreamer &RTS = getTargetStreamer();
 
-  bool EmittedOptionArch = emitDirectiveOptionArch();
+  bool EmittedOptionArch = emitTargetFeaturePush(*STI);
 
   SetupMachineFunction(MF);
   emitFunctionBody();
@@ -563,8 +587,7 @@ bool RISCVAsmPrinter::runOnMachineFunction(MachineFunction &MF) {
   // Emit the XRay table
   emitXRayTable();
 
-  if (EmittedOptionArch)
-    RTS.emitDirectiveOptionPop();
+  emitTargetFeaturePop(*STI, EmittedOptionArch);
   return false;
 }
 
@@ -597,7 +620,7 @@ void RISCVAsmPrinter::emitSled(const MachineInstr *MI, SledKind Kind) {
   // is a chance that we'll use C.JAL instead, so an additional NOP is needed.
   const uint8_t NoopsInSledCount = STI->is64Bit() ? 33 : 21;
 
-  OutStreamer->emitCodeAlignment(Align(4), STI);
+  OutStreamer->emitCodeAlignment(Align(4), *STI);
   auto CurSled = OutContext.createTempSymbol("xray_sled_", true);
   OutStreamer->emitLabel(CurSled);
   auto Target = OutContext.createTempSymbol();
@@ -625,9 +648,19 @@ void RISCVAsmPrinter::emitStartOfAsmFile(Module &M) {
   assert(OutStreamer->getTargetStreamer() &&
          "target streamer is uninitialized");
   RISCVTargetStreamer &RTS = getTargetStreamer();
-  if (const MDString *ModuleTargetABI =
-          dyn_cast_or_null<MDString>(M.getModuleFlag("target-abi")))
-    RTS.setTargetABI(RISCVABI::getTargetABI(ModuleTargetABI->getString()));
+  StringRef ABIName = M.getTargetABIFromMD();
+  if (!ABIName.empty()) {
+    RISCVABI::ABI ABI = RISCVABI::getTargetABI(ABIName);
+    if (ABI == RISCVABI::ABI_Unknown) {
+      M.getContext().emitError(Twine('\'') + ABIName +
+                               "' is not a recognized ABI for this target");
+    } else {
+      RTS.setTargetABI(ABI);
+    }
+  } else if (!RTS.hasTargetABI()) {
+    RTS.setTargetABI(
+        cantFail(RISCVABI::computeTargetABI(TM.getMCSubtargetInfo(), "")));
+  }
 
   MCSubtargetInfo SubtargetInfo = TM.getMCSubtargetInfo();
 
@@ -640,10 +673,10 @@ void RISCVAsmPrinter::emitStartOfAsmFile(Module &M) {
             /*ExperimentalExtensionVersionCheck=*/true);
         if (!errorToBool(ParseResult.takeError())) {
           auto &ISAInfo = *ParseResult;
-          for (const auto &Feature : RISCVFeatureKV) {
-            if (ISAInfo->hasExtension(Feature.Key) &&
+          for (const auto &Feature : SubtargetInfo.getAllProcessorFeatures()) {
+            if (ISAInfo->hasExtension(Feature.key()) &&
                 !SubtargetInfo.hasFeature(Feature.Value))
-              SubtargetInfo.ToggleFeature(Feature.Key);
+              SubtargetInfo.ToggleFeature(Feature.key());
           }
         }
       }
@@ -652,14 +685,14 @@ void RISCVAsmPrinter::emitStartOfAsmFile(Module &M) {
     RTS.setFlagsFromFeatures(SubtargetInfo);
   }
 
-  if (TM.getTargetTriple().isOSBinFormatELF())
+  if (M.getTargetTriple().isOSBinFormatELF())
     emitAttributes(SubtargetInfo);
 }
 
 void RISCVAsmPrinter::emitEndOfAsmFile(Module &M) {
   RISCVTargetStreamer &RTS = getTargetStreamer();
 
-  if (TM.getTargetTriple().isOSBinFormatELF()) {
+  if (M.getTargetTriple().isOSBinFormatELF()) {
     RTS.finishAttributeSection();
     emitNoteGnuProperty(M);
   }
@@ -799,7 +832,7 @@ void RISCVAsmPrinter::EmitHwasanMemaccessSymbols(Module &M) {
   if (HwasanMemaccessSymbols.empty())
     return;
 
-  assert(TM.getTargetTriple().isOSBinFormatELF());
+  assert(M.getTargetTriple().isOSBinFormatELF());
   // Use MCSubtargetInfo from TargetMachine. Individual functions may have
   // attributes that differ from other functions in the module and we have no
   // way to know which function is correct.
@@ -1019,12 +1052,41 @@ void RISCVAsmPrinter::EmitHwasanMemaccessSymbols(Module &M) {
 }
 
 void RISCVAsmPrinter::emitNoteGnuProperty(const Module &M) {
-  assert(TM.getTargetTriple().isOSBinFormatELF() && "invalid binary format");
+  assert(M.getTargetTriple().isOSBinFormatELF() && "invalid binary format");
+  uint32_t GnuProps = 0;
   if (const Metadata *const Flag = M.getModuleFlag("cf-protection-return");
+      Flag && !mdconst::extract<ConstantInt>(Flag)->isZero())
+    GnuProps |= ELF::GNU_PROPERTY_RISCV_FEATURE_1_CFI_SS;
+
+  if (const Metadata *const Flag = M.getModuleFlag("cf-protection-branch");
       Flag && !mdconst::extract<ConstantInt>(Flag)->isZero()) {
-    auto &RTS = static_cast<RISCVTargetELFStreamer &>(getTargetStreamer());
-    RTS.emitNoteGnuPropertySection(ELF::GNU_PROPERTY_RISCV_FEATURE_1_CFI_SS);
+    using namespace llvm::RISCVISAUtils;
+    const Metadata *const CFBranchLabelSchemeFlag =
+        M.getModuleFlag("cf-branch-label-scheme");
+    assert(CFBranchLabelSchemeFlag &&
+           "cf-protection=branch should come with cf-branch-label-scheme=... "
+           "on RISC-V targets");
+    const StringRef CFBranchLabelScheme =
+        cast<MDString>(CFBranchLabelSchemeFlag)->getString();
+    switch (llvm::RISCVCFI::getZicfilpLabelScheme(CFBranchLabelScheme)) {
+    case llvm::RISCVCFI::ZicfilpLabelSchemeKind::Invalid:
+      reportFatalInternalError("invalid RISC-V Zicfilp label scheme");
+    case llvm::RISCVCFI::ZicfilpLabelSchemeKind::Unlabeled:
+      GnuProps |= ELF::GNU_PROPERTY_RISCV_FEATURE_1_CFI_LP_UNLABELED;
+      break;
+    case llvm::RISCVCFI::ZicfilpLabelSchemeKind::FuncSig:
+      // TODO: Emit the func-sig bit after the feature is implemented
+      reportFatalUsageError("the complete func-sig label scheme feature is not "
+                            "implemented yet");
+      break;
+    }
   }
+
+  if (!GnuProps)
+    return;
+
+  auto &RTS = static_cast<RISCVTargetELFStreamer &>(getTargetStreamer());
+  RTS.emitNoteGnuPropertySection(GnuProps);
 }
 
 static MCOperand lowerSymbolOperand(const MachineOperand &MO, MCSymbol *Sym,
@@ -1082,6 +1144,9 @@ static MCOperand lowerSymbolOperand(const MachineOperand &MO, MCSymbol *Sym,
     break;
   case RISCVII::MO_TLSDESC_CALL:
     Kind = ELF::R_RISCV_TLSDESC_CALL;
+    break;
+  case RISCVII::MO_QC_ACCESS:
+    Kind = RISCV::S_QC_ACCESS;
     break;
   }
 
@@ -1285,7 +1350,64 @@ void RISCVAsmPrinter::emitMachineConstantPoolValue(
   OutStreamer->emitValue(Expr, Size);
 }
 
+MaybeAlign
+RISCVAsmPrinter::getRequiredGlobalAlignmentGranule(const GlobalVariable &GV) {
+  const MCSubtargetInfo &MCSTI = TM.getMCSubtargetInfo();
+  if (!GV.getValueType()->isSized())
+    return std::nullopt;
+
+  // When the alignment granule is determined by a CHERI requirement,
+  // don't increase alignment if a custom section has been specified,
+  // as doing so can break existing code that relies on the lack of
+  // padding (e.g. linker sets).
+  if (GV.hasSection())
+    return std::nullopt;
+
+  uint64_t Size = GV.getGlobalSize(getDataLayout());
+  if (MCSTI.hasFeature(RISCV::FeatureVendorXCheriot))
+    return CHERIoTCapabilityFormat::getRequiredAlignment(Size);
+
+  if (MCSTI.hasFeature(RISCV::FeatureStdExtY)) {
+    if (MCSTI.hasFeature(RISCV::Feature64Bit))
+      return RV64YCapabilityFormat::getRequiredAlignment(Size);
+    else
+      return RV32YCapabilityFormat::getRequiredAlignment(Size);
+  }
+
+  return std::nullopt;
+}
+
 char RISCVAsmPrinter::ID = 0;
 
 INITIALIZE_PASS(RISCVAsmPrinter, "riscv-asm-printer", "RISC-V Assembly Printer",
                 false, false)
+
+PreservedAnalyses RISCVAsmPrinterBeginPass::run(Module &M,
+                                                ModuleAnalysisManager &MAM) {
+  RISCVAsmPrinter &AsmPrinter = static_cast<RISCVAsmPrinter &>(
+      MAM.getResult<AsmPrinterAnalysis>(M).getPrinter());
+  setupModuleAsmPrinter(M, MAM, AsmPrinter);
+  AsmPrinter.doInitialization(M);
+  return PreservedAnalyses::all();
+}
+
+PreservedAnalyses
+RISCVAsmPrinterPass::run(MachineFunction &MF,
+                         MachineFunctionAnalysisManager &MFAM) {
+  RISCVAsmPrinter &AsmPrinter = static_cast<RISCVAsmPrinter &>(
+      MFAM.getResult<ModuleAnalysisManagerMachineFunctionProxy>(MF)
+          .getCachedResult<AsmPrinterAnalysis>(*MF.getFunction().getParent())
+          ->getPrinter());
+  setupMachineFunctionAsmPrinter(MFAM, MF, AsmPrinter);
+  AsmPrinter.runOnMachineFunction(MF);
+  return PreservedAnalyses::all();
+}
+
+PreservedAnalyses RISCVAsmPrinterEndPass::run(Module &M,
+                                              ModuleAnalysisManager &MAM) {
+  RISCVAsmPrinter &AsmPrinter = static_cast<RISCVAsmPrinter &>(
+      MAM.getResult<AsmPrinterAnalysis>(M).getPrinter());
+  setupModuleAsmPrinter(M, MAM, AsmPrinter);
+  AsmPrinter.doFinalization(M);
+  return PreservedAnalyses::all();
+}

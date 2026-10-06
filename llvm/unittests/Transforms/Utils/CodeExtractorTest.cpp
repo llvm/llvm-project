@@ -9,6 +9,7 @@
 #include "llvm/Transforms/Utils/CodeExtractor.h"
 #include "llvm/Analysis/AssumptionCache.h"
 #include "llvm/AsmParser/Parser.h"
+#include "llvm/BinaryFormat/Dwarf.h"
 #include "llvm/IR/BasicBlock.h"
 #include "llvm/IR/Constants.h"
 #include "llvm/IR/DebugInfoMetadata.h"
@@ -746,7 +747,7 @@ TEST(CodeExtractor, OpenMPAggregateArgs) {
   SMDiagnostic Err;
   std::unique_ptr<Module> M(parseAssemblyString(R"ir(
     target datalayout = "e-p:64:64-p1:64:64-p2:32:32-p3:32:32-p4:64:64-p5:32:32-p6:32:32-p7:160:256:256:32-p8:128:128:128:48-i64:64-v16:16-v24:32-v32:32-v48:64-v96:128-v192:256-v256:256-v512:512-v1024:1024-v2048:2048-n32:64-S32-A5-G1-ni:7:8:9"
-    target triple = "amdgcn-amd-amdhsa"
+    target triple = "amdgpu7.00-amd-amdhsa"
 
     define void @foo(ptr %0) {
       %2= alloca ptr, align 8, addrspace(5)
@@ -813,7 +814,7 @@ TEST(CodeExtractor, ArgsDebugInfo) {
   define void @foo(i32 %a, i32 %b) !dbg !2 {
     %1 = alloca i32, i64 1, align 4, !dbg !1
     store i32 %a, ptr %1, align 4, !dbg !1
-    #dbg_declare(ptr %1, !8, !DIExpression(), !1)
+    #dbg_declare(ptr %1, !8, !DIExpression(DW_OP_plus_uconst, 4), !1)
     #dbg_value(i32 %b, !9, !DIExpression(), !1)
     br label %entry
 
@@ -864,9 +865,14 @@ TEST(CodeExtractor, ArgsDebugInfo) {
     for (DbgVariableRecord &DVR : filterDbgVars(Term->getDbgRecordRange())) {
       DILocalVariable *Var = DVR.getVariable();
       EXPECT_TRUE(Var);
-      if (DVR.isDbgDeclare())
+      const DIExpression *Expr = DVR.getExpression();
+      ASSERT_TRUE(Expr);
+      if (DVR.isDbgDeclare()) {
         EXPECT_TRUE(Var->getName() == "a");
-      else
+        ASSERT_EQ(Expr->getNumElements(), 2u);
+        EXPECT_EQ(Expr->getElement(0), dwarf::DW_OP_plus_uconst);
+        EXPECT_EQ(Expr->getElement(1), 4u);
+      } else
         EXPECT_TRUE(Var->getName() == "b");
       for (Value *Loc : DVR.location_ops()) {
         if (Instruction *I = dyn_cast<Instruction>(Loc))

@@ -1,9 +1,9 @@
-; RUN: llc -mtriple=amdgcn -amdgpu-set-wave-priority=true -o - %s | \
+; RUN: llc -mtriple=amdgpu6.00 -amdgpu-set-wave-priority=true -o - %s | \
 ; RUN:   FileCheck %s
 
-; RUN: llc -mtriple=amdgcn -stop-after=si-late-branch-lowering -o - %s | \
-; RUN:   llc -x mir -mtriple=amdgcn -passes=amdgpu-set-wave-priority -o - | \
-; RUN:   llc -x mir -mtriple=amdgcn -start-after=si-late-branch-lowering -o - | \
+; RUN: llc -mtriple=amdgpu6.00 -stop-after=si-late-branch-lowering -o - %s | \
+; RUN:   llc -x mir -mtriple=amdgpu6.00 -passes=amdgpu-set-wave-priority -o - | \
+; RUN:   llc -x mir -mtriple=amdgpu6.00 -start-after=si-late-branch-lowering -o - | \
 ; RUN:   FileCheck %s
 
 ; CHECK-LABEL: no_setprio:
@@ -126,7 +126,7 @@ exit:
 ; CHECK:       [[LOOP:.*]]:  ; %loop
 ; CHECK-NOT:       s_setprio
 ; CHECK:           s_cbranch_scc1 [[LOOP]]
-; CHECK        {{.*}}:  ; %exit
+; CHECK:      {{.*}}:  ; %exit
 ; CHECK-NOT:       s_setprio
 ; CHECK:           s_branch [[RET:.*]]
 ; CHECK:       [[ANOTHER_LOAD]]:  ; %another_load

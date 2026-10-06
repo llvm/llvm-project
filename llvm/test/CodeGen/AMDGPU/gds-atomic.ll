@@ -1,7 +1,7 @@
-; RUN: llc -mtriple=amdgcn -mcpu=bonaire < %s | FileCheck -check-prefixes=GCN,FUNC %s
-; RUN: llc -mtriple=amdgcn -mcpu=tonga -mattr=-flat-for-global < %s | FileCheck -check-prefixes=GCN,FUNC %s
-; RUN: llc -mtriple=amdgcn -mcpu=gfx900 < %s | FileCheck -check-prefixes=GCN,FUNC %s
-; RUN: llc -mtriple=amdgcn -mcpu=gfx9-generic --amdhsa-code-object-version=6 < %s | FileCheck -check-prefixes=GCN,FUNC %s
+; RUN: llc -mtriple=amdgpu7.04 < %s | FileCheck -check-prefixes=GCN,FUNC %s
+; RUN: llc -mtriple=amdgpu8.02 -mattr=-flat-for-global < %s | FileCheck -check-prefixes=GCN,FUNC %s
+; RUN: llc -mtriple=amdgpu9.00 < %s | FileCheck -check-prefixes=GCN,FUNC %s
+; RUN: llc -mtriple=amdgpu9 --amdhsa-code-object-version=6 < %s | FileCheck -check-prefixes=GCN,FUNC %s
 
 ; FUNC-LABEL: {{^}}atomic_add_ret_gds:
 ; GCN-DAG: v_mov_b32_e32 v[[OFF:[0-9]+]], s

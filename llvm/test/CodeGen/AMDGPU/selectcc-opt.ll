@@ -1,5 +1,5 @@
-; RUN: llc -mtriple=amdgcn < %s | FileCheck -check-prefix=SI -check-prefix=FUNC %s
-; RUN: llc -mtriple=amdgcn -mcpu=tonga -mattr=-flat-for-global < %s | FileCheck -check-prefix=SI -check-prefix=FUNC %s
+; RUN: llc -mtriple=amdgpu6.00 < %s | FileCheck -check-prefix=SI -check-prefix=FUNC %s
+; RUN: llc -mtriple=amdgpu8.02 -mattr=-flat-for-global < %s | FileCheck -check-prefix=SI -check-prefix=FUNC %s
 ; RUN: llc -mtriple=r600 -mcpu=redwood < %s | FileCheck -check-prefix=EG -check-prefix=FUNC %s
 
 
@@ -70,7 +70,7 @@ entry:
 
 ; FUNC-LABEL: {{^}}selectcc_bool:
 ; SI: s_cmp_lg_u32
-; SI: v_cndmask_b32_e64
+; SI: s_cselect_b32 {{s[0-9]+}}, -1, 0
 ; SI-NOT: cmp
 ; SI-NOT: cndmask
 define amdgpu_kernel void @selectcc_bool(ptr addrspace(1) %out, i32 %a, i32 %b) nounwind {

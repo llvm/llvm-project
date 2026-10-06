@@ -2,13 +2,50 @@ set(OFFLOAD_TOOLS_INSTALL_DIR "${CMAKE_INSTALL_BINDIR}" CACHE PATH
     "Path for binary subdirectory (defaults to '${CMAKE_INSTALL_BINDIR}')")
 mark_as_advanced(OFFLOAD_TOOLS_INSTALL_DIR)
 
-macro(add_offload_tool name)
-  llvm_add_tool(OFFLOAD ${ARGV})
-endmacro()
+file(RELATIVE_PATH offload_libdir_relpath
+     "${CMAKE_INSTALL_PREFIX}/${OFFLOAD_TOOLS_INSTALL_DIR}"
+     "${CMAKE_INSTALL_PREFIX}/${OFFLOAD_INSTALL_LIBDIR}")
+set(OFFLOAD_TOOLS_INSTALL_RPATH "$ORIGIN/${offload_libdir_relpath}")
+if(LLVM_LINK_LLVM_DYLIB)
+  file(RELATIVE_PATH llvm_libdir_relpath
+       "${CMAKE_INSTALL_PREFIX}/${OFFLOAD_TOOLS_INSTALL_DIR}"
+       "${CMAKE_INSTALL_PREFIX}/lib${LLVM_LIBDIR_SUFFIX}")
+  list(APPEND OFFLOAD_TOOLS_INSTALL_RPATH "$ORIGIN/${llvm_libdir_relpath}")
+endif()
 
-macro(add_offload_tool_symlink name)
-  llvm_add_tool_symlink(OFFLOAD ${ARGV})
-endmacro()
+function(add_offload_tool name)
+  cmake_parse_arguments(ARG "" "" "LINK_COMPONENTS" ${ARGN})
+  add_executable(${name} ${ARG_UNPARSED_ARGUMENTS})
+  llvm_update_compile_flags(${name})
+
+  if(ARG_LINK_COMPONENTS)
+    if(LLVM_LINK_LLVM_DYLIB)
+      set(llvm_libs LLVM)
+    else()
+      llvm_map_components_to_libnames(llvm_libs ${ARG_LINK_COMPONENTS})
+    endif()
+    target_link_libraries(${name} PRIVATE ${llvm_libs})
+  endif()
+
+  set_target_properties(${name} PROPERTIES
+                        RUNTIME_OUTPUT_DIRECTORY "${LLVM_RUNTIME_OUTPUT_INTDIR}"
+                        INSTALL_RPATH "${OFFLOAD_TOOLS_INSTALL_RPATH}")
+
+  # Multilib builds share the output and install paths with the base build.
+  if(OFFLOAD_LIBDIR_SUBDIR)
+    set_target_properties(${name} PROPERTIES EXCLUDE_FROM_ALL ON)
+    return()
+  endif()
+
+  install(TARGETS ${name}
+          COMPONENT offload
+          RUNTIME DESTINATION "${OFFLOAD_TOOLS_INSTALL_DIR}")
+  add_dependencies(offload ${name})
+endfunction()
 
 add_subdirectory(deviceinfo)
-add_subdirectory(kernelreplay)
+
+# kernelreplay requires libomptarget which is not available on Windows
+if(BUILD_LIBOMPTARGET)
+  add_subdirectory(kernelreplay)
+endif()

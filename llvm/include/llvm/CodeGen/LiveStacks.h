@@ -30,7 +30,8 @@ class AnalysisUsage;
 class MachineFunction;
 class Module;
 class raw_ostream;
-class TargetRegisterClass;
+class MCRegisterClass;
+using TargetRegisterClass = MCRegisterClass;
 class TargetRegisterInfo;
 
 class LiveStacks {

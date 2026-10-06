@@ -22,6 +22,7 @@
 #include "llvm/ADT/APSInt.h"
 #include "llvm/ADT/FoldingSet.h"
 #include "llvm/ADT/ImmutableList.h"
+#include "llvm/ADT/ImmutableSet.h"
 #include "llvm/ADT/PointerUnion.h"
 #include "llvm/ADT/STLForwardCompat.h"
 #include "llvm/ADT/iterator_range.h"
@@ -99,7 +100,12 @@ public:
     ID.AddInteger(llvm::to_underlying(getKind()));
   }
 
-  bool operator==(SVal R) const { return Kind == R.Kind && Data == R.Data; }
+  bool operator<(SVal R) const {
+    return std::tie(Data, Kind) < std::tie(R.Data, R.Kind);
+  }
+  bool operator==(SVal R) const {
+    return std::tie(Data, Kind) == std::tie(R.Data, R.Kind);
+  }
   bool operator!=(SVal R) const { return !(*this == R); }
 
   bool isUnknown() const { return getKind() == UnknownValKind; }
@@ -529,6 +535,29 @@ public:
 } // namespace clang
 
 namespace llvm {
+// Allow SVal to be used as a key in ImmutableSet / ImmutableMap.
+template <>
+struct ImutContainerInfo<clang::ento::SVal>
+    : public ImutProfileInfo<clang::ento::SVal> {
+  using value_type = clang::ento::SVal;
+  using value_type_ref = clang::ento::SVal;
+  using key_type = value_type;
+  using key_type_ref = value_type_ref;
+  using data_type = bool;
+  using data_type_ref = bool;
+
+  static key_type_ref KeyOfValue(value_type_ref D) { return D; }
+  static data_type_ref DataOfValue(value_type_ref) { return true; }
+
+  static bool isEqual(clang::ento::SVal L, clang::ento::SVal R) {
+    return L == R;
+  }
+
+  static bool isLess(clang::ento::SVal L, clang::ento::SVal R) { return L < R; }
+
+  static bool isDataEqual(data_type_ref, data_type_ref) { return true; }
+};
+
 template <typename To, typename From>
 struct CastInfo<
     To, From,

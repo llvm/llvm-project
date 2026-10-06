@@ -418,7 +418,7 @@ private:
 
   AppleObjCRuntimeV2(Process *process, const lldb::ModuleSP &objc_module_sp);
 
-  ObjCISA GetPointerISA(ObjCISA isa);
+  ObjCISA GetPointerISA(ObjCISA isa) override;
 
   lldb::addr_t GetISAHashTablePointer();
 

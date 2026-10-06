@@ -394,7 +394,7 @@ bool X86MachObjectWriter::recordScatteredRelocation(MachObjectWriter *Writer,
     // we're hosed. It's an unfortunate limitation of the MachO format.
     if (FixupOffset > 0xffffff) {
       char Buffer[32];
-      format("0x%x", FixupOffset).print(Buffer, sizeof(Buffer));
+      format("0x%x", FixupOffset).snprint(Buffer, sizeof(Buffer));
       reportError(Fixup.getLoc(), Twine("Section too large, can't encode "
                                         "r_address (") +
                                       Buffer +

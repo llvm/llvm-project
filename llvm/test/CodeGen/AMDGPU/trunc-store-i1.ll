@@ -1,5 +1,5 @@
-; RUN: llc -mtriple=amdgcn < %s | FileCheck -enable-var-scope --check-prefix=GCN %s
-; RUN: llc -mtriple=amdgcn -mcpu=tonga -mattr=-flat-for-global < %s | FileCheck -enable-var-scope --check-prefix=GCN %s
+; RUN: llc -mtriple=amdgpu6.00 < %s | FileCheck -enable-var-scope --check-prefix=GCN %s
+; RUN: llc -mtriple=amdgpu8.02 -mattr=-flat-for-global < %s | FileCheck -enable-var-scope --check-prefix=GCN %s
 
 
 ; GCN-LABEL: {{^}}global_truncstore_i32_to_i1:

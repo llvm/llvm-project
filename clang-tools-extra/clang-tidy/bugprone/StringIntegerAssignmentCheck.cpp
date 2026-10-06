@@ -140,7 +140,7 @@ void StringIntegerAssignmentCheck::check(
           .isLikelyCharExpression(Argument))
     return;
 
-  auto Diag =
+  const auto Diag =
       diag(Loc, "an integer is interpreted as a character code when assigning "
                 "it to a string; if this is intended, cast the integer to the "
                 "appropriate character type; if you want a string "

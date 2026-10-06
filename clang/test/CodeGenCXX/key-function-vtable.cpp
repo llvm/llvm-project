@@ -1,5 +1,5 @@
-// RUN: %clang_cc1 -triple x86_64-none-linux-gnu %s -emit-llvm -o - | FileCheck %s
-// RUN: %clang_cc1 -triple arm-apple-darwin %s -emit-llvm -o - | FileCheck %s
+// RUN: %clang_cc1 -triple x86_64-none-linux-gnu %s -emit-llvm -o - | FileCheck %s --check-prefixes=CHECK,LINUX
+// RUN: %clang_cc1 -triple arm-apple-darwin %s -emit-llvm -o - | FileCheck %s --check-prefixes=CHECK,DARWIN
 
 // Simple key function test
 struct testa { virtual void a(); };
@@ -43,9 +43,13 @@ inline void X1::f() { }
 
 void use_X1() { X1 x1; }
 
-// CHECK-DAG: @_ZTV2X1 = linkonce_odr constant
+// LINUX-DAG: @_ZTV2X1 = linkonce_odr constant
+// DARWIN-DAG: @_ZTV2X1 = linkonce_odr unnamed_addr constant
 // CHECK-DAG: @_ZTV5testa ={{.*}}constant { [3 x ptr] } { [3 x ptr] [ptr null
-// CHECK-DAG: @_ZTV5testc = linkonce_odr constant { [3 x ptr] } { [3 x ptr] [ptr null
-// CHECK-DAG: @_ZTV5testb = linkonce_odr constant { [3 x ptr] } { [3 x ptr] [ptr null
-// CHECK-DAG: @_ZTV5teste = linkonce_odr constant { [3 x ptr] } { [3 x ptr] [ptr null
+// LINUX-DAG: @_ZTV5testc = linkonce_odr constant { [3 x ptr] } { [3 x ptr] [ptr null
+// DARWIN-DAG: @_ZTV5testc = linkonce_odr unnamed_addr constant { [3 x ptr] } { [3 x ptr] [ptr null
+// LINUX-DAG: @_ZTV5testb = linkonce_odr constant { [3 x ptr] } { [3 x ptr] [ptr null
+// DARWIN-DAG: @_ZTV5testb = linkonce_odr unnamed_addr constant { [3 x ptr] } { [3 x ptr] [ptr null
+// LINUX-DAG: @_ZTV5teste = linkonce_odr constant { [3 x ptr] } { [3 x ptr] [ptr null
+// DARWIN-DAG: @_ZTV5teste = linkonce_odr unnamed_addr constant { [3 x ptr] } { [3 x ptr] [ptr null
 // CHECK-DAG: @_ZTVN12_GLOBAL__N_15testgE = internal constant { [3 x ptr] } { [3 x ptr] [ptr null

@@ -20,6 +20,7 @@
 #include "llvm/ADT/StringRef.h"
 #include "llvm/Support/MemoryBuffer.h"
 #include <cstdint>
+#include <optional>
 #include <string>
 
 namespace Fortran::frontend {
@@ -273,6 +274,12 @@ struct FrontendOptions {
   /// The output file, if any.
   std::string outputFile;
 
+  /// The dependency-file (.d) to write, if any (-dependency-file).
+  std::string dependencyOutputFile;
+
+  /// Target name(s) for the dependency rule (-MT), already quoted for Make.
+  std::vector<std::string> dependencyTargets;
+
   /// The frontend action to perform.
   frontend::ActionKind programAction = ParseSyntaxOnly;
 
@@ -283,8 +290,9 @@ struct FrontendOptions {
   std::vector<Fortran::lower::EnvironmentDefault> envDefaults;
 
   // The column after which characters are ignored in fixed form lines in the
-  // source file.
-  int fixedFormColumns = 72;
+  // source file. std::nullopt means there is no limit
+  // (-ffixed-line-length=none or -ffixed-line-length=0).
+  std::optional<int> fixedFormColumns = 72;
 
   /// The input kind, either specified via -x argument or deduced from the input
   /// file name.

@@ -50,6 +50,7 @@
 #include "llvm/Analysis/DependenceAnalysis.h"
 #include "llvm/Analysis/DomTreeUpdater.h"
 #include "llvm/Analysis/LoopInfo.h"
+#include "llvm/Analysis/LoopNestAnalysis.h"
 #include "llvm/Analysis/OptimizationRemarkEmitter.h"
 #include "llvm/Analysis/PostDominators.h"
 #include "llvm/Analysis/ScalarEvolution.h"
@@ -63,6 +64,7 @@
 #include "llvm/Transforms/Utils/CodeMoverUtils.h"
 #include "llvm/Transforms/Utils/LoopPeel.h"
 #include "llvm/Transforms/Utils/LoopSimplify.h"
+#include "llvm/Transforms/Utils/LoopUtils.h"
 #include <list>
 
 using namespace llvm;
@@ -403,6 +405,86 @@ printFusionCandidates(const FusionCandidateCollection &FusionCandidates) {
 }
 #endif // NDEBUG
 
+/// Fold away an empty block on the "skip" edge of \p L's loop guard, if any.
+///
+/// Loop::getLoopGuardBranch() recognizes a guard only when the non-loop
+/// successor of the guard branch is the block that the loop exit flows into
+/// (looking through empty blocks on the exit side only). Passes such as
+/// JumpThreading can leave an empty forwarding block on the guard side
+/// instead:
+///
+///   Guard:    br %c, %Preheader, %Skip
+///   Skip:     br %Merge             ; empty, only reachable from Guard
+///   ...
+///   Exit:     br %Merge
+///   Merge:    ...
+///
+/// which makes getLoopGuardBranch() treat \p L as unguarded.
+/// This function folds %Skip: it redirects the guard branch to %Merge and
+/// deletes the empty %Skip block. Loop fusion calls this on every loop before
+/// collecting fusion candidates so that a guarded loop left in this shape by
+/// an earlier pass is still recognized as guarded and as adjacent to its
+/// neighbor. Returns true if the CFG was changed.
+static bool simplifyLoopGuard(Loop *L, DomTreeUpdater &DTU, LoopInfo &LI,
+                              ScalarEvolution &SE) {
+  if (!L->isLoopSimplifyForm() || !L->isRotatedForm())
+    return false;
+
+  BasicBlock *Preheader = L->getLoopPreheader();
+  BasicBlock *ExitBlock = L->getUniqueExitBlock();
+  if (!ExitBlock)
+    return false;
+
+  BasicBlock *GuardBB = Preheader->getUniquePredecessor();
+  if (!GuardBB)
+    return false;
+
+  auto *GuardBI = dyn_cast<CondBrInst>(GuardBB->getTerminator());
+  if (!GuardBI)
+    return false;
+
+  BasicBlock *SkipBB = GuardBI->getSuccessor(0) == Preheader
+                           ? GuardBI->getSuccessor(1)
+                           : GuardBI->getSuccessor(0);
+  if (SkipBB == Preheader)
+    return false;
+
+  // The skip block must contain nothing but an unconditional branch and must
+  // be reachable only from the guard, so that removing it cannot change any
+  // other path.
+  if (SkipBB->size() != 1 || !isa<UncondBrInst>(SkipBB->getTerminator()) ||
+      SkipBB->hasAddressTaken() || SkipBB->getUniquePredecessor() != GuardBB)
+    return false;
+
+  BasicBlock *MergeBB = SkipBB->getUniqueSuccessor();
+  if (!MergeBB || MergeBB == SkipBB || MergeBB == GuardBB ||
+      LI.isLoopHeader(MergeBB))
+    return false;
+
+  // The loop exit must flow into the same block; otherwise the branch is
+  // not a loop guard.
+  if (&LoopNest::skipEmptyBlockUntil(ExitBlock, MergeBB,
+                                     /*CheckUniquePred=*/true) != MergeBB)
+    return false;
+
+  LLVM_DEBUG(dbgs() << "Removing empty guard skip block " << SkipBB->getName()
+                    << " of loop " << L->getHeader()->getName() << "\n");
+
+  MergeBB->replacePhiUsesWith(SkipBB, GuardBB);
+  GuardBI->replaceSuccessorWith(SkipBB, MergeBB);
+  SkipBB->getTerminator()->eraseFromParent();
+  new UnreachableInst(SkipBB->getContext(), SkipBB);
+
+  DTU.applyUpdates({{DominatorTree::Delete, GuardBB, SkipBB},
+                    {DominatorTree::Delete, SkipBB, MergeBB},
+                    {DominatorTree::Insert, GuardBB, MergeBB}});
+  LI.removeBlock(SkipBB);
+  DTU.deleteBB(SkipBB);
+  DTU.flush();
+
+  return true;
+}
+
 namespace {
 
 /// Collect all loops in function at the same nest level, starting at the
@@ -542,7 +624,7 @@ public:
 #ifndef NDEBUG
     assert(DT.verify());
     assert(PDT.verify());
-    LI.verify(DT);
+    LI.verify();
     SE.verify();
 #endif
 
@@ -791,20 +873,21 @@ private:
           continue;
         }
 
-        // If TCDifference is not set or if it is zero, peeling is not needed.
-        // In this case we must ensure if the loops are guarded the guards
-        // are identical.
-        if (!TCDifference || *TCDifference == 0) {
-          if (FC0.GuardBranch && FC1.GuardBranch &&
-              !haveIdenticalGuards(FC0, FC1)) {
-            LLVM_DEBUG(dbgs() << "Fusion candidates do not have identical "
-                                 "guards. Not Fusing.\n");
-            ++NonIdenticalGuards;
-            reportLoopFusion<OptimizationRemarkMissed>(
-                FC0, FC1, "NonIdenticalGuards",
-                "Candidates have different guards");
-            continue;
-          }
+        // If Loops are guarded, we expect the guards to be identical.
+        // Currently peeling is supported only for loops with constant
+        // iteration counts. If two loops have different loop guards
+        // there is no mechanism in loop fusion to make their fusion legal.
+        // The trivial case where the guards compare two constant values can be
+        // ignored. Those guards will be optimized away by other passes.
+        if (FC0.GuardBranch && FC1.GuardBranch &&
+            !haveIdenticalGuards(FC0, FC1)) {
+          LLVM_DEBUG(dbgs() << "Fusion candidates do not have identical "
+                               "guards. Not Fusing.\n");
+          ++NonIdenticalGuards;
+          reportLoopFusion<OptimizationRemarkMissed>(
+              FC0, FC1, "NonIdenticalGuards",
+              "Candidates have different guards");
+          continue;
         }
 
         if (FC0.GuardBranch) {
@@ -1113,6 +1196,14 @@ private:
     auto DepResult = DI.depends(&I0, &I1);
     if (!DepResult)
       return true;
+    // If two stores write the same SSA value, fusion is safe regardless of
+    // aliasing - writing the same value twice is idempotent.
+    if (isa<StoreInst>(I0) && isa<StoreInst>(I1)) {
+      auto *S0 = cast<StoreInst>(&I0);
+      auto *S1 = cast<StoreInst>(&I1);
+      if (S0->getValueOperand() == S1->getValueOperand())
+        return true;
+    }
 #ifndef NDEBUG
     if (VerboseFusionDebugging) {
       LLVM_DEBUG(dbgs() << "DA res: "; DepResult->dump(dbgs());
@@ -1157,6 +1248,20 @@ private:
         NumDA++;
         return true;
       }
+      // Same-iteration scalar flow/anti dependences between adjacent loops are
+      // preserved by placing FC0's body before FC1's body in the fused loop.
+      // This enables fusing accumulation chains such as:
+      //   for (i)
+      //     A[i] = ...;
+      //   for (i)
+      //     A[i] += ...;
+      unsigned CurDir = DepResult->getDirection(CurLoopLevel, true);
+      if (!(CurDir & Dependence::DVEntry::GT) &&
+          !(CurDir & Dependence::DVEntry::LT)) {
+        LLVM_DEBUG(dbgs() << "Safe to fuse same-iteration scalar dependence\n");
+        NumDA++;
+        return true;
+      }
       LLVM_DEBUG(
           dbgs() << "Not safe to fuse due to a scalar flow dependency\n");
       return false;
@@ -1192,6 +1297,16 @@ private:
     assert(FC0.L->getLoopDepth() == FC1.L->getLoopDepth());
     assert(DT.dominates(FC0.getEntryBlock(), FC1.getEntryBlock()));
 
+    // Walk through all uses in FC1. For each use, find the reaching def.
+    // If the def is located in FC0 then it is not safe to fuse.
+    for (BasicBlock *BB : FC1.L->blocks())
+      for (Instruction &I : *BB)
+        for (auto &Op : I.operands())
+          if (Instruction *Def = dyn_cast<Instruction>(Op))
+            if (FC0.L->contains(Def->getParent())) {
+              return false;
+            }
+
     for (Instruction *WriteL0 : FC0.MemWrites) {
       for (Instruction *WriteL1 : FC1.MemWrites)
         if (!dependencesAllowFusion(FC0, FC1, *WriteL0, *WriteL1)) {
@@ -1210,16 +1325,6 @@ private:
         if (!dependencesAllowFusion(FC0, FC1, *ReadL0, *WriteL1)) {
           return false;
         }
-
-    // Walk through all uses in FC1. For each use, find the reaching def. If the
-    // def is located in FC0 then it is not safe to fuse.
-    for (BasicBlock *BB : FC1.L->blocks())
-      for (Instruction &I : *BB)
-        for (auto &Op : I.operands())
-          if (Instruction *Def = dyn_cast<Instruction>(Op))
-            if (FC0.L->contains(Def->getParent())) {
-              return false;
-            }
 
     return true;
   }
@@ -1354,6 +1459,121 @@ private:
     }
   }
 
+  /// Move FC1's header PHIs into FC0's header, insert the loop-carried PHIs
+  /// needed to keep SSA valid when FC0 exits without taking its back-edge, and
+  /// rewire both latches to form the fused loop. Latch dominator-tree updates
+  /// are appended to \p TreeUpdates for the caller to apply.
+  void rewireFusedHeaderPHIsAndLatches(
+      const FusionCandidate &FC0, const FusionCandidate &FC1,
+      const SmallVectorImpl<PHINode *> &OriginalFC0PHIs,
+      SmallVectorImpl<DominatorTree::UpdateType> &TreeUpdates) {
+    // Moves the phi nodes from the second to the first loops header block.
+    while (PHINode *PHI = dyn_cast<PHINode>(&FC1.Header->front())) {
+      if (SE.isSCEVable(PHI->getType()))
+        SE.forgetValue(PHI);
+      if (PHI->hasNUsesOrMore(1))
+        PHI->moveBefore(FC0.Header->getFirstInsertionPt());
+      else
+        PHI->eraseFromParent();
+    }
+
+    // Introduce new phi nodes in the second loop header to ensure
+    // exiting the first and jumping to the header of the second does not break
+    // the SSA property of the phis originally in the first loop. See also the
+    // comment above.
+    BasicBlock::iterator L1HeaderIP = FC1.Header->begin();
+    for (PHINode *LCPHI : OriginalFC0PHIs) {
+      int L1LatchBBIdx = LCPHI->getBasicBlockIndex(FC1.Latch);
+      assert(L1LatchBBIdx >= 0 &&
+             "Expected loop carried value to be rewired at this point!");
+
+      Value *LCV = LCPHI->getIncomingValue(L1LatchBBIdx);
+
+      PHINode *L1HeaderPHI =
+          PHINode::Create(LCV->getType(), 2, LCPHI->getName() + ".afterFC0");
+      L1HeaderPHI->insertBefore(L1HeaderIP);
+      L1HeaderPHI->addIncoming(LCV, FC0.Latch);
+      L1HeaderPHI->addIncoming(PoisonValue::get(LCV->getType()),
+                               FC0.ExitingBlock);
+
+      LCPHI->setIncomingValue(L1LatchBBIdx, L1HeaderPHI);
+    }
+
+    // Replace latch terminator destinations.
+    FC0.Latch->getTerminator()->replaceUsesOfWith(FC0.Header, FC1.Header);
+    FC1.Latch->getTerminator()->replaceUsesOfWith(FC1.Header, FC0.Header);
+
+    // Modify the latch branch of FC0 to be unconditional as both successors of
+    // the branch are the same.
+    simplifyLatchBranch(FC0);
+
+    // If FC0.Latch and FC0.ExitingBlock are the same then we have already
+    // performed the updates above.
+    if (FC0.Latch != FC0.ExitingBlock)
+      TreeUpdates.emplace_back(DominatorTree::UpdateType(
+          DominatorTree::Insert, FC0.Latch, FC1.Header));
+
+    TreeUpdates.emplace_back(DominatorTree::UpdateType(DominatorTree::Delete,
+                                                       FC0.Latch, FC0.Header));
+    TreeUpdates.emplace_back(DominatorTree::UpdateType(DominatorTree::Insert,
+                                                       FC1.Latch, FC0.Header));
+    TreeUpdates.emplace_back(DominatorTree::UpdateType(DominatorTree::Delete,
+                                                       FC1.Latch, FC1.Header));
+  }
+
+  /// Forget cached SCEV state for both loops, move all of FC1's blocks and
+  /// child loops into FC0, erase the now-empty FC1, and merge the latches.
+  /// Returns the fused loop (FC0.L).
+  Loop *finalizeFusedLoop(const FusionCandidate &FC0,
+                          const FusionCandidate &FC1) {
+    // Is there a way to keep SE up-to-date so we don't need to forget the loops
+    // and rebuild the information in subsequent passes of fusion?
+    // Note: Need to forget the loops before merging the loop latches, as
+    // mergeLatch may remove the only block in FC1.
+    SE.forgetLoop(FC1.L);
+    SE.forgetLoop(FC0.L);
+
+    // Merge the loops.
+    SmallVector<BasicBlock *, 8> Blocks(FC1.L->blocks());
+    for (BasicBlock *BB : Blocks) {
+      FC0.L->addBlockEntry(BB);
+      FC1.L->removeBlockFromLoop(BB);
+      if (LI.getLoopFor(BB) != FC1.L)
+        continue;
+      LI.changeLoopFor(BB, FC0.L);
+    }
+    while (!FC1.L->isInnermost()) {
+      const auto &ChildLoopIt = FC1.L->begin();
+      Loop *ChildLoop = *ChildLoopIt;
+      FC1.L->removeChildLoop(ChildLoopIt);
+      FC0.L->addChildLoop(ChildLoop);
+    }
+
+    // Delete the now empty loop L1.
+    LI.erase(FC1.L);
+
+    // Forget block dispositions as well, so that there are no dangling
+    // pointers to erased/free'ed blocks. It should be done after mergeLatch()
+    // since merging the latches may affect the dispositions.
+    SE.forgetBlockAndLoopDispositions();
+
+    // Move instructions from FC0.Latch to FC1.Latch.
+    // Note: mergeLatch requires an updated DT.
+    mergeLatch(FC0, FC1);
+
+#ifndef NDEBUG
+    assert(!verifyFunction(*FC0.Header->getParent(), &errs()));
+    assert(DT.verify(DominatorTree::VerificationLevel::Fast));
+    assert(PDT.verify());
+    LI.verify();
+    SE.verify();
+#endif
+
+    LLVM_DEBUG(dbgs() << "Fusion done:\n");
+
+    return FC0.L;
+  }
+
   /// Fuse two fusion candidates, creating a new fused loop.
   ///
   /// This method contains the mechanics of fusing two loops, represented by \p
@@ -1472,58 +1692,7 @@ private:
     TreeUpdates.emplace_back(DominatorTree::UpdateType(
         DominatorTree::Delete, FC1.Preheader, FC1.Header));
 
-    // Moves the phi nodes from the second to the first loops header block.
-    while (PHINode *PHI = dyn_cast<PHINode>(&FC1.Header->front())) {
-      if (SE.isSCEVable(PHI->getType()))
-        SE.forgetValue(PHI);
-      if (PHI->hasNUsesOrMore(1))
-        PHI->moveBefore(FC0.Header->getFirstInsertionPt());
-      else
-        PHI->eraseFromParent();
-    }
-
-    // Introduce new phi nodes in the second loop header to ensure
-    // exiting the first and jumping to the header of the second does not break
-    // the SSA property of the phis originally in the first loop. See also the
-    // comment above.
-    BasicBlock::iterator L1HeaderIP = FC1.Header->begin();
-    for (PHINode *LCPHI : OriginalFC0PHIs) {
-      int L1LatchBBIdx = LCPHI->getBasicBlockIndex(FC1.Latch);
-      assert(L1LatchBBIdx >= 0 &&
-             "Expected loop carried value to be rewired at this point!");
-
-      Value *LCV = LCPHI->getIncomingValue(L1LatchBBIdx);
-
-      PHINode *L1HeaderPHI =
-          PHINode::Create(LCV->getType(), 2, LCPHI->getName() + ".afterFC0");
-      L1HeaderPHI->insertBefore(L1HeaderIP);
-      L1HeaderPHI->addIncoming(LCV, FC0.Latch);
-      L1HeaderPHI->addIncoming(PoisonValue::get(LCV->getType()),
-                               FC0.ExitingBlock);
-
-      LCPHI->setIncomingValue(L1LatchBBIdx, L1HeaderPHI);
-    }
-
-    // Replace latch terminator destinations.
-    FC0.Latch->getTerminator()->replaceUsesOfWith(FC0.Header, FC1.Header);
-    FC1.Latch->getTerminator()->replaceUsesOfWith(FC1.Header, FC0.Header);
-
-    // Modify the latch branch of FC0 to be unconditional as both successors of
-    // the branch are the same.
-    simplifyLatchBranch(FC0);
-
-    // If FC0.Latch and FC0.ExitingBlock are the same then we have already
-    // performed the updates above.
-    if (FC0.Latch != FC0.ExitingBlock)
-      TreeUpdates.emplace_back(DominatorTree::UpdateType(
-          DominatorTree::Insert, FC0.Latch, FC1.Header));
-
-    TreeUpdates.emplace_back(DominatorTree::UpdateType(DominatorTree::Delete,
-                                                       FC0.Latch, FC0.Header));
-    TreeUpdates.emplace_back(DominatorTree::UpdateType(DominatorTree::Insert,
-                                                       FC1.Latch, FC0.Header));
-    TreeUpdates.emplace_back(DominatorTree::UpdateType(DominatorTree::Delete,
-                                                       FC1.Latch, FC1.Header));
+    rewireFusedHeaderPHIsAndLatches(FC0, FC1, OriginalFC0PHIs, TreeUpdates);
 
     // Update DT/PDT
     DTU.applyUpdates(TreeUpdates);
@@ -1537,52 +1706,7 @@ private:
 
     DTU.flush();
 
-    // Is there a way to keep SE up-to-date so we don't need to forget the loops
-    // and rebuild the information in subsequent passes of fusion?
-    // Note: Need to forget the loops before merging the loop latches, as
-    // mergeLatch may remove the only block in FC1.
-    SE.forgetLoop(FC1.L);
-    SE.forgetLoop(FC0.L);
-
-    // Merge the loops.
-    SmallVector<BasicBlock *, 8> Blocks(FC1.L->blocks());
-    for (BasicBlock *BB : Blocks) {
-      FC0.L->addBlockEntry(BB);
-      FC1.L->removeBlockFromLoop(BB);
-      if (LI.getLoopFor(BB) != FC1.L)
-        continue;
-      LI.changeLoopFor(BB, FC0.L);
-    }
-    while (!FC1.L->isInnermost()) {
-      const auto &ChildLoopIt = FC1.L->begin();
-      Loop *ChildLoop = *ChildLoopIt;
-      FC1.L->removeChildLoop(ChildLoopIt);
-      FC0.L->addChildLoop(ChildLoop);
-    }
-
-    // Delete the now empty loop L1.
-    LI.erase(FC1.L);
-
-    // Forget block dispositions as well, so that there are no dangling
-    // pointers to erased/free'ed blocks. It should be done after mergeLatch()
-    // since merging the latches may affect the dispositions.
-    SE.forgetBlockAndLoopDispositions();
-
-    // Move instructions from FC0.Latch to FC1.Latch.
-    // Note: mergeLatch requires an updated DT.
-    mergeLatch(FC0, FC1);
-
-#ifndef NDEBUG
-    assert(!verifyFunction(*FC0.Header->getParent(), &errs()));
-    assert(DT.verify(DominatorTree::VerificationLevel::Fast));
-    assert(PDT.verify());
-    LI.verify(DT);
-    SE.verify();
-#endif
-
-    LLVM_DEBUG(dbgs() << "Fusion done:\n");
-
-    return FC0.L;
+    return finalizeFusedLoop(FC0, FC1);
   }
 
   /// Report details on loop fusion opportunities.
@@ -1758,60 +1882,7 @@ private:
     TreeUpdates.emplace_back(DominatorTree::UpdateType(
         DominatorTree::Delete, FC1.Preheader, FC1.Header));
 
-    // Moves the phi nodes from the second to the first loops header block.
-    while (PHINode *PHI = dyn_cast<PHINode>(&FC1.Header->front())) {
-      if (SE.isSCEVable(PHI->getType()))
-        SE.forgetValue(PHI);
-      if (PHI->hasNUsesOrMore(1))
-        PHI->moveBefore(FC0.Header->getFirstInsertionPt());
-      else
-        PHI->eraseFromParent();
-    }
-
-    // Introduce new phi nodes in the second loop header to ensure
-    // exiting the first and jumping to the header of the second does not break
-    // the SSA property of the phis originally in the first loop. See also the
-    // comment above.
-    BasicBlock::iterator L1HeaderIP = FC1.Header->begin();
-    for (PHINode *LCPHI : OriginalFC0PHIs) {
-      int L1LatchBBIdx = LCPHI->getBasicBlockIndex(FC1.Latch);
-      assert(L1LatchBBIdx >= 0 &&
-             "Expected loop carried value to be rewired at this point!");
-
-      Value *LCV = LCPHI->getIncomingValue(L1LatchBBIdx);
-
-      PHINode *L1HeaderPHI =
-          PHINode::Create(LCV->getType(), 2, LCPHI->getName() + ".afterFC0");
-      L1HeaderPHI->insertBefore(L1HeaderIP);
-      L1HeaderPHI->addIncoming(LCV, FC0.Latch);
-      L1HeaderPHI->addIncoming(PoisonValue::get(LCV->getType()),
-                               FC0.ExitingBlock);
-
-      LCPHI->setIncomingValue(L1LatchBBIdx, L1HeaderPHI);
-    }
-
-    // Update the latches
-
-    // Replace latch terminator destinations.
-    FC0.Latch->getTerminator()->replaceUsesOfWith(FC0.Header, FC1.Header);
-    FC1.Latch->getTerminator()->replaceUsesOfWith(FC1.Header, FC0.Header);
-
-    // Modify the latch branch of FC0 to be unconditional as both successors of
-    // the branch are the same.
-    simplifyLatchBranch(FC0);
-
-    // If FC0.Latch and FC0.ExitingBlock are the same then we have already
-    // performed the updates above.
-    if (FC0.Latch != FC0.ExitingBlock)
-      TreeUpdates.emplace_back(DominatorTree::UpdateType(
-          DominatorTree::Insert, FC0.Latch, FC1.Header));
-
-    TreeUpdates.emplace_back(DominatorTree::UpdateType(DominatorTree::Delete,
-                                                       FC0.Latch, FC0.Header));
-    TreeUpdates.emplace_back(DominatorTree::UpdateType(DominatorTree::Insert,
-                                                       FC1.Latch, FC0.Header));
-    TreeUpdates.emplace_back(DominatorTree::UpdateType(DominatorTree::Delete,
-                                                       FC1.Latch, FC1.Header));
+    rewireFusedHeaderPHIsAndLatches(FC0, FC1, OriginalFC0PHIs, TreeUpdates);
 
     // All done
     // Apply the updates to the Dominator Tree and cleanup.
@@ -1834,52 +1905,7 @@ private:
     DTU.deleteBB(FC0.ExitBlock);
     DTU.flush();
 
-    // Is there a way to keep SE up-to-date so we don't need to forget the loops
-    // and rebuild the information in subsequent passes of fusion?
-    // Note: Need to forget the loops before merging the loop latches, as
-    // mergeLatch may remove the only block in FC1.
-    SE.forgetLoop(FC1.L);
-    SE.forgetLoop(FC0.L);
-
-    // Merge the loops.
-    SmallVector<BasicBlock *, 8> Blocks(FC1.L->blocks());
-    for (BasicBlock *BB : Blocks) {
-      FC0.L->addBlockEntry(BB);
-      FC1.L->removeBlockFromLoop(BB);
-      if (LI.getLoopFor(BB) != FC1.L)
-        continue;
-      LI.changeLoopFor(BB, FC0.L);
-    }
-    while (!FC1.L->isInnermost()) {
-      const auto &ChildLoopIt = FC1.L->begin();
-      Loop *ChildLoop = *ChildLoopIt;
-      FC1.L->removeChildLoop(ChildLoopIt);
-      FC0.L->addChildLoop(ChildLoop);
-    }
-
-    // Delete the now empty loop L1.
-    LI.erase(FC1.L);
-
-    // Forget block dispositions as well, so that there are no dangling
-    // pointers to erased/free'ed blocks. It should be done after mergeLatch()
-    // since merging the latches may affect the dispositions.
-    SE.forgetBlockAndLoopDispositions();
-
-    // Move instructions from FC0.Latch to FC1.Latch.
-    // Note: mergeLatch requires an updated DT.
-    mergeLatch(FC0, FC1);
-
-#ifndef NDEBUG
-    assert(!verifyFunction(*FC0.Header->getParent(), &errs()));
-    assert(DT.verify(DominatorTree::VerificationLevel::Fast));
-    assert(PDT.verify());
-    LI.verify(DT);
-    SE.verify();
-#endif
-
-    LLVM_DEBUG(dbgs() << "Fusion done:\n");
-
-    return FC0.L;
+    return finalizeFusedLoop(FC0, FC1);
   }
 };
 } // namespace
@@ -1898,10 +1924,15 @@ PreservedAnalyses LoopFusePass::run(Function &F, FunctionAnalysisManager &AM) {
   // pass. Added only for new PM since the legacy PM has already added
   // LoopSimplify pass as a dependency.
   bool Changed = false;
+  DomTreeUpdater DTU(&DT, DomTreeUpdater::UpdateStrategy::Lazy);
   for (auto &L : LI) {
     Changed |=
         simplifyLoop(L, &DT, &LI, &SE, &AC, nullptr, false /* PreserveLCSSA */);
   }
+  for (Loop *L : LI.getLoopsInPreorder()) {
+    Changed |= simplifyLoopGuard(L, DTU, LI, SE);
+  }
+
   if (Changed)
     PDT.recalculate(F);
 

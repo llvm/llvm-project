@@ -1,7 +1,7 @@
-// RUN: llvm-mc -triple=amdgcn -mcpu=gfx950 -show-encoding %s | FileCheck -check-prefix=GFX950 %s
-// RUN: not llvm-mc -triple=amdgcn -mcpu=gfx942 %s -filetype=null 2>&1 | FileCheck -check-prefix=ERR %s
-// RUN: not llvm-mc -triple=amdgcn -mcpu=gfx90a %s -filetype=null 2>&1 | FileCheck -check-prefix=ERR %s
-// RUN: not llvm-mc -triple=amdgcn -mcpu=gfx1010 %s -filetype=null 2>&1 | FileCheck -check-prefix=ERR %s
+// RUN: llvm-mc -triple=amdgpu9.50 -show-encoding %s | FileCheck -check-prefix=GFX950 %s
+// RUN: not llvm-mc -triple=amdgpu9.42 %s -filetype=null 2>&1 | FileCheck -check-prefix=ERR %s
+// RUN: not llvm-mc -triple=amdgpu9.0a %s -filetype=null 2>&1 | FileCheck -check-prefix=ERR %s
+// RUN: not llvm-mc -triple=amdgpu10.10 %s -filetype=null 2>&1 | FileCheck -check-prefix=ERR %s
 
 // cbsz = SrcA
 // blgp = SrcB

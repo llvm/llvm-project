@@ -257,7 +257,7 @@ void FileSystem::Resolve(FileSpec &file_spec, bool force_make_absolute) {
   Resolve(path, force_make_absolute);
 
   // Update the FileSpec with the resolved path.
-  if (file_spec.GetFilename().IsEmpty())
+  if (file_spec.GetFilename().empty())
     file_spec.SetDirectory(path);
   else
     file_spec.SetPath(path);
@@ -318,17 +318,17 @@ FileSystem::CreateDataBuffer(const FileSpec &file_spec, uint64_t size,
 
 bool FileSystem::ResolveExecutableLocation(FileSpec &file_spec) {
   // If the directory is set there's nothing to do.
-  ConstString directory = file_spec.GetDirectory();
-  if (directory)
+  llvm::StringRef directory = file_spec.GetDirectory();
+  if (!directory.empty())
     return false;
 
   // We cannot look for a file if there's no file name.
-  ConstString filename = file_spec.GetFilename();
-  if (!filename)
+  llvm::StringRef filename = file_spec.GetFilename();
+  if (filename.empty())
     return false;
 
   // Search for the file on the host.
-  const std::string filename_str(filename.GetCString());
+  const std::string filename_str(filename);
   llvm::ErrorOr<std::string> error_or_path =
       llvm::sys::findProgramByName(filename_str);
   if (!error_or_path)

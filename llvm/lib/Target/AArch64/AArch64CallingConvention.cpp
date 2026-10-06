@@ -221,6 +221,14 @@ static bool CC_AArch64_Custom_Block(unsigned &ValNo, MVT &ValVT, MVT &LocVT,
   return finishStackBlock(PendingMembers, LocVT, ArgFlags, State, SlotAlign);
 }
 
+static bool CC_AArch64_AnyReg_Error(unsigned &, MVT &, MVT &,
+                                    CCValAssign::LocInfo &, ISD::ArgFlagsTy &,
+                                    CCState &) {
+  reportFatalUsageError("the anyregcc calling convention is only supported by "
+                        "the stackmap and patchpoint intrinsics");
+}
+
 // TableGen provides definitions of the calling convention analysis entry
 // points.
+#define GET_CALLING_CONV_IMPL
 #include "AArch64GenCallingConv.inc"

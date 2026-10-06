@@ -1,5 +1,5 @@
-; RUN: llc -mtriple=amdgcn -mcpu=gfx942 < %s | FileCheck -enable-var-scope --check-prefix=GCN %s
-; RUN: llc -global-isel -new-reg-bank-select -mtriple=amdgcn -mcpu=gfx942 < %s | FileCheck -enable-var-scope --check-prefix=GCN %s
+; RUN: llc -mtriple=amdgpu9.42 < %s | FileCheck -enable-var-scope --check-prefix=GCN %s
+; RUN: llc -global-isel -mtriple=amdgpu9.42 < %s | FileCheck -enable-var-scope --check-prefix=GCN %s
 
 declare <4 x i32> @llvm.amdgcn.mfma.i32.16x16x32.i8(i64, i64, <4 x i32>, i32, i32, i32)
 declare <16 x i32> @llvm.amdgcn.mfma.i32.32x32x16.i8(i64, i64, <16 x i32>, i32, i32, i32)

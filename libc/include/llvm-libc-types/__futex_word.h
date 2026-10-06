@@ -9,7 +9,7 @@
 #ifndef LLVM_LIBC_TYPES___FUTEX_WORD_H
 #define LLVM_LIBC_TYPES___FUTEX_WORD_H
 
-#include "__llvm-libc-common.h"
+#include "../__llvm-libc-common.h"
 
 typedef struct {
   // Futex word should be aligned appropriately to allow target atomic

@@ -7,7 +7,7 @@ define i64 @src(i32 %a) {
 ; X86-SAME: i32 [[A:%.*]]) {
 ; X86-NEXT:  [[ENTRY:.*:]]
 ; X86-NEXT:    [[TMP0:%.*]] = sext i32 [[A]] to i64
-; X86-NEXT:    [[TMP1:%.*]] = insertelement <4 x i32> poison, i32 [[A]], i32 0
+; X86-NEXT:    [[TMP1:%.*]] = insertelement <4 x i32> poison, i32 [[A]], i64 0
 ; X86-NEXT:    [[TMP2:%.*]] = shufflevector <4 x i32> [[TMP1]], <4 x i32> poison, <4 x i32> zeroinitializer
 ; X86-NEXT:    [[TMP3:%.*]] = sext <4 x i32> [[TMP2]] to <4 x i64>
 ; X86-NEXT:    [[TMP4:%.*]] = add nsw <4 x i64> [[TMP3]], splat (i64 4294967297)
@@ -22,7 +22,7 @@ define i64 @src(i32 %a) {
 ; AARCH64-SAME: i32 [[A:%.*]]) {
 ; AARCH64-NEXT:  [[ENTRY:.*:]]
 ; AARCH64-NEXT:    [[TMP0:%.*]] = sext i32 [[A]] to i64
-; AARCH64-NEXT:    [[TMP1:%.*]] = insertelement <4 x i32> poison, i32 [[A]], i32 0
+; AARCH64-NEXT:    [[TMP1:%.*]] = insertelement <4 x i32> poison, i32 [[A]], i64 0
 ; AARCH64-NEXT:    [[TMP2:%.*]] = shufflevector <4 x i32> [[TMP1]], <4 x i32> poison, <4 x i32> zeroinitializer
 ; AARCH64-NEXT:    [[TMP3:%.*]] = sext <4 x i32> [[TMP2]] to <4 x i64>
 ; AARCH64-NEXT:    [[TMP4:%.*]] = add nsw <4 x i64> [[TMP3]], splat (i64 4294967297)

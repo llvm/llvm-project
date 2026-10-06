@@ -78,7 +78,7 @@ void MachineValueTypeSet::writeToStream(raw_ostream &OS) const {
 TypeSetByHwMode::TypeSetByHwMode(ArrayRef<ValueTypeByHwMode> VTList) {
   // Take the address space from the first type in the list.
   if (!VTList.empty())
-    AddrSpace = VTList[0].PtrAddrSpace;
+    PtrAddrSpace = VTList[0].PtrAddrSpace;
 
   for (const ValueTypeByHwMode &VVT : VTList)
     insert(VVT);
@@ -98,7 +98,7 @@ ValueTypeByHwMode TypeSetByHwMode::getValueTypeByHwMode(bool SkipEmpty) const {
   assert(isValueTypeByHwMode(true) &&
          "The type set has multiple types for at least one HW mode");
   ValueTypeByHwMode VVT;
-  VVT.PtrAddrSpace = AddrSpace;
+  VVT.PtrAddrSpace = PtrAddrSpace;
 
   for (const auto &I : *this) {
     if (SkipEmpty && I.second.empty())
@@ -188,21 +188,14 @@ bool TypeSetByHwMode::assign_if(const TypeSetByHwMode &VTS, Predicate P) {
 }
 
 void TypeSetByHwMode::writeToStream(raw_ostream &OS) const {
-  SmallVector<unsigned, 4> Modes;
-  Modes.reserve(Map.size());
-
-  for (const auto &I : *this)
-    Modes.push_back(I.first);
-  if (Modes.empty()) {
+  if (Map.empty()) {
     OS << "{}";
     return;
   }
-  array_pod_sort(Modes.begin(), Modes.end());
-
   OS << '{';
-  for (unsigned M : Modes) {
-    OS << ' ' << getModeName(M) << ':';
-    get(M).writeToStream(OS);
+  for (const auto &[Mode, Types] : Map) {
+    OS << ' ' << getModeName(Mode) << ':';
+    Types.writeToStream(OS);
   }
   OS << " }";
 }
@@ -658,14 +651,22 @@ bool TypeInfer::EnforceVectorSubVectorTypeIs(TypeSetByHwMode &Vec,
   auto IsSubVec = [](MVT B, MVT P) -> bool {
     if (!B.isVector() || !P.isVector())
       return false;
-    // Logically a <4 x i32> is a valid subvector of <n x 4 x i32>
-    // but until there are obvious use-cases for this, keep the
-    // types separate.
-    if (B.isScalableVector() != P.isScalableVector())
+    // You cannot extract a scalable vector from a fixed length vector.
+    // You cannot insert a scalable vector into a fixed length vector.
+    if (B.isScalableVector() && !P.isScalableVector())
       return false;
     if (B.getVectorElementType() != P.getVectorElementType())
       return false;
-    return B.getVectorMinNumElements() < P.getVectorMinNumElements();
+    // If the subvector and vector are both fixed or both scalable, require
+    // the minimum element count to be smaller.
+    if (B.isScalableVector() == P.isScalableVector())
+      return B.getVectorMinNumElements() < P.getVectorMinNumElements();
+
+    // If the subvector is fixed and the vector is scalable, allow the
+    // minimum number of elements to be less than or equal. Note, if vscale is
+    // known to be greater than 1, the subvector could have more than the
+    // minimum number of elements, but that would probably require custom isel.
+    return B.getVectorMinNumElements() <= P.getVectorMinNumElements();
   };
 
   /// Return true if S has no element (vector type) that T is a sub-vector of,
@@ -3354,6 +3355,10 @@ CodeGenDAGPatterns::CodeGenDAGPatterns(const RecordKeeper &R, bool ExpandHwMode)
     : Records(R), Target(R), Intrinsics(R),
       LegalVTS(Target.getLegalValueTypes()),
       LegalPtrVTS(ComputeLegalPtrTypes()) {
+  IntrinsicIDs.reserve(Intrinsics.size());
+  for (auto [ID, Intrinsic] : enumerate(Intrinsics))
+    IntrinsicIDs.try_emplace(Intrinsic.TheDef, ID);
+
   ParseNodeInfo();
   ParseNodeTransforms();
   ParseComplexPatterns();
@@ -4006,8 +4011,12 @@ void CodeGenDAGPatterns::parseInstructionPattern(const CodeGenInstruction &CGI,
 
     // Check that it exists in InstResults.
     auto InstResultIter = InstResults.find(OpName);
-    if (InstResultIter == InstResults.end() || !InstResultIter->second)
-      I.error("Operand $" + OpName + " does not exist in operand list!");
+    if (InstResultIter == InstResults.end() || !InstResultIter->second) {
+      I.dump();
+      PrintFatalError(CGI.TheDef, "In " + CGI.TheDef->getName() +
+                                      ": Operand $" + OpName +
+                                      " does not exist in operand list!");
+    }
 
     TreePatternNodePtr RNode = InstResultIter->second;
     const Record *R = cast<DefInit>(RNode->getLeafValue())->getDef();
@@ -4234,7 +4243,8 @@ void CodeGenDAGPatterns::AddPatternToMatch(TreePattern *Pattern,
   for (const auto &Entry : SrcNames)
     if (DstNames[Entry.first].first == nullptr &&
         SrcNames[Entry.first].second == 1)
-      Pattern->error("Pattern has dead named input: $" + Entry.first);
+      Pattern->error("Pattern has dead named input: $" + Entry.first +
+                     " (use srcvalue for an intentionally unused input)");
 
   PatternsToMatch.push_back(std::move(PTM));
 }

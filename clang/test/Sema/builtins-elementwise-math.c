@@ -214,6 +214,74 @@ void test_builtin_elementwise_clmul(int i, short s, double d, float4 v,
   vu = __builtin_elementwise_clmul(vu, vu);
 }
 
+void test_builtin_elementwise_pext(int i, short s, double d, float4 v,
+                                   int3 iv, unsigned3 uv, unsigned u,
+                                   unsigned4 vu, int *p) {
+  i = __builtin_elementwise_pext(p, d);
+  // expected-error@-1 {{1st argument must be a scalar or vector of integer types (was 'int *')}}
+
+  struct Foo foo = __builtin_elementwise_pext(i, i);
+  // expected-error@-1 {{initializing 'struct Foo' with an expression of incompatible type 'int'}}
+
+  i = __builtin_elementwise_pext(i);
+  // expected-error@-1 {{too few arguments to function call, expected 2, have 1}}
+
+  i = __builtin_elementwise_pext();
+  // expected-error@-1 {{too few arguments to function call, expected 2, have 0}}
+
+  i = __builtin_elementwise_pext(i, i, i);
+  // expected-error@-1 {{too many arguments to function call, expected 2, have 3}}
+
+  i = __builtin_elementwise_pext(v, v);
+  // expected-error@-1 {{1st argument must be a scalar or vector of integer types (was 'float4' (vector of 4 'float' values))}}
+
+  i = __builtin_elementwise_pext(i, s);
+  // expected-error@-1 {{arguments are of different types ('int' vs 'short')}}
+
+  i = __builtin_elementwise_pext(uv, iv);
+  // expected-error@-1 {{arguments are of different types ('unsigned3' (vector of 3 'unsigned int' values) vs 'int3' (vector of 3 'int' values))}}
+
+  unsigned _BitInt(31) ext; // expected-warning {{'_BitInt' in C17 and earlier is a Clang extension}}
+  ext = __builtin_elementwise_pext(ext, ext);
+
+  u = __builtin_elementwise_pext(u, u);
+  vu = __builtin_elementwise_pext(vu, vu);
+}
+
+void test_builtin_elementwise_pdep(int i, short s, double d, float4 v,
+                                   int3 iv, unsigned3 uv, unsigned u,
+                                   unsigned4 vu, int *p) {
+  i = __builtin_elementwise_pdep(p, d);
+  // expected-error@-1 {{1st argument must be a scalar or vector of integer types (was 'int *')}}
+
+  struct Foo foo = __builtin_elementwise_pdep(i, i);
+  // expected-error@-1 {{initializing 'struct Foo' with an expression of incompatible type 'int'}}
+
+  i = __builtin_elementwise_pdep(i);
+  // expected-error@-1 {{too few arguments to function call, expected 2, have 1}}
+
+  i = __builtin_elementwise_pdep();
+  // expected-error@-1 {{too few arguments to function call, expected 2, have 0}}
+
+  i = __builtin_elementwise_pdep(i, i, i);
+  // expected-error@-1 {{too many arguments to function call, expected 2, have 3}}
+
+  i = __builtin_elementwise_pdep(v, v);
+  // expected-error@-1 {{1st argument must be a scalar or vector of integer types (was 'float4' (vector of 4 'float' values))}}
+
+  i = __builtin_elementwise_pdep(i, s);
+  // expected-error@-1 {{arguments are of different types ('int' vs 'short')}}
+
+  i = __builtin_elementwise_pdep(uv, iv);
+  // expected-error@-1 {{arguments are of different types ('unsigned3' (vector of 3 'unsigned int' values) vs 'int3' (vector of 3 'int' values))}}
+
+  unsigned _BitInt(31) ext; // expected-warning {{'_BitInt' in C17 and earlier is a Clang extension}}
+  ext = __builtin_elementwise_pdep(ext, ext);
+
+  u = __builtin_elementwise_pdep(u, u);
+  vu = __builtin_elementwise_pdep(vu, vu);
+}
+
 void test_builtin_elementwise_max(int i, short s, double d, float4 v, int3 iv, unsigned3 uv, int *p) {
   i = __builtin_elementwise_max(p, d);
   // expected-error@-1 {{1st argument must be a vector, integer or floating-point type (was 'int *')}}

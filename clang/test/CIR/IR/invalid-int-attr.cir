@@ -1,0 +1,35 @@
+// RUN: cir-opt %s -verify-diagnostics -split-input-file
+
+!u8i = !cir.int<u, 8>
+
+module {
+  // expected-error @below {{integer value too large for the given type}}
+  cir.global external @u8_overflow = #cir.int<256> : !u8i
+}
+
+// -----
+
+!s8i = !cir.int<s, 8>
+
+module {
+  // expected-error @below {{integer value too large for the given type}}
+  cir.global external @s8_overflow = #cir.int<128> : !s8i
+}
+
+// -----
+
+!u8i = !cir.int<u, 8>
+
+module {
+  // expected-error @below {{integer value too large for the given type}}
+  cir.global external @u8_negative = #cir.int<-1> : !u8i
+}
+
+// -----
+
+!s8i = !cir.int<s, 8>
+
+module {
+  // expected-error @below {{integer value too large for the given type}}
+  cir.global external @s8_neg_overflow = #cir.int<-129> : !s8i
+}

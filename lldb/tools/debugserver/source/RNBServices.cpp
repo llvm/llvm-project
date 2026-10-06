@@ -88,7 +88,7 @@ int GetProcesses(CFMutableArrayRef plistMutableArray, bool all_users) {
         // Okay, now search backwards from that to see if there is a
         // slash in the name.  Note, even though we got all the args we don't
         // care
-        // because the list data is just a bunch of concatenated null terminated
+        // because the list data is just a bunch of concatenated null-terminated
         // strings
         // so strrchr will start from the end of argv0.
 

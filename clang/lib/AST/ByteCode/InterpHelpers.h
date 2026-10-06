@@ -40,21 +40,54 @@ bool CheckLive(InterpState &S, CodePtr OpPC, const Pointer &Ptr,
                AccessKinds AK);
 
 /// Checks if a pointer is a dummy pointer.
-bool CheckDummy(InterpState &S, CodePtr OpPC, const Block *B, AccessKinds AK);
+bool CheckDummy(InterpState &S, CodePtr OpPC, const Pointer &Ptr,
+                AccessKinds AK);
+bool diagnoseDummy(InterpState &S, CodePtr OpPC, const Pointer &Ptr,
+                   AccessKinds AK);
+
+bool arrayElemPtrOpaque(InterpState &S, CodePtr OpPC, const Pointer &Ptr,
+                        APSInt &&Index, bool AllowReplace = true);
 
 /// Checks if a pointer is in range.
-bool CheckRange(InterpState &S, CodePtr OpPC, const Pointer &Ptr,
-                AccessKinds AK);
+inline bool CheckRange(InterpState &S, CodePtr OpPC, PtrView Ptr,
+                       AccessKinds AK) {
+  if (!Ptr.isOnePastEnd() && !Ptr.isZeroSizeArray())
+    return true;
+  if (S.getLangOpts().CPlusPlus)
+    S.FFDiag(S.Current->getSource(OpPC), diag::note_constexpr_access_past_end)
+        << AK << S.Current->getRange(OpPC);
+
+  return false;
+}
+inline bool CheckRange(InterpState &S, CodePtr OpPC, const Pointer &Ptr,
+                       AccessKinds AK) {
+  if (!Ptr.isOnePastEnd() && !Ptr.isZeroSizeArray())
+    return true;
+  if (S.getLangOpts().CPlusPlus)
+    S.FFDiag(S.Current->getSource(OpPC), diag::note_constexpr_access_past_end)
+        << AK << S.Current->getRange(OpPC);
+
+  return false;
+}
 
 /// Checks if a field from which a pointer is going to be derived is valid.
 bool CheckRange(InterpState &S, CodePtr OpPC, const Pointer &Ptr,
                 CheckSubobjectKind CSK);
 
 /// Checks if a pointer points to a mutable field.
-bool CheckMutable(InterpState &S, CodePtr OpPC, const Pointer &Ptr);
+bool CheckMutable(InterpState &S, CodePtr OpPC, PtrView Ptr,
+                  AccessKinds AK = AK_Read);
+inline bool CheckMutable(InterpState &S, CodePtr OpPC, const Pointer &Ptr,
+                         AccessKinds AK = AK_Read) {
+  if (!Ptr.isBlockPointer())
+    return true;
+  return CheckMutable(S, OpPC, Ptr.view(), AK);
+}
 
 /// Checks if a value can be loaded from a block.
 bool CheckLoad(InterpState &S, CodePtr OpPC, const Pointer &Ptr,
+               AccessKinds AK = AK_Read);
+bool CheckLoad(InterpState &S, CodePtr OpPC, PtrView Ptr,
                AccessKinds AK = AK_Read);
 
 /// Diagnose mismatched new[]/delete or new/delete[] pairs.
@@ -64,10 +97,16 @@ bool CheckNewDeleteForms(InterpState &S, CodePtr OpPC,
                          const Expr *NewExpr);
 
 /// Copy the contents of Src into Dest.
-bool DoMemcpy(InterpState &S, CodePtr OpPC, const Pointer &Src, Pointer &Dest);
+bool DoMemcpy(InterpState &S, CodePtr OpPC, const Pointer &Src, Pointer &Dest,
+              bool Activate = true, bool Diagnose = false);
 
 UnsignedOrNone evaluateBuiltinObjectSize(const ASTContext &ASTCtx,
-                                         unsigned Kind, Pointer &Ptr);
+                                         unsigned Kind, Pointer &Ptr,
+                                         const Expr *E, bool IsDynamic = false);
+
+bool diagnoseUninitialized(InterpState &S, CodePtr OpPC, bool Extern,
+                           const Block *B, Lifetime LT = Lifetime::Started,
+                           AccessKinds AK = AK_Read);
 
 template <typename T>
 bool handleOverflow(InterpState &S, CodePtr OpPC, const T &SrcValue) {
@@ -77,11 +116,19 @@ bool handleOverflow(InterpState &S, CodePtr OpPC, const T &SrcValue) {
 }
 
 inline bool CheckArraySize(InterpState &S, CodePtr OpPC, uint64_t NumElems) {
+  // Descriptors store the number of elements as unsigned.
+  if (NumElems > std::numeric_limits<unsigned>::max()) {
+    S.FFDiag(S.Current->getSource(OpPC), diag::note_constexpr_new_too_large)
+        << NumElems;
+    return false;
+  }
+
   uint64_t Limit = S.getLangOpts().ConstexprStepLimit;
   if (Limit != 0 && NumElems > Limit) {
     S.FFDiag(S.Current->getSource(OpPC),
-             diag::note_constexpr_new_exceeds_limits)
+             diag::note_constexpr_new_exceeds_limits, 1)
         << NumElems << Limit;
+    S.Note(S.Current->getSource(OpPC), diag::note_constexpr_steps);
     return false;
   }
   return true;
@@ -95,21 +142,26 @@ static inline llvm::RoundingMode getRoundingMode(FPOptions FPO) {
 }
 
 inline bool Invalid(InterpState &S, CodePtr OpPC) {
-  const SourceLocation &Loc = S.Current->getLocation(OpPC);
-  S.FFDiag(Loc, diag::note_invalid_subexpr_in_const_expr)
-      << S.Current->getRange(OpPC);
+  if (S.diagnosing())
+    S.FFDiag(S.Current->getSource(OpPC),
+             diag::note_invalid_subexpr_in_const_expr)
+        << S.Current->getRange(OpPC);
   return false;
 }
 
 template <typename SizeT>
-bool CheckArraySize(InterpState &S, CodePtr OpPC, SizeT *NumElements,
+bool CheckArraySize(InterpState &S, CodePtr OpPC, SizeT NumElements,
                     unsigned ElemSize, bool IsNoThrow) {
+
+  if (ElemSize == 0)
+    return true;
+
   // FIXME: Both the SizeT::from() as well as the
   // NumElements.toAPSInt() in this function are rather expensive.
 
   // Can't be too many elements if the bitwidth of NumElements is lower than
   // that of Descriptor::MaxArrayElemBytes.
-  if ((NumElements->bitWidth() - NumElements->isSigned()) <
+  if ((NumElements.bitWidth() - NumElements.isSigned()) <
       (sizeof(Descriptor::MaxArrayElemBytes) * 8))
     return true;
 
@@ -119,18 +171,16 @@ bool CheckArraySize(InterpState &S, CodePtr OpPC, SizeT *NumElements,
   // constructing the array, we catch this here.
   SizeT MaxElements = SizeT::from(Descriptor::MaxArrayElemBytes / ElemSize);
   assert(MaxElements.isPositive());
-  if (NumElements->toAPSInt().getActiveBits() >
+  if (NumElements.toAPSInt().getActiveBits() >
           ConstantArrayType::getMaxSizeBits(S.getASTContext()) ||
-      *NumElements > MaxElements) {
+      NumElements > MaxElements) {
     if (!IsNoThrow) {
-      const SourceInfo &Loc = S.Current->getSource(OpPC);
-
-      if (NumElements->isSigned() && NumElements->isNegative()) {
-        S.FFDiag(Loc, diag::note_constexpr_new_negative)
-            << NumElements->toDiagnosticString(S.getASTContext());
+      if (NumElements.isSigned() && NumElements.isNegative()) {
+        S.FFDiag(S.Current->getSource(OpPC), diag::note_constexpr_new_negative)
+            << NumElements.toDiagnosticString(S.getASTContext());
       } else {
-        S.FFDiag(Loc, diag::note_constexpr_new_too_large)
-            << NumElements->toDiagnosticString(S.getASTContext());
+        S.FFDiag(S.Current->getSource(OpPC), diag::note_constexpr_new_too_large)
+            << NumElements.toDiagnosticString(S.getASTContext());
       }
     }
     return false;

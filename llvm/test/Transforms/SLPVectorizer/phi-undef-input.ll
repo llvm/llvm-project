@@ -9,10 +9,10 @@ define i32 @phi3UndefInput(i1 %cond, i8 %arg0, i8 %arg1, i8 %arg2, i8 %arg3) {
 ; CHECK-NEXT:  entry:
 ; CHECK-NEXT:    br i1 [[COND:%.*]], label [[BB2:%.*]], label [[BB3:%.*]]
 ; CHECK:       bb2:
-; CHECK-NEXT:    [[TMP0:%.*]] = insertelement <4 x i8> poison, i8 [[ARG0:%.*]], i32 0
-; CHECK-NEXT:    [[TMP1:%.*]] = insertelement <4 x i8> [[TMP0]], i8 [[ARG1:%.*]], i32 1
-; CHECK-NEXT:    [[TMP2:%.*]] = insertelement <4 x i8> [[TMP1]], i8 [[ARG2:%.*]], i32 2
-; CHECK-NEXT:    [[TMP3:%.*]] = insertelement <4 x i8> [[TMP2]], i8 [[ARG3:%.*]], i32 3
+; CHECK-NEXT:    [[TMP0:%.*]] = insertelement <4 x i8> poison, i8 [[ARG0:%.*]], i64 0
+; CHECK-NEXT:    [[TMP1:%.*]] = insertelement <4 x i8> [[TMP0]], i8 [[ARG1:%.*]], i64 1
+; CHECK-NEXT:    [[TMP2:%.*]] = insertelement <4 x i8> [[TMP1]], i8 [[ARG2:%.*]], i64 2
+; CHECK-NEXT:    [[TMP3:%.*]] = insertelement <4 x i8> [[TMP2]], i8 [[ARG3:%.*]], i64 3
 ; CHECK-NEXT:    br label [[BB3]]
 ; CHECK:       bb3:
 ; CHECK-NEXT:    [[TMP4:%.*]] = phi <4 x i8> [ [[TMP3]], [[BB2]] ], [ <i8 0, i8 undef, i8 undef, i8 undef>, [[ENTRY:%.*]] ]
@@ -46,10 +46,10 @@ define i32 @phi2UndefInput(i1 %cond, i8 %arg0, i8 %arg1, i8 %arg2, i8 %arg3) {
 ; CHECK-NEXT:  entry:
 ; CHECK-NEXT:    br i1 [[COND:%.*]], label [[BB2:%.*]], label [[BB3:%.*]]
 ; CHECK:       bb2:
-; CHECK-NEXT:    [[TMP0:%.*]] = insertelement <4 x i8> poison, i8 [[ARG0:%.*]], i32 0
-; CHECK-NEXT:    [[TMP1:%.*]] = insertelement <4 x i8> [[TMP0]], i8 [[ARG1:%.*]], i32 1
-; CHECK-NEXT:    [[TMP2:%.*]] = insertelement <4 x i8> [[TMP1]], i8 [[ARG2:%.*]], i32 2
-; CHECK-NEXT:    [[TMP3:%.*]] = insertelement <4 x i8> [[TMP2]], i8 [[ARG3:%.*]], i32 3
+; CHECK-NEXT:    [[TMP0:%.*]] = insertelement <4 x i8> poison, i8 [[ARG0:%.*]], i64 0
+; CHECK-NEXT:    [[TMP1:%.*]] = insertelement <4 x i8> [[TMP0]], i8 [[ARG1:%.*]], i64 1
+; CHECK-NEXT:    [[TMP2:%.*]] = insertelement <4 x i8> [[TMP1]], i8 [[ARG2:%.*]], i64 2
+; CHECK-NEXT:    [[TMP3:%.*]] = insertelement <4 x i8> [[TMP2]], i8 [[ARG3:%.*]], i64 3
 ; CHECK-NEXT:    br label [[BB3]]
 ; CHECK:       bb3:
 ; CHECK-NEXT:    [[TMP4:%.*]] = phi <4 x i8> [ [[TMP3]], [[BB2]] ], [ <i8 0, i8 0, i8 undef, i8 undef>, [[ENTRY:%.*]] ]
@@ -83,10 +83,10 @@ define i32 @phi1UndefInput(i1 %cond, i8 %arg0, i8 %arg1, i8 %arg2, i8 %arg3) {
 ; CHECK-NEXT:  entry:
 ; CHECK-NEXT:    br i1 [[COND:%.*]], label [[BB2:%.*]], label [[BB3:%.*]]
 ; CHECK:       bb2:
-; CHECK-NEXT:    [[TMP0:%.*]] = insertelement <4 x i8> poison, i8 [[ARG0:%.*]], i32 0
-; CHECK-NEXT:    [[TMP1:%.*]] = insertelement <4 x i8> [[TMP0]], i8 [[ARG1:%.*]], i32 1
-; CHECK-NEXT:    [[TMP2:%.*]] = insertelement <4 x i8> [[TMP1]], i8 [[ARG2:%.*]], i32 2
-; CHECK-NEXT:    [[TMP3:%.*]] = insertelement <4 x i8> [[TMP2]], i8 [[ARG3:%.*]], i32 3
+; CHECK-NEXT:    [[TMP0:%.*]] = insertelement <4 x i8> poison, i8 [[ARG0:%.*]], i64 0
+; CHECK-NEXT:    [[TMP1:%.*]] = insertelement <4 x i8> [[TMP0]], i8 [[ARG1:%.*]], i64 1
+; CHECK-NEXT:    [[TMP2:%.*]] = insertelement <4 x i8> [[TMP1]], i8 [[ARG2:%.*]], i64 2
+; CHECK-NEXT:    [[TMP3:%.*]] = insertelement <4 x i8> [[TMP2]], i8 [[ARG3:%.*]], i64 3
 ; CHECK-NEXT:    br label [[BB3]]
 ; CHECK:       bb3:
 ; CHECK-NEXT:    [[TMP4:%.*]] = phi <4 x i8> [ [[TMP3]], [[BB2]] ], [ <i8 0, i8 0, i8 0, i8 undef>, [[ENTRY:%.*]] ]
@@ -121,10 +121,10 @@ define i32 @phi1Undef1PoisonInput(i1 %cond, i8 %arg0, i8 %arg1, i8 %arg2, i8 %ar
 ; CHECK-NEXT:  entry:
 ; CHECK-NEXT:    br i1 [[COND:%.*]], label [[BB2:%.*]], label [[BB3:%.*]]
 ; CHECK:       bb2:
-; CHECK-NEXT:    [[TMP0:%.*]] = insertelement <4 x i8> poison, i8 [[ARG0:%.*]], i32 0
-; CHECK-NEXT:    [[TMP1:%.*]] = insertelement <4 x i8> [[TMP0]], i8 [[ARG1:%.*]], i32 1
-; CHECK-NEXT:    [[TMP2:%.*]] = insertelement <4 x i8> [[TMP1]], i8 [[ARG2:%.*]], i32 2
-; CHECK-NEXT:    [[TMP3:%.*]] = insertelement <4 x i8> [[TMP2]], i8 [[ARG3:%.*]], i32 3
+; CHECK-NEXT:    [[TMP0:%.*]] = insertelement <4 x i8> poison, i8 [[ARG0:%.*]], i64 0
+; CHECK-NEXT:    [[TMP1:%.*]] = insertelement <4 x i8> [[TMP0]], i8 [[ARG1:%.*]], i64 1
+; CHECK-NEXT:    [[TMP2:%.*]] = insertelement <4 x i8> [[TMP1]], i8 [[ARG2:%.*]], i64 2
+; CHECK-NEXT:    [[TMP3:%.*]] = insertelement <4 x i8> [[TMP2]], i8 [[ARG3:%.*]], i64 3
 ; CHECK-NEXT:    br label [[BB3]]
 ; CHECK:       bb3:
 ; CHECK-NEXT:    [[TMP4:%.*]] = phi <4 x i8> [ [[TMP3]], [[BB2]] ], [ <i8 0, i8 0, i8 poison, i8 undef>, [[ENTRY:%.*]] ]
@@ -159,10 +159,10 @@ define i32 @phi1Undef2PoisonInputs(i1 %cond, i8 %arg0, i8 %arg1, i8 %arg2, i8 %a
 ; CHECK-NEXT:  entry:
 ; CHECK-NEXT:    br i1 [[COND:%.*]], label [[BB2:%.*]], label [[BB3:%.*]]
 ; CHECK:       bb2:
-; CHECK-NEXT:    [[TMP0:%.*]] = insertelement <4 x i8> poison, i8 [[ARG1:%.*]], i32 0
-; CHECK-NEXT:    [[TMP1:%.*]] = insertelement <4 x i8> [[TMP0]], i8 [[ARG0:%.*]], i32 1
-; CHECK-NEXT:    [[TMP2:%.*]] = insertelement <4 x i8> [[TMP1]], i8 [[ARG2:%.*]], i32 2
-; CHECK-NEXT:    [[TMP3:%.*]] = insertelement <4 x i8> [[TMP2]], i8 [[ARG3:%.*]], i32 3
+; CHECK-NEXT:    [[TMP0:%.*]] = insertelement <4 x i8> poison, i8 [[ARG1:%.*]], i64 0
+; CHECK-NEXT:    [[TMP1:%.*]] = insertelement <4 x i8> [[TMP0]], i8 [[ARG0:%.*]], i64 1
+; CHECK-NEXT:    [[TMP2:%.*]] = insertelement <4 x i8> [[TMP1]], i8 [[ARG2:%.*]], i64 2
+; CHECK-NEXT:    [[TMP3:%.*]] = insertelement <4 x i8> [[TMP2]], i8 [[ARG3:%.*]], i64 3
 ; CHECK-NEXT:    br label [[BB3]]
 ; CHECK:       bb3:
 ; CHECK-NEXT:    [[TMP4:%.*]] = phi <4 x i8> [ [[TMP3]], [[BB2]] ], [ <i8 0, i8 poison, i8 poison, i8 undef>, [[ENTRY:%.*]] ]
@@ -196,10 +196,10 @@ define i32 @phi1Undef1PoisonGapInput(i1 %cond, i8 %arg0, i8 %arg1, i8 %arg2, i8 
 ; CHECK-NEXT:  entry:
 ; CHECK-NEXT:    br i1 [[COND:%.*]], label [[BB2:%.*]], label [[BB3:%.*]]
 ; CHECK:       bb2:
-; CHECK-NEXT:    [[TMP0:%.*]] = insertelement <4 x i8> poison, i8 [[ARG1:%.*]], i32 0
-; CHECK-NEXT:    [[TMP1:%.*]] = insertelement <4 x i8> [[TMP0]], i8 [[ARG3:%.*]], i32 1
-; CHECK-NEXT:    [[TMP2:%.*]] = insertelement <4 x i8> [[TMP1]], i8 [[ARG0:%.*]], i32 2
-; CHECK-NEXT:    [[TMP3:%.*]] = insertelement <4 x i8> [[TMP2]], i8 [[ARG2:%.*]], i32 3
+; CHECK-NEXT:    [[TMP0:%.*]] = insertelement <4 x i8> poison, i8 [[ARG1:%.*]], i64 0
+; CHECK-NEXT:    [[TMP1:%.*]] = insertelement <4 x i8> [[TMP0]], i8 [[ARG3:%.*]], i64 1
+; CHECK-NEXT:    [[TMP2:%.*]] = insertelement <4 x i8> [[TMP1]], i8 [[ARG0:%.*]], i64 2
+; CHECK-NEXT:    [[TMP3:%.*]] = insertelement <4 x i8> [[TMP2]], i8 [[ARG2:%.*]], i64 3
 ; CHECK-NEXT:    br label [[BB3]]
 ; CHECK:       bb3:
 ; CHECK-NEXT:    [[TMP4:%.*]] = phi <4 x i8> [ [[TMP3]], [[BB2]] ], [ <i8 0, i8 0, i8 poison, i8 undef>, [[ENTRY:%.*]] ]

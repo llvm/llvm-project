@@ -31,13 +31,10 @@ define ptr @store_only_fp_tail() {
 ; NO-CANON-NEXT:    ret ptr null
 ;
 ; CANON-LABEL: define ptr @store_only_fp_tail() {
-; CANON-NEXT:    [[DOTSROA_4:%.*]] = alloca { float, float, float, float, float, float, float, float, float, float, float }, align 8
-; CANON-NEXT:    [[DOTSROA_2:%.*]] = alloca { float, float, float, float, float, float, float, float, float, float, float }, align 8
-; CANON-NEXT:    call void @llvm.memcpy.p0.p0.i64(ptr align 8 [[DOTSROA_4]], ptr align 8 [[DOTSROA_2]], i64 44, i1 false)
-; CANON-NEXT:    [[DST_SROA_0_0_VEC_INSERT:%.*]] = insertelement <4 x float> {{.*}}, float 0.000000e+00, i32 0
+; CANON-NEXT:    [[DST_SROA_0_0_VEC_INSERT:%.*]] = insertelement <4 x float> undef, float 0.000000e+00, i64 0
 ; CANON-NEXT:    store <4 x float> [[DST_SROA_0_0_VEC_INSERT]], ptr null, align 1
 ; CANON-NEXT:    store float 0.000000e+00, ptr getelementptr inbounds (i8, ptr null, i64 16), align 1
-; CANON-NEXT:    call void @llvm.memcpy.p0.p0.i64(ptr align 1 getelementptr inbounds (i8, ptr null, i64 20), ptr align 8 [[DOTSROA_4]], i64 44, i1 false)
+; CANON-NEXT:    store <11 x float> undef, ptr getelementptr inbounds (i8, ptr null, i64 20), align 1
 ; CANON-NEXT:    ret ptr null
 ;
   %dst = alloca %class.aiMatrix4x4t, align 4

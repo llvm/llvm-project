@@ -1,4 +1,4 @@
-// RUN: llvm-mc -triple aarch64_lfi %s | FileCheck %s
+// RUN: llvm-mc -triple aarch64_lfi --aarch64-lfi-guard-elim=false %s | FileCheck %s
 
 // FP/SIMD scalar loads (zero offset -> RoW)
 ldr b0, [x1]

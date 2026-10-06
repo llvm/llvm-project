@@ -320,7 +320,8 @@ struct PPCIntrinsicLibrary : IntrinsicLibrary {
                                 llvm::ArrayRef<fir::ExtendedValue> args);
 };
 
-const IntrinsicHandler *findPPCIntrinsicHandler(llvm::StringRef name);
+const IntrinsicHandler *findPPCIntrinsicHandler(llvm::StringRef name,
+                                                bool isBindcCall = false);
 
 std::pair<const MathOperation *, const MathOperation *>
 checkPPCMathOperationsRange(llvm::StringRef name);

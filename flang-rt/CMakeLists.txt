@@ -27,7 +27,9 @@ set(FLANG_SOURCE_DIR "${CMAKE_CURRENT_SOURCE_DIR}/../flang")
 # LLVM's requirement is only CMake 3.20, teach CMake 3.20-3.23 how to use Flang.
 if (CMAKE_VERSION VERSION_LESS "3.24")
   cmake_path(GET CMAKE_Fortran_COMPILER STEM _Fortran_COMPILER_STEM)
-  if (_Fortran_COMPILER_STEM STREQUAL "flang-new" OR _Fortran_COMPILER_STEM STREQUAL "flang")
+  if (_Fortran_COMPILER_STEM STREQUAL "flang-new" OR
+      _Fortran_COMPILER_STEM STREQUAL "flang" OR
+      _Fortran_COMPILER_STEM STREQUAL "fakeflang")
     include(CMakeForceCompiler)
     CMAKE_FORCE_Fortran_COMPILER("${CMAKE_Fortran_COMPILER}" "LLVMFlang")
 
@@ -121,11 +123,15 @@ endif ()
 
 # TODO: Support tests for the GPU target.
 set(FLANG_RT_INCLUDE_TESTS_default ${LLVM_INCLUDE_TESTS})
-if ("${LLVM_DEFAULT_TARGET_TRIPLE}" MATCHES "^amdgcn|^nvptx")
+if ("${LLVM_DEFAULT_TARGET_TRIPLE}" MATCHES "^amdgpu|^amdgcn|^nvptx")
   set(FLANG_RT_INCLUDE_TESTS_default OFF)
 elseif (NOT FLANG_RT_FORTRAN_MODULES)
   set(FLANG_RT_INCLUDE_TESTS_default OFF)
 elseif (NOT FLANG_RT_ENABLE_STATIC AND NOT FLANG_RT_ENABLE_SHARED)
+  set(FLANG_RT_INCLUDE_TESTS_default OFF)
+# NonGTestTesting uses LINK_TO_LLVM, pulling in host dependencies
+# (e.g. ZLIB::ZLIB) that break cross-compilation.
+elseif (CMAKE_CROSSCOMPILING)
   set(FLANG_RT_INCLUDE_TESTS_default OFF)
 endif()
 option(FLANG_RT_INCLUDE_TESTS "Generate build targets for the flang-rt unit and regression-tests." "${FLANG_RT_INCLUDE_TESTS_default}")
@@ -157,6 +163,12 @@ endif ()
 option(FLANG_RT_INCLUDE_CUF "Build the CUDA Fortran runtime (libflang_rt.cuda.a)" OFF)
 if (FLANG_RT_INCLUDE_CUF)
   find_package(CUDAToolkit REQUIRED)
+  # CUF runtime uses cudaGetDriverEntryPointByVersion (CUDA 12.5+) and assumes
+  # the toolchain floor used elsewhere for CUDA Fortran (12.8+).
+  if (CUDAToolkit_VERSION VERSION_LESS "12.8")
+    message(FATAL_ERROR
+      "FLANG_RT_INCLUDE_CUF requires CUDA Toolkit 12.8 or later (found ${CUDAToolkit_VERSION})")
+  endif ()
 endif()
 
 # A recently added check in clang emits warnings for feclearexcept and fesetround:
@@ -278,6 +290,7 @@ endif ()
 # directory ("flang-rt") and delegate it to the runtimes build dir.
 # AddFlangRT will add all non-EXCLUDE_FROM_ALL targets to it.
 add_custom_target(flang-rt)
+add_llvm_install_targets(install-flang-rt DEPENDS flang-rt COMPONENT flang-rt)
 
 
 ###################
@@ -302,7 +315,10 @@ endif()
 ###################
 
 if (NOT LLVM_INSTALL_TOOLCHAIN_ONLY)
-  add_llvm_install_targets(install-flang-rt-headers COMPONENT flang-rt-headers)
+  add_custom_target(flang-rt-headers)
+  add_llvm_install_targets(install-flang-rt-headers
+                           DEPENDS flang-rt-headers
+                           COMPONENT flang-rt-headers)
 
   install(DIRECTORY include/flang-rt/runtime
     DESTINATION "${CMAKE_INSTALL_INCLUDEDIR}/flang-rt"

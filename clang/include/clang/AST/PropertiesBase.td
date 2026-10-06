@@ -130,6 +130,13 @@ def LValuePathSerializationHelper :
     PropertyType<"APValue::LValuePathSerializationHelper"> {
   let BufferElementTypes = [ LValuePathEntry ];
 }
+def MatrixLayoutKind : EnumPropertyType<"MatrixType::LayoutKind"> {
+  let PackOptional =
+    "value.value_or(static_cast<MatrixType::LayoutKind>(2))";
+  let UnpackOptional =
+    "value == static_cast<MatrixType::LayoutKind>(2) ? std::nullopt : "
+    "std::optional<MatrixType::LayoutKind>(value)";
+}
 def NestedNameSpecifier : PropertyType<"NestedNameSpecifier">;
 def NestedNameSpecifierKind : EnumPropertyType<"NestedNameSpecifier::Kind">;
 def OverloadedOperatorKind : EnumPropertyType;
@@ -142,7 +149,7 @@ def StmtRef : RefPropertyType<"Stmt"> { let ConstWhenWriting = 1; }
   def ExprRef : SubclassPropertyType<"Expr", StmtRef>;
 def TemplateArgument : PropertyType;
 def TemplateArgumentKind : EnumPropertyType<"TemplateArgument::ArgKind">;
-def TemplateName : DefaultValuePropertyType;
+def TemplateName : PropertyType;
 def TemplateNameKind : EnumPropertyType<"TemplateName::NameKind">;
 def TypeOfKind : EnumPropertyType<"TypeOfKind">;
 def UInt32 : CountPropertyType<"uint32_t">;
@@ -416,6 +423,10 @@ let Class = PropertyTypeCase<APValue, "Struct"> in {
     unsigned numFields = node.getStructNumFields();
     for (unsigned i = 0; i < numFields; ++i)
       structFields.push_back(node.getStructField(i));
+    SmallVector<APValue, 4> structVirtualBases;
+    unsigned numVirtualBases = node.getStructNumVirtualBases();
+    for (unsigned i = 0; i < numVirtualBases; ++i)
+      structVirtualBases.push_back(node.getStructVirtualBase(i));
   }]>;
   def : Property<"bases", Array<APValue>> {
     let Read = [{ structBases }];
@@ -423,13 +434,18 @@ let Class = PropertyTypeCase<APValue, "Struct"> in {
   def : Property<"fields", Array<APValue>> {
     let Read = [{ structFields }];
   }
+  def : Property<"vbases", Array<APValue>> {
+    let Read = [{ structVirtualBases }];
+  }
   def : Creator<[{
     APValue result;
-    result.MakeStruct(bases.size(), fields.size());
+    result.MakeStruct(bases.size(), fields.size(), vbases.size());
     for (unsigned i = 0; i < bases.size(); ++i)
       result.getStructBase(i) = bases[i];
     for (unsigned i = 0; i < fields.size(); ++i)
       result.getStructField(i) = fields[i];
+    for (unsigned i = 0; i < vbases.size(); ++i)
+      result.getStructVirtualBase(i) = vbases[i];
     return result;
   }]>;
 }
@@ -591,6 +607,31 @@ let Class = PropertyTypeCase<APValue, "LValue"> in {
         base, offset, pathLength, isLValueOnePastTheEnd, isNullPtr).data();
     llvm::copy(lvaluePath->Path, path);
     return result;
+  }]>;
+}
+
+def ReflectionKind : EnumPropertyType<"ReflectionKind">;
+
+let Class = PropertyTypeCase<APValue, "Reflection"> in {
+  def : Property<"reflectionKind", ReflectionKind> {
+    let Read = [{ node.getReflectionOperandKind() }];
+  }
+  def : Property<"reflectionType", QualType> {
+    let Conditional = [{ reflectionKind == ReflectionKind::Type }];
+    let Read = [{
+      QualType::getFromOpaquePtr(node.getReflectionOpaqueOperand())
+    }];
+  }
+  def : Creator<[{
+    switch (reflectionKind) {
+    // TODO(Reflection): Add support for TypeSourceInfo, NamespaceReference
+    // TemplateReference and DeclRefExpr
+    case ReflectionKind::Null:
+      return APValue(reflectionKind, nullptr);
+    case ReflectionKind::Type:
+      return APValue(reflectionKind, (*reflectionType).getAsOpaquePtr());
+    }
+    llvm_unreachable("unimplemented or unknow reflection entities");
   }]>;
 }
 
@@ -799,6 +840,26 @@ let Class = PropertyTypeCase<TemplateName, "DeducedTemplate"> in {
   }
   def : Creator<[{
     return ctx.getDeducedTemplateName(underlying, {startPos, defaultArgs});
+  }]>;
+}
+let Class = PropertyTypeCase<TemplateName, "PackIndexingTemplate"> in {
+  def : ReadHelper<[{
+    auto PI = node.getAsPackIndexingTemplate();
+  }]>;
+  def : Property<"pattern", TemplateName> {
+    let Read = [{ PI->getPattern() }];
+  }
+  def : Property<"indexExpression", ExprRef> {
+    let Read = [{ PI->getIndexExpr() }];
+  }
+  def : Property<"isFullySubstituted", Bool> {
+    let Read = [{ PI->isFullySubstituted() }];
+  }
+  def : Property<"expansions", Array<TemplateName>> {
+    let Read = [{ PI->getExpansions() }];
+  }
+  def : Creator<[{
+    return ctx.getPackIndexingTemplateName(pattern, indexExpression, isFullySubstituted, expansions);
   }]>;
 }
 

@@ -1,9 +1,9 @@
-; RUN: llc -mtriple=amdgcn -mcpu=verde < %s | FileCheck -check-prefixes=GCN,PREGFX12,GFX6789 %s
-; RUN: llc -mtriple=amdgcn -mcpu=gfx900 < %s | FileCheck -check-prefixes=GCN,PREGFX12,GFX6789 %s
-; RUN: llc -mtriple=amdgcn -mcpu=gfx1010 -show-mc-encoding < %s | FileCheck -check-prefixes=GCN,PREGFX12,GFX10 %s
-; RUN: llc -mtriple=amdgcn -mcpu=gfx1100 -show-mc-encoding < %s | FileCheck -check-prefixes=GCN,PREGFX12,GFX10 %s
-; RUN: llc -mtriple=amdgcn -mcpu=gfx1200 -show-mc-encoding < %s | FileCheck -check-prefixes=GCN,GFX12PLUS %s
-; RUN: llc -mtriple=amdgcn -mcpu=gfx1310 -show-mc-encoding < %s | FileCheck -check-prefixes=GCN,GFX12PLUS %s
+; RUN: llc -mtriple=amdgpu6.01 < %s | FileCheck -check-prefixes=GCN,PREGFX12,GFX6789 %s
+; RUN: llc -mtriple=amdgpu9.00 < %s | FileCheck -check-prefixes=GCN,PREGFX12,GFX6789 %s
+; RUN: llc -mtriple=amdgpu10.10 -show-mc-encoding < %s | FileCheck -check-prefixes=GCN,PREGFX12,GFX10 %s
+; RUN: llc -mtriple=amdgpu11.00 -show-mc-encoding < %s | FileCheck -check-prefixes=GCN,PREGFX12,GFX10 %s
+; RUN: llc -mtriple=amdgpu12.00 -show-mc-encoding < %s | FileCheck -check-prefixes=GCN,GFX12PLUS %s
+; RUN: llc -mtriple=amdgpu13.10 -show-mc-encoding < %s | FileCheck -check-prefixes=GCN,GFX12PLUS %s
 
 ; GCN-LABEL: {{^}}gather4_2d:
 ; GFX6789: image_gather4 v[0:3], v[0:1], s[0:7], s[8:11] dmask:0x1{{$}}

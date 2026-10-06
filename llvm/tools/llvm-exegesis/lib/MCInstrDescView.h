@@ -20,10 +20,10 @@
 
 #include <memory>
 #include <random>
-#include <unordered_map>
 
 #include "RegisterAliasing.h"
 #include "llvm/ADT/ArrayRef.h"
+#include "llvm/ADT/DenseMap.h"
 #include "llvm/MC/MCInst.h"
 #include "llvm/MC/MCInstrDesc.h"
 #include "llvm/MC/MCInstrInfo.h"
@@ -197,8 +197,7 @@ private:
   const MCInstrInfo &InstrInfo;
   const RegisterAliasingTrackerCache &RATC;
   const MCSubtargetInfo *STI;
-  mutable std::unordered_map<unsigned, std::unique_ptr<Instruction>>
-      Instructions;
+  mutable DenseMap<unsigned, std::unique_ptr<Instruction>> Instructions;
   const BitVectorCache BVC;
 };
 

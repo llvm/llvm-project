@@ -2,7 +2,7 @@
 ; RUN: opt -aa-pipeline=basic-aa -passes=openmp-opt -attributor-manifest-internal  -attributor-annotate-decl-cs -S < %s | FileCheck %s --check-prefixes=CHECK,TUNIT
 ; RUN: opt -aa-pipeline=basic-aa -passes=openmp-opt-cgscc -attributor-manifest-internal  -attributor-annotate-decl-cs -S < %s | FileCheck %s --check-prefixes=CHECK,CGSCC
 
-target triple = "amdgcn-amd-amdhsa"
+target triple = "amdgpu7.00-amd-amdhsa"
 
 %struct.ConfigurationEnvironmentTy = type { i8, i8, i8, i32, i32, i32, i32, i32, i32 }
 %struct.KernelEnvironmentTy = type { %struct.ConfigurationEnvironmentTy, ptr, ptr }

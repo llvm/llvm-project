@@ -68,7 +68,6 @@
 #include "AMDGPU.h"
 #include "AMDGPULaneMaskUtils.h"
 #include "GCNSubtarget.h"
-#include "MCTargetDesc/AMDGPUMCTargetDesc.h"
 #include "llvm/CodeGen/MachineDominators.h"
 #include "llvm/InitializePasses.h"
 #include "llvm/Target/TargetMachine.h"
@@ -100,6 +99,8 @@ public:
   unsigned NumReadfirstlanes = 0;
   // Current score state. To speedup selection V2SCopyInfos for processing
   bool NeedToBeConvertedToVALU = false;
+  // Marks entries lowered to VALU for bulk removal from V2SCopies.
+  bool Erased = false;
   // Unique ID. Used as a key for mapping to keep permanent order.
   unsigned ID;
 
@@ -139,7 +140,6 @@ public:
 
   bool run(MachineFunction &MF);
   void fixSCCCopies(MachineFunction &MF);
-  void prepareRegSequenceAndPHIs(MachineFunction &MF);
   unsigned getNextVGPRToSGPRCopyId() { return ++NextVGPRToSGPRCopyID; }
   bool needToBeConvertedToVALU(V2SCopyInfo *I);
   void analyzeVGPRToSGPRCopy(MachineInstr *MI);
@@ -178,9 +178,14 @@ public:
 
   void getAnalysisUsage(AnalysisUsage &AU) const override {
     AU.addRequired<MachineDominatorTreeWrapperPass>();
-    AU.addPreserved<MachineDominatorTreeWrapperPass>();
     AU.setPreservesCFG();
     MachineFunctionPass::getAnalysisUsage(AU);
+  }
+
+  // Waterfall expansion may introduce Phi nodes and -verify-machineinstrs will
+  // fail.
+  MachineFunctionProperties getClearedProperties() const override {
+    return MachineFunctionProperties().setNoPHIs();
   }
 };
 
@@ -363,7 +368,7 @@ static bool isSafeToFoldImmIntoCopy(const MachineInstr *Copy,
   if (Copy->getOpcode() != AMDGPU::COPY)
     return false;
 
-  if (!MoveImm->isMoveImmediate())
+  if (!MoveImm || !MoveImm->isMoveImmediate())
     return false;
 
   const MachineOperand *ImmOp =
@@ -382,6 +387,7 @@ static bool isSafeToFoldImmIntoCopy(const MachineInstr *Copy,
   case AMDGPU::AV_MOV_B32_IMM_PSEUDO:
     SMovOp = AMDGPU::S_MOV_B32;
     break;
+  case AMDGPU::V_MOV_B64_e32:
   case AMDGPU::V_MOV_B64_PSEUDO:
     SMovOp = AMDGPU::S_MOV_B64_IMM_PSEUDO;
     break;
@@ -451,6 +457,7 @@ getFirstNonPrologue(MachineBasicBlock *MBB, const TargetInstrInfo *TII) {
 // SGPR. A VGPR cannot be processed since we cannot guarantee vector
 // executioon.
 static bool hoistAndMergeSGPRInits(unsigned Reg,
+                                   ArrayRef<MachineInstr *> RegMaskInstrs,
                                    const MachineRegisterInfo &MRI,
                                    const TargetRegisterInfo *TRI,
                                    MachineDominatorTree &MDT,
@@ -481,6 +488,12 @@ static bool hoistAndMergeSGPRInits(unsigned Reg,
     else
       Clobbers.push_back(&MI);
   }
+
+  // A regmask clobbers Reg instead of explicitly defining it, so these are not
+  // on the def list of Reg.
+  for (MachineInstr *MI : RegMaskInstrs)
+    if (MI->modifiesRegister(Reg, TRI))
+      Clobbers.push_back(MI);
 
   for (auto &Init : Inits) {
     auto &Defs = Init.second;
@@ -602,7 +615,7 @@ static bool hoistAndMergeSGPRInits(unsigned Reg,
       const unsigned Threshold = 50;
       // Search until B or Threshold for a place to insert the initialization.
       for (unsigned I = 0; R != B && I < Threshold; ++R, ++I)
-        if (R->readsRegister(Reg, TRI) || R->definesRegister(Reg, TRI) ||
+        if (R->readsRegister(Reg, TRI) || R->modifiesRegister(Reg, TRI) ||
             TII->isSchedulingBoundary(*R, MBB, *MBB->getParent()))
           break;
 
@@ -630,11 +643,18 @@ bool SIFixSGPRCopies::run(MachineFunction &MF) {
 
   // Instructions to re-legalize after changing register classes
   SmallVector<MachineInstr *, 8> Relegalize;
+  SmallVector<MachineInstr *, 4> RegMaskInstrs;
 
   for (MachineBasicBlock &MBB : MF) {
     for (MachineBasicBlock::iterator I = MBB.begin(), E = MBB.end(); I != E;
          ++I) {
       MachineInstr &MI = *I;
+
+      // Regmask operands clobber registers without an explicit def, so record
+      // their instructions for hoistAndMergeSGPRInits.
+      if (llvm::any_of(MI.operands(),
+                       [](const MachineOperand &MO) { return MO.isRegMask(); }))
+        RegMaskInstrs.push_back(&MI);
 
       switch (MI.getOpcode()) {
       default:
@@ -804,7 +824,7 @@ bool SIFixSGPRCopies::run(MachineFunction &MF) {
     TII->legalizeOperands(*Relegalize.pop_back_val(), MDT);
 
   if (MF.getTarget().getOptLevel() > CodeGenOptLevel::None && EnableM0Merge)
-    hoistAndMergeSGPRInits(AMDGPU::M0, *MRI, TRI, *MDT, TII);
+    hoistAndMergeSGPRInits(AMDGPU::M0, RegMaskInstrs, *MRI, TRI, *MDT, TII);
 
   SiblingPenalty.clear();
   V2SCopies.clear();
@@ -1008,7 +1028,8 @@ void SIFixSGPRCopies::analyzeVGPRToSGPRCopy(MachineInstr* MI) {
       }
     } else if (Inst->getNumExplicitDefs() != 0) {
       Register Reg = Inst->getOperand(0).getReg();
-      if (Reg.isVirtual() && TRI->isSGPRReg(*MRI, Reg) && !TII->isVALU(*Inst)) {
+      if (Reg.isVirtual() && TRI->isSGPRReg(*MRI, Reg) &&
+          !TII->isVALU(*Inst, /*AllowLDSDMA=*/true)) {
         for (auto &U : MRI->use_instructions(Reg))
           Users.push_back(&U);
       }
@@ -1077,12 +1098,12 @@ void SIFixSGPRCopies::lowerVGPR2SGPRCopies(MachineFunction &MF) {
   while (!LoweringWorklist.empty()) {
     unsigned CurID = LoweringWorklist.pop_back_val();
     auto *CurInfoIt = V2SCopies.find(CurID);
-    if (CurInfoIt != V2SCopies.end()) {
-      const V2SCopyInfo &C = CurInfoIt->second;
+    if (CurInfoIt != V2SCopies.end() && !CurInfoIt->second.Erased) {
+      V2SCopyInfo &C = CurInfoIt->second;
       LLVM_DEBUG(dbgs() << "Processing ...\n"; C.dump());
       for (auto S : C.Siblings) {
         auto *SibInfoIt = V2SCopies.find(S);
-        if (SibInfoIt != V2SCopies.end()) {
+        if (SibInfoIt != V2SCopies.end() && !SibInfoIt->second.Erased) {
           V2SCopyInfo &SI = SibInfoIt->second;
           LLVM_DEBUG(dbgs() << "Sibling:\n"; SI.dump());
           if (!SI.NeedToBeConvertedToVALU) {
@@ -1096,11 +1117,10 @@ void SIFixSGPRCopies::lowerVGPR2SGPRCopies(MachineFunction &MF) {
       LLVM_DEBUG(dbgs() << "V2S copy " << *C.Copy
                         << " is being turned to VALU\n");
       Copies.insert(C.Copy);
-      // TODO: MapVector::erase is inefficient. Do bulk removal with remove_if
-      // instead.
-      V2SCopies.erase(C.ID);
+      C.Erased = true;
     }
   }
+  V2SCopies.remove_if([](const auto &P) { return P.second.Erased; });
 
   TII->moveToVALU(Copies, MDT);
   Copies.clear();
@@ -1177,8 +1197,11 @@ void SIFixSGPRCopies::lowerVGPR2SGPRCopies(MachineFunction &MF) {
 }
 
 void SIFixSGPRCopies::fixSCCCopies(MachineFunction &MF) {
-  const AMDGPU::LaneMaskConstants &LMC =
-      AMDGPU::LaneMaskConstants::get(MF.getSubtarget<GCNSubtarget>());
+  const GCNSubtarget &ST = MF.getSubtarget<GCNSubtarget>();
+  const AMDGPU::LaneMaskConstants &LMC = AMDGPU::LaneMaskConstants::get(ST);
+  // S_CMP_LG_U64 is only available on GFX8+. S_CMP_LG_U32 always is, and
+  // wave32 implies GFX10+ anyway.
+  bool HasCmp = ST.isWave32() || ST.hasScalarCompareEq64();
   for (MachineBasicBlock &MBB : MF) {
     for (MachineBasicBlock::iterator I = MBB.begin(), E = MBB.end(); I != E;
          ++I) {
@@ -1186,7 +1209,8 @@ void SIFixSGPRCopies::fixSCCCopies(MachineFunction &MF) {
       // May already have been lowered.
       if (!MI.isCopy())
         continue;
-      Register SrcReg = MI.getOperand(1).getReg();
+      const MachineOperand &Src = MI.getOperand(1);
+      Register SrcReg = Src.getReg();
       Register DstReg = MI.getOperand(0).getReg();
       if (SrcReg == AMDGPU::SCC) {
         Register SCCCopy =
@@ -1202,12 +1226,25 @@ void SIFixSGPRCopies::fixSCCCopies(MachineFunction &MF) {
         continue;
       }
       if (DstReg == AMDGPU::SCC) {
-        Register Tmp = MRI->createVirtualRegister(TRI->getBoolRC());
-        I = BuildMI(*MI.getParent(), std::next(MachineBasicBlock::iterator(MI)),
-                    MI.getDebugLoc(), TII->get(LMC.AndOpc))
-                .addReg(Tmp, getDefRegState(true))
-                .addReg(SrcReg)
-                .addReg(LMC.ExecReg);
+        MachineBasicBlock::iterator InsPt =
+            std::next(MachineBasicBlock::iterator(MI));
+        if (HasCmp && !Src.getSubReg() &&
+            TII->isMaskedByExec(SrcReg, MI, *MRI)) {
+          // The source already has 0 in the bits of all inactive lanes, so
+          // SCC is just "source is non-zero". S_CMP computes that without
+          // needing a destination register.
+          I = BuildMI(*MI.getParent(), InsPt, MI.getDebugLoc(),
+                      TII->get(LMC.CmpLgOpc))
+                  .add(Src)
+                  .addImm(0);
+        } else {
+          Register Tmp = MRI->createVirtualRegister(TRI->getBoolRC());
+          I = BuildMI(*MI.getParent(), InsPt, MI.getDebugLoc(),
+                      TII->get(LMC.AndOpc))
+                  .addReg(Tmp, getDefRegState(true))
+                  .add(Src)
+                  .addReg(LMC.ExecReg);
+        }
         MI.eraseFromParent();
       }
     }

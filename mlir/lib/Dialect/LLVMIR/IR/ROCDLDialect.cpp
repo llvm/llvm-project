@@ -16,6 +16,8 @@
 
 #include "mlir/Dialect/LLVMIR/ROCDLDialect.h"
 
+#include "IR/ROCDLOps.h"
+
 #include "mlir/Dialect/GPU/IR/CompilationInterfaces.h"
 #include "mlir/Dialect/LLVMIR/LLVMDialect.h"
 #include "mlir/IR/Builders.h"
@@ -25,6 +27,7 @@
 #include "mlir/IR/Operation.h"
 #include "mlir/Transforms/InliningUtils.h"
 #include "llvm/ADT/StringExtras.h"
+#include "llvm/ADT/StringRef.h"
 #include "llvm/ADT/TypeSwitch.h"
 #include "llvm/Support/ErrorHandling.h"
 #include "llvm/Support/raw_ostream.h"
@@ -50,10 +53,7 @@ struct ROCDLInlinerInterface final : DialectInlinerInterface {
 
 // TODO: This should be the llvm.rocdl dialect once this is supported.
 void ROCDLDialect::initialize() {
-  addOperations<
-#define GET_OP_LIST
-#include "mlir/Dialect/LLVMIR/ROCDLOps.cpp.inc"
-      >();
+  registerROCDLDialectOperations(this);
 
   addAttributes<
 #define GET_ATTRDEF_LIST
@@ -66,6 +66,34 @@ void ROCDLDialect::initialize() {
   declarePromisedInterface<gpu::TargetAttrInterface, ROCDLTargetAttr>();
 }
 
+LLVM::ModFlagBehavior
+BufferOOBModeModuleFlagAttr::getModuleFlagBehavior() const {
+  return LLVM::ModFlagBehavior::Max;
+}
+
+StringAttr BufferOOBModeModuleFlagAttr::getModuleFlagKey() const {
+  return StringAttr::get(getContext(),
+                         ROCDLDialect::getModuleFlagKeyBufferOOBModeName());
+}
+
+Attribute BufferOOBModeModuleFlagAttr::getModuleFlagValue() const {
+  return BufferOOBModeAttr::get(getContext(), getValue());
+}
+
+LLVM::ModFlagBehavior
+TBufferOOBModeModuleFlagAttr::getModuleFlagBehavior() const {
+  return LLVM::ModFlagBehavior::Max;
+}
+
+StringAttr TBufferOOBModeModuleFlagAttr::getModuleFlagKey() const {
+  return StringAttr::get(getContext(),
+                         ROCDLDialect::getModuleFlagKeyTBufferOOBModeName());
+}
+
+Attribute TBufferOOBModeModuleFlagAttr::getModuleFlagValue() const {
+  return BufferOOBModeAttr::get(getContext(), getValue());
+}
+
 LogicalResult ROCDLDialect::verifyOperationAttribute(Operation *op,
                                                      NamedAttribute attr) {
   // Kernel function attribute should be attached to functions.
@@ -74,6 +102,15 @@ LogicalResult ROCDLDialect::verifyOperationAttribute(Operation *op,
       return op->emitError() << "'" << kernelAttrName.getName()
                              << "' attribute attached to unexpected op";
     }
+  }
+  // xnack/sramecc describe the whole code object.
+  if (attr.getName() == xnackAttrName.getName() ||
+      attr.getName() == srameccAttrName.getName()) {
+    if (!LLVM::satisfiesLLVMModule(op))
+      return op->emitError()
+             << attr.getName() << " is only supported on modules";
+    if (!isa<BoolAttr>(attr.getValue()))
+      return op->emitError() << attr.getName() << " must be a boolean";
   }
   return success();
 }
@@ -96,7 +133,7 @@ static ParseResult parseCachePolicyEnum(OpAsmParser &parser,
   return success();
 }
 
-static ParseResult parseCachePolicy(OpAsmParser &parser,
+ParseResult ROCDL::parseCachePolicy(OpAsmParser &parser,
                                     Attribute &cachePolicy) {
   uint32_t rawValue;
   OptionalParseResult rawValueParseResult =
@@ -137,7 +174,7 @@ static void printCachePolicyEnum(OpAsmPrinter &printer, EnumAttrT cachePolicy,
   printer << family << "<" << cachePolicy.getValue() << ">";
 }
 
-static void printCachePolicy(OpAsmPrinter &printer, Operation *,
+void ROCDL::printCachePolicy(OpAsmPrinter &printer, Operation *,
                              Attribute cachePolicy) {
   llvm::TypeSwitch<Attribute>(cachePolicy)
       .Case<IntegerAttr>([&](IntegerAttr rawPolicy) {
@@ -190,9 +227,6 @@ ROCDLTargetAttr::verify(function_ref<InFlightDiagnostic()> emitError,
   }
   return success();
 }
-
-#define GET_OP_CLASSES
-#include "mlir/Dialect/LLVMIR/ROCDLOps.cpp.inc"
 
 #define GET_ATTRDEF_CLASSES
 #include "mlir/Dialect/LLVMIR/ROCDLOpsAttributes.cpp.inc"

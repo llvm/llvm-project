@@ -1,13 +1,13 @@
 // RUN: %clang_cc1 -finclude-default-header -triple dxil-pc-shadermodel6.6-library %s -emit-llvm-only -disable-llvm-passes -verify
 
 // RWStructuredBuffer<int>
-using handle_t = __hlsl_resource_t [[hlsl::resource_class(UAV)]] [[hlsl::contained_type(int)]] [[hlsl::raw_buffer]];
+using handle_t = __hlsl_resource_t [[hlsl::resource_class("UAV")]] [[hlsl::contained_type(int)]] [[hlsl::raw_buffer]];
 // RWBuffer<int>
-using bad_handle_not_raw_t = __hlsl_resource_t [[hlsl::resource_class(UAV)]] [[hlsl::contained_type(int)]];
+using bad_handle_not_raw_t = __hlsl_resource_t [[hlsl::resource_class("UAV")]] [[hlsl::contained_type(int)]];
 // RWByteAddressBuffer
-using bad_handle_no_type_t = __hlsl_resource_t [[hlsl::resource_class(UAV)]] [[hlsl::raw_buffer]];
+using bad_handle_no_type_t = __hlsl_resource_t [[hlsl::resource_class("UAV")]] [[hlsl::raw_buffer]];
 // StructuredBuffer
-using bad_handle_not_uav_t = __hlsl_resource_t [[hlsl::resource_class(SRV)]] [[hlsl::contained_type(int)]] [[hlsl::raw_buffer]];
+using bad_handle_not_uav_t = __hlsl_resource_t [[hlsl::resource_class("SRV")]] [[hlsl::contained_type(int)]] [[hlsl::raw_buffer]];
 
 void test_args(int x, bool b) {
   // expected-error@+1 {{too few arguments to function call, expected 2, have 1}}
@@ -39,7 +39,7 @@ void test_args(int x, bool b) {
 
   // expected-error@+1 {{cannot initialize a parameter of type 'int' with an lvalue of type 'const char[2]'}}
   __builtin_hlsl_buffer_update_counter(res, "1");
-  
+
   // expected-error@+1 {{argument 1 must be constant integer 1 or -1}}
   __builtin_hlsl_buffer_update_counter(res, 10);
 

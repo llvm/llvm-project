@@ -50,6 +50,7 @@
 #include "llvm/Support/CommandLine.h"
 #include "llvm/Support/Error.h"
 #include "llvm/Support/TargetSelect.h"
+#include "llvm/Support/raw_ostream.h"
 #include "llvm/Transforms/IPO.h"
 
 using namespace llvm;
@@ -483,7 +484,7 @@ static void buildEarlyPollyPipeline(llvm::ModulePassManager &MPM,
                                     llvm::OptimizationLevel Level,
                                     IntrusiveRefCntPtr<vfs::FileSystem> FS) {
   bool EnableForOpt =
-      shouldEnablePollyForOptimization() && Level.isOptimizingForSpeed();
+      shouldEnablePollyForOptimization() && Level != OptimizationLevel::O0;
   if (!shouldEnablePollyForDiagnostic() && !EnableForOpt)
     return;
 
@@ -513,7 +514,7 @@ static void buildLatePollyPipeline(FunctionPassManager &PM,
                                    llvm::OptimizationLevel Level,
                                    IntrusiveRefCntPtr<vfs::FileSystem> FS) {
   bool EnableForOpt =
-      shouldEnablePollyForOptimization() && Level.isOptimizingForSpeed();
+      shouldEnablePollyForOptimization() && Level != OptimizationLevel::O0;
   if (!shouldEnablePollyForDiagnostic() && !EnableForOpt)
     return;
 
@@ -690,7 +691,20 @@ void registerPollyPasses(PassBuilder &PB) {
 }
 } // namespace polly
 
+static Error parseArguments(ArrayRef<const char *> Args) {
+  SmallVector<const char *> Argv = {"Polly"};
+  append_range(Argv, Args);
+  std::string Msg;
+  raw_string_ostream OS(Msg);
+  if (!cl::ParseCommandLineOptions(Argv.size(), Argv.data(), "", &OS))
+    return createStringError(StringRef(Msg).trim());
+  return Error::success();
+}
+
 llvm::PassPluginLibraryInfo getPollyPluginInfo() {
-  return {LLVM_PLUGIN_API_VERSION, "Polly", LLVM_VERSION_STRING,
-          polly::registerPollyPasses};
+  llvm::PassPluginLibraryInfo Info = {LLVM_PLUGIN_API_VERSION, "Polly",
+                                      LLVM_VERSION_STRING,
+                                      polly::registerPollyPasses};
+  Info.ParseArguments = parseArguments;
+  return Info;
 }

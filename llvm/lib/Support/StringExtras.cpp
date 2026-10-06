@@ -79,6 +79,15 @@ void llvm::printLowerCase(StringRef String, raw_ostream &Out) {
     Out << toLower(C);
 }
 
+void llvm::printPercentEncoded(StringRef String, raw_ostream &Out) {
+  for (unsigned char C : String) {
+    if (isAlnum(C) || StringRef("-_.~").contains(C))
+      Out << C;
+    else
+      Out << '%' << hexdigit(C >> 4) << hexdigit(C & 0x0F);
+  }
+}
+
 std::string llvm::convertToSnakeFromCamelCase(StringRef input) {
   if (input.empty())
     return "";

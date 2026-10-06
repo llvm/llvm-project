@@ -10,6 +10,31 @@
 ## Check that converting PDB to YAML and back results in the same binary.
 # RUN: diff %t.pdb %t.yaml.pdb
 
+## Check `dump` output for DXContainer.
+# RUN: llvm-pdbutil dump --streams --dxcontainer %t.pdb | FileCheck %s --check-prefix=CHECK-DUMP
+
+# CHECK-DUMP:                           Streams
+# CHECK-DUMP: ============================================================
+# CHECK-DUMP:   Stream 0 (  0 bytes): [Old MSF Directory]
+# CHECK-DUMP:   Stream 1 ( 52 bytes): [PDB Stream]
+# CHECK-DUMP:   Stream 2 (  0 bytes): [TPI Stream]
+# CHECK-DUMP:   Stream 3 (  0 bytes): [DBI Stream]
+# CHECK-DUMP:   Stream 4 (  0 bytes): [IPI Stream]
+# CHECK-DUMP:   Stream 5 (140 bytes): [DXContainer Stream]
+
+# CHECK-DUMP:                      DirectX Container
+# CHECK-DUMP: ============================================================
+# CHECK-DUMP:   Hash: 00000000000000000000000000000000
+# CHECK-DUMP:   Version:
+# CHECK-DUMP:     Major: 1
+# CHECK-DUMP:     Minor: 0
+# CHECK-DUMP:   FileSize: 140
+# CHECK-DUMP:   PartCount: 3
+# CHECK-DUMP:   Parts:
+# CHECK-DUMP:     ILDN | offset = 52, size = 16
+# CHECK-DUMP:     HASH | offset = 76, size = 20
+# CHECK-DUMP:     ILDB | offset = 104, size = 28
+
 # CHECK: ---
 # CHECK: MSF:
 # CHECK:   SuperBlock:

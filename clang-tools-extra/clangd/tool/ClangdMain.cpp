@@ -66,7 +66,7 @@ namespace clangd {
 
 // Implemented in Check.cpp.
 bool check(const llvm::StringRef File, const ThreadsafeFS &TFS,
-           const ClangdLSPServer::Options &Opts);
+           ClangdLSPServer::Options &&Opts);
 
 namespace {
 
@@ -91,16 +91,16 @@ OptionCategory Retired("clangd flags no longer in use");
 const OptionCategory *ClangdCategories[] = {&Features, &Protocol,
                                             &CompileCommands, &Misc, &Retired};
 
+std::vector<const llvm::cl::Option *> RetiredOptions;
+
 template <typename T> class RetiredFlag {
   opt<T> Option;
 
 public:
   RetiredFlag(llvm::StringRef Name)
-      : Option(Name, cat(Retired), desc("Obsolete flag, ignored"), Hidden,
-               llvm::cl::callback([Name](const T &) {
-                 llvm::errs()
-                     << "The flag `-" << Name << "` is obsolete and ignored.\n";
-               })) {}
+      : Option(Name, cat(Retired), desc("Obsolete flag, ignored"), Hidden) {
+    RetiredOptions.push_back(&Option);
+  }
 };
 
 enum CompileArgsFrom { LSPCompileArgs, FilesystemCompileArgs };
@@ -489,14 +489,7 @@ opt<bool> PrettyPrint{
 opt<bool> EnableConfig{
     "enable-config",
     cat(Misc),
-    desc(
-        "Read user and project configuration from YAML files.\n"
-        "Project config is from a .clangd file in the project directory.\n"
-        "User config is from clangd/config.yaml in the following directories:\n"
-        "\tWindows: %USERPROFILE%\\AppData\\Local\n"
-        "\tMac OS: ~/Library/Preferences/\n"
-        "\tOthers: $XDG_CONFIG_HOME, usually ~/.config\n"
-        "Configuration is documented at https://clangd.llvm.org/config.html"),
+    desc(config::Provider::EnableConfigFlagDesc),
     init(true),
 };
 
@@ -798,6 +791,10 @@ clangd accepts flags on the commandline, and in the CLANGD_FLAGS environment var
   llvm::cl::HideUnrelatedOptions(ClangdCategories);
   llvm::cl::ParseCommandLineOptions(argc, argv, Overview, /*Errs=*/nullptr,
                                     /*VFS=*/nullptr, FlagsEnvVar);
+  for (const llvm::cl::Option *O : RetiredOptions)
+    if (O->getNumOccurrences())
+      llvm::errs() << "The flag `-" << O->ArgStr
+                   << "` is obsolete and ignored.\n";
   if (Test) {
     if (!Sync.getNumOccurrences())
       Sync = true;
@@ -912,7 +909,28 @@ clangd accepts flags on the commandline, and in the CLANGD_FLAGS environment var
     log("argv[{0}]: {1}", I, argv[I]);
   if (auto EnvFlags = llvm::sys::Process::GetEnv(FlagsEnvVar))
     log("{0}: {1}", FlagsEnvVar, *EnvFlags);
+  // Log environment variables that influence how clangd finds system headers.
+  // This helps diagnose missing-include issues, especially on Windows.
+  for (const char *EnvVar : {
+           // MSVC environment variables (set by vcvarsall.bat)
+           "INCLUDE",
+           "LIB",
+           "LIBPATH",
+           "CL",
+           "_CL_",
+           // GCC/Clang environment variables
+           "CPATH",
+           "C_INCLUDE_PATH",
+           "CPLUS_INCLUDE_PATH",
+           "OBJC_INCLUDE_PATH",
+           "LIBRARY_PATH",
+           "GCC_EXEC_PREFIX",
+       }) {
+    if (auto Val = llvm::sys::Process::GetEnv(EnvVar))
+      log("Env {0}: {1}", EnvVar, *Val);
+  }
 
+  RealThreadsafeFS TFS;
   ClangdLSPServer::Options Opts;
   Opts.UseDirBasedCDB = (CompileArgsFrom == FilesystemCompileArgs);
   Opts.EnableExperimentalModulesSupport = ExperimentalModulesSupport;
@@ -975,28 +993,11 @@ clangd accepts flags on the commandline, and in the CLANGD_FLAGS environment var
   // external decls, since currently the index doesn't support C++20 modules.
   Opts.CodeComplete.ForceLoadPreamble = ExperimentalModulesSupport;
 
-  RealThreadsafeFS TFS;
   std::vector<std::unique_ptr<config::Provider>> ProviderStack;
-  std::unique_ptr<config::Provider> Config;
-  if (EnableConfig) {
-    ProviderStack.push_back(
-        config::Provider::fromAncestorRelativeYAMLFiles(".clangd", TFS));
-    llvm::SmallString<256> UserConfig;
-    if (llvm::sys::path::user_config_directory(UserConfig)) {
-      llvm::sys::path::append(UserConfig, "clangd", "config.yaml");
-      vlog("User config file is {0}", UserConfig);
-      ProviderStack.push_back(config::Provider::fromYAMLFile(
-          UserConfig, /*Directory=*/"", TFS, /*Trusted=*/true));
-    } else {
-      elog("Couldn't determine user config file, not loading");
-    }
-  }
+  if (EnableConfig)
+    ProviderStack = config::Provider::createDefaultProviders(TFS);
   ProviderStack.push_back(std::make_unique<FlagsConfigProvider>());
-  std::vector<const config::Provider *> ProviderPointers;
-  for (const auto &P : ProviderStack)
-    ProviderPointers.push_back(P.get());
-  Config = config::Provider::combine(std::move(ProviderPointers));
-  Opts.ConfigProvider = Config.get();
+  Opts.ConfigProvider = config::Provider::combine(std::move(ProviderStack));
 
   // Create an empty clang-tidy option.
   TidyProvider ClangTidyOptProvider;
@@ -1035,7 +1036,7 @@ clangd accepts flags on the commandline, and in the CLANGD_FLAGS environment var
       return 1;
     }
     log("Entering check mode (no LSP server)");
-    return check(Path, TFS, Opts)
+    return check(Path, TFS, std::move(Opts))
                ? 0
                : static_cast<int>(ErrorResultCode::CheckFailed);
   }
@@ -1072,7 +1073,7 @@ clangd accepts flags on the commandline, and in the CLANGD_FLAGS environment var
                                                 std::move(*Mappings));
   }
 
-  ClangdLSPServer LSPServer(*TransportLayer, TFS, Opts);
+  ClangdLSPServer LSPServer(*TransportLayer, TFS, std::move(Opts));
   llvm::set_thread_name("clangd.main");
   int ExitCode = LSPServer.run()
                      ? 0

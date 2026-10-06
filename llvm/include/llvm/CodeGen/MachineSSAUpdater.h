@@ -24,7 +24,8 @@ class MachineInstr;
 class MachineOperand;
 class MachineRegisterInfo;
 class TargetInstrInfo;
-class TargetRegisterClass;
+class MCRegisterClass;
+using TargetRegisterClass = MCRegisterClass;
 template<typename T> class SmallVectorImpl;
 template<typename T> class SSAUpdaterTraits;
 

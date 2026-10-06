@@ -17,6 +17,7 @@
 
 #include <benchmark/benchmark.h>
 #include "../../GenerateInput.h"
+#include "test_macros.h"
 
 int main(int argc, char** argv) {
   auto std_mismatch_3leg = [](auto first1, auto last1, auto first2, auto) {
@@ -26,18 +27,10 @@ int main(int argc, char** argv) {
     return std::mismatch(first1, last1, first2, last2);
   };
   auto std_mismatch_3leg_pred = [](auto first1, auto last1, auto first2, auto) {
-    return std::mismatch(first1, last1, first2, [](auto x, auto y) {
-      benchmark::DoNotOptimize(x);
-      benchmark::DoNotOptimize(y);
-      return x == y;
-    });
+    return std::mismatch(first1, last1, first2, [](auto x, auto y) { return x == y; });
   };
   auto std_mismatch_4leg_pred = [](auto first1, auto last1, auto first2, auto last2) {
-    return std::mismatch(first1, last1, first2, last2, [](auto x, auto y) {
-      benchmark::DoNotOptimize(x);
-      benchmark::DoNotOptimize(y);
-      return x == y;
-    });
+    return std::mismatch(first1, last1, first2, last2, [](auto x, auto y) { return x == y; });
   };
 
   // Benchmark {std,ranges}::mismatch where we find the mismatching element at the very end (worst case).
@@ -48,7 +41,7 @@ int main(int argc, char** argv) {
     auto bm = []<class Container>(std::string name, auto mismatch) {
       benchmark::RegisterBenchmark(
           name,
-          [mismatch](auto& st) {
+          [mismatch](auto& st) TEST_ALIGN_BENCHMARK {
             std::size_t const size = st.range(0);
             using ValueType        = typename Container::value_type;
             ValueType x            = Generate<ValueType>::random();

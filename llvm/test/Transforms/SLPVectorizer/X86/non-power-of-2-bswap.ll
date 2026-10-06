@@ -4,7 +4,7 @@
 define i32 @test(i8 %0) {
 ; CHECK-LABEL: define i32 @test(
 ; CHECK-SAME: i8 [[TMP0:%.*]]) #[[ATTR0:[0-9]+]] {
-; CHECK-NEXT:    [[TMP2:%.*]] = insertelement <3 x i8> poison, i8 [[TMP0]], i32 0
+; CHECK-NEXT:    [[TMP2:%.*]] = insertelement <3 x i8> poison, i8 [[TMP0]], i64 0
 ; CHECK-NEXT:    [[TMP3:%.*]] = shufflevector <3 x i8> [[TMP2]], <3 x i8> poison, <3 x i32> zeroinitializer
 ; CHECK-NEXT:    [[TMP4:%.*]] = and <3 x i8> [[TMP3]], splat (i8 1)
 ; CHECK-NEXT:    [[TMP5:%.*]] = zext <3 x i8> [[TMP4]] to <3 x i32>

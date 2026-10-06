@@ -9,6 +9,7 @@ from lldbsuite.test import lldbutil
 class TestRedefinitionsInInlines(TestBase):
     # https://github.com/llvm/llvm-project/issues/28219
     @skipIf(compiler="clang", compiler_version=["<", "3.5"])
+    @skipIfWasm  # no expression evaluation
     def test(self):
         self.source = "main.c"
         self.build()

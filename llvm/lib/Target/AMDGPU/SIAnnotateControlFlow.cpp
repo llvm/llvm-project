@@ -128,7 +128,7 @@ void SIAnnotateControlFlow::initialize(const GCNSubtarget &ST) {
 /// Is the branch condition uniform or did the StructurizeCFG pass
 /// consider it as such?
 bool SIAnnotateControlFlow::isUniform(CondBrInst *T) {
-  return UA->isUniformAtDef(T) || T->hasMetadata("structurizecfg.uniform");
+  return UA->isUniformTerminator(T) || T->hasMetadata("structurizecfg.uniform");
 }
 
 /// Is BB the last block saved on the stack ?
@@ -327,7 +327,7 @@ bool SIAnnotateControlFlow::closeControlFlow(BasicBlock *BB) {
       // Split edge to make Def dominate Use
       FirstInsertionPt = SplitEdge(DefBB, BB, DT, LI)->getFirstInsertionPt();
     }
-    IRBuilder<> IRB(FirstInsertionPt->getParent(), FirstInsertionPt);
+    IRBuilder<> IRB(FirstInsertionPt);
     // TODO: StructurizeCFG 'Flow' blocks have debug locations from the
     // condition, for now just avoid copying these DebugLocs so that stepping
     // out of the then/else block in a debugger doesn't step to the condition.

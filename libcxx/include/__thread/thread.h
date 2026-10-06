@@ -11,12 +11,13 @@
 #define _LIBCPP___THREAD_THREAD_H
 
 #include <__assert>
+#include <__charconv/to_chars_integral.h>
 #include <__condition_variable/condition_variable.h>
 #include <__config>
 #include <__exception/terminate.h>
 #include <__functional/hash.h>
 #include <__functional/unary_function.h>
-#include <__locale>
+#include <__fwd/ostream.h>
 #include <__memory/addressof.h>
 #include <__memory/unique_ptr.h>
 #include <__mutex/mutex.h>
@@ -27,15 +28,15 @@
 #include <__type_traits/enable_if.h>
 #include <__type_traits/invoke.h>
 #include <__type_traits/is_constructible.h>
+#include <__type_traits/is_integral.h>
+#include <__type_traits/is_pointer.h>
 #include <__type_traits/is_same.h>
 #include <__type_traits/remove_cvref.h>
 #include <__utility/exchange.h>
 #include <__utility/forward.h>
+#include <cstdint>
+#include <limits>
 #include <tuple>
-
-#if _LIBCPP_HAS_LOCALIZATION
-#  include <sstream>
-#endif
 
 #if !defined(_LIBCPP_HAS_NO_PRAGMA_SYSTEM_HEADER)
 #  pragma GCC system_header
@@ -146,13 +147,19 @@ operator<<(basic_ostream<_CharT, _Traits>& __os, __thread_id __id) {
   //
   // Since various flags in the output stream can affect how the
   // thread id is represented (e.g. numpunct or showbase), we
-  // use a temporary stream instead and just output the thread
-  // id representation as a string.
+  // use `to_chars` directly and output the id as a string.
 
-  basic_ostringstream<_CharT, _Traits> __sstr;
-  __sstr.imbue(locale::classic());
-  __sstr << __id.__id_;
-  return __os << __sstr.str();
+  static_assert(is_pointer<__libcpp_thread_id>::value || is_integral<__libcpp_thread_id>::value);
+
+  using __int_type = __conditional_t<is_pointer<__libcpp_thread_id>::value, uintptr_t, __libcpp_thread_id>;
+
+  static const size_t __buffer_size = numeric_limits<__int_type>::digits10 + 2;
+  char __buffer[__buffer_size];
+  auto __ret =
+      std::__to_chars_integral(__buffer, __buffer + __buffer_size - 1, reinterpret_cast<__int_type>(__id.__id_), 10);
+  _LIBCPP_ASSERT_INTERNAL(__ret.__ec == std::errc(), "to_chars failed!");
+  *__ret.__ptr = '\0';
+  return __os << __buffer;
 }
 #  endif // _LIBCPP_HAS_LOCALIZATION
 

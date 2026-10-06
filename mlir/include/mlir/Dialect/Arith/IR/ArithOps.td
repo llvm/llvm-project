@@ -244,12 +244,8 @@ def Arith_ConstantOp : Op<Arith_Dialect, "constant",
   }];
 
   let arguments = (ins TypedAttrInterface:$value);
-  // TODO: Disallow arith.constant to return anything other than a signless
-  // integer or float like. Downstream users of Arith should only be
-  // working with signless integers, floats, or vectors/tensors thereof.
-  // However, it is necessary to allow arith.constant to return vectors/tensors
-  // of strings and signed/unsigned integers (for now) as an artefact of
-  // splitting the Standard dialect.
+  // Keep this broad so the custom verifier can produce arith.constant-specific
+  // diagnostics after checking that the value and result types match.
   let results = (outs /*SignlessIntegerOrIndexOrFloatLike*/AnyType:$result);
 
   let extraClassDeclaration = [{
@@ -1117,6 +1113,7 @@ def Arith_AddFOp : Arith_FloatBinaryOpWithRoundingMode<"addf", [Commutative]> {
     %a = arith.addf %b, %c to_nearest_even : f64
     ```
   }];
+  let hasCanonicalizer = 1;
   let hasFolder = 1;
 }
 
@@ -1193,6 +1190,32 @@ def Arith_MaxNumFOp : Arith_FloatBinaryOp<"maxnumf", [Commutative]> {
   let hasFolder = 1;
 }
 
+//===----------------------------------------------------------------------===//
+// MaximumNumFOp
+//===----------------------------------------------------------------------===//
+
+def Arith_MaximumNumFOp : Arith_FloatBinaryOp<"maximumnumf", [Commutative]> {
+  let summary = "floating-point maximumNumber operation";
+  let description = [{
+    Returns the maximum of the two arguments, not propagating NaNs and treating
+    -0.0 as less than +0.0.
+
+    If both operands are NaNs, returns a NaN. If one operand is NaN and the
+    other operand is a number, returns the number. Otherwise, returns the
+    greater of the two arguments. -0.0 is considered to be less than +0.0 for
+    this operation.
+
+    If the `nsz` flag is specified, `arith.maximumnumf` with one +0.0 and one
+    -0.0 operand may non-deterministically return either operand. Unlike the
+    usual `nsz` semantics, if both zero operands have the same sign, the result
+    must retain that sign. For example, `maximumnumf(+0.0, +0.0)` with `nsz`
+    must return +0.0, while `maximumnumf(-0.0, +0.0)` may return either zero.
+
+    This operation follows the semantics of `maximumNumber` in IEEE 754-2019.
+  }];
+  let hasFolder = 1;
+}
+
 
 //===----------------------------------------------------------------------===//
 // MaxSIOp
@@ -1251,6 +1274,32 @@ def Arith_MinNumFOp : Arith_FloatBinaryOp<"minnumf", [Commutative]> {
     // Scalar floating-point minimum.
     %a = arith.minnumf %b, %c : f64
     ```
+  }];
+  let hasFolder = 1;
+}
+
+//===----------------------------------------------------------------------===//
+// MinimumNumFOp
+//===----------------------------------------------------------------------===//
+
+def Arith_MinimumNumFOp : Arith_FloatBinaryOp<"minimumnumf", [Commutative]> {
+  let summary = "floating-point minimumNumber operation";
+  let description = [{
+    Returns the minimum of the two arguments, not propagating NaNs and treating
+    -0.0 as less than +0.0.
+
+    If both operands are NaNs, returns a NaN. If one operand is NaN and the
+    other operand is a number, returns the number. Otherwise, returns the
+    lesser of the two arguments. -0.0 is considered to be less than +0.0 for
+    this operation.
+
+    If the `nsz` flag is specified, `arith.minimumnumf` with one +0.0 and one
+    -0.0 operand may non-deterministically return either operand. Unlike the
+    usual `nsz` semantics, if both zero operands have the same sign, the result
+    must retain that sign. For example, `minimumnumf(-0.0, -0.0)` with `nsz`
+    must return -0.0, while `minimumnumf(-0.0, +0.0)` may return either zero.
+
+    This operation follows the semantics of `minimumNumber` in IEEE 754-2019.
   }];
   let hasFolder = 1;
 }
@@ -1503,6 +1552,7 @@ def Arith_ScalingExtFOp
     %h = arith.scaling_extf %i, %f : vector<32xf4E2M1FN>, vector<32xf8E8M0FNU> to vector<32xbf16>
     ```
   }];
+  let hasFolder = 1;
   let hasVerifier = 1;
   let assemblyFormat =
       [{ $in `,` $scale (`fastmath` `` $fastmath^)? attr-dict `:`
@@ -1692,6 +1742,7 @@ def Arith_ScalingTruncFOp
     %h = arith.scaling_truncf %i, %f : vector<32xbf16>, vector<32xf8E8M0FNU> to vector<32xf4E2M1FN>
     ```
   }];
+  let hasFolder = 1;
   let hasVerifier = 1;
   let assemblyFormat =
       [{ $in `,` $scale ($roundingmode^)? (`fastmath` `` $fastmath^)? attr-dict `:`
