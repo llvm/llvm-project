@@ -2299,9 +2299,10 @@ struct VPCSEDenseMapInfo : public DenseMapInfo<VPSingleDefRecipe *> {
 
     // The issue with (Insert|Extract)Value is that the index of the
     // insert/extract is not a proper operand in LLVM IR, and hence also not in
-    // VPlan.
+    // VPlan. Allocas must not be merged, as each creates a distinct allocation.
     if (!C || (!C->first && (C->second == Instruction::InsertValue ||
-                             C->second == Instruction::ExtractValue)))
+                             C->second == Instruction::ExtractValue ||
+                             C->second == Instruction::Alloca)))
       return false;
 
     // Widened loads (including the EVL variant) are handled, as cse() only
