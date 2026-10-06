@@ -42,7 +42,7 @@ define i32 @more_than_one_use(ptr %a, i64 %n) {
 ; CHECK-NEXT:  Successor(s): middle.block
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  middle.block:
-; CHECK-NEXT:    EMIT vp<[[VP7:%[0-9]+]]> = compute-reduction-result (add) ir<%tmp3>
+; CHECK-NEXT:    EMIT-SCALAR vp<[[VP7:%[0-9]+]]> = compute-reduction-result (add) ir<%tmp3>
 ; CHECK-NEXT:    EMIT vp<%cmp.n> = icmp eq vp<[[VP3]]>, vp<[[VP2]]>
 ; CHECK-NEXT:    EMIT branch-on-cond vp<%cmp.n>
 ; CHECK-NEXT:  Successor(s): ir-bb<for.end>, scalar.ph

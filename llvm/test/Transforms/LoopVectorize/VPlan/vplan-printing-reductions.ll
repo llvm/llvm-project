@@ -36,7 +36,7 @@ define float @print_reduction(i64 %n, ptr noalias %y) {
 ; CHECK-NEXT:  Successor(s): middle.block
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  middle.block:
-; CHECK-NEXT:    EMIT vp<[[VP8:%[0-9]+]]> = compute-reduction-result (fadd, in-loop) fast ir<%red.next>
+; CHECK-NEXT:    EMIT-SCALAR vp<[[VP8:%[0-9]+]]> = compute-reduction-result (fadd, in-loop) fast ir<%red.next>
 ; CHECK-NEXT:    EMIT vp<%cmp.n> = icmp eq ir<%n>, vp<[[VP2]]>
 ; CHECK-NEXT:    EMIT branch-on-cond vp<%cmp.n>
 ; CHECK-NEXT:  Successor(s): ir-bb<exit>, scalar.ph
@@ -110,7 +110,7 @@ define void @print_reduction_with_invariant_store(i64 %n, ptr noalias %y, ptr no
 ; CHECK-NEXT:  Successor(s): middle.block
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  middle.block:
-; CHECK-NEXT:    EMIT vp<[[VP8:%[0-9]+]]> = compute-reduction-result (fadd, in-loop) fast ir<%red.next>
+; CHECK-NEXT:    EMIT-SCALAR vp<[[VP8:%[0-9]+]]> = compute-reduction-result (fadd, in-loop) fast ir<%red.next>
 ; CHECK-NEXT:    CLONE store vp<[[VP8]]>, ir<%dst>
 ; CHECK-NEXT:    EMIT vp<%cmp.n> = icmp eq ir<%n>, vp<[[VP2]]>
 ; CHECK-NEXT:    EMIT branch-on-cond vp<%cmp.n>
@@ -190,7 +190,7 @@ define float @print_fmuladd_strict(ptr %a, ptr %b, i64 %n) {
 ; CHECK-NEXT:  Successor(s): middle.block
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  middle.block:
-; CHECK-NEXT:    EMIT vp<[[VP10:%[0-9]+]]> = compute-reduction-result (fmuladd, in-loop) nnan ninf nsz ir<%muladd>
+; CHECK-NEXT:    EMIT-SCALAR vp<[[VP10:%[0-9]+]]> = compute-reduction-result (fmuladd, in-loop) nnan ninf nsz ir<%muladd>
 ; CHECK-NEXT:    EMIT vp<%cmp.n> = icmp eq ir<%n>, vp<[[VP2]]>
 ; CHECK-NEXT:    EMIT branch-on-cond vp<%cmp.n>
 ; CHECK-NEXT:  Successor(s): ir-bb<exit>, scalar.ph
@@ -270,7 +270,7 @@ define i64 @find_last_iv(ptr %a, i64 %n, i64 %start) {
 ; CHECK-NEXT:  Successor(s): middle.block
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  middle.block:
-; CHECK-NEXT:    EMIT vp<[[VP7:%[0-9]+]]> = compute-reduction-result (smax) ir<%cond>
+; CHECK-NEXT:    EMIT-SCALAR vp<[[VP7:%[0-9]+]]> = compute-reduction-result (smax) ir<%cond>
 ; CHECK-NEXT:    EMIT vp<[[VP8:%[0-9]+]]> = icmp ne vp<[[VP7]]>, ir<-9223372036854775808>
 ; CHECK-NEXT:    EMIT vp<[[VP9:%[0-9]+]]> = select vp<[[VP8]]>, vp<[[VP7]]>, ir<%start>
 ; CHECK-NEXT:    EMIT vp<%cmp.n> = icmp eq ir<%n>, vp<[[VP2]]>
@@ -348,7 +348,7 @@ define i64 @print_extended_reduction(ptr nocapture readonly %x, ptr nocapture re
 ; CHECK-NEXT:  Successor(s): middle.block
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  middle.block:
-; CHECK-NEXT:    EMIT vp<[[VP9:%[0-9]+]]> = compute-reduction-result (add, in-loop) vp<[[VP7]]>
+; CHECK-NEXT:    EMIT-SCALAR vp<[[VP9:%[0-9]+]]> = compute-reduction-result (add, in-loop) vp<[[VP7]]>
 ; CHECK-NEXT:    EMIT vp<%cmp.n> = icmp eq ir<%n>, vp<[[VP2]]>
 ; CHECK-NEXT:    EMIT branch-on-cond vp<%cmp.n>
 ; CHECK-NEXT:  Successor(s): ir-bb<exit>, scalar.ph
@@ -428,7 +428,7 @@ define i64 @print_mulacc(ptr nocapture readonly %x, ptr nocapture readonly %y, i
 ; CHECK-NEXT:  Successor(s): middle.block
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  middle.block:
-; CHECK-NEXT:    EMIT vp<[[VP10:%[0-9]+]]> = compute-reduction-result (add, in-loop) vp<[[VP8]]>
+; CHECK-NEXT:    EMIT-SCALAR vp<[[VP10:%[0-9]+]]> = compute-reduction-result (add, in-loop) vp<[[VP8]]>
 ; CHECK-NEXT:    EMIT vp<%cmp.n> = icmp eq ir<%n>, vp<[[VP2]]>
 ; CHECK-NEXT:    EMIT branch-on-cond vp<%cmp.n>
 ; CHECK-NEXT:  Successor(s): ir-bb<exit>, scalar.ph
@@ -512,7 +512,7 @@ define i64 @print_mulacc_extended(ptr nocapture readonly %x, ptr nocapture reado
 ; CHECK-NEXT:  Successor(s): middle.block
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  middle.block:
-; CHECK-NEXT:    EMIT vp<[[VP10:%[0-9]+]]> = compute-reduction-result (add, in-loop) vp<[[VP8]]>
+; CHECK-NEXT:    EMIT-SCALAR vp<[[VP10:%[0-9]+]]> = compute-reduction-result (add, in-loop) vp<[[VP8]]>
 ; CHECK-NEXT:    EMIT vp<%cmp.n> = icmp eq ir<%n>, vp<[[VP2]]>
 ; CHECK-NEXT:    EMIT branch-on-cond vp<%cmp.n>
 ; CHECK-NEXT:  Successor(s): ir-bb<exit>, scalar.ph
@@ -599,7 +599,7 @@ define i64 @print_extended_sub_reduction(ptr nocapture readonly %x, ptr nocaptur
 ; CHECK-NEXT:  Successor(s): middle.block
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  middle.block:
-; CHECK-NEXT:    EMIT vp<[[VP9:%[0-9]+]]> = compute-reduction-result (sub, in-loop) vp<[[VP7]]>
+; CHECK-NEXT:    EMIT-SCALAR vp<[[VP9:%[0-9]+]]> = compute-reduction-result (sub, in-loop) vp<[[VP7]]>
 ; CHECK-NEXT:    EMIT vp<%cmp.n> = icmp eq ir<%n>, vp<[[VP2]]>
 ; CHECK-NEXT:    EMIT branch-on-cond vp<%cmp.n>
 ; CHECK-NEXT:  Successor(s): ir-bb<exit>, scalar.ph
@@ -679,7 +679,7 @@ define i32 @print_mulacc_sub(ptr %a, ptr %b) {
 ; CHECK-NEXT:  Successor(s): middle.block
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  middle.block:
-; CHECK-NEXT:    EMIT vp<[[VP10:%[0-9]+]]> = compute-reduction-result (sub, in-loop) vp<[[VP8]]>
+; CHECK-NEXT:    EMIT-SCALAR vp<[[VP10:%[0-9]+]]> = compute-reduction-result (sub, in-loop) vp<[[VP8]]>
 ; CHECK-NEXT:    EMIT vp<%cmp.n> = icmp eq ir<1024>, vp<[[VP2]]>
 ; CHECK-NEXT:    EMIT branch-on-cond vp<%cmp.n>
 ; CHECK-NEXT:  Successor(s): ir-bb<exit>, scalar.ph
@@ -766,7 +766,7 @@ define i32 @print_mulacc_negated(ptr %a, ptr %b) {
 ; CHECK-NEXT:  Successor(s): middle.block
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  middle.block:
-; CHECK-NEXT:    EMIT vp<[[VP10:%[0-9]+]]> = compute-reduction-result (add, in-loop) vp<[[VP8]]>
+; CHECK-NEXT:    EMIT-SCALAR vp<[[VP10:%[0-9]+]]> = compute-reduction-result (add, in-loop) vp<[[VP8]]>
 ; CHECK-NEXT:    EMIT vp<%cmp.n> = icmp eq ir<1024>, vp<[[VP2]]>
 ; CHECK-NEXT:    EMIT branch-on-cond vp<%cmp.n>
 ; CHECK-NEXT:  Successor(s): ir-bb<exit>, scalar.ph
@@ -855,7 +855,7 @@ define i64 @print_mulacc_sub_extended(ptr nocapture readonly %x, ptr nocapture r
 ; CHECK-NEXT:  Successor(s): middle.block
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  middle.block:
-; CHECK-NEXT:    EMIT vp<[[VP10:%[0-9]+]]> = compute-reduction-result (sub, in-loop) vp<[[VP8]]>
+; CHECK-NEXT:    EMIT-SCALAR vp<[[VP10:%[0-9]+]]> = compute-reduction-result (sub, in-loop) vp<[[VP8]]>
 ; CHECK-NEXT:    EMIT vp<%cmp.n> = icmp eq ir<%n>, vp<[[VP2]]>
 ; CHECK-NEXT:    EMIT branch-on-cond vp<%cmp.n>
 ; CHECK-NEXT:  Successor(s): ir-bb<exit>, scalar.ph
@@ -942,7 +942,7 @@ define i64 @print_mulacc_duplicate_extends(ptr nocapture readonly %x, ptr nocapt
 ; CHECK-NEXT:  Successor(s): middle.block
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  middle.block:
-; CHECK-NEXT:    EMIT vp<[[VP9:%[0-9]+]]> = compute-reduction-result (sub, in-loop) vp<[[VP7]]>
+; CHECK-NEXT:    EMIT-SCALAR vp<[[VP9:%[0-9]+]]> = compute-reduction-result (sub, in-loop) vp<[[VP7]]>
 ; CHECK-NEXT:    EMIT vp<%cmp.n> = icmp eq ir<%n>, vp<[[VP2]]>
 ; CHECK-NEXT:    EMIT branch-on-cond vp<%cmp.n>
 ; CHECK-NEXT:  Successor(s): ir-bb<exit>, scalar.ph
@@ -1025,7 +1025,7 @@ define i32 @print_mulacc_extended_const(ptr %start, ptr %end) {
 ; CHECK-NEXT:  Successor(s): middle.block
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  middle.block:
-; CHECK-NEXT:    EMIT vp<[[VP11:%[0-9]+]]> = compute-reduction-result (add, in-loop) vp<[[VP9]]>
+; CHECK-NEXT:    EMIT-SCALAR vp<[[VP11:%[0-9]+]]> = compute-reduction-result (add, in-loop) vp<[[VP9]]>
 ; CHECK-NEXT:    EMIT vp<%cmp.n> = icmp eq vp<[[VP3]]>, vp<[[VP2]]>
 ; CHECK-NEXT:    EMIT branch-on-cond vp<%cmp.n>
 ; CHECK-NEXT:  Successor(s): ir-bb<exit>, scalar.ph
@@ -1104,7 +1104,7 @@ define i32 @print_mulacc_extended_const_lhs(ptr %start, ptr %end) {
 ; CHECK-NEXT:  Successor(s): middle.block
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  middle.block:
-; CHECK-NEXT:    EMIT vp<[[VP11:%[0-9]+]]> = compute-reduction-result (add, in-loop) vp<[[VP9]]>
+; CHECK-NEXT:    EMIT-SCALAR vp<[[VP11:%[0-9]+]]> = compute-reduction-result (add, in-loop) vp<[[VP9]]>
 ; CHECK-NEXT:    EMIT vp<%cmp.n> = icmp eq vp<[[VP3]]>, vp<[[VP2]]>
 ; CHECK-NEXT:    EMIT branch-on-cond vp<%cmp.n>
 ; CHECK-NEXT:  Successor(s): ir-bb<exit>, scalar.ph
@@ -1184,7 +1184,7 @@ define i32 @print_mulacc_not_extended_const(ptr %start, ptr %end) {
 ; CHECK-NEXT:  Successor(s): middle.block
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  middle.block:
-; CHECK-NEXT:    EMIT vp<[[VP11:%[0-9]+]]> = compute-reduction-result (add, in-loop) vp<[[VP9]]>
+; CHECK-NEXT:    EMIT-SCALAR vp<[[VP11:%[0-9]+]]> = compute-reduction-result (add, in-loop) vp<[[VP9]]>
 ; CHECK-NEXT:    EMIT vp<%cmp.n> = icmp eq vp<[[VP3]]>, vp<[[VP2]]>
 ; CHECK-NEXT:    EMIT branch-on-cond vp<%cmp.n>
 ; CHECK-NEXT:  Successor(s): ir-bb<exit>, scalar.ph
@@ -1263,7 +1263,7 @@ define i64 @print_ext_mulacc_extended_const(ptr %start, ptr %end) {
 ; CHECK-NEXT:  Successor(s): middle.block
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  middle.block:
-; CHECK-NEXT:    EMIT vp<[[VP11:%[0-9]+]]> = compute-reduction-result (add, in-loop) vp<[[VP9]]>
+; CHECK-NEXT:    EMIT-SCALAR vp<[[VP11:%[0-9]+]]> = compute-reduction-result (add, in-loop) vp<[[VP9]]>
 ; CHECK-NEXT:    EMIT vp<%cmp.n> = icmp eq vp<[[VP3]]>, vp<[[VP2]]>
 ; CHECK-NEXT:    EMIT branch-on-cond vp<%cmp.n>
 ; CHECK-NEXT:  Successor(s): ir-bb<exit>, scalar.ph
@@ -1346,7 +1346,7 @@ define i64 @print_ext_mulacc_not_extended_const(ptr %start, ptr %end) {
 ; CHECK-NEXT:  Successor(s): middle.block
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  middle.block:
-; CHECK-NEXT:    EMIT vp<[[VP12:%[0-9]+]]> = compute-reduction-result (add, in-loop) vp<[[VP10]]>
+; CHECK-NEXT:    EMIT-SCALAR vp<[[VP12:%[0-9]+]]> = compute-reduction-result (add, in-loop) vp<[[VP10]]>
 ; CHECK-NEXT:    EMIT vp<%cmp.n> = icmp eq vp<[[VP3]]>, vp<[[VP2]]>
 ; CHECK-NEXT:    EMIT branch-on-cond vp<%cmp.n>
 ; CHECK-NEXT:  Successor(s): ir-bb<exit>, scalar.ph
@@ -1428,10 +1428,10 @@ define i64 @print_ext_mul_two_uses(i64 %n, ptr %a, i16 %b, i32 %c) {
 ; CHECK-NEXT:  Successor(s): middle.block
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  middle.block:
-; CHECK-NEXT:    EMIT vp<[[VP7:%[0-9]+]]> = compute-reduction-result (add, in-loop) vp<[[VP5]]>
-; CHECK-NEXT:    EMIT vp<%vector.recur.extract.for.phi> = extract-penultimate-element ir<%load.ext.ext>
+; CHECK-NEXT:    EMIT-SCALAR vp<[[VP7:%[0-9]+]]> = compute-reduction-result (add, in-loop) vp<[[VP5]]>
+; CHECK-NEXT:    EMIT-SCALAR vp<%vector.recur.extract.for.phi> = extract-penultimate-element ir<%load.ext.ext>
 ; CHECK-NEXT:    EMIT vp<[[VP8:%[0-9]+]]> = extract-last-part ir<%load.ext.ext>
-; CHECK-NEXT:    EMIT vp<%vector.recur.extract> = extract-last-lane vp<[[VP8]]>
+; CHECK-NEXT:    EMIT-SCALAR vp<%vector.recur.extract> = extract-last-lane vp<[[VP8]]>
 ; CHECK-NEXT:    EMIT vp<%cmp.n> = icmp eq vp<[[VP2]]>, vp<[[VP1]]>
 ; CHECK-NEXT:    EMIT branch-on-cond vp<%cmp.n>
 ; CHECK-NEXT:  Successor(s): ir-bb<exit>, scalar.ph
@@ -1520,7 +1520,7 @@ define i32 @print_umax_reduction_out_of_loop(ptr %y) {
 ; CHECK-NEXT:  Successor(s): middle.block
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  middle.block:
-; CHECK-NEXT:    EMIT vp<[[VP7:%[0-9]+]]> = compute-reduction-result (umax) ir<%red.next>
+; CHECK-NEXT:    EMIT-SCALAR vp<[[VP7:%[0-9]+]]> = compute-reduction-result (umax) ir<%red.next>
 ; CHECK-NEXT:    EMIT vp<%cmp.n> = icmp eq ir<100>, vp<[[VP2]]>
 ; CHECK-NEXT:    EMIT branch-on-cond vp<%cmp.n>
 ; CHECK-NEXT:  Successor(s): ir-bb<exit>, scalar.ph
@@ -1593,7 +1593,7 @@ define i32 @print_umax_reduction(ptr %y) {
 ; CHECK-NEXT:  Successor(s): middle.block
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  middle.block:
-; CHECK-NEXT:    EMIT vp<[[VP7:%[0-9]+]]> = compute-reduction-result (umax) ir<%red.next>
+; CHECK-NEXT:    EMIT-SCALAR vp<[[VP7:%[0-9]+]]> = compute-reduction-result (umax) ir<%red.next>
 ; CHECK-NEXT:    EMIT vp<%cmp.n> = icmp eq ir<100>, vp<[[VP2]]>
 ; CHECK-NEXT:    EMIT branch-on-cond vp<%cmp.n>
 ; CHECK-NEXT:  Successor(s): ir-bb<exit>, scalar.ph
@@ -1666,7 +1666,7 @@ define i32 @print_umin_reduction(ptr %y) {
 ; CHECK-NEXT:  Successor(s): middle.block
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  middle.block:
-; CHECK-NEXT:    EMIT vp<[[VP7:%[0-9]+]]> = compute-reduction-result (umin) ir<%red.next>
+; CHECK-NEXT:    EMIT-SCALAR vp<[[VP7:%[0-9]+]]> = compute-reduction-result (umin) ir<%red.next>
 ; CHECK-NEXT:    EMIT vp<%cmp.n> = icmp eq ir<100>, vp<[[VP2]]>
 ; CHECK-NEXT:    EMIT branch-on-cond vp<%cmp.n>
 ; CHECK-NEXT:  Successor(s): ir-bb<exit>, scalar.ph
@@ -1739,7 +1739,7 @@ define i32 @print_smax_reduction(ptr %y) {
 ; CHECK-NEXT:  Successor(s): middle.block
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  middle.block:
-; CHECK-NEXT:    EMIT vp<[[VP7:%[0-9]+]]> = compute-reduction-result (smax) ir<%red.next>
+; CHECK-NEXT:    EMIT-SCALAR vp<[[VP7:%[0-9]+]]> = compute-reduction-result (smax) ir<%red.next>
 ; CHECK-NEXT:    EMIT vp<%cmp.n> = icmp eq ir<100>, vp<[[VP2]]>
 ; CHECK-NEXT:    EMIT branch-on-cond vp<%cmp.n>
 ; CHECK-NEXT:  Successor(s): ir-bb<exit>, scalar.ph
@@ -1812,7 +1812,7 @@ define i32 @print_smin_reduction(ptr %y) {
 ; CHECK-NEXT:  Successor(s): middle.block
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  middle.block:
-; CHECK-NEXT:    EMIT vp<[[VP7:%[0-9]+]]> = compute-reduction-result (smin) ir<%red.next>
+; CHECK-NEXT:    EMIT-SCALAR vp<[[VP7:%[0-9]+]]> = compute-reduction-result (smin) ir<%red.next>
 ; CHECK-NEXT:    EMIT vp<%cmp.n> = icmp eq ir<100>, vp<[[VP2]]>
 ; CHECK-NEXT:    EMIT branch-on-cond vp<%cmp.n>
 ; CHECK-NEXT:  Successor(s): ir-bb<exit>, scalar.ph

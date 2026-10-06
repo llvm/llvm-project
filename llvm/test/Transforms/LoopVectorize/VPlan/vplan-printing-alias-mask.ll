@@ -61,7 +61,7 @@ define void @alias_mask(ptr noalias %a, ptr %b, ptr %c, i64 %n) {
 ; FINAL-EMPTY:
 ; FINAL-NEXT:  vector.clamped.vf.check:
 ; FINAL-NEXT:    WIDEN-INTRINSIC vp<[[VP4:%[0-9]+]]> = call llvm.loop.dependence.war.mask(vp<[[VP3]]>, vp<[[VP2]]>, ir<1>)
-; FINAL-NEXT:    EMIT vp<%num.active.lanes> = num-active-lanes vp<[[VP4]]>
+; FINAL-NEXT:    EMIT-SCALAR vp<%num.active.lanes> = num-active-lanes vp<[[VP4]]>
 ; FINAL-NEXT:    EMIT vp<%vf.is.scalar> = icmp ule vp<%num.active.lanes>, ir<1>
 ; FINAL-NEXT:    EMIT vp<[[VP5:%[0-9]+]]> = sub ir<-1>, ir<%n>
 ; FINAL-NEXT:    EMIT vp<%vf.step.overflow> = icmp ult vp<[[VP5]]>, vp<%num.active.lanes>

@@ -156,7 +156,7 @@ compound=true
   N6 [label =
     "middle.block:\l" +
     "  EMIT vp\<%5\> = extract-last-part ir\<%indvars.iv.next\>\l" +
-    "  EMIT vp\<%6\> = extract-last-lane vp\<%5\>\l" +
+    "  EMIT-SCALAR vp\<%6\> = extract-last-lane vp\<%5\>\l" +
     "  EMIT vp\<%cmp.n\> = icmp eq ir\<%N\>, vp\<%1\>\l" +
     "  EMIT branch-on-cond vp\<%cmp.n\>\l" +
     "Successor(s): ir-bb\<for.end\>, scalar.ph\l"
@@ -332,7 +332,7 @@ compound=true
   N7 [label =
     "middle.block:\l" +
     "  EMIT vp\<%5\> = extract-last-part ir\<%iv.next\>\l" +
-    "  EMIT vp\<%6\> = extract-last-lane vp\<%5\>\l" +
+    "  EMIT-SCALAR vp\<%6\> = extract-last-lane vp\<%5\>\l" +
     "  EMIT vp\<%cmp.n\> = icmp eq ir\<%N\>, vp\<%1\>\l" +
     "  EMIT branch-on-cond vp\<%cmp.n\>\l" +
     "Successor(s): ir-bb\<exit.2\>, scalar.ph\l"

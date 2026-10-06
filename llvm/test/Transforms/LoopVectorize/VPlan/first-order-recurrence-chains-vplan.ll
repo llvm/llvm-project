@@ -39,9 +39,9 @@ define void @test_chained_first_order_recurrences_1(ptr %ptr) {
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  middle.block:
 ; CHECK-NEXT:    EMIT vp<[[VP10:%[0-9]+]]> = extract-last-part ir<%for.1.next>
-; CHECK-NEXT:    EMIT vp<%vector.recur.extract> = extract-last-lane vp<[[VP10]]>
+; CHECK-NEXT:    EMIT-SCALAR vp<%vector.recur.extract> = extract-last-lane vp<[[VP10]]>
 ; CHECK-NEXT:    EMIT vp<[[VP11:%[0-9]+]]> = extract-last-part vp<[[VP6]]>
-; CHECK-NEXT:    EMIT vp<%vector.recur.extract>.1 = extract-last-lane vp<[[VP11]]>
+; CHECK-NEXT:    EMIT-SCALAR vp<%vector.recur.extract>.1 = extract-last-lane vp<[[VP11]]>
 ; CHECK-NEXT:    EMIT vp<%cmp.n> = icmp eq ir<1000>, vp<[[VP2]]>
 ; CHECK-NEXT:    EMIT branch-on-cond vp<%cmp.n>
 ; CHECK-NEXT:  Successor(s): ir-bb<exit>, scalar.ph
@@ -127,11 +127,11 @@ define void @test_chained_first_order_recurrences_3(ptr %ptr) {
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  middle.block:
 ; CHECK-NEXT:    EMIT vp<[[VP11:%[0-9]+]]> = extract-last-part ir<%for.1.next>
-; CHECK-NEXT:    EMIT vp<%vector.recur.extract> = extract-last-lane vp<[[VP11]]>
+; CHECK-NEXT:    EMIT-SCALAR vp<%vector.recur.extract> = extract-last-lane vp<[[VP11]]>
 ; CHECK-NEXT:    EMIT vp<[[VP12:%[0-9]+]]> = extract-last-part vp<[[VP6]]>
-; CHECK-NEXT:    EMIT vp<%vector.recur.extract>.1 = extract-last-lane vp<[[VP12]]>
+; CHECK-NEXT:    EMIT-SCALAR vp<%vector.recur.extract>.1 = extract-last-lane vp<[[VP12]]>
 ; CHECK-NEXT:    EMIT vp<[[VP13:%[0-9]+]]> = extract-last-part vp<[[VP7]]>
-; CHECK-NEXT:    EMIT vp<%vector.recur.extract>.2 = extract-last-lane vp<[[VP13]]>
+; CHECK-NEXT:    EMIT-SCALAR vp<%vector.recur.extract>.2 = extract-last-lane vp<[[VP13]]>
 ; CHECK-NEXT:    EMIT vp<%cmp.n> = icmp eq ir<1000>, vp<[[VP2]]>
 ; CHECK-NEXT:    EMIT branch-on-cond vp<%cmp.n>
 ; CHECK-NEXT:  Successor(s): ir-bb<exit>, scalar.ph
@@ -223,9 +223,9 @@ define i32 @test_chained_first_order_recurrences_4(ptr %base, i64 %x) {
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  middle.block:
 ; CHECK-NEXT:    EMIT vp<[[VP10:%[0-9]+]]> = extract-last-part vp<[[VP3]]>
-; CHECK-NEXT:    EMIT vp<%vector.recur.extract> = extract-last-lane vp<[[VP10]]>
+; CHECK-NEXT:    EMIT-SCALAR vp<%vector.recur.extract> = extract-last-lane vp<[[VP10]]>
 ; CHECK-NEXT:    EMIT vp<[[VP11:%[0-9]+]]> = extract-last-part ir<%for.x.prev>
-; CHECK-NEXT:    EMIT vp<%vector.recur.extract>.1 = extract-last-lane vp<[[VP11]]>
+; CHECK-NEXT:    EMIT-SCALAR vp<%vector.recur.extract>.1 = extract-last-lane vp<[[VP11]]>
 ; CHECK-NEXT:    EMIT vp<%cmp.n> = icmp eq ir<4098>, vp<[[VP2]]>
 ; CHECK-NEXT:    EMIT branch-on-cond vp<%cmp.n>
 ; CHECK-NEXT:  Successor(s): ir-bb<ret>, scalar.ph
@@ -312,9 +312,9 @@ define i32 @test_chained_first_order_recurrences_5_hoist_to_load(ptr %base) {
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  middle.block:
 ; CHECK-NEXT:    EMIT vp<[[VP11:%[0-9]+]]> = extract-last-part vp<[[VP6]]>
-; CHECK-NEXT:    EMIT vp<%vector.recur.extract> = extract-last-lane vp<[[VP11]]>
+; CHECK-NEXT:    EMIT-SCALAR vp<%vector.recur.extract> = extract-last-lane vp<[[VP11]]>
 ; CHECK-NEXT:    EMIT vp<[[VP12:%[0-9]+]]> = extract-last-part ir<%for.x.prev>
-; CHECK-NEXT:    EMIT vp<%vector.recur.extract>.1 = extract-last-lane vp<[[VP12]]>
+; CHECK-NEXT:    EMIT-SCALAR vp<%vector.recur.extract>.1 = extract-last-lane vp<[[VP12]]>
 ; CHECK-NEXT:    EMIT vp<%cmp.n> = icmp eq ir<4098>, vp<[[VP2]]>
 ; CHECK-NEXT:    EMIT branch-on-cond vp<%cmp.n>
 ; CHECK-NEXT:  Successor(s): ir-bb<ret>, scalar.ph

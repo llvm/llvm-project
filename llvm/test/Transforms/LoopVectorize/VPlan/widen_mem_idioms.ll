@@ -123,7 +123,7 @@ define void @reduc_store_inside_unrolled(ptr noalias %dst, ptr noalias readonly 
 ; CHECK-NEXT:    CLONE store ir<%sum.2>, ir<%gep.dst>
 ; CHECK-NEXT:    EMIT vp<[[VP5:%[0-9]+]]> = exiting-iv-value ir<%iv>
 ; CHECK-NEXT:    EMIT vp<[[VP6:%[0-9]+]]> = extract-last-part ir<%sum.2>
-; CHECK-NEXT:    EMIT vp<[[VP7:%[0-9]+]]> = extract-last-lane vp<[[VP6]]>
+; CHECK-NEXT:    EMIT-SCALAR vp<[[VP7:%[0-9]+]]> = extract-last-lane vp<[[VP6]]>
 ; CHECK-NEXT:    EMIT vp<%cmp.n> = icmp eq ir<500>, vp<[[VP2]]>
 ; CHECK-NEXT:    EMIT branch-on-cond vp<%cmp.n>
 ; CHECK-NEXT:  Successor(s): ir-bb<exit>, scalar.ph

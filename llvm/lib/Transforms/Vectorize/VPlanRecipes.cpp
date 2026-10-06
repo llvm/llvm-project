@@ -614,6 +614,16 @@ static bool isAlwaysSingleScalar(unsigned Opcode) {
   case VPInstruction::ExplicitVectorLength:
   case VPInstruction::ResumeForEpilogue:
   case VPInstruction::Intrinsic:
+  case VPInstruction::ExtractLastLane:
+  case VPInstruction::ExtractPenultimateElement:
+  case Instruction::ExtractElement:
+  case VPInstruction::ExtractLane:
+  case VPInstruction::FirstActiveLane:
+  case VPInstruction::LastActiveLane:
+  case VPInstruction::ExtractLastActive:
+  case VPInstruction::ComputeReductionResult:
+  case VPInstruction::AnyOf:
+  case VPInstruction::NumActiveLanes:
     return true;
   default:
     return false;
@@ -724,7 +734,7 @@ bool VPInstruction::doesGeneratePerAllLanes() const {
 }
 
 bool VPInstruction::inferGeneratesSingleScalar() const {
-  if (doesGenerateSingleScalar() || isVectorToScalar())
+  if (doesGenerateSingleScalar())
     return true;
   switch (Opcode) {
   case Instruction::Freeze:

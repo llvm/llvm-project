@@ -58,7 +58,7 @@ define void @unfoldable(ptr %src, ptr noalias %dst) {
 ; CHECK-NEXT:  Successor(s): pred.load.continue
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  pred.load.continue:
-; CHECK-NEXT:    EMIT vp<[[VP13:%[0-9]+]]> = extractelement vp<%active.lane.mask>, ir<0>
+; CHECK-NEXT:    EMIT-SCALAR vp<[[VP13:%[0-9]+]]> = extractelement vp<%active.lane.mask>, ir<0>
 ; CHECK-NEXT:    EMIT branch-on-cond vp<[[VP13]]>
 ; CHECK-NEXT:  Successor(s): pred.load.if, pred.load.continue
 ; CHECK-EMPTY:
@@ -70,7 +70,7 @@ define void @unfoldable(ptr %src, ptr noalias %dst) {
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  pred.load.continue:
 ; CHECK-NEXT:    WIDEN-PHI vp<[[VP16:%[0-9]+]]> = phi [ ir<poison>, pred.load.continue ], [ vp<[[VP15]]>, pred.load.if ]
-; CHECK-NEXT:    EMIT vp<[[VP17:%[0-9]+]]> = extractelement vp<%active.lane.mask>, ir<1>
+; CHECK-NEXT:    EMIT-SCALAR vp<[[VP17:%[0-9]+]]> = extractelement vp<%active.lane.mask>, ir<1>
 ; CHECK-NEXT:    EMIT branch-on-cond vp<[[VP17]]>
 ; CHECK-NEXT:  Successor(s): pred.load.if, pred.load.continue
 ; CHECK-EMPTY:
@@ -82,7 +82,7 @@ define void @unfoldable(ptr %src, ptr noalias %dst) {
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  pred.load.continue:
 ; CHECK-NEXT:    WIDEN-PHI vp<[[VP20:%[0-9]+]]> = phi [ vp<[[VP16]]>, pred.load.continue ], [ vp<[[VP19]]>, pred.load.if ]
-; CHECK-NEXT:    EMIT vp<[[VP21:%[0-9]+]]> = extractelement vp<%active.lane.mask>, ir<2>
+; CHECK-NEXT:    EMIT-SCALAR vp<[[VP21:%[0-9]+]]> = extractelement vp<%active.lane.mask>, ir<2>
 ; CHECK-NEXT:    EMIT branch-on-cond vp<[[VP21]]>
 ; CHECK-NEXT:  Successor(s): pred.load.if, pred.load.continue
 ; CHECK-EMPTY:
@@ -94,7 +94,7 @@ define void @unfoldable(ptr %src, ptr noalias %dst) {
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  pred.load.continue:
 ; CHECK-NEXT:    WIDEN-PHI vp<[[VP24:%[0-9]+]]> = phi [ vp<[[VP20]]>, pred.load.continue ], [ vp<[[VP23]]>, pred.load.if ]
-; CHECK-NEXT:    EMIT vp<[[VP25:%[0-9]+]]> = extractelement vp<%active.lane.mask>, ir<3>
+; CHECK-NEXT:    EMIT-SCALAR vp<[[VP25:%[0-9]+]]> = extractelement vp<%active.lane.mask>, ir<3>
 ; CHECK-NEXT:    EMIT branch-on-cond vp<[[VP25]]>
 ; CHECK-NEXT:  Successor(s): pred.load.if, pred.load.continue
 ; CHECK-EMPTY:
@@ -111,7 +111,7 @@ define void @unfoldable(ptr %src, ptr noalias %dst) {
 ; CHECK-NEXT:  Successor(s): pred.store.if
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  pred.store.if:
-; CHECK-NEXT:    EMIT vp<[[VP29:%[0-9]+]]> = extractelement ir<%m>, ir<0>
+; CHECK-NEXT:    EMIT-SCALAR vp<[[VP29:%[0-9]+]]> = extractelement ir<%m>, ir<0>
 ; CHECK-NEXT:    CLONE store vp<[[VP29]]>, ir<%dst>
 ; CHECK-NEXT:  Successor(s): pred.store.continue
 ; CHECK-EMPTY:
@@ -120,7 +120,7 @@ define void @unfoldable(ptr %src, ptr noalias %dst) {
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  pred.store.if:
 ; CHECK-NEXT:    CLONE ir<%q> = getelementptr inbounds ir<%dst>, vp<[[VP3]]>
-; CHECK-NEXT:    EMIT vp<[[VP30:%[0-9]+]]> = extractelement ir<%m>, ir<1>
+; CHECK-NEXT:    EMIT-SCALAR vp<[[VP30:%[0-9]+]]> = extractelement ir<%m>, ir<1>
 ; CHECK-NEXT:    CLONE store vp<[[VP30]]>, ir<%q>
 ; CHECK-NEXT:  Successor(s): pred.store.continue
 ; CHECK-EMPTY:
@@ -129,7 +129,7 @@ define void @unfoldable(ptr %src, ptr noalias %dst) {
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  pred.store.if:
 ; CHECK-NEXT:    CLONE ir<%q>.1 = getelementptr inbounds ir<%dst>, vp<[[VP4]]>
-; CHECK-NEXT:    EMIT vp<[[VP31:%[0-9]+]]> = extractelement ir<%m>, ir<2>
+; CHECK-NEXT:    EMIT-SCALAR vp<[[VP31:%[0-9]+]]> = extractelement ir<%m>, ir<2>
 ; CHECK-NEXT:    CLONE store vp<[[VP31]]>, ir<%q>.1
 ; CHECK-NEXT:  Successor(s): pred.store.continue
 ; CHECK-EMPTY:
@@ -138,7 +138,7 @@ define void @unfoldable(ptr %src, ptr noalias %dst) {
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  pred.store.if:
 ; CHECK-NEXT:    CLONE ir<%q>.2 = getelementptr inbounds ir<%dst>, vp<[[VP5]]>
-; CHECK-NEXT:    EMIT vp<[[VP32:%[0-9]+]]> = extractelement ir<%m>, ir<3>
+; CHECK-NEXT:    EMIT-SCALAR vp<[[VP32:%[0-9]+]]> = extractelement ir<%m>, ir<3>
 ; CHECK-NEXT:    CLONE store vp<[[VP32]]>, ir<%q>.2
 ; CHECK-NEXT:  Successor(s): pred.store.continue
 ; CHECK-EMPTY:
@@ -148,7 +148,7 @@ define void @unfoldable(ptr %src, ptr noalias %dst) {
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  pred.store.if:
 ; CHECK-NEXT:    CLONE ir<%q>.3 = getelementptr inbounds ir<%dst>, vp<[[VP2]]>
-; CHECK-NEXT:    EMIT vp<[[VP34:%[0-9]+]]> = extractelement ir<%m>.1, ir<0>
+; CHECK-NEXT:    EMIT-SCALAR vp<[[VP34:%[0-9]+]]> = extractelement ir<%m>.1, ir<0>
 ; CHECK-NEXT:    CLONE store vp<[[VP34]]>, ir<%q>.3
 ; CHECK-NEXT:  Successor(s): pred.store.continue
 ; CHECK-EMPTY:
@@ -158,7 +158,7 @@ define void @unfoldable(ptr %src, ptr noalias %dst) {
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  pred.store.if:
 ; CHECK-NEXT:    CLONE ir<%q>.4 = getelementptr inbounds ir<%dst>, vp<[[VP6]]>
-; CHECK-NEXT:    EMIT vp<[[VP36:%[0-9]+]]> = extractelement ir<%m>.1, ir<1>
+; CHECK-NEXT:    EMIT-SCALAR vp<[[VP36:%[0-9]+]]> = extractelement ir<%m>.1, ir<1>
 ; CHECK-NEXT:    CLONE store vp<[[VP36]]>, ir<%q>.4
 ; CHECK-NEXT:  Successor(s): pred.store.continue
 ; CHECK-EMPTY:
@@ -168,7 +168,7 @@ define void @unfoldable(ptr %src, ptr noalias %dst) {
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  pred.store.if:
 ; CHECK-NEXT:    CLONE ir<%q>.5 = getelementptr inbounds ir<%dst>, vp<[[VP7]]>
-; CHECK-NEXT:    EMIT vp<[[VP38:%[0-9]+]]> = extractelement ir<%m>.1, ir<2>
+; CHECK-NEXT:    EMIT-SCALAR vp<[[VP38:%[0-9]+]]> = extractelement ir<%m>.1, ir<2>
 ; CHECK-NEXT:    CLONE store vp<[[VP38]]>, ir<%q>.5
 ; CHECK-NEXT:  Successor(s): pred.store.continue
 ; CHECK-EMPTY:
@@ -178,7 +178,7 @@ define void @unfoldable(ptr %src, ptr noalias %dst) {
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  pred.store.if:
 ; CHECK-NEXT:    CLONE ir<%q>.6 = getelementptr inbounds ir<%dst>, vp<[[VP8]]>
-; CHECK-NEXT:    EMIT vp<[[VP40:%[0-9]+]]> = extractelement ir<%m>.1, ir<3>
+; CHECK-NEXT:    EMIT-SCALAR vp<[[VP40:%[0-9]+]]> = extractelement ir<%m>.1, ir<3>
 ; CHECK-NEXT:    CLONE store vp<[[VP40]]>, ir<%q>.6
 ; CHECK-NEXT:  Successor(s): pred.store.continue
 ; CHECK-EMPTY:

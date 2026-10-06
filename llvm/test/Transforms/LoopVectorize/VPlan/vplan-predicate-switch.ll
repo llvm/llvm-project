@@ -29,7 +29,7 @@ define void @switch4_default_common_dest_with_case(ptr %start, ptr %end) {
 ; CHECK-NEXT:    EMIT vp<[[VP10:%[0-9]+]]> = icmp eq ir<%l>, ir<13>
 ; CHECK-NEXT:    EMIT vp<[[VP11:%[0-9]+]]> = or vp<[[VP9]]>, vp<[[VP10]]>
 ; CHECK-NEXT:    EMIT vp<[[VP12:%[0-9]+]]> = not vp<[[VP11]]>
-; CHECK-NEXT:    EMIT vp<[[VP13:%[0-9]+]]> = extractelement vp<[[VP10]]>, ir<0>
+; CHECK-NEXT:    EMIT-SCALAR vp<[[VP13:%[0-9]+]]> = extractelement vp<[[VP10]]>, ir<0>
 ; CHECK-NEXT:    EMIT branch-on-cond vp<[[VP13]]>
 ; CHECK-NEXT:  Successor(s): pred.store.if, pred.store.continue
 ; CHECK-EMPTY:
@@ -38,7 +38,7 @@ define void @switch4_default_common_dest_with_case(ptr %start, ptr %end) {
 ; CHECK-NEXT:  Successor(s): pred.store.continue
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  pred.store.continue:
-; CHECK-NEXT:    EMIT vp<[[VP15:%[0-9]+]]> = extractelement vp<[[VP10]]>, ir<1>
+; CHECK-NEXT:    EMIT-SCALAR vp<[[VP15:%[0-9]+]]> = extractelement vp<[[VP10]]>, ir<1>
 ; CHECK-NEXT:    EMIT branch-on-cond vp<[[VP15]]>
 ; CHECK-NEXT:  Successor(s): pred.store.if, pred.store.continue
 ; CHECK-EMPTY:
@@ -47,7 +47,7 @@ define void @switch4_default_common_dest_with_case(ptr %start, ptr %end) {
 ; CHECK-NEXT:  Successor(s): pred.store.continue
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  pred.store.continue:
-; CHECK-NEXT:    EMIT vp<[[VP17:%[0-9]+]]> = extractelement vp<[[VP9]]>, ir<0>
+; CHECK-NEXT:    EMIT-SCALAR vp<[[VP17:%[0-9]+]]> = extractelement vp<[[VP9]]>, ir<0>
 ; CHECK-NEXT:    EMIT branch-on-cond vp<[[VP17]]>
 ; CHECK-NEXT:  Successor(s): pred.store.if, pred.store.continue
 ; CHECK-EMPTY:
@@ -56,7 +56,7 @@ define void @switch4_default_common_dest_with_case(ptr %start, ptr %end) {
 ; CHECK-NEXT:  Successor(s): pred.store.continue
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  pred.store.continue:
-; CHECK-NEXT:    EMIT vp<[[VP19:%[0-9]+]]> = extractelement vp<[[VP9]]>, ir<1>
+; CHECK-NEXT:    EMIT-SCALAR vp<[[VP19:%[0-9]+]]> = extractelement vp<[[VP9]]>, ir<1>
 ; CHECK-NEXT:    EMIT branch-on-cond vp<[[VP19]]>
 ; CHECK-NEXT:  Successor(s): pred.store.if, pred.store.continue
 ; CHECK-EMPTY:
@@ -65,7 +65,7 @@ define void @switch4_default_common_dest_with_case(ptr %start, ptr %end) {
 ; CHECK-NEXT:  Successor(s): pred.store.continue
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  pred.store.continue:
-; CHECK-NEXT:    EMIT vp<[[VP21:%[0-9]+]]> = extractelement vp<[[VP12]]>, ir<0>
+; CHECK-NEXT:    EMIT-SCALAR vp<[[VP21:%[0-9]+]]> = extractelement vp<[[VP12]]>, ir<0>
 ; CHECK-NEXT:    EMIT branch-on-cond vp<[[VP21]]>
 ; CHECK-NEXT:  Successor(s): pred.store.if, pred.store.continue
 ; CHECK-EMPTY:
@@ -74,7 +74,7 @@ define void @switch4_default_common_dest_with_case(ptr %start, ptr %end) {
 ; CHECK-NEXT:  Successor(s): pred.store.continue
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  pred.store.continue:
-; CHECK-NEXT:    EMIT vp<[[VP23:%[0-9]+]]> = extractelement vp<[[VP12]]>, ir<1>
+; CHECK-NEXT:    EMIT-SCALAR vp<[[VP23:%[0-9]+]]> = extractelement vp<[[VP12]]>, ir<1>
 ; CHECK-NEXT:    EMIT branch-on-cond vp<[[VP23]]>
 ; CHECK-NEXT:  Successor(s): pred.store.if, pred.store.continue
 ; CHECK-EMPTY:

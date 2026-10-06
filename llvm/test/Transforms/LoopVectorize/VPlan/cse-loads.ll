@@ -637,12 +637,12 @@ define void @dup_load_across_replicate_region(ptr noalias %a, ptr noalias %b, pt
 ; CHECK-NEXT:    WIDEN ir<%x> = load ir<%p>
 ; CHECK-NEXT:    WIDEN ir<%c> = icmp sgt ir<%x>, ir<0>
 ; CHECK-NEXT:    WIDEN-CAST ir<%idx> = sext ir<%x> to i64
-; CHECK-NEXT:    EMIT vp<[[VP1:%[0-9]+]]> = extractelement ir<%c>, ir<0>
+; CHECK-NEXT:    EMIT-SCALAR vp<[[VP1:%[0-9]+]]> = extractelement ir<%c>, ir<0>
 ; CHECK-NEXT:    EMIT branch-on-cond vp<[[VP1]]>
 ; CHECK-NEXT:  Successor(s): pred.load.if, pred.load.continue
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  pred.load.if:
-; CHECK-NEXT:    EMIT vp<[[VP3:%[0-9]+]]> = extractelement ir<%idx>, ir<0>
+; CHECK-NEXT:    EMIT-SCALAR vp<[[VP3:%[0-9]+]]> = extractelement ir<%idx>, ir<0>
 ; CHECK-NEXT:    CLONE ir<%gep2> = getelementptr inbounds ir<%b>, vp<[[VP3]]>
 ; CHECK-NEXT:    CLONE ir<%ld> = load ir<%gep2>
 ; CHECK-NEXT:    EMIT vp<[[VP4:%[0-9]+]]> = insertelement ir<poison>, ir<%ld>, ir<0>
@@ -650,12 +650,12 @@ define void @dup_load_across_replicate_region(ptr noalias %a, ptr noalias %b, pt
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  pred.load.continue:
 ; CHECK-NEXT:    WIDEN-PHI vp<[[VP5:%[0-9]+]]> = phi [ ir<poison>, vector.body ], [ vp<[[VP4]]>, pred.load.if ]
-; CHECK-NEXT:    EMIT vp<[[VP6:%[0-9]+]]> = extractelement ir<%c>, ir<1>
+; CHECK-NEXT:    EMIT-SCALAR vp<[[VP6:%[0-9]+]]> = extractelement ir<%c>, ir<1>
 ; CHECK-NEXT:    EMIT branch-on-cond vp<[[VP6]]>
 ; CHECK-NEXT:  Successor(s): pred.load.if, pred.load.continue
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  pred.load.if:
-; CHECK-NEXT:    EMIT vp<[[VP8:%[0-9]+]]> = extractelement ir<%idx>, ir<1>
+; CHECK-NEXT:    EMIT-SCALAR vp<[[VP8:%[0-9]+]]> = extractelement ir<%idx>, ir<1>
 ; CHECK-NEXT:    CLONE ir<%gep2>.1 = getelementptr inbounds ir<%b>, vp<[[VP8]]>
 ; CHECK-NEXT:    CLONE ir<%ld>.1 = load ir<%gep2>.1
 ; CHECK-NEXT:    EMIT vp<[[VP9:%[0-9]+]]> = insertelement vp<[[VP5]]>, ir<%ld>.1, ir<1>
@@ -663,12 +663,12 @@ define void @dup_load_across_replicate_region(ptr noalias %a, ptr noalias %b, pt
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  pred.load.continue:
 ; CHECK-NEXT:    WIDEN-PHI vp<[[VP10:%[0-9]+]]> = phi [ vp<[[VP5]]>, pred.load.continue ], [ vp<[[VP9]]>, pred.load.if ]
-; CHECK-NEXT:    EMIT vp<[[VP11:%[0-9]+]]> = extractelement ir<%c>, ir<2>
+; CHECK-NEXT:    EMIT-SCALAR vp<[[VP11:%[0-9]+]]> = extractelement ir<%c>, ir<2>
 ; CHECK-NEXT:    EMIT branch-on-cond vp<[[VP11]]>
 ; CHECK-NEXT:  Successor(s): pred.load.if, pred.load.continue
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  pred.load.if:
-; CHECK-NEXT:    EMIT vp<[[VP13:%[0-9]+]]> = extractelement ir<%idx>, ir<2>
+; CHECK-NEXT:    EMIT-SCALAR vp<[[VP13:%[0-9]+]]> = extractelement ir<%idx>, ir<2>
 ; CHECK-NEXT:    CLONE ir<%gep2>.2 = getelementptr inbounds ir<%b>, vp<[[VP13]]>
 ; CHECK-NEXT:    CLONE ir<%ld>.2 = load ir<%gep2>.2
 ; CHECK-NEXT:    EMIT vp<[[VP14:%[0-9]+]]> = insertelement vp<[[VP10]]>, ir<%ld>.2, ir<2>
@@ -676,12 +676,12 @@ define void @dup_load_across_replicate_region(ptr noalias %a, ptr noalias %b, pt
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  pred.load.continue:
 ; CHECK-NEXT:    WIDEN-PHI vp<[[VP15:%[0-9]+]]> = phi [ vp<[[VP10]]>, pred.load.continue ], [ vp<[[VP14]]>, pred.load.if ]
-; CHECK-NEXT:    EMIT vp<[[VP16:%[0-9]+]]> = extractelement ir<%c>, ir<3>
+; CHECK-NEXT:    EMIT-SCALAR vp<[[VP16:%[0-9]+]]> = extractelement ir<%c>, ir<3>
 ; CHECK-NEXT:    EMIT branch-on-cond vp<[[VP16]]>
 ; CHECK-NEXT:  Successor(s): pred.load.if, pred.load.continue
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  pred.load.if:
-; CHECK-NEXT:    EMIT vp<[[VP18:%[0-9]+]]> = extractelement ir<%idx>, ir<3>
+; CHECK-NEXT:    EMIT-SCALAR vp<[[VP18:%[0-9]+]]> = extractelement ir<%idx>, ir<3>
 ; CHECK-NEXT:    CLONE ir<%gep2>.3 = getelementptr inbounds ir<%b>, vp<[[VP18]]>
 ; CHECK-NEXT:    CLONE ir<%ld>.3 = load ir<%gep2>.3
 ; CHECK-NEXT:    EMIT vp<[[VP19:%[0-9]+]]> = insertelement vp<[[VP15]]>, ir<%ld>.3, ir<3>

@@ -38,12 +38,12 @@ define i32 @find_last_with_select(ptr noalias %a, ptr noalias %b) {
 ; CHECK-NEXT:  Successor(s): middle.block
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  middle.block:
-; CHECK-NEXT:    EMIT vp<[[VP7:%[0-9]+]]> = compute-reduction-result (find-last) ir<%sel>
+; CHECK-NEXT:    EMIT-SCALAR vp<[[VP7:%[0-9]+]]> = compute-reduction-result (find-last) ir<%sel>
 ; CHECK-NEXT:    EMIT vp<[[VP8:%[0-9]+]]> = exiting-iv-value ir<%iv>
 ; CHECK-NEXT:    EMIT vp<[[VP9:%[0-9]+]]> = extract-last-part vp<[[VP7]]>
-; CHECK-NEXT:    EMIT vp<[[VP10:%[0-9]+]]> = extract-last-lane vp<[[VP9]]>
+; CHECK-NEXT:    EMIT-SCALAR vp<[[VP10:%[0-9]+]]> = extract-last-lane vp<[[VP9]]>
 ; CHECK-NEXT:    EMIT vp<[[VP11:%[0-9]+]]> = extract-last-part vp<[[VP7]]>
-; CHECK-NEXT:    EMIT vp<[[VP12:%[0-9]+]]> = extract-last-lane vp<[[VP11]]>
+; CHECK-NEXT:    EMIT-SCALAR vp<[[VP12:%[0-9]+]]> = extract-last-lane vp<[[VP11]]>
 ; CHECK-NEXT:    EMIT vp<%cmp.n> = icmp eq ir<500>, vp<[[VP2]]>
 ; CHECK-NEXT:    EMIT branch-on-cond vp<%cmp.n>
 ; CHECK-NEXT:  Successor(s): ir-bb<exit>, scalar.ph

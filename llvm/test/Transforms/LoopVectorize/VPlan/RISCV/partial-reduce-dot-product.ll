@@ -42,7 +42,7 @@ define i32 @vdota4(ptr %a, ptr %b) vscale_range(2, 1024) {
 ; CHECK-NEXT:  Successor(s): middle.block
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  middle.block:
-; CHECK-NEXT:    EMIT vp<[[VP13:%[0-9]+]]> = compute-reduction-result (add) vp<[[VP10]]>
+; CHECK-NEXT:    EMIT-SCALAR vp<[[VP13:%[0-9]+]]> = compute-reduction-result (add) vp<[[VP10]]>
 ; CHECK-NEXT:  Successor(s): ir-bb<for.exit>
 ;
 entry:

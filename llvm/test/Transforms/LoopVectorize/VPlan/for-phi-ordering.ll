@@ -30,11 +30,11 @@ define i32 @test(i32 %limit, i1 %guard, i32 %divisor) {
 ; CHECK-NEXT:  middle.block:
 ; CHECK-NEXT:    WIDEN ir<%prev.iv> = add nsw ir<%iv>, ir<-1>
 ; CHECK-NEXT:    EMIT vp<[[VP6:%[0-9]+]]> = extract-last-part ir<%prev.iv>
-; CHECK-NEXT:    EMIT vp<[[VP7:%[0-9]+]]> = extract-last-lane vp<[[VP6]]>
+; CHECK-NEXT:    EMIT-SCALAR vp<[[VP7:%[0-9]+]]> = extract-last-lane vp<[[VP6]]>
 ; CHECK-NEXT:    EMIT vp<[[VP8:%[0-9]+]]> = extract-last-part ir<0>
-; CHECK-NEXT:    EMIT vp<[[VP9:%[0-9]+]]> = extract-last-lane vp<[[VP8]]>
+; CHECK-NEXT:    EMIT-SCALAR vp<[[VP9:%[0-9]+]]> = extract-last-lane vp<[[VP8]]>
 ; CHECK-NEXT:    EMIT vp<[[VP10:%[0-9]+]]> = extract-last-part ir<0>
-; CHECK-NEXT:    EMIT vp<[[VP11:%[0-9]+]]> = extract-last-lane vp<[[VP10]]>
+; CHECK-NEXT:    EMIT-SCALAR vp<[[VP11:%[0-9]+]]> = extract-last-lane vp<[[VP10]]>
 ; CHECK-NEXT:    EMIT vp<%cmp.n> = icmp eq vp<[[VP3]]>, vp<[[VP2]]>
 ; CHECK-NEXT:    EMIT branch-on-cond vp<%cmp.n>
 ; CHECK-NEXT:  Successor(s): ir-bb<exit>, scalar.ph
