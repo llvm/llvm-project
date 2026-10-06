@@ -2,8 +2,8 @@
 
 ; Check vectorization that would ordinarily require a runtime bounds
 ; check on the pointers when mixing address spaces. For now we cannot
-; assume address spaces do not alias, and we can't assume that
-; different pointers are directly comparable.
+; assume address spaces do not alias, and pointers in these address
+; spaces cannot be compared on this target.
 ;
 ; These all test this basic loop for different combinations of address
 ; spaces, and swapping in globals or adding noalias.

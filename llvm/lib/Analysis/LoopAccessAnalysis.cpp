@@ -1687,11 +1687,12 @@ public:
       PointerIntPair<Value * /* AccessPtr */, 1, bool /* IsWrite */>;
 
   AccessAnalysis(const Loop *TheLoop, AAResults *AA, const LoopInfo *LI,
-                 DominatorTree &DT, MemoryDepChecker::DepCandidates &DA,
+                 DominatorTree &DT, const TargetTransformInfo *TTI,
+                 MemoryDepChecker::DepCandidates &DA,
                  PredicatedScalarEvolution &PSE,
                  SmallPtrSetImpl<MDNode *> &LoopAliasScopes)
-      : TheLoop(TheLoop), BAA(*AA), AST(BAA), LI(LI), DT(DT), DepCands(DA),
-        PSE(PSE), LoopAliasScopes(LoopAliasScopes) {
+      : TheLoop(TheLoop), BAA(*AA), AST(BAA), LI(LI), DT(DT), TTI(TTI),
+        DepCands(DA), PSE(PSE), LoopAliasScopes(LoopAliasScopes) {
     // We're analyzing dependences across loop iterations.
     BAA.enableCrossIterationMode();
   }
@@ -1813,6 +1814,9 @@ private:
 
   /// The dominator tree of the function.
   DominatorTree &DT;
+
+  /// Target transform info, may be null.
+  const TargetTransformInfo *TTI;
 
   /// Sets of potentially dependent accesses - members of one set share an
   /// underlying pointer. The set "CheckDeps" identfies which sets really need a
@@ -2243,6 +2247,20 @@ bool AccessAnalysis::createCheckForAccess(RuntimePointerChecking &RtCheck,
   return true;
 }
 
+/// Returns true if pointers in \p AS0 and \p AS1 can be compared in runtime
+/// checks, i.e. casts between them are no-ops and both are integral with the
+/// same pointer size.
+static bool areAddrSpacesComparable(unsigned AS0, unsigned AS1,
+                                    const DataLayout &DL,
+                                    const TargetTransformInfo *TTI) {
+  return AS0 == AS1 ||
+         (TTI && TTI->isNoopAddrSpaceCast(AS0, AS1) &&
+          TTI->isNoopAddrSpaceCast(AS1, AS0) &&
+          !DL.isNonIntegralAddressSpace(AS0) &&
+          !DL.isNonIntegralAddressSpace(AS1) &&
+          DL.getPointerSizeInBits(AS0) == DL.getPointerSizeInBits(AS1));
+}
+
 bool AccessAnalysis::canCheckPtrAtRT(RuntimePointerChecking &RtCheck,
                                      Loop *TheLoop,
                                      const SymbolicStrideMap &StridesMap,
@@ -2372,11 +2390,9 @@ bool AccessAnalysis::canCheckPtrAtRT(RuntimePointerChecking &RtCheck,
     ++ASId;
   }
 
-  // If the pointers that we would use for the bounds comparison have different
-  // address spaces, assume the values aren't directly comparable, so we can't
-  // use them for the runtime check. We also have to assume they could
-  // overlap. In the future there should be metadata for whether address spaces
-  // are disjoint.
+  // Pointers in different address spaces may alias, so give up if their bounds
+  // cannot be compared.
+  const DataLayout &DL = TheLoop->getHeader()->getDataLayout();
   unsigned NumPointers = RtCheck.Pointers.size();
   for (unsigned i = 0; i < NumPointers; ++i) {
     for (unsigned j = i + 1; j < NumPointers; ++j) {
@@ -2393,10 +2409,10 @@ bool AccessAnalysis::canCheckPtrAtRT(RuntimePointerChecking &RtCheck,
 
       unsigned ASi = PtrI->getType()->getPointerAddressSpace();
       unsigned ASj = PtrJ->getType()->getPointerAddressSpace();
-      if (ASi != ASj) {
+      if (!areAddrSpacesComparable(ASi, ASj, DL, TTI)) {
         LLVM_DEBUG(
             dbgs() << "LAA: Runtime check would require comparison between"
-                      " different address spaces\n");
+                      " address spaces that cannot be compared\n");
         return false;
       }
     }
@@ -3493,6 +3509,7 @@ bool LoopAccessInfo::canAnalyzeLoop() {
 }
 
 bool LoopAccessInfo::analyzeLoop(AAResults *AA, const LoopInfo *LI,
+                                 const TargetTransformInfo *TTI,
                                  const TargetLibraryInfo *TLI,
                                  DominatorTree *DT) {
   // Holds the Load and Store instructions.
@@ -3632,7 +3649,7 @@ bool LoopAccessInfo::analyzeLoop(AAResults *AA, const LoopInfo *LI,
   }
 
   MemoryDepChecker::DepCandidates DepCands;
-  AccessAnalysis Accesses(TheLoop, AA, LI, *DT, DepCands, *PSE,
+  AccessAnalysis Accesses(TheLoop, AA, LI, *DT, TTI, DepCands, *PSE,
                           LoopAliasScopes);
 
   // Holds the analyzed pointers. We don't want to call getUnderlyingObjects
@@ -4097,7 +4114,7 @@ LoopAccessInfo::LoopAccessInfo(Loop *L, ScalarEvolution *SE,
   PtrRtChecking =
       std::make_unique<RuntimePointerChecking>(*DepChecker, SE, LoopGuards);
   if (canAnalyzeLoop())
-    CanVecMem = analyzeLoop(AA, LI, TLI, DT);
+    CanVecMem = analyzeLoop(AA, LI, TTI, TLI, DT);
 }
 
 void LoopAccessInfo::print(raw_ostream &OS, unsigned Depth) const {
