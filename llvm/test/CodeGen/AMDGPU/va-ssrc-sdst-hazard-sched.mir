@@ -113,8 +113,8 @@ body: |
     ; CHECK-NEXT: [[V_ADD_F32_e64_1:%[0-9]+]]:vgpr_32 = V_ADD_F32_e64 0, [[COPY4]], 0, [[COPY5]], 0, 0, implicit $mode, implicit $exec
     ; CHECK-NEXT: [[V_ADD_F32_e64_2:%[0-9]+]]:vgpr_32 = V_ADD_F32_e64 0, [[COPY3]], 0, [[COPY5]], 0, 0, implicit $mode, implicit $exec
     ; CHECK-NEXT: [[V_ADD_F32_e64_3:%[0-9]+]]:vgpr_32 = V_ADD_F32_e64 0, [[COPY6]], 0, [[COPY7]], 0, 0, implicit $mode, implicit $exec
-    ; CHECK-NEXT: dead [[V_ADD_F32_e64_4:%[0-9]+]]:vgpr_32 = V_ADD_F32_e64 0, [[COPY4]], 0, [[COPY6]], 0, 0, implicit $mode, implicit $exec
     ; CHECK-NEXT: [[S_ADD_I32_:%[0-9]+]]:sgpr_32 = S_ADD_I32 [[COPY]], [[COPY1]], implicit-def $scc
+    ; CHECK-NEXT: dead [[V_ADD_F32_e64_4:%[0-9]+]]:vgpr_32 = V_ADD_F32_e64 0, [[COPY4]], 0, [[COPY6]], 0, 0, implicit $mode, implicit $exec
     ; CHECK-NEXT: [[S_ADD_I32_1:%[0-9]+]]:sgpr_32 = S_ADD_I32 [[COPY]], [[COPY1]], implicit-def $scc
     ; CHECK-NEXT: S_ENDPGM 0, implicit [[V_CMP_LT_F32_e64_]], implicit [[V_ADD_F32_e64_1]], implicit [[V_ADD_F32_e64_3]], implicit [[V_ADD_F32_e64_]], implicit [[V_ADD_F32_e64_2]], implicit [[S_ADD_I32_]], implicit [[S_ADD_I32_1]]
     %0:sgpr_32 = COPY $sgpr0

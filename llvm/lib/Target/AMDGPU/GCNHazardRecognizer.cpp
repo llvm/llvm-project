@@ -551,12 +551,25 @@ static bool isSALUReadsNonVCCSGPR(const MachineInstr &MI,
 
     Register Reg = Op.getReg();
 
-    // Skip VCC registers
-    if (Reg == AMDGPU::VCC || Reg == AMDGPU::VCC_LO || Reg == AMDGPU::VCC_HI)
+    if (!TRI.isSGPRReg(MRI, Reg))
       continue;
 
-    if (TRI.isSGPRReg(MRI, Reg))
+    if (Reg.isPhysical()) {
+      // Skip VCC registers
+      if (Reg == AMDGPU::VCC || Reg == AMDGPU::VCC_LO || Reg == AMDGPU::VCC_HI)
+        continue;
+
+      // Physical SGPR
       return true;
+    }
+
+    if (Reg.isVirtual()) {
+      const TargetRegisterClass *RC = MRI.getRegClass(Reg);
+      if (RC->hasSuperClassEq(TRI.getWaveMaskRegClass()))
+        continue;
+
+      return true;
+    }
   }
   return false;
 }
@@ -653,6 +666,12 @@ GCNHazardRecognizer::checkVASSrcVASDstHazards(const MachineInstr &MI) const {
             Reg == AMDGPU::VCC_HI)
           continue;
 
+        if (Reg.isVirtual()) {
+          const TargetRegisterClass *RC = MRI.getRegClass(Reg);
+          if (RC->hasSuperClassEq(TRI.getWaveMaskRegClass()))
+            continue;
+        }
+
         if (TRI.isSGPRReg(MRI, Reg))
           return true;
       }
@@ -675,8 +694,8 @@ GCNHazardRecognizer::checkVASSrcVASDstHazards(const MachineInstr &MI) const {
 
   // VALU writes VCCZ or EXECZ and CBranch consumes it.
   if (IsCBranchVCCZ || IsCBranchEXECZ) {
-    auto IsVALUWritesVCCZEXECZHazardFn = [IsCBranchVCCZ, IsCBranchEXECZ](
-                                             const MachineInstr &I) {
+    auto IsVALUWritesVCCZEXECZHazardFn = [&MRI, IsCBranchVCCZ, IsCBranchEXECZ,
+                                          this](const MachineInstr &I) {
       if (!SIInstrInfo::isVALU(I, false))
         return false;
 
@@ -686,9 +705,18 @@ GCNHazardRecognizer::checkVASSrcVASDstHazards(const MachineInstr &MI) const {
 
         Register Reg = Op.getReg();
         // Check if VALU writes VCC and CBRANCH reads VCCZ
-        if (IsCBranchVCCZ && (Reg == AMDGPU::VCC || Reg == AMDGPU::VCC_LO ||
-                              Reg == AMDGPU::VCC_HI))
-          return true;
+        if (IsCBranchVCCZ) {
+          if (Reg == AMDGPU::VCC || Reg == AMDGPU::VCC_LO ||
+              Reg == AMDGPU::VCC_HI)
+            return true;
+
+          if (Reg.isPhysical())
+            continue;
+
+          const TargetRegisterClass *RC = MRI.getRegClass(Reg);
+          if (RC->hasSuperClassEq(TRI.getWaveMaskRegClass()))
+            return true;
+        }
         // Check if VALU writes EXEC and CBRANCH reads EXECZ
         if (IsCBranchEXECZ && (Reg == AMDGPU::EXEC || Reg == AMDGPU::EXEC_LO ||
                                Reg == AMDGPU::EXEC_HI))
@@ -752,7 +780,7 @@ GCNHazardRecognizer::checkVASSrcVASDstHazards(const MachineInstr &MI) const {
   // VALU writes VCC followed by SALU which reads non-VCC SGPR
   if (isSALUReadsNonVCCSGPR(MI, MRI, TRI) || IsSALUCopy) {
     const int VALUWritesVCCHazardCycles = ST.isWave64() ? 5 : 4;
-    auto IsVALUWritesVCCHazardFn = [](const MachineInstr &MI) {
+    auto IsVALUWritesVCCHazardFn = [&MRI, this](const MachineInstr &MI) {
       if (!SIInstrInfo::isVALU(MI, false))
         return false;
 
@@ -763,6 +791,14 @@ GCNHazardRecognizer::checkVASSrcVASDstHazards(const MachineInstr &MI) const {
         Register Reg = Op.getReg();
         if (Reg == AMDGPU::VCC || Reg == AMDGPU::VCC_LO ||
             Reg == AMDGPU::VCC_HI)
+          return true;
+
+        if (Reg.isPhysical())
+          ;
+        continue;
+
+        const TargetRegisterClass *RC = MRI.getRegClass(Reg);
+        if (RC->hasSuperClassEq(TRI.getWaveMaskRegClass()))
           return true;
       }
       return false;
