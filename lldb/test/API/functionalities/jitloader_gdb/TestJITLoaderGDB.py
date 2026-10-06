@@ -33,6 +33,28 @@ class JITLoaderGDBTestCase(TestBase):
         self.assertState(process.GetState(), lldb.eStateExited)
         self.assertEqual(process.GetExitStatus(), 0)
 
+    @skipIfWindows  # This test fails on Windows during C code build
+    def test_misaligned_first_entry(self):
+        """A single module whose descriptor has a misaligned first_entry must
+        not crash lldb. ReadJITEntry has to bail gracefully instead of
+        asserting."""
+        self.build()
+        exe = self.getBuildArtifact("misaligned")
+
+        self.runCmd("settings set plugin.jit-loader.gdb.enable on")
+        self.addTearDownHook(
+            lambda: self.runCmd("settings set plugin.jit-loader.gdb.enable default")
+        )
+
+        target = self.dbg.CreateTarget(exe)
+        self.assertTrue(target, VALID_TARGET)
+        process = target.LaunchSimple(None, None, self.get_process_working_directory())
+        self.assertTrue(process, PROCESS_IS_VALID)
+
+        # Without the fix this aborts in ReadJITEntry.
+        self.assertState(process.GetState(), lldb.eStateExited)
+        self.assertEqual(process.GetExitStatus(), 0)
+
     def gen_log_file(self):
         logfile = self.getBuildArtifact(
             "jitintgdb-{}.txt".format(self.getArchitecture())
