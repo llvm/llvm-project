@@ -9,6 +9,7 @@
 #include "mlir/Dialect/DLTI/DLTI.h"
 #include "mlir/Dialect/LLVMIR/LLVMDialect.h"
 #include "mlir/IR/BuiltinOps.h"
+#include "mlir/IR/DialectRegistry.h"
 #include "mlir/IR/MLIRContext.h"
 #include "mlir/IR/Verifier.h"
 #include "mlir/Target/LLVMIR/Import.h"
@@ -60,8 +61,9 @@ define ptr @f() {
   ASSERT_TRUE(narrowGEP);
   ret->setOperand(0, narrowGEP);
 
-  MLIRContext context;
-  context.loadDialect<LLVM::LLVMDialect, DLTIDialect>();
+  DialectRegistry registry;
+  registry.insert<LLVM::LLVMDialect, DLTIDialect>();
+  MLIRContext context(registry);
   OwningOpRef<ModuleOp> module =
       translateLLVMIRToModule(std::move(llvmModule), &context);
   ASSERT_TRUE(module);
