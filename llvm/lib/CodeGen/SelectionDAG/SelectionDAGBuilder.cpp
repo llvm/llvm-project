@@ -12580,8 +12580,6 @@ void SelectionDAGBuilder::lowerWorkItem(SwitchWorkListItem W, Value *Cond,
   for (CaseClusterIt I = W.FirstCluster; I <= W.LastCluster; ++I)
     UnhandledProbs += I->Prob;
 
-  // Insert bit-test blocks before the linear work-item continuation blocks so
-  // that pre-creating the latter preserves the existing layout.
   for (CaseClusterIt I = W.FirstCluster; I <= W.LastCluster; ++I) {
     if (I->Kind != CC_BitTests)
       continue;
@@ -12688,9 +12686,6 @@ void SelectionDAGBuilder::lowerWorkItem(SwitchWorkListItem W, Value *Cond,
         // FIXME: Optimize away range check based on pivot comparisons.
         BitTestBlock *BTB = &SL->BitTestCases[I->BTCasesIndex];
 
-        // The bit-test blocks were inserted before the work-item entry
-        // blocks were created.
-
         // Fill in fields of the BitTestBlock.
         BTB->Parent = CurMBB;
         BTB->Default = Fallthrough;
@@ -12700,7 +12695,9 @@ void SelectionDAGBuilder::lowerWorkItem(SwitchWorkListItem W, Value *Cond,
         // above First + Range.  If the remaining clusters are laid out as an
         // in-range prefix followed by an out-of-range suffix, the suffix has
         // a stable entry block that can be used as the range-failure target.
-        // Otherwise retain the old combined continuation for now.
+	// If the remaining clusters do not have this form, leave
+	// RangeCheckDefault unset so range failures use the normal cluster
+	// continuation.
         if (BTB->First.isZero()) {
           APInt RangeEnd = BTB->First + BTB->Range;
           unsigned FirstUpperOutOfRange = Size;
