@@ -958,11 +958,14 @@ MachineFunction *MachineOutliner::createOutlinedFunction(
       MachineInstr &NewMI = TII.duplicate(MBB, MBB.end(), MI);
       NewMI.dropMemRefs(MF);
       NewMI.setDebugLoc(DL);
-      // Also clear debug locations on any bundled instructions.
+      NewMI.clearKillInfo();
+      // Also clear debug locations and kill info on any bundled instructions.
       if (NewMI.isBundledWithSucc()) {
         auto BundleEnd = getBundleEnd(NewMI.getIterator());
-        for (auto I = std::next(NewMI.getIterator()); I != BundleEnd; ++I)
+        for (auto I = std::next(NewMI.getIterator()); I != BundleEnd; ++I) {
           I->setDebugLoc(DL);
+          I->clearKillInfo();
+        }
       }
     }
   }

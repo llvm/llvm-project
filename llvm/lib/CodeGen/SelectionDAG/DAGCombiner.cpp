@@ -545,6 +545,7 @@ namespace {
     SDValue visitBUILD_VECTOR(SDNode *N);
     SDValue visitCONCAT_VECTORS(SDNode *N);
     SDValue visitVECTOR_INTERLEAVE(SDNode *N);
+    SDValue visitVECTOR_DEINTERLEAVE(SDNode *N);
     SDValue visitEXTRACT_SUBVECTOR(SDNode *N);
     SDValue visitVECTOR_SHUFFLE(SDNode *N);
     SDValue visitSCALAR_TO_VECTOR(SDNode *N);
@@ -2102,6 +2103,7 @@ SDValue DAGCombiner::visit(SDNode *N) {
   case ISD::BUILD_VECTOR:       return visitBUILD_VECTOR(N);
   case ISD::CONCAT_VECTORS:     return visitCONCAT_VECTORS(N);
   case ISD::VECTOR_INTERLEAVE:  return visitVECTOR_INTERLEAVE(N);
+  case ISD::VECTOR_DEINTERLEAVE: return visitVECTOR_DEINTERLEAVE(N);
   case ISD::EXTRACT_SUBVECTOR:  return visitEXTRACT_SUBVECTOR(N);
   case ISD::VECTOR_SHUFFLE:     return visitVECTOR_SHUFFLE(N);
   case ISD::SCALAR_TO_VECTOR:   return visitSCALAR_TO_VECTOR(N);
@@ -17970,7 +17972,7 @@ SDValue DAGCombiner::visitTRUNCATE(SDNode *N) {
 
   // fold (truncate (load x)) -> (smaller load x)
   // fold (truncate (srl (load x), c)) -> (smaller load (x+c/evtbits))
-  if (!LegalTypes || TLI.isTypeDesirableForOp(N0.getOpcode(), VT)) {
+  if (!LegalTypes || TLI.isTypeDesirableForOp(N0.getNode(), VT)) {
     if (SDValue Reduced = reduceLoadWidth(N))
       return Reduced;
 
@@ -27909,6 +27911,13 @@ SDValue DAGCombiner::visitVECTOR_INTERLEAVE(SDNode *N) {
   SDValue Op0 = N->getOperand(0);
   unsigned Factor = N->getNumOperands();
 
+  // Canonicalize shuffle undef, undef -> undef
+  if (all_of(N->op_values(), [](SDValue Op) { return Op.isUndef(); })) {
+    SDLoc DL(N);
+    SmallVector<SDValue> Ops(N->getNumValues(), DAG.getUNDEF(VT));
+    return DAG.getMergeValues(Ops, DL);
+  }
+
   // Fold an interleave of fixed-length BUILD_VECTORs by rearranging their
   // scalar operands directly.
   if (Op0.getOpcode() == ISD::BUILD_VECTOR) {
@@ -27966,6 +27975,20 @@ SDValue DAGCombiner::visitVECTOR_INTERLEAVE(SDNode *N) {
   SmallVector<SDValue, 4> Ops;
   Ops.append(N->op_values().begin(), N->op_values().end());
   return CombineTo(N, &Ops);
+}
+
+SDValue DAGCombiner::visitVECTOR_DEINTERLEAVE(SDNode *N) {
+  EVT VT = N->getValueType(0);
+  SDValue Op0 = N->getOperand(0);
+
+  // Canonicalize shuffle undef -> {undef, undef, ..}
+  if (Op0.isUndef()) {
+    SDLoc DL(N);
+    SmallVector<SDValue> Ops(N->getNumValues(), DAG.getUNDEF(VT));
+    return DAG.getMergeValues(Ops, DL);
+  }
+
+  return SDValue();
 }
 
 // Helper that peeks through INSERT_SUBVECTOR/CONCAT_VECTORS to find
