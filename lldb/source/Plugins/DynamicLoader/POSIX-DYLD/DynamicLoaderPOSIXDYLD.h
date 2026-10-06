@@ -66,6 +66,10 @@ public:
       llvm::function_ref<bool(const lldb_private::Thread &)>
           save_thread_predicate) override;
 
+  lldb_private::Status
+  ReplaceModule(const lldb::ModuleSP &old_module_sp,
+                const lldb::ModuleSP &new_module_sp) override;
+
 protected:
   /// Runtime linker rendezvous structure.
   DYLDRendezvous m_rendezvous;
@@ -177,18 +181,28 @@ private:
   const DynamicLoaderPOSIXDYLD &
   operator=(const DynamicLoaderPOSIXDYLD &) = delete;
 
+  /// What each module was loaded with, enough to load another module the same
+  /// way.
+  struct LoadedModuleInfo {
+    lldb::addr_t link_map_addr = LLDB_INVALID_ADDRESS;
+    lldb::addr_t base_addr = LLDB_INVALID_ADDRESS;
+    bool base_addr_is_offset = false;
+  };
+
   /// Loaded module list. (link map for each module)
   /// This may be accessed in a multi-threaded context. Use the accessor methods
   /// to access `m_loaded_modules` safely.
-  std::map<lldb::ModuleWP, lldb::addr_t, std::owner_less<lldb::ModuleWP>>
+  std::map<lldb::ModuleWP, LoadedModuleInfo, std::owner_less<lldb::ModuleWP>>
       m_loaded_modules;
   llvm::sys::RWMutex m_loaded_modules_rw_mutex;
 
   void SetLoadedModule(const lldb::ModuleSP &module_sp,
-                       lldb::addr_t link_map_addr);
+                       lldb::addr_t link_map_addr,
+                       lldb::addr_t base_addr = LLDB_INVALID_ADDRESS,
+                       bool base_addr_is_offset = false);
   void UnloadModule(const lldb::ModuleSP &module_sp);
-  std::optional<lldb::addr_t>
-  GetLoadedModuleLinkAddr(const lldb::ModuleSP &module_sp);
+  std::optional<LoadedModuleInfo>
+  GetLoadedModuleInfo(const lldb::ModuleSP &module_sp);
 };
 
 #endif // LLDB_SOURCE_PLUGINS_DYNAMICLOADER_POSIX_DYLD_DYNAMICLOADERPOSIXDYLD_H
