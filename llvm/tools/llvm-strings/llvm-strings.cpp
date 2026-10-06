@@ -98,7 +98,7 @@ static void parseIntArg(const opt::InputArgList &Args, int ID, T &Value) {
 // and true is returned.
 // If P...E is empty, or holds an incomplete character and AtEOF is false, P
 // and MBState are unchanged, Ch is set to 0, and false is returned. This is
-// intended to allow more bytes to be read and Read to be called again.
+// intended to allow more bytes to be read and readChar to be called again.
 // If P...E holds an incomplete character and AtEOF is true, or if P...E
 // starts with an invalid character, the first bytes are skipped and MBState is
 // reset to allow continuing from the next point, Ch is set to 0, and true is
@@ -109,64 +109,85 @@ static void parseIntArg(const opt::InputArgList &Args, int ID, T &Value) {
 // arbitrary locales: it is the longest subsequence that could start a valid
 // multibyte character, or if the initial byte cannot start a valid multibyte
 // character, the initial byte. This allows consistent error recovery.
-static bool readChar(const char *&P, const char *E, std::mbstate_t &MBState,
+static bool readChar(const char *&Cur, const char *End, std::mbstate_t &MBState,
                      bool AtEOF, UTF32 &Ch) {
-  if (P == E)
+  if (Cur == End)
     return false;
 
   switch (Encoding) {
   case Encoding::Ascii:
-    Ch = *P++;
+    Ch = *Cur++;
     return true;
 
   case Encoding::Locale: {
-    std::mbstate_t SaveMBState = MBState;
+    const char *Next = Cur;
+    std::mbstate_t NextMBState = MBState;
     wchar_t WCh;
-    const size_t BytesRead = mbrtowc(&WCh, P, E - P, &MBState);
-    switch (BytesRead) {
-    default:
-      P += BytesRead;
-      Ch = WCh;
-      return true;
-    case 0:
-    case (size_t)-1: {
-      // We encountered a (possibly null) byte that cannot be part of a valid
-      // character from the previous state. Recover by retrying one byte at a
-      // time, processing as many bytes as possible. If this gives us a
-      // partial character, treat this partial character as a single invalid
-      // character, otherwise treat the first byte as a single invalid
-      // character.
-      const bool PartialChar = mbrtowc(&WCh, P, 1, &SaveMBState) == (size_t)-2;
-      do {
-        ++P;
-        assert(!PartialChar || P != E);
-      } while (PartialChar && mbrtowc(&WCh, P, 1, &SaveMBState) == (size_t)-2);
-      Ch = 0;
-      MBState = {};
-      return true;
-    }
-    case (size_t)-2:
-      MBState = SaveMBState;
-      return false;
+    for (;;) {
+      // Read one byte at a time. This is usually not the best way to use
+      // mbrtowc(), usually it would make more sense to pass the size of the
+      // buffer, but the strings utility is unusual in that it is expected to
+      // encounter many bytes that do not form valid characters and it is more
+      // useful to optimise for this case.
+      const size_t BytesRead = mbrtowc(&WCh, Next, 1, &NextMBState);
+      switch (BytesRead) {
+      case 1:
+        ++Next;
+        Cur = Next;
+        MBState = NextMBState;
+        Ch = WCh;
+        return true;
+
+      case (size_t)-2:
+        // We encountered a byte that is a valid start or continuation of a
+        // multibyte character. If we have more bytes, carry on. If we don't
+        // have more bytes yet, but we are not at the end of file, return false.
+        // If we don't have more bytes and we are at the end of file, fall
+        // through to treat it as an error.
+        ++Next;
+        if (Next != End)
+          continue;
+        if (AtEOF)
+          return false;
+        LLVM_FALLTHROUGH;
+
+      case 0:
+      case (size_t)-1:
+        // We cannot form a valid non-null character.
+        //
+        // If we processed any bytes already that formed an incomplete multibyte
+        // character, treat those bytes as a single null character, otherwise
+        // treat the current byte as a single null character.
+        if (Next == Cur)
+          ++Next;
+        Cur = Next;
+        MBState = {};
+        Ch = 0;
+        return true;
+
+      default:
+        llvm_unreachable("unexpected result from mbrtowc");
+      }
     }
   }
 
   case Encoding::Utf8: {
-    const UTF8 *UP = reinterpret_cast<const UTF8 *>(P);
-    const UTF8 *UE = reinterpret_cast<const UTF8 *>(E);
-    UTF32 *Next = &Ch;
-    const auto Res =
-        ConvertUTF8toUTF32(&UP, UE, &Next, &Ch + 1, strictConversion);
-    if (UP != reinterpret_cast<const UTF8 *>(P)) {
-      assert(Next != &Ch);
+    const UTF8 *UTF8Cur = reinterpret_cast<const UTF8 *>(Cur);
+    const UTF8 *UTF8Next = UTF8Cur;
+    const UTF8 *UTF8End = reinterpret_cast<const UTF8 *>(End);
+    UTF32 *UTF32Next = &Ch;
+    const auto Res = ConvertUTF8toUTF32(&UTF8Next, UTF8End, &UTF32Next, &Ch + 1,
+                                        strictConversion);
+    if (UTF8Next != UTF8Cur) {
+      assert(UTF32Next != &Ch);
     } else if (Res == sourceExhausted && !AtEOF) {
       return false;
     } else {
-      assert(Next == &Ch);
-      UP += findMaximalSubpartOfIllFormedUTF8Sequence(UP, UE);
-      *Next++ = 0;
+      assert(UTF32Next == &Ch);
+      UTF8Next += findMaximalSubpartOfIllFormedUTF8Sequence(UTF8Next, UTF8End);
+      Ch = 0;
     }
-    P = reinterpret_cast<const char *>(UP);
+    Cur = reinterpret_cast<const char *>(UTF8Next);
     return true;
   }
   }
@@ -233,9 +254,9 @@ static void strings(raw_ostream &OS, StringRef FileName,
   // never needs an arbitrarily large buffer. Candidate therefore only ever
   // holds a run that is shorter than MinLength and that was cut off by the end
   // of a chunk.
-  const size_t Min = MinLength;
+  const size_t MinLengthChars = MinLength;
   SmallString<DefaultMinLength> Candidate;
-  size_t CandidateLength = 0;
+  size_t CandidateLengthChars = 0;
   bool InString = false;
   std::mbstate_t MBState{};
   // Offset of the start of the current chunk within the file.
@@ -243,20 +264,20 @@ static void strings(raw_ostream &OS, StringRef FileName,
 
   while (true) {
     // Size of any partial character left over from the previous chunk.
-    size_t PartialCharSize = Buffer.size();
-    Buffer.resize_for_overwrite(PartialCharSize +
+    const size_t PendingCharSizeBytes = Buffer.size();
+    Buffer.resize_for_overwrite(PendingCharSizeBytes +
                                 sys::fs::DefaultReadChunkSize);
 
     Expected<size_t> ReadBytesOrErr = sys::fs::readNativeFile(
         Handle,
-        MutableArrayRef(Buffer.begin() + PartialCharSize, Buffer.end()));
+        MutableArrayRef(Buffer.begin() + PendingCharSizeBytes, Buffer.end()));
     if (!ReadBytesOrErr) {
       errs() << FileName << ": "
              << errorToErrorCode(ReadBytesOrErr.takeError()).message() << '\n';
       return;
     }
     const bool AtEOF = *ReadBytesOrErr == 0;
-    const size_t ChunkSize = PartialCharSize + *ReadBytesOrErr;
+    const size_t ChunkSize = PendingCharSizeBytes + *ReadBytesOrErr;
     if (ChunkSize == 0)
       break;
 
@@ -282,7 +303,7 @@ static void strings(raw_ostream &OS, StringRef FileName,
     if (InString || !Candidate.empty()) {
       const char *StringEnd;
       std::mbstate_t PrevMBState;
-      size_t Len = 0;
+      size_t LengthChars = 0;
       bool EndOfChunk;
 
       // Find the end of the current string.
@@ -292,37 +313,37 @@ static void strings(raw_ostream &OS, StringRef FileName,
         EndOfChunk = !readChar(Cur, End, MBState, AtEOF, Ch);
         if (EndOfChunk || !isStringChar(Ch))
           break;
-        ++Len;
+        ++LengthChars;
       }
 
-      size_t Size = StringEnd - Begin;
+      size_t SizeBytes = StringEnd - Begin;
       if (InString) {
         // Print the remaining part if the previous chunk has already printed
         // the header. E.g. header: aaaaa | bbbbb, where | is the chunk
         // boundary.
         // Output: Header: aaaaabbbbb, where bbbbb is printed in here.
-        OS << StringRef(Begin, Size);
-      } else if (CandidateLength + Len >= Min) {
+        OS << StringRef(Begin, SizeBytes);
+      } else if (CandidateLengthChars + LengthChars >= MinLengthChars) {
         // If the header hasn't been printed yet (i.e. the previous candidate
         // was smaller than Min), but we can print it now, print the header
         // first, followed by the candidate from the previous chunk and the
         // current string. E.g. aa | bbbbbb
         // Output Header: aabbbbbb, where aabbbbbb is printed in here.
         PrintHeader(ChunkOffset - Candidate.size());
-        OS << Candidate << StringRef(Begin, Size);
+        OS << Candidate << StringRef(Begin, SizeBytes);
         Candidate.clear();
-        CandidateLength = 0;
+        CandidateLengthChars = 0;
         InString = true;
       } else if (EndOfChunk) {
         // If the current chunk + previous candidate is still smaller than Min,
         // append it to Candidate.
         Candidate.append(Begin, StringEnd);
-        CandidateLength += Len;
+        CandidateLengthChars += LengthChars;
       } else {
         // If the string has terminated but is still smaller than Min, clear the
         // buffer since it is too short to print.
         Candidate.clear();
-        CandidateLength = 0;
+        CandidateLengthChars = 0;
       }
 
       if (EndOfChunk) {
@@ -343,7 +364,7 @@ static void strings(raw_ostream &OS, StringRef FileName,
     // At this point, we are always at the start of a new string because the
     // remaining part of the previous string has already been handled.
     const char *StrHead = nullptr;
-    size_t Len = 0;
+    size_t LengthChars = 0;
     for (;;) {
       const char *Prev = Cur;
       std::mbstate_t PrevMBState = MBState;
@@ -353,17 +374,17 @@ static void strings(raw_ostream &OS, StringRef FileName,
         // Find the start of the next string.
         if (!StrHead)
           StrHead = Prev;
-        ++Len;
+        ++LengthChars;
       } else if (StrHead) {
         // If it is not a printable character, we have reached the end of the
         // current string. Print it if long enough.
-        if (Len >= Min) {
+        if (LengthChars >= MinLengthChars) {
           PrintHeader(ChunkOffset + (StrHead - Begin));
           OS << StringRef(StrHead, Prev - StrHead);
           endString(OS, PrevMBState);
         }
         StrHead = nullptr;
-        Len = 0;
+        LengthChars = 0;
       }
     }
 
@@ -372,13 +393,13 @@ static void strings(raw_ostream &OS, StringRef FileName,
     // it again.
     if (StrHead) {
       // Print it, or append it to Candidate if it is too short.
-      if (Len >= Min) {
+      if (LengthChars >= MinLengthChars) {
         PrintHeader(ChunkOffset + (StrHead - Begin));
         OS << StringRef(StrHead, Cur - StrHead);
         InString = true;
       } else {
         Candidate.append(StrHead, Cur);
-        CandidateLength += Len;
+        CandidateLengthChars += LengthChars;
       }
     }
 
