@@ -1342,7 +1342,7 @@ bool LoopVectorizationLegality::blockNeedsPredication(
 }
 
 bool LoopVectorizationLegality::blockCanBePredicated(
-    BasicBlock *BB, SmallPtrSetImpl<Value *> &SafePtrs,
+    BasicBlock *BB, SafeAccessesTy &SafePtrs,
     SmallPtrSetImpl<const Instruction *> &MaskedOp) const {
   for (Instruction &I : *BB) {
     // We can predicate blocks with calls to assume, as long as we drop them in
@@ -1370,7 +1370,8 @@ bool LoopVectorizationLegality::blockCanBePredicated(
 
     // Loads are handled via masking (or speculated if safe to do so.)
     if (auto *LI = dyn_cast<LoadInst>(&I)) {
-      if (!SafePtrs.count(LI->getPointerOperand()))
+      auto It = SafePtrs.find({LI->getPointerOperand(), LI->getType()});
+      if (It == SafePtrs.end() || It->second < LI->getAlign())
         MaskedOp.insert(LI);
       continue;
     }
@@ -1406,14 +1407,20 @@ bool LoopVectorizationLegality::canVectorizeWithIfConvert() {
   // the memory pointed to can be dereferenced (with the access size implied by
   // the value's type) unconditionally within the loop header without
   // introducing a new fault.
-  SmallPtrSet<Value *, 8> SafePointers;
+  SafeAccessesTy SafePointers;
 
   // Collect safe addresses.
   for (BasicBlock *BB : TheLoop->blocks()) {
     if (!blockNeedsPredication(BB)) {
-      for (Instruction &I : *BB)
-        if (auto *Ptr = getLoadStorePointerOperand(&I))
-          SafePointers.insert(Ptr);
+      for (Instruction &I : *BB) {
+        if (auto *Ptr = getLoadStorePointerOperand(&I)) {
+          auto [It, Inserted] = SafePointers.try_emplace(
+              std::make_pair(Ptr, getLoadStoreType(&I)),
+              getLoadStoreAlignment(&I));
+          if (!Inserted)
+            It->second = std::max(It->second, getLoadStoreAlignment(&I));
+        }
+      }
       continue;
     }
 
@@ -1474,8 +1481,12 @@ bool LoopVectorizationLegality::canVectorizeWithIfConvert() {
       if (LI && !LI->getType()->isVectorTy() && !mustSuppressSpeculation(*LI) &&
           CanSpeculatePointerOp(LI->getPointerOperand()) &&
           isDereferenceableAndAlignedInLoop(LI, TheLoop, SE, *DT, AC,
-                                            &Predicates))
-        SafePointers.insert(LI->getPointerOperand());
+                                            &Predicates)) {
+        auto [It, Inserted] = SafePointers.try_emplace(
+            std::make_pair(LI->getPointerOperand(), LI->getType()), LI->getAlign());
+        if (!Inserted)
+          It->second = std::max(It->second, LI->getAlign());
+      }
       Predicates.clear();
     }
   }
@@ -2047,7 +2058,7 @@ bool LoopVectorizationLegality::canFoldTailByMasking() const {
   LLVM_DEBUG(dbgs() << "LV: checking if tail can be folded by masking.\n");
 
   // The list of pointers that we can safely read and write to remains empty.
-  SmallPtrSet<Value *, 8> SafePointers;
+  SafeAccessesTy SafePointers;
 
   // Check all blocks for predication, including those that ordinarily do not
   // need predication such as the header block.
@@ -2066,7 +2077,7 @@ bool LoopVectorizationLegality::canFoldTailByMasking() const {
 
 void LoopVectorizationLegality::prepareToFoldTailByMasking() {
   // The list of pointers that we can safely read and write to remains empty.
-  SmallPtrSet<Value *, 8> SafePointers;
+  SafeAccessesTy SafePointers;
 
   // Mark all blocks for predication, including those that ordinarily do not
   // need predication such as the header block, and collect instructions needing
