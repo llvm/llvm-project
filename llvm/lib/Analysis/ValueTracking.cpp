@@ -8519,6 +8519,8 @@ bool llvm::intrinsicPropagatesPoison(Intrinsic::ID IID) {
   case Intrinsic::atan2:
   case Intrinsic::canonicalize:
   case Intrinsic::sqrt:
+  case Intrinsic::fma:
+  case Intrinsic::fmuladd:
   case Intrinsic::exp:
   case Intrinsic::exp2:
   case Intrinsic::exp10:

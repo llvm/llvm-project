@@ -1024,3 +1024,24 @@ define <4 x float> @fmuladd_undemanded_elt(<4 x float> %a, <4 x float> %b, <4 x 
   %r = shufflevector <4 x float> %fma, <4 x float> poison, <4 x i32> <i32 0, i32 1, i32 2, i32 poison>
   ret <4 x float> %r
 }
+
+; An operand lane that is poison makes the matching result lane poison: here all
+; demanded result lanes come from lane 3, where operand 0 is poison, so the whole
+; result folds to poison.
+define <4 x float> @fma_poison_elt_propagates(<4 x float> %b, <4 x float> %c) {
+; CHECK-LABEL: @fma_poison_elt_propagates(
+; CHECK-NEXT:    ret <4 x float> poison
+;
+  %fma = call <4 x float> @llvm.fma.v4f32(<4 x float> <float 1.0, float 2.0, float 3.0, float poison>, <4 x float> %b, <4 x float> %c)
+  %r = shufflevector <4 x float> %fma, <4 x float> poison, <4 x i32> <i32 3, i32 3, i32 3, i32 3>
+  ret <4 x float> %r
+}
+
+define <4 x float> @fmuladd_poison_elt_propagates(<4 x float> %b, <4 x float> %c) {
+; CHECK-LABEL: @fmuladd_poison_elt_propagates(
+; CHECK-NEXT:    ret <4 x float> poison
+;
+  %fma = call <4 x float> @llvm.fmuladd.v4f32(<4 x float> %b, <4 x float> <float 1.0, float 2.0, float 3.0, float poison>, <4 x float> %c)
+  %r = shufflevector <4 x float> %fma, <4 x float> poison, <4 x i32> <i32 3, i32 3, i32 3, i32 3>
+  ret <4 x float> %r
+}
