@@ -136,7 +136,7 @@ body:             |
     ; FP32: ADJCALLSTACKDOWN 16, 0, implicit-def $sp, implicit $sp
     ; FP32: $f12 = COPY [[COPY]]
     ; FP32: $f14 = COPY [[COPY1]]
-    ; FP32: JAL @float_in_fpr, csr_o32, implicit-def $ra, implicit-def $sp, implicit $f12, implicit $f14, implicit-def $f0
+    ; FP32: JAL @float_in_fpr, csr_o32, implicit-def dead $ra, implicit-def $sp, implicit $f12, implicit $f14, implicit-def $f0
     ; FP32: [[COPY2:%[0-9]+]]:fgr32 = COPY $f0
     ; FP32: ADJCALLSTACKUP 16, 0, implicit-def $sp, implicit $sp
     ; FP32: $f0 = COPY [[COPY2]]
@@ -148,7 +148,7 @@ body:             |
     ; FP64: ADJCALLSTACKDOWN 16, 0, implicit-def $sp, implicit $sp
     ; FP64: $f12 = COPY [[COPY]]
     ; FP64: $f14 = COPY [[COPY1]]
-    ; FP64: JAL @float_in_fpr, csr_o32, implicit-def $ra, implicit-def $sp, implicit $f12, implicit $f14, implicit-def $f0
+    ; FP64: JAL @float_in_fpr, csr_o32, implicit-def dead $ra, implicit-def $sp, implicit $f12, implicit $f14, implicit-def $f0
     ; FP64: [[COPY2:%[0-9]+]]:fgr32 = COPY $f0
     ; FP64: ADJCALLSTACKUP 16, 0, implicit-def $sp, implicit $sp
     ; FP64: $f0 = COPY [[COPY2]]
@@ -158,7 +158,7 @@ body:             |
     ADJCALLSTACKDOWN 16, 0, implicit-def $sp, implicit $sp
     $f12 = COPY %0(s32)
     $f14 = COPY %1(s32)
-    JAL @float_in_fpr, csr_o32, implicit-def $ra, implicit-def $sp, implicit $f12, implicit $f14, implicit-def $f0
+    JAL @float_in_fpr, csr_o32, implicit-def dead $ra, implicit-def $sp, implicit $f12, implicit $f14, implicit-def $f0
     %2:fprb(s32) = COPY $f0
     ADJCALLSTACKUP 16, 0, implicit-def $sp, implicit $sp
     $f0 = COPY %2(s32)
@@ -182,7 +182,7 @@ body:             |
     ; FP32: ADJCALLSTACKDOWN 16, 0, implicit-def $sp, implicit $sp
     ; FP32: $d6 = COPY [[COPY]]
     ; FP32: $d7 = COPY [[COPY1]]
-    ; FP32: JAL @double_in_fpr, csr_o32, implicit-def $ra, implicit-def $sp, implicit $d6, implicit $d7, implicit-def $d0
+    ; FP32: JAL @double_in_fpr, csr_o32, implicit-def dead $ra, implicit-def $sp, implicit $d6, implicit $d7, implicit-def $d0
     ; FP32: [[COPY2:%[0-9]+]]:afgr64 = COPY $d0
     ; FP32: ADJCALLSTACKUP 16, 0, implicit-def $sp, implicit $sp
     ; FP32: $d0 = COPY [[COPY2]]
@@ -194,7 +194,7 @@ body:             |
     ; FP64: ADJCALLSTACKDOWN 16, 0, implicit-def $sp, implicit $sp
     ; FP64: $d6 = COPY [[COPY]]
     ; FP64: $d7 = COPY [[COPY1]]
-    ; FP64: JAL @double_in_fpr, csr_o32, implicit-def $ra, implicit-def $sp, implicit $d6, implicit $d7, implicit-def $d0
+    ; FP64: JAL @double_in_fpr, csr_o32, implicit-def dead $ra, implicit-def $sp, implicit $d6, implicit $d7, implicit-def $d0
     ; FP64: [[COPY2:%[0-9]+]]:fgr64 = COPY $d0
     ; FP64: ADJCALLSTACKUP 16, 0, implicit-def $sp, implicit $sp
     ; FP64: $d0 = COPY [[COPY2]]
@@ -204,7 +204,7 @@ body:             |
     ADJCALLSTACKDOWN 16, 0, implicit-def $sp, implicit $sp
     $d6 = COPY %0(s64)
     $d7 = COPY %1(s64)
-    JAL @double_in_fpr, csr_o32, implicit-def $ra, implicit-def $sp, implicit $d6, implicit $d7, implicit-def $d0
+    JAL @double_in_fpr, csr_o32, implicit-def dead $ra, implicit-def $sp, implicit $d6, implicit $d7, implicit-def $d0
     %2:fprb(s64) = COPY $d0
     ADJCALLSTACKUP 16, 0, implicit-def $sp, implicit $sp
     $d0 = COPY %2(s64)
@@ -228,7 +228,7 @@ body:             |
     ; FP32: ADJCALLSTACKDOWN 16, 0, implicit-def $sp, implicit $sp
     ; FP32: $a0 = COPY [[COPY]]
     ; FP32: $a1 = COPY [[COPY1]]
-    ; FP32: JAL @float_in_gpr, csr_o32, implicit-def $ra, implicit-def $sp, implicit $a0, implicit-def $f0
+    ; FP32: JAL @float_in_gpr, csr_o32, implicit-def dead $ra, implicit-def $sp, implicit $a0, implicit-def $f0
     ; FP32: [[COPY2:%[0-9]+]]:fgr32 = COPY $f0
     ; FP32: ADJCALLSTACKUP 16, 0, implicit-def $sp, implicit $sp
     ; FP32: $f0 = COPY [[COPY2]]
@@ -240,7 +240,7 @@ body:             |
     ; FP64: ADJCALLSTACKDOWN 16, 0, implicit-def $sp, implicit $sp
     ; FP64: $a0 = COPY [[COPY]]
     ; FP64: $a1 = COPY [[COPY1]]
-    ; FP64: JAL @float_in_gpr, csr_o32, implicit-def $ra, implicit-def $sp, implicit $a0, implicit-def $f0
+    ; FP64: JAL @float_in_gpr, csr_o32, implicit-def dead $ra, implicit-def $sp, implicit $a0, implicit-def $f0
     ; FP64: [[COPY2:%[0-9]+]]:fgr32 = COPY $f0
     ; FP64: ADJCALLSTACKUP 16, 0, implicit-def $sp, implicit $sp
     ; FP64: $f0 = COPY [[COPY2]]
@@ -250,7 +250,7 @@ body:             |
     ADJCALLSTACKDOWN 16, 0, implicit-def $sp, implicit $sp
     $a0 = COPY %0(s32)
     $a1 = COPY %1(s32)
-    JAL @float_in_gpr, csr_o32, implicit-def $ra, implicit-def $sp, implicit $a0, implicit-def $f0
+    JAL @float_in_gpr, csr_o32, implicit-def dead $ra, implicit-def $sp, implicit $a0, implicit-def $f0
     %2:fprb(s32) = COPY $f0
     ADJCALLSTACKUP 16, 0, implicit-def $sp, implicit $sp
     $f0 = COPY %2(s32)
@@ -276,7 +276,7 @@ body:             |
     ; FP32: $a0 = COPY [[COPY]]
     ; FP32: $a2 = COPY [[COPY1]]
     ; FP32: $a3 = COPY [[COPY2]]
-    ; FP32: JAL @double_in_gpr, csr_o32, implicit-def $ra, implicit-def $sp, implicit $a0, implicit-def $d0
+    ; FP32: JAL @double_in_gpr, csr_o32, implicit-def dead $ra, implicit-def $sp, implicit $a0, implicit-def $d0
     ; FP32: [[COPY3:%[0-9]+]]:afgr64 = COPY $d0
     ; FP32: ADJCALLSTACKUP 16, 0, implicit-def $sp, implicit $sp
     ; FP32: $d0 = COPY [[COPY3]]
@@ -290,7 +290,7 @@ body:             |
     ; FP64: $a0 = COPY [[COPY]]
     ; FP64: $a2 = COPY [[COPY1]]
     ; FP64: $a3 = COPY [[COPY2]]
-    ; FP64: JAL @double_in_gpr, csr_o32, implicit-def $ra, implicit-def $sp, implicit $a0, implicit-def $d0
+    ; FP64: JAL @double_in_gpr, csr_o32, implicit-def dead $ra, implicit-def $sp, implicit $a0, implicit-def $d0
     ; FP64: [[COPY3:%[0-9]+]]:fgr64 = COPY $d0
     ; FP64: ADJCALLSTACKUP 16, 0, implicit-def $sp, implicit $sp
     ; FP64: $d0 = COPY [[COPY3]]
@@ -302,7 +302,7 @@ body:             |
     $a0 = COPY %0(s32)
     $a2 = COPY %2(s32)
     $a3 = COPY %3(s32)
-    JAL @double_in_gpr, csr_o32, implicit-def $ra, implicit-def $sp, implicit $a0, implicit-def $d0
+    JAL @double_in_gpr, csr_o32, implicit-def dead $ra, implicit-def $sp, implicit $a0, implicit-def $d0
     %4:fprb(s64) = COPY $d0
     ADJCALLSTACKUP 16, 0, implicit-def $sp, implicit $sp
     $d0 = COPY %4(s64)

@@ -48,6 +48,12 @@ class TestReadMemCString(TestBase):
         self.assertSuccess(err)
         self.assertNotEqual(invalid_memory_str_addr, lldb.LLDB_INVALID_ADDRESS)
 
+        invalid_utf8_str_addr = frame.FindVariable(
+            "invalid_utf8_string"
+        ).GetValueAsUnsigned(err)
+        self.assertSuccess(err)
+        self.assertNotEqual(invalid_utf8_str_addr, lldb.LLDB_INVALID_ADDRESS)
+
         # Important:  An empty (0-length) c-string must come back as a Python string, not a
         # None object.
         empty_str = process.ReadCStringFromMemory(empty_str_addr, 2048, err)
@@ -65,3 +71,13 @@ class TestReadMemCString(TestBase):
         )
         self.assertTrue(err.Fail())
         self.assertTrue(invalid_memory_string == "" or invalid_memory_string is None)
+
+        # A successful read of bytes that are not valid UTF-8 must still produce a
+        # printable Python string, with undecodable bytes replaced by U+FFFD.
+        err = lldb.SBError()
+        invalid_utf8_string = process.ReadCStringFromMemory(
+            invalid_utf8_str_addr, 2048, err
+        )
+        self.assertSuccess(err)
+        self.assertEqual(invalid_utf8_string, "\ufffd" + "d" + "\ufffd" + "1")
+        invalid_utf8_string.encode("utf-8")
