@@ -17,12 +17,14 @@
 #include "llvm/ADT/ArrayRef.h"
 #include "llvm/ADT/DenseMap.h"
 #include "llvm/ADT/STLExtras.h"
+#include "llvm/ADT/SetVector.h"
 #include "llvm/ADT/SmallVector.h"
 #include "llvm/Frontend/Directive/Spelling.h"
 #include "llvm/Frontend/OpenMP/OMP.h"
 #include "llvm/Frontend/OpenMP/OMPDescriptors.h"
 
 #include <algorithm>
+#include <limits>
 #include <list>
 #include <optional>
 #include <string>
@@ -32,6 +34,24 @@
 
 namespace Fortran::semantics {
 using namespace Fortran::parser::omp;
+
+template <typename ElemTy>
+static llvm::omp::Properties GetProperties(
+    ElemTy id, llvm::omp::Version version) {
+  assert(version && "Expecting valid version");
+  const auto &desc{llvm::omp::getDescriptor(id)};
+  return desc.getProperties(version);
+}
+
+static llvm::omp::Version GetClosestVersion(
+    llvm::directive::VersionRange range, llvm::omp::Version version) {
+  if (range.isValid()) {
+    int intVer{static_cast<int>(static_cast<unsigned>(version))};
+    return llvm::omp::Version(
+        intVer >= range.Min ? std::min(intVer, range.Max) : range.Min);
+  }
+  return llvm::omp::Version();
+}
 
 template < //
     typename ElemTy, typename SetsSetTy, typename OwnerTy,
@@ -96,37 +116,31 @@ template < //
 static ResultTy VerifyUnique(const AppliedElementInfo<ElemTy, SetsSetTy> &info,
     OwnerTy ownerId, llvm::omp::Version version) {
   using AppliedElementTy = AppliedElement<ElemTy, SetsSetTy>;
-  using ElemSetTy = llvm::omp::EnumSet<ElemTy>;
-  ElemSetTy unique;
-
-  auto &odesc{llvm::omp::getDescriptor(ownerId)};
-  ElemSetTy allowed{descriptor::GetAllowedElements(odesc, version)};
-
-  for (auto e : descriptor::GetElements(odesc, version)) {
-    auto &edesc{llvm::omp::getDescriptor(e)};
-    // Ultimate modifiers should have the "unique" property present as well.
-    if (edesc.getProperties(version).test(llvm::omp::Property::Unique)) {
-      unique.set(e);
-    }
-  }
-  for (auto s : descriptor::GetSets(odesc, version)) {
-    auto &sdesc{llvm::omp::getDescriptor(s)};
-    if (sdesc.getProperties(version).test(llvm::omp::Property::Unique)) {
-      unique |= descriptor::GetElements(sdesc, version);
-    }
-  }
 
   ResultTy repeated;
   llvm::DenseMap<ElemTy, parser::CharBlock> present;
   for (const AppliedElementTy &elem : info.elements) {
-    if (!allowed.test(elem.id.value)) {
+    if (!elem.version) {
       // Skip invalid elements.
       continue;
     }
-    if (unique.test(elem.id.value)) {
+    auto &edesc{llvm::omp::getDescriptor(elem.id.value)};
+    if (edesc.getProperties(elem.version).test(llvm::omp::Property::Unique)) {
       auto [where, inserted]{present.insert({elem.id.value, elem.id.source})};
       if (!inserted) {
         repeated.insert({elem.id.value, {where->second, elem.id.source}});
+      }
+      continue;
+    }
+    for (auto s : elem.sets) {
+      auto &sdesc{llvm::omp::getDescriptor(s)};
+      if (sdesc.getProperties(elem.version).test(llvm::omp::Property::Unique)) {
+        auto [where, inserted]{present.insert({elem.id.value, elem.id.source})};
+        if (!inserted) {
+          repeated.insert({elem.id.value, {where->second, elem.id.source}});
+        }
+        // One unique set is enough.
+        break;
       }
     }
   }
@@ -144,27 +158,20 @@ static ResultTy VerifyExclusive(
   using AppliedElementTy = AppliedElement<ElemTy, SetsSetTy>;
   ResultTy result;
 
-  auto &odesc{llvm::omp::getDescriptor(ownerId)};
-  auto allowed{descriptor::GetAllowedElements(odesc, version)};
-
-  llvm::DenseMap<ElemTy, parser::CharBlock> present;
   for (const AppliedElementTy &elem : info.elements) {
-    if (!allowed.test(elem.id.value)) {
+    if (!elem.version) {
       // Skip invalid elements.
       continue;
     }
-    present.insert({elem.id.value, elem.id.source});
-  }
-
-  for (auto [id, source] : present) {
-    auto &edesc{llvm::omp::getDescriptor(id)};
-    if (!edesc.getProperties(version).test(llvm::omp::Property::Exclusive)) {
+    auto properties{GetProperties(elem.id.value, elem.version)};
+    if (!properties.test(llvm::omp::Property::Exclusive)) {
       continue;
     }
     // Element is exclusive, it cannot coexist with any other element.
-    for (auto [otherId, otherSource] : present) {
-      if (otherId != id) {
-        result.insert({id, {otherId, source, otherSource}});
+    for (const AppliedElementTy &other : info.elements) {
+      if (other.version && other.id.value != elem.id.value) {
+        result.insert(
+            {elem.id.value, {other.id.value, elem.id.source, other.id.source}});
         break;
       }
     }
@@ -185,26 +192,56 @@ static ResultTy VerifyMutuallyExclusive(
 
   ResultTy result;
 
-  auto &odesc{llvm::omp::getDescriptor(ownerId)};
-  auto allowed{descriptor::GetAllowedElements(odesc, version)};
+  // The are-mutually-exclusive relation is not symmetric here, since it
+  // depends on version, and the applicable version may be different for
+  // different elements.
+  // For example, element A may be allowed in v1.0, element B may be
+  // allowed in v2.0, and also the set {A, B} may be exclusive in v2.0.
+  // If the current version is v1.0, the effective versions will be
+  // 1.0 and 2.0 for A and B respectively.
+  // When looking at A, there is no indication that it interacts with B
+  // in any way, it's only when looking at B that the mutual-exclusivity
+  // becomes evident.
 
-  llvm::DenseMap<SetTy, const AppliedElementTy *> exclusive;
+  // First collect all exclusive sets that any specified element is a
+  // member of in its applicable version.
+  llvm::DenseMap<SetTy, llvm::SetVector<llvm::omp::Version>> exclusiveSets;
   for (const AppliedElementTy &elem : info.elements) {
-    if (!allowed.test(elem.id.value)) {
+    if (!elem.version) {
       // Skip invalid elements.
       continue;
     }
     for (auto s : elem.sets) {
-      auto &sdesc{llvm::omp::getDescriptor(s)};
-      if (!sdesc.getProperties(version).test(llvm::omp::Property::Exclusive)) {
-        continue;
+      auto properties{GetProperties(s, elem.version)};
+      if (properties.test(llvm::omp::Property::Exclusive)) {
+        exclusiveSets[s].insert(elem.version);
       }
-      auto [where, inserted]{exclusive.insert({s, &elem})};
-      if (!inserted) {
-        const AppliedElementTy *prev{where->second};
-        if (prev->id.value != elem.id.value) {
-          result.insert({elem.id.value,
-              {prev->id.value, elem.id.source, prev->id.source}});
+    }
+  }
+
+  // Then iterate over all specified elements and check is they are members
+  // of some exclusive set for any applicable version for that set.
+  llvm::DenseMap<SetTy, const AppliedElementTy *> exclusive;
+  for (const AppliedElementTy &elem : info.elements) {
+    if (!elem.version) {
+      // Skip invalid elements.
+      continue;
+    }
+    for (auto [s, versions] : exclusiveSets) {
+      auto &sdesc{llvm::omp::getDescriptor(s)};
+      for (llvm::omp::Version v : versions) {
+        if (!descriptor::GetElements(sdesc, v).test(elem.id.value)) {
+          continue;
+        }
+        auto [where, inserted]{exclusive.insert({s, &elem})};
+        if (!inserted) {
+          const AppliedElementTy *prev{where->second};
+          if (prev->id.value != elem.id.value) {
+            result.insert({elem.id.value,
+                {prev->id.value, elem.id.source, prev->id.source}});
+            // Stop version traversal.
+            break;
+          }
         }
       }
     }
@@ -224,37 +261,28 @@ static ResultTy VerifyUltimate(
     return result;
   }
 
-  using AppliedElementTy = AppliedElement<ElemTy, SetsSetTy>;
-  llvm::omp::EnumSet<ElemTy> ultimate;
-
-  auto &odesc{llvm::omp::getDescriptor(ownerId)};
-  auto allowed{descriptor::GetAllowedElements(odesc, version)};
-
-  for (auto e : descriptor::GetElements(odesc, version)) {
-    auto &edesc{llvm::omp::getDescriptor(e)};
-    if (edesc.getProperties(version).test(llvm::omp::Property::Ultimate)) {
-      ultimate.set(e);
-    }
-  }
-  for (auto s : descriptor::GetSets(odesc, version)) {
-    auto &sdesc{llvm::omp::getDescriptor(s)};
-    if (sdesc.getProperties(version).test(llvm::omp::Property::Ultimate)) {
-      ultimate |= descriptor::GetElements(sdesc, version);
-    }
-  }
-
   // Check if there is an ultimate modifier that is in a wrong position.
+  using AppliedElementTy = AppliedElement<ElemTy, SetsSetTy>;
   auto rest{last
           ? llvm::ArrayRef<AppliedElementTy>(info.elements).drop_back(1)
           : llvm::ArrayRef<AppliedElementTy>(info.elements).drop_front(1)};
 
   for (const AppliedElementTy &elem : rest) {
-    if (!allowed.test(elem.id.value)) {
+    if (!elem.version) {
       // Skip invalid elements.
       continue;
     }
-    if (ultimate.test(elem.id.value)) {
+    auto properties{GetProperties(elem.id.value, elem.version)};
+    if (properties.test(llvm::omp::Property::Ultimate)) {
       result.insert({elem.id.value, elem.id.source});
+      continue;
+    }
+    for (auto s : elem.sets) {
+      auto properties{GetProperties(s, elem.version)};
+      if (properties.test(llvm::omp::Property::Ultimate)) {
+        result.insert({elem.id.value, elem.id.source});
+        break;
+      }
     }
   }
 
@@ -265,6 +293,7 @@ bool OmpStructureChecker::VerifyModifierVersion(
     WithSource<llvm::omp::Clause> clause, const AppliedModifierInfo &info) {
   // Verify that the specified modifiers are allowed in this version.
   llvm::omp::Version version{context_.langOptions().getOpenMPVersion()};
+  llvm::omp::Version maxVer{std::numeric_limits<int>::max()};
 
   auto result = VerifyVersions(info, clause.value, version);
 
@@ -274,12 +303,12 @@ bool OmpStructureChecker::VerifyModifierVersion(
     llvm::omp::Version since(svr.second.Min);
     llvm::omp::Version until(svr.second.Max);
 
-    if (since == ~0u && until == 0u) {
+    if (since == maxVer && until == 0u) {
       // This shouldn't really happen, but have it just in case.
       context_.Say(svr.first,
           "'%s' modifier is not supported on %s clause"_err_en_US, modName,
           clauseName);
-    } else if (since != ~0u && version < since) {
+    } else if (since != maxVer && version < since) {
       context_.Say(svr.first,
           "'%s' modifier is not supported on %s clause in %s, %s"_warn_en_US,
           modName, clauseName, omp::ThisVersion(version),
@@ -389,6 +418,15 @@ bool OmpStructureChecker::VerifyModifierUltimate(
   return result.empty();
 }
 
+// Collect the information about modifiers specified on the given clause.
+// If a modifier is allowed on this clause in "version", store the list of
+// modifier sets that the clause allows in "version" in AppliedModifier.
+// If a modifier is not allowed on this clause in "version", but is allowed
+// on it in another version v, store the list of modifier sets that the clause
+// allows on v.
+// In either case, store the applied version in AppliedModifier.
+// If the modifier is not allowed in any version, the applied version will
+// be the default (i.e. 0) and no sets will be stored.
 template <typename UnionTy>
 AppliedModifierInfo GetAppliedModifiers(llvm::omp::Clause clauseId,
     llvm::omp::Version version,
@@ -401,10 +439,15 @@ AppliedModifierInfo GetAppliedModifiers(llvm::omp::Clause clauseId,
           [&](auto &&t) {
             auto &am{info.elements.emplace_back(AppliedModifier{})};
             am.id = WithSource{t.Id, m.source};
-            for (auto s : cdesc.getModifierSets(version)) {
-              auto &sdesc{llvm::omp::getDescriptor(s)};
-              if (sdesc.getModifiers(version).test(am.id.value)) {
-                am.sets.set(s);
+            am.version = GetClosestVersion(
+                descriptor::GetVersionRangeForElement(am.id.value, clauseId),
+                version);
+            if (am.version) {
+              for (auto s : cdesc.getModifierSets(am.version)) {
+                auto &sdesc{llvm::omp::getDescriptor(s)};
+                if (sdesc.getModifiers(am.version).test(am.id.value)) {
+                  am.sets.set(s);
+                }
               }
             }
           },
