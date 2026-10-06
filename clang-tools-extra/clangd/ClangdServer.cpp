@@ -1223,13 +1223,11 @@ void ClangdServer::adjustParseInputs(ParseInputs &Inputs, PathRef File) const {
 
   Inputs.Opts.SkipPreambleBuild = [&]() {
     switch (SkipPreambleBuild) {
-      using enum SkipPreambleBuildPolicy;
-
-    case Never:
+    case SkipPreambleBuildPolicy::Never:
       return false;
-    case Modules:
+    case SkipPreambleBuildPolicy::Modules:
       return HasRequiredModules();
-    case Always:
+    case SkipPreambleBuildPolicy::Always:
       return true;
     }
   }();
