@@ -103,7 +103,7 @@ extern "C" void both_neg() {
 }
 
 // Mixed signed/unsigned trip counts: the flattened IV is unsigned, and the
-// signed inner count is converted into that type for max(1, N).
+// signed inner count is converted into that type for (N == 0 ? 1 : N).
 // CHECK-LABEL: define {{.*}}void @mixed_sign(
 // CHECK:   %.flatten.iv = alloca i64
 // CHECK:   icmp ult i64
