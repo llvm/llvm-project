@@ -97,3 +97,27 @@ body: |
     %4:_(i8) = G_CONSTANT i8 6
     %5:_(<2 x i8>) = G_INSERT_VECTOR_ELT %3, %4, %idx
 ...
+---
+# computeKnownBits: an inserted value narrower than the element is any-extended,
+# so the upper bits of that lane are unknown. The other lanes are unaffected.
+name: knownbits_narrower_inserted_value
+body: |
+  bb.0:
+  ; CHECK-LABEL: name: @knownbits_narrower_inserted_value
+  ; CHECK-NEXT: %c:_ KnownBits:0000000000000011 SignBits:14 IsKnownNeverZero:1
+  ; CHECK-NEXT: %v:_ KnownBits:0000000000000011 SignBits:14 IsKnownNeverZero:1
+  ; CHECK-NEXT: %val:_ KnownBits:00000011 SignBits:6 IsKnownNeverZero:1
+  ; CHECK-NEXT: %idx0:_ KnownBits:0000000000000000000000000000000000000000000000000000000000000000 SignBits:64 IsKnownNeverZero:0
+  ; CHECK-NEXT: %idx1:_ KnownBits:0000000000000000000000000000000000000000000000000000000000000001 SignBits:63 IsKnownNeverZero:1
+  ; CHECK-NEXT: %r:_ KnownBits:????????00000011 SignBits:1 IsKnownNeverZero:1
+  ; CHECK-NEXT: %e0:_ KnownBits:????????00000011 SignBits:1 IsKnownNeverZero:1
+  ; CHECK-NEXT: %e1:_ KnownBits:0000000000000011 SignBits:14 IsKnownNeverZero:1
+    %c:_(i16) = G_CONSTANT i16 3
+    %v:_(<4 x i16>) = G_BUILD_VECTOR %c, %c, %c, %c
+    %val:_(i8) = G_CONSTANT i8 3
+    %idx0:_(i64) = G_CONSTANT i64 0
+    %idx1:_(i64) = G_CONSTANT i64 1
+    %r:_(<4 x i16>) = G_INSERT_VECTOR_ELT %v, %val, %idx0
+    %e0:_(i16) = G_EXTRACT_VECTOR_ELT %r, %idx0
+    %e1:_(i16) = G_EXTRACT_VECTOR_ELT %r, %idx1
+...
