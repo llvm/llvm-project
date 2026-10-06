@@ -29,6 +29,26 @@ if(NOT LLVM_LIBC_FULL_BUILD)
 endif()
 
 add_entrypoint_object(
+  fflush
+  SRCS
+    fflush.cpp
+  HDRS
+    fflush.h
+    stdin.h
+    stdout.h
+    stderr.h
+  DEPENDS
+    libc.src.errno.errno
+    libc.hdr.types.FILE
+    libc.src.__support.File.file
+    libc.src.__support.File.platform_file
+    libc.src.stdio.stdin
+    libc.src.stdio.stdout
+    libc.src.stdio.stderr
+)
+
+
+add_entrypoint_object(
   flockfile
   SRCS
     flockfile.cpp
@@ -303,7 +323,7 @@ add_stdio_entrypoint_object(ftell)
 add_stdio_entrypoint_object(fseeko)
 add_stdio_entrypoint_object(fileno)
 add_stdio_entrypoint_object(ftello)
-add_stdio_entrypoint_object(fflush)
+# add_stdio_entrypoint_object(fflush)
 add_stdio_entrypoint_object(clearerr)
 add_stdio_entrypoint_object(clearerr_unlocked)
 add_stdio_entrypoint_object(fopen)
