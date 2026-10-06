@@ -7417,9 +7417,11 @@ The `name:` field is mandatory. The `configMacros:`, `includePath:`,
 dynamic length and location encoded as an expression.
 The `tag:` field is optional and defaults to `DW_TAG_string_type`. The `name:`,
 `stringLength:`, `stringLengthExpression`, `stringLocationExpression:`,
-`size:`, `align:`, and `encoding:` fields are optional.
+`size:`, `align:`, `encoding:`, and `charType:` fields are optional.
 
 If not present, the `size:` and `align:` fields default to the value zero.
+
+`charType:` specifies a non-default character type.
 
 The length in bits of the string is specified by the first of the following
 fields present:
@@ -9243,12 +9245,15 @@ allocation. This information is consumed by the `alloc-token` pass to
 instrument such calls with allocation token IDs.
 
 The metadata contains: string with the type of an allocation, and a boolean
-denoting if the type contains a pointer.
+denoting if the type contains a pointer. Optionally, it contains a string with
+the name of the function containing the allocation.
 
 ```
 call ptr @malloc(i64 64), !alloc_token !0
+call ptr @malloc(i64 64), !alloc_token !1
 
 !0 = !{!"<type-name>", i1 <contains-pointer>}
+!1 = !{!"<type-name>", i1 <contains-pointer>, !"<function-name>"}
 ```
 
 #### '`stack-protector`' Metadata
@@ -14032,9 +14037,13 @@ This instruction requires several arguments:
       the return value of the callee is returned to the caller's caller, even
       if a void return type is in use.
 
-   Both markers imply that the callee does not access allocas, va_args, or
-   byval arguments from the caller. As an exception to that, an alloca or byval
-   argument may be passed to the callee as a byval argument, which can be
+   Both markers imply that the callee does not access any value derived from
+   the caller's stack frame, which is torn down before the callee runs. That
+   covers allocas, va_args, and byval arguments, and equally an address of the
+   frame itself, including pointers returned by intrinsics such as
+   `llvm.frameaddress` with a level of zero, `llvm.localaddress`, or
+   `llvm.stacksave` evaluated in the caller. As an exception, an alloca or
+   byval argument may be passed to the callee as a byval argument, which can be
    dereferenced inside the callee. For example:
 
    ```llvm
@@ -14087,6 +14096,15 @@ This instruction requires several arguments:
    define void @invalid_byval(ptr byval(i64) %x) {
    entry:
      tail call void @take_ptr(ptr %x)
+     ret void
+   }
+
+   ; Invalid (assuming @take_ptr dereferences the pointer), because the frame
+   ; @frameaddress names is torn down before @take_ptr runs.
+   define void @invalid_frameaddress() {
+   entry:
+     %fp = call ptr @llvm.frameaddress.p0(i32 0)
+     tail call void @take_ptr(ptr %fp)
      ret void
    }
    ```

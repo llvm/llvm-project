@@ -5974,6 +5974,39 @@ bool AArch64TTIImpl::isLegalSpeculativeLoad(Type *DataType,
          Size.getFixedValue() <= 16;
 }
 
+bool AArch64TTIImpl::hasMultiVectorLoadStore(
+    unsigned NumVectors, TTI::MaskSource Mask, VectorType *VectorTy,
+    bool IsStore, std::optional<Instruction::CastOps> CastHint) const {
+  if (NumVectors <= 1 || !ST->enableSubRegLiveness() || !ST->hasSVE2p1())
+    return false;
+
+  // TODO: Support masked multi-vector loads/stores.
+  if (Mask != TTI::MaskSource::None)
+    return false;
+
+  // A null vector type queries whether the target supports multi-vector memory
+  // operations in general.
+  if (!VectorTy)
+    return true;
+
+  if (!isa<ScalableVectorType>(VectorTy))
+    return false;
+
+  // Conservatively, avoid using multi-vector loads when it's possible we could
+  // use extending loads instead. Note: We can ignore stores as we only use
+  // truncating stores when the store vector-width is < a full SVE vector.
+  if (!IsStore &&
+      (CastHint == Instruction::ZExt || CastHint == Instruction::SExt))
+    return false;
+
+  // For unpredicated loads/stores allow any pow-of-two multiple of a vector >=
+  // to a single z-register. We can split operations wider than a single
+  // multi-vector load/store during ISEL.
+  return isPowerOf2_32(NumVectors) &&
+         DL.getTypeSizeInBits(VectorTy).isKnownMultipleOf(
+             AArch64::SVEBitsPerBlock);
+}
+
 unsigned
 AArch64TTIImpl::getMaxInterleaveFactor(ElementCount VF,
                                        bool HasUnorderedReductions) const {
@@ -6302,6 +6335,9 @@ void AArch64TTIImpl::getUnrollingPreferences(
         return;
       }
 
+      // The cost is only compared against Aarch64ForceUnrollThreshold below.
+      if (Cost >= Aarch64ForceUnrollThreshold)
+        continue;
       SmallVector<const Value *, 4> Operands(I.operand_values());
       Cost += getInstructionCost(&I, Operands,
                                  TargetTransformInfo::TCK_SizeAndLatency);
@@ -7465,6 +7501,44 @@ AArch64TTIImpl::getScalingFactorCost(Type *Ty, GlobalValue *BaseGV,
     // it is not equal to 0 or 1.
     return AM.Scale != 0 && AM.Scale != 1;
   return InstructionCost::getInvalid();
+}
+
+bool AArch64TTIImpl::isLegalAddressingMode(Type *Ty, GlobalValue *BaseGV,
+                                           int64_t BaseOffset, bool HasBaseReg,
+                                           int64_t Scale, unsigned AddrSpace,
+                                           Instruction *I,
+                                           int64_t ScalableOffset) const {
+  LLVMContext &Ctx = Ty->getContext();
+  const AArch64TargetLowering *TLI = getTLI();
+
+  // LSR can make an illegal scalable vector access easier to split and combine
+  // by preferring a base+scalable-offset form. Note: This is an LSR preference
+  // rather than a legal machine addressing mode.
+  if (!BaseGV && !BaseOffset && HasBaseReg && isa<ScalableVectorType>(Ty)) {
+    EVT MemVT = TLI->getValueType(DL, Ty);
+    TargetLowering::LegalizeTypeAction Action = TLI->getTypeAction(Ctx, MemVT);
+
+    // Note: If MemVT cannot be legalized (e.g. no scalable vectors) then
+    // LegalVT could be MVT::Other (which would assert on getStoreSize()).
+    EVT LegalVT = TLI->getLegalTypeToTransformTo(Ctx, MemVT);
+    if (Action == TargetLowering::TypeSplitVector && LegalVT.isScalableVT() &&
+        LegalVT.getVectorElementType() == MemVT.getVectorElementType()) {
+      uint64_t LegalNumBytes = LegalVT.getStoreSize().getKnownMinValue();
+      assert(MemVT.getStoreSize().getKnownMinValue() % LegalNumBytes == 0 &&
+             "expected vector split");
+
+      // Don't prefer scaled access if the type may need splitting. Only the
+      // first access can use the scaled offset. Later accesses need to
+      // materialize a new base + mul vl offset.
+      if (Scale)
+        return false;
+      if (ScalableOffset && ScalableOffset % LegalNumBytes == 0)
+        return true;
+    }
+  }
+
+  return BaseT::isLegalAddressingMode(Ty, BaseGV, BaseOffset, HasBaseReg, Scale,
+                                      AddrSpace, I, ScalableOffset);
 }
 
 bool AArch64TTIImpl::shouldTreatInstructionLikeSelect(

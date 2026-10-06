@@ -105,9 +105,9 @@ multiclass BARRIER_ALL<string asmstr, Intrinsic intrinsic, list<Predicate> requi
 
 multiclass BARRIER_COUNT<string asmstr, Intrinsic intrinsic, list<Predicate> requires = []> {
   let Predicates = requires in {
-    def _rr : BasicNVPTXInst<(outs), (ins B32:$i, B32:$j), asmstr, 
+    def _rr : BasicNVPTXInst<(outs), (ins B32:$i, B32:$j), asmstr,
                              [(intrinsic i32:$i, i32:$j)]>;
-    def _ri : BasicNVPTXInst<(outs), (ins B32:$i, i32imm:$j), asmstr, 
+    def _ri : BasicNVPTXInst<(outs), (ins B32:$i, i32imm:$j), asmstr,
                              [(intrinsic i32:$i, imm:$j)]>;
     def _ir : BasicNVPTXInst<(outs), (ins i32imm:$i, B32:$j), asmstr,
                              [(intrinsic imm:$i, i32:$j)]>;
@@ -120,16 +120,16 @@ multiclass BARRIER_RED_ALL<string asmstr, Intrinsic intrinsic, RegTyInfo dst_rt,
   let Predicates = requires in {
     def _ip : BasicNVPTXInst<(outs dst_rt.RC:$dest), (ins i32imm:$i, B1:$pred), asmstr,
                              [(set dst_rt.Ty:$dest, (intrinsic imm:$i, i1:$pred))]>;
-    def _rp : BasicNVPTXInst<(outs dst_rt.RC:$dest), (ins B32:$i, B1:$pred), asmstr, 
+    def _rp : BasicNVPTXInst<(outs dst_rt.RC:$dest), (ins B32:$i, B1:$pred), asmstr,
                              [(set dst_rt.Ty:$dest, (intrinsic i32:$i, i1:$pred))]>;
   }
 }
 
 multiclass BARRIER_RED_COUNT<string asmstr, Intrinsic intrinsic, RegTyInfo dst_rt, list<Predicate> requires = []> {
   let Predicates = requires in {
-    def _rrp : BasicNVPTXInst<(outs dst_rt.RC:$dest), (ins B32:$i, B32:$j, B1:$pred), asmstr, 
+    def _rrp : BasicNVPTXInst<(outs dst_rt.RC:$dest), (ins B32:$i, B32:$j, B1:$pred), asmstr,
                               [(set dst_rt.Ty:$dest, (intrinsic i32:$i, i32:$j, i1:$pred))]>;
-    def _rip : BasicNVPTXInst<(outs dst_rt.RC:$dest), (ins B32:$i, i32imm:$j, B1:$pred), asmstr, 
+    def _rip : BasicNVPTXInst<(outs dst_rt.RC:$dest), (ins B32:$i, i32imm:$j, B1:$pred), asmstr,
                               [(set dst_rt.Ty:$dest, (intrinsic i32:$i, imm:$j, i1:$pred))]>;
     def _irp : BasicNVPTXInst<(outs dst_rt.RC:$dest), (ins i32imm:$i, B32:$j, B1:$pred), asmstr,
                               [(set dst_rt.Ty:$dest, (intrinsic imm:$i, i32:$j, i1:$pred))]>;
@@ -1630,16 +1630,16 @@ class PREFETCH_INTRS<string InstName, Intrinsic Intr> :
           [(Intr addr:$addr)]>,
           Requires<[PTX80, SM90]>;
 
-def PREFETCHU_L1 : PREFETCH_INTRS<"prefetchu.L1", int_nvvm_prefetchu_L1>;   
+def PREFETCHU_L1 : PREFETCH_INTRS<"prefetchu.L1", int_nvvm_prefetchu_L1>;
 def PREFETCH_L1 : PREFETCH_INTRS<"prefetch.L1", int_nvvm_prefetch_L1>;
 def PREFETCH_L2 : PREFETCH_INTRS<"prefetch.L2", int_nvvm_prefetch_L2>;
 def PREFETCH_GLOBAL_L1 : PREFETCH_INTRS<"prefetch.global.L1", int_nvvm_prefetch_global_L1>;
 def PREFETCH_LOCAL_L1 : PREFETCH_INTRS<"prefetch.local.L1", int_nvvm_prefetch_local_L1>;
 def PREFETCH_GLOBAL_L2 : PREFETCH_INTRS<"prefetch.global.L2", int_nvvm_prefetch_global_L2>;
 def PREFETCH_LOCAL_L2 : PREFETCH_INTRS<"prefetch.local.L2", int_nvvm_prefetch_local_L2>;
-def PREFETCH_GLOBAL_L2_EVICT_NORMAL : PREFETCH_INTRS<"prefetch.global.L2::evict_normal", 
+def PREFETCH_GLOBAL_L2_EVICT_NORMAL : PREFETCH_INTRS<"prefetch.global.L2::evict_normal",
                                       int_nvvm_prefetch_global_L2_evict_normal>;
-def PREFETCH_GLOBAL_L2_EVICT_LAST : PREFETCH_INTRS<"prefetch.global.L2::evict_last", 
+def PREFETCH_GLOBAL_L2_EVICT_LAST : PREFETCH_INTRS<"prefetch.global.L2::evict_last",
                                     int_nvvm_prefetch_global_L2_evict_last>;
 
 //Applypriority intrinsics
@@ -2447,7 +2447,7 @@ let Predicates = [SM100, doNoF32FTZ] in {
   def : Pat<(f32 (fma (f32 (fpextend f16:$a)),
                       (f32 (fpextend f16:$b)), f32:$c)),
             (INT_NVVM_MIXED_FMA_rn_f32_f16 B16:$a, B16:$b, B32:$c)>;
-  def : Pat<(f32 (fma (f32 (fpextend bf16:$a)), 
+  def : Pat<(f32 (fma (f32 (fpextend bf16:$a)),
                       (f32 (fpextend bf16:$b)), f32:$c)),
             (INT_NVVM_MIXED_FMA_rn_f32_bf16 B16:$a, B16:$b, B32:$c)>;
 }
@@ -2456,7 +2456,7 @@ foreach ty = [F16RT, F16X2RT, BF16RT, BF16X2RT] in {
   foreach relu = ["", "_relu"] in {
     defvar Intr = !cast<Intrinsic>("int_nvvm_fma_rn_oob" # relu);
     defvar suffix = !subst("_", ".", relu # "_" # ty.PtxType);
-    def INT_NVVM_FMA_OOB # relu # ty.PtxType : 
+    def INT_NVVM_FMA_OOB # relu # ty.PtxType :
       BasicNVPTXInst<(outs ty.RC:$dst), (ins ty.RC:$a, ty.RC:$b, ty.RC:$c),
         "fma.rn.oob" # suffix,
         [(set ty.Ty:$dst, (Intr ty.Ty:$a, ty.Ty:$b, ty.Ty:$c))]>,
@@ -2726,7 +2726,7 @@ let Predicates = [hasFP16x2MixedPrecisionSupport] in
 
 // These nodes are created by combineFAddWithNeg.
 def sub_rn_sat : SDNode<"NVPTXISD::SUB_RN_SAT", SDTFPBinOp>;
-def sub_rn_ftz_sat : 
+def sub_rn_ftz_sat :
   SDNode<"NVPTXISD::SUB_RN_FTZ_SAT", SDTFPBinOp>;
 
 foreach rnd = FPRoundingModes in
@@ -2974,11 +2974,11 @@ def : Pat<(int_nvvm_ui2f_rp i32:$a), (CVT_f32_u32 $a, CvtRP)>;
 
 // Utility to look up base and satfinite variants of a conversion intrinsic.
 // Missing variants are left unset so this can be used when only one exists.
-class ToCvtIntrinsics<string suffix> {
-  Intrinsic base = !if(!exists<Intrinsic>("int_nvvm_" # suffix),
-                       !cast<Intrinsic>("int_nvvm_" # suffix), ?);
-  Intrinsic sf = !if(!exists<Intrinsic>("int_nvvm_" # suffix # "_satfinite"),
-                     !cast<Intrinsic>("int_nvvm_" # suffix # "_satfinite"), ?);
+class ToCvtIntrinsics<string suffix, string scale_suffix = ""> {
+  Intrinsic base = !if(!exists<Intrinsic>("int_nvvm_" # suffix # scale_suffix),
+                       !cast<Intrinsic>("int_nvvm_" # suffix # scale_suffix), ?);
+  Intrinsic sf = !if(!exists<Intrinsic>("int_nvvm_" # suffix # "_satfinite" # scale_suffix),
+                     !cast<Intrinsic>("int_nvvm_" # suffix # "_satfinite" # scale_suffix), ?);
 }
 
 foreach rnd = ["rn", "rz"] in {
@@ -3105,6 +3105,9 @@ foreach dst = ["e4m3x2", "e5m2x2"] in {
       defvar F32X2    = ToCvtIntrinsics<"ff_to_" # Suffix>;
       defvar F16X2    = ToCvtIntrinsics<"f16x2_to_" # Suffix>;
       defvar BF16X2   = ToCvtIntrinsics<"bf16x2_to_" # Suffix>;
+      defvar F32Scale = ToCvtIntrinsics<"ff_to_" # Suffix, "_scale_n1_ue8m0">;
+      defvar F16Scale = ToCvtIntrinsics<"f16x2_to_" # Suffix, "_scale_n1_ue8m0">;
+      defvar BF16Scale = ToCvtIntrinsics<"bf16x2_to_" # Suffix, "_scale_n1_ue8m0">;
 
       foreach pzo = [0, 1] in {
         defvar PZO = !if(pzo, -1, 0);
@@ -3121,6 +3124,16 @@ foreach dst = ["e4m3x2", "e5m2x2"] in {
               Requires<F32X2Preds>;
         def : Pat<(BF16X2.sf v2bf16:$a, PZO), (!cast<NVPTXInst>("CVT_" # dst # "_bf16x2") $a, Mode)>,
               Requires<BF16X2Preds>;
+
+        def : Pat<(F32Scale.base f32:$a, f32:$b, i16:$s, PZO),
+                  (!cast<NVPTXInst>("CVT_" # dst # "_f32_scale_n1") $a, $b, $s, Mode)>,
+              Requires<[hasRubinFamilySupport]>;
+        def : Pat<(F16Scale.base v2f16:$a, i16:$s, PZO),
+                  (!cast<NVPTXInst>("CVT_" # dst # "_f16x2_scale_n1") $a, $s, Mode)>,
+              Requires<[hasRubinFamilySupport]>;
+        def : Pat<(BF16Scale.sf v2bf16:$a, i16:$s, PZO),
+                  (!cast<NVPTXInst>("CVT_" # dst # "_bf16x2_scale_n1") $a, $s, Mode)>,
+              Requires<[hasRubinFamilySupport]>;
       }
     }
   }
@@ -3167,7 +3180,7 @@ let Predicates = [hasS2F6X2ConversionSupport] in {
             (CVT_bf16x2_s2f6x2_scale $a, $scale, CvtRN)>;
   def : Pat<(int_nvvm_s2f6x2_to_bf16x2_rn_relu_scale_n2_ue8m0 i16:$a, i16:$scale),
             (CVT_bf16x2_s2f6x2_scale $a, $scale, CvtRN_RELU)>;
-  
+
   def : Pat<(int_nvvm_s2f6x2_to_bf16x2_rn_satfinite_scale_n2_ue8m0 i16:$a, i16:$scale),
             (CVT_bf16x2_s2f6x2_sf_scale $a, $scale, CvtRN)>;
   def : Pat<(int_nvvm_s2f6x2_to_bf16x2_rn_relu_satfinite_scale_n2_ue8m0 i16:$a, i16:$scale),
@@ -3182,6 +3195,9 @@ foreach dst = ["e2m3x2", "e3m2x2"] in {
       defvar F32X2    = ToCvtIntrinsics<"ff_to_" # Suffix>;
       defvar F16X2    = ToCvtIntrinsics<"f16x2_to_" # Suffix>;
       defvar BF16X2   = ToCvtIntrinsics<"bf16x2_to_" # Suffix>;
+      defvar F32Scale = ToCvtIntrinsics<"ff_to_" # Suffix, "_scale_n1_ue8m0">;
+      defvar F16Scale = ToCvtIntrinsics<"f16x2_to_" # Suffix, "_scale_n1_ue8m0">;
+      defvar BF16Scale = ToCvtIntrinsics<"bf16x2_to_" # Suffix, "_scale_n1_ue8m0">;
 
       foreach pzo = [0, 1] in {
         defvar PZO = !if(pzo, -1, 0);
@@ -3198,6 +3214,16 @@ foreach dst = ["e2m3x2", "e3m2x2"] in {
               Requires<FPX2Preds>;
         def : Pat<(BF16X2.sf v2bf16:$a, PZO), (!cast<NVPTXInst>("CVT_" # dst # "_bf16x2_sf") $a, Mode)>,
               Requires<FPX2Preds>;
+
+        def : Pat<(F32Scale.sf f32:$a, f32:$b, i16:$s, PZO),
+                  (!cast<NVPTXInst>("CVT_" # dst # "_f32_sf_scale_n1") $a, $b, $s, Mode)>,
+              Requires<[hasRubinFamilySupport]>;
+        def : Pat<(F16Scale.sf v2f16:$a, i16:$s, PZO),
+                  (!cast<NVPTXInst>("CVT_" # dst # "_f16x2_sf_scale_n1") $a, $s, Mode)>,
+              Requires<[hasRubinFamilySupport]>;
+        def : Pat<(BF16Scale.sf v2bf16:$a, i16:$s, PZO),
+                  (!cast<NVPTXInst>("CVT_" # dst # "_bf16x2_sf_scale_n1") $a, $s, Mode)>,
+              Requires<[hasRubinFamilySupport]>;
       }
     }
   }
@@ -3235,6 +3261,9 @@ foreach relu = ["", "relu"] in {
     defvar F32X2    = ToCvtIntrinsics<"ff_to_" # Suffix>;
     defvar F16X2    = ToCvtIntrinsics<"f16x2_to_" # Suffix>;
     defvar BF16X2   = ToCvtIntrinsics<"bf16x2_to_" # Suffix>;
+    defvar F32Scale = ToCvtIntrinsics<"ff_to_" # Suffix, "_scale_n1_ue8m0">;
+    defvar F16Scale = ToCvtIntrinsics<"f16x2_to_" # Suffix, "_scale_n1_ue8m0">;
+    defvar BF16Scale = ToCvtIntrinsics<"bf16x2_to_" # Suffix, "_scale_n1_ue8m0">;
 
     foreach pzo = [0, 1] in {
       defvar PZO = !if(pzo, -1, 0);
@@ -3251,6 +3280,13 @@ foreach relu = ["", "relu"] in {
             Requires<FPX2Preds>;
       def : Pat<(BF16X2.sf v2bf16:$a, PZO), (CVT_e2m1x2_bf16x2_sf $a, Mode)>,
             Requires<FPX2Preds>;
+
+      def : Pat<(F32Scale.sf f32:$a, f32:$b, i16:$s, PZO), (CVT_e2m1x2_f32_sf_scale_n1 $a, $b, $s, Mode)>,
+            Requires<[hasRubinFamilySupport]>;
+      def : Pat<(F16Scale.sf v2f16:$a, i16:$s, PZO), (CVT_e2m1x2_f16x2_sf_scale_n1 $a, $s, Mode)>,
+            Requires<[hasRubinFamilySupport]>;
+      def : Pat<(BF16Scale.sf v2bf16:$a, i16:$s, PZO), (CVT_e2m1x2_bf16x2_sf_scale_n1 $a, $s, Mode)>,
+            Requires<[hasRubinFamilySupport]>;
     }
   }
 }
@@ -3301,12 +3337,12 @@ let Predicates = [hasNarrowFPConversionSupport] in {
 let Predicates = [hasRubinFamilySupport] in {
   def : Pat<(int_nvvm_ue5m3x2_to_f16x2_rn i16:$a),
             (CVT_f16x2_ue5m3x2 $a, CvtRN)>;
-  
+
   def : Pat<(int_nvvm_ue5m3x2_to_bf16x2_rn i16:$a),
             (CVT_bf16x2_ue5m3x2 $a, CvtRN)>;
   def : Pat<(int_nvvm_ue5m3x2_to_bf16x2_rn_satfinite i16:$a),
             (CVT_bf16x2_ue5m3x2 $a, CvtRN_SATFINITE)>;
-  
+
   def : Pat<(int_nvvm_ue5m3x2_to_bf16x2_rn_scale_n2_ue8m0 i16:$a, i16:$b),
             (CVT_bf16x2_ue5m3x2_scale_n2 $a, $b, CvtRN)>;
   def : Pat<(int_nvvm_ue5m3x2_to_bf16x2_rn_satfinite_scale_n2_ue8m0 i16:$a, i16:$b),
@@ -3349,27 +3385,27 @@ let Predicates = [hasRubinFamilySupport] in {
 } // let Predicates = [hasRubinFamilySupport]
 
 def SDT_CVT_F32X4_TO_FPX4_RS_VEC :
-  SDTypeProfile<1, 6, [SDTCisVec<0>, SDTCisFP<1>, SDTCisFP<2>, SDTCisFP<3>, 
+  SDTypeProfile<1, 6, [SDTCisVec<0>, SDTCisFP<1>, SDTCisFP<2>, SDTCisFP<3>,
                        SDTCisFP<4>, SDTCisInt<5>, SDTCisInt<6>]>;
 
 def SDT_CVT_F32X4_TO_FPX4_RS_INT :
-  SDTypeProfile<1, 6, [SDTCisInt<0>, SDTCisFP<1>, SDTCisFP<2>, SDTCisFP<3>, 
+  SDTypeProfile<1, 6, [SDTCisInt<0>, SDTCisFP<1>, SDTCisFP<2>, SDTCisFP<3>,
                        SDTCisFP<4>, SDTCisInt<5>, SDTCisInt<6>]>;
 
 class CVT_F32X4_TO_FPX4_RS_SF_NODE<string FPName, SDTypeProfile SDT> :
   SDNode<"NVPTXISD::CVT_" # FPName # "X4_F32X4_RS_SF", SDT, []>;
-  
+
 multiclass CVT_F32X4_TO_FPX4_RS_SF_VEC<string FPName, VTVec RetTy> {
   def : Pat<(RetTy (CVT_F32X4_TO_FPX4_RS_SF_NODE<!toupper(FPName),
                       SDT_CVT_F32X4_TO_FPX4_RS_VEC>
                    f32:$f1, f32:$f2, f32:$f3, f32:$f4, i32:$rbits, CvtRS)),
-            (!cast<NVPTXInst>("CVT_" # FPName # "x4_f32x4_rs_sf") 
+            (!cast<NVPTXInst>("CVT_" # FPName # "x4_f32x4_rs_sf")
               $f1, $f2, $f3, $f4, $rbits, CvtRS)>;
-  
-  def : Pat<(RetTy (CVT_F32X4_TO_FPX4_RS_SF_NODE<!toupper(FPName), 
+
+  def : Pat<(RetTy (CVT_F32X4_TO_FPX4_RS_SF_NODE<!toupper(FPName),
                       SDT_CVT_F32X4_TO_FPX4_RS_VEC>
                    f32:$f1, f32:$f2, f32:$f3, f32:$f4, i32:$rbits, CvtRS_RELU)),
-            (!cast<NVPTXInst>("CVT_" # FPName # "x4_f32x4_rs_sf") 
+            (!cast<NVPTXInst>("CVT_" # FPName # "x4_f32x4_rs_sf")
               $f1, $f2, $f3, $f4, $rbits, CvtRS_RELU)>;
 }
 
@@ -3384,11 +3420,11 @@ defm : CVT_F32X4_TO_FPX4_RS_SF_VEC<"e2m3", v4i8>;
 defm : CVT_F32X4_TO_FPX4_RS_SF_VEC<"e3m2", v4i8>;
 
 // FP4x4 conversions
-def : Pat<(i16 (CVT_F32X4_TO_FPX4_RS_SF_NODE<"E2M1", 
+def : Pat<(i16 (CVT_F32X4_TO_FPX4_RS_SF_NODE<"E2M1",
                   SDT_CVT_F32X4_TO_FPX4_RS_INT>
                 f32:$f1, f32:$f2, f32:$f3, f32:$f4, i32:$rbits, CvtRS)),
           (CVT_e2m1x4_f32x4_rs_sf $f1, $f2, $f3, $f4, $rbits, CvtRS)>;
-def : Pat<(i16 (CVT_F32X4_TO_FPX4_RS_SF_NODE<"E2M1", 
+def : Pat<(i16 (CVT_F32X4_TO_FPX4_RS_SF_NODE<"E2M1",
                   SDT_CVT_F32X4_TO_FPX4_RS_INT>
                 f32:$f1, f32:$f2, f32:$f3, f32:$f4, i32:$rbits, CvtRS_RELU)),
           (CVT_e2m1x4_f32x4_rs_sf $f1, $f2, $f3, $f4, $rbits, CvtRS_RELU)>;
@@ -5329,7 +5365,7 @@ foreach op = ["clamp", "trap", "zero"] in {
 //-----------------------------------
 
 let IsSurfTexQuery = true in {
-  foreach query = ["channel_order", "channel_data_type", "width", "height", 
+  foreach query = ["channel_order", "channel_data_type", "width", "height",
                    "depth", "array_size", "num_samples", "num_mipmap_levels"] in {
     def TXQ_ # !toupper(query) # _R
       : NVPTXInst<(outs B32:$d), (ins B64:$a),
@@ -7043,8 +7079,8 @@ class ST_ASYNC_MMIO_SYS<string type, NVPTXRegClass reg> :
     "st.async.mmio.release.sys.global." # type>;
 
 class ST_ASYNC_RELEASE_B8_BODY<string instr_prefix, string prefix> {
-  // The minimum supported register size to pass in arguments is 16-bits, so 
-  // the 8-bit value is passed in using a 16-bit register and truncated to 
+  // The minimum supported register size to pass in arguments is 16-bits, so
+  // the 8-bit value is passed in using a 16-bit register and truncated to
   // 8-bits with a cvt instruction.
   string body =
     "{{ \n\t"
@@ -7698,19 +7734,19 @@ foreach space = ["tensor", "shared"] in {
 // tensormap.replace Instructions
 //
 
-class TensormapReplaceInst_2<string state_space, string field_name, 
+class TensormapReplaceInst_2<string state_space, string field_name,
   string regclass_name, NVPTXRegClass val_RC, ValueType ValTy, Intrinsic Intrin,
   NVPTXAddressSpace as> :
-  BasicNVPTXInst<(outs), 
-    (ins ADDR:$addr, val_RC:$val), 
+  BasicNVPTXInst<(outs),
+    (ins ADDR:$addr, val_RC:$val),
     "tensormap.replace.tile." # field_name # "." # state_space # ".b1024." # regclass_name,
     [(IntrinsicInAS<Intrin, as> addr:$addr, ValTy:$val)]>;
 
-class TensormapReplaceInst_3<string state_space, string field_name, 
+class TensormapReplaceInst_3<string state_space, string field_name,
   string regclass_name, NVPTXRegClass val_RC, ValueType ValTy, Intrinsic Intrin,
   NVPTXAddressSpace as> :
-  BasicNVPTXInst<(outs), 
-    (ins ADDR:$addr, B32:$ord, val_RC:$val), 
+  BasicNVPTXInst<(outs),
+    (ins ADDR:$addr, B32:$ord, val_RC:$val),
     "tensormap.replace.tile." # field_name # "." # state_space # ".b1024." # regclass_name,
     [(IntrinsicInAS<Intrin, as> addr:$addr, i32:$ord, ValTy:$val)]>;
 
@@ -7718,39 +7754,39 @@ foreach ss = ["GLOBAL", "SHARED_CTA"] in {
   defvar as = !if(!eq(ss, "GLOBAL"), AddrSpaceGlobal, AddrSpaceShared);
   defvar ss_ptx = !tolower(!subst("_", "::", ss));
   let Predicates = [hasTensormapReplaceSupport] in {
-    def TENSORMAP_REPLACE_TILE_GLOBAL_ADDRESS_ # ss : 
+    def TENSORMAP_REPLACE_TILE_GLOBAL_ADDRESS_ # ss :
       TensormapReplaceInst_2<ss_ptx, "global_address", "b64", B64, i64,
         int_nvvm_tensormap_replace_global_address, as>;
 
     foreach field_name = ["INTERLEAVE_LAYOUT", "FILL_MODE", "RANK"] in {
       defvar intrin = !cast<Intrinsic>("int_nvvm_tensormap_replace_" # !tolower(field_name));
-      def TENSORMAP_REPLACE_TILE_ # field_name # _ # ss : 
+      def TENSORMAP_REPLACE_TILE_ # field_name # _ # ss :
         TensormapReplaceInst_2<ss_ptx, !tolower(field_name), "b32", B32, i32,
           intrin, as>;
     } // field_name
 
-    def TENSORMAP_REPLACE_TILE_GLOBAL_STRIDE_ # ss : 
-      TensormapReplaceInst_3<ss_ptx, "global_stride", "b64", B64, i64, 
+    def TENSORMAP_REPLACE_TILE_GLOBAL_STRIDE_ # ss :
+      TensormapReplaceInst_3<ss_ptx, "global_stride", "b64", B64, i64,
         int_nvvm_tensormap_replace_global_stride, as>;
 
     foreach field_name = ["BOX_DIM", "GLOBAL_DIM", "ELEMENT_STRIDE"] in {
       defvar intrin = !cast<Intrinsic>("int_nvvm_tensormap_replace_" # !tolower(field_name));
-      def TENSORMAP_REPLACE_TILE_ # field_name # _ # ss : 
-        TensormapReplaceInst_3<ss_ptx, !tolower(field_name), "b32", B32, i32, 
+      def TENSORMAP_REPLACE_TILE_ # field_name # _ # ss :
+        TensormapReplaceInst_3<ss_ptx, !tolower(field_name), "b32", B32, i32,
           intrin, as>;
     } // field_name
   } // hasTensormapReplaceSupport
 
-  def TENSORMAP_REPLACE_TILE_ELEMTYPE_ # ss : 
-    TensormapReplaceInst_2<ss_ptx, "elemtype", "b32", B32, i32, 
+  def TENSORMAP_REPLACE_TILE_ELEMTYPE_ # ss :
+    TensormapReplaceInst_2<ss_ptx, "elemtype", "b32", B32, i32,
       int_nvvm_tensormap_replace_elemtype, as>;
 
-  def TENSORMAP_REPLACE_SWIZZLE_ATOMICITY_ # ss : 
-    TensormapReplaceInst_2<ss_ptx, "swizzle_atomicity", "b32", B32, i32, 
+  def TENSORMAP_REPLACE_SWIZZLE_ATOMICITY_ # ss :
+    TensormapReplaceInst_2<ss_ptx, "swizzle_atomicity", "b32", B32, i32,
       int_nvvm_tensormap_replace_swizzle_atomicity, as>,
     Requires<[hasTensormapReplaceSwizzleAtomicitySupport]>;
 
-  def TENSORMAP_REPLACE_SWIZZLE_MODE_ # ss : 
-    TensormapReplaceInst_2<ss_ptx, "swizzle_mode", "b32", B32, i32, 
+  def TENSORMAP_REPLACE_SWIZZLE_MODE_ # ss :
+    TensormapReplaceInst_2<ss_ptx, "swizzle_mode", "b32", B32, i32,
       int_nvvm_tensormap_replace_swizzle_mode, as>;
 } // state_space
