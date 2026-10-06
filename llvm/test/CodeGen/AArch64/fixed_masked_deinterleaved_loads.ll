@@ -421,10 +421,11 @@ define { <2 x double>, <2 x double> } @foo_ld2_v2f64(<2 x i1> %mask, ptr %p) {
 ; CHECK-LABEL: foo_ld2_v2f64:
 ; CHECK:       // %bb.0:
 ; CHECK-NEXT:    // kill: def $d0 killed $d0 def $q0
+; CHECK-NEXT:    dup v1.2s, v0.s[1]
 ; CHECK-NEXT:    adrp x8, .LCPI3_0
-; CHECK-NEXT:    zip1 v0.4s, v0.4s, v0.4s
+; CHECK-NEXT:    dup v0.2s, v0.s[0]
+; CHECK-NEXT:    uzp1 v0.4h, v0.4h, v1.4h
 ; CHECK-NEXT:    ldr d1, [x8, :lo12:.LCPI3_0]
-; CHECK-NEXT:    xtn v0.4h, v0.4s
 ; CHECK-NEXT:    shl v0.4h, v0.4h, #15
 ; CHECK-NEXT:    cmlt v0.4h, v0.4h, #0
 ; CHECK-NEXT:    and v0.8b, v0.8b, v1.8b
@@ -455,8 +456,8 @@ define { <2 x double>, <2 x double> } @foo_ld2_v2f64(<2 x i1> %mask, ptr %p) {
 ; CHECK-NEXT:    add x8, x0, #24
 ; CHECK-NEXT:    ld1 { v2.d }[1], [x8]
 ; CHECK-NEXT:  .LBB3_8: // %else8
-; CHECK-NEXT:    uzp1 v0.2d, v1.2d, v2.2d
-; CHECK-NEXT:    uzp2 v1.2d, v1.2d, v2.2d
+; CHECK-NEXT:    zip1 v0.2d, v1.2d, v2.2d
+; CHECK-NEXT:    zip2 v1.2d, v1.2d, v2.2d
 ; CHECK-NEXT:    ret
   %interleaved.mask = call <4 x i1> @llvm.vector.interleave2.v4i1(<2 x i1> %mask, <2 x i1> %mask)
   %wide.masked.vec = call <4 x double> @llvm.masked.load.v4f64.p0(ptr %p, i32 8, <4 x i1> %interleaved.mask, <4 x double> poison)

@@ -75,8 +75,8 @@ define {<2 x float>, <2 x float>} @vector_deinterleave_v2f32_v4f32(<4 x float> %
 ; CHECK-SD-LABEL: vector_deinterleave_v2f32_v4f32:
 ; CHECK-SD:       // %bb.0:
 ; CHECK-SD-NEXT:    mov d1, v0.d[1]
-; CHECK-SD-NEXT:    uzp1 v2.2s, v0.2s, v1.2s
-; CHECK-SD-NEXT:    uzp2 v1.2s, v0.2s, v1.2s
+; CHECK-SD-NEXT:    zip1 v2.2s, v0.2s, v1.2s
+; CHECK-SD-NEXT:    zip2 v1.2s, v0.2s, v1.2s
 ; CHECK-SD-NEXT:    fmov d0, d2
 ; CHECK-SD-NEXT:    ret
 ;
@@ -103,19 +103,12 @@ ret  {<4 x float>, <4 x float>}   %retval
 }
 
 define {<2 x double>, <2 x double>} @vector_deinterleave_v2f64_v4f64(<4 x double> %vec) {
-; CHECK-SD-LABEL: vector_deinterleave_v2f64_v4f64:
-; CHECK-SD:       // %bb.0:
-; CHECK-SD-NEXT:    uzp1 v2.2d, v0.2d, v1.2d
-; CHECK-SD-NEXT:    uzp2 v1.2d, v0.2d, v1.2d
-; CHECK-SD-NEXT:    mov v0.16b, v2.16b
-; CHECK-SD-NEXT:    ret
-;
-; CHECK-GI-LABEL: vector_deinterleave_v2f64_v4f64:
-; CHECK-GI:       // %bb.0:
-; CHECK-GI-NEXT:    zip1 v2.2d, v0.2d, v1.2d
-; CHECK-GI-NEXT:    zip2 v1.2d, v0.2d, v1.2d
-; CHECK-GI-NEXT:    mov v0.16b, v2.16b
-; CHECK-GI-NEXT:    ret
+; CHECK-LABEL: vector_deinterleave_v2f64_v4f64:
+; CHECK:       // %bb.0:
+; CHECK-NEXT:    zip1 v2.2d, v0.2d, v1.2d
+; CHECK-NEXT:    zip2 v1.2d, v0.2d, v1.2d
+; CHECK-NEXT:    mov v0.16b, v2.16b
+; CHECK-NEXT:    ret
   %retval = call {<2 x double>, <2 x double>} @llvm.vector.deinterleave2.v4f64(<4 x double> %vec)
   ret {<2 x double>, <2 x double>}   %retval
 }
@@ -156,19 +149,12 @@ define {<4 x i32>, <4 x i32>} @vector_deinterleave_v4i32_v8i32(<8 x i32> %vec) {
 }
 
 define {<2 x i64>, <2 x i64>} @vector_deinterleave_v2i64_v4i64(<4 x i64> %vec) {
-; CHECK-SD-LABEL: vector_deinterleave_v2i64_v4i64:
-; CHECK-SD:       // %bb.0:
-; CHECK-SD-NEXT:    uzp1 v2.2d, v0.2d, v1.2d
-; CHECK-SD-NEXT:    uzp2 v1.2d, v0.2d, v1.2d
-; CHECK-SD-NEXT:    mov v0.16b, v2.16b
-; CHECK-SD-NEXT:    ret
-;
-; CHECK-GI-LABEL: vector_deinterleave_v2i64_v4i64:
-; CHECK-GI:       // %bb.0:
-; CHECK-GI-NEXT:    zip1 v2.2d, v0.2d, v1.2d
-; CHECK-GI-NEXT:    zip2 v1.2d, v0.2d, v1.2d
-; CHECK-GI-NEXT:    mov v0.16b, v2.16b
-; CHECK-GI-NEXT:    ret
+; CHECK-LABEL: vector_deinterleave_v2i64_v4i64:
+; CHECK:       // %bb.0:
+; CHECK-NEXT:    zip1 v2.2d, v0.2d, v1.2d
+; CHECK-NEXT:    zip2 v1.2d, v0.2d, v1.2d
+; CHECK-NEXT:    mov v0.16b, v2.16b
+; CHECK-NEXT:    ret
   %retval = call {<2 x i64>, <2 x i64>} @llvm.vector.deinterleave2.v4i64(<4 x i64> %vec)
   ret {<2 x i64>, <2 x i64>}   %retval
 }
@@ -242,15 +228,16 @@ define {<8 x i16>, <8 x i16>, <8 x i16>, <8 x i16>} @vector_deinterleave4_v8i16_
 define {<2 x i32>, <2 x i32>, <2 x i32>, <2 x i32>} @vector_deinterleave4_v2i32_v8i32(<8 x i32> %vec) {
 ; CHECK-LABEL: vector_deinterleave4_v2i32_v8i32:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    uzp2 v2.4s, v1.4s, v0.4s
-; CHECK-NEXT:    uzp1 v3.4s, v0.4s, v1.4s
-; CHECK-NEXT:    uzp2 v4.4s, v0.4s, v0.4s
-; CHECK-NEXT:    xtn v5.2s, v1.2d
-; CHECK-NEXT:    xtn v6.2s, v0.2d
-; CHECK-NEXT:    xtn v0.2s, v3.2d
-; CHECK-NEXT:    uzp1 v1.2s, v4.2s, v2.2s
-; CHECK-NEXT:    uzp2 v3.2s, v4.2s, v2.2s
-; CHECK-NEXT:    uzp2 v2.2s, v6.2s, v5.2s
+; CHECK-NEXT:    mov d2, v1.d[1]
+; CHECK-NEXT:    mov d3, v0.d[1]
+; CHECK-NEXT:    zip1 v4.2s, v1.2s, v2.2s
+; CHECK-NEXT:    zip1 v5.2s, v0.2s, v3.2s
+; CHECK-NEXT:    zip2 v6.2s, v1.2s, v2.2s
+; CHECK-NEXT:    zip2 v3.2s, v0.2s, v3.2s
+; CHECK-NEXT:    zip1 v0.2s, v5.2s, v4.2s
+; CHECK-NEXT:    zip2 v2.2s, v5.2s, v4.2s
+; CHECK-NEXT:    zip1 v1.2s, v3.2s, v6.2s
+; CHECK-NEXT:    zip2 v3.2s, v3.2s, v6.2s
 ; CHECK-NEXT:    ret
   %retval = call {<2 x i32>, <2 x i32>, <2 x i32>, <2 x i32>} @llvm.vector.deinterleave4.v8i32(<8 x i32> %vec)
   ret {<2 x i32>, <2 x i32>, <2 x i32>, <2 x i32>} %retval
@@ -288,14 +275,14 @@ define {<1 x i64>, <1 x i64>, <1 x i64>, <1 x i64>} @vector_deinterleave4_v1i64_
 define {<2 x i64>, <2 x i64>, <2 x i64>, <2 x i64>} @vector_deinterleave4_v2i64_v8i64(<8 x i64> %vec) {
 ; CHECK-LABEL: vector_deinterleave4_v2i64_v8i64:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    uzp1 v4.2d, v2.2d, v3.2d
-; CHECK-NEXT:    uzp1 v5.2d, v0.2d, v1.2d
-; CHECK-NEXT:    uzp2 v3.2d, v2.2d, v3.2d
-; CHECK-NEXT:    uzp2 v6.2d, v0.2d, v1.2d
-; CHECK-NEXT:    uzp1 v0.2d, v5.2d, v4.2d
-; CHECK-NEXT:    uzp2 v2.2d, v5.2d, v4.2d
-; CHECK-NEXT:    uzp1 v1.2d, v6.2d, v3.2d
-; CHECK-NEXT:    uzp2 v3.2d, v6.2d, v3.2d
+; CHECK-NEXT:    zip1 v4.2d, v2.2d, v3.2d
+; CHECK-NEXT:    zip1 v5.2d, v0.2d, v1.2d
+; CHECK-NEXT:    zip2 v3.2d, v2.2d, v3.2d
+; CHECK-NEXT:    zip2 v6.2d, v0.2d, v1.2d
+; CHECK-NEXT:    zip1 v0.2d, v5.2d, v4.2d
+; CHECK-NEXT:    zip2 v2.2d, v5.2d, v4.2d
+; CHECK-NEXT:    zip1 v1.2d, v6.2d, v3.2d
+; CHECK-NEXT:    zip2 v3.2d, v6.2d, v3.2d
 ; CHECK-NEXT:    ret
   %retval = call {<2 x i64>, <2 x i64>, <2 x i64>, <2 x i64>} @llvm.vector.deinterleave4.v8i64(<8 x i64> %vec)
   ret {<2 x i64>, <2 x i64>, <2 x i64>, <2 x i64>} %retval
@@ -338,14 +325,14 @@ define {<2 x float>, <2 x float>, <2 x float>, <2 x float>} @vector_deinterleave
 ; CHECK:       // %bb.0:
 ; CHECK-NEXT:    mov d2, v1.d[1]
 ; CHECK-NEXT:    mov d3, v0.d[1]
-; CHECK-NEXT:    uzp1 v4.2s, v1.2s, v2.2s
-; CHECK-NEXT:    uzp1 v5.2s, v0.2s, v3.2s
-; CHECK-NEXT:    uzp2 v6.2s, v1.2s, v2.2s
-; CHECK-NEXT:    uzp2 v3.2s, v0.2s, v3.2s
-; CHECK-NEXT:    uzp1 v0.2s, v5.2s, v4.2s
-; CHECK-NEXT:    uzp2 v2.2s, v5.2s, v4.2s
-; CHECK-NEXT:    uzp1 v1.2s, v3.2s, v6.2s
-; CHECK-NEXT:    uzp2 v3.2s, v3.2s, v6.2s
+; CHECK-NEXT:    zip1 v4.2s, v1.2s, v2.2s
+; CHECK-NEXT:    zip1 v5.2s, v0.2s, v3.2s
+; CHECK-NEXT:    zip2 v6.2s, v1.2s, v2.2s
+; CHECK-NEXT:    zip2 v3.2s, v0.2s, v3.2s
+; CHECK-NEXT:    zip1 v0.2s, v5.2s, v4.2s
+; CHECK-NEXT:    zip2 v2.2s, v5.2s, v4.2s
+; CHECK-NEXT:    zip1 v1.2s, v3.2s, v6.2s
+; CHECK-NEXT:    zip2 v3.2s, v3.2s, v6.2s
 ; CHECK-NEXT:    ret
   %retval = call {<2 x float>, <2 x float>, <2 x float>, <2 x float>} @llvm.vector.deinterleave4.v8f32(<8 x float> %vec)
   ret {<2 x float>, <2 x float>, <2 x float>, <2 x float>} %retval
@@ -383,14 +370,14 @@ define {<1 x double>, <1 x double>, <1 x double>, <1 x double>} @vector_deinterl
 define {<2 x double>, <2 x double>, <2 x double>, <2 x double>} @vector_deinterleave4_v2f64_v8f64(<8 x double> %vec) {
 ; CHECK-LABEL: vector_deinterleave4_v2f64_v8f64:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    uzp1 v4.2d, v2.2d, v3.2d
-; CHECK-NEXT:    uzp1 v5.2d, v0.2d, v1.2d
-; CHECK-NEXT:    uzp2 v3.2d, v2.2d, v3.2d
-; CHECK-NEXT:    uzp2 v6.2d, v0.2d, v1.2d
-; CHECK-NEXT:    uzp1 v0.2d, v5.2d, v4.2d
-; CHECK-NEXT:    uzp2 v2.2d, v5.2d, v4.2d
-; CHECK-NEXT:    uzp1 v1.2d, v6.2d, v3.2d
-; CHECK-NEXT:    uzp2 v3.2d, v6.2d, v3.2d
+; CHECK-NEXT:    zip1 v4.2d, v2.2d, v3.2d
+; CHECK-NEXT:    zip1 v5.2d, v0.2d, v1.2d
+; CHECK-NEXT:    zip2 v3.2d, v2.2d, v3.2d
+; CHECK-NEXT:    zip2 v6.2d, v0.2d, v1.2d
+; CHECK-NEXT:    zip1 v0.2d, v5.2d, v4.2d
+; CHECK-NEXT:    zip2 v2.2d, v5.2d, v4.2d
+; CHECK-NEXT:    zip1 v1.2d, v6.2d, v3.2d
+; CHECK-NEXT:    zip2 v3.2d, v6.2d, v3.2d
 ; CHECK-NEXT:    ret
   %retval = call {<2 x double>, <2 x double>, <2 x double>, <2 x double>} @llvm.vector.deinterleave4.v8f64(<8 x double> %vec)
   ret {<2 x double>, <2 x double>, <2 x double>, <2 x double>} %retval
@@ -431,13 +418,12 @@ define {<8 x bfloat>, <8 x bfloat>, <8 x bfloat>, <8 x bfloat>} @vector_deinterl
 define {<2 x double>, <2 x double>, <2 x double>} @vector_deinterleave3_v6f64(<2 x double> %a, <2 x double> %b, <2 x double> %c) {
 ; CHECK-LABEL: vector_deinterleave3_v6f64:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    sub sp, sp, #48
-; CHECK-NEXT:    .cfi_def_cfa_offset 48
-; CHECK-NEXT:    stp q1, q2, [sp, #16]
-; CHECK-NEXT:    mov x8, sp
-; CHECK-NEXT:    str q0, [sp]
-; CHECK-NEXT:    ld3 { v0.2d, v1.2d, v2.2d }, [x8]
-; CHECK-NEXT:    add sp, sp, #48
+; CHECK-NEXT:    mov v3.16b, v1.16b
+; CHECK-NEXT:    dup v1.2d, v0.d[1]
+; CHECK-NEXT:    mov v0.d[1], v3.d[1]
+; CHECK-NEXT:    mov v3.d[1], v2.d[1]
+; CHECK-NEXT:    mov v1.d[1], v2.d[0]
+; CHECK-NEXT:    mov v2.16b, v3.16b
 ; CHECK-NEXT:    ret
   %ins0 = call <6 x double> @llvm.vector.insert.v6f64.v2f64(<6 x double> poison, <2 x double> %a, i64 0)
   %ins1 = call <6 x double> @llvm.vector.insert.v6f64.v2f64(<6 x double> %ins0, <2 x double> %b, i64 2)
@@ -449,13 +435,19 @@ define {<2 x double>, <2 x double>, <2 x double>} @vector_deinterleave3_v6f64(<2
 define {<4 x float>, <4 x float>, <4 x float>} @vector_deinterleave3_v12f32(<4 x float> %a, <4 x float> %b, <4 x float> %c) {
 ; CHECK-LABEL: vector_deinterleave3_v12f32:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    sub sp, sp, #48
-; CHECK-NEXT:    .cfi_def_cfa_offset 48
-; CHECK-NEXT:    stp q1, q2, [sp, #16]
-; CHECK-NEXT:    mov x8, sp
-; CHECK-NEXT:    str q0, [sp]
-; CHECK-NEXT:    ld3 { v0.4s, v1.4s, v2.4s }, [x8]
-; CHECK-NEXT:    add sp, sp, #48
+; CHECK-NEXT:    dup v3.4s, v0.s[1]
+; CHECK-NEXT:    dup v4.4s, v0.s[2]
+; CHECK-NEXT:    mov v0.s[1], v0.s[3]
+; CHECK-NEXT:    mov v3.s[1], v1.s[0]
+; CHECK-NEXT:    mov v4.s[1], v1.s[1]
+; CHECK-NEXT:    mov v0.s[2], v1.s[2]
+; CHECK-NEXT:    mov v3.s[2], v1.s[3]
+; CHECK-NEXT:    mov v4.s[2], v2.s[0]
+; CHECK-NEXT:    mov v0.s[3], v2.s[1]
+; CHECK-NEXT:    mov v3.s[3], v2.s[2]
+; CHECK-NEXT:    mov v4.s[3], v2.s[3]
+; CHECK-NEXT:    mov v1.16b, v3.16b
+; CHECK-NEXT:    mov v2.16b, v4.16b
 ; CHECK-NEXT:    ret
   %ins0 = call <12 x float> @llvm.vector.insert.v12f32.v4f32(<12 x float> poison, <4 x float> %a, i64 0)
   %ins1 = call <12 x float> @llvm.vector.insert.v12f32.v4f32(<12 x float> %ins0, <4 x float> %b, i64 4)
@@ -467,13 +459,20 @@ define {<4 x float>, <4 x float>, <4 x float>} @vector_deinterleave3_v12f32(<4 x
 define {<8 x half>, <8 x half>, <8 x half>} @vector_deinterleave3_v24f16(<8 x half> %a, <8 x half> %b, <8 x half> %c) {
 ; CHECK-LABEL: vector_deinterleave3_v24f16:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    sub sp, sp, #48
-; CHECK-NEXT:    .cfi_def_cfa_offset 48
-; CHECK-NEXT:    stp q1, q2, [sp, #16]
-; CHECK-NEXT:    mov x8, sp
-; CHECK-NEXT:    str q0, [sp]
-; CHECK-NEXT:    ld3 { v0.8h, v1.8h, v2.8h }, [x8]
-; CHECK-NEXT:    add sp, sp, #48
+; CHECK-NEXT:    adrp x8, .LCPI28_0
+; CHECK-NEXT:    adrp x9, .LCPI28_1
+; CHECK-NEXT:    // kill: def $q2 killed $q2 killed $q0_q1_q2 def $q0_q1_q2
+; CHECK-NEXT:    adrp x10, .LCPI28_2
+; CHECK-NEXT:    ldr q3, [x8, :lo12:.LCPI28_0]
+; CHECK-NEXT:    ldr q4, [x9, :lo12:.LCPI28_1]
+; CHECK-NEXT:    // kill: def $q1 killed $q1 killed $q0_q1_q2 def $q0_q1_q2
+; CHECK-NEXT:    ldr q5, [x10, :lo12:.LCPI28_2]
+; CHECK-NEXT:    // kill: def $q0 killed $q0 killed $q0_q1_q2 def $q0_q1_q2
+; CHECK-NEXT:    tbl v3.16b, { v0.16b, v1.16b, v2.16b }, v3.16b
+; CHECK-NEXT:    tbl v4.16b, { v0.16b, v1.16b, v2.16b }, v4.16b
+; CHECK-NEXT:    tbl v2.16b, { v0.16b, v1.16b, v2.16b }, v5.16b
+; CHECK-NEXT:    mov v0.16b, v3.16b
+; CHECK-NEXT:    mov v1.16b, v4.16b
 ; CHECK-NEXT:    ret
   %ins0 = call <24 x half> @llvm.vector.insert.v24f16.v8f16(<24 x half> poison, <8 x half> %a, i64 0)
   %ins1 = call <24 x half> @llvm.vector.insert.v24f16.v8f16(<24 x half> %ins0, <8 x half> %b, i64 8)
@@ -485,13 +484,20 @@ define {<8 x half>, <8 x half>, <8 x half>} @vector_deinterleave3_v24f16(<8 x ha
 define {<16 x i8>, <16 x i8>, <16 x i8>} @vector_deinterleave3_v48i8(<16 x i8> %a, <16 x i8> %b, <16 x i8> %c) {
 ; CHECK-LABEL: vector_deinterleave3_v48i8:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    sub sp, sp, #48
-; CHECK-NEXT:    .cfi_def_cfa_offset 48
-; CHECK-NEXT:    stp q1, q2, [sp, #16]
-; CHECK-NEXT:    mov x8, sp
-; CHECK-NEXT:    str q0, [sp]
-; CHECK-NEXT:    ld3 { v0.16b, v1.16b, v2.16b }, [x8]
-; CHECK-NEXT:    add sp, sp, #48
+; CHECK-NEXT:    adrp x8, .LCPI29_0
+; CHECK-NEXT:    adrp x9, .LCPI29_1
+; CHECK-NEXT:    // kill: def $q2 killed $q2 killed $q0_q1_q2 def $q0_q1_q2
+; CHECK-NEXT:    adrp x10, .LCPI29_2
+; CHECK-NEXT:    ldr q3, [x8, :lo12:.LCPI29_0]
+; CHECK-NEXT:    ldr q4, [x9, :lo12:.LCPI29_1]
+; CHECK-NEXT:    // kill: def $q1 killed $q1 killed $q0_q1_q2 def $q0_q1_q2
+; CHECK-NEXT:    ldr q5, [x10, :lo12:.LCPI29_2]
+; CHECK-NEXT:    // kill: def $q0 killed $q0 killed $q0_q1_q2 def $q0_q1_q2
+; CHECK-NEXT:    tbl v3.16b, { v0.16b, v1.16b, v2.16b }, v3.16b
+; CHECK-NEXT:    tbl v4.16b, { v0.16b, v1.16b, v2.16b }, v4.16b
+; CHECK-NEXT:    tbl v2.16b, { v0.16b, v1.16b, v2.16b }, v5.16b
+; CHECK-NEXT:    mov v0.16b, v3.16b
+; CHECK-NEXT:    mov v1.16b, v4.16b
 ; CHECK-NEXT:    ret
   %ins0 = call <48 x i8> @llvm.vector.insert.v48i8.v16i8(<48 x i8> poison, <16 x i8> %a, i64 0)
   %ins1 = call <48 x i8> @llvm.vector.insert.v48i8.v16i8(<48 x i8> %ins0, <16 x i8> %b, i64 16)
@@ -504,13 +510,24 @@ define {<16 x i8>, <16 x i8>, <16 x i8>} @vector_deinterleave3_v48i8(<16 x i8> %
 define {<4 x half>, <4 x half>, <4 x half>} @vector_deinterleave3_v12f16(<4 x half> %a, <4 x half> %b, <4 x half> %c) {
 ; CHECK-LABEL: vector_deinterleave3_v12f16:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    sub sp, sp, #32
-; CHECK-NEXT:    .cfi_def_cfa_offset 32
-; CHECK-NEXT:    stp d1, d2, [sp, #16]
-; CHECK-NEXT:    add x8, sp, #8
-; CHECK-NEXT:    str d0, [sp, #8]
-; CHECK-NEXT:    ld3 { v0.4h, v1.4h, v2.4h }, [x8]
-; CHECK-NEXT:    add sp, sp, #32
+; CHECK-NEXT:    // kill: def $d0 killed $d0 def $q0
+; CHECK-NEXT:    fmov d5, d0
+; CHECK-NEXT:    // kill: def $d1 killed $d1 def $q1
+; CHECK-NEXT:    // kill: def $d2 killed $d2 def $q2
+; CHECK-NEXT:    dup v3.4h, v5.h[1]
+; CHECK-NEXT:    dup v4.4h, v5.h[2]
+; CHECK-NEXT:    mov v0.h[1], v5.h[3]
+; CHECK-NEXT:    mov v3.h[1], v1.h[0]
+; CHECK-NEXT:    mov v4.h[1], v1.h[1]
+; CHECK-NEXT:    mov v0.h[2], v1.h[2]
+; CHECK-NEXT:    mov v3.h[2], v1.h[3]
+; CHECK-NEXT:    mov v4.h[2], v2.h[0]
+; CHECK-NEXT:    mov v0.h[3], v2.h[1]
+; CHECK-NEXT:    // kill: def $d0 killed $d0 killed $q0
+; CHECK-NEXT:    mov v3.h[3], v2.h[2]
+; CHECK-NEXT:    mov v4.h[3], v2.h[3]
+; CHECK-NEXT:    fmov d1, d3
+; CHECK-NEXT:    fmov d2, d4
 ; CHECK-NEXT:    ret
   %ins0 = call <12 x half> @llvm.vector.insert.v12f16.v4f16(<12 x half> poison, <4 x half> %a, i64 0)
   %ins1 = call <12 x half> @llvm.vector.insert.v12f16.v4f16(<12 x half> %ins0, <4 x half> %b, i64 4)
@@ -523,13 +540,20 @@ define {<4 x half>, <4 x half>, <4 x half>} @vector_deinterleave3_v12f16(<4 x ha
 define {<8 x i8>, <8 x i8>, <8 x i8>} @vector_deinterleave3_v24i8(<8 x i8> %a, <8 x i8> %b, <8 x i8> %c) {
 ; CHECK-LABEL: vector_deinterleave3_v24i8:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    sub sp, sp, #32
-; CHECK-NEXT:    .cfi_def_cfa_offset 32
-; CHECK-NEXT:    stp d1, d2, [sp, #16]
-; CHECK-NEXT:    add x8, sp, #8
-; CHECK-NEXT:    str d0, [sp, #8]
-; CHECK-NEXT:    ld3 { v0.8b, v1.8b, v2.8b }, [x8]
-; CHECK-NEXT:    add sp, sp, #32
+; CHECK-NEXT:    adrp x8, .LCPI31_0
+; CHECK-NEXT:    adrp x9, .LCPI31_1
+; CHECK-NEXT:    // kill: def $d2 killed $d2 killed $q0_q1_q2 def $q0_q1_q2
+; CHECK-NEXT:    adrp x10, .LCPI31_2
+; CHECK-NEXT:    ldr d3, [x8, :lo12:.LCPI31_0]
+; CHECK-NEXT:    ldr d4, [x9, :lo12:.LCPI31_1]
+; CHECK-NEXT:    // kill: def $d1 killed $d1 killed $q0_q1_q2 def $q0_q1_q2
+; CHECK-NEXT:    ldr d5, [x10, :lo12:.LCPI31_2]
+; CHECK-NEXT:    // kill: def $d0 killed $d0 killed $q0_q1_q2 def $q0_q1_q2
+; CHECK-NEXT:    tbl v3.8b, { v0.16b, v1.16b, v2.16b }, v3.8b
+; CHECK-NEXT:    tbl v4.8b, { v0.16b, v1.16b, v2.16b }, v4.8b
+; CHECK-NEXT:    tbl v2.8b, { v0.16b, v1.16b, v2.16b }, v5.8b
+; CHECK-NEXT:    fmov d0, d3
+; CHECK-NEXT:    fmov d1, d4
 ; CHECK-NEXT:    ret
   %ins0 = call <24 x i8> @llvm.vector.insert.v24i8.v8i8(<24 x i8> poison, <8 x i8> %a, i64 0)
   %ins1 = call <24 x i8> @llvm.vector.insert.v24i8.v8i8(<24 x i8> %ins0, <8 x i8> %b, i64 8)
@@ -541,23 +565,22 @@ define {<8 x i8>, <8 x i8>, <8 x i8>} @vector_deinterleave3_v24i8(<8 x i8> %a, <
 define {<2 x double>, <2 x double>, <2 x double>, <2 x double>, <2 x double>, <2 x double>} @deinterleave6_v12f64(<2 x double> %a, <2 x double> %b, <2 x double> %c, <2 x double> %d, <2 x double> %e, <2 x double> %f){
 ; CHECK-LABEL: deinterleave6_v12f64:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    sub sp, sp, #96
-; CHECK-NEXT:    .cfi_def_cfa_offset 96
-; CHECK-NEXT:    stp q4, q5, [sp, #16]
-; CHECK-NEXT:    mov x8, sp
-; CHECK-NEXT:    add x9, sp, #48
-; CHECK-NEXT:    str q3, [sp]
-; CHECK-NEXT:    stp q1, q2, [sp, #64]
-; CHECK-NEXT:    str q0, [sp, #48]
-; CHECK-NEXT:    ld3 { v5.2d, v6.2d, v7.2d }, [x8]
-; CHECK-NEXT:    ld3 { v16.2d, v17.2d, v18.2d }, [x9]
-; CHECK-NEXT:    uzp1 v0.2d, v16.2d, v5.2d
-; CHECK-NEXT:    uzp1 v1.2d, v17.2d, v6.2d
-; CHECK-NEXT:    uzp1 v2.2d, v18.2d, v7.2d
-; CHECK-NEXT:    uzp2 v3.2d, v16.2d, v5.2d
-; CHECK-NEXT:    uzp2 v4.2d, v17.2d, v6.2d
-; CHECK-NEXT:    uzp2 v5.2d, v18.2d, v7.2d
-; CHECK-NEXT:    add sp, sp, #96
+; CHECK-NEXT:    dup v16.2d, v3.d[1]
+; CHECK-NEXT:    dup v17.2d, v0.d[1]
+; CHECK-NEXT:    mov v3.d[1], v4.d[1]
+; CHECK-NEXT:    mov v0.d[1], v1.d[1]
+; CHECK-NEXT:    mov v4.d[1], v5.d[1]
+; CHECK-NEXT:    mov v1.d[1], v2.d[1]
+; CHECK-NEXT:    mov v16.d[1], v5.d[0]
+; CHECK-NEXT:    mov v17.d[1], v2.d[0]
+; CHECK-NEXT:    zip1 v7.2d, v0.2d, v3.2d
+; CHECK-NEXT:    zip1 v2.2d, v1.2d, v4.2d
+; CHECK-NEXT:    zip2 v3.2d, v0.2d, v3.2d
+; CHECK-NEXT:    zip2 v5.2d, v1.2d, v4.2d
+; CHECK-NEXT:    zip1 v6.2d, v17.2d, v16.2d
+; CHECK-NEXT:    zip2 v4.2d, v17.2d, v16.2d
+; CHECK-NEXT:    mov v0.16b, v7.16b
+; CHECK-NEXT:    mov v1.16b, v6.16b
 ; CHECK-NEXT:    ret
   %ins0 = call <12 x double> @llvm.vector.insert.v12f64.v2f64(<12 x double> poison, <2 x double> %a, i64 0)
   %ins1 = call <12 x double> @llvm.vector.insert.v12f64.v2f64(<12 x double> %ins0, <2 x double> %b, i64 2)
@@ -572,23 +595,35 @@ define {<2 x double>, <2 x double>, <2 x double>, <2 x double>, <2 x double>, <2
 define {<4 x i32>, <4 x i32>, <4 x i32>, <4 x i32>, <4 x i32>, <4 x i32>} @deinterleave6_v24i32(<4 x i32> %a, <4 x i32> %b, <4 x i32> %c, <4 x i32> %d, <4 x i32> %e, <4 x i32> %f) {
 ; CHECK-LABEL: deinterleave6_v24i32:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    sub sp, sp, #96
-; CHECK-NEXT:    .cfi_def_cfa_offset 96
-; CHECK-NEXT:    stp q4, q5, [sp, #16]
-; CHECK-NEXT:    mov x8, sp
-; CHECK-NEXT:    add x9, sp, #48
-; CHECK-NEXT:    str q3, [sp]
-; CHECK-NEXT:    stp q1, q2, [sp, #64]
-; CHECK-NEXT:    str q0, [sp, #48]
-; CHECK-NEXT:    ld3 { v5.4s, v6.4s, v7.4s }, [x8]
-; CHECK-NEXT:    ld3 { v16.4s, v17.4s, v18.4s }, [x9]
-; CHECK-NEXT:    uzp1 v0.4s, v16.4s, v5.4s
-; CHECK-NEXT:    uzp1 v1.4s, v17.4s, v6.4s
-; CHECK-NEXT:    uzp1 v2.4s, v18.4s, v7.4s
-; CHECK-NEXT:    uzp2 v3.4s, v16.4s, v5.4s
-; CHECK-NEXT:    uzp2 v4.4s, v17.4s, v6.4s
-; CHECK-NEXT:    uzp2 v5.4s, v18.4s, v7.4s
-; CHECK-NEXT:    add sp, sp, #96
+; CHECK-NEXT:    dup v6.4s, v3.s[1]
+; CHECK-NEXT:    dup v7.4s, v0.s[1]
+; CHECK-NEXT:    dup v16.4s, v3.s[2]
+; CHECK-NEXT:    dup v17.4s, v0.s[2]
+; CHECK-NEXT:    mov v18.16b, v0.16b
+; CHECK-NEXT:    mov v3.s[1], v3.s[3]
+; CHECK-NEXT:    mov v6.s[1], v4.s[0]
+; CHECK-NEXT:    mov v7.s[1], v1.s[0]
+; CHECK-NEXT:    mov v16.s[1], v4.s[1]
+; CHECK-NEXT:    mov v18.s[1], v0.s[3]
+; CHECK-NEXT:    mov v17.s[1], v1.s[1]
+; CHECK-NEXT:    mov v3.s[2], v4.s[2]
+; CHECK-NEXT:    mov v6.s[2], v4.s[3]
+; CHECK-NEXT:    mov v7.s[2], v1.s[3]
+; CHECK-NEXT:    mov v16.s[2], v5.s[0]
+; CHECK-NEXT:    mov v18.s[2], v1.s[2]
+; CHECK-NEXT:    mov v17.s[2], v2.s[0]
+; CHECK-NEXT:    mov v3.s[3], v5.s[1]
+; CHECK-NEXT:    mov v6.s[3], v5.s[2]
+; CHECK-NEXT:    mov v7.s[3], v2.s[2]
+; CHECK-NEXT:    mov v16.s[3], v5.s[3]
+; CHECK-NEXT:    mov v18.s[3], v2.s[1]
+; CHECK-NEXT:    mov v17.s[3], v2.s[3]
+; CHECK-NEXT:    uzp1 v1.4s, v7.4s, v6.4s
+; CHECK-NEXT:    uzp2 v4.4s, v7.4s, v6.4s
+; CHECK-NEXT:    uzp1 v0.4s, v18.4s, v3.4s
+; CHECK-NEXT:    uzp1 v2.4s, v17.4s, v16.4s
+; CHECK-NEXT:    uzp2 v3.4s, v18.4s, v3.4s
+; CHECK-NEXT:    uzp2 v5.4s, v17.4s, v16.4s
 ; CHECK-NEXT:    ret
   %ins0 = call <24 x i32> @llvm.vector.insert.v24i32.v4i32(<24 x i32> poison,  <4 x i32> %a, i64 0)
   %ins1 = call <24 x i32> @llvm.vector.insert.v24i32.v4i32(<24 x i32> %ins0,   <4 x i32> %b, i64 4)
@@ -603,23 +638,28 @@ define {<4 x i32>, <4 x i32>, <4 x i32>, <4 x i32>, <4 x i32>, <4 x i32>} @deint
 define {<2 x i32>, <2 x i32>, <2 x i32>, <2 x i32>, <2 x i32>, <2 x i32>} @deinterleave6_v12i32(<2 x i32> %a, <2 x i32> %b, <2 x i32> %c, <2 x i32> %d, <2 x i32> %e, <2 x i32> %f) {
 ; CHECK-LABEL: deinterleave6_v12i32:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    sub sp, sp, #48
-; CHECK-NEXT:    .cfi_def_cfa_offset 48
-; CHECK-NEXT:    stp d4, d5, [sp, #8]
-; CHECK-NEXT:    mov x8, sp
-; CHECK-NEXT:    add x9, sp, #24
-; CHECK-NEXT:    str d3, [sp]
-; CHECK-NEXT:    stp d1, d2, [sp, #32]
-; CHECK-NEXT:    str d0, [sp, #24]
-; CHECK-NEXT:    ld3 { v5.2s, v6.2s, v7.2s }, [x8]
-; CHECK-NEXT:    ld3 { v16.2s, v17.2s, v18.2s }, [x9]
-; CHECK-NEXT:    uzp1 v0.2s, v16.2s, v5.2s
-; CHECK-NEXT:    uzp1 v1.2s, v17.2s, v6.2s
-; CHECK-NEXT:    uzp1 v2.2s, v18.2s, v7.2s
-; CHECK-NEXT:    uzp2 v3.2s, v16.2s, v5.2s
-; CHECK-NEXT:    uzp2 v4.2s, v17.2s, v6.2s
-; CHECK-NEXT:    uzp2 v5.2s, v18.2s, v7.2s
-; CHECK-NEXT:    add sp, sp, #48
+; CHECK-NEXT:    // kill: def $d3 killed $d3 def $q3
+; CHECK-NEXT:    // kill: def $d0 killed $d0 def $q0
+; CHECK-NEXT:    dup v16.2s, v3.s[1]
+; CHECK-NEXT:    dup v17.2s, v0.s[1]
+; CHECK-NEXT:    // kill: def $d5 killed $d5 def $q5
+; CHECK-NEXT:    // kill: def $d4 killed $d4 def $q4
+; CHECK-NEXT:    // kill: def $d2 killed $d2 def $q2
+; CHECK-NEXT:    // kill: def $d1 killed $d1 def $q1
+; CHECK-NEXT:    mov v3.s[1], v4.s[1]
+; CHECK-NEXT:    mov v0.s[1], v1.s[1]
+; CHECK-NEXT:    mov v4.s[1], v5.s[1]
+; CHECK-NEXT:    mov v1.s[1], v2.s[1]
+; CHECK-NEXT:    mov v16.s[1], v5.s[0]
+; CHECK-NEXT:    mov v17.s[1], v2.s[0]
+; CHECK-NEXT:    zip1 v7.2s, v0.2s, v3.2s
+; CHECK-NEXT:    zip2 v3.2s, v0.2s, v3.2s
+; CHECK-NEXT:    zip1 v2.2s, v1.2s, v4.2s
+; CHECK-NEXT:    zip2 v5.2s, v1.2s, v4.2s
+; CHECK-NEXT:    zip1 v6.2s, v17.2s, v16.2s
+; CHECK-NEXT:    zip2 v4.2s, v17.2s, v16.2s
+; CHECK-NEXT:    fmov d0, d7
+; CHECK-NEXT:    fmov d1, d6
 ; CHECK-NEXT:    ret
   %ins0 = call <12 x i32> @llvm.vector.insert.v12i32.v2i32(<12 x i32> poison, <2 x i32> %a, i64 0)
   %ins1 = call <12 x i32> @llvm.vector.insert.v12i32.v2i32(<12 x i32> %ins0,  <2 x i32> %b, i64 2)
@@ -634,23 +674,30 @@ define {<2 x i32>, <2 x i32>, <2 x i32>, <2 x i32>, <2 x i32>, <2 x i32>} @deint
 define {<8 x bfloat>, <8 x bfloat>, <8 x bfloat>, <8 x bfloat>, <8 x bfloat>, <8 x bfloat>} @deinterleave6_v48bf16(<8 x bfloat> %a, <8 x bfloat> %b, <8 x bfloat> %c, <8 x bfloat> %d, <8 x bfloat> %e, <8 x bfloat> %f) {
 ; CHECK-LABEL: deinterleave6_v48bf16:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    sub sp, sp, #96
-; CHECK-NEXT:    .cfi_def_cfa_offset 96
-; CHECK-NEXT:    stp q4, q5, [sp, #16]
-; CHECK-NEXT:    mov x8, sp
-; CHECK-NEXT:    add x9, sp, #48
-; CHECK-NEXT:    str q3, [sp]
-; CHECK-NEXT:    stp q1, q2, [sp, #64]
-; CHECK-NEXT:    str q0, [sp, #48]
-; CHECK-NEXT:    ld3 { v5.8h, v6.8h, v7.8h }, [x8]
-; CHECK-NEXT:    ld3 { v16.8h, v17.8h, v18.8h }, [x9]
-; CHECK-NEXT:    uzp1 v0.8h, v16.8h, v5.8h
-; CHECK-NEXT:    uzp1 v1.8h, v17.8h, v6.8h
-; CHECK-NEXT:    uzp1 v2.8h, v18.8h, v7.8h
-; CHECK-NEXT:    uzp2 v3.8h, v16.8h, v5.8h
-; CHECK-NEXT:    uzp2 v4.8h, v17.8h, v6.8h
-; CHECK-NEXT:    uzp2 v5.8h, v18.8h, v7.8h
-; CHECK-NEXT:    add sp, sp, #96
+; CHECK-NEXT:    adrp x8, .LCPI35_0
+; CHECK-NEXT:    // kill: def $q5 killed $q5 killed $q3_q4_q5 def $q3_q4_q5
+; CHECK-NEXT:    adrp x9, .LCPI35_1
+; CHECK-NEXT:    // kill: def $q2 killed $q2 killed $q0_q1_q2 def $q0_q1_q2
+; CHECK-NEXT:    ldr q6, [x8, :lo12:.LCPI35_0]
+; CHECK-NEXT:    adrp x8, .LCPI35_2
+; CHECK-NEXT:    // kill: def $q4 killed $q4 killed $q3_q4_q5 def $q3_q4_q5
+; CHECK-NEXT:    ldr q7, [x9, :lo12:.LCPI35_1]
+; CHECK-NEXT:    ldr q16, [x8, :lo12:.LCPI35_2]
+; CHECK-NEXT:    // kill: def $q1 killed $q1 killed $q0_q1_q2 def $q0_q1_q2
+; CHECK-NEXT:    // kill: def $q3 killed $q3 killed $q3_q4_q5 def $q3_q4_q5
+; CHECK-NEXT:    // kill: def $q0 killed $q0 killed $q0_q1_q2 def $q0_q1_q2
+; CHECK-NEXT:    tbl v17.16b, { v3.16b, v4.16b, v5.16b }, v6.16b
+; CHECK-NEXT:    tbl v6.16b, { v0.16b, v1.16b, v2.16b }, v6.16b
+; CHECK-NEXT:    tbl v18.16b, { v3.16b, v4.16b, v5.16b }, v7.16b
+; CHECK-NEXT:    tbl v7.16b, { v0.16b, v1.16b, v2.16b }, v7.16b
+; CHECK-NEXT:    tbl v5.16b, { v3.16b, v4.16b, v5.16b }, v16.16b
+; CHECK-NEXT:    tbl v16.16b, { v0.16b, v1.16b, v2.16b }, v16.16b
+; CHECK-NEXT:    uzp1 v0.8h, v6.8h, v17.8h
+; CHECK-NEXT:    uzp2 v3.8h, v6.8h, v17.8h
+; CHECK-NEXT:    uzp1 v1.8h, v7.8h, v18.8h
+; CHECK-NEXT:    uzp1 v2.8h, v16.8h, v5.8h
+; CHECK-NEXT:    uzp2 v4.8h, v7.8h, v18.8h
+; CHECK-NEXT:    uzp2 v5.8h, v16.8h, v5.8h
 ; CHECK-NEXT:    ret
   %ins0 = call <48 x bfloat> @llvm.vector.insert.v48bf16.v8bf16(<48 x bfloat> poison, <8 x bfloat> %a, i64 0)
   %ins1 = call <48 x bfloat> @llvm.vector.insert.v48bf16.v8bf16(<48 x bfloat> %ins0, <8 x bfloat> %b, i64 8)
@@ -665,23 +712,43 @@ define {<8 x bfloat>, <8 x bfloat>, <8 x bfloat>, <8 x bfloat>, <8 x bfloat>, <8
 define {<4 x i16>, <4 x i16>, <4 x i16>, <4 x i16>, <4 x i16>, <4 x i16>} @deinterleave6_v24i16(<4 x i16> %a, <4 x i16> %b, <4 x i16> %c, <4 x i16> %d, <4 x i16> %e, <4 x i16> %f) {
 ; CHECK-LABEL: deinterleave6_v24i16:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    sub sp, sp, #48
-; CHECK-NEXT:    .cfi_def_cfa_offset 48
-; CHECK-NEXT:    stp d4, d5, [sp, #8]
-; CHECK-NEXT:    mov x8, sp
-; CHECK-NEXT:    add x9, sp, #24
-; CHECK-NEXT:    str d3, [sp]
-; CHECK-NEXT:    stp d1, d2, [sp, #32]
-; CHECK-NEXT:    str d0, [sp, #24]
-; CHECK-NEXT:    ld3 { v5.4h, v6.4h, v7.4h }, [x8]
-; CHECK-NEXT:    ld3 { v16.4h, v17.4h, v18.4h }, [x9]
-; CHECK-NEXT:    uzp1 v0.4h, v16.4h, v5.4h
-; CHECK-NEXT:    uzp1 v1.4h, v17.4h, v6.4h
-; CHECK-NEXT:    uzp1 v2.4h, v18.4h, v7.4h
-; CHECK-NEXT:    uzp2 v3.4h, v16.4h, v5.4h
-; CHECK-NEXT:    uzp2 v4.4h, v17.4h, v6.4h
-; CHECK-NEXT:    uzp2 v5.4h, v18.4h, v7.4h
-; CHECK-NEXT:    add sp, sp, #48
+; CHECK-NEXT:    // kill: def $d3 killed $d3 def $q3
+; CHECK-NEXT:    // kill: def $d0 killed $d0 def $q0
+; CHECK-NEXT:    fmov d16, d3
+; CHECK-NEXT:    fmov d6, d0
+; CHECK-NEXT:    // kill: def $d4 killed $d4 def $q4
+; CHECK-NEXT:    // kill: def $d1 killed $d1 def $q1
+; CHECK-NEXT:    // kill: def $d5 killed $d5 def $q5
+; CHECK-NEXT:    // kill: def $d2 killed $d2 def $q2
+; CHECK-NEXT:    dup v7.4h, v16.h[1]
+; CHECK-NEXT:    dup v17.4h, v6.h[1]
+; CHECK-NEXT:    dup v18.4h, v16.h[2]
+; CHECK-NEXT:    dup v19.4h, v6.h[2]
+; CHECK-NEXT:    mov v3.h[1], v16.h[3]
+; CHECK-NEXT:    mov v0.h[1], v6.h[3]
+; CHECK-NEXT:    mov v7.h[1], v4.h[0]
+; CHECK-NEXT:    mov v17.h[1], v1.h[0]
+; CHECK-NEXT:    mov v18.h[1], v4.h[1]
+; CHECK-NEXT:    mov v19.h[1], v1.h[1]
+; CHECK-NEXT:    mov v3.h[2], v4.h[2]
+; CHECK-NEXT:    mov v0.h[2], v1.h[2]
+; CHECK-NEXT:    mov v7.h[2], v4.h[3]
+; CHECK-NEXT:    mov v17.h[2], v1.h[3]
+; CHECK-NEXT:    mov v18.h[2], v5.h[0]
+; CHECK-NEXT:    mov v19.h[2], v2.h[0]
+; CHECK-NEXT:    mov v3.h[3], v5.h[1]
+; CHECK-NEXT:    mov v0.h[3], v2.h[1]
+; CHECK-NEXT:    mov v7.h[3], v5.h[2]
+; CHECK-NEXT:    mov v17.h[3], v2.h[2]
+; CHECK-NEXT:    mov v18.h[3], v5.h[3]
+; CHECK-NEXT:    mov v19.h[3], v2.h[3]
+; CHECK-NEXT:    uzp1 v6.4h, v0.4h, v3.4h
+; CHECK-NEXT:    uzp2 v3.4h, v0.4h, v3.4h
+; CHECK-NEXT:    uzp1 v1.4h, v17.4h, v7.4h
+; CHECK-NEXT:    uzp2 v4.4h, v17.4h, v7.4h
+; CHECK-NEXT:    uzp1 v2.4h, v19.4h, v18.4h
+; CHECK-NEXT:    uzp2 v5.4h, v19.4h, v18.4h
+; CHECK-NEXT:    fmov d0, d6
 ; CHECK-NEXT:    ret
   %ins0 = call <24 x i16> @llvm.vector.insert.v24i16.v4i16(<24 x i16> poison, <4 x i16> %a, i64 0)
   %ins1 = call <24 x i16> @llvm.vector.insert.v24i16.v4i16(<24 x i16> %ins0,  <4 x i16> %b, i64 4)
@@ -696,23 +763,30 @@ define {<4 x i16>, <4 x i16>, <4 x i16>, <4 x i16>, <4 x i16>, <4 x i16>} @deint
 define {<16 x i8>, <16 x i8>, <16 x i8>, <16 x i8>, <16 x i8>, <16 x i8>} @deinterleave6_v96i8(<16 x i8> %a, <16 x i8> %b, <16 x i8> %c, <16 x i8> %d, <16 x i8> %e, <16 x i8> %f) {
 ; CHECK-LABEL: deinterleave6_v96i8:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    sub sp, sp, #96
-; CHECK-NEXT:    .cfi_def_cfa_offset 96
-; CHECK-NEXT:    stp q4, q5, [sp, #16]
-; CHECK-NEXT:    mov x8, sp
-; CHECK-NEXT:    add x9, sp, #48
-; CHECK-NEXT:    str q3, [sp]
-; CHECK-NEXT:    stp q1, q2, [sp, #64]
-; CHECK-NEXT:    str q0, [sp, #48]
-; CHECK-NEXT:    ld3 { v5.16b, v6.16b, v7.16b }, [x8]
-; CHECK-NEXT:    ld3 { v16.16b, v17.16b, v18.16b }, [x9]
-; CHECK-NEXT:    uzp1 v0.16b, v16.16b, v5.16b
-; CHECK-NEXT:    uzp1 v1.16b, v17.16b, v6.16b
-; CHECK-NEXT:    uzp1 v2.16b, v18.16b, v7.16b
-; CHECK-NEXT:    uzp2 v3.16b, v16.16b, v5.16b
-; CHECK-NEXT:    uzp2 v4.16b, v17.16b, v6.16b
-; CHECK-NEXT:    uzp2 v5.16b, v18.16b, v7.16b
-; CHECK-NEXT:    add sp, sp, #96
+; CHECK-NEXT:    adrp x8, .LCPI37_0
+; CHECK-NEXT:    // kill: def $q5 killed $q5 killed $q3_q4_q5 def $q3_q4_q5
+; CHECK-NEXT:    adrp x9, .LCPI37_1
+; CHECK-NEXT:    // kill: def $q2 killed $q2 killed $q0_q1_q2 def $q0_q1_q2
+; CHECK-NEXT:    ldr q6, [x8, :lo12:.LCPI37_0]
+; CHECK-NEXT:    adrp x8, .LCPI37_2
+; CHECK-NEXT:    // kill: def $q4 killed $q4 killed $q3_q4_q5 def $q3_q4_q5
+; CHECK-NEXT:    ldr q7, [x9, :lo12:.LCPI37_1]
+; CHECK-NEXT:    ldr q16, [x8, :lo12:.LCPI37_2]
+; CHECK-NEXT:    // kill: def $q1 killed $q1 killed $q0_q1_q2 def $q0_q1_q2
+; CHECK-NEXT:    // kill: def $q3 killed $q3 killed $q3_q4_q5 def $q3_q4_q5
+; CHECK-NEXT:    // kill: def $q0 killed $q0 killed $q0_q1_q2 def $q0_q1_q2
+; CHECK-NEXT:    tbl v17.16b, { v3.16b, v4.16b, v5.16b }, v6.16b
+; CHECK-NEXT:    tbl v6.16b, { v0.16b, v1.16b, v2.16b }, v6.16b
+; CHECK-NEXT:    tbl v18.16b, { v3.16b, v4.16b, v5.16b }, v7.16b
+; CHECK-NEXT:    tbl v7.16b, { v0.16b, v1.16b, v2.16b }, v7.16b
+; CHECK-NEXT:    tbl v5.16b, { v3.16b, v4.16b, v5.16b }, v16.16b
+; CHECK-NEXT:    tbl v16.16b, { v0.16b, v1.16b, v2.16b }, v16.16b
+; CHECK-NEXT:    uzp1 v0.16b, v6.16b, v17.16b
+; CHECK-NEXT:    uzp2 v3.16b, v6.16b, v17.16b
+; CHECK-NEXT:    uzp1 v1.16b, v7.16b, v18.16b
+; CHECK-NEXT:    uzp1 v2.16b, v16.16b, v5.16b
+; CHECK-NEXT:    uzp2 v4.16b, v7.16b, v18.16b
+; CHECK-NEXT:    uzp2 v5.16b, v16.16b, v5.16b
 ; CHECK-NEXT:    ret
   %ins0 = call <96 x i8> @llvm.vector.insert.v96i8.v16i8(<96 x i8> poison, <16 x i8> %a, i64 0)
   %ins1 = call <96 x i8> @llvm.vector.insert.v96i8.v16i8(<96 x i8> %ins0, <16 x i8> %b, i64 16)
@@ -728,30 +802,30 @@ define {<16 x i8>, <16 x i8>, <16 x i8>, <16 x i8>, <16 x i8>, <16 x i8>} @deint
 define {<2 x double>, <2 x double>, <2 x double>, <2 x double>, <2 x double>, <2 x double>, <2 x double>, <2 x double>} @deinterleave8_v16f64(
 ; CHECK-LABEL: deinterleave8_v16f64:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    uzp1 v16.2d, v6.2d, v7.2d
-; CHECK-NEXT:    uzp1 v17.2d, v4.2d, v5.2d
-; CHECK-NEXT:    uzp1 v18.2d, v2.2d, v3.2d
-; CHECK-NEXT:    uzp1 v19.2d, v0.2d, v1.2d
-; CHECK-NEXT:    uzp2 v6.2d, v6.2d, v7.2d
-; CHECK-NEXT:    uzp2 v4.2d, v4.2d, v5.2d
-; CHECK-NEXT:    uzp2 v2.2d, v2.2d, v3.2d
-; CHECK-NEXT:    uzp2 v0.2d, v0.2d, v1.2d
-; CHECK-NEXT:    uzp1 v5.2d, v17.2d, v16.2d
-; CHECK-NEXT:    uzp2 v16.2d, v17.2d, v16.2d
-; CHECK-NEXT:    uzp1 v7.2d, v19.2d, v18.2d
-; CHECK-NEXT:    uzp1 v20.2d, v4.2d, v6.2d
-; CHECK-NEXT:    uzp2 v17.2d, v19.2d, v18.2d
-; CHECK-NEXT:    uzp1 v21.2d, v0.2d, v2.2d
-; CHECK-NEXT:    uzp2 v18.2d, v4.2d, v6.2d
-; CHECK-NEXT:    uzp2 v19.2d, v0.2d, v2.2d
-; CHECK-NEXT:    uzp1 v0.2d, v7.2d, v5.2d
-; CHECK-NEXT:    uzp1 v2.2d, v17.2d, v16.2d
-; CHECK-NEXT:    uzp2 v4.2d, v7.2d, v5.2d
-; CHECK-NEXT:    uzp1 v1.2d, v21.2d, v20.2d
-; CHECK-NEXT:    uzp1 v3.2d, v19.2d, v18.2d
-; CHECK-NEXT:    uzp2 v5.2d, v21.2d, v20.2d
-; CHECK-NEXT:    uzp2 v6.2d, v17.2d, v16.2d
-; CHECK-NEXT:    uzp2 v7.2d, v19.2d, v18.2d
+; CHECK-NEXT:    zip1 v16.2d, v6.2d, v7.2d
+; CHECK-NEXT:    zip1 v17.2d, v4.2d, v5.2d
+; CHECK-NEXT:    zip1 v18.2d, v2.2d, v3.2d
+; CHECK-NEXT:    zip1 v19.2d, v0.2d, v1.2d
+; CHECK-NEXT:    zip2 v6.2d, v6.2d, v7.2d
+; CHECK-NEXT:    zip2 v4.2d, v4.2d, v5.2d
+; CHECK-NEXT:    zip2 v2.2d, v2.2d, v3.2d
+; CHECK-NEXT:    zip2 v0.2d, v0.2d, v1.2d
+; CHECK-NEXT:    zip1 v5.2d, v17.2d, v16.2d
+; CHECK-NEXT:    zip2 v16.2d, v17.2d, v16.2d
+; CHECK-NEXT:    zip1 v7.2d, v19.2d, v18.2d
+; CHECK-NEXT:    zip1 v20.2d, v4.2d, v6.2d
+; CHECK-NEXT:    zip2 v17.2d, v19.2d, v18.2d
+; CHECK-NEXT:    zip1 v21.2d, v0.2d, v2.2d
+; CHECK-NEXT:    zip2 v18.2d, v4.2d, v6.2d
+; CHECK-NEXT:    zip2 v19.2d, v0.2d, v2.2d
+; CHECK-NEXT:    zip1 v0.2d, v7.2d, v5.2d
+; CHECK-NEXT:    zip1 v2.2d, v17.2d, v16.2d
+; CHECK-NEXT:    zip2 v4.2d, v7.2d, v5.2d
+; CHECK-NEXT:    zip1 v1.2d, v21.2d, v20.2d
+; CHECK-NEXT:    zip1 v3.2d, v19.2d, v18.2d
+; CHECK-NEXT:    zip2 v5.2d, v21.2d, v20.2d
+; CHECK-NEXT:    zip2 v6.2d, v17.2d, v16.2d
+; CHECK-NEXT:    zip2 v7.2d, v19.2d, v18.2d
 ; CHECK-NEXT:    ret
     <2 x double> %a, <2 x double> %b, <2 x double> %c, <2 x double> %d,
     <2 x double> %e, <2 x double> %f, <2 x double> %g, <2 x double> %h) {
@@ -812,30 +886,30 @@ define {<4 x i32>, <4 x i32>, <4 x i32>, <4 x i32>, <4 x i32>, <4 x i32>, <4 x i
 define {<2 x i32>, <2 x i32>, <2 x i32>, <2 x i32>, <2 x i32>, <2 x i32>, <2 x i32>, <2 x i32>} @deinterleave8_v16i32(
 ; CHECK-LABEL: deinterleave8_v16i32:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    uzp1 v16.2s, v6.2s, v7.2s
-; CHECK-NEXT:    uzp1 v17.2s, v4.2s, v5.2s
-; CHECK-NEXT:    uzp1 v18.2s, v2.2s, v3.2s
-; CHECK-NEXT:    uzp1 v19.2s, v0.2s, v1.2s
-; CHECK-NEXT:    uzp2 v6.2s, v6.2s, v7.2s
-; CHECK-NEXT:    uzp2 v4.2s, v4.2s, v5.2s
-; CHECK-NEXT:    uzp2 v2.2s, v2.2s, v3.2s
-; CHECK-NEXT:    uzp2 v0.2s, v0.2s, v1.2s
-; CHECK-NEXT:    uzp1 v5.2s, v17.2s, v16.2s
-; CHECK-NEXT:    uzp2 v16.2s, v17.2s, v16.2s
-; CHECK-NEXT:    uzp1 v7.2s, v19.2s, v18.2s
-; CHECK-NEXT:    uzp1 v20.2s, v4.2s, v6.2s
-; CHECK-NEXT:    uzp2 v17.2s, v19.2s, v18.2s
-; CHECK-NEXT:    uzp1 v21.2s, v0.2s, v2.2s
-; CHECK-NEXT:    uzp2 v18.2s, v4.2s, v6.2s
-; CHECK-NEXT:    uzp2 v19.2s, v0.2s, v2.2s
-; CHECK-NEXT:    uzp1 v0.2s, v7.2s, v5.2s
-; CHECK-NEXT:    uzp1 v2.2s, v17.2s, v16.2s
-; CHECK-NEXT:    uzp2 v4.2s, v7.2s, v5.2s
-; CHECK-NEXT:    uzp1 v1.2s, v21.2s, v20.2s
-; CHECK-NEXT:    uzp1 v3.2s, v19.2s, v18.2s
-; CHECK-NEXT:    uzp2 v5.2s, v21.2s, v20.2s
-; CHECK-NEXT:    uzp2 v6.2s, v17.2s, v16.2s
-; CHECK-NEXT:    uzp2 v7.2s, v19.2s, v18.2s
+; CHECK-NEXT:    zip1 v16.2s, v6.2s, v7.2s
+; CHECK-NEXT:    zip1 v17.2s, v4.2s, v5.2s
+; CHECK-NEXT:    zip1 v18.2s, v2.2s, v3.2s
+; CHECK-NEXT:    zip1 v19.2s, v0.2s, v1.2s
+; CHECK-NEXT:    zip2 v6.2s, v6.2s, v7.2s
+; CHECK-NEXT:    zip2 v4.2s, v4.2s, v5.2s
+; CHECK-NEXT:    zip2 v2.2s, v2.2s, v3.2s
+; CHECK-NEXT:    zip2 v0.2s, v0.2s, v1.2s
+; CHECK-NEXT:    zip1 v5.2s, v17.2s, v16.2s
+; CHECK-NEXT:    zip2 v16.2s, v17.2s, v16.2s
+; CHECK-NEXT:    zip1 v7.2s, v19.2s, v18.2s
+; CHECK-NEXT:    zip1 v20.2s, v4.2s, v6.2s
+; CHECK-NEXT:    zip2 v17.2s, v19.2s, v18.2s
+; CHECK-NEXT:    zip1 v21.2s, v0.2s, v2.2s
+; CHECK-NEXT:    zip2 v18.2s, v4.2s, v6.2s
+; CHECK-NEXT:    zip2 v19.2s, v0.2s, v2.2s
+; CHECK-NEXT:    zip1 v0.2s, v7.2s, v5.2s
+; CHECK-NEXT:    zip1 v2.2s, v17.2s, v16.2s
+; CHECK-NEXT:    zip2 v4.2s, v7.2s, v5.2s
+; CHECK-NEXT:    zip1 v1.2s, v21.2s, v20.2s
+; CHECK-NEXT:    zip1 v3.2s, v19.2s, v18.2s
+; CHECK-NEXT:    zip2 v5.2s, v21.2s, v20.2s
+; CHECK-NEXT:    zip2 v6.2s, v17.2s, v16.2s
+; CHECK-NEXT:    zip2 v7.2s, v19.2s, v18.2s
 ; CHECK-NEXT:    ret
     <2 x i32> %a, <2 x i32> %b, <2 x i32> %c, <2 x i32> %d,
     <2 x i32> %e, <2 x i32> %f, <2 x i32> %g, <2 x i32> %h) {
