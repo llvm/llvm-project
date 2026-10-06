@@ -13461,15 +13461,32 @@ ScalarEvolution::howManyLessThans(const SCEV *LHS, const SCEV *RHS,
 
   // The step of ~IV is the negated step of IV.
   const SCEV *Stride = IV->getStepRecurrence(*this);
-  if (Invert)
-    Stride = getNegativeSCEV(Stride);
+  const SCEV *Start = IV->getStart();
+
+  // Preserve pointer-typed Start/RHS to pass to isLoopEntryGuardedByCond.
+  // If we convert to integers, isLoopEntryGuardedByCond will miss some cases.
+  // Use integer-typed versions for actual computation; we can't subtract
+  // pointers in general.
+  const SCEV *OrigStart = Start;
+  const SCEV *OrigRHS = RHS;
+  if (Start->getType()->isPointerTy()) {
+    Start = getPtrToAddrExpr(Start);
+    if (isa<SCEVCouldNotCompute>(Start))
+      return Start;
+  }
+  if (RHS->getType()->isPointerTy()) {
+    RHS = getPtrToAddrExpr(RHS);
+    if (isa<SCEVCouldNotCompute>(RHS))
+      return RHS;
+  }
+
   const SCEV *GuardedStride = Stride;
 
   // Whether the IV may reach the maximum (or minimum if inverted) value
   // before the exit is taken.
   bool IVMayOverflow = true;
-
   bool PositiveStride = isKnownPositive(Stride);
+
   // A dominating guard may prove the stride positive.
   if (!PositiveStride) {
     const SCEV *LoopGuardedStride = applyLoopGuards(Stride, getGuards());
@@ -13568,13 +13585,17 @@ ScalarEvolution::howManyLessThans(const SCEV *LHS, const SCEV *RHS,
         Stride = getUMaxExpr(Stride, getOne(Stride->getType()));
       }
     }
+  } 
+  else if (NoWrap) {
+    IVMayOverflow = false;
   } else {
     // Avoid proven overflow cases: this will ensure that the backedge taken
     // count will not generate any unsigned overflow.
-    IVMayOverflow = canIVOverflowOnLT(RHS, GuardedStride, IsSigned, Invert);
-    if (IVMayOverflow && !NoWrap)
+    IVMayOverflow = canIVOverflowOnLT(RHS, Stride, IsSigned);
+    if (IVMayOverflow && !AllowPredicates)
       return getCouldNotCompute();
   }
+  
 
   // On all paths just preceeding, we established the following invariant:
   //   IV can be assumed not to overflow up to and including the exiting
@@ -13585,23 +13606,22 @@ ScalarEvolution::howManyLessThans(const SCEV *LHS, const SCEV *RHS,
   //      before any possible exit.
   // Note that we have not yet proved RHS invariant (in general).
 
-  const SCEV *Start = IV->getStart();
+  // Add a predicate to ensure RHS does not exceed the maximum value
+  // that can be represented without overflow, given the stride.
+  if (!NoWrap && IVMayOverflow) {
+    unsigned BitWidth = getTypeSizeInBits(RHS->getType());
+    const SCEV *One = getOne(Stride->getType());
+    const SCEV *StrideMinusOne = getMinusSCEV(Stride, One);
 
-  // Preserve pointer-typed Start/RHS to pass to isLoopEntryGuardedByCond.
-  // If we convert to integers, isLoopEntryGuardedByCond will miss some cases.
-  // Use integer-typed versions for actual computation; we can't subtract
-  // pointers in general.
-  const SCEV *OrigStart = Start;
-  const SCEV *OrigRHS = RHS;
-  if (Start->getType()->isPointerTy()) {
-    Start = getPtrToAddrExpr(Start);
-    if (isa<SCEVCouldNotCompute>(Start))
-      return Start;
-  }
-  if (RHS->getType()->isPointerTy()) {
-    RHS = getPtrToAddrExpr(RHS);
-    if (isa<SCEVCouldNotCompute>(RHS))
-      return RHS;
+    APInt MaxStrideMinusOne = IsSigned ? getSignedRangeMax(StrideMinusOne)
+                                       : getUnsignedRangeMax(StrideMinusOne);
+    APInt Limit = (IsSigned ? APInt::getSignedMaxValue(BitWidth)
+                            : APInt::getMaxValue(BitWidth)) -
+                  MaxStrideMinusOne;
+
+    Predicates.push_back(
+        getComparePredicate(IsSigned ? ICmpInst::ICMP_SLE : ICmpInst::ICMP_ULE,
+                            RHS, getConstant(Limit)));
   }
 
   const SCEV *End = nullptr, *BECount = getCouldNotCompute(),
