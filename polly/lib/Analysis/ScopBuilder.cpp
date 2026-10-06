@@ -1499,11 +1499,12 @@ void ScopBuilder::addUserAssumptions(
 
     // scop->setContext is used to gist AssumedContext and InvalidContext. Both
     // add RTCs, so using setContext would remove the RTC that would ensure the
-    // correctness of AssumptionCtx. Such an RTC exists if the translation of
-    // the assumption has preconditions, or if the assumption is inside the SCoP
-    // and the domain of its block, from which AssumptionCtx is built, has
-    // preconditions. Using DefinedBehaviorContext which does not gist the other
-    // contexts.
+    // correctness of AssumptionCtx. RTCs that must be preserved include the
+    // validity of the expressions the assumption contains
+    // (AssumptionInvalidDomain) as well as, for an assumption inside the SCoP,
+    // the reachability of the control flow that leads to the assumption
+    // (BBInvalidDomain). Use DefinedBehaviorContext, which does not gist the
+    // other contexts, in that case.
     // TODO: Use recordAssumption() for adding context/assumptions
     if (!HasPreconditions) {
       isl::set newContext =
