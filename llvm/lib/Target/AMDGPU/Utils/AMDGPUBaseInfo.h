@@ -233,14 +233,6 @@ unsigned getNumExtraSGPRs(const MCSubtargetInfo &STI, bool VCCUsed,
 /// register counts.
 unsigned getNumSGPRBlocks(const MCSubtargetInfo &STI, unsigned NumSGPRs);
 
-/// \returns VGPR allocation granularity for given subtarget \p STI.
-///
-/// For subtargets which support it, \p EnableWavefrontSize32 should match
-/// the ENABLE_WAVEFRONT_SIZE32 kernel descriptor field.
-unsigned
-getVGPRAllocGranule(const MCSubtargetInfo &STI, unsigned DynamicVGPRBlockSize,
-                    std::optional<bool> EnableWavefrontSize32 = std::nullopt);
-
 /// For subtargets with a unified VGPR file and mixed ArchVGPR/AGPR usage,
 /// returns the allocation granule for ArchVGPRs.
 unsigned getArchVGPRAllocGranule();
