@@ -9,6 +9,9 @@ define amdgpu_ps i48 @test_merge_values_sgpr(<3 x i16> inreg %src0, <3 x i16> in
 ; GFX11-NEXT:    s_delay_alu instid0(SALU_CYCLE_1) | instskip(NEXT) | instid1(SALU_CYCLE_1)
 ; GFX11-NEXT:    s_xor_b64 s[0:1], s[4:5], s[0:1]
 ; GFX11-NEXT:    s_and_b64 s[0:1], s[2:3], s[0:1]
+; GFX11-NEXT:    s_delay_alu instid0(SALU_CYCLE_1) | instskip(NEXT) | instid1(SALU_CYCLE_1)
+; GFX11-NEXT:    s_lshr_b32 s2, s0, 16
+; GFX11-NEXT:    s_pack_ll_b32_b16 s0, s0, s2
 ; GFX11-NEXT:    ; return to shader part epilog
 ;
 ; GFX12-LABEL: test_merge_values_sgpr:
@@ -17,6 +20,9 @@ define amdgpu_ps i48 @test_merge_values_sgpr(<3 x i16> inreg %src0, <3 x i16> in
 ; GFX12-NEXT:    s_delay_alu instid0(SALU_CYCLE_1) | instskip(NEXT) | instid1(SALU_CYCLE_1)
 ; GFX12-NEXT:    s_xor_b64 s[0:1], s[4:5], s[0:1]
 ; GFX12-NEXT:    s_and_b64 s[0:1], s[2:3], s[0:1]
+; GFX12-NEXT:    s_delay_alu instid0(SALU_CYCLE_1) | instskip(NEXT) | instid1(SALU_CYCLE_1)
+; GFX12-NEXT:    s_lshr_b32 s2, s0, 16
+; GFX12-NEXT:    s_pack_ll_b32_b16 s0, s0, s2
 ; GFX12-NEXT:    ; return to shader part epilog
   %not.src1 = xor <3 x i16> %src1, <i16 -1, i16 -1, i16 -1>
   %and = and <3 x i16> %src0, %not.src1

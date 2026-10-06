@@ -120,29 +120,20 @@ SARIFDiagnostic::getSarifLocation(FullSourceLoc Loc, PresumedLoc PLoc,
 
   FileID CaretFileID = Loc.getExpansionLoc().getFileID();
 
+  auto &SM = Loc.getManager();
   for (const CharSourceRange Range : Ranges) {
-    // Ignore invalid ranges.
-    if (Range.isInvalid())
+    std::optional<CharSourceRange> FileRange =
+        getExpansionRangeInFile(Range, CaretFileID, SM);
+    if (!FileRange)
       continue;
 
-    auto &SM = Loc.getManager();
-    SourceLocation B = SM.getExpansionLoc(Range.getBegin());
-    CharSourceRange ERange = SM.getExpansionRange(Range.getEnd());
-    SourceLocation E = ERange.getEnd();
-    bool IsTokenRange = ERange.isTokenRange();
-
-    FileIDAndOffset BInfo = SM.getDecomposedLoc(B);
-    FileIDAndOffset EInfo = SM.getDecomposedLoc(E);
-
-    // If the start or end of the range is in another file, just discard
-    // it.
-    if (BInfo.first != CaretFileID || EInfo.first != CaretFileID)
-      continue;
+    SourceLocation B = FileRange->getBegin();
+    SourceLocation E = FileRange->getEnd();
 
     // Add in the length of the token, so that we cover multi-char
     // tokens.
     unsigned TokSize = 0;
-    if (IsTokenRange)
+    if (FileRange->isTokenRange())
       TokSize = Lexer::MeasureTokenLength(E, SM, LangOpts);
 
     FullSourceLoc BF(B, SM), EF(E, SM);
@@ -157,7 +148,6 @@ SARIFDiagnostic::getSarifLocation(FullSourceLoc Loc, PresumedLoc PLoc,
     // Text and SARIF diagnostics.
   }
 
-  auto &SM = Loc.getManager();
   auto FID = PLoc.getFileID();
   // Visual Studio 2010 or earlier expects column number to be off by one.
   unsigned int ColNo = (LangOpts.MSCompatibilityVersion &&

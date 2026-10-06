@@ -2,7 +2,7 @@
 Test lldb-dap locations request
 """
 
-from lldbsuite.test.decorators import skipIf, skipIfWindows
+from lldbsuite.test.decorators import *
 from lldbsuite.test.lldbtest import line_number
 from lldbsuite.test.tools.lldb_dap import DAPTestCaseBase
 from lldbsuite.test.tools.lldb_dap.types import LaunchArgs
@@ -14,6 +14,7 @@ class TestDAP_locations(DAPTestCaseBase):
     @skipIf(
         bugnumber="https://github.com/llvm/llvm-project/issues/203127", archs=["arm64e"]
     )
+    @skipIfWasm  # a Wasm function pointer is a table index, not a code address
     def test_locations(self):
         """
         Tests the 'locations' request.

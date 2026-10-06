@@ -14,12 +14,28 @@ end interface
 contains
 
 subroutine g
-  integer :: i
-  !ERROR: Clause LINEAR is not allowed if clause ORDERED appears on the DO directive
+  integer :: i, j
+  !ERROR: LINEAR clause is not allowed when ORDERED clause with an argument is present
   !ERROR: Loop iteration variable with a predetermined data sharing attribute cannot appear in a LINEAR clause
   !$omp do ordered(1) linear(i)
   !BECAUSE: 'i' is an iteration variable of an affected loop
   do i = 1, 10
+  end do
+
+  j = 10
+  !This is ok
+  !$omp do ordered collapse(1) linear(j)
+  do i = 1, 10
+    j = j + 1
+  end do
+end
+
+subroutine h
+  integer :: x, i
+  !ERROR: 'linear-step' modifier cannot occur multiple times
+  !$omp do linear(x : 2, 2)
+  do i = 1, 10
+    x = x + 2
   end do
 end
 

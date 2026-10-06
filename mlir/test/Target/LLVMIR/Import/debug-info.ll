@@ -1046,3 +1046,41 @@ define void @fn_with_static_local() !dbg !3 {
 !12 = !DILocalVariable(name: "unused_local", scope: !3, file: !4, line: 122, type: !9)
 !13 = !DISubroutineType(types: !14)
 !14 = !{null}
+
+; // -----
+
+; CHECK-DAG: #[[DIALECT_FILE:.+]] = #llvm.di_file<"dialect.ll" in "/">
+; CHECK-DAG: #[[DIALECT_CU:.+]] = #llvm.di_compile_unit<id = distinct[0]<>, sourceLanguage = #llvm.di_source_language_name<language = DW_LANG_C, dialect = DW_LLVM_LANG_DIALECT_tile>, file = #[[DIALECT_FILE]]>
+
+define void @fn_cu_dialect() !dbg !3 {
+  ret void
+}
+
+!llvm.dbg.cu = !{!1}
+!llvm.module.flags = !{!0}
+
+!0 = !{i32 2, !"Debug Info Version", i32 3}
+!1 = distinct !DICompileUnit(language: DW_LANG_C, file: !2, dialect: DW_LLVM_LANG_DIALECT_tile)
+!2 = !DIFile(filename: "dialect.ll", directory: "/")
+!3 = distinct !DISubprogram(name: "fn_cu_dialect", scope: !2, file: !2, spFlags: DISPFlagDefinition, unit: !1, type: !4)
+!4 = !DISubroutineType(types: !5)
+!5 = !{null}
+
+; // -----
+
+; CHECK-DAG: #[[LNAME_FILE:.+]] = #llvm.di_file<"language-name.cpp" in "/test/">
+; CHECK-DAG: #[[LNAME_CU:.+]] = #llvm.di_compile_unit<id = distinct[0]<>, sourceLanguage = #llvm.di_source_language_name<name = DW_LNAME_C_plus_plus, version = 202002, dialect = DW_LLVM_LANG_DIALECT_simt>, file = #[[LNAME_FILE]]>
+
+define void @fn_cu_source_language_name() !dbg !3 {
+  ret void
+}
+
+!llvm.dbg.cu = !{!1}
+!llvm.module.flags = !{!0}
+
+!0 = !{i32 2, !"Debug Info Version", i32 3}
+!1 = distinct !DICompileUnit(sourceLanguageName: DW_LNAME_C_plus_plus, sourceLanguageVersion: 202002, file: !2, dialect: DW_LLVM_LANG_DIALECT_simt)
+!2 = !DIFile(filename: "language-name.cpp", directory: "/test/")
+!3 = distinct !DISubprogram(name: "fn_cu_source_language_name", scope: !2, file: !2, spFlags: DISPFlagDefinition, unit: !1, type: !4)
+!4 = !DISubroutineType(types: !5)
+!5 = !{null}

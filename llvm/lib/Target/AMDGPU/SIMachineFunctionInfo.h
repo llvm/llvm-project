@@ -580,9 +580,9 @@ private:
   WWMSpillsMap WWMSpills;
 
   // Before allocation, the VGPR registers are partitioned into two distinct
-  // sets, the first one for WWM-values and the second set for non-WWM values.
+  // sets, the first one for WWM values and the second set for per-lane values.
   // The latter set should be reserved during WWM-regalloc.
-  BitVector NonWWMRegMask;
+  BitVector PerLaneVGPRMask;
 
   using ReservedRegSet = SmallSetVector<Register, 8>;
   // To track the VGPRs reserved for WWM instructions. They get stack slots
@@ -679,9 +679,9 @@ public:
                            : WWMReservedRegs.contains(Reg);
   }
 
-  void updateNonWWMRegMask(BitVector &RegMask) { NonWWMRegMask = RegMask; }
-  BitVector getNonWWMRegMask() const { return NonWWMRegMask; }
-  void clearNonWWMRegAllocMask() { NonWWMRegMask.clear(); }
+  void updatePerLaneVGPRMask(BitVector &RegMask) { PerLaneVGPRMask = RegMask; }
+  BitVector getPerLaneVGPRMask() const { return PerLaneVGPRMask; }
+  void clearPerLaneVGPRAllocMask() { PerLaneVGPRMask.clear(); }
 
   SIModeRegisterDefaults getMode() const { return Mode; }
 

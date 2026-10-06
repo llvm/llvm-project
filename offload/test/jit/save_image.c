@@ -6,7 +6,6 @@
 // clang-format on
 
 // REQUIRES: gpu
-// XFAIL: intelgpu
 
 int main() {
   int X = 0;

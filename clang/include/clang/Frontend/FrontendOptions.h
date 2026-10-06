@@ -423,9 +423,10 @@ public:
   LLVM_PREFERRED_TYPE(bool)
   unsigned ClangIREnableIdiomRecognizer : 1;
 
-  /// Enable Clang IR (CIR) calling-convention lowering
+  /// Run the Clang IR (CIR) calling-convention lowering pass.  A no-op on
+  /// targets whose calling convention is not yet implemented.
   LLVM_PREFERRED_TYPE(bool)
-  unsigned ClangIREnableCallConvLowering : 1;
+  unsigned ClangIRCallConvLowering : 1;
 
   /// Enable ClangIR library optimization.
   /// Set when -fclangir-lib-opt or -fclangir-lib-opt= was passed.
@@ -459,6 +460,9 @@ public:
 
   /// If given, filter dumped AST Decl nodes by this substring.
   std::string ASTDumpFilter;
+
+  /// If given, filter dumped AST Decl nodes by source file path (glob pattern).
+  std::string ASTDumpFilterPath;
 
   /// If given, enable code completion at the provided location.
   ParsedSourceLocation CodeCompletionAt;
@@ -569,7 +573,7 @@ public:
         EmitPrettySymbolGraphs(false), GenReducedBMI(false),
         UseClangIRPipeline(false), ClangIRDisablePasses(false),
         ClangIRDisableCIRVerifier(false), ClangIREnableIdiomRecognizer(false),
-        ClangIREnableCallConvLowering(false), ClangIRLibOptEnabled(false),
+        ClangIRCallConvLowering(true), ClangIRLibOptEnabled(false),
         TimeTraceGranularity(500), TimeTraceVerbose(false) {}
 
   /// getInputKindForExtension - Return the appropriate input kind for a file

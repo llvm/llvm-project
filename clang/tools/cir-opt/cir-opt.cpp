@@ -25,6 +25,12 @@
 #include "clang/CIR/InitAllDialects.h"
 #include "clang/CIR/Passes.h"
 
+#ifdef CLANG_INCLUDE_TESTS
+namespace cir::test {
+void registerTestCIRAliasAnalysisPass();
+} // namespace cir::test
+#endif
+
 struct CIRToLLVMPipelineOptions
     : public mlir::PassPipelineOptions<CIRToLLVMPipelineOptions> {
   Option<bool> enableOpenMP{
@@ -37,6 +43,10 @@ int main(int argc, char **argv) {
   // TODO: register needed MLIR passes for CIR?
   mlir::DialectRegistry registry;
   cir::registerAllDialects(registry);
+
+#ifdef CLANG_INCLUDE_TESTS
+  cir::test::registerTestCIRAliasAnalysisPass();
+#endif
   registry.insert<mlir::memref::MemRefDialect, mlir::LLVM::LLVMDialect>();
 
   ::mlir::registerPass([]() -> std::unique_ptr<::mlir::Pass> {

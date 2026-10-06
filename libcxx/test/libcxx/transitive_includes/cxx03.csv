@@ -292,7 +292,9 @@ fstream version
 functional compare
 functional cstdint
 functional cstring
+functional initializer_list
 functional tuple
+functional typeinfo
 functional version
 future cctype
 future cerrno

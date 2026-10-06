@@ -48,7 +48,7 @@ static bool isValidDatePattern(StringRef Pattern) {
 void NSDateFormatterCheck::check(const MatchFinder::MatchResult &Result) {
   // Callback implementation.
   const auto *StrExpr = Result.Nodes.getNodeAs<ObjCStringLiteral>("str_lit");
-  const StringLiteral *SL = cast<ObjCStringLiteral>(StrExpr)->getString();
+  const StringLiteral *SL = StrExpr->getString();
   const StringRef SR = SL->getString();
 
   if (!isValidDatePattern(SR))

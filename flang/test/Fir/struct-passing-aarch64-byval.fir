@@ -69,8 +69,19 @@ func.func private @too_many_hfa(!fir.type<hfa_max{i:f128,j:f128,k:f128,l:f128}>,
                            !fir.type<hfa_max{i:f128,j:f128,k:f128,l:f128}>,
                            !fir.type<hfa_max{i:f128,j:f128,k:f128,l:f128}>)
 
-// CHECK-LABEL: func.func private @too_big(!fir.ref<!fir.type<too_big{i:!fir.array<5xi32>}>> {{{.*}}, llvm.byval = !fir.type<too_big{i:!fir.array<5xi32>}>})
+// A composite larger than 16 bytes is passed indirectly: the caller makes a
+// copy and passes a pointer to it in a general-purpose register (AAPCS64 B.4).
+// It is not marked byval, which would instead let the target lower it as a
+// by-value aggregate and consume no register.
+// CHECK-LABEL: func.func private @too_big(!fir.ref<!fir.type<too_big{i:!fir.array<5xi32>}>> {llvm.align = 4 : i32})
 func.func private @too_big(!fir.type<too_big{i:!fir.array<5xi32>}>)
+
+// An indirectly passed composite still consumes a register, so the arguments
+// that follow it keep their register assignment.
+// CHECK-LABEL: func.func private @big_among_scalars(!fir.ref<i64>, i32,
+// CHECK-SAME: !fir.ref<!fir.type<big_char{i:!fir.array<128x!fir.char<1>>}>> {llvm.align = 1 : i32}, i32)
+func.func private @big_among_scalars(!fir.ref<i64>, i32,
+                       !fir.type<big_char{i:!fir.array<128x!fir.char<1>>}>, i32)
 
 // CHECK-LABEL: func.func private @pointer_type(!fir.ref<i64>, !fir.array<1xi64>)
 func.func private @pointer_type(!fir.ref<i64>, !fir.type<pointer_type{i:i64}>)

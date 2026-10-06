@@ -127,7 +127,7 @@ __clc_remquo_stret(__CLC_GENTYPE x, __CLC_GENTYPE y) {
                            ? (__CLC_CHARN)1
                            : (__CLC_CHARN)-1;
 
-    __CLC_GENTYPE t = __clc_mad(y, -__CLC_CONVERT_GENTYPE(qsgn), x);
+    __CLC_GENTYPE t = qsgn > 0 ? (x - y) : (x + y);
     ret = c ? t : __clc_flush_if_daz(x);
     q7 = c ? qsgn : 0;
 

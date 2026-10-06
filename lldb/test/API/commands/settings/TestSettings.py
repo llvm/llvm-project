@@ -406,10 +406,12 @@ class SettingsCommandTestCase(TestBase):
         self.expect("settings set target.jit-engine bogus", error=True)
 
     @skipIfDarwinEmbedded  # <rdar://problem/34446098> debugserver on ios etc can't write files
+    @skipIfWasm  # WASI gives the inferior no working directory and no file system
     def test_run_args_and_env_vars(self):
         self.do_test_run_args_and_env_vars(use_launchsimple=False)
 
     @skipIfDarwinEmbedded  # <rdar://problem/34446098> debugserver on ios etc can't write files
+    @skipIfWasm  # WASI gives the inferior no working directory and no file system
     def test_launchsimple_args_and_env_vars(self):
         self.do_test_run_args_and_env_vars(use_launchsimple=True)
 
@@ -490,6 +492,7 @@ class SettingsCommandTestCase(TestBase):
         )
 
     @skipIfRemote  # it doesn't make sense to send host env to remote target
+    @skipIfWasm  # WASI gives the inferior no working directory and no file system
     def test_pass_host_env_vars(self):
         """Test that the host env vars are passed to the launched process."""
         self.build()
@@ -612,6 +615,7 @@ class SettingsCommandTestCase(TestBase):
         )
 
     @skipIfDarwinEmbedded  # <rdar://problem/34446098> debugserver on ios etc can't write files
+    @skipIfWasm  # WASI gives the inferior no working directory and no file system
     def test_set_error_output_path(self):
         """Test that setting target.error/output-path for the launched process works."""
         self.build()
@@ -666,6 +670,7 @@ class SettingsCommandTestCase(TestBase):
         )
 
     @skipIfDarwinEmbedded  # <rdar://problem/34446098> debugserver on ios etc can't write files
+    @skipIfWasm  # WASI gives the inferior no working directory and no file system
     def test_same_error_output_path(self):
         """Test that setting target.error and output-path to the same file path for the launched process works."""
         self.build()

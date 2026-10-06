@@ -126,13 +126,13 @@ void applyExtractVecEltPairwiseAdd(
 
 bool isSignExtended(Register R, MachineRegisterInfo &MRI) {
   // TODO: check if extended build vector as well.
-  unsigned Opc = MRI.getVRegDef(R)->getOpcode();
-  return Opc == TargetOpcode::G_SEXT || Opc == TargetOpcode::G_SEXT_INREG;
+  return mi_match(R, MRI, m_GSExt(m_Reg())) ||
+         mi_match(R, MRI, m_GSExtInReg(m_Reg()));
 }
 
 bool isZeroExtended(Register R, MachineRegisterInfo &MRI) {
   // TODO: check if extended build vector as well.
-  return MRI.getVRegDef(R)->getOpcode() == TargetOpcode::G_ZEXT;
+  return mi_match(R, MRI, m_GZExt(m_Reg()));
 }
 
 bool matchAArch64MulConstCombine(
@@ -257,54 +257,6 @@ void applyAArch64MulConstCombine(
   MI.eraseFromParent();
 }
 
-/// Try to fold a G_MERGE_VALUES of 2 s32 sources, where the second source
-/// is a zero, into a G_ZEXT of the first.
-bool matchFoldMergeToZext(MachineInstr &MI, MachineRegisterInfo &MRI) {
-  auto &Merge = cast<GMerge>(MI);
-  LLT SrcTy = MRI.getType(Merge.getSourceReg(0));
-  if (SrcTy != LLT::scalar(32) || Merge.getNumSources() != 2)
-    return false;
-  return mi_match(Merge.getSourceReg(1), MRI, m_SpecificICst(0));
-}
-
-void applyFoldMergeToZext(MachineInstr &MI, MachineRegisterInfo &MRI,
-                          MachineIRBuilder &B, GISelChangeObserver &Observer) {
-  // Mutate %d(s64) = G_MERGE_VALUES %a(s32), 0(s32)
-  //  ->
-  // %d(s64) = G_ZEXT %a(s32)
-  Observer.changingInstr(MI);
-  MI.setDesc(B.getTII().get(TargetOpcode::G_ZEXT));
-  MI.removeOperand(2);
-  Observer.changedInstr(MI);
-}
-
-/// \returns True if a G_ANYEXT instruction \p MI should be mutated to a G_ZEXT
-/// instruction.
-bool matchMutateAnyExtToZExt(MachineInstr &MI, MachineRegisterInfo &MRI) {
-  // If this is coming from a scalar compare then we can use a G_ZEXT instead of
-  // a G_ANYEXT:
-  //
-  // %cmp:_(s32) = G_[I|F]CMP ... <-- produces 0/1.
-  // %ext:_(s64) = G_ANYEXT %cmp(s32)
-  //
-  // By doing this, we can leverage more KnownBits combines.
-  assert(MI.getOpcode() == TargetOpcode::G_ANYEXT);
-  Register Dst = MI.getOperand(0).getReg();
-  Register Src = MI.getOperand(1).getReg();
-  return MRI.getType(Dst).isScalar() &&
-         mi_match(Src, MRI,
-                  m_any_of(m_GICmp(m_Pred(), m_Reg(), m_Reg()),
-                           m_GFCmp(m_Pred(), m_Reg(), m_Reg())));
-}
-
-void applyMutateAnyExtToZExt(MachineInstr &MI, MachineRegisterInfo &MRI,
-                             MachineIRBuilder &B,
-                             GISelChangeObserver &Observer) {
-  Observer.changingInstr(MI);
-  MI.setDesc(B.getTII().get(TargetOpcode::G_ZEXT));
-  Observer.changedInstr(MI);
-}
-
 /// Match a 128b store of zero and split it into two 64 bit stores, for
 /// size/performance reasons.
 bool matchSplitStoreZero128(MachineInstr &MI, MachineRegisterInfo &MRI) {
@@ -385,6 +337,42 @@ void applyOrToBSP(MachineInstr &MI, MachineRegisterInfo &MRI,
   MI.eraseFromParent();
 }
 
+/// Match G_TRUNC (G_OR X, Y) => G_ADDHN X, Y when both inputs are sign
+/// extended from the result element type. The high half of the addition then
+/// equals the truncation of the OR.
+bool matchTruncOrToADDHN(MachineInstr &MI, MachineRegisterInfo &MRI,
+                         GISelValueTracking *VT, Register Dst, Register Or,
+                         Register Src0, Register Src1) {
+  if (!MRI.hasOneUse(Or))
+    return false;
+
+  LLT DstTy = MRI.getType(Dst);
+  LLT SrcTy = MRI.getType(Or);
+  if (!((DstTy == LLT::fixed_vector(8, 8) &&
+         SrcTy == LLT::fixed_vector(8, 16)) ||
+        (DstTy == LLT::fixed_vector(4, 16) &&
+         SrcTy == LLT::fixed_vector(4, 32)) ||
+        (DstTy == LLT::fixed_vector(2, 32) &&
+         SrcTy == LLT::fixed_vector(2, 64))))
+    return false;
+
+  // If the narrow result is immediately any-extended back to the original type,
+  // the G_OR is cheaper than G_ADDHN followed by a vector widen.
+  if (MRI.hasOneNonDBGUse(Dst)) {
+    MachineInstr &UseMI = *MRI.use_nodbg_instructions(Dst).begin();
+    if (UseMI.getOpcode() == TargetOpcode::G_ANYEXT &&
+        MRI.getType(UseMI.getOperand(0).getReg()) == SrcTy)
+      return false;
+  }
+
+  unsigned EltSize = SrcTy.getScalarSizeInBits();
+  if (VT->computeNumSignBits(Src0) != EltSize ||
+      VT->computeNumSignBits(Src1) != EltSize)
+    return false;
+
+  return true;
+}
+
 // Combines Mul(And(Srl(X, 15), 0x10001), 0xffff) into CMLTz
 bool matchCombineMulCMLT(MachineInstr &MI, MachineRegisterInfo &MRI,
                          Register &SrcReg) {
@@ -423,9 +411,8 @@ void applyCombineMulCMLT(MachineInstr &MI, MachineRegisterInfo &MRI,
                          MachineIRBuilder &B, Register &SrcReg) {
   Register DstReg = MI.getOperand(0).getReg();
   LLT DstTy = MRI.getType(DstReg);
-  LLT HalfTy =
-      DstTy.changeElementCount(DstTy.getElementCount().multiplyCoefficientBy(2))
-          .changeElementSize(DstTy.getScalarSizeInBits() / 2);
+  LLT HalfTy = DstTy.changeElementCount(DstTy.getElementCount() * 2)
+                   .changeElementSize(DstTy.getScalarSizeInBits() / 2);
 
   Register ZeroVec = B.buildConstant(HalfTy, 0).getReg(0);
   Register CastReg =
@@ -571,21 +558,6 @@ static bool matchSubAddMulReassoc(Register Mul1, Register Mul2, Register Sub,
       M2->getOpcode() != AArch64::G_UMULL)
     return false;
   return true;
-}
-
-static void applySubAddMulReassoc(MachineInstr &MI, MachineInstr &Sub,
-                                  MachineRegisterInfo &MRI, MachineIRBuilder &B,
-                                  GISelChangeObserver &Observer) {
-  Register Src = MI.getOperand(1).getReg();
-  Register Tmp = MI.getOperand(2).getReg();
-  Register Mul1 = Sub.getOperand(1).getReg();
-  Register Mul2 = Sub.getOperand(2).getReg();
-  Observer.changingInstr(MI);
-  B.buildInstr(AArch64::G_SUB, {Tmp}, {Src, Mul1});
-  MI.getOperand(1).setReg(Tmp);
-  MI.getOperand(2).setReg(Mul2);
-  Sub.eraseFromParent();
-  Observer.changedInstr(MI);
 }
 
 class AArch64PostLegalizerCombinerImpl : public Combiner {
@@ -951,7 +923,8 @@ AArch64PostLegalizerCombinerPass::run(MachineFunction &MF,
     return PreservedAnalyses::all();
 
   const bool IsOptNone = TM->isGlobalISelOptNone();
-  bool EnableOpt = !IsOptNone;
+  bool EnableOpt =
+      !IsOptNone && !shouldSkipOptimizationForOptBisect(MF.getFunction());
 
   GISelValueTracking *VT = &MFAM.getResult<GISelValueTrackingAnalysis>(MF);
   MachineDominatorTree *MDT =
