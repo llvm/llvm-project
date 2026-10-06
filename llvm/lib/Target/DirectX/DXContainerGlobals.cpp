@@ -12,6 +12,7 @@
 
 #include "DXILRootSignature.h"
 #include "DXILShaderFlags.h"
+#include "DXILSignatureAnalysis.h"
 #include "DirectX.h"
 #include "llvm/ADT/SmallVector.h"
 #include "llvm/ADT/StringExtras.h"
@@ -81,6 +82,7 @@ public:
     AU.setPreservesAll();
     AU.addRequired<ShaderFlagsAnalysisWrapper>();
     AU.addRequired<RootSignatureAnalysisWrapper>();
+    AU.addRequired<SignatureAnalysisWrapper>();
     AU.addRequired<DXILMetadataAnalysisWrapperPass>();
     AU.addRequired<DXILResourceTypeWrapperPass>();
     AU.addRequired<DXILResourceWrapperPass>();
@@ -218,13 +220,16 @@ GlobalVariable *DXContainerGlobals::buildSignature(Module &M, Signature &Sig,
 
 void DXContainerGlobals::addSignature(Module &M,
                                       SmallVector<GlobalValue *> &Globals) {
-  // FIXME: support graphics shader.
-  //  see issue https://github.com/llvm/llvm-project/issues/90504.
+  const auto &MMI =
+      getAnalysis<DXILMetadataAnalysisWrapperPass>().getModuleMetadata();
+  const auto &Signatures =
+      getAnalysis<SignatureAnalysisWrapper>().getSignatureInfo();
+  Signature InputSig, OutputSig;
+  if (MMI.ShaderProfile != Triple::Library && MMI.EntryPropertyVec.size() == 1)
+    if (const auto *Sig = Signatures.get(MMI.EntryPropertyVec[0].Entry))
+      Sig->buildSignatures(InputSig, OutputSig, MMI.ValidatorVersion);
 
-  Signature InputSig;
   Globals.emplace_back(buildSignature(M, InputSig, "dx.isg1", "ISG1"));
-
-  Signature OutputSig;
   Globals.emplace_back(buildSignature(M, OutputSig, "dx.osg1", "OSG1"));
 }
 
@@ -357,6 +362,24 @@ void DXContainerGlobals::addPipelineStateValidationInfo(
       static_cast<uint8_t>(MMI.ShaderProfile - Triple::Pixel);
 
   addResourcesForPSV(M, PSV);
+  unsigned PSVVersion = 3;
+  if (MMI.ShaderProfile != Triple::Library &&
+      MMI.EntryPropertyVec.size() == 1) {
+    const auto &Signatures =
+        getAnalysis<SignatureAnalysisWrapper>().getSignatureInfo();
+    if (const auto *Sig = Signatures.get(MMI.EntryPropertyVec[0].Entry)) {
+      Sig->updatePSV(PSV, MMI.ValidatorVersion);
+      // Preserve the existing empty-signature path, and select an ABI version
+      // compatible with the validator for graphics signature data.
+      VersionTuple V = MMI.ValidatorVersion;
+      if ((!Sig->Inputs.empty() || !Sig->Outputs.empty()) && !V.empty() &&
+          V != VersionTuple(0, 0))
+        PSVVersion = V < VersionTuple(1, 1)   ? 0
+                     : V < VersionTuple(1, 6) ? 1
+                     : V < VersionTuple(1, 8) ? 2
+                                              : 3;
+    }
+  }
 
   // Hardcoded values here to unblock loading the shader into D3D.
   //
@@ -384,8 +407,8 @@ void DXContainerGlobals::addPipelineStateValidationInfo(
       MMI.ShaderProfile != Triple::RootSignature)
     PSV.EntryName = MMI.EntryPropertyVec[0].Entry->getName();
 
-  PSV.finalize(MMI.ShaderProfile);
-  PSV.write(OS);
+  PSV.finalize(MMI.ShaderProfile, PSVVersion);
+  PSV.write(OS, PSVVersion);
   addSection(M, Globals, Data, "dx.psv0", "PSV0");
 }
 
@@ -421,6 +444,7 @@ char DXContainerGlobals::ID = 0;
 INITIALIZE_PASS_BEGIN(DXContainerGlobals, "dxil-globals",
                       "DXContainer Global Emitter", false, true)
 INITIALIZE_PASS_DEPENDENCY(ShaderFlagsAnalysisWrapper)
+INITIALIZE_PASS_DEPENDENCY(SignatureAnalysisWrapper)
 INITIALIZE_PASS_DEPENDENCY(DXILMetadataAnalysisWrapperPass)
 INITIALIZE_PASS_DEPENDENCY(DXILResourceTypeWrapperPass)
 INITIALIZE_PASS_DEPENDENCY(DXILResourceWrapperPass)
