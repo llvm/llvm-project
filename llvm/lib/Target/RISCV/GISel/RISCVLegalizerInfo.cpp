@@ -1088,7 +1088,13 @@ bool RISCVLegalizerInfo::legalizeBRJT(MachineInstr &MI,
     break;
   }
 
-  MIRBuilder.buildBrIndirect(TargetReg);
+  if (MF.getInfo<RISCVMachineFunctionInfo>()->hasCFProtectionBranch()) {
+    // When cf-protection-branch is enabled, we need to use a software
+    // guarded branch for jump table branch.
+    MIRBuilder.buildInstr(RISCV::G_SW_GUARDED_BRIND, {}, {TargetReg});
+  } else {
+    MIRBuilder.buildBrIndirect(TargetReg);
+  }
 
   MI.eraseFromParent();
   return true;
