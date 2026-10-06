@@ -276,6 +276,10 @@ unsigned AArch64InstrInfo::getInstSizeInBytes(const MachineInstr &MI) const {
     if (NumBytes == 0)
       NumBytes = 4;
     break;
+  case TargetOpcode::PATCHABLE_OP:
+    // Hotpatch padding emits at most one instruction.
+    NumBytes = 4;
+    break;
   case TargetOpcode::PATCHABLE_FUNCTION_ENTER:
     // If `patchable-function-entry` is set, PATCHABLE_FUNCTION_ENTER
     // instructions are expanded to the specified number of NOPs. Otherwise,

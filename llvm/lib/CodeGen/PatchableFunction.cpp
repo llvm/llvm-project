@@ -20,6 +20,7 @@
 #include "llvm/CodeGen/TargetSubtargetInfo.h"
 #include "llvm/InitializePasses.h"
 #include "llvm/Pass.h"
+#include "llvm/Target/TargetMachine.h"
 
 using namespace llvm;
 
@@ -58,14 +59,21 @@ PatchableFunctionPass::run(MachineFunction &MF,
 
 bool PatchableFunction::run(MachineFunction &MF) {
   MachineBasicBlock &FirstMBB = *MF.begin();
+  bool IsAArch64 = MF.getTarget().getTargetTriple().isAArch64();
+  bool HasPatchableEntry =
+      MF.getFunction().hasFnAttribute("patchable-function-entry");
 
-  if (MF.getFunction().hasFnAttribute("patchable-function-entry")) {
+  if (HasPatchableEntry) {
     const TargetInstrInfo *TII = MF.getSubtarget().getInstrInfo();
     // The initial .loc covers PATCHABLE_FUNCTION_ENTER.
     BuildMI(FirstMBB, FirstMBB.begin(), DebugLoc(),
             TII->get(TargetOpcode::PATCHABLE_FUNCTION_ENTER));
-    return true;
-  } else if (MF.getFunction().hasFnAttribute("patchable-function")) {
+  }
+
+  // On AArch64, PATCHABLE_OP only ensures the entry block isn't empty. It is
+  // needed even with patchable-function-entry, which may be "0" (N,N).
+  if (MF.getFunction().hasFnAttribute("patchable-function") &&
+      (!HasPatchableEntry || IsAArch64)) {
 #ifndef NDEBUG
     Attribute PatchAttr = MF.getFunction().getFnAttribute("patchable-function");
     StringRef PatchType = PatchAttr.getValueAsString();
@@ -74,11 +82,12 @@ bool PatchableFunction::run(MachineFunction &MF) {
     auto *TII = MF.getSubtarget().getInstrInfo();
     BuildMI(FirstMBB, FirstMBB.begin(), DebugLoc(),
             TII->get(TargetOpcode::PATCHABLE_OP))
-        .addImm(2);
-    MF.ensureAlignment(Align(16));
+        .addImm(IsAArch64 ? 4 : 2);
+    if (!IsAArch64)
+      MF.ensureAlignment(Align(16));
     return true;
   }
-  return false;
+  return HasPatchableEntry;
 }
 
 char PatchableFunctionLegacy::ID = 0;

@@ -1,7 +1,8 @@
 // REQUIRES: aarch64-registered-target
 ///
 /// Check that using /hotpatch doesn't generate an error.
-/// Binaries are always hotpatchable on ARM/ARM64.
+/// ARM64 instructions are always atomically patchable, but /hotpatch still
+/// ensures that the first instruction of a function is not a branch target.
 ///
 // RUN: %clang_cl --target=aarch64-pc-windows-msvc /c /hotpatch /Z7 -- %s 2>&1
 ///
