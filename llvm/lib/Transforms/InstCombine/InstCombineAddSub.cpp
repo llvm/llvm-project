@@ -1813,8 +1813,9 @@ Instruction *InstCombinerImpl::visitAdd(BinaryOperator &I) {
 
   // (add (xor A, B) (shl (and A, B), 1)) --> (add A, B)
   // (add (shl (and A, B), 1) (xor A, B)) --> (add A, B)
-  if (match(&I, m_c_BinOp(m_Xor(m_Value(A), m_Value(B)),
-                          m_Shl(m_c_And(m_Deferred(A), m_Deferred(B)), m_One())))) {
+  if (match(&I,
+            m_c_BinOp(m_Xor(m_Value(A), m_Value(B)),
+                      m_Shl(m_c_And(m_Deferred(A), m_Deferred(B)), m_One())))) {
     replaceOperand(I, 0, A);
     replaceOperand(I, 1, B);
     return &I;
@@ -1822,7 +1823,8 @@ Instruction *InstCombinerImpl::visitAdd(BinaryOperator &I) {
 
   // (add (xor A, B) (mul (and A, B), 2)) --> (add A, B)
   if (match(&I, m_c_BinOp(m_Xor(m_Value(A), m_Value(B)),
-                          m_c_Mul(m_c_And(m_Deferred(A), m_Deferred(B)), m_SpecificInt(2))))) {
+                          m_c_Mul(m_c_And(m_Deferred(A), m_Deferred(B)),
+                                  m_SpecificInt(2))))) {
     replaceOperand(I, 0, A);
     replaceOperand(I, 1, B);
     return &I;
@@ -2740,7 +2742,8 @@ Instruction *InstCombinerImpl::visitSub(BinaryOperator &I) {
     Value *A, *B;
     if (match(Op0, m_Add(m_Value(A), m_Value(B))) &&
         (match(Op1, m_Shl(m_c_And(m_Specific(A), m_Specific(B)), m_One())) ||
-         match(Op1, m_c_Mul(m_c_And(m_Specific(A), m_Specific(B)), m_SpecificInt(2)))))
+         match(Op1, m_c_Mul(m_c_And(m_Specific(A), m_Specific(B)),
+                            m_SpecificInt(2)))))
       return BinaryOperator::CreateXor(A, B);
   }
 
