@@ -2917,7 +2917,7 @@ void CodeGenFunction::EmitSanitizerStatReport(llvm::SanitizerStatKind SSK) {
   if (!CGM.getCodeGenOpts().SanitizeStats)
     return;
 
-  llvm::IRBuilder<> IRB(Builder.GetInsertBlock(), Builder.GetInsertPoint());
+  llvm::IRBuilder<> IRB(Builder.GetInsertPoint());
   IRB.SetCurrentDebugLocation(Builder.getCurrentDebugLocation());
   CGM.getSanStats().create(IRB, SSK);
 }
@@ -3240,7 +3240,7 @@ void CodeGenFunction::EmitAArch64MultiVersionResolver(
     }
 
     if (!AArch64CpuInitialized) {
-      Builder.SetInsertPoint(CurBlock, CurBlock->begin());
+      Builder.SetInsertPoint(CurBlock->begin());
       EmitAArch64CpuInit();
       AArch64CpuInitialized = true;
       Builder.SetInsertPoint(CurBlock);

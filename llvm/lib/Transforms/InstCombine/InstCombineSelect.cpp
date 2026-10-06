@@ -2026,16 +2026,22 @@ static Value *canonicalizeClampLike(SelectInst &Sel0, ICmpInst &Cmp0,
            "Constant folding of ImmConstant cannot fail");
   }
 
+  // We mark the select instructions below as having an unknown profile as it is
+  // not possible to recover profile information from the original selects in
+  // the general case. From them we can only know the probability that we clamp
+  // whereas we need the probabilities for clamping specific to the low end/high
+  // end.
+
   // All good, finally emit the new pattern.
   Value *ShouldReplaceLow = Builder.CreateICmpSLT(X, ThresholdLowIncl);
   Value *ShouldReplaceHigh = Builder.CreateICmpSGE(X, ThresholdHighExcl);
-  Value *MaybeReplacedLow =
-      Builder.CreateSelect(ShouldReplaceLow, ReplacementLow, X);
+  Value *MaybeReplacedLow = Builder.CreateSelectWithUnknownProfile(
+      ShouldReplaceLow, ReplacementLow, X, DEBUG_TYPE);
 
   // Create the final select. If we looked through a truncate above, we will
   // need to retruncate the result.
-  Value *MaybeReplacedHigh = Builder.CreateSelect(
-      ShouldReplaceHigh, ReplacementHigh, MaybeReplacedLow);
+  Value *MaybeReplacedHigh = Builder.CreateSelectWithUnknownProfile(
+      ShouldReplaceHigh, ReplacementHigh, MaybeReplacedLow, DEBUG_TYPE);
   return Builder.CreateTrunc(MaybeReplacedHigh, Sel0.getType());
 }
 
@@ -3210,7 +3216,7 @@ static Instruction *foldSelectToPhiImpl(SelectInst &Sel, BasicBlock *BB,
         return nullptr;
   }
 
-  Builder.SetInsertPoint(BB, BB->begin());
+  Builder.SetInsertPoint(BB->begin());
   auto *PN = Builder.CreatePHI(Sel.getType(), Inputs.size());
   for (auto *Pred : predecessors(BB))
     PN->addIncoming(Inputs[Pred], Pred);
@@ -4713,8 +4719,11 @@ Instruction *InstCombinerImpl::visitSelectInst(SelectInst &SI) {
           FMF.setNoNaNs(true);
         if (FCmp->hasNoInfs())
           FMF.setNoInfs(true);
-        Value *NewSel =
-            Builder.CreateSelectFMF(NewCond, FalseVal, TrueVal, FMF);
+        Value *NewSel = Builder.CreateSelectFMF(
+            NewCond, FalseVal, TrueVal, FMF, "",
+            ProfcheckDisableMetadataFixes ? nullptr : &SI);
+        if (auto *NewSI = dyn_cast<SelectInst>(NewSel))
+          NewSI->swapProfMetadata();
         return replaceInstUsesWith(SI, NewSel);
       }
     }

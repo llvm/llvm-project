@@ -267,18 +267,13 @@ void SCEV::computeAndSetCanonical(ScalarEvolution &SE) {
   // For all other expressions, check whether any immediate operand has a
   // different canonical. Since operands are always created before their parent,
   // their canonical pointers are already set — no recursion needed.
-  bool Changed = false;
-  SmallVector<SCEVUse, 4> CanonOps;
-  for (SCEVUse Op : operands()) {
-    CanonOps.push_back(Op->getCanonical());
-    Changed |= CanonOps.back() != Op;
-  }
-
-  if (!Changed) {
+  if (all_of(operands(), [](SCEVUse Op) { return Op.isCanonical(); })) {
     CanonicalSCEV = this;
     return;
   }
 
+  SmallVector<SCEVUse, 4> CanonOps(
+      map_range(operands(), [](SCEVUse Op) { return Op.getCanonical(); }));
   // Rebuild the expression from the canonical operands, stripping use flags.
   CanonicalSCEV = SE.getWithOperands(this, CanonOps);
 }
@@ -13369,6 +13364,14 @@ ScalarEvolution::howManyLessThans(const SCEV *LHS, const SCEV *RHS,
                                   bool ControlsOnlyExit, bool AllowPredicates) {
   SmallVector<const SCEVPredicate *> Predicates;
 
+  // Loop guards for L, collected on demand.
+  std::optional<LoopGuards> CachedGuards;
+  auto getGuards = [&]() -> const LoopGuards & {
+    if (!CachedGuards)
+      CachedGuards.emplace(LoopGuards::collect(L, *this));
+    return *CachedGuards;
+  };
+
   // FIXME: Extend the non-invariant RHS analysis to greater-than comparisons.
   if (Invert && !isLoopInvariant(RHS, L))
     return getCouldNotCompute();
@@ -13405,7 +13408,8 @@ ScalarEvolution::howManyLessThans(const SCEV *LHS, const SCEV *RHS,
           APInt StrideMax = getUnsignedRangeMax(AR->getStepRecurrence(*this));
           APInt Limit = APInt::getMaxValue(InnerBitWidth) - (StrideMax - 1);
           Limit = Limit.zext(OuterBitWidth);
-          return getUnsignedRangeMax(applyLoopGuards(RHS, L)).ule(Limit);
+          return getUnsignedRangeMax(applyLoopGuards(RHS, getGuards()))
+              .ule(Limit);
         };
         auto Flags = AR->getNoWrapFlags();
         if (!hasFlags(Flags, SCEV::FlagNUW) && canProveNUW())
@@ -13468,7 +13472,7 @@ ScalarEvolution::howManyLessThans(const SCEV *LHS, const SCEV *RHS,
   bool PositiveStride = isKnownPositive(Stride);
   // A dominating guard may prove the stride positive.
   if (!PositiveStride) {
-    const SCEV *LoopGuardedStride = applyLoopGuards(Stride, L);
+    const SCEV *LoopGuardedStride = applyLoopGuards(Stride, getGuards());
     if (isKnownPositive(LoopGuardedStride)) {
       GuardedStride = LoopGuardedStride;
       PositiveStride = true;
@@ -13796,8 +13800,8 @@ ScalarEvolution::howManyLessThans(const SCEV *LHS, const SCEV *RHS,
         };
 
         auto CondGE = IsSigned ? ICmpInst::ICMP_SGE : ICmpInst::ICMP_UGE;
-        const SCEV *GuardedRHS = applyLoopGuards(OrigRHS, L);
-        const SCEV *GuardedStart = applyLoopGuards(OrigStart, L);
+        const SCEV *GuardedRHS = applyLoopGuards(OrigRHS, getGuards());
+        const SCEV *GuardedStart = applyLoopGuards(OrigStart, getGuards());
         if (Invert)
           std::swap(GuardedRHS, GuardedStart);
 
@@ -14600,10 +14604,6 @@ bool ScalarEvolution::dominates(const SCEV *S, const BasicBlock *BB) {
 
 bool ScalarEvolution::properlyDominates(const SCEV *S, const BasicBlock *BB) {
   return getBlockDisposition(S, BB) == ProperlyDominatesBlock;
-}
-
-bool ScalarEvolution::hasOperand(const SCEV *S, const SCEV *Op) const {
-  return SCEVExprContains(S, [&](const SCEV *Expr) { return Expr == Op; });
 }
 
 void ScalarEvolution::forgetBackedgeTakenCounts(const Loop *L,
