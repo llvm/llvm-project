@@ -604,10 +604,6 @@ void SystemZHLASMAsmStreamer::finishImpl() {
     emitXATTR(OS, Sym.getName(), Sym.getADA(), Sym.isIndirect(),
               Sym.getLinkage(), Sym.getCodeData(), Sym.getBindingScope());
     EmitEOL();
-    if (Sym.getCodeData() == GOFF::ESD_EXE_DATA) {
-      OS << Sym.getName() << " AMODE 64";
-      EmitEOL();
-    }
     if (Sym.hasExternalName())
       OS << Sym.getName() << " ALIAS C'" << Sym.getExternalName() << "'\n";
   }

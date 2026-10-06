@@ -30,11 +30,8 @@ MCSectionGOFF *MCSymbolGOFF::getSectionForCommonSymbol(MCContext &Ctx,
 
   return Ctx.getGOFFSection(
       SectionKind::getBSS(), getName(),
-      GOFF::PRAttr{
-          false, GOFF::ESD_EXE_DATA, GOFF::ESD_BST_Strong, GOFF::ESD_LT_XPLink,
-          getBindingScope() == GOFF::ESD_BSC_Section ? GOFF::ESD_AMODE_None
-                                                     : GOFF::ESD_AMODE_64,
-          getBindingScope(), 0},
+      GOFF::PRAttr{false, GOFF::ESD_EXE_DATA, GOFF::ESD_BST_Strong,
+                   GOFF::ESD_LT_XPLink, getBindingScope(), 0},
       ED);
 }
 

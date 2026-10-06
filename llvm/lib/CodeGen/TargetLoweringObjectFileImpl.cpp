@@ -2919,9 +2919,8 @@ MCSection *TargetLoweringObjectFileGOFF::getSectionForLSDA(
   WSA->setAlignment(Align(8));
   return getContext().getGOFFSection(
       SectionKind::getData(), Name,
-      GOFF::PRAttr{true, GOFF::ESD_EXE_DATA, GOFF::ESD_BST_Strong,
-                   GOFF::ESD_LT_XPLink, GOFF::ESD_AMODE_None,
-                   GOFF::ESD_BSC_Section, 0},
+      GOFF::PRAttr{false, GOFF::ESD_EXE_DATA, GOFF::ESD_BST_Strong,
+                   GOFF::ESD_LT_XPLink, GOFF::ESD_BSC_Section, 0},
       WSA);
 }
 
@@ -2956,14 +2955,10 @@ MCSection *TargetLoweringObjectFileGOFF::SelectSectionForGlobal(
                      GOFF::ESD_LB_Deferred, GOFF::ESD_RQ_0, 0},
         SD);
     ED->setAlignment(Alignment.value_or(llvm::Align(8)));
-    // Set AMODE only for global symbols.
-    GOFF::ESDAmode AMODE = PRBindingScope == GOFF::ESD_BSC_Section
-                               ? GOFF::ESD_AMODE_None
-                               : GOFF::ESD_AMODE_64;
     MCSectionGOFF *PR = getContext().getGOFFSection(
         Kind, Symbol->getName(),
         GOFF::PRAttr{false, GOFF::ESD_EXE_DATA, GOFF::ESD_BST_Strong,
-                     GOFF::ESD_LT_XPLink, AMODE, PRBindingScope, 0},
+                     GOFF::ESD_LT_XPLink, PRBindingScope, 0},
         ED);
     // The binder rejects zero-length PR sections. Mark the PR so the writer
     // inflates it to a valid length if needed.
@@ -3000,8 +2995,7 @@ TargetLoweringObjectFileGOFF::getStaticXtorSection(unsigned Priority) const {
   MCSectionGOFF *Xtor = Ctx.getGOFFSection(
       SectionKind::getData(), Name,
       GOFF::PRAttr{true, GOFF::ESD_EXE_DATA, GOFF::ESD_BST_Strong,
-                   GOFF::ESD_LT_XPLink, GOFF::ESD_AMODE_None,
-                   GOFF::ESD_BSC_Section, Prio},
+                   GOFF::ESD_LT_XPLink, GOFF::ESD_BSC_Section, Prio},
       SInit);
   return Xtor;
 }

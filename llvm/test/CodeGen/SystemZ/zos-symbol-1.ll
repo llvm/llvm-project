@@ -1,14 +1,11 @@
 ; RUN: llc <%s --mtriple s390x-ibm-zos | FileCheck %s
 
-@extint = external global i32, align 4
-
 declare extern_weak void @other1(...)
 declare void @other2(...)
 
-define internal signext i32 @me1() {
+define internal void @me1() {
 entry:
-  %0 = load i32, ptr @extint, align 4
-  ret i32 %0
+  ret void
 }
 
 define hidden void @me2() {
@@ -38,9 +35,6 @@ entry:
 
 ; CHECK:       EXTRN CELQSTRT
 ; CHECK-NEXT: CELQSTRT XATTR LINKAGE(OS),SCOPE(EXPORT)
-; CHECK-NEXT: C_WSA64 CATTR PART(extint)
-; CHECK-NEXT: extint XATTR LINKAGE(XPLINK),REFERENCE(DATA),SCOPE(EXPORT)
-; CHECK-NEXT: extint AMODE 64
 ; CHECK-NEXT:  WXTRN other1
 ; CHECK-NEXT: other1 XATTR LINKAGE(XPLINK),SCOPE(EXPORT)
 ; CHECK-NEXT:  EXTRN other2
