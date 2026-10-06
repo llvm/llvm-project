@@ -1235,7 +1235,7 @@ int GCNHazardRecognizer::getMaxVALUWindowDeficit(int MaxWindow,
   // EmittedVALUInstrs is capped at MaxVALULookAhead, so a MaxWindow beyond that
   // window could miss a hazard. Keep the cap in sync with the wait-state
   // tables.
-  assert(MaxWindow <= (int)MaxVALULookAhead &&
+  assert(MaxWindow <= static_cast<int>(MaxVALULookAhead) &&
          "MaxWindow exceeds the EmittedVALUInstrs lookahead window");
   int Deficit = 0, Distance = 0;
   for (MachineInstr *MI : EmittedVALUInstrs) {
