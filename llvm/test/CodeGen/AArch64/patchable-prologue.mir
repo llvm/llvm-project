@@ -1,0 +1,78 @@
+# RUN: llc -mtriple=aarch64-pc-windows-msvc -start-after=patchable-function -verify-machineinstrs %s -o - | FileCheck %s
+# RUN: llc -mtriple=aarch64-pc-windows-msvc -start-after=patchable-function -verify-machineinstrs -filetype=obj %s -o %t
+# RUN: llvm-readobj -u %t | FileCheck %s --check-prefix=UNWIND
+
+## Instructions that emit no bytes must not hide an empty entry block.
+# CHECK-LABEL: meta_entry:
+# CHECK:       // %bb.0:
+# CHECK-NEXT:  nop
+# CHECK-NEXT:  // kill:
+# CHECK-NEXT:  // implicit-def:
+# CHECK-NEXT:  [[LOOP:\.LBB[0-9]+_[0-9]+]]:
+# CHECK:       b [[LOOP]]
+
+## Windows unwind directives also emit no bytes. A NOP inserted before the end
+## of the prologue needs a corresponding unwind directive.
+# CHECK-LABEL: seh_entry:
+# CHECK:       // %bb.0:
+# CHECK-NEXT:  nop
+# CHECK-NEXT:  .seh_nop
+# CHECK-NEXT:  .seh_endprologue
+# CHECK-NEXT:  [[LOOP:\.LBB[0-9]+_[0-9]+]]:
+# CHECK:       b [[LOOP]]
+
+## The prologue unwind codes must describe the NOP.
+# UNWIND:      Function: seh_entry
+# UNWIND:      Prologue [
+# UNWIND-NEXT:   0xe3 ; nop
+# UNWIND-NEXT:   0xe4 ; end
+# UNWIND-NEXT: ]
+
+--- |
+  define void @meta_entry() {
+  entry:
+    br label %loop
+  loop:
+    br label %loop
+  }
+
+  define void @seh_entry() uwtable {
+  entry:
+    br label %loop
+  loop:
+    br label %loop
+  }
+...
+---
+name: meta_entry
+alignment: 4
+tracksRegLiveness: true
+body: |
+  bb.0.entry:
+    successors: %bb.1
+    liveins: $x0
+
+    PATCHABLE_OP 4
+    KILL $x0
+    $x1 = IMPLICIT_DEF
+
+  bb.1.loop:
+    successors: %bb.1
+    B %bb.1
+...
+---
+name: seh_entry
+alignment: 4
+tracksRegLiveness: true
+hasWinCFI: true
+body: |
+  bb.0.entry:
+    successors: %bb.1
+
+    PATCHABLE_OP 4
+    frame-setup SEH_PrologEnd
+
+  bb.1.loop:
+    successors: %bb.1
+    B %bb.1
+...
