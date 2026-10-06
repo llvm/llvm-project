@@ -662,7 +662,7 @@ define void @nonstreaming_caller_single_streaming_compatible_callee_alwaysinline
   ret void
 }
 
-; Conseratively disallow inlining when forced; it is unclear what the user's intentions were.
+; Reject inlining even when forced; it is unclear what the user's intentions were.
 define void @streaming_caller_to_nonstreaming_alwaysinline_callee_with_single_streamingcompatible_callee_dont_inline() "aarch64_pstate_sm_enabled" {
 ; CHECK-LABEL: define void @streaming_caller_to_nonstreaming_alwaysinline_callee_with_single_streamingcompatible_callee_dont_inline
 ; CHECK-SAME: () #[[ATTR2]] {
@@ -1055,7 +1055,7 @@ define void @scatter_fixed_length_caller(ptr %ptr_to_ptrs, ptr %ptr_to_vals) "aa
 }
 
 ;
-; Test that we never inline a scalable gather/scatter operations into a streaming function.
+; Test that we never inline a scalable gather/scatter operation into a streaming function.
 ;
 
 define void @scatter_scalable_length(<vscale x 2 x ptr> %ptrs, <vscale x 2 x i64> %vals) alwaysinline {

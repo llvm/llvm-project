@@ -238,13 +238,11 @@ enum class StreamingIncompatibility : uint8_t {
   VScaleDependent = 1 << 0,
   HasIncompatibleInstruction = 1 << 1,
   FullyIncompatible = VScaleDependent | HasIncompatibleInstruction,
-  LLVM_MARK_AS_BITMASK_ENUM(/*LargestFlag=*/FullyIncompatible)
+  LLVM_MARK_AS_BITMASK_ENUM(/*LargestFlag=*/HasIncompatibleInstruction)
 };
 
-/// Returns true if \p I is an intrinsic that may not be compatible in the mode
-/// of the caller. If \p AssumeVScaleIsEquivalent is true, then we can allow
-/// operations that dependent on vscale as long as they are available in both
-/// streaming/non-streaming mode.
+/// Returns an enum describing whether \p I is an instruction that is
+/// incompatible in the mode of the caller.
 static StreamingIncompatibility
 getCompatibilityForChangeToStreamingMode(const Instruction *I) {
   if (auto *II = dyn_cast<IntrinsicInst>(I)) {
@@ -324,7 +322,7 @@ static bool hasPossibleIncompatibleOps(const Function *F,
           return true;
 
         // If the callee has calls to streaming compatible functions, then those
-        // may have statements which dependent on SME state (e.g. vscale or
+        // may have statements which depend on SME state (e.g. vscale or
         // explicit reads of PSTATE.SM). If we were to inline those calls,
         // behaviour may change after inlining because the streaming-compatible
         // function would be executed in a different streaming mode.
