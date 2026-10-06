@@ -1,0 +1,6 @@
+{
+    "name": "llvm-ir-dataset-utils-docs",
+    "scripts": {
+        "build": "make html"
+    }
+}

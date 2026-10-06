@@ -1,0 +1,13 @@
+{
+  "sources": [
+    {
+      "type": "git",
+      "repo_url": "https://github.com/dtolnay/syn",
+      "commit_sha": "782fd24671315587d0d3cda3e8603528ce650299"
+    }
+  ],
+  "folder_name": "syn",
+  "build_system": "cargo",
+  "license": "MIT",
+  "license_source": "manual"
+}

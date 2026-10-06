@@ -1,0 +1,8 @@
+{
+  "sources": [],
+  "folder_name": "Gen",
+  "build_system": "julia",
+  "package_name": "Gen",
+  "license": "Apache-2.0",
+  "license_source": "manual"
+}
