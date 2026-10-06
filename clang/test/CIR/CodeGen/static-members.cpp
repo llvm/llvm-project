@@ -26,7 +26,11 @@ struct S {
 // LLVM-DAG: @_ZN1S2hdE = linkonce_odr global %struct.HasDtor zeroinitializer, comdat, align 1
 // LLVM-DAG: @_ZN5Outer5Inner2hdE = linkonce_odr global %struct.HasDtor zeroinitializer, comdat, align 1
 // LLVM-DAG: @_ZN13NonThreadSafeIiE1fE = linkonce_odr global i32 0, comdat, align 4
-// LLVM: @llvm.global_ctors = appending global [3 x { i32, ptr, ptr }] [{ i32, ptr, ptr } { i32 65535, ptr @__cxx_global_var_init, ptr @_ZN1S2hdE }, { i32, ptr, ptr } { i32 65535, ptr @__cxx_global_var_init.1, ptr @_ZN5Outer5Inner2hdE }, { i32, ptr, ptr } { i32 65535, ptr @__cxx_global_var_init.2, ptr @_ZN13NonThreadSafeIiE1fE }]
+
+// The COMDAT keys must be kept in `llvm.used` so the linker doesn't
+// garbage-collect them (and, with them, their `llvm.global_ctors` entries).
+// LLVM-DAG: @llvm.used = appending global [3 x ptr] [ptr @_ZN1S2hdE, ptr @_ZN5Outer5Inner2hdE, ptr @_ZN13NonThreadSafeIiE1fE], section "llvm.metadata"
+// LLVM-DAG: @llvm.global_ctors = appending global [3 x { i32, ptr, ptr }] [{ i32, ptr, ptr } { i32 65535, ptr @__cxx_global_var_init, ptr @_ZN1S2hdE }, { i32, ptr, ptr } { i32 65535, ptr @__cxx_global_var_init.1, ptr @_ZN5Outer5Inner2hdE }, { i32, ptr, ptr } { i32 65535, ptr @__cxx_global_var_init.2, ptr @_ZN13NonThreadSafeIiE1fE }]
 
 
 // CIR: cir.global linkonce_odr comdat dynamic_init_guard<"_ZGVN1S2hdE"> @_ZN1S2hdE = #cir.zero : !rec_HasDtor align(1) ast(#cir.var.decl.ast) dynamic_init_info<local = false, tls = none, is_inline = true, tsk = undeclared>

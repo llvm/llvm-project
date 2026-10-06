@@ -221,6 +221,10 @@ struct LoweringPreparePass
                                     cir::IntType guardTy,
                                     cir::GlobalLinkageKind linkage);
 
+  /// Append 'global' to the module's llvm.used list to make sure it doesn't get
+  /// garbage-collected by the linker.
+  void addUsedGlobal(cir::GlobalOp global);
+
   /// Get the guard variable for a static local declaration.
   cir::GlobalOp getStaticLocalDeclGuardAddress(llvm::StringRef globalSymName) {
     auto it = staticLocalDeclGuardMap.find(globalSymName);
@@ -1399,6 +1403,44 @@ cir::GlobalOp LoweringPreparePass::createGuardGlobalOp(
   return g;
 }
 
+void LoweringPreparePass::addUsedGlobal(cir::GlobalOp global) {
+  CIRBaseBuilderTy builder(getContext());
+  mlir::Attribute entry = cir::GlobalViewAttr::get(
+      builder.getVoidPtrTy(),
+      mlir::FlatSymbolRefAttr::get(global.getSymNameAttr()));
+
+  mlir::StringAttr usedName = builder.getStringAttr("llvm.used");
+  cir::GlobalOp used =
+      symbolTables.lookupSymbolIn<cir::GlobalOp>(mlirModule, usedName);
+
+  llvm::SmallVector<mlir::Attribute, 4> elements;
+  if (used) {
+    auto existing = mlir::cast<cir::ConstArrayAttr>(*used.getInitialValue());
+    llvm::append_range(elements,
+                       mlir::cast<mlir::ArrayAttr>(existing.getElts()));
+  }
+  elements.push_back(entry);
+
+  cir::ArrayType arrayTy =
+      cir::ArrayType::get(builder.getVoidPtrTy(), elements.size());
+  cir::ConstArrayAttr initAttr = cir::ConstArrayAttr::get(
+      arrayTy, mlir::ArrayAttr::get(&getContext(), elements));
+
+  if (used) {
+    used.setSymType(arrayTy);
+    used.setInitialValueAttr(initAttr);
+    return;
+  }
+
+  builder.setInsertionPointToStart(mlirModule.getBody());
+  used = cir::GlobalOp::create(builder, mlirModule.getLoc(),
+                               usedName.getValue(), arrayTy);
+  used.setLinkage(cir::GlobalLinkageKind::AppendingLinkage);
+  used.setInitialValueAttr(initAttr);
+  used.setSectionAttr(builder.getStringAttr("llvm.metadata"));
+  symbolTables.getSymbolTable(mlirModule).insert(used);
+}
+
 void LoweringPreparePass::handleStaticLocal(cir::GlobalOp globalOp,
                                             cir::LocalInitOp localInitOp) {
   CIRBaseBuilderTy builder(getContext());
@@ -1769,6 +1811,13 @@ void LoweringPreparePass::lowerGlobalOp(GlobalOp op) {
       globalCtorList.emplace_back(f.getSymName(),
                                   cir::GlobalCtorAttr::getDefaultPriority(),
                                   op.getSymName());
+      // When COMDAT is used on ELF or in the MS C++ ABI, the key must be in
+      // `llvm.used` to prevent the linker from garbage-collecting it (and,
+      // with it, the global ctor entry keyed to it). Matches classic
+      // CodeGen's EmitCXXGlobalVarDeclInitFunc.
+      if (getTargetInfo().getTriple().isOSBinFormatELF() ||
+          getTargetInfo().getCXXABI().isMicrosoft())
+        addUsedGlobal(op);
     } else {
       dynamicInitializers.push_back(f);
     }
