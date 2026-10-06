@@ -1,0 +1,73 @@
+[
+  {
+    "CallGraph": [
+      {
+        "Function": {
+          "Names": [
+            "main"
+          ],
+          "Address": 100,
+          "DirectCallees": [
+            {
+              "Names": [
+                "foo"
+              ],
+              "Address": 200
+            }
+          ]
+        }
+      },
+      {
+        "Function": {
+          "Names": [
+            "foo"
+          ],
+          "Address": 200,
+          "DirectCallees": [
+            {
+              "Names": [
+                "ignored_func"
+              ],
+              "Address": 300
+            }
+          ]
+        }
+      },
+      {
+        "Function": {
+          "Names": [
+            "ignored_func"
+          ],
+          "Address": 300,
+          "DirectCallees": []
+        }
+      }
+    ],
+    "StackSizes": [
+      {
+        "Entry": {
+          "Functions": [
+            "main"
+          ],
+          "Size": 5
+        }
+      },
+      {
+        "Entry": {
+          "Functions": [
+            "foo"
+          ],
+          "Size": 10
+        }
+      },
+      {
+        "Entry": {
+          "Functions": [
+            "ignored_func"
+          ],
+          "Size": 100
+        }
+      }
+    ]
+  }
+]
