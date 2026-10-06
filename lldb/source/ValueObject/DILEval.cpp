@@ -552,10 +552,12 @@ Interpreter::Visit(const IdentifierNode &node) {
 
   if (!identifier && node.GetName()[0] == '$') {
     auto language = GetSourceLanguageFromCU(m_stack_frame);
-    if (!language)
-      return language.takeError();
-    identifier = LookupPersistentIdentifier(node.GetName(), m_stack_frame,
-                                            m_target, language.get());
+    if (language)
+      identifier = LookupPersistentIdentifier(node.GetName(), m_stack_frame,
+                                              m_target, language.get());
+    else
+      // Fall through to the unknown identifier diagnostic without a CU.
+      llvm::consumeError(language.takeError());
   }
 
   if (!identifier && node.GetName() == "nullptr") {

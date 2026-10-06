@@ -686,7 +686,7 @@ class TestXMLRegisterUnion(GDBRemoteTestBase):
         self.expect(
             "register read does_not_exist",
             error=True,
-            substrs=["Invalid register name 'does_not_exist'"],
+            substrs=["use of undeclared identifier '$does_not_exist'"],
         )
 
         frame = process.GetThreadAtIndex(0).GetFrameAtIndex(0)
