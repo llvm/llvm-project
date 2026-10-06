@@ -27,6 +27,7 @@
 #include "sanitizer_common/sanitizer_interface_internal.h"
 #include "sanitizer_common/sanitizer_placement_new.h"
 #include "sanitizer_common/sanitizer_report_decorator.h"
+#include "sanitizer_common/sanitizer_report_receiver.h"
 #include "sanitizer_common/sanitizer_stackdepot.h"
 #include "sanitizer_common/sanitizer_symbolizer.h"
 
@@ -169,7 +170,17 @@ class ScopedInErrorReport {
       return;
     }
     ASAN_ON_ERROR();
-    if (current_error_.IsValid()) current_error_.Print();
+    if (current_error_.IsValid()) {
+      // Passed by reference (or pointer) through the Error*::Print /
+      // *AddressDescription::Print methods so they can push receiver events.
+      const char *type_str =
+          current_error_.kind == kErrorKindGeneric
+              ? current_error_.Generic.bug_descr
+              : current_error_.Base.scariness.GetDescription();
+      ScopedSanitizerReport srep("AddressSanitizer",
+                                 type_str ? type_str : "unknown");
+      current_error_.Print(srep);
+    }
 
     // Make sure the current thread is announced.
     DescribeThread(GetCurrentThread());
@@ -492,7 +503,7 @@ void ReportMacMzReallocUnknown(uptr addr, uptr zone_ptr, const char *zone_name,
       (void *)addr);
   PrintZoneForPointer(addr, zone_ptr, zone_name);
   stack->Print();
-  DescribeAddressIfHeap(addr);
+  DescribeAddressIfHeap(nullptr, addr);
 }
 
 // -------------- SuppressErrorReport -------------- {{{1
@@ -553,7 +564,7 @@ void NOINLINE __asan_set_error_report_callback(void (*callback)(const char*)) {
 void __asan_describe_address(uptr addr) {
   // Thread registry must be locked while we're describing an address.
   asanThreadRegistry().Lock();
-  PrintAddressDescription(addr, 1, "");
+  PrintAddressDescription(nullptr, addr, 1, "");
   asanThreadRegistry().Unlock();
 }
 
