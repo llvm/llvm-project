@@ -522,6 +522,44 @@ def uimm6m1_64b : Operand<i64> {
   let OperandType = "OPERAND_IMMEDIATE";
 }
 
+def uimm9 : Operand<i64> {
+  let ParserMatchClass = AsmImmRange<0, 511>;
+  let OperandType = "OPERAND_IMMEDIATE";
+}
+
+class AdjImmAsmOperand<string name, string diagnostic, int adjustment,
+                       int low, int high> : AsmOperandClass {
+  let Name = name;
+  let DiagnosticType = diagnostic;
+  let RenderMethod = "addAdjImmOperands<" # adjustment # ">";
+  let PredicateMethod = "isImmInRange<" # !sub(low, adjustment) # "," #
+                        !sub(high, adjustment) # ">";
+}
+
+def uimm9p1 : Operand<i64> {
+  let ParserMatchClass =
+      AdjImmAsmOperand<"UImm9P1", "InvalidImm1_512", -1, 0, 511>;
+  let OperandType = "OPERAND_IMMEDIATE";
+}
+
+def uimm9m1 : Operand<i64> {
+  let ParserMatchClass =
+      AdjImmAsmOperand<"UImm9M1", "InvalidImmM1_510", 1, 0, 511>;
+  let OperandType = "OPERAND_IMMEDIATE";
+}
+
+def simm9p1 : Operand<i64> {
+  let ParserMatchClass =
+      AdjImmAsmOperand<"SImm9P1", "InvalidImmM255_256", -1, -256, 255>;
+  let OperandType = "OPERAND_IMMEDIATE";
+}
+
+def simm9m1 : Operand<i64> {
+  let ParserMatchClass =
+      AdjImmAsmOperand<"SImm9M1", "InvalidImmM257_254", 1, -256, 255>;
+  let OperandType = "OPERAND_IMMEDIATE";
+}
+
 def SImm9Operand : SImmOperand<9>;
 def simm9 : Operand<i64>, ImmLeaf<i64, [{ return Imm >= -256 && Imm < 256; }]> {
   let ParserMatchClass = SImm9Operand;
@@ -13657,4 +13695,106 @@ multiclass TENTER<string asm> {
 multiclass TEXIT<string asm> {
   def NAME : TEXITInst<asm>;
   def      : InstAlias<asm, (!cast<Instruction>(NAME) 0), 1>;
+}
+
+//----------------------------------------------------------------------------
+// Conditional Fault instructions (FEAT_CFLT)
+//----------------------------------------------------------------------------
+
+class BaseCondFLT
+    : I<(outs), (ins ccode:$cond, uimm16:$imm),
+        "flt", ".$cond\t$imm", "", []>, Sched<[]> {
+  bits<4> cond;
+  bits<16> imm;
+  let Inst{31-21} = 0b11010100001;
+  let Inst{20-5}  = imm;
+  let Inst{4}     = 1;
+  let Inst{3-0}   = cond;
+
+  let Uses = [NZCV];
+}
+
+class BaseFLT<bit sf, dag iops, string asm, string operands>
+    : I<(outs), iops, asm, operands, "", []>, Sched<[]> {
+  bits<2> reason;
+  bits<5> Rt;
+  let Inst{31}    = sf;
+  let Inst{30-24} = 0b1110110;
+  let Inst{15-12} = 0b0000;
+  let Inst{11-10} = reason;
+  let Inst{4-0}   = Rt;
+}
+
+class BaseCFLTImm<RegisterClass regtype, bit sf, Operand immtype,
+                  bits<3> cc, string asm>
+    : BaseFLT<sf, (ins imm0_3:$reason, regtype:$Rt, immtype:$imm),
+              asm, "\t$reason, $Rt, $imm"> {
+  bits<9> imm;
+  let Inst{23-21} = cc;
+  let Inst{20-16} = imm{8-4};
+  let Inst{9}     = 0;
+  let Inst{8-5}   = imm{3-0};
+}
+
+class BaseCFLTReg<RegisterClass regtype, bit sf, bits<3> cc, string asm>
+    : BaseFLT<sf, (ins imm0_3:$reason, regtype:$Rt, regtype:$Rm),
+              asm, "\t$reason, $Rt, $Rm"> {
+  bits<5> Rm;
+  let Inst{23-21} = cc;
+  let Inst{20-16} = Rm;
+  let Inst{9-5}   = 0b10000;
+}
+
+multiclass CFLTImm<bits<3> cc, string asm, Operand immtype> {
+  def Wi : BaseCFLTImm<GPR32, 0, immtype, cc, asm>;
+  def Xi : BaseCFLTImm<GPR64, 1, immtype, cc, asm>;
+}
+
+multiclass CFLTReg<bits<3> cc, string asm> {
+  def Wr : BaseCFLTReg<GPR32sp, 0, cc, asm>;
+  def Xr : BaseCFLTReg<GPR64sp, 1, cc, asm>;
+}
+
+multiclass CFLTRegAlias<string mnemonic, string inst> {
+  def : InstAlias<mnemonic # "\t$reason, $Rm, $Rt",
+                  (!cast<Instruction>(inst # "Wr") imm0_3:$reason,
+                   GPR32sp:$Rt, GPR32sp:$Rm), 0>;
+  def : InstAlias<mnemonic # "\t$reason, $Rm, $Rt",
+                  (!cast<Instruction>(inst # "Xr") imm0_3:$reason,
+                   GPR64sp:$Rt, GPR64sp:$Rm), 0>;
+}
+
+multiclass CFLTImmAlias<string mnemonic, string inst, Operand immtype> {
+  def : InstAlias<mnemonic # "\t$reason, $Rt, $imm",
+                  (!cast<Instruction>(inst # "Wi") imm0_3:$reason,
+                   GPR32:$Rt, immtype:$imm), 0>;
+  def : InstAlias<mnemonic # "\t$reason, $Rt, $imm",
+                  (!cast<Instruction>(inst # "Xi") imm0_3:$reason,
+                   GPR64:$Rt, immtype:$imm), 0>;
+}
+
+def tflt_imm32_63 : Operand<i64> {
+  let ParserMatchClass = TBZImm32_63Operand;
+  let OperandType = "OPERAND_IMMEDIATE";
+  let DecoderMethod = "DecodeTFLTImm32_63";
+}
+
+class BaseTFLT<RegisterClass regtype, Operand immtype, bit sf, bit op,
+               string asm>
+    : BaseFLT<sf, (ins imm0_3:$reason, regtype:$Rt, immtype:$bit_off),
+              asm, "\t$reason, $Rt, $bit_off"> {
+  bits<6> bit_off;
+  let Inst{23-19} = bit_off{4-0};
+  let Inst{18-16} = 0b000;
+  let Inst{9-6}   = 0b1001;
+  let Inst{5}     = op;
+}
+
+multiclass TFLT<bit op, string asm> {
+  def W : BaseTFLT<GPR32, tbz_imm0_31_diag, 0, op, asm>;
+  def X : BaseTFLT<GPR64, tflt_imm32_63, 1, op, asm>;
+
+  def : InstAlias<asm # "\t$reason, $Rt, $imm",
+                  (!cast<Instruction>(NAME # "W") imm0_3:$reason,
+                   GPR32as64:$Rt, tbz_imm0_31_nodiag:$imm), 0>;
 }

@@ -237,6 +237,8 @@ def HasF16F32DOT     : Predicate<"Subtarget->hasF16F32DOT()">,
                                  AssemblerPredicateWithAll<(all_of FeatureF16F32DOT), "f16f32dot">;
 def HasF16F32MM      : Predicate<"Subtarget->hasF16F32MM()">,
                                  AssemblerPredicateWithAll<(all_of FeatureF16F32MM), "f16f32mm">;
+def HasCFLT          : Predicate<"Subtarget->hasCFLT()">,
+                                 AssemblerPredicateWithAll<(all_of FeatureCFLT), "cflt">;
 
 // A subset of SVE(2) instructions are legal in Streaming SVE execution mode,
 // they should be enabled if either has been specified.
@@ -12754,6 +12756,53 @@ let Predicates = [HasS1POE2] in {
 let Predicates = [HasTEV] in {
   defm TENTER : TENTER<"tenter">;
   defm TEXIT : TEXIT<"texit">;
+}
+
+//===-----------------------------------------------------===//
+// Conditional Fault instructions (FEAT_CFLT)
+//===-----------------------------------------------------===//
+let Predicates = [HasCFLT] in {
+  def FLTcc : BaseCondFLT;
+
+  defm CFLTEQ : CFLTReg<0b110, "cflteq">;
+  defm CFLTEQ : CFLTImm<0b100, "cflteq", simm9>;
+
+  defm CFLTNE : CFLTReg<0b111, "cfltne">;
+  defm CFLTNE : CFLTImm<0b101, "cfltne", simm9>;
+
+  defm CFLTGT : CFLTReg<0b000, "cfltgt">;
+  defm CFLTGT : CFLTImm<0b000, "cfltgt", simm9>;
+
+  defm CFLTGE : CFLTReg<0b001, "cfltge">;
+  defm CFLTLT : CFLTImm<0b001, "cfltlt", simm9>;
+
+  defm CFLTHI : CFLTReg<0b010, "cflthi">;
+  defm CFLTHI : CFLTImm<0b010, "cflthi", uimm9>;
+
+  defm CFLTHS : CFLTReg<0b011, "cflths">;
+  defm CFLTLO : CFLTImm<0b011, "cfltlo", uimm9>;
+
+  defm : CFLTImmAlias<"cfltge", "CFLTGT", simm9p1>;
+  defm : CFLTImmAlias<"cflths", "CFLTHI", uimm9p1>;
+  defm : CFLTImmAlias<"cfltle", "CFLTLT", simm9m1>;
+  defm : CFLTImmAlias<"cfltls", "CFLTLO", uimm9m1>;
+
+  defm : CFLTRegAlias<"cfltle", "CFLTGE">;
+  defm : CFLTRegAlias<"cfltlo", "CFLTHI">;
+  defm : CFLTRegAlias<"cfltls", "CFLTHS">;
+  defm : CFLTRegAlias<"cfltlt", "CFLTGT">;
+
+  def : InstAlias<"cfltnz\t$reason, $Rt",
+                  (CFLTNEWi imm0_3:$reason, GPR32:$Rt, 0), 0>;
+  def : InstAlias<"cfltnz\t$reason, $Rt",
+                  (CFLTNEXi imm0_3:$reason, GPR64:$Rt, 0), 0>;
+  def : InstAlias<"cfltz\t$reason, $Rt",
+                  (CFLTEQWi imm0_3:$reason, GPR32:$Rt, 0), 0>;
+  def : InstAlias<"cfltz\t$reason, $Rt",
+                  (CFLTEQXi imm0_3:$reason, GPR64:$Rt, 0), 0>;
+
+  defm TFLTZ  : TFLT<0, "tfltz">;
+  defm TFLTNZ : TFLT<1, "tfltnz">;
 }
 
 include "AArch64InstrAtomics.td"
