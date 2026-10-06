@@ -55,3 +55,22 @@ func.func @global_transpose_load_16xi6(%i : index, %j : index,
          : memref<128x32xi8, #gpu.address_space<global>> -> vector<16xi6>
   return %0 : vector<16xi6>
 }
+
+// -----
+
+// A negative stride makes the `index * stride` term wrap when computed as an
+// unsigned value, so `nuw` must not be requested even though the signed
+// address is correct and in bounds.
+
+// CHECK-LABEL: func @global_transpose_load_negative_stride
+func.func @global_transpose_load_negative_stride(%i : index, %j : index,
+    %src : memref<128x256xf16, strided<[256, -1], offset: 255>, #gpu.address_space<global>>)
+    -> vector<8xf16> {
+  // CHECK: llvm.mul %{{.*}}, %{{.*}} overflow<nsw> : i64
+  // CHECK-NOT: overflow<nsw, nuw>
+  // CHECK: llvm.getelementptr inbounds %{{.*}}[%{{.*}}]
+  // CHECK-NOT: inbounds|nuw
+  %0 = amdgpu.global_transpose_load %src[%i, %j]
+         : memref<128x256xf16, strided<[256, -1], offset: 255>, #gpu.address_space<global>> -> vector<8xf16>
+  return %0 : vector<8xf16>
+}
