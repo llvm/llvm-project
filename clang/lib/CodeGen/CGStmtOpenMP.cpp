@@ -74,15 +74,6 @@ static bool canEmitGPUFusedDistSchedule(const CodeGenModule &CGM,
          !S.getSingleClause<OMPOrderedClause>();
 }
 
-static bool canEmitGPUNoLoopKernel(CodeGenModule &CGM,
-                                   const OMPLoopDirective &S) {
-  const auto *D = dyn_cast<OMPTargetTeamsDistributeParallelForDirective>(&S);
-  return S.getLoopsNumber() == 1 &&
-         CGM.getOpenMPRuntime().canPromoteToNoLoop(S) &&
-         !S.getSingleClause<OMPScheduleClause>() &&
-         !S.getSingleClause<OMPDistScheduleClause>() && !(D && D->hasCancel());
-}
-
 namespace {
 /// Lexical scope for OpenMP executable constructs, that handles correct codegen
 /// for captured expressions.
@@ -3971,7 +3962,7 @@ emitInnerParallelForWhenCombined(CodeGenFunction &CGF,
     CodeGenFunction::OMPCancelStackRAII CancelRegion(CGF, EKind, HasCancel);
 
     CodeGenModule &CGM = CGF.CGM;
-    if (canEmitGPUNoLoopKernel(CGM, S)) {
+    if (CGM.getOpenMPRuntime().canPromoteToNoLoop()) {
       // Prepare the loop variables and their privatization.
       emitLoopIterationspaceVars(CGF, S);
       OMPLoopScope PreInitScope(CGF, S);
@@ -6600,7 +6591,7 @@ void CodeGenFunction::EmitOMPDistributeLoop(const OMPLoopDirective &S,
           !isOpenMPTeamsDirective(S.getDirectiveKind()))
         EmitOMPReductionClauseInit(S, LoopScope);
 
-      const bool NoLoopKernel = canEmitGPUNoLoopKernel(CGM, S);
+      const bool NoLoopKernel = CGM.getOpenMPRuntime().canPromoteToNoLoop();
       HasLastprivateClause = EmitOMPLastprivateClauseInit(S, LoopScope);
       EmitOMPPrivateLoopCounters(S, LoopScope);
       (void)LoopScope.Privatize();
