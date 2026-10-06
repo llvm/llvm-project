@@ -1056,6 +1056,11 @@ let DecoderNamespace = "MicroMips" in {
   def PAUSE_MM : MMRel, Barrier<"pause">, BARRIER_FM_MM<0x5>,
                  ISA_MICROMIPS;
 
+  def MFC0_MM : MFC3OP<"mfc0", GPR32Opnd, COP0Opnd>,
+                MFC0_FM_MM<0x0fc>, ISA_MICROMIPS32_NOT_MIPS32R6;
+  def MTC0_MM : MTC3OP<"mtc0", COP0Opnd, GPR32Opnd>,
+                MFC0_FM_MM<0x2fc>, ISA_MICROMIPS32_NOT_MIPS32R6;
+
   def TLBP_MM : MMRel, TLB<"tlbp">, COP0_TLB_FM_MM<0x0d>,
                 ISA_MICROMIPS;
   def TLBR_MM : MMRel, TLB<"tlbr">, COP0_TLB_FM_MM<0x4d>,
@@ -1292,6 +1297,12 @@ class UncondBranchMMPseudo<string opstr> :
 def B_MM_Pseudo : UncondBranchMMPseudo<"b">, ISA_MICROMIPS;
 
 let EncodingPredicates = [InMicroMips] in {
+  def : MipsInstAlias<"mfc0 $rt, $rd",
+                      (MFC0_MM GPR32Opnd:$rt, COP0Opnd:$rd, 0), 0>,
+        ISA_MICROMIPS32_NOT_MIPS32R6;
+  def : MipsInstAlias<"mtc0 $rt, $rd",
+                      (MTC0_MM COP0Opnd:$rd, GPR32Opnd:$rt, 0), 0>,
+        ISA_MICROMIPS32_NOT_MIPS32R6;
   def SDIV_MM_Pseudo : MultDivPseudo<SDIV_MM, ACC64, GPR32Opnd, MipsDivRem,
                                      0, 1, 1>, ISA_MIPS1_NOT_32R6_64R6;
   def UDIV_MM_Pseudo : MultDivPseudo<UDIV_MM, ACC64, GPR32Opnd, MipsDivRemU,
