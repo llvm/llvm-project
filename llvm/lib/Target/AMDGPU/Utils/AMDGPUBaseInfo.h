@@ -1774,6 +1774,11 @@ bool isIntrinsicSourceOfDivergence(unsigned IntrID);
 /// \returns true if the intrinsic is uniform
 bool isIntrinsicAlwaysUniform(unsigned IntrID);
 
+/// \returns the index of the f32 scale argument of a V_CVT_SCALEF32_*
+/// conversion to a narrow format, or std::nullopt for any other intrinsic.
+/// These instructions only read the exponent field of the scale.
+std::optional<unsigned> getCvtScaleF32ScaleArgIdx(unsigned IntrID);
+
 /// \returns a register class for the physical register \p Reg if it is a VGPR
 /// or nullptr otherwise.
 const MCRegisterClass *getVGPRPhysRegClass(MCRegister Reg,

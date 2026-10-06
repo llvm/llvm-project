@@ -613,6 +613,31 @@ bool GCNTTIImpl::simplifyDemandedLaneMaskArg(InstCombiner &IC,
   return false;
 }
 
+static bool isCvtScaleF32ScaleUse(const Use &U) {
+  auto *II = dyn_cast<IntrinsicInst>(U.getUser());
+  if (!II)
+    return false;
+  std::optional<unsigned> ScaleArgIdx =
+      AMDGPU::getCvtScaleF32ScaleArgIdx(II->getIntrinsicID());
+  return ScaleArgIdx && U.getOperandNo() == *ScaleArgIdx;
+}
+
+/// Simplify the integer bits behind the f32 scale operand of a
+/// V_CVT_SCALEF32_* conversion, of which only the exponent field is read.
+static bool simplifyDemandedCvtScaleArg(InstCombiner &IC, IntrinsicInst &II,
+                                        unsigned ScaleArgIdx) {
+  auto *BC = dyn_cast<BitCastInst>(II.getArgOperand(ScaleArgIdx));
+  if (!BC || !BC->getSrcTy()->isIntegerTy(32))
+    return false;
+  // Simplifying the bitcast source changes it for every user of the bitcast.
+  if (!all_of(BC->uses(), isCvtScaleF32ScaleUse))
+    return false;
+
+  APInt DemandedMask = APInt::getBitsSet(32, 23, 31);
+  KnownBits Known(32);
+  return IC.SimplifyDemandedBits(BC, 0, DemandedMask, Known);
+}
+
 static CallInst *rewriteCall(IRBuilderBase &B, CallInst &Old,
                              Function &NewCallee, ArrayRef<Value *> Ops) {
   SmallVector<OperandBundleDef, 2> OpBundles;
@@ -1178,6 +1203,13 @@ static Instruction *foldConstantIntoDotAccumulator(IntrinsicInst &II,
 std::optional<Instruction *>
 GCNTTIImpl::instCombineIntrinsic(InstCombiner &IC, IntrinsicInst &II) const {
   Intrinsic::ID IID = II.getIntrinsicID();
+  if (std::optional<unsigned> ScaleArgIdx =
+          AMDGPU::getCvtScaleF32ScaleArgIdx(IID)) {
+    if (simplifyDemandedCvtScaleArg(IC, II, *ScaleArgIdx))
+      return &II;
+    return std::nullopt;
+  }
+
   switch (IID) {
   case Intrinsic::amdgcn_implicitarg_ptr: {
     if (II.getFunction()->hasFnAttribute("amdgpu-no-implicitarg-ptr"))

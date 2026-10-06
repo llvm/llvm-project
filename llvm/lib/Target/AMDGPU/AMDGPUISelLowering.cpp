@@ -4288,6 +4288,29 @@ SDValue AMDGPUTargetLowering::performAssertSZExtCombine(SDNode *N,
   return SDValue();
 }
 
+/// V_CVT_SCALEF32_* conversions to a narrow format only read the exponent
+/// field of their f32 scale operand.
+static SDValue
+simplifyDemandedCvtScaleOperand(SDNode *N, unsigned OpIdx,
+                                TargetLowering::DAGCombinerInfo &DCI) {
+  SelectionDAG &DAG = DCI.DAG;
+  const TargetLowering &TLI = DAG.getTargetLoweringInfo();
+  SDValue Scale = N->getOperand(OpIdx);
+  APInt Demanded = APInt::getBitsSet(32, 23, 31);
+
+  if (SDValue DemandedScale =
+          TLI.SimplifyMultipleUseDemandedBits(Scale, Demanded, DAG)) {
+    SmallVector<SDValue> Ops(N->ops());
+    Ops[OpIdx] = DemandedScale;
+    return DAG.getNode(ISD::INTRINSIC_WO_CHAIN, SDLoc(N), N->getVTList(), Ops);
+  }
+
+  if (TLI.SimplifyDemandedBits(Scale, Demanded, DCI))
+    return SDValue(N, 0);
+
+  return SDValue();
+}
+
 SDValue AMDGPUTargetLowering::performIntrinsicWOChainCombine(
   SDNode *N, DAGCombinerInfo &DCI) const {
   unsigned IID = N->getConstantOperandVal(0);
@@ -4320,6 +4343,10 @@ SDValue AMDGPUTargetLowering::performIntrinsicWOChainCombine(
                    0);
   }
   default:
+    // Operand 0 is the intrinsic ID.
+    if (std::optional<unsigned> ScaleArgIdx =
+            AMDGPU::getCvtScaleF32ScaleArgIdx(IID))
+      return simplifyDemandedCvtScaleOperand(N, *ScaleArgIdx + 1, DCI);
     return SDValue();
   }
 }
