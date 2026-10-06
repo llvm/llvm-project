@@ -339,3 +339,143 @@ define i64 @sign_extend_inreg_isdef32(i64) {
   %6 = zext i32 %5 to i64
   ret i64 %6
 }
+
+define i64 @shl1_sext_i32(i32 %val) nounwind {
+; CHECK-LABEL: shl1_sext_i32:
+; CHECK:       ; %bb.0:
+; CHECK-NEXT:    ; kill: def $w0 killed $w0 def $x0
+; CHECK-NEXT:    sbfiz x0, x0, #1, #31
+; CHECK-NEXT:    ret
+  %1 = shl i32 %val, 1
+  %2 = sext i32 %1 to i64
+  ret i64 %2
+}
+
+define i64 @shl31_sext_i32(i32 %val) nounwind {
+; CHECK-LABEL: shl31_sext_i32:
+; CHECK:       ; %bb.0:
+; CHECK-NEXT:    ; kill: def $w0 killed $w0 def $x0
+; CHECK-NEXT:    sbfiz x0, x0, #31, #1
+; CHECK-NEXT:    ret
+  %1 = shl i32 %val, 31
+  %2 = sext i32 %1 to i64
+  ret i64 %2
+}
+
+define i64 @sext_shl1_sext_i8(i8 %val) nounwind {
+; CHECK-LABEL: sext_shl1_sext_i8:
+; CHECK:       ; %bb.0:
+; CHECK-NEXT:    ; kill: def $w0 killed $w0 def $x0
+; CHECK-NEXT:    sbfiz x0, x0, #1, #8
+; CHECK-NEXT:    ret
+  %1 = sext i8 %val to i32
+  %2 = shl i32 %1, 1
+  %3 = sext i32 %2 to i64
+  ret i64 %3
+}
+
+define i64 @sext_shl31_sext_i8(i8 %val) nounwind {
+; CHECK-LABEL: sext_shl31_sext_i8:
+; CHECK:       ; %bb.0:
+; CHECK-NEXT:    ; kill: def $w0 killed $w0 def $x0
+; CHECK-NEXT:    sbfiz x0, x0, #31, #1
+; CHECK-NEXT:    ret
+  %1 = sext i8 %val to i32
+  %2 = shl i32 %1, 31
+  %3 = sext i32 %2 to i64
+  ret i64 %3
+}
+
+define i64 @sext_shl1_sext_i16(i16 %val) nounwind {
+; CHECK-LABEL: sext_shl1_sext_i16:
+; CHECK:       ; %bb.0:
+; CHECK-NEXT:    ; kill: def $w0 killed $w0 def $x0
+; CHECK-NEXT:    sbfiz x0, x0, #1, #16
+; CHECK-NEXT:    ret
+  %1 = sext i16 %val to i32
+  %2 = shl i32 %1, 1
+  %3 = sext i32 %2 to i64
+  ret i64 %3
+}
+
+define i64 @sext_shl31_sext_i16(i16 %val) nounwind {
+; CHECK-LABEL: sext_shl31_sext_i16:
+; CHECK:       ; %bb.0:
+; CHECK-NEXT:    ; kill: def $w0 killed $w0 def $x0
+; CHECK-NEXT:    sbfiz x0, x0, #31, #1
+; CHECK-NEXT:    ret
+  %1 = sext i16 %val to i32
+  %2 = shl i32 %1, 31
+  %3 = sext i32 %2 to i64
+  ret i64 %3
+}
+
+define i64 @ashr1_sext_i32(i32 %val) nounwind {
+; CHECK-LABEL: ashr1_sext_i32:
+; CHECK:       ; %bb.0:
+; CHECK-NEXT:    ; kill: def $w0 killed $w0 def $x0
+; CHECK-NEXT:    sbfx x0, x0, #1, #31
+; CHECK-NEXT:    ret
+  %1 = ashr i32 %val, 1
+  %2 = sext i32 %1 to i64
+  ret i64 %2
+}
+
+define i64 @ashr31_sext_i32(i32 %val) nounwind {
+; CHECK-LABEL: ashr31_sext_i32:
+; CHECK:       ; %bb.0:
+; CHECK-NEXT:    ; kill: def $w0 killed $w0 def $x0
+; CHECK-NEXT:    sbfx x0, x0, #31, #1
+; CHECK-NEXT:    ret
+  %1 = ashr i32 %val, 31
+  %2 = sext i32 %1 to i64
+  ret i64 %2
+}
+
+define i64 @sext_ashr1_sext_i8(i8 %val) nounwind {
+; CHECK-LABEL: sext_ashr1_sext_i8:
+; CHECK:       ; %bb.0:
+; CHECK-NEXT:    ; kill: def $w0 killed $w0 def $x0
+; CHECK-NEXT:    sbfx x0, x0, #1, #7
+; CHECK-NEXT:    ret
+  %1 = sext i8 %val to i32
+  %2 = ashr i32 %1, 1
+  %3 = sext i32 %2 to i64
+  ret i64 %3
+}
+
+define i64 @sext_ashr7_sext_i8(i8 %val) nounwind {
+; CHECK-LABEL: sext_ashr7_sext_i8:
+; CHECK:       ; %bb.0:
+; CHECK-NEXT:    ; kill: def $w0 killed $w0 def $x0
+; CHECK-NEXT:    sbfx x0, x0, #7, #1
+; CHECK-NEXT:    ret
+  %1 = sext i8 %val to i32
+  %2 = ashr i32 %1, 7
+  %3 = sext i32 %2 to i64
+  ret i64 %3
+}
+
+define i64 @sext_ashr1_sext_i16(i16 %val) nounwind {
+; CHECK-LABEL: sext_ashr1_sext_i16:
+; CHECK:       ; %bb.0:
+; CHECK-NEXT:    ; kill: def $w0 killed $w0 def $x0
+; CHECK-NEXT:    sbfx x0, x0, #1, #15
+; CHECK-NEXT:    ret
+  %1 = sext i16 %val to i32
+  %2 = ashr i32 %1, 1
+  %3 = sext i32 %2 to i64
+  ret i64 %3
+}
+
+define i64 @sext_ashr15_sext_i16(i16 %val) nounwind {
+; CHECK-LABEL: sext_ashr15_sext_i16:
+; CHECK:       ; %bb.0:
+; CHECK-NEXT:    ; kill: def $w0 killed $w0 def $x0
+; CHECK-NEXT:    sbfx x0, x0, #15, #1
+; CHECK-NEXT:    ret
+  %1 = sext i16 %val to i32
+  %2 = ashr i32 %1, 15
+  %3 = sext i32 %2 to i64
+  ret i64 %3
+}

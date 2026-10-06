@@ -86,9 +86,7 @@ public:
   SPIRVEnvType getEnv() const { return Env; }
   bool isKernel() const { return getEnv() == Kernel; }
   bool isShader() const { return getEnv() == Shader; }
-  bool isLogicalSPIRV() const {
-    return TargetTriple.getArch() == Triple::spirv;
-  }
+  bool isLogicalSPIRV() const { return TargetTriple.isSPIRVLogical(); }
   bool isPhysicalSPIRV() const {
     return TargetTriple.getArch() == Triple::spirv32 ||
            TargetTriple.getArch() == Triple::spirv64;

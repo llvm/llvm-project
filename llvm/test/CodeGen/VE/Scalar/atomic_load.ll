@@ -170,7 +170,7 @@ define i64 @_Z23atomic_load_relaxed_u64RNSt3__16atomicImEE(ptr nocapture nonnull
 ; Function Attrs: nofree nounwind mustprogress
 define i128 @_Z24atomic_load_relaxed_i128RNSt3__16atomicInEE(ptr nonnull align 16 dereferenceable(16) %0) {
 ; CHECK-LABEL: _Z24atomic_load_relaxed_i128RNSt3__16atomicInEE:
-; CHECK:       .LBB{{[0-9]+}}_2:
+; CHECK:       .LBB{{[0-9]+}}_1:
 ; CHECK-NEXT:    or %s1, 0, %s0
 ; CHECK-NEXT:    lea %s0, __atomic_load@lo
 ; CHECK-NEXT:    and %s0, %s0, (32)0
@@ -193,7 +193,7 @@ define i128 @_Z24atomic_load_relaxed_i128RNSt3__16atomicInEE(ptr nonnull align 1
 ; Function Attrs: nofree nounwind mustprogress
 define i128 @_Z24atomic_load_relaxed_u128RNSt3__16atomicIoEE(ptr nonnull align 16 dereferenceable(16) %0) {
 ; CHECK-LABEL: _Z24atomic_load_relaxed_u128RNSt3__16atomicIoEE:
-; CHECK:       .LBB{{[0-9]+}}_2:
+; CHECK:       .LBB{{[0-9]+}}_1:
 ; CHECK-NEXT:    or %s1, 0, %s0
 ; CHECK-NEXT:    lea %s0, __atomic_load@lo
 ; CHECK-NEXT:    and %s0, %s0, (32)0
@@ -318,7 +318,7 @@ define i64 @_Z23atomic_load_acquire_u64RNSt3__16atomicImEE(ptr nocapture nonnull
 ; Function Attrs: nofree nounwind mustprogress
 define i128 @_Z24atomic_load_acquire_i128RNSt3__16atomicInEE(ptr nonnull align 16 dereferenceable(16) %0) {
 ; CHECK-LABEL: _Z24atomic_load_acquire_i128RNSt3__16atomicInEE:
-; CHECK:       .LBB{{[0-9]+}}_2:
+; CHECK:       .LBB{{[0-9]+}}_1:
 ; CHECK-NEXT:    or %s1, 0, %s0
 ; CHECK-NEXT:    lea %s0, __atomic_load@lo
 ; CHECK-NEXT:    and %s0, %s0, (32)0
@@ -341,7 +341,7 @@ define i128 @_Z24atomic_load_acquire_i128RNSt3__16atomicInEE(ptr nonnull align 1
 ; Function Attrs: nofree nounwind mustprogress
 define i128 @_Z24atomic_load_acquire_u128RNSt3__16atomicIoEE(ptr nonnull align 16 dereferenceable(16) %0) {
 ; CHECK-LABEL: _Z24atomic_load_acquire_u128RNSt3__16atomicIoEE:
-; CHECK:       .LBB{{[0-9]+}}_2:
+; CHECK:       .LBB{{[0-9]+}}_1:
 ; CHECK-NEXT:    or %s1, 0, %s0
 ; CHECK-NEXT:    lea %s0, __atomic_load@lo
 ; CHECK-NEXT:    and %s0, %s0, (32)0
@@ -466,7 +466,7 @@ define i64 @_Z23atomic_load_seq_cst_u64RNSt3__16atomicImEE(ptr nocapture nonnull
 ; Function Attrs: nofree nounwind mustprogress
 define i128 @_Z24atomic_load_seq_cst_i128RNSt3__16atomicInEE(ptr nonnull align 16 dereferenceable(16) %0) {
 ; CHECK-LABEL: _Z24atomic_load_seq_cst_i128RNSt3__16atomicInEE:
-; CHECK:       .LBB{{[0-9]+}}_2:
+; CHECK:       .LBB{{[0-9]+}}_1:
 ; CHECK-NEXT:    or %s1, 0, %s0
 ; CHECK-NEXT:    lea %s0, __atomic_load@lo
 ; CHECK-NEXT:    and %s0, %s0, (32)0
@@ -489,7 +489,7 @@ define i128 @_Z24atomic_load_seq_cst_i128RNSt3__16atomicInEE(ptr nonnull align 1
 ; Function Attrs: nofree nounwind mustprogress
 define i128 @_Z24atomic_load_seq_cst_u128RNSt3__16atomicIoEE(ptr nonnull align 16 dereferenceable(16) %0) {
 ; CHECK-LABEL: _Z24atomic_load_seq_cst_u128RNSt3__16atomicIoEE:
-; CHECK:       .LBB{{[0-9]+}}_2:
+; CHECK:       .LBB{{[0-9]+}}_1:
 ; CHECK-NEXT:    or %s1, 0, %s0
 ; CHECK-NEXT:    lea %s0, __atomic_load@lo
 ; CHECK-NEXT:    and %s0, %s0, (32)0
@@ -512,7 +512,7 @@ define i128 @_Z24atomic_load_seq_cst_u128RNSt3__16atomicIoEE(ptr nonnull align 1
 ; Function Attrs: mustprogress
 define zeroext i1 @_Z26atomic_load_relaxed_stk_i1v() {
 ; CHECK-LABEL: _Z26atomic_load_relaxed_stk_i1v:
-; CHECK:       .LBB{{[0-9]+}}_2:
+; CHECK:       .LBB{{[0-9]+}}_1:
 ; CHECK-NEXT:    lea %s0, _Z6fun_i1RNSt3__16atomicIbEE@lo
 ; CHECK-NEXT:    and %s0, %s0, (32)0
 ; CHECK-NEXT:    lea.sl %s12, _Z6fun_i1RNSt3__16atomicIbEE@hi(, %s0)
@@ -542,7 +542,7 @@ declare void @llvm.lifetime.end.p0(i64 immarg, ptr nocapture)
 ; Function Attrs: mustprogress
 define signext i8 @_Z26atomic_load_relaxed_stk_i8v() {
 ; CHECK-LABEL: _Z26atomic_load_relaxed_stk_i8v:
-; CHECK:       .LBB{{[0-9]+}}_2:
+; CHECK:       .LBB{{[0-9]+}}_1:
 ; CHECK-NEXT:    lea %s0, _Z6fun_i8RNSt3__16atomicIcEE@lo
 ; CHECK-NEXT:    and %s0, %s0, (32)0
 ; CHECK-NEXT:    lea.sl %s12, _Z6fun_i8RNSt3__16atomicIcEE@hi(, %s0)
@@ -563,7 +563,7 @@ declare void @_Z6fun_i8RNSt3__16atomicIcEE(ptr nonnull align 1 dereferenceable(1
 ; Function Attrs: mustprogress
 define zeroext i8 @_Z26atomic_load_relaxed_stk_u8v() {
 ; CHECK-LABEL: _Z26atomic_load_relaxed_stk_u8v:
-; CHECK:       .LBB{{[0-9]+}}_2:
+; CHECK:       .LBB{{[0-9]+}}_1:
 ; CHECK-NEXT:    lea %s0, _Z6fun_u8RNSt3__16atomicIhEE@lo
 ; CHECK-NEXT:    and %s0, %s0, (32)0
 ; CHECK-NEXT:    lea.sl %s12, _Z6fun_u8RNSt3__16atomicIhEE@hi(, %s0)
@@ -584,7 +584,7 @@ declare void @_Z6fun_u8RNSt3__16atomicIhEE(ptr nonnull align 1 dereferenceable(1
 ; Function Attrs: mustprogress
 define signext i16 @_Z27atomic_load_relaxed_stk_i16v() {
 ; CHECK-LABEL: _Z27atomic_load_relaxed_stk_i16v:
-; CHECK:       .LBB{{[0-9]+}}_2:
+; CHECK:       .LBB{{[0-9]+}}_1:
 ; CHECK-NEXT:    lea %s0, _Z7fun_i16RNSt3__16atomicIsEE@lo
 ; CHECK-NEXT:    and %s0, %s0, (32)0
 ; CHECK-NEXT:    lea.sl %s12, _Z7fun_i16RNSt3__16atomicIsEE@hi(, %s0)
@@ -605,7 +605,7 @@ declare void @_Z7fun_i16RNSt3__16atomicIsEE(ptr nonnull align 2 dereferenceable(
 ; Function Attrs: mustprogress
 define zeroext i16 @_Z27atomic_load_relaxed_stk_u16v() {
 ; CHECK-LABEL: _Z27atomic_load_relaxed_stk_u16v:
-; CHECK:       .LBB{{[0-9]+}}_2:
+; CHECK:       .LBB{{[0-9]+}}_1:
 ; CHECK-NEXT:    lea %s0, _Z7fun_u16RNSt3__16atomicItEE@lo
 ; CHECK-NEXT:    and %s0, %s0, (32)0
 ; CHECK-NEXT:    lea.sl %s12, _Z7fun_u16RNSt3__16atomicItEE@hi(, %s0)
@@ -626,7 +626,7 @@ declare void @_Z7fun_u16RNSt3__16atomicItEE(ptr nonnull align 2 dereferenceable(
 ; Function Attrs: mustprogress
 define signext i32 @_Z27atomic_load_relaxed_stk_i32v() {
 ; CHECK-LABEL: _Z27atomic_load_relaxed_stk_i32v:
-; CHECK:       .LBB{{[0-9]+}}_2:
+; CHECK:       .LBB{{[0-9]+}}_1:
 ; CHECK-NEXT:    lea %s0, _Z7fun_i32RNSt3__16atomicIiEE@lo
 ; CHECK-NEXT:    and %s0, %s0, (32)0
 ; CHECK-NEXT:    lea.sl %s12, _Z7fun_i32RNSt3__16atomicIiEE@hi(, %s0)
@@ -647,7 +647,7 @@ declare void @_Z7fun_i32RNSt3__16atomicIiEE(ptr nonnull align 4 dereferenceable(
 ; Function Attrs: mustprogress
 define zeroext i32 @_Z27atomic_load_relaxed_stk_u32v() {
 ; CHECK-LABEL: _Z27atomic_load_relaxed_stk_u32v:
-; CHECK:       .LBB{{[0-9]+}}_2:
+; CHECK:       .LBB{{[0-9]+}}_1:
 ; CHECK-NEXT:    lea %s0, _Z7fun_u32RNSt3__16atomicIjEE@lo
 ; CHECK-NEXT:    and %s0, %s0, (32)0
 ; CHECK-NEXT:    lea.sl %s12, _Z7fun_u32RNSt3__16atomicIjEE@hi(, %s0)
@@ -668,7 +668,7 @@ declare void @_Z7fun_u32RNSt3__16atomicIjEE(ptr nonnull align 4 dereferenceable(
 ; Function Attrs: mustprogress
 define i64 @_Z27atomic_load_relaxed_stk_i64v() {
 ; CHECK-LABEL: _Z27atomic_load_relaxed_stk_i64v:
-; CHECK:       .LBB{{[0-9]+}}_2:
+; CHECK:       .LBB{{[0-9]+}}_1:
 ; CHECK-NEXT:    lea %s0, _Z7fun_i64RNSt3__16atomicIlEE@lo
 ; CHECK-NEXT:    and %s0, %s0, (32)0
 ; CHECK-NEXT:    lea.sl %s12, _Z7fun_i64RNSt3__16atomicIlEE@hi(, %s0)
@@ -689,7 +689,7 @@ declare void @_Z7fun_i64RNSt3__16atomicIlEE(ptr nonnull align 8 dereferenceable(
 ; Function Attrs: mustprogress
 define i64 @_Z27atomic_load_relaxed_stk_u64v() {
 ; CHECK-LABEL: _Z27atomic_load_relaxed_stk_u64v:
-; CHECK:       .LBB{{[0-9]+}}_2:
+; CHECK:       .LBB{{[0-9]+}}_1:
 ; CHECK-NEXT:    lea %s0, _Z7fun_u64RNSt3__16atomicImEE@lo
 ; CHECK-NEXT:    and %s0, %s0, (32)0
 ; CHECK-NEXT:    lea.sl %s12, _Z7fun_u64RNSt3__16atomicImEE@hi(, %s0)
@@ -710,7 +710,7 @@ declare void @_Z7fun_u64RNSt3__16atomicImEE(ptr nonnull align 8 dereferenceable(
 ; Function Attrs: mustprogress
 define i128 @_Z28atomic_load_relaxed_stk_i128v() {
 ; CHECK-LABEL: _Z28atomic_load_relaxed_stk_i128v:
-; CHECK:       .LBB{{[0-9]+}}_2:
+; CHECK:       .LBB{{[0-9]+}}_1:
 ; CHECK-NEXT:    lea %s0, _Z8fun_i128RNSt3__16atomicInEE@lo
 ; CHECK-NEXT:    and %s0, %s0, (32)0
 ; CHECK-NEXT:    lea.sl %s12, _Z8fun_i128RNSt3__16atomicInEE@hi(, %s0)
@@ -744,7 +744,7 @@ declare void @_Z8fun_i128RNSt3__16atomicInEE(ptr nonnull align 16 dereferenceabl
 ; Function Attrs: mustprogress
 define i128 @_Z28atomic_load_relaxed_stk_u128v() {
 ; CHECK-LABEL: _Z28atomic_load_relaxed_stk_u128v:
-; CHECK:       .LBB{{[0-9]+}}_2:
+; CHECK:       .LBB{{[0-9]+}}_1:
 ; CHECK-NEXT:    lea %s0, _Z8fun_u128RNSt3__16atomicIoEE@lo
 ; CHECK-NEXT:    and %s0, %s0, (32)0
 ; CHECK-NEXT:    lea.sl %s12, _Z8fun_u128RNSt3__16atomicIoEE@hi(, %s0)
@@ -898,7 +898,7 @@ define i64 @_Z26atomic_load_relaxed_gv_u64v() {
 ; Function Attrs: nofree nounwind mustprogress
 define i128 @_Z27atomic_load_relaxed_gv_i128v() {
 ; CHECK-LABEL: _Z27atomic_load_relaxed_gv_i128v:
-; CHECK:       .LBB{{[0-9]+}}_2:
+; CHECK:       .LBB{{[0-9]+}}_1:
 ; CHECK-NEXT:    lea %s0, __atomic_load@lo
 ; CHECK-NEXT:    and %s0, %s0, (32)0
 ; CHECK-NEXT:    lea.sl %s12, __atomic_load@hi(, %s0)
@@ -923,7 +923,7 @@ define i128 @_Z27atomic_load_relaxed_gv_i128v() {
 ; Function Attrs: nofree nounwind mustprogress
 define i128 @_Z27atomic_load_relaxed_gv_u128v() {
 ; CHECK-LABEL: _Z27atomic_load_relaxed_gv_u128v:
-; CHECK:       .LBB{{[0-9]+}}_2:
+; CHECK:       .LBB{{[0-9]+}}_1:
 ; CHECK-NEXT:    lea %s0, __atomic_load@lo
 ; CHECK-NEXT:    and %s0, %s0, (32)0
 ; CHECK-NEXT:    lea.sl %s12, __atomic_load@hi(, %s0)

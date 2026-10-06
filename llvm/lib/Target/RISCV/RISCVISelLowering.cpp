@@ -2161,6 +2161,10 @@ MVT RISCVTargetLowering::getVPExplicitVectorLengthTy() const {
   return Subtarget.getXLenVT();
 }
 
+bool RISCVTargetLowering::isProfitableToFoldVScaleAdd(SDValue N) const {
+  return N.hasOneUse();
+}
+
 // Return false if we can lower get_vector_length to a vsetvli intrinsic.
 bool RISCVTargetLowering::shouldExpandGetVectorLength(EVT TripCountVT,
                                                       unsigned VF,
@@ -6924,6 +6928,46 @@ SDValue RISCVTargetLowering::lowerVECTOR_SHUFFLE(SDValue Op,
       NumElts != 2)
     return DAG.getNode(ISD::VECTOR_REVERSE, DL, VT, V1);
 
+  // Try using vunzip{e,o} from Zvzip to lower deinterleave2.
+  unsigned Index = 0;
+  if (Subtarget.hasStdExtZvzip() &&
+      ShuffleVectorInst::isDeInterleaveMaskOfFactor(Mask, 2, Index) &&
+      1 < count_if(Mask, [](int Idx) { return Idx != -1; })) {
+    bool UsesBothSources =
+        1 < count_if(Mask,
+                     [&Mask](int Idx) { return Idx < (int)Mask.size(); }) &&
+        1 < count_if(Mask,
+                     [&Mask](int Idx) { return Idx >= (int)Mask.size(); });
+
+    unsigned Opc = Index == 0 ? RISCVISD::VUNZIPE_VL : RISCVISD::VUNZIPO_VL;
+    if (isLegalVTForZvzipDeinterleavedOperand(VT, Subtarget)) {
+      MVT NewVT = VT.getDoubleNumVectorElementsVT();
+      if (isTypeLegal(NewVT)) {
+        SDValue Op;
+        if (V2.isUndef()) {
+          Op = DAG.getNode(ISD::CONCAT_VECTORS, DL, NewVT, V1, V2);
+        } else if (auto VLEN = Subtarget.getRealVLen();
+                   VLEN && VT.getSizeInBits().getKnownMinValue() % *VLEN == 0) {
+          Op = DAG.getNode(ISD::CONCAT_VECTORS, DL, NewVT, V1, V2);
+        } else if (SDValue Src = foldConcatVector(V1, V2)) {
+          Op = DAG.getExtractSubvector(DL, NewVT, Src, 0);
+        }
+        if (Op)
+          return lowerZvzipVUNZIP(Opc, Op, DL, DAG, Subtarget);
+      }
+    }
+
+    MVT HalfVT = VT.getHalfNumVectorElementsVT();
+    if (UsesBothSources &&
+        isLegalVTForZvzipDeinterleavedOperand(HalfVT, Subtarget) &&
+        V1.getSimpleValueType().getVectorMinNumElements() >= 2 &&
+        V2.getSimpleValueType().getVectorMinNumElements() >= 2) {
+      SDValue Lo = lowerZvzipVUNZIP(Opc, V1, DL, DAG, Subtarget);
+      SDValue Hi = lowerZvzipVUNZIP(Opc, V2, DL, DAG, Subtarget);
+      return DAG.getNode(ISD::CONCAT_VECTORS, DL, VT, Lo, Hi);
+    }
+  }
+
   // If this is a deinterleave(2,4,8) and we can widen the vector, then we can
   // use shift and truncate to perform the shuffle.
   // TODO: For Factor=6, we can perform the first step of the deinterleave via
@@ -6966,47 +7010,6 @@ SDValue RISCVTargetLowering::lowerVECTOR_SHUFFLE(SDValue Op,
           return DAG.getInsertSubvector(DL, Vec, Concat, 0);
         }
       }
-    }
-  }
-
-  // If this is a deinterleave(2), try using vunzip{e,o}. This mostly catches
-  // e64 which can't match above.
-  unsigned Index = 0;
-  if (Subtarget.hasStdExtZvzip() &&
-      ShuffleVectorInst::isDeInterleaveMaskOfFactor(Mask, 2, Index) &&
-      1 < count_if(Mask, [](int Idx) { return Idx != -1; })) {
-    bool UsesBothSources =
-        1 < count_if(Mask,
-                     [&Mask](int Idx) { return Idx < (int)Mask.size(); }) &&
-        1 < count_if(Mask,
-                     [&Mask](int Idx) { return Idx >= (int)Mask.size(); });
-
-    unsigned Opc = Index == 0 ? RISCVISD::VUNZIPE_VL : RISCVISD::VUNZIPO_VL;
-    if (isLegalVTForZvzipDeinterleavedOperand(VT, Subtarget)) {
-      MVT NewVT = VT.getDoubleNumVectorElementsVT();
-      if (isTypeLegal(NewVT)) {
-        SDValue Op;
-        if (V2.isUndef()) {
-          Op = DAG.getNode(ISD::CONCAT_VECTORS, DL, NewVT, V1, V2);
-        } else if (auto VLEN = Subtarget.getRealVLen();
-                   VLEN && VT.getSizeInBits().getKnownMinValue() % *VLEN == 0) {
-          Op = DAG.getNode(ISD::CONCAT_VECTORS, DL, NewVT, V1, V2);
-        } else if (SDValue Src = foldConcatVector(V1, V2)) {
-          Op = DAG.getExtractSubvector(DL, NewVT, Src, 0);
-        }
-        if (Op)
-          return lowerZvzipVUNZIP(Opc, Op, DL, DAG, Subtarget);
-      }
-    }
-
-    MVT HalfVT = VT.getHalfNumVectorElementsVT();
-    if (UsesBothSources &&
-        isLegalVTForZvzipDeinterleavedOperand(HalfVT, Subtarget) &&
-        V1.getSimpleValueType().getVectorMinNumElements() >= 2 &&
-        V2.getSimpleValueType().getVectorMinNumElements() >= 2) {
-      SDValue Lo = lowerZvzipVUNZIP(Opc, V1, DL, DAG, Subtarget);
-      SDValue Hi = lowerZvzipVUNZIP(Opc, V2, DL, DAG, Subtarget);
-      return DAG.getNode(ISD::CONCAT_VECTORS, DL, VT, Lo, Hi);
     }
   }
 
@@ -10486,8 +10489,15 @@ static SDValue lowerSelectToBinOp(SDNode *N, SelectionDAG &DAG,
           return DAG.getNode(RISCVISD::QC_MULIADD, DL, VT, CondV, CondV,
                              DAG.getSignedTargetConstant(MulImm - 1, DL, VT));
 
+        // (select c, (1 << ShAmount), 0) -> c << ShAmount
+        uint64_t TrueVal = TrueC->getZExtValue();
+        if (isPowerOf2_64(TrueVal))
+          return DAG.getNode(
+              ISD::SHL, DL, VT, CondV,
+              DAG.getShiftAmountConstant(Log2_64(TrueVal), VT, DL));
+
         // (select c, (1 << ShAmount) + 1, 0) -> (c << ShAmount) + c
-        uint64_t TrueM1 = TrueC->getZExtValue() - 1;
+        uint64_t TrueM1 = TrueVal - 1;
         if (isPowerOf2_64(TrueM1)) {
           unsigned ShAmount = Log2_64(TrueM1);
           if (Subtarget.hasShlAdd(ShAmount))
@@ -27102,7 +27112,7 @@ static MachineBasicBlock *emitQuietFCMP(MachineInstr &MI, MachineBasicBlock *BB,
 
   // Restore the FFLAGS.
   BuildMI(*BB, MI, DL, TII.get(RISCV::WriteFFLAGS))
-      .addReg(SavedFFlags, RegState::Kill);
+      .addReg(SavedFFlags);
 
   // Issue a dummy FEQ opcode to raise exception for signaling NaNs.
   auto MIB2 = BuildMI(*BB, MI, DL, TII.get(EqOpcode), RISCV::X0)
@@ -27259,7 +27269,7 @@ static MachineBasicBlock *emitSelectPseudo(MachineInstr &MI,
       MI.getOperand(1).isReg() && MI.getOperand(2).isReg() &&
       Next != BB->end() && Next->getOpcode() == MI.getOpcode() &&
       Next->getOperand(5).getReg() == MI.getOperand(0).getReg() &&
-      Next->getOperand(5).isKill())
+      BB->getParent()->getRegInfo().hasOneNonDBGUse(MI.getOperand(0).getReg()))
     return EmitLoweredCascadedSelect(MI, *Next, BB, Subtarget);
 
   Register LHS = MI.getOperand(1).getReg();
@@ -27442,7 +27452,7 @@ static MachineBasicBlock *emitVFROUND_NOEXCEPT_MASK(MachineInstr &MI,
 
   // Restore FFLAGS.
   BuildMI(*BB, MI, DL, TII.get(RISCV::WriteFFLAGS))
-      .addReg(SavedFFLAGS, RegState::Kill);
+      .addReg(SavedFFLAGS);
 
   // Erase the pseudoinstruction.
   MI.eraseFromParent();
