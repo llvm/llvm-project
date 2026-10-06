@@ -25,8 +25,8 @@
 # RELAX-NEXT:              nop
 # RELAX-NEXT:              nop
 ## offset = .plt(0x10400)+32 - 0x10010 = 1040
-# RELAX-NEXT:      10010:  bl     1040 <bar+0x10420>
-# RELAX-NEXT:              b      1036 <bar+0x10420>
+# RELAX-NEXT:      10010:  bl     1040 <_start_end+0x404>
+# RELAX-NEXT:              b      1036 <_start_end+0x404>
 # RELAX-EMPTY:
 # RELAX-NEXT: <a>:
 # RELAX-NEXT:      10018:  ret

@@ -5,33 +5,28 @@
 ## to reproduce the original failure.
 
 ## Two empty sections, one with symbol in, one without.
-# RUN: yaml2obj %s --docnum=1 -o %t1 -D SIZE1=0 -D SIZE2=0 -D SECTION=.second -D INDEX=SHN_ABS
+# RUN: yaml2obj %s --docnum=1 -o %t1 -D SIZE1=0 -D SIZE2=0 -D SECTION=.second -D INDEX=SHN_ABS -D VALUE=0x5
 # RUN: llvm-objdump -d %t1 | FileCheck %s --check-prefix=TARGET
-# RUN: yaml2obj %s --docnum=1 -o %t2 -D SIZE1=0 -D SIZE2=0 -D SECTION=.first -D INDEX=SHN_ABS
+# RUN: yaml2obj %s --docnum=1 -o %t2 -D SIZE1=0 -D SIZE2=0 -D SECTION=.first -D INDEX=SHN_ABS -D VALUE=0x5
 # RUN: llvm-objdump -d %t2 | FileCheck %s --check-prefix=TARGET
 
 ## Two sections, one empty with symbol, other non-empty, without symbol.
-# RUN: yaml2obj %s --docnum=1 -o %t3 -D SIZE1=1 -D SIZE2=0 -D SECTION=.second -D INDEX=SHN_ABS
+# RUN: yaml2obj %s --docnum=1 -o %t3 -D SIZE1=1 -D SIZE2=0 -D SECTION=.second -D INDEX=SHN_ABS -D VALUE=0x5
 # RUN: llvm-objdump -d %t3 | FileCheck %s --check-prefix=TARGET
-# RUN: yaml2obj %s --docnum=1 -o %t4 -D SIZE1=0 -D SIZE2=1 -D SECTION=.first -D INDEX=SHN_ABS
+# RUN: yaml2obj %s --docnum=1 -o %t4 -D SIZE1=0 -D SIZE2=1 -D SECTION=.first -D INDEX=SHN_ABS -D VALUE=0x5
 # RUN: llvm-objdump -d %t4 | FileCheck %s --check-prefix=TARGET
 
-## Fall back to absolute symbol if no symbol found in candidate sections.
-# RUN: yaml2obj %s --docnum=1 -o %t5 -D SIZE1=1 -D SIZE2=0 -D SECTION=.caller -D INDEX=SHN_ABS
+## Fall back to absolute symbols if no symbol found in candidate sections.
+# RUN: llvm-objcopy -N foo --add-symbol absol=0 %p/../ELF/Inputs/call-absolute-symbol.elf-x86_64 %t5
 # RUN: llvm-objdump -d %t5 | FileCheck %s --check-prefix=ABSOLUTE
 
-## Show that other symbols with reserved st_shndx values are treated as absolute
-## symbols.
-# RUN: yaml2obj %s --docnum=1 -o %t6 -D SIZE1=1 -D SIZE2=0 -D SECTION=.caller -D INDEX=SHN_LOPROC
-# RUN: llvm-objdump -d %t6 | FileCheck %s --check-prefix=ABSOLUTE
-
 ## Print no target if no symbol in section/absolute symbol found.
-# RUN: llvm-objcopy %t5 %t7 -N other
-# RUN: llvm-objdump -d %t7 | FileCheck %s --check-prefix=FAIL
+# RUN: llvm-objcopy %p/../ELF/Inputs/call-absolute-symbol.elf-x86_64 %t6 -N foo
+# RUN: llvm-objdump -d %t6 | FileCheck %s --check-prefix=FAIL
 
 # TARGET:   callq 0x5 <target>
-# ABSOLUTE: callq 0x5 <other+0x5>
-# FAIL:     callq 0x5{{$}}
+# ABSOLUTE: callq 0x100 <absol+0x100>
+# FAIL:     callq 0x100{{$}}
 
 --- !ELF
 FileHeader:
@@ -58,7 +53,7 @@ Sections:
 Symbols:
   - Name:    target
     Section: [[SECTION]]
-    Value:   0x5
+    Value:   [[VALUE]]
   - Name:    other
     Index:   [[INDEX]]
     Value:   0x0
