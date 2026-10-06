@@ -14,6 +14,11 @@ struct Outer {
   int b;
 };
 
+struct Outer2 {
+  int Outer::*m[2];
+  int b;
+};
+
 // Arrays of pointer-to-data-member should be all -1s.
 
 // CIR: cir.global "private" internal dso_local @_ZZ12static_slotsvE8fn_slots = #cir.const_array<[#cir.int<-1> : !s64i, #cir.int<-1> : !s64i]> : !cir.array<!s64i x 2>
@@ -51,6 +56,11 @@ Inner rec_slots[2];
 // LLVM-DAG: @md_slots = {{.*}}global [2 x [3 x i64]] [{{\[3 x i64\]}} [i64 -1, i64 -1, i64 -1], {{\[3 x i64\]}} [i64 -1, i64 -1, i64 -1]]
 
 int Inner::*md_slots[2][3];
+
+// CIR: cir.global external @initList = #cir.const_record<{#cir.const_array<[#cir.int<-1> : !s64i, #cir.int<-1> : !s64i]> : !cir.array<!s64i x 2>, #cir.int<1> : !s32i}> : !rec_Outer2 align(8)
+// LLVM-DAG: @initList = global %struct.Outer2 { [2 x i64] [i64 -1, i64 -1], i32 1 }, align 8
+
+Outer2 initList = {.b = 1};
 
 // Same with 'new' allocated types.
 
