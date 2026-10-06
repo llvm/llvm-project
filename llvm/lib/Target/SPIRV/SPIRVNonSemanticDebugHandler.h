@@ -133,8 +133,19 @@ class SPIRVNonSemanticDebugHandler : public DebugHandlerBase {
     }
   };
 
+  // Used to track which scopes are in progress, and which operands are used by
+  // a forward references. Operands must be later defined even if the scope
+  // fails to emit.
+  struct InProgressScope {
+    MCRegister Id;
+    bool ForwardReferenced = false;
+  };
+
   // Types and scopes whose instruction is currently being built.
-  SmallPtrSet<const DIScope *, 8> ScopesInProgress;
+  SmallDenseMap<const DIScope *, InProgressScope, 8> ScopesInProgress;
+
+  // True when prepareModuleOutput saw SPV_KHR_relaxed_extended_instruction.
+  bool HasRelaxedExtInst = false;
 
   // Types and scopes that are not supported.
   SmallPtrSet<const DIScope *, 8> FailedScopes;
@@ -386,10 +397,16 @@ private:
                                 bool UseEmptyPathIfNullScope = false);
   MCRegister emitOpConstantI32(uint32_t Value, MCRegister I32TypeReg,
                                SPIRV::ModuleAnalysisInfo &MAI);
+
+  /// Mark in-progress scopes named by \p Operands. Return true when any
+  /// operand is such an id. A marked id needs a definition if that scope fails.
+  bool markForwardReferencedOperands(ArrayRef<MCRegister> Operands);
+
   MCRegister emitExtInst(SPIRV::NonSemanticExtInst::NonSemanticExtInst Opcode,
                          MCRegister VoidTypeReg, MCRegister ExtInstSetReg,
                          ArrayRef<MCRegister> Operands,
-                         SPIRV::ModuleAnalysisInfo &MAI);
+                         SPIRV::ModuleAnalysisInfo &MAI,
+                         std::optional<MCRegister> ResultReg = std::nullopt);
 
   /// Return OpTypeVoid id for this module (lazy lookup / emit, then cache).
   MCRegister getOrEmitOpTypeVoidReg(SPIRV::ModuleAnalysisInfo &MAI);
@@ -407,10 +424,13 @@ private:
 
   /// Return the id for the type or scope \p S, emitting it and the types and
   /// scopes it names first. One already in \c DebugScopeRegs is Emitted. A null
-  /// \p S or one in \c FailedScopes is Unsupported. One already in
-  /// \c ScopesInProgress is the back edge of a cycle and is InProgress; nothing
-  /// is emitted for that edge. An Unsupported result is recorded in
-  /// \c FailedScopes, an InProgress one is not.
+  /// \p S or one in \c FailedScopes is Unsupported. Entering a scope reserves
+  /// its result id. A back edge (\p S already in \c ScopesInProgress) returns
+  /// that id when \c HasRelaxedExtInst is set, and InProgress otherwise. If
+  /// emission fails after an emitted instruction used that id, it is defined as
+  /// DebugInfoNone. An id that nothing named stays undefined. An Unsupported
+  /// result is recorded in \c FailedScopes; an InProgress one is not, so a
+  /// later walk can retry it.
   EmitResult<MCRegister> getOrCreateDebugScope(const DIScope *S);
 
   /// Build the instruction for \p S. Only \c getOrCreateDebugScope calls this
