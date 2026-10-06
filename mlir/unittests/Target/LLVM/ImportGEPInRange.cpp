@@ -53,10 +53,12 @@ define ptr @f() {
     indices.push_back(llvm::cast<llvm::Constant>(index.get()));
   llvm::ConstantRange narrowRange(llvm::APInt(32, -16, /*isSigned=*/true),
                                   llvm::APInt(32, 40, /*isSigned=*/true));
-  ret->setOperand(0, llvm::ConstantExpr::getGetElementPtr(
-                         gep->getSourceElementType(),
-                         llvm::cast<llvm::Constant>(gep->getPointerOperand()),
-                         indices, gep->getNoWrapFlags(), narrowRange));
+  llvm::Constant *narrowGEP = llvm::ConstantExpr::getGetElementPtr(
+      llvmModule->getDataLayout(), gep->getSourceElementType(),
+      llvm::cast<llvm::Constant>(gep->getPointerOperand()), indices,
+      gep->getNoWrapFlags(), narrowRange);
+  ASSERT_TRUE(narrowGEP);
+  ret->setOperand(0, narrowGEP);
 
   MLIRContext context;
   context.loadDialect<LLVM::LLVMDialect, DLTIDialect>();
