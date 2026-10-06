@@ -277,6 +277,7 @@ struct LoweringPreparePass
       guard.setDSOLocal(globalOp.getDsoLocal());
       guard.setAlignment(guardAlignment.getAsAlign().value());
       guard.setTlsModel(globalOp.getTlsModel());
+      guard.setGlobalVisibility(globalOp.getGlobalVisibility());
 
       // The ABI says: "It is suggested that it be emitted in the same COMDAT
       // group as the associated data object." In practice, this doesn't work

@@ -26,6 +26,8 @@
 // LLVM-DAG: @_ZGVZ1fvE1a = internal global i64 0
 // CIR-DAG: cir.global "private" linkonce_odr comdat @_ZGVZ10getInlineAvE1a = #cir.int<0> : !s64i
 // LLVM-DAG: @_ZGVZ10getInlineAvE1a = linkonce_odr global i64 0, comdat
+// CIR-DAG: cir.global "private" hidden linkonce_odr comdat @_ZGVZ16getHiddenInlineAvE1a = #cir.int<0> : !s64i
+// LLVM-DAG: @_ZGVZ16getHiddenInlineAvE1a = linkonce_odr hidden global i64 0, comdat
 // CIR-DAG: cir.global "private" internal dso_local @_ZGVZ8ref_initvE1y = #cir.int<0> : !s64i
 // LLVM-DAG: @_ZGVZ8ref_initvE1y = internal global i64 0
 // CIR-DAG: cir.global "private" internal dso_local @_ZGVZ23array_static_local_dtorvE2sm = #cir.int<0> : !s64i
@@ -180,6 +182,18 @@ void call_inline() {
 //
 // LLVM:  call void @_ZN1AC1Ev(ptr {{.*}}@_ZZ10getInlineAvE1a)
 // LLVM:  call void @__cxa_guard_release(ptr @_ZGVZ10getInlineAvE1a)
+
+__attribute__((visibility("hidden")))
+inline const A &getHiddenInlineA() {
+  static A a;
+  return a;
+}
+
+void call_hidden_inline() {
+  use(&getHiddenInlineA());
+}
+
+// CIR-BOTH-LABEL: cir.func no_inline comdat linkonce_odr hidden @_Z16getHiddenInlineAv()
 
 int bar();
 
