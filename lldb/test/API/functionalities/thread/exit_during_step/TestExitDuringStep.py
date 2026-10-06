@@ -2,16 +2,19 @@
 Test number of threads.
 """
 
-
 import lldb
 from lldbsuite.test.decorators import *
 from lldbsuite.test.lldbtest import *
 from lldbsuite.test import lldbutil
 
 
-@skipIfTargetDoesNotSupportThreads()
+@requireThreadSupport
 class ExitDuringStepTestCase(TestBase):
-    @skipIfWindows  # This is flakey on Windows: llvm.org/pr38373
+    @expectedFailureAll(
+        oslist=["windows"],
+        archs=["aarch64"],
+        bugnumber="https://github.com/llvm/llvm-project/pull/228391",
+    )
     def test(self):
         """Test thread exit during step handling."""
         self.build()
@@ -19,7 +22,11 @@ class ExitDuringStepTestCase(TestBase):
             "thread step-inst -m all-threads", "stop reason = instruction step", True
         )
 
-    @skipIfWindows  # This is flakey on Windows: llvm.org/pr38373
+    @expectedFailureAll(
+        oslist=["windows"],
+        archs=["aarch64"],
+        bugnumber="https://github.com/llvm/llvm-project/pull/228391",
+    )
     def test_step_over(self):
         """Test thread exit during step-over handling."""
         self.build()
@@ -27,7 +34,11 @@ class ExitDuringStepTestCase(TestBase):
             "thread step-over -m all-threads", "stop reason = step over", False
         )
 
-    @skipIfWindows  # This is flakey on Windows: llvm.org/pr38373
+    @expectedFailureAll(
+        oslist=["windows"],
+        archs=["aarch64"],
+        bugnumber="https://github.com/llvm/llvm-project/pull/228391",
+    )
     def test_step_in(self):
         """Test thread exit during step-in handling."""
         self.build()
@@ -44,6 +55,11 @@ class ExitDuringStepTestCase(TestBase):
 
     def exit_during_step_base(self, step_cmd, step_stop_reason, by_instruction):
         """Test thread exit during step handling."""
+        if self.getArchitecture().lower() == "arm":
+            # We require a separate debug info file to be able to backtrace starting
+            # from a libc function. This file is provided by libc6-dbg on Linux.
+            self.runCmd("settings set symbols.enable-external-lookup true")
+
         exe = self.getBuildArtifact("a.out")
         self.runCmd("file " + exe, CURRENT_EXECUTABLE_SET)
 
@@ -76,7 +92,10 @@ class ExitDuringStepTestCase(TestBase):
         target = self.dbg.GetSelectedTarget()
         process = target.GetProcess()
 
-        num_threads = process.GetNumThreads()
+        # Count only the threads running a.out code: the OS can add a thread
+        # between two stops (see lldbutil.get_threads_in_executable).
+        bp_tids = {t.GetThreadID() for t in lldbutil.get_threads_in_executable(process)}
+        num_threads = len(bp_tids)
         # Make sure we see all three threads
         self.assertGreaterEqual(
             num_threads,
@@ -130,7 +149,7 @@ class ExitDuringStepTestCase(TestBase):
         self.runCmd("thread list")
 
         # Update the number of threads
-        new_num_threads = process.GetNumThreads()
+        new_num_threads = len(lldbutil.get_threads_in_executable(process))
 
         # Check to see that we reduced the number of threads as expected
         self.assertEqual(
@@ -138,6 +157,10 @@ class ExitDuringStepTestCase(TestBase):
             num_threads - 1,
             "Number of threads did not reduce by 1 after thread exit.",
         )
+        # The exited thread must be gone from the thread list, not just from
+        # the count: a stale entry must not have an a.out frame.
+        gone = bp_tids - {t.GetThreadID() for t in process}
+        self.assertEqual(len(gone), 1, "The exited thread is still listed.")
 
         self.expect(
             "thread list",

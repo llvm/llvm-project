@@ -269,47 +269,25 @@ namespace std {
 #  include <__optional/optional_ref.h>
 #  include <__optional/swap.h>
 
-// TODO: Some headers rely on these transitive includes
-#  include <__cstddef/size_t.h>
-#  include <__type_traits/conditional.h>
-#  include <__type_traits/enable_if.h>
-#  include <__type_traits/invoke.h>
-#  include <__type_traits/is_constructible.h>
-#  include <__type_traits/is_object.h>
-#  include <__type_traits/is_reference.h>
-#  include <__type_traits/remove_const.h>
-#  include <__type_traits/remove_cvref.h>
-#  include <__utility/declval.h>
-#  include <__utility/forward.h>
-#  include <__utility/in_place.h>
-#  include <__utility/move.h>
-
 #  include <initializer_list>
 
 // standard-mandated includes
 // [optional.syn]
 #  include <compare>
 
+#  if _LIBCPP_STD_VER >= 26
+// [iterator.range]
+#    include <__iterator/access.h>
+#    include <__iterator/data.h>
+#    include <__iterator/empty.h>
+#    include <__iterator/reverse_access.h>
+#    include <__iterator/size.h>
+#  endif // _LIBCPP_STD_VER >= 26
+
 #  if !defined(_LIBCPP_HAS_NO_PRAGMA_SYSTEM_HEADER)
 #    pragma GCC system_header
 #  endif
 
-#  if defined(_LIBCPP_KEEP_TRANSITIVE_INCLUDES_LLVM23) && _LIBCPP_STD_VER <= 20
-#    include <atomic>
-#    include <climits>
-#    include <concepts>
-#    include <ctime>
-#    include <iterator>
-#    include <limits>
-#    include <memory>
-#    include <ratio>
-#    include <stdexcept>
-#    include <tuple>
-#    include <type_traits>
-#    include <typeinfo>
-#    include <utility>
-#    include <variant>
-#  endif
 #endif // __cplusplus < 201103L && defined(_LIBCPP_USE_FROZEN_CXX03_HEADERS)
 
 #endif // _LIBCPP_OPTIONAL

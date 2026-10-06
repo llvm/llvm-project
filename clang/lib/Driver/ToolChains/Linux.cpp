@@ -521,6 +521,11 @@ static void handlePAuthABI(const Driver &D, const ArgList &DriverArgs,
     CC1Args.push_back("-fptrauth-vtable-pointer-type-discrimination");
 
   if (!DriverArgs.hasArg(
+          options::OPT_fptrauth_vtt_vtable_pointer_discrimination,
+          options::OPT_fno_ptrauth_vtt_vtable_pointer_discrimination))
+    CC1Args.push_back("-fptrauth-vtt-vtable-pointer-discrimination");
+
+  if (!DriverArgs.hasArg(
           options::OPT_fptrauth_type_info_vtable_pointer_discrimination,
           options::OPT_fno_ptrauth_type_info_vtable_pointer_discrimination))
     CC1Args.push_back("-fptrauth-type-info-vtable-pointer-discrimination");
@@ -881,7 +886,9 @@ void Linux::addOffloadRTLibs(unsigned ActiveKinds, const ArgList &Args,
   if (!Args.hasFlag(options::OPT_offloadlib, options::OPT_no_offloadlib,
                     true) ||
       Args.hasArg(options::OPT_nostdlib) ||
-      Args.hasArg(options::OPT_no_hip_rt) || Args.hasArg(options::OPT_r))
+      Args.hasArg(options::OPT_no_hip_rt) || Args.hasArg(options::OPT_r) ||
+      Args.hasFlag(options::OPT_foffload_via_llvm,
+                   options::OPT_fno_offload_via_llvm, false))
     return;
 
   llvm::SmallVector<std::pair<StringRef, StringRef>> Libraries;

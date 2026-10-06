@@ -2,14 +2,14 @@
 Test lldb-dap launch request.
 """
 
-from lldbsuite.test.decorators import skipUnlessWindows, skipIfBuildType
+from lldbsuite.test.decorators import *
 from lldbsuite.test.tools.lldb_dap.types import LaunchArgs, Console
 from lldbsuite.test.tools.lldb_dap import DAPTestCaseBase
 from typing import List
 
 
 @skipIfBuildType(["debug"])
-@skipUnlessWindows
+@requireWindows
 class TestDAP_launch_win_debug_heap(DAPTestCaseBase):
     """
     Test that lldb-dap respects the debug heap setting on Windows when launching in an integrated terminal.

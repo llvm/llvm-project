@@ -35,32 +35,32 @@
 // OBJDUMP-NEXT: 0000 00000000 00000000 00000000 00000000
 // OBJDUMP-NEXT: 0010 00000000 00000000 00000000 00000000
 // OBJDUMP-NEXT: 0020 00000000 00000000 00000000 00000000
-// OBJDUMP-NEXT: 0030 00000cc0 80000000 00040000 00000000
+// OBJDUMP-NEXT: 0030 00000cc0 80000000 00000000 00000000
 // complete
 // OBJDUMP-NEXT: 0040 01000000 01000000 0c000000 00000000
 // OBJDUMP-NEXT: 0050 00000000 00000000 00000000 00000000
 // OBJDUMP-NEXT: 0060 00000000 00000000 00000000 00c00000
-// OBJDUMP-NEXT: 0070 005021c4 410f007f 5e048200 00000000
+// OBJDUMP-NEXT: 0070 005021c4 410f007f 5e008200 00000000
 // special_sgpr
 // OBJDUMP-NEXT: 0080 00000000 00000000 00000000 00000000
 // OBJDUMP-NEXT: 0090 00000000 00000000 00000000 00000000
 // OBJDUMP-NEXT: 00a0 00000000 00000000 00000000 00000000
-// OBJDUMP-NEXT: 00b0 000000c0 80000000 00040000 00000000
+// OBJDUMP-NEXT: 00b0 000000c0 80000000 00000000 00000000
 // disabled_user_sgpr
 // OBJDUMP-NEXT: 00c0 00000000 00000000 00000000 00000000
 // OBJDUMP-NEXT: 00d0 00000000 00000000 00000000 00000000
 // OBJDUMP-NEXT: 00e0 00000000 00000000 00000000 00000000
-// OBJDUMP-NEXT: 00f0 00000cc0 80000000 00040000 00000000
+// OBJDUMP-NEXT: 00f0 00000cc0 80000000 00000000 00000000
 // max_lds_size
 // OBJDUMP-NEXT: 0100 00000500 00000000 00000000 00000000
 // OBJDUMP-NEXT: 0110 00000000 00000000 00000000 00000000
 // OBJDUMP-NEXT: 0120 00000000 00000000 00000000 00000000
-// OBJDUMP-NEXT: 0130 00000cc0 80000000 00040000 00000000
+// OBJDUMP-NEXT: 0130 00000cc0 80000000 00000000 00000000
 // max_vgprs
 // OBJDUMP-NEXT: 0140 00000000 00000000 00000000 00000000
 // OBJDUMP-NEXT: 0150 00000000 00000000 00000000 00000000
 // OBJDUMP-NEXT: 0160 00000000 00000000 00000000 00000000
-// OBJDUMP-NEXT: 0170 3f000cc0 80000000 00040000 00000000
+// OBJDUMP-NEXT: 0170 3f000cc0 80000000 00000000 00000000
 
 .text
 
@@ -70,43 +70,49 @@
 .p2align 8
 .type minimal,@function
 minimal:
-  global_prefetch_b8 v0, s[0:1] scope:SCOPE_SE
+  s_mov_b64 s[64:65], 0
   v_nop
+  global_prefetch_b8 v0, s[64:65] scope:SCOPE_SE th:TH_LOAD_RT
   s_endpgm
 
 .p2align 8
 .type complete,@function
 complete:
-  global_prefetch_b8 v0, s[0:1] scope:SCOPE_SE
+  s_mov_b64 s[64:65], 0
   v_nop
+  global_prefetch_b8 v0, s[64:65] scope:SCOPE_SE th:TH_LOAD_RT
   s_endpgm
 
 .p2align 8
 .type special_sgpr,@function
 special_sgpr:
-  global_prefetch_b8 v0, s[0:1] scope:SCOPE_SE
+  s_mov_b64 s[64:65], 0
   v_nop
+  global_prefetch_b8 v0, s[64:65] scope:SCOPE_SE th:TH_LOAD_RT
   s_endpgm
 
 .p2align 8
 .type disabled_user_sgpr,@function
 disabled_user_sgpr:
-  global_prefetch_b8 v0, s[0:1] scope:SCOPE_SE
+  s_mov_b64 s[64:65], 0
   v_nop
+  global_prefetch_b8 v0, s[64:65] scope:SCOPE_SE th:TH_LOAD_RT
   s_endpgm
 
 .p2align 8
 .type max_lds_size,@function
 max_lds_size:
-  global_prefetch_b8 v0, s[0:1] scope:SCOPE_SE
+  s_mov_b64 s[64:65], 0
   v_nop
+  global_prefetch_b8 v0, s[64:65] scope:SCOPE_SE th:TH_LOAD_RT
   s_endpgm
 
 .p2align 8
 .type max_vgprs,@function
 max_vgprs:
-  global_prefetch_b8 v0, s[0:1] scope:SCOPE_SE
+  s_mov_b64 s[64:65], 0
   v_nop
+  global_prefetch_b8 v0, s[64:65] scope:SCOPE_SE th:TH_LOAD_RT
   s_endpgm
 
 .rodata
@@ -139,7 +145,6 @@ max_vgprs:
   .amdhsa_user_sgpr_kernarg_preload_length 2
   .amdhsa_user_sgpr_kernarg_preload_offset 1
   .amdhsa_user_sgpr_private_segment_size 1
-  .amdhsa_wavefront_size32 1
   .amdhsa_enable_private_segment 1
   .amdhsa_system_sgpr_workgroup_id_x 0
   .amdhsa_system_sgpr_workgroup_id_y 1
@@ -179,7 +184,6 @@ max_vgprs:
 // ASM-NEXT: .amdhsa_user_sgpr_kernarg_preload_length 2
 // ASM-NEXT: .amdhsa_user_sgpr_kernarg_preload_offset 1
 // ASM-NEXT: .amdhsa_user_sgpr_private_segment_size 1
-// ASM-NEXT: .amdhsa_wavefront_size32 1
 // ASM-NEXT: .amdhsa_enable_private_segment 1
 // ASM-NEXT: .amdhsa_system_sgpr_workgroup_id_x 0
 // ASM-NEXT: .amdhsa_system_sgpr_workgroup_id_y 1
@@ -278,14 +282,14 @@ max_vgprs:
 .byte .amdgcn.next_free_vgpr
 // ASM: .byte 1
 .byte .amdgcn.next_free_sgpr
-// ASM: .byte 2
+// ASM: .byte 66
 
 v_mov_b32_e32 v16, s3
 
 .byte .amdgcn.next_free_vgpr
 // ASM: .byte 17
 .byte .amdgcn.next_free_sgpr
-// ASM: .byte 4
+// ASM: .byte 66
 
 .set .amdgcn.next_free_vgpr, 0
 .set .amdgcn.next_free_sgpr, 0

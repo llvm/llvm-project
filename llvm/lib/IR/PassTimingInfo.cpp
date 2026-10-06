@@ -123,15 +123,21 @@ Timer *PassTimingInfo::getPassTimer(Pass *P, PassInstanceID Pass) {
 
   init();
   sys::SmartScopedLock<true> Lock(*TimingInfoMutex);
+  StringRef PassName = P->getPassName();
+  StringRef PassArgument;
+  if (const PassInfo *PI = Pass::lookupPassInfo(P->getPassID()))
+    PassArgument = PI->getPassArgument();
+  StringRef TimerName = PassArgument.empty() ? PassName : PassArgument;
+
   std::unique_ptr<Timer> &T = TimingData[Pass];
 
-  if (!T) {
-    StringRef PassName = P->getPassName();
-    StringRef PassArgument;
-    if (const PassInfo *PI = Pass::lookupPassInfo(P->getPassID()))
-      PassArgument = PI->getPassArgument();
-    T.reset(newPassTimer(PassArgument.empty() ? PassName : PassArgument, PassName));
-  }
+  // This map outlives the pass instances it is keyed on, so a new pass can be
+  // allocated at a destroyed one's address. Its timer carries the old name.
+  if (T && T->getName() != TimerName)
+    T.reset();
+
+  if (!T)
+    T.reset(newPassTimer(TimerName, PassName));
   return T.get();
 }
 
@@ -301,9 +307,9 @@ void TimePassesHandler::registerCallbacks(PassInstrumentationCallbacks &PIC) {
     return;
 
   PIC.registerBeforeNonSkippedPassCallback(
-      [this](StringRef P, Any) { this->startPassTimer(P); });
+      [this](StringRef P, IRUnitRef) { this->startPassTimer(P); });
   PIC.registerAfterPassCallback(
-      [this](StringRef P, Any, const PreservedAnalyses &) {
+      [this](StringRef P, IRUnitRef, const PreservedAnalyses &) {
         this->stopPassTimer(P);
       });
   PIC.registerAfterPassInvalidatedCallback(
@@ -311,7 +317,7 @@ void TimePassesHandler::registerCallbacks(PassInstrumentationCallbacks &PIC) {
         this->stopPassTimer(P);
       });
   PIC.registerBeforeAnalysisCallback(
-      [this](StringRef P, Any) { this->startAnalysisTimer(P); });
+      [this](StringRef P, IRUnitRef) { this->startAnalysisTimer(P); });
   PIC.registerAfterAnalysisCallback(
-      [this](StringRef P, Any) { this->stopAnalysisTimer(P); });
+      [this](StringRef P, IRUnitRef) { this->stopAnalysisTimer(P); });
 }

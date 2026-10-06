@@ -177,7 +177,7 @@ template void for_vectorize_value_dependent<1>(int *List, int Length);
 // CHECK-DAG: ![[UNROLL_8:[0-9]+]] = !{!"llvm.loop.unroll.count", i32 8}
 //
 // OTHER-DAG: ![[VEC_1:[0-9]+]] = !{!"llvm.loop.vectorize.width", i32 1}
-// OTHER-DAG: ![[VEC_FIXED:[0-9]+]] = !{!"llvm.loop.vectorize.scalable.enable", i1 false}
+// OTHER-DAG: ![[VEC_FIXED:[0-9]+]] = !{!"llvm.loop.vectorize.scalable.disable"}
 //
 // CHECK-DAG: ![[LOOP_1]] = distinct !{![[LOOP_1]], ![[MP]], ![[UNROLL_ENABLE]]}
 // CHECK-DAG: ![[LOOP_2]] = distinct !{![[LOOP_2]], ![[MP]], ![[UNROLL_DISABLE]]}

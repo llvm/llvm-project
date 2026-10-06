@@ -23,6 +23,8 @@
 #include <__iterator/iterator_with_data.h>
 #include <__iterator/segmented_iterator.h>
 #include <__memory/addressof.h>
+#include <__optional/comparison.h>
+#include <__optional/optional.h>
 #include <__ranges/access.h>
 #include <__ranges/all.h>
 #include <__ranges/concepts.h>
@@ -31,11 +33,14 @@
 #include <__ranges/range_adaptor.h>
 #include <__ranges/view_interface.h>
 #include <__type_traits/common_type.h>
+#include <__type_traits/conditional.h>
+#include <__type_traits/is_reference.h>
 #include <__type_traits/maybe_const.h>
+#include <__type_traits/remove_cvref.h>
 #include <__utility/as_lvalue.h>
 #include <__utility/empty.h>
 #include <__utility/forward.h>
-#include <optional>
+#include <__utility/move.h>
 
 #if !defined(_LIBCPP_HAS_NO_PRAGMA_SYSTEM_HEADER)
 #  pragma GCC system_header
@@ -44,9 +49,9 @@
 _LIBCPP_PUSH_MACROS
 #include <__undef_macros>
 
-_LIBCPP_BEGIN_NAMESPACE_STD
-
 #if _LIBCPP_STD_VER >= 20
+
+_LIBCPP_BEGIN_NAMESPACE_STD
 
 namespace ranges {
 template <class>
@@ -422,9 +427,9 @@ struct __segmented_iterator_traits<_JoinViewIterator> {
   }
 };
 
-#endif // #if _LIBCPP_STD_VER >= 20
-
 _LIBCPP_END_NAMESPACE_STD
+
+#endif // #if _LIBCPP_STD_VER >= 20
 
 _LIBCPP_POP_MACROS
 
