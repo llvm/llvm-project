@@ -581,7 +581,7 @@ std::optional<std::int64_t> GetInt64ArgOr(
 
 template <typename A, typename B>
 std::optional<std::vector<A>> GetIntegerVector(const B &x) {
-  static_assert(common::numeric_limits<A>::is_integer);
+  static_assert(common::is_integral_v<A>);
   if (const auto *someInteger{UnwrapExpr<Expr<SomeInteger>>(x)}) {
     return common::visit(
         [](const auto &typedExpr) -> std::optional<std::vector<A>> {

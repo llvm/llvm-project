@@ -242,8 +242,8 @@ inline RT_API_ATTRS T RealMod(
   }
   T aAbs{ABSTy<T>::compute(a)};
   T pAbs{ABSTy<T>::compute(p)};
-  if (aAbs <= static_cast<T>(std::numeric_limits<std::int64_t>::max()) &&
-      pAbs <= static_cast<T>(std::numeric_limits<std::int64_t>::max())) {
+  if (aAbs <= static_cast<T>(common::numeric_limits<std::int64_t>::max()) &&
+      pAbs <= static_cast<T>(common::numeric_limits<std::int64_t>::max())) {
     if (auto aInt{static_cast<std::int64_t>(a)}; a == aInt) {
       if (auto pInt{static_cast<std::int64_t>(p)}; p == pInt) {
         // Fast exact case for integer operands

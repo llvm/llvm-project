@@ -289,7 +289,7 @@ void ExecutionEnvironment::Configure(int ac, const char *av[],
   if (auto *x{std::getenv("FORT_FMT_RECL")}) {
     char *end;
     auto n{std::strtol(x, &end, 10)};
-    if (n > 0 && n < std::numeric_limits<int>::max() && *end == '\0') {
+    if (n > 0 && n < common::numeric_limits<int>::max() && *end == '\0') {
       listDirectedOutputLineLengthLimit = n;
     } else {
       std::fprintf(
@@ -392,7 +392,7 @@ void ExecutionEnvironment::Configure(int ac, const char *av[],
   if (auto *x{std::getenv("ACC_OFFLOAD_STACK_SIZE")}) {
     char *end;
     auto n{std::strtoul(x, &end, 10)};
-    if (n > 0 && n != std::numeric_limits<unsigned long>::max() &&
+    if (n > 0 && n != common::numeric_limits<unsigned long>::max() &&
         *end == '\0') {
       cudaStackLimit = n;
     } else {

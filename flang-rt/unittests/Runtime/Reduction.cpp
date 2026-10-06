@@ -23,6 +23,7 @@
 #include <vector>
 
 using namespace Fortran::runtime;
+using Fortran::numeric_limits;
 using Fortran::common::TypeCategory;
 
 TEST(Reductions, Int4Ops) {
@@ -481,8 +482,8 @@ TEST(Reductions, FindlocNumeric) {
   std::vector<int> shape{2, 3};
   auto realArray{MakeArray<TypeCategory::Real, 8>(shape,
       std::vector<double>{0.0, -0.0, 1.0, 3.14,
-          std::numeric_limits<double>::quiet_NaN(),
-          std::numeric_limits<double>::infinity()})};
+          numeric_limits<double>::quiet_NaN(),
+          numeric_limits<double>::infinity()})};
   ASSERT_EQ(realArray->ElementBytes(), sizeof(double));
   StaticDescriptor<2, true> statDesc[2];
   Descriptor &res{statDesc[0].descriptor()};
@@ -511,7 +512,7 @@ TEST(Reductions, FindlocNumeric) {
   EXPECT_EQ(*res.ZeroBasedIndexedElement<SubscriptValue>(1), 1);
   res.Destroy();
   // Find the +Inf
-  value = std::numeric_limits<double>::infinity();
+  value = numeric_limits<double>::infinity();
   RTNAME(Findloc)
   (res, *realArray, target, 8, __FILE__, __LINE__, nullptr, /*BACK=*/false);
   EXPECT_EQ(res.rank(), 1);
@@ -522,7 +523,7 @@ TEST(Reductions, FindlocNumeric) {
   EXPECT_EQ(*res.ZeroBasedIndexedElement<SubscriptValue>(1), 3);
   res.Destroy();
   // Ensure that we can't find a NaN
-  value = std::numeric_limits<double>::quiet_NaN();
+  value = numeric_limits<double>::quiet_NaN();
   RTNAME(Findloc)
   (res, *realArray, target, 8, __FILE__, __LINE__, nullptr, /*BACK=*/false);
   EXPECT_EQ(res.rank(), 1);
@@ -575,8 +576,8 @@ TEST(Reductions, FindlocNumeric) {
   std::vector<int> shape1{6};
   auto realArray1{MakeArray<TypeCategory::Real, 8>(shape1,
       std::vector<double>{0.0, -0.0, 1.0, 3.14,
-          std::numeric_limits<double>::quiet_NaN(),
-          std::numeric_limits<double>::infinity()})};
+          numeric_limits<double>::quiet_NaN(),
+          numeric_limits<double>::infinity()})};
   StaticDescriptor<1, true> statDesc0[1];
   Descriptor &scalarResult{statDesc0[0].descriptor()};
   RTNAME(FindlocDim)
@@ -710,7 +711,7 @@ TEST(Reductions, ReduceInt4Dim) {
 }
 
 TEST(Reductions, InfSums) {
-  auto inf{std::numeric_limits<float>::infinity()};
+  auto inf{numeric_limits<float>::infinity()};
   auto inf0{MakeArray<TypeCategory::Real, 4>(
       std::vector<int>{2}, std::vector<float>{inf, 0.0f})};
   auto t1{RTNAME(SumReal4)(*inf0, __FILE__, __LINE__)};
@@ -757,12 +758,12 @@ TEST(Reductions, RealProductNoEarlyExit) {
   EXPECT_FALSE(std::signbit(r8));
   // A NaN after a zero must propagate.
   auto zeroThenNaN{MakeArray<TypeCategory::Real, 4>(std::vector<int>{2},
-      std::vector<float>{0.0f, std::numeric_limits<float>::quiet_NaN()})};
+      std::vector<float>{0.0f, numeric_limits<float>::quiet_NaN()})};
   float r4{RTNAME(ProductReal4)(*zeroThenNaN, __FILE__, __LINE__)};
   EXPECT_NE(r4, r4) << r4;
   // No zero element: the running product underflows to +0 before the
   // negative factor is reached, so the result is -0.
-  auto tiny{std::numeric_limits<double>::min()};
+  auto tiny{numeric_limits<double>::min()};
   auto underflow{MakeArray<TypeCategory::Real, 8>(
       std::vector<int>{3}, std::vector<double>{tiny, tiny, -2.0})};
   double u8{RTNAME(ProductReal8)(*underflow, __FILE__, __LINE__)};

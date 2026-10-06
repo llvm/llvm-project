@@ -505,8 +505,8 @@ int RTNAME(Irand)(int *i) {
 // RAND(I)
 float RTNAME(Rand)(int *i, const char *sourceFile, int line) {
   unsigned mask = 0;
-  constexpr int radix = std::numeric_limits<float>::radix;
-  constexpr int digits = std::numeric_limits<float>::digits;
+  constexpr int radix = common::numeric_limits<float>::radix;
+  constexpr int digits = common::numeric_limits<float>::digits;
   if constexpr (radix == 2) {
     mask = ~(unsigned)0u << (32 - digits + 1);
   } else {
