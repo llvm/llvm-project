@@ -941,6 +941,12 @@ public:
   isLegalMaskedLoad(Type *DataType, Align Alignment, unsigned AddressSpace,
                     MaskKind MaskKind = VariableOrConstantMask) const;
 
+  /// Return true if the target supports speculatively loading \p DataType from
+  /// address space \p AddressSpace, i.e. @llvm.can.load.speculatively can
+  /// return true for the store size of \p DataType.
+  LLVM_ABI bool isLegalSpeculativeLoad(Type *DataType,
+                                       unsigned AddressSpace) const;
+
   /// Return true if the target supports nontemporal store.
   LLVM_ABI bool isLegalNTStore(Type *DataType, Align Alignment) const;
   /// Return true if the target supports nontemporal load.
@@ -994,6 +1000,28 @@ public:
   LLVM_ABI bool isLegalAltInstr(VectorType *VecTy, unsigned Opcode0,
                                 unsigned Opcode1,
                                 const SmallBitVector &OpcodeMask) const;
+
+  /// Enum describing the source/producer of a mask.
+  enum class MaskSource {
+    /// The operation is unmasked.
+    None,
+    /// The operation is masked with an arbitrary predicate.
+    ArbitraryPredicate,
+    /// The operation is masked with a contiguous active lane mask.
+    ActiveLaneMask,
+  };
+
+  /// Return true if the target supports loading or storing \p NumVectors
+  /// contiguous vectors of type \p VectorTy as a single operation. A null
+  /// \p VectorTy queries whether the target supports this operation in
+  /// general.
+  ///
+  /// \p CastHint is non-null if a stored value is produced by a cast or a
+  /// loaded value is consumed by one.
+  LLVM_ABI bool hasMultiVectorLoadStore(
+      unsigned NumVectors, MaskSource Mask, VectorType *VectorTy = nullptr,
+      bool IsStore = false,
+      std::optional<Instruction::CastOps> CastHint = std::nullopt) const;
 
   /// Return true if we should be enabling ordered reductions for the target.
   LLVM_ABI bool enableOrderedReductions() const;
@@ -1551,6 +1579,10 @@ public:
 
   /// Collect properties of V used in cost analysis, e.g. OP_PowerOf2.
   LLVM_ABI static OperandValueInfo getOperandInfo(const Value *V);
+
+  /// Return information about the vector formed for the specified index
+  /// of a vector of (the same) instruction.
+  LLVM_ABI static OperandValueInfo getOperandInfo(ArrayRef<Value *> Ops);
 
   /// Collect common data between two OperandValueInfo inputs
   LLVM_ABI static OperandValueInfo commonOperandInfo(const Value *X,
