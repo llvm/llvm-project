@@ -303,7 +303,7 @@ foreach op = ["load_add", "load_sub", "load_and", "load_or", "load_xor",
         (outs g8rc:$dst), (ins memrr:$ptr, i32imm:$sz, g8rc:$incr),
         "#" # NAME, []>;
   def : Pat<(i64 (pat ForceXForm:$ptr, g8rc:$incr)),
-          (!cast<Instruction>(pseudo) memrr:$ptr, 8, g8rc:$incr)>;
+          (!cast<Instruction>(pseudo) memrr:$ptr, 3, g8rc:$incr)>;
 }
 
 let Defs = [CR0] in
