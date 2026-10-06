@@ -175,11 +175,24 @@ define i32 @caller_i256_indirect_reference_in_stack() {
   ; LP64-NEXT:   [[C8:%[0-9]+]]:_(s256) = G_CONSTANT i256 42
   ; LP64-NEXT:   ADJCALLSTACKDOWN 8, 0, implicit-def $x2, implicit $x2
   ; LP64-NEXT:   [[FRAME_INDEX:%[0-9]+]]:_(p0) = G_FRAME_INDEX %stack.0
-  ; LP64-NEXT:   G_STORE [[C8]](s256), [[FRAME_INDEX]](p0) :: (store (s256) into %stack.0, align 16)
+  ; LP64-NEXT:   [[EXTRACT:%[0-9]+]]:_(s64) = G_EXTRACT [[C8]](s256), 0
+  ; LP64-NEXT:   G_STORE [[EXTRACT]](s64), [[FRAME_INDEX]](p0) :: (store (s64) into %stack.0, align 16)
   ; LP64-NEXT:   [[COPY:%[0-9]+]]:_(p0) = COPY $x2
   ; LP64-NEXT:   [[C9:%[0-9]+]]:_(s64) = G_CONSTANT i64 0
   ; LP64-NEXT:   [[PTR_ADD:%[0-9]+]]:_(p0) = G_PTR_ADD [[COPY]], [[C9]](s64)
   ; LP64-NEXT:   G_STORE [[FRAME_INDEX]](p0), [[PTR_ADD]](p0) :: (store (p0) into stack, align 16)
+  ; LP64-NEXT:   [[C10:%[0-9]+]]:_(s64) = G_CONSTANT i64 8
+  ; LP64-NEXT:   [[PTR_ADD1:%[0-9]+]]:_(p0) = G_PTR_ADD [[FRAME_INDEX]], [[C10]](s64)
+  ; LP64-NEXT:   [[EXTRACT1:%[0-9]+]]:_(s64) = G_EXTRACT [[C8]](s256), 64
+  ; LP64-NEXT:   G_STORE [[EXTRACT1]](s64), [[PTR_ADD1]](p0) :: (store (s64) into %stack.0 + 8)
+  ; LP64-NEXT:   [[C11:%[0-9]+]]:_(s64) = G_CONSTANT i64 16
+  ; LP64-NEXT:   [[PTR_ADD2:%[0-9]+]]:_(p0) = G_PTR_ADD [[FRAME_INDEX]], [[C11]](s64)
+  ; LP64-NEXT:   [[EXTRACT2:%[0-9]+]]:_(s64) = G_EXTRACT [[C8]](s256), 128
+  ; LP64-NEXT:   G_STORE [[EXTRACT2]](s64), [[PTR_ADD2]](p0) :: (store (s64) into %stack.0 + 16, align 16)
+  ; LP64-NEXT:   [[C12:%[0-9]+]]:_(s64) = G_CONSTANT i64 24
+  ; LP64-NEXT:   [[PTR_ADD3:%[0-9]+]]:_(p0) = G_PTR_ADD [[FRAME_INDEX]], [[C12]](s64)
+  ; LP64-NEXT:   [[EXTRACT3:%[0-9]+]]:_(s64) = G_EXTRACT [[C8]](s256), 192
+  ; LP64-NEXT:   G_STORE [[EXTRACT3]](s64), [[PTR_ADD3]](p0) :: (store (s64) into %stack.0 + 24)
   ; LP64-NEXT:   $x10 = COPY [[C]](s64)
   ; LP64-NEXT:   $x11 = COPY [[C1]](s64)
   ; LP64-NEXT:   $x12 = COPY [[C2]](s64)
@@ -209,11 +222,24 @@ define i32 @caller_i256_indirect_reference_in_stack() {
   ; LP64F-NEXT:   [[C8:%[0-9]+]]:_(s256) = G_CONSTANT i256 42
   ; LP64F-NEXT:   ADJCALLSTACKDOWN 8, 0, implicit-def $x2, implicit $x2
   ; LP64F-NEXT:   [[FRAME_INDEX:%[0-9]+]]:_(p0) = G_FRAME_INDEX %stack.0
-  ; LP64F-NEXT:   G_STORE [[C8]](s256), [[FRAME_INDEX]](p0) :: (store (s256) into %stack.0, align 16)
+  ; LP64F-NEXT:   [[EXTRACT:%[0-9]+]]:_(s64) = G_EXTRACT [[C8]](s256), 0
+  ; LP64F-NEXT:   G_STORE [[EXTRACT]](s64), [[FRAME_INDEX]](p0) :: (store (s64) into %stack.0, align 16)
   ; LP64F-NEXT:   [[COPY:%[0-9]+]]:_(p0) = COPY $x2
   ; LP64F-NEXT:   [[C9:%[0-9]+]]:_(s64) = G_CONSTANT i64 0
   ; LP64F-NEXT:   [[PTR_ADD:%[0-9]+]]:_(p0) = G_PTR_ADD [[COPY]], [[C9]](s64)
   ; LP64F-NEXT:   G_STORE [[FRAME_INDEX]](p0), [[PTR_ADD]](p0) :: (store (p0) into stack, align 16)
+  ; LP64F-NEXT:   [[C10:%[0-9]+]]:_(s64) = G_CONSTANT i64 8
+  ; LP64F-NEXT:   [[PTR_ADD1:%[0-9]+]]:_(p0) = G_PTR_ADD [[FRAME_INDEX]], [[C10]](s64)
+  ; LP64F-NEXT:   [[EXTRACT1:%[0-9]+]]:_(s64) = G_EXTRACT [[C8]](s256), 64
+  ; LP64F-NEXT:   G_STORE [[EXTRACT1]](s64), [[PTR_ADD1]](p0) :: (store (s64) into %stack.0 + 8)
+  ; LP64F-NEXT:   [[C11:%[0-9]+]]:_(s64) = G_CONSTANT i64 16
+  ; LP64F-NEXT:   [[PTR_ADD2:%[0-9]+]]:_(p0) = G_PTR_ADD [[FRAME_INDEX]], [[C11]](s64)
+  ; LP64F-NEXT:   [[EXTRACT2:%[0-9]+]]:_(s64) = G_EXTRACT [[C8]](s256), 128
+  ; LP64F-NEXT:   G_STORE [[EXTRACT2]](s64), [[PTR_ADD2]](p0) :: (store (s64) into %stack.0 + 16, align 16)
+  ; LP64F-NEXT:   [[C12:%[0-9]+]]:_(s64) = G_CONSTANT i64 24
+  ; LP64F-NEXT:   [[PTR_ADD3:%[0-9]+]]:_(p0) = G_PTR_ADD [[FRAME_INDEX]], [[C12]](s64)
+  ; LP64F-NEXT:   [[EXTRACT3:%[0-9]+]]:_(s64) = G_EXTRACT [[C8]](s256), 192
+  ; LP64F-NEXT:   G_STORE [[EXTRACT3]](s64), [[PTR_ADD3]](p0) :: (store (s64) into %stack.0 + 24)
   ; LP64F-NEXT:   $x10 = COPY [[C]](s64)
   ; LP64F-NEXT:   $x11 = COPY [[C1]](s64)
   ; LP64F-NEXT:   $x12 = COPY [[C2]](s64)
@@ -243,11 +269,24 @@ define i32 @caller_i256_indirect_reference_in_stack() {
   ; LP64D-NEXT:   [[C8:%[0-9]+]]:_(s256) = G_CONSTANT i256 42
   ; LP64D-NEXT:   ADJCALLSTACKDOWN 8, 0, implicit-def $x2, implicit $x2
   ; LP64D-NEXT:   [[FRAME_INDEX:%[0-9]+]]:_(p0) = G_FRAME_INDEX %stack.0
-  ; LP64D-NEXT:   G_STORE [[C8]](s256), [[FRAME_INDEX]](p0) :: (store (s256) into %stack.0, align 16)
+  ; LP64D-NEXT:   [[EXTRACT:%[0-9]+]]:_(s64) = G_EXTRACT [[C8]](s256), 0
+  ; LP64D-NEXT:   G_STORE [[EXTRACT]](s64), [[FRAME_INDEX]](p0) :: (store (s64) into %stack.0, align 16)
   ; LP64D-NEXT:   [[COPY:%[0-9]+]]:_(p0) = COPY $x2
   ; LP64D-NEXT:   [[C9:%[0-9]+]]:_(s64) = G_CONSTANT i64 0
   ; LP64D-NEXT:   [[PTR_ADD:%[0-9]+]]:_(p0) = G_PTR_ADD [[COPY]], [[C9]](s64)
   ; LP64D-NEXT:   G_STORE [[FRAME_INDEX]](p0), [[PTR_ADD]](p0) :: (store (p0) into stack, align 16)
+  ; LP64D-NEXT:   [[C10:%[0-9]+]]:_(s64) = G_CONSTANT i64 8
+  ; LP64D-NEXT:   [[PTR_ADD1:%[0-9]+]]:_(p0) = G_PTR_ADD [[FRAME_INDEX]], [[C10]](s64)
+  ; LP64D-NEXT:   [[EXTRACT1:%[0-9]+]]:_(s64) = G_EXTRACT [[C8]](s256), 64
+  ; LP64D-NEXT:   G_STORE [[EXTRACT1]](s64), [[PTR_ADD1]](p0) :: (store (s64) into %stack.0 + 8)
+  ; LP64D-NEXT:   [[C11:%[0-9]+]]:_(s64) = G_CONSTANT i64 16
+  ; LP64D-NEXT:   [[PTR_ADD2:%[0-9]+]]:_(p0) = G_PTR_ADD [[FRAME_INDEX]], [[C11]](s64)
+  ; LP64D-NEXT:   [[EXTRACT2:%[0-9]+]]:_(s64) = G_EXTRACT [[C8]](s256), 128
+  ; LP64D-NEXT:   G_STORE [[EXTRACT2]](s64), [[PTR_ADD2]](p0) :: (store (s64) into %stack.0 + 16, align 16)
+  ; LP64D-NEXT:   [[C12:%[0-9]+]]:_(s64) = G_CONSTANT i64 24
+  ; LP64D-NEXT:   [[PTR_ADD3:%[0-9]+]]:_(p0) = G_PTR_ADD [[FRAME_INDEX]], [[C12]](s64)
+  ; LP64D-NEXT:   [[EXTRACT3:%[0-9]+]]:_(s64) = G_EXTRACT [[C8]](s256), 192
+  ; LP64D-NEXT:   G_STORE [[EXTRACT3]](s64), [[PTR_ADD3]](p0) :: (store (s64) into %stack.0 + 24)
   ; LP64D-NEXT:   $x10 = COPY [[C]](s64)
   ; LP64D-NEXT:   $x11 = COPY [[C1]](s64)
   ; LP64D-NEXT:   $x12 = COPY [[C2]](s64)
@@ -284,8 +323,18 @@ define i64 @callee_i256_indirect_reference_in_stack(i64 %x1, i64 %x2, i64 %x3, i
   ; RV64I-NEXT:   [[COPY7:%[0-9]+]]:_(s64) = COPY $x17
   ; RV64I-NEXT:   [[FRAME_INDEX:%[0-9]+]]:_(p0) = G_FRAME_INDEX %fixed-stack.0
   ; RV64I-NEXT:   [[LOAD:%[0-9]+]]:_(p0) = G_LOAD [[FRAME_INDEX]](p0) :: (load (p0) from %fixed-stack.0, align 16)
-  ; RV64I-NEXT:   [[LOAD1:%[0-9]+]]:_(s256) = G_LOAD [[LOAD]](p0) :: (load (s256), align 16)
-  ; RV64I-NEXT:   [[TRUNC:%[0-9]+]]:_(s64) = G_TRUNC [[LOAD1]](s256)
+  ; RV64I-NEXT:   [[LOAD1:%[0-9]+]]:_(s64) = G_LOAD [[LOAD]](p0) :: (load (s64), align 16)
+  ; RV64I-NEXT:   [[C:%[0-9]+]]:_(s64) = G_CONSTANT i64 8
+  ; RV64I-NEXT:   [[PTR_ADD:%[0-9]+]]:_(p0) = G_PTR_ADD [[LOAD]], [[C]](s64)
+  ; RV64I-NEXT:   [[LOAD2:%[0-9]+]]:_(s64) = G_LOAD [[PTR_ADD]](p0) :: (load (s64))
+  ; RV64I-NEXT:   [[C1:%[0-9]+]]:_(s64) = G_CONSTANT i64 16
+  ; RV64I-NEXT:   [[PTR_ADD1:%[0-9]+]]:_(p0) = G_PTR_ADD [[LOAD]], [[C1]](s64)
+  ; RV64I-NEXT:   [[LOAD3:%[0-9]+]]:_(s64) = G_LOAD [[PTR_ADD1]](p0) :: (load (s64), align 16)
+  ; RV64I-NEXT:   [[C2:%[0-9]+]]:_(s64) = G_CONSTANT i64 24
+  ; RV64I-NEXT:   [[PTR_ADD2:%[0-9]+]]:_(p0) = G_PTR_ADD [[LOAD]], [[C2]](s64)
+  ; RV64I-NEXT:   [[LOAD4:%[0-9]+]]:_(s64) = G_LOAD [[PTR_ADD2]](p0) :: (load (s64))
+  ; RV64I-NEXT:   [[MV:%[0-9]+]]:_(s256) = G_MERGE_VALUES [[LOAD1]](s64), [[LOAD2]](s64), [[LOAD3]](s64), [[LOAD4]](s64)
+  ; RV64I-NEXT:   [[TRUNC:%[0-9]+]]:_(s64) = G_TRUNC [[MV]](s256)
   ; RV64I-NEXT:   $x10 = COPY [[TRUNC]](s64)
   ; RV64I-NEXT:   PseudoRET implicit $x10
   %2 = trunc i256 %y to i64
@@ -299,10 +348,27 @@ define i64 @callee_i256_indirect_reference_in_reg(i256 %x, i256 %y) {
   ; RV64I-NEXT:   liveins: $x10, $x11
   ; RV64I-NEXT: {{  $}}
   ; RV64I-NEXT:   [[COPY:%[0-9]+]]:_(p0) = COPY $x10
-  ; RV64I-NEXT:   [[LOAD:%[0-9]+]]:_(s256) = G_LOAD [[COPY]](p0) :: (load (s256), align 16)
+  ; RV64I-NEXT:   [[LOAD:%[0-9]+]]:_(s64) = G_LOAD [[COPY]](p0) :: (load (s64), align 16)
+  ; RV64I-NEXT:   [[C:%[0-9]+]]:_(s64) = G_CONSTANT i64 8
+  ; RV64I-NEXT:   [[PTR_ADD:%[0-9]+]]:_(p0) = G_PTR_ADD [[COPY]], [[C]](s64)
+  ; RV64I-NEXT:   [[LOAD1:%[0-9]+]]:_(s64) = G_LOAD [[PTR_ADD]](p0) :: (load (s64))
+  ; RV64I-NEXT:   [[C1:%[0-9]+]]:_(s64) = G_CONSTANT i64 16
+  ; RV64I-NEXT:   [[PTR_ADD1:%[0-9]+]]:_(p0) = G_PTR_ADD [[COPY]], [[C1]](s64)
+  ; RV64I-NEXT:   [[LOAD2:%[0-9]+]]:_(s64) = G_LOAD [[PTR_ADD1]](p0) :: (load (s64), align 16)
+  ; RV64I-NEXT:   [[C2:%[0-9]+]]:_(s64) = G_CONSTANT i64 24
+  ; RV64I-NEXT:   [[PTR_ADD2:%[0-9]+]]:_(p0) = G_PTR_ADD [[COPY]], [[C2]](s64)
+  ; RV64I-NEXT:   [[LOAD3:%[0-9]+]]:_(s64) = G_LOAD [[PTR_ADD2]](p0) :: (load (s64))
+  ; RV64I-NEXT:   [[MV:%[0-9]+]]:_(s256) = G_MERGE_VALUES [[LOAD]](s64), [[LOAD1]](s64), [[LOAD2]](s64), [[LOAD3]](s64)
   ; RV64I-NEXT:   [[COPY1:%[0-9]+]]:_(p0) = COPY $x11
-  ; RV64I-NEXT:   [[LOAD1:%[0-9]+]]:_(s256) = G_LOAD [[COPY1]](p0) :: (load (s256), align 16)
-  ; RV64I-NEXT:   [[ADD:%[0-9]+]]:_(s256) = G_ADD [[LOAD]], [[LOAD1]]
+  ; RV64I-NEXT:   [[LOAD4:%[0-9]+]]:_(s64) = G_LOAD [[COPY1]](p0) :: (load (s64), align 16)
+  ; RV64I-NEXT:   [[PTR_ADD3:%[0-9]+]]:_(p0) = G_PTR_ADD [[COPY1]], [[C]](s64)
+  ; RV64I-NEXT:   [[LOAD5:%[0-9]+]]:_(s64) = G_LOAD [[PTR_ADD3]](p0) :: (load (s64))
+  ; RV64I-NEXT:   [[PTR_ADD4:%[0-9]+]]:_(p0) = G_PTR_ADD [[COPY1]], [[C1]](s64)
+  ; RV64I-NEXT:   [[LOAD6:%[0-9]+]]:_(s64) = G_LOAD [[PTR_ADD4]](p0) :: (load (s64), align 16)
+  ; RV64I-NEXT:   [[PTR_ADD5:%[0-9]+]]:_(p0) = G_PTR_ADD [[COPY1]], [[C2]](s64)
+  ; RV64I-NEXT:   [[LOAD7:%[0-9]+]]:_(s64) = G_LOAD [[PTR_ADD5]](p0) :: (load (s64))
+  ; RV64I-NEXT:   [[MV1:%[0-9]+]]:_(s256) = G_MERGE_VALUES [[LOAD4]](s64), [[LOAD5]](s64), [[LOAD6]](s64), [[LOAD7]](s64)
+  ; RV64I-NEXT:   [[ADD:%[0-9]+]]:_(s256) = G_ADD [[MV]], [[MV1]]
   ; RV64I-NEXT:   [[TRUNC:%[0-9]+]]:_(s64) = G_TRUNC [[ADD]](s256)
   ; RV64I-NEXT:   $x10 = COPY [[TRUNC]](s64)
   ; RV64I-NEXT:   PseudoRET implicit $x10
@@ -318,9 +384,32 @@ define i32 @caller_i256_indirect_reference_in_reg() {
   ; LP64-NEXT:   [[C1:%[0-9]+]]:_(s256) = G_CONSTANT i256 2
   ; LP64-NEXT:   ADJCALLSTACKDOWN 0, 0, implicit-def $x2, implicit $x2
   ; LP64-NEXT:   [[FRAME_INDEX:%[0-9]+]]:_(p0) = G_FRAME_INDEX %stack.0
-  ; LP64-NEXT:   G_STORE [[C]](s256), [[FRAME_INDEX]](p0) :: (store (s256) into %stack.0, align 16)
+  ; LP64-NEXT:   [[EXTRACT:%[0-9]+]]:_(s64) = G_EXTRACT [[C]](s256), 0
+  ; LP64-NEXT:   G_STORE [[EXTRACT]](s64), [[FRAME_INDEX]](p0) :: (store (s64) into %stack.0, align 16)
+  ; LP64-NEXT:   [[C2:%[0-9]+]]:_(s64) = G_CONSTANT i64 8
+  ; LP64-NEXT:   [[PTR_ADD:%[0-9]+]]:_(p0) = G_PTR_ADD [[FRAME_INDEX]], [[C2]](s64)
+  ; LP64-NEXT:   [[EXTRACT1:%[0-9]+]]:_(s64) = G_EXTRACT [[C]](s256), 64
+  ; LP64-NEXT:   G_STORE [[EXTRACT1]](s64), [[PTR_ADD]](p0) :: (store (s64) into %stack.0 + 8)
+  ; LP64-NEXT:   [[C3:%[0-9]+]]:_(s64) = G_CONSTANT i64 16
+  ; LP64-NEXT:   [[PTR_ADD1:%[0-9]+]]:_(p0) = G_PTR_ADD [[FRAME_INDEX]], [[C3]](s64)
+  ; LP64-NEXT:   [[EXTRACT2:%[0-9]+]]:_(s64) = G_EXTRACT [[C]](s256), 128
+  ; LP64-NEXT:   G_STORE [[EXTRACT2]](s64), [[PTR_ADD1]](p0) :: (store (s64) into %stack.0 + 16, align 16)
+  ; LP64-NEXT:   [[C4:%[0-9]+]]:_(s64) = G_CONSTANT i64 24
+  ; LP64-NEXT:   [[PTR_ADD2:%[0-9]+]]:_(p0) = G_PTR_ADD [[FRAME_INDEX]], [[C4]](s64)
+  ; LP64-NEXT:   [[EXTRACT3:%[0-9]+]]:_(s64) = G_EXTRACT [[C]](s256), 192
+  ; LP64-NEXT:   G_STORE [[EXTRACT3]](s64), [[PTR_ADD2]](p0) :: (store (s64) into %stack.0 + 24)
   ; LP64-NEXT:   [[FRAME_INDEX1:%[0-9]+]]:_(p0) = G_FRAME_INDEX %stack.1
-  ; LP64-NEXT:   G_STORE [[C1]](s256), [[FRAME_INDEX1]](p0) :: (store (s256) into %stack.1, align 16)
+  ; LP64-NEXT:   [[EXTRACT4:%[0-9]+]]:_(s64) = G_EXTRACT [[C1]](s256), 0
+  ; LP64-NEXT:   G_STORE [[EXTRACT4]](s64), [[FRAME_INDEX1]](p0) :: (store (s64) into %stack.1, align 16)
+  ; LP64-NEXT:   [[PTR_ADD3:%[0-9]+]]:_(p0) = G_PTR_ADD [[FRAME_INDEX1]], [[C2]](s64)
+  ; LP64-NEXT:   [[EXTRACT5:%[0-9]+]]:_(s64) = G_EXTRACT [[C1]](s256), 64
+  ; LP64-NEXT:   G_STORE [[EXTRACT5]](s64), [[PTR_ADD3]](p0) :: (store (s64) into %stack.1 + 8)
+  ; LP64-NEXT:   [[PTR_ADD4:%[0-9]+]]:_(p0) = G_PTR_ADD [[FRAME_INDEX1]], [[C3]](s64)
+  ; LP64-NEXT:   [[EXTRACT6:%[0-9]+]]:_(s64) = G_EXTRACT [[C1]](s256), 128
+  ; LP64-NEXT:   G_STORE [[EXTRACT6]](s64), [[PTR_ADD4]](p0) :: (store (s64) into %stack.1 + 16, align 16)
+  ; LP64-NEXT:   [[PTR_ADD5:%[0-9]+]]:_(p0) = G_PTR_ADD [[FRAME_INDEX1]], [[C4]](s64)
+  ; LP64-NEXT:   [[EXTRACT7:%[0-9]+]]:_(s64) = G_EXTRACT [[C1]](s256), 192
+  ; LP64-NEXT:   G_STORE [[EXTRACT7]](s64), [[PTR_ADD5]](p0) :: (store (s64) into %stack.1 + 24)
   ; LP64-NEXT:   $x10 = COPY [[FRAME_INDEX]](p0)
   ; LP64-NEXT:   $x11 = COPY [[FRAME_INDEX1]](p0)
   ; LP64-NEXT:   PseudoCALL target-flags(riscv-call) @callee_i256_indirect_reference_in_reg, csr_ilp32_lp64, implicit-def $x1, implicit $x10, implicit $x11, implicit-def $x10
@@ -337,9 +426,32 @@ define i32 @caller_i256_indirect_reference_in_reg() {
   ; LP64F-NEXT:   [[C1:%[0-9]+]]:_(s256) = G_CONSTANT i256 2
   ; LP64F-NEXT:   ADJCALLSTACKDOWN 0, 0, implicit-def $x2, implicit $x2
   ; LP64F-NEXT:   [[FRAME_INDEX:%[0-9]+]]:_(p0) = G_FRAME_INDEX %stack.0
-  ; LP64F-NEXT:   G_STORE [[C]](s256), [[FRAME_INDEX]](p0) :: (store (s256) into %stack.0, align 16)
+  ; LP64F-NEXT:   [[EXTRACT:%[0-9]+]]:_(s64) = G_EXTRACT [[C]](s256), 0
+  ; LP64F-NEXT:   G_STORE [[EXTRACT]](s64), [[FRAME_INDEX]](p0) :: (store (s64) into %stack.0, align 16)
+  ; LP64F-NEXT:   [[C2:%[0-9]+]]:_(s64) = G_CONSTANT i64 8
+  ; LP64F-NEXT:   [[PTR_ADD:%[0-9]+]]:_(p0) = G_PTR_ADD [[FRAME_INDEX]], [[C2]](s64)
+  ; LP64F-NEXT:   [[EXTRACT1:%[0-9]+]]:_(s64) = G_EXTRACT [[C]](s256), 64
+  ; LP64F-NEXT:   G_STORE [[EXTRACT1]](s64), [[PTR_ADD]](p0) :: (store (s64) into %stack.0 + 8)
+  ; LP64F-NEXT:   [[C3:%[0-9]+]]:_(s64) = G_CONSTANT i64 16
+  ; LP64F-NEXT:   [[PTR_ADD1:%[0-9]+]]:_(p0) = G_PTR_ADD [[FRAME_INDEX]], [[C3]](s64)
+  ; LP64F-NEXT:   [[EXTRACT2:%[0-9]+]]:_(s64) = G_EXTRACT [[C]](s256), 128
+  ; LP64F-NEXT:   G_STORE [[EXTRACT2]](s64), [[PTR_ADD1]](p0) :: (store (s64) into %stack.0 + 16, align 16)
+  ; LP64F-NEXT:   [[C4:%[0-9]+]]:_(s64) = G_CONSTANT i64 24
+  ; LP64F-NEXT:   [[PTR_ADD2:%[0-9]+]]:_(p0) = G_PTR_ADD [[FRAME_INDEX]], [[C4]](s64)
+  ; LP64F-NEXT:   [[EXTRACT3:%[0-9]+]]:_(s64) = G_EXTRACT [[C]](s256), 192
+  ; LP64F-NEXT:   G_STORE [[EXTRACT3]](s64), [[PTR_ADD2]](p0) :: (store (s64) into %stack.0 + 24)
   ; LP64F-NEXT:   [[FRAME_INDEX1:%[0-9]+]]:_(p0) = G_FRAME_INDEX %stack.1
-  ; LP64F-NEXT:   G_STORE [[C1]](s256), [[FRAME_INDEX1]](p0) :: (store (s256) into %stack.1, align 16)
+  ; LP64F-NEXT:   [[EXTRACT4:%[0-9]+]]:_(s64) = G_EXTRACT [[C1]](s256), 0
+  ; LP64F-NEXT:   G_STORE [[EXTRACT4]](s64), [[FRAME_INDEX1]](p0) :: (store (s64) into %stack.1, align 16)
+  ; LP64F-NEXT:   [[PTR_ADD3:%[0-9]+]]:_(p0) = G_PTR_ADD [[FRAME_INDEX1]], [[C2]](s64)
+  ; LP64F-NEXT:   [[EXTRACT5:%[0-9]+]]:_(s64) = G_EXTRACT [[C1]](s256), 64
+  ; LP64F-NEXT:   G_STORE [[EXTRACT5]](s64), [[PTR_ADD3]](p0) :: (store (s64) into %stack.1 + 8)
+  ; LP64F-NEXT:   [[PTR_ADD4:%[0-9]+]]:_(p0) = G_PTR_ADD [[FRAME_INDEX1]], [[C3]](s64)
+  ; LP64F-NEXT:   [[EXTRACT6:%[0-9]+]]:_(s64) = G_EXTRACT [[C1]](s256), 128
+  ; LP64F-NEXT:   G_STORE [[EXTRACT6]](s64), [[PTR_ADD4]](p0) :: (store (s64) into %stack.1 + 16, align 16)
+  ; LP64F-NEXT:   [[PTR_ADD5:%[0-9]+]]:_(p0) = G_PTR_ADD [[FRAME_INDEX1]], [[C4]](s64)
+  ; LP64F-NEXT:   [[EXTRACT7:%[0-9]+]]:_(s64) = G_EXTRACT [[C1]](s256), 192
+  ; LP64F-NEXT:   G_STORE [[EXTRACT7]](s64), [[PTR_ADD5]](p0) :: (store (s64) into %stack.1 + 24)
   ; LP64F-NEXT:   $x10 = COPY [[FRAME_INDEX]](p0)
   ; LP64F-NEXT:   $x11 = COPY [[FRAME_INDEX1]](p0)
   ; LP64F-NEXT:   PseudoCALL target-flags(riscv-call) @callee_i256_indirect_reference_in_reg, csr_ilp32f_lp64f, implicit-def $x1, implicit $x10, implicit $x11, implicit-def $x10
@@ -356,9 +468,32 @@ define i32 @caller_i256_indirect_reference_in_reg() {
   ; LP64D-NEXT:   [[C1:%[0-9]+]]:_(s256) = G_CONSTANT i256 2
   ; LP64D-NEXT:   ADJCALLSTACKDOWN 0, 0, implicit-def $x2, implicit $x2
   ; LP64D-NEXT:   [[FRAME_INDEX:%[0-9]+]]:_(p0) = G_FRAME_INDEX %stack.0
-  ; LP64D-NEXT:   G_STORE [[C]](s256), [[FRAME_INDEX]](p0) :: (store (s256) into %stack.0, align 16)
+  ; LP64D-NEXT:   [[EXTRACT:%[0-9]+]]:_(s64) = G_EXTRACT [[C]](s256), 0
+  ; LP64D-NEXT:   G_STORE [[EXTRACT]](s64), [[FRAME_INDEX]](p0) :: (store (s64) into %stack.0, align 16)
+  ; LP64D-NEXT:   [[C2:%[0-9]+]]:_(s64) = G_CONSTANT i64 8
+  ; LP64D-NEXT:   [[PTR_ADD:%[0-9]+]]:_(p0) = G_PTR_ADD [[FRAME_INDEX]], [[C2]](s64)
+  ; LP64D-NEXT:   [[EXTRACT1:%[0-9]+]]:_(s64) = G_EXTRACT [[C]](s256), 64
+  ; LP64D-NEXT:   G_STORE [[EXTRACT1]](s64), [[PTR_ADD]](p0) :: (store (s64) into %stack.0 + 8)
+  ; LP64D-NEXT:   [[C3:%[0-9]+]]:_(s64) = G_CONSTANT i64 16
+  ; LP64D-NEXT:   [[PTR_ADD1:%[0-9]+]]:_(p0) = G_PTR_ADD [[FRAME_INDEX]], [[C3]](s64)
+  ; LP64D-NEXT:   [[EXTRACT2:%[0-9]+]]:_(s64) = G_EXTRACT [[C]](s256), 128
+  ; LP64D-NEXT:   G_STORE [[EXTRACT2]](s64), [[PTR_ADD1]](p0) :: (store (s64) into %stack.0 + 16, align 16)
+  ; LP64D-NEXT:   [[C4:%[0-9]+]]:_(s64) = G_CONSTANT i64 24
+  ; LP64D-NEXT:   [[PTR_ADD2:%[0-9]+]]:_(p0) = G_PTR_ADD [[FRAME_INDEX]], [[C4]](s64)
+  ; LP64D-NEXT:   [[EXTRACT3:%[0-9]+]]:_(s64) = G_EXTRACT [[C]](s256), 192
+  ; LP64D-NEXT:   G_STORE [[EXTRACT3]](s64), [[PTR_ADD2]](p0) :: (store (s64) into %stack.0 + 24)
   ; LP64D-NEXT:   [[FRAME_INDEX1:%[0-9]+]]:_(p0) = G_FRAME_INDEX %stack.1
-  ; LP64D-NEXT:   G_STORE [[C1]](s256), [[FRAME_INDEX1]](p0) :: (store (s256) into %stack.1, align 16)
+  ; LP64D-NEXT:   [[EXTRACT4:%[0-9]+]]:_(s64) = G_EXTRACT [[C1]](s256), 0
+  ; LP64D-NEXT:   G_STORE [[EXTRACT4]](s64), [[FRAME_INDEX1]](p0) :: (store (s64) into %stack.1, align 16)
+  ; LP64D-NEXT:   [[PTR_ADD3:%[0-9]+]]:_(p0) = G_PTR_ADD [[FRAME_INDEX1]], [[C2]](s64)
+  ; LP64D-NEXT:   [[EXTRACT5:%[0-9]+]]:_(s64) = G_EXTRACT [[C1]](s256), 64
+  ; LP64D-NEXT:   G_STORE [[EXTRACT5]](s64), [[PTR_ADD3]](p0) :: (store (s64) into %stack.1 + 8)
+  ; LP64D-NEXT:   [[PTR_ADD4:%[0-9]+]]:_(p0) = G_PTR_ADD [[FRAME_INDEX1]], [[C3]](s64)
+  ; LP64D-NEXT:   [[EXTRACT6:%[0-9]+]]:_(s64) = G_EXTRACT [[C1]](s256), 128
+  ; LP64D-NEXT:   G_STORE [[EXTRACT6]](s64), [[PTR_ADD4]](p0) :: (store (s64) into %stack.1 + 16, align 16)
+  ; LP64D-NEXT:   [[PTR_ADD5:%[0-9]+]]:_(p0) = G_PTR_ADD [[FRAME_INDEX1]], [[C4]](s64)
+  ; LP64D-NEXT:   [[EXTRACT7:%[0-9]+]]:_(s64) = G_EXTRACT [[C1]](s256), 192
+  ; LP64D-NEXT:   G_STORE [[EXTRACT7]](s64), [[PTR_ADD5]](p0) :: (store (s64) into %stack.1 + 24)
   ; LP64D-NEXT:   $x10 = COPY [[FRAME_INDEX]](p0)
   ; LP64D-NEXT:   $x11 = COPY [[FRAME_INDEX1]](p0)
   ; LP64D-NEXT:   PseudoCALL target-flags(riscv-call) @callee_i256_indirect_reference_in_reg, csr_ilp32d_lp64d, implicit-def $x1, implicit $x10, implicit $x11, implicit-def $x10
@@ -564,10 +699,27 @@ define i64 @callee_large_scalars(i256 %a, i256 %b) nounwind {
   ; RV64I-NEXT:   liveins: $x10, $x11
   ; RV64I-NEXT: {{  $}}
   ; RV64I-NEXT:   [[COPY:%[0-9]+]]:_(p0) = COPY $x10
-  ; RV64I-NEXT:   [[LOAD:%[0-9]+]]:_(s256) = G_LOAD [[COPY]](p0) :: (load (s256), align 16)
+  ; RV64I-NEXT:   [[LOAD:%[0-9]+]]:_(s64) = G_LOAD [[COPY]](p0) :: (load (s64), align 16)
+  ; RV64I-NEXT:   [[C:%[0-9]+]]:_(s64) = G_CONSTANT i64 8
+  ; RV64I-NEXT:   [[PTR_ADD:%[0-9]+]]:_(p0) = G_PTR_ADD [[COPY]], [[C]](s64)
+  ; RV64I-NEXT:   [[LOAD1:%[0-9]+]]:_(s64) = G_LOAD [[PTR_ADD]](p0) :: (load (s64))
+  ; RV64I-NEXT:   [[C1:%[0-9]+]]:_(s64) = G_CONSTANT i64 16
+  ; RV64I-NEXT:   [[PTR_ADD1:%[0-9]+]]:_(p0) = G_PTR_ADD [[COPY]], [[C1]](s64)
+  ; RV64I-NEXT:   [[LOAD2:%[0-9]+]]:_(s64) = G_LOAD [[PTR_ADD1]](p0) :: (load (s64), align 16)
+  ; RV64I-NEXT:   [[C2:%[0-9]+]]:_(s64) = G_CONSTANT i64 24
+  ; RV64I-NEXT:   [[PTR_ADD2:%[0-9]+]]:_(p0) = G_PTR_ADD [[COPY]], [[C2]](s64)
+  ; RV64I-NEXT:   [[LOAD3:%[0-9]+]]:_(s64) = G_LOAD [[PTR_ADD2]](p0) :: (load (s64))
+  ; RV64I-NEXT:   [[MV:%[0-9]+]]:_(s256) = G_MERGE_VALUES [[LOAD]](s64), [[LOAD1]](s64), [[LOAD2]](s64), [[LOAD3]](s64)
   ; RV64I-NEXT:   [[COPY1:%[0-9]+]]:_(p0) = COPY $x11
-  ; RV64I-NEXT:   [[LOAD1:%[0-9]+]]:_(s256) = G_LOAD [[COPY1]](p0) :: (load (s256), align 16)
-  ; RV64I-NEXT:   [[ICMP:%[0-9]+]]:_(s1) = G_ICMP intpred(eq), [[LOAD]](s256), [[LOAD1]]
+  ; RV64I-NEXT:   [[LOAD4:%[0-9]+]]:_(s64) = G_LOAD [[COPY1]](p0) :: (load (s64), align 16)
+  ; RV64I-NEXT:   [[PTR_ADD3:%[0-9]+]]:_(p0) = G_PTR_ADD [[COPY1]], [[C]](s64)
+  ; RV64I-NEXT:   [[LOAD5:%[0-9]+]]:_(s64) = G_LOAD [[PTR_ADD3]](p0) :: (load (s64))
+  ; RV64I-NEXT:   [[PTR_ADD4:%[0-9]+]]:_(p0) = G_PTR_ADD [[COPY1]], [[C1]](s64)
+  ; RV64I-NEXT:   [[LOAD6:%[0-9]+]]:_(s64) = G_LOAD [[PTR_ADD4]](p0) :: (load (s64), align 16)
+  ; RV64I-NEXT:   [[PTR_ADD5:%[0-9]+]]:_(p0) = G_PTR_ADD [[COPY1]], [[C2]](s64)
+  ; RV64I-NEXT:   [[LOAD7:%[0-9]+]]:_(s64) = G_LOAD [[PTR_ADD5]](p0) :: (load (s64))
+  ; RV64I-NEXT:   [[MV1:%[0-9]+]]:_(s256) = G_MERGE_VALUES [[LOAD4]](s64), [[LOAD5]](s64), [[LOAD6]](s64), [[LOAD7]](s64)
+  ; RV64I-NEXT:   [[ICMP:%[0-9]+]]:_(s1) = G_ICMP intpred(eq), [[MV]](s256), [[MV1]]
   ; RV64I-NEXT:   [[ZEXT:%[0-9]+]]:_(s64) = G_ZEXT [[ICMP]](s1)
   ; RV64I-NEXT:   $x10 = COPY [[ZEXT]](s64)
   ; RV64I-NEXT:   PseudoRET implicit $x10
@@ -583,9 +735,32 @@ define i64 @caller_large_scalars() nounwind {
   ; LP64-NEXT:   [[C1:%[0-9]+]]:_(s256) = G_CONSTANT i256 2
   ; LP64-NEXT:   ADJCALLSTACKDOWN 0, 0, implicit-def $x2, implicit $x2
   ; LP64-NEXT:   [[FRAME_INDEX:%[0-9]+]]:_(p0) = G_FRAME_INDEX %stack.0
-  ; LP64-NEXT:   G_STORE [[C]](s256), [[FRAME_INDEX]](p0) :: (store (s256) into %stack.0, align 16)
+  ; LP64-NEXT:   [[EXTRACT:%[0-9]+]]:_(s64) = G_EXTRACT [[C]](s256), 0
+  ; LP64-NEXT:   G_STORE [[EXTRACT]](s64), [[FRAME_INDEX]](p0) :: (store (s64) into %stack.0, align 16)
+  ; LP64-NEXT:   [[C2:%[0-9]+]]:_(s64) = G_CONSTANT i64 8
+  ; LP64-NEXT:   [[PTR_ADD:%[0-9]+]]:_(p0) = G_PTR_ADD [[FRAME_INDEX]], [[C2]](s64)
+  ; LP64-NEXT:   [[EXTRACT1:%[0-9]+]]:_(s64) = G_EXTRACT [[C]](s256), 64
+  ; LP64-NEXT:   G_STORE [[EXTRACT1]](s64), [[PTR_ADD]](p0) :: (store (s64) into %stack.0 + 8)
+  ; LP64-NEXT:   [[C3:%[0-9]+]]:_(s64) = G_CONSTANT i64 16
+  ; LP64-NEXT:   [[PTR_ADD1:%[0-9]+]]:_(p0) = G_PTR_ADD [[FRAME_INDEX]], [[C3]](s64)
+  ; LP64-NEXT:   [[EXTRACT2:%[0-9]+]]:_(s64) = G_EXTRACT [[C]](s256), 128
+  ; LP64-NEXT:   G_STORE [[EXTRACT2]](s64), [[PTR_ADD1]](p0) :: (store (s64) into %stack.0 + 16, align 16)
+  ; LP64-NEXT:   [[C4:%[0-9]+]]:_(s64) = G_CONSTANT i64 24
+  ; LP64-NEXT:   [[PTR_ADD2:%[0-9]+]]:_(p0) = G_PTR_ADD [[FRAME_INDEX]], [[C4]](s64)
+  ; LP64-NEXT:   [[EXTRACT3:%[0-9]+]]:_(s64) = G_EXTRACT [[C]](s256), 192
+  ; LP64-NEXT:   G_STORE [[EXTRACT3]](s64), [[PTR_ADD2]](p0) :: (store (s64) into %stack.0 + 24)
   ; LP64-NEXT:   [[FRAME_INDEX1:%[0-9]+]]:_(p0) = G_FRAME_INDEX %stack.1
-  ; LP64-NEXT:   G_STORE [[C1]](s256), [[FRAME_INDEX1]](p0) :: (store (s256) into %stack.1, align 16)
+  ; LP64-NEXT:   [[EXTRACT4:%[0-9]+]]:_(s64) = G_EXTRACT [[C1]](s256), 0
+  ; LP64-NEXT:   G_STORE [[EXTRACT4]](s64), [[FRAME_INDEX1]](p0) :: (store (s64) into %stack.1, align 16)
+  ; LP64-NEXT:   [[PTR_ADD3:%[0-9]+]]:_(p0) = G_PTR_ADD [[FRAME_INDEX1]], [[C2]](s64)
+  ; LP64-NEXT:   [[EXTRACT5:%[0-9]+]]:_(s64) = G_EXTRACT [[C1]](s256), 64
+  ; LP64-NEXT:   G_STORE [[EXTRACT5]](s64), [[PTR_ADD3]](p0) :: (store (s64) into %stack.1 + 8)
+  ; LP64-NEXT:   [[PTR_ADD4:%[0-9]+]]:_(p0) = G_PTR_ADD [[FRAME_INDEX1]], [[C3]](s64)
+  ; LP64-NEXT:   [[EXTRACT6:%[0-9]+]]:_(s64) = G_EXTRACT [[C1]](s256), 128
+  ; LP64-NEXT:   G_STORE [[EXTRACT6]](s64), [[PTR_ADD4]](p0) :: (store (s64) into %stack.1 + 16, align 16)
+  ; LP64-NEXT:   [[PTR_ADD5:%[0-9]+]]:_(p0) = G_PTR_ADD [[FRAME_INDEX1]], [[C4]](s64)
+  ; LP64-NEXT:   [[EXTRACT7:%[0-9]+]]:_(s64) = G_EXTRACT [[C1]](s256), 192
+  ; LP64-NEXT:   G_STORE [[EXTRACT7]](s64), [[PTR_ADD5]](p0) :: (store (s64) into %stack.1 + 24)
   ; LP64-NEXT:   $x10 = COPY [[FRAME_INDEX]](p0)
   ; LP64-NEXT:   $x11 = COPY [[FRAME_INDEX1]](p0)
   ; LP64-NEXT:   PseudoCALL target-flags(riscv-call) @callee_large_scalars, csr_ilp32_lp64, implicit-def $x1, implicit $x10, implicit $x11, implicit-def $x10
@@ -600,9 +775,32 @@ define i64 @caller_large_scalars() nounwind {
   ; LP64F-NEXT:   [[C1:%[0-9]+]]:_(s256) = G_CONSTANT i256 2
   ; LP64F-NEXT:   ADJCALLSTACKDOWN 0, 0, implicit-def $x2, implicit $x2
   ; LP64F-NEXT:   [[FRAME_INDEX:%[0-9]+]]:_(p0) = G_FRAME_INDEX %stack.0
-  ; LP64F-NEXT:   G_STORE [[C]](s256), [[FRAME_INDEX]](p0) :: (store (s256) into %stack.0, align 16)
+  ; LP64F-NEXT:   [[EXTRACT:%[0-9]+]]:_(s64) = G_EXTRACT [[C]](s256), 0
+  ; LP64F-NEXT:   G_STORE [[EXTRACT]](s64), [[FRAME_INDEX]](p0) :: (store (s64) into %stack.0, align 16)
+  ; LP64F-NEXT:   [[C2:%[0-9]+]]:_(s64) = G_CONSTANT i64 8
+  ; LP64F-NEXT:   [[PTR_ADD:%[0-9]+]]:_(p0) = G_PTR_ADD [[FRAME_INDEX]], [[C2]](s64)
+  ; LP64F-NEXT:   [[EXTRACT1:%[0-9]+]]:_(s64) = G_EXTRACT [[C]](s256), 64
+  ; LP64F-NEXT:   G_STORE [[EXTRACT1]](s64), [[PTR_ADD]](p0) :: (store (s64) into %stack.0 + 8)
+  ; LP64F-NEXT:   [[C3:%[0-9]+]]:_(s64) = G_CONSTANT i64 16
+  ; LP64F-NEXT:   [[PTR_ADD1:%[0-9]+]]:_(p0) = G_PTR_ADD [[FRAME_INDEX]], [[C3]](s64)
+  ; LP64F-NEXT:   [[EXTRACT2:%[0-9]+]]:_(s64) = G_EXTRACT [[C]](s256), 128
+  ; LP64F-NEXT:   G_STORE [[EXTRACT2]](s64), [[PTR_ADD1]](p0) :: (store (s64) into %stack.0 + 16, align 16)
+  ; LP64F-NEXT:   [[C4:%[0-9]+]]:_(s64) = G_CONSTANT i64 24
+  ; LP64F-NEXT:   [[PTR_ADD2:%[0-9]+]]:_(p0) = G_PTR_ADD [[FRAME_INDEX]], [[C4]](s64)
+  ; LP64F-NEXT:   [[EXTRACT3:%[0-9]+]]:_(s64) = G_EXTRACT [[C]](s256), 192
+  ; LP64F-NEXT:   G_STORE [[EXTRACT3]](s64), [[PTR_ADD2]](p0) :: (store (s64) into %stack.0 + 24)
   ; LP64F-NEXT:   [[FRAME_INDEX1:%[0-9]+]]:_(p0) = G_FRAME_INDEX %stack.1
-  ; LP64F-NEXT:   G_STORE [[C1]](s256), [[FRAME_INDEX1]](p0) :: (store (s256) into %stack.1, align 16)
+  ; LP64F-NEXT:   [[EXTRACT4:%[0-9]+]]:_(s64) = G_EXTRACT [[C1]](s256), 0
+  ; LP64F-NEXT:   G_STORE [[EXTRACT4]](s64), [[FRAME_INDEX1]](p0) :: (store (s64) into %stack.1, align 16)
+  ; LP64F-NEXT:   [[PTR_ADD3:%[0-9]+]]:_(p0) = G_PTR_ADD [[FRAME_INDEX1]], [[C2]](s64)
+  ; LP64F-NEXT:   [[EXTRACT5:%[0-9]+]]:_(s64) = G_EXTRACT [[C1]](s256), 64
+  ; LP64F-NEXT:   G_STORE [[EXTRACT5]](s64), [[PTR_ADD3]](p0) :: (store (s64) into %stack.1 + 8)
+  ; LP64F-NEXT:   [[PTR_ADD4:%[0-9]+]]:_(p0) = G_PTR_ADD [[FRAME_INDEX1]], [[C3]](s64)
+  ; LP64F-NEXT:   [[EXTRACT6:%[0-9]+]]:_(s64) = G_EXTRACT [[C1]](s256), 128
+  ; LP64F-NEXT:   G_STORE [[EXTRACT6]](s64), [[PTR_ADD4]](p0) :: (store (s64) into %stack.1 + 16, align 16)
+  ; LP64F-NEXT:   [[PTR_ADD5:%[0-9]+]]:_(p0) = G_PTR_ADD [[FRAME_INDEX1]], [[C4]](s64)
+  ; LP64F-NEXT:   [[EXTRACT7:%[0-9]+]]:_(s64) = G_EXTRACT [[C1]](s256), 192
+  ; LP64F-NEXT:   G_STORE [[EXTRACT7]](s64), [[PTR_ADD5]](p0) :: (store (s64) into %stack.1 + 24)
   ; LP64F-NEXT:   $x10 = COPY [[FRAME_INDEX]](p0)
   ; LP64F-NEXT:   $x11 = COPY [[FRAME_INDEX1]](p0)
   ; LP64F-NEXT:   PseudoCALL target-flags(riscv-call) @callee_large_scalars, csr_ilp32f_lp64f, implicit-def $x1, implicit $x10, implicit $x11, implicit-def $x10
@@ -617,9 +815,32 @@ define i64 @caller_large_scalars() nounwind {
   ; LP64D-NEXT:   [[C1:%[0-9]+]]:_(s256) = G_CONSTANT i256 2
   ; LP64D-NEXT:   ADJCALLSTACKDOWN 0, 0, implicit-def $x2, implicit $x2
   ; LP64D-NEXT:   [[FRAME_INDEX:%[0-9]+]]:_(p0) = G_FRAME_INDEX %stack.0
-  ; LP64D-NEXT:   G_STORE [[C]](s256), [[FRAME_INDEX]](p0) :: (store (s256) into %stack.0, align 16)
+  ; LP64D-NEXT:   [[EXTRACT:%[0-9]+]]:_(s64) = G_EXTRACT [[C]](s256), 0
+  ; LP64D-NEXT:   G_STORE [[EXTRACT]](s64), [[FRAME_INDEX]](p0) :: (store (s64) into %stack.0, align 16)
+  ; LP64D-NEXT:   [[C2:%[0-9]+]]:_(s64) = G_CONSTANT i64 8
+  ; LP64D-NEXT:   [[PTR_ADD:%[0-9]+]]:_(p0) = G_PTR_ADD [[FRAME_INDEX]], [[C2]](s64)
+  ; LP64D-NEXT:   [[EXTRACT1:%[0-9]+]]:_(s64) = G_EXTRACT [[C]](s256), 64
+  ; LP64D-NEXT:   G_STORE [[EXTRACT1]](s64), [[PTR_ADD]](p0) :: (store (s64) into %stack.0 + 8)
+  ; LP64D-NEXT:   [[C3:%[0-9]+]]:_(s64) = G_CONSTANT i64 16
+  ; LP64D-NEXT:   [[PTR_ADD1:%[0-9]+]]:_(p0) = G_PTR_ADD [[FRAME_INDEX]], [[C3]](s64)
+  ; LP64D-NEXT:   [[EXTRACT2:%[0-9]+]]:_(s64) = G_EXTRACT [[C]](s256), 128
+  ; LP64D-NEXT:   G_STORE [[EXTRACT2]](s64), [[PTR_ADD1]](p0) :: (store (s64) into %stack.0 + 16, align 16)
+  ; LP64D-NEXT:   [[C4:%[0-9]+]]:_(s64) = G_CONSTANT i64 24
+  ; LP64D-NEXT:   [[PTR_ADD2:%[0-9]+]]:_(p0) = G_PTR_ADD [[FRAME_INDEX]], [[C4]](s64)
+  ; LP64D-NEXT:   [[EXTRACT3:%[0-9]+]]:_(s64) = G_EXTRACT [[C]](s256), 192
+  ; LP64D-NEXT:   G_STORE [[EXTRACT3]](s64), [[PTR_ADD2]](p0) :: (store (s64) into %stack.0 + 24)
   ; LP64D-NEXT:   [[FRAME_INDEX1:%[0-9]+]]:_(p0) = G_FRAME_INDEX %stack.1
-  ; LP64D-NEXT:   G_STORE [[C1]](s256), [[FRAME_INDEX1]](p0) :: (store (s256) into %stack.1, align 16)
+  ; LP64D-NEXT:   [[EXTRACT4:%[0-9]+]]:_(s64) = G_EXTRACT [[C1]](s256), 0
+  ; LP64D-NEXT:   G_STORE [[EXTRACT4]](s64), [[FRAME_INDEX1]](p0) :: (store (s64) into %stack.1, align 16)
+  ; LP64D-NEXT:   [[PTR_ADD3:%[0-9]+]]:_(p0) = G_PTR_ADD [[FRAME_INDEX1]], [[C2]](s64)
+  ; LP64D-NEXT:   [[EXTRACT5:%[0-9]+]]:_(s64) = G_EXTRACT [[C1]](s256), 64
+  ; LP64D-NEXT:   G_STORE [[EXTRACT5]](s64), [[PTR_ADD3]](p0) :: (store (s64) into %stack.1 + 8)
+  ; LP64D-NEXT:   [[PTR_ADD4:%[0-9]+]]:_(p0) = G_PTR_ADD [[FRAME_INDEX1]], [[C3]](s64)
+  ; LP64D-NEXT:   [[EXTRACT6:%[0-9]+]]:_(s64) = G_EXTRACT [[C1]](s256), 128
+  ; LP64D-NEXT:   G_STORE [[EXTRACT6]](s64), [[PTR_ADD4]](p0) :: (store (s64) into %stack.1 + 16, align 16)
+  ; LP64D-NEXT:   [[PTR_ADD5:%[0-9]+]]:_(p0) = G_PTR_ADD [[FRAME_INDEX1]], [[C4]](s64)
+  ; LP64D-NEXT:   [[EXTRACT7:%[0-9]+]]:_(s64) = G_EXTRACT [[C1]](s256), 192
+  ; LP64D-NEXT:   G_STORE [[EXTRACT7]](s64), [[PTR_ADD5]](p0) :: (store (s64) into %stack.1 + 24)
   ; LP64D-NEXT:   $x10 = COPY [[FRAME_INDEX]](p0)
   ; LP64D-NEXT:   $x11 = COPY [[FRAME_INDEX1]](p0)
   ; LP64D-NEXT:   PseudoCALL target-flags(riscv-call) @callee_large_scalars, csr_ilp32d_lp64d, implicit-def $x1, implicit $x10, implicit $x11, implicit-def $x10
@@ -648,13 +869,30 @@ define i64 @callee_large_scalars_exhausted_regs(i64 %a, i64 %b, i64 %c, i64 %d, 
   ; RV64I-NEXT:   [[COPY5:%[0-9]+]]:_(s64) = COPY $x15
   ; RV64I-NEXT:   [[COPY6:%[0-9]+]]:_(s64) = COPY $x16
   ; RV64I-NEXT:   [[COPY7:%[0-9]+]]:_(p0) = COPY $x17
-  ; RV64I-NEXT:   [[LOAD:%[0-9]+]]:_(s256) = G_LOAD [[COPY7]](p0) :: (load (s256), align 16)
+  ; RV64I-NEXT:   [[LOAD:%[0-9]+]]:_(s64) = G_LOAD [[COPY7]](p0) :: (load (s64), align 16)
+  ; RV64I-NEXT:   [[C:%[0-9]+]]:_(s64) = G_CONSTANT i64 8
+  ; RV64I-NEXT:   [[PTR_ADD:%[0-9]+]]:_(p0) = G_PTR_ADD [[COPY7]], [[C]](s64)
+  ; RV64I-NEXT:   [[LOAD1:%[0-9]+]]:_(s64) = G_LOAD [[PTR_ADD]](p0) :: (load (s64))
+  ; RV64I-NEXT:   [[C1:%[0-9]+]]:_(s64) = G_CONSTANT i64 16
+  ; RV64I-NEXT:   [[PTR_ADD1:%[0-9]+]]:_(p0) = G_PTR_ADD [[COPY7]], [[C1]](s64)
+  ; RV64I-NEXT:   [[LOAD2:%[0-9]+]]:_(s64) = G_LOAD [[PTR_ADD1]](p0) :: (load (s64), align 16)
+  ; RV64I-NEXT:   [[C2:%[0-9]+]]:_(s64) = G_CONSTANT i64 24
+  ; RV64I-NEXT:   [[PTR_ADD2:%[0-9]+]]:_(p0) = G_PTR_ADD [[COPY7]], [[C2]](s64)
+  ; RV64I-NEXT:   [[LOAD3:%[0-9]+]]:_(s64) = G_LOAD [[PTR_ADD2]](p0) :: (load (s64))
+  ; RV64I-NEXT:   [[MV:%[0-9]+]]:_(s256) = G_MERGE_VALUES [[LOAD]](s64), [[LOAD1]](s64), [[LOAD2]](s64), [[LOAD3]](s64)
   ; RV64I-NEXT:   [[FRAME_INDEX:%[0-9]+]]:_(p0) = G_FRAME_INDEX %fixed-stack.1
-  ; RV64I-NEXT:   [[LOAD1:%[0-9]+]]:_(s64) = G_LOAD [[FRAME_INDEX]](p0) :: (load (s64) from %fixed-stack.1, align 16)
+  ; RV64I-NEXT:   [[LOAD4:%[0-9]+]]:_(s64) = G_LOAD [[FRAME_INDEX]](p0) :: (load (s64) from %fixed-stack.1, align 16)
   ; RV64I-NEXT:   [[FRAME_INDEX1:%[0-9]+]]:_(p0) = G_FRAME_INDEX %fixed-stack.0
-  ; RV64I-NEXT:   [[LOAD2:%[0-9]+]]:_(p0) = G_LOAD [[FRAME_INDEX1]](p0) :: (load (p0) from %fixed-stack.0)
-  ; RV64I-NEXT:   [[LOAD3:%[0-9]+]]:_(s256) = G_LOAD [[LOAD2]](p0) :: (load (s256), align 16)
-  ; RV64I-NEXT:   [[ICMP:%[0-9]+]]:_(s1) = G_ICMP intpred(eq), [[LOAD]](s256), [[LOAD3]]
+  ; RV64I-NEXT:   [[LOAD5:%[0-9]+]]:_(p0) = G_LOAD [[FRAME_INDEX1]](p0) :: (load (p0) from %fixed-stack.0)
+  ; RV64I-NEXT:   [[LOAD6:%[0-9]+]]:_(s64) = G_LOAD [[LOAD5]](p0) :: (load (s64), align 16)
+  ; RV64I-NEXT:   [[PTR_ADD3:%[0-9]+]]:_(p0) = G_PTR_ADD [[LOAD5]], [[C]](s64)
+  ; RV64I-NEXT:   [[LOAD7:%[0-9]+]]:_(s64) = G_LOAD [[PTR_ADD3]](p0) :: (load (s64))
+  ; RV64I-NEXT:   [[PTR_ADD4:%[0-9]+]]:_(p0) = G_PTR_ADD [[LOAD5]], [[C1]](s64)
+  ; RV64I-NEXT:   [[LOAD8:%[0-9]+]]:_(s64) = G_LOAD [[PTR_ADD4]](p0) :: (load (s64), align 16)
+  ; RV64I-NEXT:   [[PTR_ADD5:%[0-9]+]]:_(p0) = G_PTR_ADD [[LOAD5]], [[C2]](s64)
+  ; RV64I-NEXT:   [[LOAD9:%[0-9]+]]:_(s64) = G_LOAD [[PTR_ADD5]](p0) :: (load (s64))
+  ; RV64I-NEXT:   [[MV1:%[0-9]+]]:_(s256) = G_MERGE_VALUES [[LOAD6]](s64), [[LOAD7]](s64), [[LOAD8]](s64), [[LOAD9]](s64)
+  ; RV64I-NEXT:   [[ICMP:%[0-9]+]]:_(s1) = G_ICMP intpred(eq), [[MV]](s256), [[MV1]]
   ; RV64I-NEXT:   [[ZEXT:%[0-9]+]]:_(s64) = G_ZEXT [[ICMP]](s1)
   ; RV64I-NEXT:   $x10 = COPY [[ZEXT]](s64)
   ; RV64I-NEXT:   PseudoRET implicit $x10
@@ -678,16 +916,38 @@ define i64 @caller_large_scalars_exhausted_regs() nounwind {
   ; LP64-NEXT:   [[C9:%[0-9]+]]:_(s256) = G_CONSTANT i256 10
   ; LP64-NEXT:   ADJCALLSTACKDOWN 16, 0, implicit-def $x2, implicit $x2
   ; LP64-NEXT:   [[FRAME_INDEX:%[0-9]+]]:_(p0) = G_FRAME_INDEX %stack.0
-  ; LP64-NEXT:   G_STORE [[C7]](s256), [[FRAME_INDEX]](p0) :: (store (s256) into %stack.0, align 16)
+  ; LP64-NEXT:   [[EXTRACT:%[0-9]+]]:_(s64) = G_EXTRACT [[C7]](s256), 0
+  ; LP64-NEXT:   G_STORE [[EXTRACT]](s64), [[FRAME_INDEX]](p0) :: (store (s64) into %stack.0, align 16)
+  ; LP64-NEXT:   [[C10:%[0-9]+]]:_(s64) = G_CONSTANT i64 8
+  ; LP64-NEXT:   [[PTR_ADD:%[0-9]+]]:_(p0) = G_PTR_ADD [[FRAME_INDEX]], [[C10]](s64)
+  ; LP64-NEXT:   [[EXTRACT1:%[0-9]+]]:_(s64) = G_EXTRACT [[C7]](s256), 64
+  ; LP64-NEXT:   G_STORE [[EXTRACT1]](s64), [[PTR_ADD]](p0) :: (store (s64) into %stack.0 + 8)
+  ; LP64-NEXT:   [[C11:%[0-9]+]]:_(s64) = G_CONSTANT i64 16
+  ; LP64-NEXT:   [[PTR_ADD1:%[0-9]+]]:_(p0) = G_PTR_ADD [[FRAME_INDEX]], [[C11]](s64)
+  ; LP64-NEXT:   [[EXTRACT2:%[0-9]+]]:_(s64) = G_EXTRACT [[C7]](s256), 128
+  ; LP64-NEXT:   G_STORE [[EXTRACT2]](s64), [[PTR_ADD1]](p0) :: (store (s64) into %stack.0 + 16, align 16)
+  ; LP64-NEXT:   [[C12:%[0-9]+]]:_(s64) = G_CONSTANT i64 24
+  ; LP64-NEXT:   [[PTR_ADD2:%[0-9]+]]:_(p0) = G_PTR_ADD [[FRAME_INDEX]], [[C12]](s64)
+  ; LP64-NEXT:   [[EXTRACT3:%[0-9]+]]:_(s64) = G_EXTRACT [[C7]](s256), 192
+  ; LP64-NEXT:   G_STORE [[EXTRACT3]](s64), [[PTR_ADD2]](p0) :: (store (s64) into %stack.0 + 24)
   ; LP64-NEXT:   [[COPY:%[0-9]+]]:_(p0) = COPY $x2
-  ; LP64-NEXT:   [[C10:%[0-9]+]]:_(s64) = G_CONSTANT i64 0
-  ; LP64-NEXT:   [[PTR_ADD:%[0-9]+]]:_(p0) = G_PTR_ADD [[COPY]], [[C10]](s64)
-  ; LP64-NEXT:   G_STORE [[C8]](s64), [[PTR_ADD]](p0) :: (store (s64) into stack, align 16)
+  ; LP64-NEXT:   [[C13:%[0-9]+]]:_(s64) = G_CONSTANT i64 0
+  ; LP64-NEXT:   [[PTR_ADD3:%[0-9]+]]:_(p0) = G_PTR_ADD [[COPY]], [[C13]](s64)
+  ; LP64-NEXT:   G_STORE [[C8]](s64), [[PTR_ADD3]](p0) :: (store (s64) into stack, align 16)
   ; LP64-NEXT:   [[FRAME_INDEX1:%[0-9]+]]:_(p0) = G_FRAME_INDEX %stack.1
-  ; LP64-NEXT:   G_STORE [[C9]](s256), [[FRAME_INDEX1]](p0) :: (store (s256) into %stack.1, align 16)
-  ; LP64-NEXT:   [[C11:%[0-9]+]]:_(s64) = G_CONSTANT i64 8
-  ; LP64-NEXT:   [[PTR_ADD1:%[0-9]+]]:_(p0) = G_PTR_ADD [[COPY]], [[C11]](s64)
-  ; LP64-NEXT:   G_STORE [[FRAME_INDEX1]](p0), [[PTR_ADD1]](p0) :: (store (p0) into stack + 8)
+  ; LP64-NEXT:   [[EXTRACT4:%[0-9]+]]:_(s64) = G_EXTRACT [[C9]](s256), 0
+  ; LP64-NEXT:   G_STORE [[EXTRACT4]](s64), [[FRAME_INDEX1]](p0) :: (store (s64) into %stack.1, align 16)
+  ; LP64-NEXT:   [[PTR_ADD4:%[0-9]+]]:_(p0) = G_PTR_ADD [[COPY]], [[C10]](s64)
+  ; LP64-NEXT:   G_STORE [[FRAME_INDEX1]](p0), [[PTR_ADD4]](p0) :: (store (p0) into stack + 8)
+  ; LP64-NEXT:   [[PTR_ADD5:%[0-9]+]]:_(p0) = G_PTR_ADD [[FRAME_INDEX1]], [[C10]](s64)
+  ; LP64-NEXT:   [[EXTRACT5:%[0-9]+]]:_(s64) = G_EXTRACT [[C9]](s256), 64
+  ; LP64-NEXT:   G_STORE [[EXTRACT5]](s64), [[PTR_ADD5]](p0) :: (store (s64) into %stack.1 + 8)
+  ; LP64-NEXT:   [[PTR_ADD6:%[0-9]+]]:_(p0) = G_PTR_ADD [[FRAME_INDEX1]], [[C11]](s64)
+  ; LP64-NEXT:   [[EXTRACT6:%[0-9]+]]:_(s64) = G_EXTRACT [[C9]](s256), 128
+  ; LP64-NEXT:   G_STORE [[EXTRACT6]](s64), [[PTR_ADD6]](p0) :: (store (s64) into %stack.1 + 16, align 16)
+  ; LP64-NEXT:   [[PTR_ADD7:%[0-9]+]]:_(p0) = G_PTR_ADD [[FRAME_INDEX1]], [[C12]](s64)
+  ; LP64-NEXT:   [[EXTRACT7:%[0-9]+]]:_(s64) = G_EXTRACT [[C9]](s256), 192
+  ; LP64-NEXT:   G_STORE [[EXTRACT7]](s64), [[PTR_ADD7]](p0) :: (store (s64) into %stack.1 + 24)
   ; LP64-NEXT:   $x10 = COPY [[C]](s64)
   ; LP64-NEXT:   $x11 = COPY [[C1]](s64)
   ; LP64-NEXT:   $x12 = COPY [[C2]](s64)
@@ -716,16 +976,38 @@ define i64 @caller_large_scalars_exhausted_regs() nounwind {
   ; LP64F-NEXT:   [[C9:%[0-9]+]]:_(s256) = G_CONSTANT i256 10
   ; LP64F-NEXT:   ADJCALLSTACKDOWN 16, 0, implicit-def $x2, implicit $x2
   ; LP64F-NEXT:   [[FRAME_INDEX:%[0-9]+]]:_(p0) = G_FRAME_INDEX %stack.0
-  ; LP64F-NEXT:   G_STORE [[C7]](s256), [[FRAME_INDEX]](p0) :: (store (s256) into %stack.0, align 16)
+  ; LP64F-NEXT:   [[EXTRACT:%[0-9]+]]:_(s64) = G_EXTRACT [[C7]](s256), 0
+  ; LP64F-NEXT:   G_STORE [[EXTRACT]](s64), [[FRAME_INDEX]](p0) :: (store (s64) into %stack.0, align 16)
+  ; LP64F-NEXT:   [[C10:%[0-9]+]]:_(s64) = G_CONSTANT i64 8
+  ; LP64F-NEXT:   [[PTR_ADD:%[0-9]+]]:_(p0) = G_PTR_ADD [[FRAME_INDEX]], [[C10]](s64)
+  ; LP64F-NEXT:   [[EXTRACT1:%[0-9]+]]:_(s64) = G_EXTRACT [[C7]](s256), 64
+  ; LP64F-NEXT:   G_STORE [[EXTRACT1]](s64), [[PTR_ADD]](p0) :: (store (s64) into %stack.0 + 8)
+  ; LP64F-NEXT:   [[C11:%[0-9]+]]:_(s64) = G_CONSTANT i64 16
+  ; LP64F-NEXT:   [[PTR_ADD1:%[0-9]+]]:_(p0) = G_PTR_ADD [[FRAME_INDEX]], [[C11]](s64)
+  ; LP64F-NEXT:   [[EXTRACT2:%[0-9]+]]:_(s64) = G_EXTRACT [[C7]](s256), 128
+  ; LP64F-NEXT:   G_STORE [[EXTRACT2]](s64), [[PTR_ADD1]](p0) :: (store (s64) into %stack.0 + 16, align 16)
+  ; LP64F-NEXT:   [[C12:%[0-9]+]]:_(s64) = G_CONSTANT i64 24
+  ; LP64F-NEXT:   [[PTR_ADD2:%[0-9]+]]:_(p0) = G_PTR_ADD [[FRAME_INDEX]], [[C12]](s64)
+  ; LP64F-NEXT:   [[EXTRACT3:%[0-9]+]]:_(s64) = G_EXTRACT [[C7]](s256), 192
+  ; LP64F-NEXT:   G_STORE [[EXTRACT3]](s64), [[PTR_ADD2]](p0) :: (store (s64) into %stack.0 + 24)
   ; LP64F-NEXT:   [[COPY:%[0-9]+]]:_(p0) = COPY $x2
-  ; LP64F-NEXT:   [[C10:%[0-9]+]]:_(s64) = G_CONSTANT i64 0
-  ; LP64F-NEXT:   [[PTR_ADD:%[0-9]+]]:_(p0) = G_PTR_ADD [[COPY]], [[C10]](s64)
-  ; LP64F-NEXT:   G_STORE [[C8]](s64), [[PTR_ADD]](p0) :: (store (s64) into stack, align 16)
+  ; LP64F-NEXT:   [[C13:%[0-9]+]]:_(s64) = G_CONSTANT i64 0
+  ; LP64F-NEXT:   [[PTR_ADD3:%[0-9]+]]:_(p0) = G_PTR_ADD [[COPY]], [[C13]](s64)
+  ; LP64F-NEXT:   G_STORE [[C8]](s64), [[PTR_ADD3]](p0) :: (store (s64) into stack, align 16)
   ; LP64F-NEXT:   [[FRAME_INDEX1:%[0-9]+]]:_(p0) = G_FRAME_INDEX %stack.1
-  ; LP64F-NEXT:   G_STORE [[C9]](s256), [[FRAME_INDEX1]](p0) :: (store (s256) into %stack.1, align 16)
-  ; LP64F-NEXT:   [[C11:%[0-9]+]]:_(s64) = G_CONSTANT i64 8
-  ; LP64F-NEXT:   [[PTR_ADD1:%[0-9]+]]:_(p0) = G_PTR_ADD [[COPY]], [[C11]](s64)
-  ; LP64F-NEXT:   G_STORE [[FRAME_INDEX1]](p0), [[PTR_ADD1]](p0) :: (store (p0) into stack + 8)
+  ; LP64F-NEXT:   [[EXTRACT4:%[0-9]+]]:_(s64) = G_EXTRACT [[C9]](s256), 0
+  ; LP64F-NEXT:   G_STORE [[EXTRACT4]](s64), [[FRAME_INDEX1]](p0) :: (store (s64) into %stack.1, align 16)
+  ; LP64F-NEXT:   [[PTR_ADD4:%[0-9]+]]:_(p0) = G_PTR_ADD [[COPY]], [[C10]](s64)
+  ; LP64F-NEXT:   G_STORE [[FRAME_INDEX1]](p0), [[PTR_ADD4]](p0) :: (store (p0) into stack + 8)
+  ; LP64F-NEXT:   [[PTR_ADD5:%[0-9]+]]:_(p0) = G_PTR_ADD [[FRAME_INDEX1]], [[C10]](s64)
+  ; LP64F-NEXT:   [[EXTRACT5:%[0-9]+]]:_(s64) = G_EXTRACT [[C9]](s256), 64
+  ; LP64F-NEXT:   G_STORE [[EXTRACT5]](s64), [[PTR_ADD5]](p0) :: (store (s64) into %stack.1 + 8)
+  ; LP64F-NEXT:   [[PTR_ADD6:%[0-9]+]]:_(p0) = G_PTR_ADD [[FRAME_INDEX1]], [[C11]](s64)
+  ; LP64F-NEXT:   [[EXTRACT6:%[0-9]+]]:_(s64) = G_EXTRACT [[C9]](s256), 128
+  ; LP64F-NEXT:   G_STORE [[EXTRACT6]](s64), [[PTR_ADD6]](p0) :: (store (s64) into %stack.1 + 16, align 16)
+  ; LP64F-NEXT:   [[PTR_ADD7:%[0-9]+]]:_(p0) = G_PTR_ADD [[FRAME_INDEX1]], [[C12]](s64)
+  ; LP64F-NEXT:   [[EXTRACT7:%[0-9]+]]:_(s64) = G_EXTRACT [[C9]](s256), 192
+  ; LP64F-NEXT:   G_STORE [[EXTRACT7]](s64), [[PTR_ADD7]](p0) :: (store (s64) into %stack.1 + 24)
   ; LP64F-NEXT:   $x10 = COPY [[C]](s64)
   ; LP64F-NEXT:   $x11 = COPY [[C1]](s64)
   ; LP64F-NEXT:   $x12 = COPY [[C2]](s64)
@@ -754,16 +1036,38 @@ define i64 @caller_large_scalars_exhausted_regs() nounwind {
   ; LP64D-NEXT:   [[C9:%[0-9]+]]:_(s256) = G_CONSTANT i256 10
   ; LP64D-NEXT:   ADJCALLSTACKDOWN 16, 0, implicit-def $x2, implicit $x2
   ; LP64D-NEXT:   [[FRAME_INDEX:%[0-9]+]]:_(p0) = G_FRAME_INDEX %stack.0
-  ; LP64D-NEXT:   G_STORE [[C7]](s256), [[FRAME_INDEX]](p0) :: (store (s256) into %stack.0, align 16)
+  ; LP64D-NEXT:   [[EXTRACT:%[0-9]+]]:_(s64) = G_EXTRACT [[C7]](s256), 0
+  ; LP64D-NEXT:   G_STORE [[EXTRACT]](s64), [[FRAME_INDEX]](p0) :: (store (s64) into %stack.0, align 16)
+  ; LP64D-NEXT:   [[C10:%[0-9]+]]:_(s64) = G_CONSTANT i64 8
+  ; LP64D-NEXT:   [[PTR_ADD:%[0-9]+]]:_(p0) = G_PTR_ADD [[FRAME_INDEX]], [[C10]](s64)
+  ; LP64D-NEXT:   [[EXTRACT1:%[0-9]+]]:_(s64) = G_EXTRACT [[C7]](s256), 64
+  ; LP64D-NEXT:   G_STORE [[EXTRACT1]](s64), [[PTR_ADD]](p0) :: (store (s64) into %stack.0 + 8)
+  ; LP64D-NEXT:   [[C11:%[0-9]+]]:_(s64) = G_CONSTANT i64 16
+  ; LP64D-NEXT:   [[PTR_ADD1:%[0-9]+]]:_(p0) = G_PTR_ADD [[FRAME_INDEX]], [[C11]](s64)
+  ; LP64D-NEXT:   [[EXTRACT2:%[0-9]+]]:_(s64) = G_EXTRACT [[C7]](s256), 128
+  ; LP64D-NEXT:   G_STORE [[EXTRACT2]](s64), [[PTR_ADD1]](p0) :: (store (s64) into %stack.0 + 16, align 16)
+  ; LP64D-NEXT:   [[C12:%[0-9]+]]:_(s64) = G_CONSTANT i64 24
+  ; LP64D-NEXT:   [[PTR_ADD2:%[0-9]+]]:_(p0) = G_PTR_ADD [[FRAME_INDEX]], [[C12]](s64)
+  ; LP64D-NEXT:   [[EXTRACT3:%[0-9]+]]:_(s64) = G_EXTRACT [[C7]](s256), 192
+  ; LP64D-NEXT:   G_STORE [[EXTRACT3]](s64), [[PTR_ADD2]](p0) :: (store (s64) into %stack.0 + 24)
   ; LP64D-NEXT:   [[COPY:%[0-9]+]]:_(p0) = COPY $x2
-  ; LP64D-NEXT:   [[C10:%[0-9]+]]:_(s64) = G_CONSTANT i64 0
-  ; LP64D-NEXT:   [[PTR_ADD:%[0-9]+]]:_(p0) = G_PTR_ADD [[COPY]], [[C10]](s64)
-  ; LP64D-NEXT:   G_STORE [[C8]](s64), [[PTR_ADD]](p0) :: (store (s64) into stack, align 16)
+  ; LP64D-NEXT:   [[C13:%[0-9]+]]:_(s64) = G_CONSTANT i64 0
+  ; LP64D-NEXT:   [[PTR_ADD3:%[0-9]+]]:_(p0) = G_PTR_ADD [[COPY]], [[C13]](s64)
+  ; LP64D-NEXT:   G_STORE [[C8]](s64), [[PTR_ADD3]](p0) :: (store (s64) into stack, align 16)
   ; LP64D-NEXT:   [[FRAME_INDEX1:%[0-9]+]]:_(p0) = G_FRAME_INDEX %stack.1
-  ; LP64D-NEXT:   G_STORE [[C9]](s256), [[FRAME_INDEX1]](p0) :: (store (s256) into %stack.1, align 16)
-  ; LP64D-NEXT:   [[C11:%[0-9]+]]:_(s64) = G_CONSTANT i64 8
-  ; LP64D-NEXT:   [[PTR_ADD1:%[0-9]+]]:_(p0) = G_PTR_ADD [[COPY]], [[C11]](s64)
-  ; LP64D-NEXT:   G_STORE [[FRAME_INDEX1]](p0), [[PTR_ADD1]](p0) :: (store (p0) into stack + 8)
+  ; LP64D-NEXT:   [[EXTRACT4:%[0-9]+]]:_(s64) = G_EXTRACT [[C9]](s256), 0
+  ; LP64D-NEXT:   G_STORE [[EXTRACT4]](s64), [[FRAME_INDEX1]](p0) :: (store (s64) into %stack.1, align 16)
+  ; LP64D-NEXT:   [[PTR_ADD4:%[0-9]+]]:_(p0) = G_PTR_ADD [[COPY]], [[C10]](s64)
+  ; LP64D-NEXT:   G_STORE [[FRAME_INDEX1]](p0), [[PTR_ADD4]](p0) :: (store (p0) into stack + 8)
+  ; LP64D-NEXT:   [[PTR_ADD5:%[0-9]+]]:_(p0) = G_PTR_ADD [[FRAME_INDEX1]], [[C10]](s64)
+  ; LP64D-NEXT:   [[EXTRACT5:%[0-9]+]]:_(s64) = G_EXTRACT [[C9]](s256), 64
+  ; LP64D-NEXT:   G_STORE [[EXTRACT5]](s64), [[PTR_ADD5]](p0) :: (store (s64) into %stack.1 + 8)
+  ; LP64D-NEXT:   [[PTR_ADD6:%[0-9]+]]:_(p0) = G_PTR_ADD [[FRAME_INDEX1]], [[C11]](s64)
+  ; LP64D-NEXT:   [[EXTRACT6:%[0-9]+]]:_(s64) = G_EXTRACT [[C9]](s256), 128
+  ; LP64D-NEXT:   G_STORE [[EXTRACT6]](s64), [[PTR_ADD6]](p0) :: (store (s64) into %stack.1 + 16, align 16)
+  ; LP64D-NEXT:   [[PTR_ADD7:%[0-9]+]]:_(p0) = G_PTR_ADD [[FRAME_INDEX1]], [[C12]](s64)
+  ; LP64D-NEXT:   [[EXTRACT7:%[0-9]+]]:_(s64) = G_EXTRACT [[C9]](s256), 192
+  ; LP64D-NEXT:   G_STORE [[EXTRACT7]](s64), [[PTR_ADD7]](p0) :: (store (s64) into %stack.1 + 24)
   ; LP64D-NEXT:   $x10 = COPY [[C]](s64)
   ; LP64D-NEXT:   $x11 = COPY [[C1]](s64)
   ; LP64D-NEXT:   $x12 = COPY [[C2]](s64)
