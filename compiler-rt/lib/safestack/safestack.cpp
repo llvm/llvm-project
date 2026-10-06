@@ -16,6 +16,7 @@
 #define SANITIZER_COMMON_NO_REDEFINE_BUILTINS
 
 #include <errno.h>
+#include <signal.h>
 #include <string.h>
 #include <sys/resource.h>
 
@@ -23,7 +24,16 @@
 #include "safestack_platform.h"
 #include "safestack_util.h"
 #include "sanitizer/safestack_interface.h"
+#include "sanitizer_common/sanitizer_atomic.h"
 #include "sanitizer_common/sanitizer_internal_defs.h"
+
+using __sanitizer::atomic_load;
+using __sanitizer::atomic_store;
+using __sanitizer::atomic_uint8_t;
+using __sanitizer::memory_order_acquire;
+using __sanitizer::memory_order_relaxed;
+using __sanitizer::memory_order_release;
+using __sanitizer::proc_yield;
 
 // interception.h drags in sanitizer_redefine_builtins.h, which in turn
 // creates references to __sanitizer_internal_memcpy etc.  The interceptors
@@ -120,6 +130,81 @@ __thread size_t unsafe_stack_guard = 0;
 __thread void* unsafe_sigalt_stack_ptr = nullptr;
 __thread void* unsafe_sigalt_stack_start = nullptr;
 __thread size_t unsafe_sigalt_stack_size = 0;
+
+// This is a simplified version from sanitizer_common/sanitizer_mutex.h since we
+// currently do not link in sanitizer_common since safestack is intended as
+// an exploit mitigation in production workloads.
+class StaticSpinMutex {
+ public:
+  void Lock() {
+    if (LIKELY(TryLock()))
+      return;
+    LockSlow();
+  }
+
+  bool TryLock() {
+    return atomic_exchange(&state_, 1, memory_order_acquire) == 0;
+  }
+
+  void Unlock() { atomic_store(&state_, 0, memory_order_release); }
+
+ private:
+  atomic_uint8_t state_;
+
+  void LockSlow();
+};
+
+void StaticSpinMutex::LockSlow() {
+  // TODO: since we do not depend on sanitizer_common it is easier to implement
+  // it only with proc_yield like this but ideally we would mimick the behavior
+  // of sanitizer_common for the StaticSpinMutex.
+  while (1) {
+    proc_yield(1);
+    if (atomic_load(&state_, memory_order_relaxed) == 0 &&
+        atomic_exchange(&state_, 1, memory_order_acquire) == 0)
+      return;
+  }
+}
+
+// The signal handler passed to sigaction() for each signal. SA_SIGINFO chooses
+// which of the two are set (handler or action) and since it is only used in the
+// respective interceptor (signal_handler_interceptor
+// / signal_action_interceptor), we can be sure there we're always calling the
+// correct one.
+union SignalHandler {
+  void (*handler)(int);
+  void (*action)(int, siginfo_t*, void*);
+};
+
+// SIG_DFL and SIG_IGN are defined in terms of sa_handler, but since sa_handler
+// and sa_sigaction share storage they are just as valid together with
+// SA_SIGINFO and the kernel treats them the same either way. Hence the check
+// through .handler regardless of which member is in use.
+static bool is_sig_dfl_or_ign(SignalHandler cb) {
+  return cb.handler == SIG_DFL || cb.handler == SIG_IGN;
+}
+
+// sigactions_mu guarantees atomicity of sigaction() and signal() calls.
+// Access to sigactions[] is done with relaxed atomics to avoid data race with
+// the signal handler.
+const int kMaxSignals = 1024;
+static SignalHandler* sigactions = nullptr;
+static StaticSpinMutex sigactions_mu;
+
+static SignalHandler load_signal_handler(int sig) {
+  SignalHandler cb;
+  __atomic_load(&sigactions[sig], &cb, __ATOMIC_RELAXED);
+  return cb;
+}
+
+static void store_signal_handler(int sig, SignalHandler cb) {
+  // We keep sigactions mapped without write permissions to avoid an arbitrary
+  // write trivially corrupting a signal handler pointer.
+  Mprotect(sigactions, kMaxSignals * sizeof(SignalHandler),
+           PROT_READ | PROT_WRITE);
+  __atomic_store(&sigactions[sig], &cb, __ATOMIC_RELAXED);
+  Mprotect(sigactions, kMaxSignals * sizeof(SignalHandler), PROT_READ);
+}
 
 inline void *unsafe_stack_alloc(size_t size, size_t guard) {
   SFS_CHECK(size + guard >= size);
@@ -253,6 +338,20 @@ void thread_cleanup_handler(void *_iter) {
   }
 }
 
+// Instead of calling the original signal handler, this becomes the entry point
+// for all signal handlers (if unsafe_sigaltstack() has been called and
+// SA_ONSTACK was set).
+// The handler needs to be async-signal-safe!
+// Currently, this commit does not yet switch the unsafe stack and just ensures
+// the interceptors work correctly.
+static void signal_handler_interceptor(int signo) {
+  load_signal_handler(signo).handler(signo);
+}
+
+static void signal_action_interceptor(int signo, siginfo_t* si, void* uc) {
+  load_signal_handler(signo).action(signo, si, uc);
+}
+
 void EnsureInterceptorsInitialized();
 
 /// Intercept thread creation operation to allocate and setup the unsafe stack
@@ -304,13 +403,62 @@ INTERCEPTOR(int, pthread_create, pthread_t *thread,
 }
 
 // We are intercepting sigaction in order to keep note of the set sigaction and
-// overwrite it our own function to execute the switching if the unsafe stack
-// pointer before and after the signal is handled.
-// In this version, we are simply making sure the interceptor is functional.
+// overwrite it with 'signal_handler_interceptor()/signal_action_interceptor()'
+// in order to execute custom before and after running the actual signal
+// handler (to switch to the sigalt_unsafe_stack and back). The interception is
+// only done for signal handlers that actually use the sigaltstack.
+// The code here, is largely inspired by the way MSan does intercept signal
+// handlers in compiler-rt/lib/msan/msan_interceptors.cpp.
 // sigaction is required to be async-signal-safe.
 INTERCEPTOR(int, sigaction, int sig, const struct sigaction* act,
             struct sigaction* oldact) {
-  return REAL(sigaction)(sig, act, oldact);
+  if (!act || !sigactions)
+    return REAL(sigaction)(sig, act, oldact);
+  if (!(act->sa_flags & SA_ONSTACK))
+    return REAL(sigaction)(sig, act, oldact);
+
+  int res;
+  sigactions_mu.Lock();
+
+  SignalHandler old_cb = load_signal_handler(sig);
+  struct sigaction new_act;
+  struct sigaction* pnew_act = &new_act;
+  memcpy(pnew_act, act, sizeof(struct sigaction));
+
+  // Remember the handler passed by the caller and hand our interceptor to the
+  // kernel in its place. SIG_DFL and SIG_IGN are passed through unchanged.
+  if (pnew_act->sa_flags & SA_SIGINFO) {
+    SignalHandler cb;
+    cb.action = pnew_act->sa_sigaction;
+    if (!is_sig_dfl_or_ign(cb)) {
+      store_signal_handler(sig, cb);
+      pnew_act->sa_sigaction = signal_action_interceptor;
+    }
+  } else {
+    SignalHandler cb;
+    cb.handler = pnew_act->sa_handler;
+    if (!is_sig_dfl_or_ign(cb)) {
+      store_signal_handler(sig, cb);
+      pnew_act->sa_handler = signal_handler_interceptor;
+    }
+  }
+
+  res = REAL(sigaction)(sig, pnew_act, oldact);
+
+  // If sigaction puts one of our interceptors into oldact, we need to replace
+  // that with the actual sigaction/handler set by the caller.
+  if (res == 0 && oldact) {
+    if (oldact->sa_flags & SA_SIGINFO) {
+      if (oldact->sa_sigaction == signal_action_interceptor)
+        oldact->sa_sigaction = old_cb.action;
+    } else {
+      if (oldact->sa_handler == signal_handler_interceptor)
+        oldact->sa_handler = old_cb.handler;
+    }
+  }
+
+  sigactions_mu.Unlock();
+  return res;
 }
 
 // Since sigaltstack is required to be async-signal-safe, we cannot simply
@@ -344,6 +492,11 @@ void EnsureInterceptorsInitialized() {
   MutexLock lock(interceptor_init_mutex);
   if (interceptors_inited)
     return;
+
+  sigactions =
+      (SignalHandler*)Mmap(nullptr, kMaxSignals * sizeof(SignalHandler),
+                           PROT_READ, MAP_PRIVATE | MAP_ANON, -1, 0);
+  SFS_CHECK(sigactions != MAP_FAILED);
 
   // Initialize pthread interceptors for thread allocation
   INTERCEPT_FUNCTION(pthread_create);
