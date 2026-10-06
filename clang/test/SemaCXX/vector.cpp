@@ -5,6 +5,7 @@
 // RUN: %clang_cc1 -flax-vector-conversions=all -triple x86_64-apple-darwin10 -fsyntax-only -verify -std=c++20 %s
 // RUN: %clang_cc1 -flax-vector-conversions=integer -triple x86_64-apple-darwin10 -fsyntax-only -verify %s -DNO_LAX_FLOAT
 // RUN: %clang_cc1 -flax-vector-conversions=none -triple x86_64-apple-darwin10 -fsyntax-only -verify %s -DNO_LAX_FLOAT -DNO_LAX_INT
+// RUN: not %clang_cc1 -flax-vector-conversions=all -triple x86_64-apple-darwin10 -fsyntax-only -ferror-limit 0 %s 2>&1 | FileCheck %s --check-prefix=LOCATION
 
 typedef char char16 __attribute__ ((__vector_size__ (16)));
 typedef long long longlong16 __attribute__ ((__vector_size__ (16)));
@@ -354,6 +355,36 @@ Vector<int> int_vector;
 } // namespace GH225037
 
 namespace Templates {
+struct InvalidElement {};
+
+template <typename T> struct GH229300 {
+  // LOCATION: vector.cpp:[[@LINE+1]]:33: error: invalid vector element type 'Templates::InvalidElement'
+  typedef T type __attribute__((ext_vector_type(4))); // expected-error {{invalid vector element type 'Templates::InvalidElement'}}
+};
+GH229300<InvalidElement> invalid_vector; // expected-note {{in instantiation of template class 'Templates::GH229300<Templates::InvalidElement>' requested here}}
+
+template <typename T> struct GH229300Paren {
+  typedef T
+    (type)
+    // LOCATION: vector.cpp:[[@LINE+1]]:20: error: invalid vector element type 'Templates::InvalidElement'
+    __attribute__((ext_vector_type(4))); // expected-error {{invalid vector element type 'Templates::InvalidElement'}}
+};
+GH229300Paren<InvalidElement> invalid_paren_vector; // expected-note {{in instantiation of template class 'Templates::GH229300Paren<Templates::InvalidElement>' requested here}}
+
+#if __cplusplus >= 201103L
+template <typename T> using GH229300Alias =
+  // LOCATION: vector.cpp:[[@LINE+1]]:20: error: invalid vector element type 'InvalidElement'
+  T __attribute__((ext_vector_type(4))); // expected-error {{invalid vector element type 'InvalidElement'}}
+GH229300Alias<InvalidElement> invalid_alias_vector; // expected-note {{in instantiation of template type alias 'GH229300Alias' requested here}}
+
+template <int N> struct GH229300DependentSize {
+  template <typename T> using type =
+    // LOCATION: vector.cpp:[[@LINE+1]]:22: error: invalid vector element type 'InvalidElement'
+    T __attribute__((ext_vector_type(N))); // expected-error {{invalid vector element type 'InvalidElement'}}
+};
+GH229300DependentSize<4>::type<InvalidElement> invalid_dependent_vector; // expected-note {{in instantiation of template type alias 'type' requested here}}
+#endif
+
 template <typename Elt, unsigned long long Size>
 struct TemplateVectorType {
   typedef Elt __attribute__((__vector_size__(Size))) type; // #1
