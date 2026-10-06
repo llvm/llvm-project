@@ -429,6 +429,8 @@ void UnrollState::unrollBlock(VPBlockBase *VPB) {
     // value.
     VPValue *Op1;
     if (match(&R, m_VPInstruction<VPInstruction::AnyOf>(m_VPValue(Op1))) ||
+        match(&R,
+              m_VPInstruction<VPInstruction::ConcatVectors>(m_VPValue(Op1))) ||
         match(&R, m_FirstActiveLane(m_VPValue(Op1))) ||
         match(&R, m_LastActiveLane(m_VPValue(Op1))) ||
         match(&R, m_ComputeReductionResult(m_VPValue(Op1)))) {
@@ -483,6 +485,13 @@ void UnrollState::unrollBlock(VPBlockBase *VPB) {
               m_WideActiveLaneMask(m_VPValue(), m_VPValue(), m_VPValue()))) {
       auto *ALM = cast<VPInstruction>(&R);
       ALM->setOperand(2, getConstantInt(UF));
+      continue;
+    }
+
+    if (match(&R,
+              m_CombineOr(m_VPInstruction<VPInstruction::WideVectorLoad>(),
+                          m_VPInstruction<VPInstruction::WideVectorStore>()))) {
+      cast<VPInstruction>(&R)->setOperand(0, Plan.getConstantInt(64, UF));
       continue;
     }
 
@@ -991,7 +1000,7 @@ void VPlanTransforms::replicateByVF(VPlan &Plan, ElementCount VF) {
       Def2LaneDefs[DefR] = LaneDefs;
       /// Users that only demand the first lane can use the definition for lane
       /// 0.
-      DefR->replaceUsesWithIf(LaneDefs[0], [DefR](VPUser &U, unsigned) {
+      DefR->replaceUsesWithIf(LaneDefs[0], [DefR](VPUser &U) {
         if (U.usesFirstLaneOnly(DefR))
           return true;
         auto *VPI = dyn_cast<VPInstruction>(&U);

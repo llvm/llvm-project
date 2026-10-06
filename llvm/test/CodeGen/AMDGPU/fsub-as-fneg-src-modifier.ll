@@ -1287,6 +1287,8 @@ define amdgpu_gfx float @fold_f16_fsub_into_fneg_modifier_interp_daz(float %v0, 
 ; SDAG-NEXT:    s_mov_b32 m0, s4
 ; SDAG-NEXT:    s_setreg_imm32_b32 hwreg(HW_REG_MODE, 2, 2), 3
 ; SDAG-NEXT:    v_interp_p1ll_f16 v0, -v0, attr2.y
+; SDAG-NEXT:    s_nop 0
+; SDAG-NEXT:    s_setreg_imm32_b32 hwreg(HW_REG_MODE, 2, 2), 0
 ; SDAG-NEXT:    s_setpc_b64 s[30:31]
 ;
 ; GISEL-LABEL: fold_f16_fsub_into_fneg_modifier_interp_daz:
@@ -1296,6 +1298,8 @@ define amdgpu_gfx float @fold_f16_fsub_into_fneg_modifier_interp_daz(float %v0, 
 ; GISEL-NEXT:    s_mov_b32 m0, s4
 ; GISEL-NEXT:    s_setreg_imm32_b32 hwreg(HW_REG_MODE, 2, 2), 3
 ; GISEL-NEXT:    v_interp_p1ll_f16 v0, v0, attr2.y
+; GISEL-NEXT:    s_nop 0
+; GISEL-NEXT:    s_setreg_imm32_b32 hwreg(HW_REG_MODE, 2, 2), 0
 ; GISEL-NEXT:    s_setpc_b64 s[30:31]
   %sub = fsub float -0.0, %v0
   %p1_0 = call float @llvm.amdgcn.interp.p1.f16(float %sub, i32 1, i32 2, i1 0, i32 %m0)

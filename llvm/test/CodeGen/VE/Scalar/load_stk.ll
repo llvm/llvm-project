@@ -97,8 +97,8 @@ define x86_fastcallcc i64 @loadi64_stk() {
 ; CHECK-LABEL: loadi64_stk:
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    adds.l %s11, -16, %s11
-; CHECK-NEXT:    brge.l.t %s11, %s8, .LBB0_2
-; CHECK-NEXT:  # %bb.1:
+; CHECK-NEXT:    brge.l.t %s11, %s8, .LBB0_1
+; CHECK-NEXT:  # %bb.2:
 ; CHECK-NEXT:    ld %s61, 24(, %s14)
 ; CHECK-NEXT:    or %s62, 0, %s0
 ; CHECK-NEXT:    lea %s63, 315
@@ -107,7 +107,7 @@ define x86_fastcallcc i64 @loadi64_stk() {
 ; CHECK-NEXT:    shm.l %s11, 16(%s61)
 ; CHECK-NEXT:    monc
 ; CHECK-NEXT:    or %s0, 0, %s62
-; CHECK-NEXT:  .LBB0_2:
+; CHECK-NEXT:  .LBB0_1:
 ; CHECK-NEXT:    ld %s0, 8(, %s11)
 ; CHECK-NEXT:    adds.l %s11, 16, %s11
 ; CHECK-NEXT:    b.l.t (, %s10)
@@ -129,8 +129,8 @@ define x86_fastcallcc i64 @loadi64_stk_big() {
 ; CHECK-LABEL: loadi64_stk_big:
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    lea %s11, -2147483648(, %s11)
-; CHECK-NEXT:    brge.l %s11, %s8, .LBB1_4
-; CHECK-NEXT:  # %bb.3:
+; CHECK-NEXT:    brge.l %s11, %s8, .LBB1_3
+; CHECK-NEXT:  # %bb.4:
 ; CHECK-NEXT:    ld %s61, 24(, %s14)
 ; CHECK-NEXT:    or %s62, 0, %s0
 ; CHECK-NEXT:    lea %s63, 315
@@ -139,7 +139,7 @@ define x86_fastcallcc i64 @loadi64_stk_big() {
 ; CHECK-NEXT:    shm.l %s11, 16(%s61)
 ; CHECK-NEXT:    monc
 ; CHECK-NEXT:    or %s0, 0, %s62
-; CHECK-NEXT:  .LBB1_4:
+; CHECK-NEXT:  .LBB1_3:
 ; CHECK-NEXT:    ld %s0, 2147483640(, %s11)
 ; CHECK-NEXT:    or %s1, 0, (0)1
 ; CHECK-NEXT:    lea %s2, 2147483640
@@ -180,8 +180,8 @@ define x86_fastcallcc i64 @loadi64_stk_big2() {
 ; CHECK-NEXT:    lea %s13, 2147483632
 ; CHECK-NEXT:    and %s13, %s13, (32)0
 ; CHECK-NEXT:    lea.sl %s11, -1(%s13, %s11)
-; CHECK-NEXT:    brge.l %s11, %s8, .LBB2_4
-; CHECK-NEXT:  # %bb.3:
+; CHECK-NEXT:    brge.l %s11, %s8, .LBB2_3
+; CHECK-NEXT:  # %bb.4:
 ; CHECK-NEXT:    ld %s61, 24(, %s14)
 ; CHECK-NEXT:    or %s62, 0, %s0
 ; CHECK-NEXT:    lea %s63, 315
@@ -190,7 +190,7 @@ define x86_fastcallcc i64 @loadi64_stk_big2() {
 ; CHECK-NEXT:    shm.l %s11, 16(%s61)
 ; CHECK-NEXT:    monc
 ; CHECK-NEXT:    or %s0, 0, %s62
-; CHECK-NEXT:  .LBB2_4:
+; CHECK-NEXT:  .LBB2_3:
 ; CHECK-NEXT:    lea %s13, -2147483640
 ; CHECK-NEXT:    and %s13, %s13, (32)0
 ; CHECK-NEXT:    lea.sl %s13, (%s11, %s13)
@@ -236,8 +236,8 @@ define x86_fastcallcc i64 @loadi64_stk_dyn(i64 noundef %0) {
 ; CHECK-NEXT:    st %s10, 8(, %s11)
 ; CHECK-NEXT:    or %s9, 0, %s11
 ; CHECK-NEXT:    lea %s11, -256(, %s11)
-; CHECK-NEXT:    brge.l.t %s11, %s8, .LBB3_2
-; CHECK-NEXT:  # %bb.1:
+; CHECK-NEXT:    brge.l.t %s11, %s8, .LBB3_1
+; CHECK-NEXT:  # %bb.2:
 ; CHECK-NEXT:    ld %s61, 24(, %s14)
 ; CHECK-NEXT:    or %s62, 0, %s0
 ; CHECK-NEXT:    lea %s63, 315
@@ -246,7 +246,7 @@ define x86_fastcallcc i64 @loadi64_stk_dyn(i64 noundef %0) {
 ; CHECK-NEXT:    shm.l %s11, 16(%s61)
 ; CHECK-NEXT:    monc
 ; CHECK-NEXT:    or %s0, 0, %s62
-; CHECK-NEXT:  .LBB3_2:
+; CHECK-NEXT:  .LBB3_1:
 ; CHECK-NEXT:    lea %s0, 15(, %s0)
 ; CHECK-NEXT:    and %s0, -16, %s0
 ; CHECK-NEXT:    lea %s1, __ve_grow_stack@lo
@@ -280,8 +280,8 @@ define x86_fastcallcc i64 @loadi64_stk_dyn_align(i64 noundef %0) {
 ; CHECK-NEXT:    lea %s11, -288(, %s11)
 ; CHECK-NEXT:    and %s11, %s11, (59)1
 ; CHECK-NEXT:    or %s17, 0, %s11
-; CHECK-NEXT:    brge.l.t %s11, %s8, .LBB4_2
-; CHECK-NEXT:  # %bb.1:
+; CHECK-NEXT:    brge.l.t %s11, %s8, .LBB4_1
+; CHECK-NEXT:  # %bb.2:
 ; CHECK-NEXT:    ld %s61, 24(, %s14)
 ; CHECK-NEXT:    or %s62, 0, %s0
 ; CHECK-NEXT:    lea %s63, 315
@@ -290,7 +290,7 @@ define x86_fastcallcc i64 @loadi64_stk_dyn_align(i64 noundef %0) {
 ; CHECK-NEXT:    shm.l %s11, 16(%s61)
 ; CHECK-NEXT:    monc
 ; CHECK-NEXT:    or %s0, 0, %s62
-; CHECK-NEXT:  .LBB4_2:
+; CHECK-NEXT:  .LBB4_1:
 ; CHECK-NEXT:    lea %s0, 15(, %s0)
 ; CHECK-NEXT:    and %s0, -16, %s0
 ; CHECK-NEXT:    lea %s1, __ve_grow_stack@lo
@@ -325,8 +325,8 @@ define x86_fastcallcc i64 @loadi64_stk_dyn_align2(i64 noundef %0) {
 ; CHECK-NEXT:    lea %s11, -320(, %s11)
 ; CHECK-NEXT:    and %s11, %s11, (58)1
 ; CHECK-NEXT:    or %s17, 0, %s11
-; CHECK-NEXT:    brge.l.t %s11, %s8, .LBB5_2
-; CHECK-NEXT:  # %bb.1:
+; CHECK-NEXT:    brge.l.t %s11, %s8, .LBB5_1
+; CHECK-NEXT:  # %bb.2:
 ; CHECK-NEXT:    ld %s61, 24(, %s14)
 ; CHECK-NEXT:    or %s62, 0, %s0
 ; CHECK-NEXT:    lea %s63, 315
@@ -335,7 +335,7 @@ define x86_fastcallcc i64 @loadi64_stk_dyn_align2(i64 noundef %0) {
 ; CHECK-NEXT:    shm.l %s11, 16(%s61)
 ; CHECK-NEXT:    monc
 ; CHECK-NEXT:    or %s0, 0, %s62
-; CHECK-NEXT:  .LBB5_2:
+; CHECK-NEXT:  .LBB5_1:
 ; CHECK-NEXT:    lea %s0, 15(, %s0)
 ; CHECK-NEXT:    and %s0, -16, %s0
 ; CHECK-NEXT:    lea %s1, __ve_grow_stack@lo
@@ -375,8 +375,8 @@ define x86_fastcallcc i64 @loadi64_stk_dyn_align_spill(i64 noundef %0) {
 ; CHECK-NEXT:    lea %s11, -288(, %s11)
 ; CHECK-NEXT:    and %s11, %s11, (59)1
 ; CHECK-NEXT:    or %s17, 0, %s11
-; CHECK-NEXT:    brge.l.t %s11, %s8, .LBB6_2
-; CHECK-NEXT:  # %bb.1:
+; CHECK-NEXT:    brge.l.t %s11, %s8, .LBB6_1
+; CHECK-NEXT:  # %bb.2:
 ; CHECK-NEXT:    ld %s61, 24(, %s14)
 ; CHECK-NEXT:    or %s62, 0, %s0
 ; CHECK-NEXT:    lea %s63, 315
@@ -385,7 +385,7 @@ define x86_fastcallcc i64 @loadi64_stk_dyn_align_spill(i64 noundef %0) {
 ; CHECK-NEXT:    shm.l %s11, 16(%s61)
 ; CHECK-NEXT:    monc
 ; CHECK-NEXT:    or %s0, 0, %s62
-; CHECK-NEXT:  .LBB6_2:
+; CHECK-NEXT:  .LBB6_1:
 ; CHECK-NEXT:    st %s18, 48(, %s9) # 8-byte Folded Spill
 ; CHECK-NEXT:    st %s19, 56(, %s9) # 8-byte Folded Spill
 ; CHECK-NEXT:    or %s18, 0, %s0
@@ -435,8 +435,8 @@ define x86_fastcallcc fp128 @loadquad_stk() {
 ; CHECK-LABEL: loadquad_stk:
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    adds.l %s11, -16, %s11
-; CHECK-NEXT:    brge.l.t %s11, %s8, .LBB7_2
-; CHECK-NEXT:  # %bb.1:
+; CHECK-NEXT:    brge.l.t %s11, %s8, .LBB7_1
+; CHECK-NEXT:  # %bb.2:
 ; CHECK-NEXT:    ld %s61, 24(, %s14)
 ; CHECK-NEXT:    or %s62, 0, %s0
 ; CHECK-NEXT:    lea %s63, 315
@@ -445,7 +445,7 @@ define x86_fastcallcc fp128 @loadquad_stk() {
 ; CHECK-NEXT:    shm.l %s11, 16(%s61)
 ; CHECK-NEXT:    monc
 ; CHECK-NEXT:    or %s0, 0, %s62
-; CHECK-NEXT:  .LBB7_2:
+; CHECK-NEXT:  .LBB7_1:
 ; CHECK-NEXT:    ld %s1, (, %s11)
 ; CHECK-NEXT:    ld %s0, 8(, %s11)
 ; CHECK-NEXT:    adds.l %s11, 16, %s11
@@ -464,8 +464,8 @@ define x86_fastcallcc fp128 @loadquad_stk_big() {
 ; CHECK-NEXT:    lea %s13, 2147483632
 ; CHECK-NEXT:    and %s13, %s13, (32)0
 ; CHECK-NEXT:    lea.sl %s11, -1(%s13, %s11)
-; CHECK-NEXT:    brge.l %s11, %s8, .LBB8_4
-; CHECK-NEXT:  # %bb.3:
+; CHECK-NEXT:    brge.l %s11, %s8, .LBB8_3
+; CHECK-NEXT:  # %bb.4:
 ; CHECK-NEXT:    ld %s61, 24(, %s14)
 ; CHECK-NEXT:    or %s62, 0, %s0
 ; CHECK-NEXT:    lea %s63, 315
@@ -474,7 +474,7 @@ define x86_fastcallcc fp128 @loadquad_stk_big() {
 ; CHECK-NEXT:    shm.l %s11, 16(%s61)
 ; CHECK-NEXT:    monc
 ; CHECK-NEXT:    or %s0, 0, %s62
-; CHECK-NEXT:  .LBB8_4:
+; CHECK-NEXT:  .LBB8_3:
 ; CHECK-NEXT:    lea %s13, -2147483648
 ; CHECK-NEXT:    and %s13, %s13, (32)0
 ; CHECK-NEXT:    lea.sl %s13, (%s11, %s13)
@@ -519,8 +519,8 @@ define x86_fastcallcc fp128 @loadquad_stk_big2() {
 ; CHECK-NEXT:    lea %s13, 2147483632
 ; CHECK-NEXT:    and %s13, %s13, (32)0
 ; CHECK-NEXT:    lea.sl %s11, -1(%s13, %s11)
-; CHECK-NEXT:    brge.l %s11, %s8, .LBB9_4
-; CHECK-NEXT:  # %bb.3:
+; CHECK-NEXT:    brge.l %s11, %s8, .LBB9_3
+; CHECK-NEXT:  # %bb.4:
 ; CHECK-NEXT:    ld %s61, 24(, %s14)
 ; CHECK-NEXT:    or %s62, 0, %s0
 ; CHECK-NEXT:    lea %s63, 315
@@ -529,7 +529,7 @@ define x86_fastcallcc fp128 @loadquad_stk_big2() {
 ; CHECK-NEXT:    shm.l %s11, 16(%s61)
 ; CHECK-NEXT:    monc
 ; CHECK-NEXT:    or %s0, 0, %s62
-; CHECK-NEXT:  .LBB9_4:
+; CHECK-NEXT:  .LBB9_3:
 ; CHECK-NEXT:    lea %s13, -2147483648
 ; CHECK-NEXT:    and %s13, %s13, (32)0
 ; CHECK-NEXT:    lea.sl %s13, (%s11, %s13)
@@ -576,8 +576,8 @@ define x86_fastcallcc fp128 @loadquad_stk_dyn(i64 noundef %0) {
 ; CHECK-NEXT:    st %s10, 8(, %s11)
 ; CHECK-NEXT:    or %s9, 0, %s11
 ; CHECK-NEXT:    lea %s11, -256(, %s11)
-; CHECK-NEXT:    brge.l.t %s11, %s8, .LBB10_2
-; CHECK-NEXT:  # %bb.1:
+; CHECK-NEXT:    brge.l.t %s11, %s8, .LBB10_1
+; CHECK-NEXT:  # %bb.2:
 ; CHECK-NEXT:    ld %s61, 24(, %s14)
 ; CHECK-NEXT:    or %s62, 0, %s0
 ; CHECK-NEXT:    lea %s63, 315
@@ -586,7 +586,7 @@ define x86_fastcallcc fp128 @loadquad_stk_dyn(i64 noundef %0) {
 ; CHECK-NEXT:    shm.l %s11, 16(%s61)
 ; CHECK-NEXT:    monc
 ; CHECK-NEXT:    or %s0, 0, %s62
-; CHECK-NEXT:  .LBB10_2:
+; CHECK-NEXT:  .LBB10_1:
 ; CHECK-NEXT:    lea %s0, 15(, %s0)
 ; CHECK-NEXT:    and %s0, -16, %s0
 ; CHECK-NEXT:    lea %s1, __ve_grow_stack@lo
@@ -622,8 +622,8 @@ define x86_fastcallcc fp128 @loadquad_stk_dyn_align(i64 noundef %0) {
 ; CHECK-NEXT:    lea %s11, -288(, %s11)
 ; CHECK-NEXT:    and %s11, %s11, (59)1
 ; CHECK-NEXT:    or %s17, 0, %s11
-; CHECK-NEXT:    brge.l.t %s11, %s8, .LBB11_2
-; CHECK-NEXT:  # %bb.1:
+; CHECK-NEXT:    brge.l.t %s11, %s8, .LBB11_1
+; CHECK-NEXT:  # %bb.2:
 ; CHECK-NEXT:    ld %s61, 24(, %s14)
 ; CHECK-NEXT:    or %s62, 0, %s0
 ; CHECK-NEXT:    lea %s63, 315
@@ -632,7 +632,7 @@ define x86_fastcallcc fp128 @loadquad_stk_dyn_align(i64 noundef %0) {
 ; CHECK-NEXT:    shm.l %s11, 16(%s61)
 ; CHECK-NEXT:    monc
 ; CHECK-NEXT:    or %s0, 0, %s62
-; CHECK-NEXT:  .LBB11_2:
+; CHECK-NEXT:  .LBB11_1:
 ; CHECK-NEXT:    lea %s0, 15(, %s0)
 ; CHECK-NEXT:    and %s0, -16, %s0
 ; CHECK-NEXT:    lea %s1, __ve_grow_stack@lo
@@ -669,8 +669,8 @@ define x86_fastcallcc fp128 @loadquad_stk_dyn_align2(i64 noundef %0) {
 ; CHECK-NEXT:    lea %s11, -320(, %s11)
 ; CHECK-NEXT:    and %s11, %s11, (58)1
 ; CHECK-NEXT:    or %s17, 0, %s11
-; CHECK-NEXT:    brge.l.t %s11, %s8, .LBB12_2
-; CHECK-NEXT:  # %bb.1:
+; CHECK-NEXT:    brge.l.t %s11, %s8, .LBB12_1
+; CHECK-NEXT:  # %bb.2:
 ; CHECK-NEXT:    ld %s61, 24(, %s14)
 ; CHECK-NEXT:    or %s62, 0, %s0
 ; CHECK-NEXT:    lea %s63, 315
@@ -679,7 +679,7 @@ define x86_fastcallcc fp128 @loadquad_stk_dyn_align2(i64 noundef %0) {
 ; CHECK-NEXT:    shm.l %s11, 16(%s61)
 ; CHECK-NEXT:    monc
 ; CHECK-NEXT:    or %s0, 0, %s62
-; CHECK-NEXT:  .LBB12_2:
+; CHECK-NEXT:  .LBB12_1:
 ; CHECK-NEXT:    lea %s0, 15(, %s0)
 ; CHECK-NEXT:    and %s0, -16, %s0
 ; CHECK-NEXT:    lea %s1, __ve_grow_stack@lo
@@ -722,8 +722,8 @@ define x86_fastcallcc fp128 @loadquad_stk_dyn_align_spill(i64 noundef %0) {
 ; CHECK-NEXT:    lea %s11, -288(, %s11)
 ; CHECK-NEXT:    and %s11, %s11, (59)1
 ; CHECK-NEXT:    or %s17, 0, %s11
-; CHECK-NEXT:    brge.l.t %s11, %s8, .LBB13_2
-; CHECK-NEXT:  # %bb.1:
+; CHECK-NEXT:    brge.l.t %s11, %s8, .LBB13_1
+; CHECK-NEXT:  # %bb.2:
 ; CHECK-NEXT:    ld %s61, 24(, %s14)
 ; CHECK-NEXT:    or %s62, 0, %s0
 ; CHECK-NEXT:    lea %s63, 315
@@ -732,7 +732,7 @@ define x86_fastcallcc fp128 @loadquad_stk_dyn_align_spill(i64 noundef %0) {
 ; CHECK-NEXT:    shm.l %s11, 16(%s61)
 ; CHECK-NEXT:    monc
 ; CHECK-NEXT:    or %s0, 0, %s62
-; CHECK-NEXT:  .LBB13_2:
+; CHECK-NEXT:  .LBB13_1:
 ; CHECK-NEXT:    st %s18, 48(, %s9) # 8-byte Folded Spill
 ; CHECK-NEXT:    st %s20, 64(, %s9) # 8-byte Folded Spill
 ; CHECK-NEXT:    st %s21, 72(, %s9) # 8-byte Folded Spill

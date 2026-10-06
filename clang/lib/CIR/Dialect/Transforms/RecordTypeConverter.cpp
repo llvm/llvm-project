@@ -108,8 +108,58 @@ RecordRewritingTypeConverter::convertRecordMemberTypes(cir::RecordType type) {
   return loweredMemberTypes;
 }
 
+bool RecordRewritingTypeConverter::reachesChangingType(
+    mlir::Type type, llvm::SmallPtrSetImpl<mlir::Type> &visiting) const {
+  if (typeMayChange(type))
+    return true;
+
+  // The sub-element walk skips record members. Stop on cycles.
+  if (auto rt = mlir::dyn_cast<cir::RecordType>(type)) {
+    if (!visiting.insert(type).second)
+      return false;
+    for (mlir::Type member : rt.getMembers())
+      if (reachesChangingType(member, visiting))
+        return true;
+    if (auto u = mlir::dyn_cast<cir::UnionType>(type))
+      if (mlir::Type pad = u.getPadding())
+        return reachesChangingType(pad, visiting);
+    return false;
+  }
+
+  bool found = false;
+  type.walkImmediateSubElements([](mlir::Attribute) {},
+                                [&](mlir::Type sub) {
+                                  found = found ||
+                                          reachesChangingType(sub, visiting);
+                                });
+  return found;
+}
+
+bool RecordRewritingTypeConverter::recordNeedsConversion(cir::RecordType type) {
+  {
+    std::shared_lock<decltype(recordNeedsConversionMutex)> lock(
+        recordNeedsConversionMutex);
+    auto it = recordNeedsConversionCache.find(type);
+    if (it != recordNeedsConversionCache.end())
+      return it->second;
+  }
+
+  // Nested results may be partial inside a cycle, so cache only this one.
+  llvm::SmallPtrSet<mlir::Type, 8> visiting;
+  bool result = reachesChangingType(type, visiting);
+
+  std::unique_lock<decltype(recordNeedsConversionMutex)> lock(
+      recordNeedsConversionMutex);
+  recordNeedsConversionCache[type] = result;
+  return result;
+}
+
 cir::RecordType
 RecordRewritingTypeConverter::convertRecordType(cir::RecordType type) {
+  // Keep records that reach no changing type, including through nested ones.
+  if (!recordNeedsConversion(type))
+    return type;
+
   // Unnamed record types can't be referred to recursively, so we can just
   // convert this one. It also doesn't have uniqueness problems, so we can
   // just do a conversion on it.
