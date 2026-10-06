@@ -181,6 +181,8 @@ private:
   bool vectorizeChainsInBlock(BasicBlock *BB, slpvectorizer::BoUpSLP &R,
                               SmallSetVector<Instruction *, 8> &FMACandidates);
 
+  bool isReductionStoreChainRoot(Instruction *I) const;
+
   std::optional<bool> vectorizeStoreChain(ArrayRef<Value *> Chain,
                                           slpvectorizer::BoUpSLP &R,
                                           unsigned Idx, unsigned MinVF,
