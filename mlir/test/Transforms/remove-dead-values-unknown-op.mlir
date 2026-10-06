@@ -2,15 +2,8 @@
 // RUN: mlir-opt %s -split-input-file -allow-unregistered-dialect --pass-pipeline='builtin.module(gpu.module(remove-dead-values),builtin.module(remove-dead-values))' | FileCheck %s
 // RUN: mlir-opt %s -split-input-file -allow-unregistered-dialect --remove-dead-values='canonicalize=false' | FileCheck %s
 
-// An unregistered op with a region may reference any symbol visible from its
-// symbol table, so SymbolUserMap cannot compute all of its uses. It must not
-// crash the pass, and symbols it may use must be treated conservatively.
-// See https://github.com/llvm/llvm-project/issues/226052.
-//
-// Every case is wrapped in an outer module so that the nested pipelines above
-// run the pass on the inner module.
-
-// Original reproducer. The value consumed by the unknown op must stay alive.
+// Unregistered ops may reference any visible symbol, so handle them conservatively.
+// The value consumed by the unknown op must stay alive.
 // CHECK-LABEL: func.func @bbarg_of_unknown_op_2(
 // CHECK-SAME: %{{[^ ,)]+}}: f32)
 // CHECK: tensor.empty
