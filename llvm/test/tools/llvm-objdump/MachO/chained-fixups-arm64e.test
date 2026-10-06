@@ -1,0 +1,338 @@
+## Check that llvm-objdump and llvm-otool decode the arm64e chained fixup
+## formats DYLD_CHAINED_PTR_ARM64E and DYLD_CHAINED_PTR_ARM64E_USERLAND24,
+## including the signing schema of authenticated rebases and binds.
+
+# RUN: yaml2obj -DMINOS=0xB0000 -DFORMAT=0x1 -DTARGET_HI=01 %s -o %t.arm64e
+# RUN: yaml2obj -DMINOS=0xD0000 -DFORMAT=0xC -DTARGET_HI=00 %s -o %t.userland24
+
+# RUN: llvm-objdump --macho --chained-fixups %t.arm64e | \
+# RUN:     FileCheck --check-prefix=FORMAT1 %s
+# RUN: llvm-objdump --macho --chained-fixups %t.userland24 | \
+# RUN:     FileCheck --check-prefix=FORMAT12 %s
+
+# FORMAT1:  pointer_format = 1 (DYLD_CHAINED_PTR_ARM64E)
+# FORMAT12: pointer_format = 12 (DYLD_CHAINED_PTR_ARM64E_USERLAND24)
+
+# RUN: llvm-objdump --macho --dyld-info %t.arm64e | \
+# RUN:     FileCheck --check-prefixes=CHECK,ARM64E -DNAME=%t.arm64e %s
+# RUN: llvm-otool -dyld_info %t.arm64e | \
+# RUN:     FileCheck --check-prefixes=CHECK,ARM64E -DNAME=%t.arm64e %s
+# RUN: llvm-objdump --macho --dyld-info %t.userland24 | \
+# RUN:     FileCheck --check-prefixes=CHECK,USERLAND24 -DNAME=%t.userland24 %s
+
+## The two images differ only in the encoding of the unauthenticated rebases:
+## DYLD_CHAINED_PTR_ARM64E stores their target address, and
+## DYLD_CHAINED_PTR_ARM64E_USERLAND24 its offset from the image. The target of
+## an authenticated rebase is an offset from the image in both formats. The
+## decoded values match the output of dyld_info -fixups. cctools-1040's otool
+## prints the same columns, but shows the offset of an authenticated rebase
+## (0x3B4) where llvm-objdump shows its address, as for every other rebase.
+# CHECK:           [[NAME]]:
+# CHECK-NEXT:      dyld information:
+# CHECK-NEXT:      segment section address pointer type div addr key addend dylib symbol/vm address
+# CHECK-NEXT:      __DATA __data 0x100001008 0x80080000000003B4 rebase 0x0000 false IA 0x1000003B4
+# CHECK-NEXT:      __DATA __data 0x100001010 0x800B1234000003BC rebase 0x1234 true IB 0x1000003BC
+# CHECK-NEXT:      __DATA __data 0x100001018 0xC00C002A00000000 bind 0x002A false DA 0x0 libfoo _foo
+# CHECK-NEXT:      __DATA __data 0x100001020 0xC00FFFFF00000002 bind 0xFFFF true DB 0x10 libfoo _foo
+# CHECK-NEXT:      __DATA __data 0x100001028 0xC008000100000001 bind 0x0001 false IA 0xFFFFFFFFFFFFFFFC libfoo _foo
+# ARM64E-NEXT:     __DATA __data 0x100001030 0x00080001000003B4 rebase 0x1000003B4
+# USERLAND24-NEXT: __DATA __data 0x100001030 0x00080000000003B4 rebase 0x1000003B4
+# CHECK-NEXT:      __DATA __data 0x100001038 0x4008000800000000 bind 0x8 libfoo _foo
+# ARM64E-NEXT:     __DATA __data 0x100001040 0x0000900100001000 rebase 0x1200000100001000
+# USERLAND24-NEXT: __DATA __data 0x100001040 0x0000900000001000 rebase 0x1200000100001000
+# CHECK-NOT:       {{.}}
+
+## The YAML below is the obj2yaml output, with LC_UUID zeroed, of an image
+## that Xcode 27's ld (ld-27037.1) linked from the following files. MINOS
+## selects the deployment target that makes the linker choose each format,
+## FORMAT is the pointer_format, and TARGET_HI is bits 32-39 of the two
+## unauthenticated rebases at 0x100001030 and 0x100001040, which hold the
+## 0x100000000 image base only in DYLD_CHAINED_PTR_ARM64E.
+##
+## --- foo.s:
+##   .globl _foo
+##   _foo:
+##     ret
+##
+## --- chained-fixups-arm64e.s:
+##   .globl _main
+##   .p2align 2
+##   _main:
+##     ret
+##   _local:
+##     ret
+##
+##   .data
+##   .p2align 3
+##   _target:
+##     .quad 0
+##     .quad _local@AUTH(ia,0)
+##     .quad (_local + 8)@AUTH(ib,0x1234,addr)
+##     .quad _foo@AUTH(da,42)
+##     .quad (_foo + 16)@AUTH(db,0xffff,addr)
+##     .quad (_foo - 4)@AUTH(ia,1)
+##     .quad _local
+##     .quad _foo + 8
+##     .quad _target + 0x1200000000000000
+##
+## $ clang -target arm64e-apple-macos11.0 -c foo.s
+## $ ld -arch arm64e -platform_version macos 11.0 27.0 -lSystem -dylib \
+##       -install_name @executable_path/libfoo.dylib foo.o -o libfoo.dylib
+## $ clang -target arm64e-apple-macos11.0 -c chained-fixups-arm64e.s
+## $ ld -arch arm64e -platform_version macos 11.0 27.0 -lSystem -segalign 0x1000 \
+##       chained-fixups-arm64e.o libfoo.dylib -o chained-fixups-arm64e
+## $ ld -arch arm64e -platform_version macos 13.0 27.0 -lSystem -segalign 0x1000 \
+##       chained-fixups-arm64e.o libfoo.dylib -o chained-fixups-arm64e-userland24
+## $ obj2yaml chained-fixups-arm64e
+
+--- !mach-o
+FileHeader:
+  magic:           0xFEEDFACF
+  cputype:         0x100000C
+  cpusubtype:      0x81000002
+  filetype:        0x2
+  ncmds:           18
+  sizeofcmds:      872
+  flags:           0x200085
+  reserved:        0x0
+LoadCommands:
+  - cmd:             LC_SEGMENT_64
+    cmdsize:         72
+    segname:         __PAGEZERO
+    vmaddr:          0
+    vmsize:          4294967296
+    fileoff:         0
+    filesize:        0
+    maxprot:         0
+    initprot:        0
+    nsects:          0
+    flags:           0
+  - cmd:             LC_SEGMENT_64
+    cmdsize:         152
+    segname:         __TEXT
+    vmaddr:          4294967296
+    vmsize:          4096
+    fileoff:         0
+    filesize:        4096
+    maxprot:         5
+    initprot:        5
+    nsects:          1
+    flags:           0
+    Sections:
+      - sectname:        __text
+        segname:         __TEXT
+        addr:            0x1000003B0
+        size:            8
+        offset:          0x3B0
+        align:           2
+        reloff:          0x0
+        nreloc:          0
+        flags:           0x80000400
+        reserved1:       0x0
+        reserved2:       0x0
+        reserved3:       0x0
+        content:         C0035FD6C0035FD6
+  - cmd:             LC_SEGMENT_64
+    cmdsize:         152
+    segname:         __DATA
+    vmaddr:          4294971392
+    vmsize:          4096
+    fileoff:         4096
+    filesize:        4096
+    maxprot:         3
+    initprot:        3
+    nsects:          1
+    flags:           0
+    Sections:
+      - sectname:        __data
+        segname:         __DATA
+        addr:            0x100001000
+        size:            72
+        offset:          0x1000
+        align:           3
+        reloff:          0x0
+        nreloc:          0
+        flags:           0x0
+        reserved1:       0x0
+        reserved2:       0x0
+        reserved3:       0x0
+        content:         0000000000000000B403000000000880BC03000034120B80000000002A000CC002000000FFFF0FC001000000010008C0B4030000[[TARGET_HI]]000800000000000800084000100000[[TARGET_HI]]900000
+  - cmd:             LC_SEGMENT_64
+    cmdsize:         72
+    segname:         __LINKEDIT
+    vmaddr:          4294975488
+    vmsize:          4096
+    fileoff:         8192
+    filesize:        536
+    maxprot:         1
+    initprot:        1
+    nsects:          0
+    flags:           0
+  - cmd:             LC_DYLD_CHAINED_FIXUPS
+    cmdsize:         16
+    dataoff:         8192
+    datasize:        120
+  - cmd:             LC_DYLD_EXPORTS_TRIE
+    cmdsize:         16
+    dataoff:         8312
+    datasize:        48
+  - cmd:             LC_SYMTAB
+    cmdsize:         24
+    symoff:          8368
+    nsyms:           5
+    stroff:          8448
+    strsize:         48
+  - cmd:             LC_DYSYMTAB
+    cmdsize:         80
+    ilocalsym:       0
+    nlocalsym:       2
+    iextdefsym:      2
+    nextdefsym:      2
+    iundefsym:       4
+    nundefsym:       1
+    tocoff:          0
+    ntoc:            0
+    modtaboff:       0
+    nmodtab:         0
+    extrefsymoff:    0
+    nextrefsyms:     0
+    indirectsymoff:  0
+    nindirectsyms:   0
+    extreloff:       0
+    nextrel:         0
+    locreloff:       0
+    nlocrel:         0
+  - cmd:             LC_LOAD_DYLINKER
+    cmdsize:         32
+    name:            12
+    Content:         '/usr/lib/dyld'
+    ZeroPadBytes:    7
+  - cmd:             LC_UUID
+    cmdsize:         24
+    uuid:            00000000-0000-0000-0000-000000000000
+  - cmd:             LC_BUILD_VERSION
+    cmdsize:         32
+    platform:        1
+    minos:           [[MINOS]]
+    sdk:             1769472
+    ntools:          1
+    Tools:
+      - tool:            3
+        version:         1771897088
+  - cmd:             LC_SOURCE_VERSION
+    cmdsize:         16
+    version:         0
+  - cmd:             LC_MAIN
+    cmdsize:         24
+    entryoff:        944
+    stacksize:       0
+  - cmd:             LC_LOAD_DYLIB
+    cmdsize:         56
+    dylib:
+      name:            24
+      timestamp:       2
+      current_version: 89063424
+      compatibility_version: 65536
+    Content:         '/usr/lib/libSystem.B.dylib'
+    ZeroPadBytes:    6
+  - cmd:             LC_LOAD_DYLIB
+    cmdsize:         56
+    dylib:
+      name:            24
+      timestamp:       2
+      current_version: 0
+      compatibility_version: 0
+    Content:         '@executable_path/libfoo.dylib'
+    ZeroPadBytes:    3
+  - cmd:             LC_FUNCTION_STARTS
+    cmdsize:         16
+    dataoff:         8360
+    datasize:        8
+  - cmd:             LC_DATA_IN_CODE
+    cmdsize:         16
+    dataoff:         8368
+    datasize:        0
+  - cmd:             LC_CODE_SIGNATURE
+    cmdsize:         16
+    dataoff:         8496
+    datasize:        232
+LinkEditData:
+  ExportTrie:
+    TerminalSize:    0
+    NodeOffset:      0
+    Name:            ''
+    Flags:           0x0
+    Address:         0x0
+    Other:           0x0
+    ImportName:      ''
+    Children:
+      - TerminalSize:    0
+        NodeOffset:      18
+        Name:            _
+        Flags:           0x0
+        Address:         0x0
+        Other:           0x0
+        ImportName:      ''
+        Children:
+          - TerminalSize:    2
+            NodeOffset:      9
+            Name:            _mh_execute_header
+            Flags:           0x0
+            Address:         0x0
+            Other:           0x0
+            ImportName:      ''
+          - TerminalSize:    3
+            NodeOffset:      13
+            Name:            main
+            Flags:           0x0
+            Address:         0x3B0
+            Other:           0x0
+            ImportName:      ''
+  NameList:
+    - n_strx:          33
+      n_type:          0xE
+      n_sect:          1
+      n_desc:          0
+      n_value:         4294968244
+    - n_strx:          40
+      n_type:          0xE
+      n_sect:          2
+      n_desc:          0
+      n_value:         4294971392
+    - n_strx:          2
+      n_type:          0xF
+      n_sect:          1
+      n_desc:          16
+      n_value:         4294967296
+    - n_strx:          22
+      n_type:          0xF
+      n_sect:          1
+      n_desc:          0
+      n_value:         4294968240
+    - n_strx:          28
+      n_type:          0x1
+      n_sect:          0
+      n_desc:          512
+      n_value:         0
+  StringTable:
+    - ' '
+    - __mh_execute_header
+    - _main
+    - _foo
+    - _local
+    - _target
+  FunctionStarts:  [ 0x3B0, 0x3B4 ]
+  ChainedFixups:   [ 0x0, 0x0, 0x0, 0x0, 0x20, 0x0, 0x0, 0x0, 0x50, 0x0,
+                     0x0, 0x0, 0x68, 0x0, 0x0, 0x0, 0x3, 0x0, 0x0, 0x0,
+                     0x2, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0,
+                     0x0, 0x0, 0x4, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0,
+                     0x0, 0x0, 0x0, 0x0, 0x18, 0x0, 0x0, 0x0, 0x0, 0x0,
+                     0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x18, 0x0, 0x0, 0x0,
+                     0x0, 0x10, [[FORMAT]], 0x0, 0x0, 0x10, 0x0, 0x0, 0x0, 0x0,
+                     0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x1, 0x0, 0x8, 0x0,
+                     0x2, 0x2, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x2, 0xC,
+                     0x0, 0x0, 0xFC, 0xFF, 0xFF, 0xFF, 0x2, 0x16, 0x0,
+                     0x0, 0x10, 0x0, 0x0, 0x0, 0x0, 0x5F, 0x66, 0x6F, 0x6F,
+                     0x0, 0x5F, 0x66, 0x6F, 0x6F, 0x0, 0x5F, 0x66, 0x6F,
+                     0x6F, 0x0 ]
+...
