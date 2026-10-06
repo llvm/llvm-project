@@ -48,9 +48,7 @@ template <> LIBC_INLINE long double sqrt<long double>(long double x) {
 
 #else // __builtin_elementwise_sqrt
 // Use inline assembly when __builtin_elementwise_sqrt is not available.
-#if defined(LIBC_TARGET_CPU_HAS_SSE2) &&                                       \
-    defined(LIBC_TARGET_ARCH_IS_X86_64) &&                                     \
-    !defined(LIBC_TARGET_ARCH_IS_ARM64EC)
+#if defined(LIBC_TARGET_CPU_HAS_SSE2) && defined(LIBC_TARGET_ARCH_IS_X86_64)
 #include "x86_64/sqrt.h"
 #elif (defined(LIBC_TARGET_ARCH_IS_AARCH64) ||                                 \
        defined(LIBC_TARGET_ARCH_IS_ARM64EC)) &&                                \
