@@ -59,6 +59,7 @@
 #include "llvm/IR/Module.h"
 #include "llvm/IR/PassManager.h"
 #include "llvm/IR/PatternMatch.h"
+#include "llvm/IR/ProfDataUtils.h"
 #include "llvm/IR/Type.h"
 #include "llvm/IR/Use.h"
 #include "llvm/IR/Value.h"
@@ -357,9 +358,9 @@ private:
     const Value *Addr;
     Instruction *Inst;
     int32_t Offset;
-    // For DepKind::Select only: the condition and the two addresses referenced
-    // by the "true" and "false" side of the select-dependent load.
-    const Value *SelCond = nullptr;
+    // For DepKind::Select only: the select instruction and the two addresses
+    // referenced by the "true" and "false" side of the select-dependent load.
+    SelectInst *Sel = nullptr;
     const Value *SelTrueAddr = nullptr;
     const Value *SelFalseAddr = nullptr;
 
@@ -377,10 +378,10 @@ private:
       return {DepKind::Clobber, Inst->getParent(), Addr, Inst, Offset};
     }
 
-    static ReachingMemVal getSelect(BasicBlock *BB, const Value *Cond,
+    static ReachingMemVal getSelect(BasicBlock *BB, SelectInst *Sel,
                                     const Value *TrueAddr,
                                     const Value *FalseAddr) {
-      return {DepKind::Select, BB,       nullptr, nullptr, -1, Cond,
+      return {DepKind::Select, BB,       nullptr, nullptr, -1, Sel,
               TrueAddr,        FalseAddr};
     }
   };
@@ -436,11 +437,11 @@ private:
                           Value *Address);
 
   /// Given a select-dependency for the load (the load address is a select of
-  /// \p TrueAddr and \p FalseAddr guarded by \p Cond), determine whether a
+  /// \p TrueAddr and \p FalseAddr guarded by \p Sel), determine whether a
   /// value is available by finding dominating values for both addresses.  If
   /// so, the load can be rematerialized as a select of those two values.
   std::optional<AvailableValue>
-  analyzeSelectAvailability(LoadInst *Load, Value *Cond, Value *TrueAddr,
+  analyzeSelectAvailability(LoadInst *Load, SelectInst *Sel, Value *TrueAddr,
                             Value *FalseAddr, Instruction *From);
 
   /// Given a list of non-local dependencies, determine if a value is
@@ -552,9 +553,9 @@ struct GVNPassImpl::AvailableValue {
     return Res;
   }
 
-  static AvailableValue getSelect(Value *Cond, Value *V1, Value *V2) {
+  static AvailableValue getSelect(SelectInst *Sel, Value *V1, Value *V2) {
     AvailableValue Res;
-    Res.Val = Cond;
+    Res.Val = Sel;
     Res.Kind = ValType::SelectVal;
     Res.Offset = 0;
     Res.V1 = V1;
@@ -583,9 +584,9 @@ struct GVNPassImpl::AvailableValue {
     return cast<MemIntrinsic>(Val);
   }
 
-  Value *getSelectCondition() const {
+  SelectInst *getSelectInstr() const {
     assert(isSelectValue() && "Wrong accessor");
-    return Val;
+    return cast<SelectInst>(Val);
   }
 
   /// Emit code at the specified insertion point to adjust the value defined
@@ -1506,9 +1507,11 @@ Value *AvailableValue::MaterializeAdjustedValue(LoadInst *Load,
                       << "\n\n\n");
   } else if (isSelectValue()) {
     // Introduce a new value select for a load from an eligible pointer select.
-    Value *Cond = getSelectCondition();
+    SelectInst *Sel = getSelectInstr();
     assert(V1 && V2 && "both value operands of the select must be present");
-    Res = SelectInst::Create(Cond, V1, V2, "", InsertPt->getIterator());
+    Res = SelectInst::Create(Sel->getCondition(), V1, V2, "",
+                             InsertPt->getIterator(),
+                             ProfcheckDisableMetadataFixes ? nullptr : Sel);
     // We use the DebugLoc from the original load here, as this instruction
     // materializes the value that would previously have been loaded.
     cast<SelectInst>(Res)->setDebugLoc(Load->getDebugLoc());
@@ -1640,7 +1643,7 @@ static Value *findDominatingValue(const MemoryLocation &Loc, Type *LoadTy,
 }
 
 std::optional<AvailableValue>
-GVNPassImpl::analyzeSelectAvailability(LoadInst *Load, Value *Cond,
+GVNPassImpl::analyzeSelectAvailability(LoadInst *Load, SelectInst *Sel,
                                        Value *TrueAddr, Value *FalseAddr,
                                        Instruction *From) {
   assert(TrueAddr->getType() == Load->getPointerOperandType() &&
@@ -1659,7 +1662,7 @@ GVNPassImpl::analyzeSelectAvailability(LoadInst *Load, Value *Cond,
                                   From, getAliasAnalysis());
   if (!V2)
     return std::nullopt;
-  return AvailableValue::getSelect(Cond, V1, V2);
+  return AvailableValue::getSelect(Sel, V1, V2);
 }
 
 std::optional<AvailableValue>
@@ -1790,8 +1793,7 @@ GVNPassImpl::analyzeLoadAvailability(LoadInst *Load, const ReachingMemVal &Dep,
   // loads and DepInst that may clobber the loads.
   if (auto *Sel = dyn_cast<SelectInst>(DepInst)) {
     assert(Sel->getType() == Load->getPointerOperandType());
-    if (auto AV = analyzeSelectAvailability(Load, Sel->getCondition(),
-                                            Sel->getTrueValue(),
+    if (auto AV = analyzeSelectAvailability(Load, Sel, Sel->getTrueValue(),
                                             Sel->getFalseValue(), DepInst))
       return AV;
     return std::nullopt;
@@ -1833,8 +1835,7 @@ void GVNPassImpl::analyzeLoadAvailability(LoadInst *Load,
     // are searched for at the end of DepBB.
     if (Dep.Kind == DepKind::Select) {
       if (auto AV = analyzeSelectAvailability(
-              Load, const_cast<Value *>(Dep.SelCond),
-              const_cast<Value *>(Dep.SelTrueAddr),
+              Load, Dep.Sel, const_cast<Value *>(Dep.SelTrueAddr),
               const_cast<Value *>(Dep.SelFalseAddr), DepBB->getTerminator())) {
         ValuesPerBlock.push_back(
             AvailableValueInBlock::get(DepBB, std::move(*AV)));
@@ -2393,9 +2394,9 @@ bool GVNPassImpl::processNonLocalLoad(LoadInst *Load) {
     BasicBlock *BB = Dep.getBB();
     Instruction *Inst = R.getInst();
     if (R.isSelect()) {
-      auto [Cond, Addrs] = SelAddr.getSelectCondAndAddrs();
+      auto [Sel, Addrs] = SelAddr.getSelectAndAddrs();
       MemVals.emplace_back(
-          ReachingMemVal::getSelect(BB, Cond, Addrs.first, Addrs.second));
+          ReachingMemVal::getSelect(BB, Sel, Addrs.first, Addrs.second));
       continue;
     }
     Value *Address = SelAddr.getAddr();
