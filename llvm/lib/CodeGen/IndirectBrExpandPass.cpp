@@ -118,8 +118,13 @@ bool runImpl(Function &F, const TargetLowering *TLI, DomTreeUpdater *DTU,
   bool SkipProfileUpdates = false;
   BlockFrequencyInfo *BFI = nullptr;
 
+  struct IndirectBrSuccessor {
+    size_t IndirectBrIndex = 0;
+    uint64_t SuccessorBranchWeight = 0;
+  };
+
   // Set of all potential successors for indirectbr instructions.
-  DenseMap<const BasicBlock *, SmallVector<std::pair<size_t, uint64_t>>>
+  DenseMap<const BasicBlock *, SmallVector<IndirectBrSuccessor>>
       IndirectBrSuccToIndirectBr;
 
   // Build a list of indirectbrs that we want to rewrite.
@@ -134,6 +139,7 @@ bool runImpl(Function &F, const TargetLowering *TLI, DomTreeUpdater *DTU,
       }
 
       IndirectBrs.push_back(IBr);
+      const size_t CurrentIndirectBrIndex = IndirectBrs.size() - 1;
       for (const BasicBlock *SuccessorBB : IBr->successors())
         IndirectBrSuccToIndirectBr.insert({SuccessorBB, {}});
 
@@ -157,8 +163,10 @@ bool runImpl(Function &F, const TargetLowering *TLI, DomTreeUpdater *DTU,
       for (const auto [SuccessorBB, SuccessorBranchWeight] :
            zip_equal(IBr->successors(), IndirectBrBranchWeights))
         IndirectBrSuccToIndirectBr[SuccessorBB].push_back(
-            {IndirectBrs.size() - 1, SuccessorBranchWeight});
+            {CurrentIndirectBrIndex, SuccessorBranchWeight});
       IndirectBrsBranchWeightSums.push_back(sum_of(IndirectBrBranchWeights));
+      assert(IndirectBrsBranchWeightSums.size() == IndirectBrs.size() &&
+             "expected an identical number of blocks in both vectors");
     }
 
   if (IndirectBrs.empty())
@@ -209,14 +217,15 @@ bool runImpl(Function &F, const TargetLowering *TLI, DomTreeUpdater *DTU,
          IndirectBrSuccToIndirectBrIt->second) {
       // If the branch weight sum is zero, skip adding the block weight or
       // otherwise we end up dividing by zero.
-      if (IndirectBrsBranchWeightSums[IndirectBrIndex] == 0)
+      const uint64_t CurrentBranchWeightSum =
+          IndirectBrsBranchWeightSums[IndirectBrIndex];
+      if (CurrentBranchWeightSum == 0)
         continue;
       BlockWeight += ScaledNumber<uint64_t>(
                          IndirectBrsBlockFrequencies[IndirectBrIndex], 0) *
                      ScaledNumber<uint64_t>(BlockBranchProbability, 0) *
                      (BranchWeightSumsProduct /
-                      ScaledNumber<uint64_t>(
-                          IndirectBrsBranchWeightSums[IndirectBrIndex], 0));
+                      ScaledNumber<uint64_t>(CurrentBranchWeightSum, 0));
     }
     BBWeights.push_back(BlockWeight);
   }
@@ -329,11 +338,11 @@ bool runImpl(Function &F, const TargetLowering *TLI, DomTreeUpdater *DTU,
     return true;
   }
 
-  // We need to convert the ScaledNumber weights back to normal 64 bit integers
-  // so we can apply them as metadata. They might not have the same scale
-  // though, so we find the max scale and then scale down any weights that have
-  // a scale less than the max scale. This ensures that all the weights have the
-  // same scale.
+  // We need to convert the ScaledNumber weights (which might not be
+  // representable in 64 bits) back to normal 64 bit integers so we can apply
+  // them as metadata. They might not have the same scale though, so we find the
+  // max scale and then scale down any weights that have a scale less than the
+  // max scale. This ensures that all the weights have the same scale.
   int16_t MaxScale = 0;
   for (const ScaledNumber<uint64_t> &BBWeight : BBWeights)
     MaxScale = std::max(MaxScale, BBWeight.getScale());
