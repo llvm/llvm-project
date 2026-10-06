@@ -38,7 +38,7 @@ llvm.func @masked_private(%ptr: !llvm.ptr, %filter: i32) {
 // CHECK-NOT: call void @__kmpc_barrier
 // CHECK: br label %omp.taskloop.wrapper.start
 
-// The old firstprivate path needs the same protection.
+// A firstprivate copy must also avoid a barrier inside a masked region.
 // CHECK-LABEL: define void @masked_firstprivate(
 llvm.func @masked_firstprivate(%ptr: !llvm.ptr, %filter: i32) {
   %lo = llvm.mlir.constant(1 : i32) : i32
@@ -187,4 +187,7 @@ llvm.func @nested_parallel_private(%ptr: !llvm.ptr, %filter: i32) {
   }
   llvm.return
 }
+// CHECK-LABEL: define internal void @nested_parallel_private..omp_par(
+// CHECK: omp.private.init:
+// CHECK-NOT: br{{[[:space:]]}}
 // CHECK: call void @__kmpc_barrier
