@@ -21,6 +21,7 @@ class CXXBaseSpecifier;
 class CXXMethodDecl;
 class CXXRecordDecl;
 class Decl;
+class FieldDecl;
 class FunctionDecl;
 class NamedDecl;
 class QualType;
@@ -52,6 +53,34 @@ std::optional<bool> isRefCountable(const clang::CXXRecordDecl *Class);
 /// std::nullopt if inconclusive.
 std::optional<bool> isCheckedPtrCapable(const clang::CXXRecordDecl *Class);
 
+/// \returns true if \p Class implements the CanBorrow protocol, meaning a
+/// Borrow<T> can be taken on it, false if not, std::nullopt if inconclusive.
+std::optional<bool> isBorrowable(const clang::CXXRecordDecl *Class);
+
+/// \returns true if \p Class is a Borrow<T>, false if not.
+bool isBorrow(const clang::CXXRecordDecl *Class);
+
+/// \returns true if \p T is a Borrow<T>.
+bool isBorrowType(const clang::QualType T);
+
+/// \returns the innermost type reached by stripping every pointer/reference
+/// layer from \p T; \p T itself if it has none; a null type if \p T is null.
+clang::QualType pointeeType(clang::QualType T);
+
+/// \returns the type a Borrow<T> specialization \p T borrows, or a null type
+/// if \p T is not a template specialization whose first argument is a type.
+clang::QualType borrowedType(clang::QualType T);
+
+/// \returns true if a value of type \p T is a pointer/reference/view.
+bool isView(const clang::QualType T);
+
+/// \returns true if \p Class declares reference semantics structurally: it is
+/// annotated [[gsl::Pointer]] (explicitly, or by Sema's inference for
+/// standard types), derives from std::ranges::view_interface, is a standard
+/// iterator adaptor, or is nested inside such a class, as the iterators of
+/// standard views are.
+bool isStdView(const clang::CXXRecordDecl *Class);
+
 /// \returns true if \p Class is ref-counted, false if not.
 bool isRefCounted(const clang::CXXRecordDecl *Class);
 
@@ -80,7 +109,7 @@ std::optional<bool> isUnchecked(const clang::QualType T);
 /// An inter-procedural analysis facility that detects CF types with the
 /// underlying pointer type.
 class RetainTypeChecker {
-  llvm::DenseSet<const RecordType *> CFPointees;
+  llvm::DenseMap<const RecordType *, const TypedefDecl *> CFPointees;
   llvm::DenseSet<const Type *> RecordlessTypes;
   bool IsARCEnabled{false};
   bool DefaultSynthProperties{true};
@@ -91,6 +120,7 @@ public:
   bool isUnretained(const QualType, bool ignoreARC = false);
   bool isARCEnabled() const { return IsARCEnabled; }
   bool defaultSynthProperties() const { return DefaultSynthProperties; }
+  const TypedefDecl *getCanonicalDecl(QualType);
 };
 
 /// \returns true if \p Class is ref-countable AND not ref-counted, false if
@@ -141,6 +171,9 @@ bool isRefType(const std::string &Name);
 /// \returns true if \p Name is CheckedRef or CheckedPtr, false if not.
 bool isCheckedPtr(const std::string &Name);
 
+/// \returns true if \p Name is Borrow, false if not.
+bool isBorrow(const std::string &Name);
+
 /// \returns true if \p Name is RetainPtr or its variant, false if not.
 bool isRetainPtrOrOSPtr(const std::string &Name);
 
@@ -148,11 +181,18 @@ bool isRetainPtrOrOSPtr(const std::string &Name);
 /// and unique_ptr.
 bool isOwnerPtr(const std::string &Name);
 
+/// \returns true if \p Name is unique_ptr, UniqueRef, or LazyUniqueRef.
+bool isUniquePtr(const std::string &Name);
+
 /// \returns true if \p Name is a smart pointer type name, false if not.
 bool isSmartPtrClass(const std::string &Name);
 
 /// \returns true if \p M is getter of a ref-counted class, false if not.
 std::optional<bool> isGetterOfSafePtr(const clang::CXXMethodDecl *Method);
+
+/// \returns true if \p M is a getter of unique_ptr, UniqueRef, or
+/// LazyUniqueRef, false if not.
+bool isGetterOfUniquePtr(const clang::CXXMethodDecl *Method);
 
 /// \returns true if \p F is a conversion between ref-countable or ref-counted
 /// pointer types.
@@ -182,6 +222,12 @@ public:
   bool hasTrivialDtor(const VarDecl *VD) const {
     return hasTrivialDtorImpl(VD, TheCache);
   }
+  const FieldDecl *fieldWithNonTrivialCtor(const CXXRecordDecl *RD) const {
+    return fieldWithNonTrivialCtorImpl(RD, TheCache);
+  }
+  const FieldDecl *fieldWithNonTrivialDtor(const CXXRecordDecl *RD) const {
+    return fieldWithNonTrivialDtorImpl(RD, TheCache);
+  }
 
 private:
   friend class TrivialFunctionAnalysisVisitor;
@@ -193,6 +239,10 @@ private:
   static bool isTrivialImpl(const Decl *D, CacheTy &Cache, const Stmt **);
   static bool isTrivialImpl(const Stmt *S, CacheTy &Cache, const Stmt **);
   static bool hasTrivialDtorImpl(const VarDecl *VD, CacheTy &Cache);
+  static const FieldDecl *fieldWithNonTrivialCtorImpl(const CXXRecordDecl *RD,
+                                                      CacheTy &Cache);
+  static const FieldDecl *fieldWithNonTrivialDtorImpl(const CXXRecordDecl *RD,
+                                                      CacheTy &Cache);
 };
 
 } // namespace clang

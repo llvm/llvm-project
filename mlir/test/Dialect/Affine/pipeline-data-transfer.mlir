@@ -396,3 +396,30 @@ func.func @same_memref_source_and_tag(%arg0: index, %arg1: index) {
   return
 }
 // CHECK: affine.for
+
+// -----
+
+// CHECK-LABEL: func @loop_trip_count_non_positive
+func.func @loop_trip_count_non_positive() {
+  %A = memref.alloc() : memref<256 x f32, affine_map<(d0) -> (d0)>, 0>
+  %Ah = memref.alloc() : memref<32 x f32, affine_map<(d0) -> (d0)>, 1>
+  %tag = memref.alloc() : memref<1 x f32>
+  %zero = arith.constant 0 : index
+  %num_elts = arith.constant 32 : index
+  affine.for %i = 0 to -1 {
+    affine.dma_start %A[%i], %Ah[%i], %tag[%zero], %num_elts : memref<256 x f32>, memref<32 x f32, 1>, memref<1 x f32>
+    affine.dma_wait %tag[%zero], %num_elts : memref<1 x f32>
+    %v = affine.load %Ah[%i] : memref<32 x f32, affine_map<(d0) -> (d0)>, 1>
+    %r = "compute"(%v) : (f32) -> (f32)
+    affine.store %r, %Ah[%i] : memref<32 x f32, affine_map<(d0) -> (d0)>, 1>
+  }
+  memref.dealloc %tag : memref<1 x f32>
+  memref.dealloc %Ah : memref<32 x f32, affine_map<(d0) -> (d0)>, 1>
+  return
+}
+
+//  CHECK-NOT: affine.dma_start
+//  CHECK-NOT: affine.dma_wait
+//      CHECK: affine.for %{{.*}} = 0 to -1
+// CHECK-NEXT:   affine.dma_start
+// CHECK-NEXT:   affine.dma_wait

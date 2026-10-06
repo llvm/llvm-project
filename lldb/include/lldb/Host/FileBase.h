@@ -374,6 +374,9 @@ protected:
   /// appropriate platform-specific terminal probing.
   virtual void CalculateInteractiveAndTerminal();
 
+  /// Called after a stream is successfully opened from a descriptor.
+  virtual void OnStreamOpened() {}
+
 private:
   File(const File &) = delete;
   const File &operator=(const File &) = delete;

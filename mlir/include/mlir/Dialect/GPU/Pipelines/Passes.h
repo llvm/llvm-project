@@ -125,6 +125,11 @@ struct GPUToXeVMPipelineOptions
       llvm::cl::desc("Granularity of XeGPU operations to target: workgroup | "
                      "subgroup | lane"),
       llvm::cl::init("workgroup")};
+  PassOptions::Option<bool> enableVectorToXeGPU{
+      *this, "enable-vector-to-xegpu",
+      llvm::cl::desc("Run convert-vector-to-xegpu so the pipeline can accept "
+                     "vector dialect (one level above XeGPU) as entry IR"),
+      llvm::cl::init(false)};
   // General lowering controls.
   PassOptions::Option<bool> use64bitIndex{
       *this, "use-64bit-index",
@@ -140,7 +145,10 @@ struct GPUToXeVMPipelineOptions
       llvm::cl::init(false)};
   PassOptions::Option<std::string> binaryFormat{
       *this, "binary-format",
-      llvm::cl::desc("Final GPU binary emission format (e.g. fatbin)"),
+      llvm::cl::desc("Final GPU binary emission format (e.g. fatbin). Valid "
+                     "values are the set of values for the format argument of "
+                     "-gpu-module-to-binary pass plus a special value: skip, "
+                     "which skips invoking -gpu-module-to-binary pass."),
       llvm::cl::init("fatbin")};
   // Options mirroring xevm-attach-target (GpuXeVMAttachTarget).
   PassOptions::Option<std::string> xevmModuleMatcher{
@@ -161,6 +169,32 @@ struct GPUToXeVMPipelineOptions
       *this, "igc-cmd-options",
       llvm::cl::desc("Additional downstream compiler command line options"),
       llvm::cl::init("")};
+  // Options for MathExtendToSupportedTypes and ArithEmulateUnsupportedFloats,
+  // run on the host/device module before conversion to LLVM to legalize math
+  // and arith ops operating on floating-point types that the XeVM target
+  // cannot handle natively (e.g. bf16).
+  PassOptions::ListOption<std::string> unsupportedSourceTypes{
+      *this, "unsupported-source-types",
+      llvm::cl::desc("Floating-point source types without arithmetic/math "
+                     "support on the target (e.g. bf16)"),
+      llvm::cl::list_init<std::string>(ArrayRef<std::string>{"bf16"})};
+  PassOptions::Option<std::string> supportedTargetTypes{
+      *this, "supported-target-types",
+      llvm::cl::desc(
+          "Floating-point target type used to emulate the unsupported "
+          "source types via extf/truncf pairs"),
+      llvm::cl::init("f32")};
+  // Additional types (beyond the implicit f32/f64) that math ops are allowed
+  // to run on directly. Maps to the `extra-types` option of
+  // math-extend-to-supported-types. Leave empty to extend every non-f32/f64
+  // math op to `supported-target-types`.
+  PassOptions::ListOption<std::string> mathExtendExtraTypes{
+      *this, "math-extend-extra-types",
+      llvm::cl::desc(
+          "Extra floating-point types with math op support on the target, "
+          "in addition to f32 and f64 (maps to math-extend-to-supported-"
+          "types `extra-types`)"),
+      llvm::cl::list_init<std::string>(ArrayRef<std::string>{"f16"})};
 };
 
 //===----------------------------------------------------------------------===//

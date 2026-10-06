@@ -19,7 +19,7 @@
 namespace llvm {
 class CrossDSOCFIPass : public OptionalPassInfoMixin<CrossDSOCFIPass> {
 public:
-  PreservedAnalyses run(Module &M, ModuleAnalysisManager &AM);
+  LLVM_ABI PreservedAnalyses run(Module &M, ModuleAnalysisManager &AM);
 };
 }
 #endif // LLVM_TRANSFORMS_IPO_CROSSDSOCFI_H

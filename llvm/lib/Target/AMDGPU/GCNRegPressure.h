@@ -303,12 +303,12 @@ private:
   GCNRegPressure RP;
 
   /// Target number of SGPRs.
-  unsigned MaxSGPRs;
+  unsigned MaxSGPRs = 0;
   /// Target number of ArchVGPRs and AGPRs.
-  unsigned MaxVGPRs;
+  unsigned MaxVGPRs = 0;
   /// Target number of overall VGPRs for subtargets with unified RFs. Always 0
   /// for subtargets with non-unified RFs.
-  unsigned MaxUnifiedVGPRs;
+  unsigned MaxUnifiedVGPRs = 0;
 
   GCNRPTarget(const GCNRegPressure &RP, const MachineFunction &MF)
       : MF(MF), UnifiedRF(MF.getSubtarget<GCNSubtarget>().hasGFX90AInsts()),
@@ -340,9 +340,6 @@ protected:
 
   /// Resets tracker at the specified slot index \p SI.
   void reset(const MachineRegisterInfo &MRI, SlotIndex SI);
-
-  /// Mostly copy/paste from CodeGen/RegisterPressure.cpp
-  void bumpDeadDefs(ArrayRef<VRegMaskOrUnit> DeadDefs);
 
   LaneBitmask getLastUsedLanes(Register Reg, SlotIndex Pos) const;
 
@@ -409,6 +406,11 @@ class GCNDownwardRPTracker : public GCNRPTracker {
   MachineBasicBlock::const_iterator NextMI;
 
   MachineBasicBlock::const_iterator MBBEnd;
+
+  /// Drop the lanes of \p Reg that are no longer live at \p SI, decreasing
+  /// CurPressure accordingly. \p Reg must be a virtual register that is
+  /// currently tracked as live.
+  void retireVirtReg(Register Reg, SlotIndex SI);
 
 public:
   GCNDownwardRPTracker(const LiveIntervals &LIS_) : GCNRPTracker(LIS_) {}
@@ -591,6 +593,18 @@ LLVM_ABI void dumpMaxRegPressure(MachineFunction &MF,
                                  GCNRegPressure::RegKind Kind,
                                  LiveIntervals &LIS,
                                  const MachineLoopInfo *MLI);
+
+/// Estimate VGPR pressure using greedy, non-splitting register allocation
+/// simulation, accounting for live interval interference.
+/// \param RegionBegin Start iterator of the region
+/// \param RegionEnd End iterator of the region
+/// \param LiveIns Live-in registers for the region
+/// \returns estimated VGPR pressure
+unsigned estimateGreedyVGPRPressure(
+    MachineBasicBlock::const_iterator RegionBegin,
+    MachineBasicBlock::const_iterator RegionEnd,
+    const GCNRPTracker::LiveRegSet &LiveIns, const LiveIntervals &LIS,
+    const MachineRegisterInfo &MRI, const SIRegisterInfo &TRI);
 
 } // end namespace llvm
 

@@ -179,6 +179,25 @@ TEST(KnownBitsTest, SelfAddExhaustive) {
   });
 }
 
+TEST(KnownBitsTest, SelfAddWide) {
+  // SelfAdd lowers to shl(X, 1), whose getMaxShiftAmount extracts
+  // Log2_32(BitWidth) bits from the shift amount. For source widths >= 512 that
+  // is more than the 8-bit shift amount used by the lowering, which used to
+  // assert in APInt::extractBitsAsZExtValue.
+  // 1 << 23 is IntegerType::MAX_INT_BITS, the widest integer IR can produce.
+  for (unsigned Bits : {256u, 512u, 1024u, 1u << 23}) {
+    for (const APInt &X : {APInt(Bits, 1), APInt::getMaxValue(Bits)}) {
+      KnownBits Known = KnownBits::makeConstant(X);
+      KnownBits Computed = KnownBits::add(Known, Known, /*NSW=*/false,
+                                          /*NUW=*/false, /*SelfAdd=*/true);
+      // X + X == X << 1 (truncated to Bits); the result is fully known.
+      APInt Doubled = X << 1;
+      EXPECT_EQ(Computed.One, Doubled);
+      EXPECT_EQ(Computed.Zero, ~Doubled);
+    }
+  }
+}
+
 TEST(KnownBitsTest, AddCarryExhaustive) {
   unsigned Bits = 4;
   ForeachKnownBits(Bits, [&](const KnownBits &Known1) {
@@ -635,6 +654,8 @@ TEST(KnownBitsTest, BinaryExhaustive) {
   testBinaryOpExhaustive("avgCeilS", KnownBits::avgCeilS, APIntOps::avgCeilS);
 
   testBinaryOpExhaustive("clmul", KnownBits::clmul, APIntOps::clmul);
+  testBinaryOpExhaustive("pext", KnownBits::pext, APIntOps::pext);
+  testBinaryOpExhaustive("pdep", KnownBits::pdep, APIntOps::pdep);
 }
 
 TEST(KnownBitsTest, UnaryExhaustive) {

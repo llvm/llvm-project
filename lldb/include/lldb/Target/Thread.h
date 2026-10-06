@@ -24,6 +24,7 @@
 #include "lldb/Utility/Broadcaster.h"
 #include "lldb/Utility/CompletionRequest.h"
 #include "lldb/Utility/Event.h"
+#include "lldb/Utility/ScriptedMetadata.h"
 #include "lldb/Utility/StructuredData.h"
 #include "lldb/Utility/UnimplementedError.h"
 #include "lldb/Utility/UserID.h"
@@ -828,7 +829,7 @@ public:
   ///     plan could not be queued.
   virtual lldb::ThreadPlanSP QueueThreadPlanForStepInRange(
       bool abort_other_plans, const AddressRange &range,
-      const SymbolContext &addr_context, const char *step_in_target,
+      const SymbolContext &addr_context, llvm::StringRef step_in_target,
       lldb::RunMode stop_other_threads, Status &status,
       LazyBool step_in_avoids_code_without_debug_info = eLazyBoolCalculate,
       LazyBool step_out_avoids_code_without_debug_info = eLazyBoolCalculate);
@@ -838,7 +839,7 @@ public:
   // step over a longer address range in a single operation.
   virtual lldb::ThreadPlanSP QueueThreadPlanForStepInRange(
       bool abort_other_plans, const LineEntry &line_entry,
-      const SymbolContext &addr_context, const char *step_in_target,
+      const SymbolContext &addr_context, llvm::StringRef step_in_target,
       lldb::RunMode stop_other_threads, Status &status,
       LazyBool step_in_avoids_code_without_debug_info = eLazyBoolCalculate,
       LazyBool step_out_avoids_code_without_debug_info = eLazyBoolCalculate);
@@ -1009,8 +1010,8 @@ public:
       bool stop_others, uint32_t frame_idx, Status &status);
 
   virtual lldb::ThreadPlanSP
-  QueueThreadPlanForStepScripted(bool abort_other_plans, const char *class_name,
-                                 StructuredData::ObjectSP extra_args_sp,
+  QueueThreadPlanForStepScripted(bool abort_other_plans,
+                                 const ScriptedMetadata &scripted_metadata,
                                  bool stop_other_threads, Status &status);
 
   // Thread Plan accessors:

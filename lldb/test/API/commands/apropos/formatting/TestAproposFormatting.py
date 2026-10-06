@@ -32,7 +32,6 @@ class AproposFormattingTest(PExpectTest):
         )
 
         self.expect_prompt()
-        self.quit()
 
     @skipIfAsan
     @skipIfEditlineSupportMissing
@@ -73,7 +72,6 @@ class AproposFormattingTest(PExpectTest):
         # Settings descriptions.
         self.child.expect_exact("'" + ansi_green + "plug" + ansi_reset + "in")
         self.expect_prompt()
-        self.quit()
 
     @skipIfAsan
     @skipIfEditlineSupportMissing
@@ -95,4 +93,3 @@ class AproposFormattingTest(PExpectTest):
         self.child.expect_exact(ansi_green + "will")
         self.child.expect_exact("this" + ansi_reset)
         self.expect_prompt()
-        self.quit()

@@ -26,7 +26,7 @@
 
 namespace llvm {
 
-extern cl::opt<unsigned> SSAUpdaterPhiSearchLimit;
+extern LLVM_ABI cl::opt<unsigned> SSAUpdaterPhiSearchLimit;
 
 template<typename T> class SSAUpdaterTraits;
 

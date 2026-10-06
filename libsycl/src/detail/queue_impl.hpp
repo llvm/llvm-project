@@ -12,15 +12,19 @@
 ///
 //===----------------------------------------------------------------------===//
 
-#ifndef _LIBSYCL_QUEUE_IMPL
-#define _LIBSYCL_QUEUE_IMPL
+#ifndef _LIBSYCL_SRC_DETAIL_QUEUE_IMPL_HPP
+#define _LIBSYCL_SRC_DETAIL_QUEUE_IMPL_HPP
 
 #include <sycl/__impl/detail/config.hpp>
 #include <sycl/__impl/queue.hpp>
 
 #include <OffloadAPI.h>
 
+#include <cassert>
+#include <cstddef>
 #include <memory>
+#include <utility>
+#include <vector>
 
 _LIBSYCL_BEGIN_NAMESPACE_SYCL
 namespace detail {
@@ -28,6 +32,8 @@ namespace detail {
 class ContextImpl;
 class DeviceImpl;
 class EventImpl;
+
+using EventImplPtr = std::shared_ptr<EventImpl>;
 
 class QueueImpl : public std::enable_shared_from_this<QueueImpl> {
   struct PrivateTag {
@@ -37,49 +43,158 @@ class QueueImpl : public std::enable_shared_from_this<QueueImpl> {
 public:
   ~QueueImpl();
 
-  /// Constructs a SYCL queue from a device using an asyncHandler and
-  /// a propList.
+  /// Constructs a SYCL queue from a device using an AsyncHandler and
+  /// a PropList.
   ///
-  /// \param deviceImpl is a SYCL device that is used to dispatch tasks
+  /// \param Context is a SYCL context the queue is associated with.
+  /// \param Device is a SYCL device that is used to dispatch tasks
   /// submitted to the queue.
-  /// \param asyncHandler is a SYCL asynchronous exception handler.
-  /// \param propList is a list of properties to use for queue construction.
-  explicit QueueImpl(DeviceImpl &deviceImpl, const async_handler &asyncHandler,
-                     const property_list &propList, PrivateTag);
+  /// \param AsyncHandler is a SYCL asynchronous exception handler.
+  /// \param PropList is a list of properties to use for queue construction.
+  explicit QueueImpl(const std::shared_ptr<ContextImpl> &Context,
+                     DeviceImpl &Device, const async_handler &AsyncHandler,
+                     const property_list &PropList, PrivateTag);
 
   /// Constructs a QueueImpl with the provided arguments. Variadic helper.
   /// Restricts QueueImpl creation to std::shared_ptr allocations.
   template <typename... Ts>
-  static std::shared_ptr<QueueImpl> create(Ts &&...args) {
-    return std::make_shared<QueueImpl>(std::forward<Ts>(args)..., PrivateTag{});
+  static std::shared_ptr<QueueImpl> create(Ts &&...Args) {
+    return std::make_shared<QueueImpl>(std::forward<Ts>(Args)..., PrivateTag{});
   }
 
   /// \return the SYCL backend this queue is associated with.
   backend getBackend() const noexcept;
 
   /// \return the context implementation object this queue is associated with.
-  ContextImpl &getContext() { return MContext; }
+  ContextImpl &getContext() { return *MContext; }
+
+  /// \return a weak pointer to the context implementation object this queue is
+  /// associated with.
+  std::weak_ptr<ContextImpl> getContextWeakPtr() const { return MContext; }
 
   /// \return the device implementation object this queue is associated with.
   DeviceImpl &getDevice() { return MDevice; }
 
   /// \return true if and only if the queue is in order.
-  bool isInOrder() const { return MIsInorder; }
+  bool isInOrder() const { return MIsInOrder; }
 
   /// Waits for completion of all commands submitted to this queue.
   void wait();
 
+  /// Waits for completion of all commands submitted to this queue and flushes
+  /// unconsumed async errors to the appropriate async handlers.
+  void waitAndThrow();
+
+  /// Flushes unconsumed async errors to the appropriate async handlers.
+  void throwAsynchronous();
+
+  /// Enqueues a kernel to liboffload.
+  /// Kernel dependencies and range must be passed in advance by calling
+  /// setKernelLaunchParams.
+  /// \param KernelInfo a kernel info that is uniform between different
+  /// submissions of the same kernel.
+  /// \param ArgData a pointer to kernel argument.
+  /// \param ArgSize a size of kernel argument in bytes.
+  void submitKernelImpl(DeviceKernelInfo &KernelInfo, void *ArgData,
+                        size_t ArgSize);
+
+  /// \return an event impl object that corresponds to the last kernel
+  /// submission in the calling thread.
+  EventImplPtr getLastEvent() {
+    assert(MCurrentSubmitInfo.LastEvent &&
+           "getLastEvent must be called after enqueue");
+    return MCurrentSubmitInfo.LastEvent;
+  }
+
+  /// \brief Sets event dependencies and execution range for the next kernel
+  /// submission.
+  /// \param Events a collection of events that the kernel depends on.
+  /// \param Range a unified range view of the execution range.
+  void setKernelLaunchParams(std::vector<EventImplPtr> &&Events,
+                             const detail::UnifiedRangeView &Range);
+
+  /// \copybrief
+  /// QueueImpl::setKernelLaunchParams(std::vector<EventImplPtr>&&,detail::UnifiedRangeView
+  /// const&)
+  ///
+  /// \param Events a collection of events that the kernel depends on.
+  /// \param Range a pre-converted liboffload kernel launch size args struct.
+  void setKernelLaunchParams(std::vector<EventImplPtr> &&Events,
+                             const ol_kernel_launch_size_args_t &Range);
+
+  /// \return the async_handler associated with this queue, empty if the queue
+  /// was constructed without one and its context has none either.
+  const async_handler &getAsyncHandler() const { return MAsyncHandler; }
+
+  /// Submits a memory copy operation from one USM or host pointer to another.
+  ///
+  /// \param Dest is the pointer to copy to.
+  /// \param Src is the pointer to copy from.
+  /// \param NumBytes is the number of bytes to copy.
+  /// \param DepEvents is a vector of dependencies for the operation.
+  /// \return an event impl object that represents the status of the operation.
+  EventImplPtr memcpy(void *Dest, const void *Src, std::size_t NumBytes,
+                      const std::vector<EventImplPtr> &DepEvents);
+
+  /// Submits a fill operation that replicates a pattern into USM.
+  ///
+  /// \param Ptr is the pointer to memory to be filled.
+  /// \param Pattern is the pattern to be replicated.
+  /// \param PatternSize is the size of the pattern in bytes.
+  /// \param Count is the number of times the pattern is filled.
+  /// \param DepEvents is a vector of dependencies for the operation.
+  /// \return an event impl object that represents the status of the operation.
+  EventImplPtr fill(void *Ptr, const void *Pattern, std::size_t PatternSize,
+                    std::size_t Count,
+                    const std::vector<EventImplPtr> &DepEvents);
+
+  /// Submits a command group function to this queue.
+  ///
+  /// \param CGF is the command group function to invoke.
+  /// \return an event impl object representing the submitted operation.
+  EventImplPtr submitWithHandler(const TypelessCGF &CGF);
+
+  /// Submits a dependency-only wait operation to this queue.
+  ///
+  /// \param DepEvents are the events that must complete before the wait
+  /// operation completes.
+  /// \return an event impl object representing the wait operation.
+  EventImplPtr submitWait(const std::vector<EventImplPtr> &DepEvents);
+
+  /// Submits a prefetch operation for a USM pointer.
+  ///
+  /// \param Ptr is a USM pointer to the memory to be prefetched to the device.
+  /// \param NumBytes is a number of bytes to be prefetched.
+  /// \param DepEvents is a vector of dependencies for the operation.
+  /// \return an event impl object that represents the status of the operation.
+  EventImplPtr prefetch(void *Ptr, std::size_t NumBytes,
+                        const std::vector<EventImplPtr> &DepEvents);
+
 private:
+  void handleEventDependencies(const std::vector<EventImplPtr> &Deps);
+  EventImplPtr createEvent(std::vector<EventImplPtr> &&Deps = {});
+
+  // Queue features.
   ol_queue_handle_t MOffloadQueue = {};
-  const bool MIsInorder;
+  const bool MIsInOrder;
   const async_handler MAsyncHandler;
   const property_list MPropList;
   DeviceImpl &MDevice;
-  ContextImpl &MContext;
+  const std::shared_ptr<ContextImpl> MContext;
+
+  // Submit data.
+  struct KernelSubmitInfo {
+    KernelSubmitInfo() {}
+
+    EventImplPtr LastEvent;
+    ol_kernel_launch_size_args_t Range;
+    std::vector<EventImplPtr> DepEvents;
+  };
+  inline static thread_local KernelSubmitInfo MCurrentSubmitInfo = {};
 };
 
 } // namespace detail
 
 _LIBSYCL_END_NAMESPACE_SYCL
 
-#endif // _LIBSYCL_QUEUE_IMPL
+#endif // _LIBSYCL_SRC_DETAIL_QUEUE_IMPL_HPP

@@ -73,6 +73,22 @@ func.func @atomic_compare_exchange(%ptr: !spirv.ptr<i64, Workgroup>, %value: i32
 
 // -----
 
+func.func @atomic_compare_exchange(%ptr: !spirv.ptr<i32, Workgroup>, %value: i32, %comparator: i32) -> i32 {
+  // expected-error @+1 {{expected at most one of these four memory constraints to be set: `Acquire`, `Release`,`AcquireRelease` or `SequentiallyConsistent`}}
+  %0 = spirv.AtomicCompareExchange <Workgroup> <Acquire|Release> <None> %ptr, %value, %comparator: !spirv.ptr<i32, Workgroup>
+  return %0: i32
+}
+
+// -----
+
+func.func @atomic_compare_exchange_unequal(%ptr: !spirv.ptr<i32, Workgroup>, %value: i32, %comparator: i32) -> i32 {
+  // expected-error @+1 {{expected at most one of these four memory constraints to be set: `Acquire`, `Release`,`AcquireRelease` or `SequentiallyConsistent`}}
+  %0 = spirv.AtomicCompareExchange <Workgroup> <None> <Acquire|Release> %ptr, %value, %comparator: !spirv.ptr<i32, Workgroup>
+  return %0: i32
+}
+
+// -----
+
 //===----------------------------------------------------------------------===//
 // spirv.AtomicCompareExchangeWeak
 //===----------------------------------------------------------------------===//
@@ -109,6 +125,22 @@ func.func @atomic_compare_exchange_weak(%ptr: !spirv.ptr<i64, Workgroup>, %value
 
 // -----
 
+func.func @atomic_compare_exchange_weak(%ptr: !spirv.ptr<i32, Workgroup>, %value: i32, %comparator: i32) -> i32 {
+  // expected-error @+1 {{expected at most one of these four memory constraints to be set: `Acquire`, `Release`,`AcquireRelease` or `SequentiallyConsistent`}}
+  %0 = spirv.AtomicCompareExchangeWeak <Workgroup> <Acquire|Release> <None> %ptr, %value, %comparator: !spirv.ptr<i32, Workgroup>
+  return %0: i32
+}
+
+// -----
+
+func.func @atomic_compare_exchange_weak_unequal(%ptr: !spirv.ptr<i32, Workgroup>, %value: i32, %comparator: i32) -> i32 {
+  // expected-error @+1 {{expected at most one of these four memory constraints to be set: `Acquire`, `Release`,`AcquireRelease` or `SequentiallyConsistent`}}
+  %0 = spirv.AtomicCompareExchangeWeak <Workgroup> <None> <Acquire|Release> %ptr, %value, %comparator: !spirv.ptr<i32, Workgroup>
+  return %0: i32
+}
+
+// -----
+
 //===----------------------------------------------------------------------===//
 // spirv.AtomicExchange
 //===----------------------------------------------------------------------===//
@@ -117,6 +149,22 @@ func.func @atomic_exchange(%ptr: !spirv.ptr<i32, Workgroup>, %value: i32) -> i32
   // CHECK: spirv.AtomicExchange <Workgroup> <Release> %{{.*}}, %{{.*}} : !spirv.ptr<i32, Workgroup>
   %0 = spirv.AtomicExchange <Workgroup> <Release> %ptr, %value: !spirv.ptr<i32, Workgroup>
   return %0: i32
+}
+
+// -----
+
+func.func @atomic_exchange_bf16(%ptr: !spirv.ptr<bf16, Workgroup>, %value: bf16) -> bf16 {
+  // expected-error @+1 {{'spirv.AtomicExchange' op operand #1 must be 8/16/32/64-bit integer or 16/32/64-bit float, but got 'bf16'}}
+  %0 = spirv.AtomicExchange <Workgroup> <Release> %ptr, %value : !spirv.ptr<bf16, Workgroup>
+  return %0: bf16
+}
+
+// -----
+
+func.func @atomic_exchange_float8(%ptr: !spirv.ptr<f8E4M3FN, Workgroup>, %value: f8E4M3FN) -> f8E4M3FN {
+  // expected-error @+1 {{'spirv.AtomicExchange' op operand #1 must be 8/16/32/64-bit integer or 16/32/64-bit float, but got 'f8E4M3FN'}}
+  %0 = spirv.AtomicExchange <Workgroup> <Release> %ptr, %value : !spirv.ptr<f8E4M3FN, Workgroup>
+  return %0: f8E4M3FN
 }
 
 // -----
@@ -132,6 +180,14 @@ func.func @atomic_exchange(%ptr: !spirv.ptr<i32, Workgroup>, %value: i64) -> i32
 func.func @atomic_exchange(%ptr: !spirv.ptr<i64, Workgroup>, %value: i32) -> i32 {
   // expected-error @+1 {{'spirv.AtomicExchange' op failed to verify that `value` type matches pointee type of `pointer`}}
   %0 = "spirv.AtomicExchange"(%ptr, %value) {memory_scope = #spirv.scope<Workgroup>, semantics = #spirv.memory_semantics<AcquireRelease>} : (!spirv.ptr<i64, Workgroup>, i32) -> (i32)
+  return %0: i32
+}
+
+// -----
+
+func.func @atomic_exchange(%ptr: !spirv.ptr<i32, Workgroup>, %value: i32) -> i32 {
+  // expected-error @+1 {{expected at most one of these four memory constraints to be set: `Acquire`, `Release`,`AcquireRelease` or `SequentiallyConsistent`}}
+  %0 = spirv.AtomicExchange <Workgroup> <Acquire|Release> %ptr, %value: !spirv.ptr<i32, Workgroup>
   return %0: i32
 }
 
@@ -207,6 +263,14 @@ func.func @atomic_load_mismatch(%ptr : !spirv.ptr<i32, Workgroup>) -> i64 {
 
 // -----
 
+func.func @atomic_load(%ptr : !spirv.ptr<i32, Workgroup>) -> i32 {
+  // expected-error @+1 {{expected at most one of these four memory constraints to be set: `Acquire`, `Release`,`AcquireRelease` or `SequentiallyConsistent`}}
+  %0 = spirv.AtomicLoad <Workgroup> <Acquire|Release> %ptr : !spirv.ptr<i32, Workgroup>
+  return %0 : i32
+}
+
+// -----
+
 //===----------------------------------------------------------------------===//
 // spirv.AtomicOr
 //===----------------------------------------------------------------------===//
@@ -262,6 +326,14 @@ func.func @atomic_store_float(%ptr : !spirv.ptr<f32, StorageBuffer>, %value : f3
 func.func @atomic_store_mismatch(%ptr : !spirv.ptr<i32, Workgroup>, %value : i64) {
   // expected-error @+1 {{'spirv.AtomicStore' op failed to verify that `value` type matches pointee type of `pointer`}}
   "spirv.AtomicStore"(%ptr, %value) {memory_scope = #spirv.scope<Workgroup>, semantics = #spirv.memory_semantics<Release>} : (!spirv.ptr<i32, Workgroup>, i64) -> ()
+  return
+}
+
+// -----
+
+func.func @atomic_store(%ptr : !spirv.ptr<i32, Workgroup>, %value : i32) {
+  // expected-error @+1 {{expected at most one of these four memory constraints to be set: `Acquire`, `Release`,`AcquireRelease` or `SequentiallyConsistent`}}
+  spirv.AtomicStore <Workgroup> <Acquire|Release> %ptr, %value : !spirv.ptr<i32, Workgroup>
   return
 }
 

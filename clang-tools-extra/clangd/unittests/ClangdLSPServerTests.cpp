@@ -67,7 +67,7 @@ protected:
 
   LSPClient &start() {
     EXPECT_FALSE(Server) << "Already initialized";
-    Server.emplace(Client.transport(), FS, Opts);
+    Server.emplace(Client.transport(), FS, std::move(Opts));
     ServerThread.emplace([&] { EXPECT_TRUE(Server->run()); });
     Client.call("initialize", llvm::json::Object{});
     return Client;
@@ -308,9 +308,8 @@ TEST_F(LSPTest, IncomingCalls) {
 }
 
 TEST_F(LSPTest, CDBConfigIntegration) {
-  auto CfgProvider =
+  Opts.ConfigProvider =
       config::Provider::fromAncestorRelativeYAMLFiles(".clangd", FS);
-  Opts.ConfigProvider = CfgProvider.get();
 
   // Map bar.cpp to a different compilation database which defines FOO->BAR.
   FS.Files[".clangd"] = R"yaml(
@@ -364,15 +363,6 @@ TEST_F(LSPTest, ModulesTest) {
   EXPECT_EQ(10, Client.call("get", nullptr).takeValue());
   EXPECT_THAT(Client.takeNotifications("changed"),
               ElementsAre(llvm::json::Value(2), llvm::json::Value(10)));
-}
-
-// Creates a Callback that writes its received value into an
-// std::optional<Expected>.
-template <typename T>
-llvm::unique_function<void(llvm::Expected<T>)>
-capture(std::optional<llvm::Expected<T>> &Out) {
-  Out.reset();
-  return [&Out](llvm::Expected<T> V) { Out.emplace(std::move(V)); };
 }
 
 TEST_F(LSPTest, FeatureModulesThreadingTest) {
@@ -508,6 +498,22 @@ TEST_F(LSPTest, CompletionOutOfRangePosition) {
                {"triggerCharacter", ">"},
            }},
       });
+  auto Result = Reply.take();
+  ASSERT_TRUE(!!Result) << "Expected a response, not a server crash";
+}
+
+// https://github.com/llvm/llvm-project/issues/196225
+TEST_F(LSPTest, ShutdownDuringRename) {
+  Annotations Code("void ^foo();");
+  auto &Client = start();
+  Client.didOpen("foo.cpp", Code.code());
+  auto &Reply = Client.call("textDocument/rename",
+                            llvm::json::Object{
+                                {"textDocument", Client.documentID("foo.cpp")},
+                                {"position", Code.point()},
+                                {"newName", "bar"},
+                            });
+  stop();
   auto Result = Reply.take();
   ASSERT_TRUE(!!Result) << "Expected a response, not a server crash";
 }

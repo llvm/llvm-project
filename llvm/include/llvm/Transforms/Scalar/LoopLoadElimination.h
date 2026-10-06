@@ -26,7 +26,7 @@ class Function;
 /// iterations.
 struct LoopLoadEliminationPass
     : public OptionalPassInfoMixin<LoopLoadEliminationPass> {
-  PreservedAnalyses run(Function &F, FunctionAnalysisManager &AM);
+  LLVM_ABI PreservedAnalyses run(Function &F, FunctionAnalysisManager &AM);
 };
 
 } // end namespace llvm

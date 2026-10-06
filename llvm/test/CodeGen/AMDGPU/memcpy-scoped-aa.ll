@@ -1,11 +1,11 @@
-; RUN: llc -mtriple=amdgcn-amd-amdhsa -mcpu=gfx1010 -o - %s | FileCheck %s
-; RUN: llc -mtriple=amdgcn-amd-amdhsa -mcpu=gfx1010 -stop-after=finalize-isel -o - %s | FileCheck --check-prefix=MIR %s
+; RUN: llc -mtriple=amdgpu10.10-amd-amdhsa -o - %s | FileCheck %s
+; RUN: llc -mtriple=amdgpu10.10-amd-amdhsa -stop-after=finalize-isel -o - %s | FileCheck --check-prefix=MIR %s
 
 ; Ensure that the scoped AA is attached on loads/stores lowered from mem ops.
 
 ; Re-evaluate the slot numbers of scopes as that numbering could be changed run-by-run.
 
-; MIR-DAG: ![[DOMAIN:[0-9]+]] = distinct !{!{{[0-9]+}}, !"bax"}
+; MIR-DAG: ![[DOMAIN:[0-9]+]] = distinct !{!{{[0-9]+}}, i1 false, !"bax"}
 ; MIR-DAG: ![[SCOPE0:[0-9]+]] = distinct !{!{{[0-9]+}}, ![[DOMAIN]], !"bax: %p"}
 ; MIR-DAG: ![[SCOPE1:[0-9]+]] = distinct !{!{{[0-9]+}}, ![[DOMAIN]], !"bax: %q"}
 ; MIR-DAG: ![[SET0:[0-9]+]] = !{![[SCOPE0]]}
@@ -94,7 +94,7 @@ declare void @llvm.memcpy.inline.p1.p1.i64(ptr addrspace(1) noalias nocapture wr
 declare void @llvm.memmove.p1.p1.i64(ptr addrspace(1) nocapture writeonly, ptr addrspace(1) nocapture readonly, i64, i1 immarg)
 declare void @llvm.memset.p1.i64(ptr addrspace(1) nocapture writeonly, i8, i64, i1 immarg)
 
-!0 = distinct !{!0, !"bax"}
+!0 = distinct !{!0, i1 false, !"bax"}
 !1 = distinct !{!1, !0, !"bax: %p"}
 !2 = !{!1}
 !3 = distinct !{!3, !0, !"bax: %q"}

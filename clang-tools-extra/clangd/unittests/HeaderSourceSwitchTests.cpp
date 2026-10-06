@@ -74,6 +74,23 @@ TEST(HeaderSourceSwitchTest, FileHeuristic) {
   // string.
   PathResult = getCorrespondingHeaderOrSource(Invalid, FS.view(std::nullopt));
   EXPECT_FALSE(PathResult.has_value());
+
+  // Test when both .h and .hpp exist next to a .cpp file, prefer .hpp
+  auto FooHpp = testPath("foo.hpp");
+  FS.Files[FooHpp];
+  PathResult = getCorrespondingHeaderOrSource(FooCpp, FS.view(std::nullopt));
+  EXPECT_TRUE(PathResult.has_value());
+  ASSERT_EQ(*PathResult, FooHpp);
+
+  auto BarCc = testPath("bar2.cc");
+  auto BarH = testPath("bar2.h");
+  auto BarHh = testPath("bar2.hh");
+  FS.Files[BarCc];
+  FS.Files[BarH];
+  FS.Files[BarHh];
+  PathResult = getCorrespondingHeaderOrSource(BarCc, FS.view(std::nullopt));
+  EXPECT_TRUE(PathResult.has_value());
+  ASSERT_EQ(*PathResult, BarHh);
 }
 
 TEST(HeaderSourceSwitchTest, ModuleInterfaces) {

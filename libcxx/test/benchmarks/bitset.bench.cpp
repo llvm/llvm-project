@@ -9,6 +9,7 @@
 // UNSUPPORTED: c++03
 
 #include "benchmark/benchmark.h"
+#include "test_macros.h"
 #include <bitset>
 #include <cmath>
 #include <cstddef>
@@ -39,7 +40,7 @@ struct GenerateBitset {
 };
 
 template <std::size_t N>
-static void BM_BitsetToString(benchmark::State& state) {
+static TEST_ALIGN_BENCHMARK void BM_BitsetToString(benchmark::State& state) {
   double p         = state.range(0) / 100.0;
   std::bitset<N> b = GenerateBitset<N>::generate(p);
   benchmark::DoNotOptimize(b);
@@ -67,7 +68,7 @@ BENCHMARK(BM_BitsetToString<64>)->Arg(50)->Name("BM_BitsetToString<64>/Uniform (
 BENCHMARK(BM_BitsetToString<8192>)->Arg(50)->Name("BM_BitsetToString<8192>/Uniform (50%)");
 BENCHMARK(BM_BitsetToString<1048576>)->Arg(50)->Name("BM_BitsetToString<1048576>/Uniform (50%)"); // 1 << 20
 
-static void BM_Bitset_ctor_ull(benchmark::State& state) {
+static TEST_ALIGN_BENCHMARK void BM_Bitset_ctor_ull(benchmark::State& state) {
   unsigned long long val = 1;
   for (auto _ : state) {
     benchmark::DoNotOptimize(val);

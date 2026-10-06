@@ -20,7 +20,7 @@ class SafeStackPass : public RequiredPassInfoMixin<SafeStackPass> {
 
 public:
   explicit SafeStackPass(const TargetMachine &TM_) : TM(&TM_) {}
-  PreservedAnalyses run(Function &F, FunctionAnalysisManager &FAM);
+  LLVM_ABI PreservedAnalyses run(Function &F, FunctionAnalysisManager &FAM);
 };
 
 } // namespace llvm

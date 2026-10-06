@@ -20,6 +20,7 @@
 #include "llvm/CodeGen/GlobalISel/GISelChangeObserver.h"
 #include "llvm/CodeGen/GlobalISel/MachineIRBuilder.h"
 #include "llvm/CodeGen/GlobalISel/Utils.h"
+#include "llvm/CodeGen/LowLevelTypeUtils.h"
 #include "llvm/CodeGen/MachineInstrBuilder.h"
 #include "llvm/CodeGen/MachineOperand.h"
 #include "llvm/CodeGen/MachineRegisterInfo.h"
@@ -51,14 +52,17 @@ bool GIMatchTableExecutor::executeMatchTable(
     CodeGenCoverage *CoverageInfo) const {
 
   uint64_t CurrentIdx = 0;
-  SmallVector<uint64_t, 4> OnFailResumeAt;
+  SmallVector<uint64_t, 8> OnFailResumeAt;
   NewMIVector OutMIs;
 
   GISelChangeObserver *Observer = Builder.getObserver();
   // Bypass the flag check on the instruction, and only look at the MCInstrDesc.
   bool NoFPException = !State.MIs[0]->getDesc().mayRaiseFPException();
 
-  const uint32_t Flags = State.MIs[0]->getFlags();
+  const uint32_t RootFlags = State.MIs[0]->getFlags();
+  const uint32_t RootFlagsToDrop = getRootFlagsToDrop();
+  // Flags to drop from the final (root flags | output flags).
+  SmallVector<uint32_t, 4> OutMIFlagsToDrop;
   bool BuilderInitialized = false;
   const auto initializeBuilder = [&]() {
     if (BuilderInitialized)
@@ -67,6 +71,10 @@ bool GIMatchTableExecutor::executeMatchTable(
     // action needs the builder.
     Builder.setInstrAndDebugLoc(*State.MIs[0]);
     BuilderInitialized = true;
+  };
+  const auto initializeOutMIFlagState = [&](unsigned NumOutMIs) {
+    if (NumOutMIs > OutMIFlagsToDrop.size())
+      OutMIFlagsToDrop.resize(NumOutMIs, RootFlagsToDrop);
   };
 
   enum RejectAction { RejectAndGiveUp, RejectAndResume };
@@ -83,10 +91,13 @@ bool GIMatchTableExecutor::executeMatchTable(
   };
 
   const auto propagateFlags = [&]() {
-    for (auto MIB : OutMIs) {
+    initializeOutMIFlagState(OutMIs.size());
+    for (unsigned I = 0, E = OutMIs.size(); I != E; ++I) {
+      MachineInstrBuilder MIB = OutMIs[I];
       // Set the NoFPExcept flag when no original matched instruction could
       // raise an FP exception, but the new instruction potentially might.
-      uint32_t MIBFlags = Flags | MIB.getInstr()->getFlags();
+      uint32_t MIBFlags =
+          (RootFlags | MIB.getInstr()->getFlags()) & ~OutMIFlagsToDrop[I];
       if (NoFPException && MIB->mayRaiseFPException())
         MIBFlags |= MachineInstr::NoFPExcept;
       if (Observer)
@@ -155,7 +166,26 @@ bool GIMatchTableExecutor::executeMatchTable(
       OnFailResumeAt.push_back(readU32());
       break;
     }
-
+    case GIM_Try_CheckFeatures: {
+      // This is optimized so that if the feature is not present, we don't even
+      // modify OnFailResumeAt. Instead we directly jump to OnFail.
+      unsigned OnFail = readU32();
+      uint16_t ExpectedBitsetID = readU16();
+      DEBUG_WITH_TYPE(TgtExecutor::getName(),
+                      dbgs() << CurrentIdx
+                             << ": GIM_Try_CheckFeatures(ExpectedBitsetID="
+                             << ExpectedBitsetID << ")\n");
+      if ((AvailableFeatures & ExecInfo.FeatureBitsets[ExpectedBitsetID]) !=
+          ExecInfo.FeatureBitsets[ExpectedBitsetID]) {
+        DEBUG_WITH_TYPE(TgtExecutor::getName(),
+                        dbgs() << CurrentIdx
+                               << ": Features do not match, rejected\n");
+        CurrentIdx = OnFail;
+      } else {
+        OnFailResumeAt.push_back(OnFail);
+      }
+      break;
+    }
     case GIM_RecordInsn:
     case GIM_RecordInsnIgnoreCopies: {
       uint64_t NewInsnID = readULEB();
@@ -199,20 +229,6 @@ bool GIMatchTableExecutor::executeMatchTable(
                       dbgs() << CurrentIdx << ": MIs[" << NewInsnID
                              << "] = GIM_RecordInsn(" << InsnID << ", " << OpIdx
                              << ")\n");
-      break;
-    }
-
-    case GIM_CheckFeatures: {
-      uint16_t ExpectedBitsetID = readU16();
-      DEBUG_WITH_TYPE(TgtExecutor::getName(),
-                      dbgs() << CurrentIdx
-                             << ": GIM_CheckFeatures(ExpectedBitsetID="
-                             << ExpectedBitsetID << ")\n");
-      if ((AvailableFeatures & ExecInfo.FeatureBitsets[ExpectedBitsetID]) !=
-          ExecInfo.FeatureBitsets[ExpectedBitsetID]) {
-        if (handleReject() == RejectAndGiveUp)
-          return false;
-      }
       break;
     }
     case GIM_CheckOpcode:
@@ -857,7 +873,7 @@ bool GIMatchTableExecutor::executeMatchTable(
           (Exec.*ExecInfo.ComplexPredicates[ComplexPredicateID])(
               State.MIs[InsnID]->getOperand(OpIdx));
       if (Renderer)
-        State.Renderers[RendererID] = *Renderer;
+        State.Renderers[RendererID] = std::move(*Renderer);
       else if (handleReject() == RejectAndGiveUp)
         return false;
       break;
@@ -1077,6 +1093,7 @@ bool GIMatchTableExecutor::executeMatchTable(
       uint32_t NewOpcode = readU16();
       if (NewInsnID >= OutMIs.size())
         OutMIs.resize(NewInsnID + 1);
+      initializeOutMIFlagState(NewInsnID + 1);
 
       MachineInstr *OldMI = State.MIs[OldInsnID];
       if (Observer)
@@ -1098,6 +1115,7 @@ bool GIMatchTableExecutor::executeMatchTable(
       uint32_t Opcode = readU16();
       if (NewInsnID >= OutMIs.size())
         OutMIs.resize(NewInsnID + 1);
+      initializeOutMIFlagState(NewInsnID + 1);
 
       initializeBuilder();
       OutMIs[NewInsnID] = Builder.buildInstr(Opcode);
@@ -1249,7 +1267,10 @@ bool GIMatchTableExecutor::executeMatchTable(
                       dbgs() << CurrentIdx << ": GIR_SetMIFlags(OutMIs["
                              << InsnID << "], " << Flags << ")\n");
       MachineInstr *MI = OutMIs[InsnID];
+      assert(MI && "Modifying undefined instruction");
       MI->setFlags(MI->getFlags() | Flags);
+      initializeOutMIFlagState(OutMIs.size());
+      OutMIFlagsToDrop[InsnID] &= ~Flags;
       break;
     }
     case GIR_UnsetMIFlags: {
@@ -1260,7 +1281,10 @@ bool GIMatchTableExecutor::executeMatchTable(
                       dbgs() << CurrentIdx << ": GIR_UnsetMIFlags(OutMIs["
                              << InsnID << "], " << Flags << ")\n");
       MachineInstr *MI = OutMIs[InsnID];
+      assert(MI && "Modifying undefined instruction");
       MI->setFlags(MI->getFlags() & ~Flags);
+      initializeOutMIFlagState(OutMIs.size());
+      OutMIFlagsToDrop[InsnID] |= Flags;
       break;
     }
     case GIR_CopyMIFlags: {
@@ -1271,7 +1295,11 @@ bool GIMatchTableExecutor::executeMatchTable(
                       dbgs() << CurrentIdx << ": GIR_CopyMIFlags(OutMIs["
                              << InsnID << "], MIs[" << OldInsnID << "])\n");
       MachineInstr *MI = OutMIs[InsnID];
-      MI->setFlags(MI->getFlags() | State.MIs[OldInsnID]->getFlags());
+      assert(MI && "Modifying undefined instruction");
+      uint32_t Flags = State.MIs[OldInsnID]->getFlags();
+      MI->setFlags(MI->getFlags() | Flags);
+      initializeOutMIFlagState(OutMIs.size());
+      OutMIFlagsToDrop[InsnID] &= ~Flags;
       break;
     }
     case GIR_AddSimpleTempRegister:
@@ -1318,7 +1346,7 @@ bool GIMatchTableExecutor::executeMatchTable(
       uint64_t Imm = readU64();
       assert(OutMIs[InsnID] && "Attempted to add to undefined instruction");
 
-      unsigned Width = ExecInfo.TypeObjects[TypeID].getScalarSizeInBits();
+      unsigned Width = getTypeFromIdx(TypeID).getScalarSizeInBits();
       LLVMContext &Ctx = MF->getFunction().getContext();
       OutMIs[InsnID].addCImm(
           ConstantInt::get(IntegerType::get(Ctx, Width), Imm, /*signed*/ true));
@@ -1326,6 +1354,24 @@ bool GIMatchTableExecutor::executeMatchTable(
                       dbgs() << CurrentIdx << ": GIR_AddCImm(OutMIs[" << InsnID
                              << "], TypeID=" << TypeID << ", Imm=" << Imm
                              << ")\n");
+      break;
+    }
+
+    case GIR_AddCFPImm: {
+      uint64_t InsnID = readULEB();
+      int TypeID = readS8();
+      uint64_t Imm = readU64();
+      assert(OutMIs[InsnID] && "Attempted to add to undefined instruction");
+
+      LLT Ty = getTypeFromIdx(TypeID);
+      unsigned Width = Ty.getScalarSizeInBits();
+      LLVMContext &Ctx = MF->getFunction().getContext();
+      APFloat APF(getFltSemanticForLLT(Ty.getScalarType()), APInt(Width, Imm));
+      OutMIs[InsnID].addFPImm(ConstantFP::get(Ctx, APF));
+      DEBUG_WITH_TYPE(TgtExecutor::getName(),
+                      dbgs() << CurrentIdx << ": GIR_AddCFPImm(OutMIs["
+                             << InsnID << "], TypeID=" << TypeID
+                             << ", Imm=" << Imm << ")\n");
       break;
     }
 
@@ -1429,6 +1475,9 @@ bool GIMatchTableExecutor::executeMatchTable(
                              << FnID << ")\n");
       assert(FnID > GICXXCustomAction_Invalid && "Expected a valid FnID");
       if (runCustomAction(FnID, State, OutMIs)) {
+        initializeOutMIFlagState(OutMIs.size());
+        for (unsigned I = 0, E = OutMIs.size(); I != E; ++I)
+          OutMIFlagsToDrop[I] &= ~OutMIs[I]->getFlags();
         propagateFlags();
         return true;
       }

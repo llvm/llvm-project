@@ -5,11 +5,15 @@ add_subdirectory(common)
 function(add_target_library target_name lib_name)
   add_library(${target_name} STATIC)
 
-  llvm_map_components_to_libnames(llvm_libs
-    AggressiveInstCombine Analysis BinaryFormat BitReader BitWriter CodeGen
-    Core Extensions FrontendOffloading InstCombine Instrumentation IPO IRReader
-    Linker MC Object Passes ProfileData Remarks ScalarOpts Support Target
-    TargetParser TransformUtils Vectorize)
+  if(LLVM_LINK_LLVM_DYLIB)
+    set(llvm_libs LLVM)
+  else()
+    llvm_map_components_to_libnames(llvm_libs
+      AggressiveInstCombine Analysis BinaryFormat BitReader BitWriter CodeGen
+      Core Extensions FrontendOffloading InstCombine Instrumentation IPO IRReader
+      Linker MC Object Passes ProfileData Remarks ScalarOpts Support Target
+      TargetParser TransformUtils Vectorize)
+  endif()
   llvm_update_compile_flags(${target_name})
   target_include_directories(${target_name} PUBLIC ${common_dir}/include
                              ${common_bin_dir}/include)

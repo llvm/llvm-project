@@ -15,7 +15,7 @@ namespace llvm {
 
 class WasmEHPreparePass : public RequiredPassInfoMixin<WasmEHPreparePass> {
 public:
-  PreservedAnalyses run(Function &F, FunctionAnalysisManager &FAM);
+  LLVM_ABI PreservedAnalyses run(Function &F, FunctionAnalysisManager &FAM);
 };
 
 } // namespace llvm

@@ -60,15 +60,13 @@ struct InstrumentorIRBuilderTy {
   }
 
   /// Get a temporary alloca to communicate (large) values with the runtime.
-  AllocaInst *getAlloca(Function *Fn, Type *Ty, bool MatchType = false) {
+  AllocaInst *getAlloca(Function *Fn, Type *Ty) {
     const DataLayout &DL = Fn->getDataLayout();
     auto *&AllocaList = AllocaMap[{Fn, DL.getTypeAllocSize(Ty)}];
     if (!AllocaList)
       AllocaList = new AllocaListTy;
     AllocaInst *AI = nullptr;
     for (auto *&ListAI : *AllocaList) {
-      if (MatchType && ListAI->getAllocatedType() != Ty)
-        continue;
       AI = ListAI;
       ListAI = *AllocaList->rbegin();
       break;
@@ -116,7 +114,7 @@ struct InstrumentorIRBuilderTy {
 
   /// Map that holds the currently used allocas and the list where they belong.
   /// Once an alloca has to be returned, it is returned directly to its list.
-  DenseMap<AllocaInst *, AllocaListTy *> UsedAllocas;
+  MapVector<AllocaInst *, AllocaListTy *> UsedAllocas;
 
   /// Instructions that should be erased later.
   SmallPtrSet<Instruction *, 32> ErasableInstructions;
@@ -177,7 +175,7 @@ template <typename EnumTy> struct BaseConfigTy {
 /// opportunity. Returns true if the filter passes (or is empty), false
 /// otherwise. Dynamic values (non-constants) are assumed to pass.
 LLVM_ABI
-bool evaluateFilter(Value &V, InstrumentationOpportunity &IO,
+bool evaluateFilter(Value &V, bool &Changed, InstrumentationOpportunity &IO,
                     InstrumentationConfig &IConf,
                     InstrumentorIRBuilderTy &IIRB);
 

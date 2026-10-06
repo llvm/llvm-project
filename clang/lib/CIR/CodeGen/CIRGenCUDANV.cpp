@@ -12,17 +12,24 @@
 //===----------------------------------------------------------------------===//
 
 #include "CIRGenCUDARuntime.h"
+#include "CIRGenCXXABI.h"
 #include "CIRGenFunction.h"
 #include "CIRGenModule.h"
 #include "mlir/IR/Operation.h"
 #include "clang/AST/ASTContext.h"
+#include "clang/AST/Attrs.inc"
 #include "clang/AST/Decl.h"
 #include "clang/AST/GlobalDecl.h"
 #include "clang/Basic/AddressSpaces.h"
 #include "clang/Basic/Cuda.h"
+#include "clang/Basic/DiagnosticFrontend.h"
+#include "clang/Basic/FileManager.h"
+#include "clang/Basic/SourceManager.h"
 #include "clang/CIR/Dialect/IR/CIRDialect.h"
 #include "clang/CIR/Dialect/IR/CIRTypes.h"
 #include "llvm/Support/Casting.h"
+#include "llvm/Support/MemoryBuffer.h"
+#include "llvm/Support/VirtualFileSystem.h"
 
 using namespace clang;
 using namespace clang::CIRGen;
@@ -40,12 +47,21 @@ protected:
 
   // Map a kernel handle to the kernel stub.
   llvm::DenseMap<mlir::Operation *, mlir::Operation *> kernelStubs;
+
+  struct VarInfo {
+    cir::GlobalOp var;
+    const VarDecl *d;
+    cir::CUDADeviceVarKind flags;
+  };
+  llvm::SmallVector<VarInfo, 16> deviceVars;
+
   // Mangle context for device.
   std::unique_ptr<MangleContext> deviceMC;
 
 private:
   void emitDeviceStubBodyNew(CIRGenFunction &cgf, cir::FuncOp fn,
                              FunctionArgList &args);
+  void recordDeviceBinary();
   mlir::Value prepareKernelArgs(CIRGenFunction &cgf, mlir::Location loc,
                                 FunctionArgList &args);
   mlir::Operation *getKernelHandle(cir::FuncOp fn, GlobalDecl gd) override;
@@ -64,6 +80,69 @@ public:
 
   void emitDeviceStub(CIRGenFunction &cgf, cir::FuncOp fn,
                       FunctionArgList &args) override;
+
+  void handleVarRegistration(const VarDecl *vd, cir::GlobalOp var) override;
+  void finalizeModule() override;
+  void handleGlobalReplace(cir::GlobalOp oldGV, cir::GlobalOp newGV) override;
+
+  void internalizeDeviceSideVar(const VarDecl *d,
+                                cir::GlobalLinkageKind &linkage) override;
+
+  std::string getDeviceSideName(const NamedDecl *nd) override;
+
+  void registerDeviceVar(const VarDecl *vd, cir::GlobalOp &var, bool isExtern,
+                         bool isConstant) {
+    // Attach the device var attribute to the GlobalOp
+    auto &builder = cgm.getBuilder();
+    var->setAttr(cir::CUDAVarRegistrationInfoAttr::getMnemonic(),
+                 cir::CUDAVarRegistrationInfoAttr::get(
+                     builder.getContext(),
+                     getDeviceSideName(cast<NamedDecl>(vd)),
+                     cir::CUDADeviceVarKind::Variable, isExtern, isConstant,
+                     vd->hasAttr<HIPManagedAttr>()));
+    deviceVars.push_back({
+        var,
+        vd,
+        cir::CUDADeviceVarKind::Variable,
+    });
+  }
+
+  void registerDeviceSurf(const VarDecl *vd, cir::GlobalOp &var,
+                          bool isExtern) {
+    auto &builder = cgm.getBuilder();
+
+    var->setAttr(cir::CUDAVarRegistrationInfoAttr::getMnemonic(),
+                 cir::CUDAVarRegistrationInfoAttr::get(
+                     builder.getContext(),
+                     getDeviceSideName(cast<NamedDecl>(vd)),
+                     cir::CUDADeviceVarKind::Surface, isExtern,
+                     /*isConstant=*/false,
+                     /*isManaged=*/false));
+
+    deviceVars.push_back({
+        var,
+        vd,
+        cir::CUDADeviceVarKind::Surface,
+    });
+  }
+
+  void registerDeviceTex(const VarDecl *vd, cir::GlobalOp &var, bool isExtern) {
+    auto &builder = cgm.getBuilder();
+
+    var->setAttr(cir::CUDAVarRegistrationInfoAttr::getMnemonic(),
+                 cir::CUDAVarRegistrationInfoAttr::get(
+                     builder.getContext(),
+                     getDeviceSideName(cast<NamedDecl>(vd)),
+                     cir::CUDADeviceVarKind::Texture, isExtern,
+                     /*isConstant=*/false,
+                     /*isManaged=*/false));
+
+    deviceVars.push_back({
+        var,
+        vd,
+        cir::CUDADeviceVarKind::Texture,
+    });
+  }
 };
 
 } // namespace
@@ -95,9 +174,9 @@ mlir::Value CIRGenNVCUDARuntime::prepareKernelArgs(CIRGenFunction &cgf,
 
   // Build void *args[] and populate with the addresses of kernel arguments.
   auto voidPtrArrayTy = cir::ArrayType::get(cgm.voidPtrTy, args.size());
-  mlir::Value kernelArgs = builder.createAlloca(
-      loc, cir::PointerType::get(voidPtrArrayTy), voidPtrArrayTy, "kernel_args",
-      CharUnits::fromQuantity(16));
+  mlir::Value kernelArgs =
+      builder.createAlloca(loc, cir::PointerType::get(voidPtrArrayTy),
+                           "kernel_args", CharUnits::fromQuantity(16));
 
   mlir::Value kernelArgsDecayed =
       builder.createCast(cir::CastKind::array_to_ptrdecay, kernelArgs,
@@ -187,17 +266,15 @@ void CIRGenNVCUDARuntime::emitDeviceStubBodyNew(CIRGenFunction &cgf,
       cudaLaunchKernelFD->getParamDecl(5)->getType());
 
   mlir::Value gridDim =
-      builder.createAlloca(loc, cir::PointerType::get(dim3Ty), dim3Ty,
-                           "grid_dim", CharUnits::fromQuantity(8));
+      builder.createAlloca(loc, cir::PointerType::get(dim3Ty), "grid_dim",
+                           CharUnits::fromQuantity(8));
   mlir::Value blockDim =
-      builder.createAlloca(loc, cir::PointerType::get(dim3Ty), dim3Ty,
-                           "block_dim", CharUnits::fromQuantity(8));
-  mlir::Value sharedMem =
-      builder.createAlloca(loc, cir::PointerType::get(cgm.sizeTy), cgm.sizeTy,
-                           "shared_mem", cgm.getSizeAlign());
-  mlir::Value stream =
-      builder.createAlloca(loc, cir::PointerType::get(streamTy), streamTy,
-                           "stream", cgm.getPointerAlign());
+      builder.createAlloca(loc, cir::PointerType::get(dim3Ty), "block_dim",
+                           CharUnits::fromQuantity(8));
+  mlir::Value sharedMem = builder.createAlloca(
+      loc, cir::PointerType::get(cgm.sizeTy), "shared_mem", cgm.getSizeAlign());
+  mlir::Value stream = builder.createAlloca(
+      loc, cir::PointerType::get(streamTy), "stream", cgm.getPointerAlign());
 
   cir::FuncOp popConfig = cgm.createRuntimeFunction(
       cir::FuncType::get({gridDim.getType(), blockDim.getType(),
@@ -259,7 +336,7 @@ void CIRGenNVCUDARuntime::emitDeviceStubBodyNew(CIRGenFunction &cgf,
   const CIRGenFunctionInfo &callInfo =
       cgm.getTypes().arrangeFunctionDeclaration(cudaLaunchKernelFD);
   cgf.emitCall(callInfo, CIRGenCallee::forDirect(cudaKernelLauncherFn),
-               ReturnValueSlot(), launchArgs);
+               ReturnValueSlot(), launchArgs, /*isMustTail=*/false);
 
   if (cgm.getASTContext().getTargetInfo().getCXXABI().isMicrosoft() &&
       !cgf.getLangOpts().HIP)
@@ -345,4 +422,196 @@ mlir::Operation *CIRGenNVCUDARuntime::getKernelHandle(cir::FuncOp fn,
   kernelStubs[globalOp] = fn;
 
   return globalOp;
+}
+
+void CIRGenNVCUDARuntime::internalizeDeviceSideVar(
+    const VarDecl *d, cir::GlobalLinkageKind &linkage) {
+  if (cgm.getLangOpts().GPURelocatableDeviceCode)
+    cgm.errorNYI(d->getSourceRange(),
+                 "internalizeDeviceSideVar: GPU Relocatable Device Code (RDC)");
+
+  // __shared__ variables are odd. Shadows do get created, but
+  // they are not registered with the CUDA runtime, so they
+  // can't really be used to access their device-side
+  // counterparts. It's not clear yet whether it's nvcc's bug or
+  // a feature, but we've got to do the same for compatibility.
+  if (d->hasAttr<CUDADeviceAttr>() || d->hasAttr<CUDAConstantAttr>() ||
+      d->hasAttr<CUDASharedAttr>()) {
+    linkage = cir::GlobalLinkageKind::InternalLinkage;
+  }
+
+  if (d->getType()->isCUDADeviceBuiltinSurfaceType() ||
+      d->getType()->isCUDADeviceBuiltinTextureType())
+    cgm.errorNYI(d->getSourceRange(),
+                 "internalizeDeviceSideVar: CUDA Surface/Texture support");
+}
+
+std::string CIRGenNVCUDARuntime::getDeviceSideName(const NamedDecl *nd) {
+  GlobalDecl gd;
+  // nd could be either a kernel or a variable.
+  if (auto *fd = dyn_cast<FunctionDecl>(nd))
+    gd = GlobalDecl(fd, KernelReferenceKind::Kernel);
+  else
+    gd = GlobalDecl(nd);
+  std::string deviceSideName;
+  MangleContext *mc;
+  if (cgm.getLangOpts().CUDAIsDevice)
+    mc = &cgm.getCXXABI().getMangleContext();
+  else
+    mc = deviceMC.get();
+  if (mc->shouldMangleDeclName(nd)) {
+    SmallString<256> buffer;
+    llvm::raw_svector_ostream out(buffer);
+    mc->mangleName(gd, out);
+    deviceSideName = std::string(out.str());
+  } else
+    deviceSideName = std::string(nd->getIdentifier()->getName());
+
+  // Make unique name for device side static file-scope variable for HIP.
+  if (cgm.getASTContext().shouldExternalize(nd) &&
+      cgm.getLangOpts().GPURelocatableDeviceCode) {
+    SmallString<256> buffer;
+    llvm::raw_svector_ostream out(buffer);
+    out << deviceSideName;
+    cgm.printPostfixForExternalizedDecl(out, nd);
+    deviceSideName = std::string(out.str());
+  }
+  return deviceSideName;
+}
+
+void CIRGenNVCUDARuntime::handleVarRegistration(const VarDecl *vd,
+                                                cir::GlobalOp var) {
+  if (vd->hasAttr<CUDADeviceAttr>() || vd->hasAttr<CUDAConstantAttr>()) {
+    // Shadow variables and their properties must be registered with CUDA
+    // runtime. Skip Extern global variables, which will be registered in
+    // the TU where they are defined.
+    //
+    // Don't register a C++17 inline variable. The local symbol can be
+    // discarded and referencing a discarded local symbol from outside the
+    // comdat (__cuda_register_globals) is disallowed by the ELF spec.
+    //
+    // HIP managed variables need to be always recorded in device and host
+    // compilations for transformation.
+    //
+    // HIP managed variables and variables in CUDADeviceVarODRUsedByHost are
+    // added to llvm.compiler-used, therefore they are safe to be registered.
+    if ((!vd->hasExternalStorage() && !vd->isInline()) ||
+        cgm.getASTContext().CUDADeviceVarODRUsedByHost.contains(vd) ||
+        vd->hasAttr<HIPManagedAttr>()) {
+      registerDeviceVar(vd, var, !vd->hasDefinition(),
+                        vd->hasAttr<CUDAConstantAttr>());
+    }
+  } else if (vd->getType()->isCUDADeviceBuiltinSurfaceType()) {
+    // Builtin surfaces and their template arguments are also registered
+    // with CUDA runtime.
+    if (!vd->hasExternalStorage())
+      registerDeviceSurf(vd, var, !vd->hasDefinition());
+
+  } else if (vd->getType()->isCUDADeviceBuiltinTextureType()) {
+    // Builtin textures and their template arguments are also registered
+    // with CUDA runtime.
+    if (!vd->hasExternalStorage())
+      registerDeviceTex(vd, var, !vd->hasDefinition());
+  }
+}
+
+void CIRGenNVCUDARuntime::handleGlobalReplace(cir::GlobalOp oldGV,
+                                              cir::GlobalOp newGV) {
+  for (auto &info : deviceVars) {
+    if (info.var == oldGV)
+      info.var = newGV;
+  }
+}
+
+/// Whether this translation unit has anything for the CUDA runtime to register.
+/// These are the same two attributes LoweringPrepare collects to decide whether
+/// to build a module ctor, so both sides answer the question from one source.
+static bool hasEntitiesToRegister(mlir::ModuleOp module) {
+  // A walk, not a scan of the module body, so this stays in agreement with the
+  // recursive walk LoweringPrepare collects them with.
+  return module
+      ->walk([](mlir::Operation *op) {
+        if (op->hasAttr(cir::CUDAKernelNameAttr::getMnemonic()) ||
+            op->hasAttr(cir::CUDAVarRegistrationInfoAttr::getMnemonic()))
+          return mlir::WalkResult::interrupt();
+        return mlir::WalkResult::advance();
+      })
+      .wasInterrupted();
+}
+
+/// Read the device-side fat binary and record its contents on the module as
+/// `cir.cu.device_binary`, for LoweringPrepare to build the fatbin global from.
+///
+/// This mirrors the read in CGNVCUDARuntime::makeModuleCtorFunction, guards
+/// included: nothing is read in a compilation that would build no module
+/// constructor.
+void CIRGenNVCUDARuntime::recordDeviceBinary() {
+  StringRef binaryName = cgm.getCodeGenOpts().OffloadBinaryToEmbedFile;
+  if (binaryName.empty())
+    return;
+
+  const LangOptions &langOpts = cgm.getLangOpts();
+  if ((langOpts.HIP || !langOpts.GPURelocatableDeviceCode) &&
+      !hasEntitiesToRegister(cgm.getModule()))
+    return;
+
+  llvm::vfs::FileSystem &fs = cgm.getASTContext()
+                                  .getSourceManager()
+                                  .getFileManager()
+                                  .getVirtualFileSystem();
+  llvm::ErrorOr<std::unique_ptr<llvm::MemoryBuffer>> binaryOrErr =
+      fs.getBufferForFile(binaryName, /*FileSize=*/-1,
+                          /*RequiresNullTerminator=*/false);
+  if (std::error_code ec = binaryOrErr.getError()) {
+    cgm.getDiags().Report(diag::err_cannot_open_file)
+        << binaryName << ec.message();
+    return;
+  }
+
+  // Typed as the fatbin global's array type so LoweringPrepare can use this
+  // attribute as the initializer as-is: attributes are uniqued on {value, type}
+  // and never freed, so building a second, typed copy there would keep the fat
+  // binary in memory twice.
+  StringRef bytes = binaryOrErr.get()->getBuffer();
+  mlir::MLIRContext &ctx = cgm.getMLIRContext();
+  auto charTy = cir::IntType::get(&ctx, cgm.getTarget().getCharWidth(),
+                                  /*isSigned=*/false);
+  auto fatbinTy = cir::ArrayType::get(charTy, bytes.size());
+  cgm.getModule()->setAttr(cir::CIRDialect::getCUDADeviceBinaryAttrName(),
+                           mlir::StringAttr::get(bytes, fatbinTy));
+}
+
+void CIRGenNVCUDARuntime::finalizeModule() {
+  if (!cgm.getLangOpts().CUDAIsDevice) {
+    recordDeviceBinary();
+    return;
+  }
+
+  // Mark ODR-used device variables as compiler used to prevent them from being
+  // eliminated by optimization. This is necessary for device variables
+  // ODR-used by host functions. Sema correctly marks them as ODR-used no
+  // matter whether they are ODR-used by device or host functions.
+  //
+  // We do not need to do this if the variable has used attribute since it
+  // has already been added.
+  //
+  // Static device variables have been externalized at this point, therefore
+  // variables with private or internal linkage need not be added.
+  for (auto &&info : deviceVars) {
+    auto kind = info.flags;
+    bool isDecl = info.var.isDeclaration();
+    bool isLocalLinkage = cir::isLocalLinkage(info.var.getLinkage());
+    bool isVarOrSurfaceOrTexture = (kind == cir::CUDADeviceVarKind::Variable ||
+                                    kind == cir::CUDADeviceVarKind::Surface ||
+                                    kind == cir::CUDADeviceVarKind::Texture);
+    bool isUsed = info.d->isUsed();
+    bool hasUsedAttr = info.d->hasAttr<UsedAttr>();
+    if (!isDecl && !isLocalLinkage && isVarOrSurfaceOrTexture && isUsed &&
+        !hasUsedAttr) {
+      if (auto globalValue = mlir::dyn_cast<cir::CIRGlobalValueInterface>(
+              info.var.getOperation())) {
+        cgm.addCompilerUsedGlobal(globalValue);
+      }
+    }
+  }
 }

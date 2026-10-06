@@ -37,8 +37,8 @@ define dso_local void @huge_allocas() {
 entry:
 ; CHECK-LABEL: huge_allocas:
 ; CHECK:      irg  x1, sp{{$}}
-; CHECK:      add  [[TMP:x[0-9]+]], x1, #3088
-; CHECK:      addg x0, [[TMP]], #1008, #1
+; CHECK:      add  [[TMP:x[0-9]+]], x1, #1, lsl #12
+; CHECK:      addg x0, [[TMP]], #0, #1
 ; CHECK:      bl use2
   %a = alloca i8, i64 4096, align 16
   %b = alloca i8, i64 4096, align 16

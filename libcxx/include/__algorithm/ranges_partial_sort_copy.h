@@ -60,7 +60,7 @@ struct __partial_sort_copy {
       _Comp __comp   = {},
       _Proj1 __proj1 = {},
       _Proj2 __proj2 = {}) const {
-    auto __result = std::__partial_sort_copy<_RangeAlgPolicy>(
+    return std::__partial_sort_copy<_RangeAlgPolicy>(
         std::move(__first),
         std::move(__last),
         std::move(__result_first),
@@ -68,7 +68,6 @@ struct __partial_sort_copy {
         __comp,
         __proj1,
         __proj2);
-    return {std::move(__result.first), std::move(__result.second)};
   }
 
   template <input_range _Range1,
@@ -84,7 +83,7 @@ struct __partial_sort_copy {
   _LIBCPP_HIDE_FROM_ABI constexpr partial_sort_copy_result<borrowed_iterator_t<_Range1>, borrowed_iterator_t<_Range2>>
   operator()(
       _Range1&& __range, _Range2&& __result_range, _Comp __comp = {}, _Proj1 __proj1 = {}, _Proj2 __proj2 = {}) const {
-    auto __result = std::__partial_sort_copy<_RangeAlgPolicy>(
+    return std::__partial_sort_copy<_RangeAlgPolicy>(
         ranges::begin(__range),
         ranges::end(__range),
         ranges::begin(__result_range),
@@ -92,7 +91,6 @@ struct __partial_sort_copy {
         __comp,
         __proj1,
         __proj2);
-    return {std::move(__result.first), std::move(__result.second)};
   }
 };
 

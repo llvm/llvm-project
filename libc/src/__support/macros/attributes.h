@@ -29,6 +29,14 @@
 #define LIBC_INLINE_ASM __asm__ __volatile__
 #define LIBC_UNUSED __attribute__((unused))
 
+#if __has_attribute(always_inline)
+#define LIBC_ALWAYS_INLINE LIBC_INLINE __attribute__((always_inline))
+#elif defined(LIBC_COMPILER_IS_MSVC) || defined(_MSC_VER)
+#define LIBC_ALWAYS_INLINE __forceinline
+#else
+#define LIBC_ALWAYS_INLINE LIBC_INLINE
+#endif // __has_attribute(always_inline)
+
 #ifndef LIBC_HAS_BUILTIN_IS_CONSTANT_EVALUATED
 #if (defined(LIBC_COMPILER_IS_GCC) && (LIBC_COMPILER_GCC_VER >= 900)) ||       \
     (defined(LIBC_COMPILER_IS_CLANG) && LIBC_COMPILER_CLANG_VER >= 900)
@@ -48,19 +56,41 @@
 #endif // has_builtin(__builtin_bit_cast)
 #endif // LIBC_HAS_BUILTIN_BIT_CAST
 
+#if LIBC_HAS_BUILTIN_BIT_CAST
+#define LIBC_BIT_CAST_CONSTEXPR constexpr
+#define LIBC_BIT_CAST_CONSTEXPR_VAR constexpr
+#else
+#define LIBC_BIT_CAST_CONSTEXPR
+#define LIBC_BIT_CAST_CONSTEXPR_VAR const
+#endif // LIBC_HAS_BUILTIN_BIT_CAST
+
 #ifndef LIBC_HAS_CONSTANT_EVALUATION
 #define LIBC_HAS_CONSTANT_EVALUATION                                           \
   (LIBC_HAS_BUILTIN_IS_CONSTANT_EVALUATED && LIBC_HAS_BUILTIN_BIT_CAST)
 #endif // LIBC_HAS_CONSTANT_EVALUATION
 
+#if LIBC_HAS_CONSTANT_EVALUATION
+#define LIBC_CONSTEXPR_DEFAULT constexpr
+#define LIBC_CONSTEXPR_VAR_DEFAULT constexpr
+#else
+#define LIBC_CONSTEXPR_DEFAULT
+#define LIBC_CONSTEXPR_VAR_DEFAULT const
+#endif // LIBC_HAS_CONSTANT_EVALUATION
+
 // TODO: Remove the macro once Clang/LLVM bump their minimum compilers' version.
 // The reason for indirection is GCC is known to fail with constexpr qualified
 // functions that doesn't produce constant expression.
+// Also, there are some circular dependency in the generic functions without
+// __builtin_func for the following functions:
+//   fputil::fma
+//   fputil::sqrt
 #if LIBC_ENABLE_CONSTEXPR && LIBC_HAS_CONSTANT_EVALUATION
 #define LIBC_USE_CONSTEXPR
 #define LIBC_CONSTEXPR constexpr
+#define LIBC_CONSTEXPR_VAR constexpr
 #else
 #define LIBC_CONSTEXPR
+#define LIBC_CONSTEXPR_VAR const
 #endif // LIBC_USE_CONSTEXPR
 
 #ifndef LIBC_HAS_BUILTIN_IS_ASSIGNABLE

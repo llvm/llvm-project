@@ -1,4 +1,4 @@
-; RUN: llc -mtriple=amdgcn-amd-amdhsa -mcpu=gfx90a < %s | FileCheck %s
+; RUN: llc -mtriple=amdgpu9.0a-amd-amdhsa < %s | FileCheck %s
 
 ; CHECK-LABEL: {{^}}qux
 ; CHECK: .set .Lqux.num_vgpr, 13

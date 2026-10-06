@@ -242,8 +242,15 @@ GDBRemoteCommunication::WaitForPacketNoLock(StringExtractorGDBRemote &packet,
   Log *log = GetLog(GDBRLog::Packets);
 
   // Check for a packet from our cache first without trying any reading...
-  if (CheckForPacket(nullptr, 0, packet) != PacketType::Invalid)
+  switch (CheckForPacketIgnoreNotifications(nullptr, 0, packet)) {
+  case PacketType::Standard:
     return PacketResult::Success;
+  case PacketType::Invalid:
+    break;
+  case PacketType::Notify:
+    // These are ignored by CheckForPacketIgnoreNotifications.
+    llvm_unreachable("unreachable");
+  }
 
   bool timed_out = false;
   bool disconnected = false;
@@ -258,8 +265,15 @@ GDBRemoteCommunication::WaitForPacketNoLock(StringExtractorGDBRemote &packet,
                      error, bytes_read);
 
     if (bytes_read > 0) {
-      if (CheckForPacket(buffer, bytes_read, packet) != PacketType::Invalid)
+      switch (CheckForPacketIgnoreNotifications(buffer, bytes_read, packet)) {
+      case PacketType::Standard:
         return PacketResult::Success;
+      case PacketType::Invalid:
+        break;
+      case PacketType::Notify:
+        // These are ignored by CheckForPacketIgnoreNotifications.
+        llvm_unreachable("unreachable");
+      }
     } else {
       switch (status) {
       case eConnectionStatusTimedOut:
@@ -608,6 +622,66 @@ bool GDBRemoteCommunication::DecompressPacket() {
   return true;
 }
 
+// `content` is the body between '$' and '#', `payload` is the full raw packet
+// (e.g. "$body#CC");
+static void AddToLog(llvm::StringRef content, llvm::StringRef payload,
+                     uint64_t original_packet_size,
+                     GDBRemoteCommunicationHistory &history,
+                     bool compression_enabled) {
+  Log *log = GetLog(GDBRLog::Packets);
+  if (!log)
+    return;
+
+  // If logging was just enabled, flush the history. m_history has a flag
+  // ensuring this is done only once.
+  if (!history.DidDumpToLog())
+    history.Dump(log);
+
+  bool binary = false;
+  // Detect binary for packets starting with a '$' and with a '#CC' checksum.
+  if (payload.front() == '$' && payload.size() > 4)
+    for (char c : payload)
+      if (!llvm::isPrint(c) && !llvm::isSpace(c)) {
+        binary = true;
+        break;
+      }
+
+  uint64_t total_length = payload.size();
+  if (!binary) {
+    if (compression_enabled)
+      LLDB_LOGF(log, "<%4" PRIu64 ":%" PRIu64 "> read packet: %.*s",
+                original_packet_size, total_length, (int)(total_length),
+                payload.data());
+    else
+      LLDB_LOGF(log, "<%4" PRIu64 "> read packet: %.*s", total_length,
+                (int)(total_length), payload.data());
+    return;
+  }
+
+  StreamString strm;
+  // Packet header.
+  if (compression_enabled)
+    strm.Printf("<%4" PRIu64 ":%" PRIu64 "> read packet: %c",
+                original_packet_size, total_length, payload[0]);
+  else
+    strm.Printf("<%4" PRIu64 "> read packet: %c", total_length, payload[0]);
+  for (size_t i = 0; i < content.size(); ++i) {
+    // Remove binary escaped bytes when displaying the packet.
+    const char ch = content[i];
+    if (ch == 0x7d) {
+      // Escape character: the next character is to be XOR'd with 0x20.
+      const char escapee = content[++i] ^ 0x20;
+      strm.Printf("%2.2x", escapee);
+    } else {
+      strm.Printf("%2.2x", (uint8_t)ch);
+    }
+  }
+  // Packet footer.
+  strm.Printf("%c%c%c", payload[total_length - 3], payload[total_length - 2],
+              payload[total_length - 1]);
+  log->PutString(strm.GetString());
+}
+
 GDBRemoteCommunication::PacketType
 GDBRemoteCommunication::CheckForPacket(const uint8_t *src, size_t src_len,
                                        StringExtractorGDBRemote &packet) {
@@ -717,63 +791,9 @@ GDBRemoteCommunication::CheckForPacket(const uint8_t *src, size_t src_len,
       assert(content_length <= total_length);
       size_t content_end = content_start + content_length;
 
-      bool success = true;
-      if (log) {
-        // If logging was just enabled and we have history, then dump out what
-        // we have to the log so we get the historical context. The Dump() call
-        // that logs all of the packet will set a boolean so that we don't dump
-        // this more than once
-        if (!m_history.DidDumpToLog())
-          m_history.Dump(log);
-
-        bool binary = false;
-        // Only detect binary for packets that start with a '$' and have a
-        // '#CC' checksum
-        if (m_bytes[0] == '$' && total_length > 4) {
-          for (size_t i = 0; !binary && i < total_length; ++i) {
-            unsigned char c = m_bytes[i];
-            if (!llvm::isPrint(c) && !llvm::isSpace(c)) {
-              binary = true;
-            }
-          }
-        }
-        if (binary) {
-          StreamString strm;
-          // Packet header...
-          if (CompressionIsEnabled())
-            strm.Printf("<%4" PRIu64 ":%" PRIu64 "> read packet: %c",
-                        (uint64_t)original_packet_size, (uint64_t)total_length,
-                        m_bytes[0]);
-          else
-            strm.Printf("<%4" PRIu64 "> read packet: %c",
-                        (uint64_t)total_length, m_bytes[0]);
-          for (size_t i = content_start; i < content_end; ++i) {
-            // Remove binary escaped bytes when displaying the packet...
-            const char ch = m_bytes[i];
-            if (ch == 0x7d) {
-              // 0x7d is the escape character.  The next character is to be
-              // XOR'd with 0x20.
-              const char escapee = m_bytes[++i] ^ 0x20;
-              strm.Printf("%2.2x", escapee);
-            } else {
-              strm.Printf("%2.2x", (uint8_t)ch);
-            }
-          }
-          // Packet footer...
-          strm.Printf("%c%c%c", m_bytes[total_length - 3],
-                      m_bytes[total_length - 2], m_bytes[total_length - 1]);
-          log->PutString(strm.GetString());
-        } else {
-          if (CompressionIsEnabled())
-            LLDB_LOGF(log, "<%4" PRIu64 ":%" PRIu64 "> read packet: %.*s",
-                      (uint64_t)original_packet_size, (uint64_t)total_length,
-                      (int)(total_length), m_bytes.c_str());
-          else
-            LLDB_LOGF(log, "<%4" PRIu64 "> read packet: %.*s",
-                      (uint64_t)total_length, (int)(total_length),
-                      m_bytes.c_str());
-        }
-      }
+      AddToLog(llvm::StringRef(m_bytes).slice(content_start, content_end),
+               llvm::StringRef(m_bytes).take_front(total_length),
+               original_packet_size, m_history, CompressionIsEnabled());
 
       m_history.AddPacket(m_bytes, total_length,
                           GDBRemotePacket::ePacketTypeRecv, total_length);
@@ -789,6 +809,7 @@ GDBRemoteCommunication::CheckForPacket(const uint8_t *src, size_t src_len,
       }
       packet = StringExtractorGDBRemote(*maybe_packet_str);
 
+      bool success = true;
       if (m_bytes[0] == '$' || m_bytes[0] == '%') {
         assert(checksum_idx < m_bytes.size());
         if (::isxdigit(m_bytes[checksum_idx + 0]) ||
@@ -830,6 +851,30 @@ GDBRemoteCommunication::CheckForPacket(const uint8_t *src, size_t src_len,
   }
   packet.Clear();
   return GDBRemoteCommunication::PacketType::Invalid;
+}
+
+GDBRemoteCommunication::PacketType
+GDBRemoteCommunication::CheckForPacketIgnoreNotifications(
+    const uint8_t *src, size_t src_len, StringExtractorGDBRemote &packet) {
+  for (;;) {
+    switch (CheckForPacket(src, src_len, packet)) {
+    case PacketType::Standard:
+      return PacketType::Standard;
+    case PacketType::Invalid:
+      // Either an incomplete packet or an invalid one that was removed.
+      // There may be more data in the buffer that contains valid
+      // packets but CheckForPacket does not distinguish these cases.
+      return PacketType::Invalid;
+    case PacketType::Notify:
+      // No notifications are currently supported so they should be ignored.
+      // There may be more packets in the buffer so go back to check.
+
+      // Set src_len=0 so that it doesn't add the
+      // data we read to the internal buffer again.
+      src_len = 0;
+      break;
+    }
+  }
 }
 
 Status GDBRemoteCommunication::StartDebugserverProcess(

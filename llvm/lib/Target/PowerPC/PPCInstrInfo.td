@@ -55,7 +55,7 @@ def SDT_PPCSpToDp : SDTypeProfile<1, 1, [ SDTCisVT<0, v2f64>,
 ]>;
 
 def SDT_PPCVecShift : SDTypeProfile<1, 3, [ SDTCisVec<0>,
-  SDTCisVec<1>, SDTCisVec<2>, SDTCisPtrTy<3>
+  SDTCisVec<1>, SDTCisVec<2>, SDTCisVT<3, i32>
 ]>;
 
 def SDT_PPCVecShiftQuad : SDTypeProfile<1, 2, [
@@ -2151,7 +2151,6 @@ let Defs = [R8, R9, R10], Uses = [R9, R10] in
 def LWAT_CSNE_PSEUDO : PPCPostRAExpPseudo<
     (outs gprc:$dst),
     (ins ptr_rc_nor0:$ptr),
-    "#LWAT_CSNE_PSEUDO",
     [(set i32:$dst, (int_ppc_amo_lwat_csne ptr_rc_nor0:$ptr, R9, R10))]>;
 
 let Defs = [CR0], mayStore = 1, mayLoad = 1, hasSideEffects = 1 in {
@@ -5004,7 +5003,6 @@ def : InstAlias<"mficcr $Rx", (MFSPR gprc:$Rx, 1019)>, Requires<[IsPPC4xx]>;
 
 def : InstAlias<"tlbie $RB", (TLBIE R0, gprc:$RB)>,  Requires<[IsNotISA3_0]>;
 let Predicates = [IsISA3_0] in {
-  def : InstAlias<"tlbie $RB", (TLBIEP9 R0, gprc:$RB, 0, 0, 0)>;
   def : InstAlias<"tlbie $RB, $RS", (TLBIEP9 gprc:$RB, gprc:$RS, 0, 0, 0)>;
 }
 
@@ -5152,8 +5150,9 @@ def RLWNMbm : PPCAsmPseudo<"rlwnm $rA, $rS, $n, $b",
 def RLWNMbm_rec : PPCAsmPseudo<"rlwnm. $rA, $rS, $n, $b",
                            (ins g8rc:$rA, g8rc:$rS, u5imm:$n, i32imm:$b)>;
 def PPCLdFixedAddr :
-  PPCPostRAExpPseudo<(outs gprc:$rT), (ins i32imm:$imm), "#FA_LOAD",
-                     [(set i32:$rT, (int_ppc_fixed_addr_ld timm:$imm))]>;
+  PPCPostRAExpPseudo<(outs gprc:$rT), (ins i32imm:$imm),
+                     [(set i32:$rT, (int_ppc_fixed_addr_ld timm:$imm))],
+                     "#FA_LOAD">;
 
 // These generic branch instruction forms are used for the assembler parser only.
 // Defs and Uses are conservative, since we don't know the BO value.
@@ -5588,7 +5587,7 @@ def HASHCHKP : XForm_XD6_RA5_RB5<31, 690, (outs),
 }
 
 let Defs = [CR7], Itinerary = IIC_LdStSync in
-def CFENCE : PPCPostRAExpPseudo<(outs), (ins gprc:$cr), "#CFENCE", []>;
+def CFENCE : PPCPostRAExpPseudo<(outs), (ins gprc:$cr)>;
 
 // Now both high word and low word are reversed, next
 // swap the high word and low word.

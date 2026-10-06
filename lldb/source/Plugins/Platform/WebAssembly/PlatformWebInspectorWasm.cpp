@@ -171,7 +171,21 @@ bool PlatformWebInspectorWasm::GetProcessInfo(lldb::pid_t pid,
                    "EnsureConnected failed: {0}");
     return false;
   }
-  return PlatformWasm::GetProcessInfo(pid, proc_info);
+  if (PlatformWasm::GetProcessInfo(pid, proc_info))
+    return true;
+  // The webinspector-wasm gdb-server only implements bulk process
+  // enumeration, not per-pid lookup. Fall back to FindProcesses when the
+  // per-pid query returns nothing.
+  ProcessInstanceInfoMatch match;
+  ProcessInstanceInfoList all;
+  PlatformWasm::FindProcesses(match, all);
+  for (const ProcessInstanceInfo &info : all) {
+    if (info.GetProcessID() == pid) {
+      proc_info = info;
+      return true;
+    }
+  }
+  return false;
 }
 
 lldb::ProcessSP

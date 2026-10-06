@@ -3,8 +3,8 @@
 ; Finish compiling to verify that dxil-op-lower removes the globals entirely.
 ; RUN: opt -mtriple=dxil-pc-shadermodel6.0-compute -S -dxil-op-lower %t -o - | FileCheck --check-prefixes=DXOP,CHECK %s
 ; RUN: opt -mtriple=dxil-pc-shadermodel6.6-compute -S -dxil-op-lower %t -o - | FileCheck --check-prefixes=DXOP,CHECK %s
-; RUN: llc -mtriple=dxil-pc-shadermodel6.0-compute --filetype=asm -o - %t | FileCheck --check-prefixes=DXOP,CHECK %s
-; RUN: llc -mtriple=dxil-pc-shadermodel6.6-compute --filetype=asm -o - %t | FileCheck --check-prefixes=DXOP,CHECK %s
+; RUN: llc -mtriple=dxil-pc-shadermodel6.0-compute -o - %t | FileCheck --check-prefixes=DXOP,CHECK %s
+; RUN: llc -mtriple=dxil-pc-shadermodel6.6-compute -o - %t | FileCheck --check-prefixes=DXOP,CHECK %s
 
 ; Ensure that EarlyCSE is able to eliminate unneeded loads of resource globals across typedBufferLoad.
 ; Also that DXILOpLowering eliminates the globals entirely.

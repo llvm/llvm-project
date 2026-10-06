@@ -15,7 +15,6 @@
 #include "llvm/ADT/DenseMap.h"
 #include "llvm/ADT/DenseSet.h"
 #include "llvm/ADT/STLFunctionalExtras.h"
-#include "llvm/ADT/SetVector.h"
 #include "llvm/ADT/SmallString.h"
 #include "llvm/ADT/SmallVector.h"
 #include "llvm/ADT/Statistic.h"
@@ -53,7 +52,6 @@
 #include <deque>
 #include <iterator>
 #include <limits>
-#include <map>
 #include <optional>
 #include <string>
 #include <tuple>
@@ -243,8 +241,8 @@ void BitcodeReaderMetadataList::tryToResolveCycles() {
     return;
 
   // Give up on finding a full definition for any forward decls that remain.
-  for (const auto &Ref : OldTypeRefs.FwdDecls)
-    OldTypeRefs.Final.insert(Ref);
+  for (const auto &[UUID, CT] : OldTypeRefs.FwdDecls)
+    OldTypeRefs.Final.try_emplace(UUID, CT);
   OldTypeRefs.FwdDecls.clear();
 
   // Upgrade from old type ref arrays.  In strange cases, this could add to
@@ -335,6 +333,65 @@ Metadata *BitcodeReaderMetadataList::resolveTypeArray(Metadata *MaybeTuple) {
     Ops.push_back(upgradeTypeRef(MD));
 
   return MDTuple::get(Context, Ops);
+}
+
+/// Rebuild the alias scope or domain \p Old with \p Ops, keeping its identity:
+/// a self reference has to point at the replacement, and a distinct node must
+/// not be uniqued. The first operand of both a scope and a domain is its name,
+/// which is either a string or a self reference.
+static MDNode *rebuildScopeOrDomainNode(MDNode *Old,
+                                        SmallVectorImpl<Metadata *> &Ops) {
+  LLVMContext &Context = Old->getContext();
+  if (Ops[0] != Old)
+    return Old->isDistinct() ? MDNode::getDistinct(Context, Ops)
+                             : MDNode::get(Context, Ops);
+
+  Ops[0] = nullptr;
+  MDNode *New = MDNode::getDistinct(Context, Ops);
+  New->replaceOperandWith(0, New);
+  return New;
+}
+
+static MDNode *upgradeAliasScopeDomain(MDNode *Domain,
+                                       DenseMap<MDNode *, MDNode *> &Upgraded) {
+  unsigned NumOperands = Domain->getNumOperands();
+  bool HadDescription = NumOperands == 2;
+  // Already upgraded, or invalid and left to the verifier.
+  if (NumOperands == 0 || NumOperands > 2 ||
+      (HadDescription && mdconst::hasa<ConstantInt>(Domain->getOperand(1))))
+    return Domain;
+
+  MDNode *&Upgrade = Upgraded[Domain];
+  if (Upgrade)
+    return Upgrade;
+
+  LLVMContext &Context = Domain->getContext();
+  SmallVector<Metadata *, 3> Ops = {
+      Domain->getOperand(0),
+      ConstantAsMetadata::get(ConstantInt::getFalse(Context))};
+  if (HadDescription)
+    Ops.push_back(Domain->getOperand(1));
+
+  Upgrade = rebuildScopeOrDomainNode(Domain, Ops);
+  return Upgrade;
+}
+
+static MDNode *upgradeAliasScope(MDNode *Scope,
+                                 DenseMap<MDNode *, MDNode *> &Upgraded) {
+  if (MDNode *Upgrade = Upgraded.lookup(Scope))
+    return Upgrade;
+
+  auto *Domain = cast<MDNode>(Scope->getOperand(1));
+
+  MDNode *UpgradedDomain = upgradeAliasScopeDomain(Domain, Upgraded);
+  if (UpgradedDomain == Domain)
+    return Scope;
+
+  SmallVector<Metadata *, 3> Ops(Scope->op_begin(), Scope->op_end());
+  Ops[1] = UpgradedDomain;
+  MDNode *Upgrade = rebuildScopeOrDomainNode(Scope, Ops);
+  Upgraded[Scope] = Upgrade;
+  return Upgrade;
 }
 
 namespace {
@@ -462,8 +519,16 @@ class MetadataLoader::MetadataLoaderImpl {
 
   bool StripTBAA = false;
   bool HasSeenOldLoopTags = false;
+
+  /// Rebuilt alias scopes and domains, so that upgraded domains get reused
+  /// correctly and to memoize.
+  DenseMap<MDNode *, MDNode *> UpgradedAliasScopes;
   bool NeedUpgradeToDIGlobalVariableExpression = false;
   bool NeedDeclareExpressionUpgrade = false;
+
+  /// Map DIGlobalVariable to generated DIGlobalVariable, if any.
+  DenseMap<DIGlobalVariable *, DIGlobalVariableExpression *>
+      GlobalVariableExpression;
 
   /// Map DILocalScope to the enclosing DISubprogram, if any.
   DenseMap<DILocalScope *, DISubprogram *> ParentSubprogram;
@@ -506,8 +571,11 @@ class MetadataLoader::MetadataLoaderImpl {
           for (unsigned I = 0; I < GVs->getNumOperands(); I++)
             if (auto *GV =
                     dyn_cast_or_null<DIGlobalVariable>(GVs->getOperand(I))) {
-              auto *DGVE = DIGlobalVariableExpression::getDistinct(
-                  Context, GV, DIExpression::get(Context, {}));
+              DIGlobalVariableExpression *&DGVE = GlobalVariableExpression[GV];
+              if (!DGVE) {
+                DGVE = DIGlobalVariableExpression::getDistinct(
+                    Context, GV, DIExpression::get(Context, {}));
+              }
               GVs->replaceOperandWith(I, DGVE);
             }
       }
@@ -519,8 +587,11 @@ class MetadataLoader::MetadataLoaderImpl {
       GV.eraseMetadata(LLVMContext::MD_dbg);
       for (auto *MD : MDs)
         if (auto *DGV = dyn_cast<DIGlobalVariable>(MD)) {
-          auto *DGVE = DIGlobalVariableExpression::getDistinct(
-              Context, DGV, DIExpression::get(Context, {}));
+          DIGlobalVariableExpression *&DGVE = GlobalVariableExpression[DGV];
+          if (!DGVE) {
+            DGVE = DIGlobalVariableExpression::getDistinct(
+                Context, DGV, DIExpression::get(Context, {}));
+          }
           GV.addMetadata(LLVMContext::MD_dbg, *DGVE);
         } else
           GV.addMetadata(LLVMContext::MD_dbg, *MD);
@@ -546,85 +617,64 @@ class MetadataLoader::MetadataLoaderImpl {
                llvm::dyn_cast_or_null<DISubprogram>(S);
   }
 
-  /// Move local imports from DICompileUnit's 'imports' field to
-  /// DISubprogram's retainedNodes.
-  /// Move function-local enums from DICompileUnit's enums
-  /// to DISubprogram's retainedNodes.
+  /// Map SP -> {Metadata} to store CU locals that should be attached to
+  /// subprogram retainedNodes list during CU upgrade.
+  using SPToEntitiesMap =
+      SmallDenseMap<DISubprogram *, SmallVector<Metadata *>>;
+
+  /// Retrieve the CU operand at position ListIndex, treat it as an MDTuple, and
+  /// remove all local debug info nodes from it. Fill SPToEntities map with
+  /// removed local nodes.
+  template <typename NodeT>
+  void upgradeOneCULocalsList(SPToEntitiesMap &SPToEntities, DICompileUnit *CU,
+                              unsigned ListIndex) {
+    MDTuple *List = cast_if_present<MDTuple>(CU->getOperand(ListIndex));
+    if (!List)
+      return;
+
+    if (llvm::all_of(List->operands(), [](Metadata *MD) {
+          return !isa_and_nonnull<DILocalScope>(getScope(cast<NodeT>(MD)));
+        }))
+      return;
+
+    SmallVector<Metadata *> MDs;
+    for (Metadata *MD : List->operands()) {
+      DILocalScope *LS =
+          dyn_cast_or_null<DILocalScope>(getScope(cast<NodeT>(MD)));
+      if (!LS)
+        MDs.push_back(MD);
+      else if (auto *SP = findEnclosingSubprogram(LS))
+        SPToEntities[SP].push_back(MD);
+    }
+
+    CU->replaceOperandWith(ListIndex, MDNode::get(CU->getContext(), MDs));
+  }
+
+  /// Move function-local entities from DICompileUnit's 'imports',
+  /// 'enums', and 'globals' fields to DISubprogram's retainedNodes.
   void upgradeCULocals() {
     NamedMDNode *CUNodes = TheModule.getNamedMetadata("llvm.dbg.cu");
     if (!CUNodes)
       return;
 
-    // Filter out elements of ToRemove from tuple T.
-    auto FilterTuple = [this](MDNode *T,
-                              const SetVector<Metadata *> &ToRemove) {
-      SmallVector<Metadata *> Result;
-      for (Metadata *Op : T->operands())
-        if (!ToRemove.contains(Op))
-          Result.push_back(Op);
-      return MDTuple::get(Context, Result);
-    };
-
-    // For each CU:
-    // - Collect local metadata nodes from CU's imports: and enums: lists in
-    //   MetadataToRemove set.
-    // - Remove metadata nodes of MetadataToRemove set from CU's imports: and
-    //   enums: lists.
-    // - Group MetadataToRemove items by their parent subprograms (in
-    //   SPToEntities map).
-    // - For each subprogram SP in SPToEntities:
-    //   - Append collected local metadata nodes to SP's retainedNodes: list.
+    SPToEntitiesMap SPToEntities;
     for (MDNode *N : CUNodes->operands()) {
       auto *CU = dyn_cast<DICompileUnit>(N);
       if (!CU)
         continue;
 
-      SetVector<Metadata *> MetadataToRemove;
-      // Collect imported entities to be moved.
-      if (CU->getRawImportedEntities())
-        for (Metadata *Op : CU->getImportedEntities()->operands()) {
-          auto *IE = cast<DIImportedEntity>(Op);
-          if (isa_and_nonnull<DILocalScope>(IE->getScope()))
-            MetadataToRemove.insert(IE);
-        }
-      // Collect enums to be moved.
-      if (CU->getRawEnumTypes())
-        for (Metadata *Op : CU->getEnumTypes()->operands()) {
-          auto *Enum = cast<DICompositeType>(Op);
-          if (isa_and_nonnull<DILocalScope>(Enum->getScope()))
-            MetadataToRemove.insert(Enum);
-        }
+      // Remove all static local variables from CU's globals list.
+      upgradeOneCULocalsList<DIGlobalVariableExpression>(SPToEntities, CU, 6);
+      // Remove all local imports from CU's imports list.
+      upgradeOneCULocalsList<DIImportedEntity>(SPToEntities, CU, 7);
+      // Remove all local types from CU's enums list.
+      upgradeOneCULocalsList<DICompositeType>(SPToEntities, CU, 4);
 
-      if (MetadataToRemove.empty())
-        continue;
-
-      // Remove entities with local scope from CU.
-      if (CU->getRawImportedEntities())
-        CU->replaceImportedEntities(
-            FilterTuple(CU->getImportedEntities().get(), MetadataToRemove));
-
-      // Remove enums with local scope from CU.
-      if (CU->getRawEnumTypes())
-        CU->replaceEnumTypes(
-            FilterTuple(CU->getEnumTypes().get(), MetadataToRemove));
-
-      // Find DISubprogram corresponding to each entity.
-      SmallDenseMap<DISubprogram *, SmallVector<Metadata *>> SPToEntities;
-      for (auto *I : MetadataToRemove) {
-        DILocalScope *Scope =
-            DISubprogram::getRetainedNodeScope(cast<DINode>(I));
-        if (auto *SP = findEnclosingSubprogram(Scope))
-          SPToEntities[SP].push_back(I);
-      }
-
-      // Update DISubprograms' retainedNodes.
-      for (auto I = SPToEntities.begin(); I != SPToEntities.end(); ++I) {
-        auto *SP = I->first;
-        auto RetainedNodes = SP->getRetainedNodes();
-        SmallVector<Metadata *> MDs(RetainedNodes.begin(), RetainedNodes.end());
-        MDs.append(I->second);
-        SP->replaceRetainedNodes(MDNode::get(Context, MDs));
-      }
+      // Retain local entities removed from the CU in their corresponding
+      // subprograms.
+      for (auto &[SP, Nodes] : SPToEntities)
+        SP->retainNodes(Nodes.begin(), Nodes.end());
+      SPToEntities.clear();
     }
 
     ParentSubprogram.clear();
@@ -810,6 +860,29 @@ public:
   }
 
   bool hasSeenOldLoopTags() const { return HasSeenOldLoopTags; }
+
+  /// Mark any domains in \p ScopeList that don't have a disjointness
+  /// flag as non-disjoint. Returns the original list if there are no changes.
+  MDNode *upgradeAliasScopeList(MDNode *ScopeList) {
+    if (MDNode *Upgrade = UpgradedAliasScopes.lookup(ScopeList))
+      return Upgrade;
+
+    SmallVector<Metadata *, 4> Ops;
+    bool Changed = false;
+    for (const MDOperand &Op : ScopeList->operands()) {
+      Metadata *Scope = Op;
+      if (auto *ScopeNode = dyn_cast<MDNode>(Op))
+        Scope = upgradeAliasScope(ScopeNode, UpgradedAliasScopes);
+      Changed |= Scope != Op.get();
+      Ops.push_back(Scope);
+    }
+    if (!Changed)
+      return ScopeList;
+
+    MDNode *Upgrade = MDNode::get(ScopeList->getContext(), Ops);
+    UpgradedAliasScopes[ScopeList] = Upgrade;
+    return Upgrade;
+  }
 
   Error parseMetadataAttachment(Function &F,
                                 ArrayRef<Instruction *> InstructionList);
@@ -1007,6 +1080,7 @@ MetadataLoader::MetadataLoaderImpl::lazyLoadModuleMetadataBlock() {
       case bitc::METADATA_LABEL:
       case bitc::METADATA_EXPRESSION:
       case bitc::METADATA_OBJC_PROPERTY:
+      case bitc::METADATA_PROPERTY:
       case bitc::METADATA_IMPORTED_ENTITY:
       case bitc::METADATA_GLOBAL_VAR_EXPR:
       case bitc::METADATA_GENERIC_SUBRANGE:
@@ -1937,7 +2011,7 @@ Error MetadataLoader::MetadataLoaderImpl::parseOneMetadata(
     break;
   }
   case bitc::METADATA_COMPILE_UNIT: {
-    if (Record.size() < 14 || Record.size() > 23)
+    if (Record.size() < 14 || Record.size() > 24)
       return error("Invalid record");
 
     // Ignore Record[0], which indicates whether this compile unit is
@@ -1947,13 +2021,23 @@ Error MetadataLoader::MetadataLoaderImpl::parseOneMetadata(
     const auto LangVersionMask = (uint64_t(1) << 63);
     const bool HasVersionedLanguage = Record[1] & LangVersionMask;
     const uint32_t LanguageVersion = Record.size() > 22 ? Record[22] : 0;
+    // The dialect field is written by writeDICompileUnit as a small enum
+    // value (see dwarf::LanguageDialectAttribute). Reject out-of-range
+    // values rather than silently truncating to uint16_t; this keeps the
+    // writer/reader invariant symmetric and surfaces malformed inputs.
+    // Value 0 means "no dialect specified".
+    if (Record.size() > 23 &&
+        Record[23] > static_cast<uint64_t>(dwarf::DW_LLVM_LANG_DIALECT_max))
+      return error("Invalid DICompileUnit dialect value");
+    const uint16_t Dialect =
+        Record.size() > 23 ? static_cast<uint16_t>(Record[23]) : uint16_t(0);
 
     auto *CU = DICompileUnit::getDistinct(
         Context,
         HasVersionedLanguage
             ? DISourceLanguageName(Record[1] & ~LangVersionMask,
-                                   LanguageVersion)
-            : DISourceLanguageName(Record[1]),
+                                   LanguageVersion, Dialect)
+            : DISourceLanguageName(Record[1], Dialect),
         getMDOrNull(Record[2]), getMDString(Record[3]), Record[4],
         getMDString(Record[5]), Record[6], getMDString(Record[7]), Record[8],
         getMDOrNull(Record[9]), getMDOrNull(Record[10]),
@@ -1964,6 +2048,10 @@ Error MetadataLoader::MetadataLoaderImpl::parseOneMetadata(
         Record.size() <= 17 ? false : Record[17],
         Record.size() <= 18 ? 0 : Record[18],
         Record.size() <= 19 ? false : Record[19],
+        // Keep these guarded for backwards-compatibility with older bitcode
+        // records. Keep this index layout in sync with writeDICompileUnit:
+        // index 20 is sysroot, 21 is SDK, 22 is source-language version, and
+        // 23 is dialect (read above as raw enum value, where 0 means unset).
         Record.size() <= 20 ? nullptr : getMDString(Record[20]),
         Record.size() <= 21 ? nullptr : getMDString(Record[21]));
 
@@ -2275,10 +2363,13 @@ Error MetadataLoader::MetadataLoaderImpl::parseOneMetadata(
            getDITypeRefOrNull(Record[6]), Record[7], Record[8],
            getMDOrNull(Record[10]), nullptr, AlignInBits, nullptr));
 
-      DIGlobalVariableExpression *DGVE = nullptr;
-      if (Attach || Expr)
-        DGVE = DIGlobalVariableExpression::getDistinct(
-            Context, DGV, Expr ? Expr : DIExpression::get(Context, {}));
+      DIGlobalVariableExpression *&DGVE = GlobalVariableExpression[DGV];
+      if (Attach || Expr) {
+        if (!DGVE) {
+          DGVE = DIGlobalVariableExpression::getDistinct(
+              Context, DGV, Expr ? Expr : DIExpression::get(Context, {}));
+        }
+      }
       if (Attach)
         Attach->addDebugInfo(DGVE);
 
@@ -2410,6 +2501,20 @@ Error MetadataLoader::MetadataLoaderImpl::parseOneMetadata(
     NextMetadataNo++;
     break;
   }
+  case bitc::METADATA_PROPERTY: {
+    if (Record.size() != 6)
+      return error("Invalid record");
+
+    IsDistinct = Record[0];
+    MetadataList.assignValue(
+        GET_OR_DISTINCT(DIProperty, (Context, getMDString(Record[1]),
+                                     getMDOrNull(Record[2]), Record[3],
+                                     getDITypeRefOrNull(Record[4]),
+                                     getMDOrNull(Record[5]))),
+        NextMetadataNo);
+    NextMetadataNo++;
+    break;
+  }
   case bitc::METADATA_IMPORTED_ENTITY: {
     if (Record.size() < 6 || Record.size() > 8)
       return error("Invalid DIImportedEntity record");
@@ -2441,6 +2546,9 @@ Error MetadataLoader::MetadataLoaderImpl::parseOneMetadata(
   }
   case bitc::METADATA_STRINGS: {
     auto CreateNextMDString = [&](StringRef Str) {
+      // Modern bitcode encodes MDStrings via this bulk record, so mirror the
+      // METADATA_STRING check above to arm the loop-attachment upgrader.
+      HasSeenOldLoopTags |= mayBeOldLoopAttachmentTag(Str);
       ++NumMDStringLoaded;
       MetadataList.assignValue(MDString::get(Context, Str), NextMetadataNo);
       NextMetadataNo++;
@@ -2625,7 +2733,15 @@ Error MetadataLoader::MetadataLoaderImpl::parseMetadataAttachment(
         if (I->second == LLVMContext::MD_tbaa) {
           assert(!MD->isTemporary() && "should load MDs before attachments");
           MD = UpgradeTBAANode(*MD);
+        } else if (I->second == LLVMContext::MD_tbaa_struct) {
+          assert(!MD->isTemporary() && "should load MDs before attachments");
+          MD = UpgradeTBAAStructNode(*MD);
         }
+
+        if (I->second == LLVMContext::MD_alias_scope ||
+            I->second == LLVMContext::MD_noalias)
+          MD = upgradeAliasScopeList(MD);
+
         Inst->setMetadata(I->second, MD);
       }
       break;
@@ -2742,4 +2858,8 @@ void MetadataLoader::shrinkTo(unsigned N) { return Pimpl->shrinkTo(N); }
 
 void MetadataLoader::upgradeDebugIntrinsics(Function &F) {
   return Pimpl->upgradeDebugIntrinsics(F);
+}
+
+MDNode *MetadataLoader::upgradeAliasScopeList(MDNode *ScopeList) {
+  return Pimpl->upgradeAliasScopeList(ScopeList);
 }

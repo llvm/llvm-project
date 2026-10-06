@@ -17,7 +17,6 @@
 #include "llvm/Analysis/InstructionSimplify.h"
 #include "llvm/Analysis/ValueTracking.h"
 #include "llvm/IR/PatternMatch.h"
-#include "llvm/Support/CommandLine.h"
 #include "llvm/Transforms/InstCombine/InstCombiner.h"
 #include "llvm/Transforms/Utils/Local.h"
 #include <optional>
@@ -26,10 +25,6 @@ using namespace llvm;
 using namespace llvm::PatternMatch;
 
 #define DEBUG_TYPE "instcombine"
-
-static cl::opt<unsigned>
-MaxNumPhis("instcombine-max-num-phis", cl::init(512),
-           cl::desc("Maximum number phis to handle in intptr/ptrint folding"));
 
 STATISTIC(NumPHIsOfInsertValues,
           "Number of phi-of-insertvalue turned into insertvalue-of-phis");
@@ -229,7 +224,7 @@ bool InstCombinerImpl::foldIntegerTypedPHI(PHINode &PN) {
   unsigned NumPhis = 0;
   for (PHINode &PtrPHI : BB->phis()) {
     // FIXME: consider handling this in AggressiveInstCombine
-    if (NumPhis++ > MaxNumPhis)
+    if (NumPhis++ > CLOpts.max_num_phis)
       return false;
     if (&PtrPHI == &PN || PtrPHI.getType() != IntToPtr->getType())
       continue;
@@ -1048,12 +1043,6 @@ struct LoweredPHIRecord {
 } // namespace
 
 template <> struct llvm::DenseMapInfo<LoweredPHIRecord> {
-  static inline LoweredPHIRecord getEmptyKey() {
-    return LoweredPHIRecord(nullptr, 0);
-  }
-  static inline LoweredPHIRecord getTombstoneKey() {
-    return LoweredPHIRecord(nullptr, 1);
-  }
   static unsigned getHashValue(const LoweredPHIRecord &Val) {
     return DenseMapInfo<PHINode *>::getHashValue(Val.PN) ^ (Val.Shift >> 3) ^
            (Val.Width >> 3);
@@ -1346,7 +1335,7 @@ static Value *simplifyUsingControlFlow(InstCombiner &Self, PHINode &PN,
   // sinking.
   auto InsertPt = BB->getFirstInsertionPt();
   if (InsertPt != BB->end()) {
-    Self.Builder.SetInsertPoint(&*BB, InsertPt);
+    Self.Builder.SetInsertPoint(InsertPt);
     return Self.Builder.CreateNot(Cond);
   }
 
@@ -1392,7 +1381,7 @@ static Value *foldDependentIVs(PHINode &PN, IRBuilderBase &Builder) {
   if (Iv2Start != Identity)
     return nullptr;
 
-  Builder.SetInsertPoint(&*BB, BB->getFirstInsertionPt());
+  Builder.SetInsertPoint(BB->getFirstInsertionPt());
   if (!BO) {
     auto *GEP = cast<GEPOperator>(IvNext);
     return Builder.CreateGEP(GEP->getSourceElementType(), Start, Iv2, "",

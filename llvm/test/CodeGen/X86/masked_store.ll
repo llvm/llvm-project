@@ -466,7 +466,7 @@ define void @store_v2f32_i2(i2 %trigger, ptr %addr, <2 x float> %val) nounwind {
 ; AVX1OR2-NEXT:    movl %edi, %eax
 ; AVX1OR2-NEXT:    andb $2, %al
 ; AVX1OR2-NEXT:    shrb %al
-; AVX1OR2-NEXT:    andb $1, %dil
+; AVX1OR2-NEXT:    andl $1, %edi
 ; AVX1OR2-NEXT:    vmovd %edi, %xmm1
 ; AVX1OR2-NEXT:    vpinsrb $8, %eax, %xmm1, %xmm1
 ; AVX1OR2-NEXT:    vinsertps {{.*#+}} xmm1 = xmm1[0,2],zero,zero

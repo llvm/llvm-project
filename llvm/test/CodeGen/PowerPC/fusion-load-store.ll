@@ -8,7 +8,7 @@
 
 define i64 @store_i64(ptr nocapture %P, i64 %v) {
 entry:
-; CHECK: ********** MI Scheduling **********
+; CHECK: Current Schedule Region
 ; CHECK-LABEL: store_i64:%bb.0
 ; CHECK: Cluster ld/st SU([[SU3:[0-9]+]]) - SU([[SU4:[0-9]+]])
 ; CHECK: Cluster ld/st SU([[SU2:[0-9]+]]) - SU([[SU5:[0-9]+]])
@@ -16,7 +16,7 @@ entry:
 ; CHECK: SU([[SU3]]): STD %[[REG]]:g8rc, 16
 ; CHECK: SU([[SU4]]): STD %[[REG]]:g8rc, 8
 ; CHECK: SU([[SU5]]): STD %[[REG]]:g8rc, 32
-; CHECK: ********** MI Scheduling **********
+; CHECK: Current Schedule Region
 ; CHECK-LABEL: store_i64:%bb.0
 ; CHECK: Cluster ld/st SU([[SU0:[0-9]+]]) - SU([[SU1:[0-9]+]])
 ; CHECK: Cluster ld/st SU([[SU2:[0-9]+]]) - SU([[SU3:[0-9]+]])
@@ -37,7 +37,7 @@ entry:
 
 define i32 @store_i32(ptr nocapture %P, i32 %v) {
 entry:
-; CHECK: ********** MI Scheduling **********
+; CHECK: Current Schedule Region
 ; CHECK-LABEL: store_i32:%bb.0
 ; CHECK: Cluster ld/st SU([[SU3:[0-9]+]]) - SU([[SU4:[0-9]+]])
 ; CHECK: Cluster ld/st SU([[SU2:[0-9]+]]) - SU([[SU5:[0-9]+]])
@@ -45,7 +45,7 @@ entry:
 ; CHECK: SU([[SU3]]): STW %[[REG]].sub_32:g8rc, 48
 ; CHECK: SU([[SU4]]): STW %[[REG]].sub_32:g8rc, 44
 ; CHECK: SU([[SU5]]): STW %[[REG]].sub_32:g8rc, 56
-; CHECK: ********** MI Scheduling **********
+; CHECK: Current Schedule Region
 ; CHECK-LABEL: store_i32:%bb.0
 ; CHECK: Cluster ld/st SU([[SU0:[0-9]+]]) - SU([[SU1:[0-9]+]])
 ; CHECK: Cluster ld/st SU([[SU2:[0-9]+]]) - SU([[SU3:[0-9]+]])
@@ -66,7 +66,7 @@ entry:
 
 define void @store_i64_neg(ptr nocapture %P, i64 %v) #0 {
 entry:
-; CHECK: ********** MI Scheduling **********
+; CHECK: Current Schedule Region
 ; CHECK-LABEL: store_i64_neg:%bb.0
 ; CHECK: Cluster ld/st SU([[SU2:[0-9]+]]) - SU([[SU5:[0-9]+]])
 ; CHECK: Cluster ld/st SU([[SU3:[0-9]+]]) - SU([[SU4:[0-9]+]])
@@ -74,7 +74,7 @@ entry:
 ; CHECK: SU([[SU3]]): STD %[[REG]]:g8rc, -8
 ; CHECK: SU([[SU4]]): STD %[[REG]]:g8rc, -16
 ; CHECK: SU([[SU5]]): STD %[[REG]]:g8rc, -32
-; CHECK: ********** MI Scheduling **********
+; CHECK: Current Schedule Region
 ; CHECK-LABEL: store_i64_neg:%bb.0
 ; CHECK: Cluster ld/st SU([[SU2:[0-9]+]]) - SU([[SU3:[0-9]+]])
 ; CHECK: Cluster ld/st SU([[SU0:[0-9]+]]) - SU([[SU1:[0-9]+]])
@@ -95,7 +95,7 @@ entry:
 
 define void @store_i32_neg(ptr nocapture %P, i32 %v) #0 {
 entry:
-; CHECK: ********** MI Scheduling **********
+; CHECK: Current Schedule Region
 ; CHECK-LABEL: store_i32_neg:%bb.0
 ; CHECK: Cluster ld/st SU([[SU2:[0-9]+]]) - SU([[SU5:[0-9]+]])
 ; CHECK: Cluster ld/st SU([[SU3:[0-9]+]]) - SU([[SU4:[0-9]+]])
@@ -103,7 +103,7 @@ entry:
 ; CHECK: SU([[SU3]]): STW %[[REG]].sub_32:g8rc, -4
 ; CHECK: SU([[SU4]]): STW %[[REG]].sub_32:g8rc, -8
 ; CHECK: SU([[SU5]]): STW %[[REG]].sub_32:g8rc, -16
-; CHECK: ********** MI Scheduling **********
+; CHECK: Current Schedule Region
 ; CHECK-LABEL: store_i32_neg:%bb.0
 ; CHECK: Cluster ld/st SU([[SU2:[0-9]+]]) - SU([[SU3:[0-9]+]])
 ; CHECK: Cluster ld/st SU([[SU0:[0-9]+]]) - SU([[SU1:[0-9]+]])
@@ -124,7 +124,7 @@ entry:
 
 define void @store_double(ptr nocapture %P, double %v)  {
 entry:
-; CHECK: ********** MI Scheduling **********
+; CHECK: Current Schedule Region
 ; CHECK-LABEL: store_double:%bb.0
 ; CHECK: Cluster ld/st SU([[SU3:[0-9]+]]) - SU([[SU4:[0-9]+]])
 ; CHECK: Cluster ld/st SU([[SU2:[0-9]+]]) - SU([[SU5:[0-9]+]])
@@ -132,7 +132,7 @@ entry:
 ; CHECK: SU([[SU3]]): DFSTOREf64 %[[REG]]:vsfrc, 8
 ; CHECK: SU([[SU4]]): DFSTOREf64 %[[REG]]:vsfrc, 16
 ; CHECK: SU([[SU5]]): DFSTOREf64 %[[REG]]:vsfrc, 32
-; CHECK: ********** MI Scheduling **********
+; CHECK: Current Schedule Region
 ; CHECK-LABEL: store_double:%bb.0
 ; CHECK: Cluster ld/st SU([[SU0:[0-9]+]]) - SU([[SU1:[0-9]+]])
 ; CHECK: Cluster ld/st SU([[SU2:[0-9]+]]) - SU([[SU3:[0-9]+]])
@@ -153,7 +153,7 @@ entry:
 
 define void @store_float(ptr nocapture %P, float %v)  {
 entry:
-; CHECK: ********** MI Scheduling **********
+; CHECK: Current Schedule Region
 ; CHECK-LABEL: store_float:%bb.0
 ; CHECK-NOT: Cluster ld/st
 ; CHECK-NOT: Cluster ld/st
@@ -161,7 +161,7 @@ entry:
 ; CHECK: SU([[SU3]]): DFSTOREf32 %[[REG]]:vssrc, 4
 ; CHECK: SU([[SU4]]): DFSTOREf32 %[[REG]]:vssrc, 8
 ; CHECK: SU([[SU5]]): DFSTOREf32 %[[REG]]:vssrc, 16
-; CHECK: ********** MI Scheduling **********
+; CHECK: Current Schedule Region
 ; CHECK-LABEL: store_float:%bb.0
 ; CHECK-NOT: Cluster ld/st
 ; CHECK-NOT: Cluster ld/st
@@ -183,14 +183,14 @@ entry:
 ; Cannot fuse the store/load if there is volatile in between
 define i64 @store_volatile(ptr nocapture %P, i64 %v) {
 entry:
-; CHECK: ********** MI Scheduling **********
+; CHECK: Current Schedule Region
 ; CHECK-LABEL: store_volatile:%bb.0
 ; CHECK-NOT: Cluster ld/st
 ; CHECK: SU([[SU2]]): STD %[[REG:[0-9]+]]:g8rc, 24
 ; CHECK: SU([[SU3]]): STD %[[REG]]:g8rc, 16
 ; CHECK: SU([[SU4]]): STD %[[REG]]:g8rc, 8
 ; CHECK: SU([[SU5]]): STD %[[REG]]:g8rc, 32
-; CHECK: ********** MI Scheduling **********
+; CHECK: Current Schedule Region
 ; CHECK-LABEL: store_volatile:%bb.0
 ; CHECK-NOT: Cluster ld/st
 ; CHECK: SU([[SU0]]): STD renamable $x[[REG:[0-9]+]], 24
@@ -212,12 +212,12 @@ entry:
 
 define void @store_i32_stw_stw8(i32 signext %m, i32 signext %n)  {
 entry:
-; CHECK: ********** MI Scheduling **********
+; CHECK: Current Schedule Region
 ; CHECK-LABEL: store_i32_stw_stw8:%bb.0
 ; CHECK: Cluster ld/st SU([[SU5:[0-9]+]]) - SU([[SU8:[0-9]+]])
 ; CHECK: SU([[SU5]]): STW8 %{{[0-9]+}}:g8rc, 24
 ; CHECK: SU([[SU8]]): STW %{{[0-9]+}}:gprc, 20
-; CHECK: ********** MI Scheduling **********
+; CHECK: Current Schedule Region
 ; CHECK-LABEL: store_i32_stw_stw8:%bb.0
 ; CHECK: Cluster ld/st SU([[SU5:[0-9]+]]) - SU([[SU6:[0-9]+]])
 ; CHECK: SU([[SU5]]): STW8 renamable $x{{[0-9]+}}, 24
@@ -231,12 +231,12 @@ entry:
 
 define void @store_i32_stw8(i32 signext %m, i32 signext %n)  {
 entry:
-; CHECK: ********** MI Scheduling **********
+; CHECK: Current Schedule Region
 ; CHECK-LABEL: store_i32_stw8:%bb.0
 ; CHECK: Cluster ld/st SU([[SU4:[0-9]+]]) - SU([[SU5:[0-9]+]])
 ; CHECK: SU([[SU4]]): STW8 %{{[0-9]+}}:g8rc, 24
 ; CHECK: SU([[SU5]]): STW8 %{{[0-9]+}}:g8rc, 28
-; CHECK: ********** MI Scheduling **********
+; CHECK: Current Schedule Region
 ; CHECK-LABEL: store_i32_stw8:%bb.0
 ; CHECK: Cluster ld/st SU([[SU3:[0-9]+]]) - SU([[SU4:[0-9]+]])
 ; CHECK: SU([[SU3]]): STW8 renamable $x{{[0-9]+}}, 24
@@ -250,7 +250,7 @@ declare void @bar(ptr)
 
 define void @store_frame_index(i32 %a, i32 %b) {
 entry:
-; CHECK: ********** MI Scheduling **********
+; CHECK: Current Schedule Region
 ; CHECK-LABEL: store_frame_index:%bb.0
 ; CHECK: Cluster ld/st SU([[SU2:[0-9]+]]) - SU([[SU3:[0-9]+]])
 ; CHECK: SU([[SU2]]): STD %{{[0-9]+}}:g8rc, 0, %stack.0.buf

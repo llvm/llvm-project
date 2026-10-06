@@ -1,5 +1,5 @@
-; RUN: llc -mtriple=amdgcn < %s | FileCheck -check-prefix=GCN %s
-; RUN: not llc -mtriple=amdgcn -mcpu=tonga < %s 2>&1 | FileCheck -check-prefix=ERR %s
+; RUN: llc -mtriple=amdgpu6.00 < %s | FileCheck -check-prefix=GCN %s
+; RUN: not llc -mtriple=amdgpu8.02 < %s 2>&1 | FileCheck -check-prefix=ERR %s
 
 ; ERR: intrinsic not supported on subtarget
 

@@ -14,6 +14,7 @@
 #include "DXILRootSignature.h"
 #include "DXILShaderFlags.h"
 #include "DirectX.h"
+#include "DirectXIRPasses/DXILAttributes.h"
 #include "DirectXIRPasses/PointerTypeAnalysis.h"
 #include "llvm/ADT/STLExtras.h"
 #include "llvm/ADT/StringSet.h"
@@ -34,54 +35,6 @@ using namespace llvm;
 using namespace llvm::dxil;
 
 namespace {
-
-constexpr bool isValidForDXIL(Attribute::AttrKind Attr) {
-  return is_contained({Attribute::Alignment,
-                       Attribute::AlwaysInline,
-                       Attribute::Builtin,
-                       Attribute::ByVal,
-                       Attribute::InAlloca,
-                       Attribute::Cold,
-                       Attribute::Convergent,
-                       Attribute::InlineHint,
-                       Attribute::InReg,
-                       Attribute::JumpTable,
-                       Attribute::MinSize,
-                       Attribute::Naked,
-                       Attribute::Nest,
-                       Attribute::NoAlias,
-                       Attribute::NoBuiltin,
-                       Attribute::NoDuplicate,
-                       Attribute::NoImplicitFloat,
-                       Attribute::NoInline,
-                       Attribute::NonLazyBind,
-                       Attribute::NonNull,
-                       Attribute::Dereferenceable,
-                       Attribute::DereferenceableOrNull,
-                       Attribute::Memory,
-                       Attribute::NoRedZone,
-                       Attribute::NoReturn,
-                       Attribute::NoUnwind,
-                       Attribute::OptimizeForSize,
-                       Attribute::OptimizeNone,
-                       Attribute::ReadNone,
-                       Attribute::ReadOnly,
-                       Attribute::Returned,
-                       Attribute::ReturnsTwice,
-                       Attribute::SExt,
-                       Attribute::StackAlignment,
-                       Attribute::StackProtect,
-                       Attribute::StackProtectReq,
-                       Attribute::StackProtectStrong,
-                       Attribute::SafeStack,
-                       Attribute::StructRet,
-                       Attribute::SanitizeAddress,
-                       Attribute::SanitizeThread,
-                       Attribute::SanitizeMemory,
-                       Attribute::UWTable,
-                       Attribute::ZExt},
-                      Attr);
-}
 
 static void collectDeadStringAttrs(AttributeMask &DeadAttrs, AttributeSet &&AS,
                                    const StringSet<> &LiveKeys,
@@ -177,15 +130,8 @@ class DXILPrepareModule : public ModulePass {
 
 public:
   bool runOnModule(Module &M) override {
-    M.convertFromNewDbgValues();
-
     PointerTypeMap PointerTypes = PointerTypeAnalysis::run(M);
-    AttributeMask AttrMask;
-    for (Attribute::AttrKind I = Attribute::None; I != Attribute::EndAttrKinds;
-         I = Attribute::AttrKind(I + 1)) {
-      if (!isValidForDXIL(I))
-        AttrMask.addAttribute(I);
-    }
+    const AttributeMask &AttrMask = getNonDXILAttributeMask();
 
     const dxil::ModuleMetadataInfo MetadataInfo =
         getAnalysis<DXILMetadataAnalysisWrapperPass>().getModuleMetadata();

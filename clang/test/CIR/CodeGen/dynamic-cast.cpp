@@ -13,8 +13,8 @@ struct Base {
 
 struct Derived : Base {};
 
-// CIR-BEFORE-DAG: !rec_Base = !cir.record
-// CIR-BEFORE-DAG: !rec_Derived = !cir.record
+// CIR-BEFORE-DAG: !rec_Base = !cir.struct
+// CIR-BEFORE-DAG: !rec_Derived = !cir.struct
 // CIR-BEFORE-DAG: #dyn_cast_info__ZTI4Base__ZTI7Derived = #cir.dyn_cast_info<src_rtti = #cir.global_view<@_ZTI4Base> : !cir.ptr<!u8i>, dest_rtti = #cir.global_view<@_ZTI7Derived> : !cir.ptr<!u8i>, runtime_func = @__dynamic_cast, bad_cast_func = @__cxa_bad_cast, offset_hint = #cir.int<0> : !s64i>
 
 Derived *ptr_cast(Base *b) {
@@ -82,7 +82,7 @@ Derived &ref_cast(Base &b) {
 // CIR-AFTER-NEXT:   %[[NULL_PTR:.*]] = cir.const #cir.ptr<null> : !cir.ptr<!void>
 // CIR-AFTER-NEXT:   %[[CASTED_PTR_IS_NULL:.*]] = cir.cmp eq %[[CASTED_PTR]], %[[NULL_PTR]] : !cir.ptr<!void>
 // CIR-AFTER-NEXT:   cir.if %[[CASTED_PTR_IS_NULL]] {
-// CIR-AFTER-NEXT:     cir.call @__cxa_bad_cast() : () -> ()
+// CIR-AFTER-NEXT:     cir.call @__cxa_bad_cast() {noreturn} : () -> ()
 // CIR-AFTER-NEXT:     cir.unreachable
 // CIR-AFTER-NEXT:   }
 // CIR-AFTER-NEXT:   %{{.+}} = cir.cast bitcast %[[CASTED_PTR]] : !cir.ptr<!void> -> !cir.ptr<!rec_Derived>

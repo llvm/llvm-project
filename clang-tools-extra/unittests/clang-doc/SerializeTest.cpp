@@ -25,8 +25,7 @@ class ClangDocSerializeTestVisitor
   bool Public;
 
   comments::FullComment *getComment(const NamedDecl *D) const {
-    if (RawComment *Comment =
-            D->getASTContext().getRawCommentForDeclNoCache(D)) {
+    if (RawComment *Comment = D->getASTContext().getRawCommentNoCache(D)) {
       Comment->setAttached();
       return Comment->parse(D->getASTContext(), nullptr, D);
     }

@@ -30,6 +30,7 @@
 #include "llvm/CodeGen/TargetSchedule.h"
 #include "llvm/IR/DataLayout.h"
 #include "llvm/IR/DebugInfoMetadata.h"
+#include "llvm/IR/Module.h"
 #include "llvm/MC/MCAsmInfo.h"
 #include "llvm/MC/MCInstrItineraries.h"
 #include "llvm/Support/CommandLine.h"
@@ -480,7 +481,7 @@ TargetInstrInfo::duplicate(MachineBasicBlock &MBB,
   // CFI instructions are marked as non-duplicable, because Darwin compact
   // unwind info emission can't handle multiple prologue setups.
   assert((!Orig.isNotDuplicable() ||
-          (!MF.getTarget().getTargetTriple().isOSDarwin() &&
+          (!MF.getFunction().getParent()->getTargetTriple().isOSDarwin() &&
            Orig.isCFIInstruction())) &&
          "Instruction cannot be duplicated");
 
@@ -1813,12 +1814,13 @@ unsigned TargetInstrInfo::getNumMicroOps(const InstrItineraryData *ItinData,
 }
 
 /// Return the default expected latency for a def based on it's opcode.
-unsigned TargetInstrInfo::defaultDefLatency(const MCSchedModel &SchedModel,
+unsigned TargetInstrInfo::defaultDefLatency(const TargetSubtargetInfo &STI,
+                                            const MCSchedModel &SchedModel,
                                             const MachineInstr &DefMI) const {
   if (DefMI.isTransient())
     return 0;
   if (DefMI.mayLoad())
-    return SchedModel.LoadLatency;
+    return STI.getLoadLatency();
   if (isHighLatencyDef(DefMI.getOpcode()))
     return SchedModel.HighLatency;
   return 1;

@@ -246,7 +246,7 @@ public:
     return true;
   }
 
-  /// Similiar to member function of \c visitInputFile but should
+  /// Similar to member function of \c visitInputFile but should
   /// be defined when there is a distinction between the file name
   /// and the name-as-requested. For example, when deserializing input
   /// files from precompiled AST files.
@@ -645,10 +645,6 @@ private:
   /// within them, and those anonymous declarations.
   llvm::DenseMap<Decl*, llvm::SmallVector<NamedDecl*, 2>>
     AnonymousDeclarationsForMerging;
-
-  /// Map from numbering information for lambdas to the corresponding lambdas.
-  llvm::DenseMap<std::pair<const Decl *, unsigned>, NamedDecl *>
-      LambdaDeclarationsForMerging;
 
   /// Key used to identify LifetimeExtendedTemporaryDecl for merging,
   /// containing the lifetime-extending declaration and the mangling number.
@@ -1055,6 +1051,9 @@ private:
 
   /// The IDs of all decls with function effects to be checked.
   SmallVector<GlobalDeclID> DeclsWithEffectsToVerify;
+
+  /// OpenMP 'requires' directives read from the AST file.
+  SmallVector<GlobalDeclID> OpenMPRequiresDecls;
 
   /// The RISC-V intrinsic pragma(including RVV, SiFive and Andes).
   SmallVector<bool, 3> RISCVVecIntrinsicPragma;
@@ -2317,7 +2316,7 @@ public:
   void ReadExtVectorDecls(SmallVectorImpl<TypedefNameDecl *> &Decls) override;
 
   void ReadUnusedLocalTypedefNameCandidates(
-      llvm::SmallSetVector<const TypedefNameDecl *, 4> &Decls) override;
+      llvm::SmallPtrSetImpl<const TypedefNameDecl *> &Decls) override;
 
   void ReadDeclsToCheckForDeferredDiags(
       llvm::SmallSetVector<Decl *, 4> &Decls) override;
@@ -2341,8 +2340,6 @@ public:
   void ReadLateParsedTemplates(
       llvm::MapVector<const FunctionDecl *, std::unique_ptr<LateParsedTemplate>>
           &LPTMap) override;
-
-  void AssignedLambdaNumbering(CXXRecordDecl *Lambda) override;
 
   /// Load a selector from disk, registering its ID if it exists.
   void LoadSelector(Selector Sel);
@@ -2465,6 +2462,18 @@ public:
     return SourceLocationEncoding::decode(Raw);
   }
 
+  /// Read a source location offset from \p Record at \p Idx, returning it
+  /// together with a chain anchored at that offset + \p InitialDelta for delta
+  /// decoding the locations that follow.
+  static std::pair<SourceLocation::UIntTy, SourceLocationEncoding::Chain>
+  ReadSourceLocationOffset(const RecordDataImpl &Record, unsigned Idx,
+                           SourceLocation::UIntTy InitialDelta);
+
+  /// Read an SLocEntry record's first field, returning it together with a
+  /// chain anchored at that entry.
+  static std::pair<SourceLocation::UIntTy, SourceLocationEncoding::Chain>
+  ReadEntryOffset(const RecordDataImpl &Record);
+
   /// Read a source location from raw form.
   SourceLocation ReadSourceLocation(ModuleFile &MF, RawLocEncoding Raw) const {
     if (!MF.ModuleOffsetMap.empty())
@@ -2478,6 +2487,12 @@ public:
            "Run out source location space");
 
     return TranslateSourceLocation(*OwningModuleFile, Loc);
+  }
+
+  /// Read a source location from delta-encoded form.
+  SourceLocation ReadSourceLocation(ModuleFile &MF, RawLocEncoding Raw,
+                                    SourceLocationEncoding::Chain &Chain) {
+    return ReadSourceLocation(MF, Chain.deltaDecode(Raw));
   }
 
   /// Translate a source location from another module file's source

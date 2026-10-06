@@ -12,7 +12,8 @@
 ! RUN: %flang -### --target=x86_64-unknown-haiku %S/Inputs/hello.f90 2>&1 | FileCheck %s --check-prefixes=CHECK,HAIKU,HAIKU-F128%f128-lib
 ! RUN: %flang -### --target=x86_64-windows-gnu %S/Inputs/hello.f90 2>&1 | FileCheck %s --check-prefixes=CHECK,MINGW,MINGW-F128%f128-lib
 
-! RUN: %flang -### -rtlib=compiler-rt --target=aarch64-linux-gnu %S/Inputs/hello.f90 2>&1 | FileCheck %s --check-prefixes=CHECK,UNIX,COMPILER-RT
+! RUN: %flang -### -rtlib=compiler-rt --target=aarch64-linux-gnu %S/Inputs/hello.f90 2>&1 | FileCheck %s \
+! RUN:   --check-prefixes=CHECK,UNIX,COMPILER-RT,%if default-unwindlib=libgcc %{DEFAULT-UNWIND-LIBGCC%} %else %{%if default-unwindlib=libunwind %{DEFAULT-UNWIND-LIBUNWIND%} %else %{NO-DEFAULT-UNWIND%}%}
 
 ! NOTE: Clang's driver library, clangDriver, usually adds 'oldnames' on Windows,
 !       but it is not needed when compiling Fortran code and they might bring in
@@ -86,4 +87,7 @@
 ! MSVC-SAME: "[[object_file]]"
 
 ! COMPILER-RT-NOT: "-lgcc"
-! COMPILER-RT-NOT: "-lgcc_s"
+! DEFAULT-UNWIND-LIBGCC: "-lgcc_s"
+! DEFAULT-UNWIND-LIBUNWIND: "-lunwind"
+! NO-DEFAULT-UNWIND-NOT: "-lgcc_s"
+! NO-DEFAULT-UNWIND-NOT: "-lunwind"

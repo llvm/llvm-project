@@ -118,7 +118,8 @@ public:
     CK_LEON3_UT699,
     CK_LEON3_GR712RC,
     CK_LEON4,
-    CK_LEON4_GR740
+    CK_LEON4_GR740,
+    CK_LEON5,
   } CPU = CK_GENERIC;
 
   enum CPUGeneration {
@@ -136,7 +137,7 @@ public:
 
   void fillValidCPUList(SmallVectorImpl<StringRef> &Values) const override;
 
-  bool setCPU(const std::string &Name) override {
+  bool setCPU(StringRef Name) override {
     CPU = getCPUKind(Name);
     return CPU != CK_GENERIC;
   }
@@ -167,11 +168,17 @@ public:
       break;
     }
 
-    // The SPARCv8 System V ABI has long double 128-bits in size, but 64-bit
-    // aligned.
-    LongDoubleWidth = 128;
-    LongDoubleAlign = 64;
-    LongDoubleFormat = &llvm::APFloat::IEEEquad();
+    // Base long double format on the triple.
+    if (getTriple().getDefaultLongDoubleFormat() ==
+        llvm::LongDoubleFormat::IEEEdouble) {
+      LongDoubleWidth = 64;
+      LongDoubleAlign = 64;
+      LongDoubleFormat = &llvm::APFloat::IEEEdouble();
+    } else {
+      LongDoubleWidth = 128;
+      LongDoubleAlign = 64;
+      LongDoubleFormat = &llvm::APFloat::IEEEquad();
+    }
 
     // Up to 32 bits (V8) or 64 bits (V9) are lock-free atomic, but we're
     // willing to do atomic ops on up to 64 bits.
@@ -234,7 +241,7 @@ public:
 
   void fillValidCPUList(SmallVectorImpl<StringRef> &Values) const override;
 
-  bool setCPU(const std::string &Name) override {
+  bool setCPU(StringRef Name) override {
     if (!SparcTargetInfo::setCPU(Name))
       return false;
     return getCPUGeneration(CPU) == CG_V9;

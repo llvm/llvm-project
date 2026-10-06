@@ -27,7 +27,7 @@ llvm.func @tensormap_replace_invalid_ordinal(%addr : !llvm.ptr<1>, %new_val : i3
 // -----
 
 llvm.func @tensormap_replace_ordinal_out_of_range(%addr : !llvm.ptr<1>, %new_val : i32) {
-  // expected-error @+1 {{attribute 'ord' failed to satisfy constraint: 32-bit signless integer attribute whose minimum value is 1 whose maximum value is 5}}
+  // expected-error @+1 {{attribute 'ord' failed to satisfy constraint: 32-bit signless integer attribute whose minimum value is 0 whose maximum value is 4}}
   nvvm.tensormap.replace field = box_dim[6], new_value = %new_val in %addr : !llvm.ptr<1>, i32
   llvm.return
 }

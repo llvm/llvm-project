@@ -29,7 +29,7 @@ public:
   VectorCombinePass(bool TryEarlyFoldsOnly = false)
       : TryEarlyFoldsOnly(TryEarlyFoldsOnly) {}
 
-  PreservedAnalyses run(Function &F, FunctionAnalysisManager &);
+  LLVM_ABI PreservedAnalyses run(Function &F, FunctionAnalysisManager &);
 };
 }
 #endif // LLVM_TRANSFORMS_VECTORIZE_VECTORCOMBINE_H

@@ -58,6 +58,7 @@ public:
         InPPDirective(Line.InPPDirective),
         InPragmaDirective(Line.InPragmaDirective),
         InMacroBody(Line.InMacroBody),
+        IsModuleOrImportDecl(Line.IsModuleOrImportDecl),
         MustBeDeclaration(Line.MustBeDeclaration), MightBeFunctionDecl(false),
         IsMultiVariableDeclStmt(false), Affected(false),
         LeadingEmptyLinesAffected(false), ChildrenAffected(false),
@@ -156,11 +157,6 @@ public:
            startsWith(tok::kw_export, tok::kw_namespace);
   }
 
-  /// \c true if this line starts a C++ export block.
-  bool startsWithExportBlock() const {
-    return startsWith(tok::kw_export, tok::l_brace);
-  }
-
   FormatToken *getFirstNonComment() const {
     assert(First);
     return First->is(tok::comment) ? First->getNextNonComment() : First;
@@ -184,6 +180,7 @@ public:
   bool InPPDirective;
   bool InPragmaDirective;
   bool InMacroBody;
+  bool IsModuleOrImportDecl;
   bool MustBeDeclaration;
   bool MightBeFunctionDecl;
   bool IsMultiVariableDeclStmt;

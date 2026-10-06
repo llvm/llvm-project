@@ -9,23 +9,26 @@
 #
 # This is independent of LLVM's own "maintainer" concept.
 # See https://llvm.org/docs/DeveloperPolicy.html#maintainers as well as the
-# Maintainers.* files in the the respective subproject directories.
+# Maintainers.md files in the the respective subproject directories.
 
 /libc/ @llvm/reviewers-libc
 /libcxx/ @llvm/reviewers-libcxx
 /libcxxabi/ @llvm/reviewers-libcxxabi
 /libunwind/ @llvm/reviewers-libunwind
-/runtimes/ @llvm/reviewers-libcxx
 
+/llvm/include/llvm/Analysis/ScalarEvolutionPatternMatch.h @artagnon
+/llvm/include/llvm/Support/PatternMatchHelpers.h @artagnon
 /llvm/lib/Analysis/BasicAliasAnalysis.cpp @nikic
 /llvm/lib/Analysis/HashRecognize.cpp @artagnon @pfusik
 /llvm/lib/Analysis/InstructionSimplify.cpp @nikic
 /llvm/lib/Analysis/LazyValueInfo.cpp @nikic
+/llvm/lib/Analysis/LoopAccessAnalysis.cpp @artagnon
 /llvm/lib/Analysis/ScalarEvolution.cpp @nikic
 /llvm/lib/Analysis/ValueTracking.cpp @nikic
 /llvm/lib/IR/ConstantRange.cpp @nikic
 /llvm/lib/IR/Core.cpp @nikic
 /llvm/lib/Transforms/Scalar/CorrelatedValuePropagation.cpp @nikic
+/llvm/lib/Transforms/Scalar/LoopIdiomRecognize.cpp @artagnon
 /llvm/lib/Transforms/Scalar/MemCpyOptimizer.cpp @nikic
 /llvm/lib/Transforms/InstCombine/ @nikic
 
@@ -40,6 +43,13 @@
 /clang/lib/CIR @lanza @bcardosolopes @xlauko @andykaylor
 /clang/lib/CIR/CodeGen/CIRGenBuiltinAArch64.cpp @lanza @bcardosolopes @xlauko @andykaylor @banach-space
 /clang/tools/cir-* @lanza @bcardosolopes @xlauko @andykaylor
+
+/clang/tools/clang-repl @vgvassilev
+/clang/include/clang/Interpreter @vgvassilev
+/clang/lib/Interpreter @vgvassilev
+/clang/include/clang/Serialization @vgvassilev
+/clang/lib/Serialization @vgvassilev
+/clang/examples @vgvassilev
 
 /lldb/ @JDevlieghere
 /lldb/**/*FreeBSD* @mchoo7
@@ -161,6 +171,9 @@
 /mlir/**/*shard* @fschlimb
 /mlir/**/*Shard* @fschlimb
 
+# MLIR WasmSSA Dialect
+/mlir/**/WasmSSA* @flemairen6 @lforg37
+
 # MLIR Python Bindings
 /mlir/test/python/ @ftynse @makslevental @stellaraccident @rolfmorel
 /mlir/python/ @ftynse @makslevental @stellaraccident @rolfmorel
@@ -178,7 +191,8 @@
 /bolt/ @aaupov @maksfb @rafaelauler @ayermolo @yota9 @paschalis-mpeis @yozhu @yavtuk
 
 # Bazel build system.
-/utils/bazel/ @rupprecht @keith @aaronmondal
+/utils/bazel/ @rupprecht @keith @aaronmondal @googlewalt
+/utils/bazel/llvm-project-overlay/libc/ @labath @kaladron
 
 # InstallAPI and TextAPI
 /llvm/**/TextAPI/ @cyndyishida
@@ -201,7 +215,10 @@
 /llvm-project/llvm/lib/Target/AMDGPU/Disassembler/AMDGPUDisassembler.cpp @jwanggit86
 
 # Clang Driver
-/clang/lib/Driver/ToolChains/AMDGPU.cpp @lamb-j
+/clang/lib/Driver/ToolChains/AMDGPU.cpp @lamb-j @jhuber6
+/clang/lib/Driver/ToolChains/AMDGPU.h @jhuber6
+/clang/lib/Driver/ToolChains/HIPAMD.* @jhuber6
+/clang/lib/Driver/ToolChains/HIPUtility.* @jhuber6
 /clang/lib/Driver/OffloadBundler.cpp @lamb-j @david-salinas
 
 # GlobalIsel
@@ -210,3 +227,54 @@
 # AMDGPU Memory Model
 /llvm/lib/Target/AMDGPU/SIMemoryLegalizer* @Pierre-vh @ritter-x2a
 /llvm/lib/Target/AMDGPU/SIInsertWaitcnts* @Pierre-vh @ritter-x2a
+
+# Clang-Tidy tool
+/clang-tools-extra/clang-tidy/ @vbvictor @zeyi2
+/clang-tools-extra/test/clang-tidy/ @vbvictor @zeyi2
+/clang-tools-extra/docs/clang-tidy/ @vbvictor @zeyi2
+
+# Offloading binary format and device linking
+/llvm/**/Object/OffloadBinary.* @jhuber6
+/llvm/**/ObjectYAML/Offload* @jhuber6
+/llvm/**/Frontend/Offloading/OffloadWrapper.* @jhuber6
+/llvm/**/Frontend/Offloading/Utility.* @jhuber6
+/llvm/tools/obj2yaml/offload2yaml.cpp @jhuber6
+/llvm/tools/llvm-objdump/OffloadDump.* @jhuber6
+/llvm/tools/llvm-offload-binary/ @jhuber6
+/llvm/tools/llvm-offload-wrapper/ @jhuber6
+/clang/tools/clang-linker-wrapper/ @jhuber6
+/clang/tools/clang-nvlink-wrapper/ @jhuber6
+
+# Offloading runtime
+/offload/plugins-nextgen/common @jhuber6
+/offload/plugins-nextgen/amdgpu @jhuber6
+/openmp/device/ @jhuber6
+
+# GPU headers and tools
+/clang/lib/Headers/gpuintrin.h @jhuber6
+/clang/lib/Headers/amdgpuintrin.h @jhuber6
+/clang/lib/Headers/nvptxintrin.h @jhuber6
+/clang/lib/Headers/spirvintrin.h @jhuber6
+/clang/lib/Headers/__clang_gpu_*.h @jhuber6
+/clang/lib/Headers/llvm_libc_wrappers/ @jhuber6
+/clang/lib/Headers/hip_wrappers/ @jhuber6
+/clang/tools/offload-arch/ @jhuber6
+/llvm/tools/llvm-gpu-loader/ @jhuber6
+
+# GPU builds of the runtimes
+/libc/**/gpu/ @llvm/reviewers-libc @jhuber6
+/libc/**/GPU/ @llvm/reviewers-libc @jhuber6
+/libc/**/amdgpu/ @llvm/reviewers-libc @jhuber6
+/libc/**/nvptx/ @llvm/reviewers-libc @jhuber6
+/libc/cmake/modules/prepare_libc_gpu_build.cmake @llvm/reviewers-libc @jhuber6
+/libc/shared/rpc*.h @llvm/reviewers-libc @jhuber6
+/libc/src/__support/RPC/ @llvm/reviewers-libc @jhuber6
+/libc/src/__support/CPP/simd.h @llvm/reviewers-libc @jhuber6
+/libcxx/cmake/caches/AMDGPU.cmake @llvm/reviewers-libcxx @jhuber6
+/libcxx/cmake/caches/NVPTX.cmake @llvm/reviewers-libcxx @jhuber6
+/compiler-rt/cmake/caches/AMDGPU.cmake @jhuber6
+/compiler-rt/cmake/caches/NVPTX.cmake @jhuber6
+/compiler-rt/lib/**/*offload* @jhuber6
+/compiler-rt/lib/profile/InstrProfilingPlatformGPU.c @jhuber6
+/flang-rt/lib/runtime/io-api-gpu.* @jhuber6
+/flang-rt/lib/runtime/io-api-server.cpp @jhuber6

@@ -1,5 +1,5 @@
-; RUN: not llc -mtriple=amdgcn--amdpal -mcpu=gfx1200 -global-isel=1 -new-reg-bank-select -mattr=+wavefrontsize64 < %s 2>&1 | FileCheck %s
-; RUN: not llc -mtriple=amdgcn--amdpal -mcpu=gfx1200 -global-isel=0 -mattr=+wavefrontsize64 < %s 2>&1 | FileCheck %s
+; RUN: not llc -mtriple=amdgpu12.00--amdpal -global-isel=1 -mattr=+wavefrontsize64 < %s 2>&1 | FileCheck %s
+; RUN: not llc -mtriple=amdgpu12.00--amdpal -global-isel=0 -mattr=+wavefrontsize64 < %s 2>&1 | FileCheck %s
 
 declare amdgpu_cs_chain void @callee() nounwind
 

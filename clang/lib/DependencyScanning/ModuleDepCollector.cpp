@@ -263,6 +263,12 @@ makeCommonInvocationForModuleBuild(CompilerInvocation CI) {
   resetBenignCodeGenOptions(frontend::GenerateModule, CI.getLangOpts(),
                             CI.getCodeGenOpts());
 
+  // Erase the command-line arguments. These don't make it into the final set of
+  // compilation arguments and will be re-populated during compilation itself.
+  // Keeping them around would make copies of the invocation expensive.
+  CI.getCodeGenOpts().Argv0 = nullptr;
+  CI.getCodeGenOpts().CommandLineArgs.clear();
+
   // Map output paths that affect behaviour to "-" so their existence is in the
   // context hash. The final path will be computed in addOutputPaths.
   if (!CI.getDiagnosticOpts().DiagnosticSerializationFile.empty())
@@ -286,6 +292,18 @@ makeCommonInvocationForModuleBuild(CompilerInvocation CI) {
         });
     // Remove the now unused option.
     CI.getHeaderSearchOpts().ModulesIgnoreMacros.clear();
+  }
+
+  // Remove any header search paths that are explicitly ignored.
+  if (!CI.getHeaderSearchOpts().ModulesIgnoreSearchPaths.empty()) {
+    llvm::erase_if(
+        CI.getHeaderSearchOpts().UserEntries,
+        [&CI](const HeaderSearchOptions::Entry &E) {
+          return CI.getHeaderSearchOpts().ModulesIgnoreSearchPaths.contains(
+              llvm::CachedHashString(E.Path));
+        });
+    // Remove the now unused option.
+    CI.getHeaderSearchOpts().ModulesIgnoreSearchPaths.clear();
   }
 
   return CI;
@@ -465,9 +483,9 @@ static bool isSafeToIgnoreCWD(const CowCompilerInvocation &CI) {
   // command line inputs use relative paths.
   bool AnyRelative = false;
   CI.visitPaths([&](StringRef Path) {
-    assert(!AnyRelative && "Continuing path visitation despite returning true");
+    assert(!AnyRelative && "Continuing path visitation despite relative path");
     AnyRelative |= !Path.empty() && !llvm::sys::path::is_absolute(Path);
-    return AnyRelative;
+    return CowCompilerInvocation::VisitConstResult{/*Terminate=*/AnyRelative};
   });
   return !AnyRelative;
 }
@@ -568,6 +586,10 @@ public:
       // here as `FileChanged` will never see it.
       MDC.addFileDep(FileName);
     }
+    if (ModuleImported && SuggestedModule &&
+        MDC.ScanInstance.getPreprocessorOpts()
+            .DependencyScanningModuleMapImports)
+      MDC.addRequiredStdCXXModule(SuggestedModule->getFullModuleName());
     MDC.handleImport(SuggestedModule);
   }
 
@@ -575,16 +597,26 @@ public:
                     const Module *Imported) override {
     auto &PP = MDC.ScanInstance.getPreprocessor();
     if (PP.getLangOpts().CPlusPlusModules && PP.isImportingCXXNamedModules()) {
-      P1689ModuleInfo RequiredModule;
-      RequiredModule.ModuleName = Path[0].getIdentifierInfo()->getName().str();
-      RequiredModule.Type = P1689ModuleInfo::ModuleType::NamedCXXModule;
-      MDC.RequiredStdCXXModules.push_back(std::move(RequiredModule));
+      MDC.addRequiredStdCXXModule(Path[0].getIdentifierInfo()->getName());
       return;
     }
 
     MDC.handleImport(Imported);
   }
 };
+
+void ModuleDepCollector::addRequiredStdCXXModule(StringRef ModuleName) {
+  if (llvm::any_of(RequiredStdCXXModules,
+                   [ModuleName](const P1689ModuleInfo &RequiredModule) {
+                     return RequiredModule.ModuleName == ModuleName;
+                   }))
+    return;
+
+  P1689ModuleInfo RequiredModule;
+  RequiredModule.ModuleName = ModuleName.str();
+  RequiredModule.Type = P1689ModuleInfo::ModuleType::NamedCXXModule;
+  RequiredStdCXXModules.push_back(std::move(RequiredModule));
+}
 
 void ModuleDepCollector::handleImport(const Module *Imported) {
   auto &MDC = *this;
@@ -625,7 +657,7 @@ void ModuleDepCollector::run(DependencyConsumer &Consumer) {
     // Put the module as required instead. Since the implementation
     // unit will import the primary module implicitly.
     if (PP.isInImplementationUnit())
-      MDC.RequiredStdCXXModules.push_back(ProvidedModule);
+      MDC.addRequiredStdCXXModule(ProvidedModule.ModuleName);
     else
       MDC.ProvidedStdCXXModule = ProvidedModule;
   }

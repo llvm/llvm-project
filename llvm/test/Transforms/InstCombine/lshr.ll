@@ -1585,3 +1585,45 @@ entry:
   %conv = and i32 %shift, 32767
   ret i32 %conv
 }
+
+; lshr 1, X --> zext (X == 0)
+
+define i32 @lshr_one_i32(i32 %x) {
+; CHECK-LABEL: @lshr_one_i32(
+; CHECK-NEXT:    [[TMP1:%.*]] = icmp eq i32 [[X:%.*]], 0
+; CHECK-NEXT:    [[SHR:%.*]] = zext i1 [[TMP1]] to i32
+; CHECK-NEXT:    ret i32 [[SHR]]
+;
+  %shr = lshr i32 1, %x
+  ret i32 %shr
+}
+
+define i64 @lshr_one_i64(i64 %x) {
+; CHECK-LABEL: @lshr_one_i64(
+; CHECK-NEXT:    [[TMP1:%.*]] = icmp eq i64 [[X:%.*]], 0
+; CHECK-NEXT:    [[SHR:%.*]] = zext i1 [[TMP1]] to i64
+; CHECK-NEXT:    ret i64 [[SHR]]
+;
+  %shr = lshr i64 1, %x
+  ret i64 %shr
+}
+
+define <4 x i32> @lshr_one_v4i32(<4 x i32> %x) {
+; CHECK-LABEL: @lshr_one_v4i32(
+; CHECK-NEXT:    [[TMP1:%.*]] = icmp eq <4 x i32> [[X:%.*]], zeroinitializer
+; CHECK-NEXT:    [[SHR:%.*]] = zext <4 x i1> [[TMP1]] to <4 x i32>
+; CHECK-NEXT:    ret <4 x i32> [[SHR]]
+;
+  %shr = lshr <4 x i32> <i32 1, i32 1, i32 1, i32 1>, %x
+  ret <4 x i32> %shr
+}
+
+; Negative test: constant is not 1
+define i32 @lshr_two_i32(i32 %x) {
+; CHECK-LABEL: @lshr_two_i32(
+; CHECK-NEXT:    [[SHR:%.*]] = lshr i32 2, [[X:%.*]]
+; CHECK-NEXT:    ret i32 [[SHR]]
+;
+  %shr = lshr i32 2, %x
+  ret i32 %shr
+}

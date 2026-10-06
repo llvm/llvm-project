@@ -10,6 +10,7 @@
 
 #include "flang/Runtime/exceptions.h"
 #include "flang-rt/runtime/terminator.h"
+#include "flang/Common/fp-control.h"
 #include <cfenv>
 #if defined(__aarch64__) && defined(__GLIBC__)
 #include <fpu_control.h>
@@ -88,6 +89,7 @@ uint32_t RTDEF(MapException)(uint32_t excepts) {
 // component; both are needed.
 
 void RTNAME(feclearexcept)(uint32_t excepts) {
+  FLANG_FP_TRAP_ON
   feclearexcept(excepts);
 #if defined(_MM_EXCEPT_DENORM)
   _mm_setcsr(_mm_getcsr() & ~(excepts & _MM_EXCEPT_MASK));
@@ -95,6 +97,7 @@ void RTNAME(feclearexcept)(uint32_t excepts) {
 }
 void RTDEF(feraiseexcept)(uint32_t excepts) {
 #if !defined(RT_DEVICE_COMPILATION)
+  FLANG_FP_TRAP_ON
   feraiseexcept(excepts);
 #if defined(_MM_EXCEPT_DENORM)
   _mm_setcsr(_mm_getcsr() | (excepts & _MM_EXCEPT_MASK));
@@ -102,6 +105,7 @@ void RTDEF(feraiseexcept)(uint32_t excepts) {
 #endif
 }
 uint32_t RTNAME(fetestexcept)(uint32_t excepts) {
+  FLANG_FP_TRAP_ON
 #if defined(_MM_EXCEPT_DENORM)
   return (_mm_getcsr() & _MM_EXCEPT_MASK & excepts) | fetestexcept(excepts);
 #else
@@ -138,6 +142,12 @@ uint32_t RTNAME(fegetexcept)() {
 
 // Check if the processor has the ability to control whether to halt or
 // continue execution when a given exception is raised.
+//
+// TODO: Support halting on x86 without glibc. The MXCSR helpers above (guarded
+// by _MM_EXCEPT_DENORM) already provide the machinery, so this gate could be
+// widened to `#if defined(__USE_GNU) || defined(_MM_EXCEPT_DENORM)` to cover
+// x86_64 macOS/BSD and musl-Linux. Doing so also needs the x87 control word for
+// REAL(10), 32-bit x86 (__i386__), and Windows SEH handling; see PR discussion.
 bool RTNAME(SupportHalting)([[maybe_unused]] uint32_t except) {
 #ifdef __USE_GNU
   except = RTNAME(MapException)(except);
@@ -155,6 +165,25 @@ bool RTNAME(SupportHalting)([[maybe_unused]] uint32_t except) {
 #else
   return false;
 #endif
+}
+
+void RTNAME(EnableFPETraps)(uint32_t excepts) {
+  // Enable halting only for those exceptions whose halting control is supported
+  // by the processor. The Fortran standard restricts IEEE_SET_HALTING_MODE to
+  // flags for which IEEE_SUPPORT_HALTING is true (F2023 17.11.40); on targets
+  // without halting control (e.g. non-glibc), this is a no-op.
+  uint32_t supported = 0;
+  for (uint32_t flag = 1; flag <= excepts; flag <<= 1) {
+    if ((excepts & flag) && RTNAME(SupportHalting)(flag)) {
+      supported |= flag;
+    }
+  }
+  if (supported == 0) {
+    return;
+  }
+  uint32_t mapped = RTNAME(MapException)(supported);
+  RTNAME(feclearexcept)(mapped);
+  RTNAME(feenableexcept)(mapped);
 }
 
 // A hardware FZ (flush to zero) bit is the negation of the
@@ -202,7 +231,13 @@ size_t RTNAME(GetModesTypeSize)(void) {
 #endif
 }
 size_t RTNAME(GetStatusTypeSize)(void) {
-  return sizeof(fenv_t); // byte size of ieee_status_type data
+  // byte size of ieee_status_type data
+#if defined(_AIX)
+  // the raw FPSCR double is needed for trap-enable bit round-trip
+  return sizeof(fenv_t) + sizeof(double);
+#else
+  return sizeof(fenv_t);
+#endif
 }
 
 } // extern "C"

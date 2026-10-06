@@ -37,6 +37,7 @@
 #include "llvm/ADT/APInt.h"
 #include "llvm/ADT/ArrayRef.h"
 #include "llvm/ADT/DenseMap.h"
+#include "llvm/ADT/SetOperations.h"
 #include "llvm/ADT/SmallPtrSet.h"
 #include "llvm/ADT/SmallVector.h"
 #include "llvm/ADT/Statistic.h"
@@ -77,6 +78,7 @@
 #include "llvm/IR/Instructions.h"
 #include "llvm/IR/IntrinsicInst.h"
 #include "llvm/IR/Intrinsics.h"
+#include "llvm/IR/LLVMContext.h"
 #include "llvm/IR/Metadata.h"
 #include "llvm/IR/Operator.h"
 #include "llvm/IR/PassManager.h"
@@ -88,7 +90,6 @@
 #include "llvm/IR/ValueHandle.h"
 #include "llvm/InitializePasses.h"
 #include "llvm/Support/Casting.h"
-#include "llvm/Support/CommandLine.h"
 #include "llvm/Support/Compiler.h"
 #include "llvm/Support/Debug.h"
 #include "llvm/Support/DebugCounter.h"
@@ -132,36 +133,18 @@ STATISTIC(NumReassoc  , "Number of reassociations");
 DEBUG_COUNTER(VisitCounter, "instcombine-visit",
               "Controls which instructions are visited");
 
-static cl::opt<bool> EnableCodeSinking("instcombine-code-sinking",
-                                       cl::desc("Enable code sinking"),
-                                       cl::init(true));
+InstCombiner::IRBuilderInstCombineInserter::~IRBuilderInstCombineInserter() =
+    default;
 
-static cl::opt<unsigned> MaxSinkNumUsers(
-    "instcombine-max-sink-users", cl::init(32),
-    cl::desc("Maximum number of undroppable users for instruction sinking"));
-
-static cl::opt<unsigned>
-MaxArraySize("instcombine-maxarray-size", cl::init(1024),
-             cl::desc("Maximum array size considered when doing a combine"));
-
-static cl::opt<unsigned> MaxAllocSiteRemovableUsers(
-    "instcombine-max-allocsite-removable-users", cl::Hidden, cl::init(2048),
-    cl::desc("Maximum number of users to visit in alloc-site "
-             "removability analysis"));
-
-namespace llvm {
-extern cl::opt<bool> ProfcheckDisableMetadataFixes;
-} // end namespace llvm
-
-// FIXME: Remove this flag when it is no longer necessary to convert
-// llvm.dbg.declare to avoid inaccurate debug info. Setting this to false
-// increases variable availability at the cost of accuracy. Variables that
-// cannot be promoted by mem2reg or SROA will be described as living in memory
-// for their entire lifetime. However, passes like DSE and instcombine can
-// delete stores to the alloca, leading to misleading and inaccurate debug
-// information. This flag can be removed when those passes are fixed.
-static cl::opt<unsigned> ShouldLowerDbgDeclare("instcombine-lower-dbg-declare",
-                                               cl::Hidden, cl::init(true));
+void InstCombiner::IRBuilderInstCombineInserter::InsertHelper(
+    Instruction *I, const Twine &Name, BasicBlock::iterator InsertPt) const {
+  IRBuilderDefaultInserter::InsertHelper(I, Name, InsertPt);
+  IC.Worklist.add(I);
+  if (auto *Assume = dyn_cast<AssumeInst>(I))
+    IC.AC.registerAssumption(Assume);
+  if (IC.AnnotationMetadataSource)
+    I->copyMetadata(*IC.AnnotationMetadataSource, LLVMContext::MD_annotation);
+}
 
 std::optional<Instruction *>
 InstCombiner::targetInstCombineIntrinsic(IntrinsicInst &II) {
@@ -398,21 +381,6 @@ static bool hasNoSignedWrap(BinaryOperator &I) {
   return OBO && OBO->hasNoSignedWrap();
 }
 
-/// Conservatively clears subclassOptionalData after a reassociation or
-/// commutation. We preserve fast-math flags when applicable as they can be
-/// preserved.
-static void ClearSubclassDataAfterReassociation(BinaryOperator &I) {
-  FPMathOperator *FPMO = dyn_cast<FPMathOperator>(&I);
-  if (!FPMO) {
-    I.clearSubclassOptionalData();
-    return;
-  }
-
-  FastMathFlags FMF = I.getFastMathFlags();
-  I.clearSubclassOptionalData();
-  I.setFastMathFlags(FMF);
-}
-
 /// Combine constant operands of associative operations either before or after a
 /// cast to eliminate one of the associative operations:
 /// (op (cast (op X, C2)), C1) --> (cast (op X, op (C1, C2)))
@@ -543,15 +511,15 @@ bool InstCombinerImpl::SimplifyAssociativeOrCommutative(BinaryOperator &I) {
           // Conservatively clear all optional flags since they may not be
           // preserved by the reassociation. Reset nsw/nuw based on the above
           // analysis.
-          ClearSubclassDataAfterReassociation(I);
+          if (auto *PDI = dyn_cast<PossiblyDisjointInst>(&I))
+            PDI->setIsDisjoint(false);
 
           // Note: this is only valid because SimplifyBinOp doesn't look at
           // the operands to Op0.
-          if (IsNUW)
-            I.setHasNoUnsignedWrap(true);
-
-          if (IsNSW)
-            I.setHasNoSignedWrap(true);
+          if (isa<OverflowingBinaryOperator>(I)) {
+            I.setHasNoUnsignedWrap(IsNUW);
+            I.setHasNoSignedWrap(IsNSW);
+          }
 
           Changed = true;
           ++NumReassoc;
@@ -572,7 +540,8 @@ bool InstCombinerImpl::SimplifyAssociativeOrCommutative(BinaryOperator &I) {
           replaceOperand(I, 1, C);
           // Conservatively clear the optional flags, since they may not be
           // preserved by the reassociation.
-          ClearSubclassDataAfterReassociation(I);
+          if (!isa<FPMathOperator>(I))
+            I.dropPoisonGeneratingFlags();
           Changed = true;
           ++NumReassoc;
           continue;
@@ -600,7 +569,8 @@ bool InstCombinerImpl::SimplifyAssociativeOrCommutative(BinaryOperator &I) {
           replaceOperand(I, 1, B);
           // Conservatively clear the optional flags, since they may not be
           // preserved by the reassociation.
-          ClearSubclassDataAfterReassociation(I);
+          if (!isa<FPMathOperator>(I))
+            I.dropPoisonGeneratingFlags();
           Changed = true;
           ++NumReassoc;
           continue;
@@ -620,7 +590,8 @@ bool InstCombinerImpl::SimplifyAssociativeOrCommutative(BinaryOperator &I) {
           replaceOperand(I, 1, V);
           // Conservatively clear the optional flags, since they may not be
           // preserved by the reassociation.
-          ClearSubclassDataAfterReassociation(I);
+          if (!isa<FPMathOperator>(I))
+            I.dropPoisonGeneratingFlags();
           Changed = true;
           ++NumReassoc;
           continue;
@@ -655,7 +626,8 @@ bool InstCombinerImpl::SimplifyAssociativeOrCommutative(BinaryOperator &I) {
         replaceOperand(I, 1, CRes);
         // Conservatively clear the optional flags, since they may not be
         // preserved by the reassociation.
-        ClearSubclassDataAfterReassociation(I);
+        if (!isa<FPMathOperator>(I))
+          I.dropPoisonGeneratingFlags();
         if (IsNUW)
           I.setHasNoUnsignedWrap(true);
 
@@ -1129,9 +1101,7 @@ InstCombinerImpl::foldBinOpOfSelectAndCastOfSelectCondition(BinaryOperator &I) {
   else
     return nullptr;
 
-  SelectInst *SI = ProfcheckDisableMetadataFixes
-                       ? nullptr
-                       : cast<SelectInst>(CastOp == LHS ? RHS : LHS);
+  SelectInst *SI = cast<SelectInst>(CastOp == LHS ? RHS : LHS);
 
   auto NewFoldedConst = [&](bool IsTrueArm, Value *V) {
     bool IsCastOpRHS = (CastOp == RHS);
@@ -1365,9 +1335,7 @@ Value *InstCombinerImpl::SimplifySelectsFeedingBinaryOp(BinaryOperator &I,
   if (!LHSIsSelect && !RHSIsSelect)
     return nullptr;
 
-  SelectInst *SI = ProfcheckDisableMetadataFixes
-                       ? nullptr
-                       : cast<SelectInst>(LHSIsSelect ? LHS : RHS);
+  SelectInst *SI = cast<SelectInst>(LHSIsSelect ? LHS : RHS);
 
   FastMathFlags FMF;
   BuilderTy::FastMathFlagGuard Guard(Builder);
@@ -1380,6 +1348,20 @@ Value *InstCombinerImpl::SimplifySelectsFeedingBinaryOp(BinaryOperator &I,
   SimplifyQuery Q = SQ.getWithInstruction(&I);
 
   Value *Cond, *True = nullptr, *False = nullptr;
+
+  // If V is a select whose condition is implied by Cond, resolve it to the
+  // appropriate arm for this value of Cond.
+  auto simplifySelectWithImpliedCond = [&](Value *V, Value *Cond,
+                                           bool CondIsTrue) -> Value * {
+    auto *InnerSI = dyn_cast<SelectInst>(V);
+    if (!InnerSI || Cond->getType() != InnerSI->getCondition()->getType())
+      return V;
+
+    if (std::optional<bool> Implied =
+            isImpliedCondition(Cond, InnerSI->getCondition(), DL, CondIsTrue))
+      return InnerSI->getOperand(*Implied ? 1 : 2);
+    return V;
+  };
 
   // Special-case for add/negate combination. Replace the zero in the negation
   // with the trailing add operand:
@@ -1416,15 +1398,19 @@ Value *InstCombinerImpl::SimplifySelectsFeedingBinaryOp(BinaryOperator &I,
   } else if (LHSIsSelect && LHS->hasOneUse()) {
     // (A ? B : C) op Y -> A ? (B op Y) : (C op Y)
     Cond = A;
-    True = simplifyBinOp(Opcode, B, RHS, FMF, Q);
-    False = simplifyBinOp(Opcode, C, RHS, FMF, Q);
+    Value *TrueRHS = simplifySelectWithImpliedCond(RHS, Cond, true);
+    Value *FalseRHS = simplifySelectWithImpliedCond(RHS, Cond, false);
+    True = simplifyBinOp(Opcode, B, TrueRHS, FMF, Q);
+    False = simplifyBinOp(Opcode, C, FalseRHS, FMF, Q);
     if (Value *NewSel = foldAddNegate(B, C, RHS))
       return NewSel;
   } else if (RHSIsSelect && RHS->hasOneUse()) {
     // X op (D ? E : F) -> D ? (X op E) : (X op F)
     Cond = D;
-    True = simplifyBinOp(Opcode, LHS, E, FMF, Q);
-    False = simplifyBinOp(Opcode, LHS, F, FMF, Q);
+    Value *TrueLHS = simplifySelectWithImpliedCond(LHS, Cond, true);
+    Value *FalseLHS = simplifySelectWithImpliedCond(LHS, Cond, false);
+    True = simplifyBinOp(Opcode, TrueLHS, E, FMF, Q);
+    False = simplifyBinOp(Opcode, FalseLHS, F, FMF, Q);
     if (Value *NewSel = foldAddNegate(E, F, LHS))
       return NewSel;
   }
@@ -1831,7 +1817,16 @@ Instruction *InstCombinerImpl::FoldOpIntoSelect(Instruction &Op, SelectInst *SI,
     NewTV = foldOperationIntoSelectOperand(Op, SI, TV, *this);
   if (!NewFV)
     NewFV = foldOperationIntoSelectOperand(Op, SI, FV, *this);
-  return SelectInst::Create(SI->getCondition(), NewTV, NewFV, "", nullptr, SI);
+
+  SelectInst *NewSel = SelectInst::Create(SI->getCondition(), NewTV, NewFV);
+
+  // Preserve metadata that remains valid for the transformed select including
+  // source location information.
+  NewSel->copyMetadata(*SI,
+                       {LLVMContext::MD_prof, LLVMContext::MD_unpredictable,
+                        LLVMContext::MD_dbg});
+
+  return NewSel;
 }
 
 static Value *simplifyInstructionWithPHI(Instruction &I, PHINode *PN,
@@ -1914,9 +1909,7 @@ Instruction *InstCombinerImpl::foldBinOpSelectBinOp(BinaryOperator &Op) {
   if (!NewTV || !NewFV)
     return nullptr;
 
-  Value *NewSI =
-      Builder.CreateSelect(SI->getCondition(), NewTV, NewFV, "",
-                           ProfcheckDisableMetadataFixes ? nullptr : SI);
+  Value *NewSI = Builder.CreateSelect(SI->getCondition(), NewTV, NewFV, "", SI);
   return BinaryOperator::Create(Op.getOpcode(), NewSI, Input);
 }
 
@@ -2333,7 +2326,9 @@ static bool shouldMergeGEPs(GEPOperator &GEP, GEPOperator &Src) {
 }
 
 /// Find a constant NewC that has property:
-///   shuffle(NewC, ShMask) = C
+///   shuffle(NewC, poison, ShMask) = C
+/// for lanes that select NewC. Lanes that select the poison operand are not
+/// constrained.
 /// Returns nullptr if such a constant does not exist e.g. ShMask=<0,0> C=<1,2>
 ///
 /// A 1-to-1 mapping is not required. Example:
@@ -2358,8 +2353,11 @@ Constant *InstCombinerImpl::unshuffleConstant(ArrayRef<int> ShMask, Constant *C,
   for (unsigned I = 0; I < NumElts; ++I) {
     Constant *CElt = C->getAggregateElement(I);
     if (ShMask[I] >= 0) {
-      assert(ShMask[I] < (int)NumElts && "Not expecting narrowing shuffle");
-      Constant *NewCElt = NewVecC[ShMask[I]];
+      int MaskElt = ShMask[I];
+      if (MaskElt >= (int)NewCNumElts)
+        continue;
+
+      Constant *NewCElt = NewVecC[MaskElt];
       // Bail out if:
       // 1. The constant vector contains a constant expression.
       // 2. The shuffle needs an element of the constant vector that can't
@@ -2369,7 +2367,7 @@ Constant *InstCombinerImpl::unshuffleConstant(ArrayRef<int> ShMask, Constant *C,
       if (!CElt || (!isa<PoisonValue>(NewCElt) && NewCElt != CElt) ||
           I >= NewCNumElts)
         return nullptr;
-      NewVecC[ShMask[I]] = CElt;
+      NewVecC[MaskElt] = CElt;
     }
   }
   return ConstantVector::get(NewVecC);
@@ -2445,7 +2443,7 @@ Instruction *InstCombinerImpl::foldVectorBinop(BinaryOperator &Inst) {
           bool SplatLHS) -> Instruction * {
     Value *Idx;
     Constant *Splat, *SubVector, *Dest;
-    if (!match(MaybeSplat, m_ConstantSplat(m_Constant(Splat))) ||
+    if (!match(MaybeSplat, m_Splat(m_Constant(Splat))) ||
         !match(MaybeSubVector,
                m_VectorInsert(m_Constant(Dest), m_Constant(SubVector),
                               m_Value(Idx))))
@@ -2470,30 +2468,6 @@ Instruction *InstCombinerImpl::foldVectorBinop(BinaryOperator &Inst) {
   if (Instruction *Folded = foldConstantsThroughSubVectorInsertSplat(
           /*MaybeSubVector=*/RHS, /*MaybeSplat=*/LHS, /*SplatLHS=*/true))
     return Folded;
-
-  // If both operands of the binop are vector concatenations, then perform the
-  // narrow binop on each pair of the source operands followed by concatenation
-  // of the results.
-  Value *L0, *L1, *R0, *R1;
-  ArrayRef<int> Mask;
-  if (match(LHS, m_Shuffle(m_Value(L0), m_Value(L1), m_Mask(Mask))) &&
-      match(RHS, m_Shuffle(m_Value(R0), m_Value(R1), m_SpecificMask(Mask))) &&
-      LHS->hasOneUse() && RHS->hasOneUse() &&
-      cast<ShuffleVectorInst>(LHS)->isConcat() &&
-      cast<ShuffleVectorInst>(RHS)->isConcat()) {
-    // This transform does not have the speculative execution constraint as
-    // below because the shuffle is a concatenation. The new binops are
-    // operating on exactly the same elements as the existing binop.
-    // TODO: We could ease the mask requirement to allow different undef lanes,
-    //       but that requires an analysis of the binop-with-undef output value.
-    Value *NewBO0 = Builder.CreateBinOp(Opcode, L0, R0);
-    if (auto *BO = dyn_cast<BinaryOperator>(NewBO0))
-      BO->copyIRFlags(&Inst);
-    Value *NewBO1 = Builder.CreateBinOp(Opcode, L1, R1);
-    if (auto *BO = dyn_cast<BinaryOperator>(NewBO1))
-      BO->copyIRFlags(&Inst);
-    return new ShuffleVectorInst(NewBO0, NewBO1, Mask);
-  }
 
   auto createBinOpReverse = [&](Value *X, Value *Y) {
     Value *V = Builder.CreateBinOp(Opcode, X, Y, Inst.getName());
@@ -2579,9 +2553,10 @@ Instruction *InstCombinerImpl::foldVectorBinop(BinaryOperator &Inst) {
 
   // If both arguments of the binary operation are shuffles that use the same
   // mask and shuffle within a single vector, move the shuffle after the binop.
+  ArrayRef<int> Mask;
   if (match(LHS, m_Shuffle(m_Value(V1), m_Poison(), m_Mask(Mask))) &&
       match(RHS, m_Shuffle(m_Value(V2), m_Poison(), m_SpecificMask(Mask))) &&
-      V1->getType() == V2->getType() &&
+      Inst.getType() == V1->getType() && V1->getType() == V2->getType() &&
       (LHS->hasOneUse() || RHS->hasOneUse() || LHS == RHS)) {
     // Op(shuffle(V1, Mask), shuffle(V2, Mask)) -> shuffle(Op(V1, V2), Mask)
     return createBinOpShuffle(V1, V2, Mask);
@@ -2928,9 +2903,9 @@ Instruction *InstCombinerImpl::visitGEPOfGEP(GetElementPtrInst &GEP,
       APInt NewFalseVal = *ConstOffset + *FalseVal;
       Constant *NewTrue = ConstantInt::get(Select->getType(), NewTrueVal);
       Constant *NewFalse = ConstantInt::get(Select->getType(), NewFalseVal);
-      Value *NewSelect = Builder.CreateSelect(
-          Cond, NewTrue, NewFalse, /*Name=*/"",
-          /*MDFrom=*/(ProfcheckDisableMetadataFixes ? nullptr : Select));
+      Value *NewSelect =
+          Builder.CreateSelect(Cond, NewTrue, NewFalse, /*Name=*/"",
+                               /*MDFrom=*/Select);
       GEPNoWrapFlags Flags =
           getMergedGEPNoWrapFlags(*Src, *cast<GEPOperator>(&GEP));
       return replaceInstUsesWith(GEP,
@@ -3083,9 +3058,8 @@ Value *InstCombiner::getFreelyInvertedImpl(Value *V, bool WillInvertAllUses,
         if (auto *II = dyn_cast<IntrinsicInst>(V))
           return Builder->CreateBinaryIntrinsic(
               getInverseMinMaxIntrinsic(II->getIntrinsicID()), NotA, NotB);
-        return Builder->CreateSelect(
-            Cond, NotA, NotB, "",
-            ProfcheckDisableMetadataFixes ? nullptr : cast<Instruction>(V));
+        return Builder->CreateSelect(Cond, NotA, NotB, "",
+                                     cast<Instruction>(V));
       }
       return NonNull;
     }
@@ -3579,10 +3553,9 @@ Instruction *InstCombinerImpl::visitGetElementPtrInst(GetElementPtrInst &GEP) {
           }
 
           if (NewC.has_value()) {
-            Value *NewOp = Builder.CreateBinOp(
+            Value *NewOp = Builder.CreateExactBinOp(
                 static_cast<Instruction::BinaryOps>(ExactIns->getOpcode()), V,
-                ConstantInt::get(V->getType(), *NewC));
-            cast<BinaryOperator>(NewOp)->setIsExact();
+                ConstantInt::get(V->getType(), *NewC), /*IsExact=*/true);
             return GetElementPtrInst::Create(Builder.getInt8Ty(),
                                              GEP.getPointerOperand(), NewOp,
                                              GEP.getNoWrapFlags());
@@ -3601,10 +3574,12 @@ Instruction *InstCombinerImpl::visitGetElementPtrInst(GetElementPtrInst &GEP) {
     APInt BasePtrOffset(IdxWidth, 0);
     Value *UnderlyingPtrOp =
         PtrOp->stripAndAccumulateInBoundsConstantOffsets(DL, BasePtrOffset);
-    bool CanBeNull, CanBeFreed;
+    bool CanBeNull;
     uint64_t DerefBytes = UnderlyingPtrOp->getPointerDereferenceableBytes(
-        DL, CanBeNull, CanBeFreed);
-    if (!CanBeNull && !CanBeFreed && DerefBytes != 0) {
+        DL, CanBeNull, /*CanBeFreed=*/nullptr);
+    // We can ignore CanBeFreed here, because inbounds is explicitly allowed to
+    // refer to a deallocated object.
+    if (!CanBeNull && DerefBytes != 0) {
       if (GEP.accumulateConstantOffset(DL, BasePtrOffset) &&
           BasePtrOffset.isNonNegative()) {
         APInt AllocSize(IdxWidth, DerefBytes);
@@ -3738,7 +3713,8 @@ static bool isRemovableWrite(CallBase &CB, Value *UsedV,
 
 static std::optional<ModRefInfo>
 isAllocSiteRemovable(Instruction *AI, SmallVectorImpl<Instruction *> &Users,
-                     const TargetLibraryInfo &TLI, bool KnowInit) {
+                     const TargetLibraryInfo &TLI, bool KnowInit,
+                     unsigned MaxUsers) {
   SmallVector<Instruction*, 4> Worklist;
   const std::optional<StringRef> Family = getAllocationFamily(AI, &TLI);
   Worklist.push_back(AI);
@@ -3748,7 +3724,7 @@ isAllocSiteRemovable(Instruction *AI, SmallVectorImpl<Instruction *> &Users,
     Instruction *PI = Worklist.pop_back_val();
     for (User *U : PI->users()) {
       Instruction *I = cast<Instruction>(U);
-      if (Users.size() >= MaxAllocSiteRemovableUsers)
+      if (Users.size() >= MaxUsers)
         return std::nullopt;
       switch (I->getOpcode()) {
       default:
@@ -3787,10 +3763,9 @@ isAllocSiteRemovable(Instruction *AI, SmallVectorImpl<Instruction *> &Users,
                  Alignment->isPowerOf2() && Size->urem(*Alignment).isZero();
         };
         auto *CB = dyn_cast<CallBase>(AI);
-        LibFunc TheLibFunc;
-        if (CB && TLI.getLibFunc(*CB->getCalledFunction(), TheLibFunc) &&
-            TLI.has(TheLibFunc) && TheLibFunc == LibFunc_aligned_alloc &&
-            !AlignmentAndSizeKnownValid(CB))
+        if (CB &&
+            TLI.getLibFunc(*CB->getCalledFunction()) == LibFunc_aligned_alloc &&
+            TLI.has(LibFunc_aligned_alloc) && !AlignmentAndSizeKnownValid(CB))
           return std::nullopt;
         Users.emplace_back(I);
         continue;
@@ -3827,7 +3802,6 @@ isAllocSiteRemovable(Instruction *AI, SmallVectorImpl<Instruction *> &Users,
             Users.emplace_back(I);
             continue;
           case Intrinsic::launder_invariant_group:
-          case Intrinsic::strip_invariant_group:
             Users.emplace_back(I);
             Worklist.push_back(I);
             continue;
@@ -3934,7 +3908,8 @@ Instruction *InstCombinerImpl::visitAllocSite(Instruction &MI) {
     KnowInitUndef = false;
 
   auto Removable =
-      isAllocSiteRemovable(&MI, RawUsers, TLI, KnowInitZero | KnowInitUndef);
+      isAllocSiteRemovable(&MI, RawUsers, TLI, KnowInitZero | KnowInitUndef,
+                           CLOpts.max_allocsite_removable_users);
   if (Removable) {
     SmallVector<WeakTrackingVH, 64> Users(RawUsers.begin(), RawUsers.end());
     for (WeakTrackingVH &User : Users) {
@@ -4172,8 +4147,7 @@ Instruction *InstCombinerImpl::visitFree(CallInst &FI, Value *Op) {
   // 'operator delete'; there is no 'operator delete' symbol for which we are
   // permitted to invent a call, even if we're passing in a null pointer.
   if (MinimizeSize) {
-    LibFunc Func;
-    if (TLI.getLibFunc(FI, Func) && TLI.has(Func) && Func == LibFunc_free)
+    if (TLI.getLibFunc(FI) == LibFunc_free && TLI.has(LibFunc_free))
       if (Instruction *I = tryToMoveFreeBeforeNullTest(FI, DL))
         return I;
   }
@@ -4189,12 +4163,11 @@ Instruction *InstCombinerImpl::visitReturnInst(ReturnInst &RI) {
   Function *F = RI.getFunction();
   Type *RetTy = RetVal->getType();
   if (RetTy->isPointerTy()) {
-    bool HasDereferenceable =
-        F->getAttributes().getRetDereferenceableBytes() > 0;
-    if (F->hasRetAttribute(Attribute::NonNull) ||
-        (HasDereferenceable &&
-         !NullPointerIsDefined(F, RetTy->getPointerAddressSpace()))) {
-      if (Value *V = simplifyNonNullOperand(RetVal, HasDereferenceable))
+    bool UseProvenance =
+        F->getAttributes().getRetDereferenceableBytes() > 0 &&
+        !NullPointerIsDefined(F, RetTy->getPointerAddressSpace());
+    if (F->hasRetAttribute(Attribute::NonNull) || UseProvenance) {
+      if (Value *V = simplifyNonNullOperand(RetVal, UseProvenance))
         return replaceOperand(RI, 0, V);
     }
   }
@@ -4368,16 +4341,13 @@ Instruction *InstCombinerImpl::visitCondBrInst(CondBrInst &BI) {
     Value *Or = Builder.CreateLogicalOr(NotX, Y);
 
     // Set weights for the new OR select instruction too.
-    if (!ProfcheckDisableMetadataFixes) {
-      if (auto *OrInst = dyn_cast<Instruction>(Or)) {
-        if (auto *CondInst = dyn_cast<Instruction>(Cond)) {
-          SmallVector<uint32_t> Weights;
-          if (extractBranchWeights(*CondInst, Weights)) {
-            assert(Weights.size() == 2 &&
-                   "Unexpected number of branch weights!");
-            std::swap(Weights[0], Weights[1]);
-            setBranchWeights(*OrInst, Weights, /*IsExpected=*/false);
-          }
+    if (auto *OrInst = dyn_cast<Instruction>(Or)) {
+      if (auto *CondInst = dyn_cast<Instruction>(Cond)) {
+        SmallVector<uint32_t> Weights;
+        if (extractBranchWeights(*CondInst, Weights)) {
+          assert(Weights.size() == 2 && "Unexpected number of branch weights!");
+          std::swap(Weights[0], Weights[1]);
+          setBranchWeights(*OrInst, Weights, /*IsExpected=*/false);
         }
       }
     }
@@ -4889,6 +4859,7 @@ static bool isCatchAll(EHPersonality Personality, Constant *TypeInfo) {
   case EHPersonality::Wasm_CXX:
   case EHPersonality::XL_CXX:
   case EHPersonality::ZOS_CXX:
+  case EHPersonality::Wasm_D:
     return isa<ConstantPointerNull>(TypeInfo);
   }
   llvm_unreachable("invalid enum");
@@ -5381,11 +5352,12 @@ bool InstCombinerImpl::freezeOtherUses(FreezeInst &FI) {
   });
 
   for (auto *U : Users) {
-    for (auto &AssumeVH : AC.assumptionsFor(U)) {
-      if (!AssumeVH)
-        continue;
-      AC.updateAffectedValues(cast<AssumeInst>(AssumeVH));
-    }
+    // Re-queue U and its users: freezing U's operand can expose a fold on a
+    // user of U (e.g. a freeze of U can now be pushed through it) that would
+    // otherwise only fire on a later iteration, tripping the fixpoint verifier.
+    auto *UI = cast<Instruction>(U);
+    Worklist.pushUsersToWorkList(*UI);
+    Worklist.push(UI);
   }
 
   return Changed;
@@ -5497,15 +5469,10 @@ Instruction *InstCombinerImpl::visitFreeze(FreezeInst &I) {
     auto *VTy = dyn_cast<FixedVectorType>(Ty);
     if (!VTy)
       return nullptr;
-    unsigned NumElts = VTy->getNumElements();
-    Constant *BestValue = Constant::getNullValue(VTy->getScalarType());
-    for (unsigned i = 0; i != NumElts; ++i) {
-      Constant *EltC = C->getAggregateElement(i);
-      if (EltC && !match(EltC, m_Undef())) {
-        BestValue = EltC;
-        break;
-      }
-    }
+    Constant *BestValue;
+    if (!match(C, m_ContainsMatchingVectorElement(m_CombineAnd(
+                      m_Unless(m_Undef()), m_Constant(BestValue)))))
+      BestValue = Constant::getNullValue(VTy->getScalarType());
     return Constant::replaceUndefsWith(C, BestValue);
   };
 
@@ -5615,7 +5582,7 @@ bool InstCombinerImpl::tryToSinkInstruction(Instruction *I,
     for (BasicBlock::iterator Scan = std::next(I->getIterator()),
                               E = I->getParent()->end();
          Scan != E; ++Scan)
-      if (Scan->mayWriteToMemory())
+      if (Scan->mayWriteToMemory() && !isa<AssumeInst>(Scan))
         return false;
   }
 
@@ -5821,7 +5788,7 @@ bool InstCombinerImpl::run() {
     // Return the UserBlock if successful.
     auto getOptionalSinkBlockForInst =
         [this](Instruction *I) -> std::optional<BasicBlock *> {
-      if (!EnableCodeSinking)
+      if (!CLOpts.code_sinking)
         return std::nullopt;
 
       BasicBlock *BB = I->getParent();
@@ -5839,7 +5806,7 @@ bool InstCombinerImpl::run() {
             continue;
         }
 
-        if (NumUsers > MaxSinkNumUsers)
+        if (NumUsers > CLOpts.max_sink_users)
           return std::nullopt;
 
         Instruction *UserInst = cast<Instruction>(User);
@@ -5905,8 +5872,9 @@ bool InstCombinerImpl::run() {
 
     // Now that we have an instruction, try combining it to simplify it.
     Builder.SetInsertPoint(I);
-    Builder.CollectMetadataToCopy(
-        I, {LLVMContext::MD_dbg, LLVMContext::MD_annotation});
+    Builder.SetCurrentDebugLocation(I->getDebugLoc());
+    // Used by our IRBuilder inserter to copy annotation metadata.
+    AnnotationMetadataSource = I;
 
 #ifndef NDEBUG
     std::string OrigI;
@@ -5948,6 +5916,10 @@ bool InstCombinerImpl::run() {
 
         Result->insertInto(InstParent, InsertPos);
 
+        // Register newly created assumptions.
+        if (auto *Assume = dyn_cast<AssumeInst>(Result))
+          AC.registerAssumption(Assume);
+
         // Push the new instruction and any users onto the worklist.
         Worklist.pushUsersToWorkList(*Result);
         Worklist.push(Result);
@@ -5983,6 +5955,40 @@ bool InstCombinerImpl::run() {
 class AliasScopeTracker {
   SmallPtrSet<const MDNode *, 8> UsedAliasScopesAndLists;
   SmallPtrSet<const MDNode *, 8> UsedNoAliasScopesAndLists;
+  // Scopes used by every !alias.scope list that scopes from a disjoint-scope
+  // domain appears in. This is used to catch scopes that don't actually make
+  // anything noalias.
+  SmallDenseMap<const MDNode *, SmallPtrSet<const MDNode *, 4>, 4>
+      CommonScopesOfDisjointDomain;
+
+  // Record, for each disjoint-scope domain \p ScopeList uses, which of its
+  // scopes are used by \p ScopeList, adding to a running intersection.
+  void recordDisjointDomainScopes(const MDNode *ScopeList) {
+    SmallDenseMap<const MDNode *, SmallPtrSet<const MDNode *, 4>, 4> UsedScopes;
+    for (const MDOperand &MDOperand : ScopeList->operands()) {
+      const auto *MDScope = cast<MDNode>(MDOperand);
+      const MDNode *Domain = AliasScopeNode(MDScope).getDomain();
+      if (AliasScopeDomainNode(Domain).hasDisjointScopes())
+        UsedScopes[Domain].insert(MDScope);
+    }
+
+    for (auto &[Domain, Scopes] : UsedScopes) {
+      auto [It, Inserted] =
+          CommonScopesOfDisjointDomain.try_emplace(Domain, Scopes);
+      if (!Inserted)
+        llvm::set_intersect(It->second, Scopes);
+    }
+  }
+
+  // Return true if \p Scope is on the implicit !noalias list of one of the
+  // analysed accesses, that is, if it belongs to a disjoint-scope domain and
+  // some access uses that domain without using \p Scope.
+  bool isImplicitlyNoAlias(const MDNode *Scope) const {
+    auto It =
+        CommonScopesOfDisjointDomain.find(AliasScopeNode(Scope).getDomain());
+    return It != CommonScopesOfDisjointDomain.end() &&
+           !It->second.contains(Scope);
+  }
 
 public:
   void analyse(Instruction *I) {
@@ -5990,16 +5996,20 @@ public:
     if (!I->hasMetadataOtherThanDebugLoc())
       return;
 
-    auto Track = [](Metadata *ScopeList, auto &Container) {
+    auto Track = [](Metadata *ScopeList, auto &Container) -> const MDNode * {
       const auto *MDScopeList = dyn_cast_or_null<MDNode>(ScopeList);
       if (!MDScopeList || !Container.insert(MDScopeList).second)
-        return;
+        return nullptr;
       for (const auto &MDOperand : MDScopeList->operands())
         if (auto *MDScope = dyn_cast<MDNode>(MDOperand))
           Container.insert(MDScope);
+      return MDScopeList;
     };
 
-    Track(I->getMetadata(LLVMContext::MD_alias_scope), UsedAliasScopesAndLists);
+    if (const MDNode *AliasScopeList =
+            Track(I->getMetadata(LLVMContext::MD_alias_scope),
+                  UsedAliasScopesAndLists))
+      recordDisjointDomainScopes(AliasScopeList);
     Track(I->getMetadata(LLVMContext::MD_noalias), UsedNoAliasScopesAndLists);
   }
 
@@ -6014,9 +6024,13 @@ public:
     assert(MDSL->getNumOperands() == 1 &&
            "llvm.experimental.noalias.scope should refer to a single scope");
     auto &MDOperand = MDSL->getOperand(0);
+    // A scope is relevant if it appears in an !alias.scope list, and either it
+    // appears in a !noalias list, or it is on the implicit !noalias list of
+    // some access using its disjoint-scope domain.
     if (auto *MD = dyn_cast<MDNode>(MDOperand))
       return !UsedAliasScopesAndLists.contains(MD) ||
-             !UsedNoAliasScopesAndLists.contains(MD);
+             (!UsedNoAliasScopesAndLists.contains(MD) &&
+              !isImplicitlyNoAlias(MD));
 
     // Not an MDNode ? throw away.
     return true;
@@ -6190,22 +6204,13 @@ static bool combineInstructionsOverFunction(
   bool VerifyFixpoint = Opts.VerifyFixpoint &&
                         !F.hasFnAttribute("instcombine-no-verify-fixpoint");
 
-  /// Builder - This is an IRBuilder that automatically inserts new
-  /// instructions into the worklist when they are created.
-  IRBuilder<TargetFolder, IRBuilderCallbackInserter> Builder(
-      F.getContext(), TargetFolder(DL),
-      IRBuilderCallbackInserter([&Worklist, &AC](Instruction *I) {
-        Worklist.add(I);
-        if (auto *Assume = dyn_cast<AssumeInst>(I))
-          AC.registerAssumption(Assume);
-      }));
-
   ReversePostOrderTraversal<BasicBlock *> RPOT(&F.front());
 
   // Lower dbg.declare intrinsics otherwise their value may be clobbered
   // by instcombiner.
+  const InstCombineCLOptions &CLOpts = InstCombineCLOptions::Global;
   bool MadeIRChange = false;
-  if (ShouldLowerDbgDeclare)
+  if (CLOpts.lower_dbg_declare)
     MadeIRChange = LowerDbgDeclare(F);
 
   // Iterate while there is work to do.
@@ -6223,9 +6228,8 @@ static bool combineInstructionsOverFunction(
     LLVM_DEBUG(dbgs() << "\n\nINSTCOMBINE ITERATION #" << Iteration << " on "
                       << F.getName() << "\n");
 
-    InstCombinerImpl IC(Worklist, Builder, F, AA, AC, TLI, TTI, DT, ORE, BFI,
-                        BPI, PSI, DL, RPOT);
-    IC.MaxArraySizeForCombine = MaxArraySize;
+    InstCombinerImpl IC(Worklist, F, AA, AC, TLI, TTI, DT, ORE, BFI, BPI, PSI,
+                        DL, RPOT, CLOpts);
     bool MadeChangeInThisIteration = IC.prepareWorklist(F);
     MadeChangeInThisIteration |= IC.run();
     if (!MadeChangeInThisIteration)
@@ -6312,9 +6316,7 @@ void InstructionCombiningPass::getAnalysisUsage(AnalysisUsage &AU) const {
   AU.addRequired<TargetTransformInfoWrapperPass>();
   AU.addRequired<DominatorTreeWrapperPass>();
   AU.addRequired<OptimizationRemarkEmitterWrapperPass>();
-  AU.addPreserved<DominatorTreeWrapperPass>();
   AU.addPreserved<AAResultsWrapperPass>();
-  AU.addPreserved<BasicAAWrapperPass>();
   AU.addPreserved<GlobalsAAWrapperPass>();
   AU.addRequired<ProfileSummaryInfoWrapperPass>();
   LazyBlockFrequencyInfoPass::getLazyBFIAnalysisUsage(AU);

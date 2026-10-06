@@ -1,7 +1,4 @@
-#include <stdio.h>
-
+int counter = 1;
 int main() {
-  int counter = 0;
-  printf("I only print one time: %d.\n", counter++);
-  return counter;
+  return 0; // break here
 }

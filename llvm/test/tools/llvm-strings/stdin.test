@@ -1,5 +1,10 @@
 ## Show that llvm-strings can handle stdin input properly.
 
+## On z/OS, ebcdic output from printf is converted into utf-8 as
+## the output being redirected, causing the values to be incorrect.
+## TODO: use a builtin version of printf
+# UNSUPPORTED: system-zos
+
 ## Case 1: output with single string.
 RUN: printf "abcdefg" | llvm-strings - | FileCheck %s --check-prefix=CASE1 --implicit-check-not={{.}}
 CASE1: abcdefg

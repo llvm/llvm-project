@@ -28,7 +28,7 @@ add_integration_test(
     --threads 64
 )
 
-add_libc_test(
+add_integration_test(
   fixedbuffer_test
   SUITE
     libc-support-gpu-tests

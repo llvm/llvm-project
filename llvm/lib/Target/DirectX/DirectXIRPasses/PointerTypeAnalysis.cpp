@@ -139,10 +139,11 @@ Type *classifyFunctionType(const Function &F, PointerTypeMap &Map) {
 
 static Type *classifyConstantWithOpaquePtr(const Constant *C,
                                            PointerTypeMap &Map) {
-  // FIXME: support ConstantPointerNull which could map to more than one
-  // TypedPointerType.
-  // See https://github.com/llvm/llvm-project/issues/57942.
-  if (isa<ConstantPointerNull>(C))
+  // FIXME: support ConstantPointerNull and UndefValue which could map to more
+  // than one TypedPointerType. See
+  // https://github.com/llvm/llvm-project/issues/57942.
+  if (isa<ConstantPointerNull>(C) ||
+      (isa<UndefValue>(C) && C->getType()->isPointerTy()))
     return TypedPointerType::get(Type::getInt8Ty(C->getContext()),
                                  C->getType()->getPointerAddressSpace());
 

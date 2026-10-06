@@ -314,7 +314,7 @@ def main():
     parser.add_argument(
         "--source",
         type=str,
-        help="Print each CHECK chunk before each delimeter line in the source"
+        help="Print each CHECK chunk before each delimiter line in the source"
         "file, respectively. The delimeter lines are identified by "
         "--source_delim_regex.",
     )

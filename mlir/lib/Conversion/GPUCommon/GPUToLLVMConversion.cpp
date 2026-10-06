@@ -549,12 +549,10 @@ void GpuToLLVMConversionPass::runOnOperation() {
 
   // Populate all patterns from all dialects that implement the
   // `ConvertToLLVMPatternInterface` interface.
-  for (Dialect *dialect : context->getLoadedDialects()) {
-    auto *iface = dyn_cast<ConvertToLLVMPatternInterface>(dialect);
-    if (!iface)
-      continue;
+  std::vector<Dialect *> dialects = context->getLoadedDialects();
+  for (auto *iface :
+       llvm::make_isa_range<ConvertToLLVMPatternInterface>(dialects))
     iface->populateConvertToLLVMConversionPatterns(target, converter, patterns);
-  }
 
   // Preserve GPU modules and binaries. Modules are preserved as they can be
   // converted later by `gpu-module-to-binary`.
@@ -771,8 +769,9 @@ LogicalResult ConvertAllocOpToGpuRuntimeCallPattern::matchAndRewrite(
   if (isShared && allocOp.getAsyncToken())
     return rewriter.notifyMatchFailure(
         allocOp, "Host Shared allocation cannot be done async");
-  if (!isShared && failed(isAsyncWithOneDependency(rewriter, allocOp)))
-    return failure();
+  if (adaptor.getAsyncDependencies().size() > 1)
+    return rewriter.notifyMatchFailure(
+        allocOp, "Can convert with at most one async dependency.");
 
   // Get shape of the memref as values: static sizes are constant
   // values and dynamic sizes are passed to 'alloc' as operands.
@@ -796,6 +795,18 @@ LogicalResult ConvertAllocOpToGpuRuntimeCallPattern::matchAndRewrite(
       allocCallBuilder.create(loc, rewriter, {sizeBytes, stream, isHostShared})
           .getResult();
 
+  // Cast the runtime-returned pointer to the memref's address space if it
+  // isn't there already, so it fits the descriptor's pointer slots.
+  unsigned dstAddrSpace = memRefType.getMemorySpaceAsInt();
+  unsigned srcAddrSpace =
+      cast<LLVM::LLVMPointerType>(allocatedPtr.getType()).getAddressSpace();
+  if (dstAddrSpace != srcAddrSpace) {
+    auto targetPtrTy =
+        LLVM::LLVMPointerType::get(rewriter.getContext(), dstAddrSpace);
+    allocatedPtr =
+        LLVM::AddrSpaceCastOp::create(rewriter, loc, targetPtrTy, allocatedPtr);
+  }
+
   // No alignment.
   Value alignedPtr = allocatedPtr;
 
@@ -816,18 +827,29 @@ LogicalResult ConvertAllocOpToGpuRuntimeCallPattern::matchAndRewrite(
 LogicalResult ConvertDeallocOpToGpuRuntimeCallPattern::matchAndRewrite(
     gpu::DeallocOp deallocOp, OpAdaptor adaptor,
     ConversionPatternRewriter &rewriter) const {
-  if (failed(areAllLLVMTypes(deallocOp, adaptor.getOperands(), rewriter)) ||
-      failed(isAsyncWithOneDependency(rewriter, deallocOp)))
+  if (failed(areAllLLVMTypes(deallocOp, adaptor.getOperands(), rewriter)))
     return failure();
+  if (adaptor.getAsyncDependencies().size() > 1)
+    return rewriter.notifyMatchFailure(
+        deallocOp, "Can convert with at most one async dependency.");
 
   Location loc = deallocOp.getLoc();
 
   Value pointer =
       MemRefDescriptor(adaptor.getMemref()).allocatedPtr(rewriter, loc);
-  Value stream = adaptor.getAsyncDependencies().front();
+  auto nullPtr = mlir::LLVM::ZeroOp::create(rewriter, loc, llvmPointerType);
+  Value stream = adaptor.getAsyncDependencies().empty()
+                     ? nullPtr
+                     : adaptor.getAsyncDependencies().front();
   deallocCallBuilder.create(loc, rewriter, {pointer, stream});
 
-  rewriter.replaceOp(deallocOp, {stream});
+  if (deallocOp.getAsyncToken()) {
+    // Async dealloc: propagate the stream as the async token replacement.
+    rewriter.replaceOp(deallocOp, {stream});
+  } else {
+    // Sync dealloc: no results to replace, just remove the op.
+    rewriter.eraseOp(deallocOp);
+  }
   return success();
 }
 
@@ -1057,8 +1079,8 @@ LogicalResult LegalizeLaunchFuncOpPattern::matchAndRewrite(
       uint64_t staticSize = static_cast<uint64_t>(bitwidth / 8) *
                             static_cast<uint64_t>(memrefTy.getNumElements());
 
-      Value sizeArg = LLVM::ConstantOp::create(
-          rewriter, loc, getIndexType(), rewriter.getIndexAttr(staticSize));
+      Value sizeArg =
+          createIndexAttrConstant(rewriter, loc, getIndexType(), staticSize);
       llvmArgumentsWithSizes.push_back(llvmArg); // Presumably a bare pointer.
       llvmArgumentsWithSizes.push_back(sizeArg);
     }
@@ -1078,7 +1100,7 @@ LogicalResult LegalizeLaunchFuncOpPattern::matchAndRewrite(
                       adaptor.getBlockSizeZ()},
       adaptor.getDynamicSharedMemorySize(),
       llvmArgumentsWithSizes.empty() ? llvmArguments : llvmArgumentsWithSizes,
-      stream, clusterSize);
+      nullptr, {}, stream, clusterSize);
   if (launchOp.getCooperative())
     newLaunchOp.setCooperative(true);
   if (launchOp.getAsyncToken())
@@ -1201,14 +1223,6 @@ static Value genConstInt32From(OpBuilder &builder, Location loc, T tValue) {
                                   static_cast<int32_t>(tValue));
 }
 
-template <typename T>
-static Value genConstFloat32From(OpBuilder &builder, Location loc, T tValue) {
-  Type llvmFloat32Type = builder.getF32Type();
-  return LLVM::ConstantOp::create(
-      builder, loc, llvmFloat32Type,
-      builder.getF32FloatAttr(static_cast<float>(tValue)));
-}
-
 LogicalResult ConvertCreateDnTensorOpToGpuRuntimeCallPattern::matchAndRewrite(
     gpu::CreateDnTensorOp op, OpAdaptor adaptor,
     ConversionPatternRewriter &rewriter) const {
@@ -1236,8 +1250,8 @@ LogicalResult ConvertCreateDnTensorOpToGpuRuntimeCallPattern::matchAndRewrite(
   // the dnmat is used with spmat with 2:4 sparsity
   if (dims.size() == 2) {
     if (isSpMMCusparseLtOp(op.getDnTensor())) {
-      auto handleSz = LLVM::ConstantOp::create(rewriter, loc, getIndexType(),
-                                               rewriter.getIndexAttr(11032));
+      auto handleSz =
+          createIndexAttrConstant(rewriter, loc, getIndexType(), 11032);
       handle = LLVM::AllocaOp::create(rewriter, loc, llvmPointerType,
                                       llvmInt8Type, handleSz, /*alignment=*/16);
       handle = LLVM::BitcastOp::create(rewriter, loc, llvmPointerType, handle);
@@ -1398,8 +1412,7 @@ LogicalResult ConvertCreate2To4SpMatOpToGpuRuntimeCallPattern::matchAndRewrite(
   auto dtp = genConstInt32From(rewriter, loc, getCuSparseDataTypeFrom(dType));
 
   // CUDA runner asserts the size is 44104 bytes.
-  auto handleSz = LLVM::ConstantOp::create(rewriter, loc, getIndexType(),
-                                           rewriter.getIndexAttr(44104));
+  auto handleSz = createIndexAttrConstant(rewriter, loc, getIndexType(), 44104);
   Value handle = LLVM::AllocaOp::create(
       rewriter, loc, llvmPointerType, llvmInt8Type, handleSz, /*alignment=*/16);
   handle = LLVM::BitcastOp::create(rewriter, loc, llvmPointerType, handle);
@@ -1488,8 +1501,7 @@ LogicalResult ConvertSpMMBufferSizeOpToGpuRuntimeCallPattern::matchAndRewrite(
         genConstInt32From(rewriter, loc, get2To4PruneFlag(op.getSpmatA()));
     auto computeType = genConstInt32From(
         rewriter, loc, getCuSparseLtDataTypeFrom(adaptor.getComputeType()));
-    auto three = LLVM::ConstantOp::create(rewriter, loc, getIndexType(),
-                                          rewriter.getIndexAttr(3));
+    auto three = createIndexAttrConstant(rewriter, loc, getIndexType(), 3);
     auto bufferSize =
         LLVM::AllocaOp::create(rewriter, loc, llvmPointerType, llvmPointerType,
                                three, /*alignment=*/16);
@@ -1502,12 +1514,10 @@ LogicalResult ConvertSpMMBufferSizeOpToGpuRuntimeCallPattern::matchAndRewrite(
 
     auto bufferSizePtr1 = LLVM::GEPOp::create(
         rewriter, loc, llvmPointerType, llvmPointerType, bufferSize,
-        ValueRange{LLVM::ConstantOp::create(rewriter, loc, getIndexType(),
-                                            rewriter.getIndexAttr(1))});
+        ValueRange{createIndexAttrConstant(rewriter, loc, getIndexType(), 1)});
     auto bufferSizePtr2 = LLVM::GEPOp::create(
         rewriter, loc, llvmPointerType, llvmPointerType, bufferSize,
-        ValueRange{LLVM::ConstantOp::create(rewriter, loc, getIndexType(),
-                                            rewriter.getIndexAttr(2))});
+        ValueRange{createIndexAttrConstant(rewriter, loc, getIndexType(), 2)});
     auto bufferSize0 =
         LLVM::LoadOp::create(rewriter, loc, llvmInt64Type, bufferSize);
     auto bufferSize1 =
@@ -1717,23 +1727,19 @@ LogicalResult ConvertSpMatGetSizeOpToGpuRuntimeCallPattern::matchAndRewrite(
   Location loc = op.getLoc();
   auto stream = adaptor.getAsyncDependencies().front();
 
-  auto three = LLVM::ConstantOp::create(rewriter, loc, getIndexType(),
-                                        rewriter.getIndexAttr(3));
+  auto three = createIndexAttrConstant(rewriter, loc, getIndexType(), 3);
   auto buffer = LLVM::AllocaOp::create(rewriter, loc, llvmPointerType,
                                        llvmInt64Type, three, /*alignment=*/16);
 
   auto rowsPtr = LLVM::GEPOp::create(
       rewriter, loc, llvmPointerType, llvmPointerType, buffer,
-      ValueRange{LLVM::ConstantOp::create(rewriter, loc, getIndexType(),
-                                          rewriter.getIndexAttr(0))});
+      ValueRange{createIndexAttrConstant(rewriter, loc, getIndexType(), 0)});
   auto colsPtr = LLVM::GEPOp::create(
       rewriter, loc, llvmPointerType, llvmPointerType, buffer,
-      ValueRange{LLVM::ConstantOp::create(rewriter, loc, getIndexType(),
-                                          rewriter.getIndexAttr(1))});
+      ValueRange{createIndexAttrConstant(rewriter, loc, getIndexType(), 1)});
   auto nnzsPtr = LLVM::GEPOp::create(
       rewriter, loc, llvmPointerType, llvmPointerType, buffer,
-      ValueRange{LLVM::ConstantOp::create(rewriter, loc, getIndexType(),
-                                          rewriter.getIndexAttr(2))});
+      ValueRange{createIndexAttrConstant(rewriter, loc, getIndexType(), 2)});
   createSpMatGetSizeBuilder.create(
       loc, rewriter, {adaptor.getSpmat(), rowsPtr, colsPtr, nnzsPtr, stream});
   auto rows = LLVM::LoadOp::create(rewriter, loc, llvmInt64Type, rowsPtr);

@@ -23,8 +23,9 @@ class LoopUnrollAndJamPass
 
 public:
   explicit LoopUnrollAndJamPass(int OptLevel = 2) : OptLevel(OptLevel) {}
-  PreservedAnalyses run(LoopNest &L, LoopAnalysisManager &AM,
-                        LoopStandardAnalysisResults &AR, LPMUpdater &U);
+  LLVM_ABI PreservedAnalyses run(LoopNest &L, LoopAnalysisManager &AM,
+                                 LoopStandardAnalysisResults &AR,
+                                 LPMUpdater &U);
 };
 
 } // end namespace llvm

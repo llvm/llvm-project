@@ -18,14 +18,16 @@ namespace lldb_dap {
 InstructionBreakpoint::InstructionBreakpoint(
     DAP &d, const protocol::InstructionBreakpoint &breakpoint)
     : Breakpoint(d, breakpoint.condition, breakpoint.hitCondition),
-      m_instruction_address_reference(LLDB_INVALID_ADDRESS),
-      m_offset(breakpoint.offset.value_or(0)) {
+      m_instruction_address_reference(LLDB_INVALID_ADDRESS) {
   llvm::StringRef instruction_reference(breakpoint.instructionReference);
   instruction_reference.getAsInteger(0, m_instruction_address_reference);
-  m_instruction_address_reference += m_offset;
+  m_instruction_address_reference += breakpoint.offset.value_or(0);
 }
 
 void InstructionBreakpoint::SetBreakpoint() {
+  lldb::SBMutex lock = m_dap.GetAPIMutex();
+  std::lock_guard<lldb::SBMutex> guard(lock);
+
   m_bp =
       m_dap.target.BreakpointCreateByAddress(m_instruction_address_reference);
   Breakpoint::SetBreakpoint();

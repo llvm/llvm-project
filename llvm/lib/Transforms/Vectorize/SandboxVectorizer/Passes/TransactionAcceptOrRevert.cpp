@@ -14,9 +14,8 @@
 
 namespace llvm {
 
-static cl::opt<int> CostThreshold("sbvec-cost-threshold", cl::init(0),
-                                  cl::Hidden,
-                                  cl::desc("Vectorization cost threshold."));
+cl::opt<int> CostThreshold("sbvec-cost-threshold", cl::init(0), cl::Hidden,
+                           cl::desc("Vectorization cost threshold."));
 
 namespace sandboxir {
 

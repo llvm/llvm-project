@@ -309,7 +309,7 @@ func.func @f_convert_coop_matrix(%arg0 : !spirv.coopmatrix<8x16xf32, Subgroup, M
 // -----
 
 func.func @f_convert_vector(%arg0 : f32) -> f32 {
-  // expected-error @+1 {{expected the different bit widths for operand type and result type, but provided 'f32' and 'f32'}}
+  // expected-error @+1 {{expected different component types for operand type and result type, but provided 'f32' and 'f32'}}
   %0 = spirv.FConvert %arg0 : f32 to f32
   spirv.ReturnValue %0 : f32
 }
@@ -320,6 +320,14 @@ func.func @f_convert_bf16_to_f32_scalar(%arg0 : bf16) -> f32 {
   // CHECK: {{%.*}} = spirv.FConvert {{%.*}} : bf16 to f32
   %0 = spirv.FConvert %arg0 : bf16 to f32
   spirv.ReturnValue %0 : f32
+}
+
+// -----
+
+func.func @f_convert_f16_to_bf16_scalar(%arg0 : f16) -> bf16 {
+  // CHECK: {{%.*}} = spirv.FConvert {{%.*}} : f16 to bf16
+  %0 = spirv.FConvert %arg0 : f16 to bf16
+  spirv.ReturnValue %0 : bf16
 }
 
 // -----
@@ -568,6 +576,16 @@ spirv.module Logical GLSL450 requires #spirv.vce<v1.0, [Shader], []> {
   spirv.func @covert_u_to_ptr_fail_2(%arg0 : i32) "None" {
     // expected-error @+1 {{result must be a physical pointer}}
     %0 = spirv.ConvertUToPtr %arg0 : i32 to !spirv.ptr<i32, Generic>
+    spirv.Return
+  }
+}
+
+// -----
+
+spirv.module Physical64 OpenCL requires #spirv.vce<v1.0, [Kernel, Addresses], []> {
+  spirv.func @covert_u_to_ptr_invalid_operand(%arg0 : si32) "None" {
+    // expected-error @+1 {{operand must be a scalar type of unsigned integer}}
+    %0 = spirv.ConvertUToPtr %arg0 : si32 to !spirv.ptr<i32, Generic>
     spirv.Return
   }
 }

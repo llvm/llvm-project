@@ -175,18 +175,25 @@ static void appendSubframeworkPaths(Module *Mod,
 OptionalFileEntryRef ModuleMap::findHeader(
     Module *M, const Module::UnresolvedHeaderDirective &Header,
     SmallVectorImpl<char> &RelativePathName, bool &NeedsFramework) {
-  // Search for the header file within the module's home directory.
-  auto Directory = M->Directory;
-  SmallString<128> FullPathName(Directory->getName());
-
   auto GetFile = [&](StringRef Filename) -> OptionalFileEntryRef {
-    auto File =
-        expectedToOptional(SourceMgr.getFileManager().getFileRef(Filename));
+    auto File = SourceMgr.getFileManager().getOptionalFileRef(Filename);
     if (!File || (Header.Size && File->getSize() != *Header.Size) ||
         (Header.ModTime && File->getModificationTime() != *Header.ModTime))
       return std::nullopt;
     return *File;
   };
+
+  if (llvm::sys::path::is_absolute(Header.FileName)) {
+    RelativePathName.clear();
+    RelativePathName.append(Header.FileName.begin(), Header.FileName.end());
+    return GetFile(Header.FileName);
+  }
+
+  // Search for the header file within the module's home directory.
+  auto Directory = M->Directory;
+  if (!Directory)
+    return std::nullopt;
+  SmallString<128> FullPathName(Directory->getName());
 
   auto GetFrameworkFile = [&]() -> OptionalFileEntryRef {
     unsigned FullPathLength = FullPathName.size();
@@ -215,12 +222,6 @@ OptionalFileEntryRef ModuleMap::findHeader(
     llvm::sys::path::append(FullPathName, RelativePathName);
     return GetFile(FullPathName);
   };
-
-  if (llvm::sys::path::is_absolute(Header.FileName)) {
-    RelativePathName.clear();
-    RelativePathName.append(Header.FileName.begin(), Header.FileName.end());
-    return GetFile(Header.FileName);
-  }
 
   if (M->isPartOfFramework())
     return GetFrameworkFile();

@@ -32,7 +32,7 @@ export void call0() {
 // CHECK-NEXT: [[VL:%.*]] = extractelement <2 x i32> [[L]], i64 0
 // CHECK-NEXT: store i32 [[VL]], ptr [[G1]], align 4
 // CHECK-NEXT: [[VL2:%.*]] = extractelement <2 x i32> [[L]], i64 1
-// CHECK-NEXT: [[C:%.*]] = sitofp i32 [[VL2]] to float
+// CHECK-NEXT: [[C:%.*]] = sitofp reassoc nnan ninf nsz arcp afn i32 [[VL2]] to float
 // CHECK-NEXT: store float [[C]], ptr [[G2]], align 4
 export void call1() {
   int2 A = {1,2};
@@ -54,7 +54,7 @@ export void call1() {
 // CHECK-NEXT: [[L:%.*]] = load i32, ptr [[G3]], align 4
 // CHECK-NEXT: store i32 [[L]], ptr [[G1]], align 4
 // CHECK-NEXT: [[L4:%.*]] = load i32, ptr [[G4]], align 4
-// CHECK-NEXT: [[C:%.*]] = sitofp i32 [[L4]] to float
+// CHECK-NEXT: [[C:%.*]] = sitofp reassoc nnan ninf nsz arcp afn i32 [[L4]] to float
 // CHECK-NEXT: store float [[C]], ptr [[G2]], align 4
 export void call2() {
   int A[2] = {1,2};
@@ -104,7 +104,7 @@ export void call6() {
 // CHECK-NEXT: [[L:%.*]] = load i32, ptr [[G3]], align 4
 // CHECK-NEXT: store i32 [[L]], ptr [[G1]], align 4
 // CHECK-NEXT: [[L4:%.*]] = load i32, ptr [[G4]], align 4
-// CHECK-NEXT: [[C:%.*]] = sitofp i32 [[L4]] to float
+// CHECK-NEXT: [[C:%.*]] = sitofp reassoc nnan ninf nsz arcp afn i32 [[L4]] to float
 // CHECK-NEXT: store float [[C]], ptr [[G2]], align 4
 export void call7() {
   int A[2] = {1,2};
@@ -132,7 +132,7 @@ struct T {
 // CHECK-NEXT: [[L1:%.*]] = load i32, ptr [[G3]], align 4
 // CHECK-NEXT: store i32 [[L1]], ptr [[G1]], align 4
 // CHECK-NEXT: [[L2:%.*]] = load i32, ptr [[G4]], align 4
-// CHECK-NEXT: [[C:%.*]] = sitofp i32 [[L2]] to float
+// CHECK-NEXT: [[C:%.*]] = sitofp reassoc nnan ninf nsz arcp afn i32 [[L2]] to float
 // CHECK-NEXT: store float [[C]], ptr [[G2]], align 4
 export void call8() {
   T t = {1,2,3};
@@ -152,8 +152,12 @@ struct Derived : BFields {
 
 // Derived Struct truncate to scalar
 // CHECK-LABEL: call9
-// CHECK: [[D2:%.*]] = alloca double, align 8
+// CHECK-NEXT:  [[ENTRY:.*:]]
+// CHECK-NEXT: %[[#C_ENTRY:]] = call token @llvm.experimental.convergence.entry()
+// CHECK-NEXT:  [[D_INDIRECT_ADDR:%.*]] = alloca ptr, align 4
+// CHECK-NEXT: [[D2:%.*]] = alloca double, align 8
 // CHECK-NEXT: [[Tmp:%.*]] = alloca %struct.Derived, align 1
+// CHECK-NEXT: store ptr %D, ptr [[D_INDIRECT_ADDR]], align 4
 // CHECK-NEXT: call void @llvm.memcpy.p0.p0.i32(ptr align 1 [[Tmp]], ptr align 1 %D, i32 19, i1 false)
 // CHECK-NEXT: [[Gep:%.*]] = getelementptr inbounds %struct.Derived, ptr [[Tmp]], i32 0, i32 0
 // CHECK-NEXT: [[E:%.*]] = getelementptr inbounds nuw %struct.BFields, ptr [[Gep]], i32 0, i32 1
@@ -179,7 +183,7 @@ export void call9(Derived D) {
 // CHECK-NEXT: [[Gep2:%.*]] = getelementptr inbounds %struct.Derived, ptr [[D]], i32 0, i32 0, i32 2
 // CHECK-NEXT: [[Gep3:%.*]] = getelementptr inbounds %struct.Derived, ptr [[D]], i32 0, i32 1
 // CHECK-NEXT: [[VL:%.*]] = extractelement <4 x i32> [[A]], i64 0
-// CHECK-NEXT: [[C:%.*]] = sitofp i32 [[VL]] to double
+// CHECK-NEXT: [[C:%.*]] = sitofp reassoc nnan ninf nsz arcp afn i32 [[VL]] to double
 // CHECK-NEXT: store double [[C]], ptr [[Gep1]], align 8
 // CHECK-NEXT: [[VL4:%.*]] = extractelement <4 x i32> [[A]], i64 1
 // CHECK-NEXT: [[B:%.*]] = trunc i32 [[VL4]] to i24
@@ -189,7 +193,7 @@ export void call9(Derived D) {
 // CHECK-NEXT: [[BFSet:%.*]] = or i24 [[BFC]], [[BFV]]
 // CHECK-NEXT: store i24 [[BFSet]], ptr [[E]], align 1
 // CHECK-NEXT: [[VL5:%.*]] = extractelement <4 x i32> [[A]], i64 2
-// CHECK-NEXT: [[C6:%.*]] = sitofp i32 [[VL5]] to float
+// CHECK-NEXT: [[C6:%.*]] = sitofp reassoc nnan ninf nsz arcp afn i32 [[VL5]] to float
 // CHECK-NEXT: store float [[C6]], ptr [[Gep2]], align 4
 // CHECK-NEXT: [[VL7:%.*]] = extractelement <4 x i32> [[A]], i64 3
 // CHECK-NEXT: store i32 [[VL7]], ptr [[Gep3]], align 4
@@ -200,8 +204,12 @@ export void call10(int4 I) {
 
 // truncate derived struct
 // CHECK-LABEL: call11
-// CHECK: [[B:%.*]] = alloca %struct.BFields, align 1
+// CHECK-NEXT:  [[ENTRY:.*:]]
+// CHECK-NEXT: %[[#C_ENTRY:]] = call token @llvm.experimental.convergence.entry()
+// CHECK-NEXT:  [[D_INDIRECT_ADDR:%.*]] = alloca ptr, align 4
+// CHECK-NEXT: [[B:%.*]] = alloca %struct.BFields, align 1
 // CHECK-NEXT: [[Tmp:%.*]] = alloca %struct.Derived, align 1
+// CHECK-NEXT: store ptr %D, ptr [[D_INDIRECT_ADDR]], align 4
 // CHECK-NEXT: call void @llvm.memcpy.p0.p0.i32(ptr align 1 [[Tmp]], ptr align 1 [[D]], i32 19, i1 false)
 // CHECK-NEXT: [[Gep:%.*]] = getelementptr inbounds %struct.BFields, ptr [[B]], i32 0
 // CHECK-NEXT: [[E:%.*]] = getelementptr inbounds nuw %struct.BFields, ptr [[Gep]], i32 0, i32 1
@@ -284,7 +292,7 @@ struct MoreBFields {
 // CHECK-NEXT: [[BFS:%.*]] = or i64 [[BFC]], [[BFV]]
 // CHECK-NEXT: store i64 [[BFS]], ptr [[FieldB]], align 1
 // store int A into field C
-// CHECK-NEXT: [[Conv5:%.*]] = sitofp i32 [[Z]] to float
+// CHECK-NEXT: [[Conv5:%.*]] = sitofp reassoc nnan ninf nsz arcp afn i32 [[Z]] to float
 // CHECK-NEXT: store float [[Conv5]], ptr [[FieldC]], align 4
 // store int A into bitfield D
 // CHECK-NEXT: [[Conv6:%.*]] = trunc i32 [[Z]] to i16
@@ -302,7 +310,7 @@ struct MoreBFields {
 // CHECK-NEXT: [[FES:%.*]] = or i16 [[FEC]], [[FESHL]]
 // CHECK-NEXT: store i16 [[FES]], ptr [[FieldE]], align 1
 // store int A into field F
-// CHECK-NEXT: [[Conv16:%.*]] = sitofp i32 [[Z]] to double
+// CHECK-NEXT: [[Conv16:%.*]] = sitofp reassoc nnan ninf nsz arcp afn i32 [[Z]] to double
 // CHECK-NEXT: store double [[Conv16]], ptr [[FieldF]], align 8
 // store int A into field G
 // CHECK-NEXT: store i32 [[Z]], ptr [[FieldG]], align 4

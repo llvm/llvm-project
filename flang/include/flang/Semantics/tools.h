@@ -51,6 +51,7 @@ const Scope *FindModuleOrSubmoduleContaining(const Scope &);
 const Scope *FindModuleFileContaining(const Scope &);
 const Scope *FindPureProcedureContaining(const Scope &);
 const Scope *FindOpenACCConstructContaining(const Scope *);
+bool IsOpenACCMapped(const Symbol &, const Scope &);
 bool HasOpenACCRoutineDirective(const Scope *);
 
 const Symbol *FindInterface(const Symbol &);
@@ -195,6 +196,8 @@ const Symbol *HasImpureFinal(
 bool MayRequireFinalization(const DerivedTypeSpec &);
 // Does this type have an allocatable direct component?
 bool HasAllocatableDirectComponent(const DerivedTypeSpec &);
+// Does this type have a pointer direct component?
+bool HasPointerDirectComponent(const DerivedTypeSpec &);
 // Does this type have any defined assignment at any level (or any polymorphic
 // allocatable)?
 bool MayHaveDefinedAssignment(const DerivedTypeSpec &);
@@ -205,6 +208,8 @@ bool IsExternal(const Symbol &);
 bool IsModuleProcedure(const Symbol &);
 bool HasCoarray(const parser::Expr &);
 bool IsAssumedType(const Symbol &);
+bool IsEnumerationType(const Symbol &);
+bool IsEnumerationType(const DerivedTypeSpec &);
 bool IsPolymorphic(const Symbol &);
 bool IsUnlimitedPolymorphic(const Symbol &);
 bool IsPolymorphicAllocatable(const Symbol &);
