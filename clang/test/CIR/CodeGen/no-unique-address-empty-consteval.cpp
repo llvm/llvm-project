@@ -6,7 +6,7 @@
 // RUN: FileCheck --check-prefix=LLVM --input-file=%t.ll %s
 // RUN: %clang_cc1 -std=c++20 -triple x86_64-unknown-linux-gnu \
 // RUN:   -emit-llvm %s -o %t.og.ll
-// RUN: FileCheck --check-prefix=OGCG --input-file=%t.og.ll %s
+// RUN: FileCheck --check-prefix=LLVM --input-file=%t.og.ll %s
 
 // Regression test: a [[no_unique_address]] empty member/base initialized by
 // a consteval constructor is folded by Sema into a ConstantExpr. CIRGen's
@@ -73,10 +73,6 @@ struct U {
 // LLVM:         %[[V3:.*]] = getelementptr inbounds nuw %struct.U, ptr %{{.+}}, i32 0, i32 0
 // LLVM-NEXT:    store i64 39612, ptr %[[V3]], align 8
 
-// OGCG-LABEL: define {{.*}} i64 @_Z19test_aggregate_initv(
-// OGCG:         %[[V3:.*]] = getelementptr inbounds nuw %struct.U, ptr %{{.+}}, i32 0, i32 0
-// OGCG-NEXT:    store i64 39612, ptr %[[V3]], align 8
-
 unsigned long test_aggregate_init() {
   U u{0x9abc, 0};
   return u.v3;
@@ -106,12 +102,6 @@ unsigned long test_default_member_init() {
 // LLVM-NEXT:    store i64 %[[X]], ptr %[[V]], align 8
 // LLVM-NEXT:    ret void
 
-// OGCG-LABEL: define {{.*}} void @_ZN1SC2Em(
-// OGCG:         %[[V:.*]] = getelementptr inbounds nuw %struct.S, ptr %{{.+}}, i32 0, i32 0
-// OGCG:         %[[X:.*]] = load i64, ptr %{{.+}}, align 8
-// OGCG-NEXT:    store i64 %[[X]], ptr %[[V]], align 8
-// OGCG-NEXT:    ret void
-
 // CIR-LABEL: cir.func {{.*}} @_ZN1TC2Em(
 // CIR:         cir.base_class_addr
 // CIR:         %[[V2:.*]] = cir.get_member %{{.+}}[0] {name = "v2"}
@@ -125,12 +115,6 @@ unsigned long test_default_member_init() {
 // LLVM-NEXT:    store i64 %[[X2]], ptr %[[V2]], align 8
 // LLVM-NEXT:    ret void
 
-// OGCG-LABEL: define {{.*}} void @_ZN1TC2Em(
-// OGCG:         %[[V2:.*]] = getelementptr inbounds nuw %struct.T, ptr %{{.+}}, i32 0, i32 0
-// OGCG:         %[[X2:.*]] = load i64, ptr %{{.+}}, align 8
-// OGCG-NEXT:    store i64 %[[X2]], ptr %[[V2]], align 8
-// OGCG-NEXT:    ret void
-
 // CIR-LABEL: cir.func {{.*}} @_ZN1VC2Em(
 // CIR:         %[[V4:.*]] = cir.get_member %{{.+}}[0] {name = "v4"}
 // CIR:         %[[X4:.*]] = cir.load align(8) %{{.+}} : !cir.ptr<!u64i>, !u64i
@@ -142,9 +126,3 @@ unsigned long test_default_member_init() {
 // LLVM:         %[[X4:.*]] = load i64, ptr %{{.+}}, align 8
 // LLVM-NEXT:    store i64 %[[X4]], ptr %[[V4]], align 8
 // LLVM-NEXT:    ret void
-
-// OGCG-LABEL: define {{.*}} void @_ZN1VC2Em(
-// OGCG:         %[[V4:.*]] = getelementptr inbounds nuw %struct.V, ptr %{{.+}}, i32 0, i32 0
-// OGCG:         %[[X4:.*]] = load i64, ptr %{{.+}}, align 8
-// OGCG-NEXT:    store i64 %[[X4]], ptr %[[V4]], align 8
-// OGCG-NEXT:    ret void
