@@ -223,7 +223,7 @@ class module_test_generator:
             "      key: libcpp-header-exportable-declarations.FileType, "
             f"     value: {'CHeader' if is_c_header else 'Header'}"
             "    }, "
-            f"   {skip_declarations} {extra_declarations} {extra_header}, "
+            f"   {skip_declarations} {extra_declarations} {extra_header}"
             "  ]}' "
             f"--load={self.clang_tidy_plugin} "
             f"-- {self.compiler_flags} "
