@@ -20891,16 +20891,16 @@ static SDValue combineFPBoundarySetCC(SDNode *N, SelectionDAG &DAG,
   SDValue Bound = N->getOperand(1);
   EVT FPVT = X.getValueType();
   if ((FPVT != MVT::f32 && FPVT != MVT::f64) ||
-      (FPVT == MVT::f32 && !Subtarget.hasStdExtFOrZfinx()) ||
-      (FPVT == MVT::f64 && !Subtarget.hasStdExtDOrZdinx()) ||
+      !DAG.getTargetLoweringInfo().isTypeLegal(FPVT) ||
       !isa<ConstantFPSDNode>(Bound))
     return SDValue();
 
   const APFloat &C = cast<ConstantFPSDNode>(Bound)->getValueAPF();
   ISD::CondCode CC = cast<CondCodeSDNode>(N->getOperand(2))->get();
   FPClassTest Mask = fcNone;
-  FPClassTest NaNs = fcSNan | fcQNan;
-  if (C.bitwiseIsEqual(APFloat::getLargest(C.getSemantics(), true))) {
+  const FPClassTest NaNs = fcSNan | fcQNan;
+  if (C.bitwiseIsEqual(
+          APFloat::getLargest(C.getSemantics(), /*Negative=*/true))) {
     if (CC == ISD::SETOLT || CC == ISD::SETULT)
       Mask = fcNegInf;
     else if (CC == ISD::SETOGE || CC == ISD::SETUGE)
