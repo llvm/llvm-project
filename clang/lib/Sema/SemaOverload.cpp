@@ -9408,6 +9408,7 @@ BuiltinCandidateTypeSet::AddTypesConvertedFrom(QualType Ty,
     HasArithmeticOrEnumeralTypes || Ty->isArithmeticType();
 
   // Flag if the type might convert to a promoted arithmetic or vector type.
+  // For records, this is set below when visiting their conversion functions.
   MayConvertToArithmetic =
       MayConvertToArithmetic ||
       !(TyIsRec || Ty->isScopedEnumeralType() || Ty->isAnyPointerType() ||
@@ -9606,11 +9607,9 @@ class BuiltinOperatorOverloadBuilder {
   Sema &S;
   ArrayRef<Expr *> Args;
   QualifiersAndAtomic VisibleTypeConversionsQuals;
-  bool HasArithmeticOrEnumeralCandidateType;
-  // Whether the candidates that only have arithmetic or vector parameter types
-  // can be viable: HasArithmeticOrEnumeralCandidateType is set, and every
-  // argument might convert to such a type. Nothing looks at non-viable builtin
-  // candidates, so these candidates are only added if this is set.
+  // Whether a candidate whose parameters are all arithmetic, vector or matrix
+  // types can be viable. It is viable if there is an arithmetic or enumeral
+  // candidate type, and every argument might convert to such a type.
   bool ArithmeticCandidatesMayBeViable;
   SmallVectorImpl<BuiltinCandidateTypeSet> &CandidateTypes;
   OverloadCandidateSet &CandidateSet;
@@ -9757,8 +9756,6 @@ public:
       OverloadCandidateSet &CandidateSet)
       : S(S), Args(Args),
         VisibleTypeConversionsQuals(VisibleTypeConversionsQuals),
-        HasArithmeticOrEnumeralCandidateType(
-            HasArithmeticOrEnumeralCandidateType),
         ArithmeticCandidatesMayBeViable(
             HasArithmeticOrEnumeralCandidateType &&
             llvm::all_of(CandidateTypes,
@@ -10144,7 +10141,7 @@ public:
   ///  * (M2.getElementType(), M2) -> M2
   ///  * (M2, M2) -> M2 // Only if M2 is not part of CandidateTypes[0].
   void addMatrixBinaryArithmeticOverloads() {
-    if (!HasArithmeticOrEnumeralCandidateType)
+    if (!ArithmeticCandidatesMayBeViable)
       return;
 
     for (QualType M1 : CandidateTypes[0].matrix_types()) {

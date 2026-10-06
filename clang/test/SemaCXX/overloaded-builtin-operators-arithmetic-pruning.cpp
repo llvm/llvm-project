@@ -10,6 +10,7 @@ typedef int Vec __attribute__((vector_size(16)));
 
 struct ConvTemplate { template <class T> operator T() const; };
 struct ConvInt { operator int() const; };
+struct ConvConvInt { operator ConvInt() const; };
 struct ConvIntRef { operator int &() const; };
 struct ConvScoped { operator Scoped() const; };
 struct ConvUnscoped { operator Unscoped() const; };
@@ -20,7 +21,7 @@ struct ExplicitBool { explicit operator bool() const; };
 Scoped operator|(Scoped, Scoped);
 
 void test(Scoped S, Unscoped U, ConvTemplate CT, ConvInt CI, ConvIntRef CIR,
-          ConvScoped CS, ConvUnscoped CU, ConvPtr CP, ConvVec CV,
+          ConvConvInt CCI, ConvScoped CS, ConvUnscoped CU, ConvPtr CP, ConvVec CV,
           ExplicitBool EB, int I, int *P, Vec V, _Atomic(int) AI) {
   // Conversion function templates might convert to anything.
   (void)(CT == 1); // expected-error {{use of overloaded operator '==' is ambiguous (with operand types 'ConvTemplate' and 'int')}} \
@@ -58,6 +59,7 @@ void test(Scoped S, Unscoped U, ConvTemplate CT, ConvInt CI, ConvIntRef CIR,
                    // expected-note {{no implicit conversion for scoped enum}}
   (void)(S + CI);  // expected-error {{invalid operands to binary expression ('Scoped' and 'ConvInt')}}
   (void)(CS == 1); // expected-error {{invalid operands to binary expression ('ConvScoped' and 'int')}}
+  (void)(CCI == 1); // expected-error {{invalid operands to binary expression ('ConvConvInt' and 'int')}}
   (void)(CP == 1); // expected-error {{invalid operands to binary expression ('ConvPtr' and 'int')}}
   (void)(EB == 1); // expected-error {{invalid operands to binary expression ('ExplicitBool' and 'int')}}
   (void)(AI + S);  // expected-error {{invalid operands to binary expression ('_Atomic(int)' and 'Scoped')}} \
