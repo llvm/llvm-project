@@ -356,25 +356,25 @@ define void @store_factor3(ptr %ptr, <4 x i32> %v0, <4 x i32> %v1, <4 x i32> %v2
 ; NO_NEON:       // %bb.0:
 ; NO_NEON-NEXT:    ldr w8, [sp]
 ; NO_NEON-NEXT:    ldr w9, [sp, #32]
-; NO_NEON-NEXT:    // kill: def $w4 killed $w4 def $x4
-; NO_NEON-NEXT:    mov w12, w3
-; NO_NEON-NEXT:    ldr w10, [sp, #24]
-; NO_NEON-NEXT:    ldr w11, [sp, #16]
-; NO_NEON-NEXT:    mov w13, w6
-; NO_NEON-NEXT:    orr x8, x8, x9, lsl #32
-; NO_NEON-NEXT:    ldr w9, [sp, #8]
+; NO_NEON-NEXT:    // kill: def $w6 killed $w6 def $x6
+; NO_NEON-NEXT:    // kill: def $w3 killed $w3 def $x3
+; NO_NEON-NEXT:    // kill: def $w1 killed $w1 def $x1
 ; NO_NEON-NEXT:    // kill: def $w7 killed $w7 def $x7
 ; NO_NEON-NEXT:    // kill: def $w5 killed $w5 def $x5
+; NO_NEON-NEXT:    // kill: def $w4 killed $w4 def $x4
 ; NO_NEON-NEXT:    // kill: def $w2 killed $w2 def $x2
-; NO_NEON-NEXT:    orr x12, x12, x7, lsl #32
-; NO_NEON-NEXT:    orr x10, x10, x4, lsl #32
-; NO_NEON-NEXT:    orr x9, x9, x2, lsl #32
+; NO_NEON-NEXT:    ldr w10, [sp, #24]
+; NO_NEON-NEXT:    ldr w11, [sp, #8]
+; NO_NEON-NEXT:    bfi x3, x7, #32, #32
+; NO_NEON-NEXT:    bfi x1, x5, #32, #32
+; NO_NEON-NEXT:    bfi x8, x9, #32, #32
+; NO_NEON-NEXT:    ldr w9, [sp, #16]
+; NO_NEON-NEXT:    bfi x10, x4, #32, #32
+; NO_NEON-NEXT:    bfi x11, x2, #32, #32
+; NO_NEON-NEXT:    bfi x6, x9, #32, #32
 ; NO_NEON-NEXT:    stp x10, x8, [x0, #32]
-; NO_NEON-NEXT:    mov w10, w1
-; NO_NEON-NEXT:    orr x8, x13, x11, lsl #32
-; NO_NEON-NEXT:    orr x10, x10, x5, lsl #32
-; NO_NEON-NEXT:    stp x8, x12, [x0, #16]
-; NO_NEON-NEXT:    stp x10, x9, [x0]
+; NO_NEON-NEXT:    stp x1, x11, [x0]
+; NO_NEON-NEXT:    stp x6, x3, [x0, #16]
 ; NO_NEON-NEXT:    ret
 ;
 ; CHECK-GI-LABEL: store_factor3:
@@ -1024,22 +1024,22 @@ define void @store_undef_mask_factor3(ptr %ptr, <4 x i32> %v0, <4 x i32> %v1, <4
 ; NO_NEON-NEXT:    ldr w8, [sp]
 ; NO_NEON-NEXT:    ldr w9, [sp, #32]
 ; NO_NEON-NEXT:    // kill: def $w4 killed $w4 def $x4
-; NO_NEON-NEXT:    mov w11, w3
-; NO_NEON-NEXT:    ldr w10, [sp, #24]
+; NO_NEON-NEXT:    // kill: def $w3 killed $w3 def $x3
+; NO_NEON-NEXT:    // kill: def $w1 killed $w1 def $x1
 ; NO_NEON-NEXT:    // kill: def $w7 killed $w7 def $x7
 ; NO_NEON-NEXT:    // kill: def $w5 killed $w5 def $x5
 ; NO_NEON-NEXT:    // kill: def $w2 killed $w2 def $x2
-; NO_NEON-NEXT:    orr x8, x8, x9, lsl #32
+; NO_NEON-NEXT:    ldr w10, [sp, #24]
+; NO_NEON-NEXT:    bfi x3, x7, #32, #32
+; NO_NEON-NEXT:    bfi x1, x5, #32, #32
+; NO_NEON-NEXT:    bfi x8, x9, #32, #32
+; NO_NEON-NEXT:    bfi x10, x4, #32, #32
 ; NO_NEON-NEXT:    ldr w9, [sp, #16]
-; NO_NEON-NEXT:    orr x10, x10, x4, lsl #32
-; NO_NEON-NEXT:    lsl x9, x9, #32
 ; NO_NEON-NEXT:    stp x10, x8, [x0, #32]
-; NO_NEON-NEXT:    orr x8, x11, x7, lsl #32
-; NO_NEON-NEXT:    mov w10, w1
-; NO_NEON-NEXT:    lsl x11, x2, #32
-; NO_NEON-NEXT:    stp x9, x8, [x0, #16]
-; NO_NEON-NEXT:    orr x9, x10, x5, lsl #32
-; NO_NEON-NEXT:    stp x9, x11, [x0]
+; NO_NEON-NEXT:    lsl x8, x9, #32
+; NO_NEON-NEXT:    lsl x9, x2, #32
+; NO_NEON-NEXT:    stp x8, x3, [x0, #16]
+; NO_NEON-NEXT:    stp x1, x9, [x0]
 ; NO_NEON-NEXT:    ret
 ;
 ; CHECK-GI-LABEL: store_undef_mask_factor3:
@@ -1500,27 +1500,27 @@ define void @store_general_mask_factor3(ptr %ptr, <32 x i32> %v0, <32 x i32> %v1
 ; NO_NEON-NEXT:    .cfi_def_cfa_offset 16
 ; NO_NEON-NEXT:    .cfi_offset w29, -16
 ; NO_NEON-NEXT:    ldr w8, [sp, #240]
-; NO_NEON-NEXT:    ldr w10, [sp, #112]
+; NO_NEON-NEXT:    ldr w9, [sp, #112]
+; NO_NEON-NEXT:    // kill: def $w7 killed $w7 def $x7
+; NO_NEON-NEXT:    // kill: def $w5 killed $w5 def $x5
 ; NO_NEON-NEXT:    // kill: def $w6 killed $w6 def $x6
-; NO_NEON-NEXT:    ldr w11, [sp, #224]
-; NO_NEON-NEXT:    ldr w12, [sp, #96]
-; NO_NEON-NEXT:    ldr w9, [sp, #104]
-; NO_NEON-NEXT:    ldr w13, [sp, #16]
-; NO_NEON-NEXT:    orr x8, x8, x10, lsl #32
-; NO_NEON-NEXT:    orr x10, x11, x12, lsl #32
-; NO_NEON-NEXT:    ldr w11, [sp, #232]
-; NO_NEON-NEXT:    orr x9, x9, x13, lsl #32
-; NO_NEON-NEXT:    mov w13, w7
+; NO_NEON-NEXT:    ldr w10, [sp, #104]
+; NO_NEON-NEXT:    ldr w11, [sp, #16]
+; NO_NEON-NEXT:    ldr w12, [sp, #232]
+; NO_NEON-NEXT:    bfi x8, x9, #32, #32
+; NO_NEON-NEXT:    ldr w9, [sp, #224]
+; NO_NEON-NEXT:    bfi x10, x11, #32, #32
+; NO_NEON-NEXT:    ldr w11, [sp, #96]
+; NO_NEON-NEXT:    bfi x7, x12, #32, #32
 ; NO_NEON-NEXT:    ldr w12, [sp, #88]
 ; NO_NEON-NEXT:    str x8, [x0, #40]
-; NO_NEON-NEXT:    orr x11, x13, x11, lsl #32
 ; NO_NEON-NEXT:    ldr w8, [sp, #216]
-; NO_NEON-NEXT:    orr x12, x12, x6, lsl #32
-; NO_NEON-NEXT:    stp x11, x9, [x0, #24]
-; NO_NEON-NEXT:    mov w9, w5
-; NO_NEON-NEXT:    orr x8, x9, x8, lsl #32
-; NO_NEON-NEXT:    stp x12, x10, [x0, #8]
-; NO_NEON-NEXT:    str x8, [x0]
+; NO_NEON-NEXT:    bfi x9, x11, #32, #32
+; NO_NEON-NEXT:    stp x7, x10, [x0, #24]
+; NO_NEON-NEXT:    bfi x12, x6, #32, #32
+; NO_NEON-NEXT:    bfi x5, x8, #32, #32
+; NO_NEON-NEXT:    stp x12, x9, [x0, #8]
+; NO_NEON-NEXT:    str x5, [x0]
 ; NO_NEON-NEXT:    ldr x29, [sp], #16 // 8-byte Folded Reload
 ; NO_NEON-NEXT:    ret
 ;
@@ -1578,23 +1578,23 @@ define void @store_general_mask_factor3_undefmultimid(ptr %ptr, <32 x i32> %v0, 
 ; NO_NEON-NEXT:    .cfi_offset w29, -16
 ; NO_NEON-NEXT:    ldr w8, [sp, #240]
 ; NO_NEON-NEXT:    ldr w9, [sp, #112]
+; NO_NEON-NEXT:    // kill: def $w5 killed $w5 def $x5
 ; NO_NEON-NEXT:    ldr w10, [sp, #104]
 ; NO_NEON-NEXT:    ldr w11, [sp, #16]
 ; NO_NEON-NEXT:    ldr w12, [sp, #232]
-; NO_NEON-NEXT:    orr x8, x8, x9, lsl #32
+; NO_NEON-NEXT:    bfi x8, x9, #32, #32
 ; NO_NEON-NEXT:    ldr w9, [sp, #224]
-; NO_NEON-NEXT:    orr x10, x10, x11, lsl #32
+; NO_NEON-NEXT:    bfi x10, x11, #32, #32
 ; NO_NEON-NEXT:    ldr w11, [sp, #96]
 ; NO_NEON-NEXT:    lsl x12, x12, #32
 ; NO_NEON-NEXT:    str x8, [x0, #40]
 ; NO_NEON-NEXT:    ldr w8, [sp, #216]
-; NO_NEON-NEXT:    orr x9, x9, x11, lsl #32
-; NO_NEON-NEXT:    mov w11, w5
+; NO_NEON-NEXT:    bfi x9, x11, #32, #32
 ; NO_NEON-NEXT:    str x10, [x0, #32]
 ; NO_NEON-NEXT:    ldr w10, [sp, #88]
-; NO_NEON-NEXT:    orr x8, x11, x8, lsl #32
+; NO_NEON-NEXT:    bfi x5, x8, #32, #32
 ; NO_NEON-NEXT:    stp x9, x12, [x0, #16]
-; NO_NEON-NEXT:    stp x8, x10, [x0]
+; NO_NEON-NEXT:    stp x5, x10, [x0]
 ; NO_NEON-NEXT:    ldr x29, [sp], #16 // 8-byte Folded Reload
 ; NO_NEON-NEXT:    ret
 ;
@@ -1641,23 +1641,23 @@ define void @store_general_mask_factor3_undef_fail(ptr %ptr, <32 x i32> %v0, <32
 ; NO_NEON-NEXT:    .cfi_offset w29, -16
 ; NO_NEON-NEXT:    ldr w8, [sp, #240]
 ; NO_NEON-NEXT:    ldr w9, [sp, #112]
+; NO_NEON-NEXT:    // kill: def $w5 killed $w5 def $x5
 ; NO_NEON-NEXT:    ldr w10, [sp, #104]
 ; NO_NEON-NEXT:    ldr w11, [sp, #24]
 ; NO_NEON-NEXT:    ldr w12, [sp, #232]
-; NO_NEON-NEXT:    orr x8, x8, x9, lsl #32
+; NO_NEON-NEXT:    bfi x8, x9, #32, #32
 ; NO_NEON-NEXT:    ldr w9, [sp, #224]
-; NO_NEON-NEXT:    orr x10, x10, x11, lsl #32
+; NO_NEON-NEXT:    bfi x10, x11, #32, #32
 ; NO_NEON-NEXT:    ldr w11, [sp, #96]
 ; NO_NEON-NEXT:    lsl x12, x12, #32
 ; NO_NEON-NEXT:    str x8, [x0, #40]
 ; NO_NEON-NEXT:    ldr w8, [sp, #216]
-; NO_NEON-NEXT:    orr x9, x9, x11, lsl #32
-; NO_NEON-NEXT:    mov w11, w5
+; NO_NEON-NEXT:    bfi x9, x11, #32, #32
 ; NO_NEON-NEXT:    str x10, [x0, #32]
 ; NO_NEON-NEXT:    ldr w10, [sp, #88]
-; NO_NEON-NEXT:    orr x8, x11, x8, lsl #32
+; NO_NEON-NEXT:    bfi x5, x8, #32, #32
 ; NO_NEON-NEXT:    stp x9, x12, [x0, #16]
-; NO_NEON-NEXT:    stp x8, x10, [x0]
+; NO_NEON-NEXT:    stp x5, x10, [x0]
 ; NO_NEON-NEXT:    ldr x29, [sp], #16 // 8-byte Folded Reload
 ; NO_NEON-NEXT:    ret
 ;
@@ -1715,14 +1715,14 @@ define void @store_general_mask_factor3_undeflane(ptr %ptr, <32 x i32> %v0, <32 
 ; NO_NEON-NEXT:    ldr w11, [sp, #232]
 ; NO_NEON-NEXT:    ldr w12, [sp, #224]
 ; NO_NEON-NEXT:    ldr w13, [sp, #96]
-; NO_NEON-NEXT:    orr x8, x8, x9, lsl #32
+; NO_NEON-NEXT:    bfi x8, x9, #32, #32
 ; NO_NEON-NEXT:    str x10, [x0, #32]
 ; NO_NEON-NEXT:    ldr w10, [sp, #216]
 ; NO_NEON-NEXT:    lsl x9, x11, #32
-; NO_NEON-NEXT:    orr x11, x12, x13, lsl #32
+; NO_NEON-NEXT:    bfi x12, x13, #32, #32
 ; NO_NEON-NEXT:    str x8, [x0, #40]
 ; NO_NEON-NEXT:    ldr w8, [sp, #88]
-; NO_NEON-NEXT:    stp x11, x9, [x0, #16]
+; NO_NEON-NEXT:    stp x12, x9, [x0, #16]
 ; NO_NEON-NEXT:    lsl x9, x10, #32
 ; NO_NEON-NEXT:    stp x9, x8, [x0]
 ; NO_NEON-NEXT:    ldr x29, [sp], #16 // 8-byte Folded Reload
@@ -1776,13 +1776,13 @@ define void @store_general_mask_factor3_negativestart(ptr %ptr, <32 x i32> %v0, 
 ; NO_NEON-NEXT:    ldr w10, [sp, #104]
 ; NO_NEON-NEXT:    ldr w11, [sp, #232]
 ; NO_NEON-NEXT:    ldr w12, [sp, #96]
-; NO_NEON-NEXT:    orr x8, x8, x9, lsl #32
+; NO_NEON-NEXT:    bfi x8, x9, #32, #32
 ; NO_NEON-NEXT:    ldr w9, [sp, #224]
-; NO_NEON-NEXT:    orr x10, x10, x3, lsl #32
+; NO_NEON-NEXT:    bfi x10, x3, #32, #32
 ; NO_NEON-NEXT:    lsl x11, x11, #32
 ; NO_NEON-NEXT:    str x8, [x0, #40]
 ; NO_NEON-NEXT:    ldr w8, [sp, #216]
-; NO_NEON-NEXT:    orr x9, x9, x12, lsl #32
+; NO_NEON-NEXT:    bfi x9, x12, #32, #32
 ; NO_NEON-NEXT:    str x10, [x0, #32]
 ; NO_NEON-NEXT:    ldr w10, [sp, #88]
 ; NO_NEON-NEXT:    lsl x8, x8, #32
@@ -2613,51 +2613,52 @@ define void @store_factor3_wide(ptr %ptr, <8 x i32> %v0, <8 x i32> %v1, <8 x i32
 ;
 ; NO_NEON-LABEL: store_factor3_wide:
 ; NO_NEON:       // %bb.0:
-; NO_NEON-NEXT:    ldr w10, [sp, #48]
-; NO_NEON-NEXT:    ldr w11, [sp, #112]
+; NO_NEON-NEXT:    ldr w8, [sp, #64]
+; NO_NEON-NEXT:    ldr w9, [sp, #128]
+; NO_NEON-NEXT:    // kill: def $w5 killed $w5 def $x5
+; NO_NEON-NEXT:    // kill: def $w7 killed $w7 def $x7
+; NO_NEON-NEXT:    // kill: def $w3 killed $w3 def $x3
+; NO_NEON-NEXT:    // kill: def $w1 killed $w1 def $x1
 ; NO_NEON-NEXT:    // kill: def $w6 killed $w6 def $x6
 ; NO_NEON-NEXT:    // kill: def $w4 killed $w4 def $x4
-; NO_NEON-NEXT:    mov w18, w7
-; NO_NEON-NEXT:    ldr w9, [sp, #64]
-; NO_NEON-NEXT:    ldr w8, [sp, #120]
-; NO_NEON-NEXT:    mov w17, w5
-; NO_NEON-NEXT:    ldr w14, [sp, #128]
-; NO_NEON-NEXT:    orr x10, x10, x11, lsl #32
-; NO_NEON-NEXT:    ldr w11, [sp]
-; NO_NEON-NEXT:    ldr w12, [sp, #104]
-; NO_NEON-NEXT:    ldr w13, [sp, #32]
 ; NO_NEON-NEXT:    // kill: def $w2 killed $w2 def $x2
-; NO_NEON-NEXT:    ldr w15, [sp, #88]
-; NO_NEON-NEXT:    orr x9, x9, x14, lsl #32
-; NO_NEON-NEXT:    orr x8, x8, x11, lsl #32
-; NO_NEON-NEXT:    ldr w16, [sp, #16]
-; NO_NEON-NEXT:    ldr w11, [sp, #56]
-; NO_NEON-NEXT:    orr x12, x12, x6, lsl #32
-; NO_NEON-NEXT:    ldr w14, [sp, #40]
-; NO_NEON-NEXT:    str x9, [x0, #88]
-; NO_NEON-NEXT:    ldr w9, [sp, #96]
-; NO_NEON-NEXT:    str x8, [x0, #80]
-; NO_NEON-NEXT:    ldr w8, [sp, #80]
-; NO_NEON-NEXT:    orr x11, x18, x11, lsl #32
-; NO_NEON-NEXT:    orr x9, x13, x9, lsl #32
-; NO_NEON-NEXT:    orr x13, x15, x4, lsl #32
-; NO_NEON-NEXT:    stp x12, x10, [x0, #56]
-; NO_NEON-NEXT:    orr x8, x16, x8, lsl #32
-; NO_NEON-NEXT:    ldr w12, [sp, #24]
-; NO_NEON-NEXT:    str x11, [x0, #72]
-; NO_NEON-NEXT:    stp x13, x9, [x0, #32]
-; NO_NEON-NEXT:    ldr w13, [sp, #72]
-; NO_NEON-NEXT:    mov w9, w3
-; NO_NEON-NEXT:    str x8, [x0, #16]
+; NO_NEON-NEXT:    ldr w10, [sp, #120]
+; NO_NEON-NEXT:    ldr w12, [sp]
+; NO_NEON-NEXT:    ldr w11, [sp, #48]
+; NO_NEON-NEXT:    ldr w15, [sp, #112]
+; NO_NEON-NEXT:    bfi x8, x9, #32, #32
+; NO_NEON-NEXT:    ldr w14, [sp, #56]
+; NO_NEON-NEXT:    ldr w9, [sp, #32]
+; NO_NEON-NEXT:    bfi x10, x12, #32, #32
+; NO_NEON-NEXT:    bfi x11, x15, #32, #32
+; NO_NEON-NEXT:    ldr w13, [sp, #104]
+; NO_NEON-NEXT:    str x8, [x0, #88]
+; NO_NEON-NEXT:    bfi x7, x14, #32, #32
+; NO_NEON-NEXT:    ldr w8, [sp, #40]
+; NO_NEON-NEXT:    str x10, [x0, #80]
+; NO_NEON-NEXT:    bfi x13, x6, #32, #32
+; NO_NEON-NEXT:    ldr w10, [sp, #96]
+; NO_NEON-NEXT:    bfi x5, x8, #32, #32
+; NO_NEON-NEXT:    ldr w8, [sp, #24]
+; NO_NEON-NEXT:    ldr w12, [sp, #88]
+; NO_NEON-NEXT:    ldr w14, [sp, #16]
+; NO_NEON-NEXT:    bfi x9, x10, #32, #32
+; NO_NEON-NEXT:    str x11, [x0, #64]
+; NO_NEON-NEXT:    ldr w10, [sp, #80]
+; NO_NEON-NEXT:    bfi x3, x8, #32, #32
+; NO_NEON-NEXT:    bfi x12, x4, #32, #32
+; NO_NEON-NEXT:    ldr w11, [sp, #72]
 ; NO_NEON-NEXT:    ldr w8, [sp, #8]
-; NO_NEON-NEXT:    mov w11, w1
-; NO_NEON-NEXT:    orr x10, x17, x14, lsl #32
-; NO_NEON-NEXT:    orr x9, x9, x12, lsl #32
-; NO_NEON-NEXT:    orr x12, x13, x2, lsl #32
-; NO_NEON-NEXT:    orr x8, x11, x8, lsl #32
-; NO_NEON-NEXT:    str x10, [x0, #48]
-; NO_NEON-NEXT:    str x9, [x0, #24]
-; NO_NEON-NEXT:    stp x8, x12, [x0]
+; NO_NEON-NEXT:    str x7, [x0, #72]
+; NO_NEON-NEXT:    bfi x14, x10, #32, #32
+; NO_NEON-NEXT:    str x13, [x0, #56]
+; NO_NEON-NEXT:    bfi x11, x2, #32, #32
+; NO_NEON-NEXT:    bfi x1, x8, #32, #32
+; NO_NEON-NEXT:    str x5, [x0, #48]
+; NO_NEON-NEXT:    str x9, [x0, #40]
+; NO_NEON-NEXT:    stp x3, x12, [x0, #24]
+; NO_NEON-NEXT:    stp x11, x14, [x0, #8]
+; NO_NEON-NEXT:    str x1, [x0]
 ; NO_NEON-NEXT:    ret
 ;
 ; CHECK-GI-LABEL: store_factor3_wide:
@@ -3141,25 +3142,25 @@ define void @store_factor3_intrinsic(ptr %ptr, <4 x i32> %v0, <4 x i32> %v1, <4 
 ; NO_NEON:       // %bb.0:
 ; NO_NEON-NEXT:    ldr w8, [sp]
 ; NO_NEON-NEXT:    ldr w9, [sp, #32]
-; NO_NEON-NEXT:    // kill: def $w4 killed $w4 def $x4
-; NO_NEON-NEXT:    mov w12, w3
-; NO_NEON-NEXT:    ldr w10, [sp, #24]
-; NO_NEON-NEXT:    ldr w11, [sp, #16]
-; NO_NEON-NEXT:    mov w13, w6
-; NO_NEON-NEXT:    orr x8, x8, x9, lsl #32
-; NO_NEON-NEXT:    ldr w9, [sp, #8]
+; NO_NEON-NEXT:    // kill: def $w6 killed $w6 def $x6
+; NO_NEON-NEXT:    // kill: def $w3 killed $w3 def $x3
+; NO_NEON-NEXT:    // kill: def $w1 killed $w1 def $x1
 ; NO_NEON-NEXT:    // kill: def $w7 killed $w7 def $x7
 ; NO_NEON-NEXT:    // kill: def $w5 killed $w5 def $x5
+; NO_NEON-NEXT:    // kill: def $w4 killed $w4 def $x4
 ; NO_NEON-NEXT:    // kill: def $w2 killed $w2 def $x2
-; NO_NEON-NEXT:    orr x12, x12, x7, lsl #32
-; NO_NEON-NEXT:    orr x10, x10, x4, lsl #32
-; NO_NEON-NEXT:    orr x9, x9, x2, lsl #32
+; NO_NEON-NEXT:    ldr w10, [sp, #24]
+; NO_NEON-NEXT:    ldr w11, [sp, #8]
+; NO_NEON-NEXT:    bfi x3, x7, #32, #32
+; NO_NEON-NEXT:    bfi x1, x5, #32, #32
+; NO_NEON-NEXT:    bfi x8, x9, #32, #32
+; NO_NEON-NEXT:    ldr w9, [sp, #16]
+; NO_NEON-NEXT:    bfi x10, x4, #32, #32
+; NO_NEON-NEXT:    bfi x11, x2, #32, #32
+; NO_NEON-NEXT:    bfi x6, x9, #32, #32
 ; NO_NEON-NEXT:    stp x10, x8, [x0, #32]
-; NO_NEON-NEXT:    mov w10, w1
-; NO_NEON-NEXT:    orr x8, x13, x11, lsl #32
-; NO_NEON-NEXT:    orr x10, x10, x5, lsl #32
-; NO_NEON-NEXT:    stp x8, x12, [x0, #16]
-; NO_NEON-NEXT:    stp x10, x9, [x0]
+; NO_NEON-NEXT:    stp x1, x11, [x0]
+; NO_NEON-NEXT:    stp x6, x3, [x0, #16]
 ; NO_NEON-NEXT:    ret
 ;
 ; CHECK-GI-LABEL: store_factor3_intrinsic:
@@ -3189,51 +3190,52 @@ define void @store_factor3_wide_intrinsic(ptr %ptr, <8 x i32> %v0, <8 x i32> %v1
 ;
 ; NO_NEON-LABEL: store_factor3_wide_intrinsic:
 ; NO_NEON:       // %bb.0:
-; NO_NEON-NEXT:    ldr w10, [sp, #48]
-; NO_NEON-NEXT:    ldr w11, [sp, #112]
+; NO_NEON-NEXT:    ldr w8, [sp, #64]
+; NO_NEON-NEXT:    ldr w9, [sp, #128]
+; NO_NEON-NEXT:    // kill: def $w5 killed $w5 def $x5
+; NO_NEON-NEXT:    // kill: def $w7 killed $w7 def $x7
+; NO_NEON-NEXT:    // kill: def $w3 killed $w3 def $x3
+; NO_NEON-NEXT:    // kill: def $w1 killed $w1 def $x1
 ; NO_NEON-NEXT:    // kill: def $w6 killed $w6 def $x6
 ; NO_NEON-NEXT:    // kill: def $w4 killed $w4 def $x4
-; NO_NEON-NEXT:    mov w18, w7
-; NO_NEON-NEXT:    ldr w9, [sp, #64]
-; NO_NEON-NEXT:    ldr w8, [sp, #120]
-; NO_NEON-NEXT:    mov w17, w5
-; NO_NEON-NEXT:    ldr w14, [sp, #128]
-; NO_NEON-NEXT:    orr x10, x10, x11, lsl #32
-; NO_NEON-NEXT:    ldr w11, [sp]
-; NO_NEON-NEXT:    ldr w12, [sp, #104]
-; NO_NEON-NEXT:    ldr w13, [sp, #32]
 ; NO_NEON-NEXT:    // kill: def $w2 killed $w2 def $x2
-; NO_NEON-NEXT:    ldr w15, [sp, #88]
-; NO_NEON-NEXT:    orr x9, x9, x14, lsl #32
-; NO_NEON-NEXT:    orr x8, x8, x11, lsl #32
-; NO_NEON-NEXT:    ldr w16, [sp, #16]
-; NO_NEON-NEXT:    ldr w11, [sp, #56]
-; NO_NEON-NEXT:    orr x12, x12, x6, lsl #32
-; NO_NEON-NEXT:    ldr w14, [sp, #40]
-; NO_NEON-NEXT:    str x9, [x0, #88]
-; NO_NEON-NEXT:    ldr w9, [sp, #96]
-; NO_NEON-NEXT:    str x8, [x0, #80]
-; NO_NEON-NEXT:    ldr w8, [sp, #80]
-; NO_NEON-NEXT:    orr x11, x18, x11, lsl #32
-; NO_NEON-NEXT:    orr x9, x13, x9, lsl #32
-; NO_NEON-NEXT:    orr x13, x15, x4, lsl #32
-; NO_NEON-NEXT:    stp x12, x10, [x0, #56]
-; NO_NEON-NEXT:    orr x8, x16, x8, lsl #32
-; NO_NEON-NEXT:    ldr w12, [sp, #24]
-; NO_NEON-NEXT:    str x11, [x0, #72]
-; NO_NEON-NEXT:    stp x13, x9, [x0, #32]
-; NO_NEON-NEXT:    ldr w13, [sp, #72]
-; NO_NEON-NEXT:    mov w9, w3
-; NO_NEON-NEXT:    str x8, [x0, #16]
+; NO_NEON-NEXT:    ldr w10, [sp, #120]
+; NO_NEON-NEXT:    ldr w12, [sp]
+; NO_NEON-NEXT:    ldr w11, [sp, #48]
+; NO_NEON-NEXT:    ldr w15, [sp, #112]
+; NO_NEON-NEXT:    bfi x8, x9, #32, #32
+; NO_NEON-NEXT:    ldr w14, [sp, #56]
+; NO_NEON-NEXT:    ldr w9, [sp, #32]
+; NO_NEON-NEXT:    bfi x10, x12, #32, #32
+; NO_NEON-NEXT:    bfi x11, x15, #32, #32
+; NO_NEON-NEXT:    ldr w13, [sp, #104]
+; NO_NEON-NEXT:    str x8, [x0, #88]
+; NO_NEON-NEXT:    bfi x7, x14, #32, #32
+; NO_NEON-NEXT:    ldr w8, [sp, #40]
+; NO_NEON-NEXT:    str x10, [x0, #80]
+; NO_NEON-NEXT:    bfi x13, x6, #32, #32
+; NO_NEON-NEXT:    ldr w10, [sp, #96]
+; NO_NEON-NEXT:    bfi x5, x8, #32, #32
+; NO_NEON-NEXT:    ldr w8, [sp, #24]
+; NO_NEON-NEXT:    ldr w12, [sp, #88]
+; NO_NEON-NEXT:    ldr w14, [sp, #16]
+; NO_NEON-NEXT:    bfi x9, x10, #32, #32
+; NO_NEON-NEXT:    str x11, [x0, #64]
+; NO_NEON-NEXT:    ldr w10, [sp, #80]
+; NO_NEON-NEXT:    bfi x3, x8, #32, #32
+; NO_NEON-NEXT:    bfi x12, x4, #32, #32
+; NO_NEON-NEXT:    ldr w11, [sp, #72]
 ; NO_NEON-NEXT:    ldr w8, [sp, #8]
-; NO_NEON-NEXT:    mov w11, w1
-; NO_NEON-NEXT:    orr x10, x17, x14, lsl #32
-; NO_NEON-NEXT:    orr x9, x9, x12, lsl #32
-; NO_NEON-NEXT:    orr x12, x13, x2, lsl #32
-; NO_NEON-NEXT:    orr x8, x11, x8, lsl #32
-; NO_NEON-NEXT:    str x10, [x0, #48]
-; NO_NEON-NEXT:    str x9, [x0, #24]
-; NO_NEON-NEXT:    stp x8, x12, [x0]
+; NO_NEON-NEXT:    str x7, [x0, #72]
+; NO_NEON-NEXT:    bfi x14, x10, #32, #32
+; NO_NEON-NEXT:    str x13, [x0, #56]
+; NO_NEON-NEXT:    bfi x11, x2, #32, #32
+; NO_NEON-NEXT:    bfi x1, x8, #32, #32
+; NO_NEON-NEXT:    str x5, [x0, #48]
+; NO_NEON-NEXT:    str x9, [x0, #40]
+; NO_NEON-NEXT:    stp x3, x12, [x0, #24]
+; NO_NEON-NEXT:    stp x11, x14, [x0, #8]
+; NO_NEON-NEXT:    str x1, [x0]
 ; NO_NEON-NEXT:    ret
 ;
 ; CHECK-GI-LABEL: store_factor3_wide_intrinsic:
@@ -3401,27 +3403,27 @@ define void @store_general_mask_factor3_intrinsic(ptr %ptr, <32 x i32> %v0, <32 
 ; NO_NEON-NEXT:    .cfi_def_cfa_offset 16
 ; NO_NEON-NEXT:    .cfi_offset w29, -16
 ; NO_NEON-NEXT:    ldr w8, [sp, #240]
-; NO_NEON-NEXT:    ldr w10, [sp, #112]
+; NO_NEON-NEXT:    ldr w9, [sp, #112]
+; NO_NEON-NEXT:    // kill: def $w7 killed $w7 def $x7
+; NO_NEON-NEXT:    // kill: def $w5 killed $w5 def $x5
 ; NO_NEON-NEXT:    // kill: def $w6 killed $w6 def $x6
-; NO_NEON-NEXT:    ldr w11, [sp, #224]
-; NO_NEON-NEXT:    ldr w12, [sp, #96]
-; NO_NEON-NEXT:    ldr w9, [sp, #104]
-; NO_NEON-NEXT:    ldr w13, [sp, #16]
-; NO_NEON-NEXT:    orr x8, x8, x10, lsl #32
-; NO_NEON-NEXT:    orr x10, x11, x12, lsl #32
-; NO_NEON-NEXT:    ldr w11, [sp, #232]
-; NO_NEON-NEXT:    orr x9, x9, x13, lsl #32
-; NO_NEON-NEXT:    mov w13, w7
+; NO_NEON-NEXT:    ldr w10, [sp, #104]
+; NO_NEON-NEXT:    ldr w11, [sp, #16]
+; NO_NEON-NEXT:    ldr w12, [sp, #232]
+; NO_NEON-NEXT:    bfi x8, x9, #32, #32
+; NO_NEON-NEXT:    ldr w9, [sp, #224]
+; NO_NEON-NEXT:    bfi x10, x11, #32, #32
+; NO_NEON-NEXT:    ldr w11, [sp, #96]
+; NO_NEON-NEXT:    bfi x7, x12, #32, #32
 ; NO_NEON-NEXT:    ldr w12, [sp, #88]
 ; NO_NEON-NEXT:    str x8, [x0, #40]
-; NO_NEON-NEXT:    orr x11, x13, x11, lsl #32
 ; NO_NEON-NEXT:    ldr w8, [sp, #216]
-; NO_NEON-NEXT:    orr x12, x12, x6, lsl #32
-; NO_NEON-NEXT:    stp x11, x9, [x0, #24]
-; NO_NEON-NEXT:    mov w9, w5
-; NO_NEON-NEXT:    orr x8, x9, x8, lsl #32
-; NO_NEON-NEXT:    stp x12, x10, [x0, #8]
-; NO_NEON-NEXT:    str x8, [x0]
+; NO_NEON-NEXT:    bfi x9, x11, #32, #32
+; NO_NEON-NEXT:    stp x7, x10, [x0, #24]
+; NO_NEON-NEXT:    bfi x12, x6, #32, #32
+; NO_NEON-NEXT:    bfi x5, x8, #32, #32
+; NO_NEON-NEXT:    stp x12, x9, [x0, #8]
+; NO_NEON-NEXT:    str x5, [x0]
 ; NO_NEON-NEXT:    ldr x29, [sp], #16 // 8-byte Folded Reload
 ; NO_NEON-NEXT:    ret
 ;
@@ -3456,26 +3458,26 @@ define void @store_general_mask_factor3_undeflane_intrinsic(ptr %ptr, <32 x i32>
 ; NO_NEON-NEXT:    .cfi_offset w29, -16
 ; NO_NEON-NEXT:    ldr w8, [sp, #240]
 ; NO_NEON-NEXT:    ldr w9, [sp, #112]
-; NO_NEON-NEXT:    mov w14, w3
-; NO_NEON-NEXT:    ldr w10, [sp, #104]
-; NO_NEON-NEXT:    ldr w11, [sp, #224]
+; NO_NEON-NEXT:    // kill: def $w3 killed $w3 def $x3
+; NO_NEON-NEXT:    // kill: def $w1 killed $w1 def $x1
 ; NO_NEON-NEXT:    // kill: def $w4 killed $w4 def $x4
 ; NO_NEON-NEXT:    // kill: def $w2 killed $w2 def $x2
+; NO_NEON-NEXT:    ldr w10, [sp, #104]
+; NO_NEON-NEXT:    ldr w11, [sp, #232]
 ; NO_NEON-NEXT:    ldr w12, [sp, #96]
-; NO_NEON-NEXT:    ldr w13, [sp, #232]
-; NO_NEON-NEXT:    orr x8, x8, x9, lsl #32
-; NO_NEON-NEXT:    ldr w9, [sp, #88]
-; NO_NEON-NEXT:    orr x10, x10, x4, lsl #32
-; NO_NEON-NEXT:    orr x11, x11, x12, lsl #32
-; NO_NEON-NEXT:    orr x12, x14, x13, lsl #32
+; NO_NEON-NEXT:    ldr w13, [sp, #88]
+; NO_NEON-NEXT:    bfi x8, x9, #32, #32
+; NO_NEON-NEXT:    bfi x10, x4, #32, #32
+; NO_NEON-NEXT:    ldr w9, [sp, #224]
+; NO_NEON-NEXT:    bfi x3, x11, #32, #32
+; NO_NEON-NEXT:    bfi x13, x2, #32, #32
 ; NO_NEON-NEXT:    str x8, [x0, #40]
 ; NO_NEON-NEXT:    ldr w8, [sp, #216]
-; NO_NEON-NEXT:    orr x9, x9, x2, lsl #32
-; NO_NEON-NEXT:    stp x12, x10, [x0, #24]
-; NO_NEON-NEXT:    mov w10, w1
-; NO_NEON-NEXT:    orr x8, x10, x8, lsl #32
-; NO_NEON-NEXT:    stp x9, x11, [x0, #8]
-; NO_NEON-NEXT:    str x8, [x0]
+; NO_NEON-NEXT:    bfi x9, x12, #32, #32
+; NO_NEON-NEXT:    stp x3, x10, [x0, #24]
+; NO_NEON-NEXT:    bfi x1, x8, #32, #32
+; NO_NEON-NEXT:    stp x13, x9, [x0, #8]
+; NO_NEON-NEXT:    str x1, [x0]
 ; NO_NEON-NEXT:    ldr x29, [sp], #16 // 8-byte Folded Reload
 ; NO_NEON-NEXT:    ret
 ;
@@ -3509,27 +3511,27 @@ define void @store_general_mask_factor3_undefmultimid_intrinsic(ptr %ptr, <32 x 
 ; NO_NEON-NEXT:    .cfi_def_cfa_offset 16
 ; NO_NEON-NEXT:    .cfi_offset w29, -16
 ; NO_NEON-NEXT:    ldr w8, [sp, #240]
-; NO_NEON-NEXT:    ldr w10, [sp, #112]
+; NO_NEON-NEXT:    ldr w9, [sp, #112]
+; NO_NEON-NEXT:    // kill: def $w7 killed $w7 def $x7
+; NO_NEON-NEXT:    // kill: def $w5 killed $w5 def $x5
 ; NO_NEON-NEXT:    // kill: def $w6 killed $w6 def $x6
-; NO_NEON-NEXT:    ldr w11, [sp, #224]
-; NO_NEON-NEXT:    ldr w12, [sp, #96]
-; NO_NEON-NEXT:    ldr w9, [sp, #104]
-; NO_NEON-NEXT:    ldr w13, [sp, #16]
-; NO_NEON-NEXT:    orr x8, x8, x10, lsl #32
-; NO_NEON-NEXT:    orr x10, x11, x12, lsl #32
-; NO_NEON-NEXT:    ldr w11, [sp, #232]
-; NO_NEON-NEXT:    orr x9, x9, x13, lsl #32
-; NO_NEON-NEXT:    mov w13, w7
+; NO_NEON-NEXT:    ldr w10, [sp, #104]
+; NO_NEON-NEXT:    ldr w11, [sp, #16]
+; NO_NEON-NEXT:    ldr w12, [sp, #232]
+; NO_NEON-NEXT:    bfi x8, x9, #32, #32
+; NO_NEON-NEXT:    ldr w9, [sp, #224]
+; NO_NEON-NEXT:    bfi x10, x11, #32, #32
+; NO_NEON-NEXT:    ldr w11, [sp, #96]
+; NO_NEON-NEXT:    bfi x7, x12, #32, #32
 ; NO_NEON-NEXT:    ldr w12, [sp, #88]
 ; NO_NEON-NEXT:    str x8, [x0, #40]
-; NO_NEON-NEXT:    orr x11, x13, x11, lsl #32
 ; NO_NEON-NEXT:    ldr w8, [sp, #216]
-; NO_NEON-NEXT:    orr x12, x12, x6, lsl #32
-; NO_NEON-NEXT:    stp x11, x9, [x0, #24]
-; NO_NEON-NEXT:    mov w9, w5
-; NO_NEON-NEXT:    orr x8, x9, x8, lsl #32
-; NO_NEON-NEXT:    stp x12, x10, [x0, #8]
-; NO_NEON-NEXT:    str x8, [x0]
+; NO_NEON-NEXT:    bfi x9, x11, #32, #32
+; NO_NEON-NEXT:    stp x7, x10, [x0, #24]
+; NO_NEON-NEXT:    bfi x12, x6, #32, #32
+; NO_NEON-NEXT:    bfi x5, x8, #32, #32
+; NO_NEON-NEXT:    stp x12, x9, [x0, #8]
+; NO_NEON-NEXT:    str x5, [x0]
 ; NO_NEON-NEXT:    ldr x29, [sp], #16 // 8-byte Folded Reload
 ; NO_NEON-NEXT:    ret
 ;
@@ -3914,25 +3916,25 @@ define void @store_undef_mask_factor3_intrinsic(ptr %ptr, <4 x i32> %v0, <4 x i3
 ; NO_NEON:       // %bb.0:
 ; NO_NEON-NEXT:    ldr w8, [sp]
 ; NO_NEON-NEXT:    ldr w9, [sp, #32]
-; NO_NEON-NEXT:    // kill: def $w4 killed $w4 def $x4
-; NO_NEON-NEXT:    mov w12, w3
-; NO_NEON-NEXT:    ldr w10, [sp, #24]
-; NO_NEON-NEXT:    ldr w11, [sp, #16]
-; NO_NEON-NEXT:    mov w13, w6
-; NO_NEON-NEXT:    orr x8, x8, x9, lsl #32
-; NO_NEON-NEXT:    ldr w9, [sp, #8]
+; NO_NEON-NEXT:    // kill: def $w6 killed $w6 def $x6
+; NO_NEON-NEXT:    // kill: def $w3 killed $w3 def $x3
+; NO_NEON-NEXT:    // kill: def $w1 killed $w1 def $x1
 ; NO_NEON-NEXT:    // kill: def $w7 killed $w7 def $x7
 ; NO_NEON-NEXT:    // kill: def $w5 killed $w5 def $x5
+; NO_NEON-NEXT:    // kill: def $w4 killed $w4 def $x4
 ; NO_NEON-NEXT:    // kill: def $w2 killed $w2 def $x2
-; NO_NEON-NEXT:    orr x12, x12, x7, lsl #32
-; NO_NEON-NEXT:    orr x10, x10, x4, lsl #32
-; NO_NEON-NEXT:    orr x9, x9, x2, lsl #32
+; NO_NEON-NEXT:    ldr w10, [sp, #24]
+; NO_NEON-NEXT:    ldr w11, [sp, #8]
+; NO_NEON-NEXT:    bfi x3, x7, #32, #32
+; NO_NEON-NEXT:    bfi x1, x5, #32, #32
+; NO_NEON-NEXT:    bfi x8, x9, #32, #32
+; NO_NEON-NEXT:    ldr w9, [sp, #16]
+; NO_NEON-NEXT:    bfi x10, x4, #32, #32
+; NO_NEON-NEXT:    bfi x11, x2, #32, #32
+; NO_NEON-NEXT:    bfi x6, x9, #32, #32
 ; NO_NEON-NEXT:    stp x10, x8, [x0, #32]
-; NO_NEON-NEXT:    mov w10, w1
-; NO_NEON-NEXT:    orr x8, x13, x11, lsl #32
-; NO_NEON-NEXT:    orr x10, x10, x5, lsl #32
-; NO_NEON-NEXT:    stp x8, x12, [x0, #16]
-; NO_NEON-NEXT:    stp x10, x9, [x0]
+; NO_NEON-NEXT:    stp x1, x11, [x0]
+; NO_NEON-NEXT:    stp x6, x3, [x0, #16]
 ; NO_NEON-NEXT:    ret
 ;
 ; CHECK-GI-LABEL: store_undef_mask_factor3_intrinsic:
