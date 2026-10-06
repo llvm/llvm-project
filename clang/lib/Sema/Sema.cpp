@@ -2098,6 +2098,11 @@ public:
     if (auto *S = FD->getBody()) {
       this->Visit(S);
     }
+    // A constructor initializes its bases and members, and so calls their
+    // constructors, in its initializer list rather than its body.
+    if (auto *Ctor = dyn_cast<CXXConstructorDecl>(FD))
+      for (CXXCtorInitializer *Init : Ctor->inits())
+        this->Visit(Init->getInit());
     if (CXXDestructorDecl *Dtor = dyn_cast<CXXDestructorDecl>(FD))
       asImpl().VisitCalledDestructors(Dtor);
     UsePath.pop_back();
