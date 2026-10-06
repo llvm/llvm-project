@@ -63,9 +63,12 @@ static bool functionHasPassObjectSizeParams(const FunctionDecl *FD) {
 
 /// A convenience routine for creating a decayed reference to a function.
 static ExprResult CreateFunctionRefExpr(
-    Sema &S, FunctionDecl *Fn, NamedDecl *FoundDecl, const Expr *Base,
-    bool HadMultipleCandidates, SourceLocation Loc = SourceLocation(),
-    const DeclarationNameLoc &LocInfo = DeclarationNameLoc()) {
+    Sema &S, NestedNameSpecifierLoc QualifierLoc, SourceLocation TemplateKWLoc,
+    FunctionDecl *Fn, NamedDecl *FoundDecl, const Expr *Base,
+    bool HadMultipleCandidates, const DeclarationNameInfo &NameInfo,
+    const TemplateArgumentListInfo *TemplateArgs) {
+  SourceLocation Loc = NameInfo.getLoc();
+
   if (S.DiagnoseUseOfDecl(FoundDecl, Loc))
     return ExprError();
   // If FoundDecl is different from Fn (such as if one is a template
@@ -76,8 +79,10 @@ static ExprResult CreateFunctionRefExpr(
   // being used.
   if (FoundDecl != Fn && S.DiagnoseUseOfDecl(Fn, Loc))
     return ExprError();
-  DeclRefExpr *DRE = new (S.Context)
-      DeclRefExpr(S.Context, Fn, false, Fn->getType(), VK_LValue, Loc, LocInfo);
+  auto *DRE = DeclRefExpr::Create(S.Context, QualifierLoc, TemplateKWLoc, Fn,
+                                  /*RefersToEnclosingVariableOrCapture=*/false,
+                                  NameInfo, Fn->getType(), VK_LValue, FoundDecl,
+                                  TemplateArgs);
   if (HadMultipleCandidates)
     DRE->setHadMultipleCandidates(true);
 
@@ -90,6 +95,23 @@ static ExprResult CreateFunctionRefExpr(
   }
   return S.ImpCastExprToType(DRE, S.Context.getPointerType(DRE->getType()),
                              CK_FunctionToPointerDecay);
+}
+
+static ExprResult CreateFunctionRefExpr(Sema &S, FunctionDecl *Fn,
+                                        NamedDecl *FoundDecl, const Expr *Base,
+                                        bool HadMultipleCandidates,
+                                        const DeclarationNameInfo &NameInfo) {
+  return CreateFunctionRefExpr(S, /*QualifierLoc=*/{}, /*TemplateKWLoc=*/{}, Fn,
+                               FoundDecl, Base, HadMultipleCandidates, NameInfo,
+                               /*TemplateArgs=*/nullptr);
+}
+
+static ExprResult CreateFunctionRefExpr(Sema &S, FunctionDecl *Fn,
+                                        NamedDecl *FoundDecl, const Expr *Base,
+                                        bool HadMultipleCandidates,
+                                        SourceLocation Loc) {
+  return CreateFunctionRefExpr(S, Fn, FoundDecl, Base, HadMultipleCandidates,
+                               DeclarationNameInfo(Fn->getDeclName(), Loc));
 }
 
 static bool IsStandardConversion(Sema &S, Expr* From, QualType ToType,
@@ -174,6 +196,7 @@ ImplicitConversionRank clang::GetConversionRank(ImplicitConversionKind Kind) {
       ICR_Conversion,
       ICR_HLSL_Scalar_Widening,
       ICR_HLSL_Scalar_Widening,
+      ICR_Conversion,
   };
   static_assert(std::size(Rank) == (int)ICK_Num_Conversion_Kinds);
   return Rank[(int)Kind];
@@ -238,6 +261,7 @@ static const char *GetImplicitConversionName(ImplicitConversionKind Kind) {
       "Non-decaying array conversion",
       "HLSL vector splat",
       "HLSL matrix splat",
+      "HLSL packed type conversion",
   };
   static_assert(std::size(Name) == (int)ICK_Num_Conversion_Kinds);
   return Name[Kind];
@@ -461,7 +485,7 @@ NarrowingKind StandardConversionSequence::getNarrowingKind(
       Expr::EvalResult R;
       if ((Ctx.getLangOpts().C23 && Initializer->EvaluateAsRValue(R, Ctx)) ||
           ((Ctx.getLangOpts().CPlusPlus &&
-            Initializer->isCXX11ConstantExpr(Ctx, &ConstantValue,
+            Initializer->isCXX11ConstantExpr(Ctx, ConstantValue,
                                              AllowRelaxedEval)))) {
         // Constant!
         if (Ctx.getLangOpts().C23)
@@ -2323,6 +2347,45 @@ static bool IsVectorConversion(Sema &S, QualType FromType, QualType ToType,
   return false;
 }
 
+static bool IsHLSLPackedTypeConversion(Sema &S, QualType FromType,
+                                       QualType ToType,
+                                       ImplicitConversionKind &ICK,
+                                       ImplicitConversionKind &DimensionICK,
+                                       Expr *From) {
+  if (!S.getLangOpts().HLSL)
+    return false;
+  if (S.Context.hasSameUnqualifiedType(FromType, ToType))
+    return false;
+
+  const bool FromPacked = FromType->isHLSLBuiltinPackedType();
+  const bool ToPacked = ToType->isHLSLBuiltinPackedType();
+
+  if (FromPacked && ToPacked) {
+    ICK = ICK_Integral_Conversion;
+    DimensionICK = ICK_Identity;
+    return true;
+  }
+
+  // Only convert packed types to and from uint
+  QualType UIntTy = S.Context.UnsignedIntTy;
+  const bool ToIsUint = S.Context.hasSameUnqualifiedType(ToType, UIntTy);
+  if (FromPacked && !ToIsUint)
+    return false;
+
+  const bool FromIsUint = S.Context.hasSameUnqualifiedType(FromType, UIntTy);
+  if (ToPacked && !FromIsUint)
+    return false;
+
+  // Converting to or from uint
+  if (FromIsUint || ToIsUint) {
+    ICK = ICK_HLSL_Packed_Type_Conversion;
+    DimensionICK = ICK_Identity;
+    return true;
+  }
+
+  return false;
+}
+
 static bool tryAtomicConversion(Sema &S, Expr *From, QualType ToType,
                                 bool InOverloadResolution,
                                 StandardConversionSequence &SCS,
@@ -2587,6 +2650,11 @@ static bool IsStandardConversion(Sema &S, Expr* From, QualType ToType,
     FromType = ToType.getUnqualifiedType();
   } else if (IsMatrixConversion(S, FromType, ToType, SecondICK, DimensionICK,
                                 From, InOverloadResolution, CStyle)) {
+    SCS.Second = SecondICK;
+    SCS.Dimension = DimensionICK;
+    FromType = ToType.getUnqualifiedType();
+  } else if (IsHLSLPackedTypeConversion(S, FromType, ToType, SecondICK,
+                                        DimensionICK, From)) {
     SCS.Second = SecondICK;
     SCS.Dimension = DimensionICK;
     FromType = ToType.getUnqualifiedType();
@@ -6469,6 +6537,7 @@ static bool CheckConvertedConstantConversions(Sema &S,
   case ICK_Fixed_Point_Conversion:
   case ICK_HLSL_Vector_Truncation:
   case ICK_HLSL_Matrix_Truncation:
+  case ICK_HLSL_Packed_Type_Conversion:
     return false;
 
   case ICK_Lvalue_To_Rvalue:
@@ -9132,6 +9201,10 @@ class BuiltinCandidateTypeSet  {
   /// candidate set.
   bool HasNullPtrType;
 
+  /// A flag indicating whether the reflection type was present in the
+  /// candidate set.
+  bool HasReflectionType;
+
   /// Sema - The semantic analysis instance where we are building the
   /// candidate type set.
   Sema &SemaRef;
@@ -9148,11 +9221,9 @@ public:
   typedef TypeSet::iterator iterator;
 
   BuiltinCandidateTypeSet(Sema &SemaRef)
-    : HasNonRecordTypes(false),
-      HasArithmeticOrEnumeralTypes(false),
-      HasNullPtrType(false),
-      SemaRef(SemaRef),
-      Context(SemaRef.Context) { }
+      : HasNonRecordTypes(false), HasArithmeticOrEnumeralTypes(false),
+        HasNullPtrType(false), HasReflectionType(false), SemaRef(SemaRef),
+        Context(SemaRef.Context) {}
 
   void AddTypesConvertedFrom(QualType Ty,
                              SourceLocation Loc,
@@ -9175,6 +9246,7 @@ public:
   bool hasNonRecordTypes() { return HasNonRecordTypes; }
   bool hasArithmeticOrEnumeralTypes() { return HasArithmeticOrEnumeralTypes; }
   bool hasNullPtrType() const { return HasNullPtrType; }
+  bool hasReflectionType() const { return HasReflectionType; }
 };
 
 } // end anonymous namespace
@@ -9356,6 +9428,8 @@ BuiltinCandidateTypeSet::AddTypesConvertedFrom(QualType Ty,
     MatrixTypes.insert(Ty);
   } else if (Ty->isNullPtrType()) {
     HasNullPtrType = true;
+  } else if (Ty->isMetaInfoType()) {
+    HasReflectionType = true;
   } else if (AllowUserConversions && TyIsRec) {
     // No conversion functions in incomplete types.
     if (!SemaRef.isCompleteType(Loc, Ty))
@@ -9655,18 +9729,16 @@ class BuiltinOperatorOverloadBuilder {
 
 public:
   BuiltinOperatorOverloadBuilder(
-    Sema &S, ArrayRef<Expr *> Args,
-    QualifiersAndAtomic VisibleTypeConversionsQuals,
-    bool HasArithmeticOrEnumeralCandidateType,
-    SmallVectorImpl<BuiltinCandidateTypeSet> &CandidateTypes,
-    OverloadCandidateSet &CandidateSet)
-    : S(S), Args(Args),
-      VisibleTypeConversionsQuals(VisibleTypeConversionsQuals),
-      HasArithmeticOrEnumeralCandidateType(
-        HasArithmeticOrEnumeralCandidateType),
-      CandidateTypes(CandidateTypes),
-      CandidateSet(CandidateSet) {
-
+      Sema &S, ArrayRef<Expr *> Args,
+      QualifiersAndAtomic VisibleTypeConversionsQuals,
+      bool HasArithmeticOrEnumeralCandidateType,
+      SmallVectorImpl<BuiltinCandidateTypeSet> &CandidateTypes,
+      OverloadCandidateSet &CandidateSet)
+      : S(S), Args(Args),
+        VisibleTypeConversionsQuals(VisibleTypeConversionsQuals),
+        HasArithmeticOrEnumeralCandidateType(
+            HasArithmeticOrEnumeralCandidateType),
+        CandidateTypes(CandidateTypes), CandidateSet(CandidateSet) {
     InitArithmeticTypes();
   }
 
@@ -9832,6 +9904,14 @@ public:
         CanQualType NullPtrTy = S.Context.getCanonicalType(S.Context.NullPtrTy);
         if (AddedTypes.insert(NullPtrTy).second) {
           QualType ParamTypes[2] = { NullPtrTy, NullPtrTy };
+          S.AddBuiltinCandidate(ParamTypes, Args, CandidateSet);
+        }
+      }
+
+      if (CandidateTypes[ArgIdx].hasReflectionType()) {
+        CanQualType MetaInfoTy = S.Context.MetaInfoTy;
+        if (AddedTypes.insert(MetaInfoTy).second) {
+          QualType ParamTypes[2] = {MetaInfoTy, MetaInfoTy};
           S.AddBuiltinCandidate(ParamTypes, Args, CandidateSet);
         }
       }
@@ -10958,7 +11038,7 @@ static bool sameFunctionParameterTypeLists(Sema &S, FunctionDecl *Fn1,
     if (Mem1->isInstance() && Mem2->isInstance() &&
         !S.getASTContext().hasSameType(
             Mem1->getFunctionObjectParameterReferenceType(),
-            Mem1->getFunctionObjectParameterReferenceType()))
+            Mem2->getFunctionObjectParameterReferenceType()))
       return false;
   }
   return true;
@@ -12425,10 +12505,11 @@ static void DiagnoseBadDeduction(Sema &S, NamedDecl *Found, Decl *Templated,
                                  TemplateSpecCandidateSetKind CandidateSetKind =
                                      TemplateSpecCandidateSetKind::Normal) {
   TemplateParameter Param = DeductionFailure.getTemplateParameter();
-  NamedDecl *ParamD;
-  (ParamD = Param.dyn_cast<TemplateTypeParmDecl*>()) ||
-  (ParamD = Param.dyn_cast<NonTypeTemplateParmDecl*>()) ||
-  (ParamD = Param.dyn_cast<TemplateTemplateParmDecl*>());
+  NamedDecl *ParamD = dyn_cast_if_present<TemplateTypeParmDecl *>(Param);
+  if (!ParamD)
+    ParamD = dyn_cast_if_present<NonTypeTemplateParmDecl *>(Param);
+  if (!ParamD)
+    ParamD = dyn_cast_if_present<TemplateTemplateParmDecl *>(Param);
   switch (DeductionFailure.getResult()) {
   case TemplateDeductionResult::Success:
     llvm_unreachable(
@@ -14612,13 +14693,14 @@ static bool canBeDeclaredInNamespace(const DeclarationName &Name) {
 
 /// Attempt to recover from an ill-formed use of a non-dependent name in a
 /// template, where the non-dependent name was declared after the template
-/// was defined. This is common in code written for a compilers which do not
+/// was defined. This is common in code written for compilers which do not
 /// correctly implement two-stage name lookup.
 ///
 /// Returns true if a viable candidate was found and a diagnostic was issued.
 static bool DiagnoseTwoPhaseLookup(
     Sema &SemaRef, SourceLocation FnLoc, const CXXScopeSpec &SS,
     LookupResult &R, OverloadCandidateSet::CandidateSetKind CSK,
+    const OverloadCandidateSet &ResolvedCandidates,
     TemplateArgumentListInfo *ExplicitTemplateArgs, ArrayRef<Expr *> Args,
     CXXRecordDecl **FoundInClass = nullptr) {
   if (!SemaRef.inTemplateInstantiation() || !SS.isEmpty())
@@ -14634,6 +14716,14 @@ static bool DiagnoseTwoPhaseLookup(
       R.suppressDiagnostics();
 
       OverloadCandidateSet Candidates(FnLoc, CSK);
+      // We have performed a BestViableFunction over these candidates, so
+      // exclude them.
+      for (auto &Cand : ResolvedCandidates) {
+        if (Cand.Function)
+          Candidates.exclude(Cand.Function);
+        else if (Cand.IsSurrogate)
+          Candidates.exclude(Cand.Surrogate);
+      }
       SemaRef.AddOverloadedCallCandidates(R, ExplicitTemplateArgs, Args,
                                           Candidates);
 
@@ -14724,16 +14814,16 @@ static bool DiagnoseTwoPhaseLookup(
 /// was defined.
 ///
 /// Returns true if a viable candidate was found and a diagnostic was issued.
-static bool
-DiagnoseTwoPhaseOperatorLookup(Sema &SemaRef, OverloadedOperatorKind Op,
-                               SourceLocation OpLoc,
-                               ArrayRef<Expr *> Args) {
+static bool DiagnoseTwoPhaseOperatorLookup(
+    Sema &SemaRef, OverloadedOperatorKind Op, SourceLocation OpLoc,
+    ArrayRef<Expr *> Args, const OverloadCandidateSet &ResolvedCandidateSet) {
   DeclarationName OpName =
-    SemaRef.Context.DeclarationNames.getCXXOperatorName(Op);
+      SemaRef.Context.DeclarationNames.getCXXOperatorName(Op);
   LookupResult R(SemaRef, OpName, OpLoc, Sema::LookupOperatorName);
-  return DiagnoseTwoPhaseLookup(SemaRef, OpLoc, CXXScopeSpec(), R,
-                                OverloadCandidateSet::CSK_Operator,
-                                /*ExplicitTemplateArgs=*/nullptr, Args);
+  return DiagnoseTwoPhaseLookup(
+      SemaRef, OpLoc, CXXScopeSpec(), R, OverloadCandidateSet::CSK_Operator,
+      ResolvedCandidateSet,
+      /*ExplicitTemplateArgs=*/nullptr, Args, /*FoundInClass=*/nullptr);
 }
 
 namespace {
@@ -14760,11 +14850,10 @@ public:
 ///    expected to diagnose as appropriate.
 static ExprResult
 BuildRecoveryCallExpr(Sema &SemaRef, Scope *S, Expr *Fn,
-                      UnresolvedLookupExpr *ULE,
-                      SourceLocation LParenLoc,
-                      MutableArrayRef<Expr *> Args,
-                      SourceLocation RParenLoc,
-                      bool EmptyLookup, bool AllowTypoCorrection) {
+                      UnresolvedLookupExpr *ULE, SourceLocation LParenLoc,
+                      MutableArrayRef<Expr *> Args, SourceLocation RParenLoc,
+                      const OverloadCandidateSet &ResolvedCandidateSet,
+                      bool AllowTypoCorrection) {
   // Do not try to recover if it is already building a recovery call.
   // This stops infinite loops for template instantiations like
   //
@@ -14788,11 +14877,11 @@ BuildRecoveryCallExpr(Sema &SemaRef, Scope *S, Expr *Fn,
   LookupResult R(SemaRef, ULE->getName(), ULE->getNameLoc(),
                  Sema::LookupOrdinaryName);
   CXXRecordDecl *FoundInClass = nullptr;
-  if (DiagnoseTwoPhaseLookup(SemaRef, Fn->getExprLoc(), SS, R,
-                             OverloadCandidateSet::CSK_Normal,
-                             ExplicitTemplateArgs, Args, &FoundInClass)) {
+  if (DiagnoseTwoPhaseLookup(
+          SemaRef, Fn->getExprLoc(), SS, R, OverloadCandidateSet::CSK_Normal,
+          ResolvedCandidateSet, ExplicitTemplateArgs, Args, &FoundInClass)) {
     // OK, diagnosed a two-phase lookup issue.
-  } else if (EmptyLookup) {
+  } else if (ResolvedCandidateSet.empty()) {
     // Try to recover from an empty lookup with typo correction.
     R.clear();
     NoTypoCorrectionCCC NoTypoValidator{};
@@ -15005,10 +15094,9 @@ static ExprResult FinishOverloadedCallExpr(Sema &SemaRef, Scope *S, Expr *Fn,
 
     // Try to recover by looking for viable functions which the user might
     // have meant to call.
-    ExprResult Recovery = BuildRecoveryCallExpr(SemaRef, S, Fn, ULE, LParenLoc,
-                                                Args, RParenLoc,
-                                                CandidateSet->empty(),
-                                                AllowTypoCorrection);
+    ExprResult Recovery =
+        BuildRecoveryCallExpr(SemaRef, S, Fn, ULE, LParenLoc, Args, RParenLoc,
+                              *CandidateSet, AllowTypoCorrection);
     if (Recovery.isInvalid() || Recovery.isUsable())
       return Recovery;
 
@@ -15410,7 +15498,8 @@ Sema::CreateOverloadedUnaryOp(SourceLocation OpLoc, UnaryOperatorKind Opc,
     // This is an erroneous use of an operator which can be overloaded by
     // a non-member function. Check for non-member operators which were
     // defined too late to be candidates.
-    if (DiagnoseTwoPhaseOperatorLookup(*this, Op, OpLoc, ArgsArray))
+    if (DiagnoseTwoPhaseOperatorLookup(*this, Op, OpLoc, ArgsArray,
+                                       CandidateSet))
       // FIXME: Recover by calling the found function.
       return ExprError();
 
@@ -15932,7 +16021,8 @@ ExprResult Sema::CreateOverloadedBinOp(SourceLocation OpLoc,
         // This is an erroneous use of an operator which can be overloaded by
         // a non-member function. Check for non-member operators which were
         // defined too late to be candidates.
-        if (DiagnoseTwoPhaseOperatorLookup(*this, Op, OpLoc, Args))
+        if (DiagnoseTwoPhaseOperatorLookup(*this, Op, OpLoc, Args,
+                                           CandidateSet))
           // FIXME: Recover by calling the found function.
           return ExprError();
 
@@ -16225,9 +16315,9 @@ ExprResult Sema::CreateOverloadedArraySubscriptExpr(SourceLocation LLoc,
         // Build the actual expression node.
         DeclarationNameInfo OpLocInfo(OpName, LLoc);
         OpLocInfo.setCXXOperatorNameRange(SourceRange(LLoc, RLoc));
-        ExprResult FnExpr = CreateFunctionRefExpr(
-            *this, FnDecl, Best->FoundDecl, Base, HadMultipleCandidates,
-            OpLocInfo.getLoc(), OpLocInfo.getInfo());
+        ExprResult FnExpr =
+            CreateFunctionRefExpr(*this, FnDecl, Best->FoundDecl, Base,
+                                  HadMultipleCandidates, OpLocInfo);
         if (FnExpr.isInvalid())
           return ExprError();
 
@@ -16561,10 +16651,18 @@ ExprResult Sema::BuildCallToMemberFunction(Scope *S, Expr *MemExprE,
                                       NewArgs))
       return ExprError();
 
+    // FIXME: avoid copy.
+    TemplateArgumentListInfo TemplateArgsBuffer, *TemplateArgs = nullptr;
+    if (MemExpr->hasExplicitTemplateArgs()) {
+      MemExpr->copyTemplateArgumentsInto(TemplateArgsBuffer);
+      TemplateArgs = &TemplateArgsBuffer;
+    }
+
     // Build the actual expression node.
-    ExprResult FnExpr =
-        CreateFunctionRefExpr(*this, Method, FoundDecl, MemExpr,
-                              HadMultipleCandidates, MemExpr->getExprLoc());
+    ExprResult FnExpr = CreateFunctionRefExpr(
+        *this, MemExpr->getQualifierLoc(), MemExpr->getTemplateKeywordLoc(),
+        Method, FoundDecl, MemExpr, HadMultipleCandidates,
+        MemExpr->getMemberNameInfo(), TemplateArgs);
     if (FnExpr.isInvalid())
       return ExprError();
 
@@ -16812,12 +16910,13 @@ Sema::BuildCallToObjectOfClassType(Scope *S, Expr *Obj,
       = cast<CXXConversionDecl>(
                          Best->Conversions[0].UserDefined.ConversionFunction);
 
+    // FoundDecl may be a UsingShadowDecl naming the conversion function.
+    assert(Conv == Best->FoundDecl.getDecl()->getUnderlyingDecl() &&
+           "Found Decl & conversion-to-functionptr should be same, right?!");
     CheckMemberOperatorAccess(LParenLoc, Object.get(), nullptr,
                               Best->FoundDecl);
-    if (DiagnoseUseOfDecl(Best->FoundDecl, LParenLoc))
+    if (DiagnoseUseOfDecl(Conv, LParenLoc))
       return ExprError();
-    assert(Conv == Best->FoundDecl.getDecl() &&
-             "Found Decl & conversion-to-functionptr should be same, right?!");
     // We selected one of the surrogate functions that converts the
     // object parameter to a function pointer. Perform the conversion
     // on the object argument, then let BuildCallExpr finish the job.
@@ -16853,10 +16952,8 @@ Sema::BuildCallToObjectOfClassType(Scope *S, Expr *Obj,
   DeclarationNameInfo OpLocInfo(
                Context.DeclarationNames.getCXXOperatorName(OO_Call), LParenLoc);
   OpLocInfo.setCXXOperatorNameRange(SourceRange(LParenLoc, RParenLoc));
-  ExprResult NewFn = CreateFunctionRefExpr(*this, Method, Best->FoundDecl,
-                                           Obj, HadMultipleCandidates,
-                                           OpLocInfo.getLoc(),
-                                           OpLocInfo.getInfo());
+  ExprResult NewFn = CreateFunctionRefExpr(*this, Method, Best->FoundDecl, Obj,
+                                           HadMultipleCandidates, OpLocInfo);
   if (NewFn.isInvalid())
     return true;
 
@@ -17085,10 +17182,8 @@ ExprResult Sema::BuildLiteralOperatorCall(LookupResult &R,
   }
 
   FunctionDecl *FD = Best->Function;
-  ExprResult Fn = CreateFunctionRefExpr(*this, FD, Best->FoundDecl,
-                                        nullptr, HadMultipleCandidates,
-                                        SuffixInfo.getLoc(),
-                                        SuffixInfo.getInfo());
+  ExprResult Fn = CreateFunctionRefExpr(*this, FD, Best->FoundDecl, nullptr,
+                                        HadMultipleCandidates, SuffixInfo);
   if (Fn.isInvalid())
     return true;
 

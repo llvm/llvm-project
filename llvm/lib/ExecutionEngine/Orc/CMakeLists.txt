@@ -58,6 +58,7 @@ add_llvm_component_library(LLVMOrcJIT
   RTDyldObjectLinkingLayer.cpp
   SectCreate.cpp
   SelfExecutorProcessControl.cpp
+  SharedMemoryMapSPS.cpp
   SimpleMemoryMapSPS.cpp
   SimpleRemoteEPC.cpp
   SimpleRemoteMemoryMapper.cpp

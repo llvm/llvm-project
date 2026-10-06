@@ -12,9 +12,12 @@
 #include "clang/AST/CXXInheritance.h"
 #include "clang/AST/Decl.h"
 #include "clang/AST/DeclCXX.h"
+#include "clang/AST/DeclTemplate.h"
 #include "clang/AST/ExprCXX.h"
 #include "clang/AST/StmtVisitor.h"
+#include "clang/Analysis/Analyses/LifetimeSafety/LifetimeAnnotations.h"
 #include "clang/Analysis/DomainSpecific/CocoaConventions.h"
+#include "llvm/ADT/StringSet.h"
 #include <optional>
 
 using namespace clang;
@@ -28,6 +31,15 @@ bool hasPublicMethodInBaseClass(const CXXRecordDecl *R, StringRef NameToMatch) {
   for (const CXXMethodDecl *MD : R->methods()) {
     const auto MethodName = safeGetName(MD);
     if (MethodName == NameToMatch && MD->getAccess() == AS_public)
+      return true;
+  }
+
+  for (const Decl *D : R->decls()) {
+    const auto *Shadow = dyn_cast<UsingShadowDecl>(D);
+    if (!Shadow || Shadow->getAccess() != AS_public)
+      continue;
+    const auto *MD = dyn_cast<CXXMethodDecl>(Shadow->getTargetDecl());
+    if (MD && safeGetName(MD) == NameToMatch)
       return true;
   }
   return false;
@@ -64,55 +76,53 @@ hasPublicMethodInBase(const CXXBaseSpecifier *Base, StringRef NameToMatch) {
   return hasPublicMethodInBaseClass(R, NameToMatch) ? R : nullptr;
 }
 
-std::optional<bool> isSmartPtrCompatible(const CXXRecordDecl *R,
-                                         StringRef IncMethodName,
-                                         StringRef DecMethodName) {
+static std::optional<bool> hasPublicMethodInHierarchy(const CXXRecordDecl *R,
+                                                      StringRef MethodName) {
   assert(R);
 
   R = R->getDefinition();
   if (!R)
     return std::nullopt;
 
-  bool hasRef = hasPublicMethodInBaseClass(R, IncMethodName);
-  bool hasDeref = hasPublicMethodInBaseClass(R, DecMethodName);
-  if (hasRef && hasDeref)
+  if (hasPublicMethodInBaseClass(R, MethodName))
     return true;
 
   CXXBasePaths Paths;
   Paths.setOrigin(const_cast<CXXRecordDecl *>(R));
 
   bool AnyInconclusiveBase = false;
-  const auto hasPublicRefInBase = [&](const CXXBaseSpecifier *Base,
-                                      CXXBasePath &) {
-    auto hasRefInBase = clang::hasPublicMethodInBase(Base, IncMethodName);
-    if (!hasRefInBase) {
+  const auto hasPublicMethod = [&](const CXXBaseSpecifier *Base,
+                                   CXXBasePath &) {
+    auto HasMethodInBase = clang::hasPublicMethodInBase(Base, MethodName);
+    if (!HasMethodInBase) {
       AnyInconclusiveBase = true;
       return false;
     }
-    return (*hasRefInBase) != nullptr;
+    return (*HasMethodInBase) != nullptr;
   };
 
-  hasRef = hasRef || R->lookupInBases(hasPublicRefInBase, Paths,
-                                      /*LookupInDependent =*/true);
+  bool Found = R->lookupInBases(hasPublicMethod, Paths,
+                                /*LookupInDependent =*/true);
   if (AnyInconclusiveBase)
     return std::nullopt;
 
-  Paths.clear();
-  const auto hasPublicDerefInBase = [&](const CXXBaseSpecifier *Base,
-                                        CXXBasePath &) {
-    auto hasDerefInBase = clang::hasPublicMethodInBase(Base, DecMethodName);
-    if (!hasDerefInBase) {
-      AnyInconclusiveBase = true;
-      return false;
-    }
-    return (*hasDerefInBase) != nullptr;
-  };
-  hasDeref = hasDeref || R->lookupInBases(hasPublicDerefInBase, Paths,
-                                          /*LookupInDependent =*/true);
-  if (AnyInconclusiveBase)
+  return Found;
+}
+
+std::optional<bool> isSmartPtrCompatible(const CXXRecordDecl *R,
+                                         StringRef IncMethodName,
+                                         StringRef DecMethodName) {
+  assert(R);
+
+  auto HasInc = hasPublicMethodInHierarchy(R, IncMethodName);
+  if (!HasInc)
     return std::nullopt;
 
-  return hasRef && hasDeref;
+  auto HasDec = hasPublicMethodInHierarchy(R, DecMethodName);
+  if (!HasDec)
+    return std::nullopt;
+
+  return *HasInc && *HasDec;
 }
 
 std::optional<bool> isRefCountable(const clang::CXXRecordDecl *R) {
@@ -122,6 +132,108 @@ std::optional<bool> isRefCountable(const clang::CXXRecordDecl *R) {
 std::optional<bool> isCheckedPtrCapable(const clang::CXXRecordDecl *R) {
   return isSmartPtrCompatible(R, "incrementCheckedPtrCount",
                               "decrementCheckedPtrCount");
+}
+
+std::optional<bool> isBorrowable(const clang::CXXRecordDecl *R) {
+  assert(R);
+  return hasPublicMethodInHierarchy(R, "crashIfBorrowed");
+}
+
+bool isBorrow(const clang::CXXRecordDecl *R) {
+  if (!R)
+    return false;
+  return isBorrow(safeGetName(R));
+}
+
+bool isBorrowType(const clang::QualType T) {
+  return isBorrow(T->getAsCXXRecordDecl());
+}
+
+QualType pointeeType(QualType T) {
+  while (!T.isNull()) {
+    QualType Pointee = T->getPointeeType();
+    if (Pointee.isNull())
+      break;
+    T = Pointee;
+  }
+  return T;
+}
+
+QualType borrowedType(QualType T) {
+  const auto *Specialization =
+      dyn_cast_or_null<ClassTemplateSpecializationDecl>(
+          T->getAsCXXRecordDecl());
+  if (!Specialization)
+    return QualType();
+  const auto &Args = Specialization->getTemplateArgs();
+  if (!Args.size() || Args[0].getKind() != TemplateArgument::Type)
+    return QualType();
+  return Args[0].getAsType();
+}
+
+static bool hasLifetimeBoundCtor(const clang::CXXRecordDecl *R) {
+  if (!R || !R->hasDefinition())
+    return false;
+  for (const CXXConstructorDecl *Ctor : R->ctors()) {
+    for (const ParmVarDecl *Param : Ctor->parameters()) {
+      if (Param->hasAttr<LifetimeBoundAttr>() ||
+          Param->hasAttr<LifetimeCaptureByAttr>())
+        return true;
+    }
+  }
+  return false;
+}
+
+static bool isStdRangesViewInterface(const clang::CXXRecordDecl *R) {
+  if (!R || !R->getIdentifier() || R->getName() != "view_interface")
+    return false;
+  const auto *NS = dyn_cast<NamespaceDecl>(R->getDeclContext());
+  return NS && NS->getIdentifier() && NS->getName() == "ranges" &&
+         NS->getParent()->isStdNamespace();
+}
+
+static bool derivesFromViewInterface(const clang::CXXRecordDecl *R) {
+  if (!R)
+    return false;
+  R = R->getDefinition();
+  if (!R)
+    return false;
+  if (isStdRangesViewInterface(R))
+    return true;
+  for (const CXXBaseSpecifier &Base : R->bases()) {
+    if (derivesFromViewInterface(Base.getType()->getAsCXXRecordDecl()))
+      return true;
+  }
+  return false;
+}
+
+bool isStdView(const clang::CXXRecordDecl *R) {
+  if (!R)
+    return false;
+  if (R->hasAttr<PointerAttr>())
+    return true;
+  static const llvm::StringSet<> StdIterators{
+      "reverse_iterator", "move_iterator", "common_iterator",
+      "counted_iterator", "basic_const_iterator"};
+  if (R->isInStdNamespace() && R->getIdentifier() &&
+      StdIterators.contains(R->getName()))
+    return true;
+  if (derivesFromViewInterface(R))
+    return true;
+  if (const auto *Parent = dyn_cast<CXXRecordDecl>(R->getDeclContext()))
+    return isStdView(Parent);
+  return false;
+}
+
+bool isView(const clang::QualType T) {
+  if (T->isReferenceType())
+    return true;
+  if (lifetimes::isPointerLikeType(T))
+    return true;
+  auto *Record = T->getAsCXXRecordDecl();
+  if (isStdView(Record))
+    return true;
+  return hasLifetimeBoundCtor(Record);
 }
 
 bool isRefType(const std::string &Name) {
@@ -138,9 +250,15 @@ bool isCheckedPtr(const std::string &Name) {
   return Name == "CheckedPtr" || Name == "CheckedRef";
 }
 
+bool isUniquePtr(const std::string &Name) {
+  return Name == "unique_ptr" || Name == "UniqueRef" || Name == "LazyUniqueRef";
+}
+
+bool isBorrow(const std::string &Name) { return Name == "Borrow"; }
+
 bool isOwnerPtr(const std::string &Name) {
   return isRefType(Name) || isCheckedPtr(Name) || isRetainPtrOrOSPtr(Name) ||
-         Name == "unique_ptr" || Name == "UniqueRef" || Name == "LazyUniqueRef";
+         isUniquePtr(Name);
 }
 
 static bool isWeakPtrClass(const std::string &Name) {
@@ -218,6 +336,9 @@ static bool isPtrOfType(const clang::QualType T, Predicate Pred) {
       return Decl && Pred(Decl->getNameAsString());
     } else if (auto *DTS = type->getAs<DeducedTemplateSpecializationType>()) {
       auto *Decl = DTS->getTemplateName().getAsTemplateDecl();
+      return Decl && Pred(Decl->getNameAsString());
+    } else if (auto *RD = type->getAs<RecordType>()) {
+      auto *Decl = RD->getDecl();
       return Decl && Pred(Decl->getNameAsString());
     } else
       break;
@@ -402,6 +523,20 @@ std::optional<bool> isGetterOfSafePtr(const CXXMethodDecl *M) {
   return false;
 }
 
+bool isGetterOfUniquePtr(const CXXMethodDecl *M) {
+  assert(M);
+  if (!isUniquePtr(safeGetName(M->getParent())))
+    return false;
+  auto method = safeGetName(M);
+  if (method == "get" || method == "ptr")
+    return true;
+  if (auto *conversion = dyn_cast<CXXConversionDecl>(M)) {
+    const Type *T = conversion->getConversionType().getTypePtrOrNull();
+    return T && (T->isPointerType() || T->isReferenceType());
+  }
+  return false;
+}
+
 bool isRefCounted(const CXXRecordDecl *R) {
   assert(R);
   if (auto *TmplR = R->getTemplateInstantiationPattern()) {
@@ -448,23 +583,31 @@ enum class WebKitAnnotation : uint8_t {
   NoDelete,
 };
 
-static WebKitAnnotation typeAnnotationForReturnType(const FunctionDecl *FD) {
+static WebKitAnnotation annotationType(StringRef Annotation) {
+  if (Annotation == "webkit.pointerconversion")
+    return WebKitAnnotation::PointerConversion;
+  if (Annotation == "webkit.nodelete")
+    return WebKitAnnotation::NoDelete;
+  return WebKitAnnotation::None;
+}
+
+static bool hasAnnotationForFunction(const FunctionDecl *FD,
+                                     WebKitAnnotation TargetAnnotation) {
+  for (auto *Attr : FD->specific_attrs<AnnotateAttr>()) {
+    if (annotationType(Attr->getAnnotation()) == TargetAnnotation)
+      return true;
+  }
   auto RetType = FD->getReturnType();
   auto *Type = RetType.getTypePtrOrNull();
   if (auto *MacroQualified = dyn_cast_or_null<MacroQualifiedType>(Type))
     Type = MacroQualified->desugar().getTypePtrOrNull();
   auto *Attr = dyn_cast_or_null<AttributedType>(Type);
   if (!Attr)
-    return WebKitAnnotation::None;
+    return false;
   auto *AnnotateType = dyn_cast_or_null<AnnotateTypeAttr>(Attr->getAttr());
   if (!AnnotateType)
-    return WebKitAnnotation::None;
-  auto Annotation = AnnotateType->getAnnotation();
-  if (Annotation == "webkit.pointerconversion")
-    return WebKitAnnotation::PointerConversion;
-  if (Annotation == "webkit.nodelete")
-    return WebKitAnnotation::NoDelete;
-  return WebKitAnnotation::None;
+    return false;
+  return annotationType(AnnotateType->getAnnotation()) == TargetAnnotation;
 }
 
 bool isPtrConversion(const FunctionDecl *F) {
@@ -484,14 +627,14 @@ bool isPtrConversion(const FunctionDecl *F) {
       FunctionName == "checked_objc_cast")
     return true;
 
-  if (typeAnnotationForReturnType(F) == WebKitAnnotation::PointerConversion)
+  if (hasAnnotationForFunction(F, WebKitAnnotation::PointerConversion))
     return true;
 
   return false;
 }
 
 static bool isNoDeleteFunctionDecl(const FunctionDecl *F) {
-  return typeAnnotationForReturnType(F) == WebKitAnnotation::NoDelete;
+  return hasAnnotationForFunction(F, WebKitAnnotation::NoDelete);
 }
 
 bool isNoDeleteFunction(const FunctionDecl *F) {
@@ -537,24 +680,26 @@ bool isSingleton(const NamedDecl *F) {
 // (non-recursive) visitor.
 class TrivialFunctionAnalysisVisitor
     : public ConstStmtVisitor<TrivialFunctionAnalysisVisitor, bool> {
+  using Base = ConstStmtVisitor<TrivialFunctionAnalysisVisitor, bool>;
 
   // Returns false if at least one child is non-trivial.
   bool VisitChildren(const Stmt *S) {
     for (const Stmt *Child : S->children()) {
-      if (Child && !Visit(Child)) {
-        if (OffendingStmt && !*OffendingStmt)
-          *OffendingStmt = Child;
+      if (Child && !Visit(Child))
         return false;
-      }
     }
 
     return true;
   }
 
+  bool canUseCachedResult(bool CachedResult) const {
+    return CachedResult || !CallStack;
+  }
+
   template <typename StmtOrDecl, typename CheckFunction>
   bool WithCachedResult(const StmtOrDecl *S, CheckFunction Function) {
     auto CacheIt = Cache.find(S);
-    if (CacheIt != Cache.end() && !OffendingStmt)
+    if (CacheIt != Cache.end() && canUseCachedResult(CacheIt->second))
       return CacheIt->second;
 
     // Treat a recursive statement to be trivial until proven otherwise.
@@ -577,13 +722,21 @@ class TrivialFunctionAnalysisVisitor
     return Result;
   }
 
+  static bool isTrivialType(QualType Ty) {
+    // T*, T&, or T&& does not delete.
+    if (Ty->isPointerOrReferenceType())
+      return true;
+
+    // Fundamental types (integral, nullptr, etc...) does not delete.
+    if (Ty->isFundamentalType() || Ty->isIntegralOrEnumerationType())
+      return true;
+
+    return false;
+  }
+
   bool CanTriviallyDestruct(QualType Ty) {
     if (Ty.isNull())
       return false;
-
-    // T*, T& or T&& does not run its destructor.
-    if (Ty->isPointerOrReferenceType())
-      return true;
 
     // FIXME: Handle a case when there is a local autorelease pool.
     if (Ty->isObjCObjectPointerType()) {
@@ -593,8 +746,7 @@ class TrivialFunctionAnalysisVisitor
       // strong lifetime in ARC could dealloc an object.
     }
 
-    // Fundamental types (integral, nullptr_t, etc...) don't have destructors.
-    if (Ty->isFundamentalType() || Ty->isIntegralOrEnumerationType())
+    if (isTrivialType(Ty))
       return true;
 
     if (const auto *R = Ty->getAsCXXRecordDecl()) {
@@ -602,7 +754,12 @@ class TrivialFunctionAnalysisVisitor
       if (R->hasDefinition() && R->hasTrivialDestructor())
         return true;
 
-      if (HasFieldWithNonTrivialDtor(R))
+      if (auto *Dtor = R->getDestructor()) {
+        if (isNoDeleteFunction(Dtor))
+          return true;
+      }
+
+      if (FieldWithNonTrivialDtor(R))
         return false;
 
       // For Webkit, side-effects are fine as long as we don't delete objects,
@@ -623,16 +780,42 @@ class TrivialFunctionAnalysisVisitor
     return false; // Otherwise it's likely not trivial.
   }
 
-  bool HasFieldWithNonTrivialDtor(const CXXRecordDecl *Cls) {
-    auto CacheIt = FieldDtorCache.find(Cls);
-    if (CacheIt != FieldDtorCache.end())
+  bool CanTriviallyConstruct(QualType Ty) {
+    if (Ty.isNull())
+      return false;
+
+    if (isTrivialType(Ty))
+      return true;
+
+    if (const auto *R = Ty->getAsCXXRecordDecl()) {
+      // C++ trivially destructible classes are fine.
+      if (R->hasDefinition() && R->hasTrivialDefaultConstructor())
+        return true;
+      for (auto *Ctor : R->ctors()) {
+        if (Ctor->isDefaultConstructor() && IsFunctionTrivial(Ctor))
+          return true;
+      }
+    }
+
+    return false;
+  }
+
+  template <typename CacheTy, typename IsTrivialTypeFn>
+  bool hasNonTrivialField(const CXXRecordDecl *Cls,
+                          const FieldDecl **OffendingField, CacheTy &Cache,
+                          IsTrivialTypeFn IsTrivialType) {
+    auto CacheIt = Cache.find(Cls);
+    if (CacheIt != Cache.end() && !OffendingField)
       return CacheIt->second;
 
     bool Result = ([&] {
       auto HasNonTrivialField = [&](const CXXRecordDecl *R) {
         for (const FieldDecl *F : R->fields()) {
-          if (!CanTriviallyDestruct(F->getType()))
+          if (!IsTrivialType(F->getType())) {
+            if (OffendingField)
+              *OffendingField = F;
             return true;
+          }
         }
         return false;
       };
@@ -656,7 +839,7 @@ class TrivialFunctionAnalysisVisitor
           Paths, /*LookupInDependent =*/true);
     })();
 
-    FieldDtorCache[Cls] = Result;
+    Cache[Cls] = Result;
 
     return Result;
   }
@@ -665,12 +848,60 @@ public:
   using CacheTy = TrivialFunctionAnalysis::CacheTy;
 
   TrivialFunctionAnalysisVisitor(CacheTy &Cache,
-                                 const Stmt **OffendingStmt = nullptr)
-      : Cache(Cache), OffendingStmt(OffendingStmt) {}
+                                 NonTrivialityReason *Reason = nullptr)
+      : Cache(Cache), OffendingStmt(Reason ? &Reason->OffendingStmt : nullptr),
+        CallStack(Reason ? &Reason->CallStack : nullptr) {}
+
+  // Hides ConstStmtVisitor::Visit so that every recursive step in this class
+  // funnels through here. Recursion unwinds innermost-first, so the first
+  // statement recorded is the deepest one that failed -- the code actually
+  // responsible, rather than the enclosing statement that contains it.
+  // Implicit nodes have no location to point at, so they are passed over in
+  // favour of the nearest enclosing node that was actually written.
+  bool Visit(const Stmt *S) {
+    bool Result = Base::Visit(S);
+    if (!Result && OffendingStmt && !*OffendingStmt &&
+        S->getBeginLoc().isValid())
+      *OffendingStmt = S;
+    return Result;
+  }
 
   bool IsFunctionTrivial(const Decl *D) {
-    const Stmt **SavedOffendingStmt = std::exchange(OffendingStmt, nullptr);
-    auto Result = WithCachedResult(D, [&]() {
+    if (!CallStack)
+      return IsFunctionTrivialImpl(D);
+
+    const auto *FnDecl = dyn_cast<FunctionDecl>(D);
+    if (!FnDecl)
+      return IsFunctionTrivialImpl(D);
+
+    // CallStack[0, ActiveDepth) mirrors the functions currently being
+    // analyzed. Anything past that was left by a callee whose failure was
+    // tolerated, e.g. one of several candidate default constructors, and is
+    // not part of the chain that explains this call.
+    CallStack->truncate(ActiveDepth);
+    size_t Index = ActiveDepth++;
+    CallStack->push_back({FnDecl, nullptr});
+
+    // Blame is recorded separately for each function, so that every frame
+    // can point at the code within it that leads further down the chain.
+    const Stmt *CalleeOffendingStmt = nullptr;
+    const Stmt **SavedOffendingStmt =
+        std::exchange(OffendingStmt, &CalleeOffendingStmt);
+    bool Result = IsFunctionTrivialImpl(D);
+    OffendingStmt = SavedOffendingStmt;
+
+    --ActiveDepth;
+    // On failure, keep this frame along with the frames its body left behind:
+    // together they are the chain from here down to the root cause.
+    if (Result)
+      CallStack->truncate(Index);
+    else
+      (*CallStack)[Index].OffendingStmt = CalleeOffendingStmt;
+    return Result;
+  }
+
+  bool IsFunctionTrivialImpl(const Decl *D) {
+    return WithCachedResult(D, [&]() {
       auto *FnDecl = dyn_cast<FunctionDecl>(D);
       auto *MethodDecl = dyn_cast<CXXMethodDecl>(D);
       auto *CtorDecl = dyn_cast<CXXConstructorDecl>(D);
@@ -716,8 +947,6 @@ public:
         return false;
       return Visit(Body);
     });
-    OffendingStmt = SavedOffendingStmt;
-    return Result;
   }
 
   bool HasTrivialDestructor(const VarDecl *VD) {
@@ -725,9 +954,25 @@ public:
         VD, [&] { return CanTriviallyDestruct(VD->getType()); });
   }
 
+  const FieldDecl *FieldWithNonTrivialCtor(const CXXRecordDecl *Cls) {
+    const FieldDecl *OffendingField = nullptr;
+    hasNonTrivialField(
+        Cls, &OffendingField, FieldCtorCache,
+        [&](const QualType Ty) { return CanTriviallyConstruct(Ty); });
+    return OffendingField;
+  }
+
+  const FieldDecl *FieldWithNonTrivialDtor(const CXXRecordDecl *Cls) {
+    const FieldDecl *OffendingField = nullptr;
+    hasNonTrivialField(
+        Cls, &OffendingField, FieldDtorCache,
+        [&](const QualType Ty) { return CanTriviallyDestruct(Ty); });
+    return OffendingField;
+  }
+
   bool IsStatementTrivial(const Stmt *S) {
     auto CacheIt = Cache.find(S);
-    if (CacheIt != Cache.end())
+    if (CacheIt != Cache.end() && canUseCachedResult(CacheIt->second))
       return CacheIt->second;
     bool Result = Visit(S);
     Cache[S] = Result;
@@ -1065,6 +1310,17 @@ public:
     return true;
   }
 
+  bool VisitCXXStdInitializerListExpr(const CXXStdInitializerListExpr *ILE) {
+    auto *SubExpr = ILE->getSubExpr();
+    if (!SubExpr)
+      return false;
+    // The backing array of a std::initializer_list is a temporary whose
+    // lifetime ends in this function, so its elements are destructed here.
+    if (!CanTriviallyDestruct(SubExpr->getType()))
+      return false;
+    return Visit(SubExpr);
+  }
+
   bool VisitMemberExpr(const MemberExpr *ME) {
     // Field access is allowed but the base pointer may itself be non-trivial.
     return Visit(ME->getBase());
@@ -1105,29 +1361,53 @@ public:
 
 private:
   CacheTy &Cache;
+  CacheTy FieldCtorCache;
   CacheTy FieldDtorCache;
   CacheTy RecursiveFn;
   const Stmt **OffendingStmt;
+  SmallVectorImpl<NonTrivialityReason::Frame> *CallStack;
+  unsigned ActiveDepth = 0;
 };
 
 bool TrivialFunctionAnalysis::isTrivialImpl(
-    const Decl *D, TrivialFunctionAnalysis::CacheTy &Cache,
-    const Stmt **OffendingStmt) {
-  TrivialFunctionAnalysisVisitor V(Cache, OffendingStmt);
+    const Decl *D, TrivialFunctionAnalysis::CacheTy &Cache) {
+  TrivialFunctionAnalysisVisitor V(Cache);
   return V.IsFunctionTrivial(D);
 }
 
 bool TrivialFunctionAnalysis::isTrivialImpl(
-    const Stmt *S, TrivialFunctionAnalysis::CacheTy &Cache,
-    const Stmt **OffendingStmt) {
-  TrivialFunctionAnalysisVisitor V(Cache, OffendingStmt);
+    const Stmt *S, TrivialFunctionAnalysis::CacheTy &Cache) {
+  TrivialFunctionAnalysisVisitor V(Cache);
   return V.IsStatementTrivial(S);
+}
+
+NonTrivialityReason TrivialFunctionAnalysis::computeReason(const Stmt *S) {
+  NonTrivialityReason Reason;
+  CacheTy Cache;
+  TrivialFunctionAnalysisVisitor V(Cache, &Reason);
+  [[maybe_unused]] bool Trivial = V.IsStatementTrivial(S);
+  assert(!Trivial && "computeReason called on a trivial statement");
+  return Reason;
 }
 
 bool TrivialFunctionAnalysis::hasTrivialDtorImpl(const VarDecl *VD,
                                                  CacheTy &Cache) {
   TrivialFunctionAnalysisVisitor V(Cache);
   return V.HasTrivialDestructor(VD);
+}
+
+const FieldDecl *
+TrivialFunctionAnalysis::fieldWithNonTrivialCtorImpl(const CXXRecordDecl *RD,
+                                                     CacheTy &Cache) {
+  TrivialFunctionAnalysisVisitor V(Cache);
+  return V.FieldWithNonTrivialCtor(RD);
+}
+
+const FieldDecl *
+TrivialFunctionAnalysis::fieldWithNonTrivialDtorImpl(const CXXRecordDecl *RD,
+                                                     CacheTy &Cache) {
+  TrivialFunctionAnalysisVisitor V(Cache);
+  return V.FieldWithNonTrivialDtor(RD);
 }
 
 } // namespace clang

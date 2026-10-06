@@ -48,8 +48,6 @@ void ProcessWasm::DebuggerInitialize(Debugger &debugger) {
 
 llvm::StringRef ProcessWasm::GetPluginName() { return GetPluginNameStatic(); }
 
-llvm::StringRef ProcessWasm::GetPluginNameStatic() { return "wasm"; }
-
 llvm::StringRef ProcessWasm::GetPluginDescriptionStatic() {
   return "GDB Remote protocol based WebAssembly debugging plug-in.";
 }
@@ -249,7 +247,7 @@ ProcessWasm::GetWasmVariable(WasmVirtualRegisterKinds kind,
 llvm::Expected<lldb::DataBufferSP>
 ProcessWasm::GetWasmGlobalForModule(uint32_t module_id, uint32_t index) {
   return SendWasmValueQuery(
-      llvm::formatv("qWasmGlobal:{0};instance:{1}", index, module_id).str());
+      llvm::formatv("qWasmGlobal:{0};instance:{1};", index, module_id).str());
 }
 
 llvm::Expected<lldb::DataBufferSP>

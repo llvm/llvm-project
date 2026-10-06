@@ -117,7 +117,6 @@ if(CLANG_ENABLE_CIR)
   list(APPEND CLANG_TEST_DEPS
     cir-opt
     cir-translate
-    mlir-translate
     )
   add_subdirectory(CIR/lib)
 endif()
@@ -239,10 +238,48 @@ add_lit_testsuite(check-clang "Running the Clang regression tests"
   ARGS ${CLANG_TEST_EXTRA_ARGS}
   )
 
+# Skip CIR here. check-clang above still discovers these tests, but they do
+# nothing unless CIR is enabled. When CIR is enabled, the check-clang-cir
+# targets below depend only on the tools those tests invoke and the tools
+# required to load clang/test/lit.cfg.py.
 add_lit_testsuites(CLANG ${CMAKE_CURRENT_SOURCE_DIR}
   DEPENDS ${CLANG_TEST_DEPS}
   FOLDER "Clang tests/Suites"
+  SKIP "^CIR"
 )
+
+if(CLANG_ENABLE_CIR)
+  # These tools are resolved while loading clang/test/lit.cfg.py, or invoked
+  # directly by tests under clang/test/CIR.
+  set(CLANG_CIR_TEST_DEPS
+    clang
+    cir-opt
+    cir-translate
+    )
+  if(NOT CLANG_BUILT_STANDALONE)
+    list(APPEND CLANG_CIR_TEST_DEPS
+      FileCheck
+      count
+      llvm-config
+      llvm-dis
+      llvm-objdump
+      not
+      opt
+      split-file
+      )
+  endif()
+
+  add_lit_target(check-clang-cir "Running the CIR regression tests"
+    ${CMAKE_CURRENT_SOURCE_DIR}/CIR
+    DEPENDS ${CLANG_CIR_TEST_DEPS}
+    )
+  set_target_properties(check-clang-cir PROPERTIES FOLDER "Clang tests/Suites")
+
+  add_lit_testsuites(CLANG-CIR ${CMAKE_CURRENT_SOURCE_DIR}/CIR
+    DEPENDS ${CLANG_CIR_TEST_DEPS}
+    FOLDER "Clang tests/Suites"
+    )
+endif()
 
 # Add a legacy target spelling: clang-test
 add_custom_target(clang-test)

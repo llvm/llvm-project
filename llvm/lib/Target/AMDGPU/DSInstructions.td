@@ -1110,7 +1110,7 @@ class DS128Bit8ByteAlignedWritePat<DS_Pseudo inst, ValueType vt, PatFrag frag> :
 >;
 
 multiclass DS64Bit4ByteAlignedPat_mc<ValueType vt> {
-  let OtherPredicates = [LDSRequiresM0Init, isGFX7Plus] in {
+  let SubtargetPredicate = HasUsableDSOffset, OtherPredicates = [LDSRequiresM0Init] in {
     def : DS64Bit4ByteAlignedReadPat<DS_READ2_B32, vt, load_local_m0>;
     def : DS64Bit4ByteAlignedWritePat<DS_WRITE2_B32, vt, store_local_m0>;
   }
@@ -1127,7 +1127,7 @@ multiclass DS64Bit4ByteAlignedPat_mc<ValueType vt> {
 }
 
 multiclass DS128Bit8ByteAlignedPat_mc<ValueType vt> {
-  let OtherPredicates = [LDSRequiresM0Init, isGFX7Plus] in {
+  let SubtargetPredicate = HasUsableDSOffset, OtherPredicates = [LDSRequiresM0Init] in {
     def : DS128Bit8ByteAlignedReadPat<DS_READ2_B64, vt, load_local_m0>;
     def : DS128Bit8ByteAlignedWritePat<DS_WRITE2_B64, vt, store_local_m0>;
   }
@@ -1454,13 +1454,15 @@ multiclass DS_Real_gfx12<bits<8> op,
 multiclass DS_Real_gfx13<bits<8> op,
                          DS_Pseudo ps = !cast<DS_Pseudo>(NAME),
                          string name = !tolower(NAME)> {
-  let AssemblerPredicate = isGFX13Only, DecoderNamespace = "GFX13" in
-    def _gfx13 :
-      Base_DS_Real_gfx6_gfx7_gfx10_gfx11_gfx12_gfx13<op, ps,
-                                                     SIEncodingFamily.GFX13,
-                                                     name, /*hasGDS=*/false>;
-  if !ne(ps.Mnemonic, name) then
-    def : MnemonicAlias<ps.Mnemonic, name>, Requires<[isGFX13Only]>;
+  let AssemblerPredicate = isGFX13Only in {
+    let DecoderNamespace = "GFX13" in
+      def _gfx13 :
+        Base_DS_Real_gfx6_gfx7_gfx10_gfx11_gfx12_gfx13<op, ps,
+                                                       SIEncodingFamily.GFX13,
+                                                       name, /*hasGDS=*/false>;
+    if !ne(ps.Mnemonic, name) then
+      def : AMDGPUMnemonicAlias<ps.Mnemonic, name>;
+  } // End AssemblerPredicate
 }
 
 // Helper to avoid repeating the pseudo-name if we only need to set

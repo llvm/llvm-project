@@ -17,6 +17,7 @@ licenses(["notice"])
             "**/*.ll",
             "**/*.s",
             "**/*.test",
+            "**/*.yaml",
         ],
         exclude = ["**/Inputs/**"],
     )

@@ -43,6 +43,7 @@ add_llvm_unittest(CodeGenTests
   MIR2VecTest.cpp
   RegAllocBasicTest.cpp
   RegAllocScoreTest.cpp
+  RegisterPressureTest.cpp
   RegisterTest.cpp
   PassManagerTest.cpp
   RematerializerTest.cpp
@@ -52,6 +53,7 @@ add_llvm_unittest(CodeGenTests
   SelectionDAGCSETest.cpp
   SelectionDAGNodeConstructionTest.cpp
   SelectionDAGPatternMatchTest.cpp
+  SlotIndexesTest.cpp
   TypeTraitsTest.cpp
   TargetOptionsTest.cpp
   TestAsmPrinter.cpp
@@ -59,6 +61,9 @@ add_llvm_unittest(CodeGenTests
   )
 
 add_subdirectory(GlobalISel)
-add_subdirectory(CGPluginTest)
+
+if (LLVM_ENABLE_PLUGINS)
+  add_subdirectory(CGPluginTest)
+endif()
 
 target_link_libraries(CodeGenTests PRIVATE LLVMTestingSupport)

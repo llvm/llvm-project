@@ -12,6 +12,11 @@ from lldbsuite.test.lldbgdbclient import GDBRemoteTestBase
 MODULE_ID = 16
 SECOND_MODULE_ID = 26
 
+# Ids of the instances the fake stub loads in place of the others when it
+# reloads them. A reloaded module is a new instance, with an id of its own.
+RELOADED_MODULE_ID = 36
+RELOADED_SECOND_MODULE_ID = 46
+
 # The address spaces an address can point into, in the bits above the id of the
 # instance the address belongs to. The object space holds the module image, so
 # that is the space a module is loaded in.
@@ -96,7 +101,7 @@ def global_read_packet(global_index, module_id=MODULE_ID):
     """
     The packet that reads a global from the module instance holding it.
     """
-    return f"qWasmGlobal:{global_index};{INSTANCE_KEY}{module_id}"
+    return f"qWasmGlobal:{global_index};{INSTANCE_KEY}{module_id};"
 
 
 def format_register_value(val):
@@ -205,7 +210,7 @@ class MyResponder(MockGDBServerResponder):
         Read a global. A client that can name the instance holding it does so
         with the instance suffix, and one that cannot names a frame.
 
-        Format: qWasmGlobal:index;instance:id or
+        Format: qWasmGlobal:index;instance:id; or
                 qWasmGlobal:frame_index;index
         """
         first, _, rest = packet.split(":", 1)[1].partition(";")
@@ -217,7 +222,7 @@ class MyResponder(MockGDBServerResponder):
             # The global index space belongs to the instance, so an index only
             # names a global together with the instance it indexes. Another
             # instance's globals answer a different question.
-            module = self.module_with_id(int(rest[len(INSTANCE_KEY) :]))
+            module = self.module_with_id(int(rest[len(INSTANCE_KEY) :].rstrip(";")))
             if module is None:
                 return "E04"
             return module.encode_global(int(first))
@@ -325,6 +330,22 @@ class MyResponder(MockGDBServerResponder):
         if frame_index == "0" and local_index == "2":
             return format_register_value(WASM_LOCAL_ADDR)
         return "E03"
+
+
+class ReloadingResponder(MyResponder):
+    """
+    A fake stub that replaces the modules it has loaded with others when it
+    continues, as an engine does when the page running them reloads, and stops
+    to report the change.
+    """
+
+    def __init__(self, modules, reloaded_modules):
+        MyResponder.__init__(self, modules)
+        self._reloaded_modules = reloaded_modules
+
+    def cont(self):
+        self._modules = self._reloaded_modules
+        return "T05thread:1;library:;"
 
 
 class TestWasm(GDBRemoteTestBase):
@@ -1028,6 +1049,79 @@ class TestWasm(GDBRemoteTestBase):
         self.assertEqual(int.from_bytes(data, "little"), WASM_GLOBALS[0][1])
 
         self.assertPacketLogReceived(["qWasmGlobal:0;0"])
+
+    def reload_modules(self, modules, reloaded_modules):
+        """
+        Connect to a fake stub holding the given modules, continue it until it
+        has reloaded them as the others, and return its target.
+        """
+        self.server.responder = ReloadingResponder(modules, reloaded_modules)
+        target = self.dbg.CreateTarget("")
+        process = self.connect(target, "wasm")
+        lldbutil.expect_state_changes(
+            self, self.dbg.GetListener(), process, [lldb.eStateStopped]
+        )
+        self.assertSuccess(process.Continue())
+        return target
+
+    def modules_in_target(self, target):
+        """
+        The name of every module in the target, together with the address its
+        image was read from.
+        """
+        return [
+            (
+                module.GetFileSpec().GetFilename(),
+                module.GetObjectFileHeaderAddress().GetLoadAddress(target),
+            )
+            for module in target.modules
+        ]
+
+    @skipIfAsan
+    @skipIfXmlSupportMissing
+    def test_reload_modules(self):
+        """Test that the modules a stub no longer reports leave the target,
+        the first one it loaded included."""
+
+        modules = [
+            self.build_wasm_module("test_wasm"),
+            self.build_wasm_module("second_test_wasm", module_id=SECOND_MODULE_ID),
+        ]
+        reloaded_modules = [
+            self.build_wasm_module("reloaded_test_wasm", module_id=RELOADED_MODULE_ID),
+            self.build_wasm_module(
+                "reloaded_second_test_wasm", module_id=RELOADED_SECOND_MODULE_ID
+            ),
+        ]
+        target = self.reload_modules(modules, reloaded_modules)
+
+        self.assertEqual(
+            self.modules_in_target(target),
+            [(module.name, module.load_address) for module in reloaded_modules],
+        )
+
+    @skipIfAsan
+    @skipIfXmlSupportMissing
+    def test_reload_modules_under_same_name(self):
+        """Test that a module a stub reloads under the name it had is read
+        again from where it was reloaded."""
+
+        modules = [
+            self.build_wasm_module("test_wasm"),
+            self.build_wasm_module("second_test_wasm", module_id=SECOND_MODULE_ID),
+        ]
+        reloaded_modules = [
+            WasmModule(module.obj_path, module.name, module_id=module_id)
+            for module, module_id in zip(
+                modules, [RELOADED_MODULE_ID, RELOADED_SECOND_MODULE_ID]
+            )
+        ]
+        target = self.reload_modules(modules, reloaded_modules)
+
+        self.assertEqual(
+            self.modules_in_target(target),
+            [(module.name, module.load_address) for module in reloaded_modules],
+        )
 
     @skipIfXmlSupportMissing
     def test_non_wasm_process(self):

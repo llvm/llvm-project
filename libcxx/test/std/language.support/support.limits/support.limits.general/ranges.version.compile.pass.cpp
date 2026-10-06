@@ -671,17 +671,11 @@
 #    error "__cpp_lib_ranges_zip should have the value 202110L in c++29"
 #  endif
 
-#  if !defined(_LIBCPP_VERSION)
-#    ifndef __cpp_lib_view_interface
-#      error "__cpp_lib_view_interface should be defined in c++29"
-#    endif
-#    if __cpp_lib_view_interface != 202606L
-#      error "__cpp_lib_view_interface should have the value 202606L in c++29"
-#    endif
-#  else
-#    ifdef __cpp_lib_view_interface
-#      error "__cpp_lib_view_interface should not be defined because it is unimplemented in libc++!"
-#    endif
+#  ifndef __cpp_lib_view_interface
+#    error "__cpp_lib_view_interface should be defined in c++29"
+#  endif
+#  if __cpp_lib_view_interface != 202606L
+#    error "__cpp_lib_view_interface should have the value 202606L in c++29"
 #  endif
 
 #endif // TEST_STD_VER > 26

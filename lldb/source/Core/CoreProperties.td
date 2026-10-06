@@ -206,6 +206,30 @@ let Definition = "debugger", Path = "" in {
     Global,
     DefaultStringValue<"${ansi.normal}">,
     Desc<"When displaying progress in a color-enabled terminal, use the ANSI terminal code specified in this format immediately after the progress message.">;
+  def LabelAnsiPrefix: Property<"label-ansi-prefix", "String">,
+    Global,
+    DefaultStringValue<"${ansi.fg.green}${ansi.bold}">,
+    Desc<"When displaying a field label in command output in a color-enabled terminal, use the ANSI terminal code specified in this format immediately before the label.">;
+  def LabelAnsiSuffix: Property<"label-ansi-suffix", "String">,
+    Global,
+    DefaultStringValue<"${ansi.normal}">,
+    Desc<"When displaying a field label in command output in a color-enabled terminal, use the ANSI terminal code specified in this format immediately after the label.">;
+  def TitleAnsiPrefix: Property<"title-ansi-prefix", "String">,
+    Global,
+    DefaultStringValue<"${ansi.fg.cyan}${ansi.bold}">,
+    Desc<"When displaying the title of an entry in a list in a color-enabled terminal, use the ANSI terminal code specified in this format immediately before the title.">;
+  def TitleAnsiSuffix: Property<"title-ansi-suffix", "String">,
+    Global,
+    DefaultStringValue<"${ansi.normal}">,
+    Desc<"When displaying the title of an entry in a list in a color-enabled terminal, use the ANSI terminal code specified in this format immediately after the title.">;
+  def DividerAnsiPrefix: Property<"divider-ansi-prefix", "String">,
+    Global,
+    DefaultStringValue<"${ansi.faint}">,
+    Desc<"When displaying the divider between entries of a list in a color-enabled terminal, use the ANSI terminal code specified in this format immediately before the divider.">;
+  def DividerAnsiSuffix: Property<"divider-ansi-suffix", "String">,
+    Global,
+    DefaultStringValue<"${ansi.normal}">,
+    Desc<"When displaying the divider between entries of a list in a color-enabled terminal, use the ANSI terminal code specified in this format immediately after the divider.">;
   def ShowStatusline: Property<"show-statusline", "Boolean">,
     Global,
     DefaultTrue,
