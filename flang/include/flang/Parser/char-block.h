@@ -31,6 +31,8 @@ public:
       : llvm::StringRef(begin, end - begin) {}
   CharBlock(const char *begin) : llvm::StringRef(begin, 1) {}
 
+  // Checks whether the address range of "that" is contained in the
+  // address range of "this".
   bool Contains(const CharBlock &that) const {
     uintptr_t thisBegin{reinterpret_cast<uintptr_t>(begin())};
     uintptr_t thisEnd{reinterpret_cast<uintptr_t>(end())};
