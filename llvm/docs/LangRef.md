@@ -28648,3 +28648,11 @@ of comparisons, switches, divisions, GEPs, loads, stores and indirect calls is
 performed inside regions. Function entry/exit callbacks, stack depth tracing and
 control
 flow tables are not emitted for such functions.
+
+ThreadSanitizer supports regions in functions marked with
+`disable_sanitizer_instrumentation`, and in functions that lack the
+`sanitize_thread` attribute. In the former, plain and atomic memory accesses and
+memory intrinsics are instrumented only inside regions, and no function
+entry/exit hooks are inserted. In the latter, which already get their atomic
+accesses and function entry/exit instrumented, plain memory accesses and memory
+intrinsics inside regions are instrumented as well.
