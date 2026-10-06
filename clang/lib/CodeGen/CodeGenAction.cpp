@@ -575,6 +575,24 @@ void CodeGenAction::ExecuteAction() {
     TheModule->setTargetTriple(Triple(TargetOpts.Triple));
   }
 
+  llvm::ExceptionHandling ExceptionModel =
+      CodeGenOptions::toExceptionHandling(CodeGenOpts.getExceptionHandling());
+  if (ExceptionModel != llvm::ExceptionHandling::Default) {
+    StringRef ModelName = llvm::getExceptionModelName(ExceptionModel);
+    if (auto *Existing = cast_or_null<llvm::MDString>(
+            TheModule->getModuleFlag("exception-model"))) {
+      if (Existing->getString() != ModelName) {
+        Diagnostics.Report(diag::err_fe_exception_model_mismatch)
+            << ModelName << Existing->getString();
+        return;
+      }
+    } else {
+      TheModule->addModuleFlag(
+          llvm::Module::Error, "exception-model",
+          llvm::MDString::get(TheModule->getContext(), ModelName));
+    }
+  }
+
   EmbedObject(TheModule.get(), CodeGenOpts, CI.getVirtualFileSystem(),
               Diagnostics);
   EmbedBitcode(TheModule.get(), CodeGenOpts, *MainFile);

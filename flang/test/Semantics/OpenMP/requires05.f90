@@ -6,7 +6,7 @@
 ! clause and no device_type.
 
 subroutine f
-  !WARNING: The usage of TO clause on DECLARE TARGET directive has been deprecated. Use ENTER clause instead. [-Wopenmp-usage]
+  !WARNING: The usage of TO clause on DECLARE TARGET directive has been deprecated. Use ENTER clause instead. [-Wopenmp-deprecated]
   !$omp declare target to(f)
   !$omp declare target enter(f)
   !ERROR: REQUIRES directive with 'DYNAMIC_ALLOCATORS' clause found lexically after device construct

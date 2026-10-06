@@ -10672,6 +10672,20 @@ bool PointerExprEvaluator::VisitBuiltinCallExpr(const CallExpr *E,
     if (!getAlignmentArgument(E->getArg(1), E->getArg(0)->getType(), Info,
                               Alignment))
       return false;
+
+    if (!Result.Base) {
+      // Null pointers are always aligned and align_up/align_down preserve null.
+      if (Result.Offset.isZero())
+        return true;
+
+      // Non-null pointers without a base (for example, integer-to-pointer
+      // casts such as (void *)32) do not have enough information to perform
+      // pointer arithmetic during constant evaluation.
+      Info.FFDiag(E->getArg(0), diag::note_constexpr_alignment_adjust)
+          << Alignment;
+      return false;
+    }
+
     CharUnits BaseAlignment = getBaseAlignment(Info, Result);
     CharUnits PtrAlign = BaseAlignment.alignmentAtOffset(Result.Offset);
     // For align_up/align_down, we can return the same value if the alignment
@@ -17110,6 +17124,18 @@ bool IntExprEvaluator::VisitBuiltinCallExpr(const CallExpr *E,
       // If we evaluated a pointer, check the minimum known alignment.
       LValue Ptr;
       Ptr.setFrom(Info.Ctx, Src);
+      if (!Ptr.Base) {
+        // Null pointers are always aligned.
+        if (Ptr.Offset.isZero())
+          return Success(1, E);
+
+        Info.FFDiag(E->getArg(0), diag::note_constexpr_alignment_compute)
+            << Alignment;
+        // Reject non-null pointers without an underlying object.
+        // Do not interpret the pointer offset as an integer address.
+        return false;
+      }
+
       CharUnits BaseAlignment = getBaseAlignment(Info, Ptr);
       CharUnits PtrAlign = BaseAlignment.alignmentAtOffset(Ptr.Offset);
       // We can return true if the known alignment at the computed offset is

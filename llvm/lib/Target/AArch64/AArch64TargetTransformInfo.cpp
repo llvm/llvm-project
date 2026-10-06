@@ -6302,6 +6302,9 @@ void AArch64TTIImpl::getUnrollingPreferences(
         return;
       }
 
+      // The cost is only compared against Aarch64ForceUnrollThreshold below.
+      if (Cost >= Aarch64ForceUnrollThreshold)
+        continue;
       SmallVector<const Value *, 4> Operands(I.operand_values());
       Cost += getInstructionCost(&I, Operands,
                                  TargetTransformInfo::TCK_SizeAndLatency);
@@ -7465,6 +7468,44 @@ AArch64TTIImpl::getScalingFactorCost(Type *Ty, GlobalValue *BaseGV,
     // it is not equal to 0 or 1.
     return AM.Scale != 0 && AM.Scale != 1;
   return InstructionCost::getInvalid();
+}
+
+bool AArch64TTIImpl::isLegalAddressingMode(Type *Ty, GlobalValue *BaseGV,
+                                           int64_t BaseOffset, bool HasBaseReg,
+                                           int64_t Scale, unsigned AddrSpace,
+                                           Instruction *I,
+                                           int64_t ScalableOffset) const {
+  LLVMContext &Ctx = Ty->getContext();
+  const AArch64TargetLowering *TLI = getTLI();
+
+  // LSR can make an illegal scalable vector access easier to split and combine
+  // by preferring a base+scalable-offset form. Note: This is an LSR preference
+  // rather than a legal machine addressing mode.
+  if (!BaseGV && !BaseOffset && HasBaseReg && isa<ScalableVectorType>(Ty)) {
+    EVT MemVT = TLI->getValueType(DL, Ty);
+    TargetLowering::LegalizeTypeAction Action = TLI->getTypeAction(Ctx, MemVT);
+
+    // Note: If MemVT cannot be legalized (e.g. no scalable vectors) then
+    // LegalVT could be MVT::Other (which would assert on getStoreSize()).
+    EVT LegalVT = TLI->getLegalTypeToTransformTo(Ctx, MemVT);
+    if (Action == TargetLowering::TypeSplitVector && LegalVT.isScalableVT() &&
+        LegalVT.getVectorElementType() == MemVT.getVectorElementType()) {
+      uint64_t LegalNumBytes = LegalVT.getStoreSize().getKnownMinValue();
+      assert(MemVT.getStoreSize().getKnownMinValue() % LegalNumBytes == 0 &&
+             "expected vector split");
+
+      // Don't prefer scaled access if the type may need splitting. Only the
+      // first access can use the scaled offset. Later accesses need to
+      // materialize a new base + mul vl offset.
+      if (Scale)
+        return false;
+      if (ScalableOffset && ScalableOffset % LegalNumBytes == 0)
+        return true;
+    }
+  }
+
+  return BaseT::isLegalAddressingMode(Ty, BaseGV, BaseOffset, HasBaseReg, Scale,
+                                      AddrSpace, I, ScalableOffset);
 }
 
 bool AArch64TTIImpl::shouldTreatInstructionLikeSelect(
