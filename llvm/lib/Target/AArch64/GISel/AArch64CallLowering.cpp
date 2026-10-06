@@ -1098,7 +1098,7 @@ bool AArch64CallLowering::isEligibleForTailCallOptimization(
   // cannot rely on the linker replacing the tail call with a return.
   if (Info.Callee.isGlobal()) {
     const GlobalValue *GV = Info.Callee.getGlobal();
-    const Triple &TT = MF.getTarget().getTargetTriple();
+    const Triple &TT = GV->getParent()->getTargetTriple();
     if (GV->hasExternalWeakLinkage() &&
         (!TT.isOSWindows() || TT.isOSBinFormatELF() ||
          TT.isOSBinFormatMachO())) {

@@ -207,8 +207,109 @@ struct FindHostArray
   }
 };
 
+// Intrinsics that only use the address or the descriptor of their arguments.
+static const llvm::StringSet<> hostAddressIntrinsics_ = {
+    "__builtin_c_devloc", "__builtin_c_loc", "c_sizeof", "loc", "sizeof"};
+
+// Inquiry intrinsics whose arguments are all inquired objects. Other inquiry
+// intrinsics only inquire about their first argument and read the values of
+// the others (DIM=, KIND=).
+static const llvm::StringSet<> allArgsInquiryIntrinsics_ = {
+    "associated", "extends_type_of", "same_type_as"};
+
+// Collects, in order of appearance, the device data whose value host code
+// reads when it evaluates an expression. Device data that is only designated
+// (actual argument to a procedure, argument of an inquiry intrinsic) is not
+// read; the subscripts of its designator still are. A component with a CUDA
+// data attribute is collected instead of its base.
+struct CollectDeviceDataReadOnHost
+    : public evaluate::Traverse<CollectDeviceDataReadOnHost, SymbolVector> {
+  using Result = SymbolVector;
+  using Base = evaluate::Traverse<CollectDeviceDataReadOnHost, Result>;
+  explicit CollectDeviceDataReadOnHost(
+      SemanticsContext &c, bool onlyDesignated = false)
+      : Base(*this), context_{c}, onlyDesignated_{onlyDesignated} {}
+  using Base::operator();
+  static Result Default() { return {}; }
+  static Result Combine(Result &&x, Result &&y) {
+    x.insert(x.end(), y.begin(), y.end());
+    return std::move(x);
+  }
+  Result operator()(const Symbol &symbol) const {
+    if (onlyDesignated_ ||
+        !evaluate::IsCUDADeviceOnlySymbol(GetAssociationRoot(symbol))) {
+      return {};
+    }
+    return {symbol};
+  }
+  Result operator()(const evaluate::Component &x) const {
+    const Symbol &component{x.GetLastSymbol()};
+    if (evaluate::HasCUDADataAttr(component)) {
+      // The attribute of the component hides the one of the base.
+      return Combine((*this)(component),
+          CollectDeviceDataReadOnHost{context_, /*onlyDesignated=*/true}(
+              x.base()));
+    }
+    return (*this)(x.base());
+  }
+  Result operator()(const evaluate::ArrayRef &x) const {
+    return Combine((*this)(x.base()),
+        CollectDeviceDataReadOnHost{context_}(x.subscript()));
+  }
+  Result operator()(const evaluate::Substring &x) const {
+    CollectDeviceDataReadOnHost readCollector{context_};
+    return Combine((*this)(x.parent()),
+        Combine(readCollector(x.lower()), readCollector(x.upper())));
+  }
+  Result operator()(const evaluate::DescriptorInquiry &x) const {
+    // Accessing descriptor metadata is allowed, but selecting the descriptor
+    // may require reading device data in subscripts.
+    return CollectDeviceDataReadOnHost{context_, /*onlyDesignated=*/true}(
+        x.base());
+  }
+  Result operator()(const evaluate::TypeParamInquiry &) const { return {}; }
+  Result operator()(const evaluate::ProcedureRef &x) const {
+    bool onlyFirstArgDesignated{false};
+    if (const auto *intrinsic{x.proc().GetSpecificIntrinsic()}) {
+      if (context_.intrinsics().GetIntrinsicClass(intrinsic->name) !=
+              evaluate::IntrinsicClass::inquiryFunction &&
+          !hostAddressIntrinsics_.contains(intrinsic->name)) {
+        return (*this)(x.arguments());
+      }
+      onlyFirstArgDesignated =
+          !allArgsInquiryIntrinsics_.contains(intrinsic->name);
+    }
+    Result result;
+    for (std::size_t j{0}; j < x.arguments().size(); ++j) {
+      const auto &arg{x.arguments()[j]};
+      if (const auto *expr{arg ? arg->UnwrapExpr() : nullptr}) {
+        bool designated{
+            evaluate::IsVariable(*expr) && (j == 0 || !onlyFirstArgDesignated)};
+        result = Combine(std::move(result),
+            CollectDeviceDataReadOnHost{
+                context_, onlyDesignated_ || designated}(*expr));
+      }
+    }
+    return result;
+  }
+
+  SemanticsContext &context_;
+  bool onlyDesignated_{false};
+};
+
+// A scalar variable other than a component, an allocatable or a pointer.
+static bool IsPlainScalar(const Symbol &symbol) {
+  const Symbol &ultimate{symbol.GetUltimate()};
+  return ultimate.has<ObjectEntityDetails>() && ultimate.Rank() == 0 &&
+      !ultimate.owner().IsDerivedType() && !IsAllocatableOrPointer(ultimate);
+}
+
+// [[maybe_unused]] works around a -Wunused-template false positive: this
+// overload is only reached through the if-constexpr-dispatched recursion in
+// ActionStmtChecker::WhyNotOk, a pattern Clang's use-tracking misses (see
+// llvm/llvm-project#218429). Remove once that is fixed upstream.
 template <typename A>
-static MaybeMsg CheckUnwrappedExpr(
+[[maybe_unused]] static MaybeMsg CheckUnwrappedExpr(
     SemanticsContext &context, const A &x, bool allowHostCallees = false) {
   if (const auto *expr{parser::Unwrap<parser::Expr>(x)}) {
     return DeviceExprChecker{context, allowHostCallees}(expr->typedExpr);
@@ -835,13 +936,30 @@ void CUDAChecker::Enter(const parser::AssignmentStmt &x) {
 
   int nbLhs{evaluate::GetNbOfCUDADeviceSymbols(assign->lhs)};
   int nbRhs{evaluate::GetNbOfUniqueCUDADeviceSymbols(assign->rhs)};
-  int nbRhsManaged{evaluate::GetNbOfCUDAManagedOrUnifiedSymbols(assign->rhs)};
+  int nbRhsManaged{
+      evaluate::GetNbOfUniqueCUDAManagedOrUnifiedSymbols(assign->rhs)};
 
   // device to host transfer with more than one device object on the rhs is not
-  // legal.
-  if (nbLhs == 0 && nbRhs > 1 && nbRhsManaged != nbRhs) {
+  // legal. Managed and unified objects are accessible from the host and are not
+  // counted.
+  if (nbLhs == 0 && nbRhs - nbRhsManaged > 1) {
     context_.Say(lhsLoc,
         "More than one reference to a CUDA object on the right hand side of the assignment"_err_en_US);
+  }
+
+  // An implicit data transfer copies the whole device object to the host, and
+  // the size of an assumed-size array is unknown.
+  if (evaluate::IsCUDADataTransfer(assign->lhs, assign->rhs) &&
+      evaluate::HasCUDAImplicitTransfer(assign->rhs)) {
+    for (const Symbol &sym : evaluate::CollectCudaSymbols(assign->rhs)) {
+      if (evaluate::IsCUDADeviceSymbol(sym) &&
+          IsAssumedSizeArray(sym.GetUltimate())) {
+        context_.Say(lhsLoc,
+            "Implicit data transfer of assumed-size device array '%s' is not supported"_err_en_US,
+            sym.name());
+        break;
+      }
+    }
   }
 
   if (evaluate::HasCUDADeviceAttrs(assign->lhs) &&
@@ -853,6 +971,61 @@ void CUDAChecker::Enter(const parser::AssignmentStmt &x) {
     }
     context_.Say(lhsLoc, "Unsupported CUDA data transfer"_err_en_US);
   }
+}
+
+template <typename A> void CUDAChecker::EnterHostScalarExpr(const A &x) {
+  if (hostScalarExprDepth_++ > 0) {
+    return; // Checked with the enclosing expression.
+  }
+  const auto &expr{DEREF(parser::Unwrap<parser::Expr>(x))};
+  const Scope &progUnit{
+      GetProgramUnitContaining(context_.FindScope(expr.source))};
+  if (IsCUDADeviceContext(&progUnit) || deviceConstructDepth_ > 0) {
+    return;
+  }
+  if (const auto *typedExpr{GetExpr(context_, expr)}) {
+    const Symbol *deviceScalar{nullptr};
+    for (const Symbol &deviceData :
+        CollectDeviceDataReadOnHost{context_}(*typedExpr)) {
+      if (!IsPlainScalar(deviceData)) {
+        context_.Say(expr.source,
+            "Device data '%s' may not be referenced in host code outside of a data transfer or an actual argument"_err_en_US,
+            deviceData.name());
+        return;
+      }
+      // Host code reads a module scalar from its host copy.
+      if (!deviceScalar &&
+          deviceData.GetUltimate().owner().kind() != Scope::Kind::Module) {
+        deviceScalar = &deviceData;
+      }
+    }
+    if (deviceScalar) {
+      context_.Warn(common::UsageWarning::CUDAUsage, expr.source,
+          "Device data '%s' is read in host code outside of a data transfer or an actual argument"_warn_en_US,
+          deviceScalar->name());
+    }
+  }
+}
+
+void CUDAChecker::Enter(const parser::Scalar<parser::Expr> &x) {
+  EnterHostScalarExpr(x);
+}
+void CUDAChecker::Leave(const parser::Scalar<parser::Expr> &) {
+  --hostScalarExprDepth_;
+}
+void CUDAChecker::Enter(const parser::ScalarExpr &x) { EnterHostScalarExpr(x); }
+void CUDAChecker::Leave(const parser::ScalarExpr &) { --hostScalarExprDepth_; }
+void CUDAChecker::Enter(const parser::ScalarIntExpr &x) {
+  EnterHostScalarExpr(x);
+}
+void CUDAChecker::Leave(const parser::ScalarIntExpr &) {
+  --hostScalarExprDepth_;
+}
+void CUDAChecker::Enter(const parser::ScalarLogicalExpr &x) {
+  EnterHostScalarExpr(x);
+}
+void CUDAChecker::Leave(const parser::ScalarLogicalExpr &) {
+  --hostScalarExprDepth_;
 }
 
 void CUDAChecker::Enter(const parser::PrintStmt &x) {

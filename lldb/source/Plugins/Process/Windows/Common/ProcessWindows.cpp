@@ -581,7 +581,10 @@ Status ProcessWindows::DoGetMemoryRegionInfo(lldb::addr_t vm_addr,
 
 lldb::addr_t ProcessWindows::GetImageInfoAddress() {
   Target &target = GetTarget();
-  ObjectFile *obj_file = target.GetExecutableModule()->GetObjectFile();
+  ModuleSP executable_sp = target.GetExecutableModule();
+  if (!executable_sp)
+    return LLDB_INVALID_ADDRESS;
+  ObjectFile *obj_file = executable_sp->GetObjectFile();
   Address addr = obj_file->GetImageInfoAddress(&target);
   if (addr.IsValid())
     return addr.GetLoadAddress(&target);
@@ -670,7 +673,7 @@ void ProcessWindows::OnDebuggerConnected(lldb::addr_t image_base) {
         GetTarget().GetOrCreateModule(module_spec, /*notify=*/true, &error);
     if (!module)
       return;
-    GetTarget().SetExecutableModule(module, eLoadDependentsNo);
+    GetTarget().RebuildModuleListWithExecutable(module, eLoadDependentsNo);
   }
 
   if (auto dyld = GetDynamicLoader())
