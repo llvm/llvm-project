@@ -4247,6 +4247,32 @@ SUnit *GenericScheduler::pickNode(bool &IsTopNode) {
   return SU;
 }
 
+/// Clear potentially-stale read-undef flags on subregister defs of \p VRegs in
+/// \p MI, then re-add the ones still valid according to \p LIS. Instructions
+/// without an affected def are left untouched. The clear must come first
+/// because adjustLaneLiveness only adds flags; the re-add avoids introducing
+/// reads of undefined lanes.
+static void recomputeReadUndefFlags(MachineInstr &MI, ArrayRef<Register> VRegs,
+                                    LiveIntervals &LIS,
+                                    const TargetRegisterInfo &TRI) {
+  bool HasAffectedDef = false;
+  for (MachineOperand &MO : MI.all_defs()) {
+    if (!MO.getReg().isVirtual() || MO.getSubReg() == 0 ||
+        !llvm::is_contained(VRegs, MO.getReg()))
+      continue;
+    MO.setIsUndef(false);
+    HasAffectedDef = true;
+  }
+  if (!HasAffectedDef)
+    return;
+
+  const MachineRegisterInfo &MRI = MI.getMF()->getRegInfo();
+  RegisterOperands RegOpers;
+  RegOpers.collect(MI, TRI, MRI, /*TrackLaneMasks=*/true,
+                   /*IgnoreDead=*/false);
+  RegOpers.adjustLaneLiveness(LIS, MRI, MI);
+}
+
 void GenericScheduler::reschedulePhysReg(SUnit *SU, bool isTop) {
   MachineBasicBlock::iterator InsertPos = SU->getInstr();
   if (!isTop)
@@ -4272,54 +4298,50 @@ void GenericScheduler::reschedulePhysReg(SUnit *SU, bool isTop) {
     // read-undef makes a later DAG build drop true data dependencies, which
     // can orphan the moved copy and crash LiveIntervals. Recompute the affected
     // flags from LiveIntervals after the move.
+    //
+    // 1) Check whether any read-undef flags could have changed. The recompute
+    // needs live intervals to recompute from, vreg liveness, and lane-mask
+    // tracking for the flags to be meaningful. A copy mentioning no vregs
+    // cannot affect vreg subregister defs.
     LiveIntervals *LIS = DAG->getLIS();
-    bool FixUndef = LIS && DAG->hasVRegLiveness() && shouldTrackLaneMasks();
-    MachineBasicBlock::iterator OldNext = Copy->getParent()->end();
-    SlotIndex OldIdx;
     SmallVector<Register, 8> CopyVRegs;
-    if (FixUndef) {
-      OldIdx = LIS->getInstructionIndex(*Copy);
-      OldNext = std::next(Copy->getIterator());
+    if (LIS && DAG->hasVRegLiveness() && shouldTrackLaneMasks())
       for (const MachineOperand &MO : Copy->operands())
         if (MO.isReg() && MO.getReg().isVirtual())
           CopyVRegs.push_back(MO.getReg());
+    bool FixUndef = !CopyVRegs.empty();
+
+    // 2) Cache the copy's old location. This is purely an optimization: it
+    // narrows step 3 to the instructions the copy moves past. Recomputing a
+    // wider range would be equally correct, since the recompute reproduces
+    // identical flags wherever relative order did not change.
+    SlotIndex OldIdx;
+    MachineBasicBlock::iterator OldNext;
+    if (FixUndef) {
+      OldIdx = LIS->getInstructionIndex(*Copy);
+      OldNext = std::next(Copy->getIterator());
     }
+
     DAG->moveInstruction(Copy, InsertPos);
-    if (!FixUndef || CopyVRegs.empty())
+    if (!FixUndef)
       continue;
 
-    auto FixVRegUndef = [&](MachineInstr &MI) {
-      bool HasAffectedDef = false;
-      for (MachineOperand &MO : MI.all_defs()) {
-        if (!MO.getReg().isVirtual() || MO.getSubReg() == 0 ||
-            !llvm::is_contained(CopyVRegs, MO.getReg()))
-          continue;
-        MO.setIsUndef(false);
-        HasAffectedDef = true;
-      }
-      if (!HasAffectedDef)
-        return;
-
-      // adjustLaneLiveness only adds read-undef flags, so clear them first.
-      // Re-add the valid flags to avoid introducing reads of undefined lanes.
-      const MachineRegisterInfo &MRI = MI.getMF()->getRegInfo();
-      RegisterOperands RegOpers;
-      RegOpers.collect(MI, *TRI, MRI, /*TrackLaneMasks=*/true,
-                       /*IgnoreDead=*/false);
-      RegOpers.adjustLaneLiveness(*LIS, MRI, MI);
-    };
-    FixVRegUndef(*Copy);
+    // 3) Recompute the read-undef flags invalidated by the move, on the copy
+    // itself and on every instruction it moved past.
+    recomputeReadUndefFlags(*Copy, CopyVRegs, *LIS, *TRI);
     MachineBasicBlock::iterator NewIt = Copy->getIterator();
     SlotIndex NewIdx = LIS->getInstructionIndex(*Copy);
+    MachineBasicBlock::iterator FixBegin = NewIt, FixEnd = NewIt;
     if (NewIdx < OldIdx) {
-      for (auto I = std::next(NewIt); I != OldNext; ++I)
-        if (!I->isDebugInstr())
-          FixVRegUndef(*I);
+      FixBegin = std::next(NewIt);
+      FixEnd = OldNext;
     } else if (OldIdx < NewIdx) {
-      for (auto I = OldNext; I != NewIt; ++I)
-        if (!I->isDebugInstr())
-          FixVRegUndef(*I);
+      FixBegin = OldNext;
+      FixEnd = NewIt;
     }
+    for (auto I = FixBegin; I != FixEnd; ++I)
+      if (!I->isDebugInstr())
+        recomputeReadUndefFlags(*I, CopyVRegs, *LIS, *TRI);
   }
 }
 
