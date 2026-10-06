@@ -439,6 +439,12 @@ functions:
     arguments:
       - type: long double
       - type: long double
+  - name: erfc
+    standards:
+      - stdc
+    return_type: double
+    arguments:
+      - type: double
   - name: erff
     standards:
       - stdc
