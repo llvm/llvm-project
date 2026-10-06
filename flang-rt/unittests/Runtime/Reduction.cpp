@@ -12,6 +12,7 @@
 #include "flang-rt/runtime/descriptor.h"
 #include "flang-rt/runtime/type-code.h"
 #include "flang/Common/float128.h"
+#include "flang/Common/numeric-limits.h"
 #include "flang/Runtime/allocatable.h"
 #include "flang/Runtime/cpp-type.h"
 #include "flang/Runtime/reduce.h"
@@ -23,7 +24,7 @@
 #include <vector>
 
 using namespace Fortran::runtime;
-using Fortran::numeric_limits;
+using Fortran::common::numeric_limits;
 using Fortran::common::TypeCategory;
 
 TEST(Reductions, Int4Ops) {
