@@ -20,6 +20,7 @@
 #include <__algorithm/move.h>
 #include <__algorithm/upper_bound.h>
 #include <__atomic/atomic.h>
+#include <__atomic/memory_order.h>
 #include <__config>
 #include <__cstddef/ptrdiff_t.h>
 #include <__cstddef/size_t.h>

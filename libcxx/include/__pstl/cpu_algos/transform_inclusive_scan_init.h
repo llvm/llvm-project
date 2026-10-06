@@ -10,6 +10,7 @@
 #define _LIBCPP___PSTL_CPU_ALGOS_TRANSFORM_INCLUSIVE_SCAN_INIT_H
 
 #include <__config>
+#include <__cstddef/size_t.h>
 #include <__functional/identity.h>
 #include <__functional/operations.h>
 #include <__iterator/concepts.h>
@@ -22,6 +23,7 @@
 #include <__pstl/cpu_algos/cpu_traits.h>
 #include <__pstl/decoupled_lookback.h>
 #include <__type_traits/is_execution_policy.h>
+#include <__utility/empty.h>
 #include <__utility/move.h>
 
 #if !defined(_LIBCPP_HAS_NO_PRAGMA_SYSTEM_HEADER)
