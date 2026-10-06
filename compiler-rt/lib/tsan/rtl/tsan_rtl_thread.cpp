@@ -96,20 +96,15 @@ void ThreadFinalize(ThreadState *thr) {
   }
 
   for (uptr i = 0; i < leaks.Size(); i++) {
-    // Use alloca, because malloc during signal handling deadlocks
-    ScopedReport *rep = (ScopedReport *)__builtin_alloca(sizeof(ScopedReport));
+    ScopedReport rep(ReportTypeThreadLeak);
     // Release locks before symbolizing and outputting the report to avoid
     // deadlocks.
     {
       ThreadRegistryLock l(&ctx->thread_registry);
-      new (rep) ScopedReport(ReportTypeThreadLeak);
-      rep->AddThread(leaks[i].tctx, true);
-      rep->SetCount(leaks[i].count);
+      rep.AddThread(leaks[i].tctx, true);
+      rep.SetCount(leaks[i].count);
     }
-    OutputReport(thr, *rep);
-
-    // Need to manually destroy this because we used placement new to allocate
-    rep->~ScopedReport();
+    OutputReport(thr, rep);
   }
 #endif
 }
