@@ -91,9 +91,9 @@ define amdgpu_kernel void @kernel(ptr addrspace(1) inreg %0, ptr addrspace(1) %1
 ; CHECK-NEXT:    v_fma_mix_f32 v14, v18, 1.0, v14 op_sel_hi:[1,1,1]
 ; CHECK-NEXT:    v_mov_b32_e32 v18, s10
 ; CHECK-NEXT:    v_fma_mix_f32 v10, v10, 1.0, v32 op_sel_hi:[1,1,0]
-; CHECK-NEXT:    v_fma_mix_f32 v15, v19, 1.0, v15 op_sel_hi:[1,1,1]
-; CHECK-NEXT:    v_fma_mix_f32 v6, v6, 1.0, v14 op_sel_hi:[1,1,0]
 ; CHECK-NEXT:    v_add_f32_e32 v3, v3, v10
+; CHECK-NEXT:    v_fma_mix_f32 v6, v6, 1.0, v14 op_sel_hi:[1,1,0]
+; CHECK-NEXT:    v_fma_mix_f32 v15, v19, 1.0, v15 op_sel_hi:[1,1,1]
 ; CHECK-NEXT:    v_fma_mix_f32 v2, v2, 1.0, 0 op_sel_hi:[1,1,0]
 ; CHECK-NEXT:    v_cndmask_b32_e32 v1, v1, v18, vcc
 ; CHECK-NEXT:    v_fma_mix_f32 v12, v12, 1.0, v34 op_sel_hi:[1,1,0]
@@ -142,8 +142,8 @@ define amdgpu_kernel void @kernel(ptr addrspace(1) inreg %0, ptr addrspace(1) %1
 ; CHECK-NEXT:    v_pk_add_f32 v[0:1], v[0:1], v[2:3]
 ; CHECK-NEXT:    ds_write_b32 v27, v6
 ; CHECK-NEXT:    v_pk_add_f32 v[4:5], v[0:1], v[4:5]
-; CHECK-NEXT:    v_pk_add_f32 v[8:9], s[16:17], v[20:21]
 ; CHECK-NEXT:    v_cvt_pk_bf16_f32 v4, v4, v5
+; CHECK-NEXT:    v_pk_add_f32 v[8:9], s[16:17], v[20:21]
 ; CHECK-NEXT:    ds_read_b128 v[0:3], v27
 ; CHECK-NEXT:    ds_write_b32 v27, v4
 ; CHECK-NEXT:    v_cvt_pk_bf16_f32 v8, v8, v9
