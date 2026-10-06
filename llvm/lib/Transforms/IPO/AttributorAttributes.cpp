@@ -865,9 +865,39 @@ protected:
   /// invalidation.
   AAPointerInfo::OffsetInfo ReturnedOffsets;
 
+  /// Return the \p Size and \p Alignment of \p I. Unchanged if unknown.
+  static void getSizeAndAlignment(Instruction &I, const DataLayout &DL,
+                                  uint32_t &Size, Align &Alignment) {
+    if (auto *LI = dyn_cast<LoadInst>(&I)) {
+      Size = DL.getTypeStoreSize(LI->getType());
+      Alignment = LI->getAlign();
+    } else if (auto *SI = dyn_cast<StoreInst>(&I)) {
+      Size = DL.getTypeStoreSize(SI->getPointerOperandType());
+      Alignment = SI->getAlign();
+    } else if (auto *AI = dyn_cast<AtomicRMWInst>(&I)) {
+      Size = DL.getTypeStoreSize(AI->getPointerOperand()->getType());
+      Alignment = AI->getAlign();
+    } else if (auto *AI = dyn_cast<AtomicCmpXchgInst>(&I)) {
+      Size = DL.getTypeStoreSize(AI->getPointerOperand()->getType());
+      Alignment = AI->getAlign();
+    } else if (auto *MI = dyn_cast<MemSetInst>(&I)) {
+      std::optional<APInt> Length = MI->getLengthInBytes();
+      if (Length && Length->getActiveBits() <= 32)
+        Size = Length->getZExtValue();
+      Alignment = MI->getDestAlign().valueOrOne();
+    } else if (auto *MI = dyn_cast<MemTransferInst>(&I)) {
+      std::optional<APInt> Length = MI->getLengthInBytes();
+      if (Length && Length->getActiveBits() <= 32)
+        Size = Length->getZExtValue();
+      Alignment = std::min(MI->getSourceAlign().valueOrOne(),
+                           MI->getDestAlign().valueOrOne());
+    }
+  }
+
   /// See AAPointerInfo::forallInterferingAccesses.
   template <typename F>
-  bool forallInterferingAccesses(AA::RangeTy Range, F CB) const {
+  bool forallInterferingAccesses(AA::RangeTy Range, F CB, uint32_t Size = 0,
+                                 Align Alignment = Align(0)) const {
     if (!isValidState() || !ReturnedOffsets.isUnassigned())
       return false;
 
@@ -876,9 +906,22 @@ protected:
       if (!Range.mayOverlap(ItRange))
         continue;
       bool IsExact = Range == ItRange && !Range.offsetOrSizeAreUnknown();
+      bool IsCoherent = false;
       for (auto Index : It.getSecond()) {
         auto &Access = AccessList[Index];
-        if (!CB(Access, IsExact))
+        if (!IsExact) {
+          auto *AccI = Access.getRemoteInst();
+          uint32_t AccSize = 0;
+          Align AccAlignment(1);
+          const DataLayout &DL = AccI->getDataLayout();
+          getSizeAndAlignment(*AccI, DL, AccSize, AccAlignment);
+          if (AccSize && AccSize == Size && Alignment >= Size &&
+              AccAlignment >= AccSize)
+            IsCoherent = true;
+        }
+        if (!CB(Access, IsExact      ? AAPointerInfo::EXACT
+                        : IsCoherent ? AAPointerInfo::COHERENT
+                                     : AAPointerInfo::UNKNOWN))
           return false;
       }
     }
@@ -904,7 +947,11 @@ protected:
           break;
       }
     }
-    return forallInterferingAccesses(Range, CB);
+    uint32_t Size = 0;
+    Align Alignment(1);
+    const DataLayout &DL = I.getDataLayout();
+    getSizeAndAlignment(I, DL, Size, Alignment);
+    return forallInterferingAccesses(Range, CB, Size, Alignment);
   }
 
 private:
@@ -1056,7 +1103,7 @@ struct AAPointerInfoImpl
 
   bool forallInterferingAccesses(
       AA::RangeTy Range,
-      function_ref<bool(const AAPointerInfo::Access &, bool)> CB)
+      function_ref<bool(const AAPointerInfo::Access &, AccessOverlapTy)> CB)
       const override {
     return State::forallInterferingAccesses(Range, CB);
   }
@@ -1064,13 +1111,14 @@ struct AAPointerInfoImpl
   bool forallInterferingAccesses(
       Attributor &A, const AbstractAttribute &QueryingAA, Instruction &I,
       bool FindInterferingWrites, bool FindInterferingReads,
-      function_ref<bool(const Access &, bool)> UserCB, bool &HasBeenWrittenTo,
-      AA::RangeTy &Range,
+      function_ref<bool(const Access &, AccessOverlapTy)> UserCB,
+      bool &HasBeenWrittenTo, AA::RangeTy &Range,
       function_ref<bool(const Access &)> SkipCB) const override {
     HasBeenWrittenTo = false;
 
     SmallPtrSet<const Access *, 8> DominatingWrites;
-    SmallVector<std::pair<const Access *, bool>, 8> InterferingAccesses;
+    SmallVector<std::pair<const Access *, AccessOverlapTy>, 8>
+        InterferingAccesses;
 
     Function &Scope = *I.getFunction();
     bool IsKnownNoSync;
@@ -1199,7 +1247,8 @@ struct AAPointerInfoImpl
     // therefore blockers in the reachability traversal.
     AA::InstExclusionSetTy ExclusionSet;
 
-    auto AccessCB = [&](const Access &Acc, bool Exact) {
+    auto AccessCB = [&](const Access &Acc, AccessOverlapTy AOTy) {
+      bool Exact = AOTy == AccessOverlapTy::EXACT;
       Function *AccScope = Acc.getRemoteInst()->getFunction();
       bool AccInSameScope = AccScope == &Scope;
 
@@ -1228,7 +1277,7 @@ struct AAPointerInfoImpl
       // the given instruction.
       AllInSameNoSyncFn &= Acc.getRemoteInst()->getFunction() == &Scope;
 
-      InterferingAccesses.push_back({&Acc, Exact});
+      InterferingAccesses.push_back({&Acc, AOTy});
       return true;
     };
     if (!State::forallInterferingAccesses(I, AccessCB, Range))
@@ -1248,7 +1297,7 @@ struct AAPointerInfoImpl
     }
 
     // Helper to determine if we can skip a specific write access.
-    auto CanSkipAccess = [&](const Access &Acc, bool Exact) {
+    auto CanSkipAccess = [&](const Access &Acc, AccessOverlapTy AOTy) {
       if (SkipCB && SkipCB(Acc))
         return true;
       if (!CanIgnoreThreading(Acc))
