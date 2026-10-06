@@ -194,12 +194,7 @@
   !5 = !DISubroutineType(types: !6)
   !6 = !{null, !7}
   !7 = !DIBasicType(name: "ptr", size: 64, encoding: DW_ATE_unsigned)
-  !8  = !DILabel(scope: !4, name: "L0", file: !1, line: 3)
-  !9  = !DILabel(scope: !4, name: "L1", file: !1, line: 4)
-  !10 = !DILabel(scope: !4, name: "L2", file: !1, line: 5)
-  !11 = !DILabel(scope: !4, name: "L3", file: !1, line: 6)
-  !12 = !DILabel(scope: !4, name: "L4", file: !1, line: 7)
-  !13 = !DILabel(scope: !4, name: "L5", file: !1, line: 8)
+  !8 = !DILabel(scope: !4, name: "L0", file: !1, line: 3)
 ...
 ---
 name:            test_simple_2xs8
@@ -932,11 +927,11 @@ body:             |
     G_STORE %5(i8), %0(p0) :: (store (i8) into %ir.addr1)
 
     DBG_LABEL !8
-    DBG_LABEL !9
-    DBG_LABEL !10
-    DBG_LABEL !11
-    DBG_LABEL !12
-    DBG_LABEL !13
+    DBG_LABEL !8
+    DBG_LABEL !8
+    DBG_LABEL !8
+    DBG_LABEL !8
+    DBG_LABEL !8
 
     %6:_(i16) = G_LSHR %1, %3
     %7:_(i8) = G_TRUNC %6(i16)
