@@ -804,23 +804,30 @@ static bool buildAtomicRMWInst(const SPIRV::IncomingCall *Call, unsigned Opcode,
                               GR->getSPIRVTypeID(Call->ReturnType));
 
   MachineRegisterInfo *MRI = MIRBuilder.getMRI();
+  StringRef Name = Call->Builtin->name();
+  // The registry prefixes atomic_fetch_min/max with "s_" or "u_".
+  bool IsOCL20 =
+      Name.contains("atomic_fetch_") || Name.starts_with("atomic_exchange");
+  SPIRV::Scope::Scope DefaultScope =
+      IsOCL20 ? SPIRV::Scope::Device : SPIRV::Scope::Workgroup;
   Register ScopeRegister =
       Call->Arguments.size() >= 4 ? Call->Arguments[3] : Register();
 
   assert(Call->Arguments.size() <= 4 &&
          "Too many args for explicit atomic RMW");
-  ScopeRegister = buildScopeReg(ScopeRegister, SPIRV::Scope::Workgroup,
-                                MIRBuilder, GR, MRI);
+  ScopeRegister =
+      buildScopeReg(ScopeRegister, DefaultScope, MIRBuilder, GR, MRI);
 
   Register PtrRegister = Call->Arguments[0];
   SPIRV::MemorySemantics::MemorySemantics Ordering =
-      SPIRV::MemorySemantics::None;
+      IsOCL20 ? SPIRV::MemorySemantics::SequentiallyConsistent
+              : SPIRV::MemorySemantics::None;
   unsigned StorageClassSem = SPIRV::MemorySemantics::None;
-  if (Call->Arguments.size() >= 3) {
+  if (Call->Arguments.size() >= 3)
     Ordering = getMemOrdering(Call->Arguments[2], MRI);
+  if (IsOCL20 || Call->Arguments.size() >= 3)
     StorageClassSem =
         getMemSemanticsForStorageClass(GR->getPointerStorageClass(PtrRegister));
-  }
   Register MemSemanticsReg =
       buildMemSemanticsReg(Ordering, StorageClassSem, MIRBuilder, GR);
   Register ValueReg = Call->Arguments[1];
