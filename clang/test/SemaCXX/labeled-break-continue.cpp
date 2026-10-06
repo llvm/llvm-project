@@ -1,4 +1,5 @@
-// RUN: %clang_cc1 -std=c++20 -verify -fsyntax-only -fnamed-loops %s
+// RUN: %clang_cc1 -std=c++20 -verify -fsyntax-only -fnamed-loops %s -fno-experimental-new-constant-interpreter
+// RUN: %clang_cc1 -std=c++20 -verify -fsyntax-only -fnamed-loops %s -fexperimental-new-constant-interpreter
 
 int a[10]{};
 struct S {
