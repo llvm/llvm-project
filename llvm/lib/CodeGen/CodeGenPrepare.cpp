@@ -8878,13 +8878,6 @@ static bool strengthReduceVectorPhiUsers(PHINode *Phi, LoopInfo *LI) {
       return false;
   }
 
-  // Only continue processing if the GEP has a single user, with said user
-  // being a store using the result of the GEP as the data operand.
-  Use *GEPUse = GEP->getSingleUndroppableUse();
-  if (!GEPUse || !isa<StoreInst>(GEPUse->getUser()) ||
-      GEPUse->getOperandNo() != 0)
-    return false;
-
   // Reject if the base isn't loop invariant.
   Value *Base = GEP->getOperand(0);
   if (!L->isLoopInvariant(Base))

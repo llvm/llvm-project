@@ -370,18 +370,24 @@ define void @update_first_elt_of_strided_structs(ptr noalias %struct_ptr, i64 %n
 ; CHECK-NEXT:    [[TMP0:%.*]] = tail call <vscale x 2 x i64> @llvm.stepvector.nxv2i64()
 ; CHECK-NEXT:    [[DOTSPLATINSERT:%.*]] = insertelement <vscale x 2 x i64> poison, i64 [[STEP]], i64 0
 ; CHECK-NEXT:    [[DOTSPLAT:%.*]] = shufflevector <vscale x 2 x i64> [[DOTSPLATINSERT]], <vscale x 2 x i64> poison, <vscale x 2 x i32> zeroinitializer
+; CHECK-NEXT:    [[TMP4:%.*]] = mul <vscale x 2 x i64> [[TMP0]], splat (i64 72)
+; CHECK-NEXT:    [[TMP5:%.*]] = getelementptr i8, ptr [[STRUCT_PTR]], <vscale x 2 x i64> [[TMP4]]
+; CHECK-NEXT:    [[TMP7:%.*]] = mul i64 [[STEP]], 72
+; CHECK-NEXT:    [[DOTSPLATINSERT1:%.*]] = insertelement <vscale x 2 x i64> poison, i64 [[TMP7]], i64 0
+; CHECK-NEXT:    [[DOTSPLAT1:%.*]] = shufflevector <vscale x 2 x i64> [[DOTSPLATINSERT1]], <vscale x 2 x i64> poison, <vscale x 2 x i32> zeroinitializer
 ; CHECK-NEXT:    br label %[[VECTOR_BODY:.*]]
 ; CHECK:       [[VECTOR_BODY]]:
 ; CHECK-NEXT:    [[INDEX:%.*]] = phi i64 [ 0, %[[ENTRY]] ], [ [[INDEX_NEXT:%.*]], %[[VECTOR_BODY]] ]
-; CHECK-NEXT:    [[VEC_IND:%.*]] = phi <vscale x 2 x i64> [ [[TMP0]], %[[ENTRY]] ], [ [[VEC_IND_NEXT:%.*]], %[[VECTOR_BODY]] ]
-; CHECK-NEXT:    [[WIDE_GEP:%.*]] = getelementptr inbounds nuw [72 x i8], ptr [[STRUCT_PTR]], <vscale x 2 x i64> [[VEC_IND]]
+; CHECK-NEXT:    [[WIDE_GEP:%.*]] = phi <vscale x 2 x ptr> [ [[TMP5]], %[[ENTRY]] ], [ [[TMP6:%.*]], %[[VECTOR_BODY]] ]
+; CHECK-NEXT:    [[WIDE_GEP1:%.*]] = getelementptr inbounds nuw [72 x i8], ptr [[STRUCT_PTR]], <vscale x 2 x i64> poison
 ; CHECK-NEXT:    [[DATA:%.*]] = call <vscale x 2 x i64> @llvm.masked.gather.nxv2i64.nxv2p0(<vscale x 2 x ptr> align 8 [[WIDE_GEP]], <vscale x 2 x i1> [[MASK]], <vscale x 2 x i64> poison)
 ; CHECK-NEXT:    [[UPDATED:%.*]] = add <vscale x 2 x i64> [[DATA]], splat (i64 1)
 ; CHECK-NEXT:    call void @llvm.masked.scatter.nxv2i64.nxv2p0(<vscale x 2 x i64> [[UPDATED]], <vscale x 2 x ptr> align 8 [[WIDE_GEP]], <vscale x 2 x i1> [[MASK]])
 ; CHECK-NEXT:    [[TMP1:%.*]] = tail call i64 @llvm.vscale.i64()
 ; CHECK-NEXT:    [[TMP2:%.*]] = shl nuw nsw i64 [[TMP1]], 1
 ; CHECK-NEXT:    [[INDEX_NEXT]] = add nuw i64 [[INDEX]], [[TMP2]]
-; CHECK-NEXT:    [[VEC_IND_NEXT]] = add nuw nsw <vscale x 2 x i64> [[VEC_IND]], [[DOTSPLAT]]
+; CHECK-NEXT:    [[TMP6]] = getelementptr i8, <vscale x 2 x ptr> [[WIDE_GEP]], <vscale x 2 x i64> [[DOTSPLAT1]]
+; CHECK-NEXT:    [[VEC_IND_NEXT:%.*]] = add nuw nsw <vscale x 2 x i64> poison, [[DOTSPLAT]]
 ; CHECK-NEXT:    [[TMP3:%.*]] = icmp eq i64 [[INDEX_NEXT]], [[N_VEC]]
 ; CHECK-NEXT:    br i1 [[TMP3]], label %[[MIDDLE_BLOCK:.*]], label %[[VECTOR_BODY]]
 ; CHECK:       [[MIDDLE_BLOCK]]:

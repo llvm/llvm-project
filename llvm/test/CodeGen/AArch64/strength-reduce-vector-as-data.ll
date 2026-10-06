@@ -318,20 +318,20 @@ exit:
 define void @update_first_elt_of_strided_structs(ptr noalias %struct_ptr, i64 %num, <vscale x 2 x i1> %mask) #0 {
 ; CHECK-LABEL: update_first_elt_of_strided_structs:
 ; CHECK:       // %bb.0: // %entry
-; CHECK-NEXT:    cntd x8
-; CHECK-NEXT:    index z0.d, #0, #1
+; CHECK-NEXT:    mov w8, #72 // =0x48
+; CHECK-NEXT:    cntd x9
+; CHECK-NEXT:    index z0.d, x0, x8
+; CHECK-NEXT:    rdvl x8, #9
 ; CHECK-NEXT:    mov z1.d, x8
-; CHECK-NEXT:    neg x8, x8
+; CHECK-NEXT:    neg x8, x9
 ; CHECK-NEXT:    and x8, x8, x1
 ; CHECK-NEXT:  .LBB4_1: // %vector.body
 ; CHECK-NEXT:    // =>This Inner Loop Header: Depth=1
-; CHECK-NEXT:    movprfx z2, z0
-; CHECK-NEXT:    mul z2.d, z2.d, #72
+; CHECK-NEXT:    ld1d { z2.d }, p0/z, [z0.d]
 ; CHECK-NEXT:    decd x8
+; CHECK-NEXT:    add z2.d, z2.d, #1 // =0x1
+; CHECK-NEXT:    st1d { z2.d }, p0, [z0.d]
 ; CHECK-NEXT:    add z0.d, z0.d, z1.d
-; CHECK-NEXT:    ld1d { z3.d }, p0/z, [x0, z2.d]
-; CHECK-NEXT:    add z3.d, z3.d, #1 // =0x1
-; CHECK-NEXT:    st1d { z3.d }, p0, [x0, z2.d]
 ; CHECK-NEXT:    cbnz x8, .LBB4_1
 ; CHECK-NEXT:  // %bb.2: // %middle.block
 ; CHECK-NEXT:    ret
