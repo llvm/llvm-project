@@ -11,7 +11,6 @@
 //===----------------------------------------------------------------------===//
 
 #include <sanitizer_common/sanitizer_deadlock_detector_interface.h>
-#include <sanitizer_common/sanitizer_placement_new.h>
 #include <sanitizer_common/sanitizer_stackdepot.h>
 
 #include "tsan_flags.h"
@@ -56,23 +55,18 @@ static void ReportMutexMisuse(ThreadState *thr, uptr pc, ReportType typ,
     return;
   if (!ShouldReport(thr, typ))
     return;
-  // Use alloca, because malloc during signal handling deadlocks
-  ScopedReport *rep = (ScopedReport *)__builtin_alloca(sizeof(ScopedReport));
+  VarSizeStackTrace trace;
+  ObtainCurrentStack(thr, pc, &trace);
+  ScopedReport rep(typ);
   // Release locks before symbolizing and outputting the report to avoid
   // deadlocks.
   {
     ThreadRegistryLock l(&ctx->thread_registry);
-    new (rep) ScopedReport(typ);
-    rep->AddMutex(addr, creation_stack_id);
-    VarSizeStackTrace trace;
-    ObtainCurrentStack(thr, pc, &trace);
-    rep->AddStack(trace, true);
-    rep->AddLocation(addr, 1);
+    rep.AddMutex(addr, creation_stack_id);
+    rep.AddStack(trace, true);
+    rep.AddLocation(addr, 1);
   }
-  OutputReport(thr, *rep);
-
-  // Need to manually destroy this because we used placement new to allocate
-  rep->~ScopedReport();
+  OutputReport(thr, rep);
 }
 
 static void RecordMutexLock(ThreadState *thr, uptr pc, uptr addr,
@@ -538,17 +532,15 @@ void AfterSleep(ThreadState *thr, uptr pc) {
 void ReportDeadlock(ThreadState *thr, uptr pc, DDReport *r) {
   if (r == 0 || !ShouldReport(thr, ReportTypeDeadlock))
     return;
-  // Use alloca, because malloc during signal handling deadlocks
-  ScopedReport *rep = (ScopedReport *)__builtin_alloca(sizeof(ScopedReport));
+  ScopedReport rep(ReportTypeDeadlock);
   // Release locks before symbolizing and outputting the report to avoid
   // deadlocks.
   {
     ThreadRegistryLock l(&ctx->thread_registry);
-    new (rep) ScopedReport(ReportTypeDeadlock);
     for (int i = 0; i < r->n; i++) {
-      rep->AddMutex(r->loop[i].mtx_ctx0, r->loop[i].stk[0]);
-      rep->AddUniqueTid((int)r->loop[i].thr_ctx);
-      rep->AddThread((int)r->loop[i].thr_ctx);
+      rep.AddMutex(r->loop[i].mtx_ctx0, r->loop[i].stk[0]);
+      rep.AddUniqueTid((int)r->loop[i].thr_ctx);
+      rep.AddThread((int)r->loop[i].thr_ctx);
     }
     uptr dummy_pc = 0x42;
     for (int i = 0; i < r->n; i++) {
@@ -562,14 +554,11 @@ void ReportDeadlock(ThreadState *thr, uptr pc, DDReport *r) {
           // but we should still produce some stack trace in the report.
           stack = StackTrace(&dummy_pc, 1);
         }
-        rep->AddStack(stack, true);
+        rep.AddStack(stack, true);
       }
     }
   }
-  OutputReport(thr, *rep);
-
-  // Need to manually destroy this because we used placement new to allocate
-  rep->~ScopedReport();
+  OutputReport(thr, rep);
 }
 
 void ReportDestroyLocked(ThreadState *thr, uptr pc, uptr addr,
@@ -590,24 +579,20 @@ void ReportDestroyLocked(ThreadState *thr, uptr pc, uptr addr,
       return;
   }
 
-  // Use alloca, because malloc during signal handling deadlocks
-  ScopedReport* rep = (ScopedReport*)__builtin_alloca(sizeof(ScopedReport));
+  VarSizeStackTrace trace;
+  ObtainCurrentStack(thr, pc, &trace);
+
+  ScopedReport rep(ReportTypeMutexDestroyLocked);
   // Release locks before symbolizing and outputting the report to avoid
   // deadlocks.
   {
     ThreadRegistryLock l0(&ctx->thread_registry);
-    new (rep) ScopedReport(ReportTypeMutexDestroyLocked);
-    rep->AddMutex(addr, creation_stack_id);
-    VarSizeStackTrace trace;
-    ObtainCurrentStack(thr, pc, &trace);
-    rep->AddStack(trace, true);
-    rep->AddStack(last_lock_stack, true);
-    rep->AddLocation(addr, 1);
+    rep.AddMutex(addr, creation_stack_id);
+    rep.AddStack(trace, true);
+    rep.AddStack(last_lock_stack, true);
+    rep.AddLocation(addr, 1);
   }
-  OutputReport(thr, *rep);
-
-  // Need to manually destroy this because we used placement new to allocate
-  rep->~ScopedReport();
+  OutputReport(thr, rep);
 }
 
 }  // namespace __tsan

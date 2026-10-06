@@ -9291,6 +9291,8 @@ CCAssignFn *AArch64TargetLowering::CCAssignFnForCall(CallingConv::ID CC,
   switch (CC) {
   default:
     reportFatalUsageError("unsupported calling convention");
+  case CallingConv::AnyReg:
+    return CC_AArch64_AnyReg;
   case CallingConv::GHC:
     return CC_AArch64_GHC;
   case CallingConv::PreserveNone:
@@ -10096,26 +10098,23 @@ static void analyzeCallOperands(const AArch64TargetLowering &TLI,
     NumArgs -= 2;
   }
 
+  // On Windows, the fixed arguments in a vararg call are passed in GPRs too, so
+  // use the vararg CC to force them to integer registers.
+  bool FixedUseVarArgCC = IsVarArg && IsCalleeWin64;
+  CCAssignFn *FixedAssignFn = TLI.CCAssignFnForCall(CalleeCC, FixedUseVarArgCC);
+  CCAssignFn *VarArgAssignFn =
+      IsVarArg ? TLI.CCAssignFnForCall(CalleeCC, /*IsVarArg=*/true) : nullptr;
+
   for (unsigned i = 0; i != NumArgs; ++i) {
     MVT ArgVT = Outs[i].VT;
     ISD::ArgFlagsTy ArgFlags = Outs[i].Flags;
-
-    bool UseVarArgCC = false;
-    if (IsVarArg) {
-      // On Windows, the fixed arguments in a vararg call are passed in GPRs
-      // too, so use the vararg CC to force them to integer registers.
-      if (IsCalleeWin64) {
-        UseVarArgCC = true;
-      } else {
-        UseVarArgCC = ArgFlags.isVarArg();
-      }
-    }
+    bool UseVarArgCC = FixedUseVarArgCC || (IsVarArg && ArgFlags.isVarArg());
 
     if (!UseVarArgCC) {
       // Get type of the original argument.
-      EVT ActualVT =
-          TLI.getValueType(DAG.getDataLayout(), CLI.Args[Outs[i].OrigArgIndex].Ty,
-                       /*AllowUnknown*/ true);
+      EVT ActualVT = TLI.getValueType(DAG.getDataLayout(),
+                                      CLI.Args[Outs[i].OrigArgIndex].Ty,
+                                      /*AllowUnknown*/ true);
       MVT ActualMVT = ActualVT.isSimple() ? ActualVT.getSimpleVT() : ArgVT;
       // If ActualMVT is i1/i8/i16, we should set LocVT to i8/i8/i16.
       if (ActualMVT == MVT::i1 || ActualMVT == MVT::i8)
@@ -10124,9 +10123,7 @@ static void analyzeCallOperands(const AArch64TargetLowering &TLI,
         ArgVT = MVT::i16;
     }
 
-    // FIXME: CCAssignFnForCall should be called once, for the call and not per
-    // argument. This logic should exactly mirror LowerFormalArguments.
-    CCAssignFn *AssignFn = TLI.CCAssignFnForCall(CalleeCC, UseVarArgCC);
+    CCAssignFn *AssignFn = UseVarArgCC ? VarArgAssignFn : FixedAssignFn;
     bool Res = AssignFn(i, ArgVT, ArgVT, CCValAssign::Full, ArgFlags,
                         Outs[i].OrigTy, CCInfo);
     assert(!Res && "Call operand has unhandled type");
@@ -33552,7 +33549,7 @@ Value *AArch64TargetLowering::emitCanLoadSpeculatively(
 
   // Narrow only after the comparison above, so that a size exceeding the
   // address width is not truncated into the accepted range.
-  const DataLayout &DL = Builder.GetInsertBlock()->getDataLayout();
+  const DataLayout &DL = Builder.getDataLayout();
   Type *AddrTy = DL.getAddressType(Ptr->getType());
   Value *SizeAddr = Builder.CreateZExtOrTrunc(SizeInBytes, AddrTy);
 

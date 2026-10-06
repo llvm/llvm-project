@@ -3677,10 +3677,10 @@ VPExpressionRecipe::VPExpressionRecipe(
       // There are users outside of the expression. Clone the recipe and use the
       // clone those external users.
       VPSingleDefRecipe *CopyForExtUsers = R->clone();
-      R->replaceUsesWithIf(CopyForExtUsers, [&ExpressionRecipesAsSetOfUsers](
-                                                VPUser &U, unsigned) {
-        return !ExpressionRecipesAsSetOfUsers.contains(&U);
-      });
+      R->replaceUsesWithIf(CopyForExtUsers,
+                           [&ExpressionRecipesAsSetOfUsers](VPUser &U) {
+                             return !ExpressionRecipesAsSetOfUsers.contains(&U);
+                           });
       CopyForExtUsers->insertBefore(R);
     }
     if (R->getParent())
@@ -4100,7 +4100,8 @@ InstructionCost VPReplicateRecipe::computeCost(ElementCount VF,
                                               to_vector(operands()), VF);
     // If the recipe is not predicated (i.e. not in a replicate region), return
     // the scalar cost. Otherwise handle predicated cost.
-    if (!getRegion()->isReplicator())
+    const VPRegionBlock *ParentRegion = getRegion();
+    if (!ParentRegion || !ParentRegion->isReplicator())
       return ScalarCost;
 
     // Account for the phi nodes that we will create.
@@ -4110,7 +4111,7 @@ InstructionCost VPReplicateRecipe::computeCost(ElementCount VF,
     // This assumes the predicated block for each vector lane is equally
     // likely.
     ScalarCost /= Ctx.getCostDivisor(
-        getRegion()->getEntryBranchOnMask()->getExecutionFrequency());
+        ParentRegion->getEntryBranchOnMask()->getExecutionFrequency());
     return ScalarCost;
   }
   case Instruction::Load:
