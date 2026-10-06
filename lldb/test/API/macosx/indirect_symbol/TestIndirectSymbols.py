@@ -14,7 +14,7 @@ class TestIndirectFunctions(TestBase):
         # Find the line numbers that we will step to in main:
         self.main_source = "main.c"
 
-    @skipUnlessDarwin
+    @requireDarwin
     @add_test_categories(["pyapi"])
     @skipIf(bugnumber="rdar://120796553")
     def test_with_python_api(self):

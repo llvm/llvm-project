@@ -977,10 +977,9 @@ TEST_F(IRBuilderTest, DIBuilder) {
     return &*std::prev(I->getDbgRecordRange().end());
   };
 
-  auto ExpectOrder = [&](DbgInstPtr First, BasicBlock::iterator Second) {
-    EXPECT_TRUE(isa<DbgRecord *>(First));
+  auto ExpectOrder = [&](DbgRecord *First, BasicBlock::iterator Second) {
     EXPECT_FALSE(Second->getDbgRecordRange().empty());
-    EXPECT_EQ(GetLastDbgRecord(&*Second), cast<DbgRecord *>(First));
+    EXPECT_EQ(GetLastDbgRecord(&*Second), First);
   };
 
   auto RunTest = [&]() {
@@ -1024,7 +1023,7 @@ TEST_F(IRBuilderTest, DIBuilder) {
       // We should be able to insert at the end of the block, even if there's
       // no terminator yet. Note that in RemoveDIs mode this record won't get
       // inserted into the block untill another instruction is added.
-      DbgInstPtr LabelRecord = DIB.insertLabel(Label, LabelLoc, BB->end());
+      DbgRecord *LabelRecord = DIB.insertLabel(Label, LabelLoc, BB->end());
       // Specifically do not insert a terminator, to check this works. `I`
       // should have absorbed the DbgLabelRecord in the new debug info mode.
       I = Builder.CreateAlloca(Builder.getInt32Ty());
@@ -1040,12 +1039,12 @@ TEST_F(IRBuilderTest, DIBuilder) {
     DILocalVariable *VarY =
         DIB.createAutoVariable(BarSP, "Y", File, 2, IntType, true);
     { /* dbg.value | DbgVariableRecord::Value */
-      ExpectOrder(DIB.insertDbgValueIntrinsic(I, VarX, DIB.createExpression(),
-                                              VarLoc, I->getIterator()),
+      ExpectOrder(DIB.insertDbgValue(I, VarX, DIB.createExpression(), VarLoc,
+                                     I->getIterator()),
                   I->getIterator());
       // Check inserting at end of the block works as with labels.
-      DbgInstPtr VarXValue = DIB.insertDbgValueIntrinsic(
-          I, VarX, DIB.createExpression(), VarLoc, BB);
+      DbgRecord *VarXValue =
+          DIB.insertDbgValue(I, VarX, DIB.createExpression(), VarLoc, BB);
       I = Builder.CreateAlloca(Builder.getInt32Ty());
       ExpectOrder(VarXValue, I->getIterator());
       EXPECT_EQ(BB->getTrailingDbgRecords(), nullptr);
@@ -1055,7 +1054,7 @@ TEST_F(IRBuilderTest, DIBuilder) {
                                     I->getIterator()),
                   I->getIterator());
       // Check inserting at end of the block works as with labels.
-      DbgInstPtr VarYDeclare =
+      DbgRecord *VarYDeclare =
           DIB.insertDeclare(I, VarY, DIB.createExpression(), VarLoc, BB);
       I = Builder.CreateAlloca(Builder.getInt32Ty());
       ExpectOrder(VarYDeclare, I->getIterator());
@@ -1067,7 +1066,7 @@ TEST_F(IRBuilderTest, DIBuilder) {
       // DbgAssign interface is slightly different - it always inserts after the
       // linked instr. Check we can do this with no instruction to insert
       // before.
-      DbgInstPtr VarXAssign =
+      DbgRecord *VarXAssign =
           DIB.insertDbgAssign(I, I, VarX, DIB.createExpression(), I,
                               DIB.createExpression(), VarLoc);
       I = Builder.CreateAlloca(Builder.getInt32Ty());
@@ -1275,7 +1274,7 @@ TEST_F(IRBuilderTest, DebugLoc) {
   EXPECT_EQ(DL1, Call1->getDebugLoc());
 
   Call1->setDebugLoc(DL2);
-  Builder.SetInsertPoint(Call1->getParent(), Call1->getIterator());
+  Builder.SetInsertPoint(Call1->getIterator());
   EXPECT_EQ(DL2, Builder.getCurrentDebugLocation());
   auto Call2 = Builder.CreateCall(Callee, {});
   EXPECT_EQ(DL2, Call2->getDebugLoc());
@@ -1398,10 +1397,10 @@ TEST_F(IRBuilderTest, CTAD) {
   // The block BB is empty, so don't test this one.
   // IRBuilder Builder5(BB->getTerminator());
   // static_assert(std::is_same_v<decltype(Builder5), IRBuilder<>>);
-  IRBuilder Builder6(BB, BB->end(), Folder);
+  IRBuilder Builder6(BB->end(), Folder);
   static_assert(
       std::is_same_v<decltype(Builder6), IRBuilder<InstSimplifyFolder>>);
-  IRBuilder Builder7(BB, BB->end());
+  IRBuilder Builder7(BB->end());
   static_assert(std::is_same_v<decltype(Builder7), IRBuilder<>>);
 }
 

@@ -13,7 +13,7 @@ exit:
 }
 !0 = distinct !{!0, !1}
 
-;      BAD: Expected one operand for llvm.loop.distribute metadata
+;      BAD: Expecting only the metadata name
 
 ; Single-operand enable.
 ; RUN: cat %s > %t

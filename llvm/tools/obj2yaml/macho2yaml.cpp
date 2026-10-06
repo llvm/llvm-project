@@ -287,6 +287,15 @@ MachODumper::processLoadCommandData<MachO::build_version_command>(
   return Start + NTools * sizeof(MachO::build_tool_version);
 }
 
+template <>
+Expected<const char *>
+MachODumper::processLoadCommandData<MachO::target_triple_command>(
+    MachOYAML::LoadCommand &LC,
+    const llvm::object::MachOObjectFile::LoadCommandInfo &LoadCmd,
+    MachOYAML::Object &Y) {
+  return readString<MachO::target_triple_command>(LC, LoadCmd);
+}
+
 Expected<std::unique_ptr<MachOYAML::Object>> MachODumper::dump() {
   auto Y = std::make_unique<MachOYAML::Object>();
   Y->IsLittleEndian = Obj.isLittleEndian();

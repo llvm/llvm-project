@@ -1,4 +1,5 @@
 // RUN: %clang_analyze_cc1 -analyzer-checker=core,debug.ExprInspection \
+// RUN:   -fexperimental-max-bitint-width=1024 \
 // RUN:   -analyzer-constraints=unsupported-z3 -verify %s
 // REQUIRES: z3
 

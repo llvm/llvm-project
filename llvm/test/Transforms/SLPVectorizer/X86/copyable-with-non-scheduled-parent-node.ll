@@ -6,8 +6,7 @@ define i64 @test(ptr %a) {
 ; CHECK-SAME: ptr [[A:%.*]]) #[[ATTR0:[0-9]+]] {
 ; CHECK-NEXT:    [[TMP2:%.*]] = load i64, ptr [[A]], align 4
 ; CHECK-NEXT:    [[TMP7:%.*]] = insertelement <4 x i64> <i64 poison, i64 0, i64 0, i64 0>, i64 [[TMP2]], i64 0
-; CHECK-NEXT:    [[TMP3:%.*]] = add <4 x i64> zeroinitializer, [[TMP7]]
-; CHECK-NEXT:    [[TMP4:%.*]] = add <4 x i64> <i64 0, i64 0, i64 0, i64 1>, [[TMP3]]
+; CHECK-NEXT:    [[TMP4:%.*]] = add <4 x i64> <i64 0, i64 0, i64 0, i64 1>, [[TMP7]]
 ; CHECK-NEXT:    [[TMP5:%.*]] = shufflevector <4 x i64> [[TMP4]], <4 x i64> poison, <6 x i32> <i32 0, i32 1, i32 2, i32 3, i32 poison, i32 poison>
 ; CHECK-NEXT:    [[TMP6:%.*]] = shufflevector <6 x i64> [[TMP5]], <6 x i64> <i64 0, i64 0, i64 undef, i64 undef, i64 undef, i64 undef>, <6 x i32> <i32 0, i32 1, i32 2, i32 3, i32 6, i32 7>
 ; CHECK-NEXT:    br label %[[BB7:.*]]

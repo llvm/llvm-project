@@ -38,7 +38,7 @@ using namespace llvm;
 #define DEBUG_TYPE "aarch64-ptrue-coalesce"
 
 static cl::opt<bool> EnablePTrueCoalescing(
-    "aarch64-enable-ptrue-coalescing", cl::init(false), cl::Hidden,
+    "aarch64-enable-ptrue-coalescing", cl::init(true), cl::Hidden,
     cl::desc("Enable coalescing of compatible AArch64 SVE PTRUE instructions"));
 
 namespace {
@@ -113,7 +113,6 @@ public:
   void getAnalysisUsage(AnalysisUsage &AU) const override {
     AU.setPreservesCFG();
     AU.addRequired<MachineDominatorTreeWrapperPass>();
-    AU.addPreserved<MachineDominatorTreeWrapperPass>();
     MachineFunctionPass::getAnalysisUsage(AU);
   }
 };
@@ -264,7 +263,6 @@ AArch64PTrueCoalescingPass::run(MachineFunction &MF,
     return PreservedAnalyses::all();
 
   auto PA = getMachineFunctionPassPreservedAnalyses();
-  PA.preserve<MachineDominatorTreeAnalysis>();
   PA.preserveSet<CFGAnalyses>();
   return PA;
 }

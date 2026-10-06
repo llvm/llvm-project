@@ -1,3 +1,4 @@
+; REQUIRES: x86-registered-target
 ; RUN: opt -S -passes=declare-runtime-libcalls -mtriple=x86_64-unknown-linux-gnu < %s | FileCheck %s
 
 ; Check an already declared function

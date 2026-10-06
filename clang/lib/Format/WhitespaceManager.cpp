@@ -1033,6 +1033,14 @@ void WhitespaceManager::alignTrailingComments() {
         Newlines = 0;
       }
     }
+    if (NewLineThreshold > 1 && C.Tok->is(BK_Block)) {
+      alignTrailingComments(StartOfSequence, I, MinColumn);
+      MinColumn = 0;
+      MaxColumn = INT_MAX;
+      StartOfSequence = I + 1;
+      Newlines = 0;
+      continue;
+    }
     if (!C.IsTrailingComment)
       continue;
 

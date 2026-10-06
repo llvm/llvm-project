@@ -176,3 +176,14 @@ ldr x1, [x14, #16]
 // CHECK-NEXT: mov x14, x15
 // CHECK-NEXT: add x28, x27, w14, uxtw
 // CHECK-NEXT: ldr x1, [x28, #16]
+
+temp_label_test:
+ldr x8, [x6, #8]
+.Ltmp_label1:
+ldr x9, [x6, #16]
+// CHECK-LABEL: temp_label_test:
+// CHECK-NEXT: add x28, x27, w6, uxtw
+// CHECK-NEXT: ldr x8, [x28, #8]
+// CHECK-NEXT: .Ltmp_label1:
+// CHECK-NEXT: add x28, x27, w6, uxtw
+// CHECK-NEXT: ldr x9, [x28, #16]

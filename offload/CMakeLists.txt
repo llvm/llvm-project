@@ -27,8 +27,8 @@ endif()
 if(APPLE OR WASM)
   message(WARNING "libomptarget cannot be built on MacOS X and WASM!")
   return()
-elseif("${LLVM_DEFAULT_TARGET_TRIPLE}" MATCHES "^(amdgcn|nvptx|spirv)" OR
-       "${CMAKE_CXX_COMPILER_TARGET}" MATCHES "^(amdgcn|nvptx|spirv)")
+elseif("${LLVM_DEFAULT_TARGET_TRIPLE}" MATCHES "^(amdgpu|amdgcn|nvptx|spirv)" OR
+       "${CMAKE_CXX_COMPILER_TARGET}" MATCHES "^(amdgpu|amdgcn|nvptx|spirv)")
   message(WARNING "offload cannot be built on GPU targets yet.")
   return()
 elseif(NOT "cxx_std_17" IN_LIST CMAKE_CXX_COMPILE_FEATURES)
@@ -144,7 +144,7 @@ if(DEFINED LIBOMPTARGET_BUILD_CUDA_PLUGIN OR
 endif()
 
 if(WIN32)
-  set(LIBOMPTARGET_ALL_PLUGIN_TARGETS "")
+  set(LIBOMPTARGET_ALL_PLUGIN_TARGETS level_zero)
 
   set(LIBOMPTARGET_PLUGINS_TO_BUILD "" CACHE STRING
       "Semicolon-separated list of plugins to use: level_zero or \"all\".")
@@ -159,9 +159,9 @@ if(WIN32)
     endif()
   endforeach()
 else()
-  set(LIBOMPTARGET_ALL_PLUGIN_TARGETS amdgpu cuda)
+  set(LIBOMPTARGET_ALL_PLUGIN_TARGETS amdgpu cuda level_zero)
   set(LIBOMPTARGET_PLUGINS_TO_BUILD "all" CACHE STRING
-      "Semicolon-separated list of plugins to use: cuda, amdgpu or \"all\".")
+      "Semicolon-separated list of plugins to use: cuda, amdgpu, level_zero or \"all\".")
 
   if(LIBOMPTARGET_PLUGINS_TO_BUILD STREQUAL "all")
     set(LIBOMPTARGET_PLUGINS_TO_BUILD ${LIBOMPTARGET_ALL_PLUGIN_TARGETS})
@@ -171,13 +171,16 @@ endif()
 list(APPEND LIBOMPTARGET_PLUGINS_TO_BUILD "host")
 list(REMOVE_DUPLICATES LIBOMPTARGET_PLUGINS_TO_BUILD)
 
-if(NOT (CMAKE_SYSTEM_PROCESSOR MATCHES "(x86_64)|(ppc64le)|(aarch64)$"
+if(NOT (CMAKE_SYSTEM_PROCESSOR MATCHES "(x86_64)|(ppc64le)|(aarch64)|(riscv64)$"
         AND CMAKE_SYSTEM_NAME MATCHES "Linux"))
   if("amdgpu" IN_LIST LIBOMPTARGET_PLUGINS_TO_BUILD)
     message(STATUS "Not building AMDGPU plugin: only support AMDGPU in "
-                   "Linux x86_64, ppc64le, or aarch64 hosts")
+                   "Linux x86_64, ppc64le, aarch64, or riscv64 hosts")
     list(REMOVE_ITEM LIBOMPTARGET_PLUGINS_TO_BUILD "amdgpu")
   endif()
+endif()
+if(NOT (CMAKE_SYSTEM_PROCESSOR MATCHES "(x86_64)|(ppc64le)|(aarch64)$"
+        AND CMAKE_SYSTEM_NAME MATCHES "Linux"))
   if("cuda" IN_LIST LIBOMPTARGET_PLUGINS_TO_BUILD)
     message(STATUS "Not building CUDA plugin: only support CUDA in "
                    "Linux x86_64, ppc64le, or aarch64 hosts")
@@ -328,23 +331,14 @@ set(LIBOMPTARGET_LLVM_LIBRARY_DIR "${LLVM_LIBRARY_DIR}" CACHE STRING
 set(LIBOMPTARGET_LLVM_LIBRARY_INTDIR "${LIBOMPTARGET_LIBRARY_DIR}" CACHE STRING
   "Path to folder where intermediate libraries will be output")
 
-add_subdirectory(tools/offload-tblgen)
-
-# Build offloading plugins and device RTLs if they are available.
-add_subdirectory(plugins-nextgen)
-add_subdirectory(tools)
-add_subdirectory(docs)
-
-if(BUILD_LIBOMPTARGET)
-  add_subdirectory(libomptarget)
-endif()
-
-add_subdirectory(liboffload)
-
-# Add tests.
-if(OFFLOAD_INCLUDE_TESTS)
-  add_subdirectory(test)
-  add_subdirectory(unittests)
+# If LLVM is dynamically linked we need to add its libraries.
+set(OFFLOAD_INSTALL_RPATH "$ORIGIN")
+if(LLVM_LINK_LLVM_DYLIB)
+  file(RELATIVE_PATH llvm_libdir_relpath
+       "${CMAKE_INSTALL_PREFIX}/${OFFLOAD_INSTALL_LIBDIR}"
+       "${CMAKE_INSTALL_PREFIX}/lib${LLVM_LIBDIR_SUFFIX}")
+  string(REGEX REPLACE "/$" "" llvm_libdir_relpath "${llvm_libdir_relpath}")
+  list(APPEND OFFLOAD_INSTALL_RPATH "$ORIGIN/${llvm_libdir_relpath}")
 endif()
 
 # Expose a high-level target to build the offloading runtimes.
@@ -353,23 +347,37 @@ endif()
 add_custom_target(offload
   COMMENT "Building offloading runtime libraries and plugins"
 )
-if(TARGET omptarget)
-  add_dependencies(offload omptarget)
-endif()
-if(TARGET LLVMOffload)
-  add_dependencies(offload LLVMOffload)
-endif()
 
 add_custom_target(install-offload
   COMMAND "${CMAKE_COMMAND}" --install "${CMAKE_BINARY_DIR}" --component offload)
 add_custom_target(install-offload-stripped
   COMMAND "${CMAKE_COMMAND}" --install "${CMAKE_BINARY_DIR}" --component offload --strip)
+add_dependencies(install-offload offload)
+add_dependencies(install-offload-stripped offload)
 
-if(TARGET omptarget)
-  add_dependencies(install-offload omptarget)
-  add_dependencies(install-offload-stripped omptarget)
+add_subdirectory(tools/offload-tblgen)
+
+# Build offloading plugins and device RTLs if they are available.
+add_subdirectory(plugins-nextgen)
+add_subdirectory(tools)
+add_subdirectory(docs)
+
+add_subdirectory(liboffload)
+
+if(BUILD_LIBOMPTARGET)
+  add_subdirectory(libomptarget)
 endif()
-if(TARGET LLVMOffload)
-  add_dependencies(install-offload LLVMOffload)
-  add_dependencies(install-offload-stripped LLVMOffload)
+
+add_subdirectory(languages)
+
+# Add tests.
+if(OFFLOAD_INCLUDE_TESTS)
+  add_subdirectory(test)
+  add_subdirectory(unittests)
 endif()
+
+foreach(target omptarget LLVMOffload LLVMOffloadKernel)
+  if(TARGET ${target})
+    add_dependencies(offload ${target})
+  endif()
+endforeach()

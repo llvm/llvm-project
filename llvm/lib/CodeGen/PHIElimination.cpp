@@ -16,6 +16,7 @@
 #include "PHIEliminationUtils.h"
 #include "llvm/ADT/DenseMap.h"
 #include "llvm/ADT/SmallPtrSet.h"
+#include "llvm/ADT/SmallSet.h"
 #include "llvm/ADT/Statistic.h"
 #include "llvm/Analysis/LoopInfo.h"
 #include "llvm/CodeGen/LiveInterval.h"
@@ -113,6 +114,10 @@ class PHIEliminationImpl {
 
   // Count the number of non-undef PHI uses of each register in each BB.
   VRegPHIUse VRegPHIUseCount;
+
+  // PHI source registers whose subranges must be shrunk to their own uses once
+  // all PHIs are gone.
+  SmallSet<Register, 8> PHISrcRegsToShrink;
 
   // Defs of PHI sources which are implicit_def.
   SmallPtrSet<MachineInstr *, 4> ImpDefs;
@@ -306,6 +311,18 @@ bool PHIEliminationImpl::run(MachineFunction &MF) {
   }
 
   LoweredPHIs.clear();
+
+  // Different lanes may be used by different PHI source copies, or may already
+  // be dead in a predecessor. The main range's last use is therefore not a
+  // valid endpoint for every subrange. Wait until all PHIs have been removed
+  // before shrinking subranges to their remaining lane-specific uses.
+  for (Register Reg : PHISrcRegsToShrink) {
+    LiveInterval &LI = LIS->getInterval(Reg);
+    for (LiveInterval::SubRange &SR : LI.subranges())
+      LIS->shrinkToUses(SR, Reg);
+  }
+  PHISrcRegsToShrink.clear();
+
   ImpDefs.clear();
   VRegPHIUseCount.clear();
 
@@ -424,7 +441,7 @@ void PHIEliminationImpl::LowerPHINode(MachineBasicBlock &MBB,
         MBB, AfterPHIsIt, MPhi->getDebugLoc(), IncomingReg, DestReg);
   }
 
-  if (MPhi->peekDebugInstrNum()) {
+  if (MPhi->peekDebugInstrNum() && IncomingReg) {
     // If referred to by debug-info, store where this PHI was.
     MachineFunction *MF = MBB.getParent();
     unsigned ID = MPhi->peekDebugInstrNum();
@@ -513,6 +530,11 @@ void PHIEliminationImpl::LowerPHINode(MachineBasicBlock &MBB,
 
     LiveInterval &DestLI = LIS->getInterval(DestReg);
     assert(!DestLI.empty() && "PHIs should have non-empty LiveIntervals.");
+
+    // Make sure the instruction's dead flag matches the dead range created
+    // below.
+    if (DestLI.endIndex().isDead())
+      PHICopy->getOperand(0).setIsDead();
 
     SlotIndex NewStart = DestCopyIndex.getRegSlot();
 
@@ -718,6 +740,8 @@ void PHIEliminationImpl::LowerPHINode(MachineBasicBlock &MBB,
       if (!SrcUndef &&
           !VRegPHIUseCount[BBVRegPair(opBlock.getNumber(), SrcReg)]) {
         LiveInterval &SrcLI = LIS->getInterval(SrcReg);
+        if (SrcLI.hasSubRanges())
+          PHISrcRegsToShrink.insert(SrcReg);
 
         bool isLiveOut = false;
         for (MachineBasicBlock *Succ : opBlock.successors()) {
@@ -763,10 +787,6 @@ void PHIEliminationImpl::LowerPHINode(MachineBasicBlock &MBB,
           SlotIndex LastUseIndex = LIS->getInstructionIndex(*KillInst);
           SrcLI.removeSegment(LastUseIndex.getRegSlot(),
                               LIS->getMBBEndIdx(&opBlock));
-          for (auto &SR : SrcLI.subranges()) {
-            SR.removeSegment(LastUseIndex.getRegSlot(),
-                             LIS->getMBBEndIdx(&opBlock));
-          }
         }
       }
     }

@@ -7,6 +7,10 @@
 ; RUN:   | FileCheck -match-full-lines -strict-whitespace -check-prefix=SPIRV-Opt %s
 ; RUN:llc -O3 -mtriple=spirv-- -disable-verify -debug-pass=Structure < %s 2>&1 \
 ; RUN:   | FileCheck -match-full-lines -strict-whitespace -check-prefix=SPIRV-Opt %s
+; RUN:llc -O0 -mtriple=spirv-- -enable-new-pm -stop-before=spirv-asm-printer < %s \
+; RUN:   | FileCheck -check-prefix=SPIRV-NPM %s
+; RUN:llc -O3 -mtriple=spirv-- -enable-new-pm -stop-before=spirv-asm-printer < %s \
+; RUN:   | FileCheck -check-prefix=SPIRV-NPM %s
 ; REQUIRES:asserts
 
 ; SPIRV-O0:Target Library Information
@@ -17,7 +21,6 @@
 ; SPIRV-O0-NEXT:Library Function Lowering Analysis
 ; SPIRV-O0-NEXT:Create Garbage Collector Module Metadata
 ; SPIRV-O0-NEXT:Assumption Cache Tracker
-; SPIRV-O0-NEXT:Profile summary info
 ; SPIRV-O0-NEXT:Machine Branch Probability Analysis
 ; SPIRV-O0-NEXT:  ModulePass Manager
 ; SPIRV-O0-NEXT:    Pre-ISel Intrinsic Lowering
@@ -43,7 +46,7 @@
 ; SPIRV-O0-NEXT:      Natural Loop Information
 ; SPIRV-O0-NEXT:      Canonicalize natural loops
 ; SPIRV-O0-NEXT:      Strip convergence intrinsics and operand bundles
-; SPIRV-O0-NEXT:    SPIRV Legalize Implicit Binding
+; SPIRV-O0-NEXT:    SPIRV Legalize Resource Binding
 ; SPIRV-O0-NEXT:    SPIRV Legalize Zero-Size Arrays
 ; SPIRV-O0-NEXT:    SPIRV CBuffer Access
 ; SPIRV-O0-NEXT:    SPIRV push constant Access
@@ -63,11 +66,6 @@
 ; SPIRV-O0-NEXT:      Legalizer
 ; SPIRV-O0-NEXT:      SPIRV post legalizer
 ; SPIRV-O0-NEXT:      Analysis for ComputingKnownBits
-; SPIRV-O0-NEXT:      Dominator Tree Construction
-; SPIRV-O0-NEXT:      Cycle Info Analysis
-; SPIRV-O0-NEXT:      Lazy Branch Probability Analysis
-; SPIRV-O0-NEXT:      Natural Loop Information
-; SPIRV-O0-NEXT:      Lazy Block Frequency Analysis
 ; SPIRV-O0-NEXT:      InstructionSelect
 ; SPIRV-O0-NEXT:      ResetMachineFunction
 ; SPIRV-O0-NEXT:      Finalize ISel and expand pseudo-instructions
@@ -129,7 +127,6 @@
 ; SPIRV-Opt-NEXT:      Cycle Info Analysis
 ; SPIRV-Opt-NEXT:      Post-Dominator Tree Construction
 ; SPIRV-Opt-NEXT:      Branch Probability Analysis
-; SPIRV-Opt-NEXT:      Natural Loop Information
 ; SPIRV-Opt-NEXT:      Block Frequency Analysis
 ; SPIRV-Opt-NEXT:      Constant Hoisting
 ; SPIRV-Opt-NEXT:      Replace intrinsics with calls to vector library
@@ -160,7 +157,7 @@
 ; SPIRV-Opt-NEXT:      Natural Loop Information
 ; SPIRV-Opt-NEXT:      Canonicalize natural loops
 ; SPIRV-Opt-NEXT:      Strip convergence intrinsics and operand bundles
-; SPIRV-Opt-NEXT:    SPIRV Legalize Implicit Binding
+; SPIRV-Opt-NEXT:    SPIRV Legalize Resource Binding
 ; SPIRV-Opt-NEXT:    SPIRV Legalize Zero-Size Arrays
 ; SPIRV-Opt-NEXT:    SPIRV CBuffer Access
 ; SPIRV-Opt-NEXT:    SPIRV push constant Access
@@ -187,7 +184,6 @@
 ; SPIRV-Opt-NEXT:      SPIRV post legalizer
 ; SPIRV-Opt-NEXT:      Analysis for ComputingKnownBits
 ; SPIRV-Opt-NEXT:      Lazy Branch Probability Analysis
-; SPIRV-Opt-NEXT:      Natural Loop Information
 ; SPIRV-Opt-NEXT:      Lazy Block Frequency Analysis
 ; SPIRV-Opt-NEXT:      InstructionSelect
 ; SPIRV-Opt-NEXT:      ResetMachineFunction
@@ -201,14 +197,15 @@
 ; SPIRV-Opt-NEXT:      Remove dead machine instructions
 ; SPIRV-Opt-NEXT:      MachineDominator Tree Construction
 ; SPIRV-Opt-NEXT:      Machine Natural Loop Construction
+; SPIRV-Opt-NEXT:      Machine Cycle Info Analysis
 ; SPIRV-Opt-NEXT:      Machine Block Frequency Analysis
+; SPIRV-Opt-NEXT:      Machine Register Class Info Analysis
 ; SPIRV-Opt-NEXT:      Early Machine Loop Invariant Code Motion
 ; SPIRV-Opt-NEXT:      MachineDominator Tree Construction
+; SPIRV-Opt-NEXT:      Machine Cycle Info Analysis
 ; SPIRV-Opt-NEXT:      Machine Block Frequency Analysis
 ; SPIRV-Opt-NEXT:      Machine Common Subexpression Elimination
 ; SPIRV-Opt-NEXT:      MachinePostDominator Tree Construction
-; SPIRV-Opt-NEXT:      Machine Cycle Info Analysis
-; SPIRV-Opt-NEXT:      Machine Register Class Info Analysis
 ; SPIRV-Opt-NEXT:      Machine code sinking
 ; SPIRV-Opt-NEXT:      Peephole Optimizations
 ; SPIRV-Opt-NEXT:      Remove dead machine instructions
@@ -232,6 +229,14 @@
 ; SPIRV-Opt-NEXT:      Machine Optimization Remark Emitter
 ; SPIRV-Opt-NEXT:      SPIRV Assembly Printer
 ; SPIRV-Opt-NEXT:      Free MachineFunction
+
+; SPIR-V NewPM skips RegBankSelect, so instruction selection must not require it.
+; SPIRV-NPM:legalized:       true
+; SPIRV-NPM-NEXT:regBankSelected: false
+; SPIRV-NPM-NEXT:selected:        true
+; SPIRV-NPM:%[[#VOID:]]:type = OpTypeVoid
+; SPIRV-NPM:%[[#]]:iid = OpFunction %[[#VOID]], 0, %[[#]]
+; SPIRV-NPM:OpReturn
 
 define void @empty() {
   ret void

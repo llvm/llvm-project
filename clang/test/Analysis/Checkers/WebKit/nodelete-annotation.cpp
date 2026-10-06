@@ -623,6 +623,42 @@ Ref<RefCountable> [[clang::annotate_type("webkit.nodelete")]] returnClassStatic(
 
 } // namespace copy_elision_edge_cases
 
+namespace return_temp_ref_ptr {
+
+struct RefObj {
+  mutable unsigned m_refCount { 0 };
+  void ref() const { m_refCount++; }
+  void deref() const {
+    m_refCount--;
+    if (!m_refCount)
+      delete const_cast<RefObj*>(this);
+  }
+
+  static Ref<RefObj> create(int) {
+    return adoptRef(*new RefObj);
+  }
+};
+
+Ref<RefObj> [[clang::annotate_type("webkit.nodelete")]] returnRef() {
+  return RefObj::create(0);
+}
+
+Ref<RefObj> [[clang::annotate_type("webkit.nodelete")]] returnRefWithInit() {
+  return { RefObj::create(0) };
+}
+
+RefPtr<RefObj> [[clang::annotate_type("webkit.nodelete")]] returnRefPtrSafe() {
+  return { RefObj::create(0) };
+}
+
+int val();
+RefPtr<RefObj> [[clang::annotate_type("webkit.nodelete")]] returnRefPtrUnsafe() {
+  return { RefObj::create(val()) };
+  // expected-warning@-1{{A function 'returnRefPtrUnsafe' has [[clang::annotate_type("webkit.nodelete")]] but it contains code that could destruct an object}}
+}
+
+} // namespace return_temp_ref_ptr
+
 namespace temp_object_typecheck {
 
 struct Tracked {
@@ -759,3 +795,119 @@ void [[clang::annotate_type("webkit.nodelete")]] valueInitNew() {
 }
 
 } // namespace trivial_implicit_ctor_in_new_expr
+
+namespace nodelete_ctor_dtor {
+
+struct OpaqueObject {
+  OpaqueObject();
+  ~OpaqueObject();
+};
+
+struct RefPtrContainer {
+  [[clang::annotate("webkit.nodelete")]] RefPtrContainer() { }
+  // expected-warning@-1{{A constructor 'RefPtrContainer' has [[clang::annotate_type("webkit.nodelete")]] but it constructs a member variable 'opaqueObject' that could destruct an object}}
+  [[clang::annotate("webkit.nodelete")]] ~RefPtrContainer() { }
+  // expected-warning@-1{{A destructor '~RefPtrContainer' has [[clang::annotate_type("webkit.nodelete")]] but it destructs a member variable 'countable' that could destruct an object}}
+  RefPtr<RefCountable> countable;
+  OpaqueObject opaqueObject;
+};
+
+struct RefPtrContainerWithSuppressedDestructor {
+  [[clang::suppress]] [[clang::annotate("webkit.nodelete")]] ~RefPtrContainerWithSuppressedDestructor() { }
+  RefPtr<RefCountable> countable;
+};
+
+void [[clang::annotate_type("webkit.nodelete")]] foo(const RefPtrContainer& src) {
+  RefPtrContainer container(src);
+}
+
+struct ObjectWithOpaqueCopyConstructor {
+  ObjectWithOpaqueCopyConstructor(const ObjectWithOpaqueCopyConstructor&);
+  ObjectWithOpaqueCopyConstructor() { }
+};
+
+struct CallDefaultConstructor {
+  [[clang::annotate("webkit.nodelete")]] CallDefaultConstructor() { }
+  ObjectWithOpaqueCopyConstructor objectWithOpaqueCopyConstructor;
+};
+
+struct CallCopyConstructor {
+  using InnerObjectType = ObjectWithOpaqueCopyConstructor;
+  [[clang::annotate("webkit.nodelete")]] CallCopyConstructor(const InnerObjectType& obj)
+    : object(obj)
+    // expected-warning@-1{{A constructor 'CallCopyConstructor' has [[clang::annotate_type("webkit.nodelete")]] but it contains code that could destruct an object}}
+  {
+  }
+  InnerObjectType object;
+};
+
+} // namespace nodelete_ctor_dtor
+
+namespace nodelete_ptrconversion {
+
+  [[clang::annotate("webkit.ptrconversion")]] [[clang::annotate("webkit.nodelete")]] void foo(void* ptr) {
+    someFunction(); // expected-warning{{A function 'foo' has [[clang::annotate_type("webkit.nodelete")]] but it contains code that could destruct an object}}
+  }
+
+} // namespace nodelete_ptrconversion
+
+namespace std {
+
+// The compiler only recognises the real ::std::initializer_list, so this mock
+// has to live in the global std namespace.
+template <typename T>
+class initializer_list {
+  const T* m_begin;
+  decltype(sizeof(0)) m_size;
+
+public:
+  constexpr initializer_list() : m_begin(nullptr), m_size(0) { }
+  constexpr const T* begin() const { return m_begin; }
+  constexpr const T* end() const { return m_begin + m_size; }
+  constexpr decltype(sizeof(0)) size() const { return m_size; }
+};
+
+template <typename T>
+constexpr T min(initializer_list<T> list) {
+  const T* first = list.begin();
+  const T* last = list.end();
+  T result = *first;
+  for (++first; first != last; ++first) {
+    if (*first < result)
+      result = *first;
+  }
+  return result;
+}
+
+} // namespace std
+
+namespace std_initializer_list {
+
+// A braced list passed as std::initializer_list materialises a backing array
+// temporary wrapped in a CXXStdInitializerListExpr. That array is destructed in
+// this function, so it's only safe when its element type destructs trivially.
+
+unsigned [[clang::annotate_type("webkit.nodelete")]] safeSize();
+
+void [[clang::annotate_type("webkit.nodelete")]] callsMinWithInitializerList(unsigned other) {
+  unsigned smallest = std::min({ safeSize(), other, 3u });
+  (void)smallest;
+}
+
+void takesTrackedList(std::initializer_list<ObjectWithNonTrivialDestructor>);
+
+void [[clang::annotate_type("webkit.nodelete")]] passesListOfTrackedObjects() {
+  takesTrackedList({ ObjectWithNonTrivialDestructor(), ObjectWithNonTrivialDestructor() });
+  // expected-warning@-1{{A function 'passesListOfTrackedObjects' has [[clang::annotate_type("webkit.nodelete")]] but it contains code that could destruct an object}}
+}
+
+void [[clang::annotate_type("webkit.nodelete")]] nonDestructiveObjectInBraces() {
+  int x = (ObjectWithConstructor(2.3), 1);
+}
+
+void [[clang::annotate_type("webkit.nodelete")]] destructiveObjectInBraces() {
+  int x = (ObjectWithNonTrivialDestructor(), 1);
+  // expected-warning@-1{{A function 'destructiveObjectInBraces' has [[clang::annotate_type("webkit.nodelete")]] but it contains code that could destruct an object}}
+}
+
+} // namespace std_initializer_list

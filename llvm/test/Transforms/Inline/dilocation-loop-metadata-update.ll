@@ -50,7 +50,7 @@ entry:
 !10 = !{!"llvm.loop.distribute.enable"}
 !11 = !{!"llvm.loop.distribute.followup_all", !7, !8, !9, !12, !13, !14}
 !12 = !{!"llvm.loop.vectorize.width", i32 8}
-!13 = !{!"llvm.loop.vectorize.enable", i1 true}
+!13 = !{!"llvm.loop.vectorize.enable"}
 !14 = !{!"llvm.loop.vectorize.followup_all", !7, !8, !9, !15, !16}
 !15 = !{!"llvm.loop.isvectorized"}
 !16 = !{!"llvm.loop.unroll.count", i32 1}
@@ -69,15 +69,15 @@ entry:
 ; CHECK: [[META10]] = !{!"llvm.loop.distribute.enable"}
 ; CHECK: [[META11]] = !{!"llvm.loop.distribute.followup_all", [[META7]], [[META8]], [[META9]], [[META12:![0-9]+]], [[META13:![0-9]+]], [[META14:![0-9]+]]}
 ; CHECK: [[META12]] = !{!"llvm.loop.vectorize.width", i32 8}
-; CHECK: [[META13]] = !{!"llvm.loop.vectorize.enable", i1 true}
+; CHECK: [[META13]] = !{!"llvm.loop.vectorize.enable"}
 ; CHECK: [[META14]] = !{!"llvm.loop.vectorize.followup_all", [[META7]], [[META8]], [[META9]], [[META15:![0-9]+]], [[META16:![0-9]+]]}
 ; CHECK: [[META15]] = !{!"llvm.loop.isvectorized"}
 ; CHECK: [[META16]] = !{!"llvm.loop.unroll.count", i32 1}
 ; CHECK: [[DBG17]] = distinct !DISubprogram(name: "f", scope: [[META1]], file: [[META1]], line: 9, type: [[META4]], scopeLine: 9, spFlags: DISPFlagDefinition | DISPFlagOptimized, unit: [[META0]])
 ; CHECK: [[LOOP18]] = distinct !{[[LOOP18]], [[META19:![0-9]+]], [[META21:![0-9]+]], [[META9]], [[META10]], [[META22:![0-9]+]]}
-; CHECK: [[META19]] = !DILocation(line: 6, column: 3, scope: [[DBG3]], inlinedAt: [[META20:![0-9]+]])
+; CHECK: [[META19]] = distinct !DILocation(line: 6, column: 3, scope: [[DBG3]], inlinedAt: [[META20:![0-9]+]])
 ; CHECK: [[META20]] = distinct !DILocation(line: 9, column: 12, scope: [[DBG17]])
-; CHECK: [[META21]] = !DILocation(line: 7, column: 22, scope: [[DBG3]], inlinedAt: [[META20]])
+; CHECK: [[META21]] = distinct !DILocation(line: 7, column: 22, scope: [[DBG3]], inlinedAt: [[META20]])
 ; CHECK: [[META22]] = !{!"llvm.loop.distribute.followup_all", [[META19]], [[META21]], [[META9]], [[META12]], [[META13]], [[META23:![0-9]+]]}
 ; CHECK: [[META23]] = !{!"llvm.loop.vectorize.followup_all", [[META19]], [[META21]], [[META9]], [[META15]], [[META16]]}
 ;.

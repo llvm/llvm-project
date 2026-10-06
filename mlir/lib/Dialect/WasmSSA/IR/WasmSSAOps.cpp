@@ -37,7 +37,7 @@ void printElseRegion(OpAsmPrinter &opPrinter, Operation *op,
                      Region &elseRegion) {
   if (elseRegion.empty())
     return;
-  opPrinter.printKeywordOrString("else ");
+  opPrinter << "else ";
   opPrinter.printRegion(elseRegion);
 }
 } // namespace
@@ -87,8 +87,10 @@ ParseResult parseImportOp(OpAsmParser &parser, OperationState &result) {
     return failure();
 
   StringAttr symbolName;
-  res = parser.parseSymbolName(symbolName, SymbolTable::getSymbolAttrName(),
-                               result.attributes);
+  res = parser.parseSymbolName(symbolName);
+  if (succeeded(res))
+    result.getOrAddProperties<GlobalImportOp::Properties>().sym_name =
+        symbolName;
   return res;
 }
 } // namespace
@@ -272,7 +274,7 @@ ParseResult GlobalOp::parse(OpAsmParser &parser, OperationState &result) {
     result.addAttribute(getExportedAttrName(result.name), UnitAttr::get(ctx));
   }
 
-  res = parser.parseSymbolName(symbolName, SymbolTable::getSymbolAttrName(),
+  res = parser.parseSymbolName(symbolName, getSymNameAttrName(result.name),
                                result.attributes);
   res = parser.parseType(globalType);
   result.addAttribute(getTypeAttrName(result.name), TypeAttr::get(globalType));
@@ -328,6 +330,44 @@ GlobalGetOp::verifySymbolUses(SymbolTableCollection &symbolTable) {
     return emitError("global.get op is considered constant if it's referring "
                      "to a import.global symbol marked non-mutable");
   }
+  return success();
+}
+
+//===----------------------------------------------------------------------===//
+// GlobalSetOp
+//===----------------------------------------------------------------------===//
+
+LogicalResult
+GlobalSetOp::verifySymbolUses(SymbolTableCollection &symbolTable) {
+  Operation *symTabOp = SymbolTable::getNearestSymbolTable(*this);
+  StringRef referencedSymbol = getGlobal();
+  Operation *definitionOp = symbolTable.lookupSymbolIn(
+      symTabOp, StringAttr::get(this->getContext(), referencedSymbol));
+  if (!definitionOp)
+    return emitError() << "symbol @" << referencedSymbol << " is undefined";
+
+  Type globalType;
+  bool isMutable = false;
+  if (auto global = dyn_cast<GlobalOp>(definitionOp)) {
+    globalType = global.getType();
+    isMutable = global.getIsMutable();
+  } else if (auto globalImport = dyn_cast<GlobalImportOp>(definitionOp)) {
+    globalType = globalImport.getType();
+    isMutable = globalImport.getIsMutable();
+  } else {
+    return emitError() << "symbol @" << referencedSymbol
+                       << " is not a global symbol";
+  }
+
+  if (!isMutable)
+    return emitError("global.set target must be mutable");
+
+  Type valueType = getValue().getType();
+  if (globalType != valueType)
+    return emitError("global.set value type does not match target global "
+                     "type: expected ")
+           << globalType << " but got " << valueType;
+
   return success();
 }
 
@@ -453,3 +493,21 @@ LogicalResult ReinterpretOp::verify() {
 //===----------------------------------------------------------------------===//
 
 void ReturnOp::build(OpBuilder &odsBuilder, OperationState &odsState) {}
+
+LogicalResult ReturnOp::verify() {
+  auto funcOp = (*this)->getParentOfType<FuncOp>();
+  if (!funcOp)
+    return success();
+  ArrayRef<Type> resultTypes = funcOp.getFunctionType().getResults();
+  if (getOperands().size() != resultTypes.size())
+    return emitOpError("has ") << getOperands().size()
+                               << " operands, but enclosing function returns "
+                               << resultTypes.size();
+  for (auto [idx, resultType, operandType] :
+       llvm::enumerate(resultTypes, getOperands().getTypes()))
+    if (resultType != operandType)
+      return emitOpError("type of return operand #")
+             << idx << " (" << operandType
+             << ") doesn't match function result type (" << resultType << ")";
+  return success();
+}

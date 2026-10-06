@@ -7,8 +7,7 @@ declare void @prevent_merging()
 define i32 @test1(ptr %array, i32 %length, i32 %n) {
 ; CHECK-LABEL: @test1(
 ; CHECK-NEXT:  loop.preheader:
-; CHECK-NEXT:    [[UMAX:%.*]] = call i32 @llvm.umax.i32(i32 [[N:%.*]], i32 1)
-; CHECK-NEXT:    [[TMP0:%.*]] = add i32 [[UMAX]], -1
+; CHECK-NEXT:    [[TMP0:%.*]] = call i32 @llvm.usub.sat.i32(i32 [[N:%.*]], i32 1)
 ; CHECK-NEXT:    [[TMP1:%.*]] = freeze i32 [[TMP0]]
 ; CHECK-NEXT:    [[UMIN:%.*]] = call i32 @llvm.umin.i32(i32 [[TMP1]], i32 [[LENGTH:%.*]])
 ; CHECK-NEXT:    [[TMP2:%.*]] = icmp ne i32 [[LENGTH]], [[UMIN]]
@@ -231,8 +230,7 @@ define i32 @two_range_checks(ptr %array.1, i32 %length.1, ptr %array.2, i32 %len
 ; CHECK-LABEL: @two_range_checks(
 ; CHECK-NEXT:  loop.preheader:
 ; CHECK-NEXT:    [[UMIN:%.*]] = call i32 @llvm.umin.i32(i32 [[LENGTH_2:%.*]], i32 [[LENGTH_1:%.*]])
-; CHECK-NEXT:    [[UMAX:%.*]] = call i32 @llvm.umax.i32(i32 [[N:%.*]], i32 1)
-; CHECK-NEXT:    [[TMP0:%.*]] = add i32 [[UMAX]], -1
+; CHECK-NEXT:    [[TMP0:%.*]] = call i32 @llvm.usub.sat.i32(i32 [[N:%.*]], i32 1)
 ; CHECK-NEXT:    [[TMP1:%.*]] = freeze i32 [[TMP0]]
 ; CHECK-NEXT:    [[UMIN1:%.*]] = call i32 @llvm.umin.i32(i32 [[TMP1]], i32 [[UMIN]])
 ; CHECK-NEXT:    [[TMP2:%.*]] = icmp ne i32 [[UMIN]], [[UMIN1]]
@@ -296,8 +294,7 @@ define i32 @three_range_checks(ptr %array.1, i32 %length.1, ptr %array.2, i32 %l
 ; CHECK-NEXT:  loop.preheader:
 ; CHECK-NEXT:    [[UMIN:%.*]] = call i32 @llvm.umin.i32(i32 [[LENGTH_3:%.*]], i32 [[LENGTH_2:%.*]])
 ; CHECK-NEXT:    [[UMIN1:%.*]] = call i32 @llvm.umin.i32(i32 [[UMIN]], i32 [[LENGTH_1:%.*]])
-; CHECK-NEXT:    [[UMAX:%.*]] = call i32 @llvm.umax.i32(i32 [[N:%.*]], i32 1)
-; CHECK-NEXT:    [[TMP0:%.*]] = add i32 [[UMAX]], -1
+; CHECK-NEXT:    [[TMP0:%.*]] = call i32 @llvm.usub.sat.i32(i32 [[N:%.*]], i32 1)
 ; CHECK-NEXT:    [[TMP1:%.*]] = freeze i32 [[TMP0]]
 ; CHECK-NEXT:    [[UMIN2:%.*]] = call i32 @llvm.umin.i32(i32 [[TMP1]], i32 [[UMIN1]])
 ; CHECK-NEXT:    [[TMP2:%.*]] = icmp ne i32 [[UMIN1]], [[UMIN2]]
@@ -368,8 +365,7 @@ exit:                                             ; preds = %guarded, %entry
 define i32 @distinct_checks(ptr %array.1, i32 %length.1, ptr %array.2, i32 %length.2, ptr %array.3, i32 %length.3, i32 %n) {
 ; CHECK-LABEL: @distinct_checks(
 ; CHECK-NEXT:  loop.preheader:
-; CHECK-NEXT:    [[UMAX:%.*]] = call i32 @llvm.umax.i32(i32 [[N:%.*]], i32 1)
-; CHECK-NEXT:    [[TMP0:%.*]] = add i32 [[UMAX]], -1
+; CHECK-NEXT:    [[TMP0:%.*]] = call i32 @llvm.usub.sat.i32(i32 [[N:%.*]], i32 1)
 ; CHECK-NEXT:    [[TMP1:%.*]] = freeze i32 [[TMP0]]
 ; CHECK-NEXT:    [[TMP2:%.*]] = freeze i32 [[LENGTH_2:%.*]]
 ; CHECK-NEXT:    [[UMIN:%.*]] = call i32 @llvm.umin.i32(i32 [[TMP1]], i32 [[TMP2]])
@@ -445,8 +441,7 @@ exit:
 define i32 @duplicate_checks(ptr %array.1, ptr %array.2, ptr %array.3, i32 %length, i32 %n) {
 ; CHECK-LABEL: @duplicate_checks(
 ; CHECK-NEXT:  loop.preheader:
-; CHECK-NEXT:    [[UMAX:%.*]] = call i32 @llvm.umax.i32(i32 [[N:%.*]], i32 1)
-; CHECK-NEXT:    [[TMP0:%.*]] = add i32 [[UMAX]], -1
+; CHECK-NEXT:    [[TMP0:%.*]] = call i32 @llvm.usub.sat.i32(i32 [[N:%.*]], i32 1)
 ; CHECK-NEXT:    [[TMP1:%.*]] = freeze i32 [[TMP0]]
 ; CHECK-NEXT:    [[UMIN:%.*]] = call i32 @llvm.umin.i32(i32 [[TMP1]], i32 [[LENGTH:%.*]])
 ; CHECK-NEXT:    [[TMP2:%.*]] = icmp ne i32 [[LENGTH]], [[UMIN]]
@@ -639,8 +634,7 @@ define i32 @different_ivs(ptr %array, i32 %length, i32 %n) {
 ; CHECK-LABEL: @different_ivs(
 ; CHECK-NEXT:  loop.preheader:
 ; CHECK-NEXT:    [[N64:%.*]] = zext i32 [[N:%.*]] to i64
-; CHECK-NEXT:    [[UMAX:%.*]] = call i64 @llvm.umax.i64(i64 [[N64]], i64 1)
-; CHECK-NEXT:    [[TMP0:%.*]] = add nsw i64 [[UMAX]], -1
+; CHECK-NEXT:    [[TMP0:%.*]] = call i64 @llvm.usub.sat.i64(i64 [[N64]], i64 1)
 ; CHECK-NEXT:    [[TMP1:%.*]] = freeze i64 [[TMP0]]
 ; CHECK-NEXT:    [[TMP2:%.*]] = zext i32 [[LENGTH:%.*]] to i64
 ; CHECK-NEXT:    [[UMIN:%.*]] = call i64 @llvm.umin.i64(i64 [[TMP1]], i64 [[TMP2]])

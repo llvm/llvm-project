@@ -356,7 +356,7 @@ PartialInlinerImpl::computeOutliningColdRegionsInfo(
   std::unique_ptr<BlockFrequencyInfo> ScopedBFI;
   BlockFrequencyInfo *BFI;
   if (!GetBFI) {
-    ScopedBFI.reset(new BlockFrequencyInfo(F, BPI, LI));
+    ScopedBFI.reset(new BlockFrequencyInfo(F, BPI, CI));
     BFI = ScopedBFI.get();
   } else
     BFI = &(GetBFI(F));
@@ -905,12 +905,10 @@ void PartialInlinerImpl::computeCallsiteToProfCountMap(
   auto ComputeCurrBFI = [&,this](Function *Caller) {
       // For the old pass manager:
       if (!GetBFI) {
-        DominatorTree DT(*Caller);
         CycleInfo CI;
         CI.compute(*Caller);
-        LoopInfo LI(DT);
         BranchProbabilityInfo BPI(*Caller, CI);
-        TempBFI.reset(new BlockFrequencyInfo(*Caller, BPI, LI));
+        TempBFI.reset(new BlockFrequencyInfo(*Caller, BPI, CI));
         CurrentCallerBFI = TempBFI.get();
       } else {
         // New pass manager:
@@ -1095,9 +1093,8 @@ bool PartialInlinerImpl::FunctionCloner::doMultiRegionFunctionOutlining() {
   // Manually calculate a BlockFrequencyInfo and BranchProbabilityInfo.
   CycleInfo CI;
   CI.compute(*ClonedFunc);
-  LoopInfo LI(DT);
   BranchProbabilityInfo BPI(*ClonedFunc, CI);
-  ClonedFuncBFI.reset(new BlockFrequencyInfo(*ClonedFunc, BPI, LI));
+  ClonedFuncBFI.reset(new BlockFrequencyInfo(*ClonedFunc, BPI, CI));
 
   // Cache and recycle the CodeExtractor analysis to avoid O(n^2) compile-time.
   CodeExtractorAnalysisCache CEAC(*ClonedFunc);
@@ -1172,9 +1169,8 @@ PartialInlinerImpl::FunctionCloner::doSingleRegionFunctionOutlining() {
   // Manually calculate a BlockFrequencyInfo and BranchProbabilityInfo.
   CycleInfo CI;
   CI.compute(*ClonedFunc);
-  LoopInfo LI(DT);
   BranchProbabilityInfo BPI(*ClonedFunc, CI);
-  ClonedFuncBFI.reset(new BlockFrequencyInfo(*ClonedFunc, BPI, LI));
+  ClonedFuncBFI.reset(new BlockFrequencyInfo(*ClonedFunc, BPI, CI));
 
   // Gather up the blocks that we're going to extract.
   std::vector<BasicBlock *> ToExtract;

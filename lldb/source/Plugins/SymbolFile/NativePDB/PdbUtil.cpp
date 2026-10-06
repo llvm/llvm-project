@@ -21,7 +21,6 @@
 #include "Plugins/Language/CPlusPlus/MSVCUndecoratedNameParser.h"
 #include "Plugins/SymbolFile/NativePDB/CodeViewRegisterMapping.h"
 #include "lldb/Symbol/Block.h"
-#include "lldb/Utility/LLDBAssert.h"
 #include "lldb/Utility/LLDBLog.h"
 #include "lldb/lldb-enumerations.h"
 
@@ -275,7 +274,7 @@ PDB_SymType lldb_private::npdb::CVSymToPDBSym(SymbolKind kind) {
   case S_CALLERS:
     return PDB_SymType::Caller;
   default:
-    lldbassert(false && "Invalid symbol record kind!");
+    assert(false && "Invalid symbol record kind!");
   }
   return PDB_SymType::None;
 }
@@ -304,7 +303,7 @@ PDB_SymType lldb_private::npdb::CVTypeToPDBType(TypeLeafKind kind) {
   case LF_BITFIELD:
     return PDB_SymType::BuiltinType;
   default:
-    lldbassert(false && "Invalid type record kind!");
+    assert(false && "Invalid type record kind!");
   }
   return PDB_SymType::None;
 }
@@ -435,7 +434,7 @@ SegmentOffset lldb_private::npdb::GetSegmentAndOffset(const CVSymbol &sym) {
     return ::GetSegmentAndOffset<ThreadLocalDataSym>(sym);
     break;
   default:
-    lldbassert(false && "Record does not have a segment/offset!");
+    assert(false && "Record does not have a segment/offset!");
   }
   return {0, 0};
 }
@@ -489,7 +488,7 @@ lldb_private::npdb::GetSegmentOffsetAndLength(const CVSymbol &sym) {
     return ::GetSegmentOffsetAndLength<BlockSym>(sym);
     break;
   default:
-    lldbassert(false && "Record does not have a segment/offset/length triple!");
+    assert(false && "Record does not have a segment/offset/length triple!");
   }
   return {0, 0, 0};
 }
@@ -591,7 +590,10 @@ TypeIndex lldb_private::npdb::GetFieldListIndex(CVType cvt) {
 }
 
 TypeIndex lldb_private::npdb::LookThroughModifierRecord(CVType modifier) {
-  lldbassert(modifier.kind() == LF_MODIFIER);
+  if (modifier.kind() != LF_MODIFIER) {
+    assert(false && "must be called on an LF_MODIFIER");
+    return {};
+  }
   ModifierRecord mr;
   llvm::cantFail(TypeDeserializer::deserializeAs<ModifierRecord>(modifier, mr));
   return mr.ModifiedType;
@@ -662,7 +664,7 @@ VariableInfo lldb_private::npdb::GetVariableNameInfo(CVSymbol sym) {
     return result;
   }
 
-  lldbassert(false && "Invalid variable record kind!");
+  assert(false && "Invalid variable record kind!");
   return {};
 }
 
@@ -670,7 +672,8 @@ static llvm::FixedStreamArray<FrameData>::Iterator
 GetCorrespondingFrameData(lldb::addr_t load_addr,
                           const DebugFrameDataSubsectionRef &fpo_data,
                           const Variable::RangeList &ranges) {
-  lldbassert(!ranges.IsEmpty());
+  if (ranges.IsEmpty())
+    return fpo_data.end();
 
   // assume that all variable ranges correspond to one frame data
   using RangeListEntry = Variable::RangeList::Entry;
@@ -819,8 +822,10 @@ VariableInfo lldb_private::npdb::GetVariableLocationInfo(
           PdbCompilandSymId func_scope_id =
               PdbSymUid(func_block.GetID()).asCompilandSym();
           CVSymbol func_block_cvs = index.ReadSymbolRecord(func_scope_id);
-          lldbassert(func_block_cvs.kind() == S_GPROC32 ||
-                     func_block_cvs.kind() == S_LPROC32);
+          if (func_block_cvs.kind() != S_GPROC32 &&
+              func_block_cvs.kind() != S_LPROC32)
+            return result; // Invalid variable.
+
           PdbCompilandSymId frame_proc_id(func_scope_id.modi,
                                           func_scope_id.offset +
                                               func_block_cvs.length());

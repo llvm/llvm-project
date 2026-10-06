@@ -728,6 +728,10 @@ class Attr {
   // typical attribute serialization. This will cause tablegen to emit a call to
   // ASTRecordWriter::Add<Name>Attr and ASTRecordReader::read<Name>Attr.
   bit HasCustomSerialization = 0;
+  // Set to true if this attribute has a custom text node dump implementation
+  // in TextNodeDumper.cpp. This will prevent the automatic generation of a
+  // Visit method in AttrTextNodeDump.inc.
+  bit HasCustomTextNodeDump = 0;
   // Set to true if all of the attribute's arguments should be parsed in an
   // unevaluated context.
   bit ParseArgumentsAsUnevaluated = 0;
@@ -1299,13 +1303,6 @@ def Bounded : IgnoredAttr {
   let Spellings = [GNU<"bounded">];
 }
 
-def CarriesDependency : InheritableParamAttr {
-  let Spellings = [GNU<"carries_dependency">,
-                   CXX11<"","carries_dependency", 200809>];
-  let Subjects = SubjectList<[ParmVar, ObjCMethod, Function], ErrorDiag>;
-  let Documentation = [CarriesDependencyDocs];
-}
-
 def CDecl : DeclOrTypeAttr {
   let Spellings = [GCC<"cdecl">, CustomKeyword<"__cdecl">, CustomKeyword<"_cdecl">];
 //  let Subjects = [Function, ObjCMethod];
@@ -1653,10 +1650,7 @@ def CUDALaunchBounds : InheritableAttr {
               ExprArgument<"MaxBlocks", 1>];
   let LangOpts = [CUDA];
   let Subjects = SubjectList<[ObjCMethod, FunctionLike]>;
-  // An AST node is created for this attribute, but is not used by other parts
-  // of the compiler. However, this node needs to exist in the AST because
-  // non-LLVM backends may be relying on the attribute's presence.
-  let Documentation = [Undocumented];
+  let Documentation = [LaunchBoundsDocs];
 }
 
 def CUDAShared : InheritableAttr {
@@ -1826,11 +1820,13 @@ def OpenCLGlobalAddressSpace : TypeAttr {
   let Documentation = [OpenCLAddressSpaceGlobalDocs];
 }
 
+// TODO: Remove OpenCLGlobalDeviceAddressSpace after deprecation.
 def OpenCLGlobalDeviceAddressSpace : TypeAttr {
   let Spellings = [Clang<"opencl_global_device">];
   let Documentation = [OpenCLAddressSpaceGlobalExtDocs];
 }
 
+// TODO: Remove OpenCLGlobalHostAddressSpace after deprecation.
 def OpenCLGlobalHostAddressSpace : TypeAttr {
   let Spellings = [Clang<"opencl_global_host">];
   let Documentation = [OpenCLAddressSpaceGlobalExtDocs];
@@ -1852,6 +1848,36 @@ def OpenCLGenericAddressSpace : TypeAttr {
   let Spellings = [CustomKeyword<"__generic">, CustomKeyword<"generic">,
                    Clang<"opencl_generic">];
   let Documentation = [OpenCLAddressSpaceGenericDocs];
+}
+
+def SYCLPrivateAddressSpace : TypeAttr {
+  let Spellings = [CXX11<"clang", "sycl_private">];
+  let LangOpts = [SYCLHost, SYCLDevice];
+  let Documentation = [SYCLAddressSpaceDocs];
+}
+
+def SYCLGlobalAddressSpace : TypeAttr {
+  let Spellings = [CXX11<"clang", "sycl_global">];
+  let LangOpts = [SYCLHost, SYCLDevice];
+  let Documentation = [SYCLAddressSpaceDocs];
+}
+
+def SYCLLocalAddressSpace : TypeAttr {
+  let Spellings = [CXX11<"clang", "sycl_local">];
+  let LangOpts = [SYCLHost, SYCLDevice];
+  let Documentation = [SYCLAddressSpaceDocs];
+}
+
+def SYCLConstantAddressSpace : TypeAttr {
+  let Spellings = [CXX11<"clang", "sycl_constant">];
+  let LangOpts = [SYCLHost, SYCLDevice];
+  let Documentation = [SYCLAddressSpaceDocs];
+}
+
+def SYCLGenericAddressSpace : TypeAttr {
+  let Spellings = [CXX11<"clang", "sycl_generic">];
+  let LangOpts = [SYCLHost, SYCLDevice];
+  let Documentation = [SYCLAddressSpaceDocs];
 }
 
 def OpenCLNoSVM : Attr {
@@ -1997,7 +2023,7 @@ def MinSize : InheritableAttr {
 }
 
 def FlagEnum : InheritableAttr {
-  let Spellings = [Clang<"flag_enum">];
+  let Spellings = [ClangGCC<"flag_enum">];
   let Subjects = SubjectList<[Enum]>;
   let Documentation = [FlagEnumDocs];
   let SimpleHandler = 1;
@@ -2423,6 +2449,8 @@ def NoInline : DeclOrStmtAttr {
   let SimpleHandler = 1;
 }
 
+def : MutualExclusions<[AlwaysInline, NoInline]>;
+
 def NoOutline : DeclOrStmtAttr {
   let Spellings = [Clang<"no_outline">];
   let Subjects = SubjectList<[Function, ObjCMethod, Block], ErrorDiag>;
@@ -2532,6 +2560,19 @@ def AMDGPUMaxNumWorkGroups : InheritableAttr {
   let Subjects = SubjectList<[Function], ErrorDiag, "kernel functions">;
 }
 
+def AMDGPUNamedBarrierWrapper : InheritableAttr {
+  let Spellings = [];
+  let Args = [];
+  let Documentation = [InternalOnly];
+  let SemaHandler = 0;
+}
+
+def AMDGPUAvailableVisible : StmtAttr, TargetSpecificAttr<TargetAMDGPU> {
+  let Spellings = [Clang<"amdgpu_av">];
+  let Args = [StringArgument<"Mode">];
+  let Documentation = [AMDGPUAvailableVisibleDocs];
+}
+
 def BPFPreserveAccessIndex : InheritableAttr,
                              TargetSpecificAttr<TargetBPF>  {
   let Spellings = [Clang<"preserve_access_index">];
@@ -2578,7 +2619,7 @@ def WebAssemblyExportName : InheritableAttr,
   let Spellings = [Clang<"export_name">];
   let Args = [StringArgument<"ExportName">];
   let Documentation = [WebAssemblyExportNameDocs];
-  let Subjects = SubjectList<[Function], ErrorDiag>;
+  let Subjects = SubjectList<[Function, GlobalVar], ErrorDiag>;
 }
 
 def WebAssemblyImportModule : InheritableAttr,
@@ -2586,7 +2627,7 @@ def WebAssemblyImportModule : InheritableAttr,
   let Spellings = [Clang<"import_module">];
   let Args = [StringArgument<"ImportModule">];
   let Documentation = [WebAssemblyImportModuleDocs];
-  let Subjects = SubjectList<[Function], ErrorDiag>;
+  let Subjects = SubjectList<[Function, GlobalVar], ErrorDiag>;
 }
 
 def WebAssemblyImportName : InheritableAttr,
@@ -2594,7 +2635,7 @@ def WebAssemblyImportName : InheritableAttr,
   let Spellings = [Clang<"import_name">];
   let Args = [StringArgument<"ImportName">];
   let Documentation = [WebAssemblyImportNameDocs];
-  let Subjects = SubjectList<[Function], ErrorDiag>;
+  let Subjects = SubjectList<[Function, GlobalVar], ErrorDiag>;
 }
 
 def NoSplitStack : InheritableAttr {
@@ -2685,7 +2726,7 @@ def CountedByOrNull : DeclOrTypeAttr {
   let Args = [ExprArgument<"Count">, IntArgument<"NestedLevel", 1>];
   let LateParsed = LateAttrParseExperimentalExt;
   let ParseArgumentsAsUnevaluated = 1;
-  let Documentation = [CountedByDocs];
+  let Documentation = [CountedByOrNullDocs];
   let LangOpts = [COnly];
 }
 
@@ -2708,7 +2749,7 @@ def SizedBy : DeclOrTypeAttr {
   let Args = [ExprArgument<"Size">, IntArgument<"NestedLevel", 1>];
   let LateParsed = LateAttrParseExperimentalExt;
   let ParseArgumentsAsUnevaluated = 1;
-  let Documentation = [CountedByDocs];
+  let Documentation = [SizedByDocs];
   let LangOpts = [COnly];
 }
 
@@ -2718,7 +2759,7 @@ def SizedByOrNull : DeclOrTypeAttr {
   let Args = [ExprArgument<"Size">, IntArgument<"NestedLevel", 1>];
   let LateParsed = LateAttrParseExperimentalExt;
   let ParseArgumentsAsUnevaluated = 1;
-  let Documentation = [CountedByDocs];
+  let Documentation = [SizedByOrNullDocs];
   let LangOpts = [COnly];
 }
 
@@ -3299,9 +3340,34 @@ def SwiftPrivate : InheritableAttr {
 def SwiftVersionedAddition : Attr {
   // This attribute has no spellings as it is only ever created implicitly
   // from API notes.
+  //
+  // A "slice" is one element of an APINotesReader::VersionedInfo: the
+  // annotations that one version of a sidecar '.apinotes' file supplies for one
+  // declaration, paired with that version. An unversioned section supplies a
+  // slice whose version is empty.
+  //
+  // A "group" is all the slices one lookup returned, which is one whole
+  // VersionedInfo. Clang selects at most one slice per group and applies it, so
+  // a slice can only suppress other slices in its own group.
+  //
+  // SliceGroup says which group this slice came from.
+  //
+  // This is needed because capture mode (version-independent apinotes) attaches
+  // every slice from every lookup to the same declaration, which erases the
+  // VersionedInfo boundaries. SliceGroup restores them, so a consumer redoes
+  // the selection once per group instead of pooling unrelated slices.
+  // One group is one lookup: a second API notes reader is a different lookup,
+  // and so is an exact parameter-selector query beside a broad one.
+  //
+  // Group numbers also carry precedence. Clang applies each group's winner in
+  // ascending group order, and when two winners set the same key the last one
+  // applied owns it. So a consumer partitions by group, selects within each
+  // group, then resolves any remaining collision in ascending group order.
+  //
   let Spellings = [];
   let Args = [VersionArgument<"Version">, WrappedAttr<"AdditionalAttr">,
-              BoolArgument<"IsReplacedByActive">];
+              BoolArgument<"IsReplacedByActive">,
+              UnsignedArgument<"SliceGroup">];
   let SemaHandler = 0;
   let Documentation = [InternalOnly];
 }
@@ -3309,9 +3375,13 @@ def SwiftVersionedAddition : Attr {
 def SwiftVersionedRemoval : Attr {
   // This attribute has no spellings as it is only ever created implicitly
   // from API notes.
+  //
+  // SliceGroup says which lookup this slice belongs to. See the
+  // SwiftVersionedAddition comment above.
   let Spellings = [];
   let Args = [VersionArgument<"Version">, UnsignedArgument<"RawKind">,
-              BoolArgument<"IsReplacedByActive">];
+              BoolArgument<"IsReplacedByActive">,
+              UnsignedArgument<"SliceGroup">];
   let SemaHandler = 0;
   let Documentation = [InternalOnly];
   let AdditionalMembers = [{
@@ -3319,6 +3389,24 @@ def SwiftVersionedRemoval : Attr {
       return static_cast<attr::Kind>(getRawKind());
     }
   }];
+}
+
+def SwiftVersionedSlice : Attr {
+  // This attribute has no spellings as it is only ever created implicitly
+  // from API notes, and only under -fswift-version-independent-apinotes.
+  //
+  // One of these records each Swift version slice an API notes lookup supplied
+  // for the declaration, whether or not that slice set any keyed values.
+  // A slice that sets no key still takes part in version selection, selecting it
+  // suppresses the annotations of every other slice in its group, so a
+  // consumer that recomputes the selection has to know the slice exists.
+  //
+  // SliceGroup says which group this slice came from. See the
+  // SwiftVersionedAddition comment above.
+  let Spellings = [];
+  let Args = [VersionArgument<"Version">, UnsignedArgument<"SliceGroup">];
+  let SemaHandler = 0;
+  let Documentation = [InternalOnly];
 }
 
 def NoDeref : TypeAttr {
@@ -4582,7 +4670,16 @@ def MSInheritance : InheritableAttr {
   let Spellings = [CustomKeyword<"__single_inheritance">,
                    CustomKeyword<"__multiple_inheritance">,
                    CustomKeyword<"__virtual_inheritance">,
-                   CustomKeyword<"__unspecified_inheritance">];
+                   CustomKeyword<"__unspecified_inheritance">,
+                   // The single underscore spellings are aliases defined in
+                   // TokenKinds.def; they must come *after* all of the other
+                   // spellings because otherwise the MSInheritanceModel
+                   // enumeration will break (we're relying on token
+                   // normalization converting the alias to the normal form).
+                   CustomKeyword<"_single_inheritance">,
+                   CustomKeyword<"_multiple_inheritance">,
+                   CustomKeyword<"_virtual_inheritance">
+                   ];
   let AdditionalMembers = [{
   MSInheritanceModel getInheritanceModel() const {
     // The spelling enum should agree with MSInheritanceModel.
@@ -4686,7 +4783,7 @@ def LoopHint : Attr {
   std::string getDiagnosticName(const PrintingPolicy &Policy) const;
   }];
 
-  let Documentation = [LoopHintDocs, UnrollHintDocs];
+  let Documentation = [LoopHintDocs, UnrollHintDocs, PipelineHintDocs];
   let HasCustomParsing = 1;
 }
 
@@ -4709,7 +4806,7 @@ def HLSLControlFlowHint: StmtAttr {
   let Subjects = SubjectList<[IfStmt, SwitchStmt],
                               ErrorDiag, "'if' and 'switch' statements">;
   let LangOpts = [HLSL];
-  let Documentation = [InternalOnly];
+  let Documentation = [HLSLControlFlowHintDocs];
 }
 
 def CapturedRecord : InheritableAttr {
@@ -4745,6 +4842,7 @@ def OMPCaptureKind : Attr {
   let SemaHandler = 0;
   let Args = [UnsignedArgument<"CaptureKindVal">];
   let Documentation = [InternalOnly];
+  let HasCustomTextNodeDump = 1;
   let AdditionalMembers = [{
     llvm::omp::Clause getCaptureKind() const {
       return static_cast<llvm::omp::Clause>(getCaptureKindVal());
@@ -4875,6 +4973,20 @@ def OMPAssume : InheritableAttr {
   let InheritEvenIfAlreadyPresent = 1;
   let Documentation = [OMPAssumeDocs];
   let Args = [StringArgument<"Assumption">];
+}
+
+def OMPInvariantPredicateBound : StmtAttr {
+  // Internal droppable hint on an `#pragma omp tile` intra-tile loop.
+  // RectCond: rectangular bound (`t < floor + T`) used instead of the stored
+  //           `min(floor + T, N)` condition.
+  // TileSize: constant intra-tile trip count T.
+  // Predicate: optional overshoot guard (`t < N`); omitted when N % T == 0.
+  let Spellings = [];
+  let SemaHandler = 0;
+  let Subjects = SubjectList<[Stmt], ErrorDiag>;
+  let Args = [ExprArgument<"RectCond">, ExprArgument<"TileSize">,
+              ExprArgument<"Predicate", 1>];
+  let Documentation = [InternalOnly];
 }
 
 def InternalLinkage : InheritableAttr {
@@ -5200,24 +5312,6 @@ def HLSLShader : InheritableAttr {
 }];
 }
 
-def HLSLIsArray : TypeAttr {
-  let Spellings = [CXX11<"hlsl", "is_array">];
-  let LangOpts = [HLSL];
-  let Documentation = [InternalOnly];
-}
-
-def HLSLIsMultiSampled : TypeAttr {
-  let Spellings = [CXX11<"hlsl", "is_ms">];
-  let LangOpts = [HLSL];
-  let Documentation = [InternalOnly];
-}
-
-def HLSLROV : TypeAttr {
-  let Spellings = [CXX11<"hlsl", "is_rov">];
-  let LangOpts = [HLSL];
-  let Documentation = [InternalOnly];
-}
-
 def HLSLResourceClass : TypeAttr {
   let Spellings = [CXX11<"hlsl", "resource_class">];
   let LangOpts = [HLSL];
@@ -5226,7 +5320,7 @@ def HLSLResourceClass : TypeAttr {
       /*is_string=*/true, ["SRV", "UAV", "CBuffer", "Sampler"],
       ["SRV", "UAV", "CBuffer", "Sampler"],
       /*opt=*/0, /*fake=*/0, /*isExternalType=*/1>];
-  let Documentation = [InternalOnly];
+  let Documentation = [HLSLResourceClassDocs];
 }
 
 def HLSLResourceDimension : TypeAttr {
@@ -5237,26 +5331,44 @@ def HLSLResourceDimension : TypeAttr {
       /*is_string=*/true, ["Unknown", "1D", "2D", "3D", "Cube"],
       ["Unknown", "Dim1D", "Dim2D", "Dim3D", "Cube"],
       /*opt=*/0, /*fake=*/0, /*isExternalType=*/1>];
-  let Documentation = [InternalOnly];
+  let Documentation = [HLSLResourceDimensionDocs];
 }
 
 def HLSLContainedType : TypeAttr {
   let Spellings = [CXX11<"hlsl", "contained_type">];
   let LangOpts = [HLSL];
   let Args = [TypeArgument<"Type", /*opt=*/0>];
-  let Documentation = [InternalOnly];
+  let Documentation = [HLSLContainedTypeDocs];
 }
 
 def HLSLRawBuffer : TypeAttr {
   let Spellings = [CXX11<"hlsl", "raw_buffer">];
   let LangOpts = [HLSL];
-  let Documentation = [InternalOnly];
+  let Documentation = [HLSLRawBufferDocs];
+}
+
+def HLSLIsArray : TypeAttr {
+  let Spellings = [CXX11<"hlsl", "is_array">];
+  let LangOpts = [HLSL];
+  let Documentation = [HLSLIsArrayDocs];
+}
+
+def HLSLIsMultiSampled : TypeAttr {
+  let Spellings = [CXX11<"hlsl", "is_ms">];
+  let LangOpts = [HLSL];
+  let Documentation = [HLSLIsMultiSampledDocs];
+}
+
+def HLSLIsROV : TypeAttr {
+  let Spellings = [CXX11<"hlsl", "is_rov">];
+  let LangOpts = [HLSL];
+  let Documentation = [HLSLIsROVDocs];
 }
 
 def HLSLIsCounter : TypeAttr {
   let Spellings = [CXX11<"hlsl", "is_counter">];
   let LangOpts = [HLSL];
-  let Documentation = [InternalOnly];
+  let Documentation = [HLSLIsCounterDocs];
 }
 
 def HLSLGroupSharedAddressSpace : TypeAttr {
@@ -5333,7 +5445,7 @@ def HLSLVkLocation : HLSLAnnotationAttr {
 }
 
 // `row_major` / `column_major` are HLSL keywords that select the in-memory
-// layout of a matrix-typed declaration. 
+// layout of a matrix-typed declaration.
 def HLSLRowMajor : TypeAttr {
   let Spellings = [CustomKeyword<"row_major">];
   let LangOpts = [HLSL];

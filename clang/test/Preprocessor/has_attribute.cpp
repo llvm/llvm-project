@@ -46,6 +46,7 @@ CXX11(gnu::mips16)
 // Test for standard attributes as listed in C++2a [cpp.cond] paragraph 6.
 
 CXX11(assert)
+// carries_dependency was removed from the standard by P3475R2.
 CXX11(carries_dependency)
 CXX11(deprecated)
 CXX11(ensures)
@@ -59,7 +60,7 @@ CXX11(nodiscard)
 CXX11(noreturn)
 CXX11(unlikely)
 // FIXME(201806L) CHECK: assert: 0
-// CHECK: carries_dependency: 200809L
+// CHECK: carries_dependency: 0
 // CHECK: deprecated: 201309L
 // FIXME(201806L) CHECK: ensures: 0
 // FIXME(201806L) CHECK: expects: 0

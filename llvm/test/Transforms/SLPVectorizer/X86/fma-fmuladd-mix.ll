@@ -27,16 +27,11 @@ define void @fma_fmuladd_2f64() {
 ; NO-FMA-NEXT:    ret void
 ;
 ; FMA-LABEL: @fma_fmuladd_2f64(
-; FMA-NEXT:    [[A0:%.*]] = load double, ptr @srcA64, align 8
-; FMA-NEXT:    [[A1:%.*]] = load double, ptr getelementptr inbounds ([8 x double], ptr @srcA64, i32 0, i64 1), align 8
-; FMA-NEXT:    [[B0:%.*]] = load double, ptr @srcB64, align 8
-; FMA-NEXT:    [[B1:%.*]] = load double, ptr getelementptr inbounds ([8 x double], ptr @srcB64, i32 0, i64 1), align 8
-; FMA-NEXT:    [[C0:%.*]] = load double, ptr @srcC64, align 8
-; FMA-NEXT:    [[C1:%.*]] = load double, ptr getelementptr inbounds ([8 x double], ptr @srcC64, i32 0, i64 1), align 8
-; FMA-NEXT:    [[FMA0:%.*]] = call double @llvm.fma.f64(double [[A0]], double [[B0]], double [[C0]])
-; FMA-NEXT:    [[FMA1:%.*]] = call double @llvm.fmuladd.f64(double [[A1]], double [[B1]], double [[C1]])
-; FMA-NEXT:    store double [[FMA0]], ptr @dst64, align 8
-; FMA-NEXT:    store double [[FMA1]], ptr getelementptr inbounds ([8 x double], ptr @dst64, i32 0, i64 1), align 8
+; FMA-NEXT:    [[TMP1:%.*]] = load <2 x double>, ptr @srcA64, align 8
+; FMA-NEXT:    [[TMP2:%.*]] = load <2 x double>, ptr @srcB64, align 8
+; FMA-NEXT:    [[TMP3:%.*]] = load <2 x double>, ptr @srcC64, align 8
+; FMA-NEXT:    [[TMP4:%.*]] = call <2 x double> @llvm.fma.v2f64(<2 x double> [[TMP1]], <2 x double> [[TMP2]], <2 x double> [[TMP3]])
+; FMA-NEXT:    store <2 x double> [[TMP4]], ptr @dst64, align 8
 ; FMA-NEXT:    ret void
 ;
   %a0 = load double, ptr @srcA64, align 8
@@ -69,16 +64,11 @@ define void @fmuladd_fma_2f64() {
 ; NO-FMA-NEXT:    ret void
 ;
 ; FMA-LABEL: @fmuladd_fma_2f64(
-; FMA-NEXT:    [[A0:%.*]] = load double, ptr @srcA64, align 8
-; FMA-NEXT:    [[A1:%.*]] = load double, ptr getelementptr inbounds ([8 x double], ptr @srcA64, i32 0, i64 1), align 8
-; FMA-NEXT:    [[B0:%.*]] = load double, ptr @srcB64, align 8
-; FMA-NEXT:    [[B1:%.*]] = load double, ptr getelementptr inbounds ([8 x double], ptr @srcB64, i32 0, i64 1), align 8
-; FMA-NEXT:    [[C0:%.*]] = load double, ptr @srcC64, align 8
-; FMA-NEXT:    [[C1:%.*]] = load double, ptr getelementptr inbounds ([8 x double], ptr @srcC64, i32 0, i64 1), align 8
-; FMA-NEXT:    [[FMA0:%.*]] = call double @llvm.fmuladd.f64(double [[A0]], double [[B0]], double [[C0]])
-; FMA-NEXT:    [[FMA1:%.*]] = call double @llvm.fma.f64(double [[A1]], double [[B1]], double [[C1]])
-; FMA-NEXT:    store double [[FMA0]], ptr @dst64, align 8
-; FMA-NEXT:    store double [[FMA1]], ptr getelementptr inbounds ([8 x double], ptr @dst64, i32 0, i64 1), align 8
+; FMA-NEXT:    [[TMP1:%.*]] = load <2 x double>, ptr @srcA64, align 8
+; FMA-NEXT:    [[TMP2:%.*]] = load <2 x double>, ptr @srcB64, align 8
+; FMA-NEXT:    [[TMP3:%.*]] = load <2 x double>, ptr @srcC64, align 8
+; FMA-NEXT:    [[TMP4:%.*]] = call <2 x double> @llvm.fma.v2f64(<2 x double> [[TMP1]], <2 x double> [[TMP2]], <2 x double> [[TMP3]])
+; FMA-NEXT:    store <2 x double> [[TMP4]], ptr @dst64, align 8
 ; FMA-NEXT:    ret void
 ;
   %a0 = load double, ptr @srcA64, align 8

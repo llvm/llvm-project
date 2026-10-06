@@ -137,6 +137,38 @@ the test should be run or not.
 @skipTestIfFn(checking_function_name)
 ```
 
+### Skipped versus unsupported
+
+A test that doesn't run does so for one of two very different reasons, and the
+decorator you pick says which:
+
+* The test **can never** run in this configuration. A test for Mach-O debug
+  maps has nothing to say on Linux; a test that calls `fork()` has nothing to
+  say on Windows. Use the `require*` family. These are reported as
+  **UNSUPPORTED**.
+
+* The test **ought to** run in this configuration but doesn't work yet. Use the
+  `skipIf*` / `skipUnless*` family. These are reported as **SKIPPED**, which
+  keeps them visible as work still to be done.
+
+```python
+@requireDarwin      # inherently Darwin-only: reported UNSUPPORTED elsewhere
+@skipIfWindows      # ought to work on Windows, currently broken: reported SKIPPED
+```
+
+The `require*` decorators mirror the `skip*` ones one-for-one:
+`requireDarwin` / `requireNotDarwin`, `requireLinux` / `requireNotLinux`,
+`requireWindows` / `requireNotWindows`, plus `requirePOSIX`, `requireSignals`,
+`requireNotWasm`, `requireDarwinHost`, `requireClang`, and the general
+`requirePlatform(oslist)` / `requireNotPlatform(oslist)`.
+
+Reach for `require*` when the test is tied to a platform-specific file format,
+API, or OS feature, or to a specific compiler. If the test is merely untested
+or broken somewhere, keep `skipIf*` so nobody mistakes a bug for a design
+decision. For example, a test that only uses Clang-specific debug info
+options belongs behind `@requireClang` rather than
+`@skipIf(compiler=no_match("clang"))`.
+
 In addition to providing a lot more flexibility when it comes to writing the
 test, the API test also allow for much more complex scenarios when it comes to
 building inferiors. Every test has its own `Makefile`, most of them only a
@@ -434,18 +466,16 @@ If you need to fake part of the debug server but forward the rest to a real
 debug server, start by looking at the reverse execution tests which use
 `ReverseTestBase`.
 
-### The debug server's handling of specific packets or sequences of packets
-
-Use an API test that sends fake traffic to a real `lldb-server`. The existing
-tests in `lldb/test/API/tools/lldb-server` are your starting point.
-
 ### The Debug Server’s Handling of Specific Packets or Sequences of Packets
 
 Generally you can check this using `lldb`'s own commands in a Shell or API
-test.
+test. If you need exact packets, you can use an API test that sends fake traffic
+to a real `lldb-server`. The existing tests in `lldb/test/API/tools/lldb-server`
+are your starting point.
 
-However if you do not trust enough of the implementation yet to do that,
-you can have the inferior process check things for you.
+If you are using `lldb`'s own commands but you do not want to trust the
+implementation of those commands, you can have the inferior process check things
+for you.
 
 For example, to test register access the API test might:
 1. Launch the inferior, which writes a known pattern to the register using
@@ -511,16 +541,15 @@ You can also add to the test runner options by setting the
 items which must be separate parts of the runner's command line.
 
 It is possible to customize the architecture of the test binaries and compiler
-used by appending `-A` and `-C` options respectively. For example, to test
+used by appending `--triple` and `-C` options respectively. For example, to test
 LLDB against 32-bit binaries built with a custom version of clang, do:
 
 ```
-$ cmake -DLLDB_TEST_USER_ARGS="-A;i386;-C;/path/to/custom/clang" -G Ninja
+$ cmake -DLLDB_TEST_USER_ARGS="--triple;i386-unknown-linux-gnu;-C;/path/to/custom/clang" -G Ninja
 $ ninja check-lldb
 ```
 
-Note that multiple `-A` and `-C` flags can be specified to
-`LLDB_TEST_USER_ARGS`.
+Note that multiple `-C` flags can be specified to `LLDB_TEST_USER_ARGS`.
 
 If you want to change the LLDB settings that tests run with then you can set
 the `--setting` option of the test runner via this same variable. For example

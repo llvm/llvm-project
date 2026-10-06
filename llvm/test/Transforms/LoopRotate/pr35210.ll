@@ -7,8 +7,8 @@
 
 ; CHECK: Running pass: ADCEPass on f
 ; CHECK-NEXT: Running analysis: PostDominatorTreeAnalysis on f
-; CHECK-NEXT: Running pass: LoopSimplifyPass on f
 ; CHECK-NEXT: Running analysis: LoopAnalysis on f
+; CHECK-NEXT: Running pass: LoopSimplifyPass on f
 ; CHECK-NEXT: Running analysis: DominatorTreeAnalysis on f
 ; CHECK-NEXT: Running analysis: AssumptionAnalysis on f
 ; CHECK-NEXT: Running analysis: TargetIRAnalysis on f
@@ -25,8 +25,8 @@
 
 ; MSSA: Running pass: ADCEPass on f
 ; MSSA-NEXT: Running analysis: PostDominatorTreeAnalysis on f
-; MSSA-NEXT: Running pass: LoopSimplifyPass on f
 ; MSSA-NEXT: Running analysis: LoopAnalysis on f
+; MSSA-NEXT: Running pass: LoopSimplifyPass on f
 ; MSSA-NEXT: Running analysis: DominatorTreeAnalysis on f
 ; MSSA-NEXT: Running analysis: AssumptionAnalysis on f
 ; MSSA-NEXT: Running analysis: TargetIRAnalysis on f

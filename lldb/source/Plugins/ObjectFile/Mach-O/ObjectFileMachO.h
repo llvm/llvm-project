@@ -419,16 +419,16 @@ protected:
   MachOCorefileAllImageInfos GetCorefileAllImageInfos();
 
   llvm::MachO::mach_header m_header;
-  static lldb_private::ConstString GetSegmentNameTEXT();
-  static lldb_private::ConstString GetSegmentNameDATA();
-  static lldb_private::ConstString GetSegmentNameDATA_DIRTY();
-  static lldb_private::ConstString GetSegmentNameDATA_CONST();
-  static lldb_private::ConstString GetSegmentNameOBJC();
-  static lldb_private::ConstString GetSegmentNameLINKEDIT();
-  static lldb_private::ConstString GetSegmentNameDWARF();
-  static lldb_private::ConstString GetSegmentNameLLVM_COV();
-  static lldb_private::ConstString GetSectionNameEHFrame();
-  static lldb_private::ConstString GetSectionNameLLDBNoNlist();
+  static llvm::StringRef GetSegmentNameTEXT();
+  static llvm::StringRef GetSegmentNameDATA();
+  static llvm::StringRef GetSegmentNameDATA_DIRTY();
+  static llvm::StringRef GetSegmentNameDATA_CONST();
+  static llvm::StringRef GetSegmentNameOBJC();
+  static llvm::StringRef GetSegmentNameLINKEDIT();
+  static llvm::StringRef GetSegmentNameDWARF();
+  static llvm::StringRef GetSegmentNameLLVM_COV();
+  static llvm::StringRef GetSectionNameEHFrame();
+  static llvm::StringRef GetSectionNameLLDBNoNlist();
 
   llvm::MachO::dysymtab_command m_dysymtab;
   std::vector<llvm::MachO::section_64> m_mach_sections;

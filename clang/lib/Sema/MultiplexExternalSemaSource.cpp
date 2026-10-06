@@ -370,9 +370,3 @@ bool MultiplexExternalSemaSource::MaybeDiagnoseMissingCompleteType(
   }
   return false;
 }
-
-void MultiplexExternalSemaSource::AssignedLambdaNumbering(
-    CXXRecordDecl *Lambda) {
-  for (auto &Source : Sources)
-    Source->AssignedLambdaNumbering(Lambda);
-}

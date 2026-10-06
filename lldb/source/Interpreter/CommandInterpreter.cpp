@@ -2728,7 +2728,8 @@ void CommandInterpreter::SourceInitFileHome(CommandReturnObject &result,
     GetHomeInitFile(init_file);
 
   if (!m_skip_app_init_files) {
-    llvm::StringRef program_name = HostInfo::GetProgramFileSpec().GetFilename();
+    FileSpec program_file_spec = HostInfo::GetProgramFileSpec();
+    llvm::StringRef program_name = program_file_spec.GetFilename();
     FileSpec program_init_file;
     GetHomeInitFile(program_init_file, program_name);
     if (FileSystem::Instance().Exists(program_init_file))
@@ -3435,8 +3436,11 @@ void CommandInterpreter::IOHandlerInputComplete(IOHandler &io_handler,
 
   StartHandlingCommand();
 
+  // Only push the selected execution context when a real target is selected.
+  // The command may create and select a target (e.g. "target create"), and any
+  // command it runs afterwards must see that target, not the dummy target.
   ExecutionContext exe_ctx =
-      m_debugger.GetSelectedExecutionContext(/*adopt_dummy_target=*/true);
+      m_debugger.GetSelectedExecutionContext(/*adopt_dummy_target=*/false);
   bool pushed_exe_ctx = false;
   if (exe_ctx.HasTargetScope()) {
     OverrideExecutionContext(exe_ctx);

@@ -422,8 +422,9 @@ static LLVMValueRef clone_constant_impl(LLVMValueRef Cst, LLVMModuleRef M) {
       for (int i = 1; i <= NumIdx; i++)
         Idx.push_back(clone_constant(LLVMGetOperand(Cst, i), M));
 
-      return LLVMConstGEPWithNoWrapFlags(ElemTy, Ptr, Idx.data(), NumIdx,
-                                         LLVMGEPGetNoWrapFlags(Cst));
+      return LLVMConstPtrAddFromIndices(LLVMGetModuleDataLayout(M), ElemTy, Ptr,
+                                        Idx.data(), NumIdx,
+                                        LLVMGEPGetNoWrapFlags(Cst));
     }
     default:
       fprintf(stderr, "%d is not a supported opcode for constant expressions\n",
@@ -992,6 +993,20 @@ struct FunCloner {
       case LLVMFreeze: {
         LLVMValueRef Arg = CloneValue(LLVMGetOperand(Src, 0));
         Dst = LLVMBuildFreeze(Builder, Arg, Name);
+        break;
+      }
+      case LLVMBitInsert: {
+        LLVMValueRef Base = CloneValue(LLVMGetOperand(Src, 0));
+        LLVMValueRef Val = CloneValue(LLVMGetOperand(Src, 1));
+        LLVMValueRef Offset = CloneValue(LLVMGetOperand(Src, 2));
+        Dst = LLVMBuildBitInsert(Builder, Base, Val, Offset, Name);
+        break;
+      }
+      case LLVMBitExtract: {
+        LLVMTypeRef Type = CloneType(LLVMTypeOf(Src));
+        LLVMValueRef SrcV = CloneValue(LLVMGetOperand(Src, 0));
+        LLVMValueRef Offset = CloneValue(LLVMGetOperand(Src, 1));
+        Dst = LLVMBuildBitExtract(Builder, Type, SrcV, Offset, Name);
         break;
       }
       case LLVMFence: {

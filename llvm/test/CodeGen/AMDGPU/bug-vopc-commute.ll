@@ -50,8 +50,8 @@ define amdgpu_vs float @main(i32 %v) {
 ; GFX8-NEXT:  .LBB0_6: ; %IF63
 ; GFX8-NEXT:  .LBB0_7:
 main_body:
-  %d1 = call float @llvm.amdgcn.s.buffer.load.f32(<4 x i32> poison, i32 960, i32 0)
-  %d2 = call float @llvm.amdgcn.s.buffer.load.f32(<4 x i32> poison, i32 976, i32 0)
+  %d1 = call float @llvm.amdgcn.ptr.s.buffer.load.f32(ptr addrspace(8) poison, i32 960, i32 0), !invariant.load !{}
+  %d2 = call float @llvm.amdgcn.ptr.s.buffer.load.f32(ptr addrspace(8) poison, i32 976, i32 0), !invariant.load !{}
   br i1 poison, label %ENDIF56, label %IF57
 
 IF57:                                             ; preds = %ENDIF
@@ -82,7 +82,7 @@ ENDIF62:                                          ; preds = %ENDIF59
   ret float %r
 }
 
-declare float @llvm.amdgcn.s.buffer.load.f32(<4 x i32>, i32, i32) #0
+declare float @llvm.amdgcn.ptr.s.buffer.load.f32(ptr addrspace(8), i32, i32) #0
 
 attributes #0 = { nounwind readnone }
 attributes #1 = { readnone }

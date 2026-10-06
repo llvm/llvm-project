@@ -15,13 +15,13 @@
 
 #include <cassert>
 #include <level_zero/ze_api.h>
-#include <list>
 #include <map>
 #include <memory>
 #include <mutex>
 
 #include "L0Defs.h"
 #include "L0Trace.h"
+#include "PluginInterface.h"
 
 namespace llvm::omp::target::plugin {
 
@@ -250,13 +250,20 @@ class MemAllocatorTy {
     /// Remove allocation information for the given memory location.
     bool remove(void *Ptr, MemAllocInfoTy *Removed = nullptr);
 
-    /// Finds allocation information for the given memory location.
+    /// Finds allocation information for the given memory location. Ptr may
+    /// point anywhere inside the allocation.
     const MemAllocInfoTy *find(void *Ptr) const {
-      auto AllocInfo = Map.find(Ptr);
-      if (AllocInfo == Map.end())
+      if (Map.empty())
         return nullptr;
-      else
-        return &AllocInfo->second;
+      auto I = Map.upper_bound(Ptr);
+      if (I == Map.begin())
+        return nullptr;
+      --I;
+      uintptr_t PtrAsInt = reinterpret_cast<uintptr_t>(Ptr);
+      uintptr_t Base = reinterpret_cast<uintptr_t>(I->first);
+      if (PtrAsInt >= Base + I->second.ReqSize)
+        return nullptr;
+      return &I->second;
     }
 
     /// Check if the map contains the given pointer and offset.
@@ -287,6 +294,11 @@ class MemAllocatorTy {
 
   /// L0 context to use.
   const L0ContextTy *L0Context = nullptr;
+  /// ze_context used for allocations. Normally matches
+  /// L0Context->getZeContext(), but for pools owned by a user-created
+  /// plugin context this holds that context's ze_context so memory ends
+  /// up in the ze_context the caller's queues use.
+  ze_context_handle_t ZeContext = nullptr;
   /// L0 device to use.
   L0DeviceTy *Device = nullptr;
   /// Whether the device supports large memory allocation.
@@ -377,8 +389,11 @@ public:
   MemAllocatorTy &operator=(const MemAllocatorTy &&) = delete;
   ~MemAllocatorTy() = default;
 
-  Error initDevicePools(L0DeviceTy &L0Device, const L0OptionsTy &Option);
-  Error initHostPool(L0ContextTy &Driver, const L0OptionsTy &Option);
+  Error initDevicePools(L0DeviceTy &L0Device, const L0OptionsTy &Option,
+                        ze_context_handle_t ZeCtx);
+  Error initHostPool(L0ContextTy &Driver, const L0OptionsTy &Option,
+                     ze_context_handle_t ZeCtx);
+  ze_context_handle_t getZeContext() const { return ZeContext; }
   void updateMaxAllocSize(L0DeviceTy &L0Device);
 
   /// Release resources and report statistics if requested.
@@ -421,92 +436,6 @@ public:
     return Ret;
   }
 }; /// MemAllocatorTy
-
-/// Staging buffer.
-/// A single staging buffer is not enough when batching is enabled since there
-/// can be multiple pending copy operations.
-class StagingBufferTy {
-  /// Context for L0 calls.
-  ze_context_handle_t Context = nullptr;
-  /// Max allowed size for staging buffer.
-  size_t Size = L0StagingBufferSize;
-  /// Number of buffers allocated together.
-  size_t Count = L0StagingBufferCount;
-  /// Buffers increasing by Count if a new buffer is required.
-  llvm::SmallVector<void *> Buffers;
-  /// Next buffer location in the buffers.
-  size_t Offset = 0;
-
-  Expected<void *> addBuffers() {
-    ze_host_mem_alloc_desc_t AllocDesc{ZE_STRUCTURE_TYPE_HOST_MEM_ALLOC_DESC,
-                                       nullptr, 0};
-    void *Ret = nullptr;
-    size_t AllocSize = Size * Count;
-    CALL_ZE_RET_ERROR(zeMemAllocHost, Context, &AllocDesc, AllocSize,
-                      L0DefaultAlignment, &Ret);
-    Buffers.push_back(Ret);
-    return Ret;
-  }
-
-public:
-  StagingBufferTy() = default;
-  StagingBufferTy(const StagingBufferTy &) = delete;
-  StagingBufferTy(StagingBufferTy &&) = delete;
-  StagingBufferTy &operator=(const StagingBufferTy &) = delete;
-  StagingBufferTy &operator=(const StagingBufferTy &&) = delete;
-  ~StagingBufferTy() = default;
-
-  Error clear() {
-    for (auto Ptr : Buffers)
-      CALL_ZE_RET_ERROR(zeMemFree, Context, Ptr);
-    Context = nullptr;
-    return Plugin::success();
-  }
-
-  bool initialized() const { return Context != nullptr; }
-
-  void init(ze_context_handle_t ContextIn, size_t SizeIn, size_t CountIn) {
-    Context = ContextIn;
-    Size = SizeIn;
-    Count = CountIn;
-  }
-
-  void reset() { Offset = 0; }
-
-  /// Always return the first buffer.
-  Expected<void *> get() {
-    if (Size == 0 || Count == 0)
-      return nullptr;
-    return Buffers.empty() ? addBuffers() : Buffers.front();
-  }
-
-  /// Return the next available buffer.
-  Expected<void *> getNext() {
-    void *Ret = nullptr;
-    if (Size == 0 || Count == 0)
-      return Ret;
-
-    size_t AllocSize = Size * Count;
-    bool NeedToGrow = Buffers.empty() || Offset >= Buffers.size() * AllocSize;
-    if (NeedToGrow) {
-      auto PtrOrErr = addBuffers();
-      if (!PtrOrErr)
-        return PtrOrErr.takeError();
-      Ret = *PtrOrErr;
-    } else
-      Ret = reinterpret_cast<void *>(
-          reinterpret_cast<uintptr_t>(Buffers.back()) + (Offset % AllocSize));
-
-    if (!Ret)
-      return nullptr;
-
-    Offset += Size;
-    return Ret;
-  }
-
-  /// Return either a fixed buffer or next buffer.
-  Expected<void *> get(bool Next) { return Next ? getNext() : get(); }
-};
 
 } // namespace llvm::omp::target::plugin
 

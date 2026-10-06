@@ -1,9 +1,5 @@
 # Performance Tips for Frontend Authors
 
-```{contents}
-:depth: 2
-:local:
-```
 
 ## Abstract
 

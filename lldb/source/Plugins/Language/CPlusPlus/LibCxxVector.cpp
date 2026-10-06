@@ -137,6 +137,9 @@ llvm::Expected<uint32_t> lldb_private::formatters::
   case VectorLayout::Size:
     return GetNumChildren(m_finish);
   }
+
+  assert(false && "invalid vector layout");
+  return llvm::createStringError("invalid vector layout");
 }
 
 lldb::ValueObjectSP

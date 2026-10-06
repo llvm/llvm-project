@@ -3,9 +3,9 @@
 ; RUN: llc -mtriple=amdgpu8.02 < %s | FileCheck -enable-var-scope -check-prefixes=GCN,VI %s
 ; RUN: llc -mtriple=amdgpu11.00 -mattr=+real-true16 < %s | FileCheck -enable-var-scope -check-prefixes=GCN,GFX11,GFX11-TRUE16 %s
 ; RUN: llc -mtriple=amdgpu11.00 -mattr=-real-true16 < %s | FileCheck -enable-var-scope -check-prefixes=GCN,GFX11,GFX11-FAKE16 %s
-; RUN: not --crash llc -mtriple=r600 -mcpu=redwood < %s 2>&1 | FileCheck -check-prefix=R600-ERR %s
+; RUN: not llc -mtriple=r600 -mcpu=redwood -filetype=null %s 2>&1 | FileCheck -check-prefix=R600-ERR %s
 
-; R600-ERR: LLVM ERROR: unsupported library call operation
+; R600-ERR: error: no libcall available for fsub
 
 define amdgpu_kernel void @s_fneg_f32(ptr addrspace(1) %out, float %in) {
 ; SI-LABEL: s_fneg_f32:

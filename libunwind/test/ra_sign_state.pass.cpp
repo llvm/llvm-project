@@ -14,8 +14,8 @@
 
 // The libSystem unwinder does not correctly read UNW_AARCH64_RA_SIGN_STATE, at
 // least through OS version 27.0
-// XFAIL: stdlib=apple-libc++ && target={{.*}}-apple-{{.*}}{{(11|12|13|14|15|26)(\.\d+)?}}
-// XFAIL: stdlib=apple-libc++ && target={{.*}}-apple-{{.*}}27.0
+// XFAIL: stdlib=apple-libc++ && target={{.*}}-apple-{{.*}}{{(11|12|13|14|15|26)(\.\d+)*}}
+// XFAIL: stdlib=apple-libc++ && target={{.*}}-apple-{{.*}}27.0{{(\.\d+)*}}
 
 // clang-format on
 
@@ -58,8 +58,9 @@ static bool checkHasPAuth() {
 #elif defined(_LIBUNWIND_HAVE_ELF_AUX_INFO)
 static bool checkHasPAuth() {
   constexpr unsigned long hwcap_paca = (1UL << 30);
-  unsigned long hwcap = 0;
-  elf_aux_info(AT_HWCAP, &hwcap, sizeof(hwcap));
+  unsigned long hwcap;
+  if (elf_aux_info(AT_HWCAP, &hwcap, sizeof(hwcap)) != 0)
+    return false;
   return (hwcap & hwcap_paca) != 0;
 }
 #else
@@ -141,6 +142,34 @@ __attribute__((naked, target("pauth"))) static uint64_t check_negate() {
   // clang-format on
 }
 
+#if defined(HAVE_CFI_SET_RA_STATE)
+__attribute__((naked, target("pauth"))) uint64_t check_set() {
+  // clang-format off
+  asm(
+#if !defined(__APPLE__)
+      ".cfi_b_key_frame\n"
+#endif
+      ".cfi_set_ra_state 1, 0\n"
+      "pacibsp\n"
+
+      "stp x29, x30, [sp, #-16]!\n"
+      ".cfi_def_cfa_offset 16\n"
+      ".cfi_offset x29, -16\n"
+      ".cfi_offset x30, -8\n"
+
+      "bl " SYMBOL_NAME(get_main_ra_sign_state) "\n"
+
+      "ldp x29, x30, [sp], #16\n"
+      ".cfi_def_cfa_offset 0\n"
+      ".cfi_restore x29\n"
+      ".cfi_restore x30\n"
+
+      ".cfi_set_ra_state 0, -20\n"
+      "retab");
+  // clang-format on
+}
+#endif
+
 FUNC_ATTR(main_func) int main(int, char **) {
   uint64_t ret;
 
@@ -159,6 +188,12 @@ FUNC_ATTR(main_func) int main(int, char **) {
   fprintf(stderr, "check_negate: ret = 0x%" PRIx64 "\n", ret);
   assert(ret == 1);
 
-  printf("success\n");
+#if defined(HAVE_CFI_SET_RA_STATE)
+  ret = check_set();
+  fprintf(stderr, "check_set: ret = 0x%" PRIx64 "\n", ret);
+  assert(ret == 1);
+#endif
+
+  fprintf(stderr, "success\n");
   return 0;
 }

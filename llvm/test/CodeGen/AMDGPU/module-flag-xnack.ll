@@ -3,21 +3,21 @@
 ; Also tests that unsupported targets ignore the xnack module flag
 
 ; RUN: split-file %s %t
-; RUN: llc -mtriple=amdgcn-amd-amdhsa -mcpu=gfx900 < %t/on.ll | FileCheck --check-prefix=XNACK-ON %s
-; RUN: llc -mtriple=amdgcn-amd-amdhsa -mcpu=gfx900 < %t/off.ll | FileCheck --check-prefix=XNACK-OFF %s
-; RUN: llc -mtriple=amdgcn-amd-amdhsa -mcpu=gfx900 < %t/absent.ll | FileCheck --check-prefix=XNACK-ANY %s
+; RUN: llc -mtriple=amdgpu9.00-amd-amdhsa < %t/on.ll | FileCheck --check-prefix=XNACK-ON %s
+; RUN: llc -mtriple=amdgpu9.00-amd-amdhsa < %t/off.ll | FileCheck --check-prefix=XNACK-OFF %s
+; RUN: llc -mtriple=amdgpu9.00-amd-amdhsa < %t/absent.ll | FileCheck --check-prefix=XNACK-ANY %s
 
 ; Test that xnack module flag is ignored on targets that don't support it. gfx801 supports xnack, gfx803 does not.
-; RUN: llc -mtriple=amdgcn-amd-amdhsa -mcpu=gfx801 < %t/on.ll | FileCheck --check-prefixes=CHECK,GFX801 %s
-; RUN: llc -mtriple=amdgcn-amd-amdhsa -mcpu=gfx803 < %t/on.ll | FileCheck --check-prefixes=CHECK,GFX803 %s
+; RUN: llc -mtriple=amdgpu8.01-amd-amdhsa < %t/on.ll | FileCheck --check-prefixes=CHECK,GFX801 %s
+; RUN: llc -mtriple=amdgpu8.03-amd-amdhsa < %t/on.ll | FileCheck --check-prefixes=CHECK,GFX803 %s
 
 ; Target directives for xnack supported target
-; XNACK-ON: .amdgcn_target "amdgcn-amd-amdhsa-unknown-gfx900:xnack+"
-; XNACK-OFF: .amdgcn_target "amdgcn-amd-amdhsa-unknown-gfx900:xnack-"
-; XNACK-ANY: .amdgcn_target "amdgcn-amd-amdhsa-unknown-gfx900"
+; XNACK-ON: .amdgcn_target "amdgpu9.00-amd-amdhsa-unknown-gfx900:xnack+"
+; XNACK-OFF: .amdgcn_target "amdgpu9.00-amd-amdhsa-unknown-gfx900:xnack-"
+; XNACK-ANY: .amdgcn_target "amdgpu9.00-amd-amdhsa-unknown-gfx900"
 
-; GFX801: .amdgcn_target "amdgcn-amd-amdhsa-unknown-gfx801:xnack+"
-; GFX803: .amdgcn_target "amdgcn-amd-amdhsa-unknown-gfx803"
+; GFX801: .amdgcn_target "amdgpu8.01-amd-amdhsa-unknown-gfx801:xnack+"
+; GFX803: .amdgcn_target "amdgpu8.03-amd-amdhsa-unknown-gfx803"
 
 ; Check codegen impact - xnack affects register allocation
 ; When xnack is on, first load must not overwrite the pointer argument
