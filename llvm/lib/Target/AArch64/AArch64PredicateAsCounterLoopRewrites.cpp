@@ -236,15 +236,13 @@ static bool tryRewriteExtractElement(Instruction &UserI,
   IRBuilder<> Builder(EEI);
   Builder.SetCurrentDebugLocation(EEI->getDebugLoc());
 
-  Module *M = EEI->getModule();
-  FunctionCallee PExt = Intrinsic::getOrInsertDeclaration(
-      M, Intrinsic::aarch64_sve_pext,
-      {VectorType::get(Builder.getInt1Ty(), LegalEC)});
-  auto *ExtractMask =
-      Builder.CreateCall(PExt, {Count, Builder.getInt32(0)}, "pac.pext");
+  auto *ExtractMask = Builder.CreateIntrinsic(
+      Intrinsic::aarch64_sve_pext,
+      {VectorType::get(Builder.getInt1Ty(), LegalEC)},
+      {Count, Builder.getInt32(0)}, /*FMFSource=*/{}, "pn.pext");
 
   Value *Extracted = Builder.CreateExtractElement(
-      ExtractMask, EEI->getIndexOperand(), EEI->getName() + ".pac");
+      ExtractMask, EEI->getIndexOperand(), EEI->getName() + ".pn");
 
   EEI->replaceAllUsesWith(Extracted);
   EEI->eraseFromParent();
