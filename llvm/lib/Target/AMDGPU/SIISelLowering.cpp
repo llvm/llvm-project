@@ -5351,7 +5351,8 @@ emitLoadM0FromVGPRLoop(const SIInstrInfo *TII, MachineRegisterInfo &MRI,
 
   // Update EXEC, save the original EXEC value to VCC.
   BuildMI(LoopBB, I, DL, TII->get(LMC.AndSaveExecOpc), NewExec)
-      .addReg(CondReg, RegState::Kill);
+      .addReg(CondReg, RegState::Kill)
+      .setOperandDead(3); // Dead scc
 
   MRI.setSimpleHint(NewExec, CondReg);
 
@@ -5362,7 +5363,8 @@ emitLoadM0FromVGPRLoop(const SIInstrInfo *TII, MachineRegisterInfo &MRI,
       SGPRIdxReg = MRI.createVirtualRegister(&AMDGPU::SGPR_32RegClass);
       BuildMI(LoopBB, I, DL, TII->get(AMDGPU::S_ADD_I32), SGPRIdxReg)
           .addReg(CurrentIdxReg, RegState::Kill)
-          .addImm(Offset);
+          .addImm(Offset)
+          .setOperandDead(3); // Dead scc
     }
   } else {
     // Move index from VCC into M0
@@ -5372,7 +5374,8 @@ emitLoadM0FromVGPRLoop(const SIInstrInfo *TII, MachineRegisterInfo &MRI,
     } else {
       BuildMI(LoopBB, I, DL, TII->get(AMDGPU::S_ADD_I32), AMDGPU::M0)
           .addReg(CurrentIdxReg, RegState::Kill)
-          .addImm(Offset);
+          .addImm(Offset)
+          .setOperandDead(3); // Dead scc
     }
   }
 
@@ -5380,7 +5383,8 @@ emitLoadM0FromVGPRLoop(const SIInstrInfo *TII, MachineRegisterInfo &MRI,
   MachineInstr *InsertPt =
       BuildMI(LoopBB, I, DL, TII->get(LMC.XorTermOpc), LMC.ExecReg)
           .addReg(LMC.ExecReg)
-          .addReg(NewExec);
+          .addReg(NewExec)
+          .setOperandDead(3); // Dead scc
 
   // XXX - s_xor_b64 sets scc to 1 if the result is nonzero, so can we use
   // s_cbranch_scc0?
@@ -5482,7 +5486,8 @@ static void setM0ToIndexFromSGPR(const SIInstrInfo *TII,
   } else {
     BuildMI(*MBB, I, DL, TII->get(AMDGPU::S_ADD_I32), AMDGPU::M0)
         .add(*Idx)
-        .addImm(Offset);
+        .addImm(Offset)
+        .setOperandDead(3); // Dead scc
   }
 }
 
@@ -5501,7 +5506,8 @@ static Register getIndirectSGPRIdx(const SIInstrInfo *TII,
   Register Tmp = MRI.createVirtualRegister(&AMDGPU::SReg_32_XM0RegClass);
   BuildMI(*MBB, I, DL, TII->get(AMDGPU::S_ADD_I32), Tmp)
       .add(*Idx)
-      .addImm(Offset);
+      .addImm(Offset)
+      .setOperandDead(3); // Dead scc
   return Tmp;
 }
 
@@ -7329,7 +7335,8 @@ SITargetLowering::EmitInstrWithCustomInserter(MachineInstr &MI,
     unsigned ReturnAddrReg = TII->getRegisterInfo().getReturnAddressReg(*MF);
 
     MachineInstrBuilder MIB;
-    MIB = BuildMI(*BB, MI, DL, TII->get(AMDGPU::SI_CALL), ReturnAddrReg);
+    MIB = BuildMI(*BB, MI, DL, TII->get(AMDGPU::SI_CALL))
+              .addDef(ReturnAddrReg, RegState::Dead);
 
     for (const MachineOperand &MO : MI.operands())
       MIB.add(MO);
@@ -8673,7 +8680,7 @@ unsigned SITargetLowering::isCFIntrinsic(const SDNode *Intr) const {
 }
 
 bool SITargetLowering::shouldEmitFixup(const GlobalValue *GV) const {
-  const Triple &TT = getTargetMachine().getTargetTriple();
+  const Triple &TT = GV->getParent()->getTargetTriple();
   return (GV->getAddressSpace() == AMDGPUAS::CONSTANT_ADDRESS ||
           GV->getAddressSpace() == AMDGPUAS::CONSTANT_ADDRESS_32BIT) &&
          AMDGPU::shouldEmitConstantsToTextSection(TT);
@@ -19369,6 +19376,18 @@ SDValue SITargetLowering::PerformDAGCombine(SDNode *N,
     SelectionDAG &DAG = DCI.DAG;
     EVT VT = N->getValueType(0);
 
+    // When bf16 inline constants live in the upper half of the expanded fp32
+    // constant, only a splat is encodable as an inline constant. The high lane
+    // is dead here, so splat it.
+    if (VT == MVT::v2bf16 && Subtarget->hasBF16InlineConstFromUpperFP32()) {
+      auto *C = dyn_cast<ConstantFPSDNode>(N->getOperand(0));
+      if (C && AMDGPU::isInlinableLiteralBF16(
+                   C->getValueAPF().bitcastToAPInt().getSExtValue(),
+                   Subtarget->hasInv2PiInlineImm()))
+        return DAG.getBuildVector(VT, SDLoc(N),
+                                  {N->getOperand(0), N->getOperand(0)});
+    }
+
     // v2i16 (scalar_to_vector i16:x) -> v2i16 (bitcast (any_extend i16:x))
     if (VT == MVT::v2i16 || VT == MVT::v2f16 || VT == MVT::v2bf16) {
       SDLoc SL(N);
@@ -20563,21 +20582,26 @@ Align SITargetLowering::computeKnownAlignForTargetInstr(
   return Align(1);
 }
 
-Align SITargetLowering::getPrefLoopAlignment(MachineLoop *ML) const {
+Align SITargetLowering::getPrefLoopAlignment(
+    MachineLoop *ML, const MachineBasicBlock *BlockToAlign) const {
   const Align PrefAlign = TargetLowering::getPrefLoopAlignment(ML);
   const Align CacheLineAlign = Align(64);
 
-  // GFX950: Prevent an 8-byte instruction at loop header from being split by
-  // the 32-byte instruction fetch window boundary. This avoids a significant
-  // fetch delay after backward branch. We use 32-byte alignment with max
-  // padding of 4 bytes (one s_nop), see getMaxPermittedBytesForAlignment().
+  // GFX950: Prevent an 8-byte instruction at the block being aligned from being
+  // split by the 32-byte instruction fetch window boundary. This avoids a
+  // significant fetch delay after a backward branch. We use 32-byte alignment
+  // with max padding of 4 bytes (one s_nop), see
+  // getMaxPermittedBytesForAlignment().
   if (ML && !DisableLoopAlignment &&
       getSubtarget()->hasLoopHeadInstSplitSensitivity()) {
-    const MachineBasicBlock *Header = ML->getHeader();
+    // Loop rotation can make the backedge destination a block other than the
+    // LoopInfo header, so prefer the block the caller is actually aligning.
+    if (!BlockToAlign)
+      BlockToAlign = ML->getHeader();
     // Respect user-specified or previously set alignment.
-    if (Header->getAlignment() != PrefAlign)
-      return Header->getAlignment();
-    if (needsFetchWindowAlignment(*Header))
+    if (BlockToAlign->getAlignment() != PrefAlign)
+      return BlockToAlign->getAlignment();
+    if (needsFetchWindowAlignment(*BlockToAlign))
       return Align(32);
   }
 
@@ -20856,7 +20880,7 @@ static bool isAtomicRMWLegalXChgTy(const AtomicRMWInst *RMW) {
     return true;
 
   if (PointerType *PT = dyn_cast<PointerType>(Ty)) {
-    const DataLayout &DL = RMW->getFunction()->getParent()->getDataLayout();
+    const DataLayout &DL = RMW->getFunction()->getDataLayout();
     unsigned BW = DL.getPointerSizeInBits(PT->getAddressSpace());
     return BW == 32 || BW == 64;
   }

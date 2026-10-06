@@ -1827,29 +1827,64 @@ TSAN_INTERCEPTOR(int, creat64, const char *name, int mode) {
 #define TSAN_MAYBE_INTERCEPT_CREAT64
 #endif
 
+static int HandleDupResult(ThreadState* thr, uptr pc, int oldfd, int newfd,
+                           bool write) {
+  if (oldfd >= 0 && newfd >= 0 && newfd != oldfd)
+    FdDup(thr, pc, oldfd, newfd, write);
+  return newfd;
+}
+
+#if SANITIZER_LINUX
+// These values are part of the Linux UAPI and are the same on all Linux
+// architectures.
+static const int kF_DUPFD = 0;
+static const int kF_DUPFD_CLOEXEC = 1030;
+
+// fcntl accepts either an int or a pointer as its optional argument.  Reading
+// it as uptr follows libc's implementation strategy and preserves either value
+// on the ABIs supported by TSan.
+#  define TSAN_FCNTL_INTERCEPTOR(func)                       \
+    TSAN_INTERCEPTOR(int, func, int oldfd, int cmd, ...) {   \
+      va_list ap;                                            \
+      va_start(ap, cmd);                                     \
+      uptr arg = va_arg(ap, uptr);                           \
+      va_end(ap);                                            \
+      SCOPED_TSAN_INTERCEPTOR(func, oldfd, cmd, arg);        \
+      int newfd = REAL(func)(oldfd, cmd, arg);               \
+      if (cmd == kF_DUPFD || cmd == kF_DUPFD_CLOEXEC)        \
+        return HandleDupResult(thr, pc, oldfd, newfd, true); \
+      return newfd;                                          \
+    }
+
+TSAN_FCNTL_INTERCEPTOR(fcntl)
+#  if SANITIZER_INTERCEPT_FCNTL64
+TSAN_FCNTL_INTERCEPTOR(fcntl64)
+#    define TSAN_MAYBE_INTERCEPT_FCNTL64 TSAN_INTERCEPT(fcntl64)
+#  else
+#    define TSAN_MAYBE_INTERCEPT_FCNTL64
+#  endif
+#  undef TSAN_FCNTL_INTERCEPTOR
+#  define TSAN_MAYBE_INTERCEPT_FCNTL TSAN_INTERCEPT(fcntl)
+#else
+#  define TSAN_MAYBE_INTERCEPT_FCNTL
+#  define TSAN_MAYBE_INTERCEPT_FCNTL64
+#endif
+
 TSAN_INTERCEPTOR(int, dup, int oldfd) {
   SCOPED_TSAN_INTERCEPTOR(dup, oldfd);
-  int newfd = REAL(dup)(oldfd);
-  if (oldfd >= 0 && newfd >= 0 && newfd != oldfd)
-    FdDup(thr, pc, oldfd, newfd, true);
-  return newfd;
+  return HandleDupResult(thr, pc, oldfd, REAL(dup)(oldfd), true);
 }
 
 TSAN_INTERCEPTOR(int, dup2, int oldfd, int newfd) {
   SCOPED_TSAN_INTERCEPTOR(dup2, oldfd, newfd);
-  int newfd2 = REAL(dup2)(oldfd, newfd);
-  if (oldfd >= 0 && newfd2 >= 0 && newfd2 != oldfd)
-    FdDup(thr, pc, oldfd, newfd2, false);
-  return newfd2;
+  return HandleDupResult(thr, pc, oldfd, REAL(dup2)(oldfd, newfd), false);
 }
 
 #if !SANITIZER_APPLE
 TSAN_INTERCEPTOR(int, dup3, int oldfd, int newfd, int flags) {
   SCOPED_TSAN_INTERCEPTOR(dup3, oldfd, newfd, flags);
-  int newfd2 = REAL(dup3)(oldfd, newfd, flags);
-  if (oldfd >= 0 && newfd2 >= 0 && newfd2 != oldfd)
-    FdDup(thr, pc, oldfd, newfd2, false);
-  return newfd2;
+  return HandleDupResult(thr, pc, oldfd, REAL(dup3)(oldfd, newfd, flags),
+                         false);
 }
 #endif
 
@@ -2179,26 +2214,21 @@ static void ReportErrnoSpoiling(ThreadState *thr, uptr pc, int sig) {
   // Use alloca, because malloc during signal handling deadlocks
   ScopedReport *rep = (ScopedReport *)__builtin_alloca(sizeof(ScopedReport));
   bool suppressed;
-  // Take a new scope as Apple platforms require the below locks released
-  // before symbolizing in order to avoid a deadlock
+  // Release locks before symbolizing and outputting the report to avoid
+  // deadlocks.
   {
-    ThreadRegistryLock l(&ctx->thread_registry);
     new (rep) ScopedReport(ReportTypeErrnoInSignal);
+    ThreadRegistryLock l(&ctx->thread_registry);
     rep->SetSigNum(sig);
     suppressed = IsFiredSuppression(ctx, ReportTypeErrnoInSignal, stack);
     if (!suppressed)
       rep->AddStack(stack, true);
-#if SANITIZER_APPLE
-  }  // Close this scope to release the locks before writing report
-#endif
-    if (!suppressed)
-      OutputReport(thr, *rep);
-
-    // Need to manually destroy this because we used placement new to allocate
-    rep->~ScopedReport();
-#if !SANITIZER_APPLE
   }
-#endif
+  if (!suppressed)
+    OutputReport(thr, *rep);
+
+  // Need to manually destroy this because we used placement new to allocate
+  rep->~ScopedReport();
 }
 
 static void CallUserSignalHandler(ThreadState *thr, bool sync, bool acquire,
@@ -3147,6 +3177,8 @@ void InitializeInterceptors() {
   TSAN_MAYBE_INTERCEPT_OPEN64;
   TSAN_INTERCEPT(creat);
   TSAN_MAYBE_INTERCEPT_CREAT64;
+  TSAN_MAYBE_INTERCEPT_FCNTL;
+  TSAN_MAYBE_INTERCEPT_FCNTL64;
   TSAN_INTERCEPT(dup);
   TSAN_INTERCEPT(dup2);
   TSAN_INTERCEPT(dup3);

@@ -10,6 +10,15 @@ func.func @test_i64_argmax_large_axis_dim(%arg0: tensor<1x513x513x2147483650xi8>
 
 // -----
 
+// CHECK-LABEL: test_i64_argmin_large_axis_dim
+func.func @test_i64_argmin_large_axis_dim(%arg0: tensor<1x513x513x2147483650xi8>) -> tensor<1x513x513xi64> {
+  // DEFAULT: tosa.argmin %arg0 axis(3) : (tensor<1x513x513x2147483650xi8>) -> tensor<1x513x513xi32>
+  %0 = tosa.argmin %arg0 axis(3) : (tensor<1x513x513x2147483650xi8>) -> tensor<1x513x513xi64>
+  return %0 : tensor<1x513x513xi64>
+}
+
+// -----
+
 // CHECK-LABEL: test_convert_input_parameters
 // DEFAULT: %[[IN:.*]]: tensor<1x513x513x3xi64>
 // FUNCBOUND: %[[IN:.*]]: tensor<1x513x513x3xi32>
@@ -72,7 +81,7 @@ func.func @test_regions(%arg0: tensor<i64>, %arg1: tensor<i64>, %arg2: tensor<i1
 
 // CHECK-LABEL: test_const
 func.func @test_const() -> tensor<2xi64> {
-  // COMMON: %[[CONST:.*]] = "tosa.const"() <{values = dense<[1, 2]> : tensor<2xi32>}> : () -> tensor<2xi32>
+  // COMMON: %[[CONST:.*]] = tosa.const values(dense<[1, 2]> : tensor<2xi32>) : () -> tensor<2xi32>
   %0 = "tosa.const"() <{values = dense<[1, 2]> : tensor<2xi64>}> : () -> tensor<2xi64>
   // DEFAULT: %[[OUT:.*]] = tosa.cast %[[CONST]] input_unsigned(false) : (tensor<2xi32>) -> tensor<2xi64>
   // DEFAULT: return %[[OUT]] : tensor<2xi64>
@@ -93,7 +102,7 @@ func.func @test_clamp_trunc(%arg0: tensor<100xi64>) -> tensor<100xi64> {
 
 // CHECK-LABEL: test_dense_ressource_i64
 func.func @test_dense_ressource_i64() -> tensor<1x2xi64> {
-  // COMMON: %[[CONST:.*]] = "tosa.const"() <{values = dense_resource<resource> : tensor<1x2xi32>}> : () -> tensor<1x2xi32>
+  // COMMON: %[[CONST:.*]] = tosa.const values(dense_resource<resource> : tensor<1x2xi32>) : () -> tensor<1x2xi32>
   %1 = "tosa.const"() <{values = dense_resource<resource> : tensor<1x2xi64>}> : () -> tensor<1x2xi64>
   // DEFAULT: %[[OUT_CAST:.*]] = tosa.cast %[[CONST]] input_unsigned(false) : (tensor<1x2xi32>) -> tensor<1x2xi64>
   // DEFAULT: return %[[OUT_CAST]] : tensor<1x2xi64>
