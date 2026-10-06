@@ -267,6 +267,12 @@ void ScopedReport::AddUniqueTid(Tid unique_tid) {
 }
 
 void ScopedReport::AddThread(const ThreadContext* tctx, bool suppressable) {
+  ThreadRegistryLock l(&ctx->thread_registry);
+  AddThreadLocked(tctx, suppressable);
+}
+
+void ScopedReport::AddThreadLocked(const ThreadContext* tctx,
+                                   bool suppressable) {
   ctx->thread_registry.CheckLocked();
   for (uptr i = 0; i < rep_->threads.Size(); i++) {
     if ((u32)rep_->threads[i]->id == tctx->tid)
@@ -311,10 +317,10 @@ ThreadContext *IsThreadStackOrTls(uptr addr, bool *is_stack) {
 #endif
 
 void ScopedReport::AddThread(Tid tid, bool suppressable) {
-  ctx->thread_registry.CheckLocked();
+  ThreadRegistryLock l(&ctx->thread_registry);
   if (const auto* tctx = static_cast<ThreadContext*>(
           ctx->thread_registry.GetThreadLocked(tid)))
-    AddThread(tctx, suppressable);
+    AddThreadLocked(tctx, suppressable);
 }
 
 int ScopedReport::AddMutex(uptr addr, StackID creation_stack_id) {
@@ -372,12 +378,15 @@ void ScopedReport::AddLocation(uptr addr, uptr size) {
     return;
   }
   bool is_stack = false;
-  if (ThreadContext *tctx = IsThreadStackOrTls(addr, &is_stack)) {
-    auto *loc = New<ReportLocation>();
-    loc->type = is_stack ? ReportLocationStack : ReportLocationTLS;
-    loc->tid = tctx->tid;
-    rep_->locs.PushBack(loc);
-    AddThread(tctx);
+  {
+    ThreadRegistryLock l(&ctx->thread_registry);
+    if (ThreadContext* tctx = IsThreadStackOrTls(addr, &is_stack)) {
+      auto* loc = New<ReportLocation>();
+      loc->type = is_stack ? ReportLocationStack : ReportLocationTLS;
+      loc->tid = tctx->tid;
+      rep_->locs.PushBack(loc);
+      AddThreadLocked(tctx);
+    }
   }
 #endif
   rep_->added_location_addrs.PushBack({addr, rep_->locs.Size()});
@@ -843,33 +852,28 @@ void ReportRace(ThreadState *thr, RawShadow *shadow_mem, Shadow cur, Shadow old,
   }
 
   ScopedReport rep(rep_typ, tag);
-  // Release locks before symbolizing and outputting the report to avoid
-  // deadlocks.
-  {
-    ThreadRegistryLock l0(&ctx->thread_registry);
-    for (uptr i = 0; i < kMop; i++)
-      rep.AddMemoryAccess(addr, tags[i], s[i], tids[i], traces[i], mset[i]);
+  for (uptr i = 0; i < kMop; i++)
+    rep.AddMemoryAccess(addr, tags[i], s[i], tids[i], traces[i], mset[i]);
 
-    for (uptr i = 0; i < kMop; i++) rep.AddThread(tids[i]);
+  for (uptr i = 0; i < kMop; i++) rep.AddThread(tids[i]);
 
-    rep.AddLocation(addr_min, addr_max - addr_min);
+  rep.AddLocation(addr_min, addr_max - addr_min);
 
-    if (flags()->print_full_thread_history) {
-      const ReportDesc* rep_desc = rep.GetReport();
-      for (uptr i = 0; i < rep_desc->threads.Size(); i++) {
-        Tid parent_tid = rep_desc->threads[i]->parent_tid;
-        if (parent_tid == kMainTid || parent_tid == kInvalidTid)
-          continue;
-        rep.AddThread(parent_tid);
-      }
+  if (flags()->print_full_thread_history) {
+    const ReportDesc* rep_desc = rep.GetReport();
+    for (uptr i = 0; i < rep_desc->threads.Size(); i++) {
+      Tid parent_tid = rep_desc->threads[i]->parent_tid;
+      if (parent_tid == kMainTid || parent_tid == kInvalidTid)
+        continue;
+      rep.AddThread(parent_tid);
     }
+  }
 
 #if !SANITIZER_GO
-    if (!((typ0 | typ1) & kAccessFree) &&
-        s[1].epoch() <= thr->last_sleep_clock.Get(s[1].sid()))
-      rep.AddSleep(thr->last_sleep_stack_id);
+  if (!((typ0 | typ1) & kAccessFree) &&
+      s[1].epoch() <= thr->last_sleep_clock.Get(s[1].sid()))
+    rep.AddSleep(thr->last_sleep_stack_id);
 #endif
-  }
   OutputReport(thr, rep);
 }
 
