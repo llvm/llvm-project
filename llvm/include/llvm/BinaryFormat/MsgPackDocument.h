@@ -19,6 +19,7 @@
 
 #include "llvm/BinaryFormat/MsgPackReader.h"
 #include "llvm/Support/Compiler.h"
+#include <algorithm>
 #include <map>
 
 namespace llvm {
@@ -459,7 +460,7 @@ public:
   /// is owned by the Document.
   StringRef addString(StringRef S) {
     Strings.push_back(std::unique_ptr<char[]>(new char[S.size()]));
-    memcpy(&Strings.back()[0], S.data(), S.size());
+    std::copy(S.begin(), S.end(), &Strings.back()[0]);
     return StringRef(&Strings.back()[0], S.size());
   }
 
