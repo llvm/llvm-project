@@ -464,6 +464,27 @@ static bool hasLoopCarriedDependence(isl::ast_node_for For, const Scop &S) {
   return false;
 }
 
+/// Sign-extend or truncate V to Ty.
+///
+/// Returns V unchanged if it already has type Ty, sign-extends it if
+/// Ty is wider, or truncates it if Ty is narrower.
+static Value *castToType(IRBuilderBase &Builder, Value *V, Type *Ty) {
+  if (V->getType() == Ty)
+    return V;
+  return Builder.CreateSExtOrTrunc(V, Ty);
+}
+
+/// Returns true when V is known to fit in IntPtrTy without data loss.
+/// Accepts i64 constants such as 0 and 1 that ISL materialises as i64 even on
+/// 32-bit targets.
+static bool fitsInTy(Value *V, IntegerType *IntTy) {
+  if (V->getType()->getIntegerBitWidth() <= IntTy->getBitWidth())
+    return true;
+  if (auto *CI = dyn_cast<ConstantInt>(V))
+    return CI->getValue().isSignedIntN(IntTy->getBitWidth());
+  return false;
+}
+
 void IslNodeBuilder::createForSequential(isl::ast_node_for For,
                                          bool MarkParallel) {
   Value *ValueLB, *ValueUB, *ValueInc;
@@ -497,12 +518,23 @@ void IslNodeBuilder::createForSequential(isl::ast_node_for For,
   MaxType = ExprBuilder.getWidestType(MaxType, ValueUB->getType());
   MaxType = ExprBuilder.getWidestType(MaxType, ValueInc->getType());
 
-  if (MaxType != ValueLB->getType())
-    ValueLB = Builder.CreateSExt(ValueLB, MaxType);
-  if (MaxType != ValueUB->getType())
-    ValueUB = Builder.CreateSExt(ValueUB, MaxType);
-  if (MaxType != ValueInc->getType())
-    ValueInc = Builder.CreateSExt(ValueInc, MaxType);
+  // Narrow the IV type to pointer size when all three bounds are known to fit.
+  // On 32-bit targets (e.g. Hexagon) this avoids i64 IVs and the truncations
+  // they cause in loop bodies. This also allows Hexagon to represent loops as
+  // Hardware loops. ISL materializes constants (e.g. LB=0, Inc=1)
+  // as i64 even when they fit in i32, so we accept those via isSignedIntN.
+  // Non-constant variables with a type wider than PtrBits are left unchanged
+  // to avoid an unsafe truncation.
+  IntegerType *IntPtrTy = Builder.getIntPtrTy(DL);
+  if (MaxType->getIntegerBitWidth() > IntPtrTy->getBitWidth() &&
+      fitsInTy(ValueLB, IntPtrTy) && fitsInTy(ValueUB, IntPtrTy) &&
+      fitsInTy(ValueInc, IntPtrTy))
+    MaxType = IntPtrTy;
+
+  // Coerce each bound to MaxType, using trunc when MaxType was narrowed.
+  ValueLB = castToType(Builder, ValueLB, MaxType);
+  ValueUB = castToType(Builder, ValueUB, MaxType);
+  ValueInc = castToType(Builder, ValueInc, MaxType);
 
   // If we can show that LB <Predicate> UB holds at least once, we can
   // omit the GuardBB in front of the loop.
@@ -532,7 +564,7 @@ void IslNodeBuilder::createForSequential(isl::ast_node_for For,
 
   IDToValue.erase(IDToValue.find(IteratorID.get()));
 
-  Builder.SetInsertPoint(ExitBlock, ExitBlock->begin());
+  Builder.SetInsertPoint(ExitBlock->begin());
 
   SequentialLoops++;
 }
@@ -552,7 +584,7 @@ void IslNodeBuilder::createForParallel(__isl_take isl_ast_node *For) {
   BasicBlock *ParBB =
       SplitBlock(Builder.GetInsertBlock(), Builder.GetInsertPoint(), &DT, &LI);
   ParBB->setName("polly.parallel.for");
-  Builder.SetInsertPoint(ParBB, ParBB->begin());
+  Builder.SetInsertPoint(ParBB->begin());
 
   Body = isl_ast_node_for_get_body(For);
   Init = isl_ast_node_for_get_init(For);
@@ -577,12 +609,22 @@ void IslNodeBuilder::createForParallel(__isl_take isl_ast_node *For) {
   MaxType = ExprBuilder.getWidestType(MaxType, ValueUB->getType());
   MaxType = ExprBuilder.getWidestType(MaxType, ValueInc->getType());
 
-  if (MaxType != ValueLB->getType())
-    ValueLB = Builder.CreateSExt(ValueLB, MaxType);
-  if (MaxType != ValueUB->getType())
-    ValueUB = Builder.CreateSExt(ValueUB, MaxType);
-  if (MaxType != ValueInc->getType())
-    ValueInc = Builder.CreateSExt(ValueInc, MaxType);
+  // Narrow the IV type to pointer size when all three bounds are known to fit.
+  // On 32-bit targets (e.g. Hexagon) this avoids i64 IVs and the truncations
+  // they cause in loop bodies. ISL materializes constants (e.g. LB=0, Inc=1)
+  // as i64 even when they fit in i32, so we accept those via isSignedIntN.
+  // Non-constant variables with a type wider than PtrBits are left unchanged
+  // to avoid an unsafe truncation.
+  IntegerType *IntPtrTy = Builder.getIntPtrTy(DL);
+  if (MaxType->getIntegerBitWidth() > IntPtrTy->getBitWidth() &&
+      fitsInTy(ValueLB, IntPtrTy) && fitsInTy(ValueUB, IntPtrTy) &&
+      fitsInTy(ValueInc, IntPtrTy))
+    MaxType = IntPtrTy;
+
+  // Coerce each bound to MaxType, using trunc when MaxType was narrowed.
+  ValueLB = castToType(Builder, ValueLB, MaxType);
+  ValueUB = castToType(Builder, ValueUB, MaxType);
+  ValueInc = castToType(Builder, ValueInc, MaxType);
 
   BasicBlock::iterator LoopBody;
 
@@ -790,16 +832,16 @@ void IslNodeBuilder::createIf(__isl_take isl_ast_node *If) {
   Builder.CreateBr(MergeBB);
   Builder.SetInsertPoint(ElseBB);
   Builder.CreateBr(MergeBB);
-  Builder.SetInsertPoint(ThenBB, ThenBB->begin());
+  Builder.SetInsertPoint(ThenBB->begin());
 
   create(isl_ast_node_if_get_then(If));
 
-  Builder.SetInsertPoint(ElseBB, ElseBB->begin());
+  Builder.SetInsertPoint(ElseBB->begin());
 
   if (isl_ast_node_if_has_else(If))
     create(isl_ast_node_if_get_else(If));
 
-  Builder.SetInsertPoint(MergeBB, MergeBB->begin());
+  Builder.SetInsertPoint(MergeBB->begin());
 
   isl_ast_node_free(If);
 
@@ -936,9 +978,9 @@ void IslNodeBuilder::generateCopyStmt(
 Value *IslNodeBuilder::materializeNonScopLoopInductionVariable(const Loop *L) {
   assert(!OutsideLoopIterations.contains(L) &&
          "trying to materialize loop induction variable twice");
-  const SCEV *OuterLIV = SE.getAddRecExpr(SE.getUnknown(Builder.getInt64(0)),
-                                          SE.getUnknown(Builder.getInt64(1)), L,
-                                          SCEV::FlagAnyWrap);
+  const SCEV *OuterLIV =
+      SE.getAddRecExpr(SE.getUnknown(Builder.getInt64(0)),
+                       SE.getUnknown(Builder.getInt64(1)), L, SCEV::FlagNone);
   Value *V = generateSCEV(OuterLIV);
   OutsideLoopIterations[L] = SE.getUnknown(V);
   return V;
@@ -1189,16 +1231,16 @@ Value *IslNodeBuilder::preloadInvariantLoad(const MemoryAccess &MA,
     L->addBasicBlockToLoop(ExecBB, *GenLI);
 
   auto *CondBBTerminator = CondBB->getTerminator();
-  Builder.SetInsertPoint(CondBB, CondBBTerminator->getIterator());
+  Builder.SetInsertPoint(CondBBTerminator->getIterator());
   Builder.CreateCondBr(Cond, ExecBB, MergeBB);
   CondBBTerminator->eraseFromParent();
 
   Builder.SetInsertPoint(ExecBB);
   Builder.CreateBr(MergeBB);
 
-  Builder.SetInsertPoint(ExecBB, ExecBB->getTerminator()->getIterator());
+  Builder.SetInsertPoint(ExecBB->getTerminator()->getIterator());
   Value *PreAccInst = preloadUnconditionally(AccessRange, Build, AccInst);
-  Builder.SetInsertPoint(MergeBB, MergeBB->getTerminator()->getIterator());
+  Builder.SetInsertPoint(MergeBB->getTerminator()->getIterator());
   auto *MergePHI = Builder.CreatePHI(
       AccInstTy, 2, "polly.preload." + AccInst->getName() + ".merge");
   Value *PreloadVal = MergePHI;
@@ -1378,11 +1420,9 @@ void IslNodeBuilder::allocateNewArrays(BBPair StartExitBlocks) {
 
       // Insert the malloc call at polly.start
       BasicBlock *StartBlock = std::get<0>(StartExitBlocks);
-      Builder.SetInsertPoint(StartBlock,
-                             StartBlock->getTerminator()->getIterator());
+      Builder.SetInsertPoint(StartBlock->getTerminator()->getIterator());
       auto *CreatedArray = Builder.CreateMalloc(
-          IntPtrTy, SAI->getElementType(),
-          ConstantInt::get(Type::getInt64Ty(Ctx), Size),
+          IntPtrTy, ConstantInt::get(Type::getInt64Ty(Ctx), Size),
           ConstantInt::get(Type::getInt64Ty(Ctx), ArraySizeInt), nullptr,
           SAI->getName());
 
@@ -1390,8 +1430,7 @@ void IslNodeBuilder::allocateNewArrays(BBPair StartExitBlocks) {
 
       // Insert the free call at polly.exiting
       BasicBlock *ExitingBlock = std::get<1>(StartExitBlocks);
-      Builder.SetInsertPoint(ExitingBlock,
-                             ExitingBlock->getTerminator()->getIterator());
+      Builder.SetInsertPoint(ExitingBlock->getTerminator()->getIterator());
       Builder.CreateFree(CreatedArray);
     } else {
       auto InstIt = Builder.GetInsertBlock()
@@ -1417,7 +1456,7 @@ bool IslNodeBuilder::preloadInvariantLoads() {
   BasicBlock *PreLoadBB = SplitBlock(Builder.GetInsertBlock(),
                                      Builder.GetInsertPoint(), GenDT, GenLI);
   PreLoadBB->setName("polly.preload.begin");
-  Builder.SetInsertPoint(PreLoadBB, PreLoadBB->begin());
+  Builder.SetInsertPoint(PreLoadBB->begin());
 
   for (auto &IAClass : InvariantEquivClasses)
     if (!preloadInvariantEquivClass(IAClass))

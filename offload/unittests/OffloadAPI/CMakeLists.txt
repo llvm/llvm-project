@@ -12,8 +12,7 @@ add_offload_unittest("context"
 add_offload_unittest("device"
     device/olIterateDevices.cpp
     device/olGetDeviceInfo.cpp
-    device/olGetDeviceInfoSize.cpp
-    device/olGetHostInfo.cpp)
+    device/olGetDeviceInfoSize.cpp)
 
 add_offload_unittest("event"
     event/olCreateEvent.cpp
@@ -45,11 +44,13 @@ add_offload_unittest("memory"
 
 add_offload_unittest("platform"
     platform/olGetPlatformInfo.cpp
-    platform/olGetPlatformInfoSize.cpp)
+    platform/olGetPlatformInfoSize.cpp
+    platform/olIteratePlatforms.cpp)
 
 add_offload_unittest("program"
     program/olCreateProgram.cpp
     program/olIsValidBinary.cpp
+    program/olIterateCompatibleDevices.cpp
     program/olDestroyProgram.cpp)
 
 add_offload_unittest("queue"

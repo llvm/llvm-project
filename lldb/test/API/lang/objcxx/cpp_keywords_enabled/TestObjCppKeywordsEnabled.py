@@ -5,7 +5,7 @@ from lldbsuite.test import lldbutil
 
 
 class TestCase(TestBase):
-    @skipUnlessDarwin
+    @requireDarwin
     @no_debug_info_test
     def test_keyword(self):
         # Make sure that C++ keywords work in the expression parser when using

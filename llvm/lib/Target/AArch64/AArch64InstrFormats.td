@@ -881,6 +881,7 @@ class fixedpoint_recip_i32<ValueType FloatVT>
     ComplexPattern<FloatVT, 1, "SelectCVTFixedPosRecipOperand<32>", [fpimm, ld]> {
   let EncoderMethod = "getFixedPointScaleOpValue";
   let DecoderMethod = "DecodeFixedPointScaleImm32";
+  let ParserMatchClass = Imm1_32Operand;
   let OperandType = "OPERAND_IMMEDIATE";
 }
 
@@ -889,6 +890,7 @@ class fixedpoint_recip_i64<ValueType FloatVT>
     ComplexPattern<FloatVT, 1, "SelectCVTFixedPosRecipOperand<64>", [fpimm, ld]> {
   let EncoderMethod = "getFixedPointScaleOpValue";
   let DecoderMethod = "DecodeFixedPointScaleImm64";
+  let ParserMatchClass = Imm1_64Operand;
   let OperandType = "OPERAND_IMMEDIATE";
 }
 
@@ -2014,7 +2016,6 @@ def pstatefield4_op : Operand<i32> {
 }
 
 // Instructions to modify PSTATE, no input reg
-let Defs = [NZCV] in
 class PstateWriteSimple<dag iops, string asm, string operands>
   : SimpleSystemI<0, iops, asm, operands> {
 
@@ -2747,6 +2748,16 @@ class BaseShift<bit size, bits<2> shift_type, RegisterClass regtype, string asm,
   let Inst{11-10} = shift_type;
 }
 
+// ComplexPattern to match shift amounts with redundant AND masks.
+// AArch64 shift instructions only use the low 5 bits (i32) or 6 bits (i64),
+// so AND masks that exactly cover a narrow type are redundant.
+def shiftMask32 : ComplexPattern<i32, 1, "SelectShiftMask<32>", [], [], 0>;
+def gi_shift_mask32 : GIComplexOperandMatcher<s32, "selectShiftMask<32>">,
+                      GIComplexPatternEquiv<shiftMask32>;
+def shiftMask64 : ComplexPattern<i64, 1, "SelectShiftMask<64>", [], [], 0>;
+def gi_shift_mask64 : GIComplexOperandMatcher<s64, "selectShiftMask<64>">,
+                      GIComplexPatternEquiv<shiftMask64>;
+
 multiclass Shift<bits<2> shift_type, string asm, SDNode OpNode> {
   def Wr : BaseShift<0b0, shift_type, GPR32, asm>;
 
@@ -2772,6 +2783,11 @@ multiclass Shift<bits<2> shift_type, string asm, SDNode OpNode> {
   def : Pat<(i64 (OpNode GPR64:$Rn, (i64 (zext GPR32:$Rm)))),
             (!cast<Instruction>(NAME # "Xr") GPR64:$Rn,
                 (SUBREG_TO_REG GPR32:$Rm, sub_32))>;
+
+  def : Pat<(i32 (OpNode GPR32:$Rn, shiftMask32:$Rm)),
+            (!cast<Instruction>(NAME # "Wr") GPR32:$Rn, shiftMask32:$Rm)>;
+  def : Pat<(i64 (OpNode GPR64:$Rn, shiftMask64:$Rm)),
+            (!cast<Instruction>(NAME # "Xr") GPR64:$Rn, shiftMask64:$Rm)>;
 }
 
 class ShiftAlias<string asm, Instruction inst, RegisterClass regtype>
@@ -5022,7 +5038,7 @@ class LoadStoreExclusiveSimple<bits<2> sz, bit o2, bit L, bit o1, bit o0,
 }
 
 // Simple load acquires don't set the exclusive monitor
-let mayLoad = 1, mayStore = 0 in
+let mayLoad = 1, mayStore = 0, hasSideEffects = 0 in
 class LoadAcquire<bits<2> sz, bit o2, bit L, bit o1, bit o0,
                   RegisterClass regtype, string asm>
     : LoadStoreExclusiveSimple<sz, o2, L, o1, o0, (outs regtype:$Rt),
@@ -5160,7 +5176,7 @@ multiclass StoreUnprivilegedLSUI<bits<2> sz, RegisterClass regtype, string asm> 
 }
 
 // Simple store release operations do not check the exclusive monitor.
-let mayLoad = 0, mayStore = 1 in
+let mayLoad = 0, mayStore = 1, hasSideEffects = 0 in
 class StoreRelease<bits<2> sz, bit o2, bit L, bit o1, bit o0,
                    RegisterClass regtype, string asm>
     : LoadStoreExclusiveSimple<sz, o2, L, o1, o0, (outs),
@@ -7451,7 +7467,7 @@ class BaseSIMDDifferentThreeVectorTied<bit U, bits<3> size, bits<4> opcode,
 //        the high elements of the result register rather than the low
 //        elements). Until that's fixed, we can't code-gen those.
 multiclass SIMDNarrowThreeVectorBHS<bit U, bits<4> opc, string asm,
-                                    Intrinsic IntOp> {
+                                    SDPatternOperator IntOp> {
   def v8i16_v8i8   : BaseSIMDDifferentThreeVector<U, 0b000, opc,
                                                   V64, V128, V128,
                                                   asm, ".8b", ".8h", ".8h",
@@ -7684,8 +7700,8 @@ multiclass SIMDWideThreeVectorBHS<bit U, bits<4> opc, string asm,
 //----------------------------------------------------------------------------
 
 class BaseSIMDBitwiseExtract<bit size, RegisterOperand regtype, ValueType vty,
-                             string asm, string kind>
-  : I<(outs regtype:$Rd), (ins regtype:$Rn, regtype:$Rm, i32imm:$imm), asm,
+                             Operand immtype, string asm, string kind>
+  : I<(outs regtype:$Rd), (ins regtype:$Rn, regtype:$Rm, immtype:$imm), asm,
       "{\t$Rd" # kind # ", $Rn" # kind # ", $Rm" # kind # ", $imm" #
       "|" # kind # "\t$Rd, $Rn, $Rm, $imm}", "",
       [(set (vty regtype:$Rd),
@@ -7708,10 +7724,10 @@ class BaseSIMDBitwiseExtract<bit size, RegisterOperand regtype, ValueType vty,
 
 
 multiclass SIMDBitwiseExtract<string asm> {
-  def v8i8  : BaseSIMDBitwiseExtract<0, V64, v8i8, asm, ".8b"> {
+  def v8i8  : BaseSIMDBitwiseExtract<0, V64, v8i8, imm32_0_7, asm, ".8b"> {
     let imm{3} = 0;
   }
-  def v16i8 : BaseSIMDBitwiseExtract<1, V128, v16i8, asm, ".16b">;
+  def v16i8 : BaseSIMDBitwiseExtract<1, V128, v16i8, imm32_0_15, asm, ".16b">;
 }
 
 //----------------------------------------------------------------------------

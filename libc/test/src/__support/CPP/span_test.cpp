@@ -1,9 +1,14 @@
-//===-- Unittests for span ------------------------------------------------===//
+//===----------------------------------------------------------------------===//
 //
 // Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
 // See https://llvm.org/LICENSE.txt for license information.
 // SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
 //
+//===----------------------------------------------------------------------===//
+///
+/// \file
+/// Unit tests for cpp::span.
+///
 //===----------------------------------------------------------------------===//
 
 #include "src/__support/CPP/array.h"
@@ -82,9 +87,25 @@ TEST(LlvmLibcSpanTest, InitializeViewFormMutableArray) {
 }
 
 TEST(LlvmLibcSpanTest, InitializeFromMutable) {
-  span<int> s;
+  int a[] = {1, 2, 3};
+  span<int> s(a);
   span<const int> view(s);
-  (void)view;
+  ASSERT_EQ(view.size(), size_t(3));
+  ASSERT_TRUE(view.data() == &a[0]);
+  ASSERT_EQ(view[0], 1);
+  ASSERT_EQ(view[1], 2);
+  ASSERT_EQ(view[2], 3);
+
+  const span<int> const_s(a);
+  span<const int> view_from_const(const_s);
+  ASSERT_EQ(view_from_const.size(), size_t(3));
+  ASSERT_TRUE(view_from_const.data() == &a[0]);
+
+  span<const int> view_from_rvalue(s.subspan(1));
+  ASSERT_EQ(view_from_rvalue.size(), size_t(2));
+  ASSERT_TRUE(view_from_rvalue.data() == &a[1]);
+  ASSERT_EQ(view_from_rvalue[0], 2);
+  ASSERT_EQ(view_from_rvalue[1], 3);
 }
 
 TEST(LlvmLibcSpanTest, Assign) {
@@ -93,10 +114,66 @@ TEST(LlvmLibcSpanTest, Assign) {
   other = s;
 }
 
+TEST(LlvmLibcSpanTest, CopyAssignment) {
+  int a[] = {1, 2, 3};
+  span<int> s1(a);
+  span<int> s2;
+  s2 = s1;
+  ASSERT_EQ(s2.size(), size_t(3));
+  ASSERT_TRUE(s2.data() == &a[0]);
+  ASSERT_EQ(s2[0], 1);
+  ASSERT_EQ(s2[1], 2);
+  ASSERT_EQ(s2[2], 3);
+}
+
+TEST(LlvmLibcSpanTest, ReassignFromRValueTemporary) {
+  int a[] = {1, 2, 3, 4};
+  span<int> s(a);
+  s = s.subspan(1);
+  ASSERT_EQ(s.size(), size_t(3));
+  ASSERT_TRUE(s.data() == &a[1]);
+  ASSERT_EQ(s[0], 2);
+  ASSERT_EQ(s[1], 3);
+  ASSERT_EQ(s[2], 4);
+
+  s = span<int>();
+  ASSERT_EQ(s.size(), size_t(0));
+  ASSERT_TRUE(s.empty());
+  ASSERT_TRUE(s.data() == nullptr);
+}
+
 TEST(LlvmLibcSpanTest, AssignFromMutable) {
   span<int> s;
   span<const int> view;
   view = s;
+}
+
+TEST(LlvmLibcSpanTest, ConvertingAssignment) {
+  int a[] = {1, 2, 3};
+  span<int> s(a);
+  span<const int> view;
+  view = s;
+  ASSERT_EQ(view.size(), size_t(3));
+  ASSERT_TRUE(view.data() == &a[0]);
+  ASSERT_EQ(view[0], 1);
+  ASSERT_EQ(view[1], 2);
+  ASSERT_EQ(view[2], 3);
+
+  view = s.subspan(1);
+  ASSERT_EQ(view.size(), size_t(2));
+  ASSERT_TRUE(view.data() == &a[1]);
+  ASSERT_EQ(view[0], 2);
+  ASSERT_EQ(view[1], 3);
+
+  const span<int> const_s(a);
+  view = const_s;
+  ASSERT_EQ(view.size(), size_t(3));
+  ASSERT_TRUE(view.data() == &a[0]);
+
+  view = span<int>();
+  ASSERT_EQ(view.size(), size_t(0));
+  ASSERT_TRUE(view.empty());
+  ASSERT_TRUE(view.data() == nullptr);
 }
 
 TEST(LlvmLibcSpanTest, Modify) {

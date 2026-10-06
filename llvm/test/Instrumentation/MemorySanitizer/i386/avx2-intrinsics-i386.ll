@@ -201,7 +201,7 @@ define <16 x i16> @test_x86_avx2_pmulh_w(<16 x i16> %a0, <16 x i16> %a1) #0 {
 ; CHECK-NEXT:    [[TMP3:%.*]] = load i64, ptr @__msan_va_arg_overflow_size_tls, align 8
 ; CHECK-NEXT:    call void @llvm.donothing()
 ; CHECK-NEXT:    [[_MSPROP:%.*]] = or <16 x i16> [[TMP1]], [[TMP2]]
-; CHECK-NEXT:    [[RES:%.*]] = call <16 x i16> @llvm.x86.avx2.pmulh.w(<16 x i16> [[A0:%.*]], <16 x i16> [[A1:%.*]])
+; CHECK-NEXT:    [[RES:%.*]] = call <16 x i16> @llvm.smulh.v16i16(<16 x i16> [[A0:%.*]], <16 x i16> [[A1:%.*]])
 ; CHECK-NEXT:    store <16 x i16> [[_MSPROP]], ptr @__msan_retval_tls, align 8
 ; CHECK-NEXT:    ret <16 x i16> [[RES]]
 ;
@@ -218,7 +218,7 @@ define <16 x i16> @test_x86_avx2_pmulhu_w(<16 x i16> %a0, <16 x i16> %a1) #0 {
 ; CHECK-NEXT:    [[TMP3:%.*]] = load i64, ptr @__msan_va_arg_overflow_size_tls, align 8
 ; CHECK-NEXT:    call void @llvm.donothing()
 ; CHECK-NEXT:    [[_MSPROP:%.*]] = or <16 x i16> [[TMP1]], [[TMP2]]
-; CHECK-NEXT:    [[RES:%.*]] = call <16 x i16> @llvm.x86.avx2.pmulhu.w(<16 x i16> [[A0:%.*]], <16 x i16> [[A1:%.*]])
+; CHECK-NEXT:    [[RES:%.*]] = call <16 x i16> @llvm.umulh.v16i16(<16 x i16> [[A0:%.*]], <16 x i16> [[A1:%.*]])
 ; CHECK-NEXT:    store <16 x i16> [[_MSPROP]], ptr @__msan_retval_tls, align 8
 ; CHECK-NEXT:    ret <16 x i16> [[RES]]
 ;

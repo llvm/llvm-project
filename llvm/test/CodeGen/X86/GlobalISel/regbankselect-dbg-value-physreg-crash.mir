@@ -1,5 +1,5 @@
-# RUN: llc -mtriple=x86_64-linux-gnu                       -run-pass=regbankselect -verify-machineinstrs %s -o - | FileCheck %s
-# RUN: llc -mtriple=x86_64-linux-gnu -regbankselect-greedy -run-pass=regbankselect -verify-machineinstrs %s -o - | FileCheck %s
+# RUN: llc -mtriple=x86_64-linux-gnu                       -run-pass=reg-bank-select -verify-machineinstrs %s -o - | FileCheck %s
+# RUN: llc -mtriple=x86_64-linux-gnu -regbankselect-greedy -run-pass=reg-bank-select -verify-machineinstrs %s -o - | FileCheck %s
 
 # This reproduces a pre-regbankselect GMIR where DBG_VALUE already carries a
 # physical register. Regressions here used to crash when X86RegisterBankInfo

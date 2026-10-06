@@ -6,7 +6,7 @@ omp.declare_reduction @add_reduction_f32 : f32 init {
   omp.yield(%0 : f32)
 } combiner {
 ^bb0(%arg0: f32, %arg1: f32):
-  %0 = llvm.fadd %arg0, %arg1  {fastmathFlags = #llvm.fastmath<contract>} : f32
+  %0 = llvm.fadd %arg0, %arg1 fastmath<contract> : f32
   omp.yield(%0 : f32)
 }  
 llvm.func @sections_(%arg0: !llvm.ptr {fir.bindc_name = "x"}) attributes {fir.internal_name = "_QPsections"} {
@@ -17,14 +17,14 @@ llvm.func @sections_(%arg0: !llvm.ptr {fir.bindc_name = "x"}) attributes {fir.in
       omp.section {
       ^bb0(%arg2: !llvm.ptr):
         %2 = llvm.load %arg2 : !llvm.ptr -> f32
-        %3 = llvm.fadd %2, %1  {fastmathFlags = #llvm.fastmath<contract>} : f32
+        %3 = llvm.fadd %2, %1 fastmath<contract> : f32
         llvm.store %3, %arg2 : f32, !llvm.ptr
         omp.terminator
       }
       omp.section {
       ^bb0(%arg2: !llvm.ptr):
         %2 = llvm.load %arg2 : !llvm.ptr -> f32
-        %3 = llvm.fadd %2, %0  {fastmathFlags = #llvm.fastmath<contract>} : f32
+        %3 = llvm.fadd %2, %0 fastmath<contract> : f32
         llvm.store %3, %arg2 : f32, !llvm.ptr
         omp.terminator
       }

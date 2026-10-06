@@ -3,7 +3,8 @@
     %pythoncode %{
         def __iter__(self):
             '''Iterate over all signals in a lldb.SBUnixSignals object.'''
-            return lldb_iter(self, 'GetNumSignals', 'GetSignalAtIndex')
+            for i in range(self.GetNumSignals()):
+                yield self.GetSignalAtIndex(i)
 
         def __len__(self):
             return self.GetNumSignals()

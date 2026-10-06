@@ -41,16 +41,6 @@ Error L0KernelTy::readKernelProperties(L0ProgramTy &Program) {
   }
   KernelPR.MaxThreadGroupSize = KP.maxSubgroupSize * KP.maxNumSubgroups;
 
-  // Query and cache argument sizes if extension is available.
-  auto &Context = L0Device.getL0Context();
-  if (KernelPR.NumKernelArgs > 0 && Context.zexKernelGetArgumentSize) {
-    KernelPR.ArgSizes = std::make_unique<uint32_t[]>(KernelPR.NumKernelArgs);
-    for (uint32_t I = 0; I < KernelPR.NumKernelArgs; I++) {
-      CALL_ZE_RET_ERROR(Context.zexKernelGetArgumentSize, zeKernel, I,
-                        &KernelPR.ArgSizes[I]);
-    }
-  }
-
   return Plugin::success();
 }
 
@@ -99,14 +89,14 @@ ze_group_size_t L0KernelTy::createKernelGroups(L0DeviceTy &L0Device,
   KEnv.GroupSizes.groupSizeZ = std::min<uint32_t>(MaxGroupSize, NumThreads[2]);
 
   auto DeviceId = L0Device.getDeviceId();
-  INFO(OMP_INFOTYPE_PLUGIN_KERNEL, DeviceId,
-       "Team sizes = {%" PRIu32 ", %" PRIu32 ", %" PRIu32 "}\n",
-       KEnv.GroupSizes.groupSizeX, KEnv.GroupSizes.groupSizeY,
-       KEnv.GroupSizes.groupSizeZ);
-  INFO(OMP_INFOTYPE_PLUGIN_KERNEL, DeviceId,
-       "Number of teams = {%" PRIu32 ", %" PRIu32 ", %" PRIu32 "}\n",
-       KEnv.GroupCounts.groupCountX, KEnv.GroupCounts.groupCountY,
-       KEnv.GroupCounts.groupCountZ);
+  ODBG(OLDT_Kernel) << "Device " << DeviceId << ": Team sizes = {"
+                    << KEnv.GroupSizes.groupSizeX << ", "
+                    << KEnv.GroupSizes.groupSizeY << ", "
+                    << KEnv.GroupSizes.groupSizeZ << "}";
+  ODBG(OLDT_Kernel) << "Device " << DeviceId << ": Number of teams = {"
+                    << KEnv.GroupCounts.groupCountX << ", "
+                    << KEnv.GroupCounts.groupCountY << ", "
+                    << KEnv.GroupCounts.groupCountZ << "}";
 
   return KEnv.GroupSizes;
 }
@@ -132,8 +122,8 @@ Error L0KernelTy::setIndirectFlags(L0DeviceTy &L0Device,
 
 Error L0KernelTy::launchImpl(GenericDeviceTy &GenericDevice,
                              uint32_t NumThreads[3], uint32_t NumBlocks[3],
-                             uint32_t DynBlockMemSize, KernelArgsTy &KernelArgs,
-                             KernelLaunchParamsTy LaunchParams,
+                             uint32_t DynBlockMemSize,
+                             KernelLaunchArgsTy &LaunchArgs,
                              AsyncInfoWrapperTy &AsyncInfoWrapper) const {
   if (DynBlockMemSize > 0)
     return Plugin::error(ErrorCode::UNSUPPORTED,
@@ -145,11 +135,11 @@ Error L0KernelTy::launchImpl(GenericDeviceTy &GenericDevice,
 
   auto zeKernel = getZeKernel();
   auto DeviceId = L0Device.getDeviceId();
-  INFO(OMP_INFOTYPE_PLUGIN_KERNEL, DeviceId, "Launching kernel " DPxMOD "...\n",
-       DPxPTR(zeKernel));
+  ODBG(OLDT_Kernel) << "Device " << DeviceId << ": Launching kernel "
+                    << zeKernel << "...";
 
   auto *IdStr = L0Device.getZeIdCStr();
-  bool IsCooperative = KernelArgs.Flags.Cooperative;
+  bool IsCooperative = LaunchArgs.Flags.Cooperative;
 
   if (IsCooperative && !L0Device.supportsCooperativeKernels()) {
     return Plugin::error(
@@ -162,7 +152,7 @@ Error L0KernelTy::launchImpl(GenericDeviceTy &GenericDevice,
   auto *Queue = *QueueOrErr;
   auto &KernelPR = getProperties();
 
-  L0LaunchEnvTy KEnv(KernelPR, KernelArgs, LaunchParams);
+  L0LaunchEnvTy KEnv(KernelPR, LaunchArgs);
 
   // Protect from kernel preparation to submission as kernels are shared.
   KEnv.Lock.lock();
@@ -188,19 +178,20 @@ Error L0KernelTy::launchImpl(GenericDeviceTy &GenericDevice,
           TotalGroupCount, MaxCooperativeGroupCount);
     }
 
-    INFO(OMP_INFOTYPE_PLUGIN_KERNEL, DeviceId,
-         "Cooperative kernel validated: using %u groups (max: %u)\n",
-         TotalGroupCount, MaxCooperativeGroupCount);
+    ODBG(OLDT_Kernel) << "Device " << DeviceId
+                      << ": Cooperative kernel validated: using "
+                      << TotalGroupCount
+                      << " groups (max: " << MaxCooperativeGroupCount << ")";
   }
 
   // With pointer-array arguments, zeCommandListAppendLaunchKernelWithArguments
   // folds group-size, per-argument set, and launch into a single call.
-  if (LaunchParams.NumArgs != KernelPR.NumKernelArgs)
+  if (LaunchArgs.NumArgs != KernelPR.NumKernelArgs)
     return Plugin::error(
         ErrorCode::INVALID_ARGUMENT,
         "Number of arguments (%u) does not match the number of arguments "
         "expected by the kernel (%u)",
-        LaunchParams.NumArgs, KernelPR.NumKernelArgs);
+        LaunchArgs.NumArgs, KernelPR.NumKernelArgs);
 
   if (auto Err = setIndirectFlags(L0Device, KEnv))
     return Err;
@@ -208,8 +199,8 @@ Error L0KernelTy::launchImpl(GenericDeviceTy &GenericDevice,
   // The next call should unlock the KernelLock internally.
   if (auto Err = Queue->launchKernel(zeKernel, KEnv))
     return Err;
-  INFO(OMP_INFOTYPE_PLUGIN_KERNEL, DeviceId,
-       "Submitted kernel " DPxMOD " to device %s\n", DPxPTR(zeKernel), IdStr);
+  ODBG(OLDT_Kernel) << "Device " << DeviceId << ": Submitted kernel "
+                    << zeKernel << " to device " << IdStr;
 
   return Plugin::success();
 }

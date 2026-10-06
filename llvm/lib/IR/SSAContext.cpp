@@ -93,7 +93,7 @@ template <> Printable SSAContext::print(const BasicBlock *BB) const {
     return Printable([BB](raw_ostream &Out) { Out << BB->getName(); });
 
   return Printable([BB](raw_ostream &Out) {
-    ModuleSlotTracker MST{BB->getParent()->getParent(), false};
+    ModuleSlotTracker MST{BB->getParent()->getParent()};
     MST.incorporateFunction(*BB->getParent());
     Out << MST.getLocalSlot(BB);
   });

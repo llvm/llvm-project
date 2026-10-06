@@ -7,20 +7,18 @@
 //===----------------------------------------------------------------------===//
 
 #include "IntelPTCollector.h"
-#include "Perf.h"
+
+#include "Plugins/Process/Linux/Procfs.h"
 #include "Plugins/Process/POSIX/ProcessPOSIXLog.h"
-#include "Procfs.h"
 #include "lldb/Utility/StreamString.h"
 #include "llvm/ADT/StringRef.h"
 #include "llvm/Support/Error.h"
 #include "llvm/Support/MathExtras.h"
-#include <algorithm>
-#include <cstddef>
+
 #include <fcntl.h>
 #include <fstream>
 #include <linux/perf_event.h>
 #include <optional>
-#include <sstream>
 #include <sys/ioctl.h>
 #include <sys/syscall.h>
 

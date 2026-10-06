@@ -1170,8 +1170,17 @@ struct NonNarrowingCastsOptimization : public OpRewritePattern<tosa::CastOp> {
       return rewriter.notifyMatchFailure(castOp,
                                          "inner cast operation is narrowing");
 
+    // Bail out of the canonicalization if (inner) cast(input_unsigned=false) ->
+    // (outer) cast(input_unsigned=true)
+    if (!innerCastOp.getInputUnsigned() && castOp.getInputUnsigned()) {
+      return rewriter.notifyMatchFailure(
+          castOp, "avoid rewriting cast(input_unsigned=false) -> "
+                  "cast(input_unsigned=true)");
+    }
+
     rewriter.replaceOpWithNewOp<tosa::CastOp>(castOp, outerOutputType,
-                                              innerCastInput);
+                                              innerCastInput,
+                                              innerCastOp.getInputUnsigned());
 
     return success();
   }
@@ -1763,6 +1772,23 @@ OpFoldResult ArgMaxOp::fold(FoldAdaptor adaptor) {
   return {};
 }
 
+OpFoldResult ArgMinOp::fold(FoldAdaptor adaptor) {
+  auto inputTy = llvm::dyn_cast<RankedTensorType>(getInput().getType());
+  auto outputTy = llvm::dyn_cast<RankedTensorType>(getType());
+  if (!inputTy || !outputTy || !inputTy.hasStaticShape() ||
+      !outputTy.hasStaticShape())
+    return {};
+
+  const Type outputElementTy = getElementTypeOrSelf(outputTy);
+  if (inputTy.getDimSize(getAxis()) == 1 && outputElementTy.isInteger()) {
+    const auto outputElemIntTy = cast<IntegerType>(outputElementTy);
+    const APInt zero = APInt::getZero(outputElemIntTy.getWidth());
+    return DenseElementsAttr::get(outputTy, zero);
+  }
+
+  return {};
+}
+
 OpFoldResult IntDivOp::fold(FoldAdaptor adaptor) {
   auto lhsTy = llvm::dyn_cast<RankedTensorType>(getInput1().getType());
   auto rhsTy = llvm::dyn_cast<RankedTensorType>(getInput2().getType());
@@ -2025,7 +2051,8 @@ OpFoldResult CastOp::fold(FoldAdaptor adaptor) {
     }
 
     if (llvm::isa<IntegerType>(inETy) && llvm::isa<FloatType>(outETy)) {
-      auto unsign = llvm::cast<IntegerType>(inETy).isUnsignedInteger();
+      const bool unsign = llvm::cast<IntegerType>(inETy).isUnsignedInteger() ||
+                          adaptor.getInputUnsigned();
       APFloat splatVal(llvm::cast<FloatType>(outETy).getFloatSemantics());
       splatVal.convertFromAPInt(operand.getSplatValue<APInt>(), !unsign,
                                 llvm::RoundingMode::NearestTiesToEven);
@@ -2045,7 +2072,8 @@ OpFoldResult CastOp::fold(FoldAdaptor adaptor) {
 
     if (llvm::isa<IntegerType>(inETy) && llvm::isa<IntegerType>(outETy)) {
       const auto inIntType = llvm::cast<IntegerType>(inETy);
-      auto unsignIn = inIntType.isUnsignedInteger();
+      const bool unsignIn =
+          inIntType.isUnsignedInteger() || adaptor.getInputUnsigned();
       bool trunc =
           inETy.getIntOrFloatBitWidth() > outETy.getIntOrFloatBitWidth();
       auto intVal = operand.getSplatValue<APInt>();
@@ -2117,13 +2145,18 @@ OpFoldResult ReshapeOp::fold(FoldAdaptor adaptor) {
   if (!inputTy.getElementType().isIntOrIndexOrFloat())
     return {};
 
+  // Constants must have static shape.
+  if (!outputTy.hasStaticShape())
+    return {};
+
+  // Reshaping a resource-backed constant only requires updating its type.
+  if (auto operand = llvm::dyn_cast_if_present<DenseResourceElementsAttr>(
+          adaptor.getInput1()))
+    return DenseResourceElementsAttr::get(outputTy, operand.getRawHandle());
+
   // reshape(const(x)) -> const(reshape-attr(x))
   if (auto operand =
           llvm::dyn_cast_if_present<DenseElementsAttr>(adaptor.getInput1())) {
-    // Constants must have static shape.
-    if (!outputTy.hasStaticShape())
-      return {};
-
     // Okay to duplicate splat constants.
     if (operand.isSplat())
       return SplatElementsAttr::get(outputTy,
@@ -2200,7 +2233,9 @@ OpFoldResult ReverseOp::fold(FoldAdaptor adaptor) {
   auto operandTy = llvm::cast<ShapedType>(operand.getType());
   auto axis = getAxis();
   // If the dim-length is 1, or reversing axis is unit-dim, also a no-op.
+  // A splat of block-scaled values may still have different scales per block.
   const bool isSplatInput =
+      !isa<BlockScaledType>(operandTy.getElementType()) &&
       llvm::isa_and_nonnull<SplatElementsAttr>(adaptor.getInput1());
   if (!operandTy.hasRank() ||
       (!isSplatInput && operandTy.getDimSize(axis) != 1))

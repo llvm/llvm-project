@@ -623,6 +623,42 @@ Ref<RefCountable> [[clang::annotate_type("webkit.nodelete")]] returnClassStatic(
 
 } // namespace copy_elision_edge_cases
 
+namespace return_temp_ref_ptr {
+
+struct RefObj {
+  mutable unsigned m_refCount { 0 };
+  void ref() const { m_refCount++; }
+  void deref() const {
+    m_refCount--;
+    if (!m_refCount)
+      delete const_cast<RefObj*>(this);
+  }
+
+  static Ref<RefObj> create(int) {
+    return adoptRef(*new RefObj);
+  }
+};
+
+Ref<RefObj> [[clang::annotate_type("webkit.nodelete")]] returnRef() {
+  return RefObj::create(0);
+}
+
+Ref<RefObj> [[clang::annotate_type("webkit.nodelete")]] returnRefWithInit() {
+  return { RefObj::create(0) };
+}
+
+RefPtr<RefObj> [[clang::annotate_type("webkit.nodelete")]] returnRefPtrSafe() {
+  return { RefObj::create(0) };
+}
+
+int val();
+RefPtr<RefObj> [[clang::annotate_type("webkit.nodelete")]] returnRefPtrUnsafe() {
+  return { RefObj::create(val()) };
+  // expected-warning@-1{{A function 'returnRefPtrUnsafe' has [[clang::annotate_type("webkit.nodelete")]] but it contains code that could destruct an object}}
+}
+
+} // namespace return_temp_ref_ptr
+
 namespace temp_object_typecheck {
 
 struct Tracked {
@@ -759,3 +795,58 @@ void [[clang::annotate_type("webkit.nodelete")]] valueInitNew() {
 }
 
 } // namespace trivial_implicit_ctor_in_new_expr
+
+namespace nodelete_ctor_dtor {
+
+struct OpaqueObject {
+  OpaqueObject();
+  ~OpaqueObject();
+};
+
+struct RefPtrContainer {
+  [[clang::annotate("webkit.nodelete")]] RefPtrContainer() { }
+  // expected-warning@-1{{A constructor 'RefPtrContainer' has [[clang::annotate_type("webkit.nodelete")]] but it constructs a member variable 'opaqueObject' that could destruct an object}}
+  [[clang::annotate("webkit.nodelete")]] ~RefPtrContainer() { }
+  // expected-warning@-1{{A destructor '~RefPtrContainer' has [[clang::annotate_type("webkit.nodelete")]] but it destructs a member variable 'countable' that could destruct an object}}
+  RefPtr<RefCountable> countable;
+  OpaqueObject opaqueObject;
+};
+
+struct RefPtrContainerWithSuppressedDestructor {
+  [[clang::suppress]] [[clang::annotate("webkit.nodelete")]] ~RefPtrContainerWithSuppressedDestructor() { }
+  RefPtr<RefCountable> countable;
+};
+
+void [[clang::annotate_type("webkit.nodelete")]] foo(const RefPtrContainer& src) {
+  RefPtrContainer container(src);
+}
+
+struct ObjectWithOpaqueCopyConstructor {
+  ObjectWithOpaqueCopyConstructor(const ObjectWithOpaqueCopyConstructor&);
+  ObjectWithOpaqueCopyConstructor() { }
+};
+
+struct CallDefaultConstructor {
+  [[clang::annotate("webkit.nodelete")]] CallDefaultConstructor() { }
+  ObjectWithOpaqueCopyConstructor objectWithOpaqueCopyConstructor;
+};
+
+struct CallCopyConstructor {
+  using InnerObjectType = ObjectWithOpaqueCopyConstructor;
+  [[clang::annotate("webkit.nodelete")]] CallCopyConstructor(const InnerObjectType& obj)
+    : object(obj)
+    // expected-warning@-1{{A constructor 'CallCopyConstructor' has [[clang::annotate_type("webkit.nodelete")]] but it contains code that could destruct an object}}
+  {
+  }
+  InnerObjectType object;
+};
+
+} // namespace nodelete_ctor_dtor
+
+namespace nodelete_ptrconversion {
+
+  [[clang::annotate("webkit.ptrconversion")]] [[clang::annotate("webkit.nodelete")]] void foo(void* ptr) {
+    someFunction(); // expected-warning{{A function 'foo' has [[clang::annotate_type("webkit.nodelete")]] but it contains code that could destruct an object}}
+  }
+
+} // namespace nodelete_ptrconversion

@@ -145,3 +145,168 @@ define void @test_vector_no_fold(<4 x i32> %val, ptr %p) {
   ret void
 }
 
+; Logical operations for i16/i32/i64 types.
+
+; Modifies only LSB bits.
+define void @test_and_i16_valid(ptr %p) {
+; CHECK-LABEL: 'test_and_i16_valid'
+; CHECK: cost of 0 {{.*}} and i16 %v, -255
+; CHECK: cost of 0 {{.*}} store i16
+  %v = load i16, ptr %p
+  %res = and i16 %v, 65281 ; 0xff01
+  store i16 %res, ptr %p
+  ret void
+}
+
+; Clears bit 8, just above LSB window.
+define void @test_and_i16_invalid_above(ptr %p) {
+; CHECK-LABEL: 'test_and_i16_invalid_above'
+; CHECK: cost of 1 {{.*}} and i16 %v, -511
+; CHECK: cost of 1 {{.*}} store i16
+  %v = load i16, ptr %p
+  %res = and i16 %v, 65025 ; 0xfe01
+  store i16 %res, ptr %p
+  ret void
+}
+
+; Active bits <=8.
+define void @test_or_i16_valid(ptr %p) {
+; CHECK-LABEL: 'test_or_i16_valid'
+; CHECK: cost of 0 {{.*}} or i16 %v, 255
+; CHECK: cost of 0 {{.*}} store i16
+  %v = load i16, ptr %p
+  %res = or i16 %v, 255 ; 0x00ff
+  store i16 %res, ptr %p
+  ret void
+}
+
+; Active bits > 8.
+define void @test_or_i16_invalid(ptr %p) {
+; CHECK-LABEL: 'test_or_i16_invalid'
+; CHECK: cost of 1 {{.*}} or i16 %v, 256
+; CHECK: cost of 1 {{.*}} store i16
+  %v = load i16, ptr %p
+  %res = or i16 %v, 256 ; 0x0100
+  store i16 %res, ptr %p
+  ret void
+}
+
+; Modifies only LSB bits.
+define void @test_and_i32_valid(ptr %p) {
+; CHECK-LABEL: 'test_and_i32_valid'
+; CHECK: cost of 0 {{.*}} and i32 %v, -255
+; CHECK: cost of 0 {{.*}} store i32
+  %v = load i32, ptr %p
+  %res = and i32 %v, 4294967041 ; 0xffffff01
+  store i32 %res, ptr %p
+  ret void
+}
+
+; Zero-extended i16 context.
+define void @test_and_i32_zext_invalid(ptr %p) {
+; CHECK-LABEL: 'test_and_i32_zext_invalid'
+; CHECK: cost of 1 {{.*}} and i32 %v, 65281
+; CHECK: cost of 1 {{.*}} store i32
+  %v = load i32, ptr %p
+  %res = and i32 %v, 65281 ; 0x0000ff01
+  store i32 %res, ptr %p
+  ret void
+}
+
+; One bit down from zero-extended threshold.
+define void @test_and_i32_zext_below_invalid(ptr %p) {
+; CHECK-LABEL: 'test_and_i32_zext_below_invalid'
+; CHECK: cost of 1 {{.*}} and i32 %v, 65025
+; CHECK: cost of 1 {{.*}} store i32
+  %v = load i32, ptr %p
+  %res = and i32 %v, 65025 ; 0x0000fe01
+  store i32 %res, ptr %p
+  ret void
+}
+
+; One bit above zero-extended threshold.
+define void @test_and_i32_zext_above_invalid(ptr %p) {
+; CHECK-LABEL: 'test_and_i32_zext_above_invalid'
+; CHECK: cost of 1 {{.*}} and i32 %v, 130817
+; CHECK: cost of 1 {{.*}} store i32
+  %v = load i32, ptr %p
+  %res = and i32 %v, 130817 ; 0x0001ff01
+  store i32 %res, ptr %p
+  ret void
+}
+
+; Modifies bits outside LSB.
+define void @test_and_i32_invalid(ptr %p) {
+; CHECK-LABEL: 'test_and_i32_invalid'
+; CHECK: cost of 1 {{.*}} and i32 %v, 16
+; CHECK: cost of 1 {{.*}} store i32
+  %v = load i32, ptr %p
+  %res = and i32 %v, 16
+  store i32 %res, ptr %p
+  ret void
+}
+
+; Active bits <=8.
+define void @test_xor_i32_valid(ptr %p) {
+; CHECK-LABEL: 'test_xor_i32_valid'
+; CHECK: cost of 0 {{.*}} xor i32 %v, 255
+; CHECK: cost of 0 {{.*}} store i32
+  %v = load i32, ptr %p
+  %res = xor i32 %v, 255 ; 0x000000ff
+  store i32 %res, ptr %p
+  ret void
+}
+
+; Active bits > 8.
+define void @test_xor_i32_invalid_above(ptr %p) {
+; CHECK-LABEL: 'test_xor_i32_invalid_above'
+; CHECK: cost of 1 {{.*}} xor i32 %v, 256
+; CHECK: cost of 1 {{.*}} store i32
+  %v = load i32, ptr %p
+  %res = xor i32 %v, 256 ; 0x00000100
+  store i32 %res, ptr %p
+  ret void
+}
+
+; Modifies only LSB bits.
+define void @test_and_i64_valid(ptr %p) {
+; CHECK-LABEL: 'test_and_i64_valid'
+; CHECK: cost of 0 {{.*}} and i64 %v, -255
+; CHECK: cost of 0 {{.*}} store i64
+  %v = load i64, ptr %p
+  %res = and i64 %v, -255 ; 0xffffffffffffff01
+  store i64 %res, ptr %p
+  ret void
+}
+
+; Clears bit 8.
+define void @test_and_i64_invalid_above(ptr %p) {
+; CHECK-LABEL: 'test_and_i64_invalid_above'
+; CHECK: cost of 1 {{.*}} and i64 %v, -511
+; CHECK: cost of 1 {{.*}} store i64
+  %v = load i64, ptr %p
+  %res = and i64 %v, -511 ; 0xfffffffffffffffe01
+  store i64 %res, ptr %p
+  ret void
+}
+
+; Active bits <=8.
+define void @test_or_i64_valid(ptr %p) {
+; CHECK-LABEL: 'test_or_i64_valid'
+; CHECK: cost of 0 {{.*}} or i64 %v, 255
+; CHECK: cost of 0 {{.*}} store i64
+  %v = load i64, ptr %p
+  %res = or i64 %v, 255 ; 0x00000000000000ff
+  store i64 %res, ptr %p
+  ret void
+}
+
+; Active bits > 8.
+define void @test_or_i64_invalid(ptr %p) {
+; CHECK-LABEL: 'test_or_i64_invalid'
+; CHECK: cost of 1 {{.*}} or i64 %v, 256
+  %v = load i64, ptr %p
+  %res = or i64 %v, 256 ; 0x0000000000000100
+  store i64 %res, ptr %p
+  ret void
+}

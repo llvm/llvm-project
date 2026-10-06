@@ -1,5 +1,7 @@
 // RUN: mlir-opt -convert-math-to-emitc=language-target=c99 %s | FileCheck %s --check-prefix=c99
 // RUN: mlir-opt -convert-math-to-emitc=language-target=cpp11 %s | FileCheck %s --check-prefix=cpp11
+// RUN: mlir-opt -convert-to-emitc="filter-dialects=math lower-to-cpp=false" %s | FileCheck %s --check-prefix=c99
+// RUN: mlir-opt -convert-to-emitc="filter-dialects=math" %s | FileCheck %s --check-prefix=cpp11
 
 func.func @absf(%arg0: f32, %arg1: f64) {
     // c99: emitc.call_opaque "fabsf"

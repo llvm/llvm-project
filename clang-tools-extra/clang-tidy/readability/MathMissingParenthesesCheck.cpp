@@ -70,7 +70,7 @@ static void addParentheses(const Expr *E, const BinaryOperator *ParentBinOp,
     const SourceLocation EndLoc =
         Lexer::getLocForEndOfToken(BinOp->getEndLoc(), 0, SM, LangOpts);
 
-    auto Diag =
+    const auto Diag =
         Check->diag(StartLoc,
                     "'%0' has higher precedence than '%1'; add parentheses to "
                     "explicitly specify the order of operations")

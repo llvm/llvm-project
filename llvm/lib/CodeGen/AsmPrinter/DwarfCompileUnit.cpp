@@ -35,7 +35,6 @@
 #include "llvm/Support/CommandLine.h"
 #include "llvm/Target/TargetLoweringObjectFile.h"
 #include "llvm/Target/TargetMachine.h"
-#include "llvm/Target/TargetOptions.h"
 #include <optional>
 #include <string>
 #include <utility>
@@ -519,20 +518,14 @@ DIE &DwarfCompileUnit::updateSubprogramScopeDIE(const DISubprogram *SP,
   attachRangesOrLowHighPC(*SPDie, BB_List);
 
   if (DD->useAppleExtensionAttributes() &&
-      !DD->getCurrentFunction()->getTarget().Options.DisableFramePointerElim(
-          *DD->getCurrentFunction()))
+      !DD->getCurrentFunction()->disableFramePointerElim())
     addFlag(*SPDie, dwarf::DW_AT_APPLE_omit_frame_ptr);
 
   if (emitFuncLineTableOffsets() && LineTableSym) {
     MCSymbol *Symbol =
         Asm->getObjFileLowering().getDwarfLineSection()->getBeginSymbol();
-    if (isDwoUnit()) {
-      addSectionDelta(*SPDie, dwarf::DW_AT_LLVM_stmt_sequence, LineTableSym,
-                      Symbol);
-    } else {
-      addSectionLabel(*SPDie, dwarf::DW_AT_LLVM_stmt_sequence, LineTableSym,
-                      Symbol);
-    }
+    addSectionLabel(*SPDie, dwarf::DW_AT_LLVM_stmt_sequence, LineTableSym,
+                    Symbol);
   }
 
   // Only include DW_AT_frame_base in full debug info
@@ -648,12 +641,7 @@ void DwarfCompileUnit::addScopeRangeList(DIE &ScopeDIE,
     const TargetLoweringObjectFile &TLOF = Asm->getObjFileLowering();
     const MCSymbol *RangeSectionSym =
         TLOF.getDwarfRangesSection()->getBeginSymbol();
-    if (isDwoUnit())
-      addSectionDelta(ScopeDIE, dwarf::DW_AT_ranges, List.Label,
-                      RangeSectionSym);
-    else
-      addSectionLabel(ScopeDIE, dwarf::DW_AT_ranges, List.Label,
-                      RangeSectionSym);
+    addSectionLabel(ScopeDIE, dwarf::DW_AT_ranges, List.Label, RangeSectionSym);
   }
 }
 
@@ -863,6 +851,10 @@ bool DwarfCompileUnit::emitImplicitPointerLocation(const Loc::Single &Single,
   }
 
   if (!ArtificialDIEPtr) {
+    // Check that the value can be described before creating a DIE for it.
+    if (!Entry.isLocation() && !Entry.isInt() && !Entry.isConstantFP())
+      return false;
+
     DIE &ProcDIE = createAndAddDIE(dwarf::DW_TAG_dwarf_procedure, getUnitDie());
 
     if (Entry.isLocation()) {
@@ -870,10 +862,8 @@ bool DwarfCompileUnit::emitImplicitPointerLocation(const Loc::Single &Single,
     } else if (Entry.isInt()) {
       if (PointeeTy)
         addConstantValue(ProcDIE, Entry.getInt(), PointeeTy);
-    } else if (Entry.isConstantFP()) {
-      addConstantFPValue(ProcDIE, Entry.getConstantFP());
     } else {
-      return false;
+      addConstantFPValue(ProcDIE, Entry.getConstantFP());
     }
 
     ArtificialDIEPtr = &ProcDIE;
@@ -933,6 +923,22 @@ void DwarfCompileUnit::applyConcreteDbgVariableAttributes(
       addConstantFPValue(VariableDie, Entry->getConstantFP());
     } else if (Entry->isConstantInt()) {
       addConstantValue(VariableDie, Entry->getConstantInt(), DV.getType());
+    } else if (Entry->isGlobalAddress()) {
+      auto *Expr = Single.getExpr();
+      DIELoc *Loc = new (DIEValueAllocator) DIELoc;
+      DIEDwarfExpression DwarfExpr(*Asm, *this, *Loc);
+      DwarfExpr.addFragmentOffset(Expr);
+      if (!DwarfExpr.addGlobalAddress(Entry->getGlobalAddress(),
+                                      Entry->getGlobalOffset()))
+        return;
+      // A rejected operation leaves the expression built so far in Loc, which
+      // describes some other location rather than none. Drop it instead.
+      if (!DwarfExpr.addExpression(Expr))
+        return;
+      addBlock(VariableDie, dwarf::DW_AT_location, DwarfExpr.finalize());
+      if (DwarfExpr.TagOffset)
+        addUInt(VariableDie, dwarf::DW_AT_LLVM_tag_offset, dwarf::DW_FORM_data1,
+                *DwarfExpr.TagOffset);
     } else if (Entry->isTargetIndexLocation()) {
       DIELoc *Loc = new (DIEValueAllocator) DIELoc;
       DIEDwarfExpression DwarfExpr(*Asm, *this, *Loc);
@@ -986,6 +992,10 @@ void DwarfCompileUnit::applyConcreteDbgVariableAttributes(
       // only the WebAssembly-specific encoding is supported.
       assert(Asm->TM.getTargetTriple().isWasm());
       DwarfExpr.addWasmLocation(Loc.Index, static_cast<uint64_t>(Loc.Offset));
+    } else if (Entry.isGlobalAddress()) {
+      if (!DwarfExpr.addGlobalAddress(Entry.getGlobalAddress(),
+                                      Entry.getGlobalOffset()))
+        return false;
     } else {
       llvm_unreachable("Unsupported Entry type.");
     }
@@ -1264,19 +1274,25 @@ DIE *DwarfCompileUnit::createAndAddScopeChildren(LexicalScope *Scope,
 
   // Emit inner lexical scopes.
   auto skipLexicalScope = [this](LexicalScope *S) -> bool {
-    if (isa<DISubprogram>(S->getScopeNode()))
+    const DILocalScope *DS = S->getScopeNode();
+    if (isa<DISubprogram>(DS))
       return false;
     // Don't skip abstract lexical blocks that are scope targets for global
     // variables (e.g., function-scope statics). Those globals are emitted
     // later in endModule() and need to find the block via
     // getOrCreateContextDIE().
-    if (S->isAbstractScope() && hasGlobalVariableInScope(S->getScopeNode()))
+    if (S->isAbstractScope() && hasGlobalVariableInScope(DS))
+      return false;
+    // Create a concrete lexical block for a scope with an abstract lexical
+    // block to ensure visibility of scope-local types and static variables
+    // within the scope range.
+    if (getAbstractScopeDIEs().lookup(DS))
       return false;
     auto Vars = DU->getScopeVariables().lookup(S);
     if (!Vars.Args.empty() || !Vars.Locals.empty())
       return false;
     return includeMinimalInlineScopes() ||
-           DD->getLocalDeclsForScope(S->getScopeNode()).empty();
+           DD->getLocalDeclsForScope(DS).empty();
   };
   for (LexicalScope *LS : Scope->getChildren()) {
     // If the lexical block doesn't have non-scope children or global

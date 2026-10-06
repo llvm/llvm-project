@@ -321,6 +321,9 @@ lldb::ChildCacheState BytecodeSyntheticChildren::FrontEnd::Update() {
   if (auto *i = std::get_if<int64_t>(&top))
     if (*i == 0 || *i == 1)
       can_reuse = static_cast<ChildCacheState>(*i);
+  if (auto *ap = std::get_if<llvm::APSInt>(&top))
+    if (*ap == 0 || *ap == 1)
+      can_reuse = static_cast<ChildCacheState>(ap->getExtValue());
 
   if (can_reuse) {
     data.pop_back();
@@ -356,7 +359,7 @@ BytecodeSyntheticChildren::FrontEnd::CalculateNumChildren() {
 
   if (data.size() == 0) {
     char message[] = "@get_num_children returned empty data stack";
-    LLDB_LOG(GetLog(LLDBLog::DataFormatters), message);
+    LLDB_LOG(GetLog(LLDBLog::DataFormatters), "{0}", message);
     return llvm::createStringError(message);
   }
 
@@ -365,8 +368,16 @@ BytecodeSyntheticChildren::FrontEnd::CalculateNumChildren() {
     if (*u <= UINT32_MAX)
       return *u;
   if (auto *i = std::get_if<int64_t>(&top)) {
-    if (*i > 0 && *i <= UINT32_MAX)
+    if (*i >= 0 && *i <= UINT32_MAX)
       return *i;
+    return UINT32_MAX;
+  }
+  if (auto *ap = std::get_if<llvm::APSInt>(&top)) {
+    if (ap->isRepresentableByInt64()) {
+      int64_t v = ap->getExtValue();
+      if (v >= 0 && v <= UINT32_MAX)
+        return static_cast<uint32_t>(v);
+    }
     return UINT32_MAX;
   }
 
@@ -405,8 +416,8 @@ BytecodeSyntheticChildren::FrontEnd::GetChildAtIndex(uint32_t idx) {
 
 llvm::Expected<size_t>
 BytecodeSyntheticChildren::FrontEnd::GetIndexOfChildWithName(ConstString name) {
-  if (m_impl.get_child_index)
-    return -1;
+  if (!m_impl.get_child_index)
+    return llvm::createStringErrorV("type has no child named '{0}'", name);
 
   FormatterBytecode::ControlStack control = {
       m_impl.get_child_index->getBuffer()};
@@ -419,7 +430,7 @@ BytecodeSyntheticChildren::FrontEnd::GetIndexOfChildWithName(ConstString name) {
 
   if (data.size() == 0) {
     char message[] = "@get_child_index returned empty data stack";
-    LLDB_LOG(GetLog(LLDBLog::DataFormatters), message);
+    LLDB_LOG(GetLog(LLDBLog::DataFormatters), "{0}", message);
     return llvm::createStringError(message);
   }
 
@@ -428,8 +439,16 @@ BytecodeSyntheticChildren::FrontEnd::GetIndexOfChildWithName(ConstString name) {
     if (*u <= SIZE_MAX)
       return *u;
   if (auto *i = std::get_if<int64_t>(&top)) {
-    if (*i > 0 && static_cast<uint64_t>(*i) <= SIZE_MAX)
+    if (*i >= 0 && static_cast<uint64_t>(*i) <= SIZE_MAX)
       return *i;
+    return SIZE_MAX;
+  }
+  if (auto *ap = std::get_if<llvm::APSInt>(&top)) {
+    if (ap->isRepresentableByInt64()) {
+      int64_t v = ap->getExtValue();
+      if (v >= 0 && static_cast<uint64_t>(v) <= SIZE_MAX)
+        return static_cast<size_t>(v);
+    }
     return SIZE_MAX;
   }
 

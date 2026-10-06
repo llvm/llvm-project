@@ -1,6 +1,6 @@
 # REQUIRES: asserts
 # RUN: llc -mtriple=riscv32-linux-gnu -x=mir < %s \
-# RUN:   -debug-only=machine-scheduler -start-before=machine-scheduler 2>&1 \
+# RUN:   -debug-only=machine-scheduler -run-pass=machine-scheduler 2>&1 \
 # RUN:   -mattr=+xqcilia,+xqcili,+xqcilo,+zmmul,+fusion-xqci-movimm-alu \
 # RUN:   -mattr=+fusion-xqci-movimm-mul,+fusion-xqci-movimm-ldst \
 # RUN:   -mattr=+fusion-xqci-movimm-jump \
@@ -101,3 +101,20 @@ body:             |
     $x13 = COPY $x12
     $x10 = COPY $x11
 ...
+
+# CHECK: movimm_alu_xqci_frameindex
+## No Reg in the ADDI, needs to not crash
+name: movimm_alu_xqci_frameindex
+tracksRegLiveness: true
+stack:
+  - { id: 0, size: 4, alignment: 4 }
+body:             |
+  bb.0.entry:
+    liveins: $x10
+    %1:gpr = COPY $x10
+    %2:gpr = ADDI %stack.0, 0
+    %3:gpr = ADD %2, %1
+    $x10 = COPY %3
+    PseudoRET implicit $x10
+...
+

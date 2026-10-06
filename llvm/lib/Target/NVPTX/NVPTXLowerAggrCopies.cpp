@@ -12,7 +12,6 @@
 //
 //===----------------------------------------------------------------------===//
 
-#include "NVPTXLowerAggrCopies.h"
 #include "NVPTX.h"
 #include "llvm/Analysis/AliasAnalysis.h"
 #include "llvm/Analysis/TargetTransformInfo.h"
@@ -34,40 +33,15 @@
 
 using namespace llvm;
 
-namespace {
+static const unsigned MaxAggrCopySize = 128;
 
-// actual analysis class, which is a functionpass
-struct NVPTXLowerAggrCopies : public FunctionPass {
-  static char ID;
-
-  NVPTXLowerAggrCopies() : FunctionPass(ID) {}
-
-  void getAnalysisUsage(AnalysisUsage &AU) const override {
-    AU.addPreserved<StackProtector>();
-    AU.addRequired<TargetTransformInfoWrapperPass>();
-    AU.addRequired<AAResultsWrapperPass>();
-  }
-
-  bool runOnFunction(Function &F) override;
-
-  static const unsigned MaxAggrCopySize = 128;
-
-  StringRef getPassName() const override {
-    return "Lower aggregate copies/intrinsics into loops";
-  }
-};
-
-char NVPTXLowerAggrCopies::ID = 0;
-
-bool NVPTXLowerAggrCopies::runOnFunction(Function &F) {
+static bool lowerAggrCopies(Function &F, const TargetTransformInfo &TTI,
+                            AAResults &AA) {
   SmallVector<LoadInst *, 4> AggrLoads;
   SmallVector<MemIntrinsic *, 4> MemCalls;
 
   const DataLayout &DL = F.getDataLayout();
   LLVMContext &Context = F.getParent()->getContext();
-  const TargetTransformInfo &TTI =
-      getAnalysis<TargetTransformInfoWrapperPass>().getTTI(F);
-  AAResults &AA = getAnalysis<AAResultsWrapperPass>().getAAResults();
 
   // Collect all aggregate loads and mem* calls.
   for (BasicBlock &BB : F) {
@@ -172,17 +146,54 @@ bool NVPTXLowerAggrCopies::runOnFunction(Function &F) {
   return true;
 }
 
+namespace {
+
+struct NVPTXLowerAggrCopiesLegacyPass : public FunctionPass {
+  static char ID;
+
+  NVPTXLowerAggrCopiesLegacyPass() : FunctionPass(ID) {}
+
+  void getAnalysisUsage(AnalysisUsage &AU) const override {
+    AU.addPreserved<StackProtector>();
+    AU.addRequired<TargetTransformInfoWrapperPass>();
+    AU.addRequired<AAResultsWrapperPass>();
+  }
+
+  bool runOnFunction(Function &F) override {
+    return lowerAggrCopies(
+        F, getAnalysis<TargetTransformInfoWrapperPass>().getTTI(F),
+        getAnalysis<AAResultsWrapperPass>().getAAResults());
+  }
+
+  StringRef getPassName() const override {
+    return "Lower aggregate copies/intrinsics into loops";
+  }
+};
+
+char NVPTXLowerAggrCopiesLegacyPass::ID = 0;
+
 } // namespace
 
 INITIALIZE_PASS_BEGIN(
-    NVPTXLowerAggrCopies, "nvptx-lower-aggr-copies",
+    NVPTXLowerAggrCopiesLegacyPass, "nvptx-lower-aggr-copies",
     "Lower aggregate copies, and llvm.mem* intrinsics into loops", false, false)
 INITIALIZE_PASS_DEPENDENCY(AAResultsWrapperPass)
 INITIALIZE_PASS_DEPENDENCY(TargetTransformInfoWrapperPass)
 INITIALIZE_PASS_END(
-    NVPTXLowerAggrCopies, "nvptx-lower-aggr-copies",
+    NVPTXLowerAggrCopiesLegacyPass, "nvptx-lower-aggr-copies",
     "Lower aggregate copies, and llvm.mem* intrinsics into loops", false, false)
 
-FunctionPass *llvm::createLowerAggrCopies() {
-  return new NVPTXLowerAggrCopies();
+FunctionPass *llvm::createNVPTXLowerAggrCopiesLegacyPass() {
+  return new NVPTXLowerAggrCopiesLegacyPass();
+}
+
+PreservedAnalyses NVPTXLowerAggrCopiesPass::run(Function &F,
+                                                FunctionAnalysisManager &FAM) {
+  if (!lowerAggrCopies(F, FAM.getResult<TargetIRAnalysis>(F),
+                       FAM.getResult<AAManager>(F)))
+    return PreservedAnalyses::all();
+  // Copies are expanded into loops, so the CFG is not preserved.
+  PreservedAnalyses PA;
+  PA.preserve<SSPLayoutAnalysis>();
+  return PA;
 }

@@ -128,6 +128,14 @@ bool shouldSkipTypedef(const TypedefNameDecl *TD) {
 //      template<class X> using pvec = vector<x*>; pvec<int> x;
 //    There's no Decl `pvec<int>`, we must choose `pvec<X>` or `vector<int*>`
 //    and both are lossy. We must know upfront what the caller ultimately wants.
+
+static const TemplateDecl *getReferencedConcept(const ConceptReference *CR) {
+  TemplateName TN = CR->getNamedConcept();
+  if (const TemplateDecl *TD = TN.getAsTemplateDecl())
+    return TD;
+  return TN.getAsTemplateTemplateParmDecl();
+}
+
 struct TargetFinder {
   using RelSet = DeclRelationSet;
   using Rel = DeclRelation;
@@ -389,14 +397,20 @@ public:
         if (const auto *USD = DTST->getTemplateName().getAsUsingShadowDecl())
           Outer.add(USD, Flags);
 
-        // FIXME: This is a workaround for https://llvm.org/PR42914,
-        // which is causing DTST->getDeducedType() to be empty. We
-        // fall back to the template pattern and miss the instantiation
-        // even when it's known in principle. Once that bug is fixed,
-        // the following code can be removed (the existing handling in
-        // VisitDeducedType() is sufficient).
-        if (auto *TD = DTST->getTemplateName().getAsTemplateDecl())
+        // Template template parameters have no templated decl, so they must
+        // refer to the parameter itself.
+        if (const auto *Parm =
+                DTST->getTemplateName().getAsTemplateTemplateParmDecl()) {
+          Outer.add(Parm, Flags);
+        } else if (auto *TD = DTST->getTemplateName().getAsTemplateDecl()) {
+          // FIXME: This is a workaround for https://llvm.org/PR42914,
+          // which is causing DTST->getDeducedType() to be empty. We
+          // fall back to the template pattern and miss the instantiation
+          // even when it's known in principle. Once that bug is fixed,
+          // the following code can be removed (the existing handling in
+          // VisitDeducedType() is sufficient).
           Outer.add(TD->getTemplatedDecl(), Flags | Rel::TemplatePattern);
+        }
       }
       void VisitDependentNameType(const DependentNameType *DNT) {
         if (Outer.Resolver) {
@@ -519,7 +533,7 @@ public:
   }
 
   void add(const ConceptReference *CR, RelSet Flags) {
-    add(CR->getNamedConcept(), Flags);
+    add(getReferencedConcept(CR), Flags);
   }
 };
 
@@ -1081,7 +1095,7 @@ private:
       return {ReferenceLoc{CR->getNestedNameSpecifierLoc(),
                            CR->getConceptNameLoc(),
                            /*IsDecl=*/false,
-                           {CR->getNamedConcept()}}};
+                           {getReferencedConcept(CR)}}};
     if (const OffsetOfNode *OON = N.get<OffsetOfNode>()) {
       if (OON->getKind() == OffsetOfNode::Field)
         return {ReferenceLoc{NestedNameSpecifierLoc(),

@@ -79,6 +79,7 @@ struct MIToken {
     kw_disjoint,
     kw_samesign,
     kw_inbounds,
+    kw_nonnull,
     kw_debug_location,
     kw_debug_instr_number,
     kw_dbg_instr_ref,
@@ -151,6 +152,7 @@ struct MIToken {
     kw_ir_block_address_taken,
     kw_machine_block_address_taken,
     kw_call_frame_size,
+    kw_max_bytes_for_alignment,
     kw_noconvergent,
     kw_mmra,
     kw_lr_split,
@@ -164,6 +166,7 @@ struct MIToken {
     md_noalias,
     md_noalias_addrspace,
     md_range,
+    md_mem_cache_hint,
     md_diexpr,
     md_dilocation,
 

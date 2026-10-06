@@ -16,13 +16,13 @@
 #include <__config>
 #include <__memory/addressof.h>
 #include <__memory/construct_at.h>
+#include <__optional/optional.h>
 #include <__type_traits/is_constructible.h>
 #include <__type_traits/is_nothrow_constructible.h>
 #include <__type_traits/is_object.h>
 #include <__utility/forward.h>
 #include <__utility/in_place.h>
 #include <__utility/move.h>
-#include <optional>
 
 #if !defined(_LIBCPP_HAS_NO_PRAGMA_SYSTEM_HEADER)
 #  pragma GCC system_header
@@ -31,9 +31,9 @@
 _LIBCPP_PUSH_MACROS
 #include <__undef_macros>
 
-_LIBCPP_BEGIN_NAMESPACE_STD
-
 #if _LIBCPP_STD_VER >= 20
+
+_LIBCPP_BEGIN_NAMESPACE_STD
 
 // __movable_box allows turning a type that is move-constructible (but maybe not move-assignable) into
 // a type that is both move-constructible and move-assignable. It does that by introducing an empty state
@@ -242,9 +242,9 @@ public:
 };
 } // namespace ranges
 
-#endif // _LIBCPP_STD_VER >= 20
-
 _LIBCPP_END_NAMESPACE_STD
+
+#endif // _LIBCPP_STD_VER >= 20
 
 _LIBCPP_POP_MACROS
 

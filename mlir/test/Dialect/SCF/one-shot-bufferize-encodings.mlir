@@ -14,7 +14,7 @@ func.func @scf_for_iter_arg(%arg0: tensor<128xf32, 1>, %arg1: index, %arg2: inde
 // CHECK-LABEL: func.func @scf_for_iter_arg
 //  CHECK-SAME: (%[[arg0:.+]]: tensor<128xf32, 1 : i64>, %[[arg1:.+]]: index, %[[arg2:.+]]: index, %[[arg3:.+]]: index)
 //       CHECK:     %[[v0:.+]] = bufferization.to_buffer %[[arg0]] : tensor<128xf32, 1 : i64> to memref<128xf32, strided<[?], offset: ?>, 1>
-//       CHECK:     %[[alloc:.+]] = memref.alloc() {alignment = 64 : i64} : memref<128xf32, 1>
+//       CHECK:     %[[alloc:.+]] = memref.alloc() alignment = 64 : memref<128xf32, 1>
 //       CHECK:     memref.copy %[[v0]], %[[alloc]] : memref<128xf32, strided<[?], offset: ?>, 1> to memref<128xf32, 1>
 //       CHECK:     %[[cast:.+]] = memref.cast %[[alloc]] : memref<128xf32, 1> to memref<128xf32, strided<[?], offset: ?>, 1>
 //       CHECK:     %[[v1:.+]] = scf.for %{{.+}} = %[[arg1]] to %[[arg2]] step %[[arg3]] iter_args(%[[arg6:.+]] = %[[cast]]) -> (memref<128xf32, strided<[?], offset: ?>, 1>)
