@@ -1594,6 +1594,47 @@ Even though it has "`Impl`" in the name, SmallVectorImpl is widely used
 and is no longer "private to the implementation". A name like
 `SmallVectorHeader` might be more appropriate.
 ::::
+
+(dss_smallvectorwithflags)=
+
+#### llvm/ADT/SmallVectorWithFlags.h
+
+`SmallVectorWithFlags<T, N, FlagBits>` stores one to four user flag bits in the
+high bits of its capacity field. It has the same object size and inline
+capacity as `SmallVector<T, N>`, so a structure holding a vector followed by a
+bool or two no longer pays a word of padding for them. The maximum capacity is
+divided by `2^FlagBits`; with the 32-bit size type used for elements of four
+bytes or more, four flag bits leave room for 268 million elements. Only
+`capacity()` masks the flags out, so element access and `size()` cost the same
+as in `SmallVector`. `FlagBits` defaults to one; `N` uses the same default as
+`SmallVector<T>`.
+
+```c++
+SmallVectorWithFlags<Value *, 4> Values;
+Values.setFlag(0, true);
+Values.push_back(SomeValue); // The flag is preserved.
+```
+
+Use `getFlags()` and `setFlags(unsigned)` for the complete bit mask, or
+`getFlag(Index)` and `setFlag(Index, bool)` for individual bits. Flags initially
+contain zero. Passing bits at or above `FlagBits` to `setFlags` is undefined
+behavior; debug builds assert on it.
+
+Element operations preserve flags. Copying or moving the complete container
+copies its flags, and moving leaves the source flags unchanged. Swapping
+complete containers exchanges both flags and elements. Equality compares both
+flags and elements. Ordering compares elements lexicographically, then flags
+when the elements are equivalent. Convert explicitly to `ArrayRef<T>` for an
+element-only comparison; comparing directly against an `ArrayRef` is a compile
+error.
+
+Use `ArrayRef<T>` for read-only interfaces or
+`SmallVectorWithFlagsImpl<T, FlagBits>` for output parameters independent of
+inline capacity. Assignment and swap through `SmallVectorWithFlagsImpl` affect
+only the elements; each vector keeps its own flags. The flagged container cannot
+be passed as `SmallVectorImpl<T>`, which expects a plain capacity field; this is
+the trade-off against storing the flags in a separate member.
+
 (dss_pagedvector)=
 
 #### llvm/ADT/PagedVector.h

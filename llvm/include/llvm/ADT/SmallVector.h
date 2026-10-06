@@ -54,15 +54,15 @@ using EnableIfConvertibleToInputIterator =
 /// Using 64 bit size is desirable for cases like SmallVector<char>, where a
 /// 32 bit size would limit the vector to ~4GB. SmallVectors are used for
 /// buffering bitcode output - which can exceed 4GB.
+///
+/// This class holds the fields and the out-of-line growth routines, which are
+/// instantiated once per size type. SmallVectorHeader interprets the fields.
 template <class Size_T> class SmallVectorBase {
 protected:
   void *BeginX;
+  /// SmallVectorHeader may store flag bits in the high bits of Capacity. The
+  /// masked routines below receive the mask of the bits holding the capacity.
   Size_T Size = 0, Capacity;
-
-  /// The maximum value of the Size_T used.
-  static constexpr size_t SizeTypeMax() {
-    return std::numeric_limits<Size_T>::max();
-  }
 
   SmallVectorBase() = delete;
   SmallVectorBase(void *FirstEl, size_t TotalCapacity)
@@ -73,17 +73,82 @@ protected:
   /// least to \p MinSize.
   LLVM_ABI void *mallocForGrow(void *FirstEl, size_t MinSize, size_t TSize,
                                size_t &NewCapacity);
+  LLVM_ABI void *mallocForGrowMasked(void *FirstEl, size_t MinSize,
+                                     size_t TSize, Size_T CapacityMask,
+                                     size_t &NewCapacity);
 
   /// This is an implementation of the grow() method which only works
   /// on POD-like data types and is out of line to reduce code duplication.
   /// This function will report a fatal error if it cannot increase capacity.
   LLVM_ABI void grow_pod(void *FirstEl, size_t MinSize, size_t TSize);
+  LLVM_ABI void grow_pod_masked(void *FirstEl, size_t MinSize, size_t TSize,
+                                Size_T CapacityMask);
 
 public:
   size_t size() const { return Size; }
-  size_t capacity() const { return Capacity; }
 
   [[nodiscard]] bool empty() const { return !Size; }
+};
+
+/// The header of a SmallVector: the fields of SmallVectorBase, with the high
+/// FlagBits bits of Capacity reserved for user flags. With zero flag bits, the
+/// default, every mask below folds away and this is a plain SmallVector header.
+/// With flag bits, only capacity() pays for masking; the buffer pointer and
+/// size are untouched, so begin(), end(), and size() cost the same as in a
+/// plain SmallVector. The price is a maximum capacity divided by 2^FlagBits.
+template <class Size_T, unsigned FlagBits = 0>
+class SmallVectorHeader : public SmallVectorBase<Size_T> {
+  using Base = SmallVectorBase<Size_T>;
+
+  static_assert(FlagBits <= 4, "SmallVector supports at most four flag bits");
+
+  static constexpr unsigned FlagShift =
+      std::numeric_limits<Size_T>::digits - FlagBits;
+  static constexpr Size_T CapacityMask =
+      FlagBits == 0 ? ~Size_T(0) : (Size_T(1) << FlagShift) - 1;
+
+protected:
+  SmallVectorHeader(void *FirstEl, size_t TotalCapacity)
+      : Base(FirstEl, TotalCapacity) {}
+
+  /// The maximum capacity: the maximum value of Size_T, less the flag bits.
+  static constexpr size_t SizeTypeMax() { return CapacityMask; }
+
+  unsigned getFlags() const {
+    static_assert(FlagBits > 0, "this SmallVector has no flags");
+    return static_cast<unsigned>(this->Capacity >> FlagShift);
+  }
+
+  void setFlags(unsigned Flags) {
+    static_assert(FlagBits > 0, "this SmallVector has no flags");
+    assert((Flags >> FlagBits) == 0 && "flags exceed FlagBits");
+    this->Capacity = (this->Capacity & CapacityMask) |
+                     (static_cast<Size_T>(Flags) << FlagShift);
+  }
+
+  void *mallocForGrow(void *FirstEl, size_t MinSize, size_t TSize,
+                      size_t &NewCapacity) {
+    if constexpr (FlagBits == 0)
+      return Base::mallocForGrow(FirstEl, MinSize, TSize, NewCapacity);
+    else
+      return Base::mallocForGrowMasked(FirstEl, MinSize, TSize, CapacityMask,
+                                       NewCapacity);
+  }
+
+  void grow_pod(void *FirstEl, size_t MinSize, size_t TSize) {
+    if constexpr (FlagBits == 0)
+      Base::grow_pod(FirstEl, MinSize, TSize);
+    else
+      Base::grow_pod_masked(FirstEl, MinSize, TSize, CapacityMask);
+  }
+
+public:
+  size_t capacity() const {
+    if constexpr (FlagBits == 0)
+      return this->Capacity;
+    else
+      return this->Capacity & CapacityMask;
+  }
 
 protected:
   /// Set the array size to \p N, which the current array must have enough
@@ -92,7 +157,7 @@ protected:
   /// This does not construct or destroy any elements in the vector.
   void set_size(size_t N) {
     assert(N <= capacity()); // implies no overflow in assignment
-    Size = static_cast<Size_T>(N);
+    this->Size = static_cast<Size_T>(N);
   }
 
   /// Set the array data pointer to \p Begin and capacity to \p N.
@@ -101,8 +166,12 @@ protected:
   //  This does not clean up any existing allocation.
   void set_allocation_range(void *Begin, size_t N) {
     assert(N <= SizeTypeMax());
-    BeginX = Begin;
-    Capacity = static_cast<Size_T>(N);
+    this->BeginX = Begin;
+    if constexpr (FlagBits == 0)
+      this->Capacity = static_cast<Size_T>(N);
+    else
+      this->Capacity =
+          (this->Capacity & ~CapacityMask) | static_cast<Size_T>(N);
   }
 };
 
@@ -119,12 +188,12 @@ template <class T, typename = void> struct SmallVectorAlignmentAndSize {
 };
 
 /// This is the part of SmallVectorTemplateBase which does not depend on whether
-/// the type T is a POD. The extra dummy template argument is used by ArrayRef
-/// to avoid unnecessarily requiring T to be complete.
-template <typename T, typename = void>
+/// the type T is a POD. FlagBits is the number of user flag bits stored in the
+/// header; see SmallVectorHeader.
+template <typename T, unsigned FlagBits = 0>
 class SmallVectorTemplateCommon
-    : public SmallVectorBase<SmallVectorSizeType<T>> {
-  using Base = SmallVectorBase<SmallVectorSizeType<T>>;
+    : public SmallVectorHeader<SmallVectorSizeType<T>, FlagBits> {
+  using Base = SmallVectorHeader<SmallVectorSizeType<T>, FlagBits>;
 
 protected:
   /// Find the address of the first element.  For this pointer math to be valid
@@ -149,8 +218,9 @@ protected:
 
   /// Put this vector in a state of being small.
   void resetToSmall() {
-    this->BeginX = getFirstEl();
-    this->Size = this->Capacity = 0; // FIXME: Setting Capacity to 0 is suspect.
+    // FIXME: Setting Capacity to 0 is suspect.
+    this->set_allocation_range(getFirstEl(), 0);
+    this->Size = 0;
   }
 
   /// Return true if V is an internal reference to the given range.
@@ -324,6 +394,14 @@ public:
   }
 };
 
+namespace detail {
+template <typename T>
+inline constexpr bool SmallVectorTriviallyCopyable =
+    std::is_trivially_copy_constructible_v<T> &&
+    std::is_trivially_move_constructible_v<T> &&
+    std::is_trivially_destructible_v<T>;
+} // namespace detail
+
 /// SmallVectorTemplateBase<TriviallyCopyable = false> - This is where we put
 /// method implementations that are designed to work with non-trivial T's.
 ///
@@ -332,18 +410,17 @@ public:
 /// copy these types with memcpy, there is no way for the type to observe this.
 /// This catches the important case of std::pair<POD, POD>, which is not
 /// trivially assignable.
-template <typename T, bool = (std::is_trivially_copy_constructible<T>::value) &&
-                             (std::is_trivially_move_constructible<T>::value) &&
-                             std::is_trivially_destructible<T>::value>
-class SmallVectorTemplateBase : public SmallVectorTemplateCommon<T> {
-  friend class SmallVectorTemplateCommon<T>;
+template <typename T, unsigned FlagBits = 0,
+          bool = detail::SmallVectorTriviallyCopyable<T>>
+class SmallVectorTemplateBase : public SmallVectorTemplateCommon<T, FlagBits> {
+  friend class SmallVectorTemplateCommon<T, FlagBits>;
 
 protected:
   static constexpr bool TakesParamByValue = false;
   using ValueParamT = const T &;
 
   SmallVectorTemplateBase(size_t SizeArg)
-      : SmallVectorTemplateCommon<T>(SizeArg) {}
+      : SmallVectorTemplateCommon<T, FlagBits>(SizeArg) {}
 
   static void destroy_range(T *S, T *E) {
     while (S != E) {
@@ -439,26 +516,26 @@ public:
 };
 
 // Define this out-of-line to dissuade the C++ compiler from inlining it.
-template <typename T, bool TriviallyCopyable>
-void SmallVectorTemplateBase<T, TriviallyCopyable>::grow(size_t MinSize) {
+template <typename T, unsigned FlagBits, bool TriviallyCopyable>
+void SmallVectorTemplateBase<T, FlagBits, TriviallyCopyable>::grow(
+    size_t MinSize) {
   size_t NewCapacity;
   T *NewElts = mallocForGrow(MinSize, NewCapacity);
   moveElementsForGrow(NewElts);
   takeAllocationForGrow(NewElts, NewCapacity);
 }
 
-template <typename T, bool TriviallyCopyable>
-T *SmallVectorTemplateBase<T, TriviallyCopyable>::mallocForGrow(
+template <typename T, unsigned FlagBits, bool TriviallyCopyable>
+T *SmallVectorTemplateBase<T, FlagBits, TriviallyCopyable>::mallocForGrow(
     size_t MinSize, size_t &NewCapacity) {
-  return static_cast<T *>(
-      SmallVectorBase<SmallVectorSizeType<T>>::mallocForGrow(
-          this->getFirstEl(), MinSize, sizeof(T), NewCapacity));
+  return static_cast<T *>(SmallVectorTemplateCommon<T, FlagBits>::mallocForGrow(
+      this->getFirstEl(), MinSize, sizeof(T), NewCapacity));
 }
 
 // Define this out-of-line to dissuade the C++ compiler from inlining it.
-template <typename T, bool TriviallyCopyable>
-void SmallVectorTemplateBase<T, TriviallyCopyable>::moveElementsForGrow(
-    T *NewElts) {
+template <typename T, unsigned FlagBits, bool TriviallyCopyable>
+void SmallVectorTemplateBase<
+    T, FlagBits, TriviallyCopyable>::moveElementsForGrow(T *NewElts) {
   // Move the elements over.
   this->uninitialized_move(this->begin(), this->end(), NewElts);
 
@@ -467,9 +544,10 @@ void SmallVectorTemplateBase<T, TriviallyCopyable>::moveElementsForGrow(
 }
 
 // Define this out-of-line to dissuade the C++ compiler from inlining it.
-template <typename T, bool TriviallyCopyable>
-void SmallVectorTemplateBase<T, TriviallyCopyable>::takeAllocationForGrow(
-    T *NewElts, size_t NewCapacity) {
+template <typename T, unsigned FlagBits, bool TriviallyCopyable>
+void SmallVectorTemplateBase<
+    T, FlagBits, TriviallyCopyable>::takeAllocationForGrow(T *NewElts,
+                                                           size_t NewCapacity) {
   // If this wasn't grown from the inline copy, deallocate the old space.
   if (!this->isSmall())
     free(this->begin());
@@ -481,9 +559,10 @@ void SmallVectorTemplateBase<T, TriviallyCopyable>::takeAllocationForGrow(
 /// method implementations that are designed to work with trivially copyable
 /// T's. This allows using memcpy in place of copy/move construction and
 /// skipping destruction.
-template <typename T>
-class SmallVectorTemplateBase<T, true> : public SmallVectorTemplateCommon<T> {
-  friend class SmallVectorTemplateCommon<T>;
+template <typename T, unsigned FlagBits>
+class SmallVectorTemplateBase<T, FlagBits, true>
+    : public SmallVectorTemplateCommon<T, FlagBits> {
+  friend class SmallVectorTemplateCommon<T, FlagBits>;
 
 protected:
   /// True if it's cheap enough to take parameters by value. Doing so avoids
@@ -495,7 +574,7 @@ protected:
   using ValueParamT = std::conditional_t<TakesParamByValue, T, const T &>;
 
   SmallVectorTemplateBase(size_t SizeArg)
-      : SmallVectorTemplateCommon<T>(SizeArg) {}
+      : SmallVectorTemplateCommon<T, FlagBits>(SizeArg) {}
 
   // No need to do a destroy loop for POD's.
   static void destroy_range(T *, T *) {}
@@ -586,11 +665,15 @@ public:
   void pop_back() { this->set_size(this->size() - 1); }
 };
 
+namespace detail {
+
 /// This class consists of common code factored out of the SmallVector class to
 /// reduce code duplication based on the SmallVector 'N' template parameter.
-template <typename T>
-class SmallVectorImpl : public SmallVectorTemplateBase<T> {
-  using SuperClass = SmallVectorTemplateBase<T>;
+/// Operations on this base affect only the elements, so the algorithms are
+/// shared by headers with and without flag bits.
+template <typename T, unsigned FlagBits = 0>
+class SmallVectorImplBase : public SmallVectorTemplateBase<T, FlagBits> {
+  using SuperClass = SmallVectorTemplateBase<T, FlagBits>;
 
 public:
   using iterator = typename SuperClass::iterator;
@@ -599,24 +682,22 @@ public:
   using size_type = typename SuperClass::size_type;
 
 protected:
-  using SmallVectorTemplateBase<T>::TakesParamByValue;
+  using SuperClass::TakesParamByValue;
   using ValueParamT = typename SuperClass::ValueParamT;
 
   // Default ctor - Initialize to empty.
-  explicit SmallVectorImpl(unsigned N)
-      : SmallVectorTemplateBase<T>(N) {}
+  explicit SmallVectorImplBase(unsigned N) : SuperClass(N) {}
 
-  void assignRemote(SmallVectorImpl &&RHS) {
+  void assignRemote(SmallVectorImplBase &&RHS) {
     this->destroy_range(this->begin(), this->end());
     if (!this->isSmall())
       free(this->begin());
-    this->BeginX = RHS.BeginX;
+    this->set_allocation_range(RHS.BeginX, RHS.capacity());
     this->Size = RHS.Size;
-    this->Capacity = RHS.Capacity;
     RHS.resetToSmall();
   }
 
-  void moveConstructFrom(SmallVectorImpl &&RHS) {
+  void moveConstructFrom(SmallVectorImplBase &&RHS) {
     assert(this->empty() && "move construction requires an empty vector");
     if (!RHS.isSmall()) {
       assignRemote(std::move(RHS));
@@ -632,7 +713,7 @@ protected:
     RHS.clear();
   }
 
-  ~SmallVectorImpl() {
+  ~SmallVectorImplBase() {
     // Subclass has already destructed this vector's elements.
     // If this wasn't grown from the inline copy, deallocate the old space.
     if (!this->isSmall())
@@ -640,7 +721,7 @@ protected:
   }
 
 public:
-  SmallVectorImpl(const SmallVectorImpl &) = delete;
+  SmallVectorImplBase(const SmallVectorImplBase &) = delete;
 
   void clear() {
     this->destroy_range(this->begin(), this->end());
@@ -711,7 +792,7 @@ public:
     return Result;
   }
 
-  void swap(SmallVectorImpl &RHS);
+  void swap(SmallVectorImplBase &RHS);
 
   /// Add the specified range to the end of the SmallVector.
   template <typename ItTy, typename = EnableIfConvertibleToInputIterator<ItTy>>
@@ -740,7 +821,9 @@ public:
     append(IL.begin(), IL.end());
   }
 
-  void append(const SmallVectorImpl &RHS) { append(RHS.begin(), RHS.end()); }
+  void append(const SmallVectorImplBase &RHS) {
+    append(RHS.begin(), RHS.end());
+  }
 
   void assign(size_type NumElts, ValueParamT Elt) {
     // Note that Elt could be an internal reference.
@@ -773,7 +856,9 @@ public:
     append(IL);
   }
 
-  void assign(const SmallVectorImpl &RHS) { assign(RHS.begin(), RHS.end()); }
+  void assign(const SmallVectorImplBase &RHS) {
+    assign(RHS.begin(), RHS.end());
+  }
 
   template <typename U,
             typename = std::enable_if_t<std::is_convertible_v<U, T>>>
@@ -999,36 +1084,43 @@ public:
     return this->back();
   }
 
-  SmallVectorImpl &operator=(const SmallVectorImpl &RHS);
+  SmallVectorImplBase &operator=(const SmallVectorImplBase &RHS);
 
-  SmallVectorImpl &operator=(SmallVectorImpl &&RHS);
+  SmallVectorImplBase &operator=(SmallVectorImplBase &&RHS);
 
-  bool operator==(const SmallVectorImpl &RHS) const {
+  bool operator==(const SmallVectorImplBase &RHS) const {
     if (this->size() != RHS.size()) return false;
     return std::equal(this->begin(), this->end(), RHS.begin());
   }
-  bool operator!=(const SmallVectorImpl &RHS) const {
+  bool operator!=(const SmallVectorImplBase &RHS) const {
     return !(*this == RHS);
   }
 
-  bool operator<(const SmallVectorImpl &RHS) const {
+  bool operator<(const SmallVectorImplBase &RHS) const {
     return std::lexicographical_compare(this->begin(), this->end(),
                                         RHS.begin(), RHS.end());
   }
-  bool operator>(const SmallVectorImpl &RHS) const { return RHS < *this; }
-  bool operator<=(const SmallVectorImpl &RHS) const { return !(*this > RHS); }
-  bool operator>=(const SmallVectorImpl &RHS) const { return !(*this < RHS); }
+  bool operator>(const SmallVectorImplBase &RHS) const { return RHS < *this; }
+  bool operator<=(const SmallVectorImplBase &RHS) const {
+    return !(*this > RHS);
+  }
+  bool operator>=(const SmallVectorImplBase &RHS) const {
+    return !(*this < RHS);
+  }
 };
 
-template <typename T>
-void SmallVectorImpl<T>::swap(SmallVectorImpl<T> &RHS) {
+template <typename T, unsigned FlagBits>
+void SmallVectorImplBase<T, FlagBits>::swap(
+    SmallVectorImplBase<T, FlagBits> &RHS) {
   if (this == &RHS) return;
 
   // We can only avoid copying elements if neither vector is small.
   if (!this->isSmall() && !RHS.isSmall()) {
-    std::swap(this->BeginX, RHS.BeginX);
+    void *Begin = this->BeginX;
+    size_t Capacity = this->capacity();
+    this->set_allocation_range(RHS.BeginX, RHS.capacity());
+    RHS.set_allocation_range(Begin, Capacity);
     std::swap(this->Size, RHS.Size);
-    std::swap(this->Capacity, RHS.Capacity);
     return;
   }
   this->reserve(RHS.size());
@@ -1056,9 +1148,9 @@ void SmallVectorImpl<T>::swap(SmallVectorImpl<T> &RHS) {
   }
 }
 
-template <typename T>
-SmallVectorImpl<T> &SmallVectorImpl<T>::
-  operator=(const SmallVectorImpl<T> &RHS) {
+template <typename T, unsigned FlagBits>
+SmallVectorImplBase<T, FlagBits> &SmallVectorImplBase<T, FlagBits>::operator=(
+    const SmallVectorImplBase<T, FlagBits> &RHS) {
   // Avoid self-assignment.
   if (this == &RHS) return *this;
 
@@ -1104,8 +1196,9 @@ SmallVectorImpl<T> &SmallVectorImpl<T>::
   return *this;
 }
 
-template <typename T>
-SmallVectorImpl<T> &SmallVectorImpl<T>::operator=(SmallVectorImpl<T> &&RHS) {
+template <typename T, unsigned FlagBits>
+SmallVectorImplBase<T, FlagBits> &SmallVectorImplBase<T, FlagBits>::operator=(
+    SmallVectorImplBase<T, FlagBits> &&RHS) {
   // Avoid self-assignment.
   if (this == &RHS) return *this;
 
@@ -1159,6 +1252,32 @@ SmallVectorImpl<T> &SmallVectorImpl<T>::operator=(SmallVectorImpl<T> &&RHS) {
   RHS.clear();
   return *this;
 }
+
+} // namespace detail
+
+/// This class consists of common code factored out of the SmallVector class to
+/// reduce code duplication based on the SmallVector 'N' template parameter.
+template <typename T>
+class SmallVectorImpl : public detail::SmallVectorImplBase<T> {
+  using Base = detail::SmallVectorImplBase<T>;
+
+protected:
+  explicit SmallVectorImpl(unsigned N) : Base(N) {}
+  ~SmallVectorImpl() = default;
+
+public:
+  SmallVectorImpl(const SmallVectorImpl &) = delete;
+
+  SmallVectorImpl &operator=(const SmallVectorImpl &RHS) {
+    Base::operator=(RHS);
+    return *this;
+  }
+
+  SmallVectorImpl &operator=(SmallVectorImpl &&RHS) {
+    Base::operator=(std::move(RHS));
+    return *this;
+  }
+};
 
 /// Storage for the SmallVector elements.  This is specialized for the N=0 case
 /// to avoid allocating unnecessary storage.

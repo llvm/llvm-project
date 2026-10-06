@@ -86,10 +86,8 @@ static void report_at_maximum_capacity(size_t MaxSize) {
 }
 
 // Note: Moving this function into the header may cause performance regression.
-template <class Size_T>
-static size_t getNewCapacity(size_t MinSize, size_t TSize, size_t OldCapacity) {
-  constexpr size_t MaxSize = std::numeric_limits<Size_T>::max();
-
+static size_t getNewCapacity(size_t MinSize, size_t TSize, size_t OldCapacity,
+                             size_t MaxSize) {
   // Ensure we can fit the new capacity.
   // This is only going to be applicable when the capacity is 32 bit.
   if (MinSize > MaxSize)
@@ -127,12 +125,12 @@ static void *replaceAllocation(void *NewElts, size_t TSize, size_t NewCapacity,
   return NewEltsReplace;
 }
 
-// Note: Moving this function into the header may cause performance regression.
-template <class Size_T>
-void *SmallVectorBase<Size_T>::mallocForGrow(void *FirstEl, size_t MinSize,
-                                             size_t TSize,
-                                             size_t &NewCapacity) {
-  NewCapacity = getNewCapacity<Size_T>(MinSize, TSize, this->capacity());
+// Shared bodies of the plain and masked member functions below. Always inlined
+// so that each entry point stays a single out-of-line call.
+static LLVM_ATTRIBUTE_ALWAYS_INLINE void *
+mallocForGrowImpl(void *FirstEl, size_t MinSize, size_t TSize, size_t Capacity,
+                  size_t MaxCapacity, size_t &NewCapacity) {
+  NewCapacity = getNewCapacity(MinSize, TSize, Capacity, MaxCapacity);
   // Even if capacity is not 0 now, if the vector was originally created with
   // capacity 0, it's possible for the malloc to return FirstEl.
   void *NewElts = llvm::safe_malloc(NewCapacity * TSize);
@@ -141,27 +139,63 @@ void *SmallVectorBase<Size_T>::mallocForGrow(void *FirstEl, size_t MinSize,
   return NewElts;
 }
 
-// Note: Moving this function into the header may cause performance regression.
-template <class Size_T>
-void SmallVectorBase<Size_T>::grow_pod(void *FirstEl, size_t MinSize,
-                                       size_t TSize) {
-  size_t NewCapacity = getNewCapacity<Size_T>(MinSize, TSize, this->capacity());
+static LLVM_ATTRIBUTE_ALWAYS_INLINE void *
+growPodImpl(void *Begin, void *FirstEl, size_t MinSize, size_t TSize,
+            size_t Size, size_t Capacity, size_t MaxCapacity,
+            size_t &NewCapacity) {
+  NewCapacity = getNewCapacity(MinSize, TSize, Capacity, MaxCapacity);
   void *NewElts;
-  if (BeginX == FirstEl) {
+  if (Begin == FirstEl) {
     NewElts = llvm::safe_malloc(NewCapacity * TSize);
     if (NewElts == FirstEl)
       NewElts = replaceAllocation(NewElts, TSize, NewCapacity);
 
-    // Copy the elements over.  No need to run dtors on PODs.
-    memcpy(NewElts, this->BeginX, size() * TSize);
+    // Copy the elements over. No need to run dtors on PODs.
+    memcpy(NewElts, Begin, Size * TSize);
   } else {
-    // If this wasn't grown from the inline copy, grow the allocated space.
-    NewElts = llvm::safe_realloc(this->BeginX, NewCapacity * TSize);
+    NewElts = llvm::safe_realloc(Begin, NewCapacity * TSize);
     if (NewElts == FirstEl)
-      NewElts = replaceAllocation(NewElts, TSize, NewCapacity, size());
+      NewElts = replaceAllocation(NewElts, TSize, NewCapacity, Size);
   }
+  return NewElts;
+}
 
-  this->set_allocation_range(NewElts, NewCapacity);
+// Note: Moving this function into the header may cause performance regression.
+template <class Size_T>
+void *SmallVectorBase<Size_T>::mallocForGrow(void *FirstEl, size_t MinSize,
+                                             size_t TSize,
+                                             size_t &NewCapacity) {
+  return mallocForGrowImpl(FirstEl, MinSize, TSize, Capacity,
+                           std::numeric_limits<Size_T>::max(), NewCapacity);
+}
+
+template <class Size_T>
+void *SmallVectorBase<Size_T>::mallocForGrowMasked(void *FirstEl,
+                                                   size_t MinSize, size_t TSize,
+                                                   Size_T CapacityMask,
+                                                   size_t &NewCapacity) {
+  return mallocForGrowImpl(FirstEl, MinSize, TSize, Capacity & CapacityMask,
+                           CapacityMask, NewCapacity);
+}
+
+// Note: Moving this function into the header may cause performance regression.
+template <class Size_T>
+void SmallVectorBase<Size_T>::grow_pod(void *FirstEl, size_t MinSize,
+                                       size_t TSize) {
+  size_t NewCapacity;
+  BeginX = growPodImpl(BeginX, FirstEl, MinSize, TSize, Size, Capacity,
+                       std::numeric_limits<Size_T>::max(), NewCapacity);
+  Capacity = static_cast<Size_T>(NewCapacity);
+}
+
+template <class Size_T>
+void SmallVectorBase<Size_T>::grow_pod_masked(void *FirstEl, size_t MinSize,
+                                              size_t TSize,
+                                              Size_T CapacityMask) {
+  size_t NewCapacity;
+  BeginX = growPodImpl(BeginX, FirstEl, MinSize, TSize, Size,
+                       Capacity & CapacityMask, CapacityMask, NewCapacity);
+  Capacity = (Capacity & ~CapacityMask) | static_cast<Size_T>(NewCapacity);
 }
 
 template class llvm::SmallVectorBase<uint32_t>;
