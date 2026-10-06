@@ -356,9 +356,50 @@ void GotSection::addEntry(Symbol *sym) {
   }
 }
 
+// Reports, with ld64's message, a rebase target the pointer format can't hold.
+static void reportUnencodableRebase(const uint8_t *buf, bool isAddress,
+                                    uint64_t value) {
+  uint64_t fileOff = buf - in.bufferStart;
+  std::string loc = "<unknown>";
+  for (const OutputSegment *seg : outputSegments)
+    if (fileOff >= seg->fileOff && fileOff - seg->fileOff < seg->fileSize)
+      loc = (seg->name + "+0x" + utohexstr(fileOff - seg->fileOff)).str();
+  error(Twine(isAddress ? "vmAddress" : "vmOffset") + " (0x" +
+        utohexstr(value) + ") cannot fit in fixup at " + loc);
+}
+
+static void writeArm64eChainedRebase(uint8_t *buf, uint64_t targetVA) {
+  uint64_t imageBase = in.header->addr;
+  // USERLAND24 rebases hold an offset from the image base, ARM64E rebases an
+  // address.
+  uint64_t targetValue =
+      config->chainedFixupsPointerFormat == DYLD_CHAINED_PTR_ARM64E_USERLAND24
+          ? targetVA - imageBase
+          : targetVA;
+  auto *rebase = reinterpret_cast<dyld_chained_ptr_arm64e_rebase *>(buf);
+  rebase->target = targetValue & 0x7ff'ffff'ffff;
+  rebase->high8 = targetValue >> 56;
+  rebase->next = 0;
+  rebase->bind = 0;
+  rebase->auth = 0;
+  // Reject targets that lose bits in the encoding and, like ld64, targets below
+  // the image base.
+  uint64_t encodedValue = rebase->target | (uint64_t(rebase->high8) << 56);
+  uint64_t untaggedTarget = targetVA & ((uint64_t(1) << 56) - 1);
+  if (encodedValue != targetValue || untaggedTarget < imageBase)
+    reportUnencodableRebase(buf,
+                            config->chainedFixupsPointerFormat !=
+                                DYLD_CHAINED_PTR_ARM64E_USERLAND24,
+                            targetValue);
+}
+
 void macho::writeChainedRebase(uint8_t *buf, uint64_t targetVA) {
   assert(config->emitChainedFixups);
   assert(target->wordSize == 8 && "Only 64-bit platforms are supported");
+  if (config->arch() == AK_arm64e) {
+    writeArm64eChainedRebase(buf, targetVA);
+    return;
+  }
   auto *rebase = reinterpret_cast<dyld_chained_ptr_64_rebase *>(buf);
   rebase->target = targetVA & 0xf'ffff'ffff;
   rebase->high8 = (targetVA >> 56);
@@ -374,9 +415,31 @@ void macho::writeChainedRebase(uint8_t *buf, uint64_t targetVA) {
           " does not fit into chained fixup. Re-link with -no_fixup_chains");
 }
 
+// Bind is dyld_chained_ptr_arm64e_bind or dyld_chained_ptr_arm64e_bind24.
+template <class Bind>
+static void writeArm64eChainedBind(uint8_t *buf, const Symbol *sym,
+                                   int64_t addend) {
+  auto *bind = reinterpret_cast<Bind *>(buf);
+  auto [ordinal, inlineAddend] = in.chainedFixups->getBinding(sym, addend);
+  bind->ordinal = ordinal;
+  bind->zero = 0;
+  bind->addend = inlineAddend;
+  bind->next = 0;
+  bind->bind = 1;
+  bind->auth = 0;
+}
+
 static void writeChainedBind(uint8_t *buf, const Symbol *sym, int64_t addend) {
   assert(config->emitChainedFixups);
   assert(target->wordSize == 8 && "Only 64-bit platforms are supported");
+  if (config->arch() == AK_arm64e) {
+    if (config->chainedFixupsPointerFormat ==
+        DYLD_CHAINED_PTR_ARM64E_USERLAND24)
+      writeArm64eChainedBind<dyld_chained_ptr_arm64e_bind24>(buf, sym, addend);
+    else
+      writeArm64eChainedBind<dyld_chained_ptr_arm64e_bind>(buf, sym, addend);
+    return;
+  }
   auto *bind = reinterpret_cast<dyld_chained_ptr_64_bind *>(buf);
   auto [ordinal, inlineAddend] = in.chainedFixups->getBinding(sym, addend);
   bind->ordinal = ordinal;
@@ -2443,7 +2506,7 @@ size_t ChainedFixupsSection::SegmentInfo::writeTo(uint8_t *buf) const {
   segInfo->size = getSize();
   segInfo->page_size = target->getPageSize();
   // FIXME: Use DYLD_CHAINED_PTR_64_OFFSET on newer OS versions.
-  segInfo->pointer_format = DYLD_CHAINED_PTR_64;
+  segInfo->pointer_format = config->chainedFixupsPointerFormat;
   segInfo->segment_offset = oseg->addr - in.header->addr;
   segInfo->max_valid_pointer = 0; // not used on 64-bit
   segInfo->page_count = pageStarts.back().first + 1;
@@ -2544,6 +2607,12 @@ void ChainedFixupsSection::finalizeContents() {
   if (!isUInt<32>(symtabSize))
     error("cannot encode chained fixups: imported symbols table size " +
           Twine(symtabSize) + " exceeds 4 GiB");
+
+  // DYLD_CHAINED_PTR_ARM64E binds have 16-bit import ordinals.
+  if (config->chainedFixupsPointerFormat == DYLD_CHAINED_PTR_ARM64E &&
+      bindings.size() > UINT16_MAX)
+    error("chained fixups, imports_count (" + Twine(bindings.size()) +
+          ") exceeds max of 65535");
 
   bool needsLargeOrdinal = any_of(bindings, [](const auto &p) {
     // 0xF1 - 0xFF are reserved for special ordinals in the 8-bit encoding.
