@@ -72,7 +72,7 @@ public:
   /// \throw sycl::exception with sycl::errc::runtime when the symbol lookup
   /// fails.
   /// \return the liboffload symbol handle of the kernel.
-  ol_symbol_handle_t getOrCreateKernel(std::string_view KernelName);
+  ol_symbol_handle_t getKernel(std::string_view KernelName);
 
 private:
   // Programs are owned by their context, so the context outlives them.

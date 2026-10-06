@@ -99,7 +99,7 @@ ContextImpl::getOrCreateKernel(const DeviceImageManager &DeviceImage,
     }
   }
 
-  return ProgramIt->second.getOrCreateKernel(KernelName);
+  return ProgramIt->second.getKernel(KernelName);
 }
 
 void ContextImpl::releaseProgramsForImage(
