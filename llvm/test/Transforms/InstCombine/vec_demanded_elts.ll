@@ -1345,3 +1345,106 @@ define <11 x i32> @wide_insert_chain_out_of_range(i32 %a0, i32 %bad, i32 %a1, i3
   %v10 = insertelement <11 x i32> %v9, i32 %a10, i64 10
   ret <11 x i32> %v10
 }
+
+; Tests for trivially vectorizable intrinsics
+
+; FIXME: the shuffle should be simplified since only lane 1 is demanded
+define float @fma_only_lane_1_demanded(
+; CHECK-LABEL: @fma_only_lane_1_demanded(
+; CHECK-NEXT:    [[SHUFFLE:%.*]] = shufflevector <2 x float> [[B:%.*]], <2 x float> [[A:%.*]], <2 x i32> <i32 0, i32 3>
+; CHECK-NEXT:    [[RESULT:%.*]] = call <2 x float> @llvm.fma.v2f32(<2 x float> [[SHUFFLE]], <2 x float> [[A]], <2 x float> [[C:%.*]])
+; CHECK-NEXT:    [[ELT:%.*]] = extractelement <2 x float> [[RESULT]], i64 1
+; CHECK-NEXT:    ret float [[ELT]]
+;
+  <2 x float> %a, <2 x float> %b, <2 x float> %c) {
+  %shuffle = shufflevector <2 x float> %a, <2 x float> %b,
+  <2 x i32> <i32 2, i32 1>
+
+  %result = call <2 x float> @llvm.fma.v2f32(
+  <2 x float> %shuffle, <2 x float> %a, <2 x float> %c)
+
+  %elt = extractelement <2 x float> %result, i64 1
+  ret float %elt
+}
+
+; FIXME: should simplify to a 'ret float poison'
+define float @sin_poison_in_demanded_lane(float %x) {
+; CHECK-LABEL: @sin_poison_in_demanded_lane(
+; CHECK-NEXT:    [[V:%.*]] = insertelement <2 x float> poison, float [[X:%.*]], i64 1
+; CHECK-NEXT:    [[R:%.*]] = call <2 x float> @llvm.sin.v2f32(<2 x float> [[V]])
+; CHECK-NEXT:    [[E:%.*]] = extractelement <2 x float> [[R]], i64 0
+; CHECK-NEXT:    ret float [[E]]
+;
+  %v = insertelement <2 x float> poison, float %x, i64 1
+  %r = call <2 x float> @llvm.sin.v2f32(<2 x float> %v)
+  %e = extractelement <2 x float> %r, i64 0
+  ret float %e
+}
+
+; FIXME: shuffle should be simplified since only some lanes are used
+define <2 x float> @sin_non_contiguous_demanded_lanes(
+; CHECK-LABEL: @sin_non_contiguous_demanded_lanes(
+; CHECK-NEXT:    [[SHUFFLE:%.*]] = shufflevector <4 x float> [[A:%.*]], <4 x float> [[B:%.*]], <4 x i32> <i32 0, i32 5, i32 2, i32 7>
+; CHECK-NEXT:    [[RESULT:%.*]] = call <4 x float> @llvm.sin.v4f32(<4 x float> [[SHUFFLE]])
+; CHECK-NEXT:    [[SELECTED:%.*]] = shufflevector <4 x float> [[RESULT]], <4 x float> poison, <2 x i32> <i32 0, i32 2>
+; CHECK-NEXT:    ret <2 x float> [[SELECTED]]
+;
+  <4 x float> %a, <4 x float> %b) {
+  %shuffle = shufflevector <4 x float> %a, <4 x float> %b,
+  <4 x i32> <i32 0, i32 5, i32 2, i32 7>
+
+  %result = call <4 x float> @llvm.sin.v4f32(<4 x float> %shuffle)
+
+  ; Keep only lanes 0 and 2.
+  %selected = shufflevector <4 x float> %result, <4 x float> poison,
+  <2 x i32> <i32 0, i32 2>
+
+  ret <2 x float> %selected
+}
+
+; FIXME: simplify the vector operand of powi when only 1 lane demanded
+define float @powi_only_lane_1_demanded(
+; CHECK-LABEL: @powi_only_lane_1_demanded(
+; CHECK-NEXT:    [[SHUFFLE:%.*]] = shufflevector <2 x float> [[B:%.*]], <2 x float> [[A:%.*]], <2 x i32> <i32 0, i32 3>
+; CHECK-NEXT:    [[RESULT:%.*]] = call <2 x float> @llvm.powi.v2f32.i32(<2 x float> [[SHUFFLE]], i32 [[POWER:%.*]])
+; CHECK-NEXT:    [[ELT:%.*]] = extractelement <2 x float> [[RESULT]], i64 1
+; CHECK-NEXT:    ret float [[ELT]]
+;
+  <2 x float> %a, <2 x float> %b, i32 %power) {
+
+  %shuffle = shufflevector <2 x float> %a, <2 x float> %b,
+  <2 x i32> <i32 2, i32 1>
+
+  %result = call <2 x float> @llvm.powi.v2f32.i32(
+  <2 x float> %shuffle, i32 %power)
+
+  %elt = extractelement <2 x float> %result, i64 1
+  ret float %elt
+}
+
+; FIXME: simplify all 3 operands of fma when only lane 1 of result is demanded
+define float @fma_all_args_only_lane_1_demanded(
+; CHECK-LABEL: @fma_all_args_only_lane_1_demanded(
+; CHECK-NEXT:    [[SA:%.*]] = shufflevector <2 x float> [[B:%.*]], <2 x float> [[A:%.*]], <2 x i32> <i32 0, i32 3>
+; CHECK-NEXT:    [[SB:%.*]] = shufflevector <2 x float> [[C:%.*]], <2 x float> [[B]], <2 x i32> <i32 0, i32 3>
+; CHECK-NEXT:    [[SC:%.*]] = shufflevector <2 x float> [[A]], <2 x float> [[C]], <2 x i32> <i32 0, i32 3>
+; CHECK-NEXT:    [[RESULT:%.*]] = call <2 x float> @llvm.fma.v2f32(<2 x float> [[SA]], <2 x float> [[SB]], <2 x float> [[SC]])
+; CHECK-NEXT:    [[ELT:%.*]] = extractelement <2 x float> [[RESULT]], i64 1
+; CHECK-NEXT:    ret float [[ELT]]
+;
+  <2 x float> %a, <2 x float> %b, <2 x float> %c) {
+  %sa = shufflevector <2 x float> %a, <2 x float> %b,
+  <2 x i32> <i32 2, i32 1>
+
+  %sb = shufflevector <2 x float> %b, <2 x float> %c,
+  <2 x i32> <i32 2, i32 1>
+
+  %sc = shufflevector <2 x float> %c, <2 x float> %a,
+  <2 x i32> <i32 2, i32 1>
+
+  %result = call <2 x float> @llvm.fma.v2f32(
+  <2 x float> %sa, <2 x float> %sb, <2 x float> %sc)
+
+  %elt = extractelement <2 x float> %result, i64 1
+  ret float %elt
+}
