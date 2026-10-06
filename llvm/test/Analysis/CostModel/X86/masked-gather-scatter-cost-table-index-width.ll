@@ -12,13 +12,13 @@
 ; Enabling the feature therefore moves the part count here, and with it the cost
 ; kinds derived from that count. The FEATURE numbers are the ones that agree
 ; with the single instruction llc emits; the difference is deliberate rather
-; than the feature leaking, and this test pins it so that it cannot change
+; than the feature leaking, and this test holds it so that it cannot change
 ; silently.
 
-; A calibrated row is keyed on data shape alone, and was calibrated against the
+; A calibrated row covers one data shape, and was calibrated against the
 ; dword-indexed form, which is the form the premium is recovered from. Where the
 ; qword-indexed body is the larger of the two, the same premium prices the shape
-; above its row. The v8i64 scatter pair at the end pins that gap -- 35 against
+; above its row. The v8i64 scatter pair at the end records that gap -- 35 against
 ; 32, the difference the schedule model carries between VPSCATTERQQZ and
 ; VPSCATTERDQZ.
 

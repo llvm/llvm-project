@@ -10,7 +10,7 @@
 ; (TuningPreferGSCostTable = schedule-model body + break-even overhead) at 11,
 ; against 6 from the generic flat overhead on skx.
 ;
-; The first two runs pin that the difference changes the decision and not just
+; The first two runs show that the difference changes the decision and not just
 ; the number: at the same threshold skx forms the gather, while znver4 leaves
 ; the loads scalar and vectorizes only the stores. The third run gives znver4
 ; the budget to afford the gather, so the ZNVER4 checks are a costing decision

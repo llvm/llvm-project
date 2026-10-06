@@ -1,7 +1,7 @@
 ; End-to-end loop-vectorize decisions driven by the per-shape gather/scatter
 ; cost tables (TuningPreferGSCostTable, set on znver4+). The companion
-; cost-model test masked-gather-scatter-cost-table.ll pins the individual cost
-; numbers; this test pins the resulting vectorizer decisions so cost-model
+; cost-model test masked-gather-scatter-cost-table.ll checks the individual cost
+; numbers; this test checks the resulting vectorizer decisions so cost-model
 ; refactors that re-enable harmful gathers (or suppress profitable ones) are
 ; caught here.
 ;
@@ -60,7 +60,7 @@ exit:
 ; The positive CHECK on vector.body distinguishes "vectorized without a
 ; gather" from "did not vectorize at all" -- without it, a future regression
 ; that fails to vectorize the loop entirely would pass CHECK-NOT vacuously.
-; SKX takes the gather here, so the two runs pin the cost difference itself.
+; SKX takes the gather here, so the two runs isolate the cost difference itself.
 ; CHECK-LABEL: define i64 @i64_indirect_gather_avoided
 ; CHECK:       vector.body
 ; ZNVER5-NOT:  call <{{[0-9]+}} x i64> @llvm.masked.gather.v{{[0-9]+}}i64
@@ -140,7 +140,7 @@ exit:
 
 ; --- Case 5: i64 indirect-store scatter is NOT chosen on znver5 ----------
 ; Same vector.body anchor as Case 2, and the same SKX contrast: SKX scatters
-; here, so the znver5 CHECK-NOT is pinning a cost decision rather than an
+; here, so the znver5 CHECK-NOT records a cost decision rather than an
 ; unconditional refusal to scatter.
 ; CHECK-LABEL: define void @i64_indirect_scatter_avoided
 ; CHECK:       vector.body

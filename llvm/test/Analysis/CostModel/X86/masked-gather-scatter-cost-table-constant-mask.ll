@@ -10,13 +10,12 @@
 ; The premium follows the live lanes for the same reason -- a lane that is
 ; masked off has no scalar load to be measured against -- so a gather whose
 ; live lanes fill one eight-lane part costs what the v8i32 gather it compiles
-; to costs. The reference functions below pin that equality.
+; to costs. The reference functions below check that equality.
 ;
-; The scatter reaches it too, and its reference pins the same equality. A
-; scatter's margins grow with the row -- v4i32 clears its body by 11, v8i32 by
-; 13 and v16i32 by 21 -- so the narrowest row that holds the live lanes is also
-; the cheapest one that could describe them, and a partly masked scatter is
-; charged what the scatter it compiles to is charged, not more.
+; The scatter reaches it too, and its reference checks the same equality. A
+; scatter's margins grow with the row, so the narrowest row that holds the live
+; lanes is also the cheapest one that could describe them, and a partly masked
+; scatter is charged what the scatter it compiles to is charged, not more.
 
 ; RUN: opt < %s -S -mtriple=x86_64-unknown-linux-gnu -passes="print<cost-model>" 2>&1 -disable-output -cost-kind=throughput -mcpu=znver4 | FileCheck %s --check-prefix=RTHRU
 ; RUN: opt < %s -S -mtriple=x86_64-unknown-linux-gnu -passes="print<cost-model>" 2>&1 -disable-output -cost-kind=code-size -mcpu=znver4 | FileCheck %s --check-prefix=CODESIZE

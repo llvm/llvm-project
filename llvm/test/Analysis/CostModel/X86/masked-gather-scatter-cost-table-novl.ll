@@ -9,8 +9,8 @@
 ; form it cannot use.
 ;
 ; Widening is not the only outcome: the v4i64 qword-indexed gather below is
-; scalarised instead, and its cost has to follow that. The NOVL-ASM run pins
-; each lowering a cost here depends on.
+; scalarised instead, and its cost has to follow that. The NOVL-ASM run reads
+; back the lowering of the three shapes it checks.
 ;
 ; Shapes that already need a 512-bit operand -- a v8i32 gather with 64-bit
 ; indices uses a full zmm of indices -- do not require AVX512VL and must be
@@ -58,8 +58,8 @@ define void @scatter_v8i32_dword_index(<8 x i32> %val, ptr %base, <8 x i32> %idx
 ; Data 256-bit, index 256-bit: scalarised rather than widened. Without AVX512VL
 ; there is no narrow form to use and no wide one CodeGen prefers either, so it
 ; breaks the operation into scalar loads. The cost has to price that sequence
-; rather than fall back to a flat number. The lowering itself is pinned in
-; CodeGen/X86/masked_gather_scatter_irregular.ll.
+; rather than fall back to a flat number; the NOVL-ASM check below reads back
+; that no gather is emitted.
 define <4 x i64> @gather_v4i64_qword_index(<4 x ptr> %ptrs, <4 x i1> %mask) {
 ; VL-LABEL: 'gather_v4i64_qword_index'
 ; VL-NEXT:  Cost Model: Found an estimated cost of 15 for instruction: %v = call <4 x i64> @llvm.masked.gather.v4i64.v4p0(<4 x ptr> align 8 %ptrs, <4 x i1> %mask, <4 x i64> poison)

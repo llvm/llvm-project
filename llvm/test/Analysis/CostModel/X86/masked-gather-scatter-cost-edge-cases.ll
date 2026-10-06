@@ -242,9 +242,9 @@ define void @scatter_v8i64_i64_index(<8 x i64> %src, ptr %base, <8 x i64> %index
 ; The two functions below carry the attribute pair Clang emits for
 ; -mprefer-vector-width=256: prefer-vector-width=256 together with
 ; min-legal-vector-width=0. That combination stops CodeGen using zmm at all, so
-; each gather is emitted as two ymm gathers instead of one zmm gather. Doing
-; half the work twice leaves reciprocal throughput unchanged, which is why only
-; the instruction count separates them from the attribute-free control.
+; the operation becomes several ymm gathers instead of one zmm gather: two for
+; the dword index and four for the qword one. The control above costs 35 for
+; its single gather; these cost 50 and 52.
 
 define <16 x i32> @gather_v16i32_i32_index(ptr %base, <16 x i32> %index, <16 x i1> %mask) {
 ; THROUGHPUT-LABEL: 'gather_v16i32_i32_index'

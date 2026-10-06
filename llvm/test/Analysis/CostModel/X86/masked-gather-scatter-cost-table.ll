@@ -3,11 +3,11 @@
 ;
 ; ZNVER4 / ZNVER5 carry TuningPreferGSCostTable and have AVX-512, so
 ; getGSVectorCost reads the measured hardware cost from the schedule model
-; (which stays honest for llvm-mca) and adds the per-shape break-even overhead
+; (the same figure llvm-mca reports) and adds the per-shape break-even overhead
 ; from the TTI tables on top.
 ; ZNVER3 lacks AVX-512, so masked gather is scalarised; its numbers are the
 ; unchanged scalar fallback, kept only to show no regression on pre-AVX-512 Zen.
-; SKX is a non-Zen AVX-512 baseline: not gated into the schedule-model path, so
+; SKX is a non-Zen AVX-512 baseline: it does not take the schedule-model path, so
 ; it keeps the generic flat overhead and its numbers are unchanged.
 ;
 ; RUN: opt < %s -S -mtriple=x86_64-unknown-linux-gnu -passes="print<cost-model>" 2>&1 -disable-output -cost-kind=throughput -mcpu=znver4 | FileCheck %s --check-prefix=ZNVER4
@@ -749,7 +749,7 @@ define void @scatter_v8f64(<8 x double> %src, <8 x ptr> %ptrs, <8 x i1> %mask) {
 ; Pointer element type.
 ;
 ; A gather of pointers is the same VPGATHERQQ as a gather of i64, so it must be
-; priced from the i64 rows. The table is keyed on the legalized type, not the IR
+; priced from the i64 rows. The table is looked up on the legalized type, not the IR
 ; one, which matters here because a pointer reports a primitive size of 0.
 ; SLPVectorizer's ScatterVectorize reaches getGSVectorCost with these shapes.
 ;------------------------------------------------------------------------------
@@ -1205,7 +1205,7 @@ define <32 x i64> @gather_v32i64(<32 x ptr> %ptrs, <32 x i1> %mask) {
 ;------------------------------------------------------------------------------
 ; Irregular (non-power-of-2) vector lengths
 ;
-; Every shape above is a power of two, so nothing pinned what happens to a VF
+; Every shape above is a power of two, so nothing covered what happens to a VF
 ; the tables have no row for. A VF3 operation should be priced as the next
 ; legal shape, VF4 -- not scalarised and not tiled into VF2 + VF1, either of
 ; which would show up here as a larger number than the matching *_v4* case.

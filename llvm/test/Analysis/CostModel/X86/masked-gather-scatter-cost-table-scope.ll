@@ -10,7 +10,7 @@
 ; not open to question. Where the index comes from a GEP the feature does move
 ; the part count, and with it the cost kinds derived from that count, because it
 ; takes the real index width at every VF instead of only at VF 16 and above.
-; That difference is deliberate; its magnitudes are pinned in
+; That difference is deliberate; its magnitudes are checked in
 ; masked-gather-scatter-cost-table-index-width.ll.
 ;
 ; The last shape is GEP-indexed, and is here rather than there because the two

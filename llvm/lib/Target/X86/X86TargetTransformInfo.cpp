@@ -7339,9 +7339,10 @@ X86TTIImpl::getModeledGSInstrCost(bool IsLoad, Type *SrcVTy, unsigned IndexSize,
 // so X86ScheduleZnver4.td stays the only source for the hardware half and a
 // retune needs no edit here.
 //
-// A row is keyed on the data shape while the body varies with the index
+// A row covers one data shape while the body varies with the index
 // width, so a total is exact only for the dword form it was calibrated
-// against. Keyed by native shape: VF <= 16 for 32-bit, <= 8 for 64-bit.
+// against. Rows exist for the native shapes: VF <= 16 for 32-bit, <= 8
+// for 64-bit.
 std::optional<unsigned>
 X86TTIImpl::getZenGSCalibratedTotal(bool IsLoad, Type *SrcVTy) const {
   if (!ST->hasPreferGSCostTable() || !ST->hasAVX512() || !SrcVTy)
@@ -7682,9 +7683,10 @@ InstructionCost X86TTIImpl::getZenGSVectorCost(
       ActiveLanes = *Live;
 
     // Price a given number of live lanes spread over a given number of emitted
-    // instructions. Both counts are magnitudes: where in the vector the mask
-    // happens to place its live lanes changes neither the row this is measured
-    // against nor the instructions CodeGen emits.
+    // instructions. Where the mask places its live lanes decides the second --
+    // eight contiguous lanes occupy one part where eight dispersed lanes occupy
+    // three -- and the caller has counted them already. It does not decide the
+    // row, which follows from how many lanes are live and not from where.
     auto priceLanes = [&](unsigned Lanes, InstructionCost::CostType Parts)
         -> std::optional<InstructionCost::CostType> {
       // The rows run from the narrowest that holds the live lanes to the one
@@ -7704,12 +7706,16 @@ InstructionCost X86TTIImpl::getZenGSVectorCost(
         std::optional<unsigned> Total =
             getZenGSCalibratedTotal(IsLoad, NativeVTy);
 
-        // The row pins the total for the dword-indexed form it was calibrated
+        // The row holds the total for the dword-indexed form it was calibrated
         // against, so the premium is recovered from that same form: a retune
-        // moves the body, the premium absorbs it, and the total holds. A
-        // qword-indexed shape keeps that premium over a larger body and prices
-        // above its row -- v8i64 scatter at 35 against 32, the gap between
-        // VPSCATTERQQZ and VPSCATTERDQZ.
+        // moves the body, the premium absorbs it, and the total holds.
+        //
+        // A qword-indexed shape carries that premium over a different body. It
+        // prices above its row where the wider index only grows the body --
+        // v8i64 scatter at 35 against 32, the gap between VPSCATTERQQZ and
+        // VPSCATTERDQZ -- and below it where the wider index also splits the
+        // shape across narrower rows, as the v16i32 scatter does at 45
+        // against 47.
         std::optional<unsigned> NativeBody =
             getModeledGSInstrCost(IsLoad, NativeVTy, /*IndexSize=*/32, CostKind,
                                   /*WidenWithoutVLX=*/false);
@@ -7730,9 +7736,10 @@ InstructionCost X86TTIImpl::getZenGSVectorCost(
         // them: per occupied register would price four isolated lanes above
         // the sixteen that compile to one instruction.
         //
-        // The narrowest row holding the live lanes is also the cheapest, so
-        // the first match wins: premiums grow with the row, 11 at v4i32, 13 at
-        // v8i32 and 21 at v16i32.
+        // The narrowest row holding the live lanes is the cheapest, so the
+        // first match wins. That rests on premiums growing with the row, which
+        // the assert above does not cover: a retune that inverted two rows
+        // would price a partly masked operation above the full one.
         Margin = divideCeil(Lanes, NativeVF) * Premium;
         break;
       }
@@ -7754,7 +7761,7 @@ InstructionCost X86TTIImpl::getZenGSVectorCost(
 
   // A shape with no row -- a sub-dword element, or a cost kind the rows do not
   // supply -- falls back to the flat break-even overhead plus body, charged
-  // once per emitted part.
+  // once per legalized part. A mask known at compile time does not reduce it.
   const int GSOverhead = IsLoad ? getGatherOverhead() : getScatterOverhead();
   return SplitFactor * GSOverhead +
          VF * getMemoryOpCost(Opcode, SrcVTy->getScalarType(), Alignment,
