@@ -435,7 +435,7 @@ define i32 @extract_last_active_v8i32(<8 x i32> %a, <8 x i1> %c) nounwind {
 ; AVX2-NEXT:    pushq %rbp
 ; AVX2-NEXT:    movq %rsp, %rbp
 ; AVX2-NEXT:    andq $-32, %rsp
-; AVX2-NEXT:    subq $64, %rsp
+; AVX2-NEXT:    subq $32, %rsp
 ; AVX2-NEXT:    vmovaps %ymm0, (%rsp)
 ; AVX2-NEXT:    vpsllw $15, %xmm1, %xmm0
 ; AVX2-NEXT:    vpacksswb %xmm0, %xmm0, %xmm1
@@ -462,7 +462,7 @@ define i32 @extract_last_active_v8i32(<8 x i32> %a, <8 x i1> %c) nounwind {
 ; AVX512-NEXT:    pushq %rbp
 ; AVX512-NEXT:    movq %rsp, %rbp
 ; AVX512-NEXT:    andq $-32, %rsp
-; AVX512-NEXT:    subq $64, %rsp
+; AVX512-NEXT:    subq $32, %rsp
 ; AVX512-NEXT:    vpsllw $15, %xmm1, %xmm1
 ; AVX512-NEXT:    vpmovw2m %xmm1, %k1
 ; AVX512-NEXT:    vmovdqa %ymm0, (%rsp)
@@ -552,7 +552,7 @@ define i32 @extract_last_active_v16i32(<16 x i32> %a, <16 x i1> %c) nounwind {
 ; AVX2-NEXT:    pushq %rbp
 ; AVX2-NEXT:    movq %rsp, %rbp
 ; AVX2-NEXT:    andq $-32, %rsp
-; AVX2-NEXT:    subq $96, %rsp
+; AVX2-NEXT:    subq $64, %rsp
 ; AVX2-NEXT:    vpxor %xmm3, %xmm3, %xmm3
 ; AVX2-NEXT:    vpsllw $7, %xmm2, %xmm2
 ; AVX2-NEXT:    vpcmpgtb %xmm2, %xmm3, %xmm3
@@ -583,7 +583,7 @@ define i32 @extract_last_active_v16i32(<16 x i32> %a, <16 x i1> %c) nounwind {
 ; AVX512-NEXT:    pushq %rbp
 ; AVX512-NEXT:    movq %rsp, %rbp
 ; AVX512-NEXT:    andq $-64, %rsp
-; AVX512-NEXT:    addq $-128, %rsp
+; AVX512-NEXT:    subq $64, %rsp
 ; AVX512-NEXT:    vpsllw $7, %xmm1, %xmm1
 ; AVX512-NEXT:    vpmovb2m %xmm1, %k1
 ; AVX512-NEXT:    vmovdqa64 %zmm0, (%rsp)
@@ -723,7 +723,7 @@ define i8 @extract_last_active_split(<32 x i8> %data, <32 x i8> %mask, i8 %passt
 ; AVX2-NEXT:    pushq %rbp
 ; AVX2-NEXT:    movq %rsp, %rbp
 ; AVX2-NEXT:    andq $-32, %rsp
-; AVX2-NEXT:    subq $64, %rsp
+; AVX2-NEXT:    subq $32, %rsp
 ; AVX2-NEXT:    vpxor %xmm2, %xmm2, %xmm2
 ; AVX2-NEXT:    vpcmpeqb %ymm2, %ymm1, %ymm2
 ; AVX2-NEXT:    vmovaps %ymm0, (%rsp)
@@ -753,7 +753,7 @@ define i8 @extract_last_active_split(<32 x i8> %data, <32 x i8> %mask, i8 %passt
 ; AVX512-NEXT:    pushq %rbp
 ; AVX512-NEXT:    movq %rsp, %rbp
 ; AVX512-NEXT:    andq $-32, %rsp
-; AVX512-NEXT:    subq $64, %rsp
+; AVX512-NEXT:    subq $32, %rsp
 ; AVX512-NEXT:    vptestmb %ymm1, %ymm1, %k1
 ; AVX512-NEXT:    vmovaps %ymm0, (%rsp)
 ; AVX512-NEXT:    vmovdqu8 {{.*#+}} ymm0 {%k1} {z} = [0,1,2,3,4,5,6,7,8,9,10,11,12,13,14,15,16,17,18,19,20,21,22,23,24,25,26,27,28,29,30,31]

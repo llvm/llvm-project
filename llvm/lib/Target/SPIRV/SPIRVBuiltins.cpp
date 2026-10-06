@@ -2973,6 +2973,58 @@ static bool buildNDRange(const SPIRV::IncomingCall *Call,
       .addUse(TmpReg);
 }
 
+static void buildKernelInvokeOperands(
+    const SPIRV::IncomingCall *Call, unsigned InvokeIdx, unsigned ParamIdx,
+    MachineIRBuilder &MIRBuilder, SPIRVGlobalRegistry *GR, Register &InvokeReg,
+    Register &ParamReg, Register &ParamSizeReg, Register &ParamAlignReg) {
+  MachineRegisterInfo *MRI = MIRBuilder.getMRI();
+  const DataLayout &DL = MIRBuilder.getDataLayout();
+
+  // Bypass the addrspacecast so Invoke references the function's <id>.
+  MachineInstr *InvokeGlobalMI =
+      getBlockStructInstr(Call->Arguments[InvokeIdx], MRI);
+  assert(InvokeGlobalMI->getOpcode() == TargetOpcode::G_GLOBAL_VALUE);
+  InvokeReg = InvokeGlobalMI->getOperand(0).getReg();
+  MRI->setRegClass(InvokeReg, &SPIRV::pIDRegClass);
+
+  Register BlockLiteralReg = Call->Arguments[ParamIdx];
+  const SPIRVTypeInst Int8Ty = GR->getOrCreateSPIRVIntegerType(8, MIRBuilder);
+  const SPIRVTypeInst Int8PtrGen = GR->getOrCreateSPIRVPointerType(
+      Int8Ty, MIRBuilder, SPIRV::StorageClass::Generic);
+  Type *PType = const_cast<Type *>(getBlockStructType(BlockLiteralReg, MRI));
+
+  ParamReg = createVirtualRegister(Int8PtrGen, GR, MIRBuilder);
+  MIRBuilder.buildInstr(SPIRV::OpBitcast)
+      .addDef(ParamReg)
+      .addUse(GR->getSPIRVTypeID(Int8PtrGen))
+      .addUse(BlockLiteralReg);
+  // TODO: these numbers should be obtained from block literal structure.
+  ParamSizeReg =
+      buildConstantIntReg32(DL.getTypeStoreSize(PType), MIRBuilder, GR);
+  ParamAlignReg =
+      buildConstantIntReg32(DL.getPrefTypeAlign(PType).value(), MIRBuilder, GR);
+}
+
+static bool buildKernelQuery(const SPIRV::IncomingCall *Call, unsigned Opcode,
+                             MachineIRBuilder &MIRBuilder,
+                             SPIRVGlobalRegistry *GR) {
+  bool HasNDRange = Call->Builtin->name().contains("_ndrange_impl");
+  unsigned InvokeIdx = HasNDRange ? 1 : 0;
+  Register InvokeReg, ParamReg, ParamSizeReg, ParamAlignReg;
+  buildKernelInvokeOperands(Call, InvokeIdx, InvokeIdx + 1, MIRBuilder, GR,
+                            InvokeReg, ParamReg, ParamSizeReg, ParamAlignReg);
+  auto MIB = MIRBuilder.buildInstr(Opcode)
+                 .addDef(Call->ReturnRegister)
+                 .addUse(GR->getSPIRVTypeID(Call->ReturnType));
+  if (HasNDRange)
+    MIB.addUse(Call->Arguments[0]);
+  MIB.addUse(InvokeReg)
+      .addUse(ParamReg)
+      .addUse(ParamSizeReg)
+      .addUse(ParamAlignReg);
+  return true;
+}
+
 static bool buildEnqueueKernel(const SPIRV::IncomingCall *Call,
                                MachineIRBuilder &MIRBuilder,
                                SPIRVGlobalRegistry *GR) {
@@ -2982,7 +3034,6 @@ static bool buildEnqueueKernel(const SPIRV::IncomingCall *Call,
   //   3. create a SPIRV operator with arguments.
 
   MachineRegisterInfo *MRI = MIRBuilder.getMRI();
-  const DataLayout &DL = MIRBuilder.getDataLayout();
   const SPIRVTypeInst Int32Ty = GR->getOrCreateSPIRVIntegerType(32, MIRBuilder);
 
   // 1. prepare call indexes in order we expect them.
@@ -3060,39 +3111,11 @@ static bool buildEnqueueKernel(const SPIRV::IncomingCall *Call,
     RetEventReg = NullPtr;
   }
 
-  // 2.2 Invoke (Kernel)
-  // The Invoke operand of OpEnqueueKernel must be the function's <id>
-  // (per SPIR-V spec). The frontend hands us the result of an
-  // addrspacecast of @block_invoke_kernel; bypass that cast so the
-  // operand references the underlying G_GLOBAL_VALUE register, which
-  // selectGlobalValue lowers to a placeholder later rewritten by
-  // SPIRVModuleAnalysis to the OpFunction <id>.
-  MachineInstr *InvokeGlobalMI =
-      getBlockStructInstr(Call->Arguments[InvokeIdx], MRI);
-  assert(InvokeGlobalMI->getOpcode() == TargetOpcode::G_GLOBAL_VALUE);
-  Register InvokeReg = InvokeGlobalMI->getOperand(0).getReg();
-  // OpEnqueueKernel's Invoke operand uses the pID register class.
-  MRI->setRegClass(InvokeReg, &SPIRV::pIDRegClass);
+  Register InvokeReg, ParamReg, ParamSizeReg, ParamAlignReg;
+  buildKernelInvokeOperands(Call, InvokeIdx, ParamIdx, MIRBuilder, GR,
+                            InvokeReg, ParamReg, ParamSizeReg, ParamAlignReg);
 
-  // 2.3 Param, Param Size, Param Align
-  Register BlockLiteralReg = Call->Arguments[ParamIdx];
-  const SPIRVTypeInst Int8Ty = GR->getOrCreateSPIRVIntegerType(8, MIRBuilder);
-  const SPIRVTypeInst Int8PtrGen = GR->getOrCreateSPIRVPointerType(
-      Int8Ty, MIRBuilder, SPIRV::StorageClass::Generic);
-  Type *PType = const_cast<Type *>(getBlockStructType(BlockLiteralReg, MRI));
-
-  Register ParamReg = createVirtualRegister(Int8PtrGen, GR, MIRBuilder);
-  MIRBuilder.buildInstr(SPIRV::OpBitcast)
-      .addDef(ParamReg)
-      .addUse(GR->getSPIRVTypeID(Int8PtrGen))
-      .addUse(BlockLiteralReg);
-  // TODO: these numbers should be obtained from block literal structure.
-  Register ParamSizeReg =
-      buildConstantIntReg32(DL.getTypeStoreSize(PType), MIRBuilder, GR);
-  Register ParamAlignReg =
-      buildConstantIntReg32(DL.getPrefTypeAlign(PType).value(), MIRBuilder, GR);
-
-  // 2.4 Local Size Array
+  // 2.3 Local Size Array
   SmallVector<Register, 16> LocalSizes;
   if (HasVarArgs) {
     Register LocalSizeNumElem = Call->Arguments[LocalSizeNumElemIdx];
@@ -3172,6 +3195,11 @@ static bool generateEnqueueInst(const SPIRV::IncomingCall *Call,
     return buildNDRange(Call, MIRBuilder, GR, CB);
   case SPIRV::OpEnqueueKernel:
     return buildEnqueueKernel(Call, MIRBuilder, GR);
+  case SPIRV::OpGetKernelNDrangeSubGroupCount:
+  case SPIRV::OpGetKernelNDrangeMaxSubGroupSize:
+  case SPIRV::OpGetKernelWorkGroupSize:
+  case SPIRV::OpGetKernelPreferredWorkGroupSizeMultiple:
+    return buildKernelQuery(Call, Opcode, MIRBuilder, GR);
   default:
     return false;
   }
