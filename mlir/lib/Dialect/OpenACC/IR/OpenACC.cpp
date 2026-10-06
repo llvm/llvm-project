@@ -387,6 +387,15 @@ struct MemrefAddressOfGlobalModel
   }
 };
 
+struct LLVMAddressOfGlobalModel
+    : public AddressOfGlobalOpInterface::ExternalModel<LLVMAddressOfGlobalModel,
+                                                       LLVM::AddressOfOp> {
+  SymbolRefAttr getSymbol(Operation *op) const {
+    auto addressOfOp = cast<LLVM::AddressOfOp>(op);
+    return addressOfOp.getGlobalNameAttr();
+  }
+};
+
 struct MemrefGlobalVariableModel
     : public GlobalVariableOpInterface::ExternalModel<MemrefGlobalVariableModel,
                                                       memref::GlobalOp> {
@@ -525,6 +534,7 @@ void OpenACCDialect::initialize() {
   // Attach operation interfaces
   memref::GetGlobalOp::attachInterface<MemrefAddressOfGlobalModel>(
       *getContext());
+  LLVM::AddressOfOp::attachInterface<LLVMAddressOfGlobalModel>(*getContext());
   memref::GlobalOp::attachInterface<MemrefGlobalVariableModel>(*getContext());
   gpu::LaunchOp::attachInterface<GPULaunchOffloadRegionModel>(*getContext());
 }
@@ -3423,7 +3433,7 @@ LogicalResult acc::HostDataOp::verify() {
   llvm::SmallPtrSet<mlir::Value, 4> seenVars;
   for (mlir::Value operand : getDataClauseOperands()) {
     auto useDeviceOp =
-        mlir::dyn_cast<acc::UseDeviceOp>(operand.getDefiningOp());
+        mlir::dyn_cast_if_present<acc::UseDeviceOp>(operand.getDefiningOp());
     if (!useDeviceOp)
       return emitError("expect data entry operation as defining op");
 
@@ -4464,20 +4474,29 @@ void ExitDataOp::addAsyncOperand(
 void ExitDataOp::addWaitOnly(MLIRContext *context,
                              llvm::ArrayRef<DeviceType> effectiveDeviceTypes) {
   assert(effectiveDeviceTypes.empty());
-  assert(!getWaitAttr());
-  assert(getWaitOperands().empty());
-  assert(!getWaitDevnum());
+
+  if (getWaitAttr())
+    return;
 
   setWaitAttr(mlir::UnitAttr::get(context));
+
+  getWaitDevnumMutable().clear();
+  getWaitOperandsMutable().clear();
 }
 
 void ExitDataOp::addWaitOperands(
     MLIRContext *context, bool hasDevnum, mlir::ValueRange newValues,
     llvm::ArrayRef<DeviceType> effectiveDeviceTypes) {
   assert(effectiveDeviceTypes.empty());
-  assert(!getWaitAttr());
-  assert(getWaitOperands().empty());
-  assert(!getWaitDevnum());
+
+  if (getWaitAttr())
+    return;
+
+  // FIXME: At one point we need to figure out how to support multiple devnums
+  // here.  For now, assert.  Eventually we probably want to make dev-num and
+  // operands work in 'lock-step', so that getWaitDevnum().size() ==
+  // getWaitOperandsMutable().size().
+  assert(!getWaitDevnum() && "Merging devnum not yet implemented");
 
   // if hasDevnum, the first value is the devnum. The 'rest' go into the
   // operands list.
@@ -4560,20 +4579,29 @@ void EnterDataOp::addAsyncOperand(
 void EnterDataOp::addWaitOnly(MLIRContext *context,
                               llvm::ArrayRef<DeviceType> effectiveDeviceTypes) {
   assert(effectiveDeviceTypes.empty());
-  assert(!getWaitAttr());
-  assert(getWaitOperands().empty());
-  assert(!getWaitDevnum());
+
+  if (getWaitAttr())
+    return;
 
   setWaitAttr(mlir::UnitAttr::get(context));
+
+  getWaitDevnumMutable().clear();
+  getWaitOperandsMutable().clear();
 }
 
 void EnterDataOp::addWaitOperands(
     MLIRContext *context, bool hasDevnum, mlir::ValueRange newValues,
     llvm::ArrayRef<DeviceType> effectiveDeviceTypes) {
   assert(effectiveDeviceTypes.empty());
-  assert(!getWaitAttr());
-  assert(getWaitOperands().empty());
-  assert(!getWaitDevnum());
+
+  if (getWaitAttr())
+    return;
+
+  // FIXME: At one point we need to figure out how to support multiple devnums
+  // here.  For now, assert.  Eventually we probably want to make dev-num and
+  // operands work in 'lock-step', so that getWaitDevnum().size() ==
+  // getWaitOperandsMutable().size().
+  assert(!getWaitDevnum() && "Merging devnum not yet implemented");
 
   // if hasDevnum, the first value is the devnum. The 'rest' go into the
   // operands list.

@@ -539,20 +539,23 @@ template <> struct MDNodeKeyImpl<DIStringType> {
   Metadata *SizeInBits;
   uint32_t AlignInBits;
   unsigned Encoding;
+  Metadata *CharType;
 
   MDNodeKeyImpl(unsigned Tag, MDString *Name, Metadata *StringLength,
                 Metadata *StringLengthExp, Metadata *StringLocationExp,
-                Metadata *SizeInBits, uint32_t AlignInBits, unsigned Encoding)
+                Metadata *SizeInBits, uint32_t AlignInBits, unsigned Encoding,
+                Metadata *CharType)
       : Tag(Tag), Name(Name), StringLength(StringLength),
         StringLengthExp(StringLengthExp), StringLocationExp(StringLocationExp),
-        SizeInBits(SizeInBits), AlignInBits(AlignInBits), Encoding(Encoding) {}
+        SizeInBits(SizeInBits), AlignInBits(AlignInBits), Encoding(Encoding),
+        CharType(CharType) {}
   MDNodeKeyImpl(const DIStringType *N)
       : Tag(N->getTag()), Name(N->getRawName()),
         StringLength(N->getRawStringLength()),
         StringLengthExp(N->getRawStringLengthExp()),
         StringLocationExp(N->getRawStringLocationExp()),
         SizeInBits(N->getRawSizeInBits()), AlignInBits(N->getAlignInBits()),
-        Encoding(N->getEncoding()) {}
+        Encoding(N->getEncoding()), CharType(N->getRawCharType()) {}
 
   bool isKeyOf(const DIStringType *RHS) const {
     return Tag == RHS->getTag() && Name == RHS->getRawName() &&
@@ -561,14 +564,14 @@ template <> struct MDNodeKeyImpl<DIStringType> {
            StringLocationExp == RHS->getRawStringLocationExp() &&
            SizeInBits == RHS->getRawSizeInBits() &&
            AlignInBits == RHS->getAlignInBits() &&
-           Encoding == RHS->getEncoding();
+           Encoding == RHS->getEncoding() && CharType == RHS->getRawCharType();
   }
   unsigned getHashValue() const {
     // Intentionally computes the hash on a subset of the operands for
     // performance reason. The subset has to be significant enough to avoid
     // collision "most of the time". There is no correctness issue in case of
     // collision because of the full check above.
-    return hash_combine(Tag, Name, StringLength, Encoding);
+    return hash_combine(Tag, Name, StringLength, Encoding, CharType);
   }
 };
 
@@ -1557,6 +1560,42 @@ struct MDAttachment {
   TrackingMDNodeRef Node;
 };
 
+/// Head pointer for a Value's ValueHandleBase doubly-linked list, stored in
+/// LLVMContextImpl::ValueHandles. The first node's PrevPtr points to Head, so
+/// relocating the bucket refreshes PrevPtr to the new Head address.
+class ValueHandleHead {
+  // Tag Head with true via PointerIntPair so RemoveFromUseList can
+  // distinguish ValueHandleHead::Head from an untagged ValueHandleBase::Next
+  // when accessed through *PrevPtr.
+  using TaggedPtr = PointerIntPair<ValueHandleBase *, 1, bool>;
+
+  ValueHandleBase *Head =
+      static_cast<ValueHandleBase *>(TaggedPtr(nullptr, true).getOpaqueValue());
+
+public:
+  ValueHandleBase *get() const {
+    return TaggedPtr::getFromOpaqueValue(Head).getPointer();
+  }
+
+  ValueHandleBase **getAddress() { return &Head; }
+
+  // Replace the pointer in *Slot with NewPtr while preserving its tag bit,
+  // and return the old TaggedPtr.
+  static TaggedPtr exchange(ValueHandleBase **Slot, ValueHandleBase *NewPtr) {
+    TaggedPtr Old = TaggedPtr::getFromOpaqueValue(*Slot);
+    TaggedPtr Updated = Old;
+    Updated.setPointer(NewPtr);
+    *Slot = static_cast<ValueHandleBase *>(Updated.getOpaqueValue());
+    return Old;
+  }
+
+  ValueHandleHead() = default;
+  ValueHandleHead(ValueHandleHead &&Other) noexcept;
+  ValueHandleHead &operator=(ValueHandleHead &&) = delete;
+  ValueHandleHead(const ValueHandleHead &) = delete;
+  ValueHandleHead &operator=(const ValueHandleHead &) = delete;
+};
+
 class LLVMContextImpl {
 public:
   /// OwnedModules - The set of modules instantiated in this context, and which
@@ -1750,7 +1789,7 @@ public:
   /// ValueHandles - This map keeps track of all of the value handles that are
   /// watching a Value*.  The Value::HasValueHandle bit is used to know
   /// whether or not a value has an entry in this map.
-  using ValueHandlesTy = DenseMap<Value *, ValueHandleBase *>;
+  using ValueHandlesTy = DenseMap<Value *, ValueHandleHead>;
   ValueHandlesTy ValueHandles;
 
   /// CustomMDKindNames - Map to hold the metadata string to ID mapping.

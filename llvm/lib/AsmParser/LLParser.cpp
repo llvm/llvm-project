@@ -538,18 +538,6 @@ bool LLParser::validateEndOfModule(bool UpgradeDebugInfo) {
   DISubprogram::cleanupRetainedNodes(NewDistinctSPs);
   NewDistinctSPs.clear();
 
-  for (auto *Inst : InstsWithTBAATag) {
-    MDNode *MD = Inst->getMetadata(LLVMContext::MD_tbaa);
-    // With incomplete IR, the tbaa metadata may have been dropped.
-    if (!AllowIncompleteIR)
-      assert(MD && "UpgradeInstWithTBAATag should have a TBAA tag");
-    if (MD) {
-      auto *UpgradedMD = UpgradeTBAANode(*MD);
-      if (MD != UpgradedMD)
-        Inst->setMetadata(LLVMContext::MD_tbaa, UpgradedMD);
-    }
-  }
-
   // Look for intrinsic functions and CallInst that need to be upgraded.  We use
   // make_early_inc_range here because we may remove some functions.
   for (Function &F : llvm::make_early_inc_range(*M))
@@ -2551,9 +2539,6 @@ bool LLParser::parseInstructionMetadata(Instruction &Inst) {
       PendingDbgInsts.emplace_back(Loc, &Inst, N);
     else
       Inst.setMetadata(MDK, N);
-
-    if (MDK == LLVMContext::MD_tbaa)
-      InstsWithTBAATag.push_back(&Inst);
 
     // If this is the end of the list, we're done.
   } while (EatIfPresent(lltok::comma));
@@ -4925,8 +4910,10 @@ bool LLParser::parseValID(ValID &ID, PerFunctionState *PFS, Type *ExpectedTy) {
       if (!GetElementPtrInst::getIndexedType(Ty, Indices))
         return error(ID.Loc, "invalid getelementptr indices");
 
+      LLVM_SUPPRESS_DEPRECATED_DECLARATIONS_PUSH
       ID.ConstantVal =
           ConstantExpr::getGetElementPtr(Ty, Elts[0], Indices, NW, InRange);
+      LLVM_SUPPRESS_DEPRECATED_DECLARATIONS_POP
     } else if (Opc == Instruction::ShuffleVector) {
       if (Elts.size() != 3)
         return error(ID.Loc, "expected three operands to shufflevector");
@@ -6117,7 +6104,8 @@ bool LLParser::parseDIStringType(MDNode *&Result, bool IsDistinct) {
   OPTIONAL(stringLocationExpression, MDField, );                               \
   OPTIONAL(size, MDUnsignedOrMDField, (0, UINT64_MAX));                        \
   OPTIONAL(align, MDUnsignedField, (0, UINT32_MAX));                           \
-  OPTIONAL(encoding, DwarfAttEncodingField, );
+  OPTIONAL(encoding, DwarfAttEncodingField, );                                 \
+  OPTIONAL(charType, MDField, );
   PARSE_MD_FIELDS();
 #undef VISIT_MD_FIELDS
 
@@ -6125,7 +6113,7 @@ bool LLParser::parseDIStringType(MDNode *&Result, bool IsDistinct) {
       DIStringType,
       (Context, tag.Val, name.Val, stringLength.Val, stringLengthExpression.Val,
        stringLocationExpression.Val, size.getValueAsMetadata(Context),
-       align.Val, encoding.Val));
+       align.Val, encoding.Val, charType.Val));
   return false;
 }
 
@@ -7939,6 +7927,10 @@ int LLParser::parseInstruction(Instruction *&Inst, BasicBlock *BB,
     return parseLandingPad(Inst, PFS);
   case lltok::kw_freeze:
     return parseFreeze(Inst, PFS);
+  case lltok::kw_bitinsert:
+    return parseBitInsert(Inst, PFS);
+  case lltok::kw_bitextract:
+    return parseBitExtract(Inst, PFS);
   // Call.
   case lltok::kw_call:
     return parseCall(Inst, PFS, CallInst::TCK_None);
@@ -8753,6 +8745,45 @@ bool LLParser::parseInsertElement(Instruction *&Inst, PerFunctionState &PFS) {
     return error(Loc, "invalid insertelement operands");
 
   Inst = InsertElementInst::Create(Op0, Op1, Op2);
+  return false;
+}
+
+// parseBitExtract
+// ::= 'bitextract' Type ',' TypeAndValue ',' TypeAndValue
+bool LLParser::parseBitExtract(Instruction *&Inst, PerFunctionState &PFS) {
+  LocTy Loc;
+  Type *Ty = nullptr;
+  Value *Op0, *Op1;
+  if (parseType(Ty, Loc) ||
+      parseToken(lltok::comma, "expected ',' after bitextract type") ||
+      parseTypeAndValue(Op0, Loc, PFS) ||
+      parseToken(lltok::comma, "expected ',' after bitextract source value") ||
+      parseTypeAndValue(Op1, PFS))
+    return true;
+
+  if (const char *Reason = BitExtractInst::areInvalidOperands(Ty, Op0, Op1))
+    return error(Loc, Reason);
+
+  Inst = BitExtractInst::Create(Ty, Op0, Op1);
+  return false;
+}
+
+// parseBitInsert
+// ::= 'bitinsert' TypeAndValue ',' TypeAndValue ',' TypeAndValue
+bool LLParser::parseBitInsert(Instruction *&Inst, PerFunctionState &PFS) {
+  LocTy Loc;
+  Value *Op0, *Op1, *Op2;
+  if (parseTypeAndValue(Op0, Loc, PFS) ||
+      parseToken(lltok::comma, "expected ',' after bitinsert source value") ||
+      parseTypeAndValue(Op1, PFS) ||
+      parseToken(lltok::comma, "expected ',' after bitinsert insert value") ||
+      parseTypeAndValue(Op2, PFS))
+    return true;
+
+  if (const char *Reason = BitInsertInst::areInvalidOperands(Op0, Op1, Op2))
+    return error(Loc, Reason);
+
+  Inst = BitInsertInst::Create(Op0, Op1, Op2);
   return false;
 }
 
