@@ -49,7 +49,6 @@
 ; O0-NEXT:     x86-dyn-alloca-expander
 ; O0-NEXT:     x86-fast-pre-tile-config
 ; O0-NEXT:     phi-node-elimination
-; O0-NEXT:     two-address-instruction
 ; O0-NEXT:     regallocfast
 ; O0-NEXT:     x86-lower-tile-copy
 ; O0-NEXT:     x86-fp-stackifier
@@ -253,7 +252,6 @@
 ; O0-WINDOWS-NEXT:     x86-dyn-alloca-expander
 ; O0-WINDOWS-NEXT:     x86-fast-pre-tile-config
 ; O0-WINDOWS-NEXT:     phi-node-elimination
-; O0-WINDOWS-NEXT:     two-address-instruction
 ; O0-WINDOWS-NEXT:     regallocfast
 ; O0-WINDOWS-NEXT:     x86-lower-tile-copy
 ; O0-WINDOWS-NEXT:     x86-fp-stackifier

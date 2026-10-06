@@ -4846,6 +4846,11 @@ public:
     return isTypeLegal(VT);
   }
 
+  /// Overload that takes the specific node being optimized.
+  virtual bool isTypeDesirableForOp(SDNode *N, EVT VT) const {
+    return isTypeDesirableForOp(N->getOpcode(), VT);
+  }
+
   /// Return true if it is profitable for dag combiner to transform a floating
   /// point op of specified opcode to a equivalent op of an integer
   /// type. e.g. f32 load -> i32 load can be profitable on ARM.
