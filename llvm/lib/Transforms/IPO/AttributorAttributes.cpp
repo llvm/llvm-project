@@ -5881,12 +5881,11 @@ bool AANoCapture::isImpliedByIR(Attributor &A, const IRPosition &IRP,
   if (!isa<Constant>(V) && !IRP.isArgumentPosition())
     return V.use_empty();
 
-  // You cannot "capture" null in the default address space.
-  //
-  // FIXME: This should use NullPointerIsDefined to account for the function
-  // attribute.
-  if (isa<UndefValue>(V) || (isa<ConstantPointerNull>(V) &&
-                             V.getType()->getPointerAddressSpace() == 0)) {
+  // You cannot "capture" null if it is not a valid pointer.
+  if (isa<UndefValue>(V) ||
+      (isa<ConstantPointerNull>(V) &&
+       !NullPointerIsDefined(IRP.getAnchorScope(),
+                             V.getType()->getPointerAddressSpace()))) {
     return true;
   }
 
