@@ -1006,7 +1006,6 @@ AMDGPULegalizerInfo::AMDGPULegalizerInfo(const GCNSubtarget &ST_,
   } else {
     FPOpActions.widenScalarFor({BF16}, changeElementTo(0, F32));
     FCanonicalizeActions.widenScalarFor({BF16}, changeElementTo(0, F32));
-    StrictFPOpActions.widenScalarFor({BF16}, changeElementTo(0, F32));
   }
 
   if (ST.hasAnyPackedFP32Ops()) {
