@@ -3,9 +3,17 @@
 ; RUN:   | FileCheck %s -check-prefix=RV32I
 ; RUN: llc -mtriple=riscv32 -target-abi ilp32e -verify-machineinstrs < %s \
 ; RUN:   | FileCheck %s -check-prefix=RV32I-ILP32E
+; RUN: llc -mtriple=riscv32 -mattr=+zve32x -verify-machineinstrs < %s \
+; RUN:   | FileCheck %s -check-prefix=RV32I
+; RUN: llc -mtriple=riscv32 -mattr=+zve32x -target-abi ilp32e -verify-machineinstrs < %s \
+; RUN:   | FileCheck %s -check-prefix=RV32I-ILP32E
 ; RUN: llc -mtriple=riscv64 -verify-machineinstrs < %s \
 ; RUN:   | FileCheck %s -check-prefix=RV64I
 ; RUN: llc -mtriple=riscv64 -target-abi lp64e -verify-machineinstrs < %s \
+; RUN:   | FileCheck %s -check-prefix=RV64I-LP64E
+; RUN: llc -mtriple=riscv64 -mattr=+zve32x -verify-machineinstrs < %s \
+; RUN:   | FileCheck %s -check-prefix=RV64I
+; RUN: llc -mtriple=riscv64 -mattr=+zve32x -target-abi lp64e -verify-machineinstrs < %s \
 ; RUN:   | FileCheck %s -check-prefix=RV64I-LP64E
 
 declare void @callee(ptr)
