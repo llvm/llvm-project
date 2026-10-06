@@ -3685,7 +3685,8 @@ RValue CodeGenFunction::EmitBuiltinExpr(const GlobalDecl GD, unsigned BuiltinID,
     // lets code guard its uses on __has_builtin alone.
     SanitizerMask Consumers =
         SanitizerKind::Memory | SanitizerKind::KernelMemory |
-        SanitizerKind::Address | SanitizerKind::KernelAddress;
+        SanitizerKind::Address | SanitizerKind::KernelAddress |
+        SanitizerKind::Thread;
     if (getLangOpts().Sanitize.hasOneOf(Consumers) ||
         CGM.getCodeGenOpts().hasSanitizeCoverage())
       Builder.CreateCall(CGM.getIntrinsic(
