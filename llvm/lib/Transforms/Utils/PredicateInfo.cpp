@@ -453,6 +453,31 @@ void PredicateInfoBuilder::processBranch(
           addInfoFor(OpsToRename, V, PB);
         }
       }
+
+      if (isa<Instruction>(Cond) || isa<Argument>(Cond)) {
+        for (User *U : Cond->users()) {
+          auto *SI = dyn_cast<SelectInst>(U);
+          if (!SI || SI->getCondition() != Cond ||
+              SI->getParent() != BranchBB ||
+              SI->getTrueValue() == SI->getFalseValue() || SI->use_empty())
+            continue;
+
+          // Skip selects that are logically equivalent to and/or, which are
+          // expanded by the worklist above.
+          if (match(SI, m_LogicalAnd()) || match(SI, m_LogicalOr()))
+            continue;
+
+          // The ssa copy is represented as a no-op bitcast, which is not valid
+          // on every type a select can switch over (e.g. aggregates).
+          if (!CastInst::castIsValid(Instruction::BitCast, SI->getType(),
+                                     SI->getType()))
+            continue;
+
+          PredicateSelect *PS = new (Allocator)
+              PredicateSelect(SI, BranchBB, Succ, Cond, TakenEdge, SI);
+          addInfoFor(OpsToRename, SI, PS);
+        }
+      }
     }
   }
 }
@@ -773,6 +798,12 @@ std::optional<PredicateConstraint> PredicateBase::getConstraint() const {
 
     return {{Pred, OtherOp}};
   }
+  case PT_Select: {
+    auto *PSelect = cast<PredicateSelect>(this);
+    return {{CmpInst::ICMP_EQ, PSelect->TrueEdge
+                                   ? PSelect->Select->getTrueValue()
+                                   : PSelect->Select->getFalseValue()}};
+  }
   case PT_Switch:
     if (Condition != RenamedOp) {
       // TODO: Make this an assertion once RenamedOp is fully accurate.
@@ -834,6 +865,13 @@ public:
         PB->From->printAsOperand(OS);
         OS << ",";
         PB->To->printAsOperand(OS);
+        OS << "]";
+      } else if (const auto *PS = dyn_cast<PredicateSelect>(PI)) {
+        OS << "; select predicate info { TrueEdge: " << PS->TrueEdge
+           << " Comparison:" << *PS->Condition << " Edge: [";
+        PS->From->printAsOperand(OS);
+        OS << ",";
+        PS->To->printAsOperand(OS);
         OS << "]";
       } else if (const auto *PS = dyn_cast<PredicateSwitch>(PI)) {
         OS << "; switch predicate info { CaseValue: " << *PS->CaseValue

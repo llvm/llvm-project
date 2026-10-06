@@ -72,7 +72,8 @@ enum PredicateType {
   PT_Branch,
   PT_ConditionAssume,
   PT_BundleAssume,
-  PT_Switch
+  PT_Select,
+  PT_Switch,
 };
 
 /// Constraint for a predicate of the form "cmp Pred Op, OtherOp", where Op
@@ -164,7 +165,8 @@ public:
   BasicBlock *To;
   PredicateWithEdge() = delete;
   static bool classof(const PredicateBase *PB) {
-    return PB->Type == PT_Branch || PB->Type == PT_Switch;
+    return PB->Type == PT_Branch || PB->Type == PT_Switch ||
+           PB->Type == PT_Select;
   }
 
 protected:
@@ -186,6 +188,21 @@ public:
   static bool classof(const PredicateBase *PB) {
     return PB->Type == PT_Branch;
   }
+};
+
+// Provides predicate information for select instructions whose condition is
+// co(ntra)variant with a corresponding branch.
+class PredicateSelect : public PredicateWithEdge {
+public:
+  // If true, SplitBB is the true successor, otherwise it's the false successor.
+  bool TrueEdge;
+  SelectInst *Select;
+  PredicateSelect(Value *Op, BasicBlock *BranchBB, BasicBlock *SplitBB,
+                  Value *Condition, bool TakenEdge, SelectInst *SI)
+      : PredicateWithEdge(PT_Select, Op, BranchBB, SplitBB, Condition),
+        TrueEdge(TakenEdge), Select(SI) {}
+  PredicateSelect() = delete;
+  static bool classof(const PredicateBase *PB) { return PB->Type == PT_Select; }
 };
 
 class PredicateSwitch : public PredicateWithEdge {
