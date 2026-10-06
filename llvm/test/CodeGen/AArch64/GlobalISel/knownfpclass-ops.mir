@@ -966,8 +966,8 @@ body:             |
   bb.0:
   ; CHECK-LABEL: name: @FRemSelfKnownFiniteNonZero
   ; CHECK-NEXT: %val:_ FPClasses:(pnorm) SignBitKnown:0
-  ; CHECK-NEXT: %frem:_ FPClasses:(zero) SignBitKnown:?
-  ; CHECK-NEXT: %copy:_ FPClasses:(zero) SignBitKnown:?
+  ; CHECK-NEXT: %frem:_ FPClasses:(pzero) SignBitKnown:0
+  ; CHECK-NEXT: %copy:_ FPClasses:(pzero) SignBitKnown:0
     %val:_(s32) = G_FCONSTANT float 2.0
     %frem:_(s32) = G_FREM %val, %val
     %copy:_(s32) = COPY %frem
