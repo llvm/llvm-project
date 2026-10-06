@@ -518,12 +518,18 @@ opt<bool> PreambleParseForwardingFunctions{
     init(ParseOptions().PreambleParseForwardingFunctions),
 };
 
-opt<bool> SkipPreambleBuild{
+opt<ClangdServer::SkipPreambleBuildPolicy> SkipPreambleBuild{
     "skip-preamble-build",
     cat(Misc),
-    desc("If ture, skip preamble build"),
+    desc("Skip building the preamble"),
     Hidden,
-    init(ParseOptions().SkipPreambleBuild),
+    values(clEnumValN(ClangdServer::SkipPreambleBuildPolicy::Never, "never",
+                      "never skip"),
+           clEnumValN(ClangdServer::SkipPreambleBuildPolicy::Modules, "modules",
+                      "only if module use is encountered (default)"),
+           clEnumValN(ClangdServer::SkipPreambleBuildPolicy::Always, "always",
+                      "always skip")),
+    init(ClangdServer::SkipPreambleBuildPolicy::Modules),
 };
 
 #if defined(__GLIBC__) && CLANGD_MALLOC_TRIM
