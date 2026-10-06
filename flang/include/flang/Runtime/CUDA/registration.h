@@ -37,6 +37,11 @@ void RTDECL(CUFRegisterManagedVariable)(
 /// unified memory addresses.
 void RTDECL(CUFInitModule)(void **module);
 
+/// Register the pages spanning [\p begin, \p end) with the CUDA runtime so
+/// device code can access them through their host address. Registering the
+/// same range more than once is allowed.
+void RTDECL(CUFRegisterHostMemoryRange)(void *begin, void *end);
+
 } // extern "C"
 
 } // namespace Fortran::runtime::cuda
