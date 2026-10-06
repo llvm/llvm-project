@@ -669,11 +669,10 @@ public:
     return false;
   };
 
-  /// Check whether a target kernel can be promoted to a "no-loop" SPMD kernel,
-  /// mirroring Flang's MLIR promotion path.
-  virtual bool canPromoteToNoLoop(const OMPExecutableDirective &D) const {
-    return false;
-  }
+  /// Check whether the target kernel being emitted is tagged SPMD_NO_LOOP, to
+  /// complete the promotion to a "no-loop" SPMD kernel, mirroring Flang's MLIR
+  /// promotion path.
+  virtual bool canPromoteToNoLoop() const { return false; }
 
   /// Get call to __kmpc_alloc_shared
   virtual std::pair<llvm::Value *, llvm::Value *>
