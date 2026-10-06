@@ -571,8 +571,6 @@ Type *llvm::computeScalarTypeForInstruction(unsigned Opcode,
     return StructTy->getTypeAtIndex(
         cast<VPConstantInt>(Operands[1])->getZExtValue());
   }
-  case VPInstruction::ExtractVectorForPart:
-    return Op0Ty;
   case VPInstruction::WideVectorLoad:
   case VPInstruction::FirstActiveLane:
   case VPInstruction::LastActiveLane:
@@ -1210,19 +1208,23 @@ Value *VPInstruction::generate(VPTransformState &State,
 
     Value *Addr = State.get(getOperand(1), /*IsScalar=*/true);
     Align Alignment = Align(cast<VPConstantInt>(getOperand(2))->getZExtValue());
-    return Builder.CreateAlignedLoad(WideDataTy, Addr, Alignment);
+    LoadInst *WideLI = Builder.CreateAlignedLoad(WideDataTy, Addr, Alignment);
+    applyMetadata(*WideLI);
+    return WideLI;
   }
   case VPInstruction::WideVectorStore: {
     unsigned Multiplier = cast<VPConstantInt>(getOperand(0))->getZExtValue();
-    auto *WideDataTy =
-        VectorType::get(getOperand(3)->getScalarType(), State.VF * Multiplier);
     Value *WideData = State.get(getOperand(3));
-    assert(WideData->getType() == WideDataTy &&
-           "stored value does not match wide vector type");
+    assert(cast<VectorType>(WideData->getType())->getElementCount() ==
+               State.VF * Multiplier &&
+           "stored value does not match wide element count");
+    (void)Multiplier;
 
     Value *Addr = State.get(getOperand(1), /*IsScalar=*/true);
     Align Alignment = Align(cast<VPConstantInt>(getOperand(2))->getZExtValue());
-    return Builder.CreateAlignedStore(WideData, Addr, Alignment);
+    StoreInst *WideSI = Builder.CreateAlignedStore(WideData, Addr, Alignment);
+    applyMetadata(*WideSI);
+    return WideSI;
   }
   default:
     llvm_unreachable("Unsupported opcode for instruction");

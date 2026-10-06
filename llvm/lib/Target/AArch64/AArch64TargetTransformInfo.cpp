@@ -6002,8 +6002,9 @@ bool AArch64TTIImpl::hasMultiVectorLoadStore(
   // For unpredicated loads/stores allow any pow-of-two multiple of a vector >=
   // to a single z-register. We can split operations wider than a single
   // multi-vector load/store during ISEL.
-  return DL.getTypeSizeInBits(VectorTy).isKnownMultipleOf(128) &&
-         isPowerOf2_32(NumVectors);
+  return isPowerOf2_32(NumVectors) &&
+         DL.getTypeSizeInBits(VectorTy).isKnownMultipleOf(
+             AArch64::SVEBitsPerBlock);
 }
 
 unsigned

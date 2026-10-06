@@ -4200,11 +4200,12 @@ void VPlanTransforms::widenMemoryAccessesByUF(VPlan &Plan, ElementCount VF,
                                               unsigned UF,
                                               const TargetTransformInfo &TTI) {
   assert(UF > 1 && "Expected plan to have an UF > 1");
+
+  auto m_ContiguousVecPtr = m_VecPtr(m_VPValue(), m_One());
   for (VPBasicBlock *VPBB : VPBlockUtils::blocksOnly<VPBasicBlock>(
            vp_depth_first_shallow(Plan.getVectorLoopRegion()->getEntry()))) {
     for (VPRecipeBase &R : make_early_inc_range(*VPBB)) {
       VPValue *StoredValue = nullptr;
-      auto m_ContiguousVecPtr = m_VecPtr(m_VPValue(), m_One());
       if (!match(&R, m_WidenLoad(m_ContiguousVecPtr)) &&
           !match(&R, m_WidenStore(m_ContiguousVecPtr, m_VPValue(StoredValue))))
         continue;
@@ -4218,7 +4219,7 @@ void VPlanTransforms::widenMemoryAccessesByUF(VPlan &Plan, ElementCount VF,
 
       Type *AccessType = StoredValue ? StoredValue->getScalarType()
                                      : R.getVPSingleValue()->getScalarType();
-      unsigned IsStore = isa<VPWidenStoreRecipe>(MemOp->getAsRecipe());
+      bool IsStore = isa<VPWidenStoreRecipe>(MemOp->getAsRecipe());
       std::optional<Instruction::CastOps> CastHint;
       VPUser *MaybeCast = IsStore ? StoredValue->getDefiningRecipe()
                                   : R.getVPSingleValue()->getSingleUser();
