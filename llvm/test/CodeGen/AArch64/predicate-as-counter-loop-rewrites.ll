@@ -330,37 +330,37 @@ exit:
 define void @mixed_data_vector_types(ptr %x, ptr %y, i64 %n) #0 {
 ; CHECK-LABEL: mixed_data_vector_types:
 ; CHECK:       // %bb.0: // %entry
-; CHECK-NEXT:    mov x8, xzr
 ; CHECK-NEXT:    whilelo pn8.d, xzr, x2, vlx4
+; CHECK-NEXT:    cnth x8
 ; CHECK-NEXT:  .LBB5_1: // %loop
 ; CHECK-NEXT:    // =>This Inner Loop Header: Depth=1
 ; CHECK-NEXT:    pext { p0.d, p1.d }, pn8[0]
-; CHECK-NEXT:    add x9, x0, x8, lsl #3
-; CHECK-NEXT:    add x10, x1, x8, lsl #2
-; CHECK-NEXT:    uzp1 p2.s, p0.s, p1.s
-; CHECK-NEXT:    ld1d { z0.d }, p0/z, [x0, x8, lsl #3]
-; CHECK-NEXT:    ld1d { z5.d }, p1/z, [x9, #1, mul vl]
-; CHECK-NEXT:    ld1w { z1.s }, p2/z, [x1, x8, lsl #2]
-; CHECK-NEXT:    inch x8
 ; CHECK-NEXT:    pext { p2.d, p3.d }, pn8[1]
-; CHECK-NEXT:    ld1d { z3.d }, p3/z, [x9, #3, mul vl]
-; CHECK-NEXT:    ld1d { z4.d }, p2/z, [x9, #2, mul vl]
 ; CHECK-NEXT:    whilelo pn8.d, x8, x2, vlx4
 ; CHECK-NEXT:    pext { p4.d, p5.d }, pn8[0]
-; CHECK-NEXT:    uzp1 p0.s, p4.s, p5.s
-; CHECK-NEXT:    pext { p4.d, p5.d }, pn8[1]
+; CHECK-NEXT:    ld1d { z0.d }, p3/z, [x0, #3, mul vl]
+; CHECK-NEXT:    ld1d { z1.d }, p2/z, [x0, #2, mul vl]
 ; CHECK-NEXT:    uzp1 p4.s, p4.s, p5.s
-; CHECK-NEXT:    uzp1 p0.h, p0.h, p4.h
-; CHECK-NEXT:    uzp1 p4.s, p2.s, p3.s
-; CHECK-NEXT:    mov z2.h, p0/z, #1 // =0x1
-; CHECK-NEXT:    ld1w { z6.s }, p4/z, [x10, #1, mul vl]
-; CHECK-NEXT:    fmov w9, s2
+; CHECK-NEXT:    pext { p5.d, p6.d }, pn8[1]
+; CHECK-NEXT:    ld1d { z2.d }, p1/z, [x0, #1, mul vl]
+; CHECK-NEXT:    uzp1 p5.s, p5.s, p6.s
+; CHECK-NEXT:    ld1d { z3.d }, p0/z, [x0]
+; CHECK-NEXT:    inch x8
+; CHECK-NEXT:    uzp1 p6.s, p0.s, p1.s
+; CHECK-NEXT:    incb x0, all, mul #4
+; CHECK-NEXT:    uzp1 p4.h, p4.h, p5.h
+; CHECK-NEXT:    uzp1 p5.s, p2.s, p3.s
+; CHECK-NEXT:    ld1w { z5.s }, p6/z, [x1]
+; CHECK-NEXT:    mov z6.h, p4/z, #1 // =0x1
+; CHECK-NEXT:    ld1w { z4.s }, p5/z, [x1, #1, mul vl]
+; CHECK-NEXT:    incb x1, all, mul #2
+; CHECK-NEXT:    fmov w9, s6
+; CHECK-NEXT:    // fake_use: $z3
+; CHECK-NEXT:    // fake_use: $z2
+; CHECK-NEXT:    // fake_use: $z1
 ; CHECK-NEXT:    // fake_use: $z0
 ; CHECK-NEXT:    // fake_use: $z5
 ; CHECK-NEXT:    // fake_use: $z4
-; CHECK-NEXT:    // fake_use: $z3
-; CHECK-NEXT:    // fake_use: $z1
-; CHECK-NEXT:    // fake_use: $z6
 ; CHECK-NEXT:    tbnz w9, #0, .LBB5_1
 ; CHECK-NEXT:  // %bb.2: // %exit
 ; CHECK-NEXT:    ret
@@ -396,35 +396,35 @@ define void @prefer_more_common_masked_access_size(ptr %x16, ptr %y32, i64 %n) #
 ; CHECK-LABEL: prefer_more_common_masked_access_size:
 ; CHECK:       // %bb.0: // %entry
 ; CHECK-NEXT:    movi v0.2d, #0000000000000000
-; CHECK-NEXT:    mov x8, xzr
 ; CHECK-NEXT:    whilelo pn8.s, xzr, x2, vlx4
+; CHECK-NEXT:    rdvl x8, #1
 ; CHECK-NEXT:  .LBB6_1: // %loop
 ; CHECK-NEXT:    // =>This Inner Loop Header: Depth=1
 ; CHECK-NEXT:    pext { p0.s, p1.s }, pn8[0]
 ; CHECK-NEXT:    pext { p2.s, p3.s }, pn8[1]
-; CHECK-NEXT:    add x9, x0, x8, lsl #1
-; CHECK-NEXT:    uzp1 p4.h, p0.h, p1.h
-; CHECK-NEXT:    uzp1 p5.h, p2.h, p3.h
-; CHECK-NEXT:    st1h { z0.h }, p4, [x0, x8, lsl #1]
-; CHECK-NEXT:    st1h { z0.h }, p5, [x9, #1, mul vl]
-; CHECK-NEXT:    add x9, x1, x8, lsl #2
-; CHECK-NEXT:    ld1w { z1.s }, p0/z, [x1, x8, lsl #2]
-; CHECK-NEXT:    incb x8
-; CHECK-NEXT:    ld1w { z3.s }, p3/z, [x9, #3, mul vl]
-; CHECK-NEXT:    ld1w { z4.s }, p2/z, [x9, #2, mul vl]
-; CHECK-NEXT:    ld1w { z5.s }, p1/z, [x9, #1, mul vl]
 ; CHECK-NEXT:    whilelo pn8.s, x8, x2, vlx4
-; CHECK-NEXT:    pext { p4.s, p5.s }, pn8[0]
-; CHECK-NEXT:    uzp1 p0.h, p4.h, p5.h
-; CHECK-NEXT:    pext { p4.s, p5.s }, pn8[1]
-; CHECK-NEXT:    uzp1 p4.h, p4.h, p5.h
-; CHECK-NEXT:    uzp1 p0.b, p0.b, p4.b
-; CHECK-NEXT:    mov z2.b, p0/z, #1 // =0x1
-; CHECK-NEXT:    fmov w9, s2
-; CHECK-NEXT:    // fake_use: $z1
-; CHECK-NEXT:    // fake_use: $z5
+; CHECK-NEXT:    pext { p5.s, p6.s }, pn8[0]
+; CHECK-NEXT:    uzp1 p4.h, p2.h, p3.h
+; CHECK-NEXT:    incb x8
+; CHECK-NEXT:    uzp1 p5.h, p5.h, p6.h
+; CHECK-NEXT:    pext { p6.s, p7.s }, pn8[1]
+; CHECK-NEXT:    uzp1 p6.h, p6.h, p7.h
+; CHECK-NEXT:    st1h { z0.h }, p4, [x0, #1, mul vl]
+; CHECK-NEXT:    uzp1 p7.h, p0.h, p1.h
+; CHECK-NEXT:    uzp1 p4.b, p5.b, p6.b
+; CHECK-NEXT:    st1h { z0.h }, p7, [x0]
+; CHECK-NEXT:    incb x0, all, mul #2
+; CHECK-NEXT:    ld1w { z1.s }, p3/z, [x1, #3, mul vl]
+; CHECK-NEXT:    ld1w { z2.s }, p2/z, [x1, #2, mul vl]
+; CHECK-NEXT:    ld1w { z3.s }, p1/z, [x1, #1, mul vl]
+; CHECK-NEXT:    ld1w { z4.s }, p0/z, [x1]
+; CHECK-NEXT:    mov z5.b, p4/z, #1 // =0x1
+; CHECK-NEXT:    incb x1, all, mul #4
+; CHECK-NEXT:    fmov w9, s5
 ; CHECK-NEXT:    // fake_use: $z4
 ; CHECK-NEXT:    // fake_use: $z3
+; CHECK-NEXT:    // fake_use: $z2
+; CHECK-NEXT:    // fake_use: $z1
 ; CHECK-NEXT:    tbnz w9, #0, .LBB6_1
 ; CHECK-NEXT:  // %bb.2: // %exit
 ; CHECK-NEXT:    ret
@@ -460,35 +460,35 @@ define void @prefer_larger_access_size_on_tie(ptr %x16, ptr %y32, i64 %n) #0 {
 ; CHECK-LABEL: prefer_larger_access_size_on_tie:
 ; CHECK:       // %bb.0: // %entry
 ; CHECK-NEXT:    movi v0.2d, #0000000000000000
-; CHECK-NEXT:    mov x8, xzr
 ; CHECK-NEXT:    whilelo pn8.s, xzr, x2, vlx4
+; CHECK-NEXT:    rdvl x8, #1
 ; CHECK-NEXT:  .LBB7_1: // %loop
 ; CHECK-NEXT:    // =>This Inner Loop Header: Depth=1
 ; CHECK-NEXT:    pext { p0.s, p1.s }, pn8[0]
 ; CHECK-NEXT:    pext { p2.s, p3.s }, pn8[1]
-; CHECK-NEXT:    add x9, x0, x8, lsl #1
-; CHECK-NEXT:    uzp1 p4.h, p0.h, p1.h
-; CHECK-NEXT:    uzp1 p5.h, p2.h, p3.h
-; CHECK-NEXT:    st1h { z0.h }, p4, [x0, x8, lsl #1]
-; CHECK-NEXT:    st1h { z0.h }, p5, [x9, #1, mul vl]
-; CHECK-NEXT:    add x9, x1, x8, lsl #2
-; CHECK-NEXT:    ld1w { z1.s }, p0/z, [x1, x8, lsl #2]
-; CHECK-NEXT:    incb x8
-; CHECK-NEXT:    ld1w { z3.s }, p3/z, [x9, #3, mul vl]
-; CHECK-NEXT:    ld1w { z4.s }, p2/z, [x9, #2, mul vl]
-; CHECK-NEXT:    ld1w { z5.s }, p1/z, [x9, #1, mul vl]
 ; CHECK-NEXT:    whilelo pn8.s, x8, x2, vlx4
-; CHECK-NEXT:    pext { p4.s, p5.s }, pn8[0]
-; CHECK-NEXT:    uzp1 p0.h, p4.h, p5.h
-; CHECK-NEXT:    pext { p4.s, p5.s }, pn8[1]
-; CHECK-NEXT:    uzp1 p4.h, p4.h, p5.h
-; CHECK-NEXT:    uzp1 p0.b, p0.b, p4.b
-; CHECK-NEXT:    mov z2.b, p0/z, #1 // =0x1
-; CHECK-NEXT:    fmov w9, s2
-; CHECK-NEXT:    // fake_use: $z1
-; CHECK-NEXT:    // fake_use: $z5
+; CHECK-NEXT:    pext { p5.s, p6.s }, pn8[0]
+; CHECK-NEXT:    uzp1 p4.h, p2.h, p3.h
+; CHECK-NEXT:    incb x8
+; CHECK-NEXT:    uzp1 p5.h, p5.h, p6.h
+; CHECK-NEXT:    pext { p6.s, p7.s }, pn8[1]
+; CHECK-NEXT:    uzp1 p6.h, p6.h, p7.h
+; CHECK-NEXT:    st1h { z0.h }, p4, [x0, #1, mul vl]
+; CHECK-NEXT:    uzp1 p7.h, p0.h, p1.h
+; CHECK-NEXT:    uzp1 p4.b, p5.b, p6.b
+; CHECK-NEXT:    st1h { z0.h }, p7, [x0]
+; CHECK-NEXT:    incb x0, all, mul #2
+; CHECK-NEXT:    ld1w { z1.s }, p3/z, [x1, #3, mul vl]
+; CHECK-NEXT:    ld1w { z2.s }, p2/z, [x1, #2, mul vl]
+; CHECK-NEXT:    ld1w { z3.s }, p1/z, [x1, #1, mul vl]
+; CHECK-NEXT:    ld1w { z4.s }, p0/z, [x1]
+; CHECK-NEXT:    mov z5.b, p4/z, #1 // =0x1
+; CHECK-NEXT:    incb x1, all, mul #4
+; CHECK-NEXT:    fmov w9, s5
 ; CHECK-NEXT:    // fake_use: $z4
 ; CHECK-NEXT:    // fake_use: $z3
+; CHECK-NEXT:    // fake_use: $z2
+; CHECK-NEXT:    // fake_use: $z1
 ; CHECK-NEXT:    tbnz w9, #0, .LBB7_1
 ; CHECK-NEXT:  // %bb.2: // %exit
 ; CHECK-NEXT:    ret
