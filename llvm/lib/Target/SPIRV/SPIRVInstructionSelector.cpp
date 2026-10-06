@@ -497,6 +497,8 @@ private:
   Register buildOnesVal(bool AllOnes, SPIRVTypeInst ResType,
                         MachineInstr &I) const;
   Register buildOnesValF(SPIRVTypeInst ResType, MachineInstr &I) const;
+  Register buildVectorSplat(Register ScalarReg, unsigned NumElts,
+                            MachineInstr &I) const;
 
   bool wrapIntoSpecConstantOp(MachineInstr &I,
                               SmallVector<Register> &CompositeArgs) const;
@@ -1683,18 +1685,7 @@ bool SPIRVInstructionSelector::selectLdexp(Register ResVReg,
   if (ResType->getOpcode() == SPIRV::OpTypeVector &&
       ExpType->getOpcode() != SPIRV::OpTypeVector) {
     unsigned NumElts = ResType->getOperand(2).getImm();
-    SPIRVTypeInst ExpVecType =
-        GR.getOrCreateSPIRVVectorType(ExpType, NumElts, I, TII);
-    Register SplatReg = MRI->createVirtualRegister(GR.getRegClass(ExpVecType));
-    GR.assignSPIRVTypeToVReg(ExpVecType, SplatReg, MRI->getMF());
-    auto MIB = BuildMI(*I.getParent(), I, I.getDebugLoc(),
-                       TII.get(SPIRV::OpCompositeConstruct))
-                   .addDef(SplatReg)
-                   .addUse(GR.getSPIRVTypeID(ExpVecType));
-    for (unsigned J = 0; J < NumElts; ++J)
-      MIB.addUse(ExpReg);
-    MIB.constrainAllUses(TII, TRI, RBI);
-    ExpReg = SplatReg;
+    ExpReg = buildVectorSplat(ExpReg, NumElts, I);
   }
 
   return selectExtInst(ResVReg, ResType, I, CL::ldexp, GL::Ldexp,
@@ -4719,6 +4710,23 @@ Register SPIRVInstructionSelector::buildOnesVal(bool AllOnes,
   return GR.getOrCreateConstInt(One, I, ResType, TII);
 }
 
+Register SPIRVInstructionSelector::buildVectorSplat(Register ScalarReg,
+                                                    unsigned NumElts,
+                                                    MachineInstr &I) const {
+  SPIRVTypeInst VecType = GR.getOrCreateSPIRVVectorType(
+      GR.getSPIRVTypeForVReg(ScalarReg), NumElts, I, TII);
+  Register SplatReg = MRI->createVirtualRegister(GR.getRegClass(VecType));
+  GR.assignSPIRVTypeToVReg(VecType, SplatReg, MRI->getMF());
+  auto MIB = BuildMI(*I.getParent(), I, I.getDebugLoc(),
+                     TII.get(SPIRV::OpCompositeConstruct))
+                 .addDef(SplatReg)
+                 .addUse(GR.getSPIRVTypeID(VecType));
+  for (unsigned J = 0; J < NumElts; ++J)
+    MIB.addUse(ScalarReg);
+  MIB.constrainAllUses(TII, TRI, RBI);
+  return SplatReg;
+}
+
 bool SPIRVInstructionSelector::selectSelect(Register ResVReg,
                                             SPIRVTypeInst ResType,
                                             MachineInstr &I) const {
@@ -4741,18 +4749,7 @@ bool SPIRVInstructionSelector::selectSelect(Register ResVReg,
     // LLVM IR also allows a scalar i1 condition. Splat it in that case.
     if (IsScalarBool && !STI.isAtLeastSPIRVVer(VersionTuple(1, 4))) {
       unsigned NumElts = GR.getScalarOrVectorComponentCount(ResType);
-      SPIRVTypeInst CondVecType = GR.getOrCreateSPIRVVectorType(
-          GR.getSPIRVTypeForVReg(CondReg), NumElts, I, TII);
-      Register SplatReg =
-          createVirtualRegister(CondVecType, &GR, MRI, MRI->getMF());
-      auto MIB = BuildMI(*I.getParent(), I, I.getDebugLoc(),
-                         TII.get(SPIRV::OpCompositeConstruct))
-                     .addDef(SplatReg)
-                     .addUse(GR.getSPIRVTypeID(CondVecType));
-      for (unsigned J = 0; J < NumElts; ++J)
-        MIB.addUse(CondReg);
-      MIB.constrainAllUses(TII, TRI, RBI);
-      CondReg = SplatReg;
+      CondReg = buildVectorSplat(CondReg, NumElts, I);
       IsScalarBool = false;
     }
     if (IsFloatTy) {

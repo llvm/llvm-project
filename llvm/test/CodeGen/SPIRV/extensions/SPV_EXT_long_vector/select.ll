@@ -9,7 +9,8 @@
 ; RUN: %if spirv-tools %{ llc -O0 -mtriple=spirv64v1.4-unknown-unknown --spirv-ext=+SPV_EXT_long_vector %s -o - -filetype=obj | spirv-val --target-env spv1.4 %}
 
 ; The component count of OpTypeVectorIdEXT is an ID, not a literal.
-; Before SPIR-V 1.4, splat the scalar condition to a matching boolean vector.
+; SPV_EXT_long_vector requires SPIR-V 1.3. In that version, splat the scalar
+; condition to a matching boolean vector; SPIR-V 1.4 allows a scalar condition.
 ; CHECK: OpCapability LongVectorEXT
 ; CHECK: OpExtension "SPV_EXT_long_vector"
 ; CHECK-DAG: [[BOOL:%.+]] = OpTypeBool
