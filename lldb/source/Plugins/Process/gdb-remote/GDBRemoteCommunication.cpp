@@ -345,7 +345,8 @@ GDBRemoteCommunication::WaitForPacketNoLock(StringExtractorGDBRemote &packet,
                   packet = echo_response;
                   got_actual_response = true;
                   // The echo reply follows right behind it. Don't let the
-                  // reads spent waiting for the response count against the retry counter.
+                  // reads spent waiting for the response count against the
+                  // retry counter.
                   retries_left = max_retries;
                 }
               } else if (echo_packet_result == PacketResult::ErrorReplyTimeout)
