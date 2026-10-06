@@ -1201,11 +1201,11 @@
 ; GCN-O3-NEXT:      Straight line strength reduction
 ; GCN-O3-NEXT:      Basic Alias Analysis (stateless AA impl)
 ; GCN-O3-NEXT:      Function Alias Analysis Results
-; GCN-O3-NEXT:      Memory Dependence Analysis
 ; GCN-O3-NEXT:      Cycle Info Analysis
 ; GCN-O3-NEXT:      Lazy Branch Probability Analysis
 ; GCN-O3-NEXT:      Lazy Block Frequency Analysis
 ; GCN-O3-NEXT:      Optimization Remark Emitter
+; GCN-O3-NEXT:      Memory SSA
 ; GCN-O3-NEXT:      Global Value Numbering
 ; GCN-O3-NEXT:      Scalar Evolution Analysis
 ; GCN-O3-NEXT:      Nary reassociation
@@ -1246,11 +1246,11 @@
 ; GCN-O3-NEXT:      Natural Loop Information
 ; GCN-O3-NEXT:      Basic Alias Analysis (stateless AA impl)
 ; GCN-O3-NEXT:      Function Alias Analysis Results
-; GCN-O3-NEXT:      Memory Dependence Analysis
 ; GCN-O3-NEXT:      Cycle Info Analysis
 ; GCN-O3-NEXT:      Lazy Branch Probability Analysis
 ; GCN-O3-NEXT:      Lazy Block Frequency Analysis
 ; GCN-O3-NEXT:      Optimization Remark Emitter
+; GCN-O3-NEXT:      Memory SSA
 ; GCN-O3-NEXT:      Global Value Numbering
 ; GCN-O3-NEXT:    AMDGPU Preload Kernel Arguments
 ; GCN-O3-NEXT:    FunctionPass Manager
