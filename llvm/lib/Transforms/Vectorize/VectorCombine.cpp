@@ -6981,6 +6981,11 @@ bool VectorCombine::foldShuffleOfAdjacentLoads(Instruction &I) {
 
   const int NumElts = LoadTy->getNumElements();
 
+  // WideSz = 2 * LoadSz
+  // MaxMaskSize = WideSz * 2 = 4 * LoadSz
+  if (NumElts > INT_MAX / 4)
+    return false;
+
   // Determine which load is at the lower address and confirm the two loads are
   // exactly contiguous. isConsecutiveAccess(A, B) is true only when B directly
   // follows A, so we probe both orderings to also handle the reversed case.
