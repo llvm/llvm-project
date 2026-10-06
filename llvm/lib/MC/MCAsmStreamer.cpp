@@ -480,8 +480,9 @@ public:
   void emitCFILLVMDefAspaceCfa(int64_t Register, int64_t Offset,
                                int64_t AddressSpace, SMLoc Loc) override;
   void emitCFILLVMDefCfaAddressLinear(
-      std::optional<MCCFIInstruction::CfaRegisterTerm> Source, int64_t Offset,
-      unsigned AddressSpace, SMLoc Loc) override;
+      unsigned AddressSpace, int64_t Offset,
+      std::optional<MCCFIInstruction::CfaRegisterTerm> Source,
+      SMLoc Loc) override;
   void emitCFIOffset(int64_t Register, int64_t Offset, SMLoc Loc) override;
   void emitCFIPersonality(const MCSymbol *Sym, unsigned Encoding) override;
   void emitCFILsda(const MCSymbol *Sym, unsigned Encoding) override;
@@ -2198,17 +2199,15 @@ void MCAsmStreamer::emitCFILLVMDefAspaceCfa(int64_t Register, int64_t Offset,
 }
 
 void MCAsmStreamer::emitCFILLVMDefCfaAddressLinear(
-    std::optional<MCCFIInstruction::CfaRegisterTerm> Source, int64_t Offset,
-    unsigned AddressSpace, SMLoc Loc) {
-  MCStreamer::emitCFILLVMDefCfaAddressLinear(Source, Offset, AddressSpace, Loc);
-  OS << "\t.cfi_llvm_def_cfa_address_linear ";
+    unsigned AddressSpace, int64_t Offset,
+    std::optional<MCCFIInstruction::CfaRegisterTerm> Source, SMLoc Loc) {
+  MCStreamer::emitCFILLVMDefCfaAddressLinear(AddressSpace, Offset, Source, Loc);
+  OS << "\t.cfi_llvm_def_cfa_address_linear " << AddressSpace << ", " << Offset;
   if (Source) {
+    OS << ", ";
     EmitRegisterName(Source->Register);
     OS << ", " << Source->DerefSize << ", " << Source->Scale;
-  } else {
-    OS << "noreg, 0, 0";
   }
-  OS << ", " << Offset << ", " << AddressSpace;
   EmitEOL();
 }
 

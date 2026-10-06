@@ -4406,43 +4406,38 @@ bool AsmParser::parseDirectiveCFILLVMDefAspaceCfa(SMLoc DirectiveLoc) {
 }
 
 /// parseDirectiveCFILLVMDefCfaAddressLinear
-/// ::= .cfi_llvm_def_cfa_address_linear register, deref_size, scale, offset,
-///                                                address_space
-/// ::= .cfi_llvm_def_cfa_address_linear noreg, 0, 0, offset, address_space
+/// ::= .cfi_llvm_def_cfa_address_linear address_space, offset
+///                                      [, register, deref_size, scale]
 bool AsmParser::parseDirectiveCFILLVMDefCfaAddressLinear(SMLoc DirectiveLoc) {
-  int64_t Register = 0, DerefSize = 0, Scale = 0, Offset = 0, AddressSpace = 0;
-  bool HasRegister = true;
-  if (getTok().is(AsmToken::Identifier) && getTok().getString() == "noreg") {
-    HasRegister = false;
-    Lex();
-  } else if (parseRegisterOrRegisterNumber(Register, DirectiveLoc)) {
+  int64_t AddressSpace, Offset;
+  if (parseAbsoluteExpression(AddressSpace) || parseComma() ||
+      parseAbsoluteExpression(Offset))
     return true;
-  }
-  if (parseComma() || parseAbsoluteExpression(DerefSize) || parseComma() ||
-      parseAbsoluteExpression(Scale) || parseComma() ||
-      parseAbsoluteExpression(Offset) || parseComma() ||
-      parseAbsoluteExpression(AddressSpace) || parseEOL())
-    return true;
-  if (HasRegister && !isUInt<32>(Register))
-    return Error(DirectiveLoc, "expected an unsigned CFA register number");
-  if (!isUInt<8>(DerefSize))
-    return Error(DirectiveLoc, "expected an 8-bit CFA dereference size");
-  if (!isUInt<32>(Scale))
-    return Error(DirectiveLoc, "expected an unsigned CFA scale");
   if (!isUInt<32>(AddressSpace))
     return Error(DirectiveLoc, "expected an unsigned CFA address space");
-  if (!HasRegister && (DerefSize != 0 || Scale != 0))
-    return Error(DirectiveLoc,
-                 "expected zero CFA dereference size and scale for noreg");
-  if (HasRegister && DerefSize == 0)
-    return Error(DirectiveLoc, "expected a nonzero CFA dereference size");
 
   std::optional<MCCFIInstruction::CfaRegisterTerm> Source;
-  if (HasRegister)
+  if (getTok().isNot(AsmToken::EndOfStatement)) {
+    int64_t Register, DerefSize, Scale;
+    if (parseComma() || parseRegisterOrRegisterNumber(Register, DirectiveLoc) ||
+        parseComma() || parseAbsoluteExpression(DerefSize) || parseComma() ||
+        parseAbsoluteExpression(Scale))
+      return true;
+    if (!isUInt<32>(Register))
+      return Error(DirectiveLoc, "expected an unsigned CFA register number");
+    if (!isUInt<8>(DerefSize))
+      return Error(DirectiveLoc, "expected an 8-bit CFA dereference size");
+    if (DerefSize == 0)
+      return Error(DirectiveLoc, "expected a nonzero CFA dereference size");
+    if (!isUInt<32>(Scale))
+      return Error(DirectiveLoc, "expected an unsigned CFA scale");
     Source = MCCFIInstruction::CfaRegisterTerm{static_cast<unsigned>(Register),
                                                static_cast<unsigned>(DerefSize),
                                                static_cast<unsigned>(Scale)};
-  getStreamer().emitCFILLVMDefCfaAddressLinear(Source, Offset, AddressSpace,
+  }
+  if (parseEOL())
+    return true;
+  getStreamer().emitCFILLVMDefCfaAddressLinear(AddressSpace, Offset, Source,
                                                DirectiveLoc);
   return false;
 }

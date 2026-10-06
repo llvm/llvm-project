@@ -2714,43 +2714,26 @@ bool MIParser::parseCFIOperand(MachineOperand &Dest) {
         nullptr, Reg, Offset, AddressSpace, SMLoc()));
     break;
   case MIToken::kw_cfi_llvm_def_cfa_address_linear: {
-    auto SourceLoc = Token.location();
+    if (parseCFIAddressSpace(AddressSpace) ||
+        expectAndConsume(MIToken::comma) || parseCFIOffset(Offset))
+      return true;
     std::optional<MCCFIInstruction::CfaRegisterTerm> Source;
-    if (Token.is(MIToken::NamedRegister) && Token.stringValue() == "noreg") {
-      lex();
-    } else {
+    if (consumeIfPresent(MIToken::comma)) {
       Source.emplace();
-      if (parseCFIRegister(Source->Register))
+      if (parseCFIRegister(Source->Register) ||
+          expectAndConsume(MIToken::comma))
         return true;
-    }
-    if (expectAndConsume(MIToken::comma))
-      return true;
-    auto DerefSizeLoc = Token.location();
-    unsigned DerefSize, Scale;
-    if (parseCFIUnsigned(DerefSize) || expectAndConsume(MIToken::comma) ||
-        parseCFIUnsigned(Scale) || expectAndConsume(MIToken::comma))
-      return true;
-    if (!isUInt<8>(DerefSize))
-      return error(DerefSizeLoc, "expected an 8-bit CFA dereference size");
-    if (Source) {
-      if (DerefSize == 0)
+      auto DerefSizeLoc = Token.location();
+      if (parseCFIUnsigned(Source->DerefSize) ||
+          expectAndConsume(MIToken::comma) || parseCFIUnsigned(Source->Scale))
+        return true;
+      if (!isUInt<8>(Source->DerefSize))
+        return error(DerefSizeLoc, "expected an 8-bit CFA dereference size");
+      if (Source->DerefSize == 0)
         return error(DerefSizeLoc, "expected a nonzero CFA dereference size");
-      Source->DerefSize = DerefSize;
-      Source->Scale = Scale;
-    } else if (DerefSize != 0 || Scale != 0) {
-      return error(SourceLoc,
-                   "expected zero CFA dereference size and scale for $noreg");
     }
-    if (Token.isNot(MIToken::IntegerLiteral))
-      return error("expected a signed 64-bit CFA offset");
-    std::optional<int64_t> CfaOffset = Token.integerValue().tryExtValue();
-    if (!CfaOffset)
-      return error("expected a signed 64-bit CFA offset");
-    lex();
-    if (expectAndConsume(MIToken::comma) || parseCFIUnsigned(AddressSpace))
-      return true;
     CFIIndex = MF.addFrameInst(MCCFIInstruction::createLLVMDefCfaAddressLinear(
-        nullptr, Source, *CfaOffset, AddressSpace));
+        nullptr, AddressSpace, Offset, Source));
     break;
   }
   case MIToken::kw_cfi_remember_state:

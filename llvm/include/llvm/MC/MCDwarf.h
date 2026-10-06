@@ -573,9 +573,9 @@ public:
   };
   /// Held in ExtraFields when OpLLVMDefCfaAddressLinear.
   struct CfaAddressLinearFields {
-    std::optional<CfaRegisterTerm> Source;
-    int64_t Offset;
     unsigned AddressSpace;
+    int64_t Offset;
+    std::optional<CfaRegisterTerm> Source;
   };
   /// Held in ExtraFields when OpLLVMRegisterPair.
   struct RegisterPairFields {
@@ -786,17 +786,19 @@ public:
     return {OpLabel, L, LabelFields{CfiLabel}, Loc};
   }
 
-  /// .cfi_llvm_def_cfa_address_linear  defines the CFA as follows.
+  /// .cfi_llvm_def_cfa_address_linear address_space, offset
+  ///                                [, register, deref_size, scale]
+  /// defines the CFA as follows.
   /// With Source, the address is read(Register, DerefSize) * Scale + Offset,
   /// interpreting the result in AddressSpace.
   /// Without Source, Offset alone defines the address.
   static MCCFIInstruction createLLVMDefCfaAddressLinear(
-      MCSymbol *L, std::optional<CfaRegisterTerm> Source, int64_t Offset,
-      unsigned AddressSpace, SMLoc Loc = {}) {
+      MCSymbol *L, unsigned AddressSpace, int64_t Offset,
+      std::optional<CfaRegisterTerm> Source, SMLoc Loc = {}) {
     assert((!Source || isUInt<8>(Source->DerefSize)) &&
            "DW_OP_deref_size operand is too large");
     return {OpLLVMDefCfaAddressLinear, L,
-            CfaAddressLinearFields{Source, Offset, AddressSpace}, Loc};
+            CfaAddressLinearFields{AddressSpace, Offset, Source}, Loc};
   }
 
   /// .cfi_llvm_register_pair Previous value of Register is saved in R1:R2.

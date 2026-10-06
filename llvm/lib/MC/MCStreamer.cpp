@@ -540,12 +540,12 @@ void MCStreamer::emitCFILLVMDefAspaceCfa(int64_t Register, int64_t Offset,
 }
 
 void MCStreamer::emitCFILLVMDefCfaAddressLinear(
-    std::optional<MCCFIInstruction::CfaRegisterTerm> Source, int64_t Offset,
-    unsigned AddressSpace, SMLoc Loc) {
+    unsigned AddressSpace, int64_t Offset,
+    std::optional<MCCFIInstruction::CfaRegisterTerm> Source, SMLoc Loc) {
   MCSymbol *Label = emitCFILabel();
   MCCFIInstruction Instruction =
-      MCCFIInstruction::createLLVMDefCfaAddressLinear(Label, Source, Offset,
-                                                      AddressSpace, Loc);
+      MCCFIInstruction::createLLVMDefCfaAddressLinear(Label, AddressSpace,
+                                                      Offset, Source, Loc);
   MCDwarfFrameInfo *CurFrame = getCurrentDwarfFrameInfo();
   if (!CurFrame)
     return;

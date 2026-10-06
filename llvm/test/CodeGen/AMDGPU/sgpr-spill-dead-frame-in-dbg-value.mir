@@ -59,7 +59,7 @@ body:             |
   ; PEI: bb.0:
   ; PEI-NEXT:   successors: %bb.1(0x80000000)
   ; PEI-NEXT: {{  $}}
-  ; PEI-NEXT:   frame-setup CFI_INSTRUCTION llvm_def_cfa_address_linear $noreg, 0, 0, 0, 6
+  ; PEI-NEXT:   frame-setup CFI_INSTRUCTION llvm_def_cfa_address_linear 6, 0{{$}}
   ; PEI-NEXT:   frame-setup CFI_INSTRUCTION undefined $pc_reg
   ; PEI-NEXT:   renamable $sgpr10 = IMPLICIT_DEF
   ; PEI-NEXT:   $vgpr0 = IMPLICIT_DEF
