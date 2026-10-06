@@ -21,9 +21,14 @@ void AccessPath::dump(llvm::raw_ostream &OS) const {
       OS << "$" << PVD->getNameAsString();
     else if (PB->getImplicitThisParent())
       OS << "$this";
-  } else if (const auto *E = getAsNewAllocation())
-    OS << "NewAllocation at " << E;
-  else
+  } else if (const auto *E = getAsAllocation()) {
+    if (isa<CXXNewExpr>(E))
+      OS << "NewAllocation at " << E;
+    else if (isa<CallExpr>(E))
+      OS << "HeapAllocation at " << E;
+    else
+      llvm_unreachable("unexpected allocation expression");
+  } else
     llvm_unreachable("access path base invalid");
   for (const auto &E : Elements)
     E.dump(OS);
