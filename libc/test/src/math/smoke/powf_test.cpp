@@ -15,6 +15,7 @@
 #include "hdr/math_macros.h"
 #include "hdr/stdint_proxy.h"
 #include "src/__support/FPUtil/FPBits.h"
+#include "src/__support/math/powf.h"
 #include "src/__support/math/powf_double_eval.h"
 #include "src/__support/math/powf_float_eval.h"
 #include "src/math/powf.h"
@@ -294,7 +295,11 @@ public:
   LIST_POWF_FTZ_DAZ_TESTS(suffix, func)                                        \
   static_assert(true, "Require semicolon.")
 
-LIST_POWF_TESTS(Default, LIBC_NAMESPACE::powf, /*tolerance=*/0);
+LIST_POWF_TESTS(Default, LIBC_NAMESPACE::powf,
+                /*tolerance=*/LIBC_NAMESPACE::math::powf ==
+                        LIBC_NAMESPACE::math::float_eval::powf
+                    ? 1
+                    : 0);
 LIST_POWF_TESTS(DoubleEval, LIBC_NAMESPACE::math::double_eval::powf,
                 /*tolerance=*/0);
 LIST_POWF_TESTS(FloatEval, LIBC_NAMESPACE::math::float_eval::powf,
