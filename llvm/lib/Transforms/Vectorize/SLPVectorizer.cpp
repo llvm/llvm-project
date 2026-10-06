@@ -2592,10 +2592,12 @@ private:
   /// Get the loop nest for the given loop \p L.
   ArrayRef<const Loop *> getLoopNest(const Loop *L);
 
-  /// \returns the cost of the vectorizable entry.
+  /// \returns the cost of the vectorizable entry. \p RdxKind and \p RdxFMF
+  /// describe the reduction that consumes the tree, if any.
   InstructionCost getEntryCost(const TreeEntry *E,
                                ArrayRef<Value *> VectorizedVals,
-                               SmallPtrSetImpl<Value *> &CheckedExtracts);
+                               SmallPtrSetImpl<Value *> &CheckedExtracts,
+                               RecurKind RdxKind, FastMathFlags RdxFMF);
 
   /// Estimates spill/reload cost from vector register pressure for \p E at the
   /// point of emitting its vector result type \p FinalVecTy. \p ScalarTy is the
@@ -16517,9 +16519,10 @@ getVectorInstrContextHint(ArrayRef<Value *> VL, const APInt &DemandedElts) {
   return VIC;
 }
 
-InstructionCost
-BoUpSLP::getEntryCost(const TreeEntry *E, ArrayRef<Value *> VectorizedVals,
-                      SmallPtrSetImpl<Value *> &CheckedExtracts) {
+InstructionCost BoUpSLP::getEntryCost(const TreeEntry *E,
+                                      ArrayRef<Value *> VectorizedVals,
+                                      SmallPtrSetImpl<Value *> &CheckedExtracts,
+                                      RecurKind RdxKind, FastMathFlags RdxFMF) {
   ArrayRef<Value *> VL = E->Scalars;
 
   Type *ScalarTy = getValueType(VL[0], SLPReVec);
@@ -17607,6 +17610,19 @@ BoUpSLP::getEntryCost(const TreeEntry *E, ArrayRef<Value *> VectorizedVals,
               Instruction::Load, VecTy, LI0->getAlign(),
               LI0->getPointerAddressSpace(), CostKind,
               TTI::getOperandInfo(LI0->getPointerOperand()));
+          // The vector load of a bundle saves nothing over scalar loads the
+          // target coalesces as well. A reduction that loses its fmas pays
+          // that saving back.
+          if (E->ReuseShuffleIndices.empty() && E->ReorderIndices.empty() &&
+              It == MinBWs.end() &&
+              reductionLosesFMAs(RdxKind, RdxFMF, VectorizedVals)) {
+            Align BestAlign = LI0->getAlign();
+            for (Value *V : VL)
+              BestAlign = std::max(BestAlign, cast<LoadInst>(V)->getAlign());
+            VecLdCost += TTI->getLoadCoalescingSaving(
+                LI0->getType(), VL.size(), BestAlign,
+                LI0->getPointerAddressSpace(), CostKind);
+          }
         }
         break;
       case TreeEntry::StridedVectorize: {
@@ -19382,29 +19398,6 @@ InstructionCost BoUpSLP::calculateTreeCostAndTrimNonProfitable(
       return false;
     return IsExternallyUsedV(V);
   };
-  // The vector load of a bundle saves nothing over scalar loads the target
-  // coalesces as well. A reduction that loses its fmas pays that saving back.
-  bool LosesFMAs = reductionLosesFMAs(RdxKind, RdxFMF, VectorizedVals);
-  auto GetCoalescedLoadSaving = [&](const TreeEntry &TE) -> InstructionCost {
-    if (!LosesFMAs || !TE.hasState() || TE.isGather() ||
-        TE.getOpcode() != Instruction::Load ||
-        TE.State != TreeEntry::Vectorize || TE.getInterleaveFactor())
-      return 0;
-    if (DeletedNodes.contains(&TE) || TransformedToGatherNodes.contains(&TE))
-      return 0;
-    if (!TE.ReuseShuffleIndices.empty() || !TE.ReorderIndices.empty() ||
-        MinBWs.contains(&TE))
-      return 0;
-    if (!all_of(TE.Scalars, IsaPred<LoadInst>))
-      return 0;
-    auto *LI0 = cast<LoadInst>(TE.getMainOp());
-    Align BestAlign = LI0->getAlign();
-    for (Value *V : TE.Scalars)
-      BestAlign = std::max(BestAlign, cast<LoadInst>(V)->getAlign());
-    return TTI->getLoadCoalescingSaving(
-        LI0->getType(), TE.Scalars.size(), BestAlign,
-        LI0->getPointerAddressSpace(), CostKind);
-  };
   InstructionCost Cost = 0;
   SmallDenseMap<const TreeEntry *, uint64_t> EntryToScale;
   uint64_t PrevScale = 0;
@@ -19441,8 +19434,8 @@ InstructionCost BoUpSLP::calculateTreeCostAndTrimNonProfitable(
     assert((!TE.isGather() || TE.Idx == 0 || TE.UserTreeIndex) &&
            "Expected gather nodes with users only.");
 
-    InstructionCost C = getEntryCost(&TE, VectorizedVals, CheckedExtracts);
-    C += GetCoalescedLoadSaving(TE);
+    InstructionCost C =
+        getEntryCost(&TE, VectorizedVals, CheckedExtracts, RdxKind, RdxFMF);
     uint64_t Scale = 0;
     bool CostIsFree = C == 0;
     // For gather/buildvector (and split-vectorize) entries, prefer the
@@ -19644,8 +19637,8 @@ InstructionCost BoUpSLP::calculateTreeCostAndTrimNonProfitable(
     return BVCost;
   };
   auto RecostEntry = [&](const TreeEntry *TE) {
-    InstructionCost C = getEntryCost(TE, VectorizedVals, CheckedExtracts);
-    C += GetCoalescedLoadSaving(*TE);
+    InstructionCost C =
+        getEntryCost(TE, VectorizedVals, CheckedExtracts, RdxKind, RdxFMF);
     if (!C.isValid() || C == 0)
       return C;
     uint64_t Scale = EntryToScale.lookup(TE);
