@@ -4094,7 +4094,8 @@ void Sema::ActOnDeferStmtError([[maybe_unused]] Scope *CurScope) {
   CurrentDefer.pop_back();
 }
 
-StmtResult Sema::ActOnEndOfDeferStmt(Stmt *Body, Scope *CurScope) {
+StmtResult Sema::ActOnEndOfDeferStmt(Stmt *Body,
+                                     [[maybe_unused]] Scope *CurScope) {
   assert(!CurrentDefer.empty() && CurrentDefer.back().first == CurScope);
   SourceLocation DeferLoc = CurrentDefer.pop_back_val().second;
   DiagnoseEmptyStmtBody(DeferLoc, Body, diag::warn_empty_defer_body);
