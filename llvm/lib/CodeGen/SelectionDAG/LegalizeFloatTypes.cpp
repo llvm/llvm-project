@@ -1527,7 +1527,7 @@ void DAGTypeLegalizer::ExpandFloatResult(SDNode *N, unsigned ResNo) {
     dbgs() << "ExpandFloatResult #" << ResNo << ": ";
     N->dump(&DAG); dbgs() << "\n";
 #endif
-    report_fatal_error("Do not know how to expand the result of this "
+    report_fatal_error("do not know how to expand the result of this "
                        "operator!");
     // clang-format off
   case ISD::POISON:
@@ -2180,7 +2180,7 @@ bool DAGTypeLegalizer::ExpandFloatOperand(SDNode *N, unsigned OpNo) {
     dbgs() << "ExpandFloatOperand Op #" << OpNo << ": ";
     N->dump(&DAG); dbgs() << "\n";
 #endif
-    report_fatal_error("Do not know how to expand this operator's operand!");
+    report_fatal_error("do not know how to expand this operator's operand!");
 
   case ISD::BITCAST:         Res = ExpandOp_BITCAST(N); break;
   case ISD::BUILD_VECTOR:    Res = ExpandOp_BUILD_VECTOR(N); break;

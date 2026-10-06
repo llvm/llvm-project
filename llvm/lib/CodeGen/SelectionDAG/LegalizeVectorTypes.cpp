@@ -1886,7 +1886,7 @@ void DAGTypeLegalizer::SplitVecRes_BITCAST(SDNode *N, SDValue &Lo,
     Hi = DAG.getNode(ISD::BITCAST, dl, HiVT, Hi);
     return;
   case TargetLowering::TypeScalarizeScalableVector:
-    report_fatal_error("Scalarization of scalable vectors is not supported.");
+    report_fatal_error("scalarization of scalable vectors is not supported");
   }
 
   if (LoVT.isScalableVector()) {
@@ -5309,7 +5309,7 @@ void DAGTypeLegalizer::WidenVectorResult(SDNode *N, unsigned ResNo) {
     N->dump(&DAG);
     dbgs() << "\n";
 #endif
-    report_fatal_error("Do not know how to widen the result of this operator!");
+    report_fatal_error("do not know how to widen the result of this operator!");
 
   case ISD::LOOP_DEPENDENCE_RAW_MASK:
   case ISD::LOOP_DEPENDENCE_WAR_MASK:
@@ -6418,7 +6418,7 @@ SDValue DAGTypeLegalizer::WidenVecRes_BITCAST(SDNode *N) {
   case TargetLowering::TypeLegal:
     break;
   case TargetLowering::TypeScalarizeScalableVector:
-    report_fatal_error("Scalarization of scalable vectors is not supported.");
+    report_fatal_error("scalarization of scalable vectors is not supported");
   case TargetLowering::TypePromoteInteger: {
     // If the incoming type is a vector that is being promoted, then
     // we know that the elements are arranged differently and that we
@@ -7858,7 +7858,7 @@ bool DAGTypeLegalizer::WidenVectorOperand(SDNode *N, unsigned OpNo) {
     N->dump(&DAG);
     dbgs() << "\n";
 #endif
-    report_fatal_error("Do not know how to widen this operator's operand!");
+    report_fatal_error("do not know how to widen this operator's operand!");
 
   case ISD::BITCAST:            Res = WidenVecOp_BITCAST(N); break;
   case ISD::FAKE_USE:
