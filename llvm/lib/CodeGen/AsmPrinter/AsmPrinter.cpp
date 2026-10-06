@@ -195,8 +195,6 @@ static cl::opt<std::string>
                    cl::desc("Output filename for stack usage information"),
                    cl::value_desc("filename"), cl::Hidden);
 
-extern cl::opt<bool> EmitBBHash;
-
 STATISTIC(EmittedInsts, "Number of machine instrs printed");
 
 char AsmPrinter::ID = 0;
@@ -512,7 +510,7 @@ void AsmPrinter::getAnalysisUsage(AnalysisUsage &AU) const {
   AU.addRequired<GCModuleInfo>();
   AU.addRequired<LazyMachineBlockFrequencyInfoPass>();
   AU.addRequired<MachineBranchProbabilityInfoWrapperPass>();
-  if (EmitBBHash)
+  if (shouldEmitBBHash())
     AU.addRequired<MachineBlockHashInfo>();
   AU.addUsedIfAvailable<BasicBlockSectionsProfileReaderWrapperPass>();
 }
@@ -523,7 +521,7 @@ bool AsmPrinter::doInitialization(Module &M) {
   HasSplitStack = false;
   HasNoSplitStack = false;
   DbgInfoAvailable = !M.debug_compile_units().empty();
-  const Triple &Target = TM.getTargetTriple();
+  const Triple &Target = M.getTargetTriple();
 
   AddrLabelSymbols = nullptr;
 
@@ -773,8 +771,8 @@ MCSymbol *AsmPrinter::getSymbolPreferLocal(const GlobalValue &GV) const {
   // assembler would otherwise be conservative and assume a global default
   // visibility symbol can be interposable, even if the code generator already
   // assumed it.
-  if (TM.getTargetTriple().isOSBinFormatELF() && GV.canBenefitFromLocalAlias()) {
-    const Module &M = *GV.getParent();
+  const Module &M = *GV.getParent();
+  if (M.getTargetTriple().isOSBinFormatELF() && GV.canBenefitFromLocalAlias()) {
     if (TM.getRelocationModel() != Reloc::Static &&
         M.getPIELevel() == PIELevel::Default && GV.isDSOLocal())
       return getSymbolWithGlobalValueBase(&GV, "$local");
@@ -829,9 +827,7 @@ void AsmPrinter::emitGlobalVariable(const GlobalVariable *GV,
   emitVisibility(EmittedSym, GV->getVisibility(), !GV->isDeclaration());
 
   if (GV->isTagged()) {
-    Triple T = TM.getTargetTriple();
-
-    if (T.getArch() != Triple::aarch64)
+    if (TM.getTargetTriple().getArch() != Triple::aarch64)
       OutContext.reportError(SMLoc(),
                              "tagged symbols (-fsanitize=memtag-globals) are "
                              "only supported on AArch64");
@@ -1339,6 +1335,12 @@ static bool emitDebugValueComment(const MachineInstr *MI, AsmPrinter &AP) {
       OS << "!target-index(" << Op.getIndex() << "," << Op.getOffset() << ")";
       break;
     }
+    case MachineOperand::MO_GlobalAddress: {
+      Op.getGlobal()->printAsOperand(OS, /*PrintType=*/false);
+      if (Op.getOffset())
+        OS << '+' << Op.getOffset();
+      break;
+    }
     case MachineOperand::MO_Register:
     case MachineOperand::MO_FrameIndex: {
       Register Reg;
@@ -1512,7 +1514,7 @@ getBBAddrMapFeature(const MachineFunction &MF, int NumMBBSectionRanges,
           MF.hasBBSections() && NumMBBSectionRanges > 1,
           // Use static_cast to avoid breakage of tests on windows.
           static_cast<bool>(BBAddrMapSkipEmitBBEntries), HasCalls,
-          static_cast<bool>(EmitBBHash), PostLinkCfgEnabled};
+          shouldEmitBBHash(), PostLinkCfgEnabled};
 }
 
 void AsmPrinter::emitBBAddrMapSection(const MachineFunction &MF) {
@@ -2093,8 +2095,9 @@ void AsmPrinter::emitFunctionBody() {
   bool HasAnyRealCode = false;
   int NumInstsInFunction = 0;
   // Only x86 needs this padding; the Arm unwinders back the PC up themselves.
-  bool NeedsEHaNops = MMI->getModule()->getModuleFlag("eh-asynch") &&
-                      TM.getTargetTriple().isX86();
+  const Module *M = MMI->getModule();
+  bool NeedsEHaNops =
+      M->getTargetTriple().isX86() && M->getModuleFlag("eh-asynch");
 
   const MCSubtargetInfo *STI = nullptr;
   if (this->MF)
@@ -2342,7 +2345,7 @@ void AsmPrinter::emitFunctionBody() {
       // If there is a post-instruction symbol, emit a label for it here.
       if (MCSymbol *S = MI.getPostInstrSymbol()) {
         // Emit the weak symbol attribute used for the prefetch target fallback.
-        if (TM.getTargetTriple().isOSBinFormatELF()) {
+        if (M->getTargetTriple().isOSBinFormatELF()) {
           MCSymbolELF *ESym = static_cast<MCSymbolELF *>(S);
           if (ESym->getBinding() == ELF::STB_WEAK)
             OutStreamer->emitSymbolAttribute(S, MCSA_Weak);
@@ -2451,7 +2454,7 @@ void AsmPrinter::emitFunctionBody() {
   // after linking, causing the kernel not to load the binary:
   // https://developercommunity.visualstudio.com/content/problem/45366/vc-linker-creates-invalid-dll-with-clang-cl.html
   // FIXME: Hide this behind some API in e.g. MCAsmInfo or MCTargetStreamer.
-  const Triple &TT = TM.getTargetTriple();
+  const Triple &TT = M->getTargetTriple();
   if (!HasAnyRealCode && (MAI.hasSubsectionsViaSymbols() ||
                           (TT.isOSWindows() && TT.isOSBinFormatCOFF()))) {
     MCInst Noop = MF->getSubtarget().getInstrInfo()->getNop();
@@ -2689,7 +2692,7 @@ void AsmPrinter::emitGlobalAlias(const Module &M, const GlobalAlias &GA) {
   // so AIX has to use the extra-label-at-definition strategy. At this
   // point, all the extra label is emitted, we just have to emit linkage for
   // those labels.
-  if (TM.getTargetTriple().isOSBinFormatXCOFF()) {
+  if (M.getTargetTriple().isOSBinFormatXCOFF()) {
     // Linkage for alias of global variable has been emitted.
     if (isa_and_nonnull<GlobalVariable>(BaseObject))
       return;
@@ -2714,7 +2717,7 @@ void AsmPrinter::emitGlobalAlias(const Module &M, const GlobalAlias &GA) {
   // This affects codegen when the aliasee is not a function.
   if (IsFunction) {
     OutStreamer->emitSymbolAttribute(Name, MCSA_ELF_TypeFunction);
-    if (TM.getTargetTriple().isOSBinFormatCOFF()) {
+    if (M.getTargetTriple().isOSBinFormatCOFF()) {
       OutStreamer->beginCOFFSymbolDef(Name);
       OutStreamer->emitCOFFSymbolStorageClass(
           GA.hasLocalLinkage() ? COFF::IMAGE_SYM_CLASS_STATIC
@@ -2761,7 +2764,7 @@ void AsmPrinter::emitGlobalIFunc(Module &M, const GlobalIFunc &GI) {
       assert(GI.hasLocalLinkage() && "Invalid ifunc linkage");
   };
 
-  if (TM.getTargetTriple().isOSBinFormatELF()) {
+  if (M.getTargetTriple().isOSBinFormatELF()) {
     MCSymbol *Name = getSymbol(&GI);
     EmitLinkage(Name);
     OutStreamer->emitSymbolAttribute(Name, MCSA_ELF_TypeIndFunction);
@@ -2777,7 +2780,7 @@ void AsmPrinter::emitGlobalIFunc(Module &M, const GlobalIFunc &GI) {
     return;
   }
 
-  if (!TM.getTargetTriple().isOSBinFormatMachO() || !getIFuncMCSubtargetInfo())
+  if (!M.getTargetTriple().isOSBinFormatMachO() || !getIFuncMCSubtargetInfo())
     reportFatalUsageError("IFuncs are not supported on this platform");
 
   // On Darwin platforms, emit a manually-constructed .symbol_resolver that
@@ -2862,8 +2865,7 @@ void AsmPrinter::emitRemarksSection(remarks::RemarkStreamer &RS) {
 
 static uint64_t globalSize(const llvm::GlobalVariable &G) {
   const Constant *Initializer = G.getInitializer();
-  return G.getParent()->getDataLayout().getTypeAllocSize(
-      Initializer->getType());
+  return G.getDataLayout().getTypeAllocSize(Initializer->getType());
 }
 
 static bool shouldTagGlobal(const llvm::GlobalVariable &G) {
@@ -2943,7 +2945,7 @@ bool AsmPrinter::doFinalization(Module &M) {
   // accesses to MF specific features at the module level and so that
   // we can conditionalize accesses based on whether or not it is nullptr.
   MF = nullptr;
-  const Triple &Target = TM.getTargetTriple();
+  const Triple &Target = M.getTargetTriple();
 
   std::vector<GlobalVariable *> GlobalsToTag;
   for (GlobalVariable &G : M.globals()) {
@@ -3096,7 +3098,7 @@ bool AsmPrinter::doFinalization(Module &M) {
   // sections after DWARF.
   for (const auto &IFunc : M.ifuncs())
     emitGlobalIFunc(M, IFunc);
-  if (TM.getTargetTriple().isOSBinFormatXCOFF() && hasDebugInfo()) {
+  if (M.getTargetTriple().isOSBinFormatXCOFF() && hasDebugInfo()) {
     // Emit section end. This is used to tell the debug line section where the
     // end is for a text section if we don't use .loc to represent the debug
     // line.
@@ -3157,7 +3159,7 @@ bool AsmPrinter::doFinalization(Module &M) {
 
   // Emit .note.GNU-split-stack and .note.GNU-no-split-stack sections if
   // split-stack is used.
-  if (TM.getTargetTriple().isOSBinFormatELF() && HasSplitStack) {
+  if (M.getTargetTriple().isOSBinFormatELF() && HasSplitStack) {
     OutStreamer->switchSection(OutContext.getELFSection(".note.GNU-split-stack",
                                                         ELF::SHT_PROGBITS, 0));
     if (HasNoSplitStack)
@@ -5249,7 +5251,7 @@ AsmPrinter::getCodeViewJumpTableInfo(int JTI, const MachineInstr *BranchInstr,
 }
 
 void AsmPrinter::emitCOFFReplaceableFunctionData(Module &M) {
-  const Triple &TT = TM.getTargetTriple();
+  const Triple &TT = M.getTargetTriple();
   assert(TT.isOSBinFormatCOFF());
 
   bool IsTargetArm64EC = TT.isWindowsArm64EC();
@@ -5314,7 +5316,7 @@ void AsmPrinter::emitCOFFReplaceableFunctionData(Module &M) {
 }
 
 void AsmPrinter::emitCOFFFeatureSymbol(Module &M) {
-  const Triple &TT = TM.getTargetTriple();
+  const Triple &TT = M.getTargetTriple();
   assert(TT.isOSBinFormatCOFF());
 
   // Emit an absolute @feat.00 symbol.
