@@ -85,7 +85,7 @@ class SPIRV_CLBinaryArithmeticOp<string mnemonic, int opcode, Type type,
 // Base class for OpenCL binary ops.
 class SPIRV_CLTernaryOp<string mnemonic, int opcode, Type resultType,
                       Type operandType, list<Trait> traits = []> :
-  SPIRV_CLOp<mnemonic, opcode, !listconcat([Pure], traits)> {
+  SPIRV_CLOp<mnemonic, opcode, !listconcat([NoMemoryEffect], traits)> {
 
   let arguments = (ins
     SPIRV_ScalarOrVectorOf<operandType>:$x,
@@ -587,7 +587,8 @@ def SPIRV_CLFClampOp : SPIRV_CLTernaryArithmeticOp<"fclamp", 95, SPIRV_Float> {
   let summary = "Clamp x between min and max values.";
 
   let description = [{
-    Returns min(max(x, minval), maxval).
+    Returns min(max(x, minval), maxval). The resulting value is poison if
+    minval > maxval.
 
     Result Type, x, minval and maxval must be floating-point or
     vector(2,3,4,8,16) of floating-point values.
@@ -1069,7 +1070,8 @@ def SPIRV_CLSClampOp : SPIRV_CLTernaryArithmeticOp<"s_clamp", 149, SPIRV_Integer
 
   let description = [{
     Returns min(max(x, minval), maxval), where x, minval and maxval are
-    interpreted as signed integers.
+    interpreted as signed integers. The resulting value is poison if
+    minval > maxval.
 
     Result Type, x, minval and maxval must be integer or vector(2,3,4,8,16)
     of integer values.
@@ -1093,7 +1095,8 @@ def SPIRV_CLUClampOp : SPIRV_CLTernaryArithmeticOp<"u_clamp", 150, SPIRV_Integer
 
   let description = [{
     Returns min(max(x, minval), maxval), where x, minval and maxval are
-    interpreted as unsigned integers.
+    interpreted as unsigned integers. The resulting value is poison if
+    minval > maxval.
 
     Result Type, x, minval and maxval must be integer or vector(2,3,4,8,16)
     of integer values.
