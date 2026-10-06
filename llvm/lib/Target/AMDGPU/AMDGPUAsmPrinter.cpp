@@ -228,9 +228,8 @@ void AMDGPUAsmPrinter::emitFunctionBodyStart() {
 void AMDGPUAsmPrinter::emitFunctionBodyEnd() {
   // Emit the label for the prefetch end symbol if ICache prefetch is enabled.
   // This symbol was created in emitFunctionBodyStart for this function.
-  if (PrefetchEndSym) {
+  if (PrefetchEndSym)
     OutStreamer->emitLabel(PrefetchEndSym);
-  }
   PrefetchEndSym = nullptr;
 }
 
