@@ -194,7 +194,7 @@ static void emitDeclDestroy(CIRGenFunction &cgf, const VarDecl *vd,
     // The same applies to code above where it is calling getAddrOfGlobalVar.
     mlir::Value globalVal = builder.createGetGlobal(addr);
     globalVal.getDefiningOp<cir::GetGlobalOp>().setStaticLocal(
-        addr.getDynamicInitGuard().has_value());
+        addr.getDynamicInitGuard().has_value() && vd->isLocalVarDecl());
     CharUnits alignment = cgf.getContext().getDeclAlign(vd);
     Address globalAddr{globalVal, cgf.convertTypeForMem(type), alignment};
     cgf.emitDestroy(globalAddr, type, cgf.getDestroyer(dtorKind));
@@ -357,10 +357,11 @@ void CIRGenModule::emitCXXSpecialVarDeclInit(const VarDecl *varDecl,
   scope.setAsGlobalInit();
   builder.setInsertionPointToStart(block);
   mlir::Value getGlobal = builder.createGetGlobal(addr, varDecl->getTLSKind());
-  // If we're initializing a guarded variable, set the flag that indicates
-  // that.
+  // If we're initializing a guarded local static, set the flag that
+  // indicates that. Namespace-scope vague-linkage globals also get a
+  // dynamic-init guard, but aren't "static locals".
   getGlobal.getDefiningOp<cir::GetGlobalOp>().setStaticLocal(
-      addr.getDynamicInitGuard().has_value());
+      addr.getDynamicInitGuard().has_value() && varDecl->isLocalVarDecl());
 
   Address declAddr(getGlobal, getASTContext().getDeclAlign(varDecl));
   assert(performInit && "cannot have a constant initializer which needs "
