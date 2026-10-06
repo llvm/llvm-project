@@ -738,14 +738,12 @@ multiclass TTAscalonSchedResources<bit ReducedFP64Vec> {
         defm "" : LMULSEWWriteResMXSEW<"WriteVFMulF",  FPVRes, mx, sew, IsWorstCase>;
         defm "" : LMULSEWWriteResMXSEW<"WriteVFMulAddV", FPVRes, mx, sew, IsWorstCase>;
         defm "" : LMULSEWWriteResMXSEW<"WriteVFMulAddF", FPVRes, mx, sew, IsWorstCase>;
-      }
-      let Latency = Cycles, ReleaseAtCycles = [1, Cycles] in {
-        defm "" : LMULSEWWriteResMXSEW<"WriteVFRecpV",   [AscalonFP, AscalonV], mx, sew, IsWorstCase>;
-        defm "" : LMULSEWWriteResMXSEW<"WriteVFCvtIToFV", [AscalonFP, AscalonV], mx, sew, IsWorstCase>;
-        defm "" : LMULSEWWriteResMXSEW<"WriteVFMinMaxV", [AscalonFP, AscalonV], mx, sew, IsWorstCase>;
-        defm "" : LMULSEWWriteResMXSEW<"WriteVFMinMaxF", [AscalonFP, AscalonV], mx, sew, IsWorstCase>;
-        defm "" : LMULSEWWriteResMXSEW<"WriteVFSgnjV",   [AscalonFP, AscalonV], mx, sew, IsWorstCase>;
-        defm "" : LMULSEWWriteResMXSEW<"WriteVFSgnjF",   [AscalonFP, AscalonV], mx, sew, IsWorstCase>;
+        defm "" : LMULSEWWriteResMXSEW<"WriteVFRecpV",   FPVRes, mx, sew, IsWorstCase>;
+        defm "" : LMULSEWWriteResMXSEW<"WriteVFCvtIToFV", FPVRes, mx, sew, IsWorstCase>;
+        defm "" : LMULSEWWriteResMXSEW<"WriteVFMinMaxV", FPVRes, mx, sew, IsWorstCase>;
+        defm "" : LMULSEWWriteResMXSEW<"WriteVFMinMaxF", FPVRes, mx, sew, IsWorstCase>;
+        defm "" : LMULSEWWriteResMXSEW<"WriteVFSgnjV",   FPVRes, mx, sew, IsWorstCase>;
+        defm "" : LMULSEWWriteResMXSEW<"WriteVFSgnjF",   FPVRes, mx, sew, IsWorstCase>;
       }
     }
   }

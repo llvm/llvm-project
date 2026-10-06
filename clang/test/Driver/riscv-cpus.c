@@ -250,70 +250,71 @@
 // MCPU-TT-ASCALON-X-SAME: "-target-feature" "+svpbmt"
 // MCPU-TT-ASCALON-X-SAME: "-target-abi" "lp64d"
 
-// RUN: %clang --target=riscv64 -### -c %s 2>&1 -mtune=tt-ascalon-xg | FileCheck -check-prefix=MTUNE-TT-ASCALON-XG %s
-// MTUNE-TT-ASCALON-XG: "-tune-cpu" "tt-ascalon-xg"
-
-// RUN: %clang --target=riscv64 -### -c %s 2>&1 -mcpu=tt-ascalon-xg | FileCheck -check-prefix=MCPU-TT-ASCALON-XG %s
-// MCPU-TT-ASCALON-XG: "-target-cpu" "tt-ascalon-xg"
-// MCPU-TT-ASCALON-XG-SAME: "-target-feature" "+m"
-// MCPU-TT-ASCALON-XG-SAME: "-target-feature" "+a"
-// MCPU-TT-ASCALON-XG-SAME: "-target-feature" "+f"
-// MCPU-TT-ASCALON-XG-SAME: "-target-feature" "+d"
-// MCPU-TT-ASCALON-XG-SAME: "-target-feature" "+c"
-// MCPU-TT-ASCALON-XG-SAME: "-target-feature" "+v"
-// MCPU-TT-ASCALON-XG-SAME: "-target-feature" "+h"
-// MCPU-TT-ASCALON-XG-SAME: "-target-feature" "+zicbom"
-// MCPU-TT-ASCALON-XG-SAME: "-target-feature" "+zicbop"
-// MCPU-TT-ASCALON-XG-SAME: "-target-feature" "+zicboz"
-// MCPU-TT-ASCALON-XG-SAME: "-target-feature" "+zicntr"
-// MCPU-TT-ASCALON-XG-SAME: "-target-feature" "+zicond"
-// MCPU-TT-ASCALON-XG-SAME: "-target-feature" "+zicsr"
-// MCPU-TT-ASCALON-XG-SAME: "-target-feature" "+zifencei"
-// MCPU-TT-ASCALON-XG-SAME: "-target-feature" "+zihintntl"
-// MCPU-TT-ASCALON-XG-SAME: "-target-feature" "+zihintpause"
-// MCPU-TT-ASCALON-XG-SAME: "-target-feature" "+zihpm"
-// MCPU-TT-ASCALON-XG-SAME: "-target-feature" "+zimop"
-// MCPU-TT-ASCALON-XG-SAME: "-target-feature" "+zmmul"
-// MCPU-TT-ASCALON-XG-SAME: "-target-feature" "+zawrs"
-// MCPU-TT-ASCALON-XG-SAME: "-target-feature" "+zfa"
-// MCPU-TT-ASCALON-XG-SAME: "-target-feature" "+zfbfmin"
-// MCPU-TT-ASCALON-XG-SAME: "-target-feature" "+zfh"
-// MCPU-TT-ASCALON-XG-SAME: "-target-feature" "+zfhmin"
-// MCPU-TT-ASCALON-XG-SAME: "-target-feature" "+zca"
-// MCPU-TT-ASCALON-XG-SAME: "-target-feature" "+zcb"
-// MCPU-TT-ASCALON-XG-SAME: "-target-feature" "+zba"
-// MCPU-TT-ASCALON-XG-SAME: "-target-feature" "+zbb"
-// MCPU-TT-ASCALON-XG-SAME: "-target-feature" "+zbs"
-// MCPU-TT-ASCALON-XG-SAME: "-target-feature" "+zkr"
-// MCPU-TT-ASCALON-XG-SAME: "-target-feature" "+zkt"
-// MCPU-TT-ASCALON-XG-SAME: "-target-feature" "+zvbb"
-// MCPU-TT-ASCALON-XG-SAME: "-target-feature" "+zvbc"
-// MCPU-TT-ASCALON-XG-SAME: "-target-feature" "+zve32f"
-// MCPU-TT-ASCALON-XG-SAME: "-target-feature" "+zve32x"
-// MCPU-TT-ASCALON-XG-SAME: "-target-feature" "+zve64d"
-// MCPU-TT-ASCALON-XG-SAME: "-target-feature" "+zve64f"
-// MCPU-TT-ASCALON-XG-SAME: "-target-feature" "+zve64x"
-// MCPU-TT-ASCALON-XG-SAME: "-target-feature" "+zvfbfmin"
-// MCPU-TT-ASCALON-XG-SAME: "-target-feature" "+zvfbfwma"
-// MCPU-TT-ASCALON-XG-SAME: "-target-feature" "+zvfh"
-// MCPU-TT-ASCALON-XG-SAME: "-target-feature" "+zvfhmin"
-// MCPU-TT-ASCALON-XG-SAME: "-target-feature" "+zvkb"
-// MCPU-TT-ASCALON-XG-SAME: "-target-feature" "+zvkt"
-// MCPU-TT-ASCALON-XG-SAME: "-target-feature" "+zvl128b"
-// MCPU-TT-ASCALON-XG-SAME: "-target-feature" "+zvl256b"
-// MCPU-TT-ASCALON-XG-SAME: "-target-feature" "+zvl32b"
-// MCPU-TT-ASCALON-XG-SAME: "-target-feature" "+zvl64b"
-// MCPU-TT-ASCALON-XG-SAME: "-target-feature" "+smaia"
-// MCPU-TT-ASCALON-XG-SAME: "-target-feature" "+smmpm"
-// MCPU-TT-ASCALON-XG-SAME: "-target-feature" "+smnpm"
-// MCPU-TT-ASCALON-XG-SAME: "-target-feature" "+smrnmi"
-// MCPU-TT-ASCALON-XG-SAME: "-target-feature" "+smstateen"
-// MCPU-TT-ASCALON-XG-SAME: "-target-feature" "+sscofpmf"
-// MCPU-TT-ASCALON-XG-SAME: "-target-feature" "+svinval"
-// MCPU-TT-ASCALON-XG-SAME: "-target-feature" "+svnapot"
-// MCPU-TT-ASCALON-XG-SAME: "-target-feature" "+svpbmt"
-// MCPU-TT-ASCALON-XG-SAME: "-target-feature" "-zvkng"
-// MCPU-TT-ASCALON-XG-SAME: "-target-abi" "lp64d"
+// RUN: %clang --target=riscv64 -mcpu=tt-ascalon-xg --print-enabled-extensions | FileCheck -check-prefix=MCPU-TT-ASCALON-XG %s
+// MCPU-TT-ASCALON-XG: i
+// MCPU-TT-ASCALON-XG: m
+// MCPU-TT-ASCALON-XG: a
+// MCPU-TT-ASCALON-XG: f
+// MCPU-TT-ASCALON-XG: d
+// MCPU-TT-ASCALON-XG: c
+// MCPU-TT-ASCALON-XG: v
+// MCPU-TT-ASCALON-XG: h
+// MCPU-TT-ASCALON-XG: zicbom
+// MCPU-TT-ASCALON-XG: zicbop
+// MCPU-TT-ASCALON-XG: zicboz
+// MCPU-TT-ASCALON-XG: zicntr
+// MCPU-TT-ASCALON-XG: zicond
+// MCPU-TT-ASCALON-XG: zicsr
+// MCPU-TT-ASCALON-XG: zifencei
+// MCPU-TT-ASCALON-XG: zihintntl
+// MCPU-TT-ASCALON-XG: zihintpause
+// MCPU-TT-ASCALON-XG: zihpm
+// MCPU-TT-ASCALON-XG: zimop
+// MCPU-TT-ASCALON-XG: zmmul
+// MCPU-TT-ASCALON-XG: zawrs
+// MCPU-TT-ASCALON-XG: zfa
+// MCPU-TT-ASCALON-XG: zfbfmin
+// MCPU-TT-ASCALON-XG: zfh
+// MCPU-TT-ASCALON-XG: zfhmin
+// MCPU-TT-ASCALON-XG: zca
+// MCPU-TT-ASCALON-XG: zcb
+// MCPU-TT-ASCALON-XG: zba
+// MCPU-TT-ASCALON-XG: zbb
+// MCPU-TT-ASCALON-XG: zbs
+// MCPU-TT-ASCALON-XG: zkr
+// MCPU-TT-ASCALON-XG: zkt
+// MCPU-TT-ASCALON-XG: zvbb
+// MCPU-TT-ASCALON-XG: zvbc
+// MCPU-TT-ASCALON-XG: zve32f
+// MCPU-TT-ASCALON-XG: zve32x
+// MCPU-TT-ASCALON-XG: zve64d
+// MCPU-TT-ASCALON-XG: zve64f
+// MCPU-TT-ASCALON-XG: zve64x
+// MCPU-TT-ASCALON-XG: zvfbfmin
+// MCPU-TT-ASCALON-XG: zvfbfwma
+// MCPU-TT-ASCALON-XG: zvfh
+// MCPU-TT-ASCALON-XG: zvfhmin
+// MCPU-TT-ASCALON-XG: zvkb
+// MCPU-TT-ASCALON-XG-NOT: zvkg
+// MCPU-TT-ASCALON-XG-NOT: zvkn
+// MCPU-TT-ASCALON-XG-NOT: zvknc
+// MCPU-TT-ASCALON-XG-NOT: zvkned
+// MCPU-TT-ASCALON-XG-NOT: zvknha
+// MCPU-TT-ASCALON-XG-NOT: zvknhb
+// MCPU-TT-ASCALON-XG: zvkt
+// MCPU-TT-ASCALON-XG: zvl128b
+// MCPU-TT-ASCALON-XG: zvl256b
+// MCPU-TT-ASCALON-XG: zvl32b
+// MCPU-TT-ASCALON-XG: zvl64b
+// MCPU-TT-ASCALON-XG: smaia
+// MCPU-TT-ASCALON-XG: smmpm
+// MCPU-TT-ASCALON-XG: smnpm
+// MCPU-TT-ASCALON-XG: smrnmi
+// MCPU-TT-ASCALON-XG: smstateen
+// MCPU-TT-ASCALON-XG: sscofpmf
+// MCPU-TT-ASCALON-XG: svinval
+// MCPU-TT-ASCALON-XG: svnapot
+// MCPU-TT-ASCALON-XG: svpbmt
 
 // RUN: %clang --target=riscv64 -### -c %s 2>&1 -mtune=xiangshan-nanhu | FileCheck -check-prefix=MTUNE-XIANGSHAN-NANHU %s
 // MTUNE-XIANGSHAN-NANHU: "-tune-cpu" "xiangshan-nanhu"
