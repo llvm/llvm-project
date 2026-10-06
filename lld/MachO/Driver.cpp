@@ -984,6 +984,8 @@ static TargetInfo *createTargetInfo(InputArgList &args) {
   case CPU_TYPE_X86_64:
     return createX86_64TargetInfo();
   case CPU_TYPE_ARM64:
+    if (config->arch() == AK_arm64e)
+      return createARM64eTargetInfo();
     return createARM64TargetInfo();
   case CPU_TYPE_ARM64_32:
     return createARM64_32TargetInfo();
