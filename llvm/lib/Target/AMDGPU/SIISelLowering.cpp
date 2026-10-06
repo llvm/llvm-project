@@ -1427,24 +1427,18 @@ static unsigned getIntrMemWidth(unsigned IntrID) {
   case Intrinsic::amdgcn_global_load_async_to_lds_b32:
   case Intrinsic::amdgcn_cluster_load_async_to_lds_b32:
   case Intrinsic::amdgcn_global_store_async_from_lds_b32:
-  case Intrinsic::amdgcn_cooperative_atomic_load_32x4B:
-  case Intrinsic::amdgcn_cooperative_atomic_store_32x4B:
   case Intrinsic::amdgcn_flat_load_monitor_b32:
   case Intrinsic::amdgcn_global_load_monitor_b32:
     return 32;
   case Intrinsic::amdgcn_global_load_async_to_lds_b64:
   case Intrinsic::amdgcn_cluster_load_async_to_lds_b64:
   case Intrinsic::amdgcn_global_store_async_from_lds_b64:
-  case Intrinsic::amdgcn_cooperative_atomic_load_16x8B:
-  case Intrinsic::amdgcn_cooperative_atomic_store_16x8B:
   case Intrinsic::amdgcn_flat_load_monitor_b64:
   case Intrinsic::amdgcn_global_load_monitor_b64:
     return 64;
   case Intrinsic::amdgcn_global_load_async_to_lds_b128:
   case Intrinsic::amdgcn_cluster_load_async_to_lds_b128:
   case Intrinsic::amdgcn_global_store_async_from_lds_b128:
-  case Intrinsic::amdgcn_cooperative_atomic_load_8x16B:
-  case Intrinsic::amdgcn_cooperative_atomic_store_8x16B:
   case Intrinsic::amdgcn_flat_load_monitor_b128:
   case Intrinsic::amdgcn_global_load_monitor_b128:
     return 128;
@@ -1765,7 +1759,9 @@ void SITargetLowering::getTgtMemIntrinsic(SmallVectorImpl<IntrinsicInfo> &Infos,
   case Intrinsic::amdgcn_cooperative_atomic_load_16x8B:
   case Intrinsic::amdgcn_cooperative_atomic_load_8x16B: {
     Info.opc = ISD::INTRINSIC_W_CHAIN;
-    Info.memVT = EVT::getIntegerVT(CI.getContext(), getIntrMemWidth(IntrID));
+    // These are lowered to generic atomic loads and stores, which require the
+    // memory type to match the value type.
+    Info.memVT = MVT::getVT(CI.getType());
     Info.ptrVal = CI.getOperand(0);
     Info.align.reset();
     Info.flags = (MachineMemOperand::MOLoad | MOCooperative);
@@ -1778,7 +1774,7 @@ void SITargetLowering::getTgtMemIntrinsic(SmallVectorImpl<IntrinsicInfo> &Infos,
   case Intrinsic::amdgcn_cooperative_atomic_store_16x8B:
   case Intrinsic::amdgcn_cooperative_atomic_store_8x16B: {
     Info.opc = ISD::INTRINSIC_VOID;
-    Info.memVT = EVT::getIntegerVT(CI.getContext(), getIntrMemWidth(IntrID));
+    Info.memVT = MVT::getVT(CI.getArgOperand(1)->getType());
     Info.ptrVal = CI.getArgOperand(0);
     Info.align.reset();
     Info.flags = (MachineMemOperand::MOStore | MOCooperative);
