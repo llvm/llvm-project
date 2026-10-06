@@ -334,6 +334,37 @@ module @ir attributes { test.apply_rewrite_4 } {
 
 // -----
 
+// Check that a native rewrite may return a null attribute, which is dropped
+// when used as an attribute of a created operation.
+module @patterns {
+  pdl_interp.func @matcher(%root : !pdl.operation) {
+    pdl_interp.check_operation_name of %root is "test.op" -> ^pat, ^end
+
+  ^pat:
+    pdl_interp.record_match @rewriters::@success(%root : !pdl.operation) : benefit(1), loc([%root]) -> ^end
+
+  ^end:
+    pdl_interp.finalize
+  }
+
+  module @rewriters {
+    pdl_interp.func @success(%root : !pdl.operation) {
+      %attr = pdl_interp.apply_rewrite "null_attr_creator" : !pdl.attribute
+      %newOp = pdl_interp.create_operation "test.success" {"attr" = %attr}
+      pdl_interp.erase %root
+      pdl_interp.finalize
+    }
+  }
+}
+
+// CHECK-LABEL: test.apply_rewrite_5
+// CHECK: "test.success"() : () -> ()
+module @ir attributes { test.apply_rewrite_5 } {
+  "test.op"() : () -> ()
+}
+
+// -----
+
 //===----------------------------------------------------------------------===//
 // pdl_interp::AreEqualOp
 //===----------------------------------------------------------------------===//
