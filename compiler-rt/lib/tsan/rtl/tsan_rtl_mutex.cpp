@@ -56,6 +56,8 @@ static void ReportMutexMisuse(ThreadState *thr, uptr pc, ReportType typ,
     return;
   if (!ShouldReport(thr, typ))
     return;
+  VarSizeStackTrace trace;
+  ObtainCurrentStack(thr, pc, &trace);
   // Use alloca, because malloc during signal handling deadlocks
   ScopedReport *rep = (ScopedReport *)__builtin_alloca(sizeof(ScopedReport));
   // Release locks before symbolizing and outputting the report to avoid
@@ -64,8 +66,6 @@ static void ReportMutexMisuse(ThreadState *thr, uptr pc, ReportType typ,
     ThreadRegistryLock l(&ctx->thread_registry);
     new (rep) ScopedReport(typ);
     rep->AddMutex(addr, creation_stack_id);
-    VarSizeStackTrace trace;
-    ObtainCurrentStack(thr, pc, &trace);
     rep->AddStack(trace, true);
     rep->AddLocation(addr, 1);
   }
@@ -590,6 +590,9 @@ void ReportDestroyLocked(ThreadState *thr, uptr pc, uptr addr,
       return;
   }
 
+  VarSizeStackTrace trace;
+  ObtainCurrentStack(thr, pc, &trace);
+
   // Use alloca, because malloc during signal handling deadlocks
   ScopedReport* rep = (ScopedReport*)__builtin_alloca(sizeof(ScopedReport));
   // Release locks before symbolizing and outputting the report to avoid
@@ -598,8 +601,6 @@ void ReportDestroyLocked(ThreadState *thr, uptr pc, uptr addr,
     ThreadRegistryLock l0(&ctx->thread_registry);
     new (rep) ScopedReport(ReportTypeMutexDestroyLocked);
     rep->AddMutex(addr, creation_stack_id);
-    VarSizeStackTrace trace;
-    ObtainCurrentStack(thr, pc, &trace);
     rep->AddStack(trace, true);
     rep->AddStack(last_lock_stack, true);
     rep->AddLocation(addr, 1);
