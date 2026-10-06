@@ -285,12 +285,6 @@ void ScopedReport::AddThread(const ThreadContext* tctx, bool suppressable) {
 }
 
 #if !SANITIZER_GO
-static ThreadContext *FindThreadByTidLocked(Tid tid) {
-  ctx->thread_registry.CheckLocked();
-  return static_cast<ThreadContext *>(
-      ctx->thread_registry.GetThreadLocked(tid));
-}
-
 static bool IsInStackOrTls(ThreadContextBase *tctx_base, void *arg) {
   uptr addr = (uptr)arg;
   ThreadContext *tctx = static_cast<ThreadContext*>(tctx_base);
@@ -317,10 +311,10 @@ ThreadContext *IsThreadStackOrTls(uptr addr, bool *is_stack) {
 #endif
 
 void ScopedReport::AddThread(Tid tid, bool suppressable) {
-#if !SANITIZER_GO
-  if (const ThreadContext *tctx = FindThreadByTidLocked(tid))
+  ctx->thread_registry.CheckLocked();
+  if (const auto* tctx = static_cast<ThreadContext*>(
+          ctx->thread_registry.GetThreadLocked(tid)))
     AddThread(tctx, suppressable);
-#endif
 }
 
 int ScopedReport::AddMutex(uptr addr, StackID creation_stack_id) {
@@ -856,11 +850,7 @@ void ReportRace(ThreadState *thr, RawShadow *shadow_mem, Shadow cur, Shadow old,
     for (uptr i = 0; i < kMop; i++)
       rep.AddMemoryAccess(addr, tags[i], s[i], tids[i], traces[i], mset[i]);
 
-    for (uptr i = 0; i < kMop; i++) {
-      ThreadContext *tctx = static_cast<ThreadContext *>(
-          ctx->thread_registry.GetThreadLocked(tids[i]));
-      rep.AddThread(tctx);
-    }
+    for (uptr i = 0; i < kMop; i++) rep.AddThread(tids[i]);
 
     rep.AddLocation(addr_min, addr_max - addr_min);
 
@@ -870,9 +860,7 @@ void ReportRace(ThreadState *thr, RawShadow *shadow_mem, Shadow cur, Shadow old,
         Tid parent_tid = rep_desc->threads[i]->parent_tid;
         if (parent_tid == kMainTid || parent_tid == kInvalidTid)
           continue;
-        ThreadContext *parent_tctx = static_cast<ThreadContext *>(
-            ctx->thread_registry.GetThreadLocked(parent_tid));
-        rep.AddThread(parent_tctx);
+        rep.AddThread(parent_tid);
       }
     }
 
