@@ -49,7 +49,7 @@ void fallsthrough() {
 // CIR: %[[TWO:.*]] = cir.const #cir.int<2> : !s32i
 // CIR: %[[THREE:.*]] = cir.const #cir.fp<3.0{{.*}}> : !cir.double
 // CIR: %[[LOAD_DERIVED:.*]] = cir.load %[[TMP_ALLOCA]] : !cir.ptr<!cir.ptr<!rec_Derived>>, !cir.ptr<!rec_Derived>
-// CIR: %[[BASE_ADDR:.*]] = cir.base_class_addr %[[LOAD_DERIVED]] : !cir.ptr<!rec_Derived> nonnull [0] -> !cir.ptr<!rec_Base>
+// CIR: %[[BASE_ADDR:.*]] = cir.base_class_addr nonnull %[[LOAD_DERIVED]] [0] : !cir.ptr<!rec_Derived> -> !cir.ptr<!rec_Base>
 // CIR: cir.call @_ZN4BaseC2Efz(%[[BASE_ADDR]], %[[FP_1_1]], %[[TWO]], %[[THREE]]) : (!cir.ptr<!rec_Base>{{.*}}, !cir.float{{.*}}, !s32i{{.*}}, !cir.double{{.*}}) -> ()
 //
 // LLVM-LABEL: define dso_local void @_Z26cannotEmitDelegateCallArgsv()
@@ -70,7 +70,7 @@ void fallsthrough() {
 // CIR: %[[THIS_ALLOCA:.*]] = cir.alloca "this" align(8) init : !cir.ptr<!cir.ptr<!rec_VirtualDelegatingCtor>>
 // CIR: %[[X_ALLOCA:.*]] = cir.alloca "x" align(4) init : !cir.ptr<!s32i>
 // CIR: %[[THIS_LOAD:.*]] = cir.load %[[THIS_ALLOCA]] : !cir.ptr<!cir.ptr<!rec_VirtualDelegatingCtor>>, !cir.ptr<!rec_VirtualDelegatingCtor>
-// CIR: %[[BASE_ADDR:.*]] = cir.base_class_addr %[[THIS_LOAD]] : !cir.ptr<!rec_VirtualDelegatingCtor> nonnull [0] -> !cir.ptr<!rec_Base>
+// CIR: %[[BASE_ADDR:.*]] = cir.base_class_addr nonnull %[[THIS_LOAD]] [0] : !cir.ptr<!rec_VirtualDelegatingCtor> -> !cir.ptr<!rec_Base>
 // CIR: %[[X_LOAD:.*]] = cir.load align(4) %[[X_ALLOCA]] : !cir.ptr<!s32i>, !s32i
 // CIR: cir.call @_ZN4BaseC2Ei(%[[BASE_ADDR]], %[[X_LOAD]]) : (!cir.ptr<!rec_Base> {{.*}}, !s32i {{{.*}}) -> ()
 //
@@ -86,7 +86,7 @@ void fallsthrough() {
 // in the body, and not being included in the declaration/definition of this
 // function. CIR cannot reproduce this, as we have a verifier that checks that
 // the arg counts match.
-// CIR: %[[BASE_ADDR:.*]] = cir.base_class_addr %[[THIS_LOAD]] : !cir.ptr<!rec_VirtualDelegatingCtor> nonnull [0] -> !cir.ptr<!rec_VirtDerived>
+// CIR: %[[BASE_ADDR:.*]] = cir.base_class_addr nonnull %[[THIS_LOAD]] [0] : !cir.ptr<!rec_VirtualDelegatingCtor> -> !cir.ptr<!rec_VirtDerived>
 // CIR: %[[ADDR_PT:.*]] = cir.vtt.address_point @_ZTT21VirtualDelegatingCtor, offset = 1 -> !cir.ptr<!cir.ptr<!void>>
 // CIR: cir.call @_ZN11VirtDerivedCI24BaseEi(%[[BASE_ADDR]], %[[ADDR_PT]]) : (!cir.ptr<!rec_VirtDerived>{{.*}}, !cir.ptr<!cir.ptr<!void>>{{.*}}) -> ()
 // CIR: %[[ADDR_PT:.*]] = cir.vtable.address_point(@_ZTV21VirtualDelegatingCtor, address_point = <index = 0, offset = 3>) : !cir.vptr
@@ -101,7 +101,7 @@ void fallsthrough() {
 // CIR: %[[THIS_ALLOCA:.*]] = cir.alloca "this" {{.*}} init : !cir.ptr<!cir.ptr<!rec_Derived>>
 // CIR: %[[INT_ALLOCA:.*]] = cir.alloca "" {{.*}} init : !cir.ptr<!s32i>
 // CIR: %[[THIS_LOAD:.*]] = cir.load %[[THIS_ALLOCA]] : !cir.ptr<!cir.ptr<!rec_Derived>>, !cir.ptr<!rec_Derived>
-// CIR: %[[BASE_ADDR:.*]] = cir.base_class_addr %[[THIS_LOAD]] : !cir.ptr<!rec_Derived> nonnull [0] -> !cir.ptr<!rec_Base>
+// CIR: %[[BASE_ADDR:.*]] = cir.base_class_addr nonnull %[[THIS_LOAD]] [0] : !cir.ptr<!rec_Derived> -> !cir.ptr<!rec_Base>
 // CIR: %[[INT:.*]] = cir.load align(4) %[[INT_ALLOCA]] : !cir.ptr<!s32i>, !s32i
 // CIR: cir.call @_ZN4BaseC2Ei(%[[BASE_ADDR]], %[[INT]]) : (!cir.ptr<!rec_Base>{{.*}}, !s32i{{.*}}) -> () 
 //

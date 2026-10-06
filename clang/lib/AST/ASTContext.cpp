@@ -357,7 +357,7 @@ RawComment *ASTContext::getRawCommentNoCache(RawCommentLookupKey Key) const {
 }
 
 void ASTContext::addComment(const RawComment &RC) {
-  assert(LangOpts.RetainCommentsFromSystemHeaders ||
+  assert(LangOpts.CommentOpts.RetainCommentsFromSystemHeaders ||
          !SourceMgr.isInSystemHeader(RC.getSourceRange().getBegin()));
   Comments.addComment(RC, LangOpts.CommentOpts, BumpAlloc);
 }
@@ -907,12 +907,6 @@ interp::Context &ASTContext::getInterpContext() const {
   return *InterpContext;
 }
 
-ParentMapContext &ASTContext::getParentMapContext() {
-  if (!ParentMapCtx)
-    ParentMapCtx.reset(new ParentMapContext(*this));
-  return *ParentMapCtx;
-}
-
 static bool isAddrSpaceMapManglingEnabled(const TargetInfo &TI,
                                           const LangOptions &LangOpts) {
   switch (LangOpts.getAddressSpaceMapMangling()) {
@@ -946,9 +940,10 @@ ASTContext::ASTContext(LangOptions &LOpts, SourceManager &SM,
                                         LangOpts.XRayNeverInstrumentFiles,
                                         LangOpts.XRayAttrListFiles, SM)),
       ProfList(new ProfileList(LangOpts.ProfileListFiles, SM)),
-      PrintingPolicy(LOpts), Idents(idents), Selectors(sels),
-      BuiltinInfo(builtins), TUKind(TUKind), DeclarationNames(*this),
-      Comments(SM), CommentCommandTraits(BumpAlloc, LOpts.CommentOpts),
+      PrintingPolicy(LOpts), ParentMapCtx(new ParentMapContext(*this)),
+      Idents(idents), Selectors(sels), BuiltinInfo(builtins), TUKind(TUKind),
+      DeclarationNames(*this), Comments(SM),
+      CommentCommandTraits(BumpAlloc, LOpts.CommentOpts),
       CompCategories(this_()), LastSDM(nullptr, 0) {
   addTranslationUnitDecl();
 }
@@ -1449,6 +1444,10 @@ void ASTContext::InitBuiltinTypes(const TargetInfo &Target,
 #define HLSL_INTANGIBLE_TYPE(Name, Id, SingletonId)                            \
   InitBuiltinType(SingletonId, BuiltinType::Id);
 #include "clang/Basic/HLSLIntangibleTypes.def"
+
+#define HLSL_PACKED_TYPE(Name, Id, SingletonId)                                \
+  InitBuiltinType(SingletonId, BuiltinType::Id);
+#include "clang/Basic/HLSLPackedTypes.def"
   }
 
   if (Target.hasAArch64ACLETypes() ||
@@ -1512,6 +1511,9 @@ void ASTContext::InitBuiltinTypes(const TargetInfo &Target,
 
   // nullptr type (C++0x 2.14.7)
   InitBuiltinType(NullPtrTy,           BuiltinType::NullPtr);
+
+  // std::meta::info type (C++26 21.4.1)
+  InitBuiltinType(MetaInfoTy, BuiltinType::MetaInfo);
 
   // half type (OpenCL 6.1.1.1) / ARM NEON __fp16
   InitBuiltinType(HalfTy, BuiltinType::Half);
@@ -2378,6 +2380,12 @@ TypeInfo ASTContext::getTypeInfoImpl(const Type *T) const {
       Width = Target->getPointerWidth(LangAS::Default);
       Align = Target->getPointerAlign(LangAS::Default);
       break;
+    case BuiltinType::MetaInfo:
+      // sizeof(std::meta::info) == sizeof(void*)
+      Width = Target->getPointerWidth(LangAS::Default);
+      // alignof(std::meta::info) == alignof(void*)
+      Align = Target->getPointerAlign(LangAS::Default);
+      break;
     case BuiltinType::ObjCId:
     case BuiltinType::ObjCClass:
     case BuiltinType::ObjCSel:
@@ -2462,6 +2470,11 @@ TypeInfo ASTContext::getTypeInfoImpl(const Type *T) const {
 #include "clang/Basic/HLSLIntangibleTypes.def"
       Width = Target->getPointerWidth(LangAS::Default);
       Align = Target->getPointerAlign(LangAS::Default);
+      break;
+#define HLSL_PACKED_TYPE(Name, Id, SingletonId) case BuiltinType::Id:
+#include "clang/Basic/HLSLPackedTypes.def"
+      Width = 32;
+      Align = 32;
       break;
 #define SPIRV_TYPE(Name, Id, SingletonId)                                      \
   case BuiltinType::Id:                                                        \
@@ -3593,6 +3606,7 @@ static void encodeTypeForFunctionPointerAuth(const ASTContext &Ctx,
     case BuiltinType::VectorPair:
     case BuiltinType::DMR1024:
     case BuiltinType::DMR2048:
+    case BuiltinType::MetaInfo:
       OS << "?";
       return;
 
@@ -3615,6 +3629,10 @@ static void encodeTypeForFunctionPointerAuth(const ASTContext &Ctx,
   case BuiltinType::Id:                                                        \
     return;
 #include "clang/Basic/HLSLIntangibleTypes.def"
+#define HLSL_PACKED_TYPE(Name, Id, SingletonId)                                \
+  case BuiltinType::Id:                                                        \
+    return;
+#include "clang/Basic/HLSLPackedTypes.def"
     case BuiltinType::Dependent:
       llvm_unreachable("should never get here");
 #define AMDGPU_TYPE(Name, Id, SingletonId, Width, Align) case BuiltinType::Id:
@@ -4305,10 +4323,6 @@ QualType ASTContext::getConstantArrayType(QualType EltTy,
   // the target.
   llvm::APInt ArySize(ArySizeIn);
   ArySize = ArySize.zextOrTrunc(Target->getMaxPointerWidth());
-
-  // The type stores only the CVR bits of the index qualifiers, so key on
-  // those.
-  IndexTypeQuals &= Qualifiers::CVRMask;
 
   llvm::FoldingSetNodeID ID;
   ConstantArrayType::Profile(ID, *this, EltTy, ArySize.getZExtValue(), SizeExpr,
@@ -9349,11 +9363,14 @@ static char getObjCEncodingForPrimitiveType(const ASTContext *C,
     case BuiltinType::OCLReserveID:
     case BuiltinType::OCLSampler:
     case BuiltinType::Dependent:
+    case BuiltinType::MetaInfo:
 #define PPC_VECTOR_TYPE(Name, Id, Size) \
     case BuiltinType::Id:
 #include "clang/Basic/PPCTypes.def"
 #define HLSL_INTANGIBLE_TYPE(Name, Id, SingletonId) case BuiltinType::Id:
 #include "clang/Basic/HLSLIntangibleTypes.def"
+#define HLSL_PACKED_TYPE(Name, Id, SingletonId) case BuiltinType::Id:
+#include "clang/Basic/HLSLPackedTypes.def"
 #define BUILTIN_TYPE(KIND, ID)
 #define PLACEHOLDER_TYPE(KIND, ID) \
     case BuiltinType::KIND:
