@@ -443,23 +443,18 @@ void __tsan_mutex_post_divert(void *addr, unsigned flagz) {
 static void ReportMutexHeldWrongContext(ThreadState *thr, uptr pc) {
   VarSizeStackTrace trace;
   ObtainCurrentStack(thr, pc, &trace);
-  // Use alloca, because malloc during signal handling deadlocks
-  ScopedReport *rep = (ScopedReport *)__builtin_alloca(sizeof(ScopedReport));
+  ScopedReport rep(ReportTypeMutexHeldWrongContext);
   // Release locks before symbolizing and outputting the report to avoid
   // deadlocks.
   {
-    new (rep) ScopedReport(ReportTypeMutexHeldWrongContext);
     ThreadRegistryLock l(&ctx->thread_registry);
     for (uptr i = 0; i < thr->mset.Size(); ++i) {
       MutexSet::Desc desc = thr->mset.Get(i);
-      rep->AddMutex(desc.addr, desc.stack_id);
+      rep.AddMutex(desc.addr, desc.stack_id);
     }
-    rep->AddStack(trace, true);
+    rep.AddStack(trace, true);
   }
-  OutputReport(thr, *rep);
-
-  // Need to manually destroy this because we used placement new to allocate
-  rep->~ScopedReport();
+  OutputReport(thr, rep);
 }
 
 INTERFACE_ATTRIBUTE

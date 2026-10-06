@@ -173,9 +173,7 @@ ScopedReport::ScopedReport(ReportType typ, uptr tag) {
 ScopedReport::~ScopedReport() { DestroyAndFree(rep_); }
 
 void ScopedReport::AddStack(StackTrace stack, bool suppressable) {
-  ReportStack **rs = rep_->stacks.PushBack();
-  *rs = SymbolizeStack(stack);
-  (*rs)->suppressable = suppressable;
+  rep_->added_stacks.PushBack({stack, suppressable});
 }
 
 void ScopedReport::AddMemoryAccess(uptr addr, uptr external_tag, Shadow s,
@@ -202,6 +200,15 @@ void ScopedReport::AddMemoryAccess(uptr addr, uptr external_tag, Shadow s,
 }
 
 void ScopedReport::SymbolizeStackElems() {
+  // symbolize stacks
+  for (usize i = 0, size = rep_->added_stacks.Size(); i < size; i++) {
+    AddedStack& as = rep_->added_stacks[i];
+    ReportStack* rs = SymbolizeStack(as.stack_trace);
+    if (rs)
+      rs->suppressable = as.suppressable;
+    rep_->stacks.PushBack(rs);
+  }
+
   // symbolize memory ops
   for (usize i = 0, size = rep_->mops.Size(); i < size; i++) {
     ReportMop *mop = rep_->mops[i];
@@ -249,6 +256,10 @@ void ScopedReport::SymbolizeStackElems() {
     ReportMutex *rm = rep_->mutexes[i];
     rm->stack = SymbolizeStackId(rm->stack_id);
   }
+
+#if !SANITIZER_GO
+  rep_->sleep = SymbolizeStackId(rep_->sleep_stack_id);
+#endif
 }
 
 void ScopedReport::AddUniqueTid(Tid unique_tid) {
@@ -381,7 +392,7 @@ void ScopedReport::AddLocation(uptr addr, uptr size) {
 
 #if !SANITIZER_GO
 void ScopedReport::AddSleep(StackID stack_id) {
-  rep_->sleep = SymbolizeStackId(stack_id);
+  rep_->sleep_stack_id = stack_id;
 }
 #endif
 
@@ -837,46 +848,41 @@ void ReportRace(ThreadState *thr, RawShadow *shadow_mem, Shadow cur, Shadow old,
     }
   }
 
-  // Use alloca, because malloc during signal handling deadlocks
-  ScopedReport* rep = (ScopedReport*)__builtin_alloca(sizeof(ScopedReport));
+  ScopedReport rep(rep_typ, tag);
   // Release locks before symbolizing and outputting the report to avoid
   // deadlocks.
   {
-    new (rep) ScopedReport(rep_typ, tag);
     ThreadRegistryLock l0(&ctx->thread_registry);
     for (uptr i = 0; i < kMop; i++)
-      rep->AddMemoryAccess(addr, tags[i], s[i], tids[i], traces[i], mset[i]);
+      rep.AddMemoryAccess(addr, tags[i], s[i], tids[i], traces[i], mset[i]);
 
     for (uptr i = 0; i < kMop; i++) {
       ThreadContext *tctx = static_cast<ThreadContext *>(
           ctx->thread_registry.GetThreadLocked(tids[i]));
-      rep->AddThread(tctx);
+      rep.AddThread(tctx);
     }
 
-    rep->AddLocation(addr_min, addr_max - addr_min);
+    rep.AddLocation(addr_min, addr_max - addr_min);
 
     if (flags()->print_full_thread_history) {
-      const ReportDesc *rep_desc = rep->GetReport();
+      const ReportDesc* rep_desc = rep.GetReport();
       for (uptr i = 0; i < rep_desc->threads.Size(); i++) {
         Tid parent_tid = rep_desc->threads[i]->parent_tid;
         if (parent_tid == kMainTid || parent_tid == kInvalidTid)
           continue;
         ThreadContext *parent_tctx = static_cast<ThreadContext *>(
             ctx->thread_registry.GetThreadLocked(parent_tid));
-        rep->AddThread(parent_tctx);
+        rep.AddThread(parent_tctx);
       }
     }
 
 #if !SANITIZER_GO
     if (!((typ0 | typ1) & kAccessFree) &&
         s[1].epoch() <= thr->last_sleep_clock.Get(s[1].sid()))
-      rep->AddSleep(thr->last_sleep_stack_id);
+      rep.AddSleep(thr->last_sleep_stack_id);
 #endif
   }
-  OutputReport(thr, *rep);
-
-  // Need to manually destroy this because we used placement new to allocate
-  rep->~ScopedReport();
+  OutputReport(thr, rep);
 }
 
 void PrintCurrentStack(ThreadState *thr, uptr pc) {
