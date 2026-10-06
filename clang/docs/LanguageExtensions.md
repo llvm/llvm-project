@@ -3921,7 +3921,8 @@ if (__builtin_unpredictable(x > 0)) {
 **Description**:
 
 The `__builtin_unpredictable()` builtin is expected to be used with control
-flow conditions such as in `if` and `switch` statements.
+flow conditions such as in `if` and `switch` statements. It returns its
+argument and can be used in constant expressions.
 
 Query for this feature with `__has_builtin(__builtin_unpredictable)`.
 
