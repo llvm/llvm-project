@@ -246,6 +246,10 @@ unsigned AArch64InstrInfo::getInstSizeInBytes(const MachineInstr &MI) const {
     return NumBytes;
   }
 
+  // Windows unwind directives describe the code but emit no bytes.
+  if (isSEHInstruction(MI))
+    return 0;
+
   // Size should be preferably set in
   // llvm/lib/Target/AArch64/AArch64InstrInfo.td (default case).
   // Specific cases handle instructions of variable sizes
@@ -275,10 +279,6 @@ unsigned AArch64InstrInfo::getInstSizeInBytes(const MachineInstr &MI) const {
     // No patch bytes means a normal call inst is emitted
     if (NumBytes == 0)
       NumBytes = 4;
-    break;
-  case TargetOpcode::PATCHABLE_OP:
-    // Hotpatch padding emits at most one instruction.
-    NumBytes = 4;
     break;
   case TargetOpcode::PATCHABLE_FUNCTION_ENTER:
     // If `patchable-function-entry` is set, PATCHABLE_FUNCTION_ENTER

@@ -155,7 +155,6 @@ public:
                        const MachineInstr &MI);
   void LowerFAULTING_OP(const MachineInstr &MI);
 
-  void LowerPATCHABLE_OP(const MachineInstr &MI);
   void LowerPATCHABLE_FUNCTION_ENTER(const MachineInstr &MI);
   void LowerPATCHABLE_FUNCTION_EXIT(const MachineInstr &MI);
   void LowerPATCHABLE_TAIL_CALL(const MachineInstr &MI);
@@ -505,35 +504,6 @@ void AArch64AsmPrinter::emitFunctionHeaderComment() {
   std::optional<std::string> OutlinerString = FI->getOutliningStyle();
   if (OutlinerString != std::nullopt)
     OutStreamer->getCommentOS() << ' ' << OutlinerString;
-}
-
-void AArch64AsmPrinter::LowerPATCHABLE_OP(const MachineInstr &MI) {
-  assert(MI.getOperand(0).getImm() == 4 &&
-         "Expected a single patchable AArch64 instruction");
-
-  const MachineBasicBlock &MBB = *MI.getParent();
-  const auto *TII = STI->getInstrInfo();
-  auto NextMI =
-      std::find_if(std::next(MI.getIterator()), MBB.end().getInstrIterator(),
-                   [&](const MachineInstr &Next) {
-                     return Next.isInlineAsm() ||
-                            (!AArch64InstrInfo::isSEHInstruction(Next) &&
-                             TII->getInstSizeInBytes(Next) != 0);
-                   });
-
-  // Every AArch64 instruction is atomically patchable. If this block emits no
-  // instructions, however, the next block would share the function's entry
-  // address. Pad it so a backedge cannot reach the hotpatch instruction. As on
-  // x86, conservatively pad inline assembly, whose first instruction may have
-  // a label targeted by branches within the assembly.
-  if (NextMI == MBB.end() || NextMI->isInlineAsm()) {
-    emitNops(1);
-    if (MF->hasWinCFI()) {
-      auto *TS = static_cast<AArch64TargetStreamer *>(
-          OutStreamer->getTargetStreamer());
-      TS->emitARM64WinCFINop();
-    }
-  }
 }
 
 void AArch64AsmPrinter::LowerPATCHABLE_FUNCTION_ENTER(const MachineInstr &MI)
@@ -3942,10 +3912,6 @@ void AArch64AsmPrinter::emitInstruction(const MachineInstr *MI) {
 
   case TargetOpcode::FAULTING_OP:
     return LowerFAULTING_OP(*MI);
-
-  case TargetOpcode::PATCHABLE_OP:
-    LowerPATCHABLE_OP(*MI);
-    return;
 
   case TargetOpcode::PATCHABLE_FUNCTION_ENTER:
     LowerPATCHABLE_FUNCTION_ENTER(*MI);
