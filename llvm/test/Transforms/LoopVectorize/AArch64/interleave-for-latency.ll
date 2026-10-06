@@ -2130,6 +2130,313 @@ exit:
   ret void
 }
 
+; The loop being a reduction shouldn't matter when interleaving for latency, so
+; this function should be interleaved the same as i32_add1.
+define i32 @i32_reduction(ptr %p, i64 %n) {
+; CHECK-LATENCY1-LABEL: define i32 @i32_reduction(
+; CHECK-LATENCY1-SAME: ptr [[P:%.*]], i64 [[N:%.*]]) {
+; CHECK-LATENCY1-NEXT:  [[ENTRY:.*]]:
+; CHECK-LATENCY1-NEXT:    [[MIN_ITERS_CHECK:%.*]] = icmp ult i64 [[N]], 4
+; CHECK-LATENCY1-NEXT:    br i1 [[MIN_ITERS_CHECK]], label %[[SCALAR_PH:.*]], label %[[VECTOR_PH:.*]]
+; CHECK-LATENCY1:       [[VECTOR_PH]]:
+; CHECK-LATENCY1-NEXT:    [[TMP0:%.*]] = and i64 [[N]], 3
+; CHECK-LATENCY1-NEXT:    [[N_VEC:%.*]] = sub i64 [[N]], [[TMP0]]
+; CHECK-LATENCY1-NEXT:    br label %[[VECTOR_BODY:.*]]
+; CHECK-LATENCY1:       [[VECTOR_BODY]]:
+; CHECK-LATENCY1-NEXT:    [[INDEX:%.*]] = phi i64 [ 0, %[[VECTOR_PH]] ], [ [[INDEX_NEXT:%.*]], %[[VECTOR_BODY]] ]
+; CHECK-LATENCY1-NEXT:    [[VEC_PHI:%.*]] = phi <4 x i32> [ zeroinitializer, %[[VECTOR_PH]] ], [ [[TMP2:%.*]], %[[VECTOR_BODY]] ]
+; CHECK-LATENCY1-NEXT:    [[TMP1:%.*]] = getelementptr inbounds nuw [4 x i8], ptr [[P]], i64 [[INDEX]]
+; CHECK-LATENCY1-NEXT:    [[WIDE_LOAD:%.*]] = load <4 x i32>, ptr [[TMP1]], align 4
+; CHECK-LATENCY1-NEXT:    [[TMP2]] = add <4 x i32> [[WIDE_LOAD]], [[VEC_PHI]]
+; CHECK-LATENCY1-NEXT:    [[INDEX_NEXT]] = add nuw i64 [[INDEX]], 4
+; CHECK-LATENCY1-NEXT:    [[TMP3:%.*]] = icmp eq i64 [[INDEX_NEXT]], [[N_VEC]]
+; CHECK-LATENCY1-NEXT:    br i1 [[TMP3]], label %[[MIDDLE_BLOCK:.*]], label %[[VECTOR_BODY]], !llvm.loop [[LOOP11:![0-9]+]]
+; CHECK-LATENCY1:       [[MIDDLE_BLOCK]]:
+; CHECK-LATENCY1-NEXT:    [[TMP4:%.*]] = call i32 @llvm.vector.reduce.add.v4i32(<4 x i32> [[TMP2]])
+; CHECK-LATENCY1-NEXT:    [[CMP_N:%.*]] = icmp eq i64 [[N]], [[N_VEC]]
+; CHECK-LATENCY1-NEXT:    br i1 [[CMP_N]], label %[[EXIT:.*]], label %[[SCALAR_PH]]
+; CHECK-LATENCY1:       [[SCALAR_PH]]:
+; CHECK-LATENCY1-NEXT:    [[BC_RESUME_VAL:%.*]] = phi i64 [ [[N_VEC]], %[[MIDDLE_BLOCK]] ], [ 0, %[[ENTRY]] ]
+; CHECK-LATENCY1-NEXT:    [[BC_MERGE_RDX:%.*]] = phi i32 [ [[TMP4]], %[[MIDDLE_BLOCK]] ], [ 0, %[[ENTRY]] ]
+; CHECK-LATENCY1-NEXT:    br label %[[LOOP:.*]]
+; CHECK-LATENCY1:       [[LOOP]]:
+; CHECK-LATENCY1-NEXT:    [[IV:%.*]] = phi i64 [ [[IV_NEXT:%.*]], %[[LOOP]] ], [ [[BC_RESUME_VAL]], %[[SCALAR_PH]] ]
+; CHECK-LATENCY1-NEXT:    [[RET:%.*]] = phi i32 [ [[ADD:%.*]], %[[LOOP]] ], [ [[BC_MERGE_RDX]], %[[SCALAR_PH]] ]
+; CHECK-LATENCY1-NEXT:    [[ARRAYIDX:%.*]] = getelementptr inbounds nuw [4 x i8], ptr [[P]], i64 [[IV]]
+; CHECK-LATENCY1-NEXT:    [[VAL:%.*]] = load i32, ptr [[ARRAYIDX]], align 4
+; CHECK-LATENCY1-NEXT:    [[ADD]] = add nsw i32 [[VAL]], [[RET]]
+; CHECK-LATENCY1-NEXT:    [[IV_NEXT]] = add nuw nsw i64 [[IV]], 1
+; CHECK-LATENCY1-NEXT:    [[EXITCOND:%.*]] = icmp eq i64 [[IV_NEXT]], [[N]]
+; CHECK-LATENCY1-NEXT:    br i1 [[EXITCOND]], label %[[EXIT]], label %[[LOOP]], !llvm.loop [[LOOP12:![0-9]+]]
+; CHECK-LATENCY1:       [[EXIT]]:
+; CHECK-LATENCY1-NEXT:    [[ADD_LCSSA:%.*]] = phi i32 [ [[ADD]], %[[LOOP]] ], [ [[TMP4]], %[[MIDDLE_BLOCK]] ]
+; CHECK-LATENCY1-NEXT:    ret i32 [[ADD_LCSSA]]
+;
+; CHECK-LATENCY2-LABEL: define i32 @i32_reduction(
+; CHECK-LATENCY2-SAME: ptr [[P:%.*]], i64 [[N:%.*]]) {
+; CHECK-LATENCY2-NEXT:  [[ENTRY:.*]]:
+; CHECK-LATENCY2-NEXT:    [[MIN_ITERS_CHECK:%.*]] = icmp ult i64 [[N]], 8
+; CHECK-LATENCY2-NEXT:    br i1 [[MIN_ITERS_CHECK]], label %[[SCALAR_PH:.*]], label %[[VECTOR_PH:.*]]
+; CHECK-LATENCY2:       [[VECTOR_PH]]:
+; CHECK-LATENCY2-NEXT:    [[TMP0:%.*]] = and i64 [[N]], 7
+; CHECK-LATENCY2-NEXT:    [[N_VEC:%.*]] = sub i64 [[N]], [[TMP0]]
+; CHECK-LATENCY2-NEXT:    br label %[[VECTOR_BODY:.*]]
+; CHECK-LATENCY2:       [[VECTOR_BODY]]:
+; CHECK-LATENCY2-NEXT:    [[INDEX:%.*]] = phi i64 [ 0, %[[VECTOR_PH]] ], [ [[INDEX_NEXT:%.*]], %[[VECTOR_BODY]] ]
+; CHECK-LATENCY2-NEXT:    [[VEC_PHI:%.*]] = phi <4 x i32> [ zeroinitializer, %[[VECTOR_PH]] ], [ [[TMP3:%.*]], %[[VECTOR_BODY]] ]
+; CHECK-LATENCY2-NEXT:    [[VEC_PHI1:%.*]] = phi <4 x i32> [ zeroinitializer, %[[VECTOR_PH]] ], [ [[TMP4:%.*]], %[[VECTOR_BODY]] ]
+; CHECK-LATENCY2-NEXT:    [[TMP1:%.*]] = getelementptr inbounds nuw [4 x i8], ptr [[P]], i64 [[INDEX]]
+; CHECK-LATENCY2-NEXT:    [[TMP2:%.*]] = getelementptr inbounds nuw i32, ptr [[TMP1]], i64 4
+; CHECK-LATENCY2-NEXT:    [[WIDE_LOAD:%.*]] = load <4 x i32>, ptr [[TMP1]], align 4
+; CHECK-LATENCY2-NEXT:    [[WIDE_LOAD2:%.*]] = load <4 x i32>, ptr [[TMP2]], align 4
+; CHECK-LATENCY2-NEXT:    [[TMP3]] = add <4 x i32> [[WIDE_LOAD]], [[VEC_PHI]]
+; CHECK-LATENCY2-NEXT:    [[TMP4]] = add <4 x i32> [[WIDE_LOAD2]], [[VEC_PHI1]]
+; CHECK-LATENCY2-NEXT:    [[INDEX_NEXT]] = add nuw i64 [[INDEX]], 8
+; CHECK-LATENCY2-NEXT:    [[TMP5:%.*]] = icmp eq i64 [[INDEX_NEXT]], [[N_VEC]]
+; CHECK-LATENCY2-NEXT:    br i1 [[TMP5]], label %[[MIDDLE_BLOCK:.*]], label %[[VECTOR_BODY]], !llvm.loop [[LOOP11:![0-9]+]]
+; CHECK-LATENCY2:       [[MIDDLE_BLOCK]]:
+; CHECK-LATENCY2-NEXT:    [[BIN_RDX:%.*]] = add <4 x i32> [[TMP4]], [[TMP3]]
+; CHECK-LATENCY2-NEXT:    [[TMP6:%.*]] = call i32 @llvm.vector.reduce.add.v4i32(<4 x i32> [[BIN_RDX]])
+; CHECK-LATENCY2-NEXT:    [[CMP_N:%.*]] = icmp eq i64 [[N]], [[N_VEC]]
+; CHECK-LATENCY2-NEXT:    br i1 [[CMP_N]], label %[[EXIT:.*]], label %[[SCALAR_PH]]
+; CHECK-LATENCY2:       [[SCALAR_PH]]:
+; CHECK-LATENCY2-NEXT:    [[BC_RESUME_VAL:%.*]] = phi i64 [ [[N_VEC]], %[[MIDDLE_BLOCK]] ], [ 0, %[[ENTRY]] ]
+; CHECK-LATENCY2-NEXT:    [[BC_MERGE_RDX:%.*]] = phi i32 [ [[TMP6]], %[[MIDDLE_BLOCK]] ], [ 0, %[[ENTRY]] ]
+; CHECK-LATENCY2-NEXT:    br label %[[LOOP:.*]]
+; CHECK-LATENCY2:       [[LOOP]]:
+; CHECK-LATENCY2-NEXT:    [[IV:%.*]] = phi i64 [ [[IV_NEXT:%.*]], %[[LOOP]] ], [ [[BC_RESUME_VAL]], %[[SCALAR_PH]] ]
+; CHECK-LATENCY2-NEXT:    [[RET:%.*]] = phi i32 [ [[ADD:%.*]], %[[LOOP]] ], [ [[BC_MERGE_RDX]], %[[SCALAR_PH]] ]
+; CHECK-LATENCY2-NEXT:    [[ARRAYIDX:%.*]] = getelementptr inbounds nuw [4 x i8], ptr [[P]], i64 [[IV]]
+; CHECK-LATENCY2-NEXT:    [[VAL:%.*]] = load i32, ptr [[ARRAYIDX]], align 4
+; CHECK-LATENCY2-NEXT:    [[ADD]] = add nsw i32 [[VAL]], [[RET]]
+; CHECK-LATENCY2-NEXT:    [[IV_NEXT]] = add nuw nsw i64 [[IV]], 1
+; CHECK-LATENCY2-NEXT:    [[EXITCOND:%.*]] = icmp eq i64 [[IV_NEXT]], [[N]]
+; CHECK-LATENCY2-NEXT:    br i1 [[EXITCOND]], label %[[EXIT]], label %[[LOOP]], !llvm.loop [[LOOP12:![0-9]+]]
+; CHECK-LATENCY2:       [[EXIT]]:
+; CHECK-LATENCY2-NEXT:    [[ADD_LCSSA:%.*]] = phi i32 [ [[ADD]], %[[LOOP]] ], [ [[TMP6]], %[[MIDDLE_BLOCK]] ]
+; CHECK-LATENCY2-NEXT:    ret i32 [[ADD_LCSSA]]
+;
+; CHECK-LATENCY8-LABEL: define i32 @i32_reduction(
+; CHECK-LATENCY8-SAME: ptr [[P:%.*]], i64 [[N:%.*]]) {
+; CHECK-LATENCY8-NEXT:  [[ITER_CHECK:.*]]:
+; CHECK-LATENCY8-NEXT:    [[MIN_ITERS_CHECK:%.*]] = icmp ult i64 [[N]], 4
+; CHECK-LATENCY8-NEXT:    br i1 [[MIN_ITERS_CHECK]], label %[[VEC_EPILOG_SCALAR_PH:.*]], label %[[VECTOR_MAIN_LOOP_ITER_CHECK:.*]]
+; CHECK-LATENCY8:       [[VECTOR_MAIN_LOOP_ITER_CHECK]]:
+; CHECK-LATENCY8-NEXT:    [[MIN_ITERS_CHECK1:%.*]] = icmp ult i64 [[N]], 16
+; CHECK-LATENCY8-NEXT:    br i1 [[MIN_ITERS_CHECK1]], label %[[VEC_EPILOG_PH:.*]], label %[[VECTOR_PH:.*]]
+; CHECK-LATENCY8:       [[VECTOR_PH]]:
+; CHECK-LATENCY8-NEXT:    [[TMP0:%.*]] = and i64 [[N]], 15
+; CHECK-LATENCY8-NEXT:    [[N_VEC:%.*]] = sub i64 [[N]], [[TMP0]]
+; CHECK-LATENCY8-NEXT:    br label %[[VECTOR_BODY:.*]]
+; CHECK-LATENCY8:       [[VECTOR_BODY]]:
+; CHECK-LATENCY8-NEXT:    [[INDEX:%.*]] = phi i64 [ 0, %[[VECTOR_PH]] ], [ [[INDEX_NEXT:%.*]], %[[VECTOR_BODY]] ]
+; CHECK-LATENCY8-NEXT:    [[VEC_PHI:%.*]] = phi <4 x i32> [ zeroinitializer, %[[VECTOR_PH]] ], [ [[TMP5:%.*]], %[[VECTOR_BODY]] ]
+; CHECK-LATENCY8-NEXT:    [[VEC_PHI2:%.*]] = phi <4 x i32> [ zeroinitializer, %[[VECTOR_PH]] ], [ [[TMP6:%.*]], %[[VECTOR_BODY]] ]
+; CHECK-LATENCY8-NEXT:    [[VEC_PHI3:%.*]] = phi <4 x i32> [ zeroinitializer, %[[VECTOR_PH]] ], [ [[TMP7:%.*]], %[[VECTOR_BODY]] ]
+; CHECK-LATENCY8-NEXT:    [[VEC_PHI4:%.*]] = phi <4 x i32> [ zeroinitializer, %[[VECTOR_PH]] ], [ [[TMP8:%.*]], %[[VECTOR_BODY]] ]
+; CHECK-LATENCY8-NEXT:    [[TMP1:%.*]] = getelementptr inbounds nuw [4 x i8], ptr [[P]], i64 [[INDEX]]
+; CHECK-LATENCY8-NEXT:    [[TMP2:%.*]] = getelementptr inbounds nuw i32, ptr [[TMP1]], i64 4
+; CHECK-LATENCY8-NEXT:    [[TMP3:%.*]] = getelementptr inbounds nuw i32, ptr [[TMP1]], i64 8
+; CHECK-LATENCY8-NEXT:    [[TMP4:%.*]] = getelementptr inbounds nuw i32, ptr [[TMP1]], i64 12
+; CHECK-LATENCY8-NEXT:    [[WIDE_LOAD:%.*]] = load <4 x i32>, ptr [[TMP1]], align 4
+; CHECK-LATENCY8-NEXT:    [[WIDE_LOAD5:%.*]] = load <4 x i32>, ptr [[TMP2]], align 4
+; CHECK-LATENCY8-NEXT:    [[WIDE_LOAD6:%.*]] = load <4 x i32>, ptr [[TMP3]], align 4
+; CHECK-LATENCY8-NEXT:    [[WIDE_LOAD7:%.*]] = load <4 x i32>, ptr [[TMP4]], align 4
+; CHECK-LATENCY8-NEXT:    [[TMP5]] = add <4 x i32> [[WIDE_LOAD]], [[VEC_PHI]]
+; CHECK-LATENCY8-NEXT:    [[TMP6]] = add <4 x i32> [[WIDE_LOAD5]], [[VEC_PHI2]]
+; CHECK-LATENCY8-NEXT:    [[TMP7]] = add <4 x i32> [[WIDE_LOAD6]], [[VEC_PHI3]]
+; CHECK-LATENCY8-NEXT:    [[TMP8]] = add <4 x i32> [[WIDE_LOAD7]], [[VEC_PHI4]]
+; CHECK-LATENCY8-NEXT:    [[INDEX_NEXT]] = add nuw i64 [[INDEX]], 16
+; CHECK-LATENCY8-NEXT:    [[TMP9:%.*]] = icmp eq i64 [[INDEX_NEXT]], [[N_VEC]]
+; CHECK-LATENCY8-NEXT:    br i1 [[TMP9]], label %[[MIDDLE_BLOCK:.*]], label %[[VECTOR_BODY]], !llvm.loop [[LOOP11:![0-9]+]]
+; CHECK-LATENCY8:       [[MIDDLE_BLOCK]]:
+; CHECK-LATENCY8-NEXT:    [[BIN_RDX:%.*]] = add <4 x i32> [[TMP6]], [[TMP5]]
+; CHECK-LATENCY8-NEXT:    [[BIN_RDX8:%.*]] = add <4 x i32> [[TMP7]], [[BIN_RDX]]
+; CHECK-LATENCY8-NEXT:    [[BIN_RDX9:%.*]] = add <4 x i32> [[TMP8]], [[BIN_RDX8]]
+; CHECK-LATENCY8-NEXT:    [[TMP10:%.*]] = call i32 @llvm.vector.reduce.add.v4i32(<4 x i32> [[BIN_RDX9]])
+; CHECK-LATENCY8-NEXT:    [[CMP_N:%.*]] = icmp eq i64 [[N]], [[N_VEC]]
+; CHECK-LATENCY8-NEXT:    br i1 [[CMP_N]], label %[[EXIT:.*]], label %[[VEC_EPILOG_ITER_CHECK:.*]]
+; CHECK-LATENCY8:       [[VEC_EPILOG_ITER_CHECK]]:
+; CHECK-LATENCY8-NEXT:    [[MIN_EPILOG_ITERS_CHECK:%.*]] = icmp ult i64 [[TMP0]], 4
+; CHECK-LATENCY8-NEXT:    br i1 [[MIN_EPILOG_ITERS_CHECK]], label %[[VEC_EPILOG_SCALAR_PH]], label %[[VEC_EPILOG_PH]], !prof [[PROF12:![0-9]+]]
+; CHECK-LATENCY8:       [[VEC_EPILOG_PH]]:
+; CHECK-LATENCY8-NEXT:    [[VEC_EPILOG_RESUME_VAL:%.*]] = phi i64 [ [[N_VEC]], %[[VEC_EPILOG_ITER_CHECK]] ], [ 0, %[[VECTOR_MAIN_LOOP_ITER_CHECK]] ]
+; CHECK-LATENCY8-NEXT:    [[BC_MERGE_RDX:%.*]] = phi i32 [ [[TMP10]], %[[VEC_EPILOG_ITER_CHECK]] ], [ 0, %[[VECTOR_MAIN_LOOP_ITER_CHECK]] ]
+; CHECK-LATENCY8-NEXT:    [[TMP11:%.*]] = and i64 [[N]], 3
+; CHECK-LATENCY8-NEXT:    [[N_VEC10:%.*]] = sub i64 [[N]], [[TMP11]]
+; CHECK-LATENCY8-NEXT:    [[TMP12:%.*]] = insertelement <4 x i32> zeroinitializer, i32 [[BC_MERGE_RDX]], i64 0
+; CHECK-LATENCY8-NEXT:    br label %[[VEC_EPILOG_VECTOR_BODY:.*]]
+; CHECK-LATENCY8:       [[VEC_EPILOG_VECTOR_BODY]]:
+; CHECK-LATENCY8-NEXT:    [[INDEX11:%.*]] = phi i64 [ [[VEC_EPILOG_RESUME_VAL]], %[[VEC_EPILOG_PH]] ], [ [[INDEX_NEXT14:%.*]], %[[VEC_EPILOG_VECTOR_BODY]] ]
+; CHECK-LATENCY8-NEXT:    [[VEC_PHI12:%.*]] = phi <4 x i32> [ [[TMP12]], %[[VEC_EPILOG_PH]] ], [ [[TMP14:%.*]], %[[VEC_EPILOG_VECTOR_BODY]] ]
+; CHECK-LATENCY8-NEXT:    [[TMP13:%.*]] = getelementptr inbounds nuw [4 x i8], ptr [[P]], i64 [[INDEX11]]
+; CHECK-LATENCY8-NEXT:    [[WIDE_LOAD13:%.*]] = load <4 x i32>, ptr [[TMP13]], align 4
+; CHECK-LATENCY8-NEXT:    [[TMP14]] = add <4 x i32> [[WIDE_LOAD13]], [[VEC_PHI12]]
+; CHECK-LATENCY8-NEXT:    [[INDEX_NEXT14]] = add nuw i64 [[INDEX11]], 4
+; CHECK-LATENCY8-NEXT:    [[TMP15:%.*]] = icmp eq i64 [[INDEX_NEXT14]], [[N_VEC10]]
+; CHECK-LATENCY8-NEXT:    br i1 [[TMP15]], label %[[VEC_EPILOG_MIDDLE_BLOCK:.*]], label %[[VEC_EPILOG_VECTOR_BODY]], !llvm.loop [[LOOP13:![0-9]+]]
+; CHECK-LATENCY8:       [[VEC_EPILOG_MIDDLE_BLOCK]]:
+; CHECK-LATENCY8-NEXT:    [[TMP16:%.*]] = call i32 @llvm.vector.reduce.add.v4i32(<4 x i32> [[TMP14]])
+; CHECK-LATENCY8-NEXT:    [[CMP_N15:%.*]] = icmp eq i64 [[N]], [[N_VEC10]]
+; CHECK-LATENCY8-NEXT:    br i1 [[CMP_N15]], label %[[EXIT]], label %[[VEC_EPILOG_SCALAR_PH]]
+; CHECK-LATENCY8:       [[VEC_EPILOG_SCALAR_PH]]:
+; CHECK-LATENCY8-NEXT:    [[BC_RESUME_VAL:%.*]] = phi i64 [ [[N_VEC10]], %[[VEC_EPILOG_MIDDLE_BLOCK]] ], [ [[N_VEC]], %[[VEC_EPILOG_ITER_CHECK]] ], [ 0, %[[ITER_CHECK]] ]
+; CHECK-LATENCY8-NEXT:    [[BC_MERGE_RDX16:%.*]] = phi i32 [ [[TMP16]], %[[VEC_EPILOG_MIDDLE_BLOCK]] ], [ [[TMP10]], %[[VEC_EPILOG_ITER_CHECK]] ], [ 0, %[[ITER_CHECK]] ]
+; CHECK-LATENCY8-NEXT:    br label %[[LOOP:.*]]
+; CHECK-LATENCY8:       [[LOOP]]:
+; CHECK-LATENCY8-NEXT:    [[IV:%.*]] = phi i64 [ [[IV_NEXT:%.*]], %[[LOOP]] ], [ [[BC_RESUME_VAL]], %[[VEC_EPILOG_SCALAR_PH]] ]
+; CHECK-LATENCY8-NEXT:    [[RET:%.*]] = phi i32 [ [[ADD:%.*]], %[[LOOP]] ], [ [[BC_MERGE_RDX16]], %[[VEC_EPILOG_SCALAR_PH]] ]
+; CHECK-LATENCY8-NEXT:    [[ARRAYIDX:%.*]] = getelementptr inbounds nuw [4 x i8], ptr [[P]], i64 [[IV]]
+; CHECK-LATENCY8-NEXT:    [[VAL:%.*]] = load i32, ptr [[ARRAYIDX]], align 4
+; CHECK-LATENCY8-NEXT:    [[ADD]] = add nsw i32 [[VAL]], [[RET]]
+; CHECK-LATENCY8-NEXT:    [[IV_NEXT]] = add nuw nsw i64 [[IV]], 1
+; CHECK-LATENCY8-NEXT:    [[EXITCOND:%.*]] = icmp eq i64 [[IV_NEXT]], [[N]]
+; CHECK-LATENCY8-NEXT:    br i1 [[EXITCOND]], label %[[EXIT]], label %[[LOOP]], !llvm.loop [[LOOP14:![0-9]+]]
+; CHECK-LATENCY8:       [[EXIT]]:
+; CHECK-LATENCY8-NEXT:    [[ADD_LCSSA:%.*]] = phi i32 [ [[ADD]], %[[LOOP]] ], [ [[TMP10]], %[[MIDDLE_BLOCK]] ], [ [[TMP16]], %[[VEC_EPILOG_MIDDLE_BLOCK]] ]
+; CHECK-LATENCY8-NEXT:    ret i32 [[ADD_LCSSA]]
+;
+; CHECK-A510-LABEL: define i32 @i32_reduction(
+; CHECK-A510-SAME: ptr [[P:%.*]], i64 [[N:%.*]]) #[[ATTR0]] {
+; CHECK-A510-NEXT:  [[ENTRY:.*]]:
+; CHECK-A510-NEXT:    [[MIN_ITERS_CHECK:%.*]] = icmp ult i64 [[N]], 8
+; CHECK-A510-NEXT:    br i1 [[MIN_ITERS_CHECK]], label %[[SCALAR_PH:.*]], label %[[VECTOR_PH:.*]]
+; CHECK-A510:       [[VECTOR_PH]]:
+; CHECK-A510-NEXT:    [[TMP0:%.*]] = and i64 [[N]], 7
+; CHECK-A510-NEXT:    [[N_VEC:%.*]] = sub i64 [[N]], [[TMP0]]
+; CHECK-A510-NEXT:    br label %[[VECTOR_BODY:.*]]
+; CHECK-A510:       [[VECTOR_BODY]]:
+; CHECK-A510-NEXT:    [[INDEX:%.*]] = phi i64 [ 0, %[[VECTOR_PH]] ], [ [[INDEX_NEXT:%.*]], %[[VECTOR_BODY]] ]
+; CHECK-A510-NEXT:    [[VEC_PHI:%.*]] = phi <4 x i32> [ zeroinitializer, %[[VECTOR_PH]] ], [ [[TMP3:%.*]], %[[VECTOR_BODY]] ]
+; CHECK-A510-NEXT:    [[VEC_PHI1:%.*]] = phi <4 x i32> [ zeroinitializer, %[[VECTOR_PH]] ], [ [[TMP4:%.*]], %[[VECTOR_BODY]] ]
+; CHECK-A510-NEXT:    [[TMP1:%.*]] = getelementptr inbounds nuw [4 x i8], ptr [[P]], i64 [[INDEX]]
+; CHECK-A510-NEXT:    [[TMP2:%.*]] = getelementptr inbounds nuw i32, ptr [[TMP1]], i64 4
+; CHECK-A510-NEXT:    [[WIDE_LOAD:%.*]] = load <4 x i32>, ptr [[TMP1]], align 4
+; CHECK-A510-NEXT:    [[WIDE_LOAD2:%.*]] = load <4 x i32>, ptr [[TMP2]], align 4
+; CHECK-A510-NEXT:    [[TMP3]] = add <4 x i32> [[WIDE_LOAD]], [[VEC_PHI]]
+; CHECK-A510-NEXT:    [[TMP4]] = add <4 x i32> [[WIDE_LOAD2]], [[VEC_PHI1]]
+; CHECK-A510-NEXT:    [[INDEX_NEXT]] = add nuw i64 [[INDEX]], 8
+; CHECK-A510-NEXT:    [[TMP5:%.*]] = icmp eq i64 [[INDEX_NEXT]], [[N_VEC]]
+; CHECK-A510-NEXT:    br i1 [[TMP5]], label %[[MIDDLE_BLOCK:.*]], label %[[VECTOR_BODY]], !llvm.loop [[LOOP11:![0-9]+]]
+; CHECK-A510:       [[MIDDLE_BLOCK]]:
+; CHECK-A510-NEXT:    [[BIN_RDX:%.*]] = add <4 x i32> [[TMP4]], [[TMP3]]
+; CHECK-A510-NEXT:    [[TMP6:%.*]] = call i32 @llvm.vector.reduce.add.v4i32(<4 x i32> [[BIN_RDX]])
+; CHECK-A510-NEXT:    [[CMP_N:%.*]] = icmp eq i64 [[N]], [[N_VEC]]
+; CHECK-A510-NEXT:    br i1 [[CMP_N]], label %[[EXIT:.*]], label %[[SCALAR_PH]]
+; CHECK-A510:       [[SCALAR_PH]]:
+; CHECK-A510-NEXT:    [[BC_RESUME_VAL:%.*]] = phi i64 [ [[N_VEC]], %[[MIDDLE_BLOCK]] ], [ 0, %[[ENTRY]] ]
+; CHECK-A510-NEXT:    [[BC_MERGE_RDX:%.*]] = phi i32 [ [[TMP6]], %[[MIDDLE_BLOCK]] ], [ 0, %[[ENTRY]] ]
+; CHECK-A510-NEXT:    br label %[[LOOP:.*]]
+; CHECK-A510:       [[LOOP]]:
+; CHECK-A510-NEXT:    [[IV:%.*]] = phi i64 [ [[IV_NEXT:%.*]], %[[LOOP]] ], [ [[BC_RESUME_VAL]], %[[SCALAR_PH]] ]
+; CHECK-A510-NEXT:    [[RET:%.*]] = phi i32 [ [[ADD:%.*]], %[[LOOP]] ], [ [[BC_MERGE_RDX]], %[[SCALAR_PH]] ]
+; CHECK-A510-NEXT:    [[ARRAYIDX:%.*]] = getelementptr inbounds nuw [4 x i8], ptr [[P]], i64 [[IV]]
+; CHECK-A510-NEXT:    [[VAL:%.*]] = load i32, ptr [[ARRAYIDX]], align 4
+; CHECK-A510-NEXT:    [[ADD]] = add nsw i32 [[VAL]], [[RET]]
+; CHECK-A510-NEXT:    [[IV_NEXT]] = add nuw nsw i64 [[IV]], 1
+; CHECK-A510-NEXT:    [[EXITCOND:%.*]] = icmp eq i64 [[IV_NEXT]], [[N]]
+; CHECK-A510-NEXT:    br i1 [[EXITCOND]], label %[[EXIT]], label %[[LOOP]], !llvm.loop [[LOOP12:![0-9]+]]
+; CHECK-A510:       [[EXIT]]:
+; CHECK-A510-NEXT:    [[ADD_LCSSA:%.*]] = phi i32 [ [[ADD]], %[[LOOP]] ], [ [[TMP6]], %[[MIDDLE_BLOCK]] ]
+; CHECK-A510-NEXT:    ret i32 [[ADD_LCSSA]]
+;
+; CHECK-A320-LABEL: define i32 @i32_reduction(
+; CHECK-A320-SAME: ptr [[P:%.*]], i64 [[N:%.*]]) #[[ATTR0]] {
+; CHECK-A320-NEXT:  [[ITER_CHECK:.*]]:
+; CHECK-A320-NEXT:    [[MIN_ITERS_CHECK:%.*]] = icmp ult i64 [[N]], 4
+; CHECK-A320-NEXT:    br i1 [[MIN_ITERS_CHECK]], label %[[VEC_EPILOG_SCALAR_PH:.*]], label %[[VECTOR_MAIN_LOOP_ITER_CHECK:.*]]
+; CHECK-A320:       [[VECTOR_MAIN_LOOP_ITER_CHECK]]:
+; CHECK-A320-NEXT:    [[MIN_ITERS_CHECK1:%.*]] = icmp ult i64 [[N]], 16
+; CHECK-A320-NEXT:    br i1 [[MIN_ITERS_CHECK1]], label %[[VEC_EPILOG_PH:.*]], label %[[VECTOR_PH:.*]]
+; CHECK-A320:       [[VECTOR_PH]]:
+; CHECK-A320-NEXT:    [[TMP0:%.*]] = and i64 [[N]], 15
+; CHECK-A320-NEXT:    [[N_VEC:%.*]] = sub i64 [[N]], [[TMP0]]
+; CHECK-A320-NEXT:    br label %[[VECTOR_BODY:.*]]
+; CHECK-A320:       [[VECTOR_BODY]]:
+; CHECK-A320-NEXT:    [[INDEX:%.*]] = phi i64 [ 0, %[[VECTOR_PH]] ], [ [[INDEX_NEXT:%.*]], %[[VECTOR_BODY]] ]
+; CHECK-A320-NEXT:    [[VEC_PHI:%.*]] = phi <4 x i32> [ zeroinitializer, %[[VECTOR_PH]] ], [ [[TMP5:%.*]], %[[VECTOR_BODY]] ]
+; CHECK-A320-NEXT:    [[VEC_PHI2:%.*]] = phi <4 x i32> [ zeroinitializer, %[[VECTOR_PH]] ], [ [[TMP6:%.*]], %[[VECTOR_BODY]] ]
+; CHECK-A320-NEXT:    [[VEC_PHI3:%.*]] = phi <4 x i32> [ zeroinitializer, %[[VECTOR_PH]] ], [ [[TMP7:%.*]], %[[VECTOR_BODY]] ]
+; CHECK-A320-NEXT:    [[VEC_PHI4:%.*]] = phi <4 x i32> [ zeroinitializer, %[[VECTOR_PH]] ], [ [[TMP8:%.*]], %[[VECTOR_BODY]] ]
+; CHECK-A320-NEXT:    [[TMP1:%.*]] = getelementptr inbounds nuw [4 x i8], ptr [[P]], i64 [[INDEX]]
+; CHECK-A320-NEXT:    [[TMP2:%.*]] = getelementptr inbounds nuw i32, ptr [[TMP1]], i64 4
+; CHECK-A320-NEXT:    [[TMP3:%.*]] = getelementptr inbounds nuw i32, ptr [[TMP1]], i64 8
+; CHECK-A320-NEXT:    [[TMP4:%.*]] = getelementptr inbounds nuw i32, ptr [[TMP1]], i64 12
+; CHECK-A320-NEXT:    [[WIDE_LOAD:%.*]] = load <4 x i32>, ptr [[TMP1]], align 4
+; CHECK-A320-NEXT:    [[WIDE_LOAD5:%.*]] = load <4 x i32>, ptr [[TMP2]], align 4
+; CHECK-A320-NEXT:    [[WIDE_LOAD6:%.*]] = load <4 x i32>, ptr [[TMP3]], align 4
+; CHECK-A320-NEXT:    [[WIDE_LOAD7:%.*]] = load <4 x i32>, ptr [[TMP4]], align 4
+; CHECK-A320-NEXT:    [[TMP5]] = add <4 x i32> [[WIDE_LOAD]], [[VEC_PHI]]
+; CHECK-A320-NEXT:    [[TMP6]] = add <4 x i32> [[WIDE_LOAD5]], [[VEC_PHI2]]
+; CHECK-A320-NEXT:    [[TMP7]] = add <4 x i32> [[WIDE_LOAD6]], [[VEC_PHI3]]
+; CHECK-A320-NEXT:    [[TMP8]] = add <4 x i32> [[WIDE_LOAD7]], [[VEC_PHI4]]
+; CHECK-A320-NEXT:    [[INDEX_NEXT]] = add nuw i64 [[INDEX]], 16
+; CHECK-A320-NEXT:    [[TMP9:%.*]] = icmp eq i64 [[INDEX_NEXT]], [[N_VEC]]
+; CHECK-A320-NEXT:    br i1 [[TMP9]], label %[[MIDDLE_BLOCK:.*]], label %[[VECTOR_BODY]], !llvm.loop [[LOOP11:![0-9]+]]
+; CHECK-A320:       [[MIDDLE_BLOCK]]:
+; CHECK-A320-NEXT:    [[BIN_RDX:%.*]] = add <4 x i32> [[TMP6]], [[TMP5]]
+; CHECK-A320-NEXT:    [[BIN_RDX8:%.*]] = add <4 x i32> [[TMP7]], [[BIN_RDX]]
+; CHECK-A320-NEXT:    [[BIN_RDX9:%.*]] = add <4 x i32> [[TMP8]], [[BIN_RDX8]]
+; CHECK-A320-NEXT:    [[TMP10:%.*]] = call i32 @llvm.vector.reduce.add.v4i32(<4 x i32> [[BIN_RDX9]])
+; CHECK-A320-NEXT:    [[CMP_N:%.*]] = icmp eq i64 [[N]], [[N_VEC]]
+; CHECK-A320-NEXT:    br i1 [[CMP_N]], label %[[EXIT:.*]], label %[[VEC_EPILOG_ITER_CHECK:.*]]
+; CHECK-A320:       [[VEC_EPILOG_ITER_CHECK]]:
+; CHECK-A320-NEXT:    [[MIN_EPILOG_ITERS_CHECK:%.*]] = icmp ult i64 [[TMP0]], 4
+; CHECK-A320-NEXT:    br i1 [[MIN_EPILOG_ITERS_CHECK]], label %[[VEC_EPILOG_SCALAR_PH]], label %[[VEC_EPILOG_PH]], !prof [[PROF12:![0-9]+]]
+; CHECK-A320:       [[VEC_EPILOG_PH]]:
+; CHECK-A320-NEXT:    [[VEC_EPILOG_RESUME_VAL:%.*]] = phi i64 [ [[N_VEC]], %[[VEC_EPILOG_ITER_CHECK]] ], [ 0, %[[VECTOR_MAIN_LOOP_ITER_CHECK]] ]
+; CHECK-A320-NEXT:    [[BC_MERGE_RDX:%.*]] = phi i32 [ [[TMP10]], %[[VEC_EPILOG_ITER_CHECK]] ], [ 0, %[[VECTOR_MAIN_LOOP_ITER_CHECK]] ]
+; CHECK-A320-NEXT:    [[TMP11:%.*]] = and i64 [[N]], 3
+; CHECK-A320-NEXT:    [[N_VEC10:%.*]] = sub i64 [[N]], [[TMP11]]
+; CHECK-A320-NEXT:    [[TMP12:%.*]] = insertelement <4 x i32> zeroinitializer, i32 [[BC_MERGE_RDX]], i64 0
+; CHECK-A320-NEXT:    br label %[[VEC_EPILOG_VECTOR_BODY:.*]]
+; CHECK-A320:       [[VEC_EPILOG_VECTOR_BODY]]:
+; CHECK-A320-NEXT:    [[INDEX11:%.*]] = phi i64 [ [[VEC_EPILOG_RESUME_VAL]], %[[VEC_EPILOG_PH]] ], [ [[INDEX_NEXT14:%.*]], %[[VEC_EPILOG_VECTOR_BODY]] ]
+; CHECK-A320-NEXT:    [[VEC_PHI12:%.*]] = phi <4 x i32> [ [[TMP12]], %[[VEC_EPILOG_PH]] ], [ [[TMP14:%.*]], %[[VEC_EPILOG_VECTOR_BODY]] ]
+; CHECK-A320-NEXT:    [[TMP13:%.*]] = getelementptr inbounds nuw [4 x i8], ptr [[P]], i64 [[INDEX11]]
+; CHECK-A320-NEXT:    [[WIDE_LOAD13:%.*]] = load <4 x i32>, ptr [[TMP13]], align 4
+; CHECK-A320-NEXT:    [[TMP14]] = add <4 x i32> [[WIDE_LOAD13]], [[VEC_PHI12]]
+; CHECK-A320-NEXT:    [[INDEX_NEXT14]] = add nuw i64 [[INDEX11]], 4
+; CHECK-A320-NEXT:    [[TMP15:%.*]] = icmp eq i64 [[INDEX_NEXT14]], [[N_VEC10]]
+; CHECK-A320-NEXT:    br i1 [[TMP15]], label %[[VEC_EPILOG_MIDDLE_BLOCK:.*]], label %[[VEC_EPILOG_VECTOR_BODY]], !llvm.loop [[LOOP13:![0-9]+]]
+; CHECK-A320:       [[VEC_EPILOG_MIDDLE_BLOCK]]:
+; CHECK-A320-NEXT:    [[TMP16:%.*]] = call i32 @llvm.vector.reduce.add.v4i32(<4 x i32> [[TMP14]])
+; CHECK-A320-NEXT:    [[CMP_N15:%.*]] = icmp eq i64 [[N]], [[N_VEC10]]
+; CHECK-A320-NEXT:    br i1 [[CMP_N15]], label %[[EXIT]], label %[[VEC_EPILOG_SCALAR_PH]]
+; CHECK-A320:       [[VEC_EPILOG_SCALAR_PH]]:
+; CHECK-A320-NEXT:    [[BC_RESUME_VAL:%.*]] = phi i64 [ [[N_VEC10]], %[[VEC_EPILOG_MIDDLE_BLOCK]] ], [ [[N_VEC]], %[[VEC_EPILOG_ITER_CHECK]] ], [ 0, %[[ITER_CHECK]] ]
+; CHECK-A320-NEXT:    [[BC_MERGE_RDX16:%.*]] = phi i32 [ [[TMP16]], %[[VEC_EPILOG_MIDDLE_BLOCK]] ], [ [[TMP10]], %[[VEC_EPILOG_ITER_CHECK]] ], [ 0, %[[ITER_CHECK]] ]
+; CHECK-A320-NEXT:    br label %[[LOOP:.*]]
+; CHECK-A320:       [[LOOP]]:
+; CHECK-A320-NEXT:    [[IV:%.*]] = phi i64 [ [[IV_NEXT:%.*]], %[[LOOP]] ], [ [[BC_RESUME_VAL]], %[[VEC_EPILOG_SCALAR_PH]] ]
+; CHECK-A320-NEXT:    [[RET:%.*]] = phi i32 [ [[ADD:%.*]], %[[LOOP]] ], [ [[BC_MERGE_RDX16]], %[[VEC_EPILOG_SCALAR_PH]] ]
+; CHECK-A320-NEXT:    [[ARRAYIDX:%.*]] = getelementptr inbounds nuw [4 x i8], ptr [[P]], i64 [[IV]]
+; CHECK-A320-NEXT:    [[VAL:%.*]] = load i32, ptr [[ARRAYIDX]], align 4
+; CHECK-A320-NEXT:    [[ADD]] = add nsw i32 [[VAL]], [[RET]]
+; CHECK-A320-NEXT:    [[IV_NEXT]] = add nuw nsw i64 [[IV]], 1
+; CHECK-A320-NEXT:    [[EXITCOND:%.*]] = icmp eq i64 [[IV_NEXT]], [[N]]
+; CHECK-A320-NEXT:    br i1 [[EXITCOND]], label %[[EXIT]], label %[[LOOP]], !llvm.loop [[LOOP14:![0-9]+]]
+; CHECK-A320:       [[EXIT]]:
+; CHECK-A320-NEXT:    [[ADD_LCSSA:%.*]] = phi i32 [ [[ADD]], %[[LOOP]] ], [ [[TMP10]], %[[MIDDLE_BLOCK]] ], [ [[TMP16]], %[[VEC_EPILOG_MIDDLE_BLOCK]] ]
+; CHECK-A320-NEXT:    ret i32 [[ADD_LCSSA]]
+;
+entry:
+  br label %loop
+
+loop:
+  %iv = phi i64 [ %iv.next, %loop ], [ 0, %entry ]
+  %ret = phi i32 [ %add, %loop ], [ 0, %entry ]
+  %arrayidx = getelementptr inbounds nuw [4 x i8], ptr %p, i64 %iv
+  %val = load i32, ptr %arrayidx, align 4
+  %add = add nsw i32 %val, %ret
+  %iv.next = add nuw nsw i64 %iv, 1
+  %exitcond = icmp eq i64 %iv.next, %n
+  br i1 %exitcond, label %exit, label %loop
+
+exit:
+  ret i32 %add
+}
+
 !0 = !{!"llvm.loop.vectorize.enable"}
 !1 = distinct !{!1, !0}
 
