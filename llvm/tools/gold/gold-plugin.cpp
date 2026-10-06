@@ -1083,8 +1083,15 @@ static std::vector<std::pair<SmallString<128>, bool>> runLTO() {
     std::string Identifier =
         getThinLTOObjectFileName(F.name, OldSuffix, NewSuffix);
     auto ObjFilename = ObjectToIndexFileState.insert({Identifier, false});
-    assert(ObjFilename.second);
-    if (const void *View = getSymbolsAndView(F))
+    // get_symbols must be called for every claimed file; skipping it causes
+    // the LTO plugin to crash when processing the file handle during linking.
+    const void *View = getSymbolsAndView(F);
+    // The same archive may be specified multiple times on the command line to
+    // handle circular dependencies between archives. Skip duplicate modules
+    // rather than asserting, since each module only needs to be processed once.
+    if (!ObjFilename.second)
+      continue;
+    if (View)
       addModule(*Lto, F, View, ObjFilename.first->first());
     else if (options::thinlto_index_only) {
       ObjFilename.first->second = true;
