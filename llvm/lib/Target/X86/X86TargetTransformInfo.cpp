@@ -4141,6 +4141,23 @@ InstructionCost X86TTIImpl::getCmpSelInstrCost(
 
 unsigned X86TTIImpl::getAtomicMemIntrinsicMaxElementSize() const { return 16; }
 
+/// Returns true if the square root is divided into with the reciprocal
+/// allowed and the target replaces the pair with the rsqrt* based estimate.
+static bool isFoldedIntoRsqrtEstimate(const IntrinsicCostAttributes &ICA,
+                                      const X86TargetLowering &TLI,
+                                      const DataLayout &DL) {
+  using namespace PatternMatch;
+  const IntrinsicInst *II = ICA.getInst();
+  if (!II || !II->hasOneUse() ||
+      !match(II->user_back(), m_FDiv(m_Value(), m_Specific(II))) ||
+      !cast<FPMathOperator>(II->user_back())->hasAllowReciprocal())
+    return false;
+  EVT VT = TLI.getValueType(DL, ICA.getReturnType());
+  return TLI.hasSqrtEstimate(VT, /*Reciprocal=*/true) &&
+         TLI.getRecipEstimateSqrtEnabled(VT, *II->getFunction()) !=
+             TargetLoweringBase::ReciprocalEstimate::Disabled;
+}
+
 InstructionCost
 X86TTIImpl::getIntrinsicInstrCost(const IntrinsicCostAttributes &ICA,
                                   TTI::TargetCostKind CostKind) const {
@@ -5128,6 +5145,11 @@ X86TTIImpl::getIntrinsicInstrCost(const IntrinsicCostAttributes &ICA,
     ISD = ISD::MULHU;
     break;
   case Intrinsic::sqrt:
+    // The estimate sequence is costed with the division it is folded into.
+    if ((CostKind == TTI::TCK_RecipThroughput ||
+         CostKind == TTI::TCK_Latency) &&
+        isFoldedIntoRsqrtEstimate(ICA, *TLI, DL))
+      return TTI::TCC_Free;
     ISD = ISD::FSQRT;
     break;
   case Intrinsic::sadd_with_overflow:
