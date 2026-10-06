@@ -3,11 +3,14 @@
 ; RUN: llc -relocation-model=pic < %s | FileCheck %s --check-prefixes=CHECK,PIC
 
 ; On i686 with SSE1 but no SSE2 or x87, v4f32 is legal while scalar f32 has
-; the TypeSoftenFloat action. The v4f32 functions create refinement constants
-; before type legalization. The v8f32 functions split first and create them in
-; the AfterLegalizeTypes combine. The refinement constants become constant-pool
-; loads created in DAGCombiner, so the PIC run checks that they take the GOT
-; relative form. The fallback functions disable one estimate each:
+; the TypeSoftenFloat action. When refinement needs constants in v4f32
+; functions or ABI-narrowed v8f32 divisions, DAGCombiner builds them before
+; type legalization. The stored-result v8f32 division and nonzero-refinement
+; v8f32 reciprocal-square-root functions build them in the AfterLegalizeTypes
+; combine after type legalization splits the vector. These constants become
+; constant-pool loads. The PIC run checks the GOT-relative form of folded pool
+; operands. Generated register-load checks show the constant values. The
+; fallback functions disable one estimate each:
 ; fallback_sqrt_v4 keeps the native sqrtps while its division still uses the
 ; reciprocal estimate, and fallback_div_v4 keeps the native divps.
 
@@ -435,6 +438,88 @@ define <8 x float> @div_v8_steps_2(<8 x float> %n, <8 x float> %d) #5 {
 ; PIC-NEXT:    retl
   %q = fdiv arcp ninf <8 x float> %n, %d
   ret <8 x float> %q
+}
+
+define void @div_v8_stored_steps_2(<8 x float> %n, <8 x float> %d, ptr %out) #5 {
+; STATIC-LABEL: div_v8_stored_steps_2:
+; STATIC:       # %bb.0:
+; STATIC-NEXT:    subl $12, %esp
+; STATIC-NEXT:    rcpps %xmm2, %xmm4
+; STATIC-NEXT:    movaps %xmm2, %xmm5
+; STATIC-NEXT:    mulps %xmm4, %xmm5
+; STATIC-NEXT:    movaps {{.*#+}} xmm3 = [1.0E+0,1.0E+0,1.0E+0,1.0E+0]
+; STATIC-NEXT:    movaps %xmm3, %xmm6
+; STATIC-NEXT:    subps %xmm5, %xmm6
+; STATIC-NEXT:    mulps %xmm4, %xmm6
+; STATIC-NEXT:    addps %xmm4, %xmm6
+; STATIC-NEXT:    movaps %xmm0, %xmm4
+; STATIC-NEXT:    mulps %xmm6, %xmm4
+; STATIC-NEXT:    mulps %xmm4, %xmm2
+; STATIC-NEXT:    subps %xmm2, %xmm0
+; STATIC-NEXT:    mulps %xmm6, %xmm0
+; STATIC-NEXT:    addps %xmm4, %xmm0
+; STATIC-NEXT:    movaps {{[0-9]+}}(%esp), %xmm2
+; STATIC-NEXT:    rcpps %xmm2, %xmm4
+; STATIC-NEXT:    movaps %xmm2, %xmm5
+; STATIC-NEXT:    mulps %xmm4, %xmm5
+; STATIC-NEXT:    subps %xmm5, %xmm3
+; STATIC-NEXT:    mulps %xmm4, %xmm3
+; STATIC-NEXT:    addps %xmm4, %xmm3
+; STATIC-NEXT:    movaps %xmm1, %xmm4
+; STATIC-NEXT:    mulps %xmm3, %xmm4
+; STATIC-NEXT:    mulps %xmm4, %xmm2
+; STATIC-NEXT:    subps %xmm2, %xmm1
+; STATIC-NEXT:    mulps %xmm3, %xmm1
+; STATIC-NEXT:    addps %xmm4, %xmm1
+; STATIC-NEXT:    movl {{[0-9]+}}(%esp), %eax
+; STATIC-NEXT:    movaps %xmm1, 16(%eax)
+; STATIC-NEXT:    movaps %xmm0, (%eax)
+; STATIC-NEXT:    addl $12, %esp
+; STATIC-NEXT:    retl
+;
+; PIC-LABEL: div_v8_stored_steps_2:
+; PIC:       # %bb.0:
+; PIC-NEXT:    subl $12, %esp
+; PIC-NEXT:    calll .L12$pb
+; PIC-NEXT:  .L12$pb:
+; PIC-NEXT:    popl %eax
+; PIC-NEXT:  .Ltmp6:
+; PIC-NEXT:    addl $_GLOBAL_OFFSET_TABLE_+(.Ltmp6-.L12$pb), %eax
+; PIC-NEXT:    rcpps %xmm2, %xmm4
+; PIC-NEXT:    movaps %xmm2, %xmm5
+; PIC-NEXT:    mulps %xmm4, %xmm5
+; PIC-NEXT:    movaps {{.*#+}} xmm3 = [1.0E+0,1.0E+0,1.0E+0,1.0E+0]
+; PIC-NEXT:    movaps %xmm3, %xmm6
+; PIC-NEXT:    subps %xmm5, %xmm6
+; PIC-NEXT:    mulps %xmm4, %xmm6
+; PIC-NEXT:    addps %xmm4, %xmm6
+; PIC-NEXT:    movaps %xmm0, %xmm4
+; PIC-NEXT:    mulps %xmm6, %xmm4
+; PIC-NEXT:    mulps %xmm4, %xmm2
+; PIC-NEXT:    subps %xmm2, %xmm0
+; PIC-NEXT:    mulps %xmm6, %xmm0
+; PIC-NEXT:    addps %xmm4, %xmm0
+; PIC-NEXT:    movaps {{[0-9]+}}(%esp), %xmm2
+; PIC-NEXT:    rcpps %xmm2, %xmm4
+; PIC-NEXT:    movaps %xmm2, %xmm5
+; PIC-NEXT:    mulps %xmm4, %xmm5
+; PIC-NEXT:    subps %xmm5, %xmm3
+; PIC-NEXT:    mulps %xmm4, %xmm3
+; PIC-NEXT:    addps %xmm4, %xmm3
+; PIC-NEXT:    movaps %xmm1, %xmm4
+; PIC-NEXT:    mulps %xmm3, %xmm4
+; PIC-NEXT:    mulps %xmm4, %xmm2
+; PIC-NEXT:    subps %xmm2, %xmm1
+; PIC-NEXT:    mulps %xmm3, %xmm1
+; PIC-NEXT:    addps %xmm4, %xmm1
+; PIC-NEXT:    movl {{[0-9]+}}(%esp), %eax
+; PIC-NEXT:    movaps %xmm1, 16(%eax)
+; PIC-NEXT:    movaps %xmm0, (%eax)
+; PIC-NEXT:    addl $12, %esp
+; PIC-NEXT:    retl
+  %q = fdiv arcp ninf <8 x float> %n, %d
+  store <8 x float> %q, ptr %out
+  ret void
 }
 
 define <4 x float> @fallback_sqrt_v4(<4 x float> %n, <4 x float> %x) #6 {
