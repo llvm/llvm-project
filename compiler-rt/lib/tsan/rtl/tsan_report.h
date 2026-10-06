@@ -46,22 +46,23 @@ struct ReportStack {
 };
 
 struct ReportMopMutex {
-  int id;
-  bool write;
+  int id = 0;
+  bool write = false;
 };
 
 struct ReportMop {
-  int tid;
-  uptr addr;
-  int size;
-  bool write;
-  bool atomic;
-  uptr external_tag;
+  int tid = kInvalidTid;
+  uptr addr = 0;
+  int size = 0;
+  bool write = false;
+  bool atomic = false;
+  uptr external_tag = 0;
   Vector<ReportMopMutex> mset;
   StackTrace stack_trace;
-  ReportStack *stack;
+  ReportStack* stack = nullptr;
 
   ReportMop();
+  ~ReportMop();
 };
 
 enum ReportLocationType {
@@ -87,42 +88,49 @@ struct ReportLocation {
 };
 
 struct ReportThread {
-  Tid id;
-  ThreadID os_id;
-  bool running;
-  ThreadType thread_type;
-  char *name;
-  Tid parent_tid;
-  StackID stack_id;
-  ReportStack *stack;
-  bool suppressable;
+  Tid id = kInvalidTid;
+  ThreadID os_id = 0;
+  bool running = false;
+  ThreadType thread_type = ThreadType::Regular;
+  char* name = nullptr;
+  Tid parent_tid = kInvalidTid;
+  StackID stack_id = 0;
+  ReportStack* stack = nullptr;
+  bool suppressable = false;
 };
 
 struct ReportMutex {
-  int id;
-  uptr addr;
-  StackID stack_id;
-  ReportStack *stack;
+  int id = 0;
+  uptr addr = 0;
+  StackID stack_id = 0;
+  ReportStack* stack = nullptr;
 };
 
 struct AddedLocationAddr {
-  uptr addr;
-  usize locs_idx;
+  uptr addr = 0;
+  usize locs_idx = 0;
+};
+
+struct AddedStack {
+  StackTrace stack_trace;
+  bool suppressable = false;
 };
 
 class ReportDesc {
  public:
-  ReportType typ;
-  uptr tag;
+  ReportType typ = ReportTypeRace;
+  uptr tag = kExternalTagNone;
   Vector<ReportStack*> stacks;
+  Vector<AddedStack> added_stacks;
   Vector<ReportMop*> mops;
   Vector<ReportLocation*> locs;
   Vector<AddedLocationAddr> added_location_addrs;
   Vector<ReportMutex*> mutexes;
   Vector<ReportThread*> threads;
   Vector<Tid> unique_tids;
-  ReportStack *sleep;
-  int count;
+  ReportStack* sleep = nullptr;
+  StackID sleep_stack_id = 0;
+  int count = 0;
   int signum = 0;
 
   ReportDesc();

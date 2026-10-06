@@ -523,6 +523,12 @@ public:
     return ShouldZExtBoolParam ? Attribute::ZExt : Attribute::None;
   }
 
+  static Attribute::AttrKind getExtAttrForI8Param(bool Signed = true) {
+    // Return the extension attributes here even though nothing special is
+    // done in case any target needs something different in the future.
+    return Signed ? Attribute::SExt : Attribute::ZExt;
+  }
+
   static Attribute::AttrKind getExtAttrForI32Param(const Triple &T,
                                                    bool Signed = true) {
     bool ShouldExtI32Param, ShouldExtI32Return;

@@ -186,6 +186,7 @@ cc_library(
 
 cc_test(
     name = "analysis_flow_sensitive_tests",
+    size = "medium",
     srcs = glob(
         [
             "Analysis/FlowSensitive/*.cpp",
@@ -193,6 +194,7 @@ cc_test(
         ],
         allow_empty = False,
     ),
+    shard_count = 20,
     deps = [
         "//clang:analysis",
         "//clang:ast",

@@ -163,28 +163,22 @@ bool ShouldReport(ThreadState *thr, ReportType typ) {
   }
 }
 
-ScopedReportBase::ScopedReportBase(ReportType typ, uptr tag) {
-  ctx->thread_registry.CheckLocked();
+ScopedReport::ScopedReport(ReportType typ, uptr tag) {
+  CheckedMutex::CheckNoLocks();
   rep_ = New<ReportDesc>();
   rep_->typ = typ;
   rep_->tag = tag;
-  ctx->report_mtx.Lock();
 }
 
-ScopedReportBase::~ScopedReportBase() {
-  ctx->report_mtx.Unlock();
-  DestroyAndFree(rep_);
+ScopedReport::~ScopedReport() { DestroyAndFree(rep_); }
+
+void ScopedReport::AddStack(StackTrace stack, bool suppressable) {
+  rep_->added_stacks.PushBack({stack, suppressable});
 }
 
-void ScopedReportBase::AddStack(StackTrace stack, bool suppressable) {
-  ReportStack **rs = rep_->stacks.PushBack();
-  *rs = SymbolizeStack(stack);
-  (*rs)->suppressable = suppressable;
-}
-
-void ScopedReportBase::AddMemoryAccess(uptr addr, uptr external_tag, Shadow s,
-                                       Tid tid, StackTrace stack,
-                                       const MutexSet *mset) {
+void ScopedReport::AddMemoryAccess(uptr addr, uptr external_tag, Shadow s,
+                                   Tid tid, StackTrace stack,
+                                   const MutexSet* mset) {
   uptr addr0, size;
   AccessType typ;
   s.GetAccess(&addr0, &size, &typ);
@@ -205,7 +199,16 @@ void ScopedReportBase::AddMemoryAccess(uptr addr, uptr external_tag, Shadow s,
   }
 }
 
-void ScopedReportBase::SymbolizeStackElems() {
+void ScopedReport::SymbolizeStackElems() {
+  // symbolize stacks
+  for (usize i = 0, size = rep_->added_stacks.Size(); i < size; i++) {
+    AddedStack& as = rep_->added_stacks[i];
+    ReportStack* rs = SymbolizeStack(as.stack_trace);
+    if (rs)
+      rs->suppressable = as.suppressable;
+    rep_->stacks.PushBack(rs);
+  }
+
   // symbolize memory ops
   for (usize i = 0, size = rep_->mops.Size(); i < size; i++) {
     ReportMop *mop = rep_->mops[i];
@@ -253,13 +256,24 @@ void ScopedReportBase::SymbolizeStackElems() {
     ReportMutex *rm = rep_->mutexes[i];
     rm->stack = SymbolizeStackId(rm->stack_id);
   }
+
+#if !SANITIZER_GO
+  rep_->sleep = SymbolizeStackId(rep_->sleep_stack_id);
+#endif
 }
 
-void ScopedReportBase::AddUniqueTid(Tid unique_tid) {
+void ScopedReport::AddUniqueTid(Tid unique_tid) {
   rep_->unique_tids.PushBack(unique_tid);
 }
 
-void ScopedReportBase::AddThread(const ThreadContext *tctx, bool suppressable) {
+void ScopedReport::AddThread(const ThreadContext* tctx, bool suppressable) {
+  ThreadRegistryLock l(&ctx->thread_registry);
+  AddThreadLocked(tctx, suppressable);
+}
+
+void ScopedReport::AddThreadLocked(const ThreadContext* tctx,
+                                   bool suppressable) {
+  ctx->thread_registry.CheckLocked();
   for (uptr i = 0; i < rep_->threads.Size(); i++) {
     if ((u32)rep_->threads[i]->id == tctx->tid)
       return;
@@ -277,12 +291,6 @@ void ScopedReportBase::AddThread(const ThreadContext *tctx, bool suppressable) {
 }
 
 #if !SANITIZER_GO
-static ThreadContext *FindThreadByTidLocked(Tid tid) {
-  ctx->thread_registry.CheckLocked();
-  return static_cast<ThreadContext *>(
-      ctx->thread_registry.GetThreadLocked(tid));
-}
-
 static bool IsInStackOrTls(ThreadContextBase *tctx_base, void *arg) {
   uptr addr = (uptr)arg;
   ThreadContext *tctx = static_cast<ThreadContext*>(tctx_base);
@@ -308,14 +316,14 @@ ThreadContext *IsThreadStackOrTls(uptr addr, bool *is_stack) {
 }
 #endif
 
-void ScopedReportBase::AddThread(Tid tid, bool suppressable) {
-#if !SANITIZER_GO
-  if (const ThreadContext *tctx = FindThreadByTidLocked(tid))
-    AddThread(tctx, suppressable);
-#endif
+void ScopedReport::AddThread(Tid tid, bool suppressable) {
+  ThreadRegistryLock l(&ctx->thread_registry);
+  if (const auto* tctx = static_cast<ThreadContext*>(
+          ctx->thread_registry.GetThreadLocked(tid)))
+    AddThreadLocked(tctx, suppressable);
 }
 
-int ScopedReportBase::AddMutex(uptr addr, StackID creation_stack_id) {
+int ScopedReport::AddMutex(uptr addr, StackID creation_stack_id) {
   for (uptr i = 0; i < rep_->mutexes.Size(); i++) {
     if (rep_->mutexes[i]->addr == addr)
       return rep_->mutexes[i]->id;
@@ -328,7 +336,7 @@ int ScopedReportBase::AddMutex(uptr addr, StackID creation_stack_id) {
   return rm->id;
 }
 
-void ScopedReportBase::AddLocation(uptr addr, uptr size) {
+void ScopedReport::AddLocation(uptr addr, uptr size) {
   if (addr == 0)
     return;
 #if !SANITIZER_GO
@@ -370,12 +378,15 @@ void ScopedReportBase::AddLocation(uptr addr, uptr size) {
     return;
   }
   bool is_stack = false;
-  if (ThreadContext *tctx = IsThreadStackOrTls(addr, &is_stack)) {
-    auto *loc = New<ReportLocation>();
-    loc->type = is_stack ? ReportLocationStack : ReportLocationTLS;
-    loc->tid = tctx->tid;
-    rep_->locs.PushBack(loc);
-    AddThread(tctx);
+  {
+    ThreadRegistryLock l(&ctx->thread_registry);
+    if (ThreadContext* tctx = IsThreadStackOrTls(addr, &is_stack)) {
+      auto* loc = New<ReportLocation>();
+      loc->type = is_stack ? ReportLocationStack : ReportLocationTLS;
+      loc->tid = tctx->tid;
+      rep_->locs.PushBack(loc);
+      AddThreadLocked(tctx);
+    }
   }
 #endif
   rep_->added_location_addrs.PushBack({addr, rep_->locs.Size()});
@@ -383,21 +394,16 @@ void ScopedReportBase::AddLocation(uptr addr, uptr size) {
 }
 
 #if !SANITIZER_GO
-void ScopedReportBase::AddSleep(StackID stack_id) {
-  rep_->sleep = SymbolizeStackId(stack_id);
+void ScopedReport::AddSleep(StackID stack_id) {
+  rep_->sleep_stack_id = stack_id;
 }
 #endif
 
-void ScopedReportBase::SetCount(int count) { rep_->count = count; }
+void ScopedReport::SetCount(int count) { rep_->count = count; }
 
-void ScopedReportBase::SetSigNum(int sig) { rep_->signum = sig; }
+void ScopedReport::SetSigNum(int sig) { rep_->signum = sig; }
 
-const ReportDesc *ScopedReportBase::GetReport() const { return rep_; }
-
-ScopedReport::ScopedReport(ReportType typ, uptr tag)
-    : ScopedReportBase(typ, tag) {}
-
-ScopedReport::~ScopedReport() {}
+const ReportDesc* ScopedReport::GetReport() const { return rep_; }
 
 // Replays the trace up to last_pos position in the last part
 // or up to the provided epoch/sid (whichever is earlier)
@@ -680,6 +686,7 @@ static bool HandleRacyStacks(ThreadState *thr, VarSizeStackTrace traces[2]) {
 }
 
 bool OutputReport(ThreadState *thr, ScopedReport &srep) {
+  CheckedMutex::CheckNoLocks();
   // These should have been checked in ShouldReport.
   // It's too late to check them here, we have already taken locks.
   CHECK(flags()->report_bugs);
@@ -713,7 +720,7 @@ bool OutputReport(ThreadState *thr, ScopedReport &srep) {
   }
   PrintReport(rep);
   __tsan_on_report(rep);
-  ctx->nreported++;
+  atomic_fetch_add(&ctx->nreported, 1, memory_order_relaxed);
   if (flags()->halt_on_error)
     Die();
   thr->current_report = nullptr;
@@ -813,10 +820,6 @@ void ReportRace(ThreadState *thr, RawShadow *shadow_mem, Shadow cur, Shadow old,
   DynamicMutexSet mset1;
   MutexSet *mset[kMop] = {&thr->mset, mset1};
 
-  // Use alloca, because malloc during signal handling deadlocks
-  ScopedReport *rep = (ScopedReport *)__builtin_alloca(sizeof(ScopedReport));
-  // Take a new scope as Apple platforms require the below locks released
-  // before symbolizing in order to avoid a deadlock
   {
     // We need to lock the slot during RestoreStack because it protects
     // the slot journal.
@@ -830,63 +833,48 @@ void ReportRace(ThreadState *thr, RawShadow *shadow_mem, Shadow cur, Shadow old,
       StoreShadow(&ctx->last_spurious_race, old.raw());
       return;
     }
+  }
 
-    if (IsFiredSuppression(ctx, rep_typ, traces[1]))
-      return;
+  if (IsFiredSuppression(ctx, rep_typ, traces[1]))
+    return;
 
-    if (HandleRacyStacks(thr, traces))
-      return;
+  if (HandleRacyStacks(thr, traces))
+    return;
 
-    // If any of the accesses has a tag, treat this as an "external" race.
-    uptr tag = kExternalTagNone;
-    for (uptr i = 0; i < kMop; i++) {
-      if (tags[i] != kExternalTagNone) {
-        rep_typ = ReportTypeExternalRace;
-        tag = tags[i];
-        break;
-      }
+  // If any of the accesses has a tag, treat this as an "external" race.
+  uptr tag = kExternalTagNone;
+  for (uptr i = 0; i < kMop; i++) {
+    if (tags[i] != kExternalTagNone) {
+      rep_typ = ReportTypeExternalRace;
+      tag = tags[i];
+      break;
     }
+  }
 
-    new (rep) ScopedReport(rep_typ, tag);
-    for (uptr i = 0; i < kMop; i++)
-      rep->AddMemoryAccess(addr, tags[i], s[i], tids[i], traces[i], mset[i]);
+  ScopedReport rep(rep_typ, tag);
+  for (uptr i = 0; i < kMop; i++)
+    rep.AddMemoryAccess(addr, tags[i], s[i], tids[i], traces[i], mset[i]);
 
-    for (uptr i = 0; i < kMop; i++) {
-      ThreadContext *tctx = static_cast<ThreadContext *>(
-          ctx->thread_registry.GetThreadLocked(tids[i]));
-      rep->AddThread(tctx);
+  for (uptr i = 0; i < kMop; i++) rep.AddThread(tids[i]);
+
+  rep.AddLocation(addr_min, addr_max - addr_min);
+
+  if (flags()->print_full_thread_history) {
+    const ReportDesc* rep_desc = rep.GetReport();
+    for (uptr i = 0; i < rep_desc->threads.Size(); i++) {
+      Tid parent_tid = rep_desc->threads[i]->parent_tid;
+      if (parent_tid == kMainTid || parent_tid == kInvalidTid)
+        continue;
+      rep.AddThread(parent_tid);
     }
-
-    rep->AddLocation(addr_min, addr_max - addr_min);
-
-    if (flags()->print_full_thread_history) {
-      const ReportDesc *rep_desc = rep->GetReport();
-      for (uptr i = 0; i < rep_desc->threads.Size(); i++) {
-        Tid parent_tid = rep_desc->threads[i]->parent_tid;
-        if (parent_tid == kMainTid || parent_tid == kInvalidTid)
-          continue;
-        ThreadContext *parent_tctx = static_cast<ThreadContext *>(
-            ctx->thread_registry.GetThreadLocked(parent_tid));
-        rep->AddThread(parent_tctx);
-      }
-    }
+  }
 
 #if !SANITIZER_GO
-    if (!((typ0 | typ1) & kAccessFree) &&
-        s[1].epoch() <= thr->last_sleep_clock.Get(s[1].sid()))
-      rep->AddSleep(thr->last_sleep_stack_id);
+  if (!((typ0 | typ1) & kAccessFree) &&
+      s[1].epoch() <= thr->last_sleep_clock.Get(s[1].sid()))
+    rep.AddSleep(thr->last_sleep_stack_id);
 #endif
-
-#if SANITIZER_APPLE
-  }  // Close this scope to release the locks
-#endif
-    OutputReport(thr, *rep);
-
-    // Need to manually destroy this because we used placement new to allocate
-    rep->~ScopedReport();
-#if !SANITIZER_APPLE
-  }
-#endif
+  OutputReport(thr, rep);
 }
 
 void PrintCurrentStack(ThreadState *thr, uptr pc) {

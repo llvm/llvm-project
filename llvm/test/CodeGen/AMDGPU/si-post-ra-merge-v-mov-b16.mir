@@ -409,3 +409,75 @@ body: |
     $vgpr0_hi16 = V_MOV_B16_t16_e32 $vgpr3_hi16, implicit $exec
     S_ENDPGM 0, implicit $vgpr0
 ...
+
+---
+# Negative: the second mov reads the lo16 written by the first — must NOT merge.
+name: no_merge_second_src_is_first_dst_lo
+tracksRegLiveness: true
+body: |
+  bb.0:
+    liveins: $vgpr1
+
+    ; CHECK-LABEL: name: no_merge_second_src_is_first_dst_lo
+    ; CHECK: liveins: $vgpr1
+    ; CHECK-NEXT: {{  $}}
+    ; CHECK-NEXT: $vgpr0_lo16 = V_MOV_B16_t16_e32 $vgpr1_lo16, implicit $exec
+    ; CHECK-NEXT: $vgpr0_hi16 = V_MOV_B16_t16_e32 $vgpr0_lo16, implicit $exec
+    ; CHECK-NEXT: S_ENDPGM 0, implicit $vgpr0
+    $vgpr0_lo16 = V_MOV_B16_t16_e32 $vgpr1_lo16, implicit $exec
+    $vgpr0_hi16 = V_MOV_B16_t16_e32 $vgpr0_lo16, implicit $exec
+    S_ENDPGM 0, implicit $vgpr0
+...
+
+---
+# Negative: the second mov reads the hi16 written by the first — must NOT merge.
+name: no_merge_second_src_is_first_dst_hi
+tracksRegLiveness: true
+body: |
+  bb.0:
+    liveins: $vgpr1
+
+    ; CHECK-LABEL: name: no_merge_second_src_is_first_dst_hi
+    ; CHECK: liveins: $vgpr1
+    ; CHECK-NEXT: {{  $}}
+    ; CHECK-NEXT: $vgpr0_hi16 = V_MOV_B16_t16_e32 $vgpr1_hi16, implicit $exec
+    ; CHECK-NEXT: $vgpr0_lo16 = V_MOV_B16_t16_e32 $vgpr0_hi16, implicit $exec
+    ; CHECK-NEXT: S_ENDPGM 0, implicit $vgpr0
+    $vgpr0_hi16 = V_MOV_B16_t16_e32 $vgpr1_hi16, implicit $exec
+    $vgpr0_lo16 = V_MOV_B16_t16_e32 $vgpr0_hi16, implicit $exec
+    S_ENDPGM 0, implicit $vgpr0
+...
+
+---
+# Negative: zero lo16, then copy it to hi16 — must NOT become v_lshlrev_b32.
+name: no_merge_second_src_is_first_dst_zero
+tracksRegLiveness: true
+body: |
+  bb.0:
+    ; CHECK-LABEL: name: no_merge_second_src_is_first_dst_zero
+    ; CHECK: $vgpr0_lo16 = V_MOV_B16_t16_e32 0, implicit $exec
+    ; CHECK-NEXT: $vgpr0_hi16 = V_MOV_B16_t16_e32 $vgpr0_lo16, implicit $exec
+    ; CHECK-NEXT: S_ENDPGM 0, implicit $vgpr0
+    $vgpr0_lo16 = V_MOV_B16_t16_e32 0, implicit $exec
+    $vgpr0_hi16 = V_MOV_B16_t16_e32 $vgpr0_lo16, implicit $exec
+    S_ENDPGM 0, implicit $vgpr0
+...
+
+---
+# Positive: the first mov reads the half written by the second; the merged
+# instruction reads it before writing, so merging is still correct.
+name: merge_first_src_is_second_dst
+tracksRegLiveness: true
+body: |
+  bb.0:
+    liveins: $vgpr0, $vgpr1
+
+    ; CHECK-LABEL: name: merge_first_src_is_second_dst
+    ; CHECK: liveins: $vgpr0, $vgpr1
+    ; CHECK-NEXT: {{  $}}
+    ; CHECK-NEXT: $vgpr0 = V_PERM_B32_e64 $vgpr1, $vgpr0, 84148994, implicit $exec
+    ; CHECK-NEXT: S_ENDPGM 0, implicit $vgpr0
+    $vgpr0_lo16 = V_MOV_B16_t16_e32 $vgpr0_hi16, implicit $exec
+    $vgpr0_hi16 = V_MOV_B16_t16_e32 $vgpr1_lo16, implicit $exec
+    S_ENDPGM 0, implicit $vgpr0
+...

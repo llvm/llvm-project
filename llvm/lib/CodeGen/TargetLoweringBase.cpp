@@ -2221,10 +2221,10 @@ void TargetLoweringBase::insertSSPDeclarations(
 
         // FreeBSD has "__stack_chk_guard" defined externally on libc.so
         if (M.getDirectAccessExternalData() &&
-            !TM.getTargetTriple().isOSCygMing() &&
-            !(TM.getTargetTriple().isPPC64() &&
-              TM.getTargetTriple().isOSFreeBSD()) &&
-            (!TM.getTargetTriple().isOSDarwin() ||
+            !M.getTargetTriple().isOSCygMing() &&
+            !(M.getTargetTriple().isPPC64() &&
+              M.getTargetTriple().isOSFreeBSD()) &&
+            (!M.getTargetTriple().isOSDarwin() ||
              TM.getRelocationModel() == Reloc::Static))
           GV->setDSOLocal(true);
 
@@ -2285,7 +2285,8 @@ void TargetLoweringBase::setMinimumBitTestCmps(unsigned Val) {
   MinimumBitTestCmps = Val;
 }
 
-Align TargetLoweringBase::getPrefLoopAlignment(MachineLoop *ML) const {
+Align TargetLoweringBase::getPrefLoopAlignment(
+    MachineLoop *ML, const MachineBasicBlock *BlockToAlign) const {
   if (TM.Options.LoopAlignment)
     return Align(TM.Options.LoopAlignment);
   return PrefLoopAlignment;
