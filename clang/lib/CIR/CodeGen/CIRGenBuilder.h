@@ -539,7 +539,8 @@ public:
     if (destType == addr.getElementType())
       return addr;
 
-    auto ptrTy = getPointerTo(destType);
+    auto srcPtrTy = mlir::cast<cir::PointerType>(addr.getPointer().getType());
+    auto ptrTy = getPointerTo(destType, srcPtrTy.getAddrSpace());
     return Address(createBitcast(loc, addr.getPointer(), ptrTy), destType,
                    addr.getAlignment());
   }
@@ -623,7 +624,7 @@ public:
     assert(index < recordTy.getMembers().size() &&
            "member index out of bounds");
     mlir::Type memberTy = recordTy.getMembers()[index];
-    mlir::Type memberPtrTy = getPointerTo(memberTy);
+    mlir::Type memberPtrTy = getPointerTo(memberTy, base.getAddressSpace());
 
     auto moduleOp =
         getInsertionBlock()->getParentOp()->getParentOfType<mlir::ModuleOp>();
@@ -825,12 +826,49 @@ public:
     return createVecShuffle(loc, vec1, poison, mask);
   }
 
+  cir::MatrixColumnMajorLoadOp createMatrixColumnMajorLoad(mlir::Location loc,
+                                                           mlir::Type resultTy,
+                                                           mlir::Value value,
+                                                           mlir::Value stride,
+                                                           bool isVolatile) {
+    return cir::MatrixColumnMajorLoadOp::create(*this, loc, resultTy, value,
+                                                stride, isVolatile);
+  }
+
+  cir::MatrixTransposeOp createMatrixTranspose(mlir::Location loc,
+                                               mlir::Value matrix) {
+    auto inputTy = mlir::cast<cir::MatrixType>(matrix.getType());
+    auto resultTy = cir::MatrixType::get(
+        inputTy.getElementType(), inputTy.getColumnNum(), inputTy.getRowNum());
+    return cir::MatrixTransposeOp::create(*this, loc, resultTy, matrix);
+  }
+
+  cir::MatrixColumnMajorStoreOp createMatrixColumnMajorStore(mlir::Location loc,
+                                                             mlir::Value matrix,
+                                                             mlir::Value data,
+                                                             mlir::Value stride,
+                                                             bool isVolatile) {
+    return cir::MatrixColumnMajorStoreOp::create(*this, loc, matrix, data,
+                                                 stride, isVolatile);
+  }
+
   template <typename... Operands>
   mlir::Value emitIntrinsicCallOp(mlir::Location loc, const llvm::StringRef str,
                                   const mlir::Type &resTy, Operands &&...op) {
     return cir::LLVMIntrinsicCallOp::create(*this, loc,
                                             this->getStringAttr(str), resTy,
                                             std::forward<Operands>(op)...)
+        .getResult();
+  }
+
+  template <typename... Operands>
+  mlir::Value emitIntrinsicCallOp(mlir::Location loc, const llvm::StringRef str,
+                                  const mlir::Type &resTy,
+                                  cir::FastMathFlagsAttr fastmath,
+                                  Operands &&...op) {
+    return cir::LLVMIntrinsicCallOp::create(
+               *this, loc, this->getStringAttr(str), resTy,
+               std::forward<Operands>(op)..., fastmath)
         .getResult();
   }
 };

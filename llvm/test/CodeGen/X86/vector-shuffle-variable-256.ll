@@ -12,7 +12,7 @@ define <4 x double> @var_shuffle_v4f64_v4f64_xxxx_i64(<4 x double> %x, i64 %i0, 
 ; ALL-NEXT:    pushq %rbp
 ; ALL-NEXT:    movq %rsp, %rbp
 ; ALL-NEXT:    andq $-32, %rsp
-; ALL-NEXT:    subq $64, %rsp
+; ALL-NEXT:    subq $32, %rsp
 ; ALL-NEXT:    andl $3, %esi
 ; ALL-NEXT:    andl $3, %edi
 ; ALL-NEXT:    andl $3, %ecx
@@ -43,7 +43,7 @@ define <4 x double> @var_shuffle_v4f64_v4f64_uxx0_i64(<4 x double> %x, i64 %i0, 
 ; ALL-NEXT:    pushq %rbp
 ; ALL-NEXT:    movq %rsp, %rbp
 ; ALL-NEXT:    andq $-32, %rsp
-; ALL-NEXT:    subq $64, %rsp
+; ALL-NEXT:    subq $32, %rsp
 ; ALL-NEXT:    andl $3, %edx
 ; ALL-NEXT:    andl $3, %esi
 ; ALL-NEXT:    vmovaps %ymm0, (%rsp)
@@ -95,7 +95,7 @@ define <4 x i64> @var_shuffle_v4i64_v4i64_xxxx_i64(<4 x i64> %x, i64 %i0, i64 %i
 ; ALL-NEXT:    pushq %rbp
 ; ALL-NEXT:    movq %rsp, %rbp
 ; ALL-NEXT:    andq $-32, %rsp
-; ALL-NEXT:    subq $64, %rsp
+; ALL-NEXT:    subq $32, %rsp
 ; ALL-NEXT:    andl $3, %edi
 ; ALL-NEXT:    andl $3, %esi
 ; ALL-NEXT:    andl $3, %edx
@@ -128,7 +128,7 @@ define <4 x i64> @var_shuffle_v4i64_v4i64_xx00_i64(<4 x i64> %x, i64 %i0, i64 %i
 ; ALL-NEXT:    pushq %rbp
 ; ALL-NEXT:    movq %rsp, %rbp
 ; ALL-NEXT:    andq $-32, %rsp
-; ALL-NEXT:    subq $64, %rsp
+; ALL-NEXT:    subq $32, %rsp
 ; ALL-NEXT:    andl $3, %edi
 ; ALL-NEXT:    andl $3, %esi
 ; ALL-NEXT:    vmovaps %ymm0, (%rsp)
@@ -182,7 +182,7 @@ define <8 x float> @var_shuffle_v8f32_v8f32_xxxxxxxx_i32(<8 x float> %x, i32 %i0
 ; ALL-NEXT:    pushq %rbp
 ; ALL-NEXT:    movq %rsp, %rbp
 ; ALL-NEXT:    andq $-32, %rsp
-; ALL-NEXT:    subq $64, %rsp
+; ALL-NEXT:    subq $32, %rsp
 ; ALL-NEXT:    # kill: def $r9d killed $r9d def $r9
 ; ALL-NEXT:    # kill: def $r8d killed $r8d def $r8
 ; ALL-NEXT:    # kill: def $ecx killed $ecx def $rcx
@@ -286,7 +286,7 @@ define <16 x i16> @var_shuffle_v16i16_v16i16_xxxxxxxxxxxxxxxx_i16(<16 x i16> %x,
 ; AVX1-NEXT:    pushq %rbp
 ; AVX1-NEXT:    movq %rsp, %rbp
 ; AVX1-NEXT:    andq $-32, %rsp
-; AVX1-NEXT:    subq $64, %rsp
+; AVX1-NEXT:    subq $32, %rsp
 ; AVX1-NEXT:    # kill: def $r9d killed $r9d def $r9
 ; AVX1-NEXT:    # kill: def $r8d killed $r8d def $r8
 ; AVX1-NEXT:    # kill: def $ecx killed $ecx def $rcx
@@ -348,7 +348,7 @@ define <16 x i16> @var_shuffle_v16i16_v16i16_xxxxxxxxxxxxxxxx_i16(<16 x i16> %x,
 ; AVX2-NEXT:    pushq %rbp
 ; AVX2-NEXT:    movq %rsp, %rbp
 ; AVX2-NEXT:    andq $-32, %rsp
-; AVX2-NEXT:    subq $64, %rsp
+; AVX2-NEXT:    subq $32, %rsp
 ; AVX2-NEXT:    # kill: def $r9d killed $r9d def $r9
 ; AVX2-NEXT:    # kill: def $r8d killed $r8d def $r8
 ; AVX2-NEXT:    # kill: def $ecx killed $ecx def $rcx
@@ -596,7 +596,7 @@ define <4 x i64> @mem_shuffle_v4i64_v4i64_xxxx_i64(<4 x i64> %x, ptr %i) nounwin
 ; ALL-NEXT:    pushq %rbp
 ; ALL-NEXT:    movq %rsp, %rbp
 ; ALL-NEXT:    andq $-32, %rsp
-; ALL-NEXT:    subq $64, %rsp
+; ALL-NEXT:    subq $32, %rsp
 ; ALL-NEXT:    movl (%rdi), %eax
 ; ALL-NEXT:    movl 8(%rdi), %ecx
 ; ALL-NEXT:    andl $3, %eax
