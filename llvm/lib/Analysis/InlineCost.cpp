@@ -3135,19 +3135,19 @@ int llvm::getCallsiteCost(const TargetTransformInfo &TTI, const CallBase &Call,
 }
 
 InlineCost llvm::getInlineCost(
-    CallBase &Call, const InlineParams &Params, TargetTransformInfo &CalleeTTI,
+    CallBase &Call, const InlineParams &Params, TargetTransformInfo &CallerTTI,
     function_ref<AssumptionCache &(Function &)> GetAssumptionCache,
     function_ref<const TargetLibraryInfo &(Function &)> GetTLI,
     function_ref<BlockFrequencyInfo &(Function &)> GetBFI,
     ProfileSummaryInfo *PSI, OptimizationRemarkEmitter *ORE,
     function_ref<EphemeralValuesCache &(Function &)> GetEphValuesCache) {
-  return getInlineCost(Call, Call.getCalledFunction(), Params, CalleeTTI,
+  return getInlineCost(Call, Call.getCalledFunction(), Params, CallerTTI,
                        GetAssumptionCache, GetTLI, GetBFI, PSI, ORE,
                        GetEphValuesCache);
 }
 
 std::optional<int> llvm::getInliningCostEstimate(
-    CallBase &Call, TargetTransformInfo &CalleeTTI,
+    CallBase &Call, TargetTransformInfo &CallerTTI,
     function_ref<AssumptionCache &(Function &)> GetAssumptionCache,
     function_ref<BlockFrequencyInfo &(Function &)> GetBFI,
     function_ref<const TargetLibraryInfo &(Function &)> GetTLI,
@@ -3164,7 +3164,7 @@ std::optional<int> llvm::getInliningCostEstimate(
                                /*ComputeFullInlineCost*/ true,
                                /*EnableDeferral*/ true};
 
-  InlineCostCallAnalyzer CA(*Call.getCalledFunction(), Call, Params, CalleeTTI,
+  InlineCostCallAnalyzer CA(*Call.getCalledFunction(), Call, Params, CallerTTI,
                             GetAssumptionCache, GetBFI, GetTLI, PSI, ORE, true,
                             /*IgnoreThreshold*/ true);
   auto R = CA.analyze();
@@ -3174,12 +3174,12 @@ std::optional<int> llvm::getInliningCostEstimate(
 }
 
 std::optional<InlineCostFeatures> llvm::getInliningCostFeatures(
-    CallBase &Call, TargetTransformInfo &CalleeTTI,
+    CallBase &Call, TargetTransformInfo &CallerTTI,
     function_ref<AssumptionCache &(Function &)> GetAssumptionCache,
     function_ref<BlockFrequencyInfo &(Function &)> GetBFI,
     function_ref<const TargetLibraryInfo &(Function &)> GetTLI,
     ProfileSummaryInfo *PSI, OptimizationRemarkEmitter *ORE) {
-  InlineCostFeaturesAnalyzer CFA(CalleeTTI, GetAssumptionCache, GetBFI, GetTLI,
+  InlineCostFeaturesAnalyzer CFA(CallerTTI, GetAssumptionCache, GetBFI, GetTLI,
                                  PSI, ORE, *Call.getCalledFunction(), Call);
   auto R = CFA.analyze();
   if (!R.isSuccess())
@@ -3188,7 +3188,7 @@ std::optional<InlineCostFeatures> llvm::getInliningCostFeatures(
 }
 
 std::optional<InlineResult> llvm::getAttributeBasedInliningDecision(
-    CallBase &Call, Function *Callee, TargetTransformInfo &CalleeTTI,
+    CallBase &Call, Function *Callee, TargetTransformInfo &CallerTTI,
     function_ref<const TargetLibraryInfo &(Function &)> GetTLI) {
 
   // Cannot inline indirect calls.
@@ -3206,7 +3206,7 @@ std::optional<InlineResult> llvm::getAttributeBasedInliningDecision(
   // this even if alwaysinline is used.
   Function *Caller = Call.getCaller();
   if (!IgnoreTTIInlineCompatible &&
-      !CalleeTTI.areInlineCompatible(Caller, Callee))
+      !CallerTTI.areInlineCompatible(Caller, Callee))
     return InlineResult::failure("conflicting target features");
 
   // Calls to functions with always-inline attributes should be inlined
@@ -3263,7 +3263,7 @@ std::optional<InlineResult> llvm::getAttributeBasedInliningDecision(
 
 InlineCost llvm::getInlineCost(
     CallBase &Call, Function *Callee, const InlineParams &Params,
-    TargetTransformInfo &CalleeTTI,
+    TargetTransformInfo &CallerTTI,
     function_ref<AssumptionCache &(Function &)> GetAssumptionCache,
     function_ref<const TargetLibraryInfo &(Function &)> GetTLI,
     function_ref<BlockFrequencyInfo &(Function &)> GetBFI,
@@ -3271,7 +3271,7 @@ InlineCost llvm::getInlineCost(
     function_ref<EphemeralValuesCache &(Function &)> GetEphValuesCache) {
 
   auto UserDecision =
-      llvm::getAttributeBasedInliningDecision(Call, Callee, CalleeTTI, GetTLI);
+      llvm::getAttributeBasedInliningDecision(Call, Callee, CallerTTI, GetTLI);
 
   if (UserDecision) {
     if (UserDecision->isSuccess())
@@ -3287,7 +3287,7 @@ InlineCost llvm::getInlineCost(
                           << "... (caller:" << Call.getCaller()->getName()
                           << ")\n");
 
-  InlineCostCallAnalyzer CA(*Callee, Call, Params, CalleeTTI,
+  InlineCostCallAnalyzer CA(*Callee, Call, Params, CallerTTI,
                             GetAssumptionCache, GetBFI, GetTLI, PSI, ORE,
                             /*BoostIndirect=*/true, /*IgnoreThreshold=*/false,
                             GetEphValuesCache);

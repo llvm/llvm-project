@@ -281,7 +281,7 @@ LLVM_ABI int getCallsiteCost(const TargetTransformInfo &TTI,
 /// Also note that calling this function *dynamically* computes the cost of
 /// inlining the callsite. It is an expensive, heavyweight call.
 LLVM_ABI InlineCost getInlineCost(
-    CallBase &Call, const InlineParams &Params, TargetTransformInfo &CalleeTTI,
+    CallBase &Call, const InlineParams &Params, TargetTransformInfo &CallerTTI,
     function_ref<AssumptionCache &(Function &)> GetAssumptionCache,
     function_ref<const TargetLibraryInfo &(Function &)> GetTLI,
     function_ref<BlockFrequencyInfo &(Function &)> GetBFI = nullptr,
@@ -296,7 +296,7 @@ LLVM_ABI InlineCost getInlineCost(
 //
 LLVM_ABI InlineCost getInlineCost(
     CallBase &Call, Function *Callee, const InlineParams &Params,
-    TargetTransformInfo &CalleeTTI,
+    TargetTransformInfo &CallerTTI,
     function_ref<AssumptionCache &(Function &)> GetAssumptionCache,
     function_ref<const TargetLibraryInfo &(Function &)> GetTLI,
     function_ref<BlockFrequencyInfo &(Function &)> GetBFI = nullptr,
@@ -311,7 +311,7 @@ LLVM_ABI InlineCost getInlineCost(
 /// Otherwise returns std::nullopt, meaning that inlining should be decided
 /// based on other criteria (e.g. cost modeling).
 LLVM_ABI std::optional<InlineResult> getAttributeBasedInliningDecision(
-    CallBase &Call, Function *Callee, TargetTransformInfo &CalleeTTI,
+    CallBase &Call, Function *Callee, TargetTransformInfo &CallerTTI,
     function_ref<const TargetLibraryInfo &(Function &)> GetTLI);
 
 /// Get the cost estimate ignoring thresholds. This is similar to getInlineCost
@@ -323,7 +323,7 @@ LLVM_ABI std::optional<InlineResult> getAttributeBasedInliningDecision(
 /// - std::nullopt, if the inlining cannot happen (is illegal)
 /// - an integer, representing the cost.
 LLVM_ABI std::optional<int> getInliningCostEstimate(
-    CallBase &Call, TargetTransformInfo &CalleeTTI,
+    CallBase &Call, TargetTransformInfo &CallerTTI,
     function_ref<AssumptionCache &(Function &)> GetAssumptionCache,
     function_ref<BlockFrequencyInfo &(Function &)> GetBFI = nullptr,
     function_ref<const TargetLibraryInfo &(Function &)> GetTLI = nullptr,
@@ -333,7 +333,7 @@ LLVM_ABI std::optional<int> getInliningCostEstimate(
 /// Get the expanded cost features. The features are returned unconditionally,
 /// even if inlining is impossible.
 LLVM_ABI std::optional<InlineCostFeatures> getInliningCostFeatures(
-    CallBase &Call, TargetTransformInfo &CalleeTTI,
+    CallBase &Call, TargetTransformInfo &CallerTTI,
     function_ref<AssumptionCache &(Function &)> GetAssumptionCache,
     function_ref<BlockFrequencyInfo &(Function &)> GetBFI = nullptr,
     function_ref<const TargetLibraryInfo &(Function &)> GetTLI = nullptr,
