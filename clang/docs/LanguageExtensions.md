@@ -5496,28 +5496,34 @@ returns the bit at the position of the current lane. It is almost equivalent to
 `(mask & (1 << lane_id)) != 0`, except that its behavior is only defined if
 the given mask has the same value for all active lanes of the current wave.
 
-#### \_\_builtin_amdgcn_av\_{load,store}\_b128
+#### \_\_builtin_amdgcn_av\_{load,store}\_{b16,b32,b64,b128}
 
 Signature:
 
 ```c
 typedef __attribute__((__vector_size__(4 * sizeof(unsigned int)))) unsigned int v4u;
 
+unsigned short __builtin_amdgcn_av_load_b16(unsigned short *src, int scope);
+unsigned int __builtin_amdgcn_av_load_b32(unsigned int *src, int scope);
+uint64_t __builtin_amdgcn_av_load_b64(uint64_t *src, int scope);
 v4u __builtin_amdgcn_av_load_b128(v4u *src, int scope);
 
+void __builtin_amdgcn_av_store_b16(unsigned short *dst, unsigned short data, int scope);
+void __builtin_amdgcn_av_store_b32(unsigned int *dst, unsigned int data, int scope);
+void __builtin_amdgcn_av_store_b64(uint64_t *dst, uint64_t data, int scope);
 void __builtin_amdgcn_av_store_b128(v4u *dst, v4u data, int scope);
 ```
 
-Load or store a vector of 4 unsigned integers from or to memory with cache
-behavior specified by `scope`, which is one of the `__MEMORY_SCOPE_*` macros
-defined for {ref}`scoped atomic builtins <langext-c11-atomic>`.
+Load or store 16, 32, 64 or 128 bits from or to memory with cache behavior
+specified by `scope`, which is one of the `__MEMORY_SCOPE_*` macros defined for
+{ref}`scoped atomic builtins <langext-c11-atomic>`.
 
 The pointer argument must point to the global or generic address space.
 
 These builtins are supported on gfx9, gfx10, gfx11, and gfx12 targets.
 
-They map to the LLVM intrinsics `llvm.amdgcn.av.load.b128` and
-`llvm.amdgcn.av.store.b128` documented in [User Guide for AMDGPU Backend](https://llvm.org/docs/AMDGPUUsage.html).
+They map to the LLVM intrinsics `llvm.amdgcn.av.load.b{16,32,64,128}` and
+`llvm.amdgcn.av.store.b{16,32,64,128}` documented in [User Guide for AMDGPU Backend](https://llvm.org/docs/AMDGPUUsage.html).
 
 ### ARM/AArch64 Language Extensions
 

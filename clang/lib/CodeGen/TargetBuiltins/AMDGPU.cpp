@@ -1036,9 +1036,42 @@ Value *CodeGenFunction::EmitAMDGPUBuiltinExpr(unsigned BuiltinID,
     llvm::Function *F = CGM.getIntrinsic(IID, {Args[0]->getType()});
     return Builder.CreateCall(F, {Args});
   }
+  case AMDGPU::BI__builtin_amdgcn_av_load_b16:
+  case AMDGPU::BI__builtin_amdgcn_av_load_b32:
+  case AMDGPU::BI__builtin_amdgcn_av_load_b64:
   case AMDGPU::BI__builtin_amdgcn_av_load_b128:
+  case AMDGPU::BI__builtin_amdgcn_av_store_b16:
+  case AMDGPU::BI__builtin_amdgcn_av_store_b32:
+  case AMDGPU::BI__builtin_amdgcn_av_store_b64:
   case AMDGPU::BI__builtin_amdgcn_av_store_b128: {
-    const bool IsStore = BuiltinID == AMDGPU::BI__builtin_amdgcn_av_store_b128;
+    Intrinsic::ID IID;
+    switch (BuiltinID) {
+    case AMDGPU::BI__builtin_amdgcn_av_load_b16:
+      IID = Intrinsic::amdgcn_av_load_b16;
+      break;
+    case AMDGPU::BI__builtin_amdgcn_av_load_b32:
+      IID = Intrinsic::amdgcn_av_load_b32;
+      break;
+    case AMDGPU::BI__builtin_amdgcn_av_load_b64:
+      IID = Intrinsic::amdgcn_av_load_b64;
+      break;
+    case AMDGPU::BI__builtin_amdgcn_av_load_b128:
+      IID = Intrinsic::amdgcn_av_load_b128;
+      break;
+    case AMDGPU::BI__builtin_amdgcn_av_store_b16:
+      IID = Intrinsic::amdgcn_av_store_b16;
+      break;
+    case AMDGPU::BI__builtin_amdgcn_av_store_b32:
+      IID = Intrinsic::amdgcn_av_store_b32;
+      break;
+    case AMDGPU::BI__builtin_amdgcn_av_store_b64:
+      IID = Intrinsic::amdgcn_av_store_b64;
+      break;
+    case AMDGPU::BI__builtin_amdgcn_av_store_b128:
+      IID = Intrinsic::amdgcn_av_store_b128;
+      break;
+    }
+    const bool IsStore = E->getType()->isVoidType();
     SmallVector<Value *, 5> Args = {EmitScalarExpr(E->getArg(0))}; // addr
     if (IsStore)
       Args.push_back(EmitScalarExpr(E->getArg(1))); // data
@@ -1046,10 +1079,7 @@ Value *CodeGenFunction::EmitAMDGPUBuiltinExpr(unsigned BuiltinID,
     auto *ScopeExpr =
         cast<llvm::ConstantInt>(EmitScalarExpr(E->getArg(ScopeIdx)));
     Args.push_back(emitScopeMD(*this, ScopeExpr->getZExtValue()));
-    llvm::Function *F =
-        CGM.getIntrinsic(IsStore ? Intrinsic::amdgcn_av_store_b128
-                                 : Intrinsic::amdgcn_av_load_b128,
-                         {Args[0]->getType()});
+    llvm::Function *F = CGM.getIntrinsic(IID, {Args[0]->getType()});
     return Builder.CreateCall(F, Args);
   }
   case AMDGPU::BI__builtin_amdgcn_get_fpenv: {

@@ -152,10 +152,10 @@ then propagates those side-effects up to its scope instance `S` and also all
 the subscope instances of `S` that contain `X`.
 
 ```llvm
-@llvm.amdgcn.av.store.b128(%addr, %value, metadata !scope)
+@llvm.amdgcn.av.store.b<N>(%addr, %value, metadata !scope)
 ```
 
-The `@llvm.amdgcn.av.store.b128` intrinsic performs a non-atomic
+The `@llvm.amdgcn.av.store.b{16,32,64,128}` intrinsics perform a non-atomic
 *store-available* operation on `%addr` with scope `!scope`. See
 {ref}`amdgpu-av-load-store` for details.
 
@@ -178,10 +178,10 @@ addition, it makes the retrieved state visible to all subscope instances of `S`
 that contain `Y`.
 
 ```llvm
-%value = @llvm.amdgcn.av.load.b128(%addr, metadata !scope)
+%value = @llvm.amdgcn.av.load.b<N>(%addr, metadata !scope)
 ```
 
-The `@llvm.amdgcn.av.load.b128` intrinsic performs a non-atomic *load-visible*
+The `@llvm.amdgcn.av.load.b{16,32,64,128}` intrinsics perform a non-atomic *load-visible*
 operation on `%addr` with scope `!scope`. See {ref}`amdgpu-av-load-store` for
 details.
 
