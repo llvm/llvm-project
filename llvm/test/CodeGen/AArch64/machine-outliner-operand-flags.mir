@@ -1,9 +1,9 @@
 # RUN: llc -mtriple=aarch64 -run-pass=machine-outliner -verify-machineinstrs -o - %s | FileCheck %s
 
-# Make sure "killed" operand flags would be correct if OUTLINED_FUNCTION is
+# Make sure `killed` operand flags would be correct if OUTLINED_FUNCTION is
 # virtually re-inserted at its call site. This is important for correct emission
 # of PAuth-related pseudo instructions by AArch64AsmPrinter.
-# Current implementation ensures this property by simply clearing all "killed"
+# Current implementation ensures this property by simply clearing all `killed`
 # flags on the operands of the instructions contained in `OUTLINED_FUNCTION`s.
 
 --- |
@@ -45,7 +45,7 @@ body:             |
 ---
 # Make sure `killed` flags are intentionally reset: in the original function, there
 # is no such ADDXrs instruction that could have been cloned as-is (without clearing
-# the `killed` flags) to OUTLINED_FUNCTION_1.
+# the `killed` flags) to OUTLINED_FUNCTION.
 
 name: test_not_exactly_cloned_flags
 tracksRegLiveness: true
