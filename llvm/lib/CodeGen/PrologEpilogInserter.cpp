@@ -95,6 +95,7 @@ class PEIImpl {
 
   // Emit remarks.
   MachineOptimizationRemarkEmitter *ORE = nullptr;
+  const RegisterClassInfo *RCI = nullptr;
 
   void calculateCallFrameInfo(MachineFunction &MF);
   void calculateSaveRestoreBlocks(MachineFunction &MF);
@@ -119,7 +120,8 @@ class PEIImpl {
   void insertZeroCallUsedRegs(MachineFunction &MF);
 
 public:
-  PEIImpl(MachineOptimizationRemarkEmitter *ORE) : ORE(ORE) {}
+  PEIImpl(MachineOptimizationRemarkEmitter *ORE, const RegisterClassInfo *RCI)
+      : ORE(ORE), RCI(RCI) {}
   bool run(MachineFunction &MF);
 };
 
@@ -147,6 +149,7 @@ INITIALIZE_PASS_BEGIN(PEILegacy, DEBUG_TYPE, "Prologue/Epilogue Insertion",
 INITIALIZE_PASS_DEPENDENCY(MachineLoopInfoWrapperPass)
 INITIALIZE_PASS_DEPENDENCY(MachineDominatorTreeWrapperPass)
 INITIALIZE_PASS_DEPENDENCY(MachineOptimizationRemarkEmitterPass)
+INITIALIZE_PASS_DEPENDENCY(MachineRegisterClassInfoWrapperPass)
 INITIALIZE_PASS_END(PEILegacy, DEBUG_TYPE,
                     "Prologue/Epilogue Insertion & Frame Finalization", false,
                     false)
@@ -161,6 +164,7 @@ STATISTIC(NumBytesStackSpace,
 void PEILegacy::getAnalysisUsage(AnalysisUsage &AU) const {
   AU.setPreservesCFG();
   AU.addRequired<MachineOptimizationRemarkEmitterPass>();
+  AU.addRequired<MachineRegisterClassInfoWrapperPass>();
   MachineFunctionPass::getAnalysisUsage(AU);
 }
 
@@ -353,7 +357,9 @@ bool PEIImpl::run(MachineFunction &MF) {
 bool PEILegacy::runOnMachineFunction(MachineFunction &MF) {
   MachineOptimizationRemarkEmitter *ORE =
       &getAnalysis<MachineOptimizationRemarkEmitterPass>().getORE();
-  return PEIImpl(ORE).run(MF);
+  const RegisterClassInfo *RCI =
+      &getAnalysis<MachineRegisterClassInfoWrapperPass>().getRCI();
+  return PEIImpl(ORE, RCI).run(MF);
 }
 
 PreservedAnalyses
@@ -361,7 +367,9 @@ PrologEpilogInserterPass::run(MachineFunction &MF,
                               MachineFunctionAnalysisManager &MFAM) {
   MachineOptimizationRemarkEmitter &ORE =
       MFAM.getResult<MachineOptimizationRemarkEmitterAnalysis>(MF);
-  if (!PEIImpl(&ORE).run(MF))
+  const RegisterClassInfo &RCI =
+      MFAM.getResult<MachineRegisterClassAnalysis>(MF);
+  if (!PEIImpl(&ORE, &RCI).run(MF))
     return PreservedAnalyses::all();
 
   return getMachineFunctionPassPreservedAnalyses().preserveSet<CFGAnalyses>();
@@ -665,6 +673,7 @@ void PEIImpl::spillCalleeSavedRegs(MachineFunction &MF) {
 
   // Determine which of the registers in the callee save list should be saved.
   BitVector SavedRegs;
+  TFI->processFunctionBeforeCalleeSaves(MF, RS, *RCI);
   TFI->determineCalleeSaves(MF, SavedRegs, RS);
 
   // Assign stack slots for any callee-saved registers that must be spilled.
