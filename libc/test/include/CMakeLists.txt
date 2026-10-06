@@ -11,6 +11,26 @@ add_libc_test(
     libc.include.llvm-libc-macros.alloca_macros
 )
 
+if(LLVM_LIBC_ALL_HEADERS OR
+   libc.src.string.strnlen_s IN_LIST TARGET_LLVMLIBC_ENTRYPOINTS)
+  add_libc_test(
+    annex_k_test
+    C_TEST
+    FULL_BUILD_ONLY
+    SUITE
+      libc_include_tests
+    SRCS
+      annex_k_test.c
+    COMPILE_OPTIONS
+      -std=c11
+      -Werror
+    DEPENDS
+      libc.include.stdio
+      libc.include.string
+      libc.include.stdlib
+  )
+endif()
+
 add_libc_test(
   assert_test
   SUITE
