@@ -10,6 +10,15 @@
 // RUN: %clang_cc1 -triple x86_64-linux-gnu -O2 -debug-info-kind=line-tables-only \
 // RUN:     -fsanitize=kernel-address -emit-llvm -o - %s \
 // RUN:     | FileCheck %s --check-prefixes=CHECK,KASAN
+// RUN: %clang_cc1 -triple x86_64-linux-gnu -O2 -debug-info-kind=line-tables-only \
+// RUN:     -fsanitize-coverage-type=3 -fsanitize-coverage-trace-pc \
+// RUN:     -fsanitize-coverage-trace-cmp -emit-llvm -o - %s \
+// RUN:     | FileCheck %s --check-prefixes=CHECK,KCOV
+// RUN: %clang_cc1 -triple x86_64-linux-gnu -O2 -debug-info-kind=line-tables-only \
+// RUN:     -fsanitize=kernel-memory -fsanitize-coverage-type=3 \
+// RUN:     -fsanitize-coverage-trace-pc -fsanitize-coverage-trace-cmp \
+// RUN:     -emit-llvm -o - %s \
+// RUN:     | FileCheck %s --check-prefixes=CHECK,KMSAN,KCOV
 
 static inline __attribute__((always_inline)) void instrumentation_begin(void) {
   __builtin_sanitizer_instrumentation_begin();
@@ -34,6 +43,8 @@ void noinstr_function(int *p, int x) {
 // CHECK-LABEL: define {{.*}}void @noinstr_function(
 // CHECK-NOT:     call {{.*}}@__{{msan|asan|tsan|sanitizer_cov}}
 // CHECK:         call void @llvm.sanitizer.instrumentation.begin()
+// KCOV:          call void @__sanitizer_cov_trace_pc()
+// KCOV:          call void @__sanitizer_cov_trace_const_cmp4(i32 7,
 // KMSAN:         call { ptr, ptr } @__msan_metadata_ptr_for_load_4(
 // KASAN:         call void @__asan_report_load4(
 // The argument is checked eagerly (-fsanitize-memory-param-retval), so the
