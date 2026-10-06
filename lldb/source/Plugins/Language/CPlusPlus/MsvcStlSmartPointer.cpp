@@ -114,7 +114,9 @@ lldb_private::formatters::MsvcStlSmartPointerSyntheticFrontEnd::
 
 llvm::Expected<uint32_t> lldb_private::formatters::
     MsvcStlSmartPointerSyntheticFrontEnd::CalculateNumChildren() {
-  return (m_ptr_obj ? 1 : 0);
+  if (m_ptr_obj && m_ptr_obj->GetValueAsUnsigned(0) != 0)
+    return 1;
+  return 0;
 }
 
 lldb::ValueObjectSP
@@ -213,7 +215,7 @@ lldb_private::formatters::MsvcStlUniquePtrSyntheticFrontEnd::
 
 llvm::Expected<uint32_t> lldb_private::formatters::
     MsvcStlUniquePtrSyntheticFrontEnd::CalculateNumChildren() {
-  if (m_value_ptr_sp)
+  if (m_value_ptr_sp && m_value_ptr_sp->GetValueAsUnsigned(0) != 0)
     return m_deleter_sp ? 2 : 1;
   return 0;
 }
