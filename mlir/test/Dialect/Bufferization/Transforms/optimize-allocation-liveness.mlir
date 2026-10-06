@@ -234,3 +234,46 @@ func.func private @test_alloc_with_multiple_results() -> () {
   memref.dealloc %alloc2 : memref<64xf32>
   return
 }
+
+// -----
+// CHECK-LABEL:   func.func @test_dealloc_blocked_by_own_result_user() {
+// CHECK:           %[[ALLOC_0:.*]] = memref.alloc() : memref<8xf32>
+// CHECK:           %[[REALLOC_0:.*]] = memref.realloc %[[ALLOC_0]] : memref<8xf32> to memref<16xf32>
+// CHECK:           memref.dealloc %[[REALLOC_0]] : memref<16xf32>
+// CHECK:           return
+// CHECK:         }
+
+// This test ensures that the dealloc does not move above its operand definitions 
+func.func @test_dealloc_blocked_by_own_result_user() {
+  %a = memref.alloc() : memref<8xf32>
+  %b = memref.realloc %a : memref<8xf32> to memref<16xf32>
+  memref.dealloc %b : memref<16xf32>
+  return
+}
+
+// -----
+// CHECK-LABEL:   func.func @test_gpu_dealloc_moved_after_async_token(
+// CHECK-SAME:      %[[ARG0:.*]]: !gpu.async.token) {
+// CHECK:           %[[ALLOC_0:.*]] = gpu.alloc  () : memref<8xf32>
+// CHECK:           %[[CONSTANT_0:.*]] = arith.constant 0 : index
+// CHECK:           %[[LOAD_0:.*]] = memref.load %[[ALLOC_0]]{{\[}}%[[CONSTANT_0]]] : memref<8xf32>
+// CHECK:           %[[WAIT_0:.*]] = gpu.wait async {{\[}}%[[ARG0]]]
+// CHECK:           %[[DEALLOC_0:.*]] = gpu.dealloc async {{\[}}%[[WAIT_0]]] %[[ALLOC_0]] : memref<8xf32>
+// CHECK:           %[[CONSTANT_1:.*]] = arith.constant 1 : index
+// CHECK:           %[[CONSTANT_2:.*]] = arith.constant 2 : index
+// CHECK:           gpu.wait {{\[}}%[[DEALLOC_0]]]
+// CHECK:           return
+// CHECK:         }
+
+// This test ensures that async token operand is respected when moving the dealloc
+func.func @test_gpu_dealloc_moved_after_async_token(%d: !gpu.async.token) {
+  %a = gpu.alloc () : memref<8xf32>
+  %c0 = arith.constant 0 : index
+  %x = memref.load %a[%c0] : memref<8xf32>
+  %w = gpu.wait async [%d]
+  %y = arith.constant 1 : index
+  %z = arith.constant 2 : index
+  %done = gpu.dealloc async [%w] %a : memref<8xf32>
+  gpu.wait [%done]
+  return
+}
