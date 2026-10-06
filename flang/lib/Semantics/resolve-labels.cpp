@@ -287,9 +287,8 @@ public:
     return PushConstructName(criticalConstruct);
   }
   bool Pre(const parser::DoConstruct &doConstruct) {
-    if (IsNonBlockDoConstruct(doConstruct)) {
+    if (IsNonBlockDoConstruct(doConstruct))
       return PreNonBlockDoConstruct(doConstruct);
-    }
     const auto &optionalName{std::get<std::optional<parser::Name>>(
         std::get<parser::Statement<parser::NonLabelDoStmt>>(doConstruct.t)
             .statement.t)};
