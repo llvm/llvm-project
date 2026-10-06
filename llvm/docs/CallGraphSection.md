@@ -33,9 +33,7 @@ Each function and direct callee is identified by exactly one of `Address` or `Re
 | `Version`                  | integer          | The format version. |
 | `IsIndirectTarget`         | boolean          | Whether the function is a potential indirect call target. |
 | `TypeID`                   | integer          | The function type ID. |
-| `NumDirectCallees`         | integer          | The number of entries in `DirectCallees`. |
 | `DirectCallees`            | array of objects | One object per direct callee, with the same `Names`, `Address` and `Relocation` fields as the function. Callees identified by `Address` are listed once per address. |
-| `NumIndirectTargetTypeIDs` | integer          | The number of entries in `IndirectTypeIDs`. |
 | `IndirectTypeIDs`          | array of integers | The indirect call target type IDs. |
 
 ### Relocation Object
@@ -62,7 +60,6 @@ A function in a shared object that calls `foo` and `bar`:
       "Version": 0,
       "IsIndirectTarget": false,
       "TypeID": 0,
-      "NumDirectCallees": 2,
       "DirectCallees": [
         {
           "Names": [
@@ -77,7 +74,6 @@ A function in a shared object that calls `foo` and `bar`:
           "Address": 6048
         }
       ],
-      "NumIndirectTargetTypeIDs": 0,
       "IndirectTypeIDs": []
     }
   }
@@ -104,7 +100,6 @@ A function in a relocatable object file that calls a local function `foo`, a glo
       "Version": 0,
       "IsIndirectTarget": true,
       "TypeID": 9080559750644022485,
-      "NumDirectCallees": 3,
       "DirectCallees": [
         {
           "Names": [
@@ -143,7 +138,6 @@ A function in a relocatable object file that calls a local function `foo`, a glo
           }
         }
       ],
-      "NumIndirectTargetTypeIDs": 0,
       "IndirectTypeIDs": []
     }
   }
