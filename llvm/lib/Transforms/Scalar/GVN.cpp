@@ -494,6 +494,9 @@ private:
   bool
   propagateEquality(Value *LHS, Value *RHS,
                     const std::variant<BasicBlockEdge, Instruction *> &Root);
+  bool 
+  propagateConstExpressions(Value *LHS, Value *RHS,
+                            const BasicBlockEdge &Root);
   bool processFoldableCondBr(CondBrInst *BI);
   void addDeadBlock(BasicBlock *BB);
   void assignValNumForDeadCode();
@@ -3489,7 +3492,7 @@ static Value *trySimplifyExpr(Instruction &Expr,
   return SimplifiedExprs[&Expr];
 }
 
-bool GVNPass::propagateConstExpressions(Value *LHS, Value *RHS,
+bool GVNPassImpl::propagateConstExpressions(Value *LHS, Value *RHS,
                                         const BasicBlockEdge &Root) {
   if (!GVNPropagateConstExp)
     return false;
