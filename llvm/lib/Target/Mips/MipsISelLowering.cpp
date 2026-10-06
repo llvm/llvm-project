@@ -179,7 +179,7 @@ SDValue MipsTargetLowering::getTargetNode(ConstantPoolSDNode *N, EVT Ty,
 
 MipsTargetLowering::MipsTargetLowering(const MipsTargetMachine &TM,
                                        const MipsSubtarget &STI)
-    : TargetLowering(TM, STI), Subtarget(STI), ABI(TM.getABI()) {
+    : TargetLowering(TM, STI), Subtarget(STI), ABI(STI.getABI()) {
   // Mips does not have i1 type, so use i32 for
   // setcc operations results (slt, sgt, ...).
   setBooleanContents(ZeroOrOneBooleanContent);
@@ -271,6 +271,9 @@ MipsTargetLowering::MipsTargetLowering(const MipsTargetMachine &TM,
     setOperationAction(ISD::FCANONICALIZE, MVT::f32, Custom);
     setOperationAction(ISD::FCANONICALIZE, MVT::f64, Custom);
   }
+
+  if (Subtarget.hasMTHC1())
+    setOperationAction(ISD::ConstantFP, MVT::f64, Custom);
 
   if (Subtarget.isGP64bit()) {
     setOperationAction(ISD::GlobalAddress,      MVT::i64,   Custom);
@@ -422,6 +425,9 @@ MipsTargetLowering::MipsTargetLowering(const MipsTargetMachine &TM,
                        ISD::OR, ISD::ADD, ISD::SUB, ISD::AssertZext, ISD::SHL,
                        ISD::SIGN_EXTEND});
 
+  // Sink shifts into their users' blocks to expose extract patterns.
+  setHasExtractBitsInsn(Subtarget.hasExtractInsert());
+
   // R5900 has no LL/SC instructions for atomic operations
   if (Subtarget.isR5900())
     setMaxAtomicSizeInBitsSupported(0);
@@ -467,7 +473,7 @@ FastISel *MipsTargetLowering::createFastISel(
 
   // Disable if either of the following is true:
   // We do not generate PIC, the ABI is not O32, XGOT is being used.
-  if (!TM.isPositionIndependent() || !TM.getABI().IsO32() ||
+  if (!TM.isPositionIndependent() || !Subtarget.getABI().IsO32() ||
       Subtarget.useXGOT())
     UseFastISel = false;
 
@@ -1265,6 +1271,8 @@ LowerOperation(SDValue Op, SelectionDAG &DAG) const
   case ISD::FP_TO_SINT:         return lowerFP_TO_SINT(Op, DAG);
   case ISD::READCYCLECOUNTER:
     return lowerREADCYCLECOUNTER(Op, DAG);
+  case ISD::ConstantFP:
+    return lowerConstantFP(Op, DAG);
   }
   return SDValue();
 }
@@ -1961,9 +1969,9 @@ MipsTargetLowering::emitAtomicCmpSwap(MachineInstr &MI,
 
   BuildMI(*BB, II, DL, TII->get(AtomicOp))
       .addReg(Dest, RegState::Define | RegState::EarlyClobber)
-      .addReg(PtrCopy, RegState::Kill)
-      .addReg(OldValCopy, RegState::Kill)
-      .addReg(NewValCopy, RegState::Kill)
+      .addReg(PtrCopy)
+      .addReg(OldValCopy)
+      .addReg(NewValCopy)
       .addReg(Scratch, RegState::EarlyClobber | RegState::Define |
                            RegState::Dead | RegState::Implicit);
 
@@ -2097,6 +2105,41 @@ MachineBasicBlock *MipsTargetLowering::emitAtomicCmpSwapPartword(
   return exitMBB;
 }
 
+SDValue MipsTargetLowering::lowerConstantFP(SDValue Op,
+                                            SelectionDAG &DAG) const {
+  EVT VT = Op.getValueType();
+  ConstantFPSDNode *CFP = cast<ConstantFPSDNode>(Op);
+  const APFloat &FPVal = CFP->getValueAPF();
+
+  if (FPVal.isZero())
+    return SDValue();
+
+  SDLoc DL(CFP);
+  APInt INTVal = FPVal.bitcastToAPInt();
+  switch (VT.getSimpleVT().SimpleTy) {
+  default:
+    llvm_unreachable("Unknown floating point type!");
+    break;
+  case MVT::f64: {
+    if (!Subtarget.hasMTHC1() || !Subtarget.hasMips32r2())
+      return SDValue();
+    uint64_t Bits = INTVal.getZExtValue();
+    uint32_t Lo = Bits & 0xFFFFFFFF;
+    if (Lo != 0 || Bits == 0)
+      return SDValue();
+
+    // TODO: DAG.getConstant(0) should be optimized to avoid generate an extra
+    // instr `addiu $x, $zero, 0`.
+    SDValue Low =
+        DAG.getCopyFromReg(DAG.getEntryNode(), DL, Mips::ZERO, MVT::i32);
+    SDValue Hi = DAG.getConstant(INTVal.extractBits(32, 32), DL, MVT::i32);
+    return DAG.getNode(MipsISD::BuildPairF64, DL, MVT::f64, Low, Hi);
+  }
+  }
+
+  return SDValue();
+}
+
 SDValue MipsTargetLowering::lowerREADCYCLECOUNTER(SDValue Op,
                                                   SelectionDAG &DAG) const {
   SmallVector<SDValue, 3> Results;
@@ -2223,7 +2266,7 @@ SDValue MipsTargetLowering::lowerGlobalAddress(SDValue Op,
         static_cast<const MipsTargetObjectFile *>(
             getTargetMachine().getObjFileLowering());
     const GlobalObject *GO = GV->getAliaseeObject();
-    if (GO && TLOF->IsGlobalInSmallSection(GO, getTargetMachine()))
+    if (Subtarget.useSmallSection() && GO && TLOF->IsGlobalInSmallSection(GO))
       // %gp_rel relocation
       return getAddrGPRel(N, SDLoc(N), Ty, DAG, ABI.IsN64());
 
@@ -2375,7 +2418,7 @@ lowerConstantPool(SDValue Op, SelectionDAG &DAG) const
             getTargetMachine().getObjFileLowering());
 
     if (TLOF->IsConstantInSmallSection(DAG.getDataLayout(), N->getConstVal(),
-                                       getTargetMachine()))
+                                       &DAG.getMachineFunction().getFunction()))
       // %gp_rel relocation
       return getAddrGPRel(N, SDLoc(N), Ty, DAG, ABI.IsN64());
 

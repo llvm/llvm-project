@@ -14,6 +14,7 @@
 
 #include "mlir/IR/Value.h"
 #include "clang/Basic/TargetBuiltins.h"
+#include "llvm/IR/IntrinsicsAMDGPU.h"
 #include "llvm/Support/AMDGPUAddrSpace.h"
 #include "llvm/Support/ErrorHandling.h"
 
@@ -89,7 +90,7 @@ static mlir::Value emitLogbBuiltin(CIRGenFunction &cgf, const CallExpr *e,
 
   mlir::Value negativeOne =
       builder.getConstant(loc, cir::IntAttr::get(int32Ty, -1));
-  mlir::Value expMinus1 = builder.createAdd(loc, exp, negativeOne);
+  mlir::Value expMinus1 = builder.createNSWAdd(loc, exp, negativeOne);
 
   mlir::Value siToFp = cir::CastOp::create(
       builder, loc, srcTy, cir::CastKind::int_to_float, expMinus1);
@@ -100,7 +101,7 @@ static mlir::Value emitLogbBuiltin(CIRGenFunction &cgf, const CallExpr *e,
   mlir::Value inf = builder.getConstant(loc, cir::FPAttr::get(srcTy, infVal));
 
   mlir::Value fabsNegInf =
-      builder.createCompare(loc, cir::CmpOpKind::ne, fabs, inf);
+      builder.createCompare(loc, cir::CmpOpKind::one, fabs, inf);
 
   mlir::Value sel = builder.createSelect(loc, fabsNegInf, siToFp, fabs);
 
@@ -206,10 +207,64 @@ CIRGenFunction::emitAMDGPUBuiltinExpr(unsigned builtinId,
   case AMDGPU::BI__builtin_amdgcn_mov_dpp8:
   case AMDGPU::BI__builtin_amdgcn_mov_dpp:
   case AMDGPU::BI__builtin_amdgcn_update_dpp: {
-    cgm.errorNYI(expr->getSourceRange(),
-                 std::string("unimplemented AMDGPU builtin call: ") +
-                     getContext().BuiltinInfo.getName(builtinId));
-    return mlir::Value{};
+    mlir::Location loc = getLoc(expr->getExprLoc());
+    unsigned iceArguments = 0;
+    ASTContext::GetBuiltinTypeError error;
+    getContext().GetBuiltinType(builtinId, error, &iceArguments);
+    assert(error == ASTContext::GE_None && "Should not codegen an error");
+    assert(expr->getNumArgs() == 5 || expr->getNumArgs() == 6 ||
+           expr->getNumArgs() == 2);
+
+    mlir::Type dataTy = convertType(expr->getArg(0)->getType());
+    unsigned size = cgm.getDataLayout().getTypeSizeInBits(dataTy);
+    cir::IntType intTy = builder.getUIntNTy(std::max(size, 32u));
+
+    bool isMovDpp8 = builtinId == AMDGPU::BI__builtin_amdgcn_mov_dpp8;
+    bool isMovDpp = builtinId == AMDGPU::BI__builtin_amdgcn_mov_dpp;
+    bool isUpdateDpp = builtinId == AMDGPU::BI__builtin_amdgcn_update_dpp;
+    llvm::StringRef intrinsicName =
+        isMovDpp8 ? "amdgcn.mov.dpp8" : "amdgcn.update.dpp";
+    cir::FuncType intrinsicTy =
+        getIntrinsicType(isMovDpp8 ? llvm::Intrinsic::amdgcn_mov_dpp8
+                                   : llvm::Intrinsic::amdgcn_update_dpp,
+                         {intTy});
+
+    auto coerceTo = [&](mlir::Value from, mlir::Type to) -> mlir::Value {
+      if (from.getType() == to)
+        return from;
+      if (mlir::isa<cir::IntType>(from.getType()) &&
+          mlir::isa<cir::IntType>(to))
+        return builder.createIntCast(from, to);
+      return builder.createBitcast(from, to);
+    };
+
+    llvm::SmallVector<mlir::Value, 6> args;
+    // __builtin_amdgcn_mov_dpp has no "old" operand at the source level, but
+    // the real intrinsic it lowers to requires one, so we synthesize a poison
+    // value for it since it is never meaningfully read.
+    if (isMovDpp)
+      args.push_back(builder.getConstant(loc, cir::PoisonAttr::get(intTy)));
+
+    // Number of builtin-level leading args that need zero-extend promotion when
+    // the data type is narrower than 32 bits.
+    unsigned numPromotedArgs = isUpdateDpp ? 2u : 1u;
+    for (unsigned i = 0; i != expr->getNumArgs(); ++i) {
+      mlir::Value v =
+          emitScalarOrConstFoldImmArg(iceArguments, i, expr->getArg(i));
+      if (i < numPromotedArgs && size < 32) {
+        mlir::Type sameWidthUTy = builder.getUIntNTy(size);
+        if (v.getType() != sameWidthUTy)
+          v = builder.createBitcast(v, sameWidthUTy);
+        v = builder.createIntCast(v, intTy);
+      }
+      args.push_back(coerceTo(v, intrinsicTy.getInput(i + unsigned(isMovDpp))));
+    }
+
+    mlir::Value result = builder.emitIntrinsicCallOp(loc, intrinsicName, intTy,
+                                                     mlir::ValueRange(args));
+    if (size < 32 && !mlir::isa<cir::IntType>(dataTy))
+      result = builder.createIntCast(result, builder.getUIntNTy(size));
+    return coerceTo(result, dataTy);
   }
   case AMDGPU::BI__builtin_amdgcn_permlane16:
   case AMDGPU::BI__builtin_amdgcn_permlanex16: {
@@ -1069,18 +1124,16 @@ CIRGenFunction::emitAMDGPUBuiltinExpr(unsigned builtinId,
                      getContext().BuiltinInfo.getName(builtinId));
     return mlir::Value{};
   }
-  case AMDGPU::BI__builtin_amdgcn_s_prefetch_data: {
-    cgm.errorNYI(expr->getSourceRange(),
-                 std::string("unimplemented AMDGPU builtin call: ") +
-                     getContext().BuiltinInfo.getName(builtinId));
-    return mlir::Value{};
-  }
-  case AMDGPU::BI__builtin_amdgcn_s_prefetch_inst: {
-    cgm.errorNYI(expr->getSourceRange(),
-                 std::string("unimplemented AMDGPU builtin call: ") +
-                     getContext().BuiltinInfo.getName(builtinId));
-    return mlir::Value{};
-  }
+  case AMDGPU::BI__builtin_amdgcn_s_prefetch_data:
+    return emitBuiltinWithOneOverloadedType<2>(
+               expr, "amdgcn.s.prefetch.data",
+               cir::VoidType::get(builder.getContext()))
+        .getValue();
+  case AMDGPU::BI__builtin_amdgcn_s_prefetch_inst:
+    return emitBuiltinWithOneOverloadedType<2>(
+               expr, "amdgcn.s.prefetch.inst",
+               cir::VoidType::get(builder.getContext()))
+        .getValue();
   case Builtin::BIlogbf:
   case Builtin::BI__builtin_logbf:
     return emitLogbBuiltin(*this, expr, llvm::APFloat::IEEEsingle());

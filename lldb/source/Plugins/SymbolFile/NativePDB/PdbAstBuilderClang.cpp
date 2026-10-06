@@ -39,18 +39,18 @@ struct CreateMethodDecl : public TypeVisitorCallbacks {
                    TypeIndex func_type_index,
                    clang::FunctionDecl *&function_decl,
                    lldb::opaque_compiler_type_t parent_ty,
-                   llvm::StringRef proc_name, ConstString mangled_name,
+                   llvm::StringRef proc_name, llvm::StringRef asm_label,
                    CompilerType func_ct)
       : m_index(m_index), m_clang(m_clang), func_type_index(func_type_index),
         function_decl(function_decl), parent_ty(parent_ty),
-        proc_name(proc_name), mangled_name(mangled_name), func_ct(func_ct) {}
+        proc_name(proc_name), asm_label(asm_label), func_ct(func_ct) {}
   PdbIndex &m_index;
   TypeSystemClang &m_clang;
   TypeIndex func_type_index;
   clang::FunctionDecl *&function_decl;
   lldb::opaque_compiler_type_t parent_ty;
   llvm::StringRef proc_name;
-  ConstString mangled_name;
+  llvm::StringRef asm_label;
   CompilerType func_ct;
 
   llvm::Error visitKnownMember(CVMemberRecord &cvr,
@@ -94,7 +94,7 @@ struct CreateMethodDecl : public TypeVisitorCallbacks {
     bool is_artificial = (options & MethodOptions::CompilerGenerated) ==
                          MethodOptions::CompilerGenerated;
     function_decl = m_clang.AddMethodToCXXRecordType(
-        parent_ty, proc_name, mangled_name, func_ct,
+        parent_ty, proc_name, asm_label, func_ct,
         /*is_virtual=*/is_virtual, /*is_static=*/is_static,
         /*is_inline=*/false, /*is_explicit=*/false,
         /*is_attr_used=*/false, /*is_artificial=*/is_artificial);
@@ -1055,8 +1055,7 @@ clang::FunctionDecl *PdbAstBuilderClang::CreateFunctionDecl(
       }
     }
 
-    ConstString mangled_name(
-        pdb->FindMangledFunctionName(func_id).value_or(llvm::StringRef()));
+    std::string asm_label = pdb->GetFunctionCallLabel(func_id);
 
     if (!tag_record.FieldList.isSimple()) {
       CVType field_list_cvt = index.tpi().getType(tag_record.FieldList);
@@ -1065,24 +1064,25 @@ clang::FunctionDecl *PdbAstBuilderClang::CreateFunctionDecl(
               field_list_cvt, field_list))
         llvm::consumeError(std::move(error));
       CreateMethodDecl process(index, m_clang, func_ti, function_decl,
-                               parent_opaque_ty, func_name, mangled_name,
-                               func_ct);
+                               parent_opaque_ty, func_name, asm_label, func_ct);
       if (llvm::Error err = visitMemberRecordStream(field_list.Data, process))
         llvm::consumeError(std::move(err));
     }
 
     if (!function_decl) {
       function_decl = m_clang.AddMethodToCXXRecordType(
-          parent_opaque_ty, func_name, mangled_name, func_ct,
+          parent_opaque_ty, func_name, asm_label, func_ct,
           /*is_virtual=*/false, /*is_static=*/false,
           /*is_inline=*/false, /*is_explicit=*/false,
           /*is_attr_used=*/false, /*is_artificial=*/false);
     }
     m_cxx_record_map[parent_opaque_ty].insert({func_name, func_ct});
   } else {
+    SymbolFileNativePDB *pdb = static_cast<SymbolFileNativePDB *>(
+        m_clang.GetSymbolFile()->GetBackingSymbolFile());
     function_decl = m_clang.CreateFunctionDeclaration(
         parent, OptionalClangModuleID(), func_name, func_ct, func_storage,
-        is_inline, /*asm_label=*/{});
+        is_inline, pdb->GetFunctionCallLabel(func_id));
     CreateFunctionParameters(func_id, *function_decl, param_count);
   }
   return function_decl;

@@ -44,7 +44,7 @@ subroutine nested_derived()
 end subroutine
 
 ! CHECK-LABEL: func.func @{{.*}}nested_derived()
-! CHECK:   %[[ARR_A:.*]]:2 = hlfir.declare {{.*}} {uniq_name = "{{.*}}a"}
+! CHECK:   %[[ARR_A:.*]]:2 = hlfir.declare {{.*}} uniq_name("{{.*}}a")
 ! CHECK:   omp.map.info var_ptr(%[[ARR_A]]#1 : {{.*}}) map_clauses(implicit, tofrom) capture(ByRef)
 ! CHECK-NOT: mapper(
 ! CHECK-SAME: name("{{.*}}a")
@@ -68,5 +68,5 @@ subroutine nested_derived_alloc()
 end subroutine
 
 ! CHECK-LABEL: func.func @{{.*}}nested_derived_alloc()
-! CHECK:   %[[ARR_ALLOC:.*]]:2 = hlfir.declare {{.*}} {uniq_name = "{{.*}}a"}
+! CHECK:   %[[ARR_ALLOC:.*]]:2 = hlfir.declare {{.*}} uniq_name("{{.*}}a")
 ! CHECK:   omp.map.info var_ptr(%[[ARR_ALLOC]]#1 : {{.*}}) map_clauses(implicit, tofrom) capture(ByRef) mapper(@[[OUTER_MAPPER]]) {{.*}} name("{{.*}}a")

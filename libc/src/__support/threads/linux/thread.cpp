@@ -1,9 +1,14 @@
-//===--- Implementation of a Linux thread class -----------------*- C++ -*-===//
+//===----------------------------------------------------------------------===//
 //
 // Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
 // See https://llvm.org/LICENSE.txt for license information.
 // SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
 //
+//===----------------------------------------------------------------------===//
+///
+/// \file
+/// Implementation of a Linux thread class.
+///
 //===----------------------------------------------------------------------===//
 
 #include "src/__support/threads/thread.h"
@@ -377,10 +382,6 @@ void Thread::wait() {
   FutexWordType clear_tid_value;
   while ((clear_tid_value = clear_tid->load()) != 0)
     clear_tid->wait(clear_tid_value, cpp::nullopt, true);
-}
-
-bool Thread::operator==(const Thread &thread) const {
-  return attrib->tid == thread.attrib->tid;
 }
 
 static constexpr cpp::string_view THREAD_NAME_PATH_PREFIX("/proc/self/task/");
