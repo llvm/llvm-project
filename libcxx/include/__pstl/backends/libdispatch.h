@@ -276,6 +276,8 @@ struct __cpu_traits<__libdispatch_backend_tag> {
         __combiner);
   }
 
+#  if _LIBCPP_STD_VER >= 20 // TODO: remove once https://github.com/llvm/llvm-project/pull/224356 is merged
+
   template <class _Value,
             class _RandomAccessIterator,
             class _WorkerPrologue,
@@ -337,6 +339,8 @@ struct __cpu_traits<__libdispatch_backend_tag> {
 
     return __empty{};
   }
+
+#  endif // _LIBCPP_STD_VER >= 20
 
   template <class _RandomAccessIterator, class _Comp, class _LeafSort>
   _LIBCPP_HIDE_FROM_ABI static optional<__empty>
@@ -434,9 +438,12 @@ struct __cpu_traits<__libdispatch_backend_tag> {
 };
 
 // Mandatory implementations of the computational basis
+
+#  if _LIBCPP_STD_VER >= 20 // TODO: remove once https://github.com/llvm/llvm-project/pull/224356 is merged
 template <class _ExecutionPolicy>
 struct __copy_if<__libdispatch_backend_tag, _ExecutionPolicy>
     : __cpu_parallel_copy_if<__libdispatch_backend_tag, _ExecutionPolicy> {};
+#  endif // _LIBCPP_STD_VER >= 20
 
 template <class _ExecutionPolicy>
 struct __find_end<__libdispatch_backend_tag, _ExecutionPolicy>

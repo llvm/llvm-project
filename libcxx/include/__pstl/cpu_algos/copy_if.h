@@ -33,38 +33,38 @@
 _LIBCPP_PUSH_MACROS
 #include <__undef_macros>
 
-#if _LIBCPP_STD_VER >= 17
+#if _LIBCPP_STD_VER >= 20 // TODO: should be 17 once https://github.com/llvm/llvm-project/pull/224356 is merged
 
 _LIBCPP_BEGIN_NAMESPACE_STD
 namespace __pstl {
 
 struct _LIBCPP_HIDE_FROM_ABI __dynamic_bitset {
-  size_t __size;
-  std::unique_ptr<size_t[]> __bits;
+  size_t __size_;
+  std::unique_ptr<size_t[]> __bits_;
 
   _LIBCPP_HIDE_FROM_ABI __dynamic_bitset(size_t __max_chunk_size)
-      : __size((__max_chunk_size + CHAR_BIT * sizeof(size_t) - 1) / (CHAR_BIT * sizeof(size_t))),
-        __bits(new (std::nothrow) size_t[__size]) {}
+      : __size_((__max_chunk_size + CHAR_BIT * sizeof(size_t) - 1) / (CHAR_BIT * sizeof(size_t))),
+        __bits_(new (std::nothrow) size_t[__size_]) {}
   _LIBCPP_HIDE_FROM_ABI __dynamic_bitset(__dynamic_bitset&&) noexcept            = default;
   _LIBCPP_HIDE_FROM_ABI __dynamic_bitset& operator=(__dynamic_bitset&&) noexcept = default;
   _LIBCPP_HIDE_FROM_ABI bool __test(size_t __pos) const {
     size_t __word_index = __pos / (CHAR_BIT * sizeof(size_t));
     size_t __bit_index  = __pos % (CHAR_BIT * sizeof(size_t));
-    return (__bits[__word_index] & (size_t(1) << __bit_index)) != 0;
+    return (__bits_[__word_index] & (size_t(1) << __bit_index)) != 0;
   }
   _LIBCPP_HIDE_FROM_ABI void __set(size_t __pos) {
     size_t __word_index = __pos / (CHAR_BIT * sizeof(size_t));
     size_t __bit_index  = __pos % (CHAR_BIT * sizeof(size_t));
-    __bits[__word_index] |= (size_t(1) << __bit_index);
+    __bits_[__word_index] |= (size_t(1) << __bit_index);
   }
   _LIBCPP_HIDE_FROM_ABI void __reset(size_t __pos) {
     size_t __word_index = __pos / (CHAR_BIT * sizeof(size_t));
     size_t __bit_index  = __pos % (CHAR_BIT * sizeof(size_t));
-    __bits[__word_index] &= ~(size_t(1) << __bit_index);
+    __bits_[__word_index] &= ~(size_t(1) << __bit_index);
   }
   _LIBCPP_HIDE_FROM_ABI void __reset() {
-    for (size_t i = 0; i < __size; ++i) {
-      __bits[i] = 0;
+    for (size_t i = 0; i < __size_; ++i) {
+      __bits_[i] = 0;
     }
   }
 };
@@ -122,13 +122,14 @@ struct __cpu_parallel_copy_if {
             __worker_ctx.__reset();
 
             size_t __occupied_count =
-                __count_and_cache_predicate_results(__chunk_first, __chunk_last, __pred, __worker_ctx);
+                __pstl::__count_and_cache_predicate_results(__chunk_first, __chunk_last, __pred, __worker_ctx);
 
             if (__optional_lookback_partition != nullptr) {
               __optional_lookback_partition->__construct_inclusive_prefix(__occupied_count);
             }
 
-            _ForwardIterator2 __chunk_result = __copy_if_flag_set(__chunk_first, __chunk_last, __result, __worker_ctx);
+            _ForwardIterator2 __chunk_result =
+                __pstl::__copy_if_flag_set(__chunk_first, __chunk_last, __result, __worker_ctx);
 
             if (__optional_lookback_partition == nullptr) {
               __out_iter = __chunk_result; // TODO: explain
@@ -143,18 +144,18 @@ struct __cpu_parallel_copy_if {
             __worker_ctx.__reset();
 
             size_t __occupied_count =
-                __count_and_cache_predicate_results(__chunk_first, __chunk_last, __pred, __worker_ctx);
+                __pstl::__count_and_cache_predicate_results(__chunk_first, __chunk_last, __pred, __worker_ctx);
 
             __lookback_partition->__construct_aggregate(__occupied_count);
             __decoupled_lookback_partition<size_t>* __prev_partition = __lookback_partition - 1;
             size_t __exclusive_prefix =
                 (__prev_partition->__acquire_available_status() & __decoupled_lookback_status_prefix_available)
                     ? __prev_partition->__inclusive_prefix()
-                    : __calculate_inclusive_prefix_of_partition(__prev_partition, plus<>{});
+                    : __pstl::__calculate_inclusive_prefix_of_partition(__prev_partition, plus<>{});
 
             __lookback_partition->__construct_inclusive_prefix(__exclusive_prefix + __occupied_count);
 
-            __copy_if_flag_set(__chunk_first, __chunk_last, __result + __exclusive_prefix, __worker_ctx);
+            __pstl::__copy_if_flag_set(__chunk_first, __chunk_last, __result + __exclusive_prefix, __worker_ctx);
           };
 
       auto __scan_tail =
@@ -164,17 +165,17 @@ struct __cpu_parallel_copy_if {
               __decoupled_lookback_partition<size_t>* __nonexistent_lookback_partition) {
             __worker_ctx.__reset();
 
-            __count_and_cache_predicate_results(__chunk_first, __chunk_last, __pred, __worker_ctx);
+            __pstl::__count_and_cache_predicate_results(__chunk_first, __chunk_last, __pred, __worker_ctx);
 
             __decoupled_lookback_partition< size_t >* __prev_partition = __nonexistent_lookback_partition - 1;
 
             size_t __exclusive_prefix =
                 (__prev_partition->__acquire_available_status() & __decoupled_lookback_status_prefix_available)
                     ? __prev_partition->__inclusive_prefix()
-                    : __calculate_inclusive_prefix_of_partition(__prev_partition, plus<>{});
+                    : __pstl::__calculate_inclusive_prefix_of_partition(__prev_partition, plus<>{});
 
             _ForwardIterator2 __chunk_result =
-                __copy_if_flag_set(__chunk_first, __chunk_last, __result + __exclusive_prefix, __worker_ctx);
+                __pstl::__copy_if_flag_set(__chunk_first, __chunk_last, __result + __exclusive_prefix, __worker_ctx);
 
             __out_iter = __chunk_result;
           };
@@ -194,7 +195,7 @@ struct __cpu_parallel_copy_if {
 } // namespace __pstl
 _LIBCPP_END_NAMESPACE_STD
 
-#endif // _LIBCPP_STD_VER >= 17
+#endif // _LIBCPP_STD_VER >= 20
 
 _LIBCPP_POP_MACROS
 

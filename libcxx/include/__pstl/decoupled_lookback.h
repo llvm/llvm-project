@@ -21,7 +21,7 @@
 _LIBCPP_PUSH_MACROS
 #include <__undef_macros>
 
-#if _LIBCPP_STD_VER >= 17
+#if _LIBCPP_STD_VER >= 20 // TODO: should be 17 once https://github.com/llvm/llvm-project/pull/224356 is merged
 
 _LIBCPP_BEGIN_NAMESPACE_STD
 namespace __pstl {
@@ -40,7 +40,7 @@ struct _LIBCPP_HIDE_FROM_ABI __decoupled_lookback_partition {
 
   // Destructor: destroy the aggregate and inclusive prefix if they have been constructed.
   ~__decoupled_lookback_partition() {
-    unsigned char __flag = __status_flag.load(std::memory_order_relaxed);
+    unsigned char __flag = __status_flag_.load(std::memory_order_relaxed);
     if (__flag & __decoupled_lookback_status_aggregate_available) {
       __aggregate().~_Tp();
     }
@@ -52,50 +52,51 @@ struct _LIBCPP_HIDE_FROM_ABI __decoupled_lookback_partition {
   // Acquire the current status of the partition.
   // If no value is published is available yet, wait until one becomes available.
   _LIBCPP_HIDE_FROM_ABI unsigned char __acquire_available_status() {
-    unsigned char __current_status = __status_flag.load(std::memory_order_acquire);
+    unsigned char __current_status = __status_flag_.load(std::memory_order_acquire);
     if (__current_status != __decoupled_lookback_status_invalid)
       return __current_status;
-    std::__atomic_wait(__status_flag, __decoupled_lookback_status_invalid, std::memory_order_acquire);
-    return __status_flag.load(std::memory_order_acquire);
+    std::__atomic_wait(__status_flag_, __decoupled_lookback_status_invalid, std::memory_order_acquire);
+    return __status_flag_.load(std::memory_order_acquire);
   }
 
   // Construct the aggregate value of the partition and publish this change.
   template <class... _Args>
   _LIBCPP_HIDE_FROM_ABI void __construct_aggregate(_Args&&... __args) {
-    std::__construct_at(&reinterpret_cast<_Tp&>(__aggregate_storage), std::forward<_Args>(__args)...);
-    __status_flag.store(__status_flag.load(std::memory_order_relaxed) | __decoupled_lookback_status_aggregate_available,
-                        std::memory_order_release);
-    std::__atomic_notify_all(__status_flag);
+    std::__construct_at(&reinterpret_cast<_Tp&>(__aggregate_storage_), std::forward<_Args>(__args)...);
+    __status_flag_.store(
+        __status_flag_.load(std::memory_order_relaxed) | __decoupled_lookback_status_aggregate_available,
+        std::memory_order_release);
+    std::__atomic_notify_all(__status_flag_);
   }
 
   // Access the aggregate value of the partition.
   // Precondition: __acquire_available_status() & __decoupled_lookback_status_aggregate_available
-  _LIBCPP_HIDE_FROM_ABI const _Tp& __aggregate() const { return reinterpret_cast<const _Tp&>(__aggregate_storage); }
+  _LIBCPP_HIDE_FROM_ABI const _Tp& __aggregate() const { return reinterpret_cast<const _Tp&>(__aggregate_storage_); }
 
   // Construct the inclusive prefix of the partition and publish this change.
   template <class... _Args>
   _LIBCPP_HIDE_FROM_ABI void __construct_inclusive_prefix(_Args&&... __args) {
-    std::__construct_at(&reinterpret_cast<_Tp&>(__inclusive_prefix_storage), std::forward<_Args>(__args)...);
-    __status_flag.store(__status_flag.load(std::memory_order_relaxed) | __decoupled_lookback_status_prefix_available,
-                        std::memory_order_release);
-    std::__atomic_notify_all(__status_flag);
+    std::__construct_at(&reinterpret_cast<_Tp&>(__inclusive_prefix_storage_), std::forward<_Args>(__args)...);
+    __status_flag_.store(__status_flag_.load(std::memory_order_relaxed) | __decoupled_lookback_status_prefix_available,
+                         std::memory_order_release);
+    std::__atomic_notify_all(__status_flag_);
   }
 
   // Access the inclusive prefix of the partition.
   // Precondition: __acquire_available_status() & __decoupled_lookback_status_prefix_available
   _LIBCPP_HIDE_FROM_ABI const _Tp& __inclusive_prefix() const {
-    return reinterpret_cast<const _Tp&>(__inclusive_prefix_storage);
+    return reinterpret_cast<const _Tp&>(__inclusive_prefix_storage_);
   }
 
 private:
   // Atomic/waitable flag indicating the status of the partition.
-  std::atomic<unsigned char> __status_flag{__decoupled_lookback_status_invalid};
+  std::atomic<unsigned char> __status_flag_{__decoupled_lookback_status_invalid};
 
   // Storage for the aggregate reduced value of the partition.
-  alignas(_Tp) unsigned char __aggregate_storage[sizeof(_Tp)];
+  alignas(_Tp) unsigned char __aggregate_storage_[sizeof(_Tp)];
 
   // Storage for the inclusive prefix of the partition.
-  alignas(_Tp) unsigned char __inclusive_prefix_storage[sizeof(_Tp)];
+  alignas(_Tp) unsigned char __inclusive_prefix_storage_[sizeof(_Tp)];
 };
 
 // Calculate an inclusive prefix of a given partition that currently has only an aggregate.
@@ -154,7 +155,7 @@ private:
 } // namespace __pstl
 _LIBCPP_END_NAMESPACE_STD
 
-#endif // _LIBCPP_STD_VER >= 17
+#endif // _LIBCPP_STD_VER >= 20
 
 _LIBCPP_POP_MACROS
 
