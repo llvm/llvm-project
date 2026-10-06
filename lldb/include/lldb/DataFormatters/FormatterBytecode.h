@@ -12,6 +12,8 @@
 #include "lldb/DataFormatters/TypeSummary.h"
 #include "lldb/Symbol/CompilerType.h"
 #include "llvm/ADT/APSInt.h"
+#include "llvm/ADT/StringMap.h"
+#include <memory>
 
 namespace lldb_private {
 
@@ -26,6 +28,9 @@ enum DataType : uint8_t {
   Type,
   Selector,
   Integer,
+  // Named `Dict` to avoid colliding with the `Dictionary` class, since this
+  // enumerator is scoped to the enclosing namespace.
+  Dict,
 };
 
 enum OpCodes : uint8_t {
@@ -48,11 +53,24 @@ enum Signatures : uint8_t {
 
 using ControlStackElement = llvm::StringRef;
 using ControlStack = std::vector<ControlStackElement>;
+
+// A Dictionary mapping String keys to DataStackElements. It is always wrapped
+// in a shared_ptr for two reasons:
+//   1. To allow DataStackElement to hold a dictionary, breaking the type
+//   reference cyle.
+//   2. To provide reference type behavior. This means `op_dict_set` can mutate
+//   the same instance that other stack slots refer to (ex via `dup`).
+class Dictionary;
+using DictionarySP = std::shared_ptr<Dictionary>;
+
 // uint64_t and int64_t are kept for compatibility with the deprecated
 // uint/int opcodes. New code should instead use APSInt (op_lit_integer).
 using DataStackElement =
     std::variant<std::string, uint64_t, int64_t, lldb::ValueObjectSP,
-                 CompilerType, Selectors, llvm::APSInt>;
+                 CompilerType, Selectors, llvm::APSInt, DictionarySP>;
+
+class Dictionary : public llvm::StringMap<DataStackElement> {};
+
 struct DataStack : public std::vector<DataStackElement> {
   DataStack() = default;
   DataStack(lldb::ValueObjectSP initial_value)

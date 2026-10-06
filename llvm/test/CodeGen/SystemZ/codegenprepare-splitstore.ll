@@ -1,6 +1,6 @@
 ; Test that CodeGenPrepare respects endianness when splitting a store.
 ;
-; RUN: llc -mtriple=s390x-linux-gnu -mcpu=z13 -stop-after codegenprepare -force-split-store < %s  | FileCheck %s
+; RUN: llc -mtriple=s390x-linux-gnu -mcpu=z13 -stop-after codegenprepare -cgp-force-split-store < %s  | FileCheck %s
 
 define void @fun(ptr %Src, ptr %Dst) {
 ; CHECK-LABEL: @fun(

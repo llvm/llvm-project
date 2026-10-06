@@ -22,6 +22,7 @@
 #include "clang/Basic/TargetInfo.h"
 #include "llvm/ADT/StringExtras.h"
 #include "llvm/Support/AllocToken.h"
+#include "llvm/Support/CRC.h"
 #include "llvm/Support/ErrorHandling.h"
 #include "llvm/Support/MathExtras.h"
 #include "llvm/Support/SipHash.h"
@@ -821,15 +822,8 @@ static bool interp__builtin_ia32_crc32(InterpState &S, CodePtr OpPC,
   // CRC32C polynomial (iSCSI polynomial, bit-reversed)
   static const uint32_t CRC32C_POLY = 0x82F63B78;
 
-  // Process each byte
-  uint32_t Result = static_cast<uint32_t>(CRCVal);
-  for (unsigned I = 0; I != DataBytes; ++I) {
-    uint8_t Byte = static_cast<uint8_t>((DataVal >> (I * 8)) & 0xFF);
-    Result ^= Byte;
-    for (int J = 0; J != 8; ++J) {
-      Result = (Result >> 1) ^ ((Result & 1) ? CRC32C_POLY : 0);
-    }
-  }
+  uint32_t Result = llvm::calculateReflectedCRC32(
+      static_cast<uint32_t>(CRCVal), DataVal, DataBytes, CRC32C_POLY);
 
   pushInteger(S, Result, Call->getType());
   return true;
@@ -1321,6 +1315,22 @@ static bool interp__builtin_is_aligned_up_down(InterpState &S, CodePtr OpPC,
   }
   assert(FirstArgT == PT_Ptr);
   const Pointer &Ptr = S.Stk.pop<Pointer>();
+
+  // Null pointers are always aligned. Preserve null pointers for
+  // align_up/align_down and return true for is_aligned.
+  if (Ptr.isZero()) {
+    if (BuiltinOp == Builtin::BI__builtin_is_aligned) {
+      S.Stk.push<Boolean>(true);
+      return true;
+    }
+
+    assert(BuiltinOp == Builtin::BI__builtin_align_up ||
+           BuiltinOp == Builtin::BI__builtin_align_down);
+
+    S.Stk.push<Pointer>(Ptr);
+    return true;
+  }
+
   if (!Ptr.isBlockPointer() && !Ptr.isOpaquePointer()) {
     S.FFDiag(Call->getArg(0), diag::note_constexpr_alignment_compute)
         << Alignment;

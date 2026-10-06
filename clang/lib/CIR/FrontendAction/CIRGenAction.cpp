@@ -8,13 +8,17 @@
 
 #include "clang/CIR/FrontendAction/CIRGenAction.h"
 #include "CIRDiagnosticHandler.h"
+#include "mlir/IR/BuiltinOps.h"
 #include "mlir/IR/MLIRContext.h"
 #include "mlir/IR/OwningOpRef.h"
+#include "mlir/Parser/Parser.h"
 #include "clang/AST/ASTContext.h"
 #include "clang/Basic/DiagnosticCodeGen.h"
 #include "clang/Basic/DiagnosticFrontend.h"
 #include "clang/CIR/CIRGenerator.h"
 #include "clang/CIR/CIRToCIRPasses.h"
+#include "clang/CIR/Dialect/IR/CIRDialect.h"
+#include "clang/CIR/InitAllDialects.h"
 #include "clang/CIR/LowerToLLVM.h"
 #include "clang/CodeGen/BackendUtil.h"
 #include "clang/CodeGen/ModuleLinker.h"
@@ -68,6 +72,14 @@ lowerFromCIRToLLVMIR(mlir::ModuleOp MLIRModule, llvm::LLVMContext &LLVMCtx,
                      llvm::vfs::FileSystem *fs = nullptr) {
   return direct::lowerDirectlyFromCIRToLLVMIR(MLIRModule, LLVMCtx, EnableOpenMP,
                                               mlirSaveTempsOutFile, fs);
+}
+
+// Print \p MLIRModule the way -emit-cir does, so that CIR emitted from source
+// and CIR printed back from ClangIR input use the same form.
+static void printCIRModule(mlir::ModuleOp MLIRModule, raw_ostream &OS) {
+  mlir::OpPrintingFlags Flags;
+  Flags.enableDebugInfo(/*enable=*/true, /*prettyForm=*/false);
+  MLIRModule->print(OS, Flags);
 }
 
 class CIRGenConsumer : public clang::ASTConsumer {
@@ -179,11 +191,8 @@ public:
 
     switch (Action) {
     case CIRGenAction::OutputType::EmitCIR:
-      if (OutputStream && MlirModule) {
-        mlir::OpPrintingFlags Flags;
-        Flags.enableDebugInfo(/*enable=*/true, /*prettyForm=*/false);
-        MlirModule->print(*OutputStream, Flags);
-      }
+      if (OutputStream && MlirModule)
+        printCIRModule(MlirModule, *OutputStream);
       break;
     case CIRGenAction::OutputType::EmitLLVM:
     case CIRGenAction::OutputType::EmitBC:
@@ -355,15 +364,82 @@ bool CIRGenAction::BeginSourceFileAction(CompilerInstance &CI) {
   return ASTFrontendAction::BeginSourceFileAction(CI);
 }
 
+static std::unique_ptr<raw_pwrite_stream>
+getOutputStream(CompilerInstance &CI, StringRef InFile,
+                CIRGenAction::OutputType Action);
+
 void CIRGenAction::ExecuteAction() {
   if (getCurrentFileKind().getLanguage() != Language::CIR) {
     ASTFrontendAction::ExecuteAction();
     return;
   }
 
-  // TODO: Parse the ClangIR input and emit the requested output.
-  getCompilerInstance().getDiagnostics().Report(
-      diag::err_fe_cir_input_unsupported);
+  CompilerInstance &CI = getCompilerInstance();
+  DiagnosticsEngine &Diags = CI.getDiagnostics();
+  SourceManager &SM = CI.getSourceManager();
+
+  std::unique_ptr<raw_pwrite_stream> OS = CI.takeOutputStream();
+  if (!OS)
+    OS = getOutputStream(CI, getCurrentFileOrBufferName(), Action);
+  if (!OS)
+    return;
+
+  std::optional<llvm::MemoryBufferRef> MainFile =
+      SM.getBufferOrNone(SM.getMainFileID());
+  if (!MainFile)
+    return;
+
+  mlir::MLIRContext MLIRContext;
+  cir::registerAllDialects(MLIRContext);
+
+  // Route parser and verifier errors through clang's diagnostics. Parse
+  // errors point into the .cir input. Verifier errors use the location of
+  // the failing op, which for CIR emitted by CIRGen is a location in the
+  // original source file; that file is not loaded in the SourceManager, so
+  // the handler reports such errors with the original location as text.
+  // TODO: Decide where errors in CIRGen-produced input should point: at the
+  // .cir text, or at the original source.
+  CIRDiagnosticHandler DiagHandler(&MLIRContext, Diags, SM,
+                                   CI.getFileManager());
+
+  mlir::OwningOpRef<mlir::ModuleOp> Module =
+      mlir::parseSourceString<mlir::ModuleOp>(MainFile->getBuffer(),
+                                              mlir::ParserConfig(&MLIRContext),
+                                              MainFile->getBufferIdentifier());
+  if (!Module) {
+    if (!Diags.hasErrorOccurred())
+      Diags.Report(diag::err_invalid_cir);
+    return;
+  }
+
+  // CIR is lowered for the target ABI of its own triple, so a module emitted
+  // for a different target cannot be retargeted by overriding its triple.
+  auto ModuleTriple = mlir::dyn_cast_if_present<mlir::StringAttr>(
+      (*Module)->getAttr(cir::CIRDialect::getTripleAttrName()));
+  if (!ModuleTriple) {
+    Diags.Report(diag::err_cir_input_missing_triple);
+    return;
+  }
+  const std::string &TargetTriple = CI.getTarget().getTriple().str();
+  if (ModuleTriple.getValue() != TargetTriple) {
+    Diags.Report(diag::err_cir_input_triple_mismatch)
+        << ModuleTriple.getValue() << TargetTriple;
+    return;
+  }
+
+  switch (Action) {
+  case OutputType::EmitCIR:
+    // The CIR-to-CIR pipeline is not run: CIR printed by -emit-cir has already
+    // been through it, and its lowering passes are not idempotent.
+    printCIRModule(*Module, *OS);
+    break;
+  case OutputType::EmitLLVM:
+  case OutputType::EmitBC:
+  case OutputType::EmitObj:
+  case OutputType::EmitAssembly:
+    Diags.Report(diag::err_fe_cir_input_unsupported);
+    break;
+  }
 }
 
 static std::unique_ptr<raw_pwrite_stream>
