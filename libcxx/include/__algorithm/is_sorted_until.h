@@ -9,6 +9,7 @@
 #ifndef _LIBCPP___ALGORITHM_IS_SORTED_UNTIL_H
 #define _LIBCPP___ALGORITHM_IS_SORTED_UNTIL_H
 
+#include <__algorithm/adjacent_find.h>
 #include <__algorithm/comp.h>
 #include <__algorithm/comp_ref_type.h>
 #include <__config>
@@ -22,15 +23,9 @@ _LIBCPP_BEGIN_NAMESPACE_STD
 template <class _Compare, class _ForwardIterator>
 _LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR_SINCE_CXX20 _ForwardIterator
 __is_sorted_until(_ForwardIterator __first, _ForwardIterator __last, _Compare __comp) {
-  if (__first != __last) {
-    _ForwardIterator __i = __first;
-    while (++__i != __last) {
-      if (__comp(*__i, *__first))
-        return __i;
-      __first = __i;
-    }
-  }
-  return __last;
+  return std::adjacent_find(__first, __last, [&](decltype(*__first) __lhs, decltype(*__first) __rhs) {
+    return __comp(__rhs, __lhs);
+  });
 }
 
 template <class _ForwardIterator, class _Compare>
