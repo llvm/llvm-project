@@ -1,6 +1,5 @@
 // RUN: %clang_analyze_cc1 -verify %s \
-// RUN:   -analyzer-checker=core \
-// RUN:   -analyzer-checker=unix.Stream
+// RUN:   -analyzer-checker=core,unix.Stream
 
 #include "Inputs/system-header-simulator.h"
 
