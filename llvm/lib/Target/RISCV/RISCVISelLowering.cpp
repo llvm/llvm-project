@@ -10489,8 +10489,15 @@ static SDValue lowerSelectToBinOp(SDNode *N, SelectionDAG &DAG,
           return DAG.getNode(RISCVISD::QC_MULIADD, DL, VT, CondV, CondV,
                              DAG.getSignedTargetConstant(MulImm - 1, DL, VT));
 
+        // (select c, (1 << ShAmount), 0) -> c << ShAmount
+        uint64_t TrueVal = TrueC->getZExtValue();
+        if (isPowerOf2_64(TrueVal))
+          return DAG.getNode(
+              ISD::SHL, DL, VT, CondV,
+              DAG.getShiftAmountConstant(Log2_64(TrueVal), VT, DL));
+
         // (select c, (1 << ShAmount) + 1, 0) -> (c << ShAmount) + c
-        uint64_t TrueM1 = TrueC->getZExtValue() - 1;
+        uint64_t TrueM1 = TrueVal - 1;
         if (isPowerOf2_64(TrueM1)) {
           unsigned ShAmount = Log2_64(TrueM1);
           if (Subtarget.hasShlAdd(ShAmount))
@@ -27105,7 +27112,7 @@ static MachineBasicBlock *emitQuietFCMP(MachineInstr &MI, MachineBasicBlock *BB,
 
   // Restore the FFLAGS.
   BuildMI(*BB, MI, DL, TII.get(RISCV::WriteFFLAGS))
-      .addReg(SavedFFlags, RegState::Kill);
+      .addReg(SavedFFlags);
 
   // Issue a dummy FEQ opcode to raise exception for signaling NaNs.
   auto MIB2 = BuildMI(*BB, MI, DL, TII.get(EqOpcode), RISCV::X0)
@@ -27262,7 +27269,7 @@ static MachineBasicBlock *emitSelectPseudo(MachineInstr &MI,
       MI.getOperand(1).isReg() && MI.getOperand(2).isReg() &&
       Next != BB->end() && Next->getOpcode() == MI.getOpcode() &&
       Next->getOperand(5).getReg() == MI.getOperand(0).getReg() &&
-      Next->getOperand(5).isKill())
+      BB->getParent()->getRegInfo().hasOneNonDBGUse(MI.getOperand(0).getReg()))
     return EmitLoweredCascadedSelect(MI, *Next, BB, Subtarget);
 
   Register LHS = MI.getOperand(1).getReg();
@@ -27445,7 +27452,7 @@ static MachineBasicBlock *emitVFROUND_NOEXCEPT_MASK(MachineInstr &MI,
 
   // Restore FFLAGS.
   BuildMI(*BB, MI, DL, TII.get(RISCV::WriteFFLAGS))
-      .addReg(SavedFFLAGS, RegState::Kill);
+      .addReg(SavedFFLAGS);
 
   // Erase the pseudoinstruction.
   MI.eraseFromParent();
