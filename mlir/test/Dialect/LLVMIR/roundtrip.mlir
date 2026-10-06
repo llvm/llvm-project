@@ -281,6 +281,12 @@ func.func @ops(%arg0: i32, %arg1: f32,
 // CHECK: llvm.intr.clmul(%{{.*}}, %{{.*}}) : (i32, i32) -> i32
   %clmul = llvm.intr.clmul(%arg0, %arg0) : (i32, i32) -> i32
 
+// CHECK: llvm.intr.smulh(%{{.*}}, %{{.*}}) : (i32, i32) -> i32
+  %smulh = llvm.intr.smulh(%arg0, %arg0) : (i32, i32) -> i32
+
+// CHECK: llvm.intr.umulh(%{{.*}}, %{{.*}}) : (i32, i32) -> i32
+  %umulh = llvm.intr.umulh(%arg0, %arg0) : (i32, i32) -> i32
+
 // CHECK: llvm.intr.ctpop(%{{.*}}) : (i32) -> i32
   %33 = llvm.intr.ctpop(%arg0) : (i32) -> i32
 
@@ -316,6 +322,10 @@ llvm.func @gep(%ptr: !llvm.ptr, %idx: i64, %ptr2: !llvm.ptr) {
   llvm.getelementptr nusw | nuw %ptr2[%idx, 0, %idx] : (!llvm.ptr, i64, i64) -> !llvm.ptr, !llvm.struct<(array<10 x f32>)>
   // CHECK: llvm.getelementptr nuw %{{.*}}[%{{.*}}, 0, %{{.*}}] : (!llvm.ptr, i64, i64) -> !llvm.ptr, !llvm.struct<(array<10 x f32>)>
   llvm.getelementptr nuw %ptr2[%idx, 0, %idx] : (!llvm.ptr, i64, i64) -> !llvm.ptr, !llvm.struct<(array<10 x f32>)>
+  // CHECK: llvm.getelementptr inrange <i64, -16, 8> %{{.*}}[0, 0, 2] : (!llvm.ptr) -> !llvm.ptr, !llvm.struct<(array<3 x ptr>)>
+  llvm.getelementptr inrange <i64, -16, 8> %ptr[0, 0, 2] : (!llvm.ptr) -> !llvm.ptr, !llvm.struct<(array<3 x ptr>)>
+  // CHECK: llvm.getelementptr inbounds inrange <i64, -16, 8> %{{.*}}[0, 0, 2] : (!llvm.ptr) -> !llvm.ptr, !llvm.struct<(array<3 x ptr>)>
+  llvm.getelementptr inbounds inrange <i64, -16, 8> %ptr[0, 0, 2] : (!llvm.ptr) -> !llvm.ptr, !llvm.struct<(array<3 x ptr>)>
   llvm.return
 }
 
@@ -809,8 +819,6 @@ llvm.func @invariant(%p: !llvm.ptr) {
 llvm.func @invariant_group_intrinsics(%p: !llvm.ptr) {
   // CHECK: %{{.+}} = llvm.intr.launder.invariant.group %[[P]] : !llvm.ptr
   %1 = llvm.intr.launder.invariant.group %p : !llvm.ptr
-  // CHECK: %{{.+}} = llvm.intr.strip.invariant.group %[[P]] : !llvm.ptr
-  %2 = llvm.intr.strip.invariant.group %p : !llvm.ptr
   llvm.return
 }
 

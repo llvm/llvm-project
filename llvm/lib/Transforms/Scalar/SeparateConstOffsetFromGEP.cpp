@@ -216,19 +216,18 @@ public:
                         User *&UserChainTail, bool &PreservesNUW);
 
   /// Looks for a constant offset from the given GEP index without extracting
-  /// it. It returns the numeric value of the extracted constant offset (0 if
-  /// failed). The meaning of the arguments are the same as Extract.
-  static APInt Find(Value *Idx, GetElementPtrInst *GEP);
+  /// it. It returns the numeric value of the extracted constant offset, or
+  /// std::nullopt on failure. The arguments have the same meaning as Extract.
+  static std::optional<APInt> Find(Value *Idx, GetElementPtrInst *GEP);
 
 private:
   ConstantOffsetExtractor(BasicBlock::iterator InsertionPt)
       : IP(InsertionPt), DL(InsertionPt->getDataLayout()), SQ(DL) {}
 
-  /// Searches the expression that computes V for a non-zero constant C s.t.
+  /// Searches the expression that computes V for a constant offset C s.t.
   /// V can be reassociated into the form V' + C. If the searching is
   /// successful, returns C and update UserChain as a def-use chain from C to V;
-  /// otherwise, UserChain is empty.
-  ///
+  /// otherwise, returns std::nullopt and UserChain is empty.
   /// \p V              The given expression
   /// \p GEP            The base GEP instruction, used for determining relevant
   ///                   types, flags, and non-negativity needed for safe
@@ -238,12 +237,12 @@ private:
   ///                   the GEP index
   /// \p ZeroExtended   Whether V will be zero-extended in the computation of
   ///                   the GEP index
-  APInt find(Value *V, GetElementPtrInst *GEP, Value *Idx, bool SignExtended,
-             bool ZeroExtended);
+  std::optional<APInt> find(Value *V, GetElementPtrInst *GEP, Value *Idx,
+                            bool SignExtended, bool ZeroExtended);
 
   /// A helper function to look into both operands of a binary operator.
-  APInt findInEitherOperand(BinaryOperator *BO, bool SignExtended,
-                            bool ZeroExtended);
+  std::optional<APInt>
+  findInEitherOperand(BinaryOperator *BO, bool SignExtended, bool ZeroExtended);
 
   /// After finding the constant offset C from the GEP index I, we build a new
   /// index I' s.t. I' + C = I. This function builds and returns the new
@@ -316,10 +315,10 @@ private:
   ///   Result:   `(xor %ptr, 2) + 1` where 1 can be folded into address mode
   ///
   /// \param XorInst The XOR binary operator to analyze
-  /// \return Returns the disjoint bits (the extractable offset), or zero if
-  /// none exist. On success, stores NonDisjointBits in
+  /// \return Returns the disjoint bits (the extractable offset), or
+  /// std::nullopt if none exist. On success, stores NonDisjointBits in
   /// NonDisjointXorConstantBits.
-  APInt extractDisjointBitsFromXor(BinaryOperator *XorInst);
+  std::optional<APInt> extractDisjointBitsFromXor(BinaryOperator *XorInst);
 
   /// The non-disjoint bits remaining after xor decomposition in
   /// `extractDisjointBitsFromXor`, which are later used while replacing the
@@ -417,7 +416,7 @@ private:
   /// Finds the constant offset within each index and accumulates them. If
   /// LowerGEP is true, it finds in indices of both sequential and structure
   /// types, otherwise it only finds in sequential indices. The output
-  /// NeedsExtraction indicates whether we successfully find a non-zero constant
+  /// NeedsExtraction indicates whether we successfully find a constant
   /// offset, and SignedOverflow indicates if there was signed overflow in
   /// offset calculation.
   APInt accumulateByteOffset(GetElementPtrInst *GEP, bool &NeedsExtraction,
@@ -685,21 +684,21 @@ bool ConstantOffsetExtractor::canTraceInto(bool SignExtended, bool ZeroExtended,
   return true;
 }
 
-APInt ConstantOffsetExtractor::findInEitherOperand(BinaryOperator *BO,
-                                                   bool SignExtended,
-                                                   bool ZeroExtended) {
+std::optional<APInt> ConstantOffsetExtractor::findInEitherOperand(
+    BinaryOperator *BO, bool SignExtended, bool ZeroExtended) {
   // Save off the current height of the chain, in case we need to restore it.
   size_t ChainLength = UserChain.size();
 
   // BO cannot use information from the base GEP at this point, so clear it.
-  APInt ConstantOffset =
+  std::optional<APInt> ConstantOffset =
       find(BO->getOperand(0), nullptr, nullptr, SignExtended, ZeroExtended);
   // If we found a constant offset in the left operand, stop and return that.
   // This shortcut might cause us to miss opportunities of combining the
   // constant offsets in both operands, e.g., (a + 4) + (b + 5) => (a + b) + 9.
   // However, such cases are probably already handled by -instcombine,
   // given this pass runs after the standard optimizations.
-  if (ConstantOffset != 0) return ConstantOffset;
+  if (ConstantOffset)
+    return ConstantOffset;
 
   // Reset the chain back to where it was when we started exploring this node,
   // since visiting the LHS didn't pan out.
@@ -709,19 +708,19 @@ APInt ConstantOffsetExtractor::findInEitherOperand(BinaryOperator *BO,
       find(BO->getOperand(1), nullptr, nullptr, SignExtended, ZeroExtended);
   // If U is a sub operator, negate the constant offset found in the right
   // operand.
-  if (BO->getOpcode() == Instruction::Sub)
-    ConstantOffset = -ConstantOffset;
+  if (ConstantOffset && BO->getOpcode() == Instruction::Sub)
+    *ConstantOffset = -*ConstantOffset;
 
   // If RHS wasn't a suitable candidate either, reset the chain again.
-  if (ConstantOffset == 0)
+  if (!ConstantOffset)
     UserChain.resize(ChainLength);
 
   return ConstantOffset;
 }
 
-APInt ConstantOffsetExtractor::find(Value *V, GetElementPtrInst *GEP,
-                                    Value *Idx, bool SignExtended,
-                                    bool ZeroExtended) {
+std::optional<APInt>
+ConstantOffsetExtractor::find(Value *V, GetElementPtrInst *GEP, Value *Idx,
+                              bool SignExtended, bool ZeroExtended) {
   // TODO(jingyue): We could trace into integer/pointer casts, such as
   // inttoptr, ptrtoint, bitcast, and addrspacecast. We choose to handle only
   // integers because it gives good enough results for our benchmarks.
@@ -729,10 +728,14 @@ APInt ConstantOffsetExtractor::find(Value *V, GetElementPtrInst *GEP,
 
   // We cannot do much with Values that are not a User, such as an Argument.
   User *U = dyn_cast<User>(V);
-  if (U == nullptr) return APInt(BitWidth, 0);
+  if (U == nullptr)
+    return std::nullopt;
 
-  APInt ConstantOffset(BitWidth, 0);
+  std::optional<APInt> ConstantOffset;
   if (ConstantInt *CI = dyn_cast<ConstantInt>(V)) {
+    // Leave literal zero offsets alone.
+    if (CI->isZero())
+      return std::nullopt;
     // Hooray, we found it!
     ConstantOffset = CI->getValue();
   } else if (BinaryOperator *BO = dyn_cast<BinaryOperator>(V)) {
@@ -742,25 +745,29 @@ APInt ConstantOffsetExtractor::find(Value *V, GetElementPtrInst *GEP,
     else if (BO->getOpcode() == Instruction::Xor)
       ConstantOffset = extractDisjointBitsFromXor(BO);
   } else if (isa<TruncInst>(V)) {
+    if (SignExtended || ZeroExtended)
+      return ConstantOffset;
     ConstantOffset =
-        find(U->getOperand(0), GEP, Idx, SignExtended, ZeroExtended)
-            .trunc(BitWidth);
+        find(U->getOperand(0), GEP, Idx, SignExtended, ZeroExtended);
+    if (ConstantOffset)
+      *ConstantOffset = ConstantOffset->trunc(BitWidth);
   } else if (isa<SExtInst>(V)) {
     ConstantOffset =
-        find(U->getOperand(0), GEP, Idx, /* SignExtended */ true, ZeroExtended)
-            .sext(BitWidth);
+        find(U->getOperand(0), GEP, Idx, /* SignExtended */ true, ZeroExtended);
+    if (ConstantOffset)
+      *ConstantOffset = ConstantOffset->sext(BitWidth);
   } else if (isa<ZExtInst>(V)) {
     // As an optimization, we can clear the SignExtended flag because
     // sext(zext(a)) = zext(a). Verified in @sext_zext in split-gep.ll.
     ConstantOffset = find(U->getOperand(0), GEP, Idx, /* SignExtended */ false,
-                          /* ZeroExtended */ true)
-                         .zext(BitWidth);
+                          /* ZeroExtended */ true);
+    if (ConstantOffset)
+      *ConstantOffset = ConstantOffset->zext(BitWidth);
   }
 
-  // If we found a non-zero constant offset, add it to the path for
-  // rebuildWithoutConstOffset. Zero is a valid constant offset, but doesn't
-  // help this optimization.
-  if (ConstantOffset != 0)
+  // If we found a constant offset, add it to the path for
+  // rebuildWithoutConstOffset.
+  if (ConstantOffset)
     UserChain.push_back(U);
   return ConstantOffset;
 }
@@ -907,17 +914,16 @@ Value *ConstantOffsetExtractor::removeConstOffset(unsigned ChainIndex) {
   return NewBO;
 }
 
-APInt ConstantOffsetExtractor::extractDisjointBitsFromXor(
-    BinaryOperator *XorInst) {
+std::optional<APInt>
+ConstantOffsetExtractor::extractDisjointBitsFromXor(BinaryOperator *XorInst) {
   assert(XorInst && XorInst->getOpcode() == Instruction::Xor &&
          "Expected XOR instruction");
 
-  unsigned BitWidth = XorInst->getType()->getScalarSizeInBits();
   Value *BaseOp;
   ConstantInt *XorConstantOp;
 
   if (!match(XorInst, m_Xor(m_Value(BaseOp), m_ConstantInt(XorConstantOp))))
-    return APInt::getZero(BitWidth);
+    return std::nullopt;
 
   const KnownBits BaseKnownBits = computeKnownBits(BaseOp, SQ);
   const APInt &ConstantValue = XorConstantOp->getValue();
@@ -928,11 +934,11 @@ APInt ConstantOffsetExtractor::extractDisjointBitsFromXor(
   // extract from the xor.
   const APInt DisjointBits = ConstantValue & BaseKnownBits.Zero;
   if (DisjointBits.isZero())
-    return DisjointBits;
+    return std::nullopt;
 
   // Avoid a pessimizing rewrite if the disjoint bits include the sign bit.
   if (DisjointBits.isSignBitSet())
-    return APInt::getZero(BitWidth);
+    return std::nullopt;
 
   // Compute the remaining bits, i.e., the non-disjoint ones, which are those
   // that must be preserved in the xor.
@@ -986,10 +992,9 @@ Value *ConstantOffsetExtractor::Extract(Value *Idx, GetElementPtrInst *GEP,
                                         User *&UserChainTail,
                                         bool &PreservesNUW) {
   ConstantOffsetExtractor Extractor(getIndexInsertionPoint(Idx, GEP));
-  // Find a non-zero constant offset first.
-  APInt ConstantOffset = Extractor.find(Idx, GEP, Idx, /* SignExtended */ false,
-                                        /* ZeroExtended */ false);
-  if (ConstantOffset == 0) {
+  // Find a constant offset first.
+  if (!Extractor.find(Idx, GEP, Idx, /* SignExtended */ false,
+                      /* ZeroExtended */ false)) {
     UserChainTail = nullptr;
     PreservesNUW = true;
     return nullptr;
@@ -1003,7 +1008,8 @@ Value *ConstantOffsetExtractor::Extract(Value *Idx, GetElementPtrInst *GEP,
   return IdxWithoutConstOffset;
 }
 
-APInt ConstantOffsetExtractor::Find(Value *Idx, GetElementPtrInst *GEP) {
+std::optional<APInt> ConstantOffsetExtractor::Find(Value *Idx,
+                                                   GetElementPtrInst *GEP) {
   return ConstantOffsetExtractor(GEP->getIterator())
       .find(Idx, GEP, Idx, /* SignExtended */ false, /* ZeroExtended */ false);
 }
@@ -1042,16 +1048,14 @@ APInt SeparateConstOffsetFromGEP::accumulateByteOffset(GetElementPtrInst *GEP,
         continue;
 
       // Tries to extract a constant offset from this GEP index.
-      APInt ConstantOffset =
-          ConstantOffsetExtractor::Find(GEP->getOperand(I), GEP)
-              .sextOrTrunc(IdxWidth);
-      if (ConstantOffset != 0) {
+      if (std::optional<APInt> ConstantOffset =
+              ConstantOffsetExtractor::Find(GEP->getOperand(I), GEP)) {
         NeedsExtraction = true;
         // A GEP may have multiple indices.  We accumulate the extracted
         // constant offset to a byte offset, and later offset the remainder of
         // the original GEP with this byte offset.
         bool Overflow;
-        auto ByteOffset = ConstantOffset.smul_ov(
+        auto ByteOffset = ConstantOffset->sextOrTrunc(IdxWidth).smul_ov(
             APInt(IdxWidth, GTI.getSequentialElementStride(*DL),
                   /*IsSigned=*/true, /*ImplicitTrunc=*/true),
             Overflow);

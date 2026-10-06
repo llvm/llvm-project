@@ -666,7 +666,8 @@ public:
 };
 
 /// Policy that emits only the last remark reported for each identity, see
-/// DenseMapInfo<Remark>. Remarks are stored until finalize().
+/// DenseMapInfo<Remark>. Remarks are stored until finalize(), which emits them
+/// in creation order, so the output does not depend on hash order.
 class RemarkEmittingPolicyFinal : public detail::RemarkEmittingPolicyBase {
 private:
   /// Remarks reported since the last finalize().
@@ -761,20 +762,11 @@ LogicalResult enableOptimizationRemarks(
 
 } // namespace mlir::remark
 
-// DenseMapInfo specialization for Remark
+/// Two remarks are the same for RemarkEmittingPolicyFinal when they have the
+/// same location, remark name, combined category name and kind.
 namespace llvm {
 template <>
 struct DenseMapInfo<mlir::remark::detail::Remark> {
-  static constexpr StringRef kEmptyKey = "<EMPTY_KEY>";
-
-  /// Helper to provide a static dummy context for sentinel keys.
-  static mlir::MLIRContext *getStaticDummyContext() {
-    static mlir::MLIRContext dummyContext;
-    return &dummyContext;
-  }
-
-  /// Create an empty remark
-  /// Compute the hash value of the remark
   static unsigned getHashValue(const mlir::remark::detail::Remark &remark) {
     return llvm::hash_combine(
         remark.getLocation().getAsOpaquePointer(),
@@ -785,12 +777,6 @@ struct DenseMapInfo<mlir::remark::detail::Remark> {
 
   static bool isEqual(const mlir::remark::detail::Remark &lhs,
                       const mlir::remark::detail::Remark &rhs) {
-    // Check for empty keys first.
-    if (lhs.getRemarkName() == kEmptyKey || rhs.getRemarkName() == kEmptyKey) {
-      return lhs.getRemarkName() == rhs.getRemarkName();
-    }
-
-    // For regular remarks, compare key identifying fields
     return lhs.getLocation() == rhs.getLocation() &&
            lhs.getRemarkName() == rhs.getRemarkName() &&
            lhs.getCombinedCategoryName() == rhs.getCombinedCategoryName() &&

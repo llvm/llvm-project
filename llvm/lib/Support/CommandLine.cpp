@@ -140,15 +140,6 @@ static SmallString<8> argPrefix(StringRef ArgName, size_t Pad = DefaultPad) {
   return Prefix;
 }
 
-// Option predicates...
-static inline bool isGrouping(const Option *O) {
-  return O->getMiscFlags() & cl::Grouping;
-}
-static inline bool isPrefixedOrGrouping(const Option *O) {
-  return isGrouping(O) || O->getFormattingFlag() == cl::Prefix ||
-         O->getFormattingFlag() == cl::AlwaysPrefix;
-}
-
 using OptionsMapTy = DenseMap<StringRef, Option *>;
 
 namespace {
@@ -176,16 +167,20 @@ public:
   // This collects additional help to be printed.
   std::vector<StringRef> MoreHelp;
 
-  // This collects Options added with the cl::DefaultOption flag. Since they can
-  // be overridden, they are not added to the appropriate SubCommands until
-  // ParseCommandLineOptions actually runs.
-  SmallVector<Option*, 4> DefaultOptions;
-
   // This collects the different option categories that have been registered.
   SmallPtrSet<OptionCategory *, 16> RegisteredOptionCategories;
 
   // This collects the different subcommands that have been registered.
   SmallPtrSet<SubCommand *, 4> RegisteredSubCommands;
+
+  // Libraries whose options are declared in TableGen, and an index from their
+  // option names. Libraries[NumIndexedLibraries:] are not indexed yet.
+  SmallVector<LibraryOptions *, 0> Libraries;
+  DenseMap<StringRef, LibraryOptions *> LibraryIndex;
+  size_t NumIndexedLibraries = 0;
+  // Copies of the arguments passed to LibraryOptions::parse, whose members may
+  // refer to them. Response file expansions do not outlive parsing.
+  BumpPtrAllocator LibraryArgAlloc;
 
   CommandLineParser() { registerSubCommand(&SubCommand::getTopLevel()); }
 
@@ -193,8 +188,7 @@ public:
 
   bool ParseCommandLineOptions(int argc, const char *const *argv,
                                StringRef Overview, raw_ostream *Errs = nullptr,
-                               vfs::FileSystem *VFS = nullptr,
-                               bool LongOptionsUseDoubleDash = false);
+                               vfs::FileSystem *VFS = nullptr);
 
   void forEachSubCommand(Option &Opt, function_ref<void(SubCommand &)> Action) {
     if (Opt.Subs.empty()) {
@@ -232,12 +226,12 @@ public:
   void addOption(Option *O, SubCommand *SC) {
     bool HadErrors = false;
     if (O->hasArgStr()) {
-      // If it's a DefaultOption, check to make sure it isn't already there.
-      if (O->isDefaultOption() && SC->OptionsMap.contains(O->ArgStr))
-        return;
-
       // Add argument to the argument map!
-      if (!SC->OptionsMap.insert(std::make_pair(O->ArgStr, O)).second) {
+      // An unregistered subcommand, such as MLIR's PassOptions, parses its
+      // own arguments.
+      if (!SC->OptionsMap.insert(std::make_pair(O->ArgStr, O)).second ||
+          (RegisteredSubCommands.contains(SC) &&
+           LibraryIndex.contains(O->ArgStr))) {
         errs() << ProgramName << ": CommandLine Error: Option '" << O->ArgStr
                << "' registered more than once!\n";
         HadErrors = true;
@@ -247,8 +241,6 @@ public:
     // Remember information about positional options.
     if (O->getFormattingFlag() == cl::Positional)
       SC->PositionalOpts.push_back(O);
-    else if (O->getMiscFlags() & cl::Sink) // Remember sink options
-      SC->SinkOpts.push_back(O);
     else if (O->getNumOccurrencesFlag() == cl::ConsumeAfter) {
       if (SC->ConsumeAfterOpt) {
         O->error("Cannot specify more than one option with cl::ConsumeAfter!");
@@ -265,11 +257,7 @@ public:
       report_fatal_error("inconsistency in registered CommandLine options");
   }
 
-  void addOption(Option *O, bool ProcessDefaultOption = false) {
-    if (!ProcessDefaultOption && O->isDefaultOption()) {
-      DefaultOptions.push_back(O);
-      return;
-    }
+  void addOption(Option *O) {
     forEachSubCommand(*O, [&](SubCommand &SC) { addOption(O, &SC); });
   }
 
@@ -296,13 +284,6 @@ public:
           break;
         }
       }
-    else if (O->getMiscFlags() & cl::Sink)
-      for (auto *Opt = Sub.SinkOpts.begin(); Opt != Sub.SinkOpts.end(); ++Opt) {
-        if (*Opt == O) {
-          Sub.SinkOpts.erase(Opt);
-          break;
-        }
-      }
     else if (O == Sub.ConsumeAfterOpt)
       Sub.ConsumeAfterOpt = nullptr;
   }
@@ -321,7 +302,7 @@ public:
       if (hasOptions(*S))
         return true;
     }
-    return false;
+    return !Libraries.empty();
   }
 
   bool hasNamedSubCommands() const {
@@ -350,6 +331,34 @@ public:
 
   void printOptionValues();
 
+  void indexLibraryOptions() {
+    bool HadErrors = false;
+    for (; NumIndexedLibraries != Libraries.size(); ++NumIndexedLibraries) {
+      LibraryOptions *L = Libraries[NumIndexedLibraries];
+      L->forEachOption([&](StringRef Spelling, StringRef, StringRef) {
+        StringRef Name = Spelling.rtrim('=');
+        auto [It, Inserted] = LibraryIndex.try_emplace(Name, L);
+        if (Inserted ? none_of(RegisteredSubCommands,
+                               [&](SubCommand *SC) {
+                                 return SC->OptionsMap.contains(Name);
+                               })
+                     : It->second == L)
+          return;
+        errs() << ProgramName << ": CommandLine Error: Option '" << Name
+               << "' registered more than once!\n";
+        HadErrors = true;
+      });
+    }
+    if (HadErrors)
+      report_fatal_error("inconsistency in registered CommandLine options");
+  }
+
+  // A library loaded while parsing (e.g. a pass plugin) may define the name.
+  LibraryOptions *lookupLibraryOption(StringRef Name) {
+    indexLibraryOptions();
+    return LibraryIndex.lookup(Name);
+  }
+
   void registerCategory(OptionCategory *cat) {
     assert(count_if(RegisteredOptionCategories,
                     [cat](const OptionCategory *Category) {
@@ -375,8 +384,7 @@ public:
            "SubCommand::getAll() should not be registered");
     for (auto &E : SubCommand::getAll().OptionsMap) {
       Option *O = E.second;
-      if ((O->isPositional() || O->isSink() || O->isConsumeAfter()) ||
-          O->hasArgStr())
+      if (O->isPositional() || O->isConsumeAfter() || O->hasArgStr())
         addOption(O, sub);
       else
         addLiteralOption(*O, sub, E.first);
@@ -403,25 +411,19 @@ public:
 
     ResetAllOptionOccurrences();
     RegisteredSubCommands.clear();
+    Libraries.clear();
+    LibraryIndex.clear();
+    NumIndexedLibraries = 0;
 
     SubCommand::getTopLevel().reset();
     SubCommand::getAll().reset();
     registerSubCommand(&SubCommand::getTopLevel());
-
-    DefaultOptions.clear();
   }
 
 private:
   SubCommand *ActiveSubCommand = nullptr;
 
   Option *LookupOption(SubCommand &Sub, StringRef &Arg, StringRef &Value);
-  Option *LookupLongOption(SubCommand &Sub, StringRef &Arg, StringRef &Value,
-                           bool LongOptionsUseDoubleDash, bool HaveDoubleDash) {
-    Option *Opt = LookupOption(Sub, Arg, Value);
-    if (Opt && LongOptionsUseDoubleDash && !HaveDoubleDash && !isGrouping(Opt))
-      return nullptr;
-    return Opt;
-  }
   SubCommand *LookupSubCommand(StringRef Name, std::string &NearestString);
 };
 
@@ -439,13 +441,14 @@ static CommandLineParser &globalParser() {
 
 template <typename T, T TrueVal, T FalseVal>
 static bool parseBool(Option &O, StringRef ArgName, StringRef Arg, T &Value) {
-  if (Arg == "" || Arg == "true" || Arg == "TRUE" || Arg == "True" ||
-      Arg == "1") {
+  // ProvideOption passes a null Arg for a bare -flag (treated as true) and an
+  // empty one for -flag= (treated as invalid).
+  if (!Arg.data() || Arg == "true" || Arg == "1") {
     Value = TrueVal;
     return false;
   }
 
-  if (Arg == "false" || Arg == "FALSE" || Arg == "False" || Arg == "0") {
+  if (Arg == "false" || Arg == "0") {
     Value = FalseVal;
     return false;
   }
@@ -480,8 +483,6 @@ void Option::setArgStr(StringRef S) {
     globalParser().updateArgStr(this, S);
   assert(!S.starts_with("-") && "Option can't start with '-");
   ArgStr = S;
-  if (ArgStr.size() == 1)
-    setMiscFlag(Grouping);
 }
 
 void Option::addCategory(OptionCategory &C) {
@@ -498,8 +499,6 @@ void Option::addCategory(OptionCategory &C) {
 void Option::reset() {
   NumOccurrences = 0;
   setDefault();
-  if (isDefaultOption())
-    removeArgument();
 }
 
 void OptionCategory::registerCategory() {
@@ -532,7 +531,6 @@ void SubCommand::unregisterSubCommand() {
 
 void SubCommand::reset() {
   PositionalOpts.clear();
-  SinkOpts.clear();
   OptionsMap.clear();
 
   ConsumeAfterOpt = nullptr;
@@ -715,92 +713,44 @@ bool llvm::cl::ProvidePositionalOption(Option *Handler, StringRef Arg, int i) {
   return ProvideOption(Handler, Handler->ArgStr, Arg, 0, nullptr, Dummy);
 }
 
-// getOptionPred - Check to see if there are any options that satisfy the
-// specified predicate with names that are the prefixes in Name.  This is
-// checked by progressively stripping characters off of the name, checking to
-// see if there options that satisfy the predicate.  If we find one, return it,
-// otherwise return null.
-//
-static Option *getOptionPred(StringRef Name, size_t &Length,
-                             bool (*Pred)(const Option *),
-                             const OptionsMapTy &OptionsMap) {
-  auto OMI = OptionsMap.find(Name);
-  if (OMI != OptionsMap.end() && !Pred(OMI->second))
-    OMI = OptionsMap.end();
-
-  // Loop while we haven't found an option and Name still has at least two
-  // characters in it (so that the next iteration will not be the empty
-  // string.
-  while (OMI == OptionsMap.end() && Name.size() > 1) {
-    Name = Name.drop_back();
-    OMI = OptionsMap.find(Name);
-    if (OMI != OptionsMap.end() && !Pred(OMI->second))
-      OMI = OptionsMap.end();
+// Find the cl::Prefix or cl::AlwaysPrefix option whose name is the longest
+// prefix of Name.
+static Option *findPrefixOption(StringRef Name, size_t &Length,
+                                const OptionsMapTy &OptionsMap) {
+  for (; !Name.empty(); Name = Name.drop_back()) {
+    Option *O = OptionsMap.lookup(Name);
+    if (O && (O->getFormattingFlag() == cl::Prefix ||
+              O->getFormattingFlag() == cl::AlwaysPrefix)) {
+      Length = Name.size();
+      return O;
+    }
   }
-
-  if (OMI != OptionsMap.end() && Pred(OMI->second)) {
-    Length = Name.size();
-    return OMI->second; // Found one!
-  }
-  return nullptr; // No option found!
+  return nullptr;
 }
 
-/// HandlePrefixedOrGroupedOption - The specified argument string (which started
-/// with at least one '-') does not fully match an available option.  Check to
-/// see if this is a prefix or grouped option.  If so, split arg into output an
-/// Arg/Value pair and return the Option to parse it with.
-static Option *HandlePrefixedOrGroupedOption(StringRef &Arg, StringRef &Value,
-                                             bool &ErrorParsing,
-                                             const OptionsMapTy &OptionsMap) {
+/// The specified argument string (which started with at least one '-') does not
+/// fully match an available option.  Check to see if this is a prefix option.
+/// If so, split arg into output an Arg/Value pair and return the Option to
+/// parse it with.
+static Option *HandlePrefixedOption(StringRef &Arg, StringRef &Value,
+                                    const OptionsMapTy &OptionsMap) {
   if (Arg.size() == 1)
     return nullptr;
 
-  // Do the lookup!
   size_t Length = 0;
-  Option *PGOpt = getOptionPred(Arg, Length, isPrefixedOrGrouping, OptionsMap);
-  if (!PGOpt)
+  Option *POpt = findPrefixOption(Arg, Length, OptionsMap);
+  if (!POpt)
     return nullptr;
 
-  do {
-    StringRef MaybeValue =
-        (Length < Arg.size()) ? Arg.substr(Length) : StringRef();
-    Arg = Arg.substr(0, Length);
-    assert(OptionsMap.count(Arg) && OptionsMap.find(Arg)->second == PGOpt);
+  StringRef MaybeValue =
+      (Length < Arg.size()) ? Arg.substr(Length) : StringRef();
+  Arg = Arg.substr(0, Length);
 
-    // cl::Prefix options do not preserve '=' when used separately.
-    // The behavior for them with grouped options should be the same.
-    if (MaybeValue.empty() || PGOpt->getFormattingFlag() == cl::AlwaysPrefix ||
-        (PGOpt->getFormattingFlag() == cl::Prefix && MaybeValue[0] != '=')) {
-      Value = MaybeValue;
-      return PGOpt;
-    }
-
-    if (MaybeValue[0] == '=') {
-      Value = MaybeValue.substr(1);
-      return PGOpt;
-    }
-
-    // This must be a grouped option.
-    assert(isGrouping(PGOpt) && "Broken getOptionPred!");
-
-    // Grouping options inside a group can't have values.
-    if (PGOpt->getValueExpectedFlag() == cl::ValueRequired) {
-      ErrorParsing |= PGOpt->error("may not occur within a group!");
-      return nullptr;
-    }
-
-    // Because the value for the option is not required, we don't need to pass
-    // argc/argv in.
-    int Dummy = 0;
-    ErrorParsing |= ProvideOption(PGOpt, Arg, StringRef(), 0, nullptr, Dummy);
-
-    // Get the next grouping option.
-    Arg = MaybeValue;
-    PGOpt = getOptionPred(Arg, Length, isGrouping, OptionsMap);
-  } while (PGOpt);
-
-  // We could not find a grouping option in the remainder of Arg.
-  return nullptr;
+  // cl::Prefix options do not preserve '=' when used separately.
+  if (POpt->getFormattingFlag() == cl::Prefix && MaybeValue.starts_with("="))
+    MaybeValue = MaybeValue.drop_front();
+  Value = MaybeValue;
+  return POpt;
 }
 
 static bool RequiresValue(const Option *O) {
@@ -1451,8 +1401,7 @@ Error ExpansionContext::readConfigFile(StringRef CfgFile,
 static void initCommonOptions();
 bool cl::ParseCommandLineOptions(int argc, const char *const *argv,
                                  StringRef Overview, raw_ostream *Errs,
-                                 vfs::FileSystem *VFS, const char *EnvVar,
-                                 bool LongOptionsUseDoubleDash) {
+                                 vfs::FileSystem *VFS, const char *EnvVar) {
   initCommonOptions();
   SmallVector<const char *, 20> NewArgv;
   BumpPtrAllocator A;
@@ -1472,8 +1421,8 @@ bool cl::ParseCommandLineOptions(int argc, const char *const *argv,
   int NewArgc = static_cast<int>(NewArgv.size());
 
   // Parse all options.
-  return globalParser().ParseCommandLineOptions(
-      NewArgc, &NewArgv[0], Overview, Errs, VFS, LongOptionsUseDoubleDash);
+  return globalParser().ParseCommandLineOptions(NewArgc, &NewArgv[0], Overview,
+                                                Errs, VFS);
 }
 
 /// Reset all options at least once, so that we can parse different options.
@@ -1492,16 +1441,19 @@ void CommandLineParser::ResetAllOptionOccurrences() {
       O->reset();
     for (Option *O : SC->PositionalOpts)
       O->reset();
-    for (Option *O : SC->SinkOpts)
-      O->reset();
     if (SC->ConsumeAfterOpt)
       SC->ConsumeAfterOpt->reset();
   }
+  for (LibraryOptions *L : Libraries)
+    L->reset();
+  LibraryArgAlloc.Reset();
 }
 
-bool CommandLineParser::ParseCommandLineOptions(
-    int argc, const char *const *argv, StringRef Overview, raw_ostream *Errs,
-    vfs::FileSystem *VFS, bool LongOptionsUseDoubleDash) {
+bool CommandLineParser::ParseCommandLineOptions(int argc,
+                                                const char *const *argv,
+                                                StringRef Overview,
+                                                raw_ostream *Errs,
+                                                vfs::FileSystem *VFS) {
   assert(hasOptions() && "No options specified!");
 
   ProgramOverview = Overview;
@@ -1530,6 +1482,7 @@ bool CommandLineParser::ParseCommandLineOptions(
 
   // Copy the program name into ProgName, making sure not to overflow it.
   ProgramName = std::string(sys::path::filename(StringRef(argv[0])));
+  indexLibraryOptions();
 
   // Check out the positional arguments to collect information about them.
   unsigned NumPositionalRequired = 0;
@@ -1555,12 +1508,7 @@ bool CommandLineParser::ParseCommandLineOptions(
   assert(ChosenSubCommand);
   auto &ConsumeAfterOpt = ChosenSubCommand->ConsumeAfterOpt;
   auto &PositionalOpts = ChosenSubCommand->PositionalOpts;
-  auto &SinkOpts = ChosenSubCommand->SinkOpts;
   auto &OptionsMap = ChosenSubCommand->OptionsMap;
-
-  for (auto *O: DefaultOptions) {
-    addOption(O, true);
-  }
 
   if (ConsumeAfterOpt) {
     assert(PositionalOpts.size() > 0 &&
@@ -1621,7 +1569,6 @@ bool CommandLineParser::ParseCommandLineOptions(
     std::string NearestHandlerString;
     StringRef Value;
     StringRef ArgName = "";
-    bool HaveDoubleDash = false;
 
     // Check to see if this is a positional argument.  This argument is
     // considered to be positional if it doesn't start with '-', if it is "-"
@@ -1660,11 +1607,9 @@ bool CommandLineParser::ParseCommandLineOptions(
       // otherwise feed it to the eating positional.
       ArgName = StringRef(argv[i] + 1);
       // Eat second dash.
-      if (ArgName.consume_front("-"))
-        HaveDoubleDash = true;
+      ArgName.consume_front("-");
 
-      Handler = LookupLongOption(*ChosenSubCommand, ArgName, Value,
-                                 LongOptionsUseDoubleDash, HaveDoubleDash);
+      Handler = LookupOption(*ChosenSubCommand, ArgName, Value);
       if (!Handler || Handler->getFormattingFlag() != cl::Positional) {
         ProvidePositionalOption(ActivePositionalArg, StringRef(argv[i]), i);
         continue; // We are done!
@@ -1672,37 +1617,45 @@ bool CommandLineParser::ParseCommandLineOptions(
     } else { // We start with a '-', must be an argument.
       ArgName = StringRef(argv[i] + 1);
       // Eat second dash.
-      if (ArgName.consume_front("-"))
-        HaveDoubleDash = true;
+      ArgName.consume_front("-");
 
-      Handler = LookupLongOption(*ChosenSubCommand, ArgName, Value,
-                                 LongOptionsUseDoubleDash, HaveDoubleDash);
+      Handler = LookupOption(*ChosenSubCommand, ArgName, Value);
 
       // If Handler is not found in a specialized subcommand, look up handler
       // in the top-level subcommand.
       // cl::opt without cl::sub belongs to top-level subcommand.
       if (!Handler && ChosenSubCommand != &SubCommand::getTopLevel())
-        Handler = LookupLongOption(SubCommand::getTopLevel(), ArgName, Value,
-                                   LongOptionsUseDoubleDash, HaveDoubleDash);
+        Handler = LookupOption(SubCommand::getTopLevel(), ArgName, Value);
 
-      // Check to see if this "option" is really a prefixed or grouped argument.
-      if (!Handler && !(LongOptionsUseDoubleDash && HaveDoubleDash))
-        Handler = HandlePrefixedOrGroupedOption(ArgName, Value, ErrorParsing,
-                                                OptionsMap);
+      if (!Handler) {
+        if (LibraryOptions *L = lookupLibraryOption(ArgName.split('=').first)) {
+          // An option takes at most one separate value.
+          StringSaver Saver(LibraryArgAlloc);
+          const char *Args[2];
+          unsigned NumArgs = std::min(argc - i, 2);
+          for (unsigned J = 0; J != NumArgs; ++J)
+            Args[J] = Saver.save(argv[i + J]).data();
+          unsigned N = 1;
+          if (Error E = L->parse(ArrayRef(Args, NumArgs), N)) {
+            *Errs << ProgramName << ": " << toString(std::move(E)) << '\n';
+            ErrorParsing = true;
+          }
+          i += N - 1;
+          continue;
+        }
+      }
+
+      // Check to see if this "option" is really a prefixed argument.
+      if (!Handler)
+        Handler = HandlePrefixedOption(ArgName, Value, OptionsMap);
 
       // Otherwise, look for the closest available option to report to the user
       // in the upcoming error.
-      if (!Handler && SinkOpts.empty())
+      if (!Handler)
         LookupNearestOption(ArgName, OptionsMap, NearestHandlerString);
     }
 
     if (!Handler) {
-      if (!SinkOpts.empty()) {
-        for (Option *SinkOpt : SinkOpts)
-          SinkOpt->addOccurrence(i, "", StringRef(argv[i]));
-        continue;
-      }
-
       auto ReportUnknownArgument = [&](bool IsArg,
                                        StringRef NearestArgumentName) {
         *Errs << ProgramName << ": Unknown "
@@ -2480,8 +2433,27 @@ public:
     for (const auto &Opt : Opts)
       MaxArgLen = std::max(MaxArgLen, Opt.second->getOptionWidth());
 
+    SmallVector<std::pair<std::string, StringRef>, 0> LibraryOpts;
+    if (ShowHidden)
+      for (LibraryOptions *L : globalParser().Libraries)
+        L->forEachOption(
+            [&](StringRef Spelling, StringRef MetaVar, StringRef Help) {
+              if (!Help.empty())
+                LibraryOpts.emplace_back((Spelling + MetaVar).str(), Help);
+            });
+    llvm::sort(LibraryOpts);
+    for (const auto &[Name, Help] : LibraryOpts)
+      MaxArgLen = std::max(MaxArgLen, argPlusPrefixesSize(Name));
+
     outs() << "OPTIONS:\n";
     printOptions(Opts, MaxArgLen);
+
+    if (!LibraryOpts.empty())
+      outs() << "\nLibrary options:\n\n";
+    for (const auto &[Name, Help] : LibraryOpts) {
+      outs() << PrintArg(Name);
+      Option::printHelpStr(Help, MaxArgLen, argPlusPrefixesSize(Name));
+    }
 
     // Print any extra help the user has declared.
     for (const auto &I : globalParser().MoreHelp)
@@ -2678,8 +2650,7 @@ struct CommandLineCommonOptions {
       cl::cat(GenericCategory),
       cl::sub(SubCommand::getAll())};
 
-  cl::alias HOpA{"h", cl::desc("Alias for --help"), cl::aliasopt(HOp),
-                 cl::DefaultOption};
+  cl::alias HOpA{"h", cl::desc("Alias for --help"), cl::aliasopt(HOp)};
 
   cl::opt<HelpPrinterWrapper, true, parser<bool>> HHOp{
       "help-hidden",
@@ -2908,6 +2879,11 @@ void cl::HideUnrelatedOptions(ArrayRef<const cl::OptionCategory *> Categories,
 }
 
 void cl::ResetCommandLineParser() { globalParser().reset(); }
+
+void cl::addLibraryOptions(LibraryOptions &L) {
+  globalParser().Libraries.push_back(&L);
+}
+
 void cl::ResetAllOptionOccurrences() {
   globalParser().ResetAllOptionOccurrences();
 }

@@ -99,6 +99,7 @@ public:
   void SetVirtualAddressableBits(uint32_t bits);
   uint32_t GetHighmemVirtualAddressableBits() const;
   void SetHighmemVirtualAddressableBits(uint32_t bits);
+  void AddressMaskChangedCallback();
   void SetPythonOSPluginPath(const FileSpec &file);
   bool GetIgnoreBreakpointsInExpressions() const;
   void SetIgnoreBreakpointsInExpressions(bool ignore);
@@ -665,11 +666,12 @@ public:
   ///     been initialized yet.
   ///
   /// \return
-  ///     The cached utility function or null if the platform is not the
-  ///     same as the target's platform.
-  UtilityFunction *GetLoadImageUtilityFunction(
+  ///     The cached utility function, or an Error if the platform is not
+  ///     the same as the target's platform, or if it could not be created.
+  llvm::Expected<UtilityFunction &> GetLoadImageUtilityFunction(
       Platform *platform,
-      llvm::function_ref<std::unique_ptr<UtilityFunction>()> factory);
+      llvm::function_ref<llvm::Expected<std::unique_ptr<UtilityFunction>>()>
+          factory);
 
   /// Get the dynamic loader plug-in for this process.
   ///
@@ -1292,7 +1294,7 @@ public:
 
   lldb::ExpressionResults
   RunThreadPlan(ExecutionContext &exe_ctx, lldb::ThreadPlanSP &thread_plan_sp,
-                const EvaluateExpressionOptions &options,
+                const EvaluateExpressionOptions &requested_options,
                 DiagnosticManager &diagnostic_manager);
 
   void GetStatus(Stream &ostrm, bool is_verbose = false);
@@ -1690,13 +1692,13 @@ public:
   size_t ReadMemoryFromInferior(lldb::addr_t vm_addr, void *buf, size_t size,
                                 Status &error);
 
-  /// Read a NULL terminated C string from memory
+  /// Read a null-terminated C string from memory
   ///
-  /// This function will read a cache page at a time until the NULL
-  /// C string terminator is found. It will stop reading if the NULL
-  /// termination byte isn't found before reading \a cstr_max_len bytes, and
-  /// the results are always guaranteed to be NULL terminated (at most
-  /// cstr_max_len - 1 bytes will be read).
+  /// This function will read a cache page at a time until the null
+  /// terminator is found. It will stop reading if the null terminator isn't
+  /// found before reading \a cstr_max_len bytes, and the results are always
+  /// guaranteed to be null-terminated (at most cstr_max_len - 1 bytes will be
+  /// read).
   size_t ReadCStringFromMemory(lldb::addr_t vm_addr, char *cstr,
                                size_t cstr_max_len, Status &error);
 
@@ -1862,6 +1864,10 @@ public:
         GetPluginName());
     return LLDB_INVALID_ADDRESS;
   }
+
+  /// Determines whether DoAllocateMemory is expected to succeed, without
+  /// running code in the process.
+  virtual bool DoCanAllocateMemory() { return false; }
 
   virtual Status WriteObjectFile(std::vector<ObjectFile::LoadableData> entries);
 
@@ -3589,6 +3595,9 @@ protected:
 
   std::unique_ptr<UtilityFunction> m_dlopen_utility_func_up;
   llvm::once_flag m_dlopen_utility_func_flag_once;
+  /// The error from the one attempt to create m_dlopen_utility_func_up,
+  /// set only if that attempt failed.
+  Status m_dlopen_utility_func_error;
 
   /// Per process source file cache.
   SourceManager::SourceFileCache m_source_file_cache;

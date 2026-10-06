@@ -1365,6 +1365,43 @@ SegmentedRegionBranchTerminatorOp::getMutableSuccessorOperands(
 }
 
 //===----------------------------------------------------------------------===//
+// IsolatedRegionBranchOp
+//===----------------------------------------------------------------------===//
+
+void IsolatedRegionBranchOp::getSuccessorRegions(
+    RegionBranchPoint point, SmallVectorImpl<RegionSuccessor> &regions) {
+  if (!point.isParent()) {
+    regions.emplace_back(getOperation());
+    return;
+  }
+  for (Region &region : getBranches())
+    regions.emplace_back(&region);
+}
+
+ValueRange
+IsolatedRegionBranchOp::getSuccessorInputs(RegionSuccessor successor) {
+  return successor.isOperation()
+             ? ValueRange(getOutputs())
+             : ValueRange(successor.getSuccessor()->getArguments());
+}
+
+OperandRange
+IsolatedRegionBranchOp::getEntrySuccessorOperands(RegionSuccessor successor) {
+  return getInputs();
+}
+
+void IsolatedRegionBranchOp::getCanonicalizationPatterns(
+    RewritePatternSet &patterns, MLIRContext *context) {
+  populateRegionBranchOpInterfaceCanonicalizationPatterns(patterns,
+                                                          getOperationName());
+}
+
+MutableOperandRange
+IsolatedRegionYieldOp::getMutableSuccessorOperands(RegionSuccessor successor) {
+  return getValuesMutable();
+}
+
+//===----------------------------------------------------------------------===//
 // LoopBlockOp
 //===----------------------------------------------------------------------===//
 
@@ -1799,7 +1836,7 @@ llvm::SmallVector<MemorySlot> TestMultiSlotAlloca::getPromotableSlots() {
 
 Value TestMultiSlotAlloca::getDefaultValue(const MemorySlot &slot,
                                            OpBuilder &builder) {
-  return TestOpConstant::create(builder, getLoc(), slot.elemType,
+  return TestOpConstant::create(builder, getLoc(), slot.valueType,
                                 builder.getI32IntegerAttr(42));
 }
 
@@ -1954,10 +1991,10 @@ Value TestTransparentCastAlias::projectSlotValueToAliasValue(
     OpOperand & /*aliasedSlotPointerOperand*/,
     const MemorySlot & /*parentSlot*/, const MemorySlot &aliasSlot,
     Value slotValue, OpBuilder &builder) {
-  if (slotValue.getType() == aliasSlot.elemType)
+  if (slotValue.getType() == aliasSlot.valueType)
     return slotValue;
   return UnrealizedConversionCastOp::create(builder, getLoc(),
-                                            aliasSlot.elemType, slotValue)
+                                            aliasSlot.valueType, slotValue)
       .getResult(0);
 }
 
@@ -1965,10 +2002,10 @@ Value TestTransparentCastAlias::projectAliasValueToSlotValue(
     OpOperand & /*aliasedSlotPointerOperand*/, const MemorySlot &parentSlot,
     const MemorySlot & /*aliasSlot*/, Value aliasValue, Value /*reachingDef*/,
     OpBuilder &builder) {
-  if (aliasValue.getType() == parentSlot.elemType)
+  if (aliasValue.getType() == parentSlot.valueType)
     return aliasValue;
   return UnrealizedConversionCastOp::create(builder, getLoc(),
-                                            parentSlot.elemType, aliasValue)
+                                            parentSlot.valueType, aliasValue)
       .getResult(0);
 }
 
@@ -2010,10 +2047,10 @@ Value TestTransparentDualAlias::projectSlotValueToAliasValue(
     OpOperand & /*aliasedSlotPointerOperand*/,
     const MemorySlot & /*parentSlot*/, const MemorySlot &aliasSlot,
     Value slotValue, OpBuilder &builder) {
-  if (slotValue.getType() == aliasSlot.elemType)
+  if (slotValue.getType() == aliasSlot.valueType)
     return slotValue;
   return UnrealizedConversionCastOp::create(builder, getLoc(),
-                                            aliasSlot.elemType, slotValue)
+                                            aliasSlot.valueType, slotValue)
       .getResult(0);
 }
 
@@ -2021,10 +2058,10 @@ Value TestTransparentDualAlias::projectAliasValueToSlotValue(
     OpOperand & /*aliasedSlotPointerOperand*/, const MemorySlot &parentSlot,
     const MemorySlot & /*aliasSlot*/, Value aliasValue, Value /*reachingDef*/,
     OpBuilder &builder) {
-  if (aliasValue.getType() == parentSlot.elemType)
+  if (aliasValue.getType() == parentSlot.valueType)
     return aliasValue;
   return UnrealizedConversionCastOp::create(builder, getLoc(),
-                                            parentSlot.elemType, aliasValue)
+                                            parentSlot.valueType, aliasValue)
       .getResult(0);
 }
 
@@ -2061,7 +2098,7 @@ Value TestPartialAlias::projectSlotValueToAliasValue(
     Value slotValue, OpBuilder &builder) {
   // Sub-value extraction: 1-input cast.
   return UnrealizedConversionCastOp::create(builder, getLoc(),
-                                            aliasSlot.elemType, slotValue)
+                                            aliasSlot.valueType, slotValue)
       .getResult(0);
 }
 
@@ -2072,7 +2109,7 @@ Value TestPartialAlias::projectAliasValueToSlotValue(
   // Sub-value insertion into the current reaching definition: emit a 2-input
   // cast taking both the new alias value and the existing parent value.
   return UnrealizedConversionCastOp::create(builder, getLoc(),
-                                            parentSlot.elemType,
+                                            parentSlot.valueType,
                                             ValueRange{aliasValue, reachingDef})
       .getResult(0);
 }
