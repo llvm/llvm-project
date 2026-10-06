@@ -7,9 +7,6 @@
 ; which SCEV cannot treat as a non-wrapping recurrence.
 ; https://alive2.llvm.org/ce/z/CUWfpR
 
-target datalayout = "e-m:e-p270:32:32-p271:32:32-p272:64:64-i64:64-i128:128-f80:128-n8:16:32:64-S128"
-target triple = "x86_64-unknown-linux-gnu"
-
 declare void @use32(i32)
 
 define i64 @sext_add_nsw_of_trunc_nsw(i64 %x) {
@@ -140,7 +137,7 @@ define <2 x i64> @sext_add_nsw_of_trunc_nsw_var_vec(<2 x i64> %x, <2 x i32> %y) 
   ret <2 x i64> %e
 }
 
-; The narrow add has another use. The sext still widens; the add stays.
+; The narrow add has another use, so widening it would duplicate the add.
 
 define i64 @sext_add_nsw_of_trunc_nsw_var_extra_use(i64 %x, i32 %y) {
 ; CHECK-LABEL: define i64 @sext_add_nsw_of_trunc_nsw_var_extra_use(
@@ -148,8 +145,7 @@ define i64 @sext_add_nsw_of_trunc_nsw_var_extra_use(i64 %x, i32 %y) {
 ; CHECK-NEXT:    [[T:%.*]] = trunc nsw i64 [[X]] to i32
 ; CHECK-NEXT:    [[S:%.*]] = add nsw i32 [[Y]], [[T]]
 ; CHECK-NEXT:    call void @use32(i32 [[S]])
-; CHECK-NEXT:    [[Y_SEXT:%.*]] = sext i32 [[Y]] to i64
-; CHECK-NEXT:    [[E:%.*]] = add nsw i64 [[X]], [[Y_SEXT]]
+; CHECK-NEXT:    [[E:%.*]] = sext i32 [[S]] to i64
 ; CHECK-NEXT:    ret i64 [[E]]
 ;
   %t = trunc nsw i64 %x to i32
