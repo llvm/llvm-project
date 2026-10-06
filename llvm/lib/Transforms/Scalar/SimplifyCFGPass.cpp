@@ -28,6 +28,8 @@
 #include "llvm/Analysis/CFG.h"
 #include "llvm/Analysis/DomTreeUpdater.h"
 #include "llvm/Analysis/GlobalsModRef.h"
+#include "llvm/Analysis/LoopInfo.h"
+#include "llvm/Analysis/ScalarEvolution.h"
 #include "llvm/Analysis/TargetTransformInfo.h"
 #include "llvm/IR/Attributes.h"
 #include "llvm/IR/CFG.h"
@@ -379,6 +381,10 @@ PreservedAnalyses SimplifyCFGPass::run(Function &F,
                                        FunctionAnalysisManager &AM) {
   auto &TTI = AM.getResult<TargetIRAnalysis>(F);
   Options.AC = &AM.getResult<AssumptionAnalysis>(F);
+  // Use loop info and SCEV only if they have already been computed, to keep
+  // sinking decisions from requiring extra analyses.
+  Options.LI = AM.getCachedResult<LoopAnalysis>(F);
+  Options.SE = AM.getCachedResult<ScalarEvolutionAnalysis>(F);
   DominatorTree *DT = nullptr;
   if (RequireAndPreserveDomTree)
     DT = &AM.getResult<DominatorTreeAnalysis>(F);
@@ -415,6 +421,10 @@ struct CFGSimplifyPass : public FunctionPass {
       return false;
 
     Options.AC = &getAnalysis<AssumptionCacheTracker>().getAssumptionCache(F);
+    if (auto *LIWP = getAnalysisIfAvailable<LoopInfoWrapperPass>())
+      Options.LI = &LIWP->getLoopInfo();
+    if (auto *SEWP = getAnalysisIfAvailable<ScalarEvolutionWrapperPass>())
+      Options.SE = &SEWP->getSE();
     DominatorTree *DT = nullptr;
     if (RequireAndPreserveDomTree)
       DT = &getAnalysis<DominatorTreeWrapperPass>().getDomTree();

@@ -19,6 +19,8 @@
 namespace llvm {
 
 class AssumptionCache;
+class LoopInfo;
+class ScalarEvolution;
 
 struct SimplifyCFGOptions {
   int BonusInstThreshold = 1;
@@ -35,6 +37,10 @@ struct SimplifyCFGOptions {
   bool SpeculateUnpredictables = false;
 
   AssumptionCache *AC = nullptr;
+  // Only used to identify unit-stride memory accesses when sinking. Both may be
+  // null, in which case no access is treated as unit-stride.
+  LoopInfo *LI = nullptr;
+  ScalarEvolution *SE = nullptr;
 
   // Support 'builder' pattern to set members by name at construction time.
   SimplifyCFGOptions &bonusInstThreshold(int I) {
