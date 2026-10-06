@@ -237,6 +237,7 @@ static constexpr TriageCommand g_triage_commands[] = {
     {"image lookup -va $pc", Requires::Frame},
     {"register read", Requires::Frame},
     {"frame variable", Requires::Frame},
+    {"scripting extension list --instances", Requires::Always},
 };
 
 static bool Available(Requires requirement, const ExecutionContext &exe_ctx) {

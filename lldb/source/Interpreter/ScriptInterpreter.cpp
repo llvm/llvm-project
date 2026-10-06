@@ -65,6 +65,18 @@ bool ScriptInterpreter::LoadScriptingModule(
   return false;
 }
 
+void ScriptInterpreter::SetImportedModulePath(llvm::StringRef module_name,
+                                              const FileSpec &path) {
+  std::lock_guard<std::mutex> guard(m_imported_modules_mutex);
+  m_imported_modules[module_name] = path;
+}
+
+FileSpec
+ScriptInterpreter::GetImportedModulePath(llvm::StringRef module_name) const {
+  std::lock_guard<std::mutex> guard(m_imported_modules_mutex);
+  return m_imported_modules.lookup(module_name);
+}
+
 std::string ScriptInterpreter::LanguageToString(lldb::ScriptLanguage language) {
   switch (language) {
   case eScriptLanguageNone:
