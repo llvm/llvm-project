@@ -11,7 +11,6 @@
 
 #include "llvm/Support/Error.h"
 #include <atomic>
-#include <condition_variable>
 #include <mutex>
 #include <string>
 
@@ -60,7 +59,9 @@ public:
 
   /// Closes the ConPTY and invalidates its handle, without closing the STDIN
   /// and STDOUT pipes. Closing the ConPTY signals EOF to any process currently
-  /// attached to it.
+  /// attached to it. The console host then writes its last frame to the STDOUT
+  /// pipe and closes its end, so reading the pipe up to EOF gets all of the
+  /// output.
   ///
   /// In pipe mode there is no ConPTY to close: this cancels the read pending
   /// on the STDOUT pipe and marks the pipes closed, so IsConnected() returns
@@ -117,26 +118,6 @@ public:
 
   Mode GetMode() const { return m_mode; };
 
-  /// Returns a reference to the mutex used to synchronize access to the
-  /// ConPTY state.
-  std::mutex &GetMutex() { return m_mutex; };
-
-  /// Returns a reference to the condition variable used to signal state changes
-  /// to threads waiting on the ConPTY (e.g. waiting for output or shutdown).
-  std::condition_variable &GetCV() { return m_cv; };
-
-  /// Returns whether the ConPTY is in the process of shutting down.
-  ///
-  /// \return
-  ///     A reference to the atomic bool that is set to true when the ConPTY
-  ///     is stopping. Callers should check this in their read/write loops to
-  ///     exit gracefully.
-  bool IsStopping() const { return m_stopping.load(); };
-
-  /// Sets the stopping flag to \p value, signalling to threads waiting on the
-  /// ConPTY that they should stop.
-  void SetStopping(bool value) { m_stopping = value; };
-
 protected:
   HANDLE m_conpty_handle = reinterpret_cast<HANDLE>(static_cast<intptr_t>(-1));
   HANDLE m_conpty_output = reinterpret_cast<HANDLE>(static_cast<intptr_t>(-1));
@@ -152,8 +133,6 @@ protected:
   std::atomic<bool> m_pipes_closed = false;
   Mode m_mode = Mode::None;
   std::mutex m_mutex{};
-  std::condition_variable m_cv{};
-  std::atomic<bool> m_stopping = false;
 };
 } // namespace lldb_private
 

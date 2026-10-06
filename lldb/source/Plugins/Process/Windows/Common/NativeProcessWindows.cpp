@@ -979,6 +979,8 @@ void NativeProcessWindows::StopStdioForwarding() {
   if (!m_stdio_communication.HasConnection())
     return;
 
+  m_stdio_communication.SynchronizeWithReadThread();
+
   if (m_pty)
     m_pty->Close();
 
