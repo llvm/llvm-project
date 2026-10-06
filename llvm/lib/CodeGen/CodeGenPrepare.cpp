@@ -8846,10 +8846,10 @@ static bool strengthReduceVectorPhiUsers(PHINode *Phi, LoopInfo *LI) {
   auto EltCnt = cast<VectorType>(Phi->getType())->getElementCount();
   const APInt *ShiftAmt = nullptr;
   Value *PtrStride = nullptr;
-  if (!match(LoopStride,
-             m_Splat(
-                 m_Value(PtrStride, m_Shl(m_VScale(), m_APInt(ShiftAmt))))) ||
-                1ULL << ShiftAmt->getZExtValue() != EltCnt.getKnownMinValue())
+  if (!match(
+          LoopStride,
+          m_Splat(m_Value(PtrStride, m_Shl(m_VScale(), m_APInt(ShiftAmt))))) ||
+      1ULL << ShiftAmt->getZExtValue() != EltCnt.getKnownMinValue())
     return false;
 
   // Check that the elements are integers equal in size to pointers.
