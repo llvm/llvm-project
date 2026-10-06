@@ -3,7 +3,8 @@
 ; RUN: llc < %s -mtriple=x86_64-unknown-linux-gnu -mcpu=x86-64-v3 | FileCheck %s --check-prefix=FMA
 ; RUN: llc < %s -mtriple=x86_64-unknown-linux-gnu -mcpu=x86-64-v4 -mattr=+avx512fp16 | FileCheck %s --check-prefix=FP16
 
-; Check v8f16 FMA lowering with approximate, exact, and native FP16 paths.
+; Check approximate f16 vector FMA promotion while preserving exact, contract,
+; and native FP16 paths.
 
 define <8 x half> @afn_fma_v8f16(<8 x half> %a, <8 x half> %b, <8 x half> %c) nounwind {
 ; NOFMA-LABEL: afn_fma_v8f16:

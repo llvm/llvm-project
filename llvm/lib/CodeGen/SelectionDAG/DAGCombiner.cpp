@@ -19984,6 +19984,61 @@ SDValue DAGCombiner::visitFMA(SDNode *N) {
           DAG.FoldConstantArithmetic(N->getOpcode(), DL, VT, {N0, N1, N2}))
     return C;
 
+  if (Level == BeforeLegalizeTypes && VT.isFixedLengthVector() &&
+      VT.getVectorElementType() == MVT::f16 &&
+      N->getFlags().hasApproximateFuncs()) {
+    // Check whether FMA becomes legal after widening, splitting, or optionally
+    // scalarizing its vector type.
+    auto isFMALegalAfterVectorTypeLegalization = [&](EVT OpVT, bool AllowCustom,
+                                                     bool AllowScalarization) {
+      LLVMContext &Ctx = *DAG.getContext();
+
+      while (!TLI.isTypeLegal(OpVT)) {
+        TargetLowering::LegalizeTypeAction Action =
+            TLI.getTypeAction(Ctx, OpVT);
+
+        if (Action == TargetLowering::TypeScalarizeVector &&
+            AllowScalarization) {
+          OpVT = OpVT.getVectorElementType();
+          continue;
+        }
+
+        if (Action != TargetLowering::TypeWidenVector &&
+            Action != TargetLowering::TypeSplitVector)
+          return false;
+
+        OpVT = TLI.getTypeToTransformTo(Ctx, OpVT);
+      }
+
+      return AllowCustom ? TLI.isOperationLegalOrCustom(ISD::FMA, OpVT)
+                         : TLI.isOperationLegal(ISD::FMA, OpVT);
+    };
+
+    // Preserve native and custom f16 FMA lowering, including native scalar
+    // lowering of small vectors. Otherwise, afn permits rounding through f32.
+    // Exact f16 FMA cannot do so because it may introduce double rounding.
+    bool HasNativeOrCustomF16FMA = isFMALegalAfterVectorTypeLegalization(
+        VT, /*AllowCustom=*/true, /*AllowScalarization=*/true);
+
+    if (!HasNativeOrCustomF16FMA) {
+      EVT F32VT = VT.changeVectorElementType(*DAG.getContext(), MVT::f32);
+      // Require a legal vector f32 FMA; custom lowering or scalarization may
+      // not make this promotion profitable.
+      bool HasLegalF32FMA = isFMALegalAfterVectorTypeLegalization(
+          F32VT, /*AllowCustom=*/false, /*AllowScalarization=*/false);
+
+      if (HasLegalF32FMA) {
+        SDValue A = DAG.getNode(ISD::FP_EXTEND, DL, F32VT, N0);
+        SDValue B = DAG.getNode(ISD::FP_EXTEND, DL, F32VT, N1);
+        SDValue C = DAG.getNode(ISD::FP_EXTEND, DL, F32VT, N2);
+        SDValue Res = DAG.getNode(ISD::FMA, DL, F32VT, A, B, C);
+
+        return DAG.getNode(ISD::FP_ROUND, DL, VT, Res,
+                           DAG.getIntPtrConstant(0, DL, /*isTarget=*/true));
+      }
+    }
+  }
+
   // (-N0 * -N1) + N2 --> (N0 * N1) + N2
   TargetLowering::NegatibleCost CostN0 =
       TargetLowering::NegatibleCost::Expensive;
