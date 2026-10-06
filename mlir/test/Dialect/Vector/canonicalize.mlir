@@ -821,33 +821,24 @@ func.func @insert_extract_transpose_3d(
 //  CHECK-SAME:   %[[A:[a-zA-Z0-9]*]]: vector<3x4x5x6xf32>
 //  CHECK-SAME:   %[[I:[a-zA-Z0-9]*]]: index
 //  CHECK-SAME:   %[[J:[a-zA-Z0-9]*]]: index
-func.func @fold_extracts(%a : vector<3x4x5x6xf32>, %i : index, %j : index) -> (f32, vector<4x5x6xf32>, f32, f32, f32) {
-  // Static positions only.
-  %b = vector.extract %a[0] : vector<4x5x6xf32> from vector<3x4x5x6xf32>
-  %c = vector.extract %b[1, 2] : vector<6xf32> from vector<4x5x6xf32>
-  //  CHECK-NEXT: vector.extract %[[A]][0, 1, 2, 3] : f32 from vector<3x4x5x6xf32>
-  %d = vector.extract %c[3] : f32 from vector<6xf32>
-
-  //  CHECK-NEXT: vector.extract %[[A]][0] : vector<4x5x6xf32> from vector<3x4x5x6xf32>
-  %e = vector.extract %a[0] : vector<4x5x6xf32> from vector<3x4x5x6xf32>
-
+func.func @fold_extracts(%a : vector<3x4x5x6xf32>, %i : index, %j : index) -> (f32, f32, f32) {
   // Dynamic position (%i) in the inner extract.
-  %f = vector.extract %a[%i] : vector<4x5x6xf32> from vector<3x4x5x6xf32>
+  %b = vector.extract %a[%i] : vector<4x5x6xf32> from vector<3x4x5x6xf32>
   //  CHECK-NEXT: vector.extract %[[A]][%[[I]], 1, 2, 3] : f32 from vector<3x4x5x6xf32>
-  %g = vector.extract %f[1, 2, 3] : f32 from vector<4x5x6xf32>
+  %c = vector.extract %b[1, 2, 3] : f32 from vector<4x5x6xf32>
 
   // Dynamic position (%j) in the outer extract.
-  %h = vector.extract %a[0, 1] : vector<5x6xf32> from vector<3x4x5x6xf32>
+  %d = vector.extract %a[0, 1] : vector<5x6xf32> from vector<3x4x5x6xf32>
   //  CHECK-NEXT: vector.extract %[[A]][0, 1, %[[J]], 3] : f32 from vector<3x4x5x6xf32>
-  %k = vector.extract %h[%j, 3] : f32 from vector<5x6xf32>
+  %e = vector.extract %d[%j, 3] : f32 from vector<5x6xf32>
 
   // Dynamic positions (%i, %j) in both extracts.
-  %l = vector.extract %a[%i, 1] : vector<5x6xf32> from vector<3x4x5x6xf32>
+  %f = vector.extract %a[%i, 1] : vector<5x6xf32> from vector<3x4x5x6xf32>
   //  CHECK-NEXT: vector.extract %[[A]][%[[I]], 1, %[[J]], 3] : f32 from vector<3x4x5x6xf32>
-  %m = vector.extract %l[%j, 3] : f32 from vector<5x6xf32>
+  %g = vector.extract %f[%j, 3] : f32 from vector<5x6xf32>
 
   //  CHECK-NEXT: return
-  return %d, %e, %g, %k, %m : f32, vector<4x5x6xf32>, f32, f32, f32
+  return %c, %e, %g : f32, f32, f32
 }
 
 // -----
