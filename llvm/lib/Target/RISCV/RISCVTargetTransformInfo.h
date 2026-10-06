@@ -73,12 +73,12 @@ class RISCVTTIImpl final : public BasicTTIImplBase<RISCVTTIImpl> {
                                TTI::TargetCostKind CostKind) const;
 
   /// Return the type used to cost vzip.vv, whose LMUL represents the
-  /// interleaved destination EMUL. Return std::nullopt if illegal.
-  std::optional<MVT> getZvzipVZIPCostVT(MVT InterleavedVT) const;
+  /// interleaved destination EMUL. Return an invalid MVT if illegal.
+  MVT getZvzipVZIPCostVT(MVT InterleavedVT) const;
 
   /// Return the type used to cost vunzipe.v/vunzipo.v, whose LMUL represents
-  /// the interleaved source EMUL. Return std::nullopt if illegal.
-  std::optional<MVT> getZvzipVUNZIPCostVT(MVT InterleavedVT) const;
+  /// the interleaved source EMUL. Return an invalid MVT if illegal.
+  MVT getZvzipVUNZIPCostVT(MVT InterleavedVT) const;
 
   /// If a fixed-length shuffle can be lowered to a vzip.vv instruction,
   /// return its cost.

@@ -743,9 +743,9 @@ InstructionCost RISCVTTIImpl::getSlideCost(FixedVectorType *Tp,
   return FirstSlideCost + SecondSlideCost + MaskCost;
 }
 
-std::optional<MVT> RISCVTTIImpl::getZvzipVZIPCostVT(MVT InterleavedVT) const {
+MVT RISCVTTIImpl::getZvzipVZIPCostVT(MVT InterleavedVT) const {
   if (!InterleavedVT.getVectorElementCount().isKnownEven())
-    return std::nullopt;
+    return MVT::INVALID_SIMPLE_VALUE_TYPE;
 
   MVT CostVT = InterleavedVT;
   if (InterleavedVT.isFixedLengthVector()) {
@@ -760,13 +760,13 @@ std::optional<MVT> RISCVTTIImpl::getZvzipVZIPCostVT(MVT InterleavedVT) const {
   // Perform the 2 * SEW <= LMUL * min(ELEN, VLEN) check.
   if (EltBits * 16 >
       LMULOctuple * std::min(ST->getELen(), ST->getRealMinVLen()))
-    return std::nullopt;
+    return MVT::INVALID_SIMPLE_VALUE_TYPE;
   return CostVT;
 }
 
-std::optional<MVT> RISCVTTIImpl::getZvzipVUNZIPCostVT(MVT InterleavedVT) const {
+MVT RISCVTTIImpl::getZvzipVUNZIPCostVT(MVT InterleavedVT) const {
   if (!InterleavedVT.getVectorElementCount().isKnownEven())
-    return std::nullopt;
+    return MVT::INVALID_SIMPLE_VALUE_TYPE;
 
   MVT CostVT = InterleavedVT;
   // lowerZvzipVUNZIP widens the source container if halving it would produce
@@ -781,7 +781,7 @@ std::optional<MVT> RISCVTTIImpl::getZvzipVUNZIPCostVT(MVT InterleavedVT) const {
 
   MVT DeinterleavedVT = CostVT.getHalfNumVectorElementsVT();
   if (RISCVTargetLowering::getLMUL(DeinterleavedVT) == RISCVVType::LMUL_8)
-    return std::nullopt;
+    return MVT::INVALID_SIMPLE_VALUE_TYPE;
   return CostVT;
 }
 
@@ -853,12 +853,12 @@ InstructionCost RISCVTTIImpl::getVZIPCost(TTI::ShuffleKind Kind,
     return InstructionCost::getInvalid();
 
   std::pair<InstructionCost, MVT> DstLT = getTypeLegalizationCost(DstTy);
-  std::optional<MVT> CostVT = getZvzipVZIPCostVT(DstLT.second);
-  if (!CostVT)
+  MVT CostVT = getZvzipVZIPCostVT(DstLT.second);
+  if (!CostVT.isValid())
     return InstructionCost::getInvalid();
 
   InstructionCost Cost =
-      DstLT.first * getRISCVInstructionCost(RISCV::VZIP_VV, *CostVT, CostKind);
+      DstLT.first * getRISCVInstructionCost(RISCV::VZIP_VV, CostVT, CostKind);
 
   // For a shuffle such as
   //   %r = shufflevector <4 x i32> %v, <4 x i32> poison,
@@ -953,9 +953,8 @@ InstructionCost RISCVTTIImpl::getShuffleCost(
         if (ST->hasStdExtZvzip() && EltTp.getScalarSizeInBits() != 1 &&
             ShuffleVectorInst::isDeInterleaveMaskOfFactor(Mask, 2, Index)) {
           unsigned Opcode = Index == 0 ? RISCV::VUNZIPE_V : RISCV::VUNZIPO_V;
-          if (auto CostVT = getZvzipVUNZIPCostVT(LT.second))
-            return LT.first *
-                   getRISCVInstructionCost(Opcode, *CostVT, CostKind);
+          if (MVT CostVT = getZvzipVUNZIPCostVT(LT.second); CostVT.isValid())
+            return LT.first * getRISCVInstructionCost(Opcode, CostVT, CostKind);
         }
 
         int SubVectorSize;
@@ -2122,13 +2121,13 @@ RISCVTTIImpl::getIntrinsicInstrCost(const IntrinsicCostAttributes &ICA,
     if (!LT.second.isScalableVector())
       break;
     if (IsInterleave) {
-      if (std::optional<MVT> CostVT = getZvzipVZIPCostVT(LT.second))
+      if (MVT CostVT = getZvzipVZIPCostVT(LT.second); CostVT.isValid())
         return LT.first *
-               getRISCVInstructionCost(RISCV::VZIP_VV, *CostVT, CostKind);
-    } else if (std::optional<MVT> CostVT = getZvzipVUNZIPCostVT(LT.second)) {
+               getRISCVInstructionCost(RISCV::VZIP_VV, CostVT, CostKind);
+    } else if (MVT CostVT = getZvzipVUNZIPCostVT(LT.second); CostVT.isValid()) {
       return LT.first *
              getRISCVInstructionCost({RISCV::VUNZIPE_V, RISCV::VUNZIPO_V},
-                                     *CostVT, CostKind);
+                                     CostVT, CostKind);
     }
     break;
   }
