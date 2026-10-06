@@ -1392,10 +1392,9 @@ void AMDGPUAsmPrinter::getSIProgramInfo(SIProgramInfo &ProgInfo,
   }
 
   if (STM.hasSGPRInitBug()) {
-    ProgInfo.NumSGPR =
-        CreateExpr(AMDGPU::IsaInfo::FIXED_NUM_SGPRS_FOR_INIT_BUG);
+    ProgInfo.NumSGPR = CreateExpr(AMDGPU::FIXED_NUM_SGPRS_FOR_INIT_BUG);
     ProgInfo.NumSGPRsForWavesPerEU =
-        CreateExpr(AMDGPU::IsaInfo::FIXED_NUM_SGPRS_FOR_INIT_BUG);
+        CreateExpr(AMDGPU::FIXED_NUM_SGPRS_FOR_INIT_BUG);
   }
 
   if (MFI->getNumUserSGPRs() > STM.getMaxNumUserSGPRs()) {
