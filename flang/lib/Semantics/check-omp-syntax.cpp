@@ -48,7 +48,7 @@ static llvm::omp::Version GetClosestVersion(
     llvm::directive::VersionRange range, llvm::omp::Version version) {
   if (range.isValid()) {
     return llvm::omp::Version(
-        std::min(std::max(version.value(), range.Min), range.Max));
+        std::min(std::max(version, range.Min), range.Max));
   }
   return llvm::omp::Version();
 }
@@ -354,7 +354,7 @@ static ResultTy VerifyUltimate(
 bool OmpStructureChecker::VerifyClauseVersion(
     parser::OmpDirectiveName dirName, const AppliedClauseInfo &info) {
   llvm::omp::Version version{context_.langOptions().getOpenMPVersion()};
-  llvm::omp::Version maxVer{std::numeric_limits<int>::max()};
+  llvm::omp::Version maxVer{llvm::omp::Version::Max()};
   bool isCancel{dirName.v == llvm::omp::Directive::OMPD_cancel ||
       dirName.v == llvm::omp::Directive::OMPD_cancellation_point};
 
@@ -604,7 +604,7 @@ bool OmpStructureChecker::VerifyModifierVersion(
     WithSource<llvm::omp::Clause> clause, const AppliedModifierInfo &info) {
   // Verify that the specified modifiers are allowed in this version.
   llvm::omp::Version version{context_.langOptions().getOpenMPVersion()};
-  llvm::omp::Version maxVer{std::numeric_limits<int>::max()};
+  llvm::omp::Version maxVer{llvm::omp::Version::Max()};
 
   auto result = VerifyVersions(info, clause.value, version);
 

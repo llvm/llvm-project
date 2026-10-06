@@ -61,7 +61,7 @@ static OpenMPDirectiveKind checkOpenMPDirectiveName(Parser &P,
                                                     SourceLocation Loc,
                                                     OpenMPDirectiveKind Kind,
                                                     StringRef Name) {
-  unsigned Version = P.getLangOpts().OpenMP;
+  llvm::omp::Version Version = P.getLangOpts().getOpenMPVersion();
   auto [D, VR] = getOpenMPDirectiveKindAndVersions(Name);
   // "ORDERED" is parsed as OMPD_ordered_standalone.
   if (D == Directive::OMPD_ordered_blockassoc)
