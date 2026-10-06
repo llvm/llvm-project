@@ -97,6 +97,14 @@ inline T constant_one_div_two_pi<T>::compute(BOOST_MATH_EXPLICIT_TEMPLATE_TYPE_S
 
 template <class T>
 template<int N>
+inline T constant_log_pi<T>::compute(BOOST_MATH_EXPLICIT_TEMPLATE_TYPE_SPEC((std::integral_constant<int, N>)))
+{
+   BOOST_MATH_STD_USING
+   return log(pi<T, policies::policy<policies::digits2<N> > >());
+}
+
+template <class T>
+template<int N>
 inline T constant_root_pi<T>::compute(BOOST_MATH_EXPLICIT_TEMPLATE_TYPE_SPEC((std::integral_constant<int, N>)))
 {
    BOOST_MATH_STD_USING

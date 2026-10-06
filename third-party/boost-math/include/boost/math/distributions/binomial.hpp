@@ -157,7 +157,7 @@ namespace boost
         template <class RealType, class Policy>
         BOOST_MATH_CUDA_ENABLED inline bool check_dist_and_prob(const char* function, const RealType& N, RealType p, RealType prob, RealType* result, const Policy& pol)
         {
-           if((check_dist(function, N, p, result, pol) && detail::check_probability(function, prob, result, pol)) == false)
+           if(!(check_dist(function, N, p, result, pol) && detail::check_probability(function, prob, result, pol)))
               return false;
            return true;
         }
@@ -226,7 +226,7 @@ namespace boost
            // but zero is the best we can do:
            return 0;
         }
-        if(p == 1 || success_fraction == 1)
+        if(q == 0 || success_fraction == 1)
         {  // Probability of n or fewer successes is always one,
            // so n is the most sensible answer here:
            return trials;
@@ -321,11 +321,11 @@ namespace boost
         BOOST_MATH_STATIC const char* function = "boost::math::binomial_distribution<%1%>::find_lower_bound_on_p";
         // Error checks:
         RealType result = 0;
-        if(false == binomial_detail::check_dist_and_k(
+        if(!(binomial_detail::check_dist_and_k(
            function, trials, RealType(0), successes, &result, Policy())
             &&
            binomial_detail::check_dist_and_prob(
-           function, trials, RealType(0), probability, &result, Policy()))
+           function, trials, RealType(0), probability, &result, Policy())))
         { return result; }
 
         if(successes == 0)
@@ -346,11 +346,11 @@ namespace boost
         BOOST_MATH_STATIC const char* function = "boost::math::binomial_distribution<%1%>::find_upper_bound_on_p";
         // Error checks:
         RealType result = 0;
-        if(false == binomial_detail::check_dist_and_k(
+        if(!(binomial_detail::check_dist_and_k(
            function, trials, RealType(0), successes, &result, Policy())
             &&
            binomial_detail::check_dist_and_prob(
-           function, trials, RealType(0), probability, &result, Policy()))
+           function, trials, RealType(0), probability, &result, Policy())))
         { return result; }
 
         if(trials == successes)
@@ -373,11 +373,11 @@ namespace boost
         BOOST_MATH_STATIC const char* function = "boost::math::binomial_distribution<%1%>::find_minimum_number_of_trials";
         // Error checks:
         RealType result = 0;
-        if(false == binomial_detail::check_dist_and_k(
+        if(!(binomial_detail::check_dist_and_k(
            function, k, p, k, &result, Policy())
             &&
            binomial_detail::check_dist_and_prob(
-           function, k, p, alpha, &result, Policy()))
+           function, k, p, alpha, &result, Policy())))
         { return result; }
 
         result = ibetac_invb(k + 1, p, alpha, Policy());  // returns n - k
@@ -392,11 +392,11 @@ namespace boost
         BOOST_MATH_STATIC const char* function = "boost::math::binomial_distribution<%1%>::find_maximum_number_of_trials";
         // Error checks:
         RealType result = 0;
-        if(false == binomial_detail::check_dist_and_k(
+        if(!(binomial_detail::check_dist_and_k(
            function, k, p, k, &result, Policy())
             &&
            binomial_detail::check_dist_and_prob(
-           function, k, p, alpha, &result, Policy()))
+           function, k, p, alpha, &result, Policy())))
         { return result; }
 
         result = ibeta_invb(k + 1, p, alpha, Policy());  // returns n - k

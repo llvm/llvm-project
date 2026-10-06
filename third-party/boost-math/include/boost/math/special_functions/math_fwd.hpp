@@ -562,6 +562,18 @@ namespace boost
    BOOST_MATH_GPU_ENABLED tools::promote_args_t<RT1, RT2> gamma_q(RT1 a, RT2 z, const Policy&);
 
    template <class RT1, class RT2>
+   BOOST_MATH_GPU_ENABLED tools::promote_args_t<RT1, RT2> lgamma_q(RT1 a, RT2 z);
+
+   template <class RT1, class RT2, class Policy>
+   BOOST_MATH_GPU_ENABLED tools::promote_args_t<RT1, RT2> lgamma_q(RT1 a, RT2 z, const Policy&);
+
+   template <class RT1, class RT2>
+   BOOST_MATH_GPU_ENABLED tools::promote_args_t<RT1, RT2> lgamma_p(RT1 a, RT2 z);
+
+   template <class RT1, class RT2, class Policy>
+   BOOST_MATH_GPU_ENABLED tools::promote_args_t<RT1, RT2> lgamma_p(RT1 a, RT2 z, const Policy&);
+
+   template <class RT1, class RT2>
    BOOST_MATH_GPU_ENABLED tools::promote_args_t<RT1, RT2> gamma_p(RT1 a, RT2 z);
 
    template <class RT1, class RT2, class Policy>
@@ -636,9 +648,17 @@ namespace boost
    BOOST_MATH_GPU_ENABLED tools::promote_args_t<T1, T2>
          hypot(T1 x, T2 y);
 
-   template <class T1, class T2, class Policy>
+   template <class T1, class T2, class Policy, boost::math::enable_if_t<policies::is_policy_v<Policy>, bool> = true>
    BOOST_MATH_GPU_ENABLED tools::promote_args_t<T1, T2>
          hypot(T1 x, T2 y, const Policy&);
+
+   template <class T1, class T2, class T3, boost::math::enable_if_t<!policies::is_policy_v<T3>, bool> = true>
+   BOOST_MATH_GPU_ENABLED tools::promote_args_t<T1, T2, T3>
+      hypot(T1 x, T2 y, T3 z);
+
+   template <class T1, class T2, class T3, class Policy>
+   BOOST_MATH_GPU_ENABLED tools::promote_args_t<T1, T2, T3>
+      hypot(T1 x, T2 y, T3 z, const Policy& pol);
 
    // cbrt - cube root.
    template <class RT>
@@ -1508,6 +1528,12 @@ namespace boost
 \
    template <class RT1, class RT2>\
    BOOST_MATH_GPU_ENABLED inline boost::math::tools::promote_args_t<RT1, RT2> gamma_q(RT1 a, RT2 z){ return boost::math::gamma_q(a, z, Policy()); }\
+\
+   template <class RT1, class RT2>\
+   BOOST_MATH_GPU_ENABLED inline boost::math::tools::promote_args_t<RT1, RT2> lgamma_q(RT1 a, RT2 z){ return boost::math::lgamma_q(a, z, Policy()); }\
+\
+   template <class RT1, class RT2>\
+   BOOST_MATH_GPU_ENABLED inline boost::math::tools::promote_args_t<RT1, RT2> lgamma_p(RT1 a, RT2 z){ return boost::math::lgamma_p(a, z, Policy()); }\
 \
    template <class RT1, class RT2>\
    BOOST_MATH_GPU_ENABLED inline boost::math::tools::promote_args_t<RT1, RT2> gamma_p(RT1 a, RT2 z){ return boost::math::gamma_p(a, z, Policy()); }\
