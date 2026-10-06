@@ -6243,12 +6243,32 @@ void VPlanTransforms::narrowInductionTruncates(VPlan &Plan, VFRange &Range,
   }
 }
 
-void VPlanTransforms::convertToStridedAccesses(VPlan &Plan,
-                                               PredicatedScalarEvolution &PSE,
-                                               Loop &L, VPCostContext &Ctx,
-                                               VFRange &Range) {
+void VPlanTransforms::convertToStridedAccesses(
+    VPlan &Plan, PredicatedScalarEvolution &PSE, Loop &L, VPCostContext &Ctx,
+    VFRange &Range,
+    const SmallPtrSetImpl<const InterleaveGroup<Instruction> *>
+        &InterleaveGroups) {
   if (Plan.hasScalarVFOnly())
     return;
+
+  // Build IR to Recipe
+  DenseMap<Instruction *, VPWidenMemoryRecipe *> IRMemberToRecipe;
+  for (VPBasicBlock *VPBB :
+       VPBlockUtils::blocksOnly<VPBasicBlock>(vp_depth_first_shallow(
+           Plan.getVectorLoopRegion()->getEntryBasicBlock())))
+    for (VPRecipeBase &R : make_filter_range(*VPBB, [](VPRecipeBase &R) {
+           return isa<VPWidenMemoryRecipe>(&R);
+         })) {
+      auto *MemR = cast<VPWidenMemoryRecipe>(&R);
+      IRMemberToRecipe[&MemR->getIngredient()] = MemR;
+    }
+  // Build Recipe to Group
+  DenseMap<VPWidenMemoryRecipe *, const InterleaveGroup<Instruction> *>
+      RecipeToGroup;
+  for (const auto *IG : InterleaveGroups)
+    for (auto *Member : IG->members())
+      if (VPWidenMemoryRecipe *R = IRMemberToRecipe.lookup(Member))
+        RecipeToGroup[R] = IG;
 
   VPRegionBlock *VectorLoop = Plan.getVectorLoopRegion();
   VPValue *I32VF = nullptr;
@@ -6260,7 +6280,7 @@ void VPlanTransforms::convertToStridedAccesses(VPlan &Plan,
       // TODO: Transform gather/scatter with uniform address into strided access
       // with 0 stride.
       // TODO: Transform interleave access into multiple strided accesses.
-      if (!MemR || MemR->isConsecutive())
+      if (!MemR || MemR->isConsecutive() || RecipeToGroup.contains(MemR))
         continue;
 
       VPValue *Ptr = MemR->getAddr();
