@@ -612,19 +612,6 @@ protected:
   VPBasicBlock *VectorPHVPBB;
 };
 
-/// Encapsulate information regarding vectorization of a loop and its epilogue.
-/// This information is meant to be updated and used across two stages of
-/// epilogue vectorization.
-struct EpilogueLoopVectorizationInfo {
-  ElementCount MainLoopVF = ElementCount::getFixed(0);
-  unsigned MainLoopUF = 0;
-  ElementCount EpilogueVF = ElementCount::getFixed(0);
-
-  EpilogueLoopVectorizationInfo(ElementCount MVF, unsigned MUF,
-                                ElementCount EVF)
-      : MainLoopVF(MVF), MainLoopUF(MUF), EpilogueVF(EVF) {}
-};
-
 /// A specialized derived class of inner loop vectorizer that performs
 /// vectorization of *epilogue* loops in the process of vectorizing loops and
 /// their epilogues. The idea is to run the vplan on a given loop twice, firstly
@@ -5790,6 +5777,11 @@ DenseMap<const SCEV *, Value *> LoopVectorizationPlanner::executePlan(
 
   RUN_VPLAN_PASS(VPlanTransforms::replaceWideCanonicalIVWithWideIV, BestVPlan,
                  *PSE.getSE(), TTI, Config.CostKind, BestVF, BestUF);
+  if (!BestVPlan.hasTailFolded() &&
+      TTI.hasMultiVectorLoadStore(BestUF,
+                                  TargetTransformInfo::MaskSource::None))
+    RUN_VPLAN_PASS(VPlanTransforms::widenMemoryAccessesByUF, BestVPlan, BestVF,
+                   BestUF, TTI);
   // TODO: Move to VPlan transform stage once the transition to the VPlan-based
   // cost model is complete for better cost estimates.
   RUN_VPLAN_PASS(VPlanTransforms::unrollByUF, BestVPlan, BestUF);
@@ -7382,9 +7374,9 @@ static MainPlanResumeMarkers preparePlanForMainVectorLoop(VPlan &MainPlan,
 /// SCEVs from \p ExpandedSCEVs and set resume values for header recipes.
 static void preparePlanForEpilogueVectorLoop(
     VPlan &MainPlan, VPlan &Plan, Loop *L, const SCEV2ValueTy &ExpandedSCEVs,
-    EpilogueLoopVectorizationInfo &EPI, LoopVectorizationPlanner &LVP,
-    VFSelectionContext &Config, ScalarEvolution &SE,
-    const MainPlanResumeMarkers &Markers) {
+    ElementCount MainLoopVF, unsigned MainLoopUF, ElementCount EpilogueVF,
+    LoopVectorizationPlanner &LVP, VFSelectionContext &Config,
+    ScalarEvolution &SE, const MainPlanResumeMarkers &Markers) {
   // Build a map from the scalar-header PHI to the ResumeForEpilogue markers
   // from the main plan.
   // TODO: Replace the IR PHI key.
@@ -7494,42 +7486,39 @@ static void preparePlanForEpilogueVectorLoop(
         ReductionPhi->setStartValue(
             PHBuilder.createNaryOp(VPInstruction::Broadcast, ResumeVPV));
         continue;
-      } else {
-        auto *PhiR = dyn_cast<VPReductionPHIRecipe>(&R);
-        if (auto *VPI = dyn_cast<VPInstruction>(PhiR->getStartValue())) {
-          assert(VPI->getOpcode() == VPInstruction::ReductionStartVector &&
-                 "unexpected start value");
-          // Partial sub-reductions always start at 0 and account for the
-          // reduction start value in a final subtraction. Update it to use the
-          // resume value from the main vector loop.
-          if (PhiR->getVFScaleFactor() > 1 &&
-              RecurrenceDescriptor::isSubRecurrenceKind(
-                  PhiR->getRecurrenceKind())) {
-            auto *Sub = cast<VPInstruction>(RdxResult->getSingleUser());
-            assert((Sub->getOpcode() == Instruction::Sub ||
-                    Sub->getOpcode() == Instruction::FSub) &&
-                   "Unexpected opcode");
-            assert(isa<VPIRValue>(Sub->getOperand(0)) &&
-                   "Expected operand to match the original start value of the "
-                   "reduction");
-            // For integer sub-reductions, verify start value is zero.
-            // For FP sub-reductions, verify start value is negative zero.
-            [[maybe_unused]] auto StartValueIsIdentity = [&] {
-              Value *IdentityValue = getRecurrenceIdentity(
-                  PhiR->getRecurrenceKind(), ResumeVPV->getScalarType(),
-                  PhiR->getFastMathFlagsOrNone());
-              auto *StartValue = dyn_cast<VPIRValue>(VPI->getOperand(0));
-              return StartValue && StartValue->getValue() == IdentityValue;
-            };
-            assert(StartValueIsIdentity() &&
-                   "Expected start value for partial sub-reduction to be zero "
-                   "(or negative zero)");
+      }
+      if (auto *VPI = dyn_cast<VPInstruction>(ReductionPhi->getStartValue())) {
+        assert(VPI->getOpcode() == VPInstruction::ReductionStartVector &&
+               "unexpected start value");
+        // Partial sub-reductions always start at 0 and account for the
+        // reduction start value in a final subtraction. Update it to use the
+        // resume value from the main vector loop.
+        if (ReductionPhi->getVFScaleFactor() > 1 &&
+            RecurrenceDescriptor::isSubRecurrenceKind(RK)) {
+          auto *Sub = cast<VPInstruction>(RdxResult->getSingleUser());
+          assert((Sub->getOpcode() == Instruction::Sub ||
+                  Sub->getOpcode() == Instruction::FSub) &&
+                 "Unexpected opcode");
+          assert(isa<VPIRValue>(Sub->getOperand(0)) &&
+                 "Expected operand to match the original start value of the "
+                 "reduction");
+          // For integer sub-reductions, verify start value is zero.
+          // For FP sub-reductions, verify start value is negative zero.
+          [[maybe_unused]] auto StartValueIsIdentity = [&] {
+            Value *IdentityValue =
+                getRecurrenceIdentity(RK, ResumeVPV->getScalarType(),
+                                      ReductionPhi->getFastMathFlagsOrNone());
+            auto *StartValue = dyn_cast<VPIRValue>(VPI->getOperand(0));
+            return StartValue && StartValue->getValue() == IdentityValue;
+          };
+          assert(StartValueIsIdentity() &&
+                 "Expected start value for partial sub-reduction to be zero "
+                 "(or negative zero)");
 
-            Sub->setOperand(0, ResumeVPV);
-          } else
-            VPI->setOperand(0, ResumeVPV);
-          continue;
-        }
+          Sub->setOperand(0, ResumeVPV);
+        } else
+          VPI->setOperand(0, ResumeVPV);
+        continue;
       }
     } else {
       // Retrieve the induction resume value via ResumeForEpilogue.
@@ -7572,12 +7561,11 @@ static void preparePlanForEpilogueVectorLoop(
   }
 
   auto VScale = Config.getVScaleForTuning();
-  unsigned MainLoopStep =
-      estimateElementCount(EPI.MainLoopVF * EPI.MainLoopUF, VScale);
-  unsigned EpilogueLoopStep = estimateElementCount(EPI.EpilogueVF, VScale);
+  unsigned MainLoopStep = estimateElementCount(MainLoopVF * MainLoopUF, VScale);
+  unsigned EpilogueLoopStep = estimateElementCount(EpilogueVF, VScale);
   RUN_VPLAN_PASS(VPlanTransforms::addMinimumVectorEpilogueIterationCheck, Plan,
                  Plan.getOrAddLiveIn(Markers.VectorTC->getUnderlyingValue()),
-                 Plan.requiresScalarEpilogue(), EPI.EpilogueVF, MainLoopStep,
+                 Plan.requiresScalarEpilogue(), EpilogueVF, MainLoopStep,
                  EpilogueLoopStep, SE);
 }
 
@@ -8098,30 +8086,27 @@ bool LoopVectorizePass::processLoop(Loop *L) {
     BestEpiPlan.getVectorPreheader()->setName("vec.epilog.ph");
     MainPlanResumeMarkers Markers =
         preparePlanForMainVectorLoop(BestMainPlan, BestEpiPlan);
-    EpilogueLoopVectorizationInfo EPI(VF.Width, IC, EpilogueVF);
 
     // Add minimum iteration check for the epilogue plan, followed by runtime
     // checks for the main plan.
-    LVP.addMinimumIterationCheck(BestMainPlan, EPI.EpilogueVF, /*UF=*/1,
+    LVP.addMinimumIterationCheck(BestMainPlan, EpilogueVF, /*UF=*/1,
                                  ElementCount::getFixed(0));
     LVP.attachRuntimeChecks(BestMainPlan, Checks, HasBranchWeights);
-    RUN_VPLAN_PASS(
-        VPlanTransforms::addIterationCountCheckBlock, BestMainPlan,
-        EPI.MainLoopVF, EPI.MainLoopUF, BestMainPlan.requiresScalarEpilogue(),
-        L, HasBranchWeights ? MinItersBypassWeights : nullptr,
-        L->getLoopPredecessor()->getTerminator()->getDebugLoc(), PSE);
+    RUN_VPLAN_PASS(VPlanTransforms::addIterationCountCheckBlock, BestMainPlan,
+                   VF.Width, IC, BestMainPlan.requiresScalarEpilogue(), L,
+                   HasBranchWeights ? MinItersBypassWeights : nullptr,
+                   L->getLoopPredecessor()->getTerminator()->getDebugLoc(),
+                   PSE);
 
     LLVM_DEBUG({
       dbgs() << "Create Skeleton for epilogue vectorized loop (first pass)\n"
-             << "Main Loop VF:" << EPI.MainLoopVF
-             << ", Main Loop UF:" << EPI.MainLoopUF
-             << ", Epilogue Loop VF:" << EPI.EpilogueVF
-             << ", Epilogue Loop UF:1\n";
+             << "Main Loop VF:" << VF.Width << ", Main Loop UF:" << IC
+             << ", Epilogue Loop VF:" << EpilogueVF << ", Epilogue Loop UF:1\n";
     });
-    InnerLoopVectorizer MainILV(L, PSE, LI, DT, TTI, AC, EPI.MainLoopVF,
-                                EPI.MainLoopUF, Checks, BestMainPlan);
+    InnerLoopVectorizer MainILV(L, PSE, LI, DT, TTI, AC, VF.Width, IC, Checks,
+                                BestMainPlan);
     auto ExpandedSCEVs = LVP.executePlan(
-        EPI.MainLoopVF, EPI.MainLoopUF, BestMainPlan, MainILV, DT,
+        VF.Width, IC, BestMainPlan, MainILV, DT,
         LoopVectorizationPlanner::EpilogueVectorizationKind::MainLoop);
     ++LoopsVectorized;
     DEBUG_WITH_TYPE(VerboseDebug, {
@@ -8135,19 +8120,18 @@ bool LoopVectorizePass::processLoop(Loop *L) {
     // Second pass vectorizes the epilogue and adjusts the control flow
     // edges from the first pass.
     EpilogueVectorizerEpilogueLoop EpilogILV(L, PSE, LI, DT, TTI, AC,
-                                             EPI.EpilogueVF, /*UnrollFactor=*/1,
+                                             EpilogueVF, /*UnrollFactor=*/1,
                                              Checks, BestEpiPlan, BestMainPlan);
     preparePlanForEpilogueVectorLoop(BestMainPlan, BestEpiPlan, L,
-                                     ExpandedSCEVs, EPI, LVP, Config,
-                                     *PSE.getSE(), Markers);
+                                     ExpandedSCEVs, VF.Width, IC, EpilogueVF,
+                                     LVP, Config, *PSE.getSE(), Markers);
     RUN_VPLAN_PASS(VPlanTransforms::simplifyLiveInsWithSCEV, BestEpiPlan, PSE);
     LLVM_DEBUG({
       dbgs() << "Create Skeleton for epilogue vectorized loop (second pass)\n"
-             << "Epilogue Loop VF:" << EPI.EpilogueVF
-             << ", Epilogue Loop UF:1\n";
+             << "Epilogue Loop VF:" << EpilogueVF << ", Epilogue Loop UF:1\n";
     });
     LVP.executePlan(
-        EPI.EpilogueVF, /*BestUF=*/1, BestEpiPlan, EpilogILV, DT,
+        EpilogueVF, /*BestUF=*/1, BestEpiPlan, EpilogILV, DT,
         LoopVectorizationPlanner::EpilogueVectorizationKind::Epilogue);
     DEBUG_WITH_TYPE(VerboseDebug, {
       dbgs() << "final fn:\n" << *L->getHeader()->getParent() << "\n";
