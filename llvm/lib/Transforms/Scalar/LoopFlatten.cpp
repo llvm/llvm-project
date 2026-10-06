@@ -837,7 +837,8 @@ static bool DoFlattenLoopPair(FlattenInfo &FI, DominatorTree *DT, LoopInfo *LI,
 
 static bool CanWidenIV(FlattenInfo &FI, DominatorTree *DT, LoopInfo *LI,
                        ScalarEvolution *SE, AssumptionCache *AC,
-                       const TargetTransformInfo *TTI) {
+                       const TargetTransformInfo *TTI,
+                       MemorySSAUpdater *MSSAU) {
   if (!WidenIV) {
     LLVM_DEBUG(dbgs() << "Widening the IVs is disabled\n");
     return false;
@@ -862,7 +863,7 @@ static bool CanWidenIV(FlattenInfo &FI, DominatorTree *DT, LoopInfo *LI,
     return false;
   }
 
-  SCEVExpander Rewriter(*SE, "loopflatten");
+  SCEVExpander Rewriter(*SE, "loopflatten", true, MSSAU);
   SmallVector<WeakTrackingVH, 4> DeadInsts;
   unsigned ElimExt = 0;
   unsigned Widened = 0;
@@ -917,7 +918,7 @@ static bool FlattenLoopPair(FlattenInfo &FI, DominatorTree *DT, LoopInfo *LI,
     return false;
 
   // Check if we can widen the induction variables to avoid overflow checks.
-  bool CanFlatten = CanWidenIV(FI, DT, LI, SE, AC, TTI);
+  bool CanFlatten = CanWidenIV(FI, DT, LI, SE, AC, TTI, MSSAU);
 
   // It can happen that after widening of the IV, flattening may not be
   // possible/happening, e.g. when it is deemed unprofitable. So bail here if

@@ -8,8 +8,11 @@
 
 #include "llvm/Transforms/Utils/ScalarEvolutionExpander.h"
 #include "llvm/ADT/SmallVector.h"
+#include "llvm/Analysis/AliasAnalysis.h"
 #include "llvm/Analysis/AssumptionCache.h"
 #include "llvm/Analysis/LoopInfo.h"
+#include "llvm/Analysis/MemorySSA.h"
+#include "llvm/Analysis/MemorySSAUpdater.h"
 #include "llvm/Analysis/ScalarEvolutionExpressions.h"
 #include "llvm/Analysis/TargetLibraryInfo.h"
 #include "llvm/AsmParser/Parser.h"
@@ -268,6 +271,83 @@ TEST_F(ScalarEvolutionExpanderTest, SCEVExpanderIsSafeToExpandAt) {
   EXPECT_TRUE(LI->getLoopFor(L)->isLCSSAForm(*DT));
   Exp.expandCodeFor(SE.getSCEV(Add), nullptr, Ret);
   EXPECT_TRUE(LI->getLoopFor(L)->isLCSSAForm(*DT));
+}
+
+TEST_F(ScalarEvolutionExpanderTest,
+       PreserveMemorySSAWhenDroppingLifetimeMarkers) {
+  SMDiagnostic Err;
+  std::unique_ptr<Module> Mod = parseAssemblyString(R"(
+    define ptr @f(i1 %again, ptr %out) {
+    entry:
+      br label %loop
+    loop:
+      %allocation = alloca i8
+      call void @llvm.lifetime.start.p0(ptr %allocation)
+      store i8 1, ptr %out
+      br i1 %again, label %loop, label %exit
+    exit:
+      call void @llvm.lifetime.end.p0(ptr %allocation)
+      %loaded = load i8, ptr %out
+      ret ptr null
+    }
+    declare void @llvm.lifetime.start.p0(ptr)
+    declare void @llvm.lifetime.end.p0(ptr)
+  )",
+                                                    Err, Context);
+  ASSERT_NE(Mod, nullptr);
+  ASSERT_FALSE(verifyModule(*Mod, &errs()));
+
+  Function *F = Mod->getFunction("f");
+  ASSERT_NE(F, nullptr);
+  ScalarEvolution SE = buildSE(*F);
+  Instruction &Allocation = GetInstByName(*F, "allocation");
+  Instruction &Load = GetInstByName(*F, "loaded");
+  BasicBlock *LoopBB = Allocation.getParent();
+  BasicBlock *ExitBB = Load.getParent();
+  Loop *L = LI->getLoopFor(LoopBB);
+  ASSERT_NE(L, nullptr);
+  EXPECT_FALSE(L->isLCSSAForm(*DT));
+
+  AAResults AA(TLI);
+  MemorySSA MSSA(*F, &AA, DT.get());
+  MemorySSAUpdater MSSAU(&MSSA);
+  auto *StartAccess = MSSA.getMemoryAccess(Allocation.getNextNode());
+  auto *EndAccess = MSSA.getMemoryAccess(&ExitBB->front());
+  auto *StoreAccess =
+      MSSA.getMemoryAccess(Allocation.getNextNode()->getNextNode());
+  auto *LoadAccess = MSSA.getMemoryAccess(&Load);
+  ASSERT_NE(StartAccess, nullptr);
+  ASSERT_NE(EndAccess, nullptr);
+  ASSERT_NE(StoreAccess, nullptr);
+  ASSERT_NE(LoadAccess, nullptr);
+  EXPECT_EQ(StoreAccess->getDefiningAccess(), StartAccess);
+  EXPECT_EQ(LoadAccess->getDefiningAccess(), EndAccess);
+  MSSA.verifyMemorySSA(MemorySSA::VerificationLevel::Full);
+
+  // Expanding this pointer outside its loop requires an LCSSA PHI. Lifetime
+  // markers cannot use that PHI, so both markers must be removed together with
+  // their MemorySSA accesses, reconnecting the surviving store and load.
+  SCEVExpander Exp(SE, "expander", /*PreserveLCSSA=*/true, &MSSAU);
+  auto *Ret = cast<ReturnInst>(ExitBB->getTerminator());
+  Value *Expanded =
+      Exp.expandCodeFor(SE.getSCEV(&Allocation), Allocation.getType(), Ret);
+  auto *Phi = dyn_cast<PHINode>(Expanded);
+  ASSERT_NE(Phi, nullptr);
+  EXPECT_EQ(Phi->getParent(), ExitBB);
+  ASSERT_EQ(Phi->getNumIncomingValues(), 1u);
+  EXPECT_EQ(Phi->getIncomingValue(0), &Allocation);
+  EXPECT_EQ(Phi->getIncomingBlock(0), LoopBB);
+  Ret->setOperand(0, Phi);
+
+  for (Instruction &I : instructions(*F))
+    EXPECT_FALSE(I.isLifetimeStartOrEnd());
+  EXPECT_EQ(StoreAccess->getDefiningAccess(), MSSA.getMemoryAccess(LoopBB));
+  EXPECT_EQ(LoadAccess->getDefiningAccess(), StoreAccess);
+  ASSERT_NE(MSSA.getBlockAccesses(ExitBB), nullptr);
+  EXPECT_EQ(MSSA.getBlockAccesses(ExitBB)->size(), 1u);
+  EXPECT_TRUE(L->isLCSSAForm(*DT));
+  EXPECT_FALSE(verifyFunction(*F, &errs()));
+  MSSA.verifyMemorySSA(MemorySSA::VerificationLevel::Full);
 }
 
 // Check that SCEV expander does not use the nuw instruction
