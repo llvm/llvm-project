@@ -37,12 +37,11 @@ static MlirRemarkCategories allCategories(const char *filter) {
   return cats;
 }
 
-/// The callback streamer: prints every field of the remark it receives and
-/// counts the deliveries in userData.
+/// Prints every field of the remark and counts the deliveries in userData.
 static void remarkCallback(MlirRemark remark, void *userData) {
   int *count = (int *)userData;
   ++*count;
-  const char *kind = "?";
+  const char *kind = "unknown";
   switch (mlirRemarkGetKind(remark)) {
   case MlirRemarkKindPassed:
     kind = "passed";
@@ -57,7 +56,6 @@ static void remarkCallback(MlirRemark remark, void *userData) {
     kind = "analysis";
     break;
   case MlirRemarkKindUnknown:
-    kind = "unknown";
     break;
   }
   MlirStringRef name = mlirRemarkGetRemarkName(remark);
@@ -78,7 +76,7 @@ static void remarkCallback(MlirRemark remark, void *userData) {
             (int)value.length, value.data);
   }
   fprintf(stderr, "  print: ");
-  mlirRemarkPrint(remark, /*printLocation=*/true, printToStderr, NULL);
+  mlirRemarkPrint(remark, printToStderr, NULL);
   fprintf(stderr, "\n  location: ");
   mlirLocationPrint(mlirRemarkGetLocation(remark), printToStderr, NULL);
   fprintf(stderr, "\n");
@@ -86,6 +84,11 @@ static void remarkCallback(MlirRemark remark, void *userData) {
 
 static void deleteUserData(void *userData) {
   fprintf(stderr, "deleteUserData called (count=%d)\n", *(int *)userData);
+}
+
+static void countRemark(MlirRemark remark, void *userData) {
+  (void)remark;
+  ++*(int *)userData;
 }
 
 static bool emit(MlirLocation loc, MlirRemarkKind kind, const char *name,
@@ -103,7 +106,6 @@ static void testCallbackStreamer(void) {
   MlirContext ctx = mlirContextCreate();
   MlirLocation loc = mlirLocationFileLineColGet(ctx, str("remarks.c"), 7, 3);
 
-  // Without an engine nothing is emitted.
   // CHECK: no engine: enabled=0 emitted=0
   bool emitted = emit(loc, MlirRemarkKindPassed, "Unroll", "Loop", "dropped");
   fprintf(stderr, "no engine: enabled=%d emitted=%d\n",
@@ -117,25 +119,18 @@ static void testCallbackStreamer(void) {
   fprintf(stderr, "enabled=%d ok=%d\n", mlirContextHasRemarkEngine(ctx),
           mlirLogicalResultIsSuccess(res));
 
-  // Enabling twice fails and leaves the first engine in place.
-  // CHECK: second enable ok=0
-  res = mlirContextEnableOptimizationRemarks(ctx, allCategories(".*"),
-                                             MlirRemarkPolicyAll, true);
-  fprintf(stderr, "second enable ok=%d\n", mlirLogicalResultIsSuccess(res));
-
   // clang-format off
   // CHECK: remark #1 kind=passed name=Unroll category=Loop full=Loop:inner function=main id=1
   // CHECK:   arg RemarkId=1
   // CHECK:   arg Remark=unrolled
   // CHECK:   arg factor=4
-  // CHECK:   print: [Passed] Unroll | Category:Loop:inner | Function=main |  @"remarks.c":7:3{{ ?}}Remark=unrolled, RemarkId=1, factor=4
+  // CHECK:   print: [Passed] Unroll | Category:Loop:inner | Function=main | Remark=unrolled, RemarkId=1, factor=4
   // CHECK:   location: loc("remarks.c":7:3)
   // CHECK: emitted=1
   // clang-format on
   emitted = emit(loc, MlirRemarkKindPassed, "Unroll", "Loop", "unrolled");
   fprintf(stderr, "emitted=%d\n", emitted);
 
-  // A category the filter does not match is dropped before the streamer.
   // CHECK-NOT: name=Vectorize
   // CHECK: count after filtered emit=1
   emit(loc, MlirRemarkKindMissed, "Vectorize", "Vector", "not matched");
@@ -148,7 +143,6 @@ static void testCallbackStreamer(void) {
   emit(loc, MlirRemarkKindFailure, "Fuse", "Loop", "no");
   emit(loc, MlirRemarkKindAnalysis, "TripCount", "Loop", "4");
 
-  // Finalize drops the engine and releases the user data.
   // CHECK: deleteUserData called (count=4)
   // CHECK: after finalize: enabled=0 count=4
   mlirContextFinalizeOptimizationRemarks(ctx);
@@ -195,9 +189,9 @@ static MlirLogicalResult diagnosticHandler(MlirDiagnostic diagnostic,
   return mlirLogicalResultSuccess();
 }
 
-// CHECK-LABEL: @testEmitRemarkForm
-static void testEmitRemarkForm(void) {
-  fprintf(stderr, "@testEmitRemarkForm\n");
+// CHECK-LABEL: @testEmitAsDiagnostics
+static void testEmitAsDiagnostics(void) {
+  fprintf(stderr, "@testEmitAsDiagnostics\n");
   MlirContext ctx = mlirContextCreate();
   MlirLocation loc = mlirLocationUnknownGet(ctx);
   MlirDiagnosticHandlerID id =
@@ -220,15 +214,16 @@ static void testFileStreamer(void) {
   fprintf(stderr, "@testFileStreamer\n");
   MlirContext ctx = mlirContextCreate();
   MlirLocation loc = mlirLocationUnknownGet(ctx);
-  char path[] = "mlir-capi-remarks-test.yaml";
+
+  char yamlPath[] = "mlir-capi-remarks-test.yaml";
   MlirLogicalResult res = mlirContextEnableOptimizationRemarksToFile(
       ctx, allCategories(".*"), MlirRemarkPolicyAll, MlirRemarkFileFormatYAML,
-      str(path), false);
-  // CHECK: file enable ok=1
-  fprintf(stderr, "file enable ok=%d\n", mlirLogicalResultIsSuccess(res));
+      str(yamlPath), /*printAsEmitRemarks=*/false);
+  // CHECK: yaml enable ok=1
+  fprintf(stderr, "yaml enable ok=%d\n", mlirLogicalResultIsSuccess(res));
   emit(loc, MlirRemarkKindPassed, "Unroll", "Loop", "to file");
   mlirContextFinalizeOptimizationRemarks(ctx);
-  FILE *f = fopen(path, "r");
+  FILE *f = fopen(yamlPath, "r");
   bool found = false;
   if (f) {
     char line[256];
@@ -236,17 +231,113 @@ static void testFileStreamer(void) {
       if (strstr(line, "Unroll"))
         found = true;
     fclose(f);
-    remove(path);
+    remove(yamlPath);
   }
   // CHECK: yaml has remark=1
   fprintf(stderr, "yaml has remark=%d\n", found);
+
+  // The bitstream file starts with the LLVM remark bitstream magic.
+  char bitstreamPath[] = "mlir-capi-remarks-test.bitstream";
+  res = mlirContextEnableOptimizationRemarksToFile(
+      ctx, allCategories(".*"), MlirRemarkPolicyFinal,
+      MlirRemarkFileFormatBitstream, str(bitstreamPath),
+      /*printAsEmitRemarks=*/false);
+  // CHECK: bitstream enable ok=1
+  fprintf(stderr, "bitstream enable ok=%d\n", mlirLogicalResultIsSuccess(res));
+  emit(loc, MlirRemarkKindPassed, "Unroll", "Loop", "to file");
+  mlirContextFinalizeOptimizationRemarks(ctx);
+  char magic[5] = {0};
+  f = fopen(bitstreamPath, "rb");
+  if (f) {
+    if (fread(magic, 1, 4, f) != 4)
+      magic[0] = '\0';
+    fclose(f);
+    remove(bitstreamPath);
+  }
+  // CHECK: bitstream magic=RMRK
+  fprintf(stderr, "bitstream magic=%s\n", magic);
   mlirContextDestroy(ctx);
+}
+
+// CHECK-LABEL: @testAccessorDefaults
+static void testAccessorDefaults(void) {
+  fprintf(stderr, "@testAccessorDefaults\n");
+  MlirContext ctx = mlirContextCreate();
+  MlirLocation loc = mlirLocationUnknownGet(ctx);
+  int count = 0;
+  MlirLogicalResult res = mlirContextEnableOptimizationRemarksWithCallback(
+      ctx, allCategories(".*"), MlirRemarkPolicyAll, remarkCallback, &count,
+      NULL, false);
+  assert(mlirLogicalResultIsSuccess(res));
+  // Unset names fall back to placeholders, the only argument is the id, and
+  // null argument arrays are accepted when numArgs is 0.
+  // clang-format off
+  // CHECK: remark #1 kind=passed name=<unknown remark name> category= full= function=<unknown function> id=1
+  // CHECK:   arg RemarkId=1
+  // CHECK:   print: [Passed]  | RemarkId=1
+  // CHECK:   location: loc(unknown)
+  // CHECK: emitted=1
+  // clang-format on
+  bool emitted =
+      mlirEmitOptimizationRemark(loc, MlirRemarkKindPassed, str(""), str(""),
+                                 str(""), str(""), str(""), 0, NULL, NULL);
+  fprintf(stderr, "emitted=%d\n", emitted);
+  // A sub-category alone is the full category name.
+  // clang-format off
+  // CHECK: remark #2 kind=missed name=Name category= full=Sub function=<unknown function> id=2
+  // CHECK:   print: [Missed] Name | Category:Sub | RemarkId=2
+  // clang-format on
+  mlirEmitOptimizationRemark(loc, MlirRemarkKindMissed, str("Name"), str(""),
+                             str("Sub"), str(""), str(""), 0, NULL, NULL);
+  // CHECK: unknown emitted=0
+  emitted = emit(loc, MlirRemarkKindUnknown, "Name", "Loop", "");
+  fprintf(stderr, "unknown emitted=%d\n", emitted);
+  mlirContextFinalizeOptimizationRemarks(ctx);
+  mlirContextDestroy(ctx);
+}
+
+// CHECK-LABEL: @testEnableWhileEnabled
+static void testEnableWhileEnabled(void) {
+  fprintf(stderr, "@testEnableWhileEnabled\n");
+  MlirContext ctx = mlirContextCreate();
+  MlirLocation loc = mlirLocationUnknownGet(ctx);
+  int first = 0, second = 0;
+  MlirLogicalResult res = mlirContextEnableOptimizationRemarksWithCallback(
+      ctx, allCategories(".*"), MlirRemarkPolicyAll, countRemark, &first,
+      deleteUserData, false);
+  // CHECK: first ok=1
+  fprintf(stderr, "first ok=%d\n", mlirLogicalResultIsSuccess(res));
+  // Every enable variant fails while an engine is active; the callback
+  // variant releases the user data it was handed right away.
+  // CHECK: deleteUserData called (count=0)
+  // CHECK: callback ok=0 file ok=0 plain ok=0
+  res = mlirContextEnableOptimizationRemarksWithCallback(
+      ctx, allCategories(".*"), MlirRemarkPolicyAll, countRemark, &second,
+      deleteUserData, false);
+  MlirLogicalResult fileRes = mlirContextEnableOptimizationRemarksToFile(
+      ctx, allCategories(".*"), MlirRemarkPolicyAll, MlirRemarkFileFormatYAML,
+      str("mlir-capi-remarks-test-unused.yaml"), false);
+  MlirLogicalResult plainRes = mlirContextEnableOptimizationRemarks(
+      ctx, allCategories(".*"), MlirRemarkPolicyAll, false);
+  fprintf(stderr, "callback ok=%d file ok=%d plain ok=%d\n",
+          mlirLogicalResultIsSuccess(res), mlirLogicalResultIsSuccess(fileRes),
+          mlirLogicalResultIsSuccess(plainRes));
+  emit(loc, MlirRemarkKindPassed, "Unroll", "Loop", "");
+  // CHECK: first=1 second=0
+  fprintf(stderr, "first=%d second=%d\n", first, second);
+  // Destroying the context with a live engine releases its user data.
+  // CHECK: deleteUserData called (count=1)
+  // CHECK: destroyed
+  mlirContextDestroy(ctx);
+  fprintf(stderr, "destroyed\n");
 }
 
 int main(void) {
   testCallbackStreamer();
   testFinalPolicy();
-  testEmitRemarkForm();
+  testEmitAsDiagnostics();
   testFileStreamer();
+  testAccessorDefaults();
+  testEnableWhileEnabled();
   return 0;
 }

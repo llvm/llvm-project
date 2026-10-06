@@ -15,6 +15,10 @@
 #include "mlir/IR/Remarks.h"
 #include "mlir/Remark/RemarkStreamer.h"
 #include "llvm/Remarks/RemarkFormat.h"
+#include "llvm/Support/ErrorHandling.h"
+
+#include <cassert>
+#include <memory>
 
 using namespace mlir;
 using mlir::remark::detail::Remark;
@@ -48,9 +52,8 @@ private:
 };
 } // namespace
 
-/// Like mlir-opt, every filter is handed to the engine as a (possibly empty)
-/// string: the engine then reports a kind when its own filter or `all`
-/// matches, and reports nothing for a kind whose filters are both empty.
+/// Every filter reaches the engine as a (possibly empty) string, as with
+/// mlir-opt's options: a kind is reported when its own filter or `all` matches.
 static remark::RemarkCategories unwrap(MlirRemarkCategories categories) {
   return remark::RemarkCategories{
       unwrap(categories.all).str(), unwrap(categories.passed).str(),
@@ -67,6 +70,16 @@ createPolicy(MlirRemarkPolicy policy) {
     return std::make_unique<remark::RemarkEmittingPolicyFinal>();
   }
   llvm_unreachable("unknown remark policy");
+}
+
+static llvm::remarks::Format unwrap(MlirRemarkFileFormat format) {
+  switch (format) {
+  case MlirRemarkFileFormatYAML:
+    return llvm::remarks::Format::YAML;
+  case MlirRemarkFileFormatBitstream:
+    return llvm::remarks::Format::Bitstream;
+  }
+  llvm_unreachable("unknown remark file format");
 }
 
 static MlirRemarkKind wrap(remark::RemarkKind kind) {
@@ -107,12 +120,9 @@ MlirLogicalResult mlirContextEnableOptimizationRemarksToFile(
   MLIRContext *ctx = unwrap(context);
   if (ctx->getRemarkEngine())
     return mlirLogicalResultFailure();
-  llvm::remarks::Format llvmFormat = format == MlirRemarkFileFormatBitstream
-                                         ? llvm::remarks::Format::Bitstream
-                                         : llvm::remarks::Format::YAML;
   return wrap(remark::enableOptimizationRemarksWithLLVMStreamer(
-      *ctx, unwrap(path), llvmFormat, createPolicy(policy), unwrap(categories),
-      printAsEmitRemarks));
+      *ctx, unwrap(path), unwrap(format), createPolicy(policy),
+      unwrap(categories), printAsEmitRemarks));
 }
 
 MlirLogicalResult mlirContextEnableOptimizationRemarksWithCallback(
@@ -122,6 +132,7 @@ MlirLogicalResult mlirContextEnableOptimizationRemarksWithCallback(
   assert(callback && "unexpected null remark callback");
   MLIRContext *ctx = unwrap(context);
   if (ctx->getRemarkEngine()) {
+    // The caller handed over `userData`; release it as on success.
     if (deleteUserData)
       deleteUserData(userData);
     return mlirLogicalResultFailure();
@@ -134,8 +145,8 @@ MlirLogicalResult mlirContextEnableOptimizationRemarksWithCallback(
 }
 
 void mlirContextFinalizeOptimizationRemarks(MlirContext context) {
-  // The engine destructor finalizes the policy (reporting postponed remarks)
-  // and then the streamer (writing the file / releasing the user data).
+  // The engine destructor reports the postponed remarks, then destroys the
+  // streamer.
   unwrap(context)->setRemarkEngine(nullptr);
 }
 
@@ -180,17 +191,23 @@ intptr_t mlirRemarkGetNumArgs(MlirRemark remark) {
 }
 
 MlirStringRef mlirRemarkGetArgKey(MlirRemark remark, intptr_t pos) {
-  return wrap(llvm::StringRef(unwrap(remark)->getArgs()[pos].key));
+  ArrayRef<Remark::Arg> args = unwrap(remark)->getArgs();
+  assert(pos >= 0 && static_cast<size_t>(pos) < args.size() &&
+         "remark argument index out of range");
+  return wrap(llvm::StringRef(args[pos].key));
 }
 
 MlirStringRef mlirRemarkGetArgValue(MlirRemark remark, intptr_t pos) {
-  return wrap(llvm::StringRef(unwrap(remark)->getArgs()[pos].val));
+  ArrayRef<Remark::Arg> args = unwrap(remark)->getArgs();
+  assert(pos >= 0 && static_cast<size_t>(pos) < args.size() &&
+         "remark argument index out of range");
+  return wrap(llvm::StringRef(args[pos].val));
 }
 
-void mlirRemarkPrint(MlirRemark remark, bool printLocation,
-                     MlirStringCallback callback, void *userData) {
+void mlirRemarkPrint(MlirRemark remark, MlirStringCallback callback,
+                     void *userData) {
   detail::CallbackOstream stream(callback, userData);
-  unwrap(remark)->print(stream, printLocation);
+  unwrap(remark)->print(stream);
 }
 
 //===----------------------------------------------------------------------===//
@@ -202,6 +219,8 @@ bool mlirEmitOptimizationRemark(
     MlirStringRef categoryName, MlirStringRef subCategoryName,
     MlirStringRef functionName, MlirStringRef message, intptr_t numArgs,
     const MlirStringRef *argKeys, const MlirStringRef *argValues) {
+  assert((numArgs == 0 || (argKeys && argValues)) &&
+         "remark arguments require both keys and values");
   Location loc = unwrap(location);
   remark::RemarkOpts opts = remark::RemarkOpts::name(unwrap(remarkName))
                                 .category(unwrap(categoryName))

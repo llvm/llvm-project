@@ -159,10 +159,9 @@ MLIR_CAPI_EXPORTED MlirStringRef mlirRemarkGetArgValue(MlirRemark remark,
                                                        intptr_t pos);
 
 /// Prints the remark in its textual form, `[Kind] name | Category:... |
-/// Function=... | key=value, ...`, optionally followed by its location.
-MLIR_CAPI_EXPORTED void mlirRemarkPrint(MlirRemark remark, bool printLocation,
-                                        MlirStringCallback callback,
-                                        void *userData);
+/// Function=... | key=value, ...` (without its location).
+MLIR_CAPI_EXPORTED void
+mlirRemarkPrint(MlirRemark remark, MlirStringCallback callback, void *userData);
 
 //===----------------------------------------------------------------------===//
 // Emission.
