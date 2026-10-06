@@ -38,6 +38,7 @@
 #include "clang/CIR/MissingFeatures.h"
 #include "clang/CodeGenUtils/CodeGenUtils.h"
 #include "clang/CodeGenUtils/ModuleUtils.h"
+#include "clang/CodeGenUtils/RecordLayoutUtils.h"
 #include "llvm/ADT/STLExtras.h"
 #include "llvm/ADT/StringExtras.h"
 #include "llvm/ADT/StringRef.h"
@@ -2493,7 +2494,7 @@ bool CIRGenModule::findFieldMemberPath(const CXXRecordDecl *currentClass,
 
 bool CIRGenModule::isEmptyFieldForMemberPointer(const FieldDecl *field) {
   if (!field->isPotentiallyOverlapping() ||
-      !isEmptyFieldForLayout(astContext, field))
+      !CodeGenUtils::isEmptyFieldForLayout(astContext, field))
     return false;
 
   // Unions always have a field even if they are empty.

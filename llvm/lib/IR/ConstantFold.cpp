@@ -996,7 +996,9 @@ Constant *llvm::ConstantFoldBinaryInstruction(unsigned Opcode, Constant *C1,
 static ICmpInst::Predicate areGlobalsPotentiallyEqual(const GlobalValue *GV1,
                                                       const GlobalValue *GV2) {
   auto isGlobalUnsafeForEquality = [](const GlobalValue *GV) {
-    if (GV->isInterposable() || GV->hasGlobalUnnamedAddr())
+    // noipa doesn't affect which definition (and so which address) a global
+    // resolves to, so it's ignored here.
+    if (GV->isInterposable(/*CheckNoIPA=*/false) || GV->hasGlobalUnnamedAddr())
       return true;
     if (const auto *GVar = dyn_cast<GlobalVariable>(GV)) {
       Type *Ty = GVar->getValueType();
