@@ -4,11 +4,7 @@
 define float @select_fmul_legacy(float %x, float %y) {
 ; CHECK-LABEL: define float @select_fmul_legacy(
 ; CHECK-SAME: float [[X:%.*]], float [[Y:%.*]]) {
-; CHECK-NEXT:    [[XZ:%.*]] = fcmp oeq float [[X]], 0.000000e+00
-; CHECK-NEXT:    [[YZ:%.*]] = fcmp oeq float [[Y]], 0.000000e+00
-; CHECK-NEXT:    [[C:%.*]] = or i1 [[XZ]], [[YZ]]
-; CHECK-NEXT:    [[MUL:%.*]] = fmul float [[X]], [[Y]]
-; CHECK-NEXT:    [[R:%.*]] = select i1 [[C]], float 0.000000e+00, float [[MUL]]
+; CHECK-NEXT:    [[R:%.*]] = call float @llvm.amdgcn.fmul.legacy(float [[X]], float [[Y]])
 ; CHECK-NEXT:    ret float [[R]]
 ;
   %xz = fcmp oeq float %x, 0.0
@@ -22,11 +18,7 @@ define float @select_fmul_legacy(float %x, float %y) {
 define float @select_fmul_legacy_uniform(float inreg %x, float inreg %y) {
 ; CHECK-LABEL: define float @select_fmul_legacy_uniform(
 ; CHECK-SAME: float inreg [[X:%.*]], float inreg [[Y:%.*]]) {
-; CHECK-NEXT:    [[XZ:%.*]] = fcmp oeq float [[X]], 0.000000e+00
-; CHECK-NEXT:    [[YZ:%.*]] = fcmp oeq float [[Y]], 0.000000e+00
-; CHECK-NEXT:    [[C:%.*]] = or i1 [[XZ]], [[YZ]]
-; CHECK-NEXT:    [[MUL:%.*]] = fmul float [[X]], [[Y]]
-; CHECK-NEXT:    [[R:%.*]] = select i1 [[C]], float 0.000000e+00, float [[MUL]]
+; CHECK-NEXT:    [[R:%.*]] = call float @llvm.amdgcn.fmul.legacy(float [[X]], float [[Y]])
 ; CHECK-NEXT:    ret float [[R]]
 ;
   %xz = fcmp oeq float %x, 0.0
@@ -40,11 +32,7 @@ define float @select_fmul_legacy_uniform(float inreg %x, float inreg %y) {
 define float @select_fmul_legacy_commute_fmul(float %x, float %y) {
 ; CHECK-LABEL: define float @select_fmul_legacy_commute_fmul(
 ; CHECK-SAME: float [[X:%.*]], float [[Y:%.*]]) {
-; CHECK-NEXT:    [[XZ:%.*]] = fcmp oeq float [[X]], 0.000000e+00
-; CHECK-NEXT:    [[YZ:%.*]] = fcmp oeq float [[Y]], 0.000000e+00
-; CHECK-NEXT:    [[C:%.*]] = or i1 [[XZ]], [[YZ]]
-; CHECK-NEXT:    [[MUL:%.*]] = fmul float [[Y]], [[X]]
-; CHECK-NEXT:    [[R:%.*]] = select i1 [[C]], float 0.000000e+00, float [[MUL]]
+; CHECK-NEXT:    [[R:%.*]] = call float @llvm.amdgcn.fmul.legacy(float [[Y]], float [[X]])
 ; CHECK-NEXT:    ret float [[R]]
 ;
   %xz = fcmp oeq float %x, 0.0
@@ -58,11 +46,7 @@ define float @select_fmul_legacy_commute_fmul(float %x, float %y) {
 define float @select_fmul_legacy_commute_or(float %x, float %y) {
 ; CHECK-LABEL: define float @select_fmul_legacy_commute_or(
 ; CHECK-SAME: float [[X:%.*]], float [[Y:%.*]]) {
-; CHECK-NEXT:    [[XZ:%.*]] = fcmp oeq float [[X]], 0.000000e+00
-; CHECK-NEXT:    [[YZ:%.*]] = fcmp oeq float [[Y]], 0.000000e+00
-; CHECK-NEXT:    [[C:%.*]] = or i1 [[YZ]], [[XZ]]
-; CHECK-NEXT:    [[MUL:%.*]] = fmul float [[X]], [[Y]]
-; CHECK-NEXT:    [[R:%.*]] = select i1 [[C]], float 0.000000e+00, float [[MUL]]
+; CHECK-NEXT:    [[R:%.*]] = call float @llvm.amdgcn.fmul.legacy(float [[X]], float [[Y]])
 ; CHECK-NEXT:    ret float [[R]]
 ;
   %xz = fcmp oeq float %x, 0.0
@@ -76,11 +60,7 @@ define float @select_fmul_legacy_commute_or(float %x, float %y) {
 define float @select_fmul_legacy_cmp_neg_zero(float %x, float %y) {
 ; CHECK-LABEL: define float @select_fmul_legacy_cmp_neg_zero(
 ; CHECK-SAME: float [[X:%.*]], float [[Y:%.*]]) {
-; CHECK-NEXT:    [[XZ:%.*]] = fcmp oeq float [[X]], -0.000000e+00
-; CHECK-NEXT:    [[YZ:%.*]] = fcmp oeq float [[Y]], -0.000000e+00
-; CHECK-NEXT:    [[C:%.*]] = or i1 [[XZ]], [[YZ]]
-; CHECK-NEXT:    [[MUL:%.*]] = fmul float [[X]], [[Y]]
-; CHECK-NEXT:    [[R:%.*]] = select i1 [[C]], float 0.000000e+00, float [[MUL]]
+; CHECK-NEXT:    [[R:%.*]] = call float @llvm.amdgcn.fmul.legacy(float [[X]], float [[Y]])
 ; CHECK-NEXT:    ret float [[R]]
 ;
   %xz = fcmp oeq float %x, -0.0
@@ -189,11 +169,7 @@ define float @select_fmul_legacy_logical_or(float %x, float %y) {
 define float @select_fmul_legacy_inverted(float %x, float %y) {
 ; CHECK-LABEL: define float @select_fmul_legacy_inverted(
 ; CHECK-SAME: float [[X:%.*]], float [[Y:%.*]]) {
-; CHECK-NEXT:    [[XNZ:%.*]] = fcmp une float [[X]], 0.000000e+00
-; CHECK-NEXT:    [[YNZ:%.*]] = fcmp une float [[Y]], 0.000000e+00
-; CHECK-NEXT:    [[C:%.*]] = and i1 [[XNZ]], [[YNZ]]
-; CHECK-NEXT:    [[MUL:%.*]] = fmul float [[X]], [[Y]]
-; CHECK-NEXT:    [[R:%.*]] = select i1 [[C]], float [[MUL]], float 0.000000e+00
+; CHECK-NEXT:    [[R:%.*]] = call float @llvm.amdgcn.fmul.legacy(float [[X]], float [[Y]])
 ; CHECK-NEXT:    ret float [[R]]
 ;
   %xnz = fcmp une float %x, 0.0
@@ -399,9 +375,7 @@ define <2 x float> @select_fmul_legacy_v2f32(<2 x float> %x, <2 x float> %y) {
 define float @select_fmul_legacy_square(float %x) {
 ; CHECK-LABEL: define float @select_fmul_legacy_square(
 ; CHECK-SAME: float [[X:%.*]]) {
-; CHECK-NEXT:    [[XZ:%.*]] = fcmp oeq float [[X]], 0.000000e+00
-; CHECK-NEXT:    [[MUL:%.*]] = fmul float [[X]], [[X]]
-; CHECK-NEXT:    [[R:%.*]] = select i1 [[XZ]], float 0.000000e+00, float [[MUL]]
+; CHECK-NEXT:    [[R:%.*]] = call float @llvm.amdgcn.fmul.legacy(float [[X]], float [[X]])
 ; CHECK-NEXT:    ret float [[R]]
 ;
   %xz = fcmp oeq float %x, 0.0
@@ -413,11 +387,7 @@ define float @select_fmul_legacy_square(float %x) {
 define float @select_fmul_legacy_square_or(float %x) {
 ; CHECK-LABEL: define float @select_fmul_legacy_square_or(
 ; CHECK-SAME: float [[X:%.*]]) {
-; CHECK-NEXT:    [[XZ0:%.*]] = fcmp oeq float [[X]], 0.000000e+00
-; CHECK-NEXT:    [[XZ1:%.*]] = fcmp oeq float [[X]], 0.000000e+00
-; CHECK-NEXT:    [[C:%.*]] = or i1 [[XZ0]], [[XZ1]]
-; CHECK-NEXT:    [[MUL:%.*]] = fmul float [[X]], [[X]]
-; CHECK-NEXT:    [[R:%.*]] = select i1 [[C]], float 0.000000e+00, float [[MUL]]
+; CHECK-NEXT:    [[R:%.*]] = call float @llvm.amdgcn.fmul.legacy(float [[X]], float [[X]])
 ; CHECK-NEXT:    ret float [[R]]
 ;
   %xz0 = fcmp oeq float %x, 0.0
@@ -431,12 +401,7 @@ define float @select_fmul_legacy_square_or(float %x) {
 define float @select_fmul_legacy_redundant_cmp(float %x, float %y) {
 ; CHECK-LABEL: define float @select_fmul_legacy_redundant_cmp(
 ; CHECK-SAME: float [[X:%.*]], float [[Y:%.*]]) {
-; CHECK-NEXT:    [[XZ:%.*]] = fcmp oeq float [[X]], 0.000000e+00
-; CHECK-NEXT:    [[YZ:%.*]] = fcmp oeq float [[Y]], 0.000000e+00
-; CHECK-NEXT:    [[C0:%.*]] = or i1 [[XZ]], [[YZ]]
-; CHECK-NEXT:    [[C:%.*]] = or i1 [[C0]], [[XZ]]
-; CHECK-NEXT:    [[MUL:%.*]] = fmul float [[X]], [[Y]]
-; CHECK-NEXT:    [[R:%.*]] = select i1 [[C]], float 0.000000e+00, float [[MUL]]
+; CHECK-NEXT:    [[R:%.*]] = call float @llvm.amdgcn.fmul.legacy(float [[X]], float [[Y]])
 ; CHECK-NEXT:    ret float [[R]]
 ;
   %xz = fcmp oeq float %x, 0.0
@@ -451,12 +416,7 @@ define float @select_fmul_legacy_redundant_cmp(float %x, float %y) {
 define float @select_fmul_legacy_shared_or(float %x, float %y) {
 ; CHECK-LABEL: define float @select_fmul_legacy_shared_or(
 ; CHECK-SAME: float [[X:%.*]], float [[Y:%.*]]) {
-; CHECK-NEXT:    [[XZ:%.*]] = fcmp oeq float [[X]], 0.000000e+00
-; CHECK-NEXT:    [[YZ:%.*]] = fcmp oeq float [[Y]], 0.000000e+00
-; CHECK-NEXT:    [[C0:%.*]] = or i1 [[XZ]], [[YZ]]
-; CHECK-NEXT:    [[C:%.*]] = or i1 [[C0]], [[C0]]
-; CHECK-NEXT:    [[MUL:%.*]] = fmul float [[X]], [[Y]]
-; CHECK-NEXT:    [[R:%.*]] = select i1 [[C]], float 0.000000e+00, float [[MUL]]
+; CHECK-NEXT:    [[R:%.*]] = call float @llvm.amdgcn.fmul.legacy(float [[X]], float [[Y]])
 ; CHECK-NEXT:    ret float [[R]]
 ;
   %xz = fcmp oeq float %x, 0.0
@@ -543,12 +503,8 @@ define float @select_fmul_legacy_const_operand(float %x) {
 define float @select_fmul_legacy_fabs_mul_operand(float %x, float %y) {
 ; CHECK-LABEL: define float @select_fmul_legacy_fabs_mul_operand(
 ; CHECK-SAME: float [[X:%.*]], float [[Y:%.*]]) {
-; CHECK-NEXT:    [[XZ:%.*]] = fcmp oeq float [[X]], 0.000000e+00
-; CHECK-NEXT:    [[YZ:%.*]] = fcmp oeq float [[Y]], 0.000000e+00
-; CHECK-NEXT:    [[C:%.*]] = or i1 [[XZ]], [[YZ]]
 ; CHECK-NEXT:    [[FABS_X:%.*]] = call float @llvm.fabs.f32(float [[X]])
-; CHECK-NEXT:    [[MUL:%.*]] = fmul float [[FABS_X]], [[Y]]
-; CHECK-NEXT:    [[R:%.*]] = select i1 [[C]], float 0.000000e+00, float [[MUL]]
+; CHECK-NEXT:    [[R:%.*]] = call float @llvm.amdgcn.fmul.legacy(float [[FABS_X]], float [[Y]])
 ; CHECK-NEXT:    ret float [[R]]
 ;
   %xz = fcmp oeq float %x, 0.0
@@ -563,12 +519,7 @@ define float @select_fmul_legacy_fabs_mul_operand(float %x, float %y) {
 define float @select_fmul_legacy_fabs_cmp_operand(float %x, float %y) {
 ; CHECK-LABEL: define float @select_fmul_legacy_fabs_cmp_operand(
 ; CHECK-SAME: float [[X:%.*]], float [[Y:%.*]]) {
-; CHECK-NEXT:    [[FABS_X:%.*]] = call float @llvm.fabs.f32(float [[X]])
-; CHECK-NEXT:    [[XZ:%.*]] = fcmp oeq float [[FABS_X]], 0.000000e+00
-; CHECK-NEXT:    [[YZ:%.*]] = fcmp oeq float [[Y]], 0.000000e+00
-; CHECK-NEXT:    [[C:%.*]] = or i1 [[XZ]], [[YZ]]
-; CHECK-NEXT:    [[MUL:%.*]] = fmul float [[X]], [[Y]]
-; CHECK-NEXT:    [[R:%.*]] = select i1 [[C]], float 0.000000e+00, float [[MUL]]
+; CHECK-NEXT:    [[R:%.*]] = call float @llvm.amdgcn.fmul.legacy(float [[X]], float [[Y]])
 ; CHECK-NEXT:    ret float [[R]]
 ;
   %fabs.x = call float @llvm.fabs.f32(float %x)
@@ -583,12 +534,8 @@ define float @select_fmul_legacy_fabs_cmp_operand(float %x, float %y) {
 define float @select_fmul_legacy_fneg_mul_operand(float %x, float %y) {
 ; CHECK-LABEL: define float @select_fmul_legacy_fneg_mul_operand(
 ; CHECK-SAME: float [[X:%.*]], float [[Y:%.*]]) {
-; CHECK-NEXT:    [[XZ:%.*]] = fcmp oeq float [[X]], 0.000000e+00
-; CHECK-NEXT:    [[YZ:%.*]] = fcmp oeq float [[Y]], 0.000000e+00
-; CHECK-NEXT:    [[C:%.*]] = or i1 [[XZ]], [[YZ]]
 ; CHECK-NEXT:    [[FNEG_X:%.*]] = fneg float [[X]]
-; CHECK-NEXT:    [[MUL:%.*]] = fmul float [[FNEG_X]], [[Y]]
-; CHECK-NEXT:    [[R:%.*]] = select i1 [[C]], float 0.000000e+00, float [[MUL]]
+; CHECK-NEXT:    [[R:%.*]] = call float @llvm.amdgcn.fmul.legacy(float [[FNEG_X]], float [[Y]])
 ; CHECK-NEXT:    ret float [[R]]
 ;
   %xz = fcmp oeq float %x, 0.0
@@ -603,12 +550,7 @@ define float @select_fmul_legacy_fneg_mul_operand(float %x, float %y) {
 define float @select_fmul_legacy_fneg_cmp_operand(float %x, float %y) {
 ; CHECK-LABEL: define float @select_fmul_legacy_fneg_cmp_operand(
 ; CHECK-SAME: float [[X:%.*]], float [[Y:%.*]]) {
-; CHECK-NEXT:    [[FNEG_X:%.*]] = fneg float [[X]]
-; CHECK-NEXT:    [[XZ:%.*]] = fcmp oeq float [[FNEG_X]], 0.000000e+00
-; CHECK-NEXT:    [[YZ:%.*]] = fcmp oeq float [[Y]], 0.000000e+00
-; CHECK-NEXT:    [[C:%.*]] = or i1 [[XZ]], [[YZ]]
-; CHECK-NEXT:    [[MUL:%.*]] = fmul float [[X]], [[Y]]
-; CHECK-NEXT:    [[R:%.*]] = select i1 [[C]], float 0.000000e+00, float [[MUL]]
+; CHECK-NEXT:    [[R:%.*]] = call float @llvm.amdgcn.fmul.legacy(float [[X]], float [[Y]])
 ; CHECK-NEXT:    ret float [[R]]
 ;
   %fneg.x = fneg float %x
@@ -625,11 +567,7 @@ define float @select_fmul_legacy_fneg_fabs(float %x, float %y) {
 ; CHECK-SAME: float [[X:%.*]], float [[Y:%.*]]) {
 ; CHECK-NEXT:    [[FABS_X:%.*]] = call float @llvm.fabs.f32(float [[X]])
 ; CHECK-NEXT:    [[FNEG_FABS_X:%.*]] = fneg float [[FABS_X]]
-; CHECK-NEXT:    [[XZ:%.*]] = fcmp oeq float [[FABS_X]], 0.000000e+00
-; CHECK-NEXT:    [[YZ:%.*]] = fcmp oeq float [[Y]], 0.000000e+00
-; CHECK-NEXT:    [[C:%.*]] = or i1 [[XZ]], [[YZ]]
-; CHECK-NEXT:    [[MUL:%.*]] = fmul float [[FNEG_FABS_X]], [[Y]]
-; CHECK-NEXT:    [[R:%.*]] = select i1 [[C]], float 0.000000e+00, float [[MUL]]
+; CHECK-NEXT:    [[R:%.*]] = call float @llvm.amdgcn.fmul.legacy(float [[FNEG_FABS_X]], float [[Y]])
 ; CHECK-NEXT:    ret float [[R]]
 ;
   %fabs.x = call float @llvm.fabs.f32(float %x)
@@ -645,12 +583,8 @@ define float @select_fmul_legacy_fneg_fabs(float %x, float %y) {
 define float @select_fmul_legacy_fneg_nsz(float %x, float %y) {
 ; CHECK-LABEL: define float @select_fmul_legacy_fneg_nsz(
 ; CHECK-SAME: float [[X:%.*]], float [[Y:%.*]]) {
-; CHECK-NEXT:    [[XZ:%.*]] = fcmp oeq float [[X]], 0.000000e+00
-; CHECK-NEXT:    [[YZ:%.*]] = fcmp oeq float [[Y]], 0.000000e+00
-; CHECK-NEXT:    [[C:%.*]] = or i1 [[XZ]], [[YZ]]
 ; CHECK-NEXT:    [[FNEG_X:%.*]] = fneg nsz float [[X]]
-; CHECK-NEXT:    [[MUL:%.*]] = fmul float [[FNEG_X]], [[Y]]
-; CHECK-NEXT:    [[R:%.*]] = select i1 [[C]], float 0.000000e+00, float [[MUL]]
+; CHECK-NEXT:    [[R:%.*]] = call float @llvm.amdgcn.fmul.legacy(float [[FNEG_X]], float [[Y]])
 ; CHECK-NEXT:    ret float [[R]]
 ;
   %xz = fcmp oeq float %x, 0.0
@@ -749,11 +683,7 @@ define float @select_fmul_legacy_canonicalize(float %x, float %y) {
 define float @select_fmul_legacy_select_flags(float %x, float %y) {
 ; CHECK-LABEL: define float @select_fmul_legacy_select_flags(
 ; CHECK-SAME: float [[X:%.*]], float [[Y:%.*]]) {
-; CHECK-NEXT:    [[XZ:%.*]] = fcmp oeq float [[X]], 0.000000e+00
-; CHECK-NEXT:    [[YZ:%.*]] = fcmp oeq float [[Y]], 0.000000e+00
-; CHECK-NEXT:    [[C:%.*]] = or i1 [[XZ]], [[YZ]]
-; CHECK-NEXT:    [[MUL:%.*]] = fmul float [[X]], [[Y]]
-; CHECK-NEXT:    [[R:%.*]] = select nsz i1 [[C]], float 0.000000e+00, float [[MUL]]
+; CHECK-NEXT:    [[R:%.*]] = call float @llvm.amdgcn.fmul.legacy(float [[X]], float [[Y]])
 ; CHECK-NEXT:    ret float [[R]]
 ;
   %xz = fcmp oeq float %x, 0.0
@@ -768,11 +698,7 @@ define float @select_fmul_legacy_select_flags(float %x, float %y) {
 define float @select_fmul_legacy_select_nnan_ninf(float %x, float %y) {
 ; CHECK-LABEL: define float @select_fmul_legacy_select_nnan_ninf(
 ; CHECK-SAME: float [[X:%.*]], float [[Y:%.*]]) {
-; CHECK-NEXT:    [[XZ:%.*]] = fcmp oeq float [[X]], 0.000000e+00
-; CHECK-NEXT:    [[YZ:%.*]] = fcmp oeq float [[Y]], 0.000000e+00
-; CHECK-NEXT:    [[C:%.*]] = or i1 [[XZ]], [[YZ]]
-; CHECK-NEXT:    [[MUL:%.*]] = fmul float [[X]], [[Y]]
-; CHECK-NEXT:    [[R:%.*]] = select nnan ninf i1 [[C]], float 0.000000e+00, float [[MUL]]
+; CHECK-NEXT:    [[R:%.*]] = call float @llvm.amdgcn.fmul.legacy(float [[X]], float [[Y]])
 ; CHECK-NEXT:    ret float [[R]]
 ;
   %xz = fcmp oeq float %x, 0.0
@@ -786,11 +712,7 @@ define float @select_fmul_legacy_select_nnan_ninf(float %x, float %y) {
 define float @select_fmul_legacy_fmul_flags(float %x, float %y) {
 ; CHECK-LABEL: define float @select_fmul_legacy_fmul_flags(
 ; CHECK-SAME: float [[X:%.*]], float [[Y:%.*]]) {
-; CHECK-NEXT:    [[XZ:%.*]] = fcmp oeq float [[X]], 0.000000e+00
-; CHECK-NEXT:    [[YZ:%.*]] = fcmp oeq float [[Y]], 0.000000e+00
-; CHECK-NEXT:    [[C:%.*]] = or i1 [[XZ]], [[YZ]]
-; CHECK-NEXT:    [[MUL:%.*]] = fmul nnan ninf float [[X]], [[Y]]
-; CHECK-NEXT:    [[R:%.*]] = select i1 [[C]], float 0.000000e+00, float [[MUL]]
+; CHECK-NEXT:    [[R:%.*]] = call float @llvm.amdgcn.fmul.legacy(float [[X]], float [[Y]])
 ; CHECK-NEXT:    ret float [[R]]
 ;
   %xz = fcmp oeq float %x, 0.0
@@ -804,11 +726,7 @@ define float @select_fmul_legacy_fmul_flags(float %x, float %y) {
 define float @select_fmul_legacy_fcmp_flags(float %x, float %y) {
 ; CHECK-LABEL: define float @select_fmul_legacy_fcmp_flags(
 ; CHECK-SAME: float [[X:%.*]], float [[Y:%.*]]) {
-; CHECK-NEXT:    [[XZ:%.*]] = fcmp nnan oeq float [[X]], 0.000000e+00
-; CHECK-NEXT:    [[YZ:%.*]] = fcmp nnan oeq float [[Y]], 0.000000e+00
-; CHECK-NEXT:    [[C:%.*]] = or i1 [[XZ]], [[YZ]]
-; CHECK-NEXT:    [[MUL:%.*]] = fmul float [[X]], [[Y]]
-; CHECK-NEXT:    [[R:%.*]] = select i1 [[C]], float 0.000000e+00, float [[MUL]]
+; CHECK-NEXT:    [[R:%.*]] = call float @llvm.amdgcn.fmul.legacy(float [[X]], float [[Y]])
 ; CHECK-NEXT:    ret float [[R]]
 ;
   %xz = fcmp nnan oeq float %x, 0.0
@@ -822,11 +740,7 @@ define float @select_fmul_legacy_fcmp_flags(float %x, float %y) {
 define float @select_fmul_legacy_daz(float %x, float %y) #0 {
 ; CHECK-LABEL: define float @select_fmul_legacy_daz(
 ; CHECK-SAME: float [[X:%.*]], float [[Y:%.*]]) #[[ATTR0:[0-9]+]] {
-; CHECK-NEXT:    [[XZ:%.*]] = fcmp oeq float [[X]], 0.000000e+00
-; CHECK-NEXT:    [[YZ:%.*]] = fcmp oeq float [[Y]], 0.000000e+00
-; CHECK-NEXT:    [[C:%.*]] = or i1 [[XZ]], [[YZ]]
-; CHECK-NEXT:    [[MUL:%.*]] = fmul float [[X]], [[Y]]
-; CHECK-NEXT:    [[R:%.*]] = select i1 [[C]], float 0.000000e+00, float [[MUL]]
+; CHECK-NEXT:    [[R:%.*]] = call float @llvm.amdgcn.fmul.legacy(float [[X]], float [[Y]])
 ; CHECK-NEXT:    ret float [[R]]
 ;
   %xz = fcmp oeq float %x, 0.0
