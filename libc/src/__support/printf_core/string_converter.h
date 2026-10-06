@@ -70,21 +70,21 @@ template <OverflowMode mode>
 LIBC_INLINE int wchar_writer(Writer<mode> *writer,
                              const FormatSection &to_conv) {
   size_t string_len = 0;
-  const char32_t *wstr_ptr =
-      reinterpret_cast<const char32_t *>(to_conv.conv_val_ptr);
+  const wchar_t *wstr_ptr =
+      reinterpret_cast<const wchar_t *>(to_conv.conv_val_ptr);
   size_t precision =
       to_conv.precision < 0 ? SIZE_MAX : static_cast<size_t>(to_conv.precision);
 
 #ifndef LIBC_COPT_PRINTF_NO_NULLPTR_CHECKS
   if (wstr_ptr == nullptr) {
-    wstr_ptr = U"(null)";
+    wstr_ptr = L"(null)";
   }
 #endif // LIBC_COPT_PRINTF_NO_NULLPTR_CHECKS
 
   internal::mbstate mbstate;
 
-  internal::StringConverter<char32_t> length_counter(wstr_ptr, &mbstate,
-                                                     precision);
+  internal::StringConverter<wchar_t> length_counter(wstr_ptr, &mbstate,
+                                                    precision);
 
   for (auto converted = length_counter.pop<char8_t>();
        converted.has_value() && converted.value() != '\0';
@@ -103,7 +103,7 @@ LIBC_INLINE int wchar_writer(Writer<mode> *writer,
   }
 
   mbstate = internal::mbstate();
-  internal::StringConverter<char32_t> out_conv(wstr_ptr, &mbstate, precision);
+  internal::StringConverter<wchar_t> out_conv(wstr_ptr, &mbstate, precision);
 
   for (auto converted = out_conv.pop<char8_t>();
        converted.has_value() && converted.value() != '\0';

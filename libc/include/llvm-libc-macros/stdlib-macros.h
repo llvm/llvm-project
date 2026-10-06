@@ -18,8 +18,9 @@
 #define EXIT_FAILURE 1
 
 #ifndef MB_CUR_MAX
-// We only support the "C" locale right now, so this is a constant byte.
-#define MB_CUR_MAX 1
+// We do UTF-32 <-> UTF-8 conversions, so MAX_UTF8_LENGTH
+// https://www.open-std.org/jtc1/sc22/wg14/issues/c90/issue0039.01.html
+#define MB_CUR_MAX 4
 #endif // MB_CUR_MAX
 
 #define RAND_MAX 2147483647

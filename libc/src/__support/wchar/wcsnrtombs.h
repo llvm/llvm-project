@@ -9,13 +9,15 @@
 #ifndef LLVM_LIBC_SRC__SUPPORT_WCHAR_WCSNRTOMBS_H
 #define LLVM_LIBC_SRC__SUPPORT_WCHAR_WCSNRTOMBS_H
 
-#include "hdr/types/char32_t.h"
+#include "hdr/errno_macros.h"
 #include "hdr/types/char8_t.h"
 #include "hdr/types/size_t.h"
 #include "hdr/types/wchar_t.h"
 #include "src/__support/common.h"
+#include "src/__support/error_or.h"
 #include "src/__support/macros/config.h"
 #include "src/__support/macros/null_check.h"
+#include "src/__support/wchar/character_converter.h"
 #include "src/__support/wchar/mbstate.h"
 #include "src/__support/wchar/string_converter.h"
 
@@ -35,9 +37,8 @@ wcsnrtombs(char *__restrict dest, const wchar_t **__restrict ptr_to_src,
   if (dest == nullptr)
     dest_len = SIZE_MAX;
 
-  StringConverter<char32_t> str_conv(
-      reinterpret_cast<const char32_t *>(*ptr_to_src), ps, dest_len,
-      num_src_widechars);
+  StringConverter<wchar_t> str_conv(*ptr_to_src, ps, dest_len,
+                                    num_src_widechars);
   size_t dst_idx = 0;
   ErrorOr<char8_t> converted = str_conv.pop<char8_t>();
   while (converted.has_value()) {

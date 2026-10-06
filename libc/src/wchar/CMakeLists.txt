@@ -149,6 +149,7 @@ add_entrypoint_object(
   DEPENDS
     libc.hdr.types.wchar_t
     libc.hdr.types.mbstate_t
+    libc.include.llvm-libc-macros.limits_macros
     libc.src.__support.libc_errno
     libc.src.__support.wchar.wcrtomb
     libc.src.__support.wchar.mbstate

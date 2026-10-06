@@ -10,6 +10,7 @@
 
 #include "hdr/types/mbstate_t.h"
 #include "hdr/types/wchar_t.h"
+#include "include/llvm-libc-macros/limits-macros.h"
 #include "src/__support/common.h"
 #include "src/__support/libc_errno.h"
 #include "src/__support/macros/config.h"
@@ -23,7 +24,7 @@ LLVM_LIBC_FUNCTION(size_t, wcrtomb,
   static internal::mbstate internal_mbstate;
 
   // when s is nullptr, this is equivalent to wcrtomb(buf, L'\0', ps)
-  char buf[sizeof(wchar_t) / sizeof(char)];
+  char buf[MB_LEN_MAX];
   if (s == nullptr) {
     s = buf;
     wc = L'\0';

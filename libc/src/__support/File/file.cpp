@@ -559,10 +559,12 @@ FileIOResult File::write_unlocked(const wchar_t *ws, size_t len) {
   size_t written = 0;
   for (size_t i = 0; i < len; ++i) {
     internal::CharacterConverter cr(&mbstate);
-    int push_err = cr.push(static_cast<char32_t>(ws[i]));
-    if (push_err != 0) {
-      err = true;
-      return {written, push_err};
+    while (!cr.isFull()) {
+      int push_err = cr.push(ws[i]);
+      if (push_err != 0) {
+        err = true;
+        return {written, push_err};
+      }
     }
     // buffer the whole wchar to save on calls to write.
     char buffer[4];
@@ -574,7 +576,7 @@ FileIOResult File::write_unlocked(const wchar_t *ws, size_t len) {
         return {written, pop_res.error()};
       }
       char8_t byte = pop_res.value();
-      buffer[char_size] = byte;
+      buffer[char_size] = static_cast<char>(byte);
       ++char_size;
     }
     auto write_res = write_unlocked_impl(buffer, char_size);
@@ -602,7 +604,7 @@ FileIOResult File::read_unlocked(wchar_t *ws, size_t len) {
   }
 
   size_t read_count = 0;
-  for (size_t i = 0; i < len; ++i) {
+  for (size_t i = 0; i < len;) {
     internal::CharacterConverter cr(&mbstate);
     while (!cr.isFull()) {
       uint8_t byte;
@@ -621,13 +623,15 @@ FileIOResult File::read_unlocked(wchar_t *ws, size_t len) {
         return {read_count, push_err};
       }
     }
-    auto pop_res = cr.pop<char32_t>();
-    if (!pop_res.has_value()) {
-      err = true;
-      return {read_count, pop_res.error()};
+    while (!cr.isEmpty()) {
+      auto pop_res = cr.pop<wchar_t>();
+      if (!pop_res.has_value()) {
+        err = true;
+        return {read_count, pop_res.error()};
+      }
+      ws[i++] = pop_res.value();
+      ++read_count;
     }
-    ws[i] = static_cast<wchar_t>(pop_res.value());
-    ++read_count;
   }
   return {read_count, 0};
 }
