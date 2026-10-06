@@ -1042,7 +1042,7 @@ void SemaCUDA::checkRTTIUse(SourceLocation Loc, StringRef Op) {
 namespace {
 /// Finds a use of RTTI, as diagnosed by checkRTTIUse, in a default argument or
 /// default member initializer.
-struct RTTIUseFinder : DynamicRecursiveASTVisitor {
+struct RTTIUseFinder : ConstDynamicRecursiveASTVisitor {
   const Expr *Use = nullptr;
 
   RTTIUseFinder() {
@@ -1052,12 +1052,12 @@ struct RTTIUseFinder : DynamicRecursiveASTVisitor {
     ShouldVisitLambdaBody = false;
   }
 
-  bool VisitCXXTypeidExpr(CXXTypeidExpr *E) override {
+  bool VisitCXXTypeidExpr(const CXXTypeidExpr *E) override {
     Use = E;
     return false;
   }
 
-  bool VisitCXXDynamicCastExpr(CXXDynamicCastExpr *E) override {
+  bool VisitCXXDynamicCastExpr(const CXXDynamicCastExpr *E) override {
     // As with -fno-rtti, upcasts and dynamic_cast to void* don't use RTTI.
     QualType DestTy = E->getType();
     if (E->getCastKind() != CK_Dynamic ||
@@ -1078,7 +1078,7 @@ void SemaCUDA::checkRTTIInDefaultInit(const ValueDecl *D, const Expr *Init,
   if (!CurFn && !isDeviceVarInit())
     return;
   RTTIUseFinder Finder;
-  Finder.TraverseStmt(const_cast<Expr *>(Init));
+  Finder.TraverseStmt(Init);
   const Expr *Use = Finder.Use;
   if (!Use)
     return;
