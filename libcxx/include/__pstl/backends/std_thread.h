@@ -14,6 +14,7 @@
 #include <__optional/optional.h>
 #include <__pstl/backend_fwd.h>
 #include <__pstl/cpu_algos/any_of.h>
+#include <__pstl/cpu_algos/copy_if.h>
 #include <__pstl/cpu_algos/cpu_traits.h>
 #include <__pstl/cpu_algos/fill.h>
 #include <__pstl/cpu_algos/find_end.h>
@@ -69,6 +70,29 @@ struct __cpu_traits<__std_thread_backend_tag> {
     return __reduce(std::move(__first), std::move(__last), std::move(__init));
   }
 
+  template <class _Value,
+            class _RandomAccessIterator,
+            class _WorkerPrologue,
+            class _ScanHead,
+            class _ScanMiddle,
+            class _ScanTail,
+            class _WorkerEpilogue>
+  _LIBCPP_HIDE_FROM_ABI static optional<__empty> __lookback_scan(
+      _RandomAccessIterator __first,
+      _RandomAccessIterator __last,
+      _WorkerPrologue __worker_prologue,
+      _ScanHead __scan_head,
+      _ScanMiddle /*__scan_middle*/,
+      _ScanTail /*__scan_tail*/,
+      _WorkerEpilogue __worker_epilogue) {
+    if (__first == __last)
+      return __empty{}; // nothing to do
+    auto __ctx = __worker_prologue(static_cast<size_t>(__last - __first));
+    __scan_head(__ctx, __first, __last, nullptr);
+    __worker_epilogue(std::move(__ctx));
+    return __empty{};
+  }
+
   template <class _RandomAccessIterator, class _Compare, class _LeafSort>
   _LIBCPP_HIDE_FROM_ABI static optional<__empty>
   __stable_sort(_RandomAccessIterator __first, _RandomAccessIterator __last, _Compare __comp, _LeafSort __leaf_sort) {
@@ -99,6 +123,10 @@ struct __cpu_traits<__std_thread_backend_tag> {
 };
 
 // Mandatory implementations of the computational basis
+template <class _ExecutionPolicy>
+struct __copy_if<__std_thread_backend_tag, _ExecutionPolicy>
+    : __cpu_parallel_copy_if<__std_thread_backend_tag, _ExecutionPolicy> {};
+
 template <class _ExecutionPolicy>
 struct __find_end<__std_thread_backend_tag, _ExecutionPolicy>
     : __cpu_parallel_find_end<__std_thread_backend_tag, _ExecutionPolicy> {};

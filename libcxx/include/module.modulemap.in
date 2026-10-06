@@ -2426,6 +2426,9 @@ module std {
       module any_of {
         header "__pstl/cpu_algos/any_of.h"
       }
+      module copy_if {
+        header "__pstl/cpu_algos/copy_if.h"
+      }
       module cpu_traits {
         header "__pstl/cpu_algos/cpu_traits.h"
       }

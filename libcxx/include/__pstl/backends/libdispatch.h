@@ -36,6 +36,7 @@
 #include <__optional/optional.h>
 #include <__pstl/backend_fwd.h>
 #include <__pstl/cpu_algos/any_of.h>
+#include <__pstl/cpu_algos/copy_if.h>
 #include <__pstl/cpu_algos/cpu_traits.h>
 #include <__pstl/cpu_algos/fill.h>
 #include <__pstl/cpu_algos/find_end.h>
@@ -54,6 +55,8 @@
 #include <__pstl/cpu_algos/transform.h>
 #include <__pstl/cpu_algos/transform_reduce.h>
 #include <__pstl/cpu_algos/uninitialized_algorithms.h>
+#include <__pstl/decoupled_lookback.h>
+#include <__thread/thread.h>
 #include <__utility/empty.h>
 #include <__utility/exception_guard.h>
 #include <__utility/move.h>
@@ -273,6 +276,68 @@ struct __cpu_traits<__libdispatch_backend_tag> {
         __combiner);
   }
 
+  template <class _Value,
+            class _RandomAccessIterator,
+            class _WorkerPrologue,
+            class _ScanHead,
+            class _ScanMiddle,
+            class _ScanTail,
+            class _WorkerEpilogue>
+  _LIBCPP_HIDE_FROM_ABI static optional<__empty> __lookback_scan(
+      _RandomAccessIterator __first,
+      _RandomAccessIterator __last,
+      _WorkerPrologue __worker_prologue,
+      _ScanHead __scan_head,
+      _ScanMiddle __scan_middle,
+      _ScanTail __scan_tail,
+      _WorkerEpilogue __worker_epilogue) {
+    if (__first == __last)
+      return __empty{}; // nothing to do
+
+    // Partition the input and allocate the lookback storage
+    __libdispatch::__chunk_partitions __partitions = __libdispatch::__partition_chunks(__last - __first);
+    __decoupled_lookback<_Value> __lookback{static_cast<size_t>(__partitions.__chunk_count_ - 1)};
+    if (__partitions.__chunk_count_ > 1 && __lookback.__size() == 0) {
+      return nullopt; // failed to allocate the lookback storage
+    }
+
+    size_t __max_workers_count = thread::hardware_concurrency();
+
+    // Run the single-pass scan with decoupled lookback
+    atomic<size_t> __next_chunk{0};
+    __libdispatch::__dispatch_apply(__max_workers_count, [&](size_t /*__worker_id*/) {
+      auto __worker_ctx = __worker_prologue(
+          static_cast<size_t>(std::max(__partitions.__first_chunk_size_, __partitions.__chunk_size_)));
+
+      size_t __chunk;
+      while ((__chunk = __next_chunk.fetch_add(1, std::memory_order_relaxed)) <
+             static_cast<size_t>(__partitions.__chunk_count_)) {
+        auto __this_chunk_size = __chunk == 0 ? __partitions.__first_chunk_size_ : __partitions.__chunk_size_;
+        auto __index           = __chunk == 0 ? 0
+                                              : (__chunk * __partitions.__chunk_size_) +
+                                                    (__partitions.__first_chunk_size_ - __partitions.__chunk_size_);
+        if (__chunk == 0) {
+          __scan_head(__worker_ctx,
+                      __first + __index,
+                      __first + __index + __this_chunk_size,
+                      __partitions.__chunk_count_ > 1 ? &__lookback.__partition(0) : nullptr);
+        } else if (__chunk < __lookback.__size()) {
+          __scan_middle(
+              __worker_ctx, __first + __index, __first + __index + __this_chunk_size, &__lookback.__partition(__chunk));
+        } else {
+          __scan_tail(__worker_ctx,
+                      __first + __index,
+                      __first + __index + __this_chunk_size,
+                      &__lookback.__partition(__chunk - 1) + 1);
+        }
+
+        __worker_epilogue(std::move(__worker_ctx));
+      }
+    });
+
+    return __empty{};
+  }
+
   template <class _RandomAccessIterator, class _Comp, class _LeafSort>
   _LIBCPP_HIDE_FROM_ABI static optional<__empty>
   __stable_sort(_RandomAccessIterator __first, _RandomAccessIterator __last, _Comp __comp, _LeafSort __leaf_sort) {
@@ -369,6 +434,10 @@ struct __cpu_traits<__libdispatch_backend_tag> {
 };
 
 // Mandatory implementations of the computational basis
+template <class _ExecutionPolicy>
+struct __copy_if<__libdispatch_backend_tag, _ExecutionPolicy>
+    : __cpu_parallel_copy_if<__libdispatch_backend_tag, _ExecutionPolicy> {};
+
 template <class _ExecutionPolicy>
 struct __find_end<__libdispatch_backend_tag, _ExecutionPolicy>
     : __cpu_parallel_find_end<__libdispatch_backend_tag, _ExecutionPolicy> {};
