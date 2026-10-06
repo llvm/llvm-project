@@ -5,15 +5,15 @@
 # blocks in layout order, so the entries for bb.2 come out as bb.1.
 
 # CHECK:      callSites:
-# CHECK-NEXT:   - { bb: 1, offset: 0, fwdArgRegs:
+# CHECK-NEXT:   - { bb: '%bb.1', offset: 0, fwdArgRegs:
 # CHECK-NEXT:       - { arg: 0, reg: '$edi' } }
-# CHECK-NEXT:   - { bb: 2, offset: 0, fwdArgRegs:
+# CHECK-NEXT:   - { bb: '%bb.2', offset: 0, fwdArgRegs:
 # CHECK-NEXT:       - { arg: 0, reg: '$esi' } }
 # CHECK:      calledGlobals:
-# CHECK-NEXT:   - bb: 1
+# CHECK-NEXT:   - bb: '%bb.1'
 # CHECK-NEXT:     offset: 0
 # CHECK-NEXT:     callee: foo
-# CHECK:        - bb: 2
+# CHECK:        - bb: '%bb.2'
 # CHECK-NEXT:     offset: 0
 # CHECK-NEXT:     callee: bar
 
@@ -25,11 +25,11 @@
 ---
 name: caller
 callSites:
-  - { bb: 2, offset: 0, fwdArgRegs: [ { arg: 0, reg: '$edi' } ] }
-  - { bb: 1, offset: 0, fwdArgRegs: [ { arg: 0, reg: '$esi' } ] }
+  - { bb: '%bb.2', offset: 0, fwdArgRegs: [ { arg: 0, reg: '$edi' } ] }
+  - { bb: '%bb.1', offset: 0, fwdArgRegs: [ { arg: 0, reg: '$esi' } ] }
 calledGlobals:
-  - { bb: 2, offset: 0, callee: foo, flags: 0 }
-  - { bb: 1, offset: 0, callee: bar, flags: 0 }
+  - { bb: '%bb.2', offset: 0, callee: foo, flags: 0 }
+  - { bb: '%bb.1', offset: 0, callee: bar, flags: 0 }
 body: |
   bb.0:
     liveins: $rdi, $eflags

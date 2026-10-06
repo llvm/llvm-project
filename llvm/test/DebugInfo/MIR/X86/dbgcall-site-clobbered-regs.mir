@@ -111,8 +111,8 @@ fixedStack:
   - { id: 0, type: spill-slot, offset: -24, size: 8, alignment: 8, callee-saved-register: '$rbx' }
   - { id: 1, type: spill-slot, offset: -16, size: 8, alignment: 16, callee-saved-register: '$r14' }
 callSites:
-  - { bb: 0, offset: 15 }
-  - { bb: 0, offset: 28, fwdArgRegs: 
+  - { bb: '%bb.0', offset: 15 }
+  - { bb: '%bb.0', offset: 28, fwdArgRegs:
       - { arg: 0, reg: '$edi' }
       - { arg: 1, reg: '$esi' } }
 debugValueSubstitutions:

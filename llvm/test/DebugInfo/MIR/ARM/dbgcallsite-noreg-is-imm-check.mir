@@ -52,7 +52,7 @@
 name:            func1
 alignment:       4
 callSites:
-  - { bb: 0, offset: 11, fwdArgRegs:
+  - { bb: '%bb.0', offset: 11, fwdArgRegs:
       - { arg: 0, reg: '$r0' } }
 body:             |
   bb.0.entry:

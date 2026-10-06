@@ -177,7 +177,7 @@ of such a YAML document:
  liveins:
    - { reg: '$rdi' }
  callSites:
-   - { bb: 0, offset: 3, fwdArgRegs:
+   - { bb: '%bb.0', offset: 3, fwdArgRegs:
        - { arg: 0, reg: '$edi' } }
  body: |
    bb.0.entry:
@@ -202,6 +202,9 @@ the function's machine basic blocks and their machine instructions.
 
 The attribute `callSites` is a representation of call site information which
 keeps track of call instructions and registers used to transfer call arguments.
+Each entry names the block of its call with a block reference, `bb`, and gives
+the call's position in that block, counting instructions in bundles, as
+`offset`.
 
 ## Machine Instructions Format Reference
 
