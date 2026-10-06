@@ -35,11 +35,14 @@ Error CodeGenDataReader::mergeFromObjectFile(
     const object::ObjectFile *Obj, OutlinedHashTreeRecord &GlobalOutlineRecord,
     StableFunctionMapRecord &GlobalFunctionMapRecord,
     stable_hash *CombinedHash) {
-  Triple TT = Obj->makeTriple();
+  // Use the object file format of the binary itself. Obj->makeTriple() does
+  // not set an OS for COFF objects, so its object format would default to ELF
+  // and the COFF section names would never match.
+  Triple::ObjectFormatType OF = Obj->getTripleObjectFormat();
   auto CGOutlineName =
-      getCodeGenDataSectionName(CG_outline, TT.getObjectFormat(), false);
+      getCodeGenDataSectionName(CG_outline, OF, /*AddSegmentInfo=*/false);
   auto CGMergeName =
-      getCodeGenDataSectionName(CG_merge, TT.getObjectFormat(), false);
+      getCodeGenDataSectionName(CG_merge, OF, /*AddSegmentInfo=*/false);
 
   auto processSectionContents = [&](const StringRef &Name,
                                     const StringRef &Contents) {
