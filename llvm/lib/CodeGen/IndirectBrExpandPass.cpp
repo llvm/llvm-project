@@ -207,6 +207,10 @@ bool runImpl(Function &F, const TargetLowering *TLI, DomTreeUpdater *DTU,
     ScaledNumber<uint64_t> BlockWeight(0, 0);
     for (const auto &[IndirectBrIndex, BlockBranchProbability] :
          IndirectBrSuccToIndirectBrIt->second) {
+      // If the branch weight sum is zero, skip adding the block weight or
+      // otherwise we end up dividing by zero.
+      if (IndirectBrsBranchWeightSums[IndirectBrIndex] == 0)
+        continue;
       BlockWeight += ScaledNumber<uint64_t>(
                          IndirectBrsBlockFrequencies[IndirectBrIndex], 0) *
                      ScaledNumber<uint64_t>(BlockBranchProbability, 0) *
@@ -325,6 +329,11 @@ bool runImpl(Function &F, const TargetLowering *TLI, DomTreeUpdater *DTU,
     return true;
   }
 
+  // We need to convert the ScaledNumber weights back to normal 64 bit integers
+  // so we can apply them as metadata. They might not have the same scale
+  // though, so we find the max scale and then scale down any weights that have
+  // a scale less than the max scale. This ensures that all the weights have the
+  // same scale.
   int16_t MaxScale = 0;
   for (const ScaledNumber<uint64_t> &BBWeight : BBWeights)
     MaxScale = std::max(MaxScale, BBWeight.getScale());
@@ -332,6 +341,7 @@ bool runImpl(Function &F, const TargetLowering *TLI, DomTreeUpdater *DTU,
   ExtractedBBWeights.reserve(BBWeights.size());
   for (ScaledNumber<uint64_t> &BBWeight : BBWeights) {
     int16_t Shift = MaxScale - BBWeight.getScale();
+    assert(Shift >= 0 && "expected non-negative shift");
     ExtractedBBWeights.push_back(BBWeight.getDigits() >> Shift);
   }
   setFittedBranchWeights(*SI, ExtractedBBWeights, false);
