@@ -5,6 +5,7 @@
 // UNSUPPORTED: darwin, glibc && !glibc-2.28
 // https://github.com/llvm/llvm-project/issues/199585
 // UNSUPPORTED: glibc && (asan || hwasan || lsan || msan || tsan)
+// UNSUPPORTED: freebsd && msan
 
 #include <stdatomic.h>
 #include <stdio.h>

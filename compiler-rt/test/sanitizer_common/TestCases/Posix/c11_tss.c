@@ -8,6 +8,9 @@
 // UNSUPPORTED: darwin, glibc && !glibc-2.28
 // https://github.com/llvm/llvm-project/issues/199585
 // UNSUPPORTED: glibc && msan
+// TSan false positive in FreeBSD libthr's internal allocator, used by
+// pthread_setspecific.
+// UNSUPPORTED: freebsd && tsan
 
 #include <pthread.h>
 #include <stdatomic.h>
