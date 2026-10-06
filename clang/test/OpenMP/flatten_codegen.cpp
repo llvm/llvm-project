@@ -100,4 +100,32 @@ extern "C" void both_neg() {
       body(i, j);
 }
 
+// A floating-point expression that initializes an integer loop counter can
+// make the calculated trip count floating-point. Flatten converts such counts
+// to an integer type before building its flattened induction variable.
+// CHECK-LABEL: define {{.*}}void @floating_init(
+// CHECK:   %.flatten.iv = alloca i32
+// CHECK:   icmp slt i32
+// CHECK:   sdiv i32
+// CHECK:   srem i32
+extern "C" void floating_init() {
+#pragma omp flatten
+  for (int i = 0; i < 2; ++i)
+    for (int j = 0.; j < 2; ++j)
+      body(i, j);
+}
+
+// long and double are the same width, so the count is not narrowed to the
+// variable. Signedness still follows the signed loop variable (i64, not u64).
+// CHECK-LABEL: define {{.*}}void @floating_long(
+// CHECK:   %.flatten.iv = alloca i64
+// CHECK:   icmp slt i64
+// CHECK:   sdiv i64
+extern "C" void floating_long() {
+#pragma omp flatten
+  for (long i = 0.; i < 2; ++i)
+    for (int j = 0; j < 2; ++j)
+      body(0, 0);
+}
+
 #endif
