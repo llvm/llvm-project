@@ -56154,7 +56154,7 @@ static bool isCFMulFromFMAddSub(SDValue N, SelectionDAG &DAG, SDValue &A,
     return matchFMulPattern(P, Q) || matchFMulPattern(Q, P);
   };
   // First 2 operands of FMADDSUB/FMSUBADD are commutable.
-  return Op2.getOpcode() == ISD::FMUL &&
+  return Op2.getOpcode() == ISD::FMUL && Op2->getFlags().hasAllowContract() &&
          (matchFMSUBADDPattern(Op0, Op1) || matchFMSUBADDPattern(Op1, Op0));
 }
 
