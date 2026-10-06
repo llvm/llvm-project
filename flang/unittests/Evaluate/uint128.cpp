@@ -134,7 +134,7 @@ template <typename T> static void TestNumericLimitsVsNative() {
     llvm::outs() << "common::numeric_limits is not specialized for this type\n";
   }
 
-  // Common may refer to either Std to Detail; in either case it must be
+  // Common may refer to either Std or Detail; in either case it must be
   // identical. This is testing the `using numeric_limits` junction between
   // `detail::` and `std::`.
   TEST(Detail::is_specialized == Common::is_specialized);
