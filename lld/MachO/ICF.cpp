@@ -587,6 +587,7 @@ Defined *macho::getBodyForThunkFoldedSym(Defined *foldedSym) {
   // will end up in the final binary.
   Defined *bodySym = cast<Defined>(target->getThunkBranchTarget(thunkBody));
   if (bodySym->branchExtensionThunk) {
+    // For branch extension thunks, follow relocations to get the original body
     InputSection *thunk = bodySym->isec();
     assert(thunk && !thunk->relocs.empty());
     const Relocation &r = thunk->relocs.front();
