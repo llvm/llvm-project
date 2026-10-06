@@ -867,7 +867,7 @@ EmitSchedule(MachineBasicBlock::iterator &InsertPos) {
     };
 
     MachineBasicBlock::iterator Before = GetPrevInsn(Emitter.getInsertPos());
-    Emitter.EmitNode(Node, IsClone, IsCloned, VRBaseMap);
+    MachineInstr *Call = Emitter.EmitNode(Node, IsClone, IsCloned, VRBaseMap);
     MachineBasicBlock::iterator After = GetPrevInsn(Emitter.getInsertPos());
 
     // If the iterator did not change, no instructions were inserted.
@@ -884,29 +884,23 @@ EmitSchedule(MachineBasicBlock::iterator &InsertPos) {
       MI = &*std::next(Before);
     }
 
-    // The call is not the first instruction emitted for its node if its callee
-    // is first copied into the register class the call needs, or is undef.
-    MachineBasicBlock::iterator End = std::next(After);
-    MachineBasicBlock::iterator Call =
-        find_if(make_range(MachineBasicBlock::iterator(MI), End),
-                [](const MachineInstr &I) { return I.isCall(); });
-    if (Call != End && Call->isCandidateForAdditionalCallInfo()) {
+    if (Call && Call->isCandidateForAdditionalCallInfo()) {
       if (DAG->getTarget().Options.EmitCallSiteInfo ||
           DAG->getTarget().Options.EmitCallGraphSection)
-        MF.addCallSiteInfo(&*Call, DAG->getCallSiteInfo(Node));
+        MF.addCallSiteInfo(Call, DAG->getCallSiteInfo(Node));
 
       if (auto CalledGlobal = DAG->getCalledGlobal(Node))
         if (CalledGlobal->Callee)
-          MF.addCalledGlobal(&*Call, *CalledGlobal);
+          MF.addCalledGlobal(Call, *CalledGlobal);
     }
 
-    if (Call != End)
+    if (Call)
       if (MDNode *MD = DAG->getHeapAllocSite(Node))
         Call->setHeapAllocMarker(MF, MD);
 
     // Nodes without a call, such as traps, can be nomerge too.
     if (DAG->getNoMergeSiteInfo(Node))
-      (Call != End ? *Call : *MI).setFlag(MachineInstr::MIFlag::NoMerge);
+      (Call ? Call : MI)->setFlag(MachineInstr::MIFlag::NoMerge);
 
     if (MDNode *MD = DAG->getPCSections(Node))
       MI->setPCSections(MF, MD);
