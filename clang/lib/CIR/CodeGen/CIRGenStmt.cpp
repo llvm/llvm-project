@@ -591,8 +591,8 @@ mlir::LogicalResult CIRGenFunction::emitIfStmt(const IfStmt &s) {
       if (!condConstant) // Condition false?
         std::swap(executed, skipped);
 
-    // If the skipped block has no labels in it, just emit the executed block.
-    // This avoids emitting dead code and simplifies the CFG substantially.
+      // If the skipped block has no labels in it, just emit the executed block.
+      // This avoids emitting dead code and simplifies the CFG substantially.
       if (s.isConstexpr() || !containsLabel(skipped)) {
         if (executed)
           return emitStmt(executed, /*useCurrentScope=*/true);
