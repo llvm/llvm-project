@@ -16980,6 +16980,196 @@ static SDValue PerformExtractFpToIntStores(StoreSDNode *St, SelectionDAG &DAG) {
   return Store;
 }
 
+// Combine stores of all VECTOR_INTERLEAVE results into a structured store
+// (vstN) when they access consecutive memory. Running this after type
+// legalization let wider vector types to be split into legal types, so each
+// split can form a structured store.
+static SDValue PerformLegalizedInterleavedStoreCombine(
+    StoreSDNode *ST, TargetLowering::DAGCombinerInfo &DCI, SelectionDAG &DAG,
+    const ARMSubtarget *Subtarget) {
+  if (DCI.getDAGCombineLevel() < AfterLegalizeTypes)
+    return SDValue();
+
+  if (!ISD::isNormalStore(ST) || !ST->isSimple() || !ST->getOffset().isUndef())
+    return SDValue();
+
+  SDValue StoredValue = ST->getValue();
+  SDNode *Interleave = StoredValue.getNode();
+  if (Interleave->getOpcode() != ISD::VECTOR_INTERLEAVE)
+    return SDValue();
+
+  unsigned NumParts = Interleave->getNumOperands();
+  if (NumParts < 2 || NumParts > 4)
+    return SDValue();
+
+  if (!Subtarget->hasNEON() && NumParts == 3)
+    return SDValue();
+
+  EVT SubVecTy = Interleave->getValueType(0);
+  if (!SubVecTy.is64BitVector() && !SubVecTy.is128BitVector())
+    return SDValue();
+
+  unsigned EltBits = SubVecTy.getScalarSizeInBits();
+  if (EltBits != 8 && EltBits != 16 && EltBits != 32)
+    return SDValue();
+
+  SmallVector<StoreSDNode *, 4> Stores(NumParts, nullptr);
+  for (SDUse &Use : Interleave->uses()) {
+    unsigned ResNo = Use.getResNo();
+    auto *Store = dyn_cast<StoreSDNode>(Use.getUser());
+    if (Stores[ResNo] || !Store)
+      return SDValue();
+    Stores[ResNo] = Store;
+  }
+
+  if (llvm::is_contained(Stores, nullptr))
+    return SDValue();
+
+  StoreSDNode *BaseStore = Stores[0];
+  unsigned Bytes = SubVecTy.getStoreSize().getFixedValue();
+  for (auto [Idx, Store] : enumerate(Stores)) {
+    if (!DAG.areNonVolatileConsecutiveStores(Store, BaseStore, Bytes, Idx))
+      return SDValue();
+  }
+
+  static constexpr Intrinsic::ID NEONStores[] = {Intrinsic::arm_neon_vst2,
+                                                 Intrinsic::arm_neon_vst3,
+                                                 Intrinsic::arm_neon_vst4};
+  SDLoc DL(Interleave);
+  SmallVector<SDValue, 8> Ops;
+
+  Ops.push_back(BaseStore->getChain());
+  Intrinsic::ID IID = 0;
+  if (Subtarget->hasNEON())
+    IID = NEONStores[NumParts - 2];
+  else
+    IID = NumParts == 2 ? Intrinsic::arm_mve_vst2q : Intrinsic::arm_mve_vst4q;
+
+  Ops.push_back(DAG.getTargetConstant(IID, DL, MVT::i64));
+
+  Ops.push_back(BaseStore->getBasePtr());
+  Ops.append(Interleave->op_begin(), Interleave->op_end());
+  Ops.push_back(DAG.getConstant(BaseStore->getAlign().value(), DL, MVT::i32));
+
+  EVT MemVT =
+      EVT::getVectorVT(*DAG.getContext(), SubVecTy.getVectorElementType(),
+                       SubVecTy.getVectorElementCount() * NumParts);
+  MachineFunction &MF = DAG.getMachineFunction();
+  MachineMemOperand *MMO =
+      MF.getMachineMemOperand(BaseStore->getMemOperand(), 0, NumParts * Bytes);
+  SDValue NewStore;
+  if (Subtarget->hasNEON()) {
+    NewStore = DAG.getMemIntrinsicNode(
+        ISD::INTRINSIC_VOID, DL, DAG.getVTList(MVT::Other), Ops, MemVT, MMO);
+  } else {
+    for (unsigned Stage = 0; Stage < NumParts; Stage++) {
+      Ops.back() = DAG.getConstant(Stage, DL, MVT::i32);
+      NewStore = DAG.getMemIntrinsicNode(
+          ISD::INTRINSIC_VOID, DL, DAG.getVTList(MVT::Other), Ops, MemVT, MMO);
+      Ops.front() = NewStore;
+    }
+  }
+  for (StoreSDNode *Store : Stores)
+    if (Store != ST)
+      DCI.CombineTo(Store, NewStore);
+  return NewStore;
+}
+
+static bool
+isSequentialConcatOfVectorInterleave(SDNode *N, SmallVectorImpl<SDValue> &Ops) {
+  if (N->getOpcode() != ISD::CONCAT_VECTORS)
+    return false;
+
+  unsigned NumParts = N->getNumOperands();
+
+  // We should be concatenating each sequential result from a
+  // VECTOR_INTERLEAVE.
+  SDNode *InterleaveOp = N->getOperand(0).getNode();
+  if (InterleaveOp->getOpcode() != ISD::VECTOR_INTERLEAVE ||
+      InterleaveOp->getNumOperands() != NumParts)
+    return false;
+
+  for (unsigned I = 0; I < NumParts; I++)
+    if (N->getOperand(I) != SDValue(InterleaveOp, I))
+      return false;
+
+  Ops.append(InterleaveOp->op_begin(), InterleaveOp->op_end());
+  return true;
+}
+
+static SDValue PerformInterleavedStoreCombine(
+    StoreSDNode *ST, TargetLowering::DAGCombinerInfo &DCI, SelectionDAG &DAG,
+    const ARMSubtarget *Subtarget) {
+  if (SDValue Res =
+          PerformLegalizedInterleavedStoreCombine(ST, DCI, DAG, Subtarget))
+    return Res;
+
+  if (!DCI.isBeforeLegalize())
+    return SDValue();
+
+  if (!ISD::isNormalStore(ST) || !ST->isSimple() || !ST->getOffset().isUndef())
+    return SDValue();
+
+  SDValue WideValue = ST->getValue();
+  SmallVector<SDValue, 4> ValueInterleaveOps;
+  if (!isSequentialConcatOfVectorInterleave(WideValue.getNode(),
+                                            ValueInterleaveOps))
+    return SDValue();
+
+  if (!WideValue.hasOneUse())
+    return SDValue();
+
+  unsigned NumParts = ValueInterleaveOps.size();
+  if (NumParts != 2 && NumParts != 3 && NumParts != 4)
+    return SDValue();
+
+  EVT SubVecTy = ValueInterleaveOps[0].getValueType();
+
+  unsigned EltBits = SubVecTy.getScalarSizeInBits();
+  if (EltBits != 8 && EltBits != 16 && EltBits != 32)
+    return SDValue();
+
+  const TargetLowering &TLI = DAG.getTargetLoweringInfo();
+  if (!TLI.isTypeLegal(SubVecTy))
+    return SDValue();
+
+  if (!SubVecTy.is64BitVector() && !SubVecTy.is128BitVector())
+    return SDValue();
+
+  static constexpr Intrinsic::ID NEONStores[] = {Intrinsic::arm_neon_vst2,
+                                                 Intrinsic::arm_neon_vst3,
+                                                 Intrinsic::arm_neon_vst4};
+  SDLoc DL(ST);
+  SmallVector<SDValue, 8> Ops;
+  Ops.push_back(ST->getChain());
+  Intrinsic::ID IID = 0;
+  if (Subtarget->hasNEON())
+    IID = NEONStores[NumParts - 2];
+  else
+    IID = NumParts == 2 ? Intrinsic::arm_mve_vst2q : Intrinsic::arm_mve_vst4q;
+
+  Ops.push_back(DAG.getTargetConstant(IID, DL, MVT::i64));
+
+  Ops.push_back(ST->getBasePtr());
+  Ops.append(ValueInterleaveOps);
+
+  Ops.push_back(DAG.getConstant(ST->getAlign().value(), DL, MVT::i32));
+  if (!Subtarget->hasNEON()) {
+    SDValue NewStore;
+    for (unsigned Stage = 0; Stage < NumParts; Stage++) {
+      Ops.back() = DAG.getConstant(Stage, DL, MVT::i32);
+      NewStore = DAG.getMemIntrinsicNode(
+          ISD::INTRINSIC_VOID, DL, DAG.getVTList(MVT::Other), Ops,
+          ST->getMemoryVT(), ST->getMemOperand());
+      Ops.front() = NewStore;
+    }
+    return NewStore;
+  }
+  return DAG.getMemIntrinsicNode(ISD::INTRINSIC_VOID, DL,
+                                 DAG.getVTList(MVT::Other), Ops,
+                                 ST->getMemoryVT(), ST->getMemOperand());
+}
+
 /// PerformSTORECombine - Target-specific dag combine xforms for
 /// ISD::STORE.
 static SDValue PerformSTORECombine(SDNode *N,
@@ -16990,6 +17180,9 @@ static SDValue PerformSTORECombine(SDNode *N,
     return SDValue();
   SDValue StVal = St->getValue();
   EVT VT = StVal.getValueType();
+  if (SDValue Store =
+          PerformInterleavedStoreCombine(St, DCI, DCI.DAG, Subtarget))
+    return Store;
 
   if (Subtarget->hasNEON())
     if (SDValue Store = PerformTruncatingStoreCombine(St, DCI.DAG))
