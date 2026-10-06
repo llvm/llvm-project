@@ -16,6 +16,9 @@ void test_barrier() {
   // CHECK: call void @llvm.dx.barrier.by.memory.type(i32 1, i32 5)
   Barrier(UAV_MEMORY, GROUP_SYNC | GROUP_SCOPE | DEVICE_SCOPE);
 
+  // CHECK: call void @llvm.dx.barrier.by.memory.type(i32 1, i32 4)
+  Barrier(UAV_MEMORY, uint2(DEVICE_SCOPE, 0).x);
+
   // CHECK: call void @llvm.dx.barrier.by.memory.handle.tdx.TypedBuffer
   // CHECK-SAME: (target("dx.TypedBuffer", float, 1, 0, 0) {{.*}}, i32 2)
   Barrier(UAVBuffer, GROUP_SCOPE);

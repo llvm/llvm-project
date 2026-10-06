@@ -13871,6 +13871,8 @@ def err_hlsl_invalid_barrier_semantic_flags: Error<
 def err_hlsl_barrier_group_memory_requires_group: Error<
   "GROUP_SHARED_MEMORY specified for Barrier operation when context has no "
   "visible group">;
+def err_hlsl_barrier_resource_requires_group: Error<
+  "resource Barrier operation requires a shader stage with a visible group">;
 def err_hlsl_barrier_node_memory_requires_node: Error<
   "NODE_INPUT_MEMORY or NODE_OUTPUT_MEMORY may only be specified for Barrier "
   "operation in a node shader">;

@@ -23,6 +23,27 @@ using namespace clang;
 using namespace CodeGen;
 using namespace llvm;
 
+static uint64_t
+getEffectiveBarrierMemoryFlags(uint64_t MemoryFlags,
+                               llvm::Triple::EnvironmentType Stage) {
+  constexpr uint64_t AllMemory =
+      llvm::to_underlying(llvm::dxil::BarrierMemoryTypeFlag::ValidMask);
+  if (MemoryFlags != AllMemory || Stage == llvm::Triple::Library ||
+      Stage == llvm::Triple::UnknownEnvironment)
+    return MemoryFlags;
+
+  constexpr uint64_t GroupSharedMemory =
+      llvm::to_underlying(llvm::dxil::BarrierMemoryTypeFlag::GroupSharedMemory);
+  constexpr uint64_t NodeMemory =
+      llvm::to_underlying(llvm::dxil::BarrierMemoryTypeFlag::NodeMemory);
+  const bool HasVisibleGroup = Stage == llvm::Triple::Compute ||
+                               Stage == llvm::Triple::Mesh ||
+                               Stage == llvm::Triple::Amplification;
+  if (!HasVisibleGroup)
+    MemoryFlags &= ~GroupSharedMemory;
+  return MemoryFlags & ~NodeMemory;
+}
+
 static Value *handleAsDoubleBuiltin(CodeGenFunction &CGF, const CallExpr *E) {
   assert((E->getArg(0)->getType()->hasUnsignedIntegerRepresentation() &&
           E->getArg(1)->getType()->hasUnsignedIntegerRepresentation()) &&
@@ -1778,20 +1799,35 @@ Value *CodeGenFunction::EmitHLSLBuiltinExpr(unsigned BuiltinID,
     return EmitIntrinsicCall(ID);
   }
   case Builtin::BI__builtin_hlsl_barrier: {
-    Value *SemanticFlags = EmitScalarExpr(E->getArg(1));
+    std::optional<llvm::APSInt> SemanticFlagsConstant =
+        E->getArg(1)->getIntegerConstantExpr(getContext());
+    assert(SemanticFlagsConstant && "expected constant semantic flags");
     constexpr uint64_t GroupScope =
         llvm::to_underlying(llvm::dxil::BarrierSemanticFlag::GroupScope);
     constexpr uint64_t DeviceScope =
         llvm::to_underlying(llvm::dxil::BarrierSemanticFlag::DeviceScope);
     constexpr uint64_t ScopeMask = GroupScope | DeviceScope;
-    auto *SemanticFlagsConstant = cast<llvm::ConstantInt>(SemanticFlags);
     uint64_t SemanticFlagsValue = SemanticFlagsConstant->getZExtValue();
     if ((SemanticFlagsValue & ScopeMask) == ScopeMask)
-      SemanticFlags = llvm::ConstantInt::get(SemanticFlags->getType(),
-                                             SemanticFlagsValue & ~GroupScope);
+      SemanticFlagsValue &= ~GroupScope;
+    Value *SemanticFlags = llvm::ConstantInt::get(
+        ConvertType(E->getArg(1)->getType()), SemanticFlagsValue);
 
     if (E->getArg(0)->getType()->isUnsignedIntegerType()) {
-      Value *MemoryFlags = EmitScalarExpr(E->getArg(0));
+      std::optional<llvm::APSInt> MemoryFlagsConstant =
+          E->getArg(0)->getIntegerConstantExpr(getContext());
+      assert(MemoryFlagsConstant && "expected constant memory flags");
+      uint64_t MemoryFlagsValue = MemoryFlagsConstant->getZExtValue();
+      llvm::Triple::EnvironmentType Stage =
+          getTarget().getTriple().getEnvironment();
+      if (Stage == llvm::Triple::Library)
+        if (const auto *FD = dyn_cast_or_null<FunctionDecl>(CurFuncDecl))
+          if (const auto *ShaderAttr = FD->getAttr<HLSLShaderAttr>())
+            Stage = ShaderAttr->getType();
+      MemoryFlagsValue =
+          getEffectiveBarrierMemoryFlags(MemoryFlagsValue, Stage);
+      Value *MemoryFlags = llvm::ConstantInt::get(
+          ConvertType(E->getArg(0)->getType()), MemoryFlagsValue);
       Intrinsic::ID ID = CGM.getHLSLRuntime().getBarrierByMemoryTypeIntrinsic();
       return EmitIntrinsicCall(ID, {},
                                ArrayRef<Value *>{MemoryFlags, SemanticFlags});

@@ -28,19 +28,27 @@ void group_barriers() {
   // expected-error@+1 {{NODE_INPUT_MEMORY or NODE_OUTPUT_MEMORY may only be specified for Barrier operation in a node shader}}
   Barrier(NODE_INPUT_MEMORY, 0);
 
-  // expected-error@+1 {{GROUP_SYNC or GROUP_SCOPE specified for Barrier operation when context has no visible group}}
-  Barrier(UAVBuffer, GROUP_SCOPE);
+  // expected-error@+1 {{resource Barrier operation requires a shader stage with a visible group}}
+  Barrier(UAVBuffer, DEVICE_SCOPE);
+}
+
+void invalid_scope_helper() {
+  // expected-error@+1 {{DEVICE_SCOPE specified for Barrier operation without applicable memory}}
+  Barrier(0, DEVICE_SCOPE);
 }
 
 [shader("vertex")]
 void vertex_main() {
   group_barriers();
+  invalid_scope_helper();
   Barrier(ALL_MEMORY, DEVICE_SCOPE);
 }
 
 [shader("compute")]
 [numthreads(1, 1, 1)]
 void compute_main() {
+  invalid_scope_helper();
+
   // expected-error@+1 {{GROUP_SCOPE specified for Barrier operation without applicable memory}}
   Barrier(0, GROUP_SCOPE);
 

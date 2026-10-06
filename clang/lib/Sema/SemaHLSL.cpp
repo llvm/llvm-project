@@ -2947,6 +2947,10 @@ void DiagnoseHLSLAvailability::DiagnoseBarrierCall(CallExpr *CE) {
         SemaRef.Diag(MemoryArg->getExprLoc(),
                      diag::err_hlsl_barrier_node_memory_requires_node);
     }
+  } else if (!HasVisibleGroup) {
+    SemaRef.Diag(MemoryArg->getExprLoc(),
+                 diag::err_hlsl_barrier_resource_requires_group);
+    return;
   }
 
   Expr *SemanticArg = CE->getArg(1);
@@ -2961,7 +2965,8 @@ void DiagnoseHLSLAvailability::DiagnoseBarrierCall(CallExpr *CE) {
     SemaRef.Diag(SemanticArg->getExprLoc(),
                  diag::err_hlsl_barrier_group_semantic_requires_group);
 
-  if (MemoryArg->getType()->isUnsignedIntegerType()) {
+  if (MemoryArg->getType()->isUnsignedIntegerType() &&
+      !ReportOnlyShaderStageIssues) {
     const uint64_t DeviceScopeMemory =
         barrierFlagValue(BarrierMemoryTypeFlag::UAVMemory) |
         barrierFlagValue(BarrierMemoryTypeFlag::NodeInputMemory);
