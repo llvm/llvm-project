@@ -146,7 +146,8 @@ define amdgpu_kernel void @cache_size_limit() {
 }
 
 ; Explicit prefetches are distributed along the post-dominator chain through
-; the shared exit block.
+; the shared exit block. Keep the large inline asm convergent so tail
+; duplication does not remove that block.
 declare i32 @llvm.amdgcn.workgroup.id.x()
 
 define amdgpu_kernel void @postdominated_prefetch() {
@@ -174,14 +175,12 @@ define amdgpu_kernel void @postdominated_prefetch() {
 ; GFX1250-NEXT:    s_cmp_eq_u32 s2, 0
 ; GFX1250-NEXT:    s_cselect_b32 s0, ttmp9, s1
 ; GFX1250-NEXT:    s_cmp_lg_u32 s0, 0
-; GFX1250-NEXT:    s_mov_b32 s0, 0
-; GFX1250-NEXT:    s_cbranch_scc0 .LBB3_4
+; GFX1250-NEXT:    s_cbranch_scc0 .LBB3_2
 ; GFX1250-NEXT:  ; %bb.1: ; %else
 ; GFX1250-NEXT:    ;;#ASMSTART
 ; GFX1250-NEXT:    .space 8000
 ; GFX1250-NEXT:    ;;#ASMEND
-; GFX1250-NEXT:    s_and_b32 s0, s0, exec_lo
-; GFX1250-NEXT:    s_cbranch_scc0 .LBB3_3
+; GFX1250-NEXT:    s_branch .LBB3_3
 ; GFX1250-NEXT:  .LBB3_2: ; %then
 ; GFX1250-NEXT:    ;;#ASMSTART
 ; GFX1250-NEXT:    .space 8000
@@ -205,12 +204,6 @@ define amdgpu_kernel void @postdominated_prefetch() {
 ; GFX1250-NEXT:    .space 32000
 ; GFX1250-NEXT:    ;;#ASMEND
 ; GFX1250-NEXT:    s_endpgm
-; GFX1250-NEXT:  .LBB3_4:
-; GFX1250-NEXT:    s_mov_b32 s0, -1
-; GFX1250-NEXT:    s_delay_alu instid0(SALU_CYCLE_1)
-; GFX1250-NEXT:    s_and_b32 s0, s0, exec_lo
-; GFX1250-NEXT:    s_cbranch_scc1 .LBB3_2
-; GFX1250-NEXT:    s_branch .LBB3_3
 ; GFX1250-NEXT:  .Lpref_func_end2:
 entry:
   %id = call i32 @llvm.amdgcn.workgroup.id.x()
@@ -226,9 +219,11 @@ else:
   br label %join
 
 join:
-  call void asm sideeffect ".space 32000", ""()
+  call void asm sideeffect ".space 32000", ""() #0
   ret void
 }
+
+attributes #0 = { convergent }
 
 ; Non-entry functions must not get explicit prefetch instructions regardless
 ; of their size.

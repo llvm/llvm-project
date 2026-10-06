@@ -9,9 +9,9 @@ end
 !CHECK: %[[C1_I32:.*]] = arith.constant 1 : i32
 !CHECK: %[[VAL_0:.*]] = fir.dummy_scope : !fir.dscope
 !CHECK: %[[VAL_1:.*]] = fir.alloca ui32 <{bindc_name = "f01", uniq_name = "_QFf01Ef01"}>
-!CHECK: %[[VAL_2:.*]] = fir.declare %[[VAL_1]] {uniq_name = "_QFf01Ef01"} : (!fir.ref<ui32>) -> !fir.ref<ui32>
-!CHECK: %[[VAL_3:.*]] = fir.declare %[[ARG0]] dummy_scope %[[VAL_0]] arg {{[0-9]+}} {fortran_attrs = #fir.var_attrs<intent_in>, uniq_name = "_QFf01Eu"} : (!fir.ref<ui32>, !fir.dscope) -> !fir.ref<ui32>
-!CHECK: %[[VAL_4:.*]] = fir.declare %[[ARG1]] dummy_scope %[[VAL_0]] arg {{[0-9]+}} {fortran_attrs = #fir.var_attrs<intent_in>, uniq_name = "_QFf01Ev"} : (!fir.ref<ui32>, !fir.dscope) -> !fir.ref<ui32>
+!CHECK: %[[VAL_2:.*]] = fir.declare %[[VAL_1]] uniq_name("_QFf01Ef01") : (!fir.ref<ui32>) -> !fir.ref<ui32>
+!CHECK: %[[VAL_3:.*]] = fir.declare %[[ARG0]] dummy_scope %[[VAL_0]] arg {{[0-9]+}} uniq_name("_QFf01Eu") fortran_attrs<intent_in> : (!fir.ref<ui32>, !fir.dscope) -> !fir.ref<ui32>
+!CHECK: %[[VAL_4:.*]] = fir.declare %[[ARG1]] dummy_scope %[[VAL_0]] arg {{[0-9]+}} uniq_name("_QFf01Ev") fortran_attrs<intent_in> : (!fir.ref<ui32>, !fir.dscope) -> !fir.ref<ui32>
 !CHECK: %[[VAL_5:.*]] = fir.load %[[VAL_3]] : !fir.ref<ui32>
 !CHECK: %[[VAL_6:.*]] = fir.load %[[VAL_4]] : !fir.ref<ui32>
 !CHECK: %[[VAL_7:.*]] = fir.convert %[[VAL_5]] : (ui32) -> i32
@@ -34,9 +34,9 @@ end
 !CHECK: %[[C1_i32:.*]] = arith.constant 1 : i32
 !CHECK: %[[VAL_0:.*]] = fir.dummy_scope : !fir.dscope
 !CHECK: %[[VAL_1:.*]] = fir.alloca ui32 <{bindc_name = "f02", uniq_name = "_QFf02Ef02"}>
-!CHECK: %[[VAL_2:.*]] = fir.declare %[[VAL_1]] {uniq_name = "_QFf02Ef02"} : (!fir.ref<ui32>) -> !fir.ref<ui32>
-!CHECK: %[[VAL_3:.*]] = fir.declare %[[ARG0]] dummy_scope %[[VAL_0]] arg {{[0-9]+}} {fortran_attrs = #fir.var_attrs<intent_in>, uniq_name = "_QFf02Eu"} : (!fir.ref<ui32>, !fir.dscope) -> !fir.ref<ui32>
-!CHECK: %[[VAL_4:.*]] = fir.declare %[[ARG1]] dummy_scope %[[VAL_0]] arg {{[0-9]+}} {fortran_attrs = #fir.var_attrs<intent_in>, uniq_name = "_QFf02Ev"} : (!fir.ref<ui32>, !fir.dscope) -> !fir.ref<ui32>
+!CHECK: %[[VAL_2:.*]] = fir.declare %[[VAL_1]] uniq_name("_QFf02Ef02") : (!fir.ref<ui32>) -> !fir.ref<ui32>
+!CHECK: %[[VAL_3:.*]] = fir.declare %[[ARG0]] dummy_scope %[[VAL_0]] arg {{[0-9]+}} uniq_name("_QFf02Eu") fortran_attrs<intent_in> : (!fir.ref<ui32>, !fir.dscope) -> !fir.ref<ui32>
+!CHECK: %[[VAL_4:.*]] = fir.declare %[[ARG1]] dummy_scope %[[VAL_0]] arg {{[0-9]+}} uniq_name("_QFf02Ev") fortran_attrs<intent_in> : (!fir.ref<ui32>, !fir.dscope) -> !fir.ref<ui32>
 !CHECK: %[[VAL_5:.*]] = fir.load %[[VAL_3]] : !fir.ref<ui32>
 !CHECK: %[[VAL_6:.*]] = fir.load %[[VAL_4]] : !fir.ref<ui32>
 !CHECK: %[[VAL_7:.*]] = fir.convert %[[VAL_5]] : (ui32) -> i64

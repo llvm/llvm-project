@@ -146,6 +146,13 @@ def err_fe_action_not_available : Error<
     "action %0 not compiled in">;
 def err_fe_cir_not_built : Error<"clang IR support not available, rebuild "
                                  "clang with -DCLANG_ENABLE_CIR=ON">;
+def err_fe_cir_input_unsupported : Error<
+    "support for ClangIR input is not yet implemented">;
+def err_invalid_cir : Error<"invalid ClangIR input">;
+def err_cir_input_missing_triple : Error<
+    "missing target triple in ClangIR input">;
+def err_cir_input_triple_mismatch : Error<
+    "target triple '%0' of ClangIR input does not match the target '%1'">;
 def err_fe_invalid_multiple_actions : Error<
     "'%0' action ignored; '%1' action specified previously">;
 def err_fe_invalid_alignment : Error<
@@ -480,6 +487,10 @@ def err_ast_action_on_llvm_ir : Error<
   "cannot apply AST actions to LLVM IR file '%0'">,
   DefaultFatal;
 
+def err_ast_action_on_cir : Error<
+  "cannot apply AST actions to ClangIR file '%0'">,
+  DefaultFatal;
+
 def err_invalid_llvm_ir : Error<"invalid LLVM IR input: %0">;
 
 def err_os_unsupport_riscv_fmv : Error<
@@ -499,6 +510,9 @@ def warn_hlsl_failed_to_embed_source
 
 def err_data_layout_mismatch : Error<"backend data layout '%0' does not match "
                                      "expected target description '%1'">;
+def err_fe_exception_model_mismatch
+    : Error<"'-exception-model=%0' does not match the module's exception "
+            "model '%1'">;
 def err_failed_to_open_for_embedding
     : Error<"could not open '%0' for embedding">;
 def err_unsupported_cxx_abi_feature
