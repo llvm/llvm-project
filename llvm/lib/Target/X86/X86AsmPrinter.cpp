@@ -1123,7 +1123,7 @@ void X86AsmPrinter::emitEndOfAsmFile(Module &M) {
       // floating point operations in the program (including calls). A program
       // that only has: `scanf("%f", &global_float);` may fail to trigger this,
       // but oh well...that's a documented issue.
-      StringRef SymbolName = (TT.isX86_32()) ? "__fltused" : "_fltused";
+      StringRef SymbolName = TT.isX86_32() ? "__fltused" : "_fltused";
       MCSymbol *S = MMI->getContext().getOrCreateSymbol(SymbolName);
       OutStreamer->emitSymbolAttribute(S, MCSA_Global);
       return;
