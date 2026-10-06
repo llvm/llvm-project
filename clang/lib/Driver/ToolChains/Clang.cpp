@@ -2317,7 +2317,6 @@ static void addQFloatLossyFastMathArgs(ArgStringList &CmdArgs) {
   CmdArgs.push_back("-ffast-math");
   CmdArgs.push_back("-ffinite-math-only");
   CmdArgs.push_back("-D__FAST_MATH__");
-  pushBackLLVMArg(CmdArgs, "-fast-math=true");
 }
 
 static void addQFloatBackendArg(const Driver &D, const ArgList &Args,
