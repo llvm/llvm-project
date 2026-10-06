@@ -437,21 +437,13 @@ void AMDGPULowerVGPREncoding::lowerLoadStoreIdx(MachineInstr &MI) {
     if (NumDwords != 1)
       Sub = TRI->getSubReg(Data, TRI->getSubRegFromChannel(i));
 
-    MachineInstr *Mov;
     if (IsStore) {
-      Mov = BuildMI(BB, MI, DL, TII->get(Opcode))
-                .addReg(Base, RegState::Undef)
-                .addReg(Sub, DataFlags)
-                .getInstr();
+      BuildMI(BB, MI, DL, TII->get(Opcode))
+          .addReg(Base, RegState::Undef)
+          .addReg(Sub, DataFlags);
     } else {
-      Mov = BuildMI(BB, MI, DL, TII->get(Opcode), Sub)
-                .addReg(Base, RegState::Undef)
-                .getInstr();
+      BuildMI(BB, MI, DL, TII->get(Opcode), Sub).addReg(Base, RegState::Undef);
     }
-
-    // Encode high address bits above 256 addressable VGPRs; else a no-op.
-    if (ST->has1024AddressableVGPRs())
-      runOnMachineInstr(*Mov);
   }
 
   // Keep the mode switch and the moves it applies to together, so nothing is
@@ -660,12 +652,24 @@ bool AMDGPULowerVGPREncoding::run(MachineFunction &MF) {
   TII = ST->getInstrInfo();
   TRI = ST->getRegisterInfo();
 
-  const bool LowerVGPRMSBs = ST->has1024AddressableVGPRs();
+  // Lowered on every subtarget, and first, so the MSB work below sees the
+  // moves like any other instruction.
+  bool Changed = false;
+  for (auto &MBB : MF) {
+    for (auto &MI : llvm::make_early_inc_range(MBB.instrs())) {
+      if (isa<AMDGPUMI::VLoadStoreIdxInst>(&MI)) {
+        lowerLoadStoreIdx(MI);
+        Changed = true;
+      }
+    }
+  }
+
+  if (!ST->has1024AddressableVGPRs())
+    return Changed;
 
   LLVM_DEBUG(dbgs() << "*** AMDGPULowerVGPREncoding on " << MF.getName()
                     << " ***\n");
 
-  bool Changed = false;
   ClauseLen = ClauseRemaining = 0;
   CurrentMode = {};
   for (auto &MBB : MF) {
@@ -677,16 +681,6 @@ bool AMDGPULowerVGPREncoding::run(MachineFunction &MF) {
                       << ":\n");
 
     for (auto &MI : llvm::make_early_inc_range(MBB.instrs())) {
-      // Lowered on every subtarget; the MSB work below is not.
-      if (isa<AMDGPUMI::VLoadStoreIdxInst>(&MI)) {
-        lowerLoadStoreIdx(MI);
-        Changed = true;
-        continue;
-      }
-
-      if (!LowerVGPRMSBs)
-        continue;
-
       if (MI.isMetaInstruction())
         continue;
 
@@ -743,10 +737,8 @@ bool AMDGPULowerVGPREncoding::run(MachineFunction &MF) {
     }
 
     // Reset the mode if we are falling through.
-    if (LowerVGPRMSBs) {
-      LLVM_DEBUG(dbgs() << "  end of BB, resetting mode\n");
-      resetMode(MBB.instr_end());
-    }
+    LLVM_DEBUG(dbgs() << "  end of BB, resetting mode\n");
+    resetMode(MBB.instr_end());
   }
 
   return Changed;
