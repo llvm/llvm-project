@@ -182,7 +182,7 @@ define void @sub_induction_nuw_nsw_constant_step(ptr noalias %dst, i32 %start, i
 ; CHECK-NEXT:    [[TMP4:%.*]] = add i32 [[START]], [[TMP3]]
 ; CHECK-NEXT:    [[BROADCAST_SPLATINSERT:%.*]] = insertelement <4 x i32> poison, i32 [[START]], i64 0
 ; CHECK-NEXT:    [[BROADCAST_SPLAT:%.*]] = shufflevector <4 x i32> [[BROADCAST_SPLATINSERT]], <4 x i32> poison, <4 x i32> zeroinitializer
-; CHECK-NEXT:    [[INDUCTION:%.*]] = add nsw <4 x i32> [[BROADCAST_SPLAT]], <i32 0, i32 -3, i32 -6, i32 -9>
+; CHECK-NEXT:    [[INDUCTION:%.*]] = add <4 x i32> [[BROADCAST_SPLAT]], <i32 0, i32 -3, i32 -6, i32 -9>
 ; CHECK-NEXT:    br label %[[VECTOR_BODY:.*]]
 ; CHECK:       [[VECTOR_BODY]]:
 ; CHECK-NEXT:    [[INDEX:%.*]] = phi i32 [ 0, %[[VECTOR_PH]] ], [ [[INDEX_NEXT:%.*]], %[[VECTOR_BODY]] ]
@@ -341,7 +341,7 @@ define i8 @add_induction_nsw_lane_offset_overflow(i8 %start, i8 %n) {
 ; CHECK-NEXT:    [[TMP6:%.*]] = add i8 [[START]], [[TMP5]]
 ; CHECK-NEXT:    [[BROADCAST_SPLATINSERT:%.*]] = insertelement <4 x i8> poison, i8 [[START]], i64 0
 ; CHECK-NEXT:    [[BROADCAST_SPLAT:%.*]] = shufflevector <4 x i8> [[BROADCAST_SPLATINSERT]], <4 x i8> poison, <4 x i32> zeroinitializer
-; CHECK-NEXT:    [[INDUCTION:%.*]] = add nuw nsw <4 x i8> [[BROADCAST_SPLAT]], <i8 0, i8 60, i8 120, i8 -76>
+; CHECK-NEXT:    [[INDUCTION:%.*]] = add nuw <4 x i8> [[BROADCAST_SPLAT]], <i8 0, i8 60, i8 120, i8 -76>
 ; CHECK-NEXT:    br label %[[VECTOR_BODY:.*]]
 ; CHECK:       [[VECTOR_BODY]]:
 ; CHECK-NEXT:    [[INDEX:%.*]] = phi i32 [ 0, %[[VECTOR_PH]] ], [ [[INDEX_NEXT:%.*]], %[[VECTOR_BODY]] ]
@@ -514,3 +514,43 @@ exit:
 
 !0 = distinct !{!0, !1}
 !1 = !{!"llvm.loop.interleave.count", i32 2}
+
+; In a loop with variable start and step, scalar recurrence with nsw does not
+; imply vector reconstructed mul and add operations have nsw. (Issue #227866)
+define void @add_induction_nsw_no_poison(ptr %p, i32 %step, i32 %start) {
+; CHECK-LABEL: define void @add_induction_nsw_no_poison(
+; CHECK-SAME: ptr [[P:%.*]], i32 [[STEP:%.*]], i32 [[START:%.*]]) {
+; CHECK-NEXT:  [[ENTRY:.*:]]
+; CHECK-NEXT:    br label %[[VECTOR_PH:.*]]
+; CHECK:       [[VECTOR_PH]]:
+; CHECK-NEXT:    [[BROADCAST_SPLATINSERT:%.*]] = insertelement <4 x i32> poison, i32 [[START]], i64 0
+; CHECK-NEXT:    [[BROADCAST_SPLAT:%.*]] = shufflevector <4 x i32> [[BROADCAST_SPLATINSERT]], <4 x i32> poison, <4 x i32> zeroinitializer
+; CHECK-NEXT:    [[BROADCAST_SPLATINSERT1:%.*]] = insertelement <4 x i32> poison, i32 [[STEP]], i64 0
+; CHECK-NEXT:    [[BROADCAST_SPLAT2:%.*]] = shufflevector <4 x i32> [[BROADCAST_SPLATINSERT1]], <4 x i32> poison, <4 x i32> zeroinitializer
+; CHECK-NEXT:    [[TMP0:%.*]] = mul <4 x i32> <i32 0, i32 1, i32 2, i32 3>, [[BROADCAST_SPLAT2]]
+; CHECK-NEXT:    [[INDUCTION:%.*]] = add <4 x i32> [[BROADCAST_SPLAT]], [[TMP0]]
+; CHECK-NEXT:    br label %[[VECTOR_BODY:.*]]
+; CHECK:       [[VECTOR_BODY]]:
+; CHECK-NEXT:    store <4 x i32> [[INDUCTION]], ptr [[P]], align 4
+; CHECK-NEXT:    br label %[[MIDDLE_BLOCK:.*]]
+; CHECK:       [[MIDDLE_BLOCK]]:
+; CHECK-NEXT:    br label %[[EXIT:.*]]
+; CHECK:       [[EXIT]]:
+; CHECK-NEXT:    ret void
+;
+entry:
+  br label %loop
+
+loop:
+  %i = phi i64 [ 0, %entry ], [ %i.next, %loop ]
+  %v = phi i32 [ %start, %entry ], [ %v.next, %loop ]
+  %gep = getelementptr inbounds i32, ptr %p, i64 %i
+  store i32 %v, ptr %gep, align 4
+  %v.next = add nsw i32 %v, %step
+  %i.next = add nuw nsw i64 %i, 1
+  %c = icmp slt i64 %i.next, 4
+  br i1 %c, label %loop, label %exit
+
+exit:
+  ret void
+}

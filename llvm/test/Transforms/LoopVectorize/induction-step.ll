@@ -37,9 +37,9 @@ define void @induction_with_global(i32 %init, ptr noalias nocapture %A, i32 %N) 
 ; CHECK-NEXT:    [[BROADCAST_SPLAT:%.*]] = shufflevector <8 x i32> [[BROADCAST_SPLATINSERT]], <8 x i32> poison, <8 x i32> zeroinitializer
 ; CHECK-NEXT:    [[BROADCAST_SPLATINSERT1:%.*]] = insertelement <8 x i32> poison, i32 [[TMP0]], i64 0
 ; CHECK-NEXT:    [[BROADCAST_SPLAT2:%.*]] = shufflevector <8 x i32> [[BROADCAST_SPLATINSERT1]], <8 x i32> poison, <8 x i32> zeroinitializer
-; CHECK-NEXT:    [[TMP7:%.*]] = mul nsw <8 x i32> <i32 0, i32 1, i32 2, i32 3, i32 4, i32 5, i32 6, i32 7>, [[BROADCAST_SPLAT2]]
-; CHECK-NEXT:    [[INDUCTION:%.*]] = add nsw <8 x i32> [[BROADCAST_SPLAT]], [[TMP7]]
-; CHECK-NEXT:    [[TMP8:%.*]] = shl nsw i32 [[TMP0]], 3
+; CHECK-NEXT:    [[TMP11:%.*]] = mul <8 x i32> <i32 0, i32 1, i32 2, i32 3, i32 4, i32 5, i32 6, i32 7>, [[BROADCAST_SPLAT2]]
+; CHECK-NEXT:    [[INDUCTION:%.*]] = add <8 x i32> [[BROADCAST_SPLAT]], [[TMP11]]
+; CHECK-NEXT:    [[TMP8:%.*]] = shl i32 [[TMP0]], 3
 ; CHECK-NEXT:    [[BROADCAST_SPLATINSERT3:%.*]] = insertelement <8 x i32> poison, i32 [[TMP8]], i64 0
 ; CHECK-NEXT:    [[BROADCAST_SPLAT4:%.*]] = shufflevector <8 x i32> [[BROADCAST_SPLATINSERT3]], <8 x i32> poison, <8 x i32> zeroinitializer
 ; CHECK-NEXT:    br label %[[VECTOR_BODY:.*]]
@@ -126,9 +126,9 @@ define i32 @induction_with_loop_inv(i32 %init, ptr noalias nocapture %A, i32 %N,
 ; CHECK-NEXT:    [[BROADCAST_SPLAT:%.*]] = shufflevector <8 x i32> [[BROADCAST_SPLATINSERT]], <8 x i32> poison, <8 x i32> zeroinitializer
 ; CHECK-NEXT:    [[BROADCAST_SPLATINSERT1:%.*]] = insertelement <8 x i32> poison, i32 [[J_012]], i64 0
 ; CHECK-NEXT:    [[BROADCAST_SPLAT2:%.*]] = shufflevector <8 x i32> [[BROADCAST_SPLATINSERT1]], <8 x i32> poison, <8 x i32> zeroinitializer
-; CHECK-NEXT:    [[TMP6:%.*]] = mul nsw <8 x i32> <i32 0, i32 1, i32 2, i32 3, i32 4, i32 5, i32 6, i32 7>, [[BROADCAST_SPLAT2]]
-; CHECK-NEXT:    [[INDUCTION:%.*]] = add nsw <8 x i32> [[BROADCAST_SPLAT]], [[TMP6]]
-; CHECK-NEXT:    [[TMP7:%.*]] = shl nsw i32 [[J_012]], 3
+; CHECK-NEXT:    [[TMP10:%.*]] = mul <8 x i32> <i32 0, i32 1, i32 2, i32 3, i32 4, i32 5, i32 6, i32 7>, [[BROADCAST_SPLAT2]]
+; CHECK-NEXT:    [[INDUCTION:%.*]] = add <8 x i32> [[BROADCAST_SPLAT]], [[TMP10]]
+; CHECK-NEXT:    [[TMP7:%.*]] = shl i32 [[J_012]], 3
 ; CHECK-NEXT:    [[BROADCAST_SPLATINSERT3:%.*]] = insertelement <8 x i32> poison, i32 [[TMP7]], i64 0
 ; CHECK-NEXT:    [[BROADCAST_SPLAT4:%.*]] = shufflevector <8 x i32> [[BROADCAST_SPLATINSERT3]], <8 x i32> poison, <8 x i32> zeroinitializer
 ; CHECK-NEXT:    br label %[[VECTOR_BODY:.*]]

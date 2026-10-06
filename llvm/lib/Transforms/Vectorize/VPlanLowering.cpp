@@ -267,12 +267,21 @@ expandVPWidenIntOrFpInduction(VPWidenIntOrFpInductionRecipe *WidenIVR) {
   Instruction::BinaryOps AddOp;
   Instruction::BinaryOps MulOp;
   VPIRFlags Flags = *WidenIVR;
+  VPIRFlags MulFlags;
+  VPIRFlags InitAddFlags;
   if (ID.getKind() == InductionDescriptor::IK_IntInduction) {
     AddOp = Instruction::Add;
     MulOp = Instruction::Mul;
+    // Reconstructed initial addition can preserve NUW from the scalar
+    // recurrence since unsigned addition is monotonic, but cannot preserve
+    // NSW as intermediate vector lane offsets (e.g., lane * step) may wrap
+    // signed bounds even if scalar additions do not.
+    InitAddFlags = VPIRFlags(VPIRFlags::WrapFlagsTy(
+        WidenIVR->getNoWrapFlagsOrNone().HasNUW, false));
   } else {
     AddOp = ID.getInductionOpcode();
     MulOp = Instruction::FMul;
+    MulFlags = InitAddFlags = Flags;
   }
 
   // If the phi is truncated, truncate the start and step values.
@@ -295,8 +304,8 @@ expandVPWidenIntOrFpInduction(VPWidenIntOrFpInductionRecipe *WidenIVR) {
   VPValue *SplatStart = Builder.createNaryOp(VPInstruction::Broadcast, Start);
   VPValue *SplatStep = Builder.createNaryOp(VPInstruction::Broadcast, Step);
 
-  Init = Builder.createNaryOp(MulOp, {Init, SplatStep}, Flags);
-  Init = Builder.createNaryOp(AddOp, {SplatStart, Init}, Flags,
+  Init = Builder.createNaryOp(MulOp, {Init, SplatStep}, MulFlags);
+  Init = Builder.createNaryOp(AddOp, {SplatStart, Init}, InitAddFlags,
                               DebugLoc::getUnknown(), "induction");
 
   // Create the widened phi of the vector IV.
@@ -325,7 +334,7 @@ expandVPWidenIntOrFpInduction(VPWidenIntOrFpInductionRecipe *WidenIVR) {
     else
       VF = Builder.createScalarZExtOrTrunc(VF, StepTy, DL);
 
-    Inc = Builder.createNaryOp(MulOp, {Step, VF}, Flags);
+    Inc = Builder.createNaryOp(MulOp, {Step, VF}, MulFlags);
     Inc = Builder.createNaryOp(VPInstruction::Broadcast, Inc);
     Prev = WidePHI;
   }
