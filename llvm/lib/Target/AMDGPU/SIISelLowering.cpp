@@ -2506,15 +2506,14 @@ bool SITargetLowering::isTypeDesirableForOp(unsigned Op, EVT VT) const {
 }
 
 bool SITargetLowering::isTypeDesirableForOp(SDNode *N, EVT VT) const {
-  // Do not convert uniform i32 loads to 16-bit.
+  // Do not convert uniform loads to 16-bit.
   // Uniform 16-bit loads are legalized to i16 = trunc (zextload i16->i32)
   // to match subword load patterns.  Allowing conversion back to a 16-bit
   // load would create an infinite loop.
   if (Subtarget->hasScalarSubwordLoads() && N->getOpcode() == ISD::LOAD &&
       !VT.isVector() && VT.getSizeInBits() == 16) {
     auto *Load = dyn_cast<LoadSDNode>(N);
-    if (Load && Load->getValueType(0) == MVT::i32 && !Load->isDivergent() &&
-        AMDGPU::isUniformMMO(Load->getMemOperand())) {
+    if (Load && isUniformLoad(Load)) {
       return false;
     }
   }
@@ -20889,13 +20888,7 @@ static bool atomicIgnoresDenormalModeOrFPModeIsFTZ(const AtomicRMWInst *RMW) {
 
   const fltSemantics &Flt = RMW->getType()->getScalarType()->getFltSemantics();
   auto DenormMode = RMW->getFunction()->getDenormalMode(Flt);
-  if (DenormMode == DenormalMode::getPreserveSign())
-    return true;
-
-  // TODO: Remove this.
-  return RMW->getFunction()
-      ->getFnAttribute("amdgpu-unsafe-fp-atomics")
-      .getValueAsBool();
+  return DenormMode == DenormalMode::getPreserveSign();
 }
 
 static OptimizationRemark emitAtomicRMWLegalRemark(const AtomicRMWInst *RMW) {

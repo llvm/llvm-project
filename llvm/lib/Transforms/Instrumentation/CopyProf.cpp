@@ -243,8 +243,7 @@ void CopyProf::insertCallback(Function &F, size_t ObjSize, unsigned NumArgs,
 
   InsertCallback(
       F,
-      InstrumentationIRBuilder{&F.getEntryBlock(),
-                               F.getEntryBlock().getFirstNonPHIOrDbgOrAlloca()},
+      InstrumentationIRBuilder{F.getEntryBlock().getFirstNonPHIOrDbgOrAlloca()},
       EntryCallback);
   for (BasicBlock &BB : F) {
     Instruction *Term = BB.getTerminator();
