@@ -24,7 +24,7 @@ end
 ! CHECK-LABEL:   func.func @_QMm_proc_pointer_hidden_by_genericPtest(
 ! CHECK:           %[[DUMMY_SCOPE_0:.*]] = fir.dummy_scope : !fir.dscope
 ! CHECK:           %[[ADDRESS_OF_0:.*]] = fir.address_of(@_QMm_proc_pointer_hidden_by_genericEp) : !fir.ref<!fir.boxproc<(!fir.ref<f32>) -> ()>>
-! CHECK:           %[[DECLARE_0:.*]]:2 = hlfir.declare %[[ADDRESS_OF_0]] {fortran_attrs = #fir.var_attrs<pointer>, uniq_name = "_QMm_proc_pointer_hidden_by_genericEp"} : (!fir.ref<!fir.boxproc<(!fir.ref<f32>) -> ()>>) -> (!fir.ref<!fir.boxproc<(!fir.ref<f32>) -> ()>>, !fir.ref<!fir.boxproc<(!fir.ref<f32>) -> ()>>)
+! CHECK:           %[[DECLARE_0:.*]]:2 = hlfir.declare %[[ADDRESS_OF_0]] uniq_name("_QMm_proc_pointer_hidden_by_genericEp") fortran_attrs<pointer> : (!fir.ref<!fir.boxproc<(!fir.ref<f32>) -> ()>>) -> (!fir.ref<!fir.boxproc<(!fir.ref<f32>) -> ()>>, !fir.ref<!fir.boxproc<(!fir.ref<f32>) -> ()>>)
 ! CHECK:           %[[ADDRESS_OF_1:.*]] = fir.address_of(@_QMm_proc_pointer_hidden_by_genericPproc2) : (!fir.ref<f32>) -> ()
 ! CHECK:           %[[EMBOXPROC_0:.*]] = fir.emboxproc %[[ADDRESS_OF_1]] : ((!fir.ref<f32>) -> ()) -> !fir.boxproc<() -> ()>
 ! CHECK:           %[[CONVERT_0:.*]] = fir.convert %[[EMBOXPROC_0]] : (!fir.boxproc<() -> ()>) -> !fir.boxproc<(!fir.ref<f32>) -> ()>

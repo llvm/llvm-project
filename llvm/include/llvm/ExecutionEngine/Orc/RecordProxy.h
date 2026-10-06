@@ -32,11 +32,10 @@ LookupPrepareFn
 recordProxy(Proxy<FnT> *P, typename Proxy<FnT>::DispatchFn Dispatch,
             SymbolNameSpec Name,
             SymbolLookupFlags LF = SymbolLookupFlags::RequiredSymbol) {
-  return [P, Dispatch, Name, LF](SymbolLookupSet &LS,
-                                 ExecutionSession &ES) -> LookupApplyFn {
-    auto N =
-        Mangler(ES.getTargetTriple())
-            .withMangledNameDo([&](StringRef M) { return ES.intern(M); }, Name);
+  return [P, Dispatch, Name, LF](SymbolLookupSet &LS, ExecutionSession &ES,
+                                 const Mangler &Mangle) -> LookupApplyFn {
+    auto N = Mangle.withMangledNameDo([&](StringRef M) { return ES.intern(M); },
+                                      Name);
     LS.add(N, LF);
     return [P, Dispatch, N = std::move(N)](const SymbolMap &M) {
       auto Sym = M.lookup(N);
@@ -56,7 +55,8 @@ recordProxy(Proxy<FnT> *P, typename Proxy<FnT>::DispatchFn Dispatch,
             SymbolStringPtr Name,
             SymbolLookupFlags LF = SymbolLookupFlags::RequiredSymbol) {
   return [P, Dispatch, Name = std::move(Name),
-          LF](SymbolLookupSet &LS, ExecutionSession &ES) -> LookupApplyFn {
+          LF](SymbolLookupSet &LS, ExecutionSession &ES,
+              const Mangler &) -> LookupApplyFn {
     LS.add(Name, LF);
     return [P, Dispatch, Name](const SymbolMap &M) {
       auto Sym = M.lookup(Name);
