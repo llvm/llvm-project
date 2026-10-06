@@ -2380,11 +2380,6 @@ private:
   bool isKnownPredicateViaConstantRanges(CmpPredicate Pred, SCEVUse LHS,
                                          SCEVUse RHS);
 
-  /// Test whether "LHS Pred RHS" is true by comparing the starts of two
-  /// non-wrapping affine add recurrences with the same loop and step.
-  bool isKnownPredicateViaAddRecStart(CmpPredicate Pred, const SCEV *LHS,
-                                      const SCEV *RHS);
-
   /// Try to prove the condition described by "LHS Pred RHS" by ruling out
   /// integer overflow.
   ///
