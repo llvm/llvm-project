@@ -975,97 +975,128 @@ static unsigned countUnexecutedTerminators(const MachineBasicBlock &Pred,
   return Unexecuted;
 }
 
-// The block walk behind GCNHazardRecognizer::getMaxWindowDeficit, which
-// documents what it returns. Can only be run in a hazard recognizer mode.
-static int getMaxWindowDeficit(
-    function_ref<std::optional<int>(const MachineInstr &)> WindowFor,
-    const MachineInstr *MI, int MaxWindow) {
-  int Deficit = 0;
+// Wait states \p MI adds to a distance. Inline asm may be empty, so it adds
+// none, which is the worst case.
+static unsigned getCountedWaitStates(const MachineInstr &MI) {
+  return MI.isInlineAsm() ? 0 : SIInstrInfo::getNumWaitStates(MI);
+}
 
-  // Arrivals are swept in nondecreasing distance, so the first one at a block
-  // that is not stale is the shortest way into it. A queued Start points past
-  // the block's terminators, with the ones the edge executes already counted
-  // in Distance.
+namespace {
+
+// Answers GCNHazardRecognizer::getMaxWindowDeficit, which documents the result,
+// by walking the CFG backwards from the instruction being checked. That needs
+// the instruction in its final place, so hazard recognizer mode only. Each
+// object answers one query.
+class WindowDeficitSearch {
+public:
+  WindowDeficitSearch(
+      function_ref<std::optional<int>(const MachineInstr &)> WindowFor,
+      int MaxWindow)
+      : WindowFor(WindowFor), MaxWindow(MaxWindow) {}
+
+  int run(const MachineInstr &MI);
+
+private:
+  // A block to scan upwards from Start, which is Distance away from the
+  // instruction being checked. In a predecessor, Start is the last instruction
+  // above the terminators, and Distance includes the ones the edge executes.
   struct Arrival {
     const MachineBasicBlock *MBB;
     MachineBasicBlock::const_reverse_instr_iterator Start;
     int Distance;
   };
+
+  void arrive(const MachineBasicBlock *MBB,
+              MachineBasicBlock::const_reverse_instr_iterator Start,
+              int Distance);
+  void scan(Arrival A);
+
+  const function_ref<std::optional<int>(const MachineInstr &)> WindowFor;
+  const int MaxWindow;
+  int Deficit = 0;
+  // Pending[D] holds the arrivals at distance D, and Best the smallest distance
+  // each block has been queued at. Buckets are emptied in increasing distance,
+  // so the first arrival scanned at a block is the shortest way into it, and
+  // any later one is stale.
   SmallVector<SmallVector<Arrival, 2>, 4> Pending;
   DenseMap<const MachineBasicBlock *, int> Best;
+};
 
-  auto Arrive = [&](const MachineBasicBlock *MBB,
-                    MachineBasicBlock::const_reverse_instr_iterator Start,
-                    int Distance) {
-    // Nothing this far back can ask for more than the answer already holds.
-    if (MaxWindow - Distance <= Deficit)
+} // end anonymous namespace
+
+void WindowDeficitSearch::arrive(
+    const MachineBasicBlock *MBB,
+    MachineBasicBlock::const_reverse_instr_iterator Start, int Distance) {
+  // No window exceeds MaxWindow, so nothing this far back can beat the deficit
+  // already found.
+  if (MaxWindow - Distance <= Deficit)
+    return;
+
+  if (Pending.empty())
+    Pending.resize(MaxWindow);
+
+  auto [It, Inserted] = Best.try_emplace(MBB, Distance);
+  if (!Inserted) {
+    if (It->second <= Distance)
       return;
+    It->second = Distance;
+  }
 
-    if (Pending.empty())
-      Pending.resize(MaxWindow);
+  assert(Distance < MaxWindow && "arrival outside the window");
+  Pending[Distance].push_back({MBB, Start, Distance});
+}
 
-    auto [It, Inserted] = Best.try_emplace(MBB, Distance);
-    if (!Inserted) {
-      if (It->second <= Distance)
-        return;
-      It->second = Distance;
+// \p A is a copy because arrive() may append to the bucket it came from, which
+// can move that bucket's elements.
+void WindowDeficitSearch::scan(Arrival A) {
+  // A shorter way into this block has been queued since.
+  if (Best.lookup(A.MBB) < A.Distance)
+    return;
+
+  int Distance = A.Distance;
+  for (auto I = A.Start, E = A.MBB->instr_rend(); I != E; ++I) {
+    if (I->isBundle())
+      continue;
+
+    if (std::optional<int> Window = WindowFor(*I)) {
+      assert(*Window >= 0 && *Window <= MaxWindow && "window out of bounds");
+      Deficit = std::max(Deficit, *Window - Distance);
     }
 
-    assert(Distance < MaxWindow && "arrival outside the window");
-    Pending[Distance].push_back({MBB, Start, Distance});
-  };
+    Distance += getCountedWaitStates(*I);
 
-  // Taken by value: Arrive can grow the bucket this arrival is stored in.
-  auto Scan = [&](Arrival A) {
-    // A closer arrival has superseded this one.
-    if (Best.lookup(A.MBB) < A.Distance)
+    if (Distance >= MaxWindow)
       return;
+  }
 
-    int Distance = A.Distance;
-    for (auto I = A.Start, E = A.MBB->instr_rend(); I != E; ++I) {
-      if (I->isBundle())
-        continue;
+  for (const MachineBasicBlock *Pred : A.MBB->predecessors()) {
+    auto Start = Pred->instr_rbegin(), End = Pred->instr_rend();
+    for (unsigned N = countUnexecutedTerminators(*Pred, A.MBB); N; --N)
+      ++Start;
 
-      if (std::optional<int> Window = WindowFor(*I)) {
-        assert(*Window >= 0 && *Window <= MaxWindow && "window out of bounds");
-        Deficit = std::max(Deficit, *Window - Distance);
-      }
-
-      if (I->isInlineAsm())
-        continue;
-
-      Distance += SIInstrInfo::getNumWaitStates(*I);
-
-      if (Distance >= MaxWindow)
-        return;
+    int Executed = 0;
+    for (; Start != End && Start->isTerminator(); ++Start) {
+      assert(!WindowFor(*Start) && "terminators must not ask for a window");
+      Executed += getCountedWaitStates(*Start);
     }
 
-    for (const MachineBasicBlock *Pred : A.MBB->predecessors()) {
-      auto Start = Pred->instr_rbegin(), End = Pred->instr_rend();
-      for (unsigned N = countUnexecutedTerminators(*Pred, A.MBB); N; --N)
-        ++Start;
+    arrive(Pred, Start, Distance + Executed);
+  }
+}
 
-      int Executed = 0;
-      for (; Start != End && Start->isTerminator(); ++Start) {
-        assert(!WindowFor(*Start) && "terminators must not ask for a window");
-        Executed += SIInstrInfo::getNumWaitStates(*Start);
-      }
+int WindowDeficitSearch::run(const MachineInstr &MI) {
+  // Only the part above MI is scanned here, so the block stays out of Best: a
+  // backedge into it must still scan it from its end.
+  scan({MI.getParent(), std::next(MI.getReverseIterator()), 0});
 
-      Arrive(Pred, Start, Distance + Executed);
-    }
-  };
-
-  // Not recorded in Best: a backedge may rescan this block from its end.
-  Scan({MI->getParent(), std::next(MI->getReverseIterator()), 0});
-
-  // Arrivals are never queued below the distance being swept, so one increasing
-  // sweep suffices; equal distances land in the bucket in hand, which the inner
-  // loop picks up by re-reading its size rather than iterating. Best keeps a
-  // zero-cost cycle from looping.
+  // Distances never shrink along a path, so a scan only queues arrivals at the
+  // distance being swept or further, and one pass over the buckets is enough.
+  // The inner loop re-reads the size because an edge that adds nothing appends
+  // to the bucket in hand; Best keeps a cycle that adds nothing from looping.
   for (int Distance = 0; Distance < static_cast<int>(Pending.size());
        ++Distance)
     for (unsigned I = 0; I != Pending[Distance].size(); ++I)
-      Scan(Pending[Distance][I]);
+      scan(Pending[Distance][I]);
 
   return Deficit;
 }
@@ -1127,7 +1158,7 @@ getWaitStatesSince(GCNHazardRecognizer::IsHazardFn IsHazard,
 int GCNHazardRecognizer::getMaxWindowDeficit(int MaxWindow,
                                              WindowForFn WindowFor) const {
   if (isHazardRecognizerMode())
-    return ::getMaxWindowDeficit(WindowFor, CurrCycleInstr, MaxWindow);
+    return WindowDeficitSearch(WindowFor, MaxWindow).run(*CurrCycleInstr);
 
   // EmittedInstrs is capped and can be shorter than the widest window, which
   // costs scheduling quality only: the standalone pass still pads.
@@ -1138,12 +1169,9 @@ int GCNHazardRecognizer::getMaxWindowDeficit(int MaxWindow,
         assert(*Window >= 0 && *Window <= MaxWindow && "window out of bounds");
         Deficit = std::max(Deficit, *Window - Distance);
       }
-
-      if (MI->isInlineAsm())
-        continue;
     }
 
-    Distance += MI ? SIInstrInfo::getNumWaitStates(*MI) : 1;
+    Distance += MI ? getCountedWaitStates(*MI) : 1;
 
     if (Distance >= MaxWindow)
       break;
