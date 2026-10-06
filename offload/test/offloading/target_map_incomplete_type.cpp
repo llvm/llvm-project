@@ -35,7 +35,7 @@ int main() {
   map_incomplete_pointer();
 
   int isHost = 1;
-#pragma omp target map(tofrom : p[0:N]) map(from : isHost)
+#pragma omp target map(tofrom : p[0 : N]) map(from : isHost)
   {
     isHost = omp_is_initial_device();
     for (int i = 0; i < N; ++i) {
@@ -54,8 +54,7 @@ int main() {
   delete[] host;
 
   // CHECK: Target region executed on the device
-  std::printf("Target region executed on the %s\n",
-              isHost ? "host" : "device");
+  std::printf("Target region executed on the %s\n", isHost ? "host" : "device");
 
   if (isHost)
     return 1;
