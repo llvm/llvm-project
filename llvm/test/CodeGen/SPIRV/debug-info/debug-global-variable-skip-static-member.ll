@@ -1,14 +1,27 @@
 ; RUN: llc --verify-machineinstrs --spirv-ext=+SPV_KHR_non_semantic_info -O0 -mtriple=spirv64-unknown-unknown %s -o - | FileCheck %s
 ; RUN: %if spirv-tools %{ llc --verify-machineinstrs --spirv-ext=+SPV_KHR_non_semantic_info -O0 -mtriple=spirv64-unknown-unknown %s -o - -filetype=obj | spirv-val %}
 
-; A DIGlobalVariable that is the definition of a static data member. Its
-; declaration DIDerivedType (DW_TAG_member) is not emitted into DebugTypeRegs
-; (member types are not supported yet), so the Static Member Declaration operand
-; cannot be resolved and the whole DebugGlobalVariable is skipped.
+; A DIGlobalVariable that is the definition of a static data member. The
+; declaration is a DW_TAG_member, so getOrCreateDebugScope emits it as
+; DebugTypeMember. DebugGlobalVariable names that id. Its Flags operand is
+; FlagStaticMember (512).
 
 ; CHECK-DAG: [[EXT:%[0-9]+]] = OpExtInstImport "NonSemantic.Shader.DebugInfo.100"
-; CHECK-DAG: OpExtInst {{.*}} DebugCompilationUnit
-; CHECK-NOT: DebugGlobalVariable
+; CHECK-DAG: [[VOID:%[0-9]+]] = OpTypeVoid
+; CHECK-DAG: [[I32T:%[0-9]+]] = OpTypeInt 32 0
+; CHECK-DAG: [[NAME:%[0-9]+]] = OpString "member"
+; CHECK-DAG: [[STR_INT:%[0-9]+]] = OpString "int"
+; CHECK-DAG: [[C0:%[0-9]+]] = OpConstant [[I32T]] 0{{$}}
+; CHECK-DAG: [[C8:%[0-9]+]] = OpConstant [[I32T]] 8{{$}}
+; CHECK-DAG: [[C32:%[0-9]+]] = OpConstant [[I32T]] 32{{$}}
+; CHECK-DAG: [[C42:%[0-9]+]] = OpConstant [[I32T]] 42{{$}}
+; CHECK-DAG: [[C512:%[0-9]+]] = OpConstant [[I32T]] 512{{$}}
+; CHECK-DAG: [[DS:%[0-9]+]] = OpExtInst [[VOID]] [[EXT]] DebugSource
+; CHECK-DAG: [[CU:%[0-9]+]] = OpExtInst [[VOID]] [[EXT]] DebugCompilationUnit
+; CHECK-DAG: [[DTI:%[0-9]+]] = OpExtInst [[VOID]] [[EXT]] DebugTypeBasic [[STR_INT]]
+; CHECK-DAG: [[MEM:%[0-9]+]] = OpExtInst [[VOID]] [[EXT]] DebugTypeMember [[NAME]] [[DTI]] [[DS]] {{%[0-9]+}} [[C0]] [[C0]] [[C0]] [[C512]]
+; CHECK-DAG: [[GV:%[0-9]+]] = OpVariable {{.*}} CrossWorkgroup
+; CHECK-DAG: OpExtInst [[VOID]] [[EXT]] DebugGlobalVariable [[NAME]] [[DTI]] [[DS]] [[C42]] [[C0]] [[CU]] [[NAME]] [[GV]] [[C8]] [[MEM]]
 
 target triple = "spirv64-unknown-unknown"
 
