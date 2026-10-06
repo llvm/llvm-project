@@ -5078,8 +5078,7 @@ SDValue DAGCombiner::visitMUL(SDNode *N) {
   }
 
   // fold (mul (add x, c1), c2) -> (add (mul x, c2), c1*c2)
-  if (sd_match(N0, m_SpecificOpc<ISD::ADD>()) &&
-      isConstantOrConstantVector(N1) &&
+  if (N0.getOpcode() == ISD::ADD && isConstantOrConstantVector(N1) &&
       isConstantOrConstantVector(N0.getOperand(1)) &&
       isMulAddWithConstProfitable(N, N0, N1))
     return DAG.getNode(
