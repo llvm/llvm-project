@@ -7,7 +7,9 @@
 //   - pointer-to-volatile character (volatile char *)
 //   - volatile character array (volatile char[])
 //   - thread-local variable (__thread, not static storage duration)
-//   - pointer not initialized directly with a string literal
+//   - pointer not initialized directly with a string literal, including
+//     when the initializer is enclosed in braces; a braced string literal is
+//     accepted without diagnostic
 //   - name-matched variables of an unsupported type (int, unsigned char)
 //   - variables defined as an alias (array and pointer) are diagnosed, while
 //     naming the aliased variable is accepted without diagnostic
@@ -19,7 +21,7 @@
 // is rejected with an error.
 
 // RUN: %clang_cc1 -triple powerpc64-ibm-aix -Wunused-const-variable \
-// RUN:   -mloadtime-comment-vars=vol_ptr,vol_char,vol_arr,tls_ptr,ind_ptr,const_arr,lfn,kept,notchar,ustr,alias_arr,alias_ptr,aliasee_arr \
+// RUN:   -mloadtime-comment-vars=vol_ptr,vol_char,vol_arr,tls_ptr,ind_ptr,const_arr,lfn,kept,notchar,ustr,alias_arr,alias_ptr,aliasee_arr,braced_ok,braced_ind \
 // RUN:   -fsyntax-only -verify %s
 
 // RUN: not %clang_cc1 -triple x86_64-unknown-linux-gnu \
@@ -44,6 +46,12 @@ __thread char *tls_ptr = "@(#) tls"; // expected-warning {{'tls_ptr' named in '-
 // diagnosed.
 static const char target[] = "@(#) target";
 const char *ind_ptr = target; // expected-warning {{'ind_ptr' named in '-mloadtime-comment-vars=' is not initialized with a string literal and will not be preserved}}
+
+// Braces around the initializer do not change the outcome: a braced string
+// literal is accepted without diagnostic, and a braced pointer to another
+// object is diagnosed.
+const char *braced_ok = {"@(#) braced"};
+const char *braced_ind = {target}; // expected-warning {{'braced_ind' named in '-mloadtime-comment-vars=' is not initialized with a string literal and will not be preserved}}
 
 // A const character array is a valid form; no diagnostic is expected.
 const char const_arr[] = "@(#) const arr";

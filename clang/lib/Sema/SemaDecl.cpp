@@ -15522,6 +15522,15 @@ static void processForLoadTimeCommentVar(Sema &S, VarDecl *VD) {
                      : AT ? AT->getElementType()
                           : QualType();
 
+  // The string literal that initializes a pointer may be enclosed in braces.
+  auto IsStringLiteralInit = [](const Expr *Init) {
+    Init = Init->IgnoreParenImpCasts();
+    if (const auto *ILE = dyn_cast<InitListExpr>(Init);
+        ILE && ILE->getNumInits() == 1)
+      Init = ILE->getInit(0)->IgnoreParenImpCasts();
+    return isa<StringLiteral>(Init);
+  };
+
   Module *Mod = S.getCurrentModule();
   std::optional<unsigned> Reason;
 
@@ -15571,7 +15580,7 @@ static void processForLoadTimeCommentVar(Sema &S, VarDecl *VD) {
     // initialized variable only gets its value from a startup constructor, so
     // the object would not contain the intended string.
     Reason = diag::LoadTimeCommentVarReason::DynamicInit;
-  else if (PT && !isa<StringLiteral>(VD->getInit()->IgnoreParenImpCasts()))
+  else if (PT && !IsStringLiteralInit(VD->getInit()))
     // For the pointer form, the variable must point directly at a string
     // literal. A pointer initialized with some other (even constant) address
     // does not carry the identifying string itself.

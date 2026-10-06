@@ -38,6 +38,7 @@
 //   version       asmid                    preserved (asm label)
 //   sccsid_ce     _ZL9sccsid_ce            preserved (static constexpr, internal)
 //   sccsid_ci     sccsid_ci                preserved (constinit; needs -std=c++20)
+//   sccsid_br     _ZL9sccsid_br            preserved (braced string literal)
 //   [a, b, c]     _ZDC1a1b1cE              preserved (structured binding: the
 //                                          DecompositionDecl owns the storage)
 //
@@ -54,7 +55,7 @@
 
 // RUN: %clang_cc1 -std=c++20 -O2 -triple powerpc64-ibm-aix -Wno-loadtime-comment-var \
 // RUN:   -mloadtime-comment-vars=x,_ZN1N1xE,_ZN1NL3ptrE,_ZN1A1xE,_ZN1B3verE,_ZN1C4infoE,not_string,_ZL4wstr \
-// RUN:   -mloadtime-comment-vars=_ZL6u16str,_ZL5u8str,_ZL9sccsid_ce,sccsid_ci,_ZDC1a1b1cE,cver,_ZN12_GLOBAL__N_14anonE,asmid \
+// RUN:   -mloadtime-comment-vars=_ZL6u16str,_ZL5u8str,_ZL9sccsid_ce,sccsid_ci,_ZL9sccsid_br,_ZDC1a1b1cE,cver,_ZN12_GLOBAL__N_14anonE,asmid \
 // RUN:   -emit-llvm -disable-llvm-passes -o %t.ll %s
 // RUN: FileCheck %s < %t.ll
 // RUN: FileCheck %s --check-prefix=NOEMIT < %t.ll
@@ -124,6 +125,7 @@ static char8_t u8str[] = u8"@(#) u8";
 //    what materializes the string in the object.
 static constexpr const char *sccsid_ce = "@(#) constexpr";
 constinit const char *sccsid_ci = "@(#) constinit";
+static const char *sccsid_br{"@(#) braced"};
 
 // 10. Structured binding. The bindings a/b/c are BindingDecls with no storage
 //     of their own; the hidden DecompositionDecl (a VarDecl) owns the array,
@@ -210,22 +212,26 @@ char bar[] = "@(#) bar";
 // CHECK-DAG: @_ZN12_GLOBAL__N_14anonE = internal global [10 x i8] c"@(#) anon\00", align {{[0-9]+}}, !loadtime_comment ![[MD]]
 // CHECK-DAG: @asmid = global [15 x i8] c"@(#) asm label\00", align {{[0-9]+}}, !loadtime_comment ![[MD]]
 
-// Eligible C++ forms: static constexpr (internal, constant) and constinit
-// (external) are both preserved.
+// Eligible C++ forms: static constexpr (internal, constant), constinit
+// (external), and a pointer list-initialized from a braced string literal
+// are all preserved.
 // CHECK-DAG: @_ZL9sccsid_ce = internal constant ptr @[[CE_STR:.*]], align {{[0-9]+}}, !loadtime_comment ![[MD]]
 // CHECK-DAG: @[[CE_STR]] = private unnamed_addr constant [15 x i8] c"@(#) constexpr\00", align {{[0-9]+}}
 // CHECK-DAG: @sccsid_ci = global ptr @[[CI_STR:.*]], align {{[0-9]+}}, !loadtime_comment ![[MD]]
 // CHECK-DAG: @[[CI_STR]] = private unnamed_addr constant [15 x i8] c"@(#) constinit\00", align {{[0-9]+}}
+// CHECK-DAG: @_ZL9sccsid_br = internal global ptr @[[BR_STR:.*]], align {{[0-9]+}}, !loadtime_comment ![[MD]]
+// CHECK-DAG: @[[BR_STR]] = private unnamed_addr constant [12 x i8] c"@(#) braced\00", align {{[0-9]+}}
 // CHECK-DAG: @_ZDC1a1b1cE = internal constant [3 x i8] c"ab\00", align {{[0-9]+}}, !loadtime_comment ![[MD]]
 
-// The nine supported matched globals are preserved in llvm.compiler.used;
+// The ten supported matched globals are preserved in llvm.compiler.used;
 // the two static data members are not.
-// CHECK: @llvm.compiler.used = appending global [9 x ptr]
+// CHECK: @llvm.compiler.used = appending global [10 x ptr]
 // CHECK-SAME: @x
 // CHECK-SAME: @_ZN1N1xE
 // CHECK-SAME: @_ZN1NL3ptrE
 // CHECK-SAME: @_ZL9sccsid_ce
 // CHECK-SAME: @sccsid_ci
+// CHECK-SAME: @_ZL9sccsid_br
 // CHECK-SAME: @_ZDC1a1b1cE
 // CHECK-SAME: @cver
 // CHECK-SAME: @_ZN12_GLOBAL__N_14anonE
