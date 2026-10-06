@@ -236,6 +236,12 @@ bool DwarfEHPrepare::InsertUnwindResumeCalls() {
   }
   RewindFunction = F.getParent()->getOrInsertFunction(RewindName, FTy);
 
+  // When -fno-plt is enabled, mark _Unwind_Resume as non-lazy-bind to ensure
+  // it goes through GOT instead of PLT.
+  if (F.getParent()->getRtLibUseGOT())
+    if (Function *RewindFn = dyn_cast<Function>(RewindFunction.getCallee()))
+      RewindFn->addFnAttr(Attribute::NonLazyBind);
+
   // Create the basic block where the _Unwind_Resume call will live.
   if (ResumesLeft == 1) {
     // Instead of creating a new BB and PHI node, just append the call to
