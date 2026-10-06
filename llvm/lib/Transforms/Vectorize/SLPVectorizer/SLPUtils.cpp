@@ -1114,10 +1114,7 @@ static bool onlyFeedsScalarAccesses(Value *Ptr, bool ReVec,
   });
 }
 
-/// Returns the getelementptr whose index is computed by the short chain of
-/// single-use arithmetic starting at \p V, or nullptr otherwise.
-static GetElementPtrInst *getIndexChainGEP(Value *V) {
-  constexpr unsigned MaxIndexChainLength = 3;
+GetElementPtrInst *getIndexChainGEP(Value *V, unsigned MaxIndexChainLength) {
   for ([[maybe_unused]] unsigned _ : seq<unsigned>(MaxIndexChainLength)) {
     if (!isa<BinaryOperator, CastInst>(V) || !V->hasOneUse())
       return nullptr;
@@ -1155,12 +1152,6 @@ bool isStrengthReducibleIndexBundle(ArrayRef<Value *> VL, ScalarEvolution &SE,
       return false;
   }
   return true;
-}
-
-bool isGEPCandidateIndex(Instruction *I,
-                         function_ref<bool(GetElementPtrInst *)> IsCandidate) {
-  GetElementPtrInst *GEP = getIndexChainGEP(I);
-  return GEP && IsCandidate(GEP);
 }
 
 Instruction *lookThroughCastRoundTrip(Value *V, bool MustBeElidable) {

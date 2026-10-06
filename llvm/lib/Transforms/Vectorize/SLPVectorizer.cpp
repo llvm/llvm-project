@@ -29377,6 +29377,7 @@ bool SLPVectorizerPass::runImpl(Function &F, ScalarEvolution *SE_,
 
   Stores.clear();
   GEPs.clear();
+  IndexedGEPs.clear();
   bool Changed = false;
 
   // If the target claims to have no vector registers don't attempt
@@ -29418,6 +29419,11 @@ bool SLPVectorizerPass::runImpl(Function &F, ScalarEvolution *SE_,
     // Start new block - clear the list of reduction roots.
     R.clearReductionData();
     collectSeedInstructions(BB);
+    // Saved to keep their index computations out of the once-used seed attempt.
+    if (VectorizeOnceUsed)
+      for (const GEPList &List : make_second_range(GEPs))
+        if (List.size() >= 2)
+          IndexedGEPs.insert_range(List);
 
     // Vectorize trees that end at stores.
     if (!Stores.empty()) {
@@ -29462,9 +29468,6 @@ bool SLPVectorizerPass::runImpl(Function &F, ScalarEvolution *SE_,
                   !R.isScalarFallbackBlock(BB);
          })) {
       R.clearReductionData();
-      // GEPs is collected per block and is also used to keep its index
-      // computations out of the standalone-seed attempt.
-      collectSeedInstructions(BB);
       Changed |= vectorizeOnceUsedSeeds(BB, R);
     }
   }
@@ -36580,11 +36583,8 @@ bool SLPVectorizerPass::vectorizeOnceUsedSeeds(BasicBlock *BB, BoUpSLP &R) {
                 !R.hasResolvedUser(&I);
        })) {
     // Index chains of collected GEPs are handled by vectorizeGEPIndices.
-    if (!GEPs.empty() && isGEPCandidateIndex(&I, [&](auto *GEP) {
-          auto It = GEPs.find(GEP->getPointerOperand());
-          return It != GEPs.end() && It->second.size() >= 2 &&
-                 is_contained(It->second, GEP);
-        }))
+    if (GetElementPtrInst *GEP = getIndexChainGEP(&I);
+        GEP && GEP->getParent() == BB && IndexedGEPs.contains(GEP))
       continue;
     // The poor-throughput ops are seeded on their own, with the different
     // grouping.
