@@ -375,7 +375,8 @@ The pass applies patterns for the following simplifications:
     efficient lowering for this new `bufferization.dealloc` operation.
 *   Remove values from the 'memref' operand list when it is guaranteed to alias
     with at least one value in the 'retained' list and may not alias any other
-    value in the 'retain' list.
+    value in the 'retain' list whose updated ownership condition cannot be
+    statically resolved to true.
 
 ## Lower Deallocations Pass
 
