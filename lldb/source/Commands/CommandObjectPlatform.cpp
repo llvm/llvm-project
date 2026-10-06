@@ -1548,6 +1548,19 @@ public:
         m_options.attach_info.SetScriptedMetadata(metadata_sp);
       }
 
+      // Without a pid or name, let the user pick a process interactively.
+      if (!m_options.attach_info.ProcessInfoSpecified() &&
+          m_class_options.GetName().empty() &&
+          GetDebugger().GetInputFile().GetIsRealTerminal()) {
+        llvm::Expected<lldb::pid_t> pid =
+            PickProcessToAttach(GetDebugger(), *platform_sp, result);
+        if (!pid) {
+          result.SetError(pid.takeError());
+          return;
+        }
+        m_options.attach_info.SetProcessID(*pid);
+      }
+
       Status err;
       ProcessSP remote_process_sp = platform_sp->Attach(
           m_options.attach_info, GetDebugger(), nullptr, err);
