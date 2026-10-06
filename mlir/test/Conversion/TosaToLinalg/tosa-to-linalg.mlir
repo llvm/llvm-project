@@ -792,6 +792,29 @@ func.func @test_simple_ui8(%arg0: tensor<1xi8>) -> () {
 
 // -----
 
+// CHECK-LABEL: @test_cast_input_unsigned
+func.func @test_cast_input_unsigned(%arg0: tensor<1xi8>, %arg1: tensor<1xi16>, %arg2: tensor<1xi32>) -> () {
+  // CHECK: linalg.generic
+  // CHECK: arith.uitofp %{{.*}} : i8 to f32
+  %0 = tosa.cast %arg0 input_unsigned(true) : (tensor<1xi8>) -> tensor<1xf32>
+
+  // CHECK: linalg.generic
+  // CHECK: arith.extui %{{.*}} : i16 to i32
+  %1 = tosa.cast %arg1 input_unsigned(true) : (tensor<1xi16>) -> tensor<1xi32>
+
+  // CHECK: linalg.generic
+  // CHECK: arith.trunci %{{.*}} : i32 to i16
+  %2 = tosa.cast %arg2 input_unsigned(true) : (tensor<1xi32>) -> tensor<1xi16>
+
+  // CHECK: linalg.generic
+  // CHECK: arith.cmpi ne
+  %3 = tosa.cast %arg0 input_unsigned(true) : (tensor<1xi8>) -> tensor<1xi1>
+
+  return
+}
+
+// -----
+
 // CHECK-LABEL: @test_i8
 func.func @test_i8(%arg0: tensor<1xi8>) -> () {
   // CHECK: linalg.generic
