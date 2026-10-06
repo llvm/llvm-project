@@ -438,6 +438,7 @@ public:
     VPWidenMemIntrinsicSC,
     VPWidenLoadEVLSC,
     VPWidenLoadSC,
+    VPWidenFirstFaultingLoadSC,
     VPWidenStoreEVLSC,
     VPWidenStoreSC,
     VPWidenSC,
@@ -653,6 +654,7 @@ public:
     case VPRecipeBase::VPWidenLoadEVLSC:
     case VPRecipeBase::VPWidenLoadSC:
       return true;
+    case VPRecipeBase::VPWidenFirstFaultingLoadSC:
     case VPRecipeBase::VPBranchOnMaskSC:
     case VPRecipeBase::VPInterleaveEVLSC:
     case VPRecipeBase::VPInterleaveSC:
@@ -1545,6 +1547,15 @@ public:
   /// Add mask \p Mask to an unmasked VPInstruction, if it needs masking.
   void addMask(VPValue *Mask) {
     assert(!isMasked() && "recipe is already masked");
+    if (alwaysUnmasked())
+      return;
+    assert(Mask->getScalarType()->isIntegerTy(1) &&
+           "Mask must be an i1 (vector)");
+    VPUser::addOperand(Mask);
+  }
+
+  /// Updates mask \p Mask to a VPInstruction.
+  void updateMask(VPValue *Mask) {
     if (alwaysUnmasked())
       return;
     assert(Mask->getScalarType()->isIntegerTy(1) &&
@@ -3814,6 +3825,23 @@ public:
     return isMasked() ? R->getOperand(R->getNumOperands() - 1) : nullptr;
   }
 
+  // Updates exiting mask with a new one.
+  void updateMask(VPValue *NewMask) {
+    if (!NewMask)
+      return;
+    assert(NewMask->getScalarType()->isIntegerTy(1) &&
+           "Mask must be an i1 (vector)");
+    VPRecipeBase *R = getAsRecipe();
+    if (!IsMasked) {
+      // If no previous mask, just set it
+      R->addOperand(NewMask);
+    } else {
+      // Replace the mask operand
+      R->setOperand(R->getNumOperands() - 1, NewMask);
+    }
+    IsMasked = true;
+  }
+
   /// Returns the alignment of the memory access.
   Align getAlign() const { return Alignment; }
 
@@ -3849,6 +3877,68 @@ struct LLVM_ABI_FOR_TEST VPWidenLoadRecipe final : public VPSingleDefRecipe,
   void execute(VPTransformState &State) override;
 
   /// Return the cost of this VPWidenLoadRecipe.
+  InstructionCost computeCost(ElementCount VF,
+                              VPCostContext &Ctx) const override {
+    return VPWidenMemoryRecipe::computeCost(VF, Ctx);
+  }
+
+  /// Returns true if the recipe only uses the first lane of operand \p Op.
+  bool usesFirstLaneOnly(const VPValue *Op) const override {
+    assert(is_contained(operands(), Op) &&
+           "Op must be an operand of the recipe");
+    // Widened, consecutive loads operations only demand the first lane of
+    // their address.
+    return Op == getAddr() && isConsecutive();
+  }
+
+protected:
+  VPRecipeBase *getAsRecipe() override;
+  const VPRecipeBase *getAsRecipe() const override;
+
+#if !defined(NDEBUG) || defined(LLVM_ENABLE_DUMP)
+  /// Print the recipe.
+  void printRecipe(raw_ostream &O, const Twine &Indent,
+                   VPSlotTracker &SlotTracker) const override;
+#endif
+};
+
+/// A recipe for widening load operations using first-only-fault
+struct LLVM_ABI_FOR_TEST VPWidenFirstFaultingLoadRecipe final
+    : public VPRecipeBase,
+      public VPWidenMemoryRecipe {
+
+  VPValue *Result;
+  VPValue *Count;
+
+  VPWidenFirstFaultingLoadRecipe(LoadInst &Load, VPValue *Addr, VPValue *Mask,
+                                 bool Consecutive, const VPIRMetadata &Metadata,
+                                 DebugLoc DL)
+      : VPRecipeBase(VPRecipeBase::VPWidenFirstFaultingLoadSC, {Addr}, DL),
+        VPWidenMemoryRecipe(Load, Consecutive, Metadata) {
+    setMask(Mask);
+
+    LLVMContext &Ctx = Load.getContext();
+
+    Result = new VPMultiDefValue(this, /*Underlying IR value*/ nullptr,
+                                 /*Scalar type*/ Load.getType());
+    Count = new VPMultiDefValue(this, /*Underlying IR value*/ nullptr,
+                                /*Scalar type*/ Type::getInt32Ty(Ctx));
+  }
+
+  VPWidenFirstFaultingLoadRecipe *clone() override {
+    return new VPWidenFirstFaultingLoadRecipe(cast<LoadInst>(Ingredient),
+                                              getAddr(), getMask(), Consecutive,
+                                              *this, getDebugLoc());
+  }
+
+  VP_CLASSOF_IMPL(VPRecipeBase::VPWidenFirstFaultingLoadSC);
+
+  void execute(VPTransformState &State) override;
+
+  VPValue *getResult() const { return Result; }
+  VPValue *getCount() const { return Count; }
+
+  /// TODO: Check its cost computation
   InstructionCost computeCost(ElementCount VF,
                               VPCostContext &Ctx) const override {
     return VPWidenMemoryRecipe::computeCost(VF, Ctx);
@@ -4887,6 +4977,9 @@ class VPlan {
   /// Represents the loop-invariant VF * UF of the vector loop region.
   VPSymbolicValue VFxUF;
 
+  /// Value of a non constant step
+  VPValue *VariableIVIncrement = nullptr;
+
   /// Contains all the external definitions created for this VPlan, as a mapping
   /// from IR Values to VPIRValues.
   SmallMapVector<Value *, VPIRValue *, 16> LiveIns;
@@ -4894,6 +4987,10 @@ class VPlan {
   /// Blocks allocated and owned by the VPlan. They will be deleted once the
   /// VPlan is destroyed.
   SmallVector<VPBlockBase *> CreatedBlocks;
+
+  /// Set of Loads that would require to be widened to first-only-fault loads
+  /// since they are potentially faulting
+  SmallPtrSet<LoadInst *, 4> PotentiallyFaultingLoads;
 
   /// Construct a VPlan with \p Entry to the plan and with \p ScalarHeader
   /// wrapping the original header of the scalar loop. The vector loop will have
@@ -5048,6 +5145,23 @@ public:
   /// Returns VF * UF of the vector loop region.
   VPSymbolicValue &getVFxUF() { return VFxUF; }
 
+  /// Sets the step to a non constant value
+  void setVariableIVIncrement(VPValue *IVInc) { VariableIVIncrement = IVInc; }
+
+  // Returns the value defining the step
+  VPValue *getVariableIVIncrement() const { return VariableIVIncrement; }
+
+  // Add a Load into potentially faulting load set
+  void addPotentiallyFaultingLoad(LoadInst *L) {
+    PotentiallyFaultingLoads.insert(L);
+  }
+
+  bool isPotentiallyFaultingLoad(LoadInst *L) const {
+    return PotentiallyFaultingLoads.contains(L);
+  }
+
+  auto getPotentiallyFaultingLoads() const { return PotentiallyFaultingLoads; }
+
   LLVMContext &getContext() const {
     return getScalarHeader()->getIRBasicBlock()->getContext();
   }
@@ -5199,6 +5313,9 @@ public:
   /// Dump the plan to stderr (for debugging).
   LLVM_DUMP_METHOD void dump() const;
 #endif
+
+  /// Find the equivalent Variable Step on a duplicated VPlan
+  LLVM_ABI_FOR_TEST VPValue *findDuplicatedVariableIVIncrement(VPlan *newVPlan);
 
   /// Clone the current VPlan, update all VPValues of the new VPlan and cloned
   /// recipes to refer to the clones, and return it.

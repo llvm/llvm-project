@@ -830,6 +830,12 @@ public:
                                                MaybeAlign Align,
                                                Value *Mask = nullptr);
 
+  // Create a call to First-Only-Fault Load intrinsic
+  LLVM_ABI CallInst *CreateFirstFaultingLoad(Type *DataTy, Value *Ptr,
+                                             Align Alignment, Value *Mask,
+                                             Value *EVL,
+                                             const Twine &Name = "");
+
   /// Return an all true boolean vector (mask) with \p NumElts lanes.
   Value *getAllOnesMask(ElementCount NumElts) {
     VectorType *VTy = VectorType::get(Type::getInt1Ty(Context), NumElts);

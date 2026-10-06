@@ -428,8 +428,9 @@ public:
 
   /// Convert \p Current to \p Start + \p Current * \p Step.
   VPDerivedIVRecipe *createDerivedIV(InductionDescriptor::InductionKind Kind,
-                                     FPMathOperator *FPBinOp, VPValue *Start,
-                                     VPValue *Current, VPValue *Step,
+                                     const FPMathOperator *FPBinOp,
+                                     VPValue *Start, VPValue *Current,
+                                     VPValue *Step,
                                      const VPIRFlags::WrapFlagsTy &Flags = {}) {
     return tryInsertInstruction(
         new VPDerivedIVRecipe(Kind, FPBinOp, Start, Current, Step, Flags));
@@ -576,6 +577,16 @@ public:
                                      DebugLoc DL) {
     return tryInsertInstruction(
         new VPWidenLoadRecipe(Load, Addr, Mask, Consecutive, Metadata, DL));
+  }
+
+  /// Create a recipe first-only-fault widening \p Load, loading from \p Addr
+  ///  with \p Mask (may be null).
+  VPWidenFirstFaultingLoadRecipe *
+  createWidenFirstFaultingLoad(LoadInst &Load, VPValue *Addr, VPValue *Mask,
+                               bool Consecutive, const VPIRMetadata &Metadata,
+                               DebugLoc DL) {
+    return tryInsertInstruction(new VPWidenFirstFaultingLoadRecipe(
+        Load, Addr, Mask, Consecutive, Metadata, DL));
   }
 
   /// Create a recipe widening \p Store, storing \p StoredVal to \p Addr with

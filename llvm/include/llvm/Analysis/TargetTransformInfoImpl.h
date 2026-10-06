@@ -1212,6 +1212,8 @@ public:
 
   virtual bool hasActiveVectorLength() const { return false; }
 
+  virtual bool supportsFirstOnlyFaultLoads() const { return false; }
+
   virtual bool isProfitableToSinkOperands(Instruction *I,
                                           SmallVectorImpl<Use *> &Ops) const {
     return false;

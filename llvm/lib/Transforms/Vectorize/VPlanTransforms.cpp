@@ -102,9 +102,15 @@ bool VPlanTransforms::tryToConvertVPInstructionsToVPRecipes(
         if (LoadInst *Load = dyn_cast<LoadInst>(Inst)) {
           bool IsConsecutive =
               IsConsecutiveAccess(VPI->getOperand(0), VPI->getScalarType());
-          NewRecipe = new VPWidenLoadRecipe(*Load, Ingredient.getOperand(0),
-                                            nullptr /*Mask*/, IsConsecutive,
-                                            *VPI, Ingredient.getDebugLoc());
+          if (Plan.isPotentiallyFaultingLoad(Load)) {
+            NewRecipe = new VPWidenFirstFaultingLoadRecipe(
+                *Load, Ingredient.getOperand(0), nullptr, IsConsecutive, *VPI,
+                Ingredient.getDebugLoc());
+          } else {
+            NewRecipe = new VPWidenLoadRecipe(*Load, Ingredient.getOperand(0),
+                                              nullptr /*Mask*/, IsConsecutive,
+                                              *VPI, Ingredient.getDebugLoc());
+          }
         } else if (StoreInst *Store = dyn_cast<StoreInst>(Inst)) {
           bool IsConsecutive = IsConsecutiveAccess(
               VPI->getOperand(1), VPI->getOperand(0)->getScalarType());
@@ -3302,8 +3308,6 @@ struct EarlyExitInfo {
 /// Successor(s): middle.block, middle.block, for.body
 ///
 /// We currently expect LoopVectorizationLegality to ensure that:
-/// * There must also be a counted exit. We will need to support speculative
-///   or first-faulting loads before we can remove this restriction.
 /// * Any stores within the loop must not alias with the load used for the
 ///   uncountable exit. We can relax this a bit with runtime aliasing checks.
 /// * Other memory operations in the loop can take place before or after the
@@ -3317,8 +3321,8 @@ static bool handleUncountableExitsWithSideEffects(
     VPlan &Plan, SmallVectorImpl<EarlyExitInfo> &Exits,
     VPBasicBlock *HeaderVPBB, VPBasicBlock *LatchVPBB, VPBasicBlock *MiddleVPBB,
     OptimizationRemarkEmitter *ORE, Loop *TheLoop,
-    PredicatedScalarEvolution &PSE, DominatorTree &DT, AssumptionCache *AC) {
-
+    PredicatedScalarEvolution &PSE, DominatorTree &DT, AssumptionCache *AC,
+    bool supportsFirstOnlyFaultLoads) {
   // Disconnect early exiting blocks from successors, remove branches. We
   // currently don't support multiple uses for recipes involved in creating
   // the uncountable exit condition.
@@ -3368,8 +3372,9 @@ static bool handleUncountableExitsWithSideEffects(
   // for determining the uncountable exit for the maximum possible number of
   // scalar iterations of the loop.
   //
-  // TODO: Support first-faulting loads in cases where we don't know whether
-  //       all possible addresses are dereferenceable.
+  // It uses first-faulting loads in cases where we don't know whether
+  // all possible addresses are dereferenceable, which speculative
+  // unmasked loads are clipped dynamically by hardware faults.
   {
     SmallVector<const SCEVPredicate *, 4> Predicates;
     const SCEV *PtrSCEV = vputils::getSCEVExprForVPValue(Ptr, PSE, TheLoop);
@@ -3380,12 +3385,18 @@ static bool handleUncountableExitsWithSideEffects(
             PtrSCEV, cast<LoadInst>(Load->getUnderlyingInstr())->getAlign(),
             PSE.getSE()->getConstant(EltSize), TheLoop, *PSE.getSE(), DT, AC,
             &Predicates)) {
-      reportVectorizationFailure("Early exit loop with side effects contains "
-                                 "load used by the exit condition that may "
-                                 "fault",
-                                 "EarlyExitSideEffectsFaultingLoad", ORE,
-                                 TheLoop);
-      return false;
+      // Tag this load so it is widened as first only fault
+      if (supportsFirstOnlyFaultLoads) {
+        auto *LI = cast<LoadInst>(Load->getUnderlyingInstr());
+        Plan.addPotentiallyFaultingLoad(LI);
+      } else {
+        reportVectorizationFailure("Early exit loop with side effects contains "
+                                   "load used by the exit condition that may "
+                                   "fault",
+                                   "EarlyExitSideEffectsFaultingLoad", ORE,
+                                   TheLoop);
+        return false;
+      }
     }
   }
 
@@ -3492,7 +3503,7 @@ static bool handleUncountableExitsWithSideEffects(
 bool VPlanTransforms::handleUncountableEarlyExits(
     VPlan &Plan, OptimizationRemarkEmitter *ORE, Loop *TheLoop,
     PredicatedScalarEvolution &PSE, DominatorTree &DT, AssumptionCache *AC,
-    UncountableExitStyle Style) {
+    UncountableExitStyle Style, bool supportsFirstOnlyFaultLoads) {
 #ifndef NDEBUG
   VPDominatorTree VPDT(Plan);
 #endif
@@ -3504,7 +3515,8 @@ bool VPlanTransforms::handleUncountableEarlyExits(
   // stores, as only the loads contributing to the exit condition need to
   // be checked.
   if (Style == UncountableExitStyle::ReadOnly &&
-      !areAllLoadsDereferenceable(HeaderVPBB, TheLoop, PSE, DT, AC)) {
+      !areAllLoadsDereferenceable(Plan, HeaderVPBB, TheLoop, PSE, DT, AC,
+                                  supportsFirstOnlyFaultLoads)) {
     reportVectorizationFailure(
         "Auto-vectorization of early exit loops with potentially "
         "faulting loads is not supported",
@@ -3608,9 +3620,9 @@ bool VPlanTransforms::handleUncountableEarlyExits(
     LatchVPBB->setSuccessors({MiddleVPBB, MiddleVPBB, HeaderVPBB});
     MiddleVPBB->clearPredecessors();
     MiddleVPBB->setPredecessors({LatchVPBB, LatchVPBB});
-    return handleUncountableExitsWithSideEffects(Plan, Exits, HeaderVPBB,
-                                                 LatchVPBB, MiddleVPBB, ORE,
-                                                 TheLoop, PSE, DT, AC);
+    return handleUncountableExitsWithSideEffects(
+        Plan, Exits, HeaderVPBB, LatchVPBB, MiddleVPBB, ORE, TheLoop, PSE, DT,
+        AC, supportsFirstOnlyFaultLoads);
   }
 
   // Create the vector.early.exit blocks.
@@ -5739,8 +5751,11 @@ void VPlanTransforms::makeMemOpWideningDecisions(VPlan &Plan, VFRange &Range,
 
   auto ReplaceWith = [&](VPInstruction *VPI, VPRecipeBase *New) {
     assert(New->getParent() && "New recipe must have been inserted");
-    if (VPI->getOpcode() == Instruction::Load)
-      VPI->replaceAllUsesWith(New->getVPSingleValue());
+    if (VPI->getOpcode() == Instruction::Load) {
+      auto *FF = dyn_cast<VPWidenFirstFaultingLoadRecipe>(New);
+      VPValue *DataVal = (FF) ? FF->getResult() : New->getVPSingleValue();
+      VPI->replaceAllUsesWith(DataVal);
+    }
     VPI->eraseFromParent();
 
     // VPI has been processed.
@@ -5851,14 +5866,23 @@ void VPlanTransforms::makeMemOpWideningDecisions(VPlan &Plan, VFRange &Range,
                                       VPI->getDebugLoc());
 
         if (IsLoad) {
-          VPSingleDefRecipe *Load = Builder.createWidenLoad(
-              *cast<LoadInst>(I), VectorPtr, Mask,
-              /*Consecutive=*/true, *VPI, VPI->getDebugLoc());
-          // Reverse the loaded values back into program order.
-          if (Reverse)
-            Load = Builder.createNaryOp(VPInstruction::Reverse, Load,
-                                        VPI->getDebugLoc());
-          return ReplaceWith(VPI, Load);
+          auto *LI = cast<LoadInst>(I);
+          if (Plan.isPotentiallyFaultingLoad(LI)) {
+            auto *FFLoad = Builder.createWidenFirstFaultingLoad(
+                *LI, VectorPtr,
+                /*Mask=*/nullptr,
+                /*Consecutive=*/true, *VPI, VPI->getDebugLoc());
+            return ReplaceWith(VPI, FFLoad);
+          } else {
+            VPSingleDefRecipe *Load = Builder.createWidenLoad(
+                *LI, VectorPtr, Mask,
+                /*Consecutive=*/true, *VPI, VPI->getDebugLoc());
+            // Reverse the loaded values back into program order.
+            if (Reverse)
+              Load = Builder.createNaryOp(VPInstruction::Reverse, Load,
+                                          VPI->getDebugLoc());
+            return ReplaceWith(VPI, Load);
+          }
         }
 
         VPValue *StoredVal = VPI->getOperand(0);
@@ -5873,14 +5897,15 @@ void VPlanTransforms::makeMemOpWideningDecisions(VPlan &Plan, VFRange &Range,
         return ReplaceWith(VPI, StoreR);
       });
 
-  VPlanTransforms::runPass("delegateMemOpWideningToLegacyCM", ProcessSubset,
-                           Plan, [&](VPInstruction *VPI) {
-                             if (VPRecipeBase *Recipe =
-                                     RecipeBuilder.tryToWidenMemory(VPI, Range))
-                               return ReplaceWith(VPI, Recipe);
+  VPlanTransforms::runPass(
+      "delegateMemOpWideningToLegacyCM", ProcessSubset, Plan,
+      [&](VPInstruction *VPI) {
+        if (VPRecipeBase *Recipe =
+                RecipeBuilder.tryToWidenMemory(VPI, Range, Plan))
+          return ReplaceWith(VPI, Recipe);
 
-                             return Scalarize(VPI);
-                           });
+        return Scalarize(VPI);
+      });
 }
 
 void VPlanTransforms::makeScalarizationDecisions(VPlan &Plan, VFRange &Range) {
@@ -6268,6 +6293,225 @@ void VPlanTransforms::convertToStridedAccesses(VPlan &Plan,
       if (!StoredValue)
         cast<VPWidenLoadRecipe>(&R)->replaceAllUsesWith(StridedR);
       R.eraseFromParent();
+    }
+  }
+}
+
+void VPlanTransforms::handleFirstFaultingLoadMasks(VPlan &Plan) {
+  // TODO: Current implementation only supports masking for handling active
+  // lanes on a ff-load. This could be completed providing support for EVL
+  // avoiding masks on those cases just wiring properly the active lanes count.
+  VPRegionBlock *LoopRegion = Plan.getVectorLoopRegion();
+  if (!LoopRegion)
+    return;
+  VPValue *PreviousMask = nullptr;
+  VPValue *Step = nullptr;
+  VPInstruction *IndexNext = nullptr;
+
+  VPBlockBase *Entry = LoopRegion->getEntry();
+  // Walk vector body blocks and insert / compose FF masks.
+  for (VPBasicBlock *BB :
+       VPBlockUtils::blocksOnly<VPBasicBlock>(vp_depth_first_shallow(Entry))) {
+
+    for (VPRecipeBase &R : *BB) {
+      if (PreviousMask) {
+        // If there is mask generated by an FF Load, we need to use it.
+        auto Mask = PreviousMask;
+        if (auto *I = dyn_cast<VPInstruction>(&R)) {
+          if (I->getOpcode() == VPInstruction::MaskedCond) {
+            if (I->getNumOperands() > 1) {
+              VPValue *OldMask = I->getOperand(1);
+              auto *NewMask = new VPInstruction(
+                  Instruction::And, {OldMask, Mask}, VPIRFlags{},
+                  VPIRMetadata{}, I->getDebugLoc(), "ff.cond.mask.merge");
+              NewMask->insertBefore(I);
+              Mask = NewMask->getVPValue(0);
+              I->setOperand(1, NewMask);
+            }
+          }
+        }
+        if (auto *MemR = dyn_cast<VPWidenMemoryRecipe>(&R)) {
+          if (VPValue *OldMask = MemR->getMask()) {
+            auto *NewMask = new VPInstruction(Instruction::And, {OldMask, Mask},
+                                              VPIRFlags{}, VPIRMetadata{},
+                                              R.getDebugLoc(), "ff.mask.merge");
+            NewMask->insertBefore(&R);
+            Mask = NewMask->getVPValue(0);
+          }
+          MemR->updateMask(Mask);
+        }
+      }
+
+      // If the current recipe is a First-Faulting Load, we need to generate
+      // the mask based on the first faulting lane.
+      if (auto *FFLoad = dyn_cast<VPWidenFirstFaultingLoadRecipe>(&R)) {
+        VPBuilder Builder = VPBuilder::getToInsertAfter(&R);
+        VPValue *FaultIndex = FFLoad->getCount();
+        Type *FaultIdxTy = FaultIndex->getScalarType();
+        Type *IVTy = LoopRegion->getCanonicalIVType();
+        if (FaultIdxTy != IVTy) {
+          FaultIndex = Builder.createScalarZExtOrTrunc(FaultIndex, IVTy,
+                                                       FFLoad->getDebugLoc());
+        }
+
+        if (!Step) {
+          Step = FaultIndex;
+        } else {
+          VPValue *Cmp =
+              Builder.createICmp(CmpInst::ICMP_ULT, FaultIndex, Step);
+          Step = Builder.createSelect(Cmp, FaultIndex, Step);
+        }
+
+        VPValue *Zero =
+            Plan.getConstantInt(LoopRegion->getCanonicalIVType(), 0);
+        auto *MaskR =
+            Builder.createNaryOp(VPInstruction::ActiveLaneMask, {Zero, Step},
+                                 FFLoad->getDebugLoc(), "ff.mask");
+        PreviousMask = MaskR->getVPValue(0);
+      }
+    }
+  }
+  // Transform handling IV
+  if (PreviousMask) {
+    IndexNext = vputils::findCanonicalIVIncrement(Plan);
+    assert(IndexNext && "Canonical IV increment must be present\n");
+    // Modify the index update
+    {
+      Type *IdNextTy = IndexNext->getOperand(1)->getScalarType();
+      if (IdNextTy != Step->getScalarType()) {
+        VPRecipeBase *InsertBefore = IndexNext;
+        VPBasicBlock *Parent = InsertBefore->getParent();
+        auto It = InsertBefore->getIterator();
+        VPBuilder Builder(Parent, It);
+        Step = Builder.createScalarZExtOrTrunc(Step, IdNextTy,
+                                               IndexNext->getDebugLoc());
+      }
+      IndexNext->setOperand(1, Step);
+      Plan.setVariableIVIncrement(Step);
+    }
+
+    // Modify exiting condition. Since fault may occur and less than VF
+    // elements can be processed, it is required to check if there are still
+    // enough elements for vector loop to process VF. This requires to modify
+    // the condition to check if there are still VF elements instead of just
+    // comparing the new index with the vector trip count.
+    {
+      auto *Latch = cast<VPBasicBlock>(
+          Plan.getVectorLoopRegion()->getExitingBasicBlock());
+      auto *Term = dyn_cast<VPInstruction>(Latch->getTerminator());
+      assert(Term && Term->getOpcode() == VPInstruction::BranchOnTwoConds);
+      VPValue *OldCond = Term->getOperand(1);
+
+      auto *Cmp = dyn_cast<VPInstruction>(OldCond);
+      VPBuilder Builder(Latch, Cmp->getIterator());
+
+      VPValue *RuntimeVF = &Plan.getVF();
+      auto *IndexPlusVF = Builder.createAdd(IndexNext, RuntimeVF);
+      auto *CanDoVF = Builder.createICmp(CmpInst::ICMP_ULT, IndexPlusVF,
+                                         Plan.getTripCount());
+      auto *ExitVec = Builder.createNot(CanDoVF);
+
+      Term->setOperand(1, ExitVec);
+    }
+  }
+
+  // Rewrite middle block to compare current index with trip count
+  if (!Step)
+    return;
+
+  VPBasicBlock *MiddleBlock = Plan.getMiddleBlock();
+
+  auto *Term = dyn_cast<VPInstruction>(MiddleBlock->getTerminator());
+  if (!Term || Term->getOpcode() != VPInstruction::BranchOnCond)
+    return;
+
+  VPValue *Cond = Term->getOperand(0);
+  auto *Cmp = dyn_cast<VPInstruction>(Cond);
+  if (!Cmp || Cmp->getOpcode() != Instruction::ICmp)
+    return;
+
+  VPValue *VTripCount = &Plan.getVectorTripCount();
+  VPValue *Op0 = Cmp->getOperand(0);
+  VPValue *Op1 = Cmp->getOperand(1);
+
+  VPValue *VTOp = Op0 == VTripCount ? Op0 : Op1;
+  auto VTOpIdx = Op0 == VTripCount ? 0 : 1;
+  // Middle block checks if there are remaining iterations after body loop
+  // by comparing vector trip count and trip count. However, FF may change this
+  // and vector body may compute less that vector trip count. This need to
+  // be adjusted to compare against the iv of the latest vector iteration
+  if (VTOp == VTripCount) {
+    Cmp->setOperand(VTOpIdx, IndexNext);
+
+    // TODO: Maybe this can be handled on optimizing end values, however
+    // it will scather the logic everywhere.
+    // It may also requires to adjust the scalar preheader since the
+    // resume value may be different to the vector trip count.
+    VPBasicBlock *ScalarPH = Plan.getScalarPreheader();
+    VPInstruction *BCResume = nullptr;
+    for (auto &R : *ScalarPH)
+      if (auto *I = dyn_cast<VPInstruction>(&R))
+        if (I->getOpcode() == Instruction::PHI) {
+          BCResume = I;
+          break;
+        }
+
+    assert(BCResume && "Scalar prheader has not the expected phi node");
+    // If Scalar IV, replace vector tripcount by the actual end value
+    unsigned ResumeIdx = 0;
+    if (BCResume->getOperand(ResumeIdx) == VTripCount) {
+      Type *OldTy = BCResume->getOperand(ResumeIdx)->getScalarType();
+      Type *NewTy = IndexNext->getScalarType();
+      VPValue *NewResume = IndexNext;
+      if (OldTy && NewTy && OldTy != NewTy) {
+        VPBuilder Builder(MiddleBlock, Term->getIterator());
+        NewResume = Builder.createScalarZExtOrTrunc(IndexNext, OldTy,
+                                                    IndexNext->getDebugLoc());
+      }
+      BCResume->setOperand(ResumeIdx, NewResume);
+    }
+
+    // Handle derived IV for what it needs to be reconstructed by computing the
+    // right value based on last index instead of vector trip count
+    if (auto *DerivedIV =
+            dyn_cast<VPDerivedIVRecipe>(BCResume->getOperand(ResumeIdx))) {
+      VPBuilder Builder(MiddleBlock, MiddleBlock->getFirstNonPhi());
+      VPValue *NewIndex = IndexNext;
+      Type *OldTy = DerivedIV->getIndex()->getScalarType();
+      Type *NewTy = IndexNext->getScalarType();
+      if (OldTy && NewTy && OldTy != NewTy) {
+        NewIndex = Builder.createScalarZExtOrTrunc(IndexNext, OldTy,
+                                                   IndexNext->getDebugLoc());
+      }
+      VPValue *NewResume = Builder.createDerivedIV(
+          DerivedIV->getInductionKind(), DerivedIV->getFPBinOp(),
+          DerivedIV->getStartValue(), NewIndex, DerivedIV->getStepValue());
+      DerivedIV->replaceAllUsesWith(NewResume);
+    }
+  }
+
+  VPValue *TripCount = Plan.getTripCount();
+  VPValue *OtherOp = Op0 == TripCount ? Op1 : Op0;
+  // On uncountable early exits, middle block increases the iv by
+  // the first active lane of the early exit. On FF load this increase
+  // must be the minimum between the first active lane and the faulting
+  // index. Otherwise it may potentially skip iterations when going to
+  // scalar loop.
+  if (auto *Add =
+          dyn_cast_or_null<VPInstruction>(OtherOp->getDefiningRecipe())) {
+    if (Add->getOpcode() == Instruction::Add) {
+      VPValue *ScalarIV = Add->getOperand(0);
+      VPValue *FirstActiveLane = Add->getOperand(1);
+      VPBuilder B(MiddleBlock, Add->getIterator());
+
+      Type *Ty = ScalarIV->getScalarType();
+      if (Step->getScalarType() != Ty)
+        Step = B.createScalarZExtOrTrunc(Step, Ty, Add->getDebugLoc());
+      auto *CmpMin = B.createICmp(CmpInst::ICMP_ULT, Step, FirstActiveLane,
+                                  Add->getDebugLoc());
+      auto *Offset =
+          B.createSelect(CmpMin, Step, FirstActiveLane, Add->getDebugLoc());
+      Add->setOperand(1, Offset);
     }
   }
 }

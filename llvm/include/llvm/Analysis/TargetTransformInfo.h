@@ -2051,6 +2051,9 @@ public:
   /// \return true when scalable vectorization is preferred.
   LLVM_ABI bool enableScalableVectorization() const;
 
+  /// \returns True if the target supports scalable vectors.
+  LLVM_ABI bool supportsFirstOnlyFaultLoads() const;
+
   /// \name Vector Predication Information
   /// @{
   /// Whether the target supports the %evl parameter of VP intrinsic efficiently
