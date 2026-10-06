@@ -1,46 +1,89 @@
-# RUN: llc -mtriple=aarch64-pc-windows-msvc -start-after=patchable-function -verify-machineinstrs %s -o - | FileCheck %s
-# RUN: llc -mtriple=aarch64-pc-windows-msvc -start-after=patchable-function -verify-machineinstrs -filetype=obj %s -o %t
+# RUN: llc -mtriple=aarch64-pc-windows-msvc -start-before=patchable-function -verify-machineinstrs %s -o - | FileCheck %s
+# RUN: llc -mtriple=aarch64-pc-windows-msvc -start-before=patchable-function -verify-machineinstrs -filetype=obj %s -o %t
 # RUN: llvm-readobj -u %t | FileCheck %s --check-prefix=UNWIND
+# RUN: llvm-objdump -d --no-show-raw-insn %t | FileCheck %s --check-prefix=OBJ
 
 ## Instructions that emit no bytes must not hide an empty entry block.
 # CHECK-LABEL: meta_entry:
 # CHECK:       // %bb.0:
-# CHECK-NEXT:  nop
 # CHECK-NEXT:  // kill:
 # CHECK-NEXT:  // implicit-def:
+# CHECK-NEXT:  nop
 # CHECK-NEXT:  [[LOOP:\.LBB[0-9]+_[0-9]+]]:
 # CHECK:       b [[LOOP]]
 
-## Windows unwind directives also emit no bytes. A NOP inserted before the end
-## of the prologue needs a corresponding unwind directive.
+## Windows unwind directives also emit no bytes. The NOP is placed after the end
+## of an empty prologue, so it needs no corresponding unwind directive.
 # CHECK-LABEL: seh_entry:
 # CHECK:       // %bb.0:
-# CHECK-NEXT:  nop
-# CHECK-NEXT:  .seh_nop
+# CHECK-NEXT:  // kill:
 # CHECK-NEXT:  .seh_endprologue
+# CHECK-NEXT:  nop
 # CHECK-NEXT:  [[LOOP:\.LBB[0-9]+_[0-9]+]]:
 # CHECK:       b [[LOOP]]
 
-## The prologue unwind codes must describe the NOP.
+## The NOP is still the first instruction, and the backedge must skip it.
+# OBJ-LABEL: <seh_entry>:
+# OBJ-NEXT:  {{[0-9a-f]+}}: nop
+# OBJ-NEXT:  {{[0-9a-f]+}}: b {{.*}} <seh_entry+0x4>
+
+## No NOP unwind code is needed for padding outside the prologue.
 # UNWIND:      Function: seh_entry
 # UNWIND:      Prologue [
-# UNWIND-NEXT:   0xe3 ; nop
 # UNWIND-NEXT:   0xe4 ; end
 # UNWIND-NEXT: ]
 
+## Padding must still precede inline assembly, which may begin with a branch
+## target.
+# CHECK-LABEL: seh_inline_asm_entry:
+# CHECK:       // %bb.0:
+# CHECK-NEXT:  .seh_endprologue
+# CHECK-NEXT:  nop
+# CHECK-NEXT:  //APP
+# CHECK:       //NO_APP
+# CHECK-NEXT:  ret
+
+# OBJ-LABEL: <seh_inline_asm_entry>:
+# OBJ-NEXT:  {{[0-9a-f]+}}: nop
+# OBJ-NEXT:  {{[0-9a-f]+}}: b {{.*}} <seh_inline_asm_entry+0x4>
+# OBJ-NEXT:  {{[0-9a-f]+}}: ret
+
+# UNWIND:      Function: seh_inline_asm_entry
+# UNWIND:      Prologue [
+# UNWIND-NEXT:   0xe4 ; end
+# UNWIND-NEXT: ]
+
+## An entry that already emits an instruction must not acquire padding.
+# CHECK-LABEL: seh_nonempty_entry:
+# CHECK:       // %bb.0:
+# CHECK-NEXT:  .seh_endprologue
+# CHECK-NEXT:  ret
+
+# OBJ-LABEL: <seh_nonempty_entry>:
+# OBJ-NEXT:  {{[0-9a-f]+}}: ret
+
 --- |
-  define void @meta_entry() {
+  define void @meta_entry() "patchable-function"="prologue-short-redirect" {
   entry:
     br label %loop
   loop:
     br label %loop
   }
 
-  define void @seh_entry() uwtable {
+  define void @seh_entry() uwtable "patchable-function"="prologue-short-redirect" {
   entry:
     br label %loop
   loop:
     br label %loop
+  }
+
+  define void @seh_inline_asm_entry() uwtable "patchable-function"="prologue-short-redirect" {
+    call void asm sideeffect "1: b 1b", ""()
+    ret void
+  }
+
+  define void @seh_nonempty_entry() uwtable "patchable-function"="prologue-short-redirect" {
+    ret void
   }
 ...
 ---
@@ -52,7 +95,6 @@ body: |
     successors: %bb.1
     liveins: $x0
 
-    PATCHABLE_OP 4
     KILL $x0
     $x1 = IMPLICIT_DEF
 
@@ -68,11 +110,33 @@ hasWinCFI: true
 body: |
   bb.0.entry:
     successors: %bb.1
+    liveins: $x0
 
-    PATCHABLE_OP 4
+    KILL $x0
     frame-setup SEH_PrologEnd
 
   bb.1.loop:
     successors: %bb.1
     B %bb.1
+...
+---
+name: seh_inline_asm_entry
+alignment: 4
+tracksRegLiveness: true
+hasWinCFI: true
+body: |
+  bb.0:
+    frame-setup SEH_PrologEnd
+    INLINEASM &"1: b 1b", 1
+    RET undef $lr
+...
+---
+name: seh_nonempty_entry
+alignment: 4
+tracksRegLiveness: true
+hasWinCFI: true
+body: |
+  bb.0:
+    frame-setup SEH_PrologEnd
+    RET undef $lr
 ...
