@@ -163,6 +163,12 @@ static constexpr llvm::StringRef getAccessGroupsAttrName() {
   return "access_groups";
 }
 
+/// Attribute to mark an alloca that lowering creates to hold a bound or
+/// length parameter of a variable.
+static constexpr llvm::StringRef getDebugBoundSlotAttrName() {
+  return "fir.debug_bound_slot";
+}
+
 /// Attribute holding the unique name of the Fortran entity an allocation
 /// belongs to. It is an inherent attribute of the FIR allocation operations,
 /// and may also be carried by allocation operations of other dialects that

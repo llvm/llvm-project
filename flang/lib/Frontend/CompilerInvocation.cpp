@@ -2149,6 +2149,8 @@ void CompilerInvocation::setLoweringOptions() {
 
   // Lower TRANSPOSE as a runtime call under -O0.
   loweringOpts.setOptimizeTranspose(codegenOpts.OptimizationLevel > 0);
+  // Keep the bounds of variables in memory under -O0 for the debugger.
+  loweringOpts.setBoundsInStackSlots(codegenOpts.OptimizationLevel == 0);
   loweringOpts.setUnderscoring(codegenOpts.Underscoring);
   loweringOpts.setSkipExternalRttiDefinition(skipExternalRttiDefinition);
 

@@ -167,7 +167,7 @@ end subroutine target_allocatable
 ! CHECK-SAME:       @[[CHAR_PRIVATIZER_SYM]] %{{[^[:space:]]+}}#0 -> %[[CHAR_ARG:[^,]+]] [map_idx=2]
 ! CHECK-SAME:       @[[FIRSTPRIVATE_SCALAR_SYM]] %{{[^[:space:]]+}}#0 -> %[[FP_SCALAR_ARG:[^,]+]] [map_idx=3] :
 ! CHECK-SAME:       !fir.ref<!fir.box<!fir.heap<i32>>>, !fir.ref<f32>, !fir.ref<i64>, !fir.ref<!fir.box<!fir.array<?xf32>>>, !fir.ref<complex<f32>>, !fir.boxchar<1>, !fir.ref<i32>)
-! CHECK-NOT:      fir.alloca
+! CHECK-NOT:      fir.alloca {{.*}}bindc_name
 ! CHECK:          hlfir.declare %[[ALLOC_ARG]]
 ! CHECK:          hlfir.declare %[[REAL_ARG]]
 ! CHECK:          hlfir.declare %[[LB_ARG]]

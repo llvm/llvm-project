@@ -37,6 +37,7 @@
 #include "flang/Optimizer/Dialect/CUF/CUFOps.h"
 #include "flang/Optimizer/Dialect/FIRAttr.h"
 #include "flang/Optimizer/Dialect/FIROps.h"
+#include "flang/Optimizer/Dialect/FIROpsSupport.h"
 #include "flang/Optimizer/Dialect/FIRType.h"
 #include "flang/Optimizer/Dialect/Support/FIRContext.h"
 #include "flang/Optimizer/HLFIR/HLFIROps.h"
@@ -2571,6 +2572,55 @@ isCapturedInInternalProcedure(Fortran::lower::AbstractConverter &converter,
   return false;
 }
 
+/// Whether \p val is the same wherever it is read, so that the debug info can
+/// describe it directly and it does not need a slot.
+static bool isInvariantBound(mlir::Value val) {
+  mlir::Operation *op = val.getDefiningOp();
+  // A block argument, which for a bound means a dummy, varies between calls.
+  if (!op)
+    return false;
+  if (op->hasTrait<mlir::OpTrait::ConstantLike>())
+    return true;
+  // The assumed-size sentinel is fixed at compile time, and the debug info
+  // leaves it out rather than describing it as an extent.
+  if (mlir::isa<fir::AssumedSizeExtentOp>(op))
+    return true;
+  // A constant bound is usually folded before lowering, but a dimension of an
+  // array that has a non-constant dimension too still reaches here so look
+  // through the computation.
+  return !op->getOperands().empty() && mlir::isPure(op) &&
+         op->getNumRegions() == 0 &&
+         llvm::all_of(op->getOperands(), isInvariantBound);
+}
+
+/// Under the BoundsInStackSlots lowering option, store the non-constant bounds
+/// and length parameters of the variable declared by \p declare in stack slots
+/// that nothing else accesses.
+static void genBoundsInStackSlots(Fortran::lower::AbstractConverter &converter,
+                                  hlfir::DeclareOp declare) {
+  if (!converter.getLoweringOptions().getBoundsInStackSlots())
+    return;
+  llvm::SmallVector<mlir::Value> bounds(declare.getTypeparams());
+  if (mlir::Value shape = declare.getShape())
+    if (mlir::Operation *shapeOp = shape.getDefiningOp())
+      llvm::append_range(bounds, shapeOp->getOperands());
+  fir::FirOpBuilder &builder = converter.getFirOpBuilder();
+  mlir::NamedAttribute slotAttr(
+      builder.getStringAttr(fir::getDebugBoundSlotAttrName()),
+      builder.getUnitAttr());
+  // Neither the slot nor the store is something the user wrote, so keep them
+  // out of the line table.
+  mlir::Location loc = builder.getUnknownLoc();
+  mlir::OpBuilder::InsertionGuard guard(builder);
+  builder.setInsertionPoint(declare);
+  for (mlir::Value bound : bounds) {
+    if (isInvariantBound(bound))
+      continue;
+    mlir::Value slot = builder.createTemporary(loc, bound.getType(), slotAttr);
+    fir::StoreOp::create(builder, loc, bound, slot);
+  }
+}
+
 /// Map a symbol to its FIR address and evaluated specification expressions.
 /// Not for symbols lowered to fir.box.
 /// Will optionally create fir.declare.
@@ -2666,6 +2716,7 @@ static void genDeclareSymbol(Fortran::lower::AbstractConverter &converter,
     auto newBase = hlfir::DeclareOp::create(
         builder, loc, base, name, shapeOrShift, lenParams, dummyScope, storage,
         storageOffset, attributes, dataAttr, argNo);
+    genBoundsInStackSlots(converter, newBase);
     symMap.addVariableDefinition(sym, newBase, force);
     return;
   }
@@ -2728,6 +2779,8 @@ void Fortran::lower::genDeclareSymbol(
     hlfir::EntityWithAttributes declare =
         hlfir::genDeclare(loc, builder, base, name, attributes, dummyScope,
                           storage, storageOffset, dataAttr, argNo);
+    if (auto declareOp = declare.getDefiningOp<hlfir::DeclareOp>())
+      genBoundsInStackSlots(converter, declareOp);
     symMap.addVariableDefinition(sym, declare.getIfVariableInterface(), force);
     return;
   }
