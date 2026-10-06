@@ -8,6 +8,7 @@
 #define __global__ __attribute__((global))
 
 typedef __attribute__((__vector_size__(4 * sizeof(unsigned int)))) unsigned int v4u32;
+typedef unsigned char u8;
 typedef unsigned short u16;
 typedef unsigned int u32;
 typedef unsigned long u64;
@@ -20,6 +21,16 @@ __device__ void test_av_load_store_device(v4u32 *ptr, v4u32 data) {
 __global__ void test_av_load_store_kernel(v4u32 *ptr, v4u32 data) {
   v4u32 res = __builtin_amdgcn_av_load_b128(ptr, 0);
   __builtin_amdgcn_av_store_b128(ptr, data, 0);
+}
+
+__device__ void test_av_load_store_b8_device(u8 *ptr, u8 data) {
+  u8 res = __builtin_amdgcn_av_load_b8(ptr, 0);
+  __builtin_amdgcn_av_store_b8(ptr, data, 0);
+}
+
+__global__ void test_av_load_store_b8_kernel(u8 *ptr, u8 data) {
+  u8 res = __builtin_amdgcn_av_load_b8(ptr, 0);
+  __builtin_amdgcn_av_store_b8(ptr, data, 0);
 }
 
 __device__ void test_av_load_store_b16_device(u16 *ptr, u16 data) {

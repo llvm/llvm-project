@@ -8838,10 +8838,12 @@ bool AMDGPULegalizerInfo::legalizeIntrinsic(LegalizerHelper &Helper,
     B.buildStore(MI.getOperand(2), MI.getOperand(1), **MI.memoperands_begin());
     MI.eraseFromParent();
     return true;
+  case Intrinsic::amdgcn_av_load_b8:
   case Intrinsic::amdgcn_av_load_b16:
   case Intrinsic::amdgcn_av_load_b32:
   case Intrinsic::amdgcn_av_load_b64:
   case Intrinsic::amdgcn_av_load_b128:
+  case Intrinsic::amdgcn_av_store_b8:
   case Intrinsic::amdgcn_av_store_b16:
   case Intrinsic::amdgcn_av_store_b32:
   case Intrinsic::amdgcn_av_store_b64:

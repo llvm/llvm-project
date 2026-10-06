@@ -1016,6 +1016,9 @@ class AMDGPUAVLoad<LLVMType ty> : Intrinsic <
 >;
 
 let TargetFeatures = "flat-global-insts" in {
+def int_amdgcn_av_store_b8 : AMDGPUAVStore<llvm_i8_ty>;
+def int_amdgcn_av_load_b8  : AMDGPUAVLoad<llvm_i8_ty>;
+
 def int_amdgcn_av_store_b16 : AMDGPUAVStore<llvm_i16_ty>;
 def int_amdgcn_av_load_b16  : AMDGPUAVLoad<llvm_i16_ty>;
 

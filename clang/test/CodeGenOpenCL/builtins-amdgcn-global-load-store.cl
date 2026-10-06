@@ -9,9 +9,11 @@
 
 typedef __attribute__((__vector_size__(4 * sizeof(unsigned int)))) unsigned int v4u32;
 typedef v4u32 __global *global_ptr_to_v4u32;
+typedef unsigned char u8;
 typedef unsigned short u16;
 typedef unsigned int u32;
 typedef unsigned long u64;
+typedef u8 __global *global_ptr_to_u8;
 typedef u16 __global *global_ptr_to_u16;
 typedef u32 __global *global_ptr_to_u32;
 typedef u64 __global *global_ptr_to_u64;
@@ -72,6 +74,60 @@ v4u32 test_amdgcn_global_load_b128_single(global_ptr_to_v4u32 ptr) {
 //
 v4u32 test_amdgcn_global_load_b128_cluster(global_ptr_to_v4u32 ptr) {
   return __builtin_amdgcn_av_load_b128(ptr, __MEMORY_SCOPE_CLUSTR);
+}
+
+// CHECK-LABEL: @test_amdgcn_global_load_b8_wave(
+// CHECK-NEXT:  entry:
+// CHECK-NEXT:    [[TMP0:%.*]] = tail call i8 @llvm.amdgcn.av.load.b8.p1(ptr addrspace(1) [[PTR:%.*]], metadata [[META8]])
+// CHECK-NEXT:    ret i8 [[TMP0]]
+//
+u8 test_amdgcn_global_load_b8_wave(global_ptr_to_u8 ptr) {
+  return __builtin_amdgcn_av_load_b8(ptr, __MEMORY_SCOPE_WVFRNT);
+}
+
+// CHECK-LABEL: @test_amdgcn_global_load_b8_workgroup(
+// CHECK-NEXT:  entry:
+// CHECK-NEXT:    [[TMP0:%.*]] = tail call i8 @llvm.amdgcn.av.load.b8.p1(ptr addrspace(1) [[PTR:%.*]], metadata [[META9]])
+// CHECK-NEXT:    ret i8 [[TMP0]]
+//
+u8 test_amdgcn_global_load_b8_workgroup(global_ptr_to_u8 ptr) {
+  return __builtin_amdgcn_av_load_b8(ptr, __MEMORY_SCOPE_WRKGRP);
+}
+
+// CHECK-LABEL: @test_amdgcn_global_load_b8_device(
+// CHECK-NEXT:  entry:
+// CHECK-NEXT:    [[TMP0:%.*]] = tail call i8 @llvm.amdgcn.av.load.b8.p1(ptr addrspace(1) [[PTR:%.*]], metadata [[META10]])
+// CHECK-NEXT:    ret i8 [[TMP0]]
+//
+u8 test_amdgcn_global_load_b8_device(global_ptr_to_u8 ptr) {
+  return __builtin_amdgcn_av_load_b8(ptr, __MEMORY_SCOPE_DEVICE);
+}
+
+// CHECK-LABEL: @test_amdgcn_global_load_b8_system(
+// CHECK-NEXT:  entry:
+// CHECK-NEXT:    [[TMP0:%.*]] = tail call i8 @llvm.amdgcn.av.load.b8.p1(ptr addrspace(1) [[PTR:%.*]], metadata [[META11]])
+// CHECK-NEXT:    ret i8 [[TMP0]]
+//
+u8 test_amdgcn_global_load_b8_system(global_ptr_to_u8 ptr) {
+  return __builtin_amdgcn_av_load_b8(ptr, __MEMORY_SCOPE_SYSTEM);
+}
+
+// CHECK-LABEL: @test_amdgcn_global_load_b8_single(
+// CHECK-NEXT:  entry:
+// CHECK-NEXT:    [[TMP0:%.*]] = tail call i8 @llvm.amdgcn.av.load.b8.p1(ptr addrspace(1) [[PTR:%.*]], metadata [[META12]])
+// CHECK-NEXT:    ret i8 [[TMP0]]
+//
+u8 test_amdgcn_global_load_b8_single(global_ptr_to_u8 ptr) {
+  return __builtin_amdgcn_av_load_b8(ptr, __MEMORY_SCOPE_SINGLE);
+}
+
+// CHECK-LABEL: @test_amdgcn_global_load_b8_cluster(
+// CHECK-NEXT:  entry:
+// CHECK-NEXT:    [[TMP0:%.*]] = tail call i8 @llvm.amdgcn.av.load.b8.p1(ptr addrspace(1) [[PTR:%.*]], metadata [[META13]])
+// CHECK-NEXT:    ret i8 [[TMP0]]
+//
+u8 test_amdgcn_global_load_b8_cluster(global_ptr_to_u8 ptr) {
+  return __builtin_amdgcn_av_load_b8(ptr, __MEMORY_SCOPE_CLUSTR);
 }
 
 // CHECK-LABEL: @test_amdgcn_global_load_b16_wave(
@@ -294,6 +350,60 @@ void test_amdgcn_global_store_b128_cluster(global_ptr_to_v4u32 ptr, v4u32 data) 
   __builtin_amdgcn_av_store_b128(ptr, data, __MEMORY_SCOPE_CLUSTR);
 }
 
+// CHECK-LABEL: @test_amdgcn_global_store_b8_wave(
+// CHECK-NEXT:  entry:
+// CHECK-NEXT:    tail call void @llvm.amdgcn.av.store.b8.p1(ptr addrspace(1) [[PTR:%.*]], i8 [[DATA:%.*]], metadata [[META8]])
+// CHECK-NEXT:    ret void
+//
+void test_amdgcn_global_store_b8_wave(global_ptr_to_u8 ptr, u8 data) {
+  __builtin_amdgcn_av_store_b8(ptr, data, __MEMORY_SCOPE_WVFRNT);
+}
+
+// CHECK-LABEL: @test_amdgcn_global_store_b8_workgroup(
+// CHECK-NEXT:  entry:
+// CHECK-NEXT:    tail call void @llvm.amdgcn.av.store.b8.p1(ptr addrspace(1) [[PTR:%.*]], i8 [[DATA:%.*]], metadata [[META9]])
+// CHECK-NEXT:    ret void
+//
+void test_amdgcn_global_store_b8_workgroup(global_ptr_to_u8 ptr, u8 data) {
+  __builtin_amdgcn_av_store_b8(ptr, data, __MEMORY_SCOPE_WRKGRP);
+}
+
+// CHECK-LABEL: @test_amdgcn_global_store_b8_device(
+// CHECK-NEXT:  entry:
+// CHECK-NEXT:    tail call void @llvm.amdgcn.av.store.b8.p1(ptr addrspace(1) [[PTR:%.*]], i8 [[DATA:%.*]], metadata [[META10]])
+// CHECK-NEXT:    ret void
+//
+void test_amdgcn_global_store_b8_device(global_ptr_to_u8 ptr, u8 data) {
+  __builtin_amdgcn_av_store_b8(ptr, data, __MEMORY_SCOPE_DEVICE);
+}
+
+// CHECK-LABEL: @test_amdgcn_global_store_b8_system(
+// CHECK-NEXT:  entry:
+// CHECK-NEXT:    tail call void @llvm.amdgcn.av.store.b8.p1(ptr addrspace(1) [[PTR:%.*]], i8 [[DATA:%.*]], metadata [[META11]])
+// CHECK-NEXT:    ret void
+//
+void test_amdgcn_global_store_b8_system(global_ptr_to_u8 ptr, u8 data) {
+  __builtin_amdgcn_av_store_b8(ptr, data, __MEMORY_SCOPE_SYSTEM);
+}
+
+// CHECK-LABEL: @test_amdgcn_global_store_b8_single(
+// CHECK-NEXT:  entry:
+// CHECK-NEXT:    tail call void @llvm.amdgcn.av.store.b8.p1(ptr addrspace(1) [[PTR:%.*]], i8 [[DATA:%.*]], metadata [[META12]])
+// CHECK-NEXT:    ret void
+//
+void test_amdgcn_global_store_b8_single(global_ptr_to_u8 ptr, u8 data) {
+  __builtin_amdgcn_av_store_b8(ptr, data, __MEMORY_SCOPE_SINGLE);
+}
+
+// CHECK-LABEL: @test_amdgcn_global_store_b8_cluster(
+// CHECK-NEXT:  entry:
+// CHECK-NEXT:    tail call void @llvm.amdgcn.av.store.b8.p1(ptr addrspace(1) [[PTR:%.*]], i8 [[DATA:%.*]], metadata [[META13]])
+// CHECK-NEXT:    ret void
+//
+void test_amdgcn_global_store_b8_cluster(global_ptr_to_u8 ptr, u8 data) {
+  __builtin_amdgcn_av_store_b8(ptr, data, __MEMORY_SCOPE_CLUSTR);
+}
+
 // CHECK-LABEL: @test_amdgcn_global_store_b16_wave(
 // CHECK-NEXT:  entry:
 // CHECK-NEXT:    tail call void @llvm.amdgcn.av.store.b16.p1(ptr addrspace(1) [[PTR:%.*]], i16 [[DATA:%.*]], metadata [[META8]])
@@ -514,6 +624,60 @@ v4u32 test_amdgcn_flat_load_b128_cluster(v4u32 * ptr) {
   return __builtin_amdgcn_av_load_b128(ptr, __MEMORY_SCOPE_CLUSTR);
 }
 
+// CHECK-LABEL: @test_amdgcn_flat_load_b8_wave(
+// CHECK-NEXT:  entry:
+// CHECK-NEXT:    [[TMP0:%.*]] = tail call i8 @llvm.amdgcn.av.load.b8.p0(ptr [[PTR:%.*]], metadata [[META8]])
+// CHECK-NEXT:    ret i8 [[TMP0]]
+//
+u8 test_amdgcn_flat_load_b8_wave(u8 * ptr) {
+  return __builtin_amdgcn_av_load_b8(ptr, __MEMORY_SCOPE_WVFRNT);
+}
+
+// CHECK-LABEL: @test_amdgcn_flat_load_b8_workgroup(
+// CHECK-NEXT:  entry:
+// CHECK-NEXT:    [[TMP0:%.*]] = tail call i8 @llvm.amdgcn.av.load.b8.p0(ptr [[PTR:%.*]], metadata [[META9]])
+// CHECK-NEXT:    ret i8 [[TMP0]]
+//
+u8 test_amdgcn_flat_load_b8_workgroup(u8 * ptr) {
+  return __builtin_amdgcn_av_load_b8(ptr, __MEMORY_SCOPE_WRKGRP);
+}
+
+// CHECK-LABEL: @test_amdgcn_flat_load_b8_device(
+// CHECK-NEXT:  entry:
+// CHECK-NEXT:    [[TMP0:%.*]] = tail call i8 @llvm.amdgcn.av.load.b8.p0(ptr [[PTR:%.*]], metadata [[META10]])
+// CHECK-NEXT:    ret i8 [[TMP0]]
+//
+u8 test_amdgcn_flat_load_b8_device(u8 * ptr) {
+  return __builtin_amdgcn_av_load_b8(ptr, __MEMORY_SCOPE_DEVICE);
+}
+
+// CHECK-LABEL: @test_amdgcn_flat_load_b8_system(
+// CHECK-NEXT:  entry:
+// CHECK-NEXT:    [[TMP0:%.*]] = tail call i8 @llvm.amdgcn.av.load.b8.p0(ptr [[PTR:%.*]], metadata [[META11]])
+// CHECK-NEXT:    ret i8 [[TMP0]]
+//
+u8 test_amdgcn_flat_load_b8_system(u8 * ptr) {
+  return __builtin_amdgcn_av_load_b8(ptr, __MEMORY_SCOPE_SYSTEM);
+}
+
+// CHECK-LABEL: @test_amdgcn_flat_load_b8_single(
+// CHECK-NEXT:  entry:
+// CHECK-NEXT:    [[TMP0:%.*]] = tail call i8 @llvm.amdgcn.av.load.b8.p0(ptr [[PTR:%.*]], metadata [[META12]])
+// CHECK-NEXT:    ret i8 [[TMP0]]
+//
+u8 test_amdgcn_flat_load_b8_single(u8 * ptr) {
+  return __builtin_amdgcn_av_load_b8(ptr, __MEMORY_SCOPE_SINGLE);
+}
+
+// CHECK-LABEL: @test_amdgcn_flat_load_b8_cluster(
+// CHECK-NEXT:  entry:
+// CHECK-NEXT:    [[TMP0:%.*]] = tail call i8 @llvm.amdgcn.av.load.b8.p0(ptr [[PTR:%.*]], metadata [[META13]])
+// CHECK-NEXT:    ret i8 [[TMP0]]
+//
+u8 test_amdgcn_flat_load_b8_cluster(u8 * ptr) {
+  return __builtin_amdgcn_av_load_b8(ptr, __MEMORY_SCOPE_CLUSTR);
+}
+
 // CHECK-LABEL: @test_amdgcn_flat_load_b16_wave(
 // CHECK-NEXT:  entry:
 // CHECK-NEXT:    [[TMP0:%.*]] = tail call i16 @llvm.amdgcn.av.load.b16.p0(ptr [[PTR:%.*]], metadata [[META8]])
@@ -732,6 +896,60 @@ void test_amdgcn_flat_store_b128_single(v4u32 * ptr, v4u32 data) {
 //
 void test_amdgcn_flat_store_b128_cluster(v4u32 * ptr, v4u32 data) {
   __builtin_amdgcn_av_store_b128(ptr, data, __MEMORY_SCOPE_CLUSTR);
+}
+
+// CHECK-LABEL: @test_amdgcn_flat_store_b8_wave(
+// CHECK-NEXT:  entry:
+// CHECK-NEXT:    tail call void @llvm.amdgcn.av.store.b8.p0(ptr [[PTR:%.*]], i8 [[DATA:%.*]], metadata [[META8]])
+// CHECK-NEXT:    ret void
+//
+void test_amdgcn_flat_store_b8_wave(u8 * ptr, u8 data) {
+  __builtin_amdgcn_av_store_b8(ptr, data, __MEMORY_SCOPE_WVFRNT);
+}
+
+// CHECK-LABEL: @test_amdgcn_flat_store_b8_workgroup(
+// CHECK-NEXT:  entry:
+// CHECK-NEXT:    tail call void @llvm.amdgcn.av.store.b8.p0(ptr [[PTR:%.*]], i8 [[DATA:%.*]], metadata [[META9]])
+// CHECK-NEXT:    ret void
+//
+void test_amdgcn_flat_store_b8_workgroup(u8 * ptr, u8 data) {
+  __builtin_amdgcn_av_store_b8(ptr, data, __MEMORY_SCOPE_WRKGRP);
+}
+
+// CHECK-LABEL: @test_amdgcn_flat_store_b8_device(
+// CHECK-NEXT:  entry:
+// CHECK-NEXT:    tail call void @llvm.amdgcn.av.store.b8.p0(ptr [[PTR:%.*]], i8 [[DATA:%.*]], metadata [[META10]])
+// CHECK-NEXT:    ret void
+//
+void test_amdgcn_flat_store_b8_device(u8 * ptr, u8 data) {
+  __builtin_amdgcn_av_store_b8(ptr, data, __MEMORY_SCOPE_DEVICE);
+}
+
+// CHECK-LABEL: @test_amdgcn_flat_store_b8_system(
+// CHECK-NEXT:  entry:
+// CHECK-NEXT:    tail call void @llvm.amdgcn.av.store.b8.p0(ptr [[PTR:%.*]], i8 [[DATA:%.*]], metadata [[META11]])
+// CHECK-NEXT:    ret void
+//
+void test_amdgcn_flat_store_b8_system(u8 * ptr, u8 data) {
+  __builtin_amdgcn_av_store_b8(ptr, data, __MEMORY_SCOPE_SYSTEM);
+}
+
+// CHECK-LABEL: @test_amdgcn_flat_store_b8_single(
+// CHECK-NEXT:  entry:
+// CHECK-NEXT:    tail call void @llvm.amdgcn.av.store.b8.p0(ptr [[PTR:%.*]], i8 [[DATA:%.*]], metadata [[META12]])
+// CHECK-NEXT:    ret void
+//
+void test_amdgcn_flat_store_b8_single(u8 * ptr, u8 data) {
+  __builtin_amdgcn_av_store_b8(ptr, data, __MEMORY_SCOPE_SINGLE);
+}
+
+// CHECK-LABEL: @test_amdgcn_flat_store_b8_cluster(
+// CHECK-NEXT:  entry:
+// CHECK-NEXT:    tail call void @llvm.amdgcn.av.store.b8.p0(ptr [[PTR:%.*]], i8 [[DATA:%.*]], metadata [[META13]])
+// CHECK-NEXT:    ret void
+//
+void test_amdgcn_flat_store_b8_cluster(u8 * ptr, u8 data) {
+  __builtin_amdgcn_av_store_b8(ptr, data, __MEMORY_SCOPE_CLUSTR);
 }
 
 // CHECK-LABEL: @test_amdgcn_flat_store_b16_wave(

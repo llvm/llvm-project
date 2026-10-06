@@ -1869,10 +1869,12 @@ void SITargetLowering::getTgtMemIntrinsic(SmallVectorImpl<IntrinsicInfo> &Infos,
     Infos.push_back(Info);
     return;
   }
+  case Intrinsic::amdgcn_av_load_b8:
   case Intrinsic::amdgcn_av_load_b16:
   case Intrinsic::amdgcn_av_load_b32:
   case Intrinsic::amdgcn_av_load_b64:
   case Intrinsic::amdgcn_av_load_b128:
+  case Intrinsic::amdgcn_av_store_b8:
   case Intrinsic::amdgcn_av_store_b16:
   case Intrinsic::amdgcn_av_store_b32:
   case Intrinsic::amdgcn_av_store_b64:
@@ -1998,10 +2000,12 @@ bool SITargetLowering::getAddrModeArguments(const IntrinsicInst *II,
   case Intrinsic::amdgcn_global_store_async_from_lds_b32:
   case Intrinsic::amdgcn_global_store_async_from_lds_b64:
   case Intrinsic::amdgcn_global_store_async_from_lds_b128:
+  case Intrinsic::amdgcn_av_load_b8:
   case Intrinsic::amdgcn_av_load_b16:
   case Intrinsic::amdgcn_av_load_b32:
   case Intrinsic::amdgcn_av_load_b64:
   case Intrinsic::amdgcn_av_load_b128:
+  case Intrinsic::amdgcn_av_store_b8:
   case Intrinsic::amdgcn_av_store_b16:
   case Intrinsic::amdgcn_av_store_b32:
   case Intrinsic::amdgcn_av_store_b64:
@@ -12529,6 +12533,7 @@ SDValue SITargetLowering::LowerINTRINSIC_W_CHAIN(SDValue Op,
     return DAG.getAtomicLoad(ISD::NON_EXTLOAD, DL, MII->getMemoryVT(), VT,
                              Chain, Ptr, MII->getMemOperand());
   }
+  case Intrinsic::amdgcn_av_load_b8:
   case Intrinsic::amdgcn_av_load_b16:
   case Intrinsic::amdgcn_av_load_b32:
   case Intrinsic::amdgcn_av_load_b64:
@@ -13241,6 +13246,7 @@ SDValue SITargetLowering::LowerINTRINSIC_VOID(SDValue Op,
     return DAG.getAtomic(ISD::ATOMIC_STORE, DL, MII->getMemoryVT(), Chain, Val,
                          Ptr, MII->getMemOperand());
   }
+  case Intrinsic::amdgcn_av_store_b8:
   case Intrinsic::amdgcn_av_store_b16:
   case Intrinsic::amdgcn_av_store_b32:
   case Intrinsic::amdgcn_av_store_b64:

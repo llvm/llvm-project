@@ -318,6 +318,16 @@ def __builtin_amdgcn_s_buffer_load_v4f16 : AMDGPUBuiltin<"_Vector<4, _Float16>(_
 // Global Available/Visible memory accesses.
 //===----------------------------------------------------------------------===//
 
+def __builtin_amdgcn_av_load_b8
+    : AMDGPUBuiltin<"unsigned char(unsigned char *, int)", [], "flat-global-insts"> {
+  let Documentation = [DocAVLoadB8];
+  let ArgNames = ["ptr", "scope"];
+}
+def __builtin_amdgcn_av_store_b8
+    : AMDGPUBuiltin<"void(unsigned char *, unsigned char, int)", [], "flat-global-insts"> {
+  let Documentation = [DocAVStoreB8];
+  let ArgNames = ["ptr", "data", "scope"];
+}
 def __builtin_amdgcn_av_load_b16
     : AMDGPUBuiltin<"unsigned short(unsigned short *, int)", [], "flat-global-insts"> {
   let Documentation = [DocAVLoadB16];

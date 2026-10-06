@@ -2260,6 +2260,7 @@ These intrinsics exist for the following data types:
    ========== ============= ====================================== =======================================
    Width      Data Type     Load                                   Store
    ========== ============= ====================================== =======================================
+   8 bits     ``i8``        ``llvm.amdgcn.av.load.b8``             ``llvm.amdgcn.av.store.b8``
    16 bits    ``i16``       ``llvm.amdgcn.av.load.b16``            ``llvm.amdgcn.av.store.b16``
    32 bits    ``i32``       ``llvm.amdgcn.av.load.b32``            ``llvm.amdgcn.av.store.b32``
    64 bits    ``i64``       ``llvm.amdgcn.av.load.b64``            ``llvm.amdgcn.av.store.b64``
