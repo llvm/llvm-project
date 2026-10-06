@@ -2192,8 +2192,10 @@ static cir::GlobalOp
 generateStringLiteral(mlir::Location loc, mlir::TypedAttr c,
                       cir::GlobalLinkageKind lt, CIRGenModule &cgm,
                       StringRef globalName, CharUnits alignment) {
-  mlir::ptr::MemorySpaceAttrInterface addrSpace = cir::toCIRAddressSpaceAttr(
-      cgm.getMLIRContext(), cgm.getGlobalConstantAddressSpace());
+  LangAS as = CodeGenUtils::getGlobalConstantAddressSpace(cgm.getLangOpts(),
+                                                          cgm.getTarget());
+  mlir::ptr::MemorySpaceAttrInterface addrSpace =
+      cir::toCIRAddressSpaceAttr(cgm.getMLIRContext(), as);
 
   // Create a global variable for this string
   // FIXME(cir): check for insertion point in module level.
@@ -2297,10 +2299,6 @@ CIRGenModule::getAddrOfConstantStringFromLiteral(const StringLiteral *s,
       getTypes().getPointerAddressSpace(s->getType()));
 
   return builder.getGlobalViewAttr(ptrTy, gv);
-}
-
-LangAS CIRGenModule::getGlobalConstantAddressSpace() const {
-  return CodeGenUtils::getGlobalConstantAddressSpace(langOpts, getTarget());
 }
 
 // TODO(cir): this could be a common AST helper for both CIR and LLVM codegen.

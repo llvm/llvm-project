@@ -464,13 +464,6 @@ public:
   getAddrOfConstantStringFromLiteral(const StringLiteral *s,
                                      llvm::StringRef name = ".str");
 
-  /// Return the AST address space of constant literal, which is used to emit
-  /// the constant literal as global variable in CIR.
-  /// Note: This is not necessarily the address space of the constant literal
-  /// in AST. For address space agnostic language, e.g. C++, constant literal
-  /// in AST is always in default address space.
-  LangAS getGlobalConstantAddressSpace() const;
-
   /// Returns the address space for temporary allocations in the language. This
   /// ensures that the allocated variable's address space matches the
   /// expectations of the AST, rather than using the target's allocation address
