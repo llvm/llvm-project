@@ -33,11 +33,6 @@
 namespace Fortran::semantics {
 using namespace Fortran::parser::omp;
 
-template <typename T> struct SetTypeFor {
-  using type = llvm::omp::EnumSet<T,
-      llvm::to_underlying(T::Last_) - llvm::to_underlying(T::First_) + 1>;
-};
-
 static llvm::omp::Modifiers GetElements(
     const llvm::omp::descriptor::Clause &desc, llvm::omp::Version version) {
   return desc.getModifiers(version);
@@ -101,7 +96,7 @@ static ResultTy VerifyVersions(
 
 template < //
     typename ElemTy, typename SetsSetTy, typename OwnerTy,
-    typename ElemSetTy = typename SetTypeFor<ElemTy>::type,
+    typename ElemSetTy = llvm::omp::EnumSet<ElemTy>,
     typename ResultTy = std::pair<ElemSetTy, SetsSetTy>>
 static ResultTy VerifyRequired(
     const AppliedElementInfo<ElemTy, SetsSetTy> &info, OwnerTy ownerId,
@@ -138,8 +133,7 @@ template < //
 static ResultTy VerifyUnique(const AppliedElementInfo<ElemTy, SetsSetTy> &info,
     OwnerTy ownerId, llvm::omp::Version version) {
   using AppliedElementTy = AppliedElement<ElemTy, SetsSetTy>;
-  using ElemSetTy = typename SetTypeFor<ElemTy>::type;
-  ElemSetTy unique;
+  llvm::omp::EnumSet<ElemTy> unique;
 
   auto &odesc{llvm::omp::getDescriptor(ownerId)};
   auto elements{GetElements(odesc, version)};
@@ -267,8 +261,7 @@ static ResultTy VerifyUltimate(
   }
 
   using AppliedElementTy = AppliedElement<ElemTy, SetsSetTy>;
-  using ElemSetTy = typename SetTypeFor<ElemTy>::type;
-  ElemSetTy ultimate;
+  llvm::omp::EnumSet<ElemTy> ultimate;
 
   auto &odesc{llvm::omp::getDescriptor(ownerId)};
   auto elements{GetElements(odesc, version)};
@@ -345,8 +338,8 @@ bool OmpStructureChecker::VerifyModifierRequired(
 
   for (llvm::omp::Modifier m : result.first) {
     auto &mdesc{llvm::omp::getDescriptor(m)};
-    context_.Say(clause.source, "'%s' modifier is required"_err_en_US,
-        mdesc.getName().str());
+    context_.Say(
+        clause.source, "'%s' modifier is required"_err_en_US, mdesc.getName());
   }
   for (llvm::omp::ModifierSet s : result.second) {
     auto &sdesc{llvm::omp::getDescriptor(s)};
@@ -355,7 +348,7 @@ bool OmpStructureChecker::VerifyModifierRequired(
     if (llvm::omp::isModifierGroup(s)) {
       context_.Say(clause.source,
           "modifier from '%s' modifier group is required"_err_en_US,
-          sdesc.getName().str());
+          sdesc.getName());
     } else {
       context_.Say(clause.source,
           "modifier from the modifier set on %s clause is required"_err_en_US,
@@ -376,7 +369,7 @@ bool OmpStructureChecker::VerifyModifierUnique(
     auto &mdesc{llvm::omp::getDescriptor(id)};
     context_
         .Say(where.first, "'%s' modifier cannot occur multiple times"_err_en_US,
-            mdesc.getName().str())
+            mdesc.getName())
         .Attach(where.second, "previous occurrence of this modifier"_en_US);
   }
 
@@ -394,9 +387,9 @@ bool OmpStructureChecker::VerifyModifierExclusive(
     context_
         .Say(source,
             "An exclusive '%s' modifier cannot be specified together with a modifier of a different type"_err_en_US,
-            llvm::omp::getDescriptor(id).getName().str())
+            llvm::omp::getDescriptor(id).getName())
         .Attach(otherSource, "'%s' provided here"_en_US,
-            llvm::omp::getDescriptor(otherId).getName().str());
+            llvm::omp::getDescriptor(otherId).getName());
   }
 
   auto resultMut = VerifyMutuallyExclusive(info, clause.value, version);
@@ -407,7 +400,7 @@ bool OmpStructureChecker::VerifyModifierExclusive(
     context_
         .Say(otherSource,
             "The '%s' and '%s' modifiers are mutually exclusive"_err_en_US,
-            llvm::omp::getDescriptor(otherId).getName().str(), thisName)
+            llvm::omp::getDescriptor(otherId).getName(), thisName)
         .Attach(source, "'%s' modifier specified here"_en_US, thisName);
   }
 
@@ -426,7 +419,7 @@ bool OmpStructureChecker::VerifyModifierUltimate(
 
   for (auto [id, where] : result) {
     context_.Say(where, "'%s' should be the %s modifier"_err_en_US,
-        llvm::omp::getDescriptor(id).getName().str(), expected);
+        llvm::omp::getDescriptor(id).getName(), expected);
   }
 
   return result.empty();
@@ -526,10 +519,6 @@ void OmpStructureChecker::VerifyModifierSyntax(const parser::OmpClause &x) {
   llvm::omp::Clause id{x.Id()};
   auto clauseId{WithSource(id, x.source)};
   switch (id) {
-  case llvm::omp::Clause::OMPC_ompx_bare:
-  case llvm::omp::Clause::OMPC_cancellation_construct_type:
-    // Those are extensions/synthetic clauses and they don't have descriptors.
-    break;
   case llvm::omp::Clause::OMPC_uses_allocators: {
     // The traits of the deprecated syntax are stored as a traits-array
     // modifier, but they are not the 5.2 modifier, so they must not be
