@@ -255,7 +255,8 @@ public:
     uint32_t minor_version = 0;
     uint32_t patch_version = 0;
   };
-  DeploymentInfo GetDeploymentInfo(const struct load_command &,
+  DeploymentInfo GetDeploymentInfo(uint32_t dyld_platform,
+                                   const struct load_command &,
                                    uint64_t load_command_address,
                                    bool is_executable);
   static std::optional<std::string> GetPlatformString(unsigned char platform);
