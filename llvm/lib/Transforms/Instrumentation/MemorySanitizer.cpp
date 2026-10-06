@@ -6125,6 +6125,17 @@ struct MemorySanitizerVisitor : public InstVisitor<MemorySanitizerVisitor> {
       handleGenericVectorConvertIntrinsic(I, /*FixedPoint=*/false);
       break;
 
+    // e.g.,
+    //     notail call void (...) @llvm.fake.use(i64 %x)
+    //     notail call void (...) @llvm.fake.use(i32 %y)
+    //     notail call void (...) @llvm.fake.use(ptr %z)
+    case Intrinsic::fake_use:
+      assert(I.getType()->isVoidTy());
+      // fake_uses aren't real, they can't hurt you. If the use isn't real, it
+      // can't be a real use-of-uninitialized memory. Silently skip over
+      // fake_use.
+      return true;
+
     default:
       return false;
     }
