@@ -1098,8 +1098,8 @@ unsigned FunctionSpecializer::getInliningBonus(Argument *A, Constant *C) {
   if (!CalledFunction)
     return 0;
 
-  // Get TTI for the called function (used for the inline cost).
-  auto &CalleeTTI = (GetTTI)(*CalledFunction);
+  // Get TTI for the caller (used for the inline cost).
+  auto &CallerTTI = (GetTTI)(*A->getParent());
 
   // Look at all the call sites whose called value is the argument.
   // Specializing the function on the argument would allow these indirect
@@ -1128,7 +1128,7 @@ unsigned FunctionSpecializer::getInliningBonus(Argument *A, Constant *C) {
     auto Params = getInlineParams();
     Params.DefaultThreshold += InlineConstants::IndirectCallThreshold;
     InlineCost IC =
-        getInlineCost(*CS, CalledFunction, Params, CalleeTTI, GetAC, GetTLI);
+        getInlineCost(*CS, CalledFunction, Params, CallerTTI, GetAC, GetTLI);
 
     // We clamp the bonus for this call to be between zero and the default
     // threshold.

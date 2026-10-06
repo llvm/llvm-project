@@ -983,12 +983,11 @@ bool SampleProfileLoader::shouldInlineColdCallee(CallBase &CallInst) {
   if (!ProfileSizeInline)
     return false;
 
-  Function *Callee = CallInst.getCalledFunction();
-  if (Callee == nullptr)
+  if (CallInst.getCalledFunction() == nullptr)
     return false;
 
-  InlineCost Cost = getInlineCost(CallInst, getInlineParams(), GetTTI(*Callee),
-                                  GetAC, GetTLI);
+  InlineCost Cost = getInlineCost(CallInst, getInlineParams(),
+                                  GetTTI(*CallInst.getCaller()), GetAC, GetTLI);
 
   if (Cost.isNever())
     return false;
@@ -1343,6 +1342,7 @@ SampleProfileLoader::shouldInlineCandidate(InlineCandidate &Candidate) {
       return InlineCost::getNever("cold callsite");
   }
 
+  Function *Caller = Candidate.CallInstr->getCaller();
   Function *Callee = Candidate.CallInstr->getCalledFunction();
   assert(Callee && "Expect a definition for inline candidate of direct call");
 
@@ -1357,7 +1357,7 @@ SampleProfileLoader::shouldInlineCandidate(InlineCandidate &Candidate) {
   // The acutal cost does not matter because we only checks isNever() to
   // see if it is legal to inline the callsite.
   InlineCost Cost = getInlineCost(*Candidate.CallInstr, Callee, Params,
-                                  GetTTI(*Callee), GetAC, GetTLI);
+                                  GetTTI(*Caller), GetAC, GetTLI);
 
   // Honor always inline and never inline from call analyzer
   if (Cost.isNever() || Cost.isAlways())
