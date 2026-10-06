@@ -2718,6 +2718,24 @@ Instruction *InstCombinerImpl::visitSub(BinaryOperator &I) {
       return BinaryOperator::CreateXor(A, B);
   }
 
+  // (sub (or A, B), (and A, ~B)) --> B
+  // (sub (or A, B), (and ~A, B)) --> A
+  {
+    Value *A, *B;
+    if (match(Op1, m_c_And(m_Value(A), m_Not(m_Value(B)))) &&
+        match(Op0, m_c_Or(m_Specific(A), m_Specific(B))))
+      return replaceInstUsesWith(I, B);
+  }
+
+  // (sub (xor A, B), (and A, ~B)) --> (and ~A, B)
+  // (sub (xor A, B), (and ~A, B)) --> (and A, ~B)
+  {
+    Value *A, *B;
+    if (match(Op1, m_c_And(m_Value(A), m_Not(m_Value(B)))) &&
+        match(Op0, m_c_Xor(m_Specific(A), m_Specific(B))))
+      return BinaryOperator::CreateAnd(Builder.CreateNot(A), B);
+  }
+
   // (sub (add A, B) (or A, B)) --> (and A, B)
   {
     Value *A, *B;

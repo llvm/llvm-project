@@ -2948,3 +2948,27 @@ define i32 @sub_const_or_no_disjoint(i32 %x) {
   %r = sub i32 100, %a
   ret i32 %r
 }
+
+define i32 @sub_or_relative_complement(i32 %x, i32 %y) {
+; CHECK-LABEL: @sub_or_relative_complement(
+; CHECK-NEXT:    ret i32 [[Y:%.*]]
+;
+  %or = or i32 %x, %y
+  %not = xor i32 %y, -1
+  %and = and i32 %x, %not
+  %sub = sub i32 %or, %and
+  ret i32 %sub
+}
+
+define i32 @sub_xor_relative_complement(i32 %x, i32 %y) {
+; CHECK-LABEL: @sub_xor_relative_complement(
+; CHECK-NEXT:    [[NOTX:%.*]] = xor i32 [[X:%.*]], -1
+; CHECK-NEXT:    [[R:%.*]] = and i32 [[NOTX]], [[Y:%.*]]
+; CHECK-NEXT:    ret i32 [[R]]
+;
+  %xor = xor i32 %x, %y
+  %not = xor i32 %y, -1
+  %and = and i32 %x, %not
+  %sub = sub i32 %xor, %and
+  ret i32 %sub
+}
