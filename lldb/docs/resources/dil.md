@@ -16,11 +16,12 @@ variable).
 
 LLDB has always had two modes for accessing values in your program: path
 expressions, that commands like `frame variable` could understand and interpret;
-and "other" expressions, which could contain path expressions, but usually also
-included other pieces written in a source language, and which could be passed to
-the `expression` (aka `expr`) command. These "other" expressions were evaluated
-using a language-accurate parser for that language, and the results were
-obtained by running code in the target program.
+and "other" expressions, which could include expressions that `frame variable`
+could handle, but usually also included other pieces written in a source
+language, and which could be passed to the `expression` (aka `expr`)
+command. These "other" expressions were evaluated using a language-accurate
+parser for that language, and the results were obtained by running code in the
+target program.
 
 LLDB's path expressions, however, are not necessarily a direct representation of
 the type layout of structures in your program. Instead they grew from the
@@ -34,7 +35,7 @@ LLDB solves this problem by using Data Formatters that take the types in the
 type system and produce an alternate layout for the types that correspond to how
 the class is used (what the user really wants to see), not how it is
 implemented. These re-formatted representations include [Synthetic
-Children](https://lldb.llvm.org/use/variable.html#synthetic-children), new
+Children](https://lldb.llvm.org/use/variable.html#synthetic-children) which are
 constructs that are not actually part of the original data type, but which
 faciliate showing users what they expect to see. The path expressions give you
 access to these re-formatted representations. In addition, these re-formatted
@@ -210,8 +211,13 @@ error: unexpected char '+' encountered after "i" in "+3"
 #### target.breakpoints-condition-mode
 
 Evaluating expressions for conditional breakpoints is one place where speed is
-particularly important, so using DIL to evaluate these conditions whenever
-possible is probably desirable.
+particularly important. The expression evaluator recognizes this, so it parses
+and JIT's the condition only the first time the breakpoint is hit; on subsequent
+hits it only has to call a simple function (and run it in the target). Even so,
+we have found that just avoiding the overhead of running the code in the target
+generally makes DIL interpreted breakpoints ~2.5x faster that expression
+evaluated breakpoints.
+
 
 On the other hand, as mentioned in the 'CAUTION: DIL vs. Expression Evaluator'
 section above, DIL can occasionally return different results than would have
