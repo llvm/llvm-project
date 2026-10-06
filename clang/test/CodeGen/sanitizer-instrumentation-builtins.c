@@ -1,15 +1,18 @@
 // Check that the sanitizer region markers lower to their intrinsics under
-// -fsanitize=kernel-memory, kernel-address and address, and to nothing without
-// a sanitizer that consumes them.
+// -fsanitize=kernel-memory, kernel-address and address, and with
+// -fsanitize-coverage, and to nothing without a sanitizer that consumes them.
 
 // RUN: %clang_cc1 -triple x86_64-linux-gnu -fsanitize=kernel-memory \
 // RUN:     -emit-llvm -disable-llvm-passes -o - %s | FileCheck %s
 // RUN: %clang_cc1 -triple x86_64-linux-gnu -emit-llvm -disable-llvm-passes \
 // RUN:     -o - %s | FileCheck %s --check-prefix=NONE
 // RUN: %clang_cc1 -triple x86_64-linux-gnu -fsanitize=kernel-address \
-// RUN:     -emit-llvm -disable-llvm-passes -o - %s | FileCheck %s --check-prefix=ASAN
+// RUN:     -emit-llvm -disable-llvm-passes -o - %s | FileCheck %s --check-prefix=MARKERS
 // RUN: %clang_cc1 -triple x86_64-linux-gnu -fsanitize=address \
-// RUN:     -emit-llvm -disable-llvm-passes -o - %s | FileCheck %s --check-prefix=ASAN
+// RUN:     -emit-llvm -disable-llvm-passes -o - %s | FileCheck %s --check-prefix=MARKERS
+// RUN: %clang_cc1 -triple x86_64-linux-gnu -fsanitize-coverage-type=3 \
+// RUN:     -fsanitize-coverage-trace-pc -emit-llvm -disable-llvm-passes -o - %s \
+// RUN:     | FileCheck %s --check-prefix=MARKERS
 // RUN: %clang_cc1 -triple x86_64-linux-gnu -fsanitize=thread \
 // RUN:     -emit-llvm -disable-llvm-passes -o - %s | FileCheck %s --check-prefix=NONE
 
@@ -39,9 +42,9 @@ void noinstr_function(int x) {
 // CHECK: declare void @llvm.sanitizer.instrumentation.begin() #[[ATTR:[0-9]+]]
 // CHECK: attributes #[[ATTR]] = { nocallback nofree nomerge nosync nounwind willreturn }
 
-// ASAN-LABEL: define {{.*}}void @noinstr_function(
-// ASAN:         call void @llvm.sanitizer.instrumentation.begin()
-// ASAN:         call void @llvm.sanitizer.instrumentation.end()
+// MARKERS-LABEL: define {{.*}}void @noinstr_function(
+// MARKERS:         call void @llvm.sanitizer.instrumentation.begin()
+// MARKERS:         call void @llvm.sanitizer.instrumentation.end()
 
 // NONE-LABEL: define {{.*}}void @noinstr_function(
 // NONE-NOT:     llvm.sanitizer.instrumentation

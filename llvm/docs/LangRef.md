@@ -28638,3 +28638,12 @@ attribute or are marked with `disable_sanitizer_instrumentation`. Inside
 regions, memory accesses and memory intrinsics are instrumented. The stack frame
 of such a function is not instrumented, accesses to its own `alloca`s are not
 checked, and no `__asan_handle_no_return` calls are inserted.
+
+SanitizerCoverage supports regions in functions marked with
+`nosanitize_coverage` or `disable_sanitizer_instrumentation`. Each basic block
+that enters a region gets a coverage point right after the point where it does
+(splitting the block if necessary), without pruning, and the requested tracing
+of comparisons, switches, divisions, GEPs, loads, stores and indirect calls is
+performed inside regions. Function entry/exit callbacks, stack depth tracing and
+control
+flow tables are not emitted for such functions.
