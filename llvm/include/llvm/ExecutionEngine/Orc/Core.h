@@ -24,6 +24,7 @@
 #include "llvm/ExecutionEngine/Orc/MaterializationUnit.h"
 #include "llvm/ExecutionEngine/Orc/Shared/ExecutorAddress.h"
 #include "llvm/ExecutionEngine/Orc/Shared/ExecutorSymbolDef.h"
+#include "llvm/ExecutionEngine/Orc/Shared/SymbolNameSpec.h"
 #include "llvm/ExecutionEngine/Orc/Shared/WrapperFunctionUtils.h"
 #include "llvm/ExecutionEngine/Orc/SymbolLookupSet.h"
 #include "llvm/ExecutionEngine/Orc/TaskDispatch.h"
@@ -1120,23 +1121,50 @@ public:
   /// For reporting errors.
   using ErrorReporter = unique_function<void(Error)>;
 
-  /// Send a result to the remote.
-  using SendResultFunction = unique_function<void(shared::WrapperFunctionBuffer)>;
+  /// Function type for returning results from a call-controller handler.
+  using CallControllerReturnFn =
+      unique_function<void(shared::WrapperFunctionBuffer)>;
 
-  /// An asynchronous wrapper-function callable from the executor via
-  /// jit-dispatch.
-  using JITDispatchHandlerFunction = unique_function<void(
-      SendResultFunction SendResult,
-      const char *ArgData, size_t ArgSize)>;
+  /// A call-controller handler: handles calls from the executor made via the
+  /// ORC runtime's call-controller mechanism.
+  using CallControllerHandlerFn = unique_function<void(
+      CallControllerReturnFn, shared::WrapperFunctionBuffer)>;
 
-  /// A map associating tag names with asynchronous wrapper function
-  /// implementations in the JIT.
-  using JITDispatchHandlerAssociationMap =
-      DenseMap<SymbolStringPtr, JITDispatchHandlerFunction>;
+  /// Associates a call-controller handler with the name of the tag symbol that
+  /// the executor will use to call it, and the SymbolLookupFlags to use when
+  /// looking that tag up.
+  ///
+  /// The name is not copied (see SymbolNameSpec): the referenced string must
+  /// outlive the registerCallControllerHandlers call that the binding is
+  /// passed to. Ordinary string literals have static storage duration, so
+  /// they are always safe.
+  class CallControllerHandlerBinding {
+  public:
+    CallControllerHandlerBinding(
+        SymbolNameSpec Name, CallControllerHandlerFn Handler,
+        SymbolLookupFlags LF = SymbolLookupFlags::RequiredSymbol)
+        : Name(Name), Handler(std::move(Handler)), LF(LF) {}
+
+    SymbolNameSpec getName() const { return Name; }
+
+    CallControllerHandlerFn takeHandler() { return std::move(Handler); }
+
+    SymbolLookupFlags getLookupFlags() const { return LF; }
+
+  private:
+    SymbolNameSpec Name;
+    CallControllerHandlerFn Handler;
+    SymbolLookupFlags LF;
+  };
 
   /// Construct an ExecutionSession with the given ExecutorProcessControl
   /// object.
   LLVM_ABI ExecutionSession(std::unique_ptr<ExecutorProcessControl> EPC);
+
+  ExecutionSession(const ExecutionSession &) = delete;
+  ExecutionSession &operator=(const ExecutionSession &) = delete;
+  ExecutionSession(ExecutionSession &&) = delete;
+  ExecutionSession &operator=(ExecutionSession &&) = delete;
 
   /// Destroy an ExecutionSession. Verifies that endSession was called prior to
   /// destruction.
@@ -1395,89 +1423,41 @@ public:
                           ArgBuffer);
   }
 
-  /// Run a wrapper function in the executor. The wrapper function should be
-  /// callable as:
+  /// For each binding, look up its tag symbol in JD and register the binding's
+  /// call-controller handler for the tag's address. The handler becomes
+  /// callable from the executor via the ORC runtime's call-controller
+  /// mechanism, using the tag's address as the handler tag.
   ///
-  /// \code{.cpp}
-  ///   CWrapperFunctionBuffer fn(uint8_t *Data, uint64_t Size);
-  /// \endcode{.cpp}
-  shared::WrapperFunctionBuffer callWrapper(ExecutorAddr WrapperFnAddr,
-                                            ArrayRef<char> ArgBuffer) {
-    return EPC->callWrapper(WrapperFnAddr, ArgBuffer);
+  /// Tag names are mangled for the session's target triple, then looked up
+  /// in JD using LookupKind::Static and JITDylibLookupFlags::MatchAllSymbols
+  /// (hidden tags will be found), with each binding's SymbolLookupFlags. If a
+  /// weakly referenced tag is not found then its handler is dropped.
+  ///
+  /// On failure no handlers are registered.
+  LLVM_ABI Error registerCallControllerHandlers(
+      JITDylib &JD, std::vector<CallControllerHandlerBinding> Hs);
+
+  /// Convenience overload of registerCallControllerHandlers that takes the
+  /// bindings as arguments, so that they can be constructed inline at the
+  /// call site.
+  template <typename... BindingTs>
+  std::enable_if_t<
+      (std::is_same_v<BindingTs, CallControllerHandlerBinding> && ...), Error>
+  registerCallControllerHandlers(JITDylib &JD, BindingTs &&...Hs) {
+    std::vector<CallControllerHandlerBinding> Bs;
+    Bs.reserve(sizeof...(Hs));
+    (Bs.push_back(std::move(Hs)), ...);
+    return registerCallControllerHandlers(JD, std::move(Bs));
   }
 
-  /// Run a wrapper function using SPS to serialize the arguments and
-  /// deserialize the results.
-  template <typename SPSSignature, typename SendResultT, typename... ArgTs>
-  void callSPSWrapperAsync(ExecutorAddr WrapperFnAddr, SendResultT &&SendResult,
-                           const ArgTs &...Args) {
-    EPC->callSPSWrapperAsync<SPSSignature, SendResultT, ArgTs...>(
-        WrapperFnAddr, std::forward<SendResultT>(SendResult), Args...);
-  }
-
-  /// Run a wrapper function using SPS to serialize the arguments and
-  /// deserialize the results.
-  ///
-  /// If SPSSignature is a non-void function signature then the second argument
-  /// (the first in the Args list) should be a reference to a return value.
-  template <typename SPSSignature, typename... WrapperCallArgTs>
-  Error callSPSWrapper(ExecutorAddr WrapperFnAddr,
-                       WrapperCallArgTs &&...WrapperCallArgs) {
-    return EPC->callSPSWrapper<SPSSignature, WrapperCallArgTs...>(
-        WrapperFnAddr, std::forward<WrapperCallArgTs>(WrapperCallArgs)...);
-  }
-
-  /// Wrap a handler that takes concrete argument types (and a sender for a
-  /// concrete return type) to produce an AsyncHandlerWrapperFunction. Uses SPS
-  /// to unpack the arguments and pack the result.
-  ///
-  /// This function is intended to support easy construction of
-  /// AsyncHandlerWrapperFunctions that can be associated with a tag
-  /// (using registerJITDispatchHandler) and called from the executor.
-  template <typename SPSSignature, typename HandlerT>
-  static JITDispatchHandlerFunction wrapAsyncWithSPS(HandlerT &&H) {
-    return [H = std::forward<HandlerT>(H)](SendResultFunction SendResult,
-                                           const char *ArgData,
-                                           size_t ArgSize) mutable {
-      shared::WrapperFunction<SPSSignature>::handleAsync(
-          ArgData, ArgSize, std::move(SendResult), H);
-    };
-  }
-
-  /// Wrap a class method that takes concrete argument types (and a sender for
-  /// a concrete return type) to produce an AsyncHandlerWrapperFunction. Uses
-  /// SPS to unpack the arguments and pack the result.
-  ///
-  /// This function is intended to support easy construction of
-  /// AsyncHandlerWrapperFunctions that can be associated with a tag
-  /// (using registerJITDispatchHandler) and called from the executor.
-  template <typename SPSSignature, typename ClassT, typename... MethodArgTs>
-  static JITDispatchHandlerFunction
-  wrapAsyncWithSPS(ClassT *Instance, void (ClassT::*Method)(MethodArgTs...)) {
-    return wrapAsyncWithSPS<SPSSignature>(
-        [Instance, Method](MethodArgTs &&...MethodArgs) {
-          (Instance->*Method)(std::forward<MethodArgTs>(MethodArgs)...);
-        });
-  }
-
-  /// For each tag symbol name, associate the corresponding
-  /// AsyncHandlerWrapperFunction with the address of that symbol. The
-  /// handler becomes callable from the executor using the ORC runtime
-  /// __orc_rt_jit_dispatch function and the given tag.
-  ///
-  /// Tag symbols will be looked up in JD using LookupKind::Static,
-  /// JITDylibLookupFlags::MatchAllSymbols (hidden tags will be found), and
-  /// LookupFlags::WeaklyReferencedSymbol. Missing tag definitions will not
-  /// cause an error, the handler will simply be dropped.
-  LLVM_ABI Error registerJITDispatchHandlers(
-      JITDylib &JD, JITDispatchHandlerAssociationMap WFs);
-
-  /// Run a registered jit-side wrapper function.
+  /// Run the call-controller handler registered for the given tag address.
   /// This should be called by the ExecutorProcessControl instance in response
-  /// to incoming jit-dispatch requests from the executor.
-  LLVM_ABI void runJITDispatchHandler(SendResultFunction SendResult,
-                                      ExecutorAddr HandlerFnTagAddr,
-                                      shared::WrapperFunctionBuffer ArgBytes);
+  /// to calls from the executor made via the ORC runtime's call-controller
+  /// mechanism.
+  LLVM_ABI void
+  runCallControllerHandler(CallControllerReturnFn Return,
+                           ExecutorAddr HandlerFnTagAddr,
+                           shared::WrapperFunctionBuffer ArgBytes);
 
   /// Dump the state of all the JITDylibs in this session.
   LLVM_ABI void dump(raw_ostream &OS);
@@ -1609,9 +1589,9 @@ private:
                         std::unique_ptr<MaterializationResponsibility>>>
       OutstandingMUs;
 
-  mutable std::mutex JITDispatchHandlersMutex;
-  DenseMap<ExecutorAddr, std::shared_ptr<JITDispatchHandlerFunction>>
-      JITDispatchHandlers;
+  mutable std::mutex CallControllerHandlersMutex;
+  DenseMap<ExecutorAddr, std::unique_ptr<CallControllerHandlerFn>>
+      CallControllerHandlers;
 };
 
 template <typename Func> Error ResourceTracker::withResourceKeyDo(Func &&F) {

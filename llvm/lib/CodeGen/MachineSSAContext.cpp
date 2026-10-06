@@ -51,7 +51,7 @@ template <>
 const MachineBasicBlock *MachineSSAContext::getDefBlock(Register value) const {
   if (!value)
     return nullptr;
-  return F->getRegInfo().getVRegDef(value)->getParent();
+  return F->getRegInfo().getDefBlock(value);
 }
 
 static bool isUndef(const MachineInstr &MI) {

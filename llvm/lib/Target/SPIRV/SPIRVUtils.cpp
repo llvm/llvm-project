@@ -27,6 +27,7 @@
 #include "llvm/IR/IntrinsicInst.h"
 #include "llvm/IR/IntrinsicsSPIRV.h"
 #include "llvm/Support/MathExtras.h"
+#include "llvm/TargetParser/AtomicScope.h"
 #include <queue>
 #include <vector>
 
@@ -302,22 +303,25 @@ void buildOpSpirvDecorations(Register Reg, MachineIRBuilder &MIRBuilder,
       continue; // Ignored.
     }
     uint32_t Dec = static_cast<uint32_t>(DecorationId->getZExtValue());
-    if (Dec == static_cast<uint32_t>(SPIRV::Decoration::UniformId)) {
-      ConstantInt *ScopeV =
+    if (Dec == static_cast<uint32_t>(SPIRV::Decoration::UniformId) ||
+        Dec == static_cast<uint32_t>(SPIRV::Decoration::AlignmentId) ||
+        Dec == static_cast<uint32_t>(SPIRV::Decoration::MaxByteOffsetId)) {
+      ConstantInt *IdV =
           OpMD->getNumOperands() == 2
               ? mdconst::dyn_extract<ConstantInt>(OpMD->getOperand(1))
               : nullptr;
-      assert(ScopeV && isUInt<32>(ScopeV->getZExtValue()) &&
-             "Expect Scope <id> operand of the UniformId decoration");
+      if (!IdV || !isUInt<32>(IdV->getZExtValue()))
+        report_fatal_error("Expect a single integer <id> operand of the "
+                           "decoration");
       SPIRVGlobalRegistry *GR = ST.getSPIRVGlobalRegistry();
       SPIRVTypeInst SpvTypeInt32 =
           GR->getOrCreateSPIRVIntegerType(32, MIRBuilder);
-      Register ScopeReg = GR->buildConstantInt(
-          ScopeV->getZExtValue(), MIRBuilder, SpvTypeInt32, /*EmitIR=*/false);
+      Register IdReg = GR->buildConstantInt(IdV->getZExtValue(), MIRBuilder,
+                                            SpvTypeInt32, /*EmitIR=*/false);
       MIRBuilder.buildInstr(SPIRV::OpDecorateId)
           .addUse(Reg)
           .addImm(Dec)
-          .addUse(ScopeReg);
+          .addUse(IdReg);
       continue;
     }
     auto MIB = MIRBuilder.buildInstr(SPIRV::OpDecorate).addUse(Reg).addImm(Dec);
@@ -421,6 +425,10 @@ getMemSemanticsForStorageClass(SPIRV::StorageClass::StorageClass SC) {
     return SPIRV::MemorySemantics::WorkgroupMemory;
   case SPIRV::StorageClass::CrossWorkgroup:
     return SPIRV::MemorySemantics::CrossWorkgroupMemory;
+  case SPIRV::StorageClass::Generic:
+    return SPIRV::MemorySemantics::MemorySemantics(
+        SPIRV::MemorySemantics::WorkgroupMemory |
+        SPIRV::MemorySemantics::CrossWorkgroupMemory);
   case SPIRV::StorageClass::AtomicCounter:
     return SPIRV::MemorySemantics::AtomicCounterMemory;
   case SPIRV::StorageClass::Image:
@@ -448,18 +456,27 @@ SPIRV::MemorySemantics::MemorySemantics getMemSemantics(AtomicOrdering Ord) {
   llvm_unreachable(nullptr);
 }
 
-SPIRV::Scope::Scope getMemScope(LLVMContext &Ctx, SyncScope::ID Id) {
+uint32_t getMemSemanticsWithStorageClass(const Triple &TT, uint32_t OrderSem,
+                                         uint32_t StorageClassSem) {
+  bool DropStorageClass =
+      TT.isVulkanOS() &&
+      OrderSem == static_cast<uint32_t>(SPIRV::MemorySemantics::None);
+  return OrderSem | (DropStorageClass ? 0 : StorageClassSem);
+}
+
+SPIRV::Scope::Scope getMemScope(const Triple &TT, LLVMContext &Ctx,
+                                SyncScope::ID Id) {
   // Named by
   // https://registry.khronos.org/SPIR-V/specs/unified1/SPIRV.html#_scope_id.
   // We don't need aliases for Invocation and CrossDevice, as we already have
   // them covered by "singlethread" and "" strings respectively (see
   // implementation of LLVMContext::LLVMContext()).
-  static const llvm::SyncScope::ID SubGroup =
-      Ctx.getOrInsertSyncScopeID("subgroup");
-  static const llvm::SyncScope::ID WorkGroup =
-      Ctx.getOrInsertSyncScopeID("workgroup");
-  static const llvm::SyncScope::ID Device =
-      Ctx.getOrInsertSyncScopeID("device");
+  auto ScopeID = [&](AtomicScope Scope) {
+    return Ctx.getOrInsertSyncScopeID(*getAtomicScopeIRString(TT, Scope));
+  };
+  static const llvm::SyncScope::ID SubGroup = ScopeID(AtomicScope::Wavefront);
+  static const llvm::SyncScope::ID WorkGroup = ScopeID(AtomicScope::Workgroup);
+  static const llvm::SyncScope::ID Device = ScopeID(AtomicScope::Device);
 
   if (Id == llvm::SyncScope::SingleThread)
     return SPIRV::Scope::Invocation;
@@ -990,6 +1007,11 @@ Register createVirtualRegister(
       MIRBuilder);
 }
 
+bool isVectorType(SPIRVTypeInst SPVTy) {
+  return SPVTy->getOpcode() == SPIRV::OpTypeVector ||
+         SPVTy->getOpcode() == SPIRV::OpTypeVectorIdEXT;
+}
+
 CallInst *buildIntrWithMD(Intrinsic::ID IntrID, ArrayRef<Type *> Types,
                           Value *Arg, Value *Arg2, ArrayRef<Constant *> Imms,
                           IRBuilder<> &B) {
@@ -1237,13 +1259,12 @@ Type *reconstitutePeeledArrayType(Type *Ty) {
     return Ty;
 
   Type *ResultTy;
-  if (STy->isLiteral())
+  if (STy->isLiteral()) {
     ResultTy =
         StructType::get(STy->getContext(), NewElementTypes, STy->isPacked());
-  else {
-    auto *NewTy = StructType::create(STy->getContext(), STy->getName());
-    NewTy->setBody(NewElementTypes, STy->isPacked());
-    ResultTy = NewTy;
+  } else {
+    ResultTy = StructType::create(STy->getContext(), NewElementTypes,
+                                  STy->getName(), STy->isPacked());
   }
   return ResultTy;
 }
@@ -1254,12 +1275,17 @@ getSpirvLinkageTypeFor(const SPIRVSubtarget &ST, const GlobalValue &GV) {
     return std::nullopt;
 
   if (GV.isDeclarationForLinker()) {
-    // Interface variables must not get Import linkage.
     if (const auto *GVar = dyn_cast<GlobalVariable>(&GV)) {
       auto SC = addressSpaceToStorageClass(GVar->getAddressSpace(), ST);
+      // Interface variables must not get Import linkage.
       if (SC == SPIRV::StorageClass::Input ||
           SC == SPIRV::StorageClass::Output ||
           SC == SPIRV::StorageClass::PushConstant)
+        return std::nullopt;
+      // Shaders have no linker, so module-internal storage
+      // (e.g. HLSL groupshared) can't be imported
+      if (ST.isShader() && (SC == SPIRV::StorageClass::Workgroup ||
+                            SC == SPIRV::StorageClass::Private))
         return std::nullopt;
     }
     return SPIRV::LinkageType::Import;

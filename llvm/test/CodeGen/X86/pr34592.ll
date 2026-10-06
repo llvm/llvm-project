@@ -8,7 +8,7 @@ define <16 x i64> @pluto(<16 x i64> %arg, <16 x i64> %arg1, <16 x i64> %arg2, <1
 ; CHECK-O0-NEXT:    pushq %rbp
 ; CHECK-O0-NEXT:    movq %rsp, %rbp
 ; CHECK-O0-NEXT:    andq $-32, %rsp
-; CHECK-O0-NEXT:    subq $64, %rsp
+; CHECK-O0-NEXT:    subq $32, %rsp
 ; CHECK-O0-NEXT:    vmovaps %ymm4, %ymm10
 ; CHECK-O0-NEXT:    vmovaps %ymm3, %ymm9
 ; CHECK-O0-NEXT:    vmovaps %ymm2, (%rsp) # 32-byte Spill
@@ -25,6 +25,7 @@ define <16 x i64> @pluto(<16 x i64> %arg, <16 x i64> %arg1, <16 x i64> %arg2, <1
 ; CHECK-O0-NEXT:    vmovaps 16(%rbp), %ymm11
 ; CHECK-O0-NEXT:    vpblendd {{.*#+}} ymm0 = ymm6[0,1,2,3,4,5],ymm0[6,7]
 ; CHECK-O0-NEXT:    vxorps %xmm3, %xmm3, %xmm3
+; CHECK-O0-NEXT:    # kill: def $ymm3 killed $xmm3
 ; CHECK-O0-NEXT:    vpunpcklqdq {{.*#+}} ymm2 = ymm2[0],ymm1[0],ymm2[2],ymm1[2]
 ; CHECK-O0-NEXT:    vpermq {{.*#+}} ymm2 = ymm2[0,2,1,3]
 ; CHECK-O0-NEXT:    vpermq {{.*#+}} ymm0 = ymm0[3,1,2,1]

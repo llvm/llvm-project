@@ -246,12 +246,12 @@ namespace std {
 #  include <__type_traits/is_nothrow_assignable.h>
 #  include <__type_traits/is_nothrow_constructible.h>
 #  include <__type_traits/is_reference.h>
+#  include <__type_traits/is_relocatable.h>
 #  include <__type_traits/is_same.h>
 #  include <__type_traits/is_swappable.h>
 #  include <__type_traits/is_trivially_assignable.h>
 #  include <__type_traits/is_trivially_constructible.h>
 #  include <__type_traits/is_trivially_destructible.h>
-#  include <__type_traits/is_trivially_relocatable.h>
 #  include <__type_traits/is_void.h>
 #  include <__type_traits/remove_const.h>
 #  include <__type_traits/remove_cvref.h>
@@ -1180,7 +1180,7 @@ class _LIBCPP_DECLSPEC_EMPTY_BASES _LIBCPP_NO_SPECIALIZATIONS variant
 
 public:
   using __trivially_relocatable _LIBCPP_NODEBUG =
-      conditional_t<_And<__libcpp_is_trivially_relocatable<_Types>...>::value, variant, void>;
+      conditional_t<__all<__is_trivially_relocatable_v<_Types>...>::value, variant, void>;
 
   template <class _FirstType = __first_type, enable_if_t<is_default_constructible_v<_FirstType>, int> = 0>
   _LIBCPP_HIDE_FROM_ABI constexpr variant() noexcept(is_nothrow_default_constructible_v<__first_type>)
@@ -1748,14 +1748,6 @@ _LIBCPP_END_NAMESPACE_STD
 
 _LIBCPP_POP_MACROS
 
-#  if defined(_LIBCPP_KEEP_TRANSITIVE_INCLUDES_LLVM23) && _LIBCPP_STD_VER <= 20
-#    include <cstddef>
-#    include <exception>
-#    include <tuple>
-#    include <type_traits>
-#    include <typeinfo>
-#    include <utility>
-#  endif
 #endif // __cplusplus < 201103L && defined(_LIBCPP_USE_FROZEN_CXX03_HEADERS)
 
 #endif // _LIBCPP_VARIANT
