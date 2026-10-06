@@ -612,19 +612,6 @@ protected:
   VPBasicBlock *VectorPHVPBB;
 };
 
-/// Encapsulate information regarding vectorization of a loop and its epilogue.
-/// This information is meant to be updated and used across two stages of
-/// epilogue vectorization.
-struct EpilogueLoopVectorizationInfo {
-  ElementCount MainLoopVF = ElementCount::getFixed(0);
-  unsigned MainLoopUF = 0;
-  ElementCount EpilogueVF = ElementCount::getFixed(0);
-
-  EpilogueLoopVectorizationInfo(ElementCount MVF, unsigned MUF,
-                                ElementCount EVF)
-      : MainLoopVF(MVF), MainLoopUF(MUF), EpilogueVF(EVF) {}
-};
-
 /// A specialized derived class of inner loop vectorizer that performs
 /// vectorization of *epilogue* loops in the process of vectorizing loops and
 /// their epilogues. The idea is to run the vplan on a given loop twice, firstly
@@ -7382,9 +7369,9 @@ static MainPlanResumeMarkers preparePlanForMainVectorLoop(VPlan &MainPlan,
 /// SCEVs from \p ExpandedSCEVs and set resume values for header recipes.
 static void preparePlanForEpilogueVectorLoop(
     VPlan &MainPlan, VPlan &Plan, Loop *L, const SCEV2ValueTy &ExpandedSCEVs,
-    EpilogueLoopVectorizationInfo &EPI, LoopVectorizationPlanner &LVP,
-    VFSelectionContext &Config, ScalarEvolution &SE,
-    const MainPlanResumeMarkers &Markers) {
+    ElementCount MainLoopVF, unsigned MainLoopUF, ElementCount EpilogueVF,
+    LoopVectorizationPlanner &LVP, VFSelectionContext &Config,
+    ScalarEvolution &SE, const MainPlanResumeMarkers &Markers) {
   // Build a map from the scalar-header PHI to the ResumeForEpilogue markers
   // from the main plan.
   // TODO: Replace the IR PHI key.
@@ -7572,12 +7559,11 @@ static void preparePlanForEpilogueVectorLoop(
   }
 
   auto VScale = Config.getVScaleForTuning();
-  unsigned MainLoopStep =
-      estimateElementCount(EPI.MainLoopVF * EPI.MainLoopUF, VScale);
-  unsigned EpilogueLoopStep = estimateElementCount(EPI.EpilogueVF, VScale);
+  unsigned MainLoopStep = estimateElementCount(MainLoopVF * MainLoopUF, VScale);
+  unsigned EpilogueLoopStep = estimateElementCount(EpilogueVF, VScale);
   RUN_VPLAN_PASS(VPlanTransforms::addMinimumVectorEpilogueIterationCheck, Plan,
                  Plan.getOrAddLiveIn(Markers.VectorTC->getUnderlyingValue()),
-                 Plan.requiresScalarEpilogue(), EPI.EpilogueVF, MainLoopStep,
+                 Plan.requiresScalarEpilogue(), EpilogueVF, MainLoopStep,
                  EpilogueLoopStep, SE);
 }
 
@@ -8098,30 +8084,27 @@ bool LoopVectorizePass::processLoop(Loop *L) {
     BestEpiPlan.getVectorPreheader()->setName("vec.epilog.ph");
     MainPlanResumeMarkers Markers =
         preparePlanForMainVectorLoop(BestMainPlan, BestEpiPlan);
-    EpilogueLoopVectorizationInfo EPI(VF.Width, IC, EpilogueVF);
 
     // Add minimum iteration check for the epilogue plan, followed by runtime
     // checks for the main plan.
-    LVP.addMinimumIterationCheck(BestMainPlan, EPI.EpilogueVF, /*UF=*/1,
+    LVP.addMinimumIterationCheck(BestMainPlan, EpilogueVF, /*UF=*/1,
                                  ElementCount::getFixed(0));
     LVP.attachRuntimeChecks(BestMainPlan, Checks, HasBranchWeights);
-    RUN_VPLAN_PASS(
-        VPlanTransforms::addIterationCountCheckBlock, BestMainPlan,
-        EPI.MainLoopVF, EPI.MainLoopUF, BestMainPlan.requiresScalarEpilogue(),
-        L, HasBranchWeights ? MinItersBypassWeights : nullptr,
-        L->getLoopPredecessor()->getTerminator()->getDebugLoc(), PSE);
+    RUN_VPLAN_PASS(VPlanTransforms::addIterationCountCheckBlock, BestMainPlan,
+                   VF.Width, IC, BestMainPlan.requiresScalarEpilogue(), L,
+                   HasBranchWeights ? MinItersBypassWeights : nullptr,
+                   L->getLoopPredecessor()->getTerminator()->getDebugLoc(),
+                   PSE);
 
     LLVM_DEBUG({
       dbgs() << "Create Skeleton for epilogue vectorized loop (first pass)\n"
-             << "Main Loop VF:" << EPI.MainLoopVF
-             << ", Main Loop UF:" << EPI.MainLoopUF
-             << ", Epilogue Loop VF:" << EPI.EpilogueVF
-             << ", Epilogue Loop UF:1\n";
+             << "Main Loop VF:" << VF.Width << ", Main Loop UF:" << IC
+             << ", Epilogue Loop VF:" << EpilogueVF << ", Epilogue Loop UF:1\n";
     });
-    InnerLoopVectorizer MainILV(L, PSE, LI, DT, TTI, AC, EPI.MainLoopVF,
-                                EPI.MainLoopUF, Checks, BestMainPlan);
+    InnerLoopVectorizer MainILV(L, PSE, LI, DT, TTI, AC, VF.Width, IC, Checks,
+                                BestMainPlan);
     auto ExpandedSCEVs = LVP.executePlan(
-        EPI.MainLoopVF, EPI.MainLoopUF, BestMainPlan, MainILV, DT,
+        VF.Width, IC, BestMainPlan, MainILV, DT,
         LoopVectorizationPlanner::EpilogueVectorizationKind::MainLoop);
     ++LoopsVectorized;
     DEBUG_WITH_TYPE(VerboseDebug, {
@@ -8135,19 +8118,18 @@ bool LoopVectorizePass::processLoop(Loop *L) {
     // Second pass vectorizes the epilogue and adjusts the control flow
     // edges from the first pass.
     EpilogueVectorizerEpilogueLoop EpilogILV(L, PSE, LI, DT, TTI, AC,
-                                             EPI.EpilogueVF, /*UnrollFactor=*/1,
+                                             EpilogueVF, /*UnrollFactor=*/1,
                                              Checks, BestEpiPlan, BestMainPlan);
     preparePlanForEpilogueVectorLoop(BestMainPlan, BestEpiPlan, L,
-                                     ExpandedSCEVs, EPI, LVP, Config,
-                                     *PSE.getSE(), Markers);
+                                     ExpandedSCEVs, VF.Width, IC, EpilogueVF,
+                                     LVP, Config, *PSE.getSE(), Markers);
     RUN_VPLAN_PASS(VPlanTransforms::simplifyLiveInsWithSCEV, BestEpiPlan, PSE);
     LLVM_DEBUG({
       dbgs() << "Create Skeleton for epilogue vectorized loop (second pass)\n"
-             << "Epilogue Loop VF:" << EPI.EpilogueVF
-             << ", Epilogue Loop UF:1\n";
+             << "Epilogue Loop VF:" << EpilogueVF << ", Epilogue Loop UF:1\n";
     });
     LVP.executePlan(
-        EPI.EpilogueVF, /*BestUF=*/1, BestEpiPlan, EpilogILV, DT,
+        EpilogueVF, /*BestUF=*/1, BestEpiPlan, EpilogILV, DT,
         LoopVectorizationPlanner::EpilogueVectorizationKind::Epilogue);
     DEBUG_WITH_TYPE(VerboseDebug, {
       dbgs() << "final fn:\n" << *L->getHeader()->getParent() << "\n";
