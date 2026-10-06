@@ -2923,12 +2923,7 @@ MCSection *TargetLoweringObjectFileGOFF::getSectionForLSDA(
 
 bool TargetLoweringObjectFileGOFF::isReadOnlyInCodeSection(
     const GlobalObject *GO) {
-  if (!GO->hasLocalLinkage())
-    return false;
-  if (const auto *GVar = dyn_cast<GlobalVariable>(GO))
-    if (GVar->hasInitializer() && GVar->getInitializer()->needsRelocation())
-      return false;
-  return true;
+  return GO->hasLocalLinkage();
 }
 
 MCSection *TargetLoweringObjectFileGOFF::SelectSectionForGlobal(
