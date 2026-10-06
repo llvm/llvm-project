@@ -1908,8 +1908,7 @@ void CodeGenFunction::emitBypassedVarInitsForSource(const Stmt *Source) {
   }
 }
 
-static bool hasFieldsEligibleForAutoInit(QualType type,
-                                         CodeGenModule &CGM,
+static bool hasFieldsEligibleForAutoInit(QualType type, CodeGenModule &CGM,
                                          uint64_t MaxSize) {
   const auto *RD = type->getAsRecordDecl();
   if (!RD)
@@ -1948,7 +1947,7 @@ void CodeGenFunction::emitZeroOrPatternInitForRecordFields(QualType type,
   if (!RD)
     return;
   const auto *Def = RD->getDefinition();
-  if(!Def || !Def->isCompleteDefinition() || Def->isUnion())
+  if (!Def || !Def->isCompleteDefinition() || Def->isUnion())
     return;
 
   auto trivialAutoVarInit = getContext().getLangOpts().getTrivialAutoVarInit();
@@ -1974,29 +1973,34 @@ void CodeGenFunction::emitZeroOrPatternInitForRecordFields(QualType type,
     if (FD->isBitField()) {
       unsigned BitWidth = FD->getBitWidthValue();
       uint64_t FieldBytes = llvm::divideCeil(BitWidth, 8);
-      if (trivialAutoVarInitMaxSize > 0 && FieldBytes > trivialAutoVarInitMaxSize)
+      if (trivialAutoVarInitMaxSize > 0 &&
+          FieldBytes > trivialAutoVarInitMaxSize)
         continue;
       if (CGM.stopAutoInit())
-          return;
+        return;
       LValue FieldLV = EmitLValueForFieldInitialization(Base, FD);
       llvm::Type *FieldTy = ConvertTypeForMem(FD->getType());
-      llvm::Constant *Constant = (trivialAutoVarInit == LangOptions::TrivialAutoVarInitKind::Zero)
-        ? llvm::Constant::getNullValue(FieldTy)
-        : initializationPatternFor(CGM, FieldTy);
+      llvm::Constant *Constant =
+          (trivialAutoVarInit == LangOptions::TrivialAutoVarInitKind::Zero)
+              ? llvm::Constant::getNullValue(FieldTy)
+              : initializationPatternFor(CGM, FieldTy);
       EmitStoreThroughBitfieldLValue(RValue::get(Constant), FieldLV);
     } else {
-      auto FieldAllocSize = CGM.getDataLayout().getTypeAllocSize(ConvertTypeForMem(FieldTy));
-      if (trivialAutoVarInitMaxSize > 0 && FieldAllocSize > trivialAutoVarInitMaxSize) {
+      auto FieldAllocSize =
+          CGM.getDataLayout().getTypeAllocSize(ConvertTypeForMem(FieldTy));
+      if (trivialAutoVarInitMaxSize > 0 &&
+          FieldAllocSize > trivialAutoVarInitMaxSize) {
         if (FieldTy->isRecordType() &&
             hasFieldsEligibleForAutoInit(FieldTy, CGM,
-                                        trivialAutoVarInitMaxSize)) {
+                                         trivialAutoVarInitMaxSize)) {
           LValue FieldLV = EmitLValueForFieldInitialization(Base, FD);
-          emitZeroOrPatternInitForRecordFields(FieldTy, D, FieldLV.getAddress());
+          emitZeroOrPatternInitForRecordFields(FieldTy, D,
+                                               FieldLV.getAddress());
         }
         continue;
       }
       if (CGM.stopAutoInit())
-          return;
+        return;
       LValue FieldLV = EmitLValueForFieldInitialization(Base, FD);
       Address FieldLoc = FieldLV.getAddress();
       if (trivialAutoVarInit == LangOptions::TrivialAutoVarInitKind::Zero) {
