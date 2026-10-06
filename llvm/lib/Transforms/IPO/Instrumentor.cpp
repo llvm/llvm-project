@@ -638,6 +638,7 @@ void InstrumentationConfig::populate(InstrumentorIRBuilderTy &IIRB) {
   UnreachableIO::populate(*this, IIRB);
   LoadIO::populate(*this, IIRB);
   StoreIO::populate(*this, IIRB);
+  AtomicRMWIO::populate(*this, IIRB);
   CastIO::populate(*this, IIRB);
   NumericIO::populate(*this, IIRB);
   CompareIO::populate(*this, IIRB);
@@ -1503,6 +1504,190 @@ Value *LoadIO::isVolatile(Value &V, Type &Ty, InstrumentationConfig &IConf,
                           InstrumentorIRBuilderTy &IIRB) {
   auto &LI = cast<LoadInst>(V);
   return getCI(&Ty, LI.isVolatile());
+}
+
+void AtomicRMWIO::init(InstrumentationConfig &IConf,
+                       InstrumentorIRBuilderTy &IIRB, ConfigTy *UserConfig) {
+  bool IsPRE = getLocationKind() == InstrumentationLocation::INSTRUCTION_PRE;
+  if (UserConfig)
+    Config = *UserConfig;
+  if (Config.has(PassPointer)) {
+    IRTArgs.push_back(
+        IRTArg(IIRB.PtrTy, "pointer", "The accessed pointer.",
+               ((IsPRE && Config.has(ReplacePointer)) ? IRTArg::REPLACABLE
+                                                      : IRTArg::NONE),
+               getPointer, setPointer));
+  }
+  if (Config.has(PassPointerAS)) {
+    IRTArgs.push_back(IRTArg(IIRB.Int32Ty, "pointer_as",
+                             "The address space of the accessed pointer.",
+                             IRTArg::NONE, getPointerAS));
+  }
+  if (Config.has(PassBasePointerInfo)) {
+    IRTArgs.push_back(IRTArg(IIRB.PtrTy, "base_pointer_info",
+                             "The runtime provided base pointer info.",
+                             IRTArg::NONE, getBasePointerInfo));
+  }
+  if (Config.has(PassValOperand)) {
+    IRTArgs.push_back(
+        IRTArg(IIRB.Int64Ty, "val_operand",
+               "The operand being atomically applied to the stored value.",
+               IRTArg::POTENTIALLY_INDIRECT |
+                   (Config.has(PassValueSize) ? IRTArg::INDIRECT_HAS_SIZE
+                                              : IRTArg::NONE),
+               getValOperand));
+  }
+  if (!IsPRE && Config.has(PassPrevValue)) {
+    IRTArgs.push_back(IRTArg(
+        getValueType(IIRB), "prev_value", "The unmodified old value.",
+        Config.has(ReplacePrevValue)
+            ? IRTArg::REPLACABLE | IRTArg::POTENTIALLY_INDIRECT |
+                  (Config.has(PassValueSize) ? IRTArg::INDIRECT_HAS_SIZE
+                                             : IRTArg::NONE)
+            : IRTArg::NONE,
+        getValue, Config.has(ReplacePrevValue) ? replaceValue : nullptr));
+  }
+  if (Config.has(PassValueSize)) {
+    IRTArgs.push_back(IRTArg(IIRB.Int64Ty, "value_size",
+                             "The size of the modified value.", IRTArg::NONE,
+                             getValueSize));
+  }
+  if (Config.has(PassAlignment)) {
+    IRTArgs.push_back(IRTArg(IIRB.Int64Ty, "alignment",
+                             "The known access alignment.", IRTArg::NONE,
+                             getAlignment));
+  }
+  if (Config.has(PassValueTypeId)) {
+    IRTArgs.push_back(IRTArg(IIRB.Int32Ty, "value_type_id",
+                             "The type id of the modified value.",
+                             IRTArg::TYPEID, getValueTypeId));
+  }
+  if (Config.has(PassValueSubTypeId)) {
+    IRTArgs.push_back(IRTArg(IIRB.Int32Ty, "value_sub_type_id",
+                             "The sub type id of the modified value (for "
+                             "arrays and vectors, or -1).",
+                             IRTArg::TYPEID, getValueSubTypeId));
+  }
+  if (Config.has(PassAtomicityOrdering)) {
+    IRTArgs.push_back(
+        IRTArg(IIRB.Int32Ty, "atomicity_ordering",
+               "The atomicity ordering of the atomic RMW instruction.",
+               IRTArg::NONE, getAtomicityOrdering));
+  }
+  if (Config.has(PassSyncScopeId)) {
+    IRTArgs.push_back(IRTArg(IIRB.Int8Ty, "sync_scope_id",
+                             "The sync scope id of the operation.",
+                             IRTArg::NONE, getSyncScopeId));
+  }
+  if (Config.has(PassOperation)) {
+    IRTArgs.push_back(IRTArg(IIRB.Int32Ty, "operation",
+                             "The atomic RMW instruction's operation id.",
+                             IRTArg::NONE, getOperation));
+  }
+  if (Config.has(PassIsVolatile)) {
+    IRTArgs.push_back(IRTArg(IIRB.Int8Ty, "is_volatile",
+                             "Flag indicating a volatile operation.",
+                             IRTArg::NONE, isVolatile));
+  }
+
+  addCommonArgs(IConf, IIRB.Ctx, Config.has(PassId));
+  IConf.addChoice(*this, IIRB.Ctx);
+}
+
+Value *AtomicRMWIO::getPointer(Value &V, Type &Ty, InstrumentationConfig &IConf,
+                               InstrumentorIRBuilderTy &IIRB) {
+  auto &AI = cast<AtomicRMWInst>(V);
+  return AI.getPointerOperand();
+}
+
+Value *AtomicRMWIO::setPointer(Value &V, Value &NewV,
+                               InstrumentationConfig &IConf,
+                               InstrumentorIRBuilderTy &IIRB) {
+  auto &AI = cast<AtomicRMWInst>(V);
+  AI.setOperand(AI.getPointerOperandIndex(), &NewV);
+  return &AI;
+}
+
+Value *AtomicRMWIO::getPointerAS(Value &V, Type &Ty,
+                                 InstrumentationConfig &IConf,
+                                 InstrumentorIRBuilderTy &IIRB) {
+  auto &AI = cast<AtomicRMWInst>(V);
+  return getCI(&Ty, AI.getPointerAddressSpace());
+}
+
+Value *AtomicRMWIO::getBasePointerInfo(Value &V, Type &Ty,
+                                       InstrumentationConfig &IConf,
+                                       InstrumentorIRBuilderTy &IIRB) {
+  auto &AI = cast<AtomicRMWInst>(V);
+  return IConf.getBasePointerInfo(*AI.getPointerOperand(), IIRB);
+}
+
+Value *AtomicRMWIO::getValue(Value &V, Type &Ty, InstrumentationConfig &IConf,
+                             InstrumentorIRBuilderTy &IIRB) {
+  return &V;
+}
+
+Value *AtomicRMWIO::getValueSize(Value &V, Type &Ty,
+                                 InstrumentationConfig &IConf,
+                                 InstrumentorIRBuilderTy &IIRB) {
+  auto &AI = cast<AtomicRMWInst>(V);
+  auto &DL = AI.getDataLayout();
+  return getCI(&Ty, DL.getTypeStoreSize(AI.getType()));
+}
+
+Value *AtomicRMWIO::getAlignment(Value &V, Type &Ty,
+                                 InstrumentationConfig &IConf,
+                                 InstrumentorIRBuilderTy &IIRB) {
+  auto &AI = cast<AtomicRMWInst>(V);
+  return getCI(&Ty, AI.getAlign().value());
+}
+
+Value *AtomicRMWIO::getValueTypeId(Value &V, Type &Ty,
+                                   InstrumentationConfig &IConf,
+                                   InstrumentorIRBuilderTy &IIRB) {
+  auto &AI = cast<AtomicRMWInst>(V);
+  return getCI(&Ty, AI.getType()->getTypeID());
+}
+
+Value *AtomicRMWIO::getValueSubTypeId(Value &V, Type &Ty,
+                                      InstrumentationConfig &IConf,
+                                      InstrumentorIRBuilderTy &IIRB) {
+  auto &AI = cast<AtomicRMWInst>(V);
+  return getSubTypeID(*AI.getType(), Ty);
+}
+
+Value *AtomicRMWIO::getAtomicityOrdering(Value &V, Type &Ty,
+                                         InstrumentationConfig &IConf,
+                                         InstrumentorIRBuilderTy &IIRB) {
+  auto &AI = cast<AtomicRMWInst>(V);
+  return getCI(&Ty, uint64_t(AI.getOrdering()));
+}
+
+Value *AtomicRMWIO::getSyncScopeId(Value &V, Type &Ty,
+                                   InstrumentationConfig &IConf,
+                                   InstrumentorIRBuilderTy &IIRB) {
+  auto &AI = cast<AtomicRMWInst>(V);
+  return getCI(&Ty, uint64_t(AI.getSyncScopeID()));
+}
+
+Value *AtomicRMWIO::getValOperand(Value &V, Type &Ty,
+                                  InstrumentationConfig &IConf,
+                                  InstrumentorIRBuilderTy &IIRB) {
+  auto &AI = cast<AtomicRMWInst>(V);
+  return AI.getValOperand();
+}
+
+Value *AtomicRMWIO::getOperation(Value &V, Type &Ty,
+                                 InstrumentationConfig &IConf,
+                                 InstrumentorIRBuilderTy &IIRB) {
+  auto &AI = cast<AtomicRMWInst>(V);
+  return getCI(&Ty, AI.getOperation());
+}
+
+Value *AtomicRMWIO::isVolatile(Value &V, Type &Ty, InstrumentationConfig &IConf,
+                               InstrumentorIRBuilderTy &IIRB) {
+  auto &AI = cast<AtomicRMWInst>(V);
+  return getCI(&Ty, AI.isVolatile());
 }
 
 void BasePointerIO::init(InstrumentationConfig &IConf,
