@@ -223,11 +223,19 @@ void AsmPrinter::emitCFIInstruction(const MCCFIInstruction &Inst) const {
     OutStreamer->emitCFILLVMDefAspaceCfa(Inst.getRegister(), Inst.getOffset(),
                                          Inst.getAddressSpace(), Loc);
     break;
-  case MCCFIInstruction::OpLLVMDefCfaAddressLinear: {
+  case MCCFIInstruction::OpLLVMDefCfaAddressConstant: {
     const auto &Fields =
-        Inst.getExtraFields<MCCFIInstruction::CfaAddressLinearFields>();
-    OutStreamer->emitCFILLVMDefCfaAddressLinear(
-        Fields.AddressSpace, Fields.Offset, Fields.Source, Loc);
+        Inst.getExtraFields<MCCFIInstruction::CfaAddressConstantFields>();
+    OutStreamer->emitCFILLVMDefCfaAddressConstant(Fields.AddressSpace,
+                                                  Fields.Offset, Loc);
+    break;
+  }
+  case MCCFIInstruction::OpLLVMDefCfaAddressScaled: {
+    const auto &Fields =
+        Inst.getExtraFields<MCCFIInstruction::CfaAddressScaledFields>();
+    OutStreamer->emitCFILLVMDefCfaAddressScaled(
+        Fields.AddressSpace, Fields.Offset, Fields.Register, Fields.DerefSize,
+        Fields.Scale, Loc);
     break;
   }
   case MCCFIInstruction::OpOffset:

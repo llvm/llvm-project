@@ -5,22 +5,10 @@
 # Verify we can parse and emit these CFI pseudos.
 
 # CHECK-LABEL: name: test
-# CHECK: CFI_INSTRUCTION llvm_def_cfa_address_linear 6, 128{{$}}
-# CHECK-NEXT: CFI_INSTRUCTION llvm_def_cfa_address_linear 6, 128, $sgpr32, 4, 32, debug-location !DILocation(line: 1, scope: !{{[0-9]+}})
-# CHECK-NEXT: CFI_INSTRUCTION llvm_def_cfa_address_linear 6, 17, $sgpr32, 4, 0
-# CHECK-NEXT: CFI_INSTRUCTION llvm_def_cfa_address_linear 6, 0{{$}}
-# CHECK-NEXT: CFI_INSTRUCTION llvm_def_cfa_address_linear 6, 0, $sgpr32, 4, 64
-# CHECK-NEXT: CFI_INSTRUCTION llvm_def_cfa_address_linear 6, 0, $sgpr32, 4, 4294967295
-# CHECK-NEXT: CFI_INSTRUCTION llvm_def_cfa_address_linear 6, -17{{$}}
-# CHECK-NEXT: CFI_INSTRUCTION llvm_def_cfa_address_linear 6, 2147483647{{$}}
-# CHECK-NEXT: CFI_INSTRUCTION llvm_def_cfa_address_linear 6, -2147483648{{$}}
-# CHECK-NEXT: CFI_INSTRUCTION llvm_def_cfa_address_linear 6, -2147483648{{$}}
-# CHECK-NEXT: CFI_INSTRUCTION llvm_def_cfa_address_linear 6, -1{{$}}
-# CHECK-NEXT: CFI_INSTRUCTION llvm_def_cfa_address_linear 6, -2147483648, $sgpr32, 4, 32
-# CHECK-NEXT: CFI_INSTRUCTION llvm_def_cfa_address_linear 6, -1, $sgpr32, 4, 32
-# CHECK-NEXT: CFI_INSTRUCTION llvm_def_cfa_address_linear 6, -17, $sgpr32, 4, 32
-# CHECK-NEXT: CFI_INSTRUCTION llvm_def_cfa_address_linear 0, 0, $sgpr0, 1, 1
-# CHECK-NEXT: CFI_INSTRUCTION llvm_def_cfa_address_linear 4294967295, 0, $sgpr32, 255, 2147483648
+# CHECK: CFI_INSTRUCTION llvm_def_cfa_address_constant 6, 128{{$}}
+# CHECK-NEXT: CFI_INSTRUCTION llvm_def_cfa_address_constant 6, -17, debug-location !DILocation(line: 1, scope: !{{[0-9]+}})
+# CHECK-NEXT: CFI_INSTRUCTION llvm_def_cfa_address_scaled 6, 128, $sgpr32, 4, 32, debug-location !DILocation(line: 1, scope: !{{[0-9]+}})
+# CHECK-NEXT: CFI_INSTRUCTION llvm_def_cfa_address_scaled 0, 0, $sgpr0, 1, 0{{$}}
 # CHECK-NEXT: CFI_INSTRUCTION llvm_register_pair $pc_reg, $sgpr30, 32, $sgpr31, 32
 # CHECK-NEXT: CFI_INSTRUCTION llvm_vector_registers $sgpr4, $vgpr3, 0, 32
 # CHECK-NEXT: CFI_INSTRUCTION llvm_vector_registers $pc_reg, $vgpr62, 0, 32, $vgpr62, 1, 32
@@ -45,24 +33,10 @@
 name: test
 body: |
   bb.0:
-    CFI_INSTRUCTION llvm_def_cfa_address_linear 6, 128
-    CFI_INSTRUCTION llvm_def_cfa_address_linear 6, 128, $sgpr32, 4, 32, debug-location !0
-    CFI_INSTRUCTION llvm_def_cfa_address_linear 6, 17, $sgpr32, 4, 0
-    CFI_INSTRUCTION llvm_def_cfa_address_linear 6, 0
-    CFI_INSTRUCTION llvm_def_cfa_address_linear 6, 0, $sgpr32, 4, 64
-    CFI_INSTRUCTION llvm_def_cfa_address_linear 6, 0, $sgpr32, 4, 4294967295
-    CFI_INSTRUCTION llvm_def_cfa_address_linear 6, -17
-    CFI_INSTRUCTION llvm_def_cfa_address_linear 6, 2147483647
-    CFI_INSTRUCTION llvm_def_cfa_address_linear 6, -2147483648
-    ; The current offset helper accepts positive unsigned 32-bit literals, then
-    ; narrows them to signed 32-bit offsets. Preserve the resulting round trip.
-    CFI_INSTRUCTION llvm_def_cfa_address_linear 6, 2147483648
-    CFI_INSTRUCTION llvm_def_cfa_address_linear 6, 4294967295
-    CFI_INSTRUCTION llvm_def_cfa_address_linear 6, 2147483648, $sgpr32, 4, 32
-    CFI_INSTRUCTION llvm_def_cfa_address_linear 6, 4294967295, $sgpr32, 4, 32
-    CFI_INSTRUCTION llvm_def_cfa_address_linear 6, -17, $sgpr32, 4, 32
-    CFI_INSTRUCTION llvm_def_cfa_address_linear 0, 0, $sgpr0, 1, 1
-    CFI_INSTRUCTION llvm_def_cfa_address_linear 4294967295, 0, $sgpr32, 255, 2147483648
+    CFI_INSTRUCTION llvm_def_cfa_address_constant 6, 128
+    CFI_INSTRUCTION llvm_def_cfa_address_constant 6, -17, debug-location !0
+    CFI_INSTRUCTION llvm_def_cfa_address_scaled 6, 128, $sgpr32, 4, 32, debug-location !0
+    CFI_INSTRUCTION llvm_def_cfa_address_scaled 0, 0, $sgpr0, 1, 0
     CFI_INSTRUCTION llvm_register_pair $pc_reg, $sgpr30, 32, $sgpr31, 32
     CFI_INSTRUCTION llvm_vector_registers $sgpr4, $vgpr3, 0, 32
     CFI_INSTRUCTION llvm_vector_registers $pc_reg, $vgpr62, 0, 32, $vgpr62, 1, 32

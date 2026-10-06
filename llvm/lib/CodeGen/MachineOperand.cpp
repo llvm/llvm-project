@@ -677,6 +677,13 @@ void MachineOperand::printIRSlotNumber(raw_ostream &OS, int Slot) {
     OS << Slot;
 }
 
+static void printCFICfaAddress(raw_ostream &OS, const MCCFIInstruction &CFI,
+                               unsigned AddressSpace, int64_t Offset) {
+  if (MCSymbol *Label = CFI.getLabel())
+    MachineOperand::printSymbol(OS, *Label);
+  OS << AddressSpace << ", " << Offset;
+}
+
 static void printCFI(raw_ostream &OS, const MCCFIInstruction &CFI,
                      const TargetRegisterInfo *TRI) {
   switch (CFI.getOperation()) {
@@ -730,18 +737,21 @@ static void printCFI(raw_ostream &OS, const MCCFIInstruction &CFI,
     OS << ", " << CFI.getOffset();
     OS << ", " << CFI.getAddressSpace();
     break;
-  case MCCFIInstruction::OpLLVMDefCfaAddressLinear: {
+  case MCCFIInstruction::OpLLVMDefCfaAddressConstant: {
+    OS << "llvm_def_cfa_address_constant ";
     const auto &Fields =
-        CFI.getExtraFields<MCCFIInstruction::CfaAddressLinearFields>();
-    OS << "llvm_def_cfa_address_linear ";
-    if (MCSymbol *Label = CFI.getLabel())
-      MachineOperand::printSymbol(OS, *Label);
-    OS << Fields.AddressSpace << ", " << Fields.Offset;
-    if (Fields.Source) {
-      OS << ", ";
-      printCFIRegister(Fields.Source->Register, OS, TRI);
-      OS << ", " << Fields.Source->DerefSize << ", " << Fields.Source->Scale;
-    }
+        CFI.getExtraFields<MCCFIInstruction::CfaAddressConstantFields>();
+    printCFICfaAddress(OS, CFI, Fields.AddressSpace, Fields.Offset);
+    break;
+  }
+  case MCCFIInstruction::OpLLVMDefCfaAddressScaled: {
+    OS << "llvm_def_cfa_address_scaled ";
+    const auto &Fields =
+        CFI.getExtraFields<MCCFIInstruction::CfaAddressScaledFields>();
+    printCFICfaAddress(OS, CFI, Fields.AddressSpace, Fields.Offset);
+    OS << ", ";
+    printCFIRegister(Fields.Register, OS, TRI);
+    OS << ", " << Fields.DerefSize << ", " << Fields.Scale;
     break;
   }
   case MCCFIInstruction::OpRelOffset:
