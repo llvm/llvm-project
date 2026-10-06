@@ -4100,7 +4100,8 @@ InstructionCost VPReplicateRecipe::computeCost(ElementCount VF,
                                               to_vector(operands()), VF);
     // If the recipe is not predicated (i.e. not in a replicate region), return
     // the scalar cost. Otherwise handle predicated cost.
-    if (!getRegion()->isReplicator())
+    const VPRegionBlock *ParentRegion = getRegion();
+    if (!ParentRegion || !ParentRegion->isReplicator())
       return ScalarCost;
 
     // Account for the phi nodes that we will create.
@@ -4110,7 +4111,7 @@ InstructionCost VPReplicateRecipe::computeCost(ElementCount VF,
     // This assumes the predicated block for each vector lane is equally
     // likely.
     ScalarCost /= Ctx.getCostDivisor(
-        getRegion()->getEntryBranchOnMask()->getExecutionFrequency());
+        ParentRegion->getEntryBranchOnMask()->getExecutionFrequency());
     return ScalarCost;
   }
   case Instruction::Load:
