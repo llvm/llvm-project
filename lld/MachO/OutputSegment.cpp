@@ -148,6 +148,7 @@ static int sectionOrder(OutputSection *osec) {
       return std::numeric_limits<int>::max();
     default:
       return StringSwitch<int>(osec->name)
+          .Case(section_names::authGot, -4)
           .Case(section_names::got, -3)
           .Case(section_names::lazySymbolPtr, -2)
           .Case(section_names::const_, -1)

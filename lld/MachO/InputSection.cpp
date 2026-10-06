@@ -258,7 +258,10 @@ void ConcatInputSection::writeTo(uint8_t *buf) {
         target->handleDtraceReloc(referentSym, r, loc);
         continue;
       }
-      referentVA = resolveSymbolOffsetVA(referentSym, r.type, r.getAddend());
+      if (target->hasAttr(r.type, RelocAttrBits::GOT) && usesAuthGot(this))
+        referentVA = in.authGot->getVA(referentSym) + r.getAddend();
+      else
+        referentVA = resolveSymbolOffsetVA(referentSym, r.type, r.getAddend());
 
       // References from thread-local variable sections are treated as offsets
       // relative to the start of the thread-local data memory area, which
@@ -411,6 +414,11 @@ bool macho::isSelRefsSection(const InputSection *isec) {
 bool macho::isEhFrameSection(const InputSection *isec) {
   return isec->getName() == section_names::ehFrame &&
          isec->getSegName() == segment_names::text;
+}
+
+bool macho::usesAuthGot(const InputSection *isec) {
+  // arm64e's unwinder expects signed personality pointers.
+  return config->arch() == AK_arm64e && isEhFrameSection(isec);
 }
 
 bool macho::isGccExceptTabSection(const InputSection *isec) {

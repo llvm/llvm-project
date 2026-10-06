@@ -511,6 +511,28 @@ void GotSection::writeTo(uint8_t *buf) const {
   }
 }
 
+AuthGotSection::AuthGotSection()
+    : SyntheticSection(segment_names::data, section_names::authGot) {
+  align = target->wordSize;
+  flags = S_NON_LAZY_SYMBOL_POINTERS;
+}
+
+void AuthGotSection::addEntry(Symbol *sym) {
+  auto [it, inserted] = indices.try_emplace(sym, entries.size());
+  if (!inserted)
+    return;
+  entries.push_back(sym);
+  addNonLazyBindingEntries(sym, isec, it->second * target->wordSize, 0,
+                           /*forceOutlineAuth=*/true);
+}
+
+void AuthGotSection::writeTo(uint8_t *buf) const {
+  static constexpr AuthInfo auth = {/*diversity=*/0, PtrAuthKeyIA,
+                                    /*addrDiv=*/true};
+  for (const auto &[i, entry] : llvm::enumerate(entries))
+    writeChainedFixup(&buf[i * target->wordSize], entry, 0, &auth);
+}
+
 BindingSection::BindingSection()
     : LinkEditSection(segment_names::linkEdit, section_names::binding) {}
 
@@ -1612,19 +1634,26 @@ IndirectSymtabSection::IndirectSymtabSection()
 
 uint32_t IndirectSymtabSection::getNumSymbols() const {
   uint32_t size = in.got->getEntries().size() + in.stubs->getEntries().size();
+  if (in.authGot)
+    size += in.authGot->getEntries().size();
   if (!config->emitChainedFixups)
     size += in.stubs->getEntries().size();
   return size;
 }
 
 bool IndirectSymtabSection::isNeeded() const {
-  return in.got->isNeeded() || in.stubs->isNeeded();
+  return in.got->isNeeded() || in.stubs->isNeeded() ||
+         (in.authGot && in.authGot->isNeeded());
 }
 
 void IndirectSymtabSection::finalizeContents() {
   uint32_t off = 0;
   in.got->reserved1 = off;
   off += in.got->getEntries().size();
+  if (in.authGot) {
+    in.authGot->reserved1 = off;
+    off += in.authGot->getEntries().size();
+  }
   in.stubs->reserved1 = off;
   if (in.lazyPointers) {
     off += in.stubs->getEntries().size();
@@ -1643,6 +1672,12 @@ void IndirectSymtabSection::writeTo(uint8_t *buf) const {
   for (const Symbol *sym : in.got->getEntries()) {
     write32le(buf + off * sizeof(uint32_t), indirectValue(sym));
     ++off;
+  }
+  if (in.authGot) {
+    for (const Symbol *sym : in.authGot->getEntries()) {
+      write32le(buf + off * sizeof(uint32_t), indirectValue(sym));
+      ++off;
+    }
   }
   for (const Symbol *sym : in.stubs->getEntries()) {
     write32le(buf + off * sizeof(uint32_t), indirectValue(sym));
