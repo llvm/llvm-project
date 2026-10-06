@@ -7,27 +7,33 @@
 
 // Example Fortran code:
 // !$omp target teams workdistribute
-// a(:,:) = b(:,:)
+// a(1:10:2,:) = b(1:10:2,:)
 // !$omp end target teams workdistribute
 
 // CHECK-LABEL:   func.func @array_assign(
 // CHECK:           omp.target_data
 // CHECK:           omp.target_allocmem
 
-// First kernel reads the strided src section into the temporary.
+// First kernel reads the stride-2 section of b into the temporary.
 // CHECK:           omp.target kernel_type
-// CHECK:           %[[SLICE:.*]] = fir.slice
-// CHECK:           %[[SRCBOX:.*]] = fir.embox {{.*}}[%[[SLICE]]]
+// CHECK:           %[[DB:.*]] = fir.declare {{.*}} uniq_name("b")
+// CHECK:           %[[STEP:.*]] = arith.constant 2 : index
+// CHECK:           %[[SLICE:.*]] = fir.slice {{[^,]*}}, {{[^,]*}}, %[[STEP]], {{.*}} -> !fir.slice<2>
+// CHECK:           %[[SRCBOX:.*]] = fir.embox %[[DB]]({{.*}}) [%[[SLICE]]]
 // CHECK:           omp.loop_nest
 // CHECK:           %[[SRC:.*]] = fir.array_coor %[[SRCBOX]] {{.*}} : (!fir.box<!fir.array<?x?xf32>>, index, index) -> !fir.ref<f32>
 // CHECK:           %[[TMP:.*]] = fir.coordinate_of {{.*}} -> !fir.ref<f32>
 // CHECK:           %[[VAL:.*]] = fir.load %[[SRC]] : !fir.ref<f32>
 // CHECK:           fir.store %[[VAL]] to %[[TMP]] : !fir.ref<f32>
 
-// Second kernel writes the temporary into the strided dest section.
+// Second kernel writes the temporary into the stride-2 section of a.
 // CHECK:           omp.target kernel_type
+// CHECK:           %[[DA:.*]] = fir.declare {{.*}} uniq_name("a")
+// CHECK:           %[[STEP2:.*]] = arith.constant 2 : index
+// CHECK:           %[[SLICE2:.*]] = fir.slice {{[^,]*}}, {{[^,]*}}, %[[STEP2]], {{.*}} -> !fir.slice<2>
+// CHECK:           %[[DSTBOX:.*]] = fir.embox %[[DA]]({{.*}}) [%[[SLICE2]]]
 // CHECK:           omp.loop_nest
-// CHECK:           %[[DST:.*]] = fir.array_coor {{.*}} : (!fir.box<!fir.array<?x?xf32>>, index, index) -> !fir.ref<f32>
+// CHECK:           %[[DST:.*]] = fir.array_coor %[[DSTBOX]] {{.*}} : (!fir.box<!fir.array<?x?xf32>>, index, index) -> !fir.ref<f32>
 // CHECK:           %[[TMP2:.*]] = fir.coordinate_of {{.*}} -> !fir.ref<f32>
 // CHECK:           %[[VAL2:.*]] = fir.load %[[TMP2]] : !fir.ref<f32>
 // CHECK:           fir.store %[[VAL2]] to %[[DST]] : !fir.ref<f32>
@@ -56,8 +62,7 @@ func.func @array_assign(%a : !fir.ref<!fir.array<?x?xf32>>, %b : !fir.ref<!fir.a
     omp.teams {
       %dtmp = fir.alloca !fir.box<!fir.array<?x?xf32>> {pinned}
       omp.workdistribute {
-        // Strided sections (stride 2 in dim 0): the descriptors carry the
-        // stride, so a correct lowering must address through them.
+        // Stride-2 sections in dim 0, so the copy must address through the descriptors.
         %lb = arith.constant 1 : index
         %st = arith.constant 2 : index
         %slice = fir.slice %lb, %e0, %st, %lb, %e1, %lb : (index, index, index, index, index, index) -> !fir.slice<2>
