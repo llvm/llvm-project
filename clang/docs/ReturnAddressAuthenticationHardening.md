@@ -1,9 +1,5 @@
 # Return Address Authentication Hardening
 
-```{contents}
-:local:
-```
-
 ## Introduction
 
 Return Address Authentication Hardening is a mitigation against the
@@ -26,7 +22,7 @@ pac-ret can be enabled via different command-line options:
 More information can be found in
 [Pointer Authentication](PointerAuthentication.md).
 
-Return Address Authentication Hardening is a mechanism to strenghthen
+Return Address Authentication Hardening is a mechanism to strengthen
 Return Address Signing against the PACMAN attack in AArch64 targets. It
 can be enabled with `-mharden-pac-ret=load-return-address`.
 

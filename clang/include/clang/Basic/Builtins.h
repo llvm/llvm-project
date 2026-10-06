@@ -16,6 +16,7 @@
 #define LLVM_CLANG_BASIC_BUILTINS_H
 
 #include "llvm/ADT/ArrayRef.h"
+#include "llvm/ADT/SmallString.h"
 #include "llvm/ADT/StringMap.h"
 #include "llvm/ADT/StringRef.h"
 #include "llvm/ADT/StringTable.h"
@@ -260,7 +261,7 @@ public:
 
   /// Return the identifier name for the specified builtin inside single quotes
   /// for a diagnostic, e.g. "'__builtin_abs'".
-  std::string getQuotedName(unsigned ID) const;
+  llvm::SmallString<64> getQuotedName(unsigned ID) const;
 
   /// Get the type descriptor string for the specified builtin.
   const char *getTypeString(unsigned ID) const;

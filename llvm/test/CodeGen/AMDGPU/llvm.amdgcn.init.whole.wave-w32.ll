@@ -372,25 +372,25 @@ define amdgpu_cs_chain void @control_flow(<3 x i32> inreg %sgpr, ptr inreg %call
 ; GISEL12-NEXT:    s_wait_alu depctr_sa_sdst(0)
 ; GISEL12-NEXT:    s_or_b32 exec_lo, exec_lo, s3
 ; GISEL12-NEXT:    s_delay_alu instid0(SALU_CYCLE_1)
-; GISEL12-NEXT:    s_mov_b32 s4, exec_lo
-; GISEL12-NEXT:    ; implicit-def: $sgpr3
+; GISEL12-NEXT:    s_mov_b32 s3, exec_lo
+; GISEL12-NEXT:    ; implicit-def: $sgpr4
 ; GISEL12-NEXT:    v_cmpx_lt_i32_e32 v12, v13
 ; GISEL12-NEXT:    s_wait_alu depctr_sa_sdst(0)
-; GISEL12-NEXT:    s_xor_b32 s4, exec_lo, s4
+; GISEL12-NEXT:    s_xor_b32 s3, exec_lo, s3
 ; GISEL12-NEXT:  ; %bb.5: ; %tail.else
-; GISEL12-NEXT:    s_mov_b32 s3, 15
+; GISEL12-NEXT:    s_mov_b32 s4, 15
 ; GISEL12-NEXT:  ; %bb.6: ; %Flow
 ; GISEL12-NEXT:    s_wait_alu depctr_sa_sdst(0)
-; GISEL12-NEXT:    s_or_saveexec_b32 s4, s4
-; GISEL12-NEXT:    v_mov_b32_e32 v8, s3
+; GISEL12-NEXT:    s_or_saveexec_b32 s3, s3
+; GISEL12-NEXT:    v_mov_b32_e32 v8, s4
 ; GISEL12-NEXT:    s_wait_alu depctr_sa_sdst(0)
-; GISEL12-NEXT:    s_xor_b32 exec_lo, exec_lo, s4
+; GISEL12-NEXT:    s_xor_b32 exec_lo, exec_lo, s3
 ; GISEL12-NEXT:  ; %bb.7: ; %tail.then
-; GISEL12-NEXT:    s_mov_b32 s3, 44
+; GISEL12-NEXT:    s_mov_b32 s4, 44
 ; GISEL12-NEXT:    s_wait_alu depctr_sa_sdst(0)
-; GISEL12-NEXT:    v_mov_b32_e32 v8, s3
+; GISEL12-NEXT:    v_mov_b32_e32 v8, s4
 ; GISEL12-NEXT:  ; %bb.8: ; %tail.end
-; GISEL12-NEXT:    s_or_b32 exec_lo, exec_lo, s4
+; GISEL12-NEXT:    s_or_b32 exec_lo, exec_lo, s3
 ; GISEL12-NEXT:    s_mov_b32 exec_lo, s5
 ; GISEL12-NEXT:    s_setpc_b64 s[6:7]
 ;
@@ -481,21 +481,21 @@ define amdgpu_cs_chain void @control_flow(<3 x i32> inreg %sgpr, ptr inreg %call
 ; GISEL10-NEXT:    v_add_nc_u32_e32 v10, 43, v2
 ; GISEL10-NEXT:  .LBB3_4: ; %Flow1
 ; GISEL10-NEXT:    s_or_b32 exec_lo, exec_lo, s3
-; GISEL10-NEXT:    s_mov_b32 s4, exec_lo
-; GISEL10-NEXT:    ; implicit-def: $sgpr3
+; GISEL10-NEXT:    s_mov_b32 s3, exec_lo
+; GISEL10-NEXT:    ; implicit-def: $sgpr4
 ; GISEL10-NEXT:    v_cmpx_lt_i32_e32 v12, v13
-; GISEL10-NEXT:    s_xor_b32 s4, exec_lo, s4
+; GISEL10-NEXT:    s_xor_b32 s3, exec_lo, s3
 ; GISEL10-NEXT:  ; %bb.5: ; %tail.else
-; GISEL10-NEXT:    s_mov_b32 s3, 15
+; GISEL10-NEXT:    s_mov_b32 s4, 15
 ; GISEL10-NEXT:  ; %bb.6: ; %Flow
-; GISEL10-NEXT:    s_or_saveexec_b32 s4, s4
-; GISEL10-NEXT:    v_mov_b32_e32 v8, s3
-; GISEL10-NEXT:    s_xor_b32 exec_lo, exec_lo, s4
+; GISEL10-NEXT:    s_or_saveexec_b32 s3, s3
+; GISEL10-NEXT:    v_mov_b32_e32 v8, s4
+; GISEL10-NEXT:    s_xor_b32 exec_lo, exec_lo, s3
 ; GISEL10-NEXT:  ; %bb.7: ; %tail.then
-; GISEL10-NEXT:    s_mov_b32 s3, 44
-; GISEL10-NEXT:    v_mov_b32_e32 v8, s3
+; GISEL10-NEXT:    s_mov_b32 s4, 44
+; GISEL10-NEXT:    v_mov_b32_e32 v8, s4
 ; GISEL10-NEXT:  ; %bb.8: ; %tail.end
-; GISEL10-NEXT:    s_or_b32 exec_lo, exec_lo, s4
+; GISEL10-NEXT:    s_or_b32 exec_lo, exec_lo, s3
 ; GISEL10-NEXT:    s_mov_b32 exec_lo, s5
 ; GISEL10-NEXT:    s_setpc_b64 s[6:7]
 ;
