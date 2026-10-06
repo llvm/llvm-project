@@ -164,7 +164,11 @@ static Value *LowerCTPOP(LLVMContext &Context, Value *V, Instruction *IP) {
     Value *PartValue = V;
     for (unsigned i = 1, ct = 0; i < (BitSize>64 ? 64 : BitSize);
          i <<= 1, ++ct) {
-      Value *MaskCst = ConstantInt::get(V->getType(), MaskValues[ct]);
+      // The masks are 64-bit repeating patterns; truncating them yields the
+      // masks for narrower types.
+      Value *MaskCst = ConstantInt::get(V->getType(), MaskValues[ct],
+                                        /*IsSigned=*/false,
+                                        /*ImplicitTrunc=*/true);
       Value *LHS = Builder.CreateAnd(PartValue, MaskCst, "cppop.and1");
       Value *VShift = Builder.CreateLShr(PartValue,
                                         ConstantInt::get(V->getType(), i),
