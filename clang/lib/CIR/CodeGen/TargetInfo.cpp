@@ -122,6 +122,10 @@ public:
 
   bool supportsLibCall() const override { return false; }
 
+  cir::CallingConv getDeviceKernelCallingConv() const override {
+    return cir::CallingConv::AMDGPUKernel;
+  }
+
   void setTargetAttributes(const clang::Decl *decl, mlir::Operation *global,
                            CIRGenModule &cgm) const override {
     if (auto func = mlir::dyn_cast<cir::FuncOp>(global)) {

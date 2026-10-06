@@ -109,6 +109,10 @@ public:
     }
   }
 
+  cir::CallingConv getDeviceKernelCallingConv() const override {
+    return cir::CallingConv::PTXKernel;
+  }
+
   mlir::Type getCUDADeviceBuiltinSurfaceDeviceType() const override {
     return cir::CUDADeviceSurfaceType::get(&getABIInfo().cgt.getMLIRContext());
   }
