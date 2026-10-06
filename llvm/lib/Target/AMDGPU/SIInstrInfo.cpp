@@ -8291,50 +8291,31 @@ void SIInstrInfo::handleCopyToPhysHelper(
   Register SrcReg = Inst.getOperand(1).getReg();
   MachineBasicBlock::iterator I = Inst.getIterator();
   MachineBasicBlock::iterator E = Inst.getParent()->end();
-  if (DstReg == AMDGPU::M0) {
-    // A VGPR "as memory" access uses M0 in every lane, so, like the SGPR
-    // arguments of SI_CALL_ISEL below, it is waterfalled. Other readers of M0
-    // take lane 0.
-    SmallVector<MachineOperand *, 4> IdxOps;
-    bool HasOtherReaders = false;
-    while (++I != E) {
-      auto *LdSt = dyn_cast<AMDGPUMI::VLoadStoreIdxInst>(&*I);
-      if (LdSt && !LdSt->isGPRIdx())
-        IdxOps.push_back(I->findRegisterUseOperand(DstReg, &RI));
-      else if (I->readsRegister(DstReg, &RI))
-        HasOtherReaders = true;
-      if (I->findRegisterDefOperand(DstReg, &RI))
-        break;
-    }
-    // The waterfall loop reads the whole register.
-    if (!IdxOps.empty() && Inst.getOperand(1).getSubReg()) {
-      SrcReg = MRI.createVirtualRegister(&AMDGPU::VGPR_32RegClass);
-      BuildMI(*Inst.getParent(), Inst, Inst.getDebugLoc(), get(AMDGPU::COPY),
-              SrcReg)
-          .addReg(Inst.getOperand(1).getReg(), {},
-                  Inst.getOperand(1).getSubReg());
-    }
-    for (MachineOperand *MO : IdxOps) {
-      MO->setReg(SrcReg);
-      V2PhysSCopyInfo &V2SCopyInfo = WaterFalls[MO->getParent()];
-      V2SCopyInfo.MOs.push_back(MO);
-      V2SCopyInfo.SGPRs.push_back(DstReg);
-    }
-    if (IdxOps.empty() || HasOtherReaders)
-      createReadFirstLaneFromCopyToPhysReg(MRI, DstReg, Inst);
-    V2SPhyCopiesToErase.try_emplace(&Inst, true);
-    return;
-  }
   // Only search current block since phyreg's def & use cannot cross
-  // blocks when MF.NoPhi = false.
+  // blocks when MF.NoPhi = false. M0 can, and one live out of the block gets
+  // the first lane below.
   while (++I != E) {
     // For SI_CALL_ISEL users, replace the phys SGPR with the VGPR source
-    // and record the operand for later waterfall loop generation.
-    if (I->getOpcode() == AMDGPU::SI_CALL_ISEL) {
+    // and record the operand for later waterfall loop generation. A VGPR "as
+    // memory" access uses M0 in every lane, so it is waterfalled the same way.
+    auto *LdStIdx = dyn_cast<AMDGPUMI::VLoadStoreIdxInst>(&*I);
+    if (I->getOpcode() == AMDGPU::SI_CALL_ISEL ||
+        (LdStIdx && !LdStIdx->isGPRIdx())) {
       MachineInstr *UseMI = &*I;
       for (unsigned i = 0; i < UseMI->getNumOperands(); ++i) {
         if (UseMI->getOperand(i).isReg() &&
             UseMI->getOperand(i).getReg() == DstReg) {
+          // The waterfall loop reads the whole register. A call's copy is
+          // inside the call sequence the loop encloses, so only an access
+          // gets its sub-register copied out here.
+          unsigned SubReg = Inst.getOperand(1).getSubReg();
+          if (LdStIdx && SubReg && SrcReg == Inst.getOperand(1).getReg()) {
+            SrcReg = MRI.createVirtualRegister(
+                RI.getVGPRClassForBitWidth(RI.getSubRegIdxSize(SubReg)));
+            BuildMI(*Inst.getParent(), Inst, Inst.getDebugLoc(),
+                    get(AMDGPU::COPY), SrcReg)
+                .addReg(Inst.getOperand(1).getReg(), {}, SubReg);
+          }
           MachineOperand *MO = &UseMI->getOperand(i);
           MO->setReg(SrcReg);
           V2PhysSCopyInfo &V2SCopyInfo = WaterFalls[UseMI];
@@ -8354,6 +8335,11 @@ void SIInstrInfo::handleCopyToPhysHelper(
     }
     if (I->findRegisterDefOperand(DstReg, &RI))
       break;
+  }
+  // Any other reader of M0 takes the first lane.
+  if (DstReg == AMDGPU::M0 && !V2SPhyCopiesToErase.lookup(&Inst)) {
+    createReadFirstLaneFromCopyToPhysReg(MRI, DstReg, Inst);
+    V2SPhyCopiesToErase[&Inst] = true;
   }
 }
 

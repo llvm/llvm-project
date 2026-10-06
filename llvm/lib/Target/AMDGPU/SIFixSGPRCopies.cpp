@@ -67,7 +67,6 @@
 #include "SIFixSGPRCopies.h"
 #include "AMDGPU.h"
 #include "AMDGPULaneMaskUtils.h"
-#include "AMDGPUMachineInstrs.h"
 #include "GCNSubtarget.h"
 #include "llvm/CodeGen/MachineDominators.h"
 #include "llvm/InitializePasses.h"
@@ -901,21 +900,6 @@ bool SIFixSGPRCopies::tryMoveVGPRConstToSGPR(
   return true;
 }
 
-// Whether the value \p Copy writes to M0 is the index of a VGPR "as memory"
-// access.
-static bool isReadByM0IndexedAccess(const MachineInstr &Copy,
-                                    const SIRegisterInfo *TRI) {
-  MachineBasicBlock::const_iterator I(Copy), E = Copy.getParent()->end();
-  while (++I != E) {
-    auto *LdSt = dyn_cast<AMDGPUMI::VLoadStoreIdxInst>(&*I);
-    if (LdSt && !LdSt->isGPRIdx())
-      return true;
-    if (I->definesRegister(AMDGPU::M0, TRI))
-      return false;
-  }
-  return false;
-}
-
 bool SIFixSGPRCopies::lowerSpecialCase(MachineInstr &MI,
                                        MachineBasicBlock::iterator &I) {
   Register DstReg = MI.getOperand(0).getReg();
@@ -923,28 +907,13 @@ bool SIFixSGPRCopies::lowerSpecialCase(MachineInstr &MI,
   if (!DstReg.isVirtual()) {
     // If the destination register is a physical register there isn't
     // really much we can do to fix this.
-    // Some special instructions use M0 as an input. Some even only use
-    // the first lane. Insert a readfirstlane and hope for the best.
+    // Some special instructions use M0 as an input. moveToVALU waterfalls the
+    // ones that use it in every lane and gives the rest the first lane.
     const TargetRegisterClass *SrcRC = MRI->getRegClass(SrcReg);
     if (DstReg == AMDGPU::M0 && TRI->hasVectorRegisters(SrcRC)) {
-      // A VGPR "as memory" access uses it in every lane, so moveToVALU
-      // waterfalls it instead.
-      if (isReadByM0IndexedAccess(MI, TRI))
-        return false;
-
-      Register TmpReg =
-          MRI->createVirtualRegister(&AMDGPU::SReg_32_XM0RegClass);
-
-      const MCInstrDesc &ReadFirstLaneDesc =
-          TII->get(AMDGPU::V_READFIRSTLANE_B32);
-      BuildMI(*MI.getParent(), MI, MI.getDebugLoc(), ReadFirstLaneDesc, TmpReg)
-          .add(MI.getOperand(1));
-
+      const TargetRegisterClass *OpRC =
+          TII->getRegClass(TII->get(AMDGPU::V_READFIRSTLANE_B32), 1);
       unsigned SubReg = MI.getOperand(1).getSubReg();
-      MI.getOperand(1).setReg(TmpReg);
-      MI.getOperand(1).setSubReg(AMDGPU::NoSubRegister);
-
-      const TargetRegisterClass *OpRC = TII->getRegClass(ReadFirstLaneDesc, 1);
       const TargetRegisterClass *ConstrainRC =
           SubReg == AMDGPU::NoSubRegister
               ? OpRC
@@ -952,7 +921,7 @@ bool SIFixSGPRCopies::lowerSpecialCase(MachineInstr &MI,
 
       if (!MRI->constrainRegClass(SrcReg, ConstrainRC))
         llvm_unreachable("failed to constrain register");
-      return true;
+      return false;
     }
 
     if (tryMoveVGPRConstToSGPR(MI.getOperand(1), DstReg, MI.getParent(), MI,
