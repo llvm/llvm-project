@@ -221,13 +221,11 @@ Sections:
 # LLVM-MISSING-INFO-NEXT:     Version: 0
 # LLVM-MISSING-INFO-NEXT:     IsIndirectTarget: Yes
 # LLVM-MISSING-INFO-NEXT:     TypeID: 0x0
-# LLVM-MISSING-INFO-NEXT:     NumDirectCallees: 1
 # LLVM-MISSING-INFO-NEXT:     DirectCallees [
 # LLVM-MISSING-INFO-NEXT:       {
 # LLVM-MISSING-INFO-NEXT:         Offset: 0x13
 # LLVM-MISSING-INFO-NEXT:       }
 # LLVM-MISSING-INFO-NEXT:     ]
-# LLVM-MISSING-INFO-NEXT:     NumIndirectTargetTypeIDs: 0
 # LLVM-MISSING-INFO-NEXT:     IndirectTypeIDs: []
 # LLVM-MISSING-INFO-NEXT:   }
 # LLVM-MISSING-INFO-NEXT:   Function {

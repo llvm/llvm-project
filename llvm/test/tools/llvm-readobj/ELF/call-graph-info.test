@@ -15,10 +15,8 @@
 # LLVM-NONRELOC-NEXT:       Version: 0
 # LLVM-NONRELOC-NEXT:       IsIndirectTarget: Yes
 # LLVM-NONRELOC-NEXT:       TypeID: 0x3ECBEEF531F74424
-# LLVM-NONRELOC-NEXT:       NumDirectCallees: 0
 # LLVM-NONRELOC-NEXT:       DirectCallees [
 # LLVM-NONRELOC-NEXT:       ]
-# LLVM-NONRELOC-NEXT:       NumIndirectTargetTypeIDs: 0
 # LLVM-NONRELOC-NEXT:       IndirectTypeIDs: []
 # LLVM-NONRELOC-NEXT:     }
 # LLVM-NONRELOC-NEXT:     Function {
@@ -27,10 +25,8 @@
 # LLVM-NONRELOC-NEXT:       Version: 0
 # LLVM-NONRELOC-NEXT:       IsIndirectTarget: Yes
 # LLVM-NONRELOC-NEXT:       TypeID: 0x3ECBEEF531F74424
-# LLVM-NONRELOC-NEXT:       NumDirectCallees: 0
 # LLVM-NONRELOC-NEXT:       DirectCallees [
 # LLVM-NONRELOC-NEXT:       ]
-# LLVM-NONRELOC-NEXT:       NumIndirectTargetTypeIDs: 0
 # LLVM-NONRELOC-NEXT:       IndirectTypeIDs: []
 # LLVM-NONRELOC-NEXT:     }
 # LLVM-NONRELOC-NEXT:     Function {
@@ -39,10 +35,8 @@
 # LLVM-NONRELOC-NEXT:       Version: 0
 # LLVM-NONRELOC-NEXT:       IsIndirectTarget: Yes
 # LLVM-NONRELOC-NEXT:       TypeID: 0x308E4B8159BC8654
-# LLVM-NONRELOC-NEXT:       NumDirectCallees: 0
 # LLVM-NONRELOC-NEXT:       DirectCallees [
 # LLVM-NONRELOC-NEXT:       ]
-# LLVM-NONRELOC-NEXT:       NumIndirectTargetTypeIDs: 0
 # LLVM-NONRELOC-NEXT:       IndirectTypeIDs: []
 # LLVM-NONRELOC-NEXT:     }
 # LLVM-NONRELOC-NEXT:     Function {
@@ -51,7 +45,6 @@
 # LLVM-NONRELOC-NEXT:       Version: 0
 # LLVM-NONRELOC-NEXT:       IsIndirectTarget: Yes
 # LLVM-NONRELOC-NEXT:       TypeID: 0xFA6809609A76AFCA
-# LLVM-NONRELOC-NEXT:       NumDirectCallees: 3
 # LLVM-NONRELOC-NEXT:       DirectCallees [
 # LLVM-NONRELOC-NEXT:         {
 # LLVM-NONRELOC-NEXT:           Names: [foo]
@@ -66,7 +59,6 @@
 # LLVM-NONRELOC-NEXT:           Address: 0x17B0
 # LLVM-NONRELOC-NEXT:         }
 # LLVM-NONRELOC-NEXT:       ]
-# LLVM-NONRELOC-NEXT:       NumIndirectTargetTypeIDs: 2
 # LLVM-NONRELOC-NEXT:       IndirectTypeIDs: [0x3ECBEEF531F74424, 0x308E4B8159BC8654]
 # LLVM-NONRELOC-NEXT:     }
 # LLVM-NONRELOC-NEXT:   ]
@@ -81,9 +73,7 @@
 # JSON-NONRELOC-NEXT:          "Version": 0,
 # JSON-NONRELOC-NEXT:          "IsIndirectTarget": true,
 # JSON-NONRELOC-NEXT:          "TypeID": 4524972987496481828,
-# JSON-NONRELOC-NEXT:          "NumDirectCallees": 0,
 # JSON-NONRELOC-NEXT:          "DirectCallees": [],
-# JSON-NONRELOC-NEXT:          "NumIndirectTargetTypeIDs": 0,
 # JSON-NONRELOC-NEXT:          "IndirectTypeIDs": []
 # JSON-NONRELOC-NEXT:        }
 # JSON-NONRELOC-NEXT:      },
@@ -96,9 +86,7 @@
 # JSON-NONRELOC-NEXT:          "Version": 0,
 # JSON-NONRELOC-NEXT:          "IsIndirectTarget": true,
 # JSON-NONRELOC-NEXT:          "TypeID": 4524972987496481828,
-# JSON-NONRELOC-NEXT:          "NumDirectCallees": 0,
 # JSON-NONRELOC-NEXT:          "DirectCallees": [],
-# JSON-NONRELOC-NEXT:          "NumIndirectTargetTypeIDs": 0,
 # JSON-NONRELOC-NEXT:          "IndirectTypeIDs": []
 # JSON-NONRELOC-NEXT:        }
 # JSON-NONRELOC-NEXT:      },
@@ -111,9 +99,7 @@
 # JSON-NONRELOC-NEXT:          "Version": 0,
 # JSON-NONRELOC-NEXT:          "IsIndirectTarget": true,
 # JSON-NONRELOC-NEXT:          "TypeID": 3498816979441845844,
-# JSON-NONRELOC-NEXT:          "NumDirectCallees": 0,
 # JSON-NONRELOC-NEXT:          "DirectCallees": [],
-# JSON-NONRELOC-NEXT:          "NumIndirectTargetTypeIDs": 0,
 # JSON-NONRELOC-NEXT:          "IndirectTypeIDs": []
 # JSON-NONRELOC-NEXT:        }
 # JSON-NONRELOC-NEXT:      },
@@ -126,7 +112,6 @@
 # JSON-NONRELOC-NEXT:          "Version": 0,
 # JSON-NONRELOC-NEXT:          "IsIndirectTarget": true,
 # JSON-NONRELOC-NEXT:          "TypeID": 18043682217572872138,
-# JSON-NONRELOC-NEXT:          "NumDirectCallees": 3,
 # JSON-NONRELOC-NEXT:          "DirectCallees": [
 # JSON-NONRELOC-NEXT:            {
 # JSON-NONRELOC-NEXT:              "Names": [
@@ -147,7 +132,6 @@
 # JSON-NONRELOC-NEXT:              "Address": 6064
 # JSON-NONRELOC-NEXT:            }
 # JSON-NONRELOC-NEXT:          ],
-# JSON-NONRELOC-NEXT:          "NumIndirectTargetTypeIDs": 2,
 # JSON-NONRELOC-NEXT:          "IndirectTypeIDs": [
 # JSON-NONRELOC-NEXT:            4524972987496481828,
 # JSON-NONRELOC-NEXT:            3498816979441845844
@@ -239,10 +223,8 @@ Symbols:
 # LLVM-RELOC-NEXT:     Version: 0
 # LLVM-RELOC-NEXT:     IsIndirectTarget: Yes
 # LLVM-RELOC-NEXT:     TypeID: 0xF85C699BB8EF20A2
-# LLVM-RELOC-NEXT:     NumDirectCallees: 0
 # LLVM-RELOC-NEXT:     DirectCallees [
 # LLVM-RELOC-NEXT:     ]
-# LLVM-RELOC-NEXT:     NumIndirectTargetTypeIDs: 0
 # LLVM-RELOC-NEXT:     IndirectTypeIDs: []
 # LLVM-RELOC-NEXT:   }
 # LLVM-RELOC-NEXT:   Function {
@@ -254,10 +236,8 @@ Symbols:
 # LLVM-RELOC-NEXT:     Version: 0
 # LLVM-RELOC-NEXT:     IsIndirectTarget: Yes
 # LLVM-RELOC-NEXT:     TypeID: 0xF85C699BB8EF20A2
-# LLVM-RELOC-NEXT:     NumDirectCallees: 0
 # LLVM-RELOC-NEXT:     DirectCallees [
 # LLVM-RELOC-NEXT:     ]
-# LLVM-RELOC-NEXT:     NumIndirectTargetTypeIDs: 0
 # LLVM-RELOC-NEXT:     IndirectTypeIDs: []
 # LLVM-RELOC-NEXT:   }
 # LLVM-RELOC-NEXT:   Function {
@@ -269,10 +249,8 @@ Symbols:
 # LLVM-RELOC-NEXT:     Version: 0
 # LLVM-RELOC-NEXT:     IsIndirectTarget: Yes
 # LLVM-RELOC-NEXT:     TypeID: 0x308E4B8159BC8654
-# LLVM-RELOC-NEXT:     NumDirectCallees: 0
 # LLVM-RELOC-NEXT:     DirectCallees [
 # LLVM-RELOC-NEXT:     ]
-# LLVM-RELOC-NEXT:     NumIndirectTargetTypeIDs: 0
 # LLVM-RELOC-NEXT:     IndirectTypeIDs: []
 # LLVM-RELOC-NEXT:   }
 # LLVM-RELOC-NEXT:   Function {
@@ -284,7 +262,6 @@ Symbols:
 # LLVM-RELOC-NEXT:     Version: 0
 # LLVM-RELOC-NEXT:     IsIndirectTarget: Yes
 # LLVM-RELOC-NEXT:     TypeID: 0xA9494DEF81A01DC
-# LLVM-RELOC-NEXT:     NumDirectCallees: 3
 # LLVM-RELOC-NEXT:     DirectCallees [
 # LLVM-RELOC-NEXT:       {
 # LLVM-RELOC-NEXT:         Relocation {
@@ -308,7 +285,6 @@ Symbols:
 # LLVM-RELOC-NEXT:         }
 # LLVM-RELOC-NEXT:       }
 # LLVM-RELOC-NEXT:     ]
-# LLVM-RELOC-NEXT:     NumIndirectTargetTypeIDs: 2
 # LLVM-RELOC-NEXT:     IndirectTypeIDs: [0xF85C699BB8EF20A2, 0x308E4B8159BC8654]
 # LLVM-RELOC-NEXT:   }
 # LLVM-RELOC-NEXT: ]
@@ -327,9 +303,7 @@ Symbols:
 # JSON-RELOC-NEXT:          "Version": 0,
 # JSON-RELOC-NEXT:          "IsIndirectTarget": true,
 # JSON-RELOC-NEXT:          "TypeID": 17896295136807035042,
-# JSON-RELOC-NEXT:          "NumDirectCallees": 0,
 # JSON-RELOC-NEXT:          "DirectCallees": [],
-# JSON-RELOC-NEXT:          "NumIndirectTargetTypeIDs": 0,
 # JSON-RELOC-NEXT:          "IndirectTypeIDs": []
 # JSON-RELOC-NEXT:        }
 # JSON-RELOC-NEXT:      },
@@ -346,9 +320,7 @@ Symbols:
 # JSON-RELOC-NEXT:          "Version": 0,
 # JSON-RELOC-NEXT:          "IsIndirectTarget": true,
 # JSON-RELOC-NEXT:          "TypeID": 17896295136807035042,
-# JSON-RELOC-NEXT:          "NumDirectCallees": 0,
 # JSON-RELOC-NEXT:          "DirectCallees": [],
-# JSON-RELOC-NEXT:          "NumIndirectTargetTypeIDs": 0,
 # JSON-RELOC-NEXT:          "IndirectTypeIDs": []
 # JSON-RELOC-NEXT:        }
 # JSON-RELOC-NEXT:      },
@@ -365,9 +337,7 @@ Symbols:
 # JSON-RELOC-NEXT:          "Version": 0,
 # JSON-RELOC-NEXT:          "IsIndirectTarget": true,
 # JSON-RELOC-NEXT:          "TypeID": 3498816979441845844,
-# JSON-RELOC-NEXT:          "NumDirectCallees": 0,
 # JSON-RELOC-NEXT:          "DirectCallees": [],
-# JSON-RELOC-NEXT:          "NumIndirectTargetTypeIDs": 0,
 # JSON-RELOC-NEXT:          "IndirectTypeIDs": []
 # JSON-RELOC-NEXT:        }
 # JSON-RELOC-NEXT:      },
@@ -384,7 +354,6 @@ Symbols:
 # JSON-RELOC-NEXT:          "Version": 0,
 # JSON-RELOC-NEXT:          "IsIndirectTarget": true,
 # JSON-RELOC-NEXT:          "TypeID": 762397922298560988,
-# JSON-RELOC-NEXT:          "NumDirectCallees": 3,
 # JSON-RELOC-NEXT:          "DirectCallees": [
 # JSON-RELOC-NEXT:            {
 # JSON-RELOC-NEXT:              "Relocation": {
@@ -417,7 +386,6 @@ Symbols:
 # JSON-RELOC-NEXT:              }
 # JSON-RELOC-NEXT:            }
 # JSON-RELOC-NEXT:          ],
-# JSON-RELOC-NEXT:          "NumIndirectTargetTypeIDs": 2,
 # JSON-RELOC-NEXT:          "IndirectTypeIDs": [
 # JSON-RELOC-NEXT:            17896295136807035042,
 # JSON-RELOC-NEXT:            3498816979441845844
@@ -537,7 +505,6 @@ Symbols:
 # LLVM-ARM-THUMB-NEXT:     Version: 0
 # LLVM-ARM-THUMB-NEXT:     IsIndirectTarget: No
 # LLVM-ARM-THUMB-NEXT:     TypeID: 0x123456789ABCDEF0
-# LLVM-ARM-THUMB-NEXT:     NumDirectCallees: 1
 # LLVM-ARM-THUMB-NEXT:     DirectCallees [
 # LLVM-ARM-THUMB-NEXT:       {
 # LLVM-ARM-THUMB-NEXT:         Relocation {
@@ -548,7 +515,6 @@ Symbols:
 # LLVM-ARM-THUMB-NEXT:         }
 # LLVM-ARM-THUMB-NEXT:       }
 # LLVM-ARM-THUMB-NEXT:     ]
-# LLVM-ARM-THUMB-NEXT:     NumIndirectTargetTypeIDs: 0
 # LLVM-ARM-THUMB-NEXT:     IndirectTypeIDs: []
 # LLVM-ARM-THUMB-NEXT:   }
 # LLVM-ARM-THUMB-NEXT: ]
@@ -568,7 +534,6 @@ Symbols:
 # JSON-ARM-THUMB-NEXT:        "Version": 0,
 # JSON-ARM-THUMB-NEXT:        "IsIndirectTarget": false,
 # JSON-ARM-THUMB-NEXT:        "TypeID": 1311768467463790320,
-# JSON-ARM-THUMB-NEXT:        "NumDirectCallees": 1,
 # JSON-ARM-THUMB-NEXT:        "DirectCallees": [
 # JSON-ARM-THUMB-NEXT:          {
 # JSON-ARM-THUMB-NEXT:            "Relocation": {
@@ -582,7 +547,6 @@ Symbols:
 # JSON-ARM-THUMB-NEXT:            }
 # JSON-ARM-THUMB-NEXT:          }
 # JSON-ARM-THUMB-NEXT:        ],
-# JSON-ARM-THUMB-NEXT:        "NumIndirectTargetTypeIDs": 0,
 # JSON-ARM-THUMB-NEXT:        "IndirectTypeIDs": []
 # JSON-ARM-THUMB-NEXT:      }
 # JSON-ARM-THUMB-NEXT:    }
@@ -646,10 +610,8 @@ Symbols:
 # LLVM-MULTI-NAMES-NEXT:     Version: 0
 # LLVM-MULTI-NAMES-NEXT:     IsIndirectTarget: Yes
 # LLVM-MULTI-NAMES-NEXT:     TypeID: 0x0
-# LLVM-MULTI-NAMES-NEXT:     NumDirectCallees: 0
 # LLVM-MULTI-NAMES-NEXT:     DirectCallees [
 # LLVM-MULTI-NAMES-NEXT:     ]
-# LLVM-MULTI-NAMES-NEXT:     NumIndirectTargetTypeIDs: 0
 # LLVM-MULTI-NAMES-NEXT:     IndirectTypeIDs: []
 # LLVM-MULTI-NAMES-NEXT:   }
 # LLVM-MULTI-NAMES-NEXT: ]
@@ -665,9 +627,7 @@ Symbols:
 # JSON-MULTI-NAMES-NEXT:        "Version": 0,
 # JSON-MULTI-NAMES-NEXT:        "IsIndirectTarget": true,
 # JSON-MULTI-NAMES-NEXT:        "TypeID": 0,
-# JSON-MULTI-NAMES-NEXT:        "NumDirectCallees": 0,
 # JSON-MULTI-NAMES-NEXT:        "DirectCallees": [],
-# JSON-MULTI-NAMES-NEXT:        "NumIndirectTargetTypeIDs": 0,
 # JSON-MULTI-NAMES-NEXT:        "IndirectTypeIDs": []
 # JSON-MULTI-NAMES-NEXT:      }
 # JSON-MULTI-NAMES-NEXT:    }
@@ -718,10 +678,8 @@ Symbols:
 # LLVM-MULTI-RELOC-NEXT:     Version: 0
 # LLVM-MULTI-RELOC-NEXT:     IsIndirectTarget: Yes
 # LLVM-MULTI-RELOC-NEXT:     TypeID: 0xF85C699BB8EF20A2
-# LLVM-MULTI-RELOC-NEXT:     NumDirectCallees: 0
 # LLVM-MULTI-RELOC-NEXT:     DirectCallees [
 # LLVM-MULTI-RELOC-NEXT:     ]
-# LLVM-MULTI-RELOC-NEXT:     NumIndirectTargetTypeIDs: 0
 # LLVM-MULTI-RELOC-NEXT:     IndirectTypeIDs: []
 # LLVM-MULTI-RELOC-NEXT:   }
 # LLVM-MULTI-RELOC-NEXT:   Function {
@@ -733,10 +691,8 @@ Symbols:
 # LLVM-MULTI-RELOC-NEXT:     Version: 0
 # LLVM-MULTI-RELOC-NEXT:     IsIndirectTarget: Yes
 # LLVM-MULTI-RELOC-NEXT:     TypeID: 0xF85C699BB8EF20A2
-# LLVM-MULTI-RELOC-NEXT:     NumDirectCallees: 0
 # LLVM-MULTI-RELOC-NEXT:     DirectCallees [
 # LLVM-MULTI-RELOC-NEXT:     ]
-# LLVM-MULTI-RELOC-NEXT:     NumIndirectTargetTypeIDs: 0
 # LLVM-MULTI-RELOC-NEXT:     IndirectTypeIDs: []
 # LLVM-MULTI-RELOC-NEXT:   }
 # LLVM-MULTI-RELOC-NEXT: ]
@@ -755,9 +711,7 @@ Symbols:
 # JSON-MULTI-RELOC-NEXT:          "Version": 0,
 # JSON-MULTI-RELOC-NEXT:          "IsIndirectTarget": true,
 # JSON-MULTI-RELOC-NEXT:          "TypeID": 17896295136807035042,
-# JSON-MULTI-RELOC-NEXT:          "NumDirectCallees": 0,
 # JSON-MULTI-RELOC-NEXT:          "DirectCallees": [],
-# JSON-MULTI-RELOC-NEXT:          "NumIndirectTargetTypeIDs": 0,
 # JSON-MULTI-RELOC-NEXT:          "IndirectTypeIDs": []
 # JSON-MULTI-RELOC-NEXT:        }
 # JSON-MULTI-RELOC-NEXT:      },
@@ -774,9 +728,7 @@ Symbols:
 # JSON-MULTI-RELOC-NEXT:          "Version": 0,
 # JSON-MULTI-RELOC-NEXT:          "IsIndirectTarget": true,
 # JSON-MULTI-RELOC-NEXT:          "TypeID": 17896295136807035042,
-# JSON-MULTI-RELOC-NEXT:          "NumDirectCallees": 0,
 # JSON-MULTI-RELOC-NEXT:          "DirectCallees": [],
-# JSON-MULTI-RELOC-NEXT:          "NumIndirectTargetTypeIDs": 0,
 # JSON-MULTI-RELOC-NEXT:          "IndirectTypeIDs": []
 # JSON-MULTI-RELOC-NEXT:        }
 # JSON-MULTI-RELOC-NEXT:      }
@@ -845,10 +797,8 @@ Symbols:
 # LLVM-MULTI-NONRELOC-NEXT:       Version: 0
 # LLVM-MULTI-NONRELOC-NEXT:       IsIndirectTarget: Yes
 # LLVM-MULTI-NONRELOC-NEXT:       TypeID: 0x3ECBEEF531F74424
-# LLVM-MULTI-NONRELOC-NEXT:       NumDirectCallees: 0
 # LLVM-MULTI-NONRELOC-NEXT:       DirectCallees [
 # LLVM-MULTI-NONRELOC-NEXT:       ]
-# LLVM-MULTI-NONRELOC-NEXT:       NumIndirectTargetTypeIDs: 0
 # LLVM-MULTI-NONRELOC-NEXT:       IndirectTypeIDs: []
 # LLVM-MULTI-NONRELOC-NEXT:     }
 # LLVM-MULTI-NONRELOC-NEXT:     Function {
@@ -857,10 +807,8 @@ Symbols:
 # LLVM-MULTI-NONRELOC-NEXT:       Version: 0
 # LLVM-MULTI-NONRELOC-NEXT:       IsIndirectTarget: Yes
 # LLVM-MULTI-NONRELOC-NEXT:       TypeID: 0x3ECBEEF531F74424
-# LLVM-MULTI-NONRELOC-NEXT:       NumDirectCallees: 0
 # LLVM-MULTI-NONRELOC-NEXT:       DirectCallees [
 # LLVM-MULTI-NONRELOC-NEXT:       ]
-# LLVM-MULTI-NONRELOC-NEXT:       NumIndirectTargetTypeIDs: 0
 # LLVM-MULTI-NONRELOC-NEXT:       IndirectTypeIDs: []
 # LLVM-MULTI-NONRELOC-NEXT:     }
 # LLVM-MULTI-NONRELOC-NEXT:   ]
@@ -875,9 +823,7 @@ Symbols:
 # JSON-MULTI-NONRELOC-NEXT:          "Version": 0,
 # JSON-MULTI-NONRELOC-NEXT:          "IsIndirectTarget": true,
 # JSON-MULTI-NONRELOC-NEXT:          "TypeID": 4524972987496481828,
-# JSON-MULTI-NONRELOC-NEXT:          "NumDirectCallees": 0,
 # JSON-MULTI-NONRELOC-NEXT:          "DirectCallees": [],
-# JSON-MULTI-NONRELOC-NEXT:          "NumIndirectTargetTypeIDs": 0,
 # JSON-MULTI-NONRELOC-NEXT:          "IndirectTypeIDs": []
 # JSON-MULTI-NONRELOC-NEXT:        }
 # JSON-MULTI-NONRELOC-NEXT:      },
@@ -890,9 +836,7 @@ Symbols:
 # JSON-MULTI-NONRELOC-NEXT:          "Version": 0,
 # JSON-MULTI-NONRELOC-NEXT:          "IsIndirectTarget": true,
 # JSON-MULTI-NONRELOC-NEXT:          "TypeID": 4524972987496481828,
-# JSON-MULTI-NONRELOC-NEXT:          "NumDirectCallees": 0,
 # JSON-MULTI-NONRELOC-NEXT:          "DirectCallees": [],
-# JSON-MULTI-NONRELOC-NEXT:          "NumIndirectTargetTypeIDs": 0,
 # JSON-MULTI-NONRELOC-NEXT:          "IndirectTypeIDs": []
 # JSON-MULTI-NONRELOC-NEXT:        }
 # JSON-MULTI-NONRELOC-NEXT:      }
@@ -962,7 +906,6 @@ Symbols:
 # LLVM-RELOC-ADDEND-NEXT:     Version: 0
 # LLVM-RELOC-ADDEND-NEXT:     IsIndirectTarget: Yes
 # LLVM-RELOC-ADDEND-NEXT:     TypeID: 0x7E04A0FB7AD8BCD5
-# LLVM-RELOC-ADDEND-NEXT:     NumDirectCallees: 2
 # LLVM-RELOC-ADDEND-NEXT:     DirectCallees [
 # LLVM-RELOC-ADDEND-NEXT:       {
 # LLVM-RELOC-ADDEND-NEXT:         Relocation {
@@ -979,7 +922,6 @@ Symbols:
 # LLVM-RELOC-ADDEND-NEXT:         }
 # LLVM-RELOC-ADDEND-NEXT:       }
 # LLVM-RELOC-ADDEND-NEXT:     ]
-# LLVM-RELOC-ADDEND-NEXT:     NumIndirectTargetTypeIDs: 0
 # LLVM-RELOC-ADDEND-NEXT:     IndirectTypeIDs: []
 # LLVM-RELOC-ADDEND-NEXT:   }
 # LLVM-RELOC-ADDEND-NEXT:   Function {
@@ -991,10 +933,8 @@ Symbols:
 # LLVM-RELOC-ADDEND-NEXT:     Version: 0
 # LLVM-RELOC-ADDEND-NEXT:     IsIndirectTarget: No
 # LLVM-RELOC-ADDEND-NEXT:     TypeID: 0x0
-# LLVM-RELOC-ADDEND-NEXT:     NumDirectCallees: 0
 # LLVM-RELOC-ADDEND-NEXT:     DirectCallees [
 # LLVM-RELOC-ADDEND-NEXT:     ]
-# LLVM-RELOC-ADDEND-NEXT:     NumIndirectTargetTypeIDs: 0
 # LLVM-RELOC-ADDEND-NEXT:     IndirectTypeIDs: []
 # LLVM-RELOC-ADDEND-NEXT:   }
 # LLVM-RELOC-ADDEND-NEXT:   Function {
@@ -1006,10 +946,8 @@ Symbols:
 # LLVM-RELOC-ADDEND-NEXT:     Version: 0
 # LLVM-RELOC-ADDEND-NEXT:     IsIndirectTarget: No
 # LLVM-RELOC-ADDEND-NEXT:     TypeID: 0x0
-# LLVM-RELOC-ADDEND-NEXT:     NumDirectCallees: 0
 # LLVM-RELOC-ADDEND-NEXT:     DirectCallees [
 # LLVM-RELOC-ADDEND-NEXT:     ]
-# LLVM-RELOC-ADDEND-NEXT:     NumIndirectTargetTypeIDs: 0
 # LLVM-RELOC-ADDEND-NEXT:     IndirectTypeIDs: []
 # LLVM-RELOC-ADDEND-NEXT:   }
 # LLVM-RELOC-ADDEND-NEXT: ]
@@ -1028,7 +966,6 @@ Symbols:
 # JSON-RELOC-ADDEND-NEXT:           "Version": 0,
 # JSON-RELOC-ADDEND-NEXT:           "IsIndirectTarget": true,
 # JSON-RELOC-ADDEND-NEXT:           "TypeID": 9080559750644022485,
-# JSON-RELOC-ADDEND-NEXT:           "NumDirectCallees": 2,
 # JSON-RELOC-ADDEND-NEXT:           "DirectCallees": [
 # JSON-RELOC-ADDEND-NEXT:             {
 # JSON-RELOC-ADDEND-NEXT:               "Relocation": {
@@ -1051,7 +988,6 @@ Symbols:
 # JSON-RELOC-ADDEND-NEXT:               }
 # JSON-RELOC-ADDEND-NEXT:             }
 # JSON-RELOC-ADDEND-NEXT:           ],
-# JSON-RELOC-ADDEND-NEXT:           "NumIndirectTargetTypeIDs": 0,
 # JSON-RELOC-ADDEND-NEXT:           "IndirectTypeIDs": []
 # JSON-RELOC-ADDEND-NEXT:         }
 # JSON-RELOC-ADDEND-NEXT:       },
@@ -1068,9 +1004,7 @@ Symbols:
 # JSON-RELOC-ADDEND-NEXT:           "Version": 0,
 # JSON-RELOC-ADDEND-NEXT:           "IsIndirectTarget": false,
 # JSON-RELOC-ADDEND-NEXT:           "TypeID": 0,
-# JSON-RELOC-ADDEND-NEXT:           "NumDirectCallees": 0,
 # JSON-RELOC-ADDEND-NEXT:           "DirectCallees": [],
-# JSON-RELOC-ADDEND-NEXT:           "NumIndirectTargetTypeIDs": 0,
 # JSON-RELOC-ADDEND-NEXT:           "IndirectTypeIDs": []
 # JSON-RELOC-ADDEND-NEXT:         }
 # JSON-RELOC-ADDEND-NEXT:       },
@@ -1087,9 +1021,7 @@ Symbols:
 # JSON-RELOC-ADDEND-NEXT:           "Version": 0,
 # JSON-RELOC-ADDEND-NEXT:           "IsIndirectTarget": false,
 # JSON-RELOC-ADDEND-NEXT:           "TypeID": 0,
-# JSON-RELOC-ADDEND-NEXT:           "NumDirectCallees": 0,
 # JSON-RELOC-ADDEND-NEXT:           "DirectCallees": [],
-# JSON-RELOC-ADDEND-NEXT:           "NumIndirectTargetTypeIDs": 0,
 # JSON-RELOC-ADDEND-NEXT:           "IndirectTypeIDs": []
 # JSON-RELOC-ADDEND-NEXT:         }
 # JSON-RELOC-ADDEND-NEXT:       }
@@ -1176,7 +1108,6 @@ Symbols:
 # LLVM-REL-ADDEND-NEXT:     Version: 0
 # LLVM-REL-ADDEND-NEXT:     IsIndirectTarget: Yes
 # LLVM-REL-ADDEND-NEXT:     TypeID: 0x7E04A0FB7AD8BCD5
-# LLVM-REL-ADDEND-NEXT:     NumDirectCallees: 2
 # LLVM-REL-ADDEND-NEXT:     DirectCallees [
 # LLVM-REL-ADDEND-NEXT:       {
 # LLVM-REL-ADDEND-NEXT:         Relocation {
@@ -1193,7 +1124,6 @@ Symbols:
 # LLVM-REL-ADDEND-NEXT:         }
 # LLVM-REL-ADDEND-NEXT:       }
 # LLVM-REL-ADDEND-NEXT:     ]
-# LLVM-REL-ADDEND-NEXT:     NumIndirectTargetTypeIDs: 0
 # LLVM-REL-ADDEND-NEXT:     IndirectTypeIDs: []
 # LLVM-REL-ADDEND-NEXT:   }
 # LLVM-REL-ADDEND-NEXT:   Function {
@@ -1205,10 +1135,8 @@ Symbols:
 # LLVM-REL-ADDEND-NEXT:     Version: 0
 # LLVM-REL-ADDEND-NEXT:     IsIndirectTarget: No
 # LLVM-REL-ADDEND-NEXT:     TypeID: 0x0
-# LLVM-REL-ADDEND-NEXT:     NumDirectCallees: 0
 # LLVM-REL-ADDEND-NEXT:     DirectCallees [
 # LLVM-REL-ADDEND-NEXT:     ]
-# LLVM-REL-ADDEND-NEXT:     NumIndirectTargetTypeIDs: 0
 # LLVM-REL-ADDEND-NEXT:     IndirectTypeIDs: []
 # LLVM-REL-ADDEND-NEXT:   }
 # LLVM-REL-ADDEND-NEXT:   Function {
@@ -1220,10 +1148,8 @@ Symbols:
 # LLVM-REL-ADDEND-NEXT:     Version: 0
 # LLVM-REL-ADDEND-NEXT:     IsIndirectTarget: No
 # LLVM-REL-ADDEND-NEXT:     TypeID: 0x0
-# LLVM-REL-ADDEND-NEXT:     NumDirectCallees: 0
 # LLVM-REL-ADDEND-NEXT:     DirectCallees [
 # LLVM-REL-ADDEND-NEXT:     ]
-# LLVM-REL-ADDEND-NEXT:     NumIndirectTargetTypeIDs: 0
 # LLVM-REL-ADDEND-NEXT:     IndirectTypeIDs: []
 # LLVM-REL-ADDEND-NEXT:   }
 # LLVM-REL-ADDEND-NEXT: ]
@@ -1242,7 +1168,6 @@ Symbols:
 # JSON-REL-ADDEND-NEXT:           "Version": 0,
 # JSON-REL-ADDEND-NEXT:           "IsIndirectTarget": true,
 # JSON-REL-ADDEND-NEXT:           "TypeID": 9080559750644022485,
-# JSON-REL-ADDEND-NEXT:           "NumDirectCallees": 2,
 # JSON-REL-ADDEND-NEXT:           "DirectCallees": [
 # JSON-REL-ADDEND-NEXT:             {
 # JSON-REL-ADDEND-NEXT:               "Relocation": {
@@ -1265,7 +1190,6 @@ Symbols:
 # JSON-REL-ADDEND-NEXT:               }
 # JSON-REL-ADDEND-NEXT:             }
 # JSON-REL-ADDEND-NEXT:           ],
-# JSON-REL-ADDEND-NEXT:           "NumIndirectTargetTypeIDs": 0,
 # JSON-REL-ADDEND-NEXT:           "IndirectTypeIDs": []
 # JSON-REL-ADDEND-NEXT:         }
 # JSON-REL-ADDEND-NEXT:       },
@@ -1282,9 +1206,7 @@ Symbols:
 # JSON-REL-ADDEND-NEXT:           "Version": 0,
 # JSON-REL-ADDEND-NEXT:           "IsIndirectTarget": false,
 # JSON-REL-ADDEND-NEXT:           "TypeID": 0,
-# JSON-REL-ADDEND-NEXT:           "NumDirectCallees": 0,
 # JSON-REL-ADDEND-NEXT:           "DirectCallees": [],
-# JSON-REL-ADDEND-NEXT:           "NumIndirectTargetTypeIDs": 0,
 # JSON-REL-ADDEND-NEXT:           "IndirectTypeIDs": []
 # JSON-REL-ADDEND-NEXT:         }
 # JSON-REL-ADDEND-NEXT:       },
@@ -1301,9 +1223,7 @@ Symbols:
 # JSON-REL-ADDEND-NEXT:           "Version": 0,
 # JSON-REL-ADDEND-NEXT:           "IsIndirectTarget": false,
 # JSON-REL-ADDEND-NEXT:           "TypeID": 0,
-# JSON-REL-ADDEND-NEXT:           "NumDirectCallees": 0,
 # JSON-REL-ADDEND-NEXT:           "DirectCallees": [],
-# JSON-REL-ADDEND-NEXT:           "NumIndirectTargetTypeIDs": 0,
 # JSON-REL-ADDEND-NEXT:           "IndirectTypeIDs": []
 # JSON-REL-ADDEND-NEXT:         }
 # JSON-REL-ADDEND-NEXT:       }
@@ -1466,8 +1386,7 @@ Symbols:
 # RUN: llvm-readobj --elf-output-style=LLVM --call-graph-info %t10 2>&1 | \
 # RUN:   FileCheck %s --match-full-lines --check-prefix=LLVM-DUP-CALLEE
 
-# LLVM-DUP-CALLEE:      NumDirectCallees: 2
-# LLVM-DUP-CALLEE-NEXT: DirectCallees [
+# LLVM-DUP-CALLEE:      DirectCallees [
 # LLVM-DUP-CALLEE-NEXT:   {
 # LLVM-DUP-CALLEE-NEXT:     Names: [foo]
 # LLVM-DUP-CALLEE-NEXT:     Address: 0x1790
@@ -1527,14 +1446,12 @@ Symbols:
 # LLVM-ARM-NONRELOC-NEXT:     Version: 0
 # LLVM-ARM-NONRELOC-NEXT:     IsIndirectTarget: No
 # LLVM-ARM-NONRELOC-NEXT:     TypeID: 0x0
-# LLVM-ARM-NONRELOC-NEXT:     NumDirectCallees: 1
 # LLVM-ARM-NONRELOC-NEXT:     DirectCallees [
 # LLVM-ARM-NONRELOC-NEXT:       {
 # LLVM-ARM-NONRELOC-NEXT:         Names: [bar]
 # LLVM-ARM-NONRELOC-NEXT:         Address: 0x1010
 # LLVM-ARM-NONRELOC-NEXT:       }
 # LLVM-ARM-NONRELOC-NEXT:     ]
-# LLVM-ARM-NONRELOC-NEXT:     NumIndirectTargetTypeIDs: 0
 # LLVM-ARM-NONRELOC-NEXT:     IndirectTypeIDs: []
 # LLVM-ARM-NONRELOC-NEXT:   }
 # LLVM-ARM-NONRELOC-NEXT: ]
