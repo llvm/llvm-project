@@ -1,0 +1,205 @@
+// RUN: %clang_cc1 -std=c++2d -verify %s
+
+// C++2d [over.inc.default]p1:
+//   A defaulted postfix increment or decrement operator function for a type C
+//   shall be a non-template function that
+//    -- has a first parameter of type "reference to C" or a first parameter of
+//       type "reference to volatile C", where the implicit object parameter
+//       (if any) is considered to be the first parameter,
+//    -- is defined as defaulted in C or in a context where C is complete, and
+//    -- has a declared return type of C.
+//   [...] A definition of a postfix increment or decrement operator as
+//   defaulted that appears in a class shall be the first declaration of that
+//   function.
+
+struct S {
+  S &operator++();
+  S &operator--();
+
+  S operator++(int) = default;
+  S operator--(int) = default;
+};
+
+// The implicit object parameter is the first parameter.
+struct Const {
+  Const &operator++();
+  Const operator++(int) const = default; // expected-error {{defaulted member postfix increment operator cannot be const-qualified}}
+};
+struct ConstDecrement {
+  ConstDecrement &operator--();
+  ConstDecrement operator--(int) const = default; // expected-error {{defaulted member postfix decrement operator cannot be const-qualified}}
+};
+struct Volatile {
+  Volatile &operator++() volatile;
+  Volatile operator++(int) volatile = default; // OK, "reference to volatile C"
+};
+struct RefQualified {
+  RefQualified &operator++();
+  RefQualified operator++(int) & = default;  // OK
+  RefQualified operator++(int) && = default; // OK, an rvalue reference is a "reference to C"
+};
+
+// Explicit object parameters.
+struct Explicit {
+  Explicit &operator++();
+  Explicit operator++(this Explicit &, int) = default; // OK
+};
+struct ExplicitVolatile {
+  ExplicitVolatile &operator++() volatile;
+  ExplicitVolatile operator++(this volatile ExplicitVolatile &, int) = default; // OK
+};
+struct ExplicitRvalue {
+  ExplicitRvalue &operator++();
+  ExplicitRvalue operator++(this ExplicitRvalue &&, int) = default; // OK
+};
+struct ExplicitConst {
+  ExplicitConst &operator++();
+  ExplicitConst operator++(this const ExplicitConst &, int) = default; // expected-error {{invalid explicit object parameter type for defaulted postfix increment operator; found 'const ExplicitConst &', expected 'ExplicitConst &' or 'volatile ExplicitConst &'}}
+};
+struct ExplicitOther {
+  ExplicitOther &operator++();
+  ExplicitOther operator++(this S &, int) = default; // expected-error {{invalid explicit object parameter type for defaulted postfix increment operator; found 'S &', expected 'ExplicitOther &' or 'volatile ExplicitOther &'}}
+};
+struct ExplicitByValue {
+  ExplicitByValue &operator--();
+  ExplicitByValue operator--(this ExplicitByValue, int) = default; // expected-error {{invalid explicit object parameter type for defaulted postfix decrement operator; found 'ExplicitByValue', expected 'ExplicitByValue &' or 'volatile ExplicitByValue &'}}
+};
+
+// Return type.
+struct ReturnsRef {
+  ReturnsRef &operator++();
+  ReturnsRef &operator++(int) = default; // expected-error {{return type for defaulted postfix increment operator must be 'ReturnsRef', not 'ReturnsRef &'}}
+};
+struct ReturnsConst {
+  ReturnsConst &operator++();
+  const ReturnsConst operator++(int) = default; // expected-error {{return type for defaulted postfix increment operator must be 'ReturnsConst', not 'const ReturnsConst'}}
+};
+struct ReturnsAuto {
+  ReturnsAuto &operator++();
+  auto operator++(int) = default; // expected-error {{return type for defaulted postfix increment operator must be 'ReturnsAuto', not 'auto'}}
+};
+struct ReturnsDecltypeAuto {
+  ReturnsDecltypeAuto &operator--();
+  decltype(auto) operator--(int) = default; // expected-error {{return type for defaulted postfix decrement operator must be 'ReturnsDecltypeAuto', not 'decltype(auto)'}}
+};
+struct ReturnsInt {
+  ReturnsInt &operator++();
+  int operator++(int) = default; // expected-error {{return type for defaulted postfix increment operator must be 'ReturnsInt', not 'int'}}
+};
+struct ReturnsAlias {
+  using Self = ReturnsAlias;
+  Self &operator++();
+  Self operator++(int) = default; // OK
+};
+
+// Non-member functions.
+struct N {
+  N &operator++();
+  N &operator--();
+};
+N operator++(N &, int) = default;  // OK
+N operator--(N &&, int) = default; // OK, an rvalue reference is a "reference to C"
+
+struct NV {
+  NV &operator++() volatile;
+  NV(const volatile NV &);
+  NV(NV &&);
+};
+NV operator++(volatile NV &, int) = default; // OK
+
+struct NConst { NConst &operator++(); };
+NConst operator++(const NConst &, int) = default; // expected-error {{invalid first parameter type for defaulted postfix increment operator; found 'const NConst &', expected 'NConst &' or 'volatile NConst &'}}
+struct NValue { NValue &operator++(); };
+NValue operator++(NValue, int) = default; // expected-error {{invalid first parameter type for defaulted postfix increment operator; found 'NValue', expected 'NValue &' or 'volatile NValue &'}}
+struct NRet { NRet &operator--(); };
+int operator--(NRet &, int) = default; // expected-error {{return type for defaulted postfix decrement operator must be 'NRet', not 'int'}}
+struct NMismatch { NMismatch &operator++(); };
+S operator++(NMismatch &, int) = default; // expected-error {{return type for defaulted postfix increment operator must be 'NMismatch', not 'S'}}
+struct NUnknown { NUnknown &operator++(); };
+S &operator++(NUnknown, int) = default; // expected-error {{invalid first parameter type for defaulted non-member postfix increment operator; found 'NUnknown', expected reference to a non-const class or enumeration type}}
+
+// Enumerations.
+enum E { e };
+E &operator++(E &);
+E operator++(E &, int) = default; // OK
+enum class EC { ec };
+EC operator++(EC &, int) = default; // OK, defined as deleted (see p2.cpp)
+// expected-warning@-1 {{explicitly defaulted postfix increment operator is implicitly deleted}}
+// expected-note@-2 {{defaulted 'operator++' is implicitly deleted because there is no viable prefix 'operator++' for an lvalue of type 'EC'}}
+// expected-note@-3 {{replace 'default' with 'delete'}}
+
+// C must be complete.
+struct Incomplete; // expected-note {{forward declaration of 'Incomplete'}}
+Incomplete operator++(Incomplete &, int) = default; // expected-error {{incomplete result type 'Incomplete' in function definition}}
+struct IncompleteFriend; // expected-note {{forward declaration of 'IncompleteFriend'}}
+struct Befriender {
+  friend IncompleteFriend operator++(IncompleteFriend &, int) = default; // expected-error {{cannot default postfix increment operator for incomplete type 'IncompleteFriend'}}
+};
+struct DefinedLater {
+  friend DefinedLater operator++(DefinedLater &, int) = default; // OK, defaulted in C
+  DefinedLater &operator++();
+};
+
+// A definition as defaulted that appears in a class shall be the first
+// declaration of that function.
+struct First;
+First operator++(First &, int); // expected-note {{previous declaration is here}}
+struct First {
+  First &operator++();
+  friend First operator++(First &, int) = default; // expected-error {{defaulting this postfix increment operator is not allowed because it was already declared outside the class}}
+};
+struct OutOfLine {
+  OutOfLine &operator++();
+  OutOfLine operator++(int);
+};
+OutOfLine OutOfLine::operator++(int) = default; // OK
+struct OutOfLineFriend {
+  OutOfLineFriend &operator--();
+  friend OutOfLineFriend operator--(OutOfLineFriend &, int);
+};
+OutOfLineFriend operator--(OutOfLineFriend &, int) = default; // OK
+struct Redefined {
+  Redefined &operator++();
+  Redefined operator++(int) = default;
+};
+Redefined Redefined::operator++(int) { return *this; } // expected-error {{definition of explicitly defaulted function}}
+
+// Templates cannot be defaulted.
+struct Template {
+  Template &operator++();
+  template <typename T = void> Template operator++(int) = default; // expected-error {{postfix increment operator template cannot be defaulted}}
+};
+template <typename T = void> S operator--(S &, int) = default; // expected-error {{postfix decrement operator template cannot be defaulted}}
+
+// Only the postfix forms can be defaulted.
+struct Prefix {
+  Prefix &operator++() = default; // expected-error {{only the postfix form of 'operator++' can be defaulted}}
+  Prefix &operator--() = default; // expected-error {{only the postfix form of 'operator--' can be defaulted}}
+};
+struct PrefixNonMember {};
+PrefixNonMember &operator++(PrefixNonMember &) = default; // expected-error {{only the postfix form of 'operator++' can be defaulted}}
+
+// Other operators still cannot be defaulted.
+struct Other {
+  Other operator+(int) = default; // expected-error {{only special member functions, comparison operators, and postfix increment and decrement operators may be defaulted}}
+};
+
+// Dependent declarations are checked when instantiated.
+template <typename T> struct DependentReturn {
+  DependentReturn &operator++();
+  T operator++(int) = default; // expected-error {{return type for defaulted postfix increment operator must be 'DependentReturn<int>', not 'int'}}
+};
+DependentReturn<int> dr1; // expected-note {{in instantiation of template class 'DependentReturn<int>' requested here}}
+
+template <typename T> struct DependentObject {
+  DependentObject &operator++();
+  DependentObject operator++(this T &, int) = default; // expected-error {{invalid explicit object parameter type for defaulted postfix increment operator; found 'int &', expected 'DependentObject<int> &' or 'volatile DependentObject<int> &'}}
+};
+DependentObject<int> do1; // expected-note {{in instantiation of template class 'DependentObject<int>' requested here}}
+
+template <typename T> struct DependentFriend {
+  DependentFriend &operator++();
+  friend DependentFriend operator++(DependentFriend &, int) = default; // OK
+  friend int operator--(T &, int) = default;                           // expected-error {{return type for defaulted postfix decrement operator must be 'S', not 'int'}}
+};
+DependentFriend<S> df1; // expected-note {{in instantiation of template class 'DependentFriend<S>' requested here}}

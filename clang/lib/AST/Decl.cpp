@@ -3306,7 +3306,23 @@ FunctionDecl::getDefaultedFunctionKind() const {
       return CXXSpecialMemberKind::Destructor;
   }
 
-  switch (getDeclName().getCXXOverloadedOperator()) {
+  switch (OverloadedOperatorKind OO =
+              getDeclName().getCXXOverloadedOperator()) {
+  case OO_PlusPlus:
+  case OO_MinusMinus: {
+    // Only the postfix forms can be defaulted. They are distinguished from the
+    // prefix forms by their trailing 'int' parameter, so they have exactly two
+    // parameters once the implicit object parameter (if any) is counted.
+    unsigned NumParams = getNumParams();
+    if (const auto *MD = dyn_cast<CXXMethodDecl>(this);
+        MD && MD->isImplicitObjectMemberFunction())
+      ++NumParams;
+    if (NumParams != 2)
+      break;
+    return OO == OO_PlusPlus ? PostfixOperatorKind::Increment
+                             : PostfixOperatorKind::Decrement;
+  }
+
   case OO_EqualEqual:
     return DefaultedComparisonKind::Equal;
 
