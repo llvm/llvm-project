@@ -674,8 +674,7 @@ static void createCBufferLoad(IntrinsicInst *II, LoadInst *LI,
                "CBuffer GEP index is not row aligned");
         RowIndex = Builder.CreateExactUDiv(
             RowIndex,
-            ConstantInt::get(Builder.getInt32Ty(),
-                             hlsl::CBufferRowSizeInBytes / IndexScale));
+            ConstantInt::get(RowIndex->getType(), hlsl::CBufferRowSizeInBytes / IndexScale));
       } else if (IndexScale > hlsl::CBufferRowSizeInBytes) {
         assert(IndexScale % hlsl::CBufferRowSizeInBytes == 0 &&
                "CBuffer GEP index is not row aligned");
@@ -684,9 +683,7 @@ static void createCBufferLoad(IntrinsicInst *II, LoadInst *LI,
             ConstantInt::get(Builder.getInt32Ty(),
                              IndexScale / hlsl::CBufferRowSizeInBytes));
       }
-      CurrentRow = cast<ConstantInt>(CurrentRow)->isZero()
-                       ? RowIndex
-                       : Builder.CreateAdd(CurrentRow, RowIndex);
+      CurrentRow = Builder.CreateAdd(CurrentRow, RowIndex);
       CurrentIndex = 0;
     }
   }
@@ -819,12 +816,12 @@ static SmallVector<IntrinsicInst *> collectUsedHandles(Value *Ptr) {
       for (Use &V : Phi->incoming_values())
         Worklist.push_back(V.get());
       VisitedPhis.insert(Phi);
-    } else if (auto *Select = dyn_cast<SelectInst>(X))
-      for (Value *V : {Select->getTrueValue(), Select->getFalseValue()})
-        Worklist.push_back(V);
-    else if (auto *GEP = dyn_cast<GetElementPtrInst>(X))
+    } else if (auto *Select = dyn_cast<SelectInst>(X)) {
+      Worklist.push_back(Select->getTrueValue());
+      Worklist.push_back(Select->getFalseValue());
+    } else if (auto *GEP = dyn_cast<GetElementPtrInst>(X)) {
       Worklist.push_back(GEP->getPointerOperand());
-    else if (auto *II = dyn_cast<IntrinsicInst>(X)) {
+    } else if (auto *II = dyn_cast<IntrinsicInst>(X)) {
       Intrinsic::ID IID = II->getIntrinsicID();
 
       if (IID == Intrinsic::dx_resource_getpointer ||
@@ -961,7 +958,7 @@ getAccessIndices(Instruction *I, SmallSetVector<Instruction *, 16> &DeadInsts,
     // the map even if we end up deleting newly created phi below since we can't
     // possibly have a constant value if we recursed.
     if (Phi->getType()->isTargetExtTy())
-      VisitedPhis[Phi] = {nullptr, HandlePhi.get(), nullptr};
+      VisitedPhis[Phi] = {/*GetPtrIdx=*/nullptr, HandlePhi.get(), /*OffsetIdx=*/nullptr};
     else if (Phi->getType()->isPointerTy())
       VisitedPhis[Phi] = {GetPtrPhi.get(), HandlePhi.get(), OffsetPhi.get()};
 
