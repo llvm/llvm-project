@@ -23,6 +23,18 @@ let OperandType = "OPERAND_IMMEDIATE" in {
 
 def brtarget    : Operand<OtherVT>;
 
+// Keep the register class so that register operands are constrained and
+// verified, but permit an immediate in the same operand slot.
+class NVPTXRegOrImm<NVPTXRegClass RC> : RegisterOperand<RC> {
+  let OperandType = "OPERAND_UNKNOWN";
+}
+
+def B32Op : NVPTXRegOrImm<B32>;
+
+// Use only in result patterns to request EmitConvertToTarget. Constants become
+// target constants, while register values pass through unchanged.
+defvar reg_or_imm = imm;
+
 // CVT conversion modes
 // These must match the enum in NVPTX.h
 def CvtNONE : PatLeaf<(i32 0x0)>;
