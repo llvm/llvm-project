@@ -736,13 +736,12 @@ static void printCFI(raw_ostream &OS, const MCCFIInstruction &CFI,
     OS << "llvm_def_cfa_address_linear ";
     if (MCSymbol *Label = CFI.getLabel())
       MachineOperand::printSymbol(OS, *Label);
+    OS << Fields.AddressSpace << ", " << Fields.Offset;
     if (Fields.Source) {
+      OS << ", ";
       printCFIRegister(Fields.Source->Register, OS, TRI);
       OS << ", " << Fields.Source->DerefSize << ", " << Fields.Source->Scale;
-    } else {
-      OS << "$noreg, 0, 0";
     }
-    OS << ", " << Fields.Offset << ", " << Fields.AddressSpace;
     break;
   }
   case MCCFIInstruction::OpRelOffset:

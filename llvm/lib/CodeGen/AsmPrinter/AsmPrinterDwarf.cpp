@@ -226,8 +226,8 @@ void AsmPrinter::emitCFIInstruction(const MCCFIInstruction &Inst) const {
   case MCCFIInstruction::OpLLVMDefCfaAddressLinear: {
     const auto &Fields =
         Inst.getExtraFields<MCCFIInstruction::CfaAddressLinearFields>();
-    OutStreamer->emitCFILLVMDefCfaAddressLinear(Fields.Source, Fields.Offset,
-                                                Fields.AddressSpace, Loc);
+    OutStreamer->emitCFILLVMDefCfaAddressLinear(
+        Fields.AddressSpace, Fields.Offset, Fields.Source, Loc);
     break;
   }
   case MCCFIInstruction::OpOffset:
