@@ -10489,8 +10489,15 @@ static SDValue lowerSelectToBinOp(SDNode *N, SelectionDAG &DAG,
           return DAG.getNode(RISCVISD::QC_MULIADD, DL, VT, CondV, CondV,
                              DAG.getSignedTargetConstant(MulImm - 1, DL, VT));
 
+        // (select c, (1 << ShAmount), 0) -> c << ShAmount
+        uint64_t TrueVal = TrueC->getZExtValue();
+        if (isPowerOf2_64(TrueVal))
+          return DAG.getNode(
+              ISD::SHL, DL, VT, CondV,
+              DAG.getShiftAmountConstant(Log2_64(TrueVal), VT, DL));
+
         // (select c, (1 << ShAmount) + 1, 0) -> (c << ShAmount) + c
-        uint64_t TrueM1 = TrueC->getZExtValue() - 1;
+        uint64_t TrueM1 = TrueVal - 1;
         if (isPowerOf2_64(TrueM1)) {
           unsigned ShAmount = Log2_64(TrueM1);
           if (Subtarget.hasShlAdd(ShAmount))
@@ -19824,7 +19831,7 @@ static SDValue combineNarrowableShiftedLoad(SDNode *N, SelectionDAG &DAG) {
   APInt MaskVal, ShiftVal;
   // (and (shl (load ...), ShiftAmt), Mask)
   if (!sd_match(
-          N, m_And(m_OneUse(m_Shl(m_Value(LoadNode, m_SpecificOpc(ISD::LOAD)),
+          N, m_And(m_OneUse(m_Shl(m_Value(LoadNode, m_SpecificOpc<ISD::LOAD>()),
                                   m_ConstInt(ShiftVal))),
                    m_ConstInt(MaskVal)))) {
     return SDValue();
@@ -22501,7 +22508,7 @@ static SDValue performBITREVERSECombine(SDNode *N, SelectionDAG &DAG,
 static auto m_ReverseEVL = [](auto X, auto EVL) {
   using namespace SDPatternMatch;
   return m_AnyOf(m_SpliceRight(m_OneUse(m_VectorReverse(X)), m_Poison(), EVL),
-                 m_Node(ISD::EXPERIMENTAL_VP_REVERSE, X, m_Value(), EVL));
+                 m_Node<ISD::EXPERIMENTAL_VP_REVERSE>(X, m_Value(), EVL));
 };
 
 // TODO: A vlse.v is not necessarily faster than a vrgather.vv on all uarchs.
@@ -26212,7 +26219,7 @@ SDValue RISCVTargetLowering::PerformDAGCombine(SDNode *N,
     if (!N->getOperand(0).isUndef() ||
         !sd_match(N->getOperand(2),
                   m_AnyOf(m_ExtractElt(m_Value(SrcVec), m_Zero()),
-                          m_Node(RISCVISD::VMV_X_S, m_Value(SrcVec)))))
+                          m_Node<RISCVISD::VMV_X_S>(m_Value(SrcVec)))))
       break;
 
     MVT SrcVecVT = SrcVec.getSimpleValueType();
@@ -27105,7 +27112,7 @@ static MachineBasicBlock *emitQuietFCMP(MachineInstr &MI, MachineBasicBlock *BB,
 
   // Restore the FFLAGS.
   BuildMI(*BB, MI, DL, TII.get(RISCV::WriteFFLAGS))
-      .addReg(SavedFFlags, RegState::Kill);
+      .addReg(SavedFFlags);
 
   // Issue a dummy FEQ opcode to raise exception for signaling NaNs.
   auto MIB2 = BuildMI(*BB, MI, DL, TII.get(EqOpcode), RISCV::X0)
@@ -27445,7 +27452,7 @@ static MachineBasicBlock *emitVFROUND_NOEXCEPT_MASK(MachineInstr &MI,
 
   // Restore FFLAGS.
   BuildMI(*BB, MI, DL, TII.get(RISCV::WriteFFLAGS))
-      .addReg(SavedFFLAGS, RegState::Kill);
+      .addReg(SavedFFLAGS);
 
   // Erase the pseudoinstruction.
   MI.eraseFromParent();

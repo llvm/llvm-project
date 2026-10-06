@@ -1679,9 +1679,12 @@ X86TargetLowering::X86TargetLowering(const X86TargetMachine &TM,
     if (HasInt256) {
       setOperationAction(ISD::MULHU, MVT::v4i64, Custom);
       // Custom so the combiner keeps full products as [SU]MUL_LOHI, not
-      // MULH[SU].
-      setOperationAction(ISD::UMUL_LOHI, MVT::v4i64, Custom);
-      setOperationAction(ISD::SMUL_LOHI, MVT::v4i64, Custom);
+      // MULH[SU]. The custom lowering unrolls to scalar i64 [SU]MUL_LOHI,
+      // which is only legalizable when i64 is a legal type.
+      if (Subtarget.is64Bit()) {
+        setOperationAction(ISD::UMUL_LOHI, MVT::v4i64, Custom);
+        setOperationAction(ISD::SMUL_LOHI, MVT::v4i64, Custom);
+      }
       setOperationAction(ISD::VSELECT, MVT::v32i8, Legal);
 
       // Custom legalize 2x32 to get a little better code.
@@ -1963,8 +1966,10 @@ X86TargetLowering::X86TargetLowering(const X86TargetMachine &TM,
     setOperationAction(ISD::MUL, MVT::v64i8,  Custom);
 
     setOperationAction(ISD::MULHU, MVT::v8i64, Custom);
-    setOperationAction(ISD::UMUL_LOHI, MVT::v8i64, Custom);
-    setOperationAction(ISD::SMUL_LOHI, MVT::v8i64, Custom);
+    if (Subtarget.is64Bit()) {
+      setOperationAction(ISD::UMUL_LOHI, MVT::v8i64, Custom);
+      setOperationAction(ISD::SMUL_LOHI, MVT::v8i64, Custom);
+    }
     setOperationAction(ISD::MULHU, MVT::v16i32, Custom);
     setOperationAction(ISD::MULHS, MVT::v16i32, Custom);
     setOperationAction(ISD::MULHS, MVT::v32i16, HasBWI ? Legal : Custom);
@@ -27998,8 +28003,7 @@ SDValue X86TargetLowering::LowerINTRINSIC_WO_CHAIN(SDValue Op,
   case Intrinsic::x86_avx512_vp2intersect_d_128: {
     SDLoc DL(Op);
     MVT MaskVT = Op.getSimpleValueType();
-    SDVTList VTs = DAG.getVTList(MVT::Untyped, MVT::Other);
-    SDValue Operation = DAG.getNode(X86ISD::VP2INTERSECT, DL, VTs,
+    SDValue Operation = DAG.getNode(X86ISD::VP2INTERSECT, DL, MVT::Untyped,
                                     Op.getOperand(1), Op.getOperand(2));
     SDValue Result0 =
         DAG.getTargetExtractSubreg(X86::sub_mask_0, DL, MaskVT, Operation);
@@ -53414,11 +53418,11 @@ static SDValue combineAnd(SDNode *N, SelectionDAG &DAG,
     if (TLI.isTypeLegal(VT) && TLI.isTypeLegal(CondVT) &&
         (VT.is512BitVector() || Subtarget.hasVLX()) &&
         (VT.getScalarSizeInBits() >= 32 || Subtarget.hasBWI()) &&
-        sd_match(
-            N,
-            m_And(m_Value(X),
-                  m_OneUse(m_SExt(m_Value(
-                      Y, m_SpecificVT(CondVT, m_SpecificOpc(ISD::SETCC)))))))) {
+        sd_match(N,
+                 m_And(m_Value(X),
+                       m_OneUse(m_SExt(m_Value(
+                           Y, m_SpecificVT(CondVT,
+                                           m_SpecificOpc<ISD::SETCC>()))))))) {
       return DAG.getSelect(dl, VT, Y, X,
                            getZeroVector(VT.getSimpleVT(), Subtarget, DAG, dl));
     }
@@ -56155,7 +56159,7 @@ static bool isCFMulFromFMAddSub(SDValue N, SelectionDAG &DAG, SDValue &A,
     return matchFMulPattern(P, Q) || matchFMulPattern(Q, P);
   };
   // First 2 operands of FMADDSUB/FMSUBADD are commutable.
-  return Op2.getOpcode() == ISD::FMUL &&
+  return Op2.getOpcode() == ISD::FMUL && Op2->getFlags().hasAllowContract() &&
          (matchFMSUBADDPattern(Op0, Op1) || matchFMSUBADDPattern(Op1, Op0));
 }
 
@@ -60298,12 +60302,12 @@ static SDValue matchPMADDWD(SelectionDAG &DAG, SDNode *N,
     return SDValue();
 
   SDValue Op0, Op1, Accum;
-  if (!sd_match(N, m_Add(m_Value(Op0, m_SpecificOpc(ISD::BUILD_VECTOR)),
-                         m_Value(Op1, m_SpecificOpc(ISD::BUILD_VECTOR)))) &&
+  if (!sd_match(N, m_Add(m_Value(Op0, m_SpecificOpc<ISD::BUILD_VECTOR>()),
+                         m_Value(Op1, m_SpecificOpc<ISD::BUILD_VECTOR>()))) &&
       !sd_match(N,
-                m_Add(m_Value(Op0, m_SpecificOpc(ISD::BUILD_VECTOR)),
+                m_Add(m_Value(Op0, m_SpecificOpc<ISD::BUILD_VECTOR>()),
                       m_Add(m_Value(Accum),
-                            m_Value(Op1, m_SpecificOpc(ISD::BUILD_VECTOR))))))
+                            m_Value(Op1, m_SpecificOpc<ISD::BUILD_VECTOR>())))))
     return SDValue();
 
   // Check if one of Op0,Op1 is of the form:
