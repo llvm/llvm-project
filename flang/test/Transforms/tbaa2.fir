@@ -94,37 +94,37 @@ module attributes {dlti.dl_spec = #dlti.dl_spec<!llvm.ptr = dense<64> : vector<4
     %c1_i32 = arith.constant 1 : i32
     %dscope = fir.dummy_scope : !fir.dscope
     %0 = fir.address_of(@_QMmodEa) : !fir.ref<!fir.box<!fir.heap<!fir.array<?xf32>>>>
-    %1 = fir.declare %0 {fortran_attrs = #fir.var_attrs<allocatable>, uniq_name = "_QMmodEa"} : (!fir.ref<!fir.box<!fir.heap<!fir.array<?xf32>>>>) -> !fir.ref<!fir.box<!fir.heap<!fir.array<?xf32>>>>
+    %1 = fir.declare %0 uniq_name("_QMmodEa") fortran_attrs<allocatable> : (!fir.ref<!fir.box<!fir.heap<!fir.array<?xf32>>>>) -> !fir.ref<!fir.box<!fir.heap<!fir.array<?xf32>>>>
     %2 = fir.address_of(@_QMmodEb) : !fir.ref<!fir.box<!fir.heap<!fir.array<?xf32>>>>
-    %3 = fir.declare %2 {fortran_attrs = #fir.var_attrs<allocatable>, uniq_name = "_QMmodEb"} : (!fir.ref<!fir.box<!fir.heap<!fir.array<?xf32>>>>) -> !fir.ref<!fir.box<!fir.heap<!fir.array<?xf32>>>>
+    %3 = fir.declare %2 uniq_name("_QMmodEb") fortran_attrs<allocatable> : (!fir.ref<!fir.box<!fir.heap<!fir.array<?xf32>>>>) -> !fir.ref<!fir.box<!fir.heap<!fir.array<?xf32>>>>
     %4 = fir.address_of(@_QMmodEdxinv) : !fir.ref<f32>
-    %5 = fir.declare %4 {uniq_name = "_QMmodEdxinv"} : (!fir.ref<f32>) -> !fir.ref<f32>
+    %5 = fir.declare %4 uniq_name("_QMmodEdxinv") : (!fir.ref<f32>) -> !fir.ref<f32>
     %6 = fir.address_of(@_QMmodEdyinv) : !fir.ref<f32>
-    %7 = fir.declare %6 {uniq_name = "_QMmodEdyinv"} : (!fir.ref<f32>) -> !fir.ref<f32>
+    %7 = fir.declare %6 uniq_name("_QMmodEdyinv") : (!fir.ref<f32>) -> !fir.ref<f32>
     %8 = fir.address_of(@_QMmodExstart) : !fir.ref<i32>
-    %9 = fir.declare %8 {uniq_name = "_QMmodExstart"} : (!fir.ref<i32>) -> !fir.ref<i32>
+    %9 = fir.declare %8 uniq_name("_QMmodExstart") : (!fir.ref<i32>) -> !fir.ref<i32>
     %10 = fir.address_of(@_QMmodEystart) : !fir.ref<i32>
-    %11 = fir.declare %10 {uniq_name = "_QMmodEystart"} : (!fir.ref<i32>) -> !fir.ref<i32>
+    %11 = fir.declare %10 uniq_name("_QMmodEystart") : (!fir.ref<i32>) -> !fir.ref<i32>
     %12 = fir.address_of(@_QMmodEystop) : !fir.ref<i32>
-    %13 = fir.declare %12 {uniq_name = "_QMmodEystop"} : (!fir.ref<i32>) -> !fir.ref<i32>
+    %13 = fir.declare %12 uniq_name("_QMmodEystop") : (!fir.ref<i32>) -> !fir.ref<i32>
     %14 = fir.address_of(@_QMmodEzstart) : !fir.ref<i32>
-    %15 = fir.declare %14 {uniq_name = "_QMmodEzstart"} : (!fir.ref<i32>) -> !fir.ref<i32>
+    %15 = fir.declare %14 uniq_name("_QMmodEzstart") : (!fir.ref<i32>) -> !fir.ref<i32>
     %16 = fir.address_of(@_QMmodEzstop) : !fir.ref<i32>
-    %17 = fir.declare %16 {uniq_name = "_QMmodEzstop"} : (!fir.ref<i32>) -> !fir.ref<i32>
+    %17 = fir.declare %16 uniq_name("_QMmodEzstop") : (!fir.ref<i32>) -> !fir.ref<i32>
     %18 = fir.alloca f32 {bindc_name = "dxold", uniq_name = "_QMmodFcalleeEdxold"}
-    %19 = fir.declare %18 {uniq_name = "_QMmodFcalleeEdxold"} : (!fir.ref<f32>) -> !fir.ref<f32>
+    %19 = fir.declare %18 uniq_name("_QMmodFcalleeEdxold") : (!fir.ref<f32>) -> !fir.ref<f32>
     %20 = fir.alloca f32 {bindc_name = "dzinv", uniq_name = "_QMmodFcalleeEdzinv"}
-    %21 = fir.declare %20 {uniq_name = "_QMmodFcalleeEdzinv"} : (!fir.ref<f32>) -> !fir.ref<f32>
+    %21 = fir.declare %20 uniq_name("_QMmodFcalleeEdzinv") : (!fir.ref<f32>) -> !fir.ref<f32>
     %22 = fir.alloca i32 {bindc_name = "i", uniq_name = "_QMmodFcalleeEi"}
-    %23 = fir.declare %22 {uniq_name = "_QMmodFcalleeEi"} : (!fir.ref<i32>) -> !fir.ref<i32>
+    %23 = fir.declare %22 uniq_name("_QMmodFcalleeEi") : (!fir.ref<i32>) -> !fir.ref<i32>
     %24 = fir.alloca i32 {bindc_name = "j", uniq_name = "_QMmodFcalleeEj"}
-    %25 = fir.declare %24 {uniq_name = "_QMmodFcalleeEj"} : (!fir.ref<i32>) -> !fir.ref<i32>
+    %25 = fir.declare %24 uniq_name("_QMmodFcalleeEj") : (!fir.ref<i32>) -> !fir.ref<i32>
     %26 = fir.alloca i32 {bindc_name = "k", uniq_name = "_QMmodFcalleeEk"}
-    %27 = fir.declare %26 {uniq_name = "_QMmodFcalleeEk"} : (!fir.ref<i32>) -> !fir.ref<i32>
-    %28 = fir.declare %arg2 dummy_scope %dscope {fortran_attrs = #fir.var_attrs<allocatable>, uniq_name = "_QMmodFcalleeElow"} : (!fir.ref<!fir.box<!fir.heap<!fir.array<?x?x?xf32>>>>, !fir.dscope) -> !fir.ref<!fir.box<!fir.heap<!fir.array<?x?x?xf32>>>>
-    %29 = fir.declare %arg1 dummy_scope %dscope {fortran_attrs = #fir.var_attrs<intent_in>, uniq_name = "_QMmodFcalleeEy"} : (!fir.box<!fir.array<?x?x?xf32>>, !fir.dscope) -> !fir.box<!fir.array<?x?x?xf32>>
+    %27 = fir.declare %26 uniq_name("_QMmodFcalleeEk") : (!fir.ref<i32>) -> !fir.ref<i32>
+    %28 = fir.declare %arg2 dummy_scope %dscope uniq_name("_QMmodFcalleeElow") fortran_attrs<allocatable> : (!fir.ref<!fir.box<!fir.heap<!fir.array<?x?x?xf32>>>>, !fir.dscope) -> !fir.ref<!fir.box<!fir.heap<!fir.array<?x?x?xf32>>>>
+    %29 = fir.declare %arg1 dummy_scope %dscope uniq_name("_QMmodFcalleeEy") fortran_attrs<intent_in> : (!fir.box<!fir.array<?x?x?xf32>>, !fir.dscope) -> !fir.box<!fir.array<?x?x?xf32>>
     %30 = fir.rebox %29 : (!fir.box<!fir.array<?x?x?xf32>>) -> !fir.box<!fir.array<?x?x?xf32>>
-    %31 = fir.declare %arg0 dummy_scope %dscope {fortran_attrs = #fir.var_attrs<intent_in>, uniq_name = "_QMmodFcalleeEz"} : (!fir.box<!fir.array<?x?x?xf32>>, !fir.dscope) -> !fir.box<!fir.array<?x?x?xf32>>
+    %31 = fir.declare %arg0 dummy_scope %dscope uniq_name("_QMmodFcalleeEz") fortran_attrs<intent_in> : (!fir.box<!fir.array<?x?x?xf32>>, !fir.dscope) -> !fir.box<!fir.array<?x?x?xf32>>
     %32 = fir.rebox %31 : (!fir.box<!fir.array<?x?x?xf32>>) -> !fir.box<!fir.array<?x?x?xf32>>
     %33 = fir.load %15 : !fir.ref<i32>
     %34 = arith.addi %33, %c1_i32 : i32
@@ -248,37 +248,37 @@ module attributes {dlti.dl_spec = #dlti.dl_spec<!llvm.ptr = dense<64> : vector<4
 // CHECK:           %[[VAL_6:.*]] = arith.constant 1 : i32
 // CHECK:           %[[DSCOPE:.*]] = fir.dummy_scope : !fir.dscope
 // CHECK:           %[[VAL_7:.*]] = fir.address_of(@_QMmodEa) : !fir.ref<!fir.box<!fir.heap<!fir.array<?xf32>>>>
-// CHECK:           %[[VAL_8:.*]] = fir.declare %[[VAL_7]] {fortran_attrs = #{{.*}}<allocatable>, uniq_name = "_QMmodEa"} : (!fir.ref<!fir.box<!fir.heap<!fir.array<?xf32>>>>) -> !fir.ref<!fir.box<!fir.heap<!fir.array<?xf32>>>>
+// CHECK:           %[[VAL_8:.*]] = fir.declare %[[VAL_7]] uniq_name("_QMmodEa") fortran_attrs<allocatable> : (!fir.ref<!fir.box<!fir.heap<!fir.array<?xf32>>>>) -> !fir.ref<!fir.box<!fir.heap<!fir.array<?xf32>>>>
 // CHECK:           %[[VAL_9:.*]] = fir.address_of(@_QMmodEb) : !fir.ref<!fir.box<!fir.heap<!fir.array<?xf32>>>>
-// CHECK:           %[[VAL_10:.*]] = fir.declare %[[VAL_9]] {fortran_attrs = #{{.*}}<allocatable>, uniq_name = "_QMmodEb"} : (!fir.ref<!fir.box<!fir.heap<!fir.array<?xf32>>>>) -> !fir.ref<!fir.box<!fir.heap<!fir.array<?xf32>>>>
+// CHECK:           %[[VAL_10:.*]] = fir.declare %[[VAL_9]] uniq_name("_QMmodEb") fortran_attrs<allocatable> : (!fir.ref<!fir.box<!fir.heap<!fir.array<?xf32>>>>) -> !fir.ref<!fir.box<!fir.heap<!fir.array<?xf32>>>>
 // CHECK:           %[[VAL_11:.*]] = fir.address_of(@_QMmodEdxinv) : !fir.ref<f32>
-// CHECK:           %[[VAL_12:.*]] = fir.declare %[[VAL_11]] {uniq_name = "_QMmodEdxinv"} : (!fir.ref<f32>) -> !fir.ref<f32>
+// CHECK:           %[[VAL_12:.*]] = fir.declare %[[VAL_11]] uniq_name("_QMmodEdxinv") : (!fir.ref<f32>) -> !fir.ref<f32>
 // CHECK:           %[[VAL_13:.*]] = fir.address_of(@_QMmodEdyinv) : !fir.ref<f32>
-// CHECK:           %[[VAL_14:.*]] = fir.declare %[[VAL_13]] {uniq_name = "_QMmodEdyinv"} : (!fir.ref<f32>) -> !fir.ref<f32>
+// CHECK:           %[[VAL_14:.*]] = fir.declare %[[VAL_13]] uniq_name("_QMmodEdyinv") : (!fir.ref<f32>) -> !fir.ref<f32>
 // CHECK:           %[[VAL_15:.*]] = fir.address_of(@_QMmodExstart) : !fir.ref<i32>
-// CHECK:           %[[VAL_16:.*]] = fir.declare %[[VAL_15]] {uniq_name = "_QMmodExstart"} : (!fir.ref<i32>) -> !fir.ref<i32>
+// CHECK:           %[[VAL_16:.*]] = fir.declare %[[VAL_15]] uniq_name("_QMmodExstart") : (!fir.ref<i32>) -> !fir.ref<i32>
 // CHECK:           %[[VAL_17:.*]] = fir.address_of(@_QMmodEystart) : !fir.ref<i32>
-// CHECK:           %[[VAL_18:.*]] = fir.declare %[[VAL_17]] {uniq_name = "_QMmodEystart"} : (!fir.ref<i32>) -> !fir.ref<i32>
+// CHECK:           %[[VAL_18:.*]] = fir.declare %[[VAL_17]] uniq_name("_QMmodEystart") : (!fir.ref<i32>) -> !fir.ref<i32>
 // CHECK:           %[[VAL_19:.*]] = fir.address_of(@_QMmodEystop) : !fir.ref<i32>
-// CHECK:           %[[VAL_20:.*]] = fir.declare %[[VAL_19]] {uniq_name = "_QMmodEystop"} : (!fir.ref<i32>) -> !fir.ref<i32>
+// CHECK:           %[[VAL_20:.*]] = fir.declare %[[VAL_19]] uniq_name("_QMmodEystop") : (!fir.ref<i32>) -> !fir.ref<i32>
 // CHECK:           %[[VAL_21:.*]] = fir.address_of(@_QMmodEzstart) : !fir.ref<i32>
-// CHECK:           %[[VAL_22:.*]] = fir.declare %[[VAL_21]] {uniq_name = "_QMmodEzstart"} : (!fir.ref<i32>) -> !fir.ref<i32>
+// CHECK:           %[[VAL_22:.*]] = fir.declare %[[VAL_21]] uniq_name("_QMmodEzstart") : (!fir.ref<i32>) -> !fir.ref<i32>
 // CHECK:           %[[VAL_23:.*]] = fir.address_of(@_QMmodEzstop) : !fir.ref<i32>
-// CHECK:           %[[VAL_24:.*]] = fir.declare %[[VAL_23]] {uniq_name = "_QMmodEzstop"} : (!fir.ref<i32>) -> !fir.ref<i32>
+// CHECK:           %[[VAL_24:.*]] = fir.declare %[[VAL_23]] uniq_name("_QMmodEzstop") : (!fir.ref<i32>) -> !fir.ref<i32>
 // CHECK:           %[[VAL_25:.*]] = fir.alloca f32 <{bindc_name = "dxold", uniq_name = "_QMmodFcalleeEdxold"}>
-// CHECK:           %[[VAL_26:.*]] = fir.declare %[[VAL_25]] {uniq_name = "_QMmodFcalleeEdxold"} : (!fir.ref<f32>) -> !fir.ref<f32>
+// CHECK:           %[[VAL_26:.*]] = fir.declare %[[VAL_25]] uniq_name("_QMmodFcalleeEdxold") : (!fir.ref<f32>) -> !fir.ref<f32>
 // CHECK:           %[[VAL_27:.*]] = fir.alloca f32 <{bindc_name = "dzinv", uniq_name = "_QMmodFcalleeEdzinv"}>
-// CHECK:           %[[VAL_28:.*]] = fir.declare %[[VAL_27]] {uniq_name = "_QMmodFcalleeEdzinv"} : (!fir.ref<f32>) -> !fir.ref<f32>
+// CHECK:           %[[VAL_28:.*]] = fir.declare %[[VAL_27]] uniq_name("_QMmodFcalleeEdzinv") : (!fir.ref<f32>) -> !fir.ref<f32>
 // CHECK:           %[[VAL_29:.*]] = fir.alloca i32 <{bindc_name = "i", uniq_name = "_QMmodFcalleeEi"}>
-// CHECK:           %[[VAL_30:.*]] = fir.declare %[[VAL_29]] {uniq_name = "_QMmodFcalleeEi"} : (!fir.ref<i32>) -> !fir.ref<i32>
+// CHECK:           %[[VAL_30:.*]] = fir.declare %[[VAL_29]] uniq_name("_QMmodFcalleeEi") : (!fir.ref<i32>) -> !fir.ref<i32>
 // CHECK:           %[[VAL_31:.*]] = fir.alloca i32 <{bindc_name = "j", uniq_name = "_QMmodFcalleeEj"}>
-// CHECK:           %[[VAL_32:.*]] = fir.declare %[[VAL_31]] {uniq_name = "_QMmodFcalleeEj"} : (!fir.ref<i32>) -> !fir.ref<i32>
+// CHECK:           %[[VAL_32:.*]] = fir.declare %[[VAL_31]] uniq_name("_QMmodFcalleeEj") : (!fir.ref<i32>) -> !fir.ref<i32>
 // CHECK:           %[[VAL_33:.*]] = fir.alloca i32 <{bindc_name = "k", uniq_name = "_QMmodFcalleeEk"}>
-// CHECK:           %[[VAL_34:.*]] = fir.declare %[[VAL_33]] {uniq_name = "_QMmodFcalleeEk"} : (!fir.ref<i32>) -> !fir.ref<i32>
-// CHECK:           %[[VAL_35:.*]] = fir.declare %[[VAL_2]] dummy_scope %[[DSCOPE]] {fortran_attrs = #{{.*}}<allocatable>, uniq_name = "_QMmodFcalleeElow"} : (!fir.ref<!fir.box<!fir.heap<!fir.array<?x?x?xf32>>>>, !fir.dscope) -> !fir.ref<!fir.box<!fir.heap<!fir.array<?x?x?xf32>>>>
-// CHECK:           %[[VAL_36:.*]] = fir.declare %[[VAL_1]] dummy_scope %[[DSCOPE]] {fortran_attrs = #{{.*}}<intent_in>, uniq_name = "_QMmodFcalleeEy"} : (!fir.box<!fir.array<?x?x?xf32>>, !fir.dscope) -> !fir.box<!fir.array<?x?x?xf32>>
+// CHECK:           %[[VAL_34:.*]] = fir.declare %[[VAL_33]] uniq_name("_QMmodFcalleeEk") : (!fir.ref<i32>) -> !fir.ref<i32>
+// CHECK:           %[[VAL_35:.*]] = fir.declare %[[VAL_2]] dummy_scope %[[DSCOPE]] uniq_name("_QMmodFcalleeElow") fortran_attrs<allocatable> : (!fir.ref<!fir.box<!fir.heap<!fir.array<?x?x?xf32>>>>, !fir.dscope) -> !fir.ref<!fir.box<!fir.heap<!fir.array<?x?x?xf32>>>>
+// CHECK:           %[[VAL_36:.*]] = fir.declare %[[VAL_1]] dummy_scope %[[DSCOPE]] uniq_name("_QMmodFcalleeEy") fortran_attrs<intent_in> : (!fir.box<!fir.array<?x?x?xf32>>, !fir.dscope) -> !fir.box<!fir.array<?x?x?xf32>>
 // CHECK:           %[[VAL_37:.*]] = fir.rebox %[[VAL_36]] : (!fir.box<!fir.array<?x?x?xf32>>) -> !fir.box<!fir.array<?x?x?xf32>>
-// CHECK:           %[[VAL_38:.*]] = fir.declare %[[VAL_0]] dummy_scope %[[DSCOPE]] {fortran_attrs = #{{.*}}<intent_in>, uniq_name = "_QMmodFcalleeEz"} : (!fir.box<!fir.array<?x?x?xf32>>, !fir.dscope) -> !fir.box<!fir.array<?x?x?xf32>>
+// CHECK:           %[[VAL_38:.*]] = fir.declare %[[VAL_0]] dummy_scope %[[DSCOPE]] uniq_name("_QMmodFcalleeEz") fortran_attrs<intent_in> : (!fir.box<!fir.array<?x?x?xf32>>, !fir.dscope) -> !fir.box<!fir.array<?x?x?xf32>>
 // CHECK:           %[[VAL_39:.*]] = fir.rebox %[[VAL_38]] : (!fir.box<!fir.array<?x?x?xf32>>) -> !fir.box<!fir.array<?x?x?xf32>>
 // CHECK:           %[[VAL_40:.*]] = fir.load %[[VAL_22]] <{tbaa = [#[[GLBL_ZSTART_TAG]]]}> : !fir.ref<i32>
 // CHECK:           %[[VAL_41:.*]] = arith.addi %[[VAL_40]], %[[VAL_6]] : i32

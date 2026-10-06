@@ -146,6 +146,14 @@ CIRGenModule::CIRGenModule(mlir::MLIRContext &mlirContext,
     if (langOpts.OpenCLCPlusPlus)
       setOpenCLVersionAttr(cir::CIRDialect::getOpenCLCXXVersionAttrName(),
                            langOpts.OpenCLCPlusPlusVersion);
+    // SPIR v2.0 s2.12 requires opencl.spir.version.
+    if (getTriple().isSPIR()) {
+      unsigned spirMajor = version / 100;
+      theModule->setAttr(cir::CIRDialect::getOpenCLSPIRVersionAttrName(),
+                         cir::OpenCLVersionAttr::get(&getMLIRContext(),
+                                                     spirMajor,
+                                                     spirMajor > 1 ? 0 : 2));
+    }
   }
   theModule->setAttr(cir::CIRDialect::getTripleAttrName(),
                      builder.getStringAttr(getTriple().str()));
@@ -413,8 +421,8 @@ CIRGenModule::getAddrOfGlobal(GlobalDecl gd, ForDefinition_t isForDefinition) {
                              isForDefinition);
   }
 
-  return getAddrOfGlobalVar(cast<VarDecl>(d), /*ty=*/nullptr, isForDefinition)
-      .getDefiningOp();
+  return getOrCreateCIRGlobal(cast<VarDecl>(d), /*ty=*/nullptr,
+                              isForDefinition);
 }
 
 void CIRGenModule::emitGlobalDecl(const clang::GlobalDecl &d) {
@@ -1436,10 +1444,25 @@ mlir::Value CIRGenModule::getAddrOfGlobalVar(const VarDecl *d, mlir::Type ty,
   bool tlsAccess = d->getTLSKind() != VarDecl::TLS_None;
   cir::GlobalOp g = getOrCreateCIRGlobal(d, ty, isForDefinition);
   mlir::Type ptrTy = builder.getPointerTo(g.getSymType(), g.getAddrSpaceAttr());
-  return cir::GetGlobalOp::create(
+  mlir::Value addr = cir::GetGlobalOp::create(
       builder, getLoc(d->getSourceRange()), ptrTy, g.getSymNameAttr(),
       tlsAccess,
       /*static_local=*/g.getStaticLocalGuard().has_value());
+  return castGlobalToDeclAddrSpace(addr, *d);
+}
+
+mlir::Value CIRGenModule::castGlobalToDeclAddrSpace(mlir::Value addr,
+                                                    const VarDecl &vd) {
+  // A global may live in a different address space than its declared type,
+  // e.g. a CUDA __shared__ variable. Like classic CodeGen, cast once where
+  // the address is formed so every user sees the declared type.
+  auto ptrTy = mlir::cast<cir::PointerType>(addr.getType());
+  mlir::ptr::MemorySpaceAttrInterface declAS =
+      getTypes().getPointerAddressSpace(vd.getType());
+  if (ptrTy.getAddrSpace() == declAS)
+    return addr;
+  return builder.createAddrSpaceCast(
+      addr, builder.getPointerTo(ptrTy.getPointee(), declAS));
 }
 
 cir::GlobalViewAttr CIRGenModule::getAddrOfGlobalVarAttr(const VarDecl *d) {
@@ -1509,9 +1532,14 @@ void CIRGenModule::emitLLVMUsed() {
 
 void CIRGenModule::emitGlobalVarDefinition(const clang::VarDecl *vd,
                                            bool isTentative) {
-  if (getLangOpts().OpenCL || getLangOpts().OpenMPIsTargetDevice) {
+  // OpenCL global variables of sampler type are translated to function calls,
+  // therefore no need to be translated.
+  if (getLangOpts().OpenCL && vd->getType()->isSamplerT())
+    return;
+
+  if (getLangOpts().OpenMPIsTargetDevice) {
     errorNYI(vd->getSourceRange(),
-             "emitGlobalVarDefinition: emit OpenCL/OpenMP global variable");
+             "emitGlobalVarDefinition: emit OpenMP global variable");
     return;
   }
 
@@ -1821,7 +1849,8 @@ CIRGenModule::getConstantArrayFromStringLiteral(const StringLiteral *e) {
   SmallVector<mlir::Attribute> elements;
   elements.reserve(arraySize);
   for (unsigned i = 0; i < literalSize; ++i)
-    elements.push_back(cir::IntAttr::get(arrayEltTy, e->getCodeUnit(i)));
+    elements.push_back(cir::IntAttr::get(
+        arrayEltTy, llvm::APInt(arrayEltTy.getWidth(), e->getCodeUnit(i))));
 
   auto elementsAttr = mlir::ArrayAttr::get(&getMLIRContext(), elements);
   return builder.getConstArray(elementsAttr, arrayTy);
@@ -1835,10 +1864,10 @@ void CIRGenModule::maybeSetTrivialComdat(const Decl &d, mlir::Operation *op) {
   if (!CodeGenUtils::shouldBeInCOMDAT(getASTContext(), d))
     return;
   if (auto globalOp = dyn_cast_or_null<cir::GlobalOp>(op)) {
-    globalOp.setComdat(true);
+    globalOp.setSelfComdat();
   } else {
     auto funcOp = cast<cir::FuncOp>(op);
-    funcOp.setComdat(true);
+    funcOp.setSelfComdat();
   }
 }
 
@@ -1938,7 +1967,7 @@ cir::GlobalOp CIRGenModule::createOrReplaceCXXRuntimeVariable(
 
   if (supportsCOMDAT() && cir::isWeakForLinker(linkage) &&
       !gv.hasAvailableExternallyLinkage()) {
-    gv.setComdat(true);
+    gv.setSelfComdat();
   }
 
   gv.setAlignmentAttr(getSize(alignment));
@@ -2163,12 +2192,14 @@ static cir::GlobalOp
 generateStringLiteral(mlir::Location loc, mlir::TypedAttr c,
                       cir::GlobalLinkageKind lt, CIRGenModule &cgm,
                       StringRef globalName, CharUnits alignment) {
-  assert(!cir::MissingFeatures::addressSpace());
+  mlir::ptr::MemorySpaceAttrInterface addrSpace = cir::toCIRAddressSpaceAttr(
+      cgm.getMLIRContext(), cgm.getGlobalConstantAddressSpace());
 
   // Create a global variable for this string
   // FIXME(cir): check for insertion point in module level.
-  cir::GlobalOp gv = cgm.createGlobalOp(loc, globalName, c.getType(),
-                                        !cgm.getLangOpts().WritableStrings);
+  cir::GlobalOp gv =
+      cgm.createGlobalOp(loc, globalName, c.getType(),
+                         !cgm.getLangOpts().WritableStrings, addrSpace);
 
   // Set up extra information and add to the module
   gv.setAlignmentAttr(cgm.getSize(alignment));
@@ -2179,7 +2210,7 @@ generateStringLiteral(mlir::Location loc, mlir::TypedAttr c,
   CIRGenModule::setInitializer(gv, c);
   if (gv.isWeakForLinker()) {
     assert(cgm.supportsCOMDAT() && "Only COFF uses weak string literals");
-    gv.setComdat(true);
+    gv.setSelfComdat();
   }
   cgm.setDSOLocal(static_cast<mlir::Operation *>(gv));
   return gv;
@@ -2261,10 +2292,24 @@ CIRGenModule::getAddrOfConstantStringFromLiteral(const StringLiteral *s,
   cir::GlobalOp gv = getGlobalForStringLiteral(s, name);
   auto arrayTy = mlir::dyn_cast<cir::ArrayType>(gv.getSymType());
   assert(arrayTy && "String literal must be array");
-  assert(!cir::MissingFeatures::addressSpace());
-  cir::PointerType ptrTy = getBuilder().getPointerTo(arrayTy.getElementType());
+  cir::PointerType ptrTy = getBuilder().getPointerTo(
+      arrayTy.getElementType(),
+      getTypes().getPointerAddressSpace(s->getType()));
 
   return builder.getGlobalViewAttr(ptrTy, gv);
+}
+
+LangAS CIRGenModule::getGlobalConstantAddressSpace() const {
+  LangAS as =
+      CodeGenUtils::getGlobalConstantAddressSpace(langOpts, getTarget());
+  // CIR cannot represent SYCL address spaces yet.
+  /// TODO: Remove this wrapper once CIR supports the global constant address
+  /// space for SYCL.
+  if (as == LangAS::sycl_global) {
+    errorNYI("SYCL global constant address space");
+    return LangAS::Default;
+  }
+  return as;
 }
 
 // TODO(cir): this could be a common AST helper for both CIR and LLVM codegen.
@@ -3255,7 +3300,10 @@ void CIRGenModule::setFunctionAttributes(GlobalDecl globalDecl,
 
 void CIRGenModule::setCIRFunctionAttributesForDefinition(
     const clang::FunctionDecl *decl, cir::FuncOp f) {
-  assert(!cir::MissingFeatures::opFuncUnwindTablesAttr());
+
+  if ((!decl || !decl->hasAttr<NoUwtableAttr>()) && codeGenOpts.UnwindTables)
+    f.setUwtable(static_cast<cir::UnwindTableKind>(codeGenOpts.UnwindTables));
+
   assert(!cir::MissingFeatures::stackProtector());
 
   if (!CodeGenUtils::hasUnwindExceptions(langOpts))
@@ -4260,7 +4308,7 @@ CIRGenModule::getAddrOfGlobalTemporary(const MaterializeTemporaryExpr *mte,
 
   gv.setAlignment(align.getAsAlign().value());
   if (supportsCOMDAT() && gv.isWeakForLinker())
-    gv.setComdat(true);
+    gv.setSelfComdat();
   if (varDecl->getTLSKind())
     setTLSMode(gv, *varDecl, /*isExtendingDecl=*/true);
   mlir::Operation *cv = gv;
@@ -4359,8 +4407,8 @@ CIRGenModule::getAddrOfTemplateParamObject(const TemplateParamObjectDecl *tpo) {
                                  typedInit.getType(), /*is_constant=*/true);
   globalOp.setLinkage(linkage);
   globalOp.setAlignment(alignment.getAsAlign().value());
-  globalOp.setComdat(supportsCOMDAT() &&
-                     linkage == cir::GlobalLinkageKind::LinkOnceODRLinkage);
+  if (supportsCOMDAT() && linkage == cir::GlobalLinkageKind::LinkOnceODRLinkage)
+    globalOp.setSelfComdat();
 
   CIRGenModule::setInitializer(globalOp, init);
   emitter.finalize(globalOp);

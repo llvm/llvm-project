@@ -562,6 +562,16 @@ void MachineBasicBlock::printName(raw_ostream &os, unsigned printNameFlags,
       os << "ehscope-entry";
       hasAttributes = true;
     }
+    if (isCleanupFuncletEntry()) {
+      os << (hasAttributes ? ", " : " (");
+      os << "cleanup-funclet-entry";
+      hasAttributes = true;
+    }
+    if (isEHContTarget()) {
+      os << (hasAttributes ? ", " : " (");
+      os << "ehcont-target";
+      hasAttributes = true;
+    }
     if (getAlignment() != Align(1)) {
       os << (hasAttributes ? ", " : " (");
       os << "align " << getAlignment().value();
@@ -1345,9 +1355,9 @@ MachineBasicBlock *MachineBasicBlock::SplitCriticalEdge(
         if (I->getOperand(ni+1).getMBB() == NMBB) {
           MachineOperand &MO = I->getOperand(ni);
           Register Reg = MO.getReg();
-          PHISrcRegs.insert(Reg);
           if (MO.isUndef())
             continue;
+          PHISrcRegs.insert(Reg);
 
           LiveInterval &LI = LIS->getInterval(Reg);
           VNInfo *VNI = LI.getVNInfoAt(PrevIndex);
