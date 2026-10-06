@@ -2192,6 +2192,9 @@ protected:
 /// a cl::opt or belongs to another library is a fatal error.
 LLVM_ABI void addLibraryOptions(LibraryOptions &L);
 
+/// Verify that every Required/OneOrMore option has a value.
+bool CheckRequiredValues(const StringMap<Option *> &OptionsMap);
+
 } // end namespace cl
 
 } // end namespace llvm
