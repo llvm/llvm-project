@@ -2953,9 +2953,12 @@ mlir::Value ScalarExprEmitter::VisitInitListExpr(InitListExpr *e) {
                                     elements);
   }
 
-  // C++11 value-initialization for the scalar.
-  if (numInitElements == 0)
+  if (numInitElements == 0) {
+    if (e->getType()->isVoidType())
+      return {};
+    // C++11 value-initialization for the scalar.
     return emitNullValue(e->getType(), cgf.getLoc(e->getExprLoc()));
+  }
 
   return Visit(e->getInit(0));
 }
@@ -3272,20 +3275,15 @@ mlir::Value ScalarExprEmitter::VisitAbstractConditionalOperator(
                                                            cgf.getContext()) &&
       CodeGenUtils::isCheapEnoughToEvaluateUnconditionally(rhsExpr,
                                                            cgf.getContext())) {
-    bool lhsIsVoid = false;
     mlir::Value condV = cgf.evaluateExprAsBool(condExpr);
     assert(!cir::MissingFeatures::incrementProfileCounter());
 
     mlir::Value lhs = Visit(lhsExpr);
-    if (!lhs) {
-      lhs = builder.getNullValue(cgf.voidTy, loc);
-      lhsIsVoid = true;
-    }
-
     mlir::Value rhs = Visit(rhsExpr);
-    if (lhsIsVoid) {
+    if (!lhs) {
+      // If the conditional has void type, make sure we return a null Value.
       assert(!rhs && "lhs and rhs types must match");
-      rhs = builder.getNullValue(cgf.voidTy, loc);
+      return {};
     }
 
     return builder.createSelect(loc, condV, lhs, rhs);
