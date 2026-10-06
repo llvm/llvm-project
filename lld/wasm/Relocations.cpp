@@ -117,6 +117,18 @@ void scanRelocations(InputChunk *chunk) {
       break;
     case R_WASM_MEMORY_ADDR_TLS_SLEB:
     case R_WASM_MEMORY_ADDR_TLS_SLEB64:
+      // These relocations are resolved relative to this module's own
+      // `__tls_base`, and the dynamic linking ABI has no way to reference a
+      // thread-local variable in another module's TLS block. Without this
+      // check the symbol would silently resolve to offset zero in our own
+      // TLS block and the code would access an unrelated variable at runtime.
+      if (sym->isShared()) {
+        error(toString(file) + ": relocation " + relocTypeToString(reloc.Type) +
+              " cannot be used against symbol `" + toString(*sym) +
+              "` defined in shared library " + toString(sym->getFile()) +
+              "; thread-local variables cannot be accessed across modules");
+        break;
+      }
       if (!sym->isDefined()) {
         error(toString(file) + ": relocation " + relocTypeToString(reloc.Type) +
               " cannot be used against an undefined symbol `" + toString(*sym) +

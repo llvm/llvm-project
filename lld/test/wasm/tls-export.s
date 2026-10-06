@@ -71,8 +71,13 @@ _start:
 # CHECK-NEXT:        Kind:            GLOBAL
 # CHECK-NEXT:        Index:           2
 
-# Check that linking a shared object that exports a TLS global doesn't cause 
-# the global to be erroneously marked as non-TLS.
+# Check that linking a shared object that exports a TLS global doesn't cause
+# the global to be erroneously marked as non-TLS. The reference itself is
+# still rejected, since TLS relocations resolve against the referencing
+# module's own __tls_base and the dynamic linking ABI cannot express a
+# reference into another module's TLS block.
 
 # RUN: llvm-mc -filetype=obj -triple=wasm32-unknown-unknown -o %t/use-tls.o %t/use-tls.s
-# RUN: wasm-ld --shared-memory -pie -o %t/use-tls.wasm %t/define-tls.so %t/use-tls.o
+# RUN: not wasm-ld --shared-memory -pie -o %t/use-tls.wasm %t/define-tls.so %t/use-tls.o 2>&1 | FileCheck %s --check-prefix=ERR
+
+# ERR: error: {{.*}}use-tls.o: relocation R_WASM_MEMORY_ADDR_TLS_SLEB cannot be used against symbol `tls1` defined in shared library {{.*}}define-tls.so; thread-local variables cannot be accessed across modules
