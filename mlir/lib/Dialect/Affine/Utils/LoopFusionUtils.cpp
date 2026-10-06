@@ -349,6 +349,62 @@ FusionResult mlir::affine::canFuseLoops(AffineForOp srcForOp,
     return FusionResult::FailIncorrectSlice;
   }
 
+  // Refuse a depth where the slice is invariant w.r.t. the dst iv at that
+  // depth: the producer body would replicate per-iv and clobber any
+  // consumer-written cell on a shared memref.
+  if (fusionStrategy.getStrategy() == FusionStrategy::ProducerConsumer &&
+      dstLoopDepth > numCommonLoops) {
+    // Locate the dst iv via a consumer op's parent chain (handles imperfect
+    // nests and sibling loops).
+    Value dstIv;
+    for (Operation *op : opsB) {
+      SmallVector<AffineForOp, 4> ivLoops;
+      affine::getAffineForIVs(*op, &ivLoops);
+      if (ivLoops.size() >= dstLoopDepth) {
+        dstIv = ivLoops[dstLoopDepth - 1].getInductionVar();
+        break;
+      }
+    }
+    if (dstIv) {
+      // Operand lists may name `dstIv` without the AffineMap actually
+      // referencing its dim/symbol; check the map.
+      auto mapUsesPos = [](AffineMap m, unsigned pos) -> bool {
+        unsigned numDims = m.getNumDims();
+        return pos < numDims ? m.isFunctionOfDim(pos)
+                             : m.isFunctionOfSymbol(pos - numDims);
+      };
+      auto boundUsesDstIv = [&](AffineMap m, ArrayRef<Value> operands) {
+        for (unsigned i = 0, e = operands.size(); i < e; ++i)
+          if (operands[i] == dstIv && mapUsesPos(m, i))
+            return true;
+        return false;
+      };
+      bool sliceUsesDstIv = false;
+      for (unsigned k = 0, e = srcSlice->ivs.size(); k < e; ++k) {
+        if (boundUsesDstIv(srcSlice->lbs[k], srcSlice->lbOperands[k]) ||
+            boundUsesDstIv(srcSlice->ubs[k], srcSlice->ubOperands[k])) {
+          sliceUsesDstIv = true;
+          break;
+        }
+      }
+      if (!sliceUsesDstIv) {
+        DenseSet<Value> producerStoreMemrefs;
+        for (Operation *op : opsA)
+          if (auto s = dyn_cast<AffineWriteOpInterface>(op))
+            producerStoreMemrefs.insert(s.getMemRef());
+        for (Operation *op : opsB) {
+          auto s = dyn_cast<AffineWriteOpInterface>(op);
+          if (s && producerStoreMemrefs.contains(s.getMemRef())) {
+            LDBG() << "Refusing fusion at depth " << dstLoopDepth
+                   << ": slice invariant w.r.t. dst iv; producer writes "
+                      "would replicate onto consumer-written memref";
+            return FusionResult::FailFusionDependence;
+          }
+        }
+      }
+    }
+  }
+
   return FusionResult::Success;
 }
 
