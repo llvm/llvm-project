@@ -2573,6 +2573,29 @@ public:
     case Intrinsic::vector_reduce_fminimumnum:
       return thisT()->getMinMaxReductionCost(getMinMaxReductionIntrinsicOp(IID),
                                              VecOpTy, ICA.getFlags(), CostKind);
+    case Intrinsic::vector_partial_reduce_add:
+    case Intrinsic::vector_partial_reduce_fadd: {
+      VectorType *AccTy = cast<VectorType>(ICA.getArgTypes()[0]);
+      VectorType *InTy = cast<VectorType>(ICA.getArgTypes()[1]);
+      unsigned Opcode = 0;
+      switch (IID) {
+      default:
+        llvm_unreachable("Unexpected partial reduction");
+        break;
+      case Intrinsic::vector_partial_reduce_add:
+        Opcode = Instruction::Add;
+        ISD = ISD::PARTIAL_REDUCE_UMLA;
+        break;
+      case Intrinsic::vector_partial_reduce_fadd:
+        Opcode = Instruction::FAdd;
+        ISD = ISD::PARTIAL_REDUCE_FMLA;
+        break;
+      }
+      // Check for a simple unordered reduction step with no extensions first.
+      if (InTy == AccTy)
+        return thisT()->getArithmeticInstrCost(Opcode, AccTy, CostKind);
+      break;
+    }
     case Intrinsic::experimental_vector_match: {
       auto *SearchTy = cast<VectorType>(ICA.getArgTypes()[0]);
       auto *NeedleTy = cast<FixedVectorType>(ICA.getArgTypes()[1]);
