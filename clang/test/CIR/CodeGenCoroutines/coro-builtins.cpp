@@ -84,3 +84,27 @@ void f(int n) {
 
   // LLVM: call i8 @llvm.coro.suspend(token none, i1 true)
 }
+
+void test_suspend_switch() {
+  switch (__builtin_coro_suspend(false)) {
+  case -1:
+    return;
+  case 0:
+    break;
+  }
+}
+
+// CIR: cir.func{{.*}} @_Z19test_suspend_switchv
+// CIR: %[[TK_NONE:.*]] = cir.token.none
+// CIR: %[[FALSE:.*]] = cir.const #false
+// CIR: %[[SUSPEND:.*]] = cir.coro.intrinsic.suspend(%[[TK_NONE]], %[[FALSE]]) : (token, !cir.bool) -> !s8i
+// CIR: %[[CAST:.*]] = cir.cast integral %[[SUSPEND]] : !s8i -> !s32i
+// CIR: cir.switch(%[[CAST]] : !s32i)
+
+// LLVM: define{{.*}} void @_Z19test_suspend_switchv
+// LLVM: %[[SUSPEND:.*]] = call i8 @llvm.coro.suspend(token none, i1 false)
+// LLVM: %[[CAST:.*]] = sext i8 %[[SUSPEND]] to i32
+// LLVM: switch i32 %[[CAST]], label %{{.*}} [
+// LLVM:   i32 -1, label %{{.*}}
+// LLVM:   i32 0, label %{{.*}}
+// LLVM: ]

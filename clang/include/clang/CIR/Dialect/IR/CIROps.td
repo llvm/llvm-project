@@ -5143,7 +5143,7 @@ def CIR_CoroSizeOp : CIR_CoroIntrinsicOp<"size", (ins),
 
 def CIR_CoroSuspendOp : CIR_CoroIntrinsicOp<"suspend",
     (ins Token:$id, CIR_AnyBoolType: $final),
-    (outs CIR_UInt8:$result), [TokenConsumerTrait]> {
+    (outs CIR_SInt8:$result), [TokenConsumerTrait]> {
   let summary = "Represents llvm.coro.suspend";
   let description = [{
     `cir.coro.suspend` represents the `llvm.coro.suspend` intrinsic.
