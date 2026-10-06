@@ -3295,6 +3295,7 @@ bool SelectionDAGLegalize::ExpandNode(SDNode *Node) {
     break;
   case ISD::READCYCLECOUNTER:
   case ISD::READSTEADYCOUNTER:
+  case ISD::IS_DEBUGGING_ENABLED:
     // If the target didn't expand this, just return 'zero' and preserve the
     // chain.
     Results.append(Node->getNumValues() - 1,

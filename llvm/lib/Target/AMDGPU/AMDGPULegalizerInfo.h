@@ -37,6 +37,8 @@ public:
   bool legalizeCustom(LegalizerHelper &Helper, MachineInstr &MI,
                       LostDebugLocObserver &LocObserver) const override;
 
+  bool legalizeIsDebuggingEnabled(MachineInstr &MI, MachineIRBuilder &B) const;
+
   Register getSegmentAperture(unsigned AddrSpace,
                               MachineRegisterInfo &MRI,
                               MachineIRBuilder &B) const;
