@@ -1013,7 +1013,7 @@ def CIR_StoreOp : CIR_Op<"store", [
 
 defvar CIR_ReturnableScopes = [
   "FuncOp", "ScopeOp", "IfOp", "SwitchOp", "CaseOp", "CleanupScopeOp",
-  "DoWhileOp", "WhileOp", "ForOp", "TryOp"
+  "CoroutineOp", "DoWhileOp", "WhileOp", "ForOp", "TryOp"
 ];
 
 def CIR_ReturnOp : CIR_Op<"return", [
@@ -1161,7 +1161,7 @@ def CIR_ConditionOp : CIR_Op<"condition", [
 //===----------------------------------------------------------------------===//
 
 defvar CIR_YieldableScopes = [
-  "ArrayCtor", "ArrayDtor", "AwaitOp", "CaseOp", "CleanupScopeOp", "CoroBodyOp",
+  "ArrayCtor", "ArrayDtor", "AwaitOp", "CaseOp", "CleanupScopeOp", "CoroutineOp",
   "DoWhileOp", "ForOp", "GlobalOp", "IfOp", "LocalInitOp", "ScopeOp", "SwitchOp",
   "TernaryOp", "TryOp", "WhileOp"
 ];
@@ -3442,10 +3442,7 @@ def CIR_GlobalOp : CIR_RegionBranchOpBase<"global", [
                        OptionalAttr<CIR_TLSModelAttr>:$tls_model,
                        OptionalAttr<CIR_ThreadLocalGlobalWrapperInitAttr>:$tls_refs,
                        OptionalAttr<AnyAttr>:$initial_value,
-                       // FIXME(cir): This eventually needs to become a
-                       // stringattr like FuncOp to allow customization of the
-                       // group name.
-                       UnitProp:$comdat,
+                       OptionalAttr<StrAttr>:$comdat,
                        UnitProp:$constant,
                        UnitProp:$dso_local,
                        OptionalAttr<CIR_StaticLocalGuardAttr>:$static_local_guard,
@@ -3467,7 +3464,7 @@ def CIR_GlobalOp : CIR_RegionBranchOpBase<"global", [
     ($global_visibility^)?
     (`constant` $constant^)?
     enum($linkage)
-    (`comdat` $comdat^)?
+    custom<ComdatName>($comdat)
     (`tls_model` `=` enum($tls_model)^)?
     (`tls_refs` `=` $tls_refs^)?
     (`dso_local` $dso_local^)?
@@ -4358,7 +4355,8 @@ def CIR_FuncOp : CIR_Op<"func", [
     CIR_OptionalPriorityAttr:$global_ctor_priority,
     CIR_OptionalPriorityAttr:$global_dtor_priority,
     OptionalAttr<CIR_FuncInfoAttr>:$func_info,
-    OptionalAttr<CIR_AnnotationArrayAttr>:$annotations
+    OptionalAttr<CIR_AnnotationArrayAttr>:$annotations,
+    OptionalAttr<CIR_UnwindTableKindAttr>:$uwtable
   );
 
   let regions = (region AnyRegion:$body);
@@ -4392,10 +4390,6 @@ def CIR_FuncOp : CIR_Op<"func", [
     /// returing void)
     llvm::ArrayRef<mlir::Type> getResultTypes() {
        return getFunctionType().getReturnTypes();
-    }
-
-    void setComdat(bool) {
-      setComdat(llvm::StringRef(""));
     }
 
     //===------------------------------------------------------------------===//
@@ -4820,6 +4814,90 @@ def CIR_TryCallOp : CIR_CallOpBase<"try_call",[
 }
 
 //===----------------------------------------------------------------------===//
+// CoroutineOp
+//===----------------------------------------------------------------------===//
+
+def CIR_CoroutineOp : CIR_Op<"coroutine", [
+  DeclareOpInterfaceMethods<RegionBranchOpInterface, ["getSuccessorInputs"]>,
+  NoRegionArguments, RecursivelySpeculatable, AutomaticAllocationScope
+]> {
+
+  let summary = "Groups a coroutine's structured suspend/resume/destroy control flow";
+  let description = [{
+    `cir.coroutine` is an op consisting of seven regions: `initial_suspend`,
+    `body`, `final_suspend`, grp (TODO),`unwind` (TODO), `destroy`, and`exit`.
+
+    - `initial_suspend`: the coroutine ramp/setup region. Its `cir.await` marked
+      `init` is the ramp boundary: the coroutine frame and its associated state
+      are established before this point, and crossing the await transfers
+      execution to `body`.
+
+    - `body`: the user-written coroutine body, arbitrary CFG, zero or more
+      `cir.await`s at any nesting depth, terminated by `cir.co_return` or a
+      plain `cir.yield` if control simply falls off the end. This region is
+      a structural boundary separating the coroutine's setup and teardown
+      logic (initial suspend, final suspend, destroy) from the
+      user-provided statements of the original function body, including
+      `co_await` and `co_return` expressions. In particular,
+      `cir.co_return` operations inside this region mark coroutine exit
+      points and introduce structured control flow that transfers
+      execution to `final_suspend`.
+
+    - `final_suspend`: exactly one `cir.await`, marked `final`. Nothing
+      else. Corresponds to `co_await promise.final_suspend()`. Resuming
+      past this point is undefined behavior in valid programs, so its
+      `resume` edge is expected to be dead in practice, but is kept for
+      structural symmetry with the other two suspend regions.
+
+    - `gro`: TODO.
+
+    - `unwind`: TODO.
+
+    - `destroy`: destroys the coroutine frame (`coro.free` + `delete`).
+      Reached by an explicit `destroy()` call on a suspended handle, by
+      normal completion through `final_suspend`, or by an exception
+      escaping the coroutine. Falls through to `exit` except when reached
+      due to an escaping exception, where it continues propagating that
+      exception instead.
+
+    - `exit`: the shared return-to-caller path. Reached directly from any
+      suspend point that isn't being destroyed (the coroutine is just
+      pausing), and from `destroy` when it was entered via ordinary
+      dispatch. Holds `coro.end` + the actual `cir.return`.
+
+  }];
+
+  // TODO(cir): Add GRO and EH
+  let regions = (region AnyRegion:$initialSuspend,
+                        AnyRegion:$body,
+                        AnyRegion:$finalSuspend,
+                        AnyRegion:$destroy,
+                        AnyRegion:$exit);
+
+  let skipDefaultBuilders = 1;
+
+  let builders = [
+    OpBuilder<(ins "BuilderCallbackRef":$initialSuspendBuilder,
+      "BuilderCallbackRef":$bodyBuilder,
+      "BuilderCallbackRef":$finalSuspendBuilder,
+      "BuilderCallbackRef":$destroyBuilder,
+      "BuilderCallbackRef":$exitBuilder)>
+  ];
+
+  let assemblyFormat = [{
+    `initialSuspend` `:` $initialSuspend `,`
+    `body` `:` $body `,`
+    `finalSuspend` `:` $finalSuspend `,`
+    `destroy` `:` $destroy `,`
+    `exit` `:` $exit
+    attr-dict
+  }];
+
+  let hasLLVMLowering = false;
+  let hasVerifier = 1;
+}
+
+//===----------------------------------------------------------------------===//
 // AwaitOp
 //===----------------------------------------------------------------------===//
 
@@ -4833,7 +4911,7 @@ def CIR_AwaitKind : CIR_I32Enum<"AwaitKind", "await kind", [
 def CIR_AwaitKindAttr : CIR_EnumAttr<CIR_AwaitKind, "await">;
 
 def CIR_AwaitOp : CIR_RegionBranchOpBase<"await", [
-  RecursivelySpeculatable, NoRegionArguments
+  RecursivelySpeculatable, NoRegionArguments, HasAncestor<"CoroutineOp">
 ]> {
   let summary = "Wraps C++ co_await implicit logic";
   let description = [{
@@ -4914,51 +4992,13 @@ def CIR_AwaitOp : CIR_RegionBranchOpBase<"await", [
   let hasVerifier = 1;
   let hasLLVMLowering = false;
 }
-//===----------------------------------------------------------------------===//
-// CoroBody
-//===----------------------------------------------------------------------===//
-def CIR_CoroBodyOp : CIR_RegionBranchOpBase<"coro.body", [
-  RecursivelySpeculatable, AutomaticAllocationScope, NoRegionArguments,
-  RecursiveMemoryEffects
-]> {
-  let summary = "Region containing the user-authored coroutine body";
-  let description = [{
-    The `cir.coro.body` operation models the region where the user-authored
-    coroutine code is emitted.
-
-    This operation serves as a structural boundary separating the coroutine
-    setup and teardown logic (e.g. initial suspend, final suspend, and cleanup)
-    from the user-provided statements inside the coroutine.
-
-    The body region contains the code corresponding to the original function
-    body, including `co_await` and `co_return` expressions. In particular,
-    `cir.co_return` operations inside this region mark coroutine exit points
-    and introduce structured control flow that transfers execution to the
-    final suspend point of the coroutine.
-  }];
-
-  let regions = (region AnyRegion:$body);
-
-  let skipDefaultBuilders = 1;
-
-  let builders = [
-    OpBuilder<(ins "BuilderCallbackRef":$bodyBuilder)>
-  ];
-
-  let assemblyFormat = [{
-    $body attr-dict
-  }];
-
-  let hasLLVMLowering = false;
-  let hasVerifier = 1;
-}
 
 //===----------------------------------------------------------------------===//
 // CoReturnOp
 //===----------------------------------------------------------------------===//
 
 def CIR_CoReturnOp : CIR_Op<"co_return", [
-  ReturnLike, Pure, Terminator, HasAncestor<"CoroBodyOp">
+  ReturnLike, Pure, Terminator, HasAncestor<"CoroutineOp">
 ]> {
   let summary = "Coroutine return operation";
   let description = [{
@@ -4972,6 +5012,7 @@ def CIR_CoReturnOp : CIR_Op<"co_return", [
     attr-dict
   }];
 
+  let hasVerifier = 1;
   let hasLLVMLowering = false;
 }
 
@@ -5160,6 +5201,52 @@ def CIR_CoroDoneOp : CIR_CoroIntrinsicOp<"done", (ins CIR_VoidPtrType:$handle),
     suspended coroutine.
   }];
   let llvmOp = "CoroDoneOp";
+}
+
+//===----------------------------------------------------------------------===//
+// CoroSuspendPoint
+//===----------------------------------------------------------------------===//
+
+def CIR_CoroSuspendPoint : CIR_Op<"coro.suspend_point", [
+  Pure, Terminator, HasParent<"AwaitOp">,
+  DeclareOpInterfaceMethods<RegionBranchTerminatorOpInterface>
+]> {
+  let summary = "Marks the point where a coroutine actually suspends";
+  let description = [{
+    Terminates the `suspend` region of a `cir.await`. It has no explicit
+    successors; the destination is determined by `CoroutineOp`
+    according to how the suspended coroutine is subsequently handled:
+
+    - resume: continues execution through the `cir.await`'s `resume` region
+      when the coroutine handle is resumed.
+
+    - exit: transfers directly to the enclosing `cir.coroutine`'s `exit`
+      region when the coroutine remains suspended. The coroutine frame remains
+      alive and no cleanups are performed.
+
+    - destroy: transfers through the enclosing `cir.cleanup.scope`s to the
+      `cir.coroutine`'s `destroy` region when the coroutine handle is
+      destroyed.
+  }];
+
+  let assemblyFormat = [{
+    attr-dict
+  }];
+
+  let hasLLVMLowering = false;
+}
+
+//===----------------------------------------------------------------------===//
+// Coroutine intrinsic NoopOp
+//===----------------------------------------------------------------------===//
+
+def CIR_CoroNoopOp : CIR_CoroIntrinsicOp<"noop", (ins),
+    (outs CIR_VoidPtrType:$result)> {
+  let summary = "Represents llvm.coro.noop";
+  let description = [{
+    Returns a coroutine handle to a no-op coroutine.
+  }];
+  let llvmOp = "CoroNoopOp";
 }
 
 //===----------------------------------------------------------------------===//
@@ -5580,7 +5667,8 @@ def CIR_AsmFlavor : CIR_I32Enum<"AsmFlavor", "ATT or Intel",
 
 def CIR_AsmFlavorAttr : CIR_EnumAttr<CIR_AsmFlavor, "asm_flavor">;
 
-def CIR_InlineAsmOp : CIR_Op<"asm", [RecursiveMemoryEffects]> {
+def CIR_InlineAsmOp : CIR_Op<"asm",
+    [DeclareOpInterfaceMethods<MemoryEffectsOpInterface>]> {
   let description = [{
     The `cir.asm` operation represents C/C++ asm inline.
 
@@ -6293,6 +6381,96 @@ def CIR_VecSplatOp : CIR_Op<"vec.splat", [
 }
 
 //===----------------------------------------------------------------------===//
+// MatrixColumnMajorLoadOp
+//===----------------------------------------------------------------------===//
+
+def CIR_MatrixColumnMajorLoadOp : CIR_Op<"matrix.column_major_load", [
+  DeclareOpInterfaceMethods<PromotableMemOpInterface>,
+]> {
+  let summary = "Matrix column major load";
+  let description = [{
+    The `cir.matrix.column_major_load` operation provides a representation for
+    the `__builtin_matrix_column_major_load` builtin and corresponds to the
+    `llvm.matrix.column.major.load` intrinsic in LLVM IR.
+
+    This operation performs a load of any matrix type with a stride to compute
+    the start address of the different columns.
+
+    The `stride` argument is the column stride which much be greater than or equal 
+    to `row`, giving the following 2x3 matrix `[[1, 2, 3], [4, 5, 6]]` with a 
+    stride of 2, the result matrix will be `[[1, 3, 5], [2, 4, 6]]`.
+
+    ```
+    %result = cir.matrix.column_major_load %ptr : <!cir.float>, %stride : !u64i, 
+      !cir.matrix<2 x 3 x !cir.float>
+
+    %result = cir.matrix.column_major_load %ptr : <!cir.double>, %stride : !u64i,
+      !cir.matrix<5 x 5 x !cir.double>
+
+    %result = cir.matrix.column_major_load %ptr : <!cir.double>, %stride : !u64i
+      volatile, !cir.matrix<5 x 5 x !cir.double>
+    ```
+  }];
+
+  let arguments = (ins
+    Arg<CIR_PointerType, "the address to load from", [MemRead]>:$value,
+    CIR_IntType:$stride,
+    UnitAttr:$is_volatile
+  );
+
+  let results = (outs CIR_MatrixType:$result);
+
+  let assemblyFormat = [{
+    $value `:` type($value) `,`
+    $stride `:` type($stride)
+    (`volatile` $is_volatile^)?
+    `,` qualified(type($result)) attr-dict
+  }];
+}
+
+//===----------------------------------------------------------------------===//
+// MatrixColumnMajorStoreOp
+//===----------------------------------------------------------------------===//
+
+def CIR_MatrixColumnMajorStoreOp : CIR_Op<"matrix.column_major_store", [
+  DeclareOpInterfaceMethods<PromotableMemOpInterface>,
+]> {
+  let summary = "Matrix column major store";
+  let description = [{
+    The `cir.matrix.column_major_store` operation provides a representation for
+    the `__builtin_matrix_column_major_store` builtin and corresponds to the
+    `llvm.matrix.column.major.store` intrinsic in LLVM IR.
+
+    This operation performs a store of data from matrix type with a stride to
+    compute the start address of the different columns.
+
+    The `stride` argument is the column stride which much be greater than or equal 
+    to `row`, giving the following 2x3 matrix `[[1, 2, 3], [4, 5, 6]]` with a 
+    stride of 2, the stored data will be `[1, 3, 5, 2, 4, 6]`.
+
+    ```
+    cir.matrix.column_major_store %matrix : <3 x 3 x !cir.float>, 
+      %data : <!cir.float>, %stribe : !u64i
+    ```
+  }];
+
+  let arguments = (ins
+    CIR_MatrixType:$matrix,
+    Arg<CIR_PointerType, "the address to store the value", [MemWrite]>:$value,
+    CIR_IntType:$stride,
+    UnitAttr:$is_volatile
+  );
+
+  let assemblyFormat = [{
+    $matrix `:` type($matrix) `,`
+    $value `:` type($value) `,`
+    $stride `:` type($stride)
+    (`volatile` $is_volatile^)?
+    attr-dict
+  }];
+}
+
+//===----------------------------------------------------------------------===//
 // MatrixTransposeOp
 //===----------------------------------------------------------------------===//
 
@@ -6325,10 +6503,27 @@ def CIR_MatrixTransposeOp : CIR_Op<"matrix.transpose", [
 }
 
 //===----------------------------------------------------------------------===//
-// BaseClassAddrOp
+// BaseClassAddrOp & DerivedClassAddrOp
 //===----------------------------------------------------------------------===//
 
-def CIR_BaseClassAddrOp : CIR_Op<"base_class_addr", [Pure]> {
+class CIR_ClassCastOp<string mnemonic> : CIR_Op<mnemonic, [Pure]> {
+  let arguments = (ins
+    CIR_PointerType:$src_addr,
+    IndexAttr:$offset,
+    UnitAttr:$assume_not_null
+  );
+
+  let results = (outs Res<CIR_PointerType, "">:$result);
+
+  let assemblyFormat = [{
+      (`nonnull` $assume_not_null^)?
+      $src_addr ` ` `[` $offset `]`
+      `:` qualified(type($src_addr)) `->` qualified(type($result))
+      attr-dict
+  }];
+}
+
+def CIR_BaseClassAddrOp : CIR_ClassCastOp<"base_class_addr"> {
   let summary = "Get the base class address for a class/struct";
   let description = [{
     The `cir.base_class_addr` operaration gets the address of a particular
@@ -6352,28 +6547,12 @@ def CIR_BaseClassAddrOp : CIR_Op<"base_class_addr", [Pure]> {
     ```
     will generate
     ```
-    %3 = cir.base_class_addr %1 : !cir.ptr<!rec_Derived> nonnull [0] -> !cir.ptr<!rec_Base>
+    %3 = cir.base_class_addr nonnull %1 [0] : !cir.ptr<!rec_Derived> -> !cir.ptr<!rec_Base>
     ```
-  }];
-
-  let arguments = (ins
-    CIR_PointerType:$derived_addr,
-    IndexAttr:$offset, UnitAttr:$assume_not_null);
-
-  let results = (outs Res<CIR_PointerType, "">:$base_addr);
-
-  let assemblyFormat = [{
-      $derived_addr `:` qualified(type($derived_addr))
-      (`nonnull` $assume_not_null^)?
-      ` ` `[` $offset `]` `->` qualified(type($base_addr)) attr-dict
   }];
 }
 
-//===----------------------------------------------------------------------===//
-// DerivedClassAddrOp
-//===----------------------------------------------------------------------===//
-
-def CIR_DerivedClassAddrOp : CIR_Op<"derived_class_addr", [Pure]> {
+def CIR_DerivedClassAddrOp : CIR_ClassCastOp<"derived_class_addr"> {
   let summary = "Get the derived class address for a class/struct";
   let description = [{
     The `cir.derived_class_addr` operaration gets the address of a particular
@@ -6402,20 +6581,8 @@ def CIR_DerivedClassAddrOp : CIR_Op<"derived_class_addr", [Pure]> {
     leads to
     ```
       %2 = cir.load %0 : !cir.ptr<!cir.ptr<!rec_A>>, !cir.ptr<!rec_A>
-      %3 = cir.base_class_addr %2 : !cir.ptr<!rec_B> [0] -> !cir.ptr<!rec_A>
+      %3 = cir.derived_class_addr %2 [0] : !cir.ptr<!rec_A> -> !cir.ptr<!rec_B>
     ```
-  }];
-
-  let arguments = (ins
-    CIR_PointerType:$base_addr,
-    IndexAttr:$offset, UnitAttr:$assume_not_null);
-
-  let results = (outs Res<CIR_PointerType, "">:$derived_addr);
-
-  let assemblyFormat = [{
-      $base_addr `:` qualified(type($base_addr))
-      (`nonnull` $assume_not_null^)?
-      ` ` `[` $offset `]` `->` qualified(type($derived_addr)) attr-dict
   }];
 }
 

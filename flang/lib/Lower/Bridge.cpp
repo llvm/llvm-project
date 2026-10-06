@@ -1843,7 +1843,8 @@ private:
     for (; iter != endDoIter; ++iter)
       genFIR(*iter, /*unstructuredContext=*/false);
 
-    mlir::scf::YieldOp::create(*builder, loc);
+    mlir::scf::YieldOp::create(*builder,
+                               genConstructEndLocation(doConstructEval));
     builder->setInsertionPointAfter(scfWhile);
   }
 
@@ -2660,6 +2661,22 @@ private:
     }
   }
 
+  /// Return the location of the statement ending construct \p eval, or of its
+  /// opening statement when the ending one has no source position (e.g. the
+  /// END IF synthesized for an IF statement).
+  mlir::Location
+  genConstructEndLocation(Fortran::lower::pft::Evaluation &eval) {
+    const Fortran::parser::CharBlock &endPosition =
+        eval.getLastNestedEvaluation().position;
+    if (!endPosition.empty())
+      return toLocation(endPosition);
+    const Fortran::parser::CharBlock &beginPosition =
+        eval.getFirstNestedEvaluation().position;
+    if (!beginPosition.empty())
+      return toLocation(beginPosition);
+    return toLocation();
+  }
+
   /// Wrap an unstructured construct's CFG in a self-contained
   /// scf.execute_region and set the builder insertion point inside it. Returns
   /// the created op (null if the construct isn't wrappable).
@@ -2670,6 +2687,9 @@ private:
             eval, bridge.getSemanticsContext()))
       return nullptr;
 
+    // A construct evaluation has no source position of its own, so the
+    // current position may still be that of a previous statement.
+    setCurrentPosition(eval.getFirstNestedEvaluation().position);
     mlir::Location loc = toLocation();
     auto wrapOp =
         mlir::scf::ExecuteRegionOp::create(*builder, loc, mlir::TypeRange{},
@@ -2680,7 +2700,7 @@ private:
     createEmptyBlocks(eval.getNestedEvaluations());
     mlir::Block *yieldBlock = builder->createBlock(&wrapOp.getRegion());
     builder->setInsertionPointToEnd(yieldBlock);
-    mlir::scf::YieldOp::create(*builder, loc);
+    mlir::scf::YieldOp::create(*builder, genConstructEndLocation(eval));
 
     if (eval.constructExit) {
       savedExitBlock = eval.constructExit->block;
@@ -2706,6 +2726,7 @@ private:
       return nullptr;
 
     Fortran::lower::pft::EvaluationList &list = eval.getNestedEvaluations();
+    setCurrentPosition(eval.getFirstNestedEvaluation().position);
     mlir::Location loc = toLocation();
     auto wrapOp =
         mlir::scf::ExecuteRegionOp::create(*builder, loc, mlir::TypeRange{},
@@ -2722,7 +2743,7 @@ private:
         llvm::make_range(std::next(list.begin()), std::prev(list.end())));
     yieldBlock = builder->createBlock(&wrapOp.getRegion());
     builder->setInsertionPointToEnd(yieldBlock);
-    mlir::scf::YieldOp::create(*builder, loc);
+    mlir::scf::YieldOp::create(*builder, genConstructEndLocation(eval));
 
     // A CYCLE targets the EndDoStmt, which is the boundary between the loop
     // body and the loop control. Inside the wrap that boundary is the region's
@@ -2997,6 +3018,9 @@ private:
     // An EndDoStmt in unstructured code may start a new block.
     Fortran::lower::pft::Evaluation &endDoEval = *iter;
     assert(endDoEval.getIf<Fortran::parser::EndDoStmt>() && "no enddo stmt");
+    // The loop end code belongs to the END DO, not to the last statement
+    // lowered in the body.
+    setCurrentPosition(endDoEval.position);
     if (unstructuredContext)
       maybeStartBlock(endDoEval.block);
 
@@ -3903,6 +3927,10 @@ private:
         std::get_if<Fortran::parser::OpenACCCombinedConstruct>(&acc.u);
 
     Fortran::lower::pft::Evaluation *curEval = &getEval();
+    // The loop the directive takes over, once the descent below has found it.
+    // A construct that owns no loop -- acc data, or acc parallel without a
+    // loop directive -- leaves this null and has its own evaluations lowered.
+    Fortran::lower::pft::Evaluation *absorbedLoop = nullptr;
     bool collapseForce = false;
     uint64_t collapseDepth = 1;
     uint64_t loopCount = 1;
@@ -3947,6 +3975,11 @@ private:
             break;
           curEval = nextDo;
         }
+      // The descent lands on the loop the directive takes over, and every
+      // level it steps through is one. A construct whose first evaluation is
+      // not a loop takes over none.
+      if (outerDo)
+        absorbedLoop = curEval;
     }
 
     // collapse(force: ...) allows statements between the loop levels the
@@ -4006,6 +4039,11 @@ private:
 
     if (collapseForce && collapseDepth > 1) {
       genCollapseForceBody();
+    } else if (absorbedLoop && absorbedLoop->lowerBodyAsWrappedRegion()) {
+      // Taking the loop over means genFIR(DoConstruct) -- where a plain loop
+      // folds a body that branches into a region -- never runs for it. Such a
+      // body still needs that region, so fold it through the same helper.
+      genLoopBodyEvaluations(*absorbedLoop, /*unstructuredContext=*/true);
     } else if (curEval->hasNestedEvaluations()) {
       for (Fortran::lower::pft::Evaluation &e : curEval->getNestedEvaluations())
         genFIR(e);

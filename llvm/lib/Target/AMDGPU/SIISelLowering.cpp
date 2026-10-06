@@ -8680,7 +8680,7 @@ unsigned SITargetLowering::isCFIntrinsic(const SDNode *Intr) const {
 }
 
 bool SITargetLowering::shouldEmitFixup(const GlobalValue *GV) const {
-  const Triple &TT = getTargetMachine().getTargetTriple();
+  const Triple &TT = GV->getParent()->getTargetTriple();
   return (GV->getAddressSpace() == AMDGPUAS::CONSTANT_ADDRESS ||
           GV->getAddressSpace() == AMDGPUAS::CONSTANT_ADDRESS_32BIT) &&
          AMDGPU::shouldEmitConstantsToTextSection(TT);
@@ -20880,7 +20880,7 @@ static bool isAtomicRMWLegalXChgTy(const AtomicRMWInst *RMW) {
     return true;
 
   if (PointerType *PT = dyn_cast<PointerType>(Ty)) {
-    const DataLayout &DL = RMW->getFunction()->getParent()->getDataLayout();
+    const DataLayout &DL = RMW->getFunction()->getDataLayout();
     unsigned BW = DL.getPointerSizeInBits(PT->getAddressSpace());
     return BW == 32 || BW == 64;
   }
