@@ -2273,10 +2273,10 @@ public:
     if (auto *CE = dyn_cast<CallExpr>(S)) {
       if (const auto *Callee = CE->getDirectCallee()) {
         if (const auto *Attr = Callee->getAttr<UnsafeBufferUsageAttr>()) {
-          // Skip if this is annotated with
-          // `[[clang::unsafe_buffer_usage("container")]]` as that case is
-          // handled by UnsafeBufferUsageContainerAttrGadget.
-          if (Attr->getCategory() == "container")
+          // Skip if this is annotated with a category (e.g.,
+          // `[[clang::unsafe_buffer_usage("container")]]`) as that case is
+          // handled by its category-specific gadget.
+          if (!Attr->getCategory().empty())
             return false;
           Result.addNode(OpTag, DynTypedNode::create(*CE));
           return true;
@@ -2288,7 +2288,7 @@ public:
         return false;
       if (const auto *Attr =
               ME->getMemberDecl()->getAttr<UnsafeBufferUsageAttr>()) {
-        if (Attr->getCategory() == "container")
+        if (!Attr->getCategory().empty())
           return false;
         Result.addNode(OpTag, DynTypedNode::create(*ME));
         return true;
@@ -2330,10 +2330,10 @@ public:
     if (!CE)
       return false;
     const auto *Attr = CE->getConstructor()->getAttr<UnsafeBufferUsageAttr>();
-    // Skip if this is annotated with
-    // `[[clang::unsafe_buffer_usage("container")]]` as that case is
-    // handled by UnsafeBufferUsageContainerAttrGadget.
-    if (!Attr || Attr->getCategory() == "container")
+    // Skip if this is annotated with a category (e.g.,
+    // `[[clang::unsafe_buffer_usage("container")]]`) as that case is
+    // handled by its category-specific gadget.
+    if (!Attr || !Attr->getCategory().empty())
       return false;
     // std::span(ptr, size) ctor is handled by SpanTwoParamConstructorGadget.
     MatchResult Tmp;
