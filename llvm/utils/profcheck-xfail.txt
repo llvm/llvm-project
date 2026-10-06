@@ -26,7 +26,6 @@ Transforms/IndVarSimplify/debugloc-rem-subst.ll
 Transforms/IndVarSimplify/eliminate-rem.ll
 Transforms/IndVarSimplify/preserving-debugloc-rem-div.ll
 Transforms/IndirectBrExpand/basic.ll
-Transforms/InstCombine/cast-mul-select.ll
 Transforms/InstCombine/fcmp-select.ll
 Transforms/InstCombine/ffs-1.ll
 Transforms/InstCombine/ffs-i16.ll
@@ -53,7 +52,6 @@ Transforms/InstCombine/select-select.ll
 Transforms/InstCombine/simplify-demanded-fpclass.ll
 Transforms/InstCombine/sink-not-into-another-hand-of-logical-and.ll
 Transforms/InstCombine/sink-not-into-another-hand-of-logical-or.ll
-Transforms/InstCombine/strrchr-3.ll
 Transforms/LoopIdiom/AArch64/byte-compare-index.ll
 Transforms/LoopIdiom/AArch64/find-first-byte-nested.ll
 Transforms/LoopIdiom/AArch64/find-first-byte.ll

@@ -19831,7 +19831,7 @@ static SDValue combineNarrowableShiftedLoad(SDNode *N, SelectionDAG &DAG) {
   APInt MaskVal, ShiftVal;
   // (and (shl (load ...), ShiftAmt), Mask)
   if (!sd_match(
-          N, m_And(m_OneUse(m_Shl(m_Value(LoadNode, m_SpecificOpc(ISD::LOAD)),
+          N, m_And(m_OneUse(m_Shl(m_Value(LoadNode, m_SpecificOpc<ISD::LOAD>()),
                                   m_ConstInt(ShiftVal))),
                    m_ConstInt(MaskVal)))) {
     return SDValue();
@@ -22508,7 +22508,7 @@ static SDValue performBITREVERSECombine(SDNode *N, SelectionDAG &DAG,
 static auto m_ReverseEVL = [](auto X, auto EVL) {
   using namespace SDPatternMatch;
   return m_AnyOf(m_SpliceRight(m_OneUse(m_VectorReverse(X)), m_Poison(), EVL),
-                 m_Node(ISD::EXPERIMENTAL_VP_REVERSE, X, m_Value(), EVL));
+                 m_Node<ISD::EXPERIMENTAL_VP_REVERSE>(X, m_Value(), EVL));
 };
 
 // TODO: A vlse.v is not necessarily faster than a vrgather.vv on all uarchs.
@@ -26219,7 +26219,7 @@ SDValue RISCVTargetLowering::PerformDAGCombine(SDNode *N,
     if (!N->getOperand(0).isUndef() ||
         !sd_match(N->getOperand(2),
                   m_AnyOf(m_ExtractElt(m_Value(SrcVec), m_Zero()),
-                          m_Node(RISCVISD::VMV_X_S, m_Value(SrcVec)))))
+                          m_Node<RISCVISD::VMV_X_S>(m_Value(SrcVec)))))
       break;
 
     MVT SrcVecVT = SrcVec.getSimpleValueType();

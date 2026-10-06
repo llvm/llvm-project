@@ -1274,7 +1274,8 @@ Value *LibCallSimplifier::optimizeMemRChr(CallInst *CI, IRBuilderBase &B) {
       // Slice off the character's high end bits.
       CharVal = B.CreateTrunc(CharVal, B.getInt8Ty());
       Value *Cmp = B.CreateICmpEQ(Val, CharVal, "memrchr.char0cmp");
-      return B.CreateSelect(Cmp, SrcStr, NullPtr, "memrchr.sel");
+      return B.CreateSelectWithUnknownProfile(Cmp, SrcStr, NullPtr, DEBUG_TYPE,
+                                              "memrchr.sel");
     }
   }
 
