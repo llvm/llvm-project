@@ -1289,14 +1289,14 @@ Symbols:
 ## Check that SymbolName reports st_name exactly. No name is printed for a
 ## symbol whose st_name is non-zero but refers to an empty string, even for an
 ## STT_SECTION symbol whose section name could otherwise be substituted. Names
-## are demangled only with --demangle.
+## are not demangled, even with --demangle.
 # RUN: yaml2obj --docnum=9 %s -o %t9
 # RUN: llvm-readobj --elf-output-style=LLVM --call-graph-info %t9 2>&1 | \
 # RUN:   FileCheck %s --match-full-lines --implicit-check-not=warning: \
-# RUN:     --check-prefixes=LLVM-RELNAME,LLVM-RAW
+# RUN:     --check-prefix=LLVM-RELNAME
 # RUN: llvm-readobj --elf-output-style=LLVM --demangle --call-graph-info %t9 2>&1 | \
 # RUN:   FileCheck %s --match-full-lines --implicit-check-not=warning: \
-# RUN:     --check-prefixes=LLVM-RELNAME,LLVM-DEMANGLE
+# RUN:     --check-prefix=LLVM-RELNAME
 # RUN: llvm-readobj --elf-output-style=JSON --pretty-print --call-graph-info %t9 2>&1 | \
 # RUN:   FileCheck %s --match-full-lines --implicit-check-not=warning: \
 # RUN:     --check-prefix=JSON-RELNAME
@@ -1309,8 +1309,7 @@ Symbols:
 # LLVM-RELNAME:           Relocation {
 # LLVM-RELNAME-NEXT:        Type: R_X86_64_64 (1)
 # LLVM-RELNAME-NEXT:        SymbolIndex: 2
-# LLVM-RAW-NEXT:            SymbolName: _Z3foov
-# LLVM-DEMANGLE-NEXT:       SymbolName: foo()
+# LLVM-RELNAME-NEXT:        SymbolName: _Z3foov
 # LLVM-RELNAME-NEXT:      }
 
 # JSON-RELNAME:           "Relocation": {

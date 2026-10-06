@@ -186,8 +186,7 @@ struct GroupSection {
 struct CallGraphReloc {
   uint32_t Type = 0;
   uint32_t SymbolIndex = 0;
-  // The name that st_name refers to, demangled if --demangle is specified.
-  // Empty if the symbol has no name.
+  // The name that st_name refers to. Empty if the symbol has no name.
   std::string SymbolName;
   int64_t Addend = 0;
 };
@@ -455,7 +454,9 @@ protected:
                         DataRegion<Elf_Word> ShndxTable) const;
   Expected<StringRef> getSymbolSectionName(const Elf_Sym &Symbol,
                                            unsigned SectionIndex) const;
-  std::string getStaticSymbolName(uint32_t Index) const;
+  // Returns the name of the symbol at Index in .symtab. The name is demangled
+  // with --demangle, unless Demangle is false.
+  std::string getStaticSymbolName(uint32_t Index, bool Demangle = true) const;
   StringRef getDynamicString(uint64_t Value) const;
 
   std::pair<Elf_Sym_Range, std::optional<StringRef>> getSymtabAndStrtab() const;
@@ -1007,7 +1008,8 @@ static std::string maybeDemangle(StringRef Name) {
 }
 
 template <typename ELFT>
-std::string ELFDumper<ELFT>::getStaticSymbolName(uint32_t Index) const {
+std::string ELFDumper<ELFT>::getStaticSymbolName(uint32_t Index,
+                                                 bool Demangle) const {
   auto Warn = [&](Error E) -> std::string {
     reportUniqueWarning("unable to read the name of symbol with index " +
                         Twine(Index) + ": " + toString(std::move(E)));
@@ -1026,7 +1028,7 @@ std::string ELFDumper<ELFT>::getStaticSymbolName(uint32_t Index) const {
   Expected<StringRef> NameOrErr = (*SymOrErr)->getName(*StrTabOrErr);
   if (!NameOrErr)
     return Warn(NameOrErr.takeError());
-  return maybeDemangle(*NameOrErr);
+  return Demangle ? maybeDemangle(*NameOrErr) : NameOrErr->str();
 }
 
 template <typename ELFT>
@@ -5587,7 +5589,7 @@ void ELFDumper<ELFT>::resolveCallGraphRelocations(
     // STT_SECTION symbols.
     if (const Elf_Sym *Sym = RelSymOrErr->Sym) {
       if (Expected<StringRef> NameOrErr = Sym->getName(StrTab))
-        Reloc.SymbolName = maybeDemangle(*NameOrErr);
+        Reloc.SymbolName = NameOrErr->str();
       else
         reportUniqueWarning(NameOrErr.takeError());
     }
@@ -8495,7 +8497,8 @@ template <class ELFT> void LLVMELFDumper<ELFT>::printCallGraphInfo() {
       SmallVector<std::string> FuncSymNames;
       FuncSymNames.reserve(FuncSymIndexes.size());
       for (uint32_t Index : FuncSymIndexes)
-        FuncSymNames.push_back(this->getStaticSymbolName(Index));
+        FuncSymNames.push_back(
+            this->getStaticSymbolName(Index, /*Demangle=*/false));
       return FuncSymNames;
     };
 
