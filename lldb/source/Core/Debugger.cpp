@@ -346,14 +346,8 @@ Status Debugger::SetPropertyValue(const ExecutionContext *exe_ctx,
                g_debugger_properties[ePropertyShowStatusline].name) {
       // Statusline setting changed. If we have a statusline instance, update it
       // now. Otherwise it will get created in the default event handler.
-      std::lock_guard<std::mutex> guard(m_statusline_mutex);
-      if (StatuslineSupported()) {
-        m_statusline.emplace(*this);
-        m_statusline->Enable(
-            GetSelectedExecutionContextRef(/*adopt_dummy_target=*/true));
-      } else {
-        m_statusline.reset();
-      }
+      HideStatusline();
+      ShowStatusline();
     } else if (property_path ==
                    g_debugger_properties[ePropertyStatuslineFormat].name ||
                property_path ==
@@ -1313,6 +1307,22 @@ void Debugger::RestoreInputTerminalState() {
     if (m_statusline)
       m_statusline->Enable(
           GetSelectedExecutionContext(/*adopt_dummy_target=*/true));
+  }
+}
+
+void Debugger::HideStatusline() {
+  // Destroy the statusline rather than just disabling it, so that resizes and
+  // redraws from other threads can't draw it back while it's hidden.
+  std::lock_guard<std::mutex> guard(m_statusline_mutex);
+  m_statusline.reset();
+}
+
+void Debugger::ShowStatusline() {
+  std::lock_guard<std::mutex> guard(m_statusline_mutex);
+  if (!m_statusline && StatuslineSupported()) {
+    m_statusline.emplace(*this);
+    m_statusline->Enable(
+        GetSelectedExecutionContextRef(/*adopt_dummy_target=*/true));
   }
 }
 

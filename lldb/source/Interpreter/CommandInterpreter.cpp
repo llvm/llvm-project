@@ -40,6 +40,9 @@
 #include "Commands/CommandObjectSource.h"
 #include "Commands/CommandObjectStats.h"
 #include "Commands/CommandObjectTarget.h"
+#ifndef NDEBUG
+#include "Commands/CommandObjectTestPicker.h"
+#endif
 #include "Commands/CommandObjectThread.h"
 #include "Commands/CommandObjectTrace.h"
 #include "Commands/CommandObjectType.h"
@@ -605,6 +608,9 @@ void CommandInterpreter::LoadCommandDictionary() {
   REGISTER_COMMAND_OBJECT("version", CommandObjectVersion);
   REGISTER_COMMAND_OBJECT("watchpoint", CommandObjectMultiwordWatchpoint);
   REGISTER_COMMAND_OBJECT("language", CommandObjectLanguage);
+#ifndef NDEBUG
+  REGISTER_COMMAND_OBJECT("test-picker", CommandObjectTestPicker);
+#endif
 
   // clang-format off
   const char *break_regexes[][2] = {

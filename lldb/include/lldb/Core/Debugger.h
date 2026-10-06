@@ -178,6 +178,12 @@ public:
 
   void RestoreInputTerminalState();
 
+  /// Remove the statusline and give its row back to the scroll region.
+  void HideStatusline();
+
+  /// Bring back the statusline after HideStatusline(), if it is enabled.
+  void ShowStatusline();
+
   lldb::StreamUP GetAsyncOutputStream();
 
   lldb::StreamUP GetAsyncErrorStream();

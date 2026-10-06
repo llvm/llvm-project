@@ -33,6 +33,7 @@ add_lldb_library(lldbCommands NO_PLUGIN_DEPENDENCIES
   CommandObjectSource.cpp
   CommandObjectStats.cpp
   CommandObjectTarget.cpp
+  CommandObjectTestPicker.cpp
   CommandObjectThread.cpp
   CommandObjectThreadUtil.cpp
   CommandObjectTrace.cpp
