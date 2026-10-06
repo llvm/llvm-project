@@ -1082,10 +1082,12 @@ SymbolUserMap::SymbolUserMap(SymbolTableCollection &symbolTable,
 
 bool SymbolUserMap::areAllUsesVisible(Operation *symbol) const {
 
-  for (Operation *parent = symbol->getParentOp(); parent;
-       parent = parent->getParentOp()) {
-    if (symbolTablesWithUnknownUsers.contains(parent)) {
-      return false;
+  if (!symbolTablesWithUnknownUsers.empty()) {
+    for (Operation *parent = symbol->getParentOp(); parent;
+         parent = parent->getParentOp()) {
+      if (symbolTablesWithUnknownUsers.contains(parent)) {
+        return false;
+      }
     }
   }
 
