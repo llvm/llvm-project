@@ -7191,7 +7191,7 @@ static void checkAliasAttr(Sema &S, NamedDecl &ND) {
     if (VD->hasInit()) {
       if (const auto *Attr = VD->getAttr<AliasAttr>()) {
         assert(VD->isThisDeclarationADefinition() &&
-               !VD->isExternallyVisible() && "Broken AliasAttr handled late!");
+               "Broken AliasAttr handled late!");
         S.Diag(Attr->getLocation(), diag::err_alias_is_definition) << VD << 0;
         VD->dropAttr<AliasAttr>();
       }
