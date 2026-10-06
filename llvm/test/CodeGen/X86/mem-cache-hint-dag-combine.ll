@@ -457,7 +457,7 @@ define i1 @simplify_setcc(ptr %p) {
 
 !20 = !{!21}
 !21 = distinct !{!21, !22, !"scope"}
-!22 = distinct !{!22, !"domain"}
+!22 = distinct !{!22, i1 false, !"domain"}
 !23 = !{!24}
 !24 = distinct !{!24, !22, !"other"}
 !30 = !{i32 0, i32 100}
