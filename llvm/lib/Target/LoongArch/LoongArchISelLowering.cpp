@@ -1021,6 +1021,11 @@ SDValue LoongArchTargetLowering::lowerSIGN_EXTEND_VECTOR_INREG(
     SDValue Op, SelectionDAG &DAG) const {
   SDLoc DL(Op);
   SDValue Src = Op.getOperand(0);
+
+  // Only whole 128-bit vectors of simple element types can be lowered this
+  // way; fall back to the default lowering for other sources.
+  if (!Src.getValueType().isSimple())
+    return SDValue();
   MVT SrcVT = Src.getSimpleValueType();
   MVT DstVT = Op.getSimpleValueType();
 
@@ -6003,14 +6008,19 @@ void LoongArchTargetLowering::ReplaceNodeResults(
 
     EVT DstVT = N->getValueType(0);
     SDValue Src = N->getOperand(0);
-    MVT SrcVT = Src.getSimpleValueType();
+
+    // The VSLTI + VILVL/VILVH expansion below only supports simple vector
+    // sources no wider than 128 bits. Fall back to the default legalization
+    // for anything else, e.g. when the mask of an i24 vector compare is
+    // sign-extended, the promoted <4 x i24> source is not a simple type.
+    EVT SrcEVT = Src.getValueType();
+    if (!SrcEVT.isSimple() || SrcEVT.getSizeInBits() > 128)
+      return;
+    MVT SrcVT = SrcEVT.getSimpleVT();
 
     unsigned SrcEltBits = SrcVT.getScalarSizeInBits();
     unsigned DstEltBits = DstVT.getScalarSizeInBits();
     unsigned NumElts = DstVT.getVectorNumElements();
-
-    if (SrcVT.getSizeInBits() > 128)
-      return;
 
     if (!DstVT.isVector() || DstVT.getSizeInBits() <= 128)
       return;
