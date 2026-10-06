@@ -1,4 +1,4 @@
-// RUN: %clang %s -o %t %if freebsd %{ -lstdthreads %}
+// RUN: %clang -pthread %s -o %t %if freebsd %{ -lstdthreads %}
 // RUN: %run %t 2>&1 | FileCheck %s
 
 // The threads come from pthread_create, not thrd_create, so that a failure
