@@ -1908,6 +1908,106 @@ void CodeGenFunction::emitBypassedVarInitsForSource(const Stmt *Source) {
   }
 }
 
+static bool hasFieldsEligibleForAutoInit(QualType type,
+                                         CodeGenModule &CGM,
+                                         uint64_t MaxSize) {
+  const auto *RD = type->getAsRecordDecl();
+  if (!RD)
+    return false;
+  const auto *Def = RD->getDefinition();
+  if (!Def || !Def->isCompleteDefinition() || Def->isUnion())
+    return false;
+
+  for (const FieldDecl *FD : Def->fields()) {
+    if (FD->isUnnamedBitField() || FD->getType()->isIncompleteArrayType())
+      continue;
+
+    QualType FieldTy = FD->getType();
+    if (FD->isBitField()) {
+      unsigned BitWidth = FD->getBitWidthValue();
+      uint64_t FieldBytes = llvm::divideCeil(BitWidth, 8);
+      if (MaxSize == 0 || FieldBytes <= MaxSize)
+        return true;
+    } else {
+      auto FieldAllocSize = CGM.getDataLayout().getTypeAllocSize(
+          CGM.getTypes().ConvertTypeForMem(FieldTy));
+      if (MaxSize == 0 || FieldAllocSize <= MaxSize)
+        return true;
+      if (FieldTy->isRecordType() &&
+          hasFieldsEligibleForAutoInit(FieldTy, CGM, MaxSize))
+        return true;
+    }
+  }
+  return false;
+}
+
+void CodeGenFunction::emitZeroOrPatternInitForRecordFields(QualType type,
+                                                           const VarDecl &D,
+                                                           Address Loc) {
+  const auto *RD = type->getAsRecordDecl();
+  if (!RD)
+    return;
+  const auto *Def = RD->getDefinition();
+  if(!Def || !Def->isCompleteDefinition() || Def->isUnion())
+    return;
+
+  auto trivialAutoVarInit = getContext().getLangOpts().getTrivialAutoVarInit();
+  auto trivialAutoVarInitMaxSize =
+      getContext().getLangOpts().TrivialAutoVarInitMaxSize;
+  bool isVolatile = type.isVolatileQualified();
+
+  if (trivialAutoVarInitMaxSize > 0 &&
+      !hasFieldsEligibleForAutoInit(type, CGM, trivialAutoVarInitMaxSize))
+    return;
+
+  Loc = Loc.withElementType(ConvertTypeForMem(type));
+  LValue Base = MakeAddrLValue(Loc, type);
+
+  for (const FieldDecl *FD : Def->fields()) {
+    if (FD->isUnnamedBitField() || FD->getType()->isIncompleteArrayType())
+      continue;
+
+    QualType FieldTy = FD->getType();
+    if (isVolatile)
+      FieldTy.addVolatile();
+
+    if (FD->isBitField()) {
+      unsigned BitWidth = FD->getBitWidthValue();
+      uint64_t FieldBytes = llvm::divideCeil(BitWidth, 8);
+      if (trivialAutoVarInitMaxSize > 0 && FieldBytes > trivialAutoVarInitMaxSize)
+        continue;
+      if (CGM.stopAutoInit())
+          return;
+      LValue FieldLV = EmitLValueForFieldInitialization(Base, FD);
+      llvm::Type *FieldTy = ConvertTypeForMem(FD->getType());
+      llvm::Constant *Constant = (trivialAutoVarInit == LangOptions::TrivialAutoVarInitKind::Zero)
+        ? llvm::Constant::getNullValue(FieldTy)
+        : initializationPatternFor(CGM, FieldTy);
+      EmitStoreThroughBitfieldLValue(RValue::get(Constant), FieldLV);
+    } else {
+      auto FieldAllocSize = CGM.getDataLayout().getTypeAllocSize(ConvertTypeForMem(FieldTy));
+      if (trivialAutoVarInitMaxSize > 0 && FieldAllocSize > trivialAutoVarInitMaxSize) {
+        if (FieldTy->isRecordType() &&
+            hasFieldsEligibleForAutoInit(FieldTy, CGM,
+                                        trivialAutoVarInitMaxSize)) {
+          LValue FieldLV = EmitLValueForFieldInitialization(Base, FD);
+          emitZeroOrPatternInitForRecordFields(FieldTy, D, FieldLV.getAddress());
+        }
+        continue;
+      }
+      if (CGM.stopAutoInit())
+          return;
+      LValue FieldLV = EmitLValueForFieldInitialization(Base, FD);
+      Address FieldLoc = FieldLV.getAddress();
+      if (trivialAutoVarInit == LangOptions::TrivialAutoVarInitKind::Zero) {
+        emitStoresForZeroInit(D, FieldLoc, isVolatile);
+      } else {
+        emitStoresForPatternInit(D, FieldLoc, isVolatile);
+      }
+    }
+  }
+}
+
 void CodeGenFunction::emitZeroOrPatternForAutoVarInit(QualType type,
                                                       const VarDecl &D,
                                                       Address Loc) {
@@ -1917,11 +2017,9 @@ void CodeGenFunction::emitZeroOrPatternForAutoVarInit(QualType type,
   CharUnits Size = getContext().getTypeSizeInChars(type);
   bool isVolatile = type.isVolatileQualified();
   if (!Size.isZero()) {
-    // We skip auto-init variables by their alloc size. Take this as an example:
-    // "struct Foo {int x; char buff[1024];}" Assume the max-size flag is 1023.
-    // All Foo type variables will be skipped. Ideally, we only skip the buff
-    // array and still auto-init X in this example.
-    // TODO: Improve the size filtering to by member size.
+    // We skip auto-init variables by their alloc size. For record types larger
+    // than trivialAutoVarInitMaxSize, we filter by member size and initialize
+    // any fields whose size does not exceed trivialAutoVarInitMaxSize.
     auto allocSize = CGM.getDataLayout().getTypeAllocSize(Loc.getElementType());
     switch (trivialAutoVarInit) {
     case LangOptions::TrivialAutoVarInitKind::Uninitialized:
@@ -1930,16 +2028,22 @@ void CodeGenFunction::emitZeroOrPatternForAutoVarInit(QualType type,
       if (CGM.stopAutoInit())
         return;
       if (trivialAutoVarInitMaxSize > 0 &&
-          allocSize > trivialAutoVarInitMaxSize)
+          allocSize > trivialAutoVarInitMaxSize) {
+        if (type->isRecordType())
+          emitZeroOrPatternInitForRecordFields(type, D, Loc);
         return;
+      }
       emitStoresForZeroInit(D, Loc, isVolatile);
       break;
     case LangOptions::TrivialAutoVarInitKind::Pattern:
       if (CGM.stopAutoInit())
         return;
       if (trivialAutoVarInitMaxSize > 0 &&
-          allocSize > trivialAutoVarInitMaxSize)
+          allocSize > trivialAutoVarInitMaxSize) {
+        if (type->isRecordType())
+          emitZeroOrPatternInitForRecordFields(type, D, Loc);
         return;
+      }
       emitStoresForPatternInit(D, Loc, isVolatile);
       break;
     }
