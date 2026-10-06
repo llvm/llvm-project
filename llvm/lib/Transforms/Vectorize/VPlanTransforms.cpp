@@ -6222,15 +6222,12 @@ void VPlanTransforms::narrowInductionTruncates(VPlan &Plan, VFRange &Range,
         continue;
 
       VPBuilder PHBuilder(Plan.getVectorPreheader());
-      auto *NewStart = PHBuilder.createScalarCast(
-          Instruction::Trunc, WideIV->getStartValue(), VPI.getScalarType(),
-          VPI.getDebugLoc());
-      auto *NewStep =
-          PHBuilder.createScalarCast(Instruction::Trunc, WideIV->getStepValue(),
-                                     VPI.getScalarType(), VPI.getDebugLoc());
-      auto *NewVF =
-          PHBuilder.createScalarCast(Instruction::Trunc, WideIV->getVFValue(),
-                                     VPI.getScalarType(), VPI.getDebugLoc());
+      auto *NewStart = PHBuilder.createScalarZExtOrTrunc(
+          WideIV->getStartValue(), VPI.getScalarType(), VPI.getDebugLoc());
+      auto *NewStep = PHBuilder.createScalarZExtOrTrunc(
+          WideIV->getStepValue(), VPI.getScalarType(), VPI.getDebugLoc());
+      auto *NewVF = PHBuilder.createScalarZExtOrTrunc(
+          WideIV->getVFValue(), VPI.getScalarType(), VPI.getDebugLoc());
 
       // Wrap flags of the original induction do not hold in the truncated
       // type, so do not propagate them.

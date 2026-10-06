@@ -4214,18 +4214,16 @@ public:
   VPDerivedIVRecipe(InductionDescriptor::InductionKind Kind,
                     const FPMathOperator *FPBinOp, VPValue *Start,
                     VPValue *Current, VPValue *Step,
-                    const VPIRFlags::WrapFlagsTy &Flags = {},
-                    DebugLoc DL = DebugLoc::getUnknown())
+                    const VPIRFlags::WrapFlagsTy &Flags = {})
       : VPRecipeWithIRFlags(VPRecipeBase::VPDerivedIVSC, {Start, Current, Step},
-                            Start->getScalarType(), Flags, DL),
+                            Start->getScalarType(), Flags),
         Kind(Kind), FPBinOp(FPBinOp) {}
 
   ~VPDerivedIVRecipe() override = default;
 
   VPDerivedIVRecipe *clone() override {
     return new VPDerivedIVRecipe(Kind, FPBinOp, getStartValue(), getOperand(1),
-                                 getStepValue(), getNoWrapFlags(),
-                                 getDebugLoc());
+                                 getStepValue(), getNoWrapFlags());
   }
 
   VP_CLASSOF_IMPL(VPRecipeBase::VPDerivedIVSC)

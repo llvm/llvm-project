@@ -430,10 +430,9 @@ public:
   VPDerivedIVRecipe *createDerivedIV(InductionDescriptor::InductionKind Kind,
                                      FPMathOperator *FPBinOp, VPValue *Start,
                                      VPValue *Current, VPValue *Step,
-                                     const VPIRFlags::WrapFlagsTy &Flags = {},
-                                     DebugLoc DL = DebugLoc::getUnknown()) {
+                                     const VPIRFlags::WrapFlagsTy &Flags = {}) {
     return tryInsertInstruction(
-        new VPDerivedIVRecipe(Kind, FPBinOp, Start, Current, Step, Flags, DL));
+        new VPDerivedIVRecipe(Kind, FPBinOp, Start, Current, Step, Flags));
   }
 
   VPInstruction *createScalarCast(Instruction::CastOps Opcode, VPValue *Op,

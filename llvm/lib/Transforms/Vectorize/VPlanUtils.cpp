@@ -632,15 +632,16 @@ VPScalarIVStepsRecipe *vputils::createScalarIVSteps(
   VPValue *CanonicalIV = LoopRegion->getCanonicalIV();
   Type *CanonicalIVTy = CanonicalIV->getScalarType();
   Type *StepTy = Step->getScalarType();
+  assert(!CanonicalIVTy->isIntegerTy() || !StepTy->isIntegerTy() ||
+         CanonicalIVTy->getScalarSizeInBits() >=
+                 StepTy->getScalarSizeInBits() &&
+             "Truncations reqiures integer type and a narrower step.");
   if (CanonicalIVTy->isIntegerTy() && StepTy->isIntegerTy() &&
       CanonicalIVTy->getScalarSizeInBits() > StepTy->getScalarSizeInBits())
     CanonicalIV = Builder.createScalarZExtOrTrunc(CanonicalIV, StepTy, DL);
-  VPSingleDefRecipe *BaseIV = Builder.createDerivedIV(
-      Kind, FPBinOp, StartV, CanonicalIV, Step, Flags, DL);
+  VPSingleDefRecipe *BaseIV =
+      Builder.createDerivedIV(Kind, FPBinOp, StartV, CanonicalIV, Step, Flags);
 
-  assert(BaseIV->getScalarType()->getScalarSizeInBits() ==
-             Step->getScalarType()->getScalarSizeInBits() &&
-         "IV should already be truncated");
   return Builder.createScalarIVSteps(InductionOpcode, FPBinOp, BaseIV, Step,
                                      &Plan.getVF(), DL);
 }
