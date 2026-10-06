@@ -2,7 +2,7 @@
 // REQUIRES: lld, system-windows
 
 // Test that we can display tag types.
-// RUN: %build --compiler=clang-cl --arch=64 --output=%t.exe %s
+// RUN: %build --compiler=clang-cl --output=%t.exe %s
 // RUN: lldb-test symbols %t.exe | FileCheck %s
 
 // CHECK: CompileUnit{{.*}}, language = "c++", file = '{{.*}}thread-locals.cpp'
