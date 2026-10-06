@@ -398,8 +398,9 @@ void AMDGPULowerVGPREncoding::lowerLoadStoreIdx(MachineInstr &MI) {
   // A statically out-of-range offset is undefined behavior; mask it into the
   // addressable range below rather than emit an invalid register. The AGPRs
   // that gfx90a+ counts as addressable cannot be named as VGPRs.
-  unsigned DynamicVGPRBlockSize =
-      MI.getMF()->getInfo<SIMachineFunctionInfo>()->getDynamicVGPRBlockSize();
+  unsigned DynamicVGPRBlockSize = BB.getParent()
+                                      ->getInfo<SIMachineFunctionInfo>()
+                                      ->getDynamicVGPRBlockSize();
   unsigned NumAddressableVGPRs =
       std::min(ST->getAddressableNumArchVGPRs(),
                ST->getAddressableNumVGPRs(DynamicVGPRBlockSize));
@@ -430,21 +431,23 @@ void AMDGPULowerVGPREncoding::lowerLoadStoreIdx(MachineInstr &MI) {
                                  ? getUndefRegState(LdSt.getDataOp().isUndef())
                                  : RegState::NoFlags;
   for (unsigned i = 0; i < NumDwords; ++i) {
-    Register Base = AMDGPU::VGPR0 + ((Offset + i) & (NumAddressableVGPRs - 1));
+    Register Base = AMDGPU::VGPR_32RegClass.getRegister(
+        (Offset + i) & (NumAddressableVGPRs - 1));
     Register Sub = Data;
     if (NumDwords != 1)
       Sub = TRI->getSubReg(Data, TRI->getSubRegFromChannel(i));
 
     MachineInstr *Mov;
-    if (IsStore)
+    if (IsStore) {
       Mov = BuildMI(BB, MI, DL, TII->get(Opcode))
                 .addReg(Base, RegState::Undef)
                 .addReg(Sub, DataFlags)
                 .getInstr();
-    else
+    } else {
       Mov = BuildMI(BB, MI, DL, TII->get(Opcode), Sub)
                 .addReg(Base, RegState::Undef)
                 .getInstr();
+    }
 
     // Encode high address bits above 256 addressable VGPRs; else a no-op.
     if (ST->has1024AddressableVGPRs())
