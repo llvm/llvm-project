@@ -736,13 +736,9 @@ void test_enum_vector_scalar(Enum ea, v2u v2ua) {
   (void)(v2ua > ea); // expected-error{{cannot convert between vector values of different size}}
   (void)(ea > v2ua); // expected-error{{cannot convert between vector values of different size}}
   (void)(v2ua && ea); // expected-error{{cannot convert between vector values of different size}}
-  // expected-error@-1{{invalid operands to binary expression}}
   (void)(ea && v2ua); // expected-error{{cannot convert between vector values of different size}}
-  // expected-error@-1{{invalid operands to binary expression}}
   (void)(v2ua || ea); // expected-error{{cannot convert between vector values of different size}}
-  // expected-error@-1{{invalid operands to binary expression}}
   (void)(ea || v2ua); // expected-error{{cannot convert between vector values of different size}}
-  // expected-error@-1{{invalid operands to binary expression}}
 
   (void)(v2ua & ea); // expected-error{{cannot convert between vector values of different size}}
   (void)(ea & v2ua); // expected-error{{cannot convert between vector values of different size}}

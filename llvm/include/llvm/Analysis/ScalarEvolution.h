@@ -1524,9 +1524,6 @@ public:
   /// the specified basic block.
   LLVM_ABI bool properlyDominates(const SCEV *S, const BasicBlock *BB);
 
-  /// Test whether the given SCEV has Op as a direct or indirect operand.
-  LLVM_ABI bool hasOperand(const SCEV *S, const SCEV *Op) const;
-
   /// Return the size of an element read or written by Inst.
   LLVM_ABI const SCEV *getElementSize(Instruction *Inst);
 
@@ -2569,9 +2566,11 @@ private:
   /// an add rec on said loop.
   void getUsedLoops(const SCEV *S, SmallPtrSetImpl<const Loop *> &LoopsUsed);
 
-  /// Look for a SCEV expression with type `SCEVType` and operands `Ops` in
-  /// `UniqueSCEVs`.  Return if found, else nullptr.
-  SCEV *findExistingSCEVInCache(SCEVTypes SCEVType, ArrayRef<SCEVUse> Ops);
+  /// Look for a SCEV expression with type \p SCEVType and operands \p Ops in
+  /// UniqueSCEVs. If \p SCEVType is scAddRecExpr, the loop \p L must be passed.
+  /// Return if found, else nullptr.
+  SCEV *findExistingSCEVInCache(SCEVTypes SCEVType, ArrayRef<SCEVUse> Ops,
+                                const Loop *L = nullptr);
 
   /// Get reachable blocks in this function, making limited use of SCEV
   /// reasoning about conditions.

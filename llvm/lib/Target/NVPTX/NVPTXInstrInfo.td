@@ -150,8 +150,7 @@ class SubtargetPredicate : Predicate<"Subtarget->" # NAME # "()">;
 
 def hasAtomAddF64 : SubtargetPredicate;
 def hasAtomScope : SubtargetPredicate;
-def hasAtomBitwise64 : SubtargetPredicate;
-def hasAtomMinMax64 : SubtargetPredicate;
+def hasAtomMinMaxAndOrXor : SubtargetPredicate;
 def hasAtomSwap128 : SubtargetPredicate;
 def hasClusters : SubtargetPredicate;
 def hasPTXASUnreachableBug : SubtargetPredicate;
@@ -183,6 +182,7 @@ def hasTensormapReplaceSupport : SubtargetPredicate;
 //  - TMA S2G im2col_w mode support
 //  - tcgen05.commit shared mem A variants.
 //  - conversions involving ue5m3x2
+//  - conversions involving scaled::n1::ue8m0
 def hasRubinFamilySupport : PredOr<[SM107f]>;
 
 // Checks tcgen05.shift instruction support.
@@ -753,6 +753,16 @@ let hasSideEffects = false in {
   defm CVT_f16x2 : CVT_FROM_FLOAT_V2_RS<"f16x2", B32>;
   defm CVT_bf16x2 : CVT_FROM_FLOAT_V2_RS<"bf16x2", B32>;
 
+  class CVT_TO_NARROWFP_SCALE_N1<dag ins, string DstType, string SrcType, string SrcOps>
+      : NVPTXInst<(outs B16:$dst), ins,
+            "{{ \n\t" #
+            ".reg .b8 \t%b8_in; \n\t" #
+            "cvt.u8.u16 \t%b8_in, $scale; \n\t" #
+            "cvt${mode:base}.satfinite${mode:relu}${mode:pzo}.scaled::n1::ue8m0." #
+            DstType # "." # SrcType # " \t$dst, " # SrcOps # ", %b8_in; \n\t" #
+            "}}", []>,
+        Requires<[hasRubinFamilySupport]>;
+
   // FP8 conversions.
   multiclass CVT_TO_F8X2<string F8Name> {
     def _f32 :
@@ -772,6 +782,12 @@ let hasSideEffects = false in {
                 "cvt${mode:base}.satfinite${mode:relu}${mode:pzo}." #
                   F8Name # "x2.bf16x2">,
       Requires<[hasFP16X2ToNarrowFPConversionSupport]>;
+    def _f32_scale_n1 : CVT_TO_NARROWFP_SCALE_N1<(ins B32:$src1, B32:$src2, B16:$scale, CvtMode:$mode),
+                                                  F8Name # "x2", "f32", "$src1, $src2">;
+    def _f16x2_scale_n1 : CVT_TO_NARROWFP_SCALE_N1<(ins B32:$src1, B16:$scale, CvtMode:$mode),
+                                                    F8Name # "x2", "f16x2", "$src1">;
+    def _bf16x2_scale_n1 : CVT_TO_NARROWFP_SCALE_N1<(ins B32:$src1, B16:$scale, CvtMode:$mode),
+                                                    F8Name # "x2", "bf16x2", "$src1">;
   }
 
   defm CVT_e4m3x2 : CVT_TO_F8X2<"e4m3">;
@@ -881,6 +897,12 @@ let Predicates = [hasS2F6X2ConversionSupport] in {
               "cvt${mode:base}.satfinite${mode:relu}${mode:pzo}." #
                 FP6Name # "x2.bf16x2">,
       Requires<[hasFP16X2ToNarrowFPConversionSupport]>;
+    def _f32_sf_scale_n1 : CVT_TO_NARROWFP_SCALE_N1<(ins B32:$src1, B32:$src2, B16:$scale, CvtMode:$mode),
+                                                    FP6Name # "x2", "f32", "$src1, $src2">;
+    def _f16x2_sf_scale_n1 : CVT_TO_NARROWFP_SCALE_N1<(ins B32:$src1, B16:$scale, CvtMode:$mode),
+                                                      FP6Name # "x2", "f16x2", "$src1">;
+    def _bf16x2_sf_scale_n1 : CVT_TO_NARROWFP_SCALE_N1<(ins B32:$src1, B16:$scale, CvtMode:$mode),
+                                                        FP6Name # "x2", "bf16x2", "$src1">;
   }
 
   defm CVT_e2m3x2 : CVT_TO_FP6X2<"e2m3">;
@@ -936,6 +958,25 @@ let Predicates = [hasS2F6X2ConversionSupport] in {
       "cvt.u16.u8 \t$dst, %e2m1x2_out; \n\t" #
       "}}", []>,
       Requires<[hasFP16X2ToNarrowFPConversionSupport]>;
+
+  class CVT_TO_E2M1X2_SCALE_N1<dag ins, string SrcType, string SrcOps>
+      : NVPTXInst<(outs B16:$dst), ins,
+            "{{ \n\t" #
+            ".reg .b8 \t%e2m1x2_out; \n\t" #
+            ".reg .b8 \t%b8_in; \n\t" #
+            "cvt.u8.u16 \t%b8_in, $scale; \n\t" #
+            "cvt${mode:base}.satfinite${mode:relu}${mode:pzo}.scaled::n1::ue8m0.e2m1x2." #
+            SrcType # " \t%e2m1x2_out, " # SrcOps # ", %b8_in; \n\t" #
+            "cvt.u16.u8 \t$dst, %e2m1x2_out; \n\t" #
+            "}}", []>,
+        Requires<[hasRubinFamilySupport]>;
+
+  def CVT_e2m1x2_f32_sf_scale_n1 : CVT_TO_E2M1X2_SCALE_N1<(ins B32:$src1, B32:$src2, B16:$scale, CvtMode:$mode),
+                                                          "f32", "$src1, $src2">;
+  def CVT_e2m1x2_f16x2_sf_scale_n1 : CVT_TO_E2M1X2_SCALE_N1<(ins B32:$src1, B16:$scale, CvtMode:$mode),
+                                                            "f16x2", "$src1">;
+  def CVT_e2m1x2_bf16x2_sf_scale_n1 : CVT_TO_E2M1X2_SCALE_N1<(ins B32:$src1, B16:$scale, CvtMode:$mode),
+                                                              "bf16x2", "$src1">;
 
   // UE8M0x2 conversions.
   class CVT_f32_to_ue8m0x2<string sat = ""> :

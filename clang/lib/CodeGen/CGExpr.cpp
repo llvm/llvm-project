@@ -644,8 +644,7 @@ EmitMaterializeTemporaryExpr(const MaterializeTemporaryExpr *M) {
 
         OldIP = Builder.saveIP();
         llvm::BasicBlock *Block = OldConditional->getStartingBlock();
-        Builder.restoreIP(CGBuilderTy::InsertPoint(
-            Block, llvm::BasicBlock::iterator(Block->back())));
+        Builder.restoreIP(Block->back().getIterator());
       }
 
       if (EmitLifetimeStart(Alloca.getPointer())) {
