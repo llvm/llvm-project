@@ -200,6 +200,31 @@ __device__ void member_init_tmpl() {
   (void)m;
 }
 
+// Whether a dependent default member initializer uses RTTI can depend on the
+// template arguments.
+template <class T> struct MemberInitDepCast { // #member_init_dep_cast
+  B *b = nullptr;
+  T *t = dynamic_cast<T *>(b);
+  // dev-error@-1 {{cannot use 'dynamic_cast' in __host__ __device__ function as RTTI is not available in device code}}
+};
+// dev-note@#member_init_dep_cast {{default member initializer used here}}
+__device__ void member_init_dep_cast() {
+  MemberInitDepCast<D> d;
+  // dev-note@-1 {{called by 'member_init_dep_cast'}}
+  MemberInitDepCast<B> b;
+  (void)d;
+  (void)b;
+}
+
+// No error, only instantiated for host code.
+template <class T> struct MemberInitTmplHost {
+  const std::type_info *t = &typeid(T);
+};
+void member_init_tmpl_host() {
+  MemberInitTmplHost<int> m;
+  (void)m;
+}
+
 // A default argument is checked where it is used.
 __device__ void default_arg(const std::type_info *t = &typeid(int)); // #default_arg
 // expected-error@-1 {{cannot use 'typeid' in __device__ function as RTTI is not available in device code}}
@@ -225,6 +250,60 @@ __device__ void local_default_arg() {
   // expected-note@-1 {{default argument used here}}
 }
 
+// A dependent default argument is checked when it is instantiated for a use.
+template <class T>
+__device__ void dep_default_arg(const std::type_info *t = &typeid(T)); // #dep_default_arg
+// expected-error@#dep_default_arg {{cannot use 'typeid' in __device__ function as RTTI is not available in device code}}
+__device__ void use_dep_default_arg() {
+  dep_default_arg<int>();
+  // expected-note@-1 {{default argument used here}}
+  // No error, the default argument is not used.
+  dep_default_arg<float>(nullptr);
+}
+
+// Whether a dependent default argument uses RTTI can depend on the template
+// arguments.
+template <class T>
+__device__ void dep_cast_default_arg(T *p = dynamic_cast<T *>(static_cast<B *>(nullptr)));
+// expected-error@-1 {{cannot use 'dynamic_cast' in __device__ function as RTTI is not available in device code}}
+__device__ void use_dep_cast_default_arg() {
+  dep_cast_default_arg<D>();
+  // expected-note@-1 {{default argument used here}}
+  dep_cast_default_arg<B>();
+  dep_cast_default_arg<void>();
+}
+
+template <class T> struct DepDefaultArgMember {
+  __device__ void f(const std::type_info *t = &typeid(T));
+  // expected-error@-1 {{cannot use 'typeid' in __device__ function as RTTI is not available in device code}}
+};
+__device__ void use_dep_default_arg_member() {
+  DepDefaultArgMember<int>().f();
+  // expected-note@-1 {{default argument used here}}
+}
+
+template <class T>
+inline __host__ __device__ void hd_dep_default_arg(const std::type_info *t = &typeid(T)) {}
+// expected-error@-1 {{cannot use 'typeid' in __device__ function as RTTI is not available in device code}}
+void use_hd_dep_default_arg_host() { hd_dep_default_arg<int>(); }
+__device__ void use_hd_dep_default_arg_device() {
+  hd_dep_default_arg<float>();
+  // expected-note@-1 {{default argument used here}}
+}
+
+// A non-dependent default argument of a template is checked for each
+// specialization that uses it.
+template <class T>
+__device__ void nondep_default_arg(T, const std::type_info *t = &typeid(int)); // #nondep_default_arg
+// expected-error@#nondep_default_arg 2{{cannot use 'typeid' in __device__ function as RTTI is not available in device code}}
+__device__ void use_nondep_default_arg() {
+  nondep_default_arg(1);
+  // expected-note@-1 {{default argument used here}}
+  nondep_default_arg(1.0);
+  // expected-note@-1 {{default argument used here}}
+  nondep_default_arg(2);
+}
+
 // A default argument used in a default member initializer.
 struct NestedDefaultArg { // #nested_struct
   const std::type_info *t = (default_arg(), nullptr);
@@ -234,6 +313,18 @@ struct NestedDefaultArg { // #nested_struct
 __device__ void nested_default_arg() {
   NestedDefaultArg n;
   // dev-note@-1 {{called by 'nested_default_arg'}}
+  (void)n;
+}
+
+// A dependent default argument used in a dependent default member initializer.
+template <class T> struct DepNestedDefaultArg { // #dep_nested_struct
+  const std::type_info *t = (dep_default_arg<T>(), nullptr);
+};
+// dev-error@#dep_default_arg {{cannot use 'typeid' in __host__ __device__ function as RTTI is not available in device code}}
+// dev-note@#dep_nested_struct {{default member initializer used here}}
+__device__ void dep_nested_default_arg() {
+  DepNestedDefaultArg<long> n;
+  // dev-note@-1 {{called by 'dep_nested_default_arg'}}
   (void)n;
 }
 
