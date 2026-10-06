@@ -7196,11 +7196,11 @@ bool Compiler<Emitter>::visitBreakStmt(const BreakStmt *S) {
       }
     }
   } else {
-    const Stmt *TargetLoop = S->getNamedLoopOrSwitch();
+    const std::optional<Stmt *> TargetLoop = S->getNamedLoopOrSwitch();
     assert(TargetLoop && "break target label not available");
 
     for (const auto &LI : LabelInfoStack) {
-      if (LI.Name == TargetLoop) {
+      if (LI.Name == TargetLoop.value()) {
         TargetLabel = *LI.BreakLabel;
         BreakScope = LI.BreakOrContinueScope;
         break;
@@ -7238,11 +7238,11 @@ bool Compiler<Emitter>::visitContinueStmt(const ContinueStmt *S) {
       }
     }
   } else {
-    const Stmt *TargetLoop = S->getNamedLoopOrSwitch();
+    const std::optional<Stmt *> TargetLoop = S->getNamedLoopOrSwitch();
     assert(TargetLoop && "continue target label not available");
 
     for (auto LI : LabelInfoStack) {
-      if (LI.Name == TargetLoop) {
+      if (LI.Name == TargetLoop.value()) {
         TargetLabel = *LI.ContinueLabel;
         ContinueScope = LI.BreakOrContinueScope;
         break;

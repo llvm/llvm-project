@@ -3112,7 +3112,7 @@ public:
   /// that this targets. May return null if the target LabelStmt has not
   /// yet been created.
   /// \pre `isNamed()`
-  const Stmt *getNamedLoopOrSwitch() const;
+  const std::optional<Stmt *> getNamedLoopOrSwitch() const;
 
   // Iterators
   child_range children() {
