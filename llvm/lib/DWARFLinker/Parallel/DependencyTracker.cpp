@@ -106,6 +106,8 @@ void DependencyTracker::verifyKeepChain() {
 #endif
 }
 
+/// Must not match DW_TAG_partial_unit: a DW_TAG_imported_unit needs the whole
+/// partial unit it imports.
 static bool isNamespaceLikeEntry(const DWARFDebugInfoEntry *Entry) {
   switch (Entry->getTag()) {
   case dwarf::DW_TAG_compile_unit:
@@ -116,6 +118,13 @@ static bool isNamespaceLikeEntry(const DWARFDebugInfoEntry *Entry) {
   default:
     return false;
   }
+}
+
+/// A unit root or namespace-like entry ends the search for a type's outermost
+/// enclosing DIE, and keeping one of its children does not keep the rest.
+static bool isUnitRootOrNamespaceLikeEntry(uint32_t Idx,
+                                           const DWARFDebugInfoEntry *Entry) {
+  return CompileUnit::isUnitRootDIE(Idx) || isNamespaceLikeEntry(Entry);
 }
 
 bool DependencyTracker::resolveDependenciesAndMarkLiveness(
@@ -132,10 +141,16 @@ bool DependencyTracker::resolveDependenciesAndMarkLiveness(
   InterCUProcessingWasStarted = InterCUProcessingStarted;
 
   // Search for live root DIEs.
-  CompileUnit::DIEInfo &CUInfo = CU.getDIEInfo(CU.getDebugInfoEntry(0));
+  UnitEntryPairTy UnitRootEntry{&CU, CU.getDebugInfoEntry(0)};
+  CompileUnit::DIEInfo &CUInfo = CU.getDIEInfo(UnitRootEntry.DieEntry);
   CUInfo.setPlacement(CompileUnit::PlainDwarf);
-  collectRootsToKeep(UnitEntryPairTy{&CU, CU.getDebugInfoEntry(0)},
-                     std::nullopt, false);
+  collectRootsToKeep(UnitRootEntry, std::nullopt, false);
+
+  // With UpdateIndexTablesOnly nothing is garbage collected, so mark the whole
+  // unit live, as the classic linker's markEverythingAsKept() does.
+  if (CU.getGlobalData().getOptions().UpdateIndexTablesOnly)
+    addActionToRootEntriesWorkList(LiveRootWorklistActionTy::MarkLiveEntryRec,
+                                   UnitRootEntry, std::nullopt);
 
   // Mark live DIEs as kept.
   return markCollectedLiveRootsAsKept(InterCUProcessingStarted,
@@ -482,7 +497,8 @@ void DependencyTracker::markParentsAsKeepingChildren(
         bool AddToWorklist = !isAlreadyMarked(
             ParentInfo, CompileUnit::DieOutputPlacement::TypeTable);
         ParentInfo.setKeepTypeChildren();
-        if (AddToWorklist && !isNamespaceLikeEntry(ParentEntry)) {
+        if (AddToWorklist &&
+            !isUnitRootOrNamespaceLikeEntry(*ParentIdx, ParentEntry)) {
           addActionToRootEntriesWorkList(
               LiveRootWorklistActionTy::MarkTypeChildrenRec,
               UnitEntryPairTy{Entry.CU, ParentEntry}, std::nullopt);
@@ -497,7 +513,8 @@ void DependencyTracker::markParentsAsKeepingChildren(
         bool AddToWorklist = !isAlreadyMarked(
             ParentInfo, CompileUnit::DieOutputPlacement::PlainDwarf);
         ParentInfo.setKeepPlainChildren();
-        if (AddToWorklist && !isNamespaceLikeEntry(ParentEntry)) {
+        if (AddToWorklist &&
+            !isUnitRootOrNamespaceLikeEntry(*ParentIdx, ParentEntry)) {
           addActionToRootEntriesWorkList(
               LiveRootWorklistActionTy::MarkLiveChildrenRec,
               UnitEntryPairTy{Entry.CU, ParentEntry}, std::nullopt);
@@ -846,6 +863,48 @@ bool DependencyTracker::maybeAddReferencedRoots(
     llvm_unreachable("Unknown TreeWalkKindTy enum");
   };
 
+  // Adds a root for each entity in Scope of an imported partial unit, looking
+  // through namespaces. Entities the unit keeps by itself are skipped.
+  auto AddImportedScopeRoots = [&](auto &Self,
+                                   const UnitEntryPairTy &Scope) -> void {
+    for (const DWARFDebugInfoEntry *CurChild =
+             Scope.CU->getFirstChildEntry(Scope.DieEntry);
+         CurChild && CurChild->getAbbreviationDeclarationPtr();
+         CurChild = Scope.CU->getSiblingEntry(CurChild)) {
+      UnitEntryPairTy ChildEntry(Scope.CU, CurChild);
+      CompileUnit::DIEInfo &ChildInfo = Scope.CU->getDIEInfo(CurChild);
+
+      switch (CurChild->getTag()) {
+      case dwarf::DW_TAG_subprogram:
+      case dwarf::DW_TAG_variable:
+      case dwarf::DW_TAG_constant:
+      case dwarf::DW_TAG_label:
+        // Code is kept or dropped by its address.
+        if (ChildInfo.getHasAnAddress())
+          continue;
+        break;
+      case dwarf::DW_TAG_base_type:
+      case dwarf::DW_TAG_imported_module:
+      case dwarf::DW_TAG_imported_declaration:
+      case dwarf::DW_TAG_imported_unit:
+        // collectRootsToKeep() keeps these whatever refers to them.
+        continue;
+      default:
+        break;
+      }
+
+      if (isNamespaceLikeEntry(CurChild)) {
+        Self(Self, ChildEntry);
+        continue;
+      }
+
+      AddRoot(ChildInfo.getODRAvailable()
+                  ? LiveRootWorklistActionTy::MarkTypeEntryRec
+                  : LiveRootWorklistActionTy::MarkLiveEntryRec,
+              ChildEntry, CurChild);
+    }
+  };
+
   DWARFUnit &Unit = Entry.CU->getOrigUnit();
   DWARFDataExtractor Data = Unit.getDebugInfoExtractor();
   uint64_t Offset =
@@ -913,6 +972,16 @@ bool DependencyTracker::maybeAddReferencedRoots(
         continue;
       }
 
+      // Treat a DW_TAG_imported_unit as a reference to each entity in the
+      // imported unit, so that a type there is not also kept in plain DWARF.
+      if (CompileUnit::isUnitRootDIE(
+              RefDie->CU->getDIEIndex(RefDie->DieEntry))) {
+        AddRoot(LiveRootWorklistActionTy::MarkSingleLiveEntry, *RefDie,
+                nullptr);
+        AddImportedScopeRoots(AddImportedScopeRoots, *RefDie);
+        continue;
+      }
+
       AddRoot(Action, *RefDie, nullptr);
       continue;
     }
@@ -952,7 +1021,7 @@ DependencyTracker::getRootForSpecifiedEntry(UnitEntryPairTy Entry) {
 
     const DWARFDebugInfoEntry *ParentEntry =
         Result.CU->getDebugInfoEntry(*ParentIdx);
-    if (isNamespaceLikeEntry(ParentEntry))
+    if (isUnitRootOrNamespaceLikeEntry(*ParentIdx, ParentEntry))
       break;
     Result.DieEntry = ParentEntry;
   } while (true);
