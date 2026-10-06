@@ -316,7 +316,7 @@ features cannot lower the translation-unit ABI level;
 - Clang now accepts `_single_inheritance` under `-fms-compatibility` as an alias for `__single_inheritance`; `_multiple_inheritance` and `_virtual_inheritance` were already correctly supported as aliases.
 
 - Fixed a bug with handling a `nonnull` attribute with an invalid argument
-  index such that it would inadvertantly apply the attribute with no arguments,
+  index such that it would inadvertently apply the attribute with no arguments,
   causing all function parameters of pointer type to be considered nonnull. (#GH228670)
 
 ### Improvements to Clang's diagnostics
