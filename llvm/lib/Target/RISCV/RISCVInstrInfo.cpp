@@ -22,7 +22,6 @@
 #include "llvm/Analysis/MemoryLocation.h"
 #include "llvm/Analysis/ValueTracking.h"
 #include "llvm/CodeGen/LiveIntervals.h"
-#include "llvm/CodeGen/LiveVariables.h"
 #include "llvm/CodeGen/MachineCombinerPattern.h"
 #include "llvm/CodeGen/MachineInstrBuilder.h"
 #include "llvm/CodeGen/MachineRegisterInfo.h"
@@ -1908,11 +1907,21 @@ int RISCVInstrInfo::getJumpTableIndex(const MachineInstr &MI) const {
   case RISCV::LW:
   case RISCV::LWU:
   case RISCV::LD:
-    // TODO: Zilx
     if (!isJumpTableLoad(*Def))
       return -1;
 
     JTI = getJumpTableIndexFromLoadAddr(MRI, Def->getOperand(1).getReg());
+    if (JTI >= 0)
+      return JTI;
+    break;
+  case RISCV::LXSW:
+  case RISCV::LXWU:
+  case RISCV::LXSD:
+  case RISCV::QC_LRW:
+    if (!isJumpTableLoad(*Def))
+      return -1;
+
+    JTI = getJumpTableIndexFromBase(MRI, Def->getOperand(1).getReg());
     if (JTI >= 0)
       return JTI;
     break;
@@ -3172,9 +3181,6 @@ bool RISCVInstrInfo::verifyInstruction(const MachineInstr &MI,
           break;
         case RISCVOp::OPERAND_UIMM6_PLUS1:
           Ok = Imm >= 1 && Imm <= 64;
-          break;
-        case RISCVOp::OPERAND_UIMM7_EQ_XLEN:
-          Ok = Imm == STI.getXLen();
           break;
         case RISCVOp::OPERAND_UIMM8_GE32:
           Ok = isUInt<8>(Imm) && Imm >= 32;
@@ -5019,7 +5025,6 @@ bool RISCVInstrInfo::simplifyInstruction(MachineInstr &MI) const {
 // clang-format on
 
 MachineInstr *RISCVInstrInfo::convertToThreeAddress(MachineInstr &MI,
-                                                    LiveVariables *LV,
                                                     LiveIntervals *LIS) const {
   MachineInstrBuilder MIB;
   switch (MI.getOpcode()) {
@@ -5096,15 +5101,6 @@ MachineInstr *RISCVInstrInfo::convertToThreeAddress(MachineInstr &MI,
   }
   }
   MIB.copyImplicitOps(MI);
-
-  if (LV) {
-    unsigned NumOps = MI.getNumOperands();
-    for (unsigned I = 1; I < NumOps; ++I) {
-      MachineOperand &Op = MI.getOperand(I);
-      if (Op.isReg() && Op.isKill())
-        LV->replaceKillInstruction(Op.getReg(), MI, *MIB);
-    }
-  }
 
   if (LIS) {
     SlotIndex Idx = LIS->ReplaceMachineInstrInMaps(MI, *MIB);

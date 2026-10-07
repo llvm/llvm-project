@@ -1277,8 +1277,10 @@ public:
   }
 
   /// Returns the default floating-point ABI for this target triple, i.e. the
-  /// ABI the code generator will resolve FloatABI::Default to
-  LLVM_ABI FloatABI::ABIType getDefaultFloatABI() const;
+  /// ABI the code generator will resolve FloatABI::Default to. \p ABIName, if
+  /// given, is the effective target ABI (e.g. "aapcs16" can force hard float on
+  /// ARM even when the ordinary default is soft).
+  LLVM_ABI FloatABI::ABIType getDefaultFloatABI(StringRef ABIName = "") const;
 
   /// Tests if the target's default floating-point ABI is hard float.
   bool isHardFloatABI() const { return getDefaultFloatABI() == FloatABI::Hard; }

@@ -469,6 +469,21 @@ TEST_F(InterpreterTest, Value) {
   EXPECT_STREQ(prettyPrint.c_str(), "(D) (One) : unsigned int 1\n");
 }
 
+TEST_F(InterpreterTest, ValueOfVoidCallExecutesTheCall) {
+  std::unique_ptr<Interpreter> Interp = createInterpreter();
+
+  llvm::cantFail(
+      Interp->ParseAndExecute("int calls = 0; void bump() { ++calls; }"));
+  Value V;
+  llvm::cantFail(Interp->ParseAndExecute("bump()", &V));
+  EXPECT_TRUE(V.isValid());
+  EXPECT_EQ(V.getKind(), Value::K_Void);
+
+  Value Calls;
+  llvm::cantFail(Interp->ParseAndExecute("calls", &Calls));
+  EXPECT_EQ(Calls.getInt(), 1);
+}
+
 // Regression: Value::setRawBits's NBytes parameter must be interpreted as a
 // byte count end-to-end. Before this was fixed, the parameter was named
 // NBits and the memcpy divided by 8, so a caller passing sizeof(T) (the
