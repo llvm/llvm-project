@@ -36,6 +36,7 @@
 #include "clang/CIR/Dialect/IR/CIRDialect.h"
 #include "clang/CIR/MissingFeatures.h"
 #include "clang/CIR/TypeEvaluationKind.h"
+#include "clang/CodeGenUtils/StmtUtils.h"
 #include "llvm/ADT/ScopedHashTable.h"
 #include "llvm/IR/Instructions.h"
 #include "llvm/IR/Intrinsics.h"
@@ -639,6 +640,26 @@ public:
     return getLangOpts().CPlusPlus11;
   }
 
+  // [C++26][intro.progress] (DR)
+  // The implementation may assume that any thread will eventually do one of
+  // the following:
+  // [...]
+  // - continue execution of a trivial infinite loop ([stmt.iter.general]).
+  //
+  // A trivial infinite loop with no side effects (e.g. `while (true) {}`)
+  // is therefore exempt from the forward-progress guarantee. If such a loop
+  // is found in a function that was speculatively marked 'mustprogress',
+  // that attribute must be removed: otherwise the optimizer would be
+  // licensed to assume the loop terminates and could delete it.
+  bool checkIfLoopMustProgress(const clang::Expr *controllingExpression,
+                               bool hasEmptyBody) {
+    return clang::CodeGenUtils::checkIfLoopMustProgress(
+        getLangOpts(), cgm.getCodeGenOpts(), getContext(),
+        controllingExpression, hasEmptyBody, [this] {
+          curFn->removeAttr(cir::CIRDialect::getMustProgressAttrName());
+        });
+  }
+
   /// True if an insertion point is defined. If not, this indicates that the
   /// current code being emitted is unreachable.
   /// FIXME(cir): we need to inspect this and perhaps use a cleaner mechanism
@@ -646,6 +667,15 @@ public:
   /// LLVM's codegen does) and we probably shouldn't.
   bool haveInsertPoint() const {
     return builder.getInsertionBlock() != nullptr;
+  }
+
+  /// True if code emitted at the builder's insertion point can be reached.
+  /// After emitting a terminator CIRGen opens a fresh block to continue in, so
+  /// the insertion block holds unreachable code whenever it is neither its
+  /// region's entry block nor the target of a branch.
+  bool insertionPointIsReachable() const {
+    mlir::Block *block = builder.getInsertionBlock();
+    return block && (block->isEntryBlock() || !block->hasNoPredecessors());
   }
 
   // Wrapper for function prototype sources. Wraps either a FunctionProtoType or
@@ -2018,6 +2048,7 @@ public:
   cir::CoroDoneOp emitCoroDoneBuiltinCall(const CallExpr *e);
   cir::CoroResumeOp emitCoroResumeBuiltinCall(const CallExpr *e);
   cir::CoroDestroyOp emitCoroDestroyBuiltinCall(const CallExpr *e);
+  cir::CoroNoopOp emitCoroNoopBuiltinCall(const CallExpr *e);
 
   cir::CoroSizeOp emitCoroSizeBuiltinCall(const CallExpr *e);
   cir::CoroFreeOp emitCoroFreeBuiltin(const CallExpr *e);
@@ -2137,7 +2168,8 @@ public:
   void emitBeginCatch(const CXXCatchStmt *catchStmt, mlir::Value ehToken);
 
   mlir::LogicalResult emitCXXTryStmt(const clang::CXXTryStmt &s,
-                                     cxxTryBodyEmitter &bodyCallback);
+                                     cxxTryBodyEmitter &bodyCallback,
+                                     bool isFnTryBlock = false);
   mlir::LogicalResult emitCXXTryStmt(const clang::CXXTryStmt &s);
 
   void emitCtorPrologue(const clang::CXXConstructorDecl *ctor,

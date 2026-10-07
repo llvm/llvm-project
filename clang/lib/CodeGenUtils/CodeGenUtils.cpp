@@ -134,6 +134,21 @@ LangAS getGlobalConstantAddressSpace(const LangOptions &LangOpts,
   return LangAS::Default;
 }
 
+bool spirNullPointerNeedsGenericCast(QualType QT, const llvm::Triple &Triple) {
+  // LLVM address space of the SPIR-V CodeSectionINTEL storage class.
+  constexpr unsigned SPIRVCodeSectionINTELAddrSpace = 9;
+  LangAS AS = QT->getUnqualifiedDesugaredType()->isNullPtrType()
+                  ? LangAS::Default
+                  : QT->getPointeeType().getAddressSpace();
+  if (AS == LangAS::Default || AS == LangAS::opencl_generic ||
+      AS == LangAS::opencl_constant)
+    return false;
+  // As per SPV_INTEL_function_pointers, it is illegal to addrspacecast
+  // function pointers to/from the generic AS.
+  return !(Triple.isSPIRV() && isTargetAddressSpace(AS) &&
+           toTargetAddressSpace(AS) == SPIRVCodeSectionINTELAddrSpace);
+}
+
 bool isInitializerOfDynamicClass(const CXXCtorInitializer *BaseInit) {
   const Type *BaseType = BaseInit->getBaseClass();
   return BaseType->castAsCXXRecordDecl()->isDynamicClass();

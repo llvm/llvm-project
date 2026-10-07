@@ -1586,9 +1586,9 @@ A member is named after its option, `enable_foo` for `-enable-foo`; a named `def
 
 The `BoolField` is set by `-enable-foo` or `-enable-foo=true|false|1|0`.
 A `ValueField`, of an integer type, `float`, `double`, or `StringRef`, is set by `-foo-threshold=8` or `-foo-threshold 8`.
-An `OptionalBoolField` is a `std::optional<bool>` that stays `std::nullopt` unless the option is given, replacing `cl::boolOrDefault`.
+An `OptionalBoolField` is a `BoolOrDefault` that stays `Default` unless the option is given, replacing `cl::boolOrDefault`; read it with `valueOr(X, Default)`.
 An `EnumField` maps each of its comma-separated values to an enumerator, replacing `cl::values`: `defm : EnumField<"foo-mode", "FooMode", "FooMode::Fast", "fast,safe", ["FooMode::Fast", "FooMode::Safe"], "The mode">;` accepts `-foo-mode=fast` and `-foo-mode=safe`.
-A `DefaultOnOffField` is a `std::optional<bool>` set by `=Default`, `=Enable`, or `=Disable`.
+A `DefaultOnOffField` is a `BoolOrDefault` set by `=Default`, `=Enable`, or `=Disable`.
 Both accept `--` for `-`.
 Only `-help-hidden` lists the options, like `cl::Hidden`.
 

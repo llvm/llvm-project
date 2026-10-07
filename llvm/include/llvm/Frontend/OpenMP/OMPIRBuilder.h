@@ -513,8 +513,8 @@ public:
   /// Create a new OpenMPIRBuilder operating on the given module \p M. This will
   /// not have an effect on \p M (see initialize)
   OpenMPIRBuilder(Module &M)
-      : M(M), Builder(M.getContext()), OffloadInfoManager(this),
-        T(M.getTargetTriple()), IsFinalized(false) {}
+      : M(M), Builder(M), OffloadInfoManager(this), T(M.getTargetTriple()),
+        IsFinalized(false) {}
   LLVM_ABI ~OpenMPIRBuilder();
 
   class AtomicInfo : public llvm::AtomicInfo {
@@ -1179,11 +1179,14 @@ private:
   /// \param NeedsBarrier Indicates whether a barrier must be inserted after
   ///                     the loop.
   /// \param NoLoop   If true, no-loop code is generated.
+  /// \param NeedsLastIter  If true, the last iteration variable is emitted.
   ///
   /// \returns Point where to insert code after the workshare construct.
-  InsertPointOrErrorTy applyWorkshareLoopTarget(
-      DebugLoc DL, CanonicalLoopInfo *CLI, InsertPointTy AllocaIP,
-      omp::WorksharingLoopType LoopType, bool NeedsBarrier, bool NoLoop);
+  InsertPointOrErrorTy
+  applyWorkshareLoopTarget(DebugLoc DL, CanonicalLoopInfo *CLI,
+                           InsertPointTy AllocaIP,
+                           omp::WorksharingLoopType LoopType, bool NeedsBarrier,
+                           bool NoLoop, bool NeedsLastIter);
 
   /// Modifies the canonical loop to be a statically-scheduled workshare loop.
   ///
@@ -1341,8 +1344,8 @@ public:
   /// \param NoLoop If true, no-loop code is generated.
   /// \param HasDistSchedule Defines if the clause being lowered is
   /// dist_schedule as this is handled slightly differently
-  ///
   /// \param DistScheduleChunkSize The chunk size for dist_schedule loop
+  /// \param NeedsLastIter  If true, the last iteration variable is emitted.
   ///
   /// \returns Point where to insert code after the workshare construct.
   LLVM_ABI InsertPointOrErrorTy applyWorkshareLoop(
@@ -1355,7 +1358,7 @@ public:
       omp::WorksharingLoopType LoopType =
           omp::WorksharingLoopType::ForStaticLoop,
       bool NoLoop = false, bool HasDistSchedule = false,
-      Value *DistScheduleChunkSize = nullptr);
+      Value *DistScheduleChunkSize = nullptr, bool NeedsLastIter = false);
 
   /// Tile a loop nest.
   ///

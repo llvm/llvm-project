@@ -38,6 +38,7 @@
 #include "clang/CIR/MissingFeatures.h"
 #include "clang/CodeGenUtils/CodeGenUtils.h"
 #include "clang/CodeGenUtils/ModuleUtils.h"
+#include "clang/CodeGenUtils/RecordLayoutUtils.h"
 #include "llvm/ADT/STLExtras.h"
 #include "llvm/ADT/StringExtras.h"
 #include "llvm/ADT/StringRef.h"
@@ -146,6 +147,14 @@ CIRGenModule::CIRGenModule(mlir::MLIRContext &mlirContext,
     if (langOpts.OpenCLCPlusPlus)
       setOpenCLVersionAttr(cir::CIRDialect::getOpenCLCXXVersionAttrName(),
                            langOpts.OpenCLCPlusPlusVersion);
+    // SPIR v2.0 s2.12 requires opencl.spir.version.
+    if (getTriple().isSPIR()) {
+      unsigned spirMajor = version / 100;
+      theModule->setAttr(cir::CIRDialect::getOpenCLSPIRVersionAttrName(),
+                         cir::OpenCLVersionAttr::get(&getMLIRContext(),
+                                                     spirMajor,
+                                                     spirMajor > 1 ? 0 : 2));
+    }
   }
   theModule->setAttr(cir::CIRDialect::getTripleAttrName(),
                      builder.getStringAttr(getTriple().str()));
@@ -1595,7 +1604,7 @@ void CIRGenModule::emitGlobalVarDefinition(const clang::VarDecl *vd,
     // exists. A use may still exists, however, so we still may need
     // to do a RAUW.
     assert(!vd->getType()->isIncompleteType() && "Unexpected incomplete type");
-    init = builder.getZeroInitAttr(convertType(vd->getType()));
+    init = emitNullConstantAttr(vd->getType());
   } else {
     emitter.emplace(*this);
     mlir::Attribute initializer = emitter->tryEmitForInitializer(*initDecl);
@@ -1608,7 +1617,7 @@ void CIRGenModule::emitGlobalVarDefinition(const clang::VarDecl *vd,
         if (initDecl->hasFlexibleArrayInit(astContext))
           errorNYI(vd->getSourceRange(),
                    "emitGlobalVarDefinition: flexible array initializer");
-        init = builder.getZeroInitAttr(convertType(qt));
+        init = emitNullConstantAttr(qt);
         if (!isDefinitionAvailableExternally)
           needsGlobalCtor = true;
       } else {
@@ -1841,7 +1850,8 @@ CIRGenModule::getConstantArrayFromStringLiteral(const StringLiteral *e) {
   SmallVector<mlir::Attribute> elements;
   elements.reserve(arraySize);
   for (unsigned i = 0; i < literalSize; ++i)
-    elements.push_back(cir::IntAttr::get(arrayEltTy, e->getCodeUnit(i)));
+    elements.push_back(cir::IntAttr::get(
+        arrayEltTy, llvm::APInt(arrayEltTy.getWidth(), e->getCodeUnit(i))));
 
   auto elementsAttr = mlir::ArrayAttr::get(&getMLIRContext(), elements);
   return builder.getConstArray(elementsAttr, arrayTy);
@@ -1855,10 +1865,10 @@ void CIRGenModule::maybeSetTrivialComdat(const Decl &d, mlir::Operation *op) {
   if (!CodeGenUtils::shouldBeInCOMDAT(getASTContext(), d))
     return;
   if (auto globalOp = dyn_cast_or_null<cir::GlobalOp>(op)) {
-    globalOp.setComdat(true);
+    globalOp.setSelfComdat();
   } else {
     auto funcOp = cast<cir::FuncOp>(op);
-    funcOp.setComdat(true);
+    funcOp.setSelfComdat();
   }
 }
 
@@ -1958,7 +1968,7 @@ cir::GlobalOp CIRGenModule::createOrReplaceCXXRuntimeVariable(
 
   if (supportsCOMDAT() && cir::isWeakForLinker(linkage) &&
       !gv.hasAvailableExternallyLinkage()) {
-    gv.setComdat(true);
+    gv.setSelfComdat();
   }
 
   gv.setAlignmentAttr(getSize(alignment));
@@ -2201,7 +2211,7 @@ generateStringLiteral(mlir::Location loc, mlir::TypedAttr c,
   CIRGenModule::setInitializer(gv, c);
   if (gv.isWeakForLinker()) {
     assert(cgm.supportsCOMDAT() && "Only COFF uses weak string literals");
-    gv.setComdat(true);
+    gv.setSelfComdat();
   }
   cgm.setDSOLocal(static_cast<mlir::Operation *>(gv));
   return gv;
@@ -2484,7 +2494,7 @@ bool CIRGenModule::findFieldMemberPath(const CXXRecordDecl *currentClass,
 
 bool CIRGenModule::isEmptyFieldForMemberPointer(const FieldDecl *field) {
   if (!field->isPotentiallyOverlapping() ||
-      !isEmptyFieldForLayout(astContext, field))
+      !CodeGenUtils::isEmptyFieldForLayout(astContext, field))
     return false;
 
   // Unions always have a field even if they are empty.
@@ -3291,7 +3301,10 @@ void CIRGenModule::setFunctionAttributes(GlobalDecl globalDecl,
 
 void CIRGenModule::setCIRFunctionAttributesForDefinition(
     const clang::FunctionDecl *decl, cir::FuncOp f) {
-  assert(!cir::MissingFeatures::opFuncUnwindTablesAttr());
+
+  if ((!decl || !decl->hasAttr<NoUwtableAttr>()) && codeGenOpts.UnwindTables)
+    f.setUwtable(static_cast<cir::UnwindTableKind>(codeGenOpts.UnwindTables));
+
   assert(!cir::MissingFeatures::stackProtector());
 
   if (!CodeGenUtils::hasUnwindExceptions(langOpts))
@@ -4296,7 +4309,7 @@ CIRGenModule::getAddrOfGlobalTemporary(const MaterializeTemporaryExpr *mte,
 
   gv.setAlignment(align.getAsAlign().value());
   if (supportsCOMDAT() && gv.isWeakForLinker())
-    gv.setComdat(true);
+    gv.setSelfComdat();
   if (varDecl->getTLSKind())
     setTLSMode(gv, *varDecl, /*isExtendingDecl=*/true);
   mlir::Operation *cv = gv;
@@ -4395,8 +4408,8 @@ CIRGenModule::getAddrOfTemplateParamObject(const TemplateParamObjectDecl *tpo) {
                                  typedInit.getType(), /*is_constant=*/true);
   globalOp.setLinkage(linkage);
   globalOp.setAlignment(alignment.getAsAlign().value());
-  globalOp.setComdat(supportsCOMDAT() &&
-                     linkage == cir::GlobalLinkageKind::LinkOnceODRLinkage);
+  if (supportsCOMDAT() && linkage == cir::GlobalLinkageKind::LinkOnceODRLinkage)
+    globalOp.setSelfComdat();
 
   CIRGenModule::setInitializer(globalOp, init);
   emitter.finalize(globalOp);
