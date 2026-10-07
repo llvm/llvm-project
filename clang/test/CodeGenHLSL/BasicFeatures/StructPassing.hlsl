@@ -134,19 +134,33 @@ void case6(S s) {
   useP(s);
 }
 
+// disabled otherwise the IR will be generated in the wrong order.
+// UTC_ARGS: --disable
+
+struct G {
+  int X;
+  void f() {}
+  void setX(int val) { this.X = val; }
+};
+
+groupshared G g;
+
 // CHECK-LABEL: define hidden void @_Z5case7v(
 // CHECK-SAME: ) #[[ATTR0]] {
 // CHECK-NEXT:  [[ENTRY:.*:]]
 // CHECK-NEXT:    [[TMP0:%.*]] = call token @llvm.experimental.convergence.entry()
 // CHECK-NEXT:    [[REF_TMP:%.*]] = alloca [[STRUCT_G:%.*]], align 1
-// CHECK-NEXT:    call void @_ZN1G1fEv(ptr noundef nonnull align 1 dereferenceable(1) [[REF_TMP]]) #[[ATTR3]] [ "convergencectrl"(token [[TMP0]]) ]
+// CHECK-NEXT:    call void @llvm.memcpy.p0.p3.i32(ptr align 1 [[REF_TMP]], ptr addrspace(3) align 1 @g, i32 4, i1 false)
+// CHECK-NEXT:    call void @_ZN1G1fEv(ptr noundef nonnull align 1 dereferenceable(4) [[REF_TMP]]) #[[ATTR3]] [ "convergencectrl"(token [[TMP0]]) ]
 // CHECK-NEXT:    ret void
 //
-void case7();
+void case7() {
+  // implicit argument passing of a groupshared struct
+  g.f();
+}
 
-struct G {
 // CHECK-LABEL: define linkonce_odr hidden void @_ZN1G1fEv(
-// CHECK-SAME: ptr noundef nonnull align 1 dereferenceable(1) [[THIS:%.*]]) #[[ATTR0]] align 2 {
+// CHECK-SAME: ptr noundef nonnull align 1 dereferenceable(4) [[THIS:%.*]]) #[[ATTR0]] align 2 {
 // CHECK-NEXT:  [[ENTRY:.*:]]
 // CHECK-NEXT:    [[TMP0:%.*]] = call token @llvm.experimental.convergence.entry()
 // CHECK-NEXT:    [[THIS_ADDR:%.*]] = alloca ptr, align 4
@@ -154,12 +168,35 @@ struct G {
 // CHECK-NEXT:    [[THIS1:%.*]] = load ptr, ptr [[THIS_ADDR]], align 4
 // CHECK-NEXT:    ret void
 //
-  void f() {}
-};
 
-groupshared G g;
-
-void case7() {
-  // implicit argument passing of a groupshared struct
-  g.f();
+// CHECK-LABEL: define hidden void @_Z5case8i(
+// CHECK-SAME: i32 noundef [[VAL:%.*]]) #[[ATTR0]] {
+// CHECK-NEXT:  [[ENTRY:.*:]]
+// CHECK-NEXT:    [[TMP0:%.*]] = call token @llvm.experimental.convergence.entry()
+// CHECK-NEXT:    [[VAL_ADDR:%.*]] = alloca i32, align 4
+// CHECK-NEXT:    [[REF_TMP:%.*]] = alloca [[STRUCT_G:%.*]], align 1
+// CHECK-NEXT:    store i32 [[VAL]], ptr [[VAL_ADDR]], align 4
+// CHECK-NEXT:    call void @llvm.memcpy.p0.p3.i32(ptr align 1 [[REF_TMP]], ptr addrspace(3) align 1 @g, i32 4, i1 false)
+// CHECK-NEXT:    [[TMP1:%.*]] = load i32, ptr [[VAL_ADDR]], align 4
+// CHECK-NEXT:    call void @_ZN1G4setXEi(ptr noundef nonnull align 1 dereferenceable(4) [[REF_TMP]], i32 noundef [[TMP1]]) #[[ATTR3]] [ "convergencectrl"(token [[TMP0]]) ]
+// CHECK-NEXT:    ret void
+//
+void case8(int val) {
+  // implicit argument passing of a groupshared struct where the implicit object is modified
+  g.setX(val);
 }
+
+// CHECK-LABEL: define linkonce_odr hidden void @_ZN1G4setXEi(
+// CHECK-SAME: ptr noundef nonnull align 1 dereferenceable(4) [[THIS:%.*]], i32 noundef [[VAL:%.*]]) #[[ATTR0]] align 2 {
+// CHECK-NEXT:  [[ENTRY:.*:]]
+// CHECK-NEXT:    [[TMP0:%.*]] = call token @llvm.experimental.convergence.entry()
+// CHECK-NEXT:    [[THIS_ADDR:%.*]] = alloca ptr, align 4
+// CHECK-NEXT:    [[VAL_ADDR:%.*]] = alloca i32, align 4
+// CHECK-NEXT:    store ptr [[THIS]], ptr [[THIS_ADDR]], align 4
+// CHECK-NEXT:    store i32 [[VAL]], ptr [[VAL_ADDR]], align 4
+// CHECK-NEXT:    [[THIS1:%.*]] = load ptr, ptr [[THIS_ADDR]], align 4
+// CHECK-NEXT:    [[TMP1:%.*]] = load i32, ptr [[VAL_ADDR]], align 4
+// CHECK-NEXT:    [[X:%.*]] = getelementptr inbounds nuw [[STRUCT_G:%.*]], ptr [[THIS1]], i32 0, i32 0
+// CHECK-NEXT:    store i32 [[TMP1]], ptr [[X]], align 1
+// CHECK-NEXT:    ret void
+//
