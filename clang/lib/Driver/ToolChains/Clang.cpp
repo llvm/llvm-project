@@ -357,6 +357,9 @@ static void addDashXForInput(const ArgList &Args, const InputInfo &Input,
     case types::TY_PP_CXXModule:
       ClangType = "c++-cpp-output";
       break;
+    case types::TY_CIRBC:
+      ClangType = "cir";
+      break;
     default:
       ClangType = types::getTypeName(Input.getType());
       break;

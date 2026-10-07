@@ -3558,7 +3558,7 @@ defm clangir : BoolFOption<"clangir",
 def emit_cir : Flag<["-"], "emit-cir">, Visibility<[ClangOption, CC1Option]>,
   Group<Action_Group>, HelpText<"Build ASTs and then lower to ClangIR">;
 def emit_cir_bc : Flag<["-"], "emit-cir-bc">,
-  Visibility<[ClangOption, CC1Option]>, Group<Action_Group>,
+  Visibility<[CC1Option]>, Group<Action_Group>,
   HelpText<"Build ASTs and then emit ClangIR bytecode">;
 /// ClangIR-specific options - END
 
