@@ -269,10 +269,10 @@ public:
   getExtendedReductionCost(unsigned Opcode, bool IsUnsigned, Type *ResTy,
                            VectorType *ValTy, std::optional<FastMathFlags> FMF,
                            TTI::TargetCostKind CostKind) const override;
-  InstructionCost
-  getMulAccReductionCost(bool IsUnsigned, unsigned RedOpcode, Type *ResTy,
-                         VectorType *ValTy,
-                         TTI::TargetCostKind CostKind) const override;
+  InstructionCost getMulAccReductionCost(
+      bool IsUnsigned, unsigned RedOpcode, Type *ResTy, VectorType *ValTy,
+      TTI::TargetCostKind CostKind,
+      TTI::CastContextHint CCH = TTI::CastContextHint::None) const override;
 
   InstructionCost
   getMinMaxReductionCost(Intrinsic::ID IID, VectorType *Ty, FastMathFlags FMF,

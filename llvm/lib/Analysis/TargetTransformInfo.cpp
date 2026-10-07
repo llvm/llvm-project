@@ -1405,17 +1405,9 @@ InstructionCost TargetTransformInfo::getExtendedReductionCost(
 
 InstructionCost TargetTransformInfo::getMulAccReductionCost(
     bool IsUnsigned, unsigned RedOpcode, Type *ResTy, VectorType *Ty,
-    TTI::TargetCostKind CostKind) const {
+    TTI::TargetCostKind CostKind, TTI::CastContextHint CCH) const {
   return TTIImpl->getMulAccReductionCost(IsUnsigned, RedOpcode, ResTy, Ty,
-                                         CostKind);
-}
-
-InstructionCost TargetTransformInfo::getFusedReductionCost(
-    unsigned Opcode, VectorType *Ty, ArrayRef<Value *> ReducedVals,
-    TTI::TargetCostKind CostKind,
-    function_ref<InstructionCost(Value *)> GetVectorizedCost) const {
-  return TTIImpl->getFusedReductionCost(Opcode, Ty, ReducedVals, CostKind,
-                                        GetVectorizedCost);
+                                         CostKind, CCH);
 }
 
 InstructionCost

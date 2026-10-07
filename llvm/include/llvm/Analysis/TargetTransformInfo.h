@@ -1813,22 +1813,12 @@ public:
   /// optional extensions. This is the cost of as:
   /// * ResTy vecreduce.add/sub(mul (A, B)) or,
   /// * ResTy vecreduce.add/sub(mul(ext(Ty A), ext(Ty B)).
-  LLVM_ABI InstructionCost
-  getMulAccReductionCost(bool IsUnsigned, unsigned RedOpcode, Type *ResTy,
-                         VectorType *Ty, TTI::TargetCostKind CostKind) const;
-
-  /// Calculate the cost of reducing \p ReducedVals with \p Opcode as a vector
-  /// of type \p Ty when the target folds the operations that define the
-  /// reduced values into the reduction (e.g. a dot product), net of the cost
-  /// of those folded operations.
-  /// \p GetVectorizedCost must return the cost the caller counts for the
-  /// vector operation that produces a value, or an invalid cost if the value
-  /// is not produced by a single vector operation.
-  /// \returns an invalid cost if the target has no such fused form.
-  LLVM_ABI InstructionCost getFusedReductionCost(
-      unsigned Opcode, VectorType *Ty, ArrayRef<Value *> ReducedVals,
+  /// \p CCH is the context of the extended operands, used to cost the
+  /// extensions when the pattern is not lowered as a single operation.
+  LLVM_ABI InstructionCost getMulAccReductionCost(
+      bool IsUnsigned, unsigned RedOpcode, Type *ResTy, VectorType *Ty,
       TTI::TargetCostKind CostKind,
-      function_ref<InstructionCost(Value *)> GetVectorizedCost) const;
+      TTI::CastContextHint CCH = TTI::CastContextHint::None) const;
 
   /// Calculate the cost of an extended reduction pattern, similar to
   /// getArithmeticReductionCost of a reduction with an extension.

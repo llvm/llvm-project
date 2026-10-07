@@ -1037,17 +1037,11 @@ public:
     return 1;
   }
 
-  virtual InstructionCost
-  getMulAccReductionCost(bool IsUnsigned, unsigned RedOpcode, Type *ResTy,
-                         VectorType *Ty, TTI::TargetCostKind CostKind) const {
-    return 1;
-  }
-
-  virtual InstructionCost getFusedReductionCost(
-      unsigned Opcode, VectorType *Ty, ArrayRef<Value *> ReducedVals,
+  virtual InstructionCost getMulAccReductionCost(
+      bool IsUnsigned, unsigned RedOpcode, Type *ResTy, VectorType *Ty,
       TTI::TargetCostKind CostKind,
-      function_ref<InstructionCost(Value *)> GetVectorizedCost) const {
-    return InstructionCost::getInvalid();
+      TTI::CastContextHint CCH = TTI::CastContextHint::None) const {
+    return 1;
   }
 
   virtual InstructionCost

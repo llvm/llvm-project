@@ -1942,10 +1942,9 @@ InstructionCost ARMTTIImpl::getExtendedReductionCost(
                                          CostKind);
 }
 
-InstructionCost
-ARMTTIImpl::getMulAccReductionCost(bool IsUnsigned, unsigned RedOpcode,
-                                   Type *ResTy, VectorType *ValTy,
-                                   TTI::TargetCostKind CostKind) const {
+InstructionCost ARMTTIImpl::getMulAccReductionCost(
+    bool IsUnsigned, unsigned RedOpcode, Type *ResTy, VectorType *ValTy,
+    TTI::TargetCostKind CostKind, TTI::CastContextHint CCH) const {
   if (RedOpcode != Instruction::Add)
     return InstructionCost::getInvalid(CostKind);
   EVT ValVT = TLI->getValueType(DL, ValTy);
@@ -1969,7 +1968,7 @@ ARMTTIImpl::getMulAccReductionCost(bool IsUnsigned, unsigned RedOpcode,
   }
 
   return BaseT::getMulAccReductionCost(IsUnsigned, RedOpcode, ResTy, ValTy,
-                                       CostKind);
+                                       CostKind, CCH);
 }
 
 InstructionCost

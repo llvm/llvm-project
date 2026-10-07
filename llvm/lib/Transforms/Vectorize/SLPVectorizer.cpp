@@ -34168,46 +34168,99 @@ private:
                   cast<VectorType>(getWidenedType(RType, ReduxWidth)), FMF,
                   CostKind);
             }
-            // The target may fold the operations defining the reduced values
-            // into the reduction (e.g. a dot product). Those operations are
-            // already counted in the tree cost; report their vector cost so
-            // the target can net it out.
-            if (RdxKind == RecurKind::Add) {
-              auto GetVectorizedCost = [&](Value *V) -> InstructionCost {
-                using TreeEntry = BoUpSLP::TreeEntry;
+            // reduce.add(mul(ext(A), ext(B))) may lower to a single
+            // multiply-accumulate reduction (e.g. a dot product). The multiply
+            // and the extends are already counted in the tree cost, so
+            // subtract them to avoid double counting (as VPlan does).
+            if (RdxKind == RecurKind::Add && !ReducedVals.empty()) {
+              Type *SrcElemTy = nullptr;
+              bool IsZExt = true;
+              bool SameOperands = true;
+              // Match one reduced lane as mul(ext(a), ext(b)) where both
+              // factors use the same widening extend. Reports the extend
+              // signedness, the pre-extension scalar type, and whether both
+              // factors are the same extend value (a single extend column).
+              auto MatchMulAccLane = [](Value *V, bool &ZExt, Type *&SrcTy,
+                                        bool &SharedExt) {
+                Value *E0, *E1, *A, *B;
+                if (match(V,
+                          m_Mul(m_CombineAnd(m_Value(E0), m_ZExt(m_Value(A))),
+                                m_CombineAnd(m_Value(E1), m_ZExt(m_Value(B))))))
+                  ZExt = true;
+                else if (match(V, m_Mul(m_CombineAnd(m_Value(E0),
+                                                     m_SExt(m_Value(A))),
+                                        m_CombineAnd(m_Value(E1),
+                                                     m_SExt(m_Value(B))))))
+                  ZExt = false;
+                else
+                  return false;
+                if (A->getType() != B->getType())
+                  return false;
+                SrcTy = A->getType();
+                SharedExt = E0 == E1;
+                return true;
+              };
+              bool IsMulAcc = all_of(ReducedVals, [&](Value *RdxVal) {
+                bool ThisZExt;
+                Type *ThisSrcTy;
+                bool SharedExt;
+                if (!MatchMulAccLane(RdxVal, ThisZExt, ThisSrcTy, SharedExt))
+                  return false;
+                SameOperands &= SharedExt;
+                if (!SrcElemTy) {
+                  SrcElemTy = ThisSrcTy;
+                  IsZExt = ThisZExt;
+                  return true;
+                }
+                return SrcElemTy == ThisSrcTy && IsZExt == ThisZExt;
+              });
+              // The single vectorized node producing V. Narrowed, combined or
+              // alternate nodes are costed differently in the tree, so they
+              // are not folded.
+              using TreeEntry = BoUpSLP::TreeEntry;
+              auto GetVectorizedTE = [&](Value *V) -> const TreeEntry * {
                 ArrayRef<TreeEntry *> TEs = R.getTreeEntries(V);
                 if (TEs.size() != 1)
-                  return InstructionCost::getInvalid();
+                  return nullptr;
                 const TreeEntry *TE = TEs.front();
-                // Narrowed, combined or alternate nodes are costed
-                // differently in the tree; do not guess their cost.
                 if (TE->isGather() || TE->State != TreeEntry::Vectorize ||
                     TE->isAltShuffle() ||
                     TE->CombinedOp != TreeEntry::NotCombinedOp ||
                     R.MinBWs.contains(TE))
-                  return InstructionCost::getInvalid();
-                Instruction *MainOp = TE->getMainOp();
-                auto *VecTy =
-                    getWidenedType(MainOp->getType(), TE->Scalars.size());
-                if (Instruction::isBinaryOp(TE->getOpcode()))
-                  return TTI->getArithmeticInstrCost(
-                      TE->getOpcode(), VecTy, CostKind,
-                      TTI::getOperandInfo(TE->getOperand(0)),
-                      TTI::getOperandInfo(TE->getOperand(1)));
-                if (Instruction::isCast(TE->getOpcode()))
-                  return TTI->getCastInstrCost(
-                      TE->getOpcode(), VecTy,
-                      getWidenedType(MainOp->getOperand(0)->getType(),
-                                     TE->Scalars.size()),
-                      R.getCastContextHint(*R.getOperandEntry(TE, 0)),
-                      CostKind);
-                return InstructionCost::getInvalid();
+                  return nullptr;
+                return TE;
               };
-              InstructionCost FusedCost =
-                  TTI->getFusedReductionCost(RdxOpcode, VectorTy, ReducedVals,
-                                             CostKind, GetVectorizedCost);
-              if (FusedCost.isValid() && FusedCost < VectorCost)
-                VectorCost = FusedCost;
+              auto *Mul =
+                  IsMulAcc ? cast<Instruction>(ReducedVals.front()) : nullptr;
+              const TreeEntry *MulTE = Mul ? GetVectorizedTE(Mul) : nullptr;
+              const TreeEntry *Ext0TE =
+                  MulTE ? GetVectorizedTE(Mul->getOperand(0)) : nullptr;
+              const TreeEntry *Ext1TE =
+                  SameOperands || !Ext0TE ? Ext0TE
+                                          : GetVectorizedTE(Mul->getOperand(1));
+              if (Ext1TE) {
+                // The unfused sequence costs both extends with one hint.
+                TTI::CastContextHint CCH =
+                    R.getCastContextHint(*R.getOperandEntry(Ext0TE, 0));
+                if (Ext1TE == Ext0TE ||
+                    CCH ==
+                        R.getCastContextHint(*R.getOperandEntry(Ext1TE, 0))) {
+                  auto *SrcVecTy =
+                      cast<VectorType>(getWidenedType(SrcElemTy, ReduxWidth));
+                  InstructionCost MulAccCost = TTI->getMulAccReductionCost(
+                      IsZExt, RdxOpcode, RedTy, SrcVecTy, CostKind, CCH);
+                  MulAccCost -= TTI->getArithmeticInstrCost(
+                      Instruction::Mul, VectorTy, CostKind,
+                      TTI::getOperandInfo(MulTE->getOperand(0)),
+                      TTI::getOperandInfo(MulTE->getOperand(1)));
+                  InstructionCost ExtCost = TTI->getCastInstrCost(
+                      IsZExt ? Instruction::ZExt : Instruction::SExt, VectorTy,
+                      SrcVecTy, CCH, CostKind);
+                  MulAccCost -= SameOperands ? ExtCost : 2 * ExtCost;
+                  if (MulAccCost.isValid() && MulAccCost < VectorCost)
+                    VectorCost = MulAccCost;
+                }
+              }
             }
             RdxOpCost = VectorCost;
           }

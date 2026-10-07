@@ -503,12 +503,8 @@ public:
 
   InstructionCost getMulAccReductionCost(
       bool IsUnsigned, unsigned RedOpcode, Type *ResTy, VectorType *Ty,
-      TTI::TargetCostKind CostKind = TTI::TCK_RecipThroughput) const override;
-
-  InstructionCost getFusedReductionCost(
-      unsigned Opcode, VectorType *Ty, ArrayRef<Value *> ReducedVals,
-      TTI::TargetCostKind CostKind,
-      function_ref<InstructionCost(Value *)> GetVectorizedCost) const override;
+      TTI::TargetCostKind CostKind = TTI::TCK_RecipThroughput,
+      TTI::CastContextHint CCH = TTI::CastContextHint::None) const override;
 
   InstructionCost
   getShuffleCost(TTI::ShuffleKind Kind, VectorType *DstTy, VectorType *SrcTy,
