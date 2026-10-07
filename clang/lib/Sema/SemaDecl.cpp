@@ -14105,14 +14105,15 @@ void Sema::DiagnoseUniqueObjectDuplication(const VarDecl *VD) {
   }
 }
 
-// Return true if builtin call returns cooperative matrix.
-bool Sema::BuiltinReturnsCoopMatrix(Expr *RHSExpr) {
+// Return the CallExpr if builtin call returns cooperative matrix.
+CallExpr *Sema::getCoopMatrixBuiltinCall(Expr *RHSExpr) {
+  RHSExpr = RHSExpr->IgnoreParens();
   auto Call = dyn_cast<CallExpr>(RHSExpr);
   if (!Call)
-    return false;
+    return nullptr;
   FunctionDecl *F = Call->getDirectCallee();
   if (!F)
-    return false;
+    return nullptr;
   switch (F->getBuiltinID()) {
   case Builtin::BIcoop_mat_load:
   case Builtin::BIcoop_mat_mulAdd:
@@ -14123,9 +14124,9 @@ bool Sema::BuiltinReturnsCoopMatrix(Expr *RHSExpr) {
   case Builtin::BIcoop_mat_scalar_mul:
   case Builtin::BIcoop_mat_scalar_neg:
   case Builtin::BIcoop_mat_init:
-    return true;
+    return Call;
   default:
-    return false;
+    return nullptr;
   }
 }
 
@@ -14347,15 +14348,14 @@ void Sema::AddInitializerToDecl(Decl *RealDecl, Expr *Init, bool DirectInit) {
 
   // Set return type of builtin call using type of LHS variable.
   // This is done for builtin calls that return cooperative matrix.
-  if (getLangOpts().OpenCL && BuiltinReturnsCoopMatrix(Init)) {
-    if (!VDecl->getType()->isCooperativeMatrixType()) {
-      Diag(VDecl->getLocation(), diag::err_coop_matrix_assignment);
-      return;
+  if (getLangOpts().OpenCL) {
+    if (CallExpr *Call = getCoopMatrixBuiltinCall(Init)) {
+      if (!VDecl->getType()->isCooperativeMatrixType()) {
+        Diag(VDecl->getLocation(), diag::err_invalid_coopmat_assignment);
+        return;
+      }
+      Call->setType(VDecl->getType());
     }
-
-    auto call = dyn_cast<CallExpr>(Init);
-    assert(call);
-    call->setType(VDecl->getType());
   }
 
   // Perform the initialization.

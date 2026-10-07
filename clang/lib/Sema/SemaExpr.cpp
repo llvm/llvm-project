@@ -15997,19 +15997,19 @@ ExprResult Sema::CreateBuiltinBinOp(SourceLocation OpLoc,
 
   switch (Opc) {
   case BO_Assign:
-    if (getLangOpts().OpenCL && BuiltinReturnsCoopMatrix(RHSExpr)) {
-      if (!LHSExpr->getType()->isCooperativeMatrixType()) {
-        Diag(LHSExpr->getBeginLoc(), diag::err_coop_matrix_assignment);
-        return ExprError();
+    if (getLangOpts().OpenCL) {
+      if (CallExpr *Call = getCoopMatrixBuiltinCall(RHSExpr)) {
+        if (!LHSExpr->getType()->isCooperativeMatrixType()) {
+          Diag(LHSExpr->getBeginLoc(), diag::err_invalid_coopmat_assignment);
+          return ExprError();
+        }
+        Call->setType(LHSExpr->getType());
+        if (CheckCoopMatrixLoadElementType(LHSExpr->getType(),
+                                           LHSExpr->getBeginLoc(), Call))
+          return ExprError();
+        if (CheckCoopMatrixMatMulOutput(Call))
+          return ExprError();
       }
-      auto Call = dyn_cast<CallExpr>(RHSExpr);
-      assert(Call);
-      Call->setType(LHSExpr->getType());
-      if (CheckCoopMatrixLoadElementType(LHSExpr->getType(),
-                                         LHSExpr->getBeginLoc(), Call))
-        return ExprError();
-      if (CheckCoopMatrixMatMulOutput(Call))
-        return ExprError();
     }
     ResultTy = CheckAssignmentOperands(LHS.get(), RHS, OpLoc, QualType(), Opc);
     if (getLangOpts().CPlusPlus &&

@@ -17602,7 +17602,7 @@ bool Sema::CheckCoopMatrixMatMulOutput(CallExpr *TheCall) {
   }
 
   if (!areCoopMatrixTypesCompatible(TheCall->getType(), MC->getType())) {
-    Diag(Loc, diag::err_coop_matrix_row_or_col_mismatch);
+    Diag(Loc, diag::err_incompatible_coopmat_types);
     return true;
   }
   return false;
@@ -17620,12 +17620,7 @@ bool Sema::CheckCoopMatrixTypes(QualType ATy, SourceLocation ALoc, QualType BTy,
     return true;
 
   if (!areCoopMatrixTypesCompatible(ATy, BTy)) {
-    Diag(ALoc, diag::err_coop_matrix_row_or_col_mismatch);
-    return true;
-  }
-
-  if (M0Ty->getUse() != M1Ty->getUse()) {
-    Diag(ALoc, diag::err_coop_matrix_use_type);
+    Diag(ALoc, diag::err_incompatible_coopmat_types);
     return true;
   }
 

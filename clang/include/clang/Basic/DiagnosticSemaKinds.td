@@ -12014,7 +12014,7 @@ def err_coop_matrix_arg
 def err_coop_matrix_operands_type
     : Error<"fourth argument of 'coop_mat_mulAdd' must have enum type">;
 
-def err_coop_matrix_assignment
+def err_invalid_coopmat_assignment
     : Error<"builtin return value should be assigned to cooperative matrix "
             "type variable">;
 
@@ -12036,9 +12036,6 @@ def err_invalid_coop_matrix_element_type
 def err_coop_matrix_row_or_col_mismatch
     : Error<"mismatch of cooperative matrix row or column">;
 
-def err_coop_matrix_use_type
-    : Error<"inconsistent cooperative matrix use type">;
-
 def err_unsupported_coopmat_binary_operator
     : Error<"unsupported cooperative matrix binary operator">;
 
@@ -12047,6 +12044,9 @@ def err_unsupported_coopmat_scalar_operator
 
 def err_invalid_operand_for_coopmat_scalar_operator
     : Error<"unsupported type for cooperative matrix scalar operator">;
+
+def err_incompatible_coopmat_types
+    : Error<"incompatible cooperative matrix types">;
 
 // MIG routine annotations.
 def warn_mig_server_routine_does_not_return_kern_return_t : Warning<
