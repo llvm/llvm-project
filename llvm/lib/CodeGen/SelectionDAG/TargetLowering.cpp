@@ -179,9 +179,9 @@ static void setArgListEntryAttributes(TargetLoweringBase::ArgListEntry &Entry,
     Entry.IndirectType = Src.getParamStructRetType(ArgIdx);
 }
 
-TargetLoweringBase::ArgListEntry::
-ArgListEntry(SDValue Node, Type *Ty, Attribute::AttrKind Attr)
-  : ArgListEntry(nullptr, Node, Ty) {
+TargetLoweringBase::ArgListEntry::ArgListEntry(SDValue Node, Type *Ty,
+                                               Attribute::AttrKind Attr)
+    : ArgListEntry(nullptr, Node, Ty) {
   if (Attr == Attribute::SExt)
     IsSExt = true;
   else if (Attr == Attribute::ZExt)
