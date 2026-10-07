@@ -673,7 +673,7 @@ static Value *canoncalizeSelectICmpMinMax(const ICmpInst *Cmp, Value *TVal,
   // (X >= Y) ? (X - Y) : 0
   if ((Pred == CmpInst::ICMP_SLT || Pred == CmpInst::ICMP_SLE) &&
       match(FVal, m_NSWSub(m_Specific(CmpLHS), m_Specific(CmpRHS))) &&
-      isGuaranteedNotToBeUndef(CmpLHS, SQ.AC, SQ.CxtI, SQ.DT)) {
+      isGuaranteedNotToBeUndef(CmpLHS, SQ.AC, SQ.CtxI, SQ.DT)) {
     Value *SMin =
         Builder.CreateBinaryIntrinsic(Intrinsic::smin, CmpRHS, CmpLHS);
     return Builder.CreateNSWSub(CmpLHS, SMin);
@@ -1886,7 +1886,7 @@ static Value *canonicalizeClampLike(SelectInst &Sel0, ICmpInst &Cmp0,
              m_CombineAnd(m_AnyIntegralConstant(), m_Constant(C0))))
     return nullptr;
 
-  if (!isa<SelectInst>(Sel1)) {
+  if (!match(Sel1, m_SelectLike(m_Value(), m_Value(), m_Value()))) {
     Pred0 = ICmpInst::getInversePredicate(Pred0);
     std::swap(X, Sel1);
   }
@@ -1944,8 +1944,8 @@ static Value *canonicalizeClampLike(SelectInst &Sel0, ICmpInst &Cmp0,
   CmpPredicate Pred1;
   Constant *C2;
   Value *ReplacementLow, *ReplacementHigh;
-  if (!match(Sel1, m_Select(m_Value(Cmp1), m_Value(ReplacementLow),
-                            m_Value(ReplacementHigh))) ||
+  if (!match(Sel1, m_SelectLike(m_Value(Cmp1), m_Value(ReplacementLow),
+                                m_Value(ReplacementHigh))) ||
       !match(Cmp1,
              m_ICmp(Pred1, m_Specific(X),
                     m_CombineAnd(m_AnyIntegralConstant(), m_Constant(C2)))))
@@ -2026,16 +2026,22 @@ static Value *canonicalizeClampLike(SelectInst &Sel0, ICmpInst &Cmp0,
            "Constant folding of ImmConstant cannot fail");
   }
 
+  // We mark the select instructions below as having an unknown profile as it is
+  // not possible to recover profile information from the original selects in
+  // the general case. From them we can only know the probability that we clamp
+  // whereas we need the probabilities for clamping specific to the low end/high
+  // end.
+
   // All good, finally emit the new pattern.
   Value *ShouldReplaceLow = Builder.CreateICmpSLT(X, ThresholdLowIncl);
   Value *ShouldReplaceHigh = Builder.CreateICmpSGE(X, ThresholdHighExcl);
-  Value *MaybeReplacedLow =
-      Builder.CreateSelect(ShouldReplaceLow, ReplacementLow, X);
+  Value *MaybeReplacedLow = Builder.CreateSelectWithUnknownProfile(
+      ShouldReplaceLow, ReplacementLow, X, DEBUG_TYPE);
 
   // Create the final select. If we looked through a truncate above, we will
   // need to retruncate the result.
-  Value *MaybeReplacedHigh = Builder.CreateSelect(
-      ShouldReplaceHigh, ReplacementHigh, MaybeReplacedLow);
+  Value *MaybeReplacedHigh = Builder.CreateSelectWithUnknownProfile(
+      ShouldReplaceHigh, ReplacementHigh, MaybeReplacedLow, DEBUG_TYPE);
   return Builder.CreateTrunc(MaybeReplacedHigh, Sel0.getType());
 }
 
@@ -2462,7 +2468,8 @@ Instruction *InstCombinerImpl::foldSelectInstWithICmp(SelectInst &SI,
     return &SI;
   }
 
-  if (Value *V = foldSelectICmpMinMax(ICI, TrueVal, FalseVal, Builder, SQ))
+  if (Value *V = foldSelectICmpMinMax(ICI, TrueVal, FalseVal, Builder,
+                                      SQ.getWithInstruction(&SI)))
     return replaceInstUsesWith(SI, V);
 
   if (Value *V = foldSelectICmpAndZeroShl(ICI, TrueVal, FalseVal, Builder))
@@ -3209,7 +3216,7 @@ static Instruction *foldSelectToPhiImpl(SelectInst &Sel, BasicBlock *BB,
         return nullptr;
   }
 
-  Builder.SetInsertPoint(BB, BB->begin());
+  Builder.SetInsertPoint(BB->begin());
   auto *PN = Builder.CreatePHI(Sel.getType(), Inputs.size());
   for (auto *Pred : predecessors(BB))
     PN->addIncoming(Inputs[Pred], Pred);
@@ -3669,8 +3676,11 @@ static Instruction *foldNestedSelects(SelectInst &OuterSelVal,
     return nullptr;
 
   // Canonicalize inversion of the innermost `select`'s condition.
-  if (match(InnerSel.Cond, m_Not(m_Value(InnerSel.Cond))))
+  bool SwapInnerSelCond = false;
+  if (match(InnerSel.Cond, m_Not(m_Value(InnerSel.Cond)))) {
     std::swap(InnerSel.TrueVal, InnerSel.FalseVal);
+    SwapInnerSelCond = !SwapInnerSelCond;
+  }
 
   Value *AltCond = nullptr;
   auto matchOuterCond = [OuterSel, IsAndVariant, &AltCond](auto m_InnerCond) {
@@ -3695,16 +3705,25 @@ static Instruction *foldNestedSelects(SelectInst &OuterSelVal,
     // Done!
     std::swap(InnerSel.TrueVal, InnerSel.FalseVal);
     InnerSel.Cond = NotInnerCond;
+    SwapInnerSelCond = !SwapInnerSelCond;
   } else // Not the pattern we were looking for.
     return nullptr;
 
-  Value *SelInner = Builder.CreateSelect(
+  // We mark the select with AltCond as having an unknown profile given the
+  // condition is derived from an and/or. We might have profile information on
+  // the operands of the and/or, but there is no guarantee that they are
+  // independent.
+  Value *SelInner = Builder.CreateSelectWithUnknownProfile(
       AltCond, IsAndVariant ? OuterSel.TrueVal : InnerSel.FalseVal,
-      IsAndVariant ? InnerSel.TrueVal : OuterSel.FalseVal);
+      IsAndVariant ? InnerSel.TrueVal : OuterSel.FalseVal, DEBUG_TYPE);
   SelInner->takeName(InnerSelVal);
-  return SelectInst::Create(InnerSel.Cond,
-                            IsAndVariant ? SelInner : InnerSel.TrueVal,
-                            !IsAndVariant ? SelInner : InnerSel.FalseVal);
+  SelectInst *SI = SelectInst::Create(
+      InnerSel.Cond, IsAndVariant ? SelInner : InnerSel.TrueVal,
+      !IsAndVariant ? SelInner : InnerSel.FalseVal, "", nullptr,
+      ProfcheckDisableMetadataFixes ? nullptr : cast<Instruction>(InnerSelVal));
+  if (SwapInnerSelCond)
+    SI->swapProfMetadata();
+  return SI;
 }
 
 /// Return true if V is poison or \p Expected given that ValAssumedPoison is
@@ -4712,8 +4731,11 @@ Instruction *InstCombinerImpl::visitSelectInst(SelectInst &SI) {
           FMF.setNoNaNs(true);
         if (FCmp->hasNoInfs())
           FMF.setNoInfs(true);
-        Value *NewSel =
-            Builder.CreateSelectFMF(NewCond, FalseVal, TrueVal, FMF);
+        Value *NewSel = Builder.CreateSelectFMF(
+            NewCond, FalseVal, TrueVal, FMF, "",
+            ProfcheckDisableMetadataFixes ? nullptr : &SI);
+        if (auto *NewSI = dyn_cast<SelectInst>(NewSel))
+          NewSI->swapProfMetadata();
         return replaceInstUsesWith(SI, NewSel);
       }
     }

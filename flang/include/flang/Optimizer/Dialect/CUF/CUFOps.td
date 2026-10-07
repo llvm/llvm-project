@@ -54,7 +54,11 @@ def cuf_AllocOp : cuf_Op<"alloc", [AttrSizedOperandSegments]> {
 
   let assemblyFormat = [{
     $in_type (`(` $typeparams^ `:` type($typeparams) `)`)?
-        (`,` $shape^ `:` type($shape) )?  attr-dict `->` qualified(type($ptr))
+        (`,` $shape^ `:` type($shape) )?
+        (`uniq_name` `(` $uniq_name^ `)`)?
+        (`bindc_name` `(` $bindc_name^ `)`)?
+        `data_attr` `(` enum($data_attr) `)`
+        attr-dict `->` qualified(type($ptr))
   }];
 
   let builders = [
@@ -68,7 +72,7 @@ def cuf_AllocOp : cuf_Op<"alloc", [AttrSizedOperandSegments]> {
   let hasVerifier = 1;
 }
 
-def cuf_FreeOp : cuf_Op<"free", [MemoryEffects<[MemFree]>]> {
+def cuf_FreeOp : cuf_Op<"free", []> {
   let summary = "Free a device allocated object";
 
   let description = [{
@@ -82,7 +86,8 @@ def cuf_FreeOp : cuf_Op<"free", [MemoryEffects<[MemFree]>]> {
     cuf_DataAttributeAttr:$data_attr
   );
 
-  let assemblyFormat = "$devptr `:` qualified(type($devptr)) attr-dict";
+  let assemblyFormat = "$devptr `:` qualified(type($devptr)) "
+                       "`data_attr` `(` enum($data_attr) `)` attr-dict";
 
   let hasVerifier = 1;
 }
@@ -114,6 +119,11 @@ def cuf_AllocateOp : cuf_Op<"allocate", [AttrSizedOperandSegments,
     ( `errmsg` `(` $errmsg^ `:` type($errmsg) `)` )?
     ( `stream` `(` $stream^ `:` type($stream) `)` )?
     ( `pinned` `(` $pinned^ `:` type($pinned) `)` )?
+    (`data_attr` `(` enum($data_attr)^ `)`)?
+    (`hasStat` $hasStat^)?
+    (`hasDoubleDescriptor` $hasDoubleDescriptor^)?
+    (`pointer` $pointer^)?
+    (`device_source` $device_source^)?
     attr-dict `->` type($stat)
   }];
 
@@ -139,6 +149,10 @@ def cuf_DeallocateOp : cuf_Op<"deallocate",
   let assemblyFormat = [{
     $box `:` qualified(type($box))
     ( `errmsg` `(` $errmsg^ `:` type($errmsg) `)` )?
+    `data_attr` `(` enum($data_attr) `)`
+    (`hasStat` $hasStat^)?
+    (`hasDoubleDescriptor` $hasDoubleDescriptor^)?
+    (`pointer` $pointer^)?
     attr-dict `->` type($stat)
   }];
 
@@ -183,7 +197,10 @@ def cuf_DataTransferOp : cuf_Op<"data_transfer", []> {
       UnitAttr:$hasManagedOrUnifedSymbols);
 
   let assemblyFormat = [{
-    $src `to` $dst (`,` $shape^ `:` type($shape) )? attr-dict `:` type($src) `,` type($dst)
+    $src `to` $dst (`,` $shape^ `:` type($shape) )?
+    `transfer_kind` `(` enum($transfer_kind) `)`
+    (`hasManagedOrUnifedSymbols` $hasManagedOrUnifedSymbols^)?
+    attr-dict `:` type($src) `,` type($dst)
   }];
 
   let hasVerifier = 1;
@@ -213,7 +230,9 @@ def cuf_KernelLaunchOp : cuf_Op<"kernel_launch", [CallOpInterface,
     $callee `<` `<` `<` $grid_x `,` $grid_y `,` $grid_z `,`$block_x `,`
         $block_y `,` $block_z
         ( `,` $bytes^ ( `,` $stream^ `:` type($stream) )? )? `>` `>` `>`
-        `` `(` $args `)` ( `:` `(` type($args)^ `)` )? attr-dict
+        `` `(` $args `)` ( `:` `(` type($args)^ `)` )?
+        (`arg_attrs` `(` $arg_attrs^ `)`)?
+        (`res_attrs` `(` $res_attrs^ `)`)? attr-dict
   }];
 
   let extraClassDeclaration = [{
@@ -277,6 +296,7 @@ def cuf_KernelOp
         ( `reduce` `(` $reduceOperands^ `:` type($reduceOperands) `:` $reduceAttrs `)` )?
         custom<CUFKernelLoopControl>($region, $lowerbound, type($lowerbound),
             $upperbound, type($upperbound), $step, type($step))
+        (`n` `(` $n^ `)`)?
         attr-dict
   }];
 
@@ -351,7 +371,8 @@ def cuf_RegisterVariableStaticOp : cuf_Op<"register_variable_static", []> {
   );
 
   let assemblyFormat = [{
-    $global `(` $varName `,` $size `)` attr-dict
+    $global `(` $varName `,` $size `)`
+    (`deviceResident` $deviceResident^)? attr-dict
   }];
 }
 
@@ -386,7 +407,11 @@ def cuf_SharedMemoryOp
 
   let assemblyFormat = [{
       (`[` $offset^ `:` type($offset) `]`)? $in_type (`(` $typeparams^ `:` type($typeparams) `)`)?
-        (`,` $shape^ `:` type($shape) )?  (`align` $alignment^ )? attr-dict `->` qualified(type($ptr))
+        (`,` $shape^ `:` type($shape) )?  (`align` $alignment^ )?
+        (`uniq_name` `(` $uniq_name^ `)`)?
+        (`bindc_name` `(` $bindc_name^ `)`)?
+        (`static` $isStatic^)?
+        attr-dict `->` qualified(type($ptr))
   }];
 
   let builders = [OpBuilder<(ins "mlir::Type":$inType,
@@ -394,6 +419,38 @@ def cuf_SharedMemoryOp
       CArg<"mlir::ValueRange", "{}">:$typeparams,
       CArg<"mlir::ValueRange", "{}">:$shape,
       CArg<"llvm::ArrayRef<mlir::NamedAttribute>", "{}">:$attributes)>];
+}
+
+def cuf_OnDeviceOp : cuf_Op<"on_device", [Pure]> {
+  let summary = "Query whether execution is on the device";
+
+  let description = [{
+    CUDA Fortran `on_device()` intrinsic. Produces true when this operation
+    is compiled into device code and false on the host. Folding is delayed so
+    a host copy of an OpenACC routine can be cloned for the device before each
+    copy is folded in its own context.
+  }];
+
+  let results = (outs I1:$res);
+
+  let assemblyFormat = "attr-dict `:` type($res)";
+}
+
+def cuf_DeviceIsActiveOp : cuf_Op<"device_is_active", []> {
+  let summary = "Query whether the CUDA device context is still active";
+
+  let description = [{
+    Returns true if the CUDA device's primary context is alive. Used to
+    guard host-side scope-exit deallocation against a user cudaDeviceReset().
+
+    Converted to a `_FortranACUFDeviceIsActive` runtime call on the host and
+    to `false` in device code, so host-only cleanup is DCE'd from GPU
+    functions.
+  }];
+
+  let results = (outs I1:$res);
+
+  let assemblyFormat = "attr-dict `:` type($res)";
 }
 
 def cuf_StreamCastOp : cuf_Op<"stream_cast", [NoMemoryEffect]> {

@@ -1416,7 +1416,7 @@ define i8 @PR14613_smax(i8 %x) {
 
 define i8 @PR46271(<2 x i8> %x) {
 ; CHECK-LABEL: @PR46271(
-; CHECK-NEXT:    [[NOT:%.*]] = call <2 x i8> @llvm.smax.v2i8(<2 x i8> [[X:%.*]], <2 x i8> splat (i8 -1))
+; CHECK-NEXT:    [[NOT:%.*]] = call <2 x i8> @llvm.smax.v2i8(<2 x i8> [[X:%.*]], <2 x i8> <i8 poison, i8 -1>)
 ; CHECK-NEXT:    [[R:%.*]] = extractelement <2 x i8> [[NOT]], i64 1
 ; CHECK-NEXT:    [[R1:%.*]] = xor i8 [[R]], -1
 ; CHECK-NEXT:    ret i8 [[R1]]
@@ -1639,6 +1639,61 @@ define i32 @test_umin_sub1_nuw(i32 %x, i32 range(i32 1, 0) %w) {
 ; CHECK-LABEL: @test_umin_sub1_nuw(
 ; CHECK-NEXT:    [[SUB:%.*]] = add i32 [[W:%.*]], -1
 ; CHECK-NEXT:    [[R:%.*]] = call i32 @llvm.umin.i32(i32 [[X:%.*]], i32 [[SUB]])
+; CHECK-NEXT:    ret i32 [[R]]
+;
+  %cmp = icmp ult i32 %x, %w
+  %sub = add i32 %w, -1
+  %r = select i1 %cmp, i32 %x, i32 %sub
+  ret i32 %r
+}
+
+define i32 @test_umin_sub1_assume_nonzero(i32 %x, i32 %w) {
+; CHECK-LABEL: @test_umin_sub1_assume_nonzero(
+; CHECK-NEXT:    [[NONZERO:%.*]] = icmp ne i32 [[W:%.*]], 0
+; CHECK-NEXT:    call void @llvm.assume(i1 [[NONZERO]])
+; CHECK-NEXT:    [[SUB:%.*]] = add i32 [[W]], -1
+; CHECK-NEXT:    [[R:%.*]] = call i32 @llvm.umin.i32(i32 [[X:%.*]], i32 [[SUB]])
+; CHECK-NEXT:    ret i32 [[R]]
+;
+  %nonzero = icmp ne i32 %w, 0
+  call void @llvm.assume(i1 %nonzero)
+  %cmp = icmp ult i32 %x, %w
+  %sub = add i32 %w, -1
+  %r = select i1 %cmp, i32 %x, i32 %sub
+  ret i32 %r
+}
+
+define i32 @test_umin_sub1_guard_nonzero(i32 %x, i32 %w) {
+; CHECK-LABEL: @test_umin_sub1_guard_nonzero(
+; CHECK-NEXT:  entry:
+; CHECK-NEXT:    [[ZERO:%.*]] = icmp eq i32 [[W:%.*]], 0
+; CHECK-NEXT:    br i1 [[ZERO]], label [[ZERO_BB:%.*]], label [[USE:%.*]]
+; CHECK:       zero.bb:
+; CHECK-NEXT:    ret i32 0
+; CHECK:       use:
+; CHECK-NEXT:    [[SUB:%.*]] = add i32 [[W]], -1
+; CHECK-NEXT:    [[R:%.*]] = call i32 @llvm.umin.i32(i32 [[X:%.*]], i32 [[SUB]])
+; CHECK-NEXT:    ret i32 [[R]]
+;
+entry:
+  %zero = icmp eq i32 %w, 0
+  br i1 %zero, label %zero.bb, label %use
+
+zero.bb:
+  ret i32 0
+
+use:
+  %cmp = icmp ult i32 %x, %w
+  %sub = add i32 %w, -1
+  %r = select i1 %cmp, i32 %x, i32 %sub
+  ret i32 %r
+}
+
+define i32 @test_umin_sub1_unknown_nonzero(i32 %x, i32 %w) {
+; CHECK-LABEL: @test_umin_sub1_unknown_nonzero(
+; CHECK-NEXT:    [[CMP:%.*]] = icmp ult i32 [[X:%.*]], [[W:%.*]]
+; CHECK-NEXT:    [[SUB:%.*]] = add i32 [[W]], -1
+; CHECK-NEXT:    [[R:%.*]] = select i1 [[CMP]], i32 [[X]], i32 [[SUB]]
 ; CHECK-NEXT:    ret i32 [[R]]
 ;
   %cmp = icmp ult i32 %x, %w

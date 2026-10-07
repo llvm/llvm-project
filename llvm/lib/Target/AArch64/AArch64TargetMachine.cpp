@@ -231,6 +231,12 @@ static cl::opt<bool> EnableSVEShuffleOpt(
              "instructions like tbl or the bottom/top variants"),
     cl::init(true), cl::Hidden);
 
+static cl::opt<bool> EnablePredicateAsCounterLoopRewrites(
+    "aarch64-enable-predicate-as-counter-loop-rewrites",
+    cl::desc("Enable rewriting loops with wide loop-carried masks to use "
+             "predicate-as-counter"),
+    cl::init(false), cl::Hidden);
+
 extern "C" LLVM_ABI LLVM_EXTERNAL_VISIBILITY void
 LLVMInitializeAArch64Target() {
   // Register the target.
@@ -258,6 +264,7 @@ LLVMInitializeAArch64Target() {
   initializeAArch64PTrueCoalescingLegacyPass(PR);
   initializeAArch64SIMDInstrOptLegacyPass(PR);
   initializeAArch64O0PreLegalizerCombinerLegacyPass(PR);
+  initializeAArch64PredicateAsCounterLoopRewritesPass(PR);
   initializeAArch64PreLegalizerCombinerLegacyPass(PR);
   initializeAArch64PointerAuthLegacyPass(PR);
   initializeAArch64PostCoalescerLegacyPass(PR);
@@ -365,8 +372,7 @@ AArch64TargetMachine::AArch64TargetMachine(const Target &T, const Triple &TT,
                                            std::optional<CodeModel::Model> CM,
                                            CodeGenOptLevel OL, bool JIT,
                                            bool LittleEndian)
-    : CodeGenTargetMachineImpl(T, TT.computeDataLayout(), TT,
-                               computeDefaultCPU(TT, CPU), FS, Options,
+    : CodeGenTargetMachineImpl(T, TT, computeDefaultCPU(TT, CPU), FS, Options,
                                getEffectiveRelocModel(TT, RM),
                                getEffectiveAArch64CodeModel(TT, CM, JIT), OL),
       TLOF(createTLOF(getTargetTriple())), isLittle(LittleEndian) {
@@ -660,6 +666,10 @@ void AArch64PassConfig::addIRPasses() {
   // Always expand atomic operations, we don't deal with atomicrmw or cmpxchg
   // ourselves.
   addPass(createAtomicExpandLegacyPass());
+
+  if (getOptLevel() >= CodeGenOptLevel::Default &&
+      EnablePredicateAsCounterLoopRewrites)
+    addPass(createAArch64PredicateAsCounterLoopRewritesPass());
 
   // Cmpxchg instructions are often used with a subsequent comparison to
   // determine whether it succeeded. We can exploit existing control-flow in

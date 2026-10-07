@@ -1639,11 +1639,15 @@ bool RegisterCoalescer::reMaterializeDef(const CoalescerPair &CP,
     assert(DstReg.isPhysical() &&
            "Only expect virtual or physical registers in remat");
 
-    // When we're rematerializing into a not-quite-right register we already add
-    // the real definition as an implicit-def, but we should also be marking the
-    // "official" register as dead, since nothing else is going to use it as a
-    // result of this remat. Not doing this can affect pressure tracking.
-    NewMI.getOperand(0).setIsDead(true);
+    // CopyDstReg is added as an implicit-def below. The remat may also define
+    // units CopyDstReg does not cover; nothing uses those, so the def is dead.
+    // If CopyDstReg covers every defined unit, the def is part of that live
+    // value and must stay live.
+    Register DefReg = NewMI.getOperand(0).getReg();
+    if (any_of(TRI->regunits(DefReg.asMCReg()), [&](MCRegUnit Unit) {
+          return !TRI->hasRegUnit(CopyDstReg, Unit);
+        }))
+      NewMI.getOperand(0).setIsDead(true);
 
     bool HasDefMatchingCopy = false;
     for (auto [OpIndex, Reg] : NewMIImplDefs) {
@@ -3326,8 +3330,8 @@ void JoinVals::pruneValues(JoinVals &Other,
           // Also remove dead flags since the joined live range will
           // continue past this instruction.
           for (MachineOperand &MO :
-               Indexes->getInstructionFromIndex(Def)->all_defs()) {
-            if (MO.getReg() == Reg) {
+               mi_bundle_ops(*Indexes->getInstructionFromIndex(Def))) {
+            if (MO.isReg() && MO.isDef() && MO.getReg() == Reg) {
               if (MO.getSubReg() != 0 && MO.isUndef() && !EraseImpDef)
                 MO.setIsUndef(false);
               MO.setIsDead(false);
