@@ -268,11 +268,12 @@ class ASTDeclUnmerger : public DeclVisitor<ASTDeclUnmerger> {
         removeFromLookups(ND);
     }
 
-    // Restore lookup for the surviving predecessor
-    // of any removed decl that had a surviving predecessor
-    DeclContext *Primary = DC->getPrimaryContext();
+    // Restore lookup for the surviving predecessor of any removed decl that
+    // had a surviving predecessor. Like removeDecl(), use its semantic
+    // context: the out-of-line definition of a member is in DC, but it was
+    // removed from the lookup table of its class or namespace.
     for (NamedDecl *Prev : Survivors)
-      Primary->makeDeclVisibleInContext(Prev);
+      Prev->getDeclContext()->makeDeclVisibleInContext(Prev);
   }
 
 public:
