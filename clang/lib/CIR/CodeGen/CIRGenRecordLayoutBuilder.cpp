@@ -23,6 +23,7 @@
 #include "clang/CIR/Dialect/IR/CIRDataLayout.h"
 #include "clang/CIR/MissingFeatures.h"
 #include "clang/CodeGenUtils/CodeGenUtils.h"
+#include "clang/CodeGenUtils/RecordLayoutUtils.h"
 #include "llvm/Support/Casting.h"
 
 #include <memory>
@@ -133,26 +134,9 @@ struct CIRRecordLowering final {
   /// Helper function to check if the target machine is BigEndian.
   bool isBigEndian() const { return astContext.getTargetInfo().isBigEndian(); }
 
-  // The Itanium base layout rule allows virtual bases to overlap
-  // other bases, which complicates layout in specific ways.
-  //
-  // Note specifically that the ms_struct attribute doesn't change this.
-  bool isOverlappingVBaseABI() {
-    return !astContext.getTargetInfo().getCXXABI().isMicrosoft();
-  }
   // Recursively searches all of the bases to find out if a vbase is
   // not the primary vbase of some base class.
   bool hasOwnStorage(const CXXRecordDecl *decl, const CXXRecordDecl *query);
-
-  /// The Microsoft bitfield layout rule allocates discrete storage
-  /// units of the field's formal type and only combines adjacent
-  /// fields of the same formal type.  We want to emit a layout with
-  /// these discrete storage units instead of combining them into a
-  /// continuous run.
-  bool isDiscreteBitFieldABI() {
-    return astContext.getTargetInfo().getCXXABI().isMicrosoft() ||
-           recordDecl->isMsStruct(astContext);
-  }
 
   CharUnits bitsToCharUnits(uint64_t bitOffset) {
     return astContext.toCharUnitsFromBits(bitOffset);
@@ -445,7 +429,7 @@ void CIRRecordLowering::fillOutputFields() {
 RecordDecl::field_iterator
 CIRRecordLowering::accumulateBitFields(RecordDecl::field_iterator field,
                                        RecordDecl::field_iterator fieldEnd) {
-  if (isDiscreteBitFieldABI()) {
+  if (CodeGenUtils::isDiscreteBitFieldABI(astContext, recordDecl)) {
     // run stores the first element of the current run of bitfields. fieldEnd is
     // used as a special value to note that we don't have a current run. A
     // bitfield run is a contiguous collection of bitfields that can be stored
@@ -600,9 +584,30 @@ CIRRecordLowering::accumulateBitFields(RecordDecl::field_iterator field,
         // Determine if accumulating the just-seen span will create an expensive
         // access unit or not.
         mlir::Type type = getUIntNType(astContext.toBits(accessSize));
-        if (!astContext.getTargetInfo().hasCheapUnalignedBitFieldAccess())
-          cirGenTypes.getCGModule().errorNYI(
-              field->getSourceRange(), "NYI CheapUnalignedBitFieldAccess");
+        if (!astContext.getTargetInfo().hasCheapUnalignedBitFieldAccess()) {
+          // Unaligned accesses are expensive. Only accumulate if the new unit
+          // is naturally aligned. Otherwise install the best we have, which is
+          // either the initial access unit (can't do better), or a naturally
+          // aligned accumulation (since we would have already installed it if
+          // it wasn't naturally aligned).
+          CharUnits align = getMemberAlignment(type);
+          if (align > astRecordLayout.getAlignment()) {
+            // The alignment required is greater than the containing structure
+            // itself.
+            installBest = true;
+          } else if (!beginOffset.isMultipleOf(align)) {
+            // The access unit is not at a naturally aligned offset within the
+            // structure.
+            installBest = true;
+          }
+
+          if (installBest && bestEnd == field) {
+            // We're installing the first span, whose clipping was presumed
+            // above. Compute it correctly.
+            if (getSize(type) == accessSize)
+              bestClipped = false;
+          }
+        }
 
         if (!installBest) {
           // Find the next used storage offset to determine what the limit of
@@ -611,7 +616,7 @@ CIRRecordLowering::accumulateBitFields(RecordDecl::field_iterator field,
           // non-reusable tail padding.
           CharUnits limitOffset;
           for (auto probe = field; probe != fieldEnd; ++probe)
-            if (!isEmptyFieldForLayout(astContext, *probe)) {
+            if (!CodeGenUtils::isEmptyFieldForLayout(astContext, *probe)) {
               // A member with storage sets the limit.
               assert((getFieldBitOffset(*probe) % charBits) == 0 &&
                      "Next storage is not byte-aligned");
@@ -709,7 +714,7 @@ void CIRRecordLowering::accumulateFields(bool nonVirtualBaseType) {
       field = accumulateBitFields(field, fieldEnd);
       assert((field == fieldEnd || !field->isBitField()) &&
              "Failed to accumulate all the bitfields");
-    } else if (isEmptyFieldForLayout(astContext, *field) &&
+    } else if (CodeGenUtils::isEmptyFieldForLayout(astContext, *field) &&
                field->isPotentiallyOverlapping()) {
       // We lay out normal empty fields, as they are required for GEPs/getting
       // function pointers. However 'no-unique-address' lends some additional
@@ -1266,12 +1271,13 @@ void CIRRecordLowering::accumulateBases() {
 void CIRRecordLowering::accumulateVBases() {
   for (const auto &base : cxxRecordDecl->vbases()) {
     const CXXRecordDecl *baseDecl = base.getType()->getAsCXXRecordDecl();
-    if (isEmptyRecordForLayout(astContext, base.getType()))
+    if (CodeGenUtils::isEmptyRecordForLayout(astContext, base.getType()))
       continue;
     CharUnits offset = astRecordLayout.getVBaseClassOffset(baseDecl);
     // If the vbase is a primary virtual base of some base, then it doesn't
     // get its own storage location but instead lives inside of that base.
-    if (isOverlappingVBaseABI() && astContext.isNearlyEmpty(baseDecl) &&
+    if (CodeGenUtils::isOverlappingVBaseABI(astContext) &&
+        astContext.isNearlyEmpty(baseDecl) &&
         !hasOwnStorage(cxxRecordDecl, baseDecl)) {
       members.push_back(MemberInfo(offset, MemberInfo::InfoKind::VBase, nullptr,
                                    cir::RecordMemberKind::Data, baseDecl));

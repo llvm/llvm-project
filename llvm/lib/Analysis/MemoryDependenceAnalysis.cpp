@@ -304,11 +304,11 @@ MemoryDependenceResults::getInvariantGroupPointerDependency(LoadInst *LI,
   // cast graph down only.
   Value *LoadOperand = LI->getPointerOperand()->stripPointerCasts();
 
-  // It's is not safe to walk the use list of global value, because function
+  // It's is not safe to walk the use list of constant, because function
   // passes aren't allowed to look outside their functions.
   // FIXME: this could be fixed by filtering instructions from outside
   // of current function.
-  if (isa<GlobalValue>(LoadOperand))
+  if (isa<Constant>(LoadOperand))
     return MemDepResult::getUnknown();
 
   Instruction *ClosestDependency = nullptr;
@@ -349,39 +349,6 @@ MemoryDependenceResults::getInvariantGroupPointerDependency(LoadInst *LI,
                             MemDepResult::getDef(ClosestDependency), nullptr));
   ReverseNonLocalDefsCache[ClosestDependency].insert(LI);
   return MemDepResult::getNonLocal();
-}
-
-// Check if SI that may alias with MemLoc can be safely skipped. This is
-// possible in case if SI can only must alias or no alias with MemLoc (no
-// partial overlapping possible) and it writes the same value that MemLoc
-// contains now (it was loaded before this store and was not modified in
-// between).
-static bool canSkipClobberingStore(const StoreInst *SI,
-                                   const MemoryLocation &MemLoc,
-                                   Align MemLocAlign, BatchAAResults &BatchAA,
-                                   unsigned ScanLimit) {
-  if (!MemLoc.Size.hasValue())
-    return false;
-  if (MemoryLocation::get(SI).Size != MemLoc.Size)
-    return false;
-  if (MemLoc.Size.isScalable())
-    return false;
-  if (std::min(MemLocAlign, SI->getAlign()).value() <
-      MemLoc.Size.getValue().getKnownMinValue())
-    return false;
-
-  auto *LI = dyn_cast<LoadInst>(SI->getValueOperand());
-  if (!LI || LI->getParent() != SI->getParent())
-    return false;
-  if (BatchAA.alias(MemoryLocation::get(LI), MemLoc) != AliasResult::MustAlias)
-    return false;
-  unsigned NumVisitedInsts = 0;
-  for (const Instruction *I = LI; I != SI; I = I->getNextNode())
-    if (++NumVisitedInsts > ScanLimit ||
-        isModSet(BatchAA.getModRefInfo(I, MemLoc)))
-      return false;
-
-  return true;
 }
 
 MemDepResult MemoryDependenceResults::getSimplePointerDependencyFrom(
@@ -598,7 +565,8 @@ MemDepResult MemoryDependenceResults::getSimplePointerDependencyFrom(
         return MemDepResult::getDef(Inst);
       if (isInvariantLoad)
         continue;
-      if (canSkipClobberingStore(SI, MemLoc, MemLocAlign, BatchAA, *Limit))
+      if (isStorePreservingMemoryLocation(SI, MemLoc, MemLocAlign, BatchAA,
+                                          *Limit))
         continue;
       return MemDepResult::getClobber(Inst);
     }

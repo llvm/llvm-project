@@ -197,7 +197,8 @@ Error L0DeviceTy::initImpl(GenericPluginTy &Plugin) {
     return QueueGroupInfoOrErr.takeError();
   QueueConfig = *QueueGroupInfoOrErr;
 
-  if (auto Err = MemAllocator.initDevicePools(*this, Options))
+  if (auto Err = MemAllocator.initDevicePools(*this, Options,
+                                              L0Context.getZeContext()))
     return Err;
   L0Context.getHostMemAllocator().updateMaxAllocSize(*this);
   reportDeviceInfo();
@@ -224,16 +225,15 @@ L0DeviceTy::loadBinaryImpl(std::unique_ptr<MemoryBuffer> &&TgtImage,
     return PGM;
   }
 
-  INFO(OMP_INFOTYPE_PLUGIN_KERNEL, getDeviceId(),
-       "Device %" PRId32 ": Loading binary from " DPxMOD "\n", getDeviceId(),
-       DPxPTR(TgtImage->getBufferStart()));
+  ODBG(OLDT_Module) << "Device " << getDeviceId() << ": Loading binary from "
+                    << static_cast<const void *>(TgtImage->getBufferStart());
 
   const auto &Options = getPlugin().getOptions();
   std::string CompilationOptions(Options.CompilationOptions);
   CompilationOptions += " " + Options.UserCompilationOptions;
 
-  INFO(OMP_INFOTYPE_PLUGIN_KERNEL, getDeviceId(),
-       "Base L0 module compilation options: %s\n", CompilationOptions.c_str());
+  ODBG(OLDT_Module) << "Base L0 module compilation options: "
+                    << CompilationOptions;
 
   CompilationOptions += " ";
   CompilationOptions += Options.InternalCompilationOptions;
@@ -291,7 +291,6 @@ Error L0DeviceTy::synchronizeImpl(__tgt_async_info &AsyncInfo,
 
   if (ReleaseQueue) {
     releaseQueue(Queue);
-    getStagingBuffer().reset();
     AsyncInfo.Queue = nullptr;
   }
 
@@ -326,7 +325,6 @@ Error L0DeviceTy::queryAsyncImpl(__tgt_async_info &AsyncInfo, bool ReleaseQueue,
 
   if (ReleaseQueue) {
     releaseQueue(Queue);
-    getStagingBuffer().reset();
     AsyncInfo.Queue = nullptr;
   }
 

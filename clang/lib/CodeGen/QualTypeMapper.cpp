@@ -184,6 +184,9 @@ QualTypeMapper::convertBuiltinType(const BuiltinType *BT) {
     return Builder.getIntegerType(1, getTypeAlign(QT), /*Signed=*/false,
                                   /*IsBitInt=*/false);
 
+  case BuiltinType::MetaInfo:
+    llvm::reportFatalInternalError("std::meta::info is consteval-only type");
+
   case BuiltinType::Char_S:
   case BuiltinType::Char_U:
   case BuiltinType::SChar:
@@ -279,7 +282,8 @@ QualTypeMapper::convertBuiltinType(const BuiltinType *BT) {
     return convertSVEBuiltinType(BT);
 
   case BuiltinType::SveCount:
-    return Builder.getSVECountType(getTypeAlign(QT));
+    return Builder.getScalablePredicateOrCountVectorType(
+        getTypeAlign(QT), llvm::abi::VectorKind::SVECount);
 
   // TODO: __mfp8 has no floating-point semantics of its own, so representing
   // it needs a decision about how the ABI library should model opaque
@@ -311,6 +315,10 @@ QualTypeMapper::convertBuiltinType(const BuiltinType *BT) {
 #include "clang/Basic/HLSLIntangibleTypes.def"
     llvm::reportFatalInternalError(
         "HLSL intangible types not yet Supported in ABI lowering library");
+#define HLSL_PACKED_TYPE(Name, Id, SingletonId) case BuiltinType::Id:
+#include "clang/Basic/HLSLPackedTypes.def"
+    llvm::reportFatalInternalError(
+        "HLSL packed types not yet Supported in ABI lowering library");
 #define SPIRV_TYPE(Name, Id, SingletonId) case BuiltinType::Id:
 #include "clang/Basic/SPIRVTypes.def"
     llvm::reportFatalInternalError(
@@ -442,7 +450,8 @@ const llvm::abi::Type *QualTypeMapper::convertRecordType(const RecordType *RT) {
   const RecordDecl *RD = RT->getDecl()->getDefinition();
   if (!RD)
     return Builder.getRecordType({}, llvm::TypeSize::getFixed(0),
-                                 llvm::Align(1));
+                                 llvm::Align(1),
+                                 /*UnadjustedAlign=*/llvm::Align(1));
 
   if (RD->isUnion())
     return convertUnionType(RD);
@@ -508,6 +517,8 @@ QualTypeMapper::convertCXXRecordType(const CXXRecordDecl *RD) {
   llvm::TypeSize Size =
       llvm::TypeSize::getFixed(Layout.getSize().getQuantity() * 8);
   llvm::Align Alignment = llvm::Align(Layout.getAlignment().getQuantity());
+  llvm::Align UnadjustedAlign =
+      llvm::Align(Layout.getUnadjustedAlignment().getQuantity());
 
   llvm::abi::RecordFlags RecFlags = llvm::abi::RecordFlags::IsCXXRecord;
   if (RD->isPolymorphic())
@@ -517,7 +528,7 @@ QualTypeMapper::convertCXXRecordType(const CXXRecordDecl *RD) {
   if (RD->hasFlexibleArrayMember())
     RecFlags |= llvm::abi::RecordFlags::HasFlexibleArrayMember;
 
-  return Builder.getRecordType(Fields, Size, Alignment,
+  return Builder.getRecordType(Fields, Size, Alignment, UnadjustedAlign,
                                llvm::abi::StructPacking::Default, BaseClasses,
                                VirtualBaseClasses, RecFlags);
 }
@@ -556,6 +567,8 @@ QualTypeMapper::convertStructType(const clang::RecordDecl *RD) {
   llvm::TypeSize Size =
       llvm::TypeSize::getFixed(Layout.getSize().getQuantity() * 8);
   llvm::Align Alignment = llvm::Align(Layout.getAlignment().getQuantity());
+  llvm::Align UnadjustedAlign =
+      llvm::Align(Layout.getUnadjustedAlignment().getQuantity());
 
   llvm::abi::RecordFlags RecFlags = llvm::abi::RecordFlags::None;
   if (IsCXXRecord)
@@ -565,7 +578,7 @@ QualTypeMapper::convertStructType(const clang::RecordDecl *RD) {
   if (RD->hasFlexibleArrayMember())
     RecFlags |= llvm::abi::RecordFlags::HasFlexibleArrayMember;
 
-  return Builder.getRecordType(Fields, Size, Alignment,
+  return Builder.getRecordType(Fields, Size, Alignment, UnadjustedAlign,
                                llvm::abi::StructPacking::Default, {}, {},
                                RecFlags);
 }
@@ -586,6 +599,8 @@ QualTypeMapper::convertUnionType(const clang::RecordDecl *RD) {
   llvm::TypeSize Size =
       llvm::TypeSize::getFixed(Layout.getSize().getQuantity() * 8);
   llvm::Align Alignment = llvm::Align(Layout.getAlignment().getQuantity());
+  llvm::Align UnadjustedAlign =
+      llvm::Align(Layout.getUnadjustedAlignment().getQuantity());
 
   llvm::abi::RecordFlags RecFlags = llvm::abi::RecordFlags::None;
   if (RD->hasAttr<TransparentUnionAttr>())
@@ -595,7 +610,7 @@ QualTypeMapper::convertUnionType(const clang::RecordDecl *RD) {
   if (isa<CXXRecordDecl>(RD))
     RecFlags |= llvm::abi::RecordFlags::IsCXXRecord;
 
-  return Builder.getUnionType(AllFields, Size, Alignment,
+  return Builder.getUnionType(AllFields, Size, Alignment, UnadjustedAlign,
                               llvm::abi::StructPacking::Default, RecFlags);
 }
 

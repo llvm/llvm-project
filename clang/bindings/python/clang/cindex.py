@@ -71,6 +71,7 @@ from ctypes import (
     byref,
     c_char_p,
     c_int,
+    c_long,
     c_longlong,
     c_uint,
     c_ulong,
@@ -82,6 +83,7 @@ from ctypes import (
 )
 
 import os
+import platform
 import sys
 from enum import Enum
 import warnings
@@ -1459,6 +1461,9 @@ class CursorKind(BaseEnumeration):
     # OpenMP ordered-blockassoc directive.
     OMP_ORDERED_BLOCK_ASSOC_DIRECTIVE = 313
 
+    # OpenMP flatten directive.
+    OMP_FLATTEN_DIRECTIVE = 314
+
     # OpenACC Compute Construct.
     OPEN_ACC_COMPUTE_DIRECTIVE = 320
 
@@ -2038,6 +2043,16 @@ class Cursor(Structure):
 
     @property
     @cursor_null_guard
+    def unary_operator(self) -> UnaryOperator:
+        """Retrieves the unary operator if this cursor has one."""
+
+        if not hasattr(self, "_unopcode"):
+            self._unopcode = conf.lib.clang_getCursorUnaryOperatorKind(self)
+
+        return UnaryOperator.from_id(self._unopcode)
+
+    @property
+    @cursor_null_guard
     def access_specifier(self) -> AccessSpecifier:
         """
         Retrieves the access specifier (if any) of the entity pointed at by the
@@ -2473,6 +2488,32 @@ class BinaryOperator(BaseEnumeration):
     XorAssign = 31
     OrAssign = 32
     Comma = 33
+
+
+class UnaryOperator(BaseEnumeration):
+    """Describes the kind of unary operators."""
+
+    def is_postfix(self):
+        return self in {
+            UnaryOperator.PostDec,
+            UnaryOperator.PostInc,
+        }
+
+    Invalid = 0
+    PostInc = 1
+    PostDec = 2
+    PreInc = 3
+    PreDec = 4
+    AddrOf = 5
+    Deref = 6
+    Plus = 7
+    Minus = 8
+    Not = 9
+    LNot = 10
+    Real = 11
+    Imag = 12
+    Extension = 13
+    Coawait = 14
 
 
 class StorageClass(BaseEnumeration):
@@ -3009,17 +3050,15 @@ class Type(Structure):
         return not self.__eq__(other)
 
 
-## CIndex Objects ##
+## Opaque Clang Objects ##
 
-# CIndex objects (derived from ClangObject) are essentially lightweight
-# wrappers attached to some underlying object, which is exposed via CIndex as
-# a void*.
-
-
-class ClangObject:
+class OpaqueClangObject:
     """
-    A helper for Clang objects. This class helps act as an intermediary for
-    the ctypes library and the Clang CIndex library.
+    A helper for Python objects that mirror opaque types of the C API.
+    It stores an opaque pointer returned by the C API, and implements a
+    `from_param` method, allowing Python objects to be implicitly converted
+    to the stored opaque pointer when it is passed as an argument to the
+    C API.
     """
 
     def __init__(self, obj):
@@ -3143,7 +3182,7 @@ class CompletionChunk:
         return CompletionString(res)
 
 
-class CompletionString(ClangObject):
+class CompletionString(OpaqueClangObject):
     def __len__(self) -> int:
         return self.num_chunks
 
@@ -3216,7 +3255,7 @@ class CCRStructure(Structure):
         return self.results[key]
 
 
-class CodeCompletionResults(ClangObject):
+class CodeCompletionResults(OpaqueClangObject):
     def __init__(self, ptr: _Pointer[CCRStructure]):
         assert isinstance(ptr, POINTER(CCRStructure)) and ptr
         self.ptr = self._as_parameter_ = ptr
@@ -3264,7 +3303,7 @@ class CodeCompletionResults(ClangObject):
         return DiagnosticsItr(self)
 
 
-class Index(ClangObject):
+class Index(OpaqueClangObject):
     """
     The Index type provides the primary interface to the Clang CIndex library,
     primarily by providing an interface for reading and parsing translation
@@ -3303,7 +3342,7 @@ class Index(ClangObject):
         return TranslationUnit.from_source(path, args, unsaved_files, options, self)
 
 
-class TranslationUnit(ClangObject):
+class TranslationUnit(OpaqueClangObject):
     """Represents a source code translation unit.
 
     This is one of the main types in the API. Any time you wish to interact
@@ -3471,7 +3510,7 @@ class TranslationUnit(ClangObject):
         """
         assert isinstance(index, Index)
         self.index = index
-        ClangObject.__init__(self, ptr)
+        OpaqueClangObject.__init__(self, ptr)
 
     def __del__(self) -> None:
         conf.lib.clang_disposeTranslationUnit(self)
@@ -3724,7 +3763,7 @@ class TranslationUnit(ClangObject):
         return TokenGroup.get_tokens(self, extent)
 
 
-class File(ClangObject):
+class File(OpaqueClangObject):
     """
     The File class represents a particular source file that is part of a
     translation unit.
@@ -3885,7 +3924,7 @@ class CompileCommands:
         return CompileCommands(res)
 
 
-class CompilationDatabase(ClangObject):
+class CompilationDatabase(OpaqueClangObject):
     """
     The CompilationDatabase is a wrapper class around
     clang::tooling::CompilationDatabase
@@ -3987,7 +4026,7 @@ class Token(Structure):
         return cursor
 
 
-class Rewriter(ClangObject):
+class Rewriter(OpaqueClangObject):
     """
     The Rewriter is a wrapper class around clang::Rewriter
 
@@ -4004,7 +4043,7 @@ class Rewriter(ClangObject):
         return Rewriter(conf.lib.clang_CXRewriter_create(tu))
 
     def __init__(self, ptr):
-        ClangObject.__init__(self, ptr)
+        OpaqueClangObject.__init__(self, ptr)
 
     def __del__(self):
         conf.lib.clang_CXRewriter_dispose(self)
@@ -4080,7 +4119,7 @@ class PrintingPolicyProperty(BaseEnumeration):
     FullyQualifiedName = 25
 
 
-class PrintingPolicy(ClangObject):
+class PrintingPolicy(OpaqueClangObject):
     """
     The PrintingPolicy is a wrapper class around clang::PrintingPolicy
 
@@ -4098,7 +4137,7 @@ class PrintingPolicy(ClangObject):
         return PrintingPolicy(conf.lib.clang_getCursorPrintingPolicy(cursor))
 
     def __init__(self, ptr):
-        ClangObject.__init__(self, ptr)
+        OpaqueClangObject.__init__(self, ptr)
 
     def __del__(self):
         conf.lib.clang_PrintingPolicy_dispose(self)
@@ -4118,8 +4157,16 @@ class PrintingPolicy(ClangObject):
 translation_unit_includes_callback = CFUNCTYPE(
     None, c_object_p, POINTER(SourceLocation), c_uint, py_object
 )
-cursor_visit_callback = CFUNCTYPE(c_int, Cursor, Cursor, py_object)
-fields_visit_callback = CFUNCTYPE(c_int, Cursor, py_object)
+# On s390x the visitor callbacks must return a full register word (c_long)
+# rather than c_int. ctypes does not sign/zero-extend a narrow closure return
+# to the full 64-bit return register the s390x ELF ABI requires, leaving
+# garbage in the high bytes. libclang reads the full register and faults with
+# a SIGFPE.
+# TODO: Remove once the ctypes fix (https://github.com/python/cpython/issues/156933)
+# has propagated.
+_visitor_result = c_long if platform.machine() == "s390x" else c_int
+cursor_visit_callback = CFUNCTYPE(_visitor_result, Cursor, Cursor, py_object)
+fields_visit_callback = CFUNCTYPE(_visitor_result, Cursor, py_object)
 
 # Functions strictly alphabetical order.
 FUNCTION_LIST: list[LibFunc] = [
@@ -4346,6 +4393,7 @@ FUNCTION_LIST: list[LibFunc] = [
     ("clang_Cursor_getTemplateArgumentValue", [Cursor, c_uint], c_longlong),
     ("clang_Cursor_getTemplateArgumentUnsignedValue", [Cursor, c_uint], c_ulonglong),
     ("clang_getCursorBinaryOperatorKind", [Cursor], c_int),
+    ("clang_getCursorUnaryOperatorKind", [Cursor], c_int),
     ("clang_Cursor_getBriefCommentText", [Cursor], _CXString),
     ("clang_Cursor_getRawCommentText", [Cursor], _CXString),
     ("clang_Cursor_getOffsetOfField", [Cursor], c_longlong),
@@ -4551,4 +4599,5 @@ __all__ = [
     "TranslationUnit",
     "TypeKind",
     "Type",
+    "UnaryOperator",
 ]

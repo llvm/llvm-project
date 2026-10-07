@@ -1179,6 +1179,7 @@ void ProcessGDBRemote::LoadStubBinaries() {
       bin_spec.force_symbol_search = true;
       bin_spec.notify = true;
       bin_spec.set_address_in_target = true;
+      bin_spec.is_main_executable = true;
       llvm::Expected<ModuleSP> module =
           DynamicLoader::LocateAndLoadBinary(this, bin_spec);
       if (!module)
@@ -2375,7 +2376,7 @@ ProcessGDBRemote::SetThreadStopInfo(StructuredData::Dictionary *thread_dict) {
                   const size_t bytes_copied =
                       bytes.GetHexBytes(data_buffer_sp->GetData(), 0);
                   if (bytes_copied == byte_size)
-                    m_memory_cache.AddCacheData(mem_cache_addr, data_buffer_sp);
+                    AddCacheData(mem_cache_addr, data_buffer_sp);
                 }
               }
             }
@@ -2565,7 +2566,7 @@ StateType ProcessGDBRemote::SetThreadStopInfo(StringExtractor &stop_packet) {
             const size_t bytes_copied =
                 bytes.GetHexBytes(data_buffer_sp->GetData(), 0);
             if (bytes_copied == byte_size)
-              m_memory_cache.AddCacheData(mem_cache_addr, data_buffer_sp);
+              AddCacheData(mem_cache_addr, data_buffer_sp);
           }
         }
       } else if (key.compare("watch") == 0 || key.compare("rwatch") == 0 ||
@@ -3129,6 +3130,7 @@ llvm::Error ProcessGDBRemote::ParseMultiMemReadPacket(
         response_str);
 
   // Sizes are separated by a `,`.
+  unsigned num_sizes = 0;
   for (llvm::StringRef size_str : llvm::split(sizes_str, ',')) {
     uint64_t read_size;
     if (size_str.getAsInteger(BASE_16, read_size))
@@ -3140,17 +3142,27 @@ llvm::Error ProcessGDBRemote::ParseMultiMemReadPacket(
                                       "enough data, requested sizes: {0}",
                                       sizes_str);
 
+    if (read_size > buffer.size())
+      return llvm::createStringErrorV(
+          "MultiMemRead response size {0} exceeds remaining buffer {1}",
+          read_size, buffer.size());
+
     llvm::StringRef region_to_read = memory_data.take_front(read_size);
     memory_data = memory_data.drop_front(read_size);
 
-    assert(buffer.size() >= read_size);
     llvm::MutableArrayRef<uint8_t> region_to_write =
         buffer.take_front(read_size);
     buffer = buffer.drop_front(read_size);
 
     memcpy(region_to_write.data(), region_to_read.data(), read_size);
     memory_regions.push_back(region_to_write);
+    ++num_sizes;
   }
+
+  if (num_sizes != expected_num_ranges)
+    return llvm::createStringErrorV(
+        "MultiMemRead response had {0} sizes, expected {1}", num_sizes,
+        expected_num_ranges);
 
   return llvm::Error::success();
 }
@@ -3390,6 +3402,27 @@ size_t ProcessGDBRemote::DoWriteMemory(addr_t addr, const void *buf,
                                               packet.GetData());
   }
   return 0;
+}
+
+bool ProcessGDBRemote::DoCanAllocateMemory() {
+  // Probe the _M packet. Falling back to mmap() only needs its symbol.
+  if (m_gdb_comm.SupportsAllocDeallocMemory() == eLazyBoolCalculate) {
+    addr_t addr = m_gdb_comm.AllocateMemory(8, ePermissionsReadable |
+                                                   ePermissionsWritable |
+                                                   ePermissionsExecutable);
+    if (addr != LLDB_INVALID_ADDRESS)
+      m_gdb_comm.DeallocateMemory(addr);
+  }
+  if (m_gdb_comm.SupportsAllocDeallocMemory() == eLazyBoolYes)
+    return true;
+
+  ModuleFunctionSearchOptions options;
+  options.include_symbols = true;
+  options.include_inlines = false;
+  SymbolContextList sc_list;
+  GetTarget().GetImages().FindFunctions(
+      ConstString("mmap"), eFunctionNameTypeFull, options, sc_list);
+  return !sc_list.IsEmpty();
 }
 
 lldb::addr_t ProcessGDBRemote::DoAllocateMemory(size_t size,
@@ -6344,7 +6377,7 @@ llvm::Error ProcessGDBRemote::LoadModules() {
         return IterationAction::Stop;
 
       lldb::ModuleSP module_copy_sp = module_sp;
-      target.SetExecutableModule(module_copy_sp, eLoadDependentsNo);
+      target.RebuildModuleListWithExecutable(module_copy_sp, eLoadDependentsNo);
       return IterationAction::Stop;
     });
 

@@ -214,6 +214,16 @@ class ScriptedProcess(metaclass=ABCMeta):
     def get_process_metadata(self) -> Optional[dict[str, Any]]:
         """Get some metadata for the scripted process.
 
+        The optional "addressable_bits" key holds the number of bits this
+        process uses for addressing, as a dictionary with optional "lowmem"
+        and "highmem" keys. "highmem" defaults to "lowmem" when it is missing.
+        LLDB strips the remaining bits off every code and data address, the
+        way the `LC_NOTE "addrable bits"` corefile note and the `qHostInfo`
+        `addressing_bits` key do for corefiles and live processes. This key is
+        read before the first stop is reported, so the threads and backtraces
+        built from that stop already have the mask applied. When it is
+        missing, the process keeps the masks it inherits from the target.
+
         Returns:
             Dict: A dictionary containing metadata for the scripted process.
                   None if the process as no metadata.
@@ -558,7 +568,7 @@ class ScriptedFrame(metaclass=ABCMeta):
         """
         return False
 
-    def get_function_name(self) -> str:
+    def get_function_name(self) -> Optional[str]:
         """Get the scripted frame function name.
 
         Returns:
@@ -566,7 +576,7 @@ class ScriptedFrame(metaclass=ABCMeta):
         """
         return self.name
 
-    def get_display_function_name(self) -> str:
+    def get_display_function_name(self) -> Optional[str]:
         """Get the scripted frame display function name.
 
         Returns:
