@@ -2914,6 +2914,10 @@ bool RISCVTargetLowering::shouldConvertFPCmpToClassTest(const APFloat &Imm,
   // cannot produce.
   if ((VT == MVT::f32 || VT == MVT::f64) && Imm.isLargest())
     return true;
+  // Without FLI.D, FCLASS.D is cheaper than materializing the smallest normal
+  // double.
+  if (VT == MVT::f64 && Imm.isSmallestNormalized() && !Subtarget.hasStdExtZfa())
+    return true;
   return TargetLowering::shouldConvertFPCmpToClassTest(Imm, VT);
 }
 
