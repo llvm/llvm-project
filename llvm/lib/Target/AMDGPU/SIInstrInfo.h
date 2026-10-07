@@ -1060,10 +1060,6 @@ public:
     return SIInstrFlags::isVINTERP(get(Opcode));
   }
 
-  static bool isScalarUnit(const MachineInstr &MI) {
-    return SIInstrFlags::isSALU(MI) || SIInstrFlags::isSMRD(MI);
-  }
-
   static bool usesVM_CNT(const MachineInstr &MI) {
     return SIInstrFlags::usesVM_CNT(MI);
   }
@@ -1540,13 +1536,6 @@ public:
   bool isOperandLegal(const MachineInstr &MI, unsigned OpIdx,
                       const MachineOperand *MO = nullptr) const;
 
-  /// Check if \p MO would be a valid operand for the given operand
-  /// definition \p OpInfo. Note this does not attempt to validate constant bus
-  /// restrictions (e.g. literal constant usage).
-  bool isLegalVSrcOperand(const MachineRegisterInfo &MRI,
-                          const MCOperandInfo &OpInfo,
-                          const MachineOperand &MO) const;
-
   /// Check if \p MO (a register operand) is a legal register for the
   /// given operand description or operand index.
   /// The operand index version provide more legality checks
@@ -1706,8 +1695,6 @@ public:
 
   InstSizeVerifyMode
   getInstSizeVerifyMode(const MachineInstr &MI) const override;
-
-  bool mayAccessFlatAddressSpace(const MachineInstr &MI) const;
 
   std::pair<unsigned, unsigned>
   decomposeMachineOperandsTargetFlags(unsigned TF) const override;

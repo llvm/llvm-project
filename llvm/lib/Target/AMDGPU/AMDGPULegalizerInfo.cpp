@@ -6542,24 +6542,6 @@ bool AMDGPULegalizerInfo::getLDSKernelId(Register DstReg,
   return false;
 }
 
-bool AMDGPULegalizerInfo::legalizeLDSKernelId(MachineInstr &MI,
-                                              MachineRegisterInfo &MRI,
-                                              MachineIRBuilder &B) const {
-
-  const SIMachineFunctionInfo *MFI = B.getMF().getInfo<SIMachineFunctionInfo>();
-  if (!MFI->isEntryFunction()) {
-    return legalizePreloadedArgIntrin(MI, MRI, B,
-                                      AMDGPUFunctionArgInfo::LDS_KERNEL_ID);
-  }
-
-  Register DstReg = MI.getOperand(0).getReg();
-  if (!getLDSKernelId(DstReg, MRI, B))
-    return false;
-
-  MI.eraseFromParent();
-  return true;
-}
-
 bool AMDGPULegalizerInfo::legalizeIsAddrSpace(MachineInstr &MI,
                                               MachineRegisterInfo &MRI,
                                               MachineIRBuilder &B,

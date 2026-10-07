@@ -119,10 +119,6 @@ struct MFMA_F8F6F4_Info {
   uint8_t NumRegsSrcB;
 };
 
-struct CvtScaleF32_F32F16ToF8F4_Info {
-  unsigned Opcode;
-};
-
 /// Normalized WMMA or SWMMAC family used to select co-execution rules.
 enum class WMMAVariant {
   Unknown = 0,
@@ -303,16 +299,6 @@ unsigned getOccupancyWithNumSGPRs(const MCSubtargetInfo &STI, unsigned SGPRs);
 unsigned getOccupancyWithNumSGPRs(unsigned SGPRs, unsigned MaxWaves,
                                   unsigned TotalNumSGPRs, unsigned Granule,
                                   unsigned TrapReserve);
-
-/// \returns Number of VGPR blocks needed for given subtarget \p STI when
-/// \p NumVGPRs are used. We actually return the number of blocks -1, since
-/// that's what we encode.
-///
-/// For subtargets which support it, \p EnableWavefrontSize32 should match the
-/// ENABLE_WAVEFRONT_SIZE32 kernel descriptor field.
-unsigned getEncodedNumVGPRBlocks(
-    const MCSubtargetInfo &STI, unsigned NumVGPRs,
-    std::optional<bool> EnableWavefrontSize32 = std::nullopt);
 
 /// \returns Number of VGPR blocks that need to be allocated for the given
 /// subtarget \p STI when \p NumVGPRs are used.
@@ -964,14 +950,9 @@ bool isDPMACCInstruction(unsigned Opc);
 LLVM_READONLY
 unsigned mapWMMA2AddrTo3AddrOpcode(unsigned Opc);
 
-LLVM_READONLY
-unsigned mapWMMA3AddrTo2AddrOpcode(unsigned Opc);
-
 void initDefaultAMDKernelCodeT(AMDGPUMCKernelCodeT &Header,
                                const MCSubtargetInfo &STI);
 
-bool isGroupSegment(const GlobalValue *GV);
-bool isGlobalSegment(const GlobalValue *GV);
 bool isReadOnlySegment(const GlobalValue *GV);
 
 /// \returns True if constants should be emitted to .text section for given
@@ -1478,7 +1459,6 @@ constexpr bool mayTailCallThisCC(CallingConv::ID CC) {
   }
 }
 
-bool hasXNACK(const MCSubtargetInfo &STI);
 bool hasMIMG_R128(const MCSubtargetInfo &STI);
 bool hasA16(const MCSubtargetInfo &STI);
 bool hasG16(const MCSubtargetInfo &STI);
@@ -1583,9 +1563,6 @@ bool isKImmOperand(const MCInstrDesc &Desc, unsigned OpNo);
 
 /// Is this floating-point operand?
 bool isSISrcFPOperand(const MCInstrDesc &Desc, unsigned OpNo);
-
-/// Does this operand support only inlinable literals?
-bool isSISrcInlinableOperand(const MCInstrDesc &Desc, unsigned OpNo);
 
 /// Get the size in bits of a register from the register class \p RC.
 unsigned getRegBitWidth(unsigned RCID);
@@ -1825,8 +1802,6 @@ public:
   bool isVariableDims() const { return getKind() == Kind::VariableDims; }
 
   void setUnknown() { *this = ClusterDimsAttr(Kind::Unknown); }
-
-  void setNoCluster() { *this = ClusterDimsAttr(Kind::NoCluster); }
 
   void setVariableDims() { *this = ClusterDimsAttr(Kind::VariableDims); }
 
