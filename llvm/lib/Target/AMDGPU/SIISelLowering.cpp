@@ -2506,15 +2506,14 @@ bool SITargetLowering::isTypeDesirableForOp(unsigned Op, EVT VT) const {
 }
 
 bool SITargetLowering::isTypeDesirableForOp(SDNode *N, EVT VT) const {
-  // Do not convert uniform i32 loads to 16-bit.
+  // Do not convert uniform loads to 16-bit.
   // Uniform 16-bit loads are legalized to i16 = trunc (zextload i16->i32)
   // to match subword load patterns.  Allowing conversion back to a 16-bit
   // load would create an infinite loop.
   if (Subtarget->hasScalarSubwordLoads() && N->getOpcode() == ISD::LOAD &&
       !VT.isVector() && VT.getSizeInBits() == 16) {
     auto *Load = dyn_cast<LoadSDNode>(N);
-    if (Load && Load->getValueType(0) == MVT::i32 && !Load->isDivergent() &&
-        AMDGPU::isUniformMMO(Load->getMemOperand())) {
+    if (Load && isUniformLoad(Load)) {
       return false;
     }
   }
@@ -8721,7 +8720,7 @@ unsigned SITargetLowering::isCFIntrinsic(const SDNode *Intr) const {
 }
 
 bool SITargetLowering::shouldEmitFixup(const GlobalValue *GV) const {
-  const Triple &TT = getTargetMachine().getTargetTriple();
+  const Triple &TT = GV->getParent()->getTargetTriple();
   return (GV->getAddressSpace() == AMDGPUAS::CONSTANT_ADDRESS ||
           GV->getAddressSpace() == AMDGPUAS::CONSTANT_ADDRESS_32BIT) &&
          AMDGPU::shouldEmitConstantsToTextSection(TT);
@@ -20881,32 +20880,88 @@ bool SITargetLowering::isKnownNeverNaNForTargetNode(SDValue Op,
                                                             DAG, SNaN, Depth);
 }
 
+namespace {
+
+/// Why a floating-point atomic instruction which may flush denormals is
+/// acceptable.
+enum class AtomicFlushDenormalReason {
+  Native,
+  IEEE,
+  IgnoreDenormalMode,
+  FunctionFlushesDenormals
+};
+
+/// Why a native floating-point atomic instruction is acceptable for a global
+/// memory address.
+enum class GlobalFPAtomicLegality {
+  Illegal,
+  AgentScopeFineGrainedRemoteMemory,
+  EmulatedSystemScope,
+  NoRemoteMemory,
+  NoFineGrainedMemory
+};
+
+} // end anonymous namespace
+
 // On older subtargets, global FP atomic instructions have a hardcoded FP mode
 // and do not support FP32 denormals, and only support v2f16/f64 denormals.
-static bool atomicIgnoresDenormalModeOrFPModeIsFTZ(const AtomicRMWInst *RMW) {
+static AtomicFlushDenormalReason
+getAtomicFlushDenormalReason(const AtomicRMWInst *RMW) {
   if (RMW->hasMetadata(LLVMContext::MD_atomic_ignore_denormal_mode))
-    return true;
+    return AtomicFlushDenormalReason::IgnoreDenormalMode;
 
   const fltSemantics &Flt = RMW->getType()->getScalarType()->getFltSemantics();
   auto DenormMode = RMW->getFunction()->getDenormalMode(Flt);
-  if (DenormMode == DenormalMode::getPreserveSign())
-    return true;
-
-  // TODO: Remove this.
-  return RMW->getFunction()
-      ->getFnAttribute("amdgpu-unsafe-fp-atomics")
-      .getValueAsBool();
+  return DenormMode == DenormalMode::getPreserveSign()
+             ? AtomicFlushDenormalReason::FunctionFlushesDenormals
+             : AtomicFlushDenormalReason::IEEE;
 }
 
-static OptimizationRemark emitAtomicRMWLegalRemark(const AtomicRMWInst *RMW) {
+static OptimizationRemark
+emitAtomicRMWLegalRemark(const AtomicRMWInst *RMW,
+                         GlobalFPAtomicLegality MemLegality,
+                         AtomicFlushDenormalReason DenormReason) {
   LLVMContext &Ctx = RMW->getContext();
-  StringRef MemScope =
-      Ctx.getSyncScopeName(RMW->getSyncScopeID()).value_or("system");
+  StringRef MemScope = Ctx.getSyncScopeName(RMW->getSyncScopeID()).value_or("");
+  if (MemScope.empty())
+    MemScope = "system";
 
-  return OptimizationRemark(DEBUG_TYPE, "Passed", RMW)
-         << "Hardware instruction generated for atomic "
-         << RMW->getOperationName(RMW->getOperation())
-         << " operation at memory scope " << MemScope;
+  OptimizationRemark R(DEBUG_TYPE, "Passed", RMW);
+  R << "hardware instruction generated for atomic "
+    << ore::NV("Operation", RMW->getOperationName(RMW->getOperation()))
+    << " at " << ore::NV("SyncScope", MemScope) << " scope since ";
+
+  switch (MemLegality) {
+  case GlobalFPAtomicLegality::AgentScopeFineGrainedRemoteMemory:
+    R << "fine-grained remote memory atomics work below system scope";
+    break;
+  case GlobalFPAtomicLegality::EmulatedSystemScope:
+    R << "system scope atomics are emulated in hardware";
+    break;
+  case GlobalFPAtomicLegality::NoRemoteMemory:
+    R << "memory is not remote (!amdgpu.no.remote.memory)";
+    break;
+  case GlobalFPAtomicLegality::NoFineGrainedMemory:
+    R << "memory is not fine-grained (!amdgpu.no.fine.grained.memory)";
+    break;
+  case GlobalFPAtomicLegality::Illegal:
+    llvm_unreachable("remark for illegal atomic");
+  }
+
+  switch (DenormReason) {
+  case AtomicFlushDenormalReason::Native:
+    break;
+  case AtomicFlushDenormalReason::IgnoreDenormalMode:
+    R << ", and denormals may be flushed (!atomic.ignore.denormal.mode)";
+    break;
+  case AtomicFlushDenormalReason::FunctionFlushesDenormals:
+    R << ", and the floating-point environment flushes denormals";
+    break;
+  case AtomicFlushDenormalReason::IEEE:
+    llvm_unreachable("remark for illegal atomic");
+  }
+
+  return R;
 }
 
 static bool isV2F16OrV2BF16(Type *Ty) {
@@ -20962,11 +21017,11 @@ static bool isAtomicRMWLegalXChgTy(const AtomicRMWInst *RMW) {
   return false;
 }
 
-/// \returns true if it's valid to emit a native instruction for \p RMW, based
-/// on the properties of the target memory.
-static bool globalMemoryFPAtomicIsLegal(const GCNSubtarget &Subtarget,
-                                        const AtomicRMWInst *RMW,
-                                        bool HasSystemScope) {
+/// \returns whether it's valid to emit a native instruction for \p RMW, and
+/// why, based on the properties of the target memory.
+static GlobalFPAtomicLegality
+getGlobalMemoryFPAtomicLegality(const GCNSubtarget &Subtarget,
+                                const AtomicRMWInst *RMW, bool HasSystemScope) {
   // The remote/fine-grained access logic is different from the integer
   // atomics. Without AgentScopeFineGrainedRemoteMemoryAtomics support,
   // fine-grained access does not work, even for a device local allocation.
@@ -20976,13 +21031,15 @@ static bool globalMemoryFPAtomicIsLegal(const GCNSubtarget &Subtarget,
   if (HasSystemScope) {
     if (Subtarget.hasAgentScopeFineGrainedRemoteMemoryAtomics() &&
         RMW->hasMetadata("amdgpu.no.remote.memory"))
-      return true;
+      return GlobalFPAtomicLegality::NoRemoteMemory;
     if (Subtarget.hasEmulatedSystemScopeAtomics())
-      return true;
+      return GlobalFPAtomicLegality::EmulatedSystemScope;
   } else if (Subtarget.hasAgentScopeFineGrainedRemoteMemoryAtomics())
-    return true;
+    return GlobalFPAtomicLegality::AgentScopeFineGrainedRemoteMemory;
 
-  return RMW->hasMetadata("amdgpu.no.fine.grained.memory");
+  return RMW->hasMetadata("amdgpu.no.fine.grained.memory")
+             ? GlobalFPAtomicLegality::NoFineGrainedMemory
+             : GlobalFPAtomicLegality::Illegal;
 }
 
 /// \return Action to perform on AtomicRMWInsts for integer operations.
@@ -21025,10 +21082,12 @@ SITargetLowering::shouldExpandAtomicRMWInIR(const AtomicRMWInst *RMW) const {
       flatInstrMayAccessPrivate(RMW))
     return AtomicExpansionKind::CustomExpand;
 
-  auto ReportUnsafeHWInst = [=](TargetLowering::AtomicExpansionKind Kind) {
+  GlobalFPAtomicLegality MemLegality = GlobalFPAtomicLegality::Illegal;
+  AtomicFlushDenormalReason DenormReason = AtomicFlushDenormalReason::Native;
+  auto ReportHWInst = [&](TargetLowering::AtomicExpansionKind Kind) {
     OptimizationRemarkEmitter ORE(RMW->getFunction());
-    ORE.emit([=]() {
-      return emitAtomicRMWLegalRemark(RMW) << " due to an unsafe request.";
+    ORE.emit([&]() {
+      return emitAtomicRMWLegalRemark(RMW, MemLegality, DenormReason);
     });
     return Kind;
   };
@@ -21178,62 +21237,64 @@ SITargetLowering::shouldExpandAtomicRMWInIR(const AtomicRMWInst *RMW) const {
     // whether the target address resides in LDS or global memory. We consider
     // this flat-maybe-flush as will-flush.
     if (Ty->isFloatTy() &&
-        !Subtarget->hasMemoryAtomicFaddF32DenormalSupport() &&
-        !atomicIgnoresDenormalModeOrFPModeIsFTZ(RMW))
-      return AtomicExpansionKind::CmpXChg;
+        !Subtarget->hasMemoryAtomicFaddF32DenormalSupport()) {
+      DenormReason = getAtomicFlushDenormalReason(RMW);
+      if (DenormReason == AtomicFlushDenormalReason::IEEE)
+        return AtomicExpansionKind::CmpXChg;
+    }
 
-    // FIXME: These ReportUnsafeHWInsts are imprecise. Some of these cases are
-    // safe. The message phrasing also should be better.
-    if (globalMemoryFPAtomicIsLegal(*Subtarget, RMW, HasSystemScope)) {
+    MemLegality =
+        getGlobalMemoryFPAtomicLegality(*Subtarget, RMW, HasSystemScope);
+    if (MemLegality != GlobalFPAtomicLegality::Illegal) {
       if (AS == AMDGPUAS::FLAT_ADDRESS) {
         // gfx942, gfx12
         if (Subtarget->hasAtomicFlatPkAdd16Insts() && isV2F16OrV2BF16(Ty))
-          return ReportUnsafeHWInst(AtomicExpansionKind::None);
+          return ReportHWInst(AtomicExpansionKind::None);
       } else if (AMDGPU::isExtendedGlobalAddrSpace(AS)) {
         // gfx90a, gfx942, gfx12
         if (Subtarget->hasAtomicBufferGlobalPkAddF16Insts() && isV2F16(Ty))
-          return ReportUnsafeHWInst(AtomicExpansionKind::None);
+          return ReportHWInst(AtomicExpansionKind::None);
 
         // gfx942, gfx12
         if (Subtarget->hasAtomicGlobalPkAddBF16Inst() && isV2BF16(Ty))
-          return ReportUnsafeHWInst(AtomicExpansionKind::None);
+          return ReportHWInst(AtomicExpansionKind::None);
       } else if (AS == AMDGPUAS::BUFFER_FAT_POINTER) {
         // gfx90a, gfx942, gfx12
         if (Subtarget->hasAtomicBufferGlobalPkAddF16Insts() && isV2F16(Ty))
-          return ReportUnsafeHWInst(AtomicExpansionKind::None);
+          return ReportHWInst(AtomicExpansionKind::None);
 
         // While gfx90a/gfx942 supports v2bf16 for global/flat, it does not for
         // buffer. gfx12 does have the buffer version.
         if (Subtarget->hasAtomicBufferPkAddBF16Inst() && isV2BF16(Ty))
-          return ReportUnsafeHWInst(AtomicExpansionKind::None);
+          return ReportHWInst(AtomicExpansionKind::None);
       }
 
       // global and flat atomic fadd f64: gfx90a, gfx942.
       if (Subtarget->hasFlatBufferGlobalAtomicFaddF64Inst() && Ty->isDoubleTy())
-        return ReportUnsafeHWInst(AtomicExpansionKind::None);
+        return ReportHWInst(AtomicExpansionKind::None);
 
       if (AS != AMDGPUAS::FLAT_ADDRESS) {
         if (Ty->isFloatTy()) {
           // global/buffer atomic fadd f32 no-rtn: gfx908, gfx90a, gfx942,
           // gfx11+.
           if (RMW->use_empty() && Subtarget->hasAtomicFaddNoRtnInsts())
-            return ReportUnsafeHWInst(AtomicExpansionKind::None);
+            return ReportHWInst(AtomicExpansionKind::None);
           // global/buffer atomic fadd f32 rtn: gfx90a, gfx942, gfx11+.
           if (!RMW->use_empty() && Subtarget->hasAtomicFaddRtnInsts())
-            return ReportUnsafeHWInst(AtomicExpansionKind::None);
+            return ReportHWInst(AtomicExpansionKind::None);
         } else {
           // gfx908
           if (RMW->use_empty() &&
               Subtarget->hasAtomicBufferGlobalPkAddF16NoRtnInsts() &&
               isV2F16(Ty))
-            return ReportUnsafeHWInst(AtomicExpansionKind::None);
+            return ReportHWInst(AtomicExpansionKind::None);
         }
       }
 
       // flat atomic fadd f32: gfx942, gfx11+.
       if (AS == AMDGPUAS::FLAT_ADDRESS && Ty->isFloatTy()) {
         if (Subtarget->hasFlatAtomicFaddF32Inst())
-          return ReportUnsafeHWInst(AtomicExpansionKind::None);
+          return ReportHWInst(AtomicExpansionKind::None);
 
         // If it is in flat address space, and the type is float, we will try to
         // expand it, if the target supports global and lds atomic fadd. The
@@ -21262,7 +21323,9 @@ SITargetLowering::shouldExpandAtomicRMWInIR(const AtomicRMWInst *RMW) const {
                                                  : AtomicExpansionKind::CmpXChg;
     }
 
-    if (globalMemoryFPAtomicIsLegal(*Subtarget, RMW, HasSystemScope)) {
+    MemLegality =
+        getGlobalMemoryFPAtomicLegality(*Subtarget, RMW, HasSystemScope);
+    if (MemLegality != GlobalFPAtomicLegality::Illegal) {
       // For flat and global cases:
       // float, double in gfx7. Manual claims denormal support.
       // Removed in gfx8.
@@ -21273,15 +21336,15 @@ SITargetLowering::shouldExpandAtomicRMWInIR(const AtomicRMWInst *RMW) const {
       // no f32.
       if (AS == AMDGPUAS::FLAT_ADDRESS) {
         if (Subtarget->hasAtomicFMinFMaxF32FlatInsts() && Ty->isFloatTy())
-          return ReportUnsafeHWInst(AtomicExpansionKind::None);
+          return ReportHWInst(AtomicExpansionKind::None);
         if (Subtarget->hasAtomicFMinFMaxF64FlatInsts() && Ty->isDoubleTy())
-          return ReportUnsafeHWInst(AtomicExpansionKind::None);
+          return ReportHWInst(AtomicExpansionKind::None);
       } else if (AMDGPU::isExtendedGlobalAddrSpace(AS) ||
                  AS == AMDGPUAS::BUFFER_FAT_POINTER) {
         if (Subtarget->hasAtomicFMinFMaxF32GlobalInsts() && Ty->isFloatTy())
-          return ReportUnsafeHWInst(AtomicExpansionKind::None);
+          return ReportHWInst(AtomicExpansionKind::None);
         if (Subtarget->hasAtomicFMinFMaxF64GlobalInsts() && Ty->isDoubleTy())
-          return ReportUnsafeHWInst(AtomicExpansionKind::None);
+          return ReportHWInst(AtomicExpansionKind::None);
       }
     }
 
