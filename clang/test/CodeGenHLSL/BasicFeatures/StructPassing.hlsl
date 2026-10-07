@@ -133,3 +133,33 @@ void case6(S s) {
   // derived to base conversion in argument passing
   useP(s);
 }
+
+// CHECK-LABEL: define hidden void @_Z5case7v(
+// CHECK-SAME: ) #[[ATTR0]] {
+// CHECK-NEXT:  [[ENTRY:.*:]]
+// CHECK-NEXT:    [[TMP0:%.*]] = call token @llvm.experimental.convergence.entry()
+// CHECK-NEXT:    [[REF_TMP:%.*]] = alloca [[STRUCT_G:%.*]], align 1
+// CHECK-NEXT:    call void @_ZN1G1fEv(ptr noundef nonnull align 1 dereferenceable(1) [[REF_TMP]]) #[[ATTR3]] [ "convergencectrl"(token [[TMP0]]) ]
+// CHECK-NEXT:    ret void
+//
+void case7();
+
+struct G {
+// CHECK-LABEL: define linkonce_odr hidden void @_ZN1G1fEv(
+// CHECK-SAME: ptr noundef nonnull align 1 dereferenceable(1) [[THIS:%.*]]) #[[ATTR0]] align 2 {
+// CHECK-NEXT:  [[ENTRY:.*:]]
+// CHECK-NEXT:    [[TMP0:%.*]] = call token @llvm.experimental.convergence.entry()
+// CHECK-NEXT:    [[THIS_ADDR:%.*]] = alloca ptr, align 4
+// CHECK-NEXT:    store ptr [[THIS]], ptr [[THIS_ADDR]], align 4
+// CHECK-NEXT:    [[THIS1:%.*]] = load ptr, ptr [[THIS_ADDR]], align 4
+// CHECK-NEXT:    ret void
+//
+  void f() {}
+};
+
+groupshared G g;
+
+void case7() {
+  // implicit argument passing of a groupshared struct
+  g.f();
+}

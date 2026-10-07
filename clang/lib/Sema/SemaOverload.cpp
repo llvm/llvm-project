@@ -6344,12 +6344,15 @@ ExprResult Sema::PerformImplicitObjectArgumentInitialization(
   QualType FromRecordType, DestType;
   QualType ImplicitParamRecordType = Method->getFunctionObjectParameterType();
 
+  LangAS FromAS = From->getType().getAddressSpace();
   if (getLangOpts().HLSL &&
-      From->getType().getAddressSpace() == LangAS::hlsl_constant) {
-    QualType CastType = From->getType().getLocalUnqualifiedType().withConst();
-    From = ImplicitCastExpr::Create(Context, CastType, CK_LValueToRValue, From,
-                                    /*BasePath=*/nullptr, VK_PRValue,
-                                    FPOptionsOverride());
+      (FromAS == LangAS::hlsl_constant || FromAS == LangAS::hlsl_groupshared)) {
+    QualType CastType = From->getType().getLocalUnqualifiedType();
+    From = ImplicitCastExpr::Create(
+        Context,
+        FromAS == LangAS::hlsl_constant ? CastType.withConst() : CastType,
+        CK_LValueToRValue, From,
+        /*BasePath=*/nullptr, VK_PRValue, FPOptionsOverride());
   }
 
   Expr::Classification FromClassification;
