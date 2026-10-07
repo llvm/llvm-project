@@ -39,11 +39,7 @@ struct PartialMappingInfo {
   }
 
   bool operator<(const PartialMappingInfo &RHS) const {
-    if (StartIdx < RHS.StartIdx)
-      return true;
-    if (StartIdx == RHS.StartIdx)
-      return Length < RHS.Length;
-    return false;
+    return std::tie(StartIdx, Length) < std::tie(RHS.StartIdx, RHS.Length);
   }
 };
 
@@ -134,9 +130,8 @@ public:
   // RCs is initialized.
   void initPartSizeSet() {
     for (const auto &RC : register_classes()) {
-      for (auto &&[HWMode, RegSI] : RC->RSI) {
+      for (auto &&[HWMode, RegSI] : RC->RSI)
         PartSizeSet.insert({0, RegSI.RegSize});
-      }
     }
 
     std::vector<const Record *> ExtraMappings =
@@ -504,13 +499,10 @@ void RegisterBankEmitter::emitPartialMapImplementation(
   if (Order.front() > Order.back())
     return false;
 
-  PartialMappingIdx Previous = Order.front();
-  for (const auto &Current : Order.drop_front()) {
-    if (Previous + 1 != Current)
-      return false;
-    Previous = Current;
-  }
-  return true;
+  return std::adjacent_find(Order.begin(), Order.end(),
+                            [](PartialMappingIdx LHS, PartialMappingIdx RHS) {
+                              return RHS != LHS + 1;
+                            }) == Order.end();
 }
 )";
 
