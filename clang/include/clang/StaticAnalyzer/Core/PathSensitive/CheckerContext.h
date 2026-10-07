@@ -279,7 +279,8 @@ public:
   generateNonFatalErrorNode(ProgramStateRef State,
                             ExplodedNode *Pred,
                             const ProgramPointTag *Tag = nullptr) {
-    return addTransition(State, Pred, (Tag ? Tag : Location.getTag()));
+    return addTransitionImpl(State, false, Pred,
+                             (Tag ? Tag : Location.getTag()));
   }
 
   /// Emit the diagnostics report.
