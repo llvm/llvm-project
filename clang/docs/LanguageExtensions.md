@@ -4107,23 +4107,44 @@ The first query reports where the pointer variable is stored. The second
 reports the address space of the pointed-to object type. The third treats `p`
 as an lvalue expression because of the extra parentheses.
 
-Clang predefines macros for the values returned by this operator. Most language
-address spaces are reported using common memory regions:
-`__ADDRSPACE_DEFAULT`, `__ADDRSPACE_GLOBAL`, `__ADDRSPACE_LOCAL`,
-`__ADDRSPACE_CONSTANT`, `__ADDRSPACE_PRIVATE`, and `__ADDRSPACE_GENERIC`.
-OpenCL, CUDA, HIP, SYCL, and HLSL address spaces that describe the same memory
-region produce the same value. For an address space written explicitly with
-`__attribute__((address_space(N)))`, the result is
-`__ADDRSPACE_TARGET(N)`. Deprecated OpenCL and SYCL `global_device` and
-`global_host` address spaces are reported as the global address space.
+Language address spaces come from a language or Clang extension. Matching
+memory kinds in OpenCL, CUDA, HIP, SYCL, and HLSL get the same value. Clang
+predefines these macros for the common kinds and the HLSL-specific kinds:
+
+| Macro | Value | Typical use |
+| --- | ---: | --- |
+| `__ADDRSPACE_DEFAULT` | 0 | Unqualified type or expression |
+| `__ADDRSPACE_GLOBAL` | 1 | OpenCL/SYCL global, CUDA/HIP `__device__`, HLSL device |
+| `__ADDRSPACE_LOCAL` | 2 | OpenCL/SYCL local, CUDA/HIP `__shared__`, HLSL groupshared |
+| `__ADDRSPACE_CONSTANT` | 3 | OpenCL/SYCL constant, CUDA/HIP `__constant__`, HLSL constant |
+| `__ADDRSPACE_PRIVATE` | 4 | OpenCL/SYCL/HLSL private |
+| `__ADDRSPACE_GENERIC` | 5 | OpenCL/SYCL generic |
+| `__ADDRSPACE_HLSL_INPUT` | 6 | HLSL input |
+| `__ADDRSPACE_HLSL_OUTPUT` | 7 | HLSL output |
+| `__ADDRSPACE_HLSL_PUSH_CONSTANT` | 8 | HLSL push constant |
+
+Values from `0` through `0xFFFFFF` are reserved for language address spaces,
+leaving room for over 16 million values. Some specialized language address
+spaces have no predefined macro. Deprecated OpenCL and SYCL `global_device`
+and `global_host` address spaces return `__ADDRSPACE_GLOBAL`.
+
+For a source-written `__attribute__((address_space(N)))`, use
+`__ADDRSPACE_TARGET(N)`. This macro gives the value `0x1000000 + N`; it does
+not change where an object is stored. Results for valid `N` start at
+`0x1000000` and currently stay below `0x1800000`. Use a language macro to
+select a kind of memory across languages or targets. Use
+`__ADDRSPACE_TARGET(N)` when code needs the exact numbered space written in an
+attribute. The meaning of `N` depends on the target. For example,
+`__ADDRSPACE_TARGET(3)` is different from `__ADDRSPACE_CONSTANT`, whose value
+is `3`.
 
 **Example use**:
 
 ```c++
-using local_int = int __attribute__((address_space(3)));
-local_int *p;
+using as3_int = int __attribute__((address_space(3)));
+as3_int *p;
 
-static_assert(__addrspaceof(local_int) == __ADDRSPACE_TARGET(3));
+static_assert(__addrspaceof(as3_int) == __ADDRSPACE_TARGET(3));
 static_assert(__addrspaceof(*p) == __ADDRSPACE_TARGET(3));
 ```
 
