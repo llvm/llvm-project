@@ -224,8 +224,6 @@ public:
   /// Add a sink node to the current path of execution, halting analysis.
   void addSink(ProgramStateRef State = nullptr,
                const ProgramPointTag *Tag = nullptr) {
-    if (!State)
-      State = getState();
     generateSink(State, getPredecessor());
   }
 
