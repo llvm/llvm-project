@@ -9,3 +9,23 @@ void test() {
   [[X1]];    // expected-warning {{unknown attribute 'X1' ignored}}
   [[X1()]];  // expected-warning {{unknown attribute 'X1' ignored}}
 }
+
+void test1() {
+  [[X1())]]; // expected-error {{expected ','}} expected-warning {{unknown attribute 'X1' ignored}}
+}
+
+void test2() {
+  [[X1([)]]; // expected-error {{expected ']'}} pedantic-warning {{attribute argument list is not a balanced token sequence}}
+} // expected-error {{expected statement}}
+
+void test3() {
+  [[X1({)]]; // expected-error {{expected ']'}} pedantic-warning {{attribute argument list is not a balanced token sequence}}
+} // expected-error {{expected statement}}
+
+void test4() {
+  [[X1(()]]; // expected-error {{expected ']'}} pedantic-warning {{attribute argument list is not a balanced token sequence}}
+} // expected-error {{expected statement}}
+
+void test5() {
+  [[X1([[[[[]]]])]]; // expected-warning {{unknown attribute 'X1' ignored}}
+}
