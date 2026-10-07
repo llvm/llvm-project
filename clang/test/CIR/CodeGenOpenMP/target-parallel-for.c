@@ -21,8 +21,7 @@
 // RUN:   | FileCheck %s --check-prefixes=LLVM-HOST,LLVM-HOST-OGCG
 
 // Device-side lowering to LLVM IR: compiled in two steps to mirror the
-// offloading driver. The kernel entry sequence is the same on both paths,
-// aside from the wrapper-vs-null difference seen in target-parallel.c.
+// offloading driver. The kernel entry sequence is the same on both paths.
 // Past that point, CIR and OGCG lower the worksharing loop through
 // different runtime APIs, so they're checked separately under
 // LLVM-DEVICE-CIR/LLVM-DEVICE-OGCG.
@@ -41,6 +40,8 @@
 
 void during(int);
 
+// This is a target SPMD construct, so the host also computes the loop's
+// trip count and forwards it via host_eval block arguments.
 void target_parallel_for() {
 #pragma omp target
 #pragma omp parallel
@@ -51,18 +52,15 @@ void target_parallel_for() {
 }
 
 // CIR-HOST: cir.func{{.*}}@target_parallel_for
-// CIR-HOST: omp.target kernel_type(generic) {
-// CIR-HOST: omp.parallel {
-
-// CIR-HOST: %[[IV_ALLOCA:.*]] = cir.alloca ".omp.iv" align(4) : !cir.ptr<!s32i>
-// CIR-HOST: %[[I_ALLOCA:.*]] = cir.alloca "i" align(4) : !cir.ptr<!s32i>
 
 // The loop only runs if its precondition `0 < 10` holds.
-// CIR-HOST-NEXT: %[[PRE_L:.*]] = cir.const #cir.int<0> : !s32i
+// CIR-HOST: %[[PRE_L:.*]] = cir.const #cir.int<0> : !s32i
 // CIR-HOST-NEXT: %[[PRE_R:.*]] = cir.const #cir.int<10> : !s32i
 // CIR-HOST-NEXT: %[[PRECOND:.*]] = cir.cmp lt %[[PRE_L]], %[[PRE_R]] : !s32i
-// The loop bounds are normalized to a `[0, tripCount)` range, with
-// tripCount = (10 - (0 - 1 + 1)) / 1 = 10.
+// The trip count is computed before the omp.target, from the original
+// bounds/step: tripCount = (10 - (0 - 1 + 1)) / 1 = 10. Then 0, the trip
+// count, and 1 are each cast to a builtin integer and forwarded as the
+// omp.target's host_eval operands.
 // CIR-HOST-NEXT: %[[HI:.*]] = cir.const #cir.int<10> : !s32i
 // CIR-HOST-NEXT: %[[LO:.*]] = cir.const #cir.int<0> : !s32i
 // CIR-HOST-NEXT: %[[STEP_A:.*]] = cir.const #cir.int<1> : !s32i
@@ -74,14 +72,21 @@ void target_parallel_for() {
 // CIR-HOST-NEXT: %[[TRIPCOUNT_CIR:.*]] = cir.div %[[SPAN]], %[[STEP_B]] : !s32i
 // CIR-HOST-NEXT: %[[TC_ZERO:.*]] = cir.const #cir.int<0> : !s32i
 // CIR-HOST-NEXT: %[[TRIPCOUNT_SEL:.*]] = cir.select if %[[PRECOND]] then %[[TRIPCOUNT_CIR]] else %[[TC_ZERO]] : (!cir.bool, !s32i, !s32i) -> !s32i
-// CIR-HOST: %[[ZERO_CIR:.*]] = cir.const #cir.int<0> : !s32i
-// CIR-HOST: %[[ZERO:.*]] = cir.builtin_int_cast %[[ZERO_CIR]] : !s32i -> i32
-// CIR-HOST: %[[ONE_CIR:.*]] = cir.const #cir.int<1> : !s32i
-// CIR-HOST: %[[ONE:.*]] = cir.builtin_int_cast %[[ONE_CIR]] : !s32i -> i32
-// CIR-HOST: %[[TRIPCOUNT:.*]] = cir.builtin_int_cast %[[TRIPCOUNT_SEL]] : !s32i -> i32
+// CIR-HOST-NEXT: %[[ZERO_CIR:.*]] = cir.const #cir.int<0> : !s32i
+// CIR-HOST-NEXT: %[[ZERO:.*]] = cir.builtin_int_cast %[[ZERO_CIR]] : !s32i -> i32
+// CIR-HOST-NEXT: %[[TRIPCOUNT:.*]] = cir.builtin_int_cast %[[TRIPCOUNT_SEL]] : !s32i -> i32
+// CIR-HOST-NEXT: %[[ONE_CIR:.*]] = cir.const #cir.int<1> : !s32i
+// CIR-HOST-NEXT: %[[ONE:.*]] = cir.builtin_int_cast %[[ONE_CIR]] : !s32i -> i32
+// CIR-HOST-NEXT: omp.target kernel_type(spmd) host_eval(%[[ZERO]] -> %[[AZERO:.*]], %[[TRIPCOUNT]] -> %[[ATRIPCOUNT:.*]], %[[ONE]] -> %[[AONE:.*]] : i32, i32, i32) {
+// CIR-HOST-NEXT: omp.parallel {
 
-// CIR-HOST: omp.wsloop private(@{{.*}} %[[I_ALLOCA]] -> %[[I_PRIV:.*]] : !cir.ptr<!s32i>) {
-// CIR-HOST-NEXT: omp.loop_nest (%[[IV:.*]]) : i32 = (%[[ZERO]]) to (%[[TRIPCOUNT]]) step (%[[ONE]]) {
+// CIR-HOST: %[[IV_ALLOCA:.*]] = cir.alloca ".omp.iv" align(4) : !cir.ptr<!s32i>
+// CIR-HOST: %[[I_ALLOCA:.*]] = cir.alloca "i" align(4) : !cir.ptr<!s32i>
+
+// The loop inside the target region uses the host_eval block arguments
+// instead of recomputing the bounds.
+// CIR-HOST-NEXT: omp.wsloop private(@{{.*}} %[[I_ALLOCA]] -> %[[I_PRIV:.*]] : !cir.ptr<!s32i>) {
+// CIR-HOST-NEXT: omp.loop_nest (%[[IV:.*]]) : i32 = (%[[AZERO]]) to (%[[ATRIPCOUNT]]) step (%[[AONE]]) {
 // CIR-HOST: %[[IV_CIR:.*]] = cir.builtin_int_cast %[[IV]] : i32 -> !s32i
 // CIR-HOST: cir.store align(4) %[[IV_CIR]], %[[IV_ALLOCA]] : !s32i, !cir.ptr<!s32i>
 // CIR-HOST: cir.store align(4) %{{.*}}, %[[I_PRIV]] : !s32i, !cir.ptr<!s32i>
@@ -94,7 +99,7 @@ void target_parallel_for() {
 // CIR-HOST: }
 
 // CIR-DEVICE: cir.func{{.*}}@target_parallel_for
-// CIR-DEVICE: omp.target kernel_type(generic) {
+// CIR-DEVICE: omp.target kernel_type(spmd) {
 // CIR-DEVICE: omp.parallel {
 
 // The two allocas and their address-space casts can be emitted in either
@@ -109,7 +114,8 @@ void target_parallel_for() {
 // CIR-DEVICE: %[[PRE_L:.*]] = cir.const #cir.int<0> : !s32i
 // CIR-DEVICE-NEXT: %[[PRE_R:.*]] = cir.const #cir.int<10> : !s32i
 // CIR-DEVICE-NEXT: %[[PRECOND:.*]] = cir.cmp lt %[[PRE_L]], %[[PRE_R]] : !s32i
-// Same trip count computation as on the host.
+// The device has no host_eval operands, so it recomputes the same trip
+// count inside the region.
 // CIR-DEVICE-NEXT: %[[HI:.*]] = cir.const #cir.int<10> : !s32i
 // CIR-DEVICE-NEXT: %[[LO:.*]] = cir.const #cir.int<0> : !s32i
 // CIR-DEVICE-NEXT: %[[STEP_A:.*]] = cir.const #cir.int<1> : !s32i
@@ -143,7 +149,9 @@ void target_parallel_for() {
 // The combined `target parallel for` directive decomposes into `target`,
 // `parallel` and `for` leaves and lowers to the same nesting as the explicit
 // target/parallel/for above: an omp.wsloop + omp.loop_nest inside omp.parallel
-// inside omp.target.
+// inside omp.target. This is a target SPMD construct, so the omp.target is
+// marked kernel_type(spmd) with host_eval'd loop bounds, just like the
+// explicitly nested directives above.
 void combined_target_parallel_for() {
 #pragma omp target parallel for
   for (int i = 0; i < 10; i++) {
@@ -152,11 +160,8 @@ void combined_target_parallel_for() {
 }
 
 // CIR-HOST: cir.func{{.*}}@combined_target_parallel_for
-// CIR-HOST: omp.target kernel_type(generic) {
-// CIR-HOST: omp.parallel {
-// CIR-HOST: %[[CI_ALLOCA:.*]] = cir.alloca "i" align(4) : !cir.ptr<!s32i>
 // The loop only runs if its precondition `0 < 10` holds.
-// CIR-HOST-NEXT: %[[PRE_L:.*]] = cir.const #cir.int<0> : !s32i
+// CIR-HOST: %[[PRE_L:.*]] = cir.const #cir.int<0> : !s32i
 // CIR-HOST-NEXT: %[[PRE_R:.*]] = cir.const #cir.int<10> : !s32i
 // CIR-HOST-NEXT: %[[PRECOND:.*]] = cir.cmp lt %[[PRE_L]], %[[PRE_R]] : !s32i
 // tripCount = (10 - (0 - 1 + 1)) / 1 = 10
@@ -172,8 +177,11 @@ void combined_target_parallel_for() {
 // CIR-HOST-NEXT: %[[TC_ZERO:.*]] = cir.const #cir.int<0> : !s32i
 // CIR-HOST-NEXT: %[[TRIPCOUNT_SEL:.*]] = cir.select if %[[PRECOND]] then %[[TRIPCOUNT_CIR]] else %[[TC_ZERO]] : (!cir.bool, !s32i, !s32i) -> !s32i
 // CIR-HOST: %[[TRIPCOUNT:.*]] = cir.builtin_int_cast %[[TRIPCOUNT_SEL]] : !s32i -> i32
+// CIR-HOST: omp.target kernel_type(spmd) host_eval(%{{.*}} -> %[[AZERO:.*]], %[[TRIPCOUNT]] -> %[[ATRIPCOUNT:.*]], %{{.*}} -> %[[AONE:.*]] : i32, i32, i32) {
+// CIR-HOST: omp.parallel {
+// CIR-HOST: %[[CI_ALLOCA:.*]] = cir.alloca "i" align(4) : !cir.ptr<!s32i>
 // CIR-HOST: omp.wsloop private(@{{.*}} %[[CI_ALLOCA]] -> %{{.*}} : !cir.ptr<!s32i>) {
-// CIR-HOST-NEXT: omp.loop_nest (%[[CIV:.*]]) : i32 = (%{{.*}}) to (%[[TRIPCOUNT]]) step (%{{.*}}) {
+// CIR-HOST-NEXT: omp.loop_nest (%[[CIV:.*]]) : i32 = (%[[AZERO]]) to (%[[ATRIPCOUNT]]) step (%[[AONE]]) {
 // CIR-HOST: cir.call @{{.*}}during
 // CIR-HOST: omp.yield
 // CIR-HOST: }
@@ -184,7 +192,7 @@ void combined_target_parallel_for() {
 // CIR-HOST: } {omp.combined}
 
 // CIR-DEVICE: cir.func{{.*}}@combined_target_parallel_for
-// CIR-DEVICE: omp.target kernel_type(generic) {
+// CIR-DEVICE: omp.target kernel_type(spmd) {
 // CIR-DEVICE: omp.parallel {
 // The loop only runs if its precondition `0 < 10` holds.
 // CIR-DEVICE: %[[PRE_L:.*]] = cir.const #cir.int<0> : !s32i
@@ -216,9 +224,16 @@ void combined_target_parallel_for() {
 
 // Host wrappers: the __tgt_target_kernel call, the offload-failed fallback
 // branch, and the call into the offloading-entry function are identical on
-// both paths.
+// both paths. This is a target SPMD construct, so CIR's kernel-launch
+// arguments carry the host_eval'd trip count (10) in the trip count field
+// (index 8); OGCG doesn't forward a host-computed trip count here, so it
+// leaves that field 0.
 //
 // LLVM-HOST-LABEL: define {{.*}} void @target_parallel_for(
+// LLVM-HOST:         %[[KARGS:.*]] = alloca %struct.__tgt_kernel_arguments, align 8
+// LLVM-HOST:         %[[TRIPCOUNT_GEP:.*]] = getelementptr inbounds nuw %struct.__tgt_kernel_arguments, ptr %[[KARGS]], i32 0, i32 8
+// LLVM-HOST-CIR-NEXT:  store i64 10, ptr %[[TRIPCOUNT_GEP]], align 8
+// LLVM-HOST-OGCG-NEXT: store i64 0, ptr %[[TRIPCOUNT_GEP]], align 8
 // LLVM-HOST:         call i32 @__tgt_target_kernel(
 // LLVM-HOST:         br i1 %{{.*}}, label %[[FAILED:[^,]+]], label %{{.*}}
 // LLVM-HOST:       {{^}}[[FAILED]]:
@@ -231,6 +246,9 @@ void combined_target_parallel_for() {
 // checks are the same either way, just placed where each path actually
 // emits them (compare the LLVM-HOST-OGCG copy of this block further down).
 // LLVM-HOST-CIR-LABEL: define {{.*}} void @combined_target_parallel_for(
+// LLVM-HOST-CIR:         %[[KARGS2:.*]] = alloca %struct.__tgt_kernel_arguments, align 8
+// LLVM-HOST-CIR:         %[[TRIPCOUNT_GEP2:.*]] = getelementptr inbounds nuw %struct.__tgt_kernel_arguments, ptr %[[KARGS2]], i32 0, i32 8
+// LLVM-HOST-CIR-NEXT:    store i64 10, ptr %[[TRIPCOUNT_GEP2]], align 8
 // LLVM-HOST-CIR:         call i32 @__tgt_target_kernel(
 // LLVM-HOST-CIR:         br i1 %{{.*}}, label %[[FAILED2:[^,]+]], label %{{.*}}
 // LLVM-HOST-CIR:       {{^}}[[FAILED2]]:
@@ -289,6 +307,9 @@ void combined_target_parallel_for() {
 // content to the LLVM-HOST-CIR block above, just emitted after
 // target_parallel_for's entry+outlined functions instead of before them.
 // LLVM-HOST-OGCG-LABEL: define {{.*}} void @combined_target_parallel_for(
+// LLVM-HOST-OGCG:         %[[KARGS2:.*]] = alloca %struct.__tgt_kernel_arguments, align 8
+// LLVM-HOST-OGCG:         %[[TRIPCOUNT_GEP2:.*]] = getelementptr inbounds nuw %struct.__tgt_kernel_arguments, ptr %[[KARGS2]], i32 0, i32 8
+// LLVM-HOST-OGCG-NEXT:    store i64 0, ptr %[[TRIPCOUNT_GEP2]], align 8
 // LLVM-HOST-OGCG:         call i32 @__tgt_target_kernel(
 // LLVM-HOST-OGCG:         br i1 %{{.*}}, label %[[FAILED2:[^,]+]], label %{{.*}}
 // LLVM-HOST-OGCG:       {{^}}[[FAILED2]]:
@@ -351,10 +372,10 @@ void combined_target_parallel_for() {
 // LLVM-DEVICE:         br i1 %{{.*}}, label %[[USER_CODE:[^,]+]], label %{{.*}}
 // LLVM-DEVICE:       {{^}}[[USER_CODE]]:
 
-// CIR passes a wrapper function to __kmpc_parallel_60; OGCG passes null
-// instead, since it doesn't need one here (same as target-parallel.c).
-// LLVM-DEVICE-CIR:   call void @__kmpc_parallel_60(ptr {{.*}}, i32 {{.*}}, i32 1, i32 -1, i32 -1, ptr @[[DEV_OUTLINED:[^,]+]], ptr @{{[^,]+}}, ptr {{.*}}, i64 0, i32 0)
-// LLVM-DEVICE-OGCG:  call void @__kmpc_parallel_60(ptr {{.*}}, i32 {{.*}}, i32 1, i32 -1, i32 -1, ptr @[[DEV_OUTLINED:[^,]+]], ptr null, ptr {{.*}}, i64 0, i32 0)
+// Unlike target-parallel.c's generic kernel, this is an SPMD kernel, so
+// neither path needs a wrapper here: CIR also passes null, since every
+// thread already runs the parallel region directly.
+// LLVM-DEVICE:       call void @__kmpc_parallel_60(ptr {{.*}}, i32 {{.*}}, i32 1, i32 -1, i32 -1, ptr @[[DEV_OUTLINED:[^,]+]], ptr null, ptr {{.*}}, i64 0, i32 0)
 
 // LLVM-DEVICE:         call void @__kmpc_target_deinit()
 
@@ -380,8 +401,7 @@ void combined_target_parallel_for() {
 // LLVM-DEVICE:         br i1 %{{.*}}, label %[[USER_CODE2:[^,]+]], label %{{.*}}
 // LLVM-DEVICE:       {{^}}[[USER_CODE2]]:
 
-// LLVM-DEVICE-CIR:   call void @__kmpc_parallel_60(ptr {{.*}}, i32 {{.*}}, i32 1, i32 -1, i32 -1, ptr @[[DEV_OUTLINED2:[^,]+]], ptr @{{[^,]+}}, ptr {{.*}}, i64 0, i32 0)
-// LLVM-DEVICE-OGCG:  call void @__kmpc_parallel_60(ptr {{.*}}, i32 {{.*}}, i32 1, i32 -1, i32 -1, ptr @[[DEV_OUTLINED2:[^,]+]], ptr null, ptr {{.*}}, i64 0, i32 0)
+// LLVM-DEVICE:       call void @__kmpc_parallel_60(ptr {{.*}}, i32 {{.*}}, i32 1, i32 -1, i32 -1, ptr @[[DEV_OUTLINED2:[^,]+]], ptr null, ptr {{.*}}, i64 0, i32 0)
 
 // LLVM-DEVICE:         call void @__kmpc_target_deinit()
 
