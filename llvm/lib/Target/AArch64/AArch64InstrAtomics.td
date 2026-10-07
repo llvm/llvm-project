@@ -464,8 +464,7 @@ class atomic_hint_fetch<PatFrag Base, code Pred>
 // Pass the LSE opcode as an immediate so all operations and orderings can use
 // the same two fetch pseudos.
 class AtomicFetchOpcode<string Inst> : SDNodeXForm<imm,
-  "return CurDAG->getTargetConstant(AArch64::" # Inst #
-  ", SDLoc(N), MVT::i32);">;
+  "return CurDAG->getTargetConstant(AArch64::" # Inst # ", SDLoc(N), MVT::i32);">;
 
 multiclass AtomicFetchHintPatternsForOpcode<string Inst, string Op,
                                           RegisterClass RC, Instruction Pseudo> {
@@ -481,27 +480,18 @@ multiclass AtomicFetchHintPatternsForOpcode<string Inst, string Op,
 
 multiclass AtomicFetchHintPatternsOrd<string Inst, string Suffix, string Op,
                                     RegisterClass RC, Instruction Pseudo> {
-  defm : AtomicFetchHintPatternsForOpcode<Inst # Suffix, Op # "_monotonic",
-                                        RC, Pseudo>;
-  defm : AtomicFetchHintPatternsForOpcode<Inst # "A" # Suffix, Op # "_acquire",
-                                        RC, Pseudo>;
-  defm : AtomicFetchHintPatternsForOpcode<Inst # "L" # Suffix, Op # "_release",
-                                        RC, Pseudo>;
-  defm : AtomicFetchHintPatternsForOpcode<Inst # "AL" # Suffix, Op # "_acq_rel",
-                                        RC, Pseudo>;
-  defm : AtomicFetchHintPatternsForOpcode<Inst # "AL" # Suffix, Op # "_seq_cst",
-                                        RC, Pseudo>;
+  defm : AtomicFetchHintPatternsForOpcode<Inst # Suffix, Op # "_monotonic", RC, Pseudo>;
+  defm : AtomicFetchHintPatternsForOpcode<Inst # "A" # Suffix, Op # "_acquire", RC, Pseudo>;
+  defm : AtomicFetchHintPatternsForOpcode<Inst # "L" # Suffix, Op # "_release", RC, Pseudo>;
+  defm : AtomicFetchHintPatternsForOpcode<Inst # "AL" # Suffix, Op # "_acq_rel", RC, Pseudo>;
+  defm : AtomicFetchHintPatternsForOpcode<Inst # "AL" # Suffix, Op # "_seq_cst", RC, Pseudo>;
 }
 
 multiclass AtomicFetchHintPatterns<string Inst, string Op> {
-  defm : AtomicFetchHintPatternsOrd<Inst, "X", Op # "_i64", GPR64,
-                                  ATOMIC_FETCH_HINT_X>;
-  defm : AtomicFetchHintPatternsOrd<Inst, "W", Op # "_i32", GPR32,
-                                  ATOMIC_FETCH_HINT_W>;
-  defm : AtomicFetchHintPatternsOrd<Inst, "H", Op # "_i16", GPR32,
-                                  ATOMIC_FETCH_HINT_W>;
-  defm : AtomicFetchHintPatternsOrd<Inst, "B", Op # "_i8", GPR32,
-                                  ATOMIC_FETCH_HINT_W>;
+  defm : AtomicFetchHintPatternsOrd<Inst, "X", Op # "_i64", GPR64, ATOMIC_FETCH_HINT_X>;
+  defm : AtomicFetchHintPatternsOrd<Inst, "W", Op # "_i32", GPR32, ATOMIC_FETCH_HINT_W>;
+  defm : AtomicFetchHintPatternsOrd<Inst, "H", Op # "_i16", GPR32, ATOMIC_FETCH_HINT_W>;
+  defm : AtomicFetchHintPatternsOrd<Inst, "B", Op # "_i8", GPR32, ATOMIC_FETCH_HINT_W>;
 }
 
 // SelectionDAG lowers SUB to ADD with a negated value and AND to CLR with a

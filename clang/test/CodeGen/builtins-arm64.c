@@ -295,6 +295,19 @@ int64_t atomic_fetch_add_with_hint_ph(int64_t *a, int64_t b) {
   return __builtin_arm_atomic_fetch_add_with_hint(a, b, __ATOMIC_RELAXED, 4);
 }
 
+// CHECK-LABEL: @atomic_fetch_with_invalid_hint(
+// CHECK: atomicrmw add ptr {{.*}}, i64 {{.*}} monotonic, align 8{{$}}
+// CHECK-NEXT: atomicrmw sub ptr {{.*}}, i64 {{.*}} monotonic, align 8{{$}}
+// CHECK-NEXT: atomicrmw and ptr {{.*}}, i64 {{.*}} monotonic, align 8{{$}}
+// CHECK-NEXT: [[OLD:%.*]] = atomicrmw add ptr {{.*}}, i64 {{.*}} monotonic, align 8{{$}}
+// CHECK-NEXT: ret i64 [[OLD]]
+int64_t atomic_fetch_with_invalid_hint(int64_t *a, int64_t b) {
+  __builtin_arm_atomic_fetch_add_with_hint(a, b, __ATOMIC_RELAXED, HINT_STSHH_KEEP);
+  __builtin_arm_atomic_fetch_sub_with_hint(a, b, __ATOMIC_RELAXED, HINT_STSHH_STRM);
+  __builtin_arm_atomic_fetch_and_with_hint(a, b, __ATOMIC_RELAXED, HINT_STCPH);
+  return __builtin_arm_atomic_fetch_add_with_hint(a, b, __ATOMIC_RELAXED, 5);
+}
+
 // CHECK: ![[M0]] = !{!"1:2:3:4:5"}
 // CHECK: ![[M1]] = !{i32 1, ![[M2:[0-9]+]]}
 // CHECK: ![[M2]] = !{!"aarch64.mem_hint", i32 0}

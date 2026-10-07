@@ -440,13 +440,9 @@ bool SemaARM::BuiltinARMAtomicHintCall(unsigned BuiltinID, CallExpr *TheCall) {
              << Hint->getType() << Hint->getSourceRange();
 
     auto MemoryHint = llvm::toAArch64MemoryHint(HintAP->getZExtValue());
-    if (!IsStore && MemoryHint != llvm::AArch64MemoryHint::SHUH &&
-        MemoryHint != llvm::AArch64MemoryHint::SHUH_PH)
-      return Diag(TheCall->getBeginLoc(),
-                  diag::err_atomic_hint_has_invalid_hint_type)
-             << *HintAP << Hint->getSourceRange();
-
-    if (MemoryHint == llvm::AArch64MemoryHint::NONE) {
+    if (MemoryHint == llvm::AArch64MemoryHint::NONE ||
+        (!IsStore && MemoryHint != llvm::AArch64MemoryHint::SHUH &&
+         MemoryHint != llvm::AArch64MemoryHint::SHUH_PH)) {
       Diag(TheCall->getBeginLoc(), diag::warn_atomic_hint_has_invalid_hint_type)
           << *HintAP << Hint->getSourceRange();
       return false;

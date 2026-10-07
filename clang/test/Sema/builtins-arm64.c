@@ -105,8 +105,8 @@ void test_atomic_fetch_hint(char *c_ptr, char c_data, const char *const_c_ptr,
   __builtin_arm_atomic_fetch_xor_with_hint(c_ptr, c_data, 0, variable); // expected-error {{invalid hint type argument to atomic hint operation ('int')}}
   __builtin_arm_atomic_fetch_or_with_hint(c_ptr, c_data, 0, "h"); // expected-error {{incompatible pointer to integer conversion passing 'char *' to parameter of type 'int'}}
   // expected-error@-1 {{invalid hint type argument to atomic hint operation ('int')}}
-  __builtin_arm_atomic_fetch_add_with_hint(c_ptr, c_data, 0, 0); // expected-error {{invalid hint type argument to atomic hint operation (0)}}
-  __builtin_arm_atomic_fetch_sub_with_hint(c_ptr, c_data, 0, 1); // expected-error {{invalid hint type argument to atomic hint operation (1)}}
-  __builtin_arm_atomic_fetch_and_with_hint(c_ptr, c_data, 0, 2); // expected-error {{invalid hint type argument to atomic hint operation (2)}}
-  __builtin_arm_atomic_fetch_add_with_hint(c_ptr, c_data, 0, 5); // expected-error {{invalid hint type argument to atomic hint operation (5)}}
+  __builtin_arm_atomic_fetch_add_with_hint(c_ptr, c_data, 0, 0); // expected-warning {{unrecognised hint type argument to atomic hint operation (0)}}
+  __builtin_arm_atomic_fetch_sub_with_hint(c_ptr, c_data, 0, 1); // expected-warning {{unrecognised hint type argument to atomic hint operation (1)}}
+  __builtin_arm_atomic_fetch_and_with_hint(c_ptr, c_data, 0, 2); // expected-warning {{unrecognised hint type argument to atomic hint operation (2)}}
+  __builtin_arm_atomic_fetch_add_with_hint(c_ptr, c_data, 0, 5); // expected-warning {{unrecognised hint type argument to atomic hint operation (5)}}
 }

@@ -2076,7 +2076,10 @@ static void AttachAtomicHintMetadata(CodeGenFunction &CGF, const CallExpr *E,
         "Expected integer hint argument to atomic operation with hint.");
   unsigned HintArg = Result.Val.getInt().getExtValue();
 
-  if (toAArch64MemoryHint(HintArg) == AArch64MemoryHint::NONE)
+  auto MemoryHint = toAArch64MemoryHint(HintArg);
+  if (MemoryHint == AArch64MemoryHint::NONE ||
+      (isa<AtomicRMWInst>(Atomic) && MemoryHint != AArch64MemoryHint::SHUH &&
+       MemoryHint != AArch64MemoryHint::SHUH_PH))
     return;
 
   MDNode *MemHint = MDNode::get(
