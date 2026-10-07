@@ -88,16 +88,15 @@ define hidden { i32, i32, i32, i32 } @bb2053_inner_loop(ptr nocapture %base0, pt
 ; CHECK-NEXT:    v128.load8_lane 0, 1
 ; CHECK-NEXT:    v128.load8_lane 0, 2
 ; CHECK-NEXT:    v128.load8_lane 0, 3
-; CHECK-NEXT:    i16x8.extend_low_i8x16_s
 ; CHECK-NEXT:    local.tee 24
 ; CHECK-NEXT:    local.get 3
 ; CHECK-NEXT:    v128.load 0:p2align=0
 ; CHECK-NEXT:    local.tee 13
 ; CHECK-NEXT:    local.get 13
 ; CHECK-NEXT:    i8x16.shuffle 1, 5, 9, 13, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0
-; CHECK-NEXT:    i16x8.extend_low_i8x16_s
 ; CHECK-NEXT:    local.tee 25
-; CHECK-NEXT:    i32x4.extmul_low_i16x8_s
+; CHECK-NEXT:    i16x8.extmul_low_i8x16_s
+; CHECK-NEXT:    i32x4.extend_low_i16x8_s
 ; CHECK-NEXT:    local.get 14
 ; CHECK-NEXT:    i32x4.add
 ; CHECK-NEXT:    local.get 7
@@ -116,32 +115,31 @@ define hidden { i32, i32, i32, i32 } @bb2053_inner_loop(ptr nocapture %base0, pt
 ; CHECK-NEXT:    v128.load8_lane 0, 1
 ; CHECK-NEXT:    v128.load8_lane 0, 2
 ; CHECK-NEXT:    v128.load8_lane 0, 3
-; CHECK-NEXT:    i16x8.extend_low_i8x16_s
 ; CHECK-NEXT:    local.tee 26
 ; CHECK-NEXT:    local.get 13
 ; CHECK-NEXT:    local.get 13
 ; CHECK-NEXT:    i8x16.shuffle 3, 7, 11, 15, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0
-; CHECK-NEXT:    i16x8.extend_low_i8x16_s
 ; CHECK-NEXT:    local.tee 27
-; CHECK-NEXT:    i32x4.extmul_low_i16x8_s
+; CHECK-NEXT:    i16x8.extmul_low_i8x16_s
+; CHECK-NEXT:    i32x4.extend_low_i16x8_s
 ; CHECK-NEXT:    i32x4.add
 ; CHECK-NEXT:    local.set 14
 ; CHECK-NEXT:    local.get 24
 ; CHECK-NEXT:    local.get 13
 ; CHECK-NEXT:    local.get 13
 ; CHECK-NEXT:    i8x16.shuffle 0, 4, 8, 12, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0
-; CHECK-NEXT:    i16x8.extend_low_i8x16_s
 ; CHECK-NEXT:    local.tee 28
-; CHECK-NEXT:    i32x4.extmul_low_i16x8_s
+; CHECK-NEXT:    i16x8.extmul_low_i8x16_s
+; CHECK-NEXT:    i32x4.extend_low_i16x8_s
 ; CHECK-NEXT:    local.get 16
 ; CHECK-NEXT:    i32x4.add
 ; CHECK-NEXT:    local.get 26
 ; CHECK-NEXT:    local.get 13
 ; CHECK-NEXT:    local.get 13
 ; CHECK-NEXT:    i8x16.shuffle 2, 6, 10, 14, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0
-; CHECK-NEXT:    i16x8.extend_low_i8x16_s
 ; CHECK-NEXT:    local.tee 13
-; CHECK-NEXT:    i32x4.extmul_low_i16x8_s
+; CHECK-NEXT:    i16x8.extmul_low_i8x16_s
+; CHECK-NEXT:    i32x4.extend_low_i16x8_s
 ; CHECK-NEXT:    i32x4.add
 ; CHECK-NEXT:    local.set 16
 ; CHECK-NEXT:    local.get 25
@@ -165,9 +163,9 @@ define hidden { i32, i32, i32, i32 } @bb2053_inner_loop(ptr nocapture %base0, pt
 ; CHECK-NEXT:    v128.load8_lane 0, 1
 ; CHECK-NEXT:    v128.load8_lane 0, 2
 ; CHECK-NEXT:    v128.load8_lane 0, 3
-; CHECK-NEXT:    i16x8.extend_low_i8x16_s
 ; CHECK-NEXT:    local.tee 24
-; CHECK-NEXT:    i32x4.extmul_low_i16x8_s
+; CHECK-NEXT:    i16x8.extmul_low_i8x16_s
+; CHECK-NEXT:    i32x4.extend_low_i16x8_s
 ; CHECK-NEXT:    local.get 15
 ; CHECK-NEXT:    i32x4.add
 ; CHECK-NEXT:    local.get 27
@@ -187,19 +185,21 @@ define hidden { i32, i32, i32, i32 } @bb2053_inner_loop(ptr nocapture %base0, pt
 ; CHECK-NEXT:    v128.load8_lane 0, 1
 ; CHECK-NEXT:    v128.load8_lane 0, 2
 ; CHECK-NEXT:    v128.load8_lane 0, 3
-; CHECK-NEXT:    i16x8.extend_low_i8x16_s
 ; CHECK-NEXT:    local.tee 25
-; CHECK-NEXT:    i32x4.extmul_low_i16x8_s
+; CHECK-NEXT:    i16x8.extmul_low_i8x16_s
+; CHECK-NEXT:    i32x4.extend_low_i16x8_s
 ; CHECK-NEXT:    i32x4.add
 ; CHECK-NEXT:    local.set 15
 ; CHECK-NEXT:    local.get 28
 ; CHECK-NEXT:    local.get 24
-; CHECK-NEXT:    i32x4.extmul_low_i16x8_s
+; CHECK-NEXT:    i16x8.extmul_low_i8x16_s
+; CHECK-NEXT:    i32x4.extend_low_i16x8_s
 ; CHECK-NEXT:    local.get 17
 ; CHECK-NEXT:    i32x4.add
 ; CHECK-NEXT:    local.get 13
 ; CHECK-NEXT:    local.get 25
-; CHECK-NEXT:    i32x4.extmul_low_i16x8_s
+; CHECK-NEXT:    i16x8.extmul_low_i8x16_s
+; CHECK-NEXT:    i32x4.extend_low_i16x8_s
 ; CHECK-NEXT:    i32x4.add
 ; CHECK-NEXT:    local.set 17
 ; CHECK-NEXT:    local.get 3
@@ -1838,16 +1838,15 @@ define hidden { i32, i32, i32, i32 } @bb41_inner_loop(ptr nocapture %lhs, ptr no
 ; CHECK-NEXT:    local.tee 15
 ; CHECK-NEXT:    local.get 12
 ; CHECK-NEXT:    i8x16.shuffle 1, 3, 5, 7, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0
-; CHECK-NEXT:    i16x8.extend_low_i8x16_s
 ; CHECK-NEXT:    local.tee 16
 ; CHECK-NEXT:    local.get 2
 ; CHECK-NEXT:    v128.load64_zero 0:p2align=0
 ; CHECK-NEXT:    local.tee 17
 ; CHECK-NEXT:    local.get 12
 ; CHECK-NEXT:    i8x16.shuffle 1, 3, 5, 7, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0
-; CHECK-NEXT:    i16x8.extend_low_i8x16_s
 ; CHECK-NEXT:    local.tee 18
-; CHECK-NEXT:    i32x4.extmul_low_i16x8_s
+; CHECK-NEXT:    i16x8.extmul_low_i8x16_s
+; CHECK-NEXT:    i32x4.extend_low_i16x8_s
 ; CHECK-NEXT:    local.get 12
 ; CHECK-NEXT:    i32x4.add
 ; CHECK-NEXT:    local.set 12
@@ -1855,9 +1854,9 @@ define hidden { i32, i32, i32, i32 } @bb41_inner_loop(ptr nocapture %lhs, ptr no
 ; CHECK-NEXT:    local.get 17
 ; CHECK-NEXT:    local.get 12
 ; CHECK-NEXT:    i8x16.shuffle 0, 2, 4, 6, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0
-; CHECK-NEXT:    i16x8.extend_low_i8x16_s
 ; CHECK-NEXT:    local.tee 17
-; CHECK-NEXT:    i32x4.extmul_low_i16x8_s
+; CHECK-NEXT:    i16x8.extmul_low_i8x16_s
+; CHECK-NEXT:    i32x4.extend_low_i16x8_s
 ; CHECK-NEXT:    local.get 13
 ; CHECK-NEXT:    i32x4.add
 ; CHECK-NEXT:    local.set 13
@@ -1865,15 +1864,16 @@ define hidden { i32, i32, i32, i32 } @bb41_inner_loop(ptr nocapture %lhs, ptr no
 ; CHECK-NEXT:    local.get 15
 ; CHECK-NEXT:    local.get 12
 ; CHECK-NEXT:    i8x16.shuffle 0, 2, 4, 6, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0
-; CHECK-NEXT:    i16x8.extend_low_i8x16_s
 ; CHECK-NEXT:    local.tee 15
-; CHECK-NEXT:    i32x4.extmul_low_i16x8_s
+; CHECK-NEXT:    i16x8.extmul_low_i8x16_s
+; CHECK-NEXT:    i32x4.extend_low_i16x8_s
 ; CHECK-NEXT:    local.get 14
 ; CHECK-NEXT:    i32x4.add
 ; CHECK-NEXT:    local.set 14
 ; CHECK-NEXT:    local.get 17
 ; CHECK-NEXT:    local.get 15
-; CHECK-NEXT:    i32x4.extmul_low_i16x8_s
+; CHECK-NEXT:    i16x8.extmul_low_i8x16_s
+; CHECK-NEXT:    i32x4.extend_low_i16x8_s
 ; CHECK-NEXT:    local.get 11
 ; CHECK-NEXT:    i32x4.add
 ; CHECK-NEXT:    local.set 11
