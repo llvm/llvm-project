@@ -331,6 +331,7 @@ struct EncodingField {
   static constexpr unsigned Width = HighBit - LowBit + 1;
 
   using ValueType = unsigned;
+  static_assert(Width <= sizeof(ValueType) * 8);
   static constexpr ValueType Default = D;
 
   ValueType Value;
