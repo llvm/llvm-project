@@ -5,6 +5,9 @@
 // and _FortranATrampolineFree instead of llvm.init.trampoline and
 // llvm.adjust.trampoline intrinsics.
 
+// The runtime trampoline pool needs no executable stack, hence no module flag.
+// CHECK-NOT:   llvm.module_flags
+
 // CHECK-LABEL: func.func @_QPtest_proc_dummy()
 // CHECK:         fir.zero_bits !fir.ref<i8>
 // CHECK:         fir.convert {{.*}} : {{.*}} -> !fir.ref<i8>
