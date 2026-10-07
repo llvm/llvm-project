@@ -46,6 +46,16 @@ struct IncludeStyle {
     ///    #include "a.h"                         #include <lib/main.h>
     /// \endcode
     IBS_Regroup,
+    /// Merge multiple `#include` blocks together and sort as one.
+    /// It's first grouped by category priority (defined in clang-format
+    /// config), then by top-level directory within each category.
+    /// \code
+    ///    #include "b/b.h"             into      #include "a/a.h"
+    ///    #include "a/b.h"                       #include "a/b.h"
+    ///    #include "a/a.h"
+    ///                                           #include "b/b.h"
+    /// \endcode
+    IBS_RegroupByDirectory,
   };
 
   /// Dependent on the value, multiple `#include` blocks can be sorted
