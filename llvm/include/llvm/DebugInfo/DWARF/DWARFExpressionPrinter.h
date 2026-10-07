@@ -34,6 +34,12 @@ LLVM_ABI void printDwarfExpression(const DWARFExpression *E, raw_ostream &OS,
                                    DIDumpOptions DumpOpts, DWARFUnit *U,
                                    bool IsEH = false);
 
+/// Print \p E without a DWARFUnit; base type references are printed as raw
+/// offsets. Unlike the overload above, this does not link DWARFUnit and
+/// DWARFContext.
+LLVM_ABI void printDwarfExpression(const DWARFExpression *E, raw_ostream &OS,
+                                   DIDumpOptions DumpOpts, bool IsEH = false);
+
 /// Print the expression in a format intended to be compact and useful to a
 /// user, but not perfectly unambiguous, or capable of representing every
 /// valid DWARF expression. Returns true if the expression was sucessfully

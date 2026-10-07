@@ -341,3 +341,29 @@ TEST(NVPTXPackedRegister, Full_DW_OP_regx_CallbackMiss) {
 
   EXPECT_EQ(OS.str(), "DW_OP_regx %rs2");
 }
+
+// Without a DWARFUnit, base type references are printed as raw offsets. The
+// overload that takes no unit must match passing a null unit.
+TEST(PrintWithoutUnit, BaseTypeRefs) {
+  const uint8_t Enc[] = {DW_OP_convert, 0x2a, DW_OP_regval_type,
+                         0x01,          0x2a, DW_OP_stack_value};
+  DataExtractor DE(Enc, true);
+  DWARFExpression Expr(DE, 8);
+
+  DIDumpOptions DumpOpts;
+  DumpOpts.GetNameForDWARFReg = [](uint64_t RegNum, bool) -> StringRef {
+    return RegNum == 1 ? "R1" : "";
+  };
+
+  std::string WithNullUnit;
+  raw_string_ostream NullOS(WithNullUnit);
+  printDwarfExpression(&Expr, NullOS, DumpOpts, nullptr);
+
+  std::string WithoutUnit;
+  raw_string_ostream OS(WithoutUnit);
+  printDwarfExpression(&Expr, OS, DumpOpts);
+
+  EXPECT_EQ(WithoutUnit, "DW_OP_convert 0x2a, DW_OP_regval_type R1 "
+                         "<base_type ref: 0x2a>, DW_OP_stack_value");
+  EXPECT_EQ(WithoutUnit, WithNullUnit);
+}

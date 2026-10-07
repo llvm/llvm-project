@@ -21,6 +21,7 @@ add_llvm_component_library(LLVMDebugInfoDWARF
   DWARFDebugRnglists.cpp
   DWARFDie.cpp
   DWARFExpressionPrinter.cpp
+  DWARFExpressionPrinterUnit.cpp
   DWARFFormValue.cpp
   DWARFGdbIndex.cpp
   DWARFListTable.cpp
