@@ -4795,27 +4795,23 @@ RValue CodeGenFunction::EmitBuiltinExpr(const GlobalDecl GD, unsigned BuiltinID,
     auto Arg0 = E->getArg(0);
     auto Arg1 = E->getArg(1);
     auto Arg2 = E->getArg(2);
+    Value *Zero = Constant::getNullValue(Int32Ty);
     auto MA = EmitScalarExpr(Arg0);
     auto MB = EmitScalarExpr(Arg1);
     auto MC = EmitScalarExpr(Arg2);
+    auto MatrixOperand =
+        (E->getNumArgs() == 4) ? EmitScalarExpr(E->getArg(3)) : Zero;
+
     const auto *MATy = Arg0->getType()->getAs<CooperativeMatrixType>();
     const auto *MBTy = Arg1->getType()->getAs<CooperativeMatrixType>();
     const auto *MCTy = Arg2->getType()->getAs<CooperativeMatrixType>();
 
-    // Check if the data is signed/unsigned
-    QualType QT = MATy->getElementType();
-    bool isSigned = false;
-    if (const BuiltinType *BT = QT->getAs<BuiltinType>()) {
-      isSigned = BT->isSignedInteger();
-    }
-    llvm::Type *Int1Ty = llvm::Type::getInt1Ty(CGM.getLLVMContext());
-    llvm::Value *isDataSigned = llvm::ConstantInt::get(Int1Ty, isSigned);
     auto *RetType = getTargetExtType(CGM, MTy);
     auto *AType = getTargetExtType(CGM, MATy);
     auto *BType = getTargetExtType(CGM, MBTy);
     auto *CType = getTargetExtType(CGM, MCTy);
     llvm::FunctionType *FTy =
-        llvm::FunctionType::get(RetType, {AType, BType, CType, Int1Ty}, false);
+        llvm::FunctionType::get(RetType, {AType, BType, CType, Int32Ty}, false);
 
     // Function name mangling.
     std::string Name = getSPIRVBuiltinName(BuiltinIDIfNoAsmLabel) +
@@ -4826,7 +4822,7 @@ RValue CodeGenFunction::EmitBuiltinExpr(const GlobalDecl GD, unsigned BuiltinID,
         CGM.getModule().getOrInsertFunction(Name, FTy);
     if (auto *F = llvm::dyn_cast<llvm::Function>(MatMulFn.getCallee()))
       F->setCallingConv(llvm::CallingConv::SPIR_FUNC);
-    auto *NewCall = Builder.CreateCall(MatMulFn, {MA, MB, MC, isDataSigned});
+    auto *NewCall = Builder.CreateCall(MatMulFn, {MA, MB, MC, MatrixOperand});
     NewCall->setCallingConv(llvm::CallingConv::SPIR_FUNC);
     return RValue::get(NewCall);
   }
