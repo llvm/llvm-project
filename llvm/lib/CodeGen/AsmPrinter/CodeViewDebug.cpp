@@ -893,8 +893,14 @@ void CodeViewDebug::emitCompilerInformation() {
     Flags |= static_cast<uint32_t>(CompileSym3Flags::PGO);
   }
   using ArchType = llvm::Triple::ArchType;
-  ArchType Arch = MMI->getModule()->getTargetTriple().getArch();
-  if (CompilerInfoAsm->TM.Options.Hotpatch || Arch == ArchType::thumb ||
+  const Module *M = MMI->getModule();
+  ArchType Arch = M->getTargetTriple().getArch();
+  // TM.Options.Hotpatch isn't set for LTO code generation. The module flag
+  // survives LTO, and is reset to 0 if any merged module lacks it.
+  auto *HotpatchFlag =
+      mdconst::extract_or_null<ConstantInt>(M->getModuleFlag("ms-hotpatch"));
+  if (CompilerInfoAsm->TM.Options.Hotpatch ||
+      (HotpatchFlag && HotpatchFlag->isOne()) || Arch == ArchType::thumb ||
       Arch == ArchType::aarch64) {
     Flags |= static_cast<uint32_t>(CompileSym3Flags::HotPatch);
   }
