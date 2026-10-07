@@ -481,27 +481,28 @@ TransformationMode llvm::hasLICMVersioningTransformation(const Loop *L) {
   return TM_Unspecified;
 }
 
-/// Does a BFS from a given node to all of its children inside a given loop.
-/// The returned vector of basic blocks includes the starting point.
-SmallVector<BasicBlock *, 16> llvm::collectChildrenInLoop(DominatorTree *DT,
-                                                          DomTreeNode *N,
-                                                          const Loop *CurLoop) {
-  SmallVector<BasicBlock *, 16> Worklist;
-  auto AddRegionToWorklist = [&](DomTreeNode *DTN) {
-    // Only include subregions in the top level loop.
+/// Does a DFS from a given node to all of its children inside a given loop.
+/// The returned vector of basic blocks includes only blocks contained in
+/// \p CurLoop and not contained in any subloops.
+SmallVector<BasicBlock *, 16>
+llvm::collectDirectChildrenInLoop(DominatorTree *DT, DomTreeNode *N,
+                                  const LoopInfo *LI, const Loop *CurLoop) {
+  SmallVector<BasicBlock *, 16> Result;
+  SmallVector<DomTreeNode *, 16> DFS;
+  DFS.push_back(N);
+  while (!DFS.empty()) {
+    DomTreeNode *DTN = DFS.pop_back_val();
+    for (DomTreeNode *Child : DTN->children())
+      if (CurLoop->contains(Child->getBlock()))
+        DFS.push_back(Child);
+
     BasicBlock *BB = DTN->getBlock();
-    if (CurLoop->contains(BB))
-      Worklist.push_back(DTN->getBlock());
-  };
-
-  AddRegionToWorklist(N);
-
-  for (size_t I = 0; I < Worklist.size(); I++) {
-    for (DomTreeNode *Child : DT->getNode(Worklist[I])->children())
-      AddRegionToWorklist(Child);
+    // Filter blocks in subloops.
+    if (LI->getLoopFor(BB) == CurLoop)
+      Result.push_back(BB);
   }
 
-  return Worklist;
+  return Result;
 }
 
 bool llvm::isAlmostDeadIV(PHINode *PN, BasicBlock *LatchBlock, Value *Cond) {
