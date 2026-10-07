@@ -326,6 +326,9 @@ features cannot lower the translation-unit ABI level;
 
 ### Improvements to Clang's diagnostics
 
+- Fixed spurious `-Wimplicit-void-ptr-cast` warnings in C for parenthesized
+  null pointer macros such as `(NULL)`. (#GH171874)
+
 - `-Wfortify-source` now diagnoses when `strlcat`, `__builtin_strlcat`, `strlcpy`, or
   `__builtin_strlcpy` is called with a size argument larger than the destination buffer.
 
