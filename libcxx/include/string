@@ -3845,23 +3845,23 @@ _LIBCPP_HIDE_FROM_ABI constexpr _StringT __to_string_integral(_Tp __val) {
   return _StringT(__buf, __res.ptr);
 }
 
-[[__nodiscard__]] _LIBCPP_EXPORTED_FROM_ABI constexpr string to_string(int __val) {
-    return std::__to_string_integral<string>(__val);
+[[__nodiscard__]] _LIBCPP_HIDE_FROM_ABI constexpr string to_string(int __val) {
+  return std::__to_string_integral<string>(__val);
 }
-[[__nodiscard__]] _LIBCPP_EXPORTED_FROM_ABI string to_string(unsigned __val) {
-    return std::__to_string_integral<string>(__val);
+[[__nodiscard__]] _LIBCPP_HIDE_FROM_ABI constexpr string to_string(unsigned __val) {
+  return std::__to_string_integral<string>(__val);
 }
-[[__nodiscard__]] _LIBCPP_EXPORTED_FROM_ABI string to_string(long __val) {
-    return std::__to_string_integral<string>(__val);
+[[__nodiscard__]] _LIBCPP_HIDE_FROM_ABI constexpr string to_string(long __val) {
+  return std::__to_string_integral<string>(__val);
 }
-[[__nodiscard__]] _LIBCPP_EXPORTED_FROM_ABI string to_string(unsigned long __val) {
-    return std::__to_string_integral<string>(__val);
+[[__nodiscard__]] _LIBCPP_HIDE_FROM_ABI constexpr string to_string(unsigned long __val) {
+  return std::__to_string_integral<string>(__val);
 }
-[[__nodiscard__]] _LIBCPP_EXPORTED_FROM_ABI string to_string(long long __val) {
-    return std::__to_string_integral<string>(__val);
+[[__nodiscard__]] _LIBCPP_HIDE_FROM_ABI constexpr string to_string(long long __val) {
+  return std::__to_string_integral<string>(__val);
 }
-[[__nodiscard__]] _LIBCPP_EXPORTED_FROM_ABI string to_string(unsigned long long __val) {
-    return std::__to_string_integral<string>(__val);
+[[__nodiscard__]] _LIBCPP_HIDE_FROM_ABI constexpr string to_string(unsigned long long __val) {
+  return std::__to_string_integral<string>(__val);
 }
 # endif // _LIBCPP_STD_VER <= 23 || defined(_LIBCPP_BUILDING_LIBRARY)
 
@@ -3883,15 +3883,37 @@ stoull(const wstring& __str, size_t* __idx = nullptr, int __base = 10);
 [[__nodiscard__]] _LIBCPP_EXPORTED_FROM_ABI double stod(const wstring& __str, size_t* __idx = nullptr);
 [[__nodiscard__]] _LIBCPP_EXPORTED_FROM_ABI long double stold(const wstring& __str, size_t* __idx = nullptr);
 
+# if _LIBCPP_STD_VER <= 23 || defined(_LIBCPP_BUILDING_LIBRARY)
 [[__nodiscard__]] _LIBCPP_EXPORTED_FROM_ABI wstring to_wstring(int __val);
 [[__nodiscard__]] _LIBCPP_EXPORTED_FROM_ABI wstring to_wstring(unsigned __val);
 [[__nodiscard__]] _LIBCPP_EXPORTED_FROM_ABI wstring to_wstring(long __val);
 [[__nodiscard__]] _LIBCPP_EXPORTED_FROM_ABI wstring to_wstring(unsigned long __val);
 [[__nodiscard__]] _LIBCPP_EXPORTED_FROM_ABI wstring to_wstring(long long __val);
 [[__nodiscard__]] _LIBCPP_EXPORTED_FROM_ABI wstring to_wstring(unsigned long long __val);
+# else 
+[[__nodiscard__]] _LIBCPP_HIDE_FROM_ABI constexpr wstring to_wstring(int __val) {
+  return std::__to_string_integral<wstring>(__val);
+}
+[[__nodiscard__]] _LIBCPP_HIDE_FROM_ABI constexpr wstring to_wstring(unsigned __val) {
+  return std::__to_string_integral<wstring>(__val);
+}
+[[__nodiscard__]] _LIBCPP_HIDE_FROM_ABI constexpr wstring to_wstring(long __val) {
+  return std::__to_string_integral<wstring>(__val);
+}
+[[__nodiscard__]] _LIBCPP_HIDE_FROM_ABI constexpr wstring to_wstring(unsigned long __val) {
+  return std::__to_string_integral<wstring>(__val);
+}
+[[__nodiscard__]] _LIBCPP_HIDE_FROM_ABI constexpr wstring to_wstring(long long __val) {
+  return std::__to_string_integral<wstring>(__val);
+}
+[[__nodiscard__]] _LIBCPP_HIDE_FROM_ABI constexpr wstring to_wstring(unsigned long long __val) {
+  return std::__to_string_integral<wstring>(__val);
+}
+# endif // _LIBCPP_STD_VER <= 23 || defined(_LIBCPP_BUILDING_LIBRARY)
 [[__nodiscard__]] _LIBCPP_EXPORTED_FROM_ABI wstring to_wstring(float __val);
 [[__nodiscard__]] _LIBCPP_EXPORTED_FROM_ABI wstring to_wstring(double __val);
 [[__nodiscard__]] _LIBCPP_EXPORTED_FROM_ABI wstring to_wstring(long double __val);
+
 #  endif // _LIBCPP_HAS_WIDE_CHARACTERS
 
 template <class _CharT, class _Traits, class _Allocator>
