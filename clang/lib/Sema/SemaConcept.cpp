@@ -618,8 +618,7 @@ private:
       return E;
     }
 
-    // Only for concept-ids: satisfied ones are cached separately, since they
-    // don't need Details or a substituted expression.
+    // concept-ids have a separate "is satisfied" cache.
     bool knownSatisfied() {
       if (!Checker.S.SatisfiedConceptIdCache.contains(ID.getRef()))
         return false;
@@ -1154,6 +1153,9 @@ ExprResult ConstraintSatisfactionChecker::Evaluate(
   // so if the normalized constraint is satisfied, we should not
   // substitute into the constraint.
   if (Satisfaction.IsSatisfied) {
+    // This only caches the positive case because that's more common by ~2x,
+    // and because the positive case needs to store just one bit.
+    // (The negative case would also have to store expression and details list.)
     if (!BuildExpression && !Satisfaction.ContainsErrors)
       PMCache.cacheSatisfied();
     return E;
