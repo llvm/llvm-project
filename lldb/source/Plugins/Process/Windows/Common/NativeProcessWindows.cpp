@@ -27,6 +27,7 @@
 #include "lldb/Host/windows/PseudoConsole.h"
 #include "lldb/Target/MemoryRegionInfo.h"
 #include "lldb/Target/Process.h"
+#include "lldb/Target/UnixSignals.h"
 #include "lldb/Utility/State.h"
 #include "llvm/ADT/STLExtras.h"
 #include "llvm/ADT/StringRef.h"
@@ -689,7 +690,8 @@ NativeProcessWindows::HandleBreakpointException(const ExceptionRecord &record) {
     m_pending_halt = false;
     ThreadStopInfo signal_info;
     signal_info.reason = StopReason::eStopReasonSignal;
-    signal_info.signo = 19; // SIGSTOP on POSIX
+    signal_info.signo =
+        UnixSignals::CreateForHost()->GetSignalNumberFromName("SIGSTOP");
 
     // Halt all threads at the kernel level.
     {
