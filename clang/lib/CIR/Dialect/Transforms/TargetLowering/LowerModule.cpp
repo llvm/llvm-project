@@ -79,20 +79,39 @@ const TargetLoweringInfo &LowerModule::getTargetLoweringInfo() {
 }
 
 // TODO: not to create it every time
-std::unique_ptr<LowerModule> createLowerModule(mlir::ModuleOp module) {
+std::unique_ptr<LowerModule>
+createLowerModule(mlir::ModuleOp module,
+                  llvm::function_ref<mlir::InFlightDiagnostic()> emitDiag) {
   // If the triple is not present, e.g. CIR modules parsed from text, we
   // cannot init LowerModule properly.
   assert(!cir::MissingFeatures::makeTripleAlwaysPresent());
-  if (!module->hasAttr(cir::CIRDialect::getTripleAttrName()))
+  // TODO(triple) what this line do? ^^^
+  if (!module->hasAttr(cir::CIRDialect::getTripleAttrName())) {
+    if (emitDiag)
+      emitDiag() << "module is missing " << cir::CIRDialect::getTripleAttrName()
+                 << " attribute";
     return nullptr;
+  }
 
   // Fetch target information.
-  llvm::Triple triple(mlir::cast<mlir::StringAttr>(
-                          module->getAttr(cir::CIRDialect::getTripleAttrName()))
-                          .getValue());
+  auto tripleAttr = module->getAttrOfType<mlir::StringAttr>(
+      cir::CIRDialect::getTripleAttrName());
+  if (!tripleAttr) {
+    if (emitDiag)
+      emitDiag() << "expected module's " << cir::CIRDialect::getTripleAttrName()
+                 << " attribute to be a string";
+    return nullptr;
+  }
+  llvm::Triple triple(tripleAttr.getValue());
   clang::TargetOptions targetOptions;
   targetOptions.Triple = triple.str();
   auto targetInfo = clang::targets::AllocateTarget(triple, targetOptions);
+  if (!targetInfo) {
+    if (emitDiag)
+      emitDiag() << "unknown triple '" << tripleAttr.getValue() << "' in "
+                 << cir::CIRDialect::getTripleAttrName() << " attribute";
+    return nullptr;
+  }
 
   // Populate the lowering-relevant LangOptions from the module's
   // #cir.lowering_lang_options attribute so a reloaded .cir lowers the same
@@ -120,6 +139,7 @@ std::unique_ptr<LowerModule> createLowerModule(mlir::ModuleOp module) {
   assert(!cir::MissingFeatures::lowerModuleCodeGenOpts());
   clang::CodeGenOptions codeGenOpts;
 
+  // TODO(optinfo): this cast should be more secure?
   if (auto optInfo = mlir::cast_if_present<cir::OptInfoAttr>(
           module->getAttr(cir::CIRDialect::getOptInfoAttrName()))) {
     codeGenOpts.OptimizationLevel = optInfo.getLevel();
