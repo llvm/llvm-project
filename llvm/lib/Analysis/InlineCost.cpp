@@ -25,6 +25,7 @@
 #include "llvm/Analysis/InstructionSimplify.h"
 #include "llvm/Analysis/LoopInfo.h"
 #include "llvm/Analysis/MemoryBuiltins.h"
+#include "llvm/Analysis/MemorySSA.h"
 #include "llvm/Analysis/OptimizationRemarkEmitter.h"
 #include "llvm/Analysis/ProfileSummaryInfo.h"
 #include "llvm/Analysis/TargetLibraryInfo.h"
@@ -282,6 +283,9 @@ protected:
   /// Getter for the cache of ephemeral values.
   function_ref<EphemeralValuesCache &(Function &)> GetEphValuesCache = nullptr;
 
+  /// Callee MemorySSA
+  MemorySSA *CalleeMSSA;
+
   /// Extension points for handling callsite features.
   // Called before a basic block was analyzed.
   virtual void onBlockStart(const BasicBlock *BB) {}
@@ -431,7 +435,7 @@ protected:
   /// Whether we allow inlining for recursive call.
   bool AllowRecursiveCall = false;
 
-  SmallPtrSet<Value *, 16> LoadAddrSet;
+  SmallMapVector<Value *, MemoryAccess *, 16> LoadAddrSet;
 
   AllocaInst *getSROAArgForValueOrNull(Value *V) const {
     auto It = SROAArgValues.find(V);
@@ -532,10 +536,12 @@ public:
       ProfileSummaryInfo *PSI = nullptr,
       OptimizationRemarkEmitter *ORE = nullptr,
       function_ref<EphemeralValuesCache &(Function &)> GetEphValuesCache =
-          nullptr)
+          nullptr,
+      MemorySSA *CalleeMSSA = nullptr)
       : TTI(TTI), GetAssumptionCache(GetAssumptionCache), GetBFI(GetBFI),
         GetTLI(GetTLI), PSI(PSI), F(Callee), DL(F.getDataLayout()), ORE(ORE),
-        CandidateCall(Call), GetEphValuesCache(GetEphValuesCache) {}
+        CandidateCall(Call), GetEphValuesCache(GetEphValuesCache),
+        CalleeMSSA(CalleeMSSA) {}
 
   InlineResult analyze();
 
@@ -1208,9 +1214,10 @@ public:
       OptimizationRemarkEmitter *ORE = nullptr, bool BoostIndirect = true,
       bool IgnoreThreshold = false,
       function_ref<EphemeralValuesCache &(Function &)> GetEphValuesCache =
-          nullptr)
+          nullptr,
+      MemorySSA *CalleeMSSA = nullptr)
       : CallAnalyzer(Callee, Call, TTI, GetAssumptionCache, GetBFI, GetTLI, PSI,
-                     ORE, GetEphValuesCache),
+                     ORE, GetEphValuesCache, CalleeMSSA),
         ComputeFullInlineCost(OptComputeFullInlineCost ||
                               Params.ComputeFullInlineCost || ORE ||
                               isCostBenefitAnalysisEnabled()),
@@ -2347,10 +2354,17 @@ bool CallAnalyzer::visitLoad(LoadInst &I) {
   // If the data is already loaded from this address and hasn't been clobbered
   // by any stores or calls, this load is likely to be redundant and can be
   // eliminated.
-  if (EnableLoadElimination &&
-      !LoadAddrSet.insert(I.getPointerOperand()).second && I.isUnordered()) {
-    onLoadEliminationOpportunity();
-    return true;
+  if (EnableLoadElimination) {
+    auto *Opnd = I.getPointerOperand();
+    auto *ClobberedBy =
+        CalleeMSSA ? CalleeMSSA->getWalker()->getClobberingMemoryAccess(&I)
+                   : nullptr;
+    if (I.isUnordered() && LoadAddrSet.contains(Opnd) &&
+        LoadAddrSet.at(Opnd) == ClobberedBy) {
+      onLoadEliminationOpportunity();
+      return true;
+    }
+    LoadAddrSet[Opnd] = ClobberedBy;
   }
 
   onMemAccess();
@@ -2361,15 +2375,8 @@ bool CallAnalyzer::visitStore(StoreInst &I) {
   if (handleSROA(I.getPointerOperand(), I.isSimple()))
     return true;
 
-  // The store can potentially clobber loads and prevent repeated loads from
-  // being eliminated.
-  // FIXME:
-  // 1. We can probably keep an initial set of eliminatable loads substracted
-  // from the cost even when we finally see a store. We just need to disable
-  // *further* accumulation of elimination savings.
-  // 2. We should probably at some point thread MemorySSA for the callee into
-  // this and then use that to actually compute *really* precise savings.
-  disableLoadElimination();
+  if (!CalleeMSSA)
+    disableLoadElimination();
 
   onMemAccess();
   return false;
@@ -3141,10 +3148,11 @@ InlineCost llvm::getInlineCost(
     function_ref<const TargetLibraryInfo &(Function &)> GetTLI,
     function_ref<BlockFrequencyInfo &(Function &)> GetBFI,
     ProfileSummaryInfo *PSI, OptimizationRemarkEmitter *ORE,
-    function_ref<EphemeralValuesCache &(Function &)> GetEphValuesCache) {
+    function_ref<EphemeralValuesCache &(Function &)> GetEphValuesCache,
+    MemorySSA *CalleeMSSA) {
   return getInlineCost(Call, Call.getCalledFunction(), Params, CalleeTTI,
                        GetAssumptionCache, GetTLI, GetBFI, PSI, ORE,
-                       GetEphValuesCache);
+                       GetEphValuesCache, CalleeMSSA);
 }
 
 std::optional<int> llvm::getInliningCostEstimate(
@@ -3269,7 +3277,8 @@ InlineCost llvm::getInlineCost(
     function_ref<const TargetLibraryInfo &(Function &)> GetTLI,
     function_ref<BlockFrequencyInfo &(Function &)> GetBFI,
     ProfileSummaryInfo *PSI, OptimizationRemarkEmitter *ORE,
-    function_ref<EphemeralValuesCache &(Function &)> GetEphValuesCache) {
+    function_ref<EphemeralValuesCache &(Function &)> GetEphValuesCache,
+    MemorySSA *CalleeMSSA) {
 
   auto UserDecision =
       llvm::getAttributeBasedInliningDecision(Call, Callee, CalleeTTI, GetTLI);
@@ -3291,7 +3300,7 @@ InlineCost llvm::getInlineCost(
   InlineCostCallAnalyzer CA(*Callee, Call, Params, CalleeTTI,
                             GetAssumptionCache, GetBFI, GetTLI, PSI, ORE,
                             /*BoostIndirect=*/true, /*IgnoreThreshold=*/false,
-                            GetEphValuesCache);
+                            GetEphValuesCache, CalleeMSSA);
   InlineResult ShouldInline = CA.analyze();
 
   LLVM_DEBUG(CA.dump());
