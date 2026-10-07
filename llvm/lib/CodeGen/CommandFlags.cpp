@@ -431,7 +431,6 @@ codegen::RegisterCodeGenFlags::RegisterCodeGenFlags() {
       cl::init(false));
   CGBINDOPT(EnableDebugEntryValues);
 
-
   static cl::opt<bool> EnableStaticDataPartitioning(
       "partition-static-data-sections",
       cl::desc("Partition data sections using profile information."),
