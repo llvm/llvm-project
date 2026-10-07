@@ -2718,3 +2718,196 @@ define i8 @test_smin_and_multiuse(i8 %x, i8 %y) {
   %res = call i8 @llvm.smin.i8(i8 %x1, i8 %y1)
   ret i8 %res
 }
+
+
+; smax(smax(x << C0, x + C1), C2) --> smax(x << C0, C2)
+; when C1 <=s C2 * (2^C0 - 1) / 2^C0
+
+; C0=1, C1=1, C2=4: condition 1 <=s 4*(2-1)/2 = 2
+define i8 @smax_shl_add_basic(i8 %x) {
+; CHECK-LABEL: @smax_shl_add_basic(
+; CHECK-NEXT:    [[SHL:%.*]] = shl nsw i8 [[X:%.*]], 1
+; CHECK-NEXT:    [[MAX2:%.*]] = call i8 @llvm.smax.i8(i8 [[SHL]], i8 4)
+; CHECK-NEXT:    ret i8 [[MAX2]]
+;
+  %add  = add nsw i8 %x, 1
+  %shl  = shl nsw i8 %x, 1
+  %max1 = call i8 @llvm.smax.i8(i8 %shl, i8 %add)
+  %max2 = call i8 @llvm.smax.i8(i8 %max1, i8 4)
+  ret i8 %max2
+}
+
+; C0=1, C1=2, C2=4: condition: 2 <=s 4*(2-1)/2 = 2
+define i8 @smax_shl_add_boundary(i8 %x) {
+; CHECK-LABEL: @smax_shl_add_boundary(
+; CHECK-NEXT:    [[SHL:%.*]] = shl nsw i8 [[X:%.*]], 1
+; CHECK-NEXT:    [[MAX2:%.*]] = call i8 @llvm.smax.i8(i8 [[SHL]], i8 4)
+; CHECK-NEXT:    ret i8 [[MAX2]]
+;
+  %add  = add nsw i8 %x, 2
+  %shl  = shl nsw i8 %x, 1
+  %max1 = call i8 @llvm.smax.i8(i8 %shl, i8 %add)
+  %max2 = call i8 @llvm.smax.i8(i8 %max1, i8 4)
+  ret i8 %max2
+}
+
+; Commuted add operand
+; C0=2, C1=1, C2=8: condition: 1 <=s 8*(4-1)/4 = 6
+define i8 @smax_shl_add_commuted_const(i8 %x) {
+; CHECK-LABEL: @smax_shl_add_commuted_const(
+; CHECK-NEXT:    [[SHL:%.*]] = shl nsw i8 [[X:%.*]], 2
+; CHECK-NEXT:    [[MAX2:%.*]] = call i8 @llvm.smax.i8(i8 [[SHL]], i8 8)
+; CHECK-NEXT:    ret i8 [[MAX2]]
+;
+  %add  = add nsw i8 1, %x
+  %shl  = shl nsw i8 %x, 2
+  %max1 = call i8 @llvm.smax.i8(i8 %shl, i8 %add)
+  %max2 = call i8 @llvm.smax.i8(i8 %max1, i8 8)
+  ret i8 %max2
+}
+
+; Inner smax operands commuted
+; C0=2, C1=6, C2=8: condition: 6 <=s 8*(4-1)/4 = 6
+define i8 @smax_shl_add_commuted_inner(i8 %x) {
+; CHECK-LABEL: @smax_shl_add_commuted_inner(
+; CHECK-NEXT:    [[SHL:%.*]] = shl nsw i8 [[X:%.*]], 2
+; CHECK-NEXT:    [[MAX2:%.*]] = call i8 @llvm.smax.i8(i8 [[SHL]], i8 8)
+; CHECK-NEXT:    ret i8 [[MAX2]]
+;
+  %add  = add nsw i8 %x, 6
+  %shl  = shl nsw i8 %x, 2
+  %max1 = call i8 @llvm.smax.i8(i8 %add, i8 %shl)
+  %max2 = call i8 @llvm.smax.i8(i8 %max1, i8 8)
+  ret i8 %max2
+}
+
+; C0=1, C1=-3, C2=-4: condition: -3 <=s (-4)*(2-1)/2 = -2
+; (negative constant value)
+define i8 @smax_shl_add_neg_consts(i8 %x) {
+; CHECK-LABEL: @smax_shl_add_neg_consts(
+; CHECK-NEXT:    [[SHL:%.*]] = shl nsw i8 [[X:%.*]], 1
+; CHECK-NEXT:    [[MAX2:%.*]] = call i8 @llvm.smax.i8(i8 [[SHL]], i8 -4)
+; CHECK-NEXT:    ret i8 [[MAX2]]
+;
+  %add  = add nsw i8 %x, -3
+  %shl  = shl nsw i8 %x, 1
+  %max1 = call i8 @llvm.smax.i8(i8 %add, i8 %shl)
+  %max2 = call i8 @llvm.smax.i8(i8 %max1, i8 -4)
+  ret i8 %max2
+}
+
+; Negative test
+; C0=1, C1=3, C2=4: condition: 3 <=s 4*(2-1)/2 = 2
+define i8 @smax_shl_add_exceed_bound(i8 %x) {
+; CHECK-LABEL: @smax_shl_add_exceed_bound(
+; CHECK-NEXT:    [[ADD:%.*]] = add nsw i8 [[X:%.*]], 3
+; CHECK-NEXT:    [[SHL:%.*]] = shl nsw i8 [[X]], 1
+; CHECK-NEXT:    [[MAX1:%.*]] = call i8 @llvm.smax.i8(i8 [[SHL]], i8 [[ADD]])
+; CHECK-NEXT:    [[MAX2:%.*]] = call i8 @llvm.smax.i8(i8 [[MAX1]], i8 4)
+; CHECK-NEXT:    ret i8 [[MAX2]]
+;
+  %add  = add nsw i8 %x, 3
+  %shl  = shl nsw i8 %x, 1
+  %max1 = call i8 @llvm.smax.i8(i8 %shl, i8 %add)
+  %max2 = call i8 @llvm.smax.i8(i8 %max1, i8 4)
+  ret i8 %max2
+}
+
+; No NSW on add operation:
+define i8 @smax_shl_add_no_nsw_add(i8 %x) {
+; CHECK-LABEL: @smax_shl_add_no_nsw_add(
+; CHECK-NEXT:    [[ADD:%.*]] = add i8 [[X:%.*]], -127
+; CHECK-NEXT:    [[SHL:%.*]] = shl nsw i8 [[X]], 2
+; CHECK-NEXT:    [[MAX1:%.*]] = call i8 @llvm.smax.i8(i8 [[SHL]], i8 [[ADD]])
+; CHECK-NEXT:    [[MAX2:%.*]] = call i8 @llvm.smax.i8(i8 [[MAX1]], i8 0)
+; CHECK-NEXT:    ret i8 [[MAX2]]
+;
+  %add = add   i8 %x, -127
+  %shl = shl nsw i8 %x, 2
+  %max1 = call i8 @llvm.smax.i8(i8 %shl, i8 %add)
+  %max2 = call i8 @llvm.smax.i8(i8 %max1, i8 0)
+  ret i8 %max2
+}
+
+;No NSW on Shl Operand:
+define i8 @smax_shl_add_no_nsw_shl(i8 %x) {
+; CHECK-LABEL: @smax_shl_add_no_nsw_shl(
+; CHECK-NEXT:    [[ADD:%.*]] = add nsw i8 [[X:%.*]], 1
+; CHECK-NEXT:    [[SHL:%.*]] = shl i8 [[X]], 1
+; CHECK-NEXT:    [[MAX1:%.*]] = call i8 @llvm.smax.i8(i8 [[SHL]], i8 [[ADD]])
+; CHECK-NEXT:    [[MAX2:%.*]] = call i8 @llvm.smax.i8(i8 [[MAX1]], i8 10)
+; CHECK-NEXT:    ret i8 [[MAX2]]
+;
+  %add  = add nsw i8 %x, 1
+  %shl  = shl   i8 %x, 1
+  %max1 = call i8 @llvm.smax.i8(i8 %shl, i8 %add)
+  %max2 = call i8 @llvm.smax.i8(i8 %max1, i8 10)
+  ret i8 %max2
+
+}
+
+; umax instead of smax:
+define i8 @smax_shl_add_umax_no_fold(i8 %x) {
+; CHECK-LABEL: @smax_shl_add_umax_no_fold(
+; CHECK-NEXT:    [[ADD:%.*]] = add nsw i8 [[X:%.*]], 1
+; CHECK-NEXT:    [[SHL:%.*]] = shl nsw i8 [[X]], 1
+; CHECK-NEXT:    [[MAX1:%.*]] = call i8 @llvm.umax.i8(i8 [[SHL]], i8 [[ADD]])
+; CHECK-NEXT:    [[MAX2:%.*]] = call i8 @llvm.umax.i8(i8 [[MAX1]], i8 4)
+; CHECK-NEXT:    ret i8 [[MAX2]]
+;
+  %add  = add nsw i8 %x, 1
+  %shl  = shl nsw i8 %x, 1
+  %max1 = call i8 @llvm.umax.i8(i8 %shl, i8 %add)
+  %max2 = call i8 @llvm.umax.i8(i8 %max1, i8 4)
+  ret i8 %max2
+}
+
+; Inner smax has two uses:
+define i8 @smax_shl_add_inner_multi_use(i8 %x) {
+; CHECK-LABEL: @smax_shl_add_inner_multi_use(
+; CHECK-NEXT:    [[ADD:%.*]] = add nsw i8 [[X:%.*]], 1
+; CHECK-NEXT:    [[SHL:%.*]] = shl nsw i8 [[X]], 1
+; CHECK-NEXT:    [[MAX1:%.*]] = call i8 @llvm.smax.i8(i8 [[SHL]], i8 [[ADD]])
+; CHECK-NEXT:    call void @use(i8 [[MAX1]])
+; CHECK-NEXT:    [[MAX2:%.*]] = call i8 @llvm.smax.i8(i8 [[MAX1]], i8 4)
+; CHECK-NEXT:    ret i8 [[MAX2]]
+;
+  %add  = add nsw i8 %x, 1
+  %shl  = shl nsw i8 %x, 1
+  %max1 = call i8 @llvm.smax.i8(i8 %shl, i8 %add)
+  call void @use(i8 %max1)
+  %max2 = call i8 @llvm.smax.i8(i8 %max1, i8 4)
+  ret i8 %max2
+}
+
+; Vector Test-Positive on splat vectors
+define <3 x i8> @smax_shl_add_vec_splat(<3 x i8> %x) {
+; CHECK-LABEL: @smax_shl_add_vec_splat(
+; CHECK-NEXT:    [[SHL:%.*]] = shl nsw <3 x i8> [[X:%.*]], splat (i8 1)
+; CHECK-NEXT:    [[MAX2:%.*]] = call <3 x i8> @llvm.smax.v3i8(<3 x i8> [[SHL]], <3 x i8> splat (i8 4))
+; CHECK-NEXT:    ret <3 x i8> [[MAX2]]
+;
+  %add  = add nsw <3 x i8> %x, <i8 1, i8 1, i8 1>
+  %shl  = shl nsw <3 x i8> %x, <i8 1, i8 1, i8 1>
+  %max1 = call <3 x i8> @llvm.smax.v3i8(<3 x i8> %shl, <3 x i8> %add)
+  %max2 = call <3 x i8> @llvm.smax.v3i8(<3 x i8> %max1, <3 x i8> <i8 4, i8 4, i8 4>)
+  ret <3 x i8> %max2
+}
+
+; Non-splat vector:Negative test
+define <3 x i8> @smax_shl_add_vec_non_splat(<3 x i8> %x) {
+; CHECK-LABEL: @smax_shl_add_vec_non_splat(
+; CHECK-NEXT:    [[ADD:%.*]] = add nsw <3 x i8> [[X:%.*]], <i8 1, i8 2, i8 1>
+; CHECK-NEXT:    [[SHL:%.*]] = shl nsw <3 x i8> [[X]], splat (i8 1)
+; CHECK-NEXT:    [[MAX1:%.*]] = call <3 x i8> @llvm.smax.v3i8(<3 x i8> [[SHL]], <3 x i8> [[ADD]])
+; CHECK-NEXT:    [[MAX2:%.*]] = call <3 x i8> @llvm.smax.v3i8(<3 x i8> [[MAX1]], <3 x i8> <i8 4, i8 8, i8 4>)
+; CHECK-NEXT:    ret <3 x i8> [[MAX2]]
+;
+  %add  = add nsw <3 x i8> %x, <i8 1, i8 2, i8 1>
+  %shl  = shl nsw <3 x i8> %x, <i8 1, i8 1, i8 1>
+  %max1 = call <3 x i8> @llvm.smax.v3i8(<3 x i8> %shl, <3 x i8> %add)
+  %max2 = call <3 x i8> @llvm.smax.v3i8(<3 x i8> %max1, <3 x i8> <i8 4, i8 8, i8 4>)
+  ret <3 x i8> %max2
+}
+
+
