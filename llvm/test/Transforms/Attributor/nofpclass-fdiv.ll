@@ -1359,6 +1359,39 @@ define float @ret_fdiv_exact_negzero__mode_dynamic_dynamic(float nofpclass(nan i
   ret float %fdiv
 }
 
+; -inf / +normal is always -inf. The normal and subnormal rule-outs leave no
+; subnormal result behind, so nothing can flush to +0.0 under FTPZ.
+
+define float @ret_fdiv_neginf_posnormal__mode_ieee_ieee(float nofpclass(nan pinf zero sub norm) %lhs, float nofpclass(nan inf zero sub nnorm) %rhs) #0 {
+; CHECK-LABEL: define nofpclass(nan pinf pzero sub norm) float @ret_fdiv_neginf_posnormal__mode_ieee_ieee
+; CHECK-SAME: (float nofpclass(nan pinf zero sub norm) [[LHS:%.*]], float nofpclass(nan inf zero sub nnorm) [[RHS:%.*]]) #[[ATTR0]] {
+; CHECK-NEXT:    [[FDIV:%.*]] = fdiv float [[LHS]], [[RHS]]
+; CHECK-NEXT:    ret float [[FDIV]]
+;
+  %fdiv = fdiv float %lhs, %rhs
+  ret float %fdiv
+}
+
+define float @ret_fdiv_neginf_posnormal__mode_ftpz_dapz(float nofpclass(nan pinf zero sub norm) %lhs, float nofpclass(nan inf zero sub nnorm) %rhs) #4 {
+; CHECK-LABEL: define nofpclass(nan pinf pzero sub norm) float @ret_fdiv_neginf_posnormal__mode_ftpz_dapz
+; CHECK-SAME: (float nofpclass(nan pinf zero sub norm) [[LHS:%.*]], float nofpclass(nan inf zero sub nnorm) [[RHS:%.*]]) #[[ATTR5]] {
+; CHECK-NEXT:    [[FDIV:%.*]] = fdiv float [[LHS]], [[RHS]]
+; CHECK-NEXT:    ret float [[FDIV]]
+;
+  %fdiv = fdiv float %lhs, %rhs
+  ret float %fdiv
+}
+
+define float @ret_fdiv_neginf_posnormal__mode_dynamic_dynamic(float nofpclass(nan pinf zero sub norm) %lhs, float nofpclass(nan inf zero sub nnorm) %rhs) #5 {
+; CHECK-LABEL: define nofpclass(nan pinf pzero sub norm) float @ret_fdiv_neginf_posnormal__mode_dynamic_dynamic
+; CHECK-SAME: (float nofpclass(nan pinf zero sub norm) [[LHS:%.*]], float nofpclass(nan inf zero sub nnorm) [[RHS:%.*]]) #[[ATTR6]] {
+; CHECK-NEXT:    [[FDIV:%.*]] = fdiv float [[LHS]], [[RHS]]
+; CHECK-NEXT:    ret float [[FDIV]]
+;
+  %fdiv = fdiv float %lhs, %rhs
+  ret float %fdiv
+}
+
 attributes #0 = { denormal_fpenv(ieee|ieee) }
 attributes #1 = { denormal_fpenv(ieee|preservesign) }
 attributes #2 = { denormal_fpenv(ieee|positivezero) }
