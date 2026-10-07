@@ -27,6 +27,16 @@
 // RUN: %clang_cc1 -triple x86_64-unknown-linux-gnu -std=c++20 -fclangir -emit-cir %t/c.cppm -o - | FileCheck %t/c.cppm --check-prefix=CIR --implicit-check-not=__in_chrg --implicit-check-not=cir.call
 // RUN: %clang_cc1 -triple x86_64-unknown-linux-gnu -std=c++20 -fclangir -emit-llvm %t/c.cppm -o - | FileCheck %t/c.cppm --check-prefix=LLVM --implicit-check-not=__in_chrg --implicit-check-not=call
 // RUN: %clang_cc1 -triple x86_64-unknown-linux-gnu -std=c++20 -emit-llvm %t/c.cppm -o - | FileCheck %t/c.cppm --check-prefix=LLVM --implicit-check-not=__in_chrg --implicit-check-not=call
+//
+// init_priority: an importing unit calls the imported initializers from its
+// first prioritized function; an interface unit folds its prioritized
+// initializers into its own initializer, behind the guard.
+// RUN: %clang_cc1 -triple x86_64-unknown-linux-gnu -std=c++20 -fclangir -fmodule-file=a=%t/a.pcm -emit-cir %t/named-module-priority.cpp -o - | FileCheck %t/named-module-priority.cpp --check-prefix=CIR
+// RUN: %clang_cc1 -triple x86_64-unknown-linux-gnu -std=c++20 -fclangir -fmodule-file=a=%t/a.pcm -emit-llvm %t/named-module-priority.cpp -o - | FileCheck %t/named-module-priority.cpp --check-prefix=LLVM
+// RUN: %clang_cc1 -triple x86_64-unknown-linux-gnu -std=c++20 -fmodule-file=a=%t/a.pcm -emit-llvm %t/named-module-priority.cpp -o - | FileCheck %t/named-module-priority.cpp --check-prefix=LLVM
+// RUN: %clang_cc1 -triple x86_64-unknown-linux-gnu -std=c++20 -fclangir -fmodule-file=a=%t/a.pcm -emit-cir %t/d.cppm -o - | FileCheck %t/d.cppm --check-prefix=CIR --implicit-check-not=_GLOBAL__I_
+// RUN: %clang_cc1 -triple x86_64-unknown-linux-gnu -std=c++20 -fclangir -fmodule-file=a=%t/a.pcm -emit-llvm %t/d.cppm -o - | FileCheck %t/d.cppm --check-prefix=LLVM --implicit-check-not=_GLOBAL__I_
+// RUN: %clang_cc1 -triple x86_64-unknown-linux-gnu -std=c++20 -fmodule-file=a=%t/a.pcm -emit-llvm %t/d.cppm -o - | FileCheck %t/d.cppm --check-prefix=LLVM --implicit-check-not=_GLOBAL__I_
 
 //--- module.modulemap
 module A {
@@ -167,3 +177,54 @@ export int c_func();
 // LLVM: @llvm.global_ctors = appending global [1 x { i32, ptr, ptr }] [{ i32, ptr, ptr } { i32 65535, ptr @_ZGIW1c, ptr null }]
 // LLVM: define void @_ZGIW1c()
 // LLVM:   ret void
+
+//--- named-module-priority.cpp
+import a;
+struct S { S(); };
+int side_effect();
+[[gnu::init_priority(200)]] S p;
+int q = side_effect();
+
+// The imported module's initializer runs from the first prioritized function,
+// before that priority's own initializers; the default-priority function keeps
+// the rest.
+// CIR: cir.global_ctors = [#cir.global_ctor<"_GLOBAL__I_000200", 200>, #cir.global_ctor<"_GLOBAL__sub_I_named_module_priority.cpp", 65535>]
+// CIR: cir.func internal private @_GLOBAL__I_000200()
+// CIR-NEXT:   cir.call @_ZGIW1a()
+// CIR-NEXT:   cir.call @__cxx_global_var_init()
+// CIR-NEXT:   cir.return
+// CIR: cir.func internal private @_GLOBAL__sub_I_named_module_priority.cpp()
+// CIR-NEXT:   cir.call @__cxx_global_var_init.1()
+// CIR-NEXT:   cir.return
+
+// LLVM: @llvm.global_ctors = appending global [2 x { i32, ptr, ptr }] [{ i32, ptr, ptr } { i32 200, ptr @_GLOBAL__I_000200, ptr null }, { i32, ptr, ptr } { i32 65535, ptr @_GLOBAL__sub_I_named_module_priority.cpp, ptr null }]
+// LLVM: define internal void @_GLOBAL__I_000200()
+// LLVM:   call void @_ZGIW1a()
+// LLVM-NEXT:   call void @__cxx_global_var_init()
+// LLVM: define internal void @_GLOBAL__sub_I_named_module_priority.cpp()
+// LLVM:   call void @__cxx_global_var_init.1()
+
+//--- d.cppm
+export module d;
+import a;
+struct S { S(); };
+int side_effect();
+[[gnu::init_priority(200)]] S p;
+int q = side_effect();
+
+// An interface unit folds its prioritized initializers into its own
+// initializer, after the imported modules' and behind the guard.
+// CIR: cir.global_ctors = [#cir.global_ctor<"_ZGIW1d", 65535>]
+// CIR: cir.func private @_ZGIW1d()
+// CIR:   cir.if
+// CIR:     cir.store
+// CIR-NEXT:     cir.call @_ZGIW1a()
+// CIR-NEXT:     cir.call @__cxx_global_var_init()
+// CIR-NEXT:     cir.call @__cxx_global_var_init.1()
+
+// LLVM: @llvm.global_ctors = appending global [1 x { i32, ptr, ptr }] [{ i32, ptr, ptr } { i32 65535, ptr @_ZGIW1d, ptr null }]
+// LLVM: define void @_ZGIW1d()
+// LLVM:   store i8 1, ptr @_ZGIW1d__in_chrg
+// LLVM-NEXT:   call void @_ZGIW1a()
+// LLVM-NEXT:   call void @__cxx_global_var_init()
+// LLVM-NEXT:   call void @__cxx_global_var_init.1()

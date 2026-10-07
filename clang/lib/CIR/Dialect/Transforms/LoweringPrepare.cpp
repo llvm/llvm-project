@@ -164,8 +164,11 @@ struct LoweringPreparePass
   void buildCXXGlobalInitFunc();
   /// Build one `_GLOBAL__I_<priority>` function per distinct priority found
   /// in `prioritizedDynamicInitializers`, in ascending priority order, and
-  /// register each with `globalCtorList`.
-  void buildCXXGlobalPriorityInitFuncs();
+  /// register each with `globalCtorList`. The first of them, the highest
+  /// priority, calls `importedInits` before its own initializers and takes
+  /// them out of the vector, as classic CodeGen does.
+  void buildCXXGlobalPriorityInitFuncs(
+      llvm::SmallVectorImpl<cir::FuncOp> &importedInits);
   // Build an init function for all of the ordered global thread local storage
   // variables.
   void buildCXXGlobalTlsFunc();
@@ -2244,7 +2247,8 @@ cir::FuncOp LoweringPreparePass::buildGlobalInitCallerFunc(
   return fn;
 }
 
-void LoweringPreparePass::buildCXXGlobalPriorityInitFuncs() {
+void LoweringPreparePass::buildCXXGlobalPriorityInitFuncs(
+    llvm::SmallVectorImpl<cir::FuncOp> &importedInits) {
   // std::map keeps priorities in ascending order, so each group is already
   // ready to emit into its own function, named after its priority so that
   // the functions are naturally ordered relative to one another.
@@ -2253,26 +2257,16 @@ void LoweringPreparePass::buildCXXGlobalPriorityInitFuncs() {
     fnName += "_GLOBAL__I_";
     fnName += getPrioritySuffix(priority);
 
+    llvm::SmallVector<cir::FuncOp> calls(importedInits.begin(),
+                                         importedInits.end());
+    calls.append(initializers.begin(), initializers.end());
+    importedInits.clear();
     buildGlobalInitCallerFunc(fnName, cir::GlobalLinkageKind::InternalLinkage,
-                              initializers, priority);
+                              calls, priority);
   }
 }
 
 void LoweringPreparePass::buildCXXGlobalInitFunc() {
-  buildCXXGlobalPriorityInitFuncs();
-
-  auto moduleInitFnName = mlirModule->getAttrOfType<mlir::StringAttr>(
-      cir::CIRDialect::getCXXModuleInitFnNameAttrName());
-  auto importedInits = mlirModule->getAttrOfType<mlir::ArrayAttr>(
-      cir::CIRDialect::getCXXModuleImportedInitsAttrName());
-
-  // As in classic CodeGen, a C++20 named-module interface unit gets its
-  // initializer function even with nothing to run, since importing
-  // translation units may call it; any other translation unit gets one only
-  // when there is something to call.
-  if (dynamicInitializers.empty() && !importedInits && !moduleInitFnName)
-    return;
-
   CIRBaseBuilderTy builder(getContext());
   builder.setInsertionPointToEnd(&mlirModule.getBodyRegion().back());
   mlir::Location loc = mlirModule.getLoc();
@@ -2280,33 +2274,37 @@ void LoweringPreparePass::buildCXXGlobalInitFunc() {
   // The initializers of the imported C++20 named modules, recorded by CIRGen
   // as the mangled names of functions this translation unit declares and
   // calls before its own initializers.
-  llvm::SmallVector<cir::FuncOp> initializers;
-  if (importedInits)
-    for (mlir::Attribute name : importedInits)
-      initializers.push_back(
+  llvm::SmallVector<cir::FuncOp> importedInits;
+  if (auto names = mlirModule->getAttrOfType<mlir::ArrayAttr>(
+          cir::CIRDialect::getCXXModuleImportedInitsAttrName()))
+    for (mlir::Attribute name : names)
+      importedInits.push_back(
           buildRuntimeFunction(builder, cast<mlir::StringAttr>(name).getValue(),
                                loc, builder.getVoidFnTy()));
-  initializers.append(dynamicInitializers.begin(), dynamicInitializers.end());
 
-  SmallString<256> fnName;
-  cir::GlobalLinkageKind linkage;
-  cir::GlobalOp guard;
-  // Include the filename in the symbol name. Including "sub_" matches gcc
-  // and makes sure these symbols appear lexicographically behind the symbols
-  // with priority (TBD).  Module implementation units behave the same
-  // way as a non-modular TU with imports.
   // The C++20 named-module init function name is precomputed by CIRGen and
   // stored as a module-level attribute.  Its presence is what marks this
   // module as a named-module interface unit, so the name and the external
   // linkage that goes with it both come from the attribute and this pass needs
   // no live ASTContext.  Modules built directly from textual CIR can opt in to
   // the module-init form by setting the same attribute.
-  if (moduleInitFnName) {
-    fnName += moduleInitFnName.getValue();
-    linkage = cir::GlobalLinkageKind::ExternalLinkage;
-    // The global ctor entry and every importing translation unit call this
-    // function, so a guard byte makes the initializers run once. There is
-    // none when there is nothing to run.
+  if (auto moduleInitFnName = mlirModule->getAttrOfType<mlir::StringAttr>(
+          cir::CIRDialect::getCXXModuleInitFnNameAttrName())) {
+    // As in classic CodeGen's EmitCXXModuleInitFunc, an interface unit gets
+    // one initializer function, even with nothing to run, since importing
+    // translation units may call it. It runs the imported modules'
+    // initializers, then the unit's own in priority order, which get no
+    // `_GLOBAL__I_<priority>` function of their own. The global ctor entry
+    // and every importing translation unit call it, so a guard byte makes
+    // the initializers run once; there is none when there is nothing to run.
+    llvm::SmallVector<cir::FuncOp> initializers(importedInits.begin(),
+                                                importedInits.end());
+    for (const auto &[priority, inits] : prioritizedDynamicInitializers)
+      initializers.append(inits.begin(), inits.end());
+    initializers.append(dynamicInitializers.begin(), dynamicInitializers.end());
+
+    llvm::StringRef fnName = moduleInitFnName.getValue();
+    cir::GlobalOp guard;
     if (!initializers.empty()) {
       cir::IntType guardTy = builder.getSIntNTy(8);
       guard =
@@ -2315,14 +2313,34 @@ void LoweringPreparePass::buildCXXGlobalInitFunc() {
       guard.setAlignment(clang::CharUnits::One().getAsAlign().value());
       guard.setInitialValueAttr(cir::IntAttr::get(guardTy, 0));
     }
-  } else {
-    fnName += "_GLOBAL__sub_I_";
-    fnName += getTransformedFileName(mlirModule);
-    linkage = cir::GlobalLinkageKind::InternalLinkage;
+    buildGlobalInitCallerFunc(fnName, cir::GlobalLinkageKind::ExternalLinkage,
+                              initializers,
+                              cir::GlobalCtorAttr::getDefaultPriority(), guard);
+    return;
   }
 
-  buildGlobalInitCallerFunc(fnName, linkage, initializers,
-                            cir::GlobalCtorAttr::getDefaultPriority(), guard);
+  // Any other translation unit, as in classic CodeGen's
+  // EmitCXXGlobalInitFunc: one function per priority, the imported modules'
+  // initializers in front of the first, then the default-priority function
+  // for the rest, only when there is something left to call.
+  buildCXXGlobalPriorityInitFuncs(importedInits);
+  if (importedInits.empty() && dynamicInitializers.empty())
+    return;
+
+  llvm::SmallVector<cir::FuncOp> initializers(importedInits.begin(),
+                                              importedInits.end());
+  initializers.append(dynamicInitializers.begin(), dynamicInitializers.end());
+
+  // Include the filename in the symbol name. Including "sub_" matches gcc
+  // and makes sure these symbols appear lexicographically behind the symbols
+  // with priority (TBD).  Module implementation units behave the same
+  // way as a non-modular TU with imports.
+  SmallString<256> fnName;
+  fnName += "_GLOBAL__sub_I_";
+  fnName += getTransformedFileName(mlirModule);
+  buildGlobalInitCallerFunc(fnName, cir::GlobalLinkageKind::InternalLinkage,
+                            initializers,
+                            cir::GlobalCtorAttr::getDefaultPriority());
 }
 
 /// Lower a cir.array.ctor or cir.array.dtor into a do-while loop that
