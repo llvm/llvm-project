@@ -26,9 +26,7 @@ include "mlir/IR/BytecodeBase.td"
 
 class Attr<string type> : WithType<type, Attribute>;
 
-// Read a generic type into a narrowed C++ handle. The reader's templated
-// readType does the dyn_cast and fails cleanly on a mismatch, so this stays
-// safe against a malformed or cross-version file.
+// The reader's templated readType dyn_casts and fails cleanly on mismatch.
 class Ty<string type> : WithType<type, Type>;
 
 class OptionalAttribute<string type> :
@@ -36,42 +34,31 @@ class OptionalAttribute<string type> :
   WithPrinter<"$_writer.writeOptionalAttribute($_getter)",
   WithType<type, Attribute>>>;
 
-// For a parameter declared OptionalParameter<"std::optional<...>">, where the
-// C++ type is an optional rather than a nullable attribute, so "absent" needs
-// a flag of its own. The helpers live in CIRDialectBytecode.cpp.
+// For a parameter declared std::optional<...> rather than nullable: absent
+// needs a flag of its own.
 class OptionalInt<string type> :
   WithParser <"succeeded(readOptionalInt($_reader, $_var))",
   WithBuilder<"$_args",
   WithPrinter<"writeOptionalInt($_writer, $_getter)",
   WithType   <"std::optional<" # type # ">">>>>;
 
-// Named for the C++ spelling, not the concept, because the difference from
-// OptionalAttribute above is exactly the C++ spelling and nothing else:
-// OptionalAttribute is for a parameter that is a nullable attribute, this is
-// for one declared std::optional<...>. The two share the same wire format, so
-// at a glance nothing but the name says which a given parameter needs.
+// OptionalAttribute for a parameter declared std::optional<...>. Same wire
+// format, different C++ spelling.
 class StdOptionalAttribute<string type> :
   WithParser <"succeeded(readStdOptionalAttribute($_reader, $_var))",
   WithBuilder<"$_args",
   WithPrinter<"writeStdOptionalAttribute($_writer, $_getter)",
   WithType   <"std::optional<" # type # ">">>>>;
 
-// A scoped enum read from an untrusted varint. The value is validated with
-// the enum's symbolizer; an out-of-range value fails the read with a
-// diagnostic instead of casting into undefined behavior.
-def CtorKindParam :
-  WithParser<"succeeded(readEnum($_reader, $_var, cir::symbolizeCtorKind, \"CtorKind\"))",
+// A scoped enum as a validated varint; see readEnum.
+class EnumParam<string name> :
+  WithParser<"succeeded(readEnum($_reader, $_var, cir::symbolize" # name # ", \"" # name # "\"))",
   WithPrinter<"$_writer.writeVarInt(static_cast<uint64_t>($_getter))",
-  WithType<"cir::CtorKind">>>;
+  WithType<"cir::" # name>>>;
 
-def AssignKindParam :
-  WithParser<"succeeded(readEnum($_reader, $_var, cir::symbolizeAssignKind, \"AssignKind\"))",
-  WithPrinter<"$_writer.writeVarInt(static_cast<uint64_t>($_getter))",
-  WithType<"cir::AssignKind">>>;
+def CtorKindParam : EnumParam<"CtorKind">;
+def AssignKindParam : EnumParam<"AssignKind">;
 
-// A varint on the wire narrowed to a fixed-width integer. The bound is checked
-// on read; a file carrying a value the parameter cannot hold fails instead of
-// truncating into a plausible count or index.
 def CheckedInt :
   WithParser<"succeeded(readCheckedInt($_reader, $_var))",
   WithPrinter<"$_writer.writeSignedVarInt($_getter)",
@@ -87,49 +74,27 @@ def CheckedUnsigned :
   WithPrinter<"$_writer.writeVarInt($_getter)",
   WithType<"unsigned">>>;
 
-//===----------------------------------------------------------------------===//
-// OptInfoAttr
-//===----------------------------------------------------------------------===//
-
 def OptInfoAttr : DialectAttribute<(attr
   CheckedUnsigned:$level,
   CheckedUnsigned:$size
 )>;
 
-//===----------------------------------------------------------------------===//
-// AddressPointAttr
-//
-// index and offset are int32_t and an address point legitimately carries a
-// negative offset, so these are signed.
-//===----------------------------------------------------------------------===//
-
+// Negative offsets are legitimate.
 def AddressPointAttr : DialectAttribute<(attr
   CheckedInt32:$index,
   CheckedInt32:$offset
 )>;
-
-//===----------------------------------------------------------------------===//
-// OpenCLVersionAttr
-//===----------------------------------------------------------------------===//
 
 def OpenCLVersionAttr : DialectAttribute<(attr
   CheckedInt32:$major,
   CheckedInt32:$minor
 )>;
 
-//===----------------------------------------------------------------------===//
-// BlockAddrInfoAttr
-//===----------------------------------------------------------------------===//
-
 def BlockAddrInfoAttr : DialectAttribute<(attr
   Ty<"cir::PointerType">:$type,
   Attr<"mlir::FlatSymbolRefAttr">:$func,
   Attr<"mlir::StringAttr">:$label
 )>;
-
-//===----------------------------------------------------------------------===//
-// BitfieldInfoAttr
-//===----------------------------------------------------------------------===//
 
 def BitfieldInfoAttr : DialectAttribute<(attr
   Attr<"mlir::StringAttr">:$name,
@@ -143,13 +108,11 @@ def BitfieldInfoAttr : DialectAttribute<(attr
 // Constants
 //===----------------------------------------------------------------------===//
 //
-// These are the entries that pay for themselves. Every literal in a function
-// body is an IntAttr, an FPAttr or a BoolAttr, so under the assembly fallback
-// each one costs its full printed form ("#cir.int<42> : !s32i") while the
-// native encoding costs a type reference plus the payload's own width.
+// Every literal in a function body is one of these, so each fallback
+// occurrence costs its full printed form.
 
-// The value's width is implied by the type, so it is not stored twice; the
-// helpers below recover it. This mirrors builtin's IntegerAttr / FloatAttr.
+// The payload width is implied by the type and not stored twice, mirroring
+// builtin's IntegerAttr / FloatAttr.
 def IntAttr : DialectAttribute<(attr
   Type:$type,
   KnownWidthAPInt<"type">:$value
@@ -164,8 +127,7 @@ def FPAttr : DialectAttribute<(attr
   let cBuilder = "get<$_resultType>(context, mlir::cast<cir::FPTypeInterface>(type), *value)";
 }
 
-// cir::BoolType is a singleton, so the self type carries no information and is
-// rebuilt on read rather than stored.
+// BoolType is a singleton, so the type is rebuilt on read rather than stored.
 def BoolAttr : DialectAttribute<(attr
   Bool:$value
 )> {
@@ -181,8 +143,7 @@ def ConstPtrAttr : DialectAttribute<(attr
 // Parameterless marker attributes
 //===----------------------------------------------------------------------===//
 //
-// No payload at all: the entry exists so the attribute costs a kind index
-// instead of its printed mnemonic.
+// No payload: each costs a kind index instead of its mnemonic.
 
 def CatchAllAttr : DialectAttribute<(attr)>;
 def UnwindAttr : DialectAttribute<(attr)>;
@@ -191,10 +152,8 @@ def UnwindAttr : DialectAttribute<(attr)>;
 // Constant initializers
 //===----------------------------------------------------------------------===//
 //
-// These carry a self type, and under the fallback each *occurrence* embeds
-// that type's whole printed form, so a zero-initialized aggregate costs the
-// full type text at every use. Encoding them natively writes a reference
-// into the bytecode type table instead.
+// Each occurrence embeds its self type's full printed form; encoded, it
+// writes a type-table reference instead.
 
 def ZeroAttr : DialectAttribute<(attr
   Type:$type
@@ -212,18 +171,14 @@ def ConstArrayAttr : DialectAttribute<(attr
   Type:$type,
   Attribute:$elts,
   CheckedInt:$trailingZerosNum
-)> {
-  let cBuilder = "getChecked<$_resultType>([&]() { return reader.emitError(); }, context, type, elts, trailingZerosNum)";
-}
+)>;
 
 def ConstRecordAttr : DialectAttribute<(attr
   Type:$type,
   Attr<"mlir::ArrayAttr">:$members
 )>;
 
-// The C++ special-member attributes on cir.func. Each is small, a type and a
-// flag, but its type is the aggregate the member belongs to, and while these
-// fell back the printed form dragged that type in fully expanded.
+// Each carries the aggregate type, which the fallback prints fully expanded.
 def CXXCtorAttr : DialectAttribute<(attr
   Type:$type,
   CtorKindParam:$ctorKind,
@@ -253,10 +208,7 @@ def BlockAddrDiffAttr : DialectAttribute<(attr
   Attr<"mlir::StringAttr">:$rhs_label
 )>;
 
-// The rest of the type-carrying attributes. A container that nests other
-// attributes only pays off once those are encoded too: the container would
-// otherwise write its operands as nested attributes, each of which drops
-// straight back to the fallback and prints its own self type in full.
+// Containers only pay off once their nested attributes are encoded too.
 def GlobalViewAttr : DialectAttribute<(attr
   Type:$type,
   Attr<"mlir::FlatSymbolRefAttr">:$symbol,
@@ -290,13 +242,7 @@ def ConstComplexAttr : DialectAttribute<(attr
 def DataMemberAttr : DialectAttribute<(attr
   Ty<"cir::DataMemberType">:$type,
   OptionalAttribute<"mlir::DenseI32ArrayAttr">:$member_path
-)> {
-  // Not the default builder: that one resolves to the ArrayRef<int32_t>
-  // overload through DenseI32ArrayAttr's implicit conversion, which
-  // dereferences a null attribute for a null pointer-to-member. The context
-  // form takes the attribute as-is.
-  let cBuilder = "cir::DataMemberAttr::getChecked([&]() { return reader.emitError(); }, context, type, member_path)";
-}
+)>;
 
 def MethodAttr : DialectAttribute<(attr
   Ty<"cir::MethodType">:$type,

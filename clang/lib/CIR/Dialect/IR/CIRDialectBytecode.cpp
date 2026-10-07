@@ -24,25 +24,18 @@ using namespace cir;
 
 namespace {
 
-// Both namespaces opened above declare a BoolAttr, and the generated readers
-// and writers name attributes unqualified. A using-declaration at global scope
-// would not help: it merges with the names the using-directives inject there
-// and stays ambiguous, so it has to live in this inner namespace, where it
-// hides them.
+// Both namespaces declare a BoolAttr, named unqualified below. This must live
+// in the inner namespace: at global scope it merges with the using-directives
+// and stays ambiguous.
 using cir::BoolAttr;
 
 //===--------------------------------------------------------------------===//
 // Helpers referenced by the generated readers
 //===--------------------------------------------------------------------===//
 
-// IntAttr and FPAttr do not store their payload's width: it is already implied
-// by the attribute's type, so storing it again would be redundant and would
-// give a malformed file two disagreeing sources of truth. These recover the
-// width from the type, mirroring the same helpers in BuiltinDialectBytecode.
-//
-// Both fail rather than assert on a type that is not the expected interface: a
-// bytecode file is untrusted input, and the type here was read from that same
-// file, so a mismatch is a corrupt-input case and not a bug.
+// The payload width is implied by the type (mirroring BuiltinDialectBytecode)
+// and recovered here. A mismatched type fails rather than asserts: it came
+// from the same untrusted file, so it is a corrupt-input case.
 
 static LogicalResult readAPIntWithKnownWidth(DialectBytecodeReader &reader,
                                              Type type, FailureOr<APInt> &val) {
@@ -66,21 +59,9 @@ readAPFloatWithKnownSemantics(DialectBytecodeReader &reader, Type type,
   return success(succeeded(val));
 }
 
-// An optional parameter spelled std::optional<T> rather than as a null-valued
-// attribute needs its own presence flag. A null Attribute already means
-// "absent", which is why OptionalAttribute in the .td needs none of this, but
-// there is no null unsigned.
-//
-// writeVarIntWithFlag packs the flag into the varint's low bit, so an absent
-// value costs one byte. These mirror the LLVM dialect's helpers of the same
-// names (LLVMDialectBytecode.cpp).
-
-// Unsigned only, and deliberately narrower than the LLVM dialect's version.
-// writeVarIntWithFlag packs the presence bit into the low bit, i.e. it shifts
-// the value left by one, so the channel is 63 bits and a negative EntryTy,
-// which becomes a uint64_t with the top bit set, cannot round-trip at all.
-// Rejecting signed types here beats discovering that at the first caller that
-// has one.
+// std::optional<T> parameters need their own presence flag, carried in the
+// varint's low bit. The channel is therefore 63 bits and unsigned-only.
+// Deliberately narrower than the LLVM dialect's version.
 template <typename EntryTy>
 static LogicalResult readOptionalInt(DialectBytecodeReader &reader,
                                      std::optional<EntryTy> &storage) {
@@ -96,11 +77,7 @@ static LogicalResult readOptionalInt(DialectBytecodeReader &reader,
     storage = std::nullopt;
     return success();
   }
-  // A file written by another version, or a corrupt one, can carry a value
-  // this parameter cannot hold. Truncating it would turn that into a plausible
-  // member index or byte offset; failing the read is what the width-sensitive
-  // readers above (readAPIntWithKnownWidth, readAPFloatWithKnownSemantics) do,
-  // and it is what the caller can actually act on.
+  // Out-of-range values fail rather than truncating into a plausible index.
   if (value > static_cast<uint64_t>(std::numeric_limits<EntryTy>::max()))
     return reader.emitError() << "optional integer value " << value
                               << " does not fit in destination type";
@@ -115,18 +92,13 @@ static void writeOptionalInt(DialectBytecodeWriter &writer,
                 "EntryTy must be unsigned: writeVarIntWithFlag spends the low "
                 "bit on the presence flag, so a negative value cannot be "
                 "represented");
-  // The channel is only 63 bits: values at or above 2^63 would lose the top
-  // bit on the wire. No caller has one, and this is where that stops being
-  // true loudly instead of silently.
+  // Values at or above 2^63 would lose the top bit on the wire.
   assert(!storage || *storage < (uint64_t(1) << 63));
   writer.writeVarIntWithFlag(storage.value_or(0), storage.has_value());
 }
 
-// The same, for a parameter that is an attribute but is still spelled
-// std::optional<> (cir.method's symbol). An engaged optional holding a null
-// attribute is not a valid state: it normalizes to std::nullopt on the wire,
-// and the read side only ever produces an engaged optional holding a
-// non-null attribute, or std::nullopt.
+// std::optional<Attr> form (cir.method's symbol). A null attribute is not a
+// valid state and normalizes to std::nullopt on the wire.
 
 template <typename AttrTy>
 static LogicalResult readStdOptionalAttribute(DialectBytecodeReader &reader,
@@ -148,10 +120,8 @@ static void writeStdOptionalAttribute(DialectBytecodeWriter &writer,
   writer.writeOptionalAttribute(storage.value_or(AttrTy()));
 }
 
-// A scoped enum read from an untrusted varint. The symbolizer rejects
-// out-of-range values; without this a corrupt file would cast one straight
-// into the enum, which is undefined behavior for a switch on the kind and an
-// empty string from the printer's stringify.
+// A scoped enum validated through its symbolizer; out-of-range values fail
+// instead of casting undefined values into the enum.
 template <typename EnumTy>
 static LogicalResult readEnum(DialectBytecodeReader &reader, EnumTy &result,
                               std::optional<EnumTy> (*symbolize)(uint32_t),
@@ -169,9 +139,8 @@ static LogicalResult readEnum(DialectBytecodeReader &reader, EnumTy &result,
   return success();
 }
 
-// A varint on the wire narrowed to a fixed-width integer. Mirror of
-// readOptionalInt's bound check: a value the parameter cannot hold fails the
-// read instead of truncating into a plausible count or index.
+// A varint narrowed to a fixed-width integer; out-of-range values fail
+// instead of truncating.
 template <typename IntTy>
 static LogicalResult readCheckedInt(DialectBytecodeReader &reader,
                                     IntTy &result) {
