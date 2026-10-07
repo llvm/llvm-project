@@ -2866,6 +2866,32 @@ public:
   //                         OpenMP Emission
   //===--------------------------------------------------------------------===//
 public:
+  /// The enclosing omp.target's host-evaluated loop bounds -- a normalized
+  /// [0, tripCount) range matching emitOMPLoopNest's convention -- forwarded
+  /// as host_eval block arguments and consumed once by the nested
+  /// omp.wsloop.
+  struct OMPHostEvalBounds {
+    mlir::Value zero;
+    mlir::Value tripCount;
+    mlir::Value one;
+    bool applied = false;
+  };
+  std::optional<OMPHostEvalBounds> ompHostEvalBounds;
+
+  /// An RAII object to set (and then restore) ompHostEvalBounds for the
+  /// extent of a nested loop directive's emission.
+  struct OMPHostEvalBoundsRAII {
+    CIRGenFunction &cgf;
+    std::optional<OMPHostEvalBounds> oldBounds;
+
+    OMPHostEvalBoundsRAII(CIRGenFunction &cgf,
+                          std::optional<OMPHostEvalBounds> newBounds)
+        : cgf(cgf), oldBounds(std::move(cgf.ompHostEvalBounds)) {
+      cgf.ompHostEvalBounds = std::move(newBounds);
+    }
+    ~OMPHostEvalBoundsRAII() { cgf.ompHostEvalBounds = std::move(oldBounds); }
+  };
+
   /// Emits a Sema-synthesized OpenMP helper variable (loop counter, iteration
   /// variable or pre-init capture) without lifetime markers. These variables
   /// are emitted between nested combined/composite OpenMP ops, which must be
