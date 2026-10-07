@@ -496,7 +496,8 @@ void CIRGenFunction::emitFunctionProlog(const FunctionArgList &args,
     // Location of the store to the param storage tracked as beginning of
     // the function body.
     mlir::Location fnBodyBegin = getLoc(bodyBeginLoc);
-    builder.CIRBaseBuilderTy::createStore(fnBodyBegin, paramVal, addrVal);
+    builder.CIRBaseBuilderTy::createStore(fnBodyBegin, paramVal,
+                                          addr.getPointer());
   }
   assert(builder.getInsertionBlock() && "Should be valid");
 }
