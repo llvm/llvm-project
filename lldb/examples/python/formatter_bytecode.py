@@ -1405,7 +1405,6 @@ if __name__ == "__main__":
             self.assertEqual(dis.getvalue(), "@summary: return\n")
 
     class TestCompiler(unittest.TestCase):
-
         class FakeValue:
             """A minimal stand-in for SBValue."""
 
@@ -1434,7 +1433,8 @@ if __name__ == "__main__":
             return dict(section.signatures)
 
         def test_synthetic(self):
-            methods = self.compile_methods("""
+            methods = self.compile_methods(
+                """
                 import lldb
 
                 class Synthetic:
@@ -1455,7 +1455,8 @@ if __name__ == "__main__":
                         if idx < self.count:
                             return self.storage.GetChildAtIndex(idx)
                         return None
-                """)
+                """
+            )
 
             FakeValue = self.FakeValue
             a, b = FakeValue(10), FakeValue(20)
@@ -1479,7 +1480,8 @@ if __name__ == "__main__":
             )
 
         def test_init(self):
-            methods = self.compile_methods("""
+            methods = self.compile_methods(
+                """
                 class Synthetic:
                     def __init__(self, valobj, _):
                         self.storage = valobj.GetChildMemberWithName("_storage")
@@ -1491,7 +1493,8 @@ if __name__ == "__main__":
 
                     def num_children(self):
                         return self.size
-                """)
+                """
+            )
             storage = self.FakeValue(3)
             valobj = self.FakeValue(children={"_storage": storage})
             self_dict = {}
@@ -1502,17 +1505,21 @@ if __name__ == "__main__":
 
         def test_errors(self):
             with self.assertRaisesRegex(CompilerError, "unknown attribute: missing"):
-                self.compile_methods("""
+                self.compile_methods(
+                    """
                     class Synthetic:
                         def num_children(self):
                             return self.missing
-                    """)
+                    """
+                )
             with self.assertRaisesRegex(CompilerError, "only allowed in __init__"):
-                self.compile_methods("""
+                self.compile_methods(
+                    """
                     class Synthetic:
                         def num_children(self):
                             self.count = 1
                             return 1
-                    """)
+                    """
+                )
 
     unittest.main(argv=[__file__])
