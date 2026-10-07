@@ -2065,7 +2065,7 @@ void TwoAddressInstructionImpl::eliminateRegSequence(
           if (DefVN != VN)
             continue;
           LaneBitmask LaneMask = TRI->getSubRegIndexLaneMask(SubReg);
-          if ((LaneMask & ~UndefLanes).none())
+          if ((LaneMask & UndefLanes) == LaneMask)
             UseOp.setIsUndef(true);
         }
         LIS->removeInterval(DstReg);
