@@ -1040,7 +1040,7 @@ LangAS CIRGenModule::getGlobalVarAddressSpace(const VarDecl *d) {
 
   if (langOpts.SYCLIsDevice &&
       (!d || d->getType().getAddressSpace() == LangAS::Default))
-    errorNYI("SYCL global address space");
+    return LangAS::sycl_global;
 
   if (langOpts.CUDA && langOpts.CUDAIsDevice) {
     if (d) {
@@ -2210,8 +2210,10 @@ static cir::GlobalOp
 generateStringLiteral(mlir::Location loc, mlir::TypedAttr c,
                       cir::GlobalLinkageKind lt, CIRGenModule &cgm,
                       StringRef globalName, CharUnits alignment) {
-  mlir::ptr::MemorySpaceAttrInterface addrSpace = cir::toCIRAddressSpaceAttr(
-      cgm.getMLIRContext(), cgm.getGlobalConstantAddressSpace());
+  LangAS as = CodeGenUtils::getGlobalConstantAddressSpace(cgm.getLangOpts(),
+                                                          cgm.getTarget());
+  mlir::ptr::MemorySpaceAttrInterface addrSpace =
+      cir::toCIRAddressSpaceAttr(cgm.getMLIRContext(), as);
 
   // Create a global variable for this string
   // FIXME(cir): check for insertion point in module level.
@@ -2315,19 +2317,6 @@ CIRGenModule::getAddrOfConstantStringFromLiteral(const StringLiteral *s,
       getTypes().getPointerAddressSpace(s->getType()));
 
   return builder.getGlobalViewAttr(ptrTy, gv);
-}
-
-LangAS CIRGenModule::getGlobalConstantAddressSpace() const {
-  LangAS as =
-      CodeGenUtils::getGlobalConstantAddressSpace(langOpts, getTarget());
-  // CIR cannot represent SYCL address spaces yet.
-  /// TODO: Remove this wrapper once CIR supports the global constant address
-  /// space for SYCL.
-  if (as == LangAS::sycl_global) {
-    errorNYI("SYCL global constant address space");
-    return LangAS::Default;
-  }
-  return as;
 }
 
 // TODO(cir): this could be a common AST helper for both CIR and LLVM codegen.
