@@ -511,13 +511,11 @@ bool BPFAbstractMemberAccess::IsValidAIChain(const MDNode *ParentType,
   assert(PTy && CTy && "ParentType or ChildType is null or not composite");
 
   uint32_t PTyTag = PTy->getTag();
-  assert(PTyTag == dwarf::DW_TAG_array_type ||
-         PTyTag == dwarf::DW_TAG_structure_type ||
+  assert(PTyTag == dwarf::DW_TAG_array_type || isStructTag(PTyTag) ||
          PTyTag == dwarf::DW_TAG_union_type);
 
   uint32_t CTyTag = CTy->getTag();
-  assert(CTyTag == dwarf::DW_TAG_array_type ||
-         CTyTag == dwarf::DW_TAG_structure_type ||
+  assert(CTyTag == dwarf::DW_TAG_array_type || isStructTag(CTyTag) ||
          CTyTag == dwarf::DW_TAG_union_type);
 
   // Multi dimensional arrays, base element should be the same
@@ -684,7 +682,7 @@ uint32_t BPFAbstractMemberAccess::GetFieldInfo(uint32_t InfoKind,
       auto *EltTy = stripQualifiers(CTy->getBaseType());
       PatchImm += AccessIndex * calcArraySize(CTy, 1) *
                   (EltTy->getSizeInBits() >> 3);
-    } else if (Tag == dwarf::DW_TAG_structure_type) {
+    } else if (isStructTag(Tag)) {
       auto *MemberTy = cast<DIDerivedType>(CTy->getElements()[AccessIndex]);
       if (!MemberTy->isBitField()) {
         PatchImm += MemberTy->getOffsetInBits() >> 3;
@@ -919,7 +917,7 @@ Value *BPFAbstractMemberAccess::computeBaseAndAccessKey(CallInst *Call,
       }
 
       unsigned CTag = CTy->getTag();
-      if (CTag == dwarf::DW_TAG_structure_type || CTag == dwarf::DW_TAG_union_type) {
+      if (isStructTag(CTag) || CTag == dwarf::DW_TAG_union_type) {
         TypeName = std::string(CTy->getName());
       } else {
         if (HasPreserveFieldInfoCall(CallStack))
@@ -966,7 +964,7 @@ Value *BPFAbstractMemberAccess::computeBaseAndAccessKey(CallInst *Call,
     auto *CTy = cast<DICompositeType>(stripQualifiers(cast<DIType>(MDN)));
 
     uint64_t BTFIndex = AccessIndex;
-    if (CTy->getTag() == dwarf::DW_TAG_structure_type) {
+    if (isStructTag(CTy->getTag())) {
       DINodeArray Elements = CTy->getElements();
       uint64_t Offset = getBTFRecordElementOffset(Elements[AccessIndex]);
       // Find this element's position in the stable offset order without
