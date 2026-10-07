@@ -1025,8 +1025,8 @@ def int_amdgcn_av_load_b16  : AMDGPUAVLoad<llvm_i16_ty>;
 def int_amdgcn_av_store_b32 : AMDGPUAVStore<llvm_i32_ty>;
 def int_amdgcn_av_load_b32  : AMDGPUAVLoad<llvm_i32_ty>;
 
-def int_amdgcn_av_store_b64 : AMDGPUAVStore<llvm_i64_ty>;
-def int_amdgcn_av_load_b64  : AMDGPUAVLoad<llvm_i64_ty>;
+def int_amdgcn_av_store_b64 : AMDGPUAVStore<llvm_v2i32_ty>;
+def int_amdgcn_av_load_b64  : AMDGPUAVLoad<llvm_v2i32_ty>;
 
 def int_amdgcn_av_store_b128 : AMDGPUAVStore<llvm_v4i32_ty>;
 def int_amdgcn_av_load_b128  : AMDGPUAVLoad<llvm_v4i32_ty>;

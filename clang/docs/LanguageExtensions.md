@@ -5501,18 +5501,19 @@ the given mask has the same value for all active lanes of the current wave.
 Signature:
 
 ```c
+typedef __attribute__((__vector_size__(2 * sizeof(unsigned int)))) unsigned int v2u;
 typedef __attribute__((__vector_size__(4 * sizeof(unsigned int)))) unsigned int v4u;
 
 unsigned char __builtin_amdgcn_av_load_b8(unsigned char *src, int scope);
 unsigned short __builtin_amdgcn_av_load_b16(unsigned short *src, int scope);
 unsigned int __builtin_amdgcn_av_load_b32(unsigned int *src, int scope);
-uint64_t __builtin_amdgcn_av_load_b64(uint64_t *src, int scope);
+v2u __builtin_amdgcn_av_load_b64(v2u *src, int scope);
 v4u __builtin_amdgcn_av_load_b128(v4u *src, int scope);
 
 void __builtin_amdgcn_av_store_b8(unsigned char *dst, unsigned char data, int scope);
 void __builtin_amdgcn_av_store_b16(unsigned short *dst, unsigned short data, int scope);
 void __builtin_amdgcn_av_store_b32(unsigned int *dst, unsigned int data, int scope);
-void __builtin_amdgcn_av_store_b64(uint64_t *dst, uint64_t data, int scope);
+void __builtin_amdgcn_av_store_b64(v2u *dst, v2u data, int scope);
 void __builtin_amdgcn_av_store_b128(v4u *dst, v4u data, int scope);
 ```
 

@@ -349,12 +349,12 @@ def __builtin_amdgcn_av_store_b32
   let ArgNames = ["ptr", "data", "scope"];
 }
 def __builtin_amdgcn_av_load_b64
-    : AMDGPUBuiltin<"uint64_t(uint64_t *, int)", [], "flat-global-insts"> {
+    : AMDGPUBuiltin<"_ExtVector<2, unsigned int>(_ExtVector<2, unsigned int> *, int)", [], "flat-global-insts"> {
   let Documentation = [DocAVLoadB64];
   let ArgNames = ["ptr", "scope"];
 }
 def __builtin_amdgcn_av_store_b64
-    : AMDGPUBuiltin<"void(uint64_t *, uint64_t, int)", [], "flat-global-insts"> {
+    : AMDGPUBuiltin<"void(_ExtVector<2, unsigned int> *, _ExtVector<2, unsigned int>, int)", [], "flat-global-insts"> {
   let Documentation = [DocAVStoreB64];
   let ArgNames = ["ptr", "data", "scope"];
 }
