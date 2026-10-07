@@ -3968,11 +3968,11 @@ CIRGenModule::getMLIRVisibilityFromCIRLinkage(cir::GlobalLinkageKind glk) {
 }
 
 std::string CIRGenModule::getModuleInitializerName(clang::Module *mod) {
-  llvm::SmallString<256> name;
-  llvm::raw_svector_ostream out(name);
+  std::string name;
+  llvm::raw_string_ostream out(name);
   cast<clang::ItaniumMangleContext>(getCXXABI().getMangleContext())
       .mangleModuleInitializer(mod, out);
-  return std::string(name);
+  return name;
 }
 
 void CIRGenModule::release() {
