@@ -785,10 +785,10 @@ static bool parseFrontendArgs(FrontendOptions &opts, llvm::opt::ArgList &args,
     }
   }
 
-  // Parsing -load <dsopath> option and storing shared object path
-  if (llvm::opt::Arg *a = args.getLastArg(clang::options::OPT_load)) {
+  // Parsing -load <dsopath> options and storing the shared object paths, in
+  // order: each is loaded, as in clang.
+  for (const llvm::opt::Arg *a : args.filtered(clang::options::OPT_load))
     opts.plugins.push_back(a->getValue());
-  }
 
   // Parsing -plugin <name> option and storing plugin name and setting action
   if (const llvm::opt::Arg *a = args.getLastArg(clang::options::OPT_plugin)) {
