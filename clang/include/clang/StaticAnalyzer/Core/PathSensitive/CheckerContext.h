@@ -232,8 +232,8 @@ public:
   ///        the default tag for the checker will be used.
   ExplodedNode *generateErrorNode(ProgramStateRef State = nullptr,
                                   const ProgramPointTag *Tag = nullptr) {
-    return generateSink(State, Pred,
-                       (Tag ? Tag : Location.getTag()));
+    return addTransitionImpl(State ? State : getState(), true, Pred,
+                             (Tag ? Tag : Location.getTag()));
   }
 
   /// Generate a transition to a node that will be used to report
@@ -248,8 +248,8 @@ public:
   ExplodedNode *generateErrorNode(ProgramStateRef State,
                                   ExplodedNode *Pred,
                                   const ProgramPointTag *Tag = nullptr) {
-    return generateSink(State, Pred,
-                       (Tag ? Tag : Location.getTag()));
+    return addTransitionImpl(State ? State : getState(), true, Pred,
+                             (Tag ? Tag : Location.getTag()));
   }
 
   /// Generate a transition to a node that will be used to report
