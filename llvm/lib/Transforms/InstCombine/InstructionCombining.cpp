@@ -5586,28 +5586,14 @@ bool InstCombinerImpl::tryToSinkInstruction(Instruction *I,
         return false;
   }
 
-  // Collect assume instructions in SrcBlock whose non-I operands all dominate
-  // DestBlock. SrcBlock dominates DestBlock (unique-predecessor invariant
-  // above), so any instruction defined in SrcBlock or a dominator of SrcBlock
-  // qualifies. We sink these assumes together with I so the alignment/attribute
-  // information they carry is not silently lost.
+  // Preserve llvm.assume users in the source block when sinking their operand.
+  // The other operands dominate SrcBlock and therefore also DestBlock.
   SmallPtrSet<AssumeInst *, 2> AssumesToSink;
   for (User *U : I->users()) {
     auto *Assume = dyn_cast<AssumeInst>(U);
     if (!Assume || Assume->getParent() != SrcBlock)
       continue;
-    bool CanSink = true;
-    for (Value *Op : Assume->operands()) {
-      auto *OpInst = dyn_cast<Instruction>(Op);
-      if (!OpInst || OpInst == I)
-        continue;
-      if (!DT.dominates(OpInst->getParent(), DestBlock)) {
-        CanSink = false;
-        break;
-      }
-    }
-    if (CanSink)
-      AssumesToSink.insert(Assume);
+    AssumesToSink.insert(Assume);
   }
 
   I->dropDroppableUses([&](const Use *U) {
