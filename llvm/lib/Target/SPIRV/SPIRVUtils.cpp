@@ -227,16 +227,6 @@ void buildOpName(Register Target, StringRef Name,
   }
 }
 
-void buildOpName(Register Target, StringRef Name, MachineInstr &I,
-                 const SPIRVInstrInfo &TII) {
-  if (!Name.empty()) {
-    auto MIB =
-        BuildMI(*I.getParent(), I, I.getDebugLoc(), TII.get(SPIRV::OpName))
-            .addUse(Target);
-    addStringImm(Name, MIB);
-  }
-}
-
 static void finishBuildOpDecorate(MachineInstrBuilder &MIB,
                                   ArrayRef<uint32_t> DecArgs,
                                   StringRef StrImm) {
