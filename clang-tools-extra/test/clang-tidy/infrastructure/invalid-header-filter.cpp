@@ -1,7 +1,7 @@
-// RUN: clang-tidy -checks='-*,google-explicit-constructor' --config='{}' -header-filter='^(?!.*/system/).*' %s -- -I %S/Inputs/file-filter 2>&1 | FileCheck --check-prefix=CHECK-HEADER %s
-// RUN: clang-tidy -checks='-*,google-explicit-constructor' --config='{}' -header-filter='.*' -exclude-header-filter='(' %s -- -I %S/Inputs/file-filter 2>&1 | FileCheck --check-prefix=CHECK-EXCLUDE %s
-// RUN: clang-tidy -checks='-*,google-explicit-constructor' --config='{HeaderFilterRegex: "(?!x)"}' %s -- -I %S/Inputs/file-filter 2>&1 | FileCheck --check-prefix=CHECK-CONFIG %s
-// RUN: clang-tidy -checks='-*,google-explicit-constructor' --config='{}' -header-filter='' -exclude-header-filter='' %s -- -I %S/Inputs/file-filter 2>&1 | FileCheck --check-prefix=CHECK-EMPTY -implicit-check-not='clang-tidy-config' %s
+// RUN: clang-tidy -checks='-*,misc-explicit-constructor' --config='{}' -header-filter='^(?!.*/system/).*' %s -- -I %S/Inputs/file-filter 2>&1 | FileCheck --check-prefix=CHECK-HEADER %s
+// RUN: clang-tidy -checks='-*,misc-explicit-constructor' --config='{}' -header-filter='.*' -exclude-header-filter='(' %s -- -I %S/Inputs/file-filter 2>&1 | FileCheck --check-prefix=CHECK-EXCLUDE %s
+// RUN: clang-tidy -checks='-*,misc-explicit-constructor' --config='{HeaderFilterRegex: "(?!x)"}' %s -- -I %S/Inputs/file-filter 2>&1 | FileCheck --check-prefix=CHECK-CONFIG %s
+// RUN: clang-tidy -checks='-*,misc-explicit-constructor' --config='{}' -header-filter='' -exclude-header-filter='' %s -- -I %S/Inputs/file-filter 2>&1 | FileCheck --check-prefix=CHECK-EMPTY -implicit-check-not='clang-tidy-config' %s
 
 // CHECK-HEADER: warning: Invalid header filter regex '^(?!.*/system/).*': repetition-operator operand invalid [clang-tidy-config]
 // CHECK-EXCLUDE: warning: Invalid exclude header filter regex '(': parentheses not balanced [clang-tidy-config]
