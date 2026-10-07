@@ -51,8 +51,9 @@ llvm::Error SystemInitializerFull::Initialize() {
 #if LLDB_ENABLE_PYTHON
   // The dynamic script interpreter plugin references Python data symbols (type
   // and exception objects), which can't be bound lazily, so Python must be
-  // mapped before loading the plugin. Failure isn't fatal, and can be handled
-  // when initializing the plugin.
+  // mapped before loading the plugin. Failure isn't fatal. The plugin itself
+  // is initialized by ScriptInterpreterPython::Initialize, which reports the
+  // cached load result.
   if (llvm::Expected<ScriptInterpreterRuntimeLoader &> python_loader =
           ScriptInterpreterRuntimeLoader::Get(lldb::eScriptLanguagePython))
     llvm::consumeError(python_loader->Load());
