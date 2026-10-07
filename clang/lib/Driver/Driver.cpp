@@ -953,7 +953,9 @@ getSystemOffloadArchs(Compilation &C, Action::OffloadKind Kind) {
     }
 
     for (StringRef Arch : llvm::split((*StdoutOrErr)->getBuffer(), "\n"))
-      if (!Arch.empty())
+      // SYCL cannot target NVIDIA GPUs, so skip them.
+      if (!Arch.empty() &&
+          !(Kind == Action::OFK_SYCL && StringToOffloadArch(Arch).isNVPTX()))
         GPUArchs.push_back(Arch.str());
   } else {
     C.getDriver().Diag(diag::err_drv_command_failure) << "offload-arch";
@@ -1031,8 +1033,8 @@ static TripleSet inferOffloadToolchains(Compilation &C,
 
     llvm::Triple Triple =
         OffloadArchToTriple(C.getDefaultToolChain().getTriple(), ID);
-    // A SYCL Intel device, or a generic one, is SPIR-V of the host's width, the
-    // same target SYCL picks when no architecture is given.
+    // For SYCL, an Intel name or "generic" means SPIR-V of the host's width,
+    // the target SYCL already uses when no architecture is given.
     if (Kind == Action::OFK_SYCL && (ID.isIntel() || ID.isGeneric()))
       Triple = llvm::Triple(C.getDefaultToolChain().getTriple().isArch64Bit()
                                 ? llvm::Triple::spirv64
