@@ -1214,6 +1214,13 @@ cir::FuncOp LoweringPreparePass::getOrCreateDtorFunc(CIRBaseBuilderTy &builder,
   // Replace all uses of the help function's get_global with the function
   // argument.
   mlir::Value dtorArg = entryBB->getArgument(0);
+  // The arg is a void*, but the destructor needs the variables type, so we
+  // might need to introduce a cast.
+  if (dtorArg.getType() != dtorGGop.getType()) {
+    builder.setInsertionPointToStart(entryBB);
+    dtorArg =
+        builder.createBitcast(dtorGGop.getLoc(), dtorArg, dtorGGop.getType());
+  }
   dtorGGop.replaceAllUsesWith(dtorArg);
   dtorGGop.erase();
 

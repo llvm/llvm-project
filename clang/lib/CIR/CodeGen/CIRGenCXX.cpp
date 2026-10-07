@@ -159,9 +159,11 @@ static void emitDeclDestroy(CIRGenFunction &cgf, const VarDecl *vd,
 
   // Prepare the dtor region.
   mlir::OpBuilder::InsertionGuard guard(builder);
-  mlir::Block *block = builder.createBlock(&dtorRegion);
-  CIRGenFunction::LexicalScope lexScope{cgf, addr.getLoc(),
-                                        builder.getInsertionBlock()};
+  // Lifetime extended temporaries might have already created a block, so use
+  // that if it exists.
+  mlir::Block *block = dtorRegion.empty() ? builder.createBlock(&dtorRegion)
+                                          : &dtorRegion.front();
+  CIRGenFunction::LexicalScope lexScope{cgf, addr.getLoc(), block};
   lexScope.setAsGlobalInit();
   builder.setInsertionPointToStart(block);
 
@@ -233,7 +235,8 @@ static void emitDeclDestroy(CIRGenFunction &cgf, const VarDecl *vd,
     block->erase();
     // Don't confuse lexical cleanup.
     builder.clearInsertionPoint();
-  } else {
+  } else if (!block->mightHaveTerminator()) {
+    // Temporary cleanup might have created a yield already: if not, create one.
     cir::YieldOp::create(builder, addr.getLoc());
   }
 }
