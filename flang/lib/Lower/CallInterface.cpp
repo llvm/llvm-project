@@ -320,9 +320,11 @@ Fortran::lower::CallerInterface::characterize() const {
   // The characteristic may not contain the argument characteristic if the
   // ProcedureDesignator has no interface, or may mismatch in case of implicit
   // interface.
-  if (!characteristic->HasExplicitInterface() ||
+  calledThroughImplicitInterface =
+      !characteristic->HasExplicitInterface() ||
       (isExternalDefinedInSameCompilationUnit(procRef.proc()) &&
-       characteristic->CanBeCalledViaImplicitInterface())) {
+       characteristic->CanBeCalledViaImplicitInterface());
+  if (calledThroughImplicitInterface) {
     // In HLFIR lowering, calls to subprogram with implicit interfaces are
     // always prepared according to the actual arguments. This is to support
     // cases where the implicit interfaces are "abused" in old and not so old

@@ -1046,6 +1046,9 @@ struct CallContext {
   std::optional<mlir::Type> resultType;
   mlir::Location loc;
   bool doCopyIn;
+  /// Is the procedure called through an implicit interface? Set from the
+  /// CallerInterface when the user call arguments are prepared.
+  bool calledThroughImplicitInterface = false;
 };
 
 using ExvAndCleanup =
@@ -1401,11 +1404,13 @@ static PreparedDummyArgument preparePresentUserCallActualArgument(
       callContext.converter.getFoldingContext()};
   const bool suggestCopyIn{Fortran::evaluate::ActualArgNeedsCopy(
                                arg.entity, arg.characteristics, foldingContext,
-                               /*forCopyOut=*/false)
+                               /*forCopyOut=*/false,
+                               callContext.calledThroughImplicitInterface)
                                .value_or(true)};
   const bool suggestCopyOut{Fortran::evaluate::ActualArgNeedsCopy(
                                 arg.entity, arg.characteristics, foldingContext,
-                                /*forCopyOut=*/true)
+                                /*forCopyOut=*/true,
+                                callContext.calledThroughImplicitInterface)
                                 .value_or(true)};
   bool mustDoCopyIn{false};
   bool mustDoCopyOut{false};
@@ -1743,6 +1748,8 @@ void prepareUserCallArguments(
   bool mustRemapActualToDummyDescriptors = false;
   fir::FirOpBuilder &builder = callContext.getBuilder();
   std::optional<unsigned> passArg = caller.getPassArgIndex();
+  callContext.calledThroughImplicitInterface =
+      caller.isCalledThroughImplicitInterface();
   int argIndex = -1;
   for (auto [preparedActual, arg] :
        llvm::zip(loweredActuals, caller.getPassedArguments())) {
