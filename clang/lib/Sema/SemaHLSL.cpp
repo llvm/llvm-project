@@ -1212,6 +1212,8 @@ void SemaHLSL::diagnoseSemanticType(const Decl *D,
   QualType ElemTy = getElementTypeOf(T, /*IncludeMatrix=*/false);
   unsigned Components = getComponentCountOf(T);
 
+  bool IsSPIRV = getASTContext().getTargetInfo().getTriple().isSPIRV();
+
   // Numeric selectors below choose the shape and element-type wording in
   // err_hlsl_semantic_invalid_type.
   switch (Kind) {
@@ -1242,18 +1244,17 @@ void SemaHLSL::diagnoseSemanticType(const Decl *D,
           << A->getAttrName() << /* scalar or vector of up to */ 1 << 4
           << /* 16 or 32 bit floating-point */ 2 << DeclaredTy;
     return;
-  case SemanticKind::InstanceID: {
-    uint64_t SizeInBits = SemaRef.Context.getTypeSize(ValueType);
+  case SemanticKind::InstanceID:
     // DXIL permits U32 or U16. SPIR-V requires a 32-bit scalar per
     // VUID-InstanceIndex-InstanceIndex-04265.
-    bool IsSPIRV = getASTContext().getTargetInfo().getTriple().isSPIRV();
-    if (!ValueType->isUnsignedIntegerType() ||
-        !(SizeInBits == 32 || (!IsSPIRV && SizeInBits == 16)))
-      Diag(AL.getLoc(), diag::err_hlsl_semantic_invalid_type)
-       << A->getAttrName() << /* scalar */ 0 << 1
-       << /* 16 or 32 bit integer */ 0 << DeclaredTy;
-    break;
-  }
+    if (!T->isUnsignedIntegerType() ||
+        !(isIntElementOfWidth(Ctx, T, 32) ||
+          (!IsSPIRV && isIntElementOfWidth(Ctx, T, 16))))
+      Diag(A->getLoc(), diag::err_hlsl_semantic_invalid_type)
+          << A->getAttrName() << /* scalar */ 0 << 1
+          << /* 16 or 32 bit unsigned integer / 32 bit unsigned integer */
+          (IsSPIRV ? 4 : 3) << DeclaredTy;
+    return;
   default:
     // Other semantics only have the general signature type restrictions.
     break;
@@ -2050,7 +2051,6 @@ void SemaHLSL::handleSemanticAttr(Decl *D, const ParsedAttr &AL) {
 
   switch (Kind) {
   // FIXME: These semantics do not yet have CodeGen support.
-  case SemanticKind::InstanceID:
   case SemanticKind::RenderTargetArrayIndex:
   case SemanticKind::ViewPortArrayIndex:
   case SemanticKind::ClipDistance:
