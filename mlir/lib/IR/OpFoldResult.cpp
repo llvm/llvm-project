@@ -111,6 +111,13 @@ bool NormalizedOpFoldResults::replacesAll() const {
   return replacesAny() && llvm::all_of(replacements, llvm::identity{});
 }
 
+OpFoldResult NormalizedOpFoldResults::operator[](unsigned i) const {
+  if (replacements.empty())
+    return OpFoldResult();
+  assert(i < replacements.size() && "result index out of range");
+  return replacements[i];
+}
+
 ArrayRef<OpFoldResult> NormalizedOpFoldResults::getReplacements() const {
   return replacements;
 }
@@ -120,4 +127,20 @@ OpFoldResults detail::convertSingleResultFold(Operation *op,
   if (dyn_cast_if_present<Value>(result) == op->getResult(0))
     return success();
   return result;
+}
+
+NormalizedOpFoldResults
+detail::dropReplacementsOfReplacedResults(Operation *op,
+                                          NormalizedOpFoldResults result) {
+  bool namesReplacedResult =
+      llvm::any_of(result.getReplacements(), [&](OpFoldResult replacement) {
+        auto opResult = dyn_cast_if_present<OpResult>(
+            dyn_cast_if_present<Value>(replacement));
+        return opResult && opResult.getOwner() == op &&
+               result[opResult.getResultNumber()];
+      });
+  if (!namesReplacedResult)
+    return result;
+  return NormalizedOpFoldResults(
+      op, OpFoldResults(success(result.modifiedInPlace())));
 }
