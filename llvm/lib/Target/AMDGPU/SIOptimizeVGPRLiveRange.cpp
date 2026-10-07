@@ -504,10 +504,6 @@ INITIALIZE_PASS_END(SIOptimizeVGPRLiveRangeLegacy, DEBUG_TYPE,
 
 char &llvm::SIOptimizeVGPRLiveRangeLegacyID = SIOptimizeVGPRLiveRangeLegacy::ID;
 
-FunctionPass *llvm::createSIOptimizeVGPRLiveRangeLegacyPass() {
-  return new SIOptimizeVGPRLiveRangeLegacy();
-}
-
 bool SIOptimizeVGPRLiveRangeLegacy::runOnMachineFunction(MachineFunction &MF) {
   if (skipFunction(MF.getFunction()))
     return false;

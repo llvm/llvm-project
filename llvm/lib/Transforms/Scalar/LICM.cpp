@@ -505,11 +505,6 @@ bool LoopInvariantCodeMotion::runOnLoop(Loop *L, AAResults *AA, LoopInfo *LI,
       SmallVector<MemoryAccess *, 8> MSSAInsertPts;
       InsertPts.reserve(ExitBlocks.size());
       MSSAInsertPts.reserve(ExitBlocks.size());
-      for (BasicBlock *ExitBlock : ExitBlocks) {
-        InsertPts.push_back(ExitBlock->getFirstInsertionPt());
-        MSSAInsertPts.push_back(nullptr);
-      }
-
       PredIteratorCache PIC;
 
       // Promoting one set of accesses may make the pointers for another set
@@ -518,6 +513,17 @@ bool LoopInvariantCodeMotion::runOnLoop(Loop *L, AAResults *AA, LoopInfo *LI,
       bool LocalPromoted;
       do {
         LocalPromoted = false;
+
+        // Recompute the insertion points each time we compute the promotion
+        // candidates, so we don't sink past a store which was promoted in a
+        // previous iteration.
+        InsertPts.clear();
+        MSSAInsertPts.clear();
+        for (BasicBlock *ExitBlock : ExitBlocks) {
+          InsertPts.push_back(ExitBlock->getFirstInsertionPt());
+          MSSAInsertPts.push_back(nullptr);
+        }
+
         for (auto [PointerMustAliases, HasReadsOutsideSet] :
              collectPromotionCandidates(MSSA, AA, DT, &SafetyInfo,
                                         LoopLocalAliasScopes, L)) {

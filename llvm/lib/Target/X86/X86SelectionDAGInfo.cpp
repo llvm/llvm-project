@@ -67,7 +67,6 @@ void X86SelectionDAGInfo::verifyTargetNode(const SelectionDAG &DAG,
   default:
     break;
   case X86ISD::CALL:
-  case X86ISD::NT_BRIND:
     // operand #1 must have type i32 (iPTR), but has type i64
   case X86ISD::INSERTQI:
   case X86ISD::EXTRQI:

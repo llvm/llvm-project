@@ -28,7 +28,7 @@ define ptr @vla(i32 %n) {
   ; LARGE-NEXT:   [[t2LSRri:%[0-9]+]]:rgpr = t2LSRri killed [[t2BICri]], 2, 14 /* CC::al */, $noreg, $noreg
   ; LARGE-NEXT:   $r4 = COPY [[t2LSRri]]
   ; LARGE-NEXT:   [[t2MOVi32imm:%[0-9]+]]:rgpr = t2MOVi32imm &__chkstk
-  ; LARGE-NEXT:   tBLXr 14 /* CC::al */, $noreg, killed [[t2MOVi32imm]], implicit-def dead $lr, implicit $sp, implicit killed $r4, implicit-def $r4, implicit-def dead $r12, implicit-def dead $cpsr
+  ; LARGE-NEXT:   tBLXr 14 /* CC::al */, $noreg, [[t2MOVi32imm]], implicit-def dead $lr, implicit $sp, implicit killed $r4, implicit-def $r4, implicit-def dead $r12, implicit-def dead $cpsr
   ; LARGE-NEXT:   $sp = frame-setup t2SUBrr killed $sp, killed $r4, 14 /* CC::al */, $noreg, $noreg
   ; LARGE-NEXT:   [[COPY1:%[0-9]+]]:gpr = COPY $sp
   ; LARGE-NEXT:   $r0 = COPY [[COPY1]]

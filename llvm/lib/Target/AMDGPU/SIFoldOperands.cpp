@@ -468,10 +468,6 @@ bool SIFoldOperandsImpl::foldCopyToVGPROfScalarAddOfFrameIndex(
   return false;
 }
 
-FunctionPass *llvm::createSIFoldOperandsLegacyPass() {
-  return new SIFoldOperandsLegacy();
-}
-
 bool SIFoldOperandsImpl::canUseImmWithOpSel(const MachineInstr *MI,
                                             unsigned UseOpNo,
                                             int64_t ImmVal) const {

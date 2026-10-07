@@ -568,10 +568,6 @@ const uint32_t *SIRegisterInfo::getAllVectorRegMask() const {
   return AMDGPU_AllVectorRegs_RegMask;
 }
 
-const uint32_t *SIRegisterInfo::getAllAllocatableSRegMask() const {
-  return AMDGPU_AllAllocatableSRegs_RegMask;
-}
-
 unsigned SIRegisterInfo::getSubRegFromChannel(unsigned Channel,
                                               unsigned NumRegs) {
   assert(NumRegs < SubRegFromChannelTableWidthMap.size());

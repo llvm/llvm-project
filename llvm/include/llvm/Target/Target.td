@@ -2060,6 +2060,11 @@ class AsmWriter {
   // will specify which alternative to use. For example "{x|y|z}" with Variant
   // == 1, will expand to "y".
   int Variant = 0;
+
+  // If set, emit a bytecode table and interpreter loop instead of a large
+  // switch statement for remaining operands that do not fit in the 64-bit
+  // table-driven printer.
+  bit UseBytecode = 0;
 }
 def DefaultAsmWriter : AsmWriter;
 

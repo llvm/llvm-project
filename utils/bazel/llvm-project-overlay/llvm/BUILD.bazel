@@ -2657,6 +2657,10 @@ llvm_target_lib_list = [lib for lib in [
                 "lib/Target/AArch64/AArch64GenExegesis.inc",
             ),
         ],
+        "tbl_deps": [
+            ":AArch64MCOptionsTableGen",
+            ":AArch64OptionsTableGen",
+        ],
     },
     {
         "name": "ARM",
@@ -3997,6 +4001,24 @@ gentbl_cc_library(
         ":CommonTargetTdFiles",
         ":RISCVTargetTdFiles",
     ],
+)
+
+gentbl_cc_library(
+    name = "AArch64MCOptionsTableGen",
+    strip_include_prefix = "lib/Target/AArch64",
+    tbl_outs = {"lib/Target/AArch64/AArch64MCOptions.inc": ["-gen-opt-parser-defs"]},
+    tblgen = ":llvm-tblgen",
+    td_file = "lib/Target/AArch64/MCTargetDesc/AArch64MCOptions.td",
+    deps = [":OptParserTdFiles"],
+)
+
+gentbl_cc_library(
+    name = "AArch64OptionsTableGen",
+    strip_include_prefix = "lib/Target/AArch64",
+    tbl_outs = {"lib/Target/AArch64/AArch64Options.inc": ["-gen-opt-parser-defs"]},
+    tblgen = ":llvm-tblgen",
+    td_file = "lib/Target/AArch64/AArch64Options.td",
+    deps = [":OptParserTdFiles"],
 )
 
 gentbl_cc_library(

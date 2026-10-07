@@ -1,5 +1,5 @@
-# RUN: llc -mtriple=amdgcn-amd-amdhsa -mcpu=gfx950 -run-pass=postmisched -verify-machineinstrs -verify-misched %s -o - | FileCheck %s
-# RUN: llc -mtriple=amdgcn-amd-amdhsa -mcpu=gfx950 -run-pass=postmisched,post-RA-hazard-rec -verify-machineinstrs -verify-misched %s -o - | FileCheck %s --check-prefixes=CHECK,FINAL
+# RUN: llc -mtriple=amdgpu9.50-amd-amdhsa -run-pass=postmisched -verify-machineinstrs -verify-misched %s -o - | FileCheck %s
+# RUN: llc -mtriple=amdgpu9.50-amd-amdhsa -run-pass=postmisched,post-RA-hazard-rec -verify-machineinstrs -verify-misched %s -o - | FileCheck %s --check-prefixes=CHECK,FINAL
 
 # A permlane reading a VALU result needs two intervening wait states on gfx950.
 # The scheduler should use available independent instructions for these slots,

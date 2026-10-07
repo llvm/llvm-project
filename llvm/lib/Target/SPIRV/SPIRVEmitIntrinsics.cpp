@@ -3716,12 +3716,10 @@ void SPIRVEmitIntrinsicsImpl::emitUnstructuredLoopControls(Function &F,
   if (LI.empty())
     return;
 
+  SmallPtrSet<BasicBlock *, 8> UsedMergeBlocks;
   for (Loop *L : LI.getLoopsInPreorder()) {
     BasicBlock *Latch = L->getLoopLatch();
     if (!Latch)
-      continue;
-    BasicBlock *MergeBlock = L->getUniqueExitBlock();
-    if (!MergeBlock)
       continue;
 
     // Check for loop unroll metadata on the latch terminator.
@@ -3735,6 +3733,21 @@ void SPIRVEmitIntrinsicsImpl::emitUnstructuredLoopControls(Function &F,
     // Switches are already lowered to spv_switch + indirectbr at this point.
     if (!isa<UncondBrInst, CondBrInst>(Header->getTerminator()))
       continue;
+
+    BasicBlock *MergeBlock = L->getUniqueExitBlock();
+    // LoopSimplify does not guarantee a unique exit block. Try the normal exit
+    // of a rotated loop (from the latch), then an unrotated loop (from the
+    // header). A merge block cannot be shared by multiple loop headers.
+    for (BasicBlock *BB : {Latch, Header}) {
+      if (MergeBlock || !isa<CondBrInst>(BB->getTerminator()))
+        continue;
+      for (BasicBlock *Succ : successors(BB))
+        if (!L->contains(Succ) && !UsedMergeBlocks.contains(Succ))
+          MergeBlock = Succ;
+    }
+    if (!MergeBlock || !UsedMergeBlocks.insert(MergeBlock).second)
+      continue;
+
     B.SetInsertPoint(Header->getTerminator());
     auto *MergeAddress = BlockAddress::get(&F, MergeBlock);
     auto *ContinueAddress = BlockAddress::get(&F, Latch);

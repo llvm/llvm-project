@@ -916,6 +916,17 @@ FIRToMemRef::getMemrefIndices(fir::ArrayCoorOp arrayCoorOp, Operation *memref,
   return indices;
 }
 
+/// Converts a descriptor's byte stride into the element stride a memref needs.
+/// `isExact` marks the division with `exact`.
+static Value elementStrideFromByteStride(Value byteStride, Value elementSize,
+                                         PatternRewriter &rewriter,
+                                         Location loc, bool isExact) {
+  auto div = arith::DivSIOp::create(rewriter, loc, byteStride, elementSize);
+  if (isExact)
+    div.setIsExact(true);
+  return castTypeToIndexType(div, rewriter);
+}
+
 MemRefInfo
 FIRToMemRef::convertArrayCoorOp(Operation *memOp, fir::ArrayCoorOp arrayCoorOp,
                                 PatternRewriter &rewriter,
@@ -1105,9 +1116,8 @@ FIRToMemRef::convertArrayCoorOp(Operation *memOp, fir::ArrayCoorOp arrayCoorOp,
       sizes.push_back(castTypeToIndexType(extent, rewriter));
 
       Value byteStride = boxDims->getResult(2);
-      Value div =
-          arith::DivSIOp::create(rewriter, loc, byteStride, boxElementSize);
-      strides.push_back(castTypeToIndexType(div, rewriter));
+      strides.push_back(elementStrideFromByteStride(
+          byteStride, boxElementSize, rewriter, loc, /*isExact=*/false));
     }
 
   } else {
@@ -1152,10 +1162,34 @@ FIRToMemRef::convertArrayCoorOp(Operation *memOp, fir::ArrayCoorOp arrayCoorOp,
     const bool hasParentShape = firMemrefIsEmbox && arrayCoorOp.getSlice() &&
                                 shapeVec.size() >= acRank + rank;
     const unsigned parentShapeStartIdx = hasParentShape ? acRank : 0;
+
+    // A descriptor behind the base address already holds each dimension's
+    // cumulative stride. Read it from the descriptor.
+    Value layoutDescriptor;
+    if (!hasParentShape && !arrayCoorOp.getSlice() && !complexPartIdx) {
+      auto boxAddr = firMemref.getDefiningOp<fir::BoxAddrOp>();
+      if (boxAddr && mlir::isa<fir::BaseBoxType>(boxAddr.getVal().getType()))
+        layoutDescriptor = boxAddr.getVal();
+    }
+    Value layoutEleSize;
+    if (layoutDescriptor)
+      layoutEleSize =
+          fir::BoxEleSizeOp::create(rewriter, loc, indexTy, layoutDescriptor);
+
     for (unsigned i = rank - 1; i > 0; --i) {
       // Sizes are always the box/slice's visible extents (shapeVec[0..rank-1]).
       Value size = shapeVec[i];
       sizes.push_back(castTypeToIndexType(size, rewriter));
+
+      if (layoutDescriptor) {
+        Value dim = arith::ConstantIndexOp::create(rewriter, loc, i);
+        auto boxDims = fir::BoxDimsOp::create(rewriter, loc, indexTy, indexTy,
+                                              indexTy, layoutDescriptor, dim);
+        strides.push_back(elementStrideFromByteStride(
+            boxDims->getResult(2), layoutEleSize, rewriter, loc,
+            /*isExact=*/true));
+        continue;
+      }
 
       // Strides use the parent's extents (via `parentShapeStartIdx`).
       Value stride = shapeVec[parentShapeStartIdx + 0];

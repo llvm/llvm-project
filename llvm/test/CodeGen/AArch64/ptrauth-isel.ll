@@ -291,7 +291,7 @@ define i64 @autxmxn_earlyclobbered_scratch(i64 %addr, i64 %disc) {
   ; GISEL-DARWIN-NEXT:   [[COPY:%[0-9]+]]:gpr64all = COPY $x0
   ; GISEL-DARWIN-NEXT:   [[COPY1:%[0-9]+]]:gpr64noip = COPY $x1
   ; GISEL-DARWIN-NEXT:   $x16 = COPY [[COPY]]
-  ; GISEL-DARWIN-NEXT:   AUTx16x17 2, 0, [[COPY1]], implicit-def $x16, implicit-def $x17, implicit-def dead $nzcv, implicit $x16
+  ; GISEL-DARWIN-NEXT:   AUTx16x17 2, 0, [[COPY1]], implicit-def $x16, implicit-def dead $x17, implicit-def dead $nzcv, implicit $x16
   ; GISEL-DARWIN-NEXT:   [[COPY2:%[0-9]+]]:gpr64 = COPY $x16
   ; GISEL-DARWIN-NEXT:   $x0 = COPY [[COPY2]]
   ; GISEL-DARWIN-NEXT:   RET_ReallyLR implicit $x0

@@ -502,6 +502,12 @@ private:
       return rewriter.notifyMatchFailure(
           getOp(),
           "CHARACTER type is not supported for MINLOC/MAXLOC inlining");
+    if (auto intType =
+            mlir::dyn_cast<mlir::IntegerType>(getSourceElementType()))
+      if (intType.isUnsigned())
+        return rewriter.notifyMatchFailure(
+            getOp(),
+            "UNSIGNED type is not supported for MINLOC/MAXLOC inlining");
     return mlir::success();
   }
 
