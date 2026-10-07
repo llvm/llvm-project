@@ -517,6 +517,15 @@ void CIRGenFunction::startFunction(GlobalDecl gd, QualType returnType,
   const auto *fd = dyn_cast_or_null<FunctionDecl>(d);
   curFuncDecl = (d ? d->getNonClosureContext() : nullptr);
 
+  // Recursion is disallowed for C++ main, OpenCL, HLSL, SYCL device code and
+  // CUDA/HIP kernels.
+  if (fd &&
+      ((getLangOpts().CPlusPlus && fd->isMain()) || getLangOpts().OpenCL ||
+       getLangOpts().HLSL || getLangOpts().SYCLIsDevice ||
+       (getLangOpts().CUDA && fd->hasAttr<CUDAGlobalAttr>())))
+    fn->setAttr(cir::CIRDialect::getNoRecurseAttrName(),
+                mlir::UnitAttr::get(fn.getContext()));
+
   // This is an artifact of the legacy handling of constrained floating-point
   // modes. The rounding mode and exception behavior tracked in
   // clang::LangOptions don't correspond directly to the representation we
@@ -779,6 +788,10 @@ cir::FuncOp CIRGenFunction::generateCode(clang::GlobalDecl gd, cir::FuncOp fn,
     if (body && isa_and_nonnull<CoroutineBodyStmt>(body))
       llvm::append_range(fnArgs, funcDecl->parameters());
 
+    if (checkIfFunctionMustProgress())
+      fn->setAttr(cir::CIRDialect::getMustProgressAttrName(),
+                  mlir::UnitAttr::get(&getMLIRContext()));
+
     if (shouldEmitLifetimeMarkers)
       fnHasBypassStmt = functionMightHaveBypass(body);
 
@@ -877,7 +890,8 @@ void CIRGenFunction::emitConstructorBody(FunctionArgList &args) {
 
   ctorTryBodyEmitter emitter{ctor, ctorType, args, isTryBody, body};
   mlir::LogicalResult bodyRes =
-      isTryBody ? emitCXXTryStmt(*cast<CXXTryStmt>(body), emitter)
+      isTryBody ? emitCXXTryStmt(*cast<CXXTryStmt>(body), emitter,
+                                 /*isFnTryBlock=*/true)
                 : emitter(*this);
 
   // TODO(cir): propagate this result via mlir::logical result. Just

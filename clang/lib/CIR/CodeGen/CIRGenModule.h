@@ -464,6 +464,13 @@ public:
   getAddrOfConstantStringFromLiteral(const StringLiteral *s,
                                      llvm::StringRef name = ".str");
 
+  /// Wrapper around CodeGenUtils::getGlobalConstantAddressSpace, currently
+  /// needed to enforce failure on SYCL modules, for which CIR does not yet
+  /// support the global constant address space.
+  /// TODO: Remove this wrapper once CIR supports the global constant address
+  /// space for SYCL.
+  LangAS getGlobalConstantAddressSpace() const;
+
   /// Returns the address space for temporary allocations in the language. This
   /// ensures that the allocated variable's address space matches the
   /// expectations of the AST, rather than using the target's allocation address
@@ -723,6 +730,10 @@ public:
   mlir::Value emitNullConstant(QualType t, mlir::Location loc);
 
   mlir::TypedAttr emitNullConstantAttr(QualType t);
+
+  /// Get target specific null pointer.
+  mlir::Value getNullPointer(cir::PointerType ptrTy, QualType qt,
+                             mlir::Location loc);
 
   /// Return a null constant appropriate for zero-initializing a base class with
   /// the given type. This is usually, but not always, an LLVM null constant.

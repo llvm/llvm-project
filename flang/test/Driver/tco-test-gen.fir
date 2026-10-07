@@ -8,11 +8,11 @@
 func.func @_QPtest(%arg0: !fir.ref<i32> {fir.bindc_name = "num"}, %arg1: !fir.ref<i32> {fir.bindc_name = "lb"}, %arg2: !fir.ref<i32> {fir.bindc_name = "ub"}, %arg3: !fir.ref<i32> {fir.bindc_name = "step"}) {
   %0 = fir.dummy_scope : !fir.dscope
   %1 = fir.alloca i32 {bindc_name = "i", uniq_name = "_QFtestEi"}
-  %2:2 = hlfir.declare %1 {uniq_name = "_QFtestEi"} : (!fir.ref<i32>) -> (!fir.ref<i32>, !fir.ref<i32>)
-  %3:2 = hlfir.declare %arg1 dummy_scope %0 {uniq_name = "_QFtestElb"} : (!fir.ref<i32>, !fir.dscope) -> (!fir.ref<i32>, !fir.ref<i32>)
-  %4:2 = hlfir.declare %arg0 dummy_scope %0 {uniq_name = "_QFtestEnum"} : (!fir.ref<i32>, !fir.dscope) -> (!fir.ref<i32>, !fir.ref<i32>)
-  %5:2 = hlfir.declare %arg3 dummy_scope %0 {uniq_name = "_QFtestEstep"} : (!fir.ref<i32>, !fir.dscope) -> (!fir.ref<i32>, !fir.ref<i32>)
-  %6:2 = hlfir.declare %arg2 dummy_scope %0 {uniq_name = "_QFtestEub"} : (!fir.ref<i32>, !fir.dscope) -> (!fir.ref<i32>, !fir.ref<i32>)
+  %2:2 = hlfir.declare %1 uniq_name("_QFtestEi") : (!fir.ref<i32>) -> (!fir.ref<i32>, !fir.ref<i32>)
+  %3:2 = hlfir.declare %arg1 dummy_scope %0 uniq_name("_QFtestElb") : (!fir.ref<i32>, !fir.dscope) -> (!fir.ref<i32>, !fir.ref<i32>)
+  %4:2 = hlfir.declare %arg0 dummy_scope %0 uniq_name("_QFtestEnum") : (!fir.ref<i32>, !fir.dscope) -> (!fir.ref<i32>, !fir.ref<i32>)
+  %5:2 = hlfir.declare %arg3 dummy_scope %0 uniq_name("_QFtestEstep") : (!fir.ref<i32>, !fir.dscope) -> (!fir.ref<i32>, !fir.ref<i32>)
+  %6:2 = hlfir.declare %arg2 dummy_scope %0 uniq_name("_QFtestEub") : (!fir.ref<i32>, !fir.dscope) -> (!fir.ref<i32>, !fir.ref<i32>)
   %7 = fir.load %3#0 : !fir.ref<i32>
   %8 = fir.convert %7 : (i32) -> index
   %9 = fir.load %6#0 : !fir.ref<i32>

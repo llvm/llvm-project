@@ -76,13 +76,11 @@ __device__ float test_logb(float x) {
 // CIR-LABEL: cir.func no_inline @_Z9test_logbf
 // CIR: cir.call_llvm_intrinsic "frexp" %{{.*}} : (!cir.float) -> !rec_anon_struct
 
-// FIXME: CIR emits 'add' without 'nsw' and 'fcmp une' instead of 'fcmp one'.
-
 // LLVM-LABEL: define spir_func noundef float @_Z9test_logbf
 // LLVM: call{{.*}} @llvm.frexp.f32.i32
-// LLVM: add i32 %{{.*}}, -1
+// LLVM: add nsw i32 %{{.*}}, -1
 // LLVM: call addrspace(4) float @llvm.fabs.f32
-// LLVM: fcmp une float %{{.*}}, +inf
+// LLVM: fcmp one float %{{.*}}, +inf
 
 // OGCG-LABEL: define spir_func noundef float @_Z9test_logbf
 // OGCG: call{{.*}} @llvm.frexp.f32.i32

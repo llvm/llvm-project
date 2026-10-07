@@ -32,36 +32,37 @@ define i128 @cvt_u128_f32(float %x) {
 ; CHECK-LABEL: cvt_u128_f32(
 ; CHECK:       {
 ; CHECK-NEXT:    .reg .pred %p<4>;
-; CHECK-NEXT:    .reg .b32 %r<10>;
+; CHECK-NEXT:    .reg .b32 %r<11>;
 ; CHECK-NEXT:    .reg .b64 %rd<6>;
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  // %bb.0: // %fp-to-i-entry
 ; CHECK-NEXT:    ld.param.b32 %r3, [cvt_u128_f32_param_0];
-; CHECK-NEXT:    bfe.u32 %r1, %r3, 23, 8;
+; CHECK-NEXT:    shr.u32 %r4, %r3, 23;
+; CHECK-NEXT:    and.b32 %r1, %r4, 255;
 ; CHECK-NEXT:    setp.lt.u32 %p1, %r1, 127;
 ; CHECK-NEXT:    mov.b64 %rd5, 0;
 ; CHECK-NEXT:    mov.b64 %rd4, %rd5;
 ; CHECK-NEXT:    @%p1 bra $L__BB1_4;
 ; CHECK-NEXT:  // %bb.1: // %fp-to-i-if-check.exp.size
-; CHECK-NEXT:    and.b32 %r4, %r3, 8388607;
-; CHECK-NEXT:    or.b32 %r2, %r4, 8388608;
+; CHECK-NEXT:    and.b32 %r5, %r3, 8388607;
+; CHECK-NEXT:    or.b32 %r2, %r5, 8388608;
 ; CHECK-NEXT:    setp.gt.u32 %p2, %r1, 149;
 ; CHECK-NEXT:    @%p2 bra $L__BB1_3;
 ; CHECK-NEXT:  // %bb.2: // %fp-to-i-if-exp.small
-; CHECK-NEXT:    sub.s32 %r8, 150, %r1;
-; CHECK-NEXT:    shr.u32 %r9, %r2, %r8;
-; CHECK-NEXT:    cvt.u64.u32 %rd4, %r9;
+; CHECK-NEXT:    sub.s32 %r9, 150, %r1;
+; CHECK-NEXT:    shr.u32 %r10, %r2, %r9;
+; CHECK-NEXT:    cvt.u64.u32 %rd4, %r10;
 ; CHECK-NEXT:    bra.uni $L__BB1_4;
 ; CHECK-NEXT:  $L__BB1_3: // %fp-to-i-if-exp.large
-; CHECK-NEXT:    add.s32 %r5, %r1, -150;
+; CHECK-NEXT:    add.s32 %r6, %r1, -150;
 ; CHECK-NEXT:    cvt.u64.u32 %rd1, %r2;
-; CHECK-NEXT:    sub.s32 %r6, 214, %r1;
-; CHECK-NEXT:    shr.u64 %rd2, %rd1, %r6;
-; CHECK-NEXT:    add.s32 %r7, %r1, -214;
-; CHECK-NEXT:    shl.b64 %rd3, %rd1, %r7;
-; CHECK-NEXT:    setp.gt.s32 %p3, %r5, 63;
+; CHECK-NEXT:    sub.s32 %r7, 214, %r1;
+; CHECK-NEXT:    shr.u64 %rd2, %rd1, %r7;
+; CHECK-NEXT:    add.s32 %r8, %r1, -214;
+; CHECK-NEXT:    shl.b64 %rd3, %rd1, %r8;
+; CHECK-NEXT:    setp.gt.s32 %p3, %r6, 63;
 ; CHECK-NEXT:    selp.b64 %rd5, %rd3, %rd2, %p3;
-; CHECK-NEXT:    shl.b64 %rd4, %rd1, %r5;
+; CHECK-NEXT:    shl.b64 %rd4, %rd1, %r6;
 ; CHECK-NEXT:  $L__BB1_4: // %fp-to-i-cleanup
 ; CHECK-NEXT:    st.param.v2.b64 [func_retval0], {%rd4, %rd5};
 ; CHECK-NEXT:    ret;
@@ -116,7 +117,7 @@ define half @cvt_f16_u128(i128 %x) {
 ; CHECK:       {
 ; CHECK-NEXT:    .reg .pred %p<10>;
 ; CHECK-NEXT:    .reg .b16 %rs<2>;
-; CHECK-NEXT:    .reg .b32 %r<19>;
+; CHECK-NEXT:    .reg .b32 %r<20>;
 ; CHECK-NEXT:    .reg .b64 %rd<28>;
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  // %bb.0: // %itofp-entry
@@ -135,7 +136,7 @@ define half @cvt_f16_u128(i128 %x) {
 ; CHECK-NEXT:    selp.b64 %rd6, %rd5, %rd4, %p2;
 ; CHECK-NEXT:    cvt.u32.u64 %r1, %rd6;
 ; CHECK-NEXT:    sub.s32 %r2, 128, %r1;
-; CHECK-NEXT:    sub.s32 %r18, 127, %r1;
+; CHECK-NEXT:    sub.s32 %r19, 127, %r1;
 ; CHECK-NEXT:    setp.lt.s32 %p3, %r2, 25;
 ; CHECK-NEXT:    @%p3 bra $L__BB3_8;
 ; CHECK-NEXT:  // %bb.2: // %itofp-if-then4
@@ -169,33 +170,34 @@ define half @cvt_f16_u128(i128 %x) {
 ; CHECK-NEXT:    or.b64 %rd27, %rd12, %rd20;
 ; CHECK-NEXT:  $L__BB3_6: // %itofp-sw-epilog
 ; CHECK-NEXT:    cvt.u32.u64 %r11, %rd27;
-; CHECK-NEXT:    bfe.u32 %r12, %r11, 2, 1;
-; CHECK-NEXT:    cvt.u64.u32 %rd21, %r12;
+; CHECK-NEXT:    shr.u32 %r12, %r11, 2;
+; CHECK-NEXT:    and.b32 %r13, %r12, 1;
+; CHECK-NEXT:    cvt.u64.u32 %rd21, %r13;
 ; CHECK-NEXT:    or.b64 %rd22, %rd27, %rd21;
 ; CHECK-NEXT:    add.s64 %rd23, %rd22, 1;
 ; CHECK-NEXT:    shr.u64 %rd24, %rd23, 2;
 ; CHECK-NEXT:    and.b64 %rd25, %rd23, 67108864;
 ; CHECK-NEXT:    setp.eq.b64 %p9, %rd25, 0;
-; CHECK-NEXT:    cvt.u32.u64 %r17, %rd24;
+; CHECK-NEXT:    cvt.u32.u64 %r18, %rd24;
 ; CHECK-NEXT:    @!%p9 bra $L__BB3_7;
 ; CHECK-NEXT:  $L__BB3_9: // %itofp-if-end26
-; CHECK-NEXT:    shl.b32 %r13, %r18, 23;
-; CHECK-NEXT:    and.b32 %r14, %r17, 8388607;
-; CHECK-NEXT:    or.b32 %r15, %r13, %r14;
-; CHECK-NEXT:    add.s32 %r16, %r15, 1065353216;
-; CHECK-NEXT:    cvt.rn.f16.f32 %rs1, %r16;
+; CHECK-NEXT:    shl.b32 %r14, %r19, 23;
+; CHECK-NEXT:    and.b32 %r15, %r18, 8388607;
+; CHECK-NEXT:    or.b32 %r16, %r14, %r15;
+; CHECK-NEXT:    add.s32 %r17, %r16, 1065353216;
+; CHECK-NEXT:    cvt.rn.f16.f32 %rs1, %r17;
 ; CHECK-NEXT:  $L__BB3_10: // %itofp-return
 ; CHECK-NEXT:    st.param.b16 [func_retval0], %rs1;
 ; CHECK-NEXT:    ret;
 ; CHECK-NEXT:  $L__BB3_8: // %itofp-if-else
 ; CHECK-NEXT:    add.s32 %r5, %r1, -104;
 ; CHECK-NEXT:    shl.b64 %rd7, %rd27, %r5;
-; CHECK-NEXT:    cvt.u32.u64 %r17, %rd7;
+; CHECK-NEXT:    cvt.u32.u64 %r18, %rd7;
 ; CHECK-NEXT:    bra.uni $L__BB3_9;
 ; CHECK-NEXT:  $L__BB3_7: // %itofp-if-then20
 ; CHECK-NEXT:    shr.u64 %rd26, %rd23, 3;
-; CHECK-NEXT:    cvt.u32.u64 %r17, %rd26;
-; CHECK-NEXT:    mov.b32 %r18, %r2;
+; CHECK-NEXT:    cvt.u32.u64 %r18, %rd26;
+; CHECK-NEXT:    mov.b32 %r19, %r2;
 ; CHECK-NEXT:    bra.uni $L__BB3_9;
 ; CHECK-NEXT:  $L__BB3_4: // %itofp-sw-bb
 ; CHECK-NEXT:    shl.b64 %rd27, %rd27, 1;
@@ -208,14 +210,14 @@ define float @cvt_f32_u128(i128 %x) {
 ; CHECK-LABEL: cvt_f32_u128(
 ; CHECK:       {
 ; CHECK-NEXT:    .reg .pred %p<10>;
-; CHECK-NEXT:    .reg .b32 %r<19>;
+; CHECK-NEXT:    .reg .b32 %r<20>;
 ; CHECK-NEXT:    .reg .b64 %rd<28>;
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  // %bb.0: // %itofp-entry
 ; CHECK-NEXT:    ld.param.v2.b64 {%rd27, %rd1}, [cvt_f32_u128_param_0];
 ; CHECK-NEXT:    or.b64 %rd2, %rd27, %rd1;
 ; CHECK-NEXT:    setp.eq.b64 %p1, %rd2, 0;
-; CHECK-NEXT:    mov.b32 %r18, 0f00000000;
+; CHECK-NEXT:    mov.b32 %r19, 0f00000000;
 ; CHECK-NEXT:    @%p1 bra $L__BB4_10;
 ; CHECK-NEXT:  // %bb.1: // %itofp-if-end
 ; CHECK-NEXT:    setp.ne.b64 %p2, %rd1, 0;
@@ -227,7 +229,7 @@ define float @cvt_f32_u128(i128 %x) {
 ; CHECK-NEXT:    selp.b64 %rd6, %rd5, %rd4, %p2;
 ; CHECK-NEXT:    cvt.u32.u64 %r1, %rd6;
 ; CHECK-NEXT:    sub.s32 %r2, 128, %r1;
-; CHECK-NEXT:    sub.s32 %r17, 127, %r1;
+; CHECK-NEXT:    sub.s32 %r18, 127, %r1;
 ; CHECK-NEXT:    setp.lt.s32 %p3, %r2, 25;
 ; CHECK-NEXT:    @%p3 bra $L__BB4_8;
 ; CHECK-NEXT:  // %bb.2: // %itofp-if-then4
@@ -261,32 +263,33 @@ define float @cvt_f32_u128(i128 %x) {
 ; CHECK-NEXT:    or.b64 %rd27, %rd12, %rd20;
 ; CHECK-NEXT:  $L__BB4_6: // %itofp-sw-epilog
 ; CHECK-NEXT:    cvt.u32.u64 %r11, %rd27;
-; CHECK-NEXT:    bfe.u32 %r12, %r11, 2, 1;
-; CHECK-NEXT:    cvt.u64.u32 %rd21, %r12;
+; CHECK-NEXT:    shr.u32 %r12, %r11, 2;
+; CHECK-NEXT:    and.b32 %r13, %r12, 1;
+; CHECK-NEXT:    cvt.u64.u32 %rd21, %r13;
 ; CHECK-NEXT:    or.b64 %rd22, %rd27, %rd21;
 ; CHECK-NEXT:    add.s64 %rd23, %rd22, 1;
 ; CHECK-NEXT:    shr.u64 %rd24, %rd23, 2;
 ; CHECK-NEXT:    and.b64 %rd25, %rd23, 67108864;
 ; CHECK-NEXT:    setp.eq.b64 %p9, %rd25, 0;
-; CHECK-NEXT:    cvt.u32.u64 %r16, %rd24;
+; CHECK-NEXT:    cvt.u32.u64 %r17, %rd24;
 ; CHECK-NEXT:    @!%p9 bra $L__BB4_7;
 ; CHECK-NEXT:  $L__BB4_9: // %itofp-if-end26
-; CHECK-NEXT:    shl.b32 %r13, %r17, 23;
-; CHECK-NEXT:    and.b32 %r14, %r16, 8388607;
-; CHECK-NEXT:    or.b32 %r15, %r13, %r14;
-; CHECK-NEXT:    add.s32 %r18, %r15, 1065353216;
+; CHECK-NEXT:    shl.b32 %r14, %r18, 23;
+; CHECK-NEXT:    and.b32 %r15, %r17, 8388607;
+; CHECK-NEXT:    or.b32 %r16, %r14, %r15;
+; CHECK-NEXT:    add.s32 %r19, %r16, 1065353216;
 ; CHECK-NEXT:  $L__BB4_10: // %itofp-return
-; CHECK-NEXT:    st.param.b32 [func_retval0], %r18;
+; CHECK-NEXT:    st.param.b32 [func_retval0], %r19;
 ; CHECK-NEXT:    ret;
 ; CHECK-NEXT:  $L__BB4_8: // %itofp-if-else
 ; CHECK-NEXT:    add.s32 %r5, %r1, -104;
 ; CHECK-NEXT:    shl.b64 %rd7, %rd27, %r5;
-; CHECK-NEXT:    cvt.u32.u64 %r16, %rd7;
+; CHECK-NEXT:    cvt.u32.u64 %r17, %rd7;
 ; CHECK-NEXT:    bra.uni $L__BB4_9;
 ; CHECK-NEXT:  $L__BB4_7: // %itofp-if-then20
 ; CHECK-NEXT:    shr.u64 %rd26, %rd23, 3;
-; CHECK-NEXT:    cvt.u32.u64 %r16, %rd26;
-; CHECK-NEXT:    mov.b32 %r17, %r2;
+; CHECK-NEXT:    cvt.u32.u64 %r17, %rd26;
+; CHECK-NEXT:    mov.b32 %r18, %r2;
 ; CHECK-NEXT:    bra.uni $L__BB4_9;
 ; CHECK-NEXT:  $L__BB4_4: // %itofp-sw-bb
 ; CHECK-NEXT:    shl.b64 %rd27, %rd27, 1;
@@ -299,7 +302,7 @@ define double @cvt_f64_u128(i128 %x) {
 ; CHECK-LABEL: cvt_f64_u128(
 ; CHECK:       {
 ; CHECK-NEXT:    .reg .pred %p<10>;
-; CHECK-NEXT:    .reg .b32 %r<35>;
+; CHECK-NEXT:    .reg .b32 %r<36>;
 ; CHECK-NEXT:    .reg .b64 %rd<34>;
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  // %bb.0: // %itofp-entry
@@ -318,7 +321,7 @@ define double @cvt_f64_u128(i128 %x) {
 ; CHECK-NEXT:    selp.b64 %rd6, %rd5, %rd4, %p2;
 ; CHECK-NEXT:    cvt.u32.u64 %r1, %rd6;
 ; CHECK-NEXT:    sub.s32 %r2, 128, %r1;
-; CHECK-NEXT:    sub.s32 %r34, 127, %r1;
+; CHECK-NEXT:    sub.s32 %r35, 127, %r1;
 ; CHECK-NEXT:    setp.lt.s32 %p3, %r2, 54;
 ; CHECK-NEXT:    @%p3 bra $L__BB5_8;
 ; CHECK-NEXT:  // %bb.2: // %itofp-if-then4
@@ -354,28 +357,29 @@ define double @cvt_f64_u128(i128 %x) {
 ; CHECK-NEXT:    mov.b64 %rd31, %rd1;
 ; CHECK-NEXT:  $L__BB5_6: // %itofp-sw-epilog
 ; CHECK-NEXT:    cvt.u32.u64 %r17, %rd30;
-; CHECK-NEXT:    bfe.u32 %r18, %r17, 2, 1;
-; CHECK-NEXT:    cvt.u64.u32 %rd20, %r18;
+; CHECK-NEXT:    shr.u32 %r18, %r17, 2;
+; CHECK-NEXT:    and.b32 %r19, %r18, 1;
+; CHECK-NEXT:    cvt.u64.u32 %rd20, %r19;
 ; CHECK-NEXT:    or.b64 %rd21, %rd30, %rd20;
 ; CHECK-NEXT:    add.cc.s64 %rd22, %rd21, 1;
 ; CHECK-NEXT:    addc.cc.s64 %rd23, %rd31, 0;
-; CHECK-NEXT:    mov.b64 {%r19, %r20}, %rd22;
-; CHECK-NEXT:    shf.l.wrap.b32 %r21, %r19, %r20, 30;
-; CHECK-NEXT:    mov.b64 {%r22, %r23}, %rd23;
-; CHECK-NEXT:    shf.l.wrap.b32 %r24, %r20, %r22, 30;
-; CHECK-NEXT:    mov.b64 %rd32, {%r21, %r24};
+; CHECK-NEXT:    mov.b64 {%r20, %r21}, %rd22;
+; CHECK-NEXT:    shf.l.wrap.b32 %r22, %r20, %r21, 30;
+; CHECK-NEXT:    mov.b64 {%r23, %r24}, %rd23;
+; CHECK-NEXT:    shf.l.wrap.b32 %r25, %r21, %r23, 30;
+; CHECK-NEXT:    mov.b64 %rd32, {%r22, %r25};
 ; CHECK-NEXT:    and.b64 %rd24, %rd22, 36028797018963968;
 ; CHECK-NEXT:    setp.eq.b64 %p9, %rd24, 0;
-; CHECK-NEXT:    shf.l.wrap.b32 %r25, %r22, %r23, 30;
-; CHECK-NEXT:    mov.b64 %rd25, {%r24, %r25};
-; CHECK-NEXT:    cvt.u32.u64 %r33, %rd25;
+; CHECK-NEXT:    shf.l.wrap.b32 %r26, %r23, %r24, 30;
+; CHECK-NEXT:    mov.b64 %rd25, {%r25, %r26};
+; CHECK-NEXT:    cvt.u32.u64 %r34, %rd25;
 ; CHECK-NEXT:    @!%p9 bra $L__BB5_7;
 ; CHECK-NEXT:  $L__BB5_9: // %itofp-if-end26
-; CHECK-NEXT:    shl.b32 %r29, %r34, 20;
-; CHECK-NEXT:    and.b32 %r30, %r33, 1048575;
-; CHECK-NEXT:    or.b32 %r31, %r29, %r30;
-; CHECK-NEXT:    add.s32 %r32, %r31, 1072693248;
-; CHECK-NEXT:    cvt.u64.u32 %rd27, %r32;
+; CHECK-NEXT:    shl.b32 %r30, %r35, 20;
+; CHECK-NEXT:    and.b32 %r31, %r34, 1048575;
+; CHECK-NEXT:    or.b32 %r32, %r30, %r31;
+; CHECK-NEXT:    add.s32 %r33, %r32, 1072693248;
+; CHECK-NEXT:    cvt.u64.u32 %rd27, %r33;
 ; CHECK-NEXT:    shl.b64 %rd28, %rd27, 32;
 ; CHECK-NEXT:    and.b64 %rd29, %rd32, 4294967295;
 ; CHECK-NEXT:    or.b64 %rd33, %rd28, %rd29;
@@ -385,16 +389,16 @@ define double @cvt_f64_u128(i128 %x) {
 ; CHECK-NEXT:  $L__BB5_8: // %itofp-if-else
 ; CHECK-NEXT:    add.s32 %r5, %r1, -75;
 ; CHECK-NEXT:    shl.b64 %rd32, %rd30, %r5;
-; CHECK-NEXT:    { .reg .b32 tmp; mov.b64 {tmp, %r33}, %rd32; }
+; CHECK-NEXT:    { .reg .b32 tmp; mov.b64 {tmp, %r34}, %rd32; }
 ; CHECK-NEXT:    bra.uni $L__BB5_9;
 ; CHECK-NEXT:  $L__BB5_7: // %itofp-if-then20
-; CHECK-NEXT:    shf.l.wrap.b32 %r26, %r19, %r20, 29;
-; CHECK-NEXT:    shf.l.wrap.b32 %r27, %r20, %r22, 29;
-; CHECK-NEXT:    mov.b64 %rd32, {%r26, %r27};
-; CHECK-NEXT:    shf.l.wrap.b32 %r28, %r22, %r23, 29;
-; CHECK-NEXT:    mov.b64 %rd26, {%r27, %r28};
-; CHECK-NEXT:    cvt.u32.u64 %r33, %rd26;
-; CHECK-NEXT:    mov.b32 %r34, %r2;
+; CHECK-NEXT:    shf.l.wrap.b32 %r27, %r20, %r21, 29;
+; CHECK-NEXT:    shf.l.wrap.b32 %r28, %r21, %r23, 29;
+; CHECK-NEXT:    mov.b64 %rd32, {%r27, %r28};
+; CHECK-NEXT:    shf.l.wrap.b32 %r29, %r23, %r24, 29;
+; CHECK-NEXT:    mov.b64 %rd26, {%r28, %r29};
+; CHECK-NEXT:    cvt.u32.u64 %r34, %rd26;
+; CHECK-NEXT:    mov.b32 %r35, %r2;
 ; CHECK-NEXT:    bra.uni $L__BB5_9;
 ; CHECK-NEXT:  $L__BB5_4: // %itofp-sw-bb
 ; CHECK-NEXT:    mov.b64 {%r6, %r7}, %rd30;
@@ -430,12 +434,13 @@ define i128 @cvt_s128_f32(float %x) {
 ; CHECK-LABEL: cvt_s128_f32(
 ; CHECK:       {
 ; CHECK-NEXT:    .reg .pred %p<4>;
-; CHECK-NEXT:    .reg .b32 %r<11>;
+; CHECK-NEXT:    .reg .b32 %r<12>;
 ; CHECK-NEXT:    .reg .b64 %rd<14>;
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  // %bb.0: // %fp-to-i-entry
 ; CHECK-NEXT:    ld.param.b32 %r3, [cvt_s128_f32_param_0];
-; CHECK-NEXT:    bfe.u32 %r1, %r3, 23, 8;
+; CHECK-NEXT:    shr.u32 %r5, %r3, 23;
+; CHECK-NEXT:    and.b32 %r1, %r5, 255;
 ; CHECK-NEXT:    setp.lt.u32 %p1, %r1, 127;
 ; CHECK-NEXT:    mov.b64 %rd12, 0;
 ; CHECK-NEXT:    mov.b64 %rd13, %rd12;
@@ -444,28 +449,28 @@ define i128 @cvt_s128_f32(float %x) {
 ; CHECK-NEXT:    shr.s32 %r4, %r3, 31;
 ; CHECK-NEXT:    cvt.s64.s32 %rd2, %r4;
 ; CHECK-NEXT:    or.b64 %rd1, %rd2, 1;
-; CHECK-NEXT:    and.b32 %r5, %r3, 8388607;
-; CHECK-NEXT:    or.b32 %r2, %r5, 8388608;
+; CHECK-NEXT:    and.b32 %r6, %r3, 8388607;
+; CHECK-NEXT:    or.b32 %r2, %r6, 8388608;
 ; CHECK-NEXT:    setp.gt.u32 %p2, %r1, 149;
 ; CHECK-NEXT:    @%p2 bra $L__BB7_3;
 ; CHECK-NEXT:  // %bb.2: // %fp-to-i-if-exp.small
-; CHECK-NEXT:    sub.s32 %r9, 150, %r1;
-; CHECK-NEXT:    shr.u32 %r10, %r2, %r9;
-; CHECK-NEXT:    cvt.u64.u32 %rd10, %r10;
+; CHECK-NEXT:    sub.s32 %r10, 150, %r1;
+; CHECK-NEXT:    shr.u32 %r11, %r2, %r10;
+; CHECK-NEXT:    cvt.u64.u32 %rd10, %r11;
 ; CHECK-NEXT:    mul.hi.u64 %rd11, %rd10, %rd1;
 ; CHECK-NEXT:    mad.lo.s64 %rd13, %rd10, %rd2, %rd11;
 ; CHECK-NEXT:    mul.lo.s64 %rd12, %rd10, %rd1;
 ; CHECK-NEXT:    bra.uni $L__BB7_4;
 ; CHECK-NEXT:  $L__BB7_3: // %fp-to-i-if-exp.large
-; CHECK-NEXT:    add.s32 %r6, %r1, -150;
+; CHECK-NEXT:    add.s32 %r7, %r1, -150;
 ; CHECK-NEXT:    cvt.u64.u32 %rd3, %r2;
-; CHECK-NEXT:    sub.s32 %r7, 214, %r1;
-; CHECK-NEXT:    shr.u64 %rd4, %rd3, %r7;
-; CHECK-NEXT:    add.s32 %r8, %r1, -214;
-; CHECK-NEXT:    shl.b64 %rd5, %rd3, %r8;
-; CHECK-NEXT:    setp.gt.s32 %p3, %r6, 63;
+; CHECK-NEXT:    sub.s32 %r8, 214, %r1;
+; CHECK-NEXT:    shr.u64 %rd4, %rd3, %r8;
+; CHECK-NEXT:    add.s32 %r9, %r1, -214;
+; CHECK-NEXT:    shl.b64 %rd5, %rd3, %r9;
+; CHECK-NEXT:    setp.gt.s32 %p3, %r7, 63;
 ; CHECK-NEXT:    selp.b64 %rd6, %rd5, %rd4, %p3;
-; CHECK-NEXT:    shl.b64 %rd7, %rd3, %r6;
+; CHECK-NEXT:    shl.b64 %rd7, %rd3, %r7;
 ; CHECK-NEXT:    mul.hi.u64 %rd8, %rd7, %rd1;
 ; CHECK-NEXT:    mad.lo.s64 %rd9, %rd7, %rd2, %rd8;
 ; CHECK-NEXT:    mad.lo.s64 %rd13, %rd6, %rd1, %rd9;
@@ -533,7 +538,7 @@ define half @cvt_f16_s128(i128 %x) {
 ; CHECK:       {
 ; CHECK-NEXT:    .reg .pred %p<11>;
 ; CHECK-NEXT:    .reg .b16 %rs<2>;
-; CHECK-NEXT:    .reg .b32 %r<22>;
+; CHECK-NEXT:    .reg .b32 %r<23>;
 ; CHECK-NEXT:    .reg .b64 %rd<33>;
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  // %bb.0: // %itofp-entry
@@ -558,7 +563,7 @@ define half @cvt_f16_s128(i128 %x) {
 ; CHECK-NEXT:    selp.b64 %rd11, %rd8, %rd10, %p3;
 ; CHECK-NEXT:    cvt.u32.u64 %r1, %rd11;
 ; CHECK-NEXT:    sub.s32 %r2, 128, %r1;
-; CHECK-NEXT:    sub.s32 %r21, 127, %r1;
+; CHECK-NEXT:    sub.s32 %r22, 127, %r1;
 ; CHECK-NEXT:    setp.lt.s32 %p4, %r2, 25;
 ; CHECK-NEXT:    @%p4 bra $L__BB9_8;
 ; CHECK-NEXT:  // %bb.2: // %itofp-if-then4
@@ -592,36 +597,37 @@ define half @cvt_f16_s128(i128 %x) {
 ; CHECK-NEXT:    or.b64 %rd32, %rd17, %rd25;
 ; CHECK-NEXT:  $L__BB9_6: // %itofp-sw-epilog
 ; CHECK-NEXT:    cvt.u32.u64 %r11, %rd32;
-; CHECK-NEXT:    bfe.u32 %r12, %r11, 2, 1;
-; CHECK-NEXT:    cvt.u64.u32 %rd26, %r12;
+; CHECK-NEXT:    shr.u32 %r12, %r11, 2;
+; CHECK-NEXT:    and.b32 %r13, %r12, 1;
+; CHECK-NEXT:    cvt.u64.u32 %rd26, %r13;
 ; CHECK-NEXT:    or.b64 %rd27, %rd32, %rd26;
 ; CHECK-NEXT:    add.s64 %rd28, %rd27, 1;
 ; CHECK-NEXT:    shr.u64 %rd29, %rd28, 2;
 ; CHECK-NEXT:    and.b64 %rd30, %rd28, 67108864;
 ; CHECK-NEXT:    setp.eq.b64 %p10, %rd30, 0;
-; CHECK-NEXT:    cvt.u32.u64 %r20, %rd29;
+; CHECK-NEXT:    cvt.u32.u64 %r21, %rd29;
 ; CHECK-NEXT:    @!%p10 bra $L__BB9_7;
 ; CHECK-NEXT:  $L__BB9_9: // %itofp-if-end26
-; CHECK-NEXT:    cvt.u32.u64 %r13, %rd3;
-; CHECK-NEXT:    and.b32 %r14, %r13, -2147483648;
-; CHECK-NEXT:    shl.b32 %r15, %r21, 23;
-; CHECK-NEXT:    add.s32 %r16, %r15, 1065353216;
-; CHECK-NEXT:    and.b32 %r17, %r20, 8388607;
-; CHECK-NEXT:    or.b32 %r18, %r17, %r14;
-; CHECK-NEXT:    or.b32 %r19, %r18, %r16;
-; CHECK-NEXT:    cvt.rn.f16.f32 %rs1, %r19;
+; CHECK-NEXT:    cvt.u32.u64 %r14, %rd3;
+; CHECK-NEXT:    and.b32 %r15, %r14, -2147483648;
+; CHECK-NEXT:    shl.b32 %r16, %r22, 23;
+; CHECK-NEXT:    add.s32 %r17, %r16, 1065353216;
+; CHECK-NEXT:    and.b32 %r18, %r21, 8388607;
+; CHECK-NEXT:    or.b32 %r19, %r18, %r15;
+; CHECK-NEXT:    or.b32 %r20, %r19, %r17;
+; CHECK-NEXT:    cvt.rn.f16.f32 %rs1, %r20;
 ; CHECK-NEXT:  $L__BB9_10: // %itofp-return
 ; CHECK-NEXT:    st.param.b16 [func_retval0], %rs1;
 ; CHECK-NEXT:    ret;
 ; CHECK-NEXT:  $L__BB9_8: // %itofp-if-else
 ; CHECK-NEXT:    add.s32 %r5, %r1, -104;
 ; CHECK-NEXT:    shl.b64 %rd12, %rd32, %r5;
-; CHECK-NEXT:    cvt.u32.u64 %r20, %rd12;
+; CHECK-NEXT:    cvt.u32.u64 %r21, %rd12;
 ; CHECK-NEXT:    bra.uni $L__BB9_9;
 ; CHECK-NEXT:  $L__BB9_7: // %itofp-if-then20
 ; CHECK-NEXT:    shr.u64 %rd31, %rd28, 3;
-; CHECK-NEXT:    cvt.u32.u64 %r20, %rd31;
-; CHECK-NEXT:    mov.b32 %r21, %r2;
+; CHECK-NEXT:    cvt.u32.u64 %r21, %rd31;
+; CHECK-NEXT:    mov.b32 %r22, %r2;
 ; CHECK-NEXT:    bra.uni $L__BB9_9;
 ; CHECK-NEXT:  $L__BB9_4: // %itofp-sw-bb
 ; CHECK-NEXT:    shl.b64 %rd32, %rd32, 1;
@@ -634,14 +640,14 @@ define float @cvt_f32_s128(i128 %x) {
 ; CHECK-LABEL: cvt_f32_s128(
 ; CHECK:       {
 ; CHECK-NEXT:    .reg .pred %p<11>;
-; CHECK-NEXT:    .reg .b32 %r<22>;
+; CHECK-NEXT:    .reg .b32 %r<23>;
 ; CHECK-NEXT:    .reg .b64 %rd<33>;
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  // %bb.0: // %itofp-entry
 ; CHECK-NEXT:    ld.param.v2.b64 {%rd1, %rd2}, [cvt_f32_s128_param_0];
 ; CHECK-NEXT:    or.b64 %rd5, %rd1, %rd2;
 ; CHECK-NEXT:    setp.eq.b64 %p1, %rd5, 0;
-; CHECK-NEXT:    mov.b32 %r21, 0f00000000;
+; CHECK-NEXT:    mov.b32 %r22, 0f00000000;
 ; CHECK-NEXT:    @%p1 bra $L__BB10_10;
 ; CHECK-NEXT:  // %bb.1: // %itofp-if-end
 ; CHECK-NEXT:    shr.s64 %rd3, %rd2, 63;
@@ -659,7 +665,7 @@ define float @cvt_f32_s128(i128 %x) {
 ; CHECK-NEXT:    selp.b64 %rd11, %rd8, %rd10, %p3;
 ; CHECK-NEXT:    cvt.u32.u64 %r1, %rd11;
 ; CHECK-NEXT:    sub.s32 %r2, 128, %r1;
-; CHECK-NEXT:    sub.s32 %r20, 127, %r1;
+; CHECK-NEXT:    sub.s32 %r21, 127, %r1;
 ; CHECK-NEXT:    setp.lt.s32 %p4, %r2, 25;
 ; CHECK-NEXT:    @%p4 bra $L__BB10_8;
 ; CHECK-NEXT:  // %bb.2: // %itofp-if-then4
@@ -693,35 +699,36 @@ define float @cvt_f32_s128(i128 %x) {
 ; CHECK-NEXT:    or.b64 %rd32, %rd17, %rd25;
 ; CHECK-NEXT:  $L__BB10_6: // %itofp-sw-epilog
 ; CHECK-NEXT:    cvt.u32.u64 %r11, %rd32;
-; CHECK-NEXT:    bfe.u32 %r12, %r11, 2, 1;
-; CHECK-NEXT:    cvt.u64.u32 %rd26, %r12;
+; CHECK-NEXT:    shr.u32 %r12, %r11, 2;
+; CHECK-NEXT:    and.b32 %r13, %r12, 1;
+; CHECK-NEXT:    cvt.u64.u32 %rd26, %r13;
 ; CHECK-NEXT:    or.b64 %rd27, %rd32, %rd26;
 ; CHECK-NEXT:    add.s64 %rd28, %rd27, 1;
 ; CHECK-NEXT:    shr.u64 %rd29, %rd28, 2;
 ; CHECK-NEXT:    and.b64 %rd30, %rd28, 67108864;
 ; CHECK-NEXT:    setp.eq.b64 %p10, %rd30, 0;
-; CHECK-NEXT:    cvt.u32.u64 %r19, %rd29;
+; CHECK-NEXT:    cvt.u32.u64 %r20, %rd29;
 ; CHECK-NEXT:    @!%p10 bra $L__BB10_7;
 ; CHECK-NEXT:  $L__BB10_9: // %itofp-if-end26
-; CHECK-NEXT:    cvt.u32.u64 %r13, %rd3;
-; CHECK-NEXT:    and.b32 %r14, %r13, -2147483648;
-; CHECK-NEXT:    shl.b32 %r15, %r20, 23;
-; CHECK-NEXT:    add.s32 %r16, %r15, 1065353216;
-; CHECK-NEXT:    and.b32 %r17, %r19, 8388607;
-; CHECK-NEXT:    or.b32 %r18, %r17, %r14;
-; CHECK-NEXT:    or.b32 %r21, %r18, %r16;
+; CHECK-NEXT:    cvt.u32.u64 %r14, %rd3;
+; CHECK-NEXT:    and.b32 %r15, %r14, -2147483648;
+; CHECK-NEXT:    shl.b32 %r16, %r21, 23;
+; CHECK-NEXT:    add.s32 %r17, %r16, 1065353216;
+; CHECK-NEXT:    and.b32 %r18, %r20, 8388607;
+; CHECK-NEXT:    or.b32 %r19, %r18, %r15;
+; CHECK-NEXT:    or.b32 %r22, %r19, %r17;
 ; CHECK-NEXT:  $L__BB10_10: // %itofp-return
-; CHECK-NEXT:    st.param.b32 [func_retval0], %r21;
+; CHECK-NEXT:    st.param.b32 [func_retval0], %r22;
 ; CHECK-NEXT:    ret;
 ; CHECK-NEXT:  $L__BB10_8: // %itofp-if-else
 ; CHECK-NEXT:    add.s32 %r5, %r1, -104;
 ; CHECK-NEXT:    shl.b64 %rd12, %rd32, %r5;
-; CHECK-NEXT:    cvt.u32.u64 %r19, %rd12;
+; CHECK-NEXT:    cvt.u32.u64 %r20, %rd12;
 ; CHECK-NEXT:    bra.uni $L__BB10_9;
 ; CHECK-NEXT:  $L__BB10_7: // %itofp-if-then20
 ; CHECK-NEXT:    shr.u64 %rd31, %rd28, 3;
-; CHECK-NEXT:    cvt.u32.u64 %r19, %rd31;
-; CHECK-NEXT:    mov.b32 %r20, %r2;
+; CHECK-NEXT:    cvt.u32.u64 %r20, %rd31;
+; CHECK-NEXT:    mov.b32 %r21, %r2;
 ; CHECK-NEXT:    bra.uni $L__BB10_9;
 ; CHECK-NEXT:  $L__BB10_4: // %itofp-sw-bb
 ; CHECK-NEXT:    shl.b64 %rd32, %rd32, 1;
@@ -734,7 +741,7 @@ define double @cvt_f64_s128(i128 %x) {
 ; CHECK-LABEL: cvt_f64_s128(
 ; CHECK:       {
 ; CHECK-NEXT:    .reg .pred %p<11>;
-; CHECK-NEXT:    .reg .b32 %r<36>;
+; CHECK-NEXT:    .reg .b32 %r<37>;
 ; CHECK-NEXT:    .reg .b64 %rd<37>;
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  // %bb.0: // %itofp-entry
@@ -759,7 +766,7 @@ define double @cvt_f64_s128(i128 %x) {
 ; CHECK-NEXT:    selp.b64 %rd11, %rd8, %rd10, %p3;
 ; CHECK-NEXT:    cvt.u32.u64 %r1, %rd11;
 ; CHECK-NEXT:    sub.s32 %r2, 128, %r1;
-; CHECK-NEXT:    sub.s32 %r35, 127, %r1;
+; CHECK-NEXT:    sub.s32 %r36, 127, %r1;
 ; CHECK-NEXT:    setp.lt.s32 %p4, %r2, 54;
 ; CHECK-NEXT:    @%p4 bra $L__BB11_8;
 ; CHECK-NEXT:  // %bb.2: // %itofp-if-then4
@@ -795,29 +802,30 @@ define double @cvt_f64_s128(i128 %x) {
 ; CHECK-NEXT:    mov.b64 %rd34, %rd4;
 ; CHECK-NEXT:  $L__BB11_6: // %itofp-sw-epilog
 ; CHECK-NEXT:    cvt.u32.u64 %r17, %rd33;
-; CHECK-NEXT:    bfe.u32 %r18, %r17, 2, 1;
-; CHECK-NEXT:    cvt.u64.u32 %rd25, %r18;
+; CHECK-NEXT:    shr.u32 %r18, %r17, 2;
+; CHECK-NEXT:    and.b32 %r19, %r18, 1;
+; CHECK-NEXT:    cvt.u64.u32 %rd25, %r19;
 ; CHECK-NEXT:    or.b64 %rd26, %rd33, %rd25;
 ; CHECK-NEXT:    add.cc.s64 %rd27, %rd26, 1;
 ; CHECK-NEXT:    addc.cc.s64 %rd28, %rd34, 0;
-; CHECK-NEXT:    mov.b64 {%r19, %r20}, %rd28;
-; CHECK-NEXT:    mov.b64 {%r21, %r22}, %rd27;
-; CHECK-NEXT:    shf.l.wrap.b32 %r23, %r22, %r19, 30;
-; CHECK-NEXT:    shf.l.wrap.b32 %r24, %r21, %r22, 30;
-; CHECK-NEXT:    mov.b64 %rd35, {%r24, %r23};
+; CHECK-NEXT:    mov.b64 {%r20, %r21}, %rd28;
+; CHECK-NEXT:    mov.b64 {%r22, %r23}, %rd27;
+; CHECK-NEXT:    shf.l.wrap.b32 %r24, %r23, %r20, 30;
+; CHECK-NEXT:    shf.l.wrap.b32 %r25, %r22, %r23, 30;
+; CHECK-NEXT:    mov.b64 %rd35, {%r25, %r24};
 ; CHECK-NEXT:    and.b64 %rd29, %rd27, 36028797018963968;
 ; CHECK-NEXT:    setp.eq.b64 %p10, %rd29, 0;
-; CHECK-NEXT:    { .reg .b32 tmp; mov.b64 {tmp, %r34}, %rd35; }
+; CHECK-NEXT:    { .reg .b32 tmp; mov.b64 {tmp, %r35}, %rd35; }
 ; CHECK-NEXT:    @!%p10 bra $L__BB11_7;
 ; CHECK-NEXT:  $L__BB11_9: // %itofp-if-end26
-; CHECK-NEXT:    cvt.u32.u64 %r27, %rd3;
-; CHECK-NEXT:    and.b32 %r28, %r27, -2147483648;
-; CHECK-NEXT:    shl.b32 %r29, %r35, 20;
-; CHECK-NEXT:    add.s32 %r30, %r29, 1072693248;
-; CHECK-NEXT:    and.b32 %r31, %r34, 1048575;
-; CHECK-NEXT:    or.b32 %r32, %r31, %r28;
-; CHECK-NEXT:    or.b32 %r33, %r32, %r30;
-; CHECK-NEXT:    cvt.u64.u32 %rd30, %r33;
+; CHECK-NEXT:    cvt.u32.u64 %r28, %rd3;
+; CHECK-NEXT:    and.b32 %r29, %r28, -2147483648;
+; CHECK-NEXT:    shl.b32 %r30, %r36, 20;
+; CHECK-NEXT:    add.s32 %r31, %r30, 1072693248;
+; CHECK-NEXT:    and.b32 %r32, %r35, 1048575;
+; CHECK-NEXT:    or.b32 %r33, %r32, %r29;
+; CHECK-NEXT:    or.b32 %r34, %r33, %r31;
+; CHECK-NEXT:    cvt.u64.u32 %rd30, %r34;
 ; CHECK-NEXT:    shl.b64 %rd31, %rd30, 32;
 ; CHECK-NEXT:    and.b64 %rd32, %rd35, 4294967295;
 ; CHECK-NEXT:    or.b64 %rd36, %rd31, %rd32;
@@ -827,14 +835,14 @@ define double @cvt_f64_s128(i128 %x) {
 ; CHECK-NEXT:  $L__BB11_8: // %itofp-if-else
 ; CHECK-NEXT:    add.s32 %r5, %r1, -75;
 ; CHECK-NEXT:    shl.b64 %rd35, %rd33, %r5;
-; CHECK-NEXT:    { .reg .b32 tmp; mov.b64 {tmp, %r34}, %rd35; }
+; CHECK-NEXT:    { .reg .b32 tmp; mov.b64 {tmp, %r35}, %rd35; }
 ; CHECK-NEXT:    bra.uni $L__BB11_9;
 ; CHECK-NEXT:  $L__BB11_7: // %itofp-if-then20
-; CHECK-NEXT:    shf.l.wrap.b32 %r25, %r22, %r19, 29;
-; CHECK-NEXT:    shf.l.wrap.b32 %r26, %r21, %r22, 29;
-; CHECK-NEXT:    mov.b64 %rd35, {%r26, %r25};
-; CHECK-NEXT:    { .reg .b32 tmp; mov.b64 {tmp, %r34}, %rd35; }
-; CHECK-NEXT:    mov.b32 %r35, %r2;
+; CHECK-NEXT:    shf.l.wrap.b32 %r26, %r23, %r20, 29;
+; CHECK-NEXT:    shf.l.wrap.b32 %r27, %r22, %r23, 29;
+; CHECK-NEXT:    mov.b64 %rd35, {%r27, %r26};
+; CHECK-NEXT:    { .reg .b32 tmp; mov.b64 {tmp, %r35}, %rd35; }
+; CHECK-NEXT:    mov.b32 %r36, %r2;
 ; CHECK-NEXT:    bra.uni $L__BB11_9;
 ; CHECK-NEXT:  $L__BB11_4: // %itofp-sw-bb
 ; CHECK-NEXT:    mov.b64 {%r6, %r7}, %rd33;

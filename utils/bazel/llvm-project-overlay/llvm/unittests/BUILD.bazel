@@ -426,6 +426,7 @@ cc_test(
         "//llvm:OrcShared",
         "//llvm:OrcTargetProcess",
         "//llvm:Support",
+        "//llvm:Target",
         "//llvm:TargetParser",
         "//llvm:TestingSupport",
         "//llvm:config",
