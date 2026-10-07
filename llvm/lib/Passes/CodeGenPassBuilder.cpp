@@ -877,6 +877,13 @@ Error CodeGenPassBuilder::addOptimizedRegAlloc(PassManagerWrapper &PMW) {
   addMachineFunctionPass(
       RequireAnalysisPass<LiveVariablesAnalysis, MachineFunction>(), PMW);
 
+  // If enabled, run the SSA machine scheduler just before PHI elimination.
+  if (Opt.EnableSSAMachineScheduler) {
+    addMachineFunctionPass(
+        RequireAnalysisPass<LiveIntervalsAnalysis, MachineFunction>(), PMW);
+    addMachineFunctionPass(SSAMachineSchedulerPass(&TM), PMW);
+  }
+
   // LiveIntervals is computed unconditionally before TwoAddressInstruction so
   // that pass can rely on it instead of LiveVariables. This is a step toward
   // removing LiveVariables entirely.
