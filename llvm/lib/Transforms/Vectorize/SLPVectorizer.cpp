@@ -381,7 +381,7 @@ struct ReductionVectorPart {
   /// flattened through fsub/fneg operations.
   bool Negated = false;
   /// Context hint for deciding the reduction pattern
-  TTI::CastContextHint Ctx;
+  TTI::CastContextHint Ctx = TTI::CastContextHint::None;
 };
 } // namespace
 
@@ -33298,7 +33298,7 @@ public:
     Value *AccV = LoopAcc.tryEmit(
         Builder, RdxFMF, LoopAccVectorized, VectorizedTree, LeftoverReductions,
         VectorValuesAndScales, RequiredExtract, ReducedValsToOps, ReductionOps,
-        [this, TTI = TTI, &V](Value *Vec, IRBuilderBase &B, Type *Ty) {
+        [this, TTI = TTI](Value *Vec, IRBuilderBase &B, Type *Ty) {
           return emitReduction(Vec, B, TTI, TTI::CastContextHint::None, Ty);
         });
     if (AccV)
@@ -34351,7 +34351,8 @@ private:
     // the signs of the operands.
     auto CreateSingleOp = [&](Value *Vec, unsigned Scale, bool IsSigned,
                               bool ReducedInTree, bool Negated,
-                              TTI::CastContextHint Ctx) {
+                              TTI::CastContextHint Ctx =
+                                  TTI::CastContextHint::None) {
       Value *Rdx = createSingleOp(Builder, TTI, Ctx, Vec, Scale, IsSigned,
                                   DestTy, ReducedInTree);
       if (!ReducedSubTree) {
@@ -34535,8 +34536,7 @@ private:
     // to reduce.
     if (VecRes)
       CreateSingleOp(VecRes, /*Scale=*/1, /*IsSigned=*/false,
-                     /*ReducedInTree=*/false, VecResNegated,
-                     TTI::CastContextHint::None);
+                     /*ReducedInTree=*/false, VecResNegated);
 
     return {ReducedSubTree, ResNegated};
   }
