@@ -152,7 +152,7 @@ struct LoweringPreparePass
   /// `globalCtorList` under `priority`. With a `guard` byte, the calls run
   /// only when it is still zero and set it first. Shared by the default
   /// `_GLOBAL__sub_I_*` initializer function, the C++20 named-module
-  /// initializer and the per-priority `_GLOBAL__I_<priority>` initializer
+  /// initializer, and the per-priority `_GLOBAL__I_<priority>` initializer
   /// functions.
   cir::FuncOp
   buildGlobalInitCallerFunc(llvm::StringRef fnName,
