@@ -156,7 +156,7 @@
       } else if (UNLIKELY(size > dst_size)) {                                \
         return REAL(__mempcpy_chk)(dst, src, size, dst_size);                \
       }                                                                      \
-      return (char*)([&]() ALWAYS_INLINE -> void* {                          \
+      return (char*)([&]() -> void* {                                        \
                COMMON_INTERCEPTOR_MEMCPY_IMPL(ctx, dst, src, size);          \
              }()) +                                                          \
              size;                                                           \
