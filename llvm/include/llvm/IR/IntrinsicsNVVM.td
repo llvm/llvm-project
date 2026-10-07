@@ -3577,6 +3577,9 @@ let IntrProperties = [IntrArgMemOnly, ReadOnly<ArgIndex<0>>, NoCapture<ArgIndex<
   foreach eviction_priority = ["evict_normal", "evict_last"] in
     def int_nvvm_prefetch_global_L2_ # eviction_priority : DefaultAttrsIntrinsic<[], [llvm_global_ptr_ty]>;
 
+  def int_nvvm_prefetch_L1_32B_valid_addr
+    : DefaultAttrsIntrinsic<[], [llvm_anyptr_ty], [], "llvm.nvvm.prefetch.L1.32B.valid_addr">;
+
   def int_nvvm_prefetchu_L1 : DefaultAttrsIntrinsic<[], [llvm_ptr_ty]>;
 }
 
