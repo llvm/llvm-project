@@ -8,6 +8,7 @@ add_clang_library(clangTidyPerformanceModule STATIC
   EnumSizeCheck.cpp
   ExpensiveValueOrCheck.cpp
   ForRangeCopyCheck.cpp
+  FunctionPointerEqualityCheck.cpp
   ImplicitConversionInLoopCheck.cpp
   InefficientAlgorithmCheck.cpp
   InefficientStringConcatenationCheck.cpp
