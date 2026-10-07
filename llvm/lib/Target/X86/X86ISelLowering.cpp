@@ -48985,6 +48985,79 @@ static SDValue combineSelect(SDNode *N, SelectionDAG &DAG,
   bool CondConstantVector = ISD::isBuildVectorOfConstantSDNodes(Cond.getNode());
   unsigned EltBitWidth = VT.getScalarSizeInBits();
 
+  // Soft bf16/f16 scalar selects do a VSELECT in vector registers instead
+  // of a scalar CMOV, to avoid a GPR round-trip. Skip constant operands
+  // (cheaper as immediates) and compare-driven conds (CMOV already reuses
+  // the flags).
+  if (N->getOpcode() == ISD::SELECT && !CondVT.isVector() &&
+      Subtarget.hasSSE2() && !isIntOrFPConstant(LHS) &&
+      !isIntOrFPConstant(RHS)) {
+    // Only worth it if both operands already live in a vector register
+    auto IsBitcastFromGPR = [](SDValue Op) {
+      return Op.getOpcode() == ISD::BITCAST &&
+             Op.getOperand(0).getValueType().isScalarInteger();
+    };
+    SDValue F16LHS, F16RHS;
+    if (!VT.isVector() && isSoftF16(VT, Subtarget)) {
+      if (!IsBitcastFromGPR(LHS) || !IsBitcastFromGPR(RHS)) {
+        F16LHS = DAG.getBitcast(MVT::f16, LHS);
+        F16RHS = DAG.getBitcast(MVT::f16, RHS);
+      }
+    } else if (VT == MVT::i16 && LHS.getOpcode() == ISD::BITCAST &&
+               RHS.getOpcode() == ISD::BITCAST) {
+      MVT SVT = LHS.getOperand(0).getSimpleValueType();
+      if ((SVT == MVT::f16 || SVT == MVT::bf16) &&
+          SVT == RHS.getOperand(0).getSimpleValueType()) {
+        F16LHS = DAG.getBitcast(MVT::f16, LHS.getOperand(0));
+        F16RHS = DAG.getBitcast(MVT::f16, RHS.getOperand(0));
+      }
+    }
+
+    auto IsFromSetCC = [](SDValue V) {
+      while (V.getOpcode() == ISD::AND || V.getOpcode() == ISD::ANY_EXTEND ||
+             V.getOpcode() == ISD::ZERO_EXTEND ||
+             V.getOpcode() == ISD::TRUNCATE)
+        V = V.getOperand(0);
+      return V.getOpcode() == ISD::SETCC || V.getOpcode() == X86ISD::SETCC;
+    };
+
+    if (F16LHS && !IsFromSetCC(Cond)) {
+      // With FP16, f16 is legal and lowers to a masked VMOVSH.
+      if (Subtarget.hasFP16())
+        return DAG.getBitcast(
+            VT, DAG.getSelect(DL, MVT::f16, Cond, F16LHS, F16RHS));
+      SDValue VLHS = DAG.getNode(ISD::SCALAR_TO_VECTOR, DL, MVT::v8f16, F16LHS);
+      SDValue VRHS = DAG.getNode(ISD::SCALAR_TO_VECTOR, DL, MVT::v8f16, F16RHS);
+      // With AVX512, select the whole low 32-bit lane via a masked VMOVSS; the
+      // upper 16 bits of the result are don't care.
+      if (Subtarget.hasAVX512()) {
+        SDValue SLHS = DAG.getExtractVectorElt(
+            DL, MVT::f32, DAG.getBitcast(MVT::v4f32, VLHS), 0);
+        SDValue SRHS = DAG.getExtractVectorElt(
+            DL, MVT::f32, DAG.getBitcast(MVT::v4f32, VRHS), 0);
+        SDValue Sel = DAG.getSelect(DL, MVT::f32, Cond, SLHS, SRHS);
+        if (VT == MVT::i16)
+          return DAG.getNode(ISD::TRUNCATE, DL, VT,
+                             DAG.getBitcast(MVT::i32, Sel));
+        SDValue VSel =
+            DAG.getBitcast(MVT::v8i16, DAG.getNode(ISD::SCALAR_TO_VECTOR, DL,
+                                                   MVT::v4f32, Sel));
+        return DAG.getBitcast(VT,
+                              DAG.getExtractVectorElt(DL, MVT::i16, VSel, 0));
+      }
+      // Otherwise blend in v8i16 (not v8f16) since a v8f16 VSELECT can fail to
+      // select on some subtargets
+      SDValue Mask =
+          DAG.getNegative(DAG.getZExtOrTrunc(Cond, DL, MVT::i16), DL, MVT::i16);
+      SDValue VMask = DAG.getNode(ISD::SCALAR_TO_VECTOR, DL, MVT::v8i16, Mask);
+      SDValue VSel =
+          DAG.getSelect(DL, MVT::v8i16, VMask, DAG.getBitcast(MVT::v8i16, VLHS),
+                        DAG.getBitcast(MVT::v8i16, VRHS));
+      SDValue Res = DAG.getExtractVectorElt(DL, MVT::i16, VSel, 0);
+      return DAG.getBitcast(VT, Res);
+    }
+  }
+
   // Attempt to combine (select M, (sub 0, X), X) -> (sub (xor X, M), M).
   // Limit this to cases of non-constant masks that createShuffleMaskFromVSELECT
   // can't catch, plus vXi8 cases where we'd likely end up with BLENDV.
