@@ -3683,15 +3683,14 @@ bool AArch64InstrInfo::isCandidateToMergeOrPair(const MachineInstr &MI) const {
 
 bool AArch64InstrInfo::getMemOperandsWithOffsetWidth(
     const MachineInstr &LdSt, SmallVectorImpl<const MachineOperand *> &BaseOps,
-    int64_t &Offset, bool &OffsetIsScalable, LocationSize &Width,
-    const TargetRegisterInfo *TRI) const {
+    int64_t &Offset, bool &OffsetIsScalable, LocationSize &Width) const {
   if (!LdSt.mayLoadOrStore())
     return false;
 
   const MachineOperand *BaseOp;
   TypeSize WidthN(0, false);
   if (!getMemOperandWithOffsetWidth(LdSt, BaseOp, Offset, OffsetIsScalable,
-                                    WidthN, TRI))
+                                    WidthN, &RI))
     return false;
   // The maximum vscale is 16 under AArch64, return the maximal extent for the
   // vector.
@@ -3701,12 +3700,11 @@ bool AArch64InstrInfo::getMemOperandsWithOffsetWidth(
 }
 
 std::optional<ExtAddrMode>
-AArch64InstrInfo::getAddrModeFromMemoryOp(const MachineInstr &MemI,
-                                          const TargetRegisterInfo *TRI) const {
+AArch64InstrInfo::getAddrModeFromMemoryOp(const MachineInstr &MemI) const {
   const MachineOperand *Base; // Filled with the base operand of MI.
   int64_t Offset;             // Filled with the offset of MI.
   bool OffsetIsScalable;
-  if (!getMemOperandWithOffset(MemI, Base, Offset, OffsetIsScalable, TRI))
+  if (!getMemOperandWithOffset(MemI, Base, Offset, OffsetIsScalable))
     return std::nullopt;
 
   if (!Base->isReg())
@@ -10716,7 +10714,7 @@ AArch64InstrInfo::getOutliningCandidateInfo(
 
       // Does it allow us to offset the base operand and is the base the
       // register SP?
-      if (!getMemOperandWithOffset(MI, Base, Offset, OffsetIsScalable, &TRI) ||
+      if (!getMemOperandWithOffset(MI, Base, Offset, OffsetIsScalable) ||
           !Base->isReg() || Base->getReg() != AArch64::SP)
         return false;
 
