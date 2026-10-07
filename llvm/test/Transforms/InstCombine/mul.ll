@@ -436,7 +436,7 @@ define i32 @mul_bools_use3(i1 %x, i1 %y) !prof !0 {
 ; CHECK-NEXT:    call void @use32(i32 [[ZX]])
 ; CHECK-NEXT:    [[ZY:%.*]] = zext i1 [[Y:%.*]] to i32
 ; CHECK-NEXT:    call void @use32(i32 [[ZY]])
-; CHECK-NEXT:    [[R:%.*]] = select i1 [[X]], i32 [[ZY]], i32 0, !prof [[PROF1]]
+; CHECK-NEXT:    [[R:%.*]] = and i32 [[ZX]], [[ZY]]
 ; CHECK-NEXT:    ret i32 [[R]]
 ;
   %zx = zext i1 %x to i32
@@ -567,8 +567,7 @@ define i32 @mul_bool_zext_one_extra_user(i1 %x) {
 ; CHECK-LABEL: @mul_bool_zext_one_extra_user(
 ; CHECK-NEXT:    [[SX:%.*]] = zext i1 [[X:%.*]] to i32
 ; CHECK-NEXT:    call void @use32(i32 [[SX]])
-; CHECK-NEXT:    [[R:%.*]] = zext i1 [[X]] to i32
-; CHECK-NEXT:    ret i32 [[R]]
+; CHECK-NEXT:    ret i32 [[SX]]
 ;
   %sx = zext i1 %x to i32
   call void @use32(i32 %sx)
@@ -2519,7 +2518,84 @@ define i1 @neg_mul_add_one_i1(i1 %x, i1 %y) {
   ret i1 %ret
 }
 
+; mul of operands known to be {0,1} via !range metadata folds to and.
+; Alive2: https://alive2.llvm.org/ce/z/uYFqiZ
+define i8 @mul_known_bool_range_noundef(ptr %p, ptr %q) {
+; CHECK-LABEL: @mul_known_bool_range_noundef(
+; CHECK-NEXT:    [[X:%.*]] = load i8, ptr [[P:%.*]], align 1, !range [[RNG2:![0-9]+]], !noundef [[META3:![0-9]+]]
+; CHECK-NEXT:    [[Y:%.*]] = load i8, ptr [[Q:%.*]], align 1, !range [[RNG2]], !noundef [[META3]]
+; CHECK-NEXT:    [[M:%.*]] = and i8 [[Y]], [[X]]
+; CHECK-NEXT:    ret i8 [[M]]
+;
+  %x = load i8, ptr %p, align 1, !range !10, !noundef !11
+  %y = load i8, ptr %q, align 1, !range !10, !noundef !11
+  %m = mul i8 %y, %x
+  ret i8 %m
+}
+
+; mul->and is a poison-safe refinement, so !noundef is not required.
+define i8 @mul_known_bool_range_no_noundef(ptr %p, ptr %q) {
+; CHECK-LABEL: @mul_known_bool_range_no_noundef(
+; CHECK-NEXT:    [[X:%.*]] = load i8, ptr [[P:%.*]], align 1, !range [[RNG2]]
+; CHECK-NEXT:    [[Y:%.*]] = load i8, ptr [[Q:%.*]], align 1, !range [[RNG2]]
+; CHECK-NEXT:    [[M:%.*]] = and i8 [[Y]], [[X]]
+; CHECK-NEXT:    ret i8 [[M]]
+;
+  %x = load i8, ptr %p, align 1, !range !10
+  %y = load i8, ptr %q, align 1, !range !10
+  %m = mul i8 %y, %x
+  ret i8 %m
+}
+
+; Vector variant
+
+define <2 x i8> @mul_known_bool_range_vec(ptr %p, ptr %q) {
+; CHECK-LABEL: @mul_known_bool_range_vec(
+; CHECK-NEXT:    [[X:%.*]] = load <2 x i8>, ptr [[P:%.*]], align 2, !range [[RNG2]], !noundef [[META3]]
+; CHECK-NEXT:    [[Y:%.*]] = load <2 x i8>, ptr [[Q:%.*]], align 2, !range [[RNG2]], !noundef [[META3]]
+; CHECK-NEXT:    [[M:%.*]] = and <2 x i8> [[Y]], [[X]]
+; CHECK-NEXT:    ret <2 x i8> [[M]]
+;
+  %x = load <2 x i8>, ptr %p, align 2, !range !10, !noundef !11
+  %y = load <2 x i8>, ptr %q, align 2, !range !10, !noundef !11
+  %m = mul <2 x i8> %y, %x
+  ret <2 x i8> %m
+}
+
+; Negative test: operands not known to be {0,1}.
+
+define i8 @mul_not_bool_range(ptr %p, ptr %q) {
+; CHECK-LABEL: @mul_not_bool_range(
+; CHECK-NEXT:    [[X:%.*]] = load i8, ptr [[P:%.*]], align 1, !range [[RNG4:![0-9]+]], !noundef [[META3]]
+; CHECK-NEXT:    [[Y:%.*]] = load i8, ptr [[Q:%.*]], align 1, !range [[RNG4]], !noundef [[META3]]
+; CHECK-NEXT:    [[M:%.*]] = mul nuw nsw i8 [[Y]], [[X]]
+; CHECK-NEXT:    ret i8 [[M]]
+;
+  %x = load i8, ptr %p, align 1, !range !12, !noundef !11
+  %y = load i8, ptr %q, align 1, !range !12, !noundef !11
+  %m = mul i8 %y, %x
+  ret i8 %m
+}
+
+; Negative test: only one operand is known to be {0,1}.
+
+define i8 @mul_one_bool_one_not(ptr %p, ptr %q) {
+; CHECK-LABEL: @mul_one_bool_one_not(
+; CHECK-NEXT:    [[X:%.*]] = load i8, ptr [[P:%.*]], align 1, !range [[RNG2]], !noundef [[META3]]
+; CHECK-NEXT:    [[Y:%.*]] = load i8, ptr [[Q:%.*]], align 1, !range [[RNG4]], !noundef [[META3]]
+; CHECK-NEXT:    [[M:%.*]] = mul nuw nsw i8 [[Y]], [[X]]
+; CHECK-NEXT:    ret i8 [[M]]
+;
+  %x = load i8, ptr %p, align 1, !range !10, !noundef !11
+  %y = load i8, ptr %q, align 1, !range !12, !noundef !11
+  %m = mul i8 %y, %x
+  ret i8 %m
+}
+
 !0 = !{!"function_entry_count", i64 1000}
+!10 = !{i8 0, i8 2}
+!11 = !{}
+!12 = !{i8 0, i8 4}
 ;.
 ; CHECK: attributes #[[ATTR0:[0-9]+]] = { nocallback nofree nosync nounwind speculatable willreturn memory(none) }
 ; CHECK: attributes #[[ATTR1:[0-9]+]] = { nocallback nocreateundeforpoison nofree nosync nounwind speculatable willreturn memory(none) }
@@ -2527,4 +2603,7 @@ define i1 @neg_mul_add_one_i1(i1 %x, i1 %y) {
 ;.
 ; CHECK: [[META0:![0-9]+]] = !{!"function_entry_count", i64 1000}
 ; CHECK: [[PROF1]] = !{!"unknown", !"instcombine"}
+; CHECK: [[RNG2]] = !{i8 0, i8 2}
+; CHECK: [[META3]] = !{}
+; CHECK: [[RNG4]] = !{i8 0, i8 4}
 ;.
