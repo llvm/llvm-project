@@ -897,7 +897,7 @@ bool AMDGPULibCalls::fold_pow(FPMathOperator *FPOp, IRBuilder<> &B,
           FInfo.getId() == AMDGPULibFunc::EI_POWN_FAST) &&
          "fold_pow: encounter a wrong function call");
 
-  Module *M = B.GetInsertBlock()->getModule();
+  Module *M = B.getModule();
   Type *eltType = FPOp->getType()->getScalarType();
   Value *opr0 = FPOp->getOperand(0);
   Value *opr1 = FPOp->getOperand(1);
@@ -1201,7 +1201,7 @@ bool AMDGPULibCalls::fold_rootn(FPMathOperator *FPOp, IRBuilder<> &B,
     return true;
   }
 
-  Module *M = B.GetInsertBlock()->getModule();
+  Module *M = B.getModule();
 
   CallInst *CI = cast<CallInst>(FPOp);
 
