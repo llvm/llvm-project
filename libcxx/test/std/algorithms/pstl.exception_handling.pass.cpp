@@ -490,6 +490,7 @@ int main(int, char**) {
         });
       }
 
+#if _LIBCPP_STD_VER >= 20 // TODO: remove once https://github.com/llvm/llvm-project/pull/224356 is merged
       {
         auto unary  = maybe_throw(tokens[5], [](int x) -> int { return x * 2; });
         auto binary = maybe_throw(tokens[5], [](int x, int y) -> int { return x * y; });
@@ -506,6 +507,7 @@ int main(int, char**) {
               policy, std::move(first1), std::move(last1), std::move(dest), binary, unary, init);
         });
       }
+#endif // _LIBCPP_STD_VER >= 20
 
       {
         auto reduction        = maybe_throw(tokens[5], [](int x, int y) -> int { return x + y; });

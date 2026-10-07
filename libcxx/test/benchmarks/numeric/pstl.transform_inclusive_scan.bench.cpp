@@ -6,7 +6,8 @@
 //
 //===----------------------------------------------------------------------===//
 
-// REQUIRES: std-at-least-c++17
+// TODO: should be C++17 https://github.com/llvm/llvm-project/pull/224356 is merged
+// REQUIRES: std-at-least-c++20
 
 // UNSUPPORTED: libcpp-has-no-incomplete-pstl
 
