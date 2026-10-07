@@ -140,5 +140,6 @@ module lldb_Utility {
   module lldb_private_types { header "lldb/lldb-private-types.h" export * }
   module lldb_public { header "lldb/lldb-public.h" export * }
   module lldb_types { header "lldb/lldb-types.h" export * }
+  module lldb_version { header "lldb/lldb-version.h" export * }
   module lldb_versioning { header "lldb/lldb-versioning.h" export * }
 }
