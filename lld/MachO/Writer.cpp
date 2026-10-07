@@ -704,7 +704,8 @@ static void prepareSymbolRelocation(Symbol *sym, const InputSection *isec,
     if (isAuth ||
         !(isThreadLocalVariables(isec->getFlags()) && isa<Defined>(sym)))
       addNonLazyBindingEntries(sym, isec, r.offset, r.getAddend(),
-                               /*forceOutlineAuth=*/isAuth);
+                               /*forceOutlineAuth=*/isAuth ||
+                                   getImplicitAuthInfo(isec, sym));
   }
 }
 
