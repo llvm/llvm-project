@@ -2100,7 +2100,8 @@ SDValue NVPTXTargetLowering::LowerINSERT_VECTOR_ELT(SDValue Op,
 
   SDValue BFI =
       DAG.getNode(NVPTXISD::BFI, DL, MVT::i32,
-                  {DAG.getZExtOrTrunc(Value, DL, MVT::i32), Vector,
+                  {DAG.getZExtOrTrunc(Value, DL, MVT::i32),
+                   DAG.getBitcast(MVT::i32, Vector),
                    DAG.getNode(ISD::MUL, DL, MVT::i32,
                                DAG.getZExtOrTrunc(Index, DL, MVT::i32),
                                DAG.getConstant(8, DL, MVT::i32)),
