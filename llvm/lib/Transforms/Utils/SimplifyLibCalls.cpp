@@ -3174,6 +3174,10 @@ Value *LibCallSimplifier::optimizeSymmetric(CallInst *CI, LibFunc Func,
   case LibFunc_coshl:
     return optimizeSymmetricCall(CI, /*IsEven*/ true, B);
 
+  case LibFunc_cbrt:
+  case LibFunc_cbrtf:
+  case LibFunc_cbrtl:
+
   case LibFunc_sin:
   case LibFunc_sinf:
   case LibFunc_sinl:
@@ -3182,6 +3186,14 @@ Value *LibCallSimplifier::optimizeSymmetric(CallInst *CI, LibFunc Func,
   case LibFunc_sinhf:
   case LibFunc_sinhl:
 
+  case LibFunc_asin:
+  case LibFunc_asinf:
+  case LibFunc_asinl:
+
+  case LibFunc_asinh:
+  case LibFunc_asinhf:
+  case LibFunc_asinhl:
+
   case LibFunc_tan:
   case LibFunc_tanf:
   case LibFunc_tanl:
@@ -3189,6 +3201,10 @@ Value *LibCallSimplifier::optimizeSymmetric(CallInst *CI, LibFunc Func,
   case LibFunc_tanh:
   case LibFunc_tanhf:
   case LibFunc_tanhl:
+
+  case LibFunc_atan:
+  case LibFunc_atanf:
+  case LibFunc_atanl:
 
   case LibFunc_erf:
   case LibFunc_erff:
