@@ -59,6 +59,28 @@ static Value *maskToIntegerWidth(Value *V, unsigned Width,
   return Builder.CreateAnd(V, ConstantInt::get(LegalTy, Mask));
 }
 
+static Value *poisonUnless(Value *V, Value *Condition, IRBuilder<> &Builder) {
+  if (auto *C = dyn_cast<ConstantInt>(Condition); C && C->isOne())
+    return V;
+  return Builder.CreateSelect(Condition, V, PoisonValue::get(V->getType()));
+}
+
+static Value *isInIntegerRange(Value *V, unsigned Width, bool Signed,
+                               IRBuilder<> &Builder) {
+  auto *LegalTy = cast<IntegerType>(V->getType());
+  unsigned LegalWidth = LegalTy->getBitWidth();
+  if (!Signed) {
+    APInt Limit = APInt::getOneBitSet(LegalWidth, Width);
+    return Builder.CreateICmpULT(V, ConstantInt::get(LegalTy, Limit));
+  }
+
+  APInt Min = APInt::getSignedMinValue(Width).sext(LegalWidth);
+  APInt Max = APInt::getSignedMaxValue(Width).sext(LegalWidth);
+  Value *AtLeastMin = Builder.CreateICmpSGE(V, ConstantInt::get(LegalTy, Min));
+  Value *AtMostMax = Builder.CreateICmpSLE(V, ConstantInt::get(LegalTy, Max));
+  return Builder.CreateAnd(AtLeastMin, AtMostMax);
+}
+
 // Return true when V is already a zero-extended Width-bit value.
 static bool isKnownZeroExtendedFromWidth(Value *V, unsigned Width,
                                          const DataLayout &DL) {
@@ -115,36 +137,55 @@ getLegalizedIntegerOperand(Value *Operand, IntegerType *LegalTy,
       /*gen_crash_diag=*/false);
 }
 
-// bitcast <N x iM> to illegal iK -> extract and pack into an i32/i64 carrier.
+// Legalize bitcasts between an illegal integer and a fixed integer vector.
 static bool
 legalizeNonStandardIntegerBitCast(BitCastInst &BitCast,
                                   SmallVectorImpl<Instruction *> &ToRemove,
                                   DenseMap<Value *, Value *> &ReplacedValues) {
-  IntegerType *LegalTy = getLegalIntegerType(BitCast.getDestTy());
-  if (!LegalTy && !getLegalIntegerType(BitCast.getSrcTy()))
+  IntegerType *LegalDstTy = getLegalIntegerType(BitCast.getDestTy());
+  IntegerType *LegalSrcTy = getLegalIntegerType(BitCast.getSrcTy());
+  if (!LegalDstTy && !LegalSrcTy)
     return false;
-  FixedVectorType *SourceTy = dyn_cast<FixedVectorType>(BitCast.getSrcTy());
-  if (!LegalTy || !SourceTy || !SourceTy->getElementType()->isIntegerTy())
+  FixedVectorType *VectorTy = dyn_cast<FixedVectorType>(
+      LegalDstTy ? BitCast.getSrcTy() : BitCast.getDestTy());
+  if (!VectorTy || !VectorTy->getElementType()->isIntegerTy() ||
+      getLegalIntegerType(VectorTy->getElementType()))
     report_fatal_error(
         "DXIL legalization does not support this integer bitcast",
         /*gen_crash_diag=*/false);
-  assert(SourceTy->getPrimitiveSizeInBits() ==
+  assert(BitCast.getSrcTy()->getPrimitiveSizeInBits() ==
              BitCast.getDestTy()->getPrimitiveSizeInBits() &&
          "Bitcast source and destination must have equal sizes");
 
   IRBuilder<> Builder(&BitCast);
-  Value *Packed = ConstantInt::get(LegalTy, 0);
-  unsigned ElementWidth = SourceTy->getScalarSizeInBits();
-  unsigned VecSize = SourceTy->getNumElements();
-  for (unsigned Index = 0; Index < VecSize; ++Index) {
-    Value *Element =
-        Builder.CreateExtractElement(BitCast.getOperand(0), uint64_t(Index));
-    Element = Builder.CreateZExt(Element, LegalTy);
-    if (Index != 0)
-      Element = Builder.CreateShl(Element, Index * ElementWidth);
-    Packed = Builder.CreateOr(Packed, Element);
+  unsigned ElementWidth = VectorTy->getScalarSizeInBits();
+  unsigned VecSize = VectorTy->getNumElements();
+  if (LegalDstTy) {
+    Value *Packed = ConstantInt::get(LegalDstTy, 0);
+    for (unsigned Index = 0; Index < VecSize; ++Index) {
+      Value *Element = Builder.CreateExtractElement(BitCast.getOperand(0),
+                                                    Builder.getInt32(Index));
+      Element = Builder.CreateZExt(Element, LegalDstTy);
+      if (Index != 0)
+        Element = Builder.CreateShl(Element, Index * ElementWidth);
+      Packed = Builder.CreateOr(Packed, Element);
+    }
+    ReplacedValues[&BitCast] = Packed;
+  } else {
+    Value *Packed = getLegalizedIntegerOperand(
+        BitCast.getOperand(0), LegalSrcTy, IntegerExtension::None, Builder,
+        ReplacedValues, BitCast.getDataLayout());
+    Value *Unpacked = PoisonValue::get(VectorTy);
+    for (unsigned Index = 0; Index < VecSize; ++Index) {
+      Value *Element = Packed;
+      if (Index != 0)
+        Element = Builder.CreateLShr(Element, Index * ElementWidth);
+      Element = Builder.CreateTrunc(Element, VectorTy->getElementType());
+      Unpacked = Builder.CreateInsertElement(Unpacked, Element,
+                                             Builder.getInt32(Index));
+    }
+    BitCast.replaceAllUsesWith(Unpacked);
   }
-  ReplacedValues[&BitCast] = Packed;
   ToRemove.push_back(&BitCast);
   return true;
 }
@@ -160,14 +201,27 @@ legalizeNonStandardIntegerTrunc(TruncInst &Trunc,
     return false;
 
   IRBuilder<> Builder(&Trunc);
-  Value *Source =
-      LegalSrcTy
-          ? getLegalizedIntegerOperand(Trunc.getOperand(0), LegalSrcTy,
-                                       IntegerExtension::None, Builder,
-                                       ReplacedValues, Trunc.getDataLayout())
-          : Trunc.getOperand(0);
+  IntegerExtension Extension = IntegerExtension::None;
+  if (Trunc.hasNoUnsignedWrap())
+    Extension = IntegerExtension::Zero;
+  else if (Trunc.hasNoSignedWrap())
+    Extension = IntegerExtension::Sign;
+  Value *Source = LegalSrcTy
+                      ? getLegalizedIntegerOperand(
+                            Trunc.getOperand(0), LegalSrcTy, Extension, Builder,
+                            ReplacedValues, Trunc.getDataLayout())
+                      : Trunc.getOperand(0);
   Type *ResultTy = LegalDstTy ? LegalDstTy : Trunc.getDestTy();
   Value *Replacement = Builder.CreateZExtOrTrunc(Source, ResultTy);
+  unsigned DestWidth = Trunc.getDestTy()->getIntegerBitWidth();
+  if (Trunc.hasNoUnsignedWrap())
+    Replacement = poisonUnless(
+        Replacement, isInIntegerRange(Source, DestWidth, false, Builder),
+        Builder);
+  if (Trunc.hasNoSignedWrap())
+    Replacement = poisonUnless(
+        Replacement, isInIntegerRange(Source, DestWidth, true, Builder),
+        Builder);
   if (LegalDstTy)
     ReplacedValues[&Trunc] = Replacement;
   else
@@ -188,10 +242,14 @@ legalizeNonStandardIntegerBinOp(BinaryOperator &BO,
   IRBuilder<> Builder(&BO);
   IntegerExtension LHSExtension = IntegerExtension::None;
   IntegerExtension RHSExtension = IntegerExtension::None;
+  bool HasNoUnsignedWrap = false;
+  bool HasNoSignedWrap = false;
   if (auto *OverflowingOp = dyn_cast<OverflowingBinaryOperator>(&BO)) {
-    if (OverflowingOp->hasNoUnsignedWrap())
+    HasNoUnsignedWrap = OverflowingOp->hasNoUnsignedWrap();
+    HasNoSignedWrap = OverflowingOp->hasNoSignedWrap();
+    if (HasNoUnsignedWrap)
       LHSExtension = RHSExtension = IntegerExtension::Zero;
-    else if (OverflowingOp->hasNoSignedWrap())
+    else if (HasNoSignedWrap)
       LHSExtension = RHSExtension = IntegerExtension::Sign;
   }
   switch (BO.getOpcode()) {
@@ -223,6 +281,20 @@ legalizeNonStandardIntegerBinOp(BinaryOperator &BO,
   Value *NewBO = Builder.CreateBinOp(BO.getOpcode(), LHS, RHS);
   if (auto *NewBOInst = dyn_cast<BinaryOperator>(NewBO))
     NewBOInst->copyIRFlags(&BO);
+  unsigned Width = BO.getType()->getIntegerBitWidth();
+  if (BO.getOpcode() == Instruction::SDiv)
+    NewBO = poisonUnless(NewBO, isInIntegerRange(NewBO, Width, true, Builder),
+                         Builder);
+  if (BO.isShift())
+    NewBO = poisonUnless(
+        NewBO, Builder.CreateICmpULT(RHS, ConstantInt::get(LegalTy, Width)),
+        Builder);
+  if (HasNoUnsignedWrap)
+    NewBO = poisonUnless(NewBO, isInIntegerRange(NewBO, Width, false, Builder),
+                         Builder);
+  else if (HasNoSignedWrap)
+    NewBO = poisonUnless(NewBO, isInIntegerRange(NewBO, Width, true, Builder),
+                         Builder);
   ReplacedValues[&BO] = NewBO;
   ToRemove.push_back(&BO);
   return true;
@@ -307,9 +379,21 @@ legalizeNonStandardIntegerCast(CastInst &Cast,
     break;
   case Instruction::FPToUI:
     Replacement = Builder.CreateFPToUI(Source, ResultTy);
+    if (LegalDstTy)
+      Replacement = poisonUnless(
+          Replacement,
+          isInIntegerRange(Replacement, Cast.getDestTy()->getIntegerBitWidth(),
+                           false, Builder),
+          Builder);
     break;
   case Instruction::FPToSI:
     Replacement = Builder.CreateFPToSI(Source, ResultTy);
+    if (LegalDstTy)
+      Replacement = poisonUnless(
+          Replacement,
+          isInIntegerRange(Replacement, Cast.getDestTy()->getIntegerBitWidth(),
+                           true, Builder),
+          Builder);
     break;
   case Instruction::UIToFP:
     Replacement = Builder.CreateUIToFP(Source, ResultTy);
@@ -440,7 +524,13 @@ static bool legalizeI8MemoryUses(Instruction &I,
       StorageTy = GV->getValueType();
     if (auto *ArrayTy = dyn_cast_or_null<ArrayType>(StorageTy))
       StorageTy = ArrayTy->getArrayElementType();
-    if (!StorageTy || !StorageTy->isIntegerTy())
+    if (!StorageTy && isa<Argument>(Pointer))
+      StorageTy = Builder.getInt32Ty();
+    else if (!StorageTy)
+      report_fatal_error(
+          "DXIL legalization cannot determine the i8 store's storage type",
+          /*gen_crash_diag=*/false);
+    else if (!StorageTy->isIntegerTy())
       return false;
 
     StoredValue = maskToIntegerWidth(StoredValue, 8, Builder);

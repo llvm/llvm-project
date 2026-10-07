@@ -1,9 +1,10 @@
 ; RUN: split-file %s %t
 ; RUN: not opt -passes='dxil-legalize' -mtriple=dxil-pc-shadermodel6.3-library %t/wide.ll -disable-output 2>&1 | FileCheck %s --check-prefix=WIDE
-; RUN: not opt -passes='dxil-legalize' -mtriple=dxil-pc-shadermodel6.3-library %t/bitcast.ll -disable-output 2>&1 | FileCheck %s --check-prefix=BITCAST
+; RUN: not opt -passes='dxil-legalize' -mtriple=dxil-pc-shadermodel6.3-library %t/bitcast-elements.ll -disable-output 2>&1 | FileCheck %s --check-prefix=BITCAST-ELEMENTS
 ; RUN: not opt -passes='dxil-legalize' -mtriple=dxil-pc-shadermodel6.3-library %t/phi.ll -disable-output 2>&1 | FileCheck %s --check-prefix=PHI
 ; RUN: not opt -passes='dxil-legalize' -mtriple=dxil-pc-shadermodel6.3-library %t/operand.ll -disable-output 2>&1 | FileCheck %s --check-prefix=OPERAND
 ; RUN: not opt -passes='dxil-legalize' -mtriple=dxil-pc-shadermodel6.3-library %t/return.ll -disable-output 2>&1 | FileCheck %s --check-prefix=RETURN
+; RUN: not opt -passes='dxil-legalize' -mtriple=dxil-pc-shadermodel6.3-library %t/ambiguous-store.ll -disable-output 2>&1 | FileCheck %s --check-prefix=AMBIGUOUS-STORE
 
 ;--- wide.ll
 
@@ -13,13 +14,13 @@ define void @integer_too_wide(i128 %lhs, i128 %rhs) {
   ret void
 }
 
-;--- bitcast.ll
+;--- bitcast-elements.ll
 
-define <3 x i1> @unsupported_reverse_bitcast(i32 %value) {
-; BITCAST: LLVM ERROR: DXIL legalization does not support this integer bitcast
-  %narrow = trunc i32 %value to i3
-  %result = bitcast i3 %narrow to <3 x i1>
-  ret <3 x i1> %result
+define i32 @unsupported_narrow_vector_elements(<3 x i3> %value) {
+; BITCAST-ELEMENTS: LLVM ERROR: DXIL legalization does not support this integer bitcast
+  %packed = bitcast <3 x i3> %value to i9
+  %result = zext i9 %packed to i32
+  ret i32 %result
 }
 
 ;--- phi.ll
@@ -56,4 +57,13 @@ define i32 @missing_operand_replacement(i3 %value) {
 define i3 @unsupported_return() {
 ; RETURN: LLVM ERROR: DXIL legalization does not support non-standard integer operand type for instruction 'ret'
   ret i3 0
+}
+
+;--- ambiguous-store.ll
+
+define void @ambiguous_i8_store(i1 %condition, ptr %lhs, ptr %rhs) {
+; AMBIGUOUS-STORE: LLVM ERROR: DXIL legalization cannot determine the i8 store's storage type
+  %pointer = select i1 %condition, ptr %lhs, ptr %rhs
+  store i8 1, ptr %pointer
+  ret void
 }
