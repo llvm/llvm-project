@@ -290,3 +290,16 @@ alignas(16) unsigned char buf16[4];
 // BE: load i32, ptr @buf16, align 16
 // BE: call i32 @llvm.bswap.i32(
 __UINT_LEAST32_TYPE__ test_aligned_leu32_stronger_known_alignment(void) { return stdc_load8_aligned_leu32(buf16); }
+
+// LE-LABEL: @test_vla(
+// LE: load i32, ptr {{.+}}, align 1
+// BE-LABEL: @test_vla(
+// BE: load i32, ptr {{.+}}, align 1
+__UINT_LEAST32_TYPE__ test_vla(int n, const unsigned char *src) {
+  unsigned char buf[n];
+  buf[0] = src[0];
+  buf[1] = src[1];
+  buf[2] = src[2];
+  buf[3] = src[3];
+  return stdc_load8_leu32(buf);
+}
