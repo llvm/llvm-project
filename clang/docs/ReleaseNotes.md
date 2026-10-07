@@ -882,6 +882,8 @@ features cannot lower the translation-unit ABI level;
 
 #### Miscellaneous Bug Fixes
 
+- Fixed clang terminating the process from inside the LLVM or MLIR option parser, instead of reporting a diagnostic, when an invalid option was passed through `-mllvm` or `-mmlir`.
+
 #### Miscellaneous Clang Crashes Fixed
 
 - Fixed a crash in CTAD for type alias templates when the aggregate deduction guide could not be resolved. (#GH206994)
