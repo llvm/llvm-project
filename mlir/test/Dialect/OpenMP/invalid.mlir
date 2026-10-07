@@ -4894,6 +4894,27 @@ func.func @iterator_bad_result_type(%lb : index, %ub : index, %st : index) {
 
 // -----
 
+func.func @iterator_iv_count_mismatch(%lb : i64, %ub : i64, %st : i64, %x : !llvm.ptr) {
+  // expected-error@+1 {{number of range arguments and IVs do not match}}
+  %0 = "omp.iterator"(%lb, %ub, %st) <{operandSegmentSizes = array<i32: 1, 1, 1>}> ({
+    omp.yield(%x : !llvm.ptr)
+  }) : (i64, i64, i64) -> !omp.iterated<!llvm.ptr>
+  return
+}
+
+// -----
+
+func.func @iterator_iv_type_mismatch(%lb : i32, %ub : i32, %st : i32, %x : !llvm.ptr) {
+  // expected-error@+1 {{range argument type does not match corresponding IV type}}
+  %0 = "omp.iterator"(%lb, %ub, %st) <{operandSegmentSizes = array<i32: 1, 1, 1>}> ({
+  ^bb0(%i: i64):
+    omp.yield(%x : !llvm.ptr)
+  }) : (i32, i32, i32) -> !omp.iterated<!llvm.ptr>
+  return
+}
+
+// -----
+
 func.func @iterator_zero_step(%s2 : !llvm.struct<(ptr, i64)>) {
   %lb = arith.constant 1 : index
   %ub = arith.constant 4 : index
@@ -4947,7 +4968,7 @@ func.func @iterator_missing_yield(%lb : index, %ub : index, %st : index) {
 // -----
 
 func.func @iterator_empty_body(%lb : index, %ub : index, %st : index) {
-  // expected-error@+1 {{expects a non-empty block}}
+  // expected-error@+1 {{region must be terminated by omp.yield}}
   %0 = omp.iterator(%i: index) = (%lb to %ub step %st) {
   } -> !omp.iterated<index>
   return
@@ -4975,6 +4996,60 @@ func.func @iterator_yield_type_mismatch(%lb : index, %ub : index, %st : index) {
 
 // -----
 
+func.func @iterator_multi_block_yield_type_mismatch(%lb : index, %ub : index, %st : index) {
+  // expected-error@+1 {{omp.iterated element type ('i64') does not match omp.yield operand type ('index')}}
+  %0 = omp.iterator(%i: index) = (%lb to %ub step %st) {
+    cf.br ^bb1
+  ^bb1:
+    omp.yield(%i : index)
+  } -> !omp.iterated<i64>
+  return
+}
+
+// -----
+
+func.func @iterator_two_yields(%lb : index, %ub : index, %st : index, %c : i1) {
+  // expected-error@+1 {{region must contain exactly one omp.yield}}
+  %0 = omp.iterator(%i: index) = (%lb to %ub step %st) {
+    cf.cond_br %c, ^bb1, ^bb2
+  ^bb1:
+    omp.yield(%i : index)
+  ^bb2:
+    omp.yield(%i : index)
+  } -> !omp.iterated<index>
+  return
+}
+
+// -----
+
+func.func @iterator_return_exit(%lb : index, %ub : index, %st : index, %c : i1) {
+  %0 = omp.iterator(%i: index) = (%lb to %ub step %st) {
+    cf.cond_br %c, ^bb1, ^bb2
+  ^bb1:
+    omp.yield(%i : index)
+  ^bb2:
+    // expected-error @below {{expected exit block terminator to be an `omp.yield` op.}}
+    llvm.return
+  } -> !omp.iterated<index>
+  return
+}
+
+// -----
+
+func.func @iterator_terminator_exit(%lb : index, %ub : index, %st : index, %c : i1) {
+  %0 = omp.iterator(%i: index) = (%lb to %ub step %st) {
+    cf.cond_br %c, ^bb1, ^bb2
+  ^bb1:
+    omp.yield(%i : index)
+  ^bb2:
+    // expected-error @below {{expected exit block terminator to be an `omp.yield` op.}}
+    omp.terminator
+  } -> !omp.iterated<index>
+  return
+}
+
+// -----
+
 func.func @map_iterated_not_iterator(%it : !omp.iterated<!llvm.ptr>) {
   // expected-error @below {{'omp.target_update' op 'map_iterated' arguments must be defined by 'omp.iterator' ops}}
   omp.target_update map_iterated(%it : !omp.iterated<!llvm.ptr>)
@@ -4986,6 +5061,21 @@ func.func @map_iterated_not_iterator(%it : !omp.iterated<!llvm.ptr>) {
 func.func @map_iterated_yield_not_map_info(%lb : index, %ub : index, %st : index,
                                             %addr : !llvm.ptr) {
   %it = omp.iterator(%iv: index) = (%lb to %ub step %st) {
+    omp.yield(%addr : !llvm.ptr)
+  } -> !omp.iterated<!llvm.ptr>
+  // expected-error @below {{'omp.target_enter_data' op 'map_iterated' iterator body must yield a value defined by 'omp.map.info'}}
+  omp.target_enter_data map_iterated(%it : !omp.iterated<!llvm.ptr>) {}
+  return
+}
+
+// -----
+
+func.func @map_iterated_multi_block_yield_not_map_info(%lb : index, %ub : index,
+                                                       %st : index,
+                                                       %addr : !llvm.ptr) {
+  %it = omp.iterator(%iv: index) = (%lb to %ub step %st) {
+    cf.br ^bb1
+  ^bb1:
     omp.yield(%addr : !llvm.ptr)
   } -> !omp.iterated<!llvm.ptr>
   // expected-error @below {{'omp.target_enter_data' op 'map_iterated' iterator body must yield a value defined by 'omp.map.info'}}
