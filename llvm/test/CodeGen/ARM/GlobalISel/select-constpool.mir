@@ -15,11 +15,11 @@ constants:
 body:             |
   bb.1.entry:
     ; CHECK-LABEL: name: get_const
-    ; CHECK: [[LDRcp:%[0-9]+]]:gpr = LDRcp %const.0, 0, 14 /* CC::al */, $noreg :: (load (s32) from constant-pool)
+    ; CHECK: [[LDRcp:%[0-9]+]]:gpr = LDRcp %const.0, 0, 14 /* CC::al */, $noreg :: (load (i32) from constant-pool)
     ; CHECK-NEXT: $r0 = COPY [[LDRcp]]
     ; CHECK-NEXT: MOVPCLR 14 /* CC::al */, $noreg, implicit $r0
     %1:gprb(p0) = G_CONSTANT_POOL %const.0
-    %0:gprb(s32) = G_LOAD %1(p0) :: (load (s32) from constant-pool)
-    $r0 = COPY %0(s32)
+    %0:gprb(i32) = G_LOAD %1(p0) :: (load (i32) from constant-pool)
+    $r0 = COPY %0(i32)
     MOVPCLR 14 /* CC::al */, $noreg, implicit $r0
 ...

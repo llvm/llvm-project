@@ -113,8 +113,7 @@ define arm_aapcscc bfloat @callee_soft_bfloat_on_stack(float %r0, float %r1, flo
 ;
 ; LE-GISEL-LABEL: callee_soft_bfloat_on_stack:
 ; LE-GISEL:       @ %bb.0: @ %entry
-; LE-GISEL-NEXT:    mov r0, sp
-; LE-GISEL-NEXT:    ldr r0, [r0]
+; LE-GISEL-NEXT:    ldr r0, [sp]
 ; LE-GISEL-NEXT:    bx lr
 entry:
   ret bfloat %f
@@ -276,13 +275,10 @@ define void @caller_hard_bfloat_in_reg() {
 ; LE-GISEL:       @ %bb.0: @ %entry
 ; LE-GISEL-NEXT:    .save {r7, lr}
 ; LE-GISEL-NEXT:    push {r7, lr}
-; LE-GISEL-NEXT:    vldr s0, .LCPI5_0
+; LE-GISEL-NEXT:    mov.w r0, #16256
+; LE-GISEL-NEXT:    vmov s0, r0
 ; LE-GISEL-NEXT:    bl callee_hard_bfloat_in_reg
 ; LE-GISEL-NEXT:    pop {r7, pc}
-; LE-GISEL-NEXT:    .p2align 2
-; LE-GISEL-NEXT:  @ %bb.1:
-; LE-GISEL-NEXT:  .LCPI5_0:
-; LE-GISEL-NEXT:    .long 0x00003f80 @ float 2.27795078E-41
 entry:
   %ret = call arm_aapcs_vfpcc bfloat @callee_hard_bfloat_in_reg(bfloat 1.0)
   ret void
@@ -313,9 +309,7 @@ define arm_aapcs_vfpcc bfloat @callee_hard_bfloat_on_stack(float %s0, float %s1,
 ;
 ; LE-GISEL-LABEL: callee_hard_bfloat_on_stack:
 ; LE-GISEL:       @ %bb.0: @ %entry
-; LE-GISEL-NEXT:    mov r0, sp
-; LE-GISEL-NEXT:    ldr r0, [r0]
-; LE-GISEL-NEXT:    vmov s0, r0
+; LE-GISEL-NEXT:    vldr s0, [sp]
 ; LE-GISEL-NEXT:    bx lr
 entry:
   ret bfloat %f
