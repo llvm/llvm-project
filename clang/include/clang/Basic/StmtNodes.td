@@ -220,6 +220,7 @@ def CUDAKernelCallExpr : StmtNode<CallExpr>;
 // Clang Extensions.
 def ShuffleVectorExpr : StmtNode<Expr>;
 def ConvertVectorExpr : StmtNode<Expr>;
+def ElementwiseSaturatingCastExpr : StmtNode<Expr>;
 def BlockExpr : StmtNode<Expr>;
 def OpaqueValueExpr : StmtNode<Expr>;
 def RecoveryExpr : StmtNode<Expr>;

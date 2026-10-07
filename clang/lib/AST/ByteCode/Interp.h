@@ -123,6 +123,7 @@ bool CallBI(InterpState &S, CodePtr OpPC, const CallExpr *CE,
             uint32_t BuiltinID);
 bool CallPtr(InterpState &S, CodePtr OpPC, uint32_t ArgSize,
              const CallExpr *CE);
+bool ElementwiseSaturatingCast(InterpState &S, CodePtr OpPC, const Expr *E);
 bool CheckLiteralType(InterpState &S, CodePtr OpPC, const Type *T);
 bool InvalidShuffleVectorIndex(InterpState &S, CodePtr OpPC, uint32_t Index);
 bool CheckBitCast(InterpState &S, CodePtr OpPC, bool HasIndeterminateBits,

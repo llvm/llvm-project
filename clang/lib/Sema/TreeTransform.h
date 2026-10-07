@@ -4094,6 +4094,15 @@ public:
     return SemaRef.ConvertVectorExpr(SrcExpr, DstTInfo, BuiltinLoc, RParenLoc);
   }
 
+  /// Build a new __builtin_elementwise_saturating_cast expression.
+  ExprResult RebuildElementwiseSaturatingCastExpr(SourceLocation BuiltinLoc,
+                                                  Expr *SrcExpr,
+                                                  TypeSourceInfo *DstTInfo,
+                                                  SourceLocation RParenLoc) {
+    return SemaRef.ElementwiseSaturatingCastExpr(SrcExpr, DstTInfo, BuiltinLoc,
+                                                 RParenLoc);
+  }
+
   /// Build a new template argument pack expansion.
   ///
   /// By default, performs semantic analysis to build a new pack expansion
@@ -17937,6 +17946,25 @@ TreeTransform<Derived>::TransformConvertVectorExpr(ConvertVectorExpr *E) {
   return getDerived().RebuildConvertVectorExpr(E->getBuiltinLoc(),
                                                SrcExpr.get(), Type,
                                                E->getRParenLoc());
+}
+
+template <typename Derived>
+ExprResult TreeTransform<Derived>::TransformElementwiseSaturatingCastExpr(
+    ElementwiseSaturatingCastExpr *E) {
+  ExprResult SrcExpr = getDerived().TransformExpr(E->getSrcExpr());
+  if (SrcExpr.isInvalid())
+    return ExprError();
+
+  TypeSourceInfo *Type = getDerived().TransformType(E->getTypeSourceInfo());
+  if (!Type)
+    return ExprError();
+
+  if (!getDerived().AlwaysRebuild() && Type == E->getTypeSourceInfo() &&
+      SrcExpr.get() == E->getSrcExpr())
+    return E;
+
+  return getDerived().RebuildElementwiseSaturatingCastExpr(
+      E->getBuiltinLoc(), SrcExpr.get(), Type, E->getRParenLoc());
 }
 
 template<typename Derived>
