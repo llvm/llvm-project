@@ -19576,8 +19576,7 @@ static bool foldAdjacentReversesIntoTbls(IntrinsicInst *Rev, Loop *L) {
 
   // Add the step of -4.
   Value *StepVector = Builder.CreateStepVector(StepVecTy);
-  StepVector =
-      Builder.CreateMul(StepVector, ConstantInt::get(StepVecTy, -4));
+  StepVector = Builder.CreateMul(StepVector, ConstantInt::get(StepVecTy, -4));
   StepVector = Builder.CreateAdd(StartVal, StepVector);
 
   // Convert each candidate we found to perform the reverse in the tbl instead,
@@ -19585,7 +19584,8 @@ static bool foldAdjacentReversesIntoTbls(IntrinsicInst *Rev, Loop *L) {
   for (auto [Tbl, RevUse, Idx] : Tbls) {
     // Subtract the reversed index then cast, giving us the final mask to
     // replace the current one.
-    Value *FinalMaskForIdx = Builder.CreateSub(StepVector, ConstantInt::get(StepVecTy, 4 - Idx));
+    Value *FinalMaskForIdx =
+        Builder.CreateSub(StepVector, ConstantInt::get(StepVecTy, 4 - Idx));
     Value *RevExtMask = Builder.CreateBitCast(FinalMaskForIdx, SrcTy);
     Tbl->setOperand(1, RevExtMask);
 
@@ -19600,8 +19600,8 @@ static bool foldAdjacentReversesIntoTbls(IntrinsicInst *Rev, Loop *L) {
   return true;
 }
 
-bool AArch64TargetLowering::optimizeVectorCrossLaneOperation(
-    Instruction *I, Loop *L) const {
+bool AArch64TargetLowering::optimizeVectorCrossLaneOperation(Instruction *I,
+                                                             Loop *L) const {
   using namespace llvm::PatternMatch;
   // We're only interested in vector operations in loops for now.
   if (!L)
