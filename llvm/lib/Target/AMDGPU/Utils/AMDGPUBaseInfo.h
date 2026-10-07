@@ -1778,9 +1778,6 @@ bool isIntrinsicSourceOfDivergence(unsigned IntrID);
 /// \returns true if the intrinsic is uniform
 bool isIntrinsicAlwaysUniform(unsigned IntrID);
 
-/// \returns true if the intrinsic is an LDS DMA
-bool isAsyncLDSDMAIntrinsic(unsigned IntrID);
-
 /// \returns true if the intrinsic executes an LDSDMA operation
 bool isLDSDMAIntrinsic(unsigned IntrID);
 
