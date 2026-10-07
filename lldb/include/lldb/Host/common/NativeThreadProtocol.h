@@ -13,6 +13,7 @@
 #include <string>
 
 #include "lldb/Host/Debug.h"
+#include "lldb/Utility/StructuredData.h"
 #include "lldb/Utility/UnimplementedError.h"
 #include "lldb/lldb-private-forward.h"
 #include "lldb/lldb-types.h"
@@ -56,6 +57,8 @@ public:
   GetSiginfo() const {
     return llvm::make_error<UnimplementedError>();
   }
+
+  virtual StructuredData::ObjectSP GetExtendedInfo() const { return nullptr; }
 
 protected:
   void ClearStopInfo() {

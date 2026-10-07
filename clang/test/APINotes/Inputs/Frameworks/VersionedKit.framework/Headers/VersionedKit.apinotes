@@ -18,6 +18,8 @@ Classes:
 Functions:
   - Name: unversionedRenameDUMP
     SwiftName: 'unversionedRename_NOTES()'
+  - Name: keylessSliceDUMP
+    SwiftName: 'keylessSlice_NOTES()'
 Tags:
   - Name: APINotedFlagEnum
     FlagEnum: true
@@ -75,6 +77,8 @@ SwiftVersions:
       - Name: Swift3RenamedAlsoDUMP
         SwiftName: SpecialSwift3Also
     Functions:
+      # Names the declaration and sets no key, on purpose.
+      - Name: keylessSliceDUMP
       - Name: moveToPointDUMP
         SwiftName: 'moveTo(a:b:)'
       - Name: acceptClosure

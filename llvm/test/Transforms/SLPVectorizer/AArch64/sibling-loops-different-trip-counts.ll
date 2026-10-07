@@ -13,7 +13,7 @@ define void @test(ptr %arr, ptr %out) {
 ; CHECK-NEXT:    br label %[[OUTER_HEADER:.*]]
 ; CHECK:       [[OUTER_HEADER]]:
 ; CHECK-NEXT:    [[OUTER_IV:%.*]] = phi i32 [ 0, %[[ENTRY]] ], [ [[OUTER_NEXT:%.*]], %[[OUTER_LATCH:.*]] ]
-; CHECK-NEXT:    [[TMP0:%.*]] = phi <2 x double> [ zeroinitializer, %[[ENTRY]] ], [ [[TMP9:%.*]], %[[OUTER_LATCH]] ]
+; CHECK-NEXT:    [[TMP0:%.*]] = phi <2 x double> [ zeroinitializer, %[[ENTRY]] ], [ [[TMP11:%.*]], %[[OUTER_LATCH]] ]
 ; CHECK-NEXT:    br label %[[FIRST_HEADER:.*]]
 ; CHECK:       [[FIRST_HEADER]]:
 ; CHECK-NEXT:    [[I_FIRST:%.*]] = phi i64 [ 0, %[[OUTER_HEADER]] ], [ [[I_FIRST_NEXT:%.*]], %[[FIRST_HEADER]] ]
@@ -25,38 +25,26 @@ define void @test(ptr %arr, ptr %out) {
 ; CHECK-NEXT:    [[TMP5]] = fadd <2 x double> [[TMP4]], [[TMP1]]
 ; CHECK-NEXT:    [[I_FIRST_NEXT]] = add nuw nsw i64 [[I_FIRST]], 1
 ; CHECK-NEXT:    [[FIRST_CONT:%.*]] = icmp ult i64 [[I_FIRST_NEXT]], 32
-; CHECK-NEXT:    [[TMP6:%.*]] = extractelement <2 x double> [[TMP5]], i64 0
-; CHECK-NEXT:    [[TMP7:%.*]] = extractelement <2 x double> [[TMP5]], i64 1
 ; CHECK-NEXT:    br i1 [[FIRST_CONT]], label %[[FIRST_HEADER]], label %[[SECOND_HEADER:.*]]
 ; CHECK:       [[SECOND_HEADER]]:
 ; CHECK-NEXT:    [[I_SECOND:%.*]] = phi i64 [ [[I_SECOND_NEXT:%.*]], %[[SECOND_HEADER]] ], [ 0, %[[FIRST_HEADER]] ]
-; CHECK-NEXT:    [[ACC1_SECOND:%.*]] = phi double [ [[ACC1_AFTER_SECOND:%.*]], %[[SECOND_HEADER]] ], [ [[TMP7]], %[[FIRST_HEADER]] ]
-; CHECK-NEXT:    [[ACC0_SECOND:%.*]] = phi double [ [[ACC0_AFTER_SECOND:%.*]], %[[SECOND_HEADER]] ], [ [[TMP6]], %[[FIRST_HEADER]] ]
+; CHECK-NEXT:    [[TMP6:%.*]] = phi <2 x double> [ [[TMP10:%.*]], %[[SECOND_HEADER]] ], [ [[TMP5]], %[[FIRST_HEADER]] ]
 ; CHECK-NEXT:    [[Q0:%.*]] = getelementptr inbounds nuw double, ptr [[ARR]], i64 [[I_SECOND]]
-; CHECK-NEXT:    [[W0:%.*]] = load double, ptr [[Q0]], align 8
-; CHECK-NEXT:    [[W0_BIAS:%.*]] = fadd double [[W0]], 1.000000e+00
-; CHECK-NEXT:    [[W0_ACC:%.*]] = fadd double [[W0_BIAS]], [[W0_BIAS]]
-; CHECK-NEXT:    [[ACC0_AFTER_SECOND]] = fadd double [[W0_ACC]], [[ACC0_SECOND]]
-; CHECK-NEXT:    [[Q1:%.*]] = getelementptr inbounds nuw i8, ptr [[Q0]], i64 8
-; CHECK-NEXT:    [[W1:%.*]] = load double, ptr [[Q1]], align 8
-; CHECK-NEXT:    [[W1_BIAS:%.*]] = fadd double [[W1]], 1.000000e+00
-; CHECK-NEXT:    [[W1_ACC:%.*]] = fadd double [[W1_BIAS]], [[W1_BIAS]]
-; CHECK-NEXT:    [[ACC1_AFTER_SECOND]] = fadd double [[W1_ACC]], [[ACC1_SECOND]]
+; CHECK-NEXT:    [[TMP7:%.*]] = load <2 x double>, ptr [[Q0]], align 8
+; CHECK-NEXT:    [[TMP8:%.*]] = fadd <2 x double> [[TMP7]], splat (double 1.000000e+00)
+; CHECK-NEXT:    [[TMP9:%.*]] = fadd <2 x double> [[TMP8]], [[TMP8]]
+; CHECK-NEXT:    [[TMP10]] = fadd <2 x double> [[TMP9]], [[TMP6]]
 ; CHECK-NEXT:    [[I_SECOND_NEXT]] = add nuw nsw i64 [[I_SECOND]], 1
 ; CHECK-NEXT:    [[SECOND_CONT:%.*]] = icmp ult i64 [[I_SECOND_NEXT]], 2
 ; CHECK-NEXT:    br i1 [[SECOND_CONT]], label %[[SECOND_HEADER]], label %[[OUTER_LATCH]]
 ; CHECK:       [[OUTER_LATCH]]:
-; CHECK-NEXT:    [[ACC0_AFTER_SECOND_LCSSA:%.*]] = phi double [ [[ACC0_AFTER_SECOND]], %[[SECOND_HEADER]] ]
-; CHECK-NEXT:    [[ACC1_AFTER_SECOND_LCSSA:%.*]] = phi double [ [[ACC1_AFTER_SECOND]], %[[SECOND_HEADER]] ]
+; CHECK-NEXT:    [[TMP11]] = phi <2 x double> [ [[TMP10]], %[[SECOND_HEADER]] ]
 ; CHECK-NEXT:    [[OUTER_NEXT]] = add nuw nsw i32 [[OUTER_IV]], 1
 ; CHECK-NEXT:    [[OUTER_CONT:%.*]] = icmp ult i32 [[OUTER_NEXT]], 2
-; CHECK-NEXT:    [[TMP8:%.*]] = insertelement <2 x double> poison, double [[ACC0_AFTER_SECOND_LCSSA]], i64 0
-; CHECK-NEXT:    [[TMP9]] = insertelement <2 x double> [[TMP8]], double [[ACC1_AFTER_SECOND_LCSSA]], i64 1
 ; CHECK-NEXT:    br i1 [[OUTER_CONT]], label %[[OUTER_HEADER]], label %[[EXIT:.*]]
 ; CHECK:       [[EXIT]]:
-; CHECK-NEXT:    [[ACC0_AFTER_SECOND_LCSSA_LCSSA:%.*]] = phi double [ [[ACC0_AFTER_SECOND_LCSSA]], %[[OUTER_LATCH]] ]
-; CHECK-NEXT:    [[ACC1_AFTER_SECOND_LCSSA_LCSSA:%.*]] = phi double [ [[ACC1_AFTER_SECOND_LCSSA]], %[[OUTER_LATCH]] ]
-; CHECK-NEXT:    [[TMP13:%.*]] = fadd double [[ACC0_AFTER_SECOND_LCSSA_LCSSA]], [[ACC1_AFTER_SECOND_LCSSA_LCSSA]]
+; CHECK-NEXT:    [[TMP12:%.*]] = phi <2 x double> [ [[TMP11]], %[[OUTER_LATCH]] ]
+; CHECK-NEXT:    [[TMP13:%.*]] = call reassoc double @llvm.vector.reduce.fadd.v2f64(double -0.000000e+00, <2 x double> [[TMP12]])
 ; CHECK-NEXT:    store double [[TMP13]], ptr [[OUT]], align 8
 ; CHECK-NEXT:    ret void
 ;
