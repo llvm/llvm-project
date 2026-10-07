@@ -1274,7 +1274,8 @@ Value *LibCallSimplifier::optimizeMemRChr(CallInst *CI, IRBuilderBase &B) {
       // Slice off the character's high end bits.
       CharVal = B.CreateTrunc(CharVal, B.getInt8Ty());
       Value *Cmp = B.CreateICmpEQ(Val, CharVal, "memrchr.char0cmp");
-      return B.CreateSelect(Cmp, SrcStr, NullPtr, "memrchr.sel");
+      return B.CreateSelectWithUnknownProfile(Cmp, SrcStr, NullPtr, DEBUG_TYPE,
+                                              "memrchr.sel");
     }
   }
 
@@ -3106,12 +3107,12 @@ static bool insertSinCosCall(IRBuilderBase &B, Function *OrigCallee, Value *Arg,
   if (Instruction *ArgInst = dyn_cast<Instruction>(Arg)) {
     // If the argument is an instruction, it must dominate all uses so put our
     // sincos call there.
-    B.SetInsertPoint(ArgInst->getParent(), ++ArgInst->getIterator());
+    B.SetInsertPoint(++ArgInst->getIterator());
   } else {
     // Otherwise (e.g. for a constant) the beginning of the function is as
     // good a place as any.
     BasicBlock &EntryBB = B.GetInsertBlock()->getParent()->getEntryBlock();
-    B.SetInsertPoint(&EntryBB, EntryBB.begin());
+    B.SetInsertPoint(EntryBB.begin());
   }
 
   SinCos = B.CreateCall(Callee, Arg, "sincospi");
@@ -3173,6 +3174,10 @@ Value *LibCallSimplifier::optimizeSymmetric(CallInst *CI, LibFunc Func,
   case LibFunc_coshl:
     return optimizeSymmetricCall(CI, /*IsEven*/ true, B);
 
+  case LibFunc_cbrt:
+  case LibFunc_cbrtf:
+  case LibFunc_cbrtl:
+
   case LibFunc_sin:
   case LibFunc_sinf:
   case LibFunc_sinl:
@@ -3181,6 +3186,14 @@ Value *LibCallSimplifier::optimizeSymmetric(CallInst *CI, LibFunc Func,
   case LibFunc_sinhf:
   case LibFunc_sinhl:
 
+  case LibFunc_asin:
+  case LibFunc_asinf:
+  case LibFunc_asinl:
+
+  case LibFunc_asinh:
+  case LibFunc_asinhf:
+  case LibFunc_asinhl:
+
   case LibFunc_tan:
   case LibFunc_tanf:
   case LibFunc_tanl:
@@ -3188,6 +3201,10 @@ Value *LibCallSimplifier::optimizeSymmetric(CallInst *CI, LibFunc Func,
   case LibFunc_tanh:
   case LibFunc_tanhf:
   case LibFunc_tanhl:
+
+  case LibFunc_atan:
+  case LibFunc_atanf:
+  case LibFunc_atanl:
 
   case LibFunc_erf:
   case LibFunc_erff:

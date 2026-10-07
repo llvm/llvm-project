@@ -8,7 +8,7 @@ define i1 @latch_counted_header_check_removable(ptr %p, i64 %n, i64 %lim) {
 ; CHECK-NEXT:    [[POS:%.*]] = icmp sgt i64 [[N]], 0
 ; CHECK-NEXT:    br i1 [[POS]], label %[[PH:.*]], label %[[EXIT_0:.*]]
 ; CHECK:       [[PH]]:
-; CHECK-NEXT:    [[NM1:%.*]] = add i64 [[N]], -1
+; CHECK-NEXT:    [[NM1:%.*]] = add nsw i64 [[N]], -1
 ; CHECK-NEXT:    [[G4:%.*]] = shl nuw nsw i64 [[NM1]], 2
 ; CHECK-NEXT:    [[G:%.*]] = icmp ult i64 [[G4]], [[LIM]]
 ; CHECK-NEXT:    br i1 [[G]], label %[[LOOP_HEADER:.*]], label %[[EXIT_1:.*]]

@@ -50,6 +50,7 @@
 #include "clang/AST/OSLog.h"
 #include "clang/AST/OptionalDiagnostic.h"
 #include "clang/AST/RecordLayout.h"
+#include "clang/AST/Reflection.h"
 #include "clang/AST/StmtVisitor.h"
 #include "clang/AST/Type.h"
 #include "clang/AST/TypeLoc.h"
@@ -61,8 +62,10 @@
 #include "llvm/ADT/Sequence.h"
 #include "llvm/ADT/SmallBitVector.h"
 #include "llvm/ADT/StringExtras.h"
+#include "llvm/Support/CRC.h"
 #include "llvm/Support/Casting.h"
 #include "llvm/Support/Debug.h"
+#include "llvm/Support/MathExtras.h"
 #include "llvm/Support/SaveAndRestore.h"
 #include "llvm/Support/SipHash.h"
 #include "llvm/Support/TimeProfiler.h"
@@ -2616,6 +2619,7 @@ static bool HandleConversionToBool(const APValue &Val, bool &Result) {
   case APValue::Struct:
   case APValue::Union:
   case APValue::AddrLabelDiff:
+  case APValue::Reflection:
     return false;
   }
 
@@ -7978,7 +7982,8 @@ class APValueToBufferConverter {
     case APValue::Matrix:
     case APValue::Union:
     case APValue::MemberPointer:
-    case APValue::AddrLabelDiff: {
+    case APValue::AddrLabelDiff:
+    case APValue::Reflection: {
       Info.FFDiag(BCE->getBeginLoc(),
                   diag::note_constexpr_bit_cast_unsupported_type)
           << Ty;
@@ -10667,6 +10672,20 @@ bool PointerExprEvaluator::VisitBuiltinCallExpr(const CallExpr *E,
     if (!getAlignmentArgument(E->getArg(1), E->getArg(0)->getType(), Info,
                               Alignment))
       return false;
+
+    if (!Result.Base) {
+      // Null pointers are always aligned and align_up/align_down preserve null.
+      if (Result.Offset.isZero())
+        return true;
+
+      // Non-null pointers without a base (for example, integer-to-pointer
+      // casts such as (void *)32) do not have enough information to perform
+      // pointer arithmetic during constant evaluation.
+      Info.FFDiag(E->getArg(0), diag::note_constexpr_alignment_adjust)
+          << Alignment;
+      return false;
+    }
+
     CharUnits BaseAlignment = getBaseAlignment(Info, Result);
     CharUnits PtrAlign = BaseAlignment.alignmentAtOffset(Result.Offset);
     // For align_up/align_down, we can return the same value if the alignment
@@ -11223,6 +11242,59 @@ bool PointerExprEvaluator::VisitCXXNewExpr(const CXXNewExpr *E) {
 
   return true;
 }
+
+//===----------------------------------------------------------------------===//
+// Reflection expression evaluation
+//===----------------------------------------------------------------------===//
+
+namespace {
+class ReflectionEvaluator : public ExprEvaluatorBase<ReflectionEvaluator> {
+
+  using BaseType = ExprEvaluatorBase<ReflectionEvaluator>;
+
+  APValue &Result;
+
+public:
+  ReflectionEvaluator(EvalInfo &E, APValue &Result)
+      : ExprEvaluatorBaseTy(E), Result(Result) {}
+
+  bool Success(const APValue &V, const Expr *E) {
+    Result = V;
+    return true;
+  }
+
+  bool VisitCXXReflectExpr(const CXXReflectExpr *E);
+  bool ZeroInitialization(const Expr *E);
+};
+
+bool ReflectionEvaluator::VisitCXXReflectExpr(const CXXReflectExpr *E) {
+  switch (E->getKind()) {
+  case ReflectionKind::Null: {
+    assert(false && "null reflection can't be constructed from parsing a "
+                    "reflection operand");
+    return false;
+  }
+  case ReflectionKind::Type: {
+    APValue ReflectionValue(ReflectionKind::Type, E->getOpaqueValue());
+    return Success(ReflectionValue, E);
+  }
+  }
+  assert(false && "unknown or unimplemented reflection entities");
+  return false;
+}
+
+bool ReflectionEvaluator::ZeroInitialization(const Expr *E) {
+  Result = APValue(ReflectionKind::Null, /*Operand=*/nullptr);
+  return true;
+}
+
+} // end anonymous namespace
+
+static bool EvaluateReflection(const Expr *E, APValue &Result, EvalInfo &Info) {
+  assert(E->isPRValue() && E->getType()->isMetaInfoType());
+  return ReflectionEvaluator(Info, Result).Visit(E);
+}
+
 //===----------------------------------------------------------------------===//
 // Member Pointer Evaluation
 //===----------------------------------------------------------------------===//
@@ -16372,6 +16444,7 @@ GCCTypeClass EvaluateBuiltinClassifyType(QualType T,
 #include "clang/Basic/HLSLPackedTypes.def"
 #define SPIRV_TYPE(Name, Id, SingletonId) case BuiltinType::Id:
 #include "clang/Basic/SPIRVTypes.def"
+    case BuiltinType::MetaInfo:
       return GCCTypeClass::None;
 
     case BuiltinType::Dependent:
@@ -16986,15 +17059,8 @@ bool IntExprEvaluator::VisitBuiltinCallExpr(const CallExpr *E,
     // CRC32C polynomial (iSCSI polynomial, bit-reversed)
     static const uint32_t CRC32C_POLY = 0x82F63B78;
 
-    // Process each byte
-    uint32_t Result = static_cast<uint32_t>(CRCVal);
-    for (unsigned I = 0; I != DataBytes; ++I) {
-      uint8_t Byte = static_cast<uint8_t>((DataVal >> (I * 8)) & 0xFF);
-      Result ^= Byte;
-      for (int J = 0; J != 8; ++J) {
-        Result = (Result >> 1) ^ ((Result & 1) ? CRC32C_POLY : 0);
-      }
-    }
+    uint32_t Result = llvm::calculateReflectedCRC32(
+        static_cast<uint32_t>(CRCVal), DataVal, DataBytes, CRC32C_POLY);
 
     return Success(Result, E);
   };
@@ -17058,6 +17124,18 @@ bool IntExprEvaluator::VisitBuiltinCallExpr(const CallExpr *E,
       // If we evaluated a pointer, check the minimum known alignment.
       LValue Ptr;
       Ptr.setFrom(Info.Ctx, Src);
+      if (!Ptr.Base) {
+        // Null pointers are always aligned.
+        if (Ptr.Offset.isZero())
+          return Success(1, E);
+
+        Info.FFDiag(E->getArg(0), diag::note_constexpr_alignment_compute)
+            << Alignment;
+        // Reject non-null pointers without an underlying object.
+        // Do not interpret the pointer offset as an integer address.
+        return false;
+      }
+
       CharUnits BaseAlignment = getBaseAlignment(Info, Ptr);
       CharUnits PtrAlign = BaseAlignment.alignmentAtOffset(Ptr.Offset);
       // We can return true if the known alignment at the computed offset is
@@ -19505,6 +19583,23 @@ EvaluateComparisonBinaryOperator(EvalInfo &Info, const BinaryOperator *E,
     return Success(CmpResult::Equal, E);
   }
 
+  if (LHSTy->isMetaInfoType() && RHSTy->isMetaInfoType()) {
+    APValue LHSValue, RHSValue;
+    llvm::FoldingSetNodeID LID, RID;
+    if (!Evaluate(LHSValue, Info, E->getLHS()))
+      return false;
+    LHSValue.Profile(LID);
+
+    if (!Evaluate(RHSValue, Info, E->getRHS()))
+      return false;
+    RHSValue.Profile(RID);
+
+    if (LID == RID)
+      return Success(CmpResult::Equal, E);
+    else
+      return Success(CmpResult::Unequal, E);
+  }
+
   return DoAfter();
 }
 
@@ -21586,6 +21681,55 @@ public:
     case Builtin::BI__builtin_operator_delete:
       return HandleOperatorDeleteCall(Info, E);
 
+    case Builtin::BIstdc_memreverse8:
+    case Builtin::BI__builtin_stdc_memreverse8: {
+      APSInt N;
+      if (!EvaluateInteger(E->getArg(0), N, Info))
+        return false;
+      uint64_t NElems = N.getZExtValue();
+
+      LValue Ptr;
+      if (!EvaluatePointer(E->getArg(1), Ptr, Info))
+        return false;
+
+      if (!Ptr.checkNullPointerForFoldAccess(Info, E, AK_Assign) ||
+          Ptr.Designator.Invalid)
+        return false;
+
+      QualType CharTy = Ptr.Designator.getType(Info.Ctx);
+      uint64_t RemainingElems = Ptr.Designator.validIndexAdjustments().second;
+      if (NElems > RemainingElems) {
+        uint64_t ArrayIndex =
+            Ptr.Designator.MostDerivedIsArrayElement
+                ? Ptr.Designator.Entries.back().getAsArrayIndex()
+                : (uint64_t)Ptr.Designator.IsOnePastTheEnd;
+        APSInt Index =
+            APSInt::getUnsigned(llvm::SaturatingAdd(ArrayIndex, NElems - 1));
+        Ptr.Designator.diagnosePointerArithmetic(Info, E, Index);
+        return false;
+      }
+
+      if (NElems <= 1)
+        return true;
+
+      LValue Lo = Ptr;
+      LValue Hi = Ptr;
+      if (!HandleLValueArrayAdjustment(Info, E, Hi, CharTy, NElems - 1))
+        return false;
+
+      for (uint64_t I = 0, Half = NElems / 2; I < Half; ++I) {
+        APValue LoVal, HiVal;
+        if (!handleLValueToRValueConversion(Info, E, CharTy, Lo, LoVal) ||
+            !handleLValueToRValueConversion(Info, E, CharTy, Hi, HiVal) ||
+            !handleAssignment(Info, E, Lo, CharTy, HiVal) ||
+            !handleAssignment(Info, E, Hi, CharTy, LoVal) ||
+            !HandleLValueArrayAdjustment(Info, E, Lo, CharTy, 1) ||
+            !HandleLValueArrayAdjustment(Info, E, Hi, CharTy, -1))
+          return false;
+      }
+      return true;
+    }
+
     default:
       return false;
     }
@@ -21698,6 +21842,9 @@ static bool Evaluate(APValue &Result, EvalInfo &Info, const Expr *E) {
       return false;
   } else if (T->isIntegralOrEnumerationType()) {
     if (!IntExprEvaluator(Info, Result).Visit(E))
+      return false;
+  } else if (T->isMetaInfoType()) {
+    if (!EvaluateReflection(E, Result, Info))
       return false;
   } else if (T->hasPointerRepresentation()) {
     LValue LV;
