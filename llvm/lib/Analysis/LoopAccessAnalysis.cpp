@@ -1938,12 +1938,15 @@ isNoWrap(PredicatedScalarEvolution &PSE, const SCEVAddRecExpr *AR, Value *Ptr,
   ScalarEvolution &SE = *PSE.getSE();
   const SCEVPredicate *WrapPred =
       SE.getWrapPredicate(AR, SCEVWrapPredicate::IncrementNUSW);
-  if (Ptr && Predicates) {
+  if (Predicates) {
     Predicates->push_back(WrapPred);
-    LLVM_DEBUG(dbgs() << "LAA: Pointer may wrap:\n"
-                      << "LAA:   Pointer: " << *Ptr << "\n"
-                      << "LAA:   SCEV: " << *AR << "\n"
-                      << "LAA:   Added an overflow assumption\n");
+    LLVM_DEBUG({
+      dbgs() << "LAA: Pointer may wrap:\n";
+      if (Ptr)
+        dbgs() << "LAA:   Pointer: " << *Ptr << "\n";
+      dbgs() << "LAA:   SCEV: " << *AR << "\n"
+             << "LAA:   Added an overflow assumption\n";
+    });
     return true;
   }
 
