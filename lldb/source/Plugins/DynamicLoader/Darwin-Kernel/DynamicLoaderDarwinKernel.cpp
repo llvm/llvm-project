@@ -804,7 +804,7 @@ bool DynamicLoaderDarwinKernel::KextImageInfo::LoadImageUsingMemoryModule(
       module_spec.GetFileSpec() = FileSpec(m_name);
 
       if (IsKernel()) {
-        // The platform's kext index has to win over the shared module list.
+        // The platform's index has to win over the shared module list.
         PlatformSP platform_sp(target.GetPlatform());
         if (platform_sp) {
           platform_sp->GetSharedModule(module_spec, target, m_module_sp,
@@ -821,8 +821,8 @@ bool DynamicLoaderDarwinKernel::KextImageInfo::LoadImageUsingMemoryModule(
               target.GetOrCreateModule(module_spec, true /* notify */);
         }
       } else {
-        // The file name is a bundle ID, which PlatformDarwinKernel's index is
-        // keyed on.
+        // SymbolLocator asks the platform first, and PlatformDarwinKernel
+        // answers from its kext index, using the bundle ID in the file name.
         StatisticsMap statistics;
         ModuleSP shared_module_sp;
         ModuleList::GetSharedModule(module_spec, shared_module_sp, nullptr,
