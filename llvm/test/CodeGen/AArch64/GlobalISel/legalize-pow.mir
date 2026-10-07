@@ -12,14 +12,14 @@ body:             |
     ; CHECK-NEXT: ADJCALLSTACKDOWN 0, 0, implicit-def $sp, implicit $sp
     ; CHECK-NEXT: $d0 = COPY [[COPY]](f64)
     ; CHECK-NEXT: $d1 = COPY [[COPY1]](f64)
-    ; CHECK-NEXT: BL &pow, csr_aarch64_aapcs, implicit-def $lr, implicit $sp, implicit $d0, implicit $d1, implicit-def $d0
+    ; CHECK-NEXT: BL &pow, csr_aarch64_aapcs, implicit-def dead $lr, implicit $sp, implicit $d0, implicit $d1, implicit-def $d0
     ; CHECK-NEXT: ADJCALLSTACKUP 0, 0, implicit-def $sp, implicit $sp
     ; CHECK-NEXT: [[COPY4:%[0-9]+]]:_(f64) = COPY $d0
     ; CHECK-NEXT: $x0 = COPY [[COPY4]](f64)
     ; CHECK-NEXT: ADJCALLSTACKDOWN 0, 0, implicit-def $sp, implicit $sp
     ; CHECK-NEXT: $s0 = COPY [[COPY2]](f32)
     ; CHECK-NEXT: $s1 = COPY [[COPY3]](f32)
-    ; CHECK-NEXT: BL &powf, csr_aarch64_aapcs, implicit-def $lr, implicit $sp, implicit $s0, implicit $s1, implicit-def $s0
+    ; CHECK-NEXT: BL &powf, csr_aarch64_aapcs, implicit-def dead $lr, implicit $sp, implicit $s0, implicit $s1, implicit-def $s0
     ; CHECK-NEXT: ADJCALLSTACKUP 0, 0, implicit-def $sp, implicit $sp
     ; CHECK-NEXT: [[COPY5:%[0-9]+]]:_(f32) = COPY $s0
     ; CHECK-NEXT: $w0 = COPY [[COPY5]](f32)
@@ -53,7 +53,7 @@ body:             |
     ; CHECK-NEXT: ADJCALLSTACKDOWN 0, 0, implicit-def $sp, implicit $sp
     ; CHECK-NEXT: $s0 = COPY [[FPEXT]](f32)
     ; CHECK-NEXT: $s1 = COPY [[FPEXT1]](f32)
-    ; CHECK-NEXT: BL &powf, csr_aarch64_aapcs, implicit-def $lr, implicit $sp, implicit $s0, implicit $s1, implicit-def $s0
+    ; CHECK-NEXT: BL &powf, csr_aarch64_aapcs, implicit-def dead $lr, implicit $sp, implicit $s0, implicit $s1, implicit-def $s0
     ; CHECK-NEXT: ADJCALLSTACKUP 0, 0, implicit-def $sp, implicit $sp
     ; CHECK-NEXT: [[COPY2:%[0-9]+]]:_(f32) = COPY $s0
     ; CHECK-NEXT: [[FPTRUNC:%[0-9]+]]:_(f16) = G_FPTRUNC [[COPY2]](f32)
@@ -62,7 +62,7 @@ body:             |
     ; CHECK-NEXT: ADJCALLSTACKDOWN 0, 0, implicit-def $sp, implicit $sp
     ; CHECK-NEXT: $s0 = COPY [[FPEXT2]](f32)
     ; CHECK-NEXT: $s1 = COPY [[FPEXT3]](f32)
-    ; CHECK-NEXT: BL &powf, csr_aarch64_aapcs, implicit-def $lr, implicit $sp, implicit $s0, implicit $s1, implicit-def $s0
+    ; CHECK-NEXT: BL &powf, csr_aarch64_aapcs, implicit-def dead $lr, implicit $sp, implicit $s0, implicit $s1, implicit-def $s0
     ; CHECK-NEXT: ADJCALLSTACKUP 0, 0, implicit-def $sp, implicit $sp
     ; CHECK-NEXT: [[COPY3:%[0-9]+]]:_(f32) = COPY $s0
     ; CHECK-NEXT: [[FPTRUNC1:%[0-9]+]]:_(f16) = G_FPTRUNC [[COPY3]](f32)
@@ -71,7 +71,7 @@ body:             |
     ; CHECK-NEXT: ADJCALLSTACKDOWN 0, 0, implicit-def $sp, implicit $sp
     ; CHECK-NEXT: $s0 = COPY [[FPEXT4]](f32)
     ; CHECK-NEXT: $s1 = COPY [[FPEXT5]](f32)
-    ; CHECK-NEXT: BL &powf, csr_aarch64_aapcs, implicit-def $lr, implicit $sp, implicit $s0, implicit $s1, implicit-def $s0
+    ; CHECK-NEXT: BL &powf, csr_aarch64_aapcs, implicit-def dead $lr, implicit $sp, implicit $s0, implicit $s1, implicit-def $s0
     ; CHECK-NEXT: ADJCALLSTACKUP 0, 0, implicit-def $sp, implicit $sp
     ; CHECK-NEXT: [[COPY4:%[0-9]+]]:_(f32) = COPY $s0
     ; CHECK-NEXT: [[FPTRUNC2:%[0-9]+]]:_(f16) = G_FPTRUNC [[COPY4]](f32)
@@ -80,7 +80,7 @@ body:             |
     ; CHECK-NEXT: ADJCALLSTACKDOWN 0, 0, implicit-def $sp, implicit $sp
     ; CHECK-NEXT: $s0 = COPY [[FPEXT6]](f32)
     ; CHECK-NEXT: $s1 = COPY [[FPEXT7]](f32)
-    ; CHECK-NEXT: BL &powf, csr_aarch64_aapcs, implicit-def $lr, implicit $sp, implicit $s0, implicit $s1, implicit-def $s0
+    ; CHECK-NEXT: BL &powf, csr_aarch64_aapcs, implicit-def dead $lr, implicit $sp, implicit $s0, implicit $s1, implicit-def $s0
     ; CHECK-NEXT: ADJCALLSTACKUP 0, 0, implicit-def $sp, implicit $sp
     ; CHECK-NEXT: [[COPY5:%[0-9]+]]:_(f32) = COPY $s0
     ; CHECK-NEXT: [[FPTRUNC3:%[0-9]+]]:_(f16) = G_FPTRUNC [[COPY5]](f32)
@@ -114,7 +114,7 @@ body:             |
     ; CHECK-NEXT: ADJCALLSTACKDOWN 0, 0, implicit-def $sp, implicit $sp
     ; CHECK-NEXT: $s0 = COPY [[FPEXT]](f32)
     ; CHECK-NEXT: $s1 = COPY [[FPEXT1]](f32)
-    ; CHECK-NEXT: BL &powf, csr_aarch64_aapcs, implicit-def $lr, implicit $sp, implicit $s0, implicit $s1, implicit-def $s0
+    ; CHECK-NEXT: BL &powf, csr_aarch64_aapcs, implicit-def dead $lr, implicit $sp, implicit $s0, implicit $s1, implicit-def $s0
     ; CHECK-NEXT: ADJCALLSTACKUP 0, 0, implicit-def $sp, implicit $sp
     ; CHECK-NEXT: [[COPY2:%[0-9]+]]:_(f32) = COPY $s0
     ; CHECK-NEXT: [[FPTRUNC:%[0-9]+]]:_(f16) = G_FPTRUNC [[COPY2]](f32)
@@ -123,7 +123,7 @@ body:             |
     ; CHECK-NEXT: ADJCALLSTACKDOWN 0, 0, implicit-def $sp, implicit $sp
     ; CHECK-NEXT: $s0 = COPY [[FPEXT2]](f32)
     ; CHECK-NEXT: $s1 = COPY [[FPEXT3]](f32)
-    ; CHECK-NEXT: BL &powf, csr_aarch64_aapcs, implicit-def $lr, implicit $sp, implicit $s0, implicit $s1, implicit-def $s0
+    ; CHECK-NEXT: BL &powf, csr_aarch64_aapcs, implicit-def dead $lr, implicit $sp, implicit $s0, implicit $s1, implicit-def $s0
     ; CHECK-NEXT: ADJCALLSTACKUP 0, 0, implicit-def $sp, implicit $sp
     ; CHECK-NEXT: [[COPY3:%[0-9]+]]:_(f32) = COPY $s0
     ; CHECK-NEXT: [[FPTRUNC1:%[0-9]+]]:_(f16) = G_FPTRUNC [[COPY3]](f32)
@@ -132,7 +132,7 @@ body:             |
     ; CHECK-NEXT: ADJCALLSTACKDOWN 0, 0, implicit-def $sp, implicit $sp
     ; CHECK-NEXT: $s0 = COPY [[FPEXT4]](f32)
     ; CHECK-NEXT: $s1 = COPY [[FPEXT5]](f32)
-    ; CHECK-NEXT: BL &powf, csr_aarch64_aapcs, implicit-def $lr, implicit $sp, implicit $s0, implicit $s1, implicit-def $s0
+    ; CHECK-NEXT: BL &powf, csr_aarch64_aapcs, implicit-def dead $lr, implicit $sp, implicit $s0, implicit $s1, implicit-def $s0
     ; CHECK-NEXT: ADJCALLSTACKUP 0, 0, implicit-def $sp, implicit $sp
     ; CHECK-NEXT: [[COPY4:%[0-9]+]]:_(f32) = COPY $s0
     ; CHECK-NEXT: [[FPTRUNC2:%[0-9]+]]:_(f16) = G_FPTRUNC [[COPY4]](f32)
@@ -141,7 +141,7 @@ body:             |
     ; CHECK-NEXT: ADJCALLSTACKDOWN 0, 0, implicit-def $sp, implicit $sp
     ; CHECK-NEXT: $s0 = COPY [[FPEXT6]](f32)
     ; CHECK-NEXT: $s1 = COPY [[FPEXT7]](f32)
-    ; CHECK-NEXT: BL &powf, csr_aarch64_aapcs, implicit-def $lr, implicit $sp, implicit $s0, implicit $s1, implicit-def $s0
+    ; CHECK-NEXT: BL &powf, csr_aarch64_aapcs, implicit-def dead $lr, implicit $sp, implicit $s0, implicit $s1, implicit-def $s0
     ; CHECK-NEXT: ADJCALLSTACKUP 0, 0, implicit-def $sp, implicit $sp
     ; CHECK-NEXT: [[COPY5:%[0-9]+]]:_(f32) = COPY $s0
     ; CHECK-NEXT: [[FPTRUNC3:%[0-9]+]]:_(f16) = G_FPTRUNC [[COPY5]](f32)
@@ -150,7 +150,7 @@ body:             |
     ; CHECK-NEXT: ADJCALLSTACKDOWN 0, 0, implicit-def $sp, implicit $sp
     ; CHECK-NEXT: $s0 = COPY [[FPEXT8]](f32)
     ; CHECK-NEXT: $s1 = COPY [[FPEXT9]](f32)
-    ; CHECK-NEXT: BL &powf, csr_aarch64_aapcs, implicit-def $lr, implicit $sp, implicit $s0, implicit $s1, implicit-def $s0
+    ; CHECK-NEXT: BL &powf, csr_aarch64_aapcs, implicit-def dead $lr, implicit $sp, implicit $s0, implicit $s1, implicit-def $s0
     ; CHECK-NEXT: ADJCALLSTACKUP 0, 0, implicit-def $sp, implicit $sp
     ; CHECK-NEXT: [[COPY6:%[0-9]+]]:_(f32) = COPY $s0
     ; CHECK-NEXT: [[FPTRUNC4:%[0-9]+]]:_(f16) = G_FPTRUNC [[COPY6]](f32)
@@ -159,7 +159,7 @@ body:             |
     ; CHECK-NEXT: ADJCALLSTACKDOWN 0, 0, implicit-def $sp, implicit $sp
     ; CHECK-NEXT: $s0 = COPY [[FPEXT10]](f32)
     ; CHECK-NEXT: $s1 = COPY [[FPEXT11]](f32)
-    ; CHECK-NEXT: BL &powf, csr_aarch64_aapcs, implicit-def $lr, implicit $sp, implicit $s0, implicit $s1, implicit-def $s0
+    ; CHECK-NEXT: BL &powf, csr_aarch64_aapcs, implicit-def dead $lr, implicit $sp, implicit $s0, implicit $s1, implicit-def $s0
     ; CHECK-NEXT: ADJCALLSTACKUP 0, 0, implicit-def $sp, implicit $sp
     ; CHECK-NEXT: [[COPY7:%[0-9]+]]:_(f32) = COPY $s0
     ; CHECK-NEXT: [[FPTRUNC5:%[0-9]+]]:_(f16) = G_FPTRUNC [[COPY7]](f32)
@@ -168,7 +168,7 @@ body:             |
     ; CHECK-NEXT: ADJCALLSTACKDOWN 0, 0, implicit-def $sp, implicit $sp
     ; CHECK-NEXT: $s0 = COPY [[FPEXT12]](f32)
     ; CHECK-NEXT: $s1 = COPY [[FPEXT13]](f32)
-    ; CHECK-NEXT: BL &powf, csr_aarch64_aapcs, implicit-def $lr, implicit $sp, implicit $s0, implicit $s1, implicit-def $s0
+    ; CHECK-NEXT: BL &powf, csr_aarch64_aapcs, implicit-def dead $lr, implicit $sp, implicit $s0, implicit $s1, implicit-def $s0
     ; CHECK-NEXT: ADJCALLSTACKUP 0, 0, implicit-def $sp, implicit $sp
     ; CHECK-NEXT: [[COPY8:%[0-9]+]]:_(f32) = COPY $s0
     ; CHECK-NEXT: [[FPTRUNC6:%[0-9]+]]:_(f16) = G_FPTRUNC [[COPY8]](f32)
@@ -177,7 +177,7 @@ body:             |
     ; CHECK-NEXT: ADJCALLSTACKDOWN 0, 0, implicit-def $sp, implicit $sp
     ; CHECK-NEXT: $s0 = COPY [[FPEXT14]](f32)
     ; CHECK-NEXT: $s1 = COPY [[FPEXT15]](f32)
-    ; CHECK-NEXT: BL &powf, csr_aarch64_aapcs, implicit-def $lr, implicit $sp, implicit $s0, implicit $s1, implicit-def $s0
+    ; CHECK-NEXT: BL &powf, csr_aarch64_aapcs, implicit-def dead $lr, implicit $sp, implicit $s0, implicit $s1, implicit-def $s0
     ; CHECK-NEXT: ADJCALLSTACKUP 0, 0, implicit-def $sp, implicit $sp
     ; CHECK-NEXT: [[COPY9:%[0-9]+]]:_(f32) = COPY $s0
     ; CHECK-NEXT: [[FPTRUNC7:%[0-9]+]]:_(f16) = G_FPTRUNC [[COPY9]](f32)
@@ -209,13 +209,13 @@ body:             |
     ; CHECK-NEXT: ADJCALLSTACKDOWN 0, 0, implicit-def $sp, implicit $sp
     ; CHECK-NEXT: $s0 = COPY [[UV]](f32)
     ; CHECK-NEXT: $s1 = COPY [[UV2]](f32)
-    ; CHECK-NEXT: BL &powf, csr_aarch64_aapcs, implicit-def $lr, implicit $sp, implicit $s0, implicit $s1, implicit-def $s0
+    ; CHECK-NEXT: BL &powf, csr_aarch64_aapcs, implicit-def dead $lr, implicit $sp, implicit $s0, implicit $s1, implicit-def $s0
     ; CHECK-NEXT: ADJCALLSTACKUP 0, 0, implicit-def $sp, implicit $sp
     ; CHECK-NEXT: [[COPY2:%[0-9]+]]:_(f32) = COPY $s0
     ; CHECK-NEXT: ADJCALLSTACKDOWN 0, 0, implicit-def $sp, implicit $sp
     ; CHECK-NEXT: $s0 = COPY [[UV1]](f32)
     ; CHECK-NEXT: $s1 = COPY [[UV3]](f32)
-    ; CHECK-NEXT: BL &powf, csr_aarch64_aapcs, implicit-def $lr, implicit $sp, implicit $s0, implicit $s1, implicit-def $s0
+    ; CHECK-NEXT: BL &powf, csr_aarch64_aapcs, implicit-def dead $lr, implicit $sp, implicit $s0, implicit $s1, implicit-def $s0
     ; CHECK-NEXT: ADJCALLSTACKUP 0, 0, implicit-def $sp, implicit $sp
     ; CHECK-NEXT: [[COPY3:%[0-9]+]]:_(f32) = COPY $s0
     ; CHECK-NEXT: [[BUILD_VECTOR:%[0-9]+]]:_(<2 x f32>) = G_BUILD_VECTOR [[COPY2]](f32), [[COPY3]](f32)
@@ -246,25 +246,25 @@ body:             |
     ; CHECK-NEXT: ADJCALLSTACKDOWN 0, 0, implicit-def $sp, implicit $sp
     ; CHECK-NEXT: $s0 = COPY [[UV]](f32)
     ; CHECK-NEXT: $s1 = COPY [[UV4]](f32)
-    ; CHECK-NEXT: BL &powf, csr_aarch64_aapcs, implicit-def $lr, implicit $sp, implicit $s0, implicit $s1, implicit-def $s0
+    ; CHECK-NEXT: BL &powf, csr_aarch64_aapcs, implicit-def dead $lr, implicit $sp, implicit $s0, implicit $s1, implicit-def $s0
     ; CHECK-NEXT: ADJCALLSTACKUP 0, 0, implicit-def $sp, implicit $sp
     ; CHECK-NEXT: [[COPY2:%[0-9]+]]:_(f32) = COPY $s0
     ; CHECK-NEXT: ADJCALLSTACKDOWN 0, 0, implicit-def $sp, implicit $sp
     ; CHECK-NEXT: $s0 = COPY [[UV1]](f32)
     ; CHECK-NEXT: $s1 = COPY [[UV5]](f32)
-    ; CHECK-NEXT: BL &powf, csr_aarch64_aapcs, implicit-def $lr, implicit $sp, implicit $s0, implicit $s1, implicit-def $s0
+    ; CHECK-NEXT: BL &powf, csr_aarch64_aapcs, implicit-def dead $lr, implicit $sp, implicit $s0, implicit $s1, implicit-def $s0
     ; CHECK-NEXT: ADJCALLSTACKUP 0, 0, implicit-def $sp, implicit $sp
     ; CHECK-NEXT: [[COPY3:%[0-9]+]]:_(f32) = COPY $s0
     ; CHECK-NEXT: ADJCALLSTACKDOWN 0, 0, implicit-def $sp, implicit $sp
     ; CHECK-NEXT: $s0 = COPY [[UV2]](f32)
     ; CHECK-NEXT: $s1 = COPY [[UV6]](f32)
-    ; CHECK-NEXT: BL &powf, csr_aarch64_aapcs, implicit-def $lr, implicit $sp, implicit $s0, implicit $s1, implicit-def $s0
+    ; CHECK-NEXT: BL &powf, csr_aarch64_aapcs, implicit-def dead $lr, implicit $sp, implicit $s0, implicit $s1, implicit-def $s0
     ; CHECK-NEXT: ADJCALLSTACKUP 0, 0, implicit-def $sp, implicit $sp
     ; CHECK-NEXT: [[COPY4:%[0-9]+]]:_(f32) = COPY $s0
     ; CHECK-NEXT: ADJCALLSTACKDOWN 0, 0, implicit-def $sp, implicit $sp
     ; CHECK-NEXT: $s0 = COPY [[UV3]](f32)
     ; CHECK-NEXT: $s1 = COPY [[UV7]](f32)
-    ; CHECK-NEXT: BL &powf, csr_aarch64_aapcs, implicit-def $lr, implicit $sp, implicit $s0, implicit $s1, implicit-def $s0
+    ; CHECK-NEXT: BL &powf, csr_aarch64_aapcs, implicit-def dead $lr, implicit $sp, implicit $s0, implicit $s1, implicit-def $s0
     ; CHECK-NEXT: ADJCALLSTACKUP 0, 0, implicit-def $sp, implicit $sp
     ; CHECK-NEXT: [[COPY5:%[0-9]+]]:_(f32) = COPY $s0
     ; CHECK-NEXT: [[BUILD_VECTOR:%[0-9]+]]:_(<4 x f32>) = G_BUILD_VECTOR [[COPY2]](f32), [[COPY3]](f32), [[COPY4]](f32), [[COPY5]](f32)
@@ -295,13 +295,13 @@ body:             |
     ; CHECK-NEXT: ADJCALLSTACKDOWN 0, 0, implicit-def $sp, implicit $sp
     ; CHECK-NEXT: $d0 = COPY [[UV]](f64)
     ; CHECK-NEXT: $d1 = COPY [[UV2]](f64)
-    ; CHECK-NEXT: BL &pow, csr_aarch64_aapcs, implicit-def $lr, implicit $sp, implicit $d0, implicit $d1, implicit-def $d0
+    ; CHECK-NEXT: BL &pow, csr_aarch64_aapcs, implicit-def dead $lr, implicit $sp, implicit $d0, implicit $d1, implicit-def $d0
     ; CHECK-NEXT: ADJCALLSTACKUP 0, 0, implicit-def $sp, implicit $sp
     ; CHECK-NEXT: [[COPY2:%[0-9]+]]:_(f64) = COPY $d0
     ; CHECK-NEXT: ADJCALLSTACKDOWN 0, 0, implicit-def $sp, implicit $sp
     ; CHECK-NEXT: $d0 = COPY [[UV1]](f64)
     ; CHECK-NEXT: $d1 = COPY [[UV3]](f64)
-    ; CHECK-NEXT: BL &pow, csr_aarch64_aapcs, implicit-def $lr, implicit $sp, implicit $d0, implicit $d1, implicit-def $d0
+    ; CHECK-NEXT: BL &pow, csr_aarch64_aapcs, implicit-def dead $lr, implicit $sp, implicit $d0, implicit $d1, implicit-def $d0
     ; CHECK-NEXT: ADJCALLSTACKUP 0, 0, implicit-def $sp, implicit $sp
     ; CHECK-NEXT: [[COPY3:%[0-9]+]]:_(f64) = COPY $d0
     ; CHECK-NEXT: [[BUILD_VECTOR:%[0-9]+]]:_(<2 x f64>) = G_BUILD_VECTOR [[COPY2]](f64), [[COPY3]](f64)

@@ -60,6 +60,7 @@ AMDGPUDisassembler::AMDGPUDisassembler(const MCSubtargetInfo &STI,
       MAI(Ctx.getAsmInfo()),
       HwModeRegClass(STI.getHwMode(MCSubtargetInfo::HwMode_RegInfo)),
       TargetMaxInstBytes(MAI.getMaxInstLength(&STI)),
+      TargetID(AMDGPU::createAMDGPUTargetID(STI, "")),
       CodeObjectVersion(AMDGPU::getDefaultAMDHSACodeObjectVersion()) {
   // ToDo: AMDGPUDisassembler supports only VI ISA.
   if (!STI.hasFeature(AMDGPU::FeatureGCN3Encoding) && !isGFX10Plus())
@@ -100,30 +101,48 @@ void AMDGPUDisassembler::emitTargetIDIfSupported(raw_ostream &OS,
 
   // Add xnack and sramecc from ELF flags (v4 format)
   if (CodeObjectVersion >= AMDGPU::AMDHSA_COV4) {
+    // Hardwired-on features are not selectable target-ID modifiers.
+    bool SramEccHardwiredOn = TargetID.isSramEccSupported() &&
+                              !STI.hasFeature(AMDGPU::FeatureSRAMECCOnOffModes);
     unsigned SrameccSetting = EFlags & ELF::EF_AMDGPU_FEATURE_SRAMECC_V4;
     switch (SrameccSetting) {
     case ELF::EF_AMDGPU_FEATURE_SRAMECC_UNSUPPORTED_V4:
+      break;
     case ELF::EF_AMDGPU_FEATURE_SRAMECC_ANY_V4:
+      TargetID.setSramEccSetting(AMDGPU::TargetIDSetting::Any);
       break;
     case ELF::EF_AMDGPU_FEATURE_SRAMECC_OFF_V4:
-      OS << ":sramecc-";
+      TargetID.setSramEccSetting(AMDGPU::TargetIDSetting::Off);
+      if (!SramEccHardwiredOn)
+        OS << ":sramecc-";
       break;
     case ELF::EF_AMDGPU_FEATURE_SRAMECC_ON_V4:
-      OS << ":sramecc+";
+      TargetID.setSramEccSetting(AMDGPU::TargetIDSetting::On);
+      if (!SramEccHardwiredOn)
+        OS << ":sramecc+";
       break;
     }
 
+    // Targets that hardwire xnack on (e.g. gfx1250) don't expose it as a
+    // selectable modifier, so don't print it.
+    bool XnackHardwiredOn = TargetID.isXnackSupported() &&
+                            !STI.hasFeature(AMDGPU::FeatureXNACKOnOffModes);
     unsigned XnackSetting = EFlags & ELF::EF_AMDGPU_FEATURE_XNACK_V4;
     switch (XnackSetting) {
     case ELF::EF_AMDGPU_FEATURE_XNACK_UNSUPPORTED_V4:
+      break;
     case ELF::EF_AMDGPU_FEATURE_XNACK_ANY_V4:
+      TargetID.setXnackSetting(AMDGPU::TargetIDSetting::Any);
       break;
     case ELF::EF_AMDGPU_FEATURE_XNACK_OFF_V4:
-      OS << ":xnack-";
+      TargetID.setXnackSetting(AMDGPU::TargetIDSetting::Off);
+      if (!XnackHardwiredOn)
+        OS << ":xnack-";
       break;
     case ELF::EF_AMDGPU_FEATURE_XNACK_ON_V4:
-      OS << ":xnack+";
-      XnackOnFromEFlags = true;
+      TargetID.setXnackSetting(AMDGPU::TargetIDSetting::On);
+      if (!XnackHardwiredOn)
+        OS << ":xnack+";
       break;
     }
   }
@@ -252,6 +271,16 @@ static DecodeStatus decodeRsrcReg128(MCInst &Inst, unsigned Imm,
   // 0-127: Uniform-direct resource in SGPRs (SReg_128).
   if (Imm < 128)
     OpWidth = 128;
+  return decodeRsrcRegOp(Inst, Imm, 0, Decoder, OpWidth);
+}
+
+static DecodeStatus decodeRsrcReg256(MCInst &Inst, unsigned Imm,
+                                     uint64_t /* Addr */,
+                                     const MCDisassembler *Decoder) {
+  unsigned OpWidth = 32;
+  // 0-127: Uniform-direct resource in SGPRs (SReg_256).
+  if (Imm < 128)
+    OpWidth = 256;
   return decodeRsrcRegOp(Inst, Imm, 0, Decoder, OpWidth);
 }
 
@@ -632,6 +661,11 @@ bool AMDGPUDisassembler::decodeImmOperands(MCInst &MI,
     if (AMDGPU::EncValues::INLINE_FLOATING_C_MIN <= Imm &&
         Imm <= AMDGPU::EncValues::INLINE_FLOATING_C_MAX) {
       switch (OpDesc.OperandType) {
+      case AMDGPU::OPERAND_REG_IMM_NOINLINE_FP16:
+      case AMDGPU::OPERAND_REG_IMM_NOINLINE_V2FP16:
+        // Inline constant encodings are not allowed for NOINLINE operand types.
+        // Keep the raw encoding value.
+        continue;
       case AMDGPU::OPERAND_REG_IMM_BF16:
       case AMDGPU::OPERAND_REG_IMM_V2BF16:
       case AMDGPU::OPERAND_REG_INLINE_C_BF16:
@@ -1485,7 +1519,8 @@ void AMDGPUDisassembler::convertMIMGInst(MCInst &MI) const {
     return;
 
   int NewOpcode =
-      AMDGPU::getMIMGOpcode(Info->BaseOpcode, Info->MIMGEncoding, DstSize, AddrSize);
+      AMDGPU::getMIMGOpcode(Info->BaseOpcode, Info->MIMGEncoding, DstSize,
+                            AddrSize, Info->IndexedRsrc, Info->IndexedSamp);
   if (NewOpcode == -1)
     return;
 
@@ -1778,6 +1813,7 @@ AMDGPUDisassembler::decodeLiteralConstant(const MCInstrDesc &Desc,
   case AMDGPU::OPERAND_REG_IMM_V2FP16_SPLAT:
     UseLit = AMDGPU::isPKFMACF16InlineConstant(Val, isGFX11Plus());
     break;
+  case AMDGPU::OPERAND_REG_IMM_NOINLINE_FP16:
   case AMDGPU::OPERAND_REG_IMM_NOINLINE_V2FP16:
     break;
   case AMDGPU::OPERAND_REG_IMM_INT16:
@@ -2604,8 +2640,7 @@ Expected<bool> AMDGPUDisassembler::decodeCOMPUTE_PGM_RSRC1(
   // Only print the directive on xnack-supporting targets (matching the
   // asmprinter), unless the binary erronously set xnack on an unsupported
   // target
-  bool ReservedXnackMask =
-      STI.hasFeature(AMDGPU::FeatureXNACK) || XnackOnFromEFlags;
+  bool ReservedXnackMask = TargetID.isXnackOnOrAny();
   if (STI.hasFeature(AMDGPU::FeatureSupportsXNACK) || ReservedXnackMask) {
     KdStream << Indent << ".amdhsa_reserve_xnack_mask " << ReservedXnackMask
              << '\n';
@@ -2957,16 +2992,15 @@ Expected<bool> AMDGPUDisassembler::decodeKernelDescriptorDirective(
       return createReservedKDBitsError(KERNEL_CODE_PROPERTY_RESERVED0,
                                        amdhsa::KERNEL_CODE_PROPERTIES_OFFSET);
 
-    // Reserved for GFX9
-    if (isGFX9() &&
-        (TwoByteBuffer & KERNEL_CODE_PROPERTY_ENABLE_WAVEFRONT_SIZE32)) {
-      return createReservedKDBitsError(
-          KERNEL_CODE_PROPERTY_ENABLE_WAVEFRONT_SIZE32,
-          amdhsa::KERNEL_CODE_PROPERTIES_OFFSET, "must be zero on gfx9");
-    }
-    if (isGFX10Plus()) {
+    // Reserved unless both wave sizes are supported.
+    if (STI.getFeatureBits().test(AMDGPU::FeatureSupportsWave32) &&
+        STI.getFeatureBits().test(AMDGPU::FeatureSupportsWave64)) {
       PRINT_DIRECTIVE(".amdhsa_wavefront_size32",
                       KERNEL_CODE_PROPERTY_ENABLE_WAVEFRONT_SIZE32);
+    } else if (TwoByteBuffer & KERNEL_CODE_PROPERTY_ENABLE_WAVEFRONT_SIZE32) {
+      return createReservedKDBitsError(
+          KERNEL_CODE_PROPERTY_ENABLE_WAVEFRONT_SIZE32,
+          amdhsa::KERNEL_CODE_PROPERTIES_OFFSET);
     }
 
     if (CodeObjectVersion >= AMDGPU::AMDHSA_COV5)
@@ -3023,7 +3057,8 @@ Expected<bool> AMDGPUDisassembler::decodeKernelDescriptor(
   // accurately produce .amdhsa_next_free_vgpr, and they appear in the wrong
   // order. Workaround this by first looking up .amdhsa_wavefront_size32 here
   // when required.
-  if (isGFX10Plus()) {
+  if (STI.getFeatureBits().test(AMDGPU::FeatureSupportsWave32) &&
+      STI.getFeatureBits().test(AMDGPU::FeatureSupportsWave64)) {
     uint16_t KernelCodeProperties =
         support::endian::read16(&Bytes[amdhsa::KERNEL_CODE_PROPERTIES_OFFSET],
                                 llvm::endianness::little);

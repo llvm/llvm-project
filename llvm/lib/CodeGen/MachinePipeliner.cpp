@@ -56,6 +56,7 @@
 #include "llvm/CodeGen/MachineLoopInfo.h"
 #include "llvm/CodeGen/MachineMemOperand.h"
 #include "llvm/CodeGen/MachineOperand.h"
+#include "llvm/CodeGen/MachinePassManager.h"
 #include "llvm/CodeGen/MachineRegisterInfo.h"
 #include "llvm/CodeGen/ModuloSchedule.h"
 #include "llvm/CodeGen/Register.h"
@@ -202,14 +203,14 @@ static cl::opt<unsigned> SwpMaxNumStores(
     cl::init(200));
 
 // A command line option to enable the CopyToPhi DAG mutation.
-cl::opt<bool>
-    llvm::SwpEnableCopyToPhi("pipeliner-enable-copytophi", cl::ReallyHidden,
-                             cl::init(true),
-                             cl::desc("Enable CopyToPhi DAG Mutation"));
+static cl::opt<bool>
+    SwpEnableCopyToPhi("pipeliner-enable-copytophi", cl::ReallyHidden,
+                       cl::init(true),
+                       cl::desc("Enable CopyToPhi DAG Mutation"));
 
 /// A command line argument to force pipeliner to use specified issue
 /// width.
-cl::opt<int> llvm::SwpForceIssueWidth(
+static cl::opt<int> SwpForceIssueWidth(
     "pipeliner-force-issue-width",
     cl::desc("Force pipeliner to use specified issue width."), cl::Hidden,
     cl::init(-1));
@@ -226,19 +227,16 @@ static cl::opt<WindowSchedulingFlag> WindowSchedulingOption(
                           "Use window algorithm instead of SMS algorithm.")));
 
 unsigned SwingSchedulerDAG::Circuits::MaxPaths = 5;
-char MachinePipeliner::ID = 0;
-#ifndef NDEBUG
-int MachinePipeliner::NumTries = 0;
-#endif
-char &llvm::MachinePipelinerID = MachinePipeliner::ID;
+char MachinePipelinerLegacy::ID = 0;
+char &llvm::MachinePipelinerID = MachinePipelinerLegacy::ID;
 
-INITIALIZE_PASS_BEGIN(MachinePipeliner, DEBUG_TYPE,
+INITIALIZE_PASS_BEGIN(MachinePipelinerLegacy, DEBUG_TYPE,
                       "Modulo Software Pipelining", false, false)
 INITIALIZE_PASS_DEPENDENCY(AAResultsWrapperPass)
 INITIALIZE_PASS_DEPENDENCY(MachineLoopInfoWrapperPass)
 INITIALIZE_PASS_DEPENDENCY(LiveIntervalsWrapperPass)
 INITIALIZE_PASS_DEPENDENCY(MachineRegisterClassInfoWrapperPass)
-INITIALIZE_PASS_END(MachinePipeliner, DEBUG_TYPE,
+INITIALIZE_PASS_END(MachinePipelinerLegacy, DEBUG_TYPE,
                     "Modulo Software Pipelining", false, false)
 
 namespace {
@@ -357,47 +355,163 @@ private:
   }
 };
 
+/// The main class in the implementation of the target independent
+/// software pipeliner pass.
+class MachinePipelinerImpl {
+public:
+  MachineFunction *MF = nullptr;
+  MachineOptimizationRemarkEmitter *ORE = nullptr;
+  const MachineLoopInfo *MLI = nullptr;
+  const InstrItineraryData *InstrItins = nullptr;
+  const TargetInstrInfo *TII = nullptr;
+  RegisterClassInfo *RegClassInfo = nullptr;
+  LiveIntervals *LIS = nullptr;
+  AAResults *AA = nullptr;
+  const TargetMachine *TM = nullptr;
+  bool disabledByPragma = false;
+  unsigned II_setByPragma = 0;
+
+#ifndef NDEBUG
+  static int NumTries;
+#endif
+
+  /// Cache the target analysis information about the loop.
+  struct LoopInfo {
+    MachineBasicBlock *TBB = nullptr;
+    MachineBasicBlock *FBB = nullptr;
+    SmallVector<MachineOperand, 4> BrCond;
+    MachineInstr *LoopInductionVar = nullptr;
+    MachineInstr *LoopCompare = nullptr;
+    std::unique_ptr<TargetInstrInfo::PipelinerLoopInfo> LoopPipelinerInfo =
+        nullptr;
+  };
+  LoopInfo LI;
+
+  MachinePipelinerImpl(MachineFunction &MF, const MachineLoopInfo &MLI,
+                       LiveIntervals &LIS, AAResults &AA,
+                       MachineOptimizationRemarkEmitter &ORE,
+                       RegisterClassInfo &RegClassInfo);
+
+  /// Run the software pipeliner over all loops in the function.
+  bool run();
+
+private:
+  void preprocessPhiNodes(MachineBasicBlock &B);
+  bool canPipelineLoop(MachineLoop &L);
+  bool scheduleLoop(MachineLoop &L);
+  bool swingModuloScheduler(MachineLoop &L);
+  void setPragmaPipelineOptions(MachineLoop &L);
+  bool runWindowScheduler(MachineLoop &L);
+  bool useSwingModuloScheduler();
+  bool useWindowScheduler(bool Changed);
+};
+
 } // end anonymous namespace
 
-/// The "main" function for implementing Swing Modulo Scheduling.
-bool MachinePipeliner::runOnMachineFunction(MachineFunction &mf) {
-  if (skipFunction(mf.getFunction()))
-    return false;
+#ifndef NDEBUG
+int MachinePipelinerImpl::NumTries = 0;
+#endif
 
+MachinePipelinerImpl::MachinePipelinerImpl(
+    MachineFunction &MF, const MachineLoopInfo &MLI, LiveIntervals &LIS,
+    AAResults &AA, MachineOptimizationRemarkEmitter &ORE,
+    RegisterClassInfo &RegClassInfo)
+    : MF(&MF), ORE(&ORE), MLI(&MLI), TII(MF.getSubtarget().getInstrInfo()),
+      RegClassInfo(&RegClassInfo), LIS(&LIS), AA(&AA), TM(&MF.getTarget()) {}
+
+/// The "main" function for implementing Swing Modulo Scheduling.
+bool MachinePipelinerImpl::run() {
+  bool Changed = false;
+  for (const auto &L : *MLI)
+    Changed |= scheduleLoop(*L);
+
+  return Changed;
+}
+
+static bool runMachinePipeliner(
+    MachineFunction &MF, function_ref<const MachineLoopInfo &()> GetMLI,
+    function_ref<LiveIntervals &()> GetLIS, function_ref<AAResults &()> GetAA,
+    function_ref<MachineOptimizationRemarkEmitter &()> GetORE,
+    function_ref<RegisterClassInfo &()> GetRCI) {
   if (!EnableSWP)
     return false;
 
-  if (mf.getFunction().getAttributes().hasFnAttr(Attribute::OptimizeForSize) &&
+  if (MF.getFunction().getAttributes().hasFnAttr(Attribute::OptimizeForSize) &&
       !EnableSWPOptSize.getPosition())
     return false;
 
-  if (!mf.getSubtarget().enableMachinePipeliner())
+  if (!MF.getSubtarget().enableMachinePipeliner())
     return false;
 
   // Cannot pipeline loops without instruction itineraries if we are using
   // DFA for the pipeliner.
-  if (mf.getSubtarget().useDFAforSMS() &&
-      (!mf.getSubtarget().getInstrItineraryData() ||
-       mf.getSubtarget().getInstrItineraryData()->isEmpty()))
+  if (MF.getSubtarget().useDFAforSMS() &&
+      (!MF.getSubtarget().getInstrItineraryData() ||
+       MF.getSubtarget().getInstrItineraryData()->isEmpty()))
     return false;
 
-  MF = &mf;
-  MLI = &getAnalysis<MachineLoopInfoWrapperPass>().getLI();
-  ORE = &getAnalysis<MachineOptimizationRemarkEmitterPass>().getORE();
-  RegClassInfo = &getAnalysis<MachineRegisterClassInfoWrapperPass>().getRCI();
-  TII = MF->getSubtarget().getInstrInfo();
+  MachinePipelinerImpl MP(MF, GetMLI(), GetLIS(), GetAA(), GetORE(), GetRCI());
+  return MP.run();
+}
 
-  for (const auto &L : *MLI)
-    scheduleLoop(*L);
+bool MachinePipelinerLegacy::runOnMachineFunction(MachineFunction &MF) {
+  if (skipFunction(MF.getFunction()))
+    return false;
 
-  return false;
+  return runMachinePipeliner(
+      MF,
+      [&]() -> const MachineLoopInfo & {
+        return getAnalysis<MachineLoopInfoWrapperPass>().getLI();
+      },
+      [&]() -> LiveIntervals & {
+        return getAnalysis<LiveIntervalsWrapperPass>().getLIS();
+      },
+      [&]() -> AAResults & {
+        return getAnalysis<AAResultsWrapperPass>().getAAResults();
+      },
+      [&]() -> MachineOptimizationRemarkEmitter & {
+        return getAnalysis<MachineOptimizationRemarkEmitterPass>().getORE();
+      },
+      [&]() -> RegisterClassInfo & {
+        return getAnalysis<MachineRegisterClassInfoWrapperPass>().getRCI();
+      });
+}
+
+PreservedAnalyses
+MachinePipelinerPass::run(MachineFunction &MF,
+                          MachineFunctionAnalysisManager &MFAM) {
+  if (!runMachinePipeliner(
+          MF,
+          [&]() -> const MachineLoopInfo & {
+            return MFAM.getResult<MachineLoopAnalysis>(MF);
+          },
+          [&]() -> LiveIntervals & {
+            return MFAM.getResult<LiveIntervalsAnalysis>(MF);
+          },
+          [&]() -> AAResults & {
+            return MFAM
+                .getResult<FunctionAnalysisManagerMachineFunctionProxy>(MF)
+                .getManager()
+                .getResult<AAManager>(MF.getFunction());
+          },
+          [&]() -> MachineOptimizationRemarkEmitter & {
+            return MFAM.getResult<MachineOptimizationRemarkEmitterAnalysis>(MF);
+          },
+          [&]() -> RegisterClassInfo & {
+            return MFAM.getResult<MachineRegisterClassAnalysis>(MF);
+          }))
+    return PreservedAnalyses::all();
+
+  PreservedAnalyses PA = getMachineFunctionPassPreservedAnalyses();
+  PA.preserve<MachineRegisterClassAnalysis>();
+  return PA;
 }
 
 /// Attempt to perform the SMS algorithm on the specified loop. This function is
 /// the main entry point for the algorithm.  The function identifies candidate
 /// loops, calculates the minimum initiation interval, and attempts to schedule
 /// the loop.
-bool MachinePipeliner::scheduleLoop(MachineLoop &L) {
+bool MachinePipelinerImpl::scheduleLoop(MachineLoop &L) {
   bool Changed = false;
   for (const auto &InnerLoop : L)
     Changed |= scheduleLoop(*InnerLoop);
@@ -436,7 +550,7 @@ bool MachinePipeliner::scheduleLoop(MachineLoop &L) {
   return Changed;
 }
 
-void MachinePipeliner::setPragmaPipelineOptions(MachineLoop &L) {
+void MachinePipelinerImpl::setPragmaPipelineOptions(MachineLoop &L) {
   // Reset the pragma for the next loop in iteration.
   disabledByPragma = false;
   II_setByPragma = 0;
@@ -542,7 +656,7 @@ static bool hasPHICycle(const MachineBasicBlock *LoopHeader,
 /// Return true if the loop can be software pipelined.  The algorithm is
 /// restricted to loops with a single basic block.  Make sure that the
 /// branch in the loop can be analyzed.
-bool MachinePipeliner::canPipelineLoop(MachineLoop &L) {
+bool MachinePipelinerImpl::canPipelineLoop(MachineLoop &L) {
   if (L.getNumBlocks() != 1) {
     ORE->emit([&]() {
       return MachineOptimizationRemarkAnalysis(DEBUG_TYPE, "canPipelineLoop",
@@ -630,10 +744,9 @@ bool MachinePipeliner::canPipelineLoop(MachineLoop &L) {
   return true;
 }
 
-void MachinePipeliner::preprocessPhiNodes(MachineBasicBlock &B) {
+void MachinePipelinerImpl::preprocessPhiNodes(MachineBasicBlock &B) {
   MachineRegisterInfo &MRI = MF->getRegInfo();
-  SlotIndexes &Slots =
-      *getAnalysis<LiveIntervalsWrapperPass>().getLIS().getSlotIndexes();
+  SlotIndexes &Slots = *LIS->getSlotIndexes();
 
   for (MachineInstr &PI : B.phis()) {
     MachineOperand &DefOp = PI.getOperand(0);
@@ -665,13 +778,11 @@ void MachinePipeliner::preprocessPhiNodes(MachineBasicBlock &B) {
 /// 1. Computation and analysis of the dependence graph.
 /// 2. Ordering of the nodes (instructions).
 /// 3. Attempt to Schedule the loop.
-bool MachinePipeliner::swingModuloScheduler(MachineLoop &L) {
+bool MachinePipelinerImpl::swingModuloScheduler(MachineLoop &L) {
   assert(L.getBlocks().size() == 1 && "SMS works on single blocks only.");
 
-  AliasAnalysis *AA = &getAnalysis<AAResultsWrapperPass>().getAAResults();
-  SwingSchedulerDAG SMS(
-      *this, L, getAnalysis<LiveIntervalsWrapperPass>().getLIS(), *RegClassInfo,
-      II_setByPragma, LI.LoopPipelinerInfo.get(), AA);
+  SwingSchedulerDAG SMS(*MF, MLI, ORE, L, *LIS, *RegClassInfo, II_setByPragma,
+                        LI.LoopPipelinerInfo.get(), AA);
 
   MachineBasicBlock *MBB = L.getHeader();
   // The kernel should not include any terminator instructions.  These
@@ -694,7 +805,7 @@ bool MachinePipeliner::swingModuloScheduler(MachineLoop &L) {
   return SMS.hasNewSchedule();
 }
 
-void MachinePipeliner::getAnalysisUsage(AnalysisUsage &AU) const {
+void MachinePipelinerLegacy::getAnalysisUsage(AnalysisUsage &AU) const {
   AU.addRequired<AAResultsWrapperPass>();
   AU.addPreserved<AAResultsWrapperPass>();
   AU.addRequired<MachineLoopInfoWrapperPass>();
@@ -706,25 +817,24 @@ void MachinePipeliner::getAnalysisUsage(AnalysisUsage &AU) const {
   MachineFunctionPass::getAnalysisUsage(AU);
 }
 
-bool MachinePipeliner::runWindowScheduler(MachineLoop &L) {
+bool MachinePipelinerImpl::runWindowScheduler(MachineLoop &L) {
   MachineSchedContext Context;
   Context.MF = MF;
   Context.MLI = MLI;
-  Context.TM = &getAnalysis<TargetPassConfig>().getTM<TargetMachine>();
-  Context.AA = &getAnalysis<AAResultsWrapperPass>().getAAResults();
-  Context.LIS = &getAnalysis<LiveIntervalsWrapperPass>().getLIS();
-  Context.RegClassInfo =
-      &getAnalysis<MachineRegisterClassInfoWrapperPass>().getRCI();
+  Context.TM = TM;
+  Context.AA = AA;
+  Context.LIS = LIS;
+  Context.RegClassInfo = RegClassInfo;
   WindowScheduler WS(&Context, L);
   return WS.run();
 }
 
-bool MachinePipeliner::useSwingModuloScheduler() {
+bool MachinePipelinerImpl::useSwingModuloScheduler() {
   // SwingModuloScheduler does not work when WindowScheduler is forced.
   return WindowSchedulingOption != WindowSchedulingFlag::WS_Force;
 }
 
-bool MachinePipeliner::useWindowScheduler(bool Changed) {
+bool MachinePipelinerImpl::useWindowScheduler(bool Changed) {
   // WindowScheduler does not work for following cases:
   // 1. when it is off.
   // 2. when SwingModuloScheduler is successfully scheduled.
@@ -755,6 +865,23 @@ void SwingSchedulerDAG::setMAX_II() {
     MAX_II = II_setByPragma;
   else
     MAX_II = MII + SwpIISearchRange;
+}
+
+SwingSchedulerDAG::SwingSchedulerDAG(MachineFunction &MF,
+                                     const MachineLoopInfo *MLI,
+                                     MachineOptimizationRemarkEmitter *ORE,
+                                     MachineLoop &L, LiveIntervals &lis,
+                                     const RegisterClassInfo &rci, unsigned II,
+                                     TargetInstrInfo::PipelinerLoopInfo *PLI,
+                                     AliasAnalysis *AA)
+    : ScheduleDAGInstrs(MF, MLI, false), ORE(ORE), Loop(L), LIS(lis),
+      RegClassInfo(rci), II_setByPragma(II), LoopPipelinerInfo(PLI),
+      Topo(SUnits, &ExitSU), AA(AA), BAA(*AA) {
+  initPolicy();
+  MF.getSubtarget().getSMSMutations(Mutations);
+  if (SwpEnableCopyToPhi)
+    Mutations.push_back(std::make_unique<CopyToPhiMutation>());
+  BAA.enableCrossIterationMode();
 }
 
 /// We override the schedule function in ScheduleDAGInstrs to implement the
@@ -799,7 +926,7 @@ void SwingSchedulerDAG::schedule() {
   if (MII == 0) {
     LLVM_DEBUG(dbgs() << "Invalid Minimal Initiation Interval: 0\n");
     NumFailZeroMII++;
-    Pass.ORE->emit([&]() {
+    ORE->emit([&]() {
       return MachineOptimizationRemarkAnalysis(
                  DEBUG_TYPE, "schedule", Loop.getStartLoc(), Loop.getHeader())
              << "Invalid Minimal Initiation Interval: 0";
@@ -812,7 +939,7 @@ void SwingSchedulerDAG::schedule() {
     LLVM_DEBUG(dbgs() << "MII > " << SwpMaxMii
                       << ", we don't pipeline large loops\n");
     NumFailLargeMaxMII++;
-    Pass.ORE->emit([&]() {
+    ORE->emit([&]() {
       return MachineOptimizationRemarkAnalysis(
                  DEBUG_TYPE, "schedule", Loop.getStartLoc(), Loop.getHeader())
              << "Minimal Initiation Interval too large: "
@@ -856,13 +983,13 @@ void SwingSchedulerDAG::schedule() {
   // check for node order issues
   checkValidNodeOrder(Circuits);
 
-  SMSchedule Schedule(Pass.MF, this);
+  SMSchedule Schedule(&MF, this);
   Scheduled = schedulePipeline(Schedule);
 
   if (!Scheduled){
     LLVM_DEBUG(dbgs() << "No schedule found, return\n");
     NumFailNoSchedule++;
-    Pass.ORE->emit([&]() {
+    ORE->emit([&]() {
       return MachineOptimizationRemarkAnalysis(
                  DEBUG_TYPE, "schedule", Loop.getStartLoc(), Loop.getHeader())
              << "Unable to find schedule";
@@ -875,7 +1002,7 @@ void SwingSchedulerDAG::schedule() {
   if (numStages == 0) {
     LLVM_DEBUG(dbgs() << "No overlapped iterations, skip.\n");
     NumFailZeroStage++;
-    Pass.ORE->emit([&]() {
+    ORE->emit([&]() {
       return MachineOptimizationRemarkAnalysis(
                  DEBUG_TYPE, "schedule", Loop.getStartLoc(), Loop.getHeader())
              << "No need to pipeline - no overlapped iterations in schedule.";
@@ -887,7 +1014,7 @@ void SwingSchedulerDAG::schedule() {
     LLVM_DEBUG(dbgs() << "numStages:" << numStages << ">" << SwpMaxStages
                       << " : too many stages, abort\n");
     NumFailLargeMaxStage++;
-    Pass.ORE->emit([&]() {
+    ORE->emit([&]() {
       return MachineOptimizationRemarkAnalysis(
                  DEBUG_TYPE, "schedule", Loop.getStartLoc(), Loop.getHeader())
              << "Too many stages in schedule: "
@@ -898,7 +1025,7 @@ void SwingSchedulerDAG::schedule() {
     return;
   }
 
-  Pass.ORE->emit([&]() {
+  ORE->emit([&]() {
     return MachineOptimizationRemark(DEBUG_TYPE, "schedule", Loop.getStartLoc(),
                                      Loop.getHeader())
            << "Pipelined succesfully!";
@@ -1592,7 +1719,7 @@ class HighRegisterPressureDetector {
 
   DenseMap<MachineInstr *, RegisterOperands> ROMap;
 
-  using Instr2LastUsesTy = DenseMap<MachineInstr *, SmallDenseSet<Register, 4>>;
+  using Instr2LastUsesTy = DenseMap<MachineInstr *, SmallSet<VirtRegOrUnit, 4>>;
 
 public:
   using OrderedInstsTy = std::vector<MachineInstr *>;
@@ -1612,12 +1739,8 @@ private:
     }
   }
 
-  void dumpPSet(Register Reg) const {
-    dbgs() << "Reg=" << printReg(Reg, TRI, 0, &MRI) << " PSet=";
-    // FIXME: The static_cast is a bug compensating bugs in the callers.
-    VirtRegOrUnit VRegOrUnit =
-        Reg.isVirtual() ? VirtRegOrUnit(Reg)
-                        : VirtRegOrUnit(static_cast<MCRegUnit>(Reg.id()));
+  void dumpPSet(VirtRegOrUnit VRegOrUnit) const {
+    dbgs() << "Reg=" << printVRegOrUnit(VRegOrUnit, TRI) << " PSet=";
     for (auto PSetIter = MRI.getPressureSets(VRegOrUnit); PSetIter.isValid();
          ++PSetIter) {
       dbgs() << *PSetIter << ' ';
@@ -1626,11 +1749,7 @@ private:
   }
 
   void increaseRegisterPressure(std::vector<unsigned> &Pressure,
-                                Register Reg) const {
-    // FIXME: The static_cast is a bug compensating bugs in the callers.
-    VirtRegOrUnit VRegOrUnit =
-        Reg.isVirtual() ? VirtRegOrUnit(Reg)
-                        : VirtRegOrUnit(static_cast<MCRegUnit>(Reg.id()));
+                                VirtRegOrUnit VRegOrUnit) const {
     auto PSetIter = MRI.getPressureSets(VRegOrUnit);
     unsigned Weight = PSetIter.getWeight();
     for (; PSetIter.isValid(); ++PSetIter)
@@ -1638,8 +1757,8 @@ private:
   }
 
   void decreaseRegisterPressure(std::vector<unsigned> &Pressure,
-                                Register Reg) const {
-    auto PSetIter = MRI.getPressureSets(VirtRegOrUnit(Reg));
+                                VirtRegOrUnit VRegOrUnit) const {
+    auto PSetIter = MRI.getPressureSets(VRegOrUnit);
     unsigned Weight = PSetIter.getWeight();
     for (; PSetIter.isValid(); ++PSetIter) {
       auto &P = Pressure[*PSetIter];
@@ -1649,13 +1768,15 @@ private:
     }
   }
 
-  // Return true if Reg is reserved one, for example, stack pointer
-  bool isReservedRegister(Register Reg) const {
-    return Reg.isPhysical() && MRI.isReserved(Reg.asMCReg());
+  /// Return true if \p VRegOrUnit is reserved one, for example, stack pointer
+  bool isReservedRegUnit(VirtRegOrUnit VRegOrUnit) const {
+    return !VRegOrUnit.isVirtualReg() &&
+           MRI.isReservedRegUnit(VRegOrUnit.asMCRegUnit());
   }
 
-  bool isDefinedInThisLoop(Register Reg) const {
-    return Reg.isVirtual() && MRI.getDefBlock(Reg) == OrigMBB;
+  bool isDefinedInThisLoop(VirtRegOrUnit VRegOrUnit) const {
+    return VRegOrUnit.isVirtualReg() &&
+           MRI.getDefBlock(VRegOrUnit.asVirtualReg()) == OrigMBB;
   }
 
   // Search for live-in variables. They are factored into the register pressure
@@ -1667,21 +1788,18 @@ private:
   //     a[i] += b[i] + c;
   // \endcode
   void computeLiveIn() {
-    DenseSet<Register> Used;
+    SmallSet<VirtRegOrUnit, 8> Used;
     for (auto &MI : *OrigMBB) {
       if (MI.isDebugInstr())
         continue;
       for (auto &Use : ROMap[&MI].Uses) {
-        // FIXME: The static_cast is a bug.
-        Register Reg =
-            Use.VRegOrUnit.isVirtualReg()
-                ? Use.VRegOrUnit.asVirtualReg()
-                : Register(static_cast<unsigned>(Use.VRegOrUnit.asMCRegUnit()));
+        VirtRegOrUnit Reg = Use.VRegOrUnit;
         // Ignore the variable that appears only on one side of phi instruction
         // because it's used only at the first iteration.
-        if (MI.isPHI() && Reg != getLoopPhiReg(MI, OrigMBB))
+        if (MI.isPHI() && Reg.isVirtualReg() &&
+            Reg.asVirtualReg() != getLoopPhiReg(MI, OrigMBB))
           continue;
-        if (isReservedRegister(Reg))
+        if (isReservedRegUnit(Reg))
           continue;
         if (isDefinedInThisLoop(Reg))
           continue;
@@ -1716,24 +1834,18 @@ private:
     // Following virtual register will be ignored
     //   - live-in one
     //   - defined but not used in the loop (potentially live-out)
-    DenseSet<Register> TargetRegs;
-    const auto UpdateTargetRegs = [this, &TargetRegs](Register Reg) {
+    SmallSet<VirtRegOrUnit, 8> TargetRegs;
+    const auto UpdateTargetRegs = [this, &TargetRegs](VirtRegOrUnit Reg) {
       if (isDefinedInThisLoop(Reg))
         TargetRegs.insert(Reg);
     };
     for (MachineInstr *MI : OrderedInsts) {
       if (MI->isPHI()) {
         Register Reg = getLoopPhiReg(*MI, OrigMBB);
-        UpdateTargetRegs(Reg);
+        UpdateTargetRegs(VirtRegOrUnit(Reg));
       } else {
-        for (auto &Use : ROMap.find(MI)->getSecond().Uses) {
-          // FIXME: The static_cast is a bug.
-          Register Reg = Use.VRegOrUnit.isVirtualReg()
-                             ? Use.VRegOrUnit.asVirtualReg()
-                             : Register(static_cast<unsigned>(
-                                   Use.VRegOrUnit.asMCRegUnit()));
-          UpdateTargetRegs(Reg);
-        }
+        for (auto &Use : ROMap.find(MI)->getSecond().Uses)
+          UpdateTargetRegs(Use.VRegOrUnit);
       }
     }
 
@@ -1741,14 +1853,10 @@ private:
       return Stages[MI] + MI->isPHI();
     };
 
-    DenseMap<Register, MachineInstr *> LastUseMI;
+    std::map<VirtRegOrUnit, MachineInstr *> LastUseMI;
     for (MachineInstr *MI : llvm::reverse(OrderedInsts)) {
       for (auto &Use : ROMap.find(MI)->getSecond().Uses) {
-        // FIXME: The static_cast is a bug.
-        Register Reg =
-            Use.VRegOrUnit.isVirtualReg()
-                ? Use.VRegOrUnit.asVirtualReg()
-                : Register(static_cast<unsigned>(Use.VRegOrUnit.asMCRegUnit()));
+        VirtRegOrUnit Reg = Use.VRegOrUnit;
         if (!TargetRegs.contains(Reg))
           continue;
         auto [Ite, Inserted] = LastUseMI.try_emplace(Reg, MI);
@@ -1783,7 +1891,7 @@ private:
   computeMaxSetPressure(const OrderedInstsTy &OrderedInsts,
                         Instr2StageTy &Stages,
                         const unsigned StageCount) const {
-    using RegSetTy = SmallDenseSet<Register, 16>;
+    using RegSetTy = SmallSet<VirtRegOrUnit, 16>;
 
     // Indexed by #Iter. To treat "local" variables of each stage separately, we
     // manage the liveness of the registers independently by iterations.
@@ -1802,34 +1910,29 @@ private:
     });
 
     const auto InsertReg = [this, &CurSetPressure](RegSetTy &RegSet,
-                                                   VirtRegOrUnit VRegOrUnit) {
-      // FIXME: The static_cast is a bug.
-      Register Reg =
-          VRegOrUnit.isVirtualReg()
-              ? VRegOrUnit.asVirtualReg()
-              : Register(static_cast<unsigned>(VRegOrUnit.asMCRegUnit()));
-      if (!Reg.isValid() || isReservedRegister(Reg))
+                                                   VirtRegOrUnit Reg) {
+      if (isReservedRegUnit(Reg))
         return;
 
       bool Inserted = RegSet.insert(Reg).second;
       if (!Inserted)
         return;
 
-      LLVM_DEBUG(dbgs() << "insert " << printReg(Reg, TRI, 0, &MRI) << "\n");
+      LLVM_DEBUG(dbgs() << "insert " << printVRegOrUnit(Reg, TRI) << "\n");
       increaseRegisterPressure(CurSetPressure, Reg);
       LLVM_DEBUG(dumpPSet(Reg));
     };
 
     const auto EraseReg = [this, &CurSetPressure](RegSetTy &RegSet,
-                                                  Register Reg) {
-      if (!Reg.isValid() || isReservedRegister(Reg))
+                                                  VirtRegOrUnit Reg) {
+      if (isReservedRegUnit(Reg))
         return;
 
       // live-in register
       if (!RegSet.contains(Reg))
         return;
 
-      LLVM_DEBUG(dbgs() << "erase " << printReg(Reg, TRI, 0, &MRI) << "\n");
+      LLVM_DEBUG(dbgs() << "erase " << printVRegOrUnit(Reg, TRI) << "\n");
       RegSet.erase(Reg);
       decreaseRegisterPressure(CurSetPressure, Reg);
       LLVM_DEBUG(dumpPSet(Reg));
@@ -2427,7 +2530,7 @@ void SwingSchedulerDAG::registerPressureFilter(NodeSetType &NodeSets) {
                                              RecRegPressure.MaxSetPressure);
       if (RPDelta.Excess.isValid()) {
         LLVM_DEBUG(
-            dbgs() << "Excess register pressure: SU(" << SU->NodeNum << ") "
+            dbgs() << "Excess register pressure: " << *SU << " "
                    << TRI->getRegPressureSetName(RPDelta.Excess.getPSet())
                    << ":" << RPDelta.Excess.getUnitInc() << "\n");
         NS.setExceedPressure(SU);
@@ -2903,7 +3006,7 @@ bool SwingSchedulerDAG::schedulePipeline(SMSchedule &Schedule) {
 
   if (scheduleFound) {
     Schedule.finalizeSchedule(this);
-    Pass.ORE->emit([&]() {
+    ORE->emit([&]() {
       return MachineOptimizationRemarkAnalysis(
                  DEBUG_TYPE, "schedule", Loop.getStartLoc(), Loop.getHeader())
              << "Schedule found with Initiation Interval: "
@@ -3595,9 +3698,9 @@ bool SMSchedule::normalizeNonPipelinedInstructions(
       auto &OldS = getInstructions(OldCycle);
       llvm::erase(OldS, &SU);
       getInstructions(NewCycle).emplace_back(&SU);
-      LLVM_DEBUG(dbgs() << "SU(" << SU.NodeNum
-                        << ") is not pipelined; moving from cycle " << OldCycle
-                        << " to " << NewCycle << " Instr:" << *SU.getInstr());
+      LLVM_DEBUG(dbgs() << SU << " is not pipelined; moving from cycle "
+                        << OldCycle << " to " << NewCycle
+                        << " Instr:" << *SU.getInstr());
     }
 
     // We traverse the SUs in the order of the original basic block. Computing
@@ -3865,7 +3968,7 @@ void NodeSet::print(raw_ostream &os) const {
   os << "Num nodes " << size() << " rec " << RecMII << " mov " << MaxMOV
      << " depth " << MaxDepth << " col " << Colocate << "\n";
   for (const auto &I : Nodes)
-    os << "   SU(" << I->NodeNum << ") " << *(I->getInstr());
+    os << "   " << *I << " " << *(I->getInstr());
   os << "\n";
 }
 
@@ -3910,6 +4013,20 @@ void ResourceManager::dumpMRT() const {
   });
 }
 #endif
+
+ResourceManager::ResourceManager(const TargetSubtargetInfo *ST,
+                                 ScheduleDAGInstrs *DAG)
+    : STI(ST), SM(ST->getSchedModel()), ST(ST), TII(ST->getInstrInfo()),
+      DAG(DAG), UseDFA(ST->useDFAforSMS()),
+      ProcResourceMasks(SM.getNumProcResourceKinds(), 0),
+      IssueWidth(SM.IssueWidth) {
+  initProcResourceVectors(SM, ProcResourceMasks);
+  if (IssueWidth <= 0)
+    // If IssueWidth is not specified, set a sufficiently large value
+    IssueWidth = 100;
+  if (SwpForceIssueWidth > 0)
+    IssueWidth = SwpForceIssueWidth;
+}
 
 void ResourceManager::initProcResourceVectors(
     const MCSchedModel &SM, SmallVectorImpl<uint64_t> &Masks) {
@@ -4394,9 +4511,10 @@ void LoopCarriedEdges::dump(SUnit *SU, const TargetRegisterInfo *TRI,
     return;
 
   const auto DumpSU = [](const SUnit *SU) {
-    std::ostringstream OSS;
-    OSS << "SU(" << SU->NodeNum << ")";
-    return OSS.str();
+    std::string S;
+    raw_string_ostream OS(S);
+    OS << *SU;
+    return S;
   };
 
   dbgs() << "  Loop carried edges from " << DumpSU(SU) << "\n"

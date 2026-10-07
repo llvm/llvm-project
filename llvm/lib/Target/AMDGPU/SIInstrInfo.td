@@ -172,6 +172,9 @@ def SIbuffer_load_format_tfe : SDNode <"AMDGPUISD::BUFFER_LOAD_FORMAT_TFE", SDTB
 def SIbuffer_load_format_d16 : SDNode <"AMDGPUISD::BUFFER_LOAD_FORMAT_D16",
                                 SDTBufferLoad,
                                 [SDNPMemOperand, SDNPHasChain, SDNPMayLoad]>;
+def SIbuffer_load_format_d16_tfe : SDNode <"AMDGPUISD::BUFFER_LOAD_FORMAT_D16_TFE",
+                                    SDTBufferLoad,
+                                    [SDNPMemOperand, SDNPHasChain, SDNPMayLoad]>;
 
 def SDTBufferStore : SDTypeProfile<0, 8,
     [                    // vdata
@@ -556,53 +559,55 @@ def sextloadi16_glue : PatFrag<(ops node:$ptr), (sextload_glue node:$ptr)> {
 }
 
 
-let IsLoad = 1, AddressSpaces = LoadAddress_local.AddrSpaces in {
-def load_local_m0 : PatFrag<(ops node:$ptr), (load_glue node:$ptr)> {
+foreach as = [ "local", "region" ] in {
+let IsLoad = 1, AddressSpaces = !cast<AddressSpaceList>("LoadAddress_"#as).AddrSpaces in {
+def load_#as#_m0 : PatFrag<(ops node:$ptr), (load_glue node:$ptr)> {
   let IsNonExtLoad = 1;
 }
 
-def extloadi8_local_m0 : PatFrag<(ops node:$ptr), (extloadi8_glue node:$ptr)>;
-def sextloadi8_local_m0 : PatFrag<(ops node:$ptr), (sextloadi8_glue node:$ptr)>;
-def zextloadi8_local_m0 : PatFrag<(ops node:$ptr), (zextloadi8_glue node:$ptr)>;
+def extloadi8_#as#_m0 : PatFrag<(ops node:$ptr), (extloadi8_glue node:$ptr)>;
+def sextloadi8_#as#_m0 : PatFrag<(ops node:$ptr), (sextloadi8_glue node:$ptr)>;
+def zextloadi8_#as#_m0 : PatFrag<(ops node:$ptr), (zextloadi8_glue node:$ptr)>;
 
-def extloadi16_local_m0 : PatFrag<(ops node:$ptr), (extloadi16_glue node:$ptr)>;
-def sextloadi16_local_m0 : PatFrag<(ops node:$ptr), (sextloadi16_glue node:$ptr)>;
-def zextloadi16_local_m0 : PatFrag<(ops node:$ptr), (zextloadi16_glue node:$ptr)>;
-} // End IsLoad = 1, , AddressSpaces = LoadAddress_local.AddrSpaces
+def extloadi16_#as#_m0 : PatFrag<(ops node:$ptr), (extloadi16_glue node:$ptr)>;
+def sextloadi16_#as#_m0 : PatFrag<(ops node:$ptr), (sextloadi16_glue node:$ptr)>;
+def zextloadi16_#as#_m0 : PatFrag<(ops node:$ptr), (zextloadi16_glue node:$ptr)>;
+} // End IsLoad = 1, AddressSpaces = LoadAddress_#as.AddrSpaces
 
-def load_align8_local_m0 : PatFrag<(ops node:$ptr),
-                                   (load_local_m0 node:$ptr)> {
+def load_align8_#as#_m0 : PatFrag<(ops node:$ptr),
+                                  (!cast<PatFrag>("load_"#as#"_m0") node:$ptr)> {
   let IsLoad = 1;
   int MinAlignment = 8;
 }
 
-def load_align16_local_m0 : PatFrag<(ops node:$ptr),
-                                   (load_local_m0 node:$ptr)> {
+def load_align16_#as#_m0 : PatFrag<(ops node:$ptr),
+                                   (!cast<PatFrag>("load_"#as#"_m0") node:$ptr)> {
   let IsLoad = 1;
   int MinAlignment = 16;
 }
 
-let IsAtomic = 1, AddressSpaces = LoadAddress_local.AddrSpaces in {
-def atomic_load_nonext_16_local_m0 : PatFrag<(ops node:$ptr),
+let IsAtomic = 1, AddressSpaces = !cast<AddressSpaceList>("LoadAddress_"#as).AddrSpaces in {
+def atomic_load_nonext_16_#as#_m0 : PatFrag<(ops node:$ptr),
                                       (atomic_load_nonext_16_glue node:$ptr)>;
-def atomic_load_nonext_32_local_m0 : PatFrag<(ops node:$ptr),
+def atomic_load_nonext_32_#as#_m0 : PatFrag<(ops node:$ptr),
                                       (atomic_load_nonext_32_glue node:$ptr)>;
-def atomic_load_nonext_64_local_m0 : PatFrag<(ops node:$ptr),
+def atomic_load_nonext_64_#as#_m0 : PatFrag<(ops node:$ptr),
                                        (atomic_load_nonext_64_glue node:$ptr)>;
 
-def atomic_load_zext_8_local_m0 : PatFrag<(ops node:$ptr),
+def atomic_load_zext_8_#as#_m0 : PatFrag<(ops node:$ptr),
                                       (atomic_load_zext_8_glue node:$ptr)>;
-def atomic_load_sext_8_local_m0 : PatFrag<(ops node:$ptr),
+def atomic_load_sext_8_#as#_m0 : PatFrag<(ops node:$ptr),
                                       (atomic_load_sext_8_glue node:$ptr)>;
-def atomic_load_aext_8_local_m0 : PatFrag<(ops node:$ptr),
+def atomic_load_aext_8_#as#_m0 : PatFrag<(ops node:$ptr),
                                       (atomic_load_aext_8_glue node:$ptr)>;
-def atomic_load_zext_16_local_m0 : PatFrag<(ops node:$ptr),
+def atomic_load_zext_16_#as#_m0 : PatFrag<(ops node:$ptr),
                                       (atomic_load_zext_16_glue node:$ptr)>;
-def atomic_load_sext_16_local_m0 : PatFrag<(ops node:$ptr),
+def atomic_load_sext_16_#as#_m0 : PatFrag<(ops node:$ptr),
                                       (atomic_load_sext_16_glue node:$ptr)>;
-def atomic_load_aext_16_local_m0 : PatFrag<(ops node:$ptr),
+def atomic_load_aext_16_#as#_m0 : PatFrag<(ops node:$ptr),
                                       (atomic_load_aext_16_glue node:$ptr)>;
-} // End let AddressSpaces = LoadAddress_local.AddrSpaces
+} // End let IsAtomic = 1, AddressSpaces = LoadAddress_#as.AddrSpaces
+} // End foreach as
 
 
 def AMDGPUst_glue : SDNode <"ISD::STORE", SDTStore,
@@ -643,26 +648,28 @@ def truncstorei16_glue : PatFrag<(ops node:$val, node:$ptr),
   let MemoryVT = i16;
 }
 
-let IsStore = 1, AddressSpaces = StoreAddress_local.AddrSpaces in {
-def store_local_m0 : PatFrag<(ops node:$val, node:$ptr),
-                             (store_glue node:$val, node:$ptr)>;
-def truncstorei8_local_m0 : PatFrag<(ops node:$val, node:$ptr),
-                                    (truncstorei8_glue node:$val, node:$ptr)>;
-def truncstorei16_local_m0 : PatFrag<(ops node:$val, node:$ptr),
+foreach as = [ "local", "region" ] in {
+let IsStore = 1, AddressSpaces = !cast<AddressSpaceList>("StoreAddress_"#as).AddrSpaces in {
+def store_#as#_m0 : PatFrag<(ops node:$val, node:$ptr),
+                            (store_glue node:$val, node:$ptr)>;
+def truncstorei8_#as#_m0 : PatFrag<(ops node:$val, node:$ptr),
+                                   (truncstorei8_glue node:$val, node:$ptr)>;
+def truncstorei16_#as#_m0 : PatFrag<(ops node:$val, node:$ptr),
                                     (truncstorei16_glue node:$val, node:$ptr)>;
 }
 
-def store_align8_local_m0 : PatFrag <(ops node:$value, node:$ptr),
-                                     (store_local_m0 node:$value, node:$ptr)>,
-                            Aligned<8> {
+def store_align8_#as#_m0 : PatFrag <(ops node:$value, node:$ptr),
+                                    (!cast<PatFrag>("store_"#as#"_m0") node:$value, node:$ptr)>,
+                           Aligned<8> {
   let IsStore = 1;
 }
 
-def store_align16_local_m0 : PatFrag <(ops node:$value, node:$ptr),
-                                     (store_local_m0 node:$value, node:$ptr)>,
+def store_align16_#as#_m0 : PatFrag <(ops node:$value, node:$ptr),
+                                     (!cast<PatFrag>("store_"#as#"_m0") node:$value, node:$ptr)>,
                             Aligned<16> {
   let IsStore = 1;
 }
+} // End foreach as
 
 let PredicateCode = [{return cast<MemSDNode>(N)->getAlign() < 4;}],
     GISelPredicateCode = [{return (*MI.memoperands_begin())->getAlign() < 4;}],
@@ -673,20 +680,26 @@ def load_align_less_than_4_local : PatFrag<(ops node:$ptr),
   let IsNonExtLoad = 1;
 }
 
-def load_align_less_than_4_local_m0 : PatFrag<(ops node:$ptr),
-                                              (load_local_m0 node:$ptr)> {
-  let IsLoad = 1;
-  let IsNonExtLoad = 1;
-}
 
 def store_align_less_than_4_local : PatFrag <(ops node:$value, node:$ptr),
                                              (store_local node:$value, node:$ptr)> {
   let IsStore = 1;
   let IsTruncStore = 0;
 }
+}
 
-def store_align_less_than_4_local_m0 : PatFrag <(ops node:$value, node:$ptr),
-                                                (store_local_m0 node:$value, node:$ptr)> {
+foreach as = [ "local", "region" ] in
+let PredicateCode = [{return cast<MemSDNode>(N)->getAlign() < 4;}],
+    GISelPredicateCode = [{return (*MI.memoperands_begin())->getAlign() < 4;}],
+    AddressSpaces = !cast<AddressSpaceList>("LoadAddress_"#as).AddrSpaces in {
+def load_align_less_than_4_#as#_m0 : PatFrag<(ops node:$ptr),
+                                             (!cast<PatFrag>("load_"#as#"_m0") node:$ptr)> {
+  let IsLoad = 1;
+  let IsNonExtLoad = 1;
+}
+
+def store_align_less_than_4_#as#_m0 : PatFrag <(ops node:$value, node:$ptr),
+                                               (!cast<PatFrag>("store_"#as#"_m0") node:$value, node:$ptr)> {
   let IsStore = 1;
   let IsTruncStore = 0;
 }
@@ -720,16 +733,17 @@ def atomic_store_64_glue : PatFrag <
   let MemoryVT = i64;
 }
 
-let IsAtomic = 1, AddressSpaces = StoreAddress_local.AddrSpaces in {
-def atomic_store_8_local_m0 : PatFrag<(ops node:$val, node:$ptr),
-                                       (atomic_store_8_glue node:$val, node:$ptr)>;
-def atomic_store_16_local_m0 : PatFrag<(ops node:$val, node:$ptr),
-                                       (atomic_store_16_glue node:$val, node:$ptr)>;
-def atomic_store_32_local_m0 : PatFrag<(ops node:$val, node:$ptr),
-                                       (atomic_store_32_glue node:$val, node:$ptr)>;
-def atomic_store_64_local_m0 : PatFrag<(ops node:$val, node:$ptr),
-                                       (atomic_store_64_glue node:$val, node:$ptr)>;
-} // End let IsAtomic = 1, AddressSpaces = StoreAddress_local.AddrSpaces
+foreach as = [ "local", "region" ] in
+let IsAtomic = 1, AddressSpaces = !cast<AddressSpaceList>("StoreAddress_"#as).AddrSpaces in {
+def atomic_store_8_#as#_m0 : PatFrag<(ops node:$val, node:$ptr),
+                                     (atomic_store_8_glue node:$val, node:$ptr)>;
+def atomic_store_16_#as#_m0 : PatFrag<(ops node:$val, node:$ptr),
+                                      (atomic_store_16_glue node:$val, node:$ptr)>;
+def atomic_store_32_#as#_m0 : PatFrag<(ops node:$val, node:$ptr),
+                                      (atomic_store_32_glue node:$val, node:$ptr)>;
+def atomic_store_64_#as#_m0 : PatFrag<(ops node:$val, node:$ptr),
+                                      (atomic_store_64_glue node:$val, node:$ptr)>;
+} // End let IsAtomic = 1, AddressSpaces = StoreAddress_#as.AddrSpaces
 
 
 //===----------------------------------------------------------------------===//
@@ -1480,6 +1494,10 @@ class FPT16InputModsMatchClass<bit IsFake16> : FPInputModsMatchClass<16> {
   let PredicateMethod = "isRegOrImmWithFPT16InputMods<" #
                         !if(IsFake16, "true", "false") # ">";
 }
+def FPT16_LO16InputModsMatchClass : FPInputModsMatchClass<16> {
+  let Name = "RegOrImmWithFPT16_LO16InputMods";
+  let PredicateMethod = "isRegOrImmWithFPT16_LO16InputMods";
+}
 def FP32InputModsMatchClass : FPInputModsMatchClass<32>;
 def FP64InputModsMatchClass : FPInputModsMatchClass<64>;
 
@@ -1508,6 +1526,9 @@ class FPInputMods <FPInputModsMatchClass matchClass> : InputMods <matchClass> {
 
 def FP16InputMods : FPInputMods<FP16InputModsMatchClass>;
 class FPT16InputMods<bit IsFake16> : FPInputMods<FPT16InputModsMatchClass<IsFake16>> {
+  let EncoderMethod = "getMachineOpValueT16";
+}
+def FPT16_LO16InputMods : FPInputMods<FPT16_LO16InputModsMatchClass> {
   let EncoderMethod = "getMachineOpValueT16";
 }
 def FP32InputMods : FPInputMods<FP32InputModsMatchClass>;
@@ -1625,6 +1646,12 @@ class FPT16VRegInputModsMatchClass<bit IsFake16> : AsmOperandClass {
                         !if(IsFake16, "true", "false") # ">";
 }
 
+def FPT16_LO16VRegInputModsMatchClass : AsmOperandClass {
+  let Name = "T16_LO16VRegWithFPInputMods";
+  let ParserMethod = "parseRegWithFPInputMods";
+  let PredicateMethod = "isT16_LO16VRegWithInputMods";
+}
+
 class FPT16_Lo128VRegInputMods<bit IsFake16 = 1>
     : InputMods <FPT16_Lo128VRegInputModsMatchClass<IsFake16>> {
   let PrintMethod = "printOperandAndFPInputMods";
@@ -1633,6 +1660,11 @@ class FPT16_Lo128VRegInputMods<bit IsFake16 = 1>
 
 class FPT16VRegInputMods<bit IsFake16 = 1>
     : InputMods <FPT16VRegInputModsMatchClass<IsFake16>> {
+  let PrintMethod = "printOperandAndFPInputMods";
+  let EncoderMethod = "getMachineOpValueT16";
+}
+
+def FPT16_LO16VRegInputMods : InputMods <FPT16_LO16VRegInputModsMatchClass> {
   let PrintMethod = "printOperandAndFPInputMods";
   let EncoderMethod = "getMachineOpValueT16";
 }
@@ -3094,6 +3126,7 @@ def VOP_F16_F16_I16 : VOPProfile <[f16, f16, i16, untyped]>;
 def VOP_F16_F16_I32 : VOPProfile <[f16, f16, i32, untyped]>;
 def VOP_I16_I16_I16 : VOPProfile <[i16, i16, i16, untyped]>;
 def VOP_I16_I16_I16_ARITH : VOPProfile <[i16, i16, i16, untyped], /*EnableClamp=*/1>;
+def VOP_I16_I16_I32 : VOPProfile <[i16, i16, i32, untyped]>;
 def VOP_BF16_BF16_BF16 : VOPProfile <[bf16, bf16, bf16, untyped]>;
 
 def VOP_I16_I16_I16_I16 : VOPProfile <[i16, i16, i16, i16, untyped]>;
@@ -3155,6 +3188,9 @@ def VOP_V2BF16_F32_F32 : VOPProfile <[v2bf16, f32, f32, untyped]>;
 def VOP_V32F32_V6I32_F32 : VOPProfile <[v32f32, v6i32, f32, untyped]>;
 def VOP_V32F16_V6I32_F32 : VOPProfile <[v32f16, v6i32, f32, untyped]>;
 def VOP_V32BF16_V6I32_F32 : VOPProfile <[v32bf16, v6i32, f32, untyped]>;
+def VOP_V32F16_V6I32_I32 : VOPProfile <[v32f16, v6i32, i32, untyped]>;
+def VOP_V32F32_V6I32_I32 : VOPProfile <[v32f32, v6i32, i32, untyped]>;
+def VOP_V32BF16_V6I32_I32 : VOPProfile <[v32bf16, v6i32, i32, untyped]>;
 def VOP_V2BF16_F32_F32_I32 : VOPProfile <[v2bf16, f32, f32, i32]>;
 def VOP_V2F16_F32_F32_I32 : VOPProfile <[v2f16, f32, f32, i32]>;
 def VOP_V6I32_V32F16_F32 : VOPProfile<[v6i32, v32f16, f32, untyped]>;

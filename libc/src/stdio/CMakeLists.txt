@@ -53,6 +53,28 @@ add_entrypoint_object(
 )
 
 add_entrypoint_object(
+  fmemopen
+  SRCS
+    fmemopen.cpp
+  HDRS
+    fmemopen.h
+  DEPENDS
+    libc.hdr.errno_macros
+    libc.hdr.stdint_proxy
+    libc.hdr.stdio_macros
+    libc.hdr.types.FILE
+    libc.hdr.types.off_t
+    libc.hdr.types.size_t
+    libc.src.__support.CPP.algorithm
+    libc.src.__support.CPP.new
+    libc.src.__support.File.file
+    libc.src.__support.alloc_checker
+    libc.src.__support.libc_errno
+    libc.src.__support.macros.null_check
+    libc.src.string.memory_utils.inline_memcpy
+)
+
+add_entrypoint_object(
   fopencookie
   SRCS
     fopencookie.cpp
@@ -250,6 +272,13 @@ add_entrypoint_object(
 )
 
 add_entrypoint_object(
+  renameat
+  ALIAS
+  DEPENDS
+    .${LIBC_TARGET_OS}.renameat
+)
+
+add_entrypoint_object(
   fdopen
   ALIAS
   DEPENDS
@@ -261,6 +290,13 @@ add_entrypoint_object(
   ALIAS
   DEPENDS
     .${LIBC_TARGET_OS}.tmpfile
+)
+
+add_entrypoint_object(
+  tmpnam
+  ALIAS
+  DEPENDS
+    .${LIBC_TARGET_OS}.tmpnam
 )
 
 # These entrypoints have multiple potential implementations.
