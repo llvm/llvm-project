@@ -7,10 +7,9 @@
 module attributes {cir.lowering_lang_options = #cir.lowering_lang_options<
   exceptions = true, threadsafe_statics = false, cuda = true,
   cuda_is_device = true, hip = true, gpu_rdc = true, openmp = true,
-  openmp_is_target_device = true, clang_abi_compat = 9>, cir.cxx_abi = "itanium"} {
+  openmp_is_target_device = true, clang_abi_compat = 9>} {
 }
 
-// CHECK: cir.cxx_abi = "itanium"
 // CHECK: cir.lowering_lang_options = #cir.lowering_lang_options<
 // CHECK-SAME: exceptions = true, threadsafe_statics = false, cuda = true,
 // CHECK-SAME: cuda_is_device = true, hip = true, gpu_rdc = true, openmp = true,
