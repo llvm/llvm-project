@@ -119,7 +119,7 @@ private:
   /// which requires the Itanium mangling of the initializer name.
   bool cxx20ModuleInits = false;
 
-  /// The complete set of modules that has been imported.
+  /// The complete set of modules that have been imported.
   llvm::SetVector<clang::Module *> importedModules;
 
   /// The set of modules for which the module initializers have been emitted.
