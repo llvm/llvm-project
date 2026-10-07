@@ -167,6 +167,7 @@
 #include "llvm/Transforms/Utils/Local.h"
 #include <cassert>
 #include <cstdint>
+#include <iterator>
 #include <optional>
 #include <string>
 
@@ -206,19 +207,18 @@ public:
   /// Extracts a constant offset from the given GEP index. It returns the
   /// new index representing the remainder (equal to the original index minus
   /// the constant offset), or nullptr if we cannot extract a constant offset.
-  /// \p Idx The given GEP index
-  /// \p GEP The given GEP
+  /// \p Idx The given GEP index use
   /// \p UserChainTail Outputs the tail of UserChain so that we can
   ///                  garbage-collect unused instructions in UserChain.
   /// \p PreservesNUW  Outputs whether the extraction allows preserving the
   ///                  GEP's nuw flag, if it has one.
-  static Value *Extract(Value *Idx, GetElementPtrInst *GEP,
-                        User *&UserChainTail, bool &PreservesNUW);
+  static Value *Extract(const Use &Idx, User *&UserChainTail,
+                        bool &PreservesNUW);
 
   /// Looks for a constant offset from the given GEP index without extracting
   /// it. It returns the numeric value of the extracted constant offset, or
   /// std::nullopt on failure. The arguments have the same meaning as Extract.
-  static std::optional<APInt> Find(Value *Idx, GetElementPtrInst *GEP);
+  static std::optional<APInt> Find(const Use &Idx);
 
 private:
   ConstantOffsetExtractor(BasicBlock::iterator InsertionPt)
@@ -229,16 +229,14 @@ private:
   /// successful, returns C and update UserChain as a def-use chain from C to V;
   /// otherwise, returns std::nullopt and UserChain is empty.
   /// \p V              The given expression
-  /// \p GEP            The base GEP instruction, used for determining relevant
-  ///                   types, flags, and non-negativity needed for safe
-  ///                   reassociation
-  /// \p Idx            The original index of the GEP
+  /// \p Idx            The original index use of the GEP, or nullptr if its
+  ///                   sign and bounds information no longer applies
   /// \p SignExtended   Whether V will be sign-extended in the computation of
   ///                   the GEP index
   /// \p ZeroExtended   Whether V will be zero-extended in the computation of
   ///                   the GEP index
-  std::optional<APInt> find(Value *V, GetElementPtrInst *GEP, Value *Idx,
-                            bool SignExtended, bool ZeroExtended);
+  std::optional<APInt> find(Value *V, const Use *Idx, bool SignExtended,
+                            bool ZeroExtended);
 
   /// A helper function to look into both operands of a binary operator.
   std::optional<APInt>
@@ -292,11 +290,10 @@ private:
   ///
   /// \p SignExtended Whether BO is surrounded by sext
   /// \p ZeroExtended Whether BO is surrounded by zext
-  /// \p GEP          The base GEP instruction, used for determining relevant
-  ///                 types and flags needed for safe reassociation.
-  /// \p Idx          The original index of the GEP
+  /// \p Idx          The original index use of the GEP, or nullptr if its
+  ///                 sign and bounds information no longer applies
   bool canTraceInto(bool SignExtended, bool ZeroExtended, BinaryOperator *BO,
-                    GetElementPtrInst *GEP, Value *Idx);
+                    const Use *Idx);
 
   /// Analyze a xor expression, and identify the bits in the constant operand
   /// that are disjoint from the base operand's known set bits. For these
@@ -510,15 +507,15 @@ FunctionPass *llvm::createSeparateConstOffsetFromGEPPass(bool LowerGEP) {
 // Checks if it is safe to reorder an add/sext result used in a GEP.
 //
 // An inbounds GEP does not guarantee that the index is non-negative.
-// This helper checks first if the index is known non-negative. If the index is
-// non-negative, the transform is always safe.
+// This helper first checks whether value tracking proves that the add cannot
+// have signed overflow. If so, the transform is safe.
 // Second, it checks whether the GEP is inbounds and directly based on a global
 // or an alloca, which are required to prove futher transform validity.
 // If the GEP:
-// - Has a zero offset from the base, the index is non-negative (any negative
-//   value would produce poison/UB)
+// - Has a zero offset from the base and Idx is its first index, the index is
+//   non-negative (any negative value would produce poison/UB)
 // - Has ObjectSize < (2^(N-1) - C + 1) * stride, where C is a constant from the
-//   add, stride is the element size of Idx, and N is bitwidth of Idx.
+//   add, stride is the element size of Idx, and N is bitwidth of the add.
 //   This is because with this pattern:
 //     %add = add iN %val, C
 //     %sext = sext iN %add to i64
@@ -537,12 +534,13 @@ FunctionPass *llvm::createSeparateConstOffsetFromGEPPass(bool LowerGEP) {
 //   producing a large positive value that still needs to be inbounds to the
 //   object size. If C is negative, we cannot make any useful assumptions based
 //   on the offset, since it would need to be extremely large.
-static bool canReorderAddSextToGEP(const GetElementPtrInst *GEP,
-                                   const Value *Idx, const BinaryOperator *Add,
+static bool canReorderAddSextToGEP(const Use *Idx, const BinaryOperator *Add,
                                    const DataLayout &DL) {
-  if (isKnownNonNegative(Idx, DL))
+  if (computeOverflowForSignedAdd(cast<AddOperator>(Add), DL) ==
+      OverflowResult::NeverOverflows)
     return true;
 
+  const auto *GEP = cast<GetElementPtrInst>(Idx->getUser());
   if (!GEP->isInBounds())
     return false;
 
@@ -561,7 +559,9 @@ static bool canReorderAddSextToGEP(const GetElementPtrInst *GEP,
   // Calculate the threshold
   APInt Threshold;
   unsigned N = Add->getType()->getIntegerBitWidth();
-  TypeSize ElemSize = DL.getTypeAllocSize(GEP->getSourceElementType());
+  // Track the use: the same value may index different types in this GEP.
+  auto GTI = std::next(gep_type_begin(GEP), Idx->getOperandNo() - 1);
+  TypeSize ElemSize = GTI.getSequentialElementStride(DL);
   if (ElemSize.isScalable())
     return false;
   uint64_t Stride = ElemSize.getFixedValue();
@@ -577,8 +577,10 @@ static bool canReorderAddSextToGEP(const GetElementPtrInst *GEP,
                 APInt(128, Stride);
   }
 
-  if (Base && (isa<AllocaInst>(Base) || isa<GlobalObject>(Base)) &&
-      !CI->isNegative()) {
+  // Only the first index is relative to Ptr. Earlier indices may move the
+  // pointer within the object, so later indices must use the object-size proof.
+  if (Idx->getOperandNo() == 1 && Base &&
+      (isa<AllocaInst>(Base) || isa<GlobalObject>(Base)) && !CI->isNegative()) {
     // If the offset is zero from an alloca or global, inbounds is sufficient to
     // prove non-negativity if one add operand is non-negative
     if (Offset == 0)
@@ -616,21 +618,17 @@ static bool canReorderAddSextToGEP(const GetElementPtrInst *GEP,
 }
 
 bool ConstantOffsetExtractor::canTraceInto(bool SignExtended, bool ZeroExtended,
-                                           BinaryOperator *BO,
-                                           GetElementPtrInst *GEP, Value *Idx) {
-  // We only consider ADD, SUB and OR, because a non-zero constant found in
+                                           BinaryOperator *BO, const Use *Idx) {
+  // Do not trace into "or" unless it is equivalent to "add nuw nsw".
+  // This is the case if the or's disjoint flag is set.
+  if (BO->getOpcode() == Instruction::Or)
+    return cast<PossiblyDisjointInst>(BO)->isDisjoint();
+
+  // We only consider ADD and SUB here, because a non-zero constant found in
   // expressions composed of these operations can be easily hoisted as a
   // constant offset by reassociation.
   if (BO->getOpcode() != Instruction::Add &&
-      BO->getOpcode() != Instruction::Sub &&
-      BO->getOpcode() != Instruction::Or) {
-    return false;
-  }
-
-  // Do not trace into "or" unless it is equivalent to "add nuw nsw".
-  // This is the case if the or's disjoint flag is set.
-  if (BO->getOpcode() == Instruction::Or &&
-      !cast<PossiblyDisjointInst>(BO)->isDisjoint())
+      BO->getOpcode() != Instruction::Sub)
     return false;
 
   // FIXME: We don't currently support constants from the RHS of subs,
@@ -642,46 +640,29 @@ bool ConstantOffsetExtractor::canTraceInto(bool SignExtended, bool ZeroExtended,
   // In addition, tracing into BO requires that its surrounding sext/zext/trunc
   // (if any) is distributable to both operands.
   //
-  // Suppose BO = A op B.
-  //  SignExtended | ZeroExtended | Distributable?
-  // --------------+--------------+----------------------------------
-  //       0       |      0       | true because no s/zext exists
-  //       0       |      1       | zext(BO) == zext(A) op zext(B)
-  //       1       |      0       | sext(BO) == sext(A) op sext(B)
-  //       1       |      1       | zext(sext(BO)) ==
-  //               |              |     zext(sext(A)) op zext(sext(B))
-  if (BO->getOpcode() == Instruction::Add && !ZeroExtended && GEP) {
-    // If a + b >= 0 and (a >= 0 or b >= 0), then
-    //   sext(a + b) = sext(a) + sext(b)
-    // even if the addition is not marked nsw.
-    //
-    // Leveraging this invariant, we can trace into an sext'ed inbound GEP
-    // index under certain conditions (see canReorderAddSextToGEP).
+  // sext (add/sub nsw A, B) == add/sub nsw (sext A), (sext B)
+  // zext (add/sub nuw A, B) == add/sub nuw (zext A), (zext B)
+  if ((!SignExtended || BO->hasNoSignedWrap()) &&
+      (!ZeroExtended || BO->hasNoUnsignedWrap()))
+    return true;
+
+  if (BO->getOpcode() == Instruction::Add && !ZeroExtended && Idx) {
+    const auto *GEP = cast<GetElementPtrInst>(Idx->getUser());
+    // For a sext(add nuw), allow tracing through when the enclosing GEP is both
+    // inbounds and nuw.
+    if (SignExtended && BO->hasNoUnsignedWrap() && GEP->isInBounds() &&
+        GEP->hasNoUnsignedWrap())
+      return true;
+
+    // Trace through sext when value tracking or the GEP's bounds prove that
+    // the addition cannot have signed overflow.
     //
     // Verified in @sext_add in split-gep.ll.
-    if (canReorderAddSextToGEP(GEP, Idx, BO, DL))
+    if (canReorderAddSextToGEP(Idx, BO, DL))
       return true;
   }
 
-  // For a sext(add nuw), allow tracing through when the enclosing GEP is both
-  // inbounds and nuw.
-  bool GEPInboundsNUW =
-      GEP ? (GEP->isInBounds() && GEP->hasNoUnsignedWrap()) : false;
-  if (BO->getOpcode() == Instruction::Add && SignExtended && !ZeroExtended &&
-      GEPInboundsNUW && BO->hasNoUnsignedWrap())
-    return true;
-
-  // sext (add/sub nsw A, B) == add/sub nsw (sext A), (sext B)
-  // zext (add/sub nuw A, B) == add/sub nuw (zext A), (zext B)
-  if (BO->getOpcode() == Instruction::Add ||
-      BO->getOpcode() == Instruction::Sub) {
-    if (SignExtended && !BO->hasNoSignedWrap())
-      return false;
-    if (ZeroExtended && !BO->hasNoUnsignedWrap())
-      return false;
-  }
-
-  return true;
+  return false;
 }
 
 std::optional<APInt> ConstantOffsetExtractor::findInEitherOperand(
@@ -689,9 +670,10 @@ std::optional<APInt> ConstantOffsetExtractor::findInEitherOperand(
   // Save off the current height of the chain, in case we need to restore it.
   size_t ChainLength = UserChain.size();
 
-  // BO cannot use information from the base GEP at this point, so clear it.
+  // An intervening binary operator invalidates the GEP's index sign and bounds
+  // information, so do not pass it to either operand.
   std::optional<APInt> ConstantOffset =
-      find(BO->getOperand(0), nullptr, nullptr, SignExtended, ZeroExtended);
+      find(BO->getOperand(0), nullptr, SignExtended, ZeroExtended);
   // If we found a constant offset in the left operand, stop and return that.
   // This shortcut might cause us to miss opportunities of combining the
   // constant offsets in both operands, e.g., (a + 4) + (b + 5) => (a + b) + 9.
@@ -704,8 +686,7 @@ std::optional<APInt> ConstantOffsetExtractor::findInEitherOperand(
   // since visiting the LHS didn't pan out.
   UserChain.resize(ChainLength);
 
-  ConstantOffset =
-      find(BO->getOperand(1), nullptr, nullptr, SignExtended, ZeroExtended);
+  ConstantOffset = find(BO->getOperand(1), nullptr, SignExtended, ZeroExtended);
   // If U is a sub operator, negate the constant offset found in the right
   // operand.
   if (ConstantOffset && BO->getOpcode() == Instruction::Sub)
@@ -718,9 +699,9 @@ std::optional<APInt> ConstantOffsetExtractor::findInEitherOperand(
   return ConstantOffset;
 }
 
-std::optional<APInt>
-ConstantOffsetExtractor::find(Value *V, GetElementPtrInst *GEP, Value *Idx,
-                              bool SignExtended, bool ZeroExtended) {
+std::optional<APInt> ConstantOffsetExtractor::find(Value *V, const Use *Idx,
+                                                   bool SignExtended,
+                                                   bool ZeroExtended) {
   // TODO(jingyue): We could trace into integer/pointer casts, such as
   // inttoptr, ptrtoint, bitcast, and addrspacecast. We choose to handle only
   // integers because it gives good enough results for our benchmarks.
@@ -740,26 +721,25 @@ ConstantOffsetExtractor::find(Value *V, GetElementPtrInst *GEP, Value *Idx,
     ConstantOffset = CI->getValue();
   } else if (BinaryOperator *BO = dyn_cast<BinaryOperator>(V)) {
     // Trace into subexpressions for more hoisting opportunities.
-    if (canTraceInto(SignExtended, ZeroExtended, BO, GEP, Idx))
+    if (canTraceInto(SignExtended, ZeroExtended, BO, Idx))
       ConstantOffset = findInEitherOperand(BO, SignExtended, ZeroExtended);
     else if (BO->getOpcode() == Instruction::Xor)
       ConstantOffset = extractDisjointBitsFromXor(BO);
   } else if (isa<TruncInst>(V)) {
     if (SignExtended || ZeroExtended)
       return ConstantOffset;
-    ConstantOffset =
-        find(U->getOperand(0), GEP, Idx, SignExtended, ZeroExtended);
+    ConstantOffset = find(U->getOperand(0), Idx, SignExtended, ZeroExtended);
     if (ConstantOffset)
       *ConstantOffset = ConstantOffset->trunc(BitWidth);
   } else if (isa<SExtInst>(V)) {
     ConstantOffset =
-        find(U->getOperand(0), GEP, Idx, /* SignExtended */ true, ZeroExtended);
+        find(U->getOperand(0), Idx, /* SignExtended */ true, ZeroExtended);
     if (ConstantOffset)
       *ConstantOffset = ConstantOffset->sext(BitWidth);
   } else if (isa<ZExtInst>(V)) {
     // As an optimization, we can clear the SignExtended flag because
     // sext(zext(a)) = zext(a). Verified in @sext_zext in split-gep.ll.
-    ConstantOffset = find(U->getOperand(0), GEP, Idx, /* SignExtended */ false,
+    ConstantOffset = find(U->getOperand(0), Idx, /* SignExtended */ false,
                           /* ZeroExtended */ true);
     if (ConstantOffset)
       *ConstantOffset = ConstantOffset->zext(BitWidth);
@@ -978,20 +958,18 @@ static bool allowsPreservingNUW(const User *U) {
   return true;
 }
 
-static BasicBlock::iterator getIndexInsertionPoint(Value *Idx,
-                                                   GetElementPtrInst *GEP) {
-  if (auto *I = dyn_cast<Instruction>(Idx))
+static BasicBlock::iterator getIndexInsertionPoint(const Use &Idx) {
+  if (auto *I = dyn_cast<Instruction>(Idx.get()))
     if (auto IP = I->getInsertionPointAfterDef())
       return *IP;
-  return GEP->getIterator();
+  return cast<GetElementPtrInst>(Idx.getUser())->getIterator();
 }
 
-Value *ConstantOffsetExtractor::Extract(Value *Idx, GetElementPtrInst *GEP,
-                                        User *&UserChainTail,
+Value *ConstantOffsetExtractor::Extract(const Use &Idx, User *&UserChainTail,
                                         bool &PreservesNUW) {
-  ConstantOffsetExtractor Extractor(getIndexInsertionPoint(Idx, GEP));
+  ConstantOffsetExtractor Extractor(getIndexInsertionPoint(Idx));
   // Find a constant offset first.
-  if (!Extractor.find(Idx, GEP, Idx, /* SignExtended */ false,
+  if (!Extractor.find(Idx, &Idx, /* SignExtended */ false,
                       /* ZeroExtended */ false)) {
     UserChainTail = nullptr;
     PreservesNUW = true;
@@ -1006,10 +984,10 @@ Value *ConstantOffsetExtractor::Extract(Value *Idx, GetElementPtrInst *GEP,
   return IdxWithoutConstOffset;
 }
 
-std::optional<APInt> ConstantOffsetExtractor::Find(Value *Idx,
-                                                   GetElementPtrInst *GEP) {
+std::optional<APInt> ConstantOffsetExtractor::Find(const Use &Idx) {
+  auto *GEP = cast<GetElementPtrInst>(Idx.getUser());
   return ConstantOffsetExtractor(GEP->getIterator())
-      .find(Idx, GEP, Idx, /* SignExtended */ false, /* ZeroExtended */ false);
+      .find(Idx, &Idx, /* SignExtended */ false, /* ZeroExtended */ false);
 }
 
 bool SeparateConstOffsetFromGEP::canonicalizeArrayIndicesToIndexSize(
@@ -1023,7 +1001,7 @@ bool SeparateConstOffsetFromGEP::canonicalizeArrayIndicesToIndexSize(
     if (GTI.isSequential()) {
       if ((*I)->getType() != PtrIdxTy) {
         *I = CastInst::CreateIntegerCast(*I, PtrIdxTy, true, "idxprom",
-                                         getIndexInsertionPoint(*I, GEP));
+                                         getIndexInsertionPoint(*I));
         Changed = true;
       }
     }
@@ -1047,7 +1025,7 @@ APInt SeparateConstOffsetFromGEP::accumulateByteOffset(GetElementPtrInst *GEP,
 
       // Tries to extract a constant offset from this GEP index.
       if (std::optional<APInt> ConstantOffset =
-              ConstantOffsetExtractor::Find(GEP->getOperand(I), GEP)) {
+              ConstantOffsetExtractor::Find(GEP->getOperandUse(I))) {
         NeedsExtraction = true;
         // A GEP may have multiple indices.  We accumulate the extracted
         // constant offset to a byte offset, and later offset the remainder of
@@ -1279,8 +1257,8 @@ bool SeparateConstOffsetFromGEP::splitGEP(GetElementPtrInst *GEP) {
       Value *Idx = GEP->getOperand(I);
       User *UserChainTail;
       bool PreservesNUW;
-      Value *NewIdx = ConstantOffsetExtractor::Extract(Idx, GEP, UserChainTail,
-                                                       PreservesNUW);
+      Value *NewIdx = ConstantOffsetExtractor::Extract(
+          GEP->getOperandUse(I), UserChainTail, PreservesNUW);
       if (NewIdx != nullptr) {
         // Switches to the index with the constant offset removed.
         GEP->setOperand(I, NewIdx);

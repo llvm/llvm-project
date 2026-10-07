@@ -4297,6 +4297,11 @@ static bool RenderModulesOptions(Compilation &C, const Driver &D,
                      ImplicitModules))
       CmdArgs.push_back("-fmodules-validate-system-headers");
 
+    if (Args.hasFlag(options::OPT_fmodules_validate_directory_dependencies,
+                     options::OPT_fno_modules_validate_directory_dependencies,
+                     false))
+      CmdArgs.push_back("-fmodules-validate-directory-dependencies");
+
     Args.AddLastArg(CmdArgs,
                     options::OPT_fmodules_disable_diagnostic_validation);
   } else {
@@ -4305,6 +4310,8 @@ static bool RenderModulesOptions(Compilation &C, const Driver &D,
     Args.ClaimAllArgs(options::OPT_fmodules_validate_once_per_build_session);
     Args.ClaimAllArgs(options::OPT_fmodules_validate_system_headers);
     Args.ClaimAllArgs(options::OPT_fno_modules_validate_system_headers);
+    Args.ClaimAllArgs(options::OPT_fmodules_validate_directory_dependencies);
+    Args.ClaimAllArgs(options::OPT_fno_modules_validate_directory_dependencies);
     Args.ClaimAllArgs(options::OPT_fmodules_disable_diagnostic_validation);
   }
 
@@ -5830,15 +5837,8 @@ void Clang::ConstructJob(Compilation &C, const JobAction &JA,
 
   // Discard value names in no-asserts builds unless otherwise specified.
   if (Args.hasFlag(options::OPT_fdiscard_value_names,
-                   options::OPT_fno_discard_value_names, !IsAssertBuild)) {
-    if (Args.hasArg(options::OPT_fdiscard_value_names) &&
-        llvm::any_of(Inputs, [](const clang::driver::InputInfo &II) {
-          return types::isLLVMIR(II.getType());
-        })) {
-      D.Diag(diag::warn_ignoring_fdiscard_for_bitcode);
-    }
+                   options::OPT_fno_discard_value_names, !IsAssertBuild))
     CmdArgs.push_back("-discard-value-names");
-  }
 
   // Set the main file name, so that debug info works even with
   // -save-temps.
