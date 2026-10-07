@@ -981,15 +981,23 @@ struct VectorContractToAMXDotProduct
             });
         auto one = rewriter.getIndexAttr(1);
         SmallVector<OpFoldResult> strides(indexVals.size(), one);
+        // A rank-reducing read drops leading unit dims. Append them back for
+        // the subview.
+        SmallVector<int64_t> subviewShape(indexVals.size() - vecTy.getRank(),
+                                          1);
+        llvm::append_range(subviewShape, vecTy.getShape());
         SmallVector<OpFoldResult> sizes = getAsIndexOpFoldResult(
-            contractOp.getRhs().getDefiningOp()->getContext(),
-            vecTy.getShape());
+            contractOp.getRhs().getDefiningOp()->getContext(), subviewShape);
         auto subview = memref::SubViewOp::create(rewriter, loc, srcBuffRhs,
                                                  indexVals, sizes, strides);
+        // The source subview already accounts for the leading unit dimensions.
+        // Set them to zero for the later loads.
+        for (Value &index : MutableArrayRef<Value>(indicesRhs).drop_back(2))
+          index = c0;
         auto bufferType = MemRefType::get({16, (16 * blockingFactor)}, ipType);
         auto packedBuffer = memref::AllocaOp::create(rewriter, loc, bufferType);
 
-        // create a loop that does online packing.
+        // Create a loop that does online packing.
         Value step =
             arith::ConstantIndexOp::create(rewriter, loc, blockingFactor);
         Value uBound = arith::ConstantIndexOp::create(rewriter, loc,
