@@ -142,12 +142,8 @@ static uint64_t computeStackId(const memprof::Frame &Frame) {
 }
 
 // Compute the line offset of a debug location relative to the start line of
-// its enclosing subprogram, in the same way as the profile (see
-// memprof::Frame::LineOffset). Locations whose line is smaller than the
-// subprogram's line, most commonly compiler generated code with line 0 such
-// as the forwarding call in a C++ non-virtual thunk (DIFlagThunk), are
-// recorded by the profiler with offset 0. Do the same here instead of
-// wrapping to a large offset that can never match the profile.
+// its enclosing subprogram, clamped at 0 as the profile reader does (e.g. for
+// locations without debug info whose line is 0).
 static uint32_t getLineOffset(const DILocation *DIL) {
   unsigned Line = DIL->getLine();
   unsigned SubprogramLine = DIL->getScope()->getSubprogram()->getLine();
