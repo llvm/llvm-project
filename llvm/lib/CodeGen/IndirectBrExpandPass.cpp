@@ -119,6 +119,8 @@ bool runImpl(Function &F, const TargetLowering *TLI, DomTreeUpdater *DTU,
   BlockFrequencyInfo *BFI = nullptr;
 
   struct IndirectBrSuccessor {
+    // The index into the IndirectBrs, IndirectBrsBlockFrequencies, and
+    // IndirectBrsBranchWeightSums vectors.
     size_t IndirectBrIndex = 0;
     uint64_t SuccessorBranchWeight = 0;
   };
