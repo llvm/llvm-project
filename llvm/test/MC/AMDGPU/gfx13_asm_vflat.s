@@ -23,6 +23,21 @@ flat_atomic_add_f32 v[0:1], v2 offset:-64
 flat_atomic_add_f32 v[0:1], v2 offset:64
 // GFX13: flat_atomic_add_f32 v[0:1], v2 offset:64 ; encoding: [0x7c,0x00,0x15,0xec,0x00,0x00,0x00,0x01,0x00,0x40,0x00,0x00]
 
+flat_atomic_add_u32 v1, v[0:1], v2 offset:-64 th:TH_ATOMIC_RETURN cfs:CFS_256B
+// GFX13: flat_atomic_add_u32 v1, v[0:1], v2 offset:-64 th:TH_ATOMIC_RETURN ; encoding: [0x7c,0x80,0x0c,0xec,0x01,0x00,0x10,0x01,0x00,0xc0,0xff,0xff]
+
+flat_atomic_add_u32 v1, v[0:1], v2 offset:-64 th:TH_ATOMIC_RETURN cfs:CFS_128B
+// GFX1250-ERR: :[[@LINE-1]]:71: error: Cache fill size is not supported on this GPU
+// GFX13: flat_atomic_add_u32 v1, v[0:1], v2 offset:-64 th:TH_ATOMIC_RETURN cfs:CFS_128B ; encoding: [0x7c,0x81,0x0c,0xec,0x01,0x00,0x10,0x01,0x00,0xc0,0xff,0xff]
+
+flat_atomic_add_u32 v1, v[0:1], v2 offset:-64 th:TH_ATOMIC_RETURN cfs:CFS_64B
+// GFX1250-ERR: :[[@LINE-1]]:71: error: Cache fill size is not supported on this GPU
+// GFX13: flat_atomic_add_u32 v1, v[0:1], v2 offset:-64 th:TH_ATOMIC_RETURN cfs:CFS_64B ; encoding: [0x7c,0x82,0x0c,0xec,0x01,0x00,0x10,0x01,0x00,0xc0,0xff,0xff]
+
+flat_atomic_add_u32 v1, v[0:1], v2 offset:-64 th:TH_ATOMIC_RETURN cfs:CFS_32B
+// GFX1250-ERR: :[[@LINE-1]]:71: error: Cache fill size is not supported on this GPU
+// GFX13: flat_atomic_add_u32 v1, v[0:1], v2 offset:-64 th:TH_ATOMIC_RETURN cfs:CFS_32B ; encoding: [0x7c,0x83,0x0c,0xec,0x01,0x00,0x10,0x01,0x00,0xc0,0xff,0xff]
+
 flat_atomic_add_u32 v1, v[0:1], v2 offset:64 th:TH_ATOMIC_RETURN
 // GFX13: flat_atomic_add_u32 v1, v[0:1], v2 offset:64 th:TH_ATOMIC_RETURN ; encoding: [0x7c,0x80,0x0c,0xec,0x01,0x00,0x10,0x01,0x00,0x40,0x00,0x00]
 
@@ -245,6 +260,22 @@ flat_atomic_max_i64 v[0:1], v[2:3] offset:-64
 
 flat_atomic_max_i64 v[0:1], v[2:3] offset:64
 // GFX13: flat_atomic_max_i64 v[0:1], v[2:3] offset:64 ; encoding: [0x7c,0xc0,0x15,0xec,0x00,0x00,0x00,0x01,0x00,0x40,0x00,0x00]
+
+flat_atomic_max_i64 v[1:2], v[0:1], v[2:3] offset:-64 th:TH_ATOMIC_RETURN cfs:CFS_256B
+// GFX1250-ERR: :[[@LINE-1]]:21: error: invalid operand for instruction
+// GFX13: flat_atomic_max_i64 v[1:2], v[0:1], v[2:3] offset:-64 th:TH_ATOMIC_RETURN ; encoding: [0x7c,0xc0,0x15,0xec,0x01,0x00,0x10,0x01,0x00,0xc0,0xff,0xff]
+
+flat_atomic_max_i64 v[1:2], v[0:1], v[2:3] offset:-64 th:TH_ATOMIC_RETURN cfs:CFS_128B
+// GFX1250-ERR: :[[@LINE-1]]:21: error: invalid operand for instruction
+// GFX13: flat_atomic_max_i64 v[1:2], v[0:1], v[2:3] offset:-64 th:TH_ATOMIC_RETURN cfs:CFS_128B ; encoding: [0x7c,0xc1,0x15,0xec,0x01,0x00,0x10,0x01,0x00,0xc0,0xff,0xff]
+
+flat_atomic_max_i64 v[1:2], v[0:1], v[2:3] offset:-64 th:TH_ATOMIC_RETURN cfs:CFS_64B
+// GFX1250-ERR: :[[@LINE-1]]:21: error: invalid operand for instruction
+// GFX13: flat_atomic_max_i64 v[1:2], v[0:1], v[2:3] offset:-64 th:TH_ATOMIC_RETURN cfs:CFS_64B ; encoding: [0x7c,0xc2,0x15,0xec,0x01,0x00,0x10,0x01,0x00,0xc0,0xff,0xff]
+
+flat_atomic_max_i64 v[1:2], v[0:1], v[2:3] offset:-64 th:TH_ATOMIC_RETURN cfs:CFS_32B
+// GFX1250-ERR: :[[@LINE-1]]:21: error: invalid operand for instruction
+// GFX13: flat_atomic_max_i64 v[1:2], v[0:1], v[2:3] offset:-64 th:TH_ATOMIC_RETURN cfs:CFS_32B ; encoding: [0x7c,0xc3,0x15,0xec,0x01,0x00,0x10,0x01,0x00,0xc0,0xff,0xff]
 
 flat_atomic_max_i64 v[1:2], v[0:1], v[2:3] offset:64 th:TH_ATOMIC_RETURN
 // GFX1250-ERR: :[[@LINE-1]]:21: error: invalid operand for instruction
@@ -564,6 +595,21 @@ flat_load_b128 v[1:4], v[0:1] offset:64
 flat_load_b128 v[1:4], v[5:6]
 // GFX1250-ERR: :[[@LINE-1]]:16: error: invalid operand for instruction
 // GFX13: flat_load_b128 v[1:4], v[5:6]           ; encoding: [0x7c,0x80,0x03,0xec,0x01,0x00,0x00,0x00,0x05,0x00,0x00,0x00]
+
+flat_load_b32 v1, v[0:1] offset:-64 cfs:CFS_256B
+// GFX13: flat_load_b32 v1, v[0:1] offset:-64     ; encoding: [0x7c,0x00,0x03,0xec,0x01,0x00,0x00,0x00,0x00,0xc0,0xff,0xff]
+
+flat_load_b32 v1, v[0:1] offset:-64 cfs:CFS_128B
+// GFX1250-ERR: :[[@LINE-1]]:41: error: Cache fill size is not supported on this GPU
+// GFX13: flat_load_b32 v1, v[0:1] offset:-64 cfs:CFS_128B ; encoding: [0x7c,0x01,0x03,0xec,0x01,0x00,0x00,0x00,0x00,0xc0,0xff,0xff]
+
+flat_load_b32 v1, v[0:1] offset:-64 cfs:CFS_64B
+// GFX1250-ERR: :[[@LINE-1]]:41: error: Cache fill size is not supported on this GPU
+// GFX13: flat_load_b32 v1, v[0:1] offset:-64 cfs:CFS_64B ; encoding: [0x7c,0x02,0x03,0xec,0x01,0x00,0x00,0x00,0x00,0xc0,0xff,0xff]
+
+flat_load_b32 v1, v[0:1] offset:-64 cfs:CFS_32B
+// GFX1250-ERR: :[[@LINE-1]]:41: error: Cache fill size is not supported on this GPU
+// GFX13: flat_load_b32 v1, v[0:1] offset:-64 cfs:CFS_32B ; encoding: [0x7c,0x03,0x03,0xec,0x01,0x00,0x00,0x00,0x00,0xc0,0xff,0xff]
 
 flat_load_b32 v1, v[0:1] offset:64
 // GFX13: flat_load_b32 v1, v[0:1] offset:64      ; encoding: [0x7c,0x00,0x03,0xec,0x01,0x00,0x00,0x00,0x00,0x40,0x00,0x00]
@@ -1205,6 +1251,21 @@ global_atomic_and_b64 v[1:2], v[0:1], v[2:3], off offset:64 th:TH_ATOMIC_RETURN
 // GFX1250-ERR: :[[@LINE-1]]:23: error: invalid operand for instruction
 // GFX13: global_atomic_and_b64 v[1:2], v[0:1], v[2:3], off offset:64 th:TH_ATOMIC_RETURN ; encoding: [0x7c,0x40,0x16,0xee,0x01,0x00,0x10,0x01,0x00,0x40,0x00,0x00]
 
+global_atomic_cmpswap_b32 v0, v1, v[2:3], s[2:3] th:TH_ATOMIC_RETURN cfs:CFS_256B
+// GFX13: global_atomic_cmpswap_b32 v0, v1, v[2:3], s[2:3] th:TH_ATOMIC_RETURN ; encoding: [0x02,0x40,0x0c,0xee,0x00,0x00,0x10,0x01,0x01,0x00,0x00,0x00]
+
+global_atomic_cmpswap_b32 v0, v1, v[2:3], s[2:3] th:TH_ATOMIC_RETURN cfs:CFS_128B
+// GFX1250-ERR: :[[@LINE-1]]:74: error: Cache fill size is not supported on this GPU
+// GFX13: global_atomic_cmpswap_b32 v0, v1, v[2:3], s[2:3] th:TH_ATOMIC_RETURN cfs:CFS_128B ; encoding: [0x02,0x41,0x0c,0xee,0x00,0x00,0x10,0x01,0x01,0x00,0x00,0x00]
+
+global_atomic_cmpswap_b32 v0, v1, v[2:3], s[2:3] th:TH_ATOMIC_RETURN cfs:CFS_64B
+// GFX1250-ERR: :[[@LINE-1]]:74: error: Cache fill size is not supported on this GPU
+// GFX13: global_atomic_cmpswap_b32 v0, v1, v[2:3], s[2:3] th:TH_ATOMIC_RETURN cfs:CFS_64B ; encoding: [0x02,0x42,0x0c,0xee,0x00,0x00,0x10,0x01,0x01,0x00,0x00,0x00]
+
+global_atomic_cmpswap_b32 v0, v1, v[2:3], s[2:3] th:TH_ATOMIC_RETURN cfs:CFS_32B
+// GFX1250-ERR: :[[@LINE-1]]:74: error: Cache fill size is not supported on this GPU
+// GFX13: global_atomic_cmpswap_b32 v0, v1, v[2:3], s[2:3] th:TH_ATOMIC_RETURN cfs:CFS_32B ; encoding: [0x02,0x43,0x0c,0xee,0x00,0x00,0x10,0x01,0x01,0x00,0x00,0x00]
+
 global_atomic_cmpswap_b32 v0, v1, v[2:3], s[2:3] th:TH_ATOMIC_RETURN
 // GFX13: global_atomic_cmpswap_b32 v0, v1, v[2:3], s[2:3] th:TH_ATOMIC_RETURN ; encoding: [0x02,0x40,0x0c,0xee,0x00,0x00,0x10,0x01,0x01,0x00,0x00,0x00]
 
@@ -1265,6 +1326,22 @@ global_atomic_cmpswap_b64 v[0:1], v[2:5], off offset:-64
 
 global_atomic_cmpswap_b64 v[0:1], v[2:5], off offset:64
 // GFX13: global_atomic_cmpswap_b64 v[0:1], v[2:5], off offset:64 ; encoding: [0x7c,0x40,0x14,0xee,0x00,0x00,0x00,0x01,0x00,0x40,0x00,0x00]
+
+global_atomic_cmpswap_b64 v[1:2], v0, v[2:5], s[0:1] offset:-64 th:TH_ATOMIC_RETURN cfs:CFS_256B
+// GFX1250-ERR: :[[@LINE-1]]:27: error: invalid operand for instruction
+// GFX13: global_atomic_cmpswap_b64 v[1:2], v0, v[2:5], s[0:1] offset:-64 th:TH_ATOMIC_RETURN ; encoding: [0x00,0x40,0x14,0xee,0x01,0x00,0x10,0x01,0x00,0xc0,0xff,0xff]
+
+global_atomic_cmpswap_b64 v[1:2], v0, v[2:5], s[0:1] offset:-64 th:TH_ATOMIC_RETURN cfs:CFS_128B
+// GFX1250-ERR: :[[@LINE-1]]:27: error: invalid operand for instruction
+// GFX13: global_atomic_cmpswap_b64 v[1:2], v0, v[2:5], s[0:1] offset:-64 th:TH_ATOMIC_RETURN cfs:CFS_128B ; encoding: [0x00,0x41,0x14,0xee,0x01,0x00,0x10,0x01,0x00,0xc0,0xff,0xff]
+
+global_atomic_cmpswap_b64 v[1:2], v0, v[2:5], s[0:1] offset:-64 th:TH_ATOMIC_RETURN cfs:CFS_64B
+// GFX1250-ERR: :[[@LINE-1]]:27: error: invalid operand for instruction
+// GFX13: global_atomic_cmpswap_b64 v[1:2], v0, v[2:5], s[0:1] offset:-64 th:TH_ATOMIC_RETURN cfs:CFS_64B ; encoding: [0x00,0x42,0x14,0xee,0x01,0x00,0x10,0x01,0x00,0xc0,0xff,0xff]
+
+global_atomic_cmpswap_b64 v[1:2], v0, v[2:5], s[0:1] offset:-64 th:TH_ATOMIC_RETURN cfs:CFS_32B
+// GFX1250-ERR: :[[@LINE-1]]:27: error: invalid operand for instruction
+// GFX13: global_atomic_cmpswap_b64 v[1:2], v0, v[2:5], s[0:1] offset:-64 th:TH_ATOMIC_RETURN cfs:CFS_32B ; encoding: [0x00,0x43,0x14,0xee,0x01,0x00,0x10,0x01,0x00,0xc0,0xff,0xff]
 
 global_atomic_cmpswap_b64 v[1:2], v0, v[2:5], s[0:1] offset:64 th:TH_ATOMIC_RETURN
 // GFX1250-ERR: :[[@LINE-1]]:27: error: invalid operand for instruction
@@ -2078,6 +2155,21 @@ global_atomic_xor_b64 v[1:2], v[0:1], v[2:3], off offset:64 th:TH_ATOMIC_RETURN
 // GFX1250-ERR: :[[@LINE-1]]:23: error: invalid operand for instruction
 // GFX13: global_atomic_xor_b64 v[1:2], v[0:1], v[2:3], off offset:64 th:TH_ATOMIC_RETURN ; encoding: [0x7c,0xc0,0x16,0xee,0x01,0x00,0x10,0x01,0x00,0x40,0x00,0x00]
 
+global_load_addtid_b32 v1, off offset:-64 cfs:CFS_256B
+// GFX13: global_load_addtid_b32 v1, off offset:-64 ; encoding: [0x7c,0x80,0x05,0xee,0x01,0x00,0x00,0x00,0x00,0xc0,0xff,0xff]
+
+global_load_addtid_b32 v1, off offset:-64 cfs:CFS_128B
+// GFX1250-ERR: :[[@LINE-1]]:47: error: Cache fill size is not supported on this GPU
+// GFX13: global_load_addtid_b32 v1, off offset:-64 cfs:CFS_128B ; encoding: [0x7c,0x81,0x05,0xee,0x01,0x00,0x00,0x00,0x00,0xc0,0xff,0xff]
+
+global_load_addtid_b32 v1, off offset:-64 cfs:CFS_64B
+// GFX1250-ERR: :[[@LINE-1]]:47: error: Cache fill size is not supported on this GPU
+// GFX13: global_load_addtid_b32 v1, off offset:-64 cfs:CFS_64B ; encoding: [0x7c,0x82,0x05,0xee,0x01,0x00,0x00,0x00,0x00,0xc0,0xff,0xff]
+
+global_load_addtid_b32 v1, off offset:-64 cfs:CFS_32B
+// GFX1250-ERR: :[[@LINE-1]]:47: error: Cache fill size is not supported on this GPU
+// GFX13: global_load_addtid_b32 v1, off offset:-64 cfs:CFS_32B ; encoding: [0x7c,0x83,0x05,0xee,0x01,0x00,0x00,0x00,0x00,0xc0,0xff,0xff]
+
 global_load_addtid_b32 v1, off offset:64
 // GFX13: global_load_addtid_b32 v1, off offset:64 ; encoding: [0x7c,0x80,0x05,0xee,0x01,0x00,0x00,0x00,0x00,0x40,0x00,0x00]
 
@@ -2571,6 +2663,21 @@ global_store_b16 v[3:4], v1, off
 global_store_b32 v0, v2, s[0:1] offset:-64
 // GFX13: global_store_b32 v0, v2, s[0:1] offset:-64 ; encoding: [0x00,0x00,0x07,0xee,0x00,0x00,0x00,0x01,0x00,0xc0,0xff,0xff]
 
+global_store_b32 v0, v2, s[0:1] offset:64 cfs:CFS_256B
+// GFX13: global_store_b32 v0, v2, s[0:1] offset:64 ; encoding: [0x00,0x00,0x07,0xee,0x00,0x00,0x00,0x01,0x00,0x40,0x00,0x00]
+
+global_store_b32 v0, v2, s[0:1] offset:64 cfs:CFS_128B
+// GFX1250-ERR: :[[@LINE-1]]:47: error: Cache fill size is not supported on this GPU
+// GFX13: global_store_b32 v0, v2, s[0:1] offset:64 cfs:CFS_128B ; encoding: [0x00,0x01,0x07,0xee,0x00,0x00,0x00,0x01,0x00,0x40,0x00,0x00]
+
+global_store_b32 v0, v2, s[0:1] offset:64 cfs:CFS_64B
+// GFX1250-ERR: :[[@LINE-1]]:47: error: Cache fill size is not supported on this GPU
+// GFX13: global_store_b32 v0, v2, s[0:1] offset:64 cfs:CFS_64B ; encoding: [0x00,0x02,0x07,0xee,0x00,0x00,0x00,0x01,0x00,0x40,0x00,0x00]
+
+global_store_b32 v0, v2, s[0:1] offset:64 cfs:CFS_32B
+// GFX1250-ERR: :[[@LINE-1]]:47: error: Cache fill size is not supported on this GPU
+// GFX13: global_store_b32 v0, v2, s[0:1] offset:64 cfs:CFS_32B ; encoding: [0x00,0x03,0x07,0xee,0x00,0x00,0x00,0x01,0x00,0x40,0x00,0x00]
+
 global_store_b32 v3, v1, s[2:3] offset:-16
 // GFX13: global_store_b32 v3, v1, s[2:3] offset:-16 ; encoding: [0x02,0x00,0x07,0xee,0x00,0x00,0x80,0x00,0x03,0xf0,0xff,0xff]
 
@@ -2738,6 +2845,22 @@ global_wbinv scope:SCOPE_DEV
 global_wbinv scope:SCOPE_SYS
 // GFX13: global_wbinv scope:SCOPE_SYS            ; encoding: [0x7c,0x80,0x0b,0xee,0x00,0x00,0x0c,0x00,0x00,0x00,0x00,0x00]
 
+scratch_load_b128 v[1:4], off, off offset:-64 cfs:CFS_256B
+// GFX1250-ERR: :[[@LINE-1]]:19: error: invalid operand for instruction
+// GFX13: scratch_load_b128 v[1:4], off, off offset:-64 ; encoding: [0x7c,0x80,0x03,0xed,0x01,0x00,0x00,0x00,0x00,0xc0,0xff,0xff]
+
+scratch_load_b128 v[1:4], off, off offset:-64 cfs:CFS_128B
+// GFX1250-ERR: :[[@LINE-1]]:19: error: invalid operand for instruction
+// GFX13: scratch_load_b128 v[1:4], off, off offset:-64 cfs:CFS_128B ; encoding: [0x7c,0x81,0x03,0xed,0x01,0x00,0x00,0x00,0x00,0xc0,0xff,0xff]
+
+scratch_load_b128 v[1:4], off, off offset:-64 cfs:CFS_64B
+// GFX1250-ERR: :[[@LINE-1]]:19: error: invalid operand for instruction
+// GFX13: scratch_load_b128 v[1:4], off, off offset:-64 cfs:CFS_64B ; encoding: [0x7c,0x82,0x03,0xed,0x01,0x00,0x00,0x00,0x00,0xc0,0xff,0xff]
+
+scratch_load_b128 v[1:4], off, off offset:-64 cfs:CFS_32B
+// GFX1250-ERR: :[[@LINE-1]]:19: error: invalid operand for instruction
+// GFX13: scratch_load_b128 v[1:4], off, off offset:-64 cfs:CFS_32B ; encoding: [0x7c,0x83,0x03,0xed,0x01,0x00,0x00,0x00,0x00,0xc0,0xff,0xff]
+
 scratch_load_b128 v[1:4], off, off offset:64
 // GFX1250-ERR: :[[@LINE-1]]:19: error: invalid operand for instruction
 // GFX13: scratch_load_b128 v[1:4], off, off offset:64 ; encoding: [0x7c,0x80,0x03,0xed,0x01,0x00,0x00,0x00,0x00,0x40,0x00,0x00]
@@ -2769,6 +2892,21 @@ scratch_load_b128 v[1:4], v0, s0 offset:64
 scratch_load_b128 v[1:4], v2, s1
 // GFX1250-ERR: :[[@LINE-1]]:19: error: invalid operand for instruction
 // GFX13: scratch_load_b128 v[1:4], v2, s1        ; encoding: [0x01,0x80,0x03,0xed,0x01,0x00,0x02,0x00,0x02,0x00,0x00,0x00]
+
+scratch_load_b32 v1, off, off offset:2047 cfs:CFS_256B
+// GFX13: scratch_load_b32 v1, off, off offset:2047 ; encoding: [0x7c,0x00,0x03,0xed,0x01,0x00,0x00,0x00,0x00,0xff,0x07,0x00]
+
+scratch_load_b32 v1, off, off offset:2047 cfs:CFS_128B
+// GFX1250-ERR: :[[@LINE-1]]:47: error: Cache fill size is not supported on this GPU
+// GFX13: scratch_load_b32 v1, off, off offset:2047 cfs:CFS_128B ; encoding: [0x7c,0x01,0x03,0xed,0x01,0x00,0x00,0x00,0x00,0xff,0x07,0x00]
+
+scratch_load_b32 v1, off, off offset:2047 cfs:CFS_64B
+// GFX1250-ERR: :[[@LINE-1]]:47: error: Cache fill size is not supported on this GPU
+// GFX13: scratch_load_b32 v1, off, off offset:2047 cfs:CFS_64B ; encoding: [0x7c,0x02,0x03,0xed,0x01,0x00,0x00,0x00,0x00,0xff,0x07,0x00]
+
+scratch_load_b32 v1, off, off offset:2047 cfs:CFS_32B
+// GFX1250-ERR: :[[@LINE-1]]:47: error: Cache fill size is not supported on this GPU
+// GFX13: scratch_load_b32 v1, off, off offset:2047 cfs:CFS_32B ; encoding: [0x7c,0x03,0x03,0xed,0x01,0x00,0x00,0x00,0x00,0xff,0x07,0x00]
 
 scratch_load_b32 v1, off, off offset:-64
 // GFX13: scratch_load_b32 v1, off, off offset:-64 ; encoding: [0x7c,0x00,0x03,0xed,0x01,0x00,0x00,0x00,0x00,0xc0,0xff,0xff]
@@ -3265,6 +3403,21 @@ scratch_store_b16 v0, v2, s0 offset:64
 
 scratch_store_b16 v1, v2, s3
 // GFX13: scratch_store_b16 v1, v2, s3            ; encoding: [0x03,0x80,0x06,0xed,0x00,0x00,0x02,0x01,0x01,0x00,0x00,0x00]
+
+scratch_store_b32 off, v2, off offset:2047 cfs:CFS_256B
+// GFX13: scratch_store_b32 off, v2, off offset:2047 ; encoding: [0x7c,0x00,0x07,0xed,0x00,0x00,0x00,0x01,0x00,0xff,0x07,0x00]
+
+scratch_store_b32 off, v2, off offset:2047 cfs:CFS_128B
+// GFX1250-ERR: :[[@LINE-1]]:48: error: Cache fill size is not supported on this GPU
+// GFX13: scratch_store_b32 off, v2, off offset:2047 cfs:CFS_128B ; encoding: [0x7c,0x01,0x07,0xed,0x00,0x00,0x00,0x01,0x00,0xff,0x07,0x00]
+
+scratch_store_b32 off, v2, off offset:2047 cfs:CFS_64B
+// GFX1250-ERR: :[[@LINE-1]]:48: error: Cache fill size is not supported on this GPU
+// GFX13: scratch_store_b32 off, v2, off offset:2047 cfs:CFS_64B ; encoding: [0x7c,0x02,0x07,0xed,0x00,0x00,0x00,0x01,0x00,0xff,0x07,0x00]
+
+scratch_store_b32 off, v2, off offset:2047 cfs:CFS_32B
+// GFX1250-ERR: :[[@LINE-1]]:48: error: Cache fill size is not supported on this GPU
+// GFX13: scratch_store_b32 off, v2, off offset:2047 cfs:CFS_32B ; encoding: [0x7c,0x03,0x07,0xed,0x00,0x00,0x00,0x01,0x00,0xff,0x07,0x00]
 
 scratch_store_b32 off, v2, off offset:-64
 // GFX13: scratch_store_b32 off, v2, off offset:-64 ; encoding: [0x7c,0x00,0x07,0xed,0x00,0x00,0x00,0x01,0x00,0xc0,0xff,0xff]
