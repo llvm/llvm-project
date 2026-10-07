@@ -15,9 +15,7 @@
 ; RUN:     -passes=early-cse -opt-bisect-limit=0 -opt-bisect-funcs=f1 -opt-bisect-verbose=true %s 2>&1 \
 ; RUN:     | FileCheck %s --check-prefix=CHECK-FUNCTION-PASS-FILTER
 ; CHECK-FUNCTION-PASS-FILTER: BISECT: NOT running pass (1) early-cse on f1
-; CHECK-FUNCTION-PASS-FILTER: BISECT: running pass (2) early-cse on f2
-; CHECK-FUNCTION-PASS-FILTER: BISECT: running pass (3) early-cse on f3
-; CHECK-FUNCTION-PASS-FILTER: BISECT: running pass (4) early-cse on f4
+; CHECK-FUNCTION-PASS-FILTER-NOT: BISECT:
 
 ; RUN: opt -disable-output -disable-verify \
 ; RUN:     -passes=early-cse -opt-bisect-limit=2 -opt-bisect-funcs=f1,f2,f3 -opt-bisect-verbose=true %s 2>&1 \
@@ -25,31 +23,27 @@
 ; CHECK-LIMIT-FUNCTION-PASS-FILTER: BISECT: running pass (1) early-cse on f1
 ; CHECK-LIMIT-FUNCTION-PASS-FILTER: BISECT: running pass (2) early-cse on f2
 ; CHECK-LIMIT-FUNCTION-PASS-FILTER: BISECT: NOT running pass (3) early-cse on f3
-; CHECK-LIMIT-FUNCTION-PASS-FILTER: BISECT: running pass (4) early-cse on f4
+; CHECK-LIMIT-FUNCTION-PASS-FILTER-NOT: BISECT:
 
 ; RUN: opt -disable-output -disable-verify \
 ; RUN:     -passes=early-cse -opt-bisect=2-3 -opt-bisect-funcs=f1,f3 -opt-bisect-verbose=true %s 2>&1 \
 ; RUN:     | FileCheck %s --check-prefix=CHECK-INTERVAL-FILTER
 ; CHECK-INTERVAL-FILTER: BISECT: NOT running pass (1) early-cse on f1
-; CHECK-INTERVAL-FILTER: BISECT: running pass (2) early-cse on f2
-; CHECK-INTERVAL-FILTER: BISECT: running pass (3) early-cse on f3
-; CHECK-INTERVAL-FILTER: BISECT: running pass (4) early-cse on f4
+; CHECK-INTERVAL-FILTER-NEXT: BISECT: running pass (2) early-cse on f3
+; CHECK-INTERVAL-FILTER-NOT: BISECT:
 
 ; RUN: opt -disable-output -disable-verify \
 ; RUN:     -passes=early-cse -opt-disable=early-cse -opt-bisect-funcs=f2 -opt-bisect-verbose=true %s 2>&1 \
 ; RUN:     | FileCheck %s --check-prefix=CHECK-DISABLE-FILTER
-; CHECK-DISABLE-FILTER: BISECT: running pass (1) early-cse on f1
-; CHECK-DISABLE-FILTER: BISECT: NOT running pass (2) early-cse on f2
-; CHECK-DISABLE-FILTER: BISECT: running pass (3) early-cse on f3
-; CHECK-DISABLE-FILTER: BISECT: running pass (4) early-cse on f4
+; CHECK-DISABLE-FILTER: BISECT: NOT running pass (1) early-cse on f2
+; CHECK-DISABLE-FILTER-NOT: BISECT:
 
 ; RUN: opt -disable-output -disable-verify \
 ; RUN:     -passes='loop(loop-simplifycfg)' -opt-bisect-limit=0 -opt-bisect-funcs=f1 \
 ; RUN:     -opt-bisect-verbose=true %s 2>&1 \
 ; RUN:     | FileCheck %s --check-prefix=CHECK-LOOP-PASS-FILTER
 ; CHECK-LOOP-PASS-FILTER: BISECT: NOT running pass ({{[0-9]+}}) loop-simplifycfg on loop %loop.0.0 in function f1
-; CHECK-LOOP-PASS-FILTER-NOT: BISECT: NOT running pass ({{[0-9]+}}) loop-simplifycfg on loop %for.cond
-; CHECK-LOOP-PASS-FILTER: BISECT: running pass ({{[0-9]+}}) loop-simplifycfg on loop %for.cond in function f4
+; CHECK-LOOP-PASS-FILTER-NOT: loop %for.cond
 
 ; RUN: opt -disable-output -disable-verify \
 ; RUN:     -passes=early-cse -opt-bisect-limit=2 -opt-bisect-verbose=true %s 2>&1 \
@@ -63,9 +57,9 @@
 ; RUN:     -passes=function-attrs -opt-bisect-limit=-1 -opt-bisect-funcs=f2 -opt-bisect-verbose=true %s 2>&1 \
 ; RUN:     | FileCheck %s --check-prefix=CHECK-CGSCC-PASS-FILTER
 ; CHECK-CGSCC-PASS-FILTER: BISECT: running pass (1) function-attrs on (f1)
-; CHECK-CGSCC-PASS-FILTER: BISECT: running pass (2) function-attrs on (f2)
-; CHECK-CGSCC-PASS-FILTER: BISECT: running pass (3) function-attrs on (f3)
-; CHECK-CGSCC-PASS-FILTER: BISECT: running pass (4) function-attrs on (f4)
+; CHECK-CGSCC-PASS-FILTER-NEXT: BISECT: running pass (2) function-attrs on (f2)
+; CHECK-CGSCC-PASS-FILTER-NEXT: BISECT: running pass (3) function-attrs on (f3)
+; CHECK-CGSCC-PASS-FILTER-NEXT: BISECT: running pass (4) function-attrs on (f4)
 
 declare i32 @g()
 

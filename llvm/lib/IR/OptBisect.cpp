@@ -107,6 +107,12 @@ bool OptBisect::shouldRunPass(StringRef PassName, StringRef IRDescription,
                               StringRef FuncName) const {
   assert(isEnabled());
 
+  // -opt-bisect-funcs restricts bisection to the listed functions. Excluded
+  // passes behave as if bisection were off, i.e. always run.
+  if (!FuncName.empty() && !OptBisectFuncNames.empty() &&
+      !OptBisectFuncNames.contains(FuncName))
+    return true;
+
   int CurBisectNum = ++LastBisectNum;
 
   // Check if current pass number falls within any of the specified intervals.
@@ -118,12 +124,6 @@ bool OptBisect::shouldRunPass(StringRef PassName, StringRef IRDescription,
 
   // Also check if the pass is disabled via -opt-disable.
   ShouldRun = ShouldRun && !DisabledPasses.contains(PassName);
-
-  // -opt-bisect-funcs restricts bisection to the listed functions. Excluded
-  // passes behave as if bisection were off, i.e. always run.
-  bool ExcludedFromBisect = !FuncName.empty() && !OptBisectFuncNames.empty() &&
-                            !OptBisectFuncNames.contains(FuncName);
-  ShouldRun = ShouldRun || ExcludedFromBisect;
 
   if (OptBisectVerbose)
     printPassMessage(PassName, CurBisectNum, IRDescription, ShouldRun);
