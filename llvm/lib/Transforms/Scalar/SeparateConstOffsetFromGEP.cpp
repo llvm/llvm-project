@@ -223,26 +223,36 @@ public:
 private:
   struct CastState {
     SmallVector<CastInst *, 4> Casts;
-    bool SignExtended = false;
-    bool ZeroExtended = false;
 
-    CastState withCast(CastInst *Cast) const {
-      assert(isa<SExtInst, ZExtInst, TruncInst>(Cast) && "Unexpected cast");
-      CastState Result = *this;
-      Result.Casts.push_back(Cast);
-      if (isa<SExtInst>(Cast)) {
-        Result.SignExtended = true;
-      } else if (isa<ZExtInst>(Cast)) {
-        // sext(zext(a)) = zext(a), so the zext makes an enclosing sext
-        // irrelevant for the expression below it.
-        Result.SignExtended = false;
-        Result.ZeroExtended = true;
-      }
-      return Result;
+    void pushCast(CastInst *Cast) {
+      assert((isa<SExtInst, ZExtInst, TruncInst>(Cast)) && "Unexpected cast");
+      Casts.push_back(Cast);
     }
 
-    bool hasSignExtension() const { return SignExtended; }
-    bool hasZeroExtension() const { return ZeroExtended; }
+    void popCast() {
+      assert(!Casts.empty() && "No cast to pop");
+      Casts.pop_back();
+    }
+
+    bool hasSignExtension() const {
+      // The innermost extension determines whether signed overflow matters:
+      // sext(zext(a)) = zext(a).
+      for (CastInst *Cast : reverse(Casts)) {
+        if (isa<SExtInst>(Cast))
+          return true;
+        if (isa<ZExtInst>(Cast))
+          return false;
+      }
+      return false;
+    }
+
+    bool hasZeroExtension() const {
+      return any_of(Casts, IsaPred<ZExtInst>);
+    }
+
+    bool hasExtensions() const {
+      return any_of(Casts, IsaPred<SExtInst, ZExtInst>);
+    }
 
     APInt apply(APInt Offset) const {
       for (CastInst *Cast : llvm::reverse(Casts)) {
@@ -271,11 +281,11 @@ private:
   /// \p Idx            The original index use of the GEP, or nullptr if its
   ///                   sign and bounds information no longer applies
   /// \p Casts          The casts surrounding V in the original expression.
-  std::optional<APInt> find(Value *V, const Use *Idx, const CastState &Casts);
+  std::optional<APInt> find(Value *V, const Use *Idx, CastState &Casts);
 
   /// A helper function to look into both operands of a binary operator.
   std::optional<APInt> findInEitherOperand(BinaryOperator *BO,
-                                           const CastState &Casts);
+                                           CastState &Casts);
 
   /// After finding the constant offset C from the GEP index I, we build a new
   /// index I' s.t. I' + C = I. This function builds and returns the new
@@ -284,10 +294,11 @@ private:
   /// While rebuilding, distribute the casts recorded in \p Casts to each
   /// operand that remains in the expression, then reassociate the expression to
   /// the form I' + C and return I'.
-  Value *rebuildWithoutConstOffset(unsigned ChainIndex, const CastState &Casts);
+  Value *rebuildWithoutConstOffset(unsigned ChainIndex, CastState &Casts);
 
   Value *rebuildWithoutConstOffset() {
-    return rebuildWithoutConstOffset(UserChain.size() - 1, CastState());
+    CastState Casts;
+    return rebuildWithoutConstOffset(UserChain.size() - 1, Casts);
   }
 
   /// A helper function to apply a list of sext/zext/trunc casts to value
@@ -667,7 +678,7 @@ bool ConstantOffsetExtractor::canTraceInto(const CastState &Casts,
 
 std::optional<APInt>
 ConstantOffsetExtractor::findInEitherOperand(BinaryOperator *BO,
-                                             const CastState &Casts) {
+                                             CastState &Casts) {
   // Save off the current height of the chain, in case we need to restore it.
   size_t ChainLength = UserChain.size();
 
@@ -700,7 +711,7 @@ ConstantOffsetExtractor::findInEitherOperand(BinaryOperator *BO,
 }
 
 std::optional<APInt> ConstantOffsetExtractor::find(Value *V, const Use *Idx,
-                                                   const CastState &Casts) {
+                                                   CastState &Casts) {
   // TODO(jingyue): We could trace into integer/pointer casts, such as
   // inttoptr, ptrtoint, bitcast, and addrspacecast. We choose to handle only
   // integers because it gives good enough results for our benchmarks.
@@ -727,10 +738,10 @@ std::optional<APInt> ConstantOffsetExtractor::find(Value *V, const Use *Idx,
         *ConstantOffset = Casts.apply(*ConstantOffset);
     }
   } else if (isa<SExtInst, ZExtInst>(V) ||
-             (isa<TruncInst>(V) && !Casts.hasSignExtension() &&
-              !Casts.hasZeroExtension())) {
-    ConstantOffset =
-        find(U->getOperand(0), Idx, Casts.withCast(cast<CastInst>(V)));
+             (isa<TruncInst>(V) && !Casts.hasExtensions())) {
+    Casts.pushCast(cast<CastInst>(V));
+    ConstantOffset = find(U->getOperand(0), Idx, Casts);
+    Casts.popCast();
   }
 
   // If we found a constant offset, add it to the path for
@@ -767,9 +778,8 @@ Value *ConstantOffsetExtractor::applyCasts(Value *V, const CastState &Casts) {
   return Current;
 }
 
-Value *
-ConstantOffsetExtractor::rebuildWithoutConstOffset(unsigned ChainIndex,
-                                                   const CastState &Casts) {
+Value *ConstantOffsetExtractor::rebuildWithoutConstOffset(unsigned ChainIndex,
+                                                          CastState &Casts) {
   User *U = UserChain[ChainIndex];
   if (ChainIndex == 0) {
     assert(isa<ConstantInt>(U));
@@ -780,7 +790,10 @@ ConstantOffsetExtractor::rebuildWithoutConstOffset(unsigned ChainIndex,
     assert(
         (isa<SExtInst>(Cast) || isa<ZExtInst>(Cast) || isa<TruncInst>(Cast)) &&
         "Only following instructions can be traced: sext, zext & trunc");
-    return rebuildWithoutConstOffset(ChainIndex - 1, Casts.withCast(Cast));
+    Casts.pushCast(Cast);
+    Value *Result = rebuildWithoutConstOffset(ChainIndex - 1, Casts);
+    Casts.popCast();
+    return Result;
   }
 
   BinaryOperator *BO = cast<BinaryOperator>(U);
@@ -910,7 +923,8 @@ Value *ConstantOffsetExtractor::Extract(const Use &Idx, User *&UserChainTail,
                                         bool &PreservesNUW) {
   ConstantOffsetExtractor Extractor(getIndexInsertionPoint(Idx));
   // Find a constant offset first.
-  if (!Extractor.find(Idx, &Idx, CastState())) {
+  CastState Casts;
+  if (!Extractor.find(Idx, &Idx, Casts)) {
     UserChainTail = nullptr;
     PreservesNUW = true;
     return nullptr;
@@ -926,8 +940,8 @@ Value *ConstantOffsetExtractor::Extract(const Use &Idx, User *&UserChainTail,
 
 std::optional<APInt> ConstantOffsetExtractor::Find(const Use &Idx) {
   auto *GEP = cast<GetElementPtrInst>(Idx.getUser());
-  return ConstantOffsetExtractor(GEP->getIterator())
-      .find(Idx, &Idx, CastState());
+  CastState Casts;
+  return ConstantOffsetExtractor(GEP->getIterator()).find(Idx, &Idx, Casts);
 }
 
 bool SeparateConstOffsetFromGEP::canonicalizeArrayIndicesToIndexSize(
