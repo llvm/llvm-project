@@ -72,8 +72,13 @@ std::unique_ptr<MLModelRunner> createReleaseModeModelRunner(
   if constexpr (HaveMLIRLowering) {
     return CreateEmitCModelRunner(Ctx, InputFeatures);
   } else {
-    return std::make_unique<ReleaseModeModelRunner<CompiledModelType>>(
+    auto Runner = std::make_unique<ReleaseModeModelRunner<CompiledModelType>>(
         Ctx, InputFeatures, DecisionName, Options);
+    // Shapes the model was compiled for do not match the requested ones. The
+    // error is already reported, so let the caller fall back.
+    if (!Runner->isValid())
+      return nullptr;
+    return Runner;
   }
 }
 

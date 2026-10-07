@@ -14,7 +14,7 @@ define void @nonsplatvalue_v4f32(float %a, float %b, float %c, float %d) nounwin
 ; MIPS64R5-NEXT:    insve.w $w0[1], $w13[0]
 ; MIPS64R5-NEXT:    insve.w $w0[2], $w14[0]
 ; MIPS64R5-NEXT:    insve.w $w0[3], $w15[0]
-; MIPS64R5-NEXT:    fmax_a.w $w0, $w0, $w0
+; MIPS64R5-NEXT:    bclri.w $w0, $w0, 31
 ; MIPS64R5-NEXT:    lui $1, %highest(v4f32)
 ; MIPS64R5-NEXT:    daddiu $1, $1, %higher(v4f32)
 ; MIPS64R5-NEXT:    dsll $1, $1, 16

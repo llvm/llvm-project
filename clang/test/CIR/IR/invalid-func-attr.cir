@@ -1,4 +1,4 @@
-// RUN: cir-opt %s -verify-diagnostics
+// RUN: cir-opt %s -verify-diagnostics -split-input-file
 
 module {
   cir.func @l0() {
@@ -6,6 +6,34 @@ module {
   }
 
   cir.func @disallowedAttr() attributes {comdat} { // expected-error{{custom op 'cir.func' attribute 'comdat' should not be specified in the explicit attribute list}}
+    cir.return
+  }
+}
+
+// -----
+
+module {
+  // expected-error@+1 {{attribute 'mustprogress' must be a unit attribute}}
+  cir.func @badMustProgressKind() attributes {mustprogress = 1 : i32} {
+    cir.return
+  }
+}
+
+// -----
+
+module {
+  // expected-error@+1 {{attribute 'uwtable' must be a #cir.uwtable attribute}}
+  cir.func @badUwtableKind() attributes {uwtable = 1 : i32} {
+    cir.return
+  }
+}
+
+// -----
+
+module {
+  // expected-error@+2 {{expected one of [none, sync, async] for Unwind Table Kind, got: bogus}}
+  // expected-error@+1 {{failed to parse CIR_UnwindTableKindAttr parameter 'value' which is to be a `::cir::UnwindTableKind`}}
+  cir.func @badUwtableSpelling() attributes {uwtable = #cir.uwtable<bogus>} {
     cir.return
   }
 }

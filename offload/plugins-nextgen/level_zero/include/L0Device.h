@@ -467,8 +467,6 @@ public:
     return L0Context.getEventPool().releaseEventObject(EventObj);
   }
 
-  StagingBufferTy &getStagingBuffer() { return L0Context.getStagingBuffer(); }
-
   bool supportsLargeMem() const { return L0Context.supportsLargeMem(); }
 
   /// Returns the Queue from an async info object, or creates a new one if
@@ -482,11 +480,11 @@ public:
   // Allocation related routines.
 
   /// Data alloc.
-  Expected<void *> dataAlloc(
-      size_t Size, size_t Align, int32_t Kind, intptr_t Offset, bool UserAlloc,
-      bool DevMalloc = false,
-      uint32_t MemAdvice = std::numeric_limits<decltype(MemAdvice)>::max(),
-      AllocOptionTy AllocOpt = AllocOptionTy::ALLOC_OPT_NONE);
+  Expected<void *>
+  dataAlloc(size_t Size, size_t Align, int32_t Kind, intptr_t Offset,
+            bool UserAlloc, bool DevMalloc = false,
+            uint32_t MemAdvice = std::numeric_limits<uint32_t>::max(),
+            AllocOptionTy AllocOpt = AllocOptionTy::ALLOC_OPT_NONE);
 
   /// Data delete.
   Error dataDelete(void *Ptr);
