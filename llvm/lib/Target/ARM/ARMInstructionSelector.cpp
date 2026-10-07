@@ -869,6 +869,9 @@ bool ARMInstructionSelector::select(MachineInstr &I) {
   bool isSExt = false;
 
   switch (I.getOpcode()) {
+  case TargetOpcode::G_BITCAST:
+    I.setDesc(TII.get(COPY));
+    return selectCopy(I, TII, MRI, TRI, RBI);
   case G_SEXT:
     isSExt = true;
     [[fallthrough]];

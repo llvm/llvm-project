@@ -27,15 +27,15 @@ body:             |
     liveins: $r0, $r1
 
     %0(p0) = COPY $r0
-    %1(s8) = G_LOAD %0 :: (load (s8))
+    %1(i8) = G_LOAD %0 :: (load (i8))
     %2(p0) = COPY $r1
-    %3(s8) = G_LOAD %2 :: (load (s8))
-    %4(s1) = G_ICMP intpred(ne), %1(s8), %3
+    %3(i8) = G_LOAD %2 :: (load (i8))
+    %4(i1) = G_ICMP intpred(ne), %1(i8), %3
     ; G_ICMP with s8 should widen
-    ; CHECK: {{%[0-9]+}}:_(s1) = G_ICMP intpred(ne), {{%[0-9]+}}(s32), {{%[0-9]+}}
-    ; CHECK-NOT: {{%[0-9]+}}:_(s1) = G_ICMP intpred(ne), {{%[0-9]+}}(s8), {{%[0-9]+}}
-    %5(s32) = G_ZEXT %4(s1)
-    $r0 = COPY %5(s32)
+    ; CHECK: {{%[0-9]+}}:_(i1) = G_ICMP intpred(ne), {{%[0-9]+}}(i32), {{%[0-9]+}}
+    ; CHECK-NOT: {{%[0-9]+}}:_(i1) = G_ICMP intpred(ne), {{%[0-9]+}}(i8), {{%[0-9]+}}
+    %5(i32) = G_ZEXT %4(i1)
+    $r0 = COPY %5(i32)
     BX_RET 14, $noreg, implicit $r0
 ...
 ---
@@ -58,15 +58,15 @@ body:             |
     liveins: $r0, $r1
 
     %0(p0) = COPY $r0
-    %1(s16) = G_LOAD %0 :: (load (s16))
+    %1(i16) = G_LOAD %0 :: (load (i16))
     %2(p0) = COPY $r1
-    %3(s16) = G_LOAD %2 :: (load (s16))
-    %4(s1) = G_ICMP intpred(slt), %1(s16), %3
+    %3(i16) = G_LOAD %2 :: (load (i16))
+    %4(i1) = G_ICMP intpred(slt), %1(i16), %3
     ; G_ICMP with s16 should widen
-    ; CHECK: {{%[0-9]+}}:_(s1) = G_ICMP intpred(slt), {{%[0-9]+}}(s32), {{%[0-9]+}}
-    ; CHECK-NOT: {{%[0-9]+}}:_(s1) = G_ICMP intpred(slt), {{%[0-9]+}}(s16), {{%[0-9]+}}
-    %5(s32) = G_ZEXT %4(s1)
-    $r0 = COPY %5(s32)
+    ; CHECK: {{%[0-9]+}}:_(i1) = G_ICMP intpred(slt), {{%[0-9]+}}(i32), {{%[0-9]+}}
+    ; CHECK-NOT: {{%[0-9]+}}:_(i1) = G_ICMP intpred(slt), {{%[0-9]+}}(i16), {{%[0-9]+}}
+    %5(i32) = G_ZEXT %4(i1)
+    $r0 = COPY %5(i32)
     BX_RET 14, $noreg, implicit $r0
 ...
 ---
@@ -86,13 +86,13 @@ body:             |
   bb.0:
     liveins: $r0, $r1
 
-    %0(s32) = COPY $r0
-    %1(s32) = COPY $r1
-    %2(s1) = G_ICMP intpred(eq), %0(s32), %1
+    %0(i32) = COPY $r0
+    %1(i32) = COPY $r1
+    %2(i1) = G_ICMP intpred(eq), %0(i32), %1
     ; G_ICMP with s32 is legal, so we should find it unchanged in the output
-    ; CHECK: {{%[0-9]+}}:_(s1) = G_ICMP intpred(eq), {{%[0-9]+}}(s32), {{%[0-9]+}}
-    %3(s32) = G_ZEXT %2(s1)
-    $r0 = COPY %3(s32)
+    ; CHECK: {{%[0-9]+}}:_(i1) = G_ICMP intpred(eq), {{%[0-9]+}}(i32), {{%[0-9]+}}
+    %3(i32) = G_ZEXT %2(i1)
+    $r0 = COPY %3(i32)
     BX_RET 14, $noreg, implicit $r0
 ...
 ---
@@ -114,10 +114,10 @@ body:             |
 
     %0(p0) = COPY $r0
     %1(p0) = COPY $r1
-    %2(s1) = G_ICMP intpred(eq), %0(p0), %1
+    %2(i1) = G_ICMP intpred(eq), %0(p0), %1
     ; G_ICMP with p0 is legal, so we should find it unchanged in the output
-    ; CHECK: {{%[0-9]+}}:_(s1) = G_ICMP intpred(eq), {{%[0-9]+}}(p0), {{%[0-9]+}}
-    %3(s32) = G_ZEXT %2(s1)
-    $r0 = COPY %3(s32)
+    ; CHECK: {{%[0-9]+}}:_(i1) = G_ICMP intpred(eq), {{%[0-9]+}}(p0), {{%[0-9]+}}
+    %3(i32) = G_ZEXT %2(i1)
+    $r0 = COPY %3(i32)
     BX_RET 14, $noreg, implicit $r0
 ...
