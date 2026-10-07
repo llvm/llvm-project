@@ -59,13 +59,13 @@ define i8 @extract_i8_elt0(<4 x float> %v) nounwind {
 define i32 @extract_i32_elt0_fadd(<4 x float> %x, <4 x float> %y) nounwind {
 ; SSE-LABEL: extract_i32_elt0_fadd:
 ; SSE:       # %bb.0:
-; SSE-NEXT:    addss %xmm1, %xmm0
+; SSE-NEXT:    addps %xmm1, %xmm0
 ; SSE-NEXT:    movd %xmm0, %eax
 ; SSE-NEXT:    retq
 ;
 ; AVX-LABEL: extract_i32_elt0_fadd:
 ; AVX:       # %bb.0:
-; AVX-NEXT:    vaddss %xmm1, %xmm0, %xmm0
+; AVX-NEXT:    vaddps %xmm1, %xmm0, %xmm0
 ; AVX-NEXT:    vmovd %xmm0, %eax
 ; AVX-NEXT:    retq
   %v = fadd <4 x float> %x, %y

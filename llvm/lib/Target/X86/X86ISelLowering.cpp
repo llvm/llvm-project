@@ -19065,14 +19065,15 @@ static SDValue LowerEXTRACT_VECTOR_ELT_SSE4(SDValue Op, SelectionDAG &DAG) {
   if (VT == MVT::f32) {
     // EXTRACTPS outputs to a GPR32 register which will require a movd to copy
     // the result back to FR32 register. It's only worth matching if the
-    // result has a single use which is a store or a bitcast to i32.  It's not
-    // worth it if the index is a constant 0, because a MOVSSmr or MOVD can be
-    // used instead, which is smaller and faster.
-    if (!Op.hasOneUse() || isNullConstant(Idx))
+    // result has a single use which is a store or a bitcast to i32.  And in
+    // the case of a store, it's not worth it if the index is a constant 0,
+    // because a MOVSSmr can be used instead, which is smaller and faster.
+    if (!Op.hasOneUse())
       return SDValue();
     SDNode *User = *Op.getNode()->user_begin();
-    if (User->getOpcode() != ISD::STORE && (User->getOpcode() != ISD::BITCAST ||
-                                            User->getValueType(0) != MVT::i32))
+    if ((User->getOpcode() != ISD::STORE || isNullConstant(Idx)) &&
+        (User->getOpcode() != ISD::BITCAST ||
+         User->getValueType(0) != MVT::i32))
       return SDValue();
     SDValue Extract = DAG.getNode(ISD::EXTRACT_VECTOR_ELT, dl, MVT::i32,
                                   DAG.getBitcast(MVT::v4i32, Vec), Idx);
@@ -48454,17 +48455,6 @@ static SDValue combineExtractVectorElt(SDNode *N, SelectionDAG &DAG,
     // combineBasicSADPattern.
     return SDValue();
   }
-
-  // extract_vector_elt (v4i32 bitcast (v4f32 X)), 0
-  //   --> bitcast i32 (extract_vector_elt X, 0)
-  // Prefer a MOVD from the low f32 element over EXTRACTPS $0. This relies on
-  // LowerEXTRACT_VECTOR_ELT_SSE4 not converting the f32 extract back.
-  if (isNullConstant(EltIdx) && VT == MVT::i32 && SrcVT == MVT::v4i32 &&
-      InputVector.getOpcode() == ISD::BITCAST &&
-      InputVector.getOperand(0).getValueType() == MVT::v4f32 &&
-      DCI.isAfterLegalizeDAG())
-    return DAG.getBitcast(VT, DAG.getExtractVectorElt(
-                                  dl, MVT::f32, InputVector.getOperand(0), 0));
 
   // Attempt to avoid multi-use src if we don't need anything from it.
   // TODO: Generlize this and move to DAGCombine.
