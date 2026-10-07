@@ -253,6 +253,8 @@ Error analyzeAccess(const IntrinsicInst &I, EntrySignature &Sig) {
 }
 
 void buildDependencyMap(EntrySignature &Sig) {
+  // Each output vector needs four component bits, so one 32-bit word holds
+  // eight vectors. Adding seven rounds up to include a partially filled word.
   unsigned Words = (Sig.OutputVectors + 7) / 8;
   Sig.InputOutputMap.assign(Sig.InputVectors * 4 * Words, 0);
   // Conservatively connect every accessed input component to every written
