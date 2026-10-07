@@ -839,7 +839,7 @@ SIMemOpAccess::SIMemOpAccess(const AMDGPUMachineModuleInfo &MMI_,
     : MMI(&MMI_), ST(ST),
       CanDemoteWorkgroupToWavefront(
           ST.isSingleWavefrontWorkgroup(MF.getFunction()) &&
-          MF.getFunction().hasFnAttribute("amdgpu-no-async")) {}
+          MF.getFunction().hasFnAttribute("amdgpu-no-lds-dma")) {}
 
 std::optional<SIMemOpInfo> SIMemOpAccess::constructFromMIWithMMO(
     const MachineBasicBlock::iterator &MI) const {
