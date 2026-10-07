@@ -111,10 +111,8 @@ def V3Write_3c_1M    : SchedWriteRes<[V3UnitM]>   { let Latency = 3; }
 def V3Write_2c_1M0   : SchedWriteRes<[V3UnitM0]>  { let Latency = 2; }
 def V3Write_3c_1M0   : SchedWriteRes<[V3UnitM0]>  { let Latency = 3; }
 def V3Write_4c_1M0   : SchedWriteRes<[V3UnitM0]>  { let Latency = 4; }
-def V3Write_12c_1M0  : SchedWriteRes<[V3UnitM0]>  { let Latency = 12;
-                                                    let ReleaseAtCycles = [12]; }
-def V3Write_20c_1M0  : SchedWriteRes<[V3UnitM0]>  { let Latency = 20;
-                                                    let ReleaseAtCycles = [20]; }
+def V3Write_7c_1M0   : SchedWriteRes<[V3UnitM0]>  { let Latency = 7;
+                                                    let ReleaseAtCycles = [7]; }
 def V3Write_4c_1L    : SchedWriteRes<[V3UnitL]>   { let Latency = 4; }
 def V3Write_6c_1L    : SchedWriteRes<[V3UnitL]>   { let Latency = 6; }
 def V3Write_2c_1V    : SchedWriteRes<[V3UnitV]>   { let Latency = 2; }
@@ -1096,8 +1094,8 @@ def : SchedAlias<WriteImm, V3Write_1c_1I>;
 // -----------------------------------------------------------------------------
 
 // SDIV, UDIV
-def : SchedAlias<WriteID32,  V3Write_12c_1M0>;
-def : SchedAlias<WriteID64,  V3Write_20c_1M0>;
+def : SchedAlias<WriteID32,  V3Write_7c_1M0>;
+def : SchedAlias<WriteID64,  V3Write_7c_1M0>;
 
 def : SchedAlias<WriteIM32, V3Write_2c_1M>;
 def : SchedAlias<WriteIM64, V3Write_2c_1M>;
