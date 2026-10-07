@@ -720,11 +720,18 @@ void RuntimeLibcallEmitter::emitLibraryFunction(
   OS << "}\n\n";
 }
 
+// The setAvailableLibFuncs_ suffix (and merge key) for a library: its shared
+// LibraryName normally, or its own def name if isolated (so it does not merge).
+static StringRef libFuncKey(const Record *Lib) {
+  return Lib->getValueAsBit("Isolated") ? Lib->getName()
+                                        : Lib->getValueAsString("LibraryName");
+}
+
 MapVector<StringRef, std::vector<const Record *>>
 RuntimeLibcallEmitter::collectLibrariesByName() const {
   MapVector<StringRef, std::vector<const Record *>> LibsByName;
   for (const Record *Lib : Records.getAllDerivedDefinitions("LibcallLibrary"))
-    LibsByName[Lib->getValueAsString("LibraryName")].push_back(Lib);
+    LibsByName[libFuncKey(Lib)].push_back(Lib);
   return LibsByName;
 }
 
@@ -839,39 +846,38 @@ void RuntimeLibcallEmitter::emitSystemRuntimeLibrarySetCalls(
       }
     }
 
-    // Split the top-level member list into named LibcallLibrary references
-    // (dispatched to their own setAvailableLibFuncs_<name> under an
-    // isLibraryAvailable guard) and the remaining bare impl / LibcallImpls
-    // members. A LibraryRef also records impls to drop.
+    // Split the member list into library references, each dispatched to
+    // setAvailableLibFuncs_<FuncSuffix> under an isLibraryAvailable(Name)
+    // guard, and the remaining members, emitted inline below. LibraryRef
+    // exclusions are applied inside the library function.
     struct DispatchLib {
       StringRef Name;
-      std::vector<const RuntimeLibcallImpl *> Exclude;
+      StringRef FuncSuffix;
     };
     const DagInit *MemberDag =
         R->getValueAsDef("MemberList")->getValueAsDag("MemberList");
     SmallVector<DispatchLib, 4> DispatchLibs;
     SmallVector<const Init *, 16> InlineArgs;
     SmallVector<const StringInit *, 16> InlineArgNames;
+    // A provider referenced both as a base opt-out and a same-name re-add
+    // variant resolves to the same function; dispatch it once.
+    DenseSet<std::pair<StringRef, StringRef>> SeenDispatch;
+    auto AddDispatch = [&](StringRef Name, StringRef FuncSuffix) {
+      if (SeenDispatch.insert({Name, FuncSuffix}).second)
+        DispatchLibs.push_back({Name, FuncSuffix});
+    };
     for (auto [Arg, ArgName] :
          zip_equal(MemberDag->getArgs(), MemberDag->getArgNames())) {
       if (const auto *DI = dyn_cast<DefInit>(Arg)) {
         const Record *Def = DI->getDef();
         if (Def->isSubClassOf("LibcallLibrary")) {
-          DispatchLibs.push_back({Def->getValueAsString("LibraryName"), {}});
+          AddDispatch(Def->getValueAsString("LibraryName"), libFuncKey(Def));
           continue;
         }
 
         if (Def->isSubClassOf("LibraryRef")) {
           const Record *Lib = Def->getValueAsDef("Library");
-          DispatchLib DL{Lib->getValueAsString("LibraryName"), {}};
-          for (const Record *ExcludeRec :
-               Def->getValueAsListOfDefs("Exclude")) {
-            if (const RuntimeLibcallImpl *Impl =
-                    Libcalls.getRuntimeLibcallImpl(ExcludeRec))
-              DL.Exclude.push_back(Impl);
-          }
-
-          DispatchLibs.push_back(std::move(DL));
+          AddDispatch(Lib->getValueAsString("LibraryName"), libFuncKey(Lib));
           continue;
         }
       }
@@ -961,7 +967,7 @@ void RuntimeLibcallEmitter::emitSystemRuntimeLibrarySetCalls(
     for (const DispatchLib &DL : DispatchLibs) {
       OS << indent(4) << "if (isLibraryAvailable(\"" << DL.Name << "\"))\n"
          << indent(6) << "setAvailableLibFuncs_";
-      emitLibFuncSuffix(OS, DL.Name);
+      emitLibFuncSuffix(OS, DL.FuncSuffix);
       OS << "(TT, ExceptionModel, FloatABI, ABIName, LongDoubleFormat);\n";
     }
     if (!DispatchLibs.empty())
