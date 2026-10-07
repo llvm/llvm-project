@@ -166,6 +166,11 @@ infrastructure are described first, followed by tool-specific sections.
 
 #### Changes in existing checks
 
+- Improved {doc}`bugprone-easily-swappable-parameters
+  <clang-tidy/checks/bugprone/easily-swappable-parameters>` check by no longer
+  emitting empty notes for type aliases when {option}`ModelImplicitConversions`
+  is enabled.
+
 - Improved {doc}`bugprone-implicit-widening-of-multiplication-result
   <clang-tidy/checks/bugprone/implicit-widening-of-multiplication-result>` check
   by suggesting a wider type of the same signedness as the original operands,
