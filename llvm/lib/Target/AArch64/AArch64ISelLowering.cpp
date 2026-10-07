@@ -4474,6 +4474,34 @@ static SDValue getAArch64Cmp(SDValue LHS, SDValue RHS, ISD::CondCode CC,
   if (isIntEqualitySetCC(CC) && isa<ConstantSDNode>(RHS)) {
     const ConstantSDNode *RHSC = cast<ConstantSDNode>(RHS);
 
+    // (and X, Mask) == C, with Mask one run of bits, C inside it and not a
+    // compare immediate, but C >> trailing-zeros(Mask) one: shift both
+    // sides down. The AND and the shift select as a UBFX, and the compare
+    // takes an immediate, so
+    //   and  w8, w0, #0xfc00
+    //   mov  w9, #0xd800
+    //   cmp  w8, w9
+    // becomes
+    //   ubfx w8, w0, #10, #6
+    //   cmp  w8, #0x36
+    if (LHS.getOpcode() == ISD::AND && LHS.hasOneUse() &&
+        !AArch64_AM::isLegalCmpImmed(RHSC->getAPIntValue())) {
+      EVT VT = LHS.getValueType();
+      if (auto *MaskC = dyn_cast<ConstantSDNode>(LHS.getOperand(1))) {
+        const APInt &Mask = MaskC->getAPIntValue();
+        const APInt &C = RHSC->getAPIntValue();
+        unsigned Shift = Mask.countr_zero();
+        if (Shift != 0 && Shift < VT.getSizeInBits() && Mask.isShiftedMask() &&
+            C.isSubsetOf(Mask) && !C.isZero() &&
+            AArch64_AM::isLegalArithImmed(C.lshr(Shift).getZExtValue())) {
+          LHS = DAG.getNode(ISD::SRL, DL, VT, LHS,
+                            DAG.getShiftAmountConstant(Shift, VT, DL));
+          RHS = DAG.getConstant(C.lshr(Shift), DL, VT);
+          RHSC = cast<ConstantSDNode>(RHS);
+        }
+      }
+    }
+
     // The imm operand of ADDS is an unsigned immediate, in the range 0 to 4095.
     // For the i8 operand, the largest immediate is 255, so this can be easily
     // encoded in the compare instruction. For the i16 operand, however, the
