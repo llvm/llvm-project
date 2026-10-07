@@ -9,9 +9,7 @@
 // variables and parameters are allocated in the private address space and
 // accessed through the generic address space.
 //
-// TODO(cir): Calls are missing the spir_func calling convention and null
-// pointers to named address spaces are not emitted as an addrspacecast of the
-// generic null pointer.
+// TODO(cir): Calls are missing the spir_func calling convention.
 
 void bar(int &Data) {}
 void bar2(int &Data) {}
@@ -122,8 +120,8 @@ void tmpl(T t) {}
 // LLVM-CIR-NEXT: %[[LOC_ASCAST:.*]] = addrspacecast ptr %[[LOC]] to ptr addrspace(4)
 // LLVM-CIR-NEXT: %[[GLOB_ASCAST:.*]] = addrspacecast ptr %[[GLOB]] to ptr addrspace(4)
 // LLVM-CIR-NEXT: %[[NOAS_ASCAST:.*]] = addrspacecast ptr %[[NOAS]] to ptr addrspace(4)
-// LLVM-CIR-NEXT: store ptr addrspace(3) null, ptr addrspace(4) %[[LOC_ASCAST]], align 8
-// LLVM-CIR-NEXT: store ptr addrspace(1) null, ptr addrspace(4) %[[GLOB_ASCAST]], align 8
+// LLVM-CIR-NEXT: store ptr addrspace(3) addrspacecast (ptr addrspace(4) null to ptr addrspace(3)), ptr addrspace(4) %[[LOC_ASCAST]], align 8
+// LLVM-CIR-NEXT: store ptr addrspace(1) addrspacecast (ptr addrspace(4) null to ptr addrspace(1)), ptr addrspace(4) %[[GLOB_ASCAST]], align 8
 // LLVM-CIR-NEXT: %[[TMP0:.*]] = load ptr addrspace(1), ptr addrspace(4) %[[GLOB_ASCAST]], align 8
 // LLVM-CIR-NEXT: %[[TMP1:.*]] = addrspacecast ptr addrspace(1) %[[TMP0]] to ptr addrspace(4)
 // LLVM-CIR-NEXT: store ptr addrspace(4) %[[TMP1]], ptr addrspace(4) %[[NOAS_ASCAST]], align 8
