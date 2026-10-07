@@ -15,6 +15,8 @@
 
 #include "RISCV.h"
 #include "RISCVTargetMachine.h"
+#include "llvm/ADT/DenseMap.h"
+#include "llvm/ADT/SmallVector.h"
 #include "llvm/ADT/Statistic.h"
 #include "llvm/Analysis/ValueTracking.h"
 #include "llvm/CodeGen/TargetPassConfig.h"
@@ -33,6 +35,9 @@ using namespace llvm;
 #define DEBUG_TYPE "riscv-codegenprepare"
 #define PASS_NAME "RISC-V CodeGenPrepare"
 
+STATISTIC(NumFullWidthExtracts,
+          "Number of full-width vector extract groups formed");
+
 namespace {
 class RISCVCodeGenPrepareImpl
     : public InstVisitor<RISCVCodeGenPrepareImpl, bool> {
@@ -46,6 +51,7 @@ public:
                           const RISCVSubtarget *ST)
       : F(F), DL(&F.getDataLayout()), DT(DT), ST(ST) {}
   bool run();
+  bool combineFullWidthExtracts(BasicBlock &BB);
   bool visitInstruction(Instruction &I) { return false; }
   bool visitAnd(BinaryOperator &BO);
   bool visitIntrinsicInst(IntrinsicInst &I);
@@ -55,6 +61,77 @@ public:
   bool visitFreezeInst(FreezeInst &BO);
 };
 } // namespace
+
+// Combine extraction of every element of an integer vector whose total size
+// is XLEN. This lets instruction selection move the whole vector to a scalar
+// register once and extract the individual elements with scalar operations.
+bool RISCVCodeGenPrepareImpl::combineFullWidthExtracts(BasicBlock &BB) {
+  if (!ST->hasVInstructions())
+    return false;
+
+  DenseMap<Value *, SmallVector<ExtractElementInst *, 8>> Extracts;
+  for (Instruction &I : BB) {
+    auto *Extract = dyn_cast<ExtractElementInst>(&I);
+    if (!Extract)
+      continue;
+
+    auto *VecTy = dyn_cast<FixedVectorType>(Extract->getVectorOperandType());
+    if (!VecTy || !VecTy->getElementType()->isIntegerTy())
+      continue;
+
+    Extracts[Extract->getVectorOperand()].push_back(Extract);
+  }
+
+  bool Changed = false;
+  unsigned XLen = ST->getXLen();
+  for (auto &Entry : Extracts) {
+    Value *Vec = Entry.first;
+    auto *VecTy = cast<FixedVectorType>(Vec->getType());
+    auto *EltTy = dyn_cast<IntegerType>(VecTy->getElementType());
+    unsigned NumElts = VecTy->getNumElements();
+    unsigned EltBits = EltTy->getBitWidth();
+
+    if (EltBits == 1 || EltBits >= XLen || NumElts * EltBits != XLen ||
+        Entry.second.size() != NumElts)
+      continue;
+
+    SmallVector<ExtractElementInst *, 8> ByIndex(NumElts);
+    bool Complete = true;
+    for (ExtractElementInst *Extract : Entry.second) {
+      auto *Index = dyn_cast<ConstantInt>(Extract->getIndexOperand());
+      if (!Index || Index->getValue().uge(NumElts) ||
+          ByIndex[Index->getZExtValue()]) {
+        Complete = false;
+        break;
+      }
+      ByIndex[Index->getZExtValue()] = Extract;
+    }
+    if (!Complete)
+      continue;
+
+    IRBuilder<> Builder(ByIndex[0]);
+    auto *PackedTy = FixedVectorType::get(
+        IntegerType::get(BB.getContext(), XLen), 1);
+    Value *Packed = Builder.CreateBitCast(Vec, PackedTy, "packed");
+    Value *Word = Builder.CreateExtractElement(Packed, (uint64_t)0, "word");
+
+    for (unsigned Index = 0; Index < NumElts; ++Index) {
+      Value *LaneWord = Word;
+      if (Index != 0)
+        LaneWord = Builder.CreateLShr(
+            Word, ConstantInt::get(Word->getType(), Index * EltBits));
+      Value *Lane = Builder.CreateTrunc(LaneWord, EltTy, "lane");
+      ByIndex[Index]->replaceAllUsesWith(Lane);
+    }
+
+    for (ExtractElementInst *Extract : ByIndex)
+      Extract->eraseFromParent();
+    ++NumFullWidthExtracts;
+    Changed = true;
+  }
+
+  return Changed;
+}
 
 namespace {
 class RISCVCodeGenPrepareLegacy : public FunctionPass {
@@ -413,9 +490,11 @@ bool RISCVCodeGenPrepareImpl::expandVPStrideLoad(IntrinsicInst &II) {
 
 bool RISCVCodeGenPrepareImpl::run() {
   bool MadeChange = false;
-  for (auto &BB : F)
+  for (auto &BB : F) {
+    MadeChange |= combineFullWidthExtracts(BB);
     for (Instruction &I : llvm::make_early_inc_range(BB))
       MadeChange |= visit(I);
+  }
 
   return MadeChange;
 }

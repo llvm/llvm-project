@@ -2,21 +2,24 @@
 ; RUN: llc -O2 -mtriple=riscv64 -mattr=+v -verify-machineinstrs < %s | FileCheck %s --check-prefixes=CHECK,RV64
 ; RUN: llc -O2 -mtriple=riscv32 -mattr=+v -verify-machineinstrs < %s | FileCheck %s --check-prefixes=CHECK,RV32
 ; RUN: llc -O2 -mtriple=riscv64 -mattr=+v,+zbb -verify-machineinstrs < %s | FileCheck %s --check-prefixes=CHECK,RV64ZBB
+; RUN: llc -O2 -mtriple=riscv64 -mattr=+v -stats -o /dev/null < %s 2>&1 | FileCheck %s --check-prefix=STATS
+
+; STATS: 3 riscv-codegenprepare  - Number of full-width vector extract groups formed
 
 define i64 @extract_all_v4i16(<4 x i16> %v) {
 ; RV64-LABEL: extract_all_v4i16:
 ; RV64:       # %bb.0:
-; RV64-NEXT:    vsetivli zero, 1, e16, mf2, ta, ma
+; RV64-NEXT:    vsetivli zero, 1, e64, m1, ta, ma
 ; RV64-NEXT:    vmv.x.s a0, v8
-; RV64-NEXT:    vslidedown.vi v9, v8, 1
-; RV64-NEXT:    vmv.x.s a1, v9
-; RV64-NEXT:    vslidedown.vi v9, v8, 2
-; RV64-NEXT:    vmv.x.s a2, v9
-; RV64-NEXT:    vslidedown.vi v8, v8, 3
-; RV64-NEXT:    vmv.x.s a3, v8
-; RV64-NEXT:    add a0, a0, a1
-; RV64-NEXT:    add a2, a2, a3
-; RV64-NEXT:    add a0, a0, a2
+; RV64-NEXT:    slli a1, a0, 48
+; RV64-NEXT:    sraiw a2, a0, 16
+; RV64-NEXT:    slli a3, a0, 16
+; RV64-NEXT:    srai a1, a1, 48
+; RV64-NEXT:    srai a3, a3, 48
+; RV64-NEXT:    srai a0, a0, 48
+; RV64-NEXT:    add a1, a1, a2
+; RV64-NEXT:    add a0, a3, a0
+; RV64-NEXT:    add a0, a1, a0
 ; RV64-NEXT:    ret
 ;
 ; RV32-LABEL: extract_all_v4i16:
@@ -49,17 +52,17 @@ define i64 @extract_all_v4i16(<4 x i16> %v) {
 ;
 ; RV64ZBB-LABEL: extract_all_v4i16:
 ; RV64ZBB:       # %bb.0:
-; RV64ZBB-NEXT:    vsetivli zero, 1, e16, mf2, ta, ma
+; RV64ZBB-NEXT:    vsetivli zero, 1, e64, m1, ta, ma
 ; RV64ZBB-NEXT:    vmv.x.s a0, v8
-; RV64ZBB-NEXT:    vslidedown.vi v9, v8, 1
-; RV64ZBB-NEXT:    vmv.x.s a1, v9
-; RV64ZBB-NEXT:    vslidedown.vi v9, v8, 2
-; RV64ZBB-NEXT:    vmv.x.s a2, v9
-; RV64ZBB-NEXT:    vslidedown.vi v8, v8, 3
-; RV64ZBB-NEXT:    vmv.x.s a3, v8
-; RV64ZBB-NEXT:    add a0, a0, a1
-; RV64ZBB-NEXT:    add a2, a2, a3
-; RV64ZBB-NEXT:    add a0, a0, a2
+; RV64ZBB-NEXT:    sext.h a1, a0
+; RV64ZBB-NEXT:    slli a2, a0, 32
+; RV64ZBB-NEXT:    slli a3, a0, 16
+; RV64ZBB-NEXT:    srai a2, a2, 48
+; RV64ZBB-NEXT:    srai a3, a3, 48
+; RV64ZBB-NEXT:    srai a0, a0, 48
+; RV64ZBB-NEXT:    add a1, a1, a2
+; RV64ZBB-NEXT:    add a0, a3, a0
+; RV64ZBB-NEXT:    add a0, a1, a0
 ; RV64ZBB-NEXT:    ret
   %e0 = extractelement <4 x i16> %v, i32 0
   %e1 = extractelement <4 x i16> %v, i32 1
@@ -78,29 +81,29 @@ define i64 @extract_all_v4i16(<4 x i16> %v) {
 define i64 @extract_all_v8i8(<8 x i8> %v) {
 ; RV64-LABEL: extract_all_v8i8:
 ; RV64:       # %bb.0:
-; RV64-NEXT:    vsetivli zero, 1, e8, mf2, ta, ma
+; RV64-NEXT:    vsetivli zero, 1, e64, m1, ta, ma
 ; RV64-NEXT:    vmv.x.s a0, v8
-; RV64-NEXT:    vslidedown.vi v9, v8, 1
-; RV64-NEXT:    vmv.x.s a1, v9
-; RV64-NEXT:    vslidedown.vi v9, v8, 2
-; RV64-NEXT:    vmv.x.s a2, v9
-; RV64-NEXT:    vslidedown.vi v9, v8, 3
-; RV64-NEXT:    vmv.x.s a3, v9
-; RV64-NEXT:    vslidedown.vi v9, v8, 4
-; RV64-NEXT:    vmv.x.s a4, v9
-; RV64-NEXT:    vslidedown.vi v9, v8, 5
-; RV64-NEXT:    vmv.x.s a5, v9
-; RV64-NEXT:    vslidedown.vi v9, v8, 6
-; RV64-NEXT:    vmv.x.s a6, v9
-; RV64-NEXT:    vslidedown.vi v8, v8, 7
-; RV64-NEXT:    vmv.x.s a7, v8
-; RV64-NEXT:    add a0, a0, a1
-; RV64-NEXT:    add a2, a2, a3
-; RV64-NEXT:    add a4, a4, a5
-; RV64-NEXT:    add a6, a6, a7
-; RV64-NEXT:    add a0, a0, a2
-; RV64-NEXT:    add a4, a4, a6
-; RV64-NEXT:    add a0, a0, a4
+; RV64-NEXT:    slli a1, a0, 56
+; RV64-NEXT:    slli a2, a0, 48
+; RV64-NEXT:    slli a3, a0, 40
+; RV64-NEXT:    sraiw a4, a0, 24
+; RV64-NEXT:    slli a5, a0, 24
+; RV64-NEXT:    slli a6, a0, 16
+; RV64-NEXT:    slli a7, a0, 8
+; RV64-NEXT:    srai a0, a0, 56
+; RV64-NEXT:    srai a1, a1, 56
+; RV64-NEXT:    srai a2, a2, 56
+; RV64-NEXT:    srai a3, a3, 56
+; RV64-NEXT:    srai a5, a5, 56
+; RV64-NEXT:    srai a6, a6, 56
+; RV64-NEXT:    srai a7, a7, 56
+; RV64-NEXT:    add a1, a1, a2
+; RV64-NEXT:    add a3, a3, a4
+; RV64-NEXT:    add a5, a5, a6
+; RV64-NEXT:    add a0, a7, a0
+; RV64-NEXT:    add a1, a1, a3
+; RV64-NEXT:    add a0, a5, a0
+; RV64-NEXT:    add a0, a1, a0
 ; RV64-NEXT:    ret
 ;
 ; RV32-LABEL: extract_all_v8i8:
@@ -169,29 +172,29 @@ define i64 @extract_all_v8i8(<8 x i8> %v) {
 ;
 ; RV64ZBB-LABEL: extract_all_v8i8:
 ; RV64ZBB:       # %bb.0:
-; RV64ZBB-NEXT:    vsetivli zero, 1, e8, mf2, ta, ma
+; RV64ZBB-NEXT:    vsetivli zero, 1, e64, m1, ta, ma
 ; RV64ZBB-NEXT:    vmv.x.s a0, v8
-; RV64ZBB-NEXT:    vslidedown.vi v9, v8, 1
-; RV64ZBB-NEXT:    vmv.x.s a1, v9
-; RV64ZBB-NEXT:    vslidedown.vi v9, v8, 2
-; RV64ZBB-NEXT:    vmv.x.s a2, v9
-; RV64ZBB-NEXT:    vslidedown.vi v9, v8, 3
-; RV64ZBB-NEXT:    vmv.x.s a3, v9
-; RV64ZBB-NEXT:    vslidedown.vi v9, v8, 4
-; RV64ZBB-NEXT:    vmv.x.s a4, v9
-; RV64ZBB-NEXT:    vslidedown.vi v9, v8, 5
-; RV64ZBB-NEXT:    vmv.x.s a5, v9
-; RV64ZBB-NEXT:    vslidedown.vi v9, v8, 6
-; RV64ZBB-NEXT:    vmv.x.s a6, v9
-; RV64ZBB-NEXT:    vslidedown.vi v8, v8, 7
-; RV64ZBB-NEXT:    vmv.x.s a7, v8
-; RV64ZBB-NEXT:    add a0, a0, a1
-; RV64ZBB-NEXT:    add a2, a2, a3
-; RV64ZBB-NEXT:    add a4, a4, a5
-; RV64ZBB-NEXT:    add a6, a6, a7
-; RV64ZBB-NEXT:    add a0, a0, a2
-; RV64ZBB-NEXT:    add a4, a4, a6
-; RV64ZBB-NEXT:    add a0, a0, a4
+; RV64ZBB-NEXT:    sext.b a1, a0
+; RV64ZBB-NEXT:    slli a2, a0, 48
+; RV64ZBB-NEXT:    slli a3, a0, 40
+; RV64ZBB-NEXT:    slli a4, a0, 32
+; RV64ZBB-NEXT:    slli a5, a0, 24
+; RV64ZBB-NEXT:    slli a6, a0, 16
+; RV64ZBB-NEXT:    slli a7, a0, 8
+; RV64ZBB-NEXT:    srai a0, a0, 56
+; RV64ZBB-NEXT:    srai a2, a2, 56
+; RV64ZBB-NEXT:    srai a3, a3, 56
+; RV64ZBB-NEXT:    srai a4, a4, 56
+; RV64ZBB-NEXT:    srai a5, a5, 56
+; RV64ZBB-NEXT:    srai a6, a6, 56
+; RV64ZBB-NEXT:    srai a7, a7, 56
+; RV64ZBB-NEXT:    add a1, a1, a2
+; RV64ZBB-NEXT:    add a3, a3, a4
+; RV64ZBB-NEXT:    add a5, a5, a6
+; RV64ZBB-NEXT:    add a0, a7, a0
+; RV64ZBB-NEXT:    add a1, a1, a3
+; RV64ZBB-NEXT:    add a0, a5, a0
+; RV64ZBB-NEXT:    add a0, a1, a0
 ; RV64ZBB-NEXT:    ret
   %e0 = extractelement <8 x i8> %v, i32 0
   %e1 = extractelement <8 x i8> %v, i32 1
@@ -222,11 +225,11 @@ define i64 @extract_all_v8i8(<8 x i8> %v) {
 define i64 @extract_all_v2i32(<2 x i32> %v) {
 ; RV64-LABEL: extract_all_v2i32:
 ; RV64:       # %bb.0:
-; RV64-NEXT:    vsetivli zero, 1, e32, mf2, ta, ma
+; RV64-NEXT:    vsetivli zero, 1, e64, m1, ta, ma
 ; RV64-NEXT:    vmv.x.s a0, v8
-; RV64-NEXT:    vslidedown.vi v8, v8, 1
-; RV64-NEXT:    vmv.x.s a1, v8
-; RV64-NEXT:    add a0, a0, a1
+; RV64-NEXT:    sext.w a1, a0
+; RV64-NEXT:    srai a0, a0, 32
+; RV64-NEXT:    add a0, a1, a0
 ; RV64-NEXT:    ret
 ;
 ; RV32-LABEL: extract_all_v2i32:
@@ -245,11 +248,11 @@ define i64 @extract_all_v2i32(<2 x i32> %v) {
 ;
 ; RV64ZBB-LABEL: extract_all_v2i32:
 ; RV64ZBB:       # %bb.0:
-; RV64ZBB-NEXT:    vsetivli zero, 1, e32, mf2, ta, ma
+; RV64ZBB-NEXT:    vsetivli zero, 1, e64, m1, ta, ma
 ; RV64ZBB-NEXT:    vmv.x.s a0, v8
-; RV64ZBB-NEXT:    vslidedown.vi v8, v8, 1
-; RV64ZBB-NEXT:    vmv.x.s a1, v8
-; RV64ZBB-NEXT:    add a0, a0, a1
+; RV64ZBB-NEXT:    sext.w a1, a0
+; RV64ZBB-NEXT:    srai a0, a0, 32
+; RV64ZBB-NEXT:    add a0, a1, a0
 ; RV64ZBB-NEXT:    ret
   %e0 = extractelement <2 x i32> %v, i32 0
   %e1 = extractelement <2 x i32> %v, i32 1
@@ -260,14 +263,33 @@ define i64 @extract_all_v2i32(<2 x i32> %v) {
 }
 
 define i32 @extract_all_v2i16(<2 x i16> %v) {
-; CHECK-LABEL: extract_all_v2i16:
-; CHECK:       # %bb.0:
-; CHECK-NEXT:    vsetivli zero, 1, e16, mf4, ta, ma
-; CHECK-NEXT:    vmv.x.s a0, v8
-; CHECK-NEXT:    vslidedown.vi v8, v8, 1
-; CHECK-NEXT:    vmv.x.s a1, v8
-; CHECK-NEXT:    add a0, a0, a1
-; CHECK-NEXT:    ret
+; RV64-LABEL: extract_all_v2i16:
+; RV64:       # %bb.0:
+; RV64-NEXT:    vsetivli zero, 1, e16, mf4, ta, ma
+; RV64-NEXT:    vmv.x.s a0, v8
+; RV64-NEXT:    vslidedown.vi v8, v8, 1
+; RV64-NEXT:    vmv.x.s a1, v8
+; RV64-NEXT:    add a0, a0, a1
+; RV64-NEXT:    ret
+;
+; RV32-LABEL: extract_all_v2i16:
+; RV32:       # %bb.0:
+; RV32-NEXT:    vsetivli zero, 1, e32, m1, ta, ma
+; RV32-NEXT:    vmv.x.s a0, v8
+; RV32-NEXT:    slli a1, a0, 16
+; RV32-NEXT:    srai a1, a1, 16
+; RV32-NEXT:    srai a0, a0, 16
+; RV32-NEXT:    add a0, a1, a0
+; RV32-NEXT:    ret
+;
+; RV64ZBB-LABEL: extract_all_v2i16:
+; RV64ZBB:       # %bb.0:
+; RV64ZBB-NEXT:    vsetivli zero, 1, e16, mf4, ta, ma
+; RV64ZBB-NEXT:    vmv.x.s a0, v8
+; RV64ZBB-NEXT:    vslidedown.vi v8, v8, 1
+; RV64ZBB-NEXT:    vmv.x.s a1, v8
+; RV64ZBB-NEXT:    add a0, a0, a1
+; RV64ZBB-NEXT:    ret
   %e0 = extractelement <2 x i16> %v, i32 0
   %e1 = extractelement <2 x i16> %v, i32 1
   %s0 = sext i16 %e0 to i32
