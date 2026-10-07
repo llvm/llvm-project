@@ -175,7 +175,7 @@ namespace internal {
 // implementing the thread_exit function.
 void call_atexit_callbacks();
 
-}//internal namespace
+} // namespace internal
 
 using AtExitCallback = void(void *);
 
@@ -183,7 +183,7 @@ int add_thread_atexit_callback(AtExitCallback *callback, void *obj);
 
 LIBC_INLINE Thread current_thread() {
   return Thread(get_current_thread_attrib());
-  }
+}
 
 } // namespace LIBC_NAMESPACE_DECL
 
