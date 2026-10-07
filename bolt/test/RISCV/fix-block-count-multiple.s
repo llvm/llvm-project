@@ -29,7 +29,7 @@
 # INDIRECT_HIGHER: jalr {{.*}}# CallProfile: 40 (0 misses) :
 # INDIRECT_HIGHER-DAG: { foo: 10 (0 misses) }
 # INDIRECT_HIGHER-DAG: { bar: 30 (0 misses) }
-# INDIRECT_HIGHER: jal {{.*}}foo # Count: 20
+# INDIRECT_HIGHER: jal {{.*}}foo # Offset: 32 # Count: 20
 
 # FDATA_DIRECT_CALL_LARGER: 0 [unknown] 0 1 main 0 0 0
 # FDATA_DIRECT_CALL_LARGER: 1 main #firstIndirectLabel# 1 foo 0 0 10
@@ -47,7 +47,7 @@
 # DIRECT_HIGHER: {{.*}}# CallProfile: 60 (0 misses) :
 # DIRECT_HIGHER-DAG: { bar: 20 (0 misses) }
 # DIRECT_HIGHER-DAG: { foo: 40 (0 misses) }
-# DIRECT_HIGHER: jal {{.*}}foo # Count: 100
+# DIRECT_HIGHER: jal {{.*}}foo # Offset: 32 # Count: 100
 
         .type main,@function
         .type foo,@function

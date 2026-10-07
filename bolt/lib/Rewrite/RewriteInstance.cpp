@@ -402,8 +402,8 @@ static bool isMarkerSymbol(const BinaryContext &BC, uint8_t ELFType,
 static bool isRetainedLocalSymbol(const BinaryContext &BC, uint8_t ELFType,
                                   uint8_t Binding, uint64_t Size,
                                   StringRef Name) {
-  return ELFType == ELF::STT_NOTYPE && Binding == ELF::STB_LOCAL &&
-         Size == 0 && !isMarkerSymbol(BC, ELFType, Size, Name);
+  return ELFType == ELF::STT_NOTYPE && Binding == ELF::STB_LOCAL && Size == 0 &&
+         !isMarkerSymbol(BC, ELFType, Size, Name);
 }
 
 static Error reportDecompressionError(StringRef SectionName, Error E) {

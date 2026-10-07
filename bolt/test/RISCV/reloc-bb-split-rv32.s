@@ -21,7 +21,7 @@ _start:
 // CHECK-LABEL: {{^}}.LBB00
 // CHECK: nop
 // CHECK: {{^}}[[BRANCH_LABEL:.Ltmp[0-9]+]]
-// CHECK: auipc t0, %pcrel_hi(d) # Label: [[HI_LABEL:.Ltmp[0-9]+]]
+// CHECK: auipc t0, %pcrel_hi(d) # Offset: 2 # Label: [[HI_LABEL:.Ltmp[0-9]+]]
 // CHECK-NEXT: lw t0, %pcrel_lo([[HI_LABEL]])(t0)
 // CHECK-NEXT: j [[BRANCH_LABEL]]
   nop
@@ -34,7 +34,7 @@ _start:
 /// start there.
 // CHECK-LABEL: {{^}}.LFT0
 // CHECK: nop
-// CHECK: auipc t0, %pcrel_hi(d) # Label: [[SECOND_HI:.Ltmp[0-9]+]]
+// CHECK: auipc t0, %pcrel_hi(d) # Offset: 14 # Label: [[SECOND_HI:.Ltmp[0-9]+]]
 // CHECK-NEXT: lw t0, %pcrel_lo([[SECOND_HI]])(t0)
 // CHECK-NEXT: ret
   nop
