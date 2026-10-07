@@ -4569,11 +4569,49 @@ static unsigned getCmpOperandFoldingProfit(SDValue Op, const ARMSubtarget &ST) {
   return 0;
 }
 
+// Return a cheaper value with the same zero/nonzero result as a low-mask AND.
+// Only zero/nonzero is preserved, so this is only suitable for zero tests.
+static SDValue getShiftedLowMaskZeroTest(SDValue Value, SelectionDAG &DAG,
+                                         const SDLoc &DL) {
+  if (Value.getValueType() != MVT::i32 || Value.getOpcode() != ISD::AND ||
+      !Value.hasOneUse())
+    return SDValue();
+
+  auto *Mask = dyn_cast<ConstantSDNode>(Value.getOperand(1));
+  if (!Mask)
+    return SDValue();
+  uint32_t MaskValue = Mask->getZExtValue();
+  // Keep the existing single-bit lowering and UXTB/UXTH for byte/halfword
+  // masks, and avoid a zero or no-op shift.
+  if (!isMask_32(MaskValue) || MaskValue == 1 || MaskValue == 0xff ||
+      MaskValue == 0xffff || MaskValue == ~0U)
+    return SDValue();
+
+  return DAG.getNode(
+      ISD::SHL, DL, MVT::i32, Value.getOperand(0),
+      DAG.getConstant(llvm::countl_zero(MaskValue), DL, MVT::i32));
+}
+
 /// Returns appropriate ARM CMP (cmp) and corresponding condition code for
 /// the given operands.
 SDValue ARMTargetLowering::getARMCmp(SDValue LHS, SDValue RHS, ISD::CondCode CC,
                                      SDValue &ARMcc, SelectionDAG &DAG,
                                      const SDLoc &dl) const {
+  // An expanded i64 zero comparison ORs its two i32 halves together. Replace
+  // a low-mask AND in either half with a shift: OR is zero exactly when both
+  // operands are zero. Require single uses to avoid duplicating live work.
+  if (Subtarget->isThumb2() && isIntEqualitySetCC(CC) && isNullConstant(RHS) &&
+      LHS.getValueType() == MVT::i32 && LHS.getOpcode() == ISD::OR &&
+      LHS.hasOneUse()) {
+    for (unsigned I = 0; I != 2; ++I) {
+      if (SDValue Shift =
+              getShiftedLowMaskZeroTest(LHS.getOperand(I), DAG, dl)) {
+        LHS = DAG.getNode(ISD::OR, dl, MVT::i32, LHS.getOperand(I ^ 1), Shift);
+        break;
+      }
+    }
+  }
+
   if (ConstantSDNode *RHSC = dyn_cast<ConstantSDNode>(RHS.getNode())) {
     unsigned C = RHSC->getZExtValue();
     if (!isLegalICmpImmediate((int32_t)C)) {
@@ -18497,9 +18535,15 @@ ARMTargetLowering::PerformCMOVCombine(SDNode *N, SelectionDAG &DAG) const {
         // If x == y then x - y == 0 and ARM's CLZ will return 32, shifting it
         // right 5 bits will make that 32 be 1, otherwise it will be 0.
         // CMOV 0, 1, ==, (CMPZ x, y) -> SRL (CTLZ (SUB x, y)), 5
-        SDValue Sub = DAG.getNode(ISD::SUB, dl, VT, LHS, RHS);
-        Res = DAG.getNode(ISD::SRL, dl, VT, DAG.getNode(ISD::CTLZ, dl, VT, Sub),
-                          DAG.getConstant(5, dl, MVT::i32));
+        SDValue Value;
+        if (VT == MVT::i32 && Subtarget->isThumb2() && isNullConstant(RHS) &&
+            Cmp.hasOneUse())
+          Value = getShiftedLowMaskZeroTest(LHS, DAG, dl);
+        if (!Value)
+          Value = DAG.getNode(ISD::SUB, dl, VT, LHS, RHS);
+        Res =
+            DAG.getNode(ISD::SRL, dl, VT, DAG.getNode(ISD::CTLZ, dl, VT, Value),
+                        DAG.getConstant(5, dl, MVT::i32));
       } else {
         // CMOV 0, 1, ==, (CMPZ x, y) ->
         //     (UADDO_CARRY (SUB x, y), t:0, t:1)
