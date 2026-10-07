@@ -1503,7 +1503,7 @@ entry:
 }
 
 ;; vgpr pointer, system scope
-define i64 @av_global_load_b64_0_11(ptr addrspace(1) %addr) {
+define <2 x i32> @av_global_load_b64_0_11(ptr addrspace(1) %addr) {
 ; GFX906-SDAG-LABEL: av_global_load_b64_0_11:
 ; GFX906-SDAG:       ; %bb.0: ; %entry
 ; GFX906-SDAG-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
@@ -1598,12 +1598,12 @@ define i64 @av_global_load_b64_0_11(ptr addrspace(1) %addr) {
 ; GFX1310-ISEL-NEXT:    s_wait_loadcnt 0x0
 ; GFX1310-ISEL-NEXT:    s_set_pc_i64 s[30:31]
 entry:
-  %data = call i64 @llvm.amdgcn.av.load.b64.p1(ptr addrspace(1) %addr, metadata !3)
-  ret i64 %data
+  %data = call <2 x i32> @llvm.amdgcn.av.load.b64.p1(ptr addrspace(1) %addr, metadata !3)
+  ret <2 x i32> %data
 }
 
 ;; sgpr pointer, system scope
-define i64 @av_global_load_b64_saddr_0_03(ptr addrspace(1) inreg %addr) {
+define <2 x i32> @av_global_load_b64_saddr_0_03(ptr addrspace(1) inreg %addr) {
 ; GFX906-SDAG-LABEL: av_global_load_b64_saddr_0_03:
 ; GFX906-SDAG:       ; %bb.0: ; %entry
 ; GFX906-SDAG-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
@@ -1710,8 +1710,8 @@ define i64 @av_global_load_b64_saddr_0_03(ptr addrspace(1) inreg %addr) {
 ; GFX1310-ISEL-NEXT:    s_wait_loadcnt 0x0
 ; GFX1310-ISEL-NEXT:    s_set_pc_i64 s[30:31]
 entry:
-  %data = call i64 @llvm.amdgcn.av.load.b64.p1(ptr addrspace(1) %addr, metadata !3)
-  ret i64 %data
+  %data = call <2 x i32> @llvm.amdgcn.av.load.b64.p1(ptr addrspace(1) %addr, metadata !3)
+  ret <2 x i32> %data
 }
 
 ;;==============================================================================

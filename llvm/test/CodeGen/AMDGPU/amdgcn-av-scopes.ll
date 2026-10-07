@@ -4973,7 +4973,7 @@ define void @flat_store_b32_system(ptr %p, i32 %v) {
 }
 
 ; scope: system
-define i64 @global_load_b64_system(ptr addrspace(1) %p) {
+define <2 x i32> @global_load_b64_system(ptr addrspace(1) %p) {
 ; GFX942-SDAG-LABEL: global_load_b64_system:
 ; GFX942-SDAG:       ; %bb.0:
 ; GFX942-SDAG-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
@@ -5059,16 +5059,16 @@ define i64 @global_load_b64_system(ptr addrspace(1) %p) {
 ; GFX1100-WGP-ISEL-NEXT:    global_load_b64 v[0:1], v[0:1], off glc
 ; GFX1100-WGP-ISEL-NEXT:    s_waitcnt vmcnt(0)
 ; GFX1100-WGP-ISEL-NEXT:    s_setpc_b64 s[30:31]
-  %v = call i64 @llvm.amdgcn.av.load.b64.p1(ptr addrspace(1) %p, metadata !3)
-  ret i64 %v
+  %v = call <2 x i32> @llvm.amdgcn.av.load.b64.p1(ptr addrspace(1) %p, metadata !3)
+  ret <2 x i32> %v
 }
 
 ; scope: system
-define void @global_store_b64_system(ptr addrspace(1) %p, i64 %v) {
+define void @global_store_b64_system(ptr addrspace(1) %p, <2 x i32> %v) {
 ; GFX942-SDAG-LABEL: global_store_b64_system:
 ; GFX942-SDAG:       ; %bb.0:
 ; GFX942-SDAG-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; GFX942-SDAG-NEXT:    global_store_dwordx2 v[0:1], v[2:3], off
+; GFX942-SDAG-NEXT:    global_store_dwordx2 v[0:1], v[2:3], off sc0 sc1
 ; GFX942-SDAG-NEXT:    s_waitcnt vmcnt(0)
 ; GFX942-SDAG-NEXT:    s_setpc_b64 s[30:31]
 ;
@@ -5088,7 +5088,7 @@ define void @global_store_b64_system(ptr addrspace(1) %p, i64 %v) {
 ; GFX1250-SDAG:       ; %bb.0:
 ; GFX1250-SDAG-NEXT:    s_wait_loadcnt_dscnt 0x0
 ; GFX1250-SDAG-NEXT:    s_wait_kmcnt 0x0
-; GFX1250-SDAG-NEXT:    global_store_b64 v[0:1], v[2:3], off
+; GFX1250-SDAG-NEXT:    global_store_b64 v[0:1], v[2:3], off scope:SCOPE_SYS
 ; GFX1250-SDAG-NEXT:    s_set_pc_i64 s[30:31]
 ;
 ; GFX1012-WGP-SDAG-LABEL: global_store_b64_system:
@@ -5140,12 +5140,12 @@ define void @global_store_b64_system(ptr addrspace(1) %p, i64 %v) {
 ; GFX1100-WGP-ISEL-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
 ; GFX1100-WGP-ISEL-NEXT:    global_store_b64 v[0:1], v[2:3], off
 ; GFX1100-WGP-ISEL-NEXT:    s_setpc_b64 s[30:31]
-  call void @llvm.amdgcn.av.store.b64.p1(ptr addrspace(1) %p, i64 %v, metadata !3)
+  call void @llvm.amdgcn.av.store.b64.p1(ptr addrspace(1) %p, <2 x i32> %v, metadata !3)
   ret void
 }
 
 ; scope: system
-define i64 @flat_load_b64_system(ptr %p) {
+define <2 x i32> @flat_load_b64_system(ptr %p) {
 ; GFX942-SDAG-LABEL: flat_load_b64_system:
 ; GFX942-SDAG:       ; %bb.0:
 ; GFX942-SDAG-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
@@ -5231,16 +5231,16 @@ define i64 @flat_load_b64_system(ptr %p) {
 ; GFX1100-WGP-ISEL-NEXT:    flat_load_b64 v[0:1], v[0:1] glc
 ; GFX1100-WGP-ISEL-NEXT:    s_waitcnt vmcnt(0) lgkmcnt(0)
 ; GFX1100-WGP-ISEL-NEXT:    s_setpc_b64 s[30:31]
-  %v = call i64 @llvm.amdgcn.av.load.b64.p0(ptr %p, metadata !3)
-  ret i64 %v
+  %v = call <2 x i32> @llvm.amdgcn.av.load.b64.p0(ptr %p, metadata !3)
+  ret <2 x i32> %v
 }
 
 ; scope: system
-define void @flat_store_b64_system(ptr %p, i64 %v) {
+define void @flat_store_b64_system(ptr %p, <2 x i32> %v) {
 ; GFX942-SDAG-LABEL: flat_store_b64_system:
 ; GFX942-SDAG:       ; %bb.0:
 ; GFX942-SDAG-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; GFX942-SDAG-NEXT:    flat_store_dwordx2 v[0:1], v[2:3]
+; GFX942-SDAG-NEXT:    flat_store_dwordx2 v[0:1], v[2:3] sc0 sc1
 ; GFX942-SDAG-NEXT:    s_waitcnt vmcnt(0) lgkmcnt(0)
 ; GFX942-SDAG-NEXT:    s_setpc_b64 s[30:31]
 ;
@@ -5262,7 +5262,7 @@ define void @flat_store_b64_system(ptr %p, i64 %v) {
 ; GFX1250-SDAG:       ; %bb.0:
 ; GFX1250-SDAG-NEXT:    s_wait_loadcnt_dscnt 0x0
 ; GFX1250-SDAG-NEXT:    s_wait_kmcnt 0x0
-; GFX1250-SDAG-NEXT:    flat_store_b64 v[0:1], v[2:3]
+; GFX1250-SDAG-NEXT:    flat_store_b64 v[0:1], v[2:3] scope:SCOPE_SYS
 ; GFX1250-SDAG-NEXT:    s_wait_dscnt 0x0
 ; GFX1250-SDAG-NEXT:    s_set_pc_i64 s[30:31]
 ;
@@ -5322,7 +5322,7 @@ define void @flat_store_b64_system(ptr %p, i64 %v) {
 ; GFX1100-WGP-ISEL-NEXT:    flat_store_b64 v[0:1], v[2:3]
 ; GFX1100-WGP-ISEL-NEXT:    s_waitcnt lgkmcnt(0)
 ; GFX1100-WGP-ISEL-NEXT:    s_setpc_b64 s[30:31]
-  call void @llvm.amdgcn.av.store.b64.p0(ptr %p, i64 %v, metadata !3)
+  call void @llvm.amdgcn.av.store.b64.p0(ptr %p, <2 x i32> %v, metadata !3)
   ret void
 }
 

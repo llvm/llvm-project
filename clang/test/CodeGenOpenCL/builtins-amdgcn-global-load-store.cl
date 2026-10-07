@@ -12,11 +12,11 @@ typedef v4u32 __global *global_ptr_to_v4u32;
 typedef unsigned char u8;
 typedef unsigned short u16;
 typedef unsigned int u32;
-typedef unsigned long u64;
+typedef __attribute__((__vector_size__(2 * sizeof(unsigned int)))) unsigned int v2u32;
 typedef u8 __global *global_ptr_to_u8;
 typedef u16 __global *global_ptr_to_u16;
 typedef u32 __global *global_ptr_to_u32;
-typedef u64 __global *global_ptr_to_u64;
+typedef v2u32 __global *global_ptr_to_v2u32;
 
 //------------------------------------------------------------------------------
 // Global Load
@@ -240,55 +240,55 @@ u32 test_amdgcn_global_load_b32_cluster(global_ptr_to_u32 ptr) {
 
 // CHECK-LABEL: @test_amdgcn_global_load_b64_wave(
 // CHECK-NEXT:  entry:
-// CHECK-NEXT:    [[TMP0:%.*]] = tail call i64 @llvm.amdgcn.av.load.b64.p1(ptr addrspace(1) [[PTR:%.*]], metadata [[META8]])
-// CHECK-NEXT:    ret i64 [[TMP0]]
+// CHECK-NEXT:    [[TMP0:%.*]] = tail call <2 x i32> @llvm.amdgcn.av.load.b64.p1(ptr addrspace(1) [[PTR:%.*]], metadata [[META8]])
+// CHECK-NEXT:    ret <2 x i32> [[TMP0]]
 //
-u64 test_amdgcn_global_load_b64_wave(global_ptr_to_u64 ptr) {
+v2u32 test_amdgcn_global_load_b64_wave(global_ptr_to_v2u32 ptr) {
   return __builtin_amdgcn_av_load_b64(ptr, __MEMORY_SCOPE_WVFRNT);
 }
 
 // CHECK-LABEL: @test_amdgcn_global_load_b64_workgroup(
 // CHECK-NEXT:  entry:
-// CHECK-NEXT:    [[TMP0:%.*]] = tail call i64 @llvm.amdgcn.av.load.b64.p1(ptr addrspace(1) [[PTR:%.*]], metadata [[META9]])
-// CHECK-NEXT:    ret i64 [[TMP0]]
+// CHECK-NEXT:    [[TMP0:%.*]] = tail call <2 x i32> @llvm.amdgcn.av.load.b64.p1(ptr addrspace(1) [[PTR:%.*]], metadata [[META9]])
+// CHECK-NEXT:    ret <2 x i32> [[TMP0]]
 //
-u64 test_amdgcn_global_load_b64_workgroup(global_ptr_to_u64 ptr) {
+v2u32 test_amdgcn_global_load_b64_workgroup(global_ptr_to_v2u32 ptr) {
   return __builtin_amdgcn_av_load_b64(ptr, __MEMORY_SCOPE_WRKGRP);
 }
 
 // CHECK-LABEL: @test_amdgcn_global_load_b64_device(
 // CHECK-NEXT:  entry:
-// CHECK-NEXT:    [[TMP0:%.*]] = tail call i64 @llvm.amdgcn.av.load.b64.p1(ptr addrspace(1) [[PTR:%.*]], metadata [[META10]])
-// CHECK-NEXT:    ret i64 [[TMP0]]
+// CHECK-NEXT:    [[TMP0:%.*]] = tail call <2 x i32> @llvm.amdgcn.av.load.b64.p1(ptr addrspace(1) [[PTR:%.*]], metadata [[META10]])
+// CHECK-NEXT:    ret <2 x i32> [[TMP0]]
 //
-u64 test_amdgcn_global_load_b64_device(global_ptr_to_u64 ptr) {
+v2u32 test_amdgcn_global_load_b64_device(global_ptr_to_v2u32 ptr) {
   return __builtin_amdgcn_av_load_b64(ptr, __MEMORY_SCOPE_DEVICE);
 }
 
 // CHECK-LABEL: @test_amdgcn_global_load_b64_system(
 // CHECK-NEXT:  entry:
-// CHECK-NEXT:    [[TMP0:%.*]] = tail call i64 @llvm.amdgcn.av.load.b64.p1(ptr addrspace(1) [[PTR:%.*]], metadata [[META11]])
-// CHECK-NEXT:    ret i64 [[TMP0]]
+// CHECK-NEXT:    [[TMP0:%.*]] = tail call <2 x i32> @llvm.amdgcn.av.load.b64.p1(ptr addrspace(1) [[PTR:%.*]], metadata [[META11]])
+// CHECK-NEXT:    ret <2 x i32> [[TMP0]]
 //
-u64 test_amdgcn_global_load_b64_system(global_ptr_to_u64 ptr) {
+v2u32 test_amdgcn_global_load_b64_system(global_ptr_to_v2u32 ptr) {
   return __builtin_amdgcn_av_load_b64(ptr, __MEMORY_SCOPE_SYSTEM);
 }
 
 // CHECK-LABEL: @test_amdgcn_global_load_b64_single(
 // CHECK-NEXT:  entry:
-// CHECK-NEXT:    [[TMP0:%.*]] = tail call i64 @llvm.amdgcn.av.load.b64.p1(ptr addrspace(1) [[PTR:%.*]], metadata [[META12]])
-// CHECK-NEXT:    ret i64 [[TMP0]]
+// CHECK-NEXT:    [[TMP0:%.*]] = tail call <2 x i32> @llvm.amdgcn.av.load.b64.p1(ptr addrspace(1) [[PTR:%.*]], metadata [[META12]])
+// CHECK-NEXT:    ret <2 x i32> [[TMP0]]
 //
-u64 test_amdgcn_global_load_b64_single(global_ptr_to_u64 ptr) {
+v2u32 test_amdgcn_global_load_b64_single(global_ptr_to_v2u32 ptr) {
   return __builtin_amdgcn_av_load_b64(ptr, __MEMORY_SCOPE_SINGLE);
 }
 
 // CHECK-LABEL: @test_amdgcn_global_load_b64_cluster(
 // CHECK-NEXT:  entry:
-// CHECK-NEXT:    [[TMP0:%.*]] = tail call i64 @llvm.amdgcn.av.load.b64.p1(ptr addrspace(1) [[PTR:%.*]], metadata [[META13]])
-// CHECK-NEXT:    ret i64 [[TMP0]]
+// CHECK-NEXT:    [[TMP0:%.*]] = tail call <2 x i32> @llvm.amdgcn.av.load.b64.p1(ptr addrspace(1) [[PTR:%.*]], metadata [[META13]])
+// CHECK-NEXT:    ret <2 x i32> [[TMP0]]
 //
-u64 test_amdgcn_global_load_b64_cluster(global_ptr_to_u64 ptr) {
+v2u32 test_amdgcn_global_load_b64_cluster(global_ptr_to_v2u32 ptr) {
   return __builtin_amdgcn_av_load_b64(ptr, __MEMORY_SCOPE_CLUSTR);
 }
 
@@ -514,55 +514,55 @@ void test_amdgcn_global_store_b32_cluster(global_ptr_to_u32 ptr, u32 data) {
 
 // CHECK-LABEL: @test_amdgcn_global_store_b64_wave(
 // CHECK-NEXT:  entry:
-// CHECK-NEXT:    tail call void @llvm.amdgcn.av.store.b64.p1(ptr addrspace(1) [[PTR:%.*]], i64 [[DATA:%.*]], metadata [[META8]])
+// CHECK-NEXT:    tail call void @llvm.amdgcn.av.store.b64.p1(ptr addrspace(1) [[PTR:%.*]], <2 x i32> [[DATA:%.*]], metadata [[META8]])
 // CHECK-NEXT:    ret void
 //
-void test_amdgcn_global_store_b64_wave(global_ptr_to_u64 ptr, u64 data) {
+void test_amdgcn_global_store_b64_wave(global_ptr_to_v2u32 ptr, v2u32 data) {
   __builtin_amdgcn_av_store_b64(ptr, data, __MEMORY_SCOPE_WVFRNT);
 }
 
 // CHECK-LABEL: @test_amdgcn_global_store_b64_workgroup(
 // CHECK-NEXT:  entry:
-// CHECK-NEXT:    tail call void @llvm.amdgcn.av.store.b64.p1(ptr addrspace(1) [[PTR:%.*]], i64 [[DATA:%.*]], metadata [[META9]])
+// CHECK-NEXT:    tail call void @llvm.amdgcn.av.store.b64.p1(ptr addrspace(1) [[PTR:%.*]], <2 x i32> [[DATA:%.*]], metadata [[META9]])
 // CHECK-NEXT:    ret void
 //
-void test_amdgcn_global_store_b64_workgroup(global_ptr_to_u64 ptr, u64 data) {
+void test_amdgcn_global_store_b64_workgroup(global_ptr_to_v2u32 ptr, v2u32 data) {
   __builtin_amdgcn_av_store_b64(ptr, data, __MEMORY_SCOPE_WRKGRP);
 }
 
 // CHECK-LABEL: @test_amdgcn_global_store_b64_device(
 // CHECK-NEXT:  entry:
-// CHECK-NEXT:    tail call void @llvm.amdgcn.av.store.b64.p1(ptr addrspace(1) [[PTR:%.*]], i64 [[DATA:%.*]], metadata [[META10]])
+// CHECK-NEXT:    tail call void @llvm.amdgcn.av.store.b64.p1(ptr addrspace(1) [[PTR:%.*]], <2 x i32> [[DATA:%.*]], metadata [[META10]])
 // CHECK-NEXT:    ret void
 //
-void test_amdgcn_global_store_b64_device(global_ptr_to_u64 ptr, u64 data) {
+void test_amdgcn_global_store_b64_device(global_ptr_to_v2u32 ptr, v2u32 data) {
   __builtin_amdgcn_av_store_b64(ptr, data, __MEMORY_SCOPE_DEVICE);
 }
 
 // CHECK-LABEL: @test_amdgcn_global_store_b64_system(
 // CHECK-NEXT:  entry:
-// CHECK-NEXT:    tail call void @llvm.amdgcn.av.store.b64.p1(ptr addrspace(1) [[PTR:%.*]], i64 [[DATA:%.*]], metadata [[META11]])
+// CHECK-NEXT:    tail call void @llvm.amdgcn.av.store.b64.p1(ptr addrspace(1) [[PTR:%.*]], <2 x i32> [[DATA:%.*]], metadata [[META11]])
 // CHECK-NEXT:    ret void
 //
-void test_amdgcn_global_store_b64_system(global_ptr_to_u64 ptr, u64 data) {
+void test_amdgcn_global_store_b64_system(global_ptr_to_v2u32 ptr, v2u32 data) {
   __builtin_amdgcn_av_store_b64(ptr, data, __MEMORY_SCOPE_SYSTEM);
 }
 
 // CHECK-LABEL: @test_amdgcn_global_store_b64_single(
 // CHECK-NEXT:  entry:
-// CHECK-NEXT:    tail call void @llvm.amdgcn.av.store.b64.p1(ptr addrspace(1) [[PTR:%.*]], i64 [[DATA:%.*]], metadata [[META12]])
+// CHECK-NEXT:    tail call void @llvm.amdgcn.av.store.b64.p1(ptr addrspace(1) [[PTR:%.*]], <2 x i32> [[DATA:%.*]], metadata [[META12]])
 // CHECK-NEXT:    ret void
 //
-void test_amdgcn_global_store_b64_single(global_ptr_to_u64 ptr, u64 data) {
+void test_amdgcn_global_store_b64_single(global_ptr_to_v2u32 ptr, v2u32 data) {
   __builtin_amdgcn_av_store_b64(ptr, data, __MEMORY_SCOPE_SINGLE);
 }
 
 // CHECK-LABEL: @test_amdgcn_global_store_b64_cluster(
 // CHECK-NEXT:  entry:
-// CHECK-NEXT:    tail call void @llvm.amdgcn.av.store.b64.p1(ptr addrspace(1) [[PTR:%.*]], i64 [[DATA:%.*]], metadata [[META13]])
+// CHECK-NEXT:    tail call void @llvm.amdgcn.av.store.b64.p1(ptr addrspace(1) [[PTR:%.*]], <2 x i32> [[DATA:%.*]], metadata [[META13]])
 // CHECK-NEXT:    ret void
 //
-void test_amdgcn_global_store_b64_cluster(global_ptr_to_u64 ptr, u64 data) {
+void test_amdgcn_global_store_b64_cluster(global_ptr_to_v2u32 ptr, v2u32 data) {
   __builtin_amdgcn_av_store_b64(ptr, data, __MEMORY_SCOPE_CLUSTR);
 }
 
@@ -788,55 +788,55 @@ u32 test_amdgcn_flat_load_b32_cluster(u32 * ptr) {
 
 // CHECK-LABEL: @test_amdgcn_flat_load_b64_wave(
 // CHECK-NEXT:  entry:
-// CHECK-NEXT:    [[TMP0:%.*]] = tail call i64 @llvm.amdgcn.av.load.b64.p0(ptr [[PTR:%.*]], metadata [[META8]])
-// CHECK-NEXT:    ret i64 [[TMP0]]
+// CHECK-NEXT:    [[TMP0:%.*]] = tail call <2 x i32> @llvm.amdgcn.av.load.b64.p0(ptr [[PTR:%.*]], metadata [[META8]])
+// CHECK-NEXT:    ret <2 x i32> [[TMP0]]
 //
-u64 test_amdgcn_flat_load_b64_wave(u64 * ptr) {
+v2u32 test_amdgcn_flat_load_b64_wave(v2u32 * ptr) {
   return __builtin_amdgcn_av_load_b64(ptr, __MEMORY_SCOPE_WVFRNT);
 }
 
 // CHECK-LABEL: @test_amdgcn_flat_load_b64_workgroup(
 // CHECK-NEXT:  entry:
-// CHECK-NEXT:    [[TMP0:%.*]] = tail call i64 @llvm.amdgcn.av.load.b64.p0(ptr [[PTR:%.*]], metadata [[META9]])
-// CHECK-NEXT:    ret i64 [[TMP0]]
+// CHECK-NEXT:    [[TMP0:%.*]] = tail call <2 x i32> @llvm.amdgcn.av.load.b64.p0(ptr [[PTR:%.*]], metadata [[META9]])
+// CHECK-NEXT:    ret <2 x i32> [[TMP0]]
 //
-u64 test_amdgcn_flat_load_b64_workgroup(u64 * ptr) {
+v2u32 test_amdgcn_flat_load_b64_workgroup(v2u32 * ptr) {
   return __builtin_amdgcn_av_load_b64(ptr, __MEMORY_SCOPE_WRKGRP);
 }
 
 // CHECK-LABEL: @test_amdgcn_flat_load_b64_device(
 // CHECK-NEXT:  entry:
-// CHECK-NEXT:    [[TMP0:%.*]] = tail call i64 @llvm.amdgcn.av.load.b64.p0(ptr [[PTR:%.*]], metadata [[META10]])
-// CHECK-NEXT:    ret i64 [[TMP0]]
+// CHECK-NEXT:    [[TMP0:%.*]] = tail call <2 x i32> @llvm.amdgcn.av.load.b64.p0(ptr [[PTR:%.*]], metadata [[META10]])
+// CHECK-NEXT:    ret <2 x i32> [[TMP0]]
 //
-u64 test_amdgcn_flat_load_b64_device(u64 * ptr) {
+v2u32 test_amdgcn_flat_load_b64_device(v2u32 * ptr) {
   return __builtin_amdgcn_av_load_b64(ptr, __MEMORY_SCOPE_DEVICE);
 }
 
 // CHECK-LABEL: @test_amdgcn_flat_load_b64_system(
 // CHECK-NEXT:  entry:
-// CHECK-NEXT:    [[TMP0:%.*]] = tail call i64 @llvm.amdgcn.av.load.b64.p0(ptr [[PTR:%.*]], metadata [[META11]])
-// CHECK-NEXT:    ret i64 [[TMP0]]
+// CHECK-NEXT:    [[TMP0:%.*]] = tail call <2 x i32> @llvm.amdgcn.av.load.b64.p0(ptr [[PTR:%.*]], metadata [[META11]])
+// CHECK-NEXT:    ret <2 x i32> [[TMP0]]
 //
-u64 test_amdgcn_flat_load_b64_system(u64 * ptr) {
+v2u32 test_amdgcn_flat_load_b64_system(v2u32 * ptr) {
   return __builtin_amdgcn_av_load_b64(ptr, __MEMORY_SCOPE_SYSTEM);
 }
 
 // CHECK-LABEL: @test_amdgcn_flat_load_b64_single(
 // CHECK-NEXT:  entry:
-// CHECK-NEXT:    [[TMP0:%.*]] = tail call i64 @llvm.amdgcn.av.load.b64.p0(ptr [[PTR:%.*]], metadata [[META12]])
-// CHECK-NEXT:    ret i64 [[TMP0]]
+// CHECK-NEXT:    [[TMP0:%.*]] = tail call <2 x i32> @llvm.amdgcn.av.load.b64.p0(ptr [[PTR:%.*]], metadata [[META12]])
+// CHECK-NEXT:    ret <2 x i32> [[TMP0]]
 //
-u64 test_amdgcn_flat_load_b64_single(u64 * ptr) {
+v2u32 test_amdgcn_flat_load_b64_single(v2u32 * ptr) {
   return __builtin_amdgcn_av_load_b64(ptr, __MEMORY_SCOPE_SINGLE);
 }
 
 // CHECK-LABEL: @test_amdgcn_flat_load_b64_cluster(
 // CHECK-NEXT:  entry:
-// CHECK-NEXT:    [[TMP0:%.*]] = tail call i64 @llvm.amdgcn.av.load.b64.p0(ptr [[PTR:%.*]], metadata [[META13]])
-// CHECK-NEXT:    ret i64 [[TMP0]]
+// CHECK-NEXT:    [[TMP0:%.*]] = tail call <2 x i32> @llvm.amdgcn.av.load.b64.p0(ptr [[PTR:%.*]], metadata [[META13]])
+// CHECK-NEXT:    ret <2 x i32> [[TMP0]]
 //
-u64 test_amdgcn_flat_load_b64_cluster(u64 * ptr) {
+v2u32 test_amdgcn_flat_load_b64_cluster(v2u32 * ptr) {
   return __builtin_amdgcn_av_load_b64(ptr, __MEMORY_SCOPE_CLUSTR);
 }
 
@@ -1062,55 +1062,55 @@ void test_amdgcn_flat_store_b32_cluster(u32 * ptr, u32 data) {
 
 // CHECK-LABEL: @test_amdgcn_flat_store_b64_wave(
 // CHECK-NEXT:  entry:
-// CHECK-NEXT:    tail call void @llvm.amdgcn.av.store.b64.p0(ptr [[PTR:%.*]], i64 [[DATA:%.*]], metadata [[META8]])
+// CHECK-NEXT:    tail call void @llvm.amdgcn.av.store.b64.p0(ptr [[PTR:%.*]], <2 x i32> [[DATA:%.*]], metadata [[META8]])
 // CHECK-NEXT:    ret void
 //
-void test_amdgcn_flat_store_b64_wave(u64 * ptr, u64 data) {
+void test_amdgcn_flat_store_b64_wave(v2u32 * ptr, v2u32 data) {
   __builtin_amdgcn_av_store_b64(ptr, data, __MEMORY_SCOPE_WVFRNT);
 }
 
 // CHECK-LABEL: @test_amdgcn_flat_store_b64_workgroup(
 // CHECK-NEXT:  entry:
-// CHECK-NEXT:    tail call void @llvm.amdgcn.av.store.b64.p0(ptr [[PTR:%.*]], i64 [[DATA:%.*]], metadata [[META9]])
+// CHECK-NEXT:    tail call void @llvm.amdgcn.av.store.b64.p0(ptr [[PTR:%.*]], <2 x i32> [[DATA:%.*]], metadata [[META9]])
 // CHECK-NEXT:    ret void
 //
-void test_amdgcn_flat_store_b64_workgroup(u64 * ptr, u64 data) {
+void test_amdgcn_flat_store_b64_workgroup(v2u32 * ptr, v2u32 data) {
   __builtin_amdgcn_av_store_b64(ptr, data, __MEMORY_SCOPE_WRKGRP);
 }
 
 // CHECK-LABEL: @test_amdgcn_flat_store_b64_device(
 // CHECK-NEXT:  entry:
-// CHECK-NEXT:    tail call void @llvm.amdgcn.av.store.b64.p0(ptr [[PTR:%.*]], i64 [[DATA:%.*]], metadata [[META10]])
+// CHECK-NEXT:    tail call void @llvm.amdgcn.av.store.b64.p0(ptr [[PTR:%.*]], <2 x i32> [[DATA:%.*]], metadata [[META10]])
 // CHECK-NEXT:    ret void
 //
-void test_amdgcn_flat_store_b64_device(u64 * ptr, u64 data) {
+void test_amdgcn_flat_store_b64_device(v2u32 * ptr, v2u32 data) {
   __builtin_amdgcn_av_store_b64(ptr, data, __MEMORY_SCOPE_DEVICE);
 }
 
 // CHECK-LABEL: @test_amdgcn_flat_store_b64_system(
 // CHECK-NEXT:  entry:
-// CHECK-NEXT:    tail call void @llvm.amdgcn.av.store.b64.p0(ptr [[PTR:%.*]], i64 [[DATA:%.*]], metadata [[META11]])
+// CHECK-NEXT:    tail call void @llvm.amdgcn.av.store.b64.p0(ptr [[PTR:%.*]], <2 x i32> [[DATA:%.*]], metadata [[META11]])
 // CHECK-NEXT:    ret void
 //
-void test_amdgcn_flat_store_b64_system(u64 * ptr, u64 data) {
+void test_amdgcn_flat_store_b64_system(v2u32 * ptr, v2u32 data) {
   __builtin_amdgcn_av_store_b64(ptr, data, __MEMORY_SCOPE_SYSTEM);
 }
 
 // CHECK-LABEL: @test_amdgcn_flat_store_b64_single(
 // CHECK-NEXT:  entry:
-// CHECK-NEXT:    tail call void @llvm.amdgcn.av.store.b64.p0(ptr [[PTR:%.*]], i64 [[DATA:%.*]], metadata [[META12]])
+// CHECK-NEXT:    tail call void @llvm.amdgcn.av.store.b64.p0(ptr [[PTR:%.*]], <2 x i32> [[DATA:%.*]], metadata [[META12]])
 // CHECK-NEXT:    ret void
 //
-void test_amdgcn_flat_store_b64_single(u64 * ptr, u64 data) {
+void test_amdgcn_flat_store_b64_single(v2u32 * ptr, v2u32 data) {
   __builtin_amdgcn_av_store_b64(ptr, data, __MEMORY_SCOPE_SINGLE);
 }
 
 // CHECK-LABEL: @test_amdgcn_flat_store_b64_cluster(
 // CHECK-NEXT:  entry:
-// CHECK-NEXT:    tail call void @llvm.amdgcn.av.store.b64.p0(ptr [[PTR:%.*]], i64 [[DATA:%.*]], metadata [[META13]])
+// CHECK-NEXT:    tail call void @llvm.amdgcn.av.store.b64.p0(ptr [[PTR:%.*]], <2 x i32> [[DATA:%.*]], metadata [[META13]])
 // CHECK-NEXT:    ret void
 //
-void test_amdgcn_flat_store_b64_cluster(u64 * ptr, u64 data) {
+void test_amdgcn_flat_store_b64_cluster(v2u32 * ptr, v2u32 data) {
   __builtin_amdgcn_av_store_b64(ptr, data, __MEMORY_SCOPE_CLUSTR);
 }
 //.

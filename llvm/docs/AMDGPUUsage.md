@@ -2822,7 +2822,7 @@ These intrinsics exist for the following data types:
   - `llvm.amdgcn.av.load.b32`
   - `llvm.amdgcn.av.store.b32`
 * - 64 bits
-  - `i64`
+  - `<2 x i32>`
   - `llvm.amdgcn.av.load.b64`
   - `llvm.amdgcn.av.store.b64`
 * - 128 bits

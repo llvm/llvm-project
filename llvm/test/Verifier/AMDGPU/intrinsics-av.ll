@@ -71,15 +71,15 @@ define void @av_global_store_b32_bad_metadata(ptr addrspace(1) %addr, i32 %data)
 }
 
 ; CHECK: the last argument to av load/store intrinsics must be a metadata string
-; CHECK-NEXT: call i64 @llvm.amdgcn.av.load.b64.p1({{.*}})
-define i64 @av_global_load_b64_bad_metadata(ptr addrspace(1) %addr) {
-  %data = call i64 @llvm.amdgcn.av.load.b64.p1(ptr addrspace(1) %addr, metadata i32 0)
-  ret i64 %data
+; CHECK-NEXT: call <2 x i32> @llvm.amdgcn.av.load.b64.p1({{.*}})
+define <2 x i32> @av_global_load_b64_bad_metadata(ptr addrspace(1) %addr) {
+  %data = call <2 x i32> @llvm.amdgcn.av.load.b64.p1(ptr addrspace(1) %addr, metadata i32 0)
+  ret <2 x i32> %data
 }
 
 ; CHECK: the last argument to av load/store intrinsics must be a metadata string
 ; CHECK-NEXT: call void @llvm.amdgcn.av.store.b64.p1({{.*}})
-define void @av_global_store_b64_bad_metadata(ptr addrspace(1) %addr, i64 %data) {
-  call void @llvm.amdgcn.av.store.b64.p1(ptr addrspace(1) %addr, i64 %data, metadata i32 0)
+define void @av_global_store_b64_bad_metadata(ptr addrspace(1) %addr, <2 x i32> %data) {
+  call void @llvm.amdgcn.av.store.b64.p1(ptr addrspace(1) %addr, <2 x i32> %data, metadata i32 0)
   ret void
 }

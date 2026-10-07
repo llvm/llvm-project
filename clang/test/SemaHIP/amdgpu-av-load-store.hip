@@ -11,7 +11,7 @@ typedef __attribute__((__vector_size__(4 * sizeof(unsigned int)))) unsigned int 
 typedef unsigned char u8;
 typedef unsigned short u16;
 typedef unsigned int u32;
-typedef unsigned long u64;
+typedef __attribute__((__vector_size__(2 * sizeof(unsigned int)))) unsigned int v2u32;
 
 __device__ void test_av_load_store_device(v4u32 *ptr, v4u32 data) {
   v4u32 res = __builtin_amdgcn_av_load_b128(ptr, 0);
@@ -53,12 +53,12 @@ __global__ void test_av_load_store_b32_kernel(u32 *ptr, u32 data) {
   __builtin_amdgcn_av_store_b32(ptr, data, 0);
 }
 
-__device__ void test_av_load_store_b64_device(u64 *ptr, u64 data) {
-  u64 res = __builtin_amdgcn_av_load_b64(ptr, 0);
+__device__ void test_av_load_store_b64_device(v2u32 *ptr, v2u32 data) {
+  v2u32 res = __builtin_amdgcn_av_load_b64(ptr, 0);
   __builtin_amdgcn_av_store_b64(ptr, data, 0);
 }
 
-__global__ void test_av_load_store_b64_kernel(u64 *ptr, u64 data) {
-  u64 res = __builtin_amdgcn_av_load_b64(ptr, 0);
+__global__ void test_av_load_store_b64_kernel(v2u32 *ptr, v2u32 data) {
+  v2u32 res = __builtin_amdgcn_av_load_b64(ptr, 0);
   __builtin_amdgcn_av_store_b64(ptr, data, 0);
 }
