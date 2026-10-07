@@ -1511,10 +1511,12 @@ define i32 @orc_b_i32(i32 %a) {
 ; RV64I-LABEL: orc_b_i32:
 ; RV64I:       # %bb.0:
 ; RV64I-NEXT:    lui a1, 4112
-; RV64I-NEXT:    addi a1, a1, 257
-; RV64I-NEXT:    and a0, a0, a1
-; RV64I-NEXT:    slli a1, a0, 8
-; RV64I-NEXT:    subw a0, a1, a0
+; RV64I-NEXT:    addi a2, a1, 257
+; RV64I-NEXT:    slli a3, a0, 8
+; RV64I-NEXT:    addi a1, a1, 256
+; RV64I-NEXT:    and a0, a0, a2
+; RV64I-NEXT:    and a1, a3, a1
+; RV64I-NEXT:    sub a0, a1, a0
 ; RV64I-NEXT:    ret
 ;
 ; RV64ZBB-LABEL: orc_b_i32:
