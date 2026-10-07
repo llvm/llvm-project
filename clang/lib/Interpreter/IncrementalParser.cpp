@@ -257,23 +257,12 @@ class ASTDeclUnmerger : public DeclVisitor<ASTDeclUnmerger> {
   /// and restore the redeclaration chain to previous state
   void VisitDeclContext(DeclContext *DC) {
     llvm::SmallVector<Decl *, 8> Members(DC->decls());
-    llvm::SmallVector<NamedDecl *, 8> Survivors;
     for (Decl *M : Members) {
-      if (auto *ND = dyn_cast<NamedDecl>(M))
-        if (NamedDecl *Prev = findSurvivor(ND))
-          Survivors.push_back(Prev);
-      Visit(M);          // restore redecls
-      DC->removeDecl(M); // remove from lookup
-      if (auto *ND = dyn_cast<NamedDecl>(M))
-        removeFromLookups(ND);
+      Visit(M); // restore redecls and lookup
+      // VisitNamedDecl() removes the named decls.
+      if (!isa<NamedDecl>(M))
+        DC->removeDecl(M);
     }
-
-    // Restore lookup for the surviving predecessor of any removed decl that
-    // had a surviving predecessor. Like removeDecl(), use its semantic
-    // context: the out-of-line definition of a member is in DC, but it was
-    // removed from the lookup table of its class or namespace.
-    for (NamedDecl *Prev : Survivors)
-      Prev->getDeclContext()->makeDeclVisibleInContext(Prev);
   }
 
 public:
@@ -285,13 +274,48 @@ public:
       VisitDeclContext(DC);
   }
 
-  void VisitFunctionDecl(FunctionDecl *D) { withdraw(D); }
-  void VisitNamespaceAliasDecl(NamespaceAliasDecl *D) { withdraw(D); }
-  void VisitTypedefNameDecl(TypedefNameDecl *D) { withdraw(D); }
-  void VisitUsingShadowDecl(UsingShadowDecl *D) { withdraw(D); }
-  void VisitVarDecl(VarDecl *D) { withdraw(D); }
+  /// Remove ND from its context and the lookup tables, and make the
+  /// declaration it redeclares visible again. Called before the
+  /// redeclaration chain of ND is restored, which hides that declaration.
+  void VisitNamedDecl(NamedDecl *ND) {
+    // The templated decl of a template is not a member of its context: the
+    // template is.
+    DeclContext *DC = ND->getLexicalDeclContext();
+    if (!DC->containsDecl(ND))
+      return;
+    NamedDecl *Prev = findSurvivor(ND);
+    DC->removeDecl(ND);
+    removeFromLookups(ND);
+    // Like removeDecl(), use the semantic context: the out-of-line definition
+    // of a member is in DC, but it was removed from the lookup table of its
+    // class or namespace.
+    if (Prev)
+      Prev->getDeclContext()->makeDeclVisibleInContext(Prev);
+  }
+
+  void VisitFunctionDecl(FunctionDecl *D) {
+    VisitNamedDecl(D);
+    withdraw(D);
+  }
+  void VisitNamespaceAliasDecl(NamespaceAliasDecl *D) {
+    VisitNamedDecl(D);
+    withdraw(D);
+  }
+  void VisitTypedefNameDecl(TypedefNameDecl *D) {
+    VisitNamedDecl(D);
+    withdraw(D);
+  }
+  void VisitUsingShadowDecl(UsingShadowDecl *D) {
+    VisitNamedDecl(D);
+    withdraw(D);
+  }
+  void VisitVarDecl(VarDecl *D) {
+    VisitNamedDecl(D);
+    withdraw(D);
+  }
 
   void VisitTagDecl(TagDecl *D) {
+    VisitNamedDecl(D);
     NamedDecl *Prev = findSurvivor(D);
     if (!Prev)
       return;
@@ -309,6 +333,7 @@ public:
   }
 
   void VisitRedeclarableTemplateDecl(RedeclarableTemplateDecl *D) {
+    VisitNamedDecl(D);
     withdraw(D);
     Visit(D->getTemplatedDecl());
   }
@@ -319,6 +344,7 @@ public:
     // PTU2: namespace outer { namespace ns { class Foo { ... }; error; } }
     // Foo's redeclaration needs to be restored
     VisitDeclContext(D);
+    VisitNamedDecl(D);
     withdraw(D);
   }
 
