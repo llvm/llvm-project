@@ -652,13 +652,7 @@ math_mpfr_test(
 
 math_mpfr_test(name = "pow")
 
-math_mpfr_test(
-    name = "powf",
-    deps = [
-        "//libc:__support_math_powf_double_eval",
-        "//libc:__support_math_powf_float_eval",
-    ],
-)
+math_mpfr_test(name = "powf")
 
 math_mpfr_test(
     name = "remquo",

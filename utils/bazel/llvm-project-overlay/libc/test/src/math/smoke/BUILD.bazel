@@ -1810,13 +1810,7 @@ math_test(
 
 math_test(name = "pow")
 
-math_test(
-    name = "powf",
-    deps = [
-        "//libc:__support_math_powf_double_eval",
-        "//libc:__support_math_powf_float_eval",
-    ],
-)
+math_test(name = "powf")
 
 math_test(
     name = "remquo",
