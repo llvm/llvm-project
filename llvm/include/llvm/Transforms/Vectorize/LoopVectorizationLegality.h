@@ -481,6 +481,8 @@ public:
 
   DominatorTree *getDominatorTree() const { return DT; }
 
+  AAResults *getAA() const { return AA; }
+
   /// Returns all exiting blocks with a countable exit, i.e. the
   /// exit-not-taken count is known exactly at compile time.
   const SmallVector<BasicBlock *, 4> &getCountableExitingBlocks() const {

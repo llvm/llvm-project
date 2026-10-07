@@ -331,6 +331,12 @@ static cl::opt<bool> EnableVPlanNativePath(
     cl::desc("Enable VPlan-native vectorization path with "
              "support for outer loop vectorization."));
 
+static cl::opt<bool> VPlanOuterLoopLegalityChecks(
+    "vplan-outer-loop-legality-checks", cl::Hidden, cl::init(false),
+    cl::desc("Check that the memory accesses of outer loops are safe to "
+             "vectorize, instead of trusting the explicit vectorization "
+             "pragma."));
+
 cl::opt<bool>
     llvm::VerifyEachVPlan("vplan-verify-each",
 #ifdef EXPENSIVE_CHECKS
@@ -6427,6 +6433,17 @@ VPlanPtr LoopVectorizationPlanner::tryToBuildVPlan1() {
   if (const LoopAccessInfo *LAI = Legal->getLAI())
     RUN_VPLAN_PASS(VPlanTransforms::replaceSymbolicStrides, *VPlan0, PSE,
                    LAI->getSymbolicStrides(), VPDT);
+
+  // Without -vplan-outer-loop-legality-checks, trust the explicit vectorization
+  // pragma that vectorizing the outer loop is safe.
+  if (!IsInnerLoop && VPlanOuterLoopLegalityChecks &&
+      !proveOuterLoopMemorySafety(*VPlan0, PSE, *Legal->getAA(), OrigLoop)) {
+    reportVectorizationFailure(
+        "Cannot prove outer loop memory accesses safe",
+        "cannot prove memory accesses in outer loop are safe to vectorize",
+        "CantProveOuterLoopMemSafety", ORE, OrigLoop);
+    return nullptr;
+  }
 
   // Add surviving induction predicates to PSE and check constraints.
   bool ForceVectorization =
