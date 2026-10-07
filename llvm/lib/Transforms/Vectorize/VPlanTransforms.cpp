@@ -6196,14 +6196,29 @@ void VPlanTransforms::narrowInductionTruncates(VPlan &Plan, VFRange &Range,
       if (Op != WideIV)
         continue;
 
+      // Partial replacing a WideIV with a narrower widen-induction recipe
+      // provides no benefit for a scalar VF. Also, generating both wider and
+      // narrower IVs prevents the DerivedIV from being eliminated by CSE.
       // Replacing a free truncate would add an induction update instruction to
       // each iteration of the loop. The canonical induction is exempt, as it
       // needs an update instruction regardless.
       auto IsNarrowingProfitable = [&](ElementCount VF) {
-        return match(WideIV, m_CanonicalWidenIV()) ||
-               !TTI.isTruncateFree(
-                   toVectorTy(VPI.getOperand(0)->getScalarType(), VF),
-                   toVectorTy(VPI.getScalarType(), VF));
+        return (!VF.isScalar() ||
+                all_of(
+                    WideIV->users(),
+                    [&](VPUser *U) {
+                      // ExitingIV with wider type can be optimized by
+                      // optimizeInductionLiveOutUsers.
+                      return U == &VPI ||
+                             match(
+                                 U,
+                                 m_VPInstruction<VPInstruction::ExitingIVValue>(
+                                     m_VPValue()));
+                    })) &&
+               (match(WideIV, m_CanonicalWidenIV()) ||
+                !TTI.isTruncateFree(
+                    toVectorTy(VPI.getOperand(0)->getScalarType(), VF),
+                    toVectorTy(VPI.getScalarType(), VF)));
       };
       if (!LoopVectorizationPlanner::getDecisionAndClampRange(
               IsNarrowingProfitable, Range))
