@@ -184,9 +184,13 @@ Makes programs 10x faster by doing Special New Thing.
 * Replaced `TargetOptions::EnableMachineFunctionSplitter` with
   `TargetOptions::FunctionSplitting`, and the `-split-machine-functions` and
   `-enable-split-machine-functions` flags with
-  `-function-splitting={none,bbsections,all}`. Use `-function-splitting=all`
-  for the previous behavior. Clang's `-fsplit-machine-functions` is
-  unchanged.
+  `-function-splitting={none,bbsections,all}`.
+  * Backend tools (`llc`, `opt`, LTO plugin options and libLTO debug options):
+    use `-function-splitting=all` for the previous behavior.
+  * Clang and Flang: `-fsplit-machine-functions` is unchanged and remains the
+    recommended spelling. `-mllvm -enable-split-machine-functions` should be
+    replaced with `-fsplit-machine-functions` or
+    `-mllvm -function-splitting=all`.
 
 ### Changes to building LLVM
 
