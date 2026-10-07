@@ -140,7 +140,7 @@ public:
       OnControllerCallReturnFn Wrapped;
     };
 
-    ControllerAccess(Session &S) : S(S) {}
+    ControllerAccess(Session &S) noexcept : S(S) {}
 
     /// Initiate connection with controller.
     ///
