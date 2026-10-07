@@ -8,9 +8,6 @@
 #include <stdio.h>
 #include <sys/mman.h>
 
-#ifndef MAP_FIXED_NOREPLACE
-#  define MAP_FIXED_NOREPLACE 0x100000
-#endif
 
 int main() {
   // A canonical Linux x86-64 address outside TSan's application memory.
