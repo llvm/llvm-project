@@ -749,12 +749,8 @@ void privatizeSymbol(
     // Boxes should be passed by reference into nested regions:
     auto oldIP = firOpBuilder.saveInsertionPoint();
     firOpBuilder.setInsertionPointToStart(firOpBuilder.getAllocaBlock());
-    // Get name so later passes (e.g. MapsForPrivatizedSymbols) can report it in
-    // offload info.
-    mlir::Location boxLoc = mlir::NameLoc::get(
-        firOpBuilder.getStringAttr(sym->name().ToString()), symLoc);
     auto alloca =
-        fir::AllocaOp::create(firOpBuilder, boxLoc, privVal.getType());
+        fir::AllocaOp::create(firOpBuilder, symLoc, privVal.getType());
     firOpBuilder.restoreInsertionPoint(oldIP);
     fir::StoreOp::create(firOpBuilder, symLoc, privVal, alloca);
     privVal = alloca;

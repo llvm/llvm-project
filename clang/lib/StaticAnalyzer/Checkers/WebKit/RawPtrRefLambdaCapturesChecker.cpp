@@ -590,7 +590,8 @@ public:
         if (Model->checksForInteriorDestruction()) {
           if (!CaptureInit)
             continue;
-          if (isCaptureOriginSafeForInteriorDestruction(CaptureInit, Origin))
+          if (isCaptureOriginSafeForInteriorDestruction(CaptureInit, Origin,
+                                                        CapturedVarQualType))
             continue;
         }
         reportBug(C, CapturedVar, CapturedVarQualType, L, Origin);
@@ -603,7 +604,8 @@ public:
   }
 
   bool isCaptureOriginSafeForInteriorDestruction(const Expr *CaptureInit,
-                                                 const Expr *&Origin) const {
+                                                 const Expr *&Origin,
+                                                 QualType SinkType) const {
     return tryToFindPtrOrigin(
         CaptureInit, /*StopAtFirstRefCountedObj=*/false,
         Model->checksForInteriorDestruction(),
@@ -631,7 +633,8 @@ public:
           }
           if (IsSafe)
             return true;
-          if (Model->isSafeExpr(CaptureOrigin, PtrIsLifetimeBoundToOrigin))
+          if (Model->isSafeExpr(CaptureOrigin, PtrIsLifetimeBoundToOrigin,
+                                SinkType))
             return true;
           if (!Origin)
             Origin = CaptureOrigin;

@@ -120,6 +120,9 @@ StringRef ISD::getCondCodeName(ISD::CondCode Operation) {
 std::string SDNode::getOperationName(const SelectionDAG *G) const {
   switch (getOpcode()) {
   default:
+    // If this assert fails, add/remove the newly added/removed opcode from the
+    // switch and update the expected value.
+    static_assert(ISD::BUILTIN_OP_END == 476, "Unexpected number of opcodes");
     if (getOpcode() < ISD::BUILTIN_OP_END)
       return "<<Unknown DAG Node>>";
     if (isMachineOpcode()) {
@@ -164,10 +167,12 @@ std::string SDNode::getOperationName(const SelectionDAG *G) const {
   case ISD::ATOMIC_LOAD_UMAX:           return "AtomicLoadUMax";
   case ISD::ATOMIC_LOAD_FADD:           return "AtomicLoadFAdd";
   case ISD::ATOMIC_LOAD_FSUB:           return "AtomicLoadFSub";
-  case ISD::ATOMIC_LOAD_FMIN:           return "AtomicLoadFMin";
   case ISD::ATOMIC_LOAD_FMAX:           return "AtomicLoadFMax";
-  case ISD::ATOMIC_LOAD_FMINIMUM:       return "AtomicLoadFMinimum";
+  case ISD::ATOMIC_LOAD_FMIN:           return "AtomicLoadFMin";
   case ISD::ATOMIC_LOAD_FMAXIMUM:       return "AtomicLoadFMaximum";
+  case ISD::ATOMIC_LOAD_FMINIMUM:       return "AtomicLoadFMinimum";
+  case ISD::ATOMIC_LOAD_FMAXIMUMNUM:    return "AtomicLoadFMaximumNum";
+  case ISD::ATOMIC_LOAD_FMINIMUMNUM:    return "AtomicLoadFMinimumNum";
   case ISD::ATOMIC_LOAD_UINC_WRAP:
     return "AtomicLoadUIncWrap";
   case ISD::ATOMIC_LOAD_UDEC_WRAP:
@@ -630,6 +635,8 @@ std::string SDNode::getOperationName(const SelectionDAG *G) const {
     return "patchpoint";
   case ISD::CLEAR_CACHE:
     return "clear_cache";
+  case ISD::DEACTIVATION_SYMBOL:
+    return "deactivation_symbol";
 
   case ISD::EXPERIMENTAL_VECTOR_HISTOGRAM:
     return "histogram";

@@ -890,7 +890,8 @@ void CIRGenFunction::emitConstructorBody(FunctionArgList &args) {
 
   ctorTryBodyEmitter emitter{ctor, ctorType, args, isTryBody, body};
   mlir::LogicalResult bodyRes =
-      isTryBody ? emitCXXTryStmt(*cast<CXXTryStmt>(body), emitter)
+      isTryBody ? emitCXXTryStmt(*cast<CXXTryStmt>(body), emitter,
+                                 /*isFnTryBlock=*/true)
                 : emitter(*this);
 
   // TODO(cir): propagate this result via mlir::logical result. Just
