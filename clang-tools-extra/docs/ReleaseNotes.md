@@ -209,6 +209,13 @@ infrastructure are described first, followed by tool-specific sections.
 - Improved {doc}`cppcoreguidelines-use-enum-class
   <clang-tidy/checks/cppcoreguidelines/use-enum-class>` check by omitting unnamed enums from the `enum class` requirement, as previously the check suggested users an ill-formed fix.
 
+- Improved {doc}`cppcoreguidelines-virtual-class-destructor
+  <clang-tidy/checks/cppcoreguidelines/virtual-class-destructor>` check by
+  emitting the diagnostic and its fix-it notes at the destructor's location
+  instead of the class name, whenever the destructor is user-declared. The
+  diagnostics are still emitted at the class name for implicitly declared
+  destructors.
+
 - Improved {doc}`misc-const-correctness
   <clang-tidy/checks/misc/const-correctness>` check:
 
@@ -268,6 +275,11 @@ infrastructure are described first, followed by tool-specific sections.
   offered when an argument covers only part of a macro expansion, as it then
   has no source text of its own.
 
+- Improved {doc}`performance-inefficient-vector-operation
+  <clang-tidy/checks/performance/inefficient-vector-operation>` by adding the
+  {option}`ForRangeLoopClasses` to configure container classes that can be used
+  as sources in range-based `for` loops.
+
 - Improved {doc}`readability-convert-member-functions-to-static
   <clang-tidy/checks/readability/convert-member-functions-to-static>` check by
   fixing a crash when checking a const-qualified method declared with the
@@ -323,8 +335,14 @@ infrastructure are described first, followed by tool-specific sections.
   `atomic_compare_exchange_strong()`.
 
 - Improved {doc}`readability-redundant-parentheses
-  <clang-tidy/checks/readability/redundant-parentheses>` check by fixing a false
-  positive on the required parentheses of `typeof` and `typeof_unqual` operands.
+  <clang-tidy/checks/readability/redundant-parentheses>` check:
+
+  - Fixed a false positive on the required parentheses of `typeof` and
+    `typeof_unqual` operands.
+
+  - Fixed false positives and incorrect fixes caused by synthetic parentheses
+    in reference non-type template parameter uses, `__builtin_dump_struct` calls,
+    and OpenMP `linear` clauses.
 
 - Fixed {doc}`readability-simplify-boolean-expr
   <clang-tidy/checks/readability/simplify-boolean-expr>` producing invalid

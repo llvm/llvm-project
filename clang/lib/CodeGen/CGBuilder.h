@@ -92,11 +92,13 @@ class CGBuilderTy : public CGBuilderBaseTy {
 
 public:
   CGBuilderTy(const CodeGenModule &CGM, llvm::LLVMContext &C)
-      : CGBuilderBaseTy(C, llvm::TargetFolder(CGM.getDataLayout())),
+      : CGBuilderBaseTy(CGM.getModule(),
+                        llvm::TargetFolder(CGM.getDataLayout())),
         TypeCache(CGM) {}
   CGBuilderTy(const CodeGenModule &CGM, llvm::LLVMContext &C,
               const CGBuilderInserterTy &Inserter)
-      : CGBuilderBaseTy(C, llvm::TargetFolder(CGM.getDataLayout()), Inserter),
+      : CGBuilderBaseTy(CGM.getModule(),
+                        llvm::TargetFolder(CGM.getDataLayout()), Inserter),
         TypeCache(CGM) {}
   CGBuilderTy(const CodeGenModule &CGM, llvm::Instruction *I)
       : CGBuilderBaseTy(I->getIterator(),
