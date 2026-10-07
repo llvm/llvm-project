@@ -5588,19 +5588,20 @@ bool InstCombinerImpl::tryToSinkInstruction(Instruction *I,
 
   // Preserve llvm.assume users in the source block when sinking their operand.
   // The other operands dominate SrcBlock and therefore also DestBlock.
-  SmallPtrSet<AssumeInst *, 2> AssumesToSink;
+  SmallVector<AssumeInst *, 2> AssumesToSink;
   for (User *U : I->users()) {
     auto *Assume = dyn_cast<AssumeInst>(U);
     if (!Assume || Assume->getParent() != SrcBlock)
       continue;
-    AssumesToSink.insert(Assume);
+    AssumesToSink.push_back(Assume);
   }
 
   I->dropDroppableUses([&](const Use *U) {
     auto *User = dyn_cast<Instruction>(U->getUser());
     if (User && User->getParent() != DestBlock) {
       // Don't drop assumes that we are going to sink to DestBlock.
-      if (auto *A = dyn_cast<AssumeInst>(User); A && AssumesToSink.count(A))
+      if (auto *A = dyn_cast<AssumeInst>(User);
+          A && is_contained(AssumesToSink, A))
         return false;
       Worklist.add(User);
       return true;
