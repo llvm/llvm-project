@@ -303,10 +303,19 @@ Response HandleFunction(Sema &SemaRef, const FunctionDecl *Function,
         Function->getPrimaryTemplate()->isMemberSpecialization())
       return Response::Done();
 
-    // If this function is a generic lambda specialization, we are done.
-    if (!ForConstraintInstantiation &&
-        isGenericLambdaCallOperatorOrStaticInvokerSpecialization(Function))
-      return Response::Done();
+    if (isGenericLambdaCallOperatorOrStaticInvokerSpecialization(Function)) {
+      // The lambda may be nested in template parameter lists that are not
+      // substituted, e.g. a default template argument of a member template.
+      unsigned Depth =
+          Function->getPrimaryTemplate()->getTemplateParameters()->getDepth();
+      // If this function is a generic lambda specialization, we are done.
+      if (!ForConstraintInstantiation) {
+        Result.addOuterRetainedLevels(Depth);
+        return Response::Done();
+      }
+      for (unsigned I = 0; I != Depth; ++I)
+        Result.addOuterTemplateArguments(std::nullopt);
+    }
 
   } else if (auto *Template = Function->getDescribedFunctionTemplate()) {
     assert(
