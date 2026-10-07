@@ -27,3 +27,28 @@ define void @equal_type_partial_reduction() {
 
   ret void
 }
+
+define void @doubleelements_partial_reduction() {
+; CHECK-LABEL: 'doubleelements_partial_reduction'
+; CHECK-NEXT:  Cost Model: Found costs of 1 for: %v16i8 = call <16 x i8> @llvm.vector.partial.reduce.add.v16i8.v32i8(<16 x i8> poison, <32 x i8> poison)
+; CHECK-NEXT:  Cost Model: Found costs of 1 for: %v8i16 = call <8 x i16> @llvm.vector.partial.reduce.add.v8i16.v16i16(<8 x i16> poison, <16 x i16> poison)
+; CHECK-NEXT:  Cost Model: Found costs of 1 for: %v4i32 = call <4 x i32> @llvm.vector.partial.reduce.add.v4i32.v8i32(<4 x i32> poison, <8 x i32> poison)
+; CHECK-NEXT:  Cost Model: Found costs of 1 for: %v2i64 = call <2 x i64> @llvm.vector.partial.reduce.add.v2i64.v4i64(<2 x i64> poison, <4 x i64> poison)
+; CHECK-NEXT:  Cost Model: Found costs of 1 for: %v8f16 = call <8 x half> @llvm.vector.partial.reduce.add.v8f16.v16f16(<8 x half> poison, <16 x half> poison)
+; CHECK-NEXT:  Cost Model: Found costs of 1 for: %v8bf16 = call <8 x bfloat> @llvm.vector.partial.reduce.add.v8bf16.v16bf16(<8 x bfloat> poison, <16 x bfloat> poison)
+; CHECK-NEXT:  Cost Model: Found costs of 1 for: %v4f32 = call <4 x float> @llvm.vector.partial.reduce.add.v4f32.v8f32(<4 x float> poison, <8 x float> poison)
+; CHECK-NEXT:  Cost Model: Found costs of 1 for: %v2f64 = call <2 x double> @llvm.vector.partial.reduce.add.v2f64.v4f64(<2 x double> poison, <4 x double> poison)
+; CHECK-NEXT:  Cost Model: Found costs of RThru:0 CodeSize:1 Lat:1 SizeLat:1 for: ret void
+;
+  %v16i8 = call <16 x i8> @llvm.vector.partial.reduce.add(<16 x i8> poison, <32 x i8> poison)
+  %v8i16 = call <8 x i16> @llvm.vector.partial.reduce.add(<8 x i16> poison, <16 x i16> poison)
+  %v4i32 = call <4 x i32> @llvm.vector.partial.reduce.add(<4 x i32> poison, <8 x i32> poison)
+  %v2i64 = call <2 x i64> @llvm.vector.partial.reduce.add(<2 x i64> poison, <4 x i64> poison)
+
+  %v8f16 = call <8 x half> @llvm.vector.partial.reduce.add(<8 x half> poison, <16 x half> poison)
+  %v8bf16 = call <8 x bfloat> @llvm.vector.partial.reduce.add(<8 x bfloat> poison, <16 x bfloat> poison)
+  %v4f32 = call <4 x float> @llvm.vector.partial.reduce.add(<4 x float> poison, <8 x float> poison)
+  %v2f64 = call <2 x double> @llvm.vector.partial.reduce.add(<2 x double> poison, <4 x double> poison)
+
+  ret void
+}
