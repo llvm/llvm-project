@@ -17,10 +17,6 @@ namespace lldb_private {
 class ScriptInterpreter;
 } // namespace lldb_private
 
-namespace llvm {
-class StringRef;
-} // namespace llvm
-
 namespace lldb {
 
 class LLDB_API SBStream {
@@ -125,7 +121,7 @@ protected:
 private:
   SBStream(const SBStream &) = delete;
   const SBStream &operator=(const SBStream &) = delete;
-  llvm::StringRef GetString() const;
+  const char *GetString() const;
   std::unique_ptr<lldb_private::Stream> m_opaque_up;
   bool m_is_file = false;
 };
