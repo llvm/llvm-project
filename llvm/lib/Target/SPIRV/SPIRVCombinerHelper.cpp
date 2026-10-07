@@ -209,10 +209,15 @@ void SPIRVCombinerHelper::applySPIRVFaceForward(MachineInstr &MI) const {
 
 /// Ignores spv_assign_type and spv_assign_name, which the pre-legalizer drops.
 static bool hasOneRealUse(Register Reg, MachineRegisterInfo &MRI) {
-  return count_if(MRI.use_nodbg_instructions(Reg), [](MachineInstr &UseMI) {
-           return !isSpvIntrinsic(UseMI, Intrinsic::spv_assign_type) &&
-                  !isSpvIntrinsic(UseMI, Intrinsic::spv_assign_name);
-         }) == 1;
+  unsigned RealUses = 0;
+  for (MachineInstr &UseMI : MRI.use_nodbg_instructions(Reg)) {
+    if (isSpvIntrinsic(UseMI, Intrinsic::spv_assign_type) ||
+        isSpvIntrinsic(UseMI, Intrinsic::spv_assign_name))
+      continue;
+    if (++RealUses > 1)
+      return false;
+  }
+  return RealUses == 1;
 }
 
 /// Rewrites exp2(sitofp(Exp)) * X to ldexp(X, Exp)

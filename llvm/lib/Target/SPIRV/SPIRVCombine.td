@@ -34,7 +34,7 @@ def ldexp_matchinfo : GIDefMatchData<"std::pair<Register, Register>">;
 
 def fmul_exp2_to_ldexp_lowering : GICombineRule <
   (defs root:$root, ldexp_matchinfo:$matchinfo),
-  (match (wip_match_opcode G_FMUL):$root,
+  (match (G_FMUL $dst, $lhs, $rhs):$root,
           [{ return Helper.matchFMulToLdexp(*${root}, ${matchinfo}); }]),
   (apply [{ Helper.applySPIRVLdexp(*${root}, ${matchinfo}); }])
 >;
