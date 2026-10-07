@@ -2601,10 +2601,10 @@ public:
   bool CheckCountedByAttrOnField(FieldDecl *FD, Expr *E, bool CountInBytes,
                                  bool OrNull);
 
-  /// Late-parsed bounds types dropped while their declarator was built. The
-  /// attribute has already been diagnosed and its node is no longer part of
-  /// any type, so the completion pass must skip it rather than parse its
-  /// argument and complete it.
+  /// Late-parsed bounds types dropped while the current declarator was built.
+  /// The attribute has already been diagnosed and the node is not part of this
+  /// declarator's type, so the parser must not pair the declarator's field with
+  /// the attribute. Other declarators sharing the node may still use it.
   llvm::SmallPtrSet<const BoundsAttributedType *, 1>
       RejectedLateParsedBoundsTypes;
 
@@ -2612,8 +2612,10 @@ public:
     RejectedLateParsedBoundsTypes.insert(BATy);
   }
 
-  bool isLateParsedBoundsTypeRejected(const BoundsAttributedType *BATy) const {
-    return RejectedLateParsedBoundsTypes.contains(BATy);
+  /// Return true if \p BATy was dropped while the current declarator was built,
+  /// and clear the mark for the next declarator.
+  bool takeLateParsedBoundsTypeRejected(const BoundsAttributedType *BATy) {
+    return RejectedLateParsedBoundsTypes.erase(BATy);
   }
 
   /// Supply the parsed argument of a late-parsed bounds attribute to the type

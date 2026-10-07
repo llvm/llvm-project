@@ -102,3 +102,35 @@ struct nested_with_unresolvable_count {
   // expected-error@+1 {{'counted_by' attribute on nested pointer type is not allowed}}
   int *__counted_by(does_not_exist) *pp;
 };
+
+// Rejecting one declarator that nests a shared declaration-specifier attribute
+// used to reject the shared node, leaving the other declarators with no count
+// and crashing on use. Only the nested declarator is rejected, in either order.
+struct shared_declspec_attr_valid_then_nested {
+  // expected-error@+1 {{'counted_by' attribute on nested pointer type is not allowed}}
+  shared_ptr_ty __counted_by(n) a, *b;
+  int n;
+};
+
+void use_shared_declspec_attr_valid_then_nested(
+    struct shared_declspec_attr_valid_then_nested *s) {
+  (void)__builtin_counted_by_ref(s->a);
+}
+
+struct shared_declspec_attr_nested_then_valid {
+  // expected-error@+1 {{'counted_by' attribute on nested pointer type is not allowed}}
+  shared_ptr_ty __counted_by(n) *a, b;
+  int n;
+};
+
+void use_shared_declspec_attr_nested_then_valid(
+    struct shared_declspec_attr_nested_then_valid *s) {
+  (void)__builtin_counted_by_ref(s->b);
+}
+
+// With every declarator rejected, the argument is never parsed.
+struct shared_declspec_attr_all_nested {
+  // expected-error@+2 {{'counted_by' attribute on nested pointer type is not allowed}}
+  // expected-error@+1 {{'counted_by' attribute on nested pointer type is not allowed}}
+  shared_ptr_ty __counted_by(does_not_exist) *a, *b;
+};

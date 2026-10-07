@@ -4970,15 +4970,25 @@ void Parser::ParseStructDeclaration(
     // __counted_by_or_null, but not counted_by) may sit nested inside the
     // field's type (in the future extension), where it cannot be recovered by
     // just inspecting the field's top-level type.
-    if (auto *FD = dyn_cast_if_present<FieldDecl>(Field);
-        FD && CurRecordLateParsedTypeAttrs) {
+    //
+    // Skip a declarator whose type dropped the attribute's node, such as `*b`
+    // in `IP __counted_by(n) a, *b;`. The node stays valid for `a`. Clear the
+    // mark even without a field, so it can't leak into the next declarator.
+    if (CurRecordLateParsedTypeAttrs) {
       unsigned Size = CurRecordLateParsedTypeAttrs->size();
       assert(Size >= DeclMark && DeclMark >= AfterDeclSpecMark &&
              AfterDeclSpecMark >= DeclSpecMark &&
              "late-parsed type attribute list must only grow");
+      auto *FD = dyn_cast_if_present<FieldDecl>(Field);
       auto Attach = [&](unsigned First, unsigned Last) {
-        for (unsigned I = First; I != Last; ++I)
-          (*CurRecordLateParsedTypeAttrs)[I]->addDecl(FD);
+        for (unsigned I = First; I != Last; ++I) {
+          LateParsedTypeAttribute *LTA = (*CurRecordLateParsedTypeAttrs)[I];
+          bool Rejected =
+              LTA->TypeToComplete &&
+              Actions.takeLateParsedBoundsTypeRejected(LTA->TypeToComplete);
+          if (FD && !Rejected)
+            LTA->addDecl(FD);
+        }
       };
       // Attach FD with attributes from the shared declaration-specifier (every
       // declarator in this declaration gets appended)
@@ -5042,8 +5052,10 @@ void Parser::CompleteLateParsedTypeAttributes(
   for (LateParsedTypeAttribute *RawLTA : LateTypeAttrs) {
     std::unique_ptr<LateParsedTypeAttribute> LTA(RawLTA);
 
+    // Skip an attribute rejected for every declarator that shares it, without
+    // parsing its argument, which would cascade diagnostics.
     BoundsAttributedType *BATy = LTA->TypeToComplete;
-    if (!BATy || Actions.isLateParsedBoundsTypeRejected(BATy))
+    if (!BATy || LTA->Decls.empty())
       continue;
 
     ArrayRef<Decl *> Fields = LTA->Decls;
@@ -5074,7 +5086,6 @@ void Parser::CompleteLateParsedTypeAttributes(
     assert(Arg);
 
     bool Valid = true;
-    assert(!Fields.empty());
     for (Decl *FD : Fields)
       Valid &= Actions.ActOnLateParsedTypeAttrArgument(
           BATy, cast<FieldDecl>(FD), Arg);
