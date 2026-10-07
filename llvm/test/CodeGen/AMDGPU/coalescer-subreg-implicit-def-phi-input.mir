@@ -3,7 +3,8 @@
 # RUN: llc -mtriple=amdgpu9.00-amd-amdhsa -verify-coalescing -passes='register-coalescer,print<live-intervals>' -o /dev/null %s 2>&1 | FileCheck -check-prefix=INTERVALS %s
 
 # The sub1 IMPLICIT_DEF in bb.3 is erased by coalescing. sub1 must stay live
-# into the PHI in bb.5 along the bb.3 edge.
+# into the PHI in bb.5 along the bb.3 edge by extending
+# the segment of value 0 of sub1 to the end of bb.3.
 
 # INTERVALS-LABEL: Live intervals for machine function: implicit_def_phi_input:
 # INTERVALS: %2 [48r,224B:0)[240r,256B:1)[256B,288r:2) 0@48r 1@240r 2@256B-phi  L0000000000000003 [48r,80B:0)[160B,192r:0) 0@48r  L000000000000000C [48r,224B:0)[240r,256B:1)[256B,288r:3) 0@48r 1@240r 2@x 3@256B-phi  weight:
