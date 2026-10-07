@@ -576,6 +576,8 @@ StackFrame::GetInScopeVariableList(bool get_file_globals,
 ValueObjectSP StackFrame::GetValueForVariableExpressionPath(
     llvm::StringRef var_expr, DynamicValueType use_dynamic, uint32_t options,
     VariableSP &var_sp, Status &error, lldb::DILMode mode) {
+  error.Clear();
+
   ExecutionContext exe_ctx;
   CalculateExecutionContext(exe_ctx);
   bool use_DIL = exe_ctx.GetTargetRef().GetUseDIL(&exe_ctx);
@@ -626,8 +628,11 @@ ValueObjectSP StackFrame::LegacyGetValueForVariableExpressionPath(
     VariableSP &var_sp, Status &error) {
   llvm::StringRef original_var_expr = var_expr;
   // We can't fetch variable information for a history stack frame.
-  if (IsHistorical())
+  if (IsHistorical()) {
+    error = Status::FromErrorString(
+        "cannot resolve a variable path in a historical frame");
     return ValueObjectSP();
+  }
 
   if (var_expr.empty()) {
     error = Status::FromErrorStringWithFormatv("invalid variable path '{0}'",
@@ -677,11 +682,6 @@ ValueObjectSP StackFrame::LegacyGetValueForVariableExpressionPath(
       return ValueObjectSP();
     }
     valobj_sp = ValueObjectRegister::Create(this, reg_ctx_sp, reg_info);
-    if (!valobj_sp) {
-      error = Status::FromErrorStringWithFormat(
-          "unable to read register '%s' in this frame", reg_info->name);
-      return {};
-    }
     name_const_string = ConstString(reg_info->name);
     var_expr = register_path;
   } else {

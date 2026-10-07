@@ -29,6 +29,7 @@
 #include "lldb/Utility/Args.h"
 #include "lldb/Utility/DataExtractor.h"
 #include "lldb/Utility/RegisterValue.h"
+#include "lldb/Utility/Status.h"
 #include "lldb/Utility/StreamString.h"
 #include "lldb/ValueObject/ValueObject.h"
 #include "llvm/Support/Errno.h"
@@ -145,7 +146,7 @@ public:
     return true;
   }
 
-  bool DumpRegisterField(Stream &strm, const RegisterInfo &reg_info,
+  void DumpRegisterField(Stream &strm, const RegisterInfo &reg_info,
                          const ValueObjectSP &value_sp,
                          size_t reg_name_right_align_at,
                          CommandReturnObject &result) {
@@ -160,7 +161,7 @@ public:
     StreamString value_stream;
     if (llvm::Error error = value_sp->Dump(value_stream, options)) {
       result.AppendError(toString(std::move(error)));
-      return false;
+      return;
     }
 
     llvm::StringRef value = value_stream.GetString();
@@ -185,7 +186,6 @@ public:
       strm.Printf("%*s = ", static_cast<int>(reg_name_right_align_at),
                   expression.str().c_str());
     strm << value << '\n';
-    return true;
   }
 
   bool DumpRegisterSet(const ExecutionContext &exe_ctx, Stream &strm,
@@ -279,9 +279,10 @@ protected:
                            "registers names are supplied as arguments\n");
       } else {
         struct RegisterArgument {
+          std::string expression;
           const RegisterInfo *reg_info = nullptr;
           ValueObjectSP value_sp;
-          std::string error;
+          Status error;
         };
 
         StackFrame *frame = m_exe_ctx.GetFramePtr();
@@ -298,51 +299,41 @@ protected:
           expression.consume_front("$");
 
           RegisterArgument argument;
-          std::string variable_path = "$" + expression.str();
+          argument.expression = expression.str();
+          std::string variable_path = "$" + argument.expression;
           VariableSP variable_sp;
-          Status error;
           argument.value_sp = frame->GetValueForVariableExpressionPath(
               variable_path, eNoDynamicValues,
               StackFrame::eExpressionPathOptionCheckPtrVsMember, variable_sp,
-              error, eDILModeLegacy);
-          if (error.Fail())
-            argument.error = error.AsCString();
-          else if (!argument.value_sp)
-            argument.error =
-                "Invalid register expression '" + expression.str() + "'";
-          else if (ValueObject *root = argument.value_sp->GetRoot()) {
-            argument.reg_info =
-                reg_ctx->GetRegisterInfoByName(root->GetName().GetStringRef());
+              argument.error, eDILModeLegacy);
+          if (argument.error.Success()) {
+            ValueObject *root = argument.value_sp->GetRoot();
+            if (root && root->GetValueType() == eValueTypeRegister)
+              argument.reg_info = reg_ctx->GetRegisterInfoByName(
+                  root->GetName().GetStringRef());
           }
 
-          if (!argument.reg_info) {
-            if (argument.error.empty())
-              argument.error =
-                  "Invalid register expression '" + expression.str() + "'";
-          } else {
-            if (argument.value_sp &&
-                argument.value_sp.get() == argument.value_sp->GetRoot()) {
-              // Whole registers use DumpRegister below. Only descendants use
-              // DumpRegisterField.
-              argument.value_sp.reset();
-            }
+          if (argument.error.Success() && !argument.reg_info)
+            argument.error = Status::FromErrorStringWithFormat(
+                "Invalid register expression '%s'",
+                argument.expression.c_str());
+          else if (argument.error.Success())
             reg_name_right_align_at =
                 std::max(reg_name_right_align_at,
                          GetNameSize(argument.reg_info,
                                      !m_command_options.alternate_name));
-          }
           register_arguments.push_back(std::move(argument));
         }
 
         // Extra ident to be consistent with register sets dumping.
         strm.IndentMore();
         for (const RegisterArgument &argument : register_arguments) {
-          if (!argument.error.empty()) {
-            result.AppendError(argument.error);
+          if (argument.error.Fail()) {
+            result.AppendError(argument.error.AsCString());
             continue;
           }
 
-          if (!argument.value_sp) {
+          if (argument.value_sp.get() == argument.value_sp->GetRoot()) {
             // If they have asked for a specific format don't obscure that by
             // printing a structured value afterwards.
             bool print_type = !m_format_options.GetFormatValue().OptionWasSet();
