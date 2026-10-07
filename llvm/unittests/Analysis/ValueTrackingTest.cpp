@@ -708,6 +708,57 @@ TEST_F(ValueTrackingTest, ComputeNumSignBits_PR32045) {
   EXPECT_EQ(ComputeNumSignBits(A, M->getDataLayout()), 32u);
 }
 
+TEST_F(ValueTrackingTest, ComputeNumSignBits_Mul) {
+  parseAssembly(R"(
+    define i32 @test(i32 %x, i32 %y) {
+      %x8 = and i32 %x, 255
+      %y8 = and i32 %y, 255
+      %A = mul i32 %x8, %y8
+      %x15 = and i32 %x, 32767
+      %y15 = and i32 %y, 32767
+      %A2 = mul i32 %x15, %y15
+      %x30 = and i32 %x, 1073741824
+      %y30 = and i32 %y, 1073741824
+      %A3 = mul i32 %x30, %y30
+      %sx = ashr i32 %x, 24
+      %sy = ashr i32 %y, 24
+      %A4 = mul i32 %sx, %sy
+      ret i32 %A
+    }
+  )");
+  EXPECT_EQ(ComputeNumSignBits(A, M->getDataLayout()), 16u);
+  EXPECT_EQ(ComputeNumSignBits(A2, M->getDataLayout()), 2u);
+  EXPECT_EQ(ComputeNumSignBits(A3, M->getDataLayout()), 32u);
+  EXPECT_EQ(ComputeNumSignBits(A4, M->getDataLayout()), 17u);
+}
+
+TEST_F(ValueTrackingTest, ComputeNumSignBits_KnownBits) {
+  parseAssembly(R"(
+    declare i32 @llvm.abs.i32(i32, i1 immarg)
+    define i32 @test(i32 %x, i32 noundef %y) {
+      %small = and i32 %x, 255
+      %A = sub i32 255, %small
+      %cond = icmp ult i32 %y, 256
+      %A2 = select i1 %cond, i32 %y, i32 %small
+      %A3 = call i32 @llvm.abs.i32(i32 %small, i1 false)
+      %nonnegative = and i32 %x, 2147483647
+      %A4 = srem i32 %nonnegative, -256
+      %high = and i32 %x, -65536
+      %A5 = trunc i32 %high to i16
+      %A6 = extractelement <2 x i32> <i32 0, i32 2147483647>, i32 0
+      %A7 = add i32 %small, 0
+      ret i32 %A
+    }
+  )");
+  EXPECT_EQ(ComputeNumSignBits(A, M->getDataLayout()), 24u);
+  EXPECT_EQ(ComputeNumSignBits(A2, M->getDataLayout()), 24u);
+  EXPECT_EQ(ComputeNumSignBits(A3, M->getDataLayout()), 24u);
+  EXPECT_EQ(ComputeNumSignBits(A4, M->getDataLayout()), 24u);
+  EXPECT_EQ(ComputeNumSignBits(A5, M->getDataLayout()), 16u);
+  EXPECT_EQ(ComputeNumSignBits(A6, M->getDataLayout()), 32u);
+  EXPECT_EQ(ComputeNumSignBits(A7, M->getDataLayout()), 24u);
+}
+
 // No guarantees for canonical IR in this analysis, so this just bails out.
 TEST_F(ValueTrackingTest, ComputeNumSignBits_Shuffle) {
   parseAssembly(
