@@ -15,13 +15,6 @@ Transforms/FixIrreducible/callbr.ll
 Transforms/FixIrreducible/nested.ll
 Transforms/FixIrreducible/pr191979.ll
 Transforms/FixIrreducible/switch.ll
-Transforms/GVN/PRE/pre-load-through-select.ll
-Transforms/GVN/PRE/pre-loop-load-through-select.ll
-Transforms/GVN/debugloc-load-select.ll
-Transforms/GVN/load-select-addr-store-fwd.ll
-Transforms/GVN/load-through-select-dbg.ll
-Transforms/GVN/opaque-ptr.ll
-Transforms/GVN/pr69301.ll
 Transforms/IndVarSimplify/debugloc-rem-subst.ll
 Transforms/IndVarSimplify/eliminate-rem.ll
 Transforms/IndVarSimplify/preserving-debugloc-rem-div.ll
