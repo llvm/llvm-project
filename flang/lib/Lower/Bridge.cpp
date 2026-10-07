@@ -4617,6 +4617,26 @@ private:
         Fortran::lower::AggregateStoreMap storeMap;
         for (const Fortran::lower::pft::Variable &var :
              Fortran::lower::pft::getScopeVariableList(scope)) {
+          if (var.hasSymbol()) {
+            const Fortran::semantics::Symbol &sym = var.getSymbol();
+            if (const auto *hostDetails =
+                    sym.detailsIf<Fortran::semantics::HostAssocDetails>()) {
+              const Fortran::semantics::Symbol &hostSym = hostDetails->symbol();
+              const auto &attrs = sym.attrs();
+              const auto &hostAttrs = hostSym.attrs();
+              const bool addsAsynchronous =
+                  attrs.test(Fortran::semantics::Attr::ASYNCHRONOUS) &&
+                  !hostAttrs.test(Fortran::semantics::Attr::ASYNCHRONOUS);
+              const bool addsVolatile =
+                  attrs.test(Fortran::semantics::Attr::VOLATILE) &&
+                  !hostAttrs.test(Fortran::semantics::Attr::VOLATILE);
+              if (addsAsynchronous || addsVolatile) {
+                addSymbol(sym, getSymbolExtendedValue(hostSym, &localSymbols),
+                          /*forced=*/true);
+                continue;
+              }
+            }
+          }
           // Do no instantiate again variables from the block host
           // that appears in specification of block variables.
           if (!var.hasSymbol() || !lookupSymbol(var.getSymbol()))
