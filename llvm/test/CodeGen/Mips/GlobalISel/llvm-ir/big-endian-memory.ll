@@ -7,7 +7,7 @@
 define i32 @load_i16(ptr %p) {
 ; BE-LABEL: load_i16:
 ; BE:       # %bb.0:
-; BE-NEXT:    # implicit-def: $at
+; BE-NEXT:    # implicit-def: $r1
 ; BE-NEXT:    lwl $1, 0($4)
 ; BE-NEXT:    lwr $1, 3($4)
 ; BE-NEXT:    srl $2, $1, 16
@@ -16,7 +16,7 @@ define i32 @load_i16(ptr %p) {
 ;
 ; LE-LABEL: load_i16:
 ; LE:       # %bb.0:
-; LE-NEXT:    # implicit-def: $at
+; LE-NEXT:    # implicit-def: $r1
 ; LE-NEXT:    lwl $1, 3($4)
 ; LE-NEXT:    lwr $1, 0($4)
 ; LE-NEXT:    andi $2, $1, 65535
@@ -40,7 +40,7 @@ define i32 @load_i16(ptr %p) {
 define i32 @load_i24(ptr %p) {
 ; BE-LABEL: load_i24:
 ; BE:       # %bb.0:
-; BE-NEXT:    # implicit-def: $at
+; BE-NEXT:    # implicit-def: $r1
 ; BE-NEXT:    lwl $1, 0($4)
 ; BE-NEXT:    lwr $1, 3($4)
 ; BE-NEXT:    srl $1, $1, 8
@@ -51,7 +51,7 @@ define i32 @load_i24(ptr %p) {
 ;
 ; LE-LABEL: load_i24:
 ; LE:       # %bb.0:
-; LE-NEXT:    # implicit-def: $at
+; LE-NEXT:    # implicit-def: $r1
 ; LE-NEXT:    lwl $1, 3($4)
 ; LE-NEXT:    lwr $1, 0($4)
 ; LE-NEXT:    sll $1, $1, 8

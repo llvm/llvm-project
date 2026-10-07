@@ -111,8 +111,8 @@ registers:
   - { id: 50, class: gpr64, preferred-register: '' }
   - { id: 51, class: gpr64, preferred-register: '' }
 liveins:
-  - { reg: '$a0_64', virtual-reg: '%5' }
-  - { reg: '$t9_64', virtual-reg: '' }
+  - { reg: '$r4_64', virtual-reg: '%5' }
+  - { reg: '$r25_64', virtual-reg: '' }
 frameInfo:
   isFrameAddressTaken: false
   isReturnAddressTaken: false
@@ -136,17 +136,17 @@ constants:
 body:             |
   bb.0.entry:
     successors: %bb.1.entry._ZTW1k.exit_crit_edge(0x7fe00000), %bb.2.init.i.i(0x00200000)
-    liveins: $a0_64, $t9_64
+    liveins: $r4_64, $r25_64
 
     %50 = LUi64 target-flags(mips-gpoff-hi) @_Z2k1i
-    %51 = DADDu %50, $t9_64
+    %51 = DADDu %50, $r25_64
     %43 = DADDiu %51, target-flags(mips-gpoff-lo) @_Z2k1i
-    %5 = COPY $a0_64
-    ADJCALLSTACKDOWN 0, 0, implicit-def dead $sp, implicit $sp
+    %5 = COPY $r4_64
+    ADJCALLSTACKDOWN 0, 0, implicit-def dead $r29, implicit $r29
     %6 = COPY %5.sub_32
-    $a0_64 = COPY %5
-    JAL @_Z1gi, csr_n64, implicit-def dead $ra, implicit $a0_64, implicit-def $sp, implicit-def $r2
-    ADJCALLSTACKUP 0, 0, implicit-def dead $sp, implicit $sp
+    $r4_64 = COPY %5
+    JAL @_Z1gi, csr_n64, implicit-def dead $r31, implicit $r4_64, implicit-def $r29, implicit-def $r2
+    ADJCALLSTACKUP 0, 0, implicit-def dead $r29, implicit $r29
     %7 = COPY $r2
     %8 = ADDu %7, killed %6
     %9 = LUi64 target-flags(mips-highest) @v
@@ -163,8 +163,8 @@ body:             |
     %18 = COPY $r3_64
     %19 = DADDu %18, killed %16
     %20 = LBu killed %19, 0 :: (dereferenceable load (s8) from @__tls_guard)
-    BEQ killed %20, $zero, %bb.2.init.i.i, implicit-def dead $at
-    J %bb.1.entry._ZTW1k.exit_crit_edge, implicit-def dead $at
+    BEQ killed %20, $r0, %bb.2.init.i.i, implicit-def dead $r1
+    J %bb.1.entry._ZTW1k.exit_crit_edge, implicit-def dead $r1
 
   bb.1.entry._ZTW1k.exit_crit_edge:
     successors: %bb.3._ZTW1k.exit(0x80000000)
@@ -176,7 +176,7 @@ body:             |
     %35 = COPY $r3_64
     %36 = DADDu %35, killed %33
     %1 = LW killed %36, 0 :: (dereferenceable load (s32) from @k)
-    J %bb.3._ZTW1k.exit, implicit-def dead $at
+    J %bb.3._ZTW1k.exit, implicit-def dead $r1
 
   bb.2.init.i.i:
     successors: %bb.3._ZTW1k.exit(0x80000000)
@@ -187,16 +187,16 @@ body:             |
     $r3_64 = COPY %23
     %24 = COPY $r3_64
     %25 = DADDu %24, killed %22
-    %26 = ADDiu $zero, 1
+    %26 = ADDiu $r0, 1
     SB killed %26, killed %25, 0 :: (store (s8) into @__tls_guard)
     %27 = LUi64 target-flags(mips-tprel-hi) @k
     %28 = DADDiu killed %27, target-flags(mips-tprel-lo) @k
     %29 = DADDu %24, killed %28
-    ADJCALLSTACKDOWN 0, 0, implicit-def dead $sp, implicit $sp
-    %30 = DADDiu $zero_64, 3
-    $a0_64 = COPY %30
-    JAL @_Z1gi, csr_n64, implicit-def dead $ra, implicit $a0_64, implicit-def $sp, implicit-def $r2
-    ADJCALLSTACKUP 0, 0, implicit-def dead $sp, implicit $sp
+    ADJCALLSTACKDOWN 0, 0, implicit-def dead $r29, implicit $r29
+    %30 = DADDiu $r0_64, 3
+    $r4_64 = COPY %30
+    JAL @_Z1gi, csr_n64, implicit-def dead $r31, implicit $r4_64, implicit-def $r29, implicit-def $r2
+    ADJCALLSTACKUP 0, 0, implicit-def dead $r29, implicit $r29
     %31 = COPY $r2
     SW %31, killed %29, 0 :: (store (s32) into @k)
     %2 = COPY %31
@@ -212,15 +212,15 @@ body:             |
     %40 = DADDiu killed %39, target-flags(mips-abs-hi) @_ZTH1j
     %41 = DSLL killed %40, 16
     %42 = DADDiu killed %41, target-flags(mips-abs-lo) @_ZTH1j
-    BEQ64 killed %42, $zero_64, %bb.5._ZTW1j.exit, implicit-def dead $at
-    J %bb.4, implicit-def dead $at
+    BEQ64 killed %42, $r0_64, %bb.5._ZTW1j.exit, implicit-def dead $r1
+    J %bb.4, implicit-def dead $r1
 
   bb.4 (%ir-block.2):
     successors: %bb.5._ZTW1j.exit(0x80000000)
 
-    ADJCALLSTACKDOWN 0, 0, implicit-def dead $sp, implicit $sp
-    JAL @_ZTH1j, csr_n64, implicit-def dead $ra, implicit-def $sp
-    ADJCALLSTACKUP 0, 0, implicit-def dead $sp, implicit $sp
+    ADJCALLSTACKDOWN 0, 0, implicit-def dead $r29, implicit $r29
+    JAL @_ZTH1j, csr_n64, implicit-def dead $r31, implicit-def $r29
+    ADJCALLSTACKUP 0, 0, implicit-def dead $r29, implicit $r29
 
   bb.5._ZTW1j.exit:
     %44 = RDHWR64 $hwr29, 0

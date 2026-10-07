@@ -34,10 +34,10 @@ body:             |
   ; MIPS32-LABEL: name: Unconditional_branch
   ; MIPS32: bb.0.entry:
   ; MIPS32-NEXT:   successors: %bb.2(0x80000000)
-  ; MIPS32-NEXT:   liveins: $a0, $a1
+  ; MIPS32-NEXT:   liveins: $r4, $r5
   ; MIPS32-NEXT: {{  $}}
-  ; MIPS32-NEXT:   [[COPY:%[0-9]+]]:gpr32 = COPY $a0
-  ; MIPS32-NEXT:   J %bb.2, implicit-def dead $at
+  ; MIPS32-NEXT:   [[COPY:%[0-9]+]]:gpr32 = COPY $r4
+  ; MIPS32-NEXT:   J %bb.2, implicit-def dead $r1
   ; MIPS32-NEXT: {{  $}}
   ; MIPS32-NEXT: bb.1.end:
   ; MIPS32-NEXT:   $r2 = COPY [[COPY]]
@@ -46,11 +46,11 @@ body:             |
   ; MIPS32-NEXT: bb.2.block:
   ; MIPS32-NEXT:   successors: %bb.1(0x80000000)
   ; MIPS32-NEXT: {{  $}}
-  ; MIPS32-NEXT:   J %bb.1, implicit-def dead $at
+  ; MIPS32-NEXT:   J %bb.1, implicit-def dead $r1
   bb.1.entry:
-    liveins: $a0, $a1
+    liveins: $r4, $r5
 
-    %0:gprb(s32) = COPY $a0
+    %0:gprb(s32) = COPY $r4
     G_BR %bb.3
 
   bb.2.end:
@@ -71,14 +71,14 @@ body:             |
   ; MIPS32-LABEL: name: Conditional_branch
   ; MIPS32: bb.0 (%ir-block.0):
   ; MIPS32-NEXT:   successors: %bb.1(0x40000000), %bb.2(0x40000000)
-  ; MIPS32-NEXT:   liveins: $a0, $a1, $a2
+  ; MIPS32-NEXT:   liveins: $r4, $r5, $r6
   ; MIPS32-NEXT: {{  $}}
-  ; MIPS32-NEXT:   [[COPY:%[0-9]+]]:gpr32 = COPY $a0
-  ; MIPS32-NEXT:   [[COPY1:%[0-9]+]]:gpr32 = COPY $a1
-  ; MIPS32-NEXT:   [[COPY2:%[0-9]+]]:gpr32 = COPY $a2
+  ; MIPS32-NEXT:   [[COPY:%[0-9]+]]:gpr32 = COPY $r4
+  ; MIPS32-NEXT:   [[COPY1:%[0-9]+]]:gpr32 = COPY $r5
+  ; MIPS32-NEXT:   [[COPY2:%[0-9]+]]:gpr32 = COPY $r6
   ; MIPS32-NEXT:   [[ANDi:%[0-9]+]]:gpr32 = ANDi [[COPY]], 1
-  ; MIPS32-NEXT:   BNE [[ANDi]], $zero, %bb.1, implicit-def dead $at
-  ; MIPS32-NEXT:   J %bb.2, implicit-def dead $at
+  ; MIPS32-NEXT:   BNE [[ANDi]], $r0, %bb.1, implicit-def dead $r1
+  ; MIPS32-NEXT:   J %bb.2, implicit-def dead $r1
   ; MIPS32-NEXT: {{  $}}
   ; MIPS32-NEXT: bb.1.if.then:
   ; MIPS32-NEXT:   $r2 = COPY [[COPY1]]
@@ -88,11 +88,11 @@ body:             |
   ; MIPS32-NEXT:   $r2 = COPY [[COPY2]]
   ; MIPS32-NEXT:   RetRA implicit $r2
   bb.1 (%ir-block.0):
-    liveins: $a0, $a1, $a2
+    liveins: $r4, $r5, $r6
 
-    %3:gprb(s32) = COPY $a0
-    %1:gprb(s32) = COPY $a1
-    %2:gprb(s32) = COPY $a2
+    %3:gprb(s32) = COPY $r4
+    %1:gprb(s32) = COPY $r5
+    %2:gprb(s32) = COPY $r6
     %5:gprb(s32) = G_CONSTANT i32 1
     %6:gprb(s32) = COPY %3(s32)
     %4:gprb(s32) = G_AND %6, %5

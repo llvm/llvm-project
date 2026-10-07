@@ -21,17 +21,17 @@ legalized:       true
 tracksRegLiveness: true
 body:             |
   bb.1.entry:
-    liveins: $a0, $a1
+    liveins: $r4, $r5
 
     ; MIPS32-LABEL: name: and_i32
-    ; MIPS32: liveins: $a0, $a1
-    ; MIPS32: [[COPY:%[0-9]+]]:gprb(s32) = COPY $a0
-    ; MIPS32: [[COPY1:%[0-9]+]]:gprb(s32) = COPY $a1
+    ; MIPS32: liveins: $r4, $r5
+    ; MIPS32: [[COPY:%[0-9]+]]:gprb(s32) = COPY $r4
+    ; MIPS32: [[COPY1:%[0-9]+]]:gprb(s32) = COPY $r5
     ; MIPS32: [[AND:%[0-9]+]]:gprb(s32) = G_AND [[COPY1]], [[COPY]]
     ; MIPS32: $r2 = COPY [[AND]](s32)
     ; MIPS32: RetRA implicit $r2
-    %0:_(s32) = COPY $a0
-    %1:_(s32) = COPY $a1
+    %0:_(s32) = COPY $r4
+    %1:_(s32) = COPY $r5
     %2:_(s32) = G_AND %1, %0
     $r2 = COPY %2(s32)
     RetRA implicit $r2
@@ -44,17 +44,17 @@ legalized:       true
 tracksRegLiveness: true
 body:             |
   bb.1.entry:
-    liveins: $a0, $a1
+    liveins: $r4, $r5
 
     ; MIPS32-LABEL: name: or_i32
-    ; MIPS32: liveins: $a0, $a1
-    ; MIPS32: [[COPY:%[0-9]+]]:gprb(s32) = COPY $a0
-    ; MIPS32: [[COPY1:%[0-9]+]]:gprb(s32) = COPY $a1
+    ; MIPS32: liveins: $r4, $r5
+    ; MIPS32: [[COPY:%[0-9]+]]:gprb(s32) = COPY $r4
+    ; MIPS32: [[COPY1:%[0-9]+]]:gprb(s32) = COPY $r5
     ; MIPS32: [[OR:%[0-9]+]]:gprb(s32) = G_OR [[COPY1]], [[COPY]]
     ; MIPS32: $r2 = COPY [[OR]](s32)
     ; MIPS32: RetRA implicit $r2
-    %0:_(s32) = COPY $a0
-    %1:_(s32) = COPY $a1
+    %0:_(s32) = COPY $r4
+    %1:_(s32) = COPY $r5
     %2:_(s32) = G_OR %1, %0
     $r2 = COPY %2(s32)
     RetRA implicit $r2
@@ -67,17 +67,17 @@ legalized:       true
 tracksRegLiveness: true
 body:             |
   bb.1.entry:
-    liveins: $a0, $a1
+    liveins: $r4, $r5
 
     ; MIPS32-LABEL: name: xor_i32
-    ; MIPS32: liveins: $a0, $a1
-    ; MIPS32: [[COPY:%[0-9]+]]:gprb(s32) = COPY $a0
-    ; MIPS32: [[COPY1:%[0-9]+]]:gprb(s32) = COPY $a1
+    ; MIPS32: liveins: $r4, $r5
+    ; MIPS32: [[COPY:%[0-9]+]]:gprb(s32) = COPY $r4
+    ; MIPS32: [[COPY1:%[0-9]+]]:gprb(s32) = COPY $r5
     ; MIPS32: [[XOR:%[0-9]+]]:gprb(s32) = G_XOR [[COPY1]], [[COPY]]
     ; MIPS32: $r2 = COPY [[XOR]](s32)
     ; MIPS32: RetRA implicit $r2
-    %0:_(s32) = COPY $a0
-    %1:_(s32) = COPY $a1
+    %0:_(s32) = COPY $r4
+    %1:_(s32) = COPY $r5
     %2:_(s32) = G_XOR %1, %0
     $r2 = COPY %2(s32)
     RetRA implicit $r2
@@ -90,16 +90,16 @@ legalized:       true
 tracksRegLiveness: true
 body:             |
   bb.1.entry:
-    liveins: $a0
+    liveins: $r4
 
     ; MIPS32-LABEL: name: shl
-    ; MIPS32: liveins: $a0
-    ; MIPS32: [[COPY:%[0-9]+]]:gprb(s32) = COPY $a0
+    ; MIPS32: liveins: $r4
+    ; MIPS32: [[COPY:%[0-9]+]]:gprb(s32) = COPY $r4
     ; MIPS32: [[C:%[0-9]+]]:gprb(s32) = G_CONSTANT i32 1
     ; MIPS32: [[SHL:%[0-9]+]]:gprb(s32) = G_SHL [[COPY]], [[C]]
     ; MIPS32: $r2 = COPY [[SHL]](s32)
     ; MIPS32: RetRA implicit $r2
-    %0:_(s32) = COPY $a0
+    %0:_(s32) = COPY $r4
     %1:_(s32) = G_CONSTANT i32 1
     %2:_(s32) = G_SHL %0, %1
     $r2 = COPY %2(s32)
@@ -113,16 +113,16 @@ legalized:       true
 tracksRegLiveness: true
 body:             |
   bb.1.entry:
-    liveins: $a0
+    liveins: $r4
 
     ; MIPS32-LABEL: name: ashr
-    ; MIPS32: liveins: $a0
-    ; MIPS32: [[COPY:%[0-9]+]]:gprb(s32) = COPY $a0
+    ; MIPS32: liveins: $r4
+    ; MIPS32: [[COPY:%[0-9]+]]:gprb(s32) = COPY $r4
     ; MIPS32: [[C:%[0-9]+]]:gprb(s32) = G_CONSTANT i32 1
     ; MIPS32: [[ASHR:%[0-9]+]]:gprb(s32) = G_ASHR [[COPY]], [[C]]
     ; MIPS32: $r2 = COPY [[ASHR]](s32)
     ; MIPS32: RetRA implicit $r2
-    %0:_(s32) = COPY $a0
+    %0:_(s32) = COPY $r4
     %1:_(s32) = G_CONSTANT i32 1
     %2:_(s32) = G_ASHR %0, %1
     $r2 = COPY %2(s32)
@@ -136,16 +136,16 @@ legalized:       true
 tracksRegLiveness: true
 body:             |
   bb.1.entry:
-    liveins: $a0
+    liveins: $r4
 
     ; MIPS32-LABEL: name: lshr
-    ; MIPS32: liveins: $a0
-    ; MIPS32: [[COPY:%[0-9]+]]:gprb(s32) = COPY $a0
+    ; MIPS32: liveins: $r4
+    ; MIPS32: [[COPY:%[0-9]+]]:gprb(s32) = COPY $r4
     ; MIPS32: [[C:%[0-9]+]]:gprb(s32) = G_CONSTANT i32 1
     ; MIPS32: [[LSHR:%[0-9]+]]:gprb(s32) = G_LSHR [[COPY]], [[C]]
     ; MIPS32: $r2 = COPY [[LSHR]](s32)
     ; MIPS32: RetRA implicit $r2
-    %0:_(s32) = COPY $a0
+    %0:_(s32) = COPY $r4
     %1:_(s32) = G_CONSTANT i32 1
     %2:_(s32) = G_LSHR %0, %1
     $r2 = COPY %2(s32)
@@ -159,17 +159,17 @@ legalized:       true
 tracksRegLiveness: true
 body:             |
   bb.1.entry:
-    liveins: $a0, $a1
+    liveins: $r4, $r5
 
     ; MIPS32-LABEL: name: shlv
-    ; MIPS32: liveins: $a0, $a1
-    ; MIPS32: [[COPY:%[0-9]+]]:gprb(s32) = COPY $a0
-    ; MIPS32: [[COPY1:%[0-9]+]]:gprb(s32) = COPY $a1
+    ; MIPS32: liveins: $r4, $r5
+    ; MIPS32: [[COPY:%[0-9]+]]:gprb(s32) = COPY $r4
+    ; MIPS32: [[COPY1:%[0-9]+]]:gprb(s32) = COPY $r5
     ; MIPS32: [[SHL:%[0-9]+]]:gprb(s32) = G_SHL [[COPY]], [[COPY1]]
     ; MIPS32: $r2 = COPY [[SHL]](s32)
     ; MIPS32: RetRA implicit $r2
-    %0:_(s32) = COPY $a0
-    %1:_(s32) = COPY $a1
+    %0:_(s32) = COPY $r4
+    %1:_(s32) = COPY $r5
     %2:_(s32) = G_SHL %0, %1
     $r2 = COPY %2(s32)
     RetRA implicit $r2
@@ -182,17 +182,17 @@ legalized:       true
 tracksRegLiveness: true
 body:             |
   bb.1.entry:
-    liveins: $a0, $a1
+    liveins: $r4, $r5
 
     ; MIPS32-LABEL: name: ashrv
-    ; MIPS32: liveins: $a0, $a1
-    ; MIPS32: [[COPY:%[0-9]+]]:gprb(s32) = COPY $a0
-    ; MIPS32: [[COPY1:%[0-9]+]]:gprb(s32) = COPY $a1
+    ; MIPS32: liveins: $r4, $r5
+    ; MIPS32: [[COPY:%[0-9]+]]:gprb(s32) = COPY $r4
+    ; MIPS32: [[COPY1:%[0-9]+]]:gprb(s32) = COPY $r5
     ; MIPS32: [[ASHR:%[0-9]+]]:gprb(s32) = G_ASHR [[COPY]], [[COPY1]]
     ; MIPS32: $r2 = COPY [[ASHR]](s32)
     ; MIPS32: RetRA implicit $r2
-    %0:_(s32) = COPY $a0
-    %1:_(s32) = COPY $a1
+    %0:_(s32) = COPY $r4
+    %1:_(s32) = COPY $r5
     %2:_(s32) = G_ASHR %0, %1
     $r2 = COPY %2(s32)
     RetRA implicit $r2
@@ -205,17 +205,17 @@ legalized:       true
 tracksRegLiveness: true
 body:             |
   bb.1.entry:
-    liveins: $a0, $a1
+    liveins: $r4, $r5
 
     ; MIPS32-LABEL: name: lshrv
-    ; MIPS32: liveins: $a0, $a1
-    ; MIPS32: [[COPY:%[0-9]+]]:gprb(s32) = COPY $a0
-    ; MIPS32: [[COPY1:%[0-9]+]]:gprb(s32) = COPY $a1
+    ; MIPS32: liveins: $r4, $r5
+    ; MIPS32: [[COPY:%[0-9]+]]:gprb(s32) = COPY $r4
+    ; MIPS32: [[COPY1:%[0-9]+]]:gprb(s32) = COPY $r5
     ; MIPS32: [[LSHR:%[0-9]+]]:gprb(s32) = G_LSHR [[COPY]], [[COPY1]]
     ; MIPS32: $r2 = COPY [[LSHR]](s32)
     ; MIPS32: RetRA implicit $r2
-    %0:_(s32) = COPY $a0
-    %1:_(s32) = COPY $a1
+    %0:_(s32) = COPY $r4
+    %1:_(s32) = COPY $r5
     %2:_(s32) = G_LSHR %0, %1
     $r2 = COPY %2(s32)
     RetRA implicit $r2

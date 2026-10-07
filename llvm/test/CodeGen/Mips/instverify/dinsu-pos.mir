@@ -16,7 +16,7 @@ registers:
   - { id: 0, class: gpr64, preferred-register: '' }
   - { id: 1, class: gpr64, preferred-register: '' }
 liveins:
-  - { reg: '$a0_64', virtual-reg: '%0' }
+  - { reg: '$r4_64', virtual-reg: '%0' }
 frameInfo:
   isFrameAddressTaken: false
   isReturnAddressTaken: false
@@ -39,9 +39,9 @@ stack:
 constants:
 body:             |
   bb.0.entry:
-    liveins: $a0_64
+    liveins: $r4_64
 
-    %0 = COPY $a0_64
+    %0 = COPY $r4_64
     %1 = DINSU %0, 65, 5
     $r2_64 = COPY %1
     RetRA implicit $r2_64

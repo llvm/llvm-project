@@ -26,7 +26,7 @@ selected:        false
 tracksRegLiveness: true
 registers:
 liveins:
-  - { reg: '$a1', virtual-reg: '' }
+  - { reg: '$r5', virtual-reg: '' }
 frameInfo:
   isFrameAddressTaken: false
   isReturnAddressTaken: false
@@ -47,29 +47,29 @@ frameInfo:
 fixedStack:
 stack:
   - { id: 0, name: '', type: spill-slot, offset: -4, size: 4, alignment: 4,
-      stack-id: default, callee-saved-register: '$ra', callee-saved-restored: true,
+      stack-id: default, callee-saved-register: '$r31', callee-saved-restored: true,
       debug-info-variable: '', debug-info-expression: '', debug-info-location: '' }
   - { id: 1, name: '', type: spill-slot, offset: -8, size: 4, alignment: 4,
-      stack-id: default, callee-saved-register: '$s0', callee-saved-restored: true,
+      stack-id: default, callee-saved-register: '$r16', callee-saved-restored: true,
       debug-info-variable: '', debug-info-expression: '', debug-info-location: '' }
 constants:
 body:             |
   bb.0:
-    liveins: $a1, $ra, $s0
+    liveins: $r5, $r31, $r16
 
-    $sp = ADDiu $sp, -24
+    $r29 = ADDiu $r29, -24
     CFI_INSTRUCTION def_cfa_offset 24
-    SW killed $ra, $sp, 20 :: (store (s32) into %stack.0)
-    SW killed $s0, $sp, 16 :: (store (s32) into %stack.1)
-    CFI_INSTRUCTION offset $ra_64, -4
-    CFI_INSTRUCTION offset $s0_64, -8
-    $s0 = MOVE16_MM $a1
-    JAL @f, csr_o32, implicit-def dead $ra, implicit-def $sp, implicit-def dead $r2
-    $r2 = MOVE16_MM killed $s0
-    $s0 = LW $sp, 16 :: (load (s32) from %stack.1)
-    $ra = LW $sp, 20 :: (load (s32) from %stack.0)
-    $sp = ADDiu $sp, 24
-    PseudoReturn undef $ra, implicit killed $r2
+    SW killed $r31, $r29, 20 :: (store (s32) into %stack.0)
+    SW killed $r16, $r29, 16 :: (store (s32) into %stack.1)
+    CFI_INSTRUCTION offset $r31_64, -4
+    CFI_INSTRUCTION offset $r16_64, -8
+    $r16 = MOVE16_MM $r5
+    JAL @f, csr_o32, implicit-def dead $r31, implicit-def $r29, implicit-def dead $r2
+    $r2 = MOVE16_MM killed $r16
+    $r16 = LW $r29, 16 :: (load (s32) from %stack.1)
+    $r31 = LW $r29, 20 :: (load (s32) from %stack.0)
+    $r29 = ADDiu $r29, 24
+    PseudoReturn undef $r31, implicit killed $r2
 
 ...
 ---
@@ -85,7 +85,7 @@ selected:        false
 tracksRegLiveness: true
 registers:
 liveins:
-  - { reg: '$a1', virtual-reg: '' }
+  - { reg: '$r5', virtual-reg: '' }
 frameInfo:
   isFrameAddressTaken: false
   isReturnAddressTaken: false
@@ -106,29 +106,29 @@ frameInfo:
 fixedStack:
 stack:
   - { id: 0, name: '', type: spill-slot, offset: -4, size: 4, alignment: 4,
-      stack-id: default, callee-saved-register: '$ra', callee-saved-restored: true,
+      stack-id: default, callee-saved-register: '$r31', callee-saved-restored: true,
       debug-info-variable: '', debug-info-expression: '', debug-info-location: '' }
   - { id: 1, name: '', type: spill-slot, offset: -8, size: 4, alignment: 4,
-      stack-id: default, callee-saved-register: '$s0', callee-saved-restored: true,
+      stack-id: default, callee-saved-register: '$r16', callee-saved-restored: true,
       debug-info-variable: '', debug-info-expression: '', debug-info-location: '' }
 constants:
 body:             |
   bb.0:
-    liveins: $a1, $ra, $s0
+    liveins: $r5, $r31, $r16
 
-    $sp = ADDiu $sp, -24
+    $r29 = ADDiu $r29, -24
     CFI_INSTRUCTION def_cfa_offset 24
-    SW_MM killed $ra, $sp, 20 :: (store (s32) into %stack.0)
-    SW_MM killed $s0, $sp, 16 :: (store (s32) into %stack.1)
-    CFI_INSTRUCTION offset $ra_64, -4
-    CFI_INSTRUCTION offset $s0_64, -8
-    $s0 = MOVE16_MM $a1
-    JAL @f, csr_o32, implicit-def dead $ra, implicit-def $sp, implicit-def dead $r2
-    $r2 = MOVE16_MM killed $s0
-    $s0 = LW_MM $sp, 16 :: (load (s32) from %stack.1)
-    $ra = LW_MM $sp, 20 :: (load (s32) from %stack.0)
-    $sp = ADDiu $sp, 24
-    PseudoReturn undef $ra, implicit killed $r2
+    SW_MM killed $r31, $r29, 20 :: (store (s32) into %stack.0)
+    SW_MM killed $r16, $r29, 16 :: (store (s32) into %stack.1)
+    CFI_INSTRUCTION offset $r31_64, -4
+    CFI_INSTRUCTION offset $r16_64, -8
+    $r16 = MOVE16_MM $r5
+    JAL @f, csr_o32, implicit-def dead $r31, implicit-def $r29, implicit-def dead $r2
+    $r2 = MOVE16_MM killed $r16
+    $r16 = LW_MM $r29, 16 :: (load (s32) from %stack.1)
+    $r31 = LW_MM $r29, 20 :: (load (s32) from %stack.0)
+    $r29 = ADDiu $r29, 24
+    PseudoReturn undef $r31, implicit killed $r2
 
 ...
 ---
@@ -144,7 +144,7 @@ selected:        false
 tracksRegLiveness: true
 registers:
 liveins:
-  - { reg: '$a1', virtual-reg: '' }
+  - { reg: '$r5', virtual-reg: '' }
 frameInfo:
   isFrameAddressTaken: false
   isReturnAddressTaken: false
@@ -165,29 +165,29 @@ frameInfo:
 fixedStack:
 stack:
   - { id: 0, name: '', type: spill-slot, offset: -4, size: 4, alignment: 4,
-      stack-id: default, callee-saved-register: '$ra', callee-saved-restored: true,
+      stack-id: default, callee-saved-register: '$r31', callee-saved-restored: true,
       debug-info-variable: '', debug-info-expression: '', debug-info-location: '' }
   - { id: 1, name: '', type: spill-slot, offset: -8, size: 4, alignment: 4,
-      stack-id: default, callee-saved-register: '$s0', callee-saved-restored: true,
+      stack-id: default, callee-saved-register: '$r16', callee-saved-restored: true,
       debug-info-variable: '', debug-info-expression: '', debug-info-location: '' }
 constants:
 body:             |
   bb.0:
-    liveins: $a1, $ra, $s0
+    liveins: $r5, $r31, $r16
 
-    $sp = ADDiu $sp, -24
+    $r29 = ADDiu $r29, -24
     CFI_INSTRUCTION def_cfa_offset 24
-    SW_MM killed $ra, $sp, 20 :: (store (s32) into %stack.0)
-    SW killed $s0, $sp, 16 :: (store (s32) into %stack.1)
-    CFI_INSTRUCTION offset $ra_64, -4
-    CFI_INSTRUCTION offset $s0_64, -8
-    $s0 = MOVE16_MM $a1
-    JAL @f, csr_o32, implicit-def dead $ra, implicit-def $sp, implicit-def dead $r2
-    $r2 = MOVE16_MM killed $s0
-    $s0 = LW_MM $sp, 16 :: (load (s32) from %stack.1)
-    $ra = LW $sp, 20 :: (load (s32) from %stack.0)
-    $sp = ADDiu $sp, 24
-    PseudoReturn undef $ra, implicit killed $r2
+    SW_MM killed $r31, $r29, 20 :: (store (s32) into %stack.0)
+    SW killed $r16, $r29, 16 :: (store (s32) into %stack.1)
+    CFI_INSTRUCTION offset $r31_64, -4
+    CFI_INSTRUCTION offset $r16_64, -8
+    $r16 = MOVE16_MM $r5
+    JAL @f, csr_o32, implicit-def dead $r31, implicit-def $r29, implicit-def dead $r2
+    $r2 = MOVE16_MM killed $r16
+    $r16 = LW_MM $r29, 16 :: (load (s32) from %stack.1)
+    $r31 = LW $r29, 20 :: (load (s32) from %stack.0)
+    $r29 = ADDiu $r29, 24
+    PseudoReturn undef $r31, implicit killed $r2
 
 ...
 ---
@@ -203,7 +203,7 @@ selected:        false
 tracksRegLiveness: true
 registers:
 liveins:
-  - { reg: '$a1', virtual-reg: '' }
+  - { reg: '$r5', virtual-reg: '' }
 frameInfo:
   isFrameAddressTaken: false
   isReturnAddressTaken: false
@@ -224,29 +224,29 @@ frameInfo:
 fixedStack:
 stack:
   - { id: 0, name: '', type: spill-slot, offset: -4, size: 4, alignment: 4,
-      stack-id: default, callee-saved-register: '$ra', callee-saved-restored: true,
+      stack-id: default, callee-saved-register: '$r31', callee-saved-restored: true,
       debug-info-variable: '', debug-info-expression: '', debug-info-location: '' }
   - { id: 1, name: '', type: spill-slot, offset: -8, size: 4, alignment: 4,
-      stack-id: default, callee-saved-register: '$s0', callee-saved-restored: true,
+      stack-id: default, callee-saved-register: '$r16', callee-saved-restored: true,
       debug-info-variable: '', debug-info-expression: '', debug-info-location: '' }
 constants:
 body:             |
   bb.0:
-    liveins: $a1, $ra, $s0
+    liveins: $r5, $r31, $r16
 
-    $sp = ADDiu $sp, -24
+    $r29 = ADDiu $r29, -24
     CFI_INSTRUCTION def_cfa_offset 24
-    SW killed $ra, $sp, 20 :: (store (s32) into %stack.0)
-    SW_MM killed $s0, $sp, 16 :: (store (s32) into %stack.1)
-    CFI_INSTRUCTION offset $ra_64, -4
-    CFI_INSTRUCTION offset $s0_64, -8
-    $s0 = MOVE16_MM $a1
-    JAL @f, csr_o32, implicit-def dead $ra, implicit-def $sp, implicit-def dead $r2
-    $r2 = MOVE16_MM killed $s0
-    $s0 = LW $sp, 16 :: (load (s32) from %stack.1)
-    $ra = LW_MM $sp, 20 :: (load (s32) from %stack.0)
-    $sp = ADDiu $sp, 24
-    PseudoReturn undef $ra, implicit killed $r2
+    SW killed $r31, $r29, 20 :: (store (s32) into %stack.0)
+    SW_MM killed $r16, $r29, 16 :: (store (s32) into %stack.1)
+    CFI_INSTRUCTION offset $r31_64, -4
+    CFI_INSTRUCTION offset $r16_64, -8
+    $r16 = MOVE16_MM $r5
+    JAL @f, csr_o32, implicit-def dead $r31, implicit-def $r29, implicit-def dead $r2
+    $r2 = MOVE16_MM killed $r16
+    $r16 = LW $r29, 16 :: (load (s32) from %stack.1)
+    $r31 = LW_MM $r29, 20 :: (load (s32) from %stack.0)
+    $r29 = ADDiu $r29, 24
+    PseudoReturn undef $r31, implicit killed $r2
 
 ...
 

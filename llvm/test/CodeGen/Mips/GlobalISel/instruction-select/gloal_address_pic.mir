@@ -21,17 +21,17 @@ regBankSelected: true
 tracksRegLiveness: true
 body:             |
   bb.1.entry:
-    liveins: $a0, $a1
+    liveins: $r4, $r5
 
     ; MIPS32-LABEL: name: f_with_local_linkage
-    ; MIPS32: liveins: $a0, $a1
-    ; MIPS32: [[COPY:%[0-9]+]]:gpr32 = COPY $a0
-    ; MIPS32: [[COPY1:%[0-9]+]]:gpr32 = COPY $a1
+    ; MIPS32: liveins: $r4, $r5
+    ; MIPS32: [[COPY:%[0-9]+]]:gpr32 = COPY $r4
+    ; MIPS32: [[COPY1:%[0-9]+]]:gpr32 = COPY $r5
     ; MIPS32: [[ADDu:%[0-9]+]]:gpr32 = ADDu [[COPY1]], [[COPY]]
     ; MIPS32: $r2 = COPY [[ADDu]]
     ; MIPS32: RetRA implicit $r2
-    %0:gprb(s32) = COPY $a0
-    %1:gprb(s32) = COPY $a1
+    %0:gprb(s32) = COPY $r4
+    %1:gprb(s32) = COPY $r5
     %2:gprb(s32) = G_ADD %1, %0
     $r2 = COPY %2(s32)
     RetRA implicit $r2
@@ -45,35 +45,35 @@ regBankSelected: true
 tracksRegLiveness: true
 body:             |
   bb.1.entry:
-    liveins: $a0, $a1, $t9, $r2
+    liveins: $r4, $r5, $r25, $r2
 
     ; MIPS32-LABEL: name: call_global
-    ; MIPS32: liveins: $a0, $a1, $t9, $r2, $t9, $r2
-    ; MIPS32: [[ADDu:%[0-9]+]]:gpr32 = ADDu $r2, $t9
-    ; MIPS32: [[ADDu1:%[0-9]+]]:gpr32 = ADDu $r2, $t9
-    ; MIPS32: [[COPY:%[0-9]+]]:gpr32 = COPY $a0
-    ; MIPS32: [[COPY1:%[0-9]+]]:gpr32 = COPY $a1
-    ; MIPS32: ADJCALLSTACKDOWN 16, 0, implicit-def $sp, implicit $sp
+    ; MIPS32: liveins: $r4, $r5, $r25, $r2, $r25, $r2
+    ; MIPS32: [[ADDu:%[0-9]+]]:gpr32 = ADDu $r2, $r25
+    ; MIPS32: [[ADDu1:%[0-9]+]]:gpr32 = ADDu $r2, $r25
+    ; MIPS32: [[COPY:%[0-9]+]]:gpr32 = COPY $r4
+    ; MIPS32: [[COPY1:%[0-9]+]]:gpr32 = COPY $r5
+    ; MIPS32: ADJCALLSTACKDOWN 16, 0, implicit-def $r29, implicit $r29
     ; MIPS32: [[LW:%[0-9]+]]:gpr32 = LW [[ADDu]], target-flags(mips-got-call) @f :: (load (s32) from got)
-    ; MIPS32: $a0 = COPY [[COPY]]
-    ; MIPS32: $a1 = COPY [[COPY1]]
-    ; MIPS32: $gp = COPY [[ADDu1]]
-    ; MIPS32: JALRPseudo [[LW]], csr_o32, implicit-def dead $ra, implicit-def $sp, implicit $a0, implicit $a1, implicit-def $gp, implicit-def $r2
+    ; MIPS32: $r4 = COPY [[COPY]]
+    ; MIPS32: $r5 = COPY [[COPY1]]
+    ; MIPS32: $r28 = COPY [[ADDu1]]
+    ; MIPS32: JALRPseudo [[LW]], csr_o32, implicit-def dead $r31, implicit-def $r29, implicit $r4, implicit $r5, implicit-def $r28, implicit-def $r2
     ; MIPS32: [[COPY2:%[0-9]+]]:gpr32 = COPY $r2
-    ; MIPS32: ADJCALLSTACKUP 16, 0, implicit-def $sp, implicit $sp
+    ; MIPS32: ADJCALLSTACKUP 16, 0, implicit-def $r29, implicit $r29
     ; MIPS32: $r2 = COPY [[COPY2]]
     ; MIPS32: RetRA implicit $r2
-    %4:gpr32 = ADDu $r2, $t9
-    %0:gprb(s32) = COPY $a0
-    %1:gprb(s32) = COPY $a1
-    ADJCALLSTACKDOWN 16, 0, implicit-def $sp, implicit $sp
+    %4:gpr32 = ADDu $r2, $r25
+    %0:gprb(s32) = COPY $r4
+    %1:gprb(s32) = COPY $r5
+    ADJCALLSTACKDOWN 16, 0, implicit-def $r29, implicit $r29
     %3:gpr32(p0) = G_GLOBAL_VALUE target-flags(mips-got-call) @f
-    $a0 = COPY %0(s32)
-    $a1 = COPY %1(s32)
-    $gp = COPY %4
-    JALRPseudo %3(p0), csr_o32, implicit-def dead $ra, implicit-def $sp, implicit $a0, implicit $a1, implicit-def $gp, implicit-def $r2
+    $r4 = COPY %0(s32)
+    $r5 = COPY %1(s32)
+    $r28 = COPY %4
+    JALRPseudo %3(p0), csr_o32, implicit-def dead $r31, implicit-def $r29, implicit $r4, implicit $r5, implicit-def $r28, implicit-def $r2
     %2:gprb(s32) = COPY $r2
-    ADJCALLSTACKUP 16, 0, implicit-def $sp, implicit $sp
+    ADJCALLSTACKUP 16, 0, implicit-def $r29, implicit $r29
     $r2 = COPY %2(s32)
     RetRA implicit $r2
 
@@ -86,36 +86,36 @@ regBankSelected: true
 tracksRegLiveness: true
 body:             |
   bb.1.entry:
-    liveins: $a0, $a1, $t9, $r2
+    liveins: $r4, $r5, $r25, $r2
 
     ; MIPS32-LABEL: name: call_global_with_local_linkage
-    ; MIPS32: liveins: $a0, $a1, $t9, $r2, $t9, $r2
-    ; MIPS32: [[ADDu:%[0-9]+]]:gpr32 = ADDu $r2, $t9
-    ; MIPS32: [[ADDu1:%[0-9]+]]:gpr32 = ADDu $r2, $t9
-    ; MIPS32: [[COPY:%[0-9]+]]:gpr32 = COPY $a0
-    ; MIPS32: [[COPY1:%[0-9]+]]:gpr32 = COPY $a1
-    ; MIPS32: ADJCALLSTACKDOWN 16, 0, implicit-def $sp, implicit $sp
+    ; MIPS32: liveins: $r4, $r5, $r25, $r2, $r25, $r2
+    ; MIPS32: [[ADDu:%[0-9]+]]:gpr32 = ADDu $r2, $r25
+    ; MIPS32: [[ADDu1:%[0-9]+]]:gpr32 = ADDu $r2, $r25
+    ; MIPS32: [[COPY:%[0-9]+]]:gpr32 = COPY $r4
+    ; MIPS32: [[COPY1:%[0-9]+]]:gpr32 = COPY $r5
+    ; MIPS32: ADJCALLSTACKDOWN 16, 0, implicit-def $r29, implicit $r29
     ; MIPS32: [[LW:%[0-9]+]]:gpr32 = LW [[ADDu]], target-flags(mips-got) @f_with_local_linkage :: (load (s32) from got)
     ; MIPS32: [[ADDiu:%[0-9]+]]:gpr32 = ADDiu [[LW]], target-flags(mips-abs-lo) @f_with_local_linkage
-    ; MIPS32: $a0 = COPY [[COPY]]
-    ; MIPS32: $a1 = COPY [[COPY1]]
-    ; MIPS32: $gp = COPY [[ADDu1]]
-    ; MIPS32: JALRPseudo [[ADDiu]], csr_o32, implicit-def dead $ra, implicit-def $sp, implicit $a0, implicit $a1, implicit-def $gp, implicit-def $r2
+    ; MIPS32: $r4 = COPY [[COPY]]
+    ; MIPS32: $r5 = COPY [[COPY1]]
+    ; MIPS32: $r28 = COPY [[ADDu1]]
+    ; MIPS32: JALRPseudo [[ADDiu]], csr_o32, implicit-def dead $r31, implicit-def $r29, implicit $r4, implicit $r5, implicit-def $r28, implicit-def $r2
     ; MIPS32: [[COPY2:%[0-9]+]]:gpr32 = COPY $r2
-    ; MIPS32: ADJCALLSTACKUP 16, 0, implicit-def $sp, implicit $sp
+    ; MIPS32: ADJCALLSTACKUP 16, 0, implicit-def $r29, implicit $r29
     ; MIPS32: $r2 = COPY [[COPY2]]
     ; MIPS32: RetRA implicit $r2
-    %4:gpr32 = ADDu $r2, $t9
-    %0:gprb(s32) = COPY $a0
-    %1:gprb(s32) = COPY $a1
-    ADJCALLSTACKDOWN 16, 0, implicit-def $sp, implicit $sp
+    %4:gpr32 = ADDu $r2, $r25
+    %0:gprb(s32) = COPY $r4
+    %1:gprb(s32) = COPY $r5
+    ADJCALLSTACKDOWN 16, 0, implicit-def $r29, implicit $r29
     %3:gpr32(p0) = G_GLOBAL_VALUE @f_with_local_linkage
-    $a0 = COPY %0(s32)
-    $a1 = COPY %1(s32)
-    $gp = COPY %4
-    JALRPseudo %3(p0), csr_o32, implicit-def dead $ra, implicit-def $sp, implicit $a0, implicit $a1, implicit-def $gp, implicit-def $r2
+    $r4 = COPY %0(s32)
+    $r5 = COPY %1(s32)
+    $r28 = COPY %4
+    JALRPseudo %3(p0), csr_o32, implicit-def dead $r31, implicit-def $r29, implicit $r4, implicit $r5, implicit-def $r28, implicit-def $r2
     %2:gprb(s32) = COPY $r2
-    ADJCALLSTACKUP 16, 0, implicit-def $sp, implicit $sp
+    ADJCALLSTACKUP 16, 0, implicit-def $r29, implicit $r29
     $r2 = COPY %2(s32)
     RetRA implicit $r2
 
@@ -129,8 +129,8 @@ tracksRegLiveness: true
 body:             |
   bb.1.entry:
     ; MIPS32-LABEL: name: ret_global_int
-    ; MIPS32: liveins: $t9, $r2
-    ; MIPS32: [[ADDu:%[0-9]+]]:gpr32 = ADDu $r2, $t9
+    ; MIPS32: liveins: $r25, $r2
+    ; MIPS32: [[ADDu:%[0-9]+]]:gpr32 = ADDu $r2, $r25
     ; MIPS32: [[LW:%[0-9]+]]:gpr32 = LW [[ADDu]], target-flags(mips-got) @val :: (load (s32) from got)
     ; MIPS32: [[LW1:%[0-9]+]]:gpr32 = LW [[LW]], 0 :: (load (s32) from @val)
     ; MIPS32: $r2 = COPY [[LW1]]
@@ -150,8 +150,8 @@ tracksRegLiveness: true
 body:             |
   bb.1.entry:
     ; MIPS32-LABEL: name: ret_global_int_with_local_linkage
-    ; MIPS32: liveins: $t9, $r2
-    ; MIPS32: [[ADDu:%[0-9]+]]:gpr32 = ADDu $r2, $t9
+    ; MIPS32: liveins: $r25, $r2
+    ; MIPS32: [[ADDu:%[0-9]+]]:gpr32 = ADDu $r2, $r25
     ; MIPS32: [[LW:%[0-9]+]]:gpr32 = LW [[ADDu]], target-flags(mips-got) @val_with_local_linkage :: (load (s32) from got)
     ; MIPS32: [[ADDiu:%[0-9]+]]:gpr32 = ADDiu [[LW]], target-flags(mips-abs-lo) @val_with_local_linkage
     ; MIPS32: [[LW1:%[0-9]+]]:gpr32 = LW [[ADDiu]], 0 :: (load (s32) from @val_with_local_linkage)

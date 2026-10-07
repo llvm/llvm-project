@@ -162,7 +162,7 @@ failedISel:      false
 tracksRegLiveness: true
 registers:
 liveins:
-  - { reg: '$a0_64', virtual-reg: '' }
+  - { reg: '$r4_64', virtual-reg: '' }
 frameInfo:
   isFrameAddressTaken: false
   isReturnAddressTaken: false
@@ -188,43 +188,43 @@ body:             |
   ; MIPS64-LABEL: name: expand_BNEZC64
   ; MIPS64: bb.0 (%ir-block.0):
   ; MIPS64:   successors: %bb.1(0x40000000), %bb.2(0x40000000)
-  ; MIPS64:   BNEZC64 killed renamable $a0_64, %bb.2, implicit-def $at
+  ; MIPS64:   BNEZC64 killed renamable $r4_64, %bb.2, implicit-def $r1
   ; MIPS64: bb.1.iftrue:
   ; MIPS64:   INLINEASM &".space 831068", sideeffect attdialect
-  ; MIPS64:   PseudoReturn64 undef $ra_64, implicit killed $r2_64 {
-  ; MIPS64:     $r2_64 = DADDiu $zero_64, 1
+  ; MIPS64:   PseudoReturn64 undef $r31_64, implicit killed $r2_64 {
+  ; MIPS64:     $r2_64 = DADDiu $r0_64, 1
   ; MIPS64:   }
   ; MIPS64: bb.2.tail:
-  ; MIPS64:   PseudoReturn64 undef $ra_64, implicit killed $r2_64 {
-  ; MIPS64:     $r2_64 = DADDiu $zero_64, 0
+  ; MIPS64:   PseudoReturn64 undef $r31_64, implicit killed $r2_64 {
+  ; MIPS64:     $r2_64 = DADDiu $r0_64, 0
   ; MIPS64:   }
   ; PIC-LABEL: name: expand_BNEZC64
   ; PIC: bb.0 (%ir-block.0):
   ; PIC:   successors: %bb.1(0x40000000), %bb.2(0x40000000)
-  ; PIC:   BNEZC64 killed renamable $a0_64, %bb.2, implicit-def $at
+  ; PIC:   BNEZC64 killed renamable $r4_64, %bb.2, implicit-def $r1
   ; PIC: bb.1.iftrue:
   ; PIC:   INLINEASM &".space 831068", sideeffect attdialect
-  ; PIC:   PseudoReturn64 undef $ra_64, implicit killed $r2_64 {
-  ; PIC:     $r2_64 = DADDiu $zero_64, 1
+  ; PIC:   PseudoReturn64 undef $r31_64, implicit killed $r2_64 {
+  ; PIC:     $r2_64 = DADDiu $r0_64, 1
   ; PIC:   }
   ; PIC: bb.2.tail:
-  ; PIC:   PseudoReturn64 undef $ra_64, implicit killed $r2_64 {
-  ; PIC:     $r2_64 = DADDiu $zero_64, 0
+  ; PIC:   PseudoReturn64 undef $r31_64, implicit killed $r2_64 {
+  ; PIC:     $r2_64 = DADDiu $r0_64, 0
   ; PIC:   }
   bb.0 (%ir-block.0):
     successors: %bb.1(0x40000000), %bb.2(0x40000000)
-    liveins: $a0_64
+    liveins: $r4_64
 
-    BNEZC64 killed renamable $a0_64, %bb.2, implicit-def $at
+    BNEZC64 killed renamable $r4_64, %bb.2, implicit-def $r1
 
   bb.1.iftrue:
     INLINEASM &".space 831068", sideeffect attdialect
-    $r2_64 = DADDiu $zero_64, 1
-    PseudoReturn64 undef $ra_64, implicit killed $r2_64
+    $r2_64 = DADDiu $r0_64, 1
+    PseudoReturn64 undef $r31_64, implicit killed $r2_64
 
   bb.2.tail:
-    $r2_64 = DADDiu $zero_64, 0
-    PseudoReturn64 undef $ra_64, implicit killed $r2_64
+    $r2_64 = DADDiu $r0_64, 0
+    PseudoReturn64 undef $r31_64, implicit killed $r2_64
 
 ...
 ---
@@ -239,7 +239,7 @@ failedISel:      false
 tracksRegLiveness: true
 registers:
 liveins:
-  - { reg: '$a0_64', virtual-reg: '' }
+  - { reg: '$r4_64', virtual-reg: '' }
 frameInfo:
   isFrameAddressTaken: false
   isReturnAddressTaken: false
@@ -265,43 +265,43 @@ body:             |
   ; MIPS64-LABEL: name: expand_BEQZC64
   ; MIPS64: bb.0 (%ir-block.0):
   ; MIPS64:   successors: %bb.1(0x40000000), %bb.2(0x40000000)
-  ; MIPS64:   BEQZC64 killed renamable $a0_64, %bb.2, implicit-def $at
+  ; MIPS64:   BEQZC64 killed renamable $r4_64, %bb.2, implicit-def $r1
   ; MIPS64: bb.1.iftrue:
   ; MIPS64:   INLINEASM &".space 831068", sideeffect attdialect
-  ; MIPS64:   PseudoReturn64 undef $ra_64, implicit killed $r2_64 {
-  ; MIPS64:     $r2_64 = DADDiu $zero_64, 1
+  ; MIPS64:   PseudoReturn64 undef $r31_64, implicit killed $r2_64 {
+  ; MIPS64:     $r2_64 = DADDiu $r0_64, 1
   ; MIPS64:   }
   ; MIPS64: bb.2.tail:
-  ; MIPS64:   PseudoReturn64 undef $ra_64, implicit killed $r2_64 {
-  ; MIPS64:     $r2_64 = DADDiu $zero_64, 0
+  ; MIPS64:   PseudoReturn64 undef $r31_64, implicit killed $r2_64 {
+  ; MIPS64:     $r2_64 = DADDiu $r0_64, 0
   ; MIPS64:   }
   ; PIC-LABEL: name: expand_BEQZC64
   ; PIC: bb.0 (%ir-block.0):
   ; PIC:   successors: %bb.1(0x40000000), %bb.2(0x40000000)
-  ; PIC:   BEQZC64 killed renamable $a0_64, %bb.2, implicit-def $at
+  ; PIC:   BEQZC64 killed renamable $r4_64, %bb.2, implicit-def $r1
   ; PIC: bb.1.iftrue:
   ; PIC:   INLINEASM &".space 831068", sideeffect attdialect
-  ; PIC:   PseudoReturn64 undef $ra_64, implicit killed $r2_64 {
-  ; PIC:     $r2_64 = DADDiu $zero_64, 1
+  ; PIC:   PseudoReturn64 undef $r31_64, implicit killed $r2_64 {
+  ; PIC:     $r2_64 = DADDiu $r0_64, 1
   ; PIC:   }
   ; PIC: bb.2.tail:
-  ; PIC:   PseudoReturn64 undef $ra_64, implicit killed $r2_64 {
-  ; PIC:     $r2_64 = DADDiu $zero_64, 0
+  ; PIC:   PseudoReturn64 undef $r31_64, implicit killed $r2_64 {
+  ; PIC:     $r2_64 = DADDiu $r0_64, 0
   ; PIC:   }
   bb.0 (%ir-block.0):
     successors: %bb.1(0x40000000), %bb.2(0x40000000)
-    liveins: $a0_64
+    liveins: $r4_64
 
-    BEQZC64 killed renamable $a0_64, %bb.2, implicit-def $at
+    BEQZC64 killed renamable $r4_64, %bb.2, implicit-def $r1
 
   bb.1.iftrue:
     INLINEASM &".space 831068", sideeffect attdialect
-    $r2_64 = DADDiu $zero_64, 1
-    PseudoReturn64 undef $ra_64, implicit killed $r2_64
+    $r2_64 = DADDiu $r0_64, 1
+    PseudoReturn64 undef $r31_64, implicit killed $r2_64
 
   bb.2.tail:
-    $r2_64 = DADDiu $zero_64, 0
-    PseudoReturn64 undef $ra_64, implicit killed $r2_64
+    $r2_64 = DADDiu $r0_64, 0
+    PseudoReturn64 undef $r31_64, implicit killed $r2_64
 
 ...
 ---
@@ -316,7 +316,7 @@ failedISel:      false
 tracksRegLiveness: true
 registers:
 liveins:
-  - { reg: '$a0_64', virtual-reg: '' }
+  - { reg: '$r4_64', virtual-reg: '' }
 frameInfo:
   isFrameAddressTaken: false
   isReturnAddressTaken: false
@@ -342,64 +342,64 @@ body:             |
   ; MIPS64-LABEL: name: expand_BNEC64
   ; MIPS64: bb.0 (%ir-block.0):
   ; MIPS64:   successors: %bb.2(0x40000000), %bb.1(0x40000000)
-  ; MIPS64:   BEQC64 $a0_64, $zero_64, %bb.2, implicit-def $at
+  ; MIPS64:   BEQC64 $r4_64, $r0_64, %bb.2, implicit-def $r1
   ; MIPS64: bb.1 (%ir-block.0):
   ; MIPS64:   successors: %bb.3(0x80000000)
-  ; MIPS64:   J %bb.3, implicit-def $at {
-  ; MIPS64:     $zero = SLL $zero, 0
+  ; MIPS64:   J %bb.3, implicit-def $r1 {
+  ; MIPS64:     $r0 = SLL $r0, 0
   ; MIPS64:   }
   ; MIPS64: bb.2.iftrue:
   ; MIPS64:   INLINEASM &".space 831068", sideeffect attdialect
-  ; MIPS64:   PseudoReturn64 undef $ra_64, implicit killed $r2_64 {
-  ; MIPS64:     $r2_64 = DADDiu $zero_64, 1
+  ; MIPS64:   PseudoReturn64 undef $r31_64, implicit killed $r2_64 {
+  ; MIPS64:     $r2_64 = DADDiu $r0_64, 1
   ; MIPS64:   }
   ; MIPS64: bb.3.tail:
-  ; MIPS64:   PseudoReturn64 undef $ra_64, implicit killed $r2_64 {
-  ; MIPS64:     $r2_64 = DADDiu $zero_64, 0
+  ; MIPS64:   PseudoReturn64 undef $r31_64, implicit killed $r2_64 {
+  ; MIPS64:     $r2_64 = DADDiu $r0_64, 0
   ; MIPS64:   }
   ; PIC-LABEL: name: expand_BNEC64
   ; PIC: bb.0 (%ir-block.0):
   ; PIC:   successors: %bb.3(0x40000000), %bb.1(0x40000000)
-  ; PIC:   BEQC64 $a0_64, $zero_64, %bb.3, implicit-def $at
+  ; PIC:   BEQC64 $r4_64, $r0_64, %bb.3, implicit-def $r1
   ; PIC: bb.1 (%ir-block.0):
   ; PIC:   successors: %bb.2(0x80000000)
-  ; PIC:   $sp_64 = DADDiu $sp_64, -16
-  ; PIC:   SD $ra_64, $sp_64, 0
-  ; PIC:   $at_64 = LONG_BRANCH_DADDiu $zero_64, target-flags(mips-abs-hi) %bb.4, %bb.2
-  ; PIC:   $at_64 = DSLL $at_64, 16
-  ; PIC:   BAL_BR %bb.2, implicit-def $ra {
-  ; PIC:     $at_64 = LONG_BRANCH_DADDiu $at_64, target-flags(mips-abs-lo) %bb.4, %bb.2
+  ; PIC:   $r29_64 = DADDiu $r29_64, -16
+  ; PIC:   SD $r31_64, $r29_64, 0
+  ; PIC:   $r1_64 = LONG_BRANCH_DADDiu $r0_64, target-flags(mips-abs-hi) %bb.4, %bb.2
+  ; PIC:   $r1_64 = DSLL $r1_64, 16
+  ; PIC:   BAL_BR %bb.2, implicit-def $r31 {
+  ; PIC:     $r1_64 = LONG_BRANCH_DADDiu $r1_64, target-flags(mips-abs-lo) %bb.4, %bb.2
   ; PIC:   }
   ; PIC: bb.2 (%ir-block.0):
   ; PIC:   successors: %bb.4(0x80000000)
-  ; PIC:   $at_64 = DADDu $ra_64, $at_64
-  ; PIC:   $ra_64 = LD $sp_64, 0
-  ; PIC:   JR64 $at_64 {
-  ; PIC:     $sp_64 = DADDiu $sp_64, 16
+  ; PIC:   $r1_64 = DADDu $r31_64, $r1_64
+  ; PIC:   $r31_64 = LD $r29_64, 0
+  ; PIC:   JR64 $r1_64 {
+  ; PIC:     $r29_64 = DADDiu $r29_64, 16
   ; PIC:   }
   ; PIC: bb.3.iftrue:
   ; PIC:   INLINEASM &".space 831068", sideeffect attdialect
-  ; PIC:   PseudoReturn64 undef $ra_64, implicit killed $r2_64 {
-  ; PIC:     $r2_64 = DADDiu $zero_64, 1
+  ; PIC:   PseudoReturn64 undef $r31_64, implicit killed $r2_64 {
+  ; PIC:     $r2_64 = DADDiu $r0_64, 1
   ; PIC:   }
   ; PIC: bb.4.tail:
-  ; PIC:   PseudoReturn64 undef $ra_64, implicit killed $r2_64 {
-  ; PIC:     $r2_64 = DADDiu $zero_64, 0
+  ; PIC:   PseudoReturn64 undef $r31_64, implicit killed $r2_64 {
+  ; PIC:     $r2_64 = DADDiu $r0_64, 0
   ; PIC:   }
   bb.0 (%ir-block.0):
     successors: %bb.1(0x40000000), %bb.2(0x40000000)
-    liveins: $a0_64
+    liveins: $r4_64
 
-    BNEC64 killed renamable $a0_64, $zero_64, %bb.2, implicit-def $at
+    BNEC64 killed renamable $r4_64, $r0_64, %bb.2, implicit-def $r1
 
   bb.1.iftrue:
     INLINEASM &".space 831068", sideeffect attdialect
-    $r2_64 = DADDiu $zero_64, 1
-    PseudoReturn64 undef $ra_64, implicit killed $r2_64
+    $r2_64 = DADDiu $r0_64, 1
+    PseudoReturn64 undef $r31_64, implicit killed $r2_64
 
   bb.2.tail:
-    $r2_64 = DADDiu $zero_64, 0
-    PseudoReturn64 undef $ra_64, implicit killed $r2_64
+    $r2_64 = DADDiu $r0_64, 0
+    PseudoReturn64 undef $r31_64, implicit killed $r2_64
 
 ...
 ---
@@ -414,7 +414,7 @@ failedISel:      false
 tracksRegLiveness: true
 registers:
 liveins:
-  - { reg: '$a0_64', virtual-reg: '' }
+  - { reg: '$r4_64', virtual-reg: '' }
 frameInfo:
   isFrameAddressTaken: false
   isReturnAddressTaken: false
@@ -440,64 +440,64 @@ body:             |
   ; MIPS64-LABEL: name: expand_BEQC64
   ; MIPS64: bb.0 (%ir-block.0):
   ; MIPS64:   successors: %bb.2(0x40000000), %bb.1(0x40000000)
-  ; MIPS64:   BNEC64 $a0_64, $zero_64, %bb.2, implicit-def $at
+  ; MIPS64:   BNEC64 $r4_64, $r0_64, %bb.2, implicit-def $r1
   ; MIPS64: bb.1 (%ir-block.0):
   ; MIPS64:   successors: %bb.3(0x80000000)
-  ; MIPS64:   J %bb.3, implicit-def $at {
-  ; MIPS64:     $zero = SLL $zero, 0
+  ; MIPS64:   J %bb.3, implicit-def $r1 {
+  ; MIPS64:     $r0 = SLL $r0, 0
   ; MIPS64:   }
   ; MIPS64: bb.2.iftrue:
   ; MIPS64:   INLINEASM &".space 831068", sideeffect attdialect
-  ; MIPS64:   PseudoReturn64 undef $ra_64, implicit killed $r2_64 {
-  ; MIPS64:     $r2_64 = DADDiu $zero_64, 1
+  ; MIPS64:   PseudoReturn64 undef $r31_64, implicit killed $r2_64 {
+  ; MIPS64:     $r2_64 = DADDiu $r0_64, 1
   ; MIPS64:   }
   ; MIPS64: bb.3.tail:
-  ; MIPS64:   PseudoReturn64 undef $ra_64, implicit killed $r2_64 {
-  ; MIPS64:     $r2_64 = DADDiu $zero_64, 0
+  ; MIPS64:   PseudoReturn64 undef $r31_64, implicit killed $r2_64 {
+  ; MIPS64:     $r2_64 = DADDiu $r0_64, 0
   ; MIPS64:   }
   ; PIC-LABEL: name: expand_BEQC64
   ; PIC: bb.0 (%ir-block.0):
   ; PIC:   successors: %bb.3(0x40000000), %bb.1(0x40000000)
-  ; PIC:   BNEC64 $a0_64, $zero_64, %bb.3, implicit-def $at
+  ; PIC:   BNEC64 $r4_64, $r0_64, %bb.3, implicit-def $r1
   ; PIC: bb.1 (%ir-block.0):
   ; PIC:   successors: %bb.2(0x80000000)
-  ; PIC:   $sp_64 = DADDiu $sp_64, -16
-  ; PIC:   SD $ra_64, $sp_64, 0
-  ; PIC:   $at_64 = LONG_BRANCH_DADDiu $zero_64, target-flags(mips-abs-hi) %bb.4, %bb.2
-  ; PIC:   $at_64 = DSLL $at_64, 16
-  ; PIC:   BAL_BR %bb.2, implicit-def $ra {
-  ; PIC:     $at_64 = LONG_BRANCH_DADDiu $at_64, target-flags(mips-abs-lo) %bb.4, %bb.2
+  ; PIC:   $r29_64 = DADDiu $r29_64, -16
+  ; PIC:   SD $r31_64, $r29_64, 0
+  ; PIC:   $r1_64 = LONG_BRANCH_DADDiu $r0_64, target-flags(mips-abs-hi) %bb.4, %bb.2
+  ; PIC:   $r1_64 = DSLL $r1_64, 16
+  ; PIC:   BAL_BR %bb.2, implicit-def $r31 {
+  ; PIC:     $r1_64 = LONG_BRANCH_DADDiu $r1_64, target-flags(mips-abs-lo) %bb.4, %bb.2
   ; PIC:   }
   ; PIC: bb.2 (%ir-block.0):
   ; PIC:   successors: %bb.4(0x80000000)
-  ; PIC:   $at_64 = DADDu $ra_64, $at_64
-  ; PIC:   $ra_64 = LD $sp_64, 0
-  ; PIC:   JR64 $at_64 {
-  ; PIC:     $sp_64 = DADDiu $sp_64, 16
+  ; PIC:   $r1_64 = DADDu $r31_64, $r1_64
+  ; PIC:   $r31_64 = LD $r29_64, 0
+  ; PIC:   JR64 $r1_64 {
+  ; PIC:     $r29_64 = DADDiu $r29_64, 16
   ; PIC:   }
   ; PIC: bb.3.iftrue:
   ; PIC:   INLINEASM &".space 831068", sideeffect attdialect
-  ; PIC:   PseudoReturn64 undef $ra_64, implicit killed $r2_64 {
-  ; PIC:     $r2_64 = DADDiu $zero_64, 1
+  ; PIC:   PseudoReturn64 undef $r31_64, implicit killed $r2_64 {
+  ; PIC:     $r2_64 = DADDiu $r0_64, 1
   ; PIC:   }
   ; PIC: bb.4.tail:
-  ; PIC:   PseudoReturn64 undef $ra_64, implicit killed $r2_64 {
-  ; PIC:     $r2_64 = DADDiu $zero_64, 0
+  ; PIC:   PseudoReturn64 undef $r31_64, implicit killed $r2_64 {
+  ; PIC:     $r2_64 = DADDiu $r0_64, 0
   ; PIC:   }
   bb.0 (%ir-block.0):
     successors: %bb.1(0x40000000), %bb.2(0x40000000)
-    liveins: $a0_64
+    liveins: $r4_64
 
-    BEQC64 killed renamable $a0_64, $zero_64, %bb.2, implicit-def $at
+    BEQC64 killed renamable $r4_64, $r0_64, %bb.2, implicit-def $r1
 
   bb.1.iftrue:
     INLINEASM &".space 831068", sideeffect attdialect
-    $r2_64 = DADDiu $zero_64, 1
-    PseudoReturn64 undef $ra_64, implicit killed $r2_64
+    $r2_64 = DADDiu $r0_64, 1
+    PseudoReturn64 undef $r31_64, implicit killed $r2_64
 
   bb.2.tail:
-    $r2_64 = DADDiu $zero_64, 0
-    PseudoReturn64 undef $ra_64, implicit killed $r2_64
+    $r2_64 = DADDiu $r0_64, 0
+    PseudoReturn64 undef $r31_64, implicit killed $r2_64
 
 ...
 ---
@@ -512,7 +512,7 @@ failedISel:      false
 tracksRegLiveness: true
 registers:
 liveins:
-  - { reg: '$a0_64', virtual-reg: '' }
+  - { reg: '$r4_64', virtual-reg: '' }
 frameInfo:
   isFrameAddressTaken: false
   isReturnAddressTaken: false
@@ -538,64 +538,64 @@ body:             |
   ; MIPS64-LABEL: name: expand_BLTC64
   ; MIPS64: bb.0 (%ir-block.0):
   ; MIPS64:   successors: %bb.2(0x40000000), %bb.1(0x40000000)
-  ; MIPS64:   BGEC64 $a0_64, $zero_64, %bb.2, implicit-def $at
+  ; MIPS64:   BGEC64 $r4_64, $r0_64, %bb.2, implicit-def $r1
   ; MIPS64: bb.1 (%ir-block.0):
   ; MIPS64:   successors: %bb.3(0x80000000)
-  ; MIPS64:   J %bb.3, implicit-def $at {
-  ; MIPS64:     $zero = SLL $zero, 0
+  ; MIPS64:   J %bb.3, implicit-def $r1 {
+  ; MIPS64:     $r0 = SLL $r0, 0
   ; MIPS64:   }
   ; MIPS64: bb.2.iftrue:
   ; MIPS64:   INLINEASM &".space 831068", sideeffect attdialect
-  ; MIPS64:   PseudoReturn64 undef $ra_64, implicit killed $r2_64 {
-  ; MIPS64:     $r2_64 = DADDiu $zero_64, 1
+  ; MIPS64:   PseudoReturn64 undef $r31_64, implicit killed $r2_64 {
+  ; MIPS64:     $r2_64 = DADDiu $r0_64, 1
   ; MIPS64:   }
   ; MIPS64: bb.3.tail:
-  ; MIPS64:   PseudoReturn64 undef $ra_64, implicit killed $r2_64 {
-  ; MIPS64:     $r2_64 = DADDiu $zero_64, 0
+  ; MIPS64:   PseudoReturn64 undef $r31_64, implicit killed $r2_64 {
+  ; MIPS64:     $r2_64 = DADDiu $r0_64, 0
   ; MIPS64:   }
   ; PIC-LABEL: name: expand_BLTC64
   ; PIC: bb.0 (%ir-block.0):
   ; PIC:   successors: %bb.3(0x40000000), %bb.1(0x40000000)
-  ; PIC:   BGEC64 $a0_64, $zero_64, %bb.3, implicit-def $at
+  ; PIC:   BGEC64 $r4_64, $r0_64, %bb.3, implicit-def $r1
   ; PIC: bb.1 (%ir-block.0):
   ; PIC:   successors: %bb.2(0x80000000)
-  ; PIC:   $sp_64 = DADDiu $sp_64, -16
-  ; PIC:   SD $ra_64, $sp_64, 0
-  ; PIC:   $at_64 = LONG_BRANCH_DADDiu $zero_64, target-flags(mips-abs-hi) %bb.4, %bb.2
-  ; PIC:   $at_64 = DSLL $at_64, 16
-  ; PIC:   BAL_BR %bb.2, implicit-def $ra {
-  ; PIC:     $at_64 = LONG_BRANCH_DADDiu $at_64, target-flags(mips-abs-lo) %bb.4, %bb.2
+  ; PIC:   $r29_64 = DADDiu $r29_64, -16
+  ; PIC:   SD $r31_64, $r29_64, 0
+  ; PIC:   $r1_64 = LONG_BRANCH_DADDiu $r0_64, target-flags(mips-abs-hi) %bb.4, %bb.2
+  ; PIC:   $r1_64 = DSLL $r1_64, 16
+  ; PIC:   BAL_BR %bb.2, implicit-def $r31 {
+  ; PIC:     $r1_64 = LONG_BRANCH_DADDiu $r1_64, target-flags(mips-abs-lo) %bb.4, %bb.2
   ; PIC:   }
   ; PIC: bb.2 (%ir-block.0):
   ; PIC:   successors: %bb.4(0x80000000)
-  ; PIC:   $at_64 = DADDu $ra_64, $at_64
-  ; PIC:   $ra_64 = LD $sp_64, 0
-  ; PIC:   JR64 $at_64 {
-  ; PIC:     $sp_64 = DADDiu $sp_64, 16
+  ; PIC:   $r1_64 = DADDu $r31_64, $r1_64
+  ; PIC:   $r31_64 = LD $r29_64, 0
+  ; PIC:   JR64 $r1_64 {
+  ; PIC:     $r29_64 = DADDiu $r29_64, 16
   ; PIC:   }
   ; PIC: bb.3.iftrue:
   ; PIC:   INLINEASM &".space 831068", sideeffect attdialect
-  ; PIC:   PseudoReturn64 undef $ra_64, implicit killed $r2_64 {
-  ; PIC:     $r2_64 = DADDiu $zero_64, 1
+  ; PIC:   PseudoReturn64 undef $r31_64, implicit killed $r2_64 {
+  ; PIC:     $r2_64 = DADDiu $r0_64, 1
   ; PIC:   }
   ; PIC: bb.4.tail:
-  ; PIC:   PseudoReturn64 undef $ra_64, implicit killed $r2_64 {
-  ; PIC:     $r2_64 = DADDiu $zero_64, 0
+  ; PIC:   PseudoReturn64 undef $r31_64, implicit killed $r2_64 {
+  ; PIC:     $r2_64 = DADDiu $r0_64, 0
   ; PIC:   }
   bb.0 (%ir-block.0):
     successors: %bb.1(0x40000000), %bb.2(0x40000000)
-    liveins: $a0_64
+    liveins: $r4_64
 
-    BLTC64 killed renamable $a0_64, $zero_64, %bb.2, implicit-def $at
+    BLTC64 killed renamable $r4_64, $r0_64, %bb.2, implicit-def $r1
 
   bb.1.iftrue:
     INLINEASM &".space 831068", sideeffect attdialect
-    $r2_64 = DADDiu $zero_64, 1
-    PseudoReturn64 undef $ra_64, implicit killed $r2_64
+    $r2_64 = DADDiu $r0_64, 1
+    PseudoReturn64 undef $r31_64, implicit killed $r2_64
 
   bb.2.tail:
-    $r2_64 = DADDiu $zero_64, 0
-    PseudoReturn64 undef $ra_64, implicit killed $r2_64
+    $r2_64 = DADDiu $r0_64, 0
+    PseudoReturn64 undef $r31_64, implicit killed $r2_64
 
 ...
 ---
@@ -610,7 +610,7 @@ failedISel:      false
 tracksRegLiveness: true
 registers:
 liveins:
-  - { reg: '$a0_64', virtual-reg: '' }
+  - { reg: '$r4_64', virtual-reg: '' }
 frameInfo:
   isFrameAddressTaken: false
   isReturnAddressTaken: false
@@ -636,64 +636,64 @@ body:             |
   ; MIPS64-LABEL: name: expand_BLTUC64
   ; MIPS64: bb.0 (%ir-block.0):
   ; MIPS64:   successors: %bb.2(0x40000000), %bb.1(0x40000000)
-  ; MIPS64:   BGEUC64 $a0_64, $zero_64, %bb.2, implicit-def $at
+  ; MIPS64:   BGEUC64 $r4_64, $r0_64, %bb.2, implicit-def $r1
   ; MIPS64: bb.1 (%ir-block.0):
   ; MIPS64:   successors: %bb.3(0x80000000)
-  ; MIPS64:   J %bb.3, implicit-def $at {
-  ; MIPS64:     $zero = SLL $zero, 0
+  ; MIPS64:   J %bb.3, implicit-def $r1 {
+  ; MIPS64:     $r0 = SLL $r0, 0
   ; MIPS64:   }
   ; MIPS64: bb.2.iftrue:
   ; MIPS64:   INLINEASM &".space 831068", sideeffect attdialect
-  ; MIPS64:   PseudoReturn64 undef $ra_64, implicit killed $r2_64 {
-  ; MIPS64:     $r2_64 = DADDiu $zero_64, 1
+  ; MIPS64:   PseudoReturn64 undef $r31_64, implicit killed $r2_64 {
+  ; MIPS64:     $r2_64 = DADDiu $r0_64, 1
   ; MIPS64:   }
   ; MIPS64: bb.3.tail:
-  ; MIPS64:   PseudoReturn64 undef $ra_64, implicit killed $r2_64 {
-  ; MIPS64:     $r2_64 = DADDiu $zero_64, 0
+  ; MIPS64:   PseudoReturn64 undef $r31_64, implicit killed $r2_64 {
+  ; MIPS64:     $r2_64 = DADDiu $r0_64, 0
   ; MIPS64:   }
   ; PIC-LABEL: name: expand_BLTUC64
   ; PIC: bb.0 (%ir-block.0):
   ; PIC:   successors: %bb.3(0x40000000), %bb.1(0x40000000)
-  ; PIC:   BGEUC64 $a0_64, $zero_64, %bb.3, implicit-def $at
+  ; PIC:   BGEUC64 $r4_64, $r0_64, %bb.3, implicit-def $r1
   ; PIC: bb.1 (%ir-block.0):
   ; PIC:   successors: %bb.2(0x80000000)
-  ; PIC:   $sp_64 = DADDiu $sp_64, -16
-  ; PIC:   SD $ra_64, $sp_64, 0
-  ; PIC:   $at_64 = LONG_BRANCH_DADDiu $zero_64, target-flags(mips-abs-hi) %bb.4, %bb.2
-  ; PIC:   $at_64 = DSLL $at_64, 16
-  ; PIC:   BAL_BR %bb.2, implicit-def $ra {
-  ; PIC:     $at_64 = LONG_BRANCH_DADDiu $at_64, target-flags(mips-abs-lo) %bb.4, %bb.2
+  ; PIC:   $r29_64 = DADDiu $r29_64, -16
+  ; PIC:   SD $r31_64, $r29_64, 0
+  ; PIC:   $r1_64 = LONG_BRANCH_DADDiu $r0_64, target-flags(mips-abs-hi) %bb.4, %bb.2
+  ; PIC:   $r1_64 = DSLL $r1_64, 16
+  ; PIC:   BAL_BR %bb.2, implicit-def $r31 {
+  ; PIC:     $r1_64 = LONG_BRANCH_DADDiu $r1_64, target-flags(mips-abs-lo) %bb.4, %bb.2
   ; PIC:   }
   ; PIC: bb.2 (%ir-block.0):
   ; PIC:   successors: %bb.4(0x80000000)
-  ; PIC:   $at_64 = DADDu $ra_64, $at_64
-  ; PIC:   $ra_64 = LD $sp_64, 0
-  ; PIC:   JR64 $at_64 {
-  ; PIC:     $sp_64 = DADDiu $sp_64, 16
+  ; PIC:   $r1_64 = DADDu $r31_64, $r1_64
+  ; PIC:   $r31_64 = LD $r29_64, 0
+  ; PIC:   JR64 $r1_64 {
+  ; PIC:     $r29_64 = DADDiu $r29_64, 16
   ; PIC:   }
   ; PIC: bb.3.iftrue:
   ; PIC:   INLINEASM &".space 831068", sideeffect attdialect
-  ; PIC:   PseudoReturn64 undef $ra_64, implicit killed $r2_64 {
-  ; PIC:     $r2_64 = DADDiu $zero_64, 1
+  ; PIC:   PseudoReturn64 undef $r31_64, implicit killed $r2_64 {
+  ; PIC:     $r2_64 = DADDiu $r0_64, 1
   ; PIC:   }
   ; PIC: bb.4.tail:
-  ; PIC:   PseudoReturn64 undef $ra_64, implicit killed $r2_64 {
-  ; PIC:     $r2_64 = DADDiu $zero_64, 0
+  ; PIC:   PseudoReturn64 undef $r31_64, implicit killed $r2_64 {
+  ; PIC:     $r2_64 = DADDiu $r0_64, 0
   ; PIC:   }
   bb.0 (%ir-block.0):
     successors: %bb.1(0x40000000), %bb.2(0x40000000)
-    liveins: $a0_64
+    liveins: $r4_64
 
-    BLTUC64 killed renamable $a0_64, $zero_64, %bb.2, implicit-def $at
+    BLTUC64 killed renamable $r4_64, $r0_64, %bb.2, implicit-def $r1
 
   bb.1.iftrue:
     INLINEASM &".space 831068", sideeffect attdialect
-    $r2_64 = DADDiu $zero_64, 1
-    PseudoReturn64 undef $ra_64, implicit killed $r2_64
+    $r2_64 = DADDiu $r0_64, 1
+    PseudoReturn64 undef $r31_64, implicit killed $r2_64
 
   bb.2.tail:
-    $r2_64 = DADDiu $zero_64, 0
-    PseudoReturn64 undef $ra_64, implicit killed $r2_64
+    $r2_64 = DADDiu $r0_64, 0
+    PseudoReturn64 undef $r31_64, implicit killed $r2_64
 
 ...
 ---
@@ -708,7 +708,7 @@ failedISel:      false
 tracksRegLiveness: true
 registers:
 liveins:
-  - { reg: '$a0_64', virtual-reg: '' }
+  - { reg: '$r4_64', virtual-reg: '' }
 frameInfo:
   isFrameAddressTaken: false
   isReturnAddressTaken: false
@@ -734,64 +734,64 @@ body:             |
   ; MIPS64-LABEL: name: expand_BGEC64
   ; MIPS64: bb.0 (%ir-block.0):
   ; MIPS64:   successors: %bb.2(0x40000000), %bb.1(0x40000000)
-  ; MIPS64:   BLTC64 $a0_64, $zero_64, %bb.2, implicit-def $at
+  ; MIPS64:   BLTC64 $r4_64, $r0_64, %bb.2, implicit-def $r1
   ; MIPS64: bb.1 (%ir-block.0):
   ; MIPS64:   successors: %bb.3(0x80000000)
-  ; MIPS64:   J %bb.3, implicit-def $at {
-  ; MIPS64:     $zero = SLL $zero, 0
+  ; MIPS64:   J %bb.3, implicit-def $r1 {
+  ; MIPS64:     $r0 = SLL $r0, 0
   ; MIPS64:   }
   ; MIPS64: bb.2.iftrue:
   ; MIPS64:   INLINEASM &".space 831068", sideeffect attdialect
-  ; MIPS64:   PseudoReturn64 undef $ra_64, implicit killed $r2_64 {
-  ; MIPS64:     $r2_64 = DADDiu $zero_64, 1
+  ; MIPS64:   PseudoReturn64 undef $r31_64, implicit killed $r2_64 {
+  ; MIPS64:     $r2_64 = DADDiu $r0_64, 1
   ; MIPS64:   }
   ; MIPS64: bb.3.tail:
-  ; MIPS64:   PseudoReturn64 undef $ra_64, implicit killed $r2_64 {
-  ; MIPS64:     $r2_64 = DADDiu $zero_64, 0
+  ; MIPS64:   PseudoReturn64 undef $r31_64, implicit killed $r2_64 {
+  ; MIPS64:     $r2_64 = DADDiu $r0_64, 0
   ; MIPS64:   }
   ; PIC-LABEL: name: expand_BGEC64
   ; PIC: bb.0 (%ir-block.0):
   ; PIC:   successors: %bb.3(0x40000000), %bb.1(0x40000000)
-  ; PIC:   BLTC64 $a0_64, $zero_64, %bb.3, implicit-def $at
+  ; PIC:   BLTC64 $r4_64, $r0_64, %bb.3, implicit-def $r1
   ; PIC: bb.1 (%ir-block.0):
   ; PIC:   successors: %bb.2(0x80000000)
-  ; PIC:   $sp_64 = DADDiu $sp_64, -16
-  ; PIC:   SD $ra_64, $sp_64, 0
-  ; PIC:   $at_64 = LONG_BRANCH_DADDiu $zero_64, target-flags(mips-abs-hi) %bb.4, %bb.2
-  ; PIC:   $at_64 = DSLL $at_64, 16
-  ; PIC:   BAL_BR %bb.2, implicit-def $ra {
-  ; PIC:     $at_64 = LONG_BRANCH_DADDiu $at_64, target-flags(mips-abs-lo) %bb.4, %bb.2
+  ; PIC:   $r29_64 = DADDiu $r29_64, -16
+  ; PIC:   SD $r31_64, $r29_64, 0
+  ; PIC:   $r1_64 = LONG_BRANCH_DADDiu $r0_64, target-flags(mips-abs-hi) %bb.4, %bb.2
+  ; PIC:   $r1_64 = DSLL $r1_64, 16
+  ; PIC:   BAL_BR %bb.2, implicit-def $r31 {
+  ; PIC:     $r1_64 = LONG_BRANCH_DADDiu $r1_64, target-flags(mips-abs-lo) %bb.4, %bb.2
   ; PIC:   }
   ; PIC: bb.2 (%ir-block.0):
   ; PIC:   successors: %bb.4(0x80000000)
-  ; PIC:   $at_64 = DADDu $ra_64, $at_64
-  ; PIC:   $ra_64 = LD $sp_64, 0
-  ; PIC:   JR64 $at_64 {
-  ; PIC:     $sp_64 = DADDiu $sp_64, 16
+  ; PIC:   $r1_64 = DADDu $r31_64, $r1_64
+  ; PIC:   $r31_64 = LD $r29_64, 0
+  ; PIC:   JR64 $r1_64 {
+  ; PIC:     $r29_64 = DADDiu $r29_64, 16
   ; PIC:   }
   ; PIC: bb.3.iftrue:
   ; PIC:   INLINEASM &".space 831068", sideeffect attdialect
-  ; PIC:   PseudoReturn64 undef $ra_64, implicit killed $r2_64 {
-  ; PIC:     $r2_64 = DADDiu $zero_64, 1
+  ; PIC:   PseudoReturn64 undef $r31_64, implicit killed $r2_64 {
+  ; PIC:     $r2_64 = DADDiu $r0_64, 1
   ; PIC:   }
   ; PIC: bb.4.tail:
-  ; PIC:   PseudoReturn64 undef $ra_64, implicit killed $r2_64 {
-  ; PIC:     $r2_64 = DADDiu $zero_64, 0
+  ; PIC:   PseudoReturn64 undef $r31_64, implicit killed $r2_64 {
+  ; PIC:     $r2_64 = DADDiu $r0_64, 0
   ; PIC:   }
   bb.0 (%ir-block.0):
     successors: %bb.1(0x40000000), %bb.2(0x40000000)
-    liveins: $a0_64
+    liveins: $r4_64
 
-    BGEC64 killed renamable $a0_64, $zero_64, %bb.2, implicit-def $at
+    BGEC64 killed renamable $r4_64, $r0_64, %bb.2, implicit-def $r1
 
   bb.1.iftrue:
     INLINEASM &".space 831068", sideeffect attdialect
-    $r2_64 = DADDiu $zero_64, 1
-    PseudoReturn64 undef $ra_64, implicit killed $r2_64
+    $r2_64 = DADDiu $r0_64, 1
+    PseudoReturn64 undef $r31_64, implicit killed $r2_64
 
   bb.2.tail:
-    $r2_64 = DADDiu $zero_64, 0
-    PseudoReturn64 undef $ra_64, implicit killed $r2_64
+    $r2_64 = DADDiu $r0_64, 0
+    PseudoReturn64 undef $r31_64, implicit killed $r2_64
 
 ...
 ---
@@ -806,7 +806,7 @@ failedISel:      false
 tracksRegLiveness: true
 registers:
 liveins:
-  - { reg: '$a0_64', virtual-reg: '' }
+  - { reg: '$r4_64', virtual-reg: '' }
 frameInfo:
   isFrameAddressTaken: false
   isReturnAddressTaken: false
@@ -832,64 +832,64 @@ body:             |
   ; MIPS64-LABEL: name: expand_BGEUC64
   ; MIPS64: bb.0 (%ir-block.0):
   ; MIPS64:   successors: %bb.2(0x40000000), %bb.1(0x40000000)
-  ; MIPS64:   BLTUC64 $a0_64, $zero_64, %bb.2, implicit-def $at
+  ; MIPS64:   BLTUC64 $r4_64, $r0_64, %bb.2, implicit-def $r1
   ; MIPS64: bb.1 (%ir-block.0):
   ; MIPS64:   successors: %bb.3(0x80000000)
-  ; MIPS64:   J %bb.3, implicit-def $at {
-  ; MIPS64:     $zero = SLL $zero, 0
+  ; MIPS64:   J %bb.3, implicit-def $r1 {
+  ; MIPS64:     $r0 = SLL $r0, 0
   ; MIPS64:   }
   ; MIPS64: bb.2.iftrue:
   ; MIPS64:   INLINEASM &".space 831068", sideeffect attdialect
-  ; MIPS64:   PseudoReturn64 undef $ra_64, implicit killed $r2_64 {
-  ; MIPS64:     $r2_64 = DADDiu $zero_64, 1
+  ; MIPS64:   PseudoReturn64 undef $r31_64, implicit killed $r2_64 {
+  ; MIPS64:     $r2_64 = DADDiu $r0_64, 1
   ; MIPS64:   }
   ; MIPS64: bb.3.tail:
-  ; MIPS64:   PseudoReturn64 undef $ra_64, implicit killed $r2_64 {
-  ; MIPS64:     $r2_64 = DADDiu $zero_64, 0
+  ; MIPS64:   PseudoReturn64 undef $r31_64, implicit killed $r2_64 {
+  ; MIPS64:     $r2_64 = DADDiu $r0_64, 0
   ; MIPS64:   }
   ; PIC-LABEL: name: expand_BGEUC64
   ; PIC: bb.0 (%ir-block.0):
   ; PIC:   successors: %bb.3(0x40000000), %bb.1(0x40000000)
-  ; PIC:   BLTUC64 $a0_64, $zero_64, %bb.3, implicit-def $at
+  ; PIC:   BLTUC64 $r4_64, $r0_64, %bb.3, implicit-def $r1
   ; PIC: bb.1 (%ir-block.0):
   ; PIC:   successors: %bb.2(0x80000000)
-  ; PIC:   $sp_64 = DADDiu $sp_64, -16
-  ; PIC:   SD $ra_64, $sp_64, 0
-  ; PIC:   $at_64 = LONG_BRANCH_DADDiu $zero_64, target-flags(mips-abs-hi) %bb.4, %bb.2
-  ; PIC:   $at_64 = DSLL $at_64, 16
-  ; PIC:   BAL_BR %bb.2, implicit-def $ra {
-  ; PIC:     $at_64 = LONG_BRANCH_DADDiu $at_64, target-flags(mips-abs-lo) %bb.4, %bb.2
+  ; PIC:   $r29_64 = DADDiu $r29_64, -16
+  ; PIC:   SD $r31_64, $r29_64, 0
+  ; PIC:   $r1_64 = LONG_BRANCH_DADDiu $r0_64, target-flags(mips-abs-hi) %bb.4, %bb.2
+  ; PIC:   $r1_64 = DSLL $r1_64, 16
+  ; PIC:   BAL_BR %bb.2, implicit-def $r31 {
+  ; PIC:     $r1_64 = LONG_BRANCH_DADDiu $r1_64, target-flags(mips-abs-lo) %bb.4, %bb.2
   ; PIC:   }
   ; PIC: bb.2 (%ir-block.0):
   ; PIC:   successors: %bb.4(0x80000000)
-  ; PIC:   $at_64 = DADDu $ra_64, $at_64
-  ; PIC:   $ra_64 = LD $sp_64, 0
-  ; PIC:   JR64 $at_64 {
-  ; PIC:     $sp_64 = DADDiu $sp_64, 16
+  ; PIC:   $r1_64 = DADDu $r31_64, $r1_64
+  ; PIC:   $r31_64 = LD $r29_64, 0
+  ; PIC:   JR64 $r1_64 {
+  ; PIC:     $r29_64 = DADDiu $r29_64, 16
   ; PIC:   }
   ; PIC: bb.3.iftrue:
   ; PIC:   INLINEASM &".space 831068", sideeffect attdialect
-  ; PIC:   PseudoReturn64 undef $ra_64, implicit killed $r2_64 {
-  ; PIC:     $r2_64 = DADDiu $zero_64, 1
+  ; PIC:   PseudoReturn64 undef $r31_64, implicit killed $r2_64 {
+  ; PIC:     $r2_64 = DADDiu $r0_64, 1
   ; PIC:   }
   ; PIC: bb.4.tail:
-  ; PIC:   PseudoReturn64 undef $ra_64, implicit killed $r2_64 {
-  ; PIC:     $r2_64 = DADDiu $zero_64, 0
+  ; PIC:   PseudoReturn64 undef $r31_64, implicit killed $r2_64 {
+  ; PIC:     $r2_64 = DADDiu $r0_64, 0
   ; PIC:   }
   bb.0 (%ir-block.0):
     successors: %bb.1(0x40000000), %bb.2(0x40000000)
-    liveins: $a0_64
+    liveins: $r4_64
 
-    BGEUC64 killed renamable $a0_64, $zero_64, %bb.2, implicit-def $at
+    BGEUC64 killed renamable $r4_64, $r0_64, %bb.2, implicit-def $r1
 
   bb.1.iftrue:
     INLINEASM &".space 831068", sideeffect attdialect
-    $r2_64 = DADDiu $zero_64, 1
-    PseudoReturn64 undef $ra_64, implicit killed $r2_64
+    $r2_64 = DADDiu $r0_64, 1
+    PseudoReturn64 undef $r31_64, implicit killed $r2_64
 
   bb.2.tail:
-    $r2_64 = DADDiu $zero_64, 0
-    PseudoReturn64 undef $ra_64, implicit killed $r2_64
+    $r2_64 = DADDiu $r0_64, 0
+    PseudoReturn64 undef $r31_64, implicit killed $r2_64
 
 ...
 ---
@@ -904,7 +904,7 @@ failedISel:      false
 tracksRegLiveness: true
 registers:
 liveins:
-  - { reg: '$a0_64', virtual-reg: '' }
+  - { reg: '$r4_64', virtual-reg: '' }
 frameInfo:
   isFrameAddressTaken: false
   isReturnAddressTaken: false
@@ -930,64 +930,64 @@ body:             |
   ; MIPS64-LABEL: name: expand_BLEZC64
   ; MIPS64: bb.0 (%ir-block.0):
   ; MIPS64:   successors: %bb.2(0x40000000), %bb.1(0x40000000)
-  ; MIPS64:   BGTZC64 $a0_64, %bb.2, implicit-def $at
+  ; MIPS64:   BGTZC64 $r4_64, %bb.2, implicit-def $r1
   ; MIPS64: bb.1 (%ir-block.0):
   ; MIPS64:   successors: %bb.3(0x80000000)
-  ; MIPS64:   J %bb.3, implicit-def $at {
-  ; MIPS64:     $zero = SLL $zero, 0
+  ; MIPS64:   J %bb.3, implicit-def $r1 {
+  ; MIPS64:     $r0 = SLL $r0, 0
   ; MIPS64:   }
   ; MIPS64: bb.2.iftrue:
   ; MIPS64:   INLINEASM &".space 831068", sideeffect attdialect
-  ; MIPS64:   PseudoReturn64 undef $ra_64, implicit killed $r2_64 {
-  ; MIPS64:     $r2_64 = DADDiu $zero_64, 1
+  ; MIPS64:   PseudoReturn64 undef $r31_64, implicit killed $r2_64 {
+  ; MIPS64:     $r2_64 = DADDiu $r0_64, 1
   ; MIPS64:   }
   ; MIPS64: bb.3.tail:
-  ; MIPS64:   PseudoReturn64 undef $ra_64, implicit killed $r2_64 {
-  ; MIPS64:     $r2_64 = DADDiu $zero_64, 0
+  ; MIPS64:   PseudoReturn64 undef $r31_64, implicit killed $r2_64 {
+  ; MIPS64:     $r2_64 = DADDiu $r0_64, 0
   ; MIPS64:   }
   ; PIC-LABEL: name: expand_BLEZC64
   ; PIC: bb.0 (%ir-block.0):
   ; PIC:   successors: %bb.3(0x40000000), %bb.1(0x40000000)
-  ; PIC:   BGTZC64 $a0_64, %bb.3, implicit-def $at
+  ; PIC:   BGTZC64 $r4_64, %bb.3, implicit-def $r1
   ; PIC: bb.1 (%ir-block.0):
   ; PIC:   successors: %bb.2(0x80000000)
-  ; PIC:   $sp_64 = DADDiu $sp_64, -16
-  ; PIC:   SD $ra_64, $sp_64, 0
-  ; PIC:   $at_64 = LONG_BRANCH_DADDiu $zero_64, target-flags(mips-abs-hi) %bb.4, %bb.2
-  ; PIC:   $at_64 = DSLL $at_64, 16
-  ; PIC:   BAL_BR %bb.2, implicit-def $ra {
-  ; PIC:     $at_64 = LONG_BRANCH_DADDiu $at_64, target-flags(mips-abs-lo) %bb.4, %bb.2
+  ; PIC:   $r29_64 = DADDiu $r29_64, -16
+  ; PIC:   SD $r31_64, $r29_64, 0
+  ; PIC:   $r1_64 = LONG_BRANCH_DADDiu $r0_64, target-flags(mips-abs-hi) %bb.4, %bb.2
+  ; PIC:   $r1_64 = DSLL $r1_64, 16
+  ; PIC:   BAL_BR %bb.2, implicit-def $r31 {
+  ; PIC:     $r1_64 = LONG_BRANCH_DADDiu $r1_64, target-flags(mips-abs-lo) %bb.4, %bb.2
   ; PIC:   }
   ; PIC: bb.2 (%ir-block.0):
   ; PIC:   successors: %bb.4(0x80000000)
-  ; PIC:   $at_64 = DADDu $ra_64, $at_64
-  ; PIC:   $ra_64 = LD $sp_64, 0
-  ; PIC:   JR64 $at_64 {
-  ; PIC:     $sp_64 = DADDiu $sp_64, 16
+  ; PIC:   $r1_64 = DADDu $r31_64, $r1_64
+  ; PIC:   $r31_64 = LD $r29_64, 0
+  ; PIC:   JR64 $r1_64 {
+  ; PIC:     $r29_64 = DADDiu $r29_64, 16
   ; PIC:   }
   ; PIC: bb.3.iftrue:
   ; PIC:   INLINEASM &".space 831068", sideeffect attdialect
-  ; PIC:   PseudoReturn64 undef $ra_64, implicit killed $r2_64 {
-  ; PIC:     $r2_64 = DADDiu $zero_64, 1
+  ; PIC:   PseudoReturn64 undef $r31_64, implicit killed $r2_64 {
+  ; PIC:     $r2_64 = DADDiu $r0_64, 1
   ; PIC:   }
   ; PIC: bb.4.tail:
-  ; PIC:   PseudoReturn64 undef $ra_64, implicit killed $r2_64 {
-  ; PIC:     $r2_64 = DADDiu $zero_64, 0
+  ; PIC:   PseudoReturn64 undef $r31_64, implicit killed $r2_64 {
+  ; PIC:     $r2_64 = DADDiu $r0_64, 0
   ; PIC:   }
   bb.0 (%ir-block.0):
     successors: %bb.1(0x40000000), %bb.2(0x40000000)
-    liveins: $a0_64
+    liveins: $r4_64
 
-    BLEZC64 killed renamable $a0_64, %bb.2, implicit-def $at
+    BLEZC64 killed renamable $r4_64, %bb.2, implicit-def $r1
 
   bb.1.iftrue:
     INLINEASM &".space 831068", sideeffect attdialect
-    $r2_64 = DADDiu $zero_64, 1
-    PseudoReturn64 undef $ra_64, implicit killed $r2_64
+    $r2_64 = DADDiu $r0_64, 1
+    PseudoReturn64 undef $r31_64, implicit killed $r2_64
 
   bb.2.tail:
-    $r2_64 = DADDiu $zero_64, 0
-    PseudoReturn64 undef $ra_64, implicit killed $r2_64
+    $r2_64 = DADDiu $r0_64, 0
+    PseudoReturn64 undef $r31_64, implicit killed $r2_64
 
 ...
 ---
@@ -1002,7 +1002,7 @@ failedISel:      false
 tracksRegLiveness: true
 registers:
 liveins:
-  - { reg: '$a0_64', virtual-reg: '' }
+  - { reg: '$r4_64', virtual-reg: '' }
 frameInfo:
   isFrameAddressTaken: false
   isReturnAddressTaken: false
@@ -1028,64 +1028,64 @@ body:             |
   ; MIPS64-LABEL: name: expand_BLTZC64
   ; MIPS64: bb.0 (%ir-block.0):
   ; MIPS64:   successors: %bb.2(0x40000000), %bb.1(0x40000000)
-  ; MIPS64:   BGEZC64 $a0_64, %bb.2, implicit-def $at
+  ; MIPS64:   BGEZC64 $r4_64, %bb.2, implicit-def $r1
   ; MIPS64: bb.1 (%ir-block.0):
   ; MIPS64:   successors: %bb.3(0x80000000)
-  ; MIPS64:   J %bb.3, implicit-def $at {
-  ; MIPS64:     $zero = SLL $zero, 0
+  ; MIPS64:   J %bb.3, implicit-def $r1 {
+  ; MIPS64:     $r0 = SLL $r0, 0
   ; MIPS64:   }
   ; MIPS64: bb.2.iftrue:
   ; MIPS64:   INLINEASM &".space 831068", sideeffect attdialect
-  ; MIPS64:   PseudoReturn64 undef $ra_64, implicit killed $r2_64 {
-  ; MIPS64:     $r2_64 = DADDiu $zero_64, 1
+  ; MIPS64:   PseudoReturn64 undef $r31_64, implicit killed $r2_64 {
+  ; MIPS64:     $r2_64 = DADDiu $r0_64, 1
   ; MIPS64:   }
   ; MIPS64: bb.3.tail:
-  ; MIPS64:   PseudoReturn64 undef $ra_64, implicit killed $r2_64 {
-  ; MIPS64:     $r2_64 = DADDiu $zero_64, 0
+  ; MIPS64:   PseudoReturn64 undef $r31_64, implicit killed $r2_64 {
+  ; MIPS64:     $r2_64 = DADDiu $r0_64, 0
   ; MIPS64:   }
   ; PIC-LABEL: name: expand_BLTZC64
   ; PIC: bb.0 (%ir-block.0):
   ; PIC:   successors: %bb.3(0x40000000), %bb.1(0x40000000)
-  ; PIC:   BGEZC64 $a0_64, %bb.3, implicit-def $at
+  ; PIC:   BGEZC64 $r4_64, %bb.3, implicit-def $r1
   ; PIC: bb.1 (%ir-block.0):
   ; PIC:   successors: %bb.2(0x80000000)
-  ; PIC:   $sp_64 = DADDiu $sp_64, -16
-  ; PIC:   SD $ra_64, $sp_64, 0
-  ; PIC:   $at_64 = LONG_BRANCH_DADDiu $zero_64, target-flags(mips-abs-hi) %bb.4, %bb.2
-  ; PIC:   $at_64 = DSLL $at_64, 16
-  ; PIC:   BAL_BR %bb.2, implicit-def $ra {
-  ; PIC:     $at_64 = LONG_BRANCH_DADDiu $at_64, target-flags(mips-abs-lo) %bb.4, %bb.2
+  ; PIC:   $r29_64 = DADDiu $r29_64, -16
+  ; PIC:   SD $r31_64, $r29_64, 0
+  ; PIC:   $r1_64 = LONG_BRANCH_DADDiu $r0_64, target-flags(mips-abs-hi) %bb.4, %bb.2
+  ; PIC:   $r1_64 = DSLL $r1_64, 16
+  ; PIC:   BAL_BR %bb.2, implicit-def $r31 {
+  ; PIC:     $r1_64 = LONG_BRANCH_DADDiu $r1_64, target-flags(mips-abs-lo) %bb.4, %bb.2
   ; PIC:   }
   ; PIC: bb.2 (%ir-block.0):
   ; PIC:   successors: %bb.4(0x80000000)
-  ; PIC:   $at_64 = DADDu $ra_64, $at_64
-  ; PIC:   $ra_64 = LD $sp_64, 0
-  ; PIC:   JR64 $at_64 {
-  ; PIC:     $sp_64 = DADDiu $sp_64, 16
+  ; PIC:   $r1_64 = DADDu $r31_64, $r1_64
+  ; PIC:   $r31_64 = LD $r29_64, 0
+  ; PIC:   JR64 $r1_64 {
+  ; PIC:     $r29_64 = DADDiu $r29_64, 16
   ; PIC:   }
   ; PIC: bb.3.iftrue:
   ; PIC:   INLINEASM &".space 831068", sideeffect attdialect
-  ; PIC:   PseudoReturn64 undef $ra_64, implicit killed $r2_64 {
-  ; PIC:     $r2_64 = DADDiu $zero_64, 1
+  ; PIC:   PseudoReturn64 undef $r31_64, implicit killed $r2_64 {
+  ; PIC:     $r2_64 = DADDiu $r0_64, 1
   ; PIC:   }
   ; PIC: bb.4.tail:
-  ; PIC:   PseudoReturn64 undef $ra_64, implicit killed $r2_64 {
-  ; PIC:     $r2_64 = DADDiu $zero_64, 0
+  ; PIC:   PseudoReturn64 undef $r31_64, implicit killed $r2_64 {
+  ; PIC:     $r2_64 = DADDiu $r0_64, 0
   ; PIC:   }
   bb.0 (%ir-block.0):
     successors: %bb.1(0x40000000), %bb.2(0x40000000)
-    liveins: $a0_64
+    liveins: $r4_64
 
-    BLTZC64 killed renamable $a0_64, %bb.2, implicit-def $at
+    BLTZC64 killed renamable $r4_64, %bb.2, implicit-def $r1
 
   bb.1.iftrue:
     INLINEASM &".space 831068", sideeffect attdialect
-    $r2_64 = DADDiu $zero_64, 1
-    PseudoReturn64 undef $ra_64, implicit killed $r2_64
+    $r2_64 = DADDiu $r0_64, 1
+    PseudoReturn64 undef $r31_64, implicit killed $r2_64
 
   bb.2.tail:
-    $r2_64 = DADDiu $zero_64, 0
-    PseudoReturn64 undef $ra_64, implicit killed $r2_64
+    $r2_64 = DADDiu $r0_64, 0
+    PseudoReturn64 undef $r31_64, implicit killed $r2_64
 
 ...
 ---
@@ -1100,7 +1100,7 @@ failedISel:      false
 tracksRegLiveness: true
 registers:
 liveins:
-  - { reg: '$a0_64', virtual-reg: '' }
+  - { reg: '$r4_64', virtual-reg: '' }
 frameInfo:
   isFrameAddressTaken: false
   isReturnAddressTaken: false
@@ -1126,64 +1126,64 @@ body:             |
   ; MIPS64-LABEL: name: expand_BGEZC64
   ; MIPS64: bb.0 (%ir-block.0):
   ; MIPS64:   successors: %bb.2(0x40000000), %bb.1(0x40000000)
-  ; MIPS64:   BLTZC64 $a0_64, %bb.2, implicit-def $at
+  ; MIPS64:   BLTZC64 $r4_64, %bb.2, implicit-def $r1
   ; MIPS64: bb.1 (%ir-block.0):
   ; MIPS64:   successors: %bb.3(0x80000000)
-  ; MIPS64:   J %bb.3, implicit-def $at {
-  ; MIPS64:     $zero = SLL $zero, 0
+  ; MIPS64:   J %bb.3, implicit-def $r1 {
+  ; MIPS64:     $r0 = SLL $r0, 0
   ; MIPS64:   }
   ; MIPS64: bb.2.iftrue:
   ; MIPS64:   INLINEASM &".space 831068", sideeffect attdialect
-  ; MIPS64:   PseudoReturn64 undef $ra_64, implicit killed $r2_64 {
-  ; MIPS64:     $r2_64 = DADDiu $zero_64, 1
+  ; MIPS64:   PseudoReturn64 undef $r31_64, implicit killed $r2_64 {
+  ; MIPS64:     $r2_64 = DADDiu $r0_64, 1
   ; MIPS64:   }
   ; MIPS64: bb.3.tail:
-  ; MIPS64:   PseudoReturn64 undef $ra_64, implicit killed $r2_64 {
-  ; MIPS64:     $r2_64 = DADDiu $zero_64, 0
+  ; MIPS64:   PseudoReturn64 undef $r31_64, implicit killed $r2_64 {
+  ; MIPS64:     $r2_64 = DADDiu $r0_64, 0
   ; MIPS64:   }
   ; PIC-LABEL: name: expand_BGEZC64
   ; PIC: bb.0 (%ir-block.0):
   ; PIC:   successors: %bb.3(0x40000000), %bb.1(0x40000000)
-  ; PIC:   BLTZC64 $a0_64, %bb.3, implicit-def $at
+  ; PIC:   BLTZC64 $r4_64, %bb.3, implicit-def $r1
   ; PIC: bb.1 (%ir-block.0):
   ; PIC:   successors: %bb.2(0x80000000)
-  ; PIC:   $sp_64 = DADDiu $sp_64, -16
-  ; PIC:   SD $ra_64, $sp_64, 0
-  ; PIC:   $at_64 = LONG_BRANCH_DADDiu $zero_64, target-flags(mips-abs-hi) %bb.4, %bb.2
-  ; PIC:   $at_64 = DSLL $at_64, 16
-  ; PIC:   BAL_BR %bb.2, implicit-def $ra {
-  ; PIC:     $at_64 = LONG_BRANCH_DADDiu $at_64, target-flags(mips-abs-lo) %bb.4, %bb.2
+  ; PIC:   $r29_64 = DADDiu $r29_64, -16
+  ; PIC:   SD $r31_64, $r29_64, 0
+  ; PIC:   $r1_64 = LONG_BRANCH_DADDiu $r0_64, target-flags(mips-abs-hi) %bb.4, %bb.2
+  ; PIC:   $r1_64 = DSLL $r1_64, 16
+  ; PIC:   BAL_BR %bb.2, implicit-def $r31 {
+  ; PIC:     $r1_64 = LONG_BRANCH_DADDiu $r1_64, target-flags(mips-abs-lo) %bb.4, %bb.2
   ; PIC:   }
   ; PIC: bb.2 (%ir-block.0):
   ; PIC:   successors: %bb.4(0x80000000)
-  ; PIC:   $at_64 = DADDu $ra_64, $at_64
-  ; PIC:   $ra_64 = LD $sp_64, 0
-  ; PIC:   JR64 $at_64 {
-  ; PIC:     $sp_64 = DADDiu $sp_64, 16
+  ; PIC:   $r1_64 = DADDu $r31_64, $r1_64
+  ; PIC:   $r31_64 = LD $r29_64, 0
+  ; PIC:   JR64 $r1_64 {
+  ; PIC:     $r29_64 = DADDiu $r29_64, 16
   ; PIC:   }
   ; PIC: bb.3.iftrue:
   ; PIC:   INLINEASM &".space 831068", sideeffect attdialect
-  ; PIC:   PseudoReturn64 undef $ra_64, implicit killed $r2_64 {
-  ; PIC:     $r2_64 = DADDiu $zero_64, 1
+  ; PIC:   PseudoReturn64 undef $r31_64, implicit killed $r2_64 {
+  ; PIC:     $r2_64 = DADDiu $r0_64, 1
   ; PIC:   }
   ; PIC: bb.4.tail:
-  ; PIC:   PseudoReturn64 undef $ra_64, implicit killed $r2_64 {
-  ; PIC:     $r2_64 = DADDiu $zero_64, 0
+  ; PIC:   PseudoReturn64 undef $r31_64, implicit killed $r2_64 {
+  ; PIC:     $r2_64 = DADDiu $r0_64, 0
   ; PIC:   }
   bb.0 (%ir-block.0):
     successors: %bb.1(0x40000000), %bb.2(0x40000000)
-    liveins: $a0_64
+    liveins: $r4_64
 
-    BGEZC64 killed renamable $a0_64, %bb.2, implicit-def $at
+    BGEZC64 killed renamable $r4_64, %bb.2, implicit-def $r1
 
   bb.1.iftrue:
     INLINEASM &".space 831068", sideeffect attdialect
-    $r2_64 = DADDiu $zero_64, 1
-    PseudoReturn64 undef $ra_64, implicit killed $r2_64
+    $r2_64 = DADDiu $r0_64, 1
+    PseudoReturn64 undef $r31_64, implicit killed $r2_64
 
   bb.2.tail:
-    $r2_64 = DADDiu $zero_64, 0
-    PseudoReturn64 undef $ra_64, implicit killed $r2_64
+    $r2_64 = DADDiu $r0_64, 0
+    PseudoReturn64 undef $r31_64, implicit killed $r2_64
 
 ...
 ---
@@ -1198,7 +1198,7 @@ failedISel:      false
 tracksRegLiveness: true
 registers:
 liveins:
-  - { reg: '$a0_64', virtual-reg: '' }
+  - { reg: '$r4_64', virtual-reg: '' }
 frameInfo:
   isFrameAddressTaken: false
   isReturnAddressTaken: false
@@ -1224,63 +1224,63 @@ body:             |
   ; MIPS64-LABEL: name: expand_BGTZC64
   ; MIPS64: bb.0 (%ir-block.0):
   ; MIPS64:   successors: %bb.2(0x40000000), %bb.1(0x40000000)
-  ; MIPS64:   BLEZC64 $a0_64, %bb.2, implicit-def $at
+  ; MIPS64:   BLEZC64 $r4_64, %bb.2, implicit-def $r1
   ; MIPS64: bb.1 (%ir-block.0):
   ; MIPS64:   successors: %bb.3(0x80000000)
-  ; MIPS64:   J %bb.3, implicit-def $at {
-  ; MIPS64:     $zero = SLL $zero, 0
+  ; MIPS64:   J %bb.3, implicit-def $r1 {
+  ; MIPS64:     $r0 = SLL $r0, 0
   ; MIPS64:   }
   ; MIPS64: bb.2.iftrue:
   ; MIPS64:   INLINEASM &".space 831068", sideeffect attdialect
-  ; MIPS64:   PseudoReturn64 undef $ra_64, implicit killed $r2_64 {
-  ; MIPS64:     $r2_64 = DADDiu $zero_64, 1
+  ; MIPS64:   PseudoReturn64 undef $r31_64, implicit killed $r2_64 {
+  ; MIPS64:     $r2_64 = DADDiu $r0_64, 1
   ; MIPS64:   }
   ; MIPS64: bb.3.tail:
-  ; MIPS64:   PseudoReturn64 undef $ra_64, implicit killed $r2_64 {
-  ; MIPS64:     $r2_64 = DADDiu $zero_64, 0
+  ; MIPS64:   PseudoReturn64 undef $r31_64, implicit killed $r2_64 {
+  ; MIPS64:     $r2_64 = DADDiu $r0_64, 0
   ; MIPS64:   }
   ; PIC-LABEL: name: expand_BGTZC64
   ; PIC: bb.0 (%ir-block.0):
   ; PIC:   successors: %bb.3(0x40000000), %bb.1(0x40000000)
-  ; PIC:   BLEZC64 $a0_64, %bb.3, implicit-def $at
+  ; PIC:   BLEZC64 $r4_64, %bb.3, implicit-def $r1
   ; PIC: bb.1 (%ir-block.0):
   ; PIC:   successors: %bb.2(0x80000000)
-  ; PIC:   $sp_64 = DADDiu $sp_64, -16
-  ; PIC:   SD $ra_64, $sp_64, 0
-  ; PIC:   $at_64 = LONG_BRANCH_DADDiu $zero_64, target-flags(mips-abs-hi) %bb.4, %bb.2
-  ; PIC:   $at_64 = DSLL $at_64, 16
-  ; PIC:   BAL_BR %bb.2, implicit-def $ra {
-  ; PIC:     $at_64 = LONG_BRANCH_DADDiu $at_64, target-flags(mips-abs-lo) %bb.4, %bb.2
+  ; PIC:   $r29_64 = DADDiu $r29_64, -16
+  ; PIC:   SD $r31_64, $r29_64, 0
+  ; PIC:   $r1_64 = LONG_BRANCH_DADDiu $r0_64, target-flags(mips-abs-hi) %bb.4, %bb.2
+  ; PIC:   $r1_64 = DSLL $r1_64, 16
+  ; PIC:   BAL_BR %bb.2, implicit-def $r31 {
+  ; PIC:     $r1_64 = LONG_BRANCH_DADDiu $r1_64, target-flags(mips-abs-lo) %bb.4, %bb.2
   ; PIC:   }
   ; PIC: bb.2 (%ir-block.0):
   ; PIC:   successors: %bb.4(0x80000000)
-  ; PIC:   $at_64 = DADDu $ra_64, $at_64
-  ; PIC:   $ra_64 = LD $sp_64, 0
-  ; PIC:   JR64 $at_64 {
-  ; PIC:     $sp_64 = DADDiu $sp_64, 16
+  ; PIC:   $r1_64 = DADDu $r31_64, $r1_64
+  ; PIC:   $r31_64 = LD $r29_64, 0
+  ; PIC:   JR64 $r1_64 {
+  ; PIC:     $r29_64 = DADDiu $r29_64, 16
   ; PIC:   }
   ; PIC: bb.3.iftrue:
   ; PIC:   INLINEASM &".space 831068", sideeffect attdialect
-  ; PIC:   PseudoReturn64 undef $ra_64, implicit killed $r2_64 {
-  ; PIC:     $r2_64 = DADDiu $zero_64, 1
+  ; PIC:   PseudoReturn64 undef $r31_64, implicit killed $r2_64 {
+  ; PIC:     $r2_64 = DADDiu $r0_64, 1
   ; PIC:   }
   ; PIC: bb.4.tail:
-  ; PIC:   PseudoReturn64 undef $ra_64, implicit killed $r2_64 {
-  ; PIC:     $r2_64 = DADDiu $zero_64, 0
+  ; PIC:   PseudoReturn64 undef $r31_64, implicit killed $r2_64 {
+  ; PIC:     $r2_64 = DADDiu $r0_64, 0
   ; PIC:   }
   bb.0 (%ir-block.0):
     successors: %bb.1(0x40000000), %bb.2(0x40000000)
-    liveins: $a0_64
+    liveins: $r4_64
 
-    BGTZC64 killed renamable $a0_64, %bb.2, implicit-def $at
+    BGTZC64 killed renamable $r4_64, %bb.2, implicit-def $r1
 
   bb.1.iftrue:
     INLINEASM &".space 831068", sideeffect attdialect
-    $r2_64 = DADDiu $zero_64, 1
-    PseudoReturn64 undef $ra_64, implicit killed $r2_64
+    $r2_64 = DADDiu $r0_64, 1
+    PseudoReturn64 undef $r31_64, implicit killed $r2_64
 
   bb.2.tail:
-    $r2_64 = DADDiu $zero_64, 0
-    PseudoReturn64 undef $ra_64, implicit killed $r2_64
+    $r2_64 = DADDiu $r0_64, 0
+    PseudoReturn64 undef $r31_64, implicit killed $r2_64
 
 ...

@@ -9,16 +9,16 @@ declare i32 @printf(ptr, ...)
 define void @testVaCopyArg(ptr %fmt, ...) {
   ; MIPS32-LABEL: name: testVaCopyArg
   ; MIPS32: bb.1.entry:
-  ; MIPS32-NEXT:   liveins: $a0, $a1, $a2, $a3
+  ; MIPS32-NEXT:   liveins: $r4, $r5, $r6, $r7
   ; MIPS32-NEXT: {{  $}}
-  ; MIPS32-NEXT:   [[COPY:%[0-9]+]]:_(p0) = COPY $a0
-  ; MIPS32-NEXT:   [[COPY1:%[0-9]+]]:_(s32) = COPY $a1
+  ; MIPS32-NEXT:   [[COPY:%[0-9]+]]:_(p0) = COPY $r4
+  ; MIPS32-NEXT:   [[COPY1:%[0-9]+]]:_(s32) = COPY $r5
   ; MIPS32-NEXT:   [[FRAME_INDEX:%[0-9]+]]:_(p0) = G_FRAME_INDEX %fixed-stack.2
   ; MIPS32-NEXT:   G_STORE [[COPY1]](s32), [[FRAME_INDEX]](p0) :: (store (s32) into %fixed-stack.2)
-  ; MIPS32-NEXT:   [[COPY2:%[0-9]+]]:_(s32) = COPY $a2
+  ; MIPS32-NEXT:   [[COPY2:%[0-9]+]]:_(s32) = COPY $r6
   ; MIPS32-NEXT:   [[FRAME_INDEX1:%[0-9]+]]:_(p0) = G_FRAME_INDEX %fixed-stack.1
   ; MIPS32-NEXT:   G_STORE [[COPY2]](s32), [[FRAME_INDEX1]](p0) :: (store (s32) into %fixed-stack.1)
-  ; MIPS32-NEXT:   [[COPY3:%[0-9]+]]:_(s32) = COPY $a3
+  ; MIPS32-NEXT:   [[COPY3:%[0-9]+]]:_(s32) = COPY $r7
   ; MIPS32-NEXT:   [[FRAME_INDEX2:%[0-9]+]]:_(p0) = G_FRAME_INDEX %fixed-stack.0
   ; MIPS32-NEXT:   G_STORE [[COPY3]](s32), [[FRAME_INDEX2]](p0) :: (store (s32) into %fixed-stack.0)
   ; MIPS32-NEXT:   [[GV:%[0-9]+]]:_(p0) = G_GLOBAL_VALUE @.str
@@ -36,12 +36,12 @@ define void @testVaCopyArg(ptr %fmt, ...) {
   ; MIPS32-NEXT:   [[LOAD1:%[0-9]+]]:_(p0) = G_LOAD [[LOAD]](p0) :: (load (p0) from %ir.argp.cur)
   ; MIPS32-NEXT:   G_STORE [[LOAD1]](p0), [[FRAME_INDEX6]](p0) :: (store (p0) into %ir.s)
   ; MIPS32-NEXT:   [[LOAD2:%[0-9]+]]:_(p0) = G_LOAD [[FRAME_INDEX6]](p0) :: (load (p0) from %ir.s)
-  ; MIPS32-NEXT:   ADJCALLSTACKDOWN 16, 0, implicit-def $sp, implicit $sp
-  ; MIPS32-NEXT:   $a0 = COPY [[GV]](p0)
-  ; MIPS32-NEXT:   $a1 = COPY [[LOAD2]](p0)
-  ; MIPS32-NEXT:   JAL @printf, csr_o32, implicit-def dead $ra, implicit-def $sp, implicit $a0, implicit $a1, implicit-def $r2
+  ; MIPS32-NEXT:   ADJCALLSTACKDOWN 16, 0, implicit-def $r29, implicit $r29
+  ; MIPS32-NEXT:   $r4 = COPY [[GV]](p0)
+  ; MIPS32-NEXT:   $r5 = COPY [[LOAD2]](p0)
+  ; MIPS32-NEXT:   JAL @printf, csr_o32, implicit-def dead $r31, implicit-def $r29, implicit $r4, implicit $r5, implicit-def $r2
   ; MIPS32-NEXT:   [[COPY4:%[0-9]+]]:_(s32) = COPY $r2
-  ; MIPS32-NEXT:   ADJCALLSTACKUP 16, 0, implicit-def $sp, implicit $sp
+  ; MIPS32-NEXT:   ADJCALLSTACKUP 16, 0, implicit-def $r29, implicit $r29
   ; MIPS32-NEXT:   RetRA
 entry:
   %fmt.addr = alloca ptr, align 4

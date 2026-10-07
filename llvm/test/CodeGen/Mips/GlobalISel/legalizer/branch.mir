@@ -32,8 +32,8 @@ body:             |
   ; MIPS32-LABEL: name: Unconditional_branch
   ; MIPS32: bb.0.entry:
   ; MIPS32:   successors: %bb.2(0x80000000)
-  ; MIPS32:   liveins: $a0, $a1
-  ; MIPS32:   [[COPY:%[0-9]+]]:_(s32) = COPY $a0
+  ; MIPS32:   liveins: $r4, $r5
+  ; MIPS32:   [[COPY:%[0-9]+]]:_(s32) = COPY $r4
   ; MIPS32:   G_BR %bb.2
   ; MIPS32: bb.1.end:
   ; MIPS32:   $r2 = COPY [[COPY]](s32)
@@ -42,9 +42,9 @@ body:             |
   ; MIPS32:   successors: %bb.1(0x80000000)
   ; MIPS32:   G_BR %bb.1
   bb.1.entry:
-    liveins: $a0, $a1
+    liveins: $r4, $r5
 
-    %0:_(s32) = COPY $a0
+    %0:_(s32) = COPY $r4
     G_BR %bb.3
 
   bb.2.end:
@@ -63,10 +63,10 @@ body:             |
   ; MIPS32-LABEL: name: Conditional_branch
   ; MIPS32: bb.0 (%ir-block.0):
   ; MIPS32:   successors: %bb.1(0x40000000), %bb.2(0x40000000)
-  ; MIPS32:   liveins: $a0, $a1, $a2
-  ; MIPS32:   [[COPY:%[0-9]+]]:_(s32) = COPY $a0
-  ; MIPS32:   [[COPY1:%[0-9]+]]:_(s32) = COPY $a1
-  ; MIPS32:   [[COPY2:%[0-9]+]]:_(s32) = COPY $a2
+  ; MIPS32:   liveins: $r4, $r5, $r6
+  ; MIPS32:   [[COPY:%[0-9]+]]:_(s32) = COPY $r4
+  ; MIPS32:   [[COPY1:%[0-9]+]]:_(s32) = COPY $r5
+  ; MIPS32:   [[COPY2:%[0-9]+]]:_(s32) = COPY $r6
   ; MIPS32:   [[C:%[0-9]+]]:_(s32) = G_CONSTANT i32 1
   ; MIPS32:   [[AND:%[0-9]+]]:_(s32) = G_AND [[COPY]], [[C]]
   ; MIPS32:   G_BRCOND [[AND]](s32), %bb.1
@@ -78,12 +78,12 @@ body:             |
   ; MIPS32:   $r2 = COPY [[COPY2]](s32)
   ; MIPS32:   RetRA implicit $r2
   bb.1 (%ir-block.0):
-    liveins: $a0, $a1, $a2
+    liveins: $r4, $r5, $r6
 
-    %3:_(s32) = COPY $a0
+    %3:_(s32) = COPY $r4
     %0:_(s1) = G_TRUNC %3(s32)
-    %1:_(s32) = COPY $a1
-    %2:_(s32) = COPY $a2
+    %1:_(s32) = COPY $r5
+    %2:_(s32) = COPY $r6
     G_BRCOND %0(s1), %bb.2
     G_BR %bb.3
 

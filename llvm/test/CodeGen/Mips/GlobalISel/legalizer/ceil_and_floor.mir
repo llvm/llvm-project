@@ -20,21 +20,21 @@ body:             |
     ; FP32-LABEL: name: ceil_f32
     ; FP32: liveins: $f12
     ; FP32: [[COPY:%[0-9]+]]:_(s32) = COPY $f12
-    ; FP32: ADJCALLSTACKDOWN 16, 0, implicit-def $sp, implicit $sp
+    ; FP32: ADJCALLSTACKDOWN 16, 0, implicit-def $r29, implicit $r29
     ; FP32: $f12 = COPY [[COPY]](s32)
-    ; FP32: JAL &ceilf, csr_o32, implicit-def dead $ra, implicit-def $sp, implicit $f12, implicit-def $f0
+    ; FP32: JAL &ceilf, csr_o32, implicit-def dead $r31, implicit-def $r29, implicit $f12, implicit-def $f0
     ; FP32: [[COPY1:%[0-9]+]]:_(s32) = COPY $f0
-    ; FP32: ADJCALLSTACKUP 16, 0, implicit-def $sp, implicit $sp
+    ; FP32: ADJCALLSTACKUP 16, 0, implicit-def $r29, implicit $r29
     ; FP32: $f0 = COPY [[COPY1]](s32)
     ; FP32: RetRA implicit $f0
     ; FP64-LABEL: name: ceil_f32
     ; FP64: liveins: $f12
     ; FP64: [[COPY:%[0-9]+]]:_(s32) = COPY $f12
-    ; FP64: ADJCALLSTACKDOWN 16, 0, implicit-def $sp, implicit $sp
+    ; FP64: ADJCALLSTACKDOWN 16, 0, implicit-def $r29, implicit $r29
     ; FP64: $f12 = COPY [[COPY]](s32)
-    ; FP64: JAL &ceilf, csr_o32_fp64, implicit-def dead $ra, implicit-def $sp, implicit $f12, implicit-def $f0
+    ; FP64: JAL &ceilf, csr_o32_fp64, implicit-def dead $r31, implicit-def $r29, implicit $f12, implicit-def $f0
     ; FP64: [[COPY1:%[0-9]+]]:_(s32) = COPY $f0
-    ; FP64: ADJCALLSTACKUP 16, 0, implicit-def $sp, implicit $sp
+    ; FP64: ADJCALLSTACKUP 16, 0, implicit-def $r29, implicit $r29
     ; FP64: $f0 = COPY [[COPY1]](s32)
     ; FP64: RetRA implicit $f0
     %0:_(s32) = COPY $f12
@@ -54,21 +54,21 @@ body:             |
     ; FP32-LABEL: name: ceil_f64
     ; FP32: liveins: $d6
     ; FP32: [[COPY:%[0-9]+]]:_(s64) = COPY $d6
-    ; FP32: ADJCALLSTACKDOWN 16, 0, implicit-def $sp, implicit $sp
+    ; FP32: ADJCALLSTACKDOWN 16, 0, implicit-def $r29, implicit $r29
     ; FP32: $d6 = COPY [[COPY]](s64)
-    ; FP32: JAL &ceil, csr_o32, implicit-def dead $ra, implicit-def $sp, implicit $d6, implicit-def $d0
+    ; FP32: JAL &ceil, csr_o32, implicit-def dead $r31, implicit-def $r29, implicit $d6, implicit-def $d0
     ; FP32: [[COPY1:%[0-9]+]]:_(s64) = COPY $d0
-    ; FP32: ADJCALLSTACKUP 16, 0, implicit-def $sp, implicit $sp
+    ; FP32: ADJCALLSTACKUP 16, 0, implicit-def $r29, implicit $r29
     ; FP32: $d0 = COPY [[COPY1]](s64)
     ; FP32: RetRA implicit $d0
     ; FP64-LABEL: name: ceil_f64
     ; FP64: liveins: $d6
     ; FP64: [[COPY:%[0-9]+]]:_(s64) = COPY $d6
-    ; FP64: ADJCALLSTACKDOWN 16, 0, implicit-def $sp, implicit $sp
+    ; FP64: ADJCALLSTACKDOWN 16, 0, implicit-def $r29, implicit $r29
     ; FP64: $d12_64 = COPY [[COPY]](s64)
-    ; FP64: JAL &ceil, csr_o32_fp64, implicit-def dead $ra, implicit-def $sp, implicit $d12_64, implicit-def $d0_64
+    ; FP64: JAL &ceil, csr_o32_fp64, implicit-def dead $r31, implicit-def $r29, implicit $d12_64, implicit-def $d0_64
     ; FP64: [[COPY1:%[0-9]+]]:_(s64) = COPY $d0_64
-    ; FP64: ADJCALLSTACKUP 16, 0, implicit-def $sp, implicit $sp
+    ; FP64: ADJCALLSTACKUP 16, 0, implicit-def $r29, implicit $r29
     ; FP64: $d0 = COPY [[COPY1]](s64)
     ; FP64: RetRA implicit $d0
     %0:_(s64) = COPY $d6
@@ -88,21 +88,21 @@ body:             |
     ; FP32-LABEL: name: floor_f32
     ; FP32: liveins: $f12
     ; FP32: [[COPY:%[0-9]+]]:_(s32) = COPY $f12
-    ; FP32: ADJCALLSTACKDOWN 16, 0, implicit-def $sp, implicit $sp
+    ; FP32: ADJCALLSTACKDOWN 16, 0, implicit-def $r29, implicit $r29
     ; FP32: $f12 = COPY [[COPY]](s32)
-    ; FP32: JAL &floorf, csr_o32, implicit-def dead $ra, implicit-def $sp, implicit $f12, implicit-def $f0
+    ; FP32: JAL &floorf, csr_o32, implicit-def dead $r31, implicit-def $r29, implicit $f12, implicit-def $f0
     ; FP32: [[COPY1:%[0-9]+]]:_(s32) = COPY $f0
-    ; FP32: ADJCALLSTACKUP 16, 0, implicit-def $sp, implicit $sp
+    ; FP32: ADJCALLSTACKUP 16, 0, implicit-def $r29, implicit $r29
     ; FP32: $f0 = COPY [[COPY1]](s32)
     ; FP32: RetRA implicit $f0
     ; FP64-LABEL: name: floor_f32
     ; FP64: liveins: $f12
     ; FP64: [[COPY:%[0-9]+]]:_(s32) = COPY $f12
-    ; FP64: ADJCALLSTACKDOWN 16, 0, implicit-def $sp, implicit $sp
+    ; FP64: ADJCALLSTACKDOWN 16, 0, implicit-def $r29, implicit $r29
     ; FP64: $f12 = COPY [[COPY]](s32)
-    ; FP64: JAL &floorf, csr_o32_fp64, implicit-def dead $ra, implicit-def $sp, implicit $f12, implicit-def $f0
+    ; FP64: JAL &floorf, csr_o32_fp64, implicit-def dead $r31, implicit-def $r29, implicit $f12, implicit-def $f0
     ; FP64: [[COPY1:%[0-9]+]]:_(s32) = COPY $f0
-    ; FP64: ADJCALLSTACKUP 16, 0, implicit-def $sp, implicit $sp
+    ; FP64: ADJCALLSTACKUP 16, 0, implicit-def $r29, implicit $r29
     ; FP64: $f0 = COPY [[COPY1]](s32)
     ; FP64: RetRA implicit $f0
     %0:_(s32) = COPY $f12
@@ -122,21 +122,21 @@ body:             |
     ; FP32-LABEL: name: floor_f64
     ; FP32: liveins: $d6
     ; FP32: [[COPY:%[0-9]+]]:_(s64) = COPY $d6
-    ; FP32: ADJCALLSTACKDOWN 16, 0, implicit-def $sp, implicit $sp
+    ; FP32: ADJCALLSTACKDOWN 16, 0, implicit-def $r29, implicit $r29
     ; FP32: $d6 = COPY [[COPY]](s64)
-    ; FP32: JAL &floor, csr_o32, implicit-def dead $ra, implicit-def $sp, implicit $d6, implicit-def $d0
+    ; FP32: JAL &floor, csr_o32, implicit-def dead $r31, implicit-def $r29, implicit $d6, implicit-def $d0
     ; FP32: [[COPY1:%[0-9]+]]:_(s64) = COPY $d0
-    ; FP32: ADJCALLSTACKUP 16, 0, implicit-def $sp, implicit $sp
+    ; FP32: ADJCALLSTACKUP 16, 0, implicit-def $r29, implicit $r29
     ; FP32: $d0 = COPY [[COPY1]](s64)
     ; FP32: RetRA implicit $d0
     ; FP64-LABEL: name: floor_f64
     ; FP64: liveins: $d6
     ; FP64: [[COPY:%[0-9]+]]:_(s64) = COPY $d6
-    ; FP64: ADJCALLSTACKDOWN 16, 0, implicit-def $sp, implicit $sp
+    ; FP64: ADJCALLSTACKDOWN 16, 0, implicit-def $r29, implicit $r29
     ; FP64: $d12_64 = COPY [[COPY]](s64)
-    ; FP64: JAL &floor, csr_o32_fp64, implicit-def dead $ra, implicit-def $sp, implicit $d12_64, implicit-def $d0_64
+    ; FP64: JAL &floor, csr_o32_fp64, implicit-def dead $r31, implicit-def $r29, implicit $d12_64, implicit-def $d0_64
     ; FP64: [[COPY1:%[0-9]+]]:_(s64) = COPY $d0_64
-    ; FP64: ADJCALLSTACKUP 16, 0, implicit-def $sp, implicit $sp
+    ; FP64: ADJCALLSTACKUP 16, 0, implicit-def $r29, implicit $r29
     ; FP64: $d0 = COPY [[COPY1]](s64)
     ; FP64: RetRA implicit $d0
     %0:_(s64) = COPY $d6

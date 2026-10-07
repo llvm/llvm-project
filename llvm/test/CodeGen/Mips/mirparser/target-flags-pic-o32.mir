@@ -45,8 +45,8 @@ registers:
   - { id: 11, class: gpr32, preferred-register: '' }
   - { id: 12, class: gpr32, preferred-register: '' }
 liveins:
-  - { reg: '$a0', virtual-reg: '%0' }
-  - { reg: '$t9', virtual-reg: '' }
+  - { reg: '$r4', virtual-reg: '%0' }
+  - { reg: '$r25', virtual-reg: '' }
   - { reg: '$r2', virtual-reg: '' }
 frameInfo:
   isFrameAddressTaken: false
@@ -70,16 +70,16 @@ stack:
 constants:
 body:             |
   bb.0.entry:
-    liveins: $a0, $t9, $r2
+    liveins: $r4, $r25, $r2
 
-    %1 = ADDu $r2, $t9
-    %0 = COPY $a0
-    ADJCALLSTACKDOWN 16, 0, implicit-def dead $sp, implicit $sp
+    %1 = ADDu $r2, $r25
+    %0 = COPY $r4
+    ADJCALLSTACKDOWN 16, 0, implicit-def dead $r29, implicit $r29
     %2 = LW %1, target-flags(mips-got-call) @_Z1gi :: (load (s32) from call-entry @_Z1gi)
-    $a0 = COPY %0
-    $gp = COPY %1
-    JALRPseudo killed %2, csr_o32_fpxx, implicit-def dead $ra, implicit $a0, implicit $gp, implicit-def $sp, implicit-def $r2
-    ADJCALLSTACKUP 16, 0, implicit-def dead $sp, implicit $sp
+    $r4 = COPY %0
+    $r28 = COPY %1
+    JALRPseudo killed %2, csr_o32_fpxx, implicit-def dead $r31, implicit $r4, implicit $r28, implicit-def $r29, implicit-def $r2
+    ADJCALLSTACKUP 16, 0, implicit-def dead $r29, implicit $r29
     %3 = COPY $r2
     %4 = ADDu %3, %0
     %5 = LW %1, target-flags(mips-got) @v :: (load (s32) from got)

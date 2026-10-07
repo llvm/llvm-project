@@ -16,7 +16,7 @@ define float @load_float_align1() {
 ; MIPS32:       # %bb.0: # %entry
 ; MIPS32-NEXT:    lui $1, %hi(float_align1)
 ; MIPS32-NEXT:    addiu $2, $1, %lo(float_align1)
-; MIPS32-NEXT:    # implicit-def: $at
+; MIPS32-NEXT:    # implicit-def: $r1
 ; MIPS32-NEXT:    lwl $1, 3($2)
 ; MIPS32-NEXT:    lwr $1, 0($2)
 ; MIPS32-NEXT:    mtc1 $1, $f0
@@ -39,7 +39,7 @@ define float @load_float_align2() {
 ; MIPS32:       # %bb.0: # %entry
 ; MIPS32-NEXT:    lui $1, %hi(float_align2)
 ; MIPS32-NEXT:    addiu $2, $1, %lo(float_align2)
-; MIPS32-NEXT:    # implicit-def: $at
+; MIPS32-NEXT:    # implicit-def: $r1
 ; MIPS32-NEXT:    lwl $1, 3($2)
 ; MIPS32-NEXT:    lwr $1, 0($2)
 ; MIPS32-NEXT:    mtc1 $1, $f0

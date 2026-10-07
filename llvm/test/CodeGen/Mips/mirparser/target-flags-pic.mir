@@ -46,8 +46,8 @@ registers:
   - { id: 12, class: gpr64, preferred-register: '' }
   - { id: 13, class: gpr64, preferred-register: '' }
 liveins:
-  - { reg: '$a0_64', virtual-reg: '%0' }
-  - { reg: '$t9_64', virtual-reg: '' }
+  - { reg: '$r4_64', virtual-reg: '%0' }
+  - { reg: '$r25_64', virtual-reg: '' }
 frameInfo:
   isFrameAddressTaken: false
   isReturnAddressTaken: false
@@ -70,18 +70,18 @@ stack:
 constants:
 body:             |
   bb.0.entry:
-    liveins: $a0_64, $t9_64
+    liveins: $r4_64, $r25_64
 
     %12 = LUi64 target-flags(mips-gpoff-hi) @_Z2k1i
-    %13 = DADDu %12, $t9_64
+    %13 = DADDu %12, $r25_64
     %1 = DADDiu %13, target-flags(mips-gpoff-lo) @_Z2k1i
-    %0 = COPY $a0_64
-    ADJCALLSTACKDOWN 0, 0, implicit-def dead $sp, implicit $sp
+    %0 = COPY $r4_64
+    ADJCALLSTACKDOWN 0, 0, implicit-def dead $r29, implicit $r29
     %2 = LD %1, target-flags(mips-got-call) @_Z1gi :: (load (s64) from call-entry @_Z1gi)
-    $a0_64 = COPY %0
-    $gp_64 = COPY %1
-    JALR64Pseudo killed %2, csr_n64, implicit-def dead $ra, implicit $a0_64, implicit $gp_64, implicit-def $sp, implicit-def $r2
-    ADJCALLSTACKUP 0, 0, implicit-def dead $sp, implicit $sp
+    $r4_64 = COPY %0
+    $r28_64 = COPY %1
+    JALR64Pseudo killed %2, csr_n64, implicit-def dead $r31, implicit $r4_64, implicit $r28_64, implicit-def $r29, implicit-def $r2
+    ADJCALLSTACKUP 0, 0, implicit-def dead $r29, implicit $r29
     %3 = COPY $r2
     %4 = COPY %0.sub_32
     %5 = ADDu %3, killed %4

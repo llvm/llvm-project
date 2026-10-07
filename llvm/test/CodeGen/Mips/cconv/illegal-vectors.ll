@@ -1279,8 +1279,8 @@ define void @call_v4i18(ptr %p) nounwind {
 ; MIPS64-NEXT:    ori $17, $17, 65280
 ; MIPS64-NEXT:    # kill: def $r2 killed $r2 def $r2_64
 ; MIPS64-NEXT:    # kill: def $r3 killed $r3 def $r3_64
-; MIPS64-NEXT:    # kill: def $a0 killed $a0 def $a0_64
-; MIPS64-NEXT:    # kill: def $a1 killed $a1 def $a1_64
+; MIPS64-NEXT:    # kill: def $r4 killed $r4 def $r4_64
+; MIPS64-NEXT:    # kill: def $r5 killed $r5 def $r5_64
 ; MIPS64-NEXT:    dsll $1, $2, 54
 ; MIPS64-NEXT:    and $3, $3, $18
 ; MIPS64-NEXT:    dsll $3, $3, 36

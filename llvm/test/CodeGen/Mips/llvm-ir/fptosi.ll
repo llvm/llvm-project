@@ -42,7 +42,7 @@ define i32 @test1(float %t) {
 ; M32-NEXT:    # <MCOperand Reg:F0>
 ; M32-NEXT:    # <MCOperand Reg:F12>>
 ; M32-NEXT:    jr $ra # <MCInst #[[#MCINST2:]] JR
-; M32-NEXT:    # <MCOperand Reg:RA>>
+; M32-NEXT:    # <MCOperand Reg:R31>>
 ; M32-NEXT:    mfc1 $2, $f0 # <MCInst #[[#MCINST3:]] MFC1
 ; M32-NEXT:    # <MCOperand Reg:R2>
 ; M32-NEXT:    # <MCOperand Reg:F0>>
@@ -53,7 +53,7 @@ define i32 @test1(float %t) {
 ; M32R2-FP64-NEXT:    # <MCOperand Reg:F0>
 ; M32R2-FP64-NEXT:    # <MCOperand Reg:F12>>
 ; M32R2-FP64-NEXT:    jr $ra # <MCInst #[[#MCINST2:]] JR
-; M32R2-FP64-NEXT:    # <MCOperand Reg:RA>>
+; M32R2-FP64-NEXT:    # <MCOperand Reg:R31>>
 ; M32R2-FP64-NEXT:    mfc1 $2, $f0 # <MCInst #[[#MCINST3:]] MFC1
 ; M32R2-FP64-NEXT:    # <MCOperand Reg:R2>
 ; M32R2-FP64-NEXT:    # <MCOperand Reg:F0>>
@@ -61,32 +61,32 @@ define i32 @test1(float %t) {
 ; M32R2-SF-LABEL: test1:
 ; M32R2-SF:       # %bb.0: # %entry
 ; M32R2-SF-NEXT:    addiu $sp, $sp, -24 # <MCInst #[[#MCINST4:]] ADDiu
-; M32R2-SF-NEXT:    # <MCOperand Reg:SP>
-; M32R2-SF-NEXT:    # <MCOperand Reg:SP>
+; M32R2-SF-NEXT:    # <MCOperand Reg:R29>
+; M32R2-SF-NEXT:    # <MCOperand Reg:R29>
 ; M32R2-SF-NEXT:    # <MCOperand Imm:-24>>
 ; M32R2-SF-NEXT:    .cfi_def_cfa_offset 24
 ; M32R2-SF-NEXT:    sw $ra, 20($sp) # 4-byte Folded Spill
 ; M32R2-SF-NEXT:    # <MCInst #[[#MCINST5:]] SW
-; M32R2-SF-NEXT:    # <MCOperand Reg:RA>
-; M32R2-SF-NEXT:    # <MCOperand Reg:SP>
+; M32R2-SF-NEXT:    # <MCOperand Reg:R31>
+; M32R2-SF-NEXT:    # <MCOperand Reg:R29>
 ; M32R2-SF-NEXT:    # <MCOperand Imm:20>>
 ; M32R2-SF-NEXT:    .cfi_offset 31, -4
 ; M32R2-SF-NEXT:    jal __fixsfsi # <MCInst #[[#MCINST6:]] JAL
 ; M32R2-SF-NEXT:    # <MCOperand Expr:__fixsfsi>>
 ; M32R2-SF-NEXT:    nop # <MCInst #[[#MCINST7:]] SLL
-; M32R2-SF-NEXT:    # <MCOperand Reg:ZERO>
-; M32R2-SF-NEXT:    # <MCOperand Reg:ZERO>
+; M32R2-SF-NEXT:    # <MCOperand Reg:R0>
+; M32R2-SF-NEXT:    # <MCOperand Reg:R0>
 ; M32R2-SF-NEXT:    # <MCOperand Imm:0>>
 ; M32R2-SF-NEXT:    lw $ra, 20($sp) # 4-byte Folded Reload
 ; M32R2-SF-NEXT:    # <MCInst #[[#MCINST8:]] LW
-; M32R2-SF-NEXT:    # <MCOperand Reg:RA>
-; M32R2-SF-NEXT:    # <MCOperand Reg:SP>
+; M32R2-SF-NEXT:    # <MCOperand Reg:R31>
+; M32R2-SF-NEXT:    # <MCOperand Reg:R29>
 ; M32R2-SF-NEXT:    # <MCOperand Imm:20>>
 ; M32R2-SF-NEXT:    jr $ra # <MCInst #[[#MCINST2:]] JR
-; M32R2-SF-NEXT:    # <MCOperand Reg:RA>>
+; M32R2-SF-NEXT:    # <MCOperand Reg:R31>>
 ; M32R2-SF-NEXT:    addiu $sp, $sp, 24 # <MCInst #[[#MCINST4]] ADDiu
-; M32R2-SF-NEXT:    # <MCOperand Reg:SP>
-; M32R2-SF-NEXT:    # <MCOperand Reg:SP>
+; M32R2-SF-NEXT:    # <MCOperand Reg:R29>
+; M32R2-SF-NEXT:    # <MCOperand Reg:R29>
 ; M32R2-SF-NEXT:    # <MCOperand Imm:24>>
 ;
 ; M32R3R5-LABEL: test1:
@@ -95,7 +95,7 @@ define i32 @test1(float %t) {
 ; M32R3R5-NEXT:    # <MCOperand Reg:F0>
 ; M32R3R5-NEXT:    # <MCOperand Reg:F12>>
 ; M32R3R5-NEXT:    jr $ra # <MCInst #[[#MCINST2:]] JR
-; M32R3R5-NEXT:    # <MCOperand Reg:RA>>
+; M32R3R5-NEXT:    # <MCOperand Reg:R31>>
 ; M32R3R5-NEXT:    mfc1 $2, $f0 # <MCInst #[[#MCINST3:]] MFC1
 ; M32R3R5-NEXT:    # <MCOperand Reg:R2>
 ; M32R3R5-NEXT:    # <MCOperand Reg:F0>>
@@ -106,8 +106,8 @@ define i32 @test1(float %t) {
 ; M32R6-NEXT:    # <MCOperand Reg:F0>
 ; M32R6-NEXT:    # <MCOperand Reg:F12>>
 ; M32R6-NEXT:    jr $ra # <MCInst #[[#MCINST9:]] JALR
-; M32R6-NEXT:    # <MCOperand Reg:ZERO>
-; M32R6-NEXT:    # <MCOperand Reg:RA>>
+; M32R6-NEXT:    # <MCOperand Reg:R0>
+; M32R6-NEXT:    # <MCOperand Reg:R31>>
 ; M32R6-NEXT:    mfc1 $2, $f0 # <MCInst #[[#MCINST3:]] MFC1
 ; M32R6-NEXT:    # <MCOperand Reg:R2>
 ; M32R6-NEXT:    # <MCOperand Reg:F0>>
@@ -121,14 +121,14 @@ define i32 @test1(float %t) {
 ; M3-NEXT:    # <MCOperand Reg:R2>
 ; M3-NEXT:    # <MCOperand Reg:F0>>
 ; M3-NEXT:    nop # <MCInst #[[#MCINST7:]] SLL
-; M3-NEXT:    # <MCOperand Reg:ZERO>
-; M3-NEXT:    # <MCOperand Reg:ZERO>
+; M3-NEXT:    # <MCOperand Reg:R0>
+; M3-NEXT:    # <MCOperand Reg:R0>
 ; M3-NEXT:    # <MCOperand Imm:0>>
 ; M3-NEXT:    jr $ra # <MCInst #[[#MCINST2:]] JR
-; M3-NEXT:    # <MCOperand Reg:RA_64>>
+; M3-NEXT:    # <MCOperand Reg:R31_64>>
 ; M3-NEXT:    nop # <MCInst #[[#MCINST7]] SLL
-; M3-NEXT:    # <MCOperand Reg:ZERO>
-; M3-NEXT:    # <MCOperand Reg:ZERO>
+; M3-NEXT:    # <MCOperand Reg:R0>
+; M3-NEXT:    # <MCOperand Reg:R0>
 ; M3-NEXT:    # <MCOperand Imm:0>>
 ;
 ; M64-LABEL: test1:
@@ -137,7 +137,7 @@ define i32 @test1(float %t) {
 ; M64-NEXT:    # <MCOperand Reg:F0>
 ; M64-NEXT:    # <MCOperand Reg:F12>>
 ; M64-NEXT:    jr $ra # <MCInst #[[#MCINST2:]] JR
-; M64-NEXT:    # <MCOperand Reg:RA_64>>
+; M64-NEXT:    # <MCOperand Reg:R31_64>>
 ; M64-NEXT:    mfc1 $2, $f0 # <MCInst #[[#MCINST3:]] MFC1
 ; M64-NEXT:    # <MCOperand Reg:R2>
 ; M64-NEXT:    # <MCOperand Reg:F0>>
@@ -148,8 +148,8 @@ define i32 @test1(float %t) {
 ; M64R6-NEXT:    # <MCOperand Reg:F0>
 ; M64R6-NEXT:    # <MCOperand Reg:F12>>
 ; M64R6-NEXT:    jr $ra # <MCInst #[[#MCINST10:]] JALR64
-; M64R6-NEXT:    # <MCOperand Reg:ZERO_64>
-; M64R6-NEXT:    # <MCOperand Reg:RA_64>>
+; M64R6-NEXT:    # <MCOperand Reg:R0_64>
+; M64R6-NEXT:    # <MCOperand Reg:R31_64>>
 ; M64R6-NEXT:    mfc1 $2, $f0 # <MCInst #[[#MCINST3:]] MFC1
 ; M64R6-NEXT:    # <MCOperand Reg:R2>
 ; M64R6-NEXT:    # <MCOperand Reg:F0>>
@@ -160,7 +160,7 @@ define i32 @test1(float %t) {
 ; MMR2-FP32-NEXT:    # <MCOperand Reg:F0>
 ; MMR2-FP32-NEXT:    # <MCOperand Reg:F12>>
 ; MMR2-FP32-NEXT:    jr $ra # <MCInst #[[#MCINST12:]] JR_MM
-; MMR2-FP32-NEXT:    # <MCOperand Reg:RA>>
+; MMR2-FP32-NEXT:    # <MCOperand Reg:R31>>
 ; MMR2-FP32-NEXT:    mfc1 $2, $f0 # <MCInst #[[#MCINST13:]] MFC1_MM
 ; MMR2-FP32-NEXT:    # <MCOperand Reg:R2>
 ; MMR2-FP32-NEXT:    # <MCOperand Reg:F0>>
@@ -171,7 +171,7 @@ define i32 @test1(float %t) {
 ; MMR2-FP64-NEXT:    # <MCOperand Reg:F0>
 ; MMR2-FP64-NEXT:    # <MCOperand Reg:F12>>
 ; MMR2-FP64-NEXT:    jr $ra # <MCInst #[[#MCINST12:]] JR_MM
-; MMR2-FP64-NEXT:    # <MCOperand Reg:RA>>
+; MMR2-FP64-NEXT:    # <MCOperand Reg:R31>>
 ; MMR2-FP64-NEXT:    mfc1 $2, $f0 # <MCInst #[[#MCINST13:]] MFC1_MM
 ; MMR2-FP64-NEXT:    # <MCOperand Reg:R2>
 ; MMR2-FP64-NEXT:    # <MCOperand Reg:F0>>
@@ -183,25 +183,25 @@ define i32 @test1(float %t) {
 ; MMR2-SF-NEXT:    .cfi_def_cfa_offset 24
 ; MMR2-SF-NEXT:    sw $ra, 20($sp) # 4-byte Folded Spill
 ; MMR2-SF-NEXT:    # <MCInst #[[#MCINST15:]] SWSP_MM
-; MMR2-SF-NEXT:    # <MCOperand Reg:RA>
-; MMR2-SF-NEXT:    # <MCOperand Reg:SP>
+; MMR2-SF-NEXT:    # <MCOperand Reg:R31>
+; MMR2-SF-NEXT:    # <MCOperand Reg:R29>
 ; MMR2-SF-NEXT:    # <MCOperand Imm:20>>
 ; MMR2-SF-NEXT:    .cfi_offset 31, -4
 ; MMR2-SF-NEXT:    jal __fixsfsi # <MCInst #[[#MCINST16:]] JAL_MM
 ; MMR2-SF-NEXT:    # <MCOperand Expr:__fixsfsi>>
 ; MMR2-SF-NEXT:    nop # <MCInst #[[#MCINST17:]] SLL_MM
-; MMR2-SF-NEXT:    # <MCOperand Reg:ZERO>
-; MMR2-SF-NEXT:    # <MCOperand Reg:ZERO>
+; MMR2-SF-NEXT:    # <MCOperand Reg:R0>
+; MMR2-SF-NEXT:    # <MCOperand Reg:R0>
 ; MMR2-SF-NEXT:    # <MCOperand Imm:0>>
 ; MMR2-SF-NEXT:    lw $ra, 20($sp) # 4-byte Folded Reload
 ; MMR2-SF-NEXT:    # <MCInst #[[#MCINST18:]] LWSP_MM
-; MMR2-SF-NEXT:    # <MCOperand Reg:RA>
-; MMR2-SF-NEXT:    # <MCOperand Reg:SP>
+; MMR2-SF-NEXT:    # <MCOperand Reg:R31>
+; MMR2-SF-NEXT:    # <MCOperand Reg:R29>
 ; MMR2-SF-NEXT:    # <MCOperand Imm:20>>
 ; MMR2-SF-NEXT:    addiusp 24 # <MCInst #[[#MCINST14]] ADDIUSP_MM
 ; MMR2-SF-NEXT:    # <MCOperand Imm:24>>
 ; MMR2-SF-NEXT:    jrc $ra # <MCInst #[[#MCINST19:]] JRC16_MM
-; MMR2-SF-NEXT:    # <MCOperand Reg:RA>>
+; MMR2-SF-NEXT:    # <MCOperand Reg:R31>>
 ;
 ; MMR6-LABEL: test1:
 ; MMR6:       # %bb.0: # %entry
@@ -212,34 +212,34 @@ define i32 @test1(float %t) {
 ; MMR6-NEXT:    # <MCOperand Reg:R2>
 ; MMR6-NEXT:    # <MCOperand Reg:F0>>
 ; MMR6-NEXT:    jrc $ra # <MCInst #[[#MCINST19:]] JRC16_MM
-; MMR6-NEXT:    # <MCOperand Reg:RA>>
+; MMR6-NEXT:    # <MCOperand Reg:R31>>
 ;
 ; MMR6-SF-LABEL: test1:
 ; MMR6-SF:       # %bb.0: # %entry
 ; MMR6-SF-NEXT:    addiu $sp, $sp, -24 # <MCInst #[[#MCINST4:]] ADDiu
-; MMR6-SF-NEXT:    # <MCOperand Reg:SP>
-; MMR6-SF-NEXT:    # <MCOperand Reg:SP>
+; MMR6-SF-NEXT:    # <MCOperand Reg:R29>
+; MMR6-SF-NEXT:    # <MCOperand Reg:R29>
 ; MMR6-SF-NEXT:    # <MCOperand Imm:-24>>
 ; MMR6-SF-NEXT:    .cfi_def_cfa_offset 24
 ; MMR6-SF-NEXT:    sw $ra, 20($sp) # 4-byte Folded Spill
 ; MMR6-SF-NEXT:    # <MCInst #[[#MCINST5:]] SW
-; MMR6-SF-NEXT:    # <MCOperand Reg:RA>
-; MMR6-SF-NEXT:    # <MCOperand Reg:SP>
+; MMR6-SF-NEXT:    # <MCOperand Reg:R31>
+; MMR6-SF-NEXT:    # <MCOperand Reg:R29>
 ; MMR6-SF-NEXT:    # <MCOperand Imm:20>>
 ; MMR6-SF-NEXT:    .cfi_offset 31, -4
 ; MMR6-SF-NEXT:    balc __fixsfsi # <MCInst #[[#MCINST21:]] BALC_MMR6
 ; MMR6-SF-NEXT:    # <MCOperand Expr:__fixsfsi>>
 ; MMR6-SF-NEXT:    lw $ra, 20($sp) # 4-byte Folded Reload
 ; MMR6-SF-NEXT:    # <MCInst #[[#MCINST8:]] LW
-; MMR6-SF-NEXT:    # <MCOperand Reg:RA>
-; MMR6-SF-NEXT:    # <MCOperand Reg:SP>
+; MMR6-SF-NEXT:    # <MCOperand Reg:R31>
+; MMR6-SF-NEXT:    # <MCOperand Reg:R29>
 ; MMR6-SF-NEXT:    # <MCOperand Imm:20>>
 ; MMR6-SF-NEXT:    addiu $sp, $sp, 24 # <MCInst #[[#MCINST4]] ADDiu
-; MMR6-SF-NEXT:    # <MCOperand Reg:SP>
-; MMR6-SF-NEXT:    # <MCOperand Reg:SP>
+; MMR6-SF-NEXT:    # <MCOperand Reg:R29>
+; MMR6-SF-NEXT:    # <MCOperand Reg:R29>
 ; MMR6-SF-NEXT:    # <MCOperand Imm:24>>
 ; MMR6-SF-NEXT:    jrc $ra # <MCInst #[[#MCINST19:]] JRC16_MM
-; MMR6-SF-NEXT:    # <MCOperand Reg:RA>>
+; MMR6-SF-NEXT:    # <MCOperand Reg:R31>>
 entry:
   %conv = fptosi float %t to i32
   ret i32 %conv
@@ -252,7 +252,7 @@ define i32 @test2(double %t) {
 ; M32-NEXT:    # <MCOperand Reg:F0>
 ; M32-NEXT:    # <MCOperand Reg:D6>>
 ; M32-NEXT:    jr $ra # <MCInst #[[#MCINST2]] JR
-; M32-NEXT:    # <MCOperand Reg:RA>>
+; M32-NEXT:    # <MCOperand Reg:R31>>
 ; M32-NEXT:    mfc1 $2, $f0 # <MCInst #[[#MCINST3]] MFC1
 ; M32-NEXT:    # <MCOperand Reg:R2>
 ; M32-NEXT:    # <MCOperand Reg:F0>>
@@ -263,7 +263,7 @@ define i32 @test2(double %t) {
 ; M32R2-FP64-NEXT:    # <MCOperand Reg:F0>
 ; M32R2-FP64-NEXT:    # <MCOperand Reg:D12_64>>
 ; M32R2-FP64-NEXT:    jr $ra # <MCInst #[[#MCINST2]] JR
-; M32R2-FP64-NEXT:    # <MCOperand Reg:RA>>
+; M32R2-FP64-NEXT:    # <MCOperand Reg:R31>>
 ; M32R2-FP64-NEXT:    mfc1 $2, $f0 # <MCInst #[[#MCINST3]] MFC1
 ; M32R2-FP64-NEXT:    # <MCOperand Reg:R2>
 ; M32R2-FP64-NEXT:    # <MCOperand Reg:F0>>
@@ -271,32 +271,32 @@ define i32 @test2(double %t) {
 ; M32R2-SF-LABEL: test2:
 ; M32R2-SF:       # %bb.0: # %entry
 ; M32R2-SF-NEXT:    addiu $sp, $sp, -24 # <MCInst #[[#MCINST4]] ADDiu
-; M32R2-SF-NEXT:    # <MCOperand Reg:SP>
-; M32R2-SF-NEXT:    # <MCOperand Reg:SP>
+; M32R2-SF-NEXT:    # <MCOperand Reg:R29>
+; M32R2-SF-NEXT:    # <MCOperand Reg:R29>
 ; M32R2-SF-NEXT:    # <MCOperand Imm:-24>>
 ; M32R2-SF-NEXT:    .cfi_def_cfa_offset 24
 ; M32R2-SF-NEXT:    sw $ra, 20($sp) # 4-byte Folded Spill
 ; M32R2-SF-NEXT:    # <MCInst #[[#MCINST5]] SW
-; M32R2-SF-NEXT:    # <MCOperand Reg:RA>
-; M32R2-SF-NEXT:    # <MCOperand Reg:SP>
+; M32R2-SF-NEXT:    # <MCOperand Reg:R31>
+; M32R2-SF-NEXT:    # <MCOperand Reg:R29>
 ; M32R2-SF-NEXT:    # <MCOperand Imm:20>>
 ; M32R2-SF-NEXT:    .cfi_offset 31, -4
 ; M32R2-SF-NEXT:    jal __fixdfsi # <MCInst #[[#MCINST6]] JAL
 ; M32R2-SF-NEXT:    # <MCOperand Expr:__fixdfsi>>
 ; M32R2-SF-NEXT:    nop # <MCInst #[[#MCINST7]] SLL
-; M32R2-SF-NEXT:    # <MCOperand Reg:ZERO>
-; M32R2-SF-NEXT:    # <MCOperand Reg:ZERO>
+; M32R2-SF-NEXT:    # <MCOperand Reg:R0>
+; M32R2-SF-NEXT:    # <MCOperand Reg:R0>
 ; M32R2-SF-NEXT:    # <MCOperand Imm:0>>
 ; M32R2-SF-NEXT:    lw $ra, 20($sp) # 4-byte Folded Reload
 ; M32R2-SF-NEXT:    # <MCInst #[[#MCINST8]] LW
-; M32R2-SF-NEXT:    # <MCOperand Reg:RA>
-; M32R2-SF-NEXT:    # <MCOperand Reg:SP>
+; M32R2-SF-NEXT:    # <MCOperand Reg:R31>
+; M32R2-SF-NEXT:    # <MCOperand Reg:R29>
 ; M32R2-SF-NEXT:    # <MCOperand Imm:20>>
 ; M32R2-SF-NEXT:    jr $ra # <MCInst #[[#MCINST2]] JR
-; M32R2-SF-NEXT:    # <MCOperand Reg:RA>>
+; M32R2-SF-NEXT:    # <MCOperand Reg:R31>>
 ; M32R2-SF-NEXT:    addiu $sp, $sp, 24 # <MCInst #[[#MCINST4]] ADDiu
-; M32R2-SF-NEXT:    # <MCOperand Reg:SP>
-; M32R2-SF-NEXT:    # <MCOperand Reg:SP>
+; M32R2-SF-NEXT:    # <MCOperand Reg:R29>
+; M32R2-SF-NEXT:    # <MCOperand Reg:R29>
 ; M32R2-SF-NEXT:    # <MCOperand Imm:24>>
 ;
 ; M32R3R5-LABEL: test2:
@@ -305,7 +305,7 @@ define i32 @test2(double %t) {
 ; M32R3R5-NEXT:    # <MCOperand Reg:F0>
 ; M32R3R5-NEXT:    # <MCOperand Reg:D6>>
 ; M32R3R5-NEXT:    jr $ra # <MCInst #[[#MCINST2]] JR
-; M32R3R5-NEXT:    # <MCOperand Reg:RA>>
+; M32R3R5-NEXT:    # <MCOperand Reg:R31>>
 ; M32R3R5-NEXT:    mfc1 $2, $f0 # <MCInst #[[#MCINST3]] MFC1
 ; M32R3R5-NEXT:    # <MCOperand Reg:R2>
 ; M32R3R5-NEXT:    # <MCOperand Reg:F0>>
@@ -316,8 +316,8 @@ define i32 @test2(double %t) {
 ; M32R6-NEXT:    # <MCOperand Reg:F0>
 ; M32R6-NEXT:    # <MCOperand Reg:D12_64>>
 ; M32R6-NEXT:    jr $ra # <MCInst #[[#MCINST9]] JALR
-; M32R6-NEXT:    # <MCOperand Reg:ZERO>
-; M32R6-NEXT:    # <MCOperand Reg:RA>>
+; M32R6-NEXT:    # <MCOperand Reg:R0>
+; M32R6-NEXT:    # <MCOperand Reg:R31>>
 ; M32R6-NEXT:    mfc1 $2, $f0 # <MCInst #[[#MCINST3]] MFC1
 ; M32R6-NEXT:    # <MCOperand Reg:R2>
 ; M32R6-NEXT:    # <MCOperand Reg:F0>>
@@ -331,14 +331,14 @@ define i32 @test2(double %t) {
 ; M3-NEXT:    # <MCOperand Reg:R2>
 ; M3-NEXT:    # <MCOperand Reg:F0>>
 ; M3-NEXT:    nop # <MCInst #[[#MCINST7]] SLL
-; M3-NEXT:    # <MCOperand Reg:ZERO>
-; M3-NEXT:    # <MCOperand Reg:ZERO>
+; M3-NEXT:    # <MCOperand Reg:R0>
+; M3-NEXT:    # <MCOperand Reg:R0>
 ; M3-NEXT:    # <MCOperand Imm:0>>
 ; M3-NEXT:    jr $ra # <MCInst #[[#MCINST2]] JR
-; M3-NEXT:    # <MCOperand Reg:RA_64>>
+; M3-NEXT:    # <MCOperand Reg:R31_64>>
 ; M3-NEXT:    nop # <MCInst #[[#MCINST7]] SLL
-; M3-NEXT:    # <MCOperand Reg:ZERO>
-; M3-NEXT:    # <MCOperand Reg:ZERO>
+; M3-NEXT:    # <MCOperand Reg:R0>
+; M3-NEXT:    # <MCOperand Reg:R0>
 ; M3-NEXT:    # <MCOperand Imm:0>>
 ;
 ; M64-LABEL: test2:
@@ -347,7 +347,7 @@ define i32 @test2(double %t) {
 ; M64-NEXT:    # <MCOperand Reg:F0>
 ; M64-NEXT:    # <MCOperand Reg:D12_64>>
 ; M64-NEXT:    jr $ra # <MCInst #[[#MCINST2]] JR
-; M64-NEXT:    # <MCOperand Reg:RA_64>>
+; M64-NEXT:    # <MCOperand Reg:R31_64>>
 ; M64-NEXT:    mfc1 $2, $f0 # <MCInst #[[#MCINST3]] MFC1
 ; M64-NEXT:    # <MCOperand Reg:R2>
 ; M64-NEXT:    # <MCOperand Reg:F0>>
@@ -358,8 +358,8 @@ define i32 @test2(double %t) {
 ; M64R6-NEXT:    # <MCOperand Reg:F0>
 ; M64R6-NEXT:    # <MCOperand Reg:D12_64>>
 ; M64R6-NEXT:    jr $ra # <MCInst #[[#MCINST10]] JALR64
-; M64R6-NEXT:    # <MCOperand Reg:ZERO_64>
-; M64R6-NEXT:    # <MCOperand Reg:RA_64>>
+; M64R6-NEXT:    # <MCOperand Reg:R0_64>
+; M64R6-NEXT:    # <MCOperand Reg:R31_64>>
 ; M64R6-NEXT:    mfc1 $2, $f0 # <MCInst #[[#MCINST3]] MFC1
 ; M64R6-NEXT:    # <MCOperand Reg:R2>
 ; M64R6-NEXT:    # <MCOperand Reg:F0>>
@@ -370,7 +370,7 @@ define i32 @test2(double %t) {
 ; MMR2-FP32-NEXT:    # <MCOperand Reg:F0>
 ; MMR2-FP32-NEXT:    # <MCOperand Reg:D6>>
 ; MMR2-FP32-NEXT:    jr $ra # <MCInst #[[#MCINST12]] JR_MM
-; MMR2-FP32-NEXT:    # <MCOperand Reg:RA>>
+; MMR2-FP32-NEXT:    # <MCOperand Reg:R31>>
 ; MMR2-FP32-NEXT:    mfc1 $2, $f0 # <MCInst #[[#MCINST13]] MFC1_MM
 ; MMR2-FP32-NEXT:    # <MCOperand Reg:R2>
 ; MMR2-FP32-NEXT:    # <MCOperand Reg:F0>>
@@ -381,7 +381,7 @@ define i32 @test2(double %t) {
 ; MMR2-FP64-NEXT:    # <MCOperand Reg:F0>
 ; MMR2-FP64-NEXT:    # <MCOperand Reg:D12_64>>
 ; MMR2-FP64-NEXT:    jr $ra # <MCInst #[[#MCINST12]] JR_MM
-; MMR2-FP64-NEXT:    # <MCOperand Reg:RA>>
+; MMR2-FP64-NEXT:    # <MCOperand Reg:R31>>
 ; MMR2-FP64-NEXT:    mfc1 $2, $f0 # <MCInst #[[#MCINST13]] MFC1_MM
 ; MMR2-FP64-NEXT:    # <MCOperand Reg:R2>
 ; MMR2-FP64-NEXT:    # <MCOperand Reg:F0>>
@@ -393,25 +393,25 @@ define i32 @test2(double %t) {
 ; MMR2-SF-NEXT:    .cfi_def_cfa_offset 24
 ; MMR2-SF-NEXT:    sw $ra, 20($sp) # 4-byte Folded Spill
 ; MMR2-SF-NEXT:    # <MCInst #[[#MCINST15]] SWSP_MM
-; MMR2-SF-NEXT:    # <MCOperand Reg:RA>
-; MMR2-SF-NEXT:    # <MCOperand Reg:SP>
+; MMR2-SF-NEXT:    # <MCOperand Reg:R31>
+; MMR2-SF-NEXT:    # <MCOperand Reg:R29>
 ; MMR2-SF-NEXT:    # <MCOperand Imm:20>>
 ; MMR2-SF-NEXT:    .cfi_offset 31, -4
 ; MMR2-SF-NEXT:    jal __fixdfsi # <MCInst #[[#MCINST16]] JAL_MM
 ; MMR2-SF-NEXT:    # <MCOperand Expr:__fixdfsi>>
 ; MMR2-SF-NEXT:    nop # <MCInst #[[#MCINST17]] SLL_MM
-; MMR2-SF-NEXT:    # <MCOperand Reg:ZERO>
-; MMR2-SF-NEXT:    # <MCOperand Reg:ZERO>
+; MMR2-SF-NEXT:    # <MCOperand Reg:R0>
+; MMR2-SF-NEXT:    # <MCOperand Reg:R0>
 ; MMR2-SF-NEXT:    # <MCOperand Imm:0>>
 ; MMR2-SF-NEXT:    lw $ra, 20($sp) # 4-byte Folded Reload
 ; MMR2-SF-NEXT:    # <MCInst #[[#MCINST18]] LWSP_MM
-; MMR2-SF-NEXT:    # <MCOperand Reg:RA>
-; MMR2-SF-NEXT:    # <MCOperand Reg:SP>
+; MMR2-SF-NEXT:    # <MCOperand Reg:R31>
+; MMR2-SF-NEXT:    # <MCOperand Reg:R29>
 ; MMR2-SF-NEXT:    # <MCOperand Imm:20>>
 ; MMR2-SF-NEXT:    addiusp 24 # <MCInst #[[#MCINST14]] ADDIUSP_MM
 ; MMR2-SF-NEXT:    # <MCOperand Imm:24>>
 ; MMR2-SF-NEXT:    jrc $ra # <MCInst #[[#MCINST19]] JRC16_MM
-; MMR2-SF-NEXT:    # <MCOperand Reg:RA>>
+; MMR2-SF-NEXT:    # <MCOperand Reg:R31>>
 ;
 ; MMR6-LABEL: test2:
 ; MMR6:       # %bb.0: # %entry
@@ -422,34 +422,34 @@ define i32 @test2(double %t) {
 ; MMR6-NEXT:    # <MCOperand Reg:R2>
 ; MMR6-NEXT:    # <MCOperand Reg:F0>>
 ; MMR6-NEXT:    jrc $ra # <MCInst #[[#MCINST19]] JRC16_MM
-; MMR6-NEXT:    # <MCOperand Reg:RA>>
+; MMR6-NEXT:    # <MCOperand Reg:R31>>
 ;
 ; MMR6-SF-LABEL: test2:
 ; MMR6-SF:       # %bb.0: # %entry
 ; MMR6-SF-NEXT:    addiu $sp, $sp, -24 # <MCInst #[[#MCINST4]] ADDiu
-; MMR6-SF-NEXT:    # <MCOperand Reg:SP>
-; MMR6-SF-NEXT:    # <MCOperand Reg:SP>
+; MMR6-SF-NEXT:    # <MCOperand Reg:R29>
+; MMR6-SF-NEXT:    # <MCOperand Reg:R29>
 ; MMR6-SF-NEXT:    # <MCOperand Imm:-24>>
 ; MMR6-SF-NEXT:    .cfi_def_cfa_offset 24
 ; MMR6-SF-NEXT:    sw $ra, 20($sp) # 4-byte Folded Spill
 ; MMR6-SF-NEXT:    # <MCInst #[[#MCINST5]] SW
-; MMR6-SF-NEXT:    # <MCOperand Reg:RA>
-; MMR6-SF-NEXT:    # <MCOperand Reg:SP>
+; MMR6-SF-NEXT:    # <MCOperand Reg:R31>
+; MMR6-SF-NEXT:    # <MCOperand Reg:R29>
 ; MMR6-SF-NEXT:    # <MCOperand Imm:20>>
 ; MMR6-SF-NEXT:    .cfi_offset 31, -4
 ; MMR6-SF-NEXT:    balc __fixdfsi # <MCInst #[[#MCINST21]] BALC_MMR6
 ; MMR6-SF-NEXT:    # <MCOperand Expr:__fixdfsi>>
 ; MMR6-SF-NEXT:    lw $ra, 20($sp) # 4-byte Folded Reload
 ; MMR6-SF-NEXT:    # <MCInst #[[#MCINST8]] LW
-; MMR6-SF-NEXT:    # <MCOperand Reg:RA>
-; MMR6-SF-NEXT:    # <MCOperand Reg:SP>
+; MMR6-SF-NEXT:    # <MCOperand Reg:R31>
+; MMR6-SF-NEXT:    # <MCOperand Reg:R29>
 ; MMR6-SF-NEXT:    # <MCOperand Imm:20>>
 ; MMR6-SF-NEXT:    addiu $sp, $sp, 24 # <MCInst #[[#MCINST4]] ADDiu
-; MMR6-SF-NEXT:    # <MCOperand Reg:SP>
-; MMR6-SF-NEXT:    # <MCOperand Reg:SP>
+; MMR6-SF-NEXT:    # <MCOperand Reg:R29>
+; MMR6-SF-NEXT:    # <MCOperand Reg:R29>
 ; MMR6-SF-NEXT:    # <MCOperand Imm:24>>
 ; MMR6-SF-NEXT:    jrc $ra # <MCInst #[[#MCINST19]] JRC16_MM
-; MMR6-SF-NEXT:    # <MCOperand Reg:RA>>
+; MMR6-SF-NEXT:    # <MCOperand Reg:R31>>
 entry:
   %conv = fptosi double %t to i32
   ret i32 %conv
