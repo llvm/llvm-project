@@ -93,4 +93,27 @@ exit:
   ret void
 }
 
+define void @multi_indices_gep_constant_idx_same_scope(ptr %p, i1 %c) {
+; CHECK-LABEL: 'multi_indices_gep_constant_idx_same_scope'
+; CHECK-NEXT:  Classifying expressions for: @multi_indices_gep_constant_idx_same_scope
+; CHECK-NEXT:    %i = load i64, ptr @g, align 8
+; CHECK-NEXT:    --> %i U: full-set S: full-set
+; CHECK-NEXT:    %gep = getelementptr inbounds nuw [4 x i16], ptr %p, i64 1, i64 %i
+; CHECK-NEXT:    --> (8 + (2 * %i)<nuw><nsw> + %p)<nuw> U: [8,0) S: [8,0)
+; CHECK-NEXT:    %val = load i16, ptr %gep, align 2
+; CHECK-NEXT:    --> %val U: full-set S: full-set
+;
+entry:
+  br i1 %c, label %if, label %exit
+
+if:
+  %i = load i64, ptr @g, align 8
+  %gep = getelementptr inbounds nuw [4 x i16], ptr %p, i64 1, i64 %i
+  %val = load i16, ptr %gep, align 2
+  br label %exit
+
+exit:
+  ret void
+}
+
 declare i64 @opaque()
