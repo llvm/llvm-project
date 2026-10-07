@@ -331,13 +331,16 @@ struct EncodingField {
   static constexpr unsigned Width = HighBit - LowBit + 1;
 
   using ValueType = unsigned;
+  static_assert(Width <= sizeof(ValueType) * 8);
   static constexpr ValueType Default = D;
 
   ValueType Value;
   constexpr EncodingField(ValueType Value) : Value(Value) {}
 
   constexpr uint64_t encode() const { return Value; }
-  static ValueType decode(uint64_t Encoded) { return Encoded; }
+  static ValueType decode(uint64_t Encoded) {
+    return static_cast<ValueType>(Encoded);
+  }
 };
 
 // Represents a single bit in an encoded value.
@@ -357,7 +360,7 @@ template <typename... Fields> struct EncodingFields {
 };
 
 LLVM_READONLY
-inline bool hasNamedOperand(uint64_t Opcode, OpName NamedIdx) {
+inline bool hasNamedOperand(uint32_t Opcode, OpName NamedIdx) {
   return getNamedOperandIdx(Opcode, NamedIdx) != -1;
 }
 
@@ -1178,7 +1181,9 @@ using HwregOffset = EncodingField<10, 6>;
 struct HwregSize : EncodingField<15, 11, 32> {
   using EncodingField::EncodingField;
   constexpr uint64_t encode() const { return Value - 1; }
-  static ValueType decode(uint64_t Encoded) { return Encoded + 1; }
+  static ValueType decode(uint64_t Encoded) {
+    return static_cast<ValueType>(Encoded + 1);
+  }
 };
 
 using HwregEncoding = EncodingFields<HwregId, HwregOffset, HwregSize>;

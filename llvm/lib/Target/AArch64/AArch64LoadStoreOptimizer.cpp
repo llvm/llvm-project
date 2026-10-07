@@ -2810,7 +2810,7 @@ bool AArch64LoadStoreOpt::tryToMergeZeroStInst(
   LdStPairFlags Flags;
   MachineBasicBlock::iterator MergeMI = findMatchingInsn(
       MBBI, Flags, Subtarget->getCLOpts().load_store_scan_limit,
-      /* FindNarrowMerge = */ true);
+      /*FindNarrowMerge=*/true);
   if (MergeMI != E) {
     ++NumZeroStoresPromoted;
 
@@ -2855,7 +2855,7 @@ bool AArch64LoadStoreOpt::tryToPairLdStInst(MachineBasicBlock::iterator &MBBI) {
   LdStPairFlags Flags;
   MachineBasicBlock::iterator Paired = findMatchingInsn(
       MBBI, Flags, Subtarget->getCLOpts().load_store_scan_limit,
-      /* FindNarrowMerge = */ false);
+      /*FindNarrowMerge=*/false);
 
   if (Paired == E)
     return false;
