@@ -7123,6 +7123,8 @@ namespace {
       Reference,
       MemberPointer,
       MacroQualified,
+      Elaborated,
+      TypeAlias,
     };
 
     QualType Original;
@@ -7160,6 +7162,12 @@ namespace {
         } else if (isa<MacroQualifiedType>(Ty)) {
           T = cast<MacroQualifiedType>(Ty)->getUnderlyingType();
           Stack.push_back(MacroQualified);
+        } else if (isa<ElaboratedType>(Ty)) {
+          T = cast<ElaboratedType>(Ty)->desugar();
+          Stack.push_back(Elaborated);
+        } else if (isa<TypedefType>(Ty)) {
+          T = cast<TypedefType>(Ty)->desugar();
+          Stack.push_back(TypeAlias);
         } else {
           const Type *DTy = Ty->getUnqualifiedDesugaredType();
           if (Ty == DTy) {
@@ -7206,6 +7214,7 @@ namespace {
       case Desugar:
         // This is the point at which we potentially lose source
         // information.
+        // FIXME: Preserve more sugar
         return wrap(C, Old->getUnqualifiedDesugaredType(), I);
 
       case Attributed:
@@ -7264,6 +7273,31 @@ namespace {
           return C.getLValueReferenceType(New, OldRef->isSpelledAsLValue());
         else
           return C.getRValueReferenceType(New);
+      }
+      case Elaborated: {
+        auto *ET = cast<ElaboratedType>(Old);
+        return C.getElaboratedType(ET->getKeyword(), ET->getQualifier(),
+                                   wrap(C, ET->getNamedType(), I));
+      }
+      case TypeAlias: {
+        auto *ET = cast<TypedefType>(Old);
+        QualType Underlying = wrap(C, ET->desugar(), I);
+        TypedefNameDecl *Typedef;
+        if (auto *TD = dyn_cast<TypedefDecl>(ET->getDecl())) {
+          Typedef = TypedefDecl::Create(C, TD->getDeclContext(),
+                                        TD->getBeginLoc(), TD->getLocation(),
+                                        TD->getIdentifier(), nullptr);
+          Typedef->setModedTypeSourceInfo(TD->getTypeSourceInfo(), Underlying);
+        } else {
+          auto *Alias = cast<TypeAliasDecl>(ET->getDecl());
+          Typedef = TypedefDecl::Create(
+              C, Alias->getDeclContext(), Alias->getBeginLoc(),
+              Alias->getLocation(), Alias->getIdentifier(), nullptr);
+          Typedef->setModedTypeSourceInfo(Alias->getTypeSourceInfo(),
+                                          Underlying);
+        }
+        Typedef->setPreviousDecl(ET->getDecl());
+        return C.getTypedefType(Typedef, Underlying);
       }
       }
 
