@@ -514,8 +514,7 @@ static const Expr *getSubExprInSizeOfExpr(const Expr &E) {
 //     Ptr is `std::addressof(...)` and Size is `1`;
 //
 //  4. Size is `0`;
-static bool isPtrBufferSafe(const Expr *Ptr, const Expr *Size,
-                            ASTContext &Ctx,
+static bool isPtrBufferSafe(const Expr *Ptr, const Expr *Size, ASTContext &Ctx,
                             bool AllowDuckTypedContainers = false) {
   // Pattern 1:
   if (auto *MCEPtr = dyn_cast<CXXMemberCallExpr>(Ptr->IgnoreParenImpCasts()))
@@ -608,9 +607,10 @@ static bool isPtrBufferSafe(const Expr *Ptr, const Expr *Size,
 //      `AllowDuckTypedContainers` is true).
 //   5. `isPtrBufferSafe` returns true for the two arguments.
 template <typename CallOrConstructExpr>
-static bool isSafeTwoParamContainerConstruct(
-    const CallOrConstructExpr &Node, ASTContext &Ctx,
-    bool AllowDuckTypedContainers = false) {
+static bool
+isSafeTwoParamContainerConstruct(const CallOrConstructExpr &Node,
+                                 ASTContext &Ctx,
+                                 bool AllowDuckTypedContainers = false) {
   assert(Node.getNumArgs() == 2 &&
          "expecting a two-parameter container constructor or factory call");
   const Expr *Arg0 = Node.getArg(0)->IgnoreParenImpCasts();
