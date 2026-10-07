@@ -767,9 +767,9 @@ function(add_libc_hermetic test_name)
 
   cmake_parse_arguments(
     "HERMETIC_TEST"
-    "IS_GPU_BENCHMARK;NO_RUN_POSTBUILD" # Optional arguments
+    "IS_GPU_BENCHMARK;NO_RUN_POSTBUILD;C_TEST" # Optional arguments
     "SUITE;CXX_STANDARD;STARTUP" # Single value arguments
-    "SRCS;HDRS;DEPENDS;ARGS;ENV;COMPILE_OPTIONS;LINK_LIBRARIES;LOADER_ARGS" # Multi-value arguments
+    "SRCS;HDRS;DEPENDS;ARGS;ENV;COMPILE_OPTIONS;LINK_LIBRARIES;FLAGS;LOADER_ARGS" # Multi-value arguments
     ${ARGN}
   )
 
@@ -812,9 +812,9 @@ function(add_libc_hermetic test_name)
 
   get_fq_deps_list(fq_deps_list ${HERMETIC_TEST_DEPENDS})
   list(APPEND fq_deps_list
-    ${startup_target_dep}
     # Hermetic tests use the platform's startup object. So, their deps also
     # have to be collected.
+    ${startup_target_dep}
     # We always add the memory functions objects. This is because the
     # compiler's codegen can emit calls to the C memory functions.
     libc.src.__support.StringUtil.error_to_string
