@@ -169,26 +169,23 @@ label3:
 
 void TestSwitch(int i) {
   switch (i) {
-  // CHECK: SwitchStmt 0x{{[^ ]*}} <line:[[@LINE-1]]:3, line:[[@LINE+37]]:3>
+  // CHECK: SwitchStmt 0x{{[^ ]*}} <line:[[@LINE-1]]:3, line:[[@LINE+31]]:3>
   // CHECK-NEXT: ImplicitCastExpr
   // CHECK-NEXT: DeclRefExpr 0x{{[^ ]*}} <col:11> 'int' lvalue ParmVar 0x{{[^ ]*}} 'i' 'int'
-  // CHECK-NEXT: CompoundStmt 0x{{[^ ]*}} <col:14, line:[[@LINE+34]]:3>
+  // CHECK-NEXT: CompoundStmt 0x{{[^ ]*}} <col:14, line:[[@LINE+28]]:3>
   case 0:
     break;
   // CHECK-NEXT: CaseStmt 0x{{[^ ]*}} <line:[[@LINE-2]]:3, line:[[@LINE-1]]:5>
-  // CHECK-NEXT: ConstantExpr
-  // CHECK-NEXT: IntegerLiteral 0x{{[^ ]*}} <col:8> 'int' 0
-  // CHECK-NEXT: BreakStmt 0x{{[^ ]*}} <line:[[@LINE-4]]:5>
+  // CHECK-NEXT: IntegerLiteral 0x{{[^ ]*}} <line:[[@LINE-3]]:8> 'int' 0
+  // CHECK-NEXT: BreakStmt 0x{{[^ ]*}} <line:[[@LINE-3]]:5>
   case 1:
   case 2:
     break;
   // CHECK-NEXT: CaseStmt 0x{{[^ ]*}} <line:[[@LINE-3]]:3, line:[[@LINE-1]]:5>
-  // CHECK-NEXT: ConstantExpr
-  // CHECK-NEXT: IntegerLiteral 0x{{[^ ]*}} <col:8> 'int' 1
-  // CHECK-NEXT: CaseStmt 0x{{[^ ]*}} <line:[[@LINE-5]]:3, line:[[@LINE-4]]:5>
-  // CHECK-NEXT: ConstantExpr
-  // CHECK-NEXT: IntegerLiteral 0x{{[^ ]*}} <col:8> 'int' 2
-  // CHECK-NEXT: BreakStmt 0x{{[^ ]*}} <line:[[@LINE-7]]:5>
+  // CHECK-NEXT: IntegerLiteral 0x{{[^ ]*}} <line:[[@LINE-4]]:8> 'int' 1
+  // CHECK-NEXT: CaseStmt 0x{{[^ ]*}} <line:[[@LINE-4]]:3, line:[[@LINE-3]]:5>
+  // CHECK-NEXT: IntegerLiteral 0x{{[^ ]*}} <line:[[@LINE-5]]:8> 'int' 2
+  // CHECK-NEXT: BreakStmt 0x{{[^ ]*}} <line:[[@LINE-5]]:5>
   default:
     break;
   // CHECK-NEXT: DefaultStmt 0x{{[^ ]*}} <line:[[@LINE-2]]:3, line:[[@LINE-1]]:5>
@@ -196,14 +193,11 @@ void TestSwitch(int i) {
   case 3 ... 5:
     break;
   // CHECK-NEXT: CaseStmt 0x{{[^ ]*}} <line:[[@LINE-2]]:3, line:[[@LINE-1]]:5> gnu_range
-  // CHECK-NEXT: ConstantExpr
-  // CHECK-NEXT: IntegerLiteral 0x{{[^ ]*}} <col:8> 'int' 3
-  // CHECK-NEXT: ConstantExpr
+  // CHECK-NEXT: IntegerLiteral 0x{{[^ ]*}} <line:[[@LINE-3]]:8> 'int' 3
   // CHECK-NEXT: IntegerLiteral 0x{{[^ ]*}} <col:14> 'int' 5
-  // CHECK-NEXT: BreakStmt 0x{{[^ ]*}} <line:[[@LINE-6]]:5>
+  // CHECK-NEXT: BreakStmt 0x{{[^ ]*}} <line:[[@LINE-4]]:5>
   case 6:
   // CHECK-NEXT: CaseStmt 0x{{[^ ]*}} <line:[[@LINE-1]]:3, col:9>
-  // CHECK-NEXT: ConstantExpr
   // CHECK-NEXT: IntegerLiteral 0x{{[^ ]*}} <col:8> 'int' 6
   // CHECK-NEXT: NullStmt 0x{{[^ ]*}} <col:9>
   }

@@ -15626,7 +15626,7 @@ void Sema::CheckCompletedExpr(Expr *E, SourceLocation CheckLoc,
   CheckImplicitConversions(E, CheckLoc);
   if (!E->isInstantiationDependent())
     CheckUnsequencedOperations(E);
-  if (!IsConstexpr && !E->isValueDependent())
+  if (!IsConstexpr && !E->isValueDependent() && !isa<ConstantExpr>(E))
     CheckForIntOverflow(E);
 }
 
