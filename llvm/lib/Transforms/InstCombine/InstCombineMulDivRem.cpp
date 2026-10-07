@@ -27,6 +27,7 @@
 #include "llvm/IR/Intrinsics.h"
 #include "llvm/IR/Operator.h"
 #include "llvm/IR/PatternMatch.h"
+#include "llvm/IR/ProfDataUtils.h"
 #include "llvm/IR/Type.h"
 #include "llvm/IR/Value.h"
 #include "llvm/Support/Casting.h"
@@ -113,7 +114,8 @@ static Value *foldMulSelectToNegate(BinaryOperator &I,
                         m_Value(OtherOp)))) {
     bool HasAnyNoWrap = I.hasNoSignedWrap() || I.hasNoUnsignedWrap();
     Value *Neg = Builder.CreateNeg(OtherOp, "", HasAnyNoWrap);
-    return Builder.CreateSelect(Cond, OtherOp, Neg, "", SI);
+    return Builder.CreateSelect(Cond, OtherOp, Neg, "",
+                                ProfcheckDisableMetadataFixes ? nullptr : SI);
   }
   // mul (select Cond, -1, 1), OtherOp --> select Cond, -OtherOp, OtherOp
   // mul OtherOp, (select Cond, -1, 1) --> select Cond, -OtherOp, OtherOp
@@ -122,7 +124,8 @@ static Value *foldMulSelectToNegate(BinaryOperator &I,
                         m_Value(OtherOp)))) {
     bool HasAnyNoWrap = I.hasNoSignedWrap() || I.hasNoUnsignedWrap();
     Value *Neg = Builder.CreateNeg(OtherOp, "", HasAnyNoWrap);
-    return Builder.CreateSelect(Cond, Neg, OtherOp, "", SI);
+    return Builder.CreateSelect(Cond, Neg, OtherOp, "",
+                                ProfcheckDisableMetadataFixes ? nullptr : SI);
   }
 
   // fmul (select Cond, 1.0, -1.0), OtherOp --> select Cond, OtherOp, -OtherOp
@@ -132,7 +135,8 @@ static Value *foldMulSelectToNegate(BinaryOperator &I,
                                           m_SpecificFP(-1.0)))),
                          m_Value(OtherOp))))
     return Builder.CreateSelectFMF(
-        Cond, OtherOp, Builder.CreateFNegFMF(OtherOp, &I), &I, "", SI);
+        Cond, OtherOp, Builder.CreateFNegFMF(OtherOp, &I), &I, "",
+        ProfcheckDisableMetadataFixes ? nullptr : SI);
 
   // fmul (select Cond, -1.0, 1.0), OtherOp --> select Cond, -OtherOp, OtherOp
   // fmul OtherOp, (select Cond, -1.0, 1.0) --> select Cond, -OtherOp, OtherOp
@@ -140,8 +144,9 @@ static Value *foldMulSelectToNegate(BinaryOperator &I,
                              SI, m_Select(m_Value(Cond), m_SpecificFP(-1.0),
                                           m_SpecificFP(1.0)))),
                          m_Value(OtherOp))))
-    return Builder.CreateSelectFMF(Cond, Builder.CreateFNegFMF(OtherOp, &I),
-                                   OtherOp, &I, "", SI);
+    return Builder.CreateSelectFMF(
+        Cond, Builder.CreateFNegFMF(OtherOp, &I), OtherOp, &I, "",
+        ProfcheckDisableMetadataFixes ? nullptr : SI);
 
   return nullptr;
 }
