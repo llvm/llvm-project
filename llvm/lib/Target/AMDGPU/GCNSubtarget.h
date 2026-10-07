@@ -479,6 +479,8 @@ public:
 
   bool enableMachineScheduler() const override { return true; }
 
+  bool enableSSAMachineScheduler() const override { return true; }
+
   bool useAA() const override;
 
   bool enableSubRegLiveness() const override { return true; }
@@ -625,6 +627,8 @@ public:
   }
 
   bool hasCvtScaleForwardingHazard() const { return HasGFX950Insts; }
+
+  bool hasPermlaneForwardingHazard() const { return HasGFX950Insts; }
 
   // All GFX9 targets experience a fetch delay when an instruction at the start
   // of a loop header is split by a 32-byte fetch window boundary, but GFX950

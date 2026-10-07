@@ -48,7 +48,7 @@ public:
   NoSanitizeInserter() = default;
 
   void InsertHelper(Instruction *I, const Twine &Name,
-                    BasicBlock::iterator InsertPt) const override {
+                    BasicBlock::iterator InsertPt) const {
     IRBuilderDefaultInserter::InsertHelper(I, Name, InsertPt);
     if (!NoSanitizeMD)
       NoSanitizeMD = MDNode::get(I->getContext(), {});
@@ -206,7 +206,7 @@ static bool addBoundsChecking(Function &F, TargetLibraryInfo &TLI,
   ObjectSizeOpts EvalOpts;
   EvalOpts.RoundToAlign = true;
   EvalOpts.EvalMode = ObjectSizeOpts::Mode::ExactUnderlyingSizeAndOffset;
-  ObjectSizeOffsetEvaluator ObjSizeEval(DL, &TLI, F.getContext(), EvalOpts);
+  ObjectSizeOffsetEvaluator ObjSizeEval(*F.getParent(), &TLI, EvalOpts);
 
   // check HANDLE_MEMORY_INST in include/llvm/Instruction.def for memory
   // touching instructions

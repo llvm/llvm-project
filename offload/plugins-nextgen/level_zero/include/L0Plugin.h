@@ -49,6 +49,16 @@ public:
                          TargetAllocTy Kind) override;
   Expected<PluginAllocInfoTy> getAllocInfo(const void *Ptr) override;
 
+  /// Get kernel indirect access flags from all allocators in this context.
+  ze_kernel_indirect_access_flags_t getIndirectFlags() {
+    ze_kernel_indirect_access_flags_t Flags = 0;
+    for (auto &[Device, Allocator] : DeviceAllocators)
+      Flags |= Allocator->getIndirectFlags();
+    if (HostAllocator)
+      Flags |= HostAllocator->getIndirectFlags();
+    return Flags;
+  }
+
   /// Initialize per-plugin-context memory allocators. Runs the pool
   /// probe L0 calls up-front so the first user allocation is not delayed.
   Error initAllocators();

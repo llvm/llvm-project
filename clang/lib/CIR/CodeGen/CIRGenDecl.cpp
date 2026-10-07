@@ -536,7 +536,7 @@ CIRGenModule::getOrCreateStaticVarDecl(const VarDecl &d,
       d.hasAttr<CUDASharedAttr>() || d.hasAttr<LoaderUninitializedAttr>())
     init = cir::UndefAttr::get(lty);
   else
-    init = builder.getZeroInitAttr(convertType(ty));
+    init = emitNullConstantAttr(ty);
 
   mlir::ptr::MemorySpaceAttrInterface addrSpace = cir::toCIRAddressSpaceAttr(
       getMLIRContext(), getGlobalVarAddressSpace(&d));
