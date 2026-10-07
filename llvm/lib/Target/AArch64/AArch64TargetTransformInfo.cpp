@@ -212,6 +212,20 @@ getCompatibilityForChangeToStreamingMode(const Instruction *I) {
       if (I->getOperand(0)->getType()->isScalableTy())
         return StreamingIncompatibility::FullyIncompatible;
       break;
+    }
+  }
+
+  // Inlining operations on scalable vectors is rejected when
+  // vscale-dependent operations cannot be safely inlined.
+  if (I->getType()->isScalableTy() ||
+      any_of(I->operand_values(),
+             [](const Value *V) { return V->getType()->isScalableTy(); }) ||
+      (isa<GetElementPtrInst>(I) &&
+       cast<GetElementPtrInst>(I)->getSourceElementType()->isScalableTy()) ||
+      (isa<AllocaInst>(I) && cast<AllocaInst>(I)->isScalable()))
+    return StreamingIncompatibility::VScaleDependent;
+
+  return StreamingIncompatibility::None;
 }
 
 /// Returns true if the function has explicit operations that can only be
