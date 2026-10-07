@@ -23,15 +23,18 @@
 //
 // A directive whose subject is a loop goes in the execution part, in front of
 // a DO or DO WHILE loop, as !DIR$ UNROLL does. Its positional arguments are
-// variables (or COMMON blocks). Lowering evaluates them in front of the loop
-// (an allocatable or pointer as its descriptor then) and passes them to a
-// marker call at the start of the loop body:
+// variables (or COMMON blocks). Lowering attaches it to the loop itself, as
+// an entry of the `fir.directives` attribute of its fir.do_loop or
+// scf.while, or, for an unstructured loop, of the branch back to its header:
 //
-//   fir.call @__flang_directive.prefix.keyword(%var...)
-//       {fir.directive = {prefix = "...", keyword = "...", args = {...}}}
+//   {prefix = "...", keyword = "...", args = {...},
+//    variables = [@_QMmEu, "_QFsEv", @blk_, ...]}
 //
-// whose `args` are the other arguments, as for `fir.directives`. The plugin's
-// passes replace the call, which nothing defines, with what it stands for.
+// whose `args` are the other arguments, as for procedures and variables. A
+// variable of a module and a COMMON block are references to their global, and
+// any other variable is the unique name of its declaration (the `uniq_name`
+// of its hlfir.declare); the plugin's passes evaluate them where they need
+// them.
 //
 // A plugin may also register a comment sentinel for its prefix, so that
 //

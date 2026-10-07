@@ -857,14 +857,6 @@ public:
     }
   }
 
-  /// A directive defined by a plugin for the loop that follows it, with its
-  /// variables evaluated in front of the loop.
-  struct PluginLoopDirective {
-    const Fortran::parser::CompilerDirective *directive;
-    llvm::SmallVector<mlir::Value> operands;
-  };
-  using PluginLoopDirectives = llvm::SmallVector<PluginLoopDirective, 1>;
-
   static bool
   isPluginLoopDirective(const Fortran::parser::CompilerDirective &dir) {
     const auto *plugin{
@@ -879,20 +871,21 @@ public:
            spec->subject == Fortran::common::PluginDirectiveSubject::Loop;
   }
 
-  /// Evaluate the variables of the plugin directives among the directives of
-  /// a loop, at the insertion point in front of it: a variable as its
-  /// address, or its descriptor if it has one (an allocatable or pointer as
-  /// its target's, as it is in front of the loop); a COMMON block as the
-  /// address of its storage.
-  PluginLoopDirectives genPluginLoopDirectiveOperands(
+  /// The plugin directives among the directives of a loop, as entries of the
+  /// `fir.directives` attribute of the loop: the dictionaries of
+  /// genPluginDirectiveAttr, with the variables of the directive as
+  /// `variables`. A variable of a module and a COMMON block are references to
+  /// their global (declared if need be); another variable is the unique name
+  /// of its declaration (`uniq_name` of its hlfir.declare). The plugin's
+  /// passes evaluate them where they need them.
+  llvm::SmallVector<mlir::Attribute> genPluginLoopDirectivesAttrs(
       llvm::ArrayRef<const Fortran::parser::CompilerDirective *> dirs) {
-    PluginLoopDirectives result;
+    llvm::SmallVector<mlir::Attribute> entries;
+    mlir::MLIRContext *ctx{builder->getContext()};
     for (const Fortran::parser::CompilerDirective *dir : dirs) {
       if (!isPluginLoopDirective(*dir))
         continue;
-      mlir::Location loc = genLocation(dir->source);
-      PluginLoopDirective &directive = result.emplace_back();
-      directive.directive = dir;
+      llvm::SmallVector<mlir::Attribute> variables;
       for (const Fortran::parser::CompilerDirective::Plugin::Arg &arg :
            std::get<2>(
                std::get<Fortran::parser::CompilerDirective::Plugin>(dir->u)
@@ -901,71 +894,46 @@ public:
           continue; // a keyword argument
         const auto &value{std::get<1>(arg.t)};
         if (const auto *name{std::get_if<Fortran::parser::Name>(&value)}) {
-          std::optional<Fortran::lower::SomeExpr> expr{
-              Fortran::evaluate::AsGenericExpr(*name->symbol)};
-          assert(expr && "plugin directive variable is not a designator");
-          Fortran::lower::StatementContext stmtCtx;
-          hlfir::Entity var{Fortran::lower::convertExprToHLFIR(
-              loc, *this, *expr, localSymbols, stmtCtx)};
-          var = hlfir::derefPointersAndAllocatables(loc, *builder, var);
-          stmtCtx.finalizeAndReset();
-          directive.operands.push_back(var.getBase());
+          const Fortran::semantics::Symbol &sym{name->symbol->GetUltimate()};
+          if (sym.owner().IsModule() &&
+              !Fortran::semantics::FindCommonBlockContaining(sym)) {
+            if (mlir::Operation *op = getOrDeclarePluginDirectiveSymbol(sym)) {
+              variables.push_back(mlir::FlatSymbolRefAttr::get(
+                  mlir::SymbolTable::getSymbolName(op)));
+              continue;
+            }
+          }
+          variables.push_back(mlir::StringAttr::get(ctx, mangleName(sym)));
         } else if (const auto *common{std::get_if<
                        Fortran::parser::CompilerDirective::Plugin::CommonBlock>(
                        &value)}) {
-          fir::GlobalOp global{
-              builder->getNamedGlobal(mangleName(*common->v.symbol))};
-          assert(global && "plugin directive COMMON block is not lowered");
-          directive.operands.push_back(fir::AddrOfOp::create(
-              *builder, loc, fir::ReferenceType::get(global.getType()),
-              global.getSymbol()));
+          variables.push_back(
+              mlir::FlatSymbolRefAttr::get(ctx, mangleName(*common->v.symbol)));
         }
       }
+      mlir::DictionaryAttr entry{genPluginDirectiveAttr(*dir)};
+      llvm::SmallVector<mlir::NamedAttribute> fields{entry.getValue()};
+      fields.push_back(
+          builder->getNamedAttr("variables", builder->getArrayAttr(variables)));
+      entries.push_back(builder->getDictionaryAttr(fields));
     }
-    return result;
+    return entries;
   }
 
-  /// At the start of a loop body, the markers of the plugin directives of the
-  /// loop: calls of `__flang_directive.<prefix>.<keyword>`, which nothing
-  /// defines, with the variables evaluated in front of the loop and the
-  /// directive as their `fir.directive` attribute. The plugin's passes replace
-  /// them.
-  void genPluginLoopDirectiveMarkers(PluginLoopDirectives &directives) {
-    for (PluginLoopDirective &directive : directives) {
-      mlir::Location loc = genLocation(directive.directive->source);
-      const auto &[prefix, keyword,
-                   args]{std::get<Fortran::parser::CompilerDirective::Plugin>(
-                             directive.directive->u)
-                             .t};
-      llvm::SmallVector<mlir::Type> types;
-      for (mlir::Value v : directive.operands)
-        types.push_back(v.getType());
-      mlir::FunctionType ty{
-          mlir::FunctionType::get(builder->getContext(), types, {})};
-      std::string base{"__flang_directive." + prefix.ToString() + "." +
-                       keyword.ToString()};
-      std::string name{base};
-      mlir::func::FuncOp callee;
-      for (unsigned n{1};; ++n) {
-        callee = builder->getNamedFunction(name);
-        if (!callee) {
-          callee = builder->createFunction(loc, name, ty);
-          break;
-        }
-        if (callee.getFunctionType() == ty)
-          break;
-        name = base + "." + std::to_string(n); // other variables' types
-      }
-      auto call{fir::CallOp::create(*builder, loc, callee, directive.operands)};
-      call->setAttr("fir.directive",
-                    genPluginDirectiveAttr(*directive.directive));
-    }
-    directives.clear();
+  /// Attach the plugin directives among the directives of a loop to \p op,
+  /// which stands for the loop: its fir.do_loop or scf.while, or the branch
+  /// back to its header if it is unstructured.
+  void attachPluginLoopDirectives(
+      mlir::Operation *op,
+      llvm::ArrayRef<const Fortran::parser::CompilerDirective *> dirs) {
+    llvm::SmallVector<mlir::Attribute> entries{
+        genPluginLoopDirectivesAttrs(dirs)};
+    if (entries.empty() || !op)
+      return;
+    if (auto existing{op->getAttrOfType<mlir::ArrayAttr>("fir.directives")})
+      entries.insert(entries.begin(), existing.begin(), existing.end());
+    op->setAttr("fir.directives", builder->getArrayAttr(entries));
   }
-
-  /// Plugin loop directive markers for the evaluation that starts the body
-  /// of an unstructured loop, emitted once its block is started.
-  PluginLoopDirectives *pendingPluginLoopDirectives = nullptr;
 
   /// Declare a function.
   void declareFunction(Fortran::lower::pft::FunctionLikeUnit &funit) {
@@ -2085,14 +2053,14 @@ private:
   void
   genDoWhileAsSCFWhile(const Fortran::parser::ScalarLogicalExpr &whileCondition,
                        Fortran::lower::pft::Evaluation &doConstructEval,
-                       Fortran::lower::pft::Evaluation &doStmtEval,
-                       PluginLoopDirectives &pluginLoopDirectives) {
+                       Fortran::lower::pft::Evaluation &doStmtEval) {
     mlir::Location loc = toLocation();
 
     auto scfWhile =
         mlir::scf::WhileOp::create(*builder, loc,
                                    /*resultTypes=*/mlir::TypeRange{},
                                    /*inits=*/mlir::ValueRange{});
+    attachPluginLoopDirectives(scfWhile, doStmtEval.dirs);
 
     // Fill the "before" region: compute condition.
     mlir::Block *beforeBlock =
@@ -2109,7 +2077,6 @@ private:
     mlir::Block *afterBlock =
         builder->createBlock(&scfWhile.getAfter(), scfWhile.getAfter().end());
     builder->setInsertionPointToStart(afterBlock);
-    genPluginLoopDirectiveMarkers(pluginLoopDirectives);
 
     // Lower nested evaluations excluding the loop control statement (the
     // NonLabelDoStmt) and the EndDoStmt.
@@ -3020,10 +2987,8 @@ private:
   /// same context flag, same region, same blocks. They may be branch targets
   /// from outside the loop, so their blocks have to stay in the enclosing
   /// region. Only what lies strictly between them goes inside the wrap.
-  void
-  genLoopBodyEvaluations(Fortran::lower::pft::Evaluation &eval,
-                         bool unstructuredContext,
-                         PluginLoopDirectives *pluginLoopDirectives = nullptr) {
+  void genLoopBodyEvaluations(Fortran::lower::pft::Evaluation &eval,
+                              bool unstructuredContext) {
     Fortran::lower::pft::EvaluationList &list = eval.getNestedEvaluations();
     auto iter = list.begin();
     auto end = std::prev(list.end());
@@ -3038,14 +3003,6 @@ private:
     mlir::Block *savedEndDoBlock = nullptr;
     mlir::scf::ExecuteRegionOp wrapOp =
         wrapUnstructuredBody(eval, yieldBlock, savedEndDoBlock);
-    // The markers of plugin loop directives start the body: here, or in the
-    // block the first evaluation of an unstructured body starts.
-    if (pluginLoopDirectives && !pluginLoopDirectives->empty()) {
-      if (unstructuredContext || wrapOp)
-        pendingPluginLoopDirectives = pluginLoopDirectives;
-      else
-        genPluginLoopDirectiveMarkers(*pluginLoopDirectives);
-    }
     for (; iter != end; ++iter)
       genFIR(*iter, unstructuredContext || wrapOp);
     closeUnstructuredBodyWrap(wrapOp, eval, yieldBlock, savedEndDoBlock);
@@ -3191,13 +3148,6 @@ private:
       headerBlock = createNextBeginBlock();
     };
 
-    // The plugin directives of the loop: their variables are evaluated in
-    // front of the loop, for markers at the start of its body.
-    PluginLoopDirectives pluginLoopDirectives;
-    auto genPluginLoopDirectivesInFront = [&]() {
-      pluginLoopDirectives = genPluginLoopDirectiveOperands(doStmtEval.dirs);
-    };
-
     IncrementLoopNestInfo incrementLoopNestInfo;
     const Fortran::parser::ScalarLogicalExpr *whileCondition = nullptr;
     bool infiniteLoop = !loopControl.has_value();
@@ -3206,7 +3156,6 @@ private:
       // Infinite loops are never wrappable; maybeWrapAndRecalc is a no-op here,
       // but call it for uniformity so wrapOp stays null.
       maybeWrapAndRecalc();
-      genPluginLoopDirectivesInFront();
       startBlock(headerBlock);
     } else if ((whileCondition =
                     std::get_if<Fortran::parser::ScalarLogicalExpr>(
@@ -3217,16 +3166,13 @@ private:
       // PFT branch analysis), allowing the loop to exit only when the condition
       // becomes false.
       if (!unstructuredContext) {
-        genPluginLoopDirectivesInFront();
-        genDoWhileAsSCFWhile(*whileCondition, eval, doStmtEval,
-                             pluginLoopDirectives);
+        genDoWhileAsSCFWhile(*whileCondition, eval, doStmtEval);
         return;
       }
 
       assert(unstructuredContext && "while loop must be unstructured");
       maybeStartBlock(preheaderBlock); // no block or empty block
       maybeWrapAndRecalc();
-      genPluginLoopDirectivesInFront();
       startBlock(headerBlock);
       genConditionalBranch(*whileCondition, bodyBlock, exitBlock);
     } else if (const auto *bounds =
@@ -3284,16 +3230,14 @@ private:
       localSymbols.pushScope();
 
     // Increment loop begin code. (Infinite/while code was already generated.)
-    if (!infiniteLoop && !whileCondition) {
-      genPluginLoopDirectivesInFront();
+    if (!infiniteLoop && !whileCondition)
       genFIRIncrementLoopBegin(incrementLoopNestInfo, doStmtEval.dirs);
-    }
 
     // The loop control is structured, but the body may hold raw branching
     // confined to it. Wrap the body, leaving the loop control outside, so the
     // structured loop op's single-block region stays well formed.
     // Loop body code.
-    genLoopBodyEvaluations(eval, unstructuredContext, &pluginLoopDirectives);
+    genLoopBodyEvaluations(eval, unstructuredContext);
     auto iter = std::prev(eval.getNestedEvaluations().end());
 
     // An EndDoStmt in unstructured code may start a new block.
@@ -3301,16 +3245,25 @@ private:
     assert(endDoEval.getIf<Fortran::parser::EndDoStmt>() && "no enddo stmt");
     if (unstructuredContext)
       maybeStartBlock(endDoEval.block);
-    // An empty body did not take the markers of plugin loop directives.
-    if (pendingPluginLoopDirectives == &pluginLoopDirectives)
-      pendingPluginLoopDirectives = nullptr;
-    genPluginLoopDirectiveMarkers(pluginLoopDirectives);
 
     // Loop end code.
     if (infiniteLoop || whileCondition)
       genBranch(headerBlock);
     else
       genFIRIncrementLoopEnd(incrementLoopNestInfo);
+
+    // The plugin directives of the loop go on its op, or, for an unstructured
+    // loop, which has none, on the branch back to its header.
+    if (unstructuredContext) {
+      mlir::Block *latch{builder->getBlock()};
+      if (latch && !latch->empty())
+        if (auto backEdge{mlir::dyn_cast<mlir::cf::BranchOp>(latch->back())};
+            backEdge && backEdge.getDest() == headerBlock)
+          attachPluginLoopDirectives(backEdge, doStmtEval.dirs);
+    } else if (!incrementLoopNestInfo.empty()) {
+      attachPluginLoopDirectives(incrementLoopNestInfo.front().loopOp,
+                                 doStmtEval.dirs);
+    }
 
     // This call may generate a branch in some contexts.
     genFIR(endDoEval, unstructuredContext);
@@ -6600,10 +6553,6 @@ private:
       maybeStartBlock(eval.isConstruct() && eval.lowerAsStructured()
                           ? eval.getFirstNestedEvaluation().block
                           : eval.block);
-    if (PluginLoopDirectives *pending = pendingPluginLoopDirectives) {
-      pendingPluginLoopDirectives = nullptr;
-      genPluginLoopDirectiveMarkers(*pending);
-    }
 
     if (eval.skipNextLowering) {
       eval.skipNextLowering = false;

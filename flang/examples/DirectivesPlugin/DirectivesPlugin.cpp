@@ -20,8 +20,9 @@
 //
 // Each one but CONVERGE becomes an entry of the `fir.directives` attribute of
 // the func.func or fir.global of its subject. CONVERGE applies to the DO or
-// DO WHILE loop that follows it: its variables are passed to a marker call
-// at the start of the loop body. A pass of the plugin would act on them;
+// DO WHILE loop that follows it: it becomes an entry of the `fir.directives`
+// attribute of the loop (its fir.do_loop or scf.while, or the branch back to
+// its header if it is unstructured). A pass of the plugin would act on them;
 // this one defines no pass.
 //
 //===----------------------------------------------------------------------===//
