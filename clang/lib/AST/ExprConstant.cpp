@@ -17407,7 +17407,7 @@ bool IntExprEvaluator::VisitBuiltinCallExpr(const CallExpr *E,
         MaxTokensOpt.value_or(0) ? *MaxTokensOpt : (~0ULL >> (64 - BitWidth));
     auto MaybeToken = llvm::getAllocToken(Mode, *ATMD, MaxTokens);
     if (!MaybeToken)
-      return Error(E, diag::note_constexpr_infer_alloc_token_stateful_mode);
+      return Error(E, diag::note_constexpr_infer_alloc_token_unsupported_mode);
     return Success(llvm::APInt(BitWidth, *MaybeToken), E);
   }
 

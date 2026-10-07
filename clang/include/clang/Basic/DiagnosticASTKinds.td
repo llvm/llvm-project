@@ -415,7 +415,7 @@ def note_constexpr_infer_alloc_token_type_inference_failed : Note<
   "could not infer allocation type for __builtin_infer_alloc_token">;
 def note_constexpr_infer_alloc_token_no_metadata : Note<
   "could not get token metadata for inferred type">;
-def note_constexpr_infer_alloc_token_stateful_mode
+def note_constexpr_infer_alloc_token_unsupported_mode
     : Note<"alloc token mode not supported in constexpr">;
 
 def warn_attribute_needs_aggregate : Warning<

@@ -1347,6 +1347,28 @@ void CodeGenFunction::EmitBoundsCheckImpl(const Expr *ArrayExpr,
             IndexInst);
 }
 
+/// Returns the qualified name of the function \p D for the TypeFuncHash modes,
+/// or "" if there is none.
+static SmallString<64> getAllocTokenFunctionName(const Decl *D,
+                                                 const ASTContext &Ctx) {
+  SmallString<64> Name;
+  const auto *ND = dyn_cast_if_present<NamedDecl>(D);
+  if (!ND)
+    return Name;
+  // Use a fixed policy instead of the ASTContext's, so that the same function
+  // gets the same name in every TU.
+  PrintingPolicy Policy(Ctx.getLangOpts());
+  // Do not use name lookup to decide whether to print inline namespaces.
+  Policy.SuppressInlineNamespace =
+      llvm::to_underlying(PrintingPolicy::SuppressInlineNamespaceMode::All);
+  // Do not print file paths for unnamed types, e.g. in template arguments.
+  Policy.AnonymousTagNameStyle =
+      llvm::to_underlying(PrintingPolicy::AnonymousTagMode::Plain);
+  llvm::raw_svector_ostream OS(Name);
+  ND->printQualifiedName(OS, Policy);
+  return Name;
+}
+
 llvm::MDNode *CodeGenFunction::buildAllocToken(QualType AllocType) {
   std::optional<llvm::AllocTokenMetadata> ATMD;
   if (!AllocType.isNull())
@@ -1359,15 +1381,10 @@ llvm::MDNode *CodeGenFunction::buildAllocToken(QualType AllocType) {
     // An empty type name denotes an unknown type.
     if (!ATMD)
       ATMD = llvm::AllocTokenMetadata{{}, false};
-    // Use the function containing the allocation. For lambdas, use the call
-    // operator. For blocks and captured statements, use the enclosing function.
-    // Allocations outside of any function (e.g. global initializers) use "".
-    const Decl *D =
-        isa_and_nonnull<FunctionDecl>(CurCodeDecl) ? CurCodeDecl : CurFuncDecl;
-    std::string FuncName;
-    if (const auto *ND = dyn_cast_or_null<NamedDecl>(D))
-      FuncName = ND->getQualifiedNameAsString();
-    ATMD->FunctionName = FuncName;
+    // Use the outermost non-closure function, i.e. allocations in lambdas,
+    // blocks, and captured statements use the enclosing function. Allocations
+    // outside of any function (e.g. global initializers) use "".
+    ATMD->FunctionName = getAllocTokenFunctionName(CurFuncDecl, getContext());
   }
   if (!ATMD)
     return nullptr;
