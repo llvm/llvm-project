@@ -10497,9 +10497,12 @@ SDValue SelectionDAG::getMemset(SDValue Chain, const SDLoc &dl, SDValue Dst,
     RTLIB::LibcallImpl MemsetImpl = Libcalls->getLibcallImpl(RTLIB::MEMSET);
 
     TargetLowering::ArgListTy Args;
+    Type *SrcTy = Src.getValueType().getTypeForEVT(Ctx);
     Args.emplace_back(Dst, PointerType::getUnqual(Ctx));
-    Args.emplace_back(Src, Src.getValueType().getTypeForEVT(Ctx));
+    Args.emplace_back(Src, SrcTy,
+                      LibInfo->getExtAttrForParam(SrcTy, /*Signed=*/false));
     Args.emplace_back(Size, DL.getIntPtrType(Ctx));
+
     CLI.setLibCallee(Libcalls->getLibcallImplCallingConv(MemsetImpl),
                      Dst.getValueType().getTypeForEVT(Ctx),
                      getExternalSymbol(MemsetImpl, TLI->getPointerTy(DL)),

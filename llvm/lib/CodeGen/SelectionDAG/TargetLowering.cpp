@@ -179,6 +179,17 @@ static void setArgListEntryAttributes(TargetLoweringBase::ArgListEntry &Entry,
     Entry.IndirectType = Src.getParamStructRetType(ArgIdx);
 }
 
+TargetLoweringBase::ArgListEntry::
+ArgListEntry(SDValue Node, Type *Ty, Attribute::AttrKind Attr)
+  : ArgListEntry(nullptr, Node, Ty) {
+  if (Attr == Attribute::SExt)
+    IsSExt = true;
+  else if (Attr == Attribute::ZExt)
+    IsZExt = true;
+  else if (Attr != Attribute::None)
+    llvm_unreachable("Unexpected attribute left unhandled.");
+}
+
 void TargetLoweringBase::ArgListEntry::setAttributes(const CallBase *Call,
                                                      unsigned ArgIdx) {
   setArgListEntryAttributes(*this, *Call, ArgIdx);

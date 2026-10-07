@@ -365,6 +365,8 @@ public:
 
     ArgListEntry(SDValue Node, Type *Ty) : ArgListEntry(nullptr, Node, Ty) {}
 
+    ArgListEntry(SDValue Node, Type *Ty, Attribute::AttrKind Attr);
+
     LLVM_ABI void setAttributes(const CallBase *Call, unsigned ArgIdx);
     LLVM_ABI void setAttributes(const AttributeList &Attrs, unsigned ArgIdx);
   };

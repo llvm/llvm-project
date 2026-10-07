@@ -244,6 +244,7 @@ define ptr @test_memset(ptr noundef %dst, i32 noundef signext %value, i32 nounde
 ; CHECK-AIX-32-P9:       # %bb.0: # %entry
 ; CHECK-AIX-32-P9-NEXT:    mflr r0
 ; CHECK-AIX-32-P9-NEXT:    stwu r1, -64(r1)
+; CHECK-AIX-32-P9-NEXT:    clrlwi r4, r4, 24
 ; CHECK-AIX-32-P9-NEXT:    stw r0, 72(r1)
 ; CHECK-AIX-32-P9-NEXT:    stw r31, 60(r1) # 4-byte Folded Spill
 ; CHECK-AIX-32-P9-NEXT:    mr r31, r3
@@ -260,6 +261,7 @@ define ptr @test_memset(ptr noundef %dst, i32 noundef signext %value, i32 nounde
 ; CHECK-LINUX32-P9:       # %bb.0: # %entry
 ; CHECK-LINUX32-P9-NEXT:    mflr r0
 ; CHECK-LINUX32-P9-NEXT:    stwu r1, -16(r1)
+; CHECK-LINUX32-P9-NEXT:    clrlwi r4, r4, 24
 ; CHECK-LINUX32-P9-NEXT:    stw r0, 20(r1)
 ; CHECK-LINUX32-P9-NEXT:    stw r30, 8(r1) # 4-byte Folded Spill
 ; CHECK-LINUX32-P9-NEXT:    mr r30, r3

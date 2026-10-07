@@ -544,6 +544,16 @@ public:
                                  Impl->ShouldSignExtI32Param, Signed);
   }
 
+  Attribute::AttrKind getExtAttrForParam(Type *Ty, bool Signed = true) const {
+    if (Ty->isIntegerTy()) {
+      if (Ty->getPrimitiveSizeInBits() == 8)
+        return getExtAttrForI8Param(Signed);
+      else if (Ty->getPrimitiveSizeInBits() == 32)
+        return getExtAttrForI32Param(Signed);
+    }
+    return Attribute::None;
+  }
+
   /// Returns extension attribute kind to be used for i32 return values
   /// corresponding to C-level int or unsigned int.  May be zeroext, signext,
   /// or none.
