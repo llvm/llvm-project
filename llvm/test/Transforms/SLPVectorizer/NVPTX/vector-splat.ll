@@ -124,18 +124,18 @@ entry:
   ret void
 }
 
-define void @f32x2_splat_with_undef_lane(ptr %a, ptr %b, ptr %o, float %x) {
-; SM100-LABEL: @f32x2_splat_with_undef_lane(
+define void @f32x2_splat_with_poison_lane(ptr %a, ptr %b, ptr %o, float %x) {
+; SM100-LABEL: @f32x2_splat_with_poison_lane(
 ; SM100-NEXT:  entry:
 ; SM100-NEXT:    [[TMP0:%.*]] = load <2 x float>, ptr [[A:%.*]], align 8
 ; SM100-NEXT:    [[TMP1:%.*]] = load <2 x float>, ptr [[B:%.*]], align 8
-; SM100-NEXT:    [[TMP2:%.*]] = insertelement <2 x float> <float poison, float undef>, float [[X:%.*]], i64 0
+; SM100-NEXT:    [[TMP2:%.*]] = insertelement <2 x float> poison, float [[X:%.*]], i64 0
 ; SM100-NEXT:    [[TMP3:%.*]] = fmul <2 x float> [[TMP0]], [[TMP2]]
 ; SM100-NEXT:    [[TMP4:%.*]] = fadd <2 x float> [[TMP3]], [[TMP1]]
 ; SM100-NEXT:    store <2 x float> [[TMP4]], ptr [[O:%.*]], align 8
 ; SM100-NEXT:    ret void
 ;
-; SM90-LABEL: @f32x2_splat_with_undef_lane(
+; SM90-LABEL: @f32x2_splat_with_poison_lane(
 ; SM90-NEXT:  entry:
 ; SM90-NEXT:    [[A0:%.*]] = load float, ptr [[A:%.*]], align 8
 ; SM90-NEXT:    [[A1P:%.*]] = getelementptr float, ptr [[A]], i64 1
@@ -144,7 +144,7 @@ define void @f32x2_splat_with_undef_lane(ptr %a, ptr %b, ptr %o, float %x) {
 ; SM90-NEXT:    [[B1P:%.*]] = getelementptr float, ptr [[B]], i64 1
 ; SM90-NEXT:    [[B1:%.*]] = load float, ptr [[B1P]], align 4
 ; SM90-NEXT:    [[M0:%.*]] = fmul float [[A0]], [[X:%.*]]
-; SM90-NEXT:    [[M1:%.*]] = fmul float [[A1]], undef
+; SM90-NEXT:    [[M1:%.*]] = fmul float [[A1]], poison
 ; SM90-NEXT:    [[S0:%.*]] = fadd float [[M0]], [[B0]]
 ; SM90-NEXT:    [[S1:%.*]] = fadd float [[M1]], [[B1]]
 ; SM90-NEXT:    [[O1:%.*]] = getelementptr float, ptr [[O:%.*]], i64 1
@@ -160,7 +160,7 @@ entry:
   %b1p = getelementptr float, ptr %b, i64 1
   %b1 = load float, ptr %b1p, align 4
   %m0 = fmul float %a0, %x
-  %m1 = fmul float %a1, undef
+  %m1 = fmul float %a1, poison
   %s0 = fadd float %m0, %b0
   %s1 = fadd float %m1, %b1
   %o1 = getelementptr float, ptr %o, i64 1

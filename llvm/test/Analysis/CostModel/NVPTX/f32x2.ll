@@ -2,25 +2,15 @@
 
 target triple = "nvptx64-nvidia-cuda"
 
-define <2 x float> @f32x2_add(<2 x float> %a, <2 x float> %b) {
-; CHECK-LABEL: 'f32x2_add'
-; CHECK-NEXT: Cost Model: Found an estimated cost of 2 for instruction: %r = fadd <2 x float> %a, %b
-  %r = fadd <2 x float> %a, %b
-  ret <2 x float> %r
-}
-
-define <2 x float> @f32x2_sub(<2 x float> %a, <2 x float> %b) {
-; CHECK-LABEL: 'f32x2_sub'
-; CHECK-NEXT: Cost Model: Found an estimated cost of 2 for instruction: %r = fsub <2 x float> %a, %b
-  %r = fsub <2 x float> %a, %b
-  ret <2 x float> %r
-}
-
-define <2 x float> @f32x2_mul(<2 x float> %a, <2 x float> %b) {
-; CHECK-LABEL: 'f32x2_mul'
-; CHECK-NEXT: Cost Model: Found an estimated cost of 2 for instruction: %r = fmul <2 x float> %a, %b
-  %r = fmul <2 x float> %a, %b
-  ret <2 x float> %r
+define <2 x float> @f32x2_arith(<2 x float> %a, <2 x float> %b) {
+; CHECK-LABEL: 'f32x2_arith'
+; CHECK-NEXT: Cost Model: Found an estimated cost of 2 for instruction: %add = fadd <2 x float> %a, %b
+; CHECK-NEXT: Cost Model: Found an estimated cost of 2 for instruction: %sub = fsub <2 x float> %add, %b
+; CHECK-NEXT: Cost Model: Found an estimated cost of 2 for instruction: %mul = fmul <2 x float> %sub, %a
+  %add = fadd <2 x float> %a, %b
+  %sub = fsub <2 x float> %add, %b
+  %mul = fmul <2 x float> %sub, %a
+  ret <2 x float> %mul
 }
 
 define void @f32x2_extract(<2 x float> %v, ptr %out) {
