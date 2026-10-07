@@ -256,22 +256,20 @@ static IteratorRange lowerIteratorRange(
   mlir::Value ubVal =
       fir::getBase(converter.genExprValue(toEvExpr(ubExpr), stmtCtx));
 
-  // Begin and end take the iterator's type, but the step keeps its own. Count
-  // in the wider of the two so that neither is narrowed.
+  // Fortran does not convert begin and end to the iterator's type (OpenMP 5.2
+  // section 3.2.6), so build the range in the widest operand type.
   mlir::Type ivTy = converter.genType(*r.ivSym);
   mlir::Value stVal =
       stExpr ? fir::getBase(converter.genExprValue(toEvExpr(*stExpr), stmtCtx))
              : builder.createIntegerConstant(loc, ivTy, 1);
-  mlir::Type rangeTy = ivTy;
-  if (auto stTy = mlir::dyn_cast<mlir::IntegerType>(stVal.getType()))
-    if (stTy.isSignless() &&
-        stTy.getWidth() > mlir::cast<mlir::IntegerType>(ivTy).getWidth())
-      rangeTy = stTy;
+  unsigned width = mlir::cast<mlir::IntegerType>(ivTy).getWidth();
+  for (mlir::Value v : {lbVal, ubVal, stVal})
+    width =
+        std::max(width, mlir::cast<mlir::IntegerType>(v.getType()).getWidth());
+  mlir::Type rangeTy = builder.getIntegerType(width);
 
-  r.lb = builder.createConvert(loc, rangeTy,
-                               builder.createConvert(loc, ivTy, lbVal));
-  r.ub = builder.createConvert(loc, rangeTy,
-                               builder.createConvert(loc, ivTy, ubVal));
+  r.lb = builder.createConvert(loc, rangeTy, lbVal);
+  r.ub = builder.createConvert(loc, rangeTy, ubVal);
   r.step = builder.createConvert(loc, rangeTy, stVal);
 
   return r;
@@ -1020,6 +1018,9 @@ static llvm::StringMap<bool> getTargetFeatures(mlir::ModuleOp module) {
   return featuresMap;
 }
 
+template <typename T>
+static bool isVectorSubscript(const evaluate::Expr<T> &expr);
+
 bool ClauseProcessor::processAffinity(
     mlir::omp::AffinityClauseOps &result) const {
   return findRepeatableClause<omp::clause::Affinity>(
@@ -1047,6 +1048,9 @@ bool ClauseProcessor::processAffinity(
         auto iteratorRanges = lowerIteratorRanges(clause, converter, stmtCtx);
 
         TodoLocators(clauseLocation, objects);
+        for (const omp::Object &object : objects)
+          if (object.ref() && isVectorSubscript(*object.ref()))
+            TODO(clauseLocation, "vector subscript in AFFINITY clause");
 
         auto genEntry = [&](const omp::Object &object,
                             lower::StatementContext &localStmtCtx) {

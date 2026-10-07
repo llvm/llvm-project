@@ -175,8 +175,7 @@ subroutine depend_component_empty(a, m, d)
 end
 ! LLVM-LABEL: define {{.*}} @depend_component_empty_(
 ! LLVM-NOT: sdiv
-! LLVM: call i32 @__kmpc_omp_task_with_deps(
-! LLVM-SAME: i32 0, ptr
+! LLVM: call i32 @__kmpc_omp_task_with_deps(ptr {{[^,]+}}, i32 {{[^,]+}}, ptr {{[^,]+}}, i32 0,
 ! LLVM-NOT: sdiv
 ! LLVM: ret void
 
@@ -189,8 +188,7 @@ subroutine depend_vector_empty(a, m, d)
 end
 ! LLVM-LABEL: define {{.*}} @depend_vector_empty_(
 ! LLVM-NOT: sdiv
-! LLVM: call i32 @__kmpc_omp_task_with_deps(
-! LLVM-SAME: i32 0, ptr
+! LLVM: call i32 @__kmpc_omp_task_with_deps(ptr {{[^,]+}}, i32 {{[^,]+}}, ptr {{[^,]+}}, i32 0,
 ! LLVM-NOT: sdiv
 ! LLVM: ret void
 
@@ -206,8 +204,7 @@ subroutine depend_section_empty(x, m, d)
 end
 ! LLVM-LABEL: define {{.*}} @depend_section_empty_(
 ! LLVM-NOT: sdiv
-! LLVM: call i32 @__kmpc_omp_task_with_deps(
-! LLVM-SAME: i32 0, ptr
+! LLVM: call i32 @__kmpc_omp_task_with_deps(ptr {{[^,]+}}, i32 {{[^,]+}}, ptr {{[^,]+}}, i32 0,
 ! LLVM-NOT: sdiv
 ! LLVM: ret void
 

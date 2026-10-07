@@ -209,8 +209,7 @@ end subroutine
 
 ! CHECK-LABEL: define {{.*}} @depend_folded_zero_(
 ! CHECK-NOT: sdiv
-! CHECK: call i32 @__kmpc_omp_task_with_deps(
-! CHECK-SAME: ptr {{[^,]+}}, i32 {{[^,]+}}, ptr {{[^,]+}}, i32 0,
+! CHECK: call i32 @__kmpc_omp_task_with_deps(ptr {{[^,]+}}, i32 {{[^,]+}}, ptr {{[^,]+}}, i32 0,
 ! CHECK-NOT: sdiv
 ! CHECK: ret void
 
@@ -299,6 +298,55 @@ end subroutine
 ! CHECK: getelementptr {{.*}} ptr %{{[0-9]+}}, i64 288
 ! CHECK: call i32 @__kmpc_omp_task_with_deps(
 ! CHECK-SAME: ptr {{[^,]+}}, i32 {{[^,]+}}, ptr {{[^,]+}}, i32 1,
+
+! Begin and end are not converted to the iterator's kind, so n = 256 leaves
+! this range empty instead of wrapping to 0:0:-1.
+subroutine depend_wide_end(a, n)
+  integer :: a(8), n
+  !$omp task depend(iterator(integer(1) :: i = 0:n:-1), in: a(1+8/i))
+  !$omp end task
+end subroutine
+
+! CHECK-LABEL: define {{.*}} @depend_wide_end_(
+! CHECK: %[[N:.*]] = load i32, ptr
+! CHECK: %[[EMPTY:.*]] = icmp sgt i32 %[[N]], 0
+! CHECK: %[[COUNT:.*]] = select i1 %[[EMPTY]], i64 0, i64 %{{.*}}
+! CHECK: %[[ZERO:.*]] = icmp eq i64 %[[COUNT]], 0
+! CHECK: br i1 %[[ZERO]], label %[[CONT:[^,]+]], label %[[BODY:.*]]
+! CHECK: [[BODY]]:
+! CHECK: sdiv i32 8,
+! CHECK: [[CONT]]:
+! CHECK: %[[RUNTIME_COUNT:.*]] = trunc i64 %[[COUNT]] to i32
+! CHECK: call i32 @__kmpc_omp_task_with_deps(ptr {{[^,]+}}, i32 {{[^,]+}}, ptr {{[^,]+}}, i32 %[[RUNTIME_COUNT]],
+
+subroutine depend_wide_end_const(a)
+  integer :: a(8)
+  !$omp task depend(iterator(integer(1) :: i = 0:256:-1), in: a(1+8/i))
+  !$omp end task
+end subroutine
+
+! CHECK-LABEL: define {{.*}} @depend_wide_end_const_(
+! CHECK-NOT: sdiv
+! CHECK: call i32 @__kmpc_omp_task_with_deps(ptr {{[^,]+}}, i32 {{[^,]+}}, ptr {{[^,]+}}, i32 0,
+
+subroutine depend_wide_begin_const(a)
+  integer :: a(8)
+  !$omp task depend(iterator(integer(1) :: i = 200:100), in: a(i))
+  !$omp end task
+end subroutine
+
+! CHECK-LABEL: define {{.*}} @depend_wide_begin_const_(
+! CHECK: call i32 @__kmpc_omp_task_with_deps(ptr {{[^,]+}}, i32 {{[^,]+}}, ptr {{[^,]+}}, i32 0,
+
+! Narrowing 150 to integer(1) would empty this range; its values are {0, 100}.
+subroutine depend_wide_end_nonempty(a)
+  integer :: a(0:100)
+  !$omp task depend(iterator(integer(1) :: i = 0:150:100), in: a(i))
+  !$omp end task
+end subroutine
+
+! CHECK-LABEL: define {{.*}} @depend_wide_end_nonempty_(
+! CHECK: call i32 @__kmpc_omp_task_with_deps(ptr {{[^,]+}}, i32 {{[^,]+}}, ptr {{[^,]+}}, i32 2,
 
 subroutine affinity_wide_kind(a)
   integer :: a(3)
