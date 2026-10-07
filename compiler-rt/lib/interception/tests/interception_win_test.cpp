@@ -769,6 +769,19 @@ TEST(Interception, UnsupportedInstructionWithTrampoline) {
     ADD_FAILURE() << "Report not called";
 }
 
+// memcpy uses OverrideFunction(), not the trampoline helper directly.
+// An unknown CRT prologue must not be patched.
+TEST(Interception, OverrideFunctionUnsupportedInstruction) {
+  struct Local {
+    // The failed patch attempts emit unhandled-instruction reports; swallow
+    // them to keep the test output clean.
+    static void DiscardReport(const char*, ...) {}
+  };
+  SetErrorReportCallback(Local::DiscardReport);
+  EXPECT_FALSE(TestFunctionPatching(kUnsupportedCode1, OverrideFunction));
+  SetErrorReportCallback(nullptr);
+}
+
 TEST(Interception, PatchableFunctionPadding) {
   TestOverrideFunction override = OverrideFunction;
   FunctionPrefixKind prefix = FunctionPrefixPadding;

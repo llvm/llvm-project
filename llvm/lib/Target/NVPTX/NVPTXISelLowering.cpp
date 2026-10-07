@@ -997,6 +997,10 @@ NVPTXTargetLowering::NVPTXTargetLowering(const NVPTXTargetMachine &TM,
     }
   }
 
+  // Expand nearest-even rounding and diagnose unsupported conversions.
+  setOperationAction(ISD::FPTRUNC_ROUND, {MVT::f16, MVT::bf16, MVT::f32},
+                     Custom);
+
   // Expand v2f32 = fp_extend
   setOperationAction(ISD::FP_EXTEND, MVT::v2f32, Expand);
   // Expand v2[b]f16 = fp_round v2f32
@@ -1133,8 +1137,6 @@ NVPTXTargetLowering::NVPTXTargetLowering(const NVPTXTargetMachine &TM,
   }
 
   setOperationAction(ISD::ADDRSPACECAST, {MVT::i32, MVT::i64}, Custom);
-
-  setOperationAction(ISD::ATOMIC_LOAD_SUB, {MVT::i32, MVT::i64}, Expand);
 
   // atom.b128 is legal in PTX but since we don't represent i128 as a legal
   // type, we need to custom lower it.
@@ -2438,6 +2440,40 @@ SDValue NVPTXTargetLowering::LowerFP_ROUND(SDValue Op,
   return Op;
 }
 
+static SDValue lowerFPTRUNC_ROUND(SDValue Op, SelectionDAG &DAG,
+                                  const NVPTXSubtarget &STI) {
+  EVT SrcVT = Op.getOperand(0).getValueType();
+  EVT DstVT = Op.getValueType();
+  auto RM = static_cast<RoundingMode>(Op.getConstantOperandVal(1));
+  if (RM == RoundingMode::NearestTiesToEven) {
+    // Reuse the native selection and fallback expansion for ordinary fptrunc.
+    SDLoc DL(Op);
+    return DAG.getNode(ISD::FP_ROUND, DL, DstVT, Op.getOperand(0),
+                       DAG.getIntPtrConstant(0, DL, /*isTarget=*/true),
+                       Op.getNode()->getFlags());
+  }
+
+  bool RoundToInfinity =
+      RM == RoundingMode::TowardNegative || RM == RoundingMode::TowardPositive;
+
+  bool Supported = RM == RoundingMode::TowardZero || RoundToInfinity;
+  if (DstVT == MVT::bf16) {
+    if (SrcVT == MVT::f64 || RoundToInfinity)
+      Supported &= STI.hasFeature(NVPTX::SM90);
+    else
+      Supported &= STI.hasFeature(NVPTX::SM80);
+  }
+
+  if (Supported)
+    return Op;
+
+  DAG.getContext()->diagnose(DiagnosticInfoUnsupported(
+      DAG.getMachineFunction().getFunction(),
+      "unsupported conversion or rounding mode for llvm.fptrunc.round",
+      SDLoc(Op).getDebugLoc()));
+  return DAG.getPOISON(DstVT);
+}
+
 SDValue NVPTXTargetLowering::LowerFP_EXTEND(SDValue Op,
                                             SelectionDAG &DAG) const {
   SDValue Narrow = Op.getOperand(0);
@@ -3521,6 +3557,8 @@ NVPTXTargetLowering::LowerOperation(SDValue Op, SelectionDAG &DAG) const {
     return LowerFP_TO_INT(Op, DAG);
   case ISD::FP_ROUND:
     return LowerFP_ROUND(Op, DAG);
+  case ISD::FPTRUNC_ROUND:
+    return lowerFPTRUNC_ROUND(Op, DAG, STI);
   case ISD::FP_EXTEND:
     return LowerFP_EXTEND(Op, DAG);
   case ISD::VAARG:
@@ -7711,8 +7749,9 @@ NVPTXTargetLowering::AtomicExpansionKind
 NVPTXTargetLowering::shouldExpandAtomicRMWInIR(const AtomicRMWInst *AI) const {
   Type *Ty = AI->getValOperand()->getType();
 
-  // Try to lower LLVM atomicrmw fadd to PTX atomic.add.  This is complicated
-  // by the weird FTZ behavior PTX atom.add has:
+  // Try to lower LLVM atomicrmw fadd/fsub to PTX atomic.add. Fsub is first
+  // expanded to an fadd with a negated operand. This is complicated by the
+  // weird FTZ behavior PTX atom.add has:
   //   - atom.add.f32 on global memory flushes denormals
   //   - atom.add.f32 on shared memory does not flush denormals
   //   - atom.add.f16 and atomic.add.bf16 never flush denormals
@@ -7722,8 +7761,13 @@ NVPTXTargetLowering::shouldExpandAtomicRMWInIR(const AtomicRMWInst *AI) const {
   // atomic.add.bf16; even though it never flushes denormals, we never flush
   // bf16 denormals when doing regular arithmetic, even when FTZ is enabled.
   if (AI->isFloatingPointOperation() &&
-      AI->getOperation() == AtomicRMWInst::BinOp::FAdd) {
+      (AI->getOperation() == AtomicRMWInst::BinOp::FAdd ||
+       AI->getOperation() == AtomicRMWInst::BinOp::FSub)) {
     const Function *F = AI->getFunction();
+    AtomicExpansionKind ExpansionKind =
+        AI->getOperation() == AtomicRMWInst::BinOp::FSub
+            ? AtomicExpansionKind::Expand
+            : AtomicExpansionKind::None;
 
     // AllowFTZAtomics forces atom.add regardless of the FTZ mismatch.
     if (Ty->isFloatTy()) {
@@ -7740,7 +7784,7 @@ NVPTXTargetLowering::shouldExpandAtomicRMWInIR(const AtomicRMWInst *AI) const {
         break;
       }
       if (UseNative)
-        return AtomicExpansionKind::None;
+        return ExpansionKind;
     }
 
     if (Ty->isHalfTy()) {
@@ -7750,14 +7794,14 @@ NVPTXTargetLowering::shouldExpandAtomicRMWInIR(const AtomicRMWInst *AI) const {
                        DenormalMode::PreserveSign;
       if ((!FTZ || AllowFTZAtomics) && STI.hasFeature(NVPTX::SM70) &&
           STI.hasFeature(NVPTX::PTX63))
-        return AtomicExpansionKind::None;
+        return ExpansionKind;
     }
 
     if (Ty->isBFloatTy() && STI.hasFeature(NVPTX::SM90))
-      return AtomicExpansionKind::None;
+      return ExpansionKind;
 
     if (Ty->isDoubleTy() && STI.hasAtomAddF64())
-      return AtomicExpansionKind::None;
+      return ExpansionKind;
   }
 
   // PTX's only atomic fp op is `add`; all other ops expand to a CAS loop.
@@ -7778,19 +7822,24 @@ NVPTXTargetLowering::shouldExpandAtomicRMWInIR(const AtomicRMWInst *AI) const {
       return AtomicExpansionKind::None;
     [[fallthrough]];
   case AtomicRMWInst::BinOp::Add:
-  case AtomicRMWInst::BinOp::Sub:
+  case AtomicRMWInst::BinOp::Sub: {
+    AtomicExpansionKind ExpansionKind =
+        AI->getOperation() == AtomicRMWInst::BinOp::Sub
+            ? AtomicExpansionKind::Expand
+            : AtomicExpansionKind::None;
     switch (BitWidth) {
     case 8:
     case 16:
       return AtomicExpansionKind::CmpXChg;
     case 32:
     case 64:
-      return AtomicExpansionKind::None;
+      return ExpansionKind;
     case 128:
       return AtomicExpansionKind::CmpXChg;
     default:
       llvm_unreachable("unsupported width encountered");
     }
+  }
   case AtomicRMWInst::BinOp::And:
   case AtomicRMWInst::BinOp::Or:
   case AtomicRMWInst::BinOp::Xor:
@@ -7891,9 +7940,12 @@ AtomicOrdering NVPTXTargetLowering::atomicOperationOrderAfterFenceSplit(
           STI.getMinCmpXchgSizeInBits())
     return AtomicOrdering::Acquire;
   else if (auto *RI = dyn_cast<AtomicRMWInst>(I);
-           RI && RI->getOrdering() == AtomicOrdering::SequentiallyConsistent &&
-           shouldExpandAtomicRMWInIR(RI) == AtomicExpansionKind::None)
-    return AtomicOrdering::Acquire;
+           RI && RI->getOrdering() == AtomicOrdering::SequentiallyConsistent) {
+    AtomicExpansionKind ExpansionKind = shouldExpandAtomicRMWInIR(RI);
+    if (ExpansionKind == AtomicExpansionKind::None ||
+        ExpansionKind == AtomicExpansionKind::Expand)
+      return AtomicOrdering::Acquire;
+  }
 
   return AtomicOrdering::Monotonic;
 }

@@ -1151,7 +1151,7 @@ public:
 
     const PathMappingList &list = target->GetImageSearchPathList();
     const size_t num = list.GetSize();
-    ConstString old_path, new_path;
+    std::string old_path, new_path;
     for (size_t i = 0; i < num; ++i) {
       if (!list.GetPathsAtIndex(i, old_path, new_path))
         break;
@@ -1249,12 +1249,12 @@ protected:
       return;
     }
 
-    ConstString orig(command.GetArgumentAtIndex(0));
-    ConstString transformed;
+    llvm::StringRef orig(command.GetArgumentAtIndex(0));
+    std::string transformed;
     if (target->GetImageSearchPathList().RemapPath(orig, transformed))
-      result.GetOutputStream().Printf("%s\n", transformed.GetCString());
+      result.GetOutputStream().Format("{0}\n", transformed);
     else
-      result.GetOutputStream().Printf("%s\n", orig.GetCString());
+      result.GetOutputStream().Format("{0}\n", orig);
 
     result.SetStatus(eReturnStatusSuccessFinishResult);
   }

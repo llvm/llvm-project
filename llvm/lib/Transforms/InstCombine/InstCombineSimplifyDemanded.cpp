@@ -14,6 +14,7 @@
 #include "InstCombineInternal.h"
 #include "llvm/ADT/SmallBitVector.h"
 #include "llvm/Analysis/ValueTracking.h"
+#include "llvm/Analysis/VectorUtils.h"
 #include "llvm/IR/GetElementPtrTypeIterator.h"
 #include "llvm/IR/IntrinsicInst.h"
 #include "llvm/IR/PatternMatch.h"
@@ -24,18 +25,6 @@ using namespace llvm;
 using namespace llvm::PatternMatch;
 
 #define DEBUG_TYPE "instcombine"
-
-static cl::opt<bool>
-    VerifyKnownBits("instcombine-verify-known-bits",
-                    cl::desc("Verify that computeKnownBits() and "
-                             "SimplifyDemandedBits() are consistent"),
-                    cl::Hidden, cl::init(false));
-
-static cl::opt<unsigned> SimplifyDemandedVectorEltsDepthLimit(
-    "instcombine-simplify-vector-elts-depth",
-    cl::desc(
-        "Depth limit when simplifying vector instructions and their operands"),
-    cl::Hidden, cl::init(10));
 
 /// Check to see if the specified operand of the specified instruction is a
 /// constant integer. If so, check to see if there are any bits set in the
@@ -1208,7 +1197,7 @@ Value *InstCombinerImpl::SimplifyDemandedUseBits(Instruction *I,
       DemandedMask.isSubsetOf(Known.Zero | Known.One))
     return Constant::getIntegerValue(VTy, Known.One);
 
-  if (VerifyKnownBits) {
+  if (CLOpts.verify_known_bits) {
     KnownBits ReferenceKnown = llvm::computeKnownBits(I, Q, Depth);
     if (Known != ReferenceKnown) {
       errs() << "Mismatched known bits for " << *I << " in "
@@ -1585,7 +1574,7 @@ Value *InstCombinerImpl::SimplifyDemandedVectorElts(Value *V,
   }
 
   // Limit search depth.
-  if (Depth == SimplifyDemandedVectorEltsDepthLimit)
+  if (Depth == CLOpts.simplify_vector_elts_depth)
     return nullptr;
 
   if (!AllowMultipleUsers) {
@@ -1663,7 +1652,7 @@ Value *InstCombinerImpl::SimplifyDemandedVectorElts(Value *V,
     break;
   }
   case Instruction::InsertElement: {
-    unsigned DepthLimit = SimplifyDemandedVectorEltsDepthLimit;
+    unsigned DepthLimit = CLOpts.simplify_vector_elts_depth;
     auto *IE = cast<InsertElementInst>(I);
     // Skip only when SDVE cannot simplify this insert chain before the limit.
     if (Depth == 0 && DemandedElts.isAllOnes() && VWidth > DepthLimit &&
@@ -1995,12 +1984,6 @@ Value *InstCombinerImpl::SimplifyDemandedVectorElts(Value *V,
       PoisonElts = PoisonElts2 & PoisonElts3;
       break;
     }
-    case Intrinsic::smulh:
-    case Intrinsic::umulh:
-      simplifyAndSetOp(II, 0, DemandedElts, PoisonElts);
-      simplifyAndSetOp(II, 1, DemandedElts, PoisonElts);
-      PoisonElts = PoisonElts2 | PoisonElts3;
-      break;
     default: {
       // Handle target specific intrinsics
       std::optional<Value *> V = targetSimplifyDemandedVectorEltsIntrinsic(
@@ -2008,6 +1991,27 @@ Value *InstCombinerImpl::SimplifyDemandedVectorElts(Value *V,
           simplifyAndSetOp);
       if (V)
         return *V;
+
+      // Trivially vectorizable intrinsics operate elementwise: each result lane
+      // uses only the matching lane of the (vector) operands, so the demand
+      // passes through unchanged to every vector operand.
+      Intrinsic::ID IID = II->getIntrinsicID();
+      if (isTriviallyVectorizable(IID)) {
+        APInt PoisonEltsAcc(VWidth, 0);
+        for (Use &Arg : II->args()) {
+          unsigned OpNo = Arg.getOperandNo();
+          // Scalar operands do not carry per-lane demand.
+          if (isVectorIntrinsicWithScalarOpAtArg(IID, OpNo, /*TTI=*/nullptr))
+            continue;
+          APInt OpPoisonElts(VWidth, 0);
+          simplifyAndSetOp(II, OpNo, DemandedElts, OpPoisonElts);
+          PoisonEltsAcc |= OpPoisonElts;
+        }
+        // A result lane is poison if any operand lane is poison, but only for
+        // intrinsics that are known to propagate poison elementwise.
+        if (intrinsicPropagatesPoison(IID))
+          PoisonElts = PoisonEltsAcc;
+      }
       break;
     }
     } // switch on IntrinsicID
@@ -3536,12 +3540,24 @@ Value *InstCombinerImpl::SimplifyDemandedUseFPClass(Instruction *I,
         switch (IID) {
         case Intrinsic::frexp: {
           FPClassTest SrcDemandedMask = fcNone;
+
           if (DemandedMask & fcNan)
             SrcDemandedMask |= fcNan;
-          if (DemandedMask & fcNegFinite)
-            SrcDemandedMask |= fcNegFinite;
-          if (DemandedMask & fcPosFinite)
-            SrcDemandedMask |= fcPosFinite;
+
+          // Positive subnormals and negative subnormals could become positive
+          // zero.
+          if (DemandedMask & fcPosZero)
+            SrcDemandedMask |= fcPosZero | fcSubnormal;
+
+          // Negative subnormals could become negative zero.
+          if (DemandedMask & fcNegZero)
+            SrcDemandedMask |= fcNegZero | fcNegSubnormal;
+
+          if (DemandedMask & (fcNegNormal | fcNegSubnormal))
+            SrcDemandedMask |= fcNegNormal | fcNegSubnormal;
+          if (DemandedMask & (fcPosNormal | fcPosSubnormal))
+            SrcDemandedMask |= fcPosNormal | fcPosSubnormal;
+
           if (DemandedMask & fcPosInf)
             SrcDemandedMask |= fcPosInf;
           if (DemandedMask & fcNegInf)
@@ -3563,7 +3579,8 @@ Value *InstCombinerImpl::SimplifyDemandedUseFPClass(Instruction *I,
                                      /*IsCanonicalizing=*/true))
             return SingleVal;
 
-          if (Known.isKnownAlways(fcInf | fcNan))
+          // frexp returns zero, infinity, and NaN inputs unchanged.
+          if (KnownSrc.isKnownAlways(fcZero | fcInf | fcNan))
             return II->getArgOperand(0);
 
           return nullptr;

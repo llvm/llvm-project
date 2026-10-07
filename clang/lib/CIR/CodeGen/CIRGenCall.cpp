@@ -268,8 +268,16 @@ static void addTrivialDefaultFunctionAttributes(
               mlir::UnitAttr::get(mlirCtx));
   }
 
-  // TODO(cir): Classic codegen adds 'nounwind' here in a bunch of offload
-  // targets.
+  // Device code cannot unwind. 'nothrow' keeps calls from getting an unwind
+  // edge, so 'nounwind' becomes LLVM's nounwind.
+  // TODO: OpenMP offload is not covered.
+  if ((langOpts.CUDA && langOpts.CUDAIsDevice) || langOpts.OpenCL ||
+      langOpts.SYCLIsDevice) {
+    attrs.set(cir::CIRDialect::getNoThrowAttrName(),
+              mlir::UnitAttr::get(mlirCtx));
+    attrs.set(cir::CIRDialect::getNoUnwindAttrName(),
+              mlir::UnitAttr::get(mlirCtx));
+  }
 
   if (codeGenOpts.SaveRegParams && !attrOnCallSite)
     attrs.set(cir::CIRDialect::getSaveRegParamsAttrName(),

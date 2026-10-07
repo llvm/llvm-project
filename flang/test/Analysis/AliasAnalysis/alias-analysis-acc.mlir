@@ -9,8 +9,8 @@
 func.func @testBothOutsideCopyinDistinctHosts() {
   %a = fir.alloca f32 {uniq_name = "_QFEa"}
   %b = fir.alloca f32 {uniq_name = "_QFEb"}
-  %da = fir.declare %a {uniq_name = "_QFEa"} : (!fir.ref<f32>) -> !fir.ref<f32>
-  %db = fir.declare %b {uniq_name = "_QFEb"} : (!fir.ref<f32>) -> !fir.ref<f32>
+  %da = fir.declare %a uniq_name("_QFEa") : (!fir.ref<f32>) -> !fir.ref<f32>
+  %db = fir.declare %b uniq_name("_QFEb") : (!fir.ref<f32>) -> !fir.ref<f32>
   %ca = acc.copyin varPtr(%da : !fir.ref<f32>) name("a") -> !fir.ref<f32> {test.ptr = "cin_a"}
   %cb = acc.copyin varPtr(%db : !fir.ref<f32>) name("b") -> !fir.ref<f32> {test.ptr = "cin_b"}
   return
@@ -25,8 +25,8 @@ func.func @testBothOutsideCopyinDistinctHosts() {
 
 func.func @testBothOutsideCopyinTargetDummyArgsMayAlias(%arg0: !fir.ref<f32> {fir.bindc_name = "x"}, %arg1: !fir.ref<f32> {fir.bindc_name = "y"}) {
   %ds = fir.dummy_scope : !fir.dscope
-  %dx = fir.declare %arg0 dummy_scope %ds arg 1 {fortran_attrs = #fir.var_attrs<target>, uniq_name = "_QFEex"} : (!fir.ref<f32>, !fir.dscope) -> !fir.ref<f32>
-  %dy = fir.declare %arg1 dummy_scope %ds arg 2 {fortran_attrs = #fir.var_attrs<target>, uniq_name = "_QFEey"} : (!fir.ref<f32>, !fir.dscope) -> !fir.ref<f32>
+  %dx = fir.declare %arg0 dummy_scope %ds arg 1 uniq_name("_QFEex") fortran_attrs<target> : (!fir.ref<f32>, !fir.dscope) -> !fir.ref<f32>
+  %dy = fir.declare %arg1 dummy_scope %ds arg 2 uniq_name("_QFEey") fortran_attrs<target> : (!fir.ref<f32>, !fir.dscope) -> !fir.ref<f32>
   %cx = acc.copyin varPtr(%dx : !fir.ref<f32>) name("x") -> !fir.ref<f32> {test.ptr = "arg_cp_a"}
   %cy = acc.copyin varPtr(%dy : !fir.ref<f32>) name("y") -> !fir.ref<f32> {test.ptr = "arg_cp_b"}
   return
@@ -40,7 +40,7 @@ func.func @testBothOutsideCopyinTargetDummyArgsMayAlias(%arg0: !fir.ref<f32> {fi
 
 func.func @testBothOutsideCopyinSameHostMustAlias() {
   %a = fir.alloca f32 {uniq_name = "_QFEa"}
-  %da = fir.declare %a {uniq_name = "_QFEa"} : (!fir.ref<f32>) -> !fir.ref<f32>
+  %da = fir.declare %a uniq_name("_QFEa") : (!fir.ref<f32>) -> !fir.ref<f32>
   %ca1 = acc.copyin varPtr(%da : !fir.ref<f32>) name("a") -> !fir.ref<f32> {test.ptr = "out_must_a"}
   %ca2 = acc.copyin varPtr(%da : !fir.ref<f32>) name("a") -> !fir.ref<f32> {test.ptr = "out_must_b"}
   return
@@ -54,8 +54,8 @@ func.func @testBothOutsideCopyinSameHostMustAlias() {
 func.func @testBothOutsideCreateDistinctHosts() {
   %a = fir.alloca f32 {uniq_name = "_QFEa"}
   %b = fir.alloca f32 {uniq_name = "_QFEb"}
-  %da = fir.declare %a {uniq_name = "_QFEa"} : (!fir.ref<f32>) -> !fir.ref<f32>
-  %db = fir.declare %b {uniq_name = "_QFEb"} : (!fir.ref<f32>) -> !fir.ref<f32>
+  %da = fir.declare %a uniq_name("_QFEa") : (!fir.ref<f32>) -> !fir.ref<f32>
+  %db = fir.declare %b uniq_name("_QFEb") : (!fir.ref<f32>) -> !fir.ref<f32>
   %ta = acc.create varPtr(%da : !fir.ref<f32>) name("a") -> !fir.ref<f32> {test.ptr = "crt_a"}
   %tb = acc.create varPtr(%db : !fir.ref<f32>) name("b") -> !fir.ref<f32> {test.ptr = "crt_b"}
   return
@@ -71,8 +71,8 @@ func.func @testBothOutsideCreateDistinctHosts() {
 func.func @testComputeRegionCopyinDistinctHostsInsideConvert() {
   %a = fir.alloca f32 {uniq_name = "_QFEa"}
   %b = fir.alloca f32 {uniq_name = "_QFEb"}
-  %da = fir.declare %a {uniq_name = "_QFEa"} : (!fir.ref<f32>) -> !fir.ref<f32>
-  %db = fir.declare %b {uniq_name = "_QFEb"} : (!fir.ref<f32>) -> !fir.ref<f32>
+  %da = fir.declare %a uniq_name("_QFEa") : (!fir.ref<f32>) -> !fir.ref<f32>
+  %db = fir.declare %b uniq_name("_QFEb") : (!fir.ref<f32>) -> !fir.ref<f32>
   %ca = acc.copyin varPtr(%da : !fir.ref<f32>) name("a") -> !fir.ref<f32>
   %cb = acc.copyin varPtr(%db : !fir.ref<f32>) name("b") -> !fir.ref<f32>
   acc.compute_region ins(%arg0 = %ca, %arg1 = %cb) : (!fir.ref<f32>, !fir.ref<f32>) {
@@ -91,8 +91,8 @@ func.func @testComputeRegionCopyinDistinctHostsInsideConvert() {
 func.func @testComputeRegionCreateDistinctHostsInsideConvert() {
   %a = fir.alloca f32 {uniq_name = "_QFEa"}
   %b = fir.alloca f32 {uniq_name = "_QFEb"}
-  %da = fir.declare %a {uniq_name = "_QFEa"} : (!fir.ref<f32>) -> !fir.ref<f32>
-  %db = fir.declare %b {uniq_name = "_QFEb"} : (!fir.ref<f32>) -> !fir.ref<f32>
+  %da = fir.declare %a uniq_name("_QFEa") : (!fir.ref<f32>) -> !fir.ref<f32>
+  %db = fir.declare %b uniq_name("_QFEb") : (!fir.ref<f32>) -> !fir.ref<f32>
   %ta = acc.create varPtr(%da : !fir.ref<f32>) name("a") -> !fir.ref<f32>
   %tb = acc.create varPtr(%db : !fir.ref<f32>) name("b") -> !fir.ref<f32>
   acc.compute_region ins(%arg0 = %ta, %arg1 = %tb) : (!fir.ref<f32>, !fir.ref<f32>) {
@@ -112,8 +112,8 @@ func.func @testComputeRegionCreateDistinctHostsInsideConvert() {
 
 func.func @testComputeRegionCopyinTargetDummiesMayAliasInsideConvert(%arg0: !fir.ref<f32> {fir.bindc_name = "x"}, %arg1: !fir.ref<f32> {fir.bindc_name = "y"}) {
   %ds = fir.dummy_scope : !fir.dscope
-  %dx = fir.declare %arg0 dummy_scope %ds arg 1 {fortran_attrs = #fir.var_attrs<target>, uniq_name = "_QFEex"} : (!fir.ref<f32>, !fir.dscope) -> !fir.ref<f32>
-  %dy = fir.declare %arg1 dummy_scope %ds arg 2 {fortran_attrs = #fir.var_attrs<target>, uniq_name = "_QFEey"} : (!fir.ref<f32>, !fir.dscope) -> !fir.ref<f32>
+  %dx = fir.declare %arg0 dummy_scope %ds arg 1 uniq_name("_QFEex") fortran_attrs<target> : (!fir.ref<f32>, !fir.dscope) -> !fir.ref<f32>
+  %dy = fir.declare %arg1 dummy_scope %ds arg 2 uniq_name("_QFEey") fortran_attrs<target> : (!fir.ref<f32>, !fir.dscope) -> !fir.ref<f32>
   %cx = acc.copyin varPtr(%dx : !fir.ref<f32>) name("x") -> !fir.ref<f32>
   %cy = acc.copyin varPtr(%dy : !fir.ref<f32>) name("y") -> !fir.ref<f32>
   acc.compute_region ins(%cr0 = %cx, %cr1 = %cy) : (!fir.ref<f32>, !fir.ref<f32>) {
@@ -133,7 +133,7 @@ func.func @testComputeRegionCopyinTargetDummiesMayAliasInsideConvert(%arg0: !fir
 
 func.func @testComputeRegionCopyinSameHostMustAliasInsideConvert() {
   %a = fir.alloca f32 {uniq_name = "_QFEa"}
-  %da = fir.declare %a {uniq_name = "_QFEa"} : (!fir.ref<f32>) -> !fir.ref<f32>
+  %da = fir.declare %a uniq_name("_QFEa") : (!fir.ref<f32>) -> !fir.ref<f32>
   %ca = acc.copyin varPtr(%da : !fir.ref<f32>) name("a") -> !fir.ref<f32>
   acc.compute_region ins(%arg0 = %ca, %arg1 = %ca) : (!fir.ref<f32>, !fir.ref<f32>) {
     %va = fir.convert %arg0 {test.ptr = "cr_must_a"} : (!fir.ref<f32>) -> !fir.ref<f32>
@@ -152,8 +152,8 @@ func.func @testComputeRegionCopyinSameHostMustAliasInsideConvert() {
 func.func @testKernelsCopyinDistinctHostsInsideConvert() {
   %a = fir.alloca f32 {uniq_name = "_QFEa"}
   %b = fir.alloca f32 {uniq_name = "_QFEb"}
-  %da = fir.declare %a {uniq_name = "_QFEa"} : (!fir.ref<f32>) -> !fir.ref<f32>
-  %db = fir.declare %b {uniq_name = "_QFEb"} : (!fir.ref<f32>) -> !fir.ref<f32>
+  %da = fir.declare %a uniq_name("_QFEa") : (!fir.ref<f32>) -> !fir.ref<f32>
+  %db = fir.declare %b uniq_name("_QFEb") : (!fir.ref<f32>) -> !fir.ref<f32>
   %ca = acc.copyin varPtr(%da : !fir.ref<f32>) name("a") -> !fir.ref<f32>
   %cb = acc.copyin varPtr(%db : !fir.ref<f32>) name("b") -> !fir.ref<f32>
   acc.kernels dataOperands(%ca, %cb : !fir.ref<f32>, !fir.ref<f32>) {
@@ -172,8 +172,8 @@ func.func @testKernelsCopyinDistinctHostsInsideConvert() {
 func.func @testKernelsCreateDistinctHostsInsideConvert() {
   %a = fir.alloca f32 {uniq_name = "_QFEa"}
   %b = fir.alloca f32 {uniq_name = "_QFEb"}
-  %da = fir.declare %a {uniq_name = "_QFEa"} : (!fir.ref<f32>) -> !fir.ref<f32>
-  %db = fir.declare %b {uniq_name = "_QFEb"} : (!fir.ref<f32>) -> !fir.ref<f32>
+  %da = fir.declare %a uniq_name("_QFEa") : (!fir.ref<f32>) -> !fir.ref<f32>
+  %db = fir.declare %b uniq_name("_QFEb") : (!fir.ref<f32>) -> !fir.ref<f32>
   %ta = acc.create varPtr(%da : !fir.ref<f32>) name("a") -> !fir.ref<f32>
   %tb = acc.create varPtr(%db : !fir.ref<f32>) name("b") -> !fir.ref<f32>
   acc.kernels dataOperands(%ta, %tb : !fir.ref<f32>, !fir.ref<f32>) {
@@ -192,8 +192,8 @@ func.func @testKernelsCreateDistinctHostsInsideConvert() {
 
 func.func @testKernelsCopyinTargetDummiesMayAliasInsideConvert(%arg0: !fir.ref<f32> {fir.bindc_name = "x"}, %arg1: !fir.ref<f32> {fir.bindc_name = "y"}) {
   %ds = fir.dummy_scope : !fir.dscope
-  %dx = fir.declare %arg0 dummy_scope %ds arg 1 {fortran_attrs = #fir.var_attrs<target>, uniq_name = "_QFEex"} : (!fir.ref<f32>, !fir.dscope) -> !fir.ref<f32>
-  %dy = fir.declare %arg1 dummy_scope %ds arg 2 {fortran_attrs = #fir.var_attrs<target>, uniq_name = "_QFEey"} : (!fir.ref<f32>, !fir.dscope) -> !fir.ref<f32>
+  %dx = fir.declare %arg0 dummy_scope %ds arg 1 uniq_name("_QFEex") fortran_attrs<target> : (!fir.ref<f32>, !fir.dscope) -> !fir.ref<f32>
+  %dy = fir.declare %arg1 dummy_scope %ds arg 2 uniq_name("_QFEey") fortran_attrs<target> : (!fir.ref<f32>, !fir.dscope) -> !fir.ref<f32>
   %cx = acc.copyin varPtr(%dx : !fir.ref<f32>) name("x") -> !fir.ref<f32>
   %cy = acc.copyin varPtr(%dy : !fir.ref<f32>) name("y") -> !fir.ref<f32>
   acc.kernels dataOperands(%cx, %cy : !fir.ref<f32>, !fir.ref<f32>) {
@@ -212,7 +212,7 @@ func.func @testKernelsCopyinTargetDummiesMayAliasInsideConvert(%arg0: !fir.ref<f
 
 func.func @testKernelsCopyinSameHostMustAliasInsideConvert() {
   %a = fir.alloca f32 {uniq_name = "_QFEa"}
-  %da = fir.declare %a {uniq_name = "_QFEa"} : (!fir.ref<f32>) -> !fir.ref<f32>
+  %da = fir.declare %a uniq_name("_QFEa") : (!fir.ref<f32>) -> !fir.ref<f32>
   %ca = acc.copyin varPtr(%da : !fir.ref<f32>) name("a") -> !fir.ref<f32>
   acc.kernels dataOperands(%ca : !fir.ref<f32>) {
     %va = fir.convert %ca {test.ptr = "kern_must_a"} : (!fir.ref<f32>) -> !fir.ref<f32>
@@ -233,8 +233,8 @@ func.func @testKernelsCopyinSameHostMustAliasInsideConvert() {
 func.func @testComputeRegionPrivateInsideConvert() {
   %a = fir.alloca f32 {uniq_name = "_QFEa"}
   %b = fir.alloca f32 {uniq_name = "_QFEb"}
-  %da = fir.declare %a {uniq_name = "_QFEa"} : (!fir.ref<f32>) -> !fir.ref<f32>
-  %db = fir.declare %b {uniq_name = "_QFEb"} : (!fir.ref<f32>) -> !fir.ref<f32>
+  %da = fir.declare %a uniq_name("_QFEa") : (!fir.ref<f32>) -> !fir.ref<f32>
+  %db = fir.declare %b uniq_name("_QFEb") : (!fir.ref<f32>) -> !fir.ref<f32>
   %pa = acc.private varPtr(%da : !fir.ref<f32>) name("a") -> !fir.ref<f32>
   %pb = acc.private varPtr(%db : !fir.ref<f32>) name("b") -> !fir.ref<f32>
   acc.compute_region ins(%arg0 = %pa, %arg1 = %pb) : (!fir.ref<f32>, !fir.ref<f32>) {
@@ -254,7 +254,7 @@ func.func @testComputeRegionPrivateInsideConvert() {
 
 func.func @testComputeRegionCopyinVsPrivateSameHostNoAlias() {
   %a = fir.alloca f32 {uniq_name = "_QFEa"}
-  %da = fir.declare %a {uniq_name = "_QFEa"} : (!fir.ref<f32>) -> !fir.ref<f32>
+  %da = fir.declare %a uniq_name("_QFEa") : (!fir.ref<f32>) -> !fir.ref<f32>
   %ca = acc.copyin varPtr(%da : !fir.ref<f32>) name("a") -> !fir.ref<f32>
   %pp = acc.private varPtr(%da : !fir.ref<f32>) name("a") -> !fir.ref<f32>
   acc.compute_region ins(%arg0 = %ca, %arg1 = %pp) : (!fir.ref<f32>, !fir.ref<f32>) {
@@ -272,7 +272,7 @@ func.func @testComputeRegionCopyinVsPrivateSameHostNoAlias() {
 
 func.func @testComputeRegionCreateVsPrivateSameHostNoAlias() {
   %a = fir.alloca f32 {uniq_name = "_QFEa"}
-  %da = fir.declare %a {uniq_name = "_QFEa"} : (!fir.ref<f32>) -> !fir.ref<f32>
+  %da = fir.declare %a uniq_name("_QFEa") : (!fir.ref<f32>) -> !fir.ref<f32>
   %ta = acc.create varPtr(%da : !fir.ref<f32>) name("a") -> !fir.ref<f32>
   %pp = acc.private varPtr(%da : !fir.ref<f32>) name("a") -> !fir.ref<f32>
   acc.compute_region ins(%arg0 = %ta, %arg1 = %pp) : (!fir.ref<f32>, !fir.ref<f32>) {
@@ -291,7 +291,7 @@ func.func @testComputeRegionCreateVsPrivateSameHostNoAlias() {
 
 func.func @testComputeRegionCopyinVsFirstprivateSameHostNoAlias() {
   %a = fir.alloca f32 {uniq_name = "_QFEa"}
-  %da = fir.declare %a {uniq_name = "_QFEa"} : (!fir.ref<f32>) -> !fir.ref<f32>
+  %da = fir.declare %a uniq_name("_QFEa") : (!fir.ref<f32>) -> !fir.ref<f32>
   %ca = acc.copyin varPtr(%da : !fir.ref<f32>) name("a") -> !fir.ref<f32>
   %pf = acc.firstprivate varPtr(%da : !fir.ref<f32>) name("a") -> !fir.ref<f32>
   acc.compute_region ins(%arg0 = %ca, %arg1 = %pf) : (!fir.ref<f32>, !fir.ref<f32>) {
@@ -310,7 +310,7 @@ func.func @testComputeRegionCopyinVsFirstprivateSameHostNoAlias() {
 
 func.func @testComputeRegionCopyinVsFirstprivateMapSameHostNoAlias() {
   %a = fir.alloca f32 {uniq_name = "_QFEa"}
-  %da = fir.declare %a {uniq_name = "_QFEa"} : (!fir.ref<f32>) -> !fir.ref<f32>
+  %da = fir.declare %a uniq_name("_QFEa") : (!fir.ref<f32>) -> !fir.ref<f32>
   %fm = acc.firstprivate_map varPtr(%da : !fir.ref<f32>) varType(f32) name("a") -> !fir.ref<f32>
   %ca = acc.copyin varPtr(%da : !fir.ref<f32>) name("a") -> !fir.ref<f32>
   acc.compute_region ins(%arg0 = %ca, %arg1 = %fm) : (!fir.ref<f32>, !fir.ref<f32>) {
@@ -329,7 +329,7 @@ func.func @testComputeRegionCopyinVsFirstprivateMapSameHostNoAlias() {
 
 func.func @testKernelsCopyinVsPrivateSameHostNoAlias() {
   %a = fir.alloca f32 {uniq_name = "_QFEa"}
-  %da = fir.declare %a {uniq_name = "_QFEa"} : (!fir.ref<f32>) -> !fir.ref<f32>
+  %da = fir.declare %a uniq_name("_QFEa") : (!fir.ref<f32>) -> !fir.ref<f32>
   %ca = acc.copyin varPtr(%da : !fir.ref<f32>) name("a") -> !fir.ref<f32>
   %pp = acc.private varPtr(%da : !fir.ref<f32>) name("a") -> !fir.ref<f32>
   acc.kernels dataOperands(%ca : !fir.ref<f32>) private(%pp : !fir.ref<f32>) {
@@ -347,7 +347,7 @@ func.func @testKernelsCopyinVsPrivateSameHostNoAlias() {
 
 func.func @testKernelsCreateVsPrivateSameHostNoAlias() {
   %a = fir.alloca f32 {uniq_name = "_QFEa"}
-  %da = fir.declare %a {uniq_name = "_QFEa"} : (!fir.ref<f32>) -> !fir.ref<f32>
+  %da = fir.declare %a uniq_name("_QFEa") : (!fir.ref<f32>) -> !fir.ref<f32>
   %ta = acc.create varPtr(%da : !fir.ref<f32>) name("a") -> !fir.ref<f32>
   %pp = acc.private varPtr(%da : !fir.ref<f32>) name("a") -> !fir.ref<f32>
   acc.kernels dataOperands(%ta : !fir.ref<f32>) private(%pp : !fir.ref<f32>) {
@@ -366,7 +366,7 @@ func.func @testKernelsCreateVsPrivateSameHostNoAlias() {
 
 func.func @testKernelsCopyinVsFirstprivateSameHostNoAlias() {
   %a = fir.alloca f32 {uniq_name = "_QFEa"}
-  %da = fir.declare %a {uniq_name = "_QFEa"} : (!fir.ref<f32>) -> !fir.ref<f32>
+  %da = fir.declare %a uniq_name("_QFEa") : (!fir.ref<f32>) -> !fir.ref<f32>
   %ca = acc.copyin varPtr(%da : !fir.ref<f32>) name("a") -> !fir.ref<f32>
   %pf = acc.firstprivate varPtr(%da : !fir.ref<f32>) name("a") -> !fir.ref<f32>
   acc.kernels dataOperands(%ca : !fir.ref<f32>) firstprivate(%pf : !fir.ref<f32>) {
@@ -385,7 +385,7 @@ func.func @testKernelsCopyinVsFirstprivateSameHostNoAlias() {
 
 func.func @testKernelsCopyinVsFirstprivateMapSameHostNoAlias() {
   %a = fir.alloca f32 {uniq_name = "_QFEa"}
-  %da = fir.declare %a {uniq_name = "_QFEa"} : (!fir.ref<f32>) -> !fir.ref<f32>
+  %da = fir.declare %a uniq_name("_QFEa") : (!fir.ref<f32>) -> !fir.ref<f32>
   %fm = acc.firstprivate_map varPtr(%da : !fir.ref<f32>) varType(f32) name("a") -> !fir.ref<f32>
   %ca = acc.copyin varPtr(%da : !fir.ref<f32>) name("a") -> !fir.ref<f32>
   acc.kernels dataOperands(%ca : !fir.ref<f32>) firstprivate(%fm : !fir.ref<f32>) {
@@ -404,7 +404,7 @@ func.func @testKernelsCopyinVsFirstprivateMapSameHostNoAlias() {
 
 func.func @testComputeRegionPrivateOpInsideVsInsCreateNoAlias() {
   %a = fir.alloca f32 {uniq_name = "_QFEa"}
-  %da = fir.declare %a {uniq_name = "_QFEa"} : (!fir.ref<f32>) -> !fir.ref<f32>
+  %da = fir.declare %a uniq_name("_QFEa") : (!fir.ref<f32>) -> !fir.ref<f32>
   %tc = acc.create varPtr(%da : !fir.ref<f32>) name("a") -> !fir.ref<f32>
   acc.compute_region ins(%arg0 = %tc) : (!fir.ref<f32>) {
     %pv = acc.private varPtr(%arg0 : !fir.ref<f32>) name("a") -> !fir.ref<f32>
@@ -423,7 +423,7 @@ func.func @testComputeRegionPrivateOpInsideVsInsCreateNoAlias() {
 
 func.func @testKernelsPrivateOpInsideVsDataCopyinNoAlias() {
   %a = fir.alloca f32 {uniq_name = "_QFEa"}
-  %da = fir.declare %a {uniq_name = "_QFEa"} : (!fir.ref<f32>) -> !fir.ref<f32>
+  %da = fir.declare %a uniq_name("_QFEa") : (!fir.ref<f32>) -> !fir.ref<f32>
   %ca = acc.copyin varPtr(%da : !fir.ref<f32>) name("a") -> !fir.ref<f32>
   acc.kernels dataOperands(%ca : !fir.ref<f32>) {
     %pv = acc.private varPtr(%ca : !fir.ref<f32>) name("a") -> !fir.ref<f32>
@@ -456,8 +456,8 @@ acc.reduction.recipe @red_f32_aa : !fir.ref<f32> reduction_operator <add> init {
 func.func @testBothOutsideReductionDistinctHosts() {
   %a = fir.alloca f32 {uniq_name = "_QFEa"}
   %b = fir.alloca f32 {uniq_name = "_QFEb"}
-  %da = fir.declare %a {uniq_name = "_QFEa"} : (!fir.ref<f32>) -> !fir.ref<f32>
-  %db = fir.declare %b {uniq_name = "_QFEb"} : (!fir.ref<f32>) -> !fir.ref<f32>
+  %da = fir.declare %a uniq_name("_QFEa") : (!fir.ref<f32>) -> !fir.ref<f32>
+  %db = fir.declare %b uniq_name("_QFEb") : (!fir.ref<f32>) -> !fir.ref<f32>
   %ra = acc.reduction varPtr(%da : !fir.ref<f32>) recipe(@red_f32_aa) name("a") -> !fir.ref<f32> {test.ptr = "red_a"}
   %rb = acc.reduction varPtr(%db : !fir.ref<f32>) recipe(@red_f32_aa) name("b") -> !fir.ref<f32> {test.ptr = "red_b"}
   return
@@ -469,8 +469,8 @@ func.func @testBothOutsideReductionDistinctHosts() {
 func.func @testComputeRegionReductionDistinctHostsInsideConvert() {
   %a = fir.alloca f32 {uniq_name = "_QFEa"}
   %b = fir.alloca f32 {uniq_name = "_QFEb"}
-  %da = fir.declare %a {uniq_name = "_QFEa"} : (!fir.ref<f32>) -> !fir.ref<f32>
-  %db = fir.declare %b {uniq_name = "_QFEb"} : (!fir.ref<f32>) -> !fir.ref<f32>
+  %da = fir.declare %a uniq_name("_QFEa") : (!fir.ref<f32>) -> !fir.ref<f32>
+  %db = fir.declare %b uniq_name("_QFEb") : (!fir.ref<f32>) -> !fir.ref<f32>
   %ra = acc.reduction varPtr(%da : !fir.ref<f32>) recipe(@red_f32_aa) name("a") -> !fir.ref<f32>
   %rb = acc.reduction varPtr(%db : !fir.ref<f32>) recipe(@red_f32_aa) name("b") -> !fir.ref<f32>
   acc.compute_region ins(%arg0 = %ra, %arg1 = %rb) : (!fir.ref<f32>, !fir.ref<f32>) {
@@ -487,8 +487,8 @@ func.func @testComputeRegionReductionDistinctHostsInsideConvert() {
 func.func @testKernelsReductionDistinctHostsInsideConvert() {
   %a = fir.alloca f32 {uniq_name = "_QFEa"}
   %b = fir.alloca f32 {uniq_name = "_QFEb"}
-  %da = fir.declare %a {uniq_name = "_QFEa"} : (!fir.ref<f32>) -> !fir.ref<f32>
-  %db = fir.declare %b {uniq_name = "_QFEb"} : (!fir.ref<f32>) -> !fir.ref<f32>
+  %da = fir.declare %a uniq_name("_QFEa") : (!fir.ref<f32>) -> !fir.ref<f32>
+  %db = fir.declare %b uniq_name("_QFEb") : (!fir.ref<f32>) -> !fir.ref<f32>
   %ra = acc.reduction varPtr(%da : !fir.ref<f32>) recipe(@red_f32_aa) name("a") -> !fir.ref<f32>
   %rb = acc.reduction varPtr(%db : !fir.ref<f32>) recipe(@red_f32_aa) name("b") -> !fir.ref<f32>
   acc.kernels reduction(%ra, %rb : !fir.ref<f32>, !fir.ref<f32>) {
@@ -504,7 +504,7 @@ func.func @testKernelsReductionDistinctHostsInsideConvert() {
 
 func.func @testComputeRegionReductionVsPrivateSameHostNoAlias() {
   %a = fir.alloca f32 {uniq_name = "_QFEa"}
-  %da = fir.declare %a {uniq_name = "_QFEa"} : (!fir.ref<f32>) -> !fir.ref<f32>
+  %da = fir.declare %a uniq_name("_QFEa") : (!fir.ref<f32>) -> !fir.ref<f32>
   %ra = acc.reduction varPtr(%da : !fir.ref<f32>) recipe(@red_f32_aa) name("a") -> !fir.ref<f32>
   %pp = acc.private varPtr(%da : !fir.ref<f32>) name("a") -> !fir.ref<f32>
   acc.compute_region ins(%arg0 = %ra, %arg1 = %pp) : (!fir.ref<f32>, !fir.ref<f32>) {
@@ -555,8 +555,8 @@ func.func @test_acc_routine__0(%arg0: !fir.ref<f32> {fir.bindc_name = "a"}, %arg
   %0 = acc.par_width par_dim(#acc.par_dim<thread_x>)
   acc.compute_region launch(%arg2 = %0) ins(%arg3 = %arg0, %arg4 = %arg1) : (!fir.ref<f32>, !fir.ref<f32>) {
     %1 = fir.dummy_scope : !fir.dscope
-    %2 = fir.declare %arg3 dummy_scope %1 arg 1 {uniq_name = "_QFtest_acc_routineEa", test.ptr = "arg_a"} : (!fir.ref<f32>, !fir.dscope) -> !fir.ref<f32>
-    %3 = fir.declare %arg4 dummy_scope %1 arg 2 {uniq_name = "_QFtest_acc_routineEb", test.ptr = "arg_b"} : (!fir.ref<f32>, !fir.dscope) -> !fir.ref<f32>
+    %2 = fir.declare %arg3 dummy_scope %1 arg 1 uniq_name("_QFtest_acc_routineEa") {test.ptr = "arg_a"} : (!fir.ref<f32>, !fir.dscope) -> !fir.ref<f32>
+    %3 = fir.declare %arg4 dummy_scope %1 arg 2 uniq_name("_QFtest_acc_routineEb") {test.ptr = "arg_b"} : (!fir.ref<f32>, !fir.dscope) -> !fir.ref<f32>
     %4 = fir.load %3 : !fir.ref<f32>
     fir.store %4 to %2 : !fir.ref<f32>
     acc.yield
@@ -576,8 +576,8 @@ func.func @test_acc_routine__0(%arg0: !fir.ref<f32> {fir.bindc_name = "a"}, %arg
 // CHECK-DAG: load_x#0 <-> load_y#0: NoAlias
 func.func @test_acc_compute_region_box_load(%arg0: !fir.ref<!fir.box<!fir.heap<!fir.array<?xf32>>>> {fir.bindc_name = "x"}, %arg1: !fir.ref<!fir.box<!fir.heap<!fir.array<?xf32>>>> {fir.bindc_name = "y"}) {
   %0 = fir.dummy_scope : !fir.dscope
-  %dx = fir.declare %arg0 dummy_scope %0 arg 1 {fortran_attrs = #fir.var_attrs<allocatable>, uniq_name = "_QFtestEx"} : (!fir.ref<!fir.box<!fir.heap<!fir.array<?xf32>>>>, !fir.dscope) -> !fir.ref<!fir.box<!fir.heap<!fir.array<?xf32>>>>
-  %dy = fir.declare %arg1 dummy_scope %0 arg 2 {fortran_attrs = #fir.var_attrs<allocatable>, uniq_name = "_QFtestEy"} : (!fir.ref<!fir.box<!fir.heap<!fir.array<?xf32>>>>, !fir.dscope) -> !fir.ref<!fir.box<!fir.heap<!fir.array<?xf32>>>>
+  %dx = fir.declare %arg0 dummy_scope %0 arg 1 uniq_name("_QFtestEx") fortran_attrs<allocatable> : (!fir.ref<!fir.box<!fir.heap<!fir.array<?xf32>>>>, !fir.dscope) -> !fir.ref<!fir.box<!fir.heap<!fir.array<?xf32>>>>
+  %dy = fir.declare %arg1 dummy_scope %0 arg 2 uniq_name("_QFtestEy") fortran_attrs<allocatable> : (!fir.ref<!fir.box<!fir.heap<!fir.array<?xf32>>>>, !fir.dscope) -> !fir.ref<!fir.box<!fir.heap<!fir.array<?xf32>>>>
   %cx = acc.copyin varPtr(%dx : !fir.ref<!fir.box<!fir.heap<!fir.array<?xf32>>>>) dataClause(acc_copy) implicit(true) name("x") -> !fir.ref<!fir.box<!fir.heap<!fir.array<?xf32>>>>
   %cy = acc.copyin varPtr(%dy : !fir.ref<!fir.box<!fir.heap<!fir.array<?xf32>>>>) dataClause(acc_copy) implicit(true) name("y") -> !fir.ref<!fir.box<!fir.heap<!fir.array<?xf32>>>>
   acc.kernel_environment dataOperands(%cx, %cy : !fir.ref<!fir.box<!fir.heap<!fir.array<?xf32>>>>, !fir.ref<!fir.box<!fir.heap<!fir.array<?xf32>>>>) {

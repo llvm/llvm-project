@@ -61,7 +61,6 @@
 #include "llvm/IR/ValueHandle.h"
 #include "llvm/Support/AtomicOrdering.h"
 #include "llvm/Support/Casting.h"
-#include "llvm/Support/CommandLine.h"
 #include "llvm/Support/Compiler.h"
 #include "llvm/Support/Debug.h"
 #include "llvm/Support/ErrorHandling.h"
@@ -88,12 +87,6 @@ using namespace llvm;
 using namespace PatternMatch;
 
 STATISTIC(NumSimplified, "Number of library calls simplified");
-
-static cl::opt<unsigned> GuardWideningWindow(
-    "instcombine-guard-widening-window",
-    cl::init(3),
-    cl::desc("How wide an instruction window to bypass looking for "
-             "another guard"));
 
 /// Return the specified type promoted as it would be to pass though a va_arg
 /// area.
@@ -1957,7 +1950,7 @@ static Value *foldSinAndCosToSinCos(IntrinsicInst *II, IRBuilderBase &B,
     B.SetInsertPoint(*InsertPt);
   } else {
     BasicBlock &EntryBB = II->getFunction()->getEntryBlock();
-    B.SetInsertPoint(&EntryBB, EntryBB.begin());
+    B.SetInsertPoint(EntryBB.begin());
   }
 
   Function *SinCosFunc = Intrinsic::getOrInsertDeclaration(
@@ -2902,7 +2895,7 @@ Instruction *InstCombinerImpl::visitCallInst(CallInst &CI) {
     unsigned BitWidth = II->getType()->getScalarSizeInBits();
 
     // Multiply by one.
-    if (match(Arg1, m_One()))
+    if (BitWidth > 1 && match(Arg1, m_One()))
       return replaceInstUsesWith(CI, Builder.CreateAShr(Arg0, BitWidth - 1));
     break;
   }
@@ -3374,7 +3367,11 @@ Instruction *InstCombinerImpl::visitCallInst(CallInst &CI) {
                            : (isa<Constant>(TVal) && isa<Constant>(FVal))) {
         CallInst *AbsT = Builder.CreateCall(II->getCalledFunction(), {TVal});
         CallInst *AbsF = Builder.CreateCall(II->getCalledFunction(), {FVal});
-        SelectInst *SI = SelectInst::Create(Cond, AbsT, AbsF);
+        // Given the condition is the same, we pull metadata (particularly
+        // profile metadata) from the original select instruction.
+        SelectInst *SI = SelectInst::Create(
+            Cond, AbsT, AbsF, "", nullptr,
+            ProfcheckDisableMetadataFixes ? nullptr : cast<Instruction>(Arg));
         SI->setFastMathFlags(II->getFastMathFlags() |
                              cast<SelectInst>(Arg)->getFastMathFlags());
         // Can't copy nsz to select, as even with the nsz flag the fabs result
@@ -4092,7 +4089,7 @@ Instruction *InstCombinerImpl::visitCallInst(CallInst &CI) {
     // fixed window of instructions to handle common cases with conditions
     // computed between guards.
     Instruction *NextInst = II->getNextNode();
-    for (unsigned i = 0; i < GuardWideningWindow; i++) {
+    for (unsigned i = 0; i < CLOpts.guard_widening_window; i++) {
       // Note: Using context-free form to avoid compile time blow up
       if (!isSafeToSpeculativelyExecute(NextInst))
         break;
