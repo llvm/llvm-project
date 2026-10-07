@@ -99,15 +99,15 @@ void lldb_private::formatters::AddFilter(
 }
 
 std::optional<size_t>
-lldb_private::formatters::ExtractIndexFromString(const char *item_name) {
-  if (!item_name || !*item_name)
+lldb_private::formatters::ExtractIndexFromString(llvm::StringRef item_name) {
+  if (item_name.empty())
     return std::nullopt;
-  if (*item_name != '[')
+  if (item_name.front() != '[')
     return std::nullopt;
-  item_name++;
-  char *endptr = nullptr;
-  unsigned long int idx = ::strtoul(item_name, &endptr, 0);
-  if ((idx == 0 && endptr == item_name) || idx == ULONG_MAX)
+  item_name = item_name.drop_front();
+
+  unsigned long long idx = 0;
+  if (llvm::consumeUnsignedInteger(item_name, /*Radix=*/10, idx))
     return std::nullopt;
   return idx;
 }
