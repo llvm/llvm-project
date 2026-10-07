@@ -26,7 +26,7 @@ function(add_orc_rt_unittest test_name)
   target_link_libraries(${test_name} PRIVATE ${ARG_LINK_LIBS})
 endfunction()
 
-if (APPLE OR CMAKE_SYSTEM_NAME STREQUAL "Linux")
+if (ORC_RT_TARGET_POSIX)
   set(ORC_RT_SUPPORT_TEST_SYS_SOURCES
     support/sys/ErrnoTest.cpp
   )
@@ -84,19 +84,24 @@ add_orc_rt_unittest(SupportTests
   LINK_LIBS orc-rt-support-objects
   )
 
-# Per-system test helpers, composed the way lib/ composes its per-system
-# implementations; see the note in lib/bedrock/CMakeLists.txt. Tests of portable
-# APIs stay in the shared list and reach the system through these.
+# Per-system test helpers and tests, composed the way lib/ composes its
+# per-system implementations; see the note in lib/bedrock/CMakeLists.txt. Tests
+# of a per-system implementation live under sys/<system>/, mirroring lib/. Tests
+# of portable APIs live outside sys/ and reach the system through the helpers,
+# so they join a system's list only once it provides the helpers, and the
+# implementation under test.
 set(ORC_RT_BEDROCK_TEST_POSIX_SOURCES
-  bedrock/SocketConnectorTest.cpp
   bedrock/SocketHandleTest.cpp
+  bedrock/sps/SimpleRemoteCAOverSocketTest.cpp
+  bedrock/sys/posix/SocketConnectorTest.cpp
   bedrock/sys/posix/SocketTestUtils.cpp
   )
 
-if (APPLE OR CMAKE_SYSTEM_NAME STREQUAL "Linux")
+if (ORC_RT_TARGET_POSIX)
   set(ORC_RT_BEDROCK_TEST_SYS_SOURCES ${ORC_RT_BEDROCK_TEST_POSIX_SOURCES})
 else()
-  # No list yet, so tests needing a socket will fail to link.
+  # No socket helpers or socket transport yet, so the socket tests are not
+  # built.
   set(ORC_RT_BEDROCK_TEST_SYS_SOURCES)
 endif()
 
@@ -120,13 +125,13 @@ add_orc_rt_unittest(BedrockTests
   bedrock/SimpleSymbolTableTest.cpp
   bedrock/TaskGroupTest.cpp
   bedrock/ThreadPoolRunnerTest.cpp
+  bedrock/VettedPeerTest.cpp
 
   bedrock/sps/CallSPSCITest.cpp
   bedrock/sps/MemoryAccessSPSCITest.cpp
   bedrock/sps/NativeDylibManagerSPSCITest.cpp
   bedrock/sps/SimpleNativeMemoryMapSPSCITest.cpp
   bedrock/sps/SimpleRemoteCATest.cpp
-  bedrock/sps/SimpleRemoteCAOverSocketTest.cpp
 
   bedrock/sys/CPUFeaturesTest.cpp
   bedrock/sys/TargetTripleTest.cpp
