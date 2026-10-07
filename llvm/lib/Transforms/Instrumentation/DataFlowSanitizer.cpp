@@ -2249,7 +2249,7 @@ std::pair<Value *, Value *> DFSanFunction::loadShadowFast(
       // chosen by combineOrigins() iff the least-significant half of the wide
       // shadow was empty but the other half was not).
       Value *WideShadowLo =
-          F->getParent()->getDataLayout().isLittleEndian()
+          F->getDataLayout().isLittleEndian()
               ? IRB.CreateShl(
                     WideShadow,
                     ConstantInt::get(WideShadowTy, WideShadowBitWidth / 2))

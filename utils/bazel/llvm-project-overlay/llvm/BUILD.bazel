@@ -2454,6 +2454,15 @@ cc_library(
     ],
 )
 
+gentbl_cc_library(
+    name = "CodeGenOptionsTableGen",
+    strip_include_prefix = "lib/CodeGen",
+    tbl_outs = {"lib/CodeGen/CodeGenOptions.inc": ["-gen-opt-parser-defs"]},
+    tblgen = ":llvm-min-tblgen",
+    td_file = "lib/CodeGen/CodeGenOptions.td",
+    deps = [":OptParserTdFiles"],
+)
+
 cc_library(
     name = "CodeGen",
     srcs = glob(
@@ -2485,6 +2494,7 @@ cc_library(
         ":BitWriter",
         ":CFGuard",
         ":CGData",
+        ":CodeGenOptionsTableGen",
         ":CodeGenTypes",
         ":Core",
         ":DebugInfoCodeView",
@@ -2497,6 +2507,7 @@ cc_library(
         ":MCParser",
         ":ObjCARC",
         ":Object",
+        ":Option",
         ":ProfileData",
         ":Remarks",
         ":Scalar",

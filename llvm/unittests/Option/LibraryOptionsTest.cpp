@@ -35,9 +35,9 @@ TEST(LibraryOptionsTest, Apply) {
   EXPECT_EQ(O.count, 3u);
   EXPECT_EQ(O.limit, std::nullopt);
   EXPECT_EQ(O.mode, test::Mode::A);
-  EXPECT_EQ(O.override, std::nullopt);
+  EXPECT_EQ(O.override, BoolOrDefault::Default);
   EXPECT_EQ(O.ratio, 0.5);
-  EXPECT_EQ(O.tristate, std::nullopt);
+  EXPECT_EQ(O.tristate, BoolOrDefault::Default);
   EXPECT_EQ(O.Path, "p");
 
   auto Apply = [&](std::initializer_list<const char *> Argv) {
@@ -57,9 +57,9 @@ TEST(LibraryOptionsTest, Apply) {
   EXPECT_EQ(O.count, 7u);
   EXPECT_EQ(O.limit, 0u);
   EXPECT_EQ(O.mode, test::Mode::B);
-  EXPECT_EQ(O.override, true);
+  EXPECT_EQ(O.override, BoolOrDefault::True);
   EXPECT_EQ(O.ratio, 0.25);
-  EXPECT_EQ(O.tristate, false);
+  EXPECT_EQ(O.tristate, BoolOrDefault::False);
   EXPECT_EQ(O.Path, "a=b");
   EXPECT_THAT(Apply({"-lib-enable=false"}), testing::Each(true));
   EXPECT_FALSE(O.enable);
@@ -67,10 +67,10 @@ TEST(LibraryOptionsTest, Apply) {
       Apply({"-lib-enable=1", "-lib-override=false", "-lib-tristate=Enable"}),
       testing::Each(true));
   EXPECT_TRUE(O.enable);
-  EXPECT_EQ(O.override, false);
-  EXPECT_EQ(O.tristate, true);
+  EXPECT_EQ(O.override, BoolOrDefault::False);
+  EXPECT_EQ(O.tristate, BoolOrDefault::True);
   EXPECT_THAT(Apply({"-lib-tristate=Default"}), testing::Each(true));
-  EXPECT_EQ(O.tristate, std::nullopt);
+  EXPECT_EQ(O.tristate, BoolOrDefault::Default);
 
   // A rejected value leaves the member unchanged.
   EXPECT_THAT(Apply({"-lib-enable=2", "-lib-count=-1", "-lib-limit=x",
@@ -80,8 +80,15 @@ TEST(LibraryOptionsTest, Apply) {
   EXPECT_EQ(O.count, 7u);
   EXPECT_EQ(O.limit, 0u);
   EXPECT_EQ(O.mode, test::Mode::B);
-  EXPECT_EQ(O.override, false);
+  EXPECT_EQ(O.override, BoolOrDefault::False);
   EXPECT_EQ(O.ratio, 0.25);
+}
+
+TEST(LibraryOptionsTest, BoolOrDefault) {
+  EXPECT_TRUE(valueOr(BoolOrDefault::Default, true));
+  EXPECT_FALSE(valueOr(BoolOrDefault::Default, false));
+  EXPECT_TRUE(valueOr(BoolOrDefault::True, false));
+  EXPECT_FALSE(valueOr(BoolOrDefault::False, true));
 }
 
 // What cl:: sees of the struct, without cl::.
@@ -97,15 +104,11 @@ TEST(LibraryOptionsTest, Parser) {
   });
   EXPECT_THAT(Rows,
               testing::ElementsAre(
-                  "lib-count=|<value>|An unsigned", "lib-count||",
-                  "lib-enable=|<value>|", "lib-enable||A bool",
-                  "lib-limit=|<value>|An optional", "lib-limit||",
-                  "lib-mode=|<a|b>|An enum", "lib-mode||",
-                  "lib-override=|<value>|", "lib-override||An optional bool",
-                  "lib-path=|<value>|A string", "lib-path||",
-                  "lib-ratio=|<value>|A double", "lib-ratio||",
-                  "lib-tristate=|<Default|Enable|Disable>|A tri-state",
-                  "lib-tristate||"));
+                  "lib-count|=<value>|An unsigned", "lib-enable||A bool",
+                  "lib-limit|=<value>|An optional", "lib-mode|=<a|b>|An enum",
+                  "lib-override||An optional bool",
+                  "lib-path|=<value>|A string", "lib-ratio|=<value>|A double",
+                  "lib-tristate|=<Default|Enable|Disable>|A tri-state"));
 
   auto Parse = [&](std::initializer_list<const char *> Argv) {
     unsigned Consumed = 0;
@@ -119,6 +122,11 @@ TEST(LibraryOptionsTest, Parser) {
   EXPECT_EQ(Parse({"-lib-count"}),
             "1 option '-lib-count' requires an argument");
   EXPECT_EQ(Parse({"-lib-other"}), "1 unknown argument '-lib-other'");
+  EXPECT_EQ(Parse({"-lib-counts=1"}), "1 unknown argument '-lib-counts=1'");
+  EXPECT_EQ(Parse({"-lib-enable", "0"}), "1 ");
+  EXPECT_EQ(Parse({"-lib-count", "x"}),
+            "2 invalid value 'x' in '-lib-count=x'");
+  EXPECT_EQ(Parse({"-lib-enable=x"}), "1 invalid value 'x' in '-lib-enable=x'");
   P.reset();
   EXPECT_EQ(TestLibraryOptions::Global.count, 3u);
 }

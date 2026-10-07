@@ -193,7 +193,7 @@ ShadowStackGCLoweringImpl::ComputeFrameLayout(Function &F) {
   // Compute the layout of the shadow stack frame using byte offsets.
   // Layout: [Next ptr | Map ptr | Root 0 | Root 1 | ... | Root N]
 
-  const DataLayout &DL = F.getParent()->getDataLayout();
+  const DataLayout &DL = F.getDataLayout();
   uint64_t PtrSize = DL.getPointerSize(0);
   Align PtrAlign = DL.getPointerABIAlignment(0);
 
@@ -311,7 +311,7 @@ bool ShadowStackGCLoweringImpl::runOnFunction(Function &F,
     return false;
 
   LLVMContext &Context = F.getContext();
-  const DataLayout &DL = F.getParent()->getDataLayout();
+  const DataLayout &DL = F.getDataLayout();
 
   // Find calls to llvm.gcroot.
   CollectRoots(F);
