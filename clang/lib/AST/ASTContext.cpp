@@ -15920,14 +15920,8 @@ private:
     // Oversized bit-fields (declared width larger than the field type) occupy
     // only the type's width. The extra declared bits are padding and follow
     // the occupied bits (Itanium C++ ABI §2.4, II.1(b)).
-    // A bool bit-field occupies its whole declared width up to the size of
-    // bool, like GCC. _BitInt(N) occupies only its N value bits.
-    const QualType FieldTy = Field->getType();
     const uint64_t OccupiedSizeInBits =
-        std::min(DeclaredSizeInBits,
-                 FieldTy->isBooleanType()
-                     ? Ctx.getTypeSize(FieldTy)
-                     : static_cast<uint64_t>(Ctx.getIntWidth(FieldTy)));
+        std::min(DeclaredSizeInBits, Ctx.getTypeSize(Field->getType()));
 
     if (Ctx.getTargetInfo().isLittleEndian()) {
       OccuppiedIntervals.push_back(
@@ -15947,16 +15941,7 @@ private:
     //
     // Occupied bits are allocated first, and any padding follows them.
     const uint64_t Start = StartBitOffset;
-    // A _BitInt(N) bit-field may be declared wider than N, e.g.
-    // `_BitInt(5) a : 6`. CodeGen stores the value in the low-order N bits of
-    // the field, which are allocated last on big-endian (01111100), so the
-    // leading bits are not value bits. Treat the field as occupied up to the
-    // storage size of _BitInt(N) so that the value bits are never cleared.
-    // Bits beyond the storage size are padding.
-    const uint64_t End =
-        Start + (FieldTy->isBitIntType()
-                     ? std::min(DeclaredSizeInBits, Ctx.getTypeSize(FieldTy))
-                     : OccupiedSizeInBits);
+    const uint64_t End = Start + OccupiedSizeInBits;
     const uint64_t CharWidth = Ctx.getCharWidth();
 
     // Special case: all the occupied bits are contained within a single byte.
