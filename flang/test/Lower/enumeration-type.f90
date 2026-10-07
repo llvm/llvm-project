@@ -150,7 +150,7 @@ end subroutine
 ! -----------------------------------------------------------------------------
 
 ! CHECK-LABEL: func.func @_QPtest_comparisons(
-! CHECK-SAME: %{{.*}}: !fir.ref<!fir.type<_QMenum_modTcolor{__ordinal:i32}>> {fir.bindc_name = "c1"}, %{{.*}}: !fir.ref<!fir.type<_QMenum_modTcolor{__ordinal:i32}>> {fir.bindc_name = "c2"})
+! CHECK-SAME: %{{.*}}: !fir.ref<!fir.type<_QMenum_modTcolor{__ordinal:i32}>> {fir.bindc_name = "c1", fir.fortran_attrs = #fir.var_attrs<intent_in>}, %{{.*}}: !fir.ref<!fir.type<_QMenum_modTcolor{__ordinal:i32}>> {fir.bindc_name = "c2", fir.fortran_attrs = #fir.var_attrs<intent_in>})
 subroutine test_comparisons(c1, c2)
   use enum_mod
   type(color), intent(in) :: c1, c2
@@ -392,7 +392,7 @@ subroutine test_enum_arg_pass()
 end subroutine
 
 ! CHECK-LABEL: func.func @_QPtake_enum(
-! CHECK-SAME: %{{.*}}: !fir.ref<!fir.type<_QMenum_modTcolor{__ordinal:i32}>> {fir.bindc_name = "c"}
+! CHECK-SAME: %{{.*}}: !fir.ref<!fir.type<_QMenum_modTcolor{__ordinal:i32}>> {fir.bindc_name = "c", fir.fortran_attrs = #fir.var_attrs<intent_in>}
 subroutine take_enum(c)
   use enum_mod
   type(color), intent(in) :: c
