@@ -1,6 +1,37 @@
 add_custom_target(libc_stdio_unittests)
 
 add_libc_test(
+  freopen_test
+  SUITE
+    libc_stdio_unittests
+  SRCS
+    freopen_test.cpp
+  DEPENDS
+    libc.include.stdio
+    libc.hdr.fcntl_macros
+    libc.hdr.stdio_macros
+    libc.src.__support.CPP.scope
+    libc.src.__support.macros.properties.os
+    libc.src.errno.errno
+    libc.src.fcntl.fcntl
+    libc.src.stdio.clearerr
+    libc.src.stdio.fclose
+    libc.src.stdio.feof
+    libc.src.stdio.ferror
+    libc.src.stdio.fflush
+    libc.src.stdio.fileno
+    libc.src.stdio.fopen
+    libc.src.stdio.fread
+    libc.src.stdio.freopen
+    libc.src.stdio.fwrite
+    libc.src.stdio.stdout
+    libc.src.unistd.close
+    libc.src.wchar.fwide
+    libc.test.UnitTest.ErrnoCheckingTest
+    libc.test.UnitTest.ErrnoSetterMatcher
+)
+
+add_libc_test(
   fileop_test
   SUITE
     libc_stdio_unittests
@@ -113,6 +144,37 @@ add_libc_test(
 )
 
 add_libc_test(
+  fmemopen_test
+  SUITE
+    libc_stdio_unittests
+  SRCS
+    fmemopen_test.cpp
+  DEPENDS
+    libc.include.stdio
+    libc.hdr.stdio_macros
+    libc.hdr.types.off_t
+    libc.src.__support.CPP.limits
+    libc.src.__support.CPP.scope
+    libc.src.errno.errno
+    libc.src.stdio.clearerr
+    libc.src.stdio.fclose
+    libc.src.stdio.feof
+    libc.src.stdio.ferror
+    libc.src.stdio.fflush
+    libc.src.stdio.fgetc
+    libc.src.stdio.fmemopen
+    libc.src.stdio.fread
+    libc.src.stdio.fseek
+    libc.src.stdio.fseeko
+    libc.src.stdio.ftell
+    libc.src.stdio.fwrite
+    libc.src.stdio.setvbuf
+    libc.test.UnitTest.ErrnoCheckingTest
+    libc.test.UnitTest.ErrnoSetterMatcher
+    libc.test.UnitTest.MemoryMatcher
+)
+
+add_libc_test(
   fopencookie_test
   SUITE
     libc_stdio_unittests
@@ -120,6 +182,7 @@ add_libc_test(
     fopencookie_test.cpp
   DEPENDS
     libc.include.stdio
+    libc.hdr.types.off_t
     libc.hdr.types.size_t
     libc.src.errno.errno
     libc.src.stdio.clearerr
@@ -132,8 +195,7 @@ add_libc_test(
     libc.src.stdio.fseek
     libc.src.stdio.fwrite
     libc.test.UnitTest.ErrnoCheckingTest
-  LINK_LIBRARIES
-    LibcMemoryHelpers
+    libc.test.UnitTest.MemoryMatcher
 )
 
 if(LIBC_CONF_PRINTF_DISABLE_FLOAT)
@@ -357,8 +419,7 @@ add_libc_test(
     sscanf_test.cpp
   DEPENDS
     libc.src.stdio.sscanf
-  LINK_LIBRARIES
-    LibcFPTestHelpers
+    libc.test.UnitTest.FPTestHelpers
   COMPILE_OPTIONS
     ${sscanf_test_copts}
 )
@@ -371,8 +432,7 @@ add_libc_test(
     vsscanf_test.cpp
   DEPENDS
     libc.src.stdio.vsscanf
-  LINK_LIBRARIES
-    LibcFPTestHelpers
+    libc.test.UnitTest.FPTestHelpers
   COMPILE_OPTIONS
     ${sscanf_test_copts}
 )
@@ -423,6 +483,19 @@ add_libc_test(
     libc.src.stdio.stderr
 )
 
+set(fopen_test_deps)
+if(LIBC_TARGET_OS STREQUAL "linux")
+  list(APPEND fopen_test_deps
+    libc.hdr.fcntl_macros
+    libc.src.errno.errno
+    libc.src.fcntl.fcntl
+    libc.src.stdio.fileno
+    libc.src.stdio.remove
+    libc.test.UnitTest.ErrnoCheckingTest
+    libc.test.UnitTest.ErrnoSetterMatcher
+  )
+endif()
+
 add_libc_test(
   fopen_test
   SUITE
@@ -430,7 +503,9 @@ add_libc_test(
   SRCS
     fopen_test.cpp
   DEPENDS
+    ${fopen_test_deps}
     libc.src.__support.CPP.scope
+    libc.src.__support.macros.properties.os
     libc.src.stdio.fread
     libc.src.stdio.fwrite
     libc.src.stdio.fclose
@@ -488,6 +563,29 @@ if(${LIBC_TARGET_OS} STREQUAL "linux")
   )
 
   add_libc_test(
+    renameat_test
+    SUITE
+      libc_stdio_unittests
+    SRCS
+      renameat_test.cpp
+    DEPENDS
+      libc.hdr.errno_macros
+      libc.hdr.fcntl_macros
+      libc.hdr.sys_stat_macros
+      libc.hdr.unistd_macros
+      libc.src.__support.CPP.scope
+      libc.src.errno.errno
+      libc.src.fcntl.open
+      libc.src.stdio.renameat
+      libc.src.unistd.access
+      libc.src.unistd.close
+      libc.src.unistd.unlink
+      libc.test.UnitTest.ErrnoCheckingTest
+      libc.test.UnitTest.ErrnoSetterMatcher
+  )
+
+
+  add_libc_test(
     fdopen_test
     SUITE
       libc_stdio_unittests
@@ -496,6 +594,8 @@ if(${LIBC_TARGET_OS} STREQUAL "linux")
     DEPENDS
       libc.hdr.fcntl_macros
       libc.hdr.sys_stat_macros
+      libc.src.__support.CPP.scope
+      libc.src.fcntl.fcntl
       libc.src.fcntl.open
       libc.src.stdio.fclose
       libc.src.stdio.fdopen
@@ -591,6 +691,36 @@ add_libc_test(
     libc.src.stdio.ftello
     libc.src.stdio.fwrite
     libc.src.stdio.setvbuf
+)
+
+add_libc_test(
+  tmpfile_test
+  SUITE
+    libc_stdio_unittests
+  SRCS
+    tmpfile_test.cpp
+  DEPENDS
+    libc.src.stdio.tmpfile
+    libc.src.stdio.fflush
+    libc.src.stdio.fread
+    libc.src.stdio.fseek
+    libc.src.stdio.ftell
+    libc.src.stdio.fwrite
+)
+
+add_libc_test(
+  tmpnam_test
+  SUITE
+    libc_stdio_unittests
+  SRCS
+    tmpnam_test.cpp
+  DEPENDS
+    libc.hdr.stdio_macros
+    libc.hdr.types.size_t
+    libc.src.stdio.tmpnam
+    libc.src.__support.CPP.string
+    libc.src.__support.CPP.string_view
+    libc.src.__support.macros.config
 )
 
 # Create an output directory for any temporary test files.

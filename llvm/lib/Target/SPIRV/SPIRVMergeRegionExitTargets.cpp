@@ -12,7 +12,6 @@
 //
 //===----------------------------------------------------------------------===//
 
-#include "SPIRVMergeRegionExitTargets.h"
 #include "Analysis/SPIRVConvergenceRegionAnalysis.h"
 #include "SPIRV.h"
 #include "SPIRVSubtarget.h"
@@ -186,7 +185,7 @@ public:
 } // namespace
 
 PreservedAnalyses
-SPIRVMergeRegionExitTargets::run(Function &F, FunctionAnalysisManager &AM) {
+SPIRVMergeRegionExitTargetsPass::run(Function &F, FunctionAnalysisManager &AM) {
   auto &LI = AM.getResult<LoopAnalysis>(F);
   auto &RegionInfo = AM.getResult<SPIRVConvergenceRegionAnalysis>(F);
   return runImpl(F, LI, RegionInfo) ? PreservedAnalyses::none()

@@ -1227,14 +1227,14 @@ bool DecodeCStrMap(const DataExtractor &data, lldb::offset_t *offset_ptr,
 }
 
 constexpr llvm::StringLiteral kIdentifierSymbolTable("SYMB");
-constexpr uint32_t CURRENT_CACHE_VERSION = 1;
+constexpr uint32_t CURRENT_CACHE_VERSION = 3;
 
 // If the size of the Symbol object changes, the serialized
 // format likely also needs to change so the
 // CURRENT_CACHE_VERSION number will need to be incremented.
 #if __SIZEOF_POINTER__ == 8
 static_assert(
-    sizeof(lldb_private::Symbol) == 80,
+    sizeof(lldb_private::Symbol) == 72,
     "Symbol size has changed, DataFileCache version likely needs updating");
 #endif
 

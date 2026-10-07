@@ -22,13 +22,13 @@ define void @test_cp_async_bulk_tensor_prefetch_3d(i32 %flag, ptr %tmap, i32 %d0
 ; CHECK-PTX64-NEXT:    .reg .b64 %rd<3>;
 ; CHECK-PTX64-EMPTY:
 ; CHECK-PTX64-NEXT:  // %bb.0:
-; CHECK-PTX64-NEXT:    ld.param.b64 %rd1, [test_cp_async_bulk_tensor_prefetch_3d_param_1];
-; CHECK-PTX64-NEXT:    ld.param.b32 %r1, [test_cp_async_bulk_tensor_prefetch_3d_param_2];
-; CHECK-PTX64-NEXT:    ld.param.b32 %r2, [test_cp_async_bulk_tensor_prefetch_3d_param_3];
-; CHECK-PTX64-NEXT:    ld.param.b32 %r3, [test_cp_async_bulk_tensor_prefetch_3d_param_4];
-; CHECK-PTX64-NEXT:    ld.param.b16 %rs1, [test_cp_async_bulk_tensor_prefetch_3d_param_5];
-; CHECK-PTX64-NEXT:    ld.param.b16 %rs2, [test_cp_async_bulk_tensor_prefetch_3d_param_6];
-; CHECK-PTX64-NEXT:    ld.param.b64 %rd2, [test_cp_async_bulk_tensor_prefetch_3d_param_7];
+; CHECK-PTX64-NEXT:    ld.param::func.b64 %rd1, [test_cp_async_bulk_tensor_prefetch_3d_param_1];
+; CHECK-PTX64-NEXT:    ld.param::func.b32 %r1, [test_cp_async_bulk_tensor_prefetch_3d_param_2];
+; CHECK-PTX64-NEXT:    ld.param::func.b32 %r2, [test_cp_async_bulk_tensor_prefetch_3d_param_3];
+; CHECK-PTX64-NEXT:    ld.param::func.b32 %r3, [test_cp_async_bulk_tensor_prefetch_3d_param_4];
+; CHECK-PTX64-NEXT:    ld.param::func.b16 %rs1, [test_cp_async_bulk_tensor_prefetch_3d_param_5];
+; CHECK-PTX64-NEXT:    ld.param::func.b16 %rs2, [test_cp_async_bulk_tensor_prefetch_3d_param_6];
+; CHECK-PTX64-NEXT:    ld.param::func.b64 %rd2, [test_cp_async_bulk_tensor_prefetch_3d_param_7];
 ; CHECK-PTX64-NEXT:    cp.async.bulk.prefetch.tensor.3d.L2.global.im2col::w [%rd1, {%r1, %r2, %r3}], {%rs1, %rs2};
 ; CHECK-PTX64-NEXT:    cp.async.bulk.prefetch.tensor.3d.L2.global.im2col::w.L2::cache_hint [%rd1, {%r1, %r2, %r3}], {%rs1, %rs2}, %rd2;
 ; CHECK-PTX64-NEXT:    cp.async.bulk.prefetch.tensor.3d.L2.global.im2col::w::128 [%rd1, {%r1, %r2, %r3}], {%rs1, %rs2};
@@ -42,13 +42,13 @@ define void @test_cp_async_bulk_tensor_prefetch_3d(i32 %flag, ptr %tmap, i32 %d0
 ; CHECK-PTX-SHARED32-NEXT:    .reg .b64 %rd<3>;
 ; CHECK-PTX-SHARED32-EMPTY:
 ; CHECK-PTX-SHARED32-NEXT:  // %bb.0:
-; CHECK-PTX-SHARED32-NEXT:    ld.param.b64 %rd1, [test_cp_async_bulk_tensor_prefetch_3d_param_1];
-; CHECK-PTX-SHARED32-NEXT:    ld.param.b32 %r1, [test_cp_async_bulk_tensor_prefetch_3d_param_2];
-; CHECK-PTX-SHARED32-NEXT:    ld.param.b32 %r2, [test_cp_async_bulk_tensor_prefetch_3d_param_3];
-; CHECK-PTX-SHARED32-NEXT:    ld.param.b32 %r3, [test_cp_async_bulk_tensor_prefetch_3d_param_4];
-; CHECK-PTX-SHARED32-NEXT:    ld.param.b16 %rs1, [test_cp_async_bulk_tensor_prefetch_3d_param_5];
-; CHECK-PTX-SHARED32-NEXT:    ld.param.b16 %rs2, [test_cp_async_bulk_tensor_prefetch_3d_param_6];
-; CHECK-PTX-SHARED32-NEXT:    ld.param.b64 %rd2, [test_cp_async_bulk_tensor_prefetch_3d_param_7];
+; CHECK-PTX-SHARED32-NEXT:    ld.param::func.b64 %rd1, [test_cp_async_bulk_tensor_prefetch_3d_param_1];
+; CHECK-PTX-SHARED32-NEXT:    ld.param::func.b32 %r1, [test_cp_async_bulk_tensor_prefetch_3d_param_2];
+; CHECK-PTX-SHARED32-NEXT:    ld.param::func.b32 %r2, [test_cp_async_bulk_tensor_prefetch_3d_param_3];
+; CHECK-PTX-SHARED32-NEXT:    ld.param::func.b32 %r3, [test_cp_async_bulk_tensor_prefetch_3d_param_4];
+; CHECK-PTX-SHARED32-NEXT:    ld.param::func.b16 %rs1, [test_cp_async_bulk_tensor_prefetch_3d_param_5];
+; CHECK-PTX-SHARED32-NEXT:    ld.param::func.b16 %rs2, [test_cp_async_bulk_tensor_prefetch_3d_param_6];
+; CHECK-PTX-SHARED32-NEXT:    ld.param::func.b64 %rd2, [test_cp_async_bulk_tensor_prefetch_3d_param_7];
 ; CHECK-PTX-SHARED32-NEXT:    cp.async.bulk.prefetch.tensor.3d.L2.global.im2col::w [%rd1, {%r1, %r2, %r3}], {%rs1, %rs2};
 ; CHECK-PTX-SHARED32-NEXT:    cp.async.bulk.prefetch.tensor.3d.L2.global.im2col::w.L2::cache_hint [%rd1, {%r1, %r2, %r3}], {%rs1, %rs2}, %rd2;
 ; CHECK-PTX-SHARED32-NEXT:    cp.async.bulk.prefetch.tensor.3d.L2.global.im2col::w::128 [%rd1, {%r1, %r2, %r3}], {%rs1, %rs2};
@@ -70,14 +70,14 @@ define void @test_cp_async_bulk_tensor_prefetch_4d(i32 %flag, ptr %tmap, i32 %d0
 ; CHECK-PTX64-NEXT:    .reg .b64 %rd<3>;
 ; CHECK-PTX64-EMPTY:
 ; CHECK-PTX64-NEXT:  // %bb.0:
-; CHECK-PTX64-NEXT:    ld.param.b64 %rd1, [test_cp_async_bulk_tensor_prefetch_4d_param_1];
-; CHECK-PTX64-NEXT:    ld.param.b32 %r1, [test_cp_async_bulk_tensor_prefetch_4d_param_2];
-; CHECK-PTX64-NEXT:    ld.param.b32 %r2, [test_cp_async_bulk_tensor_prefetch_4d_param_3];
-; CHECK-PTX64-NEXT:    ld.param.b32 %r3, [test_cp_async_bulk_tensor_prefetch_4d_param_4];
-; CHECK-PTX64-NEXT:    ld.param.b32 %r4, [test_cp_async_bulk_tensor_prefetch_4d_param_5];
-; CHECK-PTX64-NEXT:    ld.param.b16 %rs1, [test_cp_async_bulk_tensor_prefetch_4d_param_6];
-; CHECK-PTX64-NEXT:    ld.param.b16 %rs2, [test_cp_async_bulk_tensor_prefetch_4d_param_7];
-; CHECK-PTX64-NEXT:    ld.param.b64 %rd2, [test_cp_async_bulk_tensor_prefetch_4d_param_8];
+; CHECK-PTX64-NEXT:    ld.param::func.b64 %rd1, [test_cp_async_bulk_tensor_prefetch_4d_param_1];
+; CHECK-PTX64-NEXT:    ld.param::func.b32 %r1, [test_cp_async_bulk_tensor_prefetch_4d_param_2];
+; CHECK-PTX64-NEXT:    ld.param::func.b32 %r2, [test_cp_async_bulk_tensor_prefetch_4d_param_3];
+; CHECK-PTX64-NEXT:    ld.param::func.b32 %r3, [test_cp_async_bulk_tensor_prefetch_4d_param_4];
+; CHECK-PTX64-NEXT:    ld.param::func.b32 %r4, [test_cp_async_bulk_tensor_prefetch_4d_param_5];
+; CHECK-PTX64-NEXT:    ld.param::func.b16 %rs1, [test_cp_async_bulk_tensor_prefetch_4d_param_6];
+; CHECK-PTX64-NEXT:    ld.param::func.b16 %rs2, [test_cp_async_bulk_tensor_prefetch_4d_param_7];
+; CHECK-PTX64-NEXT:    ld.param::func.b64 %rd2, [test_cp_async_bulk_tensor_prefetch_4d_param_8];
 ; CHECK-PTX64-NEXT:    cp.async.bulk.prefetch.tensor.4d.L2.global.im2col::w [%rd1, {%r1, %r2, %r3, %r4}], {%rs1, %rs2};
 ; CHECK-PTX64-NEXT:    cp.async.bulk.prefetch.tensor.4d.L2.global.im2col::w.L2::cache_hint [%rd1, {%r1, %r2, %r3, %r4}], {%rs1, %rs2}, %rd2;
 ; CHECK-PTX64-NEXT:    cp.async.bulk.prefetch.tensor.4d.L2.global.im2col::w::128 [%rd1, {%r1, %r2, %r3, %r4}], {%rs1, %rs2};
@@ -91,14 +91,14 @@ define void @test_cp_async_bulk_tensor_prefetch_4d(i32 %flag, ptr %tmap, i32 %d0
 ; CHECK-PTX-SHARED32-NEXT:    .reg .b64 %rd<3>;
 ; CHECK-PTX-SHARED32-EMPTY:
 ; CHECK-PTX-SHARED32-NEXT:  // %bb.0:
-; CHECK-PTX-SHARED32-NEXT:    ld.param.b64 %rd1, [test_cp_async_bulk_tensor_prefetch_4d_param_1];
-; CHECK-PTX-SHARED32-NEXT:    ld.param.b32 %r1, [test_cp_async_bulk_tensor_prefetch_4d_param_2];
-; CHECK-PTX-SHARED32-NEXT:    ld.param.b32 %r2, [test_cp_async_bulk_tensor_prefetch_4d_param_3];
-; CHECK-PTX-SHARED32-NEXT:    ld.param.b32 %r3, [test_cp_async_bulk_tensor_prefetch_4d_param_4];
-; CHECK-PTX-SHARED32-NEXT:    ld.param.b32 %r4, [test_cp_async_bulk_tensor_prefetch_4d_param_5];
-; CHECK-PTX-SHARED32-NEXT:    ld.param.b16 %rs1, [test_cp_async_bulk_tensor_prefetch_4d_param_6];
-; CHECK-PTX-SHARED32-NEXT:    ld.param.b16 %rs2, [test_cp_async_bulk_tensor_prefetch_4d_param_7];
-; CHECK-PTX-SHARED32-NEXT:    ld.param.b64 %rd2, [test_cp_async_bulk_tensor_prefetch_4d_param_8];
+; CHECK-PTX-SHARED32-NEXT:    ld.param::func.b64 %rd1, [test_cp_async_bulk_tensor_prefetch_4d_param_1];
+; CHECK-PTX-SHARED32-NEXT:    ld.param::func.b32 %r1, [test_cp_async_bulk_tensor_prefetch_4d_param_2];
+; CHECK-PTX-SHARED32-NEXT:    ld.param::func.b32 %r2, [test_cp_async_bulk_tensor_prefetch_4d_param_3];
+; CHECK-PTX-SHARED32-NEXT:    ld.param::func.b32 %r3, [test_cp_async_bulk_tensor_prefetch_4d_param_4];
+; CHECK-PTX-SHARED32-NEXT:    ld.param::func.b32 %r4, [test_cp_async_bulk_tensor_prefetch_4d_param_5];
+; CHECK-PTX-SHARED32-NEXT:    ld.param::func.b16 %rs1, [test_cp_async_bulk_tensor_prefetch_4d_param_6];
+; CHECK-PTX-SHARED32-NEXT:    ld.param::func.b16 %rs2, [test_cp_async_bulk_tensor_prefetch_4d_param_7];
+; CHECK-PTX-SHARED32-NEXT:    ld.param::func.b64 %rd2, [test_cp_async_bulk_tensor_prefetch_4d_param_8];
 ; CHECK-PTX-SHARED32-NEXT:    cp.async.bulk.prefetch.tensor.4d.L2.global.im2col::w [%rd1, {%r1, %r2, %r3, %r4}], {%rs1, %rs2};
 ; CHECK-PTX-SHARED32-NEXT:    cp.async.bulk.prefetch.tensor.4d.L2.global.im2col::w.L2::cache_hint [%rd1, {%r1, %r2, %r3, %r4}], {%rs1, %rs2}, %rd2;
 ; CHECK-PTX-SHARED32-NEXT:    cp.async.bulk.prefetch.tensor.4d.L2.global.im2col::w::128 [%rd1, {%r1, %r2, %r3, %r4}], {%rs1, %rs2};
@@ -120,15 +120,15 @@ define void @test_cp_async_bulk_tensor_prefetch_5d(i32 %flag, ptr %tmap, i32 %d0
 ; CHECK-PTX64-NEXT:    .reg .b64 %rd<3>;
 ; CHECK-PTX64-EMPTY:
 ; CHECK-PTX64-NEXT:  // %bb.0:
-; CHECK-PTX64-NEXT:    ld.param.b64 %rd1, [test_cp_async_bulk_tensor_prefetch_5d_param_1];
-; CHECK-PTX64-NEXT:    ld.param.b32 %r1, [test_cp_async_bulk_tensor_prefetch_5d_param_2];
-; CHECK-PTX64-NEXT:    ld.param.b32 %r2, [test_cp_async_bulk_tensor_prefetch_5d_param_3];
-; CHECK-PTX64-NEXT:    ld.param.b32 %r3, [test_cp_async_bulk_tensor_prefetch_5d_param_4];
-; CHECK-PTX64-NEXT:    ld.param.b32 %r4, [test_cp_async_bulk_tensor_prefetch_5d_param_5];
-; CHECK-PTX64-NEXT:    ld.param.b32 %r5, [test_cp_async_bulk_tensor_prefetch_5d_param_6];
-; CHECK-PTX64-NEXT:    ld.param.b16 %rs1, [test_cp_async_bulk_tensor_prefetch_5d_param_7];
-; CHECK-PTX64-NEXT:    ld.param.b16 %rs2, [test_cp_async_bulk_tensor_prefetch_5d_param_8];
-; CHECK-PTX64-NEXT:    ld.param.b64 %rd2, [test_cp_async_bulk_tensor_prefetch_5d_param_9];
+; CHECK-PTX64-NEXT:    ld.param::func.b64 %rd1, [test_cp_async_bulk_tensor_prefetch_5d_param_1];
+; CHECK-PTX64-NEXT:    ld.param::func.b32 %r1, [test_cp_async_bulk_tensor_prefetch_5d_param_2];
+; CHECK-PTX64-NEXT:    ld.param::func.b32 %r2, [test_cp_async_bulk_tensor_prefetch_5d_param_3];
+; CHECK-PTX64-NEXT:    ld.param::func.b32 %r3, [test_cp_async_bulk_tensor_prefetch_5d_param_4];
+; CHECK-PTX64-NEXT:    ld.param::func.b32 %r4, [test_cp_async_bulk_tensor_prefetch_5d_param_5];
+; CHECK-PTX64-NEXT:    ld.param::func.b32 %r5, [test_cp_async_bulk_tensor_prefetch_5d_param_6];
+; CHECK-PTX64-NEXT:    ld.param::func.b16 %rs1, [test_cp_async_bulk_tensor_prefetch_5d_param_7];
+; CHECK-PTX64-NEXT:    ld.param::func.b16 %rs2, [test_cp_async_bulk_tensor_prefetch_5d_param_8];
+; CHECK-PTX64-NEXT:    ld.param::func.b64 %rd2, [test_cp_async_bulk_tensor_prefetch_5d_param_9];
 ; CHECK-PTX64-NEXT:    cp.async.bulk.prefetch.tensor.5d.L2.global.im2col::w [%rd1, {%r1, %r2, %r3, %r4, %r5}], {%rs1, %rs2};
 ; CHECK-PTX64-NEXT:    cp.async.bulk.prefetch.tensor.5d.L2.global.im2col::w.L2::cache_hint [%rd1, {%r1, %r2, %r3, %r4, %r5}], {%rs1, %rs2}, %rd2;
 ; CHECK-PTX64-NEXT:    cp.async.bulk.prefetch.tensor.5d.L2.global.im2col::w::128 [%rd1, {%r1, %r2, %r3, %r4, %r5}], {%rs1, %rs2};
@@ -142,15 +142,15 @@ define void @test_cp_async_bulk_tensor_prefetch_5d(i32 %flag, ptr %tmap, i32 %d0
 ; CHECK-PTX-SHARED32-NEXT:    .reg .b64 %rd<3>;
 ; CHECK-PTX-SHARED32-EMPTY:
 ; CHECK-PTX-SHARED32-NEXT:  // %bb.0:
-; CHECK-PTX-SHARED32-NEXT:    ld.param.b64 %rd1, [test_cp_async_bulk_tensor_prefetch_5d_param_1];
-; CHECK-PTX-SHARED32-NEXT:    ld.param.b32 %r1, [test_cp_async_bulk_tensor_prefetch_5d_param_2];
-; CHECK-PTX-SHARED32-NEXT:    ld.param.b32 %r2, [test_cp_async_bulk_tensor_prefetch_5d_param_3];
-; CHECK-PTX-SHARED32-NEXT:    ld.param.b32 %r3, [test_cp_async_bulk_tensor_prefetch_5d_param_4];
-; CHECK-PTX-SHARED32-NEXT:    ld.param.b32 %r4, [test_cp_async_bulk_tensor_prefetch_5d_param_5];
-; CHECK-PTX-SHARED32-NEXT:    ld.param.b32 %r5, [test_cp_async_bulk_tensor_prefetch_5d_param_6];
-; CHECK-PTX-SHARED32-NEXT:    ld.param.b16 %rs1, [test_cp_async_bulk_tensor_prefetch_5d_param_7];
-; CHECK-PTX-SHARED32-NEXT:    ld.param.b16 %rs2, [test_cp_async_bulk_tensor_prefetch_5d_param_8];
-; CHECK-PTX-SHARED32-NEXT:    ld.param.b64 %rd2, [test_cp_async_bulk_tensor_prefetch_5d_param_9];
+; CHECK-PTX-SHARED32-NEXT:    ld.param::func.b64 %rd1, [test_cp_async_bulk_tensor_prefetch_5d_param_1];
+; CHECK-PTX-SHARED32-NEXT:    ld.param::func.b32 %r1, [test_cp_async_bulk_tensor_prefetch_5d_param_2];
+; CHECK-PTX-SHARED32-NEXT:    ld.param::func.b32 %r2, [test_cp_async_bulk_tensor_prefetch_5d_param_3];
+; CHECK-PTX-SHARED32-NEXT:    ld.param::func.b32 %r3, [test_cp_async_bulk_tensor_prefetch_5d_param_4];
+; CHECK-PTX-SHARED32-NEXT:    ld.param::func.b32 %r4, [test_cp_async_bulk_tensor_prefetch_5d_param_5];
+; CHECK-PTX-SHARED32-NEXT:    ld.param::func.b32 %r5, [test_cp_async_bulk_tensor_prefetch_5d_param_6];
+; CHECK-PTX-SHARED32-NEXT:    ld.param::func.b16 %rs1, [test_cp_async_bulk_tensor_prefetch_5d_param_7];
+; CHECK-PTX-SHARED32-NEXT:    ld.param::func.b16 %rs2, [test_cp_async_bulk_tensor_prefetch_5d_param_8];
+; CHECK-PTX-SHARED32-NEXT:    ld.param::func.b64 %rd2, [test_cp_async_bulk_tensor_prefetch_5d_param_9];
 ; CHECK-PTX-SHARED32-NEXT:    cp.async.bulk.prefetch.tensor.5d.L2.global.im2col::w [%rd1, {%r1, %r2, %r3, %r4, %r5}], {%rs1, %rs2};
 ; CHECK-PTX-SHARED32-NEXT:    cp.async.bulk.prefetch.tensor.5d.L2.global.im2col::w.L2::cache_hint [%rd1, {%r1, %r2, %r3, %r4, %r5}], {%rs1, %rs2}, %rd2;
 ; CHECK-PTX-SHARED32-NEXT:    cp.async.bulk.prefetch.tensor.5d.L2.global.im2col::w::128 [%rd1, {%r1, %r2, %r3, %r4, %r5}], {%rs1, %rs2};
@@ -165,6 +165,39 @@ define void @test_cp_async_bulk_tensor_prefetch_5d(i32 %flag, ptr %tmap, i32 %d0
 }
 
 define void @test_cp_async_bulk_tensor_prefetch_tile_gather4_2d(ptr %tmap, i32 %d0, i32 %d1, i32 %d2, i32 %d3, i32 %d4, i64 %ch) {
+; CHECK-PTX64-LABEL: test_cp_async_bulk_tensor_prefetch_tile_gather4_2d(
+; CHECK-PTX64:       {
+; CHECK-PTX64-NEXT:    .reg .b32 %r<6>;
+; CHECK-PTX64-NEXT:    .reg .b64 %rd<3>;
+; CHECK-PTX64-EMPTY:
+; CHECK-PTX64-NEXT:  // %bb.0:
+; CHECK-PTX64-NEXT:    ld.param::func.b64 %rd1, [test_cp_async_bulk_tensor_prefetch_tile_gather4_2d_param_0];
+; CHECK-PTX64-NEXT:    ld.param::func.b32 %r1, [test_cp_async_bulk_tensor_prefetch_tile_gather4_2d_param_1];
+; CHECK-PTX64-NEXT:    ld.param::func.b32 %r2, [test_cp_async_bulk_tensor_prefetch_tile_gather4_2d_param_2];
+; CHECK-PTX64-NEXT:    ld.param::func.b32 %r3, [test_cp_async_bulk_tensor_prefetch_tile_gather4_2d_param_3];
+; CHECK-PTX64-NEXT:    ld.param::func.b32 %r4, [test_cp_async_bulk_tensor_prefetch_tile_gather4_2d_param_4];
+; CHECK-PTX64-NEXT:    ld.param::func.b32 %r5, [test_cp_async_bulk_tensor_prefetch_tile_gather4_2d_param_5];
+; CHECK-PTX64-NEXT:    ld.param::func.b64 %rd2, [test_cp_async_bulk_tensor_prefetch_tile_gather4_2d_param_6];
+; CHECK-PTX64-NEXT:    cp.async.bulk.prefetch.tensor.2d.L2.global.tile::gather4 [%rd1, {%r1, %r2, %r3, %r4, %r5}];
+; CHECK-PTX64-NEXT:    cp.async.bulk.prefetch.tensor.2d.L2.global.tile::gather4.L2::cache_hint [%rd1, {%r1, %r2, %r3, %r4, %r5}], %rd2;
+; CHECK-PTX64-NEXT:    ret;
+;
+; CHECK-PTX-SHARED32-LABEL: test_cp_async_bulk_tensor_prefetch_tile_gather4_2d(
+; CHECK-PTX-SHARED32:       {
+; CHECK-PTX-SHARED32-NEXT:    .reg .b32 %r<6>;
+; CHECK-PTX-SHARED32-NEXT:    .reg .b64 %rd<3>;
+; CHECK-PTX-SHARED32-EMPTY:
+; CHECK-PTX-SHARED32-NEXT:  // %bb.0:
+; CHECK-PTX-SHARED32-NEXT:    ld.param::func.b64 %rd1, [test_cp_async_bulk_tensor_prefetch_tile_gather4_2d_param_0];
+; CHECK-PTX-SHARED32-NEXT:    ld.param::func.b32 %r1, [test_cp_async_bulk_tensor_prefetch_tile_gather4_2d_param_1];
+; CHECK-PTX-SHARED32-NEXT:    ld.param::func.b32 %r2, [test_cp_async_bulk_tensor_prefetch_tile_gather4_2d_param_2];
+; CHECK-PTX-SHARED32-NEXT:    ld.param::func.b32 %r3, [test_cp_async_bulk_tensor_prefetch_tile_gather4_2d_param_3];
+; CHECK-PTX-SHARED32-NEXT:    ld.param::func.b32 %r4, [test_cp_async_bulk_tensor_prefetch_tile_gather4_2d_param_4];
+; CHECK-PTX-SHARED32-NEXT:    ld.param::func.b32 %r5, [test_cp_async_bulk_tensor_prefetch_tile_gather4_2d_param_5];
+; CHECK-PTX-SHARED32-NEXT:    ld.param::func.b64 %rd2, [test_cp_async_bulk_tensor_prefetch_tile_gather4_2d_param_6];
+; CHECK-PTX-SHARED32-NEXT:    cp.async.bulk.prefetch.tensor.2d.L2.global.tile::gather4 [%rd1, {%r1, %r2, %r3, %r4, %r5}];
+; CHECK-PTX-SHARED32-NEXT:    cp.async.bulk.prefetch.tensor.2d.L2.global.tile::gather4.L2::cache_hint [%rd1, {%r1, %r2, %r3, %r4, %r5}], %rd2;
+; CHECK-PTX-SHARED32-NEXT:    ret;
   tail call void @llvm.nvvm.cp.async.bulk.tensor.prefetch.tile.gather4.2d(ptr %tmap, i32 %d0, i32 %d1, i32 %d2, i32 %d3, i32 %d4, i64 %ch, i1 0)
   tail call void @llvm.nvvm.cp.async.bulk.tensor.prefetch.tile.gather4.2d(ptr %tmap, i32 %d0, i32 %d1, i32 %d2, i32 %d3, i32 %d4, i64 %ch, i1 1)
   ret void

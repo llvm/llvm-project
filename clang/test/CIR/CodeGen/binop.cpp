@@ -142,9 +142,9 @@ void testFloatingPointBinOps(float a, float b) {
 
 // LLVM-LABEL: define{{.*}} void @_Z23testFloatingPointBinOpsff(
 // LLVM-SAME: float {{.*}} %[[A:.*]], float {{.*}} %[[B:.*]])
-// LLVM:         %[[A_ADDR:.*]] = alloca float, i64 1
-// LLVM:         %[[B_ADDR:.*]] = alloca float, i64 1
-// LLVM:         %[[X_ADDR:.*]] = alloca float, i64 1
+// LLVM:         %[[A_ADDR:.*]] = alloca float, 
+// LLVM:         %[[B_ADDR:.*]] = alloca float, 
+// LLVM:         %[[X_ADDR:.*]] = alloca float, 
 // LLVM:         store float %[[A]], ptr %[[A_ADDR]]
 // LLVM:         store float %[[B]], ptr %[[B_ADDR]]
 
@@ -702,11 +702,11 @@ void b3(int a, int b, int c, int d) {
 
 // LLVM-LABEL: define{{.*}} void @_Z2b3iiii(
 // LLVM-SAME: i32 {{.*}} %[[ARG0:.+]], i32 {{.*}} %[[ARG1:.+]], i32 {{.*}} %[[ARG2:.+]], i32 {{.*}} %[[ARG3:.+]])
-// LLVM: %[[A_ADDR:.*]] = alloca i32, i64 1
-// LLVM: %[[B_ADDR:.*]] = alloca i32, i64 1
-// LLVM: %[[C_ADDR:.*]] = alloca i32, i64 1
-// LLVM: %[[D_ADDR:.*]] = alloca i32, i64 1
-// LLVM: %[[X:.*]] = alloca i8, i64 1
+// LLVM: %[[A_ADDR:.*]] = alloca i32, 
+// LLVM: %[[B_ADDR:.*]] = alloca i32, 
+// LLVM: %[[C_ADDR:.*]] = alloca i32, 
+// LLVM: %[[D_ADDR:.*]] = alloca i32, 
+// LLVM: %[[X:.*]] = alloca i8, 
 // LLVM: store i32 %[[ARG0]], ptr %[[A_ADDR]]
 // LLVM: store i32 %[[ARG1]], ptr %[[B_ADDR]]
 // LLVM: store i32 %[[ARG2]], ptr %[[C_ADDR]]

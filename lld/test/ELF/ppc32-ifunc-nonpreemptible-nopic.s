@@ -16,7 +16,7 @@
 # HEX-NEXT: 0x10020110 00000000 ....
 
 # CHECK:      Disassembly of section .text:
-# CHECK:      <.text>:
+# CHECK:      <func>:
 # CHECK-NEXT: 100100e0: blr
 # CHECK:      <_start>:
 # CHECK-NEXT:           bl 0x100100f0

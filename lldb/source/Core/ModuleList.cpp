@@ -198,6 +198,12 @@ bool ModuleListProperties::GetLoadSymbolOnDemand() const {
       idx, g_modulelist_properties[idx].default_uint_value != 0);
 }
 
+uint64_t ModuleListProperties::GetDemangledNameInfoCacheSize() const {
+  const uint32_t idx = ePropertyDemangledNameInfoCacheSize;
+  return GetPropertyAtIndexAs<uint64_t>(
+      idx, g_modulelist_properties[idx].default_uint_value);
+}
+
 ModuleList::ModuleList() : m_modules(), m_modules_mutex() {}
 
 ModuleList::ModuleList(const ModuleList &rhs) : m_modules(), m_modules_mutex() {
@@ -240,9 +246,10 @@ void ModuleList::AppendImpl(const ModuleSP &module_sp, bool use_notifier) {
       // 0th element, and only if that's NOT an executable look at the
       // incoming ObjectFile.  That way in the normal case we only look at the
       // element 0 ObjectFile.
+      lldb_private::ObjectFile *elem_zero_obj = m_modules[0]->GetObjectFile();
       const bool elem_zero_is_executable =
-          m_modules[0]->GetObjectFile()->GetType() ==
-          ObjectFile::Type::eTypeExecutable;
+          elem_zero_obj &&
+          elem_zero_obj->GetType() == ObjectFile::Type::eTypeExecutable;
       lldb_private::ObjectFile *obj = module_sp->GetObjectFile();
       if (!elem_zero_is_executable && obj &&
           obj->GetType() == ObjectFile::Type::eTypeExecutable) {

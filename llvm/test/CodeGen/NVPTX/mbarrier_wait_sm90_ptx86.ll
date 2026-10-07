@@ -30,11 +30,11 @@ define void @mbar_test_wait(ptr addrspace(3) %mbar, i64 %state, i32 %parity) {
 ; CHECK-PTX64-NEXT:    .reg .b64 %rd<3>;
 ; CHECK-PTX64-EMPTY:
 ; CHECK-PTX64-NEXT:  // %bb.0:
-; CHECK-PTX64-NEXT:    ld.param.b64 %rd1, [mbar_test_wait_param_0];
-; CHECK-PTX64-NEXT:    ld.param.b64 %rd2, [mbar_test_wait_param_1];
+; CHECK-PTX64-NEXT:    ld.param::func.b64 %rd1, [mbar_test_wait_param_0];
+; CHECK-PTX64-NEXT:    ld.param::func.b64 %rd2, [mbar_test_wait_param_1];
 ; CHECK-PTX64-NEXT:    mbarrier.test_wait.relaxed.cta.shared.b64 %p1, [%rd1], %rd2;
 ; CHECK-PTX64-NEXT:    mbarrier.test_wait.relaxed.cluster.shared.b64 %p2, [%rd1], %rd2;
-; CHECK-PTX64-NEXT:    ld.param.b32 %r1, [mbar_test_wait_param_2];
+; CHECK-PTX64-NEXT:    ld.param::func.b32 %r1, [mbar_test_wait_param_2];
 ; CHECK-PTX64-NEXT:    mbarrier.test_wait.parity.relaxed.cta.shared.b64 %p3, [%rd1], %r1;
 ; CHECK-PTX64-NEXT:    mbarrier.test_wait.parity.relaxed.cluster.shared.b64 %p4, [%rd1], %r1;
 ; CHECK-PTX64-NEXT:    ret;
@@ -46,11 +46,11 @@ define void @mbar_test_wait(ptr addrspace(3) %mbar, i64 %state, i32 %parity) {
 ; CHECK-PTX-SHARED32-NEXT:    .reg .b64 %rd<2>;
 ; CHECK-PTX-SHARED32-EMPTY:
 ; CHECK-PTX-SHARED32-NEXT:  // %bb.0:
-; CHECK-PTX-SHARED32-NEXT:    ld.param.b32 %r1, [mbar_test_wait_param_0];
-; CHECK-PTX-SHARED32-NEXT:    ld.param.b64 %rd1, [mbar_test_wait_param_1];
+; CHECK-PTX-SHARED32-NEXT:    ld.param::func.b32 %r1, [mbar_test_wait_param_0];
+; CHECK-PTX-SHARED32-NEXT:    ld.param::func.b64 %rd1, [mbar_test_wait_param_1];
 ; CHECK-PTX-SHARED32-NEXT:    mbarrier.test_wait.relaxed.cta.shared.b64 %p1, [%r1], %rd1;
 ; CHECK-PTX-SHARED32-NEXT:    mbarrier.test_wait.relaxed.cluster.shared.b64 %p2, [%r1], %rd1;
-; CHECK-PTX-SHARED32-NEXT:    ld.param.b32 %r2, [mbar_test_wait_param_2];
+; CHECK-PTX-SHARED32-NEXT:    ld.param::func.b32 %r2, [mbar_test_wait_param_2];
 ; CHECK-PTX-SHARED32-NEXT:    mbarrier.test_wait.parity.relaxed.cta.shared.b64 %p3, [%r1], %r2;
 ; CHECK-PTX-SHARED32-NEXT:    mbarrier.test_wait.parity.relaxed.cluster.shared.b64 %p4, [%r1], %r2;
 ; CHECK-PTX-SHARED32-NEXT:    ret;
@@ -71,11 +71,11 @@ define void @mbar_try_wait(ptr addrspace(3) %mbar, i64 %state, i32 %parity) {
 ; CHECK-PTX64-NEXT:    .reg .b64 %rd<3>;
 ; CHECK-PTX64-EMPTY:
 ; CHECK-PTX64-NEXT:  // %bb.0:
-; CHECK-PTX64-NEXT:    ld.param.b64 %rd1, [mbar_try_wait_param_0];
-; CHECK-PTX64-NEXT:    ld.param.b64 %rd2, [mbar_try_wait_param_1];
+; CHECK-PTX64-NEXT:    ld.param::func.b64 %rd1, [mbar_try_wait_param_0];
+; CHECK-PTX64-NEXT:    ld.param::func.b64 %rd2, [mbar_try_wait_param_1];
 ; CHECK-PTX64-NEXT:    mbarrier.try_wait.relaxed.cta.shared.b64 %p1, [%rd1], %rd2;
 ; CHECK-PTX64-NEXT:    mbarrier.try_wait.relaxed.cluster.shared.b64 %p2, [%rd1], %rd2;
-; CHECK-PTX64-NEXT:    ld.param.b32 %r1, [mbar_try_wait_param_2];
+; CHECK-PTX64-NEXT:    ld.param::func.b32 %r1, [mbar_try_wait_param_2];
 ; CHECK-PTX64-NEXT:    mbarrier.try_wait.parity.relaxed.cta.shared.b64 %p3, [%rd1], %r1;
 ; CHECK-PTX64-NEXT:    mbarrier.try_wait.parity.relaxed.cluster.shared.b64 %p4, [%rd1], %r1;
 ; CHECK-PTX64-NEXT:    ret;
@@ -87,11 +87,11 @@ define void @mbar_try_wait(ptr addrspace(3) %mbar, i64 %state, i32 %parity) {
 ; CHECK-PTX-SHARED32-NEXT:    .reg .b64 %rd<2>;
 ; CHECK-PTX-SHARED32-EMPTY:
 ; CHECK-PTX-SHARED32-NEXT:  // %bb.0:
-; CHECK-PTX-SHARED32-NEXT:    ld.param.b32 %r1, [mbar_try_wait_param_0];
-; CHECK-PTX-SHARED32-NEXT:    ld.param.b64 %rd1, [mbar_try_wait_param_1];
+; CHECK-PTX-SHARED32-NEXT:    ld.param::func.b32 %r1, [mbar_try_wait_param_0];
+; CHECK-PTX-SHARED32-NEXT:    ld.param::func.b64 %rd1, [mbar_try_wait_param_1];
 ; CHECK-PTX-SHARED32-NEXT:    mbarrier.try_wait.relaxed.cta.shared.b64 %p1, [%r1], %rd1;
 ; CHECK-PTX-SHARED32-NEXT:    mbarrier.try_wait.relaxed.cluster.shared.b64 %p2, [%r1], %rd1;
-; CHECK-PTX-SHARED32-NEXT:    ld.param.b32 %r2, [mbar_try_wait_param_2];
+; CHECK-PTX-SHARED32-NEXT:    ld.param::func.b32 %r2, [mbar_try_wait_param_2];
 ; CHECK-PTX-SHARED32-NEXT:    mbarrier.try_wait.parity.relaxed.cta.shared.b64 %p3, [%r1], %r2;
 ; CHECK-PTX-SHARED32-NEXT:    mbarrier.try_wait.parity.relaxed.cluster.shared.b64 %p4, [%r1], %r2;
 ; CHECK-PTX-SHARED32-NEXT:    ret;
@@ -112,12 +112,12 @@ define void @mbar_try_wait_tl(ptr addrspace(3) %mbar, i64 %state, i32 %parity, i
 ; CHECK-PTX64-NEXT:    .reg .b64 %rd<3>;
 ; CHECK-PTX64-EMPTY:
 ; CHECK-PTX64-NEXT:  // %bb.0:
-; CHECK-PTX64-NEXT:    ld.param.b64 %rd1, [mbar_try_wait_tl_param_0];
-; CHECK-PTX64-NEXT:    ld.param.b64 %rd2, [mbar_try_wait_tl_param_1];
-; CHECK-PTX64-NEXT:    ld.param.b32 %r1, [mbar_try_wait_tl_param_3];
+; CHECK-PTX64-NEXT:    ld.param::func.b64 %rd1, [mbar_try_wait_tl_param_0];
+; CHECK-PTX64-NEXT:    ld.param::func.b64 %rd2, [mbar_try_wait_tl_param_1];
+; CHECK-PTX64-NEXT:    ld.param::func.b32 %r1, [mbar_try_wait_tl_param_3];
 ; CHECK-PTX64-NEXT:    mbarrier.try_wait.relaxed.cta.shared.b64 %p1, [%rd1], %rd2, %r1;
 ; CHECK-PTX64-NEXT:    mbarrier.try_wait.relaxed.cluster.shared.b64 %p2, [%rd1], %rd2, %r1;
-; CHECK-PTX64-NEXT:    ld.param.b32 %r2, [mbar_try_wait_tl_param_2];
+; CHECK-PTX64-NEXT:    ld.param::func.b32 %r2, [mbar_try_wait_tl_param_2];
 ; CHECK-PTX64-NEXT:    mbarrier.try_wait.parity.relaxed.cta.shared.b64 %p3, [%rd1], %r2, %r1;
 ; CHECK-PTX64-NEXT:    mbarrier.try_wait.parity.relaxed.cluster.shared.b64 %p4, [%rd1], %r2, %r1;
 ; CHECK-PTX64-NEXT:    ret;
@@ -129,12 +129,12 @@ define void @mbar_try_wait_tl(ptr addrspace(3) %mbar, i64 %state, i32 %parity, i
 ; CHECK-PTX-SHARED32-NEXT:    .reg .b64 %rd<2>;
 ; CHECK-PTX-SHARED32-EMPTY:
 ; CHECK-PTX-SHARED32-NEXT:  // %bb.0:
-; CHECK-PTX-SHARED32-NEXT:    ld.param.b32 %r1, [mbar_try_wait_tl_param_0];
-; CHECK-PTX-SHARED32-NEXT:    ld.param.b64 %rd1, [mbar_try_wait_tl_param_1];
-; CHECK-PTX-SHARED32-NEXT:    ld.param.b32 %r2, [mbar_try_wait_tl_param_3];
+; CHECK-PTX-SHARED32-NEXT:    ld.param::func.b32 %r1, [mbar_try_wait_tl_param_0];
+; CHECK-PTX-SHARED32-NEXT:    ld.param::func.b64 %rd1, [mbar_try_wait_tl_param_1];
+; CHECK-PTX-SHARED32-NEXT:    ld.param::func.b32 %r2, [mbar_try_wait_tl_param_3];
 ; CHECK-PTX-SHARED32-NEXT:    mbarrier.try_wait.relaxed.cta.shared.b64 %p1, [%r1], %rd1, %r2;
 ; CHECK-PTX-SHARED32-NEXT:    mbarrier.try_wait.relaxed.cluster.shared.b64 %p2, [%r1], %rd1, %r2;
-; CHECK-PTX-SHARED32-NEXT:    ld.param.b32 %r3, [mbar_try_wait_tl_param_2];
+; CHECK-PTX-SHARED32-NEXT:    ld.param::func.b32 %r3, [mbar_try_wait_tl_param_2];
 ; CHECK-PTX-SHARED32-NEXT:    mbarrier.try_wait.parity.relaxed.cta.shared.b64 %p3, [%r1], %r3, %r2;
 ; CHECK-PTX-SHARED32-NEXT:    mbarrier.try_wait.parity.relaxed.cluster.shared.b64 %p4, [%r1], %r3, %r2;
 ; CHECK-PTX-SHARED32-NEXT:    ret;

@@ -1,0 +1,51 @@
+# A clang module holds the definitive description of what it defines, so when
+# several units contribute a copy of the same DW_TAG_module to the type table,
+# the one from the unit built from the .pcm has to win. Otherwise the module DIE
+# consumers read carries an importer's DW_AT_LLVM_include_path.
+#
+# The object file which owns the module unit is not necessarily the first one:
+# it is whichever object file referenced the .pcm first. Here 3.o comes first and
+# contributes a DW_TAG_module for M without referencing M.pcm, and 1.o, which
+# does reference it, comes second. 3.o owns N.pcm instead, so the unit which
+# describes M is not the first module unit of the link either.
+
+RUN: rm -rf %t && mkdir -p %t
+RUN: llc -O0 -mtriple=x86_64-apple-darwin -filetype=obj \
+RUN:     -o %t/M.pcm %p/../Inputs/module-import-canonical/M-odr.ll
+RUN: llc -O0 -mtriple=x86_64-apple-darwin -filetype=obj \
+RUN:     -o %t/N.pcm %p/../Inputs/module-import-canonical/N-odr.ll
+RUN: llc -O0 -mtriple=x86_64-apple-darwin -filetype=obj \
+RUN:     -o %t/1.o %p/../Inputs/module-import-canonical/1.ll
+RUN: llc -O0 -mtriple=x86_64-apple-darwin -filetype=obj \
+RUN:     -o %t/3.o %p/../Inputs/module-import-canonical/3.ll
+
+RUN: dsymutil --linker parallel -f \
+RUN:     -y %p/../Inputs/module-import-canonical/debug-map-priority.map \
+RUN:     -oso-prepend-path %t -o %t/out.dwarf
+RUN: llvm-dwarfdump --verify %t/out.dwarf
+RUN: llvm-dwarfdump --debug-info %t/out.dwarf | FileCheck %s
+
+RUN: dsymutil --linker parallel -f --num-threads 1 \
+RUN:     -y %p/../Inputs/module-import-canonical/debug-map-priority.map \
+RUN:     -oso-prepend-path %t -o %t/serial.dwarf
+RUN: cmp %t/out.dwarf %t/serial.dwarf
+
+# The type table holds one DW_TAG_module for M, and it is the module unit's copy.
+# Both module units of the link reach the type table, and no third module DIE
+# joins them there.
+
+CHECK:      DW_TAG_compile_unit
+CHECK:        DW_AT_name {{.*}}"__artificial_type_unit"
+CHECK:      0x0[[MODULE:[0-9a-f]+]]: DW_TAG_module
+CHECK-NEXT:   DW_AT_name {{.*}}"M"
+CHECK-NEXT:   DW_AT_LLVM_include_path {{.*}}"/tmp/M.framework"
+CHECK:        DW_TAG_module
+CHECK-NEXT:   DW_AT_name {{.*}}"N"
+CHECK-NEXT:   DW_AT_LLVM_include_path {{.*}}"/tmp/N.framework"
+CHECK-NOT:  DW_TAG_module
+CHECK:      Compile Unit
+
+# An importer whose own DW_TAG_module was uniqued into the type table shares that
+# entry, so its DW_AT_import resolves to the winner.
+
+CHECK:        DW_AT_import {{.*}}(0x{{0*}}[[MODULE]] "M")

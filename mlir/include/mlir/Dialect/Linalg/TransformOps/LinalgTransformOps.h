@@ -26,7 +26,6 @@ class RewriterBase;
 
 namespace linalg {
 class CopyOp;
-struct ForallTilingResult;
 class GenericOp;
 class LinalgOp;
 } // namespace linalg

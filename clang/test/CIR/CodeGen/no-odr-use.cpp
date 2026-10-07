@@ -15,11 +15,11 @@
 // LLVM-DAG: @[[F_A:.*]] = private constant {{.*}} { i32 1, [2 x i32] [i32 2, i32 3], [3 x i32] [i32 4, i32 5, i32 6] }
 // OGCG-DAG: @__const._Z1fi.a = private unnamed_addr constant {{.*}} { i32 1, [2 x i32] [i32 2, i32 3], [3 x i32] [i32 4, i32 5, i32 6] }
 
-// CIR-CXX11-DAG: cir.global "private" constant cir_private @_ZN7PR422765State3dmsE.const = #cir.const_array<[#cir.int<0> : !s64i, #cir.int<0> : !s64i]> : !cir.array<!s64i x 2> {alignment = 16 : i64}
+// CIR-CXX11-DAG: cir.global "private" constant cir_private @_ZN7PR422765State3dmsE.const = #cir.const_array<[#cir.int<0> : !s64i, #cir.int<0> : !s64i]> : !cir.array<!s64i x 2> align(16)
 // LLVM-CXX11-DAG :@_ZN7PR422765State3dmsE.const = private constant [2 x i64] zeroinitializer, align 16
 // OGCG-CXX11-DAG :@_ZN7PR422765State3dmsE.const = private constant [2 x i64] zeroinitializer, align 16
 
-// CIR-CXX20-DAG: cir.global "private" constant cir_private @_ZN7PR422765State3dmsE = #cir.const_array<[#cir.int<0> : !s64i, #cir.int<0> : !s64i]> : !cir.array<!s64i x 2> {alignment = 16 : i64}
+// CIR-CXX20-DAG: cir.global "private" constant cir_private @_ZN7PR422765State3dmsE = #cir.const_array<[#cir.int<0> : !s64i, #cir.int<0> : !s64i]> : !cir.array<!s64i x 2> align(16)
 // LLVM-CXX20-DAG :@_ZN7PR422765State3dmsE = private constant [2 x i64] zeroinitializer, align 16
 // OGCG-CXX20-DAG :@_ZN7PR422765State3dmsE = private constant [2 x i64] zeroinitializer, align 16
 
@@ -31,7 +31,17 @@
 // LLVM-CXX2A-DAG: @_ZN7PR422765State1mE = linkonce_odr constant [2 x { i64, i64 }] [{ {{.*}} @_ZN7PR422765State2f1Ev {{.*}}, i64 0 }, { {{.*}} @_ZN7PR422765State2f2Ev {{.*}}, i64 0 }], comdat
 // OGCG-CXX2A-DAG: @_ZN7PR422765State1mE = linkonce_odr constant [2 x { i64, i64 }] [{ {{.*}} @_ZN7PR422765State2f1Ev {{.*}}, i64 0 }, { {{.*}} @_ZN7PR422765State2f2Ev {{.*}}, i64 0 }], comdat
 
-// In OGCG, f1() is emitted before the lambda.
+// CIR-LABEL: cir.func {{.*}} @_Z1fi(
+// CIR:         %[[A_ADDR:.*]] = cir.alloca "a" {{.*}} init const : !cir.ptr<!rec_A>
+// CIR:         %[[A_INIT:.*]] = cir.get_global @[[F_A]] : !cir.ptr<!rec_A>
+// CIR:         cir.copy %[[A_INIT]] to %[[A_ADDR]]
+// CIR:         %[[ZERO:.*]] = cir.const #cir.int<0> : !s64i
+// CIR:         cir.call @_ZZ1fiENK3$_0clEiM1Ai({{.*}}, {{.*}}, %[[ZERO]])
+
+// LLVM-LABEL: define{{.*}} i32 @_Z1fi(
+// LLVM:         call void @llvm.memcpy{{.*}}({{.*}}, ptr align 4 @[[F_A]]
+// LLVM:         call{{.*}} i32 @"_ZZ1fiENK3$_0clEiM1Ai"(ptr {{.*}} %{{.*}}, i32 {{.*}} %{{.*}}, i64 0)
+
 // OGCG-LABEL: define{{.*}} i32 @_Z1fi(
 // OGCG:         call void {{.*}}memcpy{{.*}}({{.*}}, {{.*}} @__const._Z1fi.a
 // OGCG:         call{{.*}} i32 @"_ZZ1fiENK3$_0clEiM1Ai"(ptr {{.*}}, i32 {{.*}}, i64 0)
@@ -69,12 +79,12 @@ int f(int i) {
         // OGCG: getelementptr inbounds i8, ptr @__const._Z1fi.a, i64 %{{.*}}
         // OGCG: load i32
         ? a.*p
+        // CIR: %[[A:.*]] = cir.get_global @[[F_A]] : !cir.ptr<!rec_A>
+        // CIR: %[[Y:.*]] = cir.get_member %[[A]][1] {name = "y"} : !cir.ptr<!rec_A> -> !cir.ptr<!cir.array<!s32i x 2>>
         // CIR: %[[TWO:.*]] = cir.const #cir.int<2> : !s32i
         // CIR: %[[N:.*]] = cir.load{{.*}} %{{.*}} : !cir.ptr<!s32i>, !s32i
         // CIR: %[[SUB:.*]] = cir.sub nsw %[[TWO]], %[[N]] : !s32i
         // CIR: %[[SUB_64:.*]] = cir.cast integral %[[SUB]] : !s32i -> !s64i
-        // CIR: %[[A:.*]] = cir.get_global @[[F_A]] : !cir.ptr<!rec_A>
-        // CIR: %[[Y:.*]] = cir.get_member %[[A]][1] {name = "y"} : !cir.ptr<!rec_A> -> !cir.ptr<!cir.array<!s32i x 2>>
         // CIR: cir.get_element %[[Y]][%[[SUB_64]] : !s64i] : !cir.ptr<!cir.array<!s32i x 2>> -> !cir.ptr<!s32i>
 
         // LLVM: getelementptr [2 x i32], ptr getelementptr inbounds nuw ({{.*}} @[[F_A]], i64 4), i32 0, i64 %{{.*}}
@@ -85,18 +95,6 @@ int f(int i) {
         : a.y[2 - n]));
   }(i, &A::x);
 }
-
-// With CIR, f1() is emitted after the lambda.
-// CIR-LABEL: cir.func {{.*}} @_Z1fi(
-// CIR:         %[[A_ADDR:.*]] = cir.alloca "a" {{.*}} init const : !cir.ptr<!rec_A>
-// CIR:         %[[A_INIT:.*]] = cir.get_global @[[F_A]] : !cir.ptr<!rec_A>
-// CIR:         cir.copy %[[A_INIT]] to %[[A_ADDR]]
-// CIR:         %[[ZERO:.*]] = cir.const #cir.int<0> : !s64i
-// CIR:         cir.call @_ZZ1fiENK3$_0clEiM1Ai({{.*}}, {{.*}}, %[[ZERO]])
-
-// LLVM-LABEL: define{{.*}} i32 @_Z1fi(
-// LLVM:         call void @llvm.memcpy{{.*}}({{.*}}, ptr align 4 @[[F_A]]
-// LLVM:         call{{.*}} i32 @"_ZZ1fiENK3$_0clEiM1Ai"(ptr {{.*}} %{{.*}}, i32 {{.*}} %{{.*}}, i64 0)
 
 namespace PR42276 {
   class State {
@@ -109,14 +107,6 @@ namespace PR42276 {
     using dmTy = int State::*;
     static constexpr dmTy dms[]{&State::dataMem, &State::dataMem};
   };
-  // CIR-CXX11-LABEL: cir.func {{.*}} @_ZN7PR422765State2f1Ev(!cir.ptr<!rec_PR422763A3AState>{{.*}})
-  // CIR-CXX11-LABEL: cir.func {{.*}} @_ZN7PR422765State2f2Ev(!cir.ptr<!rec_PR422763A3AState>{{.*}})
-  //
-  // LLVM-CXX11-LABEL: declare{{.*}} @_ZN7PR422765State2f1Ev(ptr{{.*}})
-  // LLVM-CXX11-LABEL: declare{{.*}} @_ZN7PR422765State2f2Ev(ptr{{.*}})
-  //
-  // OG-Codegen always generates these deferred, not only if they are non-const.
-  //
   // CIR-LABEL: cir.func {{.*}} @_ZN7PR422765State16syncDirtyObjectsEv(
   // LLVM-LABEL: define{{.*}} void @_ZN7PR422765State16syncDirtyObjectsEv(
   // OGCG-LABEL: define{{.*}} void @_ZN7PR422765State16syncDirtyObjectsEv(
@@ -143,8 +133,16 @@ namespace PR42276 {
       // OGCG-CXX2A: getelementptr inbounds [2 x i64], ptr @_ZN7PR422765State3dmsE, i64 0, i64 %{{.*}}
       sum += this->*dms[i];
   }
+  // OG-Codegen always generates these deferred, not only if they are non-const.
+  //
+  // CIR-CXX11-LABEL: cir.func {{.*}} @_ZN7PR422765State2f1Ev(!cir.ptr<!rec_PR422763A3AState>{{.*}})
+  // CIR-CXX11-LABEL: cir.func {{.*}} @_ZN7PR422765State2f2Ev(!cir.ptr<!rec_PR422763A3AState>{{.*}})
+  //
   // CIR-CXX2A-LABEL: cir.func {{.*}} @_ZN7PR422765State2f1Ev(!cir.ptr<!rec_PR422763A3AState>{{.*}})
   // CIR-CXX2A-LABEL: cir.func {{.*}} @_ZN7PR422765State2f2Ev(!cir.ptr<!rec_PR422763A3AState>{{.*}})
+  //
+  // LLVM-CXX11-LABEL: declare{{.*}} @_ZN7PR422765State2f1Ev(ptr{{.*}})
+  // LLVM-CXX11-LABEL: declare{{.*}} @_ZN7PR422765State2f2Ev(ptr{{.*}})
   //
   // LLVM-CXX2A-LABEL: declare{{.*}} @_ZN7PR422765State2f1Ev(ptr{{.*}})
   // LLVM-CXX2A-LABEL: declare{{.*}} @_ZN7PR422765State2f2Ev(ptr{{.*}})

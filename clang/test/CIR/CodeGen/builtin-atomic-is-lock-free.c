@@ -15,13 +15,13 @@ int test_atomic_var(unsigned long n, void *p) {
   return __atomic_is_lock_free(n, p);
 }
 
-// CIR-DAG: cir.func private dso_local @__atomic_is_lock_free(!u64i, !cir.ptr<!void>) -> (!cir.bool {llvm.zeroext})
-
 // CIR-LABEL: cir.func{{.*}} @test_atomic(
 // CIR:   %[[SZ:.*]] = cir.const #cir.int<24> : !u64i
 // CIR:   %[[P:.*]] = cir.load{{.*}} : !cir.ptr<!cir.ptr<!rec_Big>>, !cir.ptr<!rec_Big>
 // CIR:   %[[VP:.*]] = cir.cast bitcast %[[P]] : !cir.ptr<!rec_Big> -> !cir.ptr<!void>
 // CIR:   cir.call @__atomic_is_lock_free(%[[SZ]], %[[VP]]) : (!u64i, !cir.ptr<!void>) -> (!cir.bool {llvm.zeroext})
+
+// CIR-DAG: cir.func private dso_local @__atomic_is_lock_free(!u64i, !cir.ptr<!void>) -> (!cir.bool {llvm.zeroext})
 
 // CIR-LABEL: cir.func{{.*}} @test_c11(
 // CIR:   %[[SZ2:.*]] = cir.const #cir.int<24> : !u64i

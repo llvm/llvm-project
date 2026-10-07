@@ -185,7 +185,7 @@ void foo() {
 // CIR:     cir.label "label"
 
 // LLVM: define dso_local void @foo(){{.*}} {
-// LLVM:  %{{.*}} = alloca %struct.S, i64 1, align 1
+// LLVM:  %{{.*}} = alloca %struct.S, align 1
 // LLVM:  br label %2
 // LLVM:2:
 // LLVM:  br label %3

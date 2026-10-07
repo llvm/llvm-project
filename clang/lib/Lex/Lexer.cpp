@@ -1284,6 +1284,11 @@ DiagnosticBuilder Lexer::Diag(const char *Loc, unsigned DiagID) const {
   return PP->Diag(getSourceLocation(Loc), DiagID);
 }
 
+DiagnosticBuilder Lexer::DiagCompat(const char *Loc,
+                                    unsigned CompatDiagId) const {
+  return Diag(Loc, DiagnosticIDs::getCompatDiagId(LangOpts, CompatDiagId));
+}
+
 //===----------------------------------------------------------------------===//
 // Trigraph and Escaped Newline Handling Code.
 //===----------------------------------------------------------------------===//
@@ -2391,9 +2396,7 @@ bool Lexer::LexRawStringLiteral(Token &Result, const char *CurPtr,
     if (!isLexingRawMode() &&
         llvm::is_contained({'$', '@', '`'}, CurPtr[PrefixLen])) {
       const char *Pos = &CurPtr[PrefixLen];
-      Diag(Pos, LangOpts.CPlusPlus26
-                    ? diag::warn_cxx26_compat_raw_string_literal_character_set
-                    : diag::ext_cxx26_raw_string_literal_character_set)
+      DiagCompat(Pos, diag_compat::raw_string_literal_character_set)
           << StringRef(Pos, 1);
     }
     ++PrefixLen;
@@ -3163,6 +3166,7 @@ bool Lexer::SkipBlockComment(Token &Result, const char *CurPtr) {
   // If we are returning comments as tokens, return this comment as a token.
   if (inKeepCommentMode()) {
     FormTokenWithChars(Result, CurPtr, tok::comment);
+    IsAtPhysicalStartOfLine = Result.isAtPhysicalStartOfLine();
     return true;
   }
 
@@ -4659,11 +4663,8 @@ LexNextToken:
 const char *Lexer::convertDependencyDirectiveToken(
     const dependency_directives_scan::Token &DDTok, Token &Result) {
   const char *TokPtr = BufferStart + DDTok.Offset;
-  Result.startToken();
-  Result.setLocation(getSourceLocation(TokPtr));
-  Result.setKind(DDTok.Kind);
+  Result = Token::create(DDTok.Kind, getSourceLocation(TokPtr), DDTok.Length);
   Result.setFlag((Token::TokenFlags)DDTok.Flags);
-  Result.setLength(DDTok.Length);
   if (Result.is(tok::raw_identifier))
     Result.setRawIdentifierData(TokPtr);
   else if (Result.isLiteral())

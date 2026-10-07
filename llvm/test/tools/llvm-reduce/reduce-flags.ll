@@ -288,3 +288,27 @@ define i1 @icmp_samesign_keep(i32 %a) {
   %op = icmp samesign ult i32 %a, 10
   ret i1 %op
 }
+
+; CHECK-LABEL: @addrspacecast_nonnull_drop(
+; INTERESTING: = addrspacecast
+; RESULT: addrspacecast ptr addrspace(1) %a to ptr
+define ptr @addrspacecast_nonnull_drop(ptr addrspace(1) %a) {
+  %op = addrspacecast nonnull ptr addrspace(1) %a to ptr
+  ret ptr %op
+}
+
+; CHECK-LABEL: @addrspacecast_nonnull_keep(
+; INTERESTING: = addrspacecast nonnull
+; RESULT: addrspacecast nonnull ptr addrspace(1) %a to ptr
+define ptr @addrspacecast_nonnull_keep(ptr addrspace(1) %a) {
+  %op = addrspacecast nonnull ptr addrspace(1) %a to ptr
+  ret ptr %op
+}
+
+; CHECK-LABEL: @addrspacecast_nonnull_vector_keep(
+; INTERESTING: = addrspacecast nonnull
+; RESULT: addrspacecast nonnull <2 x ptr addrspace(1)> %a to <2 x ptr>
+define <2 x ptr> @addrspacecast_nonnull_vector_keep(<2 x ptr addrspace(1)> %a) {
+  %op = addrspacecast nonnull <2 x ptr addrspace(1)> %a to <2 x ptr>
+  ret <2 x ptr> %op
+}

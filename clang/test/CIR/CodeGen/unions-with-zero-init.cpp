@@ -7,39 +7,39 @@
 // RUN: FileCheck --check-prefix=LLVM,OGCG --input-file=%t.ll %s
 
 // 'S' doesn't end up in the 'after' IR because it loses its uses.
-// CIR-BEFORE-DAG: !rec_S = !cir.struct<"S" {!s32i}>
+// CIR-BEFORE-DAG: !rec_S = !cir.struct<"S" {data !s32i}>
 
-// CIR-BEFORE-DAG: !rec_inner_aggregate = !cir.union<"inner_aggregate" {!cir.data_member<!s32i in !rec_S>, !s32i}>
-// CIR-AFTER-DAG:  !rec_inner_aggregate = !cir.union<"inner_aggregate" {!s64i, !s32i}>
+// CIR-BEFORE-DAG: !rec_inner_aggregate = !cir.union<"inner_aggregate" {data !cir.data_member<!s32i in !rec_S>, data !s32i}>
+// CIR-AFTER-DAG:  !rec_inner_aggregate = !cir.union<"inner_aggregate" {data !s64i, data !s32i}>
 // LLVM-DAG: %union.inner_aggregate = type { i64 }
 
-// CIR-BEFORE-DAG: !rec_inner_aggregate2 = !cir.union<"inner_aggregate2" {!s32i, !cir.data_member<!s32i in !rec_S>}>
-// CIR-AFTER-DAG:  !rec_inner_aggregate2 = !cir.union<"inner_aggregate2" {!s32i, !s64i}>
+// CIR-BEFORE-DAG: !rec_inner_aggregate2 = !cir.union<"inner_aggregate2" {data !s32i, data !cir.data_member<!s32i in !rec_S>}>
+// CIR-AFTER-DAG:  !rec_inner_aggregate2 = !cir.union<"inner_aggregate2" {data !s32i, data !s64i}>
 // In LLVM, inner_aggregate2 was lowered to a literal, so the type went away.
 
-// CIR-BEFORE-DAG: !rec_outer_aggregate = !cir.union<"outer_aggregate" {!cir.data_member<!s32i in !rec_S>, !s32i}>
-// CIR-AFTER-DAG:  !rec_outer_aggregate = !cir.union<"outer_aggregate" {!s64i, !s32i}>
+// CIR-BEFORE-DAG: !rec_outer_aggregate = !cir.union<"outer_aggregate" {data !cir.data_member<!s32i in !rec_S>, data !s32i}>
+// CIR-AFTER-DAG:  !rec_outer_aggregate = !cir.union<"outer_aggregate" {data !s64i, data !s32i}>
 // LLVM-DAG: %union.outer_aggregate = type { i64 }
 
-// CIR-BEFORE-DAG: !rec_outer_aggregate2 = !cir.union<"outer_aggregate2" {!s32i, !cir.data_member<!s32i in !rec_S>}>
-// CIR-AFTER-DAG:  !rec_outer_aggregate2 = !cir.union<"outer_aggregate2" {!s32i, !s64i}>
+// CIR-BEFORE-DAG: !rec_outer_aggregate2 = !cir.union<"outer_aggregate2" {data !s32i, data !cir.data_member<!s32i in !rec_S>}>
+// CIR-AFTER-DAG:  !rec_outer_aggregate2 = !cir.union<"outer_aggregate2" {data !s32i, data !s64i}>
 // LLVM-DAG: %union.inner_aggregate2 = type { i64 }
 
-// CIR-BEFORE-DAG: !rec_outer_aggregate3 = !cir.union<"outer_aggregate3" {!cir.data_member<!s32i in !rec_S>, !s32i}>
-// CIR-AFTER-DAG:  !rec_outer_aggregate3 = !cir.union<"outer_aggregate3" {!s64i, !s32i}>
+// CIR-BEFORE-DAG: !rec_outer_aggregate3 = !cir.union<"outer_aggregate3" {data !cir.data_member<!s32i in !rec_S>, data !s32i}>
+// CIR-AFTER-DAG:  !rec_outer_aggregate3 = !cir.union<"outer_aggregate3" {data !s64i, data !s32i}>
 // LLVM-DAG: %union.outer_aggregate3 = type { i64 }
 
-// CIR-BEFORE-DAG: !rec_HasPtrToMember = !cir.struct<"HasPtrToMember" {!cir.data_member<!s32i in !rec_S>}>
-// CIR-AFTER-DAG: !rec_HasPtrToMember = !cir.struct<"HasPtrToMember" {!s64i}>
+// CIR-BEFORE-DAG: !rec_HasPtrToMember = !cir.struct<"HasPtrToMember" {data !cir.data_member<!s32i in !rec_S>}>
+// CIR-AFTER-DAG: !rec_HasPtrToMember = !cir.struct<"HasPtrToMember" {data !s64i}>
 // LLVM-DAG: %struct.HasPtrToMember = type { i64 }
 
-// CIR-BEFORE-DAG: !rec_U = !cir.union<"U" {!s32i, !rec_HasPtrToMember}>
-// CIR-AFTER-DAG: !rec_U = !cir.union<"U" {!s32i, !rec_HasPtrToMember}>
+// CIR-BEFORE-DAG: !rec_U = !cir.union<"U" {data !s32i, data !rec_HasPtrToMember}>
+// CIR-AFTER-DAG: !rec_U = !cir.union<"U" {data !s32i, data !rec_HasPtrToMember}>
 // LLVM-DAG: %union.U = type { %struct.HasPtrToMember }
 
 // This gets promoted to a constant, so it is up here.
 // CIR-AFTER-DAG: cir.global "private" constant cir_private @__const._Z1fv.inner_a2 = #cir.const_record<{#cir.int<12> : !s32i}> : !rec_inner_aggregate2
-// LLVM-DAG: @__const._Z1fv.inner_a2 = private {{.*}}constant { i32, [4 x i8] } { i32 12, [4 x i8] undef }
+// LLVM-DAG: @__const._Z1fv.inner_a2 = private {{.*}}constant { i32, [4 x i8] } { i32 12, [4 x i8] {{.*}} }
 
 struct S { int x; };
 int S::* p = nullptr;
@@ -47,14 +47,9 @@ int S::* p = nullptr;
 // CIR-AFTER-LABEL: cir.global external @p = #cir.int<-1> : !s64i
 // LLVM-DAG: @p = global i64 -1, align 8
 
-// LLVMCIR gets this different because by the time we see how to do a 'zero'
-// field, we've already lost the member-pointer type, because LowerToLLVM is
-// doing the 'zeroing'.  We could be more clever here, but this is only in cases
-// where it gets initialized anyway.
-// LLVMCIR-DAG: @outer_a1 = global %union.outer_aggregate zeroinitializer
-// OGCG-DAG:    @outer_a1 = global %union.outer_aggregate { i64 -1 }
+// LLVM-DAG:    @outer_a1 = global %union.outer_aggregate { i64 -1 }
 
-// LLVM-DAG: @outer_a2 = global { i32, [4 x i8] } { i32 32, [4 x i8] undef }
+// LLVM-DAG: @outer_a2 = global { i32, [4 x i8] } { i32 32, [4 x i8] {{.*}} }
 // LLVM-DAG: @outer_a3 = global %union.outer_aggregate3 { i64 -1 }
 
 struct HasPtrToMember { int S::*p; };  // not zero-initializable
@@ -65,7 +60,7 @@ union U {
 U u{};
 // CIR-DAG: cir.global external @u = #cir.zero : !rec_U
 // LLVMCIR-DAG: @u = global %union.U zeroinitializer
-// OGCG-DAG: @u = global { i32, [4 x i8] } { i32 0, [4 x i8] undef }
+// OGCG-DAG: @u = global { i32, [4 x i8] } { i32 0, [4 x i8] {{.*}} }
 auto use() {
   return u;
 }
@@ -79,7 +74,7 @@ union outer_aggregate{int S::*m; int i; } outer_a1 = { p };
 // CIR-BEFORE:     cir.store {{.*}}%[[LOAD_P]], %[[GET_MEM]] : !cir.data_member<!s32i in !rec_S>, !cir.ptr<!cir.data_member<!s32i in !rec_S>>
 // CIR-BEFORE:   }
 
-// CIR-AFTER-LABEL: cir.global external @outer_a1 = #cir.zero : !rec_outer_aggregate
+// CIR-AFTER-LABEL: cir.global external @outer_a1 = #cir.const_record<{#cir.int<-1> : !s64i}> : !rec_outer_aggregate
 // CIR-AFTER-LABEL: cir.func internal private @__cxx_global_var_init() {
 // CIR-AFTER:   %[[GET_GLOB:.*]] = cir.get_global @outer_a1 : !cir.ptr<!rec_outer_aggregate>
 // CIR-AFTER:   %[[GET_MEM:.*]] = cir.get_member %[[GET_GLOB]][0] {name = "m"} : !cir.ptr<!rec_outer_aggregate> -> !cir.ptr<!s64i>

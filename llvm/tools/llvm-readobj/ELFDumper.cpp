@@ -701,7 +701,6 @@ private:
     if (F.Column != 0)
       OS.PadToColumn(F.Column);
     OS << F.Str;
-    OS.flush();
     return OS;
   }
   void printHashedSymbol(const Elf_Sym *Sym, unsigned SymIndex,
@@ -3758,7 +3757,8 @@ template <class ELFT> void GNUELFDumper<ELFT>::printFileHeaders() {
         e.e_flags, EnumStrings(ElfHeaderMipsFlags), unsigned(ELF::EF_MIPS_ARCH),
         unsigned(ELF::EF_MIPS_ABI), unsigned(ELF::EF_MIPS_MACH));
   else if (e.e_machine == EM_RISCV)
-    ElfFlags = printFlags(e.e_flags, EnumStrings(ElfHeaderRISCVFlags));
+    ElfFlags = printFlags(e.e_flags, EnumStrings(ElfHeaderRISCVFlags),
+                          unsigned(ELF::EF_RISCV_FLOAT_ABI));
   else if (e.e_machine == EM_SPARC32PLUS || e.e_machine == EM_SPARCV9)
     ElfFlags = printFlags(e.e_flags, EnumStrings(ElfHeaderSPARCFlags),
                           unsigned(ELF::EF_SPARCV9_MM));
@@ -5332,7 +5332,7 @@ void GNUELFDumper<ELFT>::printHashHistogramStats(size_t NBucket,
 }
 
 template <class ELFT> void GNUELFDumper<ELFT>::printCGProfile() {
-  OS << "GNUStyle::printCGProfile not implemented\n";
+  OS << "GNU output style is not supported for --cg-profile\n";
 }
 
 template <class ELFT>
@@ -5466,7 +5466,7 @@ ELFDumper<ELFT>::processCallGraphSection(const Elf_Shdr *CGSection) {
 
 template <class ELFT>
 void GNUELFDumper<ELFT>::printBBAddrMaps(bool /*PrettyPGOAnalysis*/) {
-  OS << "GNUStyle::printBBAddrMaps not implemented\n";
+  OS << "GNU output style is not supported for --bb-addr-map\n";
 }
 
 static Expected<std::vector<uint64_t>> toULEB128Array(ArrayRef<uint8_t> Data) {
@@ -6910,7 +6910,7 @@ void ELFDumper<ELFT>::printSectionsAsSFrame(ArrayRef<std::string> Sections) {
 }
 
 template <class ELFT> void GNUELFDumper<ELFT>::printELFLinkerOptions() {
-  OS << "printELFLinkerOptions not implemented!\n";
+  OS << "GNU output style is not supported for --elf-linker-options\n";
 }
 
 template <class ELFT>
@@ -7659,7 +7659,8 @@ template <class ELFT> void LLVMELFDumper<ELFT>::printFileHeaders() {
       }
       }
     } else if (E.e_machine == EM_RISCV)
-      W.printFlags("Flags", E.e_flags, EnumStrings(ElfHeaderRISCVFlags));
+      W.printFlags("Flags", E.e_flags, EnumStrings(ElfHeaderRISCVFlags),
+                   unsigned(ELF::EF_RISCV_FLOAT_ABI));
     else if (E.e_machine == EM_SPARC32PLUS || E.e_machine == EM_SPARCV9)
       W.printFlags("Flags", E.e_flags, EnumStrings(ElfHeaderSPARCFlags),
                    unsigned(ELF::EF_SPARCV9_MM));

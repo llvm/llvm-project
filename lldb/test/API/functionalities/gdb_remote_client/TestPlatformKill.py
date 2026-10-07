@@ -6,7 +6,7 @@ from lldbsuite.test.gdbclientutils import *
 from lldbsuite.test.lldbgdbclient import GDBRemoteTestBase
 
 
-@requireNotWasm  # attaching requires launching the inferior as a host process
+@requireNotWasm("attaching requires launching the inferior as a host process")
 class TestPlatformKill(GDBRemoteTestBase):
     SHARED_BUILD_TESTCASE = False
 

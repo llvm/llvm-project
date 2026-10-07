@@ -217,8 +217,8 @@ const int &test_cond_const_true_throw_true() {
 // CIR:   cir.return %[[TMP_RET]] : !cir.ptr<!s32i>
 
 // LLVM-LABEL: define{{.*}} ptr @_Z31test_cond_const_true_throw_truev(
-// LLVM:  %[[RET_ADDR:.*]] = alloca ptr, i64 1, align 8
-// LLVM:  %[[A_ADDR:.*]] = alloca i32, i64 1, align 4
+// LLVM:  %[[RET_ADDR:.*]] = alloca ptr, align 8
+// LLVM:  %[[A_ADDR:.*]] = alloca i32, align 4
 // LLVM:  store i32 30, ptr %[[A_ADDR]], align 4
 // LLVM:  %[[EXCEPTION:.*]] = call ptr @__cxa_allocate_exception(i64 4)
 // LLVM:  store i32 0, ptr %[[EXCEPTION]], align 16

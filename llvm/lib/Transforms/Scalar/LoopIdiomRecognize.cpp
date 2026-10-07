@@ -186,8 +186,6 @@ static cl::opt<CRCStrategyKind> CRCStrategy(
                clEnumValN(CRCStrategyKind::Clmul, "clmul",
                           "Use carry-less multiplication when possible")));
 
-extern cl::opt<bool> ProfcheckDisableMetadataFixes;
-
 } // namespace llvm
 
 namespace {
@@ -403,8 +401,7 @@ bool LoopIdiomRecognize::runOnCountableLoop() {
 
   // The following transforms hoist stores/memsets into the loop pre-header.
   // Give up if the loop has instructions that may throw.
-  SimpleLoopSafetyInfo SafetyInfo;
-  SafetyInfo.computeLoopSafetyInfo(CurLoop);
+  SimpleLoopSafetyInfo SafetyInfo(CurLoop);
   if (SafetyInfo.anyBlockMayThrow())
     return false;
 
@@ -840,8 +837,10 @@ bool LoopIdiomRecognize::processLoopMemCpy(MemCpyInst *MCI,
   if (MCI->isVolatile() || !isa<ConstantInt>(MCI->getLength()))
     return false;
 
-  // If we're not allowed to hack on memcpy, we fail.
-  if ((!HasMemcpy && !MCI->isForceInlined()) || DisableLIRP::Memcpy)
+  // If we're not allowed to hack on memcpy, we fail. We don't mess with the
+  // inlined version as generating a larger inline mempcy could affect code
+  // size.
+  if (!HasMemcpy || MCI->isForceInlined() || DisableLIRP::Memcpy)
     return false;
 
   Value *Dest = MCI->getDest();
@@ -903,8 +902,9 @@ bool LoopIdiomRecognize::processLoopMemSet(MemSetInst *MSI,
   if (MSI->isVolatile())
     return false;
 
-  // If we're not allowed to hack on memset, we fail.
-  if (!HasMemset || DisableLIRP::Memset)
+  // If we're not allowed to hack on memset, we fail. We don't mess with the
+  // inlined version as generating a larger memset could affect code size.
+  if (!HasMemset || MSI->isForceInlined() || DisableLIRP::Memset)
     return false;
 
   Value *Pointer = MSI->getDest();
@@ -1099,6 +1099,13 @@ bool LoopIdiomRecognize::processLoopStridedStore(
     Value *StoredVal, Instruction *TheStore,
     SmallPtrSetImpl<Instruction *> &Stores, const SCEVAddRecExpr *Ev,
     const SCEV *BECount, bool IsNegStride, bool IsLoopMemset) {
+  // We currently don't convert inline intrinsics into larger ones, to avoid
+  // code size increase. `processLoopMemSet` checks that the intrinsic is not
+  // inline before calling this function.
+  assert((isa<StoreInst>(TheStore) ||
+          !cast<MemIntrinsic>(TheStore)->isForceInlined()) &&
+         "inline mem intrinsics should be filtered out by callers");
+
   Module *M = TheStore->getModule();
 
   // The trip count of the loop and the base pointer of the addrec SCEV is
@@ -1355,12 +1362,12 @@ bool LoopIdiomRecognize::processLoopStoreOfLoopLoad(
     MaybeAlign StoreAlign, MaybeAlign LoadAlign, Instruction *TheStore,
     Instruction *TheLoad, const SCEVAddRecExpr *StoreEv,
     const SCEVAddRecExpr *LoadEv, const SCEV *BECount) {
-
-  // FIXME: until llvm.memcpy.inline supports dynamic sizes, we need to
-  // conservatively bail here, since otherwise we may have to transform
-  // llvm.memcpy.inline into llvm.memcpy which is illegal.
-  if (auto *MCI = dyn_cast<MemCpyInst>(TheStore); MCI && MCI->isForceInlined())
-    return false;
+  // We currently don't convert inline intrinsics into larger ones, to avoid
+  // code size increase. `processLoopMemCpy` checks that the intrinsic is not
+  // inline before calling this function.
+  assert((isa<StoreInst>(TheStore) ||
+          !cast<MemIntrinsic>(TheStore)->isForceInlined()) &&
+         "inline mem intrinsics should be filtered out by callers");
 
   // The trip count of the loop and the base pointer of the addrec SCEV is
   // guaranteed to be loop invariant, which means that it should dominate the
@@ -1923,8 +1930,7 @@ void LoopIdiomRecognize::optimizeCRCLoopUsingTableLookup(
       return LoByte(Builder, Op, Name + ".lo.byte");
     };
 
-    IRBuilder<> Builder(CurLoop->getHeader(),
-                        CurLoop->getHeader()->getFirstNonPHIIt());
+    IRBuilder<> Builder(CurLoop->getHeader()->getFirstNonPHIIt());
 
     // Create the CRC PHI, and initialize its incoming value to the initial
     // value of CRC.
@@ -2098,14 +2104,14 @@ public:
 
     LLVM_DEBUG(dbgs() << "pointer load scev: " << *LoadEv << "\n");
 
-    unsigned StepSize = Step->getZExtValue();
+    uint64_t StepSize = Step->getZExtValue();
 
     // Verify that StepSize is consistent with platform char width.
     OpWidth = OperandType->getIntegerBitWidth();
     unsigned WcharSize = TLI->getWCharSize(*LoopLoad->getModule());
-    if (OpWidth != StepSize * 8)
-      return false;
     if (OpWidth != 8 && OpWidth != 16 && OpWidth != 32)
+      return false;
+    if (StepSize != OpWidth / 8)
       return false;
     if (OpWidth >= 16)
       if (OpWidth != WcharSize * 8)
@@ -2738,12 +2744,11 @@ bool LoopIdiomRecognize::insertFFSIfProfitable(Intrinsic::ID IntrinID,
   // would have identical behavior in the original loop and thus
   if (!IsCntPhiUsedOutsideLoop) {
     auto *PreCondBB = PH->getSinglePredecessor();
-    if (!PreCondBB)
-      return false;
-    auto *PreCondBI = dyn_cast<CondBrInst>(PreCondBB->getTerminator());
-    if (!PreCondBI)
-      return false;
-    if (matchCondition(PreCondBI, PH) != InitX)
+    auto *PreCondBI =
+        PreCondBB ? dyn_cast<CondBrInst>(PreCondBB->getTerminator()) : nullptr;
+    if (!(PreCondBI && matchCondition(PreCondBI, PH) == InitX) &&
+        !isKnownNonZero(
+            InitX, SimplifyQuery(*DL, DT, /*AC=*/nullptr, PH->getTerminator())))
       return false;
     ZeroCheck = true;
   }
@@ -3486,7 +3491,7 @@ bool LoopIdiomRecognize::recognizeShiftUntilBitTest() {
   // Step 4: Rewrite the loop into a countable form, with canonical IV.
 
   // The new canonical induction variable.
-  Builder.SetInsertPoint(LoopHeaderBB, LoopHeaderBB->begin());
+  Builder.SetInsertPoint(LoopHeaderBB->begin());
   auto *IV = Builder.CreatePHI(Ty, 2, CurLoop->getName() + ".iv");
 
   // The induction itself.
@@ -3501,7 +3506,6 @@ bool LoopIdiomRecognize::recognizeShiftUntilBitTest() {
                                        CurLoop->getName() + ".ivcheck");
   SmallVector<uint32_t> BranchWeights;
   const bool HasBranchWeights =
-      !ProfcheckDisableMetadataFixes &&
       extractBranchWeights(*LoopHeaderBB->getTerminator(), BranchWeights);
 
   auto *BI = Builder.CreateCondBr(IVCheck, SuccessorBB, LoopHeaderBB);
@@ -3822,11 +3826,11 @@ bool LoopIdiomRecognize::recognizeShiftUntilZero() {
   // Step 3: Rewrite the loop into a countable form, with canonical IV.
 
   // The new canonical induction variable.
-  Builder.SetInsertPoint(LoopHeaderBB, LoopHeaderBB->begin());
+  Builder.SetInsertPoint(LoopHeaderBB->begin());
   auto *CIV = Builder.CreatePHI(Ty, 2, CurLoop->getName() + ".iv");
 
   // The induction itself.
-  Builder.SetInsertPoint(LoopHeaderBB, LoopHeaderBB->getFirstNonPHIIt());
+  Builder.SetInsertPoint(LoopHeaderBB->getFirstNonPHIIt());
   auto *CIVNext =
       Builder.CreateAdd(CIV, ConstantInt::get(Ty, 1), CIV->getName() + ".next",
                         /*HasNUW=*/true, /*HasNSW=*/Bitwidth != 2);
@@ -3849,7 +3853,6 @@ bool LoopIdiomRecognize::recognizeShiftUntilZero() {
   Builder.SetInsertPoint(LoopHeaderBB->getTerminator());
   SmallVector<uint32_t> BranchWeights;
   const bool HasBranchWeights =
-      !ProfcheckDisableMetadataFixes &&
       extractBranchWeights(*LoopHeaderBB->getTerminator(), BranchWeights);
 
   auto *BI = Builder.CreateCondBr(CIVCheck, SuccessorBB, LoopHeaderBB);
