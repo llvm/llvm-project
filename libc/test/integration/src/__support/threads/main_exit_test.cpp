@@ -6,8 +6,8 @@
 //
 //===----------------------------------------------------------------------===//
 
-#include "test/IntegrationTest/test.h"
 #include "src/stdlib/__cxa_thread_atexit_impl.h"
+#include "test/IntegrationTest/test.h"
 
 bool called = false;
 
@@ -23,7 +23,7 @@ void destructor() {
 }
 
 TEST_MAIN() {
-	LIBC_NAMESPACE::__cxa_thread_atexit_impl([](void *) { called = true; }, nullptr,
-                           __dso_handle);
+  LIBC_NAMESPACE::__cxa_thread_atexit_impl([](void *) { called = true; },
+                                           nullptr, __dso_handle);
   return 0;
 }

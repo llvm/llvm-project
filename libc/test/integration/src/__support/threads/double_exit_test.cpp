@@ -6,8 +6,8 @@
 //
 //===----------------------------------------------------------------------===//
 
-#include "src/stdlib/exit.h"
 #include "src/stdlib/__cxa_thread_atexit_impl.h"
+#include "src/stdlib/exit.h"
 #include "test/IntegrationTest/test.h"
 
 extern "C" {
@@ -25,8 +25,9 @@ void check() {
 }
 
 TEST_MAIN() {
-  LIBC_NAMESPACE::__cxa_thread_atexit_impl([](void *) { LIBC_NAMESPACE::exit(0); }, nullptr,
-                           __dso_handle);
-  LIBC_NAMESPACE::__cxa_thread_atexit_impl([](void *) { ++call_num; }, nullptr, __dso_handle);
+  LIBC_NAMESPACE::__cxa_thread_atexit_impl(
+      [](void *) { LIBC_NAMESPACE::exit(0); }, nullptr, __dso_handle);
+  LIBC_NAMESPACE::__cxa_thread_atexit_impl([](void *) { ++call_num; }, nullptr,
+                                           __dso_handle);
   LIBC_NAMESPACE::exit(1);
 }
