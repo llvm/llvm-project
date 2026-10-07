@@ -642,8 +642,20 @@ NewFunction::getFuncBody(const SourceManager &SM) const {
 }
 
 std::string NewFunction::Parameter::render(const DeclContext *Context) const {
-  return printType(TypeInfo, *Context) +
-         (Kind == ParamPassKind::Reference ? " &" : " ") + Name;
+  // Passing Name as printType()'s declarator placeholder (rather than just
+  // appending it after the printed type) lets clang's own type printer
+  // place it correctly for declarator syntax that doesn't simply put the
+  // name after the type, e.g. a function pointer (`void (*name)(int)`, not
+  // `void (*)(int) name`) or an array (`int name[5]`, not `int[5] name`).
+  // For a reference, building the actual reference QualType (rather than
+  // just prepending "&" to the placeholder string) is what lets the
+  // printer correctly parenthesize a reference-to-array
+  // (`int (&name)[5]`, not the invalid `int &name[5]`).
+  QualType RenderedType =
+      Kind == ParamPassKind::Reference
+          ? Context->getParentASTContext().getLValueReferenceType(TypeInfo)
+          : TypeInfo;
+  return printType(RenderedType, *Context, Name);
 }
 
 // Stores captured information about Extraction Zone.

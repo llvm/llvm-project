@@ -79,7 +79,7 @@ void f(int a) {
 struct Foo {
   int x;
 };
-void extracted(int &a, int b, int * &ptr, const Foo &foo) {
+void extracted(int &a, int b, int *&ptr, const Foo &foo) {
 a += foo.x + b;
   *ptr++;
 }
@@ -927,12 +927,12 @@ TEST_F(ExtractFunctionTest, ConstParametersPointerIndirection) {
     struct S { int x; };
     void f(S *ptr) { [[ptr->x = 1;]] }
   )cpp"),
-              HasSubstr("extracted(S * ptr)"));
+              HasSubstr("extracted(S *ptr)"));
   EXPECT_THAT(apply("void f(int *p) { [[p[0] = 1;]] }"),
-              HasSubstr("extracted(int * p)"));
+              HasSubstr("extracted(int *p)"));
   // Same for a plain dereference.
   EXPECT_THAT(apply("void f(int *p) { [[*p = 1;]] }"),
-              HasSubstr("extracted(int * p)"));
+              HasSubstr("extracted(int *p)"));
 }
 
 TEST_F(ExtractFunctionTest, ConstParametersConditionalReferenceBinding) {
@@ -975,11 +975,21 @@ TEST_F(ExtractFunctionTest, ConstParametersStaticOperatorCall) {
               HasSubstr("extracted(const S &s, int x)"));
 }
 
+TEST_F(ExtractFunctionTest, ConstParametersFunctionPointer) {
+  Context = File;
+  // A function pointer's declarator syntax puts the name inside the
+  // parens around the "*", not after the whole type: printType()'s
+  // placeholder must be threaded through for this to render as
+  // `void (*F)(int)` rather than the uncompilable `void (*)(int) F`.
+  EXPECT_THAT(apply("void f(void (*F)(int)) { [[F(1);]] }"),
+              HasSubstr("extracted(void (*F)(int))"));
+}
+
 TEST_F(ExtractFunctionTest, ConstParametersScalarsByValue) {
   Context = File;
   // An unmutated pointer is a scalar too: passed by value.
   EXPECT_THAT(apply("void use(int *); void f(int *p) { [[use(p);]] }"),
-              HasSubstr("extracted(int * p)"));
+              HasSubstr("extracted(int *p)"));
   // An unmutated enum: passed by value.
   EXPECT_THAT(apply(R"cpp(
     enum E { A, B };
@@ -998,7 +1008,7 @@ TEST_F(ExtractFunctionTest, ConstParametersScalarsByValue) {
   // An unmutated array is not a scalar (even though its element type is):
   // stays a non-const reference, per the existing array carve-out.
   EXPECT_THAT(apply("void f() { int arr[5]; [[int x = arr[0];]] }"),
-              HasSubstr("extracted(int[5] &arr)"));
+              HasSubstr("extracted(int (&arr)[5])"));
 }
 
 // Variables of reference type, const or non-const, must stay references,
@@ -1065,7 +1075,7 @@ TEST_F(ExtractFunctionTest, CFileModifiedScalarBecomesPointer) {
          int j;
          [[j = 0;]]
     })cpp"),
-              AllOf(HasSubstr("extracted(int * j)"), HasSubstr("(*j) = 0;"),
+              AllOf(HasSubstr("extracted(int *j)"), HasSubstr("(*j) = 0;"),
                     HasSubstr("extracted(&j)")));
 }
 
@@ -1082,7 +1092,7 @@ TEST_F(ExtractFunctionTest, CFileUnmodifiedStructBecomesConstPointer) {
          p.v1 = 0;
          [[i = p.v1;]]
     })cpp"),
-              AllOf(HasSubstr("extracted(const struct pair * p)"),
+              AllOf(HasSubstr("extracted(const struct pair *p)"),
                     HasSubstr("i = p->v1;"), HasSubstr("extracted(&p)")));
 }
 
@@ -1134,7 +1144,7 @@ TEST_F(ExtractFunctionTest, CFileModifiedArrayStaysPlainPointer) {
          int arr[5];
          [[arr[0] = 1;]]
     })cpp"),
-              AllOf(HasSubstr("extracted(int * arr)"), HasSubstr("arr[0] = 1;"),
+              AllOf(HasSubstr("extracted(int *arr)"), HasSubstr("arr[0] = 1;"),
                     HasSubstr("extracted(arr)"), Not(HasSubstr("&arr"))));
 }
 
