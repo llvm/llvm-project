@@ -502,14 +502,14 @@ public:
   /// Sets the narrowed reduction chain instructions, dropped together with
   /// the reduction.
   void setNarrowedChainInsts(ArrayRef<Instruction *> Insts) {
-    Candidate.setNarrowedChainInsts(Insts);
+    Candidate.NarrowedChainInsts.insert(Insts.begin(), Insts.end());
   }
 
   /// Returns true if the last buildTree() observed a may-alias memory
   /// dependency between two distinct, range-checkable base objects, i.e. a
   /// dependency that could be turned into a runtime alias check.
   bool hasRuntimeCheckableBlockers() const {
-    return Candidate.hasRuntimeCheckableBlockers();
+    return Candidate.HasRuntimeCheckableBlockers;
   }
 
   /// Returns true if the last buildTree() kept a may-alias memory dependency
@@ -517,7 +517,7 @@ public:
   /// dependency cannot be dropped, so a runtime-checks retry cannot unblock the
   /// region and would be pure overhead.
   bool hasNonCheckableMemBlocker() const {
-    return Candidate.hasNonCheckableMemBlocker();
+    return Candidate.HasNonCheckableMemBlocker;
   }
 
   /// Returns true if the current vectorization attempt may drop
@@ -574,7 +574,7 @@ public:
   /// Returns true if the last (optimistic) buildTree() collected any runtime
   /// alias checks that must guard the vectorized region.
   bool hasRuntimeAliasChecks() const {
-    return Candidate.hasRuntimeAliasChecks();
+    return !Candidate.RTChecks.BasePairs.empty();
   }
 
   /// Returns true if vectorization changed the CFG (i.e. a block was versioned
@@ -586,13 +586,11 @@ public:
   const TreeEntry &getRootNode() const { return Candidate.getRootNode(); }
 
   /// Returns the scalars of the root node.
-  ArrayRef<Value *> getRootNodeScalars() const {
-    return Candidate.getRootNodeScalars();
-  }
+  ArrayRef<Value *> getRootNodeScalars() const { return getRootNode().Scalars; }
 
   /// Returns the lane the given value is vectorized to in the root node.
   unsigned findRootLaneForValue(Value *V) const {
-    return Candidate.findRootLaneForValue(V);
+    return getRootNode().findLaneForValue(V);
   }
 
   /// Returns the type/is-signed info for the root node in the graph without
@@ -604,21 +602,20 @@ public:
   /// Checks if the root graph node can be emitted with narrower bitwidth at
   /// codegen and returns it signedness, if so.
   bool isSignedMinBitwidthRootNode() const {
-    return Candidate.isSignedMinBitwidthRootNode();
+    return Candidate.MinBWs.at(&getRootNode()).second;
   }
 
   /// Returns reduction type after minbitdth analysis.
   FixedVectorType *getReductionType() const {
     if (Candidate.ReductionBitWidth == 0 ||
-        !Candidate.getRootNodeScalars().front()->getType()->isIntegerTy() ||
+        !getRootNodeScalars().front()->getType()->isIntegerTy() ||
         Candidate.ReductionBitWidth >=
-            DL->getTypeSizeInBits(
-                Candidate.getRootNodeScalars().front()->getType()))
+            DL->getTypeSizeInBits(getRootNodeScalars().front()->getType()))
       return cast<FixedVectorType>(
-          getWidenedType(Candidate.getRootNodeScalars().front()->getType(),
+          getWidenedType(getRootNodeScalars().front()->getType(),
                          Candidate.getRootNode().getVectorFactor()));
     return cast<FixedVectorType>(getWidenedType(
-        IntegerType::get(Candidate.getRootNodeScalars().front()->getContext(),
+        IntegerType::get(getRootNodeScalars().front()->getContext(),
                          Candidate.ReductionBitWidth),
         Candidate.getRootNode().getVectorFactor()));
   }
@@ -632,7 +629,7 @@ public:
   }
 
   /// Returns true if the tree is a reduction tree.
-  bool isReductionTree() const { return Candidate.isReductionTree(); }
+  bool isReductionTree() const { return Candidate.UserIgnoreList != nullptr; }
 
   /// Builds external uses of the vectorized scalars, i.e. the list of
   /// vectorized scalars to be extracted, their lanes and their scalar users. \p
@@ -665,7 +662,7 @@ public:
     Candidate.clear();
   }
 
-  unsigned getTreeSize() const { return Candidate.getTreeSize(); }
+  unsigned getTreeSize() const { return Candidate.VectorizableTree.size(); }
 
   /// Returns true if the tree gathers any scalars other than constants.
   bool hasNonConstantGathers() const {
@@ -673,13 +670,11 @@ public:
   }
 
   /// Returns the base graph size, before any transformations.
-  unsigned getCanonicalGraphSize() const {
-    return Candidate.getCanonicalGraphSize();
-  }
+  unsigned getCanonicalGraphSize() const { return Candidate.BaseGraphSize; }
 
   /// Number of tree entries that form the splat gather subtrees.
   unsigned getNumSplatSubtreeEntries() const {
-    return Candidate.getNumSplatSubtreeEntries();
+    return Candidate.NumCanonicalSplatSubtreeEntries;
   }
 
   /// Perform LICM and CSE on the newly generated gather sequences.
@@ -2307,10 +2302,12 @@ public:
     return Candidate.isAnyGathered(Vals);
   }
   /// Checks if the given value is gathered in one of the nodes.
-  bool isGathered(const Value *V) const { return Candidate.isGathered(V); }
+  bool isGathered(const Value *V) const {
+    return Candidate.MustGather.contains(V);
+  }
   /// Checks if the specified value was not schedule.
   bool isNotScheduled(const Value *V) const {
-    return Candidate.isNotScheduled(V);
+    return Candidate.NonScheduledFirst.contains(V);
   }
 
   /// Check if the value is vectorized in the tree.
@@ -3634,35 +3631,6 @@ private:
     DenseSet<unsigned> ExtraBitWidthNodes;
 
   public:
-    /// Sets the narrowed reduction chain instructions, dropped together with
-    /// the reduction.
-    void setNarrowedChainInsts(ArrayRef<Instruction *> Insts) {
-      NarrowedChainInsts.insert(Insts.begin(), Insts.end());
-    }
-
-    /// Returns true if the last buildTree() observed a may-alias memory
-    /// dependency between two distinct, range-checkable base objects, i.e. a
-    /// dependency that could be turned into a runtime alias check.
-    bool hasRuntimeCheckableBlockers() const {
-      return HasRuntimeCheckableBlockers;
-    }
-
-    /// Records whether a may-alias dependency between distinct, range-checkable
-    /// base objects has been observed, so the caller can decide to retry with
-    /// runtime alias checks enabled.
-    void setHasRuntimeCheckableBlockers(bool V) {
-      HasRuntimeCheckableBlockers = V;
-    }
-
-    /// Returns true if the last buildTree() kept a may-alias memory dependency
-    /// that is not runtime-checkable (call or a non-simple mem access). Such a
-    /// dependency cannot be dropped, so a runtime-checks retry cannot unblock
-    /// the region and would be pure overhead.
-    bool hasNonCheckableMemBlocker() const { return HasNonCheckableMemBlocker; }
-
-    /// Records that a non-runtime-checkable may-alias dependency was kept.
-    void setHasNonCheckableMemBlocker(bool V) { HasNonCheckableMemBlocker = V; }
-
     /// Resets the runtime alias check data.
     void resetRuntimeAliasCheckState() {
       HasRuntimeCheckableBlockers = false;
@@ -3671,10 +3639,6 @@ private:
       RTChecks.clear();
       RTOrigBodyOrder.clear();
     }
-
-    /// Returns true if the last (optimistic) buildTree() collected any runtime
-    /// alias checks that must guard the vectorized region.
-    bool hasRuntimeAliasChecks() const { return !RTChecks.BasePairs.empty(); }
 
     TreeEntry &getRootNode() {
       assert(!VectorizableTree.empty() &&
@@ -3686,16 +3650,6 @@ private:
       assert(!VectorizableTree.empty() &&
              "No graph to get the first node from");
       return *VectorizableTree.front();
-    }
-
-    /// Returns the scalars of the root node.
-    ArrayRef<Value *> getRootNodeScalars() const {
-      return getRootNode().Scalars;
-    }
-
-    /// Returns the lane the given value is vectorized to in the root node.
-    unsigned findRootLaneForValue(Value *V) const {
-      return getRootNode().findLaneForValue(V);
     }
 
     /// Returns the type/is-signed info for the root node in the graph without
@@ -3718,12 +3672,6 @@ private:
       return std::nullopt;
     }
 
-    /// Checks if the root graph node can be emitted with narrower bitwidth at
-    /// codegen and returns it signedness, if so.
-    bool isSignedMinBitwidthRootNode() const {
-      return MinBWs.at(&getRootNode()).second;
-    }
-
     /// Returns true if the tree results in one of the reduced bitcasts
     /// variants.
     bool isReducedBitcastRoot() const {
@@ -3742,11 +3690,6 @@ private:
              getRootNode().CombinedOp == TreeEntry::ReducedCmpBitcast &&
              getRootNode().State == TreeEntry::Vectorize;
     }
-
-    /// Returns true if the tree is a reduction tree.
-    bool isReductionTree() const { return UserIgnoreList != nullptr; }
-
-    unsigned getTreeSize() const { return VectorizableTree.size(); }
 
     /// Returns the size of the current tree, stopping at gathers
     /// For instance, even though we continue adding tree entries after
@@ -3786,14 +3729,6 @@ private:
                     });
     }
 
-    /// Returns the base graph size, before any transformations.
-    unsigned getCanonicalGraphSize() const { return BaseGraphSize; }
-
-    /// Number of tree entries that form the splat gather subtrees.
-    unsigned getNumSplatSubtreeEntries() const {
-      return NumCanonicalSplatSubtreeEntries;
-    }
-
     /// Checks whether some existing tree entry has scalars equal to \p VL.
     /// \p S is the common opcode of \p VL when one exists; an empty \p S means
     /// the values have no common opcode (mixed buildvector/gather candidates).
@@ -3830,13 +3765,6 @@ private:
     bool isAnyGathered(const SmallDenseSet<Value *> &Vals) const {
       return any_of(MustGather, [&](Value *V) { return Vals.contains(V); });
     }
-    /// Checks if the given value is gathered in one of the nodes.
-    bool isGathered(const Value *V) const { return MustGather.contains(V); }
-    /// Checks if the specified value was not schedule.
-    bool isNotScheduled(const Value *V) const {
-      return NonScheduledFirst.contains(V);
-    }
-
     /// Check if \p V is a peeled reassociated scalar still owned by a live
     /// (non-deleted, non-gathered) tree entry.
     bool isReassocScalarVectorized(const Value *V) const {
@@ -3893,14 +3821,6 @@ private:
       }
     }
 #endif
-
-    /// Returns all entries in the candidate's graph.
-    ArrayRef<std::unique_ptr<TreeEntry>> getTreeEntries() const {
-      return VectorizableTree;
-    }
-
-    /// Returns the scalar uses that require extraction from the tree.
-    ArrayRef<ExternalUser> getExternalUses() const { return ExternalUses; }
 
     /// Get list of vector entries, associated with the value \p V.
     ArrayRef<TreeEntry *> getTreeEntries(const Value *V) const {
@@ -4010,10 +3930,10 @@ private:
 
   /// Candidate views used by graph traits.
   ArrayRef<std::unique_ptr<TreeEntry>> getTreeEntries() const {
-    return Candidate.getTreeEntries();
+    return Candidate.VectorizableTree;
   }
   ArrayRef<ExternalUser> getExternalUses() const {
-    return Candidate.getExternalUses();
+    return Candidate.ExternalUses;
   }
   /// When true, scheduling drops may-alias memory dependencies between
   /// distinct, range-checkable base objects and records them as runtime alias
@@ -7346,7 +7266,7 @@ bool BoUpSLP::isProfitableToReorder() const {
     // gather load node
     if (Candidate.getRootNode().hasState() &&
         Candidate.getRootNode().getOpcode() == Instruction::PHI &&
-        Candidate.getRootNodeScalars().size() == TinyVF &&
+        getRootNodeScalars().size() == TinyVF &&
         Candidate.getRootNode().getNumOperands() > PhiOpsLimit)
       return false;
     // Single node, which require reorder - skip.
@@ -7395,7 +7315,7 @@ bool BoUpSLP::isProfitableToReorder() const {
         if (all_of(TE->Scalars, IsaPred<Constant, PHINode>) ||
             all_of(TE->Scalars, IsaPred<BinaryOperator, PHINode>))
           continue;
-        if (Candidate.getRootNodeScalars().size() == TinyVF &&
+        if (getRootNodeScalars().size() == TinyVF &&
             any_of(TE->Scalars, IsaPred<PHINode, GEPOperator>))
           continue;
         return true;
@@ -7419,7 +7339,7 @@ bool BoUpSLP::isProfitableToReorder() const {
            static_cast<unsigned>(count_if(TE->Scalars, IsaPred<PHINode>)) <
                TE->Scalars.size() / 2))
         return true;
-      if (Candidate.getRootNodeScalars().size() == TinyVF &&
+      if (getRootNodeScalars().size() == TinyVF &&
           TE->getNumOperands() > PhiOpsLimit)
         return false;
       HasPhis = true;
@@ -8321,7 +8241,7 @@ void BoUpSLP::buildExternalUses(
   Candidate.KeptReassocScalars.clear();
   SmallVector<const Value *, 8> KeptWorklist;
   for (const auto &[V, Owners] : Candidate.ReassocScalarToTreeEntries)
-    if ((Candidate.isGathered(V) || !Candidate.getTreeEntries(V).empty() ||
+    if ((isGathered(V) || !Candidate.getTreeEntries(V).empty() ||
          any_of(Owners,
                 [V = V](const TreeEntry *TE) {
                   return TE->isCopyableElement(const_cast<Value *>(V));
@@ -15389,16 +15309,15 @@ void BoUpSLP::transformNodes() {
     constexpr unsigned SmallTree = 3;
     constexpr unsigned SmallVF = 2;
     if ((Candidate.VectorizableTree.size() <= SmallTree &&
-         Candidate.getRootNodeScalars().size() == SmallVF) ||
+         getRootNodeScalars().size() == SmallVF) ||
         (Candidate.VectorizableTree.size() <= 2 && Candidate.UserIgnoreList))
       return;
 
     if (Candidate.getRootNode().isNonPowOf2Vec() &&
-        Candidate.getCanonicalGraphSize() != Candidate.getTreeSize() &&
-        Candidate.UserIgnoreList &&
-        Candidate.getCanonicalGraphSize() <= SmallTree &&
+        getCanonicalGraphSize() != getTreeSize() && Candidate.UserIgnoreList &&
+        getCanonicalGraphSize() <= SmallTree &&
         count_if(ArrayRef(Candidate.VectorizableTree)
-                     .drop_front(Candidate.getCanonicalGraphSize()),
+                     .drop_front(getCanonicalGraphSize()),
                  [](const std::unique_ptr<TreeEntry> &TE) {
                    return TE->isGather() && TE->hasState() &&
                           TE->getOpcode() == Instruction::Load &&
@@ -18879,12 +18798,12 @@ bool BoUpSLP::isTreeTinyAndNotFullyVectorizable(bool ForReduction) const {
 }
 
 bool BoUpSLP::isTreeNotExtendable() const {
-  if (Candidate.getCanonicalGraphSize() != Candidate.getTreeSize()) {
+  if (getCanonicalGraphSize() != getTreeSize()) {
     constexpr unsigned SmallTree = 3;
     if (Candidate.getRootNode().isNonPowOf2Vec() &&
-        Candidate.getCanonicalGraphSize() <= SmallTree &&
+        getCanonicalGraphSize() <= SmallTree &&
         count_if(ArrayRef(Candidate.VectorizableTree)
-                     .drop_front(Candidate.getCanonicalGraphSize()),
+                     .drop_front(getCanonicalGraphSize()),
                  [](const std::unique_ptr<TreeEntry> &TE) {
                    return TE->isGather() && TE->hasState() &&
                           TE->getOpcode() == Instruction::Load &&
@@ -18894,7 +18813,7 @@ bool BoUpSLP::isTreeNotExtendable() const {
     return false;
   }
   bool Res = false;
-  for (unsigned Idx : seq<unsigned>(Candidate.getTreeSize())) {
+  for (unsigned Idx : seq<unsigned>(getTreeSize())) {
     TreeEntry &E = *Candidate.VectorizableTree[Idx];
     if (E.State == TreeEntry::SplitVectorize)
       return false;
@@ -19900,7 +19819,7 @@ BoUpSLP::calculateTreeCostAndTrimNonProfitable(ArrayRef<Value *> VectorizedVals,
   }
   const unsigned MinVF = getMinVF(Sz);
   if (Cost >= -SLPCostThreshold &&
-      Candidate.getRootNodeScalars().size() * PartLimit <= MinVF &&
+      getRootNodeScalars().size() * PartLimit <= MinVF &&
       (!Candidate.getRootNode().hasState() ||
        (Candidate.getRootNode().getOpcode() != Instruction::Store &&
         LI->getLoopFor(Candidate.getRootNode().getMainOp()->getParent()))))
@@ -20300,7 +20219,7 @@ BoUpSLP::calculateTreeCostAndTrimNonProfitable(ArrayRef<Value *> VectorizedVals,
     if ((!TE->hasState() || !TE->isAltShuffle()) &&
         all_of(TE->Scalars, [&](Value *V) {
           return (TE->hasCopyableElements() && TE->isCopyableElement(V)) ||
-                 isConstant(V) || Candidate.isGathered(V) ||
+                 isConstant(V) || isGathered(V) ||
                  Candidate.getTreeEntries(V).size() > 1;
         }))
       GatherCost *= 2;
@@ -20383,8 +20302,7 @@ BoUpSLP::calculateTreeCostAndTrimNonProfitable(ArrayRef<Value *> VectorizedVals,
       CostKind != TTI::TCK_CodeSize && SLPInstCountCheck &&
       TTI->preferSLPInstCountCheck() &&
       Candidate.getRootNode().getVectorFactor() == 2 && SLPCostThreshold == 0 &&
-      (!SLPReVec ||
-       !isa<VectorType>(Candidate.getRootNodeScalars().front()->getType()));
+      (!SLPReVec || !isa<VectorType>(getRootNodeScalars().front()->getType()));
   const Loop *InstCountLoop = nullptr;
   if (ApplyInstCountVeto && LoopAwareTripCount != 0 &&
       Candidate.getRootNode().hasState())
@@ -20678,7 +20596,7 @@ InstructionCost BoUpSLP::getTreeCost(InstructionCost TreeCost,
       TTI->preferSLPInstCountCheck() &&
       Candidate.getRootNode().getVectorFactor() == 2 && SLPCostThreshold == 0 &&
       (!SLPReVec ||
-       !isa<VectorType>(Candidate.getRootNodeScalars().front()->getType()))) {
+       !isa<VectorType>(getRootNodeScalars().front()->getType()))) {
     // Loop containing the tree root; null for flat code or disabled
     // loop-aware modeling. Shared by both calls below.
     const Loop *TreeLoop = nullptr;
@@ -21064,7 +20982,7 @@ InstructionCost BoUpSLP::getTreeCost(InstructionCost TreeCost,
         // better ordering info of PHIs, being vectorized currently.
         bool IsProfitablePHIUser =
             (KeepScalar || (ScalarCost - ExtraCost <= TTI::TCC_Basic &&
-                            Candidate.getRootNodeScalars().size() > 2)) &&
+                            getRootNodeScalars().size() > 2)) &&
             Candidate.getRootNode().hasState() &&
             Candidate.getRootNode().getOpcode() == Instruction::PHI &&
             !Inst->hasNUsesOrMore(UsesLimit) &&
@@ -27356,12 +27274,11 @@ BoUpSLP::vectorizeTree(const ExtraValueToDebugLocsMap &ExternallyUsedValues,
              (IE->UserTreeIndex.UserTE == &Candidate.getRootNode() &&
               IE->UserTreeIndex.EdgeIdx == UINT_MAX))) &&
           !(Candidate.getRootNode().State == TreeEntry::SplitVectorize &&
-            IE->UserTreeIndex &&
-            is_contained(Candidate.getRootNodeScalars(), I)) &&
+            IE->UserTreeIndex && is_contained(getRootNodeScalars(), I)) &&
           !(Candidate.GatheredLoadsEntriesFirst.has_value() &&
             IE->Idx >= *Candidate.GatheredLoadsEntriesFirst &&
             Candidate.getRootNode().isGather() &&
-            is_contained(Candidate.getRootNodeScalars(), I)) &&
+            is_contained(getRootNodeScalars(), I)) &&
           !(!Candidate.getRootNode().isGather() &&
             Candidate.getRootNode().isCopyableElement(I)) &&
           // Dropped narrowed reduction chain instructions may still use
@@ -28487,7 +28404,7 @@ void BoUpSLP::BlockScheduling::calculateDependencies(
               IgnoredMemDeps.insert(Key);
               Dropped = true;
             }
-          } else if (!SLP->Candidate.hasNonCheckableMemBlocker()) {
+          } else if (!SLP->hasNonCheckableMemBlocker()) {
             // A dependency on a non-simple access (call, a volatile/atomic, or
             // anything without a single load/store pointer) cannot be
             // range-checked, so it is a hard blocker a retry cannot drop. A
@@ -28496,10 +28413,10 @@ void BoUpSLP::BlockScheduling::calculateDependencies(
             // resolved statically and are not blockers.
             if (IsNonSimpleSrc || !getLoadStorePointerOperand(DepInst) ||
                 !isSimple(DepInst))
-              SLP->Candidate.setHasNonCheckableMemBlocker(true);
-            else if (!SLP->Candidate.hasRuntimeCheckableBlockers() &&
+              SLP->Candidate.HasNonCheckableMemBlocker = true;
+            else if (!SLP->hasRuntimeCheckableBlockers() &&
                      SLP->isRuntimeCheckableAliasPair(SrcInst, DepInst))
-              SLP->Candidate.setHasRuntimeCheckableBlockers(true);
+              SLP->Candidate.HasRuntimeCheckableBlockers = true;
           }
         }
 
@@ -29638,7 +29555,7 @@ void BoUpSLP::computeMinimumValueSizes() {
   // modify.
   // Add reduction ops sizes, if any.
   if (Candidate.UserIgnoreList &&
-      isa<IntegerType>(Candidate.getRootNodeScalars().front()->getType())) {
+      isa<IntegerType>(getRootNodeScalars().front()->getType())) {
     // Convert vector_reduce_add(ZExt(<n x i1>)) to ZExtOrTrunc(ctpop(bitcast <n
     // x i1> to in)).
     if (all_of(make_isa_range<Instruction>(*Candidate.UserIgnoreList),
@@ -29691,9 +29608,9 @@ void BoUpSLP::computeMinimumValueSizes() {
   while (NodeIdx < Candidate.VectorizableTree.size()) {
     ArrayRef<Value *> TreeRoot = Candidate.VectorizableTree[NodeIdx]->Scalars;
     unsigned Limit = 2;
-    if (IsTopRoot && Candidate.ReductionBitWidth ==
-                         DL->getTypeSizeInBits(
-                             Candidate.getRootNodeScalars().front()->getType()))
+    if (IsTopRoot &&
+        Candidate.ReductionBitWidth ==
+            DL->getTypeSizeInBits(getRootNodeScalars().front()->getType()))
       Limit = 3;
     unsigned MaxBitWidth = ComputeMaxBitWidth(
         *Candidate.VectorizableTree[NodeIdx], IsTopRoot,
