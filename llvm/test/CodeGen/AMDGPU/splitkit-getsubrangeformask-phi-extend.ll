@@ -623,7 +623,6 @@ define void @f(ptr %p, <16 x i1> %m, <16 x i63> %pt, <16 x i1> %sc,
 ; CHECK-NEXT:  ; %bb.5: ; %LeafBlock
 ; CHECK-NEXT:    v_cmp_ne_u32_e64 s[38:39], 2, v22
 ; CHECK-NEXT:    s_andn2_b64 s[52:53], s[52:53], exec
-; CHECK-NEXT:    s_and_b64 s[38:39], s[38:39], exec
 ; CHECK-NEXT:    s_mov_b64 s[50:51], exec
 ; CHECK-NEXT:    s_or_b64 s[52:53], s[52:53], s[38:39]
 ; CHECK-NEXT:  ; %bb.6: ; %Flow53
