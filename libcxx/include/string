@@ -597,6 +597,7 @@ basic_string<char32_t> operator""s( const char32_t *str, size_t len );          
 #  include <__algorithm/min.h>
 #  include <__algorithm/remove.h>
 #  include <__algorithm/remove_if.h>
+#  include <__charconv/to_chars_integral.h>
 #  include <__assert>
 #  include <__config>
 #  include <__cstddef/size_t.h>
@@ -3825,12 +3826,45 @@ stoull(const string& __str, size_t* __idx = nullptr, int __base = 10);
 [[__nodiscard__]] _LIBCPP_EXPORTED_FROM_ABI double stod(const string& __str, size_t* __idx = nullptr);
 [[__nodiscard__]] _LIBCPP_EXPORTED_FROM_ABI long double stold(const string& __str, size_t* __idx = nullptr);
 
-[[__nodiscard__]] _LIBCPP_EXPORTED_FROM_ABI _LIBCPP_CONSTEXPR_SINCE_CXX26 string to_string(int __val);
-[[__nodiscard__]] _LIBCPP_EXPORTED_FROM_ABI _LIBCPP_CONSTEXPR_SINCE_CXX26 string to_string(unsigned __val);
-[[__nodiscard__]] _LIBCPP_EXPORTED_FROM_ABI _LIBCPP_CONSTEXPR_SINCE_CXX26 string to_string(long __val);
-[[__nodiscard__]] _LIBCPP_EXPORTED_FROM_ABI _LIBCPP_CONSTEXPR_SINCE_CXX26 string to_string(unsigned long __val);
-[[__nodiscard__]] _LIBCPP_EXPORTED_FROM_ABI _LIBCPP_CONSTEXPR_SINCE_CXX26 string to_string(long long __val);
-[[__nodiscard__]] _LIBCPP_EXPORTED_FROM_ABI _LIBCPP_CONSTEXPR_SINCE_CXX26 string to_string(unsigned long long __val);
+# if _LIBCPP_STD_VER <= 23 || defined(_LIBCPP_BUILDING_LIBRARY)
+[[__nodiscard__]] _LIBCPP_EXPORTED_FROM_ABI string to_string(int __val);
+[[__nodiscard__]] _LIBCPP_EXPORTED_FROM_ABI string to_string(unsigned __val);
+[[__nodiscard__]] _LIBCPP_EXPORTED_FROM_ABI string to_string(long __val);
+[[__nodiscard__]] _LIBCPP_EXPORTED_FROM_ABI string to_string(unsigned long __val);
+[[__nodiscard__]] _LIBCPP_EXPORTED_FROM_ABI string to_string(long long __val);
+[[__nodiscard__]] _LIBCPP_EXPORTED_FROM_ABI string to_string(unsigned long long __val);
+# else
+template <class _StringT, class _Tp>
+_LIBCPP_HIDE_FROM_ABI constexpr _StringT __to_string_integral(_Tp __val) {
+  //  numeric_limits::digits10 returns value less on 1 than desired for unsigned numbers.
+  //  For example, for 1-byte unsigned value digits10 is 2 (999 can not be represented),
+  //  so we need +1 here.
+  char __buf[numeric_limits<_Tp>::digits10 + 2]; // +1 for minus, +1 for digits10
+  auto __res = std::to_chars(__buf, __buf + sizeof(__buf), __val);
+  _LIBCPP_ASSERT_INTERNAL(__res.ec == errc(), "__buf must be large enough to accomodate the value");
+  return _StringT(__buf, __res.ptr);
+}
+
+[[__nodiscard__]] _LIBCPP_EXPORTED_FROM_ABI constexpr string to_string(int __val) {
+    return std::__to_string_integral<string>(__val);
+}
+[[__nodiscard__]] _LIBCPP_EXPORTED_FROM_ABI string to_string(unsigned __val) {
+    return std::__to_string_integral<string>(__val);
+}
+[[__nodiscard__]] _LIBCPP_EXPORTED_FROM_ABI string to_string(long __val) {
+    return std::__to_string_integral<string>(__val);
+}
+[[__nodiscard__]] _LIBCPP_EXPORTED_FROM_ABI string to_string(unsigned long __val) {
+    return std::__to_string_integral<string>(__val);
+}
+[[__nodiscard__]] _LIBCPP_EXPORTED_FROM_ABI string to_string(long long __val) {
+    return std::__to_string_integral<string>(__val);
+}
+[[__nodiscard__]] _LIBCPP_EXPORTED_FROM_ABI string to_string(unsigned long long __val) {
+    return std::__to_string_integral<string>(__val);
+}
+# endif // _LIBCPP_STD_VER <= 23 || defined(_LIBCPP_BUILDING_LIBRARY)
+
 [[__nodiscard__]] _LIBCPP_EXPORTED_FROM_ABI string to_string(float __val);
 [[__nodiscard__]] _LIBCPP_EXPORTED_FROM_ABI string to_string(double __val);
 [[__nodiscard__]] _LIBCPP_EXPORTED_FROM_ABI string to_string(long double __val);
@@ -3849,12 +3883,12 @@ stoull(const wstring& __str, size_t* __idx = nullptr, int __base = 10);
 [[__nodiscard__]] _LIBCPP_EXPORTED_FROM_ABI double stod(const wstring& __str, size_t* __idx = nullptr);
 [[__nodiscard__]] _LIBCPP_EXPORTED_FROM_ABI long double stold(const wstring& __str, size_t* __idx = nullptr);
 
-[[__nodiscard__]] _LIBCPP_EXPORTED_FROM_ABI _LIBCPP_CONSTEXPR_SINCE_CXX26 wstring to_wstring(int __val);
-[[__nodiscard__]] _LIBCPP_EXPORTED_FROM_ABI _LIBCPP_CONSTEXPR_SINCE_CXX26 wstring to_wstring(unsigned __val);
-[[__nodiscard__]] _LIBCPP_EXPORTED_FROM_ABI _LIBCPP_CONSTEXPR_SINCE_CXX26 wstring to_wstring(long __val);
-[[__nodiscard__]] _LIBCPP_EXPORTED_FROM_ABI _LIBCPP_CONSTEXPR_SINCE_CXX26 wstring to_wstring(unsigned long __val);
-[[__nodiscard__]] _LIBCPP_EXPORTED_FROM_ABI _LIBCPP_CONSTEXPR_SINCE_CXX26 wstring to_wstring(long long __val);
-[[__nodiscard__]] _LIBCPP_EXPORTED_FROM_ABI _LIBCPP_CONSTEXPR_SINCE_CXX26 wstring to_wstring(unsigned long long __val);
+[[__nodiscard__]] _LIBCPP_EXPORTED_FROM_ABI wstring to_wstring(int __val);
+[[__nodiscard__]] _LIBCPP_EXPORTED_FROM_ABI wstring to_wstring(unsigned __val);
+[[__nodiscard__]] _LIBCPP_EXPORTED_FROM_ABI wstring to_wstring(long __val);
+[[__nodiscard__]] _LIBCPP_EXPORTED_FROM_ABI wstring to_wstring(unsigned long __val);
+[[__nodiscard__]] _LIBCPP_EXPORTED_FROM_ABI wstring to_wstring(long long __val);
+[[__nodiscard__]] _LIBCPP_EXPORTED_FROM_ABI wstring to_wstring(unsigned long long __val);
 [[__nodiscard__]] _LIBCPP_EXPORTED_FROM_ABI wstring to_wstring(float __val);
 [[__nodiscard__]] _LIBCPP_EXPORTED_FROM_ABI wstring to_wstring(double __val);
 [[__nodiscard__]] _LIBCPP_EXPORTED_FROM_ABI wstring to_wstring(long double __val);
