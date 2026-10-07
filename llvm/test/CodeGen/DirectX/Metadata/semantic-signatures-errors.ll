@@ -13,21 +13,8 @@
 ; RUN: not opt -disable-output -passes=dxil-translate-metadata %t/name.ll 2>&1 | FileCheck %s --check-prefix=NAME
 ; RUN: not opt -disable-output -passes=dxil-translate-metadata %t/function.ll 2>&1 | FileCheck %s --check-prefix=FUNCTION
 
-; TRIPLE: Invalid semantic signature: expected an entry/input/output signature triple
-; DUPLICATE: Invalid semantic signature: duplicate signature record for entry 'main'
-; WIDTH: entry 'main' input signature: expected i32 at operand 0
-; ID: entry 'main' input signature: signature IDs must be dense and in list order
-; ROWS: entry 'main' input signature: signature row count must be within 1-32
-; COMPONENT: entry 'main' input signature: unsupported signature component type
-; STAGE: entry 'main' input signature: nonempty signatures are currently supported only for vertex and pixel entries
-; ACCESS: entry 'main': signature access has an invalid component index
-; MISSING: signature access in function 'main' has no entry signature metadata
-; OVERFLOW: entry 'main' output signature: signature elements do not fit in 32 rows (element 1)
-; PARTIAL: entry 'main' input signature: partially allocated signatures are not supported
-; NAME: entry 'main' input signature: expected semantic name string
-; FUNCTION: signature entry must be a defined function in the module
-
 ;--- triple.ll
+; TRIPLE: Invalid semantic signature: expected an entry/input/output signature triple
 ; Invalid record shape: four operands instead of entry/input/output.
 target triple = "dxil-pc-shadermodel6.8-vertex"
 define void @main() #0 { ret void }
@@ -36,6 +23,7 @@ attributes #0 = { "hlsl.shader"="vertex" }
 !0 = !{ptr @main, null, null, null}
 
 ;--- duplicate.ll
+; DUPLICATE: Invalid semantic signature: duplicate signature record for entry 'main'
 ; Invalid table: the same entry record appears twice.
 target triple = "dxil-pc-shadermodel6.8-vertex"
 define void @main() #0 { ret void }
@@ -44,6 +32,7 @@ attributes #0 = { "hlsl.shader"="vertex" }
 !0 = !{ptr @main, null, null}
 
 ;--- width.ll
+; WIDTH: entry 'main' input signature: expected i32 at operand 0
 ; Invalid signature ID width (operand 0): i128 instead of i32.
 target triple = "dxil-pc-shadermodel6.8-vertex"
 define void @main() #0 { ret void }
@@ -55,6 +44,7 @@ attributes #0 = { "hlsl.shader"="vertex" }
 !3 = !{i32 0}
 
 ;--- id.ll
+; ID: entry 'main' input signature: signature IDs must be dense and in list order
 ; Invalid signature ID (operand 0): the first element must have ID 0.
 target triple = "dxil-pc-shadermodel6.8-vertex"
 define void @main() #0 { ret void }
@@ -66,6 +56,7 @@ attributes #0 = { "hlsl.shader"="vertex" }
 !3 = !{i32 0}
 
 ;--- rows.ll
+; ROWS: entry 'main' input signature: signature row count must be within 1-32
 ; Invalid row count (operand 6): zero rows, with a matching empty index list.
 target triple = "dxil-pc-shadermodel6.8-vertex"
 define void @main() #0 { ret void }
@@ -77,6 +68,7 @@ attributes #0 = { "hlsl.shader"="vertex" }
 !3 = !{}
 
 ;--- component.ll
+; COMPONENT: entry 'main' input signature: unsupported signature component type
 ; Unsupported component type (operand 2): F64 (10), rather than F32 (9).
 target triple = "dxil-pc-shadermodel6.8-vertex"
 define void @main() #0 { ret void }
@@ -88,6 +80,7 @@ attributes #0 = { "hlsl.shader"="vertex" }
 !3 = !{i32 0}
 
 ;--- stage.ll
+; STAGE: entry 'main' input signature: nonempty signatures are currently supported only for vertex and pixel entries
 ; Unsupported entry stage: geometry rather than vertex or pixel.
 target triple = "dxil-pc-shadermodel6.8-geometry"
 define void @main() #0 { ret void }
@@ -99,6 +92,7 @@ attributes #0 = { "hlsl.shader"="geometry" }
 !3 = !{i32 0}
 
 ;--- access.ll
+; ACCESS: entry 'main': signature access has an invalid component index
 ; Invalid access column (intrinsic operand 2): outside this scalar element.
 target triple = "dxil-pc-shadermodel6.8-vertex"
 define void @main() #0 {
@@ -113,6 +107,7 @@ attributes #0 = { "hlsl.shader"="vertex" }
 !3 = !{i32 0}
 
 ;--- missing.ll
+; MISSING: signature access in function 'main' has no entry signature metadata
 ; Missing signature table for an entry that accesses an input.
 target triple = "dxil-pc-shadermodel6.8-vertex"
 define void @main() #0 {
@@ -122,6 +117,7 @@ define void @main() #0 {
 attributes #0 = { "hlsl.shader"="vertex" }
 
 ;--- overflow.ll
+; OVERFLOW: entry 'main' output signature: signature elements do not fit in 32 rows (element 1)
 ; Invalid total extent: A fills all 32 rows, leaving no space for B.
 target triple = "dxil-pc-shadermodel6.8-vertex"
 define void @main() #0 { ret void }
@@ -135,6 +131,7 @@ attributes #0 = { "hlsl.shader"="vertex" }
 !5 = !{i32 0}
 
 ;--- partial.ll
+; PARTIAL: entry 'main' input signature: partially allocated signatures are not supported
 ; Invalid mixed allocation: A has a location (operands 8/9), but B does not.
 target triple = "dxil-pc-shadermodel6.8-vertex"
 define void @main() #0 { ret void }
@@ -147,6 +144,7 @@ attributes #0 = { "hlsl.shader"="vertex" }
 !4 = !{i32 1, !"B", i32 9, i32 0, !3, i32 0, i32 1, i8 1, i32 -1, i8 -1, i8 0, i8 0, i32 0}
 
 ;--- name.ll
+; NAME: entry 'main' input signature: expected semantic name string
 ; Invalid semantic name (operand 1): null instead of a metadata string.
 target triple = "dxil-pc-shadermodel6.8-vertex"
 define void @main() #0 { ret void }
@@ -158,6 +156,7 @@ attributes #0 = { "hlsl.shader"="vertex" }
 !3 = !{i32 0}
 
 ;--- function.ll
+; FUNCTION: signature entry must be a defined function in the module
 ; Invalid entry (record operand 0): a global variable instead of a function.
 target triple = "dxil-pc-shadermodel6.8-vertex"
 @global = global i32 0
