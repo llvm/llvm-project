@@ -2897,7 +2897,7 @@ public:
         ElementSize(VecTy ? DL.getTypeSizeInBits(ElementTy).getFixedValue() / 8
                           : 0),
         PHIUsers(PHIUsers), SelectUsers(SelectUsers),
-        IRB(NewAI.getContext(), ConstantFolder()) {
+        IRB(*NewAI.getModule(), ConstantFolder()) {
     if (VecTy) {
       assert((DL.getTypeSizeInBits(ElementTy).getFixedValue() % 8) == 0 &&
              "Only multiple-of-8 sized vector elements are viable");

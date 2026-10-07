@@ -222,8 +222,7 @@ public:
   bool getMemOperandsWithOffsetWidth(
       const MachineInstr &LdSt,
       SmallVectorImpl<const MachineOperand *> &BaseOps, int64_t &Offset,
-      bool &OffsetIsScalable, LocationSize &Width,
-      const TargetRegisterInfo *TRI) const override;
+      bool &OffsetIsScalable, LocationSize &Width) const override;
 
   /// Reverses the branch condition of the specified condition list,
   /// returning false on success and true if it cannot be reversed.

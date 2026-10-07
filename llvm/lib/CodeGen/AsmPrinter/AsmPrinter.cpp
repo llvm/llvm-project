@@ -1999,7 +1999,8 @@ void AsmPrinter::handleCallsiteForCallgraph(
     const MachineFunction::CallSiteInfoMap &CallSitesInfoMap,
     const MachineInstr &MI) {
   assert(MI.isCall() && "This method is meant for call instructions only.");
-  const MachineOperand &CalleeOperand = MI.getOperand(0);
+  const TargetInstrInfo *TII = MF->getSubtarget().getInstrInfo();
+  const MachineOperand &CalleeOperand = TII->getCalleeOperand(MI);
   if (CalleeOperand.isGlobal() || CalleeOperand.isSymbol()) {
     // Handle direct calls.
     MCSymbol *CalleeSymbol = nullptr;

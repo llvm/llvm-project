@@ -1552,11 +1552,6 @@ static SignedNumericExpr<CAT, KIND> buildSignedAdd(
       true};
 }
 
-template <typename T>
-static std::optional<Expr<SomeType>> tryBuildSplitSumExpressionTree(const T &) {
-  return std::nullopt;
-}
-
 template <common::TypeCategory CAT, int KIND>
 static std::optional<NumericExpr<CAT, KIND>> tryBuildSplitSumExpressionTree(
     const NumericExpr<CAT, KIND> &expr) {
@@ -1600,24 +1595,6 @@ static std::optional<NumericExpr<CAT, KIND>> tryBuildSplitSumExpressionTree(
   assert(result.isPositive &&
       "the first flattened term and therefore the split sum are positive");
   return std::move(result.expr);
-}
-
-template <common::TypeCategory CAT>
-static std::optional<Expr<SomeType>> tryBuildSplitSumExpressionTree(
-    const Expr<SomeKind<CAT>> &expr) {
-  // Keep the supported categories explicit: integer reassociation requires a
-  // separate intermediate-range policy.
-  if constexpr (CAT == common::TypeCategory::Real ||
-      CAT == common::TypeCategory::Complex) {
-    return common::visit(
-        [&](const auto &typedExpr) -> std::optional<Expr<SomeType>> {
-          if (auto result = tryBuildSplitSumExpressionTree(typedExpr))
-            return Expr<SomeType>{std::move(*result)};
-          return std::nullopt;
-        },
-        expr.u);
-  }
-  return std::nullopt;
 }
 
 template <typename> struct IsExpr : std::false_type {};
