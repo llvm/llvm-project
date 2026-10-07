@@ -683,6 +683,16 @@ bool LoopVectorizationLegality::canVectorizeOuterLoop() {
       return false;
   }
 
+  // Like for inner loops, the widest integer induction type is used for the
+  // canonical IV and trip count, so at least one integer induction is required.
+  if (!WidestIndTy) {
+    reportVectorizationFailure(
+        "Did not find one integer induction var",
+        "loop induction variable could not be identified",
+        "NoInductionVariable", ORE, TheLoop);
+    return false;
+  }
+
   return Result;
 }
 

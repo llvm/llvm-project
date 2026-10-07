@@ -56,8 +56,8 @@ end program
 ! calls the managed deallocator) rather than an inlined plain free.
 ! CHECK-LABEL: func.func @_QMmPalloc_local()
 ! CHECK-NOT:   cuf.alloc
-! CHECK:       hlfir.declare {{.*}} {fortran_attrs = #fir.var_attrs<allocatable>, uniq_name = "_QMmFalloc_localEloc_arr"}
-! CHECK:       fir.embox {{.*}} {allocator_idx = 4 : i32}
+! CHECK:       hlfir.declare {{.*}} uniq_name("_QMmFalloc_localEloc_arr") fortran_attrs<allocatable>
+! CHECK:       fir.embox {{.*}} allocator_idx(4)
 ! CHECK:       fir.call @_FortranAAllocatableAllocate
 ! CHECK-NOT:   fir.freemem
 ! CHECK:       fir.call @_FortranAAllocatableDeallocate
@@ -65,39 +65,39 @@ end program
 
 ! Module allocatable: redirected to the unified allocator at ALLOCATE.
 ! CHECK-LABEL: func.func @_QMmPalloc_module()
-! CHECK:       fir.embox {{.*}} {allocator_idx = 4 : i32}
+! CHECK:       fir.embox {{.*}} allocator_idx(4)
 
 ! Plain pointer: redirected to the unified allocator at ALLOCATE.
 ! CHECK-LABEL: func.func @_QMmPalloc_pointer()
 ! CHECK-NOT:   cuf.alloc
-! CHECK:       hlfir.declare {{.*}} {fortran_attrs = #fir.var_attrs<pointer>, uniq_name = "_QMmFalloc_pointerEloc_ptr"}
-! CHECK:       fir.embox {{.*}} {allocator_idx = 4 : i32}
+! CHECK:       hlfir.declare {{.*}} uniq_name("_QMmFalloc_pointerEloc_ptr") fortran_attrs<pointer>
+! CHECK:       fir.embox {{.*}} allocator_idx(4)
 ! CHECK-NOT:   cuf.allocate
 
 ! Explicit device allocatable keeps the device allocator (idx 2); the implicit
 ! unified redirect does not apply because the allocator index is already set.
 ! CHECK-LABEL: func.func @_QMmPalloc_explicit_device()
-! CHECK:       fir.embox {{.*}} {allocator_idx = 2 : i32}
+! CHECK:       fir.embox {{.*}} allocator_idx(2)
 
 ! COMMON-block pointer: its ALLOCATE is still redirected to the unified allocator.
 ! CHECK-LABEL: func.func @_QMmPcommon_sub()
-! CHECK:       hlfir.declare {{.*}} {fortran_attrs = #fir.var_attrs<pointer>, uniq_name = "_QMmFcommon_subEcom_ptr"}
-! CHECK:       fir.embox {{.*}} {allocator_idx = 4 : i32}
+! CHECK:       hlfir.declare {{.*}} uniq_name("_QMmFcommon_subEcom_ptr") fortran_attrs<pointer>
+! CHECK:       fir.embox {{.*}} allocator_idx(4)
 
 ! Allocate-on-assignment: the descriptor is created with the unified allocator
 ! index at declaration, so the runtime realloc for the assignment gets managed
 ! memory even though there is no explicit ALLOCATE.
 ! CHECK-LABEL: func.func @_QMmPalloc_on_assign(
-! CHECK:       fir.embox {{.*}} {allocator_idx = 4 : i32}
-! CHECK:       hlfir.declare {{.*}} uniq_name = "_QMmFalloc_on_assignEassign_arr"
+! CHECK:       fir.embox {{.*}} allocator_idx(4)
+! CHECK:       hlfir.declare {{.*}} uniq_name("_QMmFalloc_on_assignEassign_arr")
 ! CHECK:       hlfir.assign {{.*}} realloc
 
 ! Main-program local allocatable.
 ! CHECK-LABEL: func.func @_QQmain()
-! CHECK:       fir.embox {{.*}} {allocator_idx = 4 : i32}
+! CHECK:       fir.embox {{.*}} allocator_idx(4)
 
 ! The module global carries no CUDA data attribute, but its descriptor is created
 ! with the unified allocator index so runtime allocations use managed memory.
 ! CHECK:     fir.global @_QMmEmod_arr : !fir.box<!fir.heap<!fir.array<?xf32>>>
 ! CHECK-NOT: fir.global @_QMmEmod_arr <{data_attr
-! CHECK:     fir.embox {{.*}} {allocator_idx = 4 : i32}
+! CHECK:     fir.embox {{.*}} allocator_idx(4)
