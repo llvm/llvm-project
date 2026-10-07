@@ -2563,8 +2563,8 @@ void CIRGenModule::emitTopLevelDecl(Decl *decl) {
   }
 
   case Decl::Import: {
-    auto *import = cast<ImportDecl>(decl);
-    clang::Module *mod = import->getImportedModule();
+    auto *importDecl = cast<ImportDecl>(decl);
+    clang::Module *mod = importDecl->getImportedModule();
 
     // If we've already imported this module, we're done.
     if (!importedModules.insert(mod))
