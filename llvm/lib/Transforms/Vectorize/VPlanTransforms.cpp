@@ -3231,12 +3231,6 @@ getRecipesForUncountableExit(SmallVectorImpl<VPInstruction *> &Recipes,
     if (V->isDefinedOutsideLoopRegions())
       continue;
 
-    // FIXME: Remove the single user restriction; it's here because we're
-    //        starting with the simplest set of loops we can, and multiple
-    //        users means needing to add PHI nodes in the transform.
-    if (V->getNumUsers() > 1)
-      return nullptr;
-
     VPValue *Op1, *Op2;
     // Walk back through recipes until we find at least one load from memory.
     if (match(V, m_Cmp(m_VPValue(Op1), m_VPValue(Op2)))) {
@@ -3259,6 +3253,9 @@ getRecipesForUncountableExit(SmallVectorImpl<VPInstruction *> &Recipes,
       Recipes.push_back(cast<VPInstruction>(V->getDefiningRecipe()));
     } else if (match(V, m_VPInstruction<VPInstruction::MaskedCond>(
                             m_VPValue(Op1)))) {
+      Worklist.push_back(Op1);
+      Recipes.push_back(cast<VPInstruction>(V->getDefiningRecipe()));
+    } else if (match(V, m_Not(m_VPValue(Op1)))) {
       Worklist.push_back(Op1);
       Recipes.push_back(cast<VPInstruction>(V->getDefiningRecipe()));
     } else
@@ -3399,8 +3396,7 @@ static bool handleUncountableExitsWithSideEffects(
   // a widen IV recipe with a step of 1; we're only interested in contiguous
   // accesses for the condition load right now.
   auto *IV = cast<VPWidenInductionRecipe>(&HeaderVPBB->front());
-  if (!match(IV->getStartValue(), m_SpecificInt(0)) ||
-      !match(IV->getStepValue(), m_SpecificInt(1))) {
+  if (!match(IV->getStepValue(), m_SpecificInt(1))) {
     reportVectorizationFailure("Early exit loop with side effects contains "
                                "load used by the exit condition with an "
                                "unsupported memory access pattern",

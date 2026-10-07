@@ -8,8 +8,8 @@
 ;; uncountable exit condition has a second user (the store).
 define i64 @loop_contains_store(ptr dereferenceable(1024) %p1, ptr noalias %dest) !dbg !10 {
 ; CHECK-DEBUG-LABEL: LV: Checking a loop in 'loop_contains_store'
-; CHECK-DEBUG:       LV: Not vectorizing: Early exit loop with store but no supported condition load.
-; CHECK-REMARK:      foo.c:10:3: loop not vectorized: Early exit loop with store but no supported condition load
+; CHECK-DEBUG:       LV: Loop passed LoopVectorizationLegality checks!
+; CHECK-DEBUG:       LV: VPlan created successfully. Loop can be vectorized.
 entry:
   br label %loop, !dbg !11
 
