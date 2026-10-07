@@ -1452,7 +1452,7 @@ def : ProcessorAlias<"apple-s6", "apple-a13">;
 def : ProcessorAlias<"apple-s7", "apple-a13">;
 def : ProcessorAlias<"apple-s8", "apple-a13">;
 
-def : ProcessorModel<"apple-a14", CycloneModel, ProcessorFeatures.AppleA14,
+def : ProcessorModel<"apple-a14", FirestormModel, ProcessorFeatures.AppleA14,
                      [TuneAppleA14]>;
 def : ProcessorAlias<"apple-m1", "apple-a14">;
 
