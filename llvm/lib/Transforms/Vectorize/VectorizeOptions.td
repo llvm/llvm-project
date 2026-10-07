@@ -247,6 +247,8 @@ defm : ValueField<"slp-max-stride", "unsigned", "8",
   "The maximum stride, considered to be profitable">;
 defm : OptionalValueField<"slp-max-vf", "unsigned",
   "Maximum SLP vectorization factor (0=unlimited)">;
+defm : BoolField<"slp-merge-inputops", "true",
+  "Attempt to vectorize by merging input operands of a binary operator node into a single wider node">;
 defm : OptionalValueField<"slp-min-reg-size", "int",
   "Attempt to vectorize for this register size in bits">;
 defm : ValueField<"slp-min-strided-loads", "unsigned", "2",
