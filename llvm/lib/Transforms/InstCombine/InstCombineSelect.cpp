@@ -3549,9 +3549,10 @@ foldSelectOfOrderedFAbsCmpOfNaNScrubbedValue(SelectInst &SI,
   uint64_t WeightNewSelFalse =
       WeightNaN * (WeightComparisonTrue + WeightComparisonFalse) +
       WeightNotNaN * WeightComparisonFalse;
-  setFittedBranchWeights(*cast<SelectInst>(NewSel),
-                         {WeightNewSelTrue, WeightNewSelFalse},
-                         /*IsExpected*/ false);
+  if (!ProfcheckDisableMetadataFixes)
+    setFittedBranchWeights(*cast<SelectInst>(NewSel),
+                           {WeightNewSelTrue, WeightNewSelFalse},
+                           /*IsExpected*/ false);
   return NewSelUsesReplaced;
 }
 
