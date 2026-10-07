@@ -1,17 +1,18 @@
 ; Test that atomicrmw uinc_wrap/udec_wrap with AMDGPU metadata emit both
 ; OpFunctionCall (for the atomic) and AuxData InstructionMetadata (for the
-; metadata), all gated on -spirv-preserve-auxdata.
+; metadata). AMD triple enables AuxData without -spirv-preserve-auxdata.
 
 ; RUN: llc -verify-machineinstrs -O0 -mtriple=spirv64-amd-amdhsa \
 ; RUN:   --spirv-ext=+SPV_KHR_non_semantic_info,+SPV_KHR_relaxed_extended_instruction \
 ; RUN:   -spirv-preserve-auxdata %s -o - | FileCheck %s
 
 ; RUN: llc -verify-machineinstrs -O0 -mtriple=spirv64-amd-amdhsa \
-; RUN:   --spirv-ext=+SPV_KHR_non_semantic_info %s -o - \
-; RUN:   | FileCheck %s --check-prefix=OFF
+; RUN:   --spirv-ext=+SPV_KHR_non_semantic_info %s -o - | FileCheck %s
 
-; OFF-NOT: amdgpu.no.fine.grained.memory
-; OFF-NOT: amdgpu.no.remote.memory
+; No UserSemantic decorations (old encoding).
+; RUN: llc -verify-machineinstrs -O0 -mtriple=spirv64-amd-amdhsa %s -o - \
+; RUN:   | FileCheck %s --check-prefix=NOUS
+; NOUS-NOT: UserSemantic
 
 ; RUN: %if spirv-tools %{ llc -verify-machineinstrs -O0 \
 ; RUN:   -mtriple=spirv64-amd-amdhsa --spirv-ext=+SPV_KHR_non_semantic_info \

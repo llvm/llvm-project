@@ -32,6 +32,7 @@ class Constant;
 class GlobalObject;
 class Module;
 class SPIRVSubtarget;
+class Triple;
 
 // Khronos NonSemantic.AuxData opcodes (int64_t to drop casts at MCOperand
 // boundaries).
@@ -111,7 +112,7 @@ private:
                           bool UseForwardRefs = false);
 };
 
-bool spirvPreserveAuxData();
+bool spirvPreserveAuxData(const Triple &TT);
 
 } // namespace llvm
 

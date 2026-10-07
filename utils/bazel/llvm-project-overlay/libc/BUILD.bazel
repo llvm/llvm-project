@@ -2164,6 +2164,7 @@ libc_support_library(
         ":__support_cpp_type_traits",
         ":__support_ctype_utils",
         ":__support_macros_config",
+        ":__support_wctype_utils",
         ":hdr_stdint_proxy",
     ],
 )
@@ -2371,7 +2372,7 @@ libc_support_library(
         ":__support_macros_attributes",
         ":__support_macros_config",
         ":__support_osutil_linux_syscall_wrappers_close",
-        ":__support_osutil_linux_syscall_wrappers_dup2",
+        ":__support_osutil_linux_syscall_wrappers_dup3",
         ":__support_osutil_linux_syscall_wrappers_fcntl",
         ":__support_osutil_linux_syscall_wrappers_lseek",
         ":__support_osutil_linux_syscall_wrappers_open",
@@ -5048,6 +5049,24 @@ libc_function(
 )
 
 libc_function(
+    name = "inet_pton",
+    srcs = ["src/arpa/inet/inet_pton.cpp"],
+    hdrs = ["src/arpa/inet/inet_pton.h"],
+    deps = [
+        ":__support_common",
+        ":__support_libc_errno",
+        ":__support_macros_config",
+        ":__support_macros_null_check",
+        ":__support_net_address",
+        ":hdr_errno_macros",
+        ":hdr_stdint_proxy",
+        ":hdr_sys_socket_macros",
+        ":types_struct_in6_addr",
+        ":types_struct_in_addr",
+    ],
+)
+
+libc_function(
     name = "ntohl",
     srcs = ["src/arpa/inet/ntohl.cpp"],
     hdrs = ["src/arpa/inet/ntohl.h"],
@@ -6407,6 +6426,7 @@ libc_support_library(
         ":__support_fputil_multiply_add",
         ":__support_fputil_polyeval",
         ":__support_integer_literals",
+        ":__support_macros_attributes",
         ":__support_macros_config",
         ":__support_macros_optimization",
     ],
@@ -8638,6 +8658,7 @@ libc_support_library(
         ":__support_fputil_fp_bits",
         ":__support_fputil_multiply_add",
         ":__support_fputil_polyeval",
+        ":__support_macros_attributes",
         ":__support_macros_config",
         ":__support_macros_optimization",
         ":__support_math_common_constants",
@@ -8701,6 +8722,7 @@ libc_support_library(
         ":__support_common",
         ":__support_cpp_bit",
         ":__support_fputil_multiply_add",
+        ":__support_fputil_polyeval",
         ":__support_macros_config",
         ":__support_macros_optimization",
     ],
@@ -10152,6 +10174,7 @@ libc_support_library(
         ":__support_fputil_fp_bits",
         ":__support_fputil_multiply_add",
         ":__support_fputil_polyeval",
+        ":__support_macros_attributes",
         ":__support_macros_config",
         ":__support_macros_optimization",
         ":__support_macros_properties_cpu_features",
@@ -11654,6 +11677,7 @@ libc_support_library(
         ":__support_cpp_span",
         ":__support_cpp_string_view",
         ":__support_ctype_utils",
+        ":__support_fixedvector",
         ":__support_libc_assert",
         ":__support_macros_config",
         ":__support_str_to_integer",
@@ -15853,13 +15877,16 @@ libc_support_library(
     name = "str_from_util",
     hdrs = ["src/stdlib/str_from_util.h"],
     deps = [
-        ":__support_common",
+        ":__support_cpp_limits",
         ":__support_cpp_type_traits",
+        ":__support_libc_errno",
         ":__support_macros_config",
         ":__support_printf_core_printf_converter",
         ":__support_printf_core_printf_core_structs",
+        ":__support_printf_core_printf_error_mapper",
         ":__support_printf_core_printf_writer",
         ":__support_str_to_integer",
+        ":types_size_t",
     ],
 )
 
@@ -15868,12 +15895,21 @@ libc_function(
     srcs = ["src/stdlib/strfromf.cpp"],
     hdrs = ["src/stdlib/strfromf.h"],
     deps = [
-        ":__support_common",
-        ":__support_cpp_limits",
         ":__support_macros_config",
-        ":__support_printf_core_printf_core_structs",
-        ":__support_printf_core_printf_error_mapper",
         ":str_from_util",
+        ":types_size_t",
+    ],
+)
+
+libc_function(
+    name = "strfromf128",
+    srcs = ["src/stdlib/strfromf128.cpp"],
+    hdrs = ["src/stdlib/strfromf128.h"],
+    deps = [
+        ":__support_macros_config",
+        ":llvm_libc_types_float128",
+        ":str_from_util",
+        ":types_size_t",
     ],
 )
 
@@ -15882,12 +15918,9 @@ libc_function(
     srcs = ["src/stdlib/strfromd.cpp"],
     hdrs = ["src/stdlib/strfromd.h"],
     deps = [
-        ":__support_common",
-        ":__support_cpp_limits",
         ":__support_macros_config",
-        ":__support_printf_core_printf_core_structs",
-        ":__support_printf_core_printf_error_mapper",
         ":str_from_util",
+        ":types_size_t",
     ],
 )
 
@@ -15896,12 +15929,9 @@ libc_function(
     srcs = ["src/stdlib/strfroml.cpp"],
     hdrs = ["src/stdlib/strfroml.h"],
     deps = [
-        ":__support_common",
-        ":__support_cpp_limits",
         ":__support_macros_config",
-        ":__support_printf_core_printf_core_structs",
-        ":__support_printf_core_printf_error_mapper",
         ":str_from_util",
+        ":types_size_t",
     ],
 )
 

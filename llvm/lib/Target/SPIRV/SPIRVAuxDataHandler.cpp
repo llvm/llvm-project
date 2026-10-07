@@ -63,11 +63,13 @@ SPIRVAuxDataHandler::SPIRVAuxDataHandler(AsmPrinter &AP, const Module &M)
       LinkagePreservedGOs.push_back(&GO);
 }
 
-bool llvm::spirvPreserveAuxData() { return SPVPreserveAuxData; }
+bool llvm::spirvPreserveAuxData(const Triple &TT) {
+  return SPVPreserveAuxData || TT.getVendor() == Triple::VendorType::AMD;
+}
 
 void SPIRVAuxDataHandler::prepareModuleOutput(const SPIRVSubtarget &ST,
                                               SPIRV::ModuleAnalysisInfo &MAI) {
-  if (!spirvPreserveAuxData())
+  if (!spirvPreserveAuxData(Mod.getTargetTriple()))
     return;
   if (!ST.canUseExtension(SPIRV::Extension::SPV_KHR_non_semantic_info)) {
     if (SPVPreserveAuxData)
@@ -180,7 +182,7 @@ void SPIRVAuxDataHandler::collectMetadataFor(const GlobalObject *GO,
 }
 
 void SPIRVAuxDataHandler::emitAuxDataStrings(SPIRV::ModuleAnalysisInfo &MAI) {
-  if (!SPVPreserveAuxData)
+  if (!spirvPreserveAuxData(Mod.getTargetTriple()))
     return;
   if (!MAI.getExtInstSetReg(NonSemanticAuxDataSet).isValid())
     return;

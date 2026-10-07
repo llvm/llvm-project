@@ -7,14 +7,14 @@
 ; RUN:   -spirv-preserve-auxdata \
 ; RUN:   %s -o - | FileCheck %s
 
-; Negative: without -spirv-preserve-auxdata, no metadata strings.
+; AMD triple enables AuxData without -spirv-preserve-auxdata.
 ; RUN: llc -verify-machineinstrs -O0 -mtriple=spirv64-amd-amdhsa \
-; RUN:   --spirv-ext=+SPV_KHR_non_semantic_info %s -o - \
-; RUN:   | FileCheck %s --check-prefix=OFF
+; RUN:   --spirv-ext=+SPV_KHR_non_semantic_info %s -o - | FileCheck %s
 
-; OFF-NOT: amdgpu.no.fine.grained.memory
-; OFF-NOT: amdgpu.no.remote.memory
-; OFF-NOT: atomic.ignore.denormal.mode
+; No UserSemantic decorations (old encoding).
+; RUN: llc -verify-machineinstrs -O0 -mtriple=spirv64-amd-amdhsa %s -o - \
+; RUN:   | FileCheck %s --check-prefix=NOUS
+; NOUS-NOT: UserSemantic
 
 ; RUN: %if spirv-tools %{ llc -O0 -mtriple=spirv64-amd-amdhsa \
 ; RUN:   --spirv-ext=+SPV_KHR_non_semantic_info %s -o - -filetype=obj \
