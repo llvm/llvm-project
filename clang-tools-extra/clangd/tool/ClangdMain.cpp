@@ -529,7 +529,7 @@ opt<ClangdServer::SkipPreambleBuildPolicy> SkipPreambleBuild{
                       "only if module use is encountered (default)"),
            clEnumValN(ClangdServer::SkipPreambleBuildPolicy::Always, "always",
                       "always skip")),
-    init(ClangdServer::SkipPreambleBuildPolicy::Modules),
+    init(ClangdServer::Options().SkipPreambleBuild),
 };
 
 #if defined(__GLIBC__) && CLANGD_MALLOC_TRIM

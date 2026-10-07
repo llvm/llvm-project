@@ -195,7 +195,8 @@ public:
 
     // If Always, discard preamble during update
     // If Modules, only discard when modules are required
-    SkipPreambleBuildPolicy SkipPreambleBuild = {};
+    SkipPreambleBuildPolicy SkipPreambleBuild =
+        SkipPreambleBuildPolicy::Modules;
 
     /// Whether include fixer insertions for Objective-C code should use #import
     /// instead of #include.
