@@ -7,29 +7,25 @@
 define void @fmaddsub(ptr noalias %a0p, ptr noalias %a2p, ptr noalias %ep) {
 ; CHECK-LABEL: define void @fmaddsub(
 ; CHECK-SAME: ptr noalias [[A0P:%.*]], ptr noalias [[A2P:%.*]], ptr noalias [[EP:%.*]]) #[[ATTR0:[0-9]+]] {
-; CHECK-NEXT:    [[A0I_P:%.*]] = getelementptr inbounds i8, ptr [[A0P]], i64 8
 ; CHECK-NEXT:    [[A2I_P:%.*]] = getelementptr inbounds i8, ptr [[A2P]], i64 8
-; CHECK-NEXT:    [[EI_P:%.*]] = getelementptr inbounds i8, ptr [[EP]], i64 8
-; CHECK-NEXT:    [[A0R:%.*]] = load double, ptr [[A0P]], align 8
-; CHECK-NEXT:    [[A0I:%.*]] = load double, ptr [[A0I_P]], align 8
+; CHECK-NEXT:    [[TMP1:%.*]] = load <2 x double>, ptr [[A0P]], align 8
 ; CHECK-NEXT:    [[A2R:%.*]] = load double, ptr [[A2P]], align 8
 ; CHECK-NEXT:    [[A2I:%.*]] = load double, ptr [[A2I_P]], align 8
-; CHECK-NEXT:    [[ER:%.*]] = load double, ptr [[EP]], align 8
-; CHECK-NEXT:    [[EI:%.*]] = load double, ptr [[EI_P]], align 8
-; CHECK-NEXT:    [[M1:%.*]] = fmul fast double [[ER]], [[A2R]]
-; CHECK-NEXT:    [[M2:%.*]] = fmul fast double [[ER]], [[A2I]]
-; CHECK-NEXT:    [[M3:%.*]] = fmul fast double [[EI]], [[A2R]]
-; CHECK-NEXT:    [[IM:%.*]] = fadd fast double [[M3]], [[M2]]
-; CHECK-NEXT:    [[M4:%.*]] = fmul fast double [[EI]], [[A2I]]
-; CHECK-NEXT:    [[RE:%.*]] = fsub fast double [[M1]], [[M4]]
-; CHECK-NEXT:    [[HR:%.*]] = fadd fast double [[RE]], [[A0R]]
-; CHECK-NEXT:    [[HI:%.*]] = fadd fast double [[IM]], [[A0I]]
-; CHECK-NEXT:    [[SR:%.*]] = fsub fast double [[A0R]], [[RE]]
-; CHECK-NEXT:    [[SI:%.*]] = fsub fast double [[A0I]], [[IM]]
-; CHECK-NEXT:    store double [[SR]], ptr [[A2P]], align 8
-; CHECK-NEXT:    store double [[SI]], ptr [[A2I_P]], align 8
-; CHECK-NEXT:    store double [[HR]], ptr [[A0P]], align 8
-; CHECK-NEXT:    store double [[HI]], ptr [[A0I_P]], align 8
+; CHECK-NEXT:    [[TMP2:%.*]] = load <2 x double>, ptr [[EP]], align 8
+; CHECK-NEXT:    [[TMP3:%.*]] = insertelement <2 x double> poison, double [[A2R]], i64 0
+; CHECK-NEXT:    [[TMP4:%.*]] = shufflevector <2 x double> [[TMP3]], <2 x double> poison, <2 x i32> zeroinitializer
+; CHECK-NEXT:    [[TMP5:%.*]] = fmul fast <2 x double> [[TMP2]], [[TMP4]]
+; CHECK-NEXT:    [[TMP6:%.*]] = insertelement <2 x double> poison, double [[A2I]], i64 0
+; CHECK-NEXT:    [[TMP7:%.*]] = shufflevector <2 x double> [[TMP6]], <2 x double> poison, <2 x i32> zeroinitializer
+; CHECK-NEXT:    [[TMP8:%.*]] = fmul fast <2 x double> [[TMP2]], [[TMP7]]
+; CHECK-NEXT:    [[TMP9:%.*]] = shufflevector <2 x double> [[TMP8]], <2 x double> poison, <2 x i32> <i32 1, i32 0>
+; CHECK-NEXT:    [[TMP10:%.*]] = fsub fast <2 x double> [[TMP5]], [[TMP9]]
+; CHECK-NEXT:    [[TMP11:%.*]] = fadd fast <2 x double> [[TMP5]], [[TMP9]]
+; CHECK-NEXT:    [[TMP12:%.*]] = shufflevector <2 x double> [[TMP10]], <2 x double> [[TMP11]], <2 x i32> <i32 0, i32 3>
+; CHECK-NEXT:    [[TMP13:%.*]] = fsub fast <2 x double> [[TMP1]], [[TMP12]]
+; CHECK-NEXT:    store <2 x double> [[TMP13]], ptr [[A2P]], align 8
+; CHECK-NEXT:    [[TMP14:%.*]] = fadd fast <2 x double> [[TMP12]], [[TMP1]]
+; CHECK-NEXT:    store <2 x double> [[TMP14]], ptr [[A0P]], align 8
 ; CHECK-NEXT:    ret void
 ;
   %a0i.p = getelementptr inbounds i8, ptr %a0p, i64 8
@@ -61,29 +57,25 @@ define void @fmaddsub(ptr noalias %a0p, ptr noalias %a2p, ptr noalias %ep) {
 define void @fmsubadd(ptr noalias %a1p, ptr noalias %a3p, ptr noalias %ep) {
 ; CHECK-LABEL: define void @fmsubadd(
 ; CHECK-SAME: ptr noalias [[A1P:%.*]], ptr noalias [[A3P:%.*]], ptr noalias [[EP:%.*]]) #[[ATTR0]] {
-; CHECK-NEXT:    [[A1I_P:%.*]] = getelementptr inbounds i8, ptr [[A1P]], i64 8
-; CHECK-NEXT:    [[A3I_P:%.*]] = getelementptr inbounds i8, ptr [[A3P]], i64 8
 ; CHECK-NEXT:    [[EI_P:%.*]] = getelementptr inbounds i8, ptr [[EP]], i64 8
-; CHECK-NEXT:    [[A1R:%.*]] = load double, ptr [[A1P]], align 8
-; CHECK-NEXT:    [[A1I:%.*]] = load double, ptr [[A1I_P]], align 8
-; CHECK-NEXT:    [[A3R:%.*]] = load double, ptr [[A3P]], align 8
-; CHECK-NEXT:    [[A3I:%.*]] = load double, ptr [[A3I_P]], align 8
+; CHECK-NEXT:    [[TMP1:%.*]] = load <2 x double>, ptr [[A1P]], align 8
+; CHECK-NEXT:    [[TMP2:%.*]] = load <2 x double>, ptr [[A3P]], align 8
 ; CHECK-NEXT:    [[ER:%.*]] = load double, ptr [[EP]], align 8
 ; CHECK-NEXT:    [[EI:%.*]] = load double, ptr [[EI_P]], align 8
-; CHECK-NEXT:    [[M1:%.*]] = fmul fast double [[A3R]], [[ER]]
-; CHECK-NEXT:    [[M2:%.*]] = fmul fast double [[A3I]], [[ER]]
-; CHECK-NEXT:    [[M3:%.*]] = fmul fast double [[A3R]], [[EI]]
-; CHECK-NEXT:    [[IM:%.*]] = fsub fast double [[M2]], [[M3]]
-; CHECK-NEXT:    [[M4:%.*]] = fmul fast double [[A3I]], [[EI]]
-; CHECK-NEXT:    [[RE:%.*]] = fadd fast double [[M4]], [[M1]]
-; CHECK-NEXT:    [[SR:%.*]] = fsub fast double [[A1R]], [[RE]]
-; CHECK-NEXT:    [[SI:%.*]] = fsub fast double [[A1I]], [[IM]]
-; CHECK-NEXT:    [[HR:%.*]] = fadd fast double [[RE]], [[A1R]]
-; CHECK-NEXT:    [[HI:%.*]] = fadd fast double [[IM]], [[A1I]]
-; CHECK-NEXT:    store double [[HR]], ptr [[A3P]], align 8
-; CHECK-NEXT:    store double [[HI]], ptr [[A3I_P]], align 8
-; CHECK-NEXT:    store double [[SR]], ptr [[A1P]], align 8
-; CHECK-NEXT:    store double [[SI]], ptr [[A1I_P]], align 8
+; CHECK-NEXT:    [[TMP3:%.*]] = insertelement <2 x double> poison, double [[ER]], i64 0
+; CHECK-NEXT:    [[TMP4:%.*]] = shufflevector <2 x double> [[TMP3]], <2 x double> poison, <2 x i32> zeroinitializer
+; CHECK-NEXT:    [[TMP5:%.*]] = fmul fast <2 x double> [[TMP2]], [[TMP4]]
+; CHECK-NEXT:    [[TMP6:%.*]] = insertelement <2 x double> poison, double [[EI]], i64 0
+; CHECK-NEXT:    [[TMP7:%.*]] = shufflevector <2 x double> [[TMP6]], <2 x double> poison, <2 x i32> zeroinitializer
+; CHECK-NEXT:    [[TMP8:%.*]] = fmul fast <2 x double> [[TMP2]], [[TMP7]]
+; CHECK-NEXT:    [[TMP9:%.*]] = shufflevector <2 x double> [[TMP8]], <2 x double> poison, <2 x i32> <i32 1, i32 0>
+; CHECK-NEXT:    [[TMP10:%.*]] = fadd fast <2 x double> [[TMP5]], [[TMP9]]
+; CHECK-NEXT:    [[TMP11:%.*]] = fsub fast <2 x double> [[TMP5]], [[TMP9]]
+; CHECK-NEXT:    [[TMP12:%.*]] = shufflevector <2 x double> [[TMP10]], <2 x double> [[TMP11]], <2 x i32> <i32 0, i32 3>
+; CHECK-NEXT:    [[TMP13:%.*]] = fadd fast <2 x double> [[TMP12]], [[TMP1]]
+; CHECK-NEXT:    store <2 x double> [[TMP13]], ptr [[A3P]], align 8
+; CHECK-NEXT:    [[TMP14:%.*]] = fsub fast <2 x double> [[TMP1]], [[TMP12]]
+; CHECK-NEXT:    store <2 x double> [[TMP14]], ptr [[A1P]], align 8
 ; CHECK-NEXT:    ret void
 ;
   %a1i.p = getelementptr inbounds i8, ptr %a1p, i64 8
@@ -173,29 +165,25 @@ define void @no_contract(ptr noalias %a0p, ptr noalias %a2p, ptr noalias %ep) {
 define void @fmaddsub_float(ptr noalias %a0p, ptr noalias %a2p, ptr noalias %ep) {
 ; CHECK-LABEL: define void @fmaddsub_float(
 ; CHECK-SAME: ptr noalias [[A0P:%.*]], ptr noalias [[A2P:%.*]], ptr noalias [[EP:%.*]]) #[[ATTR0]] {
-; CHECK-NEXT:    [[A0I_P:%.*]] = getelementptr inbounds i8, ptr [[A0P]], i64 4
 ; CHECK-NEXT:    [[A2I_P:%.*]] = getelementptr inbounds i8, ptr [[A2P]], i64 4
-; CHECK-NEXT:    [[EI_P:%.*]] = getelementptr inbounds i8, ptr [[EP]], i64 4
-; CHECK-NEXT:    [[A0R:%.*]] = load float, ptr [[A0P]], align 4
-; CHECK-NEXT:    [[A0I:%.*]] = load float, ptr [[A0I_P]], align 4
+; CHECK-NEXT:    [[TMP1:%.*]] = load <2 x float>, ptr [[A0P]], align 4
 ; CHECK-NEXT:    [[A2R:%.*]] = load float, ptr [[A2P]], align 4
 ; CHECK-NEXT:    [[A2I:%.*]] = load float, ptr [[A2I_P]], align 4
-; CHECK-NEXT:    [[ER:%.*]] = load float, ptr [[EP]], align 4
-; CHECK-NEXT:    [[EI:%.*]] = load float, ptr [[EI_P]], align 4
-; CHECK-NEXT:    [[M1:%.*]] = fmul fast float [[ER]], [[A2R]]
-; CHECK-NEXT:    [[M2:%.*]] = fmul fast float [[ER]], [[A2I]]
-; CHECK-NEXT:    [[M3:%.*]] = fmul fast float [[EI]], [[A2R]]
-; CHECK-NEXT:    [[IM:%.*]] = fadd fast float [[M3]], [[M2]]
-; CHECK-NEXT:    [[M4:%.*]] = fmul fast float [[EI]], [[A2I]]
-; CHECK-NEXT:    [[RE:%.*]] = fsub fast float [[M1]], [[M4]]
-; CHECK-NEXT:    [[HR:%.*]] = fadd fast float [[RE]], [[A0R]]
-; CHECK-NEXT:    [[HI:%.*]] = fadd fast float [[IM]], [[A0I]]
-; CHECK-NEXT:    [[SR:%.*]] = fsub fast float [[A0R]], [[RE]]
-; CHECK-NEXT:    [[SI:%.*]] = fsub fast float [[A0I]], [[IM]]
-; CHECK-NEXT:    store float [[SR]], ptr [[A2P]], align 4
-; CHECK-NEXT:    store float [[SI]], ptr [[A2I_P]], align 4
-; CHECK-NEXT:    store float [[HR]], ptr [[A0P]], align 4
-; CHECK-NEXT:    store float [[HI]], ptr [[A0I_P]], align 4
+; CHECK-NEXT:    [[TMP2:%.*]] = load <2 x float>, ptr [[EP]], align 4
+; CHECK-NEXT:    [[TMP3:%.*]] = insertelement <2 x float> poison, float [[A2R]], i64 0
+; CHECK-NEXT:    [[TMP4:%.*]] = shufflevector <2 x float> [[TMP3]], <2 x float> poison, <2 x i32> zeroinitializer
+; CHECK-NEXT:    [[TMP5:%.*]] = fmul fast <2 x float> [[TMP2]], [[TMP4]]
+; CHECK-NEXT:    [[TMP6:%.*]] = insertelement <2 x float> poison, float [[A2I]], i64 0
+; CHECK-NEXT:    [[TMP7:%.*]] = shufflevector <2 x float> [[TMP6]], <2 x float> poison, <2 x i32> zeroinitializer
+; CHECK-NEXT:    [[TMP8:%.*]] = fmul fast <2 x float> [[TMP2]], [[TMP7]]
+; CHECK-NEXT:    [[TMP9:%.*]] = shufflevector <2 x float> [[TMP8]], <2 x float> poison, <2 x i32> <i32 1, i32 0>
+; CHECK-NEXT:    [[TMP10:%.*]] = fsub fast <2 x float> [[TMP5]], [[TMP9]]
+; CHECK-NEXT:    [[TMP11:%.*]] = fadd fast <2 x float> [[TMP5]], [[TMP9]]
+; CHECK-NEXT:    [[TMP12:%.*]] = shufflevector <2 x float> [[TMP10]], <2 x float> [[TMP11]], <2 x i32> <i32 0, i32 3>
+; CHECK-NEXT:    [[TMP13:%.*]] = fsub fast <2 x float> [[TMP1]], [[TMP12]]
+; CHECK-NEXT:    store <2 x float> [[TMP13]], ptr [[A2P]], align 4
+; CHECK-NEXT:    [[TMP14:%.*]] = fadd fast <2 x float> [[TMP12]], [[TMP1]]
+; CHECK-NEXT:    store <2 x float> [[TMP14]], ptr [[A0P]], align 4
 ; CHECK-NEXT:    ret void
 ;
   %a0i.p = getelementptr inbounds i8, ptr %a0p, i64 4
@@ -227,29 +215,25 @@ define void @fmaddsub_float(ptr noalias %a0p, ptr noalias %a2p, ptr noalias %ep)
 define void @fmsubadd_float(ptr noalias %a1p, ptr noalias %a3p, ptr noalias %ep) {
 ; CHECK-LABEL: define void @fmsubadd_float(
 ; CHECK-SAME: ptr noalias [[A1P:%.*]], ptr noalias [[A3P:%.*]], ptr noalias [[EP:%.*]]) #[[ATTR0]] {
-; CHECK-NEXT:    [[A1I_P:%.*]] = getelementptr inbounds i8, ptr [[A1P]], i64 4
-; CHECK-NEXT:    [[A3I_P:%.*]] = getelementptr inbounds i8, ptr [[A3P]], i64 4
 ; CHECK-NEXT:    [[EI_P:%.*]] = getelementptr inbounds i8, ptr [[EP]], i64 4
-; CHECK-NEXT:    [[A1R:%.*]] = load float, ptr [[A1P]], align 4
-; CHECK-NEXT:    [[A1I:%.*]] = load float, ptr [[A1I_P]], align 4
-; CHECK-NEXT:    [[A3R:%.*]] = load float, ptr [[A3P]], align 4
-; CHECK-NEXT:    [[A3I:%.*]] = load float, ptr [[A3I_P]], align 4
+; CHECK-NEXT:    [[TMP1:%.*]] = load <2 x float>, ptr [[A1P]], align 4
+; CHECK-NEXT:    [[TMP2:%.*]] = load <2 x float>, ptr [[A3P]], align 4
 ; CHECK-NEXT:    [[ER:%.*]] = load float, ptr [[EP]], align 4
 ; CHECK-NEXT:    [[EI:%.*]] = load float, ptr [[EI_P]], align 4
-; CHECK-NEXT:    [[M1:%.*]] = fmul fast float [[A3R]], [[ER]]
-; CHECK-NEXT:    [[M2:%.*]] = fmul fast float [[A3I]], [[ER]]
-; CHECK-NEXT:    [[M3:%.*]] = fmul fast float [[A3R]], [[EI]]
-; CHECK-NEXT:    [[IM:%.*]] = fsub fast float [[M2]], [[M3]]
-; CHECK-NEXT:    [[M4:%.*]] = fmul fast float [[A3I]], [[EI]]
-; CHECK-NEXT:    [[RE:%.*]] = fadd fast float [[M4]], [[M1]]
-; CHECK-NEXT:    [[SR:%.*]] = fsub fast float [[A1R]], [[RE]]
-; CHECK-NEXT:    [[SI:%.*]] = fsub fast float [[A1I]], [[IM]]
-; CHECK-NEXT:    [[HR:%.*]] = fadd fast float [[RE]], [[A1R]]
-; CHECK-NEXT:    [[HI:%.*]] = fadd fast float [[IM]], [[A1I]]
-; CHECK-NEXT:    store float [[HR]], ptr [[A3P]], align 4
-; CHECK-NEXT:    store float [[HI]], ptr [[A3I_P]], align 4
-; CHECK-NEXT:    store float [[SR]], ptr [[A1P]], align 4
-; CHECK-NEXT:    store float [[SI]], ptr [[A1I_P]], align 4
+; CHECK-NEXT:    [[TMP3:%.*]] = insertelement <2 x float> poison, float [[ER]], i64 0
+; CHECK-NEXT:    [[TMP4:%.*]] = shufflevector <2 x float> [[TMP3]], <2 x float> poison, <2 x i32> zeroinitializer
+; CHECK-NEXT:    [[TMP5:%.*]] = fmul fast <2 x float> [[TMP2]], [[TMP4]]
+; CHECK-NEXT:    [[TMP6:%.*]] = insertelement <2 x float> poison, float [[EI]], i64 0
+; CHECK-NEXT:    [[TMP7:%.*]] = shufflevector <2 x float> [[TMP6]], <2 x float> poison, <2 x i32> zeroinitializer
+; CHECK-NEXT:    [[TMP8:%.*]] = fmul fast <2 x float> [[TMP2]], [[TMP7]]
+; CHECK-NEXT:    [[TMP9:%.*]] = shufflevector <2 x float> [[TMP8]], <2 x float> poison, <2 x i32> <i32 1, i32 0>
+; CHECK-NEXT:    [[TMP10:%.*]] = fadd fast <2 x float> [[TMP5]], [[TMP9]]
+; CHECK-NEXT:    [[TMP11:%.*]] = fsub fast <2 x float> [[TMP5]], [[TMP9]]
+; CHECK-NEXT:    [[TMP12:%.*]] = shufflevector <2 x float> [[TMP10]], <2 x float> [[TMP11]], <2 x i32> <i32 0, i32 3>
+; CHECK-NEXT:    [[TMP13:%.*]] = fadd fast <2 x float> [[TMP12]], [[TMP1]]
+; CHECK-NEXT:    store <2 x float> [[TMP13]], ptr [[A3P]], align 4
+; CHECK-NEXT:    [[TMP14:%.*]] = fsub fast <2 x float> [[TMP1]], [[TMP12]]
+; CHECK-NEXT:    store <2 x float> [[TMP14]], ptr [[A1P]], align 4
 ; CHECK-NEXT:    ret void
 ;
   %a1i.p = getelementptr inbounds i8, ptr %a1p, i64 4
