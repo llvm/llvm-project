@@ -44,7 +44,11 @@ struct TestResourceBlobManagerInterface
 };
 
 namespace {
-enum test_encoding { k_attr_params = 0, k_test_i32 = 99 };
+enum test_encoding {
+  k_attr_params = 0,
+  k_test_i32 = 99,
+  k_test_rec_alias = 100
+};
 } // namespace
 
 // Test support for interacting with the Bytecode reader/writer.
@@ -59,6 +63,17 @@ struct TestBytecodeDialectInterface : public BytecodeDialectInterface {
       writer.writeVarInt(test_encoding::k_test_i32);
       return success();
     }
+    // A mutable, possibly self-referential type. Exercises the cyclic path in
+    // the bytecode reader; see readType below.
+    if (auto recType = llvm::dyn_cast<TestRecursiveAliasType>(type)) {
+      writer.writeVarInt(test_encoding::k_test_rec_alias);
+      writer.writeOwnedString(recType.getName());
+      Type body = recType.getBody();
+      writer.writeOwnedBool(static_cast<bool>(body));
+      if (body)
+        writer.writeType(body);
+      return success();
+    }
     return failure();
   }
 
@@ -68,6 +83,32 @@ struct TestBytecodeDialectInterface : public BytecodeDialectInterface {
       return Type();
     if (encoding == test_encoding::k_test_i32)
       return TestI32Type::get(getContext());
+    if (encoding == test_encoding::k_test_rec_alias) {
+      StringRef name;
+      if (failed(reader.readString(name)))
+        return Type();
+
+      // The body may name this very type, so the type has to exist before the
+      // body is read. Publish it first: a reference back to it then resolves
+      // to this incomplete value instead of re-entering the same entry. This
+      // is the bytecode counterpart of tryStartCyclicParse in
+      // TestRecursiveAliasType::parse, and it needs the same stable identity:
+      // completing the type must mutate the published instance.
+      auto rec = TestRecursiveAliasType::get(getContext(), name);
+      if (failed(reader.tryStartCyclicRead(rec)))
+        return Type();
+
+      bool hasBody = false;
+      if (failed(reader.readBool(hasBody)))
+        return Type();
+      if (hasBody) {
+        Type body;
+        if (failed(reader.readType(body)))
+          return Type();
+        rec.setBody(body);
+      }
+      return rec;
+    }
     return Type();
   }
 

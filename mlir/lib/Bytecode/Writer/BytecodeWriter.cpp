@@ -891,12 +891,17 @@ void BytecodeWriter::writeAttrTypeSection(EncodingEmitter &emitter) {
       attrTypeEmitter.emitByte(0, "attr/type separator");
     };
     auto emitAttrOrTypeImpl = [&]() -> bool {
-      // TODO: We don't currently support custom encoded mutable types and
-      // attributes.
-      if (entryValue.template hasTrait<TypeTrait::IsMutable>() ||
-          entryValue.template hasTrait<AttributeTrait::IsMutable>()) {
-        emitAttrOrTypeRawImpl();
-        return false;
+      // Mutable types use a custom encoding when the dialect provides one; a
+      // self-reference resolves through
+      // DialectBytecodeReader::tryStartCyclicRead instead of recursing.
+      // Mutable attributes still use the fallback. Note the kind test:
+      // AttributeTrait::IsMutable also matches mutable types.
+      if constexpr (std::is_same_v<std::decay_t<decltype(entryValue)>,
+                                   Attribute>) {
+        if (entryValue.template hasTrait<AttributeTrait::IsMutable>()) {
+          emitAttrOrTypeRawImpl();
+          return false;
+        }
       }
 
       DialectWriter dialectWriter(config.bytecodeVersion, attrTypeEmitter,
