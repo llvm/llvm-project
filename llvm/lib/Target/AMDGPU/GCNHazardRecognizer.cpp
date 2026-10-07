@@ -1237,21 +1237,21 @@ int GCNHazardRecognizer::getMaxVALUWindowDeficit(int MaxWindow,
   // tables.
   assert(MaxWindow <= static_cast<int>(MaxVALULookAhead) &&
          "MaxWindow exceeds the EmittedVALUInstrs lookahead window");
-  int Deficit = 0, Distance = 0;
+  int WaitStates = 0;
   for (MachineInstr *MI : EmittedVALUInstrs) {
     if (MI) {
       if (std::optional<int> Window = WindowFor(*MI)) {
         assert(*Window >= 0 && *Window <= MaxWindow && "window out of bounds");
-        Deficit = std::max(Deficit, *Window - Distance);
+        return *Window - WaitStates;
       }
     }
 
-    ++Distance;
+    ++WaitStates;
 
-    if (Distance >= MaxWindow)
+    if (WaitStates >= MaxWindow)
       break;
   }
-  return Deficit;
+  return 0;
 }
 
 int GCNHazardRecognizer::getWaitStatesSinceDef(unsigned Reg,
