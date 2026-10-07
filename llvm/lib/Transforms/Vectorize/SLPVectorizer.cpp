@@ -34376,10 +34376,9 @@ private:
     bool VecResSignedness = false;
     bool VecResNegated = false;
     auto CreateVecOp = [&](Value *Vec, unsigned Cnt, bool IsSigned,
-                           bool ReducedInTree, bool Negated,
-                           TTI::CastContextHint Ctx) {
+                           bool ReducedInTree, bool Negated) {
       if (ReducedInTree) {
-        CreateSingleOp(Vec, Cnt, IsSigned, ReducedInTree, Negated, Ctx);
+        CreateSingleOp(Vec, Cnt, IsSigned, ReducedInTree, Negated);
         return;
       }
       Type *ScalarTy = Vec->getType()->getScalarType();
@@ -34530,8 +34529,7 @@ private:
     for (bool Negated : {false, true})
       for (const ReductionVectorPart &P : VectorValuesAndScales)
         if (P.Negated == Negated)
-          CreateVecOp(P.Vec, P.Scale, P.IsSigned, P.ReducedInTree, P.Negated,
-                      P.Ctx);
+          CreateVecOp(P.Vec, P.Scale, P.IsSigned, P.ReducedInTree, P.Negated);
     // All parts may be reduced in the tree already, leaving no vector value
     // to reduce.
     if (VecRes)
