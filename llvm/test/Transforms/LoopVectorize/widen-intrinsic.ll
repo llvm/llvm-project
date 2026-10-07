@@ -46,10 +46,10 @@ define void @minnum_nofpclass_arg_and_ret(ptr %p, ptr %q) {
 ; CHECK-NEXT:  [[ENTRY:.*:]]
 ; CHECK-NEXT:    br label %[[VECTOR_MEMCHECK:.*]]
 ; CHECK:       [[VECTOR_MEMCHECK]]:
-; CHECK-NEXT:    [[SCEVGEP:%.*]] = getelementptr i8, ptr [[P]], i64 4096
-; CHECK-NEXT:    [[SCEVGEP1:%.*]] = getelementptr i8, ptr [[Q]], i64 4096
-; CHECK-NEXT:    [[BOUND0:%.*]] = icmp ult ptr [[P]], [[SCEVGEP1]]
-; CHECK-NEXT:    [[BOUND1:%.*]] = icmp ult ptr [[Q]], [[SCEVGEP]]
+; CHECK-NEXT:    [[TMP4:%.*]] = getelementptr i8, ptr [[P]], i64 4096
+; CHECK-NEXT:    [[TMP5:%.*]] = getelementptr i8, ptr [[Q]], i64 4096
+; CHECK-NEXT:    [[BOUND0:%.*]] = icmp ult ptr [[P]], [[TMP5]]
+; CHECK-NEXT:    [[BOUND1:%.*]] = icmp ult ptr [[Q]], [[TMP4]]
 ; CHECK-NEXT:    [[FOUND_CONFLICT:%.*]] = and i1 [[BOUND0]], [[BOUND1]]
 ; CHECK-NEXT:    br i1 [[FOUND_CONFLICT]], label %[[SCALAR_PH:.*]], label %[[VECTOR_PH:.*]]
 ; CHECK:       [[VECTOR_PH]]:

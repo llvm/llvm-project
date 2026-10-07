@@ -30,10 +30,10 @@ define void @vector_reverse_mask_nxv4i1(ptr %a, ptr %cond, i64 %N) #0 {
 ; CHECK-NEXT:    br i1 [[MIN_ITERS_CHECK]], label %[[SCALAR_PH:.*]], label %[[VECTOR_MEMCHECK:.*]]
 ; CHECK:       [[VECTOR_MEMCHECK]]:
 ; CHECK-NEXT:    [[TMP2:%.*]] = shl i64 [[N]], 3
-; CHECK-NEXT:    [[SCEVGEP:%.*]] = getelementptr i8, ptr [[A]], i64 [[TMP2]]
-; CHECK-NEXT:    [[SCEVGEP1:%.*]] = getelementptr i8, ptr [[COND]], i64 [[TMP2]]
-; CHECK-NEXT:    [[BOUND0:%.*]] = icmp ult ptr [[A]], [[SCEVGEP1]]
-; CHECK-NEXT:    [[BOUND1:%.*]] = icmp ult ptr [[COND]], [[SCEVGEP]]
+; CHECK-NEXT:    [[TMP3:%.*]] = getelementptr i8, ptr [[A]], i64 [[TMP2]]
+; CHECK-NEXT:    [[TMP16:%.*]] = getelementptr i8, ptr [[COND]], i64 [[TMP2]]
+; CHECK-NEXT:    [[BOUND0:%.*]] = icmp ult ptr [[A]], [[TMP16]]
+; CHECK-NEXT:    [[BOUND1:%.*]] = icmp ult ptr [[COND]], [[TMP3]]
 ; CHECK-NEXT:    [[FOUND_CONFLICT:%.*]] = and i1 [[BOUND0]], [[BOUND1]]
 ; CHECK-NEXT:    br i1 [[FOUND_CONFLICT]], label %[[SCALAR_PH]], label %[[VECTOR_PH:.*]]
 ; CHECK:       [[VECTOR_PH]]:
