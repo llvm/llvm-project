@@ -3478,7 +3478,7 @@ MCRegister getVGPRWithMSBs(MCRegister Reg, unsigned MSBs,
 }
 
 static std::optional<unsigned>
-convertSetRegImmToVgprMSBs(unsigned Imm, unsigned Simm16,
+convertSetRegImmToVgprMSBs(uint64_t Imm, uint64_t Simm16,
                            bool HasSetregVGPRMSBFixup) {
   constexpr unsigned VGPRMSBShift =
       llvm::countr_zero_constexpr<unsigned>(AMDGPU::Hwreg::DST_VGPR_MSB);
@@ -3499,17 +3499,17 @@ convertSetRegImmToVgprMSBs(unsigned Imm, unsigned Simm16,
 std::optional<unsigned> convertSetRegImmToVgprMSBs(const MachineInstr &MI,
                                                    bool HasSetregVGPRMSBFixup) {
   assert(MI.getOpcode() == AMDGPU::S_SETREG_IMM32_B32);
-  return convertSetRegImmToVgprMSBs(
-      static_cast<unsigned>(MI.getOperand(0).getImm()),
-      static_cast<unsigned>(MI.getOperand(1).getImm()), HasSetregVGPRMSBFixup);
+  return convertSetRegImmToVgprMSBs(MI.getOperand(0).getImm(),
+                                    MI.getOperand(1).getImm(),
+                                    HasSetregVGPRMSBFixup);
 }
 
 std::optional<unsigned> convertSetRegImmToVgprMSBs(const MCInst &MI,
                                                    bool HasSetregVGPRMSBFixup) {
   assert(MI.getOpcode() == AMDGPU::S_SETREG_IMM32_B32_gfx12);
-  return convertSetRegImmToVgprMSBs(
-      static_cast<unsigned>(MI.getOperand(0).getImm()),
-      static_cast<unsigned>(MI.getOperand(1).getImm()), HasSetregVGPRMSBFixup);
+  return convertSetRegImmToVgprMSBs(MI.getOperand(0).getImm(),
+                                    MI.getOperand(1).getImm(),
+                                    HasSetregVGPRMSBFixup);
 }
 
 std::pair<const AMDGPU::OpName *, const AMDGPU::OpName *>
