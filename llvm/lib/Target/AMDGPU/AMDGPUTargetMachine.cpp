@@ -1308,6 +1308,8 @@ GCNTargetMachine::GCNTargetMachine(const Target &T, const Triple &TT,
                                    CodeGenOptLevel OL, bool JIT)
     : AMDGPUTargetMachine(T, TT, CPU, FS, Options, RM, CM, OL) {
   setEnableDefaultMachineVerifier(false);
+  // addFastRegAlloc inserts SIWholeQuadMode after TwoAddressInstructionPass.
+  setEnableTiedFastRegAlloc(false);
 }
 
 enum class OOBFlagValue {
