@@ -833,7 +833,9 @@ void WeakBindingSection::writeTo(uint8_t *buf) const {
 }
 
 StubsSection::StubsSection()
-    : SyntheticSection(segment_names::text, section_names::stubs) {
+    : SyntheticSection(segment_names::text, config->arch() == AK_arm64e
+                                                ? section_names::authStubs
+                                                : section_names::stubs) {
   flags = S_SYMBOL_STUBS | S_ATTR_SOME_INSTRUCTIONS | S_ATTR_PURE_INSTRUCTIONS;
   // The stubs section comprises machine instructions, which are aligned to
   // 4 bytes on the archs we care about.
@@ -848,8 +850,13 @@ uint64_t StubsSection::getSize() const {
 void StubsSection::writeTo(uint8_t *buf) const {
   size_t off = 0;
   for (const Symbol *sym : entries) {
-    uint64_t pointerVA =
-        config->emitChainedFixups ? sym->getGotVA() : sym->getLazyPtrVA();
+    uint64_t pointerVA;
+    if (!config->emitChainedFixups)
+      pointerVA = sym->getLazyPtrVA();
+    else if (config->arch() == AK_arm64e)
+      pointerVA = in.authGot->getVA(sym);
+    else
+      pointerVA = sym->getGotVA();
     target->writeStub(buf + off, *sym, pointerVA);
     off += target->stubSize;
   }
@@ -889,10 +896,12 @@ void StubsSection::addEntry(Symbol *sym) {
   if (inserted) {
     sym->stubsIndex = entries.size() - 1;
 
-    if (config->emitChainedFixups)
-      in.got->addEntry(sym);
-    else
+    if (!config->emitChainedFixups)
       addBindingsForStub(sym);
+    else if (config->arch() == AK_arm64e)
+      in.authGot->addEntry(sym);
+    else
+      in.got->addEntry(sym);
   }
 }
 
@@ -1059,8 +1068,12 @@ void ObjCStubsSection::setUp() {
                          "lazy binding (normally in libobjc.dylib)");
   objcMsgSend->used = true;
   if (config->objcStubsMode == ObjCStubsMode::fast) {
-    in.got->addEntry(objcMsgSend);
-    assert(objcMsgSend->isInGot());
+    if (config->arch() == AK_arm64e) {
+      in.authGot->addEntry(objcMsgSend);
+    } else {
+      in.got->addEntry(objcMsgSend);
+      assert(objcMsgSend->isInGot());
+    }
   } else {
     assert(config->objcStubsMode == ObjCStubsMode::small);
     // In line with ld64's behavior, when objc_msgSend is a direct symbol,
