@@ -78,32 +78,10 @@ ThrowInGlobalCtorArg throw_in_global_ctor_arg = ThrowInGlobalCtorArg((throw 1, 0
 // OGCG:         call void @_ZN20ThrowInGlobalCtorArgC1Ei
 // OGCG:         ret void
 
-template <class X> struct ThrowInTemplateStatic {
-  static inline int w = (throw 1, 0);
-};
-int use_throw_in_template_static() { return ThrowInTemplateStatic<int>::w; }
-
-// CIR-LABEL: cir.func comdat("_ZN21ThrowInTemplateStaticIiE1wE") internal private @__cxx_global_var_init.3() {
-// CIR:         cir.if {{.*}} {
-// CIR:           cir.scope {
-// CIR:             cir.throw
-// CIR-NEXT:        cir.unreachable
-// CIR:           ^bb1:
-// CIR:             cir.store {{.*}} : !s32i, !cir.ptr<!s32i>
-// CIR-NEXT:        cir.yield
-// CIR-NEXT:      }
-// CIR-NEXT:    }
-// CIR-NEXT:    cir.return
-
-// LLVM-LABEL: define internal void @__cxx_global_var_init.3() comdat($_ZN21ThrowInTemplateStaticIiE1wE)
-// LLVM:         call void @__cxa_throw
-// LLVM-NEXT:    unreachable
-// LLVM:         store i32 0, ptr @_ZN21ThrowInTemplateStaticIiE1wE
-
 inline int throw_in_inline_global = (throw 1, 0);
 int use_throw_in_inline_global() { return throw_in_inline_global; }
 
-// CIR-LABEL: cir.func comdat("throw_in_inline_global") internal private @__cxx_global_var_init.4() {
+// CIR-LABEL: cir.func comdat("throw_in_inline_global") internal private @__cxx_global_var_init.3() {
 // CIR:         cir.call @__cxa_guard_acquire
 // CIR:         cir.cleanup.scope {
 // CIR-NEXT:      cir.scope {
@@ -117,10 +95,32 @@ int use_throw_in_inline_global() { return throw_in_inline_global; }
 // CIR-NEXT:    } cleanup eh {
 // CIR-NEXT:      cir.call @__cxa_guard_abort
 
-// LLVM-LABEL: define internal void @__cxx_global_var_init.4() comdat($throw_in_inline_global)
+// LLVM-LABEL: define internal void @__cxx_global_var_init.3() comdat($throw_in_inline_global)
 // LLVM:         call i32 @__cxa_guard_acquire
 // LLVM:         invoke void @__cxa_throw
 // LLVM:         call void @__cxa_guard_abort
+
+template <class X> struct ThrowInTemplateStatic {
+  static inline int w = (throw 1, 0);
+};
+int use_throw_in_template_static() { return ThrowInTemplateStatic<int>::w; }
+
+// CIR-LABEL: cir.func comdat("_ZN21ThrowInTemplateStaticIiE1wE") internal private @__cxx_global_var_init.4() {
+// CIR:         cir.if {{.*}} {
+// CIR:           cir.scope {
+// CIR:             cir.throw
+// CIR-NEXT:        cir.unreachable
+// CIR:           ^bb1:
+// CIR:             cir.store {{.*}} : !s32i, !cir.ptr<!s32i>
+// CIR-NEXT:        cir.yield
+// CIR-NEXT:      }
+// CIR-NEXT:    }
+// CIR-NEXT:    cir.return
+
+// LLVM-LABEL: define internal void @__cxx_global_var_init.4() comdat($_ZN21ThrowInTemplateStaticIiE1wE)
+// LLVM:         call void @__cxa_throw
+// LLVM-NEXT:    unreachable
+// LLVM:         store i32 0, ptr @_ZN21ThrowInTemplateStaticIiE1wE
 
 int throw_in_static_local_init() {
   static int s = (throw 1, 0);
