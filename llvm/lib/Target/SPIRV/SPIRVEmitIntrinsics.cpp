@@ -614,7 +614,7 @@ Type *SPIRVEmitIntrinsicsImpl::reconstructType(Value *Op,
 
 CallInst *SPIRVEmitIntrinsicsImpl::buildSpvPtrcast(Function *F, Value *Op,
                                                    Type *ElemTy) {
-  IRBuilder<> B(Op->getContext());
+  IRBuilder<> B(*F->getParent());
   if (auto *OpI = dyn_cast<Instruction>(Op)) {
     // spv_ptrcast's argument Op denotes an instruction that generates
     // a value, and we may use getInsertionPointAfterDef()
@@ -1536,8 +1536,7 @@ void SPIRVEmitIntrinsicsImpl::deduceOperandElementType(
   if (!KnownElemTy || Ops.size() == 0)
     return;
 
-  LLVMContext &Ctx = CurrF->getContext();
-  IRBuilder<> B(Ctx);
+  IRBuilder<> B(*CurrF->getParent());
   for (auto &OpIt : Ops) {
     Value *Op = OpIt.first;
     if (AskOps && !AskOps->contains(Op))
@@ -3765,7 +3764,7 @@ bool SPIRVEmitIntrinsicsImpl::runOnFunction(Function &Func) {
   CanUseAnyVectorRank =
       ST.canUseExtension(SPIRV::Extension::SPV_EXT_long_vector);
   CurrF = &Func;
-  IRBuilder<> B(Func.getContext());
+  IRBuilder<> B(*Func.getParent());
   AggrConsts.clear();
   AggrConstTypes.clear();
   AggrStores.clear();
@@ -4187,7 +4186,7 @@ bool SPIRVEmitIntrinsicsImpl::runOnModule(Module &M) {
     // check if function parameter types are set
     CurrF = &F;
     if (!F.isDeclaration() && !F.isIntrinsic()) {
-      IRBuilder<> B(F.getContext());
+      IRBuilder<> B(M);
       processParamTypes(&F, B);
     }
   }
