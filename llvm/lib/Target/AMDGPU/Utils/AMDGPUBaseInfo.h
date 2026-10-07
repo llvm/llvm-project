@@ -1776,8 +1776,13 @@ bool isIntrinsicAlwaysUniform(unsigned IntrID);
 
 /// \returns the index of the f32 scale argument of a V_CVT_SCALEF32_*
 /// conversion to a narrow format, or std::nullopt for any other intrinsic.
-/// These instructions only read the exponent field of the scale.
-std::optional<unsigned> getCvtScaleF32ScaleArgIdx(unsigned IntrID);
+/// These instructions only read the bits of the scale given by
+/// getExponentOnlyScaleDemandedBits().
+std::optional<unsigned> getExponentOnlyScaleArgIdx(unsigned IntrID);
+
+/// \returns the bits of an exponent-only scale argument that are read: the
+/// exponent field of the f32 value.
+APInt getExponentOnlyScaleDemandedBits();
 
 /// \returns a register class for the physical register \p Reg if it is a VGPR
 /// or nullptr otherwise.

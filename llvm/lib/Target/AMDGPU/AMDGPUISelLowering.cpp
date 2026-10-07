@@ -4291,12 +4291,12 @@ SDValue AMDGPUTargetLowering::performAssertSZExtCombine(SDNode *N,
 /// V_CVT_SCALEF32_* conversions to a narrow format only read the exponent
 /// field of their f32 scale operand.
 static SDValue
-simplifyDemandedCvtScaleOperand(SDNode *N, unsigned OpIdx,
-                                TargetLowering::DAGCombinerInfo &DCI) {
+simplifyExponentOnlyScaleOperand(SDNode *N, unsigned OpIdx,
+                                 TargetLowering::DAGCombinerInfo &DCI) {
   SelectionDAG &DAG = DCI.DAG;
   const TargetLowering &TLI = DAG.getTargetLoweringInfo();
   SDValue Scale = N->getOperand(OpIdx);
-  APInt Demanded = APInt::getBitsSet(32, 23, 31);
+  APInt Demanded = AMDGPU::getExponentOnlyScaleDemandedBits();
 
   auto ReplaceScale = [&](SDValue NewScale) {
     SmallVector<SDValue> Ops(N->ops());
@@ -4368,8 +4368,8 @@ SDValue AMDGPUTargetLowering::performIntrinsicWOChainCombine(
   default:
     // Operand 0 is the intrinsic ID.
     if (std::optional<unsigned> ScaleArgIdx =
-            AMDGPU::getCvtScaleF32ScaleArgIdx(IID))
-      return simplifyDemandedCvtScaleOperand(N, *ScaleArgIdx + 1, DCI);
+            AMDGPU::getExponentOnlyScaleArgIdx(IID))
+      return simplifyExponentOnlyScaleOperand(N, *ScaleArgIdx + 1, DCI);
     return SDValue();
   }
 }
