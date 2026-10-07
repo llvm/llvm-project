@@ -23,7 +23,7 @@ contains
 end module
 
 ! CHECK-LABEL:   func.func @{{.*}}(
-! CHECK-SAME:      %[[ARG0:.*]]: !fir.box<!fir.array<?xf32>> {fir.bindc_name = "dt"},
+! CHECK-SAME:      %[[ARG0:.*]]: !fir.box<!fir.array<?xf32>> {fir.bindc_name = "dt", fir.fortran_attrs = #fir.var_attrs<intent_inout>},
 ! CHECK:           %[[VAL_0:.*]] = fir.alloca !fir.box<!fir.array<?xf32>>
 ! CHECK:           %[[VAL_1:.*]]:2 = hlfir.declare %[[ARG0]] dummy_scope {{.*}}
 ! CHECK:           fir.if %{{.*}} {

@@ -1099,7 +1099,7 @@ static void InitializeModule() {
   TheModule->setDataLayout(TheJIT->getDataLayout());
 
   // Create a new builder for the module.
-  Builder = std::make_unique<IRBuilder<>>(*TheContext);
+  Builder = std::make_unique<IRBuilder<>>(*TheModule);
 }
 
 ThreadSafeModule irgenAndTakeOwnership(FunctionAST &FnAST,
