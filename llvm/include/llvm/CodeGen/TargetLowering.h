@@ -615,6 +615,7 @@ public:
   /// based on the function's attributes. If the operation is not overridden by
   /// the function's attributes, "Unspecified" is returned and target defaults
   /// are expected to be used for instruction selection.
+  int getRecipEstimateSqrtEnabled(EVT VT, const Function &F) const;
   int getRecipEstimateSqrtEnabled(EVT VT, MachineFunction &MF) const;
 
   /// Return a ReciprocalEstimate enum value for a division of the given type
@@ -4844,6 +4845,11 @@ public:
   virtual bool isTypeDesirableForOp(unsigned /*Opc*/, EVT VT) const {
     // By default, assume all legal types are desirable.
     return isTypeLegal(VT);
+  }
+
+  /// Overload that takes the specific node being optimized.
+  virtual bool isTypeDesirableForOp(SDNode *N, EVT VT) const {
+    return isTypeDesirableForOp(N->getOpcode(), VT);
   }
 
   /// Return true if it is profitable for dag combiner to transform a floating
