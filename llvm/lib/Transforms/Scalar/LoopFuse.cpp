@@ -49,6 +49,7 @@
 #include "llvm/ADT/DenseMap.h"
 #include "llvm/ADT/SmallPtrSet.h"
 #include "llvm/ADT/Statistic.h"
+#include "llvm/Analysis/AliasAnalysis.h"
 #include "llvm/Analysis/AssumptionCache.h"
 #include "llvm/Analysis/DependenceAnalysis.h"
 #include "llvm/Analysis/DomTreeUpdater.h"
@@ -555,6 +556,7 @@ private:
   LoopInfo &LI;
   DominatorTree &DT;
   DependenceInfo &DI;
+  AAResults &AA;
   ScalarEvolution &SE;
   PostDominatorTree &PDT;
   OptimizationRemarkEmitter &ORE;
@@ -563,11 +565,13 @@ private:
 
 public:
   LoopFuser(const ScalarOptions &Opts, LoopInfo &LI, DominatorTree &DT,
-            DependenceInfo &DI, ScalarEvolution &SE, PostDominatorTree &PDT,
+            DependenceInfo &DI, AAResults &AA, ScalarEvolution &SE,
+            PostDominatorTree &PDT,
             OptimizationRemarkEmitter &ORE, AssumptionCache &AC,
             const TargetTransformInfo &TTI)
       : Opts(Opts), LDT(LI), DTU(DT, PDT, DomTreeUpdater::UpdateStrategy::Lazy),
-        LI(LI), DT(DT), DI(DI), SE(SE), PDT(PDT), ORE(ORE), AC(AC), TTI(TTI) {}
+        LI(LI), DT(DT), DI(DI), AA(AA), SE(SE), PDT(PDT), ORE(ORE), AC(AC),
+        TTI(TTI) {}
 
   /// This is the main entry point for loop fusion. It will traverse the
   /// specified function and collect candidate loops to fuse, starting at the
@@ -1196,6 +1200,36 @@ private:
     return AffineLoadKey{AR->getStart(), AR->getStepRecurrence(SE)};
   }
 
+  /// Return true if \p A is known to execute before \p B in an iteration of
+  /// \p L. Keep accesses in nested loops conservative.
+  bool isKnownBefore(const Instruction *A, const Instruction *B,
+                     const Loop *L) const {
+    return LI.getLoopFor(A->getParent()) == L &&
+           LI.getLoopFor(B->getParent()) == L && DT.dominates(A, B);
+  }
+
+  /// Return true if a write between the corresponding loads may overwrite
+  /// either loaded memory location.
+  bool hasInterveningWrite(BatchAAResults &BAA, const LoadInst &Load0,
+                           const LoadInst &Load1,
+                           const FusionCandidate &FC0,
+                           const FusionCandidate &FC1) const {
+    MemoryLocation Loc0 = MemoryLocation::get(&Load0);
+    MemoryLocation Loc1 = MemoryLocation::get(&Load1);
+    auto MayModify = [&](Instruction *Write) {
+      return isModSet(BAA.getModRefInfo(Write, Loc0)) ||
+             isModSet(BAA.getModRefInfo(Write, Loc1));
+    };
+
+    for (Instruction *Write : FC0.MemWrites)
+      if (!isKnownBefore(Write, &Load0, FC0.L) && MayModify(Write))
+        return true;
+    for (Instruction *Write : FC1.MemWrites)
+      if (!isKnownBefore(&Load1, Write, FC1.L) && MayModify(Write))
+        return true;
+    return false;
+  }
+
   /// Collect distinct read-read addresses reused at corresponding iterations.
   ///
   /// This uses exact affine SCEV equality rather than adding a potentially
@@ -1206,6 +1240,7 @@ private:
     if (ReusedValues.size() >= Opts.loop_fusion_min_reused_values)
       return;
 
+    BatchAAResults BAA(AA);
     SmallDenseMap<AffineLoadKey, Instruction *, 8> LoadAccesses0;
     for (Instruction *ReadL0 : FC0.MemReads) {
       std::optional<AffineLoadKey> Key = getAffineLoadKey(FC0, *ReadL0);
@@ -1222,6 +1257,11 @@ private:
 
       Instruction *MatchingLoad = LoadAccesses0.lookup(*Key);
       if (!MatchingLoad)
+        continue;
+
+      auto *Load0 = cast<LoadInst>(MatchingLoad);
+      auto *Load1 = cast<LoadInst>(ReadL1);
+      if (hasInterveningWrite(BAA, *Load0, *Load1, FC0, FC1))
         continue;
 
       ReusedValues.insert(MatchingLoad);
@@ -1992,6 +2032,7 @@ PreservedAnalyses LoopFusePass::run(Function &F, FunctionAnalysisManager &AM) {
   auto &LI = AM.getResult<LoopAnalysis>(F);
   auto &DT = AM.getResult<DominatorTreeAnalysis>(F);
   auto &DI = AM.getResult<DependenceAnalysis>(F);
+  auto &AA = AM.getResult<AAManager>(F);
   auto &SE = AM.getResult<ScalarEvolutionAnalysis>(F);
   auto &PDT = AM.getResult<PostDominatorTreeAnalysis>(F);
   auto &ORE = AM.getResult<OptimizationRemarkEmitterAnalysis>(F);
@@ -2014,7 +2055,7 @@ PreservedAnalyses LoopFusePass::run(Function &F, FunctionAnalysisManager &AM) {
   if (Changed)
     PDT.recalculate(F);
 
-  LoopFuser LF(ScalarOptions::Global, LI, DT, DI, SE, PDT, ORE, AC, TTI);
+  LoopFuser LF(ScalarOptions::Global, LI, DT, DI, AA, SE, PDT, ORE, AC, TTI);
   Changed |= LF.fuseLoops(F);
   if (!Changed)
     return PreservedAnalyses::all();

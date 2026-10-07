@@ -5,6 +5,8 @@
 ; CHECK: [different_stride]{{.*}}found 0 cross-loop reused values
 ; CHECK: [different_type]{{.*}}Loops fused
 ; CHECK: [non_affine]{{.*}}found 0 cross-loop reused values
+; CHECK: [store_before_second_load]{{.*}}found 0 cross-loop reused values
+; CHECK: [store_after_second_load]{{.*}}Loops fused
 
 ; Equal load types, starts, and strides form an exact affine RAR match.
 define void @exact_affine_rar(ptr noalias %src, ptr noalias %dst1,
@@ -171,6 +173,72 @@ loop2:
   %i2.next = add nuw nsw i64 %i2, 1
   %cmp2 = icmp ult i64 %i2.next, %n
   br i1 %cmp2, label %loop2, label %exit
+
+exit:
+  ret void
+}
+
+; A store between corresponding loads prevents read-read value reuse.
+define void @store_before_second_load(ptr noalias %src, ptr noalias %dst1,
+                                      ptr noalias %dst2, i64 %n) {
+entry:
+  br label %loop1
+
+loop1:
+  %i1 = phi i64 [ 0, %entry ], [ %i1.next, %loop1 ]
+  %p1 = getelementptr inbounds i32, ptr %src, i64 %i1
+  %v1 = load i32, ptr %p1, align 4
+  %d1 = getelementptr inbounds i32, ptr %dst1, i64 %i1
+  store i32 %v1, ptr %d1, align 4
+  %i1.next = add nuw nsw i64 %i1, 1
+  %c1 = icmp ult i64 %i1.next, %n
+  br i1 %c1, label %loop1, label %loop2.preheader
+
+loop2.preheader:
+  br label %loop2
+
+loop2:
+  %i2 = phi i64 [ 0, %loop2.preheader ], [ %i2.next, %loop2 ]
+  %p2 = getelementptr inbounds i32, ptr %src, i64 %i2
+  store i32 0, ptr %p2, align 4
+  %v2 = load i32, ptr %p2, align 4
+  %d2 = getelementptr inbounds i32, ptr %dst2, i64 %i2
+  store i32 %v2, ptr %d2, align 4
+  %i2.next = add nuw nsw i64 %i2, 1
+  %c2 = icmp ult i64 %i2.next, %n
+  br i1 %c2, label %loop2, label %exit
+
+exit:
+  ret void
+}
+
+; A store after the second load does not prevent read-read value reuse.
+define void @store_after_second_load(ptr noalias %src, ptr noalias %dst,
+                                     i64 %n) {
+entry:
+  br label %loop1
+
+loop1:
+  %i1 = phi i64 [ 0, %entry ], [ %i1.next, %loop1 ]
+  %p1 = getelementptr inbounds i32, ptr %src, i64 %i1
+  %v1 = load i32, ptr %p1, align 4
+  %d1 = getelementptr inbounds i32, ptr %dst, i64 %i1
+  store i32 %v1, ptr %d1, align 4
+  %i1.next = add nuw nsw i64 %i1, 1
+  %c1 = icmp ult i64 %i1.next, %n
+  br i1 %c1, label %loop1, label %loop2.preheader
+
+loop2.preheader:
+  br label %loop2
+
+loop2:
+  %i2 = phi i64 [ 0, %loop2.preheader ], [ %i2.next, %loop2 ]
+  %p2 = getelementptr inbounds i32, ptr %src, i64 %i2
+  %v2 = load i32, ptr %p2, align 4
+  store i32 0, ptr %p2, align 4
+  %i2.next = add nuw nsw i64 %i2, 1
+  %c2 = icmp ult i64 %i2.next, %n
+  br i1 %c2, label %loop2, label %exit
 
 exit:
   ret void
