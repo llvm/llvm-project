@@ -121,7 +121,7 @@ public:
 
   lldb::ValueObjectSP GuessValueForAddress(lldb::addr_t addr) override;
 
-  lldb::ValueObjectSP GuessValueForRegisterAndOffset(ConstString reg,
+  lldb::ValueObjectSP GuessValueForRegisterAndOffset(llvm::StringRef reg,
                                                      int64_t offset) override;
 
   StructuredData::ObjectSP GetLanguageSpecificData() override;

@@ -426,26 +426,6 @@ void llvm::simplifyLoopAfterUnroll(Loop *L, bool SimplifyIVs, LoopInfo *LI,
   }
 }
 
-// Loops containing convergent instructions that are uncontrolled or controlled
-// from outside the loop must have a count that divides their TripMultiple.
-LLVM_ATTRIBUTE_USED
-static bool canHaveUnrollRemainder(const Loop *L) {
-  if (getLoopConvergenceHeart(L))
-    return false;
-
-  // Check for uncontrolled convergent operations.
-  for (auto &BB : L->blocks()) {
-    for (auto &I : *BB) {
-      if (isa<ConvergenceControlInst>(I))
-        return true;
-      if (auto *CB = dyn_cast<CallBase>(&I))
-        if (CB->isConvergent())
-          return CB->getConvergenceControlToken();
-    }
-  }
-  return true;
-}
-
 // If LoopUnroll has proven OriginalLoopProb is incorrect for some iterations
 // of the original loop, adjust latch probabilities in the unrolled loop to
 // maintain the original total frequency of the original loop body.
@@ -1622,7 +1602,7 @@ llvm::UnrollLoop(Loop *L, UnrollLoopOptions ULO, LoopInfo *LI,
         continue;
       if (!RdxResult) {
         RdxResult = PartialReductions.front();
-        IRBuilder Builder(ExitBlock, ExitBlock->getFirstNonPHIIt());
+        IRBuilder Builder(ExitBlock->getFirstNonPHIIt());
         Builder.setFastMathFlags(Reductions.begin()->second.getFastMathFlags());
         RecurKind RK = Reductions.begin()->second.getRecurrenceKind();
         for (Instruction *RdxPart : drop_begin(PartialReductions)) {
@@ -1772,11 +1752,8 @@ MDNode *llvm::GetUnrollMetadata(MDNode *LoopID, StringRef Name) {
   assert(LoopID->getNumOperands() > 0 && "requires at least one operand");
   assert(LoopID->getOperand(0) == LoopID && "invalid loop id");
 
-  for (const MDOperand &MDO : llvm::drop_begin(LoopID->operands())) {
-    MDNode *MD = dyn_cast<MDNode>(MDO);
-    if (!MD)
-      continue;
-
+  for (MDNode *MD :
+       make_isa_range<MDNode>(llvm::drop_begin(LoopID->operands()))) {
     MDString *S = dyn_cast<MDString>(MD->getOperand(0));
     if (!S)
       continue;

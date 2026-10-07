@@ -14,16 +14,12 @@
 #define UBSAN_OFFLOAD_H
 
 #include "sanitizer_common/sanitizer_internal_defs.h"
-#include "sanitizer_common/sanitizer_mutex.h"
 #include "ubsan_offload_packet.h"
 
 namespace __ubsan {
 
 void Initialize();
-void PrintOffloadReport(const __ubsan_offload_report &R);
-
-// Nest only after RpcMutex, the reverse deadlocks the report thread.
-extern __sanitizer::Mutex UbsanOffloadMutex;
+u32 HandleOffloadReport(void *Port, u32 Lanes);
 
 } // namespace __ubsan
 
