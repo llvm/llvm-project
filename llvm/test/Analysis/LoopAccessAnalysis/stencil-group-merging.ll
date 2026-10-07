@@ -1315,7 +1315,7 @@ define void @stencil_merge_mixed_member(ptr %a, ptr %out, i64 %n, i64 %s1, i64 %
 ; MERGE-NEXT:          (Low: (32 + %out) High: (-32 + (8 * %n) + %out))
 ; MERGE-NEXT:            Member: {(32 + %out),+,8}<nuw><%loop>
 ; MERGE-NEXT:        Group GRP1:
-; MERGE-NEXT:          (Low: ((32 + (-5 * %s2) + %a) umin (32 + (-5 * %s1) + %a)) High: (-32 + (5 * %s1) + (5 * %s2) + (8 * %n) + %a))
+; MERGE-NEXT:          (Low: ((32 + (-5 * %s1) + %a) umin (32 + (-5 * %s2) + %a)) High: (-32 + (5 * %s1) + (5 * %s2) + (8 * %n) + %a))
 ; MERGE-NEXT:            Member: {(32 + (5 * %s1) + (5 * %s2) + %a),+,8}<nw><%loop>
 ; MERGE-NEXT:            Member: {(32 + (5 * %s2) + %a),+,8}<nw><%loop>
 ; MERGE-NEXT:            Member: {(32 + (-5 * %s2) + %a),+,8}<nw><%loop>
@@ -2202,7 +2202,7 @@ define void @stencil_merge_three_stride_star(ptr %a, ptr %out, ptr %out2, i64 %n
 ; MERGE-NEXT:          (Low: (32 + %out2) High: (-32 + (8 * %n) + %out2))
 ; MERGE-NEXT:            Member: {(32 + %out2),+,8}<nuw><%loop>
 ; MERGE-NEXT:        Group GRP2:
-; MERGE-NEXT:          (Low: ((32 + (-1 * %s3) + %a) umin (32 + (-1 * %s2) + %a) umin (32 + (-1 * %s1) + %a)) High: ((-32 + (8 * %n) + %s1 + %a) umax (-32 + (8 * %n) + %s2 + %a) umax (-32 + (8 * %n) + %s3 + %a)))
+; MERGE-NEXT:          (Low: ((32 + (-1 * %s1) + %a) umin (32 + (-1 * %s2) + %a) umin (32 + (-1 * %s3) + %a)) High: ((-32 + (8 * %n) + %s1 + %a) umax (-32 + (8 * %n) + %s2 + %a) umax (-32 + (8 * %n) + %s3 + %a)))
 ; MERGE-NEXT:            Member: {(32 + %s3 + %a),+,8}<nw><%loop>
 ; MERGE-NEXT:            Member: {(32 + (-1 * %s3) + %a),+,8}<nw><%loop>
 ; MERGE-NEXT:            Member: {(32 + %s2 + %a),+,8}<nw><%loop>
@@ -3256,8 +3256,8 @@ define void @corner_sum_overflow(ptr %a, ptr %out, i64 %n, i64 %s1in, i64 %s2in,
 ; CHECK-NEXT:          (Low: ((1 smax %s1in) + %a) High: ((8 * (1 smax %n)) + (1 smax %s1in) + %a))
 ; CHECK-NEXT:            Member: {((1 smax %s1in) + %a),+,8}<nw><%loop>
 ; CHECK-NEXT:        Group GRP7:
-; CHECK-NEXT:          (Low: ((-4611686018427387904 * (1 smax %s3in)) + (-4611686018427387904 * (1 smax %s2in)) + (-4611686018427387904 * (1 smax %s1in)) + %a) High: ((8 * (1 smax %n)) + (-4611686018427387904 * (1 smax %s3in)) + (-4611686018427387904 * (1 smax %s2in)) + (-4611686018427387904 * (1 smax %s1in)) + %a))
-; CHECK-NEXT:            Member: {((-4611686018427387904 * (1 smax %s3in)) + (-4611686018427387904 * (1 smax %s2in)) + (-4611686018427387904 * (1 smax %s1in)) + %a),+,8}<nw><%loop>
+; CHECK-NEXT:          (Low: ((-4611686018427387904 * (1 smax %s1in)) + (-4611686018427387904 * (1 smax %s2in)) + (-4611686018427387904 * (1 smax %s3in)) + %a) High: ((8 * (1 smax %n)) + (-4611686018427387904 * (1 smax %s1in)) + (-4611686018427387904 * (1 smax %s2in)) + (-4611686018427387904 * (1 smax %s3in)) + %a))
+; CHECK-NEXT:            Member: {((-4611686018427387904 * (1 smax %s1in)) + (-4611686018427387904 * (1 smax %s2in)) + (-4611686018427387904 * (1 smax %s3in)) + %a),+,8}<nw><%loop>
 ; CHECK-EMPTY:
 ; CHECK-NEXT:      Non vectorizable stores to invariant address were not found in loop.
 ; CHECK-NEXT:      SCEV assumptions:
@@ -3334,14 +3334,14 @@ define void @corner_sum_no_overflow(ptr %a, ptr %out, i64 %n, i64 %s1in, i64 %s2
 ; MERGE-NEXT:          (Low: %out High: ((8 * (1 smax %n)) + %out))
 ; MERGE-NEXT:            Member: {%out,+,8}<nuw><%loop>
 ; MERGE-NEXT:        Group GRP1:
-; MERGE-NEXT:          (Low: ((-1152921504606846976 * (1 smax %s3in)) + (-1152921504606846976 * (1 smax %s2in)) + (-1152921504606846976 * (1 smax %s1in)) + %a) High: (((8 * (1 smax %n)) + (1 smax %s3in) + %a) umax ((8 * (1 smax %n)) + (1 smax %s2in) + %a) umax ((8 * (1 smax %n)) + (1 smax %s1in) + %a)))
+; MERGE-NEXT:          (Low: ((-1152921504606846976 * (1 smax %s1in)) + (-1152921504606846976 * (1 smax %s2in)) + (-1152921504606846976 * (1 smax %s3in)) + %a) High: (((8 * (1 smax %n)) + (1 smax %s1in) + %a) umax ((8 * (1 smax %n)) + (1 smax %s2in) + %a) umax ((8 * (1 smax %n)) + (1 smax %s3in) + %a)))
 ; MERGE-NEXT:            Member: {((-1 * (1 smax %s3in))<nsw> + %a),+,8}<nw><%loop>
 ; MERGE-NEXT:            Member: {((1 smax %s3in) + %a),+,8}<nw><%loop>
 ; MERGE-NEXT:            Member: {((-1 * (1 smax %s2in))<nsw> + %a),+,8}<nw><%loop>
 ; MERGE-NEXT:            Member: {((1 smax %s2in) + %a),+,8}<nw><%loop>
 ; MERGE-NEXT:            Member: {((-1 * (1 smax %s1in))<nsw> + %a),+,8}<nw><%loop>
 ; MERGE-NEXT:            Member: {((1 smax %s1in) + %a),+,8}<nw><%loop>
-; MERGE-NEXT:            Member: {((-1152921504606846976 * (1 smax %s3in)) + (-1152921504606846976 * (1 smax %s2in)) + (-1152921504606846976 * (1 smax %s1in)) + %a),+,8}<nw><%loop>
+; MERGE-NEXT:            Member: {((-1152921504606846976 * (1 smax %s1in)) + (-1152921504606846976 * (1 smax %s2in)) + (-1152921504606846976 * (1 smax %s3in)) + %a),+,8}<nw><%loop>
 ; MERGE-EMPTY:
 ; MERGE-NEXT:      Non vectorizable stores to invariant address were not found in loop.
 ; MERGE-NEXT:      SCEV assumptions:
@@ -3414,8 +3414,8 @@ define void @corner_sum_no_overflow(ptr %a, ptr %out, i64 %n, i64 %s1in, i64 %s2
 ; NOMERGE-NEXT:          (Low: ((1 smax %s1in) + %a) High: ((8 * (1 smax %n)) + (1 smax %s1in) + %a))
 ; NOMERGE-NEXT:            Member: {((1 smax %s1in) + %a),+,8}<nw><%loop>
 ; NOMERGE-NEXT:        Group GRP7:
-; NOMERGE-NEXT:          (Low: ((-1152921504606846976 * (1 smax %s3in)) + (-1152921504606846976 * (1 smax %s2in)) + (-1152921504606846976 * (1 smax %s1in)) + %a) High: ((8 * (1 smax %n)) + (-1152921504606846976 * (1 smax %s3in)) + (-1152921504606846976 * (1 smax %s2in)) + (-1152921504606846976 * (1 smax %s1in)) + %a))
-; NOMERGE-NEXT:            Member: {((-1152921504606846976 * (1 smax %s3in)) + (-1152921504606846976 * (1 smax %s2in)) + (-1152921504606846976 * (1 smax %s1in)) + %a),+,8}<nw><%loop>
+; NOMERGE-NEXT:          (Low: ((-1152921504606846976 * (1 smax %s1in)) + (-1152921504606846976 * (1 smax %s2in)) + (-1152921504606846976 * (1 smax %s3in)) + %a) High: ((8 * (1 smax %n)) + (-1152921504606846976 * (1 smax %s1in)) + (-1152921504606846976 * (1 smax %s2in)) + (-1152921504606846976 * (1 smax %s3in)) + %a))
+; NOMERGE-NEXT:            Member: {((-1152921504606846976 * (1 smax %s1in)) + (-1152921504606846976 * (1 smax %s2in)) + (-1152921504606846976 * (1 smax %s3in)) + %a),+,8}<nw><%loop>
 ; NOMERGE-EMPTY:
 ; NOMERGE-NEXT:      Non vectorizable stores to invariant address were not found in loop.
 ; NOMERGE-NEXT:      SCEV assumptions:
@@ -3692,7 +3692,7 @@ define void @constant_offset_fits(ptr %a, ptr %out, i64 %n, i64 %s1in, i64 %s2in
 ; MERGE-NEXT:          (Low: %out High: ((8 * (1 smax %n)) + %out))
 ; MERGE-NEXT:            Member: {%out,+,8}<nuw><%loop>
 ; MERGE-NEXT:        Group GRP1:
-; MERGE-NEXT:          (Low: (-4611686018427387904 + (-1 * ((1 smax %s1in) + (1 smax %s2in) + (1 smax %s3in))) + %a) High: (((8 * (1 smax %n)) + (1 smax %s3in) + %a) umax ((8 * (1 smax %n)) + (1 smax %s2in) + %a) umax ((8 * (1 smax %n)) + (1 smax %s1in) + %a)))
+; MERGE-NEXT:          (Low: (-4611686018427387904 + (-1 * ((1 smax %s1in) + (1 smax %s2in) + (1 smax %s3in))) + %a) High: (((8 * (1 smax %n)) + (1 smax %s1in) + %a) umax ((8 * (1 smax %n)) + (1 smax %s2in) + %a) umax ((8 * (1 smax %n)) + (1 smax %s3in) + %a)))
 ; MERGE-NEXT:            Member: {((-1 * (1 smax %s3in))<nsw> + %a),+,8}<nw><%loop>
 ; MERGE-NEXT:            Member: {((1 smax %s3in) + %a),+,8}<nw><%loop>
 ; MERGE-NEXT:            Member: {((-1 * (1 smax %s2in))<nsw> + %a),+,8}<nw><%loop>

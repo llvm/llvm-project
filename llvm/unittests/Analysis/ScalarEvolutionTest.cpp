@@ -375,16 +375,10 @@ TEST_F(ScalarEvolutionsTest, CompareValueComplexity) {
   auto *MulB = BinaryOperator::CreateMul(Y, X, "", EntryBB);
   ReturnInst::Create(Context, nullptr, EntryBB);
 
-  // This test isn't checking for correctness.  Today making A and B resolve to
-  // the same SCEV would require deeper searching in CompareValueComplexity,
-  // which will slow down compilation.  However, this test can fail (with LLVM's
-  // behavior still being correct) if we ever have a smarter
-  // CompareValueComplexity that is both fast and more accurate.
-
   ScalarEvolution SE = buildSE(*F);
   const SCEV *A = SE.getSCEV(MulA);
   const SCEV *B = SE.getSCEV(MulB);
-  EXPECT_NE(A, B);
+  EXPECT_EQ(A, B);
 }
 
 TEST_F(ScalarEvolutionsTest, SCEVAddExpr) {
