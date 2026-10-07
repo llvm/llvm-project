@@ -17107,6 +17107,9 @@ static bool EvaluateStdcLoad8(EvalInfo &Info, const CallExpr *E, bool IsBE,
       Ptr.Designator.Invalid)
     return false;
 
+  if (Ptr.Designator.isMostDerivedAnUnsizedArray())
+    return false;
+
   if (IsAligned) {
     CharUnits RequiredAlign = Info.Ctx.getTypeAlignInChars(E->getType());
     CharUnits BaseAlignment = getBaseAlignment(Info.Ctx, Ptr.Base);

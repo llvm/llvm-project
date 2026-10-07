@@ -2273,19 +2273,28 @@ static bool interp__builtin_load8(InterpState &S, CodePtr OpPC,
   unsigned BitWidth = ByteWidth * 8;
   APInt Result = APInt::getZero(BitWidth);
 
-  // C2y §7.18.21: result = sum(b_index * 2^(8*index)) for index in [0, N/8)
-  // where b_index = ptr[index] (LE) or ptr[N/8 - index - 1] (BE).
-  for (unsigned I = 0; I != ByteWidth; ++I) {
-    size_t SrcIdx = IsBigEndian ? (ByteWidth - I - 1) : I;
-    // When Ptr is not an array, the RemainingElems check above already
-    // guarantees ByteWidth == 1, so this loop runs once and BytePtr == Ptr.
-    Pointer BytePtr = IsArray ? Ptr.atIndex(BaseIdx + SrcIdx) : Ptr;
-    if (!CheckLoad(S, OpPC, BytePtr, AK_Read))
+  if (IsArray) {
+    // C2y §7.18.21: result = sum(b_index * 2^(8*index)) for index in [0, N/8)
+    // where b_index = ptr[index] (LE) or ptr[N/8 - index - 1] (BE).
+    for (unsigned I = 0; I != ByteWidth; ++I) {
+      size_t SrcIdx = IsBigEndian ? (ByteWidth - I - 1) : I;
+      Pointer BytePtr = Ptr.atIndex(BaseIdx + SrcIdx);
+      if (!CheckLoad(S, OpPC, BytePtr, AK_Read))
+        return false;
+      uint64_t B;
+      INT_TYPE_SWITCH_NO_BOOL(ElemT, {
+        B = static_cast<uint64_t>(BytePtr.load<T>().toUnsigned());
+      });
+      Result |= APInt(BitWidth, B) << (8 * I);
+    }
+  } else {
+    assert(ByteWidth == 1 && "non-array pointer, expected a 1-byte load");
+    if (!CheckLoad(S, OpPC, Ptr, AK_Read))
       return false;
     uint64_t B;
     INT_TYPE_SWITCH_NO_BOOL(
-        ElemT, { B = static_cast<uint64_t>(BytePtr.load<T>().toUnsigned()); });
-    Result |= APInt(BitWidth, B) << (8 * I);
+        ElemT, { B = static_cast<uint64_t>(Ptr.load<T>().toUnsigned()); });
+    Result = APInt(BitWidth, B);
   }
 
   bool IsSigned = Call->getType()->isSignedIntegerType();
