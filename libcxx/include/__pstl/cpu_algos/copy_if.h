@@ -12,11 +12,14 @@
 #include <__algorithm/copy_if.h>
 #include <__algorithm/fill.h>
 #include <__config>
+#include <__cstddef/size_t.h>
 #include <__functional/operations.h>
+#include <__iterator/concepts.h>
 #include <__iterator/iterator_traits.h>
 #include <__memory/unique_ptr.h>
 #include <__new/global_new_delete.h>
 #include <__new/nothrow_t.h>
+#include <__optional/nullopt_t.h>
 #include <__optional/optional.h>
 #include <__pstl/backend_fwd.h>
 #include <__pstl/cpu_algos/cpu_traits.h>
@@ -63,8 +66,8 @@ struct _LIBCPP_HIDE_FROM_ABI __dynamic_bitset {
     __bits_[__word_index] &= ~(size_t(1) << __bit_index);
   }
   _LIBCPP_HIDE_FROM_ABI void __reset() {
-    for (size_t i = 0; i < __size_; ++i) {
-      __bits_[i] = 0;
+    for (size_t __i = 0; __i < __size_; ++__i) {
+      __bits_[__i] = 0;
     }
   }
 };
