@@ -15335,6 +15335,13 @@ static SDValue tryToFoldExtendOfConstant(SDNode *N, const SDLoc &DL,
   SmallVector<SDValue, 8> Elts;
   unsigned NumElts = VT.getVectorNumElements();
 
+  // Extend constant bool vectors to match the target's BooleanContent.
+  bool SExt = Opcode == ISD::SIGN_EXTEND ||
+              Opcode == ISD::SIGN_EXTEND_VECTOR_INREG ||
+              (Opcode == ISD::ANY_EXTEND && EVTBits == 1 &&
+               TLI.getBooleanContents(VT) ==
+                   TargetLowering::ZeroOrNegativeOneBooleanContent);
+
   for (unsigned i = 0; i != NumElts; ++i) {
     SDValue Op = N0.getOperand(i);
     if (Op.isUndef()) {
@@ -15349,7 +15356,7 @@ static SDValue tryToFoldExtendOfConstant(SDNode *N, const SDLoc &DL,
     // Get the constant value and if needed trunc it to the size of the type.
     // Nodes like build_vector might have constants wider than the scalar type.
     APInt C = Op->getAsAPIntVal().zextOrTrunc(EVTBits);
-    if (Opcode == ISD::SIGN_EXTEND || Opcode == ISD::SIGN_EXTEND_VECTOR_INREG)
+    if (SExt)
       Elts.push_back(DAG.getConstant(C.sext(VTBits), DL, SVT));
     else
       Elts.push_back(DAG.getConstant(C.zext(VTBits), DL, SVT));

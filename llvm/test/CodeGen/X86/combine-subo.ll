@@ -201,14 +201,14 @@ define { i8, i1 } @ssub_always_overflow(i8 %x) nounwind {
 define { <4 x i8>, <4 x i1> } @always_usub_const_vector() nounwind {
 ; SSE-LABEL: always_usub_const_vector:
 ; SSE:       # %bb.0:
-; SSE-NEXT:    movaps {{.*#+}} xmm1 = [1,1,1,1]
 ; SSE-NEXT:    pcmpeqd %xmm0, %xmm0
+; SSE-NEXT:    pcmpeqd %xmm1, %xmm1
 ; SSE-NEXT:    retq
 ;
 ; AVX-LABEL: always_usub_const_vector:
 ; AVX:       # %bb.0:
-; AVX-NEXT:    vbroadcastss {{.*#+}} xmm1 = [1,1,1,1]
 ; AVX-NEXT:    vpcmpeqd %xmm0, %xmm0, %xmm0
+; AVX-NEXT:    vpcmpeqd %xmm1, %xmm1, %xmm1
 ; AVX-NEXT:    retq
   %x = call { <4 x i8>, <4 x i1> } @llvm.usub.with.overflow.v4i8(<4 x i8> <i8 0, i8 0, i8 0, i8 0>, <4 x i8> <i8 1, i8 1, i8 1, i8 1>)
   ret { <4 x i8>, <4 x i1> } %x
@@ -266,13 +266,13 @@ define { <4 x i32>, <4 x i1> } @combine_vec_ssub_constant_overflow() {
 ; SSE-LABEL: combine_vec_ssub_constant_overflow:
 ; SSE:       # %bb.0:
 ; SSE-NEXT:    movaps {{.*#+}} xmm0 = [2147483647,2147483647,2147483647,2147483647]
-; SSE-NEXT:    movaps {{.*#+}} xmm1 = [1,1,1,1]
+; SSE-NEXT:    pcmpeqd %xmm1, %xmm1
 ; SSE-NEXT:    retq
 ;
 ; AVX-LABEL: combine_vec_ssub_constant_overflow:
 ; AVX:       # %bb.0:
 ; AVX-NEXT:    vbroadcastss {{.*#+}} xmm0 = [2147483647,2147483647,2147483647,2147483647]
-; AVX-NEXT:    vbroadcastss {{.*#+}} xmm1 = [1,1,1,1]
+; AVX-NEXT:    vpcmpeqd %xmm1, %xmm1, %xmm1
 ; AVX-NEXT:    retq
   %x = call { <4 x i32>, <4 x i1> } @llvm.ssub.with.overflow.v4i32(<4 x i32> splat (i32 -2147483648), <4 x i32> splat (i32 1))
   ret { <4 x i32>, <4 x i1> } %x
@@ -303,13 +303,13 @@ define { <4 x i32>, <4 x i1> } @combine_vec_usub_constant_overflow() {
 ; SSE-LABEL: combine_vec_usub_constant_overflow:
 ; SSE:       # %bb.0:
 ; SSE-NEXT:    movaps {{.*#+}} xmm0 = [4294967294,4294967294,4294967294,4294967294]
-; SSE-NEXT:    movaps {{.*#+}} xmm1 = [1,1,1,1]
+; SSE-NEXT:    pcmpeqd %xmm1, %xmm1
 ; SSE-NEXT:    retq
 ;
 ; AVX-LABEL: combine_vec_usub_constant_overflow:
 ; AVX:       # %bb.0:
 ; AVX-NEXT:    vbroadcastss {{.*#+}} xmm0 = [4294967294,4294967294,4294967294,4294967294]
-; AVX-NEXT:    vbroadcastss {{.*#+}} xmm1 = [1,1,1,1]
+; AVX-NEXT:    vpcmpeqd %xmm1, %xmm1, %xmm1
 ; AVX-NEXT:    retq
   %x = call { <4 x i32>, <4 x i1> } @llvm.usub.with.overflow.v4i32(<4 x i32> splat (i32 1), <4 x i32> splat (i32 3))
   ret { <4 x i32>, <4 x i1> } %x

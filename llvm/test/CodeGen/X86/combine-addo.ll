@@ -169,13 +169,13 @@ define { <4 x i32>, <4 x i1> } @combine_vec_sadd_constant_overflow() {
 ; SSE-LABEL: combine_vec_sadd_constant_overflow:
 ; SSE:       # %bb.0:
 ; SSE-NEXT:    movaps {{.*#+}} xmm0 = [2147483648,2147483648,2147483648,2147483648]
-; SSE-NEXT:    movaps {{.*#+}} xmm1 = [1,1,1,1]
+; SSE-NEXT:    pcmpeqd %xmm1, %xmm1
 ; SSE-NEXT:    retq
 ;
 ; AVX-LABEL: combine_vec_sadd_constant_overflow:
 ; AVX:       # %bb.0:
 ; AVX-NEXT:    vbroadcastss {{.*#+}} xmm0 = [2147483648,2147483648,2147483648,2147483648]
-; AVX-NEXT:    vbroadcastss {{.*#+}} xmm1 = [1,1,1,1]
+; AVX-NEXT:    vpcmpeqd %xmm1, %xmm1, %xmm1
 ; AVX-NEXT:    retq
   %x = call { <4 x i32>, <4 x i1> } @llvm.sadd.with.overflow.v4i32(<4 x i32> splat (i32 2147483647), <4 x i32> splat (i32 1))
   ret { <4 x i32>, <4 x i1> } %x
@@ -206,13 +206,13 @@ define { <4 x i32>, <4 x i1> } @combine_vec_uadd_constant_overflow() {
 ; SSE-LABEL: combine_vec_uadd_constant_overflow:
 ; SSE:       # %bb.0:
 ; SSE-NEXT:    movaps {{.*#+}} xmm0 = [1,1,1,1]
-; SSE-NEXT:    movaps %xmm0, %xmm1
+; SSE-NEXT:    pcmpeqd %xmm1, %xmm1
 ; SSE-NEXT:    retq
 ;
 ; AVX-LABEL: combine_vec_uadd_constant_overflow:
 ; AVX:       # %bb.0:
 ; AVX-NEXT:    vbroadcastss {{.*#+}} xmm0 = [1,1,1,1]
-; AVX-NEXT:    vmovaps %xmm0, %xmm1
+; AVX-NEXT:    vpcmpeqd %xmm1, %xmm1, %xmm1
 ; AVX-NEXT:    retq
   %x = call { <4 x i32>, <4 x i1> } @llvm.uadd.with.overflow.v4i32(<4 x i32> splat (i32 -1), <4 x i32> splat (i32 2))
   ret { <4 x i32>, <4 x i1> } %x

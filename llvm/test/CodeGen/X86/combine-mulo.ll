@@ -178,13 +178,13 @@ define { <4 x i32>, <4 x i1> } @combine_vec_smul_constant_overflow() {
 ; SSE-LABEL: combine_vec_smul_constant_overflow:
 ; SSE:       # %bb.0:
 ; SSE-NEXT:    movaps {{.*#+}} xmm0 = [4294967294,4294967294,4294967294,4294967294]
-; SSE-NEXT:    movaps {{.*#+}} xmm1 = [1,1,1,1]
+; SSE-NEXT:    pcmpeqd %xmm1, %xmm1
 ; SSE-NEXT:    retq
 ;
 ; AVX-LABEL: combine_vec_smul_constant_overflow:
 ; AVX:       # %bb.0:
 ; AVX-NEXT:    vbroadcastss {{.*#+}} xmm0 = [4294967294,4294967294,4294967294,4294967294]
-; AVX-NEXT:    vbroadcastss {{.*#+}} xmm1 = [1,1,1,1]
+; AVX-NEXT:    vpcmpeqd %xmm1, %xmm1, %xmm1
 ; AVX-NEXT:    retq
   %x = call { <4 x i32>, <4 x i1> } @llvm.smul.with.overflow.v4i32(<4 x i32> splat (i32 2147483647), <4 x i32> splat (i32 2))
   ret { <4 x i32>, <4 x i1> } %x
@@ -215,13 +215,13 @@ define { <4 x i32>, <4 x i1> } @combine_vec_umul_constant_overflow() {
 ; SSE-LABEL: combine_vec_umul_constant_overflow:
 ; SSE:       # %bb.0:
 ; SSE-NEXT:    movaps {{.*#+}} xmm0 = [4294967294,4294967294,4294967294,4294967294]
-; SSE-NEXT:    movaps {{.*#+}} xmm1 = [1,1,1,1]
+; SSE-NEXT:    pcmpeqd %xmm1, %xmm1
 ; SSE-NEXT:    retq
 ;
 ; AVX-LABEL: combine_vec_umul_constant_overflow:
 ; AVX:       # %bb.0:
 ; AVX-NEXT:    vbroadcastss {{.*#+}} xmm0 = [4294967294,4294967294,4294967294,4294967294]
-; AVX-NEXT:    vbroadcastss {{.*#+}} xmm1 = [1,1,1,1]
+; AVX-NEXT:    vpcmpeqd %xmm1, %xmm1, %xmm1
 ; AVX-NEXT:    retq
   %x = call { <4 x i32>, <4 x i1> } @llvm.umul.with.overflow.v4i32(<4 x i32> splat (i32 -1), <4 x i32> splat (i32 2))
   ret { <4 x i32>, <4 x i1> } %x
