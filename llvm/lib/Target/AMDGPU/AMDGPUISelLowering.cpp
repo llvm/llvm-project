@@ -4264,7 +4264,6 @@ simplifyExponentOnlyScaleOperand(SDNode *N, unsigned OpIdx,
     EVT VecVT = Vec.getValueType();
     auto *Idx = dyn_cast<ConstantSDNode>(Scale.getOperand(1));
     if (Idx && VecVT.isFixedLengthVector() &&
-        VecVT.getScalarSizeInBits() == 32 &&
         Idx->getAPIntValue().ult(VecVT.getVectorNumElements())) {
       APInt DemandedElts = APInt::getOneBitSet(VecVT.getVectorNumElements(),
                                                Idx->getZExtValue());
