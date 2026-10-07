@@ -80,8 +80,13 @@ public:
                 const DominatorTree &DT, AAResults &AA, AssumptionCache &AC,
                 const DataLayout *DL, TTI::TargetCostKind CostKind,
                 bool TryEarlyFoldsOnly)
-      : F(F), Builder(*F.getParent(), InstSimplifyFolder(*DL)), TTI(TTI),
-        DT(DT), AA(AA), DL(DL), CostKind(CostKind),
+      : F(F), Builder(*F.getParent(), InstSimplifyFolder(*DL),
+                      IRBuilderCallbackInserter([this](Instruction *I) {
+                        // Automatically add newly created instructions
+                        // into the deferred queue.
+                        Worklist.add(I);
+                      })),
+        TTI(TTI), DT(DT), AA(AA), DL(DL), CostKind(CostKind),
         SQ(*DL, /*TLI=*/nullptr, &DT, &AC),
         TryEarlyFoldsOnly(TryEarlyFoldsOnly) {}
 
@@ -89,7 +94,7 @@ public:
 
 private:
   Function &F;
-  IRBuilder<InstSimplifyFolder> Builder;
+  IRBuilder<InstSimplifyFolder, IRBuilderCallbackInserter> Builder;
   const TargetTransformInfo &TTI;
   const DominatorTree &DT;
   AAResults &AA;
@@ -357,7 +362,7 @@ bool VectorCombine::vectorizeLoadInsert(Instruction &I) {
 
   // It is safe and potentially profitable to load a vector directly:
   // inselt undef, load Scalar, 0 --> load VecPtr
-  IRBuilder<> Builder(Load);
+  Builder.SetInsertPoint(Load);
   Value *CastedPtr =
       Builder.CreatePointerBitCastOrAddrSpaceCast(SrcPtr, Builder.getPtrTy(AS));
   Value *VecLd = Builder.CreateAlignedLoad(MinVecTy, CastedPtr, Alignment);
@@ -419,7 +424,7 @@ bool VectorCombine::widenSubvectorLoad(Instruction &I) {
   if (OldCost < NewCost || !NewCost.isValid())
     return false;
 
-  IRBuilder<> Builder(Load);
+  Builder.SetInsertPoint(Load);
   Value *CastedPtr =
       Builder.CreatePointerBitCastOrAddrSpaceCast(SrcPtr, Builder.getPtrTy(AS));
   Value *VecLd = Builder.CreateAlignedLoad(Ty, CastedPtr, Alignment);
@@ -722,8 +727,6 @@ bool VectorCombine::foldExtractExtract(Instruction &I) {
   Value *NewExt = Pred != CmpInst::BAD_ICMP_PREDICATE
                       ? foldExtExtCmp(ExtOp0, ExtOp1, ExtIndex, I)
                       : foldExtExtBinop(ExtOp0, ExtOp1, ExtIndex, I);
-  Worklist.push(Ext0);
-  Worklist.push(Ext1);
   replaceValue(I, *NewExt);
   return true;
 }
@@ -805,13 +808,11 @@ bool VectorCombine::foldInsExtFNeg(Instruction &I) {
     // shuffle DstVec, (shuffle (fneg SrcVec), poison, SrcMask), Mask
     LenChgShuf = Builder.CreateShuffleVector(VecFNeg, SrcMask);
     NewShuf = Builder.CreateShuffleVector(DstVec, LenChgShuf, Mask);
-    Worklist.pushValue(LenChgShuf);
   } else {
     // shuffle DstVec, (fneg SrcVec), Mask
     NewShuf = Builder.CreateShuffleVector(DstVec, VecFNeg, Mask);
   }
 
-  Worklist.pushValue(VecFNeg);
   replaceValue(I, *NewShuf);
   return true;
 }
@@ -868,8 +869,6 @@ bool VectorCombine::foldInsExtBinop(Instruction &I) {
     NewInst->andIRFlags(SclBinOp);
   }
 
-  Worklist.pushValue(NewIns0);
-  Worklist.pushValue(NewIns1);
   replaceValue(I, *NewBO);
   return true;
 }
@@ -965,8 +964,6 @@ bool VectorCombine::foldBitOpOfCastops(Instruction &I) {
                                      BinOp->getName() + ".inner");
   if (auto *NewBinOp = dyn_cast<BinaryOperator>(NewOp))
     NewBinOp->copyIRFlags(BinOp);
-
-  Worklist.pushValue(NewOp);
 
   // Create the cast operation directly to ensure we get a new instruction
   Instruction *NewCast = CastInst::Create(CastOpcode, NewOp, I.getType());
@@ -1068,8 +1065,6 @@ bool VectorCombine::foldBitOpOfCastConstant(Instruction &I) {
                                      LHSSrc, InvC, I.getName() + ".inner");
   if (auto *NewBinOp = dyn_cast<BinaryOperator>(NewOp))
     NewBinOp->copyIRFlags(&I);
-
-  Worklist.pushValue(NewOp);
 
   // Create the cast operation directly to ensure we get a new instruction
   Instruction *NewCast = CastInst::Create(CastOpcode, NewOp, I.getType());
@@ -2590,17 +2585,14 @@ bool VectorCombine::foldConcatOfBoolMasks(Instruction &I) {
   // Build bool mask concatenation, bitcast back to scalar integer, and perform
   // any residual zero-extension or shifting.
   Value *Concat = Builder.CreateShuffleVector(SrcX, SrcY, ConcatMask);
-  Worklist.pushValue(Concat);
 
   Value *Result = Builder.CreateBitCast(Concat, ConcatIntTy);
 
   if (Ty != ConcatIntTy) {
-    Worklist.pushValue(Result);
     Result = Builder.CreateZExt(Result, Ty);
   }
 
   if (ShAmtX > 0) {
-    Worklist.pushValue(Result);
     Result = Builder.CreateShl(Result, ShAmtX);
   }
 
@@ -2727,8 +2719,6 @@ bool VectorCombine::foldPermuteOfBinops(Instruction &I) {
   if (auto *NewInst = dyn_cast<Instruction>(NewBO))
     NewInst->copyIRFlags(BinOp);
 
-  Worklist.pushValue(LHS);
-  Worklist.pushValue(RHS);
   replaceValue(I, *NewBO);
   return true;
 }
@@ -2906,8 +2896,6 @@ bool VectorCombine::foldShuffleOfBinops(Instruction &I) {
     NewInst->andIRFlags(RHS);
   }
 
-  Worklist.pushValue(Shuf0);
-  Worklist.pushValue(Shuf1);
   replaceValue(I, *NewBO);
   return true;
 }
@@ -2988,9 +2976,6 @@ bool VectorCombine::foldShuffleOfSelects(Instruction &I) {
   else
     NewSel = Builder.CreateSelect(ShuffleCmp, ShuffleTrue, ShuffleFalse);
 
-  Worklist.pushValue(ShuffleCmp);
-  Worklist.pushValue(ShuffleTrue);
-  Worklist.pushValue(ShuffleFalse);
   replaceValue(I, *NewSel);
   return true;
 }
@@ -3118,7 +3103,6 @@ bool VectorCombine::foldShuffleOfCastops(Instruction &I) {
       NewInst->andIRFlags(C1);
   }
 
-  Worklist.pushValue(Shuf);
   replaceValue(I, *Cast);
   return true;
 }
@@ -3565,7 +3549,6 @@ bool VectorCombine::foldShuffleOfIntrinsics(Instruction &I) {
           II0->getArgOperand(Idx), II1->getArgOperand(Idx), OldMask);
       ShuffleCache[OperandPair] = Shuf;
       NewArgs.push_back(Shuf);
-      Worklist.pushValue(Shuf);
     }
   }
   Value *NewIntrinsic = Builder.CreateIntrinsic(ShuffleDstTy, IID, NewArgs);
@@ -3651,7 +3634,6 @@ bool VectorCombine::foldPermuteOfIntrinsic(Instruction &I) {
     } else {
       Value *Shuf = Builder.CreateShuffleVector(II0->getArgOperand(I), Mask);
       NewArgs.push_back(Shuf);
-      Worklist.pushValue(Shuf);
     }
   }
 
@@ -3811,7 +3793,6 @@ generateNewInstTree(ArrayRef<InstLane> Item, Use *From,
       Value *Op = generateNewInstTree(NewItem, &BitCast->getOperandUse(0),
                                       IdentityLeafs, SplatLeafs, ConcatLeafs,
                                       Builder, WorkList, TTI);
-      WorkList.pushValue(Op);
       return Builder.CreateBitCast(
           Op, FixedVectorType::get(BCDstTy->getScalarType(), Item.size()));
     }
@@ -3832,8 +3813,8 @@ generateNewInstTree(ArrayRef<InstLane> Item, Use *From,
     // lets foldBitcastShuffle sink the bitcast back into a shuffle(bitcast),
     // which foldShuffleToIdentity then re-matches as the same superfluous
     // identity - an infinite loop between the two folds.
-    if (!isa<BitCastInst>(I))
-      WorkList.pushValue(Ops[Idx]);
+    if (isa<BitCastInst>(I) && isa<Instruction>(Ops[Idx]))
+      WorkList.remove(cast<Instruction>(Ops[Idx]));
   }
 
   SmallVector<Value *, 8> ValueList;
@@ -5428,7 +5409,6 @@ bool VectorCombine::foldReduceAddCmpZero(Instruction &I) {
   Value *NewReduce = UseOr ? Builder.CreateOrReduce(Vec)
                            : Builder.CreateIntrinsic(
                                  Intrinsic::vector_reduce_umax, {VecTy}, {Vec});
-  Worklist.pushValue(NewReduce);
   Value *NewCmp = Builder.CreateICmp(
       NewPred, NewReduce, ConstantInt::getNullValue(VecTy->getScalarType()));
   replaceValue(I, *NewCmp);
@@ -5867,10 +5847,6 @@ bool VectorCombine::foldSelectShuffle(Instruction &I, bool FromReduction) {
     replaceValue(*Shuffles[S], *NSV, false);
   }
 
-  Worklist.pushValue(NSV0A);
-  Worklist.pushValue(NSV0B);
-  Worklist.pushValue(NSV1A);
-  Worklist.pushValue(NSV1B);
   return true;
 }
 
@@ -6300,7 +6276,7 @@ static bool canWidenDeinterleavedOperations(ArrayRef<Value *> Members,
 static Value *createWideInstruction(Instruction *NarrowInst,
                                     ArrayRef<Value *> NewOperands,
                                     VectorType *WideResultTy,
-                                    IRBuilder<InstSimplifyFolder> &Builder) {
+                                    IRBuilderBase &Builder) {
   if (isa<BinaryOperator, UnaryOperator>(NarrowInst))
     return Builder.CreateNAryOp(NarrowInst->getOpcode(), NewOperands);
   if (auto *Cast = dyn_cast<CastInst>(NarrowInst))
@@ -6320,9 +6296,9 @@ static Value *createWideInstruction(Instruction *NarrowInst,
   llvm_unreachable("Unsupported instruction");
 }
 
-static Value *
-widenDeinterleavedOperations(ArrayRef<Value *> Members, ElementCount WideEC,
-                             IRBuilder<InstSimplifyFolder> &Builder) {
+static Value *widenDeinterleavedOperations(ArrayRef<Value *> Members,
+                                           ElementCount WideEC,
+                                           IRBuilderBase &Builder) {
   if (auto *Deinterleave = getCommonDeinterleavedSource(Members)) {
     Value *Source = Deinterleave->getArgOperand(0);
     assert(cast<VectorType>(Source->getType())->getElementCount() == WideEC &&
@@ -6459,7 +6435,7 @@ bool VectorCombine::foldInterleaveIntrinsics(Instruction &I) {
   auto *NewSplat = ConstantVector::getSplat(
       ExtVTy->getElementCount(), ConstantInt::get(F.getContext(), NewSplatVal));
 
-  IRBuilder<> Builder(&I);
+  Builder.SetInsertPoint(&I);
   replaceValue(I, *Builder.CreateBitCast(NewSplat, I.getType()));
   return true;
 }
@@ -6582,15 +6558,12 @@ bool VectorCombine::foldDeinterleaveIntrinsics(Instruction &I) {
   }
 
   // Do the replacement.
-  IRBuilder<> Builder(&I);
+  Builder.SetInsertPoint(&I);
   Value *NewVecCast = Builder.CreateBitCast(DeinterleavedVal, NewVecTy);
   Value *NewDeinterleave = Builder.CreateIntrinsic(
       Intrinsic::vector_deinterleave2, {NewVecTy}, {NewVecCast});
-  Worklist.pushValue(NewVecCast);
-  Worklist.pushValue(NewDeinterleave);
   for (auto [Idx, MergeInst] : enumerate(MergeInsts)) {
     Value *NewField = Builder.CreateExtractValue(NewDeinterleave, Idx);
-    Worklist.pushValue(NewField);
     NewField = Builder.CreateBitCast(NewField, MergeInst->getType());
     replaceValue(*MergeInst, *NewField);
   }
@@ -6715,7 +6688,6 @@ bool VectorCombine::foldBitOrderReverseAndSwap(Instruction &I) {
             CanUseBswap
                 ? Builder.CreateUnaryIntrinsic(Intrinsic::bswap, X)
                 : Builder.CreateIntrinsic(Ty, Intrinsic::fshl, {X, X, HalfBW});
-        Worklist.pushValue(Swap);
         Value *BRev = Builder.CreateUnaryIntrinsic(Intrinsic::bitreverse, Swap);
         replaceValue(I, *BRev);
         return true;
@@ -6850,7 +6822,7 @@ bool VectorCombine::shrinkLoadForShuffles(Instruction &I) {
     // If the range of vector elements is smaller than the full load, attempt
     // to create a smaller load.
     if (NewNumElements < OldNumElements) {
-      IRBuilder Builder(&I);
+      Builder.SetInsertPoint(&I);
       Builder.SetCurrentDebugLocation(I.getDebugLoc());
 
       // Calculate costs of old and new ops.
@@ -7003,11 +6975,10 @@ bool VectorCombine::shrinkPhiOfShuffles(Instruction &I) {
     return false;
 
   // Create new shuffles and narrowed phi.
-  auto Builder = IRBuilder(Shuf);
+  Builder.SetInsertPoint(Shuf);
   Builder.SetCurrentDebugLocation(Shuf->getDebugLoc());
   auto *PoisonVal = PoisonValue::get(InputVT);
   auto *NewShuf0 = Builder.CreateShuffleVector(Op, PoisonVal, NewMask);
-  Worklist.push(cast<Instruction>(NewShuf0));
 
   Builder.SetInsertPoint(Phi);
   Builder.SetCurrentDebugLocation(Phi->getDebugLoc());
@@ -7229,6 +7200,17 @@ bool VectorCombine::run() {
   NextInst = nullptr;
 
   while (!Worklist.isEmpty()) {
+    // Push deferred instructions in reverse order, so that they'll end up
+    // popped from the worklist in-order.
+    while (Instruction *I = Worklist.popDeferred()) {
+      if (isInstructionTriviallyDead(I)) {
+        eraseInstruction(*I);
+        continue;
+      }
+
+      Worklist.push(I);
+    }
+
     Instruction *I = Worklist.removeOne();
     if (!I)
       continue;
