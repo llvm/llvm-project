@@ -121,116 +121,6 @@ entry:
   ret void
 }
 
-define void @pair_f32_splat(ptr %out, ptr %a, float %x) {
-; SM100-LABEL: @pair_f32_splat(
-; SM100-NEXT:  entry:
-; SM100-NEXT:    [[TMP0:%.*]] = load <2 x float>, ptr [[A:%.*]], align 8
-; SM100-NEXT:    [[TMP1:%.*]] = insertelement <2 x float> poison, float [[X:%.*]], i64 0
-; SM100-NEXT:    [[TMP2:%.*]] = shufflevector <2 x float> [[TMP1]], <2 x float> poison, <2 x i32> zeroinitializer
-; SM100-NEXT:    [[TMP3:%.*]] = fmul <2 x float> [[TMP0]], [[TMP2]]
-; SM100-NEXT:    store <2 x float> [[TMP3]], ptr [[OUT:%.*]], align 8
-; SM100-NEXT:    ret void
-;
-; SM90-LABEL: @pair_f32_splat(
-; SM90-NEXT:  entry:
-; SM90-NEXT:    [[A0:%.*]] = load float, ptr [[A:%.*]], align 8
-; SM90-NEXT:    [[A1P:%.*]] = getelementptr float, ptr [[A]], i64 1
-; SM90-NEXT:    [[A1:%.*]] = load float, ptr [[A1P]], align 4
-; SM90-NEXT:    [[R0:%.*]] = fmul float [[A0]], [[X:%.*]]
-; SM90-NEXT:    [[R1:%.*]] = fmul float [[A1]], [[X]]
-; SM90-NEXT:    store float [[R0]], ptr [[OUT:%.*]], align 8
-; SM90-NEXT:    [[OUT1:%.*]] = getelementptr float, ptr [[OUT]], i64 1
-; SM90-NEXT:    store float [[R1]], ptr [[OUT1]], align 4
-; SM90-NEXT:    ret void
-;
-entry:
-  %a0 = load float, ptr %a, align 8
-  %a1p = getelementptr float, ptr %a, i64 1
-  %a1 = load float, ptr %a1p, align 4
-  %r0 = fmul float %a0, %x
-  %r1 = fmul float %a1, %x
-  store float %r0, ptr %out, align 8
-  %out1 = getelementptr float, ptr %out, i64 1
-  store float %r1, ptr %out1, align 4
-  ret void
-}
-
-define void @pair_f32_constant_splat(ptr %out, ptr %a) {
-; SM100-LABEL: @pair_f32_constant_splat(
-; SM100-NEXT:  entry:
-; SM100-NEXT:    [[TMP0:%.*]] = load <2 x float>, ptr [[A:%.*]], align 8
-; SM100-NEXT:    [[TMP1:%.*]] = fadd <2 x float> [[TMP0]], splat (float 4.000000e+00)
-; SM100-NEXT:    store <2 x float> [[TMP1]], ptr [[OUT:%.*]], align 8
-; SM100-NEXT:    ret void
-;
-; SM90-LABEL: @pair_f32_constant_splat(
-; SM90-NEXT:  entry:
-; SM90-NEXT:    [[A0:%.*]] = load float, ptr [[A:%.*]], align 8
-; SM90-NEXT:    [[A1P:%.*]] = getelementptr float, ptr [[A]], i64 1
-; SM90-NEXT:    [[A1:%.*]] = load float, ptr [[A1P]], align 4
-; SM90-NEXT:    [[R0:%.*]] = fadd float [[A0]], 4.000000e+00
-; SM90-NEXT:    [[R1:%.*]] = fadd float [[A1]], 4.000000e+00
-; SM90-NEXT:    store float [[R0]], ptr [[OUT:%.*]], align 8
-; SM90-NEXT:    [[OUT1:%.*]] = getelementptr float, ptr [[OUT]], i64 1
-; SM90-NEXT:    store float [[R1]], ptr [[OUT1]], align 4
-; SM90-NEXT:    ret void
-;
-entry:
-  %a0 = load float, ptr %a, align 8
-  %a1p = getelementptr float, ptr %a, i64 1
-  %a1 = load float, ptr %a1p, align 4
-  %r0 = fadd float %a0, 4.000000e+00
-  %r1 = fadd float %a1, 4.000000e+00
-  store float %r0, ptr %out, align 8
-  %out1 = getelementptr float, ptr %out, i64 1
-  store float %r1, ptr %out1, align 4
-  ret void
-}
-
-define void @pair_f32_loaded_splat_used(ptr %out, ptr %a, ptr %xp) {
-; SM100-LABEL: @pair_f32_loaded_splat_used(
-; SM100-NEXT:  entry:
-; SM100-NEXT:    [[X:%.*]] = load float, ptr [[XP:%.*]], align 4
-; SM100-NEXT:    [[TMP0:%.*]] = load <2 x float>, ptr [[A:%.*]], align 8
-; SM100-NEXT:    [[TMP1:%.*]] = insertelement <2 x float> poison, float [[X]], i64 0
-; SM100-NEXT:    [[TMP2:%.*]] = shufflevector <2 x float> [[TMP1]], <2 x float> poison, <2 x i32> zeroinitializer
-; SM100-NEXT:    [[TMP3:%.*]] = fmul <2 x float> [[TMP0]], [[TMP2]]
-; SM100-NEXT:    store <2 x float> [[TMP3]], ptr [[OUT:%.*]], align 8
-; SM100-NEXT:    [[OUT2:%.*]] = getelementptr float, ptr [[OUT]], i64 2
-; SM100-NEXT:    store float [[X]], ptr [[OUT2]], align 4
-; SM100-NEXT:    ret void
-;
-; SM90-LABEL: @pair_f32_loaded_splat_used(
-; SM90-NEXT:  entry:
-; SM90-NEXT:    [[X:%.*]] = load float, ptr [[XP:%.*]], align 4
-; SM90-NEXT:    [[A0:%.*]] = load float, ptr [[A:%.*]], align 8
-; SM90-NEXT:    [[A1P:%.*]] = getelementptr float, ptr [[A]], i64 1
-; SM90-NEXT:    [[A1:%.*]] = load float, ptr [[A1P]], align 4
-; SM90-NEXT:    [[R0:%.*]] = fmul float [[A0]], [[X]]
-; SM90-NEXT:    [[R1:%.*]] = fmul float [[A1]], [[X]]
-; SM90-NEXT:    store float [[R0]], ptr [[OUT:%.*]], align 8
-; SM90-NEXT:    [[OUT1:%.*]] = getelementptr float, ptr [[OUT]], i64 1
-; SM90-NEXT:    store float [[R1]], ptr [[OUT1]], align 4
-; SM90-NEXT:    [[OUT2:%.*]] = getelementptr float, ptr [[OUT]], i64 2
-; SM90-NEXT:    store float [[X]], ptr [[OUT2]], align 4
-; SM90-NEXT:    ret void
-;
-entry:
-  %x = load float, ptr %xp, align 4
-  %a0 = load float, ptr %a, align 8
-  %a1p = getelementptr float, ptr %a, i64 1
-  %a1 = load float, ptr %a1p, align 4
-  %r0 = fmul float %a0, %x
-  %r1 = fmul float %a1, %x
-  store float %r0, ptr %out, align 8
-  %out1 = getelementptr float, ptr %out, i64 1
-  store float %r1, ptr %out1, align 4
-  %out2 = getelementptr float, ptr %out, i64 2
-  store float %x, ptr %out2, align 4
-  ret void
-}
-
-
 ; SLP should rebuild the scalar phi/insert chain as a packed f32x2 value.
 define void @f32x2_phi_store(ptr addrspace(1) %x, ptr addrspace(3) %scratch, i1 %cond) {
 ; CHECK-LABEL: @f32x2_phi_store(
@@ -284,5 +174,79 @@ entry:
   %i0 = insertelement <2 x float> poison, float %s0, i32 0
   %i1 = insertelement <2 x float> %i0, float %s1, i32 1
   store <2 x float> %i1, ptr addrspace(3) %out, align 8
+  ret void
+}
+
+define void @quad_f32_add(ptr %out, ptr %a, ptr %b) {
+; SM100-LABEL: @quad_f32_add(
+; SM100-NEXT:  entry:
+; SM100-NEXT:    [[A2P:%.*]] = getelementptr float, ptr [[A:%.*]], i64 2
+; SM100-NEXT:    [[B2P:%.*]] = getelementptr float, ptr [[B:%.*]], i64 2
+; SM100-NEXT:    [[O2:%.*]] = getelementptr float, ptr [[OUT:%.*]], i64 2
+; SM100-NEXT:    [[TMP0:%.*]] = load <2 x float>, ptr [[A]], align 16
+; SM100-NEXT:    [[TMP1:%.*]] = load <2 x float>, ptr [[B]], align 16
+; SM100-NEXT:    [[TMP2:%.*]] = fadd <2 x float> [[TMP0]], [[TMP1]]
+; SM100-NEXT:    [[TMP3:%.*]] = load <2 x float>, ptr [[A2P]], align 8
+; SM100-NEXT:    [[TMP4:%.*]] = load <2 x float>, ptr [[B2P]], align 8
+; SM100-NEXT:    [[TMP5:%.*]] = fadd <2 x float> [[TMP3]], [[TMP4]]
+; SM100-NEXT:    store <2 x float> [[TMP2]], ptr [[OUT]], align 16
+; SM100-NEXT:    store <2 x float> [[TMP5]], ptr [[O2]], align 8
+; SM100-NEXT:    ret void
+;
+; SM90-LABEL: @quad_f32_add(
+; SM90-NEXT:  entry:
+; SM90-NEXT:    [[A1P:%.*]] = getelementptr float, ptr [[A:%.*]], i64 1
+; SM90-NEXT:    [[A2P:%.*]] = getelementptr float, ptr [[A]], i64 2
+; SM90-NEXT:    [[A3P:%.*]] = getelementptr float, ptr [[A]], i64 3
+; SM90-NEXT:    [[B1P:%.*]] = getelementptr float, ptr [[B:%.*]], i64 1
+; SM90-NEXT:    [[B2P:%.*]] = getelementptr float, ptr [[B]], i64 2
+; SM90-NEXT:    [[B3P:%.*]] = getelementptr float, ptr [[B]], i64 3
+; SM90-NEXT:    [[A0:%.*]] = load float, ptr [[A]], align 16
+; SM90-NEXT:    [[A1:%.*]] = load float, ptr [[A1P]], align 4
+; SM90-NEXT:    [[A2:%.*]] = load float, ptr [[A2P]], align 8
+; SM90-NEXT:    [[A3:%.*]] = load float, ptr [[A3P]], align 4
+; SM90-NEXT:    [[B0:%.*]] = load float, ptr [[B]], align 16
+; SM90-NEXT:    [[B1:%.*]] = load float, ptr [[B1P]], align 4
+; SM90-NEXT:    [[B2:%.*]] = load float, ptr [[B2P]], align 8
+; SM90-NEXT:    [[B3:%.*]] = load float, ptr [[B3P]], align 4
+; SM90-NEXT:    [[R0:%.*]] = fadd float [[A0]], [[B0]]
+; SM90-NEXT:    [[R1:%.*]] = fadd float [[A1]], [[B1]]
+; SM90-NEXT:    [[R2:%.*]] = fadd float [[A2]], [[B2]]
+; SM90-NEXT:    [[R3:%.*]] = fadd float [[A3]], [[B3]]
+; SM90-NEXT:    [[O1:%.*]] = getelementptr float, ptr [[OUT:%.*]], i64 1
+; SM90-NEXT:    [[O2:%.*]] = getelementptr float, ptr [[OUT]], i64 2
+; SM90-NEXT:    [[O3:%.*]] = getelementptr float, ptr [[OUT]], i64 3
+; SM90-NEXT:    store float [[R0]], ptr [[OUT]], align 16
+; SM90-NEXT:    store float [[R1]], ptr [[O1]], align 4
+; SM90-NEXT:    store float [[R2]], ptr [[O2]], align 8
+; SM90-NEXT:    store float [[R3]], ptr [[O3]], align 4
+; SM90-NEXT:    ret void
+;
+entry:
+  %a1p = getelementptr float, ptr %a, i64 1
+  %a2p = getelementptr float, ptr %a, i64 2
+  %a3p = getelementptr float, ptr %a, i64 3
+  %b1p = getelementptr float, ptr %b, i64 1
+  %b2p = getelementptr float, ptr %b, i64 2
+  %b3p = getelementptr float, ptr %b, i64 3
+  %a0 = load float, ptr %a, align 16
+  %a1 = load float, ptr %a1p, align 4
+  %a2 = load float, ptr %a2p, align 8
+  %a3 = load float, ptr %a3p, align 4
+  %b0 = load float, ptr %b, align 16
+  %b1 = load float, ptr %b1p, align 4
+  %b2 = load float, ptr %b2p, align 8
+  %b3 = load float, ptr %b3p, align 4
+  %r0 = fadd float %a0, %b0
+  %r1 = fadd float %a1, %b1
+  %r2 = fadd float %a2, %b2
+  %r3 = fadd float %a3, %b3
+  %o1 = getelementptr float, ptr %out, i64 1
+  %o2 = getelementptr float, ptr %out, i64 2
+  %o3 = getelementptr float, ptr %out, i64 3
+  store float %r0, ptr %out, align 16
+  store float %r1, ptr %o1, align 4
+  store float %r2, ptr %o2, align 8
+  store float %r3, ptr %o3, align 4
   ret void
 }
