@@ -2029,12 +2029,21 @@ DIE *DWARFLinker::DIECloner::cloneDIE(const DWARFDie &InputDIE,
     }
   }
 
-  if (Unit.getOrigUnit().getVersion() >= 5 && !AttrInfo.AttrStrOffsetBaseSeen &&
-      Die->getTag() == dwarf::DW_TAG_compile_unit) {
+  if (Die == Unit.getOutputUnitDIE() && Unit.getOrigUnit().getVersion() >= 5 &&
+      !AttrInfo.AttrStrOffsetBaseSeen) {
     // No DW_AT_str_offsets_base seen, add it to the DIE.
     Die->addValue(DIEAlloc, dwarf::DW_AT_str_offsets_base,
                   dwarf::DW_FORM_sec_offset, DIEInteger(8));
     OutOffset += 4;
+  }
+
+  // No DW_AT_addr_base seen, as GCC emits; add one for the addrx-indexed
+  // entries. emitDebugAddrSection() patches in the real offset.
+  if (!Update && Die == Unit.getOutputUnitDIE() && U.getVersion() >= 5 &&
+      !Die->findAttribute(dwarf::DW_AT_addr_base)) {
+    OutOffset += Die->addValue(DIEAlloc, dwarf::DW_AT_addr_base,
+                               dwarf::DW_FORM_sec_offset, DIEInteger(0))
+                     ->sizeOf(U.getFormParams());
   }
 
   DIEAbbrev NewAbbrev = Die->generateAbbrev();
@@ -2232,7 +2241,10 @@ Error DWARFLinker::DIECloner::emitDebugAddrSection(
   if (DwarfVersion < 5)
     return Error::success();
 
-  if (AddrPool.getValues().empty())
+  // Every cloned unit root has DW_AT_addr_base, so emit the table even when it
+  // is empty (DWARFv5 section 7.27).
+  DIE *OutputUnitDIE = Unit.getOutputUnitDIE();
+  if (OutputUnitDIE == nullptr)
     return Error::success();
 
   MCSymbol *EndLabel = Emitter->emitDwarfDebugAddrsHeader(Unit);
@@ -2242,7 +2254,7 @@ Error DWARFLinker::DIECloner::emitDebugAddrSection(
     return createStringError(".debug_addr section offset 0x" +
                              Twine::utohexstr(AddrOffset) + " exceeds the " +
                              dwarf::FormatString(FP.Format) + " limit");
-  patchAddrBase(*Unit.getOutputUnitDIE(), DIEInteger(AddrOffset));
+  patchAddrBase(*OutputUnitDIE, DIEInteger(AddrOffset));
   Emitter->emitDwarfDebugAddrs(AddrPool.getValues(),
                                Unit.getOrigUnit().getAddressByteSize());
   Emitter->emitDwarfDebugAddrsFooter(Unit, EndLabel);

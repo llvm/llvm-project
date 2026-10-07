@@ -115,10 +115,10 @@ void DIEAttributeCloner::clone() {
   }
 
   // We convert source strings into the indexed form for DWARFv5.
-  // Check if original compile unit already has DW_AT_str_offsets_base
+  // Check if original unit already has DW_AT_str_offsets_base
   // attribute.
-  if (InputDieEntry->getTag() == dwarf::DW_TAG_compile_unit &&
-      InUnit.getVersion() >= 5 && !AttrInfo.HasStringOffsetBaseAttr) {
+  if (InputDIEIdx == 0 && InUnit.getVersion() >= 5 &&
+      !AttrInfo.HasStringOffsetBaseAttr && OutUnit.isCompileUnit()) {
     DebugInfoOutputSection.notePatchWithOffsetUpdate(
         DebugOffsetPatch{AttrOutOffset,
                          &OutUnit->getOrCreateSectionDescriptor(
@@ -132,6 +132,25 @@ void DIEAttributeCloner::clone() {
                                 dwarf::DW_FORM_sec_offset,
                                 OutUnit->getDebugStrOffsetsHeaderSize())
             .second;
+  }
+
+  // No DW_AT_addr_base seen, as GCC emits; add one for the addrx-indexed
+  // entries. Not in update mode, where HasAddrBaseAttr is never set.
+  if (InputDIEIdx == 0 && InUnit.getVersion() >= 5 &&
+      !AttrInfo.HasAddrBaseAttr &&
+      !InUnit.getGlobalData().getOptions().UpdateIndexTablesOnly) {
+    DebugInfoOutputSection.notePatchWithOffsetUpdate(
+        DebugOffsetPatch{
+            AttrOutOffset,
+            &OutUnit->getOrCreateSectionDescriptor(DebugSectionKind::DebugAddr),
+            true},
+        PatchesOffsets);
+
+    AttrOutOffset += Generator
+                         .addScalarAttribute(dwarf::DW_AT_addr_base,
+                                             dwarf::DW_FORM_sec_offset,
+                                             OutUnit->getDebugAddrHeaderSize())
+                         .second;
   }
 }
 
@@ -532,6 +551,7 @@ size_t DIEAttributeCloner::cloneScalarAttr(
 
     // Use size of .debug_addr header as attribute value. The offset to
     // .debug_addr would be added later while patching.
+    AttrInfo.HasAddrBaseAttr = true;
     return Generator
         .addScalarAttribute(AttrSpec.Attr, AttrSpec.Form,
                             OutUnit->getDebugAddrHeaderSize())
