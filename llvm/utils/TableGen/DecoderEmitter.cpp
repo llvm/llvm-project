@@ -1081,7 +1081,8 @@ static DecodeStatus decodeInstruction(const uint8_t DecodeTable[], MCInst &MI,
     // Fail with a fatal error if decoder table's bitwidth does not match
     // `InsnType` bitwidth.
     OS << R"(
-  [[maybe_unused]] uint32_t BitWidth = decodeULEB128AndIncUnsafe(Ptr);
+  [[maybe_unused]] uint32_t BitWidth =
+      static_cast<uint32_t>(decodeULEB128AndIncUnsafe(Ptr));
   assert(InsnBitWidth<InsnType> == BitWidth &&
          "Table and instruction bitwidth mismatch");
 )";
@@ -1099,7 +1100,8 @@ static DecodeStatus decodeInstruction(const uint8_t DecodeTable[], MCInst &MI,
              << (int)DecoderOp << '\n';
       return MCDisassembler::Fail;
     case OPC_Scope: {
-      unsigned NumToSkip = decodeULEB128AndIncUnsafe(Ptr);
+      unsigned NumToSkip =
+          static_cast<unsigned>(decodeULEB128AndIncUnsafe(Ptr));
       const uint8_t *SkipTo = Ptr + NumToSkip;
       ScopeStack.push_back(SkipTo);
       LLVM_DEBUG(dbgs() << Loc << ": OPC_Scope(" << SkipTo - DecodeTable
@@ -1108,7 +1110,7 @@ static DecodeStatus decodeInstruction(const uint8_t DecodeTable[], MCInst &MI,
     }
     case OPC_SwitchField: {
       // Decode the start value.
-      unsigned Start = decodeULEB128AndIncUnsafe(Ptr);
+      unsigned Start = static_cast<unsigned>(decodeULEB128AndIncUnsafe(Ptr));
       unsigned Len = *Ptr++;)";
   if (IsVarLenInst)
     OS << "\n      makeUp(insn, Start + Len);";
@@ -1118,7 +1120,7 @@ static DecodeStatus decodeInstruction(const uint8_t DecodeTable[], MCInst &MI,
       unsigned CaseSize;
       while (true) {
         CaseValue = decodeULEB128AndIncUnsafe(Ptr);
-        CaseSize = decodeULEB128AndIncUnsafe(Ptr);
+        CaseSize = static_cast<unsigned>(decodeULEB128AndIncUnsafe(Ptr));
         if (FieldValue == CaseValue || !CaseSize)
           break;
         Ptr += CaseSize;
@@ -1132,7 +1134,7 @@ static DecodeStatus decodeInstruction(const uint8_t DecodeTable[], MCInst &MI,
     }
     case OPC_CheckField: {
       // Decode the start value.
-      unsigned Start = decodeULEB128AndIncUnsafe(Ptr);
+      unsigned Start = static_cast<unsigned>(decodeULEB128AndIncUnsafe(Ptr));
       unsigned Len = *Ptr;)";
   if (IsVarLenInst)
     OS << "\n      makeUp(insn, Start + Len);";
@@ -1156,7 +1158,7 @@ static DecodeStatus decodeInstruction(const uint8_t DecodeTable[], MCInst &MI,
     OS << R"(
     case OPC_CheckPredicate: {
       // Decode the Predicate Index value.
-      unsigned PIdx = decodeULEB128AndIncUnsafe(Ptr);
+      unsigned PIdx = static_cast<unsigned>(decodeULEB128AndIncUnsafe(Ptr));
       // Check the predicate.
       bool Failed = !checkDecoderPredicate(PIdx, Bits);
 
@@ -1170,8 +1172,9 @@ static DecodeStatus decodeInstruction(const uint8_t DecodeTable[], MCInst &MI,
   OS << R"(
     case OPC_Decode: {
       // Decode the Opcode value.
-      unsigned Opc = decodeULEB128AndIncUnsafe(Ptr);
-      unsigned DecodeIdx = decodeULEB128AndIncUnsafe(Ptr);
+      unsigned Opc = static_cast<unsigned>(decodeULEB128AndIncUnsafe(Ptr));
+      unsigned DecodeIdx =
+          static_cast<unsigned>(decodeULEB128AndIncUnsafe(Ptr));
 
       MI.clear();
       MI.setOpcode(Opc);
