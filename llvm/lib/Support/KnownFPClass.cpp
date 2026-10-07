@@ -901,6 +901,11 @@ KnownFPClass KnownFPClass::tanh(const KnownFPClass &KnownSrc) {
   if (KnownSrc.isKnownNever(fcNegative))
     Known.knownNot(fcNegative);
 
+  // Likewise, tanh(x) > 0 iff x > 0. Zero is not ruled out: tanh(+-0.0) =
+  // +-0.0, and a flushed subnormal may become +0.0.
+  if (KnownSrc.isKnownNever(fcPosSubnormal | fcPosNormal | fcPosInf))
+    Known.knownNot(fcPosSubnormal | fcPosNormal);
+
   Known.propagateNonNaN(KnownSrc);
 
   return Known;
