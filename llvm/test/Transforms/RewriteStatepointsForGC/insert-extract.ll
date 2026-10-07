@@ -12,8 +12,8 @@ define void @barney() gc "statepoint-example" {
 ; CHECK-NEXT:    [[INSERTELEMENT_BASE:%.*]] = insertelement <2 x ptr addrspace(1)> zeroinitializer, ptr addrspace(1) [[EXTRACTELEMENT_BASE]], i32 0, !is_base_value [[META0]]
 ; CHECK-NEXT:    [[INSERTELEMENT:%.*]] = insertelement <2 x ptr addrspace(1)> splat (ptr addrspace(1) null), ptr addrspace(1) [[EXTRACTELEMENT]], i32 0
 ; CHECK-NEXT:    [[STATEPOINT_TOKEN:%.*]] = call token (i64, i32, ptr, i32, i32, ...) @llvm.experimental.gc.statepoint.p0(i64 2882400000, i32 0, ptr elementtype(i8 ()) @foo, i32 0, i32 0, i32 0, i32 0) [ "gc-live"(<2 x ptr addrspace(1)> [[INSERTELEMENT]], <2 x ptr addrspace(1)> [[INSERTELEMENT_BASE]]) ]
-; CHECK-NEXT:    [[INSERTELEMENT_RELOCATED:%.*]] = call coldcc <2 x ptr addrspace(1)> @llvm.experimental.gc.relocate.v2p1(token [[STATEPOINT_TOKEN]], i32 1, i32 0)
-; CHECK-NEXT:    [[INSERTELEMENT_BASE_RELOCATED:%.*]] = call coldcc <2 x ptr addrspace(1)> @llvm.experimental.gc.relocate.v2p1(token [[STATEPOINT_TOKEN]], i32 1, i32 1)
+; CHECK-NEXT:    [[INSERTELEMENT_RELOCATED:%.*]] = call <2 x ptr addrspace(1)> @llvm.experimental.gc.relocate.v2p1(token [[STATEPOINT_TOKEN]], i32 1, i32 0)
+; CHECK-NEXT:    [[INSERTELEMENT_BASE_RELOCATED:%.*]] = call <2 x ptr addrspace(1)> @llvm.experimental.gc.relocate.v2p1(token [[STATEPOINT_TOKEN]], i32 1, i32 1)
 ; CHECK-NEXT:    [[EXTRACTELEMENT1:%.*]] = extractelement <2 x ptr addrspace(1)> [[INSERTELEMENT_RELOCATED]], i32 0
 ; CHECK-NEXT:    ret void
 ;
@@ -39,8 +39,8 @@ define void @bart() gc "statepoint-example" {
 ; CHECK-NEXT:    [[OTHER_BASE:%.*]] = insertelement <2 x ptr addrspace(1)> [[BASE_IE]], ptr addrspace(1) [[BASE_EE]], i32 0, !is_base_value [[META0]]
 ; CHECK-NEXT:    [[OTHER:%.*]] = insertelement <2 x ptr addrspace(1)> [[TMP2]], ptr addrspace(1) [[TMP1]], i32 0
 ; CHECK-NEXT:    [[STATEPOINT_TOKEN:%.*]] = call token (i64, i32, ptr, i32, i32, ...) @llvm.experimental.gc.statepoint.p0(i64 2882400000, i32 0, ptr elementtype(i8 ()) @foo, i32 0, i32 0, i32 0, i32 0) [ "gc-live"(<2 x ptr addrspace(1)> [[OTHER]], <2 x ptr addrspace(1)> [[OTHER_BASE]]) ]
-; CHECK-NEXT:    [[OTHER_RELOCATED:%.*]] = call coldcc <2 x ptr addrspace(1)> @llvm.experimental.gc.relocate.v2p1(token [[STATEPOINT_TOKEN]], i32 1, i32 0)
-; CHECK-NEXT:    [[OTHER_BASE_RELOCATED:%.*]] = call coldcc <2 x ptr addrspace(1)> @llvm.experimental.gc.relocate.v2p1(token [[STATEPOINT_TOKEN]], i32 1, i32 1)
+; CHECK-NEXT:    [[OTHER_RELOCATED:%.*]] = call <2 x ptr addrspace(1)> @llvm.experimental.gc.relocate.v2p1(token [[STATEPOINT_TOKEN]], i32 1, i32 0)
+; CHECK-NEXT:    [[OTHER_BASE_RELOCATED:%.*]] = call <2 x ptr addrspace(1)> @llvm.experimental.gc.relocate.v2p1(token [[STATEPOINT_TOKEN]], i32 1, i32 1)
 ; CHECK-NEXT:    [[TMP3:%.*]] = extractelement <2 x ptr addrspace(1)> [[OTHER_RELOCATED]], i32 0
 ; CHECK-NEXT:    ret void
 ;

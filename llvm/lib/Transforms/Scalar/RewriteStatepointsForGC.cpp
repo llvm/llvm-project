@@ -1550,12 +1550,8 @@ static void CreateGCRelocates(ArrayRef<Value *> LiveVariables,
     Function *GCRelocateDecl = It->second;
 
     // only specify a debug name if we can give a useful one
-    CallInst *Reloc = Builder.CreateCall(
-        GCRelocateDecl, {StatepointToken, BaseIdx, LiveIdx},
-        suffixed_name_or(LiveVariables[i], ".relocated", ""));
-    // Trick CodeGen into thinking there are lots of free registers at this
-    // fake call.
-    Reloc->setCallingConv(CallingConv::Cold);
+    Builder.CreateCall(GCRelocateDecl, {StatepointToken, BaseIdx, LiveIdx},
+                       suffixed_name_or(LiveVariables[i], ".relocated", ""));
   }
 }
 
@@ -1835,7 +1831,8 @@ makeStatepointExplicitImpl(CallBase *Call, /* to replace */
         TransitionArgs, DeoptArgs, GCLive, "safepoint_token");
 
     SPCall->setTailCallKind(CI->getTailCallKind());
-    SPCall->setCallingConv(CI->getCallingConv());
+    // Intrinsics must use CallingConv::C.
+    SPCall->setCallingConv(CallingConv::C);
 
     // Set up function attrs directly on statepoint and return attrs later for
     // gc_result intrinsic.
@@ -1860,7 +1857,8 @@ makeStatepointExplicitImpl(CallBase *Call, /* to replace */
         II->getUnwindDest(), Flags, CallArgs, TransitionArgs, DeoptArgs,
         GCLive, "statepoint_token");
 
-    SPInvoke->setCallingConv(II->getCallingConv());
+    // Intrinsics must use CallingConv::C.
+    SPInvoke->setCallingConv(CallingConv::C);
 
     // Set up function attrs directly on statepoint and return attrs later for
     // gc_result intrinsic.
