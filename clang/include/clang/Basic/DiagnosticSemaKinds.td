@@ -13918,7 +13918,6 @@ def warn_unsafe_buffer_variable_main_argv : Warning<
   "%0 is an %select{unsafe pointer used for buffer access|unsafe buffer that "
   "does not perform bounds checks}1">,
   InGroup<UnsafeBufferUsageMainArgv>, DefaultIgnore;
-
 def warn_unsafe_buffer_variable : Warning<
   "%0 is an %select{unsafe pointer used for buffer access|unsafe buffer that "
   "does not perform bounds checks}1">,
@@ -13928,7 +13927,6 @@ def warn_unsafe_buffer_usage_main_argv : Warning<
   "unsafe buffer access|function introduces unsafe buffer manipulation|unsafe invocation of %1|"
   "field %1 prone to unsafe buffer manipulation}0">,
   InGroup<UnsafeBufferUsageMainArgv>, DefaultIgnore;
-
 def warn_unsafe_buffer_operation : Warning<
   "%select{unsafe pointer operation|unsafe pointer arithmetic|"
   "unsafe buffer access|function introduces unsafe buffer manipulation|unsafe invocation of %1|"
