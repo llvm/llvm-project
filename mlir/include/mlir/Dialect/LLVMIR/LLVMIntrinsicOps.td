@@ -1306,8 +1306,7 @@ def LLVM_MatrixColumnMajorLoadOp : LLVM_OneResultIntrOp<"matrix.column.major.loa
 
   string llvmBuilder = [{
     llvm::MatrixBuilder mb(builder);
-    const llvm::DataLayout &dl =
-      builder.GetInsertBlock()->getModule()->getDataLayout();
+    const llvm::DataLayout &dl = builder.getDataLayout();
     llvm::Type *ElemTy = moduleTranslation.convertType(
         op.getType().getElementType());
     llvm::Align align = dl.getABITypeAlign(ElemTy);
@@ -1342,8 +1341,7 @@ def LLVM_MatrixColumnMajorStoreOp : LLVM_ZeroResultIntrOp<"matrix.column.major.s
 
   string llvmBuilder = [{
     llvm::MatrixBuilder mb(builder);
-    const llvm::DataLayout &dl =
-      builder.GetInsertBlock()->getModule()->getDataLayout();
+    const llvm::DataLayout &dl = builder.getDataLayout();
     Type elementType = op.getMatrix().getType().getElementType();
     llvm::Align align = dl.getABITypeAlign(
       moduleTranslation.convertType(elementType));

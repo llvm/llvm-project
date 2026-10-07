@@ -154,7 +154,7 @@ static std::string computeFSAdditions(StringRef FS, CodeGenOptLevel OL,
   std::string FullFS = std::string(FS);
 
   // Make sure 64-bit features are available when CPUname is generic
-  if (TT.getArch() == Triple::ppc64 || TT.getArch() == Triple::ppc64le) {
+  if (TT.isPPC64()) {
     if (!FullFS.empty())
       FullFS = "+64bit," + FullFS;
     else
@@ -302,6 +302,9 @@ PPCTargetMachine::PPCTargetMachine(const Target &T, const Triple &TT,
                                getEffectivePPCCodeModel(TT, CM, JIT), OL),
       TLOF(createTLOF(getTargetTriple())),
       Endianness(TT.isLittleEndian() ? Endian::LITTLE : Endian::BIG) {
+  // TODO: RegAllocFast adds copies when an untied read of the tied value
+  // precedes the tied use, e.g. XXPERM.
+  setEnableTiedFastRegAlloc(false);
   initAsmInfo();
 }
 

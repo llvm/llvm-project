@@ -992,7 +992,7 @@ def StdcRotateRightTyped : LibBuiltin<"stdbit.h", "C2Y_LANG">, IntBitUtilTemplat
 
 def StdcMemReverse8: LibBuiltin<"stdbit.h", "C2Y_LANG"> {
   let Spellings = ["stdc_memreverse8"];
-  let Attributes = [NoThrow, NonNull<NonOptimizing, [1]>];
+  let Attributes = [NoThrow, Constexpr, NonNull<NonOptimizing, [1]>];
   let Prototype = "void(size_t, unsigned char*)";
   let AddBuiltinPrefixedAlias = 1;
 }
@@ -3568,6 +3568,11 @@ def Fread : LibBuiltin<"stdio.h"> {
 def Fwrite : LibBuiltin<"stdio.h"> {
   let Spellings = ["fwrite"];
   let Prototype = "size_t(void const*, size_t, size_t, FILE*)";
+}
+
+def Fgets : LibBuiltin<"stdio.h"> {
+  let Spellings = ["fgets"];
+  let Prototype = "char*(char*, int, FILE*)";
 }
 
 // C99 ctype.h
