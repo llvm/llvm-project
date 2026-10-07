@@ -404,14 +404,42 @@ TEST(BTFBuilderTest, mergeAllKinds) {
   EXPECT_EQ(Parser.findType(6)->getKind(), BTF::BTF_KIND_ENUM);
   EXPECT_EQ(Parser.findType(12)->getKind(), BTF::BTF_KIND_FUNC_PROTO);
   EXPECT_EQ(Parser.findType(19)->getKind(), BTF::BTF_KIND_ENUM64);
+
+  // Exercise every record tail in both byte orders through the same raw parser
+  // used by merge(). An existing output prefix must not impose alignment.
+  for (bool IsLittleEndian : {false, true}) {
+    SCOPED_TRACE(IsLittleEndian);
+    SmallVector<uint8_t, 0> PrefixedOutput(1, 0xab);
+    B.write(PrefixedOutput, IsLittleEndian);
+    StringRef Raw(reinterpret_cast<const char *>(PrefixedOutput.data() + 1),
+                  PrefixedOutput.size() - 1);
+    ASSERT_SUCCEEDED(Parser.parse(Raw, IsLittleEndian));
+    EXPECT_EQ(Parser.typesCount(), 20u);
+    for (uint32_t Id = 1; Id <= 19; ++Id)
+      EXPECT_EQ(Parser.getTypeBytes(Id), B.getTypeBytes(Id));
+    EXPECT_TRUE(Parser.getTypeBytes(0).empty());
+    EXPECT_TRUE(Parser.getTypeBytes(20).empty());
+
+    BTFBuilder Merged;
+    auto FirstId = Merged.merge(Raw, IsLittleEndian);
+    ASSERT_SUCCEEDED(FirstId.takeError());
+    EXPECT_EQ(*FirstId, 1u);
+    EXPECT_EQ(Merged.typesCount(), 19u);
+    for (uint32_t Id = 1; Id <= 19; ++Id) {
+      EXPECT_EQ(Merged.findType(Id)->Info, B.findType(Id)->Info);
+      EXPECT_EQ(Merged.findType(Id)->Size, B.findType(Id)->Size);
+      EXPECT_EQ(Merged.findString(Merged.findType(Id)->NameOff), "t");
+    }
+  }
 }
 
 TEST(BTFBuilderTest, mergeInvalidBTF) {
   BTFBuilder B;
 
   // Too small.
-  EXPECT_THAT_ERROR(B.merge("", !sys::IsBigEndianHost).takeError(),
-                    FailedWithMessage(testing::HasSubstr("too small")));
+  EXPECT_THAT_ERROR(
+      B.merge("", !sys::IsBigEndianHost).takeError(),
+      FailedWithMessage(testing::HasSubstr("unexpected end of data")));
 
   // Bad magic.
   SmallVector<uint8_t, 0> BadMagic(sizeof(BTF::Header), 0);
@@ -420,12 +448,36 @@ TEST(BTFBuilderTest, mergeInvalidBTF) {
                         BadMagic.size()),
               !sys::IsBigEndianHost)
           .takeError(),
-      FailedWithMessage(testing::HasSubstr("invalid BTF magic")));
+      FailedWithMessage(testing::HasSubstr("invalid .BTF magic")));
 }
 
 // Helper to build a raw BTF blob from a BTFBuilder.
 static StringRef blobRef(const SmallVectorImpl<uint8_t> &V) {
   return StringRef(reinterpret_cast<const char *>(V.data()), V.size());
+}
+
+TEST(BTFBuilderTest, mergeInvalidHeaderLength) {
+  BTF::Header Header = {BTF::MAGIC, BTF::VERSION, 0, 0, 0, 0, 0, 0};
+  BTFBuilder B;
+  EXPECT_THAT_ERROR(B.merge(StringRef(reinterpret_cast<const char *>(&Header),
+                                      sizeof(Header)),
+                            sys::IsLittleEndianHost)
+                        .takeError(),
+                    FailedWithMessage(testing::HasSubstr("header length")));
+  EXPECT_EQ(B.typesCount(), 0u);
+}
+
+TEST(BTFBuilderTest, mergeUnknownTypeKind) {
+  BTFBuilder Input;
+  Input.addType({0, mkInfo(BTF::BTF_KIND_ENUM64 + 1), {0}});
+  SmallVector<uint8_t, 0> Blob;
+  Input.write(Blob, sys::IsLittleEndianHost);
+
+  BTFBuilder B;
+  EXPECT_THAT_ERROR(
+      B.merge(blobRef(Blob), sys::IsLittleEndianHost).takeError(),
+      FailedWithMessage(testing::HasSubstr("unknown .BTF type kind")));
+  EXPECT_EQ(B.typesCount(), 0u);
 }
 
 TEST(BTFBuilderTest, invalidTypeIdLookups) {
@@ -591,7 +643,7 @@ TEST(BTFBuilderTest, mergeBadVersion) {
   BTFBuilder B;
   EXPECT_THAT_ERROR(
       B.merge(blobRef(Blob), !sys::IsBigEndianHost).takeError(),
-      FailedWithMessage(testing::HasSubstr("unsupported BTF version")));
+      FailedWithMessage(testing::HasSubstr("unsupported .BTF version")));
   EXPECT_EQ(B.typesCount(), 0u);
 }
 
@@ -611,7 +663,7 @@ TEST(BTFBuilderTest, mergeStringBoundsExceeded) {
   BTFBuilder B;
   EXPECT_THAT_ERROR(
       B.merge(blobRef(Blob), !sys::IsBigEndianHost).takeError(),
-      FailedWithMessage(testing::HasSubstr("exceeds section bounds")));
+      FailedWithMessage(testing::HasSubstr("invalid .BTF section size")));
   EXPECT_EQ(B.typesCount(), 0u);
 }
 
@@ -631,7 +683,7 @@ TEST(BTFBuilderTest, mergeTypeBoundsExceeded) {
   BTFBuilder B;
   EXPECT_THAT_ERROR(
       B.merge(blobRef(Blob), !sys::IsBigEndianHost).takeError(),
-      FailedWithMessage(testing::HasSubstr("exceeds section bounds")));
+      FailedWithMessage(testing::HasSubstr("invalid .BTF section size")));
   EXPECT_EQ(B.typesCount(), 0u);
 }
 

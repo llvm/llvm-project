@@ -80,9 +80,6 @@ public:
   /// Number of types, excluding void (type 0).
   uint32_t typesCount() const { return TypeOffsets.size(); }
 
-  /// Compute the byte size of a type entry from its CommonType header.
-  LLVM_ABI static size_t typeByteSize(const BTF::CommonType *T);
-
   /// Returns true if CommonType.Type is a type reference for this kind.
   LLVM_ABI static bool hasTypeRef(uint32_t Kind);
 

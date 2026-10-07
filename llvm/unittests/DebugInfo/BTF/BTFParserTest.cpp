@@ -248,6 +248,26 @@ TEST(BTFParserTest, badBTFSectionLen) {
   EXPECT_PARSE_ERROR(Mock2, BTFEndOfData);
 }
 
+TEST(BTFParserTest, overflowedSubsectionBounds) {
+  MockData1 Mock;
+  Mock.BTF.Header.StrOff = UINT32_MAX;
+  EXPECT_PARSE_ERROR(Mock, "invalid .BTF section size");
+}
+
+TEST(BTFParserTest, rawSectionClearsExtInfo) {
+  MockData1 Mock;
+  BTFParser Parser;
+  ASSERT_SUCCEEDED(Parser.parse(Mock.makeObj()));
+  ASSERT_TRUE(Parser.findLineInfo({16, 1}));
+
+  StringRef Raw(reinterpret_cast<const char *>(&Mock.BTF), sizeof(Mock.BTF));
+  ASSERT_SUCCEEDED(Parser.parse(Raw, sys::IsLittleEndianHost));
+  EXPECT_FALSE(Parser.findLineInfo({16, 1}));
+  EXPECT_FALSE(Parser.findFieldReloc({16, 1}));
+  EXPECT_EQ(Parser.typesCount(), 1u); // Only void.
+  EXPECT_EQ(Parser.findString(offsetof(MockData1::B::S, Foo)), "foo");
+}
+
 TEST(BTFParserTest, badBTFExtMagic) {
   MockData1 Mock;
   Mock.Ext.Header.Magic = 42;

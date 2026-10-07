@@ -100,12 +100,9 @@ public:
   }
 };
 
-Error BTFParser::parseBTF(ParseContext &Ctx, SectionRef BTF) {
-  Expected<DataExtractor> MaybeExtractor = Ctx.makeExtractor(BTF);
-  if (!MaybeExtractor)
-    return MaybeExtractor.takeError();
-
-  DataExtractor &Extractor = MaybeExtractor.get();
+Error BTFParser::parseBTF(StringRef RawData, bool IsLittleEndian,
+                          bool LoadTypes) {
+  DataExtractor Extractor(RawData, IsLittleEndian, 0);
   DataExtractor::Cursor C = DataExtractor::Cursor(0);
   uint16_t Magic = Extractor.getU16(C);
   if (!C)
@@ -121,17 +118,17 @@ Error BTFParser::parseBTF(ParseContext &Ctx, SectionRef BTF) {
   uint32_t HdrLen = Extractor.getU32(C);
   if (!C)
     return Err(".BTF", C);
-  if (HdrLen < 8)
+  if (HdrLen < sizeof(BTF::Header))
     return Err("unexpected .BTF header length: ") << HdrLen;
   uint32_t TypeOff = Extractor.getU32(C);
   uint32_t TypeLen = Extractor.getU32(C);
   uint32_t StrOff = Extractor.getU32(C);
   uint32_t StrLen = Extractor.getU32(C);
-  uint32_t StrStart = HdrLen + StrOff;
-  uint32_t StrEnd = StrStart + StrLen;
-  uint32_t TypesInfoStart = HdrLen + TypeOff;
-  uint32_t TypesInfoEnd = TypesInfoStart + TypeLen;
-  uint32_t BytesExpected = std::max(StrEnd, TypesInfoEnd);
+  uint64_t StrStart = uint64_t(HdrLen) + StrOff;
+  uint64_t StrEnd = StrStart + StrLen;
+  uint64_t TypesInfoStart = uint64_t(HdrLen) + TypeOff;
+  uint64_t TypesInfoEnd = TypesInfoStart + TypeLen;
+  uint64_t BytesExpected = std::max(StrEnd, TypesInfoEnd);
   if (!C)
     return Err(".BTF", C);
   if (Extractor.getData().size() < BytesExpected)
@@ -140,9 +137,9 @@ Error BTFParser::parseBTF(ParseContext &Ctx, SectionRef BTF) {
 
   StringsTable = Extractor.getData().slice(StrStart, StrEnd);
 
-  if (TypeLen > 0 && Ctx.Opts.LoadTypes) {
+  if (LoadTypes) {
     StringRef RawData = Extractor.getData().slice(TypesInfoStart, TypesInfoEnd);
-    if (Error E = parseTypesInfo(Ctx, TypesInfoStart, RawData))
+    if (Error E = parseTypesInfo(IsLittleEndian, TypesInfoStart, RawData))
       return E;
   }
 
@@ -151,7 +148,7 @@ Error BTFParser::parseBTF(ParseContext &Ctx, SectionRef BTF) {
 
 // Compute record size for each BTF::CommonType sub-type
 // (including entries in the tail position).
-static size_t byteSize(BTF::CommonType *Type) {
+static size_t byteSize(const BTF::CommonType *Type) {
   size_t Size = sizeof(BTF::CommonType);
   switch (Type->getKind()) {
   case BTF::BTF_KIND_INT:
@@ -202,14 +199,15 @@ const BTF::CommonType VoidTypeInst = {0, BTF::BTF_KIND_UNKN << 24, {0}};
 // - If at some point a type definition with incorrect size (logical size
 //   exceeding buffer boundaries) is reached it is not added to the
 //   `BTFParser::Types` vector and the process stops.
-Error BTFParser::parseTypesInfo(ParseContext &Ctx, uint64_t TypesInfoStart,
+Error BTFParser::parseTypesInfo(bool IsLittleEndian, uint64_t TypesInfoStart,
                                 StringRef RawData) {
   using support::endian::byte_swap;
 
-  TypesBuffer.assign(arrayRefFromStringRef(RawData));
+  auto Bytes = arrayRefFromStringRef(RawData);
+  TypesBuffer.assign(Bytes.begin(), Bytes.end());
   // Switch endianness if necessary.
-  endianness Endianness = Ctx.Obj.isLittleEndian() ? llvm::endianness::little
-                                                   : llvm::endianness::big;
+  endianness Endianness =
+      IsLittleEndian ? llvm::endianness::little : llvm::endianness::big;
   uint32_t *TypesBuffer32 = (uint32_t *)TypesBuffer.data();
   for (uint64_t I = 0; I < TypesBuffer.size() / 4; ++I)
     TypesBuffer32[I] = byte_swap(TypesBuffer32[I], Endianness);
@@ -226,6 +224,8 @@ Error BTFParser::parseTypesInfo(ParseContext &Ctx, uint64_t TypesInfoStart,
       return Err("incomplete type definition in .BTF section:")
              << " offset " << Offset << ", index " << Types.size();
 
+    if (Type->getKind() > BTF::BTF_KIND_ENUM64)
+      return Err("unknown .BTF type kind: ") << Type->getKind();
     uint64_t Size = byteSize(Type);
     if (BytesLeft < Size)
       return Err("incomplete type definition in .BTF section:")
@@ -375,12 +375,21 @@ Error BTFParser::parseRelocInfo(ParseContext &Ctx, DataExtractor &Extractor,
   return Error::success();
 }
 
-Error BTFParser::parse(const ObjectFile &Obj, const ParseOptions &Opts) {
+void BTFParser::clear() {
   StringsTable = StringRef();
   SectionLines.clear();
   SectionRelocs.clear();
   Types.clear();
   TypesBuffer.clear();
+}
+
+Error BTFParser::parse(StringRef RawBTFSection, bool IsLittleEndian) {
+  clear();
+  return parseBTF(RawBTFSection, IsLittleEndian, true);
+}
+
+Error BTFParser::parse(const ObjectFile &Obj, const ParseOptions &Opts) {
+  clear();
 
   ParseContext Ctx(Obj, Opts);
   std::optional<SectionRef> BTF;
@@ -399,7 +408,10 @@ Error BTFParser::parse(const ObjectFile &Obj, const ParseOptions &Opts) {
     return Err("can't find .BTF section");
   if (!BTFExt)
     return Err("can't find .BTF.ext section");
-  if (Error E = parseBTF(Ctx, *BTF))
+  Expected<StringRef> BTFData = BTF->getContents();
+  if (!BTFData)
+    return BTFData.takeError();
+  if (Error E = parseBTF(*BTFData, Obj.isLittleEndian(), Opts.LoadTypes))
     return E;
   if (Error E = parseBTFExt(Ctx, *BTFExt))
     return E;
@@ -459,6 +471,13 @@ const BTF::CommonType *BTFParser::findType(uint32_t Id) const {
   if (Id < Types.size())
     return Types[Id];
   return nullptr;
+}
+
+ArrayRef<uint8_t> BTFParser::getTypeBytes(uint32_t Id) const {
+  if (Id == 0 || Id >= Types.size())
+    return {};
+  return ArrayRef<uint8_t>(reinterpret_cast<const uint8_t *>(Types[Id]),
+                           byteSize(Types[Id]));
 }
 
 enum RelocKindGroup {

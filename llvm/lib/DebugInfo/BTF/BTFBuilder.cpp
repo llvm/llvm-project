@@ -7,7 +7,7 @@
 //===----------------------------------------------------------------------===//
 
 #include "llvm/DebugInfo/BTF/BTFBuilder.h"
-#include "llvm/Support/Endian.h"
+#include "llvm/DebugInfo/BTF/BTFParser.h"
 #include "llvm/Support/SwapByteOrder.h"
 
 using namespace llvm;
@@ -69,39 +69,6 @@ StringRef BTFBuilder::findString(uint32_t Offset) const {
   return StringRef(&Strings[Offset]);
 }
 
-size_t BTFBuilder::typeByteSize(const BTF::CommonType *T) {
-  size_t Size = sizeof(BTF::CommonType);
-  switch (T->getKind()) {
-  case BTF::BTF_KIND_INT:
-  case BTF::BTF_KIND_VAR:
-  case BTF::BTF_KIND_DECL_TAG:
-    Size += sizeof(uint32_t);
-    break;
-  case BTF::BTF_KIND_ARRAY:
-    Size += sizeof(BTF::BTFArray);
-    break;
-  case BTF::BTF_KIND_STRUCT:
-  case BTF::BTF_KIND_UNION:
-    Size += sizeof(BTF::BTFMember) * T->getVlen();
-    break;
-  case BTF::BTF_KIND_ENUM:
-    Size += sizeof(BTF::BTFEnum) * T->getVlen();
-    break;
-  case BTF::BTF_KIND_ENUM64:
-    Size += sizeof(BTF::BTFEnum64) * T->getVlen();
-    break;
-  case BTF::BTF_KIND_FUNC_PROTO:
-    Size += sizeof(BTF::BTFParam) * T->getVlen();
-    break;
-  case BTF::BTF_KIND_DATASEC:
-    Size += sizeof(BTF::BTFDataSec) * T->getVlen();
-    break;
-  default:
-    break;
-  }
-  return Size;
-}
-
 bool BTFBuilder::hasTypeRef(uint32_t Kind) {
   switch (Kind) {
   case BTF::BTF_KIND_PTR:
@@ -117,82 +84,6 @@ bool BTFBuilder::hasTypeRef(uint32_t Kind) {
     return true;
   default:
     return false;
-  }
-}
-
-// Byte-swap CommonType header fields in place.
-static void swapCommonType(BTF::CommonType *T) {
-  using llvm::sys::swapByteOrder;
-  swapByteOrder(T->NameOff);
-  swapByteOrder(T->Info);
-  swapByteOrder(T->Size); // Size and Type are a union, same bytes.
-}
-
-// Byte-swap kind-specific tail data in place.
-// CommonType must already be in native byte order.
-static void swapTailData(uint8_t *TailPtr, const BTF::CommonType *T) {
-  using llvm::sys::swapByteOrder;
-  switch (T->getKind()) {
-  case BTF::BTF_KIND_INT:
-  case BTF::BTF_KIND_VAR:
-  case BTF::BTF_KIND_DECL_TAG: {
-    auto *V = reinterpret_cast<uint32_t *>(TailPtr);
-    swapByteOrder(*V);
-    break;
-  }
-  case BTF::BTF_KIND_ARRAY: {
-    auto *A = reinterpret_cast<BTF::BTFArray *>(TailPtr);
-    swapByteOrder(A->ElemType);
-    swapByteOrder(A->IndexType);
-    swapByteOrder(A->Nelems);
-    break;
-  }
-  case BTF::BTF_KIND_STRUCT:
-  case BTF::BTF_KIND_UNION: {
-    auto *M = reinterpret_cast<BTF::BTFMember *>(TailPtr);
-    for (unsigned I = 0, N = T->getVlen(); I < N; ++I) {
-      swapByteOrder(M[I].NameOff);
-      swapByteOrder(M[I].Type);
-      swapByteOrder(M[I].Offset);
-    }
-    break;
-  }
-  case BTF::BTF_KIND_ENUM: {
-    auto *E = reinterpret_cast<BTF::BTFEnum *>(TailPtr);
-    for (unsigned I = 0, N = T->getVlen(); I < N; ++I) {
-      swapByteOrder(E[I].NameOff);
-      swapByteOrder(E[I].Val);
-    }
-    break;
-  }
-  case BTF::BTF_KIND_ENUM64: {
-    auto *E = reinterpret_cast<BTF::BTFEnum64 *>(TailPtr);
-    for (unsigned I = 0, N = T->getVlen(); I < N; ++I) {
-      swapByteOrder(E[I].NameOff);
-      swapByteOrder(E[I].Val_Lo32);
-      swapByteOrder(E[I].Val_Hi32);
-    }
-    break;
-  }
-  case BTF::BTF_KIND_FUNC_PROTO: {
-    auto *P = reinterpret_cast<BTF::BTFParam *>(TailPtr);
-    for (unsigned I = 0, N = T->getVlen(); I < N; ++I) {
-      swapByteOrder(P[I].NameOff);
-      swapByteOrder(P[I].Type);
-    }
-    break;
-  }
-  case BTF::BTF_KIND_DATASEC: {
-    auto *D = reinterpret_cast<BTF::BTFDataSec *>(TailPtr);
-    for (unsigned I = 0, N = T->getVlen(); I < N; ++I) {
-      swapByteOrder(D[I].Type);
-      swapByteOrder(D[I].Offset);
-      swapByteOrder(D[I].Size);
-    }
-    break;
-  }
-  default:
-    break;
   }
 }
 
@@ -285,82 +176,23 @@ static void remapStringOffsets(uint8_t *Data, uint32_t StrDelta) {
 
 Expected<uint32_t> BTFBuilder::merge(StringRef RawBTFSection,
                                      bool IsLittleEndian) {
-  bool NeedSwap = (IsLittleEndian != sys::IsLittleEndianHost);
-
-  if (RawBTFSection.size() < sizeof(BTF::Header))
-    return createStringError("BTF section too small for header");
-
-  BTF::Header Hdr;
-  memcpy(&Hdr, RawBTFSection.data(), sizeof(Hdr));
-  if (NeedSwap) {
-    sys::swapByteOrder(Hdr.Magic);
-    sys::swapByteOrder(Hdr.HdrLen);
-    sys::swapByteOrder(Hdr.TypeOff);
-    sys::swapByteOrder(Hdr.TypeLen);
-    sys::swapByteOrder(Hdr.StrOff);
-    sys::swapByteOrder(Hdr.StrLen);
-  }
-
-  if (Hdr.Magic != BTF::MAGIC)
-    return createStringError("invalid BTF magic: " +
-                             Twine::utohexstr(Hdr.Magic));
-  if (Hdr.Version != BTF::VERSION)
-    return createStringError("unsupported BTF version: " + Twine(Hdr.Version));
-
-  uint64_t DataStart = Hdr.HdrLen;
-  if (DataStart + Hdr.StrOff + Hdr.StrLen > RawBTFSection.size())
-    return createStringError("BTF string section exceeds section bounds");
-  if (DataStart + Hdr.TypeOff + Hdr.TypeLen > RawBTFSection.size())
-    return createStringError("BTF type section exceeds section bounds");
-
-  StringRef InputStrings =
-      RawBTFSection.substr(DataStart + Hdr.StrOff, Hdr.StrLen);
-  StringRef InputTypes =
-      RawBTFSection.substr(DataStart + Hdr.TypeOff, Hdr.TypeLen);
+  BTFParser Parser;
+  if (Error E = Parser.parse(RawBTFSection, IsLittleEndian))
+    return std::move(E);
 
   uint32_t StrDelta = Strings.size();
   uint32_t IdDelta = TypeOffsets.size();
   uint32_t FirstNewId = IdDelta + 1;
 
+  StringRef InputStrings = Parser.getStringTable();
   Strings.append(InputStrings.begin(), InputStrings.end());
-
-  uint32_t TypeDataBase = TypeData.size();
-  TypeData.append(reinterpret_cast<const uint8_t *>(InputTypes.data()),
-                  reinterpret_cast<const uint8_t *>(InputTypes.data()) +
-                      InputTypes.size());
-
-  uint64_t Offset = 0;
-  while (Offset + sizeof(BTF::CommonType) <= InputTypes.size()) {
-    uint32_t AbsOffset = TypeDataBase + Offset;
-    auto *CT = reinterpret_cast<BTF::CommonType *>(&TypeData[AbsOffset]);
-
-    if (NeedSwap)
-      swapCommonType(CT);
-
-    TypeOffsets.push_back(AbsOffset);
-    size_t FullSize = typeByteSize(CT);
-
-    if (Offset + FullSize > InputTypes.size()) {
-      TypeData.resize(TypeDataBase);
-      TypeOffsets.resize(IdDelta);
-      Strings.resize(StrDelta);
-      return createStringError("incomplete type in BTF type section");
-    }
-
-    if (NeedSwap)
-      swapTailData(&TypeData[AbsOffset + sizeof(BTF::CommonType)], CT);
-
-    remapStringOffsets(&TypeData[AbsOffset], StrDelta);
-    remapTypeIds(&TypeData[AbsOffset], IdDelta);
-
-    Offset += FullSize;
-  }
-
-  if (Offset != InputTypes.size()) {
-    TypeData.resize(TypeDataBase);
-    TypeOffsets.resize(IdDelta);
-    Strings.resize(StrDelta);
-    return createStringError("trailing bytes in BTF type section");
+  for (uint32_t Id = 1, N = Parser.typesCount(); Id < N; ++Id) {
+    uint32_t Offset = TypeData.size();
+    ArrayRef<uint8_t> Bytes = Parser.getTypeBytes(Id);
+    TypeOffsets.push_back(Offset);
+    TypeData.append(Bytes.begin(), Bytes.end());
+    remapStringOffsets(&TypeData[Offset], StrDelta);
+    remapTypeIds(&TypeData[Offset], IdDelta);
   }
 
   return FirstNewId;
@@ -399,13 +231,14 @@ void BTFBuilder::write(SmallVectorImpl<uint8_t> &Out,
 
   memcpy(Buf, TypeData.data(), TypeData.size());
   if (NeedSwap) {
-    uint64_t Offset = 0;
-    while (Offset + sizeof(BTF::CommonType) <= TypeData.size()) {
-      auto *CT = reinterpret_cast<BTF::CommonType *>(Buf + Offset);
-      size_t FullSize = typeByteSize(CT);
-      swapTailData(Buf + Offset + sizeof(BTF::CommonType), CT);
-      swapCommonType(CT);
-      Offset += FullSize;
+    // Every type record consists of uint32_t fields, regardless of its kind.
+    // Use unaligned loads/stores: Out may already contain an arbitrary prefix.
+    for (size_t Offset = 0; Offset < TypeData.size();
+         Offset += sizeof(uint32_t)) {
+      uint32_t Word;
+      memcpy(&Word, Buf + Offset, sizeof(Word));
+      sys::swapByteOrder(Word);
+      memcpy(Buf + Offset, &Word, sizeof(Word));
     }
   }
   Buf += TypeData.size();

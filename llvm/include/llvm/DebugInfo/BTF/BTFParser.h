@@ -40,7 +40,7 @@ class BTFParser {
   // In BTF strings are stored as a continuous memory region with
   // individual strings separated by 0 bytes. Strings are identified
   // by an offset in such region.
-  // The `StringsTable` points to this region in the parsed ObjectFile.
+  // The `StringsTable` points to this region in the parsed input.
   StringRef StringsTable;
 
   // A copy of types table from the object file but using native byte
@@ -63,13 +63,14 @@ class BTFParser {
   std::vector<const BTF::CommonType *> Types;
 
   struct ParseContext;
-  Error parseBTF(ParseContext &Ctx, SectionRef BTF);
+  void clear();
+  Error parseBTF(StringRef RawData, bool IsLittleEndian, bool LoadTypes);
   Error parseBTFExt(ParseContext &Ctx, SectionRef BTFExt);
   Error parseLineInfo(ParseContext &Ctx, DataExtractor &Extractor,
                       uint64_t LineInfoStart, uint64_t LineInfoEnd);
   Error parseRelocInfo(ParseContext &Ctx, DataExtractor &Extractor,
                        uint64_t RelocInfoStart, uint64_t RelocInfoEnd);
-  Error parseTypesInfo(ParseContext &Ctx, uint64_t TypesInfoStart,
+  Error parseTypesInfo(bool IsLittleEndian, uint64_t TypesInfoStart,
                        StringRef RawData);
 
 public:
@@ -103,6 +104,13 @@ public:
   // owned by this class.
   LLVM_ABI const BTF::CommonType *findType(uint32_t Id) const;
 
+  /// Return the native-endian bytes of a type record, excluding void (ID 0).
+  /// The returned view is owned by this parser.
+  LLVM_ABI ArrayRef<uint8_t> getTypeBytes(uint32_t Id) const;
+
+  /// Return the string table, which refers to the parsed input's storage.
+  StringRef getStringTable() const { return StringsTable; }
+
   // Return total number of known BTF types.
   size_t typesCount() const { return Types.size(); }
 
@@ -124,6 +132,11 @@ public:
   //   might be unavailable;
   LLVM_ABI Error parse(const ObjectFile &Obj, const ParseOptions &Opts);
   Error parse(const ObjectFile &Obj) { return parse(Obj, {true, true, true}); }
+
+  /// Parse types and strings from a raw .BTF section, without .BTF.ext.
+  /// The input must outlive this parser's string-table queries. As with the
+  /// ObjectFile overload, previous data is discarded, including .BTF.ext data.
+  LLVM_ABI Error parse(StringRef RawBTFSection, bool IsLittleEndian);
 
   // Return true if `Obj` has .BTF and .BTF.ext sections.
   LLVM_ABI static bool hasBTFSections(const ObjectFile &Obj);
