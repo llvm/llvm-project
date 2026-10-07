@@ -1325,7 +1325,7 @@ static void InitializeModule() {
   TheModule = std::make_unique<Module>("my cool jit", *TheContext);
   TheModule->setDataLayout(TheJIT->getDataLayout());
 
-  Builder = std::make_unique<IRBuilder<>>(*TheContext);
+  Builder = std::make_unique<IRBuilder<>>(*TheModule);
 }
 
 static void HandleDefinition() {

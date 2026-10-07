@@ -55,7 +55,6 @@
 #include "llvm/MC/MCContext.h"
 #include "llvm/MC/MCExpr.h"
 #include "llvm/MC/MCSymbol.h"
-#include "llvm/Support/CommandLine.h"
 #include "llvm/Support/Debug.h"
 #include "llvm/Support/ErrorHandling.h"
 #include "llvm/Support/KnownBits.h"
@@ -68,65 +67,6 @@
 using namespace llvm;
 
 #define DEBUG_TYPE "x86-isel"
-
-static cl::opt<int> ExperimentalPrefInnermostLoopAlignment(
-    "x86-experimental-pref-innermost-loop-alignment", cl::init(4),
-    cl::desc(
-        "Sets the preferable loop alignment for experiments (as log2 bytes) "
-        "for innermost loops only. If specified, this option overrides "
-        "alignment set by x86-experimental-pref-loop-alignment."),
-    cl::Hidden);
-
-static cl::opt<int> BrMergingBaseCostThresh(
-    "x86-br-merging-base-cost", cl::init(2),
-    cl::desc(
-        "Sets the cost threshold for when multiple conditionals will be merged "
-        "into one branch versus be split in multiple branches. Merging "
-        "conditionals saves branches at the cost of additional instructions. "
-        "This value sets the instruction cost limit, below which conditionals "
-        "will be merged, and above which conditionals will be split. Set to -1 "
-        "to never merge branches."),
-    cl::Hidden);
-
-static cl::opt<int> BrMergingCcmpBias(
-    "x86-br-merging-ccmp-bias", cl::init(6),
-    cl::desc("Increases 'x86-br-merging-base-cost' in cases that the target "
-             "supports conditional compare instructions."),
-    cl::Hidden);
-
-static cl::opt<bool>
-    WidenShift("x86-widen-shift", cl::init(true),
-               cl::desc("Replace narrow shifts with wider shifts."),
-               cl::Hidden);
-
-static cl::opt<int> BrMergingLikelyBias(
-    "x86-br-merging-likely-bias", cl::init(0),
-    cl::desc("Increases 'x86-br-merging-base-cost' in cases that it is likely "
-             "that all conditionals will be executed. For example for merging "
-             "the conditionals (a == b && c > d), if its known that a == b is "
-             "likely, then it is likely that if the conditionals are split "
-             "both sides will be executed, so it may be desirable to increase "
-             "the instruction cost threshold. Set to -1 to never merge likely "
-             "branches."),
-    cl::Hidden);
-
-static cl::opt<int> BrMergingUnlikelyBias(
-    "x86-br-merging-unlikely-bias", cl::init(-1),
-    cl::desc(
-        "Decreases 'x86-br-merging-base-cost' in cases that it is unlikely "
-        "that all conditionals will be executed. For example for merging "
-        "the conditionals (a == b && c > d), if its known that a == b is "
-        "unlikely, then it is unlikely that if the conditionals are split "
-        "both sides will be executed, so it may be desirable to decrease "
-        "the instruction cost threshold. Set to -1 to never merge unlikely "
-        "branches."),
-    cl::Hidden);
-
-static cl::opt<bool> MulConstantOptimization(
-    "mul-constant-optimization", cl::init(true),
-    cl::desc("Replace 'mul x, Const' with more effective instructions like "
-             "SHIFT, LEA, etc."),
-    cl::Hidden);
 
 X86TargetLowering::X86TargetLowering(const X86TargetMachine &TM,
                                      const X86Subtarget &STI)
@@ -1739,9 +1679,12 @@ X86TargetLowering::X86TargetLowering(const X86TargetMachine &TM,
     if (HasInt256) {
       setOperationAction(ISD::MULHU, MVT::v4i64, Custom);
       // Custom so the combiner keeps full products as [SU]MUL_LOHI, not
-      // MULH[SU].
-      setOperationAction(ISD::UMUL_LOHI, MVT::v4i64, Custom);
-      setOperationAction(ISD::SMUL_LOHI, MVT::v4i64, Custom);
+      // MULH[SU]. The custom lowering unrolls to scalar i64 [SU]MUL_LOHI,
+      // which is only legalizable when i64 is a legal type.
+      if (Subtarget.is64Bit()) {
+        setOperationAction(ISD::UMUL_LOHI, MVT::v4i64, Custom);
+        setOperationAction(ISD::SMUL_LOHI, MVT::v4i64, Custom);
+      }
       setOperationAction(ISD::VSELECT, MVT::v32i8, Legal);
 
       // Custom legalize 2x32 to get a little better code.
@@ -2023,8 +1966,10 @@ X86TargetLowering::X86TargetLowering(const X86TargetMachine &TM,
     setOperationAction(ISD::MUL, MVT::v64i8,  Custom);
 
     setOperationAction(ISD::MULHU, MVT::v8i64, Custom);
-    setOperationAction(ISD::UMUL_LOHI, MVT::v8i64, Custom);
-    setOperationAction(ISD::SMUL_LOHI, MVT::v8i64, Custom);
+    if (Subtarget.is64Bit()) {
+      setOperationAction(ISD::UMUL_LOHI, MVT::v8i64, Custom);
+      setOperationAction(ISD::SMUL_LOHI, MVT::v8i64, Custom);
+    }
     setOperationAction(ISD::MULHU, MVT::v16i32, Custom);
     setOperationAction(ISD::MULHS, MVT::v16i32, Custom);
     setOperationAction(ISD::MULHS, MVT::v32i16, HasBWI ? Legal : Custom);
@@ -3946,10 +3891,11 @@ X86TargetLowering::getJumpConditionMergingParams(Instruction::BinaryOps Opc,
                                                  const Value *Rhs,
                                                  const Function *) const {
   using namespace llvm::PatternMatch;
-  int BaseCost = BrMergingBaseCostThresh.getValue();
+  const X86Options &CLOpts = Subtarget.getCLOpts();
+  int BaseCost = CLOpts.br_merging_base_cost;
   // With CCMP, branches can be merged in a more efficient way.
   if (BaseCost >= 0 && Subtarget.hasCCMP())
-    BaseCost += BrMergingCcmpBias;
+    BaseCost += CLOpts.br_merging_ccmp_bias;
   // a == b && a == c is a fast pattern on x86.
   if (BaseCost >= 0 && Opc == Instruction::And &&
       match(Lhs, m_SpecificICmp(ICmpInst::ICMP_EQ, m_Value(), m_Value())) &&
@@ -3965,8 +3911,8 @@ X86TargetLowering::getJumpConditionMergingParams(Instruction::BinaryOps Opc,
       match(Rhs, m_SpecificICmp(ICmpInst::ICMP_EQ, m_Value(), m_Value())))
     return {-1, -1, -1};
 
-  return {BaseCost, BrMergingLikelyBias.getValue(),
-          BrMergingUnlikelyBias.getValue()};
+  return {BaseCost, CLOpts.br_merging_likely_bias,
+          CLOpts.br_merging_unlikely_bias};
 }
 
 bool X86TargetLowering::preferScalarizeSplat(SDNode *N) const {
@@ -28057,8 +28003,7 @@ SDValue X86TargetLowering::LowerINTRINSIC_WO_CHAIN(SDValue Op,
   case Intrinsic::x86_avx512_vp2intersect_d_128: {
     SDLoc DL(Op);
     MVT MaskVT = Op.getSimpleValueType();
-    SDVTList VTs = DAG.getVTList(MVT::Untyped, MVT::Other);
-    SDValue Operation = DAG.getNode(X86ISD::VP2INTERSECT, DL, VTs,
+    SDValue Operation = DAG.getNode(X86ISD::VP2INTERSECT, DL, MVT::Untyped,
                                     Op.getOperand(1), Op.getOperand(2));
     SDValue Result0 =
         DAG.getTargetExtractSubreg(X86::sub_mask_0, DL, MaskVT, Operation);
@@ -31628,7 +31573,7 @@ static SDValue LowerShift(SDValue Op, const X86Subtarget &Subtarget,
     }
     APInt APIntShiftAmt;
     bool IsConstantSplat = X86::isConstantSplat(Amt, APIntShiftAmt);
-    bool Profitable = WidenShift;
+    bool Profitable = Subtarget.getCLOpts().widen_shift;
     // AVX512BW brings support for vpsllvw.
     if (WideEltSizeInBits * AmtWideElts.size() >= 512 &&
         WideEltSizeInBits < 32 && !Subtarget.hasBWI()) {
@@ -32919,10 +32864,10 @@ X86TargetLowering::shouldExpandLogicAtomicRMWInIR(
 void X86TargetLowering::emitBitTestAtomicRMWIntrinsic(AtomicRMWInst *AI) const {
   LLVMContext &Ctx = AI->getContext();
   IRBuilder<ConstantFolder, IRBuilderCallbackInserter> Builder(
-      Ctx, ConstantFolder{}, IRBuilderCallbackInserter([&AI](Instruction *I) {
+      AI->getIterator(), ConstantFolder{},
+      IRBuilderCallbackInserter([&AI](Instruction *I) {
         I->copyMetadata(*AI, LLVMContext::MD_pcsections);
       }));
-  Builder.SetInsertPoint(AI);
   Intrinsic::ID IID_C = Intrinsic::not_intrinsic;
   Intrinsic::ID IID_I = Intrinsic::not_intrinsic;
   switch (AI->getOperation()) {
@@ -33166,10 +33111,10 @@ void X86TargetLowering::emitCmpArithAtomicRMWIntrinsic(
     AtomicRMWInst *AI) const {
   LLVMContext &Ctx = AI->getContext();
   IRBuilder<ConstantFolder, IRBuilderCallbackInserter> Builder(
-      Ctx, ConstantFolder{}, IRBuilderCallbackInserter([&AI](Instruction *I) {
+      AI->getIterator(), ConstantFolder{},
+      IRBuilderCallbackInserter([&AI](Instruction *I) {
         I->copyMetadata(*AI, LLVMContext::MD_pcsections);
       }));
-  Builder.SetInsertPoint(AI);
   Instruction *TempI = nullptr;
   ICmpInst *ICI = dyn_cast<ICmpInst>(AI->user_back());
   if (!ICI) {
@@ -33280,11 +33225,10 @@ X86TargetLowering::lowerIdempotentRMWIntoFencedLoad(AtomicRMWInst *AI) const {
       return nullptr;
 
   IRBuilder<ConstantFolder, IRBuilderCallbackInserter> Builder(
-      AI->getContext(), ConstantFolder{},
+      AI->getIterator(), ConstantFolder{},
       IRBuilderCallbackInserter([&AI](Instruction *I) {
         I->copyMetadata(*AI, LLVMContext::MD_pcsections);
       }));
-  Builder.SetInsertPoint(AI);
   auto SSID = AI->getSyncScopeID();
   // We must restrict the ordering to avoid generating loads with Release or
   // ReleaseAcquire orderings.
@@ -51308,7 +51252,7 @@ static SDValue combineMul(SDNode *N, SelectionDAG &DAG,
 
   // Optimize a single multiply with constant into two operations in order to
   // implement it with two cheaper instructions, e.g. LEA + SHL, LEA + LEA.
-  if (!MulConstantOptimization)
+  if (!Subtarget.getCLOpts().mul_constant_optimization)
     return SDValue();
 
   // An imul is usually smaller than the alternative sequence.
@@ -53474,11 +53418,11 @@ static SDValue combineAnd(SDNode *N, SelectionDAG &DAG,
     if (TLI.isTypeLegal(VT) && TLI.isTypeLegal(CondVT) &&
         (VT.is512BitVector() || Subtarget.hasVLX()) &&
         (VT.getScalarSizeInBits() >= 32 || Subtarget.hasBWI()) &&
-        sd_match(
-            N,
-            m_And(m_Value(X),
-                  m_OneUse(m_SExt(m_Value(
-                      Y, m_SpecificVT(CondVT, m_SpecificOpc(ISD::SETCC)))))))) {
+        sd_match(N,
+                 m_And(m_Value(X),
+                       m_OneUse(m_SExt(m_Value(
+                           Y, m_SpecificVT(CondVT,
+                                           m_SpecificOpc<ISD::SETCC>()))))))) {
       return DAG.getSelect(dl, VT, Y, X,
                            getZeroVector(VT.getSimpleVT(), Subtarget, DAG, dl));
     }
@@ -56215,7 +56159,7 @@ static bool isCFMulFromFMAddSub(SDValue N, SelectionDAG &DAG, SDValue &A,
     return matchFMulPattern(P, Q) || matchFMulPattern(Q, P);
   };
   // First 2 operands of FMADDSUB/FMSUBADD are commutable.
-  return Op2.getOpcode() == ISD::FMUL &&
+  return Op2.getOpcode() == ISD::FMUL && Op2->getFlags().hasAllowContract() &&
          (matchFMSUBADDPattern(Op0, Op1) || matchFMSUBADDPattern(Op1, Op0));
 }
 
@@ -60358,12 +60302,12 @@ static SDValue matchPMADDWD(SelectionDAG &DAG, SDNode *N,
     return SDValue();
 
   SDValue Op0, Op1, Accum;
-  if (!sd_match(N, m_Add(m_Value(Op0, m_SpecificOpc(ISD::BUILD_VECTOR)),
-                         m_Value(Op1, m_SpecificOpc(ISD::BUILD_VECTOR)))) &&
+  if (!sd_match(N, m_Add(m_Value(Op0, m_SpecificOpc<ISD::BUILD_VECTOR>()),
+                         m_Value(Op1, m_SpecificOpc<ISD::BUILD_VECTOR>()))) &&
       !sd_match(N,
-                m_Add(m_Value(Op0, m_SpecificOpc(ISD::BUILD_VECTOR)),
+                m_Add(m_Value(Op0, m_SpecificOpc<ISD::BUILD_VECTOR>()),
                       m_Add(m_Value(Accum),
-                            m_Value(Op1, m_SpecificOpc(ISD::BUILD_VECTOR))))))
+                            m_Value(Op1, m_SpecificOpc<ISD::BUILD_VECTOR>())))))
     return SDValue();
 
   // Check if one of Op0,Op1 is of the form:
@@ -65654,8 +65598,9 @@ X86TargetLowering::getStackProbeSize(const MachineFunction &MF) const {
 
 Align X86TargetLowering::getPrefLoopAlignment(
     MachineLoop *ML, const MachineBasicBlock *BlockToAlign) const {
-  if (ML && ML->isInnermost() &&
-      ExperimentalPrefInnermostLoopAlignment.getNumOccurrences())
-    return Align(1ULL << ExperimentalPrefInnermostLoopAlignment);
+  std::optional<int> InnermostAlign =
+      Subtarget.getCLOpts().experimental_pref_innermost_loop_alignment;
+  if (ML && ML->isInnermost() && InnermostAlign)
+    return Align(1ULL << *InnermostAlign);
   return TargetLowering::getPrefLoopAlignment();
 }

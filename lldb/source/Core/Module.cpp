@@ -1489,6 +1489,11 @@ bool Module::MatchesModuleSpec(const ModuleSpec &module_ref) {
     if (object_name != GetObjectName())
       return false;
   }
+
+  // A module read from memory is the image at the address it was read from.
+  std::optional<lldb::addr_t> load_addr = module_ref.GetLoadAddress();
+  if (load_addr && m_memory_module_addr && *load_addr != *m_memory_module_addr)
+    return false;
   return true;
 }
 

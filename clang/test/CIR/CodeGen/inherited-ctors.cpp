@@ -1,9 +1,9 @@
 // RUN: %clang_cc1 -triple x86_64-unknown-linux-gnu -fclangir -emit-cir %s -o %t.cir
 // RUN: FileCheck --check-prefix=CIR --input-file=%t.cir %s
 // RUN: %clang_cc1 -triple x86_64-unknown-linux-gnu -fclangir -emit-llvm %s -o %t-cir.ll
-// RUN: FileCheck --check-prefix=LLVM --input-file=%t-cir.ll %s
+// RUN: FileCheck --check-prefixes=LLVM,LLVMCIR --input-file=%t-cir.ll %s
 // RUN: %clang_cc1 -triple x86_64-unknown-linux-gnu -emit-llvm %s -o %t.ll
-// RUN: FileCheck --check-prefix=OGCG --input-file=%t.ll %s
+// RUN: FileCheck --check-prefixes=LLVM,OGCG --input-file=%t.ll %s
 
 struct Base {
   Base(int i);
@@ -37,11 +37,13 @@ void fallsthrough() {
 }
 
 
-// LLVM and OGCG check labels are identical other than the 1 difference called out.
 // CIR-LABEL: cir.func no_inline dso_local @_Z20emitDelegateCallArgsv()
 // CIR: cir.call @_ZN7DerivedCI14BaseEi(%{{.*}}, %{{.*}}) : (!cir.ptr<!rec_Derived>{{.*}}, !s32i{{.*}}) -> ()
 // LLVM-LABEL: define dso_local void @_Z20emitDelegateCallArgsv()
 // LLVM: call void @_ZN7DerivedCI14BaseEi(ptr {{.*}}, i32 {{.*}}1)
+//
+// LLVM-LABEL: define linkonce_odr void @_ZN7DerivedCI14BaseEi(ptr {{.*}}, i32 {{.*}})
+// LLVM: call void @_ZN7DerivedCI24BaseEi(ptr {{.*}}, i32 {{.*}})
 //
 // CIR-LABEL: cir.func no_inline dso_local @_Z26cannotEmitDelegateCallArgsv()
 // CIR: %[[TMP_ALLOCA:.*]] = cir.alloca "tmp" {{.*}} init : !cir.ptr<!cir.ptr<!rec_Derived>>
@@ -93,8 +95,11 @@ void fallsthrough() {
 // CIR: %[[VPTR:.*]] = cir.vtable.get_vptr %[[THIS_LOAD]] : !cir.ptr<!rec_VirtualDelegatingCtor> -> !cir.ptr<!cir.vptr>
 // CIR: cir.store align(8) %[[ADDR_PT]], %[[VPTR]] : !cir.vptr, !cir.ptr<!cir.vptr>
 
-// LLVM: call void @_ZN11VirtDerivedCI24BaseEi(ptr {{.*}}%[[THIS_LOAD]], ptr {{.*}}(i8, ptr @_ZTT21VirtualDelegatingCtor, i64 8))
-// LLVM: store ptr getelementptr inbounds nuw (i8, ptr @_ZTV21VirtualDelegatingCtor, i64 24), ptr %[[THIS_LOAD]]
+// LLVMCIR: call void @_ZN11VirtDerivedCI24BaseEi(ptr {{.*}}%[[THIS_LOAD]], ptr {{.*}}(i8, ptr @_ZTT21VirtualDelegatingCtor, i64 8))
+// LLVMCIR: store ptr getelementptr inbounds nuw (i8, ptr @_ZTV21VirtualDelegatingCtor, i64 24), ptr %[[THIS_LOAD]]
+// OGCG: %[[X_LOAD:.*]] = load i32, ptr %[[X_ALLOCA]]
+// OGCG: call void @_ZN11VirtDerivedCI24BaseEi(ptr {{.*}}%[[THIS_LOAD]], ptr {{.*}}(i8, ptr @_ZTT21VirtualDelegatingCtor, i64 8), i32{{.*}}%[[X_LOAD]])
+// OGCG: store ptr getelementptr inbounds inrange(-24, 0) (i8, ptr @_ZTV21VirtualDelegatingCtor, i64 24), ptr %[[THIS_LOAD]]
 //
 
 // CIR-LABEL: cir.func no_inline comdat alignment(2) linkonce_odr @_ZN7DerivedCI24BaseEi(%{{.*}}: !cir.ptr<!rec_Derived>{{.*}}, %{{.*}}: !s32i{{.*}}) func_info<#cir.cxx_ctor<!rec_Derived, custom>>
@@ -135,48 +140,3 @@ void fallsthrough() {
 // LLVM: %[[VTT:.*]] = load ptr, ptr %[[VTT_ALLOCA]]
 // LLVM: %[[VTT_ADDR_LOAD:.*]] = load ptr, ptr %[[VTT]]
 // LLVM: store ptr %[[VTT_ADDR_LOAD]], ptr %[[THIS]]
-
-
-// OGCG-LABEL: define dso_local void @_Z20emitDelegateCallArgsv()
-// OGCG: call void @_ZN7DerivedCI14BaseEi(ptr {{.*}}, i32 {{.*}}1)
-//
-// OGCG-LABEL: define linkonce_odr void @_ZN7DerivedCI14BaseEi(ptr {{.*}}, i32 {{.*}}) 
-// OGCG: call void @_ZN7DerivedCI24BaseEi(ptr {{.*}}, i32 {{.*}})
-//
-// OGCG-LABEL: define dso_local void @_Z26cannotEmitDelegateCallArgsv()
-// OGCG: %[[TMP_ALLOCA:.*]] = alloca ptr
-// OGCG: %[[TMP_LOAD:.*]] = load ptr, ptr %[[TMP_ALLOCA]]
-// OGCG: call void (ptr, float, ...) @_ZN4BaseC2Efz(ptr {{.*}}%[[TMP_LOAD]], float {{.*}}1.100000e+00, i32 {{.*}}2, double {{.*}}3.000000e+00)
-// 
-// OGCG-LABEL: declare void @_ZN4BaseC2Efz(ptr {{.*}}, float {{.*}}, ...)
-//
-// OGCG-LABEL: define dso_local void @_Z12fallsthroughv()
-// OGCG: call void @_ZN21VirtualDelegatingCtorC1Ei(ptr {{.*}}, i32 {{.*}}1)
-//
-// OGCG-LABEL: define linkonce_odr void @_ZN21VirtualDelegatingCtorC1Ei(ptr {{.*}}, i32 {{.*}})
-// OGCG: %[[THIS_ALLOCA:.*]] = alloca ptr
-// OGCG: %[[X_ALLOCA:.*]] = alloca i32
-// OGCG: %[[THIS_LOAD:.*]] = load ptr, ptr %[[THIS_ALLOCA]]
-// OGCG: %[[X_LOAD:.*]] = load i32, ptr %[[X_ALLOCA]]
-// OGCG: call void @_ZN4BaseC2Ei(ptr {{.*}}%[[THIS_LOAD]], i32 {{.*}}%[[X_LOAD]])
-// Note: see the note above for the CIR/LLVM-IR difference here.
-// OGCG: %[[X_LOAD:.*]] = load i32, ptr %[[X_ALLOCA]]
-// OGCG: call void @_ZN11VirtDerivedCI24BaseEi(ptr {{.*}}%[[THIS_LOAD]], ptr {{.*}}(i8, ptr @_ZTT21VirtualDelegatingCtor, i64 8), i32{{.*}}%[[X_LOAD]])
-// OGCG: store ptr getelementptr inbounds inrange(-24, 0) (i8, ptr @_ZTV21VirtualDelegatingCtor, i64 24), ptr %[[THIS_LOAD]]
-//
-// OGCG-LABEL: define linkonce_odr void @_ZN7DerivedCI24BaseEi(ptr {{.*}}, i32 {{.*}})
-// OGCG: %[[THIS_ALLOCA:.*]] = alloca ptr
-// OGCG: %[[INT_ALLOCA:.*]] = alloca i32
-// OGCG: %[[BASE_ADDR:.*]] = load ptr, ptr %[[THIS_ALLOCA]]
-// OGCG: %[[INT:.*]] = load i32, ptr %[[INT_ALLOCA]]
-// OGCG: call void @_ZN4BaseC2Ei(ptr {{.*}}%[[BASE_ADDR]], i32 {{.*}}[[INT]])
-//
-// OGCG-LABEL: declare void @_ZN4BaseC2Ei(ptr {{.*}}, i32 {{.*}})
-
-// OGCG-LABEL: define linkonce_odr void @_ZN11VirtDerivedCI24BaseEi(ptr {{.*}}, ptr {{.*}})
-// OGCG: %[[THIS_ALLOCA:.*]] = alloca ptr
-// OGCG: %[[VTT_ALLOCA:.*]] = alloca ptr
-// OGCG: %[[THIS:.*]] = load ptr, ptr %[[THIS_ALLOCA]]
-// OGCG: %[[VTT:.*]] = load ptr, ptr %[[VTT_ALLOCA]]
-// OGCG: %[[VTT_ADDR_LOAD:.*]] = load ptr, ptr %[[VTT]]
-// OGCG: store ptr %[[VTT_ADDR_LOAD]], ptr %[[THIS]]

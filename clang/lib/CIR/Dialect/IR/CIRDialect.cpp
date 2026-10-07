@@ -2083,7 +2083,17 @@ LogicalResult cir::BrOp::canonicalize(BrOp op, PatternRewriter &rewriter) {
   if (isa<cir::LabelOp, cir::IndirectBrOp>(dst->front()))
     return failure();
 
-  auto operands = op.getDestOperands();
+  // An operand that is an argument of the destination itself (possible in an
+  // unreachable cycle) would be replaced by itself, leaving its other uses
+  // dangling once the destination is erased.
+  if (llvm::any_of(op.getDestOperands(), [&](Value operand) {
+        auto arg = dyn_cast<BlockArgument>(operand);
+        return arg && arg.getOwner() == dst;
+      }))
+    return failure();
+
+  // Copy the operands out: erasing the branch frees its operand storage.
+  SmallVector<Value> operands(op.getDestOperands());
   rewriter.eraseOp(op);
   rewriter.mergeBlocks(dst, src, operands);
   return success();
@@ -3108,8 +3118,11 @@ bool cir::FuncOp::isCxxTrivialMemberFunction() {
 }
 
 mlir::Region *cir::FuncOp::getCallableRegion() {
-  // TODO(CIR): This function will have special handling for aliases and a
-  // check for an external function, once those features have been upstreamed.
+  // Declarations and aliases have no body to analyze or inline. Returning the
+  // empty region would make interprocedural analyses (e.g. SCCP) treat calls
+  // to them as having no returns, leaving their results uninitialized.
+  if (getBody().empty())
+    return nullptr;
   return &getBody();
 }
 
