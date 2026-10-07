@@ -21,7 +21,7 @@
 
 using namespace llvm;
 
-#define DEBUG_TYPE "process-imp-defs"
+#define DEBUG_TYPE "process-implicit-defs"
 
 namespace {
 /// Process IMPLICIT_DEF instructions and make sure there is one implicit_def

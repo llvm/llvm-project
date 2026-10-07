@@ -151,7 +151,7 @@
 ; O2-NEXT:     x86-pre-tile-config
 ; O2-NEXT:     detect-dead-lanes
 ; O2-NEXT:     init-undef
-; O2-NEXT:     process-imp-defs
+; O2-NEXT:     process-implicit-defs
 ; O2-NEXT:     unreachable-mbb-elimination
 ; O2-NEXT:     require<live-vars>
 ; O2-NEXT:     require<machine-loops>
@@ -357,7 +357,7 @@
 ; O3-WINDOWS-NEXT:     x86-pre-tile-config
 ; O3-WINDOWS-NEXT:     detect-dead-lanes
 ; O3-WINDOWS-NEXT:     init-undef
-; O3-WINDOWS-NEXT:     process-imp-defs
+; O3-WINDOWS-NEXT:     process-implicit-defs
 ; O3-WINDOWS-NEXT:     unreachable-mbb-elimination
 ; O3-WINDOWS-NEXT:     require<live-vars>
 ; O3-WINDOWS-NEXT:     require<machine-loops>

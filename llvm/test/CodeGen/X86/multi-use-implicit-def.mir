@@ -3,7 +3,7 @@
 # before removing the IMPLICIT_DEF.  -verify-machineinstrs will
 # fail otherwise.
 
-# RUN: llc -mtriple=x86_64-- -x mir -stop-after process-imp-defs < %s -verify-machineinstrs | FileCheck %s
+# RUN: llc -mtriple=x86_64-- -x mir -stop-after process-implicit-defs < %s -verify-machineinstrs | FileCheck %s
 ---
 name: implicit_def
 tracksRegLiveness: true
