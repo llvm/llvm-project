@@ -492,7 +492,9 @@ class TargetRegisterInfo;
     LLVM_ABI void ComputeHeight();
   };
 
+#if !defined(NDEBUG) || defined(LLVM_ENABLE_DUMP)
   LLVM_ABI raw_ostream &operator<<(raw_ostream &OS, const SUnit &SU);
+#endif
 
   /// Returns true if the specified SDep is equivalent except for latency.
   inline bool SDep::overlaps(const SDep &Other) const {
