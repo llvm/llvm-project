@@ -322,55 +322,16 @@ bool GCNPreRAOptimizationsImpl::run(MachineFunction &MF) {
         Register Src2 = Src2MO->getReg();
         if (!Dst.isVirtual() || !Src2.isVirtual())
           continue;
+        if (DstMO->getSubReg() != Src2MO->getSubReg())
+          continue;
         LLVM_DEBUG(dbgs() << "Adding MFMA chain hint for " << MI << " Dst: "
                           << *DstMO << " Src2: " << *Src2MO << "\n");
         MFMAHints.unionSets(Dst, Src2);
       }
     }
 
-    auto CheckAllCompatibleRC =
-        [&](const EquivalenceClasses<Register>::ECValue *I) -> bool {
-      assert(I->isLeader());
-      for (auto AI = MFMAHints.member_begin(*I), End = MFMAHints.member_end();
-           AI != End; ++AI) {
-        Register A = *AI;
-        assert(A.isVirtual());
-        const TargetRegisterClass *ARC = MRI->getRegClass(A);
-        for (auto BI = std::next(AI); BI != End; ++BI) {
-          Register B = *BI;
-          assert(B.isVirtual());
-          const TargetRegisterClass *BRC = MRI->getRegClass(B);
-
-          if (!TRI->getCommonSubClass(ARC, BRC))
-            return false;
-        }
-      }
-      return true;
-    };
-
-    EquivalenceClasses<Register> FilteredMFMAHints;
-    auto CopyCompatibleEC =
-        [&](const EquivalenceClasses<Register>::ECValue *I) {
-          auto AI = MFMAHints.member_begin(*I);
-          auto LI = AI;
-
-          FilteredMFMAHints.insert(*LI);
-          ++AI;
-
-          for (auto End = MFMAHints.member_end(); AI != End; ++AI)
-            FilteredMFMAHints.unionSets(*LI, *AI);
-        };
-
-    for (const EquivalenceClasses<Register>::ECValue *I : MFMAHints) {
-      if (!I->isLeader())
-        continue;
-      if (!CheckAllCompatibleRC(I))
-        continue;
-
-      CopyCompatibleEC(I);
-    }
     SIMachineFunctionInfo *MFI = MF.getInfo<SIMachineFunctionInfo>();
-    MFI->setMFMAChainHints(FilteredMFMAHints);
+    MFI->setMFMAChainHints(MFMAHints);
   }
 
   bool Changed = false;

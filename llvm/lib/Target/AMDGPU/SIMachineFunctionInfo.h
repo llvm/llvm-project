@@ -549,7 +549,9 @@ private:
   void MRI_NoteNewVirtualRegister(Register Reg) override;
   void MRI_NoteCloneVirtualRegister(Register NewReg, Register SrcReg) override;
 
-  mutable EquivalenceClasses<Register> MFMAChainHints;
+  // Sets of Dst and Src2 Registers in one MFMA instruction or chains of MFMA
+  // instructions.
+  EquivalenceClasses<Register> MFMAChainHints;
 
 public:
   static bool MFMAVGPRForm;
@@ -1259,7 +1261,7 @@ public:
   void setMFMAChainHints(const EquivalenceClasses<Register> &MFMAHints) {
     MFMAChainHints = MFMAHints;
   }
-  EquivalenceClasses<Register> &getMFMAChainHints() const {
+  const EquivalenceClasses<Register> &getMFMAChainHints() const {
     return MFMAChainHints;
   }
 };

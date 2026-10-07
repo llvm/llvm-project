@@ -4337,20 +4337,12 @@ bool SIRegisterInfo::getRegAllocationHints(Register VirtReg,
     bool BaseImplRetVal = TargetRegisterInfo::getRegAllocationHints(
         VirtReg, Order, Hints, MF, VRM);
     const SIMachineFunctionInfo *MFI = MF.getInfo<SIMachineFunctionInfo>();
-    EquivalenceClasses<Register> &MFMAChainHints = MFI->getMFMAChainHints();
+    const EquivalenceClasses<Register> &MFMAChainHints =
+        MFI->getMFMAChainHints();
 
     Register OriginalVirtReg = VRM ? VRM->getOriginal(VirtReg) : VirtReg;
     if (!MFMAChainHints.contains(OriginalVirtReg))
       return BaseImplRetVal;
-
-    // For split live ranges, add the current VirtReg to the EquivalenceClass of
-    // its original Register. While there may still be split registers that need
-    // to be added to the EC, that is not an issue. The hints are only added
-    // below if the member has a physical register, and any of those members
-    // would have reached this line and already been added to the
-    // EquivalenceClass.
-    if (OriginalVirtReg != VirtReg)
-      MFMAChainHints.unionSets(OriginalVirtReg, VirtReg);
 
     auto AddHintIfValid = [&](Register Reg) {
       Register Phys = Reg;
