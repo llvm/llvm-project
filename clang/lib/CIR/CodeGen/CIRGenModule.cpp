@@ -92,7 +92,10 @@ CIRGenModule::CIRGenModule(mlir::MLIRContext &mlirContext,
       diags(diags), target(astContext.getTargetInfo()),
       abi(createCXXABI(*this)), genTypes(*this), vtables(*this) {
 
-  // The name of a C++20 module initializer has only an Itanium mangling.
+  // Classic CodeGen's CXX20ModuleInits: C++20 named modules get an
+  // initializer function of their own only under the Itanium mangler, since
+  // no Microsoft mangling for it has been settled on yet; otherwise they fall
+  // back to `_GLOBAL__sub_I_` as in classic CodeGen.
   cxx20ModuleInits =
       langOpts.CPlusPlusModules &&
       getCXXABI().getMangleContext().getKind() == MangleContext::MK_Itanium;
@@ -4035,12 +4038,6 @@ void CIRGenModule::release() {
   // and that the function needs external linkage, and its absence selects the
   // `_GLOBAL__sub_I_` form.  Lowering therefore never has to rediscover the
   // module from the AST.
-  //
-  // The mangler-kind check mirrors classic codegen's `CXX20ModuleInits` (see
-  // CodeGenModule.cpp), which only enables C++20 module initializers for the
-  // Itanium mangler because no Microsoft mangling for them has been settled
-  // on yet.  Non-Itanium named modules fall back to `_GLOBAL__sub_I_` exactly
-  // as they do in classic codegen.
   if (cxx20ModuleInits) {
     clang::Module *primary = astContext.getCurrentNamedModule();
     bool isInterfaceUnit = primary && !primary->isModuleImplementation();
