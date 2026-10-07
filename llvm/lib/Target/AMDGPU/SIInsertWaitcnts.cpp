@@ -363,7 +363,18 @@ class SIInsertWaitcnts {
     ~BlockInfo();
   };
 
+  // Blocks of single loop in RPO, recorded before scoring.
+  // IsSinglePath: one latch, every block visited, and each block
+  // before the latch has the next block as its only in-loop successor.
+  struct LoopBlockChain {
+    MachineBasicBlock *LastBlock = nullptr;
+    unsigned BlocksVisited = 0;
+    bool ChainIntact = true;
+    bool IsSinglePath = false;
+  };
+
   MapVector<MachineBasicBlock *, BlockInfo> BlockInfos;
+  DenseMap<MachineLoop *, LoopBlockChain> LoopBlockChains;
 
   bool ForceEmitWaitcnt[AMDGPU::NUM_INST_CNTS] = {};
 
@@ -404,6 +415,7 @@ public:
                                              const WaitcntBrackets &Brackets);
   PreheaderFlushFlags isPreheaderToFlush(MachineBasicBlock &MBB,
                                          const WaitcntBrackets &ScoreBrackets);
+  void extendLoopBlockChain(MachineLoop *L, MachineBasicBlock *MBB);
   bool isVMEMOrFlatVMEM(const MachineInstr &MI) const;
   bool isDSRead(const MachineInstr &MI) const;
   bool mayStoreIncrementingDSCNT(const MachineInstr &MI) const;
@@ -3220,6 +3232,34 @@ bool SIInsertWaitcnts::removeRedundantSoftXcnts(MachineBasicBlock &Block) {
   return Modified;
 }
 
+// MBB is the next block of L in the walk. LastBlock must have MBB as its only
+// in-loop successor. Exit edges are ignored. A second in-loop successor, or a
+// first block that is not the header, breaks the chain.
+void SIInsertWaitcnts::extendLoopBlockChain(MachineLoop *L,
+                                            MachineBasicBlock *MBB) {
+  LoopBlockChain &Chain = LoopBlockChains[L];
+  if (!Chain.LastBlock) {
+    if (MBB != L->getHeader())
+      Chain.ChainIntact = false;
+  } else {
+    MachineBasicBlock *InLoopSucc = nullptr;
+    bool SecondInLoopSucc = false;
+    for (MachineBasicBlock *Succ : Chain.LastBlock->successors()) {
+      if (!L->contains(Succ))
+        continue;
+      if (InLoopSucc) {
+        SecondInLoopSucc = true;
+        break;
+      }
+      InLoopSucc = Succ;
+    }
+    if (SecondInLoopSucc || InLoopSucc != MBB)
+      Chain.ChainIntact = false;
+  }
+  Chain.LastBlock = MBB;
+  ++Chain.BlocksVisited;
+}
+
 // Return flags indicating which counters should be flushed in the preheader.
 PreheaderFlushFlags
 SIInsertWaitcnts::isPreheaderToFlush(MachineBasicBlock &MBB,
@@ -3279,12 +3319,12 @@ bool SIInsertWaitcnts::mayStoreIncrementingDSCNT(const MachineInstr &MI) const {
 //    Flushing in preheader reduces wait overhead if the wait requirement in
 //    iteration 1 would otherwise be more strict (but unfortunately preheader
 //    flush decision is taken before knowing that).
-// 5. (Single-block loops only) The loop has DS prefetch reads with flush point
-//    tracking. Some DS reads may be used in the same iteration (creating
-//    "flush points"), but others remain unflushed at the backedge. When a DS
-//    read is consumed in the same iteration, it and all prior reads are
-//    "flushed" (FIFO order). No DS writes are allowed in the loop.
-//    TODO: Find a way to extend to multi-block loops.
+// 5. The loop has DS prefetch reads with flush point tracking. Some DS reads
+//    may be used in the same iteration (creating "flush points"), but others
+//    remain unflushed at the backedge. When a DS read is consumed in the same
+//    iteration, it and all prior reads are "flushed" (FIFO order). No DS
+//    writes are allowed in the loop. Requires one issue order, so an in-loop
+//    branch skips this case.
 PreheaderFlushFlags
 SIInsertWaitcnts::getPreheaderFlushFlags(MachineLoop *ML,
                                          const WaitcntBrackets &Brackets) {
@@ -3302,17 +3342,30 @@ SIInsertWaitcnts::getPreheaderFlushFlags(MachineLoop *ML,
   DenseSet<MCRegUnit> VgprDefVMEM;
   DenseSet<MCRegUnit> VgprDefDS;
 
-  // Track DS reads for prefetch pattern with flush points (single-block only).
+  // Track DS reads for prefetch pattern with flush points.
   // Keeps track of the last DS read (position counted from the top of the loop)
   // to each VGPR. Read is considered consumed (and thus needs flushing) if
   // the dest register has a use or is overwritten (by any later opertions).
   DenseMap<MCRegUnit, unsigned> LastDSReadPositionMap;
   unsigned DSReadPosition = 0;
-  bool IsSingleBlock = ML->getNumBlocks() == 1;
-  bool TrackDSFlushPoint = ST.hasExtendedWaitCounts() && IsSingleBlock;
+  // BlockInfos is reverse postorder. On a single-path loop that is the issue
+  // order, so the DS reads are one FIFO. Otherwise use blocks() and leave
+  // flush-point tracking off.
+  bool IsSinglePath = false;
+  if (auto ChainIt = LoopBlockChains.find(ML); ChainIt != LoopBlockChains.end())
+    IsSinglePath = ChainIt->second.IsSinglePath;
+  SmallVector<MachineBasicBlock *, 8> BlockOrder;
+  if (IsSinglePath) {
+    for (const auto &Entry : BlockInfos)
+      if (ML->contains(Entry.first))
+        BlockOrder.push_back(Entry.first);
+  } else {
+    append_range(BlockOrder, ML->blocks());
+  }
+  bool TrackDSFlushPoint = ST.hasExtendedWaitCounts() && IsSinglePath;
   unsigned LastDSFlushPosition = 0;
 
-  for (MachineBasicBlock *MBB : ML->blocks()) {
+  for (MachineBasicBlock *MBB : BlockOrder) {
     for (MachineInstr &MI : *MBB) {
       if (isVMEMOrFlatVMEM(MI)) {
         HasVMemLoad |= MI.mayLoad();
@@ -3555,10 +3608,26 @@ bool SIInsertWaitcnts::run() {
     Modified = true;
   }
 
+  // Reverse postorder, before scoring. On GFX12+, record which loops are a
+  // header-to-latch chain with one in-loop successor per block.
+  for (auto *MBB : ReversePostOrderTraversal<MachineFunction *>(&MF)) {
+    BlockInfos.try_emplace(MBB);
+    if (!ST.hasExtendedWaitCounts())
+      continue;
+    for (MachineLoop *L = MLI.getLoopFor(MBB); L; L = L->getParentLoop())
+      extendLoopBlockChain(L, MBB);
+  }
+  if (ST.hasExtendedWaitCounts()) {
+    for (auto &[L, Chain] : LoopBlockChains) {
+      MachineBasicBlock *Latch = L->getLoopLatch();
+      Chain.IsSinglePath = Chain.ChainIntact && Latch &&
+                           Chain.BlocksVisited == L->getNumBlocks() &&
+                           Chain.LastBlock == Latch;
+    }
+  }
+
   // Keep iterating over the blocks in reverse post order, inserting and
   // updating s_waitcnt where needed, until a fix point is reached.
-  for (auto *MBB : ReversePostOrderTraversal<MachineFunction *>(&MF))
-    BlockInfos.try_emplace(MBB);
 
   std::unique_ptr<WaitcntBrackets> Brackets;
   bool Repeat;
