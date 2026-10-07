@@ -107,7 +107,7 @@ class TTAscalonSchedMachineModel : SchedMachineModel {
   let UnsupportedFeatures = [HasStdExtZbkb, HasStdExtZbkc, HasStdExtZbkx,
                              HasStdExtZcmt, HasStdExtZknd, HasStdExtZkne,
                              HasStdExtZknh, HasStdExtZksed, HasStdExtZksh,
-                             HasStdExtZkr];
+                             HasStdExtZkr, HasStdExtZvbc];
 
   string Name;
   bit HasReducedFP64VectorThroughput;
