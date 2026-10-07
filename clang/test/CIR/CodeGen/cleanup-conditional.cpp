@@ -1168,3 +1168,186 @@ void test_short_circuit_cond_temp(bool always, bool c, int n) {
 // OGCG:       [[COND_FALSE]]:
 // OGCG:         call void @_ZN1QC1Ev(ptr {{.*}} %[[REF_TMP1]])
 // OGCG:         store i1 true, ptr %[[ACTIVE1]]
+
+// A temporary that is created conditionally in a default argument, a default
+// member initializer or a lambda's capture initializer is destroyed at the end
+// of the enclosing full-expression, guarded by its active flag.
+
+bool cond();
+
+void f(bool = cond() && S().get());
+
+void default_argument() { f(); }
+
+// CIR-LABEL: cir.func {{.*}} @_Z16default_argumentv(
+// CIR:         %[[TMP:.*]] = cir.alloca "ref.tmp0" {{.*}} : !cir.ptr<!rec_S>
+// CIR:         %[[ACTIVE:.*]] = cir.alloca "cleanup.cond"
+// CIR:         cir.cleanup.scope {
+// CIR:           cir.call @_ZN1SC1Ev(%[[TMP]])
+// CIR:           cir.call @_Z1fb(
+// CIR:         } cleanup normal {
+// CIR-NEXT:      %[[IS_ACTIVE:.*]] = cir.load {{.*}} %[[ACTIVE]]
+// CIR-NEXT:      cir.if %[[IS_ACTIVE]] {
+// CIR-NEXT:        cir.call @_ZN1SD1Ev(%[[TMP]])
+
+// LLVMCIR-LABEL: define {{.*}} void @_Z16default_argumentv(
+// LLVMCIR:         %[[TMP:.*]] = alloca %struct.S
+// LLVMCIR:         %[[ACTIVE:.*]] = alloca i8
+// LLVMCIR:         call void @_ZN1SC1Ev(ptr {{.*}} %[[TMP]])
+// LLVMCIR-NEXT:    store i8 1, ptr %[[ACTIVE]]
+// LLVMCIR:         call void @_Z1fb(
+// LLVMCIR:         %[[A:.*]] = load i8, ptr %[[ACTIVE]]
+// LLVMCIR-NEXT:    %[[B:.*]] = trunc i8 %[[A]] to i1
+// LLVMCIR-NEXT:    br i1 %[[B]], label %[[DTOR:.*]], label
+// LLVMCIR:       [[DTOR]]:
+// LLVMCIR-NEXT:    call void @_ZN1SD1Ev(ptr {{.*}} %[[TMP]])
+
+// OGCG-LABEL: define {{.*}} void @_Z16default_argumentv(
+// OGCG:         call void @_ZN1SC1Ev(ptr {{.*}} %[[TMP:.*]])
+// OGCG:         call void @_Z1fb(
+// OGCG:         br i1 %cleanup.is_active, label %cleanup.action
+// OGCG:       cleanup.action:
+// OGCG-NEXT:    call void @_ZN1SD1Ev(ptr {{.*}} %[[TMP]])
+
+struct D {
+  D(bool = cond() && S().get());
+};
+
+void default_ctor_argument() { D d; }
+
+// CIR-LABEL: cir.func {{.*}} @_Z21default_ctor_argumentv(
+// CIR:         %[[TMP:.*]] = cir.alloca "ref.tmp0" {{.*}} : !cir.ptr<!rec_S>
+// CIR:         %[[ACTIVE:.*]] = cir.alloca "cleanup.cond"
+// CIR:         cir.cleanup.scope {
+// CIR:           cir.call @_ZN1SC1Ev(%[[TMP]])
+// CIR:           cir.call @_ZN1DC1Eb(
+// CIR:         } cleanup normal {
+// CIR-NEXT:      %[[IS_ACTIVE:.*]] = cir.load {{.*}} %[[ACTIVE]]
+// CIR-NEXT:      cir.if %[[IS_ACTIVE]] {
+// CIR-NEXT:        cir.call @_ZN1SD1Ev(%[[TMP]])
+
+// LLVMCIR-LABEL: define {{.*}} void @_Z21default_ctor_argumentv(
+// LLVMCIR:         %[[TMP:.*]] = alloca %struct.S
+// LLVMCIR:         %[[ACTIVE:.*]] = alloca i8
+// LLVMCIR:         call void @_ZN1SC1Ev(ptr {{.*}} %[[TMP]])
+// LLVMCIR-NEXT:    store i8 1, ptr %[[ACTIVE]]
+// LLVMCIR:         call void @_ZN1DC1Eb(
+// LLVMCIR:         %[[A:.*]] = load i8, ptr %[[ACTIVE]]
+// LLVMCIR-NEXT:    %[[B:.*]] = trunc i8 %[[A]] to i1
+// LLVMCIR-NEXT:    br i1 %[[B]], label %[[DTOR:.*]], label
+// LLVMCIR:       [[DTOR]]:
+// LLVMCIR-NEXT:    call void @_ZN1SD1Ev(ptr {{.*}} %[[TMP]])
+
+// OGCG-LABEL: define {{.*}} void @_Z21default_ctor_argumentv(
+// OGCG:         call void @_ZN1SC1Ev(ptr {{.*}} %[[TMP:.*]])
+// OGCG:         call void @_ZN1DC1Eb(
+// OGCG:         br i1 %cleanup.is_active, label %cleanup.action
+// OGCG:       cleanup.action:
+// OGCG-NEXT:    call void @_ZN1SD1Ev(ptr {{.*}} %[[TMP]])
+
+struct DefaultInit {
+  int i;
+  bool b = cond() && S().get();
+};
+
+void use(DefaultInit);
+
+void aggregate_default_member_init() {
+  DefaultInit s{1};
+  use(s);
+}
+
+// CIR-LABEL: cir.func {{.*}} @_Z29aggregate_default_member_initv(
+// CIR:         %[[S:.*]] = cir.alloca "s"
+// CIR:         %[[TMP:.*]] = cir.alloca "ref.tmp0" {{.*}} : !cir.ptr<!rec_S>
+// CIR:         %[[ACTIVE:.*]] = cir.alloca "cleanup.cond"
+// CIR:         %[[B:.*]] = cir.get_member %[[S]][1] {name = "b"}
+// CIR:         cir.cleanup.scope {
+// CIR:           cir.call @_ZN1SC1Ev(%[[TMP]])
+// CIR:           cir.store {{.*}}, %[[B]]
+// CIR:         } cleanup normal {
+// CIR-NEXT:      %[[IS_ACTIVE:.*]] = cir.load {{.*}} %[[ACTIVE]]
+// CIR-NEXT:      cir.if %[[IS_ACTIVE]] {
+// CIR-NEXT:        cir.call @_ZN1SD1Ev(%[[TMP]])
+// CIR:         cir.call @_Z3use11DefaultInit(
+
+// LLVMCIR-LABEL: define {{.*}} void @_Z29aggregate_default_member_initv(
+// LLVMCIR:         %[[TMP:.*]] = alloca %struct.S
+// LLVMCIR:         %[[ACTIVE:.*]] = alloca i8
+// LLVMCIR:         call void @_ZN1SC1Ev(ptr {{.*}} %[[TMP]])
+// LLVMCIR-NEXT:    store i8 1, ptr %[[ACTIVE]]
+// LLVMCIR:         %[[A:.*]] = load i8, ptr %[[ACTIVE]]
+// LLVMCIR-NEXT:    %[[B:.*]] = trunc i8 %[[A]] to i1
+// LLVMCIR-NEXT:    br i1 %[[B]], label %[[DTOR:.*]], label
+// LLVMCIR:       [[DTOR]]:
+// LLVMCIR-NEXT:    call void @_ZN1SD1Ev(ptr {{.*}} %[[TMP]])
+// LLVMCIR:         call void @_Z3use11DefaultInit(
+
+// OGCG-LABEL: define {{.*}} void @_Z29aggregate_default_member_initv(
+// OGCG:         call void @_ZN1SC1Ev(ptr {{.*}} %[[TMP:.*]])
+// OGCG:         br i1 %cleanup.is_active, label %cleanup.action
+// OGCG:       cleanup.action:
+// OGCG-NEXT:    call void @_ZN1SD1Ev(ptr {{.*}} %[[TMP]])
+// OGCG:         call void @_Z3use11DefaultInit(
+
+void empty_aggregate_default_member_init() {
+  DefaultInit s{};
+  use(s);
+}
+
+// CIR-LABEL: cir.func {{.*}} @_Z35empty_aggregate_default_member_initv(
+// CIR:         %[[TMP:.*]] = cir.alloca "ref.tmp0" {{.*}} : !cir.ptr<!rec_S>
+// CIR:         %[[ACTIVE:.*]] = cir.alloca "cleanup.cond"
+// CIR:         cir.cleanup.scope {
+// CIR:           cir.call @_ZN1SC1Ev(%[[TMP]])
+// CIR:         } cleanup normal {
+// CIR-NEXT:      %[[IS_ACTIVE:.*]] = cir.load {{.*}} %[[ACTIVE]]
+// CIR-NEXT:      cir.if %[[IS_ACTIVE]] {
+// CIR-NEXT:        cir.call @_ZN1SD1Ev(%[[TMP]])
+// CIR:         cir.call @_Z3use11DefaultInit(
+
+// LLVMCIR-LABEL: define {{.*}} void @_Z35empty_aggregate_default_member_initv(
+// LLVMCIR:         call void @_ZN1SC1Ev(ptr {{.*}} %[[TMP:.*]])
+// LLVMCIR:         br i1 %{{.*}}, label %[[DTOR:.*]], label
+// LLVMCIR:       [[DTOR]]:
+// LLVMCIR-NEXT:    call void @_ZN1SD1Ev(ptr {{.*}} %[[TMP]])
+// LLVMCIR:         call void @_Z3use11DefaultInit(
+
+// OGCG-LABEL: define {{.*}} void @_Z35empty_aggregate_default_member_initv(
+// OGCG:         call void @_ZN1SC1Ev(ptr {{.*}} %[[TMP:.*]])
+// OGCG:         br i1 %cleanup.is_active, label %cleanup.action
+// OGCG:       cleanup.action:
+// OGCG-NEXT:    call void @_ZN1SD1Ev(ptr {{.*}} %[[TMP]])
+// OGCG:         call void @_Z3use11DefaultInit(
+
+void use(bool);
+
+void lambda_init_capture() {
+  auto l = [b = cond() && S().get()] { use(b); };
+  l();
+}
+
+// CIR-LABEL: cir.func {{.*}} @_Z19lambda_init_capturev(
+// CIR:         %[[TMP:.*]] = cir.alloca "ref.tmp0" {{.*}} : !cir.ptr<!rec_S>
+// CIR:         %[[ACTIVE:.*]] = cir.alloca "cleanup.cond"
+// CIR:         cir.cleanup.scope {
+// CIR:           cir.call @_ZN1SC1Ev(%[[TMP]])
+// CIR:         } cleanup normal {
+// CIR-NEXT:      %[[IS_ACTIVE:.*]] = cir.load {{.*}} %[[ACTIVE]]
+// CIR-NEXT:      cir.if %[[IS_ACTIVE]] {
+// CIR-NEXT:        cir.call @_ZN1SD1Ev(%[[TMP]])
+// CIR:         cir.call @_ZZ19lambda_init_capturevENK3$_0clEv(
+
+// LLVMCIR-LABEL: define {{.*}} void @_Z19lambda_init_capturev(
+// LLVMCIR:         call void @_ZN1SC1Ev(ptr {{.*}} %[[TMP:.*]])
+// LLVMCIR:         br i1 %{{.*}}, label %[[DTOR:.*]], label
+// LLVMCIR:       [[DTOR]]:
+// LLVMCIR-NEXT:    call void @_ZN1SD1Ev(ptr {{.*}} %[[TMP]])
+// LLVMCIR:         call void @"_ZZ19lambda_init_capturevENK3$_0clEv"(
+
+// OGCG-LABEL: define {{.*}} void @_Z19lambda_init_capturev(
+// OGCG:         call void @_ZN1SC1Ev(ptr {{.*}} %[[TMP:.*]])
+// OGCG:         br i1 %cleanup.is_active, label %cleanup.action
+// OGCG:       cleanup.action:
+// OGCG-NEXT:    call void @_ZN1SD1Ev(ptr {{.*}} %[[TMP]])
+// OGCG:         call void @"_ZZ19lambda_init_capturevENK3$_0clEv"(
