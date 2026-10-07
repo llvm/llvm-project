@@ -63,7 +63,7 @@ static Value contractionUsersAfterYield(Value v) {
   return contractionUsersAfterYield(parent->getResult(idx));
 }
 
-// Function to collapse the last two dimension (vnni and k) to help the
+// Function to collapse the last two dimension (k or n, and vnni) to help the
 // amx.tile_load to correctly load the packed element type.
 static Value collapseInnerDims(OpBuilder &builder, Location loc, Value input) {
   ShapedType inputType = cast<ShapedType>(input.getType());
@@ -98,6 +98,30 @@ static bool isReadSrcMemref(Value operand) {
   return srcBuff && isa<MemRefType>(srcBuff.getType());
 }
 
+// Check if the memref read by a vector.contract operand has the VNNI factor as
+// its static innermost dim, so that the collapsed tile rows are contiguous.
+static bool hasVnniInnerDim(Value operand, int64_t vnni) {
+  Value srcBuff;
+  llvm::TypeSwitch<Operation *>(operand.getDefiningOp())
+      .Case<TransferReadOp, LoadOp>(
+          [&](auto readOp) { srcBuff = readOp.getOperand(0); });
+
+  if (!srcBuff)
+    return false;
+  auto srcType = dyn_cast<MemRefType>(srcBuff.getType());
+  return srcType && srcType.getRank() > 0 && srcType.getShape().back() == vnni;
+}
+
+// Replaces the indices of the two innermost dims of a VNNI operand by the
+// index of the dim they collapse into.
+static void collapseVnniIndices(OpBuilder &rewriter, Location loc,
+                                SmallVectorImpl<Value> &indices, int64_t vnni) {
+  Value inner = indices.pop_back_val();
+  Value cVnni = arith::ConstantIndexOp::create(rewriter, loc, vnni);
+  Value scaled = arith::MulIOp::create(rewriter, loc, indices.back(), cVnni);
+  indices.back() = arith::AddIOp::create(rewriter, loc, scaled, inner);
+}
+
 // Get the MemRef source and offset index for the operands of
 // vector.contract.
 static FailureOr<std::pair<Value, SmallVector<Value>>>
@@ -119,9 +143,6 @@ getSrcIndxValue(OpBuilder &rewriter, Location loc, Value operand,
   if (!srcBuff || !isa<MemRefType>(srcBuff.getType()))
     return failure();
 
-  if (isNotAcc)
-    indexVals.pop_back();
-
   SmallVector<Value> indices;
   indices.reserve(indexVals.size());
 
@@ -131,6 +152,8 @@ getSrcIndxValue(OpBuilder &rewriter, Location loc, Value operand,
   }
 
   if (isNotAcc) {
+    collapseVnniIndices(rewriter, loc, indices,
+                        cast<MemRefType>(srcBuff.getType()).getShape().back());
     srcBuff = collapseInnerDims(rewriter, loc, srcBuff);
   }
 
@@ -255,20 +278,13 @@ static unsigned getIndexPosition(Value operand, scf::ForOp loop) {
 // Creates amx.tile_loads.
 static amx::TileLoadOp createTileLoads(OpBuilder &rewriter, Location loc,
                                        Value operand, Value mat, Type ipType,
-                                       bool rhs, unsigned int offset,
-                                       bool isVnni) {
+                                       unsigned int offset, bool isVnni) {
 
   auto srcIndx = getSrcIndxValue(rewriter, loc, operand, false);
   auto [srcBuff, indices] = *srcIndx;
-  if (isVnni) {
-    indices.pop_back();
-  }
-
-  if (rhs && isVnni) {
-    auto cOffset = arith::ConstantIndexOp::create(rewriter, loc, offset);
-    indices[indices.size() - 1] = arith::MulIOp::create(
-        rewriter, loc, indices[indices.size() - 1], cOffset);
-  }
+  if (isVnni)
+    collapseVnniIndices(rewriter, loc, indices,
+                        cast<MemRefType>(srcBuff.getType()).getShape().back());
 
   amx::TileType tileType = amx::TileType::get({16, (16 * offset)}, ipType);
   return amx::TileLoadOp::create(rewriter, loc, tileType, mat, indices);
@@ -462,7 +478,7 @@ createTiledDp(OpBuilder &rewriter, Location loc,
       tilesLhs = itLhs->second;
     } else {
       tilesLhs = createTileLoads(rewriter, loc, ops[i].getLhs(), matA, ipType,
-                                 false, offset, isVnni);
+                                 offset, isVnni);
       readsToTileLoads.try_emplace(readOpLhs, tilesLhs);
     }
 
@@ -473,7 +489,7 @@ createTiledDp(OpBuilder &rewriter, Location loc,
       tilesRhs = itRhs->second;
     } else {
       tilesRhs = createTileLoads(rewriter, loc, ops[i].getRhs(), matB, ipType,
-                                 true, offset, isVnni);
+                                 offset, isVnni);
       readsToTileLoads.try_emplace(readOpRhs, tilesRhs);
     }
 
@@ -864,6 +880,12 @@ struct VectorContractToAMXDotProduct
           isReadSrcMemref(contractOp.getRhs())))
       return rewriter.notifyMatchFailure(
           contractOp, "The LHS or RHS src is not a MemRef type.");
+
+    if (isVnni && !(hasVnniInnerDim(contractOp.getLhs(), blockingFactor) &&
+                    hasVnniInnerDim(contractOp.getRhs(), blockingFactor)))
+      return rewriter.notifyMatchFailure(
+          contractOp, "The innermost dim of the LHS or RHS src is not the "
+                      "static VNNI factor.");
 
     unsigned int dimValue = blockingFactor;
     if (!isVnni)

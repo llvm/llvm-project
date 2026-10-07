@@ -108,6 +108,151 @@ module attributes {transform.with_named_sequence} {
 
 // -----
 
+// The indices (i, vnni_index) of the two innermost dims of the operands map to
+// i * vnni + vnni_index in the collapsed buffers.
+
+!vecA = vector<16x16x4xi8>
+!vecB = vector<16x16x4xi8>
+!vecC = vector<16x16xi32>
+!memrefA = memref<16x32x4xi8>
+!memrefB = memref<32x32x4xi8>
+!memrefC = memref<16x32xi32>
+#map = affine_map<(d4, d1, d2, d3) -> (d1, d3, d4)>
+#map1 = affine_map<(d4, d1, d2, d3) -> (d3, d2, d4)>
+#map2 = affine_map<(d4, d1, d2, d3) -> (d1, d2)>
+func.func @matmul_int8_vnni_offsets(
+  %arg0: !memrefA, %arg1: !memrefB, %arg2: !memrefC) -> !memrefC
+{
+  %c0 = arith.constant 0 : index
+  %c16 = arith.constant 16 : index
+  %0 = ub.poison : i8
+  %32 = ub.poison : i32
+
+  %1 = vector.transfer_read %arg0[%c0, %c16, %c0], %0 {in_bounds = [true, true, true]} :
+        !memrefA, !vecA
+  %2 = vector.transfer_read %arg1[%c16, %c16, %c0], %0 {in_bounds = [true, true, true]} :
+        !memrefB, !vecB
+
+  %3 = vector.transfer_read %arg2[%c0, %c16], %32 {in_bounds = [true, true]} : !memrefC, !vecC
+
+  %4 = vector.contract {
+    indexing_maps = [#map, #map1, #map2],
+    iterator_types = ["reduction", "parallel", "parallel", "reduction"],
+    kind = #vector.kind<add>}
+    %1, %2, %3 : !vecA, !vecB into !vecC
+
+  vector.transfer_write %4, %arg2[%c0, %c16] {in_bounds = [true, true]} : !vecC, !memrefC
+
+  return %arg2 : !memrefC
+}
+
+// CHECK-LABEL: @matmul_int8_vnni_offsets
+// CHECK-DAG: %[[C0:.+]] = arith.constant 0 : index
+// CHECK-DAG: %[[C16:.+]] = arith.constant 16 : index
+// CHECK-DAG: %[[C64:.+]] = arith.constant 64 : index
+// CHECK-DAG: %[[LHS:.+]] = memref.collapse_shape %arg0 {{\[}}[0], [1, 2]]
+// CHECK-DAG: %[[RHS:.+]] = memref.collapse_shape %arg1 {{\[}}[0], [1, 2]]
+// CHECK: x86.amx.tile_load %[[LHS]][%[[C0]], %[[C64]]] {{.*}} !x86.amx.tile<16x64xi8>
+// CHECK: x86.amx.tile_load %[[RHS]][%[[C16]], %[[C64]]] {{.*}} !x86.amx.tile<16x64xi8>
+// CHECK: x86.amx.tile_load %arg2[%[[C0]], %[[C16]]] {{.*}} !x86.amx.tile<16x16xi32>
+// CHECK: x86.amx.tile_muli
+// CHECK: vector.transfer_write %{{.+}}, %arg2[%[[C0]], %[[C16]]]
+// CHECK-NOT: vector.contract
+
+module attributes {transform.with_named_sequence} {
+  transform.named_sequence @__transform_main(%arg1: !transform.any_op {transform.readonly}) {
+    %func = transform.structured.match ops{["func.func"]} in %arg1 : (!transform.any_op) -> !transform.any_op
+    transform.apply_patterns to %func {
+      transform.apply_patterns.x86.vector_contract_to_amx_dot_product
+    } : !transform.any_op
+    transform.yield
+  }
+}
+
+// -----
+
+// The innermost dim of the VNNI operand buffers must be the static VNNI factor.
+
+!vecA = vector<16x16x4xi8>
+!vecB = vector<16x16x4xi8>
+!vecC = vector<16x16xi32>
+!memrefA = memref<16x32x?xi8>
+!memrefB = memref<32x32x4xi8>
+!memrefC = memref<16x32xi32>
+#map = affine_map<(d4, d1, d2, d3) -> (d1, d3, d4)>
+#map1 = affine_map<(d4, d1, d2, d3) -> (d3, d2, d4)>
+#map2 = affine_map<(d4, d1, d2, d3) -> (d1, d2)>
+func.func @negative_matmul_int8_dynamic_vnni_dim(
+  %arg0: !memrefA, %arg1: !memrefB, %arg2: !memrefC) -> !memrefC
+{
+  %c0 = arith.constant 0 : index
+  %0 = ub.poison : i8
+  %32 = ub.poison : i32
+
+  %1 = vector.transfer_read %arg0[%c0, %c0, %c0], %0 {in_bounds = [true, true, true]} :
+        !memrefA, !vecA
+  %2 = vector.transfer_read %arg1[%c0, %c0, %c0], %0 {in_bounds = [true, true, true]} :
+        !memrefB, !vecB
+
+  %3 = vector.transfer_read %arg2[%c0, %c0], %32 {in_bounds = [true, true]} : !memrefC, !vecC
+
+  %4 = vector.contract {
+    indexing_maps = [#map, #map1, #map2],
+    iterator_types = ["reduction", "parallel", "parallel", "reduction"],
+    kind = #vector.kind<add>}
+    %1, %2, %3 : !vecA, !vecB into !vecC
+
+  vector.transfer_write %4, %arg2[%c0, %c0] {in_bounds = [true, true]} : !vecC, !memrefC
+
+  return %arg2 : !memrefC
+}
+
+// CHECK-LABEL: @negative_matmul_int8_dynamic_vnni_dim
+// CHECK-NOT: x86.amx
+// CHECK: vector.contract
+
+!memrefBWide = memref<32x32x8xi8>
+func.func @negative_matmul_int8_wide_vnni_dim(
+  %arg0: !memrefB, %arg1: !memrefBWide, %arg2: !memrefC) -> !memrefC
+{
+  %c0 = arith.constant 0 : index
+  %0 = ub.poison : i8
+  %32 = ub.poison : i32
+
+  %1 = vector.transfer_read %arg0[%c0, %c0, %c0], %0 {in_bounds = [true, true, true]} :
+        !memrefB, !vecA
+  %2 = vector.transfer_read %arg1[%c0, %c0, %c0], %0 {in_bounds = [true, true, true]} :
+        !memrefBWide, !vecB
+
+  %3 = vector.transfer_read %arg2[%c0, %c0], %32 {in_bounds = [true, true]} : !memrefC, !vecC
+
+  %4 = vector.contract {
+    indexing_maps = [#map, #map1, #map2],
+    iterator_types = ["reduction", "parallel", "parallel", "reduction"],
+    kind = #vector.kind<add>}
+    %1, %2, %3 : !vecA, !vecB into !vecC
+
+  vector.transfer_write %4, %arg2[%c0, %c0] {in_bounds = [true, true]} : !vecC, !memrefC
+
+  return %arg2 : !memrefC
+}
+
+// CHECK-LABEL: @negative_matmul_int8_wide_vnni_dim
+// CHECK-NOT: x86.amx
+// CHECK: vector.contract
+
+module attributes {transform.with_named_sequence} {
+  transform.named_sequence @__transform_main(%arg1: !transform.any_op {transform.readonly}) {
+    %func = transform.structured.match ops{["func.func"]} in %arg1 : (!transform.any_op) -> !transform.any_op
+    transform.apply_patterns to %func {
+      transform.apply_patterns.x86.vector_contract_to_amx_dot_product
+    } : !transform.any_op
+    transform.yield
+  }
+}
+
+// -----
+
 !vecA = vector<1x16x16x2xbf16>
 !vecB = vector<1x16x16x2xbf16>
 !vecC = vector<16x16xf32>
@@ -679,6 +824,179 @@ func.func @matmul_int8_loop(%arg0: memref<64x64x4xi8>, %arg1: memref<64x128x4xi8
 // CHECK-2: x86.amx.tile_muli
 // CHECK: scf.yield {{.*}} !x86.amx.tile<16x16xi32>, !x86.amx.tile<16x16xi32>
 // CHECK-NOT: scf.for {{.*}} vector<16x16xi32>, vector<16x16xi32>
+// CHECK-NOT: vector.contract
+
+module attributes {transform.with_named_sequence} {
+  transform.named_sequence @__transform_main(%arg1: !transform.any_op {transform.readonly}) {
+    %func = transform.structured.match ops{["func.func"]} in %arg1 : (!transform.any_op) -> !transform.any_op
+    transform.apply_patterns to %func {
+      transform.apply_patterns.x86.vector_contract_to_amx_dot_product
+    } : !transform.any_op
+    transform.yield
+  }
+}
+
+// -----
+
+// The indices (i, vnni_index) of the two innermost dims of the operands map to
+// i * vnni + vnni_index in the collapsed buffers.
+
+!vecAB = vector<16x16x4xi8>
+!vecC = vector<16x16xi32>
+!memrefA = memref<16x32x4xi8, strided<[256, 4, 1], offset: ?>>
+!memrefB = memref<16x32x4xi8, strided<[512, 4, 1], offset: ?>>
+!memrefC = memref<16x32xi32, strided<[128, 1], offset: ?>>
+
+#map = affine_map<(d0, d1, d2, d3) -> (d1, d3, d0)>
+#map1 = affine_map<(d0, d1, d2, d3) -> (d3, d2, d0)>
+#map2 = affine_map<(d0, d1, d2, d3) -> (d1, d2)>
+
+func.func @matmul_int8_loop_vnni_offsets(%arg0: memref<64x64x4xi8>, %arg1: memref<64x128x4xi8>, %arg2: memref<64x128xi32>) {
+  %0 = ub.poison : i32
+  %1 = ub.poison : i8
+  %c0 = arith.constant 0 : index
+  %c64 = arith.constant 64 : index
+  %c128 = arith.constant 128 : index
+  %c16 = arith.constant 16 : index
+  %c32 = arith.constant 32 : index
+  scf.for %arg3 = %c0 to %c64 step %c16 {
+    scf.for %arg4 = %c0 to %c128 step %c32 {
+
+      %subview = memref.subview %arg2[%arg3, %arg4] [16, 32] [1, 1] :
+                memref<64x128xi32> to !memrefC
+      %2 = vector.transfer_read %subview[%c0, %c0], %0 {in_bounds = [true, true]} :
+                !memrefC, !vecC
+      %3 = vector.transfer_read %subview[%c0, %c16], %0 {in_bounds = [true, true]} :
+                !memrefC, !vecC
+
+      %4:2 = scf.for %arg5 = %c0 to %c32 step %c16 iter_args(%arg6 = %2, %arg7 = %3) -> (!vecC, !vecC) {
+
+        %subview_0 = memref.subview %arg0[%arg3, %arg5, 0] [16, 32, 4] [1, 1, 1] :
+                memref<64x64x4xi8> to !memrefA
+        %subview_1 = memref.subview %arg1[%arg5, %arg4, 0] [16, 32, 4] [1, 1, 1] :
+                memref<64x128x4xi8> to !memrefB
+        %5 = vector.transfer_read %subview_0[%c0, %c16, %c0], %1 {in_bounds = [true, true, true]} :
+                !memrefA, !vecAB
+        %6 = vector.transfer_read %subview_1[%c0, %c0, %c0], %1 {in_bounds = [true, true, true]} :
+                !memrefB, !vecAB
+        %7 = vector.transfer_read %subview_1[%c0, %c16, %c0], %1 {in_bounds = [true, true, true]} :
+                !memrefB, !vecAB
+
+        %8 = vector.contract {indexing_maps = [#map, #map1, #map2], iterator_types =
+                ["reduction", "parallel", "parallel", "reduction"], kind = #vector.kind<add>}
+                %5, %6, %arg6 {unroll_shape = array<i64: 4, 16, 16, 16>} : !vecAB, !vecAB into !vecC
+        %9 = vector.contract {indexing_maps = [#map, #map1, #map2], iterator_types =
+                ["reduction", "parallel", "parallel", "reduction"], kind = #vector.kind<add>}
+                %5, %7, %arg7 {unroll_shape = array<i64: 4, 16, 16, 16>} : !vecAB, !vecAB into !vecC
+
+        scf.yield %8, %9 : !vecC, !vecC
+      }
+
+      vector.transfer_write %4#1, %subview[%c0, %c16] {in_bounds = [true, true]} :
+                !vecC, !memrefC
+      vector.transfer_write %4#0, %subview[%c0, %c0] {in_bounds = [true, true]} :
+                !vecC, !memrefC
+    }
+  }
+
+  return
+}
+
+// CHECK-LABEL: @matmul_int8_loop_vnni_offsets
+// CHECK-DAG: %[[C0:.+]] = arith.constant 0 : index
+// CHECK-DAG: %[[C64:.+]] = arith.constant 64 : index
+// CHECK-DAG: %[[LHS:.+]] = memref.collapse_shape %{{.+}} {{\[}}[0], [1, 2]] : memref<16x32x4xi8, strided<[256, 4, 1], offset: ?>> into memref<16x128xi8
+// CHECK-DAG: %[[RHS:.+]] = memref.collapse_shape %{{.+}} {{\[}}[0], [1, 2]] : memref<16x32x4xi8, strided<[512, 4, 1], offset: ?>> into memref<16x128xi8
+// CHECK: x86.amx.tile_load %[[LHS]][%[[C0]], %[[C64]]] {{.*}} !x86.amx.tile<16x64xi8>
+// CHECK: x86.amx.tile_load %[[RHS]][%[[C0]], %[[C0]]] {{.*}} !x86.amx.tile<16x64xi8>
+// CHECK: x86.amx.tile_muli
+// CHECK: x86.amx.tile_load %[[RHS]][%[[C0]], %[[C64]]] {{.*}} !x86.amx.tile<16x64xi8>
+// CHECK: x86.amx.tile_muli
+// CHECK-NOT: vector.contract
+
+module attributes {transform.with_named_sequence} {
+  transform.named_sequence @__transform_main(%arg1: !transform.any_op {transform.readonly}) {
+    %func = transform.structured.match ops{["func.func"]} in %arg1 : (!transform.any_op) -> !transform.any_op
+    transform.apply_patterns to %func {
+      transform.apply_patterns.x86.vector_contract_to_amx_dot_product
+    } : !transform.any_op
+    transform.yield
+  }
+}
+
+// -----
+
+!vecAB = vector<16x16x2xbf16>
+!vecC = vector<16x16xf32>
+!memrefA = memref<16x32x2xbf16, strided<[128, 2, 1], offset: ?>>
+!memrefB = memref<16x32x2xbf16, strided<[256, 2, 1], offset: ?>>
+!memrefC = memref<16x32xf32, strided<[128, 1], offset: ?>>
+
+#map = affine_map<(d0, d1, d2, d3) -> (d1, d3, d0)>
+#map1 = affine_map<(d0, d1, d2, d3) -> (d3, d2, d0)>
+#map2 = affine_map<(d0, d1, d2, d3) -> (d1, d2)>
+
+func.func @matmul_bf16_loop_vnni_offsets(%arg0: memref<64x64x2xbf16>, %arg1: memref<64x128x2xbf16>, %arg2: memref<64x128xf32>) {
+  %0 = ub.poison : f32
+  %1 = ub.poison : bf16
+  %c0 = arith.constant 0 : index
+  %c64 = arith.constant 64 : index
+  %c128 = arith.constant 128 : index
+  %c16 = arith.constant 16 : index
+  %c32 = arith.constant 32 : index
+  scf.for %arg3 = %c0 to %c64 step %c16 {
+    scf.for %arg4 = %c0 to %c128 step %c32 {
+
+      %subview = memref.subview %arg2[%arg3, %arg4] [16, 32] [1, 1] :
+                memref<64x128xf32> to !memrefC
+      %2 = vector.transfer_read %subview[%c0, %c0], %0 {in_bounds = [true, true]} :
+                !memrefC, !vecC
+      %3 = vector.transfer_read %subview[%c0, %c16], %0 {in_bounds = [true, true]} :
+                !memrefC, !vecC
+
+      %4:2 = scf.for %arg5 = %c0 to %c32 step %c16 iter_args(%arg6 = %2, %arg7 = %3) -> (!vecC, !vecC) {
+
+        %subview_0 = memref.subview %arg0[%arg3, %arg5, 0] [16, 32, 2] [1, 1, 1] :
+                memref<64x64x2xbf16> to !memrefA
+        %subview_1 = memref.subview %arg1[%arg5, %arg4, 0] [16, 32, 2] [1, 1, 1] :
+                memref<64x128x2xbf16> to !memrefB
+        %5 = vector.transfer_read %subview_0[%c0, %c16, %c0], %1 {in_bounds = [true, true, true]} :
+                !memrefA, !vecAB
+        %6 = vector.transfer_read %subview_1[%c0, %c0, %c0], %1 {in_bounds = [true, true, true]} :
+                !memrefB, !vecAB
+        %7 = vector.transfer_read %subview_1[%c0, %c16, %c0], %1 {in_bounds = [true, true, true]} :
+                !memrefB, !vecAB
+
+        %8 = vector.contract {indexing_maps = [#map, #map1, #map2], iterator_types =
+                ["reduction", "parallel", "parallel", "reduction"], kind = #vector.kind<add>}
+                %5, %6, %arg6 : !vecAB, !vecAB into !vecC
+        %9 = vector.contract {indexing_maps = [#map, #map1, #map2], iterator_types =
+                ["reduction", "parallel", "parallel", "reduction"], kind = #vector.kind<add>}
+                %5, %7, %arg7 : !vecAB, !vecAB into !vecC
+
+        scf.yield %8, %9 : !vecC, !vecC
+      }
+
+      vector.transfer_write %4#1, %subview[%c0, %c16] {in_bounds = [true, true]} :
+                !vecC, !memrefC
+      vector.transfer_write %4#0, %subview[%c0, %c0] {in_bounds = [true, true]} :
+                !vecC, !memrefC
+    }
+  }
+
+  return
+}
+
+// CHECK-LABEL: @matmul_bf16_loop_vnni_offsets
+// CHECK-DAG: %[[C0:.+]] = arith.constant 0 : index
+// CHECK-DAG: %[[C32:.+]] = arith.constant 32 : index
+// CHECK-DAG: %[[LHS:.+]] = memref.collapse_shape %{{.+}} {{\[}}[0], [1, 2]] : memref<16x32x2xbf16, strided<[128, 2, 1], offset: ?>> into memref<16x64xbf16
+// CHECK-DAG: %[[RHS:.+]] = memref.collapse_shape %{{.+}} {{\[}}[0], [1, 2]] : memref<16x32x2xbf16, strided<[256, 2, 1], offset: ?>> into memref<16x64xbf16
+// CHECK: x86.amx.tile_load %[[LHS]][%[[C0]], %[[C32]]] {{.*}} !x86.amx.tile<16x32xbf16>
+// CHECK: x86.amx.tile_load %[[RHS]][%[[C0]], %[[C0]]] {{.*}} !x86.amx.tile<16x32xbf16>
+// CHECK: x86.amx.tile_mulf
+// CHECK: x86.amx.tile_load %[[RHS]][%[[C0]], %[[C32]]] {{.*}} !x86.amx.tile<16x32xbf16>
+// CHECK: x86.amx.tile_mulf
 // CHECK-NOT: vector.contract
 
 module attributes {transform.with_named_sequence} {
