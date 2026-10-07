@@ -6,7 +6,8 @@
 //
 //===----------------------------------------------------------------------===//
 //
-// \file Pass for removing unused SPIRV global variables.
+// \file Pass for removing unused global variables used to store resource
+// handles
 //
 //===----------------------------------------------------------------------===//
 
@@ -37,7 +38,7 @@ static bool isResourceHandleCreation(Intrinsic::ID ID) {
 }
 
 // Remove module-local globals whose only users are non-volatile stores of
-// resource handles.
+// resource handles. Also remove the resource handle instruction if possible
 static bool removeUnusedResources(Module &M) {
   if (DisableSPIRVRemoveUnusedResources)
     return false;
@@ -58,7 +59,12 @@ static bool removeUnusedResources(Module &M) {
       continue;
 
     for (User *U : make_early_inc_range(GV.users())) {
-      cast<Instruction>(U)->eraseFromParent();
+      auto *SI = cast<StoreInst>(U);
+      auto *I = cast<Instruction>(SI->getValueOperand());
+      SI->eraseFromParent();
+      // Remove the resource handle intrinsic too if possible
+      if (I->use_empty())
+        I->eraseFromParent();
     }
 
     GV.eraseFromParent();
