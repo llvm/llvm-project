@@ -548,15 +548,16 @@ LogicalResult ConvertF32x2ToF8x2Op::verify() {
   bool isSatFinite = getSat() == SatMode::SATFINITE;
 
   bool hasRelu = getRelu();
+  bool hasPzo = getPzo();
 
   mlir::MLIRContext *ctx = getContext();
 
   return llvm::TypeSwitch<mlir::Type, LogicalResult>(getDstTy())
       .Case<mlir::Float8E4M3FNType, mlir::Float8E5M2Type>(
           [&](mlir::Type) -> LogicalResult {
-            if (!isRoundingModeRN) {
-              return emitOpError("Only RN rounding mode is supported for "
-                                 "conversions from f32x2 to ")
+            if (!(isRoundingModeRN || isRoundingModeRZ)) {
+              return emitOpError("Only RN and RZ rounding modes are supported "
+                                 "for conversions from f32x2 to ")
                      << mlir::Float8E4M3FNType::get(ctx) << " and "
                      << mlir::Float8E5M2Type::get(ctx) << " types";
             }
@@ -577,6 +578,10 @@ LogicalResult ConvertF32x2ToF8x2Op::verify() {
         }
         if (hasRelu) {
           return emitOpError("relu not supported for conversions to ")
+                 << mlir::Float8E8M0FNUType::get(ctx) << " type";
+        }
+        if (hasPzo) {
+          return emitOpError("pzo not supported for conversions to ")
                  << mlir::Float8E8M0FNUType::get(ctx) << " type";
         }
         return success();
@@ -612,15 +617,16 @@ LogicalResult ConvertBF16x2ToF8x2Op::verify() {
   bool isRoundingModeRP = getRnd() == RndMode::RP;
   bool isSatFinite = getSat() == SatMode::SATFINITE;
   bool hasRelu = getRelu();
+  bool hasPzo = getPzo();
 
   mlir::MLIRContext *ctx = getContext();
 
   return llvm::TypeSwitch<mlir::Type, LogicalResult>(getDstTy())
       .Case<mlir::Float8E4M3FNType, mlir::Float8E5M2Type>(
           [&](mlir::Type) -> LogicalResult {
-            if (!isRoundingModeRN)
-              return emitOpError("Only RN rounding mode is supported for "
-                                 "conversions from bf16x2 to ")
+            if (!(isRoundingModeRN || isRoundingModeRZ))
+              return emitOpError("Only RN and RZ rounding modes are supported "
+                                 "for conversions from bf16x2 to ")
                      << mlir::Float8E4M3FNType::get(ctx) << " and "
                      << mlir::Float8E5M2Type::get(ctx) << " types";
             if (!isSatFinite)
@@ -637,6 +643,9 @@ LogicalResult ConvertBF16x2ToF8x2Op::verify() {
                  << mlir::Float8E8M0FNUType::get(ctx) << " type";
         if (hasRelu)
           return emitOpError("relu not supported for conversions to ")
+                 << mlir::Float8E8M0FNUType::get(ctx) << " type";
+        if (hasPzo)
+          return emitOpError("pzo not supported for conversions to ")
                  << mlir::Float8E8M0FNUType::get(ctx) << " type";
         return success();
       })
@@ -5086,30 +5095,42 @@ ConvertF32x2ToF4x2Op::getIntrinsicIDAndArgs(NVVM::ConvertF32x2ToF4x2Op op,
   llvm::SmallVector<llvm::Value *> args;
   args.push_back(mt.lookupValue(op.getA()));
   args.push_back(mt.lookupValue(op.getB()));
-  args.push_back(builder.getInt1(false));
+  args.push_back(builder.getInt1(op.getPzo()));
 
-  bool hasRelu = op.getRelu();
+  unsigned idx =
+      (static_cast<unsigned>(op.getRnd() == NVVM::FPRoundingMode::RZ) << 1) |
+      static_cast<unsigned>(op.getRelu());
+  static constexpr llvm::Intrinsic::ID ids[] = {
+      llvm::Intrinsic::nvvm_ff_to_e2m1x2_rn_satfinite,
+      llvm::Intrinsic::nvvm_ff_to_e2m1x2_rn_relu_satfinite,
+      llvm::Intrinsic::nvvm_ff_to_e2m1x2_rz_satfinite,
+      llvm::Intrinsic::nvvm_ff_to_e2m1x2_rz_relu_satfinite,
+  };
 
-  llvm::Intrinsic::ID intId =
-      hasRelu ? llvm::Intrinsic::nvvm_ff_to_e2m1x2_rn_relu_satfinite
-              : llvm::Intrinsic::nvvm_ff_to_e2m1x2_rn_satfinite;
-
-  return {intId, std::move(args)};
+  return {ids[idx], std::move(args)};
 }
 
-#define GET_F32x2_TO_F6x2_ID(type, has_relu)                                   \
-  has_relu ? llvm::Intrinsic::nvvm_ff_to_##type##_rn_relu_satfinite            \
-           : llvm::Intrinsic::nvvm_ff_to_##type##_rn_satfinite
+llvm::Intrinsic::ID
+ConvertF32x2ToF6x2Op::getIntrinsicID(mlir::Type dstTy, NVVM::FPRoundingMode rnd,
+                                     bool hasRelu) {
+  unsigned idx = (static_cast<unsigned>(rnd == NVVM::FPRoundingMode::RZ) << 1) |
+                 static_cast<unsigned>(hasRelu);
+  static constexpr llvm::Intrinsic::ID e2m3x2IDs[] = {
+      llvm::Intrinsic::nvvm_ff_to_e2m3x2_rn_satfinite,
+      llvm::Intrinsic::nvvm_ff_to_e2m3x2_rn_relu_satfinite,
+      llvm::Intrinsic::nvvm_ff_to_e2m3x2_rz_satfinite,
+      llvm::Intrinsic::nvvm_ff_to_e2m3x2_rz_relu_satfinite,
+  };
+  static constexpr llvm::Intrinsic::ID e3m2x2IDs[] = {
+      llvm::Intrinsic::nvvm_ff_to_e3m2x2_rn_satfinite,
+      llvm::Intrinsic::nvvm_ff_to_e3m2x2_rn_relu_satfinite,
+      llvm::Intrinsic::nvvm_ff_to_e3m2x2_rz_satfinite,
+      llvm::Intrinsic::nvvm_ff_to_e3m2x2_rz_relu_satfinite,
+  };
 
-llvm::Intrinsic::ID ConvertF32x2ToF6x2Op::getIntrinsicID(mlir::Type dstTy,
-                                                         bool hasRelu) {
   return llvm::TypeSwitch<mlir::Type, llvm::Intrinsic::ID>(dstTy)
-      .Case([&](mlir::Float6E2M3FNType) {
-        return GET_F32x2_TO_F6x2_ID(e2m3x2, hasRelu);
-      })
-      .Case([&](mlir::Float6E3M2FNType) {
-        return GET_F32x2_TO_F6x2_ID(e3m2x2, hasRelu);
-      })
+      .Case([&](mlir::Float6E2M3FNType) { return e2m3x2IDs[idx]; })
+      .Case([&](mlir::Float6E3M2FNType) { return e3m2x2IDs[idx]; })
       .Default([](mlir::Type) {
         llvm_unreachable("Invalid conversion in ConvertF32x2ToF6x2Op");
         return llvm::Intrinsic::not_intrinsic;
@@ -5121,17 +5142,24 @@ ConvertF16x2ToF4x2Op::getIntrinsicIDAndArgs(NVVM::ConvertF16x2ToF4x2Op &op,
                                             LLVM::ModuleTranslation &mt,
                                             llvm::IRBuilderBase &builder) {
   mlir::Type dstTy = op.getDstTy();
-  bool hasRelu = op.getRelu();
+
+  unsigned idx =
+      (static_cast<unsigned>(op.getRnd() == NVVM::FPRoundingMode::RZ) << 1) |
+      static_cast<unsigned>(op.getRelu());
+  static constexpr llvm::Intrinsic::ID ids[] = {
+      llvm::Intrinsic::nvvm_f16x2_to_e2m1x2_rn_satfinite,
+      llvm::Intrinsic::nvvm_f16x2_to_e2m1x2_rn_relu_satfinite,
+      llvm::Intrinsic::nvvm_f16x2_to_e2m1x2_rz_satfinite,
+      llvm::Intrinsic::nvvm_f16x2_to_e2m1x2_rz_relu_satfinite,
+  };
 
   llvm::Intrinsic::ID intId = llvm::Intrinsic::not_intrinsic;
-
   if (llvm::isa<mlir::Float4E2M1FNType>(dstTy))
-    intId = hasRelu ? llvm::Intrinsic::nvvm_f16x2_to_e2m1x2_rn_relu_satfinite
-                    : llvm::Intrinsic::nvvm_f16x2_to_e2m1x2_rn_satfinite;
+    intId = ids[idx];
 
   llvm::SmallVector<llvm::Value *> args;
   args.push_back(mt.lookupValue(op.getSrc()));
-  args.push_back(builder.getInt1(false));
+  args.push_back(builder.getInt1(op.getPzo()));
 
   return {intId, std::move(args)};
 }
@@ -5141,86 +5169,121 @@ ConvertBF16x2ToF4x2Op::getIntrinsicIDAndArgs(NVVM::ConvertBF16x2ToF4x2Op &op,
                                              LLVM::ModuleTranslation &mt,
                                              llvm::IRBuilderBase &builder) {
   mlir::Type dstTy = op.getDstTy();
-  bool hasRelu = op.getRelu();
+
+  unsigned idx =
+      (static_cast<unsigned>(op.getRnd() == NVVM::FPRoundingMode::RZ) << 1) |
+      static_cast<unsigned>(op.getRelu());
+  static constexpr llvm::Intrinsic::ID ids[] = {
+      llvm::Intrinsic::nvvm_bf16x2_to_e2m1x2_rn_satfinite,
+      llvm::Intrinsic::nvvm_bf16x2_to_e2m1x2_rn_relu_satfinite,
+      llvm::Intrinsic::nvvm_bf16x2_to_e2m1x2_rz_satfinite,
+      llvm::Intrinsic::nvvm_bf16x2_to_e2m1x2_rz_relu_satfinite,
+  };
 
   llvm::Intrinsic::ID intId = llvm::Intrinsic::not_intrinsic;
-
   if (llvm::isa<mlir::Float4E2M1FNType>(dstTy))
-    intId = hasRelu ? llvm::Intrinsic::nvvm_bf16x2_to_e2m1x2_rn_relu_satfinite
-                    : llvm::Intrinsic::nvvm_bf16x2_to_e2m1x2_rn_satfinite;
+    intId = ids[idx];
 
   llvm::SmallVector<llvm::Value *> args;
   args.push_back(mt.lookupValue(op.getSrc()));
-  args.push_back(builder.getInt1(false));
+  args.push_back(builder.getInt1(op.getPzo()));
 
   return {intId, std::move(args)};
 }
 
-llvm::Intrinsic::ID ConvertF16x2ToF6x2Op::getIntrinsicID(mlir::Type dstTy,
-                                                         bool hasRelu) {
+llvm::Intrinsic::ID
+ConvertF16x2ToF6x2Op::getIntrinsicID(mlir::Type dstTy, NVVM::FPRoundingMode rnd,
+                                     bool hasRelu) {
+  unsigned idx = (static_cast<unsigned>(rnd == NVVM::FPRoundingMode::RZ) << 1) |
+                 static_cast<unsigned>(hasRelu);
+  static constexpr llvm::Intrinsic::ID e2m3x2IDs[] = {
+      llvm::Intrinsic::nvvm_f16x2_to_e2m3x2_rn_satfinite,
+      llvm::Intrinsic::nvvm_f16x2_to_e2m3x2_rn_relu_satfinite,
+      llvm::Intrinsic::nvvm_f16x2_to_e2m3x2_rz_satfinite,
+      llvm::Intrinsic::nvvm_f16x2_to_e2m3x2_rz_relu_satfinite,
+  };
+  static constexpr llvm::Intrinsic::ID e3m2x2IDs[] = {
+      llvm::Intrinsic::nvvm_f16x2_to_e3m2x2_rn_satfinite,
+      llvm::Intrinsic::nvvm_f16x2_to_e3m2x2_rn_relu_satfinite,
+      llvm::Intrinsic::nvvm_f16x2_to_e3m2x2_rz_satfinite,
+      llvm::Intrinsic::nvvm_f16x2_to_e3m2x2_rz_relu_satfinite,
+  };
+
   return llvm::TypeSwitch<mlir::Type, llvm::Intrinsic::ID>(dstTy)
-      .Case<mlir::Float6E2M3FNType>([&](mlir::Float6E2M3FNType) {
-        return hasRelu ? llvm::Intrinsic::nvvm_f16x2_to_e2m3x2_rn_relu_satfinite
-                       : llvm::Intrinsic::nvvm_f16x2_to_e2m3x2_rn_satfinite;
-      })
-      .Case<mlir::Float6E3M2FNType>([&](mlir::Float6E3M2FNType) {
-        return hasRelu ? llvm::Intrinsic::nvvm_f16x2_to_e3m2x2_rn_relu_satfinite
-                       : llvm::Intrinsic::nvvm_f16x2_to_e3m2x2_rn_satfinite;
-      })
+      .Case<mlir::Float6E2M3FNType>(
+          [&](mlir::Float6E2M3FNType) { return e2m3x2IDs[idx]; })
+      .Case<mlir::Float6E3M2FNType>(
+          [&](mlir::Float6E3M2FNType) { return e3m2x2IDs[idx]; })
       .Default([](mlir::Type) {
         llvm_unreachable("Invalid conversion in ConvertF16x2ToF6x2Op");
         return llvm::Intrinsic::not_intrinsic;
       });
 }
 
-llvm::Intrinsic::ID ConvertBF16x2ToF6x2Op::getIntrinsicID(mlir::Type dstTy,
-                                                          bool hasRelu) {
+llvm::Intrinsic::ID
+ConvertBF16x2ToF6x2Op::getIntrinsicID(mlir::Type dstTy,
+                                      NVVM::FPRoundingMode rnd, bool hasRelu) {
+  unsigned idx = (static_cast<unsigned>(rnd == NVVM::FPRoundingMode::RZ) << 1) |
+                 static_cast<unsigned>(hasRelu);
+  static constexpr llvm::Intrinsic::ID e2m3x2IDs[] = {
+      llvm::Intrinsic::nvvm_bf16x2_to_e2m3x2_rn_satfinite,
+      llvm::Intrinsic::nvvm_bf16x2_to_e2m3x2_rn_relu_satfinite,
+      llvm::Intrinsic::nvvm_bf16x2_to_e2m3x2_rz_satfinite,
+      llvm::Intrinsic::nvvm_bf16x2_to_e2m3x2_rz_relu_satfinite,
+  };
+  static constexpr llvm::Intrinsic::ID e3m2x2IDs[] = {
+      llvm::Intrinsic::nvvm_bf16x2_to_e3m2x2_rn_satfinite,
+      llvm::Intrinsic::nvvm_bf16x2_to_e3m2x2_rn_relu_satfinite,
+      llvm::Intrinsic::nvvm_bf16x2_to_e3m2x2_rz_satfinite,
+      llvm::Intrinsic::nvvm_bf16x2_to_e3m2x2_rz_relu_satfinite,
+  };
+
   return llvm::TypeSwitch<mlir::Type, llvm::Intrinsic::ID>(dstTy)
-      .Case<mlir::Float6E2M3FNType>([&](mlir::Float6E2M3FNType) {
-        return hasRelu
-                   ? llvm::Intrinsic::nvvm_bf16x2_to_e2m3x2_rn_relu_satfinite
-                   : llvm::Intrinsic::nvvm_bf16x2_to_e2m3x2_rn_satfinite;
-      })
-      .Case<mlir::Float6E3M2FNType>([&](mlir::Float6E3M2FNType) {
-        return hasRelu
-                   ? llvm::Intrinsic::nvvm_bf16x2_to_e3m2x2_rn_relu_satfinite
-                   : llvm::Intrinsic::nvvm_bf16x2_to_e3m2x2_rn_satfinite;
-      })
+      .Case<mlir::Float6E2M3FNType>(
+          [&](mlir::Float6E2M3FNType) { return e2m3x2IDs[idx]; })
+      .Case<mlir::Float6E3M2FNType>(
+          [&](mlir::Float6E3M2FNType) { return e3m2x2IDs[idx]; })
       .Default([](mlir::Type) {
         llvm_unreachable("Invalid conversion in ConvertBF16x2ToF6x2Op");
         return llvm::Intrinsic::not_intrinsic;
       });
 }
 
-#define GET_F32x2_TO_F8X2_US_ID(rnd, has_satf)                                 \
-  has_satf ? llvm::Intrinsic::nvvm_ff_to_ue8m0x2_##rnd##_satfinite             \
-           : llvm::Intrinsic::nvvm_ff_to_ue8m0x2_##rnd
-
-#define GET_F32x2_TO_F8X2_S_ID(type, has_relu)                                 \
-  has_relu ? llvm::Intrinsic::nvvm_ff_to_##type##_rn_relu                      \
-           : llvm::Intrinsic::nvvm_ff_to_##type##_rn
-
 llvm::Intrinsic::ID
 ConvertF32x2ToF8x2Op::getIntrinsicID(mlir::Type dstTy, NVVM::FPRoundingMode rnd,
                                      NVVM::SaturationMode sat, bool hasRelu) {
   bool hasSatFinite = (sat == NVVM::SaturationMode::SATFINITE);
-  bool hasRoundingModeRZ = (rnd == NVVM::FPRoundingMode::RZ);
-  bool hasRoundingModeRP = (rnd == NVVM::FPRoundingMode::RP);
+  unsigned idx = (static_cast<unsigned>(rnd == NVVM::FPRoundingMode::RZ) << 1) |
+                 static_cast<unsigned>(hasRelu);
+  unsigned ue8m0Idx = (static_cast<unsigned>(hasSatFinite) << 1) |
+                      static_cast<unsigned>(rnd == NVVM::FPRoundingMode::RP);
+
+  static constexpr llvm::Intrinsic::ID e4m3x2IDs[] = {
+      llvm::Intrinsic::nvvm_ff_to_e4m3x2_rn,
+      llvm::Intrinsic::nvvm_ff_to_e4m3x2_rn_relu,
+      llvm::Intrinsic::nvvm_ff_to_e4m3x2_rz,
+      llvm::Intrinsic::nvvm_ff_to_e4m3x2_rz_relu,
+  };
+  static constexpr llvm::Intrinsic::ID e5m2x2IDs[] = {
+      llvm::Intrinsic::nvvm_ff_to_e5m2x2_rn,
+      llvm::Intrinsic::nvvm_ff_to_e5m2x2_rn_relu,
+      llvm::Intrinsic::nvvm_ff_to_e5m2x2_rz,
+      llvm::Intrinsic::nvvm_ff_to_e5m2x2_rz_relu,
+  };
+  static constexpr llvm::Intrinsic::ID ue8m0x2IDs[] = {
+      llvm::Intrinsic::nvvm_ff_to_ue8m0x2_rz,
+      llvm::Intrinsic::nvvm_ff_to_ue8m0x2_rp,
+      llvm::Intrinsic::nvvm_ff_to_ue8m0x2_rz_satfinite,
+      llvm::Intrinsic::nvvm_ff_to_ue8m0x2_rp_satfinite,
+  };
 
   return llvm::TypeSwitch<mlir::Type, llvm::Intrinsic::ID>(dstTy)
-      .Case([&](mlir::Float8E4M3FNType) {
-        return GET_F32x2_TO_F8X2_S_ID(e4m3x2, hasRelu);
-      })
-      .Case([&](mlir::Float8E5M2Type) {
-        return GET_F32x2_TO_F8X2_S_ID(e5m2x2, hasRelu);
-      })
+      .Case([&](mlir::Float8E4M3FNType) { return e4m3x2IDs[idx]; })
+      .Case([&](mlir::Float8E5M2Type) { return e5m2x2IDs[idx]; })
       .Case([&](mlir::Float8E8M0FNUType) {
-        if (hasRoundingModeRZ)
-          return GET_F32x2_TO_F8X2_US_ID(rz, hasSatFinite);
-        else if (hasRoundingModeRP)
-          return GET_F32x2_TO_F8X2_US_ID(rp, hasSatFinite);
-
-        llvm_unreachable("Invalid conversion in ConvertF32x2ToF8x2Op");
+        if (rnd != NVVM::FPRoundingMode::RZ && rnd != NVVM::FPRoundingMode::RP)
+          llvm_unreachable("Invalid conversion in ConvertF32x2ToF8x2Op");
+        return ue8m0x2IDs[ue8m0Idx];
       })
       .Default([](mlir::Type) {
         llvm_unreachable("Invalid conversion in ConvertF32x2ToF8x2Op");
@@ -5228,19 +5291,27 @@ ConvertF32x2ToF8x2Op::getIntrinsicID(mlir::Type dstTy, NVVM::FPRoundingMode rnd,
       });
 }
 
-#define GET_F16x2_TO_F8X2_ID(type, has_relu)                                   \
-  has_relu ? llvm::Intrinsic::nvvm_f16x2_to_##type##_rn_relu                   \
-           : llvm::Intrinsic::nvvm_f16x2_to_##type##_rn
+llvm::Intrinsic::ID
+ConvertF16x2ToF8x2Op::getIntrinsicID(mlir::Type dstTy, NVVM::FPRoundingMode rnd,
+                                     bool hasRelu) {
+  unsigned idx = (static_cast<unsigned>(rnd == NVVM::FPRoundingMode::RZ) << 1) |
+                 static_cast<unsigned>(hasRelu);
+  static constexpr llvm::Intrinsic::ID e4m3x2IDs[] = {
+      llvm::Intrinsic::nvvm_f16x2_to_e4m3x2_rn,
+      llvm::Intrinsic::nvvm_f16x2_to_e4m3x2_rn_relu,
+      llvm::Intrinsic::nvvm_f16x2_to_e4m3x2_rz,
+      llvm::Intrinsic::nvvm_f16x2_to_e4m3x2_rz_relu,
+  };
+  static constexpr llvm::Intrinsic::ID e5m2x2IDs[] = {
+      llvm::Intrinsic::nvvm_f16x2_to_e5m2x2_rn,
+      llvm::Intrinsic::nvvm_f16x2_to_e5m2x2_rn_relu,
+      llvm::Intrinsic::nvvm_f16x2_to_e5m2x2_rz,
+      llvm::Intrinsic::nvvm_f16x2_to_e5m2x2_rz_relu,
+  };
 
-llvm::Intrinsic::ID ConvertF16x2ToF8x2Op::getIntrinsicID(mlir::Type dstTy,
-                                                         bool hasRelu) {
   return llvm::TypeSwitch<mlir::Type, llvm::Intrinsic::ID>(dstTy)
-      .Case([&](mlir::Float8E4M3FNType) {
-        return GET_F16x2_TO_F8X2_ID(e4m3x2, hasRelu);
-      })
-      .Case([&](mlir::Float8E5M2Type) {
-        return GET_F16x2_TO_F8X2_ID(e5m2x2, hasRelu);
-      })
+      .Case([&](mlir::Float8E4M3FNType) { return e4m3x2IDs[idx]; })
+      .Case([&](mlir::Float8E5M2Type) { return e5m2x2IDs[idx]; })
       .Default([](mlir::Type) {
         llvm_unreachable("Invalid conversion in ConvertF16x2ToF8x2Op");
         return llvm::Intrinsic::not_intrinsic;
@@ -5252,7 +5323,23 @@ ConvertBF16x2ToF8x2Op::getIntrinsicID(mlir::Type dstTy,
                                       NVVM::FPRoundingMode rnd,
                                       NVVM::SaturationMode sat, bool hasRelu) {
   bool hasSatFinite = (sat == NVVM::SaturationMode::SATFINITE);
+  unsigned idx = (static_cast<unsigned>(rnd == NVVM::FPRoundingMode::RZ) << 1) |
+                 static_cast<unsigned>(hasRelu);
+  unsigned ue8m0Idx = (static_cast<unsigned>(hasSatFinite) << 1) |
+                      static_cast<unsigned>(rnd == NVVM::FPRoundingMode::RP);
 
+  static constexpr llvm::Intrinsic::ID e4m3x2IDs[] = {
+      llvm::Intrinsic::nvvm_bf16x2_to_e4m3x2_rn_satfinite,
+      llvm::Intrinsic::nvvm_bf16x2_to_e4m3x2_rn_relu_satfinite,
+      llvm::Intrinsic::nvvm_bf16x2_to_e4m3x2_rz_satfinite,
+      llvm::Intrinsic::nvvm_bf16x2_to_e4m3x2_rz_relu_satfinite,
+  };
+  static constexpr llvm::Intrinsic::ID e5m2x2IDs[] = {
+      llvm::Intrinsic::nvvm_bf16x2_to_e5m2x2_rn_satfinite,
+      llvm::Intrinsic::nvvm_bf16x2_to_e5m2x2_rn_relu_satfinite,
+      llvm::Intrinsic::nvvm_bf16x2_to_e5m2x2_rz_satfinite,
+      llvm::Intrinsic::nvvm_bf16x2_to_e5m2x2_rz_relu_satfinite,
+  };
   static constexpr llvm::Intrinsic::ID ue8m0x2IDs[] = {
       llvm::Intrinsic::nvvm_bf16x2_to_ue8m0x2_rz,
       llvm::Intrinsic::nvvm_bf16x2_to_ue8m0x2_rp,
@@ -5261,21 +5348,12 @@ ConvertBF16x2ToF8x2Op::getIntrinsicID(mlir::Type dstTy,
   };
 
   return llvm::TypeSwitch<mlir::Type, llvm::Intrinsic::ID>(dstTy)
-      .Case<mlir::Float8E4M3FNType>([&](mlir::Float8E4M3FNType) {
-        return hasRelu
-                   ? llvm::Intrinsic::nvvm_bf16x2_to_e4m3x2_rn_relu_satfinite
-                   : llvm::Intrinsic::nvvm_bf16x2_to_e4m3x2_rn_satfinite;
-      })
-      .Case<mlir::Float8E5M2Type>([&](mlir::Float8E5M2Type) {
-        return hasRelu
-                   ? llvm::Intrinsic::nvvm_bf16x2_to_e5m2x2_rn_relu_satfinite
-                   : llvm::Intrinsic::nvvm_bf16x2_to_e5m2x2_rn_satfinite;
-      })
-      .Case<mlir::Float8E8M0FNUType>([&](mlir::Float8E8M0FNUType) {
-        bool hasRoundingModeRP = (rnd == NVVM::FPRoundingMode::RP);
-        unsigned index = (hasSatFinite << 1) | hasRoundingModeRP;
-        return ue8m0x2IDs[index];
-      })
+      .Case<mlir::Float8E4M3FNType>(
+          [&](mlir::Float8E4M3FNType) { return e4m3x2IDs[idx]; })
+      .Case<mlir::Float8E5M2Type>(
+          [&](mlir::Float8E5M2Type) { return e5m2x2IDs[idx]; })
+      .Case<mlir::Float8E8M0FNUType>(
+          [&](mlir::Float8E8M0FNUType) { return ue8m0x2IDs[ue8m0Idx]; })
       .Default([](mlir::Type) {
         llvm_unreachable("Invalid conversion in ConvertBF16x2ToF8x2Op");
         return llvm::Intrinsic::not_intrinsic;
