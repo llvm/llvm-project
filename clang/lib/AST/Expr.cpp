@@ -1743,11 +1743,12 @@ UnaryExprOrTypeTraitExpr::UnaryExprOrTypeTraitExpr(
 }
 
 static const ValueDecl *getAddrSpaceOfEntity(const Expr *E) {
+  const ValueDecl *D = nullptr;
   if (const auto *DRE = dyn_cast<DeclRefExpr>(E))
-    return dyn_cast<ValueDecl>(DRE->getDecl());
-  if (const auto *ME = dyn_cast<MemberExpr>(E))
-    return ME->getMemberDecl();
-  return nullptr;
+    D = dyn_cast<ValueDecl>(DRE->getDecl());
+  else if (const auto *ME = dyn_cast<MemberExpr>(E))
+    D = ME->getMemberDecl();
+  return D && isa<VarDecl, FieldDecl, BindingDecl>(D) ? D : nullptr;
 }
 
 static std::optional<LangAS> getCUDADeclAddressSpace(const ASTContext &Ctx,

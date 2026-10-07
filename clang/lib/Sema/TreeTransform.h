@@ -2884,10 +2884,8 @@ public:
   ExprResult RebuildUnaryExprOrTypeTrait(Expr *SubExpr, SourceLocation OpLoc,
                                          UnaryExprOrTypeTrait ExprKind,
                                          SourceRange R) {
-    SourceLocation RParenLoc =
-        ExprKind == UETT_AddrSpaceOf ? R.getEnd() : SourceLocation();
     ExprResult Result = getSema().CreateUnaryExprOrTypeTraitExpr(
-        SubExpr, OpLoc, ExprKind, RParenLoc);
+        SubExpr, OpLoc, ExprKind, R.getEnd());
     if (Result.isInvalid())
       return ExprError();
 

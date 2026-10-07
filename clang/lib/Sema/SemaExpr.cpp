@@ -4596,20 +4596,12 @@ static bool CheckAddrSpaceOfExpr(Sema &S, Expr *E) {
   else if (const auto *ME = dyn_cast<MemberExpr>(E))
     D = ME->getMemberDecl();
 
-  if (D) {
-    if (isa<VarDecl, FieldDecl>(D))
-      return false;
-    S.Diag(E->getExprLoc(), diag::err_addrspaceof_invalid_entity)
-        << E->getSourceRange();
-    return true;
-  }
+  if (!D || !isa<FunctionDecl>(D))
+    return false;
 
-  if (!E->isLValue()) {
-    S.Diag(E->getExprLoc(), diag::err_addrspaceof_invalid_expression)
-        << E->getSourceRange();
-    return true;
-  }
-  return false;
+  S.Diag(E->getExprLoc(), diag::err_addrspaceof_function)
+      << E->getSourceRange();
+  return true;
 }
 
 static bool CheckAlignOfExpr(Sema &S, Expr *E, UnaryExprOrTypeTrait ExprKind) {

@@ -4058,7 +4058,7 @@ template<typename T> constexpr T *addressof(T &value) {
 ### `__addrspaceof`
 
 `__addrspaceof` returns a Clang address-space identifier for a type, object, or
-lvalue expression.
+expression.
 
 This is useful for performance-sensitive code that needs a compile-time value
 to choose an address-space-specific operation, overload, or template
@@ -4079,20 +4079,21 @@ is queried.
 For a type operand, the operator returns its top-level explicit address space,
 or the default address space if it has none.
 
-For an unparenthesized id-expression or unparenthesized member access,
-the operator queries the directly named variable or data member. It first uses
-the top-level explicit address space of the entity's type. For a CUDA/HIP
-entity without a top-level explicit address space, it uses the storage address
-space specified by `__device__`, `__shared__`, or `__constant__`. Otherwise, it
-returns the default address space. An explicit `__device__` `const` global or
-static data member that is promoted to constant memory is reported as the CUDA
-or HIP constant address space.
+For an unparenthesized id-expression or unparenthesized member access, the
+operator queries the directly named variable, structured binding, or data
+member. It first uses the top-level explicit address space of the entity's
+type. For a CUDA/HIP entity without a top-level explicit address space, it uses
+the storage address space specified by `__device__`, `__shared__`, or
+`__constant__`. Otherwise, it returns the default address space. An explicit
+`__device__` `const` global or static data member that is promoted to constant
+memory is reported as the CUDA or HIP constant address space.
 
-Other expression operands must be lvalues. The operator returns the top-level
-explicit address space of the expression's type, or the default address space
-if it has none. Prvalue operands, including address-of expressions, are
-ill-formed. As with `decltype`, extra parentheses can change a direct entity
-query into an expression query.
+For other expression operands, the operator returns the top-level explicit
+address space of the expression's type, or the default address space if it has
+none. It does not follow pointers or look through expression wrappers to find
+an underlying object. Enumerators and non-type template parameters use this
+expression-type rule. As with `decltype`, extra parentheses can change a direct
+entity query into an expression query.
 
 ```c++
 __device__ int *p;
@@ -4113,7 +4114,7 @@ address spaces are reported using common memory regions:
 OpenCL, CUDA, HIP, SYCL, and HLSL address spaces that describe the same memory
 region produce the same value. For an address space written explicitly with
 `__attribute__((address_space(N)))`, the result is
-`__ADDRSPACE_TARGET_OFFSET + N`. Deprecated OpenCL and SYCL `global_device` and
+`__ADDRSPACE_TARGET(N)`. Deprecated OpenCL and SYCL `global_device` and
 `global_host` address spaces are reported as the global address space.
 
 **Example use**:
@@ -4122,10 +4123,8 @@ region produce the same value. For an address space written explicitly with
 using local_int = int __attribute__((address_space(3)));
 local_int *p;
 
-static_assert(__addrspaceof(local_int) ==
-              __ADDRSPACE_TARGET_OFFSET + 3);
-static_assert(__addrspaceof(*p) ==
-              __ADDRSPACE_TARGET_OFFSET + 3);
+static_assert(__addrspaceof(local_int) == __ADDRSPACE_TARGET(3));
+static_assert(__addrspaceof(*p) == __ADDRSPACE_TARGET(3));
 ```
 
 **OpenCL example use**:

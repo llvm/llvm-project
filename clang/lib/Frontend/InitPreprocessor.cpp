@@ -931,8 +931,9 @@ static void InitializePredefinedMacros(const TargetInfo &TI,
                           AddressSpaceQuery::HLSLOutput);
   DefineAddressSpaceMacro("__ADDRSPACE_HLSL_PUSH_CONSTANT",
                           AddressSpaceQuery::HLSLPushConstant);
-  DefineAddressSpaceMacro("__ADDRSPACE_TARGET_OFFSET",
-                          AddressSpaceQuery::TargetOffset);
+  Builder.defineMacro(
+      "__ADDRSPACE_TARGET(N)",
+      (Twine("(") + Twine(AddressSpaceQuery::TargetOffset) + " + (N))").str());
 
   // Define macros for floating-point data classes, used in __builtin_isfpclass.
   Builder.defineMacro("__FPCLASS_SNAN", "0x0001");

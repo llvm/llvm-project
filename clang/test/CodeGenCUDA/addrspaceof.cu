@@ -11,17 +11,7 @@ __constant__ int constant_var;
 __device__ const int const_device_var = 1;
 extern __device__ const int extern_const_device_var;
 
-#if defined(__HIP__)
-#define EXPECTED_DEVICE_ADDRESS_SPACE __ADDRSPACE_GLOBAL
-#define EXPECTED_CONSTANT_ADDRESS_SPACE __ADDRSPACE_CONSTANT
-#define EXPECTED_SHARED_ADDRESS_SPACE __ADDRSPACE_LOCAL
-#else
-#define EXPECTED_DEVICE_ADDRESS_SPACE __ADDRSPACE_GLOBAL
-#define EXPECTED_CONSTANT_ADDRESS_SPACE __ADDRSPACE_CONSTANT
-#define EXPECTED_SHARED_ADDRESS_SPACE __ADDRSPACE_LOCAL
-#endif
-
-static_assert(__addrspaceof(device_ptr) == EXPECTED_DEVICE_ADDRESS_SPACE);
+static_assert(__addrspaceof(device_ptr) == __ADDRSPACE_GLOBAL);
 static_assert(__addrspaceof(*device_ptr) ==
               __ADDRSPACE_DEFAULT);
 static_assert(__addrspaceof((device_ptr)) ==
@@ -29,7 +19,7 @@ static_assert(__addrspaceof((device_ptr)) ==
 static_assert(__addrspaceof((device_var)) ==
               __ADDRSPACE_DEFAULT);
 static_assert(__addrspaceof(extern_const_device_var) ==
-              EXPECTED_DEVICE_ADDRESS_SPACE);
+              __ADDRSPACE_GLOBAL);
 
 #ifdef HOST_TEST
 
@@ -42,13 +32,13 @@ template <class T> constexpr int host_constexpr_address_space(T *p) {
 }
 
 static_assert(__addrspaceof(device_var) ==
-              EXPECTED_DEVICE_ADDRESS_SPACE);
+              __ADDRSPACE_GLOBAL);
 static_assert(__addrspaceof(constant_var) ==
-              EXPECTED_CONSTANT_ADDRESS_SPACE);
+              __ADDRSPACE_CONSTANT);
 static_assert(__addrspaceof(const_device_var) ==
-              EXPECTED_CONSTANT_ADDRESS_SPACE);
+              __ADDRSPACE_CONSTANT);
 static_assert(__addrspaceof(device_array) ==
-              EXPECTED_DEVICE_ADDRESS_SPACE);
+              __ADDRSPACE_GLOBAL);
 static_assert(__addrspaceof(*&device_array) ==
               __ADDRSPACE_DEFAULT);
 static_assert(__addrspaceof(*(device_array + 1)) ==
@@ -107,15 +97,15 @@ template <>
 struct AddressSpaceSpecialization<__ADDRSPACE_DEFAULT> {
   static constexpr int value = __ADDRSPACE_DEFAULT;
 };
-template <> struct AddressSpaceSpecialization<EXPECTED_DEVICE_ADDRESS_SPACE> {
-  static constexpr int value = EXPECTED_DEVICE_ADDRESS_SPACE;
+template <> struct AddressSpaceSpecialization<__ADDRSPACE_GLOBAL> {
+  static constexpr int value = __ADDRSPACE_GLOBAL;
 };
-template <> struct AddressSpaceSpecialization<EXPECTED_SHARED_ADDRESS_SPACE> {
-  static constexpr int value = EXPECTED_SHARED_ADDRESS_SPACE;
+template <> struct AddressSpaceSpecialization<__ADDRSPACE_LOCAL> {
+  static constexpr int value = __ADDRSPACE_LOCAL;
 };
 template <>
-struct AddressSpaceSpecialization<EXPECTED_CONSTANT_ADDRESS_SPACE> {
-  static constexpr int value = EXPECTED_CONSTANT_ADDRESS_SPACE;
+struct AddressSpaceSpecialization<__ADDRSPACE_CONSTANT> {
+  static constexpr int value = __ADDRSPACE_CONSTANT;
 };
 
 static_assert(__addrspaceof(*(int *)&constant_var) ==
@@ -131,21 +121,19 @@ static_assert(consteval_address_space((int *)&constant_var) ==
 static_assert(constexpr_address_space(&constant_var) ==
               __ADDRSPACE_DEFAULT);
 static_assert(__addrspaceof(device_array) ==
-              EXPECTED_DEVICE_ADDRESS_SPACE);
+              __ADDRSPACE_GLOBAL);
 static_assert(__addrspaceof(*&device_array) ==
               __ADDRSPACE_DEFAULT);
 static_assert(__addrspaceof(*(device_array + 1)) ==
               __ADDRSPACE_DEFAULT);
-static_assert(__addrspaceof(*device_ptr) ==
-              __ADDRSPACE_DEFAULT);
 static_assert(
     AddressSpaceSpecialization<
       __addrspaceof(device_var)>::value ==
-      EXPECTED_DEVICE_ADDRESS_SPACE);
+      __ADDRSPACE_GLOBAL);
 static_assert(
     AddressSpaceSpecialization<
       __addrspaceof(constant_var)>::value ==
-      EXPECTED_CONSTANT_ADDRESS_SPACE);
+      __ADDRSPACE_CONSTANT);
 static_assert(
     AddressSpaceSpecialization<
         consteval_address_space(&constant_var)>::value ==
@@ -161,14 +149,19 @@ extern "C" __device__ int test_generic_pointer(int *p) {
 extern "C" __device__ int test_shared_local() {
   __shared__ int shared_var;
   __shared__ int shared_array[4];
+#define SELECT_SAME(X) _Generic(X, int : X)
+  static_assert(__addrspaceof(decltype(shared_var)) == __ADDRSPACE_DEFAULT);
+  static_assert(__addrspaceof(SELECT_SAME(shared_var)) ==
+                __ADDRSPACE_DEFAULT);
+#undef SELECT_SAME
   static_assert(__addrspaceof(shared_var) ==
-                EXPECTED_SHARED_ADDRESS_SPACE);
+                __ADDRSPACE_LOCAL);
   static_assert(__addrspaceof(*(char *)&shared_var) ==
                 __ADDRSPACE_DEFAULT);
   static_assert(__addrspaceof(*(&shared_var + 1)) ==
                 __ADDRSPACE_DEFAULT);
   static_assert(__addrspaceof(shared_array) ==
-                EXPECTED_SHARED_ADDRESS_SPACE);
+                __ADDRSPACE_LOCAL);
   static_assert(__addrspaceof(*&shared_array) ==
                 __ADDRSPACE_DEFAULT);
   static_assert(__addrspaceof(shared_array[0]) ==
@@ -184,7 +177,7 @@ extern "C" __device__ int test_shared_local() {
   static_assert(
       AddressSpaceSpecialization<
       __addrspaceof(shared_var)>::value ==
-      EXPECTED_SHARED_ADDRESS_SPACE);
+      __ADDRSPACE_LOCAL);
   return __addrspaceof(shared_var);
 }
 
