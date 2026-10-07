@@ -1647,6 +1647,7 @@ void llvm::saveUsesAndErase(MachineInstr &MI, MachineRegisterInfo &MRI,
       DeadInstChain.insert(MRI.getVRegDef(Op.getReg()));
   }
   LLVM_DEBUG(dbgs() << MI << "Is dead; erasing.\n");
+  salvageDebugInfo(MRI, MI);
   DeadInstChain.remove(&MI);
   MI.eraseFromParent();
   if (LocObserver)
@@ -1676,6 +1677,9 @@ void llvm::eraseInstr(MachineInstr &MI, MachineRegisterInfo &MRI,
 void llvm::salvageDebugInfo(const MachineRegisterInfo &MRI, MachineInstr &MI) {
   for (auto &Def : MI.defs()) {
     assert(Def.isReg() && "Must be a reg");
+    // A combine may have replaced Def with a vreg that is defined elsewhere.
+    if (!MRI.hasOneDef(Def.getReg()))
+      continue;
 
     SmallVector<MachineOperand *, 16> DbgUsers;
     for (auto &MOUse : MRI.use_operands(Def.getReg())) {
@@ -1689,6 +1693,9 @@ void llvm::salvageDebugInfo(const MachineRegisterInfo &MRI, MachineInstr &MI) {
     if (!DbgUsers.empty()) {
       salvageDebugInfoForDbgValue(MRI, MI, DbgUsers);
     }
+
+    // MI is about to be erased, so drop the debug uses that were not salvaged.
+    MRI.markUsesInDebugValueAsUndef(Def.getReg());
   }
 }
 
