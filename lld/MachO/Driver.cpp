@@ -2552,8 +2552,13 @@ bool link(ArrayRef<const char *> argsArr, llvm::raw_ostream &stdoutOS,
     // Category merging uses "->live = false" to erase old category data, so
     // it has to run after dead-stripping (markLive).
     if (args.hasFlag(OPT_objc_category_merging, OPT_no_objc_category_merging,
-                     false))
-      objc::mergeCategories();
+                     false)) {
+      // Merging doesn't preserve the signing schemas in arm64e category data.
+      if (config->arch() == AK_arm64e)
+        warn("-objc_category_merging is not supported on arm64e, ignoring");
+      else
+        objc::mergeCategories();
+    }
 
     computeColdness();
 
