@@ -9386,7 +9386,7 @@ inherited from an enclosing declaration.
 
 `nointerpolation` cannot be combined with another interpolation modifier.
 For pixel shader inputs and vertex shader outputs, it cannot be used on
-`SV_Position`, and integer, boolean, and 64-bit floating-point components only
+`SV_Position`. Integer, boolean, and 64-bit floating-point components only
 support `nointerpolation`.
 
 Unqualified pixel shader inputs and vertex shader outputs default to `linear`
