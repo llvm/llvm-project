@@ -3179,10 +3179,13 @@ static SDValue LowerEXTRACT_VECTOR_ELT(SDValue Op, SelectionDAG &DAG) {
   if (isa<ConstantSDNode>(Idx))
     return Op;
 
-  SDValue Even = DAG.getTargetExtractSubreg(SP::sub_even, DL, MVT::i32, Vec);
-  SDValue Odd = DAG.getTargetExtractSubreg(SP::sub_odd, DL, MVT::i32, Vec);
-  return DAG.getSelectCC(DL, Idx, DAG.getConstant(0, DL, Idx.getValueType()),
-                         Even, Odd, ISD::SETEQ);
+  EVT IdxVT = Idx.getValueType();
+  SDValue Elt0 = DAG.getNode(ISD::EXTRACT_VECTOR_ELT, DL, MVT::i32, Vec,
+                             DAG.getConstant(0, DL, IdxVT));
+  SDValue Elt1 = DAG.getNode(ISD::EXTRACT_VECTOR_ELT, DL, MVT::i32, Vec,
+                             DAG.getConstant(1, DL, IdxVT));
+  return DAG.getSelectCC(DL, Idx, DAG.getConstant(0, DL, IdxVT), Elt0, Elt1,
+                         ISD::SETEQ);
 }
 
 SDValue SparcTargetLowering::LowerINTRINSIC_WO_CHAIN(SDValue Op,
