@@ -140,7 +140,7 @@ std::vector<StringRef> Input::keys() {
     return Ret;
   }
   for (auto &P : MN->Mapping)
-    Ret.push_back(P.first());
+    Ret.push_back(P.first);
   return Ret;
 }
 
@@ -194,13 +194,13 @@ void Input::endMapping() {
   if (!MN)
     return;
   for (const auto &NN : MN->Mapping) {
-    if (!is_contained(MN->ValidKeys, NN.first())) {
+    if (!is_contained(MN->ValidKeys, NN.first)) {
       const SMRange &ReportLoc = NN.second.second;
       if (!AllowUnknownKeys) {
-        setError(ReportLoc, Twine("unknown key '") + NN.first() + "'");
+        setError(ReportLoc, Twine("unknown key '") + NN.first + "'");
         break;
       } else
-        reportWarning(ReportLoc, Twine("unknown key '") + NN.first() + "'");
+        reportWarning(ReportLoc, Twine("unknown key '") + NN.first + "'");
     }
   }
 }
