@@ -11,12 +11,9 @@
 ///
 //===----------------------------------------------------------------------===//
 
-#include "src/threads/__cxa_thread_atexit_impl.h"
-#include "src/__support/common.h"
-#include "src/__support/macros/config.h"
-#include "src/__support/threads/thread.h" 
+#include "src/stdlib/__cxa_thread_atexit_impl.h"
 
-#include <threads.h>
+#include "src/__support/common.h"
 
 namespace LIBC_NAMESPACE_DECL {
 
@@ -27,7 +24,7 @@ namespace LIBC_NAMESPACE_DECL {
 // The semantics are very similar to the __cxa_atexit function except for the
 // fact that the registered callback is thread specific.
 LLVM_LIBC_FUNCTION(int, __cxa_thread_atexit_impl,
-                   (AtExitCallback* callback, void *obj, void *)) {
+                   (AtExitCallback * callback, void* obj, void*)) {
   return add_thread_atexit_callback(callback, obj);
 }
-} // namespace LIBC_NAMESPACE_DECL
+}  // namespace LIBC_NAMESPACE_DECL

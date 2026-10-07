@@ -142,12 +142,6 @@ static LIBC_THREAD_LOCAL ThreadAtExitCallbackMgr atexit_callback_mgr;
 int add_thread_atexit_callback(AtExitCallback *callback, void *obj) {
   return atexit_callback_mgr.add_callback(callback, obj);
 }
-// The function __cxa_thread_atexit is provided by C++ runtimes like libcxxabi.
-// It is used by thread local object runtime to register destructor calls. To
-// actually register destructor call with the threading library, it calls
-// __cxa_thread_atexit_impl, which is to be provided by the threading library.
-// The semantics are very similar to the __cxa_atexit function except for the
-// fact that the registered callback is thread specific.
 namespace internal {
 
 void call_atexit_callbacks() {
