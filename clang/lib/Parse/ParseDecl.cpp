@@ -2536,7 +2536,7 @@ Decl *Parser::ParseDeclarationAfterDeclaratorAndAttributes(
   // If a '==' or '+=' is found, suggest a fixit to '='.
   if (isTokenEqualOrEqualTypo())
     TheInitKind = InitKind::Equal;
-  else if (Tok.is(tok::l_paren))
+  else if (getLangOpts().CPlusPlus && Tok.is(tok::l_paren))
     TheInitKind = InitKind::CXXDirect;
   else if (getLangOpts().CPlusPlus11 && Tok.is(tok::l_brace) &&
            (!CurParsedObjCImpl || !D.isFunctionDeclarator()))

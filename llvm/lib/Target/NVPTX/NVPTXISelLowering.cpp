@@ -52,6 +52,7 @@
 #include "llvm/IR/Instruction.h"
 #include "llvm/IR/Instructions.h"
 #include "llvm/IR/IntrinsicsNVPTX.h"
+#include "llvm/IR/LLVMContext.h"
 #include "llvm/IR/Module.h"
 #include "llvm/IR/NVVMIntrinsicUtils.h"
 #include "llvm/IR/Type.h"
@@ -4817,6 +4818,17 @@ void NVPTXTargetLowering::getTgtMemIntrinsic(
     return;
   }
 
+  case Intrinsic::nvvm_prefetch_L1_32B_valid_addr: {
+    Info.opc = ISD::INTRINSIC_VOID;
+    Info.memVT = MVT::i8;
+    Info.ptrVal = I.getArgOperand(0);
+    Info.offset = 0;
+    Info.flags = MachineMemOperand::MOLoad;
+    Info.align = Align(1);
+    Infos.push_back(Info);
+    return;
+  }
+
   case Intrinsic::nvvm_mbarrier_init: {
     Info.opc = ISD::INTRINSIC_VOID;
     Info.memVT = MVT::i64;
@@ -7769,11 +7781,18 @@ NVPTXTargetLowering::shouldExpandAtomicRMWInIR(const AtomicRMWInst *AI) const {
             ? AtomicExpansionKind::Expand
             : AtomicExpansionKind::None;
 
-    // AllowFTZAtomics forces atom.add regardless of the FTZ mismatch.
+    // Both the -nvptx-allow-ftz-atomics option and per-instruction
+    // !atomic.ignore.denormal.mode say that denormal handling is insignificant
+    // here, so atom.add may be used even when its FTZ behavior disagrees with
+    // the function's.
+    const bool IgnoreFTZMismatch =
+        AllowFTZAtomics ||
+        AI->hasMetadata(LLVMContext::MD_atomic_ignore_denormal_mode);
+
     if (Ty->isFloatTy()) {
       const bool FTZ = F->getDenormalMode(APFloat::IEEEsingle()).Output ==
                        DenormalMode::PreserveSign;
-      bool UseNative = AllowFTZAtomics;
+      bool UseNative = IgnoreFTZMismatch;
       switch (AI->getPointerAddressSpace()) {
       case llvm::ADDRESS_SPACE_GLOBAL:
         UseNative |= FTZ;
@@ -7792,7 +7811,7 @@ NVPTXTargetLowering::shouldExpandAtomicRMWInIR(const AtomicRMWInst *AI) const {
       // function that is not in FTZ mode for f16.
       const bool FTZ = F->getDenormalMode(APFloat::IEEEhalf()).Output ==
                        DenormalMode::PreserveSign;
-      if ((!FTZ || AllowFTZAtomics) && STI.hasFeature(NVPTX::SM70) &&
+      if ((!FTZ || IgnoreFTZMismatch) && STI.hasFeature(NVPTX::SM70) &&
           STI.hasFeature(NVPTX::PTX63))
         return ExpansionKind;
     }

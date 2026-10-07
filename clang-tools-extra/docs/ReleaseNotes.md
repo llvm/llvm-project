@@ -166,6 +166,11 @@ infrastructure are described first, followed by tool-specific sections.
 
 #### Changes in existing checks
 
+- Improved {doc}`bugprone-easily-swappable-parameters
+  <clang-tidy/checks/bugprone/easily-swappable-parameters>` check by no longer
+  emitting empty notes for type aliases when {option}`ModelImplicitConversions`
+  is enabled.
+
 - Improved {doc}`bugprone-implicit-widening-of-multiplication-result
   <clang-tidy/checks/bugprone/implicit-widening-of-multiplication-result>` check
   by suggesting a wider type of the same signedness as the original operands,
@@ -262,6 +267,11 @@ infrastructure are described first, followed by tool-specific sections.
 - Extend {doc}`modernize-use-nullptr
   <clang-tidy/checks/modernize/use-nullptr>` to turn `decltype(nullptr)` into
   `std::nullptr_t` from `<cstdef>`.
+
+- Improved {doc}`modernize-use-nullptr
+  <clang-tidy/checks/modernize/use-nullptr>` check to avoid replacing `0`
+  with `nullptr` in comparisons with ordering types such as
+  `std::strong_ordering`.
 
 - Improved {doc}`modernize-use-ranges
   <clang-tidy/checks/modernize/use-ranges>` check by preserving used output

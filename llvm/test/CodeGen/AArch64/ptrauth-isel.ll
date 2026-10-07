@@ -56,7 +56,7 @@ define i64 @small_imm_disc_non_optimized(i64 %addr) noinline optnone {
   ; DAGISEL-NEXT:   liveins: $x0
   ; DAGISEL-NEXT: {{  $}}
   ; DAGISEL-NEXT:   [[COPY:%[0-9]+]]:gpr64 = COPY $x0
-  ; DAGISEL-NEXT:   [[COPY1:%[0-9]+]]:gpr64 = COPY killed [[COPY]]
+  ; DAGISEL-NEXT:   [[COPY1:%[0-9]+]]:gpr64 = COPY [[COPY]]
   ; DAGISEL-NEXT:   [[MOVi32imm:%[0-9]+]]:gpr32 = MOVi32imm 42
   ; DAGISEL-NEXT:   [[SUBREG_TO_REG:%[0-9]+]]:gpr64noip = SUBREG_TO_REG killed [[MOVi32imm]], %subreg.sub_32
   ; DAGISEL-NEXT:   [[PAC:%[0-9]+]]:gpr64 = PAC [[COPY1]], 2, 42, $noreg, implicit-def dead $x16, implicit-def dead $x17
@@ -138,8 +138,8 @@ define i64 @blended_disc_non_optimized(i64 %addr, i64 %addrdisc) noinline optnon
   ; DAGISEL-NEXT: {{  $}}
   ; DAGISEL-NEXT:   [[COPY:%[0-9]+]]:gpr64 = COPY $x1
   ; DAGISEL-NEXT:   [[COPY1:%[0-9]+]]:gpr64 = COPY $x0
-  ; DAGISEL-NEXT:   [[COPY2:%[0-9]+]]:gpr64 = COPY killed [[COPY1]]
-  ; DAGISEL-NEXT:   [[COPY3:%[0-9]+]]:gpr64 = COPY killed [[COPY]]
+  ; DAGISEL-NEXT:   [[COPY2:%[0-9]+]]:gpr64 = COPY [[COPY1]]
+  ; DAGISEL-NEXT:   [[COPY3:%[0-9]+]]:gpr64 = COPY [[COPY]]
   ; DAGISEL-NEXT:   [[MOVKXi:%[0-9]+]]:gpr64 = MOVKXi [[COPY3]], 42, 48
   ; DAGISEL-NEXT:   [[COPY4:%[0-9]+]]:gpr64noip = COPY [[MOVKXi]]
   ; DAGISEL-NEXT:   [[COPY5:%[0-9]+]]:gpr64noip = COPY [[COPY3]]
