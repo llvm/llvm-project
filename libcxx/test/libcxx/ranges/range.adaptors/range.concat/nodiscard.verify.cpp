@@ -36,6 +36,11 @@ void test() {
   // expected-warning@+1 {{ignoring return value of function declared with 'nodiscard' attribute}}
   std::as_const(cv).size();
 
+  // expected-warning@+1 {{ignoring return value of function declared with 'nodiscard' attribute}}
+  cv.reserve_hint();
+  // expected-warning@+1 {{ignoring return value of function declared with 'nodiscard' attribute}}
+  std::as_const(cv).reserve_hint();
+
   // [range.concat.iterator]
 
   auto it = cv.begin();
