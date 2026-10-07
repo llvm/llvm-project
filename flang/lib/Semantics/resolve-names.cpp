@@ -4399,6 +4399,11 @@ FindIntrinsicModuleUseAssociationRule(
 
 void ModuleVisitor::DoAddUse(SourceName location, SourceName localName,
     Symbol &originalLocal, const Symbol &useSymbol) {
+  // These attributes are never inherited from the use-associated symbol:
+  // PUBLIC/PRIVATE accessibility and SAVE are properties of the local
+  // declaration, not of the entity being use-associated.
+  static constexpr Attrs notInheritedFromUseAttrs{
+      Attr::PUBLIC, Attr::PRIVATE, Attr::SAVE};
   Symbol *localSymbol{&originalLocal};
   if (auto *details{localSymbol->detailsIf<UseErrorDetails>()}) {
     details->add_occurrence(location, useSymbol);
@@ -4430,13 +4435,13 @@ void ModuleVisitor::DoAddUse(SourceName location, SourceName localName,
       // latter would produce a local UseDetails whose target module file
       // omits the name, so it would not survive a module file round trip.
       localSymbol->set_details(UseErrorDetails{*useError});
-      localSymbol->attrs() =
-          useSymbol.attrs() & ~Attrs{Attr::PUBLIC, Attr::PRIVATE, Attr::SAVE};
+      localSymbol->attrs() = useSymbol.attrs() & ~notInheritedFromUseAttrs;
+      localSymbol->implicitAttrs() =
+          localSymbol->attrs() & Attrs{Attr::ASYNCHRONOUS, Attr::VOLATILE};
       return;
     } else { // just create UseDetails
       localSymbol->set_details(UseDetails{localName, useSymbol});
-      localSymbol->attrs() =
-          useSymbol.attrs() & ~Attrs{Attr::PUBLIC, Attr::PRIVATE, Attr::SAVE};
+      localSymbol->attrs() = useSymbol.attrs() & ~notInheritedFromUseAttrs;
       localSymbol->implicitAttrs() =
           localSymbol->attrs() & Attrs{Attr::ASYNCHRONOUS, Attr::VOLATILE};
       localSymbol->flags() = useSymbol.flags();
