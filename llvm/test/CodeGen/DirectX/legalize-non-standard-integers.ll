@@ -68,11 +68,8 @@ define i32 @wrap_i3(i32 %lhs, i32 %rhs) {
 define i32 @nuw_i8(i32 %lhs, i32 %rhs) {
 ; CHECK-LABEL: define i32 @nuw_i8(
 ; CHECK-SAME: i32 [[LHS:%.*]], i32 [[RHS:%.*]]) {
-; CHECK-NEXT:    [[TMP1:%.*]] = and i32 [[LHS]], 255
-; CHECK-NEXT:    [[TMP2:%.*]] = and i32 [[RHS]], 255
-; CHECK-NEXT:    [[TMP3:%.*]] = add nuw i32 [[TMP1]], [[TMP2]]
-; CHECK-NEXT:    [[TMP4:%.*]] = icmp ult i32 [[TMP3]], 256
-; CHECK-NEXT:    [[SUM:%.*]] = select i1 [[TMP4]], i32 [[TMP3]], i32 poison
+; CHECK-NEXT:    [[TMP1:%.*]] = add i32 [[LHS]], [[RHS]]
+; CHECK-NEXT:    [[SUM:%.*]] = and i32 [[TMP1]], 255
 ; CHECK-NEXT:    ret i32 [[SUM]]
 ;
   %lhs.i8 = trunc i32 %lhs to i8
@@ -134,11 +131,7 @@ define i16 @trunc_i37_to_i16(i64 %value) {
 define i32 @trunc_nsw_i8(i32 %value) {
 ; CHECK-LABEL: define i32 @trunc_nsw_i8(
 ; CHECK-SAME: i32 [[VALUE:%.*]]) {
-; CHECK-NEXT:    [[TMP1:%.*]] = icmp sge i32 [[VALUE]], -128
-; CHECK-NEXT:    [[TMP2:%.*]] = icmp sle i32 [[VALUE]], 127
-; CHECK-NEXT:    [[TMP3:%.*]] = and i1 [[TMP1]], [[TMP2]]
-; CHECK-NEXT:    [[TMP4:%.*]] = select i1 [[TMP3]], i32 [[VALUE]], i32 poison
-; CHECK-NEXT:    [[TMP5:%.*]] = shl i32 [[TMP4]], 24
+; CHECK-NEXT:    [[TMP5:%.*]] = shl i32 [[VALUE]], 24
 ; CHECK-NEXT:    [[TMP6:%.*]] = ashr i32 [[TMP5]], 24
 ; CHECK-NEXT:    ret i32 [[TMP6]]
 ;
@@ -150,9 +143,7 @@ define i32 @trunc_nsw_i8(i32 %value) {
 define i32 @trunc_nuw_i8(i32 %value) {
 ; CHECK-LABEL: define i32 @trunc_nuw_i8(
 ; CHECK-SAME: i32 [[VALUE:%.*]]) {
-; CHECK-NEXT:    [[TMP1:%.*]] = icmp ult i32 [[VALUE]], 256
-; CHECK-NEXT:    [[TMP2:%.*]] = select i1 [[TMP1]], i32 [[VALUE]], i32 poison
-; CHECK-NEXT:    [[TMP3:%.*]] = and i32 [[TMP2]], 255
+; CHECK-NEXT:    [[TMP3:%.*]] = and i32 [[VALUE]], 255
 ; CHECK-NEXT:    ret i32 [[TMP3]]
 ;
   %narrow = trunc nuw i32 %value to i8
@@ -168,11 +159,7 @@ define i32 @narrow_sdiv_i3(i32 %lhs, i32 %rhs) {
 ; CHECK-NEXT:    [[TMP3:%.*]] = shl i32 [[RHS]], 29
 ; CHECK-NEXT:    [[TMP4:%.*]] = ashr i32 [[TMP3]], 29
 ; CHECK-NEXT:    [[TMP5:%.*]] = sdiv i32 [[TMP2]], [[TMP4]]
-; CHECK-NEXT:    [[TMP6:%.*]] = icmp sge i32 [[TMP5]], -4
-; CHECK-NEXT:    [[TMP7:%.*]] = icmp sle i32 [[TMP5]], 3
-; CHECK-NEXT:    [[TMP8:%.*]] = and i1 [[TMP6]], [[TMP7]]
-; CHECK-NEXT:    [[TMP9:%.*]] = select i1 [[TMP8]], i32 [[TMP5]], i32 poison
-; CHECK-NEXT:    [[TMP10:%.*]] = shl i32 [[TMP9]], 29
+; CHECK-NEXT:    [[TMP10:%.*]] = shl i32 [[TMP5]], 29
 ; CHECK-NEXT:    [[TMP11:%.*]] = ashr i32 [[TMP10]], 29
 ; CHECK-NEXT:    ret i32 [[TMP11]]
 ;
@@ -190,11 +177,7 @@ define i32 @narrow_shift_i3(i32 %value, i32 %amount) {
 ; CHECK-NEXT:    [[TMP2:%.*]] = ashr i32 [[TMP1]], 29
 ; CHECK-NEXT:    [[TMP3:%.*]] = and i32 [[AMOUNT]], 7
 ; CHECK-NEXT:    [[TMP4:%.*]] = ashr i32 [[TMP2]], [[TMP3]]
-; CHECK-NEXT:    [[TMP5:%.*]] = icmp ult i32 [[TMP3]], 3
-; CHECK-NEXT:    [[TMP6:%.*]] = select i1 [[TMP5]], i32 [[TMP4]], i32 poison
-; CHECK-NEXT:    [[TMP7:%.*]] = shl i32 [[TMP6]], 29
-; CHECK-NEXT:    [[TMP8:%.*]] = ashr i32 [[TMP7]], 29
-; CHECK-NEXT:    ret i32 [[TMP8]]
+; CHECK-NEXT:    ret i32 [[TMP4]]
 ;
   %value.narrow = trunc i32 %value to i3
   %amount.narrow = trunc i32 %amount to i3
@@ -206,16 +189,10 @@ define i32 @narrow_shift_i3(i32 %value, i32 %amount) {
 define i32 @narrow_nsw_add_i3(i32 %lhs, i32 %rhs) {
 ; CHECK-LABEL: define i32 @narrow_nsw_add_i3(
 ; CHECK-SAME: i32 [[LHS:%.*]], i32 [[RHS:%.*]]) {
-; CHECK-NEXT:    [[TMP1:%.*]] = shl i32 [[LHS]], 29
-; CHECK-NEXT:    [[TMP2:%.*]] = ashr i32 [[TMP1]], 29
-; CHECK-NEXT:    [[TMP3:%.*]] = shl i32 [[RHS]], 29
+; CHECK-NEXT:    [[TMP1:%.*]] = add i32 [[LHS]], [[RHS]]
+; CHECK-NEXT:    [[TMP3:%.*]] = shl i32 [[TMP1]], 29
 ; CHECK-NEXT:    [[TMP4:%.*]] = ashr i32 [[TMP3]], 29
-; CHECK-NEXT:    [[TMP5:%.*]] = add nsw i32 [[TMP2]], [[TMP4]]
-; CHECK-NEXT:    [[TMP6:%.*]] = icmp sge i32 [[TMP5]], -4
-; CHECK-NEXT:    [[TMP7:%.*]] = icmp sle i32 [[TMP5]], 3
-; CHECK-NEXT:    [[TMP8:%.*]] = and i1 [[TMP6]], [[TMP7]]
-; CHECK-NEXT:    [[TMP9:%.*]] = select i1 [[TMP8]], i32 [[TMP5]], i32 poison
-; CHECK-NEXT:    ret i32 [[TMP9]]
+; CHECK-NEXT:    ret i32 [[TMP4]]
 ;
   %lhs.narrow = trunc i32 %lhs to i3
   %rhs.narrow = trunc i32 %rhs to i3
@@ -237,11 +214,7 @@ define i32 @fptosi_to_i3(float %value) {
 ; CHECK-LABEL: define i32 @fptosi_to_i3(
 ; CHECK-SAME: float [[VALUE:%.*]]) {
 ; CHECK-NEXT:    [[TMP1:%.*]] = fptosi float [[VALUE]] to i32
-; CHECK-NEXT:    [[TMP2:%.*]] = icmp sge i32 [[TMP1]], -4
-; CHECK-NEXT:    [[TMP3:%.*]] = icmp sle i32 [[TMP1]], 3
-; CHECK-NEXT:    [[TMP4:%.*]] = and i1 [[TMP2]], [[TMP3]]
-; CHECK-NEXT:    [[CONVERT:%.*]] = select i1 [[TMP4]], i32 [[TMP1]], i32 poison
-; CHECK-NEXT:    [[RESULT:%.*]] = and i32 [[CONVERT]], 7
+; CHECK-NEXT:    [[RESULT:%.*]] = and i32 [[TMP1]], 7
 ; CHECK-NEXT:    ret i32 [[RESULT]]
 ;
   %narrow = fptosi float %value to i3

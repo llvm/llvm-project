@@ -59,122 +59,92 @@ static Value *maskToIntegerWidth(Value *V, unsigned Width,
   return Builder.CreateAnd(V, ConstantInt::get(LegalTy, Mask));
 }
 
-static Value *poisonUnless(Value *V, Value *Condition, IRBuilder<> &Builder) {
-  if (auto *C = dyn_cast<ConstantInt>(Condition); C && C->isOne())
-    return V;
-  return Builder.CreateSelect(Condition, V, PoisonValue::get(V->getType()));
-}
-
-static Value *isInIntegerRange(Value *V, unsigned Width, bool Signed,
-                               IRBuilder<> &Builder) {
-  auto *LegalTy = cast<IntegerType>(V->getType());
-  unsigned LegalWidth = LegalTy->getBitWidth();
-  if (!Signed) {
-    APInt Limit = APInt::getOneBitSet(LegalWidth, Width);
-    return Builder.CreateICmpULT(V, ConstantInt::get(LegalTy, Limit));
-  }
-
-  APInt Min = APInt::getSignedMinValue(Width).sext(LegalWidth);
-  APInt Max = APInt::getSignedMaxValue(Width).sext(LegalWidth);
-  Value *AtLeastMin = Builder.CreateICmpSGE(V, ConstantInt::get(LegalTy, Min));
-  Value *AtMostMax = Builder.CreateICmpSLE(V, ConstantInt::get(LegalTy, Max));
-  return Builder.CreateAnd(AtLeastMin, AtMostMax);
-}
-
-// Return true when V is already a zero-extended Width-bit value.
-static bool isKnownZeroExtendedFromWidth(Value *V, unsigned Width,
-                                         const DataLayout &DL) {
-  unsigned LegalWidth = V->getType()->getIntegerBitWidth();
-  return MaskedValueIsZero(V, APInt::getBitsSetFrom(LegalWidth, Width),
-                           SimplifyQuery(DL, dyn_cast<Instruction>(V)));
-}
-
-// Return true when V is already a sign-extended Width-bit value.
-static bool isKnownSignExtendedFromWidth(Value *V, unsigned Width,
-                                         const DataLayout &DL) {
-  unsigned LegalWidth = V->getType()->getIntegerBitWidth();
-  return ComputeNumSignBits(V, DL, /*AC=*/nullptr, dyn_cast<Instruction>(V)) >
-         LegalWidth - Width;
-}
-
-// Get an operand's legal carrier, normalizing it only when a consumer requires
-// signed or unsigned narrow-integer semantics.
-static Value *
-getLegalizedIntegerOperand(Value *Operand, IntegerType *LegalTy,
-                           IntegerExtension Extension, IRBuilder<> &Builder,
-                           const DenseMap<Value *, Value *> &ReplacedValues,
-                           const DataLayout &DL) {
-  if (Value *Replacement = ReplacedValues.lookup(Operand)) {
-    Replacement = Builder.CreateZExtOrTrunc(Replacement, LegalTy);
-    if (Extension == IntegerExtension::None)
-      return Replacement;
-    unsigned Width = cast<IntegerType>(Operand->getType())->getBitWidth();
-    if (Extension == IntegerExtension::Zero) {
-      if (auto *OverflowingOp = dyn_cast<OverflowingBinaryOperator>(Operand);
-          OverflowingOp && OverflowingOp->hasNoUnsignedWrap())
-        return Replacement;
-      return isKnownZeroExtendedFromWidth(Replacement, Width, DL)
-                 ? Replacement
-                 : maskToIntegerWidth(Replacement, Width, Builder);
-    }
-    if (isKnownSignExtendedFromWidth(Replacement, Width, DL))
-      return Replacement;
-    if (auto *OverflowingOp = dyn_cast<OverflowingBinaryOperator>(Operand);
-        OverflowingOp && OverflowingOp->hasNoSignedWrap())
-      return Replacement;
-    unsigned Shift = LegalTy->getBitWidth() - Width;
-    return Builder.CreateAShr(Builder.CreateShl(Replacement, Shift), Shift);
-  }
-  if (auto *C = dyn_cast<ConstantInt>(Operand))
-    return ConstantInt::get(
-        LegalTy, Extension == IntegerExtension::Sign
-                     ? C->getValue().sextOrTrunc(LegalTy->getBitWidth())
-                     : C->getValue().zextOrTrunc(LegalTy->getBitWidth()));
-  if (Operand->getType() == LegalTy)
-    return Operand;
-  report_fatal_error(
-      "DXIL legalization is missing an integer operand replacement",
-      /*gen_crash_diag=*/false);
-}
-
-// Legalize bitcasts between an illegal integer and a fixed integer vector.
+// Promote unsupported integer SSA operations to legal carriers while
+// preserving the original width for normalization at semantic consumers.
+// Poison inputs may become defined; do not propagate narrow-width IR flags.
 static bool
-legalizeNonStandardIntegerBitCast(BitCastInst &BitCast,
-                                  SmallVectorImpl<Instruction *> &ToRemove,
-                                  DenseMap<Value *, Value *> &ReplacedValues) {
-  IntegerType *LegalDstTy = getLegalIntegerType(BitCast.getDestTy());
-  IntegerType *LegalSrcTy = getLegalIntegerType(BitCast.getSrcTy());
-  if (!LegalDstTy && !LegalSrcTy)
-    return false;
-  FixedVectorType *VectorTy = dyn_cast<FixedVectorType>(
-      LegalDstTy ? BitCast.getSrcTy() : BitCast.getDestTy());
-  if (!VectorTy || !VectorTy->getElementType()->isIntegerTy() ||
-      getLegalIntegerType(VectorTy->getElementType()))
-    report_fatal_error(
-        "DXIL legalization does not support this integer bitcast",
-        /*gen_crash_diag=*/false);
-  assert(BitCast.getSrcTy()->getPrimitiveSizeInBits() ==
-             BitCast.getDestTy()->getPrimitiveSizeInBits() &&
-         "Bitcast source and destination must have equal sizes");
+legalizeNonStandardInteger(Instruction &I,
+                           SmallVectorImpl<Instruction *> &ToRemove,
+                           DenseMap<Value *, Value *> &ReplacedValues) {
+  IRBuilder<> Builder(&I);
 
-  IRBuilder<> Builder(&BitCast);
-  unsigned ElementWidth = VectorTy->getScalarSizeInBits();
-  unsigned VecSize = VectorTy->getNumElements();
-  if (LegalDstTy) {
-    Value *Packed = ConstantInt::get(LegalDstTy, 0);
-    for (unsigned Index = 0; Index < VecSize; ++Index) {
-      Value *Element = Builder.CreateExtractElement(BitCast.getOperand(0),
-                                                    Builder.getInt32(Index));
-      Element = Builder.CreateZExt(Element, LegalDstTy);
-      if (Index != 0)
-        Element = Builder.CreateShl(Element, Index * ElementWidth);
-      Packed = Builder.CreateOr(Packed, Element);
+  // Get an operand's legal carrier, normalizing it only when a consumer
+  // requires signed or unsigned narrow-integer semantics.
+  auto operand = [&](Value *Operand, IntegerType *LegalTy,
+                     IntegerExtension Extension =
+                         IntegerExtension::None) -> Value * {
+    if (Value *Replacement = ReplacedValues.lookup(Operand)) {
+      Replacement = Builder.CreateZExtOrTrunc(Replacement, LegalTy);
+      if (Extension == IntegerExtension::None)
+        return Replacement;
+      unsigned Width = cast<IntegerType>(Operand->getType())->getBitWidth();
+      unsigned LegalWidth = LegalTy->getBitWidth();
+      auto *ContextI = dyn_cast<Instruction>(Replacement);
+      if (Extension == IntegerExtension::Zero)
+        return MaskedValueIsZero(Replacement,
+                                 APInt::getBitsSetFrom(LegalWidth, Width),
+                                 SimplifyQuery(I.getDataLayout(), ContextI))
+                   ? Replacement
+                   : maskToIntegerWidth(Replacement, Width, Builder);
+      unsigned Shift = LegalWidth - Width;
+      if (ComputeNumSignBits(Replacement, I.getDataLayout(), /*AC=*/nullptr,
+                             ContextI) > Shift)
+        return Replacement;
+      return Builder.CreateAShr(Builder.CreateShl(Replacement, Shift), Shift);
     }
-    ReplacedValues[&BitCast] = Packed;
-  } else {
-    Value *Packed = getLegalizedIntegerOperand(
-        BitCast.getOperand(0), LegalSrcTy, IntegerExtension::None, Builder,
-        ReplacedValues, BitCast.getDataLayout());
+    if (auto *C = dyn_cast<ConstantInt>(Operand))
+      return ConstantInt::get(
+          LegalTy, Extension == IntegerExtension::Sign
+                       ? C->getValue().sextOrTrunc(LegalTy->getBitWidth())
+                       : C->getValue().zextOrTrunc(LegalTy->getBitWidth()));
+    if (Operand->getType() == LegalTy)
+      return Operand;
+    report_fatal_error(
+        "DXIL legalization is missing an integer operand replacement",
+        /*gen_crash_diag=*/false);
+  };
+
+  auto replace = [&](Value *Replacement) {
+    if (I.getType() == Replacement->getType())
+      I.replaceAllUsesWith(Replacement);
+    else
+      ReplacedValues[&I] = Replacement;
+    ToRemove.push_back(&I);
+    return true;
+  };
+
+  // Legalize bitcasts between an illegal integer and a fixed integer vector.
+  if (auto *BitCast = dyn_cast<BitCastInst>(&I)) {
+    IntegerType *LegalDstTy = getLegalIntegerType(BitCast->getDestTy());
+    IntegerType *LegalSrcTy = getLegalIntegerType(BitCast->getSrcTy());
+    if (!LegalDstTy && !LegalSrcTy)
+      return false;
+    FixedVectorType *VectorTy = dyn_cast<FixedVectorType>(
+        LegalDstTy ? BitCast->getSrcTy() : BitCast->getDestTy());
+    if (!VectorTy || !VectorTy->getElementType()->isIntegerTy() ||
+        getLegalIntegerType(VectorTy->getElementType()))
+      report_fatal_error(
+          "DXIL legalization does not support this integer bitcast",
+          /*gen_crash_diag=*/false);
+    assert(BitCast->getSrcTy()->getPrimitiveSizeInBits() ==
+               BitCast->getDestTy()->getPrimitiveSizeInBits() &&
+           "Bitcast source and destination must have equal sizes");
+
+    unsigned ElementWidth = VectorTy->getScalarSizeInBits();
+    unsigned VecSize = VectorTy->getNumElements();
+    if (LegalDstTy) {
+      Value *Packed = ConstantInt::get(LegalDstTy, 0);
+      for (unsigned Index = 0; Index < VecSize; ++Index) {
+        Value *Element = Builder.CreateExtractElement(BitCast->getOperand(0),
+                                                      Builder.getInt32(Index));
+        Element = Builder.CreateZExt(Element, LegalDstTy);
+        if (Index != 0)
+          Element = Builder.CreateShl(Element, Index * ElementWidth);
+        Packed = Builder.CreateOr(Packed, Element);
+      }
+      return replace(Packed);
+    }
+    Value *Packed = operand(BitCast->getOperand(0), LegalSrcTy);
     Value *Unpacked = PoisonValue::get(VectorTy);
     for (unsigned Index = 0; Index < VecSize; ++Index) {
       Value *Element = Packed;
@@ -184,260 +154,99 @@ legalizeNonStandardIntegerBitCast(BitCastInst &BitCast,
       Unpacked = Builder.CreateInsertElement(Unpacked, Element,
                                              Builder.getInt32(Index));
     }
-    BitCast.replaceAllUsesWith(Unpacked);
+    return replace(Unpacked);
   }
-  ToRemove.push_back(&BitCast);
-  return true;
-}
 
-// trunc illegal iM or iN -> retain its low bits in a legal result type.
-static bool
-legalizeNonStandardIntegerTrunc(TruncInst &Trunc,
-                                SmallVectorImpl<Instruction *> &ToRemove,
-                                DenseMap<Value *, Value *> &ReplacedValues) {
-  IntegerType *LegalSrcTy = getLegalIntegerType(Trunc.getSrcTy());
-  IntegerType *LegalDstTy = getLegalIntegerType(Trunc.getDestTy());
-  if (!LegalSrcTy && !LegalDstTy)
-    return false;
+  // binop illegal iN -> perform the operation in an i32/i64 carrier.
+  if (auto *BO = dyn_cast<BinaryOperator>(&I)) {
+    auto *LegalTy = getLegalIntegerType(BO->getType());
+    if (!LegalTy)
+      return false;
 
-  IRBuilder<> Builder(&Trunc);
-  IntegerExtension Extension = IntegerExtension::None;
-  if (Trunc.hasNoUnsignedWrap())
-    Extension = IntegerExtension::Zero;
-  else if (Trunc.hasNoSignedWrap())
-    Extension = IntegerExtension::Sign;
-  Value *Source = LegalSrcTy
-                      ? getLegalizedIntegerOperand(
-                            Trunc.getOperand(0), LegalSrcTy, Extension, Builder,
-                            ReplacedValues, Trunc.getDataLayout())
-                      : Trunc.getOperand(0);
-  Type *ResultTy = LegalDstTy ? LegalDstTy : Trunc.getDestTy();
-  Value *Replacement = Builder.CreateZExtOrTrunc(Source, ResultTy);
-  unsigned DestWidth = Trunc.getDestTy()->getIntegerBitWidth();
-  if (Trunc.hasNoUnsignedWrap())
-    Replacement = poisonUnless(
-        Replacement, isInIntegerRange(Source, DestWidth, false, Builder),
-        Builder);
-  if (Trunc.hasNoSignedWrap())
-    Replacement = poisonUnless(
-        Replacement, isInIntegerRange(Source, DestWidth, true, Builder),
-        Builder);
-  if (LegalDstTy)
-    ReplacedValues[&Trunc] = Replacement;
-  else
-    Trunc.replaceAllUsesWith(Replacement);
-  ToRemove.push_back(&Trunc);
-  return true;
-}
-
-// binop illegal iN -> perform the operation in an i32/i64 carrier.
-static bool
-legalizeNonStandardIntegerBinOp(BinaryOperator &BO,
-                                SmallVectorImpl<Instruction *> &ToRemove,
-                                DenseMap<Value *, Value *> &ReplacedValues) {
-  auto *LegalTy = getLegalIntegerType(BO.getType());
-  if (!LegalTy)
-    return false;
-
-  IRBuilder<> Builder(&BO);
-  IntegerExtension LHSExtension = IntegerExtension::None;
-  IntegerExtension RHSExtension = IntegerExtension::None;
-  bool HasNoUnsignedWrap = false;
-  bool HasNoSignedWrap = false;
-  if (auto *OverflowingOp = dyn_cast<OverflowingBinaryOperator>(&BO)) {
-    HasNoUnsignedWrap = OverflowingOp->hasNoUnsignedWrap();
-    HasNoSignedWrap = OverflowingOp->hasNoSignedWrap();
-    if (HasNoUnsignedWrap)
-      LHSExtension = RHSExtension = IntegerExtension::Zero;
-    else if (HasNoSignedWrap)
+    IntegerExtension LHSExtension = IntegerExtension::None;
+    IntegerExtension RHSExtension = IntegerExtension::None;
+    switch (BO->getOpcode()) {
+    case Instruction::SDiv:
+    case Instruction::SRem:
       LHSExtension = RHSExtension = IntegerExtension::Sign;
-  }
-  switch (BO.getOpcode()) {
-  case Instruction::SDiv:
-  case Instruction::SRem:
-    LHSExtension = RHSExtension = IntegerExtension::Sign;
-    break;
-  case Instruction::AShr:
-    LHSExtension = IntegerExtension::Sign;
-    RHSExtension = IntegerExtension::Zero;
-    break;
-  case Instruction::UDiv:
-  case Instruction::URem:
-  case Instruction::LShr:
-    LHSExtension = RHSExtension = IntegerExtension::Zero;
-    break;
-  case Instruction::Shl:
-    RHSExtension = IntegerExtension::Zero;
-    break;
-  default:
-    break;
-  }
-  Value *LHS =
-      getLegalizedIntegerOperand(BO.getOperand(0), LegalTy, LHSExtension,
-                                 Builder, ReplacedValues, BO.getDataLayout());
-  Value *RHS =
-      getLegalizedIntegerOperand(BO.getOperand(1), LegalTy, RHSExtension,
-                                 Builder, ReplacedValues, BO.getDataLayout());
-  Value *NewBO = Builder.CreateBinOp(BO.getOpcode(), LHS, RHS);
-  if (auto *NewBOInst = dyn_cast<BinaryOperator>(NewBO))
-    NewBOInst->copyIRFlags(&BO);
-  unsigned Width = BO.getType()->getIntegerBitWidth();
-  if (BO.getOpcode() == Instruction::SDiv)
-    NewBO = poisonUnless(NewBO, isInIntegerRange(NewBO, Width, true, Builder),
-                         Builder);
-  if (BO.isShift())
-    NewBO = poisonUnless(
-        NewBO, Builder.CreateICmpULT(RHS, ConstantInt::get(LegalTy, Width)),
-        Builder);
-  if (HasNoUnsignedWrap)
-    NewBO = poisonUnless(NewBO, isInIntegerRange(NewBO, Width, false, Builder),
-                         Builder);
-  else if (HasNoSignedWrap)
-    NewBO = poisonUnless(NewBO, isInIntegerRange(NewBO, Width, true, Builder),
-                         Builder);
-  ReplacedValues[&BO] = NewBO;
-  ToRemove.push_back(&BO);
-  return true;
-}
-
-// select illegal iN -> select between i32/i64 carrier values.
-static bool
-legalizeNonStandardIntegerSelect(SelectInst &Select,
-                                 SmallVectorImpl<Instruction *> &ToRemove,
-                                 DenseMap<Value *, Value *> &ReplacedValues) {
-  auto *LegalTy = getLegalIntegerType(Select.getType());
-  if (!LegalTy)
-    return false;
-
-  IRBuilder<> Builder(&Select);
-  Value *True = getLegalizedIntegerOperand(
-      Select.getTrueValue(), LegalTy, IntegerExtension::None, Builder,
-      ReplacedValues, Select.getDataLayout());
-  Value *False = getLegalizedIntegerOperand(
-      Select.getFalseValue(), LegalTy, IntegerExtension::None, Builder,
-      ReplacedValues, Select.getDataLayout());
-  Value *Replacement = Builder.CreateSelect(Select.getCondition(), True, False,
-                                            Select.getName(), &Select);
-  if (auto *NewSelect = dyn_cast<SelectInst>(Replacement);
-      NewSelect && !NewSelect->getMetadata(LLVMContext::MD_prof))
-    setExplicitlyUnknownBranchWeightsIfProfiled(*NewSelect, DEBUG_TYPE);
-  ReplacedValues[&Select] = Replacement;
-  ToRemove.push_back(&Select);
-  return true;
-}
-
-// icmp illegal iN -> compare normalized i32/i64 carrier values.
-static bool
-legalizeNonStandardIntegerICmp(ICmpInst &Cmp,
-                               SmallVectorImpl<Instruction *> &ToRemove,
-                               DenseMap<Value *, Value *> &ReplacedValues) {
-  auto *LegalTy = getLegalIntegerType(Cmp.getOperand(0)->getType());
-  if (!LegalTy)
-    return false;
-
-  IRBuilder<> Builder(&Cmp);
-  IntegerExtension Extension =
-      Cmp.isSigned() ? IntegerExtension::Sign : IntegerExtension::Zero;
-  Value *LHS =
-      getLegalizedIntegerOperand(Cmp.getOperand(0), LegalTy, Extension, Builder,
-                                 ReplacedValues, Cmp.getDataLayout());
-  Value *RHS =
-      getLegalizedIntegerOperand(Cmp.getOperand(1), LegalTy, Extension, Builder,
-                                 ReplacedValues, Cmp.getDataLayout());
-  Cmp.replaceAllUsesWith(Builder.CreateICmp(Cmp.getPredicate(), LHS, RHS));
-  ToRemove.push_back(&Cmp);
-  return true;
-}
-
-// cast with an illegal integer endpoint -> cast using legal carrier types.
-static bool
-legalizeNonStandardIntegerCast(CastInst &Cast,
-                               SmallVectorImpl<Instruction *> &ToRemove,
-                               DenseMap<Value *, Value *> &ReplacedValues) {
-  auto *LegalSrcTy = getLegalIntegerType(Cast.getSrcTy());
-  auto *LegalDstTy = getLegalIntegerType(Cast.getDestTy());
-  if (!LegalSrcTy && !LegalDstTy)
-    return false;
-
-  IRBuilder<> Builder(&Cast);
-  bool IsSigned = Cast.getOpcode() == Instruction::SExt ||
-                  Cast.getOpcode() == Instruction::SIToFP;
-  Value *Source = Cast.getOperand(0);
-  if (LegalSrcTy)
-    Source = getLegalizedIntegerOperand(
-        Source, LegalSrcTy,
-        IsSigned ? IntegerExtension::Sign : IntegerExtension::Zero, Builder,
-        ReplacedValues, Cast.getDataLayout());
-  Type *ResultTy = LegalDstTy ? LegalDstTy : Cast.getDestTy();
-  Value *Replacement = nullptr;
-  switch (Cast.getOpcode()) {
-  case Instruction::ZExt:
-    Replacement = Builder.CreateZExtOrTrunc(Source, ResultTy);
-    break;
-  case Instruction::SExt:
-    Replacement = Builder.CreateSExtOrTrunc(Source, ResultTy);
-    break;
-  case Instruction::FPToUI:
-    Replacement = Builder.CreateFPToUI(Source, ResultTy);
-    if (LegalDstTy)
-      Replacement = poisonUnless(
-          Replacement,
-          isInIntegerRange(Replacement, Cast.getDestTy()->getIntegerBitWidth(),
-                           false, Builder),
-          Builder);
-    break;
-  case Instruction::FPToSI:
-    Replacement = Builder.CreateFPToSI(Source, ResultTy);
-    if (LegalDstTy)
-      Replacement = poisonUnless(
-          Replacement,
-          isInIntegerRange(Replacement, Cast.getDestTy()->getIntegerBitWidth(),
-                           true, Builder),
-          Builder);
-    break;
-  case Instruction::UIToFP:
-    Replacement = Builder.CreateUIToFP(Source, ResultTy);
-    break;
-  case Instruction::SIToFP:
-    Replacement = Builder.CreateSIToFP(Source, ResultTy);
-    break;
-  case Instruction::PtrToInt:
-    Replacement = Builder.CreatePtrToInt(Source, ResultTy);
-    break;
-  case Instruction::IntToPtr:
-    Replacement = Builder.CreateIntToPtr(Source, ResultTy);
-    break;
-  default:
-    llvm_unreachable("Unexpected cast opcode with an illegal integer endpoint");
+      break;
+    case Instruction::AShr:
+      LHSExtension = IntegerExtension::Sign;
+      RHSExtension = IntegerExtension::Zero;
+      break;
+    case Instruction::UDiv:
+    case Instruction::URem:
+    case Instruction::LShr:
+      LHSExtension = RHSExtension = IntegerExtension::Zero;
+      break;
+    case Instruction::Shl:
+      RHSExtension = IntegerExtension::Zero;
+      break;
+    default:
+      break;
+    }
+    Value *LHS = operand(BO->getOperand(0), LegalTy, LHSExtension);
+    Value *RHS = operand(BO->getOperand(1), LegalTy, RHSExtension);
+    return replace(Builder.CreateBinOp(BO->getOpcode(), LHS, RHS));
   }
 
-  if (LegalDstTy)
-    ReplacedValues[&Cast] = Replacement;
-  else
-    Cast.replaceAllUsesWith(Replacement);
-  ToRemove.push_back(&Cast);
-  return true;
-}
+  // select illegal iN -> select between i32/i64 carrier values.
+  if (auto *Select = dyn_cast<SelectInst>(&I)) {
+    auto *LegalTy = getLegalIntegerType(Select->getType());
+    if (!LegalTy)
+      return false;
 
-// Promote unsupported integer SSA operations to legal carriers while
-// preserving the original width for normalization at semantic consumers.
-static bool
-legalizeNonStandardInteger(Instruction &I,
-                           SmallVectorImpl<Instruction *> &ToRemove,
-                           DenseMap<Value *, Value *> &ReplacedValues) {
-  if (auto *BitCast = dyn_cast<BitCastInst>(&I))
-    return legalizeNonStandardIntegerBitCast(*BitCast, ToRemove,
-                                             ReplacedValues);
-  if (auto *Trunc = dyn_cast<TruncInst>(&I))
-    return legalizeNonStandardIntegerTrunc(*Trunc, ToRemove, ReplacedValues);
-  if (auto *BO = dyn_cast<BinaryOperator>(&I))
-    return legalizeNonStandardIntegerBinOp(*BO, ToRemove, ReplacedValues);
-  if (auto *Select = dyn_cast<SelectInst>(&I))
-    return legalizeNonStandardIntegerSelect(*Select, ToRemove, ReplacedValues);
-  if (auto *Cmp = dyn_cast<ICmpInst>(&I))
-    return legalizeNonStandardIntegerICmp(*Cmp, ToRemove, ReplacedValues);
-  if (auto *Cast = dyn_cast<CastInst>(&I))
-    return legalizeNonStandardIntegerCast(*Cast, ToRemove, ReplacedValues);
+    Value *True = operand(Select->getTrueValue(), LegalTy);
+    Value *False = operand(Select->getFalseValue(), LegalTy);
+    Value *Replacement = Builder.CreateSelect(Select->getCondition(), True,
+                                              False, Select->getName(), Select);
+    if (auto *NewSelect = dyn_cast<SelectInst>(Replacement);
+        NewSelect && !NewSelect->getMetadata(LLVMContext::MD_prof))
+      setExplicitlyUnknownBranchWeightsIfProfiled(*NewSelect, DEBUG_TYPE);
+    return replace(Replacement);
+  }
+
+  // icmp illegal iN -> compare normalized i32/i64 carrier values.
+  if (auto *Cmp = dyn_cast<ICmpInst>(&I)) {
+    auto *LegalTy = getLegalIntegerType(Cmp->getOperand(0)->getType());
+    if (!LegalTy)
+      return false;
+
+    IntegerExtension Extension =
+        Cmp->isSigned() ? IntegerExtension::Sign : IntegerExtension::Zero;
+    Value *LHS = operand(Cmp->getOperand(0), LegalTy, Extension);
+    Value *RHS = operand(Cmp->getOperand(1), LegalTy, Extension);
+    return replace(Builder.CreateICmp(Cmp->getPredicate(), LHS, RHS));
+  }
+
+  // cast with an illegal integer endpoint -> cast using legal carrier types.
+  if (auto *Cast = dyn_cast<CastInst>(&I)) {
+    auto *LegalSrcTy = getLegalIntegerType(Cast->getSrcTy());
+    auto *LegalDstTy = getLegalIntegerType(Cast->getDestTy());
+    if (!LegalSrcTy && !LegalDstTy)
+      return false;
+
+    IntegerExtension Extension = IntegerExtension::Zero;
+    if (Cast->getOpcode() == Instruction::Trunc)
+      Extension = IntegerExtension::None;
+    else if (Cast->getOpcode() == Instruction::SExt ||
+             Cast->getOpcode() == Instruction::SIToFP)
+      Extension = IntegerExtension::Sign;
+    Value *Source = Cast->getOperand(0);
+    if (LegalSrcTy)
+      Source = operand(Source, LegalSrcTy, Extension);
+    Type *ResultTy = LegalDstTy ? LegalDstTy : Cast->getDestTy();
+    switch (Cast->getOpcode()) {
+    case Instruction::Trunc:
+    case Instruction::ZExt:
+      return replace(Builder.CreateZExtOrTrunc(Source, ResultTy));
+    case Instruction::SExt:
+      return replace(Builder.CreateSExtOrTrunc(Source, ResultTy));
+    default:
+      return replace(Builder.CreateCast(Cast->getOpcode(), Source, ResultTy));
+    }
+  }
+
   if (ReplacedValues.contains(&I) || isa<FreezeInst>(I))
     return false;
   if (getLegalIntegerType(I.getType()))
@@ -448,12 +257,11 @@ legalizeNonStandardInteger(Instruction &I,
         /*gen_crash_diag=*/false);
   for (Value *Operand : I.operands())
     if (getLegalIntegerType(Operand->getType()))
-      report_fatal_error(
-          Twine(
-              "DXIL legalization does not support non-standard integer operand "
-              "type for instruction '") +
-              I.getOpcodeName() + "'",
-          /*gen_crash_diag=*/false);
+      report_fatal_error(Twine("DXIL legalization does not support "
+                               "non-standard integer operand "
+                               "type for instruction '") +
+                             I.getOpcodeName() + "'",
+                         /*gen_crash_diag=*/false);
   return false;
 }
 
@@ -472,37 +280,6 @@ static bool legalizeFreeze(Instruction &I,
 static bool legalizeI8MemoryUses(Instruction &I,
                                  SmallVectorImpl<Instruction *> &ToRemove,
                                  DenseMap<Value *, Value *> &ReplacedValues) {
-
-  auto ProcessOperands = [&](SmallVector<Value *> &NewOperands) {
-    Type *InstrType = IntegerType::get(I.getContext(), 32);
-
-    for (unsigned OpIdx = 0; OpIdx < I.getNumOperands(); ++OpIdx) {
-      Value *Op = I.getOperand(OpIdx);
-      if (ReplacedValues.count(Op) &&
-          ReplacedValues[Op]->getType()->isIntegerTy())
-        InstrType = ReplacedValues[Op]->getType();
-    }
-
-    for (unsigned OpIdx = 0; OpIdx < I.getNumOperands(); ++OpIdx) {
-      Value *Op = I.getOperand(OpIdx);
-      if (ReplacedValues.count(Op))
-        NewOperands.push_back(ReplacedValues[Op]);
-      else if (auto *Imm = dyn_cast<ConstantInt>(Op)) {
-        APInt Value = Imm->getValue();
-        unsigned NewBitWidth = InstrType->getIntegerBitWidth();
-        // Note: options here are sext or sextOrTrunc.
-        // Since i8 isn't supported, we assume new values
-        // will always have a higher bitness.
-        assert(NewBitWidth > Value.getBitWidth() &&
-               "Replacement's BitWidth should be larger than Current.");
-        APInt NewValue = Value.sext(NewBitWidth);
-        NewOperands.push_back(ConstantInt::get(InstrType, NewValue));
-      } else {
-        assert(!Op->getType()->isIntegerTy(8));
-        NewOperands.push_back(Op);
-      }
-    }
-  };
   IRBuilder<> Builder(&I);
   if (auto *Store = dyn_cast<StoreInst>(&I)) {
     if (!Store->getValueOperand()->getType()->isIntegerTy(8))
@@ -543,17 +320,18 @@ static bool legalizeI8MemoryUses(Instruction &I,
 
   if (auto *Load = dyn_cast<LoadInst>(&I);
       Load && I.getType()->isIntegerTy(8)) {
-    SmallVector<Value *> NewOperands;
-    ProcessOperands(NewOperands);
-    Type *ElementType = NewOperands[0]->getType();
-    if (auto *AI = dyn_cast<AllocaInst>(NewOperands[0]))
+    Value *Pointer = Load->getPointerOperand();
+    if (Value *Replacement = ReplacedValues.lookup(Pointer))
+      Pointer = Replacement;
+    Type *ElementType = Pointer->getType();
+    if (auto *AI = dyn_cast<AllocaInst>(Pointer))
       ElementType = AI->getAllocatedType();
-    if (auto *GEP = dyn_cast<GetElementPtrInst>(NewOperands[0])) {
+    if (auto *GEP = dyn_cast<GetElementPtrInst>(Pointer)) {
       ElementType = GEP->getSourceElementType();
     }
     if (ElementType->isArrayTy())
       ElementType = ElementType->getArrayElementType();
-    LoadInst *NewLoad = Builder.CreateLoad(ElementType, NewOperands[0]);
+    LoadInst *NewLoad = Builder.CreateLoad(ElementType, Pointer);
     ReplacedValues[Load] = NewLoad;
     ToRemove.push_back(Load);
     return true;

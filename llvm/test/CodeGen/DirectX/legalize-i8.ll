@@ -14,11 +14,7 @@ define void @opaque_i8_store(ptr %pointer) {
 define i32 @removal_only_test(i32 %a) {
 ; CHECK-LABEL: define i32 @removal_only_test(
 ; CHECK-SAME: i32 [[A:%.*]]) {
-; CHECK-NEXT:    [[TMP1:%.*]] = icmp sge i32 [[A]], -128
-; CHECK-NEXT:    [[TMP2:%.*]] = icmp sle i32 [[A]], 127
-; CHECK-NEXT:    [[TMP3:%.*]] = and i1 [[TMP1]], [[TMP2]]
-; CHECK-NEXT:    [[TMP4:%.*]] = select i1 [[TMP3]], i32 [[A]], i32 poison
-; CHECK-NEXT:    [[SHL:%.*]] = shl i32 [[TMP4]], 24
+; CHECK-NEXT:    [[SHL:%.*]] = shl i32 [[A]], 24
 ; CHECK-NEXT:    [[SIGNED:%.*]] = ashr i32 [[SHL]], 24
 ; CHECK-NEXT:    ret i32 [[SIGNED]]
 ;
@@ -32,17 +28,7 @@ define i32 @i8trunc(float %0) #0 {
 ; CHECK-SAME: float [[TMP0:%.*]]) {
 ; CHECK-NEXT:    [[CONVERT:%.*]] = fptosi float [[TMP0]] to i32
 ; CHECK-NEXT:    [[INITIAL_REM:%.*]] = srem i32 [[CONVERT]], 8
-; CHECK-NEXT:    [[TMP4:%.*]] = icmp sge i32 [[INITIAL_REM]], -128
-; CHECK-NEXT:    [[TMP5:%.*]] = icmp sle i32 [[INITIAL_REM]], 127
-; CHECK-NEXT:    [[TMP6:%.*]] = and i1 [[TMP4]], [[TMP5]]
-; CHECK-NEXT:    [[TMP7:%.*]] = select i1 [[TMP6]], i32 [[INITIAL_REM]], i32 poison
-; CHECK-NEXT:    [[TMP8:%.*]] = shl i32 [[TMP7]], 24
-; CHECK-NEXT:    [[TMP9:%.*]] = ashr i32 [[TMP8]], 24
-; CHECK-NEXT:    [[TMP10:%.*]] = add nsw i32 [[TMP9]], 1
-; CHECK-NEXT:    [[TMP11:%.*]] = icmp sge i32 [[TMP10]], -128
-; CHECK-NEXT:    [[TMP12:%.*]] = icmp sle i32 [[TMP10]], 127
-; CHECK-NEXT:    [[TMP13:%.*]] = and i1 [[TMP11]], [[TMP12]]
-; CHECK-NEXT:    [[ADD:%.*]] = select i1 [[TMP13]], i32 [[TMP10]], i32 poison
+; CHECK-NEXT:    [[ADD:%.*]] = add i32 [[INITIAL_REM]], 1
 ; CHECK-NEXT:    [[SREM:%.*]] = srem i32 [[ADD]], 8
 ; CHECK-NEXT:    [[SUB:%.*]] = sub i32 [[SREM]], 1
 ; CHECK-NEXT:    [[MUL:%.*]] = mul i32 [[SUB]], 1
@@ -51,11 +37,7 @@ define i32 @i8trunc(float %0) #0 {
 ; CHECK-NEXT:    [[UDIV_SHL:%.*]] = shl i32 [[UDIV]], 24
 ; CHECK-NEXT:    [[UDIV_SIGNED:%.*]] = ashr i32 [[UDIV_SHL]], 24
 ; CHECK-NEXT:    [[SDIV:%.*]] = sdiv i32 [[UDIV_SIGNED]], 1
-; CHECK-NEXT:    [[TMP23:%.*]] = icmp sge i32 [[SDIV]], -128
-; CHECK-NEXT:    [[TMP24:%.*]] = icmp sle i32 [[SDIV]], 127
-; CHECK-NEXT:    [[TMP25:%.*]] = and i1 [[TMP23]], [[TMP24]]
-; CHECK-NEXT:    [[TMP26:%.*]] = select i1 [[TMP25]], i32 [[SDIV]], i32 poison
-; CHECK-NEXT:    [[SDIV_UNSIGNED:%.*]] = and i32 [[TMP26]], 255
+; CHECK-NEXT:    [[SDIV_UNSIGNED:%.*]] = and i32 [[SDIV]], 255
 ; CHECK-NEXT:    [[UREM:%.*]] = urem i32 [[SDIV_UNSIGNED]], 1
 ; CHECK-NEXT:    [[AND:%.*]] = and i32 [[UREM]], 1
 ; CHECK-NEXT:    [[OR:%.*]] = or i32 [[AND]], 1
@@ -89,12 +71,8 @@ define i32 @i8trunc(float %0) #0 {
 define i32 @cast_removal_test(i32 %a) {
 ; CHECK-LABEL: define i32 @cast_removal_test(
 ; CHECK-SAME: i32 [[A:%.*]]) {
-; CHECK-NEXT:    [[TMP1:%.*]] = icmp sge i32 [[A]], -128
-; CHECK-NEXT:    [[TMP2:%.*]] = icmp sle i32 [[A]], 127
-; CHECK-NEXT:    [[TMP3:%.*]] = and i1 [[TMP1]], [[TMP2]]
-; CHECK-NEXT:    [[TMP4:%.*]] = select i1 [[TMP3]], i32 [[A]], i32 poison
-; CHECK-NEXT:    [[TMP5:%.*]] = and i32 [[TMP4]], 255
-; CHECK-NEXT:    [[SHL:%.*]] = shl i32 [[TMP4]], 24
+; CHECK-NEXT:    [[TMP5:%.*]] = and i32 [[A]], 255
+; CHECK-NEXT:    [[SHL:%.*]] = shl i32 [[A]], 24
 ; CHECK-NEXT:    [[SIGNED:%.*]] = ashr i32 [[SHL]], 24
 ; CHECK-NEXT:    [[TMP8:%.*]] = add i32 [[TMP5]], [[SIGNED]]
 ; CHECK-NEXT:    ret i32 [[TMP8]]
@@ -109,22 +87,14 @@ define i32 @cast_removal_test(i32 %a) {
 define i1 @trunc_cmp_test(i32 %a, i32 %b) {
 ; CHECK-LABEL: define i1 @trunc_cmp_test(
 ; CHECK-SAME: i32 [[A:%.*]], i32 [[B:%.*]]) {
-; CHECK-NEXT:    [[TMP1:%.*]] = icmp sge i32 [[A]], -128
-; CHECK-NEXT:    [[TMP2:%.*]] = icmp sle i32 [[A]], 127
-; CHECK-NEXT:    [[TMP3:%.*]] = and i1 [[TMP1]], [[TMP2]]
-; CHECK-NEXT:    [[TMP4:%.*]] = select i1 [[TMP3]], i32 [[A]], i32 poison
-; CHECK-NEXT:    [[TMP5:%.*]] = icmp sge i32 [[B]], -128
-; CHECK-NEXT:    [[TMP6:%.*]] = icmp sle i32 [[B]], 127
-; CHECK-NEXT:    [[TMP7:%.*]] = and i1 [[TMP5]], [[TMP6]]
-; CHECK-NEXT:    [[TMP8:%.*]] = select i1 [[TMP7]], i32 [[B]], i32 poison
-; CHECK-NEXT:    [[ASHL:%.*]] = shl i32 [[TMP4]], 24
+; CHECK-NEXT:    [[ASHL:%.*]] = shl i32 [[A]], 24
 ; CHECK-NEXT:    [[ASIGNED:%.*]] = ashr i32 [[ASHL]], 24
-; CHECK-NEXT:    [[BSHL:%.*]] = shl i32 [[TMP8]], 24
+; CHECK-NEXT:    [[BSHL:%.*]] = shl i32 [[B]], 24
 ; CHECK-NEXT:    [[BSIGNED:%.*]] = ashr i32 [[BSHL]], 24
 ; CHECK-NEXT:    [[TMP13:%.*]] = icmp slt i32 [[ASIGNED]], [[BSIGNED]]
-; CHECK-NEXT:    [[TMP14:%.*]] = shl i32 [[TMP4]], 24
+; CHECK-NEXT:    [[TMP14:%.*]] = shl i32 [[A]], 24
 ; CHECK-NEXT:    [[TMP15:%.*]] = ashr i32 [[TMP14]], 24
-; CHECK-NEXT:    [[TMP16:%.*]] = shl i32 [[TMP8]], 24
+; CHECK-NEXT:    [[TMP16:%.*]] = shl i32 [[B]], 24
 ; CHECK-NEXT:    [[TMP17:%.*]] = ashr i32 [[TMP16]], 24
 ; CHECK-NEXT:    [[TMP18:%.*]] = icmp sgt i32 [[TMP15]], [[TMP17]]
 ; CHECK-NEXT:    [[TMP19:%.*]] = and i1 [[TMP13]], [[TMP18]]
@@ -141,11 +111,7 @@ define i1 @trunc_cmp_test(i32 %a, i32 %b) {
 define i32 @first_operand_imm_test(i32 %a) {
 ; CHECK-LABEL: define i32 @first_operand_imm_test(
 ; CHECK-SAME: i32 [[A:%.*]]) {
-; CHECK-NEXT:    [[TMP1:%.*]] = icmp sge i32 [[A]], -128
-; CHECK-NEXT:    [[TMP2:%.*]] = icmp sle i32 [[A]], 127
-; CHECK-NEXT:    [[TMP3:%.*]] = and i1 [[TMP1]], [[TMP2]]
-; CHECK-NEXT:    [[TMP4:%.*]] = select i1 [[TMP3]], i32 [[A]], i32 poison
-; CHECK-NEXT:    [[TMP5:%.*]] = sub i32 0, [[TMP4]]
+; CHECK-NEXT:    [[TMP5:%.*]] = sub i32 0, [[A]]
 ; CHECK-NEXT:    [[TMP6:%.*]] = shl i32 [[TMP5]], 24
 ; CHECK-NEXT:    [[TMP7:%.*]] = ashr i32 [[TMP6]], 24
 ; CHECK-NEXT:    ret i32 [[TMP7]]
@@ -160,11 +126,7 @@ define i16 @i16_test(i16 %a) {
 ; CHECK-LABEL: define i16 @i16_test(
 ; CHECK-SAME: i16 [[A:%.*]]) {
 ; CHECK-NEXT:    [[EXT:%.*]] = zext i16 [[A]] to i32
-; CHECK-NEXT:    [[TMP2:%.*]] = icmp sge i16 [[A]], -128
-; CHECK-NEXT:    [[TMP3:%.*]] = icmp sle i16 [[A]], 127
-; CHECK-NEXT:    [[TMP4:%.*]] = and i1 [[TMP2]], [[TMP3]]
-; CHECK-NEXT:    [[TMP5:%.*]] = select i1 [[TMP4]], i32 [[EXT]], i32 poison
-; CHECK-NEXT:    [[TMP6:%.*]] = sub i32 0, [[TMP5]]
+; CHECK-NEXT:    [[TMP6:%.*]] = sub i32 0, [[EXT]]
 ; CHECK-NEXT:    [[TMP7:%.*]] = shl i32 [[TMP6]], 24
 ; CHECK-NEXT:    [[TMP8:%.*]] = ashr i32 [[TMP7]], 24
 ; CHECK-NEXT:    [[TMP9:%.*]] = trunc i32 [[TMP8]] to i16
