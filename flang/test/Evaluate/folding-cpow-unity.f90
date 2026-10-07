@@ -14,4 +14,7 @@ complex(8), parameter :: z = (3.0_8, 0.0_8)
 real(8), parameter :: r_var = real(z ** (1.0_8, 0.0_8), kind=8)
 logical, parameter :: test_cpow_unity_var = r_var == 3.0_8
 
+complex(8), parameter :: z_im = (3.0_8, 4.0_8)
+logical, parameter :: test_cpow_unity_full = z_im ** (1.0_8, 0.0_8) == z_im
+
 end

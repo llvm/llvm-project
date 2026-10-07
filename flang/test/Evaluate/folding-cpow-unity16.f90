@@ -11,4 +11,8 @@ complex(16), parameter :: z16 = (3.0_16, 0.0_16)
 real(16), parameter :: r_var16 = real(z16 ** (1.0_16, 0.0_16), kind=16)
 logical, parameter :: test_cpow_unity_var16 = r_var16 == 3.0_16
 
+complex(16), parameter :: z16_im = (3.0_16, 4.0_16)
+logical, parameter :: test_cpow_unity_full16 = &
+  z16_im ** (1.0_16, 0.0_16) == z16_im
+
 end
