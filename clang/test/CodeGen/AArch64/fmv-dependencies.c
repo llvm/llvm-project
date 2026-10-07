@@ -138,6 +138,87 @@ __attribute__((target_version("wfxt"))) int fmv(void) { return 0; }
 // CHECK: define dso_local i32 @fmv._Mcssc() #[[cssc:[0-9]+]] {
 __attribute__((target_version("cssc"))) int fmv(void) { return 0; }
 
+// CHECK: define dso_local i32 @fmv._Mfp8() #[[fp8:[0-9]+]] {
+__attribute__((target_version("fp8"))) int fmv(void) { return 0; }
+
+// CHECK: define dso_local i32 @fmv._Mf8f32mm() #[[f8f32mm:[0-9]+]] {
+__attribute__((target_version("f8f32mm"))) int fmv(void) { return 0; }
+
+// CHECK: define dso_local i32 @fmv._Mfp8dot4() #[[fp8dot4:[0-9]+]] {
+__attribute__((target_version("fp8dot4"))) int fmv(void) { return 0; }
+
+// CHECK: define dso_local i32 @fmv._Mfp8dot2() #[[fp8dot2:[0-9]+]] {
+__attribute__((target_version("fp8dot2"))) int fmv(void) { return 0; }
+
+// CHECK: define dso_local i32 @fmv._Mfp8fma() #[[fp8fma:[0-9]+]] {
+__attribute__((target_version("fp8fma"))) int fmv(void) { return 0; }
+
+// CHECK: define dso_local i32 @fmv._Msme-f8f32() #[[sme_f8f32:[0-9]+]] {
+__attribute__((target_version("sme-f8f32"))) int fmv(void) { return 0; }
+
+// CHECK: define dso_local i32 @fmv._Mssve-fp8dot4() #[[ssve_fp8dot4:[0-9]+]] {
+__attribute__((target_version("ssve-fp8dot4"))) int fmv(void) { return 0; }
+
+// CHECK: define dso_local i32 @fmv._Mssve-fp8fma() #[[ssve_fp8fma:[0-9]+]] {
+__attribute__((target_version("ssve-fp8fma"))) int fmv(void) { return 0; }
+
+// CHECK: define dso_local i32 @fmv._Mssve-bitperm() #[[ssve_bitperm:[0-9]+]] {
+__attribute__((target_version("ssve-bitperm"))) int fmv(void) { return 0; }
+
+// CHECK: define dso_local i32 @fmv._Mssve-fp8dot2() #[[ssve_fp8dot2:[0-9]+]] {
+__attribute__((target_version("ssve-fp8dot2"))) int fmv(void) { return 0; }
+
+// CHECK: define dso_local i32 @fmv._Mssve-aes() #[[ssve_aes:[0-9]+]] {
+__attribute__((target_version("ssve-aes"))) int fmv(void) { return 0; }
+
+// CHECK: define dso_local i32 @fmv._Mssve-fexpa() #[[ssve_fexpa:[0-9]+]] {
+__attribute__((target_version("ssve-fexpa"))) int fmv(void) { return 0; }
+
+// CHECK: define dso_local i32 @fmv._Mlut() #[[lut:[0-9]+]] {
+__attribute__((target_version("lut"))) int fmv(void) { return 0; }
+
+// CHECK: define dso_local i32 @fmv._Mfaminmax() #[[faminmax:[0-9]+]] {
+__attribute__((target_version("faminmax"))) int fmv(void) { return 0; }
+
+// CHECK: define dso_local i32 @fmv._Msme-lutv2() #[[sme_lutv2:[0-9]+]] {
+__attribute__((target_version("sme-lutv2"))) int fmv(void) { return 0; }
+
+// CHECK: define dso_local i32 @fmv._Msme2p1() #[[sme2p1:[0-9]+]] {
+__attribute__((target_version("sme2p1"))) int fmv(void) { return 0; }
+
+// CHECK: define dso_local i32 @fmv._Msme2p2() #[[sme2p2:[0-9]+]] {
+__attribute__((target_version("sme2p2"))) int fmv(void) { return 0; }
+
+// CHECK: define dso_local i32 @fmv._Msve2p1() #[[sve2p1:[0-9]+]] {
+__attribute__((target_version("sve2p1"))) int fmv(void) { return 0; }
+
+// CHECK: define dso_local i32 @fmv._Msve2p2() #[[sve2p2:[0-9]+]] {
+__attribute__((target_version("sve2p2"))) int fmv(void) { return 0; }
+
+// CHECK: define dso_local i32 @fmv._Msme-f16f16() #[[sme_f16f16:[0-9]+]] {
+__attribute__((target_version("sme-f16f16"))) int fmv(void) { return 0; }
+
+// CHECK: define dso_local i32 @fmv._Mgcs() #[[gcs:[0-9]+]] {
+__attribute__((target_version("gcs"))) int fmv(void) { return 0; }
+
+// CHECK: define dso_local i32 @fmv._Msme-f8f16() #[[sme_f8f16:[0-9]+]] {
+__attribute__((target_version("sme-f8f16"))) int fmv(void) { return 0; }
+
+// CHECK: define dso_local i32 @fmv._Mf8f16mm() #[[f8f16mm:[0-9]+]] {
+__attribute__((target_version("f8f16mm"))) int fmv(void) { return 0; }
+
+// CHECK: define dso_local i32 @fmv._Msve-aes2() #[[sve_aes2:[0-9]+]] {
+__attribute__((target_version("sve-aes2"))) int fmv(void) { return 0; }
+
+// CHECK: define dso_local i32 @fmv._Msve-bfscale() #[[sve_bfscale:[0-9]+]] {
+__attribute__((target_version("sve-bfscale"))) int fmv(void) { return 0; }
+
+// CHECK: define dso_local i32 @fmv._Msve-f16f32mm() #[[sve_f16f32mm:[0-9]+]] {
+__attribute__((target_version("sve-f16f32mm"))) int fmv(void) { return 0; }
+
+// CHECK: define dso_local i32 @fmv._Msme-mop4() #[[sme_mop4:[0-9]+]] {
+__attribute__((target_version("sme-mop4"))) int fmv(void) { return 0; }
+
 // CHECK-NOT: define dso_local i32 @fmv._M{{.*}}
 __attribute__((target_version("non_existent_extension"))) int fmv(void);
 
@@ -192,3 +273,30 @@ int caller() {
 // CHECK: attributes #[[sve2_sm4]] = { {{.*}} "target-features"="+fp-armv8,+fullfp16,+neon,+outline-atomics,+sm4,+sve,+sve-sm4,+sve2,+sve2-sm4,+v8a"
 // CHECK: attributes #[[wfxt]] = { {{.*}} "target-features"="+fp-armv8,+neon,+outline-atomics,+v8a,+wfxt"
 // CHECK: attributes #[[cssc]] = { {{.*}} "target-features"="+cssc,+fp-armv8,+neon,+outline-atomics,+v8a"
+// CHECK: attributes #[[fp8]] = { {{.*}} "target-features"="+fp-armv8,+fp8,+neon,+outline-atomics,+v8a"
+// CHECK: attributes #[[f8f32mm]] = { {{.*}} "target-features"="+f8f32mm,+fp-armv8,+fp8,+neon,+outline-atomics,+v8a"
+// CHECK: attributes #[[fp8dot4]] = { {{.*}} "target-features"="+fp-armv8,+fp8,+fp8dot4,+neon,+outline-atomics,+v8a"
+// CHECK: attributes #[[fp8dot2]] = { {{.*}} "target-features"="+fp-armv8,+fp8,+fp8dot2,+neon,+outline-atomics,+v8a"
+// CHECK: attributes #[[fp8fma]] = { {{.*}} "target-features"="+fp-armv8,+fp8,+fp8fma,+neon,+outline-atomics,+v8a"
+// CHECK: attributes #[[sme_f8f32]] = { {{.*}} "target-features"="+bf16,+fp-armv8,+fp8,+fullfp16,+neon,+outline-atomics,+sme,+sme-f8f32,+sme2,+v8a"
+// CHECK: attributes #[[ssve_fp8dot4]] = { {{.*}} "target-features"="+bf16,+fp-armv8,+fp8,+fullfp16,+neon,+outline-atomics,+sme,+sme2,+ssve-fp8dot4,+v8a"
+// CHECK: attributes #[[ssve_fp8fma]] = { {{.*}} "target-features"="+bf16,+fp-armv8,+fp8,+fullfp16,+neon,+outline-atomics,+sme,+sme2,+ssve-fp8fma,+v8a"
+// CHECK: attributes #[[ssve_bitperm]] = { {{.*}} "target-features"="+bf16,+fp-armv8,+fullfp16,+neon,+outline-atomics,+sme,+sme2,+ssve-bitperm,+sve-bitperm,+v8a"
+// CHECK: attributes #[[ssve_fp8dot2]] = { {{.*}} "target-features"="+bf16,+fp-armv8,+fp8,+fullfp16,+neon,+outline-atomics,+sme,+sme2,+ssve-fp8dot2,+v8a"
+// CHECK: attributes #[[ssve_aes]] = { {{.*}} "target-features"="+aes,+bf16,+fp-armv8,+fullfp16,+neon,+outline-atomics,+sme,+sme2,+ssve-aes,+sve-aes,+v8a"
+// CHECK: attributes #[[ssve_fexpa]] = { {{.*}} "target-features"="+bf16,+fp-armv8,+fullfp16,+neon,+outline-atomics,+sme,+sme2,+ssve-fexpa,+v8a"
+// CHECK: attributes #[[lut]] = { {{.*}} "target-features"="+fp-armv8,+lut,+neon,+outline-atomics,+v8a"
+// CHECK: attributes #[[faminmax]] = { {{.*}} "target-features"="+faminmax,+fp-armv8,+neon,+outline-atomics,+v8a"
+// CHECK: attributes #[[sme_lutv2]] = { {{.*}} "target-features"="+bf16,+fp-armv8,+fullfp16,+neon,+outline-atomics,+sme,+sme-lutv2,+sme2,+v8a"
+// CHECK: attributes #[[sme2p1]] = { {{.*}} "target-features"="+bf16,+fp-armv8,+fullfp16,+neon,+outline-atomics,+sme,+sme2,+sme2p1,+v8a"
+// CHECK: attributes #[[sme2p2]] = { {{.*}} "target-features"="+bf16,+fp-armv8,+fullfp16,+neon,+outline-atomics,+sme,+sme2,+sme2p1,+sme2p2,+v8a"
+// CHECK: attributes #[[sve2p1]] = { {{.*}} "target-features"="+fp-armv8,+fullfp16,+neon,+outline-atomics,+sve,+sve2,+sve2p1,+v8a"
+// CHECK: attributes #[[sve2p2]] = { {{.*}} "target-features"="+fp-armv8,+fullfp16,+neon,+outline-atomics,+sve,+sve2,+sve2p1,+sve2p2,+v8a"
+// CHECK: attributes #[[sme_f16f16]] = { {{.*}} "target-features"="+bf16,+fp-armv8,+fullfp16,+neon,+outline-atomics,+sme,+sme-f16f16,+sme2,+v8a"
+// CHECK: attributes #[[gcs]] = { {{.*}} "target-features"="+chk,+fp-armv8,+gcs,+neon,+outline-atomics,+v8a"
+// CHECK: attributes #[[sme_f8f16]] = { {{.*}} "target-features"="+bf16,+fp-armv8,+fp8,+fullfp16,+neon,+outline-atomics,+sme,+sme-f8f16,+sme2,+v8a"
+// CHECK: attributes #[[f8f16mm]] = { {{.*}} "target-features"="+f8f16mm,+fp-armv8,+fp8,+neon,+outline-atomics,+v8a"
+// CHECK: attributes #[[sve_aes2]] = { {{.*}} "target-features"="+fp-armv8,+neon,+outline-atomics,+sve-aes2,+v8a"
+// CHECK: attributes #[[sve_bfscale]] = { {{.*}} "target-features"="+fp-armv8,+neon,+outline-atomics,+sve-bfscale,+v8a"
+// CHECK: attributes #[[sve_f16f32mm]] = { {{.*}} "target-features"="+fp-armv8,+fullfp16,+neon,+outline-atomics,+sve,+sve-f16f32mm,+v8a"
+// CHECK: attributes #[[sme_mop4]] = { {{.*}} "target-features"="+bf16,+fp-armv8,+fullfp16,+neon,+outline-atomics,+sme,+sme-mop4,+sme2,+v8a"

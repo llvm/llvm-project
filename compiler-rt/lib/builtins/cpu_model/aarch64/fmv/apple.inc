@@ -34,6 +34,7 @@ static uint64_t deriveImplicitFeatures(uint64_t features) {
   // FEAT_FP is always enabled
   features |= (1ULL << FEAT_FP);
 
+  features |= (1ULL << FEAT_EXT);
   features |= (1ULL << FEAT_INIT);
 
   return features;
@@ -97,8 +98,9 @@ void __init_cpu_features_resolver(void) {
 
     features = deriveImplicitFeatures(features);
 
-    __atomic_store(&__aarch64_cpu_features.features, &features,
-                   __ATOMIC_RELAXED);
+    __atomic_store_n(&__aarch64_cpu_features.features2, 0, __ATOMIC_RELAXED);
+    __atomic_store_n(&__aarch64_cpu_features.features, features,
+                     __ATOMIC_RELEASE);
     return;
   }
 #endif
@@ -142,8 +144,9 @@ void __init_cpu_features_resolver(void) {
 
   features = deriveImplicitFeatures(features);
 
-  __atomic_store(&__aarch64_cpu_features.features, &features,
-                  __ATOMIC_RELAXED);
+  __atomic_store_n(&__aarch64_cpu_features.features2, 0, __ATOMIC_RELAXED);
+  __atomic_store_n(&__aarch64_cpu_features.features, features,
+                   __ATOMIC_RELEASE);
 }
 
 #endif // TARGET_OS_OSX || TARGET_OS_IPHONE

@@ -7389,6 +7389,7 @@ CodeGenFunction::EmitAArch64CpuSupports(ArrayRef<StringRef> FeaturesStrs) {
     // Get features from structure in runtime library
     // struct {
     //   unsigned long long features;
+    //   unsigned long long features2;
     // } __aarch64_cpu_features;
     llvm::Type *STy = llvm::StructType::get(Int64Ty);
     llvm::Constant *AArch64CPUFeatures =
@@ -7399,10 +7400,41 @@ CodeGenFunction::EmitAArch64CpuSupports(ArrayRef<StringRef> FeaturesStrs) {
         {ConstantInt::get(Int32Ty, 0), ConstantInt::get(Int32Ty, 0)});
     Value *Features = Builder.CreateAlignedLoad(Int64Ty, CpuFeatures,
                                                 CharUnits::fromQuantity(8));
-    Value *Mask = Builder.getInt(FeaturesMask.trunc(64));
+    llvm::APInt LowerMask = FeaturesMask.trunc(64);
+    llvm::APInt UpperMask = FeaturesMask.lshr(64).trunc(64);
+    if (!UpperMask.isZero())
+      // Require the second feature word to be present.
+      LowerMask.setBit(llvm::AArch64::FEAT_EXT);
+
+    Value *Mask = Builder.getInt(LowerMask);
     Value *Bitset = Builder.CreateAnd(Features, Mask);
     Value *Cmp = Builder.CreateICmpEQ(Bitset, Mask);
     Result = Builder.CreateAnd(Result, Cmp);
+
+    if (!UpperMask.isZero()) {
+      // Load the second feature word only if present.
+      llvm::BasicBlock *LowerBlock = Builder.GetInsertBlock();
+      llvm::BasicBlock *ExtensionBlock =
+          createBasicBlock("cpu_supports.extension", CurFn);
+      llvm::BasicBlock *EndBlock = createBasicBlock("cpu_supports.end", CurFn);
+      Builder.CreateCondBr(Result, ExtensionBlock, EndBlock);
+
+      Builder.SetInsertPoint(ExtensionBlock);
+      Value *ExtendedFeatures = Builder.CreateGEP(Int8Ty, AArch64CPUFeatures,
+                                                  ConstantInt::get(Int64Ty, 8));
+      Features = Builder.CreateAlignedLoad(Int64Ty, ExtendedFeatures,
+                                           CharUnits::fromQuantity(8));
+      Mask = Builder.getInt(UpperMask);
+      Bitset = Builder.CreateAnd(Features, Mask);
+      Cmp = Builder.CreateICmpEQ(Bitset, Mask);
+      Builder.CreateBr(EndBlock);
+
+      Builder.SetInsertPoint(EndBlock);
+      llvm::PHINode *ResultPhi = Builder.CreatePHI(Builder.getInt1Ty(), 2);
+      ResultPhi->addIncoming(Builder.getFalse(), LowerBlock);
+      ResultPhi->addIncoming(Cmp, ExtensionBlock);
+      Result = ResultPhi;
+    }
   }
   return Result;
 }

@@ -64,7 +64,7 @@ _Bool __aarch64_have_lse_atomics
 // in Function Multi Versioning
 struct {
   unsigned long long features;
-  // As features grows new fields could be added
+  unsigned long long features2;
 } __aarch64_cpu_features __attribute__((visibility("hidden"), nocommon));
 
 // The formatter wants to re-order these includes, but doing so is incorrect:

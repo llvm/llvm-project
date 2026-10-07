@@ -133,6 +133,87 @@ __attribute__((target_version("sve2-sm4"))) int fmv(void) { return 0; }
 // CHECK: define dso_local i32 @fmv._Mwfxt() #[[wfxt:[0-9]+]] {
 __attribute__((target_version("wfxt"))) int fmv(void) { return 0; }
 
+// CHECK: define dso_local i32 @fmv._Mfp8() #[[fp8:[0-9]+]] {
+__attribute__((target_version("fp8"))) int fmv(void) { return 0; }
+
+// CHECK: define dso_local i32 @fmv._Mf8f32mm() #[[f8f32mm:[0-9]+]] {
+__attribute__((target_version("f8f32mm"))) int fmv(void) { return 0; }
+
+// CHECK: define dso_local i32 @fmv._Mfp8dot4() #[[fp8dot4:[0-9]+]] {
+__attribute__((target_version("fp8dot4"))) int fmv(void) { return 0; }
+
+// CHECK: define dso_local i32 @fmv._Mfp8dot2() #[[fp8dot2:[0-9]+]] {
+__attribute__((target_version("fp8dot2"))) int fmv(void) { return 0; }
+
+// CHECK: define dso_local i32 @fmv._Mfp8fma() #[[fp8fma:[0-9]+]] {
+__attribute__((target_version("fp8fma"))) int fmv(void) { return 0; }
+
+// CHECK: define dso_local i32 @fmv._Msme-f8f32() #[[sme_f8f32:[0-9]+]] {
+__attribute__((target_version("sme-f8f32"))) int fmv(void) { return 0; }
+
+// CHECK: define dso_local i32 @fmv._Mssve-fp8dot4() #[[ssve_fp8dot4:[0-9]+]] {
+__attribute__((target_version("ssve-fp8dot4"))) int fmv(void) { return 0; }
+
+// CHECK: define dso_local i32 @fmv._Mssve-fp8fma() #[[ssve_fp8fma:[0-9]+]] {
+__attribute__((target_version("ssve-fp8fma"))) int fmv(void) { return 0; }
+
+// CHECK: define dso_local i32 @fmv._Mssve-bitperm() #[[ssve_bitperm:[0-9]+]] {
+__attribute__((target_version("ssve-bitperm"))) int fmv(void) { return 0; }
+
+// CHECK: define dso_local i32 @fmv._Mssve-fp8dot2() #[[ssve_fp8dot2:[0-9]+]] {
+__attribute__((target_version("ssve-fp8dot2"))) int fmv(void) { return 0; }
+
+// CHECK: define dso_local i32 @fmv._Mssve-aes() #[[ssve_aes:[0-9]+]] {
+__attribute__((target_version("ssve-aes"))) int fmv(void) { return 0; }
+
+// CHECK: define dso_local i32 @fmv._Mssve-fexpa() #[[ssve_fexpa:[0-9]+]] {
+__attribute__((target_version("ssve-fexpa"))) int fmv(void) { return 0; }
+
+// CHECK: define dso_local i32 @fmv._Mlut() #[[lut:[0-9]+]] {
+__attribute__((target_version("lut"))) int fmv(void) { return 0; }
+
+// CHECK: define dso_local i32 @fmv._Mfaminmax() #[[faminmax:[0-9]+]] {
+__attribute__((target_version("faminmax"))) int fmv(void) { return 0; }
+
+// CHECK: define dso_local i32 @fmv._Msme-lutv2() #[[sme_lutv2:[0-9]+]] {
+__attribute__((target_version("sme-lutv2"))) int fmv(void) { return 0; }
+
+// CHECK: define dso_local i32 @fmv._Msme2p1() #[[sme2p1:[0-9]+]] {
+__attribute__((target_version("sme2p1"))) int fmv(void) { return 0; }
+
+// CHECK: define dso_local i32 @fmv._Msme2p2() #[[sme2p2:[0-9]+]] {
+__attribute__((target_version("sme2p2"))) int fmv(void) { return 0; }
+
+// CHECK: define dso_local i32 @fmv._Msve2p1() #[[sve2p1:[0-9]+]] {
+__attribute__((target_version("sve2p1"))) int fmv(void) { return 0; }
+
+// CHECK: define dso_local i32 @fmv._Msve2p2() #[[sve2p2:[0-9]+]] {
+__attribute__((target_version("sve2p2"))) int fmv(void) { return 0; }
+
+// CHECK: define dso_local i32 @fmv._Msme-f16f16() #[[sme_f16f16:[0-9]+]] {
+__attribute__((target_version("sme-f16f16"))) int fmv(void) { return 0; }
+
+// CHECK: define dso_local i32 @fmv._Mgcs() #[[gcs:[0-9]+]] {
+__attribute__((target_version("gcs"))) int fmv(void) { return 0; }
+
+// CHECK: define dso_local i32 @fmv._Msme-f8f16() #[[sme_f8f16:[0-9]+]] {
+__attribute__((target_version("sme-f8f16"))) int fmv(void) { return 0; }
+
+// CHECK: define dso_local i32 @fmv._Mf8f16mm() #[[f8f16mm:[0-9]+]] {
+__attribute__((target_version("f8f16mm"))) int fmv(void) { return 0; }
+
+// CHECK: define dso_local i32 @fmv._Msve-aes2() #[[sve_aes2:[0-9]+]] {
+__attribute__((target_version("sve-aes2"))) int fmv(void) { return 0; }
+
+// CHECK: define dso_local i32 @fmv._Msve-bfscale() #[[sve_bfscale:[0-9]+]] {
+__attribute__((target_version("sve-bfscale"))) int fmv(void) { return 0; }
+
+// CHECK: define dso_local i32 @fmv._Msve-f16f32mm() #[[sve_f16f32mm:[0-9]+]] {
+__attribute__((target_version("sve-f16f32mm"))) int fmv(void) { return 0; }
+
+// CHECK: define dso_local i32 @fmv._Msme-mop4() #[[sme_mop4:[0-9]+]] {
+__attribute__((target_version("sme-mop4"))) int fmv(void) { return 0; }
+
 // CHECK: define dso_local i32 @fmv._MaesMbf16MbtiMcrc() #[[unordered_features_with_duplicates:[0-9]+]] {
 __attribute__((target_version("crc+bti+bti+bti+aes+aes+bf16"))) int fmv(void) { return 0; }
 
@@ -190,5 +271,32 @@ int caller() {
 // CHECK: attributes #[[sve2_sha3]] = {{.*}} "fmv-features"="sve2-sha3"
 // CHECK: attributes #[[sve2_sm4]] = {{.*}} "fmv-features"="sve2-sm4"
 // CHECK: attributes #[[wfxt]] = {{.*}} "fmv-features"="wfxt"
+// CHECK: attributes #[[fp8]] = {{.*}} "fmv-features"="fp8"
+// CHECK: attributes #[[f8f32mm]] = {{.*}} "fmv-features"="f8f32mm"
+// CHECK: attributes #[[fp8dot4]] = {{.*}} "fmv-features"="fp8dot4"
+// CHECK: attributes #[[fp8dot2]] = {{.*}} "fmv-features"="fp8dot2"
+// CHECK: attributes #[[fp8fma]] = {{.*}} "fmv-features"="fp8fma"
+// CHECK: attributes #[[sme_f8f32]] = {{.*}} "fmv-features"="sme-f8f32"
+// CHECK: attributes #[[ssve_fp8dot4]] = {{.*}} "fmv-features"="ssve-fp8dot4"
+// CHECK: attributes #[[ssve_fp8fma]] = {{.*}} "fmv-features"="ssve-fp8fma"
+// CHECK: attributes #[[ssve_bitperm]] = {{.*}} "fmv-features"="ssve-bitperm"
+// CHECK: attributes #[[ssve_fp8dot2]] = {{.*}} "fmv-features"="ssve-fp8dot2"
+// CHECK: attributes #[[ssve_aes]] = {{.*}} "fmv-features"="ssve-aes"
+// CHECK: attributes #[[ssve_fexpa]] = {{.*}} "fmv-features"="ssve-fexpa"
+// CHECK: attributes #[[lut]] = {{.*}} "fmv-features"="lut"
+// CHECK: attributes #[[faminmax]] = {{.*}} "fmv-features"="faminmax"
+// CHECK: attributes #[[sme_lutv2]] = {{.*}} "fmv-features"="sme-lutv2"
+// CHECK: attributes #[[sme2p1]] = {{.*}} "fmv-features"="sme2p1"
+// CHECK: attributes #[[sme2p2]] = {{.*}} "fmv-features"="sme2p2"
+// CHECK: attributes #[[sve2p1]] = {{.*}} "fmv-features"="sve2p1"
+// CHECK: attributes #[[sve2p2]] = {{.*}} "fmv-features"="sve2p2"
+// CHECK: attributes #[[sme_f16f16]] = {{.*}} "fmv-features"="sme-f16f16"
+// CHECK: attributes #[[gcs]] = {{.*}} "fmv-features"="gcs"
+// CHECK: attributes #[[sme_f8f16]] = {{.*}} "fmv-features"="sme-f8f16"
+// CHECK: attributes #[[f8f16mm]] = {{.*}} "fmv-features"="f8f16mm"
+// CHECK: attributes #[[sve_aes2]] = {{.*}} "fmv-features"="sve-aes2"
+// CHECK: attributes #[[sve_bfscale]] = {{.*}} "fmv-features"="sve-bfscale"
+// CHECK: attributes #[[sve_f16f32mm]] = {{.*}} "fmv-features"="sve-f16f32mm"
+// CHECK: attributes #[[sme_mop4]] = {{.*}} "fmv-features"="sme-mop4"
 // CHECK: attributes #[[unordered_features_with_duplicates]] = {{.*}} "fmv-features"="aes,bf16,bti,crc"
 // CHECK: attributes #[[default]] = {{.*}} "fmv-features"

@@ -88,6 +88,42 @@
 #ifndef HWCAP_SB
 #define HWCAP_SB (1 << 29)
 #endif
+#ifndef HWCAP_GCS
+#define HWCAP_GCS (1UL << 32)
+#endif
+#ifndef HWCAP_F8MM8
+#define HWCAP_F8MM8 (1UL << 35)
+#endif
+#ifndef HWCAP_F8MM4
+#define HWCAP_F8MM4 (1UL << 36)
+#endif
+#ifndef HWCAP_SVE_F16MM
+#define HWCAP_SVE_F16MM (1UL << 37)
+#endif
+#ifndef HWCAP_SVE_AES2
+#define HWCAP_SVE_AES2 (1UL << 39)
+#endif
+#ifndef HWCAP_SVE_BFSCALE
+#define HWCAP_SVE_BFSCALE (1UL << 40)
+#endif
+#ifndef HWCAP_SVE2P2
+#define HWCAP_SVE2P2 (1UL << 41)
+#endif
+#ifndef HWCAP_SME2P2
+#define HWCAP_SME2P2 (1UL << 42)
+#endif
+#ifndef HWCAP_SME_SBITPERM
+#define HWCAP_SME_SBITPERM (1UL << 43)
+#endif
+#ifndef HWCAP_SME_AES
+#define HWCAP_SME_AES (1UL << 44)
+#endif
+#ifndef HWCAP_SME_SFEXPA
+#define HWCAP_SME_SFEXPA (1UL << 45)
+#endif
+#ifndef HWCAP_SME_SMOP4
+#define HWCAP_SME_SMOP4 (1UL << 47)
+#endif
 
 #ifndef AT_HWCAP2
 #define AT_HWCAP2 26
@@ -176,12 +212,63 @@
 #ifndef HWCAP2_CSSC
 #define HWCAP2_CSSC (1UL << 34)
 #endif
+#ifndef HWCAP2_SVE2P1
+#define HWCAP2_SVE2P1 (1UL << 36)
+#endif
 #ifndef HWCAP2_SME2
 #define HWCAP2_SME2 (1UL << 37)
+#endif
+#ifndef HWCAP2_SME2P1
+#define HWCAP2_SME2P1 (1UL << 38)
+#endif
+#ifndef HWCAP2_SME_F16F16
+#define HWCAP2_SME_F16F16 (1UL << 42)
 #endif
 #ifndef HWCAP2_MOPS
 #define HWCAP2_MOPS (1ULL << 43)
 #endif
 #ifndef HWCAP2_LRCPC3
 #define HWCAP2_LRCPC3 (1UL << 46)
+#endif
+#ifndef HWCAP2_LUT
+#define HWCAP2_LUT (1UL << 49)
+#endif
+#ifndef HWCAP2_FAMINMAX
+#define HWCAP2_FAMINMAX (1UL << 50)
+#endif
+#ifndef HWCAP2_F8CVT
+#define HWCAP2_F8CVT (1UL << 51)
+#endif
+#ifndef HWCAP2_F8FMA
+#define HWCAP2_F8FMA (1UL << 52)
+#endif
+#ifndef HWCAP2_F8DP4
+#define HWCAP2_F8DP4 (1UL << 53)
+#endif
+#ifndef HWCAP2_F8DP2
+#define HWCAP2_F8DP2 (1UL << 54)
+#endif
+#ifndef HWCAP2_F8E4M3
+#define HWCAP2_F8E4M3 (1UL << 55)
+#endif
+#ifndef HWCAP2_F8E5M2
+#define HWCAP2_F8E5M2 (1UL << 56)
+#endif
+#ifndef HWCAP2_SME_LUTV2
+#define HWCAP2_SME_LUTV2 (1UL << 57)
+#endif
+#ifndef HWCAP2_SME_F8F16
+#define HWCAP2_SME_F8F16 (1UL << 58)
+#endif
+#ifndef HWCAP2_SME_F8F32
+#define HWCAP2_SME_F8F32 (1UL << 59)
+#endif
+#ifndef HWCAP2_SME_SF8FMA
+#define HWCAP2_SME_SF8FMA (1UL << 60)
+#endif
+#ifndef HWCAP2_SME_SF8DP4
+#define HWCAP2_SME_SF8DP4 (1UL << 61)
+#endif
+#ifndef HWCAP2_SME_SF8DP2
+#define HWCAP2_SME_SF8DP2 (1UL << 62)
 #endif
