@@ -184,13 +184,11 @@ enum class DeviceInfo {
 
 /// Tree node for device information
 ///
-/// This information is either printed or used by liboffload to extract certain
-/// device queries. Each property has an optional key, an optional value
-/// and optional children. The children can be used to store additional
-/// information (such as x, y and z components of ranges).
+/// This information is used by liboffload to extract certain device queries.
+/// Each property has an optional key, an optional value and optional children.
+/// The children can be used to store additional information (such as x, y and
+/// z components of ranges).
 struct InfoTreeNode {
-  static constexpr uint64_t IndentSize = 4;
-
   std::string Key;
   using VariantType = std::variant<uint64_t, std::string, bool, std::monostate>;
   VariantType Value;
@@ -255,64 +253,6 @@ struct InfoTreeNode {
     if (Result != DeviceInfoMap.end())
       return &(*Children)[Result->second];
     return std::nullopt;
-  }
-
-  /// Print all info entries in the tree
-  void print() const {
-    // Fake an additional indent so that values are offset from the keys
-    doPrint(0, maxKeySize(1));
-  }
-
-private:
-  void doPrint(int Level, uint64_t MaxKeySize) const {
-    if (Key.size()) {
-      // Compute the indentations for the current entry.
-      uint64_t KeyIndentSize = Level * IndentSize;
-      uint64_t ValIndentSize =
-          MaxKeySize - (Key.size() + KeyIndentSize) + IndentSize;
-
-      llvm::outs() << std::string(KeyIndentSize, ' ') << Key
-                   << std::string(ValIndentSize, ' ');
-      std::visit(
-          [](auto &&V) {
-            using T = std::decay_t<decltype(V)>;
-            if constexpr (std::is_same_v<T, std::string>)
-              llvm::outs() << V;
-            else if constexpr (std::is_same_v<T, bool>)
-              llvm::outs() << (V ? "Yes" : "No");
-            else if constexpr (std::is_same_v<T, uint64_t>)
-              llvm::outs() << V;
-            else if constexpr (std::is_same_v<T, std::monostate>) {
-              // Do nothing
-            } else
-              // Use a type-dependent condition so the assert only fires when
-              // this branch is actually instantiated. GCC < 13 does not
-              // implement CWG2518 and rejects a non-dependent
-              // static_assert(false) even in a discarded constexpr branch.
-              static_assert(!sizeof(T *), "doPrint visit not exhaustive");
-          },
-          Value);
-      llvm::outs() << (Units.empty() ? "" : " ") << Units << "\n";
-    }
-
-    // Print children
-    if (Children)
-      for (const auto &Entry : *Children)
-        Entry.doPrint(Level + 1, MaxKeySize);
-  }
-
-  // Recursively calculates the maximum width of each key, including indentation
-  uint64_t maxKeySize(int Level) const {
-    uint64_t MaxKeySize = 0;
-
-    if (Children)
-      for (const auto &Entry : *Children) {
-        uint64_t KeySize = Entry.Key.size() + Level * IndentSize;
-        MaxKeySize = std::max(MaxKeySize, KeySize);
-        MaxKeySize = std::max(MaxKeySize, Entry.maxKeySize(Level + 1));
-      }
-
-    return MaxKeySize;
   }
 };
 
