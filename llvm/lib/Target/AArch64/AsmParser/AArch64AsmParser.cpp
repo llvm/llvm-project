@@ -8647,40 +8647,19 @@ ParseStatus AArch64AsmParser::tryParseSVEDataVector(OperandVector &Operands) {
 }
 
 ParseStatus AArch64AsmParser::tryParseSVEPattern(OperandVector &Operands) {
-  MCAsmParser &Parser = getParser();
-
   SMLoc SS = getLoc();
   const AsmToken &TokE = getTok();
-  bool IsHash = TokE.is(AsmToken::Hash);
 
-  if (!IsHash && TokE.isNot(AsmToken::Identifier))
+  if (TokE.isNot(AsmToken::Identifier))
     return ParseStatus::NoMatch;
 
-  int64_t Pattern;
-  if (IsHash) {
-    Lex(); // Eat hash
+  auto Pat = AArch64SVEPredPattern::lookupSVEPREDPATByName(TokE.getString());
+  if (!Pat)
+    return ParseStatus::NoMatch;
 
-    // Parse the immediate operand.
-    const MCExpr *ImmVal;
-    SS = getLoc();
-    if (Parser.parseExpression(ImmVal))
-      return ParseStatus::Failure;
-
-    auto *MCE = dyn_cast<MCConstantExpr>(ImmVal);
-    if (!MCE)
-      return TokError("invalid operand for instruction");
-
-    Pattern = MCE->getValue();
-  } else {
-    // Parse the pattern
-    auto Pat = AArch64SVEPredPattern::lookupSVEPREDPATByName(TokE.getString());
-    if (!Pat)
-      return ParseStatus::NoMatch;
-
-    Lex();
-    Pattern = Pat->Encoding;
-    assert(Pattern >= 0 && Pattern < 32);
-  }
+  Lex();
+  int64_t Pattern = Pat->Encoding;
+  assert(Pattern >= 0 && Pattern < 32);
 
   Operands.push_back(
       AArch64Operand::CreateImm(MCConstantExpr::create(Pattern, getContext()),
