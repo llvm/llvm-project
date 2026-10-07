@@ -300,33 +300,10 @@ foreach FPTy = [F32, F64, F80, F128, PPCF128] in {
   def FDIM_#FPTy.Suffix : RuntimeLibcall<FPTy.Type, [FPTy.Type, FPTy.Type]>;
 
   def CABS_#FPTy.Suffix : RuntimeLibcall<NoneType, []>;
-
-  def ACOS_FINITE_#FPTy.Suffix : RuntimeLibcall<FPTy.Type, [FPTy.Type]>;
-  def ACOSH_FINITE_#FPTy.Suffix : RuntimeLibcall<FPTy.Type, [FPTy.Type]>;
-  def ASIN_FINITE_#FPTy.Suffix : RuntimeLibcall<FPTy.Type, [FPTy.Type]>;
-  def ATAN2_FINITE_#FPTy.Suffix : RuntimeLibcall<FPTy.Type, [FPTy.Type, FPTy.Type]>;
-  def ATANH_FINITE_#FPTy.Suffix : RuntimeLibcall<FPTy.Type, [FPTy.Type]>;
-  def COSH_FINITE_#FPTy.Suffix : RuntimeLibcall<FPTy.Type, [FPTy.Type]>;
-  def SINH_FINITE_#FPTy.Suffix : RuntimeLibcall<FPTy.Type, [FPTy.Type]>;
-  def SQRT_FINITE_#FPTy.Suffix : RuntimeLibcall<FPTy.Type, [FPTy.Type]>;
-  def COSPI_#FPTy.Suffix : RuntimeLibcall<FPTy.Type, [FPTy.Type]>;
-  def SINPI_#FPTy.Suffix : RuntimeLibcall<FPTy.Type, [FPTy.Type]>;
-  def ACOSH_#FPTy.Suffix : RuntimeLibcall<FPTy.Type, [FPTy.Type]>;
-  def ASINH_#FPTy.Suffix : RuntimeLibcall<FPTy.Type, [FPTy.Type]>;
-  def ATANH_#FPTy.Suffix : RuntimeLibcall<FPTy.Type, [FPTy.Type]>;
-  def ERF_#FPTy.Suffix : RuntimeLibcall<FPTy.Type, [FPTy.Type]>;
-  def EXPM1_#FPTy.Suffix : RuntimeLibcall<FPTy.Type, [FPTy.Type]>;
-  def FABS_#FPTy.Suffix : RuntimeLibcall<FPTy.Type, [FPTy.Type]>;
-  def HYPOT_#FPTy.Suffix : RuntimeLibcall<FPTy.Type, [FPTy.Type, FPTy.Type]>;
-  def LOG1P_#FPTy.Suffix : RuntimeLibcall<FPTy.Type, [FPTy.Type]>;
-  def ILOGB_#FPTy.Suffix : RuntimeLibcall<Int, [FPTy.Type]>;
-  def LOGB_#FPTy.Suffix : RuntimeLibcall<FPTy.Type, [FPTy.Type]>;
-  def NEXTAFTER_#FPTy.Suffix : RuntimeLibcall<FPTy.Type, [FPTy.Type, FPTy.Type]>;
 }
 
 foreach FPTy = [ "F32", "F64" ] in {
   def SINCOS_STRET_#FPTy : RuntimeLibcall;
-  def SINCOSPI_STRET_#FPTy : RuntimeLibcall<NoneType, []>;
 }
 
 foreach FPTy = [F32, F64, F80, F128, PPCF128] in {
@@ -1144,8 +1121,6 @@ def ZNWMST11ALIGN_VAL_TRKST9NOTHROW_T12__HOT_COLD_T : RuntimeLibcall<Ptr, [Long,
 def KMPC_ALLOC_SHARED : RuntimeLibcall<Ptr, [SizeT]>;
 def KMPC_FREE_SHARED : RuntimeLibcall<Void, [Ptr, SizeT]>;
 
-def NVVM_REFLECT : RuntimeLibcall<Int, [Ptr]>;
-
 //--------------------------------------------------------------------
 // Global variable references
 //--------------------------------------------------------------------
@@ -1869,34 +1844,6 @@ def vsprintf : RuntimeLibcallImpl<VSPRINTF>;
 def vsscanf : RuntimeLibcallImpl<VSSCANF>;
 def wcslen : RuntimeLibcallImpl<WCSLEN>;
 def write : RuntimeLibcallImpl<WRITE>;
-
-defm __acos_finite : LibmLibcallImpls<"ACOS_FINITE", "__acos<typesuffix>_finite">;
-defm __acosh_finite : LibmLibcallImpls<"ACOSH_FINITE", "__acosh<typesuffix>_finite">;
-defm __asin_finite : LibmLibcallImpls<"ASIN_FINITE", "__asin<typesuffix>_finite">;
-defm __atan2_finite : LibmLibcallImpls<"ATAN2_FINITE", "__atan2<typesuffix>_finite">;
-defm __atanh_finite : LibmLibcallImpls<"ATANH_FINITE", "__atanh<typesuffix>_finite">;
-defm __cosh_finite : LibmLibcallImpls<"COSH_FINITE", "__cosh<typesuffix>_finite">;
-defm __sinh_finite : LibmLibcallImpls<"SINH_FINITE", "__sinh<typesuffix>_finite">;
-defm __exp10_finite : LibmLibcallImpls<"EXP10_FINITE", "__exp10<typesuffix>_finite">;
-defm __sqrt_finite : LibmLibcallImpls<"SQRT_FINITE", "__sqrt<typesuffix>_finite">;
-defm __cospi : LibmLibcallImpls<"COSPI">;
-defm __sinpi : LibmLibcallImpls<"SINPI">;
-defm acosh : LibmLibcallImpls;
-defm asinh : LibmLibcallImpls;
-defm atanh : LibmLibcallImpls;
-defm erf : LibmLibcallImpls;
-defm expm1 : LibmLibcallImpls;
-defm fabs : LibmLibcallImpls;
-defm hypot : LibmLibcallImpls;
-defm log1p : LibmLibcallImpls;
-defm ilogb : LibmLibcallImpls;
-defm logb : LibmLibcallImpls;
-defm nextafter : LibmLibcallImpls;
-
-def __nvvm_reflect : RuntimeLibcallImpl<NVVM_REFLECT>;
-
-def __sincospif_stret : RuntimeLibcallImpl<SINCOSPI_STRET_F32>;
-def __sincospi_stret : RuntimeLibcallImpl<SINCOSPI_STRET_F64>;
 
 //--------------------------------------------------------------------
 // compiler-rt/libgcc but 64-bit only, not available by default

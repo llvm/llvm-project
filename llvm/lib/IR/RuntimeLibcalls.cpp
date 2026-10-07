@@ -161,24 +161,17 @@ static std::pair<Type *, Attribute> convertToIRTypeAndAttr(FuncArgTypeID ID,
                                                            unsigned IntBits) {
 
   // FIXME: Use the llvm/ABI library to get accurate IR types and attributes.
-  Type *Ty = nullptr;
-  Attribute Attr;
   switch (ID) {
   case Void:
-    Ty = Type::getVoidTy(Ctx);
-    break;
+    return {Type::getVoidTy(Ctx), Attribute()};
   case Bool:
-    Ty = IntegerType::get(Ctx, 1);
-    Attr = Attribute::get(Ctx, Attribute::ZExt);
-    break;
+    return {IntegerType::get(Ctx, 1), Attribute::get(Ctx, Attribute::ZExt)};
   case Int16:
   case UInt16:
-    Ty = IntegerType::get(Ctx, 16);
-    break;
+    return {IntegerType::get(Ctx, 16), Attribute()};
   case Int32:
   case UInt32:
-    Ty = IntegerType::get(Ctx, 32);
-    break;
+    return {IntegerType::get(Ctx, 32), Attribute()};
   case Int:
   case UInt:
   case IntPlus:
@@ -187,35 +180,26 @@ static std::pair<Type *, Attribute> convertToIRTypeAndAttr(FuncArgTypeID ID,
   case ULong:
   case IntX:
   case UIntX:
-    Ty = IntegerType::get(Ctx, IntBits);
-    break;
+    return {IntegerType::get(Ctx, IntBits), Attribute()};
   case Int64:
   case UInt64:
   case LLong:
   case ULLong:
-    Ty = IntegerType::get(Ctx, 64);
-    break;
+    return {IntegerType::get(Ctx, 64), Attribute()};
   case SizeT:
   case SSizeT:
-    Ty = getSizeTType(Ctx, DL);
-    break;
+    return {getSizeTType(Ctx, DL), Attribute()};
   case Flt:
   case Floating:
-    Ty = Type::getFloatTy(Ctx);
-    break;
+    return {Type::getFloatTy(Ctx), Attribute()};
   case Dbl:
-    Ty = Type::getDoubleTy(Ctx);
-    break;
   case LDbl:
-    Ty = Type::getDoubleTy(Ctx);
-    break;
+    return {Type::getDoubleTy(Ctx), Attribute()};
   case Ptr:
-    Ty = PointerType::get(Ctx, 0);
-    break;
+    return {PointerType::get(Ctx, 0), Attribute()};
   default:
-    break;
+    return {};
   }
-  return {Ty, Attr};
 }
 
 std::pair<FunctionType *, AttributeList>
