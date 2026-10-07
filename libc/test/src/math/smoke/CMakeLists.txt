@@ -4831,6 +4831,7 @@ add_fp_unittest(
     atanpif16_test.cpp
   DEPENDS
     libc.src.math.atanpif16
+    libc.hdr.errno_macros
 )
 
 add_fp_unittest(
