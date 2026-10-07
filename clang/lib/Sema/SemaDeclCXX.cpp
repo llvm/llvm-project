@@ -17515,13 +17515,12 @@ VarDecl *Sema::BuildExceptionDeclaration(Scope *S, TypeSourceInfo *TInfo,
       Invalid = true;
     }
   } else if (Mode == 2) {
-    if (const PointerType *PT = BaseType->getAs<PointerType>()) {
-      if (BaseType.getAddressSpace() != LangAS::Default ||
-          PT->getPointeeType().getAddressSpace() != LangAS::Default) {
-        Diag(Loc, diag::err_throw_or_catch_address_space_qualified_ptr)
-            << /*IsCatch=*/1 << /*IsRef=*/0 << ExDeclType;
-        Invalid = true;
-      }
+    if (const PointerType *PT = BaseType->getAs<PointerType>();
+        PT && (BaseType.getAddressSpace() != LangAS::Default ||
+               PT->getPointeeType().getAddressSpace() != LangAS::Default)) {
+      Diag(Loc, diag::err_throw_or_catch_address_space_qualified_ptr)
+          << /*IsCatch=*/1 << /*IsRef=*/0 << ExDeclType;
+      Invalid = true;
     } else if (BaseType.getAddressSpace() != LangAS::Default) {
       Diag(Loc, diag::err_throw_or_catch_address_space_qualified_ptr)
           << /*IsCatch=*/1 << /*IsRef=*/1 << ExDeclType;
