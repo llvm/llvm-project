@@ -614,7 +614,7 @@ Type *SPIRVEmitIntrinsicsImpl::reconstructType(Value *Op,
 
 CallInst *SPIRVEmitIntrinsicsImpl::buildSpvPtrcast(Function *F, Value *Op,
                                                    Type *ElemTy) {
-  IRBuilder<> B(Op->getContext());
+  IRBuilder<> B(*F->getParent());
   if (auto *OpI = dyn_cast<Instruction>(Op)) {
     // spv_ptrcast's argument Op denotes an instruction that generates
     // a value, and we may use getInsertionPointAfterDef()
@@ -1536,8 +1536,7 @@ void SPIRVEmitIntrinsicsImpl::deduceOperandElementType(
   if (!KnownElemTy || Ops.size() == 0)
     return;
 
-  LLVMContext &Ctx = CurrF->getContext();
-  IRBuilder<> B(Ctx);
+  IRBuilder<> B(*CurrF->getParent());
   for (auto &OpIt : Ops) {
     Value *Op = OpIt.first;
     if (AskOps && !AskOps->contains(Op))
@@ -3717,12 +3716,10 @@ void SPIRVEmitIntrinsicsImpl::emitUnstructuredLoopControls(Function &F,
   if (LI.empty())
     return;
 
+  SmallPtrSet<BasicBlock *, 8> UsedMergeBlocks;
   for (Loop *L : LI.getLoopsInPreorder()) {
     BasicBlock *Latch = L->getLoopLatch();
     if (!Latch)
-      continue;
-    BasicBlock *MergeBlock = L->getUniqueExitBlock();
-    if (!MergeBlock)
       continue;
 
     // Check for loop unroll metadata on the latch terminator.
@@ -3736,6 +3733,21 @@ void SPIRVEmitIntrinsicsImpl::emitUnstructuredLoopControls(Function &F,
     // Switches are already lowered to spv_switch + indirectbr at this point.
     if (!isa<UncondBrInst, CondBrInst>(Header->getTerminator()))
       continue;
+
+    BasicBlock *MergeBlock = L->getUniqueExitBlock();
+    // LoopSimplify does not guarantee a unique exit block. Try the normal exit
+    // of a rotated loop (from the latch), then an unrotated loop (from the
+    // header). A merge block cannot be shared by multiple loop headers.
+    for (BasicBlock *BB : {Latch, Header}) {
+      if (MergeBlock || !isa<CondBrInst>(BB->getTerminator()))
+        continue;
+      for (BasicBlock *Succ : successors(BB))
+        if (!L->contains(Succ) && !UsedMergeBlocks.contains(Succ))
+          MergeBlock = Succ;
+    }
+    if (!MergeBlock || !UsedMergeBlocks.insert(MergeBlock).second)
+      continue;
+
     B.SetInsertPoint(Header->getTerminator());
     auto *MergeAddress = BlockAddress::get(&F, MergeBlock);
     auto *ContinueAddress = BlockAddress::get(&F, Latch);
@@ -3751,6 +3763,11 @@ bool SPIRVEmitIntrinsicsImpl::runOnFunction(Function &Func) {
     return false;
 
   const SPIRVSubtarget &ST = TM.getSubtarget<SPIRVSubtarget>(Func);
+  // LoopSimplify runs after SPIRVPrepareFunctions sorted the blocks, and the
+  // preheaders/dedicated exits it creates can end up before their dominator,
+  // which SPIR-V forbids.
+  if (!ST.isShader())
+    sortBlocks(Func);
   GR = ST.getSPIRVGlobalRegistry();
 
   if (!CurrF)
@@ -3760,7 +3777,7 @@ bool SPIRVEmitIntrinsicsImpl::runOnFunction(Function &Func) {
   CanUseAnyVectorRank =
       ST.canUseExtension(SPIRV::Extension::SPV_EXT_long_vector);
   CurrF = &Func;
-  IRBuilder<> B(Func.getContext());
+  IRBuilder<> B(*Func.getParent());
   AggrConsts.clear();
   AggrConstTypes.clear();
   AggrStores.clear();
@@ -4182,7 +4199,7 @@ bool SPIRVEmitIntrinsicsImpl::runOnModule(Module &M) {
     // check if function parameter types are set
     CurrF = &F;
     if (!F.isDeclaration() && !F.isIntrinsic()) {
-      IRBuilder<> B(F.getContext());
+      IRBuilder<> B(M);
       processParamTypes(&F, B);
     }
   }
