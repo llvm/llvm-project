@@ -12,6 +12,7 @@ add_mlir_dialect_library(MLIRXeGPUTransformOps
   MLIRXeGPUTransforms
   MLIRIR
   MLIRTransformDialect
+  MLIRTransformDialectUtils
   MLIRFuncDialect
   MLIRSCFDialect
 )
