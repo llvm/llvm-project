@@ -288,7 +288,9 @@ struct LoweringPreparePass
       if (!isLocalVarDecl && comdat.has_value() &&
           (triple.isOSBinFormatELF() || triple.isOSBinFormatWasm())) {
         guard.setComdat(comdat->empty() ? globalOp.getSymName() : *comdat);
-      } else if (comdat.has_value() && globalOp.isWeakForLinker()) {
+      } else if (triple.supportsCOMDAT() && guard.isWeakForLinker()) {
+        // A weak guard that isn't joining the variable's COMDAT gets its own,
+        // even if the variable has none (such as a plain weak variable).
         guard.setSelfComdat();
       }
 
@@ -1502,13 +1504,8 @@ void LoweringPreparePass::emitGuardedInit(CIRBaseBuilderTy &builder,
 
   // Inline variables that weren't instantiated from variable templates have
   // partially-ordered initialization within their translation unit.
-  cir::TemplateSpecializationKind tsk = info.getTsk();
-  bool isTemplateInstantiation =
-      tsk == cir::TemplateSpecializationKind::ImplicitInstantiation ||
-      tsk ==
-          cir::TemplateSpecializationKind::ExplicitInstantiationDeclaration ||
-      tsk == cir::TemplateSpecializationKind::ExplicitInstantiationDefinition;
-  bool nonTemplateInline = info.getIsInline() && !isTemplateInstantiation;
+  bool nonTemplateInline =
+      info.getIsInline() && !info.isTemplateInstantiation();
 
   // We only need to use thread-safe statics for local non-TLS variables and
   // inline variables; other global initialization is always single-threaded
@@ -1815,16 +1812,21 @@ void LoweringPreparePass::lowerGlobalOp(GlobalOp op) {
       }
     } else if (std::optional<uint32_t> priority = op.getInitPriority()) {
       prioritizedDynamicInitializers[*priority].push_back(f);
-    } else if (op.getDynamicInitGuard() &&
+    } else if (op.getDynamicInitInfo() &&
+               (op.getDynamicInitInfo()->getIsInline() ||
+                op.getDynamicInitInfo()->isTemplateInstantiation()) &&
                getTargetInfo().getTriple().supportsCOMDAT() &&
                !op.hasInternalLinkage()) {
-      // Vague-linkage globals (weak/linkonce_odr inline variables) get their
-      // own `llvm.global_ctors` entry keyed to the variable via COMDAT
-      // associated data, rather than being folded into `_GLOBAL__sub_I_*`.
-      // This ensures at most one initializer per DSO runs, and lets the
-      // linker drop the initializer call along with a discarded duplicate
-      // definition of the variable. Matches classic CodeGen's
+      // Vague-linkage globals (inline variables and template instantiations)
+      // get their own `llvm.global_ctors` entry keyed to the variable via
+      // COMDAT associated data, rather than being folded into
+      // `_GLOBAL__sub_I_*`. This ensures at most one initializer per DSO runs,
+      // and lets the linker drop the initializer call along with a discarded
+      // duplicate definition of the variable. Other guarded globals, such as a
+      // plain weak variable, stay ordered with the rest of the translation
+      // unit's initializers. Matches classic CodeGen's
       // EmitCXXGlobalVarDeclInitFunc.
+      assert(!cir::MissingFeatures::msabi());
       globalCtorList.emplace_back(f.getSymName(),
                                   cir::GlobalCtorAttr::getDefaultPriority(),
                                   op.getSymName());

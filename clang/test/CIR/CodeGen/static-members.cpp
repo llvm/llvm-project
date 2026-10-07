@@ -13,7 +13,7 @@ struct S {
 };
 
 // CIR: module @
-// CIR-SAME: cir.global_ctors = [#cir.global_ctor<"__cxx_global_var_init", 65535, @_ZN1S2hdE>, #cir.global_ctor<"__cxx_global_var_init.1", 65535, @_ZN5Outer5Inner2hdE>, #cir.global_ctor<"__cxx_global_var_init.2", 65535, @_ZN9RefMember3refE>, #cir.global_ctor<"__cxx_global_var_init.3", 65535, @_ZN13NonThreadSafeIiE1fE>, #cir.global_ctor<"__cxx_global_var_init.4", 65535, @_ZN18TemplateStaticDtorIiE1dE>]
+// CIR-SAME: cir.global_ctors = [#cir.global_ctor<"__cxx_global_var_init", 65535, @_ZN1S2hdE>, #cir.global_ctor<"__cxx_global_var_init.1", 65535, @_ZN5Outer5Inner2hdE>, #cir.global_ctor<"__cxx_global_var_init.2", 65535, @_ZN9RefMember3refE>, #cir.global_ctor<"__cxx_global_var_init.5", 65535, @_ZN13NonThreadSafeIiE1fE>, #cir.global_ctor<"__cxx_global_var_init.6", 65535, @_ZN18TemplateStaticDtorIiE1dE>, #cir.global_ctor<"_GLOBAL__sub_I_{{.*}}", 65535>]
 
 // Guard variables.
 // CIR-DAG: cir.global "private" linkonce_odr comdat("_ZN1S2hdE") @_ZGVN1S2hdE = #cir.int<0> : !s64i
@@ -25,6 +25,10 @@ struct S {
 // CIR-DAG: cir.global "private" linkonce_odr comdat("_ZN13NonThreadSafeIiE1fE") @_ZGVN13NonThreadSafeIiE1fE = #cir.int<0> : !s64i
 // LLVM-DAG: @_ZGVN13NonThreadSafeIiE1fE = linkonce_odr global i64 0, comdat($_ZN13NonThreadSafeIiE1fE), align 8
 
+// CIR-DAG: cir.global "private" weak comdat @_ZGV14weak_after_dep = #cir.int<0> : !s64i
+// LLVM-DAG: $_ZGV14weak_after_dep = comdat any
+// LLVM-DAG: @_ZGV14weak_after_dep = weak {{.*}}global i64 0, comdat, align 8
+
 // LLVM-DAG: @_ZN1S2hdE = linkonce_odr global %struct.HasDtor zeroinitializer, comdat, align 1
 // LLVM-DAG: @_ZN5Outer5Inner2hdE = linkonce_odr global %struct.HasDtor zeroinitializer, comdat, align 1
 // LLVM-DAG: @_ZN9RefMember3refE = linkonce_odr global ptr null, comdat, align 8
@@ -33,7 +37,7 @@ struct S {
 // The COMDAT keys must be kept in `llvm.used` so the linker doesn't
 // garbage-collect them (and, with them, their `llvm.global_ctors` entries).
 // LLVM-DAG: @llvm.used = appending global [5 x ptr] [ptr @_ZN1S2hdE, ptr @_ZN5Outer5Inner2hdE, ptr @_ZN9RefMember3refE, ptr @_ZN13NonThreadSafeIiE1fE, ptr @_ZN18TemplateStaticDtorIiE1dE], section "llvm.metadata"
-// LLVM-DAG: @llvm.global_ctors = appending global [5 x { i32, ptr, ptr }] [{ i32, ptr, ptr } { i32 65535, ptr @__cxx_global_var_init, ptr @_ZN1S2hdE }, { i32, ptr, ptr } { i32 65535, ptr @__cxx_global_var_init.1, ptr @_ZN5Outer5Inner2hdE }, { i32, ptr, ptr } { i32 65535, ptr @__cxx_global_var_init.2, ptr @_ZN9RefMember3refE }, { i32, ptr, ptr } { i32 65535, ptr @__cxx_global_var_init.3, ptr @_ZN13NonThreadSafeIiE1fE }, { i32, ptr, ptr } { i32 65535, ptr @__cxx_global_var_init.4, ptr @_ZN18TemplateStaticDtorIiE1dE }]
+// LLVM-DAG: @llvm.global_ctors = appending global [6 x { i32, ptr, ptr }] [{ i32, ptr, ptr } { i32 65535, ptr @__cxx_global_var_init, ptr @_ZN1S2hdE }, { i32, ptr, ptr } { i32 65535, ptr @__cxx_global_var_init.1, ptr @_ZN5Outer5Inner2hdE }, { i32, ptr, ptr } { i32 65535, ptr @__cxx_global_var_init.2, ptr @_ZN9RefMember3refE }, { i32, ptr, ptr } { i32 65535, ptr @__cxx_global_var_init.5, ptr @_ZN13NonThreadSafeIiE1fE }, { i32, ptr, ptr } { i32 65535, ptr @__cxx_global_var_init.6, ptr @_ZN18TemplateStaticDtorIiE1dE }, { i32, ptr, ptr } { i32 65535, ptr @_GLOBAL__sub_I_{{.*}}, ptr null }]
 
 
 // CIR: cir.global linkonce_odr comdat dynamic_init_guard<"_ZGVN1S2hdE"> @_ZN1S2hdE = #cir.zero : !rec_HasDtor align(1) ast(#cir.var.decl.ast) dynamic_init_info<local = false, tls = none, is_inline = true, tsk = undeclared>
@@ -189,6 +193,29 @@ int useRefMember() {
 // LLVM: [[RET]]:
 // LLVM:   ret void
 
+// A weak variable is guarded, but unlike the vague-linkage variables above it
+// doesn't get a llvm.global_ctors entry of its own: it stays ordered after the
+// initializers before it, in _GLOBAL__sub_I_*. Its guard gets a COMDAT of its
+// own, even though the variable has none.
+int get_weak_dep();
+int weak_dep = get_weak_dep();
+__attribute__((weak)) int weak_after_dep = weak_dep + 1;
+
+// CIR-LABEL: cir.func internal private @__cxx_global_var_init.3() {
+// CIR:         cir.call @_Z12get_weak_depv()
+
+// LLVM-LABEL: define internal void @__cxx_global_var_init.3()
+// LLVM:         call {{.*}}i32 @_Z12get_weak_depv()
+// LLVM:         store i32 %{{.*}}, ptr @weak_dep
+
+// CIR-LABEL: cir.func internal private @__cxx_global_var_init.4() {
+// CIR:         cir.get_global @_ZGV14weak_after_dep
+
+// LLVM-LABEL: define internal void @__cxx_global_var_init.4()
+// LLVM:         load i8, ptr @_ZGV14weak_after_dep
+// LLVM:         load i32, ptr @weak_dep
+// LLVM:         store i32 %{{.*}}, ptr @weak_after_dep
+
 // Not thread-safe example(because not inline), so doesn't have guard/release.
 int get_i();
 template <typename T> struct NonThreadSafe {
@@ -203,7 +230,7 @@ int useNonThreadSafe() {
 
 // CIR: cir.global linkonce_odr comdat dynamic_init_guard<"_ZGVN13NonThreadSafeIiE1fE"> @_ZN13NonThreadSafeIiE1fE = #cir.int<0> : !s32i align(4) ast(#cir.var.decl.ast) dynamic_init_info<local = false, tls = none, is_inline = false, tsk = implicit_instantiation>
 
-// CIR-LABEL: cir.func comdat("_ZN13NonThreadSafeIiE1fE") internal private @__cxx_global_var_init.3() {
+// CIR-LABEL: cir.func comdat("_ZN13NonThreadSafeIiE1fE") internal private @__cxx_global_var_init.5() {
 // CIR:   %[[GET_GUARD:.*]] = cir.get_global @_ZGVN13NonThreadSafeIiE1fE : !cir.ptr<!s64i>
 // CIR:   %[[TO_CHAR:.*]] = cir.cast bitcast %[[GET_GUARD]] : !cir.ptr<!s64i> -> !cir.ptr<!s8i>
 // CIR:   %[[LOAD_GUARD:.*]] = cir.load align(8) %[[TO_CHAR]] : !cir.ptr<!s8i>, !s8i
@@ -220,7 +247,7 @@ int useNonThreadSafe() {
 // CIR:   cir.return
 // CIR: }
 
-// LLVM-LABEL: define internal void @__cxx_global_var_init.3()
+// LLVM-LABEL: define internal void @__cxx_global_var_init.5()
 // LLVM-SAME: comdat($_ZN13NonThreadSafeIiE1fE)
 // LLVM: %[[LOAD_GUARD:.*]] = load i8, ptr @_ZGVN13NonThreadSafeIiE1fE, align 8
 // LLVM: %[[CMP:.*]] = icmp eq i8 %[[LOAD_GUARD]], 0
@@ -247,9 +274,17 @@ template <typename T> struct TemplateStaticDtor {
 template <typename T> TemplateHasDtor TemplateStaticDtor<T>::d;
 TemplateHasDtor *useTemplateStaticDtor() { return &TemplateStaticDtor<int>::d; }
 
-// LLVM-LABEL: define internal void @__cxx_global_var_init.4()
+// LLVM-LABEL: define internal void @__cxx_global_var_init.6()
 // LLVM-SAME: comdat($_ZN18TemplateStaticDtorIiE1dE)
 // LLVM-NOT: __cxa_thread_atexit
 // LLVM: call i32 @__cxa_atexit(ptr @_ZN15TemplateHasDtorD1Ev, ptr @_ZN18TemplateStaticDtorIiE1dE, ptr @__dso_handle)
 // LLVM-NOT: __cxa_thread_atexit
 // LLVM: ret void
+
+// CIR: cir.func internal private @_GLOBAL__sub_I_
+// CIR:   cir.call @__cxx_global_var_init.3() : () -> ()
+// CIR:   cir.call @__cxx_global_var_init.4() : () -> ()
+
+// LLVM: define internal void @_GLOBAL__sub_I_
+// LLVM:   call void @__cxx_global_var_init.3()
+// LLVM:   call void @__cxx_global_var_init.4()

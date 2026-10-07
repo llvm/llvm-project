@@ -2405,6 +2405,19 @@ def CIR_DynamicInitInfoAttr
     `<` struct($local, $tls, $is_inline, $tsk) `>`
   }];
 
+  let extraClassDeclaration = [{
+    /// Whether the variable is an instantiation of a template. Matches clang's
+    /// isTemplateInstantiation(TemplateSpecializationKind).
+    bool isTemplateInstantiation() const {
+      cir::TemplateSpecializationKind kind = getTsk();
+      return kind == cir::TemplateSpecializationKind::ImplicitInstantiation ||
+             kind == cir::TemplateSpecializationKind::
+                         ExplicitInstantiationDeclaration ||
+             kind ==
+                 cir::TemplateSpecializationKind::ExplicitInstantiationDefinition;
+    }
+  }];
+
   let canHaveIllegalCXXABIType = 0;
 }
 
