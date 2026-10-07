@@ -2414,6 +2414,22 @@ void format_test_floating_point_general_lower_case(TestFunction check) {
   check(SV("answer is '1.2000'"), SV("answer is '{:#.{}g}'"), 1.2, 5);
   check(SV("answer is '1.20000'"), SV("answer is '{:#.{}g}'"), 1.2, 6);
 
+  // For 0 < |value| < 1 the leading zeros are not significant digits.
+  check(SV("answer is '0.500000'"), SV("answer is '{:#g}'"), 0.5);
+  check(SV("answer is '0.5'"), SV("answer is '{:#.{}g}'"), 0.5, 0);
+  check(SV("answer is '0.5'"), SV("answer is '{:#.{}g}'"), 0.5, 1);
+  check(SV("answer is '0.50'"), SV("answer is '{:#.{}g}'"), 0.5, 2);
+  check(SV("answer is '0.500000'"), SV("answer is '{:#.{}g}'"), 0.5, 6);
+  check(SV("answer is '-0.250000'"), SV("answer is '{:#.{}g}'"), -0.25, 6);
+  check(SV("answer is '0.001'"), SV("answer is '{:#.{}g}'"), 0.0012, 1);
+  check(SV("answer is '0.0012'"), SV("answer is '{:#.{}g}'"), 0.0012, 2);
+  check(SV("answer is '0.00120000'"), SV("answer is '{:#.{}g}'"), 0.0012, 6);
+  check(SV("answer is '0.0001'"), SV("answer is '{:#.{}g}'"), 0.0001, 1);
+  check(SV("answer is '0.000100000'"), SV("answer is '{:#.{}g}'"), 0.0001, 6);
+  // X is determined after rounding.
+  check(SV("answer is '0.10'"), SV("answer is '{:#.{}g}'"), 0.0999999, 2);
+  check(SV("answer is '1.0'"), SV("answer is '{:#.{}g}'"), 0.99999999, 2);
+
   check(SV("answer is '1.e+03'"), SV("answer is '{:#.{}g}'"), 1200.0, 0);
   check(SV("answer is '1.e+03'"), SV("answer is '{:#.{}g}'"), 1200.0, 1);
   check(SV("answer is '1.2e+03'"), SV("answer is '{:#.{}g}'"), 1200.0, 2);
@@ -2566,6 +2582,14 @@ void format_test_floating_point_general_upper_case(TestFunction check) {
   check(SV("answer is '1.200'"), SV("answer is '{:#.{}G}'"), 1.2, 4);
   check(SV("answer is '1.2000'"), SV("answer is '{:#.{}G}'"), 1.2, 5);
   check(SV("answer is '1.20000'"), SV("answer is '{:#.{}G}'"), 1.2, 6);
+
+  // For 0 < |value| < 1 the leading zeros are not significant digits.
+  check(SV("answer is '0.500000'"), SV("answer is '{:#G}'"), 0.5);
+  check(SV("answer is '0.50'"), SV("answer is '{:#.{}G}'"), 0.5, 2);
+  check(SV("answer is '-0.250000'"), SV("answer is '{:#.{}G}'"), -0.25, 6);
+  check(SV("answer is '0.00120000'"), SV("answer is '{:#.{}G}'"), 0.0012, 6);
+  check(SV("answer is '0.000100000'"), SV("answer is '{:#.{}G}'"), 0.0001, 6);
+  check(SV("answer is '1.0'"), SV("answer is '{:#.{}G}'"), 0.99999999, 2);
 
   check(SV("answer is '1.E+03'"), SV("answer is '{:#.{}G}'"), 1200.0, 0);
   check(SV("answer is '1.E+03'"), SV("answer is '{:#.{}G}'"), 1200.0, 1);
