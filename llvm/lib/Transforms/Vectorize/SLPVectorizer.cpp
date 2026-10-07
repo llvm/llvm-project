@@ -29423,7 +29423,7 @@ bool SLPVectorizerPass::runImpl(Function &F, ScalarEvolution *SE_,
     if (VectorizeOnceUsed)
       for (const GEPList &List : make_second_range(GEPs))
         if (List.size() >= 2)
-          IndexedGEPs.insert_range(List);
+          append_range(IndexedGEPs[BB], List);
 
     // Vectorize trees that end at stores.
     if (!Stores.empty()) {
@@ -36575,6 +36575,11 @@ bool SLPVectorizerPass::vectorizeOnceUsedSeeds(BasicBlock *BB, BoUpSLP &R) {
   SmallDenseMap<std::pair<size_t, size_t>, unsigned> KeyToGroup;
   SmallDenseMap<Value *, unsigned> SeedGroups;
   PoorThroughputOpCache PoorThroughputCache;
+  SmallPtrSet<Value *, 16> IndexedGEPsInBB;
+  if (auto It = IndexedGEPs.find(BB); It != IndexedGEPs.end())
+    for (Value *GEP : It->second)
+      if (GEP)
+        IndexedGEPsInBB.insert(GEP);
   for (Instruction &I : make_filter_range(*BB, [&](Instruction &I) {
          return !R.isDeleted(&I) && I.hasOneUse() && !R.isEphemeralValue(&I) &&
                 !R.isVectorized(&I) && !R.isAnalyzedScalar(&I) &&
@@ -36584,7 +36589,7 @@ bool SLPVectorizerPass::vectorizeOnceUsedSeeds(BasicBlock *BB, BoUpSLP &R) {
        })) {
     // Index chains of collected GEPs are handled by vectorizeGEPIndices.
     if (GetElementPtrInst *GEP = getIndexChainGEP(&I);
-        GEP && GEP->getParent() == BB && IndexedGEPs.contains(GEP))
+        GEP && GEP->getParent() == BB && IndexedGEPsInBB.contains(GEP))
       continue;
     // The poor-throughput ops are seeded on their own, with the different
     // grouping.
