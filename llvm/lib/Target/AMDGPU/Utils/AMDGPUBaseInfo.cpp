@@ -900,8 +900,8 @@ int getVOPDFull(unsigned OpX, unsigned OpY, unsigned EncodingFamily,
 std::pair<unsigned, unsigned> getVOPDComponents(unsigned VOPDOpcode) {
   const VOPDInfo *Info = getVOPDOpcodeHelper(VOPDOpcode);
   assert(Info);
-  const auto *OpX = getVOPDBaseFromComponent(static_cast<uint8_t>(Info->OpX));
-  const auto *OpY = getVOPDBaseFromComponent(static_cast<uint8_t>(Info->OpY));
+  const auto *OpX = getVOPDBaseFromComponent(Info->OpX);
+  const auto *OpY = getVOPDBaseFromComponent(Info->OpY);
   assert(OpX && OpY);
   return {OpX->BaseVOP, OpY->BaseVOP};
 }
