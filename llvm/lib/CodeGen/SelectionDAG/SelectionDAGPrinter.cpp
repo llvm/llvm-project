@@ -281,9 +281,9 @@ void SelectionDAG::setSubgraphColor(SDNode *N, const char *Color) {
 #endif
 }
 
+#if !defined(NDEBUG) || defined(LLVM_ENABLE_DUMP)
 std::string ScheduleDAGSDNodes::getGraphNodeLabel(const SUnit *SU) const {
   std::string s;
-#if !defined(NDEBUG) || defined(LLVM_ENABLE_DUMP)
   raw_string_ostream O(s);
   O << *SU << ": ";
   if (SU->getNode()) {
@@ -300,9 +300,9 @@ std::string ScheduleDAGSDNodes::getGraphNodeLabel(const SUnit *SU) const {
   } else {
     O << "CROSS RC COPY";
   }
-#endif
   return s;
 }
+#endif
 
 void ScheduleDAGSDNodes::getCustomGraphFeatures(GraphWriter<ScheduleDAG*> &GW) const {
   if (DAG) {

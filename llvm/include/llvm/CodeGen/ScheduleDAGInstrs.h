@@ -294,8 +294,10 @@ namespace llvm {
     void dumpNode(const SUnit &SU) const override;
     void dump() const override;
 
+#if !defined(NDEBUG) || defined(LLVM_ENABLE_DUMP)
     /// Returns a label for a DAG node that points to an instruction.
     std::string getGraphNodeLabel(const SUnit *SU) const override;
+#endif
 
     /// Returns a label for the region of code covered by the DAG.
     std::string getDAGName() const override;

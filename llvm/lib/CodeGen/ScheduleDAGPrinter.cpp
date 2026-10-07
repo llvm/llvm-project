@@ -16,6 +16,7 @@
 #include "llvm/Support/raw_ostream.h"
 using namespace llvm;
 
+#if !defined(NDEBUG) || defined(LLVM_ENABLE_DUMP)
 template <>
 struct llvm::DOTGraphTraits<ScheduleDAG *> : public DefaultDOTGraphTraits {
 
@@ -66,6 +67,7 @@ std::string DOTGraphTraits<ScheduleDAG*>::getNodeLabel(const SUnit *SU,
                                                        const ScheduleDAG *G) {
   return G->getGraphNodeLabel(SU);
 }
+#endif
 
 /// viewGraph - Pop up a ghostview window with the reachable parts of the DAG
 /// rendered using 'dot'.
