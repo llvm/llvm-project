@@ -654,8 +654,6 @@ defset list<RuntimeLibcall> LibCalls__sync = {
 defset list<RuntimeLibcall> LibCalls__atomic = {
   // Atomic `__atomic_*' libcalls.
   foreach MemSize = ["", "_1", "_2", "_4", "_8", "_16"] in {
-    //def ATOMIC_LOAD#MemSize : RuntimeLibcall;
-    //def ATOMIC_STORE#MemSize : RuntimeLibcall;
     def ATOMIC_EXCHANGE#MemSize : RuntimeLibcall;
     def ATOMIC_COMPARE_EXCHANGE#MemSize : RuntimeLibcall;
   }

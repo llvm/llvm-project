@@ -209,44 +209,48 @@ RuntimeLibcallsInfo::getDefaultFunctionTy(
   Libcall LC = getLibcallFromImpl(LibcallImpl);
   const FuncArgTypeID *ProtoTypes = &SignatureTable[SignatureOffset[LC]];
 
+  if (ProtoTypes[0] == NoFuncArgType)
+    return {};
+
   unsigned IntBits = getIntSize(TT);
   AttributeList Attrs;
-  if (ProtoTypes[0] != NoFuncArgType) {
-    auto [RetTy, RetAttr] =
-        convertToIRTypeAndAttr(ProtoTypes[0], Ctx, DL, IntBits);
-    if (RetAttr.isValid())
-      Attrs = Attrs.addRetAttribute(Ctx, RetAttr);
 
-    Type *LastTy = RetTy, *ArgTy;
-    Attribute LastAttr = RetAttr, ArgAttr;
-    SmallVector<Type *, 4> ArgTys;
-    bool IsVarArg = false;
-    unsigned Idx = 1;
-    for (FuncArgTypeID TyID = ProtoTypes[Idx]; TyID != NoFuncArgType;
-         TyID = ProtoTypes[++Idx]) {
-      if (TyID == Ellip) {
-        // The ellipsis ends the protoype list so it must be followed by
-        // NoFuncArgType.
-        assert(ProtoTypes[Idx + 1] == NoFuncArgType);
-        IsVarArg = true;
-        break;
-      }
-      if (TyID == Same) {
-        ArgTy = LastTy;
-        ArgAttr = LastAttr;
-      } else {
-        std::tie(ArgTy, ArgAttr) =
-            convertToIRTypeAndAttr(ProtoTypes[Idx], Ctx, DL, IntBits);
-        LastTy = ArgTy;
-        LastAttr = ArgAttr;
-      }
-      ArgTys.push_back(ArgTy);
-      if (ArgAttr.isValid())
-        Attrs = Attrs.addParamAttribute(Ctx, Idx - 1, ArgAttr);
+  auto [RetTy, RetAttr] =
+      convertToIRTypeAndAttr(ProtoTypes[0], Ctx, DL, IntBits);
+  if (RetAttr.isValid())
+    Attrs = Attrs.addRetAttribute(Ctx, RetAttr);
+
+  Type *LastTy = RetTy, *ArgTy;
+  Attribute LastAttr = RetAttr, ArgAttr;
+  SmallVector<Type *, 4> ArgTys;
+  bool IsVarArg = false;
+  unsigned Idx = 1;
+  for (FuncArgTypeID TyID = ProtoTypes[Idx]; TyID != NoFuncArgType;
+       TyID = ProtoTypes[++Idx]) {
+    if (TyID == Ellip) {
+      // The ellipsis ends the protoype list so it must be followed by
+      // NoFuncArgType.
+      assert(ProtoTypes[Idx + 1] == NoFuncArgType);
+      IsVarArg = true;
+      break;
     }
-    return {FunctionType::get(RetTy, ArgTys, IsVarArg), Attrs};
+
+    if (TyID == Same) {
+      ArgTy = LastTy;
+      ArgAttr = LastAttr;
+    } else {
+      std::tie(ArgTy, ArgAttr) =
+          convertToIRTypeAndAttr(ProtoTypes[Idx], Ctx, DL, IntBits);
+      LastTy = ArgTy;
+      LastAttr = ArgAttr;
+    }
+
+    ArgTys.push_back(ArgTy);
+    if (ArgAttr.isValid())
+      Attrs = Attrs.addParamAttribute(Ctx, Idx - 1, ArgAttr);
   }
-  return {};
+
+  return {FunctionType::get(RetTy, ArgTys, IsVarArg), Attrs};
 }
 
 std::pair<FunctionType *, AttributeList>

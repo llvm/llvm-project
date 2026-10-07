@@ -444,11 +444,10 @@ static Signature getSignature(const Record *R) {
   Signature Sig;
   Sig.reserve(Tys->size() + 1);
   const Record *RetType = R->getValueAsOptionalDef("ReturnType");
-  if (RetType && (RetType->getName() != "NoneType"))
+  if (RetType && RetType->getName() != "NoneType")
     Sig.push_back(RetType->getName());
-  for (unsigned I = 0, E = Tys->size(); I < E; ++I) {
+  for (unsigned I = 0, E = Tys->size(); I < E; ++I)
     Sig.push_back(Tys->getElementAsRecord(I)->getName());
-  }
   return Sig;
 }
 
