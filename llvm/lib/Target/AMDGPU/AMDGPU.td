@@ -1072,12 +1072,21 @@ defm AtomicDsPkAdd16Insts : AMDGPUSubtargetFeature<"atomic-ds-pk-add-16-insts",
   "ds_pk_add_rtn_f16 instructions"
 >;
 
+defm AtomicDsCondSubClampInsts : AMDGPUSubtargetFeature<"atomic-ds-cond-sub-clamp-insts",
+  "Has ds_cond_sub_u32, ds_cond_sub_rtn_u32, ds_sub_clamp_u32 and "
+  "ds_sub_clamp_rtn_u32 instructions"
+>;
+
 defm LdsAtomicAddF64 : AMDGPUSubtargetFeature<"lds-atomic-add-f64",
   "Has ds_add_f64 and ds_add_rtn_f64 instructions"
 >;
 
 defm AtomicFlatPkAdd16Insts : AMDGPUSubtargetFeature<"atomic-flat-pk-add-16-insts",
   "Has flat_atomic_pk_add_f16 and flat_atomic_pk_add_bf16 instructions"
+>;
+
+defm AtomicCondSubClampFlatInsts : AMDGPUSubtargetFeature<"atomic-cond-sub-clamp-flat-insts",
+  "Has flat_atomic_cond_sub_u32 and flat_atomic_sub_clamp_u32 instructions"
 >;
 
 defm AtomicFaddRtnInsts : AMDGPUSubtargetFeature<"atomic-fadd-rtn-insts",
@@ -1883,6 +1892,7 @@ def FeatureGFX12 : GCNSubtargetFeatureGeneration<"GFX12",
    FeatureUnalignedDSAccess, FeatureTrue16BitInsts,
    FeatureDefaultComponentBroadcast, FeatureMaxHardClauseLength32,
    FeatureAtomicFMinFMaxF32GlobalInsts, FeatureAtomicFMinFMaxF32FlatInsts,
+   FeatureAtomicDsCondSubClampInsts, FeatureAtomicCondSubClampFlatInsts,
    FeatureIEEEMinimumMaximumInsts, FeatureSALUMinimumMaximumInsts,
    FeatureMinimum3Maximum3F32, FeatureMinimum3Maximum3F16,
    FeatureAgentScopeFineGrainedRemoteMemoryAtomics, FeatureFlatOffsetBits24,
@@ -1913,6 +1923,7 @@ def FeatureGFX13 : GCNSubtargetFeatureGeneration<"GFX13",
    FeatureUnalignedDSAccess, FeatureTrue16BitInsts,
    FeatureDefaultComponentBroadcast, FeatureMaxHardClauseLength32,
    FeatureAtomicFMinFMaxF32GlobalInsts, FeatureAtomicFMinFMaxF32FlatInsts,
+   FeatureAtomicDsCondSubClampInsts, FeatureAtomicCondSubClampFlatInsts,
    FeatureIEEEMinimumMaximumInsts, FeatureSALUMinimumMaximumInsts,
    FeatureMinimum3Maximum3F32, FeatureMinimum3Maximum3F16,
    FeatureAgentScopeFineGrainedRemoteMemoryAtomics, FeatureFlatOffsetBits24,
@@ -3132,10 +3143,6 @@ def isGFX13Plus :
   Predicate<"Subtarget->getGeneration() >= AMDGPUSubtarget::GFX13">,
   AssemblerPredicate<(all_of FeatureGFX13Insts)>;
 
-def HasAtomicCondSubClampFlatInsts :
-  Predicate<"Subtarget->getGeneration() >= AMDGPUSubtarget::GFX12">,
-  AssemblerPredicate<(all_of FeatureGFX12Insts)>;
-
 def HasD16LoadStore : Predicate<"Subtarget->hasD16LoadStore()">,
   AssemblerPredicate<(all_of FeatureGFX9Insts)>;
 
@@ -3276,10 +3283,6 @@ def HasCvtFP8ByteSelNotE5M3 : Predicate<"Subtarget->hasCvtFP8ByteSel() && !Subta
 
 def HasFmacLegacy32 : Predicate<"Subtarget->hasFmaLegacy32Insts() && Subtarget->getGeneration() < AMDGPUSubtarget::GFX12">,
   AssemblerPredicate<(all_of FeatureFmaLegacy32Insts, (not FeatureGFX12Insts))>;
-
-def HasAtomicDsCondSubClampInsts :
-  Predicate<"Subtarget->getGeneration() >= AMDGPUSubtarget::GFX12">,
-  AssemblerPredicate<(all_of FeatureGFX12Insts)>;
 
 def HasAtomicBufferGlobalPkAddF16NoRtnInsts
   : Predicate<"Subtarget->hasAtomicBufferGlobalPkAddF16NoRtnInsts() || Subtarget->hasAtomicBufferGlobalPkAddF16Insts()">,

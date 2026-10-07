@@ -322,8 +322,8 @@ public:
       if (auto varAttr =
               mlir::dyn_cast_or_null<mlir::LLVM::DILocalVariableAttr>(
                   fusedLoc.getMetadata())) {
-        mlir::LLVM::DbgDeclareOp::create(rewriter, memRef.getLoc(), memRef,
-                                         varAttr, nullptr);
+        mlir::LLVM::DbgDeclareOp::create(rewriter, fusedLoc, memRef, varAttr,
+                                         nullptr);
       }
     }
     rewriter.replaceOp(declareOp, memRef);
@@ -343,7 +343,7 @@ public:
       if (auto varAttr =
               mlir::dyn_cast_or_null<mlir::LLVM::DILocalVariableAttr>(
                   fusedLoc.getMetadata())) {
-        mlir::LLVM::DbgValueOp::create(rewriter, value.getLoc(), value, varAttr,
+        mlir::LLVM::DbgValueOp::create(rewriter, fusedLoc, value, varAttr,
                                        nullptr);
       }
     }
