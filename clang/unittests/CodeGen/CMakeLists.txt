@@ -2,6 +2,7 @@ add_clang_unittest(ClangCodeGenTests
   BufferSourceTest.cpp
   CodeGenExternalTest.cpp
   DemangleTrapReasonInDebugInfo.cpp
+  ReloadLinkModulesTest.cpp
   TBAAMetadataTest.cpp
   CheckTargetFeaturesTest.cpp
   QualTypeMapperTest.cpp
