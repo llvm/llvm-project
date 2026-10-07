@@ -8,18 +8,21 @@ target triple = "wasm32"
 define <4 x float> @test_minnum_f32x4(<4 x float> %a, <4 x float> %b) {
 ; CHECK-LABEL: test_minnum_f32x4:
 ; CHECK:         .functype test_minnum_f32x4 (v128, v128) -> (v128)
+; CHECK-NEXT:    .local f32
 ; CHECK-NEXT:  # %bb.0:
+; CHECK-NEXT:    local.get 0
+; CHECK-NEXT:    f32x4.extract_lane 1
+; CHECK-NEXT:    local.get 1
+; CHECK-NEXT:    f32x4.extract_lane 1
+; CHECK-NEXT:    call fminf
+; CHECK-NEXT:    local.set 2
 ; CHECK-NEXT:    local.get 0
 ; CHECK-NEXT:    f32x4.extract_lane 0
 ; CHECK-NEXT:    local.get 1
 ; CHECK-NEXT:    f32x4.extract_lane 0
 ; CHECK-NEXT:    call fminf
 ; CHECK-NEXT:    f32x4.splat
-; CHECK-NEXT:    local.get 0
-; CHECK-NEXT:    f32x4.extract_lane 1
-; CHECK-NEXT:    local.get 1
-; CHECK-NEXT:    f32x4.extract_lane 1
-; CHECK-NEXT:    call fminf
+; CHECK-NEXT:    local.get 2
 ; CHECK-NEXT:    f32x4.replace_lane 1
 ; CHECK-NEXT:    local.get 0
 ; CHECK-NEXT:    f32x4.extract_lane 2
@@ -185,18 +188,21 @@ define <4 x float> @test_minimumnum_f32x4_nsz_nnan(<4 x float> %a, <4 x float> %
 define <2 x double> @test_minnum_f64x2(<2 x double> %a, <2 x double> %b) {
 ; CHECK-LABEL: test_minnum_f64x2:
 ; CHECK:         .functype test_minnum_f64x2 (v128, v128) -> (v128)
+; CHECK-NEXT:    .local f64
 ; CHECK-NEXT:  # %bb.0:
+; CHECK-NEXT:    local.get 0
+; CHECK-NEXT:    f64x2.extract_lane 1
+; CHECK-NEXT:    local.get 1
+; CHECK-NEXT:    f64x2.extract_lane 1
+; CHECK-NEXT:    call fmin
+; CHECK-NEXT:    local.set 2
 ; CHECK-NEXT:    local.get 0
 ; CHECK-NEXT:    f64x2.extract_lane 0
 ; CHECK-NEXT:    local.get 1
 ; CHECK-NEXT:    f64x2.extract_lane 0
 ; CHECK-NEXT:    call fmin
 ; CHECK-NEXT:    f64x2.splat
-; CHECK-NEXT:    local.get 0
-; CHECK-NEXT:    f64x2.extract_lane 1
-; CHECK-NEXT:    local.get 1
-; CHECK-NEXT:    f64x2.extract_lane 1
-; CHECK-NEXT:    call fmin
+; CHECK-NEXT:    local.get 2
 ; CHECK-NEXT:    f64x2.replace_lane 1
 ; CHECK-NEXT:    # fallthrough-return
   %result = call <2 x double> @llvm.minnum.v2f64(<2 x double> %a, <2 x double> %b)
