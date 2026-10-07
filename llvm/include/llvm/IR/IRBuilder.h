@@ -114,8 +114,8 @@ class IRBuilderBase {
   DebugLoc StoredDL;
 
 protected:
-  using InsertFn = function_ref<void(const IRBuilderBase &, Instruction *,
-                                     const Twine &, BasicBlock::iterator)>;
+  using InsertFn = void (*)(const IRBuilderBase &, Instruction *, const Twine &,
+                            BasicBlock::iterator);
 
   // TODO: Remove this in favor of InsertPt.getNodeParent(), so they cannot
   // go out of sync.
@@ -134,12 +134,16 @@ protected:
 
   ArrayRef<OperandBundleDef> DefaultOperandBundles;
 
-public:
   IRBuilderBase(LLVMContext &context, const IRBuilderFolder &Folder,
                 InsertFn InsertCB)
       : Context(context), Folder(Folder), InsertCB(InsertCB) {
     ClearInsertionPoint();
   }
+
+public:
+  // IRBuilderBase contains references to IRBuilder members and is not safe
+  // to copy.
+  IRBuilderBase(const IRBuilderBase &) = delete;
 
   /// Insert and return the specified instruction.
   template<typename InstTy>
