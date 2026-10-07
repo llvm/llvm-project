@@ -3422,10 +3422,6 @@ std::optional<unsigned> getExponentOnlyScaleArgIdx(unsigned IntrID) {
   return std::nullopt;
 }
 
-APInt getExponentOnlyScaleDemandedBits() {
-  return APInt::getBitsSet(32, 23, 31);
-}
-
 const GcnBufferFormatInfo *getGcnBufferFormatInfo(uint8_t BitsPerComp,
                                                   uint8_t NumComponents,
                                                   uint8_t NumFormat,

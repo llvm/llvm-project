@@ -1782,7 +1782,9 @@ std::optional<unsigned> getExponentOnlyScaleArgIdx(unsigned IntrID);
 
 /// \returns the bits of an exponent-only scale argument that are read: the
 /// exponent field of the f32 value.
-APInt getExponentOnlyScaleDemandedBits();
+inline APInt getExponentOnlyScaleDemandedBits() {
+  return APInt::getBitsSet(32, 23, 31);
+}
 
 /// \returns a register class for the physical register \p Reg if it is a VGPR
 /// or nullptr otherwise.
