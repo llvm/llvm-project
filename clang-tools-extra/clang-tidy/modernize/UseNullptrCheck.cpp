@@ -38,6 +38,10 @@ AST_MATCHER(DecltypeType, decltypeTypeNullptrLiteral) {
 
 static constexpr char CastSequence[] = "sequence";
 
+static constexpr char DefaultIgnoredTypes[] = "std::_CmpUnspecifiedParam;"
+                                              "^std::__cmp_cat::__unspec;"
+                                              "^std::__cmp_cat::__literal_zero";
+
 /// Create a matcher that finds implicit casts as well as the head of a
 /// sequence of zero or more nested explicit casts that have an implicit cast
 /// to null within.
@@ -505,8 +509,8 @@ private:
 UseNullptrCheck::UseNullptrCheck(StringRef Name, ClangTidyContext *Context)
     : ClangTidyCheck(Name, Context),
       NullMacrosStr(Options.get("NullMacros", "NULL")),
-      IgnoredTypes(utils::options::parseStringList(Options.get(
-          "IgnoredTypes", "_CmpUnspecifiedParam;^std::__cmp_cat::__unspec"))),
+      IgnoredTypes(utils::options::parseStringList(
+          Options.get("IgnoredTypes", DefaultIgnoredTypes))),
       UseNullptrT(Options.get("UseNullptrT", true)),
       IncludeInserter(Options.getLocalOrGlobal("IncludeStyle",
                                                utils::IncludeSorter::IS_LLVM),

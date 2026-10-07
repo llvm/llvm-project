@@ -444,16 +444,11 @@ static void ReportMutexHeldWrongContext(ThreadState *thr, uptr pc) {
   VarSizeStackTrace trace;
   ObtainCurrentStack(thr, pc, &trace);
   ScopedReport rep(ReportTypeMutexHeldWrongContext);
-  // Release locks before symbolizing and outputting the report to avoid
-  // deadlocks.
-  {
-    ThreadRegistryLock l(&ctx->thread_registry);
-    for (uptr i = 0; i < thr->mset.Size(); ++i) {
-      MutexSet::Desc desc = thr->mset.Get(i);
-      rep.AddMutex(desc.addr, desc.stack_id);
-    }
-    rep.AddStack(trace, true);
+  for (uptr i = 0; i < thr->mset.Size(); ++i) {
+    MutexSet::Desc desc = thr->mset.Get(i);
+    rep.AddMutex(desc.addr, desc.stack_id);
   }
+  rep.AddStack(trace, true);
   OutputReport(thr, rep);
 }
 

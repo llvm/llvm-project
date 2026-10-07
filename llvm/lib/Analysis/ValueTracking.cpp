@@ -1919,13 +1919,33 @@ static void computeKnownBitsFromOperator(const Operator *I,
         break;
       }
 
+      case Instruction::And: {
+        // Bits that are zero in the start value stay zero, and bits that are
+        // one in both the start value and the step stay one.
+        KnownBits KnownStep(BitWidth);
+        computeKnownBitsForRecurrenceOperands(P, Start, Step, DemandedElts,
+                                              KnownStart, KnownStep, Q, Depth);
+        Known.Zero |= KnownStart.Zero;
+        Known.One |= KnownStart.One & KnownStep.One;
+        break;
+      }
+
+      case Instruction::Or: {
+        // Bits that are zero in both the start value and the step stay zero,
+        // and bits that are one in the start value stay one.
+        KnownBits KnownStep(BitWidth);
+        computeKnownBitsForRecurrenceOperands(P, Start, Step, DemandedElts,
+                                              KnownStart, KnownStep, Q, Depth);
+        Known.Zero |= KnownStart.Zero & KnownStep.Zero;
+        Known.One |= KnownStart.One;
+        break;
+      }
+
       // Check for operations that have the property that if
       // both their operands have low zero bits, the result
       // will have low zero bits.
       case Instruction::Add:
       case Instruction::Sub:
-      case Instruction::And:
-      case Instruction::Or:
       case Instruction::Mul: {
         // Ok, we have a recurrence of the form {Start,op,Step}. Check for low
         // zero bits.
@@ -2360,10 +2380,11 @@ static void computeKnownBitsFromOperator(const Operator *I,
       case Intrinsic::amdgcn_mbcnt_lo: {
         // Wave64 mbcnt_lo returns at most 32 + src1. Otherwise these return at
         // most 31 + src1.
-        Known.Zero.setBitsFrom(
+        KnownBits MbcntKnown(BitWidth);
+        MbcntKnown.Zero.setBitsFrom(
             II->getIntrinsicID() == Intrinsic::amdgcn_mbcnt_lo ? 6 : 5);
         computeKnownBits(I->getOperand(1), Known2, Q, Depth + 1);
-        Known = KnownBits::add(Known, Known2);
+        Known = Known.unionWith(KnownBits::add(MbcntKnown, Known2));
         break;
       }
       case Intrinsic::vscale: {
@@ -5645,16 +5666,29 @@ void computeKnownFPClass(const Value *V, const APInt &DemandedElts,
     case Intrinsic::roundeven: {
       KnownFPClass KnownSrc;
       FPClassTest InterestedSrcs = InterestedClasses;
-      if (InterestedSrcs & fcPosFinite)
-        InterestedSrcs |= fcPosFinite;
+
+      // Negative round ups towards zero produce negative zero.
       if (InterestedSrcs & fcNegFinite)
         InterestedSrcs |= fcNegFinite;
+
+      // Negative subnormals may flush to positive zero.
+      if (InterestedSrcs & fcPosFinite)
+        InterestedSrcs |= fcPosFinite | fcNegSubnormal;
+
       computeKnownFPClass(II->getArgOperand(0), DemandedElts, InterestedSrcs,
                           KnownSrc, Q, Depth + 1);
 
-      Known = KnownFPClass::roundToIntegral(
-          KnownSrc, IID == Intrinsic::trunc,
-          V->getType()->getScalarType()->isMultiUnitFPType());
+      const Function *F = II->getFunction();
+      DenormalMode Mode =
+          F ? F->getDenormalMode(
+                  II->getType()->getScalarType()->getFltSemantics())
+            : DenormalMode::getDynamic();
+      const bool IsMultiUnitFPType =
+          V->getType()->getScalarType()->isMultiUnitFPType();
+
+      const bool IsTrunc = IID == Intrinsic::trunc;
+      Known = KnownFPClass::roundToIntegral(KnownSrc, IsTrunc,
+                                            IsMultiUnitFPType, Mode);
       break;
     }
     case Intrinsic::exp:
@@ -6117,9 +6151,29 @@ void computeKnownFPClass(const Value *V, const APInt &DemandedElts,
     break;
   }
   case Instruction::FRem: {
-    const bool WantNan = (InterestedClasses & fcNan) != fcNone;
+    FPClassTest InterestedLHS = fcNone;
+    FPClassTest InterestedRHS = fcNone;
 
-    Known.knownNot(fcInf);
+    // NaN is also generated for frem(Inf, x) and frem(x, 0.0).
+    if (InterestedClasses & fcNan) {
+      InterestedLHS |= fcNan | fcInf;
+      InterestedRHS |= fcNan | fcZero | fcSubnormal;
+    }
+
+    // The sign for frem is the same as the first operand.
+    if (InterestedClasses & (fcPosNormal | fcPosSubnormal))
+      InterestedLHS |= fcPosNormal | fcPosSubnormal;
+    if (InterestedClasses & (fcNegNormal | fcNegSubnormal))
+      InterestedLHS |= fcNegNormal | fcNegSubnormal;
+
+    // A negative zero result requires a negative finite first operand.
+    if (InterestedClasses & fcNegZero)
+      InterestedLHS |= fcNegFinite;
+
+    // A positive zero result can additionally come from a negative finite
+    // result being flushed to positive zero.
+    if (InterestedClasses & fcPosZero)
+      InterestedLHS |= fcPosFinite | fcNegNormal | fcNegSubnormal;
 
     const Function *F = cast<Instruction>(Op)->getFunction();
     DenormalMode Mode =
@@ -6130,37 +6184,25 @@ void computeKnownFPClass(const Value *V, const APInt &DemandedElts,
     if (Op->getOperand(0) == Op->getOperand(1) &&
         isGuaranteedNotToBeUndef(Op->getOperand(0), Q.AC, Q.CtxI, Q.DT)) {
       // X % X is always exactly [+-]0.0 or a NaN.
-      Known.setKnownFPClasses(fcNan | fcZero);
-
-      if (!WantNan)
-        break;
-
+      FPClassTest InterestedSrcs = InterestedLHS | InterestedRHS;
       KnownFPClass KnownSrc;
-      computeKnownFPClass(Op->getOperand(0), DemandedElts,
-                          fcNan | fcInf | fcZero | fcSubnormal, KnownSrc, Q,
-                          Depth + 1);
-
+      if (InterestedSrcs != fcNone)
+        computeKnownFPClass(Op->getOperand(0), DemandedElts, InterestedSrcs,
+                            KnownSrc, Q, Depth + 1);
       Known = KnownFPClass::frem_self(KnownSrc, Mode);
       break;
     }
 
-    const bool WantNegative = (InterestedClasses & fcNegative) != fcNone;
-    const bool WantPositive = (InterestedClasses & fcPositive) != fcNone;
-    if (!WantNan && !WantNegative && !WantPositive)
-      break;
+    KnownFPClass KnownLHS;
+    if (InterestedLHS != fcNone)
+      computeKnownFPClass(Op->getOperand(0), DemandedElts, InterestedLHS,
+                          KnownLHS, Q, Depth + 1);
 
-    KnownFPClass KnownLHS, KnownRHS;
-    computeKnownFPClass(Op->getOperand(1), DemandedElts,
-                        fcNan | fcInf | fcZero | fcNegative, KnownRHS, Q,
-                        Depth + 1);
-
-    bool KnowSomethingUseful = KnownRHS.isKnownNeverNaN() ||
-                               KnownRHS.isKnownNever(fcNegative) ||
-                               KnownRHS.isKnownNever(fcPositive);
-
-    if (KnowSomethingUseful || WantPositive)
-      computeKnownFPClass(Op->getOperand(0), DemandedElts, fcAllFlags, KnownLHS,
-                          Q, Depth + 1);
+    KnownFPClass KnownRHS;
+    // RHS is only useful for refining NaN classes.
+    if (InterestedRHS != fcNone && KnownLHS.isKnownNever(fcSNan))
+      computeKnownFPClass(Op->getOperand(1), DemandedElts, InterestedRHS,
+                          KnownRHS, Q, Depth + 1);
 
     Known = KnownFPClass::frem(KnownLHS, KnownRHS, Mode);
 
@@ -8520,6 +8562,8 @@ bool llvm::intrinsicPropagatesPoison(Intrinsic::ID IID) {
   case Intrinsic::atan2:
   case Intrinsic::canonicalize:
   case Intrinsic::sqrt:
+  case Intrinsic::fma:
+  case Intrinsic::fmuladd:
   case Intrinsic::exp:
   case Intrinsic::exp2:
   case Intrinsic::exp10:
