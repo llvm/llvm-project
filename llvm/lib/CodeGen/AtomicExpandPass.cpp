@@ -188,7 +188,8 @@ struct ReplacementIRBuilder
       : IRBuilder(
             I->getIterator(), InstSimplifyFolder(DL),
             IRBuilderCallbackInserter([this](Instruction *I) { addMD(I); })) {
-    if (BB->getParent()->getAttributes().hasFnAttr(Attribute::StrictFP))
+    if (GetInsertBlock()->getParent()->getAttributes().hasFnAttr(
+            Attribute::StrictFP))
       this->setIsFPConstrained(true);
 
     MMRAMD = I->getMetadata(LLVMContext::MD_mmra);
