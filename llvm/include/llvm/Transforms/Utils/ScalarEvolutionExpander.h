@@ -196,7 +196,7 @@ public:
       : SE(SE), DL(SE.getDataLayout()), IVName(Name),
         PreserveLCSSA(PreserveLCSSA), IVIncInsertLoop(nullptr),
         IVIncInsertPos(nullptr), CanonicalMode(true), LSRMode(false),
-        Builder(SE.getContext(), InstSimplifyFolder(DL),
+        Builder(SE.getModule(), InstSimplifyFolder(DL),
                 IRBuilderCallbackInserter(
                     [this](Instruction *I) { rememberInstruction(I); })) {
 #if LLVM_ENABLE_ABI_BREAKING_CHECKS
@@ -411,9 +411,7 @@ public:
     Builder.SetInsertPoint(IP);
   }
 
-  void setInsertPoint(BasicBlock::iterator IP) {
-    Builder.SetInsertPoint(IP->getParent(), IP);
-  }
+  void setInsertPoint(BasicBlock::iterator IP) { Builder.SetInsertPoint(IP); }
 
   /// Clear the current insertion point. This is useful if the instruction
   /// that had been serving as the insertion point may have been deleted.

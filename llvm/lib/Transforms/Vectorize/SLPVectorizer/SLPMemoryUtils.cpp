@@ -23,6 +23,7 @@
 #include "llvm/Analysis/ScalarEvolutionExpressions.h"
 #include "llvm/Analysis/TargetTransformInfo.h"
 #include "llvm/Analysis/ValueTracking.h"
+#include "llvm/IR/Constants.h"
 #include "llvm/IR/DataLayout.h"
 #include "llvm/IR/DerivedTypes.h"
 #include "llvm/IR/Instructions.h"
@@ -39,6 +40,17 @@
 using namespace llvm;
 
 namespace llvm::slpvectorizer {
+
+ConstantInt *getStrideBytesIfConstant(Value *Stride, Type *ScalarTy,
+                                      const DataLayout &DL, bool IsReverse) {
+  auto *CI = dyn_cast_or_null<ConstantInt>(Stride);
+  if (!CI)
+    return nullptr;
+
+  uint64_t ElementSize = DL.getTypeAllocSize(ScalarTy).getFixedValue();
+  APInt Bytes = CI->getValue() * ElementSize;
+  return ConstantInt::get(CI->getContext(), IsReverse ? -Bytes : Bytes);
+}
 
 bool arePointersCompatible(Value *Ptr1, Value *Ptr2,
                            const TargetLibraryInfo &TLI, unsigned MaxDepth,

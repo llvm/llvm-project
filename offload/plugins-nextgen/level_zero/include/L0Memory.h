@@ -34,36 +34,6 @@ class L0ContextTy;
 
 constexpr static int32_t MaxMemKind = TARGET_ALLOC_LAST + 1;
 
-struct DynamicMemHeapTy {
-  /// Base address memory is allocated from.
-  uintptr_t AllocBase = 0;
-  /// Minimal size served by the current heap.
-  size_t BlockSize = 0;
-  /// Max size served by the current heap.
-  size_t MaxSize = 0;
-  /// Available memory blocks.
-  uint32_t NumBlocks = 0;
-  /// Number of block descriptors.
-  uint32_t NumBlockDesc = 0;
-  /// Number of block counters.
-  uint32_t NumBlockCounter = 0;
-  /// List of memory block descriptors.
-  uint64_t *BlockDesc = nullptr;
-  /// List of memory block counters.
-  uint32_t *BlockCounter = nullptr;
-};
-
-struct DynamicMemPoolTy {
-  /// Location of device memory blocks.
-  void *PoolBase = nullptr;
-  /// Heap size common to all heaps.
-  size_t HeapSize = 0;
-  /// Number of heaps available.
-  uint32_t NumHeaps = 0;
-  /// Heap descriptors (using fixed-size array to simplify memory allocation).
-  DynamicMemHeapTy HeapDesc[8];
-};
-
 /// Memory allocation information used in memory allocation/deallocation.
 struct MemAllocInfoTy {
   /// Base address allocated from compute runtime.
