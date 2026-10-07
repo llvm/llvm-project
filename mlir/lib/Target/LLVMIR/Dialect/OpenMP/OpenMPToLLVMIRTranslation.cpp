@@ -531,8 +531,15 @@ static LogicalResult checkImplementationStatus(Operation &op) {
   };
 
   auto checkThreadLimit = [&todo](auto op, LogicalResult &result) {
-    if (op.getThreadLimitDimsCount() > 3)
+    if (op.getThreadLimitDimsCount() > 3) {
       result = todo("thread_limit with more than 3 dimensions");
+      return;
+    }
+
+    if (op.hasThreadLimitMultiDim() && !isa<omp::TargetOp>(op.getOperation()) &&
+        !op->template getParentOfType<omp::TargetOp>())
+      result = todo(
+          "thread_limit with multi-dimensional values outside target region");
   };
   auto checkMap = [&todo](auto op, LogicalResult &result) {
     if (!op.getMapIterated().empty())
@@ -9494,11 +9501,12 @@ initTargetRuntimeAttrs(llvm::IRBuilderBase &builder,
           numThreadsVar ? moduleTranslation.lookupValue(numThreadsVar)
                         : nullptr);
   }
-  // Sizes must match for zip_equal in OMPIRBuilder. Trailing dims of a
+  // Keep thread_limit and num_threads at matching sizes. Trailing dims of a
   // specified-but-shorter clause are implicitly 1 and still clamp, whereas an
   // absent clause stays null so it imposes no constraint.
   size_t maxDims =
-      std::max(attrs.TargetThreadLimit.size(), attrs.TeamsThreadLimit.size());
+      std::max({attrs.TargetThreadLimit.size(), attrs.TeamsThreadLimit.size(),
+                attrs.MaxThreads.size()});
   auto padTrailingDims = [&](llvm::SmallVectorImpl<llvm::Value *> &vec,
                              bool isSpecified) {
     if (vec.size() >= maxDims)
@@ -9511,6 +9519,7 @@ initTargetRuntimeAttrs(llvm::IRBuilderBase &builder,
   padTrailingDims(attrs.TargetThreadLimit,
                   !targetOp.getThreadLimitVars().empty());
   padTrailingDims(attrs.TeamsThreadLimit, !teamsThreadLimitVars.empty());
+  padTrailingDims(attrs.MaxThreads, !numThreadsVars.empty());
 
   if (targetOp.hasHostEvalTripCount()) {
     llvm::OpenMPIRBuilder *ompBuilder = moduleTranslation.getOpenMPBuilder();

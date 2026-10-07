@@ -314,34 +314,26 @@ llvm.func @teams_if_with_num_teams(%condition: i1, %numTeamsLower: i32, %numTeam
 
 // -----
 
-llvm.func @duringTeams()
+// Check that the thread and bound id arguments of the outlined function are
+// generic pointers even when allocas are created in a non-zero address space.
+// The cast that produces them is deleted along with the fake allocas once the
+// region has been outlined, so the signature below is the only place it can be
+// observed.
+module attributes {dlti.dl_spec = #dlti.dl_spec<#dlti.dl_entry<"dlti.alloca_memory_space", 5 : ui32>>} {
+    llvm.func @foo()
 
-// CHECK-LABEL: @omp_teams_thread_limit_2d
-// CHECK-SAME: (i32 [[LIMIT_X:.+]], i32 [[LIMIT_Y:.+]])
-llvm.func @omp_teams_thread_limit_2d(%limitX: i32, %limitY: i32) {
-    // CHECK: [[THREAD_NUM:%.+]] = call i32 @__kmpc_global_thread_num
-    // CHECK-NEXT: call void @__kmpc_push_num_teams_51({{.+}}, i32 [[THREAD_NUM]], i32 0, i32 0, i32 [[LIMIT_X]])
-    // CHECK: call void (ptr, i32, ptr, ...) @__kmpc_fork_teams(ptr @{{[0-9]+}}, i32 0, ptr [[OUTLINED_FN:.+]])
-    omp.teams thread_limit(%limitX, %limitY : i32, i32) {
-        llvm.call @duringTeams() : () -> ()
-        omp.terminator
+    // CHECK-LABEL: @omp_teams_alloca_addrspace
+    // CHECK: call void {{.*}} @__kmpc_fork_teams(ptr @{{.+}}, i32 0, ptr @[[OUTLINED_FN:.+]])
+    llvm.func @omp_teams_alloca_addrspace() {
+        omp.teams {
+            llvm.call @foo() : () -> ()
+            omp.terminator
+        }
+        llvm.return
     }
-    llvm.return
-}
 
-// -----
-
-llvm.func @duringTeams()
-
-// CHECK-LABEL: @omp_teams_thread_limit_3d
-// CHECK-SAME: (i32 [[LIMIT_X:.+]], i64 [[LIMIT_Y:.+]], i16 [[LIMIT_Z:.+]])
-llvm.func @omp_teams_thread_limit_3d(%limitX: i32, %limitY: i64, %limitZ: i16) {
-    // CHECK: [[THREAD_NUM:%.+]] = call i32 @__kmpc_global_thread_num
-    // CHECK-NEXT: call void @__kmpc_push_num_teams_51({{.+}}, i32 [[THREAD_NUM]], i32 0, i32 0, i32 [[LIMIT_X]])
-    // CHECK: call void (ptr, i32, ptr, ...) @__kmpc_fork_teams(ptr @{{[0-9]+}}, i32 0, ptr [[OUTLINED_FN:.+]])
-    omp.teams thread_limit(%limitX, %limitY, %limitZ : i32, i64, i16) {
-        llvm.call @duringTeams() : () -> ()
-        omp.terminator
-    }
-    llvm.return
+    // CHECK:      define internal void @[[OUTLINED_FN]]
+    // CHECK-SAME: (ptr %global.tid.ptr, ptr %bound.tid.ptr)
+    // CHECK:   call void @foo()
+    // CHECK:   ret void
 }

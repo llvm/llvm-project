@@ -3,8 +3,8 @@
 // CHECK:      @[[EXEC_MODE1:.*]] = weak protected constant i8 1
 // CHECK:      @llvm.compiler.used{{.*}} = appending global [1 x ptr] [ptr @[[EXEC_MODE1]]], section "llvm.metadata"
 // CHECK:      @[[KERNEL1_ENV:.*_kernel_environment]] = weak_odr protected constant %struct.KernelEnvironmentTy {
-// Both kernels below are generic, so their blocks carry one warp for the main
-// thread on top of the thread_limit they ask for: 10 + 64 and 30 + 64.
+// All kernels below are generic, so a known thread_limit gets one extra warp
+// for the main thread: 10 + 64, 30 + 64 and 10 + 64.
 // CHECK-SAME: %struct.ConfigurationEnvironmentTy { i8 1, i8 1, i8 [[EXEC_MODE1:1]], i32 [[MIN_THREADS1:1]], i32 [[MAX_THREADS1:74]], i32 [[MIN_TEAMS1:1]], i32 [[MAX_TEAMS1:-1]], i32 0 },
 // CHECK-SAME: ptr @{{.*}}, ptr @{{.*}} }
 
@@ -15,11 +15,12 @@
 // CHECK-SAME: ptr @{{.*}}, ptr @{{.*}} }
 
 // Multi-dim thread_limit: first dim constant (10), second dim constant (5).
-// MaxThreads uses the first dim combined value: min(target=20, teams_x=10) = 10.
+// MaxThreads uses the first dim combined value: min(target=20, teams_x=10) = 10,
+// plus the generic-mode warp.
 // CHECK:      @[[EXEC_MODE3:.*]] = weak protected constant i8 1
 // CHECK:      @llvm.compiler.used{{.*}} = appending global [1 x ptr] [ptr @[[EXEC_MODE3]]], section "llvm.metadata"
 // CHECK:      @[[KERNEL3_ENV:.*_kernel_environment]] = weak_odr protected constant %struct.KernelEnvironmentTy {
-// CHECK-SAME: %struct.ConfigurationEnvironmentTy { i8 1, i8 1, i8 [[EXEC_MODE3:1]], i32 [[MIN_THREADS3:1]], i32 [[MAX_THREADS3:10]], i32 0, i32 0, i32 0 },
+// CHECK-SAME: %struct.ConfigurationEnvironmentTy { i8 1, i8 1, i8 [[EXEC_MODE3:1]], i32 [[MIN_THREADS3:1]], i32 [[MAX_THREADS3:74]], i32 0, i32 0, i32 0 },
 // CHECK-SAME: ptr @{{.*}}, ptr @{{.*}} }
 
 // Non-constant thread_limit: no compile-time bound, so MaxThreads stays 0
@@ -58,10 +59,10 @@ module attributes {dlti.dl_spec = #dlti.dl_spec<#dlti.dl_entry<"dlti.alloca_memo
 
     // CHECK: define weak_odr protected amdgpu_kernel void @__omp_offloading_{{.*}}_main_l{{[0-9]+}}(ptr %[[KERNEL_ARGS:.*]]) #[[ATTRS1]]
     // CHECK: %{{.*}} = call i32 @__kmpc_target_init(ptr @[[KERNEL3_ENV]], ptr %[[KERNEL_ARGS]])
-    %target_threads3 = llvm.mlir.constant(20) : i32
+    %target_threads3 = llvm.mlir.constant(20 : i32) : i32
     omp.target kernel_type(generic) thread_limit(%target_threads3 : i32) {
-      %teams_threads_x = llvm.mlir.constant(10) : i32
-      %teams_threads_y = llvm.mlir.constant(5) : i32
+      %teams_threads_x = llvm.mlir.constant(10 : i32) : i32
+      %teams_threads_y = llvm.mlir.constant(5 : i32) : i32
       omp.teams thread_limit(%teams_threads_x, %teams_threads_y : i32, i32) {
         omp.terminator
       }

@@ -47,7 +47,7 @@ module attributes {omp.is_target_device = false, omp.target_triples = ["amdgcn-a
   }
 
   llvm.func @main_multidim_thread_limit(%thread_limit_y : i32) {
-    %teams_threads_x = llvm.mlir.constant(10) : i32
+    %teams_threads_x = llvm.mlir.constant(10 : i32) : i32
     omp.target kernel_type(generic) host_eval(%teams_threads_x -> %arg_tlx, %thread_limit_y -> %arg_tly : i32, i32) {
       omp.teams thread_limit(%arg_tlx, %arg_tly : i32, i32) {
         omp.terminator
@@ -58,9 +58,9 @@ module attributes {omp.is_target_device = false, omp.target_triples = ["amdgcn-a
   }
 
   llvm.func @main_mixed_rank_thread_limit() {
-    %target_threads = llvm.mlir.constant(20) : i32
-    %teams_threads_x = llvm.mlir.constant(10) : i32
-    %teams_threads_y = llvm.mlir.constant(5) : i32
+    %target_threads = llvm.mlir.constant(20 : i32) : i32
+    %teams_threads_x = llvm.mlir.constant(10 : i32) : i32
+    %teams_threads_y = llvm.mlir.constant(5 : i32) : i32
     omp.target kernel_type(generic) thread_limit(%target_threads : i32)
                host_eval(%teams_threads_x -> %arg_tlx, %teams_threads_y -> %arg_tly : i32, i32) {
       omp.teams thread_limit(%arg_tlx, %arg_tly : i32, i32) {
