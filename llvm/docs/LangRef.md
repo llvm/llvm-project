@@ -2591,12 +2591,13 @@ fn -> other_fn -> other_fn ; fn is norecurse
     Interprocedural passes may still analyze this function, transform its body,
     and refine its attributes, but they will not rewrite its signature.
     Code generation defaults to the "fast" instruction selector.
-    This attribute cannot be used together with the `alwaysinline`
-    attribute; this attribute is also incompatible
-    with the `minsize`, `optsize`, and `optdebug` attributes.
+    This attribute is incompatible with the `minsize`, `optsize`, and
+    `optdebug` attributes.
 
-    This attribute requires the `noinline` attribute to be specified on
-    the function as well, so the function is never inlined into any caller.
+    This attribute implies `noinline`, so the function is not inlined into
+    any caller; the `noinline` attribute need not be specified as well.
+    If the function also has the `alwaysinline` attribute, `alwaysinline`
+    takes precedence and the function may be inlined.
     Only functions with the `alwaysinline` attribute are valid
     candidates for inlining into the body of this function.
 

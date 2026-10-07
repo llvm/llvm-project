@@ -1183,7 +1183,7 @@ void CodeViewDebug::emitDebugInfoForFunction(const Function *GV,
       ProcFlags |= ProcSymFlags::HasFP;
     if (GV->hasFnAttribute(Attribute::NoReturn))
       ProcFlags |= ProcSymFlags::IsNoReturn;
-    if (GV->hasFnAttribute(Attribute::NoInline))
+    if (GV->isNoInline())
       ProcFlags |= ProcSymFlags::IsNoInline;
     OS.emitInt8(static_cast<uint8_t>(ProcFlags));
     // Emit the function display name as a null-terminated string.

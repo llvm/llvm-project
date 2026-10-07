@@ -3248,7 +3248,7 @@ std::optional<InlineResult> llvm::getAttributeBasedInliningDecision(
     return InlineResult::failure("interposable");
 
   // Don't inline functions marked noinline.
-  if (Callee->hasFnAttribute(Attribute::NoInline))
+  if (Callee->isNoInline())
     return InlineResult::failure("noinline function attribute");
 
   // Don't inline call sites marked noinline.

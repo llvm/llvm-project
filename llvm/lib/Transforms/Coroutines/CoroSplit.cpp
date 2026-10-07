@@ -2103,9 +2103,9 @@ static void doSplitCoroutine(Function &F, SmallVectorImpl<Function *> &Clones,
 
   bool isNoSuspendCoroutine = Shape.CoroSuspends.empty();
 
-  bool shouldCreateNoAllocVariant =
-      !isNoSuspendCoroutine && Shape.ABI == coro::ABI::Switch &&
-      hasSafeElideCaller(F) && !F.hasFnAttribute(llvm::Attribute::NoInline);
+  bool shouldCreateNoAllocVariant = !isNoSuspendCoroutine &&
+                                    Shape.ABI == coro::ABI::Switch &&
+                                    hasSafeElideCaller(F) && !F.isNoInline();
   if (Shape.ABI == coro::ABI::Switch)
     Shape.SwitchLowering.HasCoroElideNoAllocVariant =
         shouldCreateNoAllocVariant;
