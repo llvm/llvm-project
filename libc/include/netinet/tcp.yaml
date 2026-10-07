@@ -1,4 +1,8 @@
 header: netinet/tcp.h
+public_includes:
+  # glibc's <netinet/tcp.h> pulls in <sys/socket.h> and callers use setsockopt
+  # on the strength of it.
+  - sys/socket.h
 standards:
   - posix
 macros:

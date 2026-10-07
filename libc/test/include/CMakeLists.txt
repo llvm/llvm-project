@@ -11,6 +11,16 @@ add_libc_test(
 )
 
 add_libc_test(
+  netinet_tcp_socket_test
+  SUITE
+    libc-include-tests
+  SRCS
+    netinet_tcp_socket_test.cpp
+  DEPENDS
+    libc.include.netinet_tcp
+)
+
+add_libc_test(
   assert_test
   SUITE
     libc-include-tests
