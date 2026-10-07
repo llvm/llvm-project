@@ -9618,8 +9618,8 @@ bool CodeGenPrepare::hoistExt(Instruction *Inst) {
   }
 
   // Insert new ZExt/SExt.
-  auto *ExtInst = CastInst::Create(ExtOpcode, Inst, DestType,
-                                   OrigCast->getName());
+  auto *ExtInst =
+      CastInst::Create(ExtOpcode, Inst, DestType, OrigCast->getName());
   ExtInst->insertAfter(Inst->getIterator());
   ExtInst->setDebugLoc(OrigCast->getDebugLoc());
 
