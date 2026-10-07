@@ -6,8 +6,8 @@
 ! added to this directory and sub-directories.
 !===----------------------------------------------------------------------===!
 
-!RUN: %flang_fc1 -emit-llvm -fopenmp -mmlir --enable-delayed-privatization-staging=false -fopenmp-version=51 -fopenmp-targets=amdgcn-amd-amdhsa %s -o - | FileCheck %s --check-prefixes=CHECK,CHECK-NO-FPRIV
-!RUN: %flang_fc1 -emit-llvm -fopenmp -mmlir --enable-delayed-privatization-staging=true -fopenmp-version=51 -fopenmp-targets=amdgcn-amd-amdhsa %s -o - | FileCheck %s --check-prefixes=CHECK,CHECK-FPRIV
+!RUN: %flang_fc1 -emit-llvm -fopenmp -mmlir --enable-delayed-privatization-staging=false -fopenmp-version=61 -fopenmp-targets=amdgcn-amd-amdhsa %s -o - | FileCheck %s --check-prefixes=CHECK,CHECK-NO-FPRIV
+!RUN: %flang_fc1 -emit-llvm -fopenmp -mmlir --enable-delayed-privatization-staging=true -fopenmp-version=61 -fopenmp-targets=amdgcn-amd-amdhsa %s -o - | FileCheck %s --check-prefixes=CHECK,CHECK-FPRIV
 
 
 !===============================================================================
@@ -429,6 +429,87 @@ subroutine mapType_common_block_members
 !$omp end target
 end subroutine mapType_common_block_members
 
+!CHECK: @.offload_sizes{{.*}} = private unnamed_addr constant [7 x i64] [i64 0, i64 40, i64 0, i64 4, i64 0, i64 0, i64 0]
+!CHECK: @.offload_maptypes{{.*}} = private unnamed_addr constant [7 x i64] [i64 33, i64 281474976710661, i64 3, i64 35, i64 16384, i64 16384, i64 288]
+!CHECK: @.offload_sizes{{.*}} = private unnamed_addr constant [7 x i64] [i64 4, i64 0, i64 40, i64 0, i64 0, i64 0, i64 0]
+!CHECK: @.offload_maptypes{{.*}} = private unnamed_addr constant [7 x i64] [i64 35, i64 545, i64 562949953421829, i64 515, i64 16384, i64 16384, i64 288]
+!CHECK: @.offload_sizes{{.*}} = private unnamed_addr constant [3 x i64] [i64 4, i64 48, i64 0]
+!CHECK: @.offload_maptypes{{.*}} = private unnamed_addr constant [3 x i64] [i64 35, i64 547, i64 288]
+!CHECK: @.offload_sizes{{.*}} = private unnamed_addr constant [7 x i64] [i64 0, i64 64, i64 0, i64 4, i64 0, i64 0, i64 0]
+!CHECK: @.offload_maptypes{{.*}} = private unnamed_addr constant [7 x i64] [i64 33, i64 281474976710661, i64 3, i64 35, i64 16384, i64 16384, i64 288]
+!CHECK: @.offload_sizes{{.*}} = private unnamed_addr constant [7 x i64] [i64 0, i64 64, i64 0, i64 4, i64 0, i64 0, i64 0]
+!CHECK: @.offload_maptypes{{.*}} = private unnamed_addr constant [7 x i64] [i64 33, i64 281474976710661, i64 3, i64 35, i64 16384, i64 16384, i64 288]
+
+module maptype_polymorphic_mod
+  type :: base_t
+    integer :: base
+  end type
+
+  type, extends(base_t) :: child_t
+    integer :: child
+  end type
+
+  type :: wrapper_t
+    integer :: marker
+    class(base_t), allocatable :: item
+  end type
+end module
+
+subroutine mapType_polymorphic_allocatable_explicit(obj, res)
+  use maptype_polymorphic_mod
+  class(base_t), allocatable :: obj
+  logical :: res
+
+!$omp target map(tofrom: obj, res)
+  obj%base = obj%base + 1
+  res = .true.
+!$omp end target
+end subroutine mapType_polymorphic_allocatable_explicit
+
+subroutine mapType_polymorphic_allocatable_implicit(obj, res)
+  use maptype_polymorphic_mod
+  class(base_t), allocatable :: obj
+  logical :: res
+
+!$omp target map(tofrom: res)
+  obj%base = obj%base + 1
+  res = .true.
+!$omp end target
+end subroutine mapType_polymorphic_allocatable_implicit
+
+subroutine mapType_polymorphic_nested_implicit(wrapper, res)
+  use maptype_polymorphic_mod
+  type(wrapper_t) :: wrapper
+  logical :: res
+
+!$omp target map(tofrom: res)
+  wrapper%item%base = wrapper%item%base + 1
+  wrapper%marker = wrapper%marker + 1
+  res = .true.
+!$omp end target
+end subroutine mapType_polymorphic_nested_implicit
+
+subroutine mapType_polymorphic_array_section_explicit(obj, res)
+  use maptype_polymorphic_mod
+  class(base_t), allocatable :: obj(:)
+  integer :: res
+
+!$omp target map(tofrom: obj(2:5), res)
+  obj(2)%base = obj(2)%base + 1
+  res = 1
+!$omp end target
+end subroutine mapType_polymorphic_array_section_explicit
+
+subroutine mapType_polymorphic_array_whole_explicit(obj, res)
+  use maptype_polymorphic_mod
+  class(base_t), allocatable :: obj(:)
+  integer :: res
+
+!$omp target map(tofrom: obj, res)
+  obj(1)%base = obj(1)%base + 1
+  res = 1
+!$omp end target
+end subroutine mapType_polymorphic_array_whole_explicit
 
 !CHECK-LABEL: define {{.*}} @{{.*}}maptype_ptr_explicit_{{.*}}
 !CHECK: %[[ALLOCA:.*]] = alloca { ptr, i64, i32, i8, i8, i8, i8 }, i64 1, align 8
@@ -838,3 +919,323 @@ end subroutine mapType_common_block_members
 !CHECK: store ptr getelementptr inbounds nuw (i8, ptr @var_common_, i64 4), ptr %[[BASE_PTR_ARR_1]], align 8
 !CHECK: %[[OFFLOAD_PTR_ARR_1:.*]] = getelementptr inbounds [3 x ptr], ptr %.offload_ptrs, i32 0, i32 1
 !CHECK: store ptr getelementptr inbounds nuw (i8, ptr @var_common_, i64 4), ptr %[[OFFLOAD_PTR_ARR_1]], align 8
+
+!CHECK-LABEL: define {{.*}} @{{.*}}maptype_polymorphic_allocatable_explicit_{{.*}}
+!CHECK: %.offload_baseptrs = alloca [7 x ptr], align 8
+!CHECK: %.offload_ptrs = alloca [7 x ptr], align 8
+!CHECK: %.offload_mappers = alloca [7 x ptr], align 8
+!CHECK: %.offload_sizes = alloca [7 x i64], align 8
+!CHECK: %[[BASE_ADDR_FIELD:.*]] = getelementptr { ptr, i64, i32, i8, i8, i8, i8, ptr, [1 x i64] }, ptr %[[DESC:.*]], i32 0, i32 0
+!CHECK: %[[ELEM_LEN_FIELD:.*]] = getelementptr { ptr, i64, i32, i8, i8, i8, i8, ptr, [1 x i64] }, ptr %{{.*}}, i32 0, i32 1
+!CHECK: %[[ELEM_LEN:.*]] = load i64, ptr %[[ELEM_LEN_FIELD]], align 8
+!CHECK: %[[UB:.*]] = sub i64 %[[ELEM_LEN]], 1
+!CHECK: %[[RTTI_FIELD:.*]] = getelementptr { ptr, i64, i32, i8, i8, i8, i8, ptr, [1 x i64] }, ptr %[[DESC]], i32 0, i32 7
+!CHECK: %[[COUNT_SUB:.*]] = sub i64 %[[UB]], 0
+!CHECK: %[[COUNT_ADD:.*]] = add i64 %[[COUNT_SUB]], 1
+!CHECK: %[[COUNT_MUL:.*]] = mul i64 1, %[[COUNT_ADD]]
+!CHECK: %[[ELEMENT_COUNT:.*]] = mul i64 %[[COUNT_MUL]], 1
+!CHECK: %[[COUNT_CMP:.*]] = icmp eq i64 %[[ELEMENT_COUNT]], 0
+!CHECK: %[[COUNT_SEL:.*]] = select i1 %[[COUNT_CMP]], i64 1, i64 %[[ELEMENT_COUNT]]
+!CHECK: %[[LOAD_BASE_ADDR:.*]] = load ptr, ptr %[[BASE_ADDR_FIELD]], align 8
+!CHECK: %[[ARRAY_OFFSET:.*]] = getelementptr inbounds i8, ptr %[[LOAD_BASE_ADDR]], i64 0
+!CHECK: %[[LOAD_RTTI:.*]] = load ptr, ptr %[[RTTI_FIELD]], align 8
+!CHECK: %[[LOAD_BASE_ADDR2:.*]] = load ptr, ptr %[[BASE_ADDR_FIELD]], align 8
+!CHECK: %[[ARRAY_OFFSET1:.*]] = getelementptr inbounds i8, ptr %[[LOAD_BASE_ADDR2]], i64 0
+!CHECK: %[[DESC_END:.*]] = getelementptr { ptr, i64, i32, i8, i8, i8, i8, ptr, [1 x i64] }, ptr %[[DESC]], i32 1
+!CHECK: %[[DESC_END_INT:.*]] = ptrtoaddr ptr %[[DESC_END]] to i64
+!CHECK: %[[DESC_BEGIN_INT:.*]] = ptrtoaddr ptr %[[DESC]] to i64
+!CHECK: %[[DESC_SIZE:.*]] = sub i64 %[[DESC_END_INT]], %[[DESC_BEGIN_INT]]
+!CHECK: %[[DATA_CMP:.*]] = icmp eq ptr %[[ARRAY_OFFSET1]], null
+!CHECK: %[[DATA_SIZE:.*]] = select i1 %[[DATA_CMP]], i64 0, i64 %[[COUNT_SEL]]
+!CHECK: %[[SEG_CMP:.*]] = icmp eq ptr %[[ARRAY_OFFSET]], null
+!CHECK: %[[SEG_SIZE:.*]] = select i1 %[[SEG_CMP]], i64 0, i64 40
+!CHECK: %[[ATTACH_CMP:.*]] = icmp eq ptr %[[LOAD_RTTI]], null
+!CHECK: %[[ATTACH_SIZE:.*]] = select i1 %[[ATTACH_CMP]], i64 0, i64 8
+!CHECK: call void @llvm.memcpy{{.*}}ptr align 8 %.offload_sizes, ptr align 8 @.offload_sizes{{.*}}
+!CHECK: %[[BASE0:.*]] = getelementptr inbounds [7 x ptr], ptr %.offload_baseptrs, i32 0, i32 0
+!CHECK: store ptr %[[DESC]], ptr %[[BASE0]], align 8
+!CHECK: %[[PTR0:.*]] = getelementptr inbounds [7 x ptr], ptr %.offload_ptrs, i32 0, i32 0
+!CHECK: store ptr %[[DESC]], ptr %[[PTR0]], align 8
+!CHECK: %[[SIZE0:.*]] = getelementptr inbounds [7 x i64], ptr %.offload_sizes, i32 0, i32 0
+!CHECK: store i64 %[[DESC_SIZE]], ptr %[[SIZE0]], align 8
+!CHECK: %[[BASE1:.*]] = getelementptr inbounds [7 x ptr], ptr %.offload_baseptrs, i32 0, i32 1
+!CHECK: store ptr %[[DESC]], ptr %[[BASE1]], align 8
+!CHECK: %[[PTR1:.*]] = getelementptr inbounds [7 x ptr], ptr %.offload_ptrs, i32 0, i32 1
+!CHECK: store ptr %[[DESC]], ptr %[[PTR1]], align 8
+!CHECK: %[[BASE2:.*]] = getelementptr inbounds [7 x ptr], ptr %.offload_baseptrs, i32 0, i32 2
+!CHECK: store ptr %[[DESC]], ptr %[[BASE2]], align 8
+!CHECK: %[[PTR2:.*]] = getelementptr inbounds [7 x ptr], ptr %.offload_ptrs, i32 0, i32 2
+!CHECK: store ptr %[[ARRAY_OFFSET1]], ptr %[[PTR2]], align 8
+!CHECK: %[[SIZE2:.*]] = getelementptr inbounds [7 x i64], ptr %.offload_sizes, i32 0, i32 2
+!CHECK: store i64 %[[DATA_SIZE]], ptr %[[SIZE2]], align 8
+!CHECK: %[[BASE3:.*]] = getelementptr inbounds [7 x ptr], ptr %.offload_baseptrs, i32 0, i32 3
+!CHECK: store ptr %[[RES:.*]], ptr %[[BASE3]], align 8
+!CHECK: %[[PTR3:.*]] = getelementptr inbounds [7 x ptr], ptr %.offload_ptrs, i32 0, i32 3
+!CHECK: store ptr %[[RES]], ptr %[[PTR3]], align 8
+!CHECK: %[[BASE4:.*]] = getelementptr inbounds [7 x ptr], ptr %.offload_baseptrs, i32 0, i32 4
+!CHECK: store ptr %[[DESC]], ptr %[[BASE4]], align 8
+!CHECK: %[[PTR4:.*]] = getelementptr inbounds [7 x ptr], ptr %.offload_ptrs, i32 0, i32 4
+!CHECK: store ptr %[[ARRAY_OFFSET]], ptr %[[PTR4]], align 8
+!CHECK: %[[SIZE4:.*]] = getelementptr inbounds [7 x i64], ptr %.offload_sizes, i32 0, i32 4
+!CHECK: store i64 %[[SEG_SIZE]], ptr %[[SIZE4]], align 8
+!CHECK: %[[BASE5:.*]] = getelementptr inbounds [7 x ptr], ptr %.offload_baseptrs, i32 0, i32 5
+!CHECK: store ptr %[[RTTI_FIELD]], ptr %[[BASE5]], align 8
+!CHECK: %[[PTR5:.*]] = getelementptr inbounds [7 x ptr], ptr %.offload_ptrs, i32 0, i32 5
+!CHECK: store ptr %[[LOAD_RTTI]], ptr %[[PTR5]], align 8
+!CHECK: %[[SIZE5:.*]] = getelementptr inbounds [7 x i64], ptr %.offload_sizes, i32 0, i32 5
+!CHECK: store i64 %[[ATTACH_SIZE]], ptr %[[SIZE5]], align 8
+!CHECK: %[[BASE6:.*]] = getelementptr inbounds [7 x ptr], ptr %.offload_baseptrs, i32 0, i32 6
+!CHECK: store ptr null, ptr %[[BASE6]], align 8
+!CHECK: %[[PTR6:.*]] = getelementptr inbounds [7 x ptr], ptr %.offload_ptrs, i32 0, i32 6
+!CHECK: store ptr null, ptr %[[PTR6]], align 8
+
+!CHECK-LABEL: define {{.*}} @{{.*}}maptype_polymorphic_allocatable_implicit_{{.*}}
+!CHECK: %.offload_baseptrs = alloca [7 x ptr], align 8
+!CHECK: %.offload_ptrs = alloca [7 x ptr], align 8
+!CHECK: %.offload_mappers = alloca [7 x ptr], align 8
+!CHECK: %.offload_sizes = alloca [7 x i64], align 8
+!CHECK: %[[BASE_ADDR_FIELD:.*]] = getelementptr { ptr, i64, i32, i8, i8, i8, i8, ptr, [1 x i64] }, ptr %[[DESC:.*]], i32 0, i32 0
+!CHECK: %[[ELEM_LEN_FIELD:.*]] = getelementptr { ptr, i64, i32, i8, i8, i8, i8, ptr, [1 x i64] }, ptr %{{.*}}, i32 0, i32 1
+!CHECK: %[[ELEM_LEN:.*]] = load i64, ptr %[[ELEM_LEN_FIELD]], align 8
+!CHECK: %[[UB:.*]] = sub i64 %[[ELEM_LEN]], 1
+!CHECK: %[[RTTI_FIELD:.*]] = getelementptr { ptr, i64, i32, i8, i8, i8, i8, ptr, [1 x i64] }, ptr %[[DESC]], i32 0, i32 7
+!CHECK: %[[COUNT_SEL:.*]] = select i1 %{{.*}}, i64 1, i64 %{{.*}}
+!CHECK: %[[LOAD_BASE_ADDR:.*]] = load ptr, ptr %[[BASE_ADDR_FIELD]], align 8
+!CHECK: %[[ARRAY_OFFSET:.*]] = getelementptr inbounds i8, ptr %[[LOAD_BASE_ADDR]], i64 0
+!CHECK: %[[LOAD_RTTI:.*]] = load ptr, ptr %[[RTTI_FIELD]], align 8
+!CHECK: %[[LOAD_BASE_ADDR2:.*]] = load ptr, ptr %[[BASE_ADDR_FIELD]], align 8
+!CHECK: %[[ARRAY_OFFSET1:.*]] = getelementptr inbounds i8, ptr %[[LOAD_BASE_ADDR2]], i64 0
+!CHECK: %[[DESC_END:.*]] = getelementptr { ptr, i64, i32, i8, i8, i8, i8, ptr, [1 x i64] }, ptr %[[DESC]], i32 1
+!CHECK: %[[DESC_END_INT:.*]] = ptrtoaddr ptr %[[DESC_END]] to i64
+!CHECK: %[[DESC_BEGIN_INT:.*]] = ptrtoaddr ptr %[[DESC]] to i64
+!CHECK: %[[DESC_SIZE:.*]] = sub i64 %[[DESC_END_INT]], %[[DESC_BEGIN_INT]]
+!CHECK: %[[DATA_CMP:.*]] = icmp eq ptr %[[ARRAY_OFFSET1]], null
+!CHECK: %[[DATA_SIZE:.*]] = select i1 %[[DATA_CMP]], i64 0, i64 %[[COUNT_SEL]]
+!CHECK: %[[SEG_CMP:.*]] = icmp eq ptr %[[ARRAY_OFFSET]], null
+!CHECK: %[[SEG_SIZE:.*]] = select i1 %[[SEG_CMP]], i64 0, i64 40
+!CHECK: %[[ATTACH_CMP:.*]] = icmp eq ptr %[[LOAD_RTTI]], null
+!CHECK: %[[ATTACH_SIZE:.*]] = select i1 %[[ATTACH_CMP]], i64 0, i64 8
+!CHECK: call void @llvm.memcpy{{.*}}ptr align 8 %.offload_sizes, ptr align 8 @.offload_sizes{{.*}}
+!CHECK: %[[BASE0:.*]] = getelementptr inbounds [7 x ptr], ptr %.offload_baseptrs, i32 0, i32 0
+!CHECK: store ptr %[[RES:.*]], ptr %[[BASE0]], align 8
+!CHECK: %[[PTR0:.*]] = getelementptr inbounds [7 x ptr], ptr %.offload_ptrs, i32 0, i32 0
+!CHECK: store ptr %[[RES]], ptr %[[PTR0]], align 8
+!CHECK: %[[BASE1:.*]] = getelementptr inbounds [7 x ptr], ptr %.offload_baseptrs, i32 0, i32 1
+!CHECK: store ptr %[[DESC]], ptr %[[BASE1]], align 8
+!CHECK: %[[PTR1:.*]] = getelementptr inbounds [7 x ptr], ptr %.offload_ptrs, i32 0, i32 1
+!CHECK: store ptr %[[DESC]], ptr %[[PTR1]], align 8
+!CHECK: %[[SIZE1:.*]] = getelementptr inbounds [7 x i64], ptr %.offload_sizes, i32 0, i32 1
+!CHECK: store i64 %[[DESC_SIZE]], ptr %[[SIZE1]], align 8
+!CHECK: %[[BASE2:.*]] = getelementptr inbounds [7 x ptr], ptr %.offload_baseptrs, i32 0, i32 2
+!CHECK: store ptr %[[DESC]], ptr %[[BASE2]], align 8
+!CHECK: %[[PTR2:.*]] = getelementptr inbounds [7 x ptr], ptr %.offload_ptrs, i32 0, i32 2
+!CHECK: store ptr %[[DESC]], ptr %[[PTR2]], align 8
+!CHECK: %[[BASE3:.*]] = getelementptr inbounds [7 x ptr], ptr %.offload_baseptrs, i32 0, i32 3
+!CHECK: store ptr %[[DESC]], ptr %[[BASE3]], align 8
+!CHECK: %[[PTR3:.*]] = getelementptr inbounds [7 x ptr], ptr %.offload_ptrs, i32 0, i32 3
+!CHECK: store ptr %[[ARRAY_OFFSET1]], ptr %[[PTR3]], align 8
+!CHECK: %[[SIZE3:.*]] = getelementptr inbounds [7 x i64], ptr %.offload_sizes, i32 0, i32 3
+!CHECK: store i64 %[[DATA_SIZE]], ptr %[[SIZE3]], align 8
+!CHECK: %[[BASE4:.*]] = getelementptr inbounds [7 x ptr], ptr %.offload_baseptrs, i32 0, i32 4
+!CHECK: store ptr %[[DESC]], ptr %[[BASE4]], align 8
+!CHECK: %[[PTR4:.*]] = getelementptr inbounds [7 x ptr], ptr %.offload_ptrs, i32 0, i32 4
+!CHECK: store ptr %[[ARRAY_OFFSET]], ptr %[[PTR4]], align 8
+!CHECK: %[[SIZE4:.*]] = getelementptr inbounds [7 x i64], ptr %.offload_sizes, i32 0, i32 4
+!CHECK: store i64 %[[SEG_SIZE]], ptr %[[SIZE4]], align 8
+!CHECK: %[[BASE5:.*]] = getelementptr inbounds [7 x ptr], ptr %.offload_baseptrs, i32 0, i32 5
+!CHECK: store ptr %[[RTTI_FIELD]], ptr %[[BASE5]], align 8
+!CHECK: %[[PTR5:.*]] = getelementptr inbounds [7 x ptr], ptr %.offload_ptrs, i32 0, i32 5
+!CHECK: store ptr %[[LOAD_RTTI]], ptr %[[PTR5]], align 8
+!CHECK: %[[SIZE5:.*]] = getelementptr inbounds [7 x i64], ptr %.offload_sizes, i32 0, i32 5
+!CHECK: store i64 %[[ATTACH_SIZE]], ptr %[[SIZE5]], align 8
+!CHECK: %[[BASE6:.*]] = getelementptr inbounds [7 x ptr], ptr %.offload_baseptrs, i32 0, i32 6
+!CHECK: store ptr null, ptr %[[BASE6]], align 8
+!CHECK: %[[PTR6:.*]] = getelementptr inbounds [7 x ptr], ptr %.offload_ptrs, i32 0, i32 6
+!CHECK: store ptr null, ptr %[[PTR6]], align 8
+
+!CHECK-LABEL: define {{.*}} @{{.*}}maptype_polymorphic_nested_implicit_{{.*}}
+!CHECK: %.offload_baseptrs = alloca [3 x ptr], align 8
+!CHECK: %.offload_ptrs = alloca [3 x ptr], align 8
+!CHECK: %.offload_mappers = alloca [3 x ptr], align 8
+!CHECK: %[[BASE0:.*]] = getelementptr inbounds [3 x ptr], ptr %.offload_baseptrs, i32 0, i32 0
+!CHECK: store ptr %[[RES:.*]], ptr %[[BASE0]], align 8
+!CHECK: %[[PTR0:.*]] = getelementptr inbounds [3 x ptr], ptr %.offload_ptrs, i32 0, i32 0
+!CHECK: store ptr %[[RES]], ptr %[[PTR0]], align 8
+!CHECK: %[[MAPPER0:.*]] = getelementptr inbounds [3 x ptr], ptr %.offload_mappers, i64 0, i64 0
+!CHECK: store ptr null, ptr %[[MAPPER0]], align 8
+!CHECK: %[[BASE1:.*]] = getelementptr inbounds [3 x ptr], ptr %.offload_baseptrs, i32 0, i32 1
+!CHECK: store ptr %[[WRAPPER:.*]], ptr %[[BASE1]], align 8
+!CHECK: %[[PTR1:.*]] = getelementptr inbounds [3 x ptr], ptr %.offload_ptrs, i32 0, i32 1
+!CHECK: store ptr %[[WRAPPER]], ptr %[[PTR1]], align 8
+!CHECK: %[[MAPPER1:.*]] = getelementptr inbounds [3 x ptr], ptr %.offload_mappers, i64 0, i64 1
+!CHECK: store ptr @.omp_mapper.{{.*}}wrapper_t_omp_default_mapper, ptr %[[MAPPER1]], align 8
+!CHECK: %[[BASE2:.*]] = getelementptr inbounds [3 x ptr], ptr %.offload_baseptrs, i32 0, i32 2
+!CHECK: store ptr null, ptr %[[BASE2]], align 8
+!CHECK: %[[PTR2:.*]] = getelementptr inbounds [3 x ptr], ptr %.offload_ptrs, i32 0, i32 2
+!CHECK: store ptr null, ptr %[[PTR2]], align 8
+!CHECK: %[[MAPPER2:.*]] = getelementptr inbounds [3 x ptr], ptr %.offload_mappers, i64 0, i64 2
+!CHECK: store ptr null, ptr %[[MAPPER2]], align 8
+
+!CHECK-LABEL: define {{.*}} @{{.*}}maptype_polymorphic_array_section_explicit_{{.*}}
+!CHECK: %.offload_baseptrs = alloca [7 x ptr], align 8
+!CHECK: %.offload_ptrs = alloca [7 x ptr], align 8
+!CHECK: %.offload_mappers = alloca [7 x ptr], align 8
+!CHECK: %.offload_sizes = alloca [7 x i64], align 8
+!CHECK: %[[SECTION_LB_ACCESS:.*]] = getelementptr { ptr, i64, i32, i8, i8, i8, i8, [1 x [3 x i64]], ptr, [1 x i64] }, ptr %{{.*}}, i32 0, i32 7, i64 0, i32 0
+!CHECK: %[[SECTION_LB:.*]] = load i64, ptr %[[SECTION_LB_ACCESS]], align 8
+!CHECK: %[[LB_OFFSET:.*]] = sub i64 2, %[[SECTION_LB]]
+!CHECK: %[[UB_OFFSET:.*]] = sub i64 5, %[[SECTION_LB]]
+!CHECK: %[[BASE_ADDR_FIELD:.*]] = getelementptr { ptr, i64, i32, i8, i8, i8, i8, [1 x [3 x i64]], ptr, [1 x i64] }, ptr %[[DESC:.*]], i32 0, i32 0
+!CHECK: %[[ELEM_LEN_FIELD:.*]] = getelementptr { ptr, i64, i32, i8, i8, i8, i8, [1 x [3 x i64]], ptr, [1 x i64] }, ptr %{{.*}}, i32 0, i32 1
+!CHECK: %[[ELEM_LEN:.*]] = load i64, ptr %[[ELEM_LEN_FIELD]], align 8
+!CHECK: %[[EXTENT:.*]] = sub i64 %[[UB_OFFSET]], %[[LB_OFFSET]]
+!CHECK: %[[EXTENT_1:.*]] = add i64 %[[EXTENT]], 1
+!CHECK: %[[LB_BYTE_OFFSET:.*]] = mul i64 %[[LB_OFFSET]], %[[ELEM_LEN]]
+!CHECK: %[[EXTENT_BYTES:.*]] = mul i64 %[[EXTENT_1]], %[[ELEM_LEN]]
+!CHECK: %[[UB_BYTES:.*]] = add i64 %[[LB_BYTE_OFFSET]], %[[EXTENT_BYTES]]
+!CHECK: %[[UB_BYTES_1:.*]] = sub i64 %[[UB_BYTES]], 1
+!CHECK: %[[ELEM_LEN_FIELD2:.*]] = getelementptr { ptr, i64, i32, i8, i8, i8, i8, [1 x [3 x i64]], ptr, [1 x i64] }, ptr %{{.*}}, i32 0, i32 1
+!CHECK: %[[ELEM_LEN2:.*]] = load i64, ptr %[[ELEM_LEN_FIELD2]], align 8
+!CHECK: %[[SEG_LB_BYTES:.*]] = mul i64 %[[LB_OFFSET]], %[[ELEM_LEN2]]
+!CHECK: %[[RTTI_FIELD:.*]] = getelementptr { ptr, i64, i32, i8, i8, i8, i8, [1 x [3 x i64]], ptr, [1 x i64] }, ptr %[[DESC]], i32 0, i32 8
+!CHECK: %[[COUNT_RANGE:.*]] = sub i64 %[[UB_BYTES_1]], %[[LB_BYTE_OFFSET]]
+!CHECK: %[[COUNT_RANGE_1:.*]] = add i64 %[[COUNT_RANGE]], 1
+!CHECK: %[[COUNT_MUL:.*]] = mul i64 1, %[[COUNT_RANGE_1]]
+!CHECK: %[[ELEMENT_COUNT:.*]] = mul i64 %[[COUNT_MUL]], 1
+!CHECK: %[[COUNT_CMP:.*]] = icmp eq i64 %[[ELEMENT_COUNT]], 0
+!CHECK: %[[COUNT_SEL:.*]] = select i1 %[[COUNT_CMP]], i64 1, i64 %[[ELEMENT_COUNT]]
+!CHECK: %[[LOAD_BASE_ADDR:.*]] = load ptr, ptr %[[BASE_ADDR_FIELD]], align 8
+!CHECK: %[[ARRAY_OFFSET:.*]] = getelementptr inbounds i8, ptr %[[LOAD_BASE_ADDR]], i64 %[[SEG_LB_BYTES]]
+!CHECK: %[[LOAD_RTTI:.*]] = load ptr, ptr %[[RTTI_FIELD]], align 8
+!CHECK: %[[LOAD_BASE_ADDR2:.*]] = load ptr, ptr %[[BASE_ADDR_FIELD]], align 8
+!CHECK: %[[ARRAY_OFFSET1:.*]] = getelementptr inbounds i8, ptr %[[LOAD_BASE_ADDR2]], i64 %[[LB_BYTE_OFFSET]]
+!CHECK: %[[DESC_END:.*]] = getelementptr { ptr, i64, i32, i8, i8, i8, i8, [1 x [3 x i64]], ptr, [1 x i64] }, ptr %[[DESC]], i32 1
+!CHECK: %[[DESC_END_INT:.*]] = ptrtoaddr ptr %[[DESC_END]] to i64
+!CHECK: %[[DESC_BEGIN_INT:.*]] = ptrtoaddr ptr %[[DESC]] to i64
+!CHECK: %[[DESC_SIZE:.*]] = sub i64 %[[DESC_END_INT]], %[[DESC_BEGIN_INT]]
+!CHECK: %[[DATA_CMP:.*]] = icmp eq ptr %[[ARRAY_OFFSET1]], null
+!CHECK: %[[DATA_SIZE:.*]] = select i1 %[[DATA_CMP]], i64 0, i64 %[[COUNT_SEL]]
+!CHECK: %[[SEG_CMP:.*]] = icmp eq ptr %[[ARRAY_OFFSET]], null
+!CHECK: %[[SEG_SIZE:.*]] = select i1 %[[SEG_CMP]], i64 0, i64 64
+!CHECK: %[[ATTACH_CMP:.*]] = icmp eq ptr %[[LOAD_RTTI]], null
+!CHECK: %[[ATTACH_SIZE:.*]] = select i1 %[[ATTACH_CMP]], i64 0, i64 8
+!CHECK: call void @llvm.memcpy{{.*}}ptr align 8 %.offload_sizes, ptr align 8 @.offload_sizes{{.*}}
+!CHECK: %[[BASE0:.*]] = getelementptr inbounds [7 x ptr], ptr %.offload_baseptrs, i32 0, i32 0
+!CHECK: store ptr %[[DESC]], ptr %[[BASE0]], align 8
+!CHECK: %[[PTR0:.*]] = getelementptr inbounds [7 x ptr], ptr %.offload_ptrs, i32 0, i32 0
+!CHECK: store ptr %[[DESC]], ptr %[[PTR0]], align 8
+!CHECK: %[[SIZE0:.*]] = getelementptr inbounds [7 x i64], ptr %.offload_sizes, i32 0, i32 0
+!CHECK: store i64 %[[DESC_SIZE]], ptr %[[SIZE0]], align 8
+!CHECK: %[[BASE1:.*]] = getelementptr inbounds [7 x ptr], ptr %.offload_baseptrs, i32 0, i32 1
+!CHECK: store ptr %[[DESC]], ptr %[[BASE1]], align 8
+!CHECK: %[[PTR1:.*]] = getelementptr inbounds [7 x ptr], ptr %.offload_ptrs, i32 0, i32 1
+!CHECK: store ptr %[[DESC]], ptr %[[PTR1]], align 8
+!CHECK: %[[BASE2:.*]] = getelementptr inbounds [7 x ptr], ptr %.offload_baseptrs, i32 0, i32 2
+!CHECK: store ptr %[[DESC]], ptr %[[BASE2]], align 8
+!CHECK: %[[PTR2:.*]] = getelementptr inbounds [7 x ptr], ptr %.offload_ptrs, i32 0, i32 2
+!CHECK: store ptr %[[ARRAY_OFFSET1]], ptr %[[PTR2]], align 8
+!CHECK: %[[SIZE2:.*]] = getelementptr inbounds [7 x i64], ptr %.offload_sizes, i32 0, i32 2
+!CHECK: store i64 %[[DATA_SIZE]], ptr %[[SIZE2]], align 8
+!CHECK: %[[BASE3:.*]] = getelementptr inbounds [7 x ptr], ptr %.offload_baseptrs, i32 0, i32 3
+!CHECK: store ptr %[[RES:.*]], ptr %[[BASE3]], align 8
+!CHECK: %[[PTR3:.*]] = getelementptr inbounds [7 x ptr], ptr %.offload_ptrs, i32 0, i32 3
+!CHECK: store ptr %[[RES]], ptr %[[PTR3]], align 8
+!CHECK: %[[BASE4:.*]] = getelementptr inbounds [7 x ptr], ptr %.offload_baseptrs, i32 0, i32 4
+!CHECK: store ptr %[[DESC]], ptr %[[BASE4]], align 8
+!CHECK: %[[PTR4:.*]] = getelementptr inbounds [7 x ptr], ptr %.offload_ptrs, i32 0, i32 4
+!CHECK: store ptr %[[ARRAY_OFFSET]], ptr %[[PTR4]], align 8
+!CHECK: %[[SIZE4:.*]] = getelementptr inbounds [7 x i64], ptr %.offload_sizes, i32 0, i32 4
+!CHECK: store i64 %[[SEG_SIZE]], ptr %[[SIZE4]], align 8
+!CHECK: %[[BASE5:.*]] = getelementptr inbounds [7 x ptr], ptr %.offload_baseptrs, i32 0, i32 5
+!CHECK: store ptr %[[RTTI_FIELD]], ptr %[[BASE5]], align 8
+!CHECK: %[[PTR5:.*]] = getelementptr inbounds [7 x ptr], ptr %.offload_ptrs, i32 0, i32 5
+!CHECK: store ptr %[[LOAD_RTTI]], ptr %[[PTR5]], align 8
+!CHECK: %[[SIZE5:.*]] = getelementptr inbounds [7 x i64], ptr %.offload_sizes, i32 0, i32 5
+!CHECK: store i64 %[[ATTACH_SIZE]], ptr %[[SIZE5]], align 8
+!CHECK: %[[BASE6:.*]] = getelementptr inbounds [7 x ptr], ptr %.offload_baseptrs, i32 0, i32 6
+!CHECK: store ptr null, ptr %[[BASE6]], align 8
+!CHECK: %[[PTR6:.*]] = getelementptr inbounds [7 x ptr], ptr %.offload_ptrs, i32 0, i32 6
+!CHECK: store ptr null, ptr %[[PTR6]], align 8
+
+!CHECK-LABEL: define {{.*}} @{{.*}}maptype_polymorphic_array_whole_explicit_{{.*}}
+!CHECK: %.offload_baseptrs = alloca [7 x ptr], align 8
+!CHECK: %.offload_ptrs = alloca [7 x ptr], align 8
+!CHECK: %.offload_mappers = alloca [7 x ptr], align 8
+!CHECK: %.offload_sizes = alloca [7 x i64], align 8
+!CHECK: %[[EXTENT_ACCESS:.*]] = getelementptr { ptr, i64, i32, i8, i8, i8, i8, [1 x [3 x i64]], ptr, [1 x i64] }, ptr %{{.*}}, i32 0, i32 7, i64 0, i32 1
+!CHECK: %[[EXTENT:.*]] = load i64, ptr %[[EXTENT_ACCESS]], align 8
+!CHECK: %[[BASE_ADDR_FIELD:.*]] = getelementptr { ptr, i64, i32, i8, i8, i8, i8, [1 x [3 x i64]], ptr, [1 x i64] }, ptr %[[DESC:.*]], i32 0, i32 0
+!CHECK: %[[ELEM_LEN_FIELD:.*]] = getelementptr { ptr, i64, i32, i8, i8, i8, i8, [1 x [3 x i64]], ptr, [1 x i64] }, ptr %{{.*}}, i32 0, i32 1
+!CHECK: %[[ELEM_LEN:.*]] = load i64, ptr %[[ELEM_LEN_FIELD]], align 8
+!CHECK: %[[EXTENT_BYTES:.*]] = mul i64 %[[EXTENT]], %[[ELEM_LEN]]
+!CHECK: %[[UB_BYTES:.*]] = sub i64 %[[EXTENT_BYTES]], 1
+!CHECK: %[[ELEM_LEN_FIELD2:.*]] = getelementptr { ptr, i64, i32, i8, i8, i8, i8, [1 x [3 x i64]], ptr, [1 x i64] }, ptr %{{.*}}, i32 0, i32 1
+!CHECK: %[[ELEM_LEN2:.*]] = load i64, ptr %[[ELEM_LEN_FIELD2]], align 8
+!CHECK: %[[EXTENT_BYTES2:.*]] = mul i64 %[[EXTENT]], %[[ELEM_LEN2]]
+!CHECK: %[[UB_BYTES2:.*]] = sub i64 %[[EXTENT_BYTES2]], 1
+!CHECK: %[[RTTI_FIELD:.*]] = getelementptr { ptr, i64, i32, i8, i8, i8, i8, [1 x [3 x i64]], ptr, [1 x i64] }, ptr %[[DESC]], i32 0, i32 8
+!CHECK: %[[COUNT_RANGE:.*]] = sub i64 %[[UB_BYTES]], 0
+!CHECK: %[[COUNT_RANGE_1:.*]] = add i64 %[[COUNT_RANGE]], 1
+!CHECK: %[[COUNT_MUL:.*]] = mul i64 1, %[[COUNT_RANGE_1]]
+!CHECK: %[[ELEMENT_COUNT:.*]] = mul i64 %[[COUNT_MUL]], 1
+!CHECK: %[[COUNT_CMP:.*]] = icmp eq i64 %[[ELEMENT_COUNT]], 0
+!CHECK: %[[COUNT_SEL:.*]] = select i1 %[[COUNT_CMP]], i64 1, i64 %[[ELEMENT_COUNT]]
+!CHECK: %[[LOAD_BASE_ADDR:.*]] = load ptr, ptr %[[BASE_ADDR_FIELD]], align 8
+!CHECK: %[[ARRAY_OFFSET:.*]] = getelementptr inbounds i8, ptr %[[LOAD_BASE_ADDR]], i64 0
+!CHECK: %[[LOAD_RTTI:.*]] = load ptr, ptr %[[RTTI_FIELD]], align 8
+!CHECK: %[[LOAD_BASE_ADDR2:.*]] = load ptr, ptr %[[BASE_ADDR_FIELD]], align 8
+!CHECK: %[[ARRAY_OFFSET1:.*]] = getelementptr inbounds i8, ptr %[[LOAD_BASE_ADDR2]], i64 0
+!CHECK: %[[DESC_END:.*]] = getelementptr { ptr, i64, i32, i8, i8, i8, i8, [1 x [3 x i64]], ptr, [1 x i64] }, ptr %[[DESC]], i32 1
+!CHECK: %[[DESC_END_INT:.*]] = ptrtoaddr ptr %[[DESC_END]] to i64
+!CHECK: %[[DESC_BEGIN_INT:.*]] = ptrtoaddr ptr %[[DESC]] to i64
+!CHECK: %[[DESC_SIZE:.*]] = sub i64 %[[DESC_END_INT]], %[[DESC_BEGIN_INT]]
+!CHECK: %[[DATA_CMP:.*]] = icmp eq ptr %[[ARRAY_OFFSET1]], null
+!CHECK: %[[DATA_SIZE:.*]] = select i1 %[[DATA_CMP]], i64 0, i64 %[[COUNT_SEL]]
+!CHECK: %[[SEG_CMP:.*]] = icmp eq ptr %[[ARRAY_OFFSET]], null
+!CHECK: %[[SEG_SIZE:.*]] = select i1 %[[SEG_CMP]], i64 0, i64 64
+!CHECK: %[[ATTACH_CMP:.*]] = icmp eq ptr %[[LOAD_RTTI]], null
+!CHECK: %[[ATTACH_SIZE:.*]] = select i1 %[[ATTACH_CMP]], i64 0, i64 8
+!CHECK: call void @llvm.memcpy{{.*}}ptr align 8 %.offload_sizes, ptr align 8 @.offload_sizes{{.*}}
+!CHECK: %[[BASE0:.*]] = getelementptr inbounds [7 x ptr], ptr %.offload_baseptrs, i32 0, i32 0
+!CHECK: store ptr %[[DESC]], ptr %[[BASE0]], align 8
+!CHECK: %[[PTR0:.*]] = getelementptr inbounds [7 x ptr], ptr %.offload_ptrs, i32 0, i32 0
+!CHECK: store ptr %[[DESC]], ptr %[[PTR0]], align 8
+!CHECK: %[[SIZE0:.*]] = getelementptr inbounds [7 x i64], ptr %.offload_sizes, i32 0, i32 0
+!CHECK: store i64 %[[DESC_SIZE]], ptr %[[SIZE0]], align 8
+!CHECK: %[[BASE1:.*]] = getelementptr inbounds [7 x ptr], ptr %.offload_baseptrs, i32 0, i32 1
+!CHECK: store ptr %[[DESC]], ptr %[[BASE1]], align 8
+!CHECK: %[[PTR1:.*]] = getelementptr inbounds [7 x ptr], ptr %.offload_ptrs, i32 0, i32 1
+!CHECK: store ptr %[[DESC]], ptr %[[PTR1]], align 8
+!CHECK: %[[BASE2:.*]] = getelementptr inbounds [7 x ptr], ptr %.offload_baseptrs, i32 0, i32 2
+!CHECK: store ptr %[[DESC]], ptr %[[BASE2]], align 8
+!CHECK: %[[PTR2:.*]] = getelementptr inbounds [7 x ptr], ptr %.offload_ptrs, i32 0, i32 2
+!CHECK: store ptr %[[ARRAY_OFFSET1]], ptr %[[PTR2]], align 8
+!CHECK: %[[SIZE2:.*]] = getelementptr inbounds [7 x i64], ptr %.offload_sizes, i32 0, i32 2
+!CHECK: store i64 %[[DATA_SIZE]], ptr %[[SIZE2]], align 8
+!CHECK: %[[BASE3:.*]] = getelementptr inbounds [7 x ptr], ptr %.offload_baseptrs, i32 0, i32 3
+!CHECK: store ptr %[[RES:.*]], ptr %[[BASE3]], align 8
+!CHECK: %[[PTR3:.*]] = getelementptr inbounds [7 x ptr], ptr %.offload_ptrs, i32 0, i32 3
+!CHECK: store ptr %[[RES]], ptr %[[PTR3]], align 8
+!CHECK: %[[BASE4:.*]] = getelementptr inbounds [7 x ptr], ptr %.offload_baseptrs, i32 0, i32 4
+!CHECK: store ptr %[[DESC]], ptr %[[BASE4]], align 8
+!CHECK: %[[PTR4:.*]] = getelementptr inbounds [7 x ptr], ptr %.offload_ptrs, i32 0, i32 4
+!CHECK: store ptr %[[ARRAY_OFFSET]], ptr %[[PTR4]], align 8
+!CHECK: %[[SIZE4:.*]] = getelementptr inbounds [7 x i64], ptr %.offload_sizes, i32 0, i32 4
+!CHECK: store i64 %[[SEG_SIZE]], ptr %[[SIZE4]], align 8
+!CHECK: %[[BASE5:.*]] = getelementptr inbounds [7 x ptr], ptr %.offload_baseptrs, i32 0, i32 5
+!CHECK: store ptr %[[RTTI_FIELD]], ptr %[[BASE5]], align 8
+!CHECK: %[[PTR5:.*]] = getelementptr inbounds [7 x ptr], ptr %.offload_ptrs, i32 0, i32 5
+!CHECK: store ptr %[[LOAD_RTTI]], ptr %[[PTR5]], align 8
+!CHECK: %[[SIZE5:.*]] = getelementptr inbounds [7 x i64], ptr %.offload_sizes, i32 0, i32 5
+!CHECK: store i64 %[[ATTACH_SIZE]], ptr %[[SIZE5]], align 8
+!CHECK: %[[BASE6:.*]] = getelementptr inbounds [7 x ptr], ptr %.offload_baseptrs, i32 0, i32 6
+!CHECK: store ptr null, ptr %[[BASE6]], align 8
+!CHECK: %[[PTR6:.*]] = getelementptr inbounds [7 x ptr], ptr %.offload_ptrs, i32 0, i32 6
+!CHECK: store ptr null, ptr %[[PTR6]], align 8
+
+!CHECK-LABEL: define internal void @.omp_mapper.{{.*}}wrapper_t_omp_default_mapper
+!CHECK: %[[ITEM_DESC:.*]] = getelementptr %{{.*}}Twrapper_t, ptr %{{.*}}, i32 0, i32 1
+!CHECK: %[[ELEM_LEN_FIELD:.*]] = getelementptr { ptr, i64, i32, i8, i8, i8, i8, ptr, [1 x i64] }, ptr %{{.*}}, i32 0, i32 1
+!CHECK: %[[ELEM_LEN:.*]] = load i64, ptr %[[ELEM_LEN_FIELD]], align 8
+!CHECK: %[[DYNAMIC_ITEM_SIZE:.*]] = select i1 %{{.*}}, i64 0, i64 %{{.*}}
+!CHECK: call void @.omp_mapper.{{.*}}base_t_omp_default_mapper(ptr %{{.*}}, ptr %{{.*}}, ptr %{{.*}}, i64 %[[DYNAMIC_ITEM_SIZE]], i64 %{{.*}}, ptr {{.*}}) {{.*}}

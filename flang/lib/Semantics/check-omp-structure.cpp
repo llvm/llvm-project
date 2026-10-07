@@ -145,6 +145,15 @@ static const Symbol *GetBaseObjectSymbol(const parser::OmpObject &object) {
   return nullptr;
 }
 
+static bool IsPolymorphicType(const Symbol &symbol) {
+  if (std::optional<evaluate::DynamicType> type{
+          evaluate::DynamicType::From(symbol.GetUltimate())}) {
+    return type->IsPolymorphic() &&
+        (type->IsUnlimitedPolymorphic() || evaluate::GetDerivedTypeSpec(*type));
+  }
+  return false;
+}
+
 static bool HasCloseMapModifier(const parser::OmpMapClause &clause) {
   const auto &modifiers{OmpGetModifiers(clause)};
   if (OmpGetUniqueModifier<parser::OmpCloseModifier>(modifiers)) {
@@ -831,6 +840,96 @@ bool OmpStructureChecker::InTargetRegion() {
     }
   }
   return false;
+}
+
+void OmpStructureChecker::CheckPolymorphicMapObjects(
+    const parser::OmpObjectList &objects) {
+  if (context_.langOptions().getOpenMPVersion() >= 61)
+    return;
+
+  llvm::SmallPtrSet<const Symbol *, 8> diagnosed;
+  for (const parser::OmpObject &object : objects.v) {
+    llvm::SmallVector<const Symbol *, 2> candidates;
+    if (const Symbol * symbol{GetObjectSymbol(object, /*ultimate=*/true)})
+      candidates.push_back(symbol);
+    if (const Symbol * symbol{GetBaseObjectSymbol(object)})
+      candidates.push_back(symbol);
+
+    for (const Symbol *symbol : candidates) {
+      const Symbol &ultimate{symbol->GetUltimate()};
+      if (!diagnosed.insert(&ultimate).second || !IsPolymorphicType(ultimate))
+        continue;
+
+      context_.Say(GetObjectSource(object).value_or(GetContext().clauseSource),
+          "Polymorphic type '%s' may not appear in a MAP clause on a target offload construct before OpenMP 6.1"_err_en_US,
+          ultimate.name());
+    }
+  }
+}
+
+namespace {
+class TargetPolymorphicUseChecker {
+public:
+  explicit TargetPolymorphicUseChecker(SemanticsContext &context)
+      : context_{context} {}
+
+  template <typename T> bool Pre(const T &) { return true; }
+  template <typename T> void Post(const T &) {}
+
+  bool Pre(const parser::Designator &designator) {
+    common::visit(common::visitors{
+                      [&](const parser::DataRef &dataRef) {
+                        Diagnose(GetBaseName(dataRef), designator.source);
+                      },
+                      [&](const parser::Substring &substring) {
+                        Diagnose(
+                            GetBaseName(std::get<parser::DataRef>(substring.t)),
+                            designator.source);
+                      },
+                  },
+        designator.u);
+    return true;
+  }
+
+  bool Pre(const parser::Expr &expr) {
+    if (const auto *semExpr{GetExpr(context_, expr)}) {
+      for (const Symbol &symbol : evaluate::CollectSymbols(*semExpr)) {
+        Diagnose(&GetAssociationRoot(symbol).GetUltimate(), expr.source);
+      }
+    }
+    return true;
+  }
+
+private:
+  void Diagnose(const parser::Name *name, parser::CharBlock source) {
+    if (name && name->symbol)
+      Diagnose(&name->symbol->GetUltimate(), source);
+  }
+
+  void Diagnose(const Symbol *symbol, parser::CharBlock source) {
+    if (!symbol)
+      return;
+    const Symbol &ultimate{symbol->GetUltimate()};
+    if (!diagnosed_.insert(&ultimate).second || !IsPolymorphicType(ultimate))
+      return;
+
+    context_.Say(source,
+        "Polymorphic type '%s' may not be used in a target region before OpenMP 6.1"_err_en_US,
+        ultimate.name());
+  }
+
+  SemanticsContext &context_;
+  llvm::SmallPtrSet<const Symbol *, 8> diagnosed_;
+};
+} // namespace
+
+void OmpStructureChecker::CheckPolymorphicSymbolsInTargetBlock(
+    const parser::Block &block) {
+  if (context_.langOptions().getOpenMPVersion() >= 61)
+    return;
+
+  TargetPolymorphicUseChecker checker{context_};
+  parser::Walk(block, checker);
 }
 
 bool OmpStructureChecker::HasRequires(llvm::omp::Clause req) {
@@ -1745,6 +1844,7 @@ void OmpStructureChecker::Enter(const parser::OmpBlockConstruct &x) {
 
   switch (beginSpec.DirId()) {
   case llvm::omp::Directive::OMPD_target:
+    CheckPolymorphicSymbolsInTargetBlock(block);
     if (CheckTargetBlockOnlyTeams(block)) {
       EnterDirectiveNest(TargetBlockOnlyTeams);
     }
@@ -5049,6 +5149,14 @@ void OmpStructureChecker::Enter(const parser::OmpClause::Map &x) {
     } else if (llvm::is_contained(leafs, Directive::OMPD_target_exit_data)) {
       CheckAllowedMapTypes(type->v, mapExitingTypes);
     }
+  }
+
+  if (version < 61 &&
+      (llvm::is_contained(leafs, Directive::OMPD_target) ||
+          llvm::is_contained(leafs, Directive::OMPD_target_data) ||
+          llvm::is_contained(leafs, Directive::OMPD_target_enter_data) ||
+          llvm::is_contained(leafs, Directive::OMPD_target_exit_data))) {
+    CheckPolymorphicMapObjects(objects);
   }
 
   if (auto *attach{

@@ -424,6 +424,8 @@ private:
   void CheckAllowedMapTypes(
       parser::OmpMapType::Value, llvm::ArrayRef<parser::OmpMapType::Value>);
   void CheckCloseModifierOnMapMembers();
+  void CheckPolymorphicMapObjects(const parser::OmpObjectList &objects);
+  void CheckPolymorphicSymbolsInTargetBlock(const parser::Block &block);
 
   llvm::StringRef getClauseName(llvm::omp::Clause clause) override;
   llvm::StringRef getDirectiveName(llvm::omp::Directive directive) override;

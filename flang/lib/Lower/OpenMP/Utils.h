@@ -22,6 +22,10 @@
 
 extern llvm::cl::opt<bool> treatIndexAsSection;
 
+namespace mlir {
+class Operation;
+} // namespace mlir
+
 namespace fir {
 class FirOpBuilder;
 class RecordType;
@@ -161,6 +165,10 @@ void gatherFuncAndVarSyms(
     const ObjectList &objects, mlir::omp::DeclareTargetCaptureClause clause,
     llvm::SmallVectorImpl<DeclareTargetCaptureInfo> &symbolAndClause,
     bool automap = false);
+
+/// If \p op implements the OpenMP DeclareTargetInterface, mark it as declare
+/// target with device_type=any, capture=to, automap=false. No-op otherwise.
+void markDeclareTarget(mlir::Operation *op, bool implicit);
 
 int64_t getCollapseValue(const List<Clause> &clauses);
 
