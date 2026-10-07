@@ -3220,6 +3220,13 @@ void RISCVTTIImpl::getUnrollingPreferences(
   UP.UnrollRemainder = true;
   UP.UnrollAndJam = true;
 
+  // The default runtime unroll count is too aggressive for RISC-V.
+  // causes excessive code bloat and register
+  // spills that outweigh the branch reduction benefit.
+  // This is based on empirical testing on the SpacemiT X60 and X100.
+  // Can be tuned further if needed. Most other targets also use 4.
+  UP.DefaultUnrollRuntimeCount = 4;
+
   // Force unrolling small loops can be very useful because of the branch
   // taken cost of the backedge.
   if (Cost < 12)
