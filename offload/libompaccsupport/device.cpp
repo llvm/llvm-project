@@ -12,6 +12,7 @@
 
 #include "device.h"
 #include "OffloadEntry.h"
+#include "OmpAccError.h"
 #include "OpenMP/Mapping.h"
 #include "OpenMP/OMPT/Callback.h"
 #include "OpenMP/OMPT/Interface.h"
@@ -40,6 +41,7 @@
 using namespace llvm::omp::target::ompt;
 #endif
 
+using namespace llvm::omp::target::error;
 using namespace llvm::omp::target::plugin;
 using namespace llvm::omp::target::debug;
 
@@ -116,9 +118,8 @@ llvm::Error DeviceTy::init() {
         OMPX_RecordReportFilename.get().c_str(),
         OMPX_RecordOutputDir.get().c_str());
     if (Ret != OFFLOAD_SUCCESS)
-      return error::createOffloadError(error::ErrorCode::BACKEND_FAILURE,
-                                       "failed to initialize RR in device %d\n",
-                                       DeviceID);
+      return createError(ErrorCode::BackendFailure,
+                         "failed to initialize RR in device %d\n", DeviceID);
   }
 
   return llvm::Error::success();
@@ -151,17 +152,17 @@ setupIndirectCallTable(DeviceTy &Device, __tgt_device_image *Image,
       void *Vtable;
       void *res;
       if (Device.RTL->get_global(Binary, PtrSize, Entry.SymbolName, &Vtable))
-        return error::createOffloadError(error::ErrorCode::INVALID_BINARY,
-                                         "failed to load %s", Entry.SymbolName);
+        return createError(ErrorCode::InvalidBinary, "failed to load %s",
+                           Entry.SymbolName);
 
       // HstPtr = Entry.Address;
       if (Device.retrieveData(&res, Vtable, PtrSize, AsyncInfo))
-        return error::createOffloadError(error::ErrorCode::INVALID_BINARY,
-                                         "failed to load %s", Entry.SymbolName);
+        return createError(ErrorCode::InvalidBinary, "failed to load %s",
+                           Entry.SymbolName);
       if (Device.synchronize(AsyncInfo))
-        return error::createOffloadError(
-            error::ErrorCode::INVALID_BINARY,
-            "failed to synchronize after retrieving %s", Entry.SymbolName);
+        return createError(ErrorCode::InvalidBinary,
+                           "failed to synchronize after retrieving %s",
+                           Entry.SymbolName);
       // Calculate and emplace entire Vtable from first Vtable byte
       for (uint64_t i = 0; i < Entry.Size / PtrSize; ++i) {
         auto &[HstPtr, DevPtr] = IndirectCallTable.emplace_back();
@@ -177,18 +178,18 @@ setupIndirectCallTable(DeviceTy &Device, __tgt_device_image *Image,
       auto &[HstPtr, DevPtr] = IndirectCallTable.emplace_back();
       void *Ptr;
       if (Device.RTL->get_global(Binary, Entry.Size, Entry.SymbolName, &Ptr))
-        return error::createOffloadError(error::ErrorCode::INVALID_BINARY,
-                                         "failed to load %s", Entry.SymbolName);
+        return createError(ErrorCode::InvalidBinary, "failed to load %s",
+                           Entry.SymbolName);
 
       HstPtr = Entry.Address;
       if (Device.retrieveData(&DevPtr, Ptr, Entry.Size, AsyncInfo))
-        return error::createOffloadError(error::ErrorCode::INVALID_BINARY,
-                                         "failed to load %s", Entry.SymbolName);
+        return createError(ErrorCode::InvalidBinary, "failed to load %s",
+                           Entry.SymbolName);
     }
     if (Device.synchronize(AsyncInfo))
-      return error::createOffloadError(
-          error::ErrorCode::INVALID_BINARY,
-          "failed to synchronize after retrieving %s", Entry.SymbolName);
+      return createError(ErrorCode::InvalidBinary,
+                         "failed to synchronize after retrieving %s",
+                         Entry.SymbolName);
   }
 
   // If we do not have any indirect globals we exit early.
@@ -204,14 +205,12 @@ setupIndirectCallTable(DeviceTy &Device, __tgt_device_image *Image,
   void *DevicePtr = Device.allocData(TableSize, nullptr, TARGET_ALLOC_DEVICE);
   if (Device.submitData(DevicePtr, IndirectCallTable.data(), TableSize,
                         AsyncInfo))
-    return error::createOffloadError(error::ErrorCode::INVALID_BINARY,
-                                     "failed to copy data");
+    return createError(ErrorCode::InvalidBinary, "failed to copy data");
   // The IndirectCallTable is on the stack, so we must synchronize to ensure
   // the data is copied before we return.
   if (Device.synchronize(AsyncInfo))
-    return error::createOffloadError(
-        error::ErrorCode::INVALID_BINARY,
-        "failed to synchronize after copying data");
+    return createError(ErrorCode::InvalidBinary,
+                       "failed to synchronize after copying data");
 
   return std::pair<void *, uint64_t>(DevicePtr, IndirectCallTable.size());
 }
@@ -222,8 +221,8 @@ DeviceTy::loadBinary(__tgt_device_image *Img) {
   __tgt_device_binary Binary;
 
   if (RTL->load_binary(RTLDeviceID, Img, &Binary) != OFFLOAD_SUCCESS)
-    return error::createOffloadError(error::ErrorCode::INVALID_BINARY,
-                                     "failed to load binary %p", Img);
+    return createError(ErrorCode::InvalidBinary, "failed to load binary %p",
+                       Img);
 
   OMPT_IF_BUILT_AND_INITIALIZED(performOmptCallback(
       device_load, DeviceID, /*FileName=*/nullptr, /*FileOffset=*/0,
@@ -261,8 +260,7 @@ DeviceTy::loadBinary(__tgt_device_image *Img) {
   AsyncInfoTy AsyncInfo(*this);
   if (submitData(DeviceEnvironmentPtr, &DeviceEnvironment,
                  sizeof(DeviceEnvironment), AsyncInfo))
-    return error::createOffloadError(error::ErrorCode::INVALID_BINARY,
-                                     "failed to copy data");
+    return createError(ErrorCode::InvalidBinary, "failed to copy data");
 
   return Binary;
 }
@@ -487,8 +485,8 @@ static llvm::Expected<KernelLaunchEnvironmentTy *> getKernelLaunchEnvironment(
 
   const bool NeedsReductionBuffer = KernelEnv.ReductionDataSize != 0;
   if (NeedsReductionBuffer && LaunchArgs.OmpABIVersion < OMP_KERNEL_ARG_VERSION)
-    return error::createOffloadError(
-        error::ErrorCode::INVALID_BINARY,
+    return createError(
+        ErrorCode::InvalidBinary,
         "kernel was built against an older OpenMP kernel-launch-environment "
         "ABI (v%u); current runtime requires v%u for cross-team reductions",
         LaunchArgs.OmpABIVersion, OMP_KERNEL_ARG_VERSION);
