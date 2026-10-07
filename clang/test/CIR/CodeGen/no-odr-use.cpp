@@ -79,12 +79,12 @@ int f(int i) {
         // OGCG: getelementptr inbounds i8, ptr @__const._Z1fi.a, i64 %{{.*}}
         // OGCG: load i32
         ? a.*p
+        // CIR: %[[A:.*]] = cir.get_global @[[F_A]] : !cir.ptr<!rec_A>
+        // CIR: %[[Y:.*]] = cir.get_member %[[A]][1] {name = "y"} : !cir.ptr<!rec_A> -> !cir.ptr<!cir.array<!s32i x 2>>
         // CIR: %[[TWO:.*]] = cir.const #cir.int<2> : !s32i
         // CIR: %[[N:.*]] = cir.load{{.*}} %{{.*}} : !cir.ptr<!s32i>, !s32i
         // CIR: %[[SUB:.*]] = cir.sub nsw %[[TWO]], %[[N]] : !s32i
         // CIR: %[[SUB_64:.*]] = cir.cast integral %[[SUB]] : !s32i -> !s64i
-        // CIR: %[[A:.*]] = cir.get_global @[[F_A]] : !cir.ptr<!rec_A>
-        // CIR: %[[Y:.*]] = cir.get_member %[[A]][1] {name = "y"} : !cir.ptr<!rec_A> -> !cir.ptr<!cir.array<!s32i x 2>>
         // CIR: cir.get_element %[[Y]][%[[SUB_64]] : !s64i] : !cir.ptr<!cir.array<!s32i x 2>> -> !cir.ptr<!s32i>
 
         // LLVM: getelementptr [2 x i32], ptr getelementptr inbounds nuw ({{.*}} @[[F_A]], i64 4), i32 0, i64 %{{.*}}

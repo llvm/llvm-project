@@ -578,13 +578,13 @@ void ProcessMinidump::ReadModuleList() {
 
       module_sp = Module::CreateModuleFromObjectFile<ObjectFilePlaceholder>(
           module_spec, load_addr, load_size);
-      // If we haven't loaded a main executable yet, set the first module to be
-      // main executable
-      if (!GetTarget().GetExecutableModule())
-        GetTarget().SetExecutableModule(module_sp);
-      else
-        GetTarget().GetImages().Append(module_sp, true /* notify */);
+      GetTarget().GetImages().Append(module_sp, true /* notify */);
     }
+
+    // The first module a minidump lists is the main executable.
+    if (module == filtered_modules.front() &&
+        !GetTarget().GetExecutableModule())
+      GetTarget().MarkExecutableModule(module_sp);
 
     bool load_addr_changed = false;
     module_sp->SetLoadAddress(GetTarget(), load_addr, false,

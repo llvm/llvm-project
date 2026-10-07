@@ -20,6 +20,7 @@
 #include "mlir/Conversion/OpenMPToLLVM/ConvertOpenMPToLLVM.h"
 #include "mlir/Dialect/DLTI/DLTI.h"
 #include "mlir/Dialect/Func/IR/FuncOps.h"
+#include "mlir/Dialect/LLVMIR/LLVMAttrs.h"
 #include "mlir/Dialect/LLVMIR/LLVMDialect.h"
 #include "mlir/Dialect/LLVMIR/LLVMTypes.h"
 #include "mlir/Dialect/OpenMP/OpenMPDialect.h"
@@ -286,6 +287,22 @@ static mlir::LLVM::CConv convertCallingConv(cir::CallingConv callingConv) {
     return LLVM::AMDGPU_KERNEL;
   }
   llvm_unreachable("Unknown calling convention");
+}
+
+static mlir::LLVM::uwtable::UWTableKind
+convertUWTableKind(cir::UnwindTableKind kind) {
+  using CIR = cir::UnwindTableKind;
+  using LLVM = mlir::LLVM::uwtable::UWTableKind;
+
+  switch (kind) {
+  case CIR::None:
+    return LLVM::None;
+  case CIR::Sync:
+    return LLVM::Sync;
+  case CIR::Async:
+    return LLVM::Async;
+  }
+  llvm_unreachable("Unknown CIR unwind table kind");
 }
 
 mlir::LogicalResult CIRToLLVMCopyOpLowering::matchAndRewrite(
@@ -2891,6 +2908,10 @@ mlir::LogicalResult CIRToLLVMFuncOpLowering::matchAndRewrite(
   if (op->hasAttr(CIRDialect::getNoReturnAttrName()))
     fn.setNoreturn(true);
 
+  if (std::optional<cir::UnwindTableKind> uwtableKind = op.getUwtable())
+    fn.setUwtableKindAttr(mlir::LLVM::UWTableKindAttr::get(
+        fn.getContext(), convertUWTableKind(*uwtableKind)));
+
   // Function attributes with no dedicated field on the LLVM dialect's
   // LLVMFuncOp are routed through the `passthrough` array. The MLIR LLVM IR
   // translator forwards `passthrough` entries to LLVM IR as function
@@ -3258,10 +3279,12 @@ getComdatAttrHelper(mlir::ModuleOp modOp, mlir::OpBuilder &builder,
 mlir::SymbolRefAttr
 CIRToLLVMGlobalOpLowering::getComdatAttr(cir::GlobalOp &op,
                                          mlir::OpBuilder &builder) const {
-  if (!op.getComdat())
+  std::optional<llvm::StringRef> comdat = op.getComdat();
+  if (!comdat)
     return mlir::SymbolRefAttr{};
+  llvm::StringRef comdatKey = comdat->empty() ? op.getSymName() : *comdat;
   return getComdatAttrHelper(op->getParentOfType<mlir::ModuleOp>(), builder,
-                             op.getSymName(), comdatOp, symbolTables);
+                             comdatKey, comdatOp, symbolTables);
 }
 
 mlir::SymbolRefAttr
@@ -5237,15 +5260,39 @@ mlir::LogicalResult CIRToLLVMVecTernaryOpLowering::matchAndRewrite(
   return mlir::success();
 }
 
+mlir::LogicalResult CIRToLLVMMatrixColumnMajorLoadOpLowering::matchAndRewrite(
+    cir::MatrixColumnMajorLoadOp op, OpAdaptor adaptor,
+    mlir::ConversionPatternRewriter &rewriter) const {
+  cir::MatrixType resultMatrixTy = op.getResult().getType();
+  mlir::Type resultTy = typeConverter->convertType(resultMatrixTy);
+  rewriter.replaceOpWithNewOp<mlir::LLVM::MatrixColumnMajorLoadOp>(
+      op, resultTy, adaptor.getValue(), adaptor.getStride(),
+      rewriter.getBoolAttr(op.getIsVolatile()),
+      rewriter.getI32IntegerAttr(resultMatrixTy.getRowNum()),
+      rewriter.getI32IntegerAttr(resultMatrixTy.getColumnNum()));
+  return mlir::success();
+}
+
+mlir::LogicalResult CIRToLLVMMatrixColumnMajorStoreOpLowering::matchAndRewrite(
+    cir::MatrixColumnMajorStoreOp op, OpAdaptor adaptor,
+    mlir::ConversionPatternRewriter &rewriter) const {
+  cir::MatrixType matrixTy = op.getMatrix().getType();
+  rewriter.replaceOpWithNewOp<mlir::LLVM::MatrixColumnMajorStoreOp>(
+      op, adaptor.getMatrix(), adaptor.getValue(), adaptor.getStride(),
+      rewriter.getBoolAttr(op.getIsVolatile()),
+      rewriter.getI32IntegerAttr(matrixTy.getRowNum()),
+      rewriter.getI32IntegerAttr(matrixTy.getColumnNum()));
+  return mlir::success();
+}
+
 mlir::LogicalResult CIRToLLVMMatrixTransposeOpLowering::matchAndRewrite(
     cir::MatrixTransposeOp op, OpAdaptor adaptor,
     mlir::ConversionPatternRewriter &rewriter) const {
-  cir::MatrixType matrixTy = op.getValue().getType();
-  mlir::Type resultTy =
-      typeConverter->convertType(op->getResultTypes().front());
+  cir::MatrixType resultMatrixTy = op.getValue().getType();
+  mlir::Type resultTy = typeConverter->convertType(resultMatrixTy);
   rewriter.replaceOpWithNewOp<mlir::LLVM::MatrixTransposeOp>(
-      +op, resultTy, adaptor.getValue(), matrixTy.getRowNum(),
-      matrixTy.getColumnNum());
+      op, resultTy, adaptor.getValue(), resultMatrixTy.getRowNum(),
+      resultMatrixTy.getColumnNum());
   return mlir::success();
 }
 
