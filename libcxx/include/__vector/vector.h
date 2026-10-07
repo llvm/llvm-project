@@ -1213,7 +1213,7 @@ vector<_Tp, _Allocator>::__insert_with_size(const_iterator __position, _Iterator
 #if _LIBCPP_STD_VER >= 23
         if constexpr (!forward_iterator<_Iterator>) {
           __construct_at_end(std::move(__first), __n);
-          std::rotate(__p, __old_last, __end);
+          std::rotate(__p, __old_last, __layout_.__end_ptr());
         } else
 #endif
         {
