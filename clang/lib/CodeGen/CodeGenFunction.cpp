@@ -40,6 +40,7 @@
 #include "clang/CodeGenUtils/FunctionUtils.h"
 #include "llvm/ADT/ArrayRef.h"
 #include "llvm/ADT/ScopeExit.h"
+#include "llvm/ADT/StringExtras.h"
 #include "llvm/Frontend/OpenMP/OMPIRBuilder.h"
 #include "llvm/IR/DataLayout.h"
 #include "llvm/IR/Dominators.h"
@@ -1053,6 +1054,33 @@ void CodeGenFunction::StartFunction(GlobalDecl GD, QualType RetTy,
     }
   }
 
+  // Annotate C++ special member functions so that CopyProfPass can instrument
+  // them, provided the object is at least as large as the size threshold.
+  if (CGM.getCodeGenOpts().CopyProf) {
+    if (const auto *MD = dyn_cast_or_null<CXXMethodDecl>(D)) {
+      StringRef Attr;
+      if (const auto *CD = dyn_cast<CXXConstructorDecl>(MD)) {
+        if (!CD->isMoveConstructor())
+          Attr =
+              CD->isCopyConstructor() ? "copyprof-copy-ctor" : "copyprof-ctor";
+      } else if (isa<CXXDestructorDecl>(MD)) {
+        Attr = "copyprof-dtor";
+      } else if (MD->isCopyAssignmentOperator()) {
+        Attr = "copyprof-copy-assign-op";
+      }
+      if (!Attr.empty()) {
+        // Finally, add the object size in bytes to the annotation.
+        // A special member function always has an implicit object parameter, so
+        // its type is guaranteed to be complete here.
+        CharUnits ObjSize = getContext().getTypeSizeInChars(
+            MD->getFunctionObjectParameterType());
+        if (ObjSize.getQuantity() >=
+            CGM.getCodeGenOpts().CopyProfStaticSizeThreshold)
+          Fn->addFnAttr(Attr, llvm::utostr(ObjSize.getQuantity()));
+      }
+    }
+  }
+
   // If we're in C++ mode and the function name is "main", it is guaranteed
   // to be norecurse by the standard (3.6.1.3 "The function main shall not be
   // used within a program").
@@ -1540,9 +1568,12 @@ void CodeGenFunction::GenerateCode(GlobalDecl GD, llvm::Function *Fn,
     if (isa<CoroutineBodyStmt>(Body))
       ShouldEmitLifetimeMarkers = true;
 
-    // Initialize helper which will detect jumps which can cause invalid
-    // lifetime markers.
-    if (ShouldEmitLifetimeMarkers)
+    // Detect jumps that invalidate lifetime markers or bypass auto-var-init.
+    bool NeedsBypassDetection =
+        ShouldEmitLifetimeMarkers ||
+        (CGM.getLangOpts().getTrivialAutoVarInit() !=
+         LangOptions::TrivialAutoVarInitKind::Uninitialized);
+    if (NeedsBypassDetection)
       Bypasses.Init(CGM, Body);
   }
 
@@ -2886,7 +2917,7 @@ void CodeGenFunction::EmitSanitizerStatReport(llvm::SanitizerStatKind SSK) {
   if (!CGM.getCodeGenOpts().SanitizeStats)
     return;
 
-  llvm::IRBuilder<> IRB(Builder.GetInsertBlock(), Builder.GetInsertPoint());
+  llvm::IRBuilder<> IRB(Builder.GetInsertPoint());
   IRB.SetCurrentDebugLocation(Builder.getCurrentDebugLocation());
   CGM.getSanStats().create(IRB, SSK);
 }
@@ -3198,6 +3229,10 @@ void CodeGenFunction::EmitAArch64MultiVersionResolver(
   llvm::BasicBlock *CurBlock = createBasicBlock("resolver_entry", Resolver);
 
   for (const FMVResolverOption &RO : Options) {
+    // Skip unreachable versions.
+    if (RO.Function == nullptr)
+      continue;
+
     Builder.SetInsertPoint(CurBlock);
     llvm::Value *Condition = FormAArch64ResolverCondition(RO);
 
@@ -3209,15 +3244,11 @@ void CodeGenFunction::EmitAArch64MultiVersionResolver(
     }
 
     if (!AArch64CpuInitialized) {
-      Builder.SetInsertPoint(CurBlock, CurBlock->begin());
+      Builder.SetInsertPoint(CurBlock->begin());
       EmitAArch64CpuInit();
       AArch64CpuInitialized = true;
       Builder.SetInsertPoint(CurBlock);
     }
-
-    // Skip unreachable versions.
-    if (RO.Function == nullptr)
-      continue;
 
     llvm::BasicBlock *RetBlock = createBasicBlock("resolver_return", Resolver);
     CGBuilderTy RetBuilder(CGM, RetBlock);

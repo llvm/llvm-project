@@ -60,10 +60,10 @@ subroutine device_object()
 end subroutine
 
 ! DEVICE-LABEL: func.func @_QPdevice_object()
-! DEVICE: cuf.alloc {{.*}} {bindc_name = "d", data_attr = #cuf.cuda<device>
-! DEVICE: fir.embox {{.*}} {allocator_idx = 2 : i32}
-! DEVICE: cuf.allocate {{.*}} {data_attr = #cuf.cuda<device>} -> i32
-! DEVICE: cuf.deallocate {{.*}} {data_attr = #cuf.cuda<device>} -> i32
+! DEVICE: cuf.alloc {{.*}} bindc_name("d") data_attr(device)
+! DEVICE: fir.embox {{.*}} allocator_idx(2)
+! DEVICE: cuf.allocate {{.*}} data_attr(device) -> i32
+! DEVICE: cuf.deallocate {{.*}} data_attr(device) -> i32
 
 !--- use_host.cuf
 subroutine host_object()
@@ -73,8 +73,8 @@ subroutine host_object()
 end subroutine
 
 ! HOST-LABEL: func.func @_QPhost_object()
-! HOST: fir.embox {{.*}} {allocator_idx = 3 : i32}
-! HOST: cuf.allocate {{.*}} {data_attr = #cuf.cuda<managed>} -> i32
+! HOST: fir.embox {{.*}} allocator_idx(3)
+! HOST: cuf.allocate {{.*}} data_attr(managed) -> i32
 
 !--- use_acc.cuf
 subroutine acc_only()
