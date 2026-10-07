@@ -150,6 +150,11 @@ public:
   }
 
   AtomicExpansionKind
+  shouldCastAtomicRMWIInIR(AtomicRMWInst *) const override {
+    return AtomicExpansionKind::None;
+  }
+
+  AtomicExpansionKind
   shouldExpandAtomicRMWInIR(const AtomicRMWInst *AI) const override;
 
   bool aggressivelyPreferBuildVectorSources(EVT VecVT) const override {
