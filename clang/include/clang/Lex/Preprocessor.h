@@ -1091,7 +1091,7 @@ private:
   llvm::SmallSetVector<Module *, 2> AffectingClangModules;
 
   /// The set of known macros exported from modules.
-  llvm::FoldingSet<ModuleMacro> ModuleMacros;
+  llvm::UniquingSet<ModuleMacro> ModuleMacros;
 
   /// The names of potential module macros that we've not yet processed.
   llvm::SmallVector<IdentifierInfo *, 32> PendingModuleMacroNames;

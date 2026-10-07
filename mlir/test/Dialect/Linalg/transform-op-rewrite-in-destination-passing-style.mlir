@@ -257,11 +257,11 @@ module attributes {transform.with_named_sequence} {
 
 // CHECK-LABEL: func @already_destination_passing_style(
 //  CHECK-SAME:   %[[ARG0:.*]]: tensor<134217728xf32>, %[[ARG1:.*]]: tensor<134217728xf32>) -> tensor<134217728xf32>
-//       CHECK:   %[[RESULT:.*]] = linalg.elementwise kind=#linalg.elementwise_kind<add> ins(%[[ARG0]], %[[ARG1]] : tensor<134217728xf32>, tensor<134217728xf32>)
+//       CHECK:   %[[RESULT:.*]] = linalg.elementwise <add> ins(%[[ARG0]], %[[ARG1]] : tensor<134217728xf32>, tensor<134217728xf32>)
 //  CHECK-SAME:   outs(%[[ARG0]] : tensor<134217728xf32>) -> tensor<134217728xf32>
 //       CHECK:   return %[[RESULT]] : tensor<134217728xf32>
 func.func @already_destination_passing_style(%arg0: tensor<134217728xf32>, %arg1: tensor<134217728xf32>) -> tensor<134217728xf32> {
-  %0 = linalg.elementwise kind=#linalg.elementwise_kind<add> ins(%arg0, %arg1 : tensor<134217728xf32>, tensor<134217728xf32>) outs(%arg0 : tensor<134217728xf32>) -> tensor<134217728xf32>
+  %0 = linalg.elementwise <add> ins(%arg0, %arg1 : tensor<134217728xf32>, tensor<134217728xf32>) outs(%arg0 : tensor<134217728xf32>) -> tensor<134217728xf32>
   return %0 : tensor<134217728xf32>
 }
 

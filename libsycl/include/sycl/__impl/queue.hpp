@@ -16,9 +16,12 @@
 #define _LIBSYCL___IMPL_QUEUE_HPP
 
 #include <sycl/__impl/async_handler.hpp>
+#include <sycl/__impl/context.hpp>
 #include <sycl/__impl/device.hpp>
 #include <sycl/__impl/event.hpp>
+#include <sycl/__impl/exception.hpp>
 #include <sycl/__impl/handler.hpp>
+#include <sycl/__impl/platform.hpp>
 #include <sycl/__impl/property_list.hpp>
 
 #include <sycl/__impl/detail/config.hpp>
@@ -27,7 +30,13 @@
 #include <sycl/__impl/detail/kernel_submission.hpp>
 #include <sycl/__impl/detail/obj_utils.hpp>
 #include <sycl/__impl/detail/unified_range_view.hpp>
-#include <sycl/__impl/exception.hpp>
+
+#include <cstddef>
+#include <functional>
+#include <memory>
+#include <type_traits>
+#include <utility>
+#include <vector>
 
 _LIBSYCL_BEGIN_NAMESPACE_SYCL
 
@@ -58,7 +67,6 @@ private:
 public:
   static constexpr bool value = type::value;
 };
-} // namespace detail
 
 class TypelessCGF {
 public:
@@ -67,8 +75,8 @@ public:
       // NOTE: Even if `F` is a pointer to a function, `&F` is a pointer to a
       // pointer to a function and as such can be cast to `void *` (pointer to
       // a function cannot be cast).
-      : Object(static_cast<const void *>(&F)),
-        InvokerF(&Invoker<std::remove_reference_t<T>>::call) {}
+      : MObject(static_cast<const void *>(&F)),
+        MInvokerF(&Invoker<std::remove_reference_t<T>>::call) {}
   ~TypelessCGF() = default;
 
   TypelessCGF(const TypelessCGF &) = delete;
@@ -76,7 +84,7 @@ public:
   TypelessCGF &operator=(const TypelessCGF &) = delete;
   TypelessCGF &operator=(TypelessCGF &&) = delete;
 
-  void operator()(handler &CGH) const { InvokerF(Object, CGH); }
+  void operator()(handler &CGH) const { MInvokerF(MObject, CGH); }
 
 private:
   // SYCL 2020 command group function object is a type that is callable with
@@ -88,10 +96,12 @@ private:
       (*const_cast<T *>(static_cast<const T *>(Object)))(CGH);
     }
   };
-  const void *Object;
+  const void *MObject;
   using InvokerTy = void (*)(const void *, handler &);
-  const InvokerTy InvokerF;
+  const InvokerTy MInvokerF;
 };
+
+} // namespace detail
 
 // SYCL 2020 4.6.5. Queue class.
 class _LIBSYCL_EXPORT queue : private detail::KernelSubmissionBase<queue> {
@@ -115,8 +125,8 @@ public:
   ///
   /// \param propList is a list of properties for queue construction.
   explicit queue(const property_list &propList = {})
-      : queue(detail::SelectDevice(default_selector_v),
-              detail::defaultAsyncHandler, propList) {}
+      : queue(detail::SelectDevice(default_selector_v), async_handler{},
+              propList) {}
 
   /// Constructs a SYCL queue instance with an async_handler using the device
   /// returned by an instance of default_selector.
@@ -138,8 +148,8 @@ public:
       typename = detail::EnableIfDeviceSelectorIsInvocable<DeviceSelector>>
   explicit queue(const DeviceSelector &deviceSelector,
                  const property_list &propList = {})
-      : queue(detail::SelectDevice(deviceSelector), detail::defaultAsyncHandler,
-              propList) {}
+      : queue(detail::SelectDevice(deviceSelector), async_handler{}, propList) {
+  }
 
   /// Constructs a SYCL queue instance using the device identified by the
   /// device selector provided.
@@ -160,7 +170,7 @@ public:
   /// \param syclDevice is an instance of SYCL device.
   /// \param propList is a list of properties for queue construction.
   explicit queue(const device &syclDevice, const property_list &propList = {})
-      : queue(syclDevice, detail::defaultAsyncHandler, propList) {}
+      : queue(syclDevice, async_handler{}, propList) {}
 
   /// Constructs a SYCL queue instance with an async_handler using the device
   /// provided.
@@ -169,6 +179,70 @@ public:
   /// \param asyncHandler is a SYCL asynchronous exception handler.
   /// \param propList is a list of properties for queue construction.
   explicit queue(const device &syclDevice, const async_handler &asyncHandler,
+                 const property_list &propList = {})
+      : queue(syclDevice.get_platform().khr_get_default_context(), syclDevice,
+              asyncHandler, propList) {}
+
+  /// Constructs a SYCL queue instance that is associated with syclContext,
+  /// using the device identified by the device selector provided.
+  ///
+  /// \param syclContext is the context to associate the queue with.
+  /// \param deviceSelector is a SYCL 2020 Device Selector, a simple callable
+  /// that takes a device and returns an int
+  /// \param propList is a list of properties for queue construction.
+  /// \throw sycl::exception with sycl::errc::invalid if syclContext does not
+  /// contain the selected device.
+  template <
+      typename DeviceSelector,
+      typename = detail::EnableIfDeviceSelectorIsInvocable<DeviceSelector>>
+  explicit queue(const context &syclContext,
+                 const DeviceSelector &deviceSelector,
+                 const property_list &propList = {})
+      : queue(syclContext, detail::SelectDevice(deviceSelector), propList) {}
+
+  /// Constructs a SYCL queue instance with an async_handler that is associated
+  /// with syclContext, using the device identified by the device selector
+  /// provided.
+  ///
+  /// \param syclContext is the context to associate the queue with.
+  /// \param deviceSelector is a SYCL 2020 Device Selector, a simple callable
+  /// that takes a device and returns an int
+  /// \param asyncHandler is a SYCL asynchronous exception handler.
+  /// \param propList is a list of properties for queue construction.
+  /// \throw sycl::exception with sycl::errc::invalid if syclContext does not
+  /// contain the selected device.
+  template <
+      typename DeviceSelector,
+      typename = detail::EnableIfDeviceSelectorIsInvocable<DeviceSelector>>
+  explicit queue(const context &syclContext,
+                 const DeviceSelector &deviceSelector,
+                 const async_handler &asyncHandler,
+                 const property_list &propList = {})
+      : queue(syclContext, detail::SelectDevice(deviceSelector), asyncHandler,
+              propList) {}
+
+  /// Constructs a SYCL queue instance that is associated with syclContext,
+  /// using the device provided.
+  ///
+  /// \param syclContext is the context to associate the queue with.
+  /// \param syclDevice is an instance of SYCL device.
+  /// \param propList is a list of properties for queue construction.
+  /// \throw sycl::exception with sycl::errc::invalid if syclContext does not
+  /// contain syclDevice.
+  explicit queue(const context &syclContext, const device &syclDevice,
+                 const property_list &propList = {});
+
+  /// Constructs a SYCL queue instance with an async_handler that is associated
+  /// with syclContext, using the device provided.
+  ///
+  /// \param syclContext is the context to associate the queue with.
+  /// \param syclDevice is an instance of SYCL device.
+  /// \param asyncHandler is a SYCL asynchronous exception handler.
+  /// \param propList is a list of properties for queue construction.
+  /// \throw sycl::exception with sycl::errc::invalid if syclContext does not
+  /// contain syclDevice.
+  explicit queue(const context &syclContext, const device &syclDevice,
+                 const async_handler &asyncHandler,
                  const property_list &propList = {});
 
   /// \return the SYCL backend associated with this queue.
@@ -442,6 +516,91 @@ public:
   event memcpy(void *dest, const void *src, std::size_t numBytes,
                const std::vector<event> &depEvents);
 
+  /// Submits a memset operation on a USM allocation that must be accessible
+  /// on the device associated with the queue. Equivalent to a fill operation
+  /// with an unsigned char pattern.
+  ///
+  /// \param ptr is the pointer to memory to be set.
+  /// \param value is the value the memory should be filled with, interpreted
+  /// as an unsigned char.
+  /// \param numBytes is the number of bytes to set.
+  /// \return an event that represents the status of the operation.
+  event memset(void *ptr, int value, std::size_t numBytes) {
+    return memset(ptr, value, numBytes, std::vector<event>{});
+  }
+
+  /// Submits a memset operation on a USM allocation that must be accessible
+  /// on the device associated with the queue. Equivalent to a fill operation
+  /// with an unsigned char pattern.
+  ///
+  /// \param ptr is the pointer to memory to be set.
+  /// \param value is the value the memory should be filled with, interpreted
+  /// as an unsigned char.
+  /// \param numBytes is the number of bytes to set.
+  /// \param depEvent is an event that represents a dependency for the
+  /// operation.
+  /// \return an event that represents the status of the operation.
+  event memset(void *ptr, int value, std::size_t numBytes, event depEvent) {
+    return memset(ptr, value, numBytes, std::vector<event>{depEvent});
+  }
+
+  /// Submits a memset operation on a USM allocation that must be accessible
+  /// on the device associated with the queue. Equivalent to a fill operation
+  /// with an unsigned char pattern.
+  ///
+  /// \param ptr is the pointer to memory to be set.
+  /// \param value is the value the memory should be filled with, interpreted
+  /// as an unsigned char.
+  /// \param numBytes is the number of bytes to set.
+  /// \param depEvents is a vector of events that represent dependencies for the
+  /// operation.
+  /// \return an event that represents the status of the operation.
+  event memset(void *ptr, int value, std::size_t numBytes,
+               const std::vector<event> &depEvents) {
+    return fill(ptr, static_cast<unsigned char>(value), numBytes, depEvents);
+  }
+
+  /// Submits a fill operation that replicates a pattern into a USM allocation
+  /// that must be accessible on the device associated with the queue.
+  ///
+  /// \param ptr is the pointer to memory to be filled.
+  /// \param pattern is the pattern to be replicated.
+  /// \param count is the number of times the pattern is replicated.
+  /// \return an event that represents the status of the operation.
+  template <typename T>
+  event fill(void *ptr, const T &pattern, std::size_t count) {
+    return fill(ptr, pattern, count, std::vector<event>{});
+  }
+
+  /// Submits a fill operation that replicates a pattern into a USM allocation
+  /// that must be accessible on the device associated with the queue.
+  ///
+  /// \param ptr is the pointer to memory to be filled.
+  /// \param pattern is the pattern to be replicated.
+  /// \param count is the number of times the pattern is replicated.
+  /// \param depEvent is an event that represents a dependency for the
+  /// operation.
+  /// \return an event that represents the status of the operation.
+  template <typename T>
+  event fill(void *ptr, const T &pattern, std::size_t count, event depEvent) {
+    return fill(ptr, pattern, count, std::vector<event>{depEvent});
+  }
+
+  /// Submits a fill operation that replicates a pattern into a USM allocation
+  /// that must be accessible on the device associated with the queue.
+  ///
+  /// \param ptr is the pointer to memory to be filled.
+  /// \param pattern is the pattern to be replicated.
+  /// \param count is the number of times the pattern is replicated.
+  /// \param depEvents is a vector of events that represent dependencies for the
+  /// operation.
+  /// \return an event that represents the status of the operation.
+  template <typename T>
+  event fill(void *ptr, const T &pattern, std::size_t count,
+             const std::vector<event> &depEvents) {
+    return fillImpl(ptr, &pattern, sizeof(T), count, depEvents);
+  }
+
   /// Immediately calls the command group function object.
   ///
   /// The command group may submit no more than one command to this queue for
@@ -478,7 +637,7 @@ public:
   /// \param ptr is a USM pointer to the memory to be prefetched to the device.
   /// \param numBytes is a number of bytes to be prefetched.
   /// \return an event representing prefetch operation.
-  event prefetch(void *ptr, std::size_t numBytes) {
+  event prefetch(const void *ptr, std::size_t numBytes) {
     return prefetch(ptr, numBytes, std::vector<event>{});
   }
 
@@ -490,7 +649,7 @@ public:
   /// \param numBytes is a number of bytes to be prefetched.
   /// \param depEvent is an event that specifies the kernel dependencies.
   /// \return an event representing prefetch operation.
-  event prefetch(void *ptr, std::size_t numBytes, event depEvent) {
+  event prefetch(const void *ptr, std::size_t numBytes, event depEvent) {
     return prefetch(ptr, numBytes, std::vector<event>{depEvent});
   }
 
@@ -503,7 +662,7 @@ public:
   /// \param depEvents is a vector of events that specify the kernel
   /// dependencies.
   /// \return an event representing prefetch operation.
-  event prefetch(void *ptr, std::size_t numBytes,
+  event prefetch(const void *ptr, std::size_t numBytes,
                  const std::vector<event> &depEvents);
 
 private:
@@ -530,12 +689,25 @@ private:
   /// \param ArgData a pointer to the kernel argument.
   /// \param ArgSize the size of the kernel argument.
   void submitKernelImpl(detail::DeviceKernelInfo &KernelInfo, void *ArgData,
-                        size_t ArgSize);
+                        std::size_t ArgSize);
 
   /// \return an event representing last kernel invocation.
   event getLastEvent();
 
-  event submitWithHandler(const TypelessCGF &CGF);
+  /// Submits a fill operation that replicates a pattern into a USM allocation
+  /// that must be accessible on the device associated with the queue.
+  ///
+  /// \param Ptr is the pointer to memory to be filled.
+  /// \param Pattern is the pattern to be replicated.
+  /// \param PatternSize is the size of the pattern in bytes.
+  /// \param Count is the number of times the pattern is replicated.
+  /// \param DepEvents is a vector of events that represent dependencies for the
+  /// operation.
+  /// \return an event that represents the status of the operation.
+  event fillImpl(void *Ptr, const void *Pattern, std::size_t PatternSize,
+                 std::size_t Count, const std::vector<event> &DepEvents);
+
+  event submitWithHandler(const detail::TypelessCGF &CGF);
 
   queue(const std::shared_ptr<detail::QueueImpl> &Impl) : impl(Impl) {}
   std::shared_ptr<detail::QueueImpl> impl;

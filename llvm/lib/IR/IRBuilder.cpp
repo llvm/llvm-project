@@ -140,23 +140,23 @@ Value *IRBuilderBase::CreateBitPreservingCastChain(const DataLayout &DL,
   };
 
   // See if we need inttoptr for this type pair. May require additional bitcast.
-  bool OldIsIntLike =
-      OldTy->isIntOrIntVectorTy() || OldTy->isByteOrByteVectorTy();
-  if (OldIsIntLike && NewTy->isPtrOrPtrVectorTy()) {
+  bool OldIsIntOrFP = OldTy->isIntOrIntVectorTy() || OldTy->isFPOrFPVectorTy();
+  if (OldIsIntOrFP && NewTy->isPtrOrPtrVectorTy()) {
     // Expand <2 x i32> to i8* --> <2 x i32> to i64 to i8*
     // Expand i128 to <2 x i8*> --> i128 to <2 x i64> to <2 x i8*>
     // Expand <4 x i32> to <2 x i8*> --> <4 x i32> to <2 x i64> to <2 x i8*>
+    // Expand <2 x float> to i8* --> <2 x float> to i64 to i8*
     // Directly handle i64 to i8*
     return CreateIntToPtr(CreateBitCastLike(V, DL.getIntPtrType(NewTy)), NewTy);
   }
 
   // See if we need ptrtoint for this type pair. May require additional bitcast.
-  bool NewIsIntLike =
-      NewTy->isIntOrIntVectorTy() || NewTy->isByteOrByteVectorTy();
-  if (OldTy->isPtrOrPtrVectorTy() && NewIsIntLike) {
+  bool NewIsIntOrFP = NewTy->isIntOrIntVectorTy() || NewTy->isFPOrFPVectorTy();
+  if (OldTy->isPtrOrPtrVectorTy() && NewIsIntOrFP) {
     // Expand <2 x i8*> to i128 --> <2 x i8*> to <2 x i64> to i128
     // Expand i8* to <2 x i32> --> i8* to i64 to <2 x i32>
     // Expand <2 x i8*> to <4 x i32> --> <2 x i8*> to <2 x i64> to <4 x i32>
+    // Expand i8* to <2 x float> --> i8* to i64 to <2 x float>
     // Expand i8* to i64 --> i8* to i64 to i64
     return CreateBitCastLike(CreatePtrToInt(V, DL.getIntPtrType(OldTy)), NewTy);
   }
@@ -214,7 +214,7 @@ Value *IRBuilderBase::CreateTypeSize(Type *Ty, TypeSize Size) {
 }
 
 Value *IRBuilderBase::CreateAllocationSize(Type *DestTy, AllocaInst *AI) {
-  const DataLayout &DL = BB->getDataLayout();
+  const DataLayout &DL = getDataLayout();
   TypeSize ElemSize = AI->getAllocationBaseSize(DL);
   Value *Size = CreateTypeSize(DestTy, ElemSize);
   if (AI->isArrayAllocation())
@@ -1186,7 +1186,7 @@ Value *IRBuilderBase::CreatePtrDiff(Value *LHS, Value *RHS, const Twine &Name,
 }
 Value *IRBuilderBase::CreatePtrDiff(Type *ElemTy, Value *LHS, Value *RHS,
                                     const Twine &Name) {
-  const DataLayout &DL = BB->getDataLayout();
+  const DataLayout &DL = getDataLayout();
   TypeSize ElemSize = DL.getTypeAllocSize(ElemTy);
   if (ElemSize == TypeSize::getFixed(1))
     return CreatePtrDiff(LHS, RHS, Name);
@@ -1209,23 +1209,6 @@ Value *IRBuilderBase::CreateLaunderInvariantGroup(Value *Ptr) {
          "LaunderInvariantGroup should take and return the same type");
 
   return CreateCall(FnLaunderInvariantGroup, {Ptr});
-}
-
-Value *IRBuilderBase::CreateStripInvariantGroup(Value *Ptr) {
-  assert(isa<PointerType>(Ptr->getType()) &&
-         "strip.invariant.group only applies to pointers.");
-
-  auto *PtrType = Ptr->getType();
-  Module *M = BB->getParent()->getParent();
-  Function *FnStripInvariantGroup = Intrinsic::getOrInsertDeclaration(
-      M, Intrinsic::strip_invariant_group, {PtrType});
-
-  assert(FnStripInvariantGroup->getReturnType() == PtrType &&
-         FnStripInvariantGroup->getFunctionType()->getParamType(0) ==
-             PtrType &&
-         "StripInvariantGroup should take and return the same type");
-
-  return CreateCall(FnStripInvariantGroup, {Ptr});
 }
 
 Value *IRBuilderBase::CreateVectorReverse(Value *V, const Twine &Name) {

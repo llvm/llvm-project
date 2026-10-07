@@ -450,6 +450,7 @@ cc_library(
     hdrs = glob([
         "include/mlir/IR/*.h",
     ]) + [
+        "include/mlir/Dialect/Utils/StaticValueUtils.h",
         "include/mlir/IR/PDLPatternMatch.h.inc",
         "include/mlir/Interfaces/CallInterfaces.h",
         "include/mlir/Interfaces/FoldInterfaces.h",
@@ -1781,6 +1782,7 @@ cc_library(
     ],
     hdrs = [
         "include/mlir/Dialect/AMDGPU/IR/AMDGPUDialect.h",
+        "include/mlir/Dialect/AMDGPU/IR/AMDGPUDialectDecl.h",
         "include/mlir/Dialect/AMDGPU/IR/AMDGPUEnums.h",
         "include/mlir/Dialect/AMDGPU/Utils/MemorySpaceUtils.h",
         "lib/Conversion/LLVMCommon/MemRefDescriptor.h",
@@ -1848,6 +1850,7 @@ cc_library(
         ":MemRefDialect",
         ":MemRefUtils",
         ":Pass",
+        ":ROCDLDialect",
         ":SCFDialect",
         ":Support",
         ":TransformUtils",
@@ -3580,7 +3583,10 @@ gentbl_cc_library(
 cc_library(
     name = "NVGPUDialect",
     srcs = ["lib/Dialect/NVGPU/IR/NVGPUDialect.cpp"],
-    hdrs = ["include/mlir/Dialect/NVGPU/IR/NVGPUDialect.h"],
+    hdrs = [
+        "include/mlir/Dialect/NVGPU/IR/NVGPUDialect.h",
+        "include/mlir/Dialect/NVGPU/IR/NVGPUDialectDecl.h",
+    ],
     includes = ["include"],
     deps = [
         ":BytecodeOpInterface",
@@ -4172,6 +4178,7 @@ cc_library(
         ":InferIntDivisibilityOpInterface",
         ":InferIntRangeCommon",
         ":InferIntRangeInterface",
+        ":InferTypeOpInterface",
         ":InliningUtils",
         ":LoopLikeInterface",
         ":MemRefDialect",
@@ -5149,6 +5156,7 @@ cc_library(
         ":DialectUtils",
         ":IR",
         ":IndexingMapOpInterface",
+        ":InferIntRangeInterface",
         ":InferTypeOpInterface",
         ":InliningUtils",
         ":MaskableOpInterface",
@@ -5854,6 +5862,7 @@ cc_library(
         ":NVGPUToNVVM",
         ":NVVMToLLVM",
         ":Pass",
+        ":ROCDLDialect",
         ":ReconcileUnrealizedCasts",
         ":SCFToControlFlow",
         ":Transforms",
@@ -6485,6 +6494,7 @@ cc_library(
     hdrs = [
         "include/mlir/Dialect/LLVMIR/BasicPtxBuilderInterface.h",
         "include/mlir/Dialect/LLVMIR/NVVMDialect.h",
+        "include/mlir/Dialect/LLVMIR/NVVMDialectDecl.h",
         "include/mlir/Dialect/LLVMIR/NVVMRequiresSMTraits.h",
         "lib/Dialect/LLVMIR/IR/NVVMOps.h",
     ],
@@ -6741,12 +6751,17 @@ cc_library(
     srcs = [
         "lib/Dialect/LLVMIR/IR/ROCDLDialect.cpp",
         "lib/Dialect/LLVMIR/IR/ROCDLOps.h",
+        "lib/Dialect/LLVMIR/IR/ROCDLTargetInfo.cpp",
     ] + gentbl_sharded_op_defs(
         name = "ROCDLOps_sharded_defs",
         shard_count = 8,
         source_file = "lib/Dialect/LLVMIR/IR/ROCDLOps.cpp",
     ),
-    hdrs = ["include/mlir/Dialect/LLVMIR/ROCDLDialect.h"],
+    hdrs = [
+        "include/mlir/Dialect/LLVMIR/ROCDLDialect.h",
+        "include/mlir/Dialect/LLVMIR/ROCDLDialectDecl.h",
+        "include/mlir/Dialect/LLVMIR/ROCDLTargetInfo.h",
+    ],
     includes = [
         "include",
         "lib/Dialect/LLVMIR",
@@ -6760,9 +6775,11 @@ cc_library(
         ":LLVMDialect",
         ":ROCDLOpsIncGen",
         ":SideEffectInterfaces",
+        ":Support",
         "//llvm:AsmParser",
         "//llvm:Core",
         "//llvm:Support",
+        "//llvm:TargetParser",
     ],
 )
 
@@ -7504,6 +7521,7 @@ cc_library(
     includes = ["include"],
     deps = [
         ":AMDGPUUtils",
+        ":ArithDialect",
         ":ConversionPassIncGen",
         ":DialectUtils",
         ":FuncDialect",
@@ -7543,7 +7561,9 @@ cc_library(
         ":LLVMCommonConversion",
         ":LLVMDialect",
         ":MathDialect",
+        ":MathTransforms",
         ":Pass",
+        ":TransformUtils",
         ":Transforms",
         ":VectorDialect",
         ":XeVMDialect",
@@ -7810,6 +7830,7 @@ cc_library(
     ],
     hdrs = [
         "include/mlir/Dialect/Tensor/IR/Tensor.h",
+        "include/mlir/Dialect/Tensor/IR/TensorDialect.h",
         "include/mlir/Dialect/Tensor/IR/ValueBoundsOpInterfaceImpl.h",
     ],
     includes = ["include"],
@@ -8690,6 +8711,7 @@ cc_library(
         ":ControlFlowDialect",
         ":ConversionPassIncGen",
         ":FuncDialect",
+        ":FunctionInterfaces",
         ":Pass",
         ":SCFDialect",
         ":TransformUtils",
@@ -8703,6 +8725,7 @@ cc_library(
     hdrs = ["include/mlir/Conversion/ControlFlowToLLVM/ControlFlowToLLVM.h"],
     includes = ["include"],
     deps = [
+        ":Analysis",
         ":ControlFlowDialect",
         ":ConversionPassIncGen",
         ":ConvertToLLVMInterface",
@@ -8937,6 +8960,7 @@ cc_library(
     hdrs = glob(["include/mlir/Conversion/ArithToLLVM/*.h"]),
     includes = ["include"],
     deps = [
+        ":Analysis",
         ":ArithAttrToLLVMConversion",
         ":ArithDialect",
         ":ArithTransforms",
@@ -9024,6 +9048,7 @@ cc_library(
     ],
     deps = [
         ":ConversionPassIncGen",
+        ":ConvertToEmitCInterface",
         ":EmitCCommon",
         ":EmitCDialect",
         ":MathDialect",
@@ -9496,6 +9521,7 @@ cc_library(
         ":LLVMIntrinsicConversionIncGen",
         ":Support",
         ":ToLLVMIRTranslation",
+        "//llvm:Analysis",
         "//llvm:Core",
         "//llvm:Support",
     ],
@@ -10031,6 +10057,7 @@ cc_library(
         ":LLVMToLLVMIRTranslation",
         ":LinalgTransformOps",
         ":MPIToLLVM",
+        ":MathToEmitC",
         ":MathToLLVM",
         ":MemRefToEmitC",
         ":MemRefToLLVM",
@@ -11117,6 +11144,7 @@ cc_library(
         ":ConversionPassIncGen",
         ":FuncDialect",
         ":FuncToLLVM",
+        ":FunctionInterfaces",
         ":IR",
         ":LLVMCommonConversion",
         ":LLVMDialect",
@@ -11127,6 +11155,7 @@ cc_library(
         ":OpenACCUtils",
         ":Pass",
         ":SideEffectInterfaces",
+        ":TransformUtils",
         ":Transforms",
         "//llvm:Support",
     ],
@@ -11702,6 +11731,7 @@ cc_library(
     ],
     hdrs = [
         "include/mlir/Dialect/Linalg/IR/Linalg.h",
+        "include/mlir/Dialect/Linalg/IR/LinalgDialect.h",
         "include/mlir/Dialect/Linalg/IR/ValueBoundsOpInterfaceImpl.h",
     ],
     includes = ["include"],
@@ -11887,6 +11917,7 @@ cc_library(
         ":MathDialect",
         ":MemRefDialect",
         ":MemRefTransforms",
+        ":MemRefUtils",
         ":Pass",
         ":RuntimeVerifiableOpInterface",
         ":SCFDialect",
@@ -12180,6 +12211,7 @@ cc_library(
     ]),
     includes = ["include"],
     deps = [
+        ":Analysis",
         ":ArithAttrToLLVMConversion",
         ":ArithDialect",
         ":ArithUtils",
@@ -13355,6 +13387,9 @@ cc_library(
     ]),
     hdrs = [
         "include/mlir/Dialect/Arith/IR/Arith.h",
+        "include/mlir/Dialect/Arith/IR/ArithAttributes.h",
+        "include/mlir/Dialect/Arith/IR/ArithDialect.h",
+        "include/mlir/Dialect/Arith/IR/ArithOpInterfaces.h",
     ],
     includes = ["include"],
     deps = [
@@ -13529,6 +13564,7 @@ cc_library(
         ":ArithDialect",
         ":BytecodeOpInterface",
         ":CommonFolders",
+        ":ConvertToEmitCInterface",
         ":ConvertToLLVMInterface",
         ":IR",
         ":InferTypeOpInterface",
@@ -13704,6 +13740,7 @@ cc_library(
     ),
     hdrs = [
         "include/mlir/Dialect/MemRef/IR/MemRef.h",
+        "include/mlir/Dialect/MemRef/IR/MemRefDialect.h",
         "include/mlir/Dialect/MemRef/IR/MemRefMemorySlot.h",
         "include/mlir/Dialect/MemRef/IR/MemoryAccessOpInterfaces.h",
         "include/mlir/Dialect/MemRef/IR/ValueBoundsOpInterfaceImpl.h",
@@ -13755,6 +13792,7 @@ cc_library(
         ":AffineDialect",
         ":ArithUtils",
         ":MemRefDialect",
+        ":SideEffectInterfaces",
         ":ViewLikeInterface",
         "//llvm:Support",
     ],
@@ -13806,6 +13844,7 @@ cc_library(
         ":MemRefDialect",
         ":MemRefPassIncGen",
         ":MemRefUtils",
+        ":MemorySlotInterfaces",
         ":Pass",
         ":RuntimeVerifiableOpInterface",
         ":SCFDialect",
@@ -14302,6 +14341,7 @@ cc_library(
     ],
     hdrs = [
         "include/mlir/Dialect/Bufferization/IR/Bufferization.h",
+        "include/mlir/Dialect/Bufferization/IR/BufferizationDialect.h",
         "include/mlir/Dialect/Bufferization/IR/DstBufferizableOpInterfaceImpl.h",
         "include/mlir/Dialect/Bufferization/IR/UnstructuredControlFlow.h",
         "include/mlir/Dialect/Bufferization/IR/ValueBoundsOpInterfaceImpl.h",
@@ -15119,6 +15159,7 @@ cc_library(
         ":LLVMCommonConversion",
         ":LLVMDialect",
         ":Pass",
+        ":SideEffectInterfaces",
         ":Support",
         ":TransformUtils",
         ":VectorDialect",

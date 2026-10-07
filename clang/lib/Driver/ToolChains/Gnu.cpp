@@ -445,7 +445,7 @@ void tools::gnutools::Linker::ConstructJob(Compilation &C, const JobAction &JA,
   if (Args.hasArg(options::OPT_Z_Xlinker__no_demangle))
     CmdArgs.push_back("--no-demangle");
 
-  bool NeedsSanitizerDeps = addSanitizerRuntimes(ToolChain, Args, CmdArgs);
+  bool NeedsSanitizerDeps = addSanitizerRuntimes(ToolChain, Args, CmdArgs, C);
   bool NeedsXRayDeps = addXRayRuntime(ToolChain, Args, CmdArgs);
   addLinkerCompressDebugSectionsOption(ToolChain, Args, CmdArgs);
   AddLinkerInputs(ToolChain, Inputs, Args, CmdArgs, JA);
@@ -548,8 +548,7 @@ void tools::gnutools::Linker::ConstructJob(Compilation &C, const JobAction &JA,
                                      options::OPT_fstack_protector_all,
                                      options::OPT_fstack_protector_strong))
           WantsSSP = !A->getOption().matches(options::OPT_fno_stack_protector);
-        if (WantsSSP &&
-            ToolChain.GetFilePath("libssp_nonshared.a") != "libssp_nonshared.a")
+        if (WantsSSP && ToolChain.GetFilePathIfExists("libssp_nonshared.a"))
           CmdArgs.push_back("-lssp_nonshared");
       }
 
@@ -2457,10 +2456,12 @@ void Generic_GCC::GCCInstallationDetector::AddDefaultGCCPrefixes(
 
   static const char *const RISCV32LibDirs[] = {"/lib32", "/lib"};
   static const char *const RISCV32Triples[] = {"riscv32-unknown-linux-gnu",
-                                               "riscv32-unknown-elf"};
+                                               "riscv32-unknown-elf",
+                                               "riscv32-redhat-linux"};
   static const char *const RISCV64LibDirs[] = {"/lib64", "/lib"};
   static const char *const RISCV64Triples[] = {"riscv64-unknown-linux-gnu",
-                                               "riscv64-unknown-elf"};
+                                               "riscv64-unknown-elf",
+                                               "riscv64-redhat-linux"};
 
   static const char *const RISCV32beLibDirs[] = {"/lib32", "/lib"};
   static const char *const RISCV32beTriples[] = {"riscv32be-unknown-linux-gnu",
