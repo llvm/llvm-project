@@ -542,8 +542,8 @@ ScheduleDAGInstrs *
 AArch64TargetMachine::createMachineScheduler(MachineSchedContext *C) const {
   const AArch64Subtarget &ST = C->MF->getSubtarget<AArch64Subtarget>();
   ScheduleDAGMILive *DAG = createSchedLive(C);
-  DAG->addMutation(createLoadClusterDAGMutation(DAG->TII, DAG->TRI));
-  DAG->addMutation(createStoreClusterDAGMutation(DAG->TII, DAG->TRI));
+  DAG->addMutation(createLoadClusterDAGMutation(DAG->TII));
+  DAG->addMutation(createStoreClusterDAGMutation(DAG->TII));
   if (ST.hasFusion())
     DAG->addMutation(createAArch64MacroFusionDAGMutation());
   if (ST.hasSME() && ST.isStreaming())
