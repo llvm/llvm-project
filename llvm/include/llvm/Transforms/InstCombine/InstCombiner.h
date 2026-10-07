@@ -123,7 +123,7 @@ public:
                const DataLayout &DL,
                ReversePostOrderTraversal<BasicBlock *> &RPOT)
       : TTIForTargetIntrinsicsOnly(TTI),
-        Builder(F.getContext(), TargetFolder(DL),
+        Builder(*F.getParent(), TargetFolder(DL),
                 IRBuilderInstCombineInserter(*this)),
         Worklist(Worklist), F(F), MinimizeSize(F.hasMinSize()), AA(AA), AC(AC),
         TLI(TLI), DT(DT), DL(DL),
@@ -362,6 +362,7 @@ public:
 
   void addToWorklist(Instruction *I) { Worklist.push(I); }
 
+  Module &getModule() const { return *F.getParent(); }
   AssumptionCache &getAssumptionCache() const { return AC; }
   TargetLibraryInfo &getTargetLibraryInfo() const { return TLI; }
   DominatorTree &getDominatorTree() const { return DT; }

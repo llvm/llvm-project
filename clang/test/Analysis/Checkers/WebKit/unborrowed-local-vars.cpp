@@ -523,7 +523,6 @@ void array_loop() {
 
 void temporary_range_loop() {
   for (char &c : makeVector()) {
-    // expected-warning@-1{{Local variable 'c' is a loan on CanBorrow type 'Vector<char>' that is not guarded by a Borrow [alpha.webkit.UnborrowedLocalVarsChecker]}}
     someFunction();
     (void)c;
   }
@@ -647,6 +646,18 @@ void borrowed_temporary_is_silent() {
     use(name);
   }
 }
+
+struct Entry {
+  Vector<Entry> *parent;
+};
+Vector<Entry> copyEntries();
+
+void element_points_back_to_container() {
+  for (Entry &entry : copyEntries()) {
+    someFunction();
+    (void)entry;
+  }
+}
 } // namespace iterator_reach_back
 
 namespace dependent_initializers {
@@ -699,3 +710,14 @@ void borrow_temporary_dies_with_the_statement(Vector<char> &vec) {
 }
 
 } // namespace short_lived_temporaries
+
+namespace prvalue_temporary {
+
+void loan_outliving_temporary() {
+  char &c = makeVector()[0];
+  // expected-warning@-1{{temporary bound to local reference 'c' will be destroyed at the end of the full-expression}}
+  someFunction();
+  (void)c;
+}
+
+} // namespace prvalue_temporary
