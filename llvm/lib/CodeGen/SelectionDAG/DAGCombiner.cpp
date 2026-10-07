@@ -18261,8 +18261,7 @@ SDValue DAGCombiner::CombineConsecutiveLoads(SDNode *N, EVT VT) {
     return DAG.getLoad(
         VT, SDLoc(N), LD1->getChain(), LD1->getBasePtr(), LD1->getPointerInfo(),
         LD1->getAlign(), MachineMemOperand::MONone,
-        MMOMetadata(AAMDNodes(), nullptr,
-                    getCommonMemCacheHint({LD1, LD2})));
+        MMOMetadata(AAMDNodes(), nullptr, getCommonMemCacheHint({LD1, LD2})));
 
   return SDValue();
 }
@@ -23311,8 +23310,8 @@ bool DAGCombiner::mergeStoresOfConstantsOrVecElts(
   std::optional<MachineMemOperand::Flags> Flags;
   AAMDNodes AAInfo;
   auto GetMemNode = [](const MemOpLink &MemOp) { return MemOp.MemNode; };
-  auto StoreMemNodes = map_range(
-      ArrayRef(StoreNodes).take_front(NumStores), GetMemNode);
+  auto StoreMemNodes =
+      map_range(ArrayRef(StoreNodes).take_front(NumStores), GetMemNode);
   const MDNode *MemCacheHint = getCommonMemCacheHint(StoreMemNodes);
   for (unsigned I = 0; I != NumStores; ++I) {
     StoreSDNode *St = cast<StoreSDNode>(StoreNodes[I].MemNode);
