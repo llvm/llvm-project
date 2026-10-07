@@ -19,6 +19,7 @@
 #include "flang/Lower/ConvertVariable.h"
 #include "flang/Lower/CustomIntrinsicCall.h"
 #include "flang/Lower/HlfirIntrinsics.h"
+#include "flang/Lower/OpenACC.h"
 #include "flang/Lower/PFTBuilder.h"
 #include "flang/Lower/StatementContext.h"
 #include "flang/Lower/SymbolMap.h"
@@ -1462,8 +1463,8 @@ static PreparedDummyArgument preparePresentUserCallActualArgument(
   // Helpers to generate hlfir.copy_in operation and register the related
   // hlfir.copy_out creation.
   auto genCopyIn = [&](hlfir::Entity var, bool doCopyOut) -> hlfir::Entity {
-    auto baseBoxTy = mlir::dyn_cast<fir::BaseBoxType>(var.getType());
-    assert(baseBoxTy && "expect non simply contiguous variables to be boxes");
+    assert(mlir::dyn_cast<fir::BaseBoxType>(var.getType()) &&
+           "expect non simply contiguous variables to be boxes");
     mlir::Value tempBox = builder.createTemporary(loc, var.getType());
     auto copyIn = hlfir::CopyInOp::create(builder, loc, var, tempBox,
                                           /*var_is_present=*/mlir::Value{});
@@ -3337,8 +3338,13 @@ genProcedureRef(CallContext &callContext) {
       // binding must be in place for this lowering, which is the only one of
       // the actual argument: lowering it again would duplicate any side
       // effect of its subscripts.
+      // Inside OpenACC compute constructs, keep the ordinary binding so that
+      // calls use the same mapping as other references, including any mapping
+      // or privatization on the compute construct itself. The OpenACC data
+      // legalization handles references to enclosing data constructs.
       std::optional<Fortran::lower::SymMapScope> deviceScope;
       if (!isKernelLaunch && isCUDADeviceDummy(arg.characteristics) &&
+          !Fortran::lower::isInsideOpenACCComputeConstruct(builder) &&
           Fortran::evaluate::IsVariable(*expr)) {
         deviceScope.emplace(callContext.symMap);
         if (!mapOpenACCDeviceBindings(*expr, callContext.symMap))

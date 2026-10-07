@@ -29,6 +29,7 @@
 #include "MemberPointer.h"
 #include "PrimType.h"
 #include "Program.h"
+#include "Reflect.h"
 #include "State.h"
 #include "clang/AST/ASTContext.h"
 #include "clang/AST/Expr.h"
@@ -104,8 +105,7 @@ bool CheckDynamicMemoryAllocation(InterpState &S, CodePtr OpPC);
 
 /// Check the source of the pointer passed to delete/delete[] has actually
 /// been heap allocated by us.
-bool CheckDeleteSource(InterpState &S, CodePtr OpPC, const Expr *Source,
-                       const Pointer &Ptr);
+bool CheckDeleteSource(InterpState &S, CodePtr OpPC, const Pointer &Ptr);
 
 /// Sets the given integral value to the pointer, which is of
 /// a std::{weak,partial,strong}_ordering type.
@@ -4184,6 +4184,12 @@ bool DiagTypeid(InterpState &S, CodePtr OpPC);
 inline bool CheckDestruction(InterpState &S, CodePtr OpPC) {
   const auto &Ptr = S.Stk.peek<Pointer>();
   return checkDestructor(S, OpPC, Ptr);
+}
+
+inline bool ReflectValue(InterpState &S, CodePtr OpPC, ReflectionKind Kind,
+                         const void *Operand) {
+  S.Stk.push<Reflect>(Kind, Operand);
+  return true;
 }
 
 inline bool IsBaseClass(InterpState &S) {

@@ -383,12 +383,10 @@ struct MTBUFInfo {
 
 struct SMInfo {
   uint32_t Opcode;
-  bool IsBuffer;
 };
 
 struct VOPInfo {
   uint32_t Opcode;
-  bool IsSingle;
 };
 
 struct VOPC64DPPInfo {
@@ -418,7 +416,6 @@ struct VOPDInfo {
 
 struct VOPTrue16Info {
   uint32_t Opcode;
-  bool IsTrue16;
 };
 
 struct VOPDXYInfo {
@@ -432,7 +429,6 @@ struct VOPDXYInfo {
 
 struct DPMACCInstructionInfo {
   uint32_t Opcode;
-  bool IsDPMACCInstruction;
 };
 
 struct FP4FP8DstByteSelInfo {
@@ -556,23 +552,19 @@ bool getMUBUFTfe(unsigned Opc) {
 }
 
 bool getSMEMIsBuffer(unsigned Opc) {
-  const SMInfo *Info = getSMEMOpcodeHelper(Opc);
-  return Info && Info->IsBuffer;
+  return isSMEMOpcodeHelper(Opc) != nullptr;
 }
 
 bool getVOP1IsSingle(unsigned Opc) {
-  const VOPInfo *Info = getVOP1OpcodeHelper(Opc);
-  return !Info || Info->IsSingle;
+  return isVOP1SingleOpcodeHelper(Opc) != nullptr;
 }
 
 bool getVOP2IsSingle(unsigned Opc) {
-  const VOPInfo *Info = getVOP2OpcodeHelper(Opc);
-  return !Info || Info->IsSingle;
+  return isVOP2SingleOpcodeHelper(Opc) != nullptr;
 }
 
 bool getVOP3IsSingle(unsigned Opc) {
-  const VOPInfo *Info = getVOP3OpcodeHelper(Opc);
-  return !Info || Info->IsSingle;
+  return isVOP3SingleOpcodeHelper(Opc) != nullptr;
 }
 
 bool isVOPC64DPP(unsigned Opc) {
@@ -703,7 +695,7 @@ CanBeVOPD getCanBeVOPD(unsigned Opc, unsigned EncodingFamily, bool VOPD3) {
     return {false, false};
   unsigned Key =
       (Info->VOPDOp << 5) | (EncodingFamily << 1) | (VOPD3 ? 1u : 0u);
-  const VOPDXYInfo *XYInfo = getVOPDXYInfo(Key);
+  const VOPDXYInfo *XYInfo = getVOPDXYInfo(static_cast<uint16_t>(Key));
   if (!XYInfo)
     return {false, false};
   return {XYInfo->IsX, XYInfo->IsY};
@@ -832,10 +824,7 @@ unsigned getTemporalHintType(const MCInstrDesc TID) {
   return CPol::TH_TYPE_LOAD;
 }
 
-bool isTrue16Inst(unsigned Opc) {
-  const VOPTrue16Info *Info = getTrue16OpcodeHelper(Opc);
-  return Info && Info->IsTrue16;
-}
+bool isTrue16Inst(unsigned Opc) { return isTrue16Opcode(Opc) != nullptr; }
 
 FPType getFPDstSelType(unsigned Opc) {
   const FP4FP8DstByteSelInfo *Info = getFP4FP8DstByteSelHelper(Opc);
@@ -850,8 +839,7 @@ FPType getFPDstSelType(unsigned Opc) {
 }
 
 bool isDPMACCInstruction(unsigned Opc) {
-  const DPMACCInstructionInfo *Info = getDPMACCInstructionHelper(Opc);
-  return Info && Info->IsDPMACCInstruction;
+  return isDPMACCInstructionHelper(Opc) != nullptr;
 }
 
 unsigned mapWMMA2AddrTo3AddrOpcode(unsigned Opc) {
@@ -890,8 +878,9 @@ int getVOPDFull(unsigned OpX, unsigned OpY, unsigned EncodingFamily,
                 bool VOPD3) {
   bool IsConvertibleToBitOp = VOPD3 ? getBitOp2(OpY) : 0;
   OpY = IsConvertibleToBitOp ? (unsigned)AMDGPU::V_BITOP3_B32_e64 : OpY;
-  const VOPDInfo *Info =
-      getVOPDInfoFromComponentOpcodes(OpX, OpY, EncodingFamily, VOPD3);
+  const VOPDInfo *Info = getVOPDInfoFromComponentOpcodes(
+      static_cast<uint8_t>(OpX), static_cast<uint8_t>(OpY),
+      static_cast<uint8_t>(EncodingFamily), VOPD3);
   return Info ? Info->Opcode : -1;
 }
 
@@ -1909,7 +1898,7 @@ static int encodeCustomOperandVal(const CustomOperandVal &Op,
                                   int64_t InputVal) {
   if (InputVal < 0 || InputVal > Op.Max)
     return OPR_VAL_INVALID;
-  return Op.encode(InputVal);
+  return Op.encode(static_cast<unsigned>(InputVal));
 }
 
 static int encodeCustomOperand(const CustomOperandVal *Opr, int Size,
@@ -2335,7 +2324,7 @@ bool msgSupportsStream(int64_t MsgId, int64_t OpId,
 
 void decodeMsg(unsigned Val, uint16_t &MsgId, uint16_t &OpId,
                uint16_t &StreamId, const MCSubtargetInfo &STI) {
-  MsgId = Val & getMsgIdMask(STI);
+  MsgId = static_cast<uint16_t>(Val & getMsgIdMask(STI));
   if (isGFX11Plus(STI)) {
     OpId = 0;
     StreamId = 0;
@@ -2383,7 +2372,8 @@ bool msgDoesNotUseM0(int64_t MsgId, const MCSubtargetInfo &STI) {
 //===----------------------------------------------------------------------===//
 
 unsigned getInitialPSInputAddr(const Function &F) {
-  return F.getFnAttributeAsParsedInteger("InitialPSInputAddr", 0);
+  return static_cast<unsigned>(
+      F.getFnAttributeAsParsedInteger("InitialPSInputAddr", 0));
 }
 
 bool getHasColorExport(const Function &F) {
@@ -2398,8 +2388,8 @@ bool getHasDepthExport(const Function &F) {
 }
 
 unsigned getDynamicVGPRBlockSize(const Function &F) {
-  unsigned BlockSize =
-      F.getFnAttributeAsParsedInteger("amdgpu-dynamic-vgpr-block-size", 0);
+  unsigned BlockSize = static_cast<unsigned>(
+      F.getFnAttributeAsParsedInteger("amdgpu-dynamic-vgpr-block-size", 0));
 
   if (BlockSize == 16 || BlockSize == 32)
     return BlockSize;
@@ -3475,7 +3465,7 @@ MCRegister getVGPRWithMSBs(MCRegister Reg, unsigned MSBs,
 }
 
 static std::optional<unsigned>
-convertSetRegImmToVgprMSBs(unsigned Imm, unsigned Simm16,
+convertSetRegImmToVgprMSBs(uint64_t Imm, uint64_t Simm16,
                            bool HasSetregVGPRMSBFixup) {
   constexpr unsigned VGPRMSBShift =
       llvm::countr_zero_constexpr<unsigned>(AMDGPU::Hwreg::DST_VGPR_MSB);
