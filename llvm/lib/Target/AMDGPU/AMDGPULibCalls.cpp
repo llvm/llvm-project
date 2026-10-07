@@ -115,9 +115,6 @@ private:
   bool fold_read_write_pipe(CallInst *CI, IRBuilder<> &B,
                             const FuncInfo &FInfo);
 
-  // Get a scalar native builtin single argument FP function
-  FunctionCallee getNativeFunction(Module *M, const FuncInfo &FInfo);
-
   /// Substitute a call to a known libcall with an intrinsic call. If \p
   /// AllowMinSize is true, allow the replacement in a minsize function.
   bool shouldReplaceLibcallWithIntrinsic(const CallInst *CI,
@@ -1607,16 +1604,6 @@ bool AMDGPULibCalls::tryOptimizePow(FPMathOperator *FPOp, IRBuilder<> &B,
   }
 
   return expandFastPow(FPOp, B, PowKind::Pow);
-}
-
-// Get a scalar native builtin single argument FP function
-FunctionCallee AMDGPULibCalls::getNativeFunction(Module *M,
-                                                 const FuncInfo &FInfo) {
-  if (getArgType(FInfo) == AMDGPULibFunc::F64 || !HasNative(FInfo.getId()))
-    return nullptr;
-  FuncInfo nf = FInfo;
-  nf.setPrefix(AMDGPULibFunc::NATIVE);
-  return getFunction(M, nf);
 }
 
 // Some library calls are just wrappers around llvm intrinsics, but compiled
