@@ -32,12 +32,19 @@
 #include "llvm/IR/Module.h"
 #include "llvm/MC/MCInst.h"
 #include "llvm/MC/MCStreamer.h"
+#include "llvm/Support/CommandLine.h"
 #include "llvm/Support/ErrorHandling.h"
 #include "llvm/Support/MathExtras.h"
 #include "llvm/Support/Path.h"
 #include <cassert>
 
 using namespace llvm;
+
+static cl::opt<bool> SPIRVDebugScopeForwardRefs(
+    "spirv-debug-scope-forward-refs",
+    cl::desc("Forward-reference debug scopes when "
+             "SPV_KHR_relaxed_extended_instruction is enabled"),
+    cl::init(false));
 
 namespace {
 
@@ -454,8 +461,10 @@ void SPIRVNonSemanticDebugHandler::prepareModuleOutput(
   // Add the extension to requirements so OpExtension is output.
   MAI.Reqs.addExtension(SPIRV::Extension::SPV_KHR_non_semantic_info);
 
-  HasRelaxedExtInst = ST.canUseExtension(
-      SPIRV::Extension::SPV_KHR_relaxed_extended_instruction);
+  HasRelaxedExtInst =
+      SPIRVDebugScopeForwardRefs &&
+      ST.canUseExtension(
+          SPIRV::Extension::SPV_KHR_relaxed_extended_instruction);
   if (HasRelaxedExtInst)
     MAI.Reqs.addExtension(
         SPIRV::Extension::SPV_KHR_relaxed_extended_instruction);
@@ -793,11 +802,10 @@ MCRegister SPIRVNonSemanticDebugHandler::findOrEmitOpTypeInt32(
 
 // Each node emits its dependencies first. E.g. for `void f() { struct L; }`,
 // node L emits f, then L. Entering a scope reserves its result id. For
-// `struct S { S *p; }`, S* is a back edge, and without
-// SPV_KHR_relaxed_extended_instruction the edge is dropped and the reserved id
-// stays unused. With it, that id is used with OpExtInstWithForwardRefsKHR.
-// A later failure defines it as DebugInfoNone only when an emitted instruction
-// already named it.
+// `struct S { S *p; }`, S* is a back edge. When forward references are
+// enabled, that id is used with OpExtInstWithForwardRefsKHR, and a later
+// failure defines it as DebugInfoNone only when an emitted instruction already
+// named it. Otherwise the edge is dropped and the reserved id stays unused.
 auto SPIRVNonSemanticDebugHandler::getOrCreateDebugScope(const DIScope *S)
     -> EmitResult<MCRegister> {
   if (!S || FailedScopes.contains(S))
