@@ -1506,7 +1506,7 @@ static Intrinsic::ID shouldUpgradeNVPTXBF16Intrinsic(StringRef Name) {
 }
 
 static bool isLegacyNVPTXBF16IntSignature(Function *F, Intrinsic::ID IID) {
-  FunctionType *NewFnTy = Intrinsic::getType(F->getContext(), IID);
+  FunctionType *NewFnTy = Intrinsic::getType(F->getParent(), IID);
   FunctionType *OldFnTy = F->getFunctionType();
   auto IsOldBF16StorageTy = [](Type *OldTy, Type *NewTy) {
     return OldTy->getScalarType()->isIntegerTy() &&
@@ -1685,7 +1685,8 @@ getFullArgCountForDefaultArgUpgrade(Function *F, Intrinsic::ID IID,
     return 0;
 
   unsigned NumMissingTrailingParams = FullArgCount - F->arg_size();
-  if (!Intrinsic::isSignatureValid(IID, F->getFunctionType(), OverloadTys,
+  if (!Intrinsic::isSignatureValid(F->getDataLayout(), IID,
+                                   F->getFunctionType(), OverloadTys,
                                    NumMissingTrailingParams))
     return 0;
 
@@ -2480,7 +2481,8 @@ bool llvm::UpgradeIntrinsicFunction(Function *F, Function *&NewFn,
   if (Intrinsic::ID id = F->getIntrinsicID()) {
     // Only do this if the intrinsic signature is valid.
     SmallVector<Type *> OverloadTys;
-    if (Intrinsic::isSignatureValid(id, F->getFunctionType(), OverloadTys))
+    if (Intrinsic::isSignatureValid(F->getDataLayout(), id,
+                                    F->getFunctionType(), OverloadTys))
       F->setAttributes(
           Intrinsic::getAttributes(F->getContext(), id, F->getFunctionType()));
   }

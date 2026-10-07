@@ -978,7 +978,8 @@ Value *IRBuilderBase::CreateIntrinsic(Intrinsic::ID ID,
                                       FMFSource FMFSource, const Twine &Name,
                                       ArrayRef<OperandBundleDef> OpBundles,
                                       function_ref<void(CallInst *)> SetFn) {
-  Type *RetTy = Intrinsic::getType(Context, ID, OverloadTypes)->getReturnType();
+  Module *M = BB->getModule();
+  Type *RetTy = Intrinsic::getType(M, ID, OverloadTypes)->getReturnType();
   if (Value *V = Folder.FoldIntrinsic(ID, Args, RetTy, FMFSource.get(FMF),
                                       GetInsertBlock()->getParent()))
     return V;

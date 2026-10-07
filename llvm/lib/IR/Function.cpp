@@ -510,7 +510,12 @@ Function::Function(FunctionType *Ty, LinkageTypes Linkage, unsigned AddrSpace,
     // Don't set the attributes if the intrinsic signature is invalid. This
     // case will either be auto-upgraded or fail verification.
     SmallVector<Type *> OverloadTys;
-    if (!Intrinsic::isSignatureValid(IntID, Ty, OverloadTys))
+    // DirectX backend is the only place where intrinsics are created unattached
+    // to a module. They have invalid signatures though, so skip the check.
+    if (!ParentModule)
+      return;
+    if (!Intrinsic::isSignatureValid(ParentModule->getDataLayout(), IntID, Ty,
+                                     OverloadTys))
       return;
 
     setAttributes(Intrinsic::getAttributes(getContext(), IntID, Ty));

@@ -39,7 +39,7 @@
 using namespace llvm;
 
 // Forward declaration of static functions.
-static bool isSignatureValid(FunctionType *FTy,
+static bool isSignatureValid(const DataLayout &DL, FunctionType *FTy,
                              ArrayRef<Intrinsic::IITDescriptor> &Infos,
                              unsigned NumArgs, bool IsVarArg,
                              SmallVectorImpl<Type *> &OverloadTys,
@@ -191,9 +191,9 @@ static std::string getIntrinsicNameImpl(Intrinsic::ID Id,
   if (HasUnnamedType) {
     assert(M && "unnamed types need a module");
     if (!FT)
-      FT = Intrinsic::getType(M->getContext(), Id, OverloadTys);
+      FT = Intrinsic::getType(M, Id, OverloadTys);
     else
-      assert(FT == Intrinsic::getType(M->getContext(), Id, OverloadTys) &&
+      assert(FT == Intrinsic::getType(M, Id, OverloadTys) &&
              "Provided FunctionType must match arguments");
     return M->getUniqueIntrinsicName(Result, Id, FT);
   }
@@ -241,6 +241,9 @@ DecodeIITType(unsigned &NextElt, ArrayRef<unsigned char> Infos,
   switch (Info) {
   case IIT_Done:
     OutputTable.push_back(IITDescriptor::get(IITDescriptor::Void, 0));
+    return;
+  case IIT_BYTE:
+    OutputTable.push_back(IITDescriptor::get(IITDescriptor::Byte, 0));
     return;
   case IIT_VARARG:
     OutputTable.push_back(IITDescriptor::get(IITDescriptor::VarArg, 0));
@@ -536,8 +539,8 @@ Intrinsic::getIntrinsicInfoTableEntries(ID id,
 }
 
 static Type *DecodeFixedType(ArrayRef<Intrinsic::IITDescriptor> &Infos,
-                             ArrayRef<Type *> OverloadTys,
-                             LLVMContext &Context) {
+                             ArrayRef<Type *> OverloadTys, LLVMContext &Context,
+                             const DataLayout &DL) {
   using namespace Intrinsic;
 
   IITDescriptor D = Infos.consume_front();
@@ -545,6 +548,8 @@ static Type *DecodeFixedType(ArrayRef<Intrinsic::IITDescriptor> &Infos,
   switch (D.Kind) {
   case IITDescriptor::Void:
     return Type::getVoidTy(Context);
+  case IITDescriptor::Byte:
+    return Type::getIntNTy(Context, DL.getByteWidth());
   case IITDescriptor::MMX:
     return llvm::FixedVectorType::get(llvm::IntegerType::get(Context, 64), 1);
   case IITDescriptor::AMX:
@@ -574,14 +579,14 @@ static Type *DecodeFixedType(ArrayRef<Intrinsic::IITDescriptor> &Infos,
   case IITDescriptor::Integer:
     return IntegerType::get(Context, D.IntegerWidth);
   case IITDescriptor::Vector:
-    return VectorType::get(DecodeFixedType(Infos, OverloadTys, Context),
+    return VectorType::get(DecodeFixedType(Infos, OverloadTys, Context, DL),
                            D.VectorWidth);
   case IITDescriptor::Pointer:
     return PointerType::get(Context, D.PointerAddressSpace);
   case IITDescriptor::Struct: {
     SmallVector<Type *, 8> Elts;
     for (unsigned i = 0, e = D.StructNumElements; i != e; ++i)
-      Elts.push_back(DecodeFixedType(Infos, OverloadTys, Context));
+      Elts.push_back(DecodeFixedType(Infos, OverloadTys, Context, DL));
     return StructType::get(Context, Elts);
   }
   // For any overload type or partially dependent type, substitute it with the
@@ -608,7 +613,7 @@ static Type *DecodeFixedType(ArrayRef<Intrinsic::IITDescriptor> &Infos,
         cast<VectorType>(OverloadTys[D.getOverloadIndex()]),
         D.getVectorDivisor());
   case IITDescriptor::SameVecWidth: {
-    Type *EltTy = DecodeFixedType(Infos, OverloadTys, Context);
+    Type *EltTy = DecodeFixedType(Infos, OverloadTys, Context, DL);
     Type *Ty = OverloadTys[D.getOverloadIndex()];
     if (auto *VTy = dyn_cast<VectorType>(Ty))
       return VectorType::get(EltTy, VTy->getElementCount());
@@ -634,16 +639,18 @@ static Type *DecodeFixedType(ArrayRef<Intrinsic::IITDescriptor> &Infos,
   llvm_unreachable("unhandled");
 }
 
-FunctionType *Intrinsic::getType(LLVMContext &Context, ID id,
+FunctionType *Intrinsic::getType(const Module *M, ID id,
                                  ArrayRef<Type *> OverloadTys) {
   SmallVector<IITDescriptor, 8> Table;
   auto [TableRef, _, IsVarArg] = getIntrinsicInfoTableEntries(id, Table);
 
-  Type *ResultTy = DecodeFixedType(TableRef, OverloadTys, Context);
+  Type *ResultTy = DecodeFixedType(TableRef, OverloadTys, M->getContext(),
+                                   M->getDataLayout());
 
   SmallVector<Type *, 8> ArgTys;
   while (!TableRef.empty())
-    ArgTys.push_back(DecodeFixedType(TableRef, OverloadTys, Context));
+    ArgTys.push_back(DecodeFixedType(TableRef, OverloadTys, M->getContext(),
+                                     M->getDataLayout()));
   return FunctionType::get(ResultTy, ArgTys, IsVarArg);
 }
 
@@ -803,7 +810,7 @@ Function *Intrinsic::getOrInsertDeclaration(Module *M, ID id,
                                             ArrayRef<Type *> OverloadTys) {
   // There can never be multiple globals with the same name of different types,
   // because intrinsics must be a specific type.
-  FunctionType *FT = getType(M->getContext(), id, OverloadTys);
+  FunctionType *FT = getType(M, id, OverloadTys);
   return getOrInsertIntrinsicDeclarationImpl(M, id, OverloadTys, FT);
 }
 
@@ -820,8 +827,9 @@ Function *Intrinsic::getOrInsertDeclaration(Module *M, ID id, Type *RetTy,
 
   // Automatically determine the overloaded types.
   SmallVector<Type *, 4> OverloadTys;
-  [[maybe_unused]] bool IsValid = ::isSignatureValid(
-      FTy, TableRef, NumArgs, IsVarArg, OverloadTys, nulls());
+  [[maybe_unused]] bool IsValid =
+      ::isSignatureValid(M->getDataLayout(), FTy, TableRef, NumArgs, IsVarArg,
+                         OverloadTys, nulls());
   assert(IsValid && "intrinsic signature mismatch");
   return getOrInsertIntrinsicDeclarationImpl(M, id, OverloadTys, FTy);
 }
@@ -941,7 +949,8 @@ using DeferredIntrinsicMatchInfo =
     std::tuple<Type *, ArrayRef<Intrinsic::IITDescriptor>, MatchPosition>;
 
 static bool
-matchIntrinsicType(Type *Ty, ArrayRef<Intrinsic::IITDescriptor> &Infos,
+matchIntrinsicType(const DataLayout &DL, Type *Ty,
+                   ArrayRef<Intrinsic::IITDescriptor> &Infos,
                    MatchPosition Position, SmallVectorImpl<Type *> &OverloadTys,
                    SmallVectorImpl<DeferredIntrinsicMatchInfo> &DeferredChecks,
                    bool IsDeferredCheck, raw_ostream &OS) {
@@ -1012,6 +1021,8 @@ matchIntrinsicType(Type *Ty, ArrayRef<Intrinsic::IITDescriptor> &Infos,
     assert(Position.IsRet && Position.NumIndices == 0 &&
            "void descriptor expected only for return type");
     return PrintMsg(Ty->isVoidTy(), "void");
+  case IITDescriptor::Byte:
+    return PrintMsg(Ty->isIntegerTy(DL.getByteWidth()), "byte-sized integer");
   case IITDescriptor::MMX: {
     FixedVectorType *VT = dyn_cast<FixedVectorType>(Ty);
     return PrintMsg(VT && VT->getNumElements() == 1 &&
@@ -1061,7 +1072,7 @@ matchIntrinsicType(Type *Ty, ArrayRef<Intrinsic::IITDescriptor> &Infos,
     if (HasError)
       return true;
     Position.push_vector_element();
-    return matchIntrinsicType(VT->getElementType(), Infos, Position,
+    return matchIntrinsicType(DL, VT->getElementType(), Infos, Position,
                               OverloadTys, DeferredChecks, IsDeferredCheck, OS);
   }
   case IITDescriptor::Pointer: {
@@ -1084,8 +1095,8 @@ matchIntrinsicType(Type *Ty, ArrayRef<Intrinsic::IITDescriptor> &Infos,
 
     for (const auto &[Idx, ETy] : llvm::enumerate(ST->elements())) {
       Position.push_struct_element(Idx);
-      if (matchIntrinsicType(ETy, Infos, Position, OverloadTys, DeferredChecks,
-                             IsDeferredCheck, OS))
+      if (matchIntrinsicType(DL, ETy, Infos, Position, OverloadTys,
+                             DeferredChecks, IsDeferredCheck, OS))
         return true;
       Position.pop_index();
     }
@@ -1239,7 +1250,7 @@ matchIntrinsicType(Type *Ty, ArrayRef<Intrinsic::IITDescriptor> &Infos,
       EltTy = ThisArgVecType->getElementType();
       Position.push_vector_element();
     }
-    return matchIntrinsicType(EltTy, Infos, Position, OverloadTys,
+    return matchIntrinsicType(DL, EltTy, Infos, Position, OverloadTys,
                               DeferredChecks, IsDeferredCheck, OS);
   }
   case IITDescriptor::VecOfAnyPtrsToElt: {
@@ -1345,7 +1356,7 @@ matchIntrinsicType(Type *Ty, ArrayRef<Intrinsic::IITDescriptor> &Infos,
 ///
 /// If the type is not valid, returns false and prints an error message to
 /// \p OS.
-static bool isSignatureValid(FunctionType *FTy,
+static bool isSignatureValid(const DataLayout &DL, FunctionType *FTy,
                              ArrayRef<Intrinsic::IITDescriptor> &Infos,
                              unsigned NumArgs, bool IsVarArg,
                              SmallVectorImpl<Type *> &OverloadTys,
@@ -1359,7 +1370,7 @@ static bool isSignatureValid(FunctionType *FTy,
   Pos.IsRet = true;
   Pos.Num = 0;
 
-  if (matchIntrinsicType(FTy->getReturnType(), Infos, Pos, OverloadTys,
+  if (matchIntrinsicType(DL, FTy->getReturnType(), Infos, Pos, OverloadTys,
                          DeferredChecks, false, OS))
     return false;
 
@@ -1373,14 +1384,14 @@ static bool isSignatureValid(FunctionType *FTy,
   Pos.IsRet = false;
   for (const auto &[Idx, Ty] : llvm::enumerate(FTy->params())) {
     Pos.Num = Idx;
-    if (matchIntrinsicType(Ty, Infos, Pos, OverloadTys, DeferredChecks, false,
-                           OS))
+    if (matchIntrinsicType(DL, Ty, Infos, Pos, OverloadTys, DeferredChecks,
+                           false, OS))
       return false;
   }
 
   for (unsigned I = 0, E = DeferredChecks.size(); I != E; ++I) {
     auto &[DefTy, DefInfos, DefPosition] = DeferredChecks[I];
-    if (matchIntrinsicType(DefTy, DefInfos, DefPosition, OverloadTys,
+    if (matchIntrinsicType(DL, DefTy, DefInfos, DefPosition, OverloadTys,
                            DeferredChecks, true, OS))
       return false;
   }
@@ -1420,14 +1431,16 @@ bool Intrinsic::hasStructReturnType(ID id) {
   return !Table.empty() && Table[0].Kind == IITDescriptor::Struct;
 }
 
-bool Intrinsic::isSignatureValid(Intrinsic::ID ID, FunctionType *FT,
+bool Intrinsic::isSignatureValid(const DataLayout &DL, Intrinsic::ID ID,
+                                 FunctionType *FT,
                                  SmallVectorImpl<Type *> &OverloadTys,
                                  raw_ostream &OS) {
-  return isSignatureValid(ID, FT, OverloadTys,
+  return isSignatureValid(DL, ID, FT, OverloadTys,
                           /*NumMissingTrailingParams=*/0, OS);
 }
 
-bool Intrinsic::isSignatureValid(Intrinsic::ID ID, FunctionType *FT,
+bool Intrinsic::isSignatureValid(const DataLayout &DL, Intrinsic::ID ID,
+                                 FunctionType *FT,
                                  SmallVectorImpl<Type *> &OverloadTys,
                                  unsigned NumMissingTrailingParams,
                                  raw_ostream &OS) {
@@ -1437,15 +1450,15 @@ bool Intrinsic::isSignatureValid(Intrinsic::ID ID, FunctionType *FT,
   SmallVector<Intrinsic::IITDescriptor, 8> Table;
   auto [TableRef, NumArgs, IsVarArg] = getIntrinsicInfoTableEntries(ID, Table);
 
-  return ::isSignatureValid(FT, TableRef, NumArgs, IsVarArg, OverloadTys, OS,
-                            NumMissingTrailingParams);
+  return ::isSignatureValid(DL, FT, TableRef, NumArgs, IsVarArg, OverloadTys,
+                            OS, NumMissingTrailingParams);
 }
 
 bool Intrinsic::isSignatureValid(Function *F,
                                  SmallVectorImpl<Type *> &OverloadTys,
                                  raw_ostream &OS) {
-  return isSignatureValid(F->getIntrinsicID(), F->getFunctionType(),
-                          OverloadTys, OS);
+  return isSignatureValid(F->getDataLayout(), F->getIntrinsicID(),
+                          F->getFunctionType(), OverloadTys, OS);
 }
 
 std::optional<Function *> Intrinsic::remangleIntrinsicFunction(Function *F) {
