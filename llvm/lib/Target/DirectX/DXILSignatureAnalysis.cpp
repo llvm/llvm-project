@@ -240,7 +240,7 @@ Error analyzeAccess(const IntrinsicInst &I, EntrySignature &Sig) {
     CorrectType = Ty->isIntegerTy(32);
     break;
   default:
-    llvm_unreachable("validated signature component type");
+    llvm_unreachable("invalid signature component type");
   }
   if (!CorrectType)
     return signatureError("signature access type disagrees with its element");
@@ -408,7 +408,7 @@ dxbc::SigComponentType getComponentType(ElementType Type, bool Legacy) {
   case ElementType::F32:
     return dxbc::SigComponentType::Float32;
   default:
-    llvm_unreachable("validated signature component type");
+    llvm_unreachable("invalid signature component type");
   }
 }
 
