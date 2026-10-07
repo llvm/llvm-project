@@ -7,15 +7,23 @@
 //===----------------------------------------------------------------------===//
 ///
 /// \file
-/// Definition of struct ifreq.
+/// Definition of struct ifmap for Linux.
 ///
 //===----------------------------------------------------------------------===//
 
-#ifndef LLVM_LIBC_TYPES_STRUCT_IFREQ_H
-#define LLVM_LIBC_TYPES_STRUCT_IFREQ_H
+#ifndef LLVM_LIBC_TYPES_LINUX_STRUCT_IFMAP_H
+#define LLVM_LIBC_TYPES_LINUX_STRUCT_IFMAP_H
 
-#if defined(__linux__)
-#include "linux/struct_ifreq.h"
-#endif
+// Prevent the linux headers from defining this type.
+#define __UAPI_DEF_IF_IFMAP 0
 
-#endif // LLVM_LIBC_TYPES_STRUCT_IFREQ_H
+struct ifmap {
+  unsigned long mem_start;
+  unsigned long mem_end;
+  unsigned short base_addr;
+  unsigned char irq;
+  unsigned char dma;
+  unsigned char port;
+};
+
+#endif // LLVM_LIBC_TYPES_LINUX_STRUCT_IFMAP_H
