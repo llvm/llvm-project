@@ -462,8 +462,7 @@ public:
     // as well even though they will have their own storage. They should be
     // considered local regardless of the status of the original symbol.
     const Symbol &actual{GetStorageOwner(symbol)};
-    return actual.owner() != scope && scope.Contains(actual.owner()) &&
-        !HasStaticStorageDuration(actual);
+    return actual.owner() != scope && scope.Contains(actual.owner());
   }
 
   template <typename A> void Walk(const A &x) { parser::Walk(x, *this); }
