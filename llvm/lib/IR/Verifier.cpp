@@ -1188,6 +1188,22 @@ void Verifier::visitDILocation(const DILocation &N) {
     CheckDI(isa<DILocation>(IA), "inlined-at should be a location", &N, IA);
   if (auto *SP = dyn_cast<DISubprogram>(N.getRawScope()))
     CheckDI(SP->isDefinition(), "scope points into the type hierarchy", &N);
+  if (auto *L = N.getRawIRLayers())
+    CheckDI(isa<DILayerLocList>(L), "irlayers must be a DILayerLocList", &N, L);
+}
+
+void Verifier::visitDILayerLoc(const DILayerLoc &N) {
+  CheckDI(isa_and_nonnull<MDString>(N.getRawKind()),
+          "layer kind must be a non-null MDString", &N, N.getRawKind());
+  CheckDI(isa_and_nonnull<DIFile>(N.getRawFile()),
+          "layer file must be a non-null DIFile", &N, N.getRawFile());
+}
+
+void Verifier::visitDILayerLocList(const DILayerLocList &N) {
+  CheckDI(N.getNumLayers() > 0, "DILayerLocList must be non-empty", &N);
+  for (const MDOperand &Op : N.layers())
+    CheckDI(isa_and_nonnull<DILayerLoc>(Op.get()),
+            "DILayerLocList entry must be a DILayerLoc", &N, Op.get());
 }
 
 void Verifier::visitGenericDINode(const GenericDINode &N) {
@@ -1332,6 +1348,9 @@ void Verifier::visitDIStringType(const DIStringType &N) {
   CheckDI(N.getTag() == dwarf::DW_TAG_string_type, "invalid tag", &N);
   CheckDI(!(N.isBigEndian() && N.isLittleEndian()), "has conflicting flags",
           &N);
+  if (N.getRawCharType())
+    CheckDI(isa<DIType>(N.getRawCharType()), "invalid character type", &N,
+            N.getRawCharType());
 }
 
 void Verifier::visitDIDerivedType(const DIDerivedType &N) {
@@ -6212,6 +6231,12 @@ void Verifier::visitIntrinsicCall(Intrinsic::ID ID, CallBase &Call) {
             "const x86_amx is not allowed in argument!");
   }
 
+  // Verify intrinsic signature, so following checks can rely on it. The actual
+  // error is reported at the intrinsic declaration.
+  SmallVector<Type *, 4> OverloadTys;
+  if (!Intrinsic::isSignatureValid(ID, Call.getFunctionType(), OverloadTys))
+    return;
+
   switch (ID) {
   default:
     break;
@@ -6691,8 +6716,6 @@ void Verifier::visitIntrinsicCall(Intrinsic::ID ID, CallBase &Call) {
     break;
   }
   case Intrinsic::experimental_gc_relocate: {
-    Check(Call.arg_size() == 3, "wrong number of arguments", Call);
-
     Check(isa<PointerType>(Call.getType()->getScalarType()),
           "gc.relocate must return a pointer or a vector of pointers", Call);
 
@@ -6846,11 +6869,10 @@ void Verifier::visitIntrinsicCall(Intrinsic::ID ID, CallBase &Call) {
     break;
   }
   case Intrinsic::get_dynamic_area_offset: {
-    auto *IntTy = dyn_cast<IntegerType>(Call.getType());
-    Check(IntTy && DL.getPointerSizeInBits(DL.getAllocaAddrSpace()) ==
-                       IntTy->getBitWidth(),
-          "get_dynamic_area_offset result type must be scalar integer matching "
-          "alloca address space width",
+    Check(DL.getPointerSizeInBits(DL.getAllocaAddrSpace()) ==
+              Call.getType()->getIntegerBitWidth(),
+          "get_dynamic_area_offset result type must match alloca address "
+          "space width",
           Call);
     break;
   }
@@ -6915,7 +6937,7 @@ void Verifier::visitIntrinsicCall(Intrinsic::ID ID, CallBase &Call) {
     Value *Stride = nullptr;
     ConstantInt *NumRows;
     ConstantInt *NumColumns;
-    VectorType *ResultTy;
+    FixedVectorType *ResultTy;
     Type *Op0ElemTy = nullptr;
     Type *Op1ElemTy = nullptr;
     switch (ID) {
@@ -6923,45 +6945,53 @@ void Verifier::visitIntrinsicCall(Intrinsic::ID ID, CallBase &Call) {
       NumRows = cast<ConstantInt>(Call.getArgOperand(2));
       ConstantInt *N = cast<ConstantInt>(Call.getArgOperand(3));
       NumColumns = cast<ConstantInt>(Call.getArgOperand(4));
-      Check(cast<FixedVectorType>(Call.getArgOperand(0)->getType())
-                    ->getNumElements() ==
+      auto *Op0Ty = dyn_cast<FixedVectorType>(Call.getArgOperand(0)->getType());
+      auto *Op1Ty = dyn_cast<FixedVectorType>(Call.getArgOperand(1)->getType());
+      auto *RetTy = dyn_cast<FixedVectorType>(Call.getType());
+      Check(Op0Ty && Op1Ty && RetTy,
+            "Matrix operations require fixed-length vectors!", &Call);
+      Check(Op0Ty->getNumElements() ==
                 NumRows->getZExtValue() * N->getZExtValue(),
             "First argument of a matrix operation does not match specified "
             "shape!");
-      Check(cast<FixedVectorType>(Call.getArgOperand(1)->getType())
-                    ->getNumElements() ==
+      Check(Op1Ty->getNumElements() ==
                 N->getZExtValue() * NumColumns->getZExtValue(),
             "Second argument of a matrix operation does not match specified "
             "shape!");
 
-      ResultTy = cast<VectorType>(Call.getType());
-      Op0ElemTy =
-          cast<VectorType>(Call.getArgOperand(0)->getType())->getElementType();
-      Op1ElemTy =
-          cast<VectorType>(Call.getArgOperand(1)->getType())->getElementType();
+      ResultTy = RetTy;
+      Op0ElemTy = Op0Ty->getElementType();
+      Op1ElemTy = Op1Ty->getElementType();
       break;
     }
-    case Intrinsic::matrix_transpose:
+    case Intrinsic::matrix_transpose: {
       NumRows = cast<ConstantInt>(Call.getArgOperand(1));
       NumColumns = cast<ConstantInt>(Call.getArgOperand(2));
-      ResultTy = cast<VectorType>(Call.getType());
-      Op0ElemTy =
-          cast<VectorType>(Call.getArgOperand(0)->getType())->getElementType();
+      auto *Op0Ty = dyn_cast<FixedVectorType>(Call.getArgOperand(0)->getType());
+      auto *RetTy = dyn_cast<FixedVectorType>(Call.getType());
+      Check(Op0Ty && RetTy, "Matrix operations require fixed-length vectors!",
+            &Call);
+      ResultTy = RetTy;
+      Op0ElemTy = Op0Ty->getElementType();
       break;
+    }
     case Intrinsic::matrix_column_major_load: {
       Stride = Call.getArgOperand(1);
       NumRows = cast<ConstantInt>(Call.getArgOperand(3));
       NumColumns = cast<ConstantInt>(Call.getArgOperand(4));
-      ResultTy = cast<VectorType>(Call.getType());
+      auto *RetTy = dyn_cast<FixedVectorType>(Call.getType());
+      Check(RetTy, "Matrix operations require fixed-length vectors!", &Call);
+      ResultTy = RetTy;
       break;
     }
     case Intrinsic::matrix_column_major_store: {
       Stride = Call.getArgOperand(2);
       NumRows = cast<ConstantInt>(Call.getArgOperand(4));
       NumColumns = cast<ConstantInt>(Call.getArgOperand(5));
-      ResultTy = cast<VectorType>(Call.getArgOperand(0)->getType());
-      Op0ElemTy =
-          cast<VectorType>(Call.getArgOperand(0)->getType())->getElementType();
+      auto *Op0Ty = dyn_cast<FixedVectorType>(Call.getArgOperand(0)->getType());
+      Check(Op0Ty, "Matrix operations require fixed-length vectors!", &Call);
+      ResultTy = Op0Ty;
+      Op0ElemTy = Op0Ty->getElementType();
       break;
     }
     default:
@@ -6984,7 +7014,7 @@ void Verifier::visitIntrinsicCall(Intrinsic::ID ID, CallBase &Call) {
             "vector!",
             IF);
 
-    Check(cast<FixedVectorType>(ResultTy)->getNumElements() ==
+    Check(ResultTy->getNumElements() ==
               NumRows->getZExtValue() * NumColumns->getZExtValue(),
           "Result of a matrix operation does not fit in the returned vector!");
 
@@ -6995,9 +7025,8 @@ void Verifier::visitIntrinsicCall(Intrinsic::ID ID, CallBase &Call) {
     break;
   }
   case Intrinsic::stepvector: {
-    auto *VecTy = dyn_cast<VectorType>(Call.getType());
-    Check(VecTy && VecTy->getScalarType()->isIntegerTy() &&
-              VecTy->getScalarSizeInBits() >= 8,
+    auto *VecTy = cast<VectorType>(Call.getType());
+    Check(VecTy->getScalarSizeInBits() >= 8,
           "stepvector only supported for vectors of integers "
           "with a bitwidth of at least 8.",
           &Call);
@@ -7006,26 +7035,14 @@ void Verifier::visitIntrinsicCall(Intrinsic::ID ID, CallBase &Call) {
   case Intrinsic::experimental_vector_match: {
     Value *Op1 = Call.getArgOperand(0);
     Value *Op2 = Call.getArgOperand(1);
-    Value *Mask = Call.getArgOperand(2);
 
-    auto *Op1Ty = dyn_cast<VectorType>(Op1->getType());
-    auto *Op2Ty = dyn_cast<VectorType>(Op2->getType());
-    auto *MaskTy = dyn_cast<VectorType>(Mask->getType());
+    auto *Op1Ty = cast<VectorType>(Op1->getType());
+    auto *Op2Ty = cast<VectorType>(Op2->getType());
 
-    Check(Op1Ty && Op2Ty && MaskTy, "Operands must be vectors.", &Call);
     Check(isa<FixedVectorType>(Op2Ty),
           "Second operand must be a fixed length vector.", &Call);
-    Check(Op1Ty->getElementType()->isIntegerTy(),
-          "First operand must be a vector of integers.", &Call);
     Check(Op1Ty->getElementType() == Op2Ty->getElementType(),
           "First two operands must have the same element type.", &Call);
-    Check(Op1Ty->getElementCount() == MaskTy->getElementCount(),
-          "First operand and mask must have the same number of elements.",
-          &Call);
-    Check(MaskTy->getElementType()->isIntegerTy(1),
-          "Mask must be a vector of i1's.", &Call);
-    Check(Call.getType() == MaskTy, "Return type must match the mask type.",
-          &Call);
     break;
   }
   case Intrinsic::speculative_load: {
@@ -7197,6 +7214,11 @@ void Verifier::visitIntrinsicCall(Intrinsic::ID ID, CallBase &Call) {
           "reduction. The width of the input vector "
           "must be a positive integer multiple of "
           "the width of the accumulator vector.");
+
+    Check(AccTy->getElementType() == VecTy->getElementType(),
+          "The element type of the input vector must match the element type "
+          "of the accumulator vector.",
+          &Call);
     break;
   }
   case Intrinsic::experimental_noalias_scope_decl: {
@@ -7652,19 +7674,6 @@ void Verifier::visitVPIntrinsic(VPIntrinsic &VPI) {
 }
 
 void Verifier::visitConstrainedFPIntrinsic(ConstrainedFPIntrinsic &FPI) {
-  unsigned NumOperands = FPI.getNonMetadataArgCount();
-  bool HasRoundingMD =
-      Intrinsic::hasConstrainedFPRoundingModeOperand(FPI.getIntrinsicID());
-
-  // Add the expected number of metadata operands.
-  NumOperands += (1 + HasRoundingMD);
-
-  // Compare intrinsics carry an extra predicate metadata operand.
-  if (isa<ConstrainedFPCmpIntrinsic>(FPI))
-    NumOperands += 1;
-  Check((FPI.arg_size() == NumOperands),
-        "invalid arguments for constrained FP intrinsic", &FPI);
-
   switch (FPI.getIntrinsicID()) {
   case Intrinsic::experimental_constrained_fcmp:
   case Intrinsic::experimental_constrained_fcmps: {
@@ -7678,8 +7687,6 @@ void Verifier::visitConstrainedFPIntrinsic(ConstrainedFPIntrinsic &FPI) {
   case Intrinsic::experimental_constrained_fptoui: {
     Value *Operand = FPI.getArgOperand(0);
     ElementCount SrcEC;
-    Check(Operand->getType()->isFPOrFPVectorTy(),
-          "Intrinsic first argument must be floating point", &FPI);
     if (auto *OperandT = dyn_cast<VectorType>(Operand->getType())) {
       SrcEC = cast<VectorType>(OperandT)->getElementCount();
     }
@@ -7687,8 +7694,6 @@ void Verifier::visitConstrainedFPIntrinsic(ConstrainedFPIntrinsic &FPI) {
     Operand = &FPI;
     Check(SrcEC.isNonZero() == Operand->getType()->isVectorTy(),
           "Intrinsic first argument and result disagree on vector use", &FPI);
-    Check(Operand->getType()->isIntOrIntVectorTy(),
-          "Intrinsic result must be an integer", &FPI);
     if (auto *OperandT = dyn_cast<VectorType>(Operand->getType())) {
       Check(SrcEC == cast<VectorType>(OperandT)->getElementCount(),
             "Intrinsic first argument and result vector lengths must be equal",
@@ -7701,8 +7706,6 @@ void Verifier::visitConstrainedFPIntrinsic(ConstrainedFPIntrinsic &FPI) {
   case Intrinsic::experimental_constrained_uitofp: {
     Value *Operand = FPI.getArgOperand(0);
     ElementCount SrcEC;
-    Check(Operand->getType()->isIntOrIntVectorTy(),
-          "Intrinsic first argument must be integer", &FPI);
     if (auto *OperandT = dyn_cast<VectorType>(Operand->getType())) {
       SrcEC = cast<VectorType>(OperandT)->getElementCount();
     }
@@ -7710,8 +7713,6 @@ void Verifier::visitConstrainedFPIntrinsic(ConstrainedFPIntrinsic &FPI) {
     Operand = &FPI;
     Check(SrcEC.isNonZero() == Operand->getType()->isVectorTy(),
           "Intrinsic first argument and result disagree on vector use", &FPI);
-    Check(Operand->getType()->isFPOrFPVectorTy(),
-          "Intrinsic result must be a floating point", &FPI);
     if (auto *OperandT = dyn_cast<VectorType>(Operand->getType())) {
       Check(SrcEC == cast<VectorType>(OperandT)->getElementCount(),
             "Intrinsic first argument and result vector lengths must be equal",
@@ -7726,10 +7727,6 @@ void Verifier::visitConstrainedFPIntrinsic(ConstrainedFPIntrinsic &FPI) {
     Type *OperandTy = Operand->getType();
     Value *Result = &FPI;
     Type *ResultTy = Result->getType();
-    Check(OperandTy->isFPOrFPVectorTy(),
-          "Intrinsic first argument must be FP or FP vector", &FPI);
-    Check(ResultTy->isFPOrFPVectorTy(),
-          "Intrinsic result must be FP or FP vector", &FPI);
     Check(OperandTy->isVectorTy() == ResultTy->isVectorTy(),
           "Intrinsic first argument and result disagree on vector use", &FPI);
     if (OperandTy->isVectorTy()) {
@@ -7761,7 +7758,7 @@ void Verifier::visitConstrainedFPIntrinsic(ConstrainedFPIntrinsic &FPI) {
 
   Check(FPI.getExceptionBehavior().has_value(),
         "invalid exception behavior argument", &FPI);
-  if (HasRoundingMD) {
+  if (Intrinsic::hasConstrainedFPRoundingModeOperand(FPI.getIntrinsicID())) {
     Check(FPI.getRoundingMode().has_value(), "invalid rounding mode argument",
           &FPI);
   }

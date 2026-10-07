@@ -1066,7 +1066,7 @@ TEST(ValueTracking, propagatesPoison) {
       {true, "call float @llvm.log.f32(float %fx)", 0},
       {true, "call float @llvm.log10.f32(float %fx)", 0},
       {true, "call float @llvm.log2.f32(float %fx)", 0},
-      {false, "call float @llvm.fma.f32(float %fx, float %fx, float %fy)", 0},
+      {true, "call float @llvm.fma.f32(float %fx, float %fx, float %fy)", 0},
       {false, "call float @llvm.fabs.f32(float %fx)", 0},
       {false, "call float @llvm.minnum.f32(float %fx, float %fy)", 0},
       {false, "call float @llvm.maxnum.f32(float %fx, float %fy)", 0},
@@ -1084,7 +1084,7 @@ TEST(ValueTracking, propagatesPoison) {
       {false, "call i64 @llvm.llround.f32(float %fx)", 0},
       {true, "call i32 @llvm.lrint.f32(float %fx)", 0},
       {true, "call i64 @llvm.llrint.f32(float %fx)", 0},
-      {false, "call float @llvm.fmuladd.f32(float %fx, float %fx, float %fy)",
+      {true, "call float @llvm.fmuladd.f32(float %fx, float %fx, float %fy)",
        0}};
 
   std::string AssemblyStr = AsmHead;
@@ -2980,7 +2980,7 @@ TEST_F(ComputeKnownBitsTest, ComputeKnownBitsAddWithRange) {
 
 TEST_F(ComputeKnownBitsTest, ComputeKnownBitsUnknownVScale) {
   Module M("", Context);
-  IRBuilder<> Builder(Context);
+  IRBuilder<> Builder(M);
   Function *TheFn = Intrinsic::getOrInsertDeclaration(&M, Intrinsic::vscale,
                                                       {Builder.getInt32Ty()});
   CallInst *CI = Builder.CreateCall(TheFn, {});

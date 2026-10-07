@@ -5666,16 +5666,29 @@ void computeKnownFPClass(const Value *V, const APInt &DemandedElts,
     case Intrinsic::roundeven: {
       KnownFPClass KnownSrc;
       FPClassTest InterestedSrcs = InterestedClasses;
-      if (InterestedSrcs & fcPosFinite)
-        InterestedSrcs |= fcPosFinite;
+
+      // Negative round ups towards zero produce negative zero.
       if (InterestedSrcs & fcNegFinite)
         InterestedSrcs |= fcNegFinite;
+
+      // Negative subnormals may flush to positive zero.
+      if (InterestedSrcs & fcPosFinite)
+        InterestedSrcs |= fcPosFinite | fcNegSubnormal;
+
       computeKnownFPClass(II->getArgOperand(0), DemandedElts, InterestedSrcs,
                           KnownSrc, Q, Depth + 1);
 
-      Known = KnownFPClass::roundToIntegral(
-          KnownSrc, IID == Intrinsic::trunc,
-          V->getType()->getScalarType()->isMultiUnitFPType());
+      const Function *F = II->getFunction();
+      DenormalMode Mode =
+          F ? F->getDenormalMode(
+                  II->getType()->getScalarType()->getFltSemantics())
+            : DenormalMode::getDynamic();
+      const bool IsMultiUnitFPType =
+          V->getType()->getScalarType()->isMultiUnitFPType();
+
+      const bool IsTrunc = IID == Intrinsic::trunc;
+      Known = KnownFPClass::roundToIntegral(KnownSrc, IsTrunc,
+                                            IsMultiUnitFPType, Mode);
       break;
     }
     case Intrinsic::exp:
@@ -8549,6 +8562,8 @@ bool llvm::intrinsicPropagatesPoison(Intrinsic::ID IID) {
   case Intrinsic::atan2:
   case Intrinsic::canonicalize:
   case Intrinsic::sqrt:
+  case Intrinsic::fma:
+  case Intrinsic::fmuladd:
   case Intrinsic::exp:
   case Intrinsic::exp2:
   case Intrinsic::exp10:

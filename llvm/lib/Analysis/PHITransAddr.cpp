@@ -358,10 +358,10 @@ SelectAddr::SelectAddrs PHITransAddr::translateValue(BasicBlock *CurBB,
   return {TranslateSide(/*CondVal=*/true), TranslateSide(/*CondVal=*/false)};
 }
 
-Value *PHITransAddr::getSelectCondition() const {
+SelectInst *PHITransAddr::getSelect() const {
   for (Instruction *I : InstInputs)
     if (auto *SI = dyn_cast<SelectInst>(I))
-      return SI->getCondition();
+      return SI;
   return nullptr;
 }
 
