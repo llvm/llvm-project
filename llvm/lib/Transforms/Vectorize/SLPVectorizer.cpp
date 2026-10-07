@@ -512,12 +512,24 @@ public:
     return Candidate.HasRuntimeCheckableBlockers;
   }
 
+  /// Records whether a may-alias dependency between distinct, range-checkable
+  /// base objects has been observed, so the caller can decide to retry with
+  /// runtime alias checks enabled.
+  void setHasRuntimeCheckableBlockers(bool V) {
+    Candidate.HasRuntimeCheckableBlockers = V;
+  }
+
   /// Returns true if the last buildTree() kept a may-alias memory dependency
   /// that is not runtime-checkable (call or a non-simple mem access). Such a
   /// dependency cannot be dropped, so a runtime-checks retry cannot unblock the
   /// region and would be pure overhead.
   bool hasNonCheckableMemBlocker() const {
     return Candidate.HasNonCheckableMemBlocker;
+  }
+
+  /// Records that a non-runtime-checkable may-alias dependency was kept.
+  void setHasNonCheckableMemBlocker(bool V) {
+    Candidate.HasNonCheckableMemBlocker = V;
   }
 
   /// Returns true if the current vectorization attempt may drop
@@ -28413,10 +28425,10 @@ void BoUpSLP::BlockScheduling::calculateDependencies(
             // resolved statically and are not blockers.
             if (IsNonSimpleSrc || !getLoadStorePointerOperand(DepInst) ||
                 !isSimple(DepInst))
-              SLP->Candidate.HasNonCheckableMemBlocker = true;
+              SLP->setHasNonCheckableMemBlocker(true);
             else if (!SLP->hasRuntimeCheckableBlockers() &&
                      SLP->isRuntimeCheckableAliasPair(SrcInst, DepInst))
-              SLP->Candidate.HasRuntimeCheckableBlockers = true;
+              SLP->setHasRuntimeCheckableBlockers(true);
           }
         }
 
