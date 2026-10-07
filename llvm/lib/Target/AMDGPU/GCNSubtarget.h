@@ -223,8 +223,6 @@ public:
   /// the original value.
   bool zeroesHigh16BitsOfDest(unsigned Opcode) const;
 
-  bool hasHWFP64() const { return HasFP64; }
-
   bool hasAddr64() const {
     return (getGeneration() < AMDGPUSubtarget::VOLCANIC_ISLANDS);
   }
@@ -383,10 +381,6 @@ public:
     return hasArchitectedFlatScratch() ||
            (EnableFlatScratch && hasFlatScratchInsts());
   }
-
-  bool hasGlobalAddTidInsts() const { return HasGFX10_BEncoding; }
-
-  bool hasAtomicCSub() const { return HasGFX10_BEncoding; }
 
   bool hasExportInsts() const {
     return !hasGFX940Insts() && !hasGFX1250Insts();
@@ -917,8 +911,6 @@ public:
   /// unit requirement.
   unsigned getMaxNumVGPRs(const Function &F) const;
 
-  unsigned getMaxNumAGPRs(const Function &F) const { return getMaxNumVGPRs(F); }
-
   /// Return a pair of maximum numbers of VGPRs and AGPRs that meet the number
   /// of waves per execution unit required for the function \p MF.
   std::pair<unsigned, unsigned> getMaxNumVectorRegs(const Function &F) const;
@@ -1099,8 +1091,6 @@ public:
   bool hasPrivateSegmentSize() const { return PrivateSegmentSize; }
 
   unsigned getNumKernargPreloadSGPRs() const { return NumKernargPreloadSGPRs; }
-
-  unsigned getNumUsedUserSGPRs() const { return NumUsedUserSGPRs; }
 
   unsigned getNumFreeUserSGPRs();
 
