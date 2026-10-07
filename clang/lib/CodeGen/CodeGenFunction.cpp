@@ -2900,7 +2900,9 @@ void CGBuilderTy::attachSyntheticInlineDebugLoc(llvm::CallInst *CI,
   // This can't be done from CGBuilderInserter::InsertHelper because IRBuilder
   // sets the instruction's debug location after the inserter runs.
   CodeGenFunction *CGF = getCGF();
-  CGDebugInfo *DI = CGF ? CGF->getDebugInfo() : nullptr;
+  if (!CGF || CGF->CGM.getCodeGenOpts().DebugKeyInstructions)
+    return;
+  CGDebugInfo *DI = CGF->getDebugInfo();
   if (!DI)
     return;
   if (llvm::DebugLoc DL = CI->getDebugLoc())
