@@ -3340,12 +3340,15 @@ public:
   /// Analysis caches, search history and reusable block scheduling storage
   /// remain in BoUpSLP and survive a candidate reset.
   struct CandidateState {
+    friend class BoUpSLP;
+
     CandidateState() = default;
     CandidateState(const CandidateState &) = delete;
     CandidateState &operator=(const CandidateState &) = delete;
     CandidateState(CandidateState &&) = delete;
     CandidateState &operator=(CandidateState &&) = delete;
 
+  private:
     /// Holds all of the tree entries. Declared first so entries are destroyed
     /// after the candidate state that refers to them.
     TreeEntry::VecTreeTy VectorizableTree;
@@ -3530,6 +3533,7 @@ public:
     /// new bitwidth analysis attempt, like trunc, IToFP or ICmp.
     DenseSet<unsigned> ExtraBitWidthNodes;
 
+  public:
     /// Sets the narrowed reduction chain instructions, dropped together with
     /// the reduction.
     void setNarrowedChainInsts(ArrayRef<Instruction *> Insts) {
@@ -3790,6 +3794,14 @@ public:
     }
 #endif
 
+    /// Returns all entries in the candidate's graph.
+    ArrayRef<std::unique_ptr<TreeEntry>> getTreeEntries() const {
+      return VectorizableTree;
+    }
+
+    /// Returns the scalar uses that require extraction from the tree.
+    ArrayRef<ExternalUser> getExternalUses() const { return ExternalUses; }
+
     /// Get list of vector entries, associated with the value \p V.
     ArrayRef<TreeEntry *> getTreeEntries(const Value *V) const {
       assert(V && "V cannot be nullptr.");
@@ -3844,6 +3856,7 @@ public:
              E->Scalars.front()->getType()->isIntegerTy(1);
     }
 
+  private:
     /// Reset rather than reconstruct to preserve existing container
     /// allocations. Block scheduling must be invalidated first.
     /// TODO: Revisit reconstruction and measure the compile-time difference.
@@ -5706,7 +5719,7 @@ template <> struct llvm::GraphTraits<BoUpSLP *> {
   /// For the node iterator we just need to turn the TreeEntry iterator into a
   /// TreeEntry* iterator so that it dereferences to NodeRef.
   class nodes_iterator {
-    using ItTy = ContainerTy::iterator;
+    using ItTy = ArrayRef<std::unique_ptr<TreeEntry>>::iterator;
     ItTy It;
 
   public:
@@ -5720,16 +5733,14 @@ template <> struct llvm::GraphTraits<BoUpSLP *> {
   };
 
   static nodes_iterator nodes_begin(BoUpSLP *R) {
-    return nodes_iterator(R->Candidate.VectorizableTree.begin());
+    return nodes_iterator(R->getCandidate().getTreeEntries().begin());
   }
 
   static nodes_iterator nodes_end(BoUpSLP *R) {
-    return nodes_iterator(R->Candidate.VectorizableTree.end());
+    return nodes_iterator(R->getCandidate().getTreeEntries().end());
   }
 
-  static unsigned size(BoUpSLP *R) {
-    return R->Candidate.VectorizableTree.size();
-  }
+  static unsigned size(BoUpSLP *R) { return R->getCandidate().getTreeSize(); }
 };
 
 template <>
@@ -5747,7 +5758,7 @@ struct llvm::DOTGraphTraits<BoUpSLP *> : public DefaultDOTGraphTraits {
     for (auto *V : Entry->Scalars) {
       OS << *V;
       if (llvm::any_of(
-              R->Candidate.ExternalUses,
+              R->getCandidate().getExternalUses(),
               [&](const BoUpSLP::ExternalUser &EU) { return EU.Scalar == V; }))
         OS << " <extract>";
       OS << "\n";
