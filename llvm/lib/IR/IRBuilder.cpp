@@ -214,7 +214,7 @@ Value *IRBuilderBase::CreateTypeSize(Type *Ty, TypeSize Size) {
 }
 
 Value *IRBuilderBase::CreateAllocationSize(Type *DestTy, AllocaInst *AI) {
-  const DataLayout &DL = BB->getDataLayout();
+  const DataLayout &DL = getDataLayout();
   TypeSize ElemSize = AI->getAllocationBaseSize(DL);
   Value *Size = CreateTypeSize(DestTy, ElemSize);
   if (AI->isArrayAllocation())
@@ -1186,7 +1186,7 @@ Value *IRBuilderBase::CreatePtrDiff(Value *LHS, Value *RHS, const Twine &Name,
 }
 Value *IRBuilderBase::CreatePtrDiff(Type *ElemTy, Value *LHS, Value *RHS,
                                     const Twine &Name) {
-  const DataLayout &DL = BB->getDataLayout();
+  const DataLayout &DL = getDataLayout();
   TypeSize ElemSize = DL.getTypeAllocSize(ElemTy);
   if (ElemSize == TypeSize::getFixed(1))
     return CreatePtrDiff(LHS, RHS, Name);

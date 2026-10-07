@@ -1133,6 +1133,7 @@ cc_library(
         # least bad approach. Using `includes` is *specifically* problematic for
         # this library because it contains files that collide easily with system
         # headers such as `CXXABI.h`.
+        "-I$(WORKSPACE_ROOT)/clang/lib/AST",
         "-I$(GENDIR)/$(WORKSPACE_ROOT)/clang/lib/AST",
         "-I$(GENDIR)/$(WORKSPACE_ROOT)/clang/lib/AST/ByteCode",
     ],

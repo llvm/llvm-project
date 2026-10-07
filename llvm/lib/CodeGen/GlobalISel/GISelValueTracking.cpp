@@ -249,9 +249,9 @@ static KnownBits extractBits(unsigned BitWidth, const KnownBits &SrcOpKnown,
   return KnownBits::lshr(SrcOpKnown, OffsetKnown) & Mask;
 }
 
-void GISelValueTracking::computeKnownBitsImpl(Register R, KnownBits &Known,
-                                              const APInt &DemandedElts,
-                                              unsigned Depth) {
+void GISelValueTracking::computeKnownBits(Register R, KnownBits &Known,
+                                          const APInt &DemandedElts,
+                                          unsigned Depth) {
   MachineInstr &MI = *MRI.getVRegDef(R);
   unsigned Opcode = MI.getOpcode();
   LLT DstTy = MRI.getType(R);
@@ -1223,6 +1223,75 @@ void GISelValueTracking::computeKnownBitsImpl(Register R, KnownBits &Known,
   }
 
   LLVM_DEBUG(dumpResult(MI, Known, Depth));
+}
+
+static void genUnknown(MachineRegisterInfo &MRI, Register Reg,
+                       KnownBits &Known) {
+  LLT Ty = MRI.getType(Reg);
+  if (!Ty.isValid()) {
+    Known = KnownBits();
+    return;
+  }
+  unsigned BitWidth = Ty.getScalarSizeInBits();
+  Known = KnownBits(BitWidth);
+}
+
+/// Evaluate a known-bits query with an explicit worklist instead of recursive
+/// descent.
+void GISelValueTracking::computeKnownBitsImpl(Register R, KnownBits &Known,
+                                              const APInt &DemandedElts,
+                                              unsigned Depth) {
+  // Nested queries only consult the per-query cache. If the result is not
+  // available yet, enqueue the request and return an unknown placeholder.
+  if (!Stack.empty()) {
+    if (!getKnownBitsResult(R, DemandedElts, Depth, Known)) {
+      Stack.push_back({R, DemandedElts, Depth});
+      genUnknown(MRI, R, Known);
+    }
+    return;
+  }
+
+  // Top-level queries drive evaluation iteratively until every queued item has
+  // either been computed or found in the cache.
+  Stack.push_back({R, DemandedElts, Depth});
+  while (!Stack.empty()) {
+    WorkItem Item = Stack.back();
+    size_t StackSize = Stack.size();
+    Register ItemReg = std::get<0>(Item);
+    const APInt &ItemDemandedElts = std::get<1>(Item);
+    const unsigned ItemDepth = std::get<2>(Item);
+    KnownBits ItemKnown;
+
+    if (getKnownBitsResult(ItemReg, ItemDemandedElts, ItemDepth, ItemKnown)) {
+      Stack.pop_back();
+      continue;
+    }
+
+    // Evaluate this item with the per-instruction known-bits logic. Dependent
+    // queries issued from there re-enter this worklist driver and take the
+    // nested-query path to enqueue more work.
+    computeKnownBits(ItemReg, ItemKnown, ItemDemandedElts, ItemDepth);
+
+    // If evaluating this item did not queue more work, its dependencies are
+    // resolved and the result can be memoized immediately.
+    if (Stack.size() == StackSize) {
+      assert((std::get<0>(Stack.back()) == ItemReg &&
+              std::get<1>(Stack.back()) == ItemDemandedElts &&
+              std::get<2>(Stack.back()) == ItemDepth) &&
+             "The item we just evaluated must still be the top one.");
+
+      setKnownBitsResult(ItemReg, ItemDemandedElts, ItemDepth, ItemKnown);
+      Stack.pop_back();
+    }
+  }
+
+  // The original query must have been computed by the time the worklist is
+  // drained.
+  if (!getKnownBitsResult(R, DemandedElts, Depth, Known))
+    llvm_unreachable(
+        "Top level query must be in `results` after iteration is complete.");
+
+  Results.clear();
 }
 
 void GISelValueTracking::computeKnownFPClass(Register R, KnownFPClass &Known,
@@ -2875,6 +2944,43 @@ unsigned GISelValueTracking::computeNumSignBits(Register R,
     unsigned Tmp2 = computeNumSignBits(Vec, DemandedSrcElts, Depth + 1);
     FirstAnswer = std::min(Tmp, Tmp2);
     break;
+  }
+  case TargetOpcode::G_INSERT_VECTOR_ELT: {
+    GInsertVectorElement &Insert = cast<GInsertVectorElement>(MI);
+    Register InVec = Insert.getVectorReg();
+    Register InVal = Insert.getElementReg();
+    LLT VecVT = MRI.getType(InVec);
+
+    // If we know the element index, split the demand between the inserted
+    // value and the source vector, otherwise assume we need both. Scalable
+    // vectors carry no per-lane demand, so they always take the minimum of the
+    // whole vector and the inserted value.
+    bool DemandedVal = true;
+    APInt DemandedVecElts = DemandedElts;
+    if (!VecVT.isScalableVector()) {
+      unsigned NumElts = VecVT.getNumElements();
+      auto ConstEltNo = getIConstantVRegVal(Insert.getIndexReg(), MRI);
+      if (ConstEltNo && ConstEltNo->ult(NumElts)) {
+        unsigned EltIdx = ConstEltNo->getZExtValue();
+        DemandedVal = !!DemandedElts[EltIdx];
+        DemandedVecElts.clearBit(EltIdx);
+      }
+    }
+
+    unsigned Tmp = TyBits;
+    if (DemandedVal) {
+      // TODO: Handle implicit truncation of inserted elements.
+      if (MRI.getType(InVal).getSizeInBits() != TyBits)
+        break;
+      unsigned ValSignBits = computeNumSignBits(InVal, APInt(1, 1), Depth + 1);
+      Tmp = std::min(Tmp, ValSignBits);
+    }
+    if (!!DemandedVecElts) {
+      unsigned VecSignBits =
+          computeNumSignBits(InVec, DemandedVecElts, Depth + 1);
+      Tmp = std::min(Tmp, VecSignBits);
+    }
+    return Tmp;
   }
   case TargetOpcode::G_EXTRACT_VECTOR_ELT: {
     GExtractVectorElement &Extract = cast<GExtractVectorElement>(MI);
