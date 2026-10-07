@@ -39,7 +39,8 @@ Both compilers need the WASI sysroot, passed as `LLDB_TEST_SYSROOT`.
 The `wasm` platform is selected with `--platform-name wasm`. The global
 [`platform.plugin.wasm`](/use/settings.md#wasm) settings `runtime-path`,
 `port-arg`, `env-arg` and `runtime-args` describe how to invoke the runtime.
-`env-arg` is optional. Set it to forward the inferior's environment.
+`env-arg` is optional. Set it to forward the launch environment
+(`target.env-vars`, `process launch -E`).
 
 LLDB assembles the runtime's command line as:
 
