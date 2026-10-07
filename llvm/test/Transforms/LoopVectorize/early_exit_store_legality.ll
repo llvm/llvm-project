@@ -140,7 +140,6 @@ exit:
   ret void
 }
 
-;; Vectorizeable, needs work on exit condition recipe collection.
 define void @loop_contains_store_fcmp_condition(ptr dereferenceable(40) noalias %array, ptr align 2 dereferenceable(40) readonly %pred) !dbg !18 {
 ; CHECK-DEBUG-LABEL: LV: Checking a loop in 'loop_contains_store_fcmp_condition'
 ; CHECK-DEBUG:       LV: Loop passed LoopVectorizationLegality checks!
