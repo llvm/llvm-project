@@ -18,6 +18,7 @@
 #include "Pointer.h"
 #include "PrimType.h"
 #include "Record.h"
+#include "Reflect.h"
 #include "Source.h"
 #include "clang/AST/ExprCXX.h"
 #include "clang/Basic/TargetInfo.h"
@@ -462,14 +463,6 @@ QualType Descriptor::getDataType(const ASTContext &Ctx) const {
     return MakeArrayType(asExpr()->getType()->getPointeeType());
 
   return getType();
-}
-
-SourceLocation Descriptor::getLocation() const {
-  if (auto *D = Source.asDecl())
-    return D->getLocation();
-  if (auto *E = Source.asExpr())
-    return E->getExprLoc();
-  llvm_unreachable("Invalid descriptor type");
 }
 
 SourceInfo Descriptor::getLoc() const {

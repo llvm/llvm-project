@@ -204,8 +204,8 @@ public:
 
   bool getMemOperandsWithOffsetWidth(
       const MachineInstr &MI, SmallVectorImpl<const MachineOperand *> &BaseOps,
-      int64_t &Offset, bool &OffsetIsScalable, LocationSize &Width,
-      const TargetRegisterInfo *TRI) const override;
+      int64_t &Offset, bool &OffsetIsScalable,
+      LocationSize &Width) const override;
 
   bool shouldClusterMemOps(ArrayRef<const MachineOperand *> BaseOps1,
                            int64_t Offset1, bool OffsetIsScalable1,
@@ -279,14 +279,13 @@ public:
 
   bool simplifyInstruction(MachineInstr &MI) const override;
 
-  MachineInstr *convertToThreeAddress(MachineInstr &MI, LiveVariables *LV,
+  MachineInstr *convertToThreeAddress(MachineInstr &MI,
                                       LiveIntervals *LIS) const override;
 
   // MIR printer helper function to annotate Operands with a comment.
-  std::string
-  createMIROperandComment(const MachineInstr &MI, const MachineOperand &Op,
-                          unsigned OpIdx,
-                          const TargetRegisterInfo *TRI) const override;
+  std::string createMIROperandComment(const MachineInstr &MI,
+                                      const MachineOperand &Op,
+                                      unsigned OpIdx) const override;
 
   /// Generate code to multiply the value in DestReg by Amt - handles all
   /// the common optimizations for this idiom, and supports fallback for

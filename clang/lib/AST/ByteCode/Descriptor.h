@@ -13,8 +13,8 @@
 #ifndef LLVM_CLANG_AST_INTERP_DESCRIPTOR_H
 #define LLVM_CLANG_AST_INTERP_DESCRIPTOR_H
 
-#include "DeclOrExpr.h"
 #include "../ExprConstShared.h"
+#include "DeclOrExpr.h"
 #include "InitMap.h"
 #include "PrimType.h"
 #include "clang/AST/Decl.h"
@@ -196,7 +196,7 @@ public:
   QualType getType() const;
   QualType getElemQualType() const;
   QualType getDataType(const ASTContext &Ctx) const;
-  SourceLocation getLocation() const;
+  SourceLocation getLocation() const { return Source.getLocation(); }
   SourceInfo getLoc() const;
 
   const Decl *asDecl() const { return Source.asDecl(); }

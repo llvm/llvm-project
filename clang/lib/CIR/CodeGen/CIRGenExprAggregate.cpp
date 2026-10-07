@@ -736,11 +736,11 @@ void AggExprEmitter::emitArrayInit(Address destPtr, cir::ArrayType arrayTy,
   const CharUnits elementAlign =
       destPtr.getAlignment().alignmentOfArrayElement(elementSize);
 
-  // Exception safety requires us to destroy all the already-constructed
-  // members if an initializer throws. For that, we'll need an EH cleanup.
+  // Destroy already-constructed elements if a later initializer throws.
+  // The cleanup is deactivated when this initialization finishes.
   QualType::DestructionKind dtorKind = elementType.isDestructedType();
   Address endOfInit = Address::invalid();
-  assert(!cir::MissingFeatures::cleanupDeactivationScope());
+  CIRGenFunction::CleanupDeactivationScope deactivateCleanups(cgf);
 
   if (dtorKind && cgf.getLangOpts().Exceptions) {
     endOfInit = cgf.createTempAlloca(cirElementPtrType, cgf.getPointerAlign(),

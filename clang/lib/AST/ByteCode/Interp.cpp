@@ -1082,6 +1082,9 @@ bool CheckFinalLoad(InterpState &S, CodePtr OpPC, const Pointer &Ptr) {
     return CheckWeak(S, OpPC, Ptr.block());
   }
 
+  if (Ptr.isPastEnd())
+    return false;
+
   if (!CheckConstant(S, OpPC, Ptr))
     return false;
 
@@ -1944,6 +1947,14 @@ bool checkDestructor(InterpState &S, CodePtr OpPC, const Pointer &Ptr) {
   // destruction for.
   if (S.checkingConstantDestruction(Ptr))
     return true;
+
+  // String pointers are immutable, so can't call a destructor on them.
+  if (Ptr.isStringPointer()) {
+    S.FFDiag(S.Current->getSource(OpPC),
+             diag::note_constexpr_access_unreadable_object)
+        << AK_Destroy << Ptr.toDiagnosticString(S.getASTContext());
+    return false;
+  }
 
   // Can't call a dtor on a global variable.
   if (Ptr.isOpaquePointer() || Ptr.block()->isStatic()) {
@@ -3780,7 +3791,7 @@ bool TrivialCopy(InterpState &S, CodePtr OpPC, bool Activate,
          Op == OP_RetSint64 || Op == OP_RetUint64 || Op == OP_RetIntAP ||
          Op == OP_RetIntAPS || Op == OP_RetBool || Op == OP_RetFixedPoint ||
          Op == OP_RetPtr || Op == OP_RetMemberPtr || Op == OP_RetFloat ||
-         Op == OP_EndSpeculation;
+         Op == OP_RetReflect || Op == OP_EndSpeculation;
 }
 
 #if USE_TAILCALLS

@@ -112,6 +112,10 @@ infrastructure are described first, followed by tool-specific sections.
   C++20 concepts.
   ([#206875](https://github.com/llvm/llvm-project/issues/206875))
 
+- `clangd-indexer` now reads clangd configuration files (`.clangd` and the
+  user config) by default. Pass `--enable-config=false` to restore the previous
+  behavior.
+
 ### Improvements to clang-doc
 
 ### Improvements to clang-query
@@ -218,6 +222,9 @@ infrastructure are described first, followed by tool-specific sections.
   - No longer diagnoses variables declared with `decltype(auto)`, where the
     suggested `const` does not compile.
     
+  - No longer diagnoses parameters of `main`, whose signature is fixed by the
+    standard.
+
 - Fixed an infinite loop in {doc}`misc-multiple-inheritance
   <clang-tidy/checks/misc/multiple-inheritance>` when checking a class that
   inherits from itself or has a circular inheritance graph.
@@ -249,6 +256,10 @@ infrastructure are described first, followed by tool-specific sections.
   <clang-tidy/checks/modernize/use-nullptr>` to turn `decltype(nullptr)` into
   `std::nullptr_t` from `<cstdef>`.
 
+- Improved {doc}`modernize-use-ranges
+  <clang-tidy/checks/modernize/use-ranges>` check by preserving used output
+  iterator results when replacing output algorithms such as `std::copy`.
+
 - Improved {doc}`performance-inefficient-algorithm
   <clang-tidy/checks/performance/inefficient-algorithm>` check to no longer
   produce a fix with the container or the searched-for value missing, such as
@@ -256,6 +267,11 @@ infrastructure are described first, followed by tool-specific sections.
   copied as written rather than with its parentheses stripped, and no fix is
   offered when an argument covers only part of a macro expansion, as it then
   has no source text of its own.
+
+- Improved {doc}`performance-inefficient-vector-operation
+  <clang-tidy/checks/performance/inefficient-vector-operation>` by adding the
+  {option}`ForRangeLoopClasses` to configure container classes that can be used
+  as sources in range-based `for` loops.
 
 - Improved {doc}`readability-convert-member-functions-to-static
   <clang-tidy/checks/readability/convert-member-functions-to-static>` check by
@@ -318,6 +334,10 @@ infrastructure are described first, followed by tool-specific sections.
 - Fixed {doc}`readability-simplify-boolean-expr
   <clang-tidy/checks/readability/simplify-boolean-expr>` producing invalid
   fixes when applying De Morgan's theorem to overloaded comparison operators.
+
+- Improved {doc}`readability-suspicious-call-argument
+  <clang-tidy/checks/readability/suspicious-call-argument>` check by fixing the
+  default `dist` and `dst` abbreviations of `distance` not being recognized.
 
 - Improved {doc}`readability-trailing-comma
   <clang-tidy/checks/readability/trailing-comma>` check:
