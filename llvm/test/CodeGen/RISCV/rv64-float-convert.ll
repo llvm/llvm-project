@@ -236,10 +236,9 @@ define i128 @fptoui_sat_f32_to_i128(float %a) nounwind {
 ; RV64IF-NEXT:    neg s0, a0
 ; RV64IF-NEXT:    call __fixunssfti
 ; RV64IF-NEXT:    fclass.s a2, fs0
-; RV64IF-NEXT:    slli a2, a2, 56
 ; RV64IF-NEXT:    and a0, s0, a0
-; RV64IF-NEXT:    srli a2, a2, 63
-; RV64IF-NEXT:    neg a2, a2
+; RV64IF-NEXT:    slli a2, a2, 56
+; RV64IF-NEXT:    srai a2, a2, 63
 ; RV64IF-NEXT:    and a1, s0, a1
 ; RV64IF-NEXT:    or a0, a2, a0
 ; RV64IF-NEXT:    or a1, a2, a1
@@ -261,10 +260,9 @@ define i128 @fptoui_sat_f32_to_i128(float %a) nounwind {
 ; RV64IZFINX-NEXT:    mv a0, s0
 ; RV64IZFINX-NEXT:    call __fixunssfti
 ; RV64IZFINX-NEXT:    fclass.s a2, s0
-; RV64IZFINX-NEXT:    slli a2, a2, 56
 ; RV64IZFINX-NEXT:    and a0, s1, a0
-; RV64IZFINX-NEXT:    srli a2, a2, 63
-; RV64IZFINX-NEXT:    neg a2, a2
+; RV64IZFINX-NEXT:    slli a2, a2, 56
+; RV64IZFINX-NEXT:    srai a2, a2, 63
 ; RV64IZFINX-NEXT:    and a1, s1, a1
 ; RV64IZFINX-NEXT:    or a0, a2, a0
 ; RV64IZFINX-NEXT:    or a1, a2, a1

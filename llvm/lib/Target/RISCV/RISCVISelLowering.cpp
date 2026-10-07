@@ -20898,24 +20898,23 @@ static SDValue combineFPBoundarySetCC(SDNode *N, SelectionDAG &DAG,
   const APFloat &C = cast<ConstantFPSDNode>(Bound)->getValueAPF();
   ISD::CondCode CC = cast<CondCodeSDNode>(N->getOperand(2))->get();
   FPClassTest Mask = fcNone;
-  const FPClassTest NaNs = fcSNan | fcQNan;
   if (C.bitwiseIsEqual(
           APFloat::getLargest(C.getSemantics(), /*Negative=*/true))) {
     if (CC == ISD::SETOLT || CC == ISD::SETULT)
       Mask = fcNegInf;
     else if (CC == ISD::SETOGE || CC == ISD::SETUGE)
-      Mask = fcAllFlags & ~(fcNegInf | NaNs);
+      Mask = ~(fcNegInf | fcNan);
   } else if (C.bitwiseIsEqual(APFloat::getLargest(C.getSemantics()))) {
     if (CC == ISD::SETOGT || CC == ISD::SETUGT)
       Mask = fcPosInf;
     else if (CC == ISD::SETOLE || CC == ISD::SETULE)
-      Mask = fcAllFlags & ~(fcPosInf | NaNs);
+      Mask = ~(fcPosInf | fcNan);
   }
   if (Mask == fcNone)
     return SDValue();
   if (CC == ISD::SETULT || CC == ISD::SETUGE || CC == ISD::SETUGT ||
       CC == ISD::SETULE)
-    Mask |= NaNs;
+    Mask |= fcNan;
   SDLoc DL(N);
   return DAG.getNode(ISD::IS_FPCLASS, DL, N->getValueType(0), X,
                      DAG.getTargetConstant(Mask, DL, MVT::i32));
