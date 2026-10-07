@@ -348,74 +348,74 @@ def CC_Mips : CallingConv<[
 //===----------------------------------------------------------------------===//
 
 def CSR_O32_SingleFloat : CalleeSavedRegs<(add(sequence "F%u", 31, 20), RA, FP,
-                              (sequence "S%u", 7, 0))>;
+                              (sequence "R%u", 23, 16))>;
 
 def CSR_O32_FPXX : CalleeSavedRegs<(add (sequence "D%u", 15, 10), RA, FP,
-                                        (sequence "S%u", 7, 0))> {
+                                        (sequence "R%u", 23, 16))> {
   let OtherPreserved = (add (decimate (sequence "F%u", 30, 20), 2));
 }
 
 def CSR_O32 : CalleeSavedRegs<(add (sequence "D%u", 15, 10), RA, FP,
-                                   (sequence "S%u", 7, 0))>;
+                                   (sequence "R%u", 23, 16))>;
 
 def CSR_O32_FP64 :
   CalleeSavedRegs<(add (decimate (sequence "D%u_64", 30, 20), 2), RA, FP,
-                       (sequence "S%u", 7, 0))>;
+                       (sequence "R%u", 23, 16))>;
 
 def CSR_N32 : CalleeSavedRegs<(add(decimate(sequence "D%u_64", 30, 20), 2),
-                  RA_64, FP_64, GP_64, (sequence "S%u_64", 7, 0))>;
+                  RA_64, FP_64, GP_64, (sequence "R%u_64", 23, 16))>;
 
 def CSR_N32_NoGP : CalleeSavedRegs<(add(decimate(sequence "D%u_64", 30, 20), 2),
-                  RA_64, FP_64, (sequence "S%u_64", 7, 0))>;
+                  RA_64, FP_64, (sequence "R%u_64", 23, 16))>;
 
 def CSR_N32_SingleFloat
     : CalleeSavedRegs<(add(decimate(sequence "F%u", 30, 20), 2), RA_64, FP_64,
-          GP_64, (sequence "S%u_64", 7, 0))>;
+          GP_64, (sequence "R%u_64", 23, 16))>;
 
 def CSR_N32_SingleFloat_NoGP
     : CalleeSavedRegs<(add(decimate(sequence "F%u", 30, 20), 2), RA_64, FP_64,
-          (sequence "S%u_64", 7, 0))>;
+          (sequence "R%u_64", 23, 16))>;
 
 def CSR_N64 : CalleeSavedRegs<(add (sequence "D%u_64", 31, 24), RA_64, FP_64,
-                                   GP_64, (sequence "S%u_64", 7, 0))>;
+                                   GP_64, (sequence "R%u_64", 23, 16))>;
 
 def CSR_N64_NoGP : CalleeSavedRegs<(add (sequence "D%u_64", 31, 24), RA_64, FP_64,
-                                   (sequence "S%u_64", 7, 0))>;
+                                   (sequence "R%u_64", 23, 16))>;
 
 def CSR_N64_SingleFloat : CalleeSavedRegs<(add(sequence "F%u", 31, 24), RA_64,
-                              FP_64, GP_64, (sequence "S%u_64", 7, 0))>;
+                              FP_64, GP_64, (sequence "R%u_64", 23, 16))>;
 
 def CSR_N64_SingleFloat_NoGP : CalleeSavedRegs<(add(sequence "F%u", 31, 24), RA_64,
-                              FP_64, (sequence "S%u_64", 7, 0))>;
+                              FP_64, (sequence "R%u_64", 23, 16))>;
 
 def CSR_Mips16RetHelper :
   CalleeSavedRegs<(add V0, V1, FP,
-                   (sequence "A%u", 3, 0), (sequence "S%u", 7, 0),
+                   (sequence "R%u", 7, 4), (sequence "R%u", 23, 16),
                    (sequence "D%u", 15, 10))>;
 
-def CSR_Interrupt_32R6 : CalleeSavedRegs<(add (sequence "A%u", 3, 0),
-                                              (sequence "S%u", 7, 0),
+def CSR_Interrupt_32R6 : CalleeSavedRegs<(add (sequence "R%u", 7, 4),
+                                              (sequence "R%u", 23, 16),
                                               (sequence "R%u", 3, 2),
                                               T9, T8,
                                               (sequence "R%u", 15, 8),
                                               RA, FP, GP, AT)>;
 
-def CSR_Interrupt_32 : CalleeSavedRegs<(add (sequence "A%u", 3, 0),
-                                            (sequence "S%u", 7, 0),
+def CSR_Interrupt_32 : CalleeSavedRegs<(add (sequence "R%u", 7, 4),
+                                            (sequence "R%u", 23, 16),
                                             (sequence "R%u", 3, 2),
                                             T9, T8,
                                             (sequence "R%u", 15, 8),
                                             RA, FP, GP, AT, LO0, HI0)>;
 
-def CSR_Interrupt_64R6 : CalleeSavedRegs<(add (sequence "A%u_64", 3, 0),
+def CSR_Interrupt_64R6 : CalleeSavedRegs<(add (sequence "R%u_64", 7, 4),
                                               (sequence "R%u_64", 3, 2),
-                                              (sequence "S%u_64", 7, 0),
+                                              (sequence "R%u_64", 23, 16),
                                               T9_64, T8_64,
                                               (sequence "R%u_64", 15, 8),
                                               RA_64, FP_64, GP_64, AT_64)>;
 
-def CSR_Interrupt_64 : CalleeSavedRegs<(add (sequence "A%u_64", 3, 0),
-                                            (sequence "S%u_64", 7, 0),
+def CSR_Interrupt_64 : CalleeSavedRegs<(add (sequence "R%u_64", 7, 4),
+                                            (sequence "R%u_64", 23, 16),
                                             T9_64, T8_64,
                                             (sequence "R%u_64", 15, 8),
                                             (sequence "R%u_64", 3, 2),
