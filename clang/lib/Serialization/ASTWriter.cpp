@@ -24,6 +24,7 @@
 #include "clang/AST/DeclContextInternals.h"
 #include "clang/AST/DeclFriend.h"
 #include "clang/AST/DeclObjC.h"
+#include "clang/AST/DeclOpenMP.h"
 #include "clang/AST/DeclTemplate.h"
 #include "clang/AST/DeclarationName.h"
 #include "clang/AST/Expr.h"
@@ -70,6 +71,7 @@
 #include "clang/Sema/Sema.h"
 #include "clang/Sema/SemaCUDA.h"
 #include "clang/Sema/SemaObjC.h"
+#include "clang/Sema/SemaOpenMP.h"
 #include "clang/Sema/SemaRISCV.h"
 #include "clang/Sema/Weak.h"
 #include "clang/Serialization/ASTBitCodes.h"
@@ -80,6 +82,7 @@
 #include "clang/Serialization/ModuleFile.h"
 #include "clang/Serialization/ModuleFileExtension.h"
 #include "clang/Serialization/SerializationDiagnostic.h"
+#include "clang/Serialization/SourceLocationEncoding.h"
 #include "llvm/ADT/APFloat.h"
 #include "llvm/ADT/APInt.h"
 #include "llvm/ADT/ArrayRef.h"
@@ -898,6 +901,7 @@ void ASTWriter::WriteBlockInfoBlock() {
   RECORD(MODULE_NAME);
   RECORD(MODULE_DIRECTORY);
   RECORD(MODULE_MAP_FILE);
+  RECORD(MODULE_DIRECTORY_DEPENDENCIES);
   RECORD(IMPORT);
   RECORD(ORIGINAL_FILE);
   RECORD(ORIGINAL_FILE_ID);
@@ -1561,6 +1565,15 @@ void ASTWriter::WriteControlBlock(Preprocessor &PP, StringRef isysroot) {
     Stream.EmitRecord(MODULE_MAP_FILE, Record);
   }
 
+  if (WritingModule && !WritingModule->getDirectoryDependencies().empty()) {
+    Record.clear();
+    ArrayRef<std::string> Dirs = WritingModule->getDirectoryDependencies();
+    Record.push_back(Dirs.size());
+    for (StringRef Dir : Dirs)
+      AddPath(Dir, Record);
+    Stream.EmitRecord(MODULE_DIRECTORY_DEPENDENCIES, Record);
+  }
+
   // Imports
   if (Chain) {
     auto Abbrev = std::make_shared<BitCodeAbbrev>();
@@ -2066,10 +2079,15 @@ static unsigned CreateSLocExpansionAbbrev(llvm::BitstreamWriter &Stream) {
 
   auto Abbrev = std::make_shared<BitCodeAbbrev>();
   Abbrev->Add(BitCodeAbbrevOp(SM_SLOC_EXPANSION_ENTRY));
+  // The static ordering of the four fields below is critical to getting good
+  // compression from the delta encoding. Specifically:
+  //   Offset -> End location -> Start location -> Spelling location.
+  // Ordered this way, the delta between Offset and End location is usually
+  // small, and so is the delta between End location and Start location.
   Abbrev->Add(BitCodeAbbrevOp(BitCodeAbbrevOp::VBR, 8)); // Offset
-  Abbrev->Add(BitCodeAbbrevOp(BitCodeAbbrevOp::VBR, 8)); // Spelling location
-  Abbrev->Add(BitCodeAbbrevOp(BitCodeAbbrevOp::VBR, 6)); // Start location
   Abbrev->Add(BitCodeAbbrevOp(BitCodeAbbrevOp::VBR, 6)); // End location
+  Abbrev->Add(BitCodeAbbrevOp(BitCodeAbbrevOp::VBR, 6)); // Start location
+  Abbrev->Add(BitCodeAbbrevOp(BitCodeAbbrevOp::VBR, 6)); // Spelling location
   Abbrev->Add(BitCodeAbbrevOp(BitCodeAbbrevOp::Fixed, 1)); // Is token range
   Abbrev->Add(BitCodeAbbrevOp(BitCodeAbbrevOp::VBR, 6)); // Token length
   return Stream.EmitAbbrev(std::move(Abbrev));
@@ -2407,8 +2425,7 @@ void ASTWriter::WriteSourceManagerBlock(SourceManager &SourceMgr) {
       if (!IsSLocAffecting[I])
         continue;
       SLocEntryOffsets.push_back(Offset);
-      // Starting offset of this entry within this module, so skip the dummy.
-      Record.push_back(getAdjustedOffset(SLoc->getOffset()) - 2);
+      Record.push_back(getEntryOffset(*SLoc));
       AddSourceLocation(getAffectingIncludeLoc(SourceMgr, File), Record);
       Record.push_back(File.getFileCharacteristic()); // FIXME: stable encoding
       Record.push_back(File.hasLineDirectives());
@@ -2467,14 +2484,17 @@ void ASTWriter::WriteSourceManagerBlock(SourceManager &SourceMgr) {
       // The source location entry is a macro expansion.
       const SrcMgr::ExpansionInfo &Expansion = SLoc->getExpansion();
       SLocEntryOffsets.push_back(Offset);
-      // Starting offset of this entry within this module, so skip the dummy.
-      Record.push_back(getAdjustedOffset(SLoc->getOffset()) - 2);
-      AddSourceLocation(Expansion.getSpellingLoc(), Record);
-      AddSourceLocation(Expansion.getExpansionLocStart(), Record);
+      auto Chain = EmitEntryOffset(*SLoc, Record);
+
+      // The chain is stateful. Encode happens in the order specified in
+      // CreateSLocExpansionAbbrev.
       AddSourceLocation(Expansion.isMacroArgExpansion()
                             ? SourceLocation()
                             : Expansion.getExpansionLocEnd(),
-                        Record);
+                        Record, Chain);
+      AddSourceLocation(Expansion.getExpansionLocStart(), Record, Chain);
+      AddSourceLocation(Expansion.getSpellingLoc(), Record, Chain);
+
       Record.push_back(Expansion.isExpansionTokenRange());
 
       // Compute the token length for this macro expansion.
@@ -5282,6 +5302,19 @@ void ASTWriter::WriteDeclsWithEffectsToVerify(Sema &SemaRef) {
   Stream.EmitRecord(DECLS_WITH_EFFECTS_TO_VERIFY, Record);
 }
 
+/// Write the OpenMP 'requires' directives seen in this translation unit.
+void ASTWriter::WriteOpenMPRequiresDecls(Sema &SemaRef) {
+  ArrayRef<const OMPRequiresDecl *> Decls = SemaRef.OpenMP().getRequiresDecls();
+  if (Decls.empty())
+    return;
+  RecordData Record;
+  for (const OMPRequiresDecl *D : Decls)
+    if (!D->isFromASTFile())
+      AddDeclRef(D, Record);
+  if (!Record.empty())
+    Stream.EmitRecord(OMP_REQUIRES_DECLS, Record);
+}
+
 void ASTWriter::WriteModuleFileExtension(Sema &SemaRef,
                                          ModuleFileExtensionWriter &Writer) {
   // Enter the extension block.
@@ -6351,6 +6384,7 @@ ASTFileSignature ASTWriter::WriteASTCore(Sema *SemaPtr, StringRef isysroot,
     WritePackPragmaOptions(*SemaPtr);
     WriteFloatControlPragmaOptions(*SemaPtr);
     WriteDeclsWithEffectsToVerify(*SemaPtr);
+    WriteOpenMPRequiresDecls(*SemaPtr);
   }
 
   // Some simple statistics
@@ -6869,9 +6903,44 @@ ASTWriter::getRawSourceLocationEncoding(SourceLocation Loc) {
   return SourceLocationEncoding::encode(Loc, BaseOffset, ModuleFileIndex);
 }
 
+SourceLocation::UIntTy
+ASTWriter::getEntryOffset(const SrcMgr::SLocEntry &SLoc) const {
+  // Skip the dummy entry.
+  return getAdjustedOffset(SLoc.getOffset()) - 2;
+}
+
+SourceLocationEncoding::Chain
+ASTWriter::EmitSourceLocationOffset(SourceLocation::UIntTy Offset,
+                                    SourceLocation::UIntTy InitialDelta,
+                                    RecordDataImpl &Record) {
+  Record.push_back(Offset);
+  return SourceLocationEncoding::Chain(Offset + InitialDelta);
+}
+
+SourceLocationEncoding::Chain
+ASTWriter::EmitEntryOffset(const SrcMgr::SLocEntry &SLoc,
+                           RecordDataImpl &Record) {
+  SourceLocation::UIntTy EntryOffset = getEntryOffset(SLoc);
+  // Anchor the chain at the entry's own local offset. The field has the dummy
+  // entry subtracted out (see getEntryOffset), so add it back. Decoding only
+  // requires the reader to derive the same anchor -- see
+  // ASTReader::ReadEntryOffset -- but anchoring at the entry keeps the deltas
+  // small, and makes the anchor trivially non-zero since local offsets are
+  // always >= 2.
+  return EmitSourceLocationOffset(EntryOffset, 2, Record);
+}
+
 void ASTWriter::AddSourceLocation(SourceLocation Loc, RecordDataImpl &Record) {
   Loc = getAdjustedLocation(Loc);
   Record.push_back(getRawSourceLocationEncoding(Loc));
+}
+
+void ASTWriter::AddSourceLocation(SourceLocation Loc, RecordDataImpl &Record,
+                                  SourceLocationEncoding::Chain &Chain) {
+  // The two-argument form appends exactly one value, so rewriting Record.back()
+  // delta encodes what it just wrote without duplicating how it is encoded.
+  AddSourceLocation(Loc, Record);
+  Record.back() = Chain.deltaEncode(Record.back());
 }
 
 void ASTWriter::AddSourceRange(SourceRange Range, RecordDataImpl &Record) {

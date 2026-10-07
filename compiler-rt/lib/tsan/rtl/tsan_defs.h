@@ -199,8 +199,7 @@ enum ExternalTag : uptr {
 };
 
 enum {
-  MutexTypeReport = MutexLastCommon,
-  MutexTypeSyncVar,
+  MutexTypeSyncVar = MutexLastCommon,
   MutexTypeAnnotations,
   MutexTypeAtExit,
   MutexTypeFired,
