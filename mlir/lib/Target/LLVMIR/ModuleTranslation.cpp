@@ -1386,8 +1386,7 @@ LogicalResult ModuleTranslation::convertGlobalsAndAliases() {
   for (auto op : getModuleBody(mlirModule).getOps<LLVM::GlobalOp>()) {
     if (Block *initializer = op.getInitializerBlock()) {
       llvm::IRBuilder<llvm::TargetFolder> builder(
-          llvmModule->getContext(),
-          llvm::TargetFolder(llvmModule->getDataLayout()));
+          *llvmModule, llvm::TargetFolder(llvmModule->getDataLayout()));
 
       [[maybe_unused]] int numConstantsHit = 0;
       [[maybe_unused]] int numConstantsErased = 0;
@@ -1478,8 +1477,7 @@ LogicalResult ModuleTranslation::convertGlobalsAndAliases() {
     if ((ctorOp && ctorOp.getCtors().empty()) ||
         (dtorOp && dtorOp.getDtors().empty())) {
       llvm::IRBuilder<llvm::TargetFolder> builder(
-          llvmModule->getContext(),
-          llvm::TargetFolder(llvmModule->getDataLayout()));
+          *llvmModule, llvm::TargetFolder(llvmModule->getDataLayout()));
       llvm::Type *eltTy = llvm::StructType::get(
           builder.getInt32Ty(), builder.getPtrTy(), builder.getPtrTy());
       llvm::ArrayType *at = llvm::ArrayType::get(eltTy, 0);
@@ -1522,8 +1520,7 @@ LogicalResult ModuleTranslation::convertGlobalsAndAliases() {
   for (auto op : getModuleBody(mlirModule).getOps<LLVM::AliasOp>()) {
     Block &initializer = op.getInitializerBlock();
     llvm::IRBuilder<llvm::TargetFolder> builder(
-        llvmModule->getContext(),
-        llvm::TargetFolder(llvmModule->getDataLayout()));
+        *llvmModule, llvm::TargetFolder(llvmModule->getDataLayout()));
 
     for (mlir::Operation &op : initializer.without_terminator()) {
       if (failed(convertOperation(op, builder)))
@@ -1780,7 +1777,7 @@ LogicalResult ModuleTranslation::convertOneFunction(LLVMFuncOp func) {
   // converted before uses.
   auto blocks = getBlocksSortedByDominance(func.getBody());
   for (Block *bb : blocks) {
-    CapturingIRBuilder builder(llvmContext,
+    CapturingIRBuilder builder(*llvmModule,
                                llvm::TargetFolder(llvmModule->getDataLayout()));
     if (failed(convertBlockImpl(*bb, bb->isEntryBlock(), builder,
                                 /*recordInsertions=*/true)))
@@ -2740,7 +2737,7 @@ mlir::translateModuleToLLVMIR(Operation *module, llvm::LLVMContext &llvmContext,
 
   ModuleTranslation translator(module, std::move(llvmModule), fs);
   llvm::IRBuilder<llvm::TargetFolder> llvmBuilder(
-      llvmContext,
+      *translator.getLLVMModule(),
       llvm::TargetFolder(translator.getLLVMModule()->getDataLayout()));
 
   // Convert module before functions and operations inside, so dialect

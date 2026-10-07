@@ -546,7 +546,7 @@ public:
                       ElementCount VecWidth, unsigned UnrollFactor,
                       GeneratedRTChecks &RTChecks, VPlan &Plan)
       : OrigLoop(OrigLoop), PSE(PSE), LI(LI), DT(DT), TTI(TTI), AC(AC),
-        VF(VecWidth), UF(UnrollFactor), Builder(PSE.getSE()->getContext()),
+        VF(VecWidth), UF(UnrollFactor), Builder(PSE.getSE()->getModule()),
         RTChecks(RTChecks), Plan(Plan),
         VectorPHVPBB(cast<VPBasicBlock>(
             Plan.getVectorLoopRegion()->getSinglePredecessor())) {}
