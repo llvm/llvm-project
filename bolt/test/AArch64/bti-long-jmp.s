@@ -1,27 +1,25 @@
-# This test checks that BOLT can generate BTI landing pads for targets of stubs inserted in LongJmp.
+# This test checks that LongJmp rejects non-call branches beyond 128MiB
+# even when BTI is enabled.
 
 # REQUIRES: system-linux
 
 # RUN: %clang %s %cflags -Wl,-q -o %t -mbranch-protection=bti -Wl,-z,force-bti
 # RUN: link_fdata --no-lbr %s %t %t.fdata
-# RUN: llvm-bolt %t -o %t.bolt --data %t.fdata -split-functions \
+# RUN: not llvm-bolt %t -o %t.bolt --data %t.fdata -split-functions \
 # RUN: --print-split --print-only foo --print-longjmp 2>&1 | FileCheck %s
 
-# CHECK: BOLT-INFO: Starting stub-insertion pass
-# CHECK: Binary Function "foo" after long-jmp
+# CHECK: Binary Function "foo" after split-functions
 
 # CHECK:      cmp     x0, #0x0
-# CHECK-NEXT: Successors: .LStub0
-
-# CHECK:      adrp    x16, .Ltmp0
-# CHECK-NEXT: add     x16, x16, :lo12:.Ltmp0
-# CHECK-NEXT: br      x16 # UNKNOWN CONTROL FLOW
+# CHECK: Successors: .Ltmp0
 
 # CHECK: -------   HOT-COLD SPLIT POINT   -------
 
-# CHECK:      bti     c
-# CHECK-NEXT: mov     x0, #0x2
+# CHECK:      mov     x0, #0x2
 # CHECK-NEXT: ret
+
+# CHECK: BOLT-INFO: Starting stub-insertion pass
+# CHECK: BOLT-ERROR: Unable to relax non-call branch beyond 128MiB
 
   .text
   .globl  foo
