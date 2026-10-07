@@ -305,6 +305,11 @@ features cannot lower the translation-unit ABI level;
   `-ftrivial-auto-var-init=` entry in the User's Manual for the details,
   including where C deliberately departs from C 6.2.4p6.
 
+- `--config` files now support trailing `#` comments after an option, in
+  addition to whole-line comments. Mid-line comment-denoting `#`s must be
+  separated from surrounding arguments by whitespace. Quoted arguments can no
+  longer be split across multiple lines using a backslash.
+
 ### Removed Compiler Flags
 
 ### Attribute Changes in Clang
@@ -315,7 +320,14 @@ features cannot lower the translation-unit ABI level;
 
 - Clang now accepts `_single_inheritance` under `-fms-compatibility` as an alias for `__single_inheritance`; `_multiple_inheritance` and `_virtual_inheritance` were already correctly supported as aliases.
 
+- Fixed a bug with handling a `nonnull` attribute with an invalid argument
+  index such that it would inadvertently apply the attribute with no arguments,
+  causing all function parameters of pointer type to be considered nonnull. (#GH228670)
+
 ### Improvements to Clang's diagnostics
+
+- Fixed spurious `-Wimplicit-void-ptr-cast` warnings in C for parenthesized
+  null pointer macros such as `(NULL)`. (#GH171874)
 
 - `-Wfortify-source` now diagnoses when `strlcat`, `__builtin_strlcat`, `strlcpy`, or
   `__builtin_strlcpy` is called with a size argument larger than the destination buffer.
@@ -569,6 +581,11 @@ features cannot lower the translation-unit ABI level;
 
 - Improve Clang diagnoses when unary `__imag` operator with non-complex type operand is used as lvalue. (#GH222383)
 
+- Added `-Wredundant-defer` to diagnose redundant uses of the `_Defer`
+  keyword, such as when deferring the last statement of a block; when
+  used as the body of a conditional; or when it immediately precedes
+  a `break`/`continue` statement or a `return` with no argument.
+
 ### Improvements to Clang's time-trace
 
 ### Improvements to Coverage Mapping
@@ -633,12 +650,17 @@ features cannot lower the translation-unit ABI level;
   reference to a vector type; `vec_step` (in C++ for OpenCL) and
   `__builtin_ptrauth_type_discriminator` similarly no longer accept reference
   types that their evaluation silently mishandled. (#GH216997)
+- Fix a crash when using `__builtin_assume_aligned` with dynamic allocations
+  during constant evaluation. (#GH173767)
 - Fixed a crash when constant-evaluating `__builtin_align_up`, `__builtin_align_down`,
-  or `__builtin_is_aligned` with pointers without an underlying object. Null pointers 
+  or `__builtin_is_aligned` with pointers without an underlying object. Null pointers
   are handled as aligned values, while other base-less pointers are rejected during constant
   evaluation.
 
 #### Bug Fixes to Attribute Support
+
+- Fixed an assertion failure when parsing malformed GNU `__attribute__`
+  syntax followed by a parenthesized expression list in C code. (#GH225045)
 
 - Fixed crash (assertion) when the `alloc_align` attribute was applied to a declaration whose type has a `FunctionProtoType` but which is not itself a `FunctionDecl`, such as a function-pointer variable. (#GH122058)
 
@@ -835,9 +857,9 @@ features cannot lower the translation-unit ABI level;
 - Fixed ambiguous overload where two non-static member functions with
   different signatures could be incorrectly considered equivalent. (#GH224499)
 
-- Fixed an assertion failure when explicitly instantiating a nested member with 
-  an ill-formed template argument. Clang now checks for a failed declaration 
-  lookup before asserting that the name is not dependent, avoiding an assertion 
+- Fixed an assertion failure when explicitly instantiating a nested member with
+  an ill-formed template argument. Clang now checks for a failed declaration
+  lookup before asserting that the name is not dependent, avoiding an assertion
   after an earlier diagnostic has caused the declaration to be unavailable. (#GH220525)
 
 - Fixed a crash in constant evaluation when a new-expression selects a
