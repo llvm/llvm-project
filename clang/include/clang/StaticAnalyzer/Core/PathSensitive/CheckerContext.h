@@ -445,7 +445,10 @@ private:
     // clients to their mistake, but several checkers (including
     // DereferenceChecker, CallAndMessageChecker, and DynamicTypePropagation)
     // rely upon the defensive behavior and would need to be updated.
-    if (!State || (State == Pred->getState() && !Tag && !MarkAsSink))
+    if (!State)
+      return Pred;
+
+    if (State == Pred->getState() && !Tag && !MarkAsSink)
       return Pred;
 
     Changed = true;
