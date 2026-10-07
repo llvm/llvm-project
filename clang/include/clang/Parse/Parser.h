@@ -234,7 +234,7 @@ struct LateParsedTypeAttribute : public LateParsedAttribute {
 
   /// The type built for this attribute during type construction, still missing
   /// the argument that hasn't been parsed yet. Filled in by
-  /// `Parser::ProcessLateParsedTypeAttrCallback` and completed once the
+  /// `Sema::ProcessLateParsedTypeAttr` and completed once the
   /// enclosing scope makes the argument parseable. Null if type construction
   /// rejected the attribute.
   ///
@@ -242,9 +242,13 @@ struct LateParsedTypeAttribute : public LateParsedAttribute {
   /// attribute this is; Sema dispatches on the concrete kind when completing.
   BoundsAttributedType *TypeToComplete = nullptr;
 
+  /// The attribute kind, resolved when the GNU attribute was parsed.
+  ParsedAttr::Kind AttrKind;
+
   explicit LateParsedTypeAttribute(Parser *P, IdentifierInfo &Name,
-                                   SourceLocation Loc)
-      : LateParsedAttribute(P, Name, Loc, Kind::Type) {}
+                                   SourceLocation Loc,
+                                   ParsedAttr::Kind AttrKind)
+      : LateParsedAttribute(P, Name, Loc, Kind::Type), AttrKind(AttrKind) {}
 
   void ParseLexedAttributes() override;
 
@@ -8161,6 +8165,11 @@ private:
   void ParseLateTemplatedFuncDef(LateParsedTemplate &LPT);
 
   static void LateTemplateParserCallback(void *P, LateParsedTemplate &LPT);
+
+  /// Implements Sema::GetLateParsedTypeAttrCB.
+  static BoundsAttributedType **
+  GetLateParsedTypeAttrCallback(LateParsedAttribute *LA, ParsedAttr::Kind &Kind,
+                                SourceLocation &Loc);
 
   /// We've parsed something that could plausibly be intended to be a template
   /// name (\p LHS) followed by a '<' token, and the following code can't

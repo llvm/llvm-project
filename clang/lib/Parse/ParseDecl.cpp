@@ -4940,6 +4940,16 @@ void Parser::CompleteLateParsedTypeAttributes(
   LateTypeAttrs.clear();
 }
 
+BoundsAttributedType **Parser::GetLateParsedTypeAttrCallback(
+    LateParsedAttribute *LA, ParsedAttr::Kind &Kind, SourceLocation &Loc) {
+  auto *LTA = dyn_cast<LateParsedTypeAttribute>(LA);
+  if (!LTA)
+    return nullptr;
+  Kind = LTA->AttrKind;
+  Loc = LTA->AttrNameLoc;
+  return &LTA->TypeToComplete;
+}
+
 void LateParsedTypeAttribute::ParseInto(ParsedAttributes &OutAttrs) {
   // Delegate to the Parser that created this attribute
   Self->ParseLexedTypeAttribute(*this, OutAttrs);
