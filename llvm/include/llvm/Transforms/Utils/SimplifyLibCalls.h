@@ -260,8 +260,8 @@ private:
   bool hasFloatVersion(const Module *M, StringRef FuncName);
 
   /// Shared code to optimize strlen+wcslen and strnlen+wcsnlen.
-  Value *optimizeStringLength(CallInst *CI, IRBuilderBase &B, unsigned CharSize,
-                              Value *Bound = nullptr);
+  Value *optimizeStringLength(CallInst *CI, IRBuilderBase &B,
+                              unsigned CharWidth, Value *Bound = nullptr);
 };
 } // End llvm namespace
 
