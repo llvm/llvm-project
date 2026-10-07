@@ -1162,8 +1162,8 @@ def CIR_ConditionOp : CIR_Op<"condition", [
 
 defvar CIR_YieldableScopes = [
   "ArrayCtor", "ArrayDtor", "AwaitOp", "CaseOp", "CleanupScopeOp", "CoroutineOp",
-  "DoWhileOp", "ForOp", "GlobalOp", "IfOp", "LocalInitOp", "ScopeOp", "SwitchOp",
-  "TernaryOp", "TryOp", "WhileOp"
+  "DoWhileOp", "ForOp", "GlobalOp", "IfOp", "LocalInitOp", "RegisterExitDtorOp",
+  "ScopeOp", "SwitchOp", "TernaryOp", "TryOp", "WhileOp"
 ];
 
 def CIR_YieldOp : CIR_Op<"yield", [
@@ -4508,6 +4508,51 @@ def CIR_LocalInitOp : CIR_Op<"local_init", [
 }
 }];
 
+  let hasLLVMLowering = false;
+}
+
+//===----------------------------------------------------------------------===//
+// RegisterExitDtorOp
+//===----------------------------------------------------------------------===//
+
+def CIR_RegisterExitDtorOp : CIR_Op<"register_exit_dtor", [
+  DeclareOpInterfaceMethods<SymbolUserOpInterface>, IsolatedFromAbove,
+  NoRegionArguments, SingleBlockImplicitTerminator<"cir::YieldOp">
+]> {
+  let summary =
+      "Register the destruction of a global at program or thread exit";
+  let description = [{
+    The `cir.register_exit_dtor` operation registers its body to run when the
+    storage duration of the global `object` ends: at program exit, or at
+    thread exit when `object` is thread local.  The registration happens when
+    the operation executes, so objects registered later are destroyed earlier.
+
+    It must be nested in the ctor region of a `cir.global` or
+    `cir.local_init`, but not inside another `cir.register_exit_dtor`,
+    typically right after the construction of a temporary whose lifetime that
+    variable extends.  `object` must have no ctor or dtor region of its own.
+    The body destroys `object`, which it reaches through `cir.get_global`.
+
+    Example:
+
+    ```
+    cir.global external @r = ctor : !rec_Refs {
+      %0 = cir.get_global @_ZGR1r_ : !cir.ptr<!rec_Tmp>
+      cir.call @_ZN3TmpC1Ei(%0, %1) : (!cir.ptr<!rec_Tmp>, !s32i) -> ()
+      cir.register_exit_dtor @_ZGR1r_ {
+        %2 = cir.get_global @_ZGR1r_ : !cir.ptr<!rec_Tmp>
+        cir.call @_ZN3TmpD1Ev(%2) : (!cir.ptr<!rec_Tmp>) -> ()
+      }
+      ...
+    }
+    ```
+  }];
+
+  let arguments = (ins FlatSymbolRefAttr:$object);
+  let regions = (region SizedRegion<1>:$body);
+  let assemblyFormat = "$object $body attr-dict";
+
+  let hasVerifier = 1;
   let hasLLVMLowering = false;
 }
 
