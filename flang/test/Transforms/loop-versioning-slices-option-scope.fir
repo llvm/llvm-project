@@ -66,7 +66,7 @@ module attributes {
       %a: !fir.box<!fir.array<?xi32>>) {
     %reboxed = fir.rebox %a
       : (!fir.box<!fir.array<?xi32>>) -> !fir.box<!fir.array<?xi32>>
-    %declared = fir.declare %reboxed {uniq_name = "interleaved"}
+    %declared = fir.declare %reboxed uniq_name("interleaved")
       : (!fir.box<!fir.array<?xi32>>) -> !fir.box<!fir.array<?xi32>>
     %c1 = arith.constant 1 : index
     %c8 = arith.constant 8 : index

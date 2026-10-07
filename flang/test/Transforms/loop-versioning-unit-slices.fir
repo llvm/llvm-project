@@ -238,7 +238,7 @@ module attributes {
   // flat owners.
   func.func @wrapped_flat_and_slice_owners_supported(
       %root: !fir.box<!fir.array<?xi32>>) {
-    %declared = fir.declare %root {uniq_name = "wrapped"}
+    %declared = fir.declare %root uniq_name("wrapped")
       : (!fir.box<!fir.array<?xi32>>) -> !fir.box<!fir.array<?xi32>>
     %c1 = arith.constant 1 : index
     %c8 = arith.constant 8 : index
@@ -800,13 +800,13 @@ module attributes {
       %boundaryArg: !fir.box<!fir.array<?xi32>>) {
     %packed = fir.pack_array %goodArg heap whole
       : (!fir.box<!fir.array<?xi32>>) -> !fir.box<!fir.array<?xi32>>
-    %declared = fir.declare %packed {uniq_name = "supported"}
+    %declared = fir.declare %packed uniq_name("supported")
       : (!fir.box<!fir.array<?xi32>>) -> !fir.box<!fir.array<?xi32>>
     %reboxed = fir.rebox %declared
       : (!fir.box<!fir.array<?xi32>>) -> !fir.box<!fir.array<?xi32>>
     %boundaryRebox = fir.rebox %boundaryArg
       : (!fir.box<!fir.array<?xi32>>) -> !fir.box<!fir.array<?xi32>>
-    %boundaryDeclared = fir.declare %boundaryRebox {uniq_name = "boundary"}
+    %boundaryDeclared = fir.declare %boundaryRebox uniq_name("boundary")
       : (!fir.box<!fir.array<?xi32>>) -> !fir.box<!fir.array<?xi32>>
     %c1 = arith.constant 1 : index
     %c8 = arith.constant 8 : index
@@ -831,7 +831,7 @@ module attributes {
   // normalization traces both of them to the same function argument.
   func.func @wrapper_identity_is_preserved(
       %arg: !fir.box<!fir.array<?xi32>>) {
-    %declared = fir.declare %arg {uniq_name = "declared"}
+    %declared = fir.declare %arg uniq_name("declared")
       : (!fir.box<!fir.array<?xi32>>) -> !fir.box<!fir.array<?xi32>>
     %reboxed = fir.rebox %declared
       : (!fir.box<!fir.array<?xi32>>) -> !fir.box<!fir.array<?xi32>>
@@ -1152,12 +1152,12 @@ module attributes {
   // declared again. Producer order must not determine argument recognition.
   func.func @indirect_pointer_descriptor(
       %slot: !fir.ref<!fir.box<!fir.ptr<!fir.array<?xi32>>>>) {
-    %declaredSlot = fir.declare %slot {uniq_name = "pointer_slot"}
+    %declaredSlot = fir.declare %slot uniq_name("pointer_slot")
       : (!fir.ref<!fir.box<!fir.ptr<!fir.array<?xi32>>>>)
         -> !fir.ref<!fir.box<!fir.ptr<!fir.array<?xi32>>>>
     %box = fir.load %declaredSlot
       : !fir.ref<!fir.box<!fir.ptr<!fir.array<?xi32>>>>
-    %declaredBox = fir.declare %box {uniq_name = "pointer_value"}
+    %declaredBox = fir.declare %box uniq_name("pointer_value")
       : (!fir.box<!fir.ptr<!fir.array<?xi32>>>)
         -> !fir.box<!fir.ptr<!fir.array<?xi32>>>
     %c1 = arith.constant 1 : index
