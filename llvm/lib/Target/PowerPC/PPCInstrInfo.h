@@ -669,8 +669,7 @@ public:
   /// loaded/stored (e.g. 1, 2, 4, 8).
   bool getMemOperandWithOffsetWidth(const MachineInstr &LdSt,
                                     const MachineOperand *&BaseOp,
-                                    int64_t &Offset, LocationSize &Width,
-                                    const TargetRegisterInfo *TRI) const;
+                                    int64_t &Offset, LocationSize &Width) const;
 
   bool optimizeCmpPostRA(MachineInstr &MI) const;
 

@@ -3380,7 +3380,7 @@ AArch64TargetLowering::EmitLoweredSetFpmr(MachineInstr &MI,
       .addImm(0xda22)
       .addUse(AArch64::FPMR, RegState::Implicit);
   BuildMI(*MBB, MI, DL, TII->get(AArch64::SUBSXrs), AArch64::XZR)
-      .addReg(CurrentFpmrVal, RegState::Kill)
+      .addReg(CurrentFpmrVal)
       .addReg(NewFpmrVal)
       .addImm(0);
   BuildMI(*MBB, MI, DL, TII->get(AArch64::Bcc))
@@ -3388,7 +3388,7 @@ AArch64TargetLowering::EmitLoweredSetFpmr(MachineInstr &MI,
       .addMBB(EndBB);
   BuildMI(*MsrBB, MsrBB->begin(), DL, TII->get(AArch64::MSR))
       .addImm(0xda22)
-      .addReg(NewFpmrVal, getKillRegState(MI.getOperand(0).isDead()))
+      .addReg(NewFpmrVal)
       .addDef(AArch64::FPMR, RegState::Implicit);
 
   MBB->addSuccessor(MsrBB);
