@@ -375,7 +375,12 @@ vputils::getConstantStride(VPValue *Addr, Type *AccessTy,
   if (!AddRec)
     return {};
 
-  return getStrideFromAddRec(AddRec, L, AccessTy, /*Ptr=*/nullptr, PSE);
+  const auto *Stride = dyn_cast_or_null<SCEVConstant>(
+      getStrideFromAddRec(AddRec, L, AccessTy, /*Ptr=*/nullptr, PSE));
+  if (!Stride)
+    return {};
+
+  return Stride->getAPInt().trySExtValue();
 }
 
 bool vputils::isAddressSCEVForCost(const SCEV *Addr, ScalarEvolution &SE,
