@@ -39,6 +39,10 @@ public:
 
   llvm::StringRef GetPluginName() override { return GetPluginNameStatic(); }
 
+  lldb::addr_t GetThreadLocalData(const lldb::ModuleSP module,
+                                  const lldb::ThreadSP thread,
+                                  lldb::addr_t tls_file_addr) override;
+
 protected:
   /// Returns the load address for the given executable module.
   ///

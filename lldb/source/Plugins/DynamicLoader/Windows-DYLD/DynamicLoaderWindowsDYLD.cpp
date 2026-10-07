@@ -247,3 +247,96 @@ DynamicLoaderWindowsDYLD::GetStepThroughTrampolinePlan(Thread &thread,
   return ThreadPlanSP(new ThreadPlanStepInstruction(
       thread, false, false, eVoteNoOpinion, eVoteNoOpinion));
 }
+
+lldb::addr_t
+DynamicLoaderWindowsDYLD::GetThreadLocalData(const lldb::ModuleSP module,
+                                             lldb::ThreadSP thread,
+                                             lldb::addr_t tls_file_addr) {
+  Log *log = GetLog(LLDBLog::DynamicLoader);
+  std::string object_name;
+  if (log) {
+    ObjectFile *obj = module->GetObjectFile();
+    if (obj)
+      object_name = obj->GetObjectName();
+  }
+
+  StructuredData::ObjectSP extended_info = thread->GetExtendedInfo();
+  if (!extended_info) {
+    LLDB_LOG(log, "missing extended info of thread");
+    return LLDB_INVALID_ADDRESS;
+  }
+  StructuredData::Dictionary *dict = extended_info->GetAsDictionary();
+  if (!dict) {
+    LLDB_LOG(log, "extended info of thread is not a dictionary");
+    return LLDB_INVALID_ADDRESS;
+  }
+  addr_t teb_base = 0;
+  if (!dict->GetValueForKeyAsInteger("teb_address", teb_base) || !teb_base ||
+      teb_base == LLDB_INVALID_ADDRESS) {
+    LLDB_LOG(log, "missing 'teb_address' in extended thread info");
+    return LLDB_INVALID_ADDRESS;
+  }
+
+  ProcessSP process = thread->GetProcess();
+  if (!process) {
+    LLDB_LOG(log, "missing process");
+    return LLDB_INVALID_ADDRESS;
+  }
+  uint32_t addr_byte_size = process->GetAddressByteSize();
+  addr_t tls_array_addr = teb_base + 11 * addr_byte_size;
+  llvm::Expected<addr_t> tls_array =
+      process->ReadPointerFromMemory(tls_array_addr);
+  if (!tls_array || *tls_array == LLDB_INVALID_ADDRESS) {
+    LLDB_LOG_ERROR(log, tls_array.takeError(),
+                   "failed to read TLS array from {1:x16}: {0}",
+                   tls_array_addr);
+    return LLDB_INVALID_ADDRESS;
+  }
+
+  Symtab *symtab = module->GetSymtab();
+  if (!symtab) {
+    LLDB_LOG(log, "missing symtab for {0}", object_name);
+    return LLDB_INVALID_ADDRESS;
+  }
+  Symbol *tls_index_sym = symtab->FindFirstSymbolWithNameAndType(
+      ConstString("_tls_index"), eSymbolTypeAny, Symtab::eDebugAny,
+      Symtab::eVisibilityAny);
+  if (!tls_index_sym) {
+    LLDB_LOG(log, "missing '_tls_index' symbol in {0}", object_name);
+    return LLDB_INVALID_ADDRESS;
+  }
+
+  Target &target = process->GetTarget();
+  addr_t tls_index_load_addr =
+      tls_index_sym->GetAddress().GetLoadAddress(&target);
+  if (tls_index_load_addr == LLDB_INVALID_ADDRESS) {
+    LLDB_LOG(log, "failed to resolve load address of '_tls_index' in {0}",
+             object_name);
+    return LLDB_INVALID_ADDRESS;
+  }
+
+  Status error;
+  uint64_t tls_index =
+      process->ReadUnsignedIntegerFromMemory(tls_index_load_addr, 4, 0, error);
+  if (error.Fail()) {
+    LLDB_LOG_ERROR(log, error.takeError(),
+                   "failed to read '_tls_index' in {1} from {2:x8}: {0}",
+                   object_name, tls_index_load_addr);
+    return LLDB_INVALID_ADDRESS;
+  }
+
+  addr_t tls_index_item = *tls_array + tls_index * addr_byte_size;
+  LLDB_LOG(log, "tls base address for {0} is at {1:x8} + {2:x8} * {3} = {4:x8}",
+           object_name, *tls_array, tls_index, addr_byte_size, tls_index_item);
+
+  llvm::Expected<addr_t> tls_base =
+      process->ReadPointerFromMemory(tls_index_item);
+  if (!tls_base || *tls_base == LLDB_INVALID_ADDRESS || *tls_base == 0) {
+    LLDB_LOG_ERROR(log, error.takeError(),
+                   "failed to read tls array in {1} at index {2} ({3:x8}): {0}",
+                   object_name, tls_index, tls_index_item);
+    return LLDB_INVALID_ADDRESS;
+  }
+
+  return *tls_base + tls_file_addr;
+}
