@@ -77,6 +77,7 @@ def APValueKind : EnumPropertyType<"APValue::ValueKind">;
 def ArraySizeModifier : EnumPropertyType<"ArraySizeModifier">;
 def AttrKind : EnumPropertyType<"attr::Kind">;
 def Attr : PropertyType<"const Attr *">;
+def DynAllocKind : PropertyType<"DynAllocKind">;
 def DeducedKind : EnumPropertyType;
 def AutoTypeKeyword : EnumPropertyType;
 def Bool : PropertyType<"bool">;
@@ -544,6 +545,10 @@ let Class = PropertyTypeCase<APValue, "LValue"> in {
     let Conditional = [{ hasBase && isDynamicAlloc }];
     let Read = [{ node.getLValueBase().get<DynamicAllocLValue>().getIndex() }];
   }
+  def : Property<"dynamicAlign", DynAllocKind> {
+    let Conditional = [{ hasBase && isDynamicAlloc }];
+    let Read = [{ node.getLValueBase().get<DynamicAllocLValue>().getAllocKind() }];
+  }
   def : Property<"type", QualType> {
     let Conditional = [{ hasBase && (isTypeInfo || isDynamicAlloc) }];
     let Read = [{
@@ -586,7 +591,7 @@ let Class = PropertyTypeCase<APValue, "LValue"> in {
             TypeInfoLValue(typeInfo->getTypePtr()), *type);
       } else if (isDynamicAlloc) {
         base = APValue::LValueBase::getDynamicAlloc(
-            DynamicAllocLValue(*dynamicAlloc), *type);
+            DynamicAllocLValue(*dynamicAlloc, *dynamicAlign), *type);
       } else if (isExpr) {
         base = APValue::LValueBase(cast<Expr>(*stmt),
                                    *callIndex, *version);
