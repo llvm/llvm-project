@@ -192,15 +192,13 @@ llvm::replaceSymbolicStrideSCEV(PredicatedScalarEvolution &PSE,
   const SCEV *OrigSCEV = PSE.getSCEV(Ptr);
 
   // If there is an entry in the map return the SCEV of the pointer with the
-  // symbolic stride replaced by one.
-  const SCEVUnknown *StrideSCEV = PtrToStride.lookup(Ptr);
+  // symbolic stride replaced by its speculated constant.
+  auto [StrideSCEV, CT] = PtrToStride.lookup(Ptr);
   if (!StrideSCEV)
     // For a non-symbolic stride, just return the original expression.
     return OrigSCEV;
 
-  ScalarEvolution *SE = PSE.getSE();
-  const SCEV *CT = SE->getOne(StrideSCEV->getType());
-  PSE.addPredicate(*SE->getEqualPredicate(StrideSCEV, CT));
+  PSE.addPredicate(*PSE.getSE()->getEqualPredicate(StrideSCEV, CT));
   const SCEV *Expr = PSE.getSCEV(Ptr);
 
   LLVM_DEBUG(dbgs() << "LAA: Replacing SCEV: " << *OrigSCEV
@@ -4075,7 +4073,32 @@ void LoopAccessInfo::collectStridedAccess(Value *MemAccess) {
     StrideBase = C->getOperand();
   assert(SE->isLoopInvariant(StrideBase, TheLoop) &&
          "users of the map rely on the stride being loop invariant");
-  SymbolicStrides[Ptr] = cast<SCEVUnknown>(StrideBase);
+  auto *Stride = cast<SCEVUnknown>(StrideBase);
+
+  // Speculate the stride to the value, which makes the access unit-strided,
+  // e.g. the access size for byte GEPs with byte strides. Accesses with the
+  // same stride reuse the value, otherwise the predicates cannot be satisfied.
+  const SCEV *StrideVal = nullptr;
+  for (const auto &[S, Val] : SymbolicStrides.values())
+    if (S == Stride)
+      StrideVal = Val;
+  if (!StrideVal) {
+    StrideVal = SE->getOne(Stride->getType());
+    ValueToSCEVMapTy StrideToOne = {{Stride->getValue(), StrideVal}};
+    TypeSize AllocSize = DL.getTypeAllocSize(getLoadStoreType(MemAccess));
+    const APInt *Scale;
+    if (const auto *AR = dyn_cast<SCEVAddRecExpr>(SE->getSCEV(Ptr));
+        AR && AllocSize.isFixed() &&
+        match(SCEVParameterRewriter::rewrite(AR->getStepRecurrence(*SE), *SE,
+                                             StrideToOne),
+              m_scev_APInt(Scale))) {
+      uint64_t Size = AllocSize.getFixedValue();
+      uint64_t AbsScale = Scale->abs().getLimitedValue();
+      if (AbsScale && AbsScale < Size && Size % AbsScale == 0)
+        StrideVal = SE->getConstant(Stride->getType(), Size / AbsScale);
+    }
+  }
+  SymbolicStrides[Ptr] = {Stride, StrideVal};
 }
 
 LoopAccessInfo::LoopAccessInfo(Loop *L, ScalarEvolution *SE,

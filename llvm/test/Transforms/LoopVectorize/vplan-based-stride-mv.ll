@@ -677,19 +677,18 @@ define void @byte_gep_nonscaled_stride(ptr noalias %p.out, ptr %p, i64 %stride) 
 ; COMPARE-LAA-MV-NEXT:  [[ENTRY:.*:]]
 ; COMPARE-LAA-MV-NEXT:    br label %[[VECTOR_SCEVCHECK:.*]]
 ; COMPARE-LAA-MV:       [[VECTOR_SCEVCHECK]]:
-; COMPARE-LAA-MV-NEXT:    [[IDENT_CHECK:%.*]] = icmp ne i64 [[STRIDE]], 1
+; COMPARE-LAA-MV-NEXT:    [[IDENT_CHECK:%.*]] = icmp ne i64 [[STRIDE]], 8
 ; COMPARE-LAA-MV-NEXT:    br i1 [[IDENT_CHECK]], label %[[SCALAR_PH1:.*]], label %[[VECTOR_PH:.*]]
 ; COMPARE-LAA-MV:       [[VECTOR_PH]]:
 ; COMPARE-LAA-MV-NEXT:    br label %[[VECTOR_BODY:.*]]
 ; COMPARE-LAA-MV:       [[VECTOR_BODY]]:
 ; COMPARE-LAA-MV-NEXT:    [[INDEX1:%.*]] = phi i64 [ 0, %[[VECTOR_PH]] ], [ [[INDEX_NEXT:%.*]], %[[VECTOR_BODY]] ]
-; COMPARE-LAA-MV-NEXT:    [[TMP0:%.*]] = phi <4 x i64> [ <i64 0, i64 1, i64 2, i64 3>, %[[VECTOR_PH]] ], [ [[VEC_IND_NEXT:%.*]], %[[VECTOR_BODY]] ]
-; COMPARE-LAA-MV-NEXT:    [[WIDE_GEP:%.*]] = getelementptr i8, ptr [[P]], <4 x i64> [[TMP0]]
-; COMPARE-LAA-MV-NEXT:    [[TMP15:%.*]] = call <4 x i64> @llvm.masked.gather.v4i64.v4p0(<4 x ptr> align 8 [[WIDE_GEP]], <4 x i1> splat (i1 true), <4 x i64> poison)
+; COMPARE-LAA-MV-NEXT:    [[TMP0:%.*]] = shl i64 [[INDEX1]], 3
+; COMPARE-LAA-MV-NEXT:    [[TMP1:%.*]] = getelementptr i8, ptr [[P]], i64 [[TMP0]]
+; COMPARE-LAA-MV-NEXT:    [[TMP15:%.*]] = load <4 x i64>, ptr [[TMP1]], align 8
 ; COMPARE-LAA-MV-NEXT:    [[TMP16:%.*]] = getelementptr i64, ptr [[P_OUT]], i64 [[INDEX1]]
 ; COMPARE-LAA-MV-NEXT:    store <4 x i64> [[TMP15]], ptr [[TMP16]], align 8
 ; COMPARE-LAA-MV-NEXT:    [[INDEX_NEXT]] = add nuw i64 [[INDEX1]], 4
-; COMPARE-LAA-MV-NEXT:    [[VEC_IND_NEXT]] = add nsw <4 x i64> [[TMP0]], splat (i64 4)
 ; COMPARE-LAA-MV-NEXT:    [[TMP17:%.*]] = icmp eq i64 [[INDEX_NEXT]], 128
 ; COMPARE-LAA-MV-NEXT:    br i1 [[TMP17]], label %[[SCALAR_PH:.*]], label %[[VECTOR_BODY]], !llvm.loop [[LOOP11:![0-9]+]]
 ; COMPARE-LAA-MV:       [[SCALAR_PH]]:
@@ -1258,15 +1257,17 @@ define void @byte_dependent_byte_geps(ptr noalias %p.out, ptr %p0, ptr %p1, i64 
 ; COMPARE-LAA-MV-NEXT:  [[ENTRY:.*:]]
 ; COMPARE-LAA-MV-NEXT:    br label %[[VECTOR_SCEVCHECK:.*]]
 ; COMPARE-LAA-MV:       [[VECTOR_SCEVCHECK]]:
-; COMPARE-LAA-MV-NEXT:    [[IDENT_CHECK:%.*]] = icmp ne i64 [[STRIDE]], 1
+; COMPARE-LAA-MV-NEXT:    [[IDENT_CHECK:%.*]] = icmp ne i64 [[STRIDE]], 8
 ; COMPARE-LAA-MV-NEXT:    br i1 [[IDENT_CHECK]], label %[[SCALAR_PH1:.*]], label %[[VECTOR_PH:.*]]
 ; COMPARE-LAA-MV:       [[VECTOR_PH]]:
 ; COMPARE-LAA-MV-NEXT:    br label %[[VECTOR_BODY:.*]]
 ; COMPARE-LAA-MV:       [[VECTOR_BODY]]:
 ; COMPARE-LAA-MV-NEXT:    [[INDEX1:%.*]] = phi i64 [ 0, %[[VECTOR_PH]] ], [ [[INDEX_NEXT:%.*]], %[[VECTOR_BODY]] ]
-; COMPARE-LAA-MV-NEXT:    [[TMP0:%.*]] = phi <4 x i64> [ <i64 0, i64 1, i64 2, i64 3>, %[[VECTOR_PH]] ], [ [[VEC_IND_NEXT:%.*]], %[[VECTOR_BODY]] ]
-; COMPARE-LAA-MV-NEXT:    [[WIDE_GEP:%.*]] = getelementptr i8, ptr [[P0]], <4 x i64> [[TMP0]]
-; COMPARE-LAA-MV-NEXT:    [[TMP15:%.*]] = call <4 x i64> @llvm.masked.gather.v4i64.v4p0(<4 x ptr> align 8 [[WIDE_GEP]], <4 x i1> splat (i1 true), <4 x i64> poison)
+; COMPARE-LAA-MV-NEXT:    [[VEC_IND:%.*]] = phi <4 x i64> [ <i64 0, i64 1, i64 2, i64 3>, %[[VECTOR_PH]] ], [ [[VEC_IND_NEXT:%.*]], %[[VECTOR_BODY]] ]
+; COMPARE-LAA-MV-NEXT:    [[TMP0:%.*]] = shl <4 x i64> [[VEC_IND]], splat (i64 3)
+; COMPARE-LAA-MV-NEXT:    [[TMP1:%.*]] = extractelement <4 x i64> [[TMP0]], i64 0
+; COMPARE-LAA-MV-NEXT:    [[TMP2:%.*]] = getelementptr i8, ptr [[P0]], i64 [[TMP1]]
+; COMPARE-LAA-MV-NEXT:    [[TMP15:%.*]] = load <4 x i64>, ptr [[TMP2]], align 8
 ; COMPARE-LAA-MV-NEXT:    [[WIDE_GEP1:%.*]] = getelementptr i8, ptr [[P1]], <4 x i64> [[TMP0]]
 ; COMPARE-LAA-MV-NEXT:    [[TMP27:%.*]] = call <4 x i32> @llvm.masked.gather.v4i32.v4p0(<4 x ptr> align 8 [[WIDE_GEP1]], <4 x i1> splat (i1 true), <4 x i32> poison)
 ; COMPARE-LAA-MV-NEXT:    [[TMP28:%.*]] = sext <4 x i32> [[TMP27]] to <4 x i64>
@@ -1274,7 +1275,7 @@ define void @byte_dependent_byte_geps(ptr noalias %p.out, ptr %p0, ptr %p1, i64 
 ; COMPARE-LAA-MV-NEXT:    [[TMP30:%.*]] = getelementptr i64, ptr [[P_OUT]], i64 [[INDEX1]]
 ; COMPARE-LAA-MV-NEXT:    store <4 x i64> [[TMP29]], ptr [[TMP30]], align 8
 ; COMPARE-LAA-MV-NEXT:    [[INDEX_NEXT]] = add nuw i64 [[INDEX1]], 4
-; COMPARE-LAA-MV-NEXT:    [[VEC_IND_NEXT]] = add nsw <4 x i64> [[TMP0]], splat (i64 4)
+; COMPARE-LAA-MV-NEXT:    [[VEC_IND_NEXT]] = add nsw <4 x i64> [[VEC_IND]], splat (i64 4)
 ; COMPARE-LAA-MV-NEXT:    [[TMP31:%.*]] = icmp eq i64 [[INDEX_NEXT]], 128
 ; COMPARE-LAA-MV-NEXT:    br i1 [[TMP31]], label %[[SCALAR_PH:.*]], label %[[VECTOR_BODY]], !llvm.loop [[LOOP22:![0-9]+]]
 ; COMPARE-LAA-MV:       [[SCALAR_PH]]:
@@ -1362,15 +1363,17 @@ define void @byte_dependent_byte_geps_reverse_order(ptr noalias %p.out, ptr %p0,
 ; COMPARE-LAA-MV-NEXT:  [[ENTRY:.*:]]
 ; COMPARE-LAA-MV-NEXT:    br label %[[VECTOR_SCEVCHECK:.*]]
 ; COMPARE-LAA-MV:       [[VECTOR_SCEVCHECK]]:
-; COMPARE-LAA-MV-NEXT:    [[IDENT_CHECK:%.*]] = icmp ne i64 [[STRIDE]], 1
+; COMPARE-LAA-MV-NEXT:    [[IDENT_CHECK:%.*]] = icmp ne i64 [[STRIDE]], 4
 ; COMPARE-LAA-MV-NEXT:    br i1 [[IDENT_CHECK]], label %[[SCALAR_PH1:.*]], label %[[VECTOR_PH:.*]]
 ; COMPARE-LAA-MV:       [[VECTOR_PH]]:
 ; COMPARE-LAA-MV-NEXT:    br label %[[VECTOR_BODY:.*]]
 ; COMPARE-LAA-MV:       [[VECTOR_BODY]]:
 ; COMPARE-LAA-MV-NEXT:    [[INDEX1:%.*]] = phi i64 [ 0, %[[VECTOR_PH]] ], [ [[INDEX_NEXT:%.*]], %[[VECTOR_BODY]] ]
-; COMPARE-LAA-MV-NEXT:    [[TMP0:%.*]] = phi <4 x i64> [ <i64 0, i64 1, i64 2, i64 3>, %[[VECTOR_PH]] ], [ [[VEC_IND_NEXT:%.*]], %[[VECTOR_BODY]] ]
-; COMPARE-LAA-MV-NEXT:    [[WIDE_GEP:%.*]] = getelementptr i8, ptr [[P1]], <4 x i64> [[TMP0]]
-; COMPARE-LAA-MV-NEXT:    [[TMP15:%.*]] = call <4 x i32> @llvm.masked.gather.v4i32.v4p0(<4 x ptr> align 8 [[WIDE_GEP]], <4 x i1> splat (i1 true), <4 x i32> poison)
+; COMPARE-LAA-MV-NEXT:    [[VEC_IND:%.*]] = phi <4 x i64> [ <i64 0, i64 1, i64 2, i64 3>, %[[VECTOR_PH]] ], [ [[VEC_IND_NEXT:%.*]], %[[VECTOR_BODY]] ]
+; COMPARE-LAA-MV-NEXT:    [[TMP0:%.*]] = shl <4 x i64> [[VEC_IND]], splat (i64 2)
+; COMPARE-LAA-MV-NEXT:    [[TMP1:%.*]] = extractelement <4 x i64> [[TMP0]], i64 0
+; COMPARE-LAA-MV-NEXT:    [[TMP2:%.*]] = getelementptr i8, ptr [[P1]], i64 [[TMP1]]
+; COMPARE-LAA-MV-NEXT:    [[TMP15:%.*]] = load <4 x i32>, ptr [[TMP2]], align 8
 ; COMPARE-LAA-MV-NEXT:    [[TMP16:%.*]] = sext <4 x i32> [[TMP15]] to <4 x i64>
 ; COMPARE-LAA-MV-NEXT:    [[WIDE_GEP1:%.*]] = getelementptr i8, ptr [[P0]], <4 x i64> [[TMP0]]
 ; COMPARE-LAA-MV-NEXT:    [[TMP28:%.*]] = call <4 x i64> @llvm.masked.gather.v4i64.v4p0(<4 x ptr> align 8 [[WIDE_GEP1]], <4 x i1> splat (i1 true), <4 x i64> poison)
@@ -1378,7 +1381,7 @@ define void @byte_dependent_byte_geps_reverse_order(ptr noalias %p.out, ptr %p0,
 ; COMPARE-LAA-MV-NEXT:    [[TMP30:%.*]] = getelementptr i64, ptr [[P_OUT]], i64 [[INDEX1]]
 ; COMPARE-LAA-MV-NEXT:    store <4 x i64> [[TMP29]], ptr [[TMP30]], align 8
 ; COMPARE-LAA-MV-NEXT:    [[INDEX_NEXT]] = add nuw i64 [[INDEX1]], 4
-; COMPARE-LAA-MV-NEXT:    [[VEC_IND_NEXT]] = add nsw <4 x i64> [[TMP0]], splat (i64 4)
+; COMPARE-LAA-MV-NEXT:    [[VEC_IND_NEXT]] = add nsw <4 x i64> [[VEC_IND]], splat (i64 4)
 ; COMPARE-LAA-MV-NEXT:    [[TMP31:%.*]] = icmp eq i64 [[INDEX_NEXT]], 128
 ; COMPARE-LAA-MV-NEXT:    br i1 [[TMP31]], label %[[SCALAR_PH:.*]], label %[[VECTOR_BODY]], !llvm.loop [[LOOP24:![0-9]+]]
 ; COMPARE-LAA-MV:       [[SCALAR_PH]]:
