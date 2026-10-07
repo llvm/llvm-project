@@ -27,6 +27,12 @@ void pragma_after_redecl(void) __attribute__((ifunc("resolver")));
 void pragma_after_redecl(void);
 #pragma weak pragma_after_redecl // expected-note {{conflicting attribute is here}}
 
+// The ifunc attribute can also be introduced on a redeclaration.
+void pragma_ifunc_on_redecl(void);
+void pragma_ifunc_on_redecl(void) __attribute__((ifunc("resolver")));
+// expected-error@-1 {{'ifunc' and 'weak' attributes are not compatible}}
+#pragma weak pragma_ifunc_on_redecl // expected-note {{conflicting attribute is here}}
+
 // A weak alias of an ifunc does not make the ifunc itself weak.
 #pragma weak pragma_alias = ifunc_alias_target
 void ifunc_alias_target(void) __attribute__((ifunc("resolver")));
