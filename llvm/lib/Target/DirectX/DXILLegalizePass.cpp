@@ -70,38 +70,33 @@ legalizeNonStandardInteger(Instruction &I,
 
   // Get an operand's legal carrier, normalizing it only when a consumer
   // requires signed or unsigned narrow-integer semantics.
-  auto operand = [&](Value *Operand, IntegerType *LegalTy,
-                     IntegerExtension Extension =
-                         IntegerExtension::None) -> Value * {
-    if (Value *Replacement = ReplacedValues.lookup(Operand)) {
-      Replacement = Builder.CreateZExtOrTrunc(Replacement, LegalTy);
-      if (Extension == IntegerExtension::None)
-        return Replacement;
-      unsigned Width = cast<IntegerType>(Operand->getType())->getBitWidth();
-      unsigned LegalWidth = LegalTy->getBitWidth();
-      auto *ContextI = dyn_cast<Instruction>(Replacement);
-      if (Extension == IntegerExtension::Zero)
-        return MaskedValueIsZero(Replacement,
-                                 APInt::getBitsSetFrom(LegalWidth, Width),
-                                 SimplifyQuery(I.getDataLayout(), ContextI))
-                   ? Replacement
-                   : maskToIntegerWidth(Replacement, Width, Builder);
-      unsigned Shift = LegalWidth - Width;
-      if (ComputeNumSignBits(Replacement, I.getDataLayout(), /*AC=*/nullptr,
-                             ContextI) > Shift)
-        return Replacement;
-      return Builder.CreateAShr(Builder.CreateShl(Replacement, Shift), Shift);
-    }
-    if (auto *C = dyn_cast<ConstantInt>(Operand))
-      return ConstantInt::get(
-          LegalTy, Extension == IntegerExtension::Sign
-                       ? C->getValue().sextOrTrunc(LegalTy->getBitWidth())
-                       : C->getValue().zextOrTrunc(LegalTy->getBitWidth()));
-    if (Operand->getType() == LegalTy)
-      return Operand;
-    report_fatal_error(
-        "DXIL legalization is missing an integer operand replacement",
-        /*gen_crash_diag=*/false);
+  auto operand = [&](Value *Operand, IntegerExtension Extension =
+                                         IntegerExtension::None) -> Value * {
+    IntegerType *LegalTy = getLegalIntegerType(Operand->getType());
+    assert(LegalTy && "Expected an unsupported-width integer operand");
+    Value *Replacement =
+        ReplacedValues.lookup_or(Operand, dyn_cast<ConstantInt>(Operand));
+    if (!Replacement)
+      report_fatal_error(
+          "DXIL legalization is missing an integer operand replacement",
+          /*gen_crash_diag=*/false);
+    Replacement = Builder.CreateZExtOrTrunc(Replacement, LegalTy);
+    if (Extension == IntegerExtension::None)
+      return Replacement;
+    unsigned Width = Operand->getType()->getIntegerBitWidth();
+    unsigned LegalWidth = LegalTy->getBitWidth();
+    auto *ContextI = dyn_cast<Instruction>(Replacement);
+    if (Extension == IntegerExtension::Zero)
+      return MaskedValueIsZero(Replacement,
+                               APInt::getBitsSetFrom(LegalWidth, Width),
+                               SimplifyQuery(I.getDataLayout(), ContextI))
+                 ? Replacement
+                 : maskToIntegerWidth(Replacement, Width, Builder);
+    unsigned Shift = LegalWidth - Width;
+    if (ComputeNumSignBits(Replacement, I.getDataLayout(), /*AC=*/nullptr,
+                           ContextI) > Shift)
+      return Replacement;
+    return Builder.CreateAShr(Builder.CreateShl(Replacement, Shift), Shift);
   };
 
   auto replace = [&](Value *Replacement) {
@@ -144,7 +139,7 @@ legalizeNonStandardInteger(Instruction &I,
       }
       return replace(Packed);
     }
-    Value *Packed = operand(BitCast->getOperand(0), LegalSrcTy);
+    Value *Packed = operand(BitCast->getOperand(0));
     Value *Unpacked = PoisonValue::get(VectorTy);
     for (unsigned Index = 0; Index < VecSize; ++Index) {
       Value *Element = Packed;
@@ -159,45 +154,38 @@ legalizeNonStandardInteger(Instruction &I,
 
   // binop illegal iN -> perform the operation in an i32/i64 carrier.
   if (auto *BO = dyn_cast<BinaryOperator>(&I)) {
-    auto *LegalTy = getLegalIntegerType(BO->getType());
-    if (!LegalTy)
+    if (!getLegalIntegerType(BO->getType()))
       return false;
 
     IntegerExtension LHSExtension = IntegerExtension::None;
-    IntegerExtension RHSExtension = IntegerExtension::None;
     switch (BO->getOpcode()) {
     case Instruction::SDiv:
     case Instruction::SRem:
-      LHSExtension = RHSExtension = IntegerExtension::Sign;
-      break;
     case Instruction::AShr:
       LHSExtension = IntegerExtension::Sign;
-      RHSExtension = IntegerExtension::Zero;
       break;
     case Instruction::UDiv:
     case Instruction::URem:
     case Instruction::LShr:
-      LHSExtension = RHSExtension = IntegerExtension::Zero;
-      break;
-    case Instruction::Shl:
-      RHSExtension = IntegerExtension::Zero;
+      LHSExtension = IntegerExtension::Zero;
       break;
     default:
       break;
     }
-    Value *LHS = operand(BO->getOperand(0), LegalTy, LHSExtension);
-    Value *RHS = operand(BO->getOperand(1), LegalTy, RHSExtension);
+    IntegerExtension RHSExtension =
+        BO->isShift() ? IntegerExtension::Zero : LHSExtension;
+    Value *LHS = operand(BO->getOperand(0), LHSExtension);
+    Value *RHS = operand(BO->getOperand(1), RHSExtension);
     return replace(Builder.CreateBinOp(BO->getOpcode(), LHS, RHS));
   }
 
   // select illegal iN -> select between i32/i64 carrier values.
   if (auto *Select = dyn_cast<SelectInst>(&I)) {
-    auto *LegalTy = getLegalIntegerType(Select->getType());
-    if (!LegalTy)
+    if (!getLegalIntegerType(Select->getType()))
       return false;
 
-    Value *True = operand(Select->getTrueValue(), LegalTy);
-    Value *False = operand(Select->getFalseValue(), LegalTy);
+    Value *True = operand(Select->getTrueValue());
+    Value *False = operand(Select->getFalseValue());
     Value *Replacement = Builder.CreateSelect(Select->getCondition(), True,
                                               False, Select->getName(), Select);
     if (auto *NewSelect = dyn_cast<SelectInst>(Replacement);
@@ -208,14 +196,13 @@ legalizeNonStandardInteger(Instruction &I,
 
   // icmp illegal iN -> compare normalized i32/i64 carrier values.
   if (auto *Cmp = dyn_cast<ICmpInst>(&I)) {
-    auto *LegalTy = getLegalIntegerType(Cmp->getOperand(0)->getType());
-    if (!LegalTy)
+    if (!getLegalIntegerType(Cmp->getOperand(0)->getType()))
       return false;
 
     IntegerExtension Extension =
         Cmp->isSigned() ? IntegerExtension::Sign : IntegerExtension::Zero;
-    Value *LHS = operand(Cmp->getOperand(0), LegalTy, Extension);
-    Value *RHS = operand(Cmp->getOperand(1), LegalTy, Extension);
+    Value *LHS = operand(Cmp->getOperand(0), Extension);
+    Value *RHS = operand(Cmp->getOperand(1), Extension);
     return replace(Builder.CreateICmp(Cmp->getPredicate(), LHS, RHS));
   }
 
@@ -234,17 +221,12 @@ legalizeNonStandardInteger(Instruction &I,
       Extension = IntegerExtension::Sign;
     Value *Source = Cast->getOperand(0);
     if (LegalSrcTy)
-      Source = operand(Source, LegalSrcTy, Extension);
+      Source = operand(Source, Extension);
     Type *ResultTy = LegalDstTy ? LegalDstTy : Cast->getDestTy();
-    switch (Cast->getOpcode()) {
-    case Instruction::Trunc:
-    case Instruction::ZExt:
-      return replace(Builder.CreateZExtOrTrunc(Source, ResultTy));
-    case Instruction::SExt:
-      return replace(Builder.CreateSExtOrTrunc(Source, ResultTy));
-    default:
-      return replace(Builder.CreateCast(Cast->getOpcode(), Source, ResultTy));
-    }
+    if (Cast->isIntegerCast())
+      return replace(Builder.CreateIntCast(
+          Source, ResultTy, Extension == IntegerExtension::Sign));
+    return replace(Builder.CreateCast(Cast->getOpcode(), Source, ResultTy));
   }
 
   if (ReplacedValues.contains(&I) || isa<FreezeInst>(I))
@@ -285,12 +267,10 @@ static bool legalizeI8MemoryUses(Instruction &I,
     if (!Store->getValueOperand()->getType()->isIntegerTy(8))
       return false;
 
-    Value *StoredValue = Store->getValueOperand();
-    if (Value *Replacement = ReplacedValues.lookup(StoredValue))
-      StoredValue = Replacement;
-    Value *Pointer = Store->getPointerOperand();
-    if (Value *Replacement = ReplacedValues.lookup(Pointer))
-      Pointer = Replacement;
+    Value *StoredValue = ReplacedValues.lookup_or(Store->getValueOperand(),
+                                                  Store->getValueOperand());
+    Value *Pointer = ReplacedValues.lookup_or(Store->getPointerOperand(),
+                                              Store->getPointerOperand());
 
     Type *StorageTy = nullptr;
     if (auto *AI = dyn_cast<AllocaInst>(Pointer))
@@ -320,9 +300,8 @@ static bool legalizeI8MemoryUses(Instruction &I,
 
   if (auto *Load = dyn_cast<LoadInst>(&I);
       Load && I.getType()->isIntegerTy(8)) {
-    Value *Pointer = Load->getPointerOperand();
-    if (Value *Replacement = ReplacedValues.lookup(Pointer))
-      Pointer = Replacement;
+    Value *Pointer = ReplacedValues.lookup_or(Load->getPointerOperand(),
+                                              Load->getPointerOperand());
     Type *ElementType = Pointer->getType();
     if (auto *AI = dyn_cast<AllocaInst>(Pointer))
       ElementType = AI->getAllocatedType();
@@ -337,38 +316,38 @@ static bool legalizeI8MemoryUses(Instruction &I,
     return true;
   }
 
+  // Loads supply their access type; standalone GEPs use the storage element.
+  auto createLegalGEP = [&](GEPOperator *GEP, Value *BasePtr,
+                            Type *ElementType = nullptr) {
+    Type *GEPType = BasePtr->getType();
+    if (auto *AI = dyn_cast<AllocaInst>(BasePtr))
+      GEPType = AI->getAllocatedType();
+    if (auto *GV = dyn_cast<GlobalVariable>(BasePtr))
+      GEPType = GV->getValueType();
+    if (!ElementType)
+      ElementType =
+          GEPType->isArrayTy() ? GEPType->getArrayElementType() : GEPType;
+    if (!GEPType->isArrayTy())
+      GEPType = ArrayType::get(ElementType, 1);
+    auto *Offset = dyn_cast<ConstantInt>(GEP->getOperand(1));
+    assert(Offset && "Offset is expected to be a ConstantInt");
+    uint32_t ByteOffset = Offset->getZExtValue();
+    uint32_t ElemSize = I.getDataLayout().getTypeAllocSize(ElementType);
+    assert(ElemSize > 0 && "ElementSize must be set");
+    uint32_t Index = ByteOffset / ElemSize;
+    return GetElementPtrInst::Create(
+        GEPType, BasePtr, {Builder.getInt32(0), Builder.getInt32(Index)},
+        GEP->getNoWrapFlags(), GEP->getName(), I.getIterator());
+  };
+
   if (auto *Load = dyn_cast<LoadInst>(&I);
       Load && isa<ConstantExpr>(Load->getPointerOperand())) {
-    auto *CE = dyn_cast<ConstantExpr>(Load->getPointerOperand());
-    if (!(CE->getOpcode() == Instruction::GetElementPtr))
-      return false;
-    auto *GEP = dyn_cast<GEPOperator>(CE);
-    if (!GEP->getSourceElementType()->isIntegerTy(8))
+    auto *GEP = dyn_cast<GEPOperator>(Load->getPointerOperand());
+    if (!GEP || !GEP->getSourceElementType()->isIntegerTy(8))
       return false;
 
     Type *ElementType = Load->getType();
-    ConstantInt *Offset = dyn_cast<ConstantInt>(GEP->getOperand(1));
-    uint32_t ByteOffset = Offset->getZExtValue();
-    uint32_t ElemSize = Load->getDataLayout().getTypeAllocSize(ElementType);
-    uint32_t Index = ByteOffset / ElemSize;
-
-    Value *PtrOperand = GEP->getPointerOperand();
-    Type *GEPType = GEP->getPointerOperandType();
-
-    if (auto *GV = dyn_cast<GlobalVariable>(PtrOperand))
-      GEPType = GV->getValueType();
-    if (auto *AI = dyn_cast<AllocaInst>(PtrOperand))
-      GEPType = AI->getAllocatedType();
-
-    if (auto *ArrTy = dyn_cast<ArrayType>(GEPType))
-      GEPType = ArrTy;
-    else
-      GEPType = ArrayType::get(ElementType, 1); // its a scalar
-
-    Value *NewGEP = GetElementPtrInst::Create(
-        GEPType, PtrOperand, {Builder.getInt32(0), Builder.getInt32(Index)},
-        GEP->getNoWrapFlags(), GEP->getName(), I.getIterator());
-
+    Value *NewGEP = createLegalGEP(GEP, GEP->getPointerOperand(), ElementType);
     LoadInst *NewLoad = Builder.CreateLoad(ElementType, NewGEP);
     ReplacedValues[Load] = NewLoad;
     Load->replaceAllUsesWith(NewLoad);
@@ -377,40 +356,13 @@ static bool legalizeI8MemoryUses(Instruction &I,
   }
 
   if (auto *GEP = dyn_cast<GetElementPtrInst>(&I)) {
-    if (!GEP->getType()->isPointerTy() ||
-        !GEP->getSourceElementType()->isIntegerTy(8))
+    if (!GEP->getSourceElementType()->isIntegerTy(8))
       return false;
 
-    Value *BasePtr = GEP->getPointerOperand();
-    if (ReplacedValues.count(BasePtr))
-      BasePtr = ReplacedValues[BasePtr];
+    Value *BasePtr = ReplacedValues.lookup_or(GEP->getPointerOperand(),
+                                              GEP->getPointerOperand());
 
-    Type *ElementType = BasePtr->getType();
-
-    if (auto *AI = dyn_cast<AllocaInst>(BasePtr))
-      ElementType = AI->getAllocatedType();
-    if (auto *GV = dyn_cast<GlobalVariable>(BasePtr))
-      ElementType = GV->getValueType();
-
-    Type *GEPType = ElementType;
-    if (auto *ArrTy = dyn_cast<ArrayType>(ElementType))
-      ElementType = ArrTy->getArrayElementType();
-    else
-      GEPType = ArrayType::get(ElementType, 1); // its a scalar
-
-    ConstantInt *Offset = dyn_cast<ConstantInt>(GEP->getOperand(1));
-    // Note: i8 to i32 offset conversion without emitting IR requires constant
-    // ints. Since offset conversion is common, we can safely assume Offset is
-    // always a ConstantInt, so no need to have a conditional bail out on
-    // nullptr, instead assert this is the case.
-    assert(Offset && "Offset is expected to be a ConstantInt");
-    uint32_t ByteOffset = Offset->getZExtValue();
-    uint32_t ElemSize = GEP->getDataLayout().getTypeAllocSize(ElementType);
-    assert(ElemSize > 0 && "ElementSize must be set");
-    uint32_t Index = ByteOffset / ElemSize;
-    Value *NewGEP = GetElementPtrInst::Create(
-        GEPType, BasePtr, {Builder.getInt32(0), Builder.getInt32(Index)},
-        GEP->getNoWrapFlags(), GEP->getName(), GEP->getIterator());
+    Value *NewGEP = createLegalGEP(cast<GEPOperator>(GEP), BasePtr);
     ReplacedValues[GEP] = NewGEP;
     GEP->replaceAllUsesWith(NewGEP);
     ToRemove.push_back(GEP);
