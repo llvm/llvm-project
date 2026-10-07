@@ -45,6 +45,8 @@ protected:
   const ABIType *F64;
   /// An x87 long double: 80 bits of value in 16 bytes of storage.
   const ABIType *F80;
+  /// A bool: one bit of value in a byte of storage.
+  const ABIType *Bool;
   const ABIType *Void;
   /// An empty class: a record with no fields, one byte wide.
   const ABIType *Empty;
@@ -60,6 +62,7 @@ protected:
         F64(TB.getFloatType(llvm::APFloat::IEEEdouble(), llvm::Align(8))),
         F80(TB.getFloatType(llvm::APFloat::x87DoubleExtended(),
                             llvm::Align(16))),
+        Bool(TB.getIntegerType(1, llvm::Align(1), /*Signed=*/false)),
         Void(TB.getVoidType()),
         Empty(TB.getRecordType({}, llvm::TypeSize::getFixed(8), llvm::Align(1),
                                /*UnadjustedAlign=*/llvm::Align(1),
@@ -644,6 +647,264 @@ TEST_F(X86TargetInfoTest, Int128VectorOnlyIsIndirectAfterSSERegistersRunOut) {
       EXPECT_TRUE(Info.getIndirectByVal());
     }
   }
+}
+
+// Each _BitInt(17) takes 32 bits, so in each struct the last two elements fill
+// the high eightbyte.
+TEST_F(X86TargetInfoTest, BitIntArrayStepsByStorageSize) {
+  std::unique_ptr<FunctionInfo> FI;
+  std::unique_ptr<TargetInfo> TI;
+  const ABIType *BitInt17 = TB.getIntegerType(17, llvm::Align(4),
+                                              /*Signed=*/true,
+                                              /*IsBitInt=*/true);
+  const ABIType *Arr4 =
+      TB.getArrayType(BitInt17, /*NumElements=*/4, /*SizeInBits=*/128);
+  const ABIType *Arr3 =
+      TB.getArrayType(BitInt17, /*NumElements=*/3, /*SizeInBits=*/96);
+  const ABIType *Records[] = {
+      makeRecord({FieldInfo(Arr4, 0)}, 128, llvm::Align(4)),
+      makeRecord({FieldInfo(I32, 0), FieldInfo(Arr3, 32)}, 128,
+                 llvm::Align(4))};
+  for (const ABIType *S : Records) {
+    SCOPED_TRACE(S == Records[0] ? "_BitInt(17) a[4]"
+                                 : "int x; _BitInt(17) a[3]");
+    llvm::ArrayRef<FieldInfo> Pair = directPair(classifyArg(S, FI, TI));
+    ASSERT_EQ(Pair.size(), 2u);
+    expectInteger(Pair[0].FieldType, 64);
+    expectInteger(Pair[1].FieldType, 64);
+  }
+}
+
+// _BitInt elements are padded out to their alignment and bools take a byte, so
+// these arrays reach the high eightbyte.
+TEST_F(X86TargetInfoTest, NarrowElementArraysStepByStorageSize) {
+  std::unique_ptr<FunctionInfo> FI;
+  std::unique_ptr<TargetInfo> TI;
+  const ABIType *BitInt3 = TB.getIntegerType(3, llvm::Align(1), /*Signed=*/true,
+                                             /*IsBitInt=*/true);
+  const ABIType *BitInt9 = TB.getIntegerType(9, llvm::Align(2), /*Signed=*/true,
+                                             /*IsBitInt=*/true);
+  const ABIType *BitInt33 = TB.getIntegerType(33, llvm::Align(8),
+                                              /*Signed=*/true,
+                                              /*IsBitInt=*/true);
+  const ABIType *BitInt3x16 =
+      TB.getArrayType(BitInt3, /*NumElements=*/16, /*SizeInBits=*/128);
+  const ABIType *BitInt9x5 =
+      TB.getArrayType(BitInt9, /*NumElements=*/5, /*SizeInBits=*/80);
+  const ABIType *BitInt33x2 =
+      TB.getArrayType(BitInt33, /*NumElements=*/2, /*SizeInBits=*/128);
+  const ABIType *Boolx16 =
+      TB.getArrayType(Bool, /*NumElements=*/16, /*SizeInBits=*/128);
+  const ABIType *Boolx9 =
+      TB.getArrayType(Bool, /*NumElements=*/9, /*SizeInBits=*/72);
+  struct {
+    const char *Decl;
+    const ABIType *S;
+    unsigned HighBits;
+  } Cases[] = {
+      {"_BitInt(3) a[16]",
+       makeRecord({FieldInfo(BitInt3x16, 0)}, 128, llvm::Align(1)), 64},
+      {"_BitInt(9) a[5]",
+       makeRecord({FieldInfo(BitInt9x5, 0)}, 80, llvm::Align(2)), 16},
+      {"_BitInt(33) a[2]",
+       makeRecord({FieldInfo(BitInt33x2, 0)}, 128, llvm::Align(8)), 64},
+      {"_Bool b[16]", makeRecord({FieldInfo(Boolx16, 0)}, 128, llvm::Align(1)),
+       64},
+      {"_Bool b[9]", makeRecord({FieldInfo(Boolx9, 0)}, 72, llvm::Align(1)),
+       8}};
+  for (const auto &Case : Cases) {
+    SCOPED_TRACE(Case.Decl);
+    llvm::ArrayRef<FieldInfo> Pair = directPair(classifyArg(Case.S, FI, TI));
+    ASSERT_EQ(Pair.size(), 2u);
+    expectInteger(Pair[0].FieldType, 64);
+    expectInteger(Pair[1].FieldType, Case.HighBits);
+  }
+}
+
+// The third element of each array starts at bit 16, so the union's data reaches
+// past the short and the union is passed as an i32.
+TEST_F(X86TargetInfoTest, NarrowArrayInUnionReachesPastShort) {
+  std::unique_ptr<FunctionInfo> FI;
+  std::unique_ptr<TargetInfo> TI;
+  const ABIType *I16 = TB.getIntegerType(16, llvm::Align(2), /*Signed=*/true);
+  const ABIType *UBitInt3 = TB.getIntegerType(3, llvm::Align(1),
+                                              /*Signed=*/false,
+                                              /*IsBitInt=*/true);
+  for (const ABIType *Elt : {UBitInt3, Bool}) {
+    SCOPED_TRACE(Elt == Bool ? "_Bool a[3]" : "unsigned _BitInt(3) a[3]");
+    const ABIType *Arr =
+        TB.getArrayType(Elt, /*NumElements=*/3, /*SizeInBits=*/24);
+    const ABIType *U =
+        unionOf({FieldInfo(Arr), FieldInfo(I16)}, 32, llvm::Align(2));
+    expectDirectInteger(classifyArg(U, FI, TI), 32);
+  }
+}
+
+// The one-byte element after the long is followed only by padding, so the high
+// eightbyte narrows to an i8.
+TEST_F(X86TargetInfoTest, OneElementNarrowArrayNarrowsHighHalf) {
+  std::unique_ptr<FunctionInfo> FI;
+  std::unique_ptr<TargetInfo> TI;
+  const ABIType *UBitInt3 = TB.getIntegerType(3, llvm::Align(1),
+                                              /*Signed=*/false,
+                                              /*IsBitInt=*/true);
+  const ABIType *Arr =
+      TB.getArrayType(UBitInt3, /*NumElements=*/1, /*SizeInBits=*/8);
+  const ABIType *S =
+      makeRecord({FieldInfo(I64, 0), FieldInfo(Arr, 64)}, 128, llvm::Align(8));
+  llvm::ArrayRef<FieldInfo> Pair = directPair(classifyArg(S, FI, TI));
+  ASSERT_EQ(Pair.size(), 2u);
+  expectInteger(Pair[0].FieldType, 64);
+  expectInteger(Pair[1].FieldType, 8);
+}
+
+// The ninth element and the float share the high eightbyte, which is therefore
+// an integer.
+TEST_F(X86TargetInfoTest, NarrowArrayBeforeFloatIsInteger) {
+  std::unique_ptr<FunctionInfo> FI;
+  std::unique_ptr<TargetInfo> TI;
+  const ABIType *UBitInt3 = TB.getIntegerType(3, llvm::Align(1),
+                                              /*Signed=*/false,
+                                              /*IsBitInt=*/true);
+  const ABIType *Arr =
+      TB.getArrayType(UBitInt3, /*NumElements=*/9, /*SizeInBits=*/72);
+  const ABIType *S =
+      makeRecord({FieldInfo(Arr, 0), FieldInfo(F32, 96)}, 128, llvm::Align(4));
+  llvm::ArrayRef<FieldInfo> Pair = directPair(classifyArg(S, FI, TI));
+  ASSERT_EQ(Pair.size(), 2u);
+  expectInteger(Pair[0].FieldType, 64);
+  expectInteger(Pair[1].FieldType, 64);
+}
+
+// A bool or narrow _BitInt bit-field counts at the size of its type, a whole
+// byte, so from bit 3 it reaches the second byte of the struct.
+TEST_F(X86TargetInfoTest, NarrowBitFieldCountsItsTypeSize) {
+  std::unique_ptr<FunctionInfo> FI;
+  std::unique_ptr<TargetInfo> TI;
+  const ABIType *U8 = TB.getIntegerType(8, llvm::Align(1), /*Signed=*/false);
+  const ABIType *BitInt5 = TB.getIntegerType(5, llvm::Align(1), /*Signed=*/true,
+                                             /*IsBitInt=*/true);
+  for (const ABIType *Second : {Bool, BitInt5}) {
+    SCOPED_TRACE(Second == Bool ? "_Bool b : 1" : "_BitInt(5) y : 1");
+    const ABIType *S = makeRecord(
+        {FieldInfo(U8, 0, /*IsBitField=*/true, /*BitFieldWidth=*/3),
+         FieldInfo(Second, 3, /*IsBitField=*/true, /*BitFieldWidth=*/1)},
+        16, llvm::Align(2));
+    expectDirectInteger(classifyArg(S, FI, TI), 16);
+  }
+}
+
+// The long double covers all 16 bytes of the union, so in either member order
+// the high eightbyte is a whole i64.
+TEST_F(X86TargetInfoTest, X87PaddingIsDataInUnion) {
+  std::unique_ptr<FunctionInfo> FI;
+  std::unique_ptr<TargetInfo> TI;
+  const ABIType *I16 = TB.getIntegerType(16, llvm::Align(2), /*Signed=*/true);
+  const ABIType *LongShort =
+      makeRecord({FieldInfo(I64, 0), FieldInfo(I16, 64)}, 128, llvm::Align(16));
+  const ABIType *Unions[] = {
+      unionOf({FieldInfo(F80), FieldInfo(LongShort)}, 128, llvm::Align(16)),
+      unionOf({FieldInfo(LongShort), FieldInfo(F80)}, 128, llvm::Align(16))};
+  for (const ABIType *U : Unions) {
+    SCOPED_TRACE(U == Unions[0] ? "long double first" : "struct first");
+    llvm::ArrayRef<FieldInfo> Pair = directPair(classifyArg(U, FI, TI));
+    ASSERT_EQ(Pair.size(), 2u);
+    expectInteger(Pair[0].FieldType, 64);
+    expectInteger(Pair[1].FieldType, 64);
+  }
+}
+
+// A bool vector is stored as an integer with one bit per element, at least a
+// byte wide, so the eightbyte holding it narrows to that integer when it is an
+// i8, i16 or i32 and the rest of the eightbyte is padding.  Twelve bools make
+// an i12, so that eightbyte stays an i64.
+TEST_F(X86TargetInfoTest, BoolVectorInMemoryIsItsLaneInteger) {
+  std::unique_ptr<FunctionInfo> FI;
+  std::unique_ptr<TargetInfo> TI;
+  struct {
+    unsigned Lanes;
+    llvm::Align Alignment;
+    unsigned HighBits;
+  } Cases[] = {{3, llvm::Align(1), 8},   {4, llvm::Align(1), 8},
+               {8, llvm::Align(1), 8},   {12, llvm::Align(2), 64},
+               {16, llvm::Align(2), 16}, {32, llvm::Align(4), 32}};
+  for (const auto &Case : Cases) {
+    SCOPED_TRACE(Case.Lanes);
+    const ABIType *V = makeVector(Bool, Case.Lanes, Case.Alignment);
+    const ABIType *S =
+        makeRecord({FieldInfo(I64, 0), FieldInfo(V, 64)}, 128, llvm::Align(8));
+    llvm::ArrayRef<FieldInfo> Pair = directPair(classifyArg(S, FI, TI));
+    ASSERT_EQ(Pair.size(), 2u);
+    expectInteger(Pair[0].FieldType, 64);
+    expectInteger(Pair[1].FieldType, Case.HighBits);
+  }
+}
+
+// A bool vector narrows its eightbyte to its integer in a one-element array at
+// the start of a struct, in a nested struct, in a union, or alone in an
+// over-aligned struct.
+TEST_F(X86TargetInfoTest, BoolVectorInMemoryNarrowsInEveryPosition) {
+  std::unique_ptr<FunctionInfo> FI;
+  std::unique_ptr<TargetInfo> TI;
+  const ABIType *V4 = makeVector(Bool, 4, llvm::Align(1));
+  const ABIType *V16 = makeVector(Bool, 16, llvm::Align(2));
+  {
+    SCOPED_TRACE("one-element array first");
+    const ABIType *Arr =
+        TB.getArrayType(V4, /*NumElements=*/1, /*SizeInBits=*/8);
+    const ABIType *ArrayFirst = makeRecord(
+        {FieldInfo(Arr, 0), FieldInfo(I64, 64)}, 128, llvm::Align(8));
+    llvm::ArrayRef<FieldInfo> Pair =
+        directPair(classifyArg(ArrayFirst, FI, TI));
+    ASSERT_EQ(Pair.size(), 2u);
+    expectInteger(Pair[0].FieldType, 8);
+    expectInteger(Pair[1].FieldType, 64);
+  }
+  {
+    SCOPED_TRACE("nested struct");
+    const ABIType *Inner = makeRecord({FieldInfo(V4, 0)}, 8, llvm::Align(1));
+    const ABIType *Nested = makeRecord(
+        {FieldInfo(I64, 0), FieldInfo(Inner, 64)}, 128, llvm::Align(8));
+    llvm::ArrayRef<FieldInfo> Pair = directPair(classifyArg(Nested, FI, TI));
+    ASSERT_EQ(Pair.size(), 2u);
+    expectInteger(Pair[0].FieldType, 64);
+    expectInteger(Pair[1].FieldType, 8);
+  }
+  {
+    SCOPED_TRACE("union aligned 4");
+    expectDirectInteger(
+        classifyArg(unionOf({FieldInfo(V4)}, 32, llvm::Align(4)), FI, TI), 8);
+  }
+  {
+    SCOPED_TRACE("struct aligned 4");
+    expectDirectInteger(
+        classifyArg(makeRecord({FieldInfo(V4, 0)}, 32, llvm::Align(4)), FI, TI),
+        8);
+  }
+  {
+    SCOPED_TRACE("16 bools, struct aligned 8");
+    expectDirectInteger(
+        classifyArg(makeRecord({FieldInfo(V16, 0)}, 64, llvm::Align(8)), FI,
+                    TI),
+        16);
+  }
+}
+
+// A vector of one-bit _BitInts is not a bool vector, so the eightbyte holding
+// it stays an i64.
+TEST_F(X86TargetInfoTest, BitIntVectorInMemoryIsNotNarrowed) {
+  std::unique_ptr<FunctionInfo> FI;
+  std::unique_ptr<TargetInfo> TI;
+  const ABIType *UBitInt1 = TB.getIntegerType(1, llvm::Align(1),
+                                              /*Signed=*/false,
+                                              /*IsBitInt=*/true);
+  const ABIType *V = makeVector(UBitInt1, 1, llvm::Align(1));
+  const ABIType *S =
+      makeRecord({FieldInfo(I64, 0), FieldInfo(V, 64)}, 128, llvm::Align(8));
+  llvm::ArrayRef<FieldInfo> Pair = directPair(classifyArg(S, FI, TI));
+  ASSERT_EQ(Pair.size(), 2u);
+  expectInteger(Pair[0].FieldType, 64);
+  expectInteger(Pair[1].FieldType, 64);
 }
 
 } // namespace

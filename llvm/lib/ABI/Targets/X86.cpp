@@ -33,36 +33,6 @@ static unsigned getNativeVectorSizeForAVXABI(X86AVXABILevel AVXLevel) {
   llvm_unreachable("Unknown AVXLevel");
 }
 
-// The width of an integer's storage container, mirroring Clang's
-// ASTContext::getTypeSize. For a plain integer this is its bit width; for a
-// _BitInt(N) it is N rounded up to the type's alignment. The x86-64 _BitInt
-// max alignment is 64, so this clamp is target-specific and kept file-local.
-static uint64_t getClangIntegerWidthInBits(const IntegerType *IT) {
-  uint64_t NumBits = IT->getSizeInBits().getFixedValue();
-  if (!IT->isBitInt())
-    return NumBits;
-  uint64_t BitAlign =
-      std::max<uint64_t>(8, std::min<uint64_t>(64, llvm::bit_ceil(NumBits)));
-  return llvm::alignTo(NumBits, BitAlign);
-}
-
-// The size of a type, with a vector taken at its ABI size rather than its
-// payload width.
-static uint64_t getSizeInBitsWithVectorPadding(const Type *Ty) {
-  if (const auto *VT = dyn_cast<VectorType>(Ty))
-    return VT->getABISizeInBits();
-  return Ty->getSizeInBits().getFixedValue();
-}
-
-// The storage-container width of a type, mirroring Clang's getTypeSize. Used on
-// the stack path so a _BitInt or illegal vector coerces to the integer covering
-// its storage, not its raw iN width.
-static uint64_t getClangTypeWidthInBits(const Type *Ty) {
-  if (const auto *IT = dyn_cast<IntegerType>(Ty))
-    return getClangIntegerWidthInBits(IT);
-  return getSizeInBitsWithVectorPadding(Ty);
-}
-
 class X86_64TargetInfo : public TargetInfo {
 public:
   enum Class { Integer, Sse, SseUp, X87, X87Up, ComplexX87, NoClass, Memory };
@@ -154,8 +124,7 @@ static const Type *reduceUnionForX8664(const RecordType *UnionType,
     // is a byte array whose i8 leaf lets getIntegerTypeAtOffset narrow the
     // coercion.  A record mapped here holds no fields, so there is no such
     // leaf and the eightbyte would be sized from the union.
-    if (bitsContainNoUserData(FieldType, 0,
-                              FieldType->getSizeInBits().getFixedValue()))
+    if (bitsContainNoUserData(FieldType, 0, FieldType->getABISizeInBits()))
       continue;
 
     if (!StorageType ||
@@ -407,7 +376,7 @@ void X86_64TargetInfo::classify(const Type *T, uint64_t OffsetBase, Class &Lo,
 
   if (const auto *CT = dyn_cast<ComplexType>(T)) {
     const Type *ElementType = CT->getElementType();
-    uint64_t Size = T->getSizeInBits().getFixedValue();
+    uint64_t Size = T->getABISizeInBits();
 
     if (isa<IntegerType>(ElementType)) {
       if (Size <= 64)
@@ -430,7 +399,7 @@ void X86_64TargetInfo::classify(const Type *T, uint64_t OffsetBase, Class &Lo,
         llvm_unreachable("Unexpected long double representation!");
     }
 
-    uint64_t ElementSize = ElementType->getSizeInBits().getFixedValue();
+    uint64_t ElementSize = ElementType->getABISizeInBits();
     // If this complex type crosses an eightbyte boundary then it
     // should be split.
     uint64_t EbReal = OffsetBase / 64;
@@ -450,7 +419,7 @@ void X86_64TargetInfo::classify(const Type *T, uint64_t OffsetBase, Class &Lo,
       return;
 
     // Arrays are treated like structures.
-    uint64_t Size = AT->getSizeInBits().getFixedValue();
+    uint64_t Size = AT->getABISizeInBits();
 
     // AMD64-ABI 3.2.3p2: Rule 1. If the size of an object is larger
     // than eight eightbytes, ..., it has class MEMORY.
@@ -471,7 +440,7 @@ void X86_64TargetInfo::classify(const Type *T, uint64_t OffsetBase, Class &Lo,
     // Otherwise implement simplified merge. We could be smarter about
     // this, but it isn't worth it and would be harder to verify.
     Current = NoClass;
-    uint64_t EltSize = getSizeInBitsWithVectorPadding(ElementType);
+    uint64_t EltSize = ElementType->getABISizeInBits();
     uint64_t ArraySize = AT->getNumElements();
 
     // The only case a 256-bit wide vector could be used is when the array
@@ -497,7 +466,7 @@ void X86_64TargetInfo::classify(const Type *T, uint64_t OffsetBase, Class &Lo,
   }
 
   if (const auto *RT = dyn_cast<RecordType>(T)) {
-    uint64_t Size = RT->getSizeInBits().getFixedValue();
+    uint64_t Size = RT->getABISizeInBits();
 
     if (containsMatrixField(RT)) {
       Lo = Memory;
@@ -538,9 +507,8 @@ void X86_64TargetInfo::classify(const Type *T, uint64_t OffsetBase, Class &Lo,
         Hi = merge(Hi, FieldHi);
 
         if (getX86ABICompatInfo().ReturnCXXRecordGreaterThan128InMem &&
-            (Size > 128 &&
-             (Size != Base.FieldType->getSizeInBits().getFixedValue() ||
-              Size > getNativeVectorSizeForAVXABI(AVXLevel))))
+            (Size > 128 && (Size != Base.FieldType->getABISizeInBits() ||
+                            Size > getNativeVectorSizeForAVXABI(AVXLevel))))
           Lo = Memory;
 
         if (Lo == Memory || Hi == Memory) {
@@ -565,7 +533,7 @@ void X86_64TargetInfo::classify(const Type *T, uint64_t OffsetBase, Class &Lo,
                            : Field.IsUnnamedBitfield))
         continue;
 
-      uint64_t FieldSize = getSizeInBitsWithVectorPadding(Field.FieldType);
+      uint64_t FieldSize = Field.FieldType->getABISizeInBits();
       if (Size > 128 && ((!IsUnion && Size != FieldSize) ||
                          Size > getNativeVectorSizeForAVXABI(AVXLevel))) {
         Lo = Memory;
@@ -932,14 +900,14 @@ const Type *X86_64TargetInfo::createPairType(const Type *Lo,
 static bool bitsContainNoUserData(const Type *Ty, unsigned StartBit,
                                   unsigned EndBit) {
   // If range is completely beyond type size, it's definitely padding
-  unsigned TySize = getSizeInBitsWithVectorPadding(Ty);
+  unsigned TySize = Ty->getABISizeInBits();
   if (TySize <= StartBit)
     return true;
 
   // Handle arrays - check each element
   if (const ArrayType *AT = dyn_cast<ArrayType>(Ty)) {
     const Type *EltTy = AT->getElementType();
-    unsigned EltSize = getSizeInBitsWithVectorPadding(EltTy);
+    unsigned EltSize = EltTy->getABISizeInBits();
 
     for (unsigned I = 0; I < AT->getNumElements(); ++I) {
       unsigned EltOffset = I * EltSize;
@@ -1012,6 +980,16 @@ const Type *X86_64TargetInfo::getIntegerTypeAtOffset(const Type *ABIType,
                                       IT->isSigned());
     }
   }
+  // A bool vector is stored as an integer with one bit per element, at least a
+  // byte wide.
+  if (InMemory && ABIType->isVector()) {
+    const auto *VT = cast<VectorType>(ABIType);
+    const auto *IT = dyn_cast<IntegerType>(VT->getElementType());
+    if (IT && IT->isBool())
+      WorkingType = TB.getIntegerType(
+          std::max<uint64_t>(VT->getNumElements().getFixedValue(), 8),
+          ABIType->getAlignment(), /*Signed=*/false);
+  }
   // If we're dealing with an un-offset ABI type, then it means that we're
   // returning an 8-byte unit starting with it. See if we can safely use it.
   if (ABIOffset == 0) {
@@ -1051,7 +1029,7 @@ const Type *X86_64TargetInfo::getIntegerTypeAtOffset(const Type *ABIType,
     if (RTy->isUnion()) {
       const Type *ReducedType = reduceUnionForX8664(RTy, TB);
       if (ReducedType) {
-        if (ABIOffset * 8 < ReducedType->getSizeInBits().getFixedValue())
+        if (ABIOffset * 8 < ReducedType->getABISizeInBits())
           return getIntegerTypeAtOffset(ReducedType, ABIOffset, SourceTy,
                                         SourceOffset, true);
         // The storage type stops before this offset, so size the coercion
@@ -1061,8 +1039,7 @@ const Type *X86_64TargetInfo::getIntegerTypeAtOffset(const Type *ABIType,
                                   SourceOffset * 8 + 64))
           return TB.getIntegerType(8, Align(1), /*Signed=*/false);
         unsigned RemainingBytes =
-            llvm::divideCeil(SourceTy->getSizeInBits().getFixedValue(), 8) -
-            SourceOffset;
+            llvm::divideCeil(SourceTy->getABISizeInBits(), 8) - SourceOffset;
         return TB.getIntegerType(std::min(RemainingBytes, 8U) * 8, Align(1),
                                  /*Signed=*/false);
       }
@@ -1079,7 +1056,7 @@ const Type *X86_64TargetInfo::getIntegerTypeAtOffset(const Type *ABIType,
 
   if (const auto *ATy = dyn_cast<ArrayType>(ABIType)) {
     const Type *EltTy = ATy->getElementType();
-    unsigned EltSize = EltTy->getSizeInBits() / 8;
+    unsigned EltSize = EltTy->getABISizeInBits() / 8;
     if (EltSize > 0) {
       unsigned EltOffset = (ABIOffset / EltSize) * EltSize;
       return getIntegerTypeAtOffset(EltTy, ABIOffset - EltOffset, SourceTy,
@@ -1094,13 +1071,7 @@ const Type *X86_64TargetInfo::getIntegerTypeAtOffset(const Type *ABIType,
     return ABIType;
   }
 
-  unsigned TySizeInBytes =
-      llvm::divideCeil(getSizeInBitsWithVectorPadding(SourceTy), 8);
-  if (auto *IT = dyn_cast<IntegerType>(SourceTy)) {
-    if (IT->isBitInt())
-      TySizeInBytes =
-          alignTo(SourceTy->getSizeInBits().getFixedValue(), 64) / 8;
-  }
+  unsigned TySizeInBytes = llvm::divideCeil(SourceTy->getABISizeInBits(), 8);
   assert(TySizeInBytes != SourceOffset && "Empty field?");
   unsigned AvailableSize = TySizeInBytes - SourceOffset;
   return TB.getIntegerType(std::min(AvailableSize, 8U) * 8, Align(1), false);
@@ -1115,7 +1086,7 @@ const Type *X86_64TargetInfo::getFPTypeAtOffset(const Type *Ty,
 
   if (const ComplexType *CT = dyn_cast<ComplexType>(Ty)) {
     const Type *ElementType = CT->getElementType();
-    unsigned ElementSize = ElementType->getSizeInBits().getFixedValue() / 8;
+    unsigned ElementSize = ElementType->getABISizeInBits() / 8;
 
     if (Offset == 0 || Offset == ElementSize)
       return ElementType;
@@ -1133,7 +1104,9 @@ const Type *X86_64TargetInfo::getFPTypeAtOffset(const Type *Ty,
   // Handle array types
   if (const ArrayType *AT = dyn_cast<ArrayType>(Ty)) {
     const Type *EltTy = AT->getElementType();
-    unsigned EltSize = EltTy->getSizeInBits() / 8;
+    unsigned EltSize = EltTy->getABISizeInBits() / 8;
+    if (EltSize == 0)
+      return nullptr;
     unsigned EltIndex = Offset / EltSize;
 
     return getFPTypeAtOffset(EltTy, Offset - (EltIndex * EltSize));
@@ -1180,14 +1153,11 @@ const Type *X86_64TargetInfo::getSSETypeAtOffset(const Type *ABIType,
     return TB.getFloatType(APFloat::IEEEdouble(), Align(8));
 
   // Calculate remaining source size in bytes
-  unsigned SourceSize =
-      (SourceTy->getSizeInBits().getFixedValue() / 8) - SourceOffset;
+  unsigned SourceSize = (SourceTy->getABISizeInBits() / 8) - SourceOffset;
 
   // Try to get adjacent FP type
   const Type *T1 = nullptr;
-  unsigned T0Size =
-      alignTo(T0->getSizeInBits().getFixedValue(), T0->getAlignment().value()) /
-      8;
+  unsigned T0Size = T0->getABISizeInBits() / 8;
   if (SourceSize > T0Size)
     T1 = getFPTypeAtOffset(ABIType, ABIOffset + T0Size);
 
@@ -1249,7 +1219,7 @@ const Type *X86_64TargetInfo::getByteVectorType(const Type *Ty) const {
     return Ty;
 
   // We couldn't find the preferred IR vector type for 'Ty'.
-  unsigned Size = Ty->getSizeInBits().getFixedValue();
+  unsigned Size = Ty->getABISizeInBits();
   assert((Size == 128 || Size == 256 || Size == 512) && "Invalid vector size");
 
   return TB.getVectorType(TB.getFloatType(APFloat::IEEEdouble(), Align(8)),
@@ -1325,10 +1295,7 @@ ArgInfo X86_64TargetInfo::getIndirectResult(const Type *Ty,
   // We can revisit this if the backend grows support for 'onstack' parameter
   // attributes. See PR12193.
   if (FreeIntRegs == 0) {
-    // Use the storage-container width (like Clang's getTypeSize) so a stack
-    // _BitInt or illegal vector coerces to the integer covering its storage,
-    // not its raw iN width.
-    uint64_t Size = getClangTypeWidthInBits(Ty);
+    uint64_t Size = Ty->getABISizeInBits();
 
     // If this type fits in an eightbyte, coerce it into the matching integral
     // type, which will end up on the stack (with alignment 8).

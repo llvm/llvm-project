@@ -123,12 +123,8 @@ const Type *TargetInfo::isSingleElementStruct(const Type *Ty) const {
     return nullptr;
 
   // We don't consider a struct a single-element struct if it has padding
-  // beyond the element type. A vector is measured at its ABI size, so its
-  // padding counts as part of the element.
-  TypeSize FoundSize = Found->getSizeInBits();
-  if (const auto *VT = dyn_cast<VectorType>(Found))
-    FoundSize = TypeSize::getFixed(VT->getABISizeInBits());
-  if (FoundSize != Ty->getSizeInBits())
+  // beyond the element type.
+  if (Found->getABISizeInBits() != Ty->getABISizeInBits())
     return nullptr;
 
   return Found;

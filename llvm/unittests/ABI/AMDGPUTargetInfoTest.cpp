@@ -284,6 +284,45 @@ TEST_F(AMDGPUTargetInfoTest, SingleElementStructOfPaddedVectorUnwraps) {
   EXPECT_EQ(Info.getCoerceToType(), V3F32);
 }
 
+// A bool or a _BitInt(17) is padded out to the size of a struct holding only
+// it, so the struct is passed and returned as the scalar, including when it is
+// an argument to an amdgpu_kernel function.
+TEST_F(AMDGPUTargetInfoTest, SingleElementStructOfPaddedScalarUnwraps) {
+  std::unique_ptr<FunctionInfo> FI;
+  std::unique_ptr<TargetInfo> TI;
+  const ABIType *Bool = TB.getIntegerType(1, llvm::Align(1), /*Signed=*/false);
+  const ABIType *BitInt17 = TB.getIntegerType(17, llvm::Align(4),
+                                              /*Signed=*/true,
+                                              /*IsBitInt=*/true);
+  struct {
+    const char *Decl;
+    const ABIType *Scalar;
+    uint64_t SizeInBits;
+    llvm::Align Alignment;
+  } Cases[] = {{"struct { _Bool b; }", Bool, 8, llvm::Align(1)},
+               {"struct { _BitInt(17) x; }", BitInt17, 32, llvm::Align(4)}};
+  for (const auto &Case : Cases) {
+    SCOPED_TRACE(Case.Decl);
+    const ABIType *Wrapper =
+        recordOf({FieldInfo(Case.Scalar, 0)}, Case.SizeInBits, Case.Alignment);
+    {
+      const ArgInfo &Info = classifyArg(Wrapper, FI, TI);
+      ASSERT_TRUE(Info.isDirect());
+      EXPECT_EQ(Info.getCoerceToType(), Case.Scalar);
+    }
+    {
+      const ArgInfo &Info = classifyRet(Wrapper, FI, TI);
+      ASSERT_TRUE(Info.isDirect());
+      EXPECT_EQ(Info.getCoerceToType(), Case.Scalar);
+    }
+    const ArgInfo &Info =
+        classifyArg(Wrapper, FI, TI, CallingConv::AMDGPU_KERNEL);
+    ASSERT_TRUE(Info.isDirect());
+    EXPECT_EQ(Info.getCoerceToType(), Case.Scalar);
+    EXPECT_FALSE(Info.getCanBeFlattened());
+  }
+}
+
 // A large aggregate that does not fit the 16-register budget is passed by
 // reference (aliased) in the private address space.
 TEST_F(AMDGPUTargetInfoTest, OversizedAggregateIsIndirectPrivate) {
