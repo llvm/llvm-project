@@ -72,6 +72,7 @@
 #include <cassert>
 #include <cstdint>
 #include <functional>
+#include <initializer_list>
 #include <iterator>
 #include <optional>
 #include <string>
@@ -161,6 +162,20 @@ static cl::opt<bool> DisableCombines("combiner-disabled", cl::Hidden,
                                      cl::desc("Disable the DAG combiner"));
 
 namespace {
+
+template <typename RangeT = std::initializer_list<const MemSDNode *>>
+static const MDNode *getCommonMemCacheHint(const RangeT &Nodes) {
+  auto Begin = Nodes.begin();
+  if (Begin == Nodes.end())
+    return nullptr;
+
+  const MDNode *MemCacheHint = (*Begin)->getMemCacheHint();
+  if (all_of(Nodes, [MemCacheHint](const MemSDNode *Node) {
+        return Node->getMemCacheHint() == MemCacheHint;
+      }))
+    return MemCacheHint;
+  return nullptr;
+}
 
   class DAGCombiner {
     SelectionDAG &DAG;
@@ -10157,10 +10172,7 @@ SDValue DAGCombiner::mergeTruncStores(StoreSDNode *N) {
     SourceValue = DAG.getNode(ISD::ROTR, DL, WideVT, SourceValue, RotAmt);
   }
 
-  auto MemCacheHints = map_range(
-      Stores, [](StoreSDNode *Store) { return Store->getMemCacheHint(); });
-  const MDNode *MemCacheHint =
-      all_equal(MemCacheHints) ? Stores.front()->getMemCacheHint() : nullptr;
+  const MDNode *MemCacheHint = getCommonMemCacheHint(Stores);
 
   SDValue NewStore =
       DAG.getStore(Chain, DL, SourceValue, FirstStore->getBasePtr(),
@@ -10369,10 +10381,7 @@ SDValue DAGCombiner::MatchLoadCombine(SDNode *N) {
   if (!Allowed || !Fast)
     return SDValue();
 
-  auto MemCacheHints = map_range(
-      Loads, [](LoadSDNode *Load) { return Load->getMemCacheHint(); });
-  const MDNode *MemCacheHint =
-      all_equal(MemCacheHints) ? FirstLoad->getMemCacheHint() : nullptr;
+  const MDNode *MemCacheHint = getCommonMemCacheHint(Loads);
 
   SDValue NewLoad = DAG.getExtLoad(
       NeedsZext ? ISD::ZEXTLOAD : ISD::NON_EXTLOAD, SDLoc(N), VT, Chain,
@@ -12200,10 +12209,7 @@ SDValue DAGCombiner::visitFunnelShift(SDNode *N) {
             SDValue NewPtr = DAG.getMemBasePlusOffset(
                 RHS->getBasePtr(), TypeSize::getFixed(PtrOff), DL);
             AddToWorklist(NewPtr.getNode());
-            const MDNode *MemCacheHint =
-                LHS->getMemCacheHint() == RHS->getMemCacheHint()
-                    ? RHS->getMemCacheHint()
-                    : nullptr;
+            const MDNode *MemCacheHint = getCommonMemCacheHint({LHS, RHS});
             SDValue Load = DAG.getLoad(
                 VT, DL, RHS->getChain(), NewPtr,
                 RHS->getPointerInfo().getWithOffset(PtrOff), NewAlign,
@@ -18256,9 +18262,7 @@ SDValue DAGCombiner::CombineConsecutiveLoads(SDNode *N, EVT VT) {
         VT, SDLoc(N), LD1->getChain(), LD1->getBasePtr(), LD1->getPointerInfo(),
         LD1->getAlign(), MachineMemOperand::MONone,
         MMOMetadata(AAMDNodes(), nullptr,
-                    LD1->getMemCacheHint() == LD2->getMemCacheHint()
-                        ? LD1->getMemCacheHint()
-                        : nullptr));
+                    getCommonMemCacheHint({LD1, LD2})));
 
   return SDValue();
 }
@@ -23306,13 +23310,15 @@ bool DAGCombiner::mergeStoresOfConstantsOrVecElts(
 
   std::optional<MachineMemOperand::Flags> Flags;
   AAMDNodes AAInfo;
-  const MDNode *MemCacheHint = nullptr;
+  auto GetMemNode = [](const MemOpLink &MemOp) { return MemOp.MemNode; };
+  auto StoreMemNodes = map_range(
+      ArrayRef(StoreNodes).take_front(NumStores), GetMemNode);
+  const MDNode *MemCacheHint = getCommonMemCacheHint(StoreMemNodes);
   for (unsigned I = 0; I != NumStores; ++I) {
     StoreSDNode *St = cast<StoreSDNode>(StoreNodes[I].MemNode);
     if (!Flags) {
       Flags = St->getMemOperand()->getFlags();
       AAInfo = St->getAAInfo();
-      MemCacheHint = St->getMemCacheHint();
       continue;
     }
     // Skip merging if there's an inconsistent flag.
@@ -23320,8 +23326,6 @@ bool DAGCombiner::mergeStoresOfConstantsOrVecElts(
       return false;
     // Concatenate AA metadata.
     AAInfo = AAInfo.concat(St->getAAInfo());
-    if (MemCacheHint != St->getMemCacheHint())
-      MemCacheHint = nullptr;
   }
 
   EVT StoreTy;
@@ -24251,18 +24255,13 @@ bool DAGCombiner::tryStoreMergeOfLoads(SmallVectorImpl<MemOpLink> &StoreNodes,
 
     StMMOFlags |= TLI.getTargetMMOFlags(*StoreNodes[0].MemNode);
 
-    auto GetMemCacheHint = [](const MemOpLink &MemOp) {
-      return MemOp.MemNode->getMemCacheHint();
-    };
-    auto LoadMemCacheHints =
-        map_range(ArrayRef(LoadNodes).take_front(NumElem), GetMemCacheHint);
-    const MDNode *LoadMemCacheHint =
-        all_equal(LoadMemCacheHints) ? FirstLoad->getMemCacheHint() : nullptr;
-    auto StoreMemCacheHints =
-        map_range(ArrayRef(StoreNodes).take_front(NumElem), GetMemCacheHint);
-    const MDNode *StoreMemCacheHint = all_equal(StoreMemCacheHints)
-                                          ? FirstInChain->getMemCacheHint()
-                                          : nullptr;
+    auto GetMemNode = [](const MemOpLink &MemOp) { return MemOp.MemNode; };
+    auto LoadMemNodes =
+        map_range(ArrayRef(LoadNodes).take_front(NumElem), GetMemNode);
+    const MDNode *LoadMemCacheHint = getCommonMemCacheHint(LoadMemNodes);
+    auto StoreMemNodes =
+        map_range(ArrayRef(StoreNodes).take_front(NumElem), GetMemNode);
+    const MDNode *StoreMemCacheHint = getCommonMemCacheHint(StoreMemNodes);
 
     SDValue NewLoad, NewStore;
     if (UseVectorTy || !DoIntegerTruncate) {
@@ -25393,10 +25392,7 @@ SDValue DAGCombiner::combineInsertEltToLoad(SDNode *N, unsigned InsIndex) {
       InsIndex == 0 ? ScalarLoad->getPointerInfo()
                     : VecLoad->getPointerInfo().getWithOffset(EltSize / 8);
 
-  const MDNode *MemCacheHint =
-      ScalarLoad->getMemCacheHint() == VecLoad->getMemCacheHint()
-          ? ScalarLoad->getMemCacheHint()
-          : nullptr;
+  const MDNode *MemCacheHint = getCommonMemCacheHint({ScalarLoad, VecLoad});
   SDValue Load =
       DAG.getLoad(VecLoad->getValueType(0), DL, ScalarLoad->getChain(), Ptr,
                   PtrInfo, NewAlign, MachineMemOperand::MONone,
@@ -27731,7 +27727,7 @@ static SDValue combineConcatVectorOfShuffles(SDNode *N, SelectionDAG &DAG,
   MachineFunction &MF = DAG.getMachineFunction();
   MachineMemOperand *WideMMO = MF.getMachineMemOperand(
       Base->getMemOperand(), /*Offset=*/0, WideVT.getStoreSize());
-  if (LoadA->getMemCacheHint() != LoadB->getMemCacheHint())
+  if (!getCommonMemCacheHint({LoadA, LoadB}))
     WideMMO->clearMemCacheHint();
   SDValue WideLoad = DAG.getLoad(WideVT, SDLoc(N), Base->getChain(),
                                  Base->getBasePtr(), WideMMO);
@@ -31214,10 +31210,7 @@ bool DAGCombiner::SimplifySelectOps(SDNode *TheSelect, SDValue LHS,
       MMOFlags &= ~MachineMemOperand::MOInvariant;
     if (!RLD->isDereferenceable())
       MMOFlags &= ~MachineMemOperand::MODereferenceable;
-    const MDNode *MemCacheHint =
-        LLD->getMemCacheHint() == RLD->getMemCacheHint()
-            ? LLD->getMemCacheHint()
-            : nullptr;
+    const MDNode *MemCacheHint = getCommonMemCacheHint({LLD, RLD});
     if (LLD->getExtensionType() == ISD::NON_EXTLOAD) {
       // FIXME: Discards pointer and AA info.
       Load = DAG.getLoad(TheSelect->getValueType(0), SDLoc(TheSelect),
