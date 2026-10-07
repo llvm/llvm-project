@@ -5142,11 +5142,11 @@ def CIR_CoroSizeOp : CIR_CoroIntrinsicOp<"size", (ins),
 //===----------------------------------------------------------------------===//
 
 def CIR_CoroSuspendOp : CIR_CoroIntrinsicOp<"suspend",
-    (ins Token:$id, CIR_AnyBoolType: $final),
+    (ins Token:$save, CIR_AnyBoolType: $final),
     (outs CIR_SInt8:$result), [TokenConsumerTrait]> {
   let summary = "Represents llvm.coro.suspend";
   let description = [{
-    `cir.coro.suspend` represents the `llvm.coro.suspend` intrinsic.
+    `cir.coro.intrinsic.suspend` represents the `llvm.coro.suspend` intrinsic.
 
     It marks the point where execution of a switched-resume coroutine is
     suspended and control returns to the caller. The result value indicates
