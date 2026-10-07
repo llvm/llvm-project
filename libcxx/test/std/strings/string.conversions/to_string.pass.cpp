@@ -102,6 +102,21 @@ void test_float() {
   }
 }
 
+# if TEST_STD_VER >= 26
+constexpr bool test_constexpr() {
+  assert(std::to_string(0) == "0");
+  assert(std::to_string(-12345) == "-12345");
+  assert(std::to_string(12345u) == "12345");
+  assert(std::to_string(-12345l) == "-12345");
+  assert(std::to_string(12345ul) == "12345");
+  assert(std::to_string(-12345ll) == "-12345");
+  assert(std::to_string(12345ull) == "12345");
+  assert(std::to_string(std::numeric_limits<long long>::min()) == "-9223372036854775808");
+  assert(std::to_string(std::numeric_limits<unsigned long long>::max()) == "18446744073709551615");
+  return true;
+}
+# endif
+
 int main(int, char**) {
   test_signed<int>();
   test_signed<long>();
@@ -112,6 +127,11 @@ int main(int, char**) {
   test_float<float>();
   test_float<double>();
   test_float<long double>();
+
+#if TEST_STD_VER >= 26
+  test_constexpr();
+  static_assert(test_constexpr());
+#endif
 
   return 0;
 }
