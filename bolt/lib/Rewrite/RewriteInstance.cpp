@@ -5775,18 +5775,26 @@ void RewriteInstance::updateELFSymbolTable(
     }
 
     if (Function) {
+      // AArch64/RISC-V mapping symbols ($x) at the function entry share its
+      // address but are not function symbols: keep them zero-sized and don't
+      // derive fragment symbols ($x.cold.0) from them.
+      const bool IsMarker =
+          BC->getMarkerType(Symbol.getType(), Symbol.st_size, *SymbolName) !=
+          MarkerSymType::NONE;
+
       // If the symbol matched a function that was not emitted, update the
       // corresponding section index but otherwise leave it unchanged.
       if (Function->isEmitted()) {
         NewSymbol.st_value = Function->getOutputAddress();
-        NewSymbol.st_size = Function->getOutputSize();
+        if (!IsMarker)
+          NewSymbol.st_size = Function->getOutputSize();
         NewSymbol.st_shndx = Function->getCodeSection()->getIndex();
       } else if (Symbol.st_shndx < ELF::SHN_LORESERVE) {
         NewSymbol.st_shndx = getNewSectionIndex(Symbol.st_shndx);
       }
 
       // Add new symbols to the symbol table if necessary.
-      if (!IsDynSym)
+      if (!IsDynSym && !IsMarker)
         addExtraSymbols(*Function, NewSymbol);
     } else {
       // Check if the function symbol matches address inside a function, i.e.
