@@ -42,8 +42,8 @@ contains
   ! `construct={dispatch}` and `host_variant` matches `device={kind(host)}`.
   !HLFIR-LABEL: func @_QMfuncsPbase_routine
   subroutine base_routine()
-    !$omp declare variant(base_routine:dispatch_variant) match(construct={dispatch})
     !$omp declare variant(base_routine:host_variant) match(device={kind(host)})
+    !$omp declare variant(base_routine:dispatch_variant) match(construct={dispatch}, user={condition(score(2): .true.)})
     print *, "in base_routine"
   end subroutine
 
@@ -463,6 +463,58 @@ contains
     integer, intent(out) :: value
     value = captured
   end subroutine
+end subroutine
+
+! Each array result is saved in its call's branch to the same result storage.
+!HLFIR-LABEL: func @_QPtest_dispatch_array_result(
+subroutine test_dispatch_array_result(nv, nc, values)
+  implicit none
+  logical :: nv, nc
+  integer :: values(3)
+  interface
+    function array_dispatch(value) result(output)
+      integer, value :: value
+      integer :: output(3)
+    end function
+    function array_user(value) result(output)
+      integer, value :: value
+      integer :: output(3)
+    end function
+    function array_base(value) result(output)
+      import :: array_dispatch, array_user
+      !$omp declare variant(array_base:array_dispatch) match(construct={dispatch})
+      !$omp declare variant(array_base:array_user) match(user={condition(.true.)})
+      integer, value :: value
+      integer :: output(3)
+    end function
+    integer function array_argument()
+    end function
+  end interface
+
+  !HLFIR: omp.dispatch nocontext(%[[ARRAY_NC:.*]]) novariants(%[[ARRAY_NV:.*]]) {
+  !HLFIR: %[[ARRAY_ARG:.*]] = fir.call @_QParray_argument() {{.*}}: () -> i32
+  !HLFIR-NOT: fir.call
+  !HLFIR: %[[ARRAY_SHAPE:.*]] = fir.shape %{{.*}} : (index) -> !fir.shape<1>
+  !HLFIR-NEXT: %[[ARRAY_EXPR:.*]] = hlfir.eval_in_mem shape %[[ARRAY_SHAPE]] : (!fir.shape<1>) -> !hlfir.expr<3xi32> {
+  !HLFIR-NEXT: ^bb0(%[[ARRAY_STORAGE:[^:]+]]: !fir.ref<!fir.array<3xi32>>):
+  !HLFIR-NEXT: fir.if %[[ARRAY_NV]] {
+  !HLFIR-NEXT: %[[ARRAY_BASE:.*]] = fir.call @_QParray_base(%[[ARRAY_ARG]]) {{.*}}: (i32) -> !fir.array<3xi32>
+  !HLFIR-NEXT: fir.save_result %[[ARRAY_BASE]] to %[[ARRAY_STORAGE]](%[[ARRAY_SHAPE]]) : !fir.array<3xi32>, !fir.ref<!fir.array<3xi32>>, !fir.shape<1>
+  !HLFIR-NEXT: } else {
+  !HLFIR-NEXT: fir.if %[[ARRAY_NC]] {
+  !HLFIR-NEXT: %[[ARRAY_USER:.*]] = fir.call @_QParray_user(%[[ARRAY_ARG]]) {{.*}}: (i32) -> !fir.array<3xi32>
+  !HLFIR-NEXT: fir.save_result %[[ARRAY_USER]] to %[[ARRAY_STORAGE]](%[[ARRAY_SHAPE]]) : !fir.array<3xi32>, !fir.ref<!fir.array<3xi32>>, !fir.shape<1>
+  !HLFIR-NEXT: } else {
+  !HLFIR-NEXT: %[[ARRAY_DISPATCH:.*]] = fir.call @_QParray_dispatch(%[[ARRAY_ARG]]) {{.*}}: (i32) -> !fir.array<3xi32>
+  !HLFIR-NEXT: fir.save_result %[[ARRAY_DISPATCH]] to %[[ARRAY_STORAGE]](%[[ARRAY_SHAPE]]) : !fir.array<3xi32>, !fir.ref<!fir.array<3xi32>>, !fir.shape<1>
+  !HLFIR-NEXT: }
+  !HLFIR-NEXT: }
+  !HLFIR-NEXT: }
+  !HLFIR-NEXT: hlfir.assign %[[ARRAY_EXPR]] to %{{.*}} : !hlfir.expr<3xi32>, !fir.ref<!fir.array<3xi32>>
+  !HLFIR-NEXT: hlfir.destroy %[[ARRAY_EXPR]] : !hlfir.expr<3xi32>
+  !HLFIR-NEXT: omp.terminator
+  !$omp dispatch novariants(nv) nocontext(nc)
+  values = array_base(array_argument())
 end subroutine
 
 !HLFIR-DAG: func.func private @_QPexternal_variant()
