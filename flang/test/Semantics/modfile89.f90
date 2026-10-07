@@ -32,6 +32,13 @@
 ! rather than its early-return whole-module path.  DTMIDDLE only pins
 ! the precondition (its module file omits the ambiguous name either way);
 ! DTDOWN is the one that catches a regression.
+!
+! GDOWN is the opposite case, as a check that the fix does not overreach:
+! GPK and GVM each contribute one specific procedure to a generic named F,
+! which is a legal (non-ambiguous) merge, not a poison pill, so it must
+! continue to work -- including being renamed by an only-list USE and
+! actually called through both merged specifics -- across the module file
+! boundary.
 
 !--- defs.f90
 module pk
@@ -70,12 +77,41 @@ end module
 module dtdown
   use dtmiddle
 end module
+module gpk
+  interface f
+    module procedure fi
+  end interface
+contains
+  integer function fi(x)
+    integer :: x
+    fi = x
+  end function
+end module
+module gvm
+  interface f
+    module procedure fr
+  end interface
+contains
+  real function fr(x)
+    real :: x
+    fr = x
+  end function
+end module
+module gmiddle
+  use gpk
+  use gvm
+end module
+module gdown
+  use gmiddle, only: g => f
+end module
 
 !--- use.f90
 use down
 use down_only
 use down_rename
 use dtdown
+use gdown
+print *, g(1), g(1.0)
 end
 
 ! PK: module pk
