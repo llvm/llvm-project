@@ -459,6 +459,22 @@ Interpreter::Interpreter(lldb::TargetSP target, llvm::StringRef expr,
   m_allow_globals = !disallow_globals;
 }
 
+llvm::Expected<lldb::ValueObjectSP>
+Interpreter::EvaluateTree(const ASTNodeUP &tree) {
+  assert(tree && "ASTNodeUP must not contain a nullptr");
+
+  auto value_or_error = Interpreter::Evaluate(*tree);
+  if (!value_or_error) {
+    auto error = value_or_error.takeError();
+    LLDB_LOG(GetLog(LLDBLog::Expressions),
+             "[Interpreter::Evaluate] DIL interpreter failed:\n{0}",
+             llvm::toStringWithoutConsuming(error));
+    return error;
+  }
+
+  return value_or_error;
+}
+
 llvm::Expected<lldb::ValueObjectSP> Interpreter::Evaluate(const ASTNode &node) {
   // Evaluate an AST.
   auto value_or_error = node.Accept(this);
@@ -1357,24 +1373,12 @@ Interpreter::Visit(const BinaryOpNode &node) {
   }
 
   switch (node.GetKind()) {
-  case BinaryOpKind::Add:
-    return EvaluateBinaryAddition(lhs, rhs, node.GetLocation());
-  case BinaryOpKind::AddAssign: {
-    auto ret_or_err = EvaluateBinaryAddition(lhs, rhs, node.GetLocation());
-    if (!ret_or_err)
-      return ret_or_err;
-    return EvaluateAssignment(lhs, *ret_or_err, node.GetLocation());
-  }
   case BinaryOpKind::Assign:
     return EvaluateAssignment(lhs, rhs, node.GetLocation());
+  case BinaryOpKind::Add:
+    return EvaluateBinaryAddition(lhs, rhs, node.GetLocation());
   case BinaryOpKind::Sub:
     return EvaluateBinarySubtraction(lhs, rhs, node.GetLocation());
-  case BinaryOpKind::SubAssign: {
-    auto ret_or_err = EvaluateBinarySubtraction(lhs, rhs, node.GetLocation());
-    if (!ret_or_err)
-      return ret_or_err;
-    return EvaluateAssignment(lhs, *ret_or_err, node.GetLocation());
-  }
   case BinaryOpKind::Mul:
     return EvaluateBinaryMultiplication(lhs, rhs, node.GetLocation());
   case BinaryOpKind::Div:
@@ -1388,6 +1392,72 @@ Interpreter::Visit(const BinaryOpNode &node) {
   case BinaryOpKind::Shl:
   case BinaryOpKind::Shr:
     return EvaluateBinaryShift(node.GetKind(), lhs, rhs, node.GetLocation());
+  case BinaryOpKind::AddAssign: {
+    auto ret_or_err = EvaluateBinaryAddition(lhs, rhs, node.GetLocation());
+    if (!ret_or_err)
+      return ret_or_err;
+    return EvaluateAssignment(lhs, *ret_or_err, node.GetLocation());
+  }
+  case BinaryOpKind::SubAssign: {
+    auto ret_or_err = EvaluateBinarySubtraction(lhs, rhs, node.GetLocation());
+    if (!ret_or_err)
+      return ret_or_err;
+    return EvaluateAssignment(lhs, *ret_or_err, node.GetLocation());
+  }
+  case BinaryOpKind::MulAssign: {
+    auto ret_or_err =
+        EvaluateBinaryMultiplication(lhs, rhs, node.GetLocation());
+    if (!ret_or_err)
+      return ret_or_err;
+    return EvaluateAssignment(lhs, *ret_or_err, node.GetLocation());
+  }
+  case BinaryOpKind::DivAssign: {
+    auto ret_or_err = EvaluateBinaryDivision(lhs, rhs, node.GetLocation());
+    if (!ret_or_err)
+      return ret_or_err;
+    return EvaluateAssignment(lhs, *ret_or_err, node.GetLocation());
+  }
+  case BinaryOpKind::RemAssign: {
+    auto ret_or_err = EvaluateBinaryRemainder(lhs, rhs, node.GetLocation());
+    if (!ret_or_err)
+      return ret_or_err;
+    return EvaluateAssignment(lhs, *ret_or_err, node.GetLocation());
+  }
+  case BinaryOpKind::AndAssign: {
+    auto ret_or_err =
+        EvaluateBinaryBitwise(BinaryOpKind::And, lhs, rhs, node.GetLocation());
+    if (!ret_or_err)
+      return ret_or_err;
+    return EvaluateAssignment(lhs, *ret_or_err, node.GetLocation());
+  }
+  case BinaryOpKind::XorAssign: {
+    auto ret_or_err =
+        EvaluateBinaryBitwise(BinaryOpKind::Xor, lhs, rhs, node.GetLocation());
+    if (!ret_or_err)
+      return ret_or_err;
+    return EvaluateAssignment(lhs, *ret_or_err, node.GetLocation());
+  }
+  case BinaryOpKind::OrAssign: {
+    auto ret_or_err =
+        EvaluateBinaryBitwise(BinaryOpKind::Or, lhs, rhs, node.GetLocation());
+    if (!ret_or_err)
+      return ret_or_err;
+    return EvaluateAssignment(lhs, *ret_or_err, node.GetLocation());
+  }
+  case BinaryOpKind::ShlAssign: {
+    auto ret_or_err =
+        EvaluateBinaryShift(BinaryOpKind::Shl, lhs, rhs, node.GetLocation());
+    if (!ret_or_err)
+      return ret_or_err;
+    return EvaluateAssignment(lhs, *ret_or_err, node.GetLocation());
+  }
+  case BinaryOpKind::ShrAssign: {
+    auto ret_or_err =
+        EvaluateBinaryShift(BinaryOpKind::Shr, lhs, rhs, node.GetLocation());
+    if (!ret_or_err)
+      return ret_or_err;
+    return EvaluateAssignment(lhs, *ret_or_err, node.GetLocation());
+  }
   case BinaryOpKind::EQ:
   case BinaryOpKind::NE:
   case BinaryOpKind::LT:
@@ -2003,11 +2073,9 @@ llvm::Expected<lldb::ValueObjectSP> Interpreter::Visit(const CastNode &node) {
                         ? operand->GetLoadAddress()
                         : (op_type.IsSigned() ? operand->GetValueAsSigned(0)
                                               : operand->GetValueAsUnsigned(0));
-    llvm::StringRef name = "result";
-    ExecutionContext exe_ctx(m_target.get(), false);
-    result = ValueObject::CreateValueObjectFromAddress(name, addr, exe_ctx,
-                                                       target_type,
-                                                       /* do_deref */ false);
+    result = ValueObject::CreateValueObjectFromAddress(
+        "result", addr, m_stack_frame, target_type,
+        /* do_deref */ false);
     break;
   }
   case CastKind::eNone: {

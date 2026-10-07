@@ -1267,7 +1267,7 @@ struct MemorySanitizerVisitor : public InstVisitor<MemorySanitizerVisitor> {
 
     MS.initializeCallbacks(*F.getParent(), TLI);
     FnPrologueEnd =
-        IRBuilder<>(&F.getEntryBlock(), F.getEntryBlock().getFirstNonPHIIt())
+        IRBuilder<>(F.getEntryBlock().getFirstNonPHIIt())
             .CreateIntrinsicWithoutFolding(Intrinsic::donothing, {});
 
     if (MS.CompileKernel) {
@@ -4630,6 +4630,37 @@ struct MemorySanitizerVisitor : public InstVisitor<MemorySanitizerVisitor> {
     setOrigin(&I, Origin);
   }
 
+  // e.g., <4 x i32> @llvm.masked.udiv.v4i32(<4 x i32> %dividend,
+  //                                         <4 x i32> %divisor,
+  //                                         <4 x i1>  %mask)
+  //
+  // As handleIntegerDiv(), but per-lane: strict on the divisor and propagating
+  // the dividend, both only on the enabled lanes. Disabled lanes cannot cause
+  // undefined behaviour, and their result is poison.
+  void handleMaskedIntegerDivRem(IntrinsicInst &I) {
+    assert(I.arg_size() == 3);
+    IRBuilder<> IRB(&I);
+    Value *Dividend = I.getArgOperand(0);
+    Value *Divisor = I.getArgOperand(1);
+    Value *Mask = I.getArgOperand(2);
+
+    insertCheckShadowOf(Mask, &I);
+
+    Value *MaskedDivisorShadow = IRB.CreateSelect(
+        Mask, getShadow(Divisor), getCleanShadow(Divisor), "_msmaskeddivisor");
+    insertCheckShadow(MaskedDivisorShadow, getOrigin(Divisor), &I);
+
+    if (!PropagateShadow) {
+      setShadow(&I, getCleanShadow(&I));
+      setOrigin(&I, getCleanOrigin());
+      return;
+    }
+
+    setShadow(&I, IRB.CreateSelect(Mask, getShadow(Dividend),
+                                   getPoisonedShadow(&I), "_msmaskeddiv"));
+    setOrigin(&I, getOrigin(Dividend));
+  }
+
   // e.g., void @llvm.x86.avx.maskstore.ps.256(ptr, <8 x i32>, <8 x float>)
   //                                           dst  mask       src
   //
@@ -5879,6 +5910,99 @@ struct MemorySanitizerVisitor : public InstVisitor<MemorySanitizerVisitor> {
     handleShadowOr(I);
   }
 
+  // Handles:
+  //   <4 x half> @llvm.aarch64.neon.fp8.fdot2.lane
+  //                  (<4 x half>, <8 x i8>, <16 x i8>, i32)
+  //                   accumulator A         B          lane
+  //
+  //   <8 x half> @llvm.aarch64.neon.fp8.fdot2.lane
+  //                  (<8 x half>, <16 x i8>, <16 x i8>, i32)
+  //   <2 x float> @llvm.aarch64.neon.fp8.fdot4.lane
+  //                  (<2 x float>, <8 x i8>, <16 x i8>, i32)
+  //   <4 x float> @llvm.aarch64.neon.fp8.fdot4.lane
+  //                  (<4 x float>, <16 x i8>, <16 x i8>, i32)
+  //
+  // The lane specifies which pair (fdot2) or quad (fdot4) of numbers to
+  // extract from B, which is then splatted before being used in the dot
+  // products e.g., for
+  //     <4 x half> @llvm.aarch64.neon.fp8.fdot2.lane:
+  //                    (<4 x half>, <8 x i8>, <16 x i8>, 1)
+  //
+  //       acc[0]     acc[1]     acc[2]     acc[3]
+  //       +    +     +    +     +    +     +    +
+  //     A[0] A[1]  A[2] A[3]  A[4] A[5]  A[6] A[7]
+  //      *    *     *    *     *    *     *    *
+  //     B[2] B[3]  B[2] B[3]  B[2] B[3]  B[2] B[3]
+  //
+  // Notice that if any bit of B[2] or B[3] is uninitialized, every accumulator
+  // value will become tainted; we approximate this by marking the output as
+  // fully uninitialized. This permits a 'Select' optimization.
+  //
+  // This function is separate from handleVectorDotProductIntrinsic(), because
+  // the non-overlapping features (e.g., odd/even lanes vs. numbered lanes,
+  // ZeroPurifies, EltSizeInBits) and optimizations make clean code reuse
+  // difficult.
+  void handleNEONDotProductLaneIntrinsic(IntrinsicInst &I,
+                                         unsigned ReductionFactor) {
+    IRBuilder<> IRB(&I);
+    assert(I.arg_size() == 4);
+
+    [[maybe_unused]] Value *VAcc = I.getOperand(0);
+    [[maybe_unused]] Value *Va = I.getOperand(1);
+    [[maybe_unused]] Value *Vb = I.getOperand(2);
+    Value *Lane = I.getOperand(3);
+
+    assert(isa<FixedVectorType>(VAcc->getType()));
+    assert(VAcc->getType() == I.getType());
+
+    assert(isa<FixedVectorType>(Va->getType()));
+    assert(Va->getType()->getPrimitiveSizeInBits() ==
+           I.getType()->getPrimitiveSizeInBits());
+
+    assert(cast<FixedVectorType>(Va->getType())->getNumElements() ==
+           cast<FixedVectorType>(I.getType())->getNumElements() *
+               ReductionFactor);
+
+    assert(isa<FixedVectorType>(Vb->getType()));
+    // Deliberately not strict equality
+    assert(Vb->getType()->getPrimitiveSizeInBits() >=
+           I.getType()->getPrimitiveSizeInBits());
+
+    assert(Lane->getType()->isIntegerTy());
+
+    // (<4 x 16>, <8 x i8>, <16 x i8>)
+    //  SAcc      Sa        Sb
+    Value *SAcc = getShadow(&I, 0);
+    Value *Sa = getShadow(&I, 1);
+    Value *Sb = getShadow(&I, 2);
+
+    // Cast the shadows to:
+    //     (<4 x i16>, <4 x i16>, <8 x i16>)
+    //      SAcc        Sa         Sb
+    Sa = IRB.CreateBitCast(Sa, SAcc->getType());
+    Sb = IRB.CreateBitCast(
+        Sb, FixedVectorType::getWithSizeAndScalar(
+                cast<FixedVectorType>(Sb->getType()),
+                cast<FixedVectorType>(SAcc->getType())->getElementType()));
+
+    // All-or-nothing shadows
+    Sa =
+        IRB.CreateSExt(IRB.CreateICmpNE(Sa, getCleanShadow(Sa)), Sa->getType());
+
+    // Extract the specific lane from Sb to get i16, then turn it into a single
+    // bit representing if it is fully initialized.
+    Sb = IRB.CreateExtractElement(Sb, Lane);
+    Value *SbClean = IRB.CreateIsNull(Sb);
+
+    Value *SOutput = IRB.CreateOr(SAcc, Sa);
+
+    // Select is cheaper than broadcasting Sb into <4 x i16>.
+    SOutput = IRB.CreateSelect(SbClean, SOutput, getPoisonedShadow(SOutput));
+
+    setShadow(&I, SOutput);
+    setOriginForNaryOp(I);
+  }
+
   bool maybeHandleCrossPlatformIntrinsic(IntrinsicInst &I) {
     switch (I.getIntrinsicID()) {
     case Intrinsic::uadd_with_overflow:
@@ -5909,7 +6033,6 @@ struct MemorySanitizerVisitor : public InstVisitor<MemorySanitizerVisitor> {
       handleLifetimeStart(I);
       break;
     case Intrinsic::launder_invariant_group:
-    case Intrinsic::strip_invariant_group:
       handleInvariantGroup(I);
       break;
     case Intrinsic::bswap:
@@ -5936,6 +6059,12 @@ struct MemorySanitizerVisitor : public InstVisitor<MemorySanitizerVisitor> {
       break;
     case Intrinsic::masked_load:
       handleMaskedLoad(I);
+      break;
+    case Intrinsic::masked_udiv:
+    case Intrinsic::masked_sdiv:
+    case Intrinsic::masked_urem:
+    case Intrinsic::masked_srem:
+      handleMaskedIntegerDivRem(I);
       break;
     case Intrinsic::vector_reduce_and:
       handleVectorReduceAndIntrinsic(I);
@@ -5995,6 +6124,17 @@ struct MemorySanitizerVisitor : public InstVisitor<MemorySanitizerVisitor> {
     case Intrinsic::fptoui_sat:
       handleGenericVectorConvertIntrinsic(I, /*FixedPoint=*/false);
       break;
+
+    // e.g.,
+    //     notail call void (...) @llvm.fake.use(i64 %x)
+    //     notail call void (...) @llvm.fake.use(i32 %y)
+    //     notail call void (...) @llvm.fake.use(ptr %z)
+    case Intrinsic::fake_use:
+      assert(I.getType()->isVoidTy());
+      // fake_uses aren't real, they can't hurt you. If the use isn't real, it
+      // can't be a real use-of-uninitialized memory. Silently skip over
+      // fake_use.
+      return true;
 
     default:
       return false;
@@ -7462,6 +7602,50 @@ struct MemorySanitizerVisitor : public InstVisitor<MemorySanitizerVisitor> {
                                       /*ZeroPurifies=*/false,
                                       /*EltSizeInBits=*/0,
                                       /*Lanes=*/kBothLanes);
+      break;
+
+    // <4 x half > @llvm.aarch64.neon.fp8.fdot2
+    //               (<4 x half >, < 8 x i8>, < 8 x i8>)
+    // <8 x half > @llvm.aarch64.neon.fp8.fdot2
+    //               (<8 x half >, <16 x i8>, <16 x i8>)
+    //
+    // N.B. although the multiplicands are i8, they are actually fp8, thus
+    //      ZeroPurifies is not applicable.
+    case Intrinsic::aarch64_neon_fp8_fdot2:
+      handleVectorDotProductIntrinsic(I, /*ReductionFactor=*/2,
+                                      /*ZeroPurifies=*/false,
+                                      /*EltSizeInBits=*/0,
+                                      /*Lanes=*/kBothLanes);
+      break;
+
+    // <2 x float> @llvm.aarch64.neon.fp8.fdot4
+    //               (<2 x float>, < 8 x i8>, < 8 x i8>)
+    // <4 x float> @llvm.aarch64.neon.fp8.fdot4
+    //               (<4 x float>, <16 x i8>, <16 x i8>)
+    //
+    // N.B. although the multiplicands are i8, they are actually fp8, thus
+    //      ZeroPurifies is not applicable.
+    case Intrinsic::aarch64_neon_fp8_fdot4:
+      handleVectorDotProductIntrinsic(I, /*ReductionFactor=*/4,
+                                      /*ZeroPurifies=*/false,
+                                      /*EltSizeInBits=*/0,
+                                      /*Lanes=*/kBothLanes);
+      break;
+
+    // <4 x half> @llvm.aarch64.neon.fp8.fdot2.lane
+    //                (<4 x half>, <8 x i8>, <16 x i8>, i32)
+    // <8 x half> @llvm.aarch64.neon.fp8.fdot2.lane
+    //                (<8 x half>, <16 x i8>, <16 x i8>, i32)
+    case Intrinsic::aarch64_neon_fp8_fdot2_lane:
+      handleNEONDotProductLaneIntrinsic(I, /*ReductionFactor=*/2);
+      break;
+
+    // <2 x float> @llvm.aarch64.neon.fp8.fdot4.lane
+    //                (<2 x float>, <8 x i8>, <16 x i8>, i32)
+    // <4 x float> @llvm.aarch64.neon.fp8.fdot4.lane
+    //                (<4 x float>, <16 x i8>, <16 x i8>, i32)
+    case Intrinsic::aarch64_neon_fp8_fdot4_lane:
+      handleNEONDotProductLaneIntrinsic(I, /*ReductionFactor=*/4);
       break;
 
     // Floating-Point Absolute Compare Greater Than/Equal

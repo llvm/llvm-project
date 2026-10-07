@@ -24,9 +24,10 @@
 # CHECK-NEXT:   EntrySize:
 # CHECK-NEXT:   SectionData (
 # CHECK-NEXT:     0000: 10000000 00000000 017A5200 01010101
-# CHECK-NEXT:     0010: 1A000000 08000000 18000000 E3FF0100
-# CHECK-NEXT:     0020: 00000000
-#   E3FF = _start(0x1000) - PC(.eh_frame(0x1001) + 0x1C), followed by a PC range of 1
+# CHECK-NEXT:     0010: 1A000000 0A000000 18000000 E3FFFFFF
+# CHECK-NEXT:     0020: 00000000 0000
+#                       ^
+#   DFFFFFFF = _start(0x1000) - PC(.eh_frame(0x1001) + 0x20)
 
 # CHECK:      Section {
 # CHECK:        Index:
@@ -77,8 +78,8 @@ _start:
   .byte 0x00
   .byte 0x00
 
-  .long 8    # Size
+  .long 10   # Size
   .long 24   # ID
 fde:
-  .word _start - fde
-  .word 1
+  .long _start - fde
+  .word 0
