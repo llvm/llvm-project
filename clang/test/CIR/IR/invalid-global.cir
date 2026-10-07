@@ -68,7 +68,7 @@ cir.global external comdat(1) @bad_comdat = #cir.int<42> : !s32i
 module {
 
 // The custom syntax always carries an initial value, so use the generic form.
-// expected-error @below {{with a constructor region must have an initial value}}
+// expected-error @below {{cannot have a constructor region without an initial value}}
 "cir.global"() <{global_visibility = 0 : i32, linkage = #cir.linkage<external>, sym_name = "ctor_without_init", sym_type = !s32i}> ({
   cir.yield
 }, {

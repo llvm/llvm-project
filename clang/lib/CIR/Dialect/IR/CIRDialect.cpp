@@ -2361,10 +2361,11 @@ mlir::LogicalResult cir::GlobalOp::verify() {
       return failure();
   }
 
-  // The ctor region runs on top of the initial value, which is the only place
-  // the pre-initialization contents (e.g. a null member pointer) are recorded.
+  // The initial value can't be recomputed from the type once the ctor is
+  // lowered (e.g. a null member pointer becomes -1 after CXXABILowering).
   if (!getCtorRegion().empty() && !getInitialValue().has_value())
-    return emitOpError("with a constructor region must have an initial value");
+    return emitOpError(
+        "cannot have a constructor region without an initial value");
 
   if ((getStaticLocalGuard().has_value()) &&
       (!getCtorRegion().empty() || !getDtorRegion().empty()))
