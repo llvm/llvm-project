@@ -1918,6 +1918,10 @@ Instruction *InstCombinerImpl::visitAShr(BinaryOperator &I) {
       if (match(Op0, m_OneUse(m_c_And(m_Add(m_Value(X), m_AllOnes()),
                                       m_Not(m_Deferred(X))))))
         return new SExtInst(Builder.CreateIsNull(X), Ty);
+
+      // ashr (add (zext X), -1), BitWidth-1 --> sext (X == 0)
+      if (match(Op0, m_OneUse(m_Add(m_ZExt(m_Value(X)), m_AllOnes()))))
+        return new SExtInst(Builder.CreateIsNull(X), Ty);
     }
 
     const APInt *MulC;
