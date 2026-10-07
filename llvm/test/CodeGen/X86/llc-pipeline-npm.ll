@@ -192,7 +192,7 @@
 ; O2-NEXT:     x86-fixup-bw-insts
 ; O2-NEXT:     x86-fixup-leas
 ; O2-NEXT:     x86-fixup-inst-tuning
-; O2-NEXT:     x86-fixup-inst-tuning
+; O2-NEXT:     x86-fixup-vector-constants
 ; O2-NEXT:     x86-compress-evex
 ; O2-NEXT:     x86-insert-x87-wait
 ; O2-NEXT:     funclet-layout
@@ -398,7 +398,7 @@
 ; O3-WINDOWS-NEXT:     x86-fixup-bw-insts
 ; O3-WINDOWS-NEXT:     x86-fixup-leas
 ; O3-WINDOWS-NEXT:     x86-fixup-inst-tuning
-; O3-WINDOWS-NEXT:     x86-fixup-inst-tuning
+; O3-WINDOWS-NEXT:     x86-fixup-vector-constants
 ; O3-WINDOWS-NEXT:     x86-compress-evex
 ; O3-WINDOWS-NEXT:     x86-insert-x87-wait
 ; O3-WINDOWS-NEXT:     funclet-layout

@@ -326,6 +326,9 @@ features cannot lower the translation-unit ABI level;
 
 ### Improvements to Clang's diagnostics
 
+- Fixed spurious `-Wimplicit-void-ptr-cast` warnings in C for parenthesized
+  null pointer macros such as `(NULL)`. (#GH171874)
+
 - `-Wfortify-source` now diagnoses when `strlcat`, `__builtin_strlcat`, `strlcpy`, or
   `__builtin_strlcpy` is called with a size argument larger than the destination buffer.
 
@@ -578,6 +581,11 @@ features cannot lower the translation-unit ABI level;
 
 - Improve Clang diagnoses when unary `__imag` operator with non-complex type operand is used as lvalue. (#GH222383)
 
+- Added `-Wredundant-defer` to diagnose redundant uses of the `_Defer`
+  keyword, such as when deferring the last statement of a block; when
+  used as the body of a conditional; or when it immediately precedes
+  a `break`/`continue` statement or a `return` with no argument.
+
 ### Improvements to Clang's time-trace
 
 ### Improvements to Coverage Mapping
@@ -650,6 +658,12 @@ features cannot lower the translation-unit ABI level;
   evaluation.
 
 #### Bug Fixes to Attribute Support
+
+- Fixed an assertion failure when parsing malformed GNU `__attribute__`
+  syntax followed by a parenthesized expression list in C code. (#GH225045)
+
+- Clang now diagnoses incompatible `weak` and `ifunc` attributes, including
+  weak linkage introduced through redeclarations or `#pragma weak`. (#GH220923)
 
 - Fixed crash (assertion) when the `alloc_align` attribute was applied to a declaration whose type has a `FunctionProtoType` but which is not itself a `FunctionDecl`, such as a function-pointer variable. (#GH122058)
 
