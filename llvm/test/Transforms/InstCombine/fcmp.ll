@@ -598,7 +598,7 @@ define i1 @is_signbit_set(double %x) {
 define i1 @is_signbit_set_1(double %x) {
 ; CHECK-LABEL: @is_signbit_set_1(
 ; CHECK-NEXT:    [[S:%.*]] = call double @llvm.copysign.f64(double 1.000000e+00, double [[X:%.*]])
-; CHECK-NEXT:    [[R:%.*]] = fcmp ult double [[S]], 0.000000e+00
+; CHECK-NEXT:    [[R:%.*]] = fcmp nnan ult double [[S]], 0.000000e+00
 ; CHECK-NEXT:    ret i1 [[R]]
 ;
   %s = call double @llvm.copysign.f64(double 1.0, double %x)
@@ -609,7 +609,7 @@ define i1 @is_signbit_set_1(double %x) {
 define i1 @is_signbit_set_2(double %x) {
 ; CHECK-LABEL: @is_signbit_set_2(
 ; CHECK-NEXT:    [[S:%.*]] = call double @llvm.copysign.f64(double 1.000000e+00, double [[X:%.*]])
-; CHECK-NEXT:    [[R:%.*]] = fcmp ole double [[S]], 0.000000e+00
+; CHECK-NEXT:    [[R:%.*]] = fcmp nnan ole double [[S]], 0.000000e+00
 ; CHECK-NEXT:    ret i1 [[R]]
 ;
   %s = call double @llvm.copysign.f64(double 1.0, double %x)
@@ -620,7 +620,7 @@ define i1 @is_signbit_set_2(double %x) {
 define i1 @is_signbit_set_3(double %x) {
 ; CHECK-LABEL: @is_signbit_set_3(
 ; CHECK-NEXT:    [[S:%.*]] = call double @llvm.copysign.f64(double 1.000000e+00, double [[X:%.*]])
-; CHECK-NEXT:    [[R:%.*]] = fcmp ule double [[S]], 0.000000e+00
+; CHECK-NEXT:    [[R:%.*]] = fcmp nnan ule double [[S]], 0.000000e+00
 ; CHECK-NEXT:    ret i1 [[R]]
 ;
   %s = call double @llvm.copysign.f64(double 1.0, double %x)
@@ -646,7 +646,7 @@ define <2 x i1> @is_signbit_set_anyzero(<2 x double> %x) {
 define i1 @is_signbit_clear(double %x) {
 ; CHECK-LABEL: @is_signbit_clear(
 ; CHECK-NEXT:    [[S:%.*]] = call double @llvm.copysign.f64(double 4.200000e+01, double [[X:%.*]])
-; CHECK-NEXT:    [[R:%.*]] = fcmp ogt double [[S]], 0.000000e+00
+; CHECK-NEXT:    [[R:%.*]] = fcmp nnan ogt double [[S]], 0.000000e+00
 ; CHECK-NEXT:    ret i1 [[R]]
 ;
   %s = call double @llvm.copysign.f64(double -42.0, double %x)
@@ -657,7 +657,7 @@ define i1 @is_signbit_clear(double %x) {
 define i1 @is_signbit_clear_1(double %x) {
 ; CHECK-LABEL: @is_signbit_clear_1(
 ; CHECK-NEXT:    [[S:%.*]] = call double @llvm.copysign.f64(double 4.200000e+01, double [[X:%.*]])
-; CHECK-NEXT:    [[R:%.*]] = fcmp ugt double [[S]], 0.000000e+00
+; CHECK-NEXT:    [[R:%.*]] = fcmp nnan ugt double [[S]], 0.000000e+00
 ; CHECK-NEXT:    ret i1 [[R]]
 ;
   %s = call double @llvm.copysign.f64(double -42.0, double %x)
@@ -668,7 +668,7 @@ define i1 @is_signbit_clear_1(double %x) {
 define i1 @is_signbit_clear_2(double %x) {
 ; CHECK-LABEL: @is_signbit_clear_2(
 ; CHECK-NEXT:    [[S:%.*]] = call double @llvm.copysign.f64(double 4.200000e+01, double [[X:%.*]])
-; CHECK-NEXT:    [[R:%.*]] = fcmp oge double [[S]], 0.000000e+00
+; CHECK-NEXT:    [[R:%.*]] = fcmp nnan oge double [[S]], 0.000000e+00
 ; CHECK-NEXT:    ret i1 [[R]]
 ;
   %s = call double @llvm.copysign.f64(double -42.0, double %x)
@@ -679,7 +679,7 @@ define i1 @is_signbit_clear_2(double %x) {
 define i1 @is_signbit_clear_3(double %x) {
 ; CHECK-LABEL: @is_signbit_clear_3(
 ; CHECK-NEXT:    [[S:%.*]] = call double @llvm.copysign.f64(double 4.200000e+01, double [[X:%.*]])
-; CHECK-NEXT:    [[R:%.*]] = fcmp uge double [[S]], 0.000000e+00
+; CHECK-NEXT:    [[R:%.*]] = fcmp nnan uge double [[S]], 0.000000e+00
 ; CHECK-NEXT:    ret i1 [[R]]
 ;
   %s = call double @llvm.copysign.f64(double -42.0, double %x)
@@ -693,7 +693,7 @@ define i1 @is_signbit_set_extra_use(double %x, ptr %p) {
 ; CHECK-LABEL: @is_signbit_set_extra_use(
 ; CHECK-NEXT:    [[S:%.*]] = call double @llvm.copysign.f64(double 1.000000e+00, double [[X:%.*]])
 ; CHECK-NEXT:    store double [[S]], ptr [[P:%.*]], align 8
-; CHECK-NEXT:    [[R:%.*]] = fcmp olt double [[S]], 0.000000e+00
+; CHECK-NEXT:    [[R:%.*]] = fcmp nnan olt double [[S]], 0.000000e+00
 ; CHECK-NEXT:    ret i1 [[R]]
 ;
   %s = call double @llvm.copysign.f64(double 1.0, double %x)
@@ -707,7 +707,7 @@ define i1 @is_signbit_set_extra_use(double %x, ptr %p) {
 define i1 @is_signbit_clear_nonzero(double %x) {
 ; CHECK-LABEL: @is_signbit_clear_nonzero(
 ; CHECK-NEXT:    [[S:%.*]] = call double @llvm.copysign.f64(double 4.200000e+01, double [[X:%.*]])
-; CHECK-NEXT:    [[R:%.*]] = fcmp ogt double [[S]], 1.000000e+00
+; CHECK-NEXT:    [[R:%.*]] = fcmp nnan ogt double [[S]], 1.000000e+00
 ; CHECK-NEXT:    ret i1 [[R]]
 ;
   %s = call double @llvm.copysign.f64(double -42.0, double %x)
@@ -1852,7 +1852,7 @@ define i1 @same_const_sub_no_fold_large_c(i32 %x) {
 ; CHECK-LABEL: @same_const_sub_no_fold_large_c(
 ; CHECK-NEXT:    [[F:%.*]] = sitofp i32 [[X:%.*]] to float
 ; CHECK-NEXT:    [[S:%.*]] = fsub float f0x4BFFFFFF, [[F]]
-; CHECK-NEXT:    [[CMP:%.*]] = fcmp oeq float [[S]], f0x4BFFFFFF
+; CHECK-NEXT:    [[CMP:%.*]] = fcmp nnan oeq float [[S]], f0x4BFFFFFF
 ; CHECK-NEXT:    ret i1 [[CMP]]
 ;
   %f = sitofp i32 %x to float
@@ -1889,7 +1889,7 @@ define i1 @same_const_sub_no_fold_subnormal_c(i32 %x) {
 ; CHECK-LABEL: @same_const_sub_no_fold_subnormal_c(
 ; CHECK-NEXT:    [[F:%.*]] = sitofp i32 [[X:%.*]] to float
 ; CHECK-NEXT:    [[S:%.*]] = fsub float 1.401300e-45, [[F]]
-; CHECK-NEXT:    [[CMP:%.*]] = fcmp olt float [[S]], 1.401300e-45
+; CHECK-NEXT:    [[CMP:%.*]] = fcmp nnan olt float [[S]], 1.401300e-45
 ; CHECK-NEXT:    ret i1 [[CMP]]
 ;
   %f = sitofp i32 %x to float
@@ -1902,7 +1902,7 @@ define i1 @same_const_sub_no_fold_wrong_mantissa_width(i32 %x) {
 ; CHECK-LABEL: @same_const_sub_no_fold_wrong_mantissa_width(
 ; CHECK-NEXT:    [[F:%.*]] = sitofp i32 [[X:%.*]] to float
 ; CHECK-NEXT:    [[S:%.*]] = fsub float f0x4C000000, [[F]]
-; CHECK-NEXT:    [[CMP:%.*]] = fcmp oeq float [[S]], f0x4C000000
+; CHECK-NEXT:    [[CMP:%.*]] = fcmp nnan oeq float [[S]], f0x4C000000
 ; CHECK-NEXT:    ret i1 [[CMP]]
 ;
   %f = sitofp i32 %x to float
@@ -1926,7 +1926,7 @@ define i1 @same_const_sub_no_fold_x86_fp80_large_c(i32 %x) {
 ; CHECK-LABEL: @same_const_sub_no_fold_x86_fp80_large_c(
 ; CHECK-NEXT:    [[F:%.*]] = sitofp i32 [[X:%.*]] to x86_fp80
 ; CHECK-NEXT:    [[S:%.*]] = fsub x86_fp80 f0x403F8000000000000000, [[F]]
-; CHECK-NEXT:    [[CMP:%.*]] = fcmp oeq x86_fp80 [[S]], f0x403F8000000000000000
+; CHECK-NEXT:    [[CMP:%.*]] = fcmp nnan oeq x86_fp80 [[S]], f0x403F8000000000000000
 ; CHECK-NEXT:    ret i1 [[CMP]]
 ;
   %f = sitofp i32 %x to x86_fp80
@@ -1940,7 +1940,7 @@ define i1 @same_const_sub_no_fold_ppcfp128(i32 %x) {
 ; CHECK-LABEL: @same_const_sub_no_fold_ppcfp128(
 ; CHECK-NEXT:    [[F:%.*]] = sitofp i32 [[X:%.*]] to ppc_fp128
 ; CHECK-NEXT:    [[S:%.*]] = fsub ppc_fp128 1.000000e+00, [[F]]
-; CHECK-NEXT:    [[CMP:%.*]] = fcmp oeq ppc_fp128 [[S]], 1.000000e+00
+; CHECK-NEXT:    [[CMP:%.*]] = fcmp nnan oeq ppc_fp128 [[S]], 1.000000e+00
 ; CHECK-NEXT:    ret i1 [[CMP]]
 ;
   %f = sitofp i32 %x to ppc_fp128
@@ -2627,7 +2627,7 @@ define i1 @fabs_uitofp_sub_ule_one(i16 %x, i16 %y) {
 ; CHECK-NEXT:    [[FY:%.*]] = uitofp i16 [[Y:%.*]] to float
 ; CHECK-NEXT:    [[SUB:%.*]] = fsub float [[FX]], [[FY]]
 ; CHECK-NEXT:    [[ABS:%.*]] = call float @llvm.fabs.f32(float [[SUB]])
-; CHECK-NEXT:    [[CMP:%.*]] = fcmp ule float [[ABS]], 1.000000e+00
+; CHECK-NEXT:    [[CMP:%.*]] = fcmp nnan ule float [[ABS]], 1.000000e+00
 ; CHECK-NEXT:    ret i1 [[CMP]]
 ;
   %fx = uitofp i16 %x to float
@@ -2644,7 +2644,7 @@ define i1 @fabs_sitofp_sub_ole_one(i16 %x, i16 %y) {
 ; CHECK-NEXT:    [[FY:%.*]] = sitofp i16 [[Y:%.*]] to float
 ; CHECK-NEXT:    [[SUB:%.*]] = fsub float [[FX]], [[FY]]
 ; CHECK-NEXT:    [[ABS:%.*]] = call float @llvm.fabs.f32(float [[SUB]])
-; CHECK-NEXT:    [[CMP:%.*]] = fcmp ole float [[ABS]], 1.000000e+00
+; CHECK-NEXT:    [[CMP:%.*]] = fcmp nnan ole float [[ABS]], 1.000000e+00
 ; CHECK-NEXT:    ret i1 [[CMP]]
 ;
   %fx = sitofp i16 %x to float
@@ -2689,7 +2689,7 @@ define i1 @fabs_uitofp_sub_olt_two_no_fold(i16 %x, i16 %y) {
 ; CHECK-NEXT:    [[FY:%.*]] = uitofp i16 [[Y:%.*]] to float
 ; CHECK-NEXT:    [[SUB:%.*]] = fsub float [[FX]], [[FY]]
 ; CHECK-NEXT:    [[ABS:%.*]] = call float @llvm.fabs.f32(float [[SUB]])
-; CHECK-NEXT:    [[CMP:%.*]] = fcmp olt float [[ABS]], 2.000000e+00
+; CHECK-NEXT:    [[CMP:%.*]] = fcmp nnan olt float [[ABS]], 2.000000e+00
 ; CHECK-NEXT:    ret i1 [[CMP]]
 ;
   %fx = uitofp i16 %x to float
@@ -2706,7 +2706,7 @@ define i1 @fabs_sitofp_sub_olt_one_i32_no_fold(i32 %x, i32 %y) {
 ; CHECK-NEXT:    [[FY:%.*]] = sitofp i32 [[Y:%.*]] to float
 ; CHECK-NEXT:    [[SUB:%.*]] = fsub float [[FX]], [[FY]]
 ; CHECK-NEXT:    [[ABS:%.*]] = call float @llvm.fabs.f32(float [[SUB]])
-; CHECK-NEXT:    [[CMP:%.*]] = fcmp olt float [[ABS]], 1.000000e+00
+; CHECK-NEXT:    [[CMP:%.*]] = fcmp nnan olt float [[ABS]], 1.000000e+00
 ; CHECK-NEXT:    ret i1 [[CMP]]
 ;
   %fx = sitofp i32 %x to float
@@ -2724,7 +2724,7 @@ define i1 @fabs_sitofp_sub_ogt_one(i16 %x, i16 %y) {
 ; CHECK-NEXT:    [[FY:%.*]] = sitofp i16 [[Y:%.*]] to float
 ; CHECK-NEXT:    [[SUB:%.*]] = fsub float [[FX]], [[FY]]
 ; CHECK-NEXT:    [[ABS:%.*]] = call float @llvm.fabs.f32(float [[SUB]])
-; CHECK-NEXT:    [[CMP:%.*]] = fcmp ogt float [[ABS]], 1.000000e+00
+; CHECK-NEXT:    [[CMP:%.*]] = fcmp nnan ogt float [[ABS]], 1.000000e+00
 ; CHECK-NEXT:    ret i1 [[CMP]]
 ;
   %fx = sitofp i16 %x to float
@@ -2741,7 +2741,7 @@ define i1 @fabs_argstype_mismatch(i16 %x, i32 %y) {
 ; CHECK-NEXT:    [[FY1:%.*]] = sitofp i32 [[Y1:%.*]] to float
 ; CHECK-NEXT:    [[SUB:%.*]] = fsub float [[FY]], [[FY1]]
 ; CHECK-NEXT:    [[ABS:%.*]] = call float @llvm.fabs.f32(float [[SUB]])
-; CHECK-NEXT:    [[CMP:%.*]] = fcmp ogt float [[ABS]], 1.000000e+00
+; CHECK-NEXT:    [[CMP:%.*]] = fcmp nnan ogt float [[ABS]], 1.000000e+00
 ; CHECK-NEXT:    ret i1 [[CMP]]
 ;
   %fx = sitofp i16 %x to float
@@ -2825,7 +2825,7 @@ define <2 x i1> @fabs_uitofp_sub_vec_bf16_no_fold(<2 x i16> %x, <2 x i16> %y) {
 ; CHECK-NEXT:    [[FY:%.*]] = uitofp <2 x i16> [[Y:%.*]] to <2 x bfloat>
 ; CHECK-NEXT:    [[SUB:%.*]] = fsub <2 x bfloat> [[FX]], [[FY]]
 ; CHECK-NEXT:    [[ABS:%.*]] = call <2 x bfloat> @llvm.fabs.v2bf16(<2 x bfloat> [[SUB]])
-; CHECK-NEXT:    [[CMP:%.*]] = fcmp olt <2 x bfloat> [[ABS]], splat (bfloat 1.000000e+00)
+; CHECK-NEXT:    [[CMP:%.*]] = fcmp nnan olt <2 x bfloat> [[ABS]], splat (bfloat 1.000000e+00)
 ; CHECK-NEXT:    ret <2 x i1> [[CMP]]
 ;
   %fx = uitofp <2 x i16> %x to <2 x bfloat>
