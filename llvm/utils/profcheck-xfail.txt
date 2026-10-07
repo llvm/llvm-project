@@ -43,8 +43,6 @@ Transforms/InstCombine/select-factorize.ll
 Transforms/InstCombine/select-min-max.ll
 Transforms/InstCombine/select-of-symmetric-selects.ll
 Transforms/InstCombine/select-select.ll
-Transforms/InstCombine/sink-not-into-another-hand-of-logical-and.ll
-Transforms/InstCombine/sink-not-into-another-hand-of-logical-or.ll
 Transforms/LoopIdiom/AArch64/byte-compare-index.ll
 Transforms/LoopIdiom/AArch64/find-first-byte-nested.ll
 Transforms/LoopIdiom/AArch64/find-first-byte.ll
