@@ -778,7 +778,8 @@ define half @bytecast_b16_to_half(b16 %b) {
   ; AMDGPU-NEXT:   [[COPY:%[0-9]+]]:_(i32) = COPY $vgpr0
   ; AMDGPU-NEXT:   [[TRUNC:%[0-9]+]]:_(i16) = G_TRUNC [[COPY]](i32)
   ; AMDGPU-NEXT:   [[BITCAST:%[0-9]+]]:_(f16) = G_BITCAST [[TRUNC]](i16)
-  ; AMDGPU-NEXT:   [[ANYEXT:%[0-9]+]]:_(i32) = G_ANYEXT [[BITCAST]](f16)
+  ; AMDGPU-NEXT:   [[BITCAST1:%[0-9]+]]:_(i16) = G_BITCAST [[BITCAST]](f16)
+  ; AMDGPU-NEXT:   [[ANYEXT:%[0-9]+]]:_(i32) = G_ANYEXT [[BITCAST1]](i16)
   ; AMDGPU-NEXT:   $vgpr0 = COPY [[ANYEXT]](i32)
   ; AMDGPU-NEXT:   SI_RETURN implicit $vgpr0
   ;
