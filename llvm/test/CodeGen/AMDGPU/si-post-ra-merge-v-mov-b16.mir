@@ -483,7 +483,7 @@ body: |
 ...
 
 ---
-# Allow merging across a WWM exec regrion since the merged instruction does't land
+# Allow merging across a WWM exec region since the merged instruction doesn't land
 # in there.
 name: merge_across_wwm_exec_write
 tracksRegLiveness: true
