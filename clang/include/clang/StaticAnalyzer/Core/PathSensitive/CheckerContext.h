@@ -262,7 +262,8 @@ public:
   ExplodedNode *
   generateNonFatalErrorNode(ProgramStateRef State = nullptr,
                             const ProgramPointTag *Tag = nullptr) {
-    return addTransition(State, (Tag ? Tag : Location.getTag()));
+    return addTransitionImpl(State ? State : getState(), false, nullptr,
+                             (Tag ? Tag : Location.getTag()));
   }
 
   /// Generate a transition to a node that will be used to report
