@@ -23,10 +23,6 @@ namespace cir {
 enum class CallConvTarget { None, Test, X86_64 };
 } // namespace cir
 
-namespace clang {
-class ASTContext;
-}
-
 namespace mlir {
 
 std::unique_ptr<Pass> createCIRCanonicalizePass();
@@ -39,14 +35,13 @@ std::unique_ptr<Pass> createCallConvLoweringPass();
 std::unique_ptr<Pass>
 createCallConvLoweringPass(cir::CallConvTarget target,
                            llvm::abi::X86AVXABILevel x86AvxAbiLevel,
-                           const llvm::abi::ABICompatInfo &x86AbiCompat);
+                           bool allowsX86TargetAttrAvx,
+                           const llvm::abi::X86ABICompatInfo &x86AbiCompat);
 std::unique_ptr<Pass> createHoistAllocasPass();
 std::unique_ptr<Pass> createLoweringPreparePass();
-std::unique_ptr<Pass> createLoweringPreparePass(clang::ASTContext *astCtx);
 std::unique_ptr<Pass> createGotoSolverPass();
 std::unique_ptr<Pass> createIdiomRecognizerPass();
 std::unique_ptr<Pass> createLibOptPass();
-std::unique_ptr<Pass> createLibOptPass(clang::ASTContext *astCtx);
 
 void populateCIRPreLoweringPasses(mlir::OpPassManager &pm);
 

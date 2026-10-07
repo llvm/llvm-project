@@ -2,6 +2,7 @@
 # See https://llvm.org/LICENSE.txt for license information.
 # SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
 
+load("@bazel_skylib//rules:run_binary.bzl", "run_binary")
 load("@rules_cc//cc:defs.bzl", "cc_library")
 load("//llvm:lit_test.bzl", "lit_expand_template")
 load("//llvm:targets.bzl", "llvm_targets")
@@ -44,6 +45,7 @@ lit_expand_template(
         "@LLVM_INCLUDE_SPIRV_TOOLS_TESTS@": "0",
         "@MLIR_ENABLE_BINDINGS_PYTHON@": "0",
         "@MLIR_ENABLE_CUDA_RUNNER@": "0",
+        "@MLIR_ENABLE_EXPENSIVE_PATTERN_API_CHECKS@": "0",
         "@MLIR_ENABLE_LEVELZERO_RUNNER@": "0",
         "@MLIR_ENABLE_PYTHON_STABLE_ABI@": "0",
         "@MLIR_ENABLE_ROCM_RUNNER@": "0",
@@ -52,7 +54,7 @@ lit_expand_template(
         "@MLIR_ENABLE_VULKAN_RUNNER@": "0",
         "@MLIR_ENABLE_XEVM_CONVERSIONS@": "0",
         "@MLIR_INCLUDE_INTEGRATION_TESTS@": "0",
-        "@MLIR_RUN_ARM_I8MM_TESTS@": "0",
+        "@MLIR_RUN_ARM_NEON_TESTS@": "0",
         "@MLIR_RUN_ARM_SME_TESTS@": "0",
         "@MLIR_RUN_ARM_SVE_TESTS@": "0",
         "@MLIR_RUN_CUDA_SM80_LT_TESTS@": "0",
@@ -61,7 +63,14 @@ lit_expand_template(
         "@MLIR_RUN_CUDA_TENSOR_CORE_TESTS@": "0",
         "@MLIR_RUN_X86_AMX_TESTS@": "0",
         "@MLIR_RUN_X86_TESTS@": "0",
-    },
+    } | select({
+        "//mlir:enable_expensive_pattern_api_checks_config": {
+            "@MLIR_ENABLE_EXPENSIVE_PATTERN_API_CHECKS@": "1",
+        },
+        "//conditions:default": {
+            "@MLIR_ENABLE_EXPENSIVE_PATTERN_API_CHECKS@": "0",
+        },
+    }),
     template = "lit.site.cfg.py.in",
 )
 
@@ -267,12 +276,16 @@ cc_library(
     ],
 )
 
-genrule(
+run_binary(
     name = "test_irdl_to_cpp_gen",
     srcs = ["lib/Dialect/TestIRDLToCpp/test_irdl_to_cpp.irdl.mlir"],
     outs = ["lib/Dialect/TestIRDLToCpp/test_irdl_to_cpp.irdl.mlir.cpp.inc"],
-    cmd = "$(location %s) $< -o $@" % "//mlir:irdl-to-cpp",
-    tools = ["//mlir:irdl-to-cpp"],
+    args = [
+        "$(execpath lib/Dialect/TestIRDLToCpp/test_irdl_to_cpp.irdl.mlir)",
+        "-o",
+        "$(execpath lib/Dialect/TestIRDLToCpp/test_irdl_to_cpp.irdl.mlir.cpp.inc)",
+    ],
+    tool = "//mlir:irdl-to-cpp",
 )
 
 cc_library(
@@ -281,7 +294,6 @@ cc_library(
     hdrs = glob(["lib/Dialect/TestIRDLToCpp/*.h"]),
     includes = ["lib/Dialect/TestIRDLToCpp"],
     deps = [
-        ":test_irdl_to_cpp_gen",
         "//llvm:Support",
         "//mlir:BuiltinToLLVMIRTranslation",
         "//mlir:IR",
@@ -542,6 +554,7 @@ cc_library(
         "//llvm:Support",
         "//mlir:ArithToSPIRV",
         "//mlir:ArithTransforms",
+        "//mlir:ControlFlowToSPIRV",
         "//mlir:FuncDialect",
         "//mlir:FuncToSPIRV",
         "//mlir:GPUDialect",
@@ -551,6 +564,7 @@ cc_library(
         "//mlir:IR",
         "//mlir:IndexToSPIRV",
         "//mlir:LLVMIRTransforms",
+        "//mlir:MathToSPIRV",
         "//mlir:MemRefToLLVM",
         "//mlir:MemRefToSPIRV",
         "//mlir:MemRefTransforms",

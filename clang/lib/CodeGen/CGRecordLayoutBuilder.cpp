@@ -21,6 +21,8 @@
 #include "clang/AST/Expr.h"
 #include "clang/AST/RecordLayout.h"
 #include "clang/Basic/CodeGenOptions.h"
+#include "clang/CodeGenUtils/CodeGenUtils.h"
+#include "clang/CodeGenUtils/RecordLayoutUtils.h"
 #include "llvm/IR/DataLayout.h"
 #include "llvm/IR/DerivedTypes.h"
 #include "llvm/IR/Type.h"
@@ -107,11 +109,6 @@ struct CGRecordLowering {
   bool isDiscreteBitFieldABI() const {
     return Context.getTargetInfo().getCXXABI().isMicrosoft() ||
            D->isMsStruct(Context);
-  }
-
-  /// Helper function to check if we are targeting AAPCS.
-  bool isAAPCS() const {
-    return Context.getTargetInfo().getABI().starts_with("aapcs");
   }
 
   /// Helper function to check if the target machine is BigEndian.
@@ -385,7 +382,7 @@ void CGRecordLowering::accumulateFields(bool isNonVirtualBaseType) {
       Field = accumulateBitFields(isNonVirtualBaseType, Field, FieldEnd);
       assert((Field == FieldEnd || !Field->isBitField()) &&
              "Failed to accumulate all the bitfields");
-    } else if (isEmptyFieldForLayout(Context, *Field)) {
+    } else if (CodeGenUtils::isEmptyFieldForLayout(Context, *Field)) {
       // Empty fields have no storage.
       ++Field;
     } else {
@@ -634,7 +631,7 @@ CGRecordLowering::accumulateBitFields(bool isNonVirtualBaseType,
           // non-reusable tail padding.
           CharUnits LimitOffset;
           for (auto Probe = Field; Probe != FieldEnd; ++Probe)
-            if (!isEmptyFieldForLayout(Context, *Probe)) {
+            if (!CodeGenUtils::isEmptyFieldForLayout(Context, *Probe)) {
               // A member with storage sets the limit.
               assert((getFieldBitOffset(*Probe) % CharBits) == 0 &&
                      "Next storage is not byte-aligned");
@@ -732,7 +729,7 @@ void CGRecordLowering::accumulateBases() {
     // Bases can be zero-sized even if not technically empty if they
     // contain only a trailing array member.
     const CXXRecordDecl *BaseDecl = Base.getType()->getAsCXXRecordDecl();
-    if (!isEmptyRecordForLayout(Context, Base.getType()) &&
+    if (!CodeGenUtils::isEmptyRecordForLayout(Context, Base.getType()) &&
         !Context.getASTRecordLayout(BaseDecl).getNonVirtualSize().isZero())
       Members.push_back(MemberInfo(Layout.getBaseClassOffset(BaseDecl),
           MemberInfo::Base, getStorageType(BaseDecl), BaseDecl));
@@ -753,7 +750,8 @@ void CGRecordLowering::accumulateBases() {
 /// Enforcing the width restriction can be disabled using
 /// -fno-aapcs-bitfield-width.
 void CGRecordLowering::computeVolatileBitfields() {
-  if (!isAAPCS() || !Types.getCodeGenOpts().AAPCSBitfieldWidth)
+  if (!CodeGenUtils::isAAPCS(Context.getTargetInfo()) ||
+      !Types.getCodeGenOpts().AAPCSBitfieldWidth)
     return;
 
   for (auto &I : BitFields) {
@@ -880,7 +878,7 @@ CGRecordLowering::calculateTailClippingOffset(bool isNonVirtualBaseType) const {
   if (!isNonVirtualBaseType && isOverlappingVBaseABI())
     for (const auto &Base : RD->vbases()) {
       const CXXRecordDecl *BaseDecl = Base.getType()->getAsCXXRecordDecl();
-      if (isEmptyRecordForLayout(Context, Base.getType()))
+      if (CodeGenUtils::isEmptyRecordForLayout(Context, Base.getType()))
         continue;
       // If the vbase is a primary virtual base of some base, then it doesn't
       // get its own storage location but instead lives inside of that base.
@@ -896,7 +894,7 @@ CGRecordLowering::calculateTailClippingOffset(bool isNonVirtualBaseType) const {
 void CGRecordLowering::accumulateVBases() {
   for (const auto &Base : RD->vbases()) {
     const CXXRecordDecl *BaseDecl = Base.getType()->getAsCXXRecordDecl();
-    if (isEmptyRecordForLayout(Context, Base.getType()))
+    if (CodeGenUtils::isEmptyRecordForLayout(Context, Base.getType()))
       continue;
     CharUnits Offset = Layout.getVBaseClassOffset(BaseDecl);
     // If the vbase is a primary virtual base of some base, then it doesn't
@@ -1157,7 +1155,7 @@ CodeGenTypes::ComputeRecordLayout(const RecordDecl *D, llvm::StructType *Ty) {
     const FieldDecl *FD = *it;
 
     // Ignore zero-sized fields.
-    if (isEmptyFieldForLayout(getContext(), FD))
+    if (CodeGenUtils::isEmptyFieldForLayout(getContext(), FD))
       continue;
 
     // For non-bit-fields, just check that the LLVM struct offset matches the

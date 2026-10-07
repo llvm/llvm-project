@@ -132,6 +132,7 @@ StringRef AMDGPUTargetStreamer::getArchNameFromElfMach(unsigned ElfMach) {
   case ELF::EF_AMDGPU_MACH_AMDGCN_GFX1172: AK = GK_GFX1172; break;
   case ELF::EF_AMDGPU_MACH_AMDGCN_GFX1200: AK = GK_GFX1200; break;
   case ELF::EF_AMDGPU_MACH_AMDGCN_GFX1201: AK = GK_GFX1201; break;
+  case ELF::EF_AMDGPU_MACH_AMDGCN_GFX1250_STRICT: AK = GK_GFX1250_STRICT; break;
   case ELF::EF_AMDGPU_MACH_AMDGCN_GFX1250: AK = GK_GFX1250; break;
   case ELF::EF_AMDGPU_MACH_AMDGCN_GFX1251: AK = GK_GFX1251; break;
   case ELF::EF_AMDGPU_MACH_AMDGCN_GFX1310: AK = GK_GFX1310; break;
@@ -227,6 +228,7 @@ unsigned AMDGPUTargetStreamer::getElfMach(StringRef GPU) {
   case GK_GFX1172: return ELF::EF_AMDGPU_MACH_AMDGCN_GFX1172;
   case GK_GFX1200: return ELF::EF_AMDGPU_MACH_AMDGCN_GFX1200;
   case GK_GFX1201: return ELF::EF_AMDGPU_MACH_AMDGCN_GFX1201;
+  case GK_GFX1250_STRICT: return ELF::EF_AMDGPU_MACH_AMDGCN_GFX1250_STRICT;
   case GK_GFX1250: return ELF::EF_AMDGPU_MACH_AMDGCN_GFX1250;
   case GK_GFX1251: return ELF::EF_AMDGPU_MACH_AMDGCN_GFX1251;
   case GK_GFX1310: return ELF::EF_AMDGPU_MACH_AMDGCN_GFX1310;
@@ -482,11 +484,13 @@ void AMDGPUTargetAsmStreamer::EmitAmdhsaKernelDescriptor(
       amdhsa::KERNEL_CODE_PROPERTY_ENABLE_SGPR_PRIVATE_SEGMENT_SIZE_SHIFT,
       amdhsa::KERNEL_CODE_PROPERTY_ENABLE_SGPR_PRIVATE_SEGMENT_SIZE,
       ".amdhsa_user_sgpr_private_segment_size");
-  if (IVersion.Major >= 10)
+  if (STI.getFeatureBits().test(AMDGPU::FeatureSupportsWave32) &&
+      STI.getFeatureBits().test(AMDGPU::FeatureSupportsWave64)) {
     PrintField(KD.kernel_code_properties,
                amdhsa::KERNEL_CODE_PROPERTY_ENABLE_WAVEFRONT_SIZE32_SHIFT,
                amdhsa::KERNEL_CODE_PROPERTY_ENABLE_WAVEFRONT_SIZE32,
                ".amdhsa_wavefront_size32");
+  }
   if (CodeObjectVersion >= AMDGPU::AMDHSA_COV5)
     PrintField(KD.kernel_code_properties,
                amdhsa::KERNEL_CODE_PROPERTY_USES_DYNAMIC_STACK_SHIFT,
@@ -566,8 +570,7 @@ void AMDGPUTargetAsmStreamer::EmitAmdhsaKernelDescriptor(
   case AMDGPU::AMDHSA_COV4:
   case AMDGPU::AMDHSA_COV5:
     if (STI.hasFeature(AMDGPU::FeatureSupportsXNACK)) {
-      bool XnackOn = getTargetID()->isXnackOnOrAny() ||
-                     STI.hasFeature(AMDGPU::FeatureXNACK);
+      bool XnackOn = getTargetID()->isXnackOnOrAny();
       OS << "\t\t.amdhsa_reserve_xnack_mask " << XnackOn << '\n';
     }
     break;
@@ -932,9 +935,13 @@ unsigned AMDGPUTargetELFStreamer::getEFlagsV4() {
   EFlagsV4 |= getElfMach(STI.getCPU());
 
   // xnack.
-  switch (getTargetID()->getXnackSetting()) {
+  // Hardwired-on XNACK is implied by the processor, not an ELF mode selection.
+  AMDGPU::TargetIDSetting XnackSetting =
+      STI.hasFeature(AMDGPU::FeatureXNACKOnOffModes)
+          ? getTargetID()->getXnackSetting()
+          : AMDGPU::TargetIDSetting::Unsupported;
+  switch (XnackSetting) {
   case AMDGPU::TargetIDSetting::Unsupported:
-    EFlagsV4 |= ELF::EF_AMDGPU_FEATURE_XNACK_UNSUPPORTED_V4;
     break;
   case AMDGPU::TargetIDSetting::Any:
     EFlagsV4 |= ELF::EF_AMDGPU_FEATURE_XNACK_ANY_V4;

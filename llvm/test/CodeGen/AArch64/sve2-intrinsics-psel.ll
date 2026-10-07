@@ -9,7 +9,7 @@ define <vscale x 16 x i1> @psel_b(<vscale x 16 x i1> %p1, <vscale x 16 x i1> %p2
 ; CHECK-NEXT:    mov w12, w0
 ; CHECK-NEXT:    psel p0, p0, p1.b[w12, 0]
 ; CHECK-NEXT:    ret
-  %res = call <vscale x 16 x i1> @llvm.aarch64.sve.psel.nxv16i1(<vscale x 16 x i1> %p1, <vscale x 16 x i1> %p2, i32 %idx)
+  %res = call <vscale x 16 x i1> @llvm.aarch64.sve.psel(<vscale x 16 x i1> %p1, <vscale x 16 x i1> %p2, i32 %idx)
   ret <vscale x 16 x i1> %res
 }
 
@@ -20,7 +20,7 @@ define <vscale x 16 x i1> @psel_b_imm(<vscale x 16 x i1> %p1, <vscale x 16 x i1>
 ; CHECK-NEXT:    psel p0, p0, p1.b[w12, 15]
 ; CHECK-NEXT:    ret
   %add = add i32 %idx, 15
-  %res = call <vscale x 16 x i1> @llvm.aarch64.sve.psel.nxv16i1(<vscale x 16 x i1> %p1, <vscale x 16 x i1> %p2, i32 %add)
+  %res = call <vscale x 16 x i1> @llvm.aarch64.sve.psel(<vscale x 16 x i1> %p1, <vscale x 16 x i1> %p2, i32 %add)
   ret <vscale x 16 x i1> %res
 }
 
@@ -30,7 +30,7 @@ define <vscale x 16 x i1> @psel_h(<vscale x 16 x i1> %p1, <vscale x 8 x i1> %p2,
 ; CHECK-NEXT:    mov w12, w0
 ; CHECK-NEXT:    psel p0, p0, p1.h[w12, 0]
 ; CHECK-NEXT:    ret
-  %res = call <vscale x 16 x i1> @llvm.aarch64.sve.psel.nxv8i1(<vscale x 16 x i1> %p1, <vscale x 8 x i1> %p2, i32 %idx)
+  %res = call <vscale x 16 x i1> @llvm.aarch64.sve.psel(<vscale x 16 x i1> %p1, <vscale x 8 x i1> %p2, i32 %idx)
   ret <vscale x 16 x i1> %res
 }
 
@@ -41,7 +41,7 @@ define <vscale x 16 x i1> @psel_h_imm(<vscale x 16 x i1> %p1, <vscale x 8 x i1> 
 ; CHECK-NEXT:    psel p0, p0, p1.h[w12, 7]
 ; CHECK-NEXT:    ret
   %add = add i32 %idx, 7
-  %res = call <vscale x 16 x i1> @llvm.aarch64.sve.psel.nxv8i1(<vscale x 16 x i1> %p1, <vscale x 8 x i1> %p2, i32 %add)
+  %res = call <vscale x 16 x i1> @llvm.aarch64.sve.psel(<vscale x 16 x i1> %p1, <vscale x 8 x i1> %p2, i32 %add)
   ret <vscale x 16 x i1> %res
 }
 
@@ -51,7 +51,7 @@ define <vscale x 16 x i1> @psel_s(<vscale x 16 x i1> %p1, <vscale x 4 x i1> %p2,
 ; CHECK-NEXT:    mov w12, w0
 ; CHECK-NEXT:    psel p0, p0, p1.s[w12, 0]
 ; CHECK-NEXT:    ret
-  %res = call <vscale x 16 x i1> @llvm.aarch64.sve.psel.nxv4i1(<vscale x 16 x i1> %p1, <vscale x 4 x i1> %p2, i32 %idx)
+  %res = call <vscale x 16 x i1> @llvm.aarch64.sve.psel(<vscale x 16 x i1> %p1, <vscale x 4 x i1> %p2, i32 %idx)
   ret <vscale x 16 x i1> %res
 }
 
@@ -62,7 +62,7 @@ define <vscale x 16 x i1> @psel_s_imm(<vscale x 16 x i1> %p1, <vscale x 4 x i1> 
 ; CHECK-NEXT:    psel p0, p0, p1.s[w12, 3]
 ; CHECK-NEXT:    ret
   %add = add i32 %idx, 3
-  %res = call <vscale x 16 x i1> @llvm.aarch64.sve.psel.nxv4i1(<vscale x 16 x i1> %p1, <vscale x 4 x i1> %p2, i32 %add)
+  %res = call <vscale x 16 x i1> @llvm.aarch64.sve.psel(<vscale x 16 x i1> %p1, <vscale x 4 x i1> %p2, i32 %add)
   ret <vscale x 16 x i1> %res
 }
 
@@ -72,7 +72,7 @@ define <vscale x 16 x i1> @psel_d(<vscale x 16 x i1> %p1, <vscale x 2 x i1> %p2,
 ; CHECK-NEXT:    mov w12, w0
 ; CHECK-NEXT:    psel p0, p0, p1.d[w12, 0]
 ; CHECK-NEXT:    ret
-  %res = call <vscale x 16 x i1> @llvm.aarch64.sve.psel.nxv2i1(<vscale x 16 x i1> %p1, <vscale x 2 x i1> %p2, i32 %idx)
+  %res = call <vscale x 16 x i1> @llvm.aarch64.sve.psel(<vscale x 16 x i1> %p1, <vscale x 2 x i1> %p2, i32 %idx)
   ret <vscale x 16 x i1> %res
 }
 
@@ -83,11 +83,90 @@ define <vscale x 16 x i1> @psel_d_imm(<vscale x 16 x i1> %p1, <vscale x 2 x i1> 
 ; CHECK-NEXT:    psel p0, p0, p1.d[w12, 1]
 ; CHECK-NEXT:    ret
   %add = add i32 %idx, 1
-  %res = call <vscale x 16 x i1> @llvm.aarch64.sve.psel.nxv2i1(<vscale x 16 x i1> %p1, <vscale x 2 x i1> %p2, i32 %add)
+  %res = call <vscale x 16 x i1> @llvm.aarch64.sve.psel(<vscale x 16 x i1> %p1, <vscale x 2 x i1> %p2, i32 %add)
   ret <vscale x 16 x i1> %res
 }
 
-declare <vscale x 16 x i1> @llvm.aarch64.sve.psel.nxv16i1(<vscale x 16 x i1>, <vscale x 16 x i1>, i32)
-declare <vscale x 16 x i1>  @llvm.aarch64.sve.psel.nxv8i1(<vscale x 16 x i1>, <vscale x 8 x i1>, i32)
-declare <vscale x 16 x i1>  @llvm.aarch64.sve.psel.nxv4i1(<vscale x 16 x i1>, <vscale x 4 x i1>, i32)
-declare <vscale x 16 x i1>  @llvm.aarch64.sve.psel.nxv2i1(<vscale x 16 x i1>, <vscale x 2 x i1>, i32)
+define target("aarch64.svcount") @psel_svcount_b(target("aarch64.svcount") %p1, <vscale x 16 x i1> %p2, i32 %idx) {
+; CHECK-LABEL: psel_svcount_b:
+; CHECK:       // %bb.0:
+; CHECK-NEXT:    mov w12, w0
+; CHECK-NEXT:    psel p0, p0, p1.b[w12, 0]
+; CHECK-NEXT:    ret
+  %res = call target("aarch64.svcount") @llvm.aarch64.sve.psel(target("aarch64.svcount") %p1, <vscale x 16 x i1> %p2, i32 %idx)
+  ret target("aarch64.svcount") %res
+}
+
+define target("aarch64.svcount") @psel_svcount_b_imm(target("aarch64.svcount") %p1, <vscale x 16 x i1> %p2, i32 %idx) {
+; CHECK-LABEL: psel_svcount_b_imm:
+; CHECK:       // %bb.0:
+; CHECK-NEXT:    mov w12, w0
+; CHECK-NEXT:    psel p0, p0, p1.b[w12, 15]
+; CHECK-NEXT:    ret
+  %add = add i32 %idx, 15
+  %res = call target("aarch64.svcount") @llvm.aarch64.sve.psel(target("aarch64.svcount") %p1, <vscale x 16 x i1> %p2, i32 %add)
+  ret target("aarch64.svcount") %res
+}
+
+define target("aarch64.svcount") @psel_svcount_h(target("aarch64.svcount") %p1, <vscale x 8 x i1> %p2, i32 %idx) {
+; CHECK-LABEL: psel_svcount_h:
+; CHECK:       // %bb.0:
+; CHECK-NEXT:    mov w12, w0
+; CHECK-NEXT:    psel p0, p0, p1.h[w12, 0]
+; CHECK-NEXT:    ret
+  %res = call target("aarch64.svcount") @llvm.aarch64.sve.psel(target("aarch64.svcount") %p1, <vscale x 8 x i1> %p2, i32 %idx)
+  ret target("aarch64.svcount") %res
+}
+
+define target("aarch64.svcount") @psel_svcount_h_imm(target("aarch64.svcount") %p1, <vscale x 8 x i1> %p2, i32 %idx) {
+; CHECK-LABEL: psel_svcount_h_imm:
+; CHECK:       // %bb.0:
+; CHECK-NEXT:    mov w12, w0
+; CHECK-NEXT:    psel p0, p0, p1.h[w12, 7]
+; CHECK-NEXT:    ret
+  %add = add i32 %idx, 7
+  %res = call target("aarch64.svcount") @llvm.aarch64.sve.psel(target("aarch64.svcount") %p1, <vscale x 8 x i1> %p2, i32 %add)
+  ret target("aarch64.svcount") %res
+}
+
+define target("aarch64.svcount") @psel_svcount_s(target("aarch64.svcount") %p1, <vscale x 4 x i1> %p2, i32 %idx) {
+; CHECK-LABEL: psel_svcount_s:
+; CHECK:       // %bb.0:
+; CHECK-NEXT:    mov w12, w0
+; CHECK-NEXT:    psel p0, p0, p1.s[w12, 0]
+; CHECK-NEXT:    ret
+  %res = call target("aarch64.svcount") @llvm.aarch64.sve.psel(target("aarch64.svcount") %p1, <vscale x 4 x i1> %p2, i32 %idx)
+  ret target("aarch64.svcount") %res
+}
+
+define target("aarch64.svcount") @psel_svcount_s_imm(target("aarch64.svcount") %p1, <vscale x 4 x i1> %p2, i32 %idx) {
+; CHECK-LABEL: psel_svcount_s_imm:
+; CHECK:       // %bb.0:
+; CHECK-NEXT:    mov w12, w0
+; CHECK-NEXT:    psel p0, p0, p1.s[w12, 3]
+; CHECK-NEXT:    ret
+  %add = add i32 %idx, 3
+  %res = call target("aarch64.svcount") @llvm.aarch64.sve.psel(target("aarch64.svcount") %p1, <vscale x 4 x i1> %p2, i32 %add)
+  ret target("aarch64.svcount") %res
+}
+
+define target("aarch64.svcount") @psel_svcount_d(target("aarch64.svcount") %p1, <vscale x 2 x i1> %p2, i32 %idx) {
+; CHECK-LABEL: psel_svcount_d:
+; CHECK:       // %bb.0:
+; CHECK-NEXT:    mov w12, w0
+; CHECK-NEXT:    psel p0, p0, p1.d[w12, 0]
+; CHECK-NEXT:    ret
+  %res = call target("aarch64.svcount") @llvm.aarch64.sve.psel(target("aarch64.svcount") %p1, <vscale x 2 x i1> %p2, i32 %idx)
+  ret target("aarch64.svcount") %res
+}
+
+define target("aarch64.svcount") @psel_svcount_d_imm(target("aarch64.svcount") %p1, <vscale x 2 x i1> %p2, i32 %idx) {
+; CHECK-LABEL: psel_svcount_d_imm:
+; CHECK:       // %bb.0:
+; CHECK-NEXT:    mov w12, w0
+; CHECK-NEXT:    psel p0, p0, p1.d[w12, 1]
+; CHECK-NEXT:    ret
+  %add = add i32 %idx, 1
+  %res = call target("aarch64.svcount") @llvm.aarch64.sve.psel(target("aarch64.svcount") %p1, <vscale x 2 x i1> %p2, i32 %add)
+  ret target("aarch64.svcount") %res
+}

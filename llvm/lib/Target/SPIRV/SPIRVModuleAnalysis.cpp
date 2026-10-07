@@ -36,7 +36,7 @@ using namespace llvm;
 static cl::opt<bool>
     SPVDumpDeps("spv-dump-deps",
                 cl::desc("Dump MIR with SPIR-V dependencies info"),
-                cl::Optional, cl::init(false));
+                cl::init(false));
 
 static cl::list<SPIRV::Capability::Capability>
     AvoidCapabilities("avoid-spirv-capabilities",
@@ -332,6 +332,22 @@ static InstrSignature instrToSignature(const MachineInstr &MI,
   return Signature;
 }
 
+// Operand index of Invoke in device enqueue instructions, 0 if none.
+static unsigned getInvokeOperandIdx(unsigned Opcode) {
+  switch (Opcode) {
+  case SPIRV::OpEnqueueKernel:
+    return 8;
+  case SPIRV::OpGetKernelNDrangeSubGroupCount:
+  case SPIRV::OpGetKernelNDrangeMaxSubGroupSize:
+    return 3;
+  case SPIRV::OpGetKernelWorkGroupSize:
+  case SPIRV::OpGetKernelPreferredWorkGroupSizeMultiple:
+    return 2;
+  default:
+    return 0;
+  }
+}
+
 bool SPIRVModuleAnalysis::isDeclSection(const MachineRegisterInfo &MRI,
                                         const MachineInstr &MI) {
   unsigned Opcode = MI.getOpcode();
@@ -351,15 +367,15 @@ bool SPIRVModuleAnalysis::isDeclSection(const MachineRegisterInfo &MRI,
     // The OpUndef may be a placeholder for a function reference recorded by
     // selectGlobalValue. Skip emitting it if any user consumes it as a
     // function-pointer-like operand (OpConstantFunctionPointerINTEL operand 2,
-    // or OpEnqueueKernel's Invoke operand at index 8). The rewrite happens
-    // in visitFunPtrUse, which aliases the OpUndef's vreg to the function's
-    // global <id>.
+    // or the Invoke operand of a device enqueue instruction). The rewrite
+    // happens in visitFunPtrUse, which aliases the OpUndef's vreg to the
+    // function's global <id>.
     Register DefReg = MI.getOperand(0).getReg();
     if (GR->getFunctionDefinitionByUse(&MI.getOperand(0))) {
       for (MachineInstr &UseMI : MRI.use_instructions(DefReg)) {
         unsigned UseOp = UseMI.getOpcode();
         if (UseOp == SPIRV::OpConstantFunctionPointerINTEL ||
-            UseOp == SPIRV::OpEnqueueKernel) {
+            getInvokeOperandIdx(UseOp)) {
           MAI.setSkipEmission(&MI);
           return false;
         }
@@ -587,11 +603,11 @@ void SPIRVModuleAnalysis::collectDeclarations(const Module &M) {
           if (DefMO.isReg() && isDeclSection(MRI, MI) &&
               !MAI.hasRegisterAlias(MF, DefMO.getReg()))
             visitDecl(MRI, SignatureToGReg, GlobalToGReg, MF, MI);
-          // OpEnqueueKernel is not a decl, but its Invoke operand may be a
-          // function-pointer placeholder OpUndef recorded by selectGlobalValue.
-          // Resolve it to the OpFunction's global <id> via visitFunPtrUse.
-          if (Opcode == SPIRV::OpEnqueueKernel && MI.getNumOperands() > 8) {
-            const MachineOperand &InvokeMO = MI.getOperand(8);
+          // Device enqueue instructions are not decls, but their Invoke
+          // operand may be a function-pointer placeholder OpUndef. Resolve it
+          // to the OpFunction's global <id> via visitFunPtrUse.
+          if (unsigned InvokeIdx = getInvokeOperandIdx(Opcode)) {
+            const MachineOperand &InvokeMO = MI.getOperand(InvokeIdx);
             if (InvokeMO.isReg()) {
               Register InvokeReg = InvokeMO.getReg();
               if (!MAI.hasRegisterAlias(MF, InvokeReg)) {
@@ -1052,6 +1068,11 @@ void RequirementHandler::initAvailableCapabilitiesForVulkan(
                     Capability::StorageImageMultisample,
                     Capability::ImageMSArray});
 
+  if (ST.isAtLeastSPIRVVer(VersionTuple(1, 3)) ||
+      ST.canUseExtension(Extension::SPV_KHR_variable_pointers))
+    addAvailableCaps({Capability::VariablePointersStorageBuffer,
+                      Capability::VariablePointers});
+
   // Became core in Vulkan 1.2
   if (ST.isAtLeastSPIRVVer(VersionTuple(1, 5))) {
     addAvailableCaps(
@@ -1239,7 +1260,7 @@ static void AddAtomicFloatRequirements(const MachineInstr &MI,
   Register TypeReg = MI.getOperand(1).getReg();
   SPIRVTypeInst TypeDef = MI.getMF()->getRegInfo().getVRegDef(TypeReg);
 
-  if (TypeDef->getOpcode() == SPIRV::OpTypeVector)
+  if (isVectorType(TypeDef))
     return AddAtomicVectorFloatRequirements(MI, Reqs, ST);
 
   if (TypeDef->getOpcode() != SPIRV::OpTypeFloat)
@@ -1483,7 +1504,7 @@ static void AddDotProductRequirements(const MachineInstr &MI,
   if (TypeDef->getOpcode() == SPIRV::OpTypeInt) {
     assert(TypeDef->getOperand(1).getImm() == 32);
     Reqs.addCapability(SPIRV::Capability::DotProductInput4x8BitPacked);
-  } else if (TypeDef->getOpcode() == SPIRV::OpTypeVector) {
+  } else if (isVectorType(TypeDef)) {
     SPIRVTypeInst ScalarTypeDef =
         MRI.getVRegDef(TypeDef->getOperand(1).getReg());
     assert(ScalarTypeDef->getOpcode() == SPIRV::OpTypeInt);
@@ -1533,6 +1554,19 @@ static void addImageOperandReqs(const MachineInstr &MI,
     if (Mask & (1U << I))
       Reqs.getAndAddRequirements(SPIRV::OperandCategory::ImageOperandOperand,
                                  1U << I, ST);
+}
+
+static inline void maybeAddScatterGatherReq(const MachineInstr &MI,
+                                            SPIRV::RequirementHandler &Reqs,
+                                            const SPIRVSubtarget &ST) {
+  assert(MI.getOperand(1).isReg());
+  const MachineRegisterInfo &MRI = MI.getMF()->getRegInfo();
+  SPIRVTypeInst ElemTypeDef = MRI.getVRegDef(MI.getOperand(1).getReg());
+  if (ElemTypeDef->getOpcode() == SPIRV::OpTypePointer &&
+      ST.canUseExtension(SPIRV::Extension::SPV_INTEL_masked_gather_scatter)) {
+    Reqs.addExtension(SPIRV::Extension::SPV_INTEL_masked_gather_scatter);
+    Reqs.addCapability(SPIRV::Capability::MaskedGatherScatterINTEL);
+  }
 }
 
 void addInstrRequirements(const MachineInstr &MI,
@@ -1620,15 +1654,23 @@ void addInstrRequirements(const MachineInstr &MI,
     unsigned NumComponents = MI.getOperand(2).getImm();
     if (NumComponents == 8 || NumComponents == 16)
       Reqs.addCapability(SPIRV::Capability::Vector16);
+    else if (requiresLongVectorEXT(NumComponents))
+      // Such widths are only expressible as OpTypeVectorIdEXT.
+      reportFatalUsageError(
+          "OpTypeVector with " + Twine(NumComponents) +
+          " components requires the following SPIR-V extension: "
+          "SPV_EXT_long_vector");
 
-    assert(MI.getOperand(1).isReg());
-    const MachineRegisterInfo &MRI = MI.getMF()->getRegInfo();
-    SPIRVTypeInst ElemTypeDef = MRI.getVRegDef(MI.getOperand(1).getReg());
-    if (ElemTypeDef->getOpcode() == SPIRV::OpTypePointer &&
-        ST.canUseExtension(SPIRV::Extension::SPV_INTEL_masked_gather_scatter)) {
-      Reqs.addExtension(SPIRV::Extension::SPV_INTEL_masked_gather_scatter);
-      Reqs.addCapability(SPIRV::Capability::MaskedGatherScatterINTEL);
-    }
+    maybeAddScatterGatherReq(MI, Reqs, ST);
+    break;
+  }
+  case SPIRV::OpTypeVectorIdEXT: {
+    if (!ST.canUseExtension(SPIRV::Extension::SPV_EXT_long_vector))
+      reportFatalUsageError("OpTypeVectorIdEXT requires the following SPIR-V "
+                            "extension: SPV_EXT_long_vector extension");
+    Reqs.addExtension(SPIRV::Extension::SPV_EXT_long_vector);
+    Reqs.addCapability(SPIRV::Capability::LongVectorEXT);
+    maybeAddScatterGatherReq(MI, Reqs, ST);
     break;
   }
   case SPIRV::OpTypePointer: {
@@ -1729,6 +1771,10 @@ void addInstrRequirements(const MachineInstr &MI,
   case SPIRV::OpTypeQueue:
   case SPIRV::OpBuildNDRange:
   case SPIRV::OpEnqueueKernel:
+  case SPIRV::OpGetKernelNDrangeSubGroupCount:
+  case SPIRV::OpGetKernelNDrangeMaxSubGroupSize:
+  case SPIRV::OpGetKernelWorkGroupSize:
+  case SPIRV::OpGetKernelPreferredWorkGroupSizeMultiple:
     Reqs.addCapability(SPIRV::Capability::DeviceEnqueue);
     break;
   case SPIRV::OpDecorate:
@@ -2566,7 +2612,7 @@ void addInstrRequirements(const MachineInstr &MI,
   case SPIRV::OpFNegateV: {
     const MachineRegisterInfo &MRI = MI.getMF()->getRegInfo();
     SPIRVTypeInst TypeDef = MRI.getVRegDef(MI.getOperand(1).getReg());
-    if (TypeDef->getOpcode() == SPIRV::OpTypeVector)
+    if (isVectorType(TypeDef))
       TypeDef = MRI.getVRegDef(TypeDef->getOperand(1).getReg());
     if (isBFloat16Type(TypeDef)) {
       if (!ST.canUseExtension(SPIRV::Extension::SPV_INTEL_bfloat16_arithmetic))
@@ -2596,7 +2642,7 @@ void addInstrRequirements(const MachineInstr &MI,
     const MachineRegisterInfo &MRI = MI.getMF()->getRegInfo();
     MachineInstr *OperandDef = MRI.getVRegDef(MI.getOperand(2).getReg());
     SPIRVTypeInst TypeDef = MRI.getVRegDef(OperandDef->getOperand(1).getReg());
-    if (TypeDef->getOpcode() == SPIRV::OpTypeVector)
+    if (isVectorType(TypeDef))
       TypeDef = MRI.getVRegDef(TypeDef->getOperand(1).getReg());
     if (isBFloat16Type(TypeDef)) {
       if (!ST.canUseExtension(SPIRV::Extension::SPV_INTEL_bfloat16_arithmetic))

@@ -15,8 +15,6 @@
 #include "AMDGPU.h"
 #include "AMDGPUInstrInfo.h"
 #include "AMDGPUSubtarget.h"
-#include "AMDGPUTargetMachine.h"
-#include "MCTargetDesc/AMDGPUMCTargetDesc.h"
 #include "MCTargetDesc/R600MCTargetDesc.h"
 #include "R600RegisterInfo.h"
 #include "SIISelLowering.h"
@@ -2017,8 +2015,8 @@ static SDValue matchExtFromI32orI32(SDValue Op, bool IsSigned,
 
   if (Op.getOpcode() != (IsSigned ? ISD::SIGN_EXTEND : ISD::ZERO_EXTEND) &&
       Op.getOpcode() != ISD::ANY_EXTEND &&
-      !(DAG->SignBitIsZero(Op) &&
-        Op.getOpcode() == (IsSigned ? ISD::ZERO_EXTEND : ISD::SIGN_EXTEND)))
+      !(Op.getOpcode() == (IsSigned ? ISD::ZERO_EXTEND : ISD::SIGN_EXTEND) &&
+        DAG->SignBitIsZero(Op.getOperand(0))))
     return SDValue();
 
   SDValue ExtSrc = Op.getOperand(0);
@@ -3699,12 +3697,16 @@ bool AMDGPUDAGToDAGISel::SelectVOP3PMods(SDValue In, SDValue &Src,
             CurDAG->getTargetConstant(RC->getID(), SL, MVT::i32), Lo,
             CurDAG->getTargetConstant(TRI->getSubRegFromChannel(0, NumRegs), SL,
                                       MVT::i32),
-            (!HasOpSel && Lo->isDivergent()) ? Lo : Undef,
+            // For packed 64-bit ops without OPSEL support, a later pass will
+            // optimize the splat sgpr patterns to save registers.
+            HasOpSel ? Undef : Lo,
             CurDAG->getTargetConstant(
                 TRI->getSubRegFromChannel(NumRegs, NumRegs), SL, MVT::i32)};
 
         Src = SDValue(CurDAG->getMachineNode(TargetOpcode::REG_SEQUENCE, SL,
                                              Src.getValueType(), Ops), 0);
+        // Check that both op_sel_0 and op_sel_1 are zero.
+        assert(!(Mods & (SISrcMods::OP_SEL_0 | SISrcMods::OP_SEL_1)));
       }
       SrcMods = CurDAG->getTargetConstant(Mods, SDLoc(In), MVT::i32);
       return true;
@@ -4285,7 +4287,8 @@ bool AMDGPUDAGToDAGISel::SelectVOP3PMadMixModsImpl(SDValue In, SDValue &Src,
   SelectVOP3ModsImpl(In, Src, Mods);
 
   bool IsExtractHigh = false;
-  if (Src.getOpcode() == ISD::FP_EXTEND) {
+  if (Src.getOpcode() == ISD::FP_EXTEND &&
+      Src.getOperand(0).getValueType() == VT) {
     Src = Src.getOperand(0);
   } else if (VT == MVT::bf16) {
     SDValue B16 = matchBF16FPExtendLike(Src, IsExtractHigh);
@@ -4750,33 +4753,6 @@ bool AMDGPUDAGToDAGISel::isVGPRImm(const SDNode * N) const {
     }
   }
   return !AllUsesAcceptSReg && (Limit < 10);
-}
-
-bool AMDGPUDAGToDAGISel::isUniformLoad(const SDNode *N) const {
-  const auto *Ld = cast<LoadSDNode>(N);
-  const MachineMemOperand *MMO = Ld->getMemOperand();
-
-  // FIXME: We ought to able able to take the direct isDivergent result. We
-  // cannot rely on the MMO for a uniformity check, and should stop using
-  // it. This is a hack for 2 ways that the IR divergence analysis is superior
-  // to the DAG divergence: Recognizing shift-of-workitem-id as always
-  // uniform, and isSingleLaneExecution. These should be handled in the DAG
-  // version, and then this can be dropped.
-  if (Ld->isDivergent() && !AMDGPU::isUniformMMO(MMO))
-    return false;
-
-  return MMO->getSize().hasValue() &&
-         Ld->getAlign() >=
-             Align(std::min(MMO->getSize().getValue().getKnownMinValue(),
-                            uint64_t(4))) &&
-         (MMO->isInvariant() ||
-          (Ld->getAddressSpace() == AMDGPUAS::CONSTANT_ADDRESS ||
-           Ld->getAddressSpace() == AMDGPUAS::CONSTANT_ADDRESS_32BIT) ||
-          (Subtarget->getScalarizeGlobalBehavior() &&
-           Ld->getAddressSpace() == AMDGPUAS::GLOBAL_ADDRESS &&
-           Ld->isSimple() &&
-           static_cast<const SITargetLowering *>(getTargetLowering())
-               ->isMemOpHasNoClobberedMemOperand(N)));
 }
 
 void AMDGPUDAGToDAGISel::PostprocessISelDAG() {

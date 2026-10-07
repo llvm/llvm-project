@@ -904,17 +904,18 @@ RegisterCoalescer::removeCopyByCommutingDef(const CoalescerPair &CP,
   if (hasOtherReachingDefs(IntA, IntB, AValNo, BValNo))
     return {false, false};
 
-  // If some of the uses of IntA.reg is already coalesced away, return false.
-  // It's not possible to determine whether it's safe to perform the coalescing.
-  for (MachineOperand &MO : MRI->use_nodbg_operands(IntA.reg())) {
+  // Make sure all reads of AValNo can be rewritten to the new register.
+  for (MachineOperand &MO : MRI->reg_nodbg_operands(IntA.reg())) {
+    if (!MO.readsReg())
+      continue;
     MachineInstr *UseMI = MO.getParent();
     unsigned OpNo = &MO - &UseMI->getOperand(0);
     SlotIndex UseIdx = LIS->getInstructionIndex(*UseMI);
     LiveInterval::iterator US = IntA.FindSegmentContaining(UseIdx);
     if (US == IntA.end() || US->valno != AValNo)
       continue;
-    // If this use is tied to a def, we can't rewrite the register.
-    if (UseMI->isRegTiedToDefOperand(OpNo))
+    // Partial defs and tied uses can't be rewritten independently.
+    if (MO.isDef() || UseMI->isRegTiedToDefOperand(OpNo))
       return {false, false};
   }
 
@@ -1638,11 +1639,15 @@ bool RegisterCoalescer::reMaterializeDef(const CoalescerPair &CP,
     assert(DstReg.isPhysical() &&
            "Only expect virtual or physical registers in remat");
 
-    // When we're rematerializing into a not-quite-right register we already add
-    // the real definition as an implicit-def, but we should also be marking the
-    // "official" register as dead, since nothing else is going to use it as a
-    // result of this remat. Not doing this can affect pressure tracking.
-    NewMI.getOperand(0).setIsDead(true);
+    // CopyDstReg is added as an implicit-def below. The remat may also define
+    // units CopyDstReg does not cover; nothing uses those, so the def is dead.
+    // If CopyDstReg covers every defined unit, the def is part of that live
+    // value and must stay live.
+    Register DefReg = NewMI.getOperand(0).getReg();
+    if (any_of(TRI->regunits(DefReg.asMCReg()), [&](MCRegUnit Unit) {
+          return !TRI->hasRegUnit(CopyDstReg, Unit);
+        }))
+      NewMI.getOperand(0).setIsDead(true);
 
     bool HasDefMatchingCopy = false;
     for (auto [OpIndex, Reg] : NewMIImplDefs) {
@@ -2617,7 +2622,8 @@ private:
                              const MachineInstr &ImpDef) {
       assert(ImpDef.isImplicitDef());
       ErasableImplicitDef = false;
-      ValidLanes = TRI.getSubRegIndexLaneMask(ImpDef.getOperand(0).getSubReg());
+      ValidLanes |=
+          TRI.getSubRegIndexLaneMask(ImpDef.getOperand(0).getSubReg());
     }
   };
 
@@ -3324,8 +3330,8 @@ void JoinVals::pruneValues(JoinVals &Other,
           // Also remove dead flags since the joined live range will
           // continue past this instruction.
           for (MachineOperand &MO :
-               Indexes->getInstructionFromIndex(Def)->all_defs()) {
-            if (MO.getReg() == Reg) {
+               mi_bundle_ops(*Indexes->getInstructionFromIndex(Def))) {
+            if (MO.isReg() && MO.isDef() && MO.getReg() == Reg) {
               if (MO.getSubReg() != 0 && MO.isUndef() && !EraseImpDef)
                 MO.setIsUndef(false);
               MO.setIsDead(false);
@@ -3691,6 +3697,10 @@ void RegisterCoalescer::mergeSubRangeInto(LiveInterval &LI,
         }
       },
       *LIS->getSlotIndexes(), *TRI, ComposeSubRegIdx);
+
+  // Merging may leave subranges empty; drop them so the interval is left in a
+  // valid state.
+  LI.removeEmptySubRanges();
 }
 
 bool RegisterCoalescer::isHighCostLiveInterval(LiveInterval &LI) {

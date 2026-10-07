@@ -105,6 +105,7 @@ def PreSparsificationRewrite : Pass<"pre-sparsification-rewrite", "ModuleOp"> {
     "linalg::LinalgDialect",
     "memref::MemRefDialect",
     "scf::SCFDialect",
+    "vector::VectorDialect",
   ];
 }
 
@@ -200,6 +201,7 @@ def StageSparseOperations : Pass<"stage-sparse-ops", "func::FuncOp"> {
   }];
   let constructor = "mlir::createStageSparseOperationsPass()";
   let dependentDialects = [
+    "bufferization::BufferizationDialect",
     "sparse_tensor::SparseTensorDialect",
   ];
 }

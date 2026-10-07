@@ -1896,7 +1896,7 @@ CCAssignFn *ARMFastISel::CCAssignFnForCall(CallingConv::ID CC,
     report_fatal_error("Unsupported calling convention");
   case CallingConv::Fast:
     if (Subtarget->hasFPRegs() && !isVarArg) {
-      if (!TM.isAAPCS_ABI())
+      if (!Subtarget->isAAPCS_ABI())
         return (Return ? RetFastCC_ARM_APCS : FastCC_ARM_APCS);
       // For AAPCS ABI targets, just use VFP variant of the calling convention.
       return (Return ? RetCC_ARM_AAPCS_VFP : CC_ARM_AAPCS_VFP);
@@ -1905,7 +1905,7 @@ CCAssignFn *ARMFastISel::CCAssignFnForCall(CallingConv::ID CC,
   case CallingConv::C:
   case CallingConv::CXX_FAST_TLS:
     // Use target triple & subtarget features to do actual dispatch.
-    if (TM.isAAPCS_ABI()) {
+    if (Subtarget->isAAPCS_ABI()) {
       if (Subtarget->hasFPRegs() && Subtarget->isTargetHardFloat() && !isVarArg)
         return (Return ? RetCC_ARM_AAPCS_VFP: CC_ARM_AAPCS_VFP);
       else
@@ -2057,10 +2057,16 @@ bool ARMFastISel::ProcessCallArgs(SmallVectorImpl<Value*> &Args,
       assert(VA.isRegLoc() && NextVA.isRegLoc() &&
              "We only handle register args!");
 
+      // VMOVRRD moves the low word to Rt and the high word to Rt2; on
+      // big-endian targets the high word goes in the first register.
+      Register Lo = VA.getLocReg();
+      Register Hi = NextVA.getLocReg();
+      if (DL.isBigEndian())
+        std::swap(Lo, Hi);
       AddOptionalDefs(BuildMI(*FuncInfo.MBB, FuncInfo.InsertPt, MIMD,
-                              TII.get(ARM::VMOVRRD), VA.getLocReg())
-                      .addReg(NextVA.getLocReg(), RegState::Define)
-                      .addReg(Arg));
+                              TII.get(ARM::VMOVRRD), Lo)
+                          .addReg(Hi, RegState::Define)
+                          .addReg(Arg));
       RegArgs.push_back(VA.getLocReg());
       RegArgs.push_back(NextVA.getLocReg());
     } else {
@@ -2107,10 +2113,16 @@ bool ARMFastISel::FinishCall(MVT RetVT, SmallVectorImpl<Register> &UsedRegs,
       MVT DestVT = RVLocs[0].getValVT();
       const TargetRegisterClass* DstRC = TLI.getRegClassFor(DestVT);
       Register ResultReg = createResultReg(DstRC);
+      // VMOVDRR takes the low word from Rt and the high word from Rt2; on
+      // big-endian targets the first register holds the high word.
+      Register Lo = RVLocs[0].getLocReg();
+      Register Hi = RVLocs[1].getLocReg();
+      if (DL.isBigEndian())
+        std::swap(Lo, Hi);
       AddOptionalDefs(BuildMI(*FuncInfo.MBB, FuncInfo.InsertPt, MIMD,
                               TII.get(ARM::VMOVDRR), ResultReg)
-                      .addReg(RVLocs[0].getLocReg())
-                      .addReg(RVLocs[1].getLocReg()));
+                          .addReg(Lo)
+                          .addReg(Hi));
 
       UsedRegs.push_back(RVLocs[0].getLocReg());
       UsedRegs.push_back(RVLocs[1].getLocReg());
@@ -2803,7 +2815,7 @@ Register ARMFastISel::ARMEmitIntExt(MVT SrcVT, Register SrcReg, MVT DestVT,
     MachineInstrBuilder MIB = BuildMI(
         *FuncInfo.MBB, FuncInfo.InsertPt, MIMD, TII.get(Opcode), ResultReg);
     if (setsCPSR)
-      MIB.addReg(ARM::CPSR, RegState::Define);
+      MIB.addReg(ARM::CPSR, RegState::Define | RegState::Dead);
     SrcReg = constrainOperandRegClass(TII.get(Opcode), SrcReg, 1 + setsCPSR);
     MIB.addReg(SrcReg, getKillRegState(isKill))
         .addImm(ImmEnc)

@@ -251,7 +251,7 @@ static void replaceWithDefined(Ctx &ctx, Symbol &sym, SectionBase &sec,
   sym.versionId = versionId;
   sym.isUsedInRegularObj = true;
   // A copy relocated alias may need a GOT entry.
-  sym.flags.fetch_and(NEEDS_GOT, std::memory_order_relaxed);
+  sym.flags.fetch_and(NEEDS_GOT | NEEDS_GOT_AUTH, std::memory_order_relaxed);
 }
 
 // Reserve space in .bss or .bss.rel.ro for copy relocation.
@@ -654,12 +654,12 @@ void elf::reportUndefinedSymbols(Ctx &ctx) {
 
 // Report an undefined symbol if necessary.
 // Returns true if the undefined symbol will produce an error message.
-bool RelocScan::maybeReportUndefined(Undefined &sym, uint64_t offset) {
-  std::lock_guard<std::mutex> lock(ctx.relocMutex);
+bool elf::maybeReportUndefined(Ctx &ctx, Undefined &sym, InputSectionBase &sec,
+                               uint64_t offset) {
   // If versioned, issue an error (even if the symbol is weak) because we don't
   // know the defining filename which is required to construct a Verneed entry.
   if (sym.hasVersionSuffix) {
-    ctx.undefErrs.push_back({&sym, {{sec, offset}}, false});
+    ctx.undefErrs.push_back({&sym, {{&sec, offset}}, false});
     return true;
   }
   if (sym.isWeak())
@@ -678,14 +678,19 @@ bool RelocScan::maybeReportUndefined(Undefined &sym, uint64_t offset) {
   // PPC32 .got2 is similar but cannot be fixed. Multiple .got2 is infeasible
   // because .LC0-.LTOC is not representable if the two labels are in different
   // .got2
-  if (sym.discardedSecIdx != 0 && (sec->name == ".got2" || sec->name == ".toc"))
+  if (sym.discardedSecIdx != 0 && (sec.name == ".got2" || sec.name == ".toc"))
     return false;
 
   bool isWarning =
       (ctx.arg.unresolvedSymbols == UnresolvedPolicy::Warn && canBeExternal) ||
       ctx.arg.noinhibitExec;
-  ctx.undefErrs.push_back({&sym, {{sec, offset}}, isWarning});
+  ctx.undefErrs.push_back({&sym, {{&sec, offset}}, isWarning});
   return !isWarning;
+}
+
+bool RelocScan::maybeReportUndefined(Undefined &sym, uint64_t offset) {
+  std::lock_guard<std::mutex> lock(ctx.relocMutex);
+  return elf::maybeReportUndefined(ctx, sym, *sec, offset);
 }
 
 bool RelocScan::checkTlsLe(uint64_t offset, Symbol &sym, RelType type) {
@@ -757,6 +762,8 @@ static void addPltEntry(Ctx &ctx, PltSection &plt, GotPltSection &gotPlt,
     return;
   }
   gotPlt.addEntry(sym);
+  if (sym.isPreemptible && ctx.arg.zMarkPlt && type == ctx.target->pltRel)
+    expr = R_PLT;
   rel.addReloc(
       {type, &gotPlt, sym.getGotPltOffset(ctx), isPreemptible, sym, 0, expr});
 }
@@ -793,9 +800,11 @@ static void addGotAuthEntry(Ctx &ctx, Symbol &sym) {
     return;
   }
 
-  // Signed GOT requires dynamic relocation.
-  ctx.in.relaDyn->addReloc(
-      {R_AARCH64_AUTH_RELATIVE, ctx.in.got.get(), off, false, sym, 0, R_ABS});
+  // Signed GOT requires dynamic relocation unless the symbol is
+  // non-preemptible and undefined.
+  if (!sym.isUndefined())
+    ctx.in.relaDyn->addReloc(
+        {R_AARCH64_AUTH_RELATIVE, ctx.in.got.get(), off, false, sym, 0, R_ABS});
 }
 
 static void addTpOffsetGotEntry(Ctx &ctx, Symbol &sym) {
@@ -855,8 +864,12 @@ bool RelocScan::isStaticLinkTimeConstant(RelExpr e, RelType type,
   // only the low bits are used.
   if (e == R_GOT || e == R_PLT)
     return ctx.target->usesOnlyLowPageBits(type) || !ctx.arg.isPic;
-  // R_AARCH64_AUTH_ABS64 and iRelSymbolicRel require a dynamic relocation.
-  if (e == RE_AARCH64_AUTH || type == ctx.target->iRelSymbolicRel)
+  // R_AARCH64_AUTH_ABS64 requires a dynamic relocation unless the symbol is
+  // non-preemptible and undefined.
+  if (e == RE_AARCH64_AUTH && (!sym.isUndefined() || sym.isPreemptible))
+    return false;
+  // iRelSymbolicRel requires a dynamic relocation.
+  if (type == ctx.target->iRelSymbolicRel)
     return false;
 
   // The behavior of an undefined weak reference is implementation defined.
@@ -932,7 +945,7 @@ void RelocScan::process(RelExpr expr, RelType type, uint64_t offset,
       // If the target adjusted the expression to an optimizable form, we may
       // end up needing the GOT if we can't optimize everything.
       if (expr == R_RELAX_GOT_PC || expr == R_RELAX_GOT_PC_NOPIC)
-        ctx.in.got->hasGotOffRel.store(true, std::memory_order_relaxed);
+        ctx.in.got->hasDeferredEntries.store(true, std::memory_order_relaxed);
     }
   }
 
@@ -958,7 +971,7 @@ void RelocScan::process(RelExpr expr, RelType type, uint64_t offset,
     } else if (!sym.isTls() || ctx.arg.emachine != EM_LOONGARCH) {
       // Many LoongArch TLS relocs reuse the RE_LOONGARCH_GOT type, in which
       // case the NEEDS_GOT flag shouldn't get set.
-      sym.setFlags(NEEDS_GOT | NEEDS_GOT_NONAUTH);
+      sym.setFlags(NEEDS_GOT);
     }
   } else if (needsPlt(expr)) {
     sym.setFlags(NEEDS_PLT);
@@ -1232,34 +1245,45 @@ static bool handleNonPreemptibleIfunc(Ctx &ctx, Symbol &sym, uint16_t flags) {
   // ("canonicalizing" it), so all references see the same address, and the
   // resolver is called exactly once. This may result in two GOT entries: one
   // in .got.plt for the IRELATIVE, and one in .got pointing to the canonical
-  // IPLT entry (for GOT-generating relocations).
-  //
-  // We clone the symbol to preserve the original resolver address for the
-  // IRELATIVE addend. The clone is tracked in ctx.irelativeSyms so that linker
-  // relaxation can adjust its value when the resolver address changes.
+  // IPLT entry (for GOT-generating relocations). We clone the symbol to
+  // preserve the original resolver address for the IRELATIVE addend. The clone
+  // is tracked in ctx.irelativeSyms so that linker relaxation can adjust its
+  // value when the resolver address changes.
   //
   // Note: IRELATIVE relocations are needed even in static executables; see
   // `addRelIpltSymbols`.
   if (!sym.isGnuIFunc() || sym.isPreemptible || ctx.arg.zIfuncNoplt)
     return false;
   // Skip unreferenced non-preemptible ifunc.
-  if (!(flags & (NEEDS_GOT | NEEDS_PLT | HAS_DIRECT_RELOC)))
+  if (!(flags & (NEEDS_GOT | NEEDS_GOT_AUTH | NEEDS_PLT | HAS_DIRECT_RELOC)))
     return true;
+  // We only support one kind of GOT entry, and IPLT entries currently always
+  // use non-AUTH GOT entries.
+  if (flags & NEEDS_GOT_AUTH) {
+    auto diag = Err(ctx);
+    diag << "AUTH GOT entry for non-preemptible ifunc '" << sym.getName()
+         << "' requested, but R_AARCH64_AUTH_IRELATIVE is not supported yet";
+    return true;
+  }
 
-  sym.isInIplt = true;
-
-  auto *irelativeSym = makeDefined(cast<Defined>(sym));
-  irelativeSym->allocateAux(ctx);
-  ctx.irelativeSyms.push_back(irelativeSym);
-  auto &dyn = getIRelativeSection(ctx);
-  addPltEntry(ctx, *ctx.in.iplt, *ctx.in.igotPlt, dyn, ctx.target->iRelativeRel,
-              *irelativeSym);
-  sym.allocateAux(ctx);
-  ctx.symAux.back().pltIdx = ctx.symAux[irelativeSym->auxIdx].pltIdx;
+  auto addIpltEntry = [&](Symbol &irelativeSym) {
+    irelativeSym.isInIplt = true;
+    irelativeSym.allocateAux(ctx);
+    auto &dyn = getIRelativeSection(ctx);
+    addPltEntry(ctx, *ctx.in.iplt, *ctx.in.igotPlt, dyn,
+                ctx.target->iRelativeRel, irelativeSym);
+  };
 
   if (flags & HAS_DIRECT_RELOC) {
     // Change the value to the IPLT and redirect all references to it.
     auto &d = cast<Defined>(sym);
+    auto *irelativeSym = addSyntheticLocal(ctx, d.getName(), d.type, d.value,
+                                           d.size, *d.section);
+    addIpltEntry(*irelativeSym);
+    ctx.irelativeSyms.push_back(irelativeSym);
+    sym.isInIplt = true;
+    sym.allocateAux(ctx);
+    ctx.symAux.back().pltIdx = ctx.symAux[irelativeSym->auxIdx].pltIdx;
     d.section = ctx.in.iplt.get();
     d.value = d.getPltIdx(ctx) * ctx.target->ipltEntrySize;
     d.size = 0;
@@ -1267,14 +1291,14 @@ static bool handleNonPreemptibleIfunc(Ctx &ctx, Symbol &sym, uint16_t flags) {
     // don't try to call the PLT as if it were an ifunc resolver.
     d.type = STT_FUNC;
 
-    if (flags & NEEDS_GOT) {
-      assert(!(flags & NEEDS_GOT_AUTH) &&
-             "R_AARCH64_AUTH_IRELATIVE is not supported yet");
+    if (flags & NEEDS_GOT)
       addGotEntry(ctx, sym);
+  } else {
+    addIpltEntry(sym);
+    if (flags & NEEDS_GOT) {
+      // Redirect GOT accesses to point to the Igot.
+      sym.gotInIgot = true;
     }
-  } else if (flags & NEEDS_GOT) {
-    // Redirect GOT accesses to point to the Igot.
-    sym.gotInIgot = true;
   }
   return true;
 }
@@ -1293,8 +1317,8 @@ void elf::postScanRelocations(Ctx &ctx) {
       return;
     sym.allocateAux(ctx);
 
-    if (flags & NEEDS_GOT) {
-      if ((flags & NEEDS_GOT_AUTH) && (flags & NEEDS_GOT_NONAUTH)) {
+    if (flags & (NEEDS_GOT | NEEDS_GOT_AUTH)) {
+      if ((flags & NEEDS_GOT) && (flags & NEEDS_GOT_AUTH)) {
         auto diag = Err(ctx);
         diag << "both AUTH and non-AUTH GOT entries for '" << sym.getName()
              << "' requested, but only one type of GOT entry per symbol is "
@@ -1337,8 +1361,8 @@ void elf::postScanRelocations(Ctx &ctx) {
       return;
     GotSection *got = ctx.in.got.get();
 
-    if (flags & NEEDS_TLSDESC) {
-      if ((flags & NEEDS_TLSDESC_AUTH) && (flags & NEEDS_TLSDESC_NONAUTH)) {
+    if (flags & (NEEDS_TLSDESC | NEEDS_TLSDESC_AUTH)) {
+      if ((flags & NEEDS_TLSDESC) && (flags & NEEDS_TLSDESC_AUTH)) {
         Err(ctx)
             << "both AUTH and non-AUTH TLSDESC entries for '" << sym.getName()
             << "' requested, but only one type of TLSDESC entry per symbol is "
@@ -1348,7 +1372,7 @@ void elf::postScanRelocations(Ctx &ctx) {
       got->addTlsDescEntry(sym);
       RelType tlsDescRel = ctx.target->tlsDescRel;
       if (flags & NEEDS_TLSDESC_AUTH) {
-        got->addTlsDescAuthEntry();
+        got->addTlsDescAuthEntry(sym);
         tlsDescRel = ELF::R_AARCH64_AUTH_TLSDESC;
       }
       ctx.in.relaDyn->addAddendOnlyRelocIfNonPreemptible(
