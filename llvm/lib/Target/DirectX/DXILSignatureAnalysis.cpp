@@ -201,9 +201,21 @@ Error analyzeAccess(const IntrinsicInst &I, EntrySignature &Sig) {
   auto &Elements = Input ? Sig.Inputs : Sig.Outputs;
   auto *ID = dyn_cast<ConstantInt>(I.getArgOperand(0));
   auto *Col = dyn_cast<ConstantInt>(I.getArgOperand(2));
-  if (!ID || ID->getZExtValue() >= Elements.size())
-    return signatureError("signature access has an invalid element ID");
+  StringRef Category = Input ? "input" : "output";
+  if (!ID)
+    return signatureError(Category +
+                          " signature: signature access requires a constant "
+                          "element ID");
+  if (ID->getZExtValue() >= Elements.size())
+    return signatureError(Category +
+                          " signature: signature access has an invalid element "
+                          "ID " +
+                          Twine(ID->getZExtValue()));
   auto &E = Elements[ID->getZExtValue()];
+  auto AccessError = [&](const Twine &Message) {
+    return signatureError(Category + " signature element " + Twine(E.SigId) +
+                          " ('" + E.SemanticName + "'): " + Message);
+  };
   Type *Ty = Input ? I.getType() : I.getArgOperand(3)->getType();
   unsigned Width = 1;
   if (auto *VT = dyn_cast<FixedVectorType>(Ty)) {
@@ -212,12 +224,12 @@ Error analyzeAccess(const IntrinsicInst &I, EntrySignature &Sig) {
   }
   if (!Col || Col->getZExtValue() >= E.Cols ||
       Width > E.Cols - Col->getZExtValue())
-    return signatureError("signature access has an invalid component index");
+    return AccessError("signature access has an invalid component index");
   auto *Row = dyn_cast<ConstantInt>(I.getArgOperand(1));
   if (Row && Row->getZExtValue() >= E.Rows)
-    return signatureError("signature access has an invalid row index");
+    return AccessError("signature access has an invalid row index");
   if (!Row && E.Rows == 1)
-    return signatureError(
+    return AccessError(
         "dynamic indexing requires a multi-row signature element");
   bool CorrectType = false;
   switch (E.CompType) {
@@ -243,7 +255,7 @@ Error analyzeAccess(const IntrinsicInst &I, EntrySignature &Sig) {
     llvm_unreachable("invalid signature component type");
   }
   if (!CorrectType)
-    return signatureError("signature access type disagrees with its element");
+    return AccessError("signature access type disagrees with its element");
   uint8_t Mask = ((1U << Width) - 1) << Col->getZExtValue();
   // As in DXC, the input usage mask includes conditional reads as well.
   E.UsageMask |= Mask;

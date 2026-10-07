@@ -92,7 +92,7 @@ attributes #0 = { "hlsl.shader"="geometry" }
 !3 = !{i32 0}
 
 ;--- access.ll
-; ACCESS: entry 'main': signature access has an invalid component index
+; ACCESS: entry 'main': input signature element 0 ('A'): signature access has an invalid component index
 ; Invalid access column (intrinsic operand 2): outside this scalar element.
 target triple = "dxil-pc-shadermodel6.8-vertex"
 define void @main() #0 {
