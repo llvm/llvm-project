@@ -6979,7 +6979,13 @@ bool VectorCombine::foldShuffleOfAdjacentLoads(Instruction &I) {
   if (DL->getTypeSizeInBits(LoadTy) != 8 * DL->getTypeStoreSize(LoadTy))
     return false;
 
-  const int NumElts = LoadTy->getNumElements();
+  const unsigned NumElts = LoadTy->getNumElements();
+  // We need this check to avoid overflow issues when we compute size of the
+  // wide load and to avoid overflow issues resulting from computing the
+  // getNumElements() in signed int type(instead of unsigned) at mutliple
+  // places. By using INT_MAX / 4, we are just being safe.
+  if (NumElts > INT_MAX / 4)
+    return false;
 
   // Determine which load is at the lower address and confirm the two loads are
   // exactly contiguous. isConsecutiveAccess(A, B) is true only when B directly

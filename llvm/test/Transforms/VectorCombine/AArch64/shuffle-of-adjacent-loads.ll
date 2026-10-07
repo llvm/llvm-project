@@ -130,17 +130,35 @@ define <12 x i1> @padding_bits_for_load_no_widen(ptr %p) {
   ret <12 x i1> %s
 }
 
-define <2 x i8> @huge_adjacent_loads_widen_v1073741823i8_v2147483646i8(ptr %p) {
-; CHECK-LABEL: define <2 x i8> @huge_adjacent_loads_widen_v1073741823i8_v2147483646i8(
+define <2 x i8> @huge_adjacent_loads_widen_v1073741823i8_no_widen(ptr %p) {
+; CHECK-LABEL: define <2 x i8> @huge_adjacent_loads_widen_v1073741823i8_no_widen(
 ; CHECK-SAME: ptr [[P:%.*]]) {
-; CHECK-NEXT:    [[TMP1:%.*]] = load <2147483646 x i8>, ptr [[P]], align 1073741824
-; CHECK-NEXT:    [[S:%.*]] = shufflevector <2147483646 x i8> [[TMP1]], <2147483646 x i8> poison, <2 x i32> <i32 0, i32 1>
+; CHECK-NEXT:    [[P_HI:%.*]] = getelementptr inbounds i8, ptr [[P]], i64 1073741823
+; CHECK-NEXT:    [[A:%.*]] = load <1073741823 x i8>, ptr [[P]], align 1073741824
+; CHECK-NEXT:    [[B:%.*]] = load <1073741823 x i8>, ptr [[P_HI]], align 1073741824
+; CHECK-NEXT:    [[S:%.*]] = shufflevector <1073741823 x i8> [[A]], <1073741823 x i8> [[B]], <2 x i32> <i32 0, i32 1>
 ; CHECK-NEXT:    ret <2 x i8> [[S]]
 ;
   %p_hi = getelementptr inbounds i8, ptr %p, i64 1073741823
   %a = load <1073741823 x i8>, ptr %p
   %b = load <1073741823 x i8>, ptr %p_hi
   %s = shufflevector <1073741823 x i8> %a, <1073741823 x i8> %b, <2 x i32> <i32 0, i32 1>
+  ret <2 x i8> %s
+}
+
+define <2 x i8> @huge_adjacent_loads_v1073741824i8_no_widen(ptr %p) {
+; CHECK-LABEL: define <2 x i8> @huge_adjacent_loads_v1073741824i8_no_widen(
+; CHECK-SAME: ptr [[P:%.*]]) {
+; CHECK-NEXT:    [[P_HI:%.*]] = getelementptr inbounds i8, ptr [[P]], i64 1073741824
+; CHECK-NEXT:    [[A:%.*]] = load <1073741824 x i8>, ptr [[P]], align 1073741824
+; CHECK-NEXT:    [[B:%.*]] = load <1073741824 x i8>, ptr [[P_HI]], align 1073741824
+; CHECK-NEXT:    [[S:%.*]] = shufflevector <1073741824 x i8> [[A]], <1073741824 x i8> [[B]], <2 x i32> <i32 0, i32 1>
+; CHECK-NEXT:    ret <2 x i8> [[S]]
+;
+  %p_hi = getelementptr inbounds i8, ptr %p, i64 1073741824
+  %a = load <1073741824 x i8>, ptr %p
+  %b = load <1073741824 x i8>, ptr %p_hi
+  %s = shufflevector <1073741824 x i8> %a, <1073741824 x i8> %b, <2 x i32> <i32 0, i32 1>
   ret <2 x i8> %s
 }
 
