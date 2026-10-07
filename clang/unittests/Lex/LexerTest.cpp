@@ -719,6 +719,27 @@ TEST_F(LexerTest, CreatedFIDCountForPredefinedBuffer) {
             1U);
 }
 
+TEST_F(LexerTest, LexIncludeFilenameResetsToken) {
+  for (const char *Source :
+       {"\"foo\\\n.h\" \"bar.h\"", "<foo\\\n.h> <bar.h>"}) {
+    auto Buffer = llvm::MemoryBuffer::getMemBuffer(Source);
+    FileID FID = SourceMgr.createFileID(std::move(Buffer));
+    Lexer L(FID, SourceMgr.getBufferOrFake(FID), SourceMgr, LangOpts);
+
+    Token Tok;
+    Tok.startToken();
+    ASSERT_TRUE(L.LexIncludeFilename(Tok));
+    ASSERT_TRUE(Tok.is(tok::header_name));
+    EXPECT_TRUE(Tok.needsCleaning());
+
+    ASSERT_TRUE(L.LexIncludeFilename(Tok));
+    ASSERT_TRUE(Tok.is(tok::header_name));
+    EXPECT_FALSE(Tok.needsCleaning());
+    EXPECT_EQ(Source[0] == '"' ? "\"bar.h\"" : "<bar.h>",
+              Lexer::getSpelling(Tok, SourceMgr, LangOpts));
+  }
+}
+
 TEST_F(LexerTest, RawAndNormalLexSameForLineComments) {
   const llvm::StringLiteral Source = R"cpp(
   // First line comment.

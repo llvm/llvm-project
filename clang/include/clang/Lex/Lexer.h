@@ -202,6 +202,9 @@ public:
   /// return the tok::eof token.  This implicitly involves the preprocessor.
   bool Lex(Token &Result);
 
+  /// Lex a token, producing a header-name token if possible.
+  bool LexIncludeFilename(Token &FilenameTok) override;
+
 private:
   /// Called when the preprocessor is in 'dependency scanning lexing mode'.
   bool LexDependencyDirectiveToken(Token &Result);
@@ -638,6 +641,10 @@ private:
   /// by Lex.
   ///
   bool LexTokenInternal(Token &Result);
+
+  /// Start a new token, applying the pending start-of-line and leading-space
+  /// flags.
+  void InitToken(Token &Result);
 
   bool CheckUnicodeWhitespace(Token &Result, uint32_t C, const char *CurPtr);
 

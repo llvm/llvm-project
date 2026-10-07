@@ -3811,9 +3811,7 @@ void Lexer::PropagateLineStartLeadingSpaceInfo(Token &Result) {
   // Note that this doesn't affect IsAtPhysicalStartOfLine.
 }
 
-bool Lexer::Lex(Token &Result) {
-  assert(!isDependencyDirectivesLexer());
-
+void Lexer::InitToken(Token &Result) {
   // Start a new token.
   Result.startToken();
 
@@ -3837,6 +3835,12 @@ bool Lexer::Lex(Token &Result) {
     Result.setFlag(Token::LeadingEmptyMacro);
     HasLeadingEmptyMacro = false;
   }
+}
+
+bool Lexer::Lex(Token &Result) {
+  assert(!isDependencyDirectivesLexer());
+
+  InitToken(Result);
 
   bool isRawLex = isLexingRawMode();
   (void) isRawLex;
@@ -4658,6 +4662,22 @@ HandleDirective:
 LexNextToken:
   Result.clearFlag(Token::NeedsCleaning);
   goto LexStart;
+}
+
+/// Lex a token, producing a header-name token if the next token starts with
+/// '<' or '"'. Otherwise, lex a normal token.
+bool Lexer::LexIncludeFilename(Token &FilenameTok) {
+  bool returnedToken = false;
+  ParsingFilename = true;
+  if (isDependencyDirectivesLexer())
+    returnedToken = LexDependencyDirectiveToken(FilenameTok);
+  else {
+    InitToken(FilenameTok);
+    returnedToken = LexTokenInternal(FilenameTok);
+  }
+
+  ParsingFilename = false;
+  return returnedToken;
 }
 
 const char *Lexer::convertDependencyDirectiveToken(
