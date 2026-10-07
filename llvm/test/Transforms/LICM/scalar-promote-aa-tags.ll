@@ -631,6 +631,62 @@ exit:
   ret i32 %res
 }
 
+; All the stores in the loop are promoted. Make sure the promoted stores
+; are emitted in the right order.
+define void @promote_multiple_iterations() {
+; CHECK-LABEL: define void @promote_multiple_iterations() {
+; CHECK-NEXT:  [[ENTRY:.*]]:
+; CHECK-NEXT:    [[ADDR:%.*]] = alloca ptr, align 8
+; CHECK-NEXT:    store ptr null, ptr [[ADDR]], align 8
+; CHECK-NEXT:    [[ADDR_PROMOTED:%.*]] = load i64, ptr [[ADDR]], align 1
+; CHECK-NEXT:    br label %[[BB_1:.*]]
+; CHECK:       [[BB_1_LOOPEXIT:.*]]:
+; CHECK-NEXT:    [[DOTLCSSA1:%.*]] = phi i64 [ [[TMP1:%.*]], %[[BB_2:.*]] ]
+; CHECK-NEXT:    br label %[[BB_1]]
+; CHECK:       [[BB_1]]:
+; CHECK-NEXT:    [[TMP0:%.*]] = phi i64 [ [[DOTLCSSA1]], %[[BB_1_LOOPEXIT]] ], [ [[ADDR_PROMOTED]], %[[ENTRY]] ]
+; CHECK-NEXT:    br i1 true, label %[[EXIT:.*]], label %[[BB_2_PREHEADER:.*]]
+; CHECK:       [[BB_2_PREHEADER]]:
+; CHECK-NEXT:    br label %[[BB_2]]
+; CHECK:       [[BB_2]]:
+; CHECK-NEXT:    [[TMP1]] = phi i64 [ [[TMP0]], %[[BB_2_PREHEADER]] ], [ 0, %[[UNREACHABLE:.*]] ]
+; CHECK-NEXT:    br i1 false, label %[[UNREACHABLE]], label %[[BB_1_LOOPEXIT]]
+; CHECK:       [[EXIT]]:
+; CHECK-NEXT:    [[DOTLCSSA:%.*]] = phi i64 [ [[TMP0]], %[[BB_1]] ]
+; CHECK-NEXT:    store i64 [[DOTLCSSA]], ptr [[ADDR]], align 1
+; CHECK-NEXT:    store ptr @promote_multiple_iterations, ptr [[ADDR]], align 8, !tbaa [[INT_TBAA0]]
+; CHECK-NEXT:    [[VAL:%.*]] = load ptr, ptr [[ADDR]], align 8
+; CHECK-NEXT:    [[CMP:%.*]] = icmp ne ptr [[VAL]], null
+; CHECK-NEXT:    call void @llvm.assume(i1 [[CMP]])
+; CHECK-NEXT:    ret void
+; CHECK:       [[UNREACHABLE]]:
+; CHECK-NEXT:    br label %[[BB_2]]
+;
+entry:
+  %addr = alloca ptr, align 8
+  store ptr null, ptr %addr, align 8
+  br label %bb.1
+
+bb.1:
+  store ptr @promote_multiple_iterations, ptr %addr, align 8, !tbaa !0
+  br i1 true, label %exit, label %bb.2
+
+bb.2:
+  br i1 false, label %unreachable, label %bb.1
+
+exit:
+  %val = load ptr, ptr %addr, align 8
+  %cmp = icmp ne ptr %val, null
+  call void @llvm.assume(i1 %cmp)
+  ret void
+
+unreachable:
+  store ptr %addr, ptr %addr, align 8, !tbaa !0
+  %1 = load ptr, ptr %addr, align 8, !tbaa !0
+  store i64 0, ptr %1, align 8, !tbaa !3
+  br label %bb.2
+}
+
 !0 = !{!4, !4, i64 0}
 !1 = !{!"omnipotent char", !2}
 !2 = !{!"Simple C/C++ TBAA"}

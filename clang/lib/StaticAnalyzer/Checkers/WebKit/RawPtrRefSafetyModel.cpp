@@ -15,6 +15,7 @@
 #include "clang/AST/Type.h"
 #include "clang/Analysis/DomainSpecific/CocoaConventions.h"
 #include "clang/Basic/SourceManager.h"
+#include "llvm/ADT/STLExtras.h"
 
 using namespace clang;
 
@@ -57,7 +58,7 @@ public:
   bool isPtrType(const std::string &Name) const override {
     return isCheckedPtr(Name);
   }
-  bool isSafeExpr(const Expr *E, bool) const override {
+  bool isSafeExpr(const Expr *E, bool, QualType) const override {
     return isExprToGetCheckedPtrCapableMember(E);
   }
   const char *typeName() const override { return "CheckedPtr-capable type"; }
@@ -82,7 +83,7 @@ public:
   bool isPtrType(const std::string &Name) const override {
     return isRetainPtrOrOSPtr(Name);
   }
-  bool isSafeExpr(const Expr *E, bool) const override {
+  bool isSafeExpr(const Expr *E, bool, QualType) const override {
     return ento::cocoa::isCocoaObjectRef(E->getType()) &&
            isa<ObjCMessageExpr>(E);
   }
@@ -110,6 +111,46 @@ public:
   RetainTypeChecker *retainTypeChecker() const override { return &RTC; }
 };
 
+static std::optional<bool> isCanBorrowType(QualType T) {
+  auto *Record = T->getAsCXXRecordDecl();
+  if (!Record)
+    return false;
+  return isBorrowable(Record);
+}
+
+static bool isSameRecord(QualType A, QualType B) {
+  auto *RecordA = A->getAsCXXRecordDecl();
+  auto *RecordB = B->getAsCXXRecordDecl();
+  return RecordA && RecordB &&
+         RecordA->getCanonicalDecl() == RecordB->getCanonicalDecl();
+}
+
+static bool mayHoldPointerTo(QualType ViewType, QualType CanBorrowType) {
+  if (ViewType.isNull() || CanBorrowType.isNull())
+    return false;
+
+  if (QualType Pointee = ViewType->getPointeeType(); !Pointee.isNull())
+    return isSameRecord(Pointee, CanBorrowType);
+
+  auto *Record = ViewType->getAsCXXRecordDecl();
+  if (!Record)
+    return false;
+  if (isBorrow(Record))
+    return isSameRecord(borrowedType(ViewType), CanBorrowType);
+  Record = Record->getDefinition();
+  if (!Record)
+    return true;
+
+  return llvm::any_of(Record->fields(),
+                      [&](const FieldDecl *Field) {
+                        return mayHoldPointerTo(Field->getType(),
+                                                CanBorrowType);
+                      }) ||
+         llvm::any_of(Record->bases(), [&](const CXXBaseSpecifier &Base) {
+           return mayHoldPointerTo(Base.getType(), CanBorrowType);
+         });
+}
+
 class BorrowSafetyModel : public PtrRefSafetyModel {
 public:
   std::optional<bool> isUnsafeType(QualType QT) const override {
@@ -126,8 +167,8 @@ public:
     return isBorrow(Name);
   }
 
-  bool isSafeExpr(const Expr *Origin,
-                  bool PtrIsLifetimeBoundToOrigin) const override {
+  bool isSafeExpr(const Expr *Origin, bool PtrIsLifetimeBoundToOrigin,
+                  QualType SinkType) const override {
     if (!PtrIsLifetimeBoundToOrigin)
       return true;
 
@@ -137,6 +178,11 @@ public:
       return true;
 
     if (isBorrowType(OriginType))
+      return true;
+
+    if (Origin->isPRValue() &&
+        isCanBorrowType(Origin->getType()).value_or(false) &&
+        !SinkType.isNull() && !mayHoldPointerTo(SinkType, Origin->getType()))
       return true;
 
     auto *Record = OriginType->getAsCXXRecordDecl();
