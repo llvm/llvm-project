@@ -37,7 +37,7 @@ void combined_target_parallel_for() {
 // LLVM-LABEL: define weak_odr protected amdgpu_kernel void @__omp_offloading_{{.*}}_target_parallel_for_l
 // LLVM:         call i32 @__kmpc_target_init(
 // LLVM:       user_code.entry:
-// LLVM:         call void @__kmpc_parallel_60(ptr {{.*}}, i32 {{.*}}, i32 1, i32 -1, i32 -1, ptr @__omp_offloading_{{.*}}_target_parallel_for_l{{.*}}..omp_par{{.*}}, ptr @__omp_offloading_{{.*}}_target_parallel_for_l{{.*}}..omp_par{{.*}}.wrapper, ptr {{.*}}, i64 0, i32 0)
+// LLVM:         call void @__kmpc_parallel_60(ptr {{.*}}, i32 {{.*}}, i32 1, i32 -1, i32 -1, ptr @__omp_offloading_{{.*}}_target_parallel_for_l{{.*}}..omp_par{{.*}}, ptr null, ptr {{.*}}, i64 0, i32 0)
 // LLVM:         call void @__kmpc_target_deinit()
 
 // LLVM-LABEL: define internal void @__omp_offloading_{{.*}}_target_parallel_for_l{{.*}}..omp_par
@@ -50,7 +50,7 @@ void combined_target_parallel_for() {
 // LLVM-LABEL: define weak_odr protected amdgpu_kernel void @__omp_offloading_{{.*}}_combined_target_parallel_for_l
 // LLVM:         call i32 @__kmpc_target_init(
 // LLVM:       user_code.entry:
-// LLVM:         call void @__kmpc_parallel_60(ptr {{.*}}, i32 {{.*}}, i32 1, i32 -1, i32 -1, ptr @__omp_offloading_{{.*}}_combined_target_parallel_for_l{{.*}}..omp_par{{.*}}, ptr @__omp_offloading_{{.*}}_combined_target_parallel_for_l{{.*}}..omp_par{{.*}}.wrapper, ptr {{.*}}, i64 0, i32 0)
+// LLVM:         call void @__kmpc_parallel_60(ptr {{.*}}, i32 {{.*}}, i32 1, i32 -1, i32 -1, ptr @__omp_offloading_{{.*}}_combined_target_parallel_for_l{{.*}}..omp_par{{.*}}, ptr null, ptr {{.*}}, i64 0, i32 0)
 // LLVM:         call void @__kmpc_target_deinit()
 
 // LLVM-LABEL: define internal void @__omp_offloading_{{.*}}_combined_target_parallel_for_l{{.*}}..omp_par

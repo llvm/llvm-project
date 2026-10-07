@@ -51,6 +51,68 @@ checkSynthesizedClauses(CIRGenFunction &cgf, const OMPExecutableDirective &s,
   return res;
 }
 
+/// Returns \p s's nested OpenMP directive -- its body after unwrapping any
+/// single-statement compounds -- or null if the body isn't itself a single
+/// OpenMP directive.
+static const OMPExecutableDirective *
+getSingleNestedOMPDirective(const OMPExecutableDirective &s) {
+  const Stmt *body =
+      s.getInnermostCapturedStmt()->getCapturedStmt()->IgnoreContainers(
+          /*IgnoreCaptured=*/true);
+  return dyn_cast<OMPExecutableDirective>(body);
+}
+
+/// Returns true if \p dir is a leaf construct kind that participates in
+/// CIR's "combined" op marking (see hasCombinableNestedLeaf).
+static bool isCombinableLeaf(llvm::omp::Directive dir) {
+  switch (dir) {
+  case llvm::omp::OMPD_target:
+  case llvm::omp::OMPD_parallel:
+  case llvm::omp::OMPD_for:
+    return true;
+  default:
+    return false;
+  }
+}
+
+/// Returns true if \p s's body is itself an OpenMP directive that combines
+/// with \p s for codegen purposes, e.g. explicitly-nested `target` +
+/// `parallel` written as separate pragmas rather than `target parallel`.
+static bool hasCombinableNestedLeaf(const OMPExecutableDirective &s) {
+  const OMPExecutableDirective *nested = getSingleNestedOMPDirective(s);
+  if (!nested)
+    return false;
+  return isCombinableLeaf(
+      llvm::omp::getLeafConstructsOrSelf(nested->getDirectiveKind()).front());
+}
+
+/// Finds the loop directive nested (possibly transitively) inside \p s.
+static const OMPLoopDirective *
+findNestedOMPLoopDirective(const OMPExecutableDirective &s) {
+  const OMPExecutableDirective *nested = getSingleNestedOMPDirective(s);
+  if (!nested)
+    return nullptr;
+  if (const auto *loopDir = dyn_cast<OMPLoopDirective>(nested))
+    return loopDir;
+  return findNestedOMPLoopDirective(*nested);
+}
+
+/// Returns true if \p s is a target SPMD construct: a combined
+/// `target parallel for`, or an explicitly nested `target` whose body is a
+/// parallel directive.
+static bool isTargetSPMD(const OMPExecutableDirective &s) {
+  switch (s.getDirectiveKind()) {
+  case llvm::omp::OMPD_target_parallel_for:
+    return true;
+  case llvm::omp::OMPD_target: {
+    const OMPExecutableDirective *nested = getSingleNestedOMPDirective(s);
+    return nested && isOpenMPParallelDirective(nested->getDirectiveKind());
+  }
+  default:
+    return false;
+  }
+}
+
 static mlir::LogicalResult
 emitParallelClauses(CIRGenFunction &cgf, CIRGenModule &cgm,
                     CIRGenBuilderTy &builder, mlir::Location loc,
@@ -80,7 +142,8 @@ emitParallelOp(CIRGenFunction &cgf, const DirectiveTy &s,
   CIRGenModule &cgm = cgf.getCIRGenModule();
 
   auto parallelOp = mlir::omp::ParallelOp::create(builder, begin, clauseOps);
-  if (!omp::isLastItemInQueue(item, queue))
+  if (!omp::isLastItemInQueue(item, queue) ||
+      hasCombinableNestedLeaf(static_cast<const OMPExecutableDirective &>(s)))
     parallelOp.setCombined(true);
 
   mlir::Block &block = parallelOp.getRegion().emplaceBlock();
@@ -273,6 +336,28 @@ static Address addPrivateCounter(CIRGenFunction &cgf, CIRGenModule &cgm,
   return moldAddr;
 }
 
+/// Computes a target SPMD loop's normalized `[0, tripCount)` bounds at the
+/// host insertion point, as builtin-integer values for the enclosing
+/// omp.target's host_eval operands. All three are forwarded even though
+/// only the trip count is runtime-dependent, since the dialect requires an
+/// SPMD loop_nest's bounds to be host-evaluated in full.
+static std::optional<CIRGenFunction::OMPHostEvalBounds>
+emitHostEvalLoopBounds(CIRGenFunction &cgf, const OMPLoopDirective &s) {
+  if (emitPreinits(cgf, s.getPreInits()).failed())
+    return std::nullopt;
+  CIRGenBuilderTy &builder = cgf.getBuilder();
+  mlir::Location loc = cgf.getLoc(s.getBeginLoc());
+  mlir::Value tripCountCir = cgf.emitScalarExpr(s.getNumIterations());
+  auto cirIntType = mlir::cast<cir::IntType>(tripCountCir.getType());
+  CIRGenFunction::OMPHostEvalBounds hev;
+  hev.zero = builder.createBuiltinIntCast(
+      loc, builder.getConstInt(loc, cirIntType, 0));
+  hev.tripCount = builder.createBuiltinIntCast(loc, tripCountCir);
+  hev.one = builder.createBuiltinIntCast(
+      loc, builder.getConstInt(loc, cirIntType, 1));
+  return hev;
+}
+
 /// Lowers an OMPLoopDirective's `for` directive to an omp.wsloop +
 /// omp.loop_nest.
 static mlir::LogicalResult
@@ -293,7 +378,12 @@ emitOMPWorksharingLoop(CIRGenFunction &cgf, const OMPLoopDirective &s,
   const CapturedStmt *capturedStmt = s.getInnermostCapturedStmt();
   const auto *forStmt = cast<ForStmt>(capturedStmt->getCapturedStmt());
 
-  if (emitPreinits(cgf, s.getPreInits()).failed())
+  // True when the enclosing omp.target already computed this loop's trip
+  // count (see emitHostEvalLoopBounds) and forwarded it via
+  // cgf.ompHostEvalBounds.
+  bool consumingHostEval =
+      cgf.ompHostEvalBounds && !cgf.ompHostEvalBounds->applied;
+  if (!consumingHostEval && emitPreinits(cgf, s.getPreInits()).failed())
     return mlir::failure();
 
   // Allocate storage for Sema's normalized 0-based loop counter.
@@ -314,13 +404,22 @@ emitOMPWorksharingLoop(CIRGenFunction &cgf, const OMPLoopDirective &s,
         vd, addPrivateCounter(cgf, cgm, loc, privateVd, clauseOps));
   }
 
-  mlir::Value tripCountCir = cgf.emitScalarExpr(s.getNumIterations());
-  auto cirIntType = mlir::cast<cir::IntType>(tripCountCir.getType());
-  mlir::Value zero = builder.createBuiltinIntCast(
-      loc, builder.getConstInt(loc, cirIntType, 0));
-  mlir::Value one = builder.createBuiltinIntCast(
-      loc, builder.getConstInt(loc, cirIntType, 1));
-  mlir::Value tripCount = builder.createBuiltinIntCast(loc, tripCountCir);
+  mlir::Value zero, tripCount, one;
+  if (consumingHostEval) {
+    // Consume the host_eval bounds forwarded by the enclosing omp.target.
+    cgf.ompHostEvalBounds->applied = true;
+    zero = cgf.ompHostEvalBounds->zero;
+    tripCount = cgf.ompHostEvalBounds->tripCount;
+    one = cgf.ompHostEvalBounds->one;
+  } else {
+    mlir::Value tripCountCir = cgf.emitScalarExpr(s.getNumIterations());
+    auto cirIntType = mlir::cast<cir::IntType>(tripCountCir.getType());
+    zero = builder.createBuiltinIntCast(
+        loc, builder.getConstInt(loc, cirIntType, 0));
+    one = builder.createBuiltinIntCast(loc,
+                                       builder.getConstInt(loc, cirIntType, 1));
+    tripCount = builder.createBuiltinIntCast(loc, tripCountCir);
+  }
 
   auto wsloopOp = mlir::omp::WsloopOp::create(builder, loc, clauseOps);
   mlir::Block *innerBlock = new mlir::Block();
@@ -582,15 +681,37 @@ emitTargetOp(CIRGenFunction &cgf, const DirectiveTy &s,
   if (mlir::failed(emitOMPTargetImplicitCaptures(cgf, s, mapSyms)))
     return mlir::failure();
 
-  // Use generic for now.
+  const auto &execDir = static_cast<const OMPExecutableDirective &>(s);
+  bool isSPMD = isTargetSPMD(execDir);
+
+  std::optional<CIRGenFunction::OMPHostEvalBounds> hostEval;
+  if (isSPMD && !cgf.getCIRGenModule().getLangOpts().OpenMPIsTargetDevice) {
+    const auto *loopDir = dyn_cast<OMPLoopDirective>(&execDir);
+    if (!loopDir)
+      loopDir = findNestedOMPLoopDirective(execDir);
+    if (!loopDir || !(hostEval = emitHostEvalLoopBounds(cgf, *loopDir))) {
+      cgf.getCIRGenModule().errorNYI(
+          s.getSourceRange(), "OpenMP target host-evaluated loop bounds");
+      return mlir::failure();
+    }
+    clauseOps.hostEvalVars.push_back(hostEval->zero);
+    clauseOps.hostEvalVars.push_back(hostEval->tripCount);
+    clauseOps.hostEvalVars.push_back(hostEval->one);
+  }
+
   clauseOps.kernelType = mlir::omp::TargetExecModeAttr::get(
-      &cgf.getMLIRContext(), mlir::omp::TargetExecMode::generic);
+      &cgf.getMLIRContext(), isSPMD ? mlir::omp::TargetExecMode::spmd
+                                    : mlir::omp::TargetExecMode::generic);
 
   auto targetOp = mlir::omp::TargetOp::create(builder, begin, clauseOps);
-  if (!omp::isLastItemInQueue(item, queue))
+  if (!omp::isLastItemInQueue(item, queue) || hasCombinableNestedLeaf(execDir))
     targetOp.setCombined(true);
 
+  // Block arguments must be added in the order BlockArgOpenMPOpInterface
+  // expects: host_eval arguments precede map arguments.
   mlir::Block &block = targetOp.getRegion().emplaceBlock();
+  for (mlir::Value hostEvalVar : clauseOps.hostEvalVars)
+    block.addArgument(hostEvalVar.getType(), begin);
   for (mlir::Value mapVar : clauseOps.mapVars)
     block.addArgument(mapVar.getType(), begin);
 
@@ -599,13 +720,28 @@ emitTargetOp(CIRGenFunction &cgf, const DirectiveTy &s,
 
   CIRGenFunction::LexicalScope ls{cgf, begin, builder.getInsertionBlock()};
 
+  auto argIface = mlir::cast<mlir::omp::BlockArgOpenMPOpInterface>(*targetOp);
+  llvm::MutableArrayRef<mlir::BlockArgument> mapBlockArgs =
+      argIface.getMapBlockArgs();
   llvm::SmallVector<std::pair<const VarDecl *, Address>> savedAddrs;
   for (auto [idx, vd] : llvm::enumerate(mapSyms)) {
     Address origAddr = cgf.getAddrOfLocalVar(vd);
     savedAddrs.push_back({vd, origAddr});
-    mlir::Value blockArg = block.getArgument(idx);
-    cgf.replaceAddrOfLocalVar(vd, Address(blockArg, origAddr.getAlignment()));
+    cgf.replaceAddrOfLocalVar(
+        vd, Address(mapBlockArgs[idx], origAddr.getAlignment()));
   }
+
+  // Forward the host_eval block arguments to the nested loop's emission.
+  std::optional<CIRGenFunction::OMPHostEvalBounds> newHostEvalBounds;
+  if (hostEval) {
+    llvm::MutableArrayRef<mlir::BlockArgument> hostEvalBlockArgs =
+        argIface.getHostEvalBlockArgs();
+    newHostEvalBounds = CIRGenFunction::OMPHostEvalBounds{
+        hostEvalBlockArgs[0], hostEvalBlockArgs[1], hostEvalBlockArgs[2],
+        /*applied=*/false};
+  }
+  CIRGenFunction::OMPHostEvalBoundsRAII hostEvalGuard(
+      cgf, std::move(newHostEvalBounds));
 
   mlir::LogicalResult res = emitBody();
   mlir::omp::TerminatorOp::create(builder, end);
