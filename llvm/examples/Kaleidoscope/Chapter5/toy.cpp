@@ -840,7 +840,7 @@ static void InitializeModuleAndManagers() {
   TheModule->setDataLayout(TheJIT->getDataLayout());
 
   // Create a new builder for the module.
-  Builder = std::make_unique<IRBuilder<>>(*TheContext);
+  Builder = std::make_unique<IRBuilder<>>(*TheModule);
 
   // Create new pass and analysis managers.
   TheFPM = std::make_unique<FunctionPassManager>();

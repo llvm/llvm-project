@@ -106,10 +106,10 @@ public:
   Scatterer() = default;
 
   // Scatter V into Size components.  If new instructions are needed,
-  // insert them before BBI in BB.  If Cache is nonnull, use it to cache
+  // insert them before BBI.  If Cache is nonnull, use it to cache
   // the results.
-  Scatterer(BasicBlock *bb, BasicBlock::iterator bbi, Value *v,
-            const VectorSplit &VS, ValueVector *cachePtr = nullptr);
+  Scatterer(BasicBlock::iterator bbi, Value *v, const VectorSplit &VS,
+            ValueVector *cachePtr = nullptr);
 
   // Return component I, creating a new Value for it if necessary.
   Value *operator[](unsigned I);
@@ -118,7 +118,6 @@ public:
   unsigned size() const { return VS.NumFragments; }
 
 private:
-  BasicBlock *BB;
   BasicBlock::iterator BBI;
   Value *V;
   VectorSplit VS;
@@ -368,9 +367,9 @@ INITIALIZE_PASS_DEPENDENCY(TargetTransformInfoWrapperPass)
 INITIALIZE_PASS_END(ScalarizerLegacyPass, "scalarizer",
                     "Scalarize vector operations", false, false)
 
-Scatterer::Scatterer(BasicBlock *bb, BasicBlock::iterator bbi, Value *v,
-                     const VectorSplit &VS, ValueVector *cachePtr)
-    : BB(bb), BBI(bbi), V(v), VS(VS), CachePtr(cachePtr) {
+Scatterer::Scatterer(BasicBlock::iterator bbi, Value *v, const VectorSplit &VS,
+                     ValueVector *cachePtr)
+    : BBI(bbi), V(v), VS(VS), CachePtr(cachePtr) {
   IsPointer = V->getType()->isPointerTy();
   if (!CachePtr) {
     Tmp.resize(VS.NumFragments, nullptr);
@@ -389,7 +388,7 @@ Value *Scatterer::operator[](unsigned Frag) {
   // Try to reuse a previous value.
   if (CV[Frag])
     return CV[Frag];
-  IRBuilder<> Builder(BB, BBI);
+  IRBuilder<> Builder(BBI);
   if (IsPointer) {
     if (Frag == 0)
       CV[Frag] = V;
@@ -486,7 +485,7 @@ Scatterer ScalarizerVisitor::scatter(Instruction *Point, Value *V,
     // so that it can be used everywhere.
     Function *F = VArg->getParent();
     BasicBlock *BB = &F->getEntryBlock();
-    return Scatterer(BB, BB->begin(), V, VS, &Scattered[{V, VS.SplitTy}]);
+    return Scatterer(BB->begin(), V, VS, &Scattered[{V, VS.SplitTy}]);
   }
   if (Instruction *VOp = dyn_cast<Instruction>(V)) {
     // When scalarizing PHI nodes we might try to examine/rewrite InsertElement
@@ -496,18 +495,17 @@ Scatterer ScalarizerVisitor::scatter(Instruction *Point, Value *V,
     // originating from instructions in unreachable blocks as undef we do not
     // need to analyse them further.
     if (!DT->isReachableFromEntry(VOp->getParent()))
-      return Scatterer(Point->getParent(), Point->getIterator(),
-                       PoisonValue::get(V->getType()), VS);
+      return Scatterer(Point->getIterator(), PoisonValue::get(V->getType()),
+                       VS);
     // Put the scattered form of an instruction directly after the
     // instruction, skipping over PHI nodes and debug intrinsics.
-    BasicBlock *BB = VOp->getParent();
     return Scatterer(
-        BB, skipPastPhiNodesAndDbg(std::next(BasicBlock::iterator(VOp))), V, VS,
+        skipPastPhiNodesAndDbg(std::next(BasicBlock::iterator(VOp))), V, VS,
         &Scattered[{V, VS.SplitTy}]);
   }
   // In the fallback case, just put the scattered before Point and
   // keep the result local to Point.
-  return Scatterer(Point->getParent(), Point->getIterator(), V, VS);
+  return Scatterer(Point->getIterator(), V, VS);
 }
 
 // Replace Op with the gathered form of the components in CV.  Defer the
