@@ -744,6 +744,13 @@ Validates correct usage and adherence to lifetime safety annotations like [[clan
   }];
 }
 
+def LifetimeSafetyFieldOriginEscape
+    : DiagGroup<"lifetime-safety-field-origin-escape"> {
+  code Documentation = [{
+Detects member functions returning an origin of a field (such as a pointer, reference, or view field).
+  }];
+}
+
 def LifetimeSafetyAll : DiagGroup<"lifetime-safety-all",
                                   [LifetimeSafety,
                                   LifetimeSafetySuggestions,

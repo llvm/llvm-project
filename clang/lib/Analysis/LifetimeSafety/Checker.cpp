@@ -60,6 +60,7 @@ private:
   llvm::DenseMap<LoanID, PendingWarning> FinalWarningsMap;
   llvm::DenseMap<AnnotationTarget, EscapingTarget> AnnotationWarningsMap;
   llvm::DenseMap<const ParmVarDecl *, EscapingTarget> NoescapeWarningsMap;
+  llvm::DenseMap<const FieldDecl *, const Expr *> FieldOriginEscapesMap;
   llvm::DenseSet<const Decl *> VerifiedLiftimeboundEscapes;
   const LoanPropagationAnalysis &LoanPropagation;
   const MovedLoansAnalysis &MovedLoans;
@@ -105,6 +106,8 @@ public:
           checkAnnotations(OEF);
     issuePendingWarnings();
     suggestAnnotations();
+    if (LSOpts.CheckFieldOriginEscape)
+      reportFieldOriginEscapes();
     if (LSOpts.CheckNoescapeViolations)
       reportNoescapeViolations();
     if (LSOpts.CheckLifetimeboundViolations)
@@ -171,6 +174,16 @@ public:
           AnnotationWarningsMap.try_emplace(MD, ReturnEsc->getReturnExpr());
       }
     };
+    auto CheckField = [&](const FieldDecl *Field) {
+      if (!LSOpts.CheckFieldOriginEscape)
+        return;
+      if (auto *ReturnEsc = dyn_cast<ReturnEscapeFact>(OEF)) {
+        if (OriginList *RetList = FactMgr.getOriginMgr().getOrCreateList(
+                ReturnEsc->getReturnExpr());
+            RetList && RetList->getOuterOriginID() == EscapedOID)
+          FieldOriginEscapesMap.try_emplace(Field, ReturnEsc->getReturnExpr());
+      }
+    };
     auto MovedAtEscape = MovedLoans.getMovedLoans(OEF);
     for (LoanID LID : EscapedLoans) {
       const Loan *L = FactMgr.getLoanMgr().getLoan(LID);
@@ -181,6 +194,8 @@ public:
         CheckParam(PVD, /*IsMoved=*/MovedAtEscape.lookup(LID));
       else if (const auto *MD = PB->getImplicitThisParent())
         CheckImplicitThis(MD);
+      else if (const auto *Field = PB->getFieldDecl())
+        CheckField(Field);
     }
   }
 
@@ -444,6 +459,17 @@ public:
           llvm_unreachable("Implicit this can only escape via Expr (return)");
       }
     }
+  }
+
+  void reportFieldOriginEscapes() {
+    if (!SemaHelper)
+      return;
+    const auto *MD = dyn_cast<CXXMethodDecl>(FD);
+    if (!MD)
+      return;
+    llvm::TimeTraceScope TimeTrace("ReportFieldOriginEscapes");
+    for (auto [Field, EscapeExpr] : FieldOriginEscapesMap)
+      SemaHelper->reportFieldOriginEscape(MD, Field, EscapeExpr);
   }
 
   void reportNoescapeViolations() {
