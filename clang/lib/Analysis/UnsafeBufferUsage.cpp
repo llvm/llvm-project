@@ -767,6 +767,21 @@ static bool isSafeStringViewTwoParamConstruct(const CXXConstructExpr &Node,
   return false; // Default to unsafe
 }
 
+// Returns true iff `Node` subscripts an array whose size is known at the
+// access, so that `-fsanitize=array-bounds` bounds-checks it.  This is what
+// `-Wno-unsafe-buffer-usage-in-static-sized-array` opts out of reporting, and
+// it mirrors `getArrayIndexingBound` in CodeGen: a trailing array member that
+// `-fstrict-flex-arrays` treats as a flexible array member is not checked
+// because its declared size is not trusted.
+static bool isSubscriptOnSizedArray(const ArraySubscriptExpr &Node,
+                                    const ASTContext &Ctx) {
+  const Expr *Base = Node.getBase()->IgnoreParenImpCasts();
+  if (!isa<ConstantArrayType>(Base->getType()->getUnqualifiedDesugaredType()))
+    return false;
+  return !Base->isFlexibleArrayMemberLike(
+      Ctx, Ctx.getLangOpts().getStrictFlexArraysLevel());
+}
+
 static bool isSafeArraySubscript(const ArraySubscriptExpr &Node,
                                  const ASTContext &Ctx,
                                  const bool IgnoreStaticSizedArrays) {
@@ -776,6 +791,9 @@ static bool isSafeArraySubscript(const ArraySubscriptExpr &Node,
   //    -  e. g. "Try harder to find a NamedDecl to point at in the note."
   //    already duplicated
   //  - call both from Sema and from here
+
+  if (IgnoreStaticSizedArrays && isSubscriptOnSizedArray(Node, Ctx))
+    return true;
 
   uint64_t limit;
   if (const auto *CATy =
@@ -789,12 +807,6 @@ static bool isSafeArraySubscript(const ArraySubscriptExpr &Node,
     limit = SLiteral->getLength() + 1;
   } else {
     return false;
-  }
-
-  if (IgnoreStaticSizedArrays) {
-    // If we made it here, it means a size was found for the var being accessed
-    // (either string literal or array). If it's fixed size, we can ignore it.
-    return true;
   }
 
   Expr::EvalResult EVResult;
