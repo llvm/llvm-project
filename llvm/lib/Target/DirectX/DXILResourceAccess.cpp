@@ -978,19 +978,21 @@ getAccessIndices(Instruction *I, SmallSetVector<Instruction *, 16> &DeadInsts,
     }
 
     Value *GetPtrIdx;
-    if (GetPtrPhi->getNumIncomingValues() == 0)
+    if (GetPtrPhi->getNumIncomingValues() == 0) {
       GetPtrIdx = nullptr;
-    else if (Value *ConstantGetPtr = GetPtrPhi->hasConstantValue())
+    } else if (Value *ConstantGetPtr = GetPtrPhi->hasConstantValue()) {
       GetPtrIdx = ConstantGetPtr;
-    else {
+      GetPtrPhi->replaceAllUsesWith(GetPtrIdx);
+    } else {
       GetPtrIdx = GetPtrPhi.release();
       Builder.Insert(GetPtrIdx);
     }
 
     Value *HandleIdx;
-    if (Value *ConstantHandle = HandlePhi->hasConstantValue())
+    if (Value *ConstantHandle = HandlePhi->hasConstantValue()) {
       HandleIdx = ConstantHandle;
-    else {
+      HandlePhi->replaceAllUsesWith(HandleIdx);
+    } else {
       HandleIdx = HandlePhi.release();
       Builder.Insert(HandleIdx);
     }
@@ -999,6 +1001,7 @@ getAccessIndices(Instruction *I, SmallSetVector<Instruction *, 16> &DeadInsts,
     if (HasOffset) {
       if (Value *ConstantIdx = OffsetPhi->hasConstantValue()) {
         OffsetIdx = ConstantIdx;
+	OffsetPhi->replaceAllUsesWith(OffsetIdx);
       } else {
         OffsetIdx = OffsetPhi.release();
         Builder.Insert(OffsetIdx);
