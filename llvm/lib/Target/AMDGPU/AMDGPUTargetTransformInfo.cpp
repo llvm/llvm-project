@@ -635,8 +635,11 @@ InstructionCost GCNTTIImpl::getArithmeticInstrCost(
   case ISD::FMUL:
     // Check possible fuse {fadd|fsub}(a,fmul(b,c)) and return zero cost for
     // fmul(b,c) supposing the fadd|fsub will get estimated cost for the whole
-    // fused operation.
-    if (CtxI && CtxI->hasOneUse()) {
+    // fused operation. A vector fmul priced with a scalar context fuses with
+    // the scalar fadd|fsub only when it is emitted lane by lane.
+    if (CtxI && CtxI->hasOneUse() &&
+        (CtxI->getType() == Ty ||
+         getMaximumVF(Ty->getScalarSizeInBits(), Opcode) == 1)) {
       const auto *FAddSub = dyn_cast<BinaryOperator>(*CtxI->user_begin());
       if (FAddSub &&
           (FAddSub->getOpcode() == Instruction::FAdd ||
