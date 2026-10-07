@@ -20,7 +20,10 @@
 static pthread_key_t key;
 static atomic_int ready = 0;
 
-static void key_destructor(void *arg) {
+// Disable HWASan instrumentation because on the final TSD destruction pass
+// this destructor runs after HwasanTSDDtor has zeroed __hwasan_tls.
+__attribute__((no_sanitize("hwaddress"))) static void
+key_destructor(void *arg) {
   // ASan and LSan defer thread unregistration to the final
   // (PTHREAD_DESTRUCTOR_ITERATIONS) TSD destruction pass by re-setting their
   // pthread_key_t on earlier passes. Because the sanitizer creates its key

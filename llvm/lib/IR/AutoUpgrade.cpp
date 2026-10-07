@@ -2499,8 +2499,7 @@ GlobalVariable *llvm::UpgradeGlobalVariable(GlobalVariable *GV) {
   if (!STy || STy->getNumElements() != 2)
     return nullptr;
 
-  LLVMContext &C = GV->getContext();
-  IRBuilder<> IRB(C);
+  IRBuilder<> IRB(*GV->getParent());
   auto EltTy = StructType::get(STy->getElementType(0), STy->getElementType(1),
                                IRB.getPtrTy());
   Constant *Init = GV->getInitializer();

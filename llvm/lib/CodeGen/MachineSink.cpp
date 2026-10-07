@@ -1540,7 +1540,7 @@ static bool SinkingPreventsImplicitNullCheck(MachineInstr &MI,
   const MachineOperand *BaseOp;
   int64_t Offset;
   bool OffsetIsScalable;
-  if (!TII->getMemOperandWithOffset(MI, BaseOp, Offset, OffsetIsScalable, TRI))
+  if (!TII->getMemOperandWithOffset(MI, BaseOp, Offset, OffsetIsScalable))
     return false;
 
   if (!BaseOp->isReg())
