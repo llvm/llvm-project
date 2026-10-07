@@ -49,10 +49,10 @@ using namespace llvm::MCD;
 
 using DecodeStatus = llvm::MCDisassembler::DecodeStatus;
 
-static int64_t getInlineImmValF16(unsigned Imm);
-static int64_t getInlineImmValBF16(unsigned Imm);
-static int64_t getInlineImmVal32(unsigned Imm);
-static int64_t getInlineImmVal64(unsigned Imm);
+static int64_t getInlineImmValF16(int64_t Imm);
+static int64_t getInlineImmValBF16(int64_t Imm);
+static int64_t getInlineImmVal32(int64_t Imm);
+static int64_t getInlineImmVal64(int64_t Imm);
 
 AMDGPUDisassembler::AMDGPUDisassembler(const MCSubtargetInfo &STI,
                                        MCContext &Ctx, MCInstrInfo const *MCII)
@@ -660,9 +660,6 @@ bool AMDGPUDisassembler::decodeImmOperands(MCInst &MI,
 
     if (AMDGPU::EncValues::INLINE_FLOATING_C_MIN <= Imm &&
         Imm <= AMDGPU::EncValues::INLINE_FLOATING_C_MAX) {
-      // The range check above bounds Imm to an inline constant encoding, which
-      // the getInlineImmVal* helpers take as an unsigned.
-      const unsigned Enc = static_cast<unsigned>(Imm);
       switch (OpDesc.OperandType) {
       case AMDGPU::OPERAND_REG_IMM_NOINLINE_FP16:
       case AMDGPU::OPERAND_REG_IMM_NOINLINE_V2FP16:
@@ -673,25 +670,25 @@ bool AMDGPUDisassembler::decodeImmOperands(MCInst &MI,
       case AMDGPU::OPERAND_REG_IMM_V2BF16:
       case AMDGPU::OPERAND_REG_INLINE_C_BF16:
       case AMDGPU::OPERAND_REG_INLINE_C_V2BF16:
-        Imm = getInlineImmValBF16(Enc);
+        Imm = getInlineImmValBF16(Imm);
         break;
       case AMDGPU::OPERAND_REG_IMM_FP16:
       case AMDGPU::OPERAND_REG_INLINE_C_FP16:
-        Imm = getInlineImmValF16(Enc);
+        Imm = getInlineImmValF16(Imm);
         break;
       case AMDGPU::OPERAND_REG_IMM_V2FP16:
       case AMDGPU::OPERAND_REG_INLINE_C_V2FP16:
-        Imm = getInlineImmValF16(Enc);
+        Imm = getInlineImmValF16(Imm);
         break;
       case AMDGPU::OPERAND_REG_IMM_V2FP16_SPLAT: {
         // V_PK_FMAC_F16 on GFX11+ duplicates the f16 inline constant to both
         // halves, so we need to produce the duplicated value for correct
         // round-trip.
         if (isGFX11Plus()) {
-          int64_t F16Val = getInlineImmValF16(Enc);
+          int64_t F16Val = getInlineImmValF16(Imm);
           Imm = (F16Val << 16) | (F16Val & 0xFFFF);
         } else {
-          Imm = getInlineImmValF16(Enc);
+          Imm = getInlineImmValF16(Imm);
         }
         break;
       }
@@ -702,10 +699,10 @@ bool AMDGPUDisassembler::decodeImmOperands(MCInst &MI,
       case AMDGPU::OPERAND_REG_INLINE_C_INT64:
       case AMDGPU::OPERAND_REG_IMM_V2FP64:
       case AMDGPU::OPERAND_REG_IMM_V2INT64:
-        Imm = getInlineImmVal64(Enc);
+        Imm = getInlineImmVal64(Imm);
         break;
       default:
-        Imm = getInlineImmVal32(Enc);
+        Imm = getInlineImmVal32(Imm);
       }
       Op.setImm(Imm);
     }
@@ -1901,7 +1898,7 @@ MCOperand AMDGPUDisassembler::decodeIntImmed(unsigned Imm) {
       // Cast prevents negative overflow.
 }
 
-static int64_t getInlineImmVal32(unsigned Imm) {
+static int64_t getInlineImmVal32(int64_t Imm) {
   switch (Imm) {
   case 240:
     return llvm::bit_cast<uint32_t>(0.5f);
@@ -1926,7 +1923,7 @@ static int64_t getInlineImmVal32(unsigned Imm) {
   }
 }
 
-static int64_t getInlineImmVal64(unsigned Imm) {
+static int64_t getInlineImmVal64(int64_t Imm) {
   switch (Imm) {
   case 240:
     return llvm::bit_cast<uint64_t>(0.5);
@@ -1951,7 +1948,7 @@ static int64_t getInlineImmVal64(unsigned Imm) {
   }
 }
 
-static int64_t getInlineImmValF16(unsigned Imm) {
+static int64_t getInlineImmValF16(int64_t Imm) {
   switch (Imm) {
   case 240:
     return 0x3800;
@@ -1976,7 +1973,7 @@ static int64_t getInlineImmValF16(unsigned Imm) {
   }
 }
 
-static int64_t getInlineImmValBF16(unsigned Imm) {
+static int64_t getInlineImmValBF16(int64_t Imm) {
   switch (Imm) {
   case 240:
     return 0x3F00;
