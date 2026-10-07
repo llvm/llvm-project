@@ -13778,7 +13778,7 @@ void TargetLowering::expandVectorDeinterleave(SDNode *Node,
     Results.resize(Factor);
     // Deinterleave the 2 factors out:
     // [a0c0 a1c1] [b0d0 b1d1] -> a0a1 b0b1 c0c1 d0d1
-    for (unsigned I = 0; I < Factor / 2; I++) {
+    for (unsigned I = 0; I < Factor / 2; ++I) {
       SDValue Deinterleave = DAG.getNode(ISD::VECTOR_DEINTERLEAVE, DL, {VT, VT},
                                          {L.getValue(I), R.getValue(I)});
       Results[I] = Deinterleave.getValue(0);
@@ -13811,14 +13811,13 @@ void TargetLowering::expandVectorDeinterleave(SDNode *Node,
 
   SmallVector<SDValue> DeinterleavedElts;
   DeinterleavedElts.reserve(Factor * NumElts);
-  for (unsigned ResultIdx = 0; ResultIdx != Factor; ++ResultIdx)
+  for (unsigned ResultIdx = 0; ResultIdx != Factor; ++ResultIdx) {
     for (unsigned EltIdx = 0; EltIdx != NumElts; ++EltIdx)
       DeinterleavedElts.push_back(ConcatElts[ResultIdx + EltIdx * Factor]);
-
-  for (unsigned ResultIdx = 0; ResultIdx != Factor; ++ResultIdx)
     Results.push_back(DAG.getBuildVector(
         VT, DL,
         ArrayRef(DeinterleavedElts).slice(ResultIdx * NumElts, NumElts)));
+  }
 }
 
 SDValue TargetLowering::expandVectorSplice(SDNode *Node,
