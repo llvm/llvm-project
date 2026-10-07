@@ -1431,8 +1431,6 @@ CallInst *IRBuilderBase::CreateNonnullAssumption(Value *PtrValue) {
   return CreateAssumption(OperandBundleDef("nonnull", PtrValue));
 }
 
-IRBuilderDefaultInserter::~IRBuilderDefaultInserter() = default;
-IRBuilderCallbackInserter::~IRBuilderCallbackInserter() = default;
-IRBuilderFolder::~IRBuilderFolder() = default;
+void IRBuilderFolder::anchor() {}
 void ConstantFolder::anchor() {}
 void NoFolder::anchor() {}
