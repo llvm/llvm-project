@@ -894,8 +894,7 @@ void CodeViewDebug::emitCompilerInformation() {
   }
   using ArchType = llvm::Triple::ArchType;
   ArchType Arch = MMI->getModule()->getTargetTriple().getArch();
-  if (CompilerInfoAsm->TM.Options.Hotpatch || Arch == ArchType::thumb ||
-      Arch == ArchType::aarch64) {
+  if (CompilerInfoAsm->TM.Options.Hotpatch || Arch == ArchType::thumb) {
     Flags |= static_cast<uint32_t>(CompileSym3Flags::HotPatch);
   }
 
