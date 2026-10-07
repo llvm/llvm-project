@@ -2240,6 +2240,9 @@ declare void  @llvm.nvvm.prefetch.local.L2(ptr addrspace(5) %local_ptr)
 declare void  @llvm.nvvm.prefetch.L1(ptr %ptr)
 declare void  @llvm.nvvm.prefetch.L2(ptr %ptr)
 
+declare void  @llvm.nvvm.prefetch.L1.32B.valid_addr.p0(ptr %generic_ptr)
+declare void  @llvm.nvvm.prefetch.L1.32B.valid_addr.p1(ptr addrspace(1) %global_ptr)
+
 declare void  @llvm.nvvm.prefetch.tensormap.p0(ptr %ptr)
 declare void  @llvm.nvvm.prefetch.tensormap.p4(ptr addrspace(4) %const_ptr)
 declare void  @llvm.nvvm.prefetch.tensormap.p101(ptr addrspace(101) %param_ptr)
@@ -2255,10 +2258,15 @@ declare void  @llvm.nvvm.prefetchu.L1(ptr %ptr)
 The '`@llvm.nvvm.prefetch.*`' and '`@llvm.nvvm.prefetchu.*`' intrinsic
 correspond to the '`prefetch.*`;' and '`prefetchu.*`' family of PTX
 instructions. The '`prefetch.*`' instructions bring the cache line containing
-the specified address in global or local memory address space into the specified
-cache level (L1 or L2). If the '`.tensormap`' qualifier is specified then the
-prefetch instruction brings the cache line containing the specified address in
-the '`.const`' or '`.param memory`' state space for subsequent use by the
+the specified address in global or local memory address space into the
+specified cache level (L1 or L2). The `L1.32B.valid_addr` intrinsic variants
+request a prefetch of at least 32 bytes. This qualifier can be used with a
+`.global` specifier or with no specifier, indicating a generic address, which
+must fall within the `global` state space. At least 1B of the memory location
+specified by the argument must be valid, otherwise the behavior is undefined.
+If the '`.tensormap`' qualifier is specified then the prefetch instruction
+brings the cache line containing the specified address in the '`.const`' or
+'`.param memory`' state space for subsequent use by the
 '`cp.async.bulk.tensor`' instruction. The '`prefetchu.*`' instruction brings
 the cache line containing the specified generic address into the specified
 uniform cache level. If no address space is specified, it is assumed to be
@@ -4377,8 +4385,10 @@ The following tables describes the possible values of the flag arguments
 ##### Syntax:
 
 ```llvm
-declare void @llvm.nvvm.st.bulk(ptr addrspace(1) %dst, i64 %size, i64 immarg %initval)
-declare void @llvm.nvvm.st.bulk.shared.cta(ptr addrspace(3) %dst, i64 %size, i64 immarg %initval)
+declare void @llvm.nvvm.st.bulk.p0.i32(ptr %dst, i32 %size, i64 immarg %initval)
+declare void @llvm.nvvm.st.bulk.p0.i64(ptr %dst, i64 %size, i64 immarg %initval)
+declare void @llvm.nvvm.st.bulk.p3.i32(ptr addrspace(3) %dst, i32 %size, i64 immarg %initval)
+declare void @llvm.nvvm.st.bulk.p3.i64(ptr addrspace(3) %dst, i64 %size, i64 immarg %initval)
 ```
 
 ##### Overview:
@@ -4386,15 +4396,15 @@ declare void @llvm.nvvm.st.bulk.shared.cta(ptr addrspace(3) %dst, i64 %size, i64
 The '`@llvm.nvvm.st.bulk.*`' intrinsics initialize a region of shared memory
 starting from the location specified by the destination address operand `%dst`.
 
-The integer operand `%size` specifies the amount of memory to be initialized in
-terms of number of bytes and must be a multiple of 8. Otherwise, the behavior
-is undefined.
+The integer operand `%size`, which may have type `i32` or `i64`, specifies the
+amount of memory to be initialized in terms of number of bytes and must be a
+multiple of 8. Otherwise, the behavior is undefined.
 
 The integer immediate operand `%initval` specifies the initialization value for
 the memory locations. The only numeric value allowed is 0.
 
-The `@llvm.nvvm.st.bulk.shared.cta` and `@llvm.nvvm.st.bulk` intrinsics are
-similar but the latter uses generic addressing (see [Generic Addressing](https://docs.nvidia.com/cuda/parallel-thread-execution/#generic-addressing)).
+The `@llvm.nvvm.st.bulk.p3.*` and `@llvm.nvvm.st.bulk.p0.*` intrinsics are
+similar, but the latter uses generic addressing (see [Generic Addressing](https://docs.nvidia.com/cuda/parallel-thread-execution/#generic-addressing)).
 
 For more information, refer [PTX ISA](https://docs.nvidia.com/cuda/parallel-thread-execution/#data-movement-and-conversion-instructions-st-bulk).
 
@@ -4724,7 +4734,7 @@ The following sets the ftz flag to 1.
 ```
 
 (`i32 4` indicates that the value set here overrides the value in another
-module we link with. See the [LangRef](project:LangRef.md#module-flags-metadata)
+module we link with. See the [LangRef](LangRef.md#module-flags-metadata)
 for details.)
 
 ## Executing PTX

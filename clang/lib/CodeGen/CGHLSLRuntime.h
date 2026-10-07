@@ -154,6 +154,7 @@ public:
   GENERATE_HLSL_INTRINSIC_FUNCTION(WaveIsFirstLane, wave_is_first_lane)
   GENERATE_HLSL_INTRINSIC_FUNCTION(WaveGetLaneCount, wave_get_lane_count)
   GENERATE_HLSL_INTRINSIC_FUNCTION(WaveReadLaneAt, wave_readlane)
+  GENERATE_HLSL_INTRINSIC_FUNCTION(WaveReadLaneFirst, wave_readlane_first)
   GENERATE_HLSL_INTRINSIC_FUNCTION(QuadReadAcrossX, quad_read_across_x)
   GENERATE_HLSL_INTRINSIC_FUNCTION(QuadReadAcrossY, quad_read_across_y)
   GENERATE_HLSL_INTRINSIC_FUNCTION(QuadReadAcrossDiagonal,
@@ -186,6 +187,8 @@ public:
                                    resource_handlefrombinding)
   GENERATE_HLSL_INTRINSIC_FUNCTION(CreateHandleFromImplicitBinding,
                                    resource_handlefromimplicitbinding)
+  GENERATE_HLSL_INTRINSIC_FUNCTION(CreateHandleFromHeap,
+                                   resource_handlefromheap)
   GENERATE_HLSL_INTRINSIC_FUNCTION(NonUniformResourceIndex,
                                    resource_nonuniformindex)
   GENERATE_HLSL_INTRINSIC_FUNCTION(BufferUpdateCounter, resource_updatecounter)
@@ -256,28 +259,34 @@ protected:
       const clang::DeclaratorDecl *Decl,
       specific_attr_iterator<HLSLAppliedSemanticAttr> begin,
       specific_attr_iterator<HLSLAppliedSemanticAttr> end,
-      SemanticSignatures &Signature);
+      SemanticSignatures &Signature,
+      llvm::hlsl::InterpolationModifier Modifiers);
 
   specific_attr_iterator<HLSLAppliedSemanticAttr> handleStructSemanticStore(
       llvm::IRBuilder<> &B, const FunctionDecl *FD, llvm::Value *Source,
       const clang::DeclaratorDecl *Decl,
       specific_attr_iterator<HLSLAppliedSemanticAttr> AttrBegin,
       specific_attr_iterator<HLSLAppliedSemanticAttr> AttrEnd,
-      SemanticSignatures &Signature);
+      SemanticSignatures &Signature,
+      llvm::hlsl::InterpolationModifier Modifiers);
 
   std::pair<llvm::Value *, specific_attr_iterator<HLSLAppliedSemanticAttr>>
   handleSemanticLoad(llvm::IRBuilder<> &B, const FunctionDecl *FD,
                      llvm::Type *Type, const clang::DeclaratorDecl *Decl,
                      specific_attr_iterator<HLSLAppliedSemanticAttr> begin,
                      specific_attr_iterator<HLSLAppliedSemanticAttr> end,
-                     SemanticSignatures &Signature);
+                     SemanticSignatures &Signature,
+                     llvm::hlsl::InterpolationModifier Modifiers =
+                         llvm::hlsl::InterpolationModifier::None);
 
   specific_attr_iterator<HLSLAppliedSemanticAttr>
   handleSemanticStore(llvm::IRBuilder<> &B, const FunctionDecl *FD,
                       llvm::Value *Source, const clang::DeclaratorDecl *Decl,
                       specific_attr_iterator<HLSLAppliedSemanticAttr> AttrBegin,
                       specific_attr_iterator<HLSLAppliedSemanticAttr> AttrEnd,
-                      SemanticSignatures &Signature);
+                      SemanticSignatures &Signature,
+                      llvm::hlsl::InterpolationModifier Modifiers =
+                          llvm::hlsl::InterpolationModifier::None);
 
 public:
   CGHLSLRuntime(CodeGenModule &CGM) : CGM(CGM) {}

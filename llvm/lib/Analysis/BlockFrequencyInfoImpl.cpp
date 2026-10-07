@@ -12,7 +12,7 @@
 
 #include "llvm/Analysis/BlockFrequencyInfoImpl.h"
 #include "llvm/ADT/APInt.h"
-#include "llvm/ADT/DenseMap.h"
+#include "llvm/ADT/MapVector.h"
 #include "llvm/ADT/SCCIterator.h"
 #include "llvm/ADT/SmallString.h"
 #include "llvm/Config/llvm-config.h"
@@ -197,10 +197,8 @@ static void combineWeightsBySorting(WeightList &Weights) {
 }
 
 static void combineWeightsByHashing(WeightList &Weights) {
-  // Collect weights into a DenseMap.
-  using HashTable = DenseMap<BlockNode::IndexType, Weight>;
-
-  HashTable Combined(NextPowerOf2(2 * Weights.size()));
+  MapVector<BlockNode::IndexType, Weight> Combined;
+  Combined.reserve(Weights.size());
   for (const Weight &W : Weights)
     combineWeight(Combined[W.TargetNode.Index], W);
 
@@ -210,7 +208,6 @@ static void combineWeightsByHashing(WeightList &Weights) {
 
   // Fill in the new weights.
   Weights.clear();
-  Weights.reserve(Combined.size());
   for (const auto &I : Combined)
     Weights.push_back(I.second);
 }

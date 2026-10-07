@@ -18,8 +18,10 @@
 #include "clang/CIR/Dialect/IR/CIRAttrs.h"
 
 #include "clang/AST/Expr.h"
+#include "clang/AST/ExprCXX.h"
 #include "clang/AST/RecordLayout.h"
 #include "clang/AST/StmtVisitor.h"
+#include "clang/CodeGenUtils/ExprUtils.h"
 #include "llvm/IR/Value.h"
 #include <cstdint>
 
@@ -27,73 +29,6 @@ using namespace clang;
 using namespace clang::CIRGen;
 
 namespace {
-// FIXME(cir): This should be a common helper between CIRGen
-// and traditional CodeGen
-/// Is the value of the given expression possibly a reference to or
-/// into a __block variable?
-static bool isBlockVarRef(const Expr *e) {
-  // Make sure we look through parens.
-  e = e->IgnoreParens();
-
-  // Check for a direct reference to a __block variable.
-  if (const DeclRefExpr *dre = dyn_cast<DeclRefExpr>(e)) {
-    const VarDecl *var = dyn_cast<VarDecl>(dre->getDecl());
-    return (var && var->hasAttr<BlocksAttr>());
-  }
-
-  // More complicated stuff.
-
-  // Binary operators.
-  if (const BinaryOperator *op = dyn_cast<BinaryOperator>(e)) {
-    // For an assignment or pointer-to-member operation, just care
-    // about the LHS.
-    if (op->isAssignmentOp() || op->isPtrMemOp())
-      return isBlockVarRef(op->getLHS());
-
-    // For a comma, just care about the RHS.
-    if (op->getOpcode() == BO_Comma)
-      return isBlockVarRef(op->getRHS());
-
-    // FIXME: pointer arithmetic?
-    return false;
-
-    // Check both sides of a conditional operator.
-  } else if (const AbstractConditionalOperator *op =
-                 dyn_cast<AbstractConditionalOperator>(e)) {
-    return isBlockVarRef(op->getTrueExpr()) ||
-           isBlockVarRef(op->getFalseExpr());
-
-    // OVEs are required to support BinaryConditionalOperators.
-  } else if (const OpaqueValueExpr *op = dyn_cast<OpaqueValueExpr>(e)) {
-    if (const Expr *src = op->getSourceExpr())
-      return isBlockVarRef(src);
-
-    // Casts are necessary to get things like (*(int*)&var) = foo().
-    // We don't really care about the kind of cast here, except
-    // we don't want to look through l2r casts, because it's okay
-    // to get the *value* in a __block variable.
-  } else if (const CastExpr *cast = dyn_cast<CastExpr>(e)) {
-    if (cast->getCastKind() == CK_LValueToRValue)
-      return false;
-    return isBlockVarRef(cast->getSubExpr());
-
-    // Handle unary operators.  Again, just aggressively look through
-    // it, ignoring the operation.
-  } else if (const UnaryOperator *uop = dyn_cast<UnaryOperator>(e)) {
-    return isBlockVarRef(uop->getSubExpr());
-
-    // Look into the base of a field access.
-  } else if (const MemberExpr *mem = dyn_cast<MemberExpr>(e)) {
-    return isBlockVarRef(mem->getBase());
-
-    // Look into the base of a subscript.
-  } else if (const ArraySubscriptExpr *sub = dyn_cast<ArraySubscriptExpr>(e)) {
-    return isBlockVarRef(sub->getBase());
-  }
-
-  return false;
-}
-
 class AggExprEmitter : public StmtVisitor<AggExprEmitter> {
 
   CIRGenFunction &cgf;
@@ -172,7 +107,7 @@ public:
                                                    e->getRHS()->getType()) &&
            "Invalid assignment");
 
-    if (isBlockVarRef(e->getLHS()) &&
+    if (CodeGenUtils::isBlockVarRef(e->getLHS()) &&
         e->getRHS()->HasSideEffects(cgf.getContext())) {
       cgf.cgm.errorNYI(e->getSourceRange(),
                        "block var reference with side effects");
@@ -274,8 +209,7 @@ public:
       mlir::Value sizeVal = cgf.getBuilder().getConstInt(
           loc, cgf.sizeTy,
           cgf.getContext().getTypeSizeInChars(e->getType()).getQuantity());
-      cgf.getBuilder().createMemCpy(loc, destAddress.getPointer(),
-                                    sourceAddress.getPointer(), sizeVal);
+      cgf.getBuilder().createMemCpy(loc, destAddress, sourceAddress, sizeVal);
 
       break;
     }
@@ -392,25 +326,53 @@ public:
     Visit(ge->getResultExpr());
   }
   void VisitCoawaitExpr(CoawaitExpr *e) {
-    cgf.cgm.errorNYI(e->getSourceRange(), "AggExprEmitter: VisitCoawaitExpr");
+    cgf.emitCoawaitExpr(*e, dest, dest.isIgnored());
   }
   void VisitCoyieldExpr(CoyieldExpr *e) {
-    cgf.cgm.errorNYI(e->getSourceRange(), "AggExprEmitter: VisitCoyieldExpr");
+    cgf.emitCoyieldExpr(*e, dest, dest.isIgnored());
   }
-  void VisitUnaryCoawait(UnaryOperator *e) {
-    cgf.cgm.errorNYI(e->getSourceRange(), "AggExprEmitter: VisitUnaryCoawait");
-  }
+  void VisitUnaryCoawait(UnaryOperator *e) { Visit(e->getSubExpr()); }
   void VisitUnaryExtension(UnaryOperator *e) { Visit(e->getSubExpr()); }
   void VisitSubstNonTypeTemplateParmExpr(SubstNonTypeTemplateParmExpr *e) {
     Visit(e->getReplacement());
   }
+  void VisitPackIndexingExpr(PackIndexingExpr *e) {
+    Visit(e->getSelectedExpr());
+  }
   void VisitConstantExpr(ConstantExpr *e) {
-    ensureDest(cgf.getLoc(e->getSourceRange()), e->getType());
+    mlir::Location loc = cgf.getLoc(e->getSourceRange());
+    ensureDest(loc, e->getType());
 
     if (mlir::Attribute result = ConstantEmitter(cgf).tryEmitConstantExpr(e)) {
+      QualType ty = e->getType();
+
+      // If the destination's tail padding may overlap another object's
+      // storage (e.g. a [[no_unique_address]] member or base), only store
+      // the type's data size rather than its full size, so we don't
+      // clobber bytes that belong to that other object. In particular, a
+      // genuinely empty class has a data size of zero, so nothing should
+      // be stored at all.
+      if (dest.mayOverlap()) {
+        CharUnits dataSize =
+            cgf.getContext().getTypeInfoDataSizeInChars(ty).Width;
+        if (dataSize.isZero())
+          return;
+
+        if (dataSize != cgf.getContext().getTypeSizeInChars(ty)) {
+          Address temp = cgf.createMemTemp(ty, loc);
+          mlir::Value resultVal = cgf.getBuilder().getConstant(
+              loc, mlir::cast<mlir::TypedAttr>(result));
+          cgf.getBuilder().createStore(loc, resultVal, temp);
+          cgf.getBuilder().createCopy(dest.getAddress(), temp,
+                                      /*isVolatile=*/false,
+                                      /*skipTailPadding=*/true);
+          return;
+        }
+      }
+
       mlir::Value resultVal = cgf.getBuilder().getConstant(
-          cgf.getLoc(e->getSourceRange()), mlir::cast<mlir::TypedAttr>(result));
-      LValue destLVal = cgf.makeAddrLValue(dest.getAddress(), e->getType());
+          loc, mlir::cast<mlir::TypedAttr>(result));
+      LValue destLVal = cgf.makeAddrLValue(dest.getAddress(), ty);
       cgf.emitStoreThroughLValue(RValue::get(resultVal), destLVal);
       return;
     }
@@ -528,7 +490,12 @@ public:
     mlir::Location loc = cgf.getLoc(e->getSourceRange());
 
     CIRGenFunction::OpaqueValueMapping binding(cgf, e);
-    CIRGenFunction::ConditionalEvaluation eval(cgf);
+
+    // Emit the condition before opening the conditional evaluation, so that
+    // the cleanup scope of any temporary the condition creates encloses the
+    // one the evaluation opens.
+    mlir::Value condV = cgf.emitOpOnBoolExpr(loc, e->getCond());
+    CIRGenFunction::ConditionalEvaluation eval(cgf, loc);
 
     // Save whether the destination's lifetime is externally managed.
     bool isExternallyDestructed = dest.isExternallyDestructed();
@@ -537,10 +504,10 @@ public:
         e->getType().isDestructedType() == QualType::DK_nontrivial_c_struct;
     isExternallyDestructed |= destructNonTrivialCStruct;
 
-    // emitIfOnBoolExpr terminates each region; an unconditional yield here
+    // emitIfOnBoolValue terminates each region; an unconditional yield here
     // would keep alive the dead block a noreturn arm leaves behind.
-    cgf.emitIfOnBoolExpr(
-        e->getCond(),
+    cgf.emitIfOnBoolValue(
+        condV, loc,
         /*thenBuilder=*/
         [&](mlir::OpBuilder &b, mlir::Location loc) {
           eval.beginEvaluation();
@@ -729,26 +696,6 @@ public:
 
 } // namespace
 
-static bool isTrivialFiller(Expr *e) {
-  if (!e)
-    return true;
-
-  if (isa<ImplicitValueInitExpr>(e))
-    return true;
-
-  if (auto *ile = dyn_cast<InitListExpr>(e)) {
-    if (ile->getNumInits())
-      return false;
-    return isTrivialFiller(ile->getArrayFiller());
-  }
-
-  if (const auto *cons = dyn_cast_or_null<CXXConstructExpr>(e))
-    return cons->getConstructor()->isDefaultConstructor() &&
-           cons->getConstructor()->isTrivial();
-
-  return false;
-}
-
 /// Given an expression with aggregate type that represents a value lvalue, this
 /// method emits the address of the lvalue, then loads the result into DestPtr.
 void AggExprEmitter::emitAggLoadOfLValue(const Expr *e) {
@@ -816,11 +763,11 @@ void AggExprEmitter::emitArrayInit(Address destPtr, cir::ArrayType arrayTy,
   const CharUnits elementAlign =
       destPtr.getAlignment().alignmentOfArrayElement(elementSize);
 
-  // Exception safety requires us to destroy all the already-constructed
-  // members if an initializer throws. For that, we'll need an EH cleanup.
+  // Destroy already-constructed elements if a later initializer throws.
+  // The cleanup is deactivated when this initialization finishes.
   QualType::DestructionKind dtorKind = elementType.isDestructedType();
   Address endOfInit = Address::invalid();
-  assert(!cir::MissingFeatures::cleanupDeactivationScope());
+  CIRGenFunction::CleanupDeactivationScope deactivateCleanups(cgf);
 
   if (dtorKind && cgf.getLangOpts().Exceptions) {
     endOfInit = cgf.createTempAlloca(cirElementPtrType, cgf.getPointerAlign(),
@@ -863,7 +810,7 @@ void AggExprEmitter::emitArrayInit(Address destPtr, cir::ArrayType arrayTy,
   const uint64_t numArrayElements = arrayTy.getSize();
 
   // Check whether there's a non-trivial array-fill expression.
-  const bool hasTrivialFiller = isTrivialFiller(arrayFiller);
+  const bool hasTrivialFiller = CodeGenUtils::isTrivialFiller(arrayFiller);
 
   // Any remaining elements need to be zero-initialized, possibly
   // using the filler expression.  We can skip this if the we're
@@ -1337,6 +1284,10 @@ AggValueSlot::Overlap_t CIRGenFunction::getOverlapForBaseInit(
   if (isVirtual)
     return AggValueSlot::MayOverlap;
 
+  // Empty bases can overlap earlier bases.
+  if (baseRD->isEmpty())
+    return AggValueSlot::MayOverlap;
+
   // If the base class is laid out entirely within the nvsize of the derived
   // class, its tail padding cannot yet be initialized, so we can issue
   // stores at the full width of the base class.
@@ -1426,6 +1377,10 @@ AggValueSlot::Overlap_t
 CIRGenFunction::getOverlapForFieldInit(const FieldDecl *fd) {
   if (!fd->hasAttr<NoUniqueAddressAttr>() || !fd->getType()->isRecordType())
     return AggValueSlot::DoesNotOverlap;
+
+  // Empty fields can overlap earlier fields.
+  if (fd->getType()->getAsCXXRecordDecl()->isEmpty())
+    return AggValueSlot::MayOverlap;
 
   // If the field lies entirely within the enclosing class's nvsize, its tail
   // padding cannot overlap any already-initialized object. (The only subobjects

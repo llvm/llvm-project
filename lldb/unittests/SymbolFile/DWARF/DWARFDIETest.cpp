@@ -9,6 +9,7 @@
 #include "Plugins/SymbolFile/DWARF/DWARFDIE.h"
 #include "Plugins/SymbolFile/DWARF/DWARFDebugInfo.h"
 #include "Plugins/SymbolFile/DWARF/DWARFDeclContext.h"
+#include "Plugins/SymbolFile/DWARF/SymbolFileDWARF.h"
 #include "TestingSupport/Symbol/YAMLModuleTester.h"
 #include "TestingSupport/TestUtilities.h"
 #include "lldb/Core/Debugger.h"
@@ -1271,6 +1272,296 @@ INSTANTIATE_TEST_SUITE_P(GetDIENamesAndRangesTests,
                          GetDIENamesAndRangesTestFixture,
                          testing::Values(DW_AT_specification,
                                          DW_AT_abstract_origin));
+
+TEST(DWARFDIETest, GetDeclContextDIEContainingDIE_Specification) {
+  // The context is the DIE containing the specification rather than the
+  // specification itself.
+  //
+  // DW_TAG_namespace "N"
+  //   DW_TAG_subprogram "foo"  <-+
+  // DW_TAG_subprogram            |
+  //   DW_AT_specification -------+
+
+  const char *yamldata = R"(
+--- !ELF
+FileHeader:
+  Class:   ELFCLASS64
+  Data:    ELFDATA2LSB
+  Type:    ET_EXEC
+  Machine: EM_AARCH64
+DWARF:
+  debug_abbrev:
+    - ID:              0
+      Table:
+        - Code:            0x1
+          Tag:             DW_TAG_compile_unit
+          Children:        DW_CHILDREN_yes
+          Attributes:
+            - Attribute:       DW_AT_language
+              Form:            DW_FORM_data2
+        - Code:            0x2
+          Tag:             DW_TAG_namespace
+          Children:        DW_CHILDREN_yes
+          Attributes:
+            - Attribute:       DW_AT_name
+              Form:            DW_FORM_string
+        - Code:            0x3
+          Tag:             DW_TAG_subprogram
+          Children:        DW_CHILDREN_no
+          Attributes:
+            - Attribute:       DW_AT_name
+              Form:            DW_FORM_string
+        - Code:            0x4
+          Tag:             DW_TAG_subprogram
+          Children:        DW_CHILDREN_no
+          Attributes:
+            - Attribute:       DW_AT_specification
+              Form:            DW_FORM_ref4
+  debug_info:
+     - Version:         5
+       UnitType:        DW_UT_compile
+       AddrSize:        8
+       Entries:
+
+        - AbbrCode:        0x1
+          Values:
+            - Value:           0x04
+
+        - AbbrCode:        0x2
+          Values:
+            - CStr:            N
+
+        - AbbrCode:        0x3
+          Values:
+            - CStr:            foo
+
+        - AbbrCode: 0x0
+
+        - AbbrCode:        0x4
+          Values:
+            - Value:           0x12
+
+        - AbbrCode: 0x0
+...
+)";
+  YAMLModuleTester t(yamldata);
+
+  DWARFUnit *unit = t.GetDwarfUnit();
+  ASSERT_NE(unit, nullptr);
+  const DWARFDebugInfoEntry *cu_entry = unit->DIE().GetDIE();
+  ASSERT_EQ(cu_entry->Tag(), DW_TAG_compile_unit);
+  DWARFDIE cu_die(unit, cu_entry);
+
+  DWARFDIE ns = cu_die.GetFirstChild();
+  ASSERT_TRUE(ns.IsValid());
+  ASSERT_EQ(ns.Tag(), DW_TAG_namespace);
+
+  DWARFDIE def = ns.GetSibling();
+  ASSERT_TRUE(def.IsValid());
+  ASSERT_EQ(def.Tag(), DW_TAG_subprogram);
+
+  DWARFDIE ctx = unit->GetSymbolFileDWARF().GetDeclContextDIEContainingDIE(def);
+  EXPECT_EQ(ctx.Tag(), DW_TAG_namespace);
+  EXPECT_EQ(ctx, ns);
+}
+
+TEST(DWARFDIETest, GetDeclContextDIEContainingDIE_SpecificationBeforeOrigin) {
+  // Follow specifications before abstract origins.
+  //
+  // DW_TAG_namespace "N"
+  //   DW_TAG_subprogram "foo"    <-+
+  // DW_TAG_structure_type "S"      |
+  //   DW_TAG_subprogram "bar"  <-+ |
+  // DW_TAG_subprogram            | |
+  //   DW_AT_specification ---------+
+  //   DW_AT_abstract_origin ----+
+
+  const char *yamldata = R"(
+--- !ELF
+FileHeader:
+  Class:   ELFCLASS64
+  Data:    ELFDATA2LSB
+  Type:    ET_EXEC
+  Machine: EM_AARCH64
+DWARF:
+  debug_abbrev:
+    - ID:              0
+      Table:
+        - Code:            0x1
+          Tag:             DW_TAG_compile_unit
+          Children:        DW_CHILDREN_yes
+          Attributes:
+            - Attribute:       DW_AT_language
+              Form:            DW_FORM_data2
+        - Code:            0x2
+          Tag:             DW_TAG_namespace
+          Children:        DW_CHILDREN_yes
+          Attributes:
+            - Attribute:       DW_AT_name
+              Form:            DW_FORM_string
+        - Code:            0x3
+          Tag:             DW_TAG_subprogram
+          Children:        DW_CHILDREN_no
+          Attributes:
+            - Attribute:       DW_AT_name
+              Form:            DW_FORM_string
+        - Code:            0x4
+          Tag:             DW_TAG_structure_type
+          Children:        DW_CHILDREN_yes
+          Attributes:
+            - Attribute:       DW_AT_name
+              Form:            DW_FORM_string
+        - Code:            0x5
+          Tag:             DW_TAG_subprogram
+          Children:        DW_CHILDREN_no
+          Attributes:
+            - Attribute:       DW_AT_specification
+              Form:            DW_FORM_ref4
+            - Attribute:       DW_AT_abstract_origin
+              Form:            DW_FORM_ref4
+  debug_info:
+     - Version:         5
+       UnitType:        DW_UT_compile
+       AddrSize:        8
+       Entries:
+
+        - AbbrCode:        0x1
+          Values:
+            - Value:           0x04
+
+        - AbbrCode:        0x2
+          Values:
+            - CStr:            N
+
+        - AbbrCode:        0x3
+          Values:
+            - CStr:            foo
+
+        - AbbrCode: 0x0
+
+        - AbbrCode:        0x4
+          Values:
+            - CStr:            S
+
+        - AbbrCode:        0x3
+          Values:
+            - CStr:            bar
+
+        - AbbrCode: 0x0
+
+        - AbbrCode:        0x5
+          Values:
+            - Value:           0x12
+            - Value:           0x1b
+
+        - AbbrCode: 0x0
+...
+)";
+  YAMLModuleTester t(yamldata);
+
+  DWARFUnit *unit = t.GetDwarfUnit();
+  ASSERT_NE(unit, nullptr);
+  const DWARFDebugInfoEntry *cu_entry = unit->DIE().GetDIE();
+  ASSERT_EQ(cu_entry->Tag(), DW_TAG_compile_unit);
+  DWARFDIE cu_die(unit, cu_entry);
+
+  DWARFDIE ns = cu_die.GetFirstChild();
+  ASSERT_TRUE(ns.IsValid());
+  ASSERT_EQ(ns.Tag(), DW_TAG_namespace);
+
+  DWARFDIE record = ns.GetSibling();
+  ASSERT_TRUE(record.IsValid());
+  ASSERT_EQ(record.Tag(), DW_TAG_structure_type);
+
+  DWARFDIE def = record.GetSibling();
+  ASSERT_TRUE(def.IsValid());
+  ASSERT_EQ(def.Tag(), DW_TAG_subprogram);
+
+  DWARFDIE ctx = unit->GetSymbolFileDWARF().GetDeclContextDIEContainingDIE(def);
+  EXPECT_EQ(ctx.Tag(), DW_TAG_namespace);
+  EXPECT_EQ(ctx, ns);
+}
+
+TEST(DWARFDIETest, GetDeclContextDIEContainingDIE_Cycle) {
+  // Terminate specification cycles and fall back to the parent context.
+  //
+  // DW_TAG_namespace "N"
+  //   DW_TAG_subprogram      <-+
+  //     DW_AT_specification ---+
+
+  const char *yamldata = R"(
+--- !ELF
+FileHeader:
+  Class:   ELFCLASS64
+  Data:    ELFDATA2LSB
+  Type:    ET_EXEC
+  Machine: EM_AARCH64
+DWARF:
+  debug_abbrev:
+    - ID:              0
+      Table:
+        - Code:            0x1
+          Tag:             DW_TAG_compile_unit
+          Children:        DW_CHILDREN_yes
+          Attributes:
+            - Attribute:       DW_AT_language
+              Form:            DW_FORM_data2
+        - Code:            0x2
+          Tag:             DW_TAG_namespace
+          Children:        DW_CHILDREN_yes
+          Attributes:
+            - Attribute:       DW_AT_name
+              Form:            DW_FORM_string
+        - Code:            0x3
+          Tag:             DW_TAG_subprogram
+          Children:        DW_CHILDREN_no
+          Attributes:
+            - Attribute:       DW_AT_specification
+              Form:            DW_FORM_ref4
+  debug_info:
+     - Version:         5
+       UnitType:        DW_UT_compile
+       AddrSize:        8
+       Entries:
+
+        - AbbrCode:        0x1
+          Values:
+            - Value:           0x04
+
+        - AbbrCode:        0x2
+          Values:
+            - CStr:            N
+
+        - AbbrCode:        0x3
+          Values:
+            - Value:           0x12
+
+        - AbbrCode: 0x0
+
+        - AbbrCode: 0x0
+...
+)";
+  YAMLModuleTester t(yamldata);
+
+  DWARFUnit *unit = t.GetDwarfUnit();
+  ASSERT_NE(unit, nullptr);
+  const DWARFDebugInfoEntry *cu_entry = unit->DIE().GetDIE();
+  ASSERT_EQ(cu_entry->Tag(), DW_TAG_compile_unit);
+  DWARFDIE cu_die(unit, cu_entry);
+
+  DWARFDIE ns = cu_die.GetFirstChild();
+  ASSERT_TRUE(ns.IsValid());
+  ASSERT_EQ(ns.Tag(), DW_TAG_namespace);
+
+  DWARFDIE func = ns.GetFirstChild();
+  ASSERT_TRUE(func.IsValid());
+  ASSERT_EQ(func.Tag(), DW_TAG_subprogram);
+
+  DWARFDIE ctx =
+      unit->GetSymbolFileDWARF().GetDeclContextDIEContainingDIE(func);
+  EXPECT_EQ(ctx.Tag(), DW_TAG_namespace);
+  EXPECT_EQ(ctx, ns);
+}
 
 // Exercises fallback in SymbolFileDWARF::ParseVariableDIE (added for
 // Swift) that walks the type chain for DW_AT_byte_size when the

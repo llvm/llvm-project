@@ -846,7 +846,14 @@ bool AMDGPUTargetLowering::shouldReduceLoadWidth(
   unsigned AS = MN->getAddressSpace();
   // Do not shrink an aligned scalar load to sub-dword.
   // Scalar engine cannot do sub-dword loads.
-  // TODO: Update this for GFX12 which does have scalar sub-dword loads.
+  // Do not enable for gfx1250+ even though it has sub-dword loads because
+  // this will convert:
+  //   i16 = trunc (zextload i16->i32)
+  // to:
+  //   i16 = (load i16)
+  // This transformation will be reversed by LowerLOAD resulting in an infinite
+  // loop. Also, tablegen already has a pattern to match zextload i16->i32, but
+  // load i16 will not be matched since there is no instruction that does it.
   if (OldSize >= 32 && NewSize < 32 && MN->getAlign() >= Align(4) &&
       (AS == AMDGPUAS::CONSTANT_ADDRESS ||
        AS == AMDGPUAS::CONSTANT_ADDRESS_32BIT ||
@@ -1811,14 +1818,6 @@ AMDGPUTargetLowering::split64BitValue(SDValue Op, SelectionDAG &DAG) const {
   return std::pair(Lo, Hi);
 }
 
-SDValue AMDGPUTargetLowering::getLoHalf64(SDValue Op, SelectionDAG &DAG) const {
-  SDLoc SL(Op);
-
-  SDValue Vec = DAG.getNode(ISD::BITCAST, SL, MVT::v2i32, Op);
-  const SDValue Zero = DAG.getConstant(0, SL, MVT::i32);
-  return DAG.getNode(ISD::EXTRACT_VECTOR_ELT, SL, MVT::i32, Vec, Zero);
-}
-
 SDValue AMDGPUTargetLowering::getHiHalf64(SDValue Op, SelectionDAG &DAG) const {
   SDLoc SL(Op);
 
@@ -2666,24 +2665,6 @@ bool AMDGPUTargetLowering::needsDenormHandlingF32(const SelectionDAG &DAG,
                  .Input != DenormalMode::PreserveSign;
 }
 
-SDValue AMDGPUTargetLowering::getIsLtSmallestNormal(SelectionDAG &DAG,
-                                                    SDValue Src,
-                                                    SDNodeFlags Flags) const {
-  SDLoc SL(Src);
-  EVT VT = Src.getValueType();
-  const fltSemantics &Semantics = VT.getFltSemantics();
-  SDValue SmallestNormal =
-      DAG.getConstantFP(APFloat::getSmallestNormalized(Semantics), SL, VT);
-
-  // Want to scale denormals up, but negatives and 0 work just as well on the
-  // scaled path.
-  SDValue IsLtSmallestNormal = DAG.getSetCC(
-      SL, getSetCCResultType(DAG.getDataLayout(), *DAG.getContext(), VT), Src,
-      SmallestNormal, ISD::SETOLT);
-
-  return IsLtSmallestNormal;
-}
-
 SDValue AMDGPUTargetLowering::getIsFinite(SelectionDAG &DAG, SDValue Src,
                                           SDNodeFlags Flags) const {
   SDLoc SL(Src);
@@ -2870,10 +2851,6 @@ SDValue AMDGPUTargetLowering::LowerFLOGCommon(SDValue Op,
   }
 
   return R;
-}
-
-SDValue AMDGPUTargetLowering::LowerFLOG10(SDValue Op, SelectionDAG &DAG) const {
-  return LowerFLOGCommon(Op, DAG);
 }
 
 // Do f32 fast math expansion for flog2 or flog10. This is accurate enough for a
@@ -4087,22 +4064,25 @@ static SDValue simplifyMul24(SDNode *Node24,
 
   APInt Demanded = APInt::getLowBitsSet(LHS.getValueSizeInBits(), 24);
 
-  // First try to simplify using SimplifyMultipleUseDemandedBits which allows
-  // the operands to have other uses, but will only perform simplifications that
-  // involve bypassing some nodes for this user.
+  if (isNullConstant(LHS) || isNullConstant(RHS))
+    return DAG.getConstant(0, SDLoc(Node24), Node24->getValueType(0));
+
+  // First try SimplifyDemandedBits which can simplify the nodes used by our
+  // operands if this node is the only user.
+  if (LHS.hasOneUse() && TLI.SimplifyDemandedBits(LHS, Demanded, DCI))
+    return SDValue(Node24, 0);
+  if (RHS.hasOneUse() && TLI.SimplifyDemandedBits(RHS, Demanded, DCI))
+    return SDValue(Node24, 0);
+
+  // Then try SimplifyMultipleUseDemandedBits which allows the operands to have
+  // other uses, but will only perform simplifications that involve bypassing
+  // some nodes for this user.
   SDValue DemandedLHS = TLI.SimplifyMultipleUseDemandedBits(LHS, Demanded, DAG);
   SDValue DemandedRHS = TLI.SimplifyMultipleUseDemandedBits(RHS, Demanded, DAG);
   if (DemandedLHS || DemandedRHS)
     return DAG.getNode(NewOpcode, SDLoc(Node24), Node24->getVTList(),
                        DemandedLHS ? DemandedLHS : LHS,
                        DemandedRHS ? DemandedRHS : RHS);
-
-  // Now try SimplifyDemandedBits which can simplify the nodes used by our
-  // operands if this node is the only user.
-  if (TLI.SimplifyDemandedBits(LHS, Demanded, DCI))
-    return SDValue(Node24, 0);
-  if (TLI.SimplifyDemandedBits(RHS, Demanded, DCI))
-    return SDValue(Node24, 0);
 
   return SDValue();
 }
@@ -5213,12 +5193,6 @@ bool AMDGPUTargetLowering::isConstantCostlierToNegate(SDValue N) const {
   return false;
 }
 
-bool AMDGPUTargetLowering::isConstantCheaperToNegate(SDValue N) const {
-  if (const ConstantFPSDNode *C = isConstOrConstSplatFP(N))
-    return getConstantNegateCost(C) == NegatibleCost::Cheaper;
-  return false;
-}
-
 static unsigned inverseMinMax(unsigned Opc) {
   switch (Opc) {
   case ISD::FMAXNUM:
@@ -6222,6 +6196,11 @@ void AMDGPUTargetLowering::computeKnownBitsForTargetNode(
       Known.Zero.setHighBits(llvm::countl_zero(MaxValue));
       break;
     }
+    case Intrinsic::amdgcn_readfirstlane:
+    case Intrinsic::amdgcn_readlane:
+      // Result is the data operand's value from some lane.
+      Known = DAG.computeKnownBits(Op.getOperand(1), DemandedElts, Depth + 1);
+      break;
     default:
       break;
     }

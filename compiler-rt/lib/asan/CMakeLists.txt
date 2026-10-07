@@ -417,12 +417,12 @@ else()
 
     if (SANITIZER_USE_SYMBOLS AND NOT ${arch} STREQUAL "i386")
       add_sanitizer_rt_symbols(clang_rt.asan_cxx
-        ARCHS ${arch})
-      add_dependencies(asan clang_rt.asan_cxx-${arch}-symbols)
+        ARCHS ${arch}
+        PARENT_TARGET asan)
       add_sanitizer_rt_symbols(clang_rt.asan
         ARCHS ${arch}
+        PARENT_TARGET asan
         EXTRA asan.syms.extra)
-      add_dependencies(asan clang_rt.asan-${arch}-symbols)
     endif()
 
     if (WIN32)

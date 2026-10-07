@@ -19,6 +19,7 @@
 #include "clang/AST/DynamicRecursiveASTVisitor.h"
 #include "clang/AST/Expr.h"
 #include "clang/AST/ExprCXX.h"
+#include "clang/AST/Mangle.h"
 #include "clang/AST/TemplateName.h"
 #include "clang/AST/Type.h"
 #include "clang/AST/TypeOrdering.h"
@@ -40,6 +41,7 @@
 #include "clang/Sema/SemaInternal.h"
 #include "clang/Sema/Template.h"
 #include "clang/Sema/TemplateDeduction.h"
+#include "llvm/ADT/STLExtras.h"
 #include "llvm/ADT/SmallBitVector.h"
 #include "llvm/ADT/StringExtras.h"
 #include "llvm/Support/Casting.h"
@@ -3428,6 +3430,28 @@ static SpirvOperand checkHLSLSpirvTypeOperand(Sema &SemaRef,
   return SpirvOperand::createType(OperandArg);
 }
 
+static QualType sortBuiltinTemplatePack(ASTContext &Context,
+                                        ArrayRef<TemplateArgument> InputArgs) {
+  // FIXME: cache mangling globally?
+  std::unique_ptr<MangleContext> MC(Context.createMangleContext());
+  SmallVector<std::pair<std::string, TemplateArgument>> SortedArgs(
+      InputArgs.size());
+  llvm::transform(InputArgs, SortedArgs.begin(),
+                  [&](const TemplateArgument &Arg) {
+                    assert(Arg.getKind() == TemplateArgument::Type);
+                    std::string MangledName;
+                    llvm::raw_string_ostream OS(MangledName);
+                    MC->mangleCanonicalTypeName(Arg.getAsType(), OS);
+                    return std::pair<std::string, TemplateArgument>(
+                        std::move(MangledName), Arg);
+                  });
+  llvm::stable_sort(SortedArgs, llvm::less_first());
+
+  auto OutArgs = llvm::to_vector(llvm::make_second_range(SortedArgs));
+  return Context.getSubstBuiltinTemplatePack(
+      TemplateArgument::CreatePackCopy(Context, OutArgs));
+}
+
 static QualType checkBuiltinTemplateIdType(
     Sema &SemaRef, ElaboratedTypeKeyword Keyword, BuiltinTemplateDecl *BTD,
     ArrayRef<TemplateArgument> Converted, SourceLocation TemplateLoc,
@@ -3586,6 +3610,15 @@ static QualType checkBuiltinTemplateIdType(
     }
     return Context.getSubstBuiltinTemplatePack(
         TemplateArgument::CreatePackCopy(Context, OutArgs));
+  }
+  case BTK__builtin_sort_pack: {
+    assert(Converted.size() == 1 &&
+           "__builtin_sort_pack should be given a parameter pack");
+    TemplateArgument Ts = Converted[0];
+    if (Ts.isDependent())
+      return QualType();
+    assert(Ts.getKind() == TemplateArgument::Pack);
+    return sortBuiltinTemplatePack(Context, Ts.getPackAsArray());
   }
   }
   llvm_unreachable("unexpected BuiltinTemplateDecl!");
@@ -4992,8 +5025,6 @@ ExprResult Sema::BuildTemplateIdExpr(const CXXScopeSpec &SS,
   R.suppressDiagnostics();
 
   if (R.getAsSingle<ConceptDecl>()) {
-    assert(TemplateKWLoc.isInvalid() &&
-           "template keyword in front of a concept id?");
     return CheckConceptTemplateId(SS, TemplateKWLoc, R.getLookupNameInfo(),
                                   R.getRepresentativeDecl(),
                                   R.getAsSingle<ConceptDecl>(), TemplateArgs);
@@ -5958,7 +5989,7 @@ bool Sema::CheckTemplateArgumentList(
       llvm::SmallVector<UnexpandedParameterPack> Unexpanded;
       collectUnexpandedParameterPacks(TL.getPatternLoc(), Unexpanded);
       for (const auto &UPP : Unexpanded) {
-        auto *TST = UPP.first.dyn_cast<const TemplateSpecializationType *>();
+        auto *TST = dyn_cast<const TemplateSpecializationType *>(UPP.first);
         if (!TST)
           continue;
         assert(isPackProducingBuiltinTemplateName(TST->getTemplateName()));
@@ -8104,6 +8135,18 @@ static Expr *BuildExpressionFromIntegralTemplateArgumentValue(
   return E;
 }
 
+/// Construct a new reflect expression that refers to the given
+/// entity with the given source-location of the reflection operator.
+static ExprResult BuildExpressionFromReflection(Sema &S, const APValue &RV,
+                                                SourceLocation CaretCaretLoc) {
+  // TODO(Reflection): Add support for NamespaceReference, TemplateReference,
+  // and DeclRefExpr.
+  return CXXReflectExpr::Create(
+      S.Context, CaretCaretLoc,
+      static_cast<TypeSourceInfo *>(
+          const_cast<void *>(RV.getReflectionOpaqueOperand())));
+}
+
 static Expr *BuildExpressionFromNonTypeTemplateArgumentValue(
     Sema &S, QualType T, const APValue &Val, SourceLocation Loc) {
   auto MakeInitList = [&](ArrayRef<Expr *> Elts) -> Expr * {
@@ -8169,7 +8212,7 @@ static Expr *BuildExpressionFromNonTypeTemplateArgumentValue(
   case APValue::Indeterminate:
     llvm_unreachable("Unexpected APValue kind.");
   case APValue::LValue:
-  case APValue::MemberPointer:
+  case APValue::MemberPointer: {
     // There isn't necessarily a valid equivalent source-level syntax for
     // these; in particular, a naive lowering might violate access control.
     // So for now we lower to a ConstantExpr holding the value, wrapped around
@@ -8182,6 +8225,9 @@ static Expr *BuildExpressionFromNonTypeTemplateArgumentValue(
     }
     auto *OVE = new (S.Context) OpaqueValueExpr(Loc, T, VK);
     return ConstantExpr::Create(S.Context, OVE, Val);
+  }
+  case APValue::Reflection:
+    return BuildExpressionFromReflection(S, Val, Loc).get();
   }
   llvm_unreachable("Unhandled APValue::ValueKind enum");
 }
@@ -10294,32 +10340,23 @@ DeclResult Sema::ActOnExplicitInstantiation(
                                        ? TSK_ExplicitInstantiationDefinition
                                        : TSK_ExplicitInstantiationDeclaration;
 
-  bool DLLAttrAffected = false;
-  const ParsedAttr *AttachedExportAttr = nullptr;
-  const ParsedAttr *AttachedImportAttr = nullptr;
-  for (const ParsedAttr &AL : Attr) {
-    if (AL.getKind() == ParsedAttr::AT_DLLExport)
-      AttachedExportAttr = &AL;
-    else if (AL.getKind() == ParsedAttr::AT_DLLImport)
-      AttachedImportAttr = &AL;
-  }
-
   if (TSK == TSK_ExplicitInstantiationDeclaration &&
       !Context.getTargetInfo().getTriple().isOSCygMing()) {
     // Check for dllexport class template instantiation declarations,
     // except for MinGW mode.
-    if (AttachedExportAttr) {
-      Diag(ExternLoc,
-           diag::warn_attribute_dllexport_explicit_instantiation_decl);
-      Diag(AttachedExportAttr->getLoc(), diag::note_attribute);
-      DLLAttrAffected = true;
+    for (const ParsedAttr &AL : Attr) {
+      if (AL.getKind() == ParsedAttr::AT_DLLExport) {
+        Diag(ExternLoc,
+             diag::warn_attribute_dllexport_explicit_instantiation_decl);
+        Diag(AL.getLoc(), diag::note_attribute);
+        break;
+      }
     }
 
     if (auto *A = ClassTemplate->getTemplatedDecl()->getAttr<DLLExportAttr>()) {
       Diag(ExternLoc,
            diag::warn_attribute_dllexport_explicit_instantiation_decl);
       Diag(A->getLocation(), diag::note_attribute);
-      DLLAttrAffected = true;
     }
   }
 
@@ -10327,12 +10364,20 @@ DeclResult Sema::ActOnExplicitInstantiation(
   // instantiation declarations for most purposes.
   bool DLLImportExplicitInstantiationDef = false;
   if (TSK == TSK_ExplicitInstantiationDefinition &&
-      Context.getTargetInfo().shouldDLLImportComdatSymbols()) {
+      Context.getTargetInfo().getCXXABI().isMicrosoft()) {
     // Check for dllimport class template instantiation definitions.
     bool DLLImport =
         ClassTemplate->getTemplatedDecl()->getAttr<DLLImportAttr>();
-    // dllexport trumps dllimport.
-    if ((DLLImport || AttachedImportAttr) && !AttachedExportAttr) {
+    for (const ParsedAttr &AL : Attr) {
+      if (AL.getKind() == ParsedAttr::AT_DLLImport)
+        DLLImport = true;
+      if (AL.getKind() == ParsedAttr::AT_DLLExport) {
+        // dllexport trumps dllimport here.
+        DLLImport = false;
+        break;
+      }
+    }
+    if (DLLImport) {
       TSK = TSK_ExplicitInstantiationDeclaration;
       DLLImportExplicitInstantiationDef = true;
     }
@@ -10364,30 +10409,28 @@ DeclResult Sema::ActOnExplicitInstantiation(
       Context.getTargetInfo().getTriple().isOSCygMing()) {
     // Check for dllexport class template instantiation definitions in MinGW
     // mode, if a previous declaration of the instantiation was seen.
-    if (AttachedExportAttr) {
-      if (PrevDecl->hasAttr<DLLExportAttr>()) {
-        Diag(AttachedExportAttr->getLoc(),
-             diag::warn_attr_dllexport_explicit_inst_def);
-      } else {
-        Diag(AttachedExportAttr->getLoc(),
-             diag::warn_attr_dllexport_explicit_inst_def_mismatch);
-        Diag(PrevDecl->getLocation(), diag::note_prev_decl_missing_dllexport);
+    for (const ParsedAttr &AL : Attr) {
+      if (AL.getKind() == ParsedAttr::AT_DLLExport) {
+        if (PrevDecl->hasAttr<DLLExportAttr>()) {
+          Diag(AL.getLoc(), diag::warn_attr_dllexport_explicit_inst_def);
+        } else {
+          Diag(AL.getLoc(),
+               diag::warn_attr_dllexport_explicit_inst_def_mismatch);
+          Diag(PrevDecl->getLocation(), diag::note_prev_decl_missing_dllexport);
+        }
+        break;
       }
-      DLLAttrAffected = true;
-    } else if (AttachedImportAttr) {
-      Diag(AttachedImportAttr->getLoc(),
-           diag::warn_attribute_dllimport_explicit_instantiation_def);
-      DLLAttrAffected = true;
     }
   }
 
   if (TSK == TSK_ExplicitInstantiationDefinition && PrevDecl &&
       !Context.getTargetInfo().getTriple().isWindowsGNUEnvironment() &&
-      !AttachedExportAttr) {
+      llvm::none_of(Attr, [](const ParsedAttr &AL) {
+        return AL.getKind() == ParsedAttr::AT_DLLExport;
+      })) {
     if (const auto *DEA = PrevDecl->getAttr<DLLExportOnDeclAttr>()) {
       Diag(TemplateLoc, diag::warn_dllexport_on_decl_ignored);
       Diag(DEA->getLoc(), diag::note_dllexport_on_decl);
-      DLLAttrAffected = true;
     }
   }
 
@@ -10459,10 +10502,7 @@ DeclResult Sema::ActOnExplicitInstantiation(
   Specialization->setTemplateKeywordLoc(TemplateLoc);
   Specialization->setBraceRange(SourceRange());
 
-  bool PreviouslyDLLExported = Specialization->hasAttr<DLLExportAttr>() ||
-                               (PrevDecl && PrevDecl->hasAttr<DLLExportAttr>());
-  bool PreviouslyDLLImported = Specialization->hasAttr<DLLImportAttr>() ||
-                               (PrevDecl && PrevDecl->hasAttr<DLLImportAttr>());
+  bool PreviouslyDLLExported = Specialization->hasAttr<DLLExportAttr>();
   ProcessDeclAttributeList(S, Specialization, Attr);
   ProcessAPINotes(Specialization);
 
@@ -10498,12 +10538,11 @@ DeclResult Sema::ActOnExplicitInstantiation(
   ClassTemplateSpecializationDecl *Def
     = cast_or_null<ClassTemplateSpecializationDecl>(
                                               Specialization->getDefinition());
-  if (!Def) {
+  if (!Def)
     InstantiateClassTemplateSpecialization(TemplateNameLoc, Specialization, TSK,
                                            /*Complain=*/true,
                                            CTAI.StrictPackMatch);
-    DLLAttrAffected = true;
-  } else if (TSK == TSK_ExplicitInstantiationDefinition) {
+  else if (TSK == TSK_ExplicitInstantiationDefinition) {
     MarkVTableUsed(TemplateNameLoc, Specialization, true);
     Specialization->setPointOfInstantiation(Def->getPointOfInstantiation());
   }
@@ -10531,16 +10570,13 @@ DeclResult Sema::ActOnExplicitInstantiation(
         A->setInherited(true);
         Def->addAttr(A);
         dllExportImportClassTemplateSpecialization(*this, Def);
-        DLLAttrAffected = true;
       }
     }
 
     // Fix a TSK_ImplicitInstantiation followed by a
     // TSK_ExplicitInstantiationDefinition
-    bool NewlyDLLExported = !PreviouslyDLLExported && AttachedExportAttr &&
-                            Specialization->hasAttr<DLLExportAttr>();
-    bool NewlyDLLImported = !PreviouslyDLLImported && AttachedImportAttr &&
-                            Specialization->hasAttr<DLLImportAttr>();
+    bool NewlyDLLExported =
+        !PreviouslyDLLExported && Specialization->hasAttr<DLLExportAttr>();
     if (Old_TSK == TSK_ImplicitInstantiation && NewlyDLLExported &&
         Context.getTargetInfo().shouldDLLImportComdatSymbols()) {
       // An explicit instantiation definition can add a dll attribute to a
@@ -10558,7 +10594,6 @@ DeclResult Sema::ActOnExplicitInstantiation(
       assert(Def == Specialization &&
              "Def and Specialization should match for implicit instantiation");
       dllExportImportClassTemplateSpecialization(*this, Def);
-      DLLAttrAffected = true;
     }
 
     // In MinGW mode, export the template instantiation if the declaration
@@ -10567,23 +10602,6 @@ DeclResult Sema::ActOnExplicitInstantiation(
         Context.getTargetInfo().getTriple().isOSCygMing() &&
         PrevDecl->hasAttr<DLLExportAttr>()) {
       dllExportImportClassTemplateSpecialization(*this, Def);
-      DLLAttrAffected = true;
-    }
-
-    if (!DLLAttrAffected && (NewlyDLLExported || NewlyDLLImported)) {
-      if (Context.getTargetInfo().getTriple().isOSCygMing() &&
-          TSK == TSK_ExplicitInstantiationDeclaration && NewlyDLLImported) {
-        // In MinGW mode, all undefined symbols are also searched from DLLs
-        // even if they were not declared with dllimport, so doesn't warn
-        // about ignoring dllimport.
-      } else {
-        const ParsedAttr *A =
-            AttachedExportAttr ? AttachedExportAttr : AttachedImportAttr;
-        Diag(A->getLoc(), diag::warn_dllattr_ignored_already_instantiated) << A;
-        Diag(Def->getPointOfInstantiation(),
-             diag::note_instantiation_required_here)
-            << /*implicit|explicit=*/0;
-      }
     }
 
     // Set the template specialization kind. Make sure it is set before
@@ -10623,10 +10641,12 @@ Sema::ActOnExplicitInstantiation(Scope *S, SourceLocation ExternLoc,
                false, TypeResult(), /*IsTypeSpecifier*/ false,
                /*IsTemplateParamOrArg*/ false, /*OOK=*/OffsetOfKind::Outside)
           .get();
-  assert(!IsDependent && "explicit instantiation of dependent name not yet handled");
 
   if (!TagD)
     return true;
+
+  assert(!IsDependent &&
+         "explicit instantiation of dependent name not yet handled");
 
   TagDecl *Tag = cast<TagDecl>(TagD);
   assert(!Tag->isEnum() && "shouldn't see enumerations here");
