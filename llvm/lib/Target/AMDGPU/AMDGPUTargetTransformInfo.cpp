@@ -412,6 +412,12 @@ bool GCNTTIImpl::consecutiveLoadsCoalesce(Type *ElemTy, unsigned NumElts,
   return VecSpeed >= ElemSpeed;
 }
 
+bool GCNTTIImpl::isPackedLaneType(Type *Ty) const {
+  unsigned Bits = DL.getTypeSizeInBits(Ty);
+  unsigned RegBits = getRegisterBitWidth(TTI::RGK_Scalar).getFixedValue();
+  return 2 * Bits <= RegBits && isTypeLegal(FixedVectorType::get(Ty, 2));
+}
+
 bool GCNTTIImpl::isLegalToVectorizeMemChain(unsigned ChainSizeInBytes,
                                             Align Alignment,
                                             unsigned AddrSpace) const {
@@ -2093,11 +2099,15 @@ InstructionCost GCNTTIImpl::getMemoryOpCost(unsigned Opcode, Type *Src,
                                 OpInfo, I);
 }
 
-InstructionCost
-GCNTTIImpl::getLoadCoalescingSaving(Type *LoadTy, unsigned NumLoads,
-                                    Align Alignment, unsigned AddrSpace,
-                                    TTI::TargetCostKind CostKind) const {
+InstructionCost GCNTTIImpl::getLoadCoalescingSaving(
+    Type *LoadTy, unsigned NumLoads, Align Alignment, unsigned AddrSpace,
+    TTI::TargetCostKind CostKind, Type *WidenedTy) const {
   if (!consecutiveLoadsCoalesce(LoadTy, NumLoads, Alignment, AddrSpace))
+    return 0;
+  // Lanes that pack two to a register keep the saving, since the scalar code
+  // unpacks every lane.
+  if (WidenedTy && (isPackedLaneType(LoadTy->getScalarType()) ||
+                    isPackedLaneType(WidenedTy)))
     return 0;
   unsigned NumElts = NumLoads;
   if (auto *LoadVecTy = dyn_cast<FixedVectorType>(LoadTy))

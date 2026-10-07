@@ -2501,10 +2501,6 @@ private:
       const TreeEntry &TE, bool ApplyMinBWs,
       function_ref<bool(const TreeEntry &)> HasExternalUses) const;
 
-  /// \returns true if two lanes of \p Ty fit a scalar register as a legal
-  /// vector type, so the target has packed arithmetic on them.
-  bool isPackedLaneType(Type *Ty) const;
-
   /// Builds the list of reorderable operands on the edges \p Edges of the \p
   /// UserTE, which allow reordering (i.e. the operands can be reordered because
   /// they have only one user and reordarable).
@@ -17614,19 +17610,17 @@ BoUpSLP::getEntryCost(const TreeEntry *E, ArrayRef<Value *> VectorizedVals,
           TTI::getOperandInfo(VI->getPointerOperand()), VI);
     };
     auto *LI0 = cast<LoadInst>(VL0);
-    auto IsWidenedByCast = [&]() {
+    auto GetWidenedLaneType = [&]() -> Type * {
       const TreeEntry *UserTE = E->UserTreeIndex.UserTE;
       if (!UserTE || UserTE->isGather() || !UserTE->hasState() ||
           !Instruction::isCast(UserTE->getOpcode()))
-        return false;
+        return nullptr;
       Type *LoadedTy = LI0->getType()->getScalarType();
       Type *WidestTy =
           getWidestLaneType(*UserTE, /*ApplyMinBWs=*/true, HasExternalUses);
-      if (DL->getTypeSizeInBits(WidestTy) <= DL->getTypeSizeInBits(LoadedTy) ||
-          isPackedLaneType(LoadedTy))
-        return false;
-      return !isPackedLaneType(
-          getWidestLaneType(*UserTE, /*ApplyMinBWs=*/false, HasExternalUses));
+      if (DL->getTypeSizeInBits(WidestTy) <= DL->getTypeSizeInBits(LoadedTy))
+        return nullptr;
+      return getWidestLaneType(*UserTE, /*ApplyMinBWs=*/false, HasExternalUses);
     };
     auto GetVectorCost = [&](InstructionCost CommonCost) {
       InstructionCost VecLdCost;
@@ -17646,19 +17640,24 @@ BoUpSLP::getEntryCost(const TreeEntry *E, ArrayRef<Value *> VectorizedVals,
           // target coalesces as well. A reduction that loses its fmas pays
           // that saving back on every bundle. Any other tree but a floating
           // point reduction pays it on the bundles whose lanes a cast widens
-          // before they leave the tree, unless the loaded or the widened lanes
-          // are of a packed type.
+          // before they leave the tree, unless the target keeps it for the
+          // widened lanes.
           if (E->ReuseShuffleIndices.empty() && E->ReorderIndices.empty() &&
-              It == MinBWs.end() &&
-              (reductionLosesFMAs(RdxKind, RdxFMF, VectorizedVals) ||
-               (!RecurrenceDescriptor::isFloatingPointRecurrenceKind(RdxKind) &&
-                IsWidenedByCast()))) {
-            Align BestAlign = LI0->getAlign();
-            for (Value *V : VL)
-              BestAlign = std::max(BestAlign, cast<LoadInst>(V)->getAlign());
-            VecLdCost += TTI->getLoadCoalescingSaving(
-                LI0->getType(), VL.size(), BestAlign,
-                LI0->getPointerAddressSpace(), CostKind);
+              It == MinBWs.end()) {
+            Type *WidenedTy = nullptr;
+            bool LosesFMAs =
+                reductionLosesFMAs(RdxKind, RdxFMF, VectorizedVals);
+            if (!LosesFMAs &&
+                !RecurrenceDescriptor::isFloatingPointRecurrenceKind(RdxKind))
+              WidenedTy = GetWidenedLaneType();
+            if (LosesFMAs || WidenedTy) {
+              Align BestAlign = LI0->getAlign();
+              for (Value *V : VL)
+                BestAlign = std::max(BestAlign, cast<LoadInst>(V)->getAlign());
+              VecLdCost += TTI->getLoadCoalescingSaving(
+                  LI0->getType(), VL.size(), BestAlign,
+                  LI0->getPointerAddressSpace(), CostKind, WidenedTy);
+            }
           }
         }
         break;
@@ -18613,13 +18612,6 @@ Type *BoUpSLP::getWidestLaneType(
     }
     E = UserTE;
   }
-}
-
-bool BoUpSLP::isPackedLaneType(Type *Ty) const {
-  unsigned Bits = DL->getTypeSizeInBits(Ty);
-  unsigned RegBits =
-      TTI->getRegisterBitWidth(TargetTransformInfo::RGK_Scalar).getFixedValue();
-  return 2 * Bits <= RegBits && TTI->isTypeLegal(FixedVectorType::get(Ty, 2));
 }
 
 InstructionCost BoUpSLP::getSpillCost() {
