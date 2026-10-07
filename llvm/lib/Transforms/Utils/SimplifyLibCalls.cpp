@@ -28,6 +28,7 @@
 #include "llvm/IR/IRBuilder.h"
 #include "llvm/IR/IntrinsicInst.h"
 #include "llvm/IR/Intrinsics.h"
+#include "llvm/IR/MDBuilder.h"
 #include "llvm/IR/Module.h"
 #include "llvm/IR/PatternMatch.h"
 #include "llvm/IR/ProfDataUtils.h"
@@ -442,7 +443,7 @@ Value *LibCallSimplifier::emitStrLenMemCpy(Value *Src, Value *Dst, uint64_t Len,
   // We have enough information to now generate the memcpy call to do the
   // concatenation for us.  Make a memcpy to copy the nul byte with align = 1.
   B.CreateMemCpy(CpyDst, Align(1), Src, Align(1),
-                 TLI->getAsSizeT(Len + 1, *B.GetInsertBlock()->getModule()));
+                 TLI->getAsSizeT(Len + 1, *B.getModule()));
   return Dst;
 }
 
@@ -2490,6 +2491,15 @@ Value *LibCallSimplifier::replacePowWithSqrt(CallInst *Pow, IRBuilderBase &B) {
           *NegInf = ConstantFP::getInfinity(Ty, true);
     Value *FCmp = B.CreateFCmpOEQ(Base, NegInf, "isinf");
     Sqrt = B.CreateSelect(FCmp, PosInf, Sqrt);
+    // We assume that the case where x == -infinity is unlikely, so we assign
+    // unlikely branch weights to that arm of the select.
+    if (!ProfcheckDisableMetadataFixes) {
+      if (auto *SqrtSI = dyn_cast<SelectInst>(Sqrt))
+        setBranchWeights(
+            *SqrtSI,
+            {MDBuilder::kUnlikelyBranchWeight, MDBuilder::kLikelyBranchWeight},
+            /*IsExpected=*/false);
+    }
   }
 
   // If the exponent is negative, then get the reciprocal.
