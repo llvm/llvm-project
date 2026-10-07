@@ -28,7 +28,8 @@
     if (!INTERCEPT_FUNCTION(name))                                             \
       VReport(1, "TypeSanitizer: failed to intercept '%s'\n", #name);          \
   } while (0)
-#else // Apple interceptors don't need to be initialized with INTERCEPT_FUNCTION.
+#else // Apple interceptors don't need to be initialized with
+      // INTERCEPT_FUNCTION.
 #define TYSAN_INTERCEPT_FUNC(name)
 #endif
 
