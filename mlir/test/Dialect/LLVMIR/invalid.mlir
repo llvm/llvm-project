@@ -309,6 +309,117 @@ func.func @call_non_llvm() {
 
 // -----
 
+llvm.func @__gxx_personality_v0(...) -> i32
+
+llvm.func @invoke_unknown_symbol() -> i32 attributes { personality = @__gxx_personality_v0 } {
+  // expected-error@+1 {{'llvm.invoke' op 'missing_callee' does not reference a symbol in the current scope}}
+  %0 = llvm.invoke @missing_callee() to ^bb1 unwind ^bb2 : () -> i32
+^bb1:
+  llvm.return %0 : i32
+^bb2:
+  %1 = llvm.landingpad cleanup : !llvm.struct<(ptr, i32)>
+  %c = llvm.mlir.constant(0 : i32) : i32
+  llvm.return %c : i32
+}
+
+// -----
+
+func.func private @standard_func_callee()
+
+llvm.func @__gxx_personality_v0(...) -> i32
+
+llvm.func @invoke_non_llvm() -> i32 attributes { personality = @__gxx_personality_v0 } {
+  // expected-error@+1 {{'llvm.invoke' op 'standard_func_callee' does not reference a valid LLVM function, IFunc, or alias}}
+  %0 = llvm.invoke @standard_func_callee() to ^bb1 unwind ^bb2 : () -> i32
+^bb1:
+  llvm.return %0 : i32
+^bb2:
+  %1 = llvm.landingpad cleanup : !llvm.struct<(ptr, i32)>
+  %c = llvm.mlir.constant(0 : i32) : i32
+  llvm.return %c : i32
+}
+
+// -----
+
+llvm.func @foo(i32) -> i32
+llvm.func @__gxx_personality_v0(...) -> i32
+
+llvm.func @invoke_result_mismatch(%arg0: i32) -> i64 attributes { personality = @__gxx_personality_v0 } {
+  // expected-error@+1 {{'llvm.invoke' op result type mismatch: 'i64' != 'i32'}}
+  %0 = llvm.invoke @foo(%arg0) to ^bb1 unwind ^bb2 : (i32) -> i64
+^bb1:
+  llvm.return %0 : i64
+^bb2:
+  %1 = llvm.landingpad cleanup : !llvm.struct<(ptr, i32)>
+  %c = llvm.mlir.constant(0 : i64) : i64
+  llvm.return %c : i64
+}
+
+// -----
+
+llvm.func @foo(i32) -> i32
+llvm.func @__gxx_personality_v0(...) -> i32
+
+llvm.func @invoke_arg_mismatch(%arg0: i64) -> i32 attributes { personality = @__gxx_personality_v0 } {
+  // expected-error@+1 {{'llvm.invoke' op operand type mismatch: expected operand type 'i32', but provided 'i64' for operand number 0}}
+  %0 = llvm.invoke @foo(%arg0) to ^bb1 unwind ^bb2 : (i64) -> i32
+^bb1:
+  llvm.return %0 : i32
+^bb2:
+  %1 = llvm.landingpad cleanup : !llvm.struct<(ptr, i32)>
+  %c = llvm.mlir.constant(0 : i32) : i32
+  llvm.return %c : i32
+}
+
+// -----
+
+llvm.func @bar() -> ()
+llvm.func @__gxx_personality_v0(...) -> i32
+
+llvm.func @invoke_void_with_result() -> i32 attributes { personality = @__gxx_personality_v0 } {
+  // expected-error@+1 {{'llvm.invoke' op calling function with void result must not produce values}}
+  %0 = llvm.invoke @bar() to ^bb1 unwind ^bb2 : () -> i32
+^bb1:
+  llvm.return %0 : i32
+^bb2:
+  %1 = llvm.landingpad cleanup : !llvm.struct<(ptr, i32)>
+  %c = llvm.mlir.constant(0 : i32) : i32
+  llvm.return %c : i32
+}
+
+// -----
+
+llvm.func @variadic(...)
+llvm.func @__gxx_personality_v0(...) -> i32
+
+llvm.func @invoke_vararg_missing_type(%arg0: i32) -> i32 attributes { personality = @__gxx_personality_v0 } {
+  // expected-error@+1 {{'llvm.invoke' op missing var_callee_type attribute for vararg call}}
+  %0 = llvm.invoke @variadic(%arg0) to ^bb1 unwind ^bb2 : (i32) -> i32
+^bb1:
+  llvm.return %0 : i32
+^bb2:
+  %1 = llvm.landingpad cleanup : !llvm.struct<(ptr, i32)>
+  %c = llvm.mlir.constant(0 : i32) : i32
+  llvm.return %c : i32
+}
+
+// -----
+
+llvm.func @__gxx_personality_v0(...) -> i32
+
+llvm.func @invoke_indirect_non_ptr(%arg0: i32, %arg1: i32) -> i32 attributes { personality = @__gxx_personality_v0 } {
+  // expected-error@+1 {{'llvm.invoke' op indirect call expects a pointer as callee: 'i32'}}
+  %0 = llvm.invoke %arg0(%arg1) to ^bb1 unwind ^bb2 : i32, (i32) -> i32
+^bb1:
+  llvm.return %0 : i32
+^bb2:
+  %1 = llvm.landingpad cleanup : !llvm.struct<(ptr, i32)>
+  %c = llvm.mlir.constant(0 : i32) : i32
+  llvm.return %c : i32
+}
+
+// -----
+
 func.func @call_non_llvm_arg(%arg0 : tensor<*xi32>) {
   // expected-error@+1 {{'llvm.call' op operand #0 must be variadic of LLVM dialect-compatible type}}
   "llvm.call"(%arg0) <{operandSegmentSizes = array<i32: 1, 0>, op_bundle_sizes = array<i32>}> : (tensor<*xi32>) -> ()
