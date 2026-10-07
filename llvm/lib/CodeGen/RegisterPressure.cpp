@@ -632,6 +632,34 @@ void RegisterOperands::adjustLaneLiveness(const LiveIntervals &LIS,
   }
 }
 
+void RegisterOperands::restoreLivenessFlags(
+    MachineInstr &MI, const TargetRegisterInfo &TRI,
+    const MachineRegisterInfo &MRI, const LiveIntervals &LIS,
+    bool TrackLaneMasks, ArrayRef<Register> OnlyRegs) {
+  assert(!MI.isDebugInstr() && "No flags to restore on debug instructions");
+  // Clear potentially-stale read-undef flags. They are re-added below for the
+  // lanes that are still dead.
+  bool HasClearedDef = false;
+  for (MachineOperand &MO : MI.all_defs()) {
+    if (!OnlyRegs.empty() && (!MO.getReg().isVirtual() || MO.getSubReg() == 0 ||
+                              !llvm::is_contained(OnlyRegs, MO.getReg())))
+      continue;
+    MO.setIsUndef(false);
+    HasClearedDef = true;
+  }
+  if (!HasClearedDef)
+    return;
+  RegisterOperands RegOpers;
+  RegOpers.collect(MI, TRI, MRI, TrackLaneMasks, /*IgnoreDead=*/false);
+  if (TrackLaneMasks) {
+    // Adjust liveness and add missing dead+read-undef flags.
+    RegOpers.adjustLaneLiveness(LIS, MRI, MI);
+  } else {
+    // Adjust for missing dead-def flags.
+    RegOpers.detectDeadDefs(MI, LIS, MRI);
+  }
+}
+
 VRegMaskOrUnit *RegisterOperands::adjustDef(VRegMaskOrUnit &Def,
                                             LaneBitmask LiveAfterDef) {
   LaneBitmask ActualDef = Def.LaneMask & LiveAfterDef;

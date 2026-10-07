@@ -203,6 +203,19 @@ public:
                                    const MachineRegisterInfo &MRI,
                                    MachineInstr &MI);
 
+  /// Clear potentially-stale read-undef flags on the defs of \p MI, then
+  /// recompute them from \p LIS. The clear must come first because
+  /// adjustLaneLiveness only adds flags. When \p OnlyRegs is non-empty, only
+  /// subregister defs of those virtual registers are cleared (and the
+  /// recompute is skipped when \p MI has none); otherwise all defs are
+  /// cleared. This is used after moving an already-scheduled instruction,
+  /// which can invalidate the flags set for its previous position.
+  LLVM_ABI static void
+  restoreLivenessFlags(MachineInstr &MI, const TargetRegisterInfo &TRI,
+                       const MachineRegisterInfo &MRI,
+                       const LiveIntervals &LIS, bool TrackLaneMasks = true,
+                       ArrayRef<Register> OnlyRegs = {});
+
 private:
   /// Adjusts the \p Def based on \p LiveAfterDef. The \p Def is moved from the
   /// Defs vector to the DeadDefs vector when no defined lane remains live after
