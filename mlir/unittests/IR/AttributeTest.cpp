@@ -407,10 +407,12 @@ TEST(SparseElementsAttrTest, GetZero) {
 
   IntegerType intTy = IntegerType::get(&context, 32);
   FloatType floatTy = Float32Type::get(&context);
+  Type mxi8Ty = MXI8Type::get(&context);
   Type stringTy = OpaqueType::get(StringAttr::get(&context, "test"), "string");
 
   ShapedType tensorI32 = RankedTensorType::get({2, 2}, intTy);
   ShapedType tensorF32 = RankedTensorType::get({2, 2}, floatTy);
+  ShapedType tensorMXI8 = RankedTensorType::get({2, 2}, mxi8Ty);
   ShapedType tensorString = RankedTensorType::get({2, 2}, stringTy);
 
   auto indicesType =
@@ -424,11 +426,18 @@ TEST(SparseElementsAttrTest, GetZero) {
   RankedTensorType floatValueTy = RankedTensorType::get({1}, floatTy);
   auto floatValue = DenseFPElementsAttr::get(floatValueTy, {1.0f});
 
+  RankedTensorType mxi8ValueTy = RankedTensorType::get({1}, mxi8Ty);
+  Attribute mxi8EncodedValue =
+      IntegerAttr::get(IntegerType::get(&context, 8), 64);
+  auto mxi8Value = DenseElementsAttr::get(
+      mxi8ValueTy, ArrayRef<Attribute>(mxi8EncodedValue));
+
   RankedTensorType stringValueTy = RankedTensorType::get({1}, stringTy);
   auto stringValue = DenseElementsAttr::get(stringValueTy, {StringRef("foo")});
 
   auto sparseInt = SparseElementsAttr::get(tensorI32, indices, intValue);
   auto sparseFloat = SparseElementsAttr::get(tensorF32, indices, floatValue);
+  auto sparseMXI8 = SparseElementsAttr::get(tensorMXI8, indices, mxi8Value);
   auto sparseString =
       SparseElementsAttr::get(tensorString, indices, stringValue);
 
@@ -443,6 +452,15 @@ TEST(SparseElementsAttrTest, GetZero) {
       cast<FloatAttr>(sparseFloat.getValues<Attribute>()[{1, 1}]);
   EXPECT_EQ(zeroFloatValue.getValueAsDouble(), 0.0f);
   EXPECT_TRUE(zeroFloatValue.getType() == floatTy);
+
+  auto zeroMXI8Value =
+      cast<IntegerAttr>(sparseMXI8.getValues<Attribute>()[{1, 1}]);
+  EXPECT_EQ(zeroMXI8Value.getInt(), 0);
+  EXPECT_TRUE(zeroMXI8Value.getType().isSignlessInteger(8));
+  auto storedMXI8Value =
+      cast<IntegerAttr>(sparseMXI8.getValues<Attribute>()[{0, 0}]);
+  EXPECT_EQ(storedMXI8Value.getInt(), 64);
+  EXPECT_TRUE(storedMXI8Value.getType().isSignlessInteger(8));
 
   auto zeroStringValue =
       cast<StringAttr>(sparseString.getValues<Attribute>()[{1, 1}]);
