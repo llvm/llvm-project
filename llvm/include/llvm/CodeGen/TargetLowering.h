@@ -366,6 +366,7 @@ public:
     ArgListEntry(SDValue Node, Type *Ty) : ArgListEntry(nullptr, Node, Ty) {}
 
     LLVM_ABI void setAttributes(const CallBase *Call, unsigned ArgIdx);
+    LLVM_ABI void setAttributes(const AttributeList &Attrs, unsigned ArgIdx);
   };
   using ArgListTy = std::vector<ArgListEntry>;
 
@@ -2174,8 +2175,14 @@ public:
   /// Return the preferred function alignment.
   Align getPrefFunctionAlignment() const { return PrefFunctionAlignment; }
 
-  /// Return the preferred loop alignment.
-  virtual Align getPrefLoopAlignment(MachineLoop *ML = nullptr) const;
+  /// Return the preferred loop alignment. \p BlockToAlign, when non-null, is
+  /// the block that will actually be aligned; after loop rotation this need not
+  /// be the LoopInfo header. Targets whose alignment depends on the block
+  /// contents should use it. Callers that are not aligning a particular block,
+  /// such as llvm-exegesis and ARM constant islands, leave it null.
+  virtual Align
+  getPrefLoopAlignment(MachineLoop *ML = nullptr,
+                       const MachineBasicBlock *BlockToAlign = nullptr) const;
 
   /// Return the maximum amount of bytes allowed to be emitted when padding for
   /// alignment
@@ -2240,7 +2247,8 @@ public:
   /// Returns true if a cast from SrcAS to DestAS is "cheap", such that e.g. we
   /// are happy to sink it into basic blocks. A cast may be free, but not
   /// necessarily a no-op. e.g. a free truncate from a 64-bit to 32-bit pointer.
-  virtual bool isFreeAddrSpaceCast(unsigned SrcAS, unsigned DestAS) const;
+  virtual bool isFreeAddrSpaceCast(const DataLayout &DL, unsigned SrcAS,
+                                   unsigned DestAS) const;
 
   /// Return true if the pointer arguments to CI should be aligned by aligning
   /// the object whose address is being passed. If so then MinSize is set to the
@@ -3777,12 +3785,6 @@ public:
 
   RTLIB::LibcallImpl getMemcpyImpl() const { return Libcalls.getMemcpyImpl(); }
 
-  /// Check if this is valid libcall for the current module, otherwise
-  /// RTLIB::Unsupported.
-  RTLIB::LibcallImpl getSupportedLibcallImpl(StringRef FuncName) const {
-    return RuntimeLibcallInfo.getSupportedLibcallImpl(FuncName);
-  }
-
   /// Get the CallingConv that should be used for the specified libcall
   /// implementation.
   CallingConv::ID getLibcallImplCallingConv(RTLIB::LibcallImpl Call) const {
@@ -4350,6 +4352,13 @@ public:
                        Chain);
   }
 
+  /// Build a call argument list for \p FuncTy, taking the argument node values
+  /// from \p Ops and the parameter types and ABI attributes from \p FuncTy and
+  /// \p FuncAttrs. \p Ops must have one entry per parameter of \p FuncTy.
+  static ArgListTy getArgListForFunctionType(FunctionType *FuncTy,
+                                             const AttributeList &FuncAttrs,
+                                             ArrayRef<SDValue> Ops);
+
   /// Check whether parameters to a call that are passed in callee saved
   /// registers are the same as from the calling function.  This needs to be
   /// checked for tail call eligibility.
@@ -4771,6 +4780,13 @@ public:
     return true;
   }
 
+  /// fold (A + vscale(C1)) + vscale(C2) -> A + vscale(C1+C2)
+  /// If (A + vscale(C1)) is used multiple times, the fold results in a
+  /// redundant addition instruction on the RISC-V architecture, whereas it
+  /// does not have this effect on other architectures (e.g. AArch64).
+  /// By default, it returns true.
+  virtual bool isProfitableToFoldVScaleAdd(SDValue N) const { return true; }
+
   /// GlobalISel - return true if it is profitable to move this shift by a
   /// constant amount through its operand, adjusting any immediate operands as
   /// necessary to preserve semantics. This transformation may not be desirable
@@ -4828,6 +4844,11 @@ public:
   virtual bool isTypeDesirableForOp(unsigned /*Opc*/, EVT VT) const {
     // By default, assume all legal types are desirable.
     return isTypeLegal(VT);
+  }
+
+  /// Overload that takes the specific node being optimized.
+  virtual bool isTypeDesirableForOp(SDNode *N, EVT VT) const {
+    return isTypeDesirableForOp(N->getOpcode(), VT);
   }
 
   /// Return true if it is profitable for dag combiner to transform a floating

@@ -1426,7 +1426,7 @@ define i32 @loadCombine_4consecutive_metadata(ptr %p, ptr %pstr) {
   ret i32 %o3
 }
 
-!0 = distinct !{!0}
+!0 = distinct !{!0, i1 false}
 !1 = distinct !{!1, !0}
 !2 = !{!1}
 

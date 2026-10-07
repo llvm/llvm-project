@@ -151,7 +151,7 @@ void TokenSequence::Put(
 void TokenSequence::Put(const CharBlock &t, Provenance provenance) {
   // Avoid t[0] if t is empty: it would create a reference to nullptr,
   // which is UB.
-  const char *addr{t.size() ? &t[0] : nullptr};
+  const char *addr{t.size() ? t.begin() : nullptr};
   Put(addr, t.size(), provenance);
 }
 
@@ -287,8 +287,9 @@ TokenSequence &TokenSequence::ClipComment(
       }
       bool isSentinel{false};
       if (tok.size() > blanks + 5) {
-        isSentinel = prescanner.IsCompilerDirectiveSentinel(&tok[blanks + 1])
-                         .has_value();
+        isSentinel =
+            prescanner.IsCompilerDirectiveSentinel(&tok.begin()[blanks + 1])
+                .has_value();
       }
       if (isSentinel) {
       } else if (skipFirst) {

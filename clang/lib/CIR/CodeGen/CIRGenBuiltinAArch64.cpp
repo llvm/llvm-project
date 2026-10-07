@@ -204,12 +204,26 @@ emitNeonCallToOp(CIRGenModule &cgm, CIRGenBuilderTy &builder,
                              builder.getStringAttr(intrinsicName.value()),
                              funcResTy, args)
         .getResult();
-  } else {
+  }
+  if constexpr (std::is_same_v<Operation, cir::FMAOp>) {
+    assert(args.size() == 3 && "fma expects three operands");
+    return Operation::create(builder, loc, funcResTy, args[0], args[1], args[2],
+                             builder.getConstrainedFPAttr())
+        .getResult();
+  }
+  if constexpr (std::is_same_v<Operation, cir::SqrtOp>) {
+    assert(args.size() == 1 && "sqrt expects one operand");
+    return Operation::create(builder, loc, funcResTy, args[0],
+                             builder.getConstrainedFPAttr())
+        .getResult();
+  }
+  if constexpr (!std::is_same_v<Operation, cir::LLVMIntrinsicCallOp> &&
+                !std::is_same_v<Operation, cir::FMAOp> &&
+                !std::is_same_v<Operation, cir::SqrtOp>)
     return Operation::create(
                builder, loc, mlir::TypeRange{funcResTy}, args,
                cir::getDefaultProperties<Operation>(builder.getContext()))
         .getResult();
-  }
 }
 
 // TODO(cir): Remove `cgm` from the list of arguments once all NYI(s) are gone.
@@ -1326,11 +1340,17 @@ static mlir::Value emitCommonNeonBuiltinExpr(
     return emitCommonNeonShift(builder, loc, vTy, extended, ops[1],
                                /*shiftLeft=*/true);
   }
-  case NEON::BI__builtin_neon_vshrn_n_v:
-    cgf.cgm.errorNYI(expr->getSourceRange(),
-                     std::string("unimplemented AArch64 builtin call: ") +
-                         ctx.BuiltinInfo.getName(builtinID));
-    return mlir::Value{};
+  case NEON::BI__builtin_neon_vshrn_n_v: {
+    CIRGenBuilderTy &builder = cgf.getBuilder();
+    cir::VectorType wideVecTy =
+        builder.getExtendedOrTruncatedElementVectorType(vTy,
+                                                        /*isExtended=*/true,
+                                                        /*isSigned=*/!usgn);
+    mlir::Value src = builder.createBitcast(ops[0], wideVecTy);
+    mlir::Value shifted = emitCommonNeonShift(builder, loc, wideVecTy, src,
+                                              ops[1], /*shiftLeft=*/false);
+    return builder.createIntCast(shifted, vTy);
+  }
   case NEON::BI__builtin_neon_vshr_n_v:
   case NEON::BI__builtin_neon_vshrq_n_v:
     return emitNeonRShiftImm(cgf, ops[0], ops[1], vTy, isUnsigned, loc);
@@ -2703,6 +2723,8 @@ CIRGenFunction::emitAArch64BuiltinExpr(unsigned builtinID, const CallExpr *expr,
   // evaluation.
   assert(!cir::MissingFeatures::msvcBuiltins());
 
+  CIRGenFPOptionsRAII fpOptsRAII(*this, expr);
+
   // Some intrinsics are equivalent - if they are use the base intrinsic ID.
   auto it = llvm::find_if(neonEquivalentIntrinsicMap, [builtinID](auto &p) {
     return p.first == builtinID;
@@ -3624,7 +3646,6 @@ CIRGenFunction::emitAArch64BuiltinExpr(unsigned builtinID, const CallExpr *expr,
   }
   case NEON::BI__builtin_neon_vsqrt_v:
   case NEON::BI__builtin_neon_vsqrtq_v:
-    assert(!cir::MissingFeatures::emitConstrainedFPCall());
     return emitNeonCallToOp<cir::SqrtOp>(cgm, builder, {ty}, ops, std::nullopt,
                                          ty, loc);
   case NEON::BI__builtin_neon_vrbit_v:

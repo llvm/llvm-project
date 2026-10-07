@@ -1626,7 +1626,6 @@ bool AArch64InstrInfo::isCoalescableExtInstr(const MachineInstr &MI,
 
 bool AArch64InstrInfo::areMemAccessesTriviallyDisjoint(
     const MachineInstr &MIa, const MachineInstr &MIb) const {
-  const TargetRegisterInfo *TRI = &getRegisterInfo();
   const MachineOperand *BaseOpA = nullptr, *BaseOpB = nullptr;
   int64_t OffsetA = 0, OffsetB = 0;
   TypeSize WidthA(0, false), WidthB(0, false);
@@ -1647,9 +1646,9 @@ bool AArch64InstrInfo::areMemAccessesTriviallyDisjoint(
   // If OffsetAIsScalable and OffsetBIsScalable are both true, they
   // are assumed to have the same scale (vscale).
   if (getMemOperandWithOffsetWidth(MIa, BaseOpA, OffsetA, OffsetAIsScalable,
-                                   WidthA, TRI) &&
+                                   WidthA) &&
       getMemOperandWithOffsetWidth(MIb, BaseOpB, OffsetB, OffsetBIsScalable,
-                                   WidthB, TRI)) {
+                                   WidthB)) {
     if (BaseOpA->isIdenticalTo(*BaseOpB) &&
         OffsetAIsScalable == OffsetBIsScalable) {
       int LowOffset = OffsetA < OffsetB ? OffsetA : OffsetB;
@@ -3151,6 +3150,18 @@ unsigned AArch64InstrInfo::getLoadStoreImmIdx(unsigned Opc) {
   case AArch64::STZ2Gi:
   case AArch64::STZGi:
   case AArch64::TAGPstack:
+  case AArch64::ATOMIC_STORE_HINT_Bi:
+  case AArch64::ATOMIC_STORE_HINT_Hi:
+  case AArch64::ATOMIC_STORE_HINT_Wi:
+  case AArch64::ATOMIC_STORE_HINT_Si:
+  case AArch64::ATOMIC_STORE_HINT_Xi:
+  case AArch64::ATOMIC_STORE_HINT_Di:
+  case AArch64::ATOMIC_STORE_HINT_Bui:
+  case AArch64::ATOMIC_STORE_HINT_Hui:
+  case AArch64::ATOMIC_STORE_HINT_Wui:
+  case AArch64::ATOMIC_STORE_HINT_Sui:
+  case AArch64::ATOMIC_STORE_HINT_Xui:
+  case AArch64::ATOMIC_STORE_HINT_Dui:
     return 2;
   case AArch64::LD1B_D_IMM:
   case AArch64::LD1B_H_IMM:
@@ -3671,15 +3682,14 @@ bool AArch64InstrInfo::isCandidateToMergeOrPair(const MachineInstr &MI) const {
 
 bool AArch64InstrInfo::getMemOperandsWithOffsetWidth(
     const MachineInstr &LdSt, SmallVectorImpl<const MachineOperand *> &BaseOps,
-    int64_t &Offset, bool &OffsetIsScalable, LocationSize &Width,
-    const TargetRegisterInfo *TRI) const {
+    int64_t &Offset, bool &OffsetIsScalable, LocationSize &Width) const {
   if (!LdSt.mayLoadOrStore())
     return false;
 
   const MachineOperand *BaseOp;
   TypeSize WidthN(0, false);
   if (!getMemOperandWithOffsetWidth(LdSt, BaseOp, Offset, OffsetIsScalable,
-                                    WidthN, TRI))
+                                    WidthN))
     return false;
   // The maximum vscale is 16 under AArch64, return the maximal extent for the
   // vector.
@@ -3689,12 +3699,11 @@ bool AArch64InstrInfo::getMemOperandsWithOffsetWidth(
 }
 
 std::optional<ExtAddrMode>
-AArch64InstrInfo::getAddrModeFromMemoryOp(const MachineInstr &MemI,
-                                          const TargetRegisterInfo *TRI) const {
+AArch64InstrInfo::getAddrModeFromMemoryOp(const MachineInstr &MemI) const {
   const MachineOperand *Base; // Filled with the base operand of MI.
   int64_t Offset;             // Filled with the offset of MI.
   bool OffsetIsScalable;
-  if (!getMemOperandWithOffset(MemI, Base, Offset, OffsetIsScalable, TRI))
+  if (!getMemOperandWithOffset(MemI, Base, Offset, OffsetIsScalable))
     return std::nullopt;
 
   if (!Base->isReg())
@@ -4686,8 +4695,7 @@ static bool isPostIndexLdStOpcode(unsigned Opcode) {
 
 bool AArch64InstrInfo::getMemOperandWithOffsetWidth(
     const MachineInstr &LdSt, const MachineOperand *&BaseOp, int64_t &Offset,
-    bool &OffsetIsScalable, TypeSize &Width,
-    const TargetRegisterInfo *TRI) const {
+    bool &OffsetIsScalable, TypeSize &Width) const {
   assert(LdSt.mayLoadOrStore() && "Expected a memory operation.");
   // Handle only loads/stores with base register followed by immediate offset.
   if (LdSt.getNumExplicitOperands() == 3) {
@@ -4761,6 +4769,8 @@ bool AArch64InstrInfo::getMemOpInfo(unsigned Opcode, TypeSize &Scale,
   case AArch64::STRXui:
   case AArch64::STRDui:
   case AArch64::PRFMui:
+  case AArch64::ATOMIC_STORE_HINT_Xui:
+  case AArch64::ATOMIC_STORE_HINT_Dui:
     Scale = Width = TypeSize::getFixed(8);
     MinOffset = 0;
     MaxOffset = 4095;
@@ -4770,6 +4780,8 @@ bool AArch64InstrInfo::getMemOpInfo(unsigned Opcode, TypeSize &Scale,
   case AArch64::LDRSWui:
   case AArch64::STRWui:
   case AArch64::STRSui:
+  case AArch64::ATOMIC_STORE_HINT_Wui:
+  case AArch64::ATOMIC_STORE_HINT_Sui:
     Scale = Width = TypeSize::getFixed(4);
     MinOffset = 0;
     MaxOffset = 4095;
@@ -4780,6 +4792,7 @@ bool AArch64InstrInfo::getMemOpInfo(unsigned Opcode, TypeSize &Scale,
   case AArch64::LDRSHXui:
   case AArch64::STRHui:
   case AArch64::STRHHui:
+  case AArch64::ATOMIC_STORE_HINT_Hui:
     Scale = Width = TypeSize::getFixed(2);
     MinOffset = 0;
     MaxOffset = 4095;
@@ -4790,6 +4803,7 @@ bool AArch64InstrInfo::getMemOpInfo(unsigned Opcode, TypeSize &Scale,
   case AArch64::LDRSBXui:
   case AArch64::STRBui:
   case AArch64::STRBBui:
+  case AArch64::ATOMIC_STORE_HINT_Bui:
     Scale = Width = TypeSize::getFixed(1);
     MinOffset = 0;
     MaxOffset = 4095;
@@ -4868,6 +4882,8 @@ bool AArch64InstrInfo::getMemOpInfo(unsigned Opcode, TypeSize &Scale,
   case AArch64::STURDi:
   case AArch64::STLURXi:
   case AArch64::PRFUMi:
+  case AArch64::ATOMIC_STORE_HINT_Xi:
+  case AArch64::ATOMIC_STORE_HINT_Di:
     Scale = TypeSize::getFixed(1);
     Width = TypeSize::getFixed(8);
     MinOffset = -256;
@@ -4881,6 +4897,8 @@ bool AArch64InstrInfo::getMemOpInfo(unsigned Opcode, TypeSize &Scale,
   case AArch64::STURWi:
   case AArch64::STURSi:
   case AArch64::STLURWi:
+  case AArch64::ATOMIC_STORE_HINT_Wi:
+  case AArch64::ATOMIC_STORE_HINT_Si:
     Scale = TypeSize::getFixed(1);
     Width = TypeSize::getFixed(4);
     MinOffset = -256;
@@ -4896,6 +4914,7 @@ bool AArch64InstrInfo::getMemOpInfo(unsigned Opcode, TypeSize &Scale,
   case AArch64::STURHi:
   case AArch64::STURHHi:
   case AArch64::STLURHi:
+  case AArch64::ATOMIC_STORE_HINT_Hi:
     Scale = TypeSize::getFixed(1);
     Width = TypeSize::getFixed(2);
     MinOffset = -256;
@@ -4911,6 +4930,7 @@ bool AArch64InstrInfo::getMemOpInfo(unsigned Opcode, TypeSize &Scale,
   case AArch64::STURBi:
   case AArch64::STURBBi:
   case AArch64::STLURBi:
+  case AArch64::ATOMIC_STORE_HINT_Bi:
     Scale = Width = TypeSize::getFixed(1);
     MinOffset = -256;
     MaxOffset = 255;
@@ -8028,7 +8048,7 @@ unsigned AArch64InstrInfo::getAccumulationStartOpcode(
   case AArch64::SABAv16i8:
     return AArch64::SABDv16i8;
   case AArch64::SABAv2i32:
-    return AArch64::SABAv2i32;
+    return AArch64::SABDv2i32;
   case AArch64::SABAv4i16:
     return AArch64::SABDv4i16;
   case AArch64::SABAv4i32:
@@ -10388,7 +10408,7 @@ enum MachineOutlinerMBBFlags {
 /// gets the small FRAME encoding, and costs one extra instruction.
 static bool isCompactUnwindFrameRecordEnabled(const MachineFunction &MF) {
   return UseCompactUnwindFrameRecordForOutlinedFunctions &&
-         MF.getTarget().getTargetTriple().isOSBinFormatMachO();
+         MF.getFunction().getParent()->getTargetTriple().isOSBinFormatMachO();
 }
 
 /// Return true if the outlined function in \p MBB should save FP and LR as a
@@ -10692,7 +10712,7 @@ AArch64InstrInfo::getOutliningCandidateInfo(
 
       // Does it allow us to offset the base operand and is the base the
       // register SP?
-      if (!getMemOperandWithOffset(MI, Base, Offset, OffsetIsScalable, &TRI) ||
+      if (!getMemOperandWithOffset(MI, Base, Offset, OffsetIsScalable) ||
           !Base->isReg() || Base->getReg() != AArch64::SP)
         return false;
 
@@ -11246,8 +11266,8 @@ void AArch64InstrInfo::fixupPostOutline(MachineBasicBlock &MBB) const {
 
     // Is this a load or store with an immediate offset with SP as the base?
     if (!MI.mayLoadOrStore() ||
-        !getMemOperandWithOffsetWidth(MI, Base, Offset, OffsetIsScalable, Width,
-                                      &RI) ||
+        !getMemOperandWithOffsetWidth(MI, Base, Offset, OffsetIsScalable,
+                                      Width) ||
         (Base->isReg() && Base->getReg() != AArch64::SP))
       continue;
 

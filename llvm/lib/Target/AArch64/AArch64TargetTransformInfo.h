@@ -251,7 +251,7 @@ public:
       TTI::OperandValueInfo Op1Info = {TTI::OK_AnyValue, TTI::OP_None},
       TTI::OperandValueInfo Op2Info = {TTI::OK_AnyValue, TTI::OP_None},
       ArrayRef<const Value *> Args = {},
-      const Instruction *CxtI = nullptr) const override;
+      const Instruction *CtxI = nullptr) const override;
 
   InstructionCost
   getAddressComputationCost(Type *PtrTy, ScalarEvolution *SE, const SCEV *Ptr,
@@ -278,6 +278,14 @@ public:
   getCostOfKeepingLiveOverCall(ArrayRef<Type *> Tys) const override;
 
   bool isLegalMaskedExpandLoad(Type *DataTy, Align Alignment) const override;
+
+  bool isLegalSpeculativeLoad(Type *DataType,
+                              unsigned AddressSpace) const override;
+
+  bool hasMultiVectorLoadStore(
+      unsigned NumVectors, TTI::MaskSource Mask, VectorType *VectorTy,
+      bool IsStore,
+      std::optional<Instruction::CastOps> CastHint) const override;
 
   void getUnrollingPreferences(Loop *L, ScalarEvolution &SE,
                                TTI::UnrollingPreferences &UP,
@@ -506,7 +514,7 @@ public:
   getShuffleCost(TTI::ShuffleKind Kind, VectorType *DstTy, VectorType *SrcTy,
                  TTI::TargetCostKind CostKind, ArrayRef<int> Mask, int Index,
                  VectorType *SubTp, ArrayRef<const Value *> Args = {},
-                 const Instruction *CxtI = nullptr,
+                 const Instruction *CtxI = nullptr,
                  TTI::VectorInstrContext VIC =
                      TTI::VectorInstrContext::None) const override;
 
@@ -527,6 +535,11 @@ public:
                                        StackOffset BaseOffset, bool HasBaseReg,
                                        int64_t Scale,
                                        unsigned AddrSpace) const override;
+
+  bool isLegalAddressingMode(Type *Ty, GlobalValue *BaseGV, int64_t BaseOffset,
+                             bool HasBaseReg, int64_t Scale, unsigned AddrSpace,
+                             Instruction *I = nullptr,
+                             int64_t ScalableOffset = 0) const override;
 
   bool enableSelectOptimize() const override {
     return ST->enableSelectOptimize();
