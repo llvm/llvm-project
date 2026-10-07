@@ -324,6 +324,11 @@ features cannot lower the translation-unit ABI level;
   index such that it would inadvertently apply the attribute with no arguments,
   causing all function parameters of pointer type to be considered nonnull. (#GH228670)
 
+- Added `[[clang::unsafe_buffer_usage_in_container]]` (and equivalent spelling
+  `[[clang::unsafe_buffer_usage("container")]]`) to allow two-parameter container
+  and view constructors and factory functions to opt in to
+  `-Wunsafe-buffer-usage-in-container` diagnostics.
+
 ### Improvements to Clang's diagnostics
 
 - Fixed spurious `-Wimplicit-void-ptr-cast` warnings in C for parenthesized
@@ -541,6 +546,14 @@ features cannot lower the translation-unit ABI level;
 - `-Wno-unsafe-buffer-usage-in-static-sized-array` now also suppresses warnings
   for pointer arithmetic on statically-sized arrays when the offset is a
   non-negative constant within the array bounds.
+
+- `-Wunsafe-buffer-usage-in-container` now warns on unsafe calls to
+  two-parameter constructors and factory functions annotated with
+  `[[clang::unsafe_buffer_usage_in_container]]` or
+  `[[clang::unsafe_buffer_usage("container")]]`. For these annotated functions,
+  the safe `(.data(), .size())` and `(.begin(), .end())` argument checks use
+  duck typing rather than a hardcoded type list, suppressing false positives
+  when both methods are called on the same user-defined container object.
 
 - `-Wc++98-compat` now diagnoses explicit conversion functions in C++20 and
   later, matching the behavior in C++11 through C++17. (#GH161689)
