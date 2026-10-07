@@ -7,20 +7,17 @@
 //===----------------------------------------------------------------------===//
 ///
 /// \file
-/// Implementation of the ilogbf128 function.
+/// Unittests for the logbf128 function.
 ///
 //===----------------------------------------------------------------------===//
 
-#include "src/math/ilogbf128.h"
-#include "src/__support/CPP/bit.h"
-#include "src/__support/math/ilogbf128.h"
+#include "LogbTest.h"
 
-namespace LIBC_NAMESPACE_DECL {
+#include "src/__support/FPUtil/float128.h"
+#include "src/math/logbf128.h"
 
-using LIBC_NAMESPACE::fputil::Float128;
+#ifndef LIBC_TYPES_HAS_NATIVE_FLOAT128
+using float128 = LIBC_NAMESPACE::fputil::Float128;
+#endif // LIBC_TYPES_HAS_NATIVE_FLOAT128
 
-LLVM_LIBC_FUNCTION(int, ilogbf128, (float128 x)) {
-  return math::ilogbf128(cpp::bit_cast<Float128>(x));
-}
-
-} // namespace LIBC_NAMESPACE_DECL
+LIST_LOGB_TESTS(Logbf128, float128, LIBC_NAMESPACE::logbf128)

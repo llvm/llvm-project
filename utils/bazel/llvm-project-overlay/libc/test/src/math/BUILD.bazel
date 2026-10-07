@@ -410,6 +410,14 @@ math_mpfr_test(
 )
 
 math_mpfr_test(
+    name = "frexpf128",
+    hdrs = ["FrexpTest.h"],
+    deps = [
+        "//libc:__support_fputil_float128",
+    ],
+)
+
+math_mpfr_test(
     name = "fsqrt",
     hdrs = ["SqrtTest.h"],
 )
