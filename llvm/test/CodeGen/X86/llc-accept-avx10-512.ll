@@ -26,12 +26,9 @@ define <32 x bfloat> @foo_avx10.1(<16 x float> %a, <16 x float> %b) {
 define <8 x i32> @foo_avx10.2(<8 x double> %f) {
 ; CHECK-AVX10_1-LABEL: foo_avx10.2:
 ; CHECK-AVX10_1:       # %bb.0:
-; CHECK-AVX10_1-NEXT:    vcmpgepd {{\.?LCPI[0-9]+_[0-9]+}}(%rip){1to8}, %zmm0, %k1
-; CHECK-AVX10_1-NEXT:    vcvttpd2dq %zmm0, %ymm1
-; CHECK-AVX10_1-NEXT:    vpbroadcastd {{.*#+}} ymm1 {%k1} = [2147483647,2147483647,2147483647,2147483647,2147483647,2147483647,2147483647,2147483647]
-; CHECK-AVX10_1-NEXT:    vcmpunordpd %zmm0, %zmm0, %k0
-; CHECK-AVX10_1-NEXT:    knotb %k0, %k1
-; CHECK-AVX10_1-NEXT:    vmovdqa32 %ymm1, %ymm0 {%k1} {z}
+; CHECK-AVX10_1-NEXT:    vcmpordpd %zmm0, %zmm0, %k1
+; CHECK-AVX10_1-NEXT:    vminpd {{\.?LCPI[0-9]+_[0-9]+}}(%rip){1to8}, %zmm0, %zmm0 {%k1} {z}
+; CHECK-AVX10_1-NEXT:    vcvttpd2dq %zmm0, %ymm0
 ; CHECK-AVX10_1-NEXT:    retq
 ;
 ; CHECK-AVX10_2-LABEL: foo_avx10.2:
