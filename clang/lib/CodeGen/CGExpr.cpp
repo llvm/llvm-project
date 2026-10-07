@@ -1347,16 +1347,12 @@ void CodeGenFunction::EmitBoundsCheckImpl(const Expr *ArrayExpr,
             IndexInst);
 }
 
-/// Returns the qualified name of the function \p D for the TypeFuncHash modes,
-/// or "" if there is none.
 static SmallString<64> getAllocTokenFunctionName(const Decl *D,
                                                  const ASTContext &Ctx) {
   SmallString<64> Name;
   const auto *ND = dyn_cast_if_present<NamedDecl>(D);
   if (!ND)
     return Name;
-  // Use a fixed policy instead of the ASTContext's, so that the same function
-  // gets the same name in every TU.
   PrintingPolicy Policy(Ctx.getLangOpts());
   // Do not use name lookup to decide whether to print inline namespaces.
   Policy.SuppressInlineNamespace =
@@ -1378,7 +1374,6 @@ llvm::MDNode *CodeGenFunction::buildAllocToken(QualType AllocType) {
       getLangOpts().AllocTokenMode.value_or(llvm::DefaultAllocTokenMode);
   if (Mode == llvm::AllocTokenMode::TypeFuncHash ||
       Mode == llvm::AllocTokenMode::TypeFuncHashPointerSplit) {
-    // An empty type name denotes an unknown type.
     if (!ATMD)
       ATMD = llvm::AllocTokenMetadata{{}, false};
     // Use the outermost non-closure function, i.e. allocations in lambdas,

@@ -34,11 +34,12 @@ change or removal. These may (experimentally) be selected with `-Xclang
 
 - `typehash`: This mode assigns a token ID based on the hash of the allocated
   type's name.
-- `typefunchash`: This mode assigns a token ID based on the hash of the
-  allocated type's name (upper half of the token ID bits) and the hash of the
-  name of the function containing the allocation (lower half).
-- `typefunchashpointersplit`: Like `typefunchash`, but the most significant bit
-  of the token ID is set for types that contain pointers.
+- `typefunchashpointersplit`: This mode assigns a token ID based on the hash of
+  the allocated type's name and the hash of the name of the function containing
+  the allocation. The upper half of the token ID bits is the type name hash,
+  the lower half of the token ID bits is the function name hash, and the most
+  significant bit is a flag indicating whether the type contains pointers.
+- `typefunchash`: Like `typefunchashpointersplit`, but without the pointer flag.
 - `random`: This mode assigns a statically-determined random token ID to each
   allocation site.
 - `increment`: This mode assigns a simple, incrementally increasing token ID
@@ -48,10 +49,11 @@ The following command-line options affect generated token IDs:
 
 - `-falloc-token-max=<N>`
   : Configures the maximum number of token IDs. By default the number of tokens
-    is bounded by `SIZE_MAX`. In the `typefunchash` and
-    `typefunchashpointersplit` modes, `N` is rounded down to a power of two,
-    unless `N` is of the form `2^k-1` (e.g. the default `SIZE_MAX`), in which
-    case all `k` bits are used and token IDs are in `[0, N]`.
+    is bounded by `SIZE_MAX`. In the `typefunchashpointersplit` and
+    `typefunchash` modes, the number of token IDs is `N` rounded down to a
+    power of two. As an exception, if `N` is of the form `2^k-1`
+    (e.g. the default `SIZE_MAX`), these modes use all `k` bits and token IDs
+    are in `[0, N]`, i.e. a token ID may be equal to `N`.
 
 ## Querying Token IDs with `__builtin_infer_alloc_token`
 
@@ -65,9 +67,9 @@ size_t __builtin_infer_alloc_token(<args>, ...);
 This builtin returns the token ID inferred from its argument expressions, which
 mirror arguments normally passed to any allocation function. The argument
 expressions are **unevaluated**, so it can be used with expressions that would
-have side effects without any runtime impact. The builtin cannot be used in
-constant expressions in the `increment`, `random`, `typefunchash`, and
-`typefunchashpointersplit` modes.
+have side effects without any runtime impact. In the `typefunchashpointersplit`,
+`typefunchash`, `random`, and `increment` modes, the builtin cannot be used in
+constant expressions.
 
 For example, it can be used as follows:
 
