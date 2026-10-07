@@ -1,4 +1,4 @@
-; RUN: llc -O0 -march aarch64 -global-isel -stop-after=irtranslator -o - %s | llc -x mir -march aarch64 -run-pass=none -o - | FileCheck %s
+; RUN: llc -O0 -march aarch64 -global-isel -stop-after=ir-translator -o - %s | llc -x mir -march aarch64 -run-pass=none -o - | FileCheck %s
 
 define i16 @unnamed_stack() {
 entry:

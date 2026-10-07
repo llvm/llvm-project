@@ -691,7 +691,7 @@ void HWAddressSanitizer::initializeModule() {
   Mapping.init(TargetTriple, InstrumentWithCalls, CompileKernel);
 
   C = &(M.getContext());
-  IRBuilder<> IRB(*C);
+  IRBuilder<> IRB(M);
 
   HwasanCtorFunction = nullptr;
 
@@ -750,7 +750,7 @@ void HWAddressSanitizer::initializeModule() {
 }
 
 void HWAddressSanitizer::initializeCallbacks(Module &M) {
-  IRBuilder<> IRB(*C);
+  IRBuilder<> IRB(M);
   const std::string MatchAllStr = UseMatchAllCallback ? "_match_all" : "";
   FunctionType *HwasanMemoryAccessCallbackSizedFnTy,
       *HwasanMemoryAccessCallbackFnTy, *HwasanMemTransferFnTy,
@@ -1678,7 +1678,7 @@ void HWAddressSanitizer::sanitizeFunction(Function &F,
   assert(!ShadowBase);
 
   BasicBlock::iterator InsertPt = F.getEntryBlock().begin();
-  IRBuilder<> EntryIRB(&F.getEntryBlock(), InsertPt);
+  IRBuilder<> EntryIRB(InsertPt);
   emitPrologue(EntryIRB,
                /*WithFrameRecord*/ ClRecordStackHistory != none &&
                    Mapping.withFrameRecord() &&

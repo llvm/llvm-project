@@ -62,8 +62,7 @@ Function *PerfMonitor::getRDTSCP() {
   return Intrinsic::getOrInsertDeclaration(M, Intrinsic::x86_rdtscp);
 }
 
-PerfMonitor::PerfMonitor(const Scop &S, Module *M)
-    : M(M), Builder(M->getContext()), S(S) {
+PerfMonitor::PerfMonitor(const Scop &S, Module *M) : M(M), Builder(*M), S(S) {
   if (M->getTargetTriple().getArch() == llvm::Triple::x86_64)
     Supported = true;
   else

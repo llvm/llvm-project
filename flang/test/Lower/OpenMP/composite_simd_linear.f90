@@ -3,8 +3,8 @@
 
 
 subroutine do_simd
-!CHECK: %[[I:.*]]:2 = hlfir.declare %{{.*}} {uniq_name = "_QFdo_simdEi"} : (!fir.ref<i32>) -> (!fir.ref<i32>, !fir.ref<i32>)
-!CHECK: %[[X:.*]]:2 = hlfir.declare %{{.*}} {uniq_name = "_QFdo_simdEx"} : (!fir.ref<i32>) -> (!fir.ref<i32>, !fir.ref<i32>)
+!CHECK: %[[I:.*]]:2 = hlfir.declare %{{.*}} uniq_name("_QFdo_simdEi") : (!fir.ref<i32>) -> (!fir.ref<i32>, !fir.ref<i32>)
+!CHECK: %[[X:.*]]:2 = hlfir.declare %{{.*}} uniq_name("_QFdo_simdEx") : (!fir.ref<i32>) -> (!fir.ref<i32>, !fir.ref<i32>)
 !CHECK: %[[CONST:.*]] = arith.constant 1 : i32
 !CHECK: %{{.*}} = arith.constant 1 : i32
 !CHECK: %[[IV_STEP:.*]] = arith.constant 1 : i32
@@ -24,7 +24,7 @@ end subroutine do_simd
 
 
 subroutine distribute_simd
-!CHECK: %[[I:.*]]:2 = hlfir.declare %{{.*}} {uniq_name = "_QFdistribute_simdEi"} : (!fir.ref<i32>) -> (!fir.ref<i32>, !fir.ref<i32>)
+!CHECK: %[[I:.*]]:2 = hlfir.declare %{{.*}} uniq_name("_QFdistribute_simdEi") : (!fir.ref<i32>) -> (!fir.ref<i32>, !fir.ref<i32>)
 !CHECK: omp.teams {
 !CHECK: omp.distribute {
 !DEFAULT: omp.simd linear({{.*}}) linear_var_types([i32]) {
@@ -43,7 +43,7 @@ end subroutine distribute_simd
 
 
 subroutine distribute_parallel_do
-!CHECK: %[[I:.*]]:2 = hlfir.declare {{.*}} {uniq_name = "_QFdistribute_parallel_doEi"} : (!fir.ref<i32>) -> (!fir.ref<i32>, !fir.ref<i32>)
+!CHECK: %[[I:.*]]:2 = hlfir.declare {{.*}} uniq_name("_QFdistribute_parallel_doEi") : (!fir.ref<i32>) -> (!fir.ref<i32>, !fir.ref<i32>)
 !CHECK: omp.teams {
 !CHECK: omp.parallel {
 !CHECK: %[[CONST:.*]] = arith.constant 1 : i32
@@ -65,8 +65,8 @@ subroutine distribute_parallel_do
 end subroutine distribute_parallel_do
 
 subroutine parallel_do
-!CHECK: %[[I:.*]]:2 = hlfir.declare %{{.*}} {uniq_name = "_QFparallel_doEi"} : (!fir.ref<i32>) -> (!fir.ref<i32>, !fir.ref<i32>)
-!CHECK: %[[X:.*]]:2 = hlfir.declare %{{.*}} {uniq_name = "_QFparallel_doEx"} : (!fir.ref<i32>) -> (!fir.ref<i32>, !fir.ref<i32>)
+!CHECK: %[[I:.*]]:2 = hlfir.declare %{{.*}} uniq_name("_QFparallel_doEi") : (!fir.ref<i32>) -> (!fir.ref<i32>, !fir.ref<i32>)
+!CHECK: %[[X:.*]]:2 = hlfir.declare %{{.*}} uniq_name("_QFparallel_doEx") : (!fir.ref<i32>) -> (!fir.ref<i32>, !fir.ref<i32>)
 !CHECK: omp.parallel {
 !CHECK: %[[LINEAR_STEP:.*]] = arith.constant 2 : i32
 !CHECK: %{{.*}} = arith.constant 1 : i32
@@ -85,8 +85,8 @@ subroutine parallel_do
 end subroutine parallel_do
 
 subroutine teams_distribute
-!CHECK: %[[I:.*]]:2 = hlfir.declare %{{.*}} {uniq_name = "_QFteams_distributeEi"} : (!fir.ref<i32>) -> (!fir.ref<i32>, !fir.ref<i32>)
-!CHECK: %[[X:.*]]:2 = hlfir.declare %{{.*}} {uniq_name = "_QFteams_distributeEx"} : (!fir.ref<i32>) -> (!fir.ref<i32>, !fir.ref<i32>)
+!CHECK: %[[I:.*]]:2 = hlfir.declare %{{.*}} uniq_name("_QFteams_distributeEi") : (!fir.ref<i32>) -> (!fir.ref<i32>, !fir.ref<i32>)
+!CHECK: %[[X:.*]]:2 = hlfir.declare %{{.*}} uniq_name("_QFteams_distributeEx") : (!fir.ref<i32>) -> (!fir.ref<i32>, !fir.ref<i32>)
 !CHECK: omp.teams {
 !CHECK: %[[LINEAR_STEP:.*]] = arith.constant 1 : i32
 !CHECK: {{.*}} = arith.constant 1 : i32
@@ -103,8 +103,8 @@ subroutine teams_distribute
 end subroutine teams_distribute
 
 subroutine teams_distribute_parallel_do
-!CHECK: %[[I:.*]]:2 = hlfir.declare %{{.*}} {uniq_name = "_QFteams_distribute_parallel_doEi"} : (!fir.ref<i32>) -> (!fir.ref<i32>, !fir.ref<i32>)
-!CHECK: %[[X:.*]]:2 = hlfir.declare %{{.*}} {uniq_name = "_QFteams_distribute_parallel_doEx"} : (!fir.ref<i32>) -> (!fir.ref<i32>, !fir.ref<i32>)
+!CHECK: %[[I:.*]]:2 = hlfir.declare %{{.*}} uniq_name("_QFteams_distribute_parallel_doEi") : (!fir.ref<i32>) -> (!fir.ref<i32>, !fir.ref<i32>)
+!CHECK: %[[X:.*]]:2 = hlfir.declare %{{.*}} uniq_name("_QFteams_distribute_parallel_doEx") : (!fir.ref<i32>) -> (!fir.ref<i32>, !fir.ref<i32>)
 !CHECK: omp.teams {
 !CHECK: omp.parallel {
 !CHECK: %[[LINEAR_STEP:.*]] = arith.constant 1 : i32
