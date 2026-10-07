@@ -3389,11 +3389,15 @@ bool isLDSDMAIntrinsic(unsigned IntrID) {
   return lookupLDSDMAIntrinsic(IntrID);
 }
 
-std::optional<unsigned> getCvtScaleF32ScaleArgIdx(unsigned IntrID) {
+std::optional<unsigned> getExponentOnlyScaleArgIdx(unsigned IntrID) {
   if (const ExponentOnlyScaleIntrinsic *Info =
           lookupExponentOnlyScaleIntrinsic(IntrID))
     return Info->ScaleArg;
   return std::nullopt;
+}
+
+APInt getExponentOnlyScaleDemandedBits() {
+  return APInt::getBitsSet(32, 23, 31);
 }
 
 const GcnBufferFormatInfo *getGcnBufferFormatInfo(uint8_t BitsPerComp,

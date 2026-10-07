@@ -183,6 +183,24 @@ define i32 @exponent_mask_multi_use(<8 x bfloat> %src, i32 %bits, ptr addrspace(
   ret i32 %r
 }
 
+; The masked seed must keep its mask.
+define i32 @sr_exponent_mask(<8 x bfloat> %src, i32 %x, i32 %bits) {
+; GFX1250-LABEL: sr_exponent_mask:
+; GFX1250:       ; %bb.0:
+; GFX1250-NEXT:    s_wait_loadcnt_dscnt 0x0
+; GFX1250-NEXT:    s_wait_kmcnt 0x0
+; GFX1250-NEXT:    v_and_b32_e32 v6, 0x7f800000, v4
+; GFX1250-NEXT:    s_delay_alu instid0(VALU_DEP_1) | instskip(NEXT) | instid1(VALU_DEP_1)
+; GFX1250-NEXT:    v_cvt_scalef32_sr_pk8_fp4_bf16 v4, v[0:3], v6, v5
+; GFX1250-NEXT:    v_mov_b32_e32 v0, v4
+; GFX1250-NEXT:    s_set_pc_i64 s[30:31]
+  %seed = and i32 %x, 2139095040
+  %and = and i32 %bits, 2139095040
+  %scale = bitcast i32 %and to float
+  %r = call i32 @llvm.amdgcn.cvt.scalef32.sr.pk8.fp4.bf16(<8 x bfloat> %src, i32 %seed, float %scale)
+  ret i32 %r
+}
+
 ; Negative test: the mask clears an exponent bit.
 define i32 @partial_exponent_mask(<8 x bfloat> %src, i32 %bits) {
 ; GFX1250-LABEL: partial_exponent_mask:
@@ -201,3 +219,4 @@ define i32 @partial_exponent_mask(<8 x bfloat> %src, i32 %bits) {
 }
 
 declare i32 @llvm.amdgcn.cvt.scalef32.pk8.fp4.bf16(<8 x bfloat>, float)
+declare i32 @llvm.amdgcn.cvt.scalef32.sr.pk8.fp4.bf16(<8 x bfloat>, i32, float)
