@@ -5,9 +5,11 @@
 ; RUN:  llc -amdgpu-scalarize-global-loads=false  -mtriple=amdgpu10.10 -mattr=-flat-for-global < %s | FileCheck -check-prefixes=GFX10 %s
 ; RUN:  llc -amdgpu-scalarize-global-loads=false  -mtriple=amdgpu11.00 -mattr=-flat-for-global,+real-true16 < %s | FileCheck -check-prefixes=GFX11 %s
 ; RUN:  llc -amdgpu-scalarize-global-loads=false  -mtriple=amdgpu11.00 -mattr=-flat-for-global,-real-true16 < %s | FileCheck -check-prefixes=GFX11 %s
-; RUN:  llc -amdgpu-scalarize-global-loads=false  -mtriple=amdgpu12.00 -mattr=-flat-for-global,+real-true16 < %s | FileCheck -check-prefixes=GFX12 %s
-; RUN:  llc -amdgpu-scalarize-global-loads=false  -mtriple=amdgpu12.00 -mattr=-flat-for-global,-real-true16 < %s | FileCheck -check-prefixes=GFX12 %s
+; RUN:  llc -amdgpu-scalarize-global-loads=false  -mtriple=amdgpu12.00 -mattr=-flat-for-global,+real-true16 < %s | FileCheck -check-prefixes=GFX12,GFX12-DEFSCHED %s
+; RUN:  llc -amdgpu-scalarize-global-loads=false  -mtriple=amdgpu12.00 -mattr=-flat-for-global,-real-true16 < %s | FileCheck -check-prefixes=GFX12,GFX12-DEFSCHED %s
+; RUN:  llc -enable-new-pm -amdgpu-scalarize-global-loads=false  -mtriple=amdgpu12.00 -mattr=-flat-for-global < %s | FileCheck -check-prefixes=GFX12,GFX12-DEFSCHED %s
 ; RUN:  llc -amdgpu-scalarize-global-loads=false  -mtriple=amdgpu12.00 -mattr=-flat-for-global -amdgpu-use-ssa-machine-scheduler=1 < %s | FileCheck -check-prefixes=GFX12,GFX12-SSASCHED %s
+; RUN:  llc -enable-new-pm -amdgpu-scalarize-global-loads=false  -mtriple=amdgpu12.00 -mattr=-flat-for-global -amdgpu-use-ssa-machine-scheduler=1 < %s | FileCheck -check-prefixes=GFX12,GFX12-SSASCHED %s
 ; RUN:  llc -amdgpu-scalarize-global-loads=false  -mtriple=amdgpu12.50 -mattr=-flat-for-global < %s | FileCheck -check-prefixes=GFX1250 %s
 ; RUN:  llc -amdgpu-scalarize-global-loads=false  -mtriple=amdgpu13.10 -mattr=-flat-for-global < %s | FileCheck -check-prefixes=GFX13 %s
 ; RUN:  llc -amdgpu-scalarize-global-loads=false  -mtriple=r600 -mcpu=redwood < %s | FileCheck -check-prefixes=EG %s

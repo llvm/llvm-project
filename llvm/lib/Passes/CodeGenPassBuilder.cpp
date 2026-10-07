@@ -875,6 +875,13 @@ Error CodeGenPassBuilder::addOptimizedRegAlloc(PassManagerWrapper &PMW) {
   addMachineFunctionPass(
       RequireAnalysisPass<LiveVariablesAnalysis, MachineFunction>(), PMW);
 
+  // If enabled, run the SSA machine scheduler just before PHI elimination.
+  if (Opt.EnableSSAMachineScheduler) {
+    addMachineFunctionPass(
+        RequireAnalysisPass<LiveIntervalsAnalysis, MachineFunction>(), PMW);
+    addMachineFunctionPass(SSAMachineSchedulerPass(&TM), PMW);
+  }
+
   // Edge splitting is smarter with machine loop info.
   addMachineFunctionPass(
       RequireAnalysisPass<MachineLoopAnalysis, MachineFunction>(), PMW);
