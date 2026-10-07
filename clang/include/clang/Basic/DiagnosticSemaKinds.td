@@ -12130,6 +12130,8 @@ def warn_omp_minus_in_reduction_deprecated : Warning<
   InGroup<Deprecated>;
 def err_omp_unexpected_clause_value : Error<
   "expected %0 in OpenMP clause '%1'">;
+def err_omp_unexpected_clause_modifier : Error<
+  "unexpected modifier in OpenMP clause '%0'">;
 def err_omp_unexpected_call_to_omp_runtime_api
     : Error<"calls to OpenMP runtime API are not allowed within a region that "
             "corresponds to a construct with an order clause that specifies "

@@ -7991,20 +7991,34 @@ void SemaOpenMP::ActOnOpenMPDeclareVariantDirective(
   }
 
   // OpenMP 6.0 [5.2.1]: each parameter list item may be specified only once
-  // per directive. The subject is the item, so a range is exempt and a name
-  // does not collide with a position that resolves to the same parameter.
+  // across all clauses of the same type in a directive. A range has the effect
+  // of specifying each of its parameter positions individually.
   llvm::SmallPtrSet<const VarDecl *, 4> AdjustVars; // named items
-  llvm::SmallSet<uint64_t, 4> AdjustPositions;      // literal positional items
+  llvm::SmallSet<uint64_t, 4> AdjustPositions; // positions, including ranges
 
   for (const OMPAdjustArgsClause *Clause : AdjustArgs) {
+    if (Clause->NeedDevicePtrModifier != OMPC_NEED_DEVICE_PTR_unknown &&
+        Clause->AdjustOp != OMPC_ADJUST_ARGS_need_device_ptr) {
+      Diag(AdjustArgsLoc, diag::err_omp_unexpected_clause_modifier)
+          << getOpenMPClauseName(OMPC_adjust_args);
+      return;
+    }
     for (const OMPAdjustArgsItem &ItemInfo : Clause->items()) {
-      // OpenMP 6.0 [5.2.1]: a parameter range 'lb:ub'. A range is
-      // exempt from the duplicate restriction above — it is one item
-      // identifying one or more parameters — so nothing is recorded for
-      // dedup.
       if (ItemInfo.Kind == OMPAdjustArgsItem::Range) {
         if (!checkOMPAdjustArgsRange(*this, ItemInfo))
-          return;
+          continue;
+        SmallVector<unsigned, 8> Positions;
+        if (resolveOMPAdjustArgsItem(ItemInfo, FD, FD->getNumParams(),
+                                     getASTContext(), Positions)) {
+          for (unsigned Pos : Positions) {
+            if (!AdjustPositions.insert(Pos).second) {
+              Diag(getOMPAdjustArgsItemLoc(ItemInfo, AdjustArgsLoc),
+                   diag::err_omp_adjust_arg_multiple_clauses)
+                  << Pos;
+              return;
+            }
+          }
+        }
         continue;
       }
 
@@ -8055,6 +8069,12 @@ void SemaOpenMP::ActOnOpenMPDeclareVariantDirective(
           }
           continue;
         }
+      }
+
+      if (isa<DeclRefExpr>(Item)) {
+        Diag(Item->getExprLoc(), diag::err_omp_param_or_this_in_clause)
+            << FD << 0;
+        return;
       }
 
       // Not a name or a position: neither form OpenMP 6.0 allows for a

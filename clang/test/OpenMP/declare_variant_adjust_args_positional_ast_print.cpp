@@ -52,12 +52,12 @@ void range(int *A, int *B, int *C, int *D);
 
 // 'omp_num_args' is spelled only as a range bound, optionally with a constant
 // logical offset.
-// PRINT: #pragma omp declare variant(v_variadic) match(construct={dispatch}) adjust_args(need_device_ptr:1:3,5,omp_num_args-1:omp_num_args)
+// PRINT: #pragma omp declare variant(v_variadic) match(construct={dispatch}) adjust_args(need_device_ptr:1:2,5,omp_num_args-1:omp_num_args)
 // DUMP: FunctionDecl{{.*}}variadic 'void (int *, int *, int *, int *, ...)'
 // DUMP: IntegerLiteral{{.*}}'int' 5
 // DUMP-NEXT: IntegerLiteral{{.*}}'int' 1
 #pragma omp declare variant(v_variadic) match(construct={dispatch}) \
-  adjust_args(need_device_ptr: 1:3, 5, omp_num_args-1:omp_num_args)
+  adjust_args(need_device_ptr: 1:2, 5, omp_num_args-1:omp_num_args)
 void variadic(int *A, int *B, int *C, int *D, ...);
 
 // Both signs of the logical offset are accepted. An item that resolves outside
@@ -150,9 +150,9 @@ void tmpl(int *A, int *B, int *C, ...);
 // In the pattern the offset stays dependent.
 // DUMP: DeclRefExpr{{.*}}'int' NonTypeTemplateParm{{.*}}'N' 'int'
 //
-// PRINT: #pragma omp declare variant(tmpl_v<N>) match(construct={dispatch}) adjust_args(need_device_ptr:N:N + 1,omp_num_args-N:omp_num_args)
+// PRINT: #pragma omp declare variant(tmpl_v<N>) match(construct={dispatch}) adjust_args(need_device_ptr:N:N + 1,omp_num_args+N:omp_num_args)
 #pragma omp declare variant(tmpl_v<N>) match(construct={dispatch}) \
-  adjust_args(need_device_ptr: N:N + 1, omp_num_args-N:omp_num_args)
+  adjust_args(need_device_ptr: N:N + 1, omp_num_args+N:omp_num_args)
 template <int N>
 void tmpl(int *A, int *B, int *C, ...) {}
 

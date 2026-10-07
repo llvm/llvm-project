@@ -85,3 +85,18 @@ void v_tmpl_pack(int *aaa, ...);
   adjust_args(need_device_ptr: Ns)
 template <int... Ns>
 void tmpl_pack(int *aaa, ...) {}
+
+// Overlaps involving dependent bounds are checked after substitution.
+template <int N>
+void v_tmpl_duplicate(int *aaa, int *bbb, int *ccc, ...);
+
+// expected-error@+2 {{'adjust_arg' argument 2 used in multiple clauses}}
+#pragma omp declare variant(v_tmpl_duplicate<N>) match(construct={dispatch}) \
+  adjust_args(need_device_ptr: 1:N, 2:3)
+template <int N>
+void tmpl_duplicate(int *aaa, int *bbb, int *ccc, ...) {}
+
+template void tmpl_duplicate<1>(int *, int *, int *, ...);
+
+// expected-note@+1 {{in instantiation of function template specialization 'tmpl_duplicate<2>' requested here}}
+template void tmpl_duplicate<2>(int *, int *, int *, ...);

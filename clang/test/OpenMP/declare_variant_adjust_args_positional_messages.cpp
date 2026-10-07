@@ -93,6 +93,14 @@ void f12(int *aaa, int *bbb, ...);
   adjust_args(need_device_ptr: G)
 void f13(int *aaa, int *bbb, ...);
 
+// A non-integer name that is not a function parameter gets the parameter-name
+// diagnostic after integer and dependent positional expressions are handled.
+int *GlobalPointer;
+// expected-error@+2 {{expected reference to one of the parameters of function 'non_parameter_pointer'}}
+#pragma omp declare variant(v1) match(construct={dispatch}) \
+  adjust_args(need_device_ptr: (GlobalPointer))
+void non_parameter_pointer(int *aaa, int *bbb, ...);
+
 // The list must have at least one item.
 // expected-error@+2 {{expected expression}}
 #pragma omp declare variant(v1) match(construct={dispatch}) \
@@ -163,6 +171,53 @@ void h4(int *aaa, int *bbb, ...);
   adjust_args(need_device_ptr: 2, 2)
 void h5(int *aaa, int *bbb, ...);
 
+// Ranges specify their positions individually, so overlaps are duplicates.
+// expected-error@+2 {{'adjust_arg' argument 2 used in multiple clauses}}
+#pragma omp declare variant(v1) match(construct={dispatch}) \
+  adjust_args(need_device_ptr: 1:2, 2:2)
+void duplicate_ranges(int *aaa, int *bbb, ...);
+
+// An invalid range does not prevent checking the remaining items.
+// expected-error@+3 {{argument to 'adjust_args' clause must be a strictly positive integer value}}
+// expected-error@+2 {{'adjust_arg' argument 2 used in multiple clauses}}
+#pragma omp declare variant(v1) match(construct={dispatch}) \
+  adjust_args(need_device_ptr: 0:2, 1:2, 2:2)
+void invalid_range_then_duplicates(int *aaa, int *bbb, ...);
+
+// expected-error@+2 {{'adjust_arg' argument 1 used in multiple clauses}}
+#pragma omp declare variant(v1) match(construct={dispatch}) \
+  adjust_args(need_device_ptr: 1:2, 1:2)
+void identical_ranges(int *aaa, int *bbb, ...);
+
+// A range and a position collide in either order.
+// expected-error@+2 {{'adjust_arg' argument 2 used in multiple clauses}}
+#pragma omp declare variant(v1) match(construct={dispatch}) \
+  adjust_args(need_device_ptr: 1:2, 2)
+void range_then_position(int *aaa, int *bbb, ...);
+
+// expected-error@+2 {{'adjust_arg' argument 2 used in multiple clauses}}
+#pragma omp declare variant(v1) match(construct={dispatch}) \
+  adjust_args(need_device_ptr: 2, 1:2)
+void position_then_range(int *aaa, int *bbb, ...);
+
+// The duplicate restriction applies across different adjustment operations.
+// expected-error@+3 {{'adjust_arg' argument 2 used in multiple clauses}}
+#pragma omp declare variant(v1) match(construct={dispatch}) \
+  adjust_args(need_device_ptr: 1:2) \
+  adjust_args(nothing: 2:2)
+void duplicate_ranges_across_clauses(int *aaa, int *bbb, ...);
+
+// Omitted bounds and omp_num_args participate in the same check.
+// expected-error@+2 {{'adjust_arg' argument 2 used in multiple clauses}}
+#pragma omp declare variant(v1) match(construct={dispatch}) \
+  adjust_args(need_device_ptr: :2, omp_num_args:omp_num_args)
+void duplicate_implicit_bounds(int *aaa, int *bbb, ...);
+
+// Adjacent ranges do not overlap.
+#pragma omp declare variant(v1) match(construct={dispatch}) \
+  adjust_args(need_device_ptr: 1:1, 2:2)
+void adjacent_ranges(int *aaa, int *bbb, ...);
+
 // A name and a position that happen to resolve to the same parameter are two
 // distinct items (OpenMP 6.0 [5.2.1]), so this is accepted, not a
 // duplicate.
@@ -201,6 +256,11 @@ template void dependent_type<int, 2>(int *, int *, ...);
 void h8(int *aaa, int *bbb, ...);
 
 constexpr int PositionOne = 1;
+// A constant integer name remains a valid positional expression.
+#pragma omp declare variant(v1) match(construct={dispatch}) \
+  adjust_args(need_device_ptr: PositionOne)
+void constant_position(int *aaa, int *bbb, ...);
+
 // expected-error@+2 {{expected reference type argument on 'adjust_args' clause with 'need_device_addr' modifier}}
 #pragma omp declare variant(v1) match(construct={dispatch}) \
   adjust_args(need_device_addr: PositionOne)
