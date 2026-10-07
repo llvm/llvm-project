@@ -409,22 +409,20 @@ TEST_F(FormatTestSelective, WrongIndent) {
 TEST_F(FormatTestSelective, KeepsEmptyLineBeforeNamespaceClosingBrace) {
   // The closing brace is not in the range, but its leading empty line is
   // reformatted because the previous line (or the empty line itself) is.
-  std::string Code = "namespace N {\n"
-                     "\n"
-                     "int i;\n"
-                     "\n"
-                     "}";
-  EXPECT_EQ(Code, format(Code, 15, 0)); // Format `int i;`.
-  EXPECT_EQ(Code, format(Code, 22, 0)); // Format the empty line before `}`.
+  StringRef Code = "namespace N {\n"
+                   "int i;\n"
+                   "\n"
+                   "}";
+  EXPECT_EQ(Code, format(Code, 14, 0)); // Format `int i;`.
+  EXPECT_EQ(Code, format(Code, 21, 0)); // Format the empty line before `}`.
 
   Style.NamespaceMacros.push_back("TESTSUITE");
   Code = "TESTSUITE(N) {\n"
-         "\n"
          "int i;\n"
          "\n"
          "}";
-  EXPECT_EQ(Code, format(Code, 16, 0)); // Format `int i;`.
-  EXPECT_EQ(Code, format(Code, 23, 0)); // Format the empty line before `}`.
+  EXPECT_EQ(Code, format(Code, 15, 0)); // Format `int i;`.
+  EXPECT_EQ(Code, format(Code, 22, 0)); // Format the empty line before `}`.
 
   Style.BreakBeforeBraces = FormatStyle::BS_Custom;
   Style.BraceWrapping.AfterNamespace = true;
