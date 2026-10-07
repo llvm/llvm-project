@@ -20,6 +20,7 @@
 
 #include "llvm/Support/ConvertUTF.h"
 #include "llvm/Support/FileSystem.h"
+#include "llvm/Support/Path.h"
 #include "llvm/Support/Windows/WindowsSupport.h"
 
 using namespace lldb_private;
@@ -46,7 +47,13 @@ Status FileSystem::Symlink(const FileSpec &src, const FileSpec &dst) {
   }
   bool is_directory = !!(attrib & FILE_ATTRIBUTE_DIRECTORY);
   DWORD flag = is_directory ? SYMBOLIC_LINK_FLAG_DIRECTORY : 0;
-  BOOL result = ::CreateSymbolicLinkW(wsrc.data(), wdst.c_str(), flag);
+  // The link stores its target as given. widenPath makes a long relative
+  // target absolute, which would change what the link points to, so only an
+  // absolute target gets the "\\?\" prefix.
+  const wchar_t *target = llvm::sys::path::is_absolute(dst.GetPath())
+                              ? wdst_long.data()
+                              : wdst.c_str();
+  BOOL result = ::CreateSymbolicLinkW(wsrc.data(), target, flag);
   if (!result)
     error = Status(::GetLastError(), lldb::eErrorTypeWin32);
   return error;
