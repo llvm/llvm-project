@@ -620,6 +620,10 @@ extern char &SIInsertHardClausesID;
 void initializeSIInsertWaitcntsLegacyPass(PassRegistry &);
 extern char &SIInsertWaitcntsID;
 
+void initializeAMDGPUStaticSimulatorLegacyPass(PassRegistry &);
+FunctionPass *createAMDGPUStaticSimulatorPass();
+extern char &AMDGPUStaticSimulatorLegacyID;
+
 void initializeSIFormMemoryClausesLegacyPass(PassRegistry &);
 extern char &SIFormMemoryClausesID;
 

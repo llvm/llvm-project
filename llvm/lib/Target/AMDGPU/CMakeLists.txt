@@ -41,6 +41,7 @@ tablegen(LLVM R600GenSubtargetInfo.inc -gen-subtarget)
 add_public_tablegen_target(AMDGPUCommonTableGen)
 
 add_llvm_target(AMDGPUCodeGen
+  AMDGPUSim/MIRAdapter.cpp
   AMDGPUAliasAnalysis.cpp
   AMDGPUAlwaysInlinePass.cpp
   AMDGPUAnnotateUniformValues.cpp
@@ -117,6 +118,7 @@ add_llvm_target(AMDGPUCodeGen
   AMDGPUSelectionDAGInfo.cpp
   AMDGPUSetWavePriority.cpp
   AMDGPUSplitModule.cpp
+  AMDGPUStaticSimulator.cpp
   AMDGPUSubtarget.cpp
   AMDGPUTargetMachine.cpp
   AMDGPUTargetObjectFile.cpp
@@ -196,6 +198,7 @@ add_llvm_target(AMDGPUCodeGen
   LINK_COMPONENTS
   AMDGPUDesc
   AMDGPUInfo
+  AMDGPUSim
   AMDGPUUtils
   Analysis
   AsmPrinter
@@ -224,6 +227,7 @@ add_llvm_target(AMDGPUCodeGen
   AMDGPU
   )
 
+add_subdirectory(AMDGPUSim)
 add_subdirectory(AsmParser)
 add_subdirectory(Disassembler)
 add_subdirectory(MCA)
