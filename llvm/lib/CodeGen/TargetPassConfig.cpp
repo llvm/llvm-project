@@ -449,6 +449,9 @@ TargetPassConfig::TargetPassConfig(TargetMachine &TM, PassManagerBase &PM)
   if (Opts.global_isel_abort)
     TM.Options.GlobalISelAbort = *Opts.global_isel_abort;
 
+  if (Opts.function_splitting)
+    TM.Options.FunctionSplitting = *Opts.function_splitting;
+
   setStartStopPasses();
 }
 

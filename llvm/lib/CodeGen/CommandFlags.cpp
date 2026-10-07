@@ -92,7 +92,6 @@ CGOPT(bool, IgnoreXCOFFVisibility)
 CGOPT(bool, XCOFFTracebackTable)
 CGOPT(bool, EnableBBAddrMap)
 CGOPT(std::string, BBSections)
-CGOPT(FunctionSplittingMode, FunctionSplitting)
 CGOPT(unsigned, TLSSize)
 CGOPT_EXP(bool, EmulatedTLS)
 CGOPT_EXP(bool, EnableTLSDESC)
@@ -432,20 +431,6 @@ codegen::RegisterCodeGenFlags::RegisterCodeGenFlags() {
       cl::init(false));
   CGBINDOPT(EnableDebugEntryValues);
 
-  static cl::opt<FunctionSplittingMode> FunctionSplitting(
-      "function-splitting",
-      cl::desc("Which functions are eligible for late function splitting"),
-      cl::init(FunctionSplittingMode::BBSectionsOnly),
-      cl::values(
-          clEnumValN(FunctionSplittingMode::None, "none",
-                     "Do not split any function"),
-          clEnumValN(FunctionSplittingMode::BBSectionsOnly, "bbsections",
-                     "Only split functions which have a basic block sections "
-                     "profile"),
-          clEnumValN(FunctionSplittingMode::All, "all",
-                     "Split functions using the basic block sections profile "
-                     "where it is available, and PGO/AutoFDO elsewhere")));
-  CGBINDOPT(FunctionSplitting);
 
   static cl::opt<bool> EnableStaticDataPartitioning(
       "partition-static-data-sections",
@@ -558,7 +543,6 @@ codegen::InitTargetOptionsFromCodeGenFlags(const Triple &TheTriple) {
   Options.ExceptionModel = getExceptionModel();
   Options.VecLib = getVectorLibrary();
   Options.EmitStackSizeSection = getEnableStackSizeSection();
-  Options.FunctionSplitting = getFunctionSplitting();
   Options.EnableStaticDataPartitioning = getEnableStaticDataPartitioning();
   Options.EmitAddrsig = getEnableAddrsig();
   Options.EmitCallGraphSection = getEnableCallGraphSection();

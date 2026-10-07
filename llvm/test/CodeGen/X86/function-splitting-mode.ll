@@ -10,7 +10,7 @@
 
 ;; Invalid modes are rejected.
 ; RUN: not llc < %s -mtriple=x86_64-unknown-linux-gnu -function-splitting=bogus 2>&1 | FileCheck %s --check-prefix=ERR
-; ERR: for the --function-splitting option: Cannot find option named 'bogus'!
+; ERR: invalid value 'bogus' in '-function-splitting=bogus'
 
 define void @foo(i1 zeroext %0) nounwind !prof !14 !section_prefix !15 {
 ; SPLIT-LABEL:   foo

@@ -151,6 +151,11 @@ defm : BoolField<"enable-implicit-null-checks", "false",
   "Fold null checks into faulting memory operations">;
 defm : OptionalBoolField<"enable-ipra",
   "Enable interprocedural register allocation to reduce load/store at procedure calls">;
+defm : EnumField<"function-splitting", "std::optional<FunctionSplittingMode>", "std::nullopt",
+  "none,bbsections,all",
+  ["FunctionSplittingMode::None", "FunctionSplittingMode::BBSectionsOnly",
+   "FunctionSplittingMode::All"],
+  "Which functions are eligible for late function splitting">;
 // -fast-isel selects FastISel at any optimization level, and -fast-isel=0
 // disables it at -O0, where it is used unless GlobalISel is enabled.
 defm : OptionalBoolField<"fast-isel",
