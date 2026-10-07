@@ -2005,7 +2005,8 @@ Instruction *InstCombinerImpl::visitSExt(SExtInst &Sext) {
     if (Src->hasOneUse() &&
         match(X, m_LShr(m_Value(Y), m_APIntAllowPoison(C))) &&
         C->ule(TruncatedBits) &&
-        ComputeNumSignBits(Y, &Sext) + C->getZExtValue() > TruncatedBits) {
+        (*C == TruncatedBits ||
+         ComputeNumSignBits(Y, &Sext) + C->getZExtValue() > TruncatedBits)) {
       Value *Ashr = Builder.CreateAShr(Y, C->getZExtValue());
       return CastInst::CreateIntegerCast(Ashr, DestTy, /* isSigned */ true);
     }
