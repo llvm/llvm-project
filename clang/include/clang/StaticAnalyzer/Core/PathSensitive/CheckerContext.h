@@ -189,8 +189,8 @@ public:
   /// to the active checker). This is arguably a bug and should be fixed.
   ExplodedNode *addTransition(ProgramStateRef State = nullptr,
                               const ProgramPointTag *Tag = nullptr) {
-    if ((!State || State == Pred->getState()) && !Tag)
-      return Pred;
+    if ((!State || State == getState()) && !Tag)
+      return getPredecessor();
     return addTransitionImpl(State, false, nullptr, Tag);
   }
 
@@ -207,9 +207,9 @@ public:
   ExplodedNode *addTransition(ProgramStateRef State, ExplodedNode *Pred,
                               const ProgramPointTag *Tag = nullptr) {
     if (!State)
-      return this->Pred;
-    if (State == this->Pred->getState() && !Tag)
-      return this->Pred;
+      return getPredecessor();
+    if (State == getState() && !Tag)
+      return getPredecessor();
     return addTransitionImpl(State, false, Pred, Tag);
   }
 
@@ -281,7 +281,7 @@ public:
                             ExplodedNode *Pred,
                             const ProgramPointTag *Tag = nullptr) {
     if (!State)
-      return this->Pred;
+      return getPredecessor();
     return addTransitionImpl(State, false, Pred, Tag);
   }
 
@@ -454,7 +454,7 @@ private:
     if (!State)
       State = getState();
     if (!P)
-      P = Pred;
+      P = getPredecessor();
 
     Frontier.erase(P);
     ExplodedNode *N =
