@@ -15,6 +15,7 @@
 #include "src/__support/fixedvector.h"
 #include "src/__support/macros/config.h"
 #include "src/__support/threads/mutex.h"
+#include "src/stdio/fflush.h"
 
 namespace LIBC_NAMESPACE_DECL {
 
@@ -62,6 +63,7 @@ LIBC_INLINE void call_exit_callbacks(ExitCallbackList &callbacks) {
     handler_list_mtx.lock();
   }
   ExitCallbackList::destroy(&callbacks);
+  LIBC_NAMESPACE::fflush(nullptr);
 }
 
 LIBC_INLINE int add_atexit_unit(ExitCallbackList &callbacks,

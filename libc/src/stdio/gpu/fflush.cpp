@@ -13,7 +13,7 @@
 #include "src/__support/common.h"
 
 namespace LIBC_NAMESPACE_DECL {
-namespace GPU_FLUSH {
+namespace GPU_FFLUSH {
 // create a new namespace for gpu to differentiate which fflush
 // implementation we are using.
 //
@@ -31,6 +31,6 @@ LLVM_LIBC_FUNCTION(int, fflush, (::FILE * stream)) {
       });
   return ret;
 }
-}
+} // namespace GPU_FFLUSH
 
 } // namespace LIBC_NAMESPACE_DECL

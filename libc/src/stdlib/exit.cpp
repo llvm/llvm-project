@@ -12,8 +12,6 @@
 #include "src/__support/macros/config.h"
 #include "src/stdio/fflush.h"
 
-#include <src/string/memory_utils/op_generic.h>
-
 #ifdef LIBC_COPT_SUPPORT_THREADS
 #include "src/__support/threads/thread.h"
 #endif
