@@ -86,8 +86,7 @@ struct MLUCandidate {
 
 // Return true if given vector.transfer_read/write has a default permutation
 // map, no mask and no out-of-bounds check.
-template <typename TransferOp>
-static bool isSimpleTransferOp(TransferOp op) {
+static bool isSimpleTransferOp(VectorTransferOpInterface op) {
   return op.getPermutationMap().isMinorIdentity() && !op.getMask() &&
          !op.hasOutOfBoundsDim();
 }
@@ -204,13 +203,9 @@ getFromNativeShapeAttr(Operation *op) {
   return SmallVector<int64_t>(attr.asArrayRef());
 }
 
-static void setNativeShapeAttr(Operation *op, VectorType nativeType) {
-  VectorType currentType;
-  TypeSwitch<Operation *>(op)
-      .Case<vector::TransferReadOp, vector::TransferWriteOp>(
-          [&](auto transferOp) { currentType = transferOp.getVectorType(); })
-      .DefaultUnreachable("expected a vector transfer op");
-  if (currentType != nativeType)
+static void setNativeShapeAttr(VectorTransferOpInterface op,
+                               VectorType nativeType) {
+  if (op.getVectorType() != nativeType)
     op->setAttr(
         nativeShapeAttrName,
         DenseI64ArrayAttr::get(nativeType.getContext(), nativeType.getShape()));
@@ -664,10 +659,11 @@ static void buildMNLoopBody(MLUCandidate &candidate, OpBuilder &b, Location loc,
     Value accViewIn =
         memref::SubViewOp::create(b, loc, candidate.accMemIn, accViewOffsets,
                                   accViewSizes, accViewStrides);
-    accInit = vector::TransferReadOp::create(b, loc, candidate.accRegTileType,
-                                             accViewIn, ValueRange{c0, c0},
-                                             /*padding=*/std::nullopt);
-    setNativeShapeAttr(accInit, candidate.accNativeType);
+    auto accInitRead = vector::TransferReadOp::create(
+        b, loc, candidate.accRegTileType, accViewIn, ValueRange{c0, c0},
+        /*padding=*/std::nullopt);
+    setNativeShapeAttr(accInitRead, candidate.accNativeType);
+    accInit = accInitRead;
   }
 
   SmallVector<Value> accInitSliced =
@@ -687,7 +683,7 @@ static void buildMNLoopBody(MLUCandidate &candidate, OpBuilder &b, Location loc,
   Value accViewOut =
       memref::SubViewOp::create(b, loc, candidate.accMemOut, accViewOffsets,
                                 accViewSizes, accViewStrides);
-  Operation *accWrite = vector::TransferWriteOp::create(
+  auto accWrite = vector::TransferWriteOp::create(
       b, loc, accSpliced, accViewOut, ValueRange{c0, c0});
 
   setNativeShapeAttr(accWrite, candidate.accNativeType);
