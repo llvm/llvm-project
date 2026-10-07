@@ -535,8 +535,9 @@ void SelectionDAGLegalize::LegalizeStoreOps(SDNode *Node) {
       assert(NVT.getSizeInBits() == VT.getSizeInBits() &&
              "Can only promote stores to same size type");
       Value = DAG.getNode(ISD::BITCAST, dl, NVT, Value);
-      SDValue Result = DAG.getStore(Chain, dl, Value, Ptr, ST->getPointerInfo(),
-                                    ST->getBaseAlign(), MMOFlags, Metadata);
+      // Reuse the original memory operand to preserve properties like atomicity.
+      SDValue Result =
+          DAG.getStore(Chain, dl, Value, Ptr, ST->getMemOperand());
       ReplaceNode(SDValue(Node, 0), Result);
       break;
     }
