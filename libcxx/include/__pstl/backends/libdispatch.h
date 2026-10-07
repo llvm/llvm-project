@@ -297,28 +297,36 @@ struct __cpu_traits<__libdispatch_backend_tag> {
     if (__first == __last)
       return __empty{}; // nothing to do
 
-    // Partition the input and allocate the lookback storage
+    // Partition the input and allocate the lookback storage.
+    // The last partition doesn't need a storage in the loookback, hence its size is 1 less.
     __libdispatch::__chunk_partitions __partitions = __libdispatch::__partition_chunks(__last - __first);
     __decoupled_lookback<_Value> __lookback{static_cast<size_t>(__partitions.__chunk_count_ - 1)};
     if (__partitions.__chunk_count_ > 1 && __lookback.__size() == 0) {
-      return nullopt; // failed to allocate the lookback storage
+      return nullopt; // Failed to allocate the lookback storage, nothing we can do - report an error
     }
 
+    // Determinate how many workers we could potentially have on the hardware level
     size_t __max_workers_count = thread::hardware_concurrency();
 
-    // Run the single-pass scan with decoupled lookback
+    // Run the single-pass scan with decoupled lookback.
+    // Ask the threading backend to spawn up to __max_workers_count workers, each of them picks the next partition to
+    // work on in a monotonically incremental order.
     atomic<size_t> __next_chunk{0};
     __libdispatch::__dispatch_apply(__max_workers_count, [&](size_t /*__worker_id*/) {
+      // Allow each worker to set up any context reusable for different partitions
       auto __worker_ctx = __worker_prologue(
           static_cast<size_t>(std::max(__partitions.__first_chunk_size_, __partitions.__chunk_size_)));
 
+      // Pick the next chunk to work on, stop once there's no more work the iteration stops.
       size_t __chunk;
       while ((__chunk = __next_chunk.fetch_add(1, std::memory_order_relaxed)) <
              static_cast<size_t>(__partitions.__chunk_count_)) {
+        // Determine the input range of this chunk
         auto __this_chunk_size = __chunk == 0 ? __partitions.__first_chunk_size_ : __partitions.__chunk_size_;
         auto __index           = __chunk == 0 ? 0
                                               : (__chunk * __partitions.__chunk_size_) +
                                                     (__partitions.__first_chunk_size_ - __partitions.__chunk_size_);
+        // Depending on the position of the chunk in the input, call either a head, a middle or a tail scan callbacks
         if (__chunk == 0) {
           __scan_head(__worker_ctx,
                       __first + __index,
