@@ -503,7 +503,7 @@ bool CodeGenPrepare::_run(Function &F) {
   if (ResetLI)
     resetLoopInfo();
 
-  if (!Opts.disable_cgp_branch_opts)
+  if (Opts.cgp_branch_opts)
     EverMadeChange |= splitBranchCondition(F);
 
   // Split some critical edges where one of the sources is an indirect branch,
@@ -525,7 +525,7 @@ bool CodeGenPrepare::_run(Function &F) {
 
   // If we are optimzing huge function, we need to consider the build time.
   // Because the basic algorithm's complex is near O(N!).
-  IsHugeFunc = F.size() > Opts.cgpp_huge_func;
+  IsHugeFunc = F.size() > Opts.cgp_huge_func;
 
   bool MadeChange = true;
   bool FuncIterated = false;
@@ -605,7 +605,7 @@ bool CodeGenPrepare::_run(Function &F) {
   // LoopInfo is not needed anymore and ConstantFoldTerminator can break it.
   LI = nullptr;
 
-  if (!Opts.disable_cgp_branch_opts) {
+  if (Opts.cgp_branch_opts) {
     MadeChange = false;
     // Use a set vector to get deterministic iteration order. The order the
     // blocks are removed may affect whether or not PHI nodes in successors
@@ -646,7 +646,7 @@ bool CodeGenPrepare::_run(Function &F) {
     EverMadeChange |= MadeChange;
   }
 
-  if (!Opts.disable_cgp_gc_opts) {
+  if (Opts.cgp_gc_opts) {
     SmallVector<GCStatepointInst *, 2> Statepoints;
     for (BasicBlock &BB : F)
       for (Instruction &I : BB)
@@ -813,7 +813,7 @@ bool CodeGenPrepare::eliminateMostlyEmptyBlocks(Function &F, bool &ResetLI) {
   // Note that this intentionally skips the entry block.
   for (auto &Block : llvm::drop_begin(F)) {
     // Delete phi nodes that could block deleting other empty blocks.
-    if (!Opts.disable_cgp_delete_phis)
+    if (Opts.cgp_delete_phis)
       MadeChange |= DeleteDeadPHIs(&Block, TLInfo, nullptr, &KnownNonDeadPHIs);
   }
 
@@ -839,7 +839,7 @@ bool CodeGenPrepare::isMergingEmptyBlockProfitable(BasicBlock *BB,
   // Loop preheaders can be good locations to spill registers. If the
   // preheader is deleted and we create a critical edge, registers may be
   // spilled in the loop body instead.
-  if (!Opts.disable_preheader_prot && isPreheader &&
+  if (Opts.cgp_preheader_prot && isPreheader &&
       !(BB->getSinglePredecessor() &&
         BB->getSinglePredecessor()->getSingleSuccessor()))
     return false;
@@ -4219,14 +4219,14 @@ private:
     // Second Step, fill new nodes by merged values and simplify if possible.
     FillPlaceholders(Map, TraverseOrder, ST);
 
-    if (!Opts.addr_sink_new_select && ST.countNewSelectNodes() > 0) {
+    if (!Opts.cgp_addr_sink_new_select && ST.countNewSelectNodes() > 0) {
       ST.destroyNewNodes(CommonType);
       return nullptr;
     }
 
     // Now we'd like to match New Phi nodes to existed ones.
     unsigned PhiNotMatchedCount = 0;
-    if (!MatchPhiSet(ST, Opts.addr_sink_new_phis, PhiNotMatchedCount)) {
+    if (!MatchPhiSet(ST, Opts.cgp_addr_sink_new_phis, PhiNotMatchedCount)) {
       ST.destroyNewNodes(CommonType);
       return nullptr;
     }
@@ -4419,19 +4419,19 @@ private:
   }
 
   bool addrModeCombiningAllowed() {
-    if (Opts.disable_complex_addr_modes)
+    if (!Opts.cgp_complex_addr_modes)
       return false;
     switch (DifferentField) {
     default:
       return false;
     case ExtAddrMode::BaseRegField:
-      return Opts.addr_sink_combine_base_reg;
+      return Opts.cgp_addr_sink_combine_base_reg;
     case ExtAddrMode::BaseGVField:
-      return Opts.addr_sink_combine_base_gv;
+      return Opts.cgp_addr_sink_combine_base_gv;
     case ExtAddrMode::BaseOffsField:
-      return Opts.addr_sink_combine_base_offs;
+      return Opts.cgp_addr_sink_combine_base_offs;
     case ExtAddrMode::ScaledRegField:
-      return Opts.addr_sink_combine_scaled_reg;
+      return Opts.cgp_addr_sink_combine_scaled_reg;
     }
   }
 };
@@ -5868,7 +5868,7 @@ bool CodeGenPrepare::optimizeMemoryInst(Instruction *MemoryInst, Value *Addr,
       return Modified;
   }
 
-  IRBuilder<> Builder(MemoryInst->getParent(), InsertPos);
+  IRBuilder<> Builder(InsertPos);
 
   if (SunkAddr) {
     LLVM_DEBUG(dbgs() << "CGP: Reusing nonlocal addrmode: " << AddrMode
@@ -5888,8 +5888,8 @@ bool CodeGenPrepare::optimizeMemoryInst(Instruction *MemoryInst, Value *Addr,
       } else
         SunkAddr = Builder.CreatePointerCast(SunkAddr, Addr->getType());
     }
-  } else if (valueOr(Opts.addr_sink_using_gep, true) ||
-             (Opts.addr_sink_using_gep == BoolOrDefault::Default &&
+  } else if (valueOr(Opts.cgp_addr_sink_using_gep, true) ||
+             (Opts.cgp_addr_sink_using_gep == BoolOrDefault::Default &&
               SubtargetInfo->addrSinkUsingGEPs())) {
     // By default, we use the GEP-based method when AA is used later. This
     // prevents new inttoptr/ptrtoint pairs from degrading AA capabilities.
@@ -6588,7 +6588,7 @@ bool CodeGenPrepare::tryToPromoteExts(
     // this check inside the for loop is to catch the case where an extension
     // is directly fed by a load because in such case the extension can be moved
     // up without any promotion on its operands.
-    if (!TLI->enableExtLdPromotion() || Opts.disable_cgp_ext_ld_promotion)
+    if (!TLI->enableExtLdPromotion() || !Opts.cgp_ext_ld_promotion)
       return false;
 
     // Get the action to perform the promotion.
@@ -6626,7 +6626,7 @@ bool CodeGenPrepare::tryToPromoteExts(
     // conservatively ceiling it to 0.
     TotalCreatedInstsCost =
         std::max((long long)0, (TotalCreatedInstsCost - ExtCost));
-    if (!Opts.stress_cgp_ext_ld_promotion &&
+    if (!Opts.cgp_stress_ext_ld_promotion &&
         (TotalCreatedInstsCost > 1 ||
          !isPromotedInstructionLegal(*TLI, *DL, PromotedVal) ||
          (ExtCost == 0 && NewExts.size() > 1))) {
@@ -6647,7 +6647,7 @@ bool CodeGenPrepare::tryToPromoteExts(
       // If we have reached to a load, we need this extra profitability check
       // as it could potentially be merged into an ext(load).
       if (isa<LoadInst>(ExtOperand) &&
-          !(Opts.stress_cgp_ext_ld_promotion ||
+          !(Opts.cgp_stress_ext_ld_promotion ||
             NewCreatedInstsCost <= ExtCost ||
             (ExtOperand->hasOneUse() || hasSameExtUse(ExtOperand, *TLI))))
         continue;
@@ -6796,7 +6796,7 @@ bool CodeGenPrepare::splitLargeGEPOffsets() {
         NewBaseInsertBB = &BaseGEP->getFunction()->getEntryBlock();
         NewBaseInsertPt = NewBaseInsertBB->getFirstInsertionPt();
       }
-      IRBuilder<> NewBaseBuilder(NewBaseInsertBB, NewBaseInsertPt);
+      IRBuilder<> NewBaseBuilder(NewBaseInsertPt);
       // Create a new base.
       // TODO: Avoid implicit trunc?
       // See https://github.com/llvm/llvm-project/issues/112510.
@@ -7609,7 +7609,7 @@ bool CodeGenPrepare::optimizeFunnelShift(IntrinsicInst *Fsh) {
 /// If we have a SelectInst that will likely profit from branch prediction,
 /// turn it into a branch.
 bool CodeGenPrepare::optimizeSelectInst(SelectInst *SI) {
-  if (Opts.disable_cgp_select2branch)
+  if (!Opts.cgp_select2branch)
     return false;
 
   // If the SelectOptimize pass is enabled, selects have already been optimized.
@@ -8366,8 +8366,8 @@ void VectorPromoteHelper::promoteImpl(Instruction *ToBePromoted) {
 /// has this feature and this is profitable.
 bool CodeGenPrepare::optimizeExtractElementInst(Instruction *Inst) {
   unsigned CombineCost = std::numeric_limits<unsigned>::max();
-  if (Opts.disable_cgp_store_extract ||
-      (!Opts.stress_cgp_store_extract &&
+  if (!Opts.cgp_store_extract ||
+      (!Opts.cgp_stress_store_extract &&
        !TLI->canCombineStoreAndExtract(Inst->getOperand(0)->getType(),
                                        Inst->getOperand(1), CombineCost)))
     return false;
@@ -8382,7 +8382,7 @@ bool CodeGenPrepare::optimizeExtractElementInst(Instruction *Inst) {
   BasicBlock *Parent = Inst->getParent();
   LLVM_DEBUG(dbgs() << "Found an interesting transition: " << *Inst << '\n');
   VectorPromoteHelper VPH(*DL, *TLI, *TTI, Inst, CombineCost,
-                          Opts.stress_cgp_store_extract);
+                          Opts.cgp_stress_store_extract);
   // If the transition has more than one use, assume this is not going to be
   // beneficial.
   while (Inst->hasOneUse()) {
@@ -8876,7 +8876,7 @@ bool CodeGenPrepare::optimizeInst(Instruction *I, ModifyDT &ModifiedDT) {
   }
 
   if (StoreInst *SI = dyn_cast<StoreInst>(I)) {
-    if (splitMergedValStore(*SI, *DL, *TLI, Opts.force_split_store))
+    if (splitMergedValStore(*SI, *DL, *TLI, Opts.cgp_force_split_store))
       return true;
     SI->setMetadata(LLVMContext::MD_invariant_group, nullptr);
     unsigned AS = SI->getPointerAddressSpace();
@@ -8898,7 +8898,7 @@ bool CodeGenPrepare::optimizeInst(Instruction *I, ModifyDT &ModifiedDT) {
   BinaryOperator *BinOp = dyn_cast<BinaryOperator>(I);
 
   if (BinOp && BinOp->getOpcode() == Instruction::And &&
-      Opts.enable_andcmp_sinking &&
+      Opts.cgp_andcmp_sinking &&
       sinkAndCmp0Expression(BinOp, *TLI, InsertedInsts))
     return true;
 

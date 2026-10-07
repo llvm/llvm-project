@@ -1999,7 +1999,8 @@ void AsmPrinter::handleCallsiteForCallgraph(
     const MachineFunction::CallSiteInfoMap &CallSitesInfoMap,
     const MachineInstr &MI) {
   assert(MI.isCall() && "This method is meant for call instructions only.");
-  const MachineOperand &CalleeOperand = MI.getOperand(0);
+  const TargetInstrInfo *TII = MF->getSubtarget().getInstrInfo();
+  const MachineOperand &CalleeOperand = TII->getCalleeOperand(MI);
   if (CalleeOperand.isGlobal() || CalleeOperand.isSymbol()) {
     // Handle direct calls.
     MCSymbol *CalleeSymbol = nullptr;
@@ -2864,8 +2865,7 @@ void AsmPrinter::emitRemarksSection(remarks::RemarkStreamer &RS) {
 
 static uint64_t globalSize(const llvm::GlobalVariable &G) {
   const Constant *Initializer = G.getInitializer();
-  return G.getParent()->getDataLayout().getTypeAllocSize(
-      Initializer->getType());
+  return G.getDataLayout().getTypeAllocSize(Initializer->getType());
 }
 
 static bool shouldTagGlobal(const llvm::GlobalVariable &G) {
