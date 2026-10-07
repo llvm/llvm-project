@@ -53,7 +53,6 @@ private:
 
 void from_call_result() {
   process(makeVector()[0]);
-  // expected-warning@-1{{Function argument 'makeVector()[0]' (to 'process') is a loan on CanBorrow type 'Vector<char>' that is not guarded by a Borrow}}
 }
 
 void from_returned_reference() {

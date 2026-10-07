@@ -59,7 +59,7 @@ Error ReOptimizeLayer::addOrcRTLiteSupport(JITDylib &PlatformJD,
   auto Mod = std::make_unique<Module>("orc-rt-lite-reoptimize.ll", *Ctx);
   Mod->setDataLayout(DL);
 
-  IRBuilder<> Builder(*Ctx);
+  IRBuilder<> Builder(*Mod);
 
   // Create basic types portably
   Type *VoidTy = Type::getVoidTy(*Ctx);

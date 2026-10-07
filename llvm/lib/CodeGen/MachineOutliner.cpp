@@ -958,11 +958,14 @@ MachineFunction *MachineOutliner::createOutlinedFunction(
       MachineInstr &NewMI = TII.duplicate(MBB, MBB.end(), MI);
       NewMI.dropMemRefs(MF);
       NewMI.setDebugLoc(DL);
-      // Also clear debug locations on any bundled instructions.
+      NewMI.clearKillInfo();
+      // Also clear debug locations and kill info on any bundled instructions.
       if (NewMI.isBundledWithSucc()) {
         auto BundleEnd = getBundleEnd(NewMI.getIterator());
-        for (auto I = std::next(NewMI.getIterator()); I != BundleEnd; ++I)
+        for (auto I = std::next(NewMI.getIterator()); I != BundleEnd; ++I) {
           I->setDebugLoc(DL);
+          I->clearKillInfo();
+        }
       }
     }
   }
@@ -1109,15 +1112,18 @@ bool MachineOutliner::outline(
       MachineBasicBlock::iterator StartIt = C.begin();
       MachineBasicBlock::iterator EndIt = std::prev(C.end());
 
-      // Use the first non-debug instruction with a non-zero source line as the
-      // location for the replacement call sequence.
-      DebugLoc CallLoc;
+      // Find the first non-debug instruction with a non-zero source line, and
+      // the location of the last call in the candidate, if it has one.
+      DebugLoc FirstLoc, LastCallLoc;
       for (MachineInstr &MI : C) {
+        if (MI.isDebugInstr())
+          continue;
         const DebugLoc &DL = MI.getDebugLoc();
-        if (!MI.isDebugInstr() && DL && DL.getLine()) {
-          CallLoc = DL;
-          break;
-        }
+        bool HasLine = DL && DL.getLine();
+        if (!FirstLoc && HasLine)
+          FirstLoc = DL;
+        if (MI.isCall())
+          LastCallLoc = HasLine ? DL : DebugLoc();
       }
 
       // Remember the instruction the call sequence will be inserted after, so
@@ -1128,11 +1134,20 @@ bool MachineOutliner::outline(
       // Insert the call.
       auto CallInst = TII.insertOutlinedCall(M, MBB, StartIt, *MF, C);
 
+      // Unwinding through a call in the candidate symbolizes the caller frame
+      // at the outlined call, so it should carry that call's location. Use the
+      // last call: a candidate ending in a call may be outlined as a thunk
+      // whose tail call returns directly past the outlined call. With multiple
+      // calls, only the last is attributed exactly. Nothing returns to a tail
+      // branch, so it keeps the first location.
+      DebugLoc CallLoc =
+          !CallInst->isTerminator() && LastCallLoc ? LastCallLoc : FirstLoc;
+
       // insertOutlinedCall may emit link register save/restore instructions
       // around the call, and leaves StartIt on the last instruction it
-      // inserted. Give the whole sequence the candidate's location. Otherwise,
-      // a locationless save or restore can introduce a line 0 row, including
-      // at the return address immediately after the call.
+      // inserted. Give the whole sequence the same location. Otherwise, a
+      // locationless save or restore can introduce a line 0 row, including at
+      // the return address immediately after the call.
       MachineBasicBlock::iterator SeqBegin =
           PrevIt == MBB.end() ? MBB.begin() : std::next(PrevIt);
       for (MachineInstr &MI : make_range(SeqBegin, std::next(StartIt)))

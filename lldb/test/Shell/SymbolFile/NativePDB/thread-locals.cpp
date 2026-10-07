@@ -1,9 +1,10 @@
 // clang-format off
-// REQUIRES: lld, x86, target-windows
+// FIXME: This test shouldn't require native, but it seems like the linking step
+// in the build script doesn't set the correct architecture.
+// REQUIRES: lld, system-windows, native
 
 // Test that we can display tag types.
-// RUN: %clang_cl --target=x86_64-windows-msvc -MDd -Od -Z7 -c /Fo%t.obj -- %s
-// RUN: lld-link -debug:full -entry:main %t.obj -out:%t.exe -pdb:%t.pdb /machine:X64
+// RUN: %build --compiler=clang-cl --output=%t.exe %s
 // RUN: lldb-test symbols %t.exe | FileCheck %s
 
 // CHECK: CompileUnit{{.*}}, language = "c++", file = '{{.*}}thread-locals.cpp'
