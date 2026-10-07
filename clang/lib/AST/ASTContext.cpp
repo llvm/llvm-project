@@ -15920,6 +15920,10 @@ private:
     // Oversized bit-fields (declared width larger than the field type) occupy
     // only the type's width. The extra declared bits are padding and follow
     // the occupied bits (Itanium C++ ABI §2.4, II.1(b)).
+    // In case where the bitfield can only have values with a range smaller than
+    // the one declared, e.g. bool a : 5 or _BitInt(5) b : 6, the remaining bits
+    // within the bitfield are for sign or zero extension. These are considered
+    // occupied as well.
     const uint64_t OccupiedSizeInBits =
         std::min(DeclaredSizeInBits, Ctx.getTypeSize(Field->getType()));
 
