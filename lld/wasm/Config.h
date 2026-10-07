@@ -15,11 +15,8 @@
 #include "llvm/ADT/Twine.h"
 #include "llvm/BinaryFormat/Wasm.h"
 #include "llvm/Support/CachePruning.h"
+#include "llvm/Support/CodeGen.h"
 #include <optional>
-
-namespace llvm {
-enum class CodeGenOptLevel;
-} // namespace llvm
 
 namespace lld::wasm {
 
@@ -52,65 +49,65 @@ enum class BuildIdKind { None, Fast, Sha1, Hexstring, Uuid };
 // and such fields have the same name as the corresponding options.
 // Most fields are initialized by the driver.
 struct Config {
-  bool allowMultipleDefinition;
-  bool bsymbolic;
-  bool checkFeatures;
-  bool compressRelocations;
-  bool demangle;
-  bool disableVerify;
-  bool emitRelocs;
-  bool exportAll;
-  bool exportDynamic;
-  bool exportTable;
-  bool extendedConst;
-  bool growableTable;
-  bool gcSections;
+  bool allowMultipleDefinition = false;
+  bool bsymbolic = false;
+  bool checkFeatures = true;
+  bool compressRelocations = false;
+  bool demangle = true;
+  bool disableVerify = false;
+  bool emitRelocs = false;
+  bool exportAll = false;
+  bool exportDynamic = false;
+  bool exportTable = false;
+  bool extendedConst = false;
+  bool growableTable = false;
+  bool gcSections = true;
   llvm::StringSet<> keepSections;
-  bool cooperativeThreading;
-  bool libcallThreadContext;
+  bool cooperativeThreading = false;
+  bool libcallThreadContext = false;
   std::optional<std::pair<llvm::StringRef, llvm::StringRef>> memoryImport;
   std::optional<llvm::StringRef> memoryExport;
-  bool sharedMemory;
-  bool importTable;
-  bool importUndefined;
+  bool sharedMemory = false;
+  bool importTable = false;
+  bool importUndefined = false;
   std::optional<bool> is64;
-  bool mergeDataSegments;
-  bool noinhibitExec;
-  bool pie;
-  bool printGcSections;
-  bool relocatable;
-  bool saveTemps;
-  bool shared;
-  bool shlibSigCheck;
-  bool stripAll;
-  bool stripDebug;
-  bool stackFirst;
+  bool mergeDataSegments = true;
+  bool noinhibitExec = false;
+  bool pie = false;
+  bool printGcSections = false;
+  bool relocatable = false;
+  bool saveTemps = false;
+  bool shared = false;
+  bool shlibSigCheck = true;
+  bool stripAll = false;
+  bool stripDebug = false;
+  bool stackFirst = true;
   // Static linking is currently the default under WebAssembly.  This may
   // change as some point in the future if dynamic linking becomes more widely
   // used.
   bool isStatic = true;
-  bool thinLTOEmitImportsFiles;
-  bool thinLTOEmitIndexFiles;
-  bool thinLTOIndexOnly;
-  bool trace;
-  uint64_t globalBase;
-  uint64_t initialHeap;
-  uint64_t initialMemory;
-  uint64_t maxMemory;
-  bool noGrowableMemory;
+  bool thinLTOEmitImportsFiles = false;
+  bool thinLTOEmitIndexFiles = false;
+  bool thinLTOIndexOnly = false;
+  bool trace = false;
+  uint64_t globalBase = 0;
+  uint64_t initialHeap = 0;
+  uint64_t initialMemory = 0;
+  uint64_t maxMemory = 0;
+  bool noGrowableMemory = false;
   // The table offset at which to place function addresses.  We reserve zero
   // for the null function pointer.  This gets set to 1 for executables and 0
   // for shared libraries (since they always added to a dynamic offset at
   // runtime).
-  uint64_t tableBase;
-  uint64_t zStackSize;
-  uint64_t pageSize;
-  unsigned ltoPartitions;
-  unsigned ltoo;
-  llvm::CodeGenOptLevel ltoCgo;
-  unsigned optimize;
-  bool ltoDebugPassManager;
-  UnresolvedPolicy unresolvedSymbols;
+  uint64_t tableBase = 0;
+  uint64_t zStackSize = llvm::wasm::WasmDefaultPageSize;
+  uint64_t pageSize = llvm::wasm::WasmDefaultPageSize;
+  unsigned ltoPartitions = 1;
+  unsigned ltoo = 2;
+  llvm::CodeGenOptLevel ltoCgo = llvm::CodeGenOptLevel::Default;
+  unsigned optimize = 1;
+  bool ltoDebugPassManager = false;
+  UnresolvedPolicy unresolvedSymbols = UnresolvedPolicy::ReportError;
   BuildIdKind buildId = BuildIdKind::None;
 
   llvm::StringRef entry;
