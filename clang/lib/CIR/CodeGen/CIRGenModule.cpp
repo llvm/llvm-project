@@ -2573,14 +2573,11 @@ void CIRGenModule::emitTopLevelDecl(Decl *decl) {
     assert(!cir::MissingFeatures::generateDebugInfo());
 
     // A C++20 named module has its own initializer function, so its
-    // initializers are not emitted here. Classic CodeGen's global init
-    // function of the importing translation unit calls that initializer,
-    // which in turn covers the modules it imports itself; that call is not
-    // emitted yet.
-    if (cxx20ModuleInits && mod->isNamedModule()) {
-      assert(!cir::MissingFeatures::emitCXXModuleInitFunc());
+    // initializers are not emitted here. The global init function of this
+    // translation unit calls that initializer, which in turn covers the
+    // modules it imports itself; release() records the modules to call.
+    if (cxx20ModuleInits && mod->isNamedModule())
       break;
-    }
 
     // For clang C++ module map modules the initializers for sub-modules are
     // emitted here.
@@ -3970,6 +3967,14 @@ CIRGenModule::getMLIRVisibilityFromCIRLinkage(cir::GlobalLinkageKind glk) {
   llvm_unreachable("linkage should be handled above!");
 }
 
+std::string CIRGenModule::getModuleInitializerName(clang::Module *mod) {
+  llvm::SmallString<256> name;
+  llvm::raw_svector_ostream out(name);
+  cast<clang::ItaniumMangleContext>(getCXXABI().getMangleContext())
+      .mangleModuleInitializer(mod, out);
+  return std::string(name);
+}
+
 void CIRGenModule::release() {
   emitDeferred();
   emitVTablesOpportunistically();
@@ -4033,15 +4038,39 @@ void CIRGenModule::release() {
   // on yet.  Non-Itanium named modules fall back to `_GLOBAL__sub_I_` exactly
   // as they do in classic codegen.
   if (cxx20ModuleInits) {
-    if (clang::Module *primary = astContext.getCurrentNamedModule();
-        primary && !primary->isModuleImplementation()) {
-      llvm::SmallString<256> fnName;
-      llvm::raw_svector_ostream out(fnName);
-      cast<clang::ItaniumMangleContext>(getCXXABI().getMangleContext())
-          .mangleModuleInitializer(primary, out);
-      theModule->setAttr(cir::CIRDialect::getCXXModuleInitFnNameAttrName(),
-                         builder.getStringAttr(fnName));
+    clang::Module *primary = astContext.getCurrentNamedModule();
+    bool isInterfaceUnit = primary && !primary->isModuleImplementation();
+    if (isInterfaceUnit)
+      theModule->setAttr(
+          cir::CIRDialect::getCXXModuleInitFnNameAttrName(),
+          builder.getStringAttr(getModuleInitializerName(primary)));
+
+    // The imported modules whose initializers the global init function of
+    // this translation unit calls first. A module interface or partition unit
+    // calls those of the modules it exports, imports, or imports in its
+    // global or private module fragment; any other translation unit calls
+    // those of the modules it imported. A header-like module has no
+    // initializer function, and a named module that needs none is skipped.
+    llvm::SmallSetVector<clang::Module *, 8> imports;
+    if (isInterfaceUnit) {
+      for (auto exported : primary->Exports)
+        imports.insert(exported.first);
+      imports.insert_range(primary->Imports);
+      for (clang::Module *sub : primary->submodules())
+        imports.insert_range(sub->Imports);
+    } else {
+      imports.insert_range(importedModules);
     }
+    llvm::SmallVector<mlir::Attribute> importedInits;
+    for (clang::Module *mod : imports) {
+      if (mod->isHeaderLikeModule() || !mod->isNamedModuleInterfaceHasInit())
+        continue;
+      importedInits.push_back(
+          builder.getStringAttr(getModuleInitializerName(mod)));
+    }
+    if (!importedInits.empty())
+      theModule->setAttr(cir::CIRDialect::getCXXModuleImportedInitsAttrName(),
+                         builder.getArrayAttr(importedInits));
   }
 
   // Autolink metadata for the imported modules is not emitted yet.

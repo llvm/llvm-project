@@ -125,6 +125,10 @@ private:
   /// The set of modules for which the module initializers have been emitted.
   llvm::SmallPtrSet<clang::Module *, 16> emittedModuleInitializers;
 
+  /// The Itanium-mangled name of the initializer function of a C++20 named
+  /// module.
+  std::string getModuleInitializerName(clang::Module *mod);
+
   llvm::DenseSet<clang::GlobalDecl> diagnosedConflictingDefinitions;
 
   /// -------
