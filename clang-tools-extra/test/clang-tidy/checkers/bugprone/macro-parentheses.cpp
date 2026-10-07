@@ -14,6 +14,10 @@
 // CHECK-MESSAGES: :[[@LINE-1]]:33: warning: macro argument should be enclosed in parentheses [bugprone-macro-parentheses]
 #define BAD7(x, y)        if (x) goto y; else x;
 // CHECK-MESSAGES: :[[@LINE-1]]:47: warning: macro argument should be enclosed in parentheses [bugprone-macro-parentheses]
+#define BAD_GENERIC1(e, t, x) _Generic((e), t * : x + 1, default : 0)
+// CHECK-MESSAGES: :[[@LINE-1]]:51: warning: macro argument should be enclosed in parentheses [bugprone-macro-parentheses]
+#define BAD_GENERIC2(e, c, x) _Generic((e), int : (c) ? x : 0)
+// CHECK-MESSAGES: :[[@LINE-1]]:57: warning: macro argument should be enclosed in parentheses [bugprone-macro-parentheses]
 
 #define GOOD1             1
 #define GOOD2             (1+2)

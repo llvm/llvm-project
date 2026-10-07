@@ -53,7 +53,7 @@ static bool isSurroundedRight(const Token &T) {
 static bool isKeyword(const Token &T) {
   // FIXME: better matching of keywords to avoid false positives.
   return T.isOneOf(tok::kw_if, tok::kw_case, tok::kw_const, tok::kw_volatile,
-                   tok::kw_struct);
+                   tok::kw_struct, tok::kw_using);
 }
 
 /// Warning is written when one of these operators are not within parentheses.
@@ -179,23 +179,34 @@ void MacroParenthesesPPCallbacks::argument(const Token &MacroNameTok,
   // Skip the goto argument with an arbitrary number of subsequent stars.
   bool FoundGoto = false;
 
-  // Tracks, for each open paren/brace/square, whether it's the argument
-  // list of a C11 _Generic selection -- e.g. _Generic(expr, type: value).
-  // An argument in the type-name position must not be parenthesized.
-  llvm::SmallVector<char, 8> GenericAssocStack;
+  // One frame per open paren/brace/square. For the argument list of a C11
+  // _Generic selection, InTypeName is true between a top-level ',' and the
+  // next top-level ':' -- i.e. while inside the type-name of an association,
+  // e.g. `type *` in `_Generic(expr, type * : value)`. A macro argument there
+  // must not be parenthesized.
+  struct NestingFrame {
+    bool IsGeneric;
+    bool InTypeName;
+  };
+  llvm::SmallVector<NestingFrame, 8> Nesting;
   bool PendingGeneric = false;
 
   for (auto TI = MI->tokens_begin(), TE = MI->tokens_end(); TI != TE; ++TI) {
     const Token &Tok = *TI;
 
     if (Tok.isOneOf(tok::l_paren, tok::l_brace, tok::l_square)) {
-      GenericAssocStack.push_back(PendingGeneric && Tok.is(tok::l_paren));
+      Nesting.push_back({PendingGeneric && Tok.is(tok::l_paren), false});
       PendingGeneric = false;
     } else if (Tok.isOneOf(tok::r_paren, tok::r_brace, tok::r_square)) {
-      if (!GenericAssocStack.empty())
-        GenericAssocStack.pop_back();
+      if (!Nesting.empty())
+        Nesting.pop_back();
     } else if (Tok.is(tok::kw__Generic)) {
       PendingGeneric = true;
+    } else if (!Nesting.empty() && Nesting.back().IsGeneric) {
+      if (Tok.is(tok::comma))
+        Nesting.back().InTypeName = true;
+      else if (Tok.is(tok::colon))
+        Nesting.back().InTypeName = false;
     }
 
     // First token.
@@ -249,9 +260,10 @@ void MacroParenthesesPPCallbacks::argument(const Token &MacroNameTok,
     if (Next.is(tok::coloncolon))
       continue;
 
-    // Argument is the type-name of a C11 _Generic association.
-    if (Next.is(tok::colon) && !GenericAssocStack.empty() &&
-        GenericAssocStack.back())
+    // Argument is (part of) the type-name of a C11 _Generic association.
+    if (llvm::any_of(Nesting, [](const NestingFrame &F) {
+          return F.IsGeneric && F.InTypeName;
+        }))
       continue;
 
     // String concatenation.
