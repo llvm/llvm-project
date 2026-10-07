@@ -411,7 +411,7 @@ struct VOPDInfo {
   uint32_t Opcode;
   uint8_t OpX;
   uint8_t OpY;
-  uint16_t Subtarget;
+  uint8_t Subtarget;
   bool VOPD3;
 };
 
