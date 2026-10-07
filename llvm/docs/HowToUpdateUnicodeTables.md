@@ -7,14 +7,13 @@ into Clang and LLVM Support.
 
 ## Downloading the Unicode data
 
-Download the following files, replacing `<VERSION>` with a Unicode version such
-as `18.0.0`:
+Download the following files:
 
 ```text
-https://www.unicode.org/Public/<VERSION>/ucdxml/ucd.nounihan.flat.zip
-https://www.unicode.org/Public/<VERSION>/ucd/UnicodeData.txt
-https://www.unicode.org/Public/<VERSION>/ucd/NameAliases.txt
-https://www.unicode.org/Public/<VERSION>/ucd/extracted/DerivedName.txt
+https://www.unicode.org/Public/UCD/latest/ucdxml/ucd.nounihan.flat.zip
+https://www.unicode.org/Public/UCD/latest/ucd/UnicodeData.txt
+https://www.unicode.org/Public/UCD/latest/ucd/NameAliases.txt
+https://www.unicode.org/Public/UCD/latest/ucd/extracted/DerivedName.txt
 ```
 
 Unzip `ucd.nounihan.flat.zip` to get `ucd.nounihan.flat.xml`.
@@ -72,7 +71,7 @@ in those files. Update `GeneratedNamesDataTable` in
 
 ```bash
 llvm/utils/unicode-case-fold.py \
-    https://www.unicode.org/Public/<VERSION>/ucd/CaseFolding.txt \
+    https://www.unicode.org/Public/UCD/latest/ucd/CaseFolding.txt \
     > llvm/lib/Support/UnicodeCaseFold.cpp
 ```
 
