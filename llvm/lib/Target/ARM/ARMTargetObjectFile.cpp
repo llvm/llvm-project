@@ -126,3 +126,8 @@ MCSection *ARMElfTargetObjectFile::SelectSectionForGlobal(
 
   return TargetLoweringObjectFileELF::SelectSectionForGlobal(GO, SK, TM);
 }
+
+const MCExpr *
+ARMCOFFTargetObjectFile::getDebugThreadLocalSymbol(const MCSymbol *Sym) const {
+  return MCSpecifierExpr::create(Sym, ARM::S_COFF_SECREL, getContext());
+}

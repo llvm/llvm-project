@@ -76,7 +76,12 @@ public:
 };
 
 /// This implementation is used for AArch64 COFF targets.
-class AArch64_COFFTargetObjectFile : public TargetLoweringObjectFileCOFF {};
+class AArch64_COFFTargetObjectFile : public TargetLoweringObjectFileCOFF {
+public:
+  AArch64_COFFTargetObjectFile() = default;
+
+  const MCExpr *getDebugThreadLocalSymbol(const MCSymbol *Sym) const override;
+};
 
 } // end namespace llvm
 

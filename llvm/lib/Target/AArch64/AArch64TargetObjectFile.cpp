@@ -192,3 +192,8 @@ const MCExpr *AArch64_ELFTargetObjectFile::getDebugThreadLocalSymbol(
     const MCSymbol *Sym) const {
   return MCSpecifierExpr::create(Sym, AArch64::S_DTPREL, getContext());
 }
+
+const MCExpr *AArch64_COFFTargetObjectFile::getDebugThreadLocalSymbol(
+    const MCSymbol *Sym) const {
+  return MCSpecifierExpr::create(Sym, AArch64::S_COFF_SECREL, getContext());
+}

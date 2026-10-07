@@ -48,6 +48,13 @@ public:
                                     const TargetMachine &TM) const override;
 };
 
+class ARMCOFFTargetObjectFile : public TargetLoweringObjectFileCOFF {
+public:
+  ARMCOFFTargetObjectFile() = default;
+
+  const MCExpr *getDebugThreadLocalSymbol(const MCSymbol *Sym) const override;
+};
+
 } // end namespace llvm
 
 #endif // LLVM_LIB_TARGET_ARM_ARMTARGETOBJECTFILE_H
