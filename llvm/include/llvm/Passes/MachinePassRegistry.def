@@ -139,7 +139,7 @@ MACHINE_FUNCTION_PASS("print<machine-uniformity>",
 MACHINE_FUNCTION_PASS("print<reaching-def>", ReachingDefPrinterPass(errs()))
 MACHINE_FUNCTION_PASS("print<slot-indexes>", SlotIndexesPrinterPass(errs()))
 MACHINE_FUNCTION_PASS("print<virtregmap>", VirtRegMapPrinterPass(errs()))
-MACHINE_FUNCTION_PASS("process-imp-defs", ProcessImplicitDefsPass())
+MACHINE_FUNCTION_PASS("process-implicit-defs", ProcessImplicitDefsPass())
 MACHINE_FUNCTION_PASS("prolog-epilog", PrologEpilogInserterPass())
 MACHINE_FUNCTION_PASS("reg-bank-select", RegBankSelectPass())
 MACHINE_FUNCTION_PASS("reg-usage-collector", RegUsageInfoCollectorPass())
