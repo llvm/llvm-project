@@ -17975,8 +17975,7 @@ BoUpSLP::getEntryCost(const TreeEntry *E, ArrayRef<Value *> VectorizedVals,
           // A runtime stride has no fixed byte window. Leave the override
           // unset so the search below is skipped for that entry.
           if (E->State == TreeEntry::StridedVectorize) {
-            const StridedPtrInfo &SPtrInfo =
-                TreeEntryToStridedPtrInfoMap.at(E);
+            const StridedPtrInfo &SPtrInfo = TreeEntryToStridedPtrInfoMap.at(E);
             std::optional<int64_t> StrideUnits;
             if (auto *CI = dyn_cast_or_null<ConstantInt>(SPtrInfo.StrideVal))
               StrideUnits = CI->getSExtValue();
