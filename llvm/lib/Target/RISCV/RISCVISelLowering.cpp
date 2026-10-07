@@ -2908,6 +2908,15 @@ bool RISCVTargetLowering::isFPImmLegal(const APFloat &Imm, EVT VT,
   return Cost <= FPImmCost;
 }
 
+bool RISCVTargetLowering::shouldConvertFPCmpToClassTest(const APFloat &Imm,
+                                                        EVT VT) const {
+  // FCLASS is cheaper than materializing the largest finite value, which FLI
+  // cannot produce.
+  if ((VT == MVT::f32 || VT == MVT::f64) && Imm.isLargest())
+    return true;
+  return TargetLowering::shouldConvertFPCmpToClassTest(Imm, VT);
+}
+
 // TODO: This is very conservative.
 TargetLowering::ExtractSubvectorCost
 RISCVTargetLowering::getExtractSubvectorCost(EVT ResVT, EVT SrcVT,
@@ -20885,41 +20894,6 @@ combineVectorSizedSetCCEquality(EVT VT, SDValue X, SDValue Y, ISD::CondCode CC,
                       DAG.getConstant(0, DL, XLenVT), CC);
 }
 
-static SDValue combineFPBoundarySetCC(SDNode *N, SelectionDAG &DAG,
-                                      const RISCVSubtarget &Subtarget) {
-  SDValue X = N->getOperand(0);
-  SDValue Bound = N->getOperand(1);
-  EVT FPVT = X.getValueType();
-  if ((FPVT != MVT::f32 && FPVT != MVT::f64) ||
-      !DAG.getTargetLoweringInfo().isTypeLegal(FPVT) ||
-      !isa<ConstantFPSDNode>(Bound))
-    return SDValue();
-
-  const APFloat &C = cast<ConstantFPSDNode>(Bound)->getValueAPF();
-  ISD::CondCode CC = cast<CondCodeSDNode>(N->getOperand(2))->get();
-  FPClassTest Mask = fcNone;
-  if (C.bitwiseIsEqual(
-          APFloat::getLargest(C.getSemantics(), /*Negative=*/true))) {
-    if (CC == ISD::SETOLT || CC == ISD::SETULT)
-      Mask = fcNegInf;
-    else if (CC == ISD::SETOGE || CC == ISD::SETUGE)
-      Mask = ~(fcNegInf | fcNan);
-  } else if (C.bitwiseIsEqual(APFloat::getLargest(C.getSemantics()))) {
-    if (CC == ISD::SETOGT || CC == ISD::SETUGT)
-      Mask = fcPosInf;
-    else if (CC == ISD::SETOLE || CC == ISD::SETULE)
-      Mask = ~(fcPosInf | fcNan);
-  }
-  if (Mask == fcNone)
-    return SDValue();
-  if (CC == ISD::SETULT || CC == ISD::SETUGE || CC == ISD::SETUGT ||
-      CC == ISD::SETULE)
-    Mask |= fcNan;
-  SDLoc DL(N);
-  return DAG.getNode(ISD::IS_FPCLASS, DL, N->getValueType(0), X,
-                     DAG.getTargetConstant(Mask, DL, MVT::i32));
-}
-
 static SDValue performSETCCCombine(SDNode *N,
                                    TargetLowering::DAGCombinerInfo &DCI,
                                    const RISCVSubtarget &Subtarget) {
@@ -20929,10 +20903,6 @@ static SDValue performSETCCCombine(SDNode *N,
   SDValue N1 = N->getOperand(1);
   EVT VT = N->getValueType(0);
   EVT OpVT = N0.getValueType();
-
-  if (DCI.isBeforeLegalizeOps() && OpVT.isFloatingPoint())
-    if (SDValue V = combineFPBoundarySetCC(N, DAG, Subtarget))
-      return V;
 
   ISD::CondCode Cond = cast<CondCodeSDNode>(N->getOperand(2))->get();
   if (SDValue V =

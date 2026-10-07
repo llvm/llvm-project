@@ -1298,6 +1298,14 @@ public:
     return false;
   }
 
+  /// Returns true if a compare of a value of type \p VT against the FP
+  /// immediate \p Imm should be replaced by an equivalent IS_FPCLASS test.
+  /// This is only queried when \p Imm is the boundary of an FP class, e.g. the
+  /// largest finite value.
+  virtual bool shouldConvertFPCmpToClassTest(const APFloat &Imm, EVT VT) const {
+    return false;
+  }
+
   /// Targets can use this to indicate that they only support *some*
   /// VECTOR_SHUFFLE operations, those with specific masks.  By default, if a
   /// target supports the VECTOR_SHUFFLE node, all mask values are assumed to be
