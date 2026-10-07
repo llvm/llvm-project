@@ -302,7 +302,7 @@ constructHexagonLinkArgs(Compilation &C, const JobAction &JA,
   bool IncDefLibs = !Args.hasArg(options::OPT_nodefaultlibs);
   bool UseLLD = false;
   const char *Exec = Args.MakeArgString(HTC.GetLinkerPath(&UseLLD));
-  UseLLD = UseLLD || llvm::sys::path::filename(Exec).ends_with("ld.lld") ||
+  UseLLD = UseLLD || llvm::sys::path::filename(Exec).starts_with("ld.lld") ||
            llvm::sys::path::stem(Exec).ends_with("ld.lld");
   bool UseShared = IsShared && !IsStatic;
   StringRef CpuVer = toolchains::HexagonToolChain::GetTargetCPUVersion(Args);
