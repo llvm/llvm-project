@@ -25,7 +25,6 @@ Transforms/GVN/pr69301.ll
 Transforms/IndVarSimplify/debugloc-rem-subst.ll
 Transforms/IndVarSimplify/eliminate-rem.ll
 Transforms/IndVarSimplify/preserving-debugloc-rem-div.ll
-Transforms/IndirectBrExpand/basic.ll
 Transforms/InstCombine/fcmp-select.ll
 Transforms/InstCombine/ffs-1.ll
 Transforms/InstCombine/ffs-i16.ll
