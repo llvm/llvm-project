@@ -24,9 +24,9 @@
 
 # CHECK: Symbol table '.symtab' contains 8 entries:
 # CHECK:      {{.*}} 0 FUNC GLOBAL DEFAULT [[#]] _start
+# CHECK-NEXT: {{.*}} 0 FUNC GLOBAL DEFAULT [[#]] foo
 # CHECK-NEXT: {{.*}} 0 FUNC GLOBAL DEFAULT [[#]] g
 # CHECK-NEXT: {{.*}} 0 FUNC GLOBAL DEFAULT [[#]] h
-# CHECK-NEXT: {{.*}} 0 FUNC GLOBAL DEFAULT [[#]] foo
 # CHECK-NEXT: {{.*}} 0 FUNC GLOBAL DEFAULT [[#]] __wrap_f
 # CHECK-NEXT: {{.*}} 0 FUNC GLOBAL DEFAULT [[#]] __wrap_g
 # CHECK-NEXT: {{.*}} 0 FUNC GLOBAL DEFAULT [[#]] __wrap_h
@@ -53,19 +53,31 @@
 # IN-NEXT: {{.*}} 0 NOTYPE  GLOBAL DEFAULT UND   __wrap_g
 # IN-NEXT: {{.*}} 0 NOTYPE  GLOBAL DEFAULT UND   __wrap_h
 
+## Link with wrapping and `--gc-sections`.
+# RUN: ld.lld --gc-sections --wrap=f --wrap=g --wrap=h -o out.gc test.o foo.o
+# RUN: llvm-readelf -s out.gc | FileCheck %s
+
+## Extract and check "inner" ELF.
+# RUN: llvm-objcopy --dump-section=.debug_llvm_dyndbg=in-dd.gc.o out.gc /dev/null
+# RUN: llvm-readelf -rs in-dd.gc.o | FileCheck --check-prefix=IN %s
+
 #--- test.s
 .global _start
 .type _start,@function
+.section .text._start,"ax",@progbits
 _start:
+  call foo
   ret
 
 .global g
 .type g,@function
+.section .text.g,"ax",@progbits
 g:
   ret
 
 .global h
 .type h,@function
+.section .text.h,"ax",@progbits
 h:
   ret
 
@@ -74,6 +86,7 @@ h:
 
 .global foo
 .type foo,@function
+.section .text.foo,"ax",@progbits
 foo:
   call f
   call g
@@ -82,12 +95,14 @@ foo:
 ## Wrapped but does not call "real".
 .global __wrap_f
 .type __wrap_f,@function
+.section .text.__wrap_f,"ax",@progbits
 __wrap_f:
   ret
 
 ## Wrapped that calls "real".
 .global __wrap_g
 .type __wrap_g,@function
+.section .text.__wrap_g,"ax",@progbits
 __wrap_g:
   call __real_g
   ret
@@ -95,6 +110,7 @@ __wrap_g:
 ## Wrapped that calls "real" but only used in "inner" unopt.
 .global __wrap_h
 .type __wrap_h,@function
+.section .text.__wrap_h,"ax",@progbits
 __wrap_h:
   call __real_h
   ret
@@ -105,6 +121,7 @@ __wrap_h:
 .global __dyndbg.foo
 .hidden __dyndbg.foo
 .type __dyndbg.foo,@function
+.section .text.__dyndbg.foo,"ax",@progbits
 __dyndbg.foo:
   call f
   call g
@@ -115,6 +132,7 @@ __dyndbg.foo:
 .global __dyndbg.__wrap_f
 .hidden __dyndbg.__wrap_f
 .type __dyndbg.__wrap_f,@function
+.section .text.__dyndbg.__wrap_f,"ax",@progbits
 __dyndbg.__wrap_f:
   ret
 
@@ -122,6 +140,7 @@ __dyndbg.__wrap_f:
 .global __dyndbg.__wrap_g
 .hidden __dyndbg.__wrap_g
 .type __dyndbg.__wrap_g,@function
+.section .text.__dyndbg.__wrap_g,"ax",@progbits
 __dyndbg.__wrap_g:
   call __real_g
   ret
@@ -130,6 +149,7 @@ __dyndbg.__wrap_g:
 .global __dyndbg.__wrap_h
 .hidden __dyndbg.__wrap_h
 .type __dyndbg.__wrap_h,@function
+.section .text.__dyndbg.__wrap_h,"ax",@progbits
 __dyndbg.__wrap_h:
   call __real_h
   ret
