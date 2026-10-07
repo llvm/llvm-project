@@ -632,6 +632,10 @@ GCNHazardRecognizer::getHazardType(SUnit *SU, int Stalls) {
       checkMAILdStHazards(MI) > 0)
     return HazardType;
 
+  if (ST.hasPermlaneForwardingHazard() && isPermlane(*MI) &&
+      checkPermlaneHazards(MI) > 0)
+    return HazardType;
+
   if (MI->isInlineAsm() && checkInlineAsmHazards(MI) > 0)
     return HazardType;
 
@@ -787,7 +791,7 @@ unsigned GCNHazardRecognizer::PreEmitNoopsCommon(MachineInstr *MI) const {
   if (SIInstrInfo::isVMEM(*MI) || SIInstrInfo::isDS(*MI))
     return std::max(WaitStates, checkMAILdStHazards(MI));
 
-  if (ST.hasGFX950Insts() && isPermlane(*MI))
+  if (ST.hasPermlaneForwardingHazard() && isPermlane(*MI))
     return std::max(WaitStates, checkPermlaneHazards(MI));
 
   return WaitStates;

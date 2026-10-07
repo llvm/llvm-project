@@ -891,8 +891,8 @@ class Negator final {
 
   SmallDenseMap<Value *, Value *> NegationsCache;
 
-  Negator(LLVMContext &C, const DataLayout &DL, const DominatorTree &DT,
-          bool IsTrulyNegation, unsigned MaxDepth);
+  Negator(Module &M, const DominatorTree &DT, bool IsTrulyNegation,
+          unsigned MaxDepth);
 
 #if LLVM_ENABLE_STATS
   unsigned NumValuesVisitedInThisNegator = 0;

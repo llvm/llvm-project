@@ -1040,7 +1040,7 @@ LangAS CIRGenModule::getGlobalVarAddressSpace(const VarDecl *d) {
 
   if (langOpts.SYCLIsDevice &&
       (!d || d->getType().getAddressSpace() == LangAS::Default))
-    errorNYI("SYCL global address space");
+    return LangAS::sycl_global;
 
   if (langOpts.CUDA && langOpts.CUDAIsDevice) {
     if (d) {
@@ -1448,7 +1448,8 @@ mlir::Value CIRGenModule::getAddrOfGlobalVar(const VarDecl *d, mlir::Type ty,
   mlir::Value addr = cir::GetGlobalOp::create(
       builder, getLoc(d->getSourceRange()), ptrTy, g.getSymNameAttr(),
       tlsAccess,
-      /*static_local=*/g.getStaticLocalGuard().has_value());
+      /*static_local=*/g.getDynamicInitGuard().has_value() &&
+          d->isLocalVarDecl());
   return castGlobalToDeclAddrSpace(addr, *d);
 }
 
@@ -1604,7 +1605,7 @@ void CIRGenModule::emitGlobalVarDefinition(const clang::VarDecl *vd,
     // exists. A use may still exists, however, so we still may need
     // to do a RAUW.
     assert(!vd->getType()->isIncompleteType() && "Unexpected incomplete type");
-    init = builder.getZeroInitAttr(convertType(vd->getType()));
+    init = emitNullConstantAttr(vd->getType());
   } else {
     emitter.emplace(*this);
     mlir::Attribute initializer = emitter->tryEmitForInitializer(*initDecl);
@@ -1617,7 +1618,7 @@ void CIRGenModule::emitGlobalVarDefinition(const clang::VarDecl *vd,
         if (initDecl->hasFlexibleArrayInit(astContext))
           errorNYI(vd->getSourceRange(),
                    "emitGlobalVarDefinition: flexible array initializer");
-        init = builder.getZeroInitAttr(convertType(qt));
+        init = emitNullConstantAttr(qt);
         if (!isDefinitionAvailableExternally)
           needsGlobalCtor = true;
       } else {
@@ -1734,8 +1735,25 @@ void CIRGenModule::emitGlobalVarDefinition(const clang::VarDecl *vd,
   maybeSetTrivialComdat(*vd, gv);
 
   // Emit the initializer function if necessary.
-  if (needsGlobalCtor || needsGlobalDtor)
+  if (needsGlobalCtor || needsGlobalDtor) {
+    // We need to make sure that these are emitted 'in order' of definition,
+    // rather than reference, so make sure this is now 'last', if it needs a
+    // global ctor/dtor, so that initialization happens in the correct order.
+    // Other uses of 'lastGlobalOp' just make sure we emit all our globals
+    // before functions/etc, so it might have ended up out of order/referenced
+    // earlier, so this is a 'move to the end' once we see definition thing
+    // happening here.
+    if (lastGlobalOp != gv.getOperation()) {
+      if (lastGlobalOp)
+        gv->moveAfter(lastGlobalOp);
+      else
+        gv->moveBefore(getModule().getBody(), getModule().getBody()->begin());
+
+      lastGlobalOp = gv.getOperation();
+    }
+
     emitCXXGlobalVarDeclInitFunc(vd, gv, needsGlobalCtor);
+  }
 }
 
 bool CIRGenModule::shouldEmitFunction(GlobalDecl gd) {
@@ -2193,8 +2211,10 @@ static cir::GlobalOp
 generateStringLiteral(mlir::Location loc, mlir::TypedAttr c,
                       cir::GlobalLinkageKind lt, CIRGenModule &cgm,
                       StringRef globalName, CharUnits alignment) {
-  mlir::ptr::MemorySpaceAttrInterface addrSpace = cir::toCIRAddressSpaceAttr(
-      cgm.getMLIRContext(), cgm.getGlobalConstantAddressSpace());
+  LangAS as = CodeGenUtils::getGlobalConstantAddressSpace(cgm.getLangOpts(),
+                                                          cgm.getTarget());
+  mlir::ptr::MemorySpaceAttrInterface addrSpace =
+      cir::toCIRAddressSpaceAttr(cgm.getMLIRContext(), as);
 
   // Create a global variable for this string
   // FIXME(cir): check for insertion point in module level.
@@ -2298,19 +2318,6 @@ CIRGenModule::getAddrOfConstantStringFromLiteral(const StringLiteral *s,
       getTypes().getPointerAddressSpace(s->getType()));
 
   return builder.getGlobalViewAttr(ptrTy, gv);
-}
-
-LangAS CIRGenModule::getGlobalConstantAddressSpace() const {
-  LangAS as =
-      CodeGenUtils::getGlobalConstantAddressSpace(langOpts, getTarget());
-  // CIR cannot represent SYCL address spaces yet.
-  /// TODO: Remove this wrapper once CIR supports the global constant address
-  /// space for SYCL.
-  if (as == LangAS::sycl_global) {
-    errorNYI("SYCL global constant address space");
-    return LangAS::Default;
-  }
-  return as;
 }
 
 // TODO(cir): this could be a common AST helper for both CIR and LLVM codegen.
