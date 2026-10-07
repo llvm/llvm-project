@@ -106,6 +106,7 @@ static constexpr SparcCPUInfo CPUInfo[] = {
     {{"gr712rc"}, SparcTargetInfo::CK_LEON3_GR712RC, SparcTargetInfo::CG_V8},
     {{"leon4"}, SparcTargetInfo::CK_LEON4, SparcTargetInfo::CG_V8},
     {{"gr740"}, SparcTargetInfo::CK_LEON4_GR740, SparcTargetInfo::CG_V8},
+    {{"leon5"}, SparcTargetInfo::CK_LEON5, SparcTargetInfo::CG_V8},
 };
 
 SparcTargetInfo::CPUGeneration
@@ -165,7 +166,8 @@ void SparcV8TargetInfo::getTargetDefines(const LangOptions &Opts,
     Builder.defineMacro("__GCC_HAVE_SYNC_COMPARE_AND_SWAP_4");
     Builder.defineMacro("__GCC_HAVE_SYNC_COMPARE_AND_SWAP_8");
   }
-  Builder.defineMacro("__LONG_DOUBLE_128__");
+  if (LongDoubleWidth == 128)
+    Builder.defineMacro("__LONG_DOUBLE_128__");
 }
 
 void SparcV9TargetInfo::getTargetDefines(const LangOptions &Opts,

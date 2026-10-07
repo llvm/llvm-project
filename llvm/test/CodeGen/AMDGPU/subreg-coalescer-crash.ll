@@ -5,9 +5,7 @@
 define amdgpu_kernel void @row_filter_C1_D0() #0 {
 ; GCN-LABEL: row_filter_C1_D0:
 ; GCN:       ; %bb.0: ; %entry
-; GCN-NEXT:    s_cbranch_scc1 .LBB0_2
-; GCN-NEXT:  ; %bb.1: ; %do.body.preheader
-; GCN-NEXT:  .LBB0_2: ; %for.inc.1
+; GCN-NEXT:  ; %bb.1: ; %for.inc.1
 entry:
   br i1 poison, label %for.inc.1, label %do.body.preheader
 
@@ -51,15 +49,14 @@ for.inc.1:                                        ; preds = %do.body.1562.prehea
 define amdgpu_ps void @foo() #0 {
 ; GCN-LABEL: foo:
 ; GCN:       ; %bb.0: ; %bb
-; GCN-NEXT:    s_mov_b64 s[0:1], -1
-; GCN-NEXT:    s_cbranch_scc0 .LBB1_2
-; GCN-NEXT:  ; %bb.1: ; %bb24
-; GCN-NEXT:    s_mov_b64 s[0:1], 0
-; GCN-NEXT:  .LBB1_2: ; %Flow1
-; GCN-NEXT:    s_and_b64 vcc, exec, s[0:1]
-; GCN-NEXT:    s_cbranch_vccz .LBB1_4
-; GCN-NEXT:  ; %bb.3: ; %bb9
+; GCN-NEXT:    s_cbranch_scc1 .LBB1_2
+; GCN-NEXT:  ; %bb.1: ; %bb9
 ; GCN-NEXT:    image_sample v[0:1], v0, s[0:7], s[0:3] dmask:0xa
+; GCN-NEXT:    s_branch .LBB1_5
+; GCN-NEXT:  .LBB1_2: ; %bb13
+; GCN-NEXT:    s_cbranch_scc1 .LBB1_4
+; GCN-NEXT:  ; %bb.3: ; %bb27
+; GCN-NEXT:    ; implicit-def: $vgpr1
 ; GCN-NEXT:    s_branch .LBB1_5
 ; GCN-NEXT:  .LBB1_4:
 ; GCN-NEXT:    v_mov_b32_e32 v1, 0

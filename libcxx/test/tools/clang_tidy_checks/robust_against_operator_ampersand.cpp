@@ -8,6 +8,7 @@
 
 #include "clang-tidy/ClangTidyCheck.h"
 // TODO(LLVM 25): Remove this compatibility check when LLVM 25 branches.
+#include "clang/Basic/Version.h"
 #if CLANG_VERSION_MAJOR > 23
 #  include "clang-tidy/ClangTidyModule.h"
 #else
@@ -24,14 +25,6 @@
 //
 // This is part of libc++'s policy
 // https://libcxx.llvm.org/CodingGuidelines.html#don-t-use-argument-dependent-lookup-unless-required-by-the-standard
-
-// TODO(LLVM-21) Remove dependentScopeDeclRefExpr
-// dependentScopeDeclRefExpr requires Clang 20, this uses the same definition as Clang
-#if defined(__clang_major__) && __clang_major__ < 20
-namespace clang::ast_matchers {
-const internal::VariadicDynCastAllOfMatcher<Stmt, DependentScopeDeclRefExpr> dependentScopeDeclRefExpr;
-} // namespace clang::ast_matchers
-#endif
 
 namespace libcpp {
 robust_against_operator_ampersand::robust_against_operator_ampersand(

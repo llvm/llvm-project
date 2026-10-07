@@ -212,8 +212,30 @@ linked list."
     Returns whether this value can be modified through SetValueFromCString()
     or SetData().
 
+    Deprecated, use CanSet() instead, which reports why the value is not
+    writable.
+
     Returns False when the value is not writable. An example would be a
     variable value reconstructed from debug info via a computation or a constant.
     A True result does not guarantee a write will succeed; other
     runtime conditions may still prevent a successful write."
 ) lldb::SBValue::CanSetValue;
+
+%feature("docstring", "
+    Returns whether this value can be modified through SetValueFromCString()
+    or SetData().
+
+    Returns an SBError describing why the value is not writable. An example
+    would be a variable value reconstructed from debug info via a computation
+    or a constant. A success result does not guarantee a write will succeed;
+    other runtime conditions may still prevent a successful write."
+) lldb::SBValue::CanSet;
+
+%feature("docstring", "
+    Create an SBValue with the given name by evaluating the expression, with
+    the execution context inherited from the current SBValue.
+    Data Inspection Language (DIL) attempts to evaluate the expression first
+    (can be disabled by setting target.experimental.use-DIL-for-creating-values
+    to false). If DIL is not called or fails, the evaluation falls back to
+    UserExpression."
+) lldb::SBValue::CreateValueFromExpression;

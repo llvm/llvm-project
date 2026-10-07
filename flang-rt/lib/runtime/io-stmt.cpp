@@ -7,12 +7,12 @@
 //===----------------------------------------------------------------------===//
 
 #include "flang-rt/runtime/io-stmt.h"
-#include "unit.h"
 #include "flang-rt/runtime/connection.h"
 #include "flang-rt/runtime/emit-encoded.h"
 #include "flang-rt/runtime/format.h"
 #include "flang-rt/runtime/memory.h"
 #include "flang-rt/runtime/tools.h"
+#include "flang-rt/runtime/unit.h"
 #include "flang-rt/runtime/utf.h"
 #include <algorithm>
 #include <cstdio>
@@ -988,7 +988,9 @@ template <Direction DIR>
 ChildIoStatementState<DIR>::ChildIoStatementState(
     ChildIo &child, const char *sourceFile, int sourceLine)
     : IoStatementBase{sourceFile, sourceLine}, child_{child},
-      mutableModes_{child.parent().mutableModes()} {}
+      mutableModes_{child.parent().mutableModes()} {
+  mutableModes_.inNamelist = false;
+}
 
 template <Direction DIR>
 const NonTbpDefinedIoTable *

@@ -319,6 +319,45 @@ define void @test_9_9(ptr addrspace(9) %p, ptr addrspace(9) %p1) {
   ret void
 }
 
+; The VGPR address space is only reachable through its own indexed accesses, so
+; it aliases nothing else - not even flat, since a flat pointer obtained by
+; casting one cannot be dereferenced.
+
+; CHECK: NoAlias:  i8 addrspace(13)* %p, i8* %p1
+define void @test_13_0(ptr addrspace(13) %p, ptr addrspace(0) %p1) {
+  load i8, ptr addrspace(13) %p
+  load i8, ptr addrspace(0) %p1
+  ret void
+}
+
+; CHECK: NoAlias:  i8 addrspace(13)* %p, i8 addrspace(1)* %p1
+define void @test_13_1(ptr addrspace(13) %p, ptr addrspace(1) %p1) {
+  load i8, ptr addrspace(13) %p
+  load i8, ptr addrspace(1) %p1
+  ret void
+}
+
+; CHECK: NoAlias:  i8 addrspace(13)* %p, i8 addrspace(3)* %p1
+define void @test_13_3(ptr addrspace(13) %p, ptr addrspace(3) %p1) {
+  load i8, ptr addrspace(13) %p
+  load i8, ptr addrspace(3) %p1
+  ret void
+}
+
+; CHECK: NoAlias:  i8 addrspace(13)* %p, i8 addrspace(5)* %p1
+define void @test_13_5(ptr addrspace(13) %p, ptr addrspace(5) %p1) {
+  load i8, ptr addrspace(13) %p
+  load i8, ptr addrspace(5) %p1
+  ret void
+}
+
+; CHECK: MayAlias:  i8 addrspace(13)* %p, i8 addrspace(13)* %p1
+define void @test_13_13(ptr addrspace(13) %p, ptr addrspace(13) %p1) {
+  load i8, ptr addrspace(13) %p
+  load i8, ptr addrspace(13) %p1
+  ret void
+}
+
 ; CHECK-LABEL: Function: test_kernel_arg_local_ptr
 ; CHECK: MayAlias:   i32 addrspace(3)* %arg, i32 addrspace(3)* %arg1
 ; CHECK: MayAlias:   i32 addrspace(3)* %arg, i32* %arg2

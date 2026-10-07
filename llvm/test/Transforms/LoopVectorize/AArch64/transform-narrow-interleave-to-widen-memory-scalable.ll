@@ -225,8 +225,6 @@ define void @test_masked_interleave_group(i32 %N, ptr %mask, ptr %src, ptr %dst)
 ; CHECK-NEXT:    [[TMP2:%.*]] = call i64 @llvm.vscale.i64()
 ; CHECK-NEXT:    [[UMAX:%.*]] = shl nuw i64 [[TMP2]], 3
 ; CHECK-NEXT:    [[MIN_ITERS_CHECK:%.*]] = icmp ult i64 [[TMP1]], [[UMAX]]
-; CHECK-NEXT:    [[TMP20:%.*]] = call i64 @llvm.vscale.i64()
-; CHECK-NEXT:    [[TMP29:%.*]] = shl nuw i64 [[TMP20]], 3
 ; CHECK-NEXT:    br i1 [[MIN_ITERS_CHECK]], label %[[VEC_EPILOG_SCALAR_PH:.*]], label %[[VECTOR_MEMCHECK:.*]]
 ; CHECK:       [[VECTOR_MEMCHECK]]:
 ; CHECK-NEXT:    [[TMP4:%.*]] = zext i32 [[N]] to i64
@@ -249,8 +247,7 @@ define void @test_masked_interleave_group(i32 %N, ptr %mask, ptr %src, ptr %dst)
 ; CHECK-NEXT:    [[MIN_ITERS_CHECK6:%.*]] = icmp ult i64 [[TMP1]], [[TMP8]]
 ; CHECK-NEXT:    br i1 [[MIN_ITERS_CHECK6]], label %[[VEC_EPILOG_PH:.*]], label %[[VECTOR_PH:.*]]
 ; CHECK:       [[VECTOR_PH]]:
-; CHECK-NEXT:    [[TMP9:%.*]] = shl nuw i64 [[TMP2]], 4
-; CHECK-NEXT:    [[N_MOD_VF:%.*]] = urem i64 [[TMP1]], [[TMP9]]
+; CHECK-NEXT:    [[N_MOD_VF:%.*]] = urem i64 [[TMP1]], [[TMP8]]
 ; CHECK-NEXT:    [[N_VEC:%.*]] = sub i64 [[TMP1]], [[N_MOD_VF]]
 ; CHECK-NEXT:    [[TMP10:%.*]] = trunc i64 [[N_VEC]] to i32
 ; CHECK-NEXT:    [[TMP11:%.*]] = shl i64 [[N_VEC]], 4
@@ -276,14 +273,14 @@ define void @test_masked_interleave_group(i32 %N, ptr %mask, ptr %src, ptr %dst)
 ; CHECK-NEXT:    [[INTERLEAVED_VEC:%.*]] = call <vscale x 64 x float> @llvm.vector.interleave4.nxv64f32(<vscale x 16 x float> [[TMP28]], <vscale x 16 x float> [[TMP16]], <vscale x 16 x float> [[TMP17]], <vscale x 16 x float> [[TMP18]])
 ; CHECK-NEXT:    [[INTERLEAVED_MASK9:%.*]] = call <vscale x 64 x i1> @llvm.vector.interleave4.nxv64i1(<vscale x 16 x i1> [[TMP27]], <vscale x 16 x i1> [[TMP27]], <vscale x 16 x i1> [[TMP27]], <vscale x 16 x i1> [[TMP27]])
 ; CHECK-NEXT:    call void @llvm.masked.store.nxv64f32.p0(<vscale x 64 x float> [[INTERLEAVED_VEC]], ptr align 4 [[NEXT_GEP1]], <vscale x 64 x i1> [[INTERLEAVED_MASK9]]), !alias.scope [[META13:![0-9]+]], !noalias [[META15:![0-9]+]]
-; CHECK-NEXT:    [[INDEX_NEXT]] = add nuw i64 [[INDEX1]], [[TMP9]]
+; CHECK-NEXT:    [[INDEX_NEXT]] = add nuw i64 [[INDEX1]], [[TMP8]]
 ; CHECK-NEXT:    [[TMP19:%.*]] = icmp eq i64 [[INDEX_NEXT]], [[N_VEC]]
 ; CHECK-NEXT:    br i1 [[TMP19]], label %[[MIDDLE_BLOCK:.*]], label %[[VECTOR_BODY]], !llvm.loop [[LOOP16:![0-9]+]]
 ; CHECK:       [[MIDDLE_BLOCK]]:
 ; CHECK-NEXT:    [[CMP_N:%.*]] = icmp eq i64 [[TMP1]], [[N_VEC]]
 ; CHECK-NEXT:    br i1 [[CMP_N]], label %[[EXIT:.*]], label %[[VEC_EPILOG_ITER_CHECK:.*]]
 ; CHECK:       [[VEC_EPILOG_ITER_CHECK]]:
-; CHECK-NEXT:    [[MIN_EPILOG_ITERS_CHECK:%.*]] = icmp ult i64 [[N_MOD_VF]], [[TMP29]]
+; CHECK-NEXT:    [[MIN_EPILOG_ITERS_CHECK:%.*]] = icmp ult i64 [[N_MOD_VF]], [[UMAX]]
 ; CHECK-NEXT:    br i1 [[MIN_EPILOG_ITERS_CHECK]], label %[[VEC_EPILOG_SCALAR_PH]], label %[[VEC_EPILOG_PH]], !prof [[PROF17:![0-9]+]]
 ; CHECK:       [[VEC_EPILOG_PH]]:
 ; CHECK-NEXT:    [[VEC_EPILOG_RESUME_VAL:%.*]] = phi i64 [ [[N_VEC]], %[[VEC_EPILOG_ITER_CHECK]] ], [ 0, %[[VECTOR_MAIN_LOOP_ITER_CHECK]] ]

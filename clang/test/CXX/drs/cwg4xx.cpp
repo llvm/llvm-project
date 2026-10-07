@@ -1035,8 +1035,8 @@ namespace cwg468 { // cwg468: 2.7 c++11
     };
   };
   int k = cwg468::template A<int>::template B<char>::C;
-  // cxx98-error@-1 {{'template' keyword outside of a template}}
-  // cxx98-error@-2 {{'template' keyword outside of a template}}
+  // cxx98-error@-1 {{use of 'template' keyword outside of a template is a C++11 extension}}
+  // cxx98-error@-2 {{use of 'template' keyword outside of a template is a C++11 extension}}
 } // namespace cwg468
 
 namespace cwg469 { // cwg469: no
@@ -1264,7 +1264,7 @@ namespace cwg482 { // cwg482: 3.5
   // expected-warning@-1 {{extra qualification on member 'f'}}
 
   inline namespace X {
-  // cxx98-error@-1 {{inline namespaces are a C++11 feature}}
+  // cxx98-error@-1 {{inline namespaces are a C++11 extension}}
     extern int b;
     void g();
     struct S;

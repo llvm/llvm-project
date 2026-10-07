@@ -21,14 +21,17 @@
 
 namespace clang::ssaf {
 
+class SSAFOptions;
+
 class Transformation : public clang::ASTConsumer {
 public:
-  Transformation(const WPASuite &Suite, SourceEditEmitter &Edits,
-                 TransformationReportEmitter &Report)
-      : Suite(Suite), Edits(Edits), Report(Report) {}
+  Transformation(const WPASuite &Suite, const SSAFOptions &Opts,
+                 SourceEditEmitter &Edits, TransformationReportEmitter &Report)
+      : Suite(Suite), Opts(Opts), Edits(Edits), Report(Report) {}
 
 protected:
   const WPASuite &Suite;
+  const SSAFOptions &Opts;
   SourceEditEmitter &Edits;
   TransformationReportEmitter &Report;
 };

@@ -20,11 +20,12 @@
 # CHECK-FDATA-WARM: chain
 # CHECK-YAML-WARM: chain
 
-# RUN: sed -i 's|chain|chain/2|g' %t.fdata
+# RUN: sed 's|chain|chain/2|g' %t.fdata > %t.fdata.tmp
+# RUN: mv %t.fdata.tmp %t.fdata
 # RUN: llvm-objcopy --localize-symbol=chain %t.main.o
 # RUN: %clang %cflags %t.chain.o %t.main.o -o %t.exe -Wl,-q
 # RUN: llvm-bolt %t.exe -o %t.bolt --split-functions --split-strategy=randomN \
-# RUN:   --reorder-blocks=ext-tsp --enable-bat --bolt-seed=7 --data=%t.fdata
+# RUN:   --reorder-blocks=ext-tsp --enable-bat --bolt-seed=20 --data=%t.fdata
 # RUN: llvm-objdump --syms %t.bolt | FileCheck %s --check-prefix=CHECK-SYMS
 
 # RUN: link_fdata %s %t.bolt %t.preagg PREAGG
@@ -40,21 +41,32 @@
 # RUN: perf2bolt %t.bolt -p %t.preagg2 --pa -o %t.bat2.fdata -w %t.bat2.yaml
 # RUN: FileCheck %s --input-file %t.bat2.yaml --check-prefix=CHECK-YAML2
 
-# CHECK-SYMS: l df *ABS*          [[#]] chain.s
-# CHECK-SYMS: l  F .bolt.org.text [[#]] chain
-# CHECK-SYMS: l  F .text.cold     [[#]] chain.cold.0
-# CHECK-SYMS: l  F .text          [[#]] chain
-# CHECK-SYMS: l df *ABS*          [[#]] bolt-pseudo.o
-# CHECK-SYMS: l  F .text.cold     [[#]] dummy.cold.0
-# CHECK-SYMS: l  F .text.cold.1   [[#]] dummy.cold.1
-# CHECK-SYMS: l  F .text.cold.2   [[#]] dummy.cold.2
+## With --bolt-seed=20 the randomN strategy splits chain into eight cold
+## fragments and dummy into two. The split is now deterministic across C++
+## standard library implementations, so we can match the fragments exactly.
+# CHECK-SYMS: l df *ABS*          {{[0-9a-f]+}} chain.s
+# CHECK-SYMS: l  F .bolt.org.text {{[0-9a-f]+}} chain
+# CHECK-SYMS: l  F .text.cold     {{[0-9a-f]+}} chain.cold.0
+# CHECK-SYMS: l  F .text.cold.1   {{[0-9a-f]+}} chain.cold.1
+# CHECK-SYMS: l  F .text.cold.2   {{[0-9a-f]+}} chain.cold.2
+# CHECK-SYMS: l  F .text.cold.3   {{[0-9a-f]+}} chain.cold.3
+# CHECK-SYMS: l  F .text.cold.4   {{[0-9a-f]+}} chain.cold.4
+# CHECK-SYMS: l  F .text.cold.5   {{[0-9a-f]+}} chain.cold.5
+# CHECK-SYMS: l  F .text.cold.6   {{[0-9a-f]+}} chain.cold.6
+# CHECK-SYMS: l  F .text.cold.7   {{[0-9a-f]+}} chain.cold.7
+# CHECK-SYMS: l  F .text          {{[0-9a-f]+}} chain
+# CHECK-SYMS: l df *ABS*          {{[0-9a-f]+}} bolt-pseudo.o
+# CHECK-SYMS: l  F .text.cold     {{[0-9a-f]+}} dummy.cold.0
+# CHECK-SYMS: l  F .text.cold.1   {{[0-9a-f]+}} dummy.cold.1
 
 # CHECK-REGISTER: BOLT-INFO: marking dummy.cold.0/1(*2) as a fragment of dummy
 # CHECK-REGISTER: BOLT-INFO: marking dummy.cold.1/1(*2) as a fragment of dummy
-# CHECK-REGISTER: BOLT-INFO: marking dummy.cold.2/1(*2) as a fragment of dummy
 # CHECK-REGISTER: BOLT-INFO: marking chain.cold.0/1(*2) as a fragment of chain/2(*2)
+# CHECK-REGISTER: BOLT-INFO: marking chain.cold.1/1(*2) as a fragment of chain/2(*2)
+# CHECK-REGISTER: BOLT-INFO: marking chain.cold.2/1(*2) as a fragment of chain/2(*2)
+# CHECK-REGISTER: BOLT-INFO: marking chain.cold.3/1(*2) as a fragment of chain/2(*2)
 
-# CHECK-FDATA: 0 [unknown] 0 1 chain/chain.s/2 10 0 1
+# CHECK-FDATA: 0 [unknown] 0 1 chain/chain.s/2 9 0 1
 # CHECK-YAML: - name: 'chain/chain.s/2'
 # CHECK-YAML2: - name: 'chain/chain.s/1'
 ## non-BAT function has non-zero insns:

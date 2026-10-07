@@ -115,10 +115,10 @@ define { i64, i1 } @cmpxchg_flat_agent_i64_volatile(ptr %ptr, i64 %val, i64 %swa
 ; CHECK-NEXT:    br i1 [[IS_PRIVATE]], label %[[ATOMICRMW_PRIVATE:.*]], label %[[ATOMICRMW_GLOBAL:.*]]
 ; CHECK:       [[ATOMICRMW_PRIVATE]]:
 ; CHECK-NEXT:    [[TMP3:%.*]] = addrspacecast ptr [[PTR]] to ptr addrspace(5)
-; CHECK-NEXT:    [[TMP4:%.*]] = load i64, ptr addrspace(5) [[TMP3]], align 8
+; CHECK-NEXT:    [[TMP4:%.*]] = load volatile i64, ptr addrspace(5) [[TMP3]], align 8
 ; CHECK-NEXT:    [[TMP5:%.*]] = icmp eq i64 [[TMP4]], [[VAL]]
 ; CHECK-NEXT:    [[TMP6:%.*]] = select i1 [[TMP5]], i64 [[SWAP]], i64 [[TMP4]]
-; CHECK-NEXT:    store i64 [[TMP6]], ptr addrspace(5) [[TMP3]], align 8
+; CHECK-NEXT:    store volatile i64 [[TMP6]], ptr addrspace(5) [[TMP3]], align 8
 ; CHECK-NEXT:    [[TMP7:%.*]] = insertvalue { i64, i1 } poison, i64 [[TMP4]], 0
 ; CHECK-NEXT:    [[TMP8:%.*]] = insertvalue { i64, i1 } [[TMP7]], i1 [[TMP5]], 1
 ; CHECK-NEXT:    br label %[[ATOMICRMW_PHI:.*]]

@@ -13,15 +13,6 @@
 
 #include <gpuintrin.h>
 
-// The warpSize is a runtime value rather than a compile-time constant.
-static inline __attribute__((device)) const struct {
-  __attribute__((device, always_inline, const)) operator int() const noexcept {
-    return __gpu_num_lanes();
-  }
-} warpSize{};
-
-// Make sure nobody can create instances of the coordinate types, take their
-// address, copy, or assign them.
 #pragma push_macro("__GPU_DISALLOW_BUILTINVAR_ACCESS")
 #define __GPU_DISALLOW_BUILTINVAR_ACCESS(__tag)                                \
   __attribute__((device)) __tag() = delete;                                    \

@@ -237,3 +237,34 @@ func.func @complex_abs_opencl(%arg: complex<f32>) -> f32 {
 //       CHECK:   spirv.CL.sqrt %[[SUM]] : f32
 
 }
+
+// -----
+
+func.func @complex_angle(%arg: complex<f32>) -> f32 {
+  %angle = complex.angle %arg : complex<f32>
+  return %angle : f32
+}
+
+// CHECK-LABEL: func.func @complex_angle
+//  CHECK-SAME: %[[ARG:.+]]: complex<f32>
+//       CHECK:   %[[V:.+]] = builtin.unrealized_conversion_cast %[[ARG]] : complex<f32> to vector<2xf32>
+//       CHECK:   %[[RE:.+]] = spirv.CompositeExtract %[[V]][0 : i32] : vector<2xf32>
+//       CHECK:   %[[IM:.+]] = spirv.CompositeExtract %[[V]][1 : i32] : vector<2xf32>
+//       CHECK:   %[[ANGLE:.+]] = spirv.GL.Atan2 %[[IM]], %[[RE]] : f32
+//       CHECK:   return %[[ANGLE]] : f32
+
+// -----
+
+module attributes {
+  spirv.target_env = #spirv.target_env<#spirv.vce<v1.0, [Kernel], []>, #spirv.resource_limits<>>
+} {
+
+func.func @complex_angle_opencl(%arg: complex<f32>) -> f32 {
+  %angle = complex.angle %arg : complex<f32>
+  return %angle : f32
+}
+
+// CHECK-LABEL: func.func @complex_angle_opencl
+//       CHECK:   spirv.CL.atan2
+
+}

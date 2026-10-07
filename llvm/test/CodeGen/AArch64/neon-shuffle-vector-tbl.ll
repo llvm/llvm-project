@@ -559,7 +559,7 @@ define <8 x i8> @no_shuffle_only_some_and_constants(<8 x i8> %src, <8 x i8> %mas
 ; CHECK-GI-NEXT:    mov x8, sp
 ; CHECK-GI-NEXT:    str d0, [sp]
 ; CHECK-GI-NEXT:    and w9, w9, #0x7
-; CHECK-GI-NEXT:    and x9, x9, #0xff
+; CHECK-GI-NEXT:    and x9, x9, #0x7
 ; CHECK-GI-NEXT:    lsl x11, x9, #1
 ; CHECK-GI-NEXT:    sub x9, x11, x9
 ; CHECK-GI-NEXT:    ldr b2, [x8, x9]

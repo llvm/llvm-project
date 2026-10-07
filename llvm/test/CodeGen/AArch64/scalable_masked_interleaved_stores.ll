@@ -54,6 +54,62 @@ define void @foo_st2_nxv2i64(<vscale x 2 x i1> %mask, <vscale x 2 x i64> %val1, 
   ret void
 }
 
+define void @foo_st3_nxv16i8(<vscale x 16 x i1> %mask, <vscale x 16 x i8> %val1, <vscale x 16 x i8> %val2, <vscale x 16 x i8> %val3, ptr %p) {
+; CHECK-LABEL: foo_st3_nxv16i8:
+; CHECK:       // %bb.0:
+; CHECK-NEXT:    // kill: def $z2 killed $z2 killed $z0_z1_z2 def $z0_z1_z2
+; CHECK-NEXT:    // kill: def $z1 killed $z1 killed $z0_z1_z2 def $z0_z1_z2
+; CHECK-NEXT:    // kill: def $z0 killed $z0 killed $z0_z1_z2 def $z0_z1_z2
+; CHECK-NEXT:    st3b { z0.b - z2.b }, p0, [x0]
+; CHECK-NEXT:    ret
+  %interleaved.mask = call <vscale x 48 x i1> @llvm.vector.interleave3.nxv48i1(<vscale x 16 x i1> %mask, <vscale x 16 x i1> %mask, <vscale x 16 x i1> %mask)
+  %interleaved.value = call <vscale x 48 x i8> @llvm.vector.interleave3.nxv48i8(<vscale x 16 x i8> %val1, <vscale x 16 x i8> %val2, <vscale x 16 x i8> %val3)
+  call void @llvm.masked.store.nxv48i8.p0(<vscale x 48 x i8> %interleaved.value, ptr %p, i32 1, <vscale x 48 x i1> %interleaved.mask)
+  ret void
+}
+
+define void @foo_st3_nxv8i16(<vscale x 8 x i1> %mask, <vscale x 8 x i16> %val1, <vscale x 8 x i16> %val2, <vscale x 8 x i16> %val3, ptr %p) {
+; CHECK-LABEL: foo_st3_nxv8i16:
+; CHECK:       // %bb.0:
+; CHECK-NEXT:    // kill: def $z2 killed $z2 killed $z0_z1_z2 def $z0_z1_z2
+; CHECK-NEXT:    // kill: def $z1 killed $z1 killed $z0_z1_z2 def $z0_z1_z2
+; CHECK-NEXT:    // kill: def $z0 killed $z0 killed $z0_z1_z2 def $z0_z1_z2
+; CHECK-NEXT:    st3h { z0.h - z2.h }, p0, [x0]
+; CHECK-NEXT:    ret
+  %interleaved.mask = call <vscale x 24 x i1> @llvm.vector.interleave3.nxv24i1(<vscale x 8 x i1> %mask, <vscale x 8 x i1> %mask, <vscale x 8 x i1> %mask)
+  %interleaved.value = call <vscale x 24 x i16> @llvm.vector.interleave3.nxv24i16(<vscale x 8 x i16> %val1, <vscale x 8 x i16> %val2, <vscale x 8 x i16> %val3)
+  call void @llvm.masked.store.nxv24i16.p0(<vscale x 24 x i16> %interleaved.value, ptr %p, i32 1, <vscale x 24 x i1> %interleaved.mask)
+  ret void
+}
+
+define void @foo_st3_nxv4i32(<vscale x 4 x i1> %mask, <vscale x 4 x i32> %val1, <vscale x 4 x i32> %val2, <vscale x 4 x i32> %val3, ptr %p) {
+; CHECK-LABEL: foo_st3_nxv4i32:
+; CHECK:       // %bb.0:
+; CHECK-NEXT:    // kill: def $z2 killed $z2 killed $z0_z1_z2 def $z0_z1_z2
+; CHECK-NEXT:    // kill: def $z1 killed $z1 killed $z0_z1_z2 def $z0_z1_z2
+; CHECK-NEXT:    // kill: def $z0 killed $z0 killed $z0_z1_z2 def $z0_z1_z2
+; CHECK-NEXT:    st3w { z0.s - z2.s }, p0, [x0]
+; CHECK-NEXT:    ret
+  %interleaved.mask = call <vscale x 12 x i1> @llvm.vector.interleave3.nxv12i1(<vscale x 4 x i1> %mask, <vscale x 4 x i1> %mask, <vscale x 4 x i1> %mask)
+  %interleaved.value = call <vscale x 12 x i32> @llvm.vector.interleave3.nxv12i32(<vscale x 4 x i32> %val1, <vscale x 4 x i32> %val2, <vscale x 4 x i32> %val3)
+  call void @llvm.masked.store.nxv12i32.p0(<vscale x 12 x i32> %interleaved.value, ptr %p, i32 1, <vscale x 12 x i1> %interleaved.mask)
+  ret void
+}
+
+define void @foo_st3_nxv2i64(<vscale x 2 x i1> %mask, <vscale x 2 x i64> %val1, <vscale x 2 x i64> %val2, <vscale x 2 x i64> %val3, ptr %p) {
+; CHECK-LABEL: foo_st3_nxv2i64:
+; CHECK:       // %bb.0:
+; CHECK-NEXT:    // kill: def $z2 killed $z2 killed $z0_z1_z2 def $z0_z1_z2
+; CHECK-NEXT:    // kill: def $z1 killed $z1 killed $z0_z1_z2 def $z0_z1_z2
+; CHECK-NEXT:    // kill: def $z0 killed $z0 killed $z0_z1_z2 def $z0_z1_z2
+; CHECK-NEXT:    st3d { z0.d - z2.d }, p0, [x0]
+; CHECK-NEXT:    ret
+  %interleaved.mask = call <vscale x 6 x i1> @llvm.vector.interleave3.nxv6i1(<vscale x 2 x i1> %mask, <vscale x 2 x i1> %mask, <vscale x 2 x i1> %mask)
+  %interleaved.value = call <vscale x 6 x i64> @llvm.vector.interleave3.nxv6i64(<vscale x 2 x i64> %val1, <vscale x 2 x i64> %val2, <vscale x 2 x i64> %val3)
+  call void @llvm.masked.store.nxv6i64.p0(<vscale x 6 x i64> %interleaved.value, ptr %p, i32 1, <vscale x 6 x i1> %interleaved.mask)
+  ret void
+}
+
 define void @foo_st4_nxv16i8(<vscale x 16 x i1> %mask, <vscale x 16 x i8> %val1, <vscale x 16 x i8> %val2, <vscale x 16 x i8> %val3, <vscale x 16 x i8> %val4, ptr %p) {
 ; CHECK-LABEL: foo_st4_nxv16i8:
 ; CHECK:       // %bb.0:

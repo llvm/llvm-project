@@ -735,6 +735,17 @@ class NewStyle(object):
   def __init__(self, one, two, three):
     pass
 
+class NoConstructorAtAll:
+  pass
+
+class NewOnlyVarArgs:
+  def __new__(cls, *args, **kwargs):
+    return super().__new__(cls)
+
+class NewOnlyFixedArgs:
+  def __new__(cls, a, b):
+    return super().__new__(cls)
+
 )";
     PyObject *o =
         RunString(script, Py_file_input, globals.get(), globals.get());
@@ -782,13 +793,37 @@ class NewStyle(object):
     arginfo = newstyle.get().GetArgInfo();
     ASSERT_THAT_EXPECTED(arginfo, llvm::Succeeded());
     EXPECT_EQ(arginfo.get().max_positional_args, 3u);
+
+    // Neither __init__ nor __new__ overridden: object.__init__ truly takes
+    // no extra arguments here.
+    auto no_ctor = As<PythonCallable>(globals.GetItem("NoConstructorAtAll"));
+    ASSERT_THAT_EXPECTED(no_ctor, llvm::Succeeded());
+    arginfo = no_ctor.get().GetArgInfo();
+    ASSERT_THAT_EXPECTED(arginfo, llvm::Succeeded());
+    EXPECT_EQ(arginfo.get().max_positional_args, 0u);
+
+    // __init__ not overridden, but __new__ is: object.__init__ becomes
+    // lenient about extra arguments once __new__ is overridden, so the
+    // argument count has to come from __new__, not from __init__ alone.
+    auto new_varargs = As<PythonCallable>(globals.GetItem("NewOnlyVarArgs"));
+    ASSERT_THAT_EXPECTED(new_varargs, llvm::Succeeded());
+    arginfo = new_varargs.get().GetArgInfo();
+    ASSERT_THAT_EXPECTED(arginfo, llvm::Succeeded());
+    EXPECT_EQ(arginfo.get().max_positional_args,
+              PythonCallable::ArgInfo::UNBOUNDED);
+
+    auto new_fixed = As<PythonCallable>(globals.GetItem("NewOnlyFixedArgs"));
+    ASSERT_THAT_EXPECTED(new_fixed, llvm::Succeeded());
+    arginfo = new_fixed.get().GetArgInfo();
+    ASSERT_THAT_EXPECTED(arginfo, llvm::Succeeded());
+    EXPECT_EQ(arginfo.get().max_positional_args, 2u);
   }
 
   {
     auto builtins = PythonModule::BuiltinsModule();
     auto hex = As<PythonCallable>(builtins.GetAttribute("hex"));
     ASSERT_THAT_EXPECTED(hex, llvm::Succeeded());
-    auto arginfo = hex.get().GetArgInfo();
+    auto arginfo = PythonCallable::GetArgInfoFromInspectSignature(hex.get());
     ASSERT_THAT_EXPECTED(arginfo, llvm::Succeeded());
     EXPECT_EQ(arginfo.get().max_positional_args, 1u);
   }

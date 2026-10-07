@@ -10,4 +10,4 @@
 
 #include "src/math/fadd.h"
 
-LIST_ADD_TESTS(float, double, LIBC_NAMESPACE::fadd)
+LIST_ADD_TESTS(Fadd, float, double, LIBC_NAMESPACE::fadd)

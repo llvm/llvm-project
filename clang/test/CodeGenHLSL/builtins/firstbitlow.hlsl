@@ -80,6 +80,12 @@ uint4 test_firstbitlow_uint4(uint4 p0) {
   return firstbitlow(p0);
 }
 
+// CHECK-LABEL: test_firstbitlow_uint5
+// CHECK: call <5 x i32> @llvm.[[TARGET]].firstbitlow.v5i32
+vector<uint, 5> test_firstbitlow_uint5(vector<uint, 5> p0) {
+  return firstbitlow(p0);
+}
+
 // CHECK-LABEL: test_firstbitlow_ulong
 // CHECK: call i32 @llvm.[[TARGET]].firstbitlow.i64
 uint test_firstbitlow_ulong(uint64_t p0) {

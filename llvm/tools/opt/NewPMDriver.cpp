@@ -166,6 +166,18 @@ static cl::opt<std::string> FullLinkTimeOptimizationLastEPPipeline(
              "the FullLinkTimeOptimizationLast extension point into default "
              "pipelines"),
     cl::Hidden);
+static cl::opt<std::string> ThinLinkTimeOptimizationEarlyEPPipeline(
+    "passes-ep-thin-link-time-optimization-early",
+    cl::desc("A textual description of the module pass pipeline inserted at "
+             "the ThinLinkTimeOptimizationEarly extension point into default "
+             "pipelines"),
+    cl::Hidden);
+static cl::opt<std::string> ThinLinkTimeOptimizationLastEPPipeline(
+    "passes-ep-thin-link-time-optimization-last",
+    cl::desc("A textual description of the module pass pipeline inserted at "
+             "the ThinLinkTimeOptimizationLast extension point into default "
+             "pipelines"),
+    cl::Hidden);
 /// @}}
 
 static cl::opt<bool> DisablePipelineVerification(
@@ -345,18 +357,30 @@ static void registerEPCallbacks(PassBuilder &PB) {
               "Unable to parse FullLinkTimeOptimizationLastEP pipeline: ");
           Err(PB.parsePassPipeline(PM, FullLinkTimeOptimizationLastEPPipeline));
         });
+  if (tryParsePipelineText<ModulePassManager>(
+          PB, ThinLinkTimeOptimizationEarlyEPPipeline))
+    PB.registerThinLinkTimeOptimizationEarlyEPCallback(
+        [&PB](ModulePassManager &PM, OptimizationLevel) {
+          ExitOnError Err(
+              "Unable to parse ThinLinkTimeOptimizationEarlyEP pipeline: ");
+          Err(PB.parsePassPipeline(PM,
+                                   ThinLinkTimeOptimizationEarlyEPPipeline));
+        });
+  if (tryParsePipelineText<ModulePassManager>(
+          PB, ThinLinkTimeOptimizationLastEPPipeline))
+    PB.registerThinLinkTimeOptimizationLastEPCallback(
+        [&PB](ModulePassManager &PM, OptimizationLevel) {
+          ExitOnError Err(
+              "Unable to parse ThinLinkTimeOptimizationLastEP pipeline: ");
+          Err(PB.parsePassPipeline(PM, ThinLinkTimeOptimizationLastEPPipeline));
+        });
 }
-
-#define HANDLE_EXTENSION(Ext)                                                  \
-  llvm::PassPluginLibraryInfo get##Ext##PluginInfo();
-#include "llvm/Support/Extension.def"
-#undef HANDLE_EXTENSION
 
 bool llvm::runPassPipeline(
     StringRef Arg0, Module &M, TargetMachine *TM, TargetLibraryInfoImpl *TLII,
     ToolOutputFile *Out, ToolOutputFile *ThinLTOLinkOut,
     ToolOutputFile *OptRemarkFile, StringRef PassPipeline,
-    ArrayRef<PassPlugin> PassPlugins,
+    ArrayRef<PassPluginLibraryInfo> Extensions,
     ArrayRef<std::function<void(PassBuilder &)>> PassBuilderCallbacks,
     OutputKind OK, VerifierKind VK, bool ShouldPreserveAssemblyUseListOrder,
     bool ShouldPreserveBitcodeUseListOrder, bool EmitSummaryIndex,
@@ -423,9 +447,7 @@ bool llvm::runPassPipeline(
 
     MAM.registerPass([&] {
       const TargetOptions &Options = TM->Options;
-      return RuntimeLibraryAnalysis(M.getTargetTriple(), Options.ExceptionModel,
-                                    Options.FloatABIType, Options.EABIVersion,
-                                    Options.MCOptions.ABIName, Options.VecLib);
+      return RuntimeLibraryAnalysis(Options.MCOptions.ABIName, Options.VecLib);
     });
   }
 
@@ -461,18 +483,14 @@ bool llvm::runPassPipeline(
   PassBuilder PB(TM, PTO, P, &PIC);
   registerEPCallbacks(PB);
 
-  // For any loaded plugins, let them register pass builder callbacks.
-  for (auto &PassPlugin : PassPlugins)
-    PassPlugin.registerPassBuilderCallbacks(PB);
+  // Let plugins and linked extensions register pass builder callbacks.
+  for (const PassPluginLibraryInfo &Info : Extensions)
+    if (Info.RegisterPassBuilderCallbacks)
+      Info.RegisterPassBuilderCallbacks(PB);
 
   // Load any explicitly specified plugins.
   for (auto &PassCallback : PassBuilderCallbacks)
     PassCallback(PB);
-
-#define HANDLE_EXTENSION(Ext)                                                  \
-  get##Ext##PluginInfo().RegisterPassBuilderCallbacks(PB);
-#include "llvm/Support/Extension.def"
-#undef HANDLE_EXTENSION
 
   // Specially handle the alias analysis manager so that we can register
   // a custom pipeline of AA passes with it.
@@ -530,7 +548,8 @@ bool llvm::runPassPipeline(
       MPM.addPass(AssignGUIDPass());
     }
     MPM.addPass(PrintModulePass(
-        Out->os(), "", ShouldPreserveAssemblyUseListOrder, EmitSummaryIndex));
+        Out->os(), "", ShouldPreserveAssemblyUseListOrder, EmitSummaryIndex,
+        /*ShouldRenumberMetadata=*/true));
     break;
   case OK_OutputBitcode:
     if (EmitSummaryIndex) {

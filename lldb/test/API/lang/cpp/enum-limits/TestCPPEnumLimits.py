@@ -56,7 +56,7 @@ class CPPEnumLimitsTestCase(TestBase):
         self.build()
         self.check_all(self.dbg.CreateTarget(self.getBuildArtifact("a.out")))
 
-    @skipUnlessPlatform(["windows"])
+    @requireWindows
     @skipUnlessMSVC
     @no_debug_info_test  # We only test MSVC
     def test_msvc(self):

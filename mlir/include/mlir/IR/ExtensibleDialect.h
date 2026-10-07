@@ -416,6 +416,14 @@ public:
 
 class NoTerminator : public DynamicOpTraitImpl<OpTrait::NoTerminator> {};
 
+class IsIsolatedFromAbove
+    : public DynamicOpTraitImpl<OpTrait::IsIsolatedFromAbove> {
+public:
+  LogicalResult verifyRegionTrait(Operation *op) const override {
+    return OpTrait::impl::verifyIsIsolatedFromAbove(op);
+  }
+};
+
 } // namespace DynamicOpTraits
 
 //===----------------------------------------------------------------------===//
@@ -544,7 +552,8 @@ public:
   void setInherentAttr(Operation *op, StringAttr name, Attribute value) final {
     llvm::report_fatal_error("Unsupported setInherentAttr on Dynamic dialects");
   }
-  void populateInherentAttrs(Operation *op, NamedAttrList &attrs) final {}
+  void walkInherentAttrs(Operation *op,
+                         OperationName::InherentAttrVisitor visitor) final {}
   LogicalResult
   verifyInherentAttrs(OperationName opName, NamedAttrList &attributes,
                       function_ref<InFlightDiagnostic()> emitError) final {

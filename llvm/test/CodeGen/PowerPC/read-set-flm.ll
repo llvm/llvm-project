@@ -17,14 +17,14 @@ define double @in_nostrict(double %a, double %b, double %c, double %d) {
 ; CHECK-NEXT:    xsadddp 1, 0, 1
 ; CHECK-NEXT:    blr
 ;
-; LOG: *** MI Scheduling ***
+; LOG: Current Schedule Region
 ; LOG-NEXT: in_nostrict:%bb.0 entry
 ; LOG: ExitSU: MTFSF 255, %{{[0-9]+}}:f8rc, 0, 0
-; LOG: *** MI Scheduling ***
+; LOG: Current Schedule Region
 ; LOG-NEXT: in_nostrict:%bb.0 entry
 ; LOG: ExitSU: %{{[0-9]+}}:f8rc = MFFS implicit $rm
 ;
-; LOG: *** MI Scheduling ***
+; LOG: Current Schedule Region
 ; LOG-NEXT: in_nostrict:%bb.0 entry
 ; LOG: ExitSU: MTFSF 255, renamable $f{{[0-9]+}}, 0, 0
 entry:
@@ -52,14 +52,14 @@ define double @in_strict(double %a, double %b, double %c, double %d) #0 {
 ; CHECK-NEXT:    xsadddp 1, 0, 1
 ; CHECK-NEXT:    blr
 ;
-; LOG: ***** MI Scheduling *****
+; LOG: Current Schedule Region
 ; LOG-NEXT: in_strict:%bb.0 entry
 ; LOG: ExitSU: MTFSF 255, %{{[0-9]+}}:f8rc, 0, 0
-; LOG: ***** MI Scheduling *****
+; LOG: Current Schedule Region
 ; LOG-NEXT: in_strict:%bb.0 entry
 ; LOG: ExitSU: %{{[0-9]+}}:f8rc = MFFS implicit $rm
 ;
-; LOG: ***** MI Scheduling *****
+; LOG: Current Schedule Region
 ; LOG-NEXT: in_strict:%bb.0 entry
 ; LOG: ExitSU: MTFSF 255, renamable $f{{[0-9]+}}, 0, 0
 entry:

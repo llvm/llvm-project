@@ -77,7 +77,6 @@ static void removeBlockFromLoops(BasicBlock *BB, Loop *FirstLoop,
                                  Loop *LastLoop = nullptr) {
   assert((!LastLoop || LastLoop->contains(FirstLoop->getHeader())) &&
          "First loop is supposed to be inside of last loop!");
-  assert(FirstLoop->contains(BB) && "Must be a loop block!");
   for (Loop *Current = FirstLoop; Current != LastLoop;
        Current = Current->getParentLoop())
     Current->removeBlockFromLoop(BB);
@@ -535,9 +534,8 @@ private:
       if (MSSAU && TheOnlySuccDuplicates > 1)
         MSSAU->removeDuplicatePhiEdgesBetween(BB, TheOnlySucc);
 
-      IRBuilder<> Builder(BB->getContext());
       Instruction *Term = BB->getTerminator();
-      Builder.SetInsertPoint(Term);
+      IRBuilder<> Builder(Term);
       Builder.CreateBr(TheOnlySucc);
       Term->eraseFromParent();
 
@@ -655,7 +653,7 @@ public:
            "DT broken after transform!");
 #endif
     assert(DT.isReachableFromEntry(Header));
-    LI.verify(DT);
+    LI.verify();
 #endif
 
     return true;

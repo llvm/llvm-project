@@ -2,6 +2,7 @@
 ; RUN: llc %s -O0 -mtriple=sparc -mcpu=gr712rc -o - | FileCheck %s
 ; RUN: llc %s -O0 -mtriple=sparc -mcpu=leon4 -o - | FileCheck %s
 ; RUN: llc %s -O0 -mtriple=sparc -mcpu=gr740 -o - | FileCheck %s
+; RUN: llc %s -O0 -mtriple=sparc -mcpu=leon5 -o - | FileCheck %s
 ; RUN: llc %s -O0 -mtriple=sparc -mcpu=myriad2 -o - | FileCheck %s
 ; RUN: llc %s -O0 -mtriple=sparc -mcpu=myriad2.1 -o - | FileCheck %s
 ; RUN: llc %s -O0 -mtriple=sparc -mcpu=myriad2.2 -o - | FileCheck %s

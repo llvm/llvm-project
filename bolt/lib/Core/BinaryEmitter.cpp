@@ -1037,7 +1037,7 @@ void BinaryEmitter::emitLSDA(BinaryFunction &BF, const FunctionFragment &FF) {
   // Emit encoding of entries in the call site table. The format is used for the
   // call site start, length, and corresponding landing pad.
   if (!LPStartSymbol)
-    Streamer.emitIntValue(dwarf::DW_EH_PE_sdata4, 1);
+    Streamer.emitIntValue(dwarf::DW_EH_PE_udata4, 1);
   else
     Streamer.emitIntValue(dwarf::DW_EH_PE_uleb128, 1);
 

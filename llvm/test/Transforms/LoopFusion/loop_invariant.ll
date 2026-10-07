@@ -4,7 +4,7 @@
 
 define void @loop_invariant(i32 %N) {
 ; CHECK-DA: Performing Loop Fusion on function loop_invariant
-; CHECK-DA: Safe to fuse due to a loop-invariant output dependency
+; CHECK-DA: Fusion is performed
 ;
 pre1:
   %ptr = alloca i32, align 4
@@ -58,5 +58,86 @@ body2:  ; preds = %pre2, %body2
   br i1 %cond2, label %body2, label %exit
 
 exit:
+  ret void
+}
+
+; Test idempotent store-store pairs: both loops write the same value to
+; Safe to fuse despite MayAlias.
+
+define void @idempotent_same_arg(ptr %a, ptr %b, i32 %n, i32 %val) {
+; CHECK-DA: Performing Loop Fusion on function idempotent_same_arg
+; CHECK-DA: Fusion is performed
+entry:
+  %cmp = icmp sgt i32 %n, 0
+  br i1 %cmp, label %for.body.preheader, label %for.cond2.preheader
+
+for.body.preheader:
+  %wide.trip.count = zext nneg i32 %n to i64
+  br label %for.body
+
+for.body:
+  %iv = phi i64 [ 0, %for.body.preheader ], [ %iv.next, %for.body ]
+  %gep.a = getelementptr inbounds i32, ptr %a, i64 %iv
+  store i32 %val, ptr %gep.a, align 4
+  %iv.next = add nuw nsw i64 %iv, 1
+  %exit = icmp eq i64 %iv.next, %wide.trip.count
+  br i1 %exit, label %for.cond2.preheader, label %for.body
+
+for.cond2.preheader:
+  %cmp2 = icmp sgt i32 %n, 0
+  br i1 %cmp2, label %for.body5.preheader, label %for.cond.cleanup4
+
+for.body5.preheader:
+  %wide.trip.count2 = zext nneg i32 %n to i64
+  br label %for.body5
+
+for.body5:
+  %iv2 = phi i64 [ 0, %for.body5.preheader ], [ %iv2.next, %for.body5 ]
+  %gep.b = getelementptr inbounds i32, ptr %b, i64 %iv2
+  store i32 %val, ptr %gep.b, align 4
+  %iv2.next = add nuw nsw i64 %iv2, 1
+  %exit2 = icmp eq i64 %iv2.next, %wide.trip.count2
+  br i1 %exit2, label %for.cond.cleanup4, label %for.body5
+
+for.cond.cleanup4:
+  ret void
+}
+
+define void @different_values_no_fusion(ptr %a, ptr %b, i32 %n, i32 %t) {
+; CHECK-DA: Performing Loop Fusion on function different_values_no_fusion
+; CHECK-DA: Memory dependencies do not allow fusion!
+entry:
+  %cmp = icmp sgt i32 %n, 0
+  br i1 %cmp, label %for.body.preheader, label %for.cond2.preheader
+
+for.body.preheader:
+  %wide.trip.count = zext nneg i32 %n to i64
+  br label %for.body
+
+for.body:
+  %iv = phi i64 [ 0, %for.body.preheader ], [ %iv.next, %for.body ]
+  %gep.a = getelementptr inbounds i32, ptr %a, i64 %iv
+  store i32 %t, ptr %gep.a, align 4
+  %iv.next = add nuw nsw i64 %iv, 1
+  %exit = icmp eq i64 %iv.next, %wide.trip.count
+  br i1 %exit, label %for.cond2.preheader, label %for.body
+
+for.cond2.preheader:
+  %cmp2 = icmp sgt i32 %n, 0
+  br i1 %cmp2, label %for.body5.preheader, label %for.cond.cleanup4
+
+for.body5.preheader:
+  %wide.trip.count2 = zext nneg i32 %n to i64
+  br label %for.body5
+
+for.body5:
+  %iv2 = phi i64 [ 0, %for.body5.preheader ], [ %iv2.next, %for.body5 ]
+  %gep.b = getelementptr inbounds i32, ptr %b, i64 %iv2
+  store i32 42, ptr %gep.b, align 4
+  %iv2.next = add nuw nsw i64 %iv2, 1
+  %exit2 = icmp eq i64 %iv2.next, %wide.trip.count2
+  br i1 %exit2, label %for.cond.cleanup4, label %for.body5
+
+for.cond.cleanup4:
   ret void
 }

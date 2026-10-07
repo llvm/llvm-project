@@ -353,8 +353,6 @@ struct ValueInfo {
 
   /// Checks if all copies are eligible for auto-hiding (have flag set).
   LLVM_ABI bool canAutoHide() const;
-
-  LLVM_ABI bool noRenameOnPromotion() const;
 };
 
 inline raw_ostream &operator<<(raw_ostream &OS, const ValueInfo &VI) {

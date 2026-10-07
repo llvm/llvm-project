@@ -94,10 +94,14 @@ entry:
 ; FP + large frame: spill FP+SR+R4+LR = entsp 3 + 200000  + extsp 1
 ; CHECKFP: .section .cp.rodata.cst4,"aMc",@progbits,4
 ; CHECKFP-NEXT: .p2align 2
-; CHECKFP-NEXT: .LCPI[[CNST0:[0-9_]+]]:
+; CHECKFP-NEXT: .type .LCPI[[CNST0:[0-9_]+]],@object
+; CHECKFP-NEXT: .LCPI[[CNST0]]:
 ; CHECKFP-NEXT: .long 200002
-; CHECKFP-NEXT: .LCPI[[CNST1:[0-9_]+]]:
+; CHECKFP-NEXT: .size .LCPI[[CNST0]], 4
+; CHECKFP-NEXT: .type .LCPI[[CNST1:[0-9_]+]],@object
+; CHECKFP-NEXT: .LCPI[[CNST1]]:
 ; CHECKFP-NEXT: .long 200001
+; CHECKFP-NEXT: .size .LCPI[[CNST1]], 4
 ; CHECKFP-NEXT: .text
 ; CHECKFP-LABEL: f6:
 ; CHECKFP: entsp 65535
@@ -139,10 +143,14 @@ entry:
 ; !FP + large frame: spill SR+SR+R4+LR = entsp 4 + 200000
 ; CHECK: .section .cp.rodata.cst4,"aMc",@progbits,4
 ; CHECK-NEXT: .p2align 2
-; CHECK-NEXT: .LCPI[[CNST0:[0-9_]+]]:
+; CHECK-NEXT: .type .LCPI[[CNST0:[0-9_]+]],@object
+; CHECK-NEXT: .LCPI[[CNST0]]:
 ; CHECK-NEXT: .long 200003
-; CHECK-NEXT: .LCPI[[CNST1:[0-9_]+]]:
+; CHECK-NEXT: .size .LCPI[[CNST0]], 4
+; CHECK-NEXT: .type .LCPI[[CNST1:[0-9_]+]],@object
+; CHECK-NEXT: .LCPI[[CNST1]]:
 ; CHECK-NEXT: .long 200002
+; CHECK-NEXT: .size .LCPI[[CNST1]], 4
 ; CHECK-NEXT: .text
 ; CHECK-LABEL: f6:
 ; CHECK: entsp 65535

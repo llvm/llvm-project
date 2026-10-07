@@ -425,12 +425,10 @@ define signext i32 @cttz_i32(i32 signext %a) nounwind {
 ; RV64XTHEADBB-NOB:       # %bb.0:
 ; RV64XTHEADBB-NOB-NEXT:    beqz a0, .LBB6_2
 ; RV64XTHEADBB-NOB-NEXT:  # %bb.1: # %cond.false
-; RV64XTHEADBB-NOB-NEXT:    addi a1, a0, -1
-; RV64XTHEADBB-NOB-NEXT:    not a0, a0
+; RV64XTHEADBB-NOB-NEXT:    neg a1, a0
 ; RV64XTHEADBB-NOB-NEXT:    and a0, a0, a1
 ; RV64XTHEADBB-NOB-NEXT:    th.ff1 a0, a0
-; RV64XTHEADBB-NOB-NEXT:    li a1, 64
-; RV64XTHEADBB-NOB-NEXT:    sub a0, a1, a0
+; RV64XTHEADBB-NOB-NEXT:    xori a0, a0, 63
 ; RV64XTHEADBB-NOB-NEXT:    ret
 ; RV64XTHEADBB-NOB-NEXT:  .LBB6_2:
 ; RV64XTHEADBB-NOB-NEXT:    li a0, 32
@@ -478,12 +476,10 @@ define signext i32 @cttz_zero_poison_i32(i32 signext %a) nounwind {
 ;
 ; RV64XTHEADBB-NOB-LABEL: cttz_zero_poison_i32:
 ; RV64XTHEADBB-NOB:       # %bb.0:
-; RV64XTHEADBB-NOB-NEXT:    li a1, 64
-; RV64XTHEADBB-NOB-NEXT:    addi a2, a0, -1
-; RV64XTHEADBB-NOB-NEXT:    not a0, a0
-; RV64XTHEADBB-NOB-NEXT:    and a0, a0, a2
+; RV64XTHEADBB-NOB-NEXT:    neg a1, a0
+; RV64XTHEADBB-NOB-NEXT:    and a0, a0, a1
 ; RV64XTHEADBB-NOB-NEXT:    th.ff1 a0, a0
-; RV64XTHEADBB-NOB-NEXT:    sub a0, a1, a0
+; RV64XTHEADBB-NOB-NEXT:    xori a0, a0, 63
 ; RV64XTHEADBB-NOB-NEXT:    ret
 ;
 ; RV64XTHEADBB-B-LABEL: cttz_zero_poison_i32:
@@ -531,13 +527,11 @@ define signext i32 @findFirstSet_i32(i32 signext %a) nounwind {
 ;
 ; RV64XTHEADBB-NOB-LABEL: findFirstSet_i32:
 ; RV64XTHEADBB-NOB:       # %bb.0:
-; RV64XTHEADBB-NOB-NEXT:    li a1, 64
-; RV64XTHEADBB-NOB-NEXT:    addi a2, a0, -1
-; RV64XTHEADBB-NOB-NEXT:    not a3, a0
-; RV64XTHEADBB-NOB-NEXT:    and a2, a3, a2
-; RV64XTHEADBB-NOB-NEXT:    th.ff1 a2, a2
+; RV64XTHEADBB-NOB-NEXT:    neg a1, a0
+; RV64XTHEADBB-NOB-NEXT:    and a1, a0, a1
+; RV64XTHEADBB-NOB-NEXT:    th.ff1 a1, a1
 ; RV64XTHEADBB-NOB-NEXT:    snez a0, a0
-; RV64XTHEADBB-NOB-NEXT:    sub a1, a1, a2
+; RV64XTHEADBB-NOB-NEXT:    xori a1, a1, 63
 ; RV64XTHEADBB-NOB-NEXT:    addi a0, a0, -1
 ; RV64XTHEADBB-NOB-NEXT:    or a0, a0, a1
 ; RV64XTHEADBB-NOB-NEXT:    ret
@@ -593,13 +587,12 @@ define signext i32 @ffs_i32(i32 signext %a) nounwind {
 ;
 ; RV64XTHEADBB-NOB-LABEL: ffs_i32:
 ; RV64XTHEADBB-NOB:       # %bb.0:
-; RV64XTHEADBB-NOB-NEXT:    li a1, 65
-; RV64XTHEADBB-NOB-NEXT:    addi a2, a0, -1
-; RV64XTHEADBB-NOB-NEXT:    not a3, a0
-; RV64XTHEADBB-NOB-NEXT:    and a2, a3, a2
-; RV64XTHEADBB-NOB-NEXT:    th.ff1 a2, a2
+; RV64XTHEADBB-NOB-NEXT:    neg a1, a0
+; RV64XTHEADBB-NOB-NEXT:    and a1, a0, a1
+; RV64XTHEADBB-NOB-NEXT:    th.ff1 a1, a1
+; RV64XTHEADBB-NOB-NEXT:    xori a1, a1, 63
 ; RV64XTHEADBB-NOB-NEXT:    seqz a0, a0
-; RV64XTHEADBB-NOB-NEXT:    sub a1, a1, a2
+; RV64XTHEADBB-NOB-NEXT:    addi a1, a1, 1
 ; RV64XTHEADBB-NOB-NEXT:    addi a0, a0, -1
 ; RV64XTHEADBB-NOB-NEXT:    and a0, a0, a1
 ; RV64XTHEADBB-NOB-NEXT:    ret
@@ -647,12 +640,10 @@ define i64 @cttz_i64(i64 %a) nounwind {
 ; RV64XTHEADBB-NOB:       # %bb.0:
 ; RV64XTHEADBB-NOB-NEXT:    beqz a0, .LBB10_2
 ; RV64XTHEADBB-NOB-NEXT:  # %bb.1: # %cond.false
-; RV64XTHEADBB-NOB-NEXT:    addi a1, a0, -1
-; RV64XTHEADBB-NOB-NEXT:    not a0, a0
+; RV64XTHEADBB-NOB-NEXT:    neg a1, a0
 ; RV64XTHEADBB-NOB-NEXT:    and a0, a0, a1
 ; RV64XTHEADBB-NOB-NEXT:    th.ff1 a0, a0
-; RV64XTHEADBB-NOB-NEXT:    li a1, 64
-; RV64XTHEADBB-NOB-NEXT:    sub a0, a1, a0
+; RV64XTHEADBB-NOB-NEXT:    xori a0, a0, 63
 ; RV64XTHEADBB-NOB-NEXT:    ret
 ; RV64XTHEADBB-NOB-NEXT:  .LBB10_2:
 ; RV64XTHEADBB-NOB-NEXT:    li a0, 64

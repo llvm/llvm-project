@@ -7,11 +7,6 @@
 -->
 # Getting Involved
 
-```{contents}
----
-local:
----
-```
 
 The Flang Project welcomes contributions of all kinds.
 Please feel free to join the mailing list or the slack channel for discussions related to development of Flang.

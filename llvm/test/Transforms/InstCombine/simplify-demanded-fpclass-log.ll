@@ -103,7 +103,7 @@ define nofpclass(pinf) float @ret_nofpclass_pinf_log_select_inf_or_unknown(i1 %c
 ; CHECK-NEXT:    [[RESULT:%.*]] = call float @llvm.log.f32(float [[UNKNOWN]])
 ; CHECK-NEXT:    ret float [[RESULT]]
 ;
-  %select = select i1 %cond, float 0x7ff0000000000000, float %unknown
+  %select = select i1 %cond, float +inf, float %unknown
   %result = call float @llvm.log.f32(float %select)
   ret float %result
 }
@@ -115,7 +115,7 @@ define nofpclass(pinf) float @ret_nofpclass_pinf_log2_select_inf_or_unknown(i1 %
 ; CHECK-NEXT:    [[RESULT:%.*]] = call float @llvm.log2.f32(float [[UNKNOWN]])
 ; CHECK-NEXT:    ret float [[RESULT]]
 ;
-  %select = select i1 %cond, float 0x7ff0000000000000, float %unknown
+  %select = select i1 %cond, float +inf, float %unknown
   %result = call float @llvm.log2.f32(float %select)
   ret float %result
 }
@@ -127,7 +127,7 @@ define nofpclass(pinf) float @ret_nofpclass_pinf_log10_select_inf_or_unknown(i1 
 ; CHECK-NEXT:    [[RESULT:%.*]] = call float @llvm.log10.f32(float [[UNKNOWN]])
 ; CHECK-NEXT:    ret float [[RESULT]]
 ;
-  %select = select i1 %cond, float 0x7ff0000000000000, float %unknown
+  %select = select i1 %cond, float +inf, float %unknown
   %result = call float @llvm.log10.f32(float %select)
   ret float %result
 }

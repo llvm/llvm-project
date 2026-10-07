@@ -286,7 +286,7 @@ define <4 x float> @PR186403(<4 x float> %0, <4 x float> %1) {
 ; AVX512-NEXT:    vblendps {{.*#+}} xmm0 = xmm0[0,1,2],xmm1[3]
 ; AVX512-NEXT:    retq
   %3 = shufflevector <4 x float> <float poison, float poison, float 1.000000e+00, float poison>, <4 x float> %0, <4 x i32> <i32 5, i32 poison, i32 2, i32 poison>
-  %4 = shufflevector <4 x float> %3, <4 x float> splat (float 0x7FF8000000000000), <4 x i32> <i32 0, i32 5, i32 2, i32 poison>
+  %4 = shufflevector <4 x float> %3, <4 x float> splat (float +qnan), <4 x i32> <i32 0, i32 5, i32 2, i32 poison>
   %5 = insertelement <4 x float> %4, float 1.000000e+00, i64 3
   ret <4 x float> %5
 }

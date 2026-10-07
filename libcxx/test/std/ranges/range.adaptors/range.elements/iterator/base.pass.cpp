@@ -37,17 +37,19 @@ LIBCPP_STATIC_ASSERT(!IsBaseNoexcept<ElementsIter&&>);
 constexpr bool test() {
   std::tuple<int> t{5};
 
+  std::ranges::elements_view<BaseView, 0> ev{BaseView{&t, &t + 1}};
+
   // const &
   {
-    const ElementsIter it{&t};
-    decltype(auto) base = it.base();
+    const ElementsIter it = ev.begin();
+    decltype(auto) base   = it.base();
     static_assert(std::is_same_v<decltype(base), std::tuple<int>* const&>);
     assert(base == &t);
   }
 
   // &
   {
-    ElementsIter it{&t};
+    ElementsIter it     = ev.begin();
     decltype(auto) base = it.base();
     static_assert(std::is_same_v<decltype(base), std::tuple<int>* const&>);
     assert(base == &t);
@@ -55,7 +57,7 @@ constexpr bool test() {
 
   // &&
   {
-    ElementsIter it{&t};
+    ElementsIter it     = ev.begin();
     decltype(auto) base = std::move(it).base();
     static_assert(std::is_same_v<decltype(base), std::tuple<int>*>);
     assert(base == &t);
@@ -63,8 +65,8 @@ constexpr bool test() {
 
   // const &&
   {
-    const ElementsIter it{&t};
-    decltype(auto) base = std::move(it).base();
+    const ElementsIter it = ev.begin();
+    decltype(auto) base   = std::move(it).base();
     static_assert(std::is_same_v<decltype(base), std::tuple<int>* const&>);
     assert(base == &t);
   }
@@ -78,10 +80,10 @@ constexpr bool test() {
       constexpr bool operator==(const MoveOnlyIter&) const { return true; }
     };
 
-    using MoveOnlyElemIter =
-        std::ranges::iterator_t<std::ranges::elements_view<std::ranges::subrange<MoveOnlyIter, Sent>, 0>>;
+    std::ranges::elements_view<std::ranges::subrange<MoveOnlyIter, Sent>, 0> mev{
+        std::ranges::subrange{MoveOnlyIter{{}, MoveOnly{5}}, Sent{}}};
+    auto it = mev.begin();
 
-    MoveOnlyElemIter it{MoveOnlyIter{{}, MoveOnly{5}}};
     decltype(auto) base = std::move(it).base();
     static_assert(std::is_same_v<decltype(base), MoveOnlyIter>);
     assert(base.mo.get() == 5);

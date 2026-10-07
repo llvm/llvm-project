@@ -14,5 +14,5 @@
 void f() {
   typedef std::unique_ptr<int> Ptr;
   std::pair<Ptr, int> t(Ptr(new int(4)), 23);
-  Ptr p = std::get<Ptr>(t); // expected-error {{call to implicitly-deleted copy constructor of 'Ptr'}}
+  Ptr p = std::get<Ptr>(t); // expected-error {{call to deleted constructor of 'Ptr'}}
 }

@@ -5,8 +5,32 @@
 // CHECK: !foo.version = !{![[VERSION:[0-9]+]]}
 // CHECK: !foo.language_version = !{![[LANG:[0-9]+]]}
 // CHECK: !foo.kernel = !{![[KERNEL:[0-9]+]]}
+// CHECK: !foo.global_refs = !{![[GLOBAL_REFS:[0-9]+]]}
+// CHECK: !foo.pointer_constants = !{![[PTR_CONSTS:[0-9]+]]}
 
 llvm.func @my_kernel() {
+  llvm.return
+}
+
+llvm.mlir.global internal @metadata_global(0 : i32) : i32
+
+llvm.func @metadata_alias_target() {
+  llvm.return
+}
+
+llvm.mlir.alias external @metadata_alias : !llvm.func<void ()> {
+  %0 = llvm.mlir.addressof @metadata_alias_target : !llvm.ptr
+  llvm.return %0 : !llvm.ptr
+}
+
+llvm.mlir.ifunc external @metadata_ifunc : !llvm.func<void ()>, !llvm.ptr @metadata_ifunc_resolver
+
+llvm.func @metadata_ifunc_resolver() -> !llvm.ptr {
+  %0 = llvm.mlir.addressof @metadata_ifunc_target : !llvm.ptr
+  llvm.return %0 : !llvm.ptr
+}
+
+llvm.func @metadata_ifunc_target() {
   llvm.return
 }
 
@@ -36,10 +60,29 @@ llvm.named_metadata "foo.language_version" [
 
 llvm.named_metadata "foo.kernel" [
   #llvm.md_node<
-    #llvm.md_func<@my_kernel>,
+    #llvm.md_global_value<@my_kernel>,
     #llvm.md_node<>,
     #llvm.md_node<#buf0>>
 ]
 // CHECK-DAG: ![[KERNEL]] = !{ptr @my_kernel, ![[EMPTY:[0-9]+]], ![[ARGS:[0-9]+]]}
 // CHECK-DAG: ![[EMPTY]] = !{}
 // CHECK-DAG: ![[ARGS]] = !{![[A0]]}
+
+llvm.named_metadata "foo.global_refs" [
+  #llvm.md_node<
+    #llvm.md_global_value<@metadata_global>,
+    #llvm.md_global_value<@metadata_alias>,
+    #llvm.md_global_value<@metadata_ifunc>>
+]
+// CHECK-DAG: ![[GLOBAL_REFS]] = !{ptr @metadata_global, ptr @metadata_alias, ptr @metadata_ifunc}
+
+llvm.mlir.global external @md_addrspace_global(0 : i32) {addr_space = 1 : i32} : i32
+
+llvm.named_metadata "foo.pointer_constants" [
+  #llvm.md_node<
+    #llvm.md_null<0>,
+    #llvm.md_null<1>,
+    #llvm.md_addrspacecast<#llvm.md_global_value<@md_addrspace_global>, 0>,
+    #llvm.md_addrspacecast<#llvm.md_null<1>, 0>>
+]
+// CHECK-DAG: ![[PTR_CONSTS]] = !{ptr null, ptr addrspace(1) null, ptr addrspacecast (ptr addrspace(1) @md_addrspace_global to ptr), ptr addrspacecast (ptr addrspace(1) null to ptr)}

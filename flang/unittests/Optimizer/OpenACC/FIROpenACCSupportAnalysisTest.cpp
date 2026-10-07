@@ -123,6 +123,20 @@ TEST_F(FIROpenACCSupportAnalysisTest, TupleWithFIRArrayMemberSizeAndAlignment) {
   EXPECT_EQ(result->second, expected->second);
 }
 
+TEST_F(FIROpenACCSupportAnalysisTest, TupleOfReferencesSizesAsPointers) {
+  Type tupleTy = TupleType::get(&context,
+      {fir::ReferenceType::get(IntegerType::get(&context, 32)),
+          fir::ReferenceType::get(Float64Type::get(&context))});
+  std::optional<acc::TypeSizeAndAlignment> result =
+      support.getTypeSizeAndAlignment(tupleTy, module);
+  LLVM::LLVMPointerType ptrTy = LLVM::LLVMPointerType::get(&context);
+  std::optional<acc::TypeSizeAndAlignment> pointer =
+      acc::getTypeSizeAndAlignment(ptrTy, module);
+  ASSERT_TRUE(result.has_value());
+  ASSERT_TRUE(pointer.has_value());
+  EXPECT_EQ(result->first.getFixedValue(), pointer->first.getFixedValue() * 2);
+}
+
 TEST_F(FIROpenACCSupportAnalysisTest, FIRBoxTypeSizeAndAlignment) {
   Type f32 = Float32Type::get(&context);
   Type seqTy = fir::SequenceType::get({4, 3}, f32);

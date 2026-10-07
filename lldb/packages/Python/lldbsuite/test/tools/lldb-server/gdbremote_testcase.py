@@ -15,7 +15,7 @@ import tempfile
 import time
 from lldbsuite.test import configuration
 from lldbsuite.test.lldbtest import *
-from lldbsuite.test.decorators import skipIfWasm
+from lldbsuite.test.decorators import requireSocketPermission, skipIfWasm
 from lldbsuite.support import seven
 from lldbgdbserverutils import *
 import logging
@@ -57,9 +57,10 @@ class GdbRemoteTestCaseFactory(type):
 
 
 @skipIfWasm  # wasm uses runtime's GDB stub, not lldb-server
+@requireSocketPermission  # the tests talk to the debug monitor over a socket
 class GdbRemoteTestCaseBase(Base, metaclass=GdbRemoteTestCaseFactory):
     # Default time out in seconds. The timeout is increased tenfold under Asan.
-    DEFAULT_TIMEOUT = 20 * (10 if ("ASAN_OPTIONS" in os.environ) else 1)
+    DEFAULT_TIMEOUT = 60 * (10 if ("ASAN_OPTIONS" in os.environ) else 1)
     # Default sleep time in seconds. The sleep time is doubled under Asan.
     DEFAULT_SLEEP = 5 * (2 if ("ASAN_OPTIONS" in os.environ) else 1)
 
@@ -944,6 +945,7 @@ class GdbRemoteTestCaseBase(Base, metaclass=GdbRemoteTestCaseFactory):
         "fork-events",
         "vfork-events",
         "memory-tagging",
+        "address-spaces",
         "qSaveCore",
         "native-signals",
         "QNonStop",
@@ -952,6 +954,8 @@ class GdbRemoteTestCaseBase(Base, metaclass=GdbRemoteTestCaseFactory):
         "MultiMemRead",
         "jMultiBreakpoint",
         "accelerator-plugins",
+        "ExpediteStack",
+        "ExpediteRecentReads",
     ]
 
     def parse_qSupported_response(self, context):

@@ -53,19 +53,19 @@ low_target2:
 // CHECK1-NEXT: <_start>:
 // CHECK1-NEXT:       94:       4770    bx      lr
 // CHECK1: <low_target>:
-// CHECK1-NEXT:       96:       f000 f803       bl      0xa0 <__Thumbv7ABSLongThunk_high_target>
-// CHECK1-NEXT:       9a:       f000 f806       bl      0xaa <__Thumbv7ABSLongThunk_high_target2>
-// CHECK1: <__Thumbv7ABSLongThunk_high_target>:
-// CHECK1-NEXT:       a0:       f240 0cbd       movw    r12, #189
+// CHECK1-NEXT:       96:       f000 f808       bl      0xaa <__Thumbv7ABSLongThunk_high_target>
+// CHECK1-NEXT:       9a:       f000 f801       bl      0xa0 <__Thumbv7ABSLongThunk_high_target2>
+// CHECK1: <__Thumbv7ABSLongThunk_high_target2>:
+// CHECK1-NEXT:       a0:       f240 0cd9       movw    r12, #217
 // CHECK1-NEXT:       a4:       f2c0 2c00       movt    r12, #512
 // CHECK1-NEXT:       a8:       4760    bx      r12
-// CHECK1: <__Thumbv7ABSLongThunk_high_target2>:
-// CHECK1-NEXT:       aa:       f240 0cd9       movw    r12, #217
+// CHECK1: <__Thumbv7ABSLongThunk_high_target>:
+// CHECK1-NEXT:       aa:       f240 0cbd       movw    r12, #189
 // CHECK1-NEXT:       ae:       f2c0 2c00       movt    r12, #512
 // CHECK1-NEXT:       b2:       4760    bx      r12
 // CHECK1: <low_target2>:
-// CHECK1-NEXT:       b4:       f7ff fff4       bl      0xa0 <__Thumbv7ABSLongThunk_high_target>
-// CHECK1-NEXT:       b8:       f7ff fff7       bl      0xaa <__Thumbv7ABSLongThunk_high_target2>
+// CHECK1-NEXT:       b4:       f7ff fff9       bl      0xaa <__Thumbv7ABSLongThunk_high_target>
+// CHECK1-NEXT:       b8:       f7ff fff2       bl      0xa0 <__Thumbv7ABSLongThunk_high_target2>
 
  .section .text_high, "ax", %progbits
  .thumb

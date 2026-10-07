@@ -37,6 +37,7 @@
 #include "lldb/Utility/RegisterValue.h"
 #include "lldb/Utility/VASPrintf.h"
 #include "lldb/lldb-private.h"
+#include "llvm/Support/Error.h"
 #include "llvm/Support/FormatAdapters.h"
 #include <cassert>
 #include <memory>
@@ -2222,18 +2223,18 @@ bool RegisterContextUnwind::ReadFrameAddress(
       return false;
     const unsigned max_iterations = 256;
     for (unsigned i = 0; i < max_iterations; ++i) {
-      Status st;
       lldb::addr_t candidate_addr =
           return_address_hint + i * process.GetAddressByteSize();
-      lldb::addr_t candidate =
-          process.ReadPointerFromMemory(candidate_addr, st);
-      if (st.Fail()) {
-        UNWIND_LOG(log, "Cannot read memory at {0:x}: {1}", candidate_addr, st);
+      llvm::Expected<lldb::addr_t> candidate =
+          process.ReadPointerFromMemory(candidate_addr);
+      if (!candidate) {
+        LLDB_LOG_ERROR(log, candidate.takeError(),
+                       "Cannot read memory at {1:x}: {0}", candidate_addr);
         return false;
       }
       Address addr;
       uint32_t permissions;
-      if (process.GetLoadAddressPermissions(candidate, permissions) &&
+      if (process.GetLoadAddressPermissions(*candidate, permissions) &&
           permissions & lldb::ePermissionsExecutable) {
         address = candidate_addr;
         UNWIND_LOG(log, "Heuristically found CFA: {0:x}", address);

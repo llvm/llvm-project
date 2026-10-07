@@ -344,6 +344,18 @@ public:
 
   llvm::StringRef GetShowProgressAnsiSuffix() const;
 
+  llvm::StringRef GetLabelAnsiPrefix() const;
+
+  llvm::StringRef GetLabelAnsiSuffix() const;
+
+  llvm::StringRef GetTitleAnsiPrefix() const;
+
+  llvm::StringRef GetTitleAnsiSuffix() const;
+
+  llvm::StringRef GetDividerAnsiPrefix() const;
+
+  llvm::StringRef GetDividerAnsiSuffix() const;
+
   llvm::StringRef GetDisabledAnsiPrefix() const;
 
   llvm::StringRef GetDisabledAnsiSuffix() const;

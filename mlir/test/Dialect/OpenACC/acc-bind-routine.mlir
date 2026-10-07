@@ -1,4 +1,4 @@
-// RUN: mlir-opt %s --pass-pipeline='builtin.module(gpu.module(any(acc-bind-routine)), any(acc-bind-routine))' -split-input-file | FileCheck %s
+// RUN: mlir-opt %s --pass-pipeline='builtin.module(acc-materialize-routine-bind-targets, gpu.module(acc-materialize-routine-bind-targets, any(acc-bind-routine)), any(acc-bind-routine))' -split-input-file | FileCheck %s
 
 // Call to routine with bind is rewritten to the bound symbol inside
 // offload region.
@@ -30,10 +30,14 @@ module {
   func.func @wrapped() attributes {acc.routine_info = #acc.routine_info<[@r_bind_str]>} {
     return
   }
-  func.func @actual_impl() {
+  func.func @entry() {
+    acc.serial {
+      func.call @wrapped() : () -> ()
+      acc.yield
+    }
     return
   }
-  func.func @entry() {
+  func.func @entry2() {
     acc.serial {
       func.call @wrapped() : () -> ()
       acc.yield
@@ -42,7 +46,11 @@ module {
   }
 }
 
+// CHECK-LABEL: func.func @entry
 // CHECK: func.call @actual_impl() : () -> ()
+// CHECK-LABEL: func.func @entry2
+// CHECK: func.call @actual_impl() : () -> ()
+// CHECK: func.func private @actual_impl()
 
 // -----
 
@@ -103,6 +111,11 @@ module {
       func.call @my_device_sub(%arg0, %arg1) : (i32, memref<i32>) -> ()
       gpu.return
     }
+    gpu.func @test2(%arg0: i32, %arg1: memref<i32>) {
+      %0 = func.call @my_device_func(%arg0) : (i32) -> i32
+      func.call @my_device_sub(%arg0, %arg1) : (i32, memref<i32>) -> ()
+      gpu.return
+    }
     func.func private @my_device_func(i32) -> i32 attributes {acc.routine_info = #acc.routine_info<[@acc_routine_0]>}
     func.func private @my_device_sub(i32, memref<i32>) attributes {acc.routine_info = #acc.routine_info<[@acc_routine_1]>}
   }
@@ -111,5 +124,28 @@ module {
 // CHECK-LABEL: gpu.func @test
 // CHECK: func.call @__wrapper_my_device_func
 // CHECK: func.call @__wrapper_my_device_sub
+// CHECK-LABEL: gpu.func @test2
+// CHECK: func.call @__wrapper_my_device_func
+// CHECK: func.call @__wrapper_my_device_sub
 // CHECK: func.func private @__wrapper_my_device_func
 // CHECK: func.func private @__wrapper_my_device_sub
+
+// -----
+
+// A routine and its callee may exist only in the GPU module.
+module {
+  gpu.module @local_only {
+    acc.routine @r_local func(@wrapped_local) seq bind("actual_local")
+    func.func private @wrapped_local()
+        attributes {acc.routine_info = #acc.routine_info<[@r_local]>}
+    gpu.func @caller() {
+      func.call @wrapped_local() : () -> ()
+      gpu.return
+    }
+  }
+}
+
+// CHECK-LABEL: gpu.module @local_only
+// CHECK-LABEL: gpu.func @caller
+// CHECK: func.call @actual_local() : () -> ()
+// CHECK: func.func private @actual_local()

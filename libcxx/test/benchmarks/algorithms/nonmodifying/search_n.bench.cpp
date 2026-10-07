@@ -17,6 +17,7 @@
 
 #include <benchmark/benchmark.h>
 #include "../../GenerateInput.h"
+#include "test_macros.h"
 
 int main(int argc, char** argv) {
   auto std_search_n = [](auto first, auto last, auto n, auto const& value) {
@@ -31,7 +32,7 @@ int main(int argc, char** argv) {
     auto bm = []<class Container>(std::string name, auto search_n) {
       benchmark::RegisterBenchmark(
           name,
-          [search_n](auto& st) {
+          [search_n](auto& st) TEST_ALIGN_BENCHMARK {
             std::size_t const size = st.range(0);
             using ValueType        = typename Container::value_type;
             ValueType x            = Generate<ValueType>::random();

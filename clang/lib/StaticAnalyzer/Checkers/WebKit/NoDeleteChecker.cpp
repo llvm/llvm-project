@@ -84,16 +84,50 @@ public:
         break;
       }
     }
+
+    const FieldDecl *Field = nullptr;
     const Stmt *OffendingStmt = nullptr;
-    if (!ParamDecl && TFA.isTrivial(Body, &OffendingStmt))
+    bool IsCtor = false;
+    bool IsDtor = false;
+    if (auto *Ctor = dyn_cast<CXXConstructorDecl>(FD)) {
+      IsCtor = true;
+      Field = TFA.fieldWithNonTrivialCtor(Ctor->getParent());
+      if (!Field) {
+        for (auto *CtorInit : Ctor->inits()) {
+          if (!TFA.isTrivial(CtorInit->getInit(), &OffendingStmt)) {
+            if (!OffendingStmt)
+              OffendingStmt = CtorInit->getInit();
+            break;
+          }
+        }
+      }
+    } else if (auto *Dtor = dyn_cast<CXXDestructorDecl>(FD)) {
+      IsDtor = true;
+      Field = TFA.fieldWithNonTrivialDtor(Dtor->getParent());
+    }
+
+    if (!ParamDecl && !Field && !OffendingStmt &&
+        TFA.isTrivial(Body, &OffendingStmt))
       return;
 
     SmallString<100> Buf;
     llvm::raw_svector_ostream Os(Buf);
 
-    Os << "A function ";
+    if (IsCtor)
+      Os << "A constructor ";
+    else if (IsDtor)
+      Os << "A destructor ";
+    else
+      Os << "A function ";
     printQuotedName(Os, FD);
-    Os << " has [[clang::annotate_type(\"webkit.nodelete\")]] but it contains ";
+    // FIXME: Update this to say clang::annotate("webkit.nodelete").
+    Os << " has [[clang::annotate_type(\"webkit.nodelete\")]] but it ";
+    if (IsCtor && Field)
+      Os << "constructs ";
+    else if (IsDtor && Field)
+      Os << "destructs ";
+    else
+      Os << "contains ";
     SourceLocation SrcLocToReport;
     SourceRange Range;
     if (ParamDecl) {
@@ -102,6 +136,12 @@ public:
       Os << " which could destruct an object.";
       SrcLocToReport = FD->getBeginLoc();
       Range = ParamDecl->getSourceRange();
+    } else if (Field) {
+      Os << "a member variable ";
+      printQuotedName(Os, Field);
+      Os << " that could destruct an object.";
+      SrcLocToReport = FD->getBeginLoc();
+      Range = Field->getSourceRange();
     } else {
       Os << "code that could destruct an object.";
       SrcLocToReport = OffendingStmt->getBeginLoc();

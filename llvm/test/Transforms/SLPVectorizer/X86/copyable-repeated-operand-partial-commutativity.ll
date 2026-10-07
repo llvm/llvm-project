@@ -6,8 +6,8 @@ define float @test() {
 ; CHECK-NEXT:  [[ENTRY:.*:]]
 ; CHECK-NEXT:    [[ADD:%.*]] = fadd float 0.000000e+00, 0.000000e+00
 ; CHECK-NEXT:    [[MUL1:%.*]] = fmul float [[ADD]], 0.000000e+00
-; CHECK-NEXT:    [[TMP0:%.*]] = insertelement <4 x float> <float 0.000000e+00, float undef, float 0.000000e+00, float 1.000000e+00>, float [[MUL1]], i64 1
-; CHECK-NEXT:    [[TMP1:%.*]] = call <4 x float> @llvm.fmuladd.v4f32(<4 x float> <float 0.000000e+00, float 1.000000e+00, float 0.000000e+00, float 1.000000e+00>, <4 x float> zeroinitializer, <4 x float> [[TMP0]])
+; CHECK-NEXT:    [[TMP0:%.*]] = insertelement <4 x float> <float 0.000000e+00, float 0.000000e+00, float undef, float 1.000000e+00>, float [[MUL1]], i64 2
+; CHECK-NEXT:    [[TMP1:%.*]] = call <4 x float> @llvm.fmuladd.v4f32(<4 x float> <float 0.000000e+00, float 0.000000e+00, float 1.000000e+00, float 1.000000e+00>, <4 x float> zeroinitializer, <4 x float> [[TMP0]])
 ; CHECK-NEXT:    [[TMP2:%.*]] = extractelement <4 x float> [[TMP1]], i64 3
 ; CHECK-NEXT:    ret float [[TMP2]]
 ;

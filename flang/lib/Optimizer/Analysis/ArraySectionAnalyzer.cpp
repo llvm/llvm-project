@@ -31,7 +31,7 @@ void ArraySectionAnalyzer::SectionDesc::normalize() {
     stride = nullptr;
   if (stride)
     if (auto val = fir::getIntIfConstant(stride))
-      if (*val == 1)
+      if (val->isOne())
         stride = nullptr;
 }
 
@@ -56,7 +56,7 @@ ArraySectionAnalyzer::getOrderedBounds(const SectionDesc &desc) {
     return {desc.lb, desc.ub};
   // Reverse the bounds, if stride is negative.
   if (auto val = fir::getIntIfConstant(stride)) {
-    if (*val >= 0)
+    if (!val->isNegative())
       return {desc.lb, desc.ub};
     else
       return {desc.ub, desc.lb};
@@ -203,7 +203,7 @@ bool ArraySectionAnalyzer::isLess(mlir::Value v1, mlir::Value v2) {
 
   auto isPositiveConstant = [](mlir::Value v) -> bool {
     if (auto val = fir::getIntIfConstant(v))
-      return *val > 0;
+      return val->isStrictlyPositive();
     return false;
   };
 
@@ -213,9 +213,12 @@ bool ArraySectionAnalyzer::isLess(mlir::Value v1, mlir::Value v2) {
     return false;
 
   // Check if they are both constants.
-  if (auto val1 = fir::getIntIfConstant(op1->getResult(0)))
-    if (auto val2 = fir::getIntIfConstant(op2->getResult(0)))
-      return *val1 < *val2;
+  std::optional<llvm::APInt> val1 = fir::getIntIfConstant(op1->getResult(0));
+  std::optional<llvm::APInt> val2 = fir::getIntIfConstant(op2->getResult(0));
+  if (val1 && val2) {
+    unsigned width = std::max(val1->getBitWidth(), val2->getBitWidth());
+    return val1->sext(width).slt(val2->sext(width));
+  }
 
   // Handle some variable cases (C > 0):
   //   v2 = v1 + C
@@ -263,7 +266,7 @@ getDesignatorIndices(hlfir::DesignateOp designate) {
       if (auto subOp =
               mlir::dyn_cast_or_null<mlir::arith::SubIOp>(v.getDefiningOp())) {
         auto cst = fir::getIntIfConstant(subOp.getRhs());
-        if (!cst || *cst != 1)
+        if (!cst || !cst->isOne())
           return false;
         if (auto dimsOp = mlir::dyn_cast_or_null<fir::BoxDimsOp>(
                 subOp.getLhs().getDefiningOp())) {
@@ -271,7 +274,7 @@ getDesignatorIndices(hlfir::DesignateOp designate) {
               dimsOp.getResult(0) != subOp.getLhs())
             return false;
           auto dimsOpDim = fir::getIntIfConstant(dimsOp.getDim());
-          return dimsOpDim && dimsOpDim == dim;
+          return dimsOpDim && *dimsOpDim == dim;
         }
       }
       return false;

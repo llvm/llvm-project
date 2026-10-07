@@ -242,3 +242,261 @@ exit:
   %res = call i1 @llvm.vector.reduce.or(<vscale x 4 x i1> %rec.freeze)
   ret i1 %res
 }
+
+define i64 @zext_of_select(ptr %p0, ptr %p1, i1 %cond) {
+; CHECK-LABEL: @zext_of_select(
+; CHECK-NEXT:  entry:
+; CHECK-NEXT:    [[LOAD_0:%.*]] = load i8, ptr [[P0:%.*]], align 1
+; CHECK-NEXT:    [[LOAD_1:%.*]] = load i8, ptr [[P1:%.*]], align 1
+; CHECK-NEXT:    [[SELECT_:%.*]] = select i1 [[COND:%.*]], i8 [[LOAD_0]], i8 [[LOAD_1]]
+; CHECK-NEXT:    [[ZEXT_:%.*]] = zext i8 [[SELECT_]] to i64
+; CHECK-NEXT:    ret i64 [[ZEXT_]]
+;
+entry:
+  %load_0 = load i8, ptr %p0
+  %load_1 = load i8, ptr %p1
+  %select_ = select i1 %cond, i8 %load_0, i8 %load_1
+  %zext_ = zext i8 %select_ to i64
+  ret i64 %zext_
+}
+
+define i64 @zext_of_ifelse_phi(ptr %p0, ptr %p1, i1 %cond) {
+; CHECK-LABEL: @zext_of_ifelse_phi(
+; CHECK-NEXT:  entry:
+; CHECK-NEXT:    br i1 [[COND:%.*]], label [[A:%.*]], label [[B:%.*]]
+; CHECK:       a:
+; CHECK-NEXT:    [[LOAD_0:%.*]] = load i8, ptr [[P0:%.*]], align 1
+; CHECK-NEXT:    br label [[JOIN:%.*]]
+; CHECK:       b:
+; CHECK-NEXT:    [[LOAD_1:%.*]] = load i8, ptr [[P1:%.*]], align 1
+; CHECK-NEXT:    br label [[JOIN]]
+; CHECK:       join:
+; CHECK-NEXT:    [[PHI_:%.*]] = phi i8 [ [[LOAD_0]], [[A]] ], [ [[LOAD_1]], [[B]] ]
+; CHECK-NEXT:    [[ZEXT_:%.*]] = zext i8 [[PHI_]] to i64
+; CHECK-NEXT:    ret i64 [[ZEXT_]]
+;
+entry:
+  br i1 %cond, label %a, label %b
+
+a:
+  %load_0 = load i8, ptr %p0
+  br label %join
+
+b:
+  %load_1 = load i8, ptr %p1
+  br label %join
+
+join:
+  %phi_ = phi i8 [ %load_0, %a ], [ %load_1, %b ]
+  %zext_ = zext i8 %phi_ to i64
+  ret i64 %zext_
+}
+
+; A constant incoming value should be extended in place.
+define i64 @zext_of_phi_with_const(ptr %p, i1 %cond) {
+; CHECK-LABEL: @zext_of_phi_with_const(
+; CHECK-NEXT:  entry:
+; CHECK-NEXT:    br i1 [[COND:%.*]], label [[A:%.*]], label [[B:%.*]]
+; CHECK:       a:
+; CHECK-NEXT:    [[LOAD_:%.*]] = load i8, ptr [[P:%.*]], align 1
+; CHECK-NEXT:    br label [[JOIN:%.*]]
+; CHECK:       b:
+; CHECK-NEXT:    br label [[JOIN]]
+; CHECK:       join:
+; CHECK-NEXT:    [[PHI_:%.*]] = phi i8 [ [[LOAD_]], [[A]] ], [ 42, [[B]] ]
+; CHECK-NEXT:    [[ZEXT_:%.*]] = zext i8 [[PHI_]] to i64
+; CHECK-NEXT:    ret i64 [[ZEXT_]]
+;
+entry:
+  br i1 %cond, label %a, label %b
+
+a:
+  %load_ = load i8, ptr %p
+  br label %join
+
+b:
+  br label %join
+
+join:
+  %phi_ = phi i8 [ %load_, %a ], [ 42, %b ]
+  %zext_ = zext i8 %phi_ to i64
+  ret i64 %zext_
+}
+
+define i64 @zext_of_loop_phi(ptr %p, i1 %cond) {
+; CHECK-LABEL: @zext_of_loop_phi(
+; CHECK-NEXT:  entry:
+; CHECK-NEXT:    [[LOAD_0:%.*]] = load i8, ptr [[P:%.*]], align 1
+; CHECK-NEXT:    br label [[LOOP:%.*]]
+; CHECK:       loop:
+; CHECK-NEXT:    [[PHI_:%.*]] = phi i8 [ [[LOAD_0]], [[ENTRY:%.*]] ], [ [[LOAD_1:%.*]], [[LOOP]] ]
+; CHECK-NEXT:    [[ZEXT_:%.*]] = zext i8 [[PHI_]] to i64
+; CHECK-NEXT:    [[GEP_:%.*]] = getelementptr i8, ptr [[P]], i64 [[ZEXT_]]
+; CHECK-NEXT:    [[LOAD_1]] = load i8, ptr [[GEP_]], align 1
+; CHECK-NEXT:    br i1 [[COND:%.*]], label [[LOOP]], label [[EXIT:%.*]]
+; CHECK:       exit:
+; CHECK-NEXT:    ret i64 [[ZEXT_]]
+;
+entry:
+  %load_0 = load i8, ptr %p
+  br label %loop
+
+loop:
+  %phi_ = phi i8 [ %load_0, %entry ], [ %load_1, %loop ]
+  %zext_ = zext i8 %phi_ to i64
+  %gep_ = getelementptr i8, ptr %p, i64 %zext_
+  %load_1 = load i8, ptr %gep_
+  br i1 %cond, label %loop, label %exit
+
+exit:
+  ret i64 %zext_
+}
+
+define i64 @zext_of_loop_phi_with_select(ptr %p, ptr %q, i1 %cond) {
+; CHECK-LABEL: @zext_of_loop_phi_with_select(
+; CHECK-NEXT:  entry:
+; CHECK-NEXT:    [[LOAD_0:%.*]] = load i8, ptr [[P:%.*]], align 1
+; CHECK-NEXT:    br label [[LOOP:%.*]]
+; CHECK:       loop:
+; CHECK-NEXT:    [[PHI_:%.*]] = phi i8 [ [[LOAD_0]], [[ENTRY:%.*]] ], [ [[SELECT_:%.*]], [[LOOP]] ]
+; CHECK-NEXT:    [[ZEXT_:%.*]] = zext i8 [[PHI_]] to i64
+; CHECK-NEXT:    [[GEP_:%.*]] = getelementptr i8, ptr [[P]], i64 [[ZEXT_]]
+; CHECK-NEXT:    [[LOAD_1:%.*]] = load i8, ptr [[GEP_]], align 1
+; CHECK-NEXT:    [[SELECT_]] = select i1 [[COND:%.*]], i8 [[LOAD_1]], i8 [[PHI_]]
+; CHECK-NEXT:    br i1 [[COND]], label [[LOOP]], label [[EXIT:%.*]]
+; CHECK:       exit:
+; CHECK-NEXT:    ret i64 [[ZEXT_]]
+;
+entry:
+  %load_0 = load i8, ptr %p
+  br label %loop
+
+loop:
+  %phi_ = phi i8 [ %load_0, %entry ], [ %select_, %loop ]
+  %zext_ = zext i8 %phi_ to i64
+  %gep_ = getelementptr i8, ptr %p, i64 %zext_
+  %load_1 = load i8, ptr %gep_
+  %select_ = select i1 %cond, i8 %load_1, i8 %phi_
+  br i1 %cond, label %loop, label %exit
+
+exit:
+  ret i64 %zext_
+}
+
+define i64 @zext_of_bare_load(ptr %p) {
+; CHECK-LABEL: @zext_of_bare_load(
+; CHECK-NEXT:  entry:
+; CHECK-NEXT:    [[LOAD_:%.*]] = load i8, ptr [[P:%.*]], align 1
+; CHECK-NEXT:    [[ZEXT_:%.*]] = zext i8 [[LOAD_]] to i64
+; CHECK-NEXT:    ret i64 [[ZEXT_]]
+;
+entry:
+  %load_ = load i8, ptr %p
+  %zext_ = zext i8 %load_ to i64
+  ret i64 %zext_
+}
+
+; One incoming value is not provably zero-extendable for free (an
+; unconstrained function argument), so the phi/zext must be left alone.
+define i64 @zext_of_phi_not_free(ptr %p, i1 %cond, i8 %arg) {
+; CHECK-LABEL: @zext_of_phi_not_free(
+; CHECK-NEXT:  entry:
+; CHECK-NEXT:    br i1 [[COND:%.*]], label [[A:%.*]], label [[B:%.*]]
+; CHECK:       a:
+; CHECK-NEXT:    [[LOAD_:%.*]] = load i8, ptr [[P:%.*]], align 1
+; CHECK-NEXT:    br label [[JOIN:%.*]]
+; CHECK:       b:
+; CHECK-NEXT:    br label [[JOIN]]
+; CHECK:       join:
+; CHECK-NEXT:    [[PHI_:%.*]] = phi i8 [ [[LOAD_]], [[A]] ], [ [[ARG:%.*]], [[B]] ]
+; CHECK-NEXT:    [[ZEXT_:%.*]] = zext i8 [[PHI_]] to i64
+; CHECK-NEXT:    ret i64 [[ZEXT_]]
+;
+entry:
+  br i1 %cond, label %a, label %b
+
+a:
+  %load_ = load i8, ptr %p
+  br label %join
+
+b:
+  br label %join
+
+join:
+  %phi_ = phi i8 [ %load_, %a ], [ %arg, %b ]
+  %zext_ = zext i8 %phi_ to i64
+  ret i64 %zext_
+}
+
+; since riscv can do truncating store, we can still use zero-extending load
+define i64 @zext_of_ifelse_phi_multiuse_store(ptr %p, ptr %out, i1 %cond) {
+; CHECK-LABEL: @zext_of_ifelse_phi_multiuse_store(
+; CHECK-NEXT:  entry:
+; CHECK-NEXT:    br i1 [[COND:%.*]], label [[A:%.*]], label [[B:%.*]]
+; CHECK:       a:
+; CHECK-NEXT:    [[LOAD_0:%.*]] = load i8, ptr [[P:%.*]], align 1
+; CHECK-NEXT:    store i8 [[LOAD_0]], ptr [[OUT:%.*]], align 1
+; CHECK-NEXT:    br label [[JOIN:%.*]]
+; CHECK:       b:
+; CHECK-NEXT:    [[LOAD_1:%.*]] = load i8, ptr [[P]], align 1
+; CHECK-NEXT:    br label [[JOIN]]
+; CHECK:       join:
+; CHECK-NEXT:    [[PHI_:%.*]] = phi i8 [ [[LOAD_0]], [[A]] ], [ [[LOAD_1]], [[B]] ]
+; CHECK-NEXT:    [[ZEXT_:%.*]] = zext i8 [[PHI_]] to i64
+; CHECK-NEXT:    ret i64 [[ZEXT_]]
+;
+entry:
+  br i1 %cond, label %a, label %b
+
+a:
+  %load_0 = load i8, ptr %p
+  store i8 %load_0, ptr %out
+  br label %join
+
+b:
+  %load_1 = load i8, ptr %p
+  br label %join
+
+join:
+  %phi_ = phi i8 [ %load_0, %a ], [ %load_1, %b ]
+  %zext_ = zext i8 %phi_ to i64
+  ret i64 %zext_
+}
+
+; we can't use extending load here, because phi is used in i8 add.
+define i64 @zext_of_phi_multiuse_add(ptr %p, ptr %out, i1 %cond) {
+; CHECK-LABEL: @zext_of_phi_multiuse_add(
+; CHECK-NEXT:  entry:
+; CHECK-NEXT:    br i1 [[COND:%.*]], label [[A:%.*]], label [[B:%.*]]
+; CHECK:       a:
+; CHECK-NEXT:    [[LOAD_0:%.*]] = load i8, ptr [[P:%.*]], align 1
+; CHECK-NEXT:    br label [[JOIN:%.*]]
+; CHECK:       b:
+; CHECK-NEXT:    [[LOAD_1:%.*]] = load i8, ptr [[P]], align 1
+; CHECK-NEXT:    br label [[JOIN]]
+; CHECK:       join:
+; CHECK-NEXT:    [[PHI_:%.*]] = phi i8 [ [[LOAD_0]], [[A]] ], [ [[LOAD_1]], [[B]] ]
+; CHECK-NEXT:    [[ADD_:%.*]] = add i8 [[PHI_]], 1
+; CHECK-NEXT:    store i8 [[ADD_]], ptr [[OUT:%.*]], align 1
+; CHECK-NEXT:    [[ZEXT_:%.*]] = zext i8 [[PHI_]] to i64
+; CHECK-NEXT:    ret i64 [[ZEXT_]]
+;
+entry:
+  br i1 %cond, label %a, label %b
+
+a:
+  %load_0 = load i8, ptr %p
+  br label %join
+
+b:
+  %load_1 = load i8, ptr %p
+  br label %join
+
+join:
+  %phi_ = phi i8 [ %load_0, %a ], [ %load_1, %b ]
+  %add_ = add i8 %phi_, 1
+  store i8 %add_, ptr %out
+  %zext_ = zext i8 %phi_ to i64
+  ret i64 %zext_
+}
+

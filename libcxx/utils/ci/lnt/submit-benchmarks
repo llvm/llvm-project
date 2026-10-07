@@ -12,13 +12,13 @@ import logging
 import pathlib
 import subprocess
 import sys
-import tempfile
 
 
 def main(argv):
     parser = argparse.ArgumentParser(
         prog='submit-benchmarks',
-        description='Submit a LNT JSON report to a LNT server.')
+        description='Submit a LNT JSON report to a LNT server.',
+        epilog='This script depends on the modules listed in `libcxx/utils/ci/lnt/requirements.txt`.')
     parser.add_argument('report', type=pathlib.Path,
         help='Path to the LNT JSON report to submit.')
     parser.add_argument('--lnt-url', type=str, required=True,
@@ -55,17 +55,9 @@ def main(argv):
                 sys.stderr.write(e.stderr.decode())
             raise
 
-    with tempfile.TemporaryDirectory() as tmp:
-        tmp = pathlib.Path(tmp)
-
-        logging.info('Installing LNT')
-        run(['python3', '-m', 'venv', tmp / '.venv'])
-        run([tmp / '.venv/bin/pip', 'install', 'llvm-lnt'])
-
-        logging.info(f'Submitting results to {args.lnt_url}')
-        submission_url = f'{args.lnt_url}/db_default/v4/{args.test_suite}/submitRun'
-        run([tmp / '.venv/bin/lnt', 'submit', '--ignore-regressions', '--merge', 'append',
-                                               submission_url, args.report.resolve()])
+    logging.info(f'Submitting results to {args.lnt_url}')
+    submission_url = f'{args.lnt_url}/db_default/v4/{args.test_suite}/submitRun'
+    run(['lnt', 'submit', '--ignore-regressions', '--merge', 'append', submission_url, args.report.resolve()])
 
 
 if __name__ == '__main__':

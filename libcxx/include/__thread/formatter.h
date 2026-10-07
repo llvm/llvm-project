@@ -12,7 +12,7 @@
 
 #include <__concepts/arithmetic.h>
 #include <__config>
-#include <__format/concepts.h>
+#include <__format/fmt_char_type.h>
 #include <__format/format_parse_context.h>
 #include <__format/formatter.h>
 #include <__format/formatter_integral.h>
@@ -61,7 +61,8 @@ public:
     return __formatter::__format_integer(reinterpret_cast<_Cp>(__get_underlying_id(__id)), __ctx, __specs);
   }
 
-  __format_spec::__parser<_CharT> __parser_{.__alignment_ = __format_spec::__alignment::__right};
+  __format_spec::__parser<_CharT> __parser_ = {
+      __format_spec::__parser_data<_CharT>{.__alignment_ = __format_spec::__alignment::__right}};
 };
 
 #  endif // _LIBCPP_HAS_THREADS

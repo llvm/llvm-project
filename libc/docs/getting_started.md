@@ -52,7 +52,7 @@ ninja -C build libc libm check-libc
 To run a specific test, such as `isalpha` in `ctype.h`:
 
 ```sh
-ninja -C build libc.test.src.ctype.isalpha_test.__unit__
+ninja -C build libc.test.src.ctype.isalpha_test
 ```
 
 ## 4. Verify with Hello World

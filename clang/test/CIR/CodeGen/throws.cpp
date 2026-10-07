@@ -45,9 +45,9 @@ int rethrow_from_block(int a, int b) {
 // CIR:  %[[RESULT:.*]] = cir.load %[[RES_ADDR]] : !cir.ptr<!s32i>, !s32i
 // CIR:  cir.return %[[RESULT]] : !s32i
 
-// LLVM: %[[A_ADDR:.*]] = alloca i32, i64 1, align 4
-// LLVM: %[[B_ADDR:.*]] = alloca i32, i64 1, align 4
-// LLVM: %[[RES_ADDR:.*]] = alloca i32, i64 1, align 4
+// LLVM: %[[A_ADDR:.*]] = alloca i32, align 4
+// LLVM: %[[B_ADDR:.*]] = alloca i32, align 4
+// LLVM: %[[RES_ADDR:.*]] = alloca i32, align 4
 // LLVM: store i32 %{{.*}}, ptr %[[A_ADDR]], align 4
 // LLVM: store i32 %{{.*}}, ptr %[[B_ADDR]], align 4
 // LLVM: br label %[[CHECK_COND:.*]]
@@ -156,7 +156,7 @@ void throw_vector_type() {
 // CIR: cir.throw %[[EXCEPTION_ADDR]] : !cir.ptr<!cir.vector<4 x !s32i>>, @_ZTIDv4_i
 // CIR: cir.unreachable
 
-// LLVM: %[[A_ADDR:.*]] = alloca <4 x i32>, i64 1, align 16
+// LLVM: %[[A_ADDR:.*]] = alloca <4 x i32>, align 16
 // LLVM: %[[EXCEPTION_ADDR:.*]] = call ptr @__cxa_allocate_exception(i64 16)
 // LLVM: %[[TMP_A:.*]] = load <4 x i32>, ptr %[[A_ADDR]], align 16
 // LLVM: store <4 x i32> %[[TMP_A]], ptr %[[EXCEPTION_ADDR]], align 16
@@ -182,7 +182,7 @@ void throw_ext_vector_type() {
 // CIR: cir.throw %[[EXCEPTION_ADDR]] : !cir.ptr<!cir.vector<4 x !s32i>>, @_ZTIDv4_i
 // CIR: cir.unreachable
 
-// LLVM: %[[A_ADDR:.*]] = alloca <4 x i32>, i64 1, align 16
+// LLVM: %[[A_ADDR:.*]] = alloca <4 x i32>, align 16
 // LLVM: %[[EXCEPTION_ADDR:.*]] = call ptr @__cxa_allocate_exception(i64 16)
 // LLVM: %[[TMP_A:.*]] = load <4 x i32>, ptr %[[A_ADDR]], align 16
 // LLVM: store <4 x i32> %[[TMP_A]], ptr %[[EXCEPTION_ADDR]], align 16

@@ -936,6 +936,205 @@ entry:
   ret <vscale x 1 x i32> %res
 }
 
+; vdot4a is commutative, so a scalar splat in either operand should select
+; vdot4a.vx.
+define <vscale x 4 x i32> @partial_reduce_vdot4a_vx_operand1(<vscale x 4 x i32> %acc, <vscale x 16 x i8> %a, i32 %x) {
+; NODOT-LABEL: partial_reduce_vdot4a_vx_operand1:
+; NODOT:       # %bb.0:
+; NODOT-NEXT:    vsetvli a1, zero, e32, m2, ta, ma
+; NODOT-NEXT:    vmv.v.x v16, a0
+; NODOT-NEXT:    vsetvli a0, zero, e16, m4, ta, ma
+; NODOT-NEXT:    vsext.vf2 v12, v10
+; NODOT-NEXT:    vsext.vf2 v24, v16
+; NODOT-NEXT:    vwmul.vv v16, v12, v24
+; NODOT-NEXT:    vsetvli a0, zero, e32, m2, ta, ma
+; NODOT-NEXT:    vadd.vv v10, v18, v20
+; NODOT-NEXT:    vadd.vv v8, v8, v16
+; NODOT-NEXT:    vadd.vv v8, v22, v8
+; NODOT-NEXT:    vadd.vv v8, v10, v8
+; NODOT-NEXT:    ret
+;
+; DOT-LABEL: partial_reduce_vdot4a_vx_operand1:
+; DOT:       # %bb.0:
+; DOT-NEXT:    vsetvli a1, zero, e32, m2, ta, ma
+; DOT-NEXT:    vdot4a.vx v8, v10, a0
+; DOT-NEXT:    ret
+  %h = insertelement <vscale x 4 x i32> poison, i32 %x, i32 0
+  %s = shufflevector <vscale x 4 x i32> %h, <vscale x 4 x i32> poison, <vscale x 4 x i32> zeroinitializer
+  %b = bitcast <vscale x 4 x i32> %s to <vscale x 16 x i8>
+  %a.sext = sext <vscale x 16 x i8> %a to <vscale x 16 x i32>
+  %b.sext = sext <vscale x 16 x i8> %b to <vscale x 16 x i32>
+  %mul = mul <vscale x 16 x i32> %a.sext, %b.sext
+  %res = call <vscale x 4 x i32> @llvm.vector.partial.reduce.add(<vscale x 4 x i32> %acc, <vscale x 16 x i32> %mul)
+  ret <vscale x 4 x i32> %res
+}
+
+define <vscale x 4 x i32> @partial_reduce_vdot4a_vx_operand0(<vscale x 4 x i32> %acc, <vscale x 16 x i8> %b, i32 %x) {
+; NODOT-LABEL: partial_reduce_vdot4a_vx_operand0:
+; NODOT:       # %bb.0: # %entry
+; NODOT-NEXT:    vsetvli a1, zero, e32, m2, ta, ma
+; NODOT-NEXT:    vmv.v.x v16, a0
+; NODOT-NEXT:    vsetvli a0, zero, e16, m4, ta, ma
+; NODOT-NEXT:    vsext.vf2 v12, v16
+; NODOT-NEXT:    vsext.vf2 v24, v10
+; NODOT-NEXT:    vwmul.vv v16, v12, v24
+; NODOT-NEXT:    vsetvli a0, zero, e32, m2, ta, ma
+; NODOT-NEXT:    vadd.vv v10, v18, v20
+; NODOT-NEXT:    vadd.vv v8, v8, v16
+; NODOT-NEXT:    vadd.vv v8, v22, v8
+; NODOT-NEXT:    vadd.vv v8, v10, v8
+; NODOT-NEXT:    ret
+;
+; DOT-LABEL: partial_reduce_vdot4a_vx_operand0:
+; DOT:       # %bb.0: # %entry
+; DOT-NEXT:    vsetvli a1, zero, e32, m2, ta, ma
+; DOT-NEXT:    vdot4a.vx v8, v10, a0
+; DOT-NEXT:    ret
+entry:
+  %h = insertelement <vscale x 4 x i32> poison, i32 %x, i32 0
+  %s = shufflevector <vscale x 4 x i32> %h, <vscale x 4 x i32> poison, <vscale x 4 x i32> zeroinitializer
+  %a = bitcast <vscale x 4 x i32> %s to <vscale x 16 x i8>
+  %a.sext = sext <vscale x 16 x i8> %a to <vscale x 16 x i32>
+  %b.sext = sext <vscale x 16 x i8> %b to <vscale x 16 x i32>
+  %mul = mul <vscale x 16 x i32> %a.sext, %b.sext
+  %res = call <vscale x 4 x i32> @llvm.vector.partial.reduce.add(<vscale x 4 x i32> %acc, <vscale x 16 x i32> %mul)
+  ret <vscale x 4 x i32> %res
+}
+
+; vdot4au is commutative, so a scalar splat in either operand should select
+; vdot4au.vx.
+define <vscale x 4 x i32> @partial_reduce_vdot4au_vx_operand1(<vscale x 4 x i32> %acc, <vscale x 16 x i8> %a, i32 %x) {
+; NODOT-LABEL: partial_reduce_vdot4au_vx_operand1:
+; NODOT:       # %bb.0: # %entry
+; NODOT-NEXT:    vsetvli a1, zero, e32, m2, ta, ma
+; NODOT-NEXT:    vmv.v.x v16, a0
+; NODOT-NEXT:    vsetvli a0, zero, e8, m2, ta, ma
+; NODOT-NEXT:    vwmulu.vv v12, v10, v16
+; NODOT-NEXT:    vsetvli zero, zero, e32, m8, ta, ma
+; NODOT-NEXT:    vzext.vf2 v16, v12
+; NODOT-NEXT:    vsetvli a0, zero, e32, m2, ta, ma
+; NODOT-NEXT:    vadd.vv v10, v18, v20
+; NODOT-NEXT:    vadd.vv v8, v8, v16
+; NODOT-NEXT:    vadd.vv v8, v22, v8
+; NODOT-NEXT:    vadd.vv v8, v10, v8
+; NODOT-NEXT:    ret
+;
+; DOT-LABEL: partial_reduce_vdot4au_vx_operand1:
+; DOT:       # %bb.0: # %entry
+; DOT-NEXT:    vsetvli a1, zero, e32, m2, ta, ma
+; DOT-NEXT:    vdot4au.vx v8, v10, a0
+; DOT-NEXT:    ret
+entry:
+  %h = insertelement <vscale x 4 x i32> poison, i32 %x, i32 0
+  %s = shufflevector <vscale x 4 x i32> %h, <vscale x 4 x i32> poison, <vscale x 4 x i32> zeroinitializer
+  %b = bitcast <vscale x 4 x i32> %s to <vscale x 16 x i8>
+  %a.zext = zext <vscale x 16 x i8> %a to <vscale x 16 x i32>
+  %b.zext = zext <vscale x 16 x i8> %b to <vscale x 16 x i32>
+  %mul = mul <vscale x 16 x i32> %a.zext, %b.zext
+  %res = call <vscale x 4 x i32> @llvm.vector.partial.reduce.add(<vscale x 4 x i32> %acc, <vscale x 16 x i32> %mul)
+  ret <vscale x 4 x i32> %res
+}
+
+define <vscale x 4 x i32> @partial_reduce_vdot4au_vx_operand0(<vscale x 4 x i32> %acc, <vscale x 16 x i8> %b, i32 %x) {
+; NODOT-LABEL: partial_reduce_vdot4au_vx_operand0:
+; NODOT:       # %bb.0: # %entry
+; NODOT-NEXT:    vsetvli a1, zero, e32, m2, ta, ma
+; NODOT-NEXT:    vmv.v.x v16, a0
+; NODOT-NEXT:    vsetvli a0, zero, e8, m2, ta, ma
+; NODOT-NEXT:    vwmulu.vv v12, v16, v10
+; NODOT-NEXT:    vsetvli zero, zero, e32, m8, ta, ma
+; NODOT-NEXT:    vzext.vf2 v16, v12
+; NODOT-NEXT:    vsetvli a0, zero, e32, m2, ta, ma
+; NODOT-NEXT:    vadd.vv v10, v18, v20
+; NODOT-NEXT:    vadd.vv v8, v8, v16
+; NODOT-NEXT:    vadd.vv v8, v22, v8
+; NODOT-NEXT:    vadd.vv v8, v10, v8
+; NODOT-NEXT:    ret
+;
+; DOT-LABEL: partial_reduce_vdot4au_vx_operand0:
+; DOT:       # %bb.0: # %entry
+; DOT-NEXT:    vsetvli a1, zero, e32, m2, ta, ma
+; DOT-NEXT:    vdot4au.vx v8, v10, a0
+; DOT-NEXT:    ret
+entry:
+  %h = insertelement <vscale x 4 x i32> poison, i32 %x, i32 0
+  %s = shufflevector <vscale x 4 x i32> %h, <vscale x 4 x i32> poison, <vscale x 4 x i32> zeroinitializer
+  %a = bitcast <vscale x 4 x i32> %s to <vscale x 16 x i8>
+  %a.zext = zext <vscale x 16 x i8> %a to <vscale x 16 x i32>
+  %b.zext = zext <vscale x 16 x i8> %b to <vscale x 16 x i32>
+  %mul = mul <vscale x 16 x i32> %a.zext, %b.zext
+  %res = call <vscale x 4 x i32> @llvm.vector.partial.reduce.add(<vscale x 4 x i32> %acc, <vscale x 16 x i32> %mul)
+  ret <vscale x 4 x i32> %res
+}
+
+; The unsigned operand of vdot4asu is a scalar splat, so this should select
+; vdot4asu.vx directly.
+define <vscale x 4 x i32> @partial_reduce_vdot4asu_vx(<vscale x 4 x i32> %acc, <vscale x 16 x i8> %a, i32 %x) {
+; NODOT-LABEL: partial_reduce_vdot4asu_vx:
+; NODOT:       # %bb.0: # %entry
+; NODOT-NEXT:    vsetvli a1, zero, e32, m2, ta, ma
+; NODOT-NEXT:    vmv.v.x v16, a0
+; NODOT-NEXT:    vsetvli a0, zero, e16, m4, ta, ma
+; NODOT-NEXT:    vsext.vf2 v12, v10
+; NODOT-NEXT:    vzext.vf2 v24, v16
+; NODOT-NEXT:    vwmulsu.vv v16, v12, v24
+; NODOT-NEXT:    vsetvli a0, zero, e32, m2, ta, ma
+; NODOT-NEXT:    vadd.vv v10, v18, v20
+; NODOT-NEXT:    vadd.vv v8, v8, v16
+; NODOT-NEXT:    vadd.vv v8, v22, v8
+; NODOT-NEXT:    vadd.vv v8, v10, v8
+; NODOT-NEXT:    ret
+;
+; DOT-LABEL: partial_reduce_vdot4asu_vx:
+; DOT:       # %bb.0: # %entry
+; DOT-NEXT:    vsetvli a1, zero, e32, m2, ta, ma
+; DOT-NEXT:    vdot4asu.vx v8, v10, a0
+; DOT-NEXT:    ret
+entry:
+  %h = insertelement <vscale x 4 x i32> poison, i32 %x, i32 0
+  %s = shufflevector <vscale x 4 x i32> %h, <vscale x 4 x i32> poison, <vscale x 4 x i32> zeroinitializer
+  %b = bitcast <vscale x 4 x i32> %s to <vscale x 16 x i8>
+  %a.sext = sext <vscale x 16 x i8> %a to <vscale x 16 x i32>
+  %b.zext = zext <vscale x 16 x i8> %b to <vscale x 16 x i32>
+  %mul = mul <vscale x 16 x i32> %a.sext, %b.zext
+  %res = call <vscale x 4 x i32> @llvm.vector.partial.reduce.add(<vscale x 4 x i32> %acc, <vscale x 16 x i32> %mul)
+  ret <vscale x 4 x i32> %res
+}
+
+; The signed operand of vdot4asu is a scalar splat, so this should select
+; vdot4aus.vx (the operand-swapped counterpart) directly instead of
+; materializing a vmv.v.x splat and using vdot4asu.vv.
+define <vscale x 4 x i32> @partial_reduce_vdot4aus_vx(<vscale x 4 x i32> %acc, <vscale x 16 x i8> %b, i32 %x) {
+; NODOT-LABEL: partial_reduce_vdot4aus_vx:
+; NODOT:       # %bb.0: # %entry
+; NODOT-NEXT:    vsetvli a1, zero, e32, m2, ta, ma
+; NODOT-NEXT:    vmv.v.x v16, a0
+; NODOT-NEXT:    vsetvli a0, zero, e16, m4, ta, ma
+; NODOT-NEXT:    vsext.vf2 v12, v16
+; NODOT-NEXT:    vzext.vf2 v24, v10
+; NODOT-NEXT:    vwmulsu.vv v16, v12, v24
+; NODOT-NEXT:    vsetvli a0, zero, e32, m2, ta, ma
+; NODOT-NEXT:    vadd.vv v10, v18, v20
+; NODOT-NEXT:    vadd.vv v8, v8, v16
+; NODOT-NEXT:    vadd.vv v8, v22, v8
+; NODOT-NEXT:    vadd.vv v8, v10, v8
+; NODOT-NEXT:    ret
+;
+; DOT-LABEL: partial_reduce_vdot4aus_vx:
+; DOT:       # %bb.0: # %entry
+; DOT-NEXT:    vsetvli a1, zero, e32, m2, ta, ma
+; DOT-NEXT:    vdot4aus.vx v8, v10, a0
+; DOT-NEXT:    ret
+entry:
+  %h = insertelement <vscale x 4 x i32> poison, i32 %x, i32 0
+  %s = shufflevector <vscale x 4 x i32> %h, <vscale x 4 x i32> poison, <vscale x 4 x i32> zeroinitializer
+  %a = bitcast <vscale x 4 x i32> %s to <vscale x 16 x i8>
+  %a.sext = sext <vscale x 16 x i8> %a to <vscale x 16 x i32>
+  %b.zext = zext <vscale x 16 x i8> %b to <vscale x 16 x i32>
+  %mul = mul <vscale x 16 x i32> %a.sext, %b.zext
+  %res = call <vscale x 4 x i32> @llvm.vector.partial.reduce.add(<vscale x 4 x i32> %acc, <vscale x 16 x i32> %mul)
+  ret <vscale x 4 x i32> %res
+}
 
 define <vscale x 4 x i32> @partial_of_sext(<vscale x 16 x i8> %a) {
 ; NODOT-LABEL: partial_of_sext:

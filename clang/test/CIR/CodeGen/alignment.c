@@ -8,8 +8,8 @@
 __attribute((aligned(32))) float a[128];
 union {int a[4]; __attribute((aligned(32))) float b[4];} b;
 
-// CIR: @a = #cir.zero {{.*}}alignment = 32
-// CIR: @b = #cir.zero{{.*}}alignment = 32
+// CIR: @a = #cir.zero {{.*}}align(32)
+// CIR: @b = #cir.zero{{.*}}align(32)
 
 // LLVM: @a = {{.*}}zeroinitializer, align 32
 // LLVM: @b = {{.*}}zeroinitializer, align 32
@@ -18,7 +18,7 @@ union {int a[4]; __attribute((aligned(32))) float b[4];} b;
 // OGCG: @b = {{.*}}zeroinitializer, align 32
 
 long long int test5[1024];
-// CIR: @test5 = #cir.zero {{.*}}alignment = 16
+// CIR: @test5 = #cir.zero {{.*}}align(16)
 // LLVM: @test5 = {{.*}}global [1024 x i64] zeroinitializer, align 16
 // OGCG: @test5 = {{.*}}global [1024 x i64] zeroinitializer, align 16
 

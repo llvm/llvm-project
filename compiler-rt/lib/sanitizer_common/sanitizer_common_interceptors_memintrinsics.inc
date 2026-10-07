@@ -120,15 +120,35 @@ INTERCEPTOR(void *, memcpy, void *dst, const void *src, usize size) {
 #endif
 }
 
-#define INIT_MEMCPY                                  \
-  do {                                               \
-    if (PLATFORM_HAS_DIFFERENT_MEMCPY_AND_MEMMOVE) { \
-      COMMON_INTERCEPT_FUNCTION(memcpy);             \
-    } else {                                         \
-      ASSIGN_REAL(memcpy, memmove);                  \
-    }                                                \
-    CHECK(REAL(memcpy));                             \
-  } while (false)
+#  if SANITIZER_WINDOWS64
+// On Win64, older CRTs export memcpy as an alias of memmove (same address),
+// while newer ones (vcruntime140.dll 14.38+) ship them as distinct exports
+// (memcpy became a jmp-rel32 stub to memmove). Intercept the memcpy export
+// only where it is distinct so that calls through it are checked. Always
+// forward REAL(memcpy) to the real memmove: memmove is a semantic superset of
+// memcpy, and the memcpy stub's resolved target may be the interceptor
+// already installed at the memmove entry, which would shadow-check (and
+// double-check) the runtime's internal copies (e.g. asan's Reallocate).
+// Requires INIT_MEMMOVE to have run first.
+#    define INIT_MEMCPY                                     \
+      do {                                                  \
+        ::__interception::OverrideFunctionIfNotAliased(     \
+            "memcpy", (::__interception::uptr)WRAP(memcpy), \
+            /*orig_old_func=*/nullptr, "memmove");          \
+        ASSIGN_REAL(memcpy, memmove);                       \
+        CHECK(REAL(memcpy));                                \
+      } while (false)
+#  else
+#    define INIT_MEMCPY                                  \
+      do {                                               \
+        if (PLATFORM_HAS_DIFFERENT_MEMCPY_AND_MEMMOVE) { \
+          COMMON_INTERCEPT_FUNCTION(memcpy);             \
+        } else {                                         \
+          ASSIGN_REAL(memcpy, memmove);                  \
+        }                                                \
+        CHECK(REAL(memcpy));                             \
+      } while (false)
+#  endif
 
 #else
 #define INIT_MEMCPY

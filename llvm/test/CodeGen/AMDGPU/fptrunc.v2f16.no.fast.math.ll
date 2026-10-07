@@ -441,7 +441,7 @@ define <2 x half> @v_test_cvt_v2f64_v2f16(<2 x double> %src) {
 ; GFX950-GISEL-NEXT:    v_cndmask_b32_e64 v5, 0, 1, vcc
 ; GFX950-GISEL-NEXT:    v_cmp_ne_u32_e32 vcc, v7, v2
 ; GFX950-GISEL-NEXT:    v_lshl_or_b32 v5, v5, 9, v8
-; GFX950-GISEL-NEXT:    v_and_b32_e32 v0, 0xffff, v0
+; GFX950-GISEL-NEXT:    s_nop 0
 ; GFX950-GISEL-NEXT:    v_cndmask_b32_e64 v2, 0, 1, vcc
 ; GFX950-GISEL-NEXT:    v_or_b32_e32 v2, v10, v2
 ; GFX950-GISEL-NEXT:    v_cmp_gt_i32_e32 vcc, 1, v1
@@ -462,7 +462,8 @@ define <2 x half> @v_test_cvt_v2f64_v2f16(<2 x double> %src) {
 ; GFX950-GISEL-NEXT:    v_cndmask_b32_e32 v1, v2, v5, vcc
 ; GFX950-GISEL-NEXT:    v_lshrrev_b32_e32 v2, 16, v3
 ; GFX950-GISEL-NEXT:    v_and_or_b32 v1, v2, v4, v1
-; GFX950-GISEL-NEXT:    v_lshl_or_b32 v0, v1, 16, v0
+; GFX950-GISEL-NEXT:    v_lshlrev_b32_e32 v1, 16, v1
+; GFX950-GISEL-NEXT:    v_or_b32_sdwa v0, v1, v0 dst_sel:DWORD dst_unused:UNUSED_PAD src0_sel:DWORD src1_sel:WORD_0
 ; GFX950-GISEL-NEXT:    s_setpc_b64 s[30:31]
   %res = fptrunc <2 x double> %src to <2 x half>
   ret <2 x half> %res

@@ -7,11 +7,6 @@
 -->
 
 # Fortran descriptor type mapping for OpenMP offload
-```{contents}
----
-local:
----
-```
 
 
 ## Details

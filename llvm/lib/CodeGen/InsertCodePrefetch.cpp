@@ -104,8 +104,8 @@ static bool
 insertPrefetchHints(MachineFunction &MF,
                     const SmallVector<PrefetchHint> &PrefetchHints) {
   bool PrefetchInserted = false;
-  bool IsELF = MF.getTarget().getTargetTriple().isOSBinFormatELF();
   const Module *M = MF.getFunction().getParent();
+  bool IsELF = M->getTargetTriple().isOSBinFormatELF();
   DenseMap<UniqueBBID, SmallVector<PrefetchHint>> PrefetchHintsBySiteBBID;
   for (const auto &H : PrefetchHints)
     PrefetchHintsBySiteBBID[H.SiteID.BBID].push_back(H);

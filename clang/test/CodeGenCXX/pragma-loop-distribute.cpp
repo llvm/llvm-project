@@ -20,5 +20,5 @@ void while_test(int *List, int Length, int *List2, int Length2) {
 }
 
 // CHECK: ![[LOOP_1]] = distinct !{![[LOOP_1]], [[MP:![0-9]+]], ![[DISTRIBUTE_ENABLE:.*]]}
-// CHECK: ![[DISTRIBUTE_ENABLE]] = !{!"llvm.loop.distribute.enable", i1 true}
+// CHECK: ![[DISTRIBUTE_ENABLE]] = !{!"llvm.loop.distribute.enable"}
 // CHECK: [[LOOP_2]] = distinct !{[[LOOP_2]], [[MP]]}

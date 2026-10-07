@@ -11,9 +11,9 @@ void test_user(int *__restrict p) {
   user_func(p);
 }
 
-// CIR: cir.func private @user_func(!cir.ptr<!s32i> {llvm.noalias, llvm.noundef})
 // CIR: cir.func {{.*}} @test_user(%arg0: !cir.ptr<!s32i> {llvm.noalias, llvm.noundef}
 // CIR:   cir.call @user_func(%{{.*}}) : (!cir.ptr<!s32i> {llvm.noundef}) -> ()
+// CIR: cir.func private @user_func(!cir.ptr<!s32i> {llvm.noalias, llvm.noundef})
 
 // LLVM: define dso_local void @test_user(ptr noalias noundef %{{.*}})
 // LLVM:   call void @user_func(ptr noundef %{{.*}})

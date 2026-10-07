@@ -382,23 +382,87 @@ _DXC_COMPAT_UNARY_INTEGER_OVERLOADS(frac)
 // isinf builtins overloads
 //===----------------------------------------------------------------------===//
 
-_DXC_DEPRECATED_64BIT_FN(fn)
+_DXC_DEPRECATED_64BIT_FN(isinf)
 constexpr bool isinf(double V) { return isinf((float)V); }
-_DXC_DEPRECATED_64BIT_FN(fn)
+_DXC_DEPRECATED_64BIT_FN(isinf)
 constexpr bool2 isinf(double2 V) { return isinf((float2)V); }
-_DXC_DEPRECATED_64BIT_FN(fn)
+_DXC_DEPRECATED_64BIT_FN(isinf)
 constexpr bool3 isinf(double3 V) { return isinf((float3)V); }
-_DXC_DEPRECATED_64BIT_FN(fn)
+_DXC_DEPRECATED_64BIT_FN(isinf)
 constexpr bool4 isinf(double4 V) { return isinf((float4)V); }
+_DXC_DEPRECATED_64BIT_FN(isinf)
+constexpr bool1x2 isinf(double1x2 V) { return isinf((float1x2)V); }
+_DXC_DEPRECATED_64BIT_FN(isinf)
+constexpr bool1x3 isinf(double1x3 V) { return isinf((float1x3)V); }
+_DXC_DEPRECATED_64BIT_FN(isinf)
+constexpr bool1x4 isinf(double1x4 V) { return isinf((float1x4)V); }
+_DXC_DEPRECATED_64BIT_FN(isinf)
+constexpr bool2x1 isinf(double2x1 V) { return isinf((float2x1)V); }
+_DXC_DEPRECATED_64BIT_FN(isinf)
+constexpr bool2x2 isinf(double2x2 V) { return isinf((float2x2)V); }
+_DXC_DEPRECATED_64BIT_FN(isinf)
+constexpr bool2x3 isinf(double2x3 V) { return isinf((float2x3)V); }
+_DXC_DEPRECATED_64BIT_FN(isinf)
+constexpr bool2x4 isinf(double2x4 V) { return isinf((float2x4)V); }
+_DXC_DEPRECATED_64BIT_FN(isinf)
+constexpr bool3x1 isinf(double3x1 V) { return isinf((float3x1)V); }
+_DXC_DEPRECATED_64BIT_FN(isinf)
+constexpr bool3x2 isinf(double3x2 V) { return isinf((float3x2)V); }
+_DXC_DEPRECATED_64BIT_FN(isinf)
+constexpr bool3x3 isinf(double3x3 V) { return isinf((float3x3)V); }
+_DXC_DEPRECATED_64BIT_FN(isinf)
+constexpr bool3x4 isinf(double3x4 V) { return isinf((float3x4)V); }
+_DXC_DEPRECATED_64BIT_FN(isinf)
+constexpr bool4x1 isinf(double4x1 V) { return isinf((float4x1)V); }
+_DXC_DEPRECATED_64BIT_FN(isinf)
+constexpr bool4x2 isinf(double4x2 V) { return isinf((float4x2)V); }
+_DXC_DEPRECATED_64BIT_FN(isinf)
+constexpr bool4x3 isinf(double4x3 V) { return isinf((float4x3)V); }
+_DXC_DEPRECATED_64BIT_FN(isinf)
+constexpr bool4x4 isinf(double4x4 V) { return isinf((float4x4)V); }
 
 //===----------------------------------------------------------------------===//
 // isnan builtins overloads
 //===----------------------------------------------------------------------===//
 
+_DXC_DEPRECATED_64BIT_FN(isnan)
 constexpr bool isnan(double V) { return isnan((float)V); }
+_DXC_DEPRECATED_64BIT_FN(isnan)
 constexpr bool2 isnan(double2 V) { return isnan((float2)V); }
+_DXC_DEPRECATED_64BIT_FN(isnan)
 constexpr bool3 isnan(double3 V) { return isnan((float3)V); }
+_DXC_DEPRECATED_64BIT_FN(isnan)
 constexpr bool4 isnan(double4 V) { return isnan((float4)V); }
+_DXC_DEPRECATED_64BIT_FN(isnan)
+constexpr bool1x2 isnan(double1x2 V) { return isnan((float1x2)V); }
+_DXC_DEPRECATED_64BIT_FN(isnan)
+constexpr bool1x3 isnan(double1x3 V) { return isnan((float1x3)V); }
+_DXC_DEPRECATED_64BIT_FN(isnan)
+constexpr bool1x4 isnan(double1x4 V) { return isnan((float1x4)V); }
+_DXC_DEPRECATED_64BIT_FN(isnan)
+constexpr bool2x1 isnan(double2x1 V) { return isnan((float2x1)V); }
+_DXC_DEPRECATED_64BIT_FN(isnan)
+constexpr bool2x2 isnan(double2x2 V) { return isnan((float2x2)V); }
+_DXC_DEPRECATED_64BIT_FN(isnan)
+constexpr bool2x3 isnan(double2x3 V) { return isnan((float2x3)V); }
+_DXC_DEPRECATED_64BIT_FN(isnan)
+constexpr bool2x4 isnan(double2x4 V) { return isnan((float2x4)V); }
+_DXC_DEPRECATED_64BIT_FN(isnan)
+constexpr bool3x1 isnan(double3x1 V) { return isnan((float3x1)V); }
+_DXC_DEPRECATED_64BIT_FN(isnan)
+constexpr bool3x2 isnan(double3x2 V) { return isnan((float3x2)V); }
+_DXC_DEPRECATED_64BIT_FN(isnan)
+constexpr bool3x3 isnan(double3x3 V) { return isnan((float3x3)V); }
+_DXC_DEPRECATED_64BIT_FN(isnan)
+constexpr bool3x4 isnan(double3x4 V) { return isnan((float3x4)V); }
+_DXC_DEPRECATED_64BIT_FN(isnan)
+constexpr bool4x1 isnan(double4x1 V) { return isnan((float4x1)V); }
+_DXC_DEPRECATED_64BIT_FN(isnan)
+constexpr bool4x2 isnan(double4x2 V) { return isnan((float4x2)V); }
+_DXC_DEPRECATED_64BIT_FN(isnan)
+constexpr bool4x3 isnan(double4x3 V) { return isnan((float4x3)V); }
+_DXC_DEPRECATED_64BIT_FN(isnan)
+constexpr bool4x4 isnan(double4x4 V) { return isnan((float4x4)V); }
 
 //===----------------------------------------------------------------------===//
 // lerp builtins overloads
@@ -484,6 +548,8 @@ _DXC_COMPAT_UNARY_INTEGER_OVERLOADS(normalize)
 
 _DXC_COMPAT_BINARY_DOUBLE_OVERLOADS(pow)
 _DXC_COMPAT_BINARY_INTEGER_OVERLOADS(pow)
+_DXC_COMPAT_BINARY_DOUBLE_MATRIX_OVERLOADS(pow)
+_DXC_COMPAT_BINARY_INTEGER_MATRIX_OVERLOADS(pow)
 
 //===----------------------------------------------------------------------===//
 // rsqrt builtins overloads

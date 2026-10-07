@@ -22,7 +22,6 @@ from .types import (
     CapabilitiesEvent,
     ContinueArgs,
     DAPError,
-    DisconnectArgs,
     ErrorResponse,
     Event,
     ExitedEvent,
@@ -285,8 +284,6 @@ class Session:
             if raw_capabilities := message.get("body"):
                 init_capabilities = dict_to_message(Capabilities, raw_capabilities)
                 self._state.update_capabilities(init_capabilities)
-        if command == DisconnectArgs.command_:
-            self._connection.stop()
 
     def _on_protocol_event(self, message: RawMessage) -> None:
         self._logger.debug("<-- %s", json.dumps(message))
@@ -448,7 +445,7 @@ class Session:
 
     def verify_reverse_process_exited(self, exit_code: Optional[int] = None):
         if process := self._reverse_process:
-            proc_exit_code = process.poll()
+            proc_exit_code = process.wait(timeout=1.0)
             if proc_exit_code is None:
                 raise DAPError(
                     f"process is still running, "

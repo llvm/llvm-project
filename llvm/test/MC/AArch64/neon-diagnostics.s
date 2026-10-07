@@ -6418,6 +6418,21 @@
 // CHECK-ERROR:         ext v0.2d, v1.2d, v2.2d, #0x0
 // CHECK-ERROR:                ^
 
+        // Symbolic operands are not valid byte-index immediates.
+        ext v0.8b, v1.8b, v2.8b, f0
+// CHECK-ERROR: [[@LINE-1]]:34: error: immediate must be an integer in range [0, 7].
+        ext v0.16b, v1.16b, v2.16b, f0
+// CHECK-ERROR: [[@LINE-1]]:37: error: immediate must be an integer in range [0, 15].
+        ext v0.8b, v1.8b, v2.8b, NaN
+// CHECK-ERROR: [[@LINE-1]]:34: error: immediate must be an integer in range [0, 7].
+        ext v0.8b, v1.8b, v2.8b, Inf
+// CHECK-ERROR: [[@LINE-1]]:34: error: immediate must be an integer in range [0, 7].
+
+        // Out-of-range byte-index immediates must be rejected.
+        ext v0.8b, v1.8b, v2.8b, #8
+// CHECK-ERROR: [[@LINE-1]]:34: error: immediate must be an integer in range [0, 7].
+        ext v0.16b, v1.16b, v2.16b, #16
+// CHECK-ERROR: [[@LINE-1]]:37: error: immediate must be an integer in range [0, 15].
 
 //----------------------------------------------------------------------
 // Permutation with 3 vectors

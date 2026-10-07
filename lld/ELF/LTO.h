@@ -44,6 +44,7 @@ public:
   void add(BitcodeFile &f);
   SmallVector<std::unique_ptr<InputFile>, 0> compile();
   void setBitcodeLibFuncs(ArrayRef<StringRef> bitcodeLibFuncs);
+  void waitForLTOCleanup();
 
 private:
   Ctx &ctx;

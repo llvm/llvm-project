@@ -138,7 +138,7 @@ entry:
 
 ; Test 'N' with multiple accesses to the same operand and i128 result.
 @V128 = global i128 0, align 16
-define i32 @fun6() {
+define void @fun6() {
 ; CHECK-LABEL: fun6:
 ; CHECK:       # %bb.0: # %entry
 ; CHECK-NEXT:    lgrl %r1, V128@GOT
@@ -154,5 +154,41 @@ entry:
   %0 = load i128, ptr @V128
   %1 = tail call i128 asm "ltgr ${0:N},${0:N}", "=&d,0"(i128 %0)
   store i128 %1, ptr @V128
-  ret i32 undef
+  ret void
+}
+
+; Test access of the odd register using 'M'.
+define i64 @fun7(i64 %b) {
+; CHECK-LABEL: fun7:
+; CHECK:       # %bb.0: # %entry
+; CHECK-NEXT:    lgr %r1, %r2
+; CHECK-NEXT:    lghi %r0, 0
+; CHECK-NEXT:    #APP
+; CHECK-NEXT:     lgr %r2,%r1
+; CHECK-NEXT:    #NO_APP
+; CHECK-NEXT:    br %r14
+entry:
+  %Ins = zext i64 %b to i128
+  %Res = tail call i64 asm "\09lgr\09$0,${1:M}", "=d,d"(i128 %Ins)
+  ret i64 %Res
+}
+
+; Test 'M' with multiple accesses to the same operand and i128 result.
+define void @fun8() {
+; CHECK-LABEL: fun8:
+; CHECK:       # %bb.0: # %entry
+; CHECK-NEXT:    lgrl %r1, V128@GOT
+; CHECK-NEXT:    lg %r3, 8(%r1)
+; CHECK-NEXT:    lg %r2, 0(%r1)
+; CHECK-NEXT:    #APP
+; CHECK-NEXT:    ltgr %r3,%r3
+; CHECK-NEXT:    #NO_APP
+; CHECK-NEXT:    stg %r2, 0(%r1)
+; CHECK-NEXT:    stg %r3, 8(%r1)
+; CHECK-NEXT:    br %r14
+entry:
+  %0 = load i128, ptr @V128
+  %1 = tail call i128 asm "ltgr ${0:M},${0:M}", "=&d,0"(i128 %0)
+  store i128 %1, ptr @V128
+  ret void
 }

@@ -294,6 +294,18 @@ makeCommonInvocationForModuleBuild(CompilerInvocation CI) {
     CI.getHeaderSearchOpts().ModulesIgnoreMacros.clear();
   }
 
+  // Remove any header search paths that are explicitly ignored.
+  if (!CI.getHeaderSearchOpts().ModulesIgnoreSearchPaths.empty()) {
+    llvm::erase_if(
+        CI.getHeaderSearchOpts().UserEntries,
+        [&CI](const HeaderSearchOptions::Entry &E) {
+          return CI.getHeaderSearchOpts().ModulesIgnoreSearchPaths.contains(
+              llvm::CachedHashString(E.Path));
+        });
+    // Remove the now unused option.
+    CI.getHeaderSearchOpts().ModulesIgnoreSearchPaths.clear();
+  }
+
   return CI;
 }
 
@@ -574,6 +586,10 @@ public:
       // here as `FileChanged` will never see it.
       MDC.addFileDep(FileName);
     }
+    if (ModuleImported && SuggestedModule &&
+        MDC.ScanInstance.getPreprocessorOpts()
+            .DependencyScanningModuleMapImports)
+      MDC.addRequiredStdCXXModule(SuggestedModule->getFullModuleName());
     MDC.handleImport(SuggestedModule);
   }
 
@@ -581,16 +597,26 @@ public:
                     const Module *Imported) override {
     auto &PP = MDC.ScanInstance.getPreprocessor();
     if (PP.getLangOpts().CPlusPlusModules && PP.isImportingCXXNamedModules()) {
-      P1689ModuleInfo RequiredModule;
-      RequiredModule.ModuleName = Path[0].getIdentifierInfo()->getName().str();
-      RequiredModule.Type = P1689ModuleInfo::ModuleType::NamedCXXModule;
-      MDC.RequiredStdCXXModules.push_back(std::move(RequiredModule));
+      MDC.addRequiredStdCXXModule(Path[0].getIdentifierInfo()->getName());
       return;
     }
 
     MDC.handleImport(Imported);
   }
 };
+
+void ModuleDepCollector::addRequiredStdCXXModule(StringRef ModuleName) {
+  if (llvm::any_of(RequiredStdCXXModules,
+                   [ModuleName](const P1689ModuleInfo &RequiredModule) {
+                     return RequiredModule.ModuleName == ModuleName;
+                   }))
+    return;
+
+  P1689ModuleInfo RequiredModule;
+  RequiredModule.ModuleName = ModuleName.str();
+  RequiredModule.Type = P1689ModuleInfo::ModuleType::NamedCXXModule;
+  RequiredStdCXXModules.push_back(std::move(RequiredModule));
+}
 
 void ModuleDepCollector::handleImport(const Module *Imported) {
   auto &MDC = *this;
@@ -631,7 +657,7 @@ void ModuleDepCollector::run(DependencyConsumer &Consumer) {
     // Put the module as required instead. Since the implementation
     // unit will import the primary module implicitly.
     if (PP.isInImplementationUnit())
-      MDC.RequiredStdCXXModules.push_back(ProvidedModule);
+      MDC.addRequiredStdCXXModule(ProvidedModule.ModuleName);
     else
       MDC.ProvidedStdCXXModule = ProvidedModule;
   }

@@ -10,4 +10,4 @@
 
 #include "src/math/frexpf128.h"
 
-LIST_FREXP_TESTS(float128, LIBC_NAMESPACE::frexpf128);
+LIST_FREXP_TESTS(Frexpf128, float128, LIBC_NAMESPACE::frexpf128);

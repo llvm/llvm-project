@@ -4445,13 +4445,11 @@ define i32 @add_reduce_sqr_sum_not_one_use(i32 %a, i32 %b) {
 
 define i32 @add_reduce_sqr_sum_not_one_use2(i32 %a, i32 %b) {
 ; CHECK-LABEL: @add_reduce_sqr_sum_not_one_use2(
-; CHECK-NEXT:    [[A_SQ:%.*]] = mul nsw i32 [[A:%.*]], [[A]]
-; CHECK-NEXT:    [[TWO_A:%.*]] = shl i32 [[A]], 1
-; CHECK-NEXT:    [[TWO_A_PLUS_B:%.*]] = add i32 [[TWO_A]], [[B:%.*]]
-; CHECK-NEXT:    [[MUL:%.*]] = mul i32 [[TWO_A_PLUS_B]], [[B]]
-; CHECK-NEXT:    tail call void @fake_func(i32 [[A_SQ]])
-; CHECK-NEXT:    [[ADD:%.*]] = add i32 [[MUL]], [[A_SQ]]
-; CHECK-NEXT:    ret i32 [[ADD]]
+; CHECK-NEXT:    [[A_SQ:%.*]] = mul nsw i32 [[A:%.*]], [[A:%.*]]
+; CHECK-NEXT:    tail call void @fake_func(i32 [[A_SQ:%.*]])
+; CHECK-NEXT:    [[AB:%.*]] = add i32 [[A:%.*]], [[B:%.*]]
+; CHECK-NEXT:    [[AB_SQ:%.*]] = mul i32 [[AB:%.*]], [[AB:%.*]]
+; CHECK-NEXT:    ret i32 [[AB_SQ:%.*]]
 ;
   %a_sq = mul nsw i32 %a, %a
   %two_a = shl i32 %a, 1
@@ -4484,13 +4482,11 @@ define i32 @add_reduce_sqr_sum_order2_not_one_use(i32 %a, i32 %b) {
 
 define i32 @add_reduce_sqr_sum_order2_not_one_use2(i32 %a, i32 %b) {
 ; CHECK-LABEL: @add_reduce_sqr_sum_order2_not_one_use2(
-; CHECK-NEXT:    [[A_SQ:%.*]] = mul nsw i32 [[A:%.*]], [[A]]
-; CHECK-NEXT:    [[TWOA:%.*]] = shl i32 [[A]], 1
-; CHECK-NEXT:    [[TWOAB1:%.*]] = add i32 [[TWOA]], [[B:%.*]]
-; CHECK-NEXT:    [[TWOAB_B2:%.*]] = mul i32 [[TWOAB1]], [[B]]
-; CHECK-NEXT:    tail call void @fake_func(i32 [[A_SQ]])
-; CHECK-NEXT:    [[AB2:%.*]] = add i32 [[A_SQ]], [[TWOAB_B2]]
-; CHECK-NEXT:    ret i32 [[AB2]]
+; CHECK-NEXT:    [[A_SQ:%.*]] = mul nsw i32 [[A:%.*]], [[A:%.*]]
+; CHECK-NEXT:    tail call void @fake_func(i32 [[A_SQ:%.*]])
+; CHECK-NEXT:    [[AB:%.*]] = add i32 [[A:%.*]], [[B:%.*]]
+; CHECK-NEXT:    [[AB_SQ:%.*]] = mul i32 [[AB:%.*]], [[AB:%.*]]
+; CHECK-NEXT:    ret i32 [[AB_SQ:%.*]]
 ;
   %a_sq = mul nsw i32 %a, %a
   %twoa = mul i32 %a, 2
@@ -4992,6 +4988,22 @@ define i32 @ceil_div_by_8_known_range(i32 range(i32 0, 100) %x) {
   ret i32 %r
 }
 
+define i32 @ceil_div_by_8_zext(i8 %x) {
+; CHECK-LABEL: @ceil_div_by_8_zext(
+; CHECK-NEXT:    [[TMP1:%.*]] = zext i8 [[X:%.*]] to i32
+; CHECK-NEXT:    [[TMP2:%.*]] = add nuw nsw i32 [[TMP1]], 7
+; CHECK-NEXT:    [[R:%.*]] = lshr i32 [[TMP2]], 3
+; CHECK-NEXT:    ret i32 [[R]]
+;
+  %shr = lshr i8 %x, 3
+  %zext = zext i8 %shr to i32
+  %and = and i8 %x, 7
+  %cmp = icmp ne i8 %and, 0
+  %ext = zext i1 %cmp to i32
+  %r = add i32 %zext, %ext
+  ret i32 %r
+}
+
 ; Test with the exact IR from the original testcase
 define i32 @ceil_div_from_clz(i32 %v) {
 ; CHECK-LABEL: @ceil_div_from_clz(
@@ -5154,6 +5166,33 @@ define i32 @ceil_div_multi_use(i32 range(i32 0, 100) %x) {
   ret i32 %r
 }
 
+define i32 @ceil_div_by_8_zext_multi_use(i8 %x) {
+; CHECK-LABEL: @ceil_div_by_8_zext_multi_use(
+; CHECK-NEXT:    [[SHR:%.*]] = lshr i8 [[X:%.*]], 3
+; CHECK-NEXT:    call void @use_i8(i8 [[SHR]])
+; CHECK-NEXT:    [[ZEXT:%.*]] = zext nneg i8 [[SHR]] to i32
+; CHECK-NEXT:    call void @use_i32(i32 [[ZEXT]])
+; CHECK-NEXT:    [[AND:%.*]] = and i8 [[X]], 7
+; CHECK-NEXT:    call void @use_i8(i8 [[AND]])
+; CHECK-NEXT:    [[CMP:%.*]] = icmp ne i8 [[AND]], 0
+; CHECK-NEXT:    [[EXT:%.*]] = zext i1 [[CMP]] to i32
+; CHECK-NEXT:    call void @use_i32(i32 [[EXT]])
+; CHECK-NEXT:    [[R:%.*]] = add nuw nsw i32 [[ZEXT]], [[EXT]]
+; CHECK-NEXT:    ret i32 [[R]]
+;
+  %shr = lshr i8 %x, 3
+  call void @use_i8(i8 %shr)
+  %zext = zext i8 %shr to i32
+  call void @use_i32(i32 %zext)
+  %and = and i8 %x, 7
+  call void @use_i8(i8 %and)
+  %cmp = icmp ne i8 %and, 0
+  %ext = zext i1 %cmp to i32
+  call void @use_i32(i32 %ext)
+  %r = add i32 %zext, %ext
+  ret i32 %r
+}
+
 ; Commuted test: add operands are swapped
 define i32 @ceil_div_commuted(i32 range(i32 0, 100) %x) {
 ; CHECK-LABEL: @ceil_div_commuted(
@@ -5231,6 +5270,7 @@ define <2 x i32> @ceil_div_vec_multi_use(<2 x i32> range(i32 0, 1000) %x) {
   ret <2 x i32> %r
 }
 
+declare void @use_i8(i8)
 declare void @use_i32(i32)
 declare void @use_vec(<2 x i32>)
 declare void @fake_func(i32)

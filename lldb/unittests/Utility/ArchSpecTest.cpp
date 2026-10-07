@@ -482,6 +482,72 @@ TEST(ArchSpecTest, Compatibility) {
   }
 }
 
+TEST(ArchSpecTest, UnrelatedCoresCompatibleMatchTerminates) {
+  {
+    ArchSpec A("mipsel-unknown-linux");
+    ArchSpec B("armv7em-apple-none");
+    ASSERT_FALSE(A.IsCompatibleMatch(B));
+    ASSERT_FALSE(B.IsCompatibleMatch(A));
+  }
+  {
+    ArchSpec A("mipsel-unknown-linux");
+    ArchSpec B("armv7m-apple-none");
+    ASSERT_FALSE(A.IsCompatibleMatch(B));
+    ASSERT_FALSE(B.IsCompatibleMatch(A));
+  }
+}
+
+TEST(ArchSpecTest, AsymmetricCoreRulesAreCheckedBothWays) {
+  // Some cores' compatibility rules only work one way: core A accepts B,
+  // but B's own rule says nothing about A. A compatible match must check
+  // both directions to find these cases.
+  {
+    // A 32-bit MIPS core has no rule about 64-bit MIPS, but 64-bit MIPS
+    // accepts the 32-bit family with the same endianness.
+    ArchSpec A("mipsel-unknown-linux");
+    ArchSpec B("mips64el-unknown-linux");
+    ASSERT_TRUE(A.IsCompatibleMatch(B));
+    ASSERT_TRUE(B.IsCompatibleMatch(A));
+    ASSERT_FALSE(A.IsExactMatch(B));
+    ASSERT_FALSE(B.IsExactMatch(A));
+  }
+  {
+    // The two Cortex-M cores explicitly accept each other.
+    ArchSpec A("armv7em-apple-none");
+    ArchSpec B("armv7m-apple-none");
+    ASSERT_TRUE(A.IsCompatibleMatch(B));
+    ASSERT_TRUE(B.IsCompatibleMatch(A));
+    ASSERT_FALSE(A.IsExactMatch(B));
+    ASSERT_FALSE(B.IsExactMatch(A));
+  }
+}
+
+TEST(ArchSpecTest, WasmCompatibility) {
+  // A Wasm module encodes no vendor or OS: those are properties of the runtime
+  // executing it. A bare wasm32 or wasm64 architecture therefore has to stay
+  // compatible with the more specific triple a runtime reports at launch.
+  {
+    ArchSpec A("wasm32");
+    ArchSpec B("wasm32-wamr-wasi-wasm");
+    ASSERT_TRUE(A.IsCompatibleMatch(B));
+    ASSERT_TRUE(B.IsCompatibleMatch(A));
+  }
+  {
+    // An explicitly specified "unknown" OS is still a specified OS, and does
+    // not match a runtime that reports a different one.
+    ArchSpec A("wasm32-unknown-unknown-wasm");
+    ArchSpec B("wasm32-wamr-wasi-wasm");
+    ASSERT_FALSE(A.IsCompatibleMatch(B));
+    ASSERT_FALSE(B.IsCompatibleMatch(A));
+  }
+  {
+    ArchSpec A("wasm32");
+    ArchSpec B("wasm64-wamr-wasi-wasm");
+    ASSERT_FALSE(A.IsCompatibleMatch(B));
+    ASSERT_FALSE(B.IsCompatibleMatch(A));
+  }
+}
+
 TEST(ArchSpecTest, OperatorBool) {
   EXPECT_FALSE(ArchSpec());
   EXPECT_TRUE(ArchSpec("x86_64-pc-linux"));

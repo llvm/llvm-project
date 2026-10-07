@@ -42,7 +42,7 @@ bb4:                                             ; preds = %bb3, %bb
   br label %bb6
 
 bb6:                                             ; preds = %bb4, %bb
-  %tmp7 = phi double [ 0x7FF8123000000000, %bb4 ], [ 0x7FF8000000000000, %bb ]
+  %tmp7 = phi double [ 0x7FF8123000000000, %bb4 ], [ +qnan, %bb ]
   store double %tmp7, ptr %arg, align 8
   ret void
 }

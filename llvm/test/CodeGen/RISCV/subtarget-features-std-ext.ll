@@ -5,7 +5,7 @@
 ; RUN: llc -mtriple=riscv32 -mattr=-f -target-abi ilp32f <%s 2>&1 \
 ; RUN:   | FileCheck -check-prefix=RV32I-ILP32F-FAILED %s
 
-; RV32I-ILP32F-FAILED: Hard-float 'f' ABI can't be used for a target that doesn't support the F instruction set extension
+; RV32I-ILP32F-FAILED: hard-float 'f' ABI can't be used for a target that doesn't support the F instruction set extension
 
 
 define float @foo(i32 %a) nounwind #0 {

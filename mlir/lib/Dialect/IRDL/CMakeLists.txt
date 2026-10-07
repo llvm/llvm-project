@@ -9,6 +9,8 @@ add_mlir_dialect_library(MLIRIRDL
   MLIRIRDLIncGen
   MLIRIRDLOpsIncGen
   MLIRIRDLTypesIncGen
+  MLIRIRDLInterfacesIncGen
+  MLIRIRDLAttributesIncGen
 
   LINK_LIBS PUBLIC
   MLIRDialect

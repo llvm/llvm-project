@@ -336,14 +336,19 @@ define <3 x i8> @tv3i8(i1 %c, ptr %p, <3 x i8> %a, <3 x i8> %b) {
 ; CHECK-SD:       // %bb.0: // %entry
 ; CHECK-SD-NEXT:    tbz w0, #0, .LBB11_2
 ; CHECK-SD-NEXT:  // %bb.1: // %t
-; CHECK-SD-NEXT:    mov w5, w2
-; CHECK-SD-NEXT:    mov w6, w3
-; CHECK-SD-NEXT:    mov w7, w4
+; CHECK-SD-NEXT:    fmov s0, w2
 ; CHECK-SD-NEXT:    str wzr, [x1]
-; CHECK-SD-NEXT:  .LBB11_2: // %e
-; CHECK-SD-NEXT:    mov w0, w5
-; CHECK-SD-NEXT:    mov w1, w6
-; CHECK-SD-NEXT:    mov w2, w7
+; CHECK-SD-NEXT:    mov v0.h[1], w3
+; CHECK-SD-NEXT:    mov v0.h[2], w4
+; CHECK-SD-NEXT:    b .LBB11_3
+; CHECK-SD-NEXT:  .LBB11_2:
+; CHECK-SD-NEXT:    fmov s0, w5
+; CHECK-SD-NEXT:    mov v0.h[1], w6
+; CHECK-SD-NEXT:    mov v0.h[2], w7
+; CHECK-SD-NEXT:  .LBB11_3: // %e
+; CHECK-SD-NEXT:    umov w0, v0.h[0]
+; CHECK-SD-NEXT:    umov w1, v0.h[1]
+; CHECK-SD-NEXT:    umov w2, v0.h[2]
 ; CHECK-SD-NEXT:    ret
 ;
 ; CHECK-GI-LABEL: tv3i8:
@@ -728,15 +733,24 @@ e:
 define <3 x i64> @tv3i64(i1 %c, ptr %p, <3 x i64> %a, <3 x i64> %b) {
 ; CHECK-SD-LABEL: tv3i64:
 ; CHECK-SD:       // %bb.0: // %entry
+; CHECK-SD-NEXT:    // kill: def $d5 killed $d5 def $q5
+; CHECK-SD-NEXT:    // kill: def $d4 killed $d4 def $q4
+; CHECK-SD-NEXT:    // kill: def $d3 killed $d3 def $q3
+; CHECK-SD-NEXT:    // kill: def $d2 killed $d2 def $q2
+; CHECK-SD-NEXT:    // kill: def $d1 killed $d1 def $q1
+; CHECK-SD-NEXT:    // kill: def $d0 killed $d0 def $q0
 ; CHECK-SD-NEXT:    tbz w0, #0, .LBB26_2
 ; CHECK-SD-NEXT:  // %bb.1: // %t
-; CHECK-SD-NEXT:    fmov d3, d0
-; CHECK-SD-NEXT:    fmov d4, d1
+; CHECK-SD-NEXT:    mov v0.d[1], v1.d[0]
+; CHECK-SD-NEXT:    mov v5.16b, v2.16b
 ; CHECK-SD-NEXT:    str wzr, [x1]
-; CHECK-SD-NEXT:    fmov d5, d2
-; CHECK-SD-NEXT:  .LBB26_2: // %e
+; CHECK-SD-NEXT:    mov v3.16b, v0.16b
+; CHECK-SD-NEXT:    b .LBB26_3
+; CHECK-SD-NEXT:  .LBB26_2:
+; CHECK-SD-NEXT:    mov v3.d[1], v4.d[0]
+; CHECK-SD-NEXT:  .LBB26_3: // %e
+; CHECK-SD-NEXT:    mov d1, v3.d[1]
 ; CHECK-SD-NEXT:    fmov d0, d3
-; CHECK-SD-NEXT:    fmov d1, d4
 ; CHECK-SD-NEXT:    fmov d2, d5
 ; CHECK-SD-NEXT:    ret
 ;
@@ -877,15 +891,24 @@ e:
 define <3 x ptr> @tv3p0(i1 %c, ptr %p, <3 x ptr> %a, <3 x ptr> %b) {
 ; CHECK-SD-LABEL: tv3p0:
 ; CHECK-SD:       // %bb.0: // %entry
+; CHECK-SD-NEXT:    // kill: def $d5 killed $d5 def $q5
+; CHECK-SD-NEXT:    // kill: def $d4 killed $d4 def $q4
+; CHECK-SD-NEXT:    // kill: def $d3 killed $d3 def $q3
+; CHECK-SD-NEXT:    // kill: def $d2 killed $d2 def $q2
+; CHECK-SD-NEXT:    // kill: def $d1 killed $d1 def $q1
+; CHECK-SD-NEXT:    // kill: def $d0 killed $d0 def $q0
 ; CHECK-SD-NEXT:    tbz w0, #0, .LBB30_2
 ; CHECK-SD-NEXT:  // %bb.1: // %t
-; CHECK-SD-NEXT:    fmov d3, d0
-; CHECK-SD-NEXT:    fmov d4, d1
+; CHECK-SD-NEXT:    mov v0.d[1], v1.d[0]
+; CHECK-SD-NEXT:    mov v5.16b, v2.16b
 ; CHECK-SD-NEXT:    str wzr, [x1]
-; CHECK-SD-NEXT:    fmov d5, d2
-; CHECK-SD-NEXT:  .LBB30_2: // %e
+; CHECK-SD-NEXT:    mov v3.16b, v0.16b
+; CHECK-SD-NEXT:    b .LBB30_3
+; CHECK-SD-NEXT:  .LBB30_2:
+; CHECK-SD-NEXT:    mov v3.d[1], v4.d[0]
+; CHECK-SD-NEXT:  .LBB30_3: // %e
+; CHECK-SD-NEXT:    mov d1, v3.d[1]
 ; CHECK-SD-NEXT:    fmov d0, d3
-; CHECK-SD-NEXT:    fmov d1, d4
 ; CHECK-SD-NEXT:    fmov d2, d5
 ; CHECK-SD-NEXT:    ret
 ;
@@ -1191,15 +1214,24 @@ e:
 define <3 x double> @tv3f64(i1 %c, ptr %p, <3 x double> %a, <3 x double> %b) {
 ; CHECK-SD-LABEL: tv3f64:
 ; CHECK-SD:       // %bb.0: // %entry
+; CHECK-SD-NEXT:    // kill: def $d5 killed $d5 def $q5
+; CHECK-SD-NEXT:    // kill: def $d4 killed $d4 def $q4
+; CHECK-SD-NEXT:    // kill: def $d3 killed $d3 def $q3
+; CHECK-SD-NEXT:    // kill: def $d2 killed $d2 def $q2
+; CHECK-SD-NEXT:    // kill: def $d1 killed $d1 def $q1
+; CHECK-SD-NEXT:    // kill: def $d0 killed $d0 def $q0
 ; CHECK-SD-NEXT:    tbz w0, #0, .LBB42_2
 ; CHECK-SD-NEXT:  // %bb.1: // %t
-; CHECK-SD-NEXT:    fmov d3, d0
-; CHECK-SD-NEXT:    fmov d4, d1
+; CHECK-SD-NEXT:    mov v0.d[1], v1.d[0]
+; CHECK-SD-NEXT:    mov v5.16b, v2.16b
 ; CHECK-SD-NEXT:    str wzr, [x1]
-; CHECK-SD-NEXT:    fmov d5, d2
-; CHECK-SD-NEXT:  .LBB42_2: // %e
+; CHECK-SD-NEXT:    mov v3.16b, v0.16b
+; CHECK-SD-NEXT:    b .LBB42_3
+; CHECK-SD-NEXT:  .LBB42_2:
+; CHECK-SD-NEXT:    mov v3.d[1], v4.d[0]
+; CHECK-SD-NEXT:  .LBB42_3: // %e
+; CHECK-SD-NEXT:    mov d1, v3.d[1]
 ; CHECK-SD-NEXT:    fmov d0, d3
-; CHECK-SD-NEXT:    fmov d1, d4
 ; CHECK-SD-NEXT:    fmov d2, d5
 ; CHECK-SD-NEXT:    ret
 ;

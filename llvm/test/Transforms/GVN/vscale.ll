@@ -47,7 +47,8 @@ define <vscale x 4 x i32> @load_store_clobber_load_noalias(ptr noalias %p, ptr n
   ret <vscale x 4 x i32> %add
 }
 
-; BasicAA return MayAlias for %gep1,%gep2, could improve as MustAlias.
+; BasicAA could return MustAlias for %gep1,%gep2, but does not bother,
+; because vscale geps are non-canonical.
 define i32 @load_clobber_load_gep1(ptr %p) {
 ; CHECK-LABEL: @load_clobber_load_gep1(
 ; CHECK-NEXT:    [[GEP1:%.*]] = getelementptr <vscale x 4 x i32>, ptr [[P:%.*]], i64 0, i64 1
@@ -80,7 +81,8 @@ define i32 @load_clobber_load_gep2(ptr %p) {
   ret i32 %add
 }
 
-; TODO: BasicAA return MayAlias for %gep1,%gep2, could improve as MustAlias.
+; BasicAA could return MustAlias for %gep1,%gep2, but does not bother,
+; because vscale geps are non-canonical.
 define i32 @load_clobber_load_gep3(ptr %p) {
 ; CHECK-LABEL: @load_clobber_load_gep3(
 ; CHECK-NEXT:    [[GEP1:%.*]] = getelementptr <vscale x 4 x i32>, ptr [[P:%.*]], i64 1, i64 0
@@ -268,7 +270,8 @@ if.end:
   ret i32 %result
 }
 
-; TODO: BasicAA return MayAlias for %gep1,%gep2, could improve as NoAlias.
+; BasicAA could return NoAlias for %gep1,%gep2, but does not bother,
+; because vscale geps are non-canonical.
 define void @redundant_load_elimination_2(i1 %c, ptr %p, ptr %q) {
 ; CHECK-LABEL: @redundant_load_elimination_2(
 ; CHECK-NEXT:  entry:

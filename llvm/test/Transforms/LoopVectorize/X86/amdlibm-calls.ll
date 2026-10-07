@@ -2037,6 +2037,34 @@ for.end:
   ret void
 }
 
+; ======================= cbrtf ============================
+define void @cbrtf_f32(ptr nocapture %varray) {
+; CHECK-LABEL: @cbrtf_f32(
+;
+; CHECK-VF2:    {{.*}} = tail call float @cbrtf(float {{.*}})
+; CHECK-VF4:    [[TMP5:%.*]] = call <4 x float> @amd_vrs4_cbrtf(<4 x float> [[TMP4:%.*]])
+; CHECK-VF8:    [[TMP5:%.*]] = call <8 x float> @amd_vrs8_cbrtf(<8 x float> [[TMP4:%.*]])
+; CHECK-VF16:   {{.*}} = tail call float @cbrtf(float {{.*}})
+; CHECK:        ret void
+;
+entry:
+  br label %for.body
+
+for.body:
+  %iv = phi i64 [ 0, %entry ], [ %iv.next, %for.body ]
+  %tmp = trunc i64 %iv to i32
+  %conv = sitofp i32 %tmp to float
+  %call = tail call float @cbrtf(float %conv)
+  %arrayidx = getelementptr inbounds float, ptr %varray, i64 %iv
+  store float %call, ptr %arrayidx, align 4
+  %iv.next = add nuw nsw i64 %iv, 1
+  %exitcond = icmp eq i64 %iv.next, 1000
+  br i1 %exitcond, label %for.end, label %for.body
+
+for.end:
+  ret void
+}
+
 ; ======================= expm1 ============================
 define void @expm1_f64(ptr nocapture %varray) {
 ; CHECK-LABEL: @expm1_f64(
@@ -2109,3 +2137,4 @@ declare double @round(double) #0
 declare float @roundf(float) #0
 declare double @expm1(double) #0
 declare float @expm1f(float) #0
+declare float @cbrtf(float) #0

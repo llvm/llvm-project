@@ -14,7 +14,6 @@
 #include "llvm/ADT/ArrayRef.h"
 #include "llvm/ADT/BitVector.h"
 #include "llvm/ADT/STLExtras.h"
-#include "llvm/ADT/SmallSet.h"
 #include "llvm/ADT/StringExtras.h"
 #include "llvm/BinaryFormat/Dwarf.h"
 #include "llvm/CodeGen/LiveInterval.h"
@@ -399,7 +398,7 @@ float TargetRegisterInfo::getSpillWeightScaleFactor(
 // Compute target-independent register allocator hints to help eliminate copies.
 bool TargetRegisterInfo::getRegAllocationHints(
     Register VirtReg, ArrayRef<MCPhysReg> Order,
-    SmallVectorImpl<MCPhysReg> &Hints, const MachineFunction &MF,
+    SmallSetVector<MCPhysReg, 16> &Hints, const MachineFunction &MF,
     const VirtRegMap *VRM, const LiveRegMatrix *Matrix) const {
   const MachineRegisterInfo &MRI = MF.getRegInfo();
   const std::pair<unsigned, SmallVector<Register, 4>> *Hints_MRI =
@@ -408,7 +407,6 @@ bool TargetRegisterInfo::getRegAllocationHints(
   if (!Hints_MRI)
     return false;
 
-  SmallSet<Register, 32> HintedRegs;
   // First hint may be a target hint.
   bool Skip = (Hints_MRI->first != 0);
   for (auto Reg : Hints_MRI->second) {
@@ -422,10 +420,6 @@ bool TargetRegisterInfo::getRegAllocationHints(
     if (VRM && Phys.isVirtual())
       Phys = VRM->getPhys(Phys);
 
-    // Don't add the same reg twice (Hints_MRI may contain multiple virtual
-    // registers allocated to the same physreg).
-    if (!HintedRegs.insert(Phys).second)
-      continue;
     // Check that Phys is a valid hint in VirtReg's register class.
     if (!Phys.isPhysical())
       continue;
@@ -438,9 +432,57 @@ bool TargetRegisterInfo::getRegAllocationHints(
       continue;
 
     // All clear, tell the register allocator to prefer this register.
-    Hints.push_back(Phys.id());
+    Hints.insert(Phys);
   }
   return false;
+}
+
+bool TargetRegisterInfo::isAntiHintedReg(
+    MCPhysReg Reg, const BitVector &AntiHintedRegUnits) const {
+  return llvm::any_of(regunits(Reg), [&](MCRegUnit Unit) {
+    return AntiHintedRegUnits.test(static_cast<unsigned>(Unit));
+  });
+}
+
+void TargetRegisterInfo::applyRegAllocationAntiHints(
+    Register VirtReg, ArrayRef<MCPhysReg> Order,
+    SmallVectorImpl<MCPhysReg> &HintsAndCustomOrder, unsigned NumHints,
+    const BitVector &AntiHintedRegUnits, const MachineFunction &MF,
+    const LiveRegMatrix *Matrix, const RegisterClassInfo *RegClassInfo) const {
+
+  if (AntiHintedRegUnits.none())
+    return;
+
+  assert(HintsAndCustomOrder.size() == NumHints &&
+         "HintsAndCustomOrder should only contain the hints here.");
+  HintsAndCustomOrder.append(Order.begin(), Order.end());
+
+  // Custom reordering of the allocation order.
+  filterAndSortForAntiHintedRegs(
+      VirtReg,
+      MutableArrayRef<MCPhysReg>(HintsAndCustomOrder).drop_front(NumHints),
+      AntiHintedRegUnits, MF, Matrix, RegClassInfo);
+}
+
+void TargetRegisterInfo::filterAndSortForAntiHintedRegs(
+    Register VirtReg, MutableArrayRef<MCPhysReg> CustomOrder,
+    const BitVector &AntiHintedRegUnits, const MachineFunction &MF,
+    const LiveRegMatrix *Matrix, const RegisterClassInfo *RegClassInfo) const {
+
+  // Partition non-anti-hinted register go first.
+  [[maybe_unused]] auto *PartitionPoint = std::stable_partition(
+      CustomOrder.begin(), CustomOrder.end(),
+      [&](MCPhysReg Reg) { return !isAntiHintedReg(Reg, AntiHintedRegUnits); });
+
+  LLVM_DEBUG({
+    size_t NonAntiHintedCount =
+        std::distance(CustomOrder.begin(), PartitionPoint);
+    size_t AntiHintedCount = std::distance(PartitionPoint, CustomOrder.end());
+    dbgs() << "Added " << NonAntiHintedCount
+           << " non-anti-hinted registers first\n"
+           << "Added " << AntiHintedCount
+           << " anti-hinted registers at the end\n";
+  });
 }
 
 bool TargetRegisterInfo::isCalleeSavedPhysReg(
@@ -608,7 +650,7 @@ TargetRegisterInfo::lookThruCopyLike(Register SrcReg,
                                      const MachineRegisterInfo *MRI) const {
   while (true) {
     const MachineInstr *MI = MRI->getVRegDef(SrcReg);
-    if (!MI->isCopyLike())
+    if (!MI || !MI->isCopyLike())
       return SrcReg;
 
     Register CopySrcReg;
@@ -631,7 +673,7 @@ Register TargetRegisterInfo::lookThruSingleUseCopyChain(
   while (true) {
     const MachineInstr *MI = MRI->getVRegDef(SrcReg);
     // Found the real definition, return it if it has a single use.
-    if (!MI->isCopyLike())
+    if (!MI || !MI->isCopyLike())
       return MRI->hasOneNonDBGUse(SrcReg) ? SrcReg : Register();
 
     Register CopySrcReg;

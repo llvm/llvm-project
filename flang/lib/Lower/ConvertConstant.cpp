@@ -12,6 +12,7 @@
 
 #include "flang/Lower/ConvertConstant.h"
 #include "flang/Evaluate/expression.h"
+#include "flang/Evaluate/fold.h"
 #include "flang/Lower/AbstractConverter.h"
 #include "flang/Lower/BuiltinModules.h"
 #include "flang/Lower/ConvertExprToHLFIR.h"
@@ -103,7 +104,7 @@ class DenseGlobalBuilder {
 public:
   static fir::GlobalOp
   tryCreating(fir::FirOpBuilder &builder, mlir::Location loc, mlir::Type symTy,
-              llvm::StringRef globalName, mlir::StringAttr linkage,
+              llvm::StringRef globalName, fir::LinkageAttr linkage,
               bool isConst, const Fortran::lower::SomeExpr &initExpr,
               cuf::DataAttributeAttr dataAttr, bool setDefaultAlignment) {
     DenseGlobalBuilder globalBuilder;
@@ -129,7 +130,7 @@ public:
   template <Fortran::common::TypeCategory TC, int KIND>
   static fir::GlobalOp tryCreating(
       fir::FirOpBuilder &builder, mlir::Location loc, mlir::Type symTy,
-      llvm::StringRef globalName, mlir::StringAttr linkage, bool isConst,
+      llvm::StringRef globalName, fir::LinkageAttr linkage, bool isConst,
       const Fortran::evaluate::Constant<Fortran::evaluate::Type<TC, KIND>>
           &constant,
       cuf::DataAttributeAttr dataAttr, bool setDefaultAlignment = true) {
@@ -201,7 +202,7 @@ private:
   fir::GlobalOp tryCreatingGlobal(fir::FirOpBuilder &builder,
                                   mlir::Location loc, mlir::Type symTy,
                                   llvm::StringRef globalName,
-                                  mlir::StringAttr linkage, bool isConst,
+                                  fir::LinkageAttr linkage, bool isConst,
                                   cuf::DataAttributeAttr dataAttr,
                                   bool setDefaultAlignment) const {
     // Not a "trivial" intrinsic constant array, or empty array.
@@ -227,7 +228,7 @@ private:
 
 fir::GlobalOp Fortran::lower::tryCreatingDenseGlobal(
     fir::FirOpBuilder &builder, mlir::Location loc, mlir::Type symTy,
-    llvm::StringRef globalName, mlir::StringAttr linkage, bool isConst,
+    llvm::StringRef globalName, fir::LinkageAttr linkage, bool isConst,
     const Fortran::lower::SomeExpr &initExpr, cuf::DataAttributeAttr dataAttr,
     bool setDefaultAlignment) {
   return DenseGlobalBuilder::tryCreating(builder, loc, symTy, globalName,
@@ -626,16 +627,7 @@ genInlinedArrayLit(Fortran::lower::AbstractConverter &converter,
   mlir::Value array = fir::UndefOp::create(builder, loc, arrayTy);
   if (Fortran::evaluate::GetSize(con.shape()) == 0)
     return array;
-  if constexpr (T::category == Fortran::common::TypeCategory::Character) {
-    do {
-      mlir::Value elementVal =
-          genScalarLit<T::kind>(builder, loc, con.At(subscripts), con.LEN(),
-                                /*outlineInReadOnlyMemory=*/false);
-      array =
-          fir::InsertValueOp::create(builder, loc, arrayTy, array, elementVal,
-                                     builder.getArrayAttr(createIdx()));
-    } while (con.IncrementSubscripts(subscripts));
-  } else if constexpr (T::category == Fortran::common::TypeCategory::Derived) {
+  if constexpr (T::category == Fortran::common::TypeCategory::Derived) {
     do {
       mlir::Type eleTy =
           mlir::cast<fir::SequenceType>(arrayTy).getElementType();
@@ -646,15 +638,31 @@ genInlinedArrayLit(Fortran::lower::AbstractConverter &converter,
           fir::InsertValueOp::create(builder, loc, arrayTy, array, elementVal,
                                      builder.getArrayAttr(createIdx()));
     } while (con.IncrementSubscripts(subscripts));
+  } else if constexpr (T::category ==
+                           Fortran::common::TypeCategory::Character &&
+                       T::kind != 1) {
+    do {
+      mlir::Value elementVal =
+          genScalarLit<T::kind>(builder, loc, con.At(subscripts), con.LEN(),
+                                /*outlineInReadOnlyMemory=*/false);
+      array =
+          fir::InsertValueOp::create(builder, loc, arrayTy, array, elementVal,
+                                     builder.getArrayAttr(createIdx()));
+    } while (con.IncrementSubscripts(subscripts));
   } else {
     llvm::SmallVector<mlir::Attribute> rangeStartIdx;
     uint64_t rangeSize = 0;
     mlir::Type eleTy = mlir::cast<fir::SequenceType>(arrayTy).getElementType();
     do {
       auto getElementVal = [&]() {
-        return builder.createConvert(loc, eleTy,
-                                     genScalarLit<T::category, T::kind>(
-                                         builder, loc, con.At(subscripts)));
+        if constexpr (T::category == Fortran::common::TypeCategory::Character)
+          return genScalarLit<T::kind>(builder, loc, con.At(subscripts),
+                                       con.LEN(),
+                                       /*outlineInReadOnlyMemory=*/false);
+        else
+          return builder.createConvert(loc, eleTy,
+                                       genScalarLit<T::category, T::kind>(
+                                           builder, loc, con.At(subscripts)));
       };
       Fortran::evaluate::ConstantSubscripts nextSubscripts = subscripts;
       bool nextIsSame = con.IncrementSubscripts(nextSubscripts) &&
@@ -825,7 +833,21 @@ genConstantValue(Fortran::lower::AbstractConverter &converter,
           std::get_if<Fortran::evaluate::StructureConstructor>(&constantExpr.u))
     return Fortran::lower::genInlinedStructureCtorLit(converter, loc,
                                                       *structCtor);
-  fir::emitFatalError(loc, "not a constant derived type expression");
+  // Initializer folding preserves parentheses around a derived constant or a
+  // structure constructor (e.g. "type(t) :: x = (t(7))"). Look through them.
+  // UnwrapConstantValue cannot see through Parentheses<SomeDerived> because a
+  // StructureConstructor is not a Constant<SomeDerived>.
+  if (const auto *parens = std::get_if<
+          Fortran::evaluate::Parentheses<Fortran::evaluate::SomeDerived>>(
+          &constantExpr.u))
+    return genConstantValue(converter, loc, parens->left());
+  // Semantics gates every initializer through NonPointerInitializationExpr,
+  // which only accepts expressions admitted by evaluate::IsActuallyConstant --
+  // exactly the forms handled above. If this fatal error is ever hit, an
+  // initializer escaped that semantic check.
+  fir::emitFatalError(loc, "expected a constant derived type expression in "
+                           "initializer, but got: " +
+                               constantExpr.AsFortran());
 }
 
 template <Fortran::common::TypeCategory TC, int KIND>
@@ -834,11 +856,20 @@ static fir::ExtendedValue genConstantValue(
     const Fortran::evaluate::Expr<Fortran::evaluate::Type<TC, KIND>>
         &constantExpr) {
   using T = Fortran::evaluate::Type<TC, KIND>;
+  // Initializer folding preserves parentheses around a scalar constant (e.g.
+  // "integer :: i = (42)"). UnwrapConstantValue looks through them.
   if (const auto *constant =
-          std::get_if<Fortran::evaluate::Constant<T>>(&constantExpr.u))
+          Fortran::evaluate::UnwrapConstantValue<T>(constantExpr))
     return Fortran::lower::convertConstant(converter, loc, *constant,
                                            /*outline=*/false);
-  fir::emitFatalError(loc, "not an evaluate::Constant<T>");
+  // Semantics gates every initializer through NonPointerInitializationExpr,
+  // which only accepts expressions admitted by evaluate::IsActuallyConstant --
+  // a Constant<T>, possibly parenthesized, once the derived-type forms are
+  // handled by the overload above. If this fatal error is ever hit, an
+  // initializer escaped that semantic check.
+  fir::emitFatalError(loc, "expected a constant expression in initializer, "
+                           "but got: " +
+                               constantExpr.AsFortran());
 }
 
 static fir::ExtendedValue
@@ -865,6 +896,12 @@ genConstantValue(Fortran::lower::AbstractConverter &converter,
         }
       },
       constantExpr.u);
+}
+
+fir::ExtendedValue Fortran::lower::genConstantExprValue(
+    Fortran::lower::AbstractConverter &converter, mlir::Location loc,
+    const Fortran::lower::SomeExpr &expr) {
+  return genConstantValue(converter, loc, expr);
 }
 
 fir::ExtendedValue Fortran::lower::genInlinedStructureCtorLit(

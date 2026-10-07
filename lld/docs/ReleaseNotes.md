@@ -37,6 +37,20 @@ from the [LLVM releases web site](https://llvm.org/releases/).
 
 ### MachO Improvements
 
+* `__objc_stubs` entries are now ordered by the priority of the sections that
+  call them, so that stubs reached from prioritized code are laid out together.
+  This applies whenever section priorities exist, such as with `-order_file`.
+
+* Added `--warn-missing-subsections-via-symbols` and
+  `--no-warn-missing-subsections-via-symbols` to lld to warn when input object
+  files lack the `MH_SUBSECTIONS_VIA_SYMBOLS` flag, which prevents
+  dead-stripping and subsection splitting.
+
 ### WebAssembly Improvements
+
+* Added support for resolving and merging common data symbols (allocating them
+  into .bss.common in executable/shared module links, or merging them with max
+  size/alignment in relocatable -r links). See
+  https://github.com/WebAssembly/tool-conventions/pull/267
 
 #### Fixes

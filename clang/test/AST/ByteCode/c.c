@@ -417,11 +417,11 @@ void callReturnsComplex(void) {
   c = returnsComplex(0.); // all-warning {{passing arguments to 'returnsComplex' without a prototype is deprecated in all versions of C and is not supported in C23}}
 }
 
-int complexMul[2 * (22222222222wb + 2i) == 2]; // all-warning {{'_BitInt' suffix for literals is a C23 extension}} \
+int complexMul[2 * (22222222222wb + 2i) == 2]; // pedantic-warning {{'_BitInt' suffix for literals is a C23 extension}} \
                                                // pedantic-warning {{imaginary constants are a C2y extension}} \
                                                // all-warning {{variable length array folded to constant array as an extension}}
 
-int complexDiv[2 / (22222222222wb + 2i) == 2]; // all-warning {{'_BitInt' suffix for literals is a C23 extension}} \
+int complexDiv[2 / (22222222222wb + 2i) == 2]; // pedantic-warning {{'_BitInt' suffix for literals is a C23 extension}} \
                                                // pedantic-warning {{imaginary constants are a C2y extension}} \
                                                // all-warning {{variable length array folded to constant array as an extension}}
 
@@ -473,4 +473,16 @@ void AddrLabelDiffSub(void) {
                                                              // all-error {{use of undeclared label 'bar'}} \
                                                              // all-error {{use of undeclared label 'baz'}} \
                                                              // pedantic-warning 2{{use of GNU address-of-label extension}}
+}
+
+void *memset(void*, int, unsigned long);
+typedef struct Parse Parse;
+struct Parse {
+  int aTempReg;
+  int sLastToken;
+};
+
+Parse sqlite3Prepare_sParse;
+void sqlite3Prepare(void) {
+  memset( ((char *)&sqlite3Prepare_sParse) + sizeof(int), 0, sizeof(int));
 }

@@ -26,11 +26,47 @@
 #include "llvm/ADT/StringSwitch.h"
 
 #include <cassert>
+#include <limits>
 
 namespace mlir {
 //===----------------------------------------------------------------------===//
 // Patterns and helpers.
 //===----------------------------------------------------------------------===//
+
+static spirv::CooperativeMatrixType
+convertMMAMatrixType(gpu::MMAMatrixType type) {
+  ArrayRef<int64_t> shape = type.getShape();
+  auto use =
+      llvm::StringSwitch<spirv::CooperativeMatrixUseKHR>(type.getOperand())
+          .Case("AOp", spirv::CooperativeMatrixUseKHR::MatrixA)
+          .Case("BOp", spirv::CooperativeMatrixUseKHR::MatrixB)
+          .Default(spirv::CooperativeMatrixUseKHR::MatrixAcc);
+  return spirv::CooperativeMatrixType::get(
+      type.getElementType(), shape[0], shape[1], spirv::Scope::Subgroup, use);
+}
+
+// Convert a memref of `gpu.mma_matrix` into a SPIR-V pointer to an array
+// of spirv::CooperativeMatrix.
+static std::optional<Type> convertMemrefOfMMAMatrixType(MemRefType type) {
+  auto matrixType = dyn_cast<gpu::MMAMatrixType>(type.getElementType());
+  if (!matrixType)
+    return std::nullopt;
+  // SPV Cooperative matrix types, and composites containing them, may only be
+  // allocated in Function or Private storage classes. For now, support only
+  // function-local arrays.
+  auto storageClass =
+      dyn_cast_or_null<spirv::StorageClassAttr>(type.getMemorySpace());
+  if (!storageClass ||
+      storageClass.getValue() != spirv::StorageClass::Function ||
+      !type.hasStaticShape() || !type.getLayout().isIdentity() ||
+      type.getNumElements() <= 0 ||
+      type.getNumElements() > std::numeric_limits<unsigned>::max())
+    return Type();
+  auto arrayType =
+      spirv::ArrayType::get(convertMMAMatrixType(matrixType),
+                            static_cast<unsigned>(type.getNumElements()));
+  return spirv::PointerType::get(arrayType, spirv::StorageClass::Function);
+}
 
 /// Creates a SPIR-V op to replace the given GPU subgroup mma elementwise op
 /// when the elementwise op directly supports with cooperative matrix type.
@@ -413,17 +449,6 @@ void mlir::populateGpuWMMAToSPIRVCoopMatrixKHRConversionPatterns(
 
 void mlir::populateMMAToSPIRVCoopMatrixTypeConversion(
     mlir::SPIRVTypeConverter &typeConverter) {
-  typeConverter.addConversion([](gpu::MMAMatrixType type) {
-    ArrayRef<int64_t> retTypeShape = type.getShape();
-    Type elementType = type.getElementType();
-    auto use =
-        llvm::StringSwitch<spirv::CooperativeMatrixUseKHR>(type.getOperand())
-            .Case("AOp", spirv::CooperativeMatrixUseKHR::MatrixA)
-            .Case("BOp", spirv::CooperativeMatrixUseKHR::MatrixB)
-            .Default(spirv::CooperativeMatrixUseKHR::MatrixAcc);
-
-    return spirv::CooperativeMatrixType::get(elementType, retTypeShape[0],
-                                             retTypeShape[1],
-                                             spirv::Scope::Subgroup, use);
-  });
+  typeConverter.addConversion(convertMMAMatrixType);
+  typeConverter.addConversion(convertMemrefOfMMAMatrixType);
 }

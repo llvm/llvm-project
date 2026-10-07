@@ -1,4 +1,4 @@
-# RUN: llc %s -mtriple aarch64-- -o - -run-pass regbankselect | FileCheck %s
+# RUN: llc %s -mtriple aarch64-- -o - -run-pass reg-bank-select | FileCheck %s
 ---
 # CHECK-LABEL: foo
 # Check that we produce a valid mapping for REG_SEQUENCE.
@@ -8,7 +8,7 @@
 # their definition may not have a type.
 #
 
-# CHECK: %0:fpr(s128) = REG_SEQUENCE $d0, %subreg.dsub0, $d1, %subreg.dsub1
+# CHECK: %0:fpr(i128) = REG_SEQUENCE $d0, %subreg.dsub0, $d1, %subreg.dsub1
 
 name: foo
 legalized: true
@@ -17,6 +17,6 @@ body: |
   bb.0:
     liveins: $d0, $d1
 
-    %0:_(s128) = REG_SEQUENCE $d0, %subreg.dsub0, $d1, %subreg.dsub1
+    %0:_(i128) = REG_SEQUENCE $d0, %subreg.dsub0, $d1, %subreg.dsub1
 
 ...

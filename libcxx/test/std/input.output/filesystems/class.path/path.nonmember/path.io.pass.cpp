@@ -27,6 +27,7 @@
 #include <sstream>
 #include <cassert>
 #include <iostream>
+#include <utility>
 
 #include "count_new.h"
 #include "make_string.h"

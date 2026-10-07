@@ -760,3 +760,41 @@ define i64 @PR71390(i64 %v) {
   %not5 = xor i64 %and4, -1
   ret i64 %not5
 }
+
+define i1 @freely_invert_catchswitch(i8 %x) personality ptr null {
+; CHECK-LABEL: @freely_invert_catchswitch(
+; CHECK-NEXT:  e:
+; CHECK-NEXT:    invoke void @use.i1(i1 true)
+; CHECK-NEXT:            to label [[N:%.*]] unwind label [[D:%.*]]
+; CHECK:       n:
+; CHECK-NEXT:    invoke void @use.i1(i1 true)
+; CHECK-NEXT:            to label [[RET:%.*]] unwind label [[D]]
+; CHECK:       ret:
+; CHECK-NEXT:    ret i1 false
+; CHECK:       d:
+; CHECK-NEXT:    [[NOTP:%.*]] = phi i1 [ false, [[N]] ], [ true, [[E:%.*]] ]
+; CHECK-NEXT:    [[S:%.*]] = catchswitch within none [label [[C:%.*]]] unwind to caller
+; CHECK:       c:
+; CHECK-NEXT:    [[TMP0:%.*]] = catchpad within [[S]] [ptr null]
+; CHECK-NEXT:    [[Z:%.*]] = icmp ne i8 [[X:%.*]], 0
+; CHECK-NEXT:    [[Y:%.*]] = select i1 [[NOTP]], i1 true, i1 [[Z]]
+; CHECK-NEXT:    call void @llvm.assume(i1 [[Y]])
+; CHECK-NEXT:    ret i1 false
+;
+e:
+  invoke void @use.i1(i1 true) to label %n unwind label %d
+n:
+  invoke void @use.i1(i1 true) to label %ret unwind label %d
+ret:
+  ret i1 false
+d:
+  %p = phi i1 [ true, %n ], [ false, %e ]
+  %s = catchswitch within none [label %c] unwind to caller
+c:
+  catchpad within %s [ptr null]
+  %z = icmp eq i8 %x, 0
+  %y = select i1 %p, i1 %z, i1 false
+  %w = xor i1 %y, true
+  call void @llvm.assume(i1 %w)
+  ret i1 false
+}

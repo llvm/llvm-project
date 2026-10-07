@@ -10,22 +10,29 @@
 
 #include "NativeRegisterContextLinux_loongarch64.h"
 
+#include "Plugins/Process/Linux/NativeProcessLinux.h"
+#include "Plugins/Process/Linux/Procfs.h"
+#include "Plugins/Process/Utility/RegisterInfoPOSIX_loongarch64.h"
+#include "Plugins/Process/Utility/lldb-loongarch-register-enums.h"
 #include "lldb/Host/HostInfo.h"
-#include "lldb/Host/linux/Ptrace.h"
 #include "lldb/Utility/DataBufferHeap.h"
 #include "lldb/Utility/Log.h"
 #include "lldb/Utility/RegisterValue.h"
 #include "lldb/Utility/Status.h"
 
-#include "Plugins/Process/Linux/NativeProcessLinux.h"
-#include "Plugins/Process/Linux/Procfs.h"
-#include "Plugins/Process/Utility/RegisterInfoPOSIX_loongarch64.h"
-#include "Plugins/Process/Utility/lldb-loongarch-register-enums.h"
-
-// NT_PRSTATUS and NT_FPREGSET definition
+// System includes - They have to be included after framework includes because
+// they define some macros which collide with variable names in other modules.
 #include <elf.h>
-// struct iovec definition
+#include <sys/ptrace.h>
 #include <sys/uio.h>
+
+#ifndef PTRACE_GETREGSET
+#define PTRACE_GETREGSET 0x4204
+#endif
+
+#ifndef PTRACE_SETREGSET
+#define PTRACE_SETREGSET 0x4205
+#endif
 
 // LoongArch SIMD eXtension registers
 #ifndef NT_LOONGARCH_LSX

@@ -300,16 +300,28 @@ int DwarfInstructions<A, R>::stepWithDwarf(
 
       isSignalFrame = cieInfo.isSignalFrame;
 
-#if defined(_LIBUNWIND_TARGET_AARCH64) &&                                      \
-    !defined(_LIBUNWIND_TARGET_AARCH64_AUTHENTICATED_UNWINDING)
+#if defined(_LIBUNWIND_TARGET_AARCH64)
       // There are two ways of return address signing: pac-ret (enabled via
       // -mbranch-protection=pac-ret) and ptrauth-returns (enabled as part of
       // Apple's arm64e or experimental pauthtest ABI on Linux). The code
-      // below handles signed RA for pac-ret, while ptrauth-returns uses
-      // different logic.
+      // below handles signed RA for ptrauth-returns, while pac-ret uses pacm
+      // instructions from the hint space.
+      //
       // TODO: unify logic for both cases, see
       // https://github.com/llvm/llvm-project/issues/160110
-      //
+#if defined(_LIBUNWIND_TARGET_AARCH64_AUTHENTICATED_UNWINDING)
+      if (getReturnAddressSignStatus(addressSpace, registers, cfa, prolog) ==
+          RASignedWithPC) {
+        newRegisters.setIPPAuthLR(returnAddress, prolog.ptrAuthDiversifier);
+      } else {
+        newRegisters.setIP(returnAddress);
+      }
+
+      // Simulate the step by replacing the register set with the new ones.
+      registers = newRegisters;
+
+      return UNW_STEP_SUCCESS;
+#else
       // If the target is aarch64 then the return address may have been signed
       // using the v8.3 pointer authentication extensions. The original
       // return address needs to be authenticated before the return address is
@@ -351,6 +363,7 @@ int DwarfInstructions<A, R>::stepWithDwarf(
         returnAddress = x17;
 #endif
       }
+#endif
 #endif
 
 #if defined(_LIBUNWIND_IS_NATIVE_ONLY) && defined(_LIBUNWIND_TARGET_ARM) &&    \
@@ -434,11 +447,21 @@ DwarfInstructions<A, R>::evaluateExpression(pint_t expression, A &addressSpace,
   if (log)
     fprintf(stderr, "evaluateExpression(): length=%" PRIu64 "\n",
             (uint64_t)length);
-  pint_t stack[100];
+  constexpr size_t kStackSize = 100;
+  pint_t stack[kStackSize];
   pint_t *sp = stack;
   *(++sp) = initialStackValue;
 
   while (p < expressionEnd) {
+    // Bounds-check the operand stack. Every opcode below pushes at most one
+    // value (writing at most sp[1]) and, except for DW_OP_pick and DW_OP_rot
+    // (checked at their use), reads/writes no deeper than sp[-1]. Keeping sp
+    // within [&stack[1], &stack[kStackSize - 2]] here therefore bounds every
+    // access to the fixed-size array. Compiler-emitted CFI expressions use tiny
+    // stack depths; violating these bounds means corrupted or malicious unwind
+    // data (e.g. a hostile FDE registered via __register_frame()).
+    if (sp < &stack[1] || sp > &stack[kStackSize - 2])
+      _LIBUNWIND_ABORT("DWARF expression operand stack out of bounds");
     if (log) {
       for (pint_t *t = sp; t > stack; --t) {
         fprintf(stderr, "sp[] = 0x%" PRIx64 "\n", (uint64_t)(*t));
@@ -581,6 +604,8 @@ DwarfInstructions<A, R>::evaluateExpression(pint_t expression, A &addressSpace,
       // pick from
       reg = addressSpace.get8(p);
       p += 1;
+      if (sp - (int)reg < &stack[1])
+        _LIBUNWIND_ABORT("DW_OP_pick index out of bounds");
       value = sp[-(int)reg];
       *(++sp) = value;
       if (log)
@@ -598,6 +623,8 @@ DwarfInstructions<A, R>::evaluateExpression(pint_t expression, A &addressSpace,
 
     case DW_OP_rot:
       // rotate top three
+      if (sp < &stack[3])
+        _LIBUNWIND_ABORT("DW_OP_rot with fewer than three stack entries");
       value = sp[0];
       sp[0] = sp[-1];
       sp[-1] = sp[-2];
@@ -957,6 +984,8 @@ DwarfInstructions<A, R>::evaluateExpression(pint_t expression, A &addressSpace,
     }
 
   }
+  if (sp < &stack[1])
+    _LIBUNWIND_ABORT("DWARF expression operand stack out of bounds");
   if (log)
     fprintf(stderr, "expression evaluates to 0x%" PRIx64 "\n", (uint64_t)*sp);
   return *sp;

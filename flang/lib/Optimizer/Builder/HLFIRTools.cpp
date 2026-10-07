@@ -467,7 +467,7 @@ static mlir::Value genUBound(mlir::Location loc, fir::FirOpBuilder &builder,
                              mlir::Value lb, mlir::Value extent,
                              mlir::Value one) {
   if (auto constantLb = fir::getIntIfConstant(lb))
-    if (*constantLb == 1)
+    if (constantLb->isOne())
       return extent;
   extent = builder.createConvert(loc, one.getType(), extent);
   lb = builder.createConvert(loc, one.getType(), lb);
@@ -761,14 +761,17 @@ std::optional<std::int64_t> hlfir::getCharLengthIfConst(hlfir::Entity entity) {
     llvm::SmallVector<mlir::Value> param;
     if (getExprLengthParameters(expr, param)) {
       assert(param.size() == 1 && "characters must have one length parameters");
-      return fir::getIntIfConstant(param.pop_back_val());
+      if (std::optional<llvm::APInt> constant =
+              fir::getIntIfConstant(param.pop_back_val()))
+        return constant->trySExtValue();
     }
     return std::nullopt;
   }
 
   // entity is a var
   if (mlir::Value len = tryGettingNonDeferredCharLen(entity))
-    return fir::getIntIfConstant(len);
+    if (std::optional<llvm::APInt> constant = fir::getIntIfConstant(len))
+      return constant->trySExtValue();
   auto charType =
       mlir::cast<fir::CharacterType>(entity.getFortranElementType());
   if (charType.hasConstantLen())
@@ -905,7 +908,8 @@ static hlfir::ExprType getArrayExprType(mlir::Type elementType,
   if (auto shapeOp = shape.getDefiningOp<fir::ShapeOp>())
     for (auto extent : llvm::enumerate(shapeOp.getExtents()))
       if (auto cstExtent = fir::getIntIfConstant(extent.value()))
-        typeShape[extent.index()] = *cstExtent;
+        if (std::optional<std::int64_t> cstExtent64 = cstExtent->trySExtValue())
+          typeShape[extent.index()] = *cstExtent64;
   return hlfir::ExprType::get(elementType.getContext(), typeShape, elementType,
                               isPolymorphic);
 }
@@ -1775,7 +1779,7 @@ bool hlfir::designatePreservesContinuity(hlfir::DesignateOp op) {
         i += 2;
         mlir::Value step = subscripts[i++];
         auto constantStep = fir::getIntIfConstant(step);
-        if (!constantStep || *constantStep != 1)
+        if (!constantStep || !constantStep->isOne())
           return false;
       }
     } else {

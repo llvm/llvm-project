@@ -545,6 +545,10 @@ class MCBoundaryAlignFragment : public MCFragment {
   /// is not meaningful before that.
   uint64_t Size = 0;
 
+  /// If true, align the last instruction in the fragment to the end of the
+  /// fragment.
+  bool AlignToEnd = false;
+
 public:
   MCBoundaryAlignFragment(Align AlignBoundary, const MCSubtargetInfo &STI)
       : MCFragment(FT_BoundaryAlign), AlignBoundary(AlignBoundary) {
@@ -556,6 +560,9 @@ public:
 
   Align getAlignment() const { return AlignBoundary; }
   void setAlignment(Align Value) { AlignBoundary = Value; }
+
+  bool isAlignToEnd() const { return AlignToEnd; }
+  void setAlignToEnd(bool Value) { AlignToEnd = Value; }
 
   const MCFragment *getLastFragment() const { return LastFragment; }
   void setLastFragment(const MCFragment *F) {

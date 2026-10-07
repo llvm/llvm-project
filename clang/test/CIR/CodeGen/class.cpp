@@ -6,9 +6,9 @@
 // RUN: FileCheck --check-prefix=OGCG --input-file=%t.ll %s
 
 // CIR: !rec_IncompleteC = !cir.struct<class "IncompleteC" incomplete>
-// CIR: !rec_Base = !cir.struct<class "Base" {!s32i}>
-// CIR: !rec_CompleteC = !cir.struct<class "CompleteC" {!s32i, !s8i}>
-// CIR: !rec_Derived = !cir.struct<class "Derived" {!rec_Base, !s32i}>
+// CIR: !rec_Base = !cir.struct<class "Base" {data !s32i}>
+// CIR: !rec_CompleteC = !cir.struct<class "CompleteC" {data !s32i, data !s8i}>
+// CIR: !rec_Derived = !cir.struct<class "Derived" {data !rec_Base, data !s32i}>
 
 // Note: LLVM and OGCG do not emit the type for incomplete classes.
 
@@ -71,7 +71,7 @@ int use_base() {
 
 // CIR: cir.func{{.*}} @_Z8use_basev
 // CIR:   %[[D_ADDR:.*]] = cir.alloca "d" {{.*}} : !cir.ptr<!rec_Derived>
-// CIR:   %[[BASE_ADDR:.*]] cir.base_class_addr %[[D_ADDR]] : !cir.ptr<!rec_Derived> nonnull [0] -> !cir.ptr<!rec_Base>
+// CIR:   %[[BASE_ADDR:.*]] cir.base_class_addr nonnull %[[D_ADDR]] [0] : !cir.ptr<!rec_Derived> -> !cir.ptr<!rec_Base>
 // CIR:   %[[D_A_ADDR:.*]] = cir.get_member %2[0] {name = "a"} : !cir.ptr<!rec_Base> -> !cir.ptr<!s32i>
 // CIR:   %[[D_A:.*]] = cir.load align(4) %3 : !cir.ptr<!s32i>, !s32i
 
@@ -91,7 +91,7 @@ int use_base_via_pointer(Derived *d) {
 // CIR:   %[[D_ADDR:.*]] = cir.alloca "d" {{.*}} init : !cir.ptr<!cir.ptr<!rec_Derived>>
 // CIR:   cir.store %[[ARG0]], %[[D_ADDR]]
 // CIR:   %[[D:.*]] = cir.load align(8) %[[D_ADDR]]
-// CIR:   %[[BASE_ADDR:.*]] = cir.base_class_addr %[[D]] : !cir.ptr<!rec_Derived> nonnull [0] -> !cir.ptr<!rec_Base>
+// CIR:   %[[BASE_ADDR:.*]] = cir.base_class_addr nonnull %[[D]] [0] : !cir.ptr<!rec_Derived> -> !cir.ptr<!rec_Base>
 // CIR:   %[[D_A_ADDR:.*]] = cir.get_member %[[BASE_ADDR]][0] {name = "a"}
 // CIR:   %[[D_A:.*]] = cir.load align(4) %[[D_A_ADDR]]
 
@@ -119,3 +119,84 @@ void use_empty_derived2() {
 // OGCG: define{{.*}} void @_Z18use_empty_derived2v
 // OGCG:   alloca %struct.EmptyDerived2
 // OGCG:   ret void
+
+// Makes sure these are the same 
+template <class T> struct Template {
+  int m;
+};
+extern template struct Template<char>;
+template struct Template<char>;
+void takesTemplate(int Template<char>::*);
+void usesTemplate() { takesTemplate(&Template<char>::m); }
+// CIR: cir.func{{.*}} @_Z12usesTemplatev
+// CIR: cir.call @_Z13takesTemplateM8TemplateIcEi(
+
+// LLVM: define dso_local void @_Z12usesTemplatev
+// LLVM: call void @_Z13takesTemplateM8TemplateIcEi(
+
+// OGCG: define dso_local void @_Z12usesTemplatev
+// OGCG: call void @_Z13takesTemplateM8TemplateIcEi(
+
+struct JustFam {
+  int m[0];
+};
+
+void fam_1() {
+  JustFam a;
+  (void)a.m;
+}
+// CIR: cir.func{{.*}}@_Z5fam_1v
+// CIR: %[[A:.*]] = cir.alloca "a" align(4) : !cir.ptr<!rec_JustFam>
+// CIR: cir.get_member %[[A]][0] {name = "m"} : !cir.ptr<!rec_JustFam> -> !cir.ptr<!cir.array<!s32i x 0>>
+
+// LLVM: define{{.*}}@_Z5fam_1v
+// LLVM: %[[A:.*]] = alloca %struct.JustFam, align 4
+// LLVM: getelementptr inbounds nuw %struct.JustFam, ptr %[[A]], i32 0, i32 0
+
+// OGCG: define{{.*}}@_Z5fam_1v
+// OGCG: %[[A:.*]] = alloca %struct.JustFam, align 4
+// OGCG: getelementptr inbounds nuw %struct.JustFam, ptr %[[A]], i32 0, i32 0
+
+void fam_2() {
+  JustFam a = JustFam();
+  (void)a.m;
+}
+
+// CIR: cir.func{{.*}}@_Z5fam_2v
+// CIR: %[[A:.*]] = cir.alloca "a" align(4) init : !cir.ptr<!rec_JustFam>
+// CIR: cir.get_member %[[A]][0] {name = "m"} : !cir.ptr<!rec_JustFam> -> !cir.ptr<!cir.array<!s32i x 0>>
+
+// LLVM: define{{.*}}@_Z5fam_2v
+// LLVM: %[[A:.*]] = alloca %struct.JustFam, align 4
+// LLVM: getelementptr inbounds nuw %struct.JustFam, ptr %[[A]], i32 0, i32 0
+
+// OGCG: define{{.*}}@_Z5fam_2v
+// OGCG: %[[A:.*]] = alloca %struct.JustFam, align 4
+// OGCG: getelementptr inbounds nuw %struct.JustFam, ptr %[[A]], i32 0, i32 0
+
+void fam_3() {
+  JustFam *a = new JustFam();
+  (void)a->m;
+}
+// CIR: cir.func{{.*}}@_Z5fam_3v
+// CIR: %[[A:.*]] = cir.alloca "a" align(8) init : !cir.ptr<!cir.ptr<!rec_JustFam>>
+// CIR: %[[ZERO:.*]] = cir.const #cir.int<0> : !u64i
+// CIR: %[[NEW:.*]] = cir.call @_Znwm(%[[ZERO]]) {allocsize = array<i32: 0>, builtin}
+// CIR: %[[NEW_TO_A:.*]] = cir.cast bitcast %[[NEW]] : !cir.ptr<!void> -> !cir.ptr<!rec_JustFam>
+// CIR: cir.store align(8) %[[NEW_TO_A]], %[[A]] : !cir.ptr<!rec_JustFam>, !cir.ptr<!cir.ptr<!rec_JustFam>>
+// CIR: %[[LOAD_A:.*]] = cir.load align(8) %[[A]] : !cir.ptr<!cir.ptr<!rec_JustFam>>, !cir.ptr<!rec_JustFam>
+// CIR: cir.get_member %[[LOAD_A]][0] {name = "m"} : !cir.ptr<!rec_JustFam> -> !cir.ptr<!cir.array<!s32i x 0>>
+
+// LLVM: define{{.*}}@_Z5fam_3v
+// LLVM: %[[A:.*]] = alloca ptr, align 8
+// LLVM: %[[NEW:.*]] = call noundef nonnull ptr @_Znwm(i64 noundef 0)
+// LLVM: store ptr %[[NEW]], ptr %[[A]], align 8
+// LLVM: %[[LOAD_A:.*]] = load ptr, ptr %[[A]], align 8
+// LLVM: getelementptr inbounds nuw %struct.JustFam, ptr %[[LOAD_A]], i32 0, i32 0
+
+// OGCG: define{{.*}}@_Z5fam_3v
+// OGCG: %[[A:.*]] = alloca ptr, align 8
+// OGCG: %[[NEW:.*]] = call noalias noundef nonnull ptr @_Znwm(i64 noundef 0)
+// OGCG: store ptr %[[NEW]], ptr %[[A]], align 8
+// OGCG: %[[LOAD_A:.*]] = load ptr, ptr %[[A]], align 8
+// OGCG: getelementptr inbounds nuw %struct.JustFam, ptr %[[LOAD_A]], i32 0, i32 0

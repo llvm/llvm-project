@@ -3,7 +3,7 @@ function(add_startup_object name)
   cmake_parse_arguments(
     "ADD_STARTUP_OBJECT"
     "ALIAS" # Option argument
-    "SRC"   # Single value arguments
+    "SRC" # Single value arguments
     "DEPENDS;COMPILE_OPTIONS" # Multi value arguments
     ${ARGN}
   )
@@ -19,7 +19,7 @@ function(add_startup_object name)
     ${name}
     SRCS ${ADD_STARTUP_OBJECT_SRC}
     COMPILE_OPTIONS ${ADD_STARTUP_OBJECT_COMPILE_OPTIONS}
-    ${ADD_STARTUP_OBJECT_UNPARSED_ARGUMENTS}
+      ${ADD_STARTUP_OBJECT_UNPARSED_ARGUMENTS}
     DEPENDS ${ADD_STARTUP_OBJECT_DEPENDS}
   )
   set_target_properties(
@@ -62,7 +62,7 @@ add_startup_object(
   crt1
   ALIAS
   DEPENDS
-  .${LIBC_TARGET_ARCHITECTURE}.crt1
+    .${LIBC_TARGET_ARCHITECTURE}.crt1
 )
 
 add_custom_target(libc-startup)
@@ -70,6 +70,6 @@ add_custom_target(libc-startup)
 set(fq_target_name libc.startup.baremetal.${LIBC_TARGET_ARCHITECTURE}.crt1)
 add_dependencies(libc-startup ${fq_target_name})
 install(FILES $<TARGET_OBJECTS:${fq_target_name}>
-        DESTINATION ${LIBC_INSTALL_LIBRARY_DIR}
-        RENAME $<TARGET_PROPERTY:${fq_target_name},OUTPUT_NAME>
-        COMPONENT libc)
+  DESTINATION ${LIBC_INSTALL_LIBRARY_DIR}
+  RENAME $<TARGET_PROPERTY:${fq_target_name},OUTPUT_NAME>
+  COMPONENT libc)

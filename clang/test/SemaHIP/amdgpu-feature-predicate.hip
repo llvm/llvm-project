@@ -1,7 +1,7 @@
 // REQUIRES: amdgpu-registered-target
 // REQUIRED: spirv-registered-target
-// RUN: %clang_cc1 -fsyntax-only -verify -triple amdgcn -Wno-unused-value %s
-// RUN: %clang_cc1 -fsyntax-only -verify -triple x86_64 -aux-triple amdgcn -Wno-unused-value %s
+// RUN: %clang_cc1 -fsyntax-only -verify -triple amdgpu -Wno-unused-value %s
+// RUN: %clang_cc1 -fsyntax-only -verify -triple x86_64 -aux-triple amdgpu -Wno-unused-value %s
 // RUN: %clang_cc1 -fsyntax-only -verify -triple spirv64-amd-amdhsa -Wno-unused-value %s
 // RUN: %clang_cc1 -fsyntax-only -verify -triple x86_64 -aux-triple spirv64-amd-amdhsa -Wno-unused-value %s
 

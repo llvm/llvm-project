@@ -9,7 +9,8 @@
 // UNSUPPORTED: c++03, c++11, c++14, c++17
 
 // constexpr auto begin();
-// constexpr auto begin() const requires forward_range<View> && forward_range<const View>;
+// constexpr auto begin() const
+//   requires forward_range<View> && forward_range<const View> && forward_range<const Pattern>;
 
 #include <ranges>
 
@@ -26,7 +27,8 @@ concept ConstBeginDisabled = !requires (const View v) {
 
 constexpr bool test() {
   // non-const: forward_range<View> && simple-view<View> -> outer-iterator<Const = true>
-  // const: forward_range<View> && forward_range<const View> -> outer-iterator<Const = true>
+  // const: forward_range<View> && forward_range<const View> && forward_range<const Pattern>
+  //     -> outer-iterator<Const = true>
   {
     using V = ForwardView;
     using P = V;
@@ -52,7 +54,8 @@ constexpr bool test() {
   }
 
   // non-const: forward_range<View> && !simple-view<View> -> outer-iterator<Const = false>
-  // const: forward_range<View> && forward_range<const View> -> outer-iterator<Const = true>
+  // const: forward_range<View> && forward_range<const View> && forward_range<const Pattern>
+  //     -> outer-iterator<Const = true>
   {
     using V = ForwardDiffView;
     using P = V;
@@ -96,7 +99,7 @@ constexpr bool test() {
   }
 
   // non-const: forward_range<View> && simple-view<View> && !simple-view<Pattern> -> outer-iterator<Const = false>
-  // const: forward_range<View> && forward_range<const View> -> outer-iterator<Const = true>
+  // const: forward_range<View> && forward_range<const View> && !forward_range<const Pattern> -> disabled
   {
     using V = ForwardView;
     using P = ForwardOnlyIfNonConstView;
@@ -113,12 +116,7 @@ constexpr bool test() {
       static_assert(std::is_same_v<decltype(*(*it).begin()), const char&>);
     }
 
-    {
-      const std::ranges::lazy_split_view<V, P> cv;
-      auto it = cv.begin();
-      static_assert(std::is_same_v<decltype(it)::iterator_concept, std::forward_iterator_tag>);
-      static_assert(std::is_same_v<decltype(*(*it).begin()), const char&>);
-    }
+    static_assert(ConstBeginDisabled<std::ranges::lazy_split_view<V, P>>);
   }
 
   // non-const: !forward_range<View> && tiny-range<Pattern> -> outer-iterator<Const = false>

@@ -13,6 +13,7 @@
 #include "clang/Frontend/MultiplexConsumer.h"
 
 namespace llvm {
+class LLVMContext;
 class Module;
 }
 

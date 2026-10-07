@@ -173,7 +173,7 @@ def CIREHABILowering : Pass<"cir-eh-abi-lowering", "mlir::ModuleOp"> {
   let dependentDialects = ["cir::CIRDialect"];
 }
 
-def LoweringPrepare : Pass<"cir-lowering-prepare"> {
+def LoweringPrepare : Pass<"cir-lowering-prepare", "mlir::ModuleOp"> {
   let summary = "Lower to more fine-grained CIR operations before lowering to "
     "other dialects";
   let description = [{
@@ -260,6 +260,10 @@ def CallConvLowering : Pass<"cir-call-conv-lowering", "mlir::ModuleOp"> {
              clEnumValN(llvm::abi::X86AVXABILevel::AVX, "avx", "AVX"),
              clEnumValN(llvm::abi::X86AVXABILevel::AVX512, "avx512", "AVX512")
            )}]>,
+    Option<"allowsX86TargetAttrAvx", "x86-target-attr-avx", "bool",
+           /*default=*/"true",
+           "Let a function's own target features raise its AVX ABI level "
+           "above x86-avx-abi-level">,
   ];
 }
 

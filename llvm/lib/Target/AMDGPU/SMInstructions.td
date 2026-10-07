@@ -1399,11 +1399,12 @@ defm S_DCACHE_DISCARD_X2 : SM_Real_Discard_gfx10 <0x29>;
 
 def SMInfoTable : GenericTable {
   let FilterClass = "SM_Real";
+  let FilterClassField = "is_buffer";
   let CppTypeName = "SMInfo";
-  let Fields = ["Opcode", "is_buffer"];
+  let Fields = ["Opcode"];
 
   let PrimaryKey = ["Opcode"];
-  let PrimaryKeyName = "getSMEMOpcodeHelper";
+  let PrimaryKeyName = "isSMEMOpcodeHelper";
 }
 
 //===----------------------------------------------------------------------===//

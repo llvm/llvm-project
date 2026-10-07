@@ -47,7 +47,7 @@ define <4 x float> @f1(<4 x float> %x, <4 x float> %a, <4 x float> %b) {
 ; CHECK-NEXT:    le %f6, 0(%r1)
 ; CHECK-NEXT:    br %r14
   %abs = call <4 x float> @llvm.fabs.v4f32(<4 x float> %x)
-  %cmp = fcmp ult <4 x float> %abs, splat (float 0x7FF0000000000000)
+  %cmp = fcmp ult <4 x float> %abs, splat (float +inf)
   %sel = select <4 x i1> %cmp, <4 x float> %a, <4 x float> %b
   ret <4 x float> %sel
 }

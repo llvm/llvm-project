@@ -25,14 +25,15 @@
 #include <__iterator/next.h>
 #include <__iterator/prev.h>
 #include <__iterator/reverse_iterator.h>
+#include <__optional/optional.h>
 #include <__ranges/access.h>
 #include <__ranges/concepts.h>
 #include <__ranges/dangling.h>
 #include <__type_traits/decay.h>
 #include <__type_traits/invoke.h>
 #include <__utility/forward.h>
+#include <__utility/in_place.h>
 #include <__utility/move.h>
-#include <optional>
 
 #if !defined(_LIBCPP_HAS_NO_PRAGMA_SYSTEM_HEADER)
 #  pragma GCC system_header
@@ -95,11 +96,7 @@ struct __flipped {
 };
 
 template <class _Func, class _Tp, class _Iter>
-concept __indirectly_binary_right_foldable =
-    __indirectly_binary_left_foldable_impl<__flipped<_Func>,
-                                           _Tp,
-                                           _Iter,
-                                           invoke_result_t<_Func&, _Tp, iter_reference_t<_Iter>>>;
+concept __indirectly_binary_right_foldable = __indirectly_binary_left_foldable<__flipped<_Func>, _Tp, _Iter>;
 
 struct __fold_left_with_iter {
   template <input_iterator _Ip, sentinel_for<_Ip> _Sp, class _Tp, __indirectly_binary_left_foldable<_Tp, _Ip> _Fp>

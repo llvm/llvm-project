@@ -2,8 +2,16 @@
 ; pass. Ignore it with 'grep -v'.
 ; RUN: llc -mtriple=x86_64-- -O0 -debug-pass=Structure < %s -o /dev/null 2>&1 \
 ; RUN:   | grep -v 'Verify generated machine code' | FileCheck %s
+; RUN: llc -mtriple=x86_64-- -O0 -debug-pass=Structure -regalloc-fast-tied < %s -o /dev/null 2>&1 \
+; RUN:   | FileCheck %s --check-prefix=TIED
 
 ; REQUIRES: asserts
+
+; The fast register allocator lowers tied operands itself, so
+; TwoAddressInstructionPass drops out while PHIElimination stays.
+; TIED: Eliminate PHI nodes for register allocation
+; TIED-NOT: Two-Address instruction pass
+; TIED: Fast Register Allocator
 
 ; CHECK-LABEL: Pass Arguments:
 ; CHECK-NEXT: Target Library Information

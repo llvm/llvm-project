@@ -278,6 +278,22 @@ func.func @parallel_loop(%arg0 : index, %arg1 : index, %arg2 : index,
   return
 }
 
+// CHECK-LABEL: func @unsigned_parallel_loop(
+// CHECK:           arith.cmpi ult
+// CHECK:           cf.cond_br
+// CHECK:           arith.cmpi ult
+// CHECK:           cf.cond_br
+func.func @unsigned_parallel_loop(%arg0 : index, %arg1 : index, %arg2 : index,
+                                  %arg3 : index, %arg4 : index) {
+  %step = arith.constant 1 : index
+  scf.parallel unsigned (%i0, %i1) = (%arg0, %arg1) to (%arg2, %arg3)
+                                                   step (%arg4, %step) {
+    %c1 = arith.constant 1 : index
+    scf.reduce
+  }
+  return
+}
+
 // CHECK-LABEL: @for_yield
 // CHECK-SAME: (%[[LB:.*]]: index, %[[UB:.*]]: index, %[[STEP:.*]]: index)
 // CHECK:        %[[INIT0:.*]] = arith.constant 0
@@ -795,3 +811,42 @@ func.func @do_while_loops_annotation() {
   return
 }
 
+// -----
+
+// CHECK: #[[LOOP_UNROLL_DISABLE:.*]] = #llvm.loop_unroll<disable = true>
+// CHECK: #[[NO_UNROLL:.*]] = #llvm.loop_annotation<unroll = #[[LOOP_UNROLL_DISABLE]]>
+// CHECK: func @parallel_loop_annotation
+// CHECK: cf.cond_br
+// CHECK: cf.br {{.*}} {llvm.loop_annotation = #[[NO_UNROLL]]}
+// CHECK: return
+#no_unroll = #llvm.loop_annotation<unroll = <disable = true>>
+func.func @parallel_loop_annotation(%arg0 : index, %arg1 : index, %arg2 : index, %arg3 : memref<?xf32>) {
+  %cst = arith.constant 1.0 : f32
+  scf.parallel (%i) = (%arg0) to (%arg1) step (%arg2) {
+    memref.store %cst, %arg3[%i] : memref<?xf32>
+    scf.reduce
+  } {llvm.loop_annotation = #no_unroll}
+  return
+}
+
+// -----
+
+// A multi-dimensional scf.parallel lowers to a loop nest, and the metadata goes
+// to the innermost loop's latch only.
+// CHECK: #[[LOOP_UNROLL_DISABLE:.*]] = #llvm.loop_unroll<disable = true>
+// CHECK: #[[NO_UNROLL:.*]] = #llvm.loop_annotation<unroll = #[[LOOP_UNROLL_DISABLE]]>
+// CHECK: func @parallel_loop_annotation_2d
+// CHECK: cf.cond_br
+// CHECK: cf.cond_br
+// CHECK: cf.br {{.*}} {llvm.loop_annotation = #[[NO_UNROLL]]}
+// CHECK-NOT: llvm.loop_annotation
+// CHECK: return
+#no_unroll = #llvm.loop_annotation<unroll = <disable = true>>
+func.func @parallel_loop_annotation_2d(%arg0 : index, %arg1 : index, %arg2 : index, %arg3 : memref<?x?xf32>) {
+  %cst = arith.constant 1.0 : f32
+  scf.parallel (%i, %j) = (%arg0, %arg0) to (%arg1, %arg1) step (%arg2, %arg2) {
+    memref.store %cst, %arg3[%i, %j] : memref<?x?xf32>
+    scf.reduce
+  } {llvm.loop_annotation = #no_unroll}
+  return
+}

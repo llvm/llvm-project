@@ -67,7 +67,7 @@ public:
     if (failed(TargetEnv::verifyTargetInformation(targetEnvAttr, mod.getLoc())))
       return signalPassFailure();
 
-    mod->setAttr(TargetEnvAttr::name, targetEnvAttr);
+    mod->setDiscardableAttr(TargetEnvAttr::name, targetEnvAttr);
   }
 
 private:

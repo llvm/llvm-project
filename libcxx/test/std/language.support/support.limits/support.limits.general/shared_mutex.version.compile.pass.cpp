@@ -133,7 +133,7 @@
 #    endif
 #  endif
 
-#elif TEST_STD_VER > 23
+#elif TEST_STD_VER == 26
 
 #  if !defined(_LIBCPP_VERSION) || _LIBCPP_HAS_THREADS
 #    ifndef __cpp_lib_shared_mutex
@@ -161,6 +161,34 @@
 #    endif
 #  endif
 
-#endif // TEST_STD_VER > 23
+#elif TEST_STD_VER > 26
+
+#  if !defined(_LIBCPP_VERSION) || _LIBCPP_HAS_THREADS
+#    ifndef __cpp_lib_shared_mutex
+#      error "__cpp_lib_shared_mutex should be defined in c++29"
+#    endif
+#    if __cpp_lib_shared_mutex != 201505L
+#      error "__cpp_lib_shared_mutex should have the value 201505L in c++29"
+#    endif
+#  else
+#    ifdef __cpp_lib_shared_mutex
+#      error "__cpp_lib_shared_mutex should not be defined when the requirement '!defined(_LIBCPP_VERSION) || _LIBCPP_HAS_THREADS' is not met!"
+#    endif
+#  endif
+
+#  if !defined(_LIBCPP_VERSION) || _LIBCPP_HAS_THREADS
+#    ifndef __cpp_lib_shared_timed_mutex
+#      error "__cpp_lib_shared_timed_mutex should be defined in c++29"
+#    endif
+#    if __cpp_lib_shared_timed_mutex != 201402L
+#      error "__cpp_lib_shared_timed_mutex should have the value 201402L in c++29"
+#    endif
+#  else
+#    ifdef __cpp_lib_shared_timed_mutex
+#      error "__cpp_lib_shared_timed_mutex should not be defined when the requirement '!defined(_LIBCPP_VERSION) || _LIBCPP_HAS_THREADS' is not met!"
+#    endif
+#  endif
+
+#endif // TEST_STD_VER > 26
 
 // clang-format on

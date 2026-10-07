@@ -26,7 +26,7 @@ define i32 @find_last_trunc_iv(ptr %src, i64 %n) {
 ; CHECK-NEXT:    [[TMP6:%.*]] = call <vscale x 4 x i1> @llvm.vp.merge.nxv4i1(<vscale x 4 x i1> splat (i1 true), <vscale x 4 x i1> [[TMP5]], <vscale x 4 x i1> zeroinitializer, i32 [[TMP3]])
 ; CHECK-NEXT:    [[TMP7:%.*]] = freeze <vscale x 4 x i1> [[TMP6]]
 ; CHECK-NEXT:    [[TMP8:%.*]] = call i1 @llvm.vector.reduce.or.nxv4i1(<vscale x 4 x i1> [[TMP7]])
-; CHECK-NEXT:    [[TMP9]] = select i1 [[TMP8]], <vscale x 4 x i1> [[TMP6]], <vscale x 4 x i1> [[TMP2]]
+; CHECK-NEXT:    [[TMP9]] = select i1 [[TMP8]], <vscale x 4 x i1> [[TMP7]], <vscale x 4 x i1> [[TMP2]]
 ; CHECK-NEXT:    [[TMP10]] = select i1 [[TMP8]], <vscale x 4 x i32> [[VEC_IND]], <vscale x 4 x i32> [[VEC_PHI]]
 ; CHECK-NEXT:    [[CURRENT_ITERATION_NEXT]] = add i64 [[TMP11]], [[TMP22]]
 ; CHECK-NEXT:    [[AVL_NEXT]] = sub nuw i64 [[AVL]], [[TMP11]]
@@ -63,8 +63,8 @@ define i64 @select_decreasing_induction_icmp_non_const_start(ptr %a, ptr %b, i64
 ; CHECK-SAME: ptr [[A:%.*]], ptr [[B:%.*]], i64 [[RDX_START:%.*]], i64 [[N:%.*]]) #[[ATTR0]] {
 ; CHECK-NEXT:  [[ENTRY:.*:]]
 ; CHECK-NEXT:    [[UMIN:%.*]] = call i64 @llvm.umin.i64(i64 [[N]], i64 1)
-; CHECK-NEXT:    [[TMP1:%.*]] = sub i64 [[N]], [[UMIN]]
-; CHECK-NEXT:    [[TMP8:%.*]] = add i64 [[TMP1]], 1
+; CHECK-NEXT:    [[TMP1:%.*]] = add i64 [[N]], 1
+; CHECK-NEXT:    [[TMP8:%.*]] = sub i64 [[TMP1]], [[UMIN]]
 ; CHECK-NEXT:    br label %[[VECTOR_PH:.*]]
 ; CHECK:       [[VECTOR_PH]]:
 ; CHECK-NEXT:    [[TMP2:%.*]] = call <vscale x 4 x i64> @llvm.stepvector.nxv4i64()

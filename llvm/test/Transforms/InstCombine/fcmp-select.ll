@@ -292,7 +292,7 @@ define double @test_fcmp_ord_select_fabs_fcmp_one_select_var_const(double %x) {
   %cmp1 = fcmp ord double %x, 0.000000e+00
   %sel1 = select i1 %cmp1, double %x, double 0.000000e+00
   %abs = call double @llvm.fabs.f64(double %sel1)
-  %cmp2 = fcmp one double %abs, 0x7FF0000000000000
+  %cmp2 = fcmp one double %abs, +inf
   %sel2 = select i1 %cmp2, double %sel1, double 0.000000e+00
   ret double %sel2
 }
@@ -307,7 +307,7 @@ define double @test_fcmp_ord_commuted_select_fabs_fcmp_one_select_var_const(doub
   %cmp1 = fcmp ord double 0.000000e+00, %x
   %sel1 = select i1 %cmp1, double %x, double 0.000000e+00
   %abs = call double @llvm.fabs.f64(double %sel1)
-  %cmp2 = fcmp one double %abs, 0x7FF0000000000000
+  %cmp2 = fcmp one double %abs, +inf
   %sel2 = select i1 %cmp2, double %sel1, double 0.000000e+00
   ret double %sel2
 }
@@ -322,7 +322,7 @@ define double @test_fcmp_ord_select_fabs_fcmp_one_select_nonnan_const(double %x,
   %cmp1 = fcmp ord double %x, 1.000000e+00
   %sel1 = select i1 %cmp1, double %x, double %y
   %abs = call double @llvm.fabs.f64(double %sel1)
-  %cmp2 = fcmp one double %abs, 0x7FF0000000000000
+  %cmp2 = fcmp one double %abs, +inf
   %sel2 = select i1 %cmp2, double %sel1, double %y
   ret double %sel2
 }
@@ -337,7 +337,7 @@ define double @test_fcmp_ord_self_select_fabs_fcmp_one_select_var_var(double %x,
   %cmp1 = fcmp ord double %x, %x
   %sel1 = select i1 %cmp1, double %x, double %y
   %abs = call double @llvm.fabs.f64(double %sel1)
-  %cmp2 = fcmp one double %abs, 0x7FF0000000000000
+  %cmp2 = fcmp one double %abs, +inf
   %sel2 = select i1 %cmp2, double %sel1, double %y
   ret double %sel2
 }
@@ -353,7 +353,7 @@ define double @test_fcmp_ord_select_fabs_fcmp_one_select_uitofp_nonnan(double %x
   %cmp1 = fcmp ord double %x, %nonnan
   %sel1 = select i1 %cmp1, double %x, double %y
   %abs = call double @llvm.fabs.f64(double %sel1)
-  %cmp2 = fcmp one double %abs, 0x7FF0000000000000
+  %cmp2 = fcmp one double %abs, +inf
   %sel2 = select i1 %cmp2, double %sel1, double %y
   ret double %sel2
 }
@@ -369,7 +369,7 @@ define double @test_fcmp_ord_commuted_select_fabs_fcmp_one_select_sitofp_nonnan(
   %cmp1 = fcmp ord double %nonnan, %x
   %sel1 = select i1 %cmp1, double %x, double %y
   %abs = call double @llvm.fabs.f64(double %sel1)
-  %cmp2 = fcmp one double %abs, 0x7FF0000000000000
+  %cmp2 = fcmp one double %abs, +inf
   %sel2 = select i1 %cmp2, double %sel1, double %y
   ret double %sel2
 }
@@ -402,7 +402,7 @@ define double @test_fcmp_ord_select_fabs_fcmp_une_select_var_const(double %x) {
   %cmp1 = fcmp ord double %x, 0.000000e+00
   %sel1 = select i1 %cmp1, double %x, double 0.000000e+00
   %abs = call double @llvm.fabs.f64(double %sel1)
-  %cmp2 = fcmp une double %abs, 0x7FF0000000000000
+  %cmp2 = fcmp une double %abs, +inf
   %sel2 = select i1 %cmp2, double %sel1, double 0.000000e+00
   ret double %sel2
 }
@@ -417,7 +417,7 @@ define double @test_fcmp_ord_select_fabs_fcmp_nnan_one_select_var_var(double %x,
   %cmp1 = fcmp ord double %x, 0.000000e+00
   %sel1 = select i1 %cmp1, double %x, double %y
   %abs = call double @llvm.fabs.f64(double %sel1)
-  %cmp2 = fcmp nnan one double %abs, 0x7FF0000000000000
+  %cmp2 = fcmp nnan one double %abs, +inf
   %sel2 = select i1 %cmp2, double %sel1, double %y
   ret double %sel2
 }
@@ -447,7 +447,7 @@ define <2 x double> @test_fcmp_ord_select_fabs_fcmp_one_select_v2f64(<2 x double
   %cmp1 = fcmp ord <2 x double> %x, zeroinitializer
   %sel1 = select <2 x i1> %cmp1, <2 x double> %x, <2 x double> %y
   %abs = call <2 x double> @llvm.fabs.v2f64(<2 x double> %sel1)
-  %cmp2 = fcmp one <2 x double> %abs, <double 0x7FF0000000000000, double 0x7FF0000000000000>
+  %cmp2 = fcmp one <2 x double> %abs, <double +inf, double +inf>
   %sel2 = select <2 x i1> %cmp2, <2 x double> %sel1, <2 x double> %y
   ret <2 x double> %sel2
 }
@@ -463,7 +463,7 @@ define <2 x double> @test_fcmp_ord_select_fabs_fcmp_one_select_uitofp_v2f64(<2 x
   %cmp1 = fcmp ord <2 x double> %x, %nonnan
   %sel1 = select <2 x i1> %cmp1, <2 x double> %x, <2 x double> %y
   %abs = call <2 x double> @llvm.fabs.v2f64(<2 x double> %sel1)
-  %cmp2 = fcmp one <2 x double> %abs, <double 0x7FF0000000000000, double 0x7FF0000000000000>
+  %cmp2 = fcmp one <2 x double> %abs, <double +inf, double +inf>
   %sel2 = select <2 x i1> %cmp2, <2 x double> %sel1, <2 x double> %y
   ret <2 x double> %sel2
 }
@@ -478,7 +478,7 @@ define <2 x double> @test_fcmp_ord_select_fabs_fcmp_nnan_one_select_v2f64(<2 x d
   %cmp1 = fcmp ord <2 x double> %x, zeroinitializer
   %sel1 = select <2 x i1> %cmp1, <2 x double> %x, <2 x double> %y
   %abs = call <2 x double> @llvm.fabs.v2f64(<2 x double> %sel1)
-  %cmp2 = fcmp nnan one <2 x double> %abs, <double 0x7FF0000000000000, double 0x7FF0000000000000>
+  %cmp2 = fcmp nnan one <2 x double> %abs, <double +inf, double +inf>
   %sel2 = select <2 x i1> %cmp2, <2 x double> %sel1, <2 x double> %y
   ret <2 x double> %sel2
 }
@@ -532,7 +532,7 @@ define double @test_fcmp_ord_select_fabs_fcmp_intersect_drop_nnan(double %x, dou
 
 define float @test_select_nnan_nsz_fcmp_olt(float %x) {
 ; CHECK-LABEL: @test_select_nnan_nsz_fcmp_olt(
-; CHECK-NEXT:    [[TMP1:%.*]] = fcmp olt float [[X:%.*]], -0.000000e+00
+; CHECK-NEXT:    [[TMP1:%.*]] = fcmp olt float [[X:%.*]], 0.000000e+00
 ; CHECK-NEXT:    [[SEL1:%.*]] = select i1 [[TMP1]], float [[X]], float -0.000000e+00
 ; CHECK-NEXT:    ret float [[SEL1]]
 ;
@@ -543,8 +543,8 @@ define float @test_select_nnan_nsz_fcmp_olt(float %x) {
 
 define float @test_select_nnan_nsz_fcmp_ult(float %x) {
 ; CHECK-LABEL: @test_select_nnan_nsz_fcmp_ult(
-; CHECK-NEXT:    [[DOTINV:%.*]] = fcmp oge float [[X:%.*]], 0.000000e+00
-; CHECK-NEXT:    [[SEL1:%.*]] = select i1 [[DOTINV]], float -0.000000e+00, float [[X]]
+; CHECK-NEXT:    [[TMP1:%.*]] = fcmp ult float [[X:%.*]], 0.000000e+00
+; CHECK-NEXT:    [[SEL1:%.*]] = select i1 [[TMP1]], float [[X]], float -0.000000e+00
 ; CHECK-NEXT:    ret float [[SEL1]]
 ;
   %cmp = fcmp ult float %x, 0.000000e+00

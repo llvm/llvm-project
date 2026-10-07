@@ -21,6 +21,7 @@
 #include "clang/AST/Expr.h"
 #include "clang/AST/RecordLayout.h"
 #include "clang/Basic/CodeGenOptions.h"
+#include "clang/CodeGenUtils/CodeGenUtils.h"
 #include "llvm/IR/DataLayout.h"
 #include "llvm/IR/DerivedTypes.h"
 #include "llvm/IR/Type.h"
@@ -107,11 +108,6 @@ struct CGRecordLowering {
   bool isDiscreteBitFieldABI() const {
     return Context.getTargetInfo().getCXXABI().isMicrosoft() ||
            D->isMsStruct(Context);
-  }
-
-  /// Helper function to check if we are targeting AAPCS.
-  bool isAAPCS() const {
-    return Context.getTargetInfo().getABI().starts_with("aapcs");
   }
 
   /// Helper function to check if the target machine is BigEndian.
@@ -753,7 +749,8 @@ void CGRecordLowering::accumulateBases() {
 /// Enforcing the width restriction can be disabled using
 /// -fno-aapcs-bitfield-width.
 void CGRecordLowering::computeVolatileBitfields() {
-  if (!isAAPCS() || !Types.getCodeGenOpts().AAPCSBitfieldWidth)
+  if (!CodeGenUtils::isAAPCS(Context.getTargetInfo()) ||
+      !Types.getCodeGenOpts().AAPCSBitfieldWidth)
     return;
 
   for (auto &I : BitFields) {

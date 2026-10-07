@@ -84,7 +84,7 @@ getNewSuffix(StringRef OldSuffix, const std::vector<StringRef> &NewSuffixes) {
   if (NewSuffixes.empty())
     return OldSuffix.upper();
   // Else, find matching suffix, case-*insensitive*ly.
-  auto NewSuffix =
+  const auto NewSuffix =
       llvm::find_if(NewSuffixes, [OldSuffix](StringRef PotentialNewSuffix) {
         return OldSuffix.equals_insensitive(PotentialNewSuffix);
       });
@@ -210,12 +210,13 @@ void UppercaseLiteralSuffixCheck::check(
           NewSuffixes, *Result.SourceManager, getLangOpts())) {
     if (Details->LiteralLocation.getBegin().isMacroID() && IgnoreMacros)
       return;
-    auto Complaint = diag(Details->LiteralLocation.getBegin(),
-                          "%select{floating point|integer}0 literal has suffix "
-                          "'%1', which is not uppercase")
-                     << IsInteger << Details->OldSuffix;
+    const auto Complaint =
+        diag(Details->LiteralLocation.getBegin(),
+             "%select{floating point|integer}0 literal has suffix "
+             "'%1', which is not uppercase")
+        << IsInteger << Details->OldSuffix;
     if (Details->FixIt) // Similarly, a fix-it is not always possible.
-      Complaint << *(Details->FixIt);
+      Complaint << *Details->FixIt;
   }
 }
 

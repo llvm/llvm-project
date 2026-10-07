@@ -34,8 +34,8 @@ define dso_local void @test(ptr %start, ptr %end) #0 {
 ; AVX2-NEXT:    [[I11_NOT1:%.*]] = icmp eq ptr [[START:%.*]], [[END:%.*]]
 ; AVX2-NEXT:    br i1 [[I11_NOT1]], label [[EXIT:%.*]], label [[BB12_PREHEADER:%.*]]
 ; AVX2:       iter.check:
-; AVX2-NEXT:    [[END3:%.*]] = ptrtoint ptr [[END]] to i64
-; AVX2-NEXT:    [[START4:%.*]] = ptrtoint ptr [[START]] to i64
+; AVX2-NEXT:    [[END3:%.*]] = ptrtoaddr ptr [[END]] to i64
+; AVX2-NEXT:    [[START4:%.*]] = ptrtoaddr ptr [[START]] to i64
 ; AVX2-NEXT:    [[TMP0:%.*]] = add i64 [[END3]], -4
 ; AVX2-NEXT:    [[TMP1:%.*]] = sub i64 [[TMP0]], [[START4]]
 ; AVX2-NEXT:    [[TMP2:%.*]] = lshr i64 [[TMP1]], 2

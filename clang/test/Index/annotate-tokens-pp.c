@@ -197,7 +197,7 @@ struct A
 // CHECK: Punctuation: "=" [25:36 - 25:37] VarDecl=z:25:34 (Definition)
 // CHECK: Identifier: "x" [25:38 - 25:39] DeclRefExpr=x:24:7
 // CHECK: Punctuation: ";" [25:39 - 25:40] DeclStmt=
-// CHECK: Punctuation: "++" [25:41 - 25:43] UnaryOperator=
+// CHECK: Punctuation: "++" [25:41 - 25:43] UnaryOperator=++
 // CHECK: Identifier: "z" [25:43 - 25:44] DeclRefExpr=z:25:3
 // CHECK: Punctuation: ";" [25:44 - 25:45] CompoundStmt=
 // CHECK: Punctuation: "}" [25:46 - 25:47] CompoundStmt=

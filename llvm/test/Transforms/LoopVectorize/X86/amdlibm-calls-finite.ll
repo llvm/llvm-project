@@ -484,15 +484,15 @@ for.end:
 
 !1 = distinct !{!1, !2, !3}
 !2 = !{!"llvm.loop.vectorize.width", i32 2}
-!3 = !{!"llvm.loop.vectorize.enable", i1 true}
+!3 = !{!"llvm.loop.vectorize.enable"}
 
 !4 = distinct !{!4, !5, !6}
 !5 = !{!"llvm.loop.vectorize.width", i32 4}
-!6 = !{!"llvm.loop.vectorize.enable", i1 true}
+!6 = !{!"llvm.loop.vectorize.enable"}
 
 !7 = distinct !{!7, !8, !9}
 !8 = !{!"llvm.loop.vectorize.width", i32 8}
-!9 = !{!"llvm.loop.vectorize.enable", i1 true}
+!9 = !{!"llvm.loop.vectorize.enable"}
 
 declare float @__expf_finite(float) #0
 declare double @__exp_finite(double) #0

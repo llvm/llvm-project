@@ -180,9 +180,12 @@ public:
   /// loading.
   uint64_t BuildSessionTimestamp = 0;
 
-  /// The set of macro names that should be ignored for the purposes
-  /// of computing the module hash.
+  /// The set of macro names that should be ignored by implicitly-built modules.
   llvm::SmallSetVector<llvm::CachedHashString, 16> ModulesIgnoreMacros;
+
+  /// The set of header search paths that should be ignored by implicitly-built
+  /// modules.
+  llvm::SmallSetVector<llvm::CachedHashString, 16> ModulesIgnoreSearchPaths;
 
   /// The set of user-provided virtual filesystem overlay files.
   std::vector<std::string> VFSOverlayFiles;

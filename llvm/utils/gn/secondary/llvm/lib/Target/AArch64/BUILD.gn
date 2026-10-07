@@ -188,7 +188,6 @@ static_library("LLVMAArch64CodeGen") {
     "GISel/AArch64RegisterBankInfo.cpp",
     "MachineSMEABIPass.cpp",
     "SMEPeepholeOpt.cpp",
-    "SVEIntrinsicOpts.cpp",
     "SVEShuffleOpts.cpp",
   ]
 }

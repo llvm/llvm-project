@@ -1,7 +1,8 @@
 import json
 import threading
-from typing import List, Union
+from typing import List
 
+from lldbsuite.test.tools.lldb_dap import DAPTestCaseBase
 from lldbsuite.test.tools.lldb_dap.types import (
     CapabilitiesEvent,
     DAPError,
@@ -14,7 +15,6 @@ from lldbsuite.test.tools.lldb_dap.types import (
     ProgressEndEvent,
     TerminatedEvent,
 )
-from lldbsuite.test.tools.lldb_dap import DAPTestCaseBase
 from lldbsuite.test.tools.lldb_dap.utils import EventHistory
 
 

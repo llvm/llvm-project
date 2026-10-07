@@ -243,7 +243,7 @@ func.func @collapse_shape_and_read_from_source(%in_0: memref<1x20x1xi32>, %vec: 
   %c4 = arith.constant 4 : index
   %c20 = arith.constant 20 : index
 
-  %alloca = memref.alloca() {alignment = 64 : i64} : memref<1x4x1xi32>
+  %alloca = memref.alloca() alignment = 64 : memref<1x4x1xi32>
   %collapse_shape = memref.collapse_shape %alloca [[0, 1, 2]] : memref<1x4x1xi32> into memref<4xi32>
   scf.for %arg0 = %c0 to %c20 step %c4 {
     %subview = memref.subview %in_0[0, %arg0, 0] [1, 4, 1] [1, 1, 1] : memref<1x20x1xi32> to memref<1x4x1xi32, strided<[20, 1, 1], offset: ?>>
@@ -273,7 +273,7 @@ func.func @expand_shape_and_read_from_source(%in_0: memref<20xi32>, %vec: vector
   %c4 = arith.constant 4 : index
   %c20 = arith.constant 20 : index
 
-  %alloca = memref.alloca() {alignment = 64 : i64} : memref<4xi32>
+  %alloca = memref.alloca() alignment = 64 : memref<4xi32>
   %expand_shape = memref.expand_shape %alloca [[0, 1, 2]] output_shape [1, 4, 1] : memref<4xi32> into memref<1x4x1xi32>
   scf.for %arg0 = %c0 to %c20 step %c4 {
     %subview = memref.subview %in_0[%arg0] [4] [1] : memref<20xi32> to memref<4xi32, strided<[1], offset: ?>>
@@ -304,7 +304,7 @@ func.func @collapse_shape_and_read_from_collapse(%in_0: memref<20xi32>, %vec: ve
   %c4 = arith.constant 4 : index
   %c20 = arith.constant 20 : index
 
-  %alloca = memref.alloca() {alignment = 64 : i64} : memref<1x4x1xi32>
+  %alloca = memref.alloca() alignment = 64 : memref<1x4x1xi32>
   %collapse_shape = memref.collapse_shape %alloca [[0, 1, 2]] : memref<1x4x1xi32> into memref<4xi32>
   scf.for %arg0 = %c0 to %c20 step %c4 {
     %subview = memref.subview %in_0[%arg0] [4] [1] : memref<20xi32> to memref<4xi32, strided<[1], offset: ?>>
@@ -335,7 +335,7 @@ func.func @expand_shape_and_read_from_expand(%in_0: memref<1x20x1xi32>, %vec: ve
   %c4 = arith.constant 4 : index
   %c20 = arith.constant 20 : index
 
-  %alloca = memref.alloca() {alignment = 64 : i64} : memref<4xi32>
+  %alloca = memref.alloca() alignment = 64 : memref<4xi32>
   %expand_shape = memref.expand_shape %alloca [[0, 1, 2]] output_shape [1, 4, 1] : memref<4xi32> into memref<1x4x1xi32>
   scf.for %arg0 = %c0 to %c20 step %c4 {
     %subview = memref.subview %in_0[0, %arg0, 0] [1, 4, 1] [1, 1, 1] : memref<1x20x1xi32> to memref<1x4x1xi32, strided<[20, 1, 1], offset: ?>>

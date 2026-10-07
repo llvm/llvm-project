@@ -2035,7 +2035,6 @@ Parser::ObjCImplParsingDataRAII::~ObjCImplParsingDataRAII() {
           << SemaObjC::OCK_Implementation;
     }
   }
-  P.CurParsedObjCImpl = nullptr;
   assert(LateParsedObjCMethods.empty());
 }
 
@@ -2061,6 +2060,10 @@ void Parser::ObjCImplParsingDataRAII::finish(SourceRange AtEnd) {
     delete *I;
   LateParsedObjCMethods.clear();
 
+  // Parsing may go on in the enclosing frame before this object is destroyed
+  // (e.g. a nested @interface ended the @implementation early), so stop being
+  // the current @implementation now rather than in the destructor.
+  P.CurParsedObjCImpl = PrevParsedObjCImpl;
   Finished = true;
 }
 
@@ -2881,7 +2884,7 @@ Parser::ParseObjCMessageExpressionBody(SourceLocation LBracLoc,
 
       ExprResult Expr;
       if (getLangOpts().CPlusPlus11 && Tok.is(tok::l_brace)) {
-        Diag(Tok, diag::warn_cxx98_compat_generalized_initializer_lists);
+        Diag(Tok, diag::compat_cxx11_generalized_initializer_lists);
         Expr = ParseBraceInitializer();
       } else
         Expr = ParseAssignmentExpression();
@@ -3199,13 +3202,13 @@ Parser::ParseObjCProtocolExpression(SourceLocation AtLoc) {
 }
 
 ExprResult Parser::ParseObjCSelectorExpression(SourceLocation AtLoc) {
-  SourceLocation SelectorLoc = ConsumeToken();
+  SourceLocation SelectorKeywordLoc = ConsumeToken();
 
   if (Tok.isNot(tok::l_paren))
     return ExprError(Diag(Tok, diag::err_expected_lparen_after) << "@selector");
 
   SmallVector<const IdentifierInfo *, 12> KeyIdents;
-  SourceLocation sLoc;
+  SourceLocation SelectorNameLoc;
 
   BalancedDelimiterTracker T(*this, tok::l_paren);
   T.consumeOpen();
@@ -3219,7 +3222,7 @@ ExprResult Parser::ParseObjCSelectorExpression(SourceLocation AtLoc) {
     return ExprError();
   }
 
-  IdentifierInfo *SelIdent = ParseObjCSelectorPiece(sLoc);
+  IdentifierInfo *SelIdent = ParseObjCSelectorPiece(SelectorNameLoc);
   if (!SelIdent &&  // missing selector name.
       Tok.isNot(tok::colon) && Tok.isNot(tok::coloncolon))
     return ExprError(Diag(Tok, diag::err_expected) << tok::identifier);
@@ -3259,8 +3262,8 @@ ExprResult Parser::ParseObjCSelectorExpression(SourceLocation AtLoc) {
   T.consumeClose();
   Selector Sel = PP.getSelectorTable().getSelector(nColons, &KeyIdents[0]);
   return Actions.ObjC().ParseObjCSelectorExpression(
-      Sel, AtLoc, SelectorLoc, T.getOpenLocation(), T.getCloseLocation(),
-      !HasOptionalParen);
+      Sel, AtLoc, SelectorKeywordLoc, SelectorNameLoc, T.getOpenLocation(),
+      T.getCloseLocation(), !HasOptionalParen);
 }
 
 void Parser::ParseLexedObjCMethodDefs(LexedMethod &LM, bool parseMethod) {
@@ -3306,15 +3309,7 @@ void Parser::ParseLexedObjCMethodDefs(LexedMethod &LM, bool parseMethod) {
     Actions.ObjC().ActOnStartOfObjCMethodDef(getCurScope(), MCDecl);
   else
     Actions.ActOnStartOfFunctionDef(getCurScope(), MCDecl);
-  if (Tok.is(tok::kw_try))
-    ParseFunctionTryBlock(MCDecl, BodyScope);
-  else {
-    if (Tok.is(tok::colon))
-      ParseConstructorInitializer(MCDecl);
-    else
-      Actions.ActOnDefaultCtorInitializers(MCDecl);
-    ParseFunctionStatementBody(MCDecl, BodyScope);
-  }
+  ParseFunctionBody(MCDecl, BodyScope);
 
   if (Tok.getLocation() != OrigLoc) {
     // Due to parsing error, we either went over the cached tokens or

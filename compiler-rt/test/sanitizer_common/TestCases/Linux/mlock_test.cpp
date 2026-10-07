@@ -7,6 +7,8 @@
 // FIXME: Implement.
 // XFAIL: hwasan
 
+// UNSUPPORTED: rtsan
+
 #include <assert.h>
 #include <sys/mman.h>
 

@@ -198,9 +198,16 @@ define x86_thiscallcc ptr @baz(ptr %arg, ptr %arg1, ptr %arg2, i1 %arg3, ptr %ar
 ; CHECK-LABEL: define x86_thiscallcc ptr @baz(
 ; CHECK-SAME: ptr [[ARG:%.*]], ptr [[ARG1:%.*]], ptr [[ARG2:%.*]], i1 [[ARG3:%.*]], ptr [[ARG4:%.*]]) personality ptr null {
 ; CHECK-NEXT:  [[BB:.*:]]
-; CHECK-NEXT:    [[ALLOCA:%.*]] = alloca [2 x %struct.foo], align 4
-; CHECK-NEXT:    [[INVOKE:%.*]] = call x86_thiscallcc ptr @quux(ptr null, ptr null, i32 0) #[[ATTR1:[0-9]+]]
+; CHECK-NEXT:    [[ALLOCA:%.*]] = alloca [2 x [[STRUCT_FOO:%.*]]], align 4
+; CHECK-NEXT:    [[INVOKE:%.*]] = invoke x86_thiscallcc ptr @quux(ptr null, ptr null, i32 0)
+; CHECK-NEXT:            to label %[[BB5:.*]] unwind label %[[BB10:.*]]
+; CHECK:       [[BB5]]:
 ; CHECK-NEXT:    unreachable
+; CHECK:       [[BB10]]:
+; CHECK-NEXT:    [[CLEANUPPAD12:%.*]] = cleanuppad within none []
+; CHECK-NEXT:    [[GETELEMENTPTR13:%.*]] = getelementptr i8, ptr null, i32 -20
+; CHECK-NEXT:    store i32 0, ptr null, align 4
+; CHECK-NEXT:    ret ptr null
 ;
 bb:
   %alloca = alloca [2 x %struct.foo], align 4

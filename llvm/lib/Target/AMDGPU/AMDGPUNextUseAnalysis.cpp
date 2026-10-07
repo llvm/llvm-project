@@ -56,8 +56,6 @@
 #include "GCNRegPressure.h"
 #include "GCNSubtarget.h"
 
-#include "llvm/ADT/DenseMap.h"
-#include "llvm/ADT/PostOrderIterator.h"
 #include "llvm/ADT/SmallVector.h"
 #include "llvm/CodeGen/MachineBasicBlock.h"
 #include "llvm/CodeGen/MachineFunction.h"
@@ -71,8 +69,6 @@
 #include "llvm/Support/ToolOutputFile.h"
 #include "llvm/Support/raw_ostream.h"
 
-#include <algorithm>
-#include <limits>
 #include <string>
 
 using namespace llvm;
@@ -1122,7 +1118,7 @@ private:
   MBBDistPair calcShortestDistanceToExit(const MachineBasicBlock *CurMBB,
                                          const MachineLoop *CurLoop) const {
     SmallVector<std::pair<MachineBasicBlock *, MachineBasicBlock *>> ExitEdges;
-    CurLoop->getExitEdges(ExitEdges);
+    MLI->getExitEdges(*CurLoop, ExitEdges);
     MBBDistPair LD;
 
     for (auto [Exit, Dest] : ExitEdges) {

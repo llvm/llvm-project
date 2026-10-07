@@ -37,7 +37,7 @@ end module
 ! The intrinsic-operator reduction is materialized under its module-scoped name
 ! (getScopedUserReductionName, byte-identical on the clause side) and the clause
 ! binds it, so no TODO aborts the compile.
-! CHECK: omp.declare_reduction @"[[RED:_QQ[A-Za-z0-9_.]*op\.\+[A-Za-z0-9_.]*]]" : !fir.ref
+! CHECK: omp.declare_reduction @"[[RED:_QQ[A-Za-z0-9_.]*op\.\+[A-Za-z0-9_.]*]]" byref_element_type({{.*}}) : !fir.ref
 ! CHECK: omp.wsloop
 ! CHECK-SAME: reduction(byref @"[[RED]]"
 ! CHECK-NOT: not yet implemented

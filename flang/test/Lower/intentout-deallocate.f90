@@ -105,7 +105,7 @@ contains
 ! on the caller side.
 
 ! CHECK-LABEL: func.func @_QMmod1Psub4()
-! CHECK: %[[BOX:.*]] = fir.alloca !fir.box<!fir.heap<!fir.type<_QMmod1Tt1{{[<]?}}{i:i32}{{[>]?}}>>> {bindc_name = "t", uniq_name = "_QMmod1Fsub4Et"}
+! CHECK: %[[BOX:.*]] = fir.alloca !fir.box<!fir.heap<!fir.type<_QMmod1Tt1{{[<]?}}{i:i32}{{[>]?}}>>> <{bindc_name = "t", uniq_name = "_QMmod1Fsub4Et"}>
 ! CHECK: %[[BOX:.*]]:2 = hlfir.declare {{.*}}"_QMmod1Fsub4Et"
 ! CHECK-NOT: fir.call @_FortranAAllocatableDeallocate
 ! CHECK: fir.call @_QMmod1Psub5(%[[BOX]]{{[#0]*}}) {{.*}}: (!fir.ref<!fir.box<!fir.heap<!fir.type<_QMmod1Tt1{{[<]?}}{i:i32}{{[>]?}}>>>>) -> ()
@@ -134,7 +134,7 @@ contains
 ! Deallocation is done with a runtime call.
 
 ! CHECK-LABEL: func.func @_QMmod1Psub6()
-! CHECK: %[[BOX:.*]] = fir.alloca !fir.box<!fir.heap<!fir.type<_QMmod1Tt1{{[<]?}}{i:i32}{{[>]?}}>>> {bindc_name = "t", uniq_name = "_QMmod1Fsub6Et"}
+! CHECK: %[[BOX:.*]] = fir.alloca !fir.box<!fir.heap<!fir.type<_QMmod1Tt1{{[<]?}}{i:i32}{{[>]?}}>>> <{bindc_name = "t", uniq_name = "_QMmod1Fsub6Et"}>
 ! CHECK: %[[BOX:.*]]:2 = hlfir.declare {{.*}}"_QMmod1Fsub6Et"
 ! CHECK: %[[BOX_NONE:.*]] = fir.convert %[[BOX]]{{[#0]*}} : (!fir.ref<!fir.box<!fir.heap<!fir.type<_QMmod1Tt1{{[<]?}}{i:i32}{{[>]?}}>>>>) -> !fir.ref<!fir.box<none>>
 ! CHECK: %{{.*}} = fir.call @_FortranAAllocatableDeallocate(%[[BOX_NONE]], %{{.*}}, %{{.*}}, %{{.*}}, %{{.*}}) {{.*}}: (!fir.ref<!fir.box<none>>, i1, !fir.box<none>, !fir.ref<i8>, i32) -> i32

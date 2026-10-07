@@ -632,3 +632,29 @@ func.func @affine_for_zero_step_verifier() {
   }) : () -> ()
   return
 }
+
+// -----
+
+func.func @affine_for_missing_induction_var() {
+  // expected-error@+1 {{'affine.for' op expected body to have an index argument for the induction variable}}
+  "affine.for"() <{lowerBoundMap = affine_map<() -> (0)>, operandSegmentSizes = array<i32: 0, 0, 0>, step = 1 : index, upperBoundMap = affine_map<() -> (2)>}> ({
+    "affine.yield"() : () -> ()
+  }) : () -> ()
+  return
+}
+
+// -----
+
+func.func @affine_load_alignment_not_power_of_2(%M : memref<10xi32>) {
+  // expected-error@+1 {{'affine.load' op attribute 'alignment' failed to satisfy constraint: 64-bit signless integer attribute whose value is positive and whose value is a power of two > 0}}
+  %v = affine.load %M[0] { alignment = 12 } : memref<10xi32>
+  return
+}
+
+// -----
+
+func.func @affine_store_alignment_not_power_of_2(%M : memref<10xi32>, %v : i32) {
+  // expected-error@+1 {{'affine.store' op attribute 'alignment' failed to satisfy constraint: 64-bit signless integer attribute whose value is positive and whose value is a power of two > 0}}
+  affine.store %v, %M[0] { alignment = 12 } : memref<10xi32>
+  return
+}

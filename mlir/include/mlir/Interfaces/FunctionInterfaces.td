@@ -132,8 +132,8 @@ def FunctionOpInterface : OpInterface<"FunctionOpInterface", [
         OpBuilder &builder, OperationState &state, StringRef name, Type type,
         ArrayRef<NamedAttribute> attrs, TypeRange inputTypes) {
       OpBuilder::InsertionGuard g(builder);
-      state.addAttribute(SymbolTable::getSymbolAttrName(),
-                        builder.getStringAttr(name));
+      state.getOrAddProperties<typename ConcreteOp::Properties>().sym_name =
+          builder.getStringAttr(name);
       state.addAttribute(ConcreteOp::getFunctionTypeAttrName(state.name),
                         TypeAttr::get(type));
       state.attributes.append(attrs.begin(), attrs.end());

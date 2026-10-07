@@ -1,6 +1,6 @@
 add_custom_target(libc_link_unittests)
 
-add_libc_unittest(
+add_libc_test(
   dl_iterate_phdr_test
   SUITE
     libc_link_unittests

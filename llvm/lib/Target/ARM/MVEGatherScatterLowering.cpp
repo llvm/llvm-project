@@ -417,10 +417,7 @@ Instruction *MVEGatherScatterLowering::lowerGather(IntrinsicInst *I) {
   lookThroughBitcast(Ptr);
   assert(Ptr->getType()->isVectorTy() && "Unexpected pointer type");
 
-  IRBuilder<> Builder(I->getContext());
-  Builder.SetInsertPoint(I);
-  Builder.SetCurrentDebugLocation(I->getDebugLoc());
-
+  IRBuilder<> Builder(I);
   Instruction *Root = I;
 
   Instruction *Load = tryCreateIncrementingGatScat(I, Ptr, Builder);
@@ -592,10 +589,7 @@ Instruction *MVEGatherScatterLowering::lowerScatter(IntrinsicInst *I) {
   lookThroughBitcast(Ptr);
   assert(Ptr->getType()->isVectorTy() && "Unexpected pointer type");
 
-  IRBuilder<> Builder(I->getContext());
-  Builder.SetInsertPoint(I);
-  Builder.SetCurrentDebugLocation(I->getDebugLoc());
-
+  IRBuilder<> Builder(I);
   Instruction *Store = tryCreateIncrementingGatScat(I, Ptr, Builder);
   if (!Store)
     Store = tryCreateMaskedScatterOffset(I, Ptr, Builder);
@@ -1077,8 +1071,7 @@ bool MVEGatherScatterLowering::optimiseOffsets(Value *Offsets, BasicBlock *BB,
     IncrementingBlock = 1;
   }
 
-  IRBuilder<> Builder(BB->getContext());
-  Builder.SetInsertPoint(Phi);
+  IRBuilder<> Builder(Phi);
   Builder.SetCurrentDebugLocation(Offs->getDebugLoc());
 
   switch (Offs->getOpcode()) {
@@ -1216,9 +1209,7 @@ bool MVEGatherScatterLowering::optimiseAddress(Value *Address, BasicBlock *BB,
     return false;
   bool Changed = false;
   if (GEP->hasOneUse() && isa<GetElementPtrInst>(GEP->getPointerOperand())) {
-    IRBuilder<> Builder(GEP->getContext());
-    Builder.SetInsertPoint(GEP);
-    Builder.SetCurrentDebugLocation(GEP->getDebugLoc());
+    IRBuilder<> Builder(GEP);
     Value *Offsets;
     unsigned Scale;
     Value *Base = foldGEP(GEP, Offsets, Scale, Builder);

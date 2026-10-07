@@ -299,20 +299,20 @@ define float @test_ull2f(i64 %a) #0 {
 
 ; CHECK-LABEL: @test_add_rn_d
 define double @test_add_rn_d(double %a, double %b) #0 {
-; CHECK: call double @llvm.nvvm.add.rn.d
-  %ret = call double @llvm.nvvm.add.rn.d(double %a, double %b)
+; CHECK: call double @llvm.nvvm.fadd.f64
+  %ret = call double @llvm.nvvm.fadd.f64(double %a, double %b, /* rnd=rn */ i32 1)
   ret double %ret
 }
 ; CHECK-LABEL: @test_add_rn_f
 define float @test_add_rn_f(float %a, float %b) #0 {
-; CHECK: call float @llvm.nvvm.add.rn.f
-  %ret = call float @llvm.nvvm.add.rn.f(float %a, float %b)
+; CHECK: call float @llvm.nvvm.fadd.f32
+  %ret = call float @llvm.nvvm.fadd.f32(float %a, float %b, /* rnd=rn */ i32 1)
   ret float %ret
 }
 ; CHECK-LABEL: @test_add_rn_f_ftz
 define float @test_add_rn_f_ftz(float %a, float %b) #0 {
-; CHECK: call float @llvm.nvvm.add.rn.ftz.f(float %a, float %b)
-  %ret = call float @llvm.nvvm.add.rn.ftz.f(float %a, float %b)
+; CHECK: call float @llvm.nvvm.fadd.ftz.f32(float %a, float %b, /* rnd=rn */ i32 1)
+  %ret = call float @llvm.nvvm.fadd.ftz.f32(float %a, float %b, /* rnd=rn */ i32 1)
   ret float %ret
 }
 
@@ -437,9 +437,36 @@ define i32 @test_fshr_clamp_3(i32 %a, i32 %b, i32 %c) {
   ret i32 %call
 }
 
-declare double @llvm.nvvm.add.rn.d(double, double)
-declare float @llvm.nvvm.add.rn.f(float, float)
-declare float @llvm.nvvm.add.rn.ftz.f(float, float)
+; CHECK-LABEL: @redux_sync_fmin_fold_abs(
+define float @redux_sync_fmin_fold_abs(float %src, i32 %mask) #0 {
+; CHECK-NEXT: %val = call float @llvm.nvvm.redux.sync.fmin.abs(float %src, i32 %mask)
+; CHECK-NEXT: ret float %val
+  %abs = call float @llvm.fabs.f32(float %src)
+  %val = call float @llvm.nvvm.redux.sync.fmin(float nofpclass(ninf nnorm nsub nzero) %abs, i32 %mask)
+  ret float %val
+}
+
+; CHECK-LABEL: @redux_sync_fmax_NaN_fold_abs(
+define float @redux_sync_fmax_NaN_fold_abs(float %src, i32 %mask) #0 {
+; CHECK-NEXT: %val = call float @llvm.nvvm.redux.sync.fmax.abs.NaN(float %src, i32 %mask)
+; CHECK-NEXT: ret float %val
+  %abs = call float @llvm.fabs.f32(float %src)
+  %val = call float @llvm.nvvm.redux.sync.fmax.NaN(float %abs, i32 %mask)
+  ret float %val
+}
+
+; CHECK-LABEL: @redux_sync_fmin_abs_NaN_fold_abs(
+define float @redux_sync_fmin_abs_NaN_fold_abs(float %src, i32 %mask) #0 {
+; CHECK-NEXT: %val = call float @llvm.nvvm.redux.sync.fmin.abs.NaN(float %src, i32 %mask)
+; CHECK-NEXT: ret float %val
+  %abs = call float @llvm.fabs.f32(float %src)
+  %val = call float @llvm.nvvm.redux.sync.fmin.abs.NaN(float %abs, i32 %mask)
+  ret float %val
+}
+
+declare double @llvm.nvvm.fadd.f64(double, double, i32 immarg)
+declare float @llvm.nvvm.fadd.f32(float, float, i32 immarg)
+declare float @llvm.nvvm.fadd.ftz.f32(float, float, i32 immarg)
 declare double @llvm.nvvm.ceil.d(double)
 declare float @llvm.nvvm.ceil.f(float)
 declare float @llvm.nvvm.ceil.ftz.f(float)
@@ -509,3 +536,8 @@ declare double @llvm.nvvm.ull2d.rn(i64)
 declare float @llvm.nvvm.ull2f.rn(i64)
 declare i32 @llvm.nvvm.fshr.clamp.i32(i32, i32, i32)
 declare i32 @llvm.nvvm.fshl.clamp.i32(i32, i32, i32)
+
+declare float @llvm.fabs.f32(float)
+declare float @llvm.nvvm.redux.sync.fmin(float, i32)
+declare float @llvm.nvvm.redux.sync.fmax.NaN(float, i32)
+declare float @llvm.nvvm.redux.sync.fmin.abs.NaN(float, i32)

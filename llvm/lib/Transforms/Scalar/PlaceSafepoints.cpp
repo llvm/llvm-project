@@ -664,7 +664,7 @@ InsertSafepointPoll(BasicBlock::iterator InsertBefore,
   BasicBlock::iterator Start = IsBegin ? OrigBB->begin() : std::next(Before);
 
   // If your poll function includes an unreachable at the end, that's not
-  // valid.  Bugpoint likes to create this, so check for it.
+  // valid. Fuzzers/test case reducers can create this, so check for it.
   assert(isPotentiallyReachable(&*Start, &*After) &&
          "malformed poll function");
 

@@ -1,0 +1,61 @@
+## CPU capabilities occupy the high byte of cpusubtype. Display the whole byte
+## without changing the CPU subtype or interpreting architecture-specific bits.
+
+## ARM64e pointer authentication capability bits, including ABI version bits.
+# RUN: yaml2obj %s -DSUBTYPE=0x80000002 -o %t
+# RUN: llvm-readobj -h %t | FileCheck %s --check-prefix=ARM64E -DCAPS=0x80
+# RUN: yaml2obj %s -DSUBTYPE=0x81000002 -o %t
+# RUN: llvm-readobj -h %t | FileCheck %s --check-prefix=ARM64E -DCAPS=0x81
+# RUN: yaml2obj %s -DSUBTYPE=0xC1000002 -o %t
+# RUN: llvm-readobj -h %t | FileCheck %s --check-prefix=ARM64E -DCAPS=0xC1
+
+## Preserve all capability bits, even when their meaning is unknown.
+# RUN: yaml2obj %s -DSUBTYPE=0xFF000002 -o %t
+# RUN: llvm-readobj -h %t | FileCheck %s --check-prefix=ARM64E -DCAPS=0xFF
+# RUN: yaml2obj %s -DSUBTYPE=0x00000002 -o %t
+# RUN: llvm-readobj -h %t | FileCheck %s --check-prefix=ARM64E -DCAPS=0x0
+
+# ARM64E:      CpuSubType: CPU_SUBTYPE_ARM64E (0x2)
+# ARM64E-NEXT: CpuCapabilities: [[CAPS]]{{$}}
+# ARM64E-NEXT: FileType: Relocatable (0x1)
+
+## Also check 32-bit little-endian and 32/64-bit big-endian headers.
+# RUN: yaml2obj %s --docnum=2 -DCPUTYPE=0x7 -DSUBTYPE=0x80000003 -o %t
+# RUN: llvm-readobj -h %t | FileCheck %s --check-prefix=X86
+
+# X86:      CpuSubType: CPU_SUBTYPE_I386_ALL (0x3)
+# X86-NEXT: CpuCapabilities: 0x80{{$}}
+# X86-NEXT: FileType: Relocatable (0x1)
+
+# RUN: yaml2obj %s --docnum=2 -DENDIAN=false -DCPUTYPE=0x12 -DSUBTYPE=0xA5000000 -o %t
+# RUN: llvm-readobj -h %t | FileCheck %s --check-prefixes=PPC,PPC32
+# RUN: yaml2obj %s -DENDIAN=false -DCPUTYPE=0x1000012 -DSUBTYPE=0xA5000000 -o %t
+# RUN: llvm-readobj -h %t | FileCheck %s --check-prefixes=PPC,PPC64
+
+# PPC32:    CpuSubType: CPU_SUBTYPE_POWERPC_ALL (0x0)
+# PPC64:    CpuSubType: 0x0
+# PPC-NEXT: CpuCapabilities: 0xA5{{$}}
+# PPC-NEXT: FileType: Relocatable (0x1)
+
+--- !mach-o
+IsLittleEndian: [[ENDIAN=true]]
+FileHeader:
+  magic:      0xFEEDFACF
+  cputype:    [[CPUTYPE=0x100000C]]
+  cpusubtype: [[SUBTYPE]]
+  filetype:   0x1
+  ncmds:      0
+  sizeofcmds: 0
+  flags:      0
+  reserved:   0
+
+--- !mach-o
+IsLittleEndian: [[ENDIAN=true]]
+FileHeader:
+  magic:      0xFEEDFACE
+  cputype:    [[CPUTYPE]]
+  cpusubtype: [[SUBTYPE]]
+  filetype:   0x1
+  ncmds:      0
+  sizeofcmds: 0
+  flags:      0

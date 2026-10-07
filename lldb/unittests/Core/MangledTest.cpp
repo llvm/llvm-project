@@ -838,77 +838,78 @@ DemanglingInfoCorrectnessTestCase g_demangling_correctness_test_cases[] = {
 #include "llvm/Testing/Demangle/DemangleTestCases.inc"
 };
 
-struct DemanglingInfoCorrectnessTestFixutre
-    : public ::testing::TestWithParam<DemanglingInfoCorrectnessTestCase> {};
+TEST(MangledTest, DemanglingInfoCorrectness) {
+  for (const auto &[mangled, demangled] : g_demangling_correctness_test_cases) {
+    SCOPED_TRACE(mangled);
 
-TEST_P(DemanglingInfoCorrectnessTestFixutre, Correctness) {
-  auto [mangled, demangled] = GetParam();
+    llvm::itanium_demangle::ManglingParser<TestAllocator> Parser(
+        mangled, mangled + ::strlen(mangled));
 
-  llvm::itanium_demangle::ManglingParser<TestAllocator> Parser(
-      mangled, mangled + ::strlen(mangled));
+    const auto *Root = Parser.parse();
 
-  const auto *Root = Parser.parse();
+    EXPECT_NE(nullptr, Root);
+    if (!Root)
+      continue;
 
-  ASSERT_NE(nullptr, Root);
+    auto OB =
+        std::unique_ptr<TrackingOutputBuffer, TrackingOutputBufferDeleter>(
+            new TrackingOutputBuffer());
+    Root->print(*OB);
 
-  auto OB = std::unique_ptr<TrackingOutputBuffer, TrackingOutputBufferDeleter>(
-      new TrackingOutputBuffer());
-  Root->print(*OB);
+    // Filter out cases which would never show up in frames. We only care
+    // about function names.
+    if (Root->getKind() !=
+            llvm::itanium_demangle::Node::Kind::KFunctionEncoding &&
+        Root->getKind() != llvm::itanium_demangle::Node::Kind::KDotSuffix)
+      continue;
 
-  // Filter out cases which would never show up in frames. We only care about
-  // function names.
-  if (Root->getKind() !=
-          llvm::itanium_demangle::Node::Kind::KFunctionEncoding &&
-      Root->getKind() != llvm::itanium_demangle::Node::Kind::KDotSuffix)
-    return;
+    EXPECT_TRUE(OB->NameInfo.hasBasename());
+    if (!OB->NameInfo.hasBasename())
+      continue;
 
-  ASSERT_TRUE(OB->NameInfo.hasBasename());
+    auto tracked_name = llvm::StringRef(*OB);
 
-  auto tracked_name = llvm::StringRef(*OB);
+    std::string reconstructed_name;
 
-  std::string reconstructed_name;
+    auto return_left = CPlusPlusLanguage::GetDemangledReturnTypeLHS(
+        tracked_name, OB->NameInfo);
+    EXPECT_THAT_EXPECTED(return_left, llvm::Succeeded());
+    reconstructed_name += *return_left;
 
-  auto return_left =
-      CPlusPlusLanguage::GetDemangledReturnTypeLHS(tracked_name, OB->NameInfo);
-  EXPECT_THAT_EXPECTED(return_left, llvm::Succeeded());
-  reconstructed_name += *return_left;
+    auto scope =
+        CPlusPlusLanguage::GetDemangledScope(tracked_name, OB->NameInfo);
+    EXPECT_THAT_EXPECTED(scope, llvm::Succeeded());
+    reconstructed_name += *scope;
 
-  auto scope = CPlusPlusLanguage::GetDemangledScope(tracked_name, OB->NameInfo);
-  EXPECT_THAT_EXPECTED(scope, llvm::Succeeded());
-  reconstructed_name += *scope;
+    auto basename =
+        CPlusPlusLanguage::GetDemangledBasename(tracked_name, OB->NameInfo);
+    reconstructed_name += basename;
 
-  auto basename =
-      CPlusPlusLanguage::GetDemangledBasename(tracked_name, OB->NameInfo);
-  reconstructed_name += basename;
+    auto template_args = CPlusPlusLanguage::GetDemangledTemplateArguments(
+        tracked_name, OB->NameInfo);
+    EXPECT_THAT_EXPECTED(template_args, llvm::Succeeded());
+    reconstructed_name += *template_args;
 
-  auto template_args = CPlusPlusLanguage::GetDemangledTemplateArguments(
-      tracked_name, OB->NameInfo);
-  EXPECT_THAT_EXPECTED(template_args, llvm::Succeeded());
-  reconstructed_name += *template_args;
+    auto args = CPlusPlusLanguage::GetDemangledFunctionArguments(tracked_name,
+                                                                 OB->NameInfo);
+    EXPECT_THAT_EXPECTED(args, llvm::Succeeded());
+    reconstructed_name += *args;
 
-  auto args = CPlusPlusLanguage::GetDemangledFunctionArguments(tracked_name,
-                                                               OB->NameInfo);
-  EXPECT_THAT_EXPECTED(args, llvm::Succeeded());
-  reconstructed_name += *args;
+    auto return_right = CPlusPlusLanguage::GetDemangledReturnTypeRHS(
+        tracked_name, OB->NameInfo);
+    EXPECT_THAT_EXPECTED(return_right, llvm::Succeeded());
+    reconstructed_name += *return_right;
 
-  auto return_right =
-      CPlusPlusLanguage::GetDemangledReturnTypeRHS(tracked_name, OB->NameInfo);
-  EXPECT_THAT_EXPECTED(return_right, llvm::Succeeded());
-  reconstructed_name += *return_right;
+    auto qualifiers = CPlusPlusLanguage::GetDemangledFunctionQualifiers(
+        tracked_name, OB->NameInfo);
+    EXPECT_THAT_EXPECTED(qualifiers, llvm::Succeeded());
+    reconstructed_name += *qualifiers;
 
-  auto qualifiers = CPlusPlusLanguage::GetDemangledFunctionQualifiers(
-      tracked_name, OB->NameInfo);
-  EXPECT_THAT_EXPECTED(qualifiers, llvm::Succeeded());
-  reconstructed_name += *qualifiers;
+    auto suffix = CPlusPlusLanguage::GetDemangledFunctionSuffix(tracked_name,
+                                                                OB->NameInfo);
+    EXPECT_THAT_EXPECTED(suffix, llvm::Succeeded());
+    reconstructed_name += *suffix;
 
-  auto suffix =
-      CPlusPlusLanguage::GetDemangledFunctionSuffix(tracked_name, OB->NameInfo);
-  EXPECT_THAT_EXPECTED(suffix, llvm::Succeeded());
-  reconstructed_name += *suffix;
-
-  EXPECT_EQ(reconstructed_name, demangled);
+    EXPECT_EQ(reconstructed_name, demangled);
+  }
 }
-
-INSTANTIATE_TEST_SUITE_P(
-    DemanglingInfoCorrectnessTests, DemanglingInfoCorrectnessTestFixutre,
-    ::testing::ValuesIn(g_demangling_correctness_test_cases));

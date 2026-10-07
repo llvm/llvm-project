@@ -158,7 +158,7 @@ protected:
 
     result.GetValueObjectList().Append(valobj_sp);
     DumpValueObjectOptions::DeclPrintingHelper helper =
-        [&valobj_sp](ConstString type, ConstString var,
+        [&valobj_sp](llvm::StringRef type, llvm::StringRef var,
                      const DumpValueObjectOptions &opts,
                      Stream &stream) -> bool {
       const ValueObject::GetExpressionPathFormat format = ValueObject::
@@ -1038,11 +1038,10 @@ void CommandObjectFrameRecognizerAdd::DoExecute(Args &command,
         recognizer_sp, module, func, Mangled::NamePreference::ePreferDemangled,
         m_options.m_first_instruction_only);
   } else {
-    auto module = ConstString(m_options.m_module);
     std::vector<ConstString> symbols(m_options.m_symbols.begin(),
                                      m_options.m_symbols.end());
     GetTarget()->GetFrameRecognizerManager().AddRecognizer(
-        recognizer_sp, module, symbols,
+        recognizer_sp, m_options.m_module, std::move(symbols),
         Mangled::NamePreference::ePreferDemangled,
         m_options.m_first_instruction_only);
   }

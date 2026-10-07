@@ -1,0 +1,15 @@
+load("//llvm:lit_test.bzl", "lit_test")
+
+licenses(["notice"])
+
+[
+    lit_test(
+        name = "%s.test" % src,
+        srcs = [src],
+        data = ["//lld/test:lit_data"],
+    )
+    for src in glob(
+        ["**/*.test"],
+        exclude = ["**/Inputs/**"],
+    )
+]

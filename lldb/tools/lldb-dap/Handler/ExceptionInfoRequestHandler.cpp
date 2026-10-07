@@ -50,7 +50,7 @@ struct MainThreadCheckerReport {
   std::string selector;
 };
 
-// See `ReportRetriever::RetrieveReportData`.
+// See `InstrumentationRuntimeASan::RetrieveReportData`.
 struct ASanReport {
   std::string description;
   lldb::addr_t address = LLDB_INVALID_ADDRESS;

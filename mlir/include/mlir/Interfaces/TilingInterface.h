@@ -14,7 +14,6 @@
 #ifndef MLIR_INTERFACES_TILINGINTERFACE_H_
 #define MLIR_INTERFACES_TILINGINTERFACE_H_
 
-#include "mlir/Dialect/Utils/StructuredOpsUtils.h"
 #include "mlir/IR/Builders.h"
 #include "mlir/IR/BuiltinTypes.h"
 #include "mlir/IR/OpImplementation.h"
@@ -22,7 +21,13 @@
 #include "mlir/Interfaces/ViewLikeInterface.h"
 #include "mlir/Support/LLVM.h"
 
+#include <cstdint>
+
 namespace mlir {
+
+namespace utils {
+enum class IteratorType : uint32_t;
+} // namespace utils
 
 /// Container for result values of tiling.
 /// - `tiledOps` contains operations created by the tiling implementation that

@@ -3,6 +3,7 @@
 // RUN: %clang_dxc -Tlib_6_7 -### /Zi /Qembed_debug %s 2>&1 | FileCheck %s
 // RUN: %clang_dxc -Tlib_6_7 -### -Zi %s 2>&1 | FileCheck %s
 // RUN: %clang_dxc -Tlib_6_7 -### -Zi -Qembed_debug %s 2>&1 | FileCheck %s
+// RUN: %clang_dxc -Tlib_6_7 -### /Zi /Qpdb_in_private %s 2>&1 | FileCheck %s -check-prefixes=CHECK,CHECK-PRIV
 // RUN: %clang_dxc -Tlib_6_7 -### -Zi -Zss %s 2>&1 | FileCheck %s --check-prefix=CHECK,CHECK-ZSS
 // RUN: %clang_dxc -Tlib_6_7 -### /Zi -Qsource_in_debug_module %s 2>&1 | FileCheck %s --check-prefix=CHECK,CHECK-SIDM
 // RUN: %clang_dxc -Tlib_6_7 -### -Zi -Qstrip_debug %s 2>&1 | FileCheck %s --check-prefix=CHECK,CHECK-STRIP
@@ -17,6 +18,7 @@
 // Make sure dwarf-version is 4.
 // CHECK-DWARF-SAME: -dwarf-version=4
 // Check that the flags are converted to their llc equivalents.
+// CHECK-PRIV-SAME: --dx-pdb-in-private
 // CHECK-ZSS-SAME: -dx-Zss
 // CHECK-SIDM-SAME: --dx-source-in-debug-module
 // CHECK-STRIP-SAME: --dx-strip-debug

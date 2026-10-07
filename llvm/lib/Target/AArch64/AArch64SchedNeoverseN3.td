@@ -20,7 +20,7 @@ def NeoverseN3Model : SchedMachineModel {
 
     list<Predicate> UnsupportedFeatures = !listconcat(SMEUnsupported.F,
                                                       SVE2p1Unsupported.F,
-        [HasSVE2p1, HasSVEB16B16, HasPAuthLR, HasCPA, HasCSSC, HasMOPS, HasMOPS_GO]);
+        [HasSVE2p1, HasSVEB16B16, HasSVEBFSCALE, HasPAuthLR, HasCPA, HasCSSC, HasMOPS, HasMOPS_GO]);
 }
 
 //===----------------------------------------------------------------------===//
@@ -2159,7 +2159,7 @@ def : InstRW<[N3Write_2c_1V], (instregex "^F(MAX|MIN)(NM)?_ZPm[IZ]_[HSD]",
                                          "^F(MAX|MIN)(NM)?_ZPZ[IZ]_[HSD]")>;
 
 // Floating point multiply
-def : InstRW<[N3Write_3c_1V], (instregex "^(FSCALE|FMULX)_ZPmZ_[HSD]",
+def : InstRW<[N3Write_3c_1V], (instregex "^(FSCALE|FMULX)_(ZPmZ|ZPZZ)_[HSD]",
                                          "^FMULX_ZPZZ_[HSD]",
                                          "^FMUL_(ZPm[IZ]|ZZZI?)_[HSD]",
                                          "^FMUL_ZPZ[IZ]_[HSD]")>;

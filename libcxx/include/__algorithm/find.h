@@ -126,7 +126,9 @@ _LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR_SINCE_CXX14 _Tp* __find(_Tp* __first, _T
       return __ret;
     return __last;
   }
-#  if _LIBCPP_HAS_WIDE_CHARACTERS
+  // wmemchr is very slow on apple platforms - we can do significantly better on our own.
+  // TODO: Remove this special-case once Apple's wmemchr is fixed.
+#  if _LIBCPP_HAS_WIDE_CHARACTERS && !defined(__APPLE__)
   else if constexpr (sizeof(_Tp) == sizeof(wchar_t) && _LIBCPP_ALIGNOF(_Tp) >= _LIBCPP_ALIGNOF(wchar_t)) {
     if (auto __ret = std::__constexpr_wmemchr(__first, __value, __last - __first))
       return __ret;

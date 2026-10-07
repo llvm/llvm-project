@@ -62,6 +62,7 @@ static_library("modernize") {
     "UseStdPrintCheck.cpp",
     "UseStringViewCheck.cpp",
     "UseStructuredBindingCheck.cpp",
+    "UseToUnderlyingCheck.cpp",
     "UseTrailingReturnTypeCheck.cpp",
     "UseTransparentFunctorsCheck.cpp",
     "UseUncaughtExceptionsCheck.cpp",

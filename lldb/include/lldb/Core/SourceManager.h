@@ -11,6 +11,7 @@
 
 #include "lldb/Utility/Checksum.h"
 #include "lldb/Utility/FileSpec.h"
+#include "lldb/Utility/Locked.h"
 #include "lldb/Utility/SupportFile.h"
 #include "lldb/lldb-defines.h"
 #include "lldb/lldb-forward.h"
@@ -23,6 +24,7 @@
 #include <map>
 #include <memory>
 #include <optional>
+#include <shared_mutex>
 #include <string>
 #include <vector>
 
@@ -104,7 +106,12 @@ public:
     uint32_t m_source_map_mod_id = 0;
     lldb::DataBufferSP m_data_sp;
     typedef std::vector<uint32_t> LineOffsets;
-    LineOffsets m_offsets;
+
+    /// The line offsets for this file.
+    /// This member that is computed after this File was created, so write
+    /// access can happen from several threads..
+    Guarded<LineOffsets, std::shared_mutex> m_offsets;
+
     lldb::DebuggerWP m_debugger_wp;
     lldb::TargetWP m_target_wp;
 

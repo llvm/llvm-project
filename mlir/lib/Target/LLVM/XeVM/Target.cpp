@@ -619,7 +619,8 @@ XeVMTargetAttrImpl::serializeToObject(Attribute attribute, Operation *module,
   auto xeTarget = cast<XeVMTargetAttr>(attribute);
   if (xeTarget.getTriple().starts_with("spirv")) {
     gpuMod.walk([&](LLVM::LLVMFuncOp funcOp) {
-      if (funcOp->hasAttr(gpu::GPUDialect::getKernelFuncAttrName())) {
+      if (funcOp->hasDiscardableAttr(
+              gpu::GPUDialect::getKernelFuncAttrName())) {
         funcOp.setIntelReqdSubGroupSize(16);
         return WalkResult::interrupt();
       }

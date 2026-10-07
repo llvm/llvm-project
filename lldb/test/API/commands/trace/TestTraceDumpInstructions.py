@@ -32,7 +32,7 @@ class TestTraceDumpInstructions(TraceIntelPTTestCaseBase):
 
         self.expect(
             "thread trace dump instructions",
-            substrs=["error: Process is not being traced"],
+            substrs=["error: process is not being traced"],
             error=True,
         )
 

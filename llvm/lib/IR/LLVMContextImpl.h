@@ -14,6 +14,7 @@
 #ifndef LLVM_LIB_IR_LLVMCONTEXTIMPL_H
 #define LLVM_LIB_IR_LLVMCONTEXTIMPL_H
 
+#include "AttributeImpl.h"
 #include "ConstantsContext.h"
 #include "llvm/ADT/APFloat.h"
 #include "llvm/ADT/APInt.h"
@@ -52,12 +53,7 @@
 
 namespace llvm {
 
-class AttributeImpl;
-class AttributeListImpl;
-class AttributeSetNode;
 class BasicBlock;
-class ConstantRangeAttributeImpl;
-class ConstantRangeListAttributeImpl;
 struct DiagnosticHandler;
 class DbgMarker;
 class ElementCount;
@@ -1396,6 +1392,32 @@ template <> struct MDNodeKeyImpl<DIObjCProperty> {
   }
 };
 
+template <> struct MDNodeKeyImpl<DIProperty> {
+  MDString *Name;
+  Metadata *File;
+  unsigned Line;
+  Metadata *Type;
+  Metadata *BackingStorage;
+
+  MDNodeKeyImpl(MDString *Name, Metadata *File, unsigned Line, Metadata *Type,
+                Metadata *BackingStorage)
+      : Name(Name), File(File), Line(Line), Type(Type),
+        BackingStorage(BackingStorage) {}
+  MDNodeKeyImpl(const DIProperty *N)
+      : Name(N->getRawName()), File(N->getRawFile()), Line(N->getLine()),
+        Type(N->getRawType()), BackingStorage(N->getRawBackingStorage()) {}
+
+  bool isKeyOf(const DIProperty *RHS) const {
+    return Name == RHS->getRawName() && File == RHS->getRawFile() &&
+           Line == RHS->getLine() && Type == RHS->getRawType() &&
+           BackingStorage == RHS->getRawBackingStorage();
+  }
+
+  unsigned getHashValue() const {
+    return hash_combine(Name, File, Line, Type, BackingStorage);
+  }
+};
+
 template <> struct MDNodeKeyImpl<DIImportedEntity> {
   unsigned Tag;
   Metadata *Scope;
@@ -1535,6 +1557,42 @@ struct MDAttachment {
   TrackingMDNodeRef Node;
 };
 
+/// Head pointer for a Value's ValueHandleBase doubly-linked list, stored in
+/// LLVMContextImpl::ValueHandles. The first node's PrevPtr points to Head, so
+/// relocating the bucket refreshes PrevPtr to the new Head address.
+class ValueHandleHead {
+  // Tag Head with true via PointerIntPair so RemoveFromUseList can
+  // distinguish ValueHandleHead::Head from an untagged ValueHandleBase::Next
+  // when accessed through *PrevPtr.
+  using TaggedPtr = PointerIntPair<ValueHandleBase *, 1, bool>;
+
+  ValueHandleBase *Head =
+      static_cast<ValueHandleBase *>(TaggedPtr(nullptr, true).getOpaqueValue());
+
+public:
+  ValueHandleBase *get() const {
+    return TaggedPtr::getFromOpaqueValue(Head).getPointer();
+  }
+
+  ValueHandleBase **getAddress() { return &Head; }
+
+  // Replace the pointer in *Slot with NewPtr while preserving its tag bit,
+  // and return the old TaggedPtr.
+  static TaggedPtr exchange(ValueHandleBase **Slot, ValueHandleBase *NewPtr) {
+    TaggedPtr Old = TaggedPtr::getFromOpaqueValue(*Slot);
+    TaggedPtr Updated = Old;
+    Updated.setPointer(NewPtr);
+    *Slot = static_cast<ValueHandleBase *>(Updated.getOpaqueValue());
+    return Old;
+  }
+
+  ValueHandleHead() = default;
+  ValueHandleHead(ValueHandleHead &&Other) noexcept;
+  ValueHandleHead &operator=(ValueHandleHead &&) = delete;
+  ValueHandleHead(const ValueHandleHead &) = delete;
+  ValueHandleHead &operator=(const ValueHandleHead &) = delete;
+};
+
 class LLVMContextImpl {
 public:
   /// OwnedModules - The set of modules instantiated in this context, and which
@@ -1602,14 +1660,32 @@ public:
   DenseMap<std::pair<ElementCount, APFloat>, std::unique_ptr<ConstantFP>>
       FPSplatConstants;
 
+  EnumAttributeImpl *EnumAttrs[Attribute::NumEnumAttrKinds] = {};
+  UniquingSet<IntAttributeImpl> IntAttrs;
+  UniquingSet<StringAttributeImpl> StringAttrs;
+  UniquingSet<TypeAttributeImpl> TypeAttrs;
   FoldingSet<AttributeImpl> AttrsSet;
-  FoldingSet<AttributeListImpl> AttrsLists;
-  FoldingSet<AttributeSetNode> AttrsSetNodes;
+  UniquingSet<AttributeListImpl> AttrsLists;
+  UniquingSet<AttributeSetNode> AttrsSetNodes;
 
   StringMap<MDString, BumpPtrAllocator> MDStringCache;
   DenseMap<Value *, ValueAsMetadata *> ValuesAsMetadata;
   DenseMap<Metadata *, MetadataAsValue *> MetadataAsValues;
   DenseSet<DIArgList *, DIArgListInfo> DIArgLists;
+
+  uint32_t NextMetadataPrintID = 0;
+
+  uint32_t allocateMetadataPrintID() { return NextMetadataPrintID++; }
+
+  void getAllMetadataNodes(SmallVectorImpl<MDNode *> &Nodes) const;
+
+  uint32_t getMetadataPrintID(const MDNode *N) const {
+    return N->getHeader().MetadataPrintID;
+  }
+
+  void setMetadataPrintID(MDNode *N, uint32_t ID) {
+    N->getHeader().MetadataPrintID = ID;
+  }
 
 #define HANDLE_MDNODE_LEAF_UNIQUABLE(CLASS)                                    \
   DenseSet<CLASS *, CLASS##Info> CLASS##s;
@@ -1623,6 +1699,10 @@ public:
   // one object can destroy them.  Keep track of them here so we can delete
   // them on context teardown.
   std::vector<MDNode *> DistinctMDNodes;
+
+  // Temporary nodes are caller-owned, but track live ones for persistent
+  // metadata print IDs.
+  DenseSet<MDNode *> TemporaryMDNodes;
 
   // ConstantRangeListAttributeImpl is a TrailingObjects/ArrayRef of
   // ConstantRange. Since this is a dynamically sized class, it's not
@@ -1706,7 +1786,7 @@ public:
   /// ValueHandles - This map keeps track of all of the value handles that are
   /// watching a Value*.  The Value::HasValueHandle bit is used to know
   /// whether or not a value has an entry in this map.
-  using ValueHandlesTy = DenseMap<Value *, ValueHandleBase *>;
+  using ValueHandlesTy = DenseMap<Value *, ValueHandleHead>;
   ValueHandlesTy ValueHandles;
 
   /// CustomMDKindNames - Map to hold the metadata string to ID mapping.
@@ -1719,11 +1799,6 @@ public:
   /// Number of currently unused metadata entries. Only used/updated in debug
   /// builds to ensure that all metadata attachments are properly freed.
   unsigned MetadataRecycleSize = 0;
-
-  /// Map DIAssignID -> Instructions with that attachment.
-  /// Managed by Instruction via Instruction::updateDIAssignIDMapping.
-  /// Query using the at:: functions defined in DebugInfo.h.
-  DenseMap<DIAssignID *, SmallVector<Instruction *, 1>> AssignmentIDToInstrs;
 
   /// Collection of per-GlobalObject sections used in this context.
   DenseMap<const GlobalObject *, StringRef> GlobalObjectSections;

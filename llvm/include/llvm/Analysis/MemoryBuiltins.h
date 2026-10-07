@@ -59,11 +59,6 @@ isAllocationFn(const Value *V,
                function_ref<const TargetLibraryInfo &(Function &)> GetTLI);
 
 /// Tests if a value is a call or invoke to a library function that
-/// allocates memory similar to malloc or calloc.
-LLVM_ABI bool isMallocOrCallocLikeFn(const Value *V,
-                                     const TargetLibraryInfo *TLI);
-
-/// Tests if a value is a call or invoke to a library function that
 /// allocates memory (either malloc, calloc, or strdup like).
 LLVM_ABI bool isAllocLikeFn(const Value *V, const TargetLibraryInfo *TLI);
 

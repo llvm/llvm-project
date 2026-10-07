@@ -9,9 +9,8 @@
 ; #####################################################################
 
 ; Load from %arg1 has no-alias store in Loop - arg1[i+1] never alias arg1[i]
-; However, our analysis cannot detect this.
 
-; CHECK: flat_load_dword
+; CHECK: s_load_dword
 
 ; #####################################################################
 

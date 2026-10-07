@@ -85,7 +85,7 @@ void SlotIndexes::analyze(MachineFunction &fn) {
          "MachineInstr -> Index mapping non-empty at initial numbering?");
 
   unsigned index = 0;
-  MBBRanges.resize(mf->getNumBlockIDs());
+  MBBRanges.resize(mf->getMaxAnalysisBlockNumber());
   idx2MBBMap.reserve(mf->size());
 
   indexList.push_back(*createEntry(nullptr, index));
@@ -110,9 +110,9 @@ void SlotIndexes::analyze(MachineFunction &fn) {
     // We insert one blank instructions between basic blocks.
     indexList.push_back(*createEntry(nullptr, index += SlotIndex::InstrDist));
 
-    MBBRanges[MBB.getNumber()].first = blockStartIndex;
-    MBBRanges[MBB.getNumber()].second = SlotIndex(&indexList.back(),
-                                                   SlotIndex::Slot_Block);
+    MBBRanges[MBB.getAnalysisNumber()].first = blockStartIndex;
+    MBBRanges[MBB.getAnalysisNumber()].second =
+        SlotIndex(&indexList.back(), SlotIndex::Slot_Block);
     idx2MBBMap.push_back(IdxMBBPair(blockStartIndex, &MBB));
   }
 
@@ -163,6 +163,29 @@ void SlotIndexes::removeSingleMachineInstrFromMaps(MachineInstr &MI) {
     // FIXME: Eventually we want to actually delete these indexes.
     MIEntry.setInstr(nullptr);
   }
+}
+
+void SlotIndexes::removeMBBFromMaps(MachineBasicBlock &MBB) {
+  assert(&MBB != &MBB.getParent()->front() &&
+         "Can't remove the first block of a function.");
+
+  unsigned Num = MBB.getAnalysisNumber();
+  SlotIndex StartIdx = MBBRanges[Num].first;
+  SlotIndex EndIdx = MBBRanges[Num].second;
+
+  // Give MBB's slot range to its layout predecessor so blocks stay contiguous.
+  auto PrevMBB = std::prev(MBB.getIterator());
+  MBBRanges[PrevMBB->getAnalysisNumber()].second = EndIdx;
+
+  // Drop MBB's index -> MBB entry, which would dangle once MBB is erased.
+  auto It = getMBBLowerBound(StartIdx);
+  assert(It != MBBIndexEnd() && It->first == StartIdx && It->second == &MBB &&
+         "MBB not found in index -> MBB map");
+  idx2MBBMap.erase(It);
+
+  // Clear the block-start boundary entry. MBBRanges is never renumbered, so
+  // MBB's now-stale slot is simply left in place.
+  StartIdx.listEntry()->setInstr(nullptr);
 }
 
 // Renumber indexes locally after curItr was inserted, but failed to get a new
@@ -280,9 +303,9 @@ void SlotIndexes::print(raw_ostream &OS) const {
       OS << '\n';
   }
 
-  for (unsigned i = 0, e = MBBRanges.size(); i != e; ++i)
-    OS << "%bb." << i << "\t[" << MBBRanges[i].first << ';'
-       << MBBRanges[i].second << ")\n";
+  for (const MachineBasicBlock &MBB : *mf)
+    OS << printMBBReference(MBB) << "\t[" << getMBBStartIdx(&MBB) << ';'
+       << getMBBEndIdx(&MBB) << ")\n";
 }
 
 #if !defined(NDEBUG) || defined(LLVM_ENABLE_DUMP)

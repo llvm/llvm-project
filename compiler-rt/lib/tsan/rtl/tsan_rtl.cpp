@@ -390,7 +390,6 @@ void SlotUnlock(ThreadState* thr) {
 
 Context::Context()
     : initialized(),
-      report_mtx(MutexTypeReport),
       nreported(),
       thread_registry([](Tid tid) -> ThreadContextBase* {
         return new (Alloc(sizeof(ThreadContext))) ThreadContext(tid);
@@ -515,8 +514,7 @@ static void *BackgroundThread(void *arg) {
       u64 last = atomic_load(&ctx->last_symbolize_time_ns,
                              memory_order_relaxed);
       if (last != 0 && last + flags()->flush_symbolizer_ms * kMs2Ns < now) {
-        Lock l(&ctx->report_mtx);
-        ScopedErrorReportLock l2;
+        ScopedErrorReportLock l;
         SymbolizeFlush();
         atomic_store(&ctx->last_symbolize_time_ns, 0, memory_order_relaxed);
       }
@@ -819,12 +817,12 @@ int Finalize(ThreadState *thr) {
 
   ThreadFinalize(thr);
 
-  if (ctx->nreported) {
+  if (u32 nreported = atomic_load_relaxed(&ctx->nreported)) {
     failed = true;
 #if !SANITIZER_GO
-    Printf("ThreadSanitizer: reported %d warnings\n", ctx->nreported);
+    Printf("ThreadSanitizer: reported %u warnings\n", nreported);
 #else
-    Printf("Found %d data race(s)\n", ctx->nreported);
+    Printf("Found %u data race(s)\n", nreported);
 #endif
   }
 
@@ -849,7 +847,7 @@ void ForkBefore(ThreadState* thr, uptr pc) SANITIZER_NO_THREAD_SAFETY_ANALYSIS {
   ScopedErrorReportLock::Lock();
   AllocatorLockBeforeFork();
   // Suppress all reports in the pthread_atfork callbacks.
-  // Reports will deadlock on the report_mtx.
+  // Reports may deadlock.
   // We could ignore sync operations as well,
   // but so far it's unclear if it will do more good or harm.
   // Unnecessarily ignoring things can lead to false positives later.
@@ -1142,11 +1140,8 @@ namespace __sanitizer {
 using namespace __tsan;
 MutexMeta mutex_meta[] = {
     {MutexInvalid, "Invalid", {}},
-    {MutexThreadRegistry,
-     "ThreadRegistry",
-     {MutexTypeSlots, MutexTypeTrace, MutexTypeReport}},
-    {MutexTypeReport, "Report", {MutexTypeTrace}},
-    {MutexTypeSyncVar, "SyncVar", {MutexTypeReport, MutexTypeTrace}},
+    {MutexThreadRegistry, "ThreadRegistry", {MutexTypeSlots, MutexTypeTrace}},
+    {MutexTypeSyncVar, "SyncVar", {MutexTypeTrace}},
     {MutexTypeAnnotations, "Annotations", {}},
     {MutexTypeAtExit, "AtExit", {}},
     {MutexTypeFired, "Fired", {MutexLeaf}},
@@ -1158,7 +1153,7 @@ MutexMeta mutex_meta[] = {
      "Slot",
      {MutexMulti, MutexTypeTrace, MutexTypeSyncVar, MutexThreadRegistry,
       MutexTypeSlots}},
-    {MutexTypeSlots, "Slots", {MutexTypeTrace, MutexTypeReport}},
+    {MutexTypeSlots, "Slots", {MutexTypeTrace}},
     {},
 };
 

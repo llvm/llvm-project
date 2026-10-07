@@ -122,7 +122,7 @@ public:
   void addEntry(const Symbol &sym);
   void addAuthEntry(const Symbol &sym);
   bool addTlsDescEntry(const Symbol &sym);
-  void addTlsDescAuthEntry();
+  void addTlsDescAuthEntry(const Symbol &sym);
   bool addDynTlsEntry(const Symbol &sym);
   bool addTlsIndex();
   uint32_t getTlsDescOffset(const Symbol &sym) const;
@@ -136,6 +136,8 @@ public:
   // Flag to force GOT to be in output if we have relocations
   // that relies on its address.
   std::atomic<bool> hasGotOffRel = false;
+  // Set if relaxOnce may add entries after removeUnusedSyntheticSections.
+  std::atomic<bool> hasDeferredEntries = false;
 
 protected:
   size_t numEntries = 0;
@@ -143,6 +145,7 @@ protected:
   struct AuthEntryInfo {
     size_t offset;
     bool isSymbolFunc;
+    bool isUndefinedNonPreemptible;
   };
   SmallVector<AuthEntryInfo, 0> authEntries;
 };
@@ -597,7 +600,7 @@ private:
 
 struct RelativeReloc {
   uint64_t getOffset() const {
-    return inputSec->getVA(inputSec->relocs()[relocIdx].offset);
+    return inputSec->getRelocVA(inputSec->relocs()[relocIdx].offset);
   }
 
   InputSectionBase *inputSec;
@@ -609,12 +612,16 @@ public:
   RelrBaseSection(Ctx &, unsigned concurrency, bool isAArch64Auth = false);
   /// Add a relative dynamic relocation that uses the target address of \p sym
   /// (i.e. InputSection::getRelocTargetVA()) + \p addend as the addend.
+  template <bool concurrent = false>
   void addRelativeReloc(InputSectionBase &isec, uint64_t offsetInSec,
                         Symbol &sym, int64_t addend, RelType addendRelType,
-                        RelExpr expr, unsigned shard) {
+                        RelExpr expr, unsigned shard = 0) {
     assert(expr != R_ADDEND && "expected non-addend relocation expression");
     isec.addReloc({expr, addendRelType, offsetInSec, addend, &sym});
-    relocsVec[shard].push_back({&isec, isec.relocs().size() - 1});
+    if constexpr (concurrent)
+      relocsVec[shard].push_back({&isec, isec.relocs().size() - 1});
+    else
+      relocs.push_back({&isec, isec.relocs().size() - 1});
   }
   bool isNeeded() const override {
     return !relocs.empty() ||
@@ -1236,6 +1243,7 @@ public:
   void writeTo(uint8_t *buf) override;
   InputSection *getTargetInputSection() const;
   bool assignOffsets();
+  void sortByDestination();
 
   // When true, round up reported size of section to 4 KiB. See comment
   // in addThunkSection() for more details.
@@ -1312,6 +1320,20 @@ private:
   SmallVector<const Symbol *, 0> symbols;
 };
 
+class DynamicDebugSection final : public SyntheticSection {
+public:
+  DynamicDebugSection(Ctx &);
+  size_t getSize() const override;
+  void writeTo(uint8_t *buf) override;
+};
+
+class DynamicDebugNote final : public SyntheticSection {
+public:
+  DynamicDebugNote(Ctx &);
+  size_t getSize() const override;
+  void writeTo(uint8_t *buf) override;
+};
+
 template <class ELFT> void createSyntheticSections(Ctx &);
 InputSection *createInterpSection(Ctx &);
 MergeInputSection *createCommentSection(Ctx &);
@@ -1325,8 +1347,7 @@ template <typename ELFT> void writeEhdr(Ctx &, uint8_t *buf);
 template <typename ELFT> void writePhdrs(Ctx &, uint8_t *buf);
 
 Defined *addSyntheticLocal(Ctx &ctx, StringRef name, uint8_t type,
-                           uint64_t value, uint64_t size,
-                           InputSectionBase &section);
+                           uint64_t value, uint64_t size, SectionBase &section);
 
 void addVerneed(Ctx &, Symbol &ss);
 

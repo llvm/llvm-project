@@ -94,9 +94,10 @@ define amdgpu_kernel void @is_local_vgpr(ptr addrspace(1) %ptr.ptr) {
 ;
 ; GFX1250-LABEL: is_local_vgpr:
 ; GFX1250:       ; %bb.0:
-; GFX1250-NEXT:    global_wb
-; GFX1250-NEXT:    v_nop
 ; GFX1250-NEXT:    s_setreg_imm32_b32 hwreg(HW_REG_WAVE_MODE, 25, 1), 1 ; msbs: dst=0 src0=0 src1=0 src2=0
+; GFX1250-NEXT:    s_mov_b64 s[64:65], 0
+; GFX1250-NEXT:    v_nop
+; GFX1250-NEXT:    global_prefetch_b8 v0, s[64:65] scope:SCOPE_SE
 ; GFX1250-NEXT:    s_load_b64 s[2:3], s[4:5], 0x0 nv
 ; GFX1250-NEXT:    v_and_b32_e32 v0, 0x3ff, v0
 ; GFX1250-NEXT:    s_mov_b64 s[0:1], src_shared_base
@@ -207,9 +208,7 @@ define amdgpu_kernel void @is_local_sgpr(ptr %ptr) {
 ; SI-NEXT:    s_load_dword s1, s[8:9], 0x33
 ; SI-NEXT:    s_waitcnt lgkmcnt(0)
 ; SI-NEXT:    s_cmp_eq_u32 s0, s1
-; SI-NEXT:    s_cselect_b32 s0, 1, 0
-; SI-NEXT:    s_cmp_lg_u32 s0, 1
-; SI-NEXT:    s_cbranch_scc1 .LBB1_2
+; SI-NEXT:    s_cbranch_scc0 .LBB1_2
 ; SI-NEXT:  ; %bb.1: ; %bb0
 ; SI-NEXT:    s_mov_b32 s3, 0x100f000
 ; SI-NEXT:    s_mov_b32 s2, -1
@@ -228,9 +227,7 @@ define amdgpu_kernel void @is_local_sgpr(ptr %ptr) {
 ; CI-SDAG-NEXT:    s_mov_b32 flat_scratch_lo, s13
 ; CI-SDAG-NEXT:    s_waitcnt lgkmcnt(0)
 ; CI-SDAG-NEXT:    s_cmp_eq_u32 s0, s1
-; CI-SDAG-NEXT:    s_cselect_b32 s0, 1, 0
-; CI-SDAG-NEXT:    s_cmp_lg_u32 s0, 1
-; CI-SDAG-NEXT:    s_cbranch_scc1 .LBB1_2
+; CI-SDAG-NEXT:    s_cbranch_scc0 .LBB1_2
 ; CI-SDAG-NEXT:  ; %bb.1: ; %bb0
 ; CI-SDAG-NEXT:    v_mov_b32_e32 v0, 0
 ; CI-SDAG-NEXT:    flat_store_dword v[0:1], v0
@@ -244,9 +241,7 @@ define amdgpu_kernel void @is_local_sgpr(ptr %ptr) {
 ; GFX9-SDAG-NEXT:    s_load_dword s0, s[8:9], 0x4
 ; GFX9-SDAG-NEXT:    s_waitcnt lgkmcnt(0)
 ; GFX9-SDAG-NEXT:    s_cmp_eq_u32 s0, s1
-; GFX9-SDAG-NEXT:    s_cselect_b32 s0, 1, 0
-; GFX9-SDAG-NEXT:    s_cmp_lg_u32 s0, 1
-; GFX9-SDAG-NEXT:    s_cbranch_scc1 .LBB1_2
+; GFX9-SDAG-NEXT:    s_cbranch_scc0 .LBB1_2
 ; GFX9-SDAG-NEXT:  ; %bb.1: ; %bb0
 ; GFX9-SDAG-NEXT:    v_mov_b32_e32 v0, 0
 ; GFX9-SDAG-NEXT:    global_store_dword v[0:1], v0, off
@@ -256,17 +251,15 @@ define amdgpu_kernel void @is_local_sgpr(ptr %ptr) {
 ;
 ; GFX1250-SDAG-LABEL: is_local_sgpr:
 ; GFX1250-SDAG:       ; %bb.0:
-; GFX1250-SDAG-NEXT:    global_wb
-; GFX1250-SDAG-NEXT:    v_nop
 ; GFX1250-SDAG-NEXT:    s_setreg_imm32_b32 hwreg(HW_REG_WAVE_MODE, 25, 1), 1 ; msbs: dst=0 src0=0 src1=0 src2=0
+; GFX1250-SDAG-NEXT:    s_mov_b64 s[64:65], 0
+; GFX1250-SDAG-NEXT:    v_nop
+; GFX1250-SDAG-NEXT:    global_prefetch_b8 v0, s[64:65] scope:SCOPE_SE
 ; GFX1250-SDAG-NEXT:    s_mov_b64 s[0:1], src_shared_base
 ; GFX1250-SDAG-NEXT:    s_load_b32 s0, s[4:5], 0x4 nv
 ; GFX1250-SDAG-NEXT:    s_wait_kmcnt 0x0
 ; GFX1250-SDAG-NEXT:    s_cmp_eq_u32 s0, s1
-; GFX1250-SDAG-NEXT:    s_cselect_b32 s0, 1, 0
-; GFX1250-SDAG-NEXT:    s_delay_alu instid0(SALU_CYCLE_1)
-; GFX1250-SDAG-NEXT:    s_cmp_lg_u32 s0, 1
-; GFX1250-SDAG-NEXT:    s_cbranch_scc1 .LBB1_2
+; GFX1250-SDAG-NEXT:    s_cbranch_scc0 .LBB1_2
 ; GFX1250-SDAG-NEXT:  ; %bb.1: ; %bb0
 ; GFX1250-SDAG-NEXT:    v_mov_b32_e32 v0, 0
 ; GFX1250-SDAG-NEXT:    global_store_b32 v[0:1], v0, off scope:SCOPE_SYS
@@ -336,9 +329,10 @@ define amdgpu_kernel void @is_local_sgpr(ptr %ptr) {
 ;
 ; GFX1250-GISEL-LABEL: is_local_sgpr:
 ; GFX1250-GISEL:       ; %bb.0:
-; GFX1250-GISEL-NEXT:    global_wb
-; GFX1250-GISEL-NEXT:    v_nop
 ; GFX1250-GISEL-NEXT:    s_setreg_imm32_b32 hwreg(HW_REG_WAVE_MODE, 25, 1), 1 ; msbs: dst=0 src0=0 src1=0 src2=0
+; GFX1250-GISEL-NEXT:    s_mov_b64 s[64:65], 0
+; GFX1250-GISEL-NEXT:    v_nop
+; GFX1250-GISEL-NEXT:    global_prefetch_b8 v0, s[64:65] scope:SCOPE_SE
 ; GFX1250-GISEL-NEXT:    s_load_b64 s[2:3], s[4:5], 0x0 nv
 ; GFX1250-GISEL-NEXT:    s_mov_b64 s[0:1], src_shared_base
 ; GFX1250-GISEL-NEXT:    s_wait_kmcnt 0x0

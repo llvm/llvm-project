@@ -12,14 +12,14 @@ body:             |
     ; CHECK-LABEL: name: fma
     ; CHECK: liveins: $d0
     ; CHECK-NEXT: {{  $}}
-    ; CHECK-NEXT: %res:_(s64) = G_FCONSTANT double 8.100000e+01
-    ; CHECK-NEXT: $d0 = COPY %res(s64)
+    ; CHECK-NEXT: %res:_(f64) = G_FCONSTANT double 8.100000e+01
+    ; CHECK-NEXT: $d0 = COPY %res(f64)
     ; CHECK-NEXT: RET_ReallyLR implicit $d0
-    %a:_(s64) = G_FCONSTANT double 40.0
-    %b:_(s64) = G_FCONSTANT double 2.0
-    %c:_(s64) = G_FCONSTANT double 1.0
-    %res:_(s64) = G_FMA %a, %b, %c
-    $d0 = COPY %res(s64)
+    %a:_(f64) = G_FCONSTANT double 40.0
+    %b:_(f64) = G_FCONSTANT double 2.0
+    %c:_(f64) = G_FCONSTANT double 1.0
+    %res:_(f64) = G_FMA %a, %b, %c
+    $d0 = COPY %res(f64)
     RET_ReallyLR implicit $d0
 
 ...
@@ -35,14 +35,14 @@ body:             |
     ; CHECK-LABEL: name: fmad
     ; CHECK: liveins: $d0
     ; CHECK-NEXT: {{  $}}
-    ; CHECK-NEXT: %res:_(s64) = G_FCONSTANT double 8.100000e+01
-    ; CHECK-NEXT: $d0 = COPY %res(s64)
+    ; CHECK-NEXT: %res:_(f64) = G_FCONSTANT double 8.100000e+01
+    ; CHECK-NEXT: $d0 = COPY %res(f64)
     ; CHECK-NEXT: RET_ReallyLR implicit $d0
-    %a:_(s64) = G_FCONSTANT double 40.0
-    %b:_(s64) = G_FCONSTANT double 2.0
-    %c:_(s64) = G_FCONSTANT double 1.0
-    %res:_(s64) = G_FMAD %a, %b, %c
-    $d0 = COPY %res(s64)
+    %a:_(f64) = G_FCONSTANT double 40.0
+    %b:_(f64) = G_FCONSTANT double 2.0
+    %c:_(f64) = G_FCONSTANT double 1.0
+    %res:_(f64) = G_FMAD %a, %b, %c
+    $d0 = COPY %res(f64)
     RET_ReallyLR implicit $d0
 
 ...

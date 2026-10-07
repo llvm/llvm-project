@@ -17,6 +17,7 @@
 #endif // __EMSCRIPTEN__
 
 #include "clang/Basic/TargetInfo.h"
+#include "clang/Config/config.h"
 #include "clang/Driver/Compilation.h"
 #include "clang/Driver/Driver.h"
 #include "clang/Driver/ToolChain.h"
@@ -27,6 +28,7 @@
 #include "llvm/ADT/Twine.h"
 
 #include "llvm/ExecutionEngine/JITLink/JITLinkMemoryManager.h"
+#include "llvm/ExecutionEngine/Orc/AbsoluteSymbols.h"
 #include "llvm/ExecutionEngine/Orc/Debugging/DebuggerSupport.h"
 #include "llvm/ExecutionEngine/Orc/EPCDynamicLibrarySearchGenerator.h"
 #include "llvm/ExecutionEngine/Orc/ExecutionUtils.h"
@@ -34,8 +36,8 @@
 #include "llvm/ExecutionEngine/Orc/JITTargetMachineBuilder.h"
 #include "llvm/ExecutionEngine/Orc/LLJIT.h"
 #include "llvm/ExecutionEngine/Orc/MapperJITLinkMemoryManager.h"
-#include "llvm/ExecutionEngine/Orc/Shared/OrcRTBridge.h"
 #include "llvm/ExecutionEngine/Orc/Shared/SimpleRemoteEPCUtils.h"
+#include "llvm/ExecutionEngine/Orc/SharedMemoryMapSPS.h"
 #include "llvm/ExecutionEngine/Orc/SimpleRemoteEPC.h"
 
 #include "llvm/Support/Error.h"
@@ -58,6 +60,27 @@
 #include <netinet/in.h>
 #include <sys/socket.h>
 #include <unistd.h>
+#endif
+
+// Address of the host's emulated-TLS runtime entry point, or null if the host
+// cannot provide one. clang-repl's JIT always lowers thread_local to emulated
+// TLS (JITTargetMachineBuilder forces EmulatedTLS on), so JIT'd code references
+// __emutls_get_address on every target. That symbol lives in the compiler
+// runtime -- libgcc_s.so on a glibc toolchain, or the compiler-rt builtins
+// static archive on Darwin and on compiler-rt-rtlib toolchains. When it is only
+// in a static archive and nothing else references it, it is never linked in and
+// ORC's process-symbol lookup cannot resolve it. Referencing it here
+// force-links the archive member so it is present regardless of how the host
+// provides it. Defined if available at configure time
+// (CLANG_HAVE_EMUTLS_GET_ADDRESS). When unavailable, thread_locals instead rely
+// on process-symbol lookup.
+#if CLANG_HAVE_EMUTLS_GET_ADDRESS
+extern "C" void *__emutls_get_address(void *);
+static void *getEmuTLSGetAddressPtr() {
+  return reinterpret_cast<void *>(&__emutls_get_address);
+}
+#else
+static void *getEmuTLSGetAddressPtr() { return nullptr; }
 #endif
 
 namespace clang {
@@ -89,22 +112,10 @@ createDefaultJITBuilder(llvm::orc::JITTargetMachineBuilder JTMB) {
 Expected<std::unique_ptr<llvm::jitlink::JITLinkMemoryManager>>
 createSharedMemoryManager(llvm::orc::ExecutorProcessControl &EPC,
                           unsigned SlabAllocateSize) {
-  llvm::orc::SharedMemoryMapper::SymbolAddrs SAs;
-  if (auto Err = EPC.getBootstrapSymbols(
-          {{SAs.Instance,
-            llvm::orc::rt::ExecutorSharedMemoryMapperServiceInstanceName},
-           {SAs.Reserve,
-            llvm::orc::rt::ExecutorSharedMemoryMapperServiceReserveWrapperName},
-           {SAs.Initialize,
-            llvm::orc::rt::
-                ExecutorSharedMemoryMapperServiceInitializeWrapperName},
-           {SAs.Deinitialize,
-            llvm::orc::rt::
-                ExecutorSharedMemoryMapperServiceDeinitializeWrapperName},
-           {SAs.Release,
-            llvm::orc::rt::
-                ExecutorSharedMemoryMapperServiceReleaseWrapperName}}))
-    return std::move(Err);
+  auto &ES = EPC.getExecutionSession();
+  auto B = llvm::orc::sps::createSharedMemoryMapBindings(ES);
+  if (!B)
+    return B.takeError();
 
   size_t SlabSize;
   if (llvm::Triple(llvm::sys::getProcessTriple()).isOSWindows())
@@ -116,7 +127,7 @@ createSharedMemoryManager(llvm::orc::ExecutorProcessControl &EPC,
     SlabSize = SlabAllocateSize;
 
   return llvm::orc::MapperJITLinkMemoryManager::CreateWithMapper<
-      llvm::orc::SharedMemoryMapper>(SlabSize, EPC, SAs);
+      llvm::orc::SharedMemoryMapper>(SlabSize, ES, std::move(*B));
 }
 
 static llvm::Expected<
@@ -388,6 +399,31 @@ IncrementalExecutorBuilder::create(llvm::orc::ThreadSafeContext &TSC,
     if (!JB)
       return JB.takeError();
     JITBuilder = std::move(*JB);
+    // TODO: Switch to native TLS once clang-repl can adopt the ORC runtime
+    // (which provides __emutls_get_address and supports the full TLS
+    // lifecycle). That will also remove the in-process-only constraint below.
+    //
+    // clang-repl lowers thread_local to emulated TLS on every target (see
+    // JITTargetMachineBuilder), so JIT'd code calls __emutls_get_address. When
+    // the host cannot resolve that symbol through process-symbol lookup
+    // (Darwin, and ELF toolchains that link compiler-rt builtins rather than
+    // libgcc_s), define the force-linked host symbol (see
+    // getEmuTLSGetAddressPtr) as an absolute symbol so it is visible to JIT'd
+    // code. This is harmless where process-symbol lookup would already resolve
+    // it: an already-defined symbol shadows the process-symbols generator.
+    // In-process execution only -- the host address is meaningless in an
+    // out-of-process executor.
+    if (void *EmuTLSGetAddress = getEmuTLSGetAddressPtr())
+      JITBuilder->setNotifyCreatedCallback(
+          [EmuTLSGetAddress](llvm::orc::LLJIT &J) {
+            auto &JD = J.getProcessSymbolsJITDylib()
+                           ? *J.getProcessSymbolsJITDylib()
+                           : J.getMainJITDylib();
+            return JD.define(llvm::orc::absoluteSymbols(
+                {{J.mangleAndIntern("__emutls_get_address"),
+                  {llvm::orc::ExecutorAddr::fromPtr(EmuTLSGetAddress),
+                   llvm::JITSymbolFlags::Exported}}}));
+          });
   }
 
   llvm::Error Err = llvm::Error::success();

@@ -25,70 +25,70 @@ define void @test(ptr noalias readonly %0, ptr noalias readonly %1, i32 %2, doub
 ; CHECK-NEXT:    [[TMP20:%.*]] = getelementptr inbounds [32 x i8], ptr [[TMP0]], i64 [[TMP19]]
 ; CHECK-NEXT:    [[TMP21:%.*]] = getelementptr inbounds nuw i8, ptr [[TMP20]], i64 16
 ; CHECK-NEXT:    [[TMP22:%.*]] = load double, ptr [[TMP21]], align 8
-; CHECK-NEXT:    [[TMP23:%.*]] = getelementptr inbounds nuw i8, ptr [[TMP15]], i64 8
-; CHECK-NEXT:    [[TMP24:%.*]] = load double, ptr [[TMP23]], align 8
-; CHECK-NEXT:    [[TMP25:%.*]] = getelementptr inbounds nuw i8, ptr [[TMP20]], i64 8
-; CHECK-NEXT:    [[TMP26:%.*]] = load double, ptr [[TMP25]], align 8
-; CHECK-NEXT:    [[TMP27:%.*]] = load double, ptr [[TMP15]], align 8
-; CHECK-NEXT:    [[TMP28:%.*]] = load double, ptr [[TMP20]], align 8
-; CHECK-NEXT:    [[TMP29:%.*]] = zext nneg i32 [[TMP11]] to i64
-; CHECK-NEXT:    br label %[[BB30:.*]]
-; CHECK:       [[BB30]]:
-; CHECK-NEXT:    [[TMP31:%.*]] = phi i64 [ 2, %[[BB10]] ], [ [[TMP81:%.*]], %[[BB30]] ]
-; CHECK-NEXT:    [[TMP32:%.*]] = phi i32 [ 0, %[[BB10]] ], [ [[TMP80:%.*]], %[[BB30]] ]
-; CHECK-NEXT:    [[TMP33:%.*]] = phi i32 [ [[TMP18]], %[[BB10]] ], [ [[TMP54:%.*]], %[[BB30]] ]
-; CHECK-NEXT:    [[TMP34:%.*]] = phi i32 [ [[TMP13]], %[[BB10]] ], [ [[TMP56:%.*]], %[[BB30]] ]
-; CHECK-NEXT:    [[TMP35:%.*]] = phi double [ [[TMP28]], %[[BB10]] ], [ [[TMP59:%.*]], %[[BB30]] ]
-; CHECK-NEXT:    [[TMP36:%.*]] = phi double [ [[TMP27]], %[[BB10]] ], [ [[TMP62:%.*]], %[[BB30]] ]
-; CHECK-NEXT:    [[TMP37:%.*]] = phi double [ [[TMP17]], %[[BB10]] ], [ [[TMP70:%.*]], %[[BB30]] ]
-; CHECK-NEXT:    [[TMP38:%.*]] = phi double [ [[TMP22]], %[[BB10]] ], [ [[TMP68:%.*]], %[[BB30]] ]
-; CHECK-NEXT:    [[TMP39:%.*]] = phi double [ [[TMP24]], %[[BB10]] ], [ [[TMP66:%.*]], %[[BB30]] ]
-; CHECK-NEXT:    [[TMP40:%.*]] = phi double [ [[TMP26]], %[[BB10]] ], [ [[TMP64:%.*]], %[[BB30]] ]
-; CHECK-NEXT:    [[TMP41:%.*]] = fsub double [[TMP3]], [[TMP35]]
-; CHECK-NEXT:    [[TMP42:%.*]] = fsub double [[TMP3]], [[TMP36]]
-; CHECK-NEXT:    [[TMP43:%.*]] = fmul double [[TMP41]], [[TMP41]]
-; CHECK-NEXT:    [[TMP44:%.*]] = fmul double [[TMP42]], [[TMP42]]
-; CHECK-NEXT:    [[TMP45:%.*]] = fsub double [[TMP4]], [[TMP40]]
-; CHECK-NEXT:    [[TMP46:%.*]] = fsub double [[TMP4]], [[TMP39]]
-; CHECK-NEXT:    [[TMP47:%.*]] = tail call double @llvm.fmuladd.f64(double [[TMP45]], double [[TMP45]], double [[TMP43]])
-; CHECK-NEXT:    [[TMP48:%.*]] = tail call double @llvm.fmuladd.f64(double [[TMP46]], double [[TMP46]], double [[TMP44]])
-; CHECK-NEXT:    [[TMP49:%.*]] = fsub double [[TMP5]], [[TMP38]]
-; CHECK-NEXT:    [[TMP50:%.*]] = fsub double [[TMP5]], [[TMP37]]
-; CHECK-NEXT:    [[TMP51:%.*]] = tail call double @llvm.fmuladd.f64(double [[TMP49]], double [[TMP49]], double [[TMP47]])
-; CHECK-NEXT:    [[TMP52:%.*]] = tail call double @llvm.fmuladd.f64(double [[TMP50]], double [[TMP50]], double [[TMP48]])
-; CHECK-NEXT:    [[TMP53:%.*]] = getelementptr inbounds nuw [4 x i8], ptr [[TMP1]], i64 [[TMP31]]
-; CHECK-NEXT:    [[TMP54]] = load i32, ptr [[TMP53]], align 4
-; CHECK-NEXT:    [[TMP55:%.*]] = getelementptr inbounds nuw i8, ptr [[TMP53]], i64 4
-; CHECK-NEXT:    [[TMP56]] = load i32, ptr [[TMP55]], align 4
-; CHECK-NEXT:    [[TMP57:%.*]] = sext i32 [[TMP54]] to i64
-; CHECK-NEXT:    [[TMP58:%.*]] = getelementptr inbounds [32 x i8], ptr [[TMP0]], i64 [[TMP57]]
-; CHECK-NEXT:    [[TMP59]] = load double, ptr [[TMP58]], align 8
-; CHECK-NEXT:    [[TMP60:%.*]] = sext i32 [[TMP56]] to i64
-; CHECK-NEXT:    [[TMP61:%.*]] = getelementptr inbounds [32 x i8], ptr [[TMP0]], i64 [[TMP60]]
-; CHECK-NEXT:    [[TMP62]] = load double, ptr [[TMP61]], align 8
-; CHECK-NEXT:    [[TMP63:%.*]] = getelementptr inbounds nuw i8, ptr [[TMP58]], i64 8
-; CHECK-NEXT:    [[TMP64]] = load double, ptr [[TMP63]], align 8
-; CHECK-NEXT:    [[TMP65:%.*]] = getelementptr inbounds nuw i8, ptr [[TMP61]], i64 8
-; CHECK-NEXT:    [[TMP66]] = load double, ptr [[TMP65]], align 8
-; CHECK-NEXT:    [[TMP67:%.*]] = getelementptr inbounds nuw i8, ptr [[TMP58]], i64 16
-; CHECK-NEXT:    [[TMP68]] = load double, ptr [[TMP67]], align 8
-; CHECK-NEXT:    [[TMP69:%.*]] = getelementptr inbounds nuw i8, ptr [[TMP61]], i64 16
-; CHECK-NEXT:    [[TMP70]] = load double, ptr [[TMP69]], align 8
-; CHECK-NEXT:    [[TMP71:%.*]] = fcmp olt double [[TMP51]], [[TMP6]]
-; CHECK-NEXT:    [[TMP72:%.*]] = fcmp olt double [[TMP52]], [[TMP6]]
-; CHECK-NEXT:    [[TMP73:%.*]] = zext nneg i32 [[TMP32]] to i64
-; CHECK-NEXT:    [[TMP74:%.*]] = getelementptr inbounds nuw [4 x i8], ptr [[TMP7]], i64 [[TMP73]]
-; CHECK-NEXT:    store i32 [[TMP33]], ptr [[TMP74]], align 4
-; CHECK-NEXT:    [[TMP75:%.*]] = zext i1 [[TMP71]] to i32
-; CHECK-NEXT:    [[TMP76:%.*]] = add nuw nsw i32 [[TMP32]], [[TMP75]]
-; CHECK-NEXT:    [[TMP77:%.*]] = zext nneg i32 [[TMP76]] to i64
-; CHECK-NEXT:    [[TMP78:%.*]] = getelementptr inbounds nuw [4 x i8], ptr [[TMP7]], i64 [[TMP77]]
-; CHECK-NEXT:    store i32 [[TMP34]], ptr [[TMP78]], align 4
-; CHECK-NEXT:    [[TMP79:%.*]] = zext i1 [[TMP72]] to i32
-; CHECK-NEXT:    [[TMP80]] = add nuw nsw i32 [[TMP76]], [[TMP79]]
-; CHECK-NEXT:    [[TMP81]] = add nuw nsw i64 [[TMP31]], 2
-; CHECK-NEXT:    [[TMP82:%.*]] = icmp samesign ult i64 [[TMP81]], [[TMP29]]
-; CHECK-NEXT:    br i1 [[TMP82]], label %[[BB30]], label %[[BB83]]
+; CHECK-NEXT:    [[TMP23:%.*]] = load <2 x double>, ptr [[TMP15]], align 8
+; CHECK-NEXT:    [[TMP24:%.*]] = load <2 x double>, ptr [[TMP20]], align 8
+; CHECK-NEXT:    [[TMP25:%.*]] = zext nneg i32 [[TMP11]] to i64
+; CHECK-NEXT:    [[TMP26:%.*]] = insertelement <2 x double> poison, double [[TMP17]], i64 0
+; CHECK-NEXT:    [[TMP27:%.*]] = insertelement <2 x double> [[TMP26]], double [[TMP22]], i64 1
+; CHECK-NEXT:    [[TMP28:%.*]] = shufflevector <2 x double> [[TMP23]], <2 x double> [[TMP24]], <2 x i32> <i32 1, i32 3>
+; CHECK-NEXT:    [[TMP29:%.*]] = shufflevector <2 x double> [[TMP23]], <2 x double> [[TMP24]], <2 x i32> <i32 0, i32 2>
+; CHECK-NEXT:    [[TMP30:%.*]] = insertelement <2 x double> poison, double [[TMP5]], i64 0
+; CHECK-NEXT:    [[TMP31:%.*]] = shufflevector <2 x double> [[TMP30]], <2 x double> poison, <2 x i32> zeroinitializer
+; CHECK-NEXT:    [[TMP32:%.*]] = insertelement <2 x double> poison, double [[TMP4]], i64 0
+; CHECK-NEXT:    [[TMP33:%.*]] = shufflevector <2 x double> [[TMP32]], <2 x double> poison, <2 x i32> zeroinitializer
+; CHECK-NEXT:    [[TMP34:%.*]] = insertelement <2 x double> poison, double [[TMP3]], i64 0
+; CHECK-NEXT:    [[TMP35:%.*]] = shufflevector <2 x double> [[TMP34]], <2 x double> poison, <2 x i32> zeroinitializer
+; CHECK-NEXT:    [[TMP36:%.*]] = insertelement <2 x double> poison, double [[TMP6]], i64 0
+; CHECK-NEXT:    [[TMP37:%.*]] = shufflevector <2 x double> [[TMP36]], <2 x double> poison, <2 x i32> zeroinitializer
+; CHECK-NEXT:    br label %[[BB38:.*]]
+; CHECK:       [[BB38]]:
+; CHECK-NEXT:    [[TMP39:%.*]] = phi i64 [ 2, %[[BB10]] ], [ [[TMP77:%.*]], %[[BB38]] ]
+; CHECK-NEXT:    [[TMP40:%.*]] = phi i32 [ 0, %[[BB10]] ], [ [[TMP76:%.*]], %[[BB38]] ]
+; CHECK-NEXT:    [[TMP41:%.*]] = phi i32 [ [[TMP18]], %[[BB10]] ], [ [[TMP50:%.*]], %[[BB38]] ]
+; CHECK-NEXT:    [[TMP42:%.*]] = phi i32 [ [[TMP13]], %[[BB10]] ], [ [[TMP52:%.*]], %[[BB38]] ]
+; CHECK-NEXT:    [[TMP43:%.*]] = phi <2 x double> [ [[TMP27]], %[[BB10]] ], [ [[TMP80:%.*]], %[[BB38]] ]
+; CHECK-NEXT:    [[TMP44:%.*]] = phi <2 x double> [ [[TMP28]], %[[BB10]] ], [ [[TMP81:%.*]], %[[BB38]] ]
+; CHECK-NEXT:    [[TMP45:%.*]] = phi <2 x double> [ [[TMP29]], %[[BB10]] ], [ [[TMP82:%.*]], %[[BB38]] ]
+; CHECK-NEXT:    [[TMP46:%.*]] = fsub <2 x double> [[TMP35]], [[TMP45]]
+; CHECK-NEXT:    [[TMP47:%.*]] = fsub <2 x double> [[TMP33]], [[TMP44]]
+; CHECK-NEXT:    [[TMP48:%.*]] = fsub <2 x double> [[TMP31]], [[TMP43]]
+; CHECK-NEXT:    [[TMP49:%.*]] = getelementptr inbounds nuw [4 x i8], ptr [[TMP1]], i64 [[TMP39]]
+; CHECK-NEXT:    [[TMP50]] = load i32, ptr [[TMP49]], align 4
+; CHECK-NEXT:    [[TMP51:%.*]] = getelementptr inbounds nuw i8, ptr [[TMP49]], i64 4
+; CHECK-NEXT:    [[TMP52]] = load i32, ptr [[TMP51]], align 4
+; CHECK-NEXT:    [[TMP53:%.*]] = sext i32 [[TMP50]] to i64
+; CHECK-NEXT:    [[TMP54:%.*]] = getelementptr inbounds [32 x i8], ptr [[TMP0]], i64 [[TMP53]]
+; CHECK-NEXT:    [[TMP55:%.*]] = sext i32 [[TMP52]] to i64
+; CHECK-NEXT:    [[TMP56:%.*]] = getelementptr inbounds [32 x i8], ptr [[TMP0]], i64 [[TMP55]]
+; CHECK-NEXT:    [[TMP57:%.*]] = getelementptr inbounds nuw i8, ptr [[TMP54]], i64 16
+; CHECK-NEXT:    [[TMP58:%.*]] = load double, ptr [[TMP57]], align 8
+; CHECK-NEXT:    [[TMP59:%.*]] = getelementptr inbounds nuw i8, ptr [[TMP56]], i64 16
+; CHECK-NEXT:    [[TMP60:%.*]] = load double, ptr [[TMP59]], align 8
+; CHECK-NEXT:    [[TMP61:%.*]] = fmul <2 x double> [[TMP46]], [[TMP46]]
+; CHECK-NEXT:    [[TMP62:%.*]] = call <2 x double> @llvm.fmuladd.v2f64(<2 x double> [[TMP47]], <2 x double> [[TMP47]], <2 x double> [[TMP61]])
+; CHECK-NEXT:    [[TMP63:%.*]] = call <2 x double> @llvm.fmuladd.v2f64(<2 x double> [[TMP48]], <2 x double> [[TMP48]], <2 x double> [[TMP62]])
+; CHECK-NEXT:    [[TMP64:%.*]] = load <2 x double>, ptr [[TMP54]], align 8
+; CHECK-NEXT:    [[TMP65:%.*]] = load <2 x double>, ptr [[TMP56]], align 8
+; CHECK-NEXT:    [[TMP66:%.*]] = fcmp olt <2 x double> [[TMP63]], [[TMP37]]
+; CHECK-NEXT:    [[TMP67:%.*]] = zext nneg i32 [[TMP40]] to i64
+; CHECK-NEXT:    [[TMP68:%.*]] = getelementptr inbounds nuw [4 x i8], ptr [[TMP7]], i64 [[TMP67]]
+; CHECK-NEXT:    store i32 [[TMP41]], ptr [[TMP68]], align 4
+; CHECK-NEXT:    [[TMP69:%.*]] = extractelement <2 x i1> [[TMP66]], i64 1
+; CHECK-NEXT:    [[TMP70:%.*]] = zext i1 [[TMP69]] to i32
+; CHECK-NEXT:    [[TMP71:%.*]] = add nuw nsw i32 [[TMP40]], [[TMP70]]
+; CHECK-NEXT:    [[TMP72:%.*]] = zext nneg i32 [[TMP71]] to i64
+; CHECK-NEXT:    [[TMP73:%.*]] = getelementptr inbounds nuw [4 x i8], ptr [[TMP7]], i64 [[TMP72]]
+; CHECK-NEXT:    store i32 [[TMP42]], ptr [[TMP73]], align 4
+; CHECK-NEXT:    [[TMP74:%.*]] = extractelement <2 x i1> [[TMP66]], i64 0
+; CHECK-NEXT:    [[TMP75:%.*]] = zext i1 [[TMP74]] to i32
+; CHECK-NEXT:    [[TMP76]] = add nuw nsw i32 [[TMP71]], [[TMP75]]
+; CHECK-NEXT:    [[TMP77]] = add nuw nsw i64 [[TMP39]], 2
+; CHECK-NEXT:    [[TMP78:%.*]] = icmp samesign ult i64 [[TMP77]], [[TMP25]]
+; CHECK-NEXT:    [[TMP79:%.*]] = insertelement <2 x double> poison, double [[TMP60]], i64 0
+; CHECK-NEXT:    [[TMP80]] = insertelement <2 x double> [[TMP79]], double [[TMP58]], i64 1
+; CHECK-NEXT:    [[TMP81]] = shufflevector <2 x double> [[TMP65]], <2 x double> [[TMP64]], <2 x i32> <i32 1, i32 3>
+; CHECK-NEXT:    [[TMP82]] = shufflevector <2 x double> [[TMP65]], <2 x double> [[TMP64]], <2 x i32> <i32 0, i32 2>
+; CHECK-NEXT:    br i1 [[TMP78]], label %[[BB38]], label %[[BB83]]
 ; CHECK:       [[BB83]]:
 ; CHECK-NEXT:    ret void
 ;

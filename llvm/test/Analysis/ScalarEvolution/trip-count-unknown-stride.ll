@@ -14,9 +14,9 @@ define void @foo1(ptr nocapture %A, i32 %n, i32 %s) mustprogress {
 ;
 ; CHECK-LABEL: 'foo1'
 ; CHECK-NEXT:  Determining loop execution counts for: @foo1
-; CHECK-NEXT:  Loop %for.body: backedge-taken count is ((-1 + (%n smax %s)) /u %s)
+; CHECK-NEXT:  Loop %for.body: backedge-taken count is ((-1 + %n) /u %s)
 ; CHECK-NEXT:  Loop %for.body: constant max backedge-taken count is i32 -1
-; CHECK-NEXT:  Loop %for.body: symbolic max backedge-taken count is ((-1 + (%n smax %s)) /u %s)
+; CHECK-NEXT:  Loop %for.body: symbolic max backedge-taken count is ((-1 + %n) /u %s)
 ; CHECK-NEXT:  Loop %for.body: Trip multiple is 1
 ;
 entry:

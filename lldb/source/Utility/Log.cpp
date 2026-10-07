@@ -438,7 +438,11 @@ void Log::EmitJSONMessage(llvm::StringRef file, llvm::StringRef function,
                           llvm::StringRef message) {
   llvm::json::Object obj;
   WriteJSONHeader(obj, file, function);
-  obj["message"] = message;
+  // Log messages can carry arbitrary bytes; JSON strings must be valid UTF-8.
+  if (llvm::json::isUTF8(message))
+    obj["message"] = message;
+  else
+    obj["message"] = llvm::json::fixUTF8(message);
   std::string out;
   llvm::raw_string_ostream os(out);
   os << llvm::json::Value(std::move(obj)) << "\n";

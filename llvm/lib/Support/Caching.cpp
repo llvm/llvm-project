@@ -21,6 +21,7 @@
 #if !defined(_MSC_VER) && !defined(__MINGW32__)
 #include <unistd.h>
 #else
+#include "llvm/Support/Windows/WindowsSupport.h"
 #include <io.h>
 #endif
 
@@ -29,7 +30,7 @@ using namespace llvm;
 Expected<FileCache> llvm::localCache(const Twine &CacheNameRef,
                                      const Twine &TempFilePrefixRef,
                                      const Twine &CacheDirectoryPathRef,
-                                     AddBufferFn AddBuffer) {
+                                     AddBufferFn AddBuffer, bool CacheRename) {
 
   // Create local copies which are safely captured-by-copy in lambdas
   SmallString<64> CacheName, TempFilePrefix, CacheDirectoryPath;
@@ -144,6 +145,50 @@ Expected<FileCache> llvm::localCache(const Twine &CacheNameRef,
       }
     };
 
+    // This class is responsible for renaming/moving existing file into a
+    // cache directory. The path for an input file is passed through a string
+    // stream.
+    struct MoveFileToCache : CachedFileStream {
+      AddBufferFn AddBuffer;
+      std::string ModuleName;
+      size_t Task;
+      StringRef FilePath;
+
+      MoveFileToCache(AddBufferFn AddBuffer, std::string EntryPath,
+                      std::string ModuleID, size_t Task)
+          : CachedFileStream({}, std::move(EntryPath)),
+            AddBuffer(std::move(AddBuffer)), ModuleName(ModuleID), Task(Task) {}
+      virtual ~MoveFileToCache() = default;
+
+      virtual Error commit(std::unique_ptr<MemoryBuffer> MemBuf) override {
+        Error E = CachedFileStream::commit();
+        if (E)
+          return E;
+
+        FilePath = MemBuf->getBufferIdentifier();
+        assert(!FilePath.empty() && "File path is empty.");
+
+        // Rename/move native object file into cache directory, if they are
+        // located the same device/logical drive, otherwise we use a copy.
+        std::error_code EC = sys::fs::rename(FilePath, ObjectPathName);
+#ifdef _WIN32
+        if (EC ==
+            std::error_code(ERROR_NOT_SAME_DEVICE, std::system_category()))
+#else
+        if (EC == std::make_error_code(std::errc::cross_device_link))
+#endif
+          EC = sys::fs::copy_file(FilePath, ObjectPathName);
+        if (EC)
+          return createStringError(EC, Twine("Failed to rename or copy file ") +
+                                           FilePath + " to " + ObjectPathName +
+                                           ": " + EC.message() + "\n");
+
+        AddBuffer(Task, ModuleName, std::move(MemBuf));
+
+        return Error::success();
+      }
+    };
+
     return [=](size_t Task, const Twine &ModuleName)
                -> Expected<std::unique_ptr<CachedFileStream>> {
       // Create the cache directory if not already done. Doing this lazily
@@ -153,6 +198,12 @@ Expected<FileCache> llvm::localCache(const Twine &CacheNameRef,
         return createStringError(EC, Twine("can't create cache directory ") +
                                          CacheDirectoryPath + ": " +
                                          EC.message());
+      // MoveFileToChache class will rename/move the file into the cache on
+      // destruction.
+      if (CacheRename) {
+        return std::make_unique<MoveFileToCache>(
+            AddBuffer, std::string(EntryPath.str()), ModuleName.str(), Task);
+      }
 
       // Write to a temporary to avoid race condition
       SmallString<64> TempFilenameModel;

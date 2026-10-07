@@ -11,4 +11,4 @@
 #include "src/__support/FPUtil/bfloat16.h"
 #include "src/math/ceilbf16.h"
 
-LIST_CEIL_TESTS(bfloat16, LIBC_NAMESPACE::ceilbf16)
+LIST_CEIL_TESTS(Ceilbf16, bfloat16, LIBC_NAMESPACE::ceilbf16)

@@ -289,7 +289,7 @@ private:
 };
 
 template <class _NodePtr>
-class __hash_const_iterator {
+class _LIBCPP_WARN_UNUSED __hash_const_iterator {
   static_assert(!is_const<typename pointer_traits<_NodePtr>::element_type>::value, "");
   typedef __hash_node_types<_NodePtr> _NodeTypes;
   typedef _NodePtr __node_pointer;
@@ -788,7 +788,7 @@ public:
 
   template <class... _Args>
   _LIBCPP_HIDE_FROM_ABI pair<iterator, bool> __emplace_unique(_Args&&... __args) {
-    return std::__try_key_extraction<key_type>(
+    return std::__try_key_extraction<key_type, value_type>(
         [this](const key_type& __key, _Args&&... __args2) {
           size_t __hash   = hash_function()(__key);
           size_type __bc  = bucket_count();

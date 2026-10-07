@@ -182,11 +182,15 @@ uint64_t Symbol::getGotPltOffset(Ctx &ctx) const {
          ctx.target->gotEntrySize;
 }
 
+uint64_t Symbol::getPltOffset(Ctx &ctx) const {
+  if (isInIplt)
+    return getPltIdx(ctx) * ctx.target->ipltEntrySize;
+  return ctx.in.plt->headerSize + getPltIdx(ctx) * ctx.target->pltEntrySize;
+}
+
 uint64_t Symbol::getPltVA(Ctx &ctx) const {
-  uint64_t outVA = isInIplt ? ctx.in.iplt->getVA() +
-                                  getPltIdx(ctx) * ctx.target->ipltEntrySize
-                            : ctx.in.plt->getVA() + ctx.in.plt->headerSize +
-                                  getPltIdx(ctx) * ctx.target->pltEntrySize;
+  uint64_t outVA = (isInIplt ? ctx.in.iplt->getVA() : ctx.in.plt->getVA()) +
+                   getPltOffset(ctx);
 
   // While linking microMIPS code PLT code are always microMIPS
   // code. Set the less-significant bit to track that fact.
@@ -653,16 +657,8 @@ void Symbol::resolve(Ctx &ctx, const LazySymbol &other) {
 
   if (LLVM_UNLIKELY(!isUndefined())) {
     // See the comment in resolve(Ctx &, const Undefined &).
-    if (isDefined()) {
+    if (isDefined())
       ctx.backwardReferences.erase(this);
-    } else if (isCommon() && ctx.arg.fortranCommon &&
-               other.file->shouldExtractForCommon(getName())) {
-      // For common objects, we want to look for global or weak definitions that
-      // should be extracted as the canonical definition instead.
-      ctx.backwardReferences.erase(this);
-      other.overwrite(*this);
-      other.extract(ctx);
-    }
     return;
   }
 

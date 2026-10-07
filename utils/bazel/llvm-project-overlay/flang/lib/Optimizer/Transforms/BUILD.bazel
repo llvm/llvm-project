@@ -64,6 +64,7 @@ cc_library(
         "//mlir:ComplexDialect",
         "//mlir:ControlFlowDialect",
         "//mlir:DLTIDialect",
+        "//mlir:DataLayoutInterfaces",
         "//mlir:FuncDialect",
         "//mlir:FunctionInterfaces",
         "//mlir:GPUDialect",

@@ -72,9 +72,8 @@ entry:
 define <vscale x 1 x i1> @test5(<vscale x 1 x i64> %0, <vscale x 1 x i64> %1, <vscale x 1 x i1> %2, i64 %avl) nounwind {
 ; CHECK-LABEL: test5:
 ; CHECK:       # %bb.0: # %entry
-; CHECK-NEXT:    vsetvli zero, a0, e64, m1, ta, ma
-; CHECK-NEXT:    vmseq.vv v8, v8, v9
-; CHECK-NEXT:    vmand.mm v0, v8, v0
+; CHECK-NEXT:    vsetvli zero, a0, e64, m1, ta, mu
+; CHECK-NEXT:    vmseq.vv v0, v8, v9, v0.t
 ; CHECK-NEXT:    ret
 entry:
   %vl = tail call i64 @llvm.riscv.vsetvli(i64 %avl, i64 3, i64 0)
@@ -821,20 +820,21 @@ define void @coalesce_vl_clobber(ptr %p) {
 ; CHECK-NEXT:    vmv.v.i v9, 0
 ; CHECK-NEXT:    vmv1r.v v0, v8
 ; CHECK-NEXT:    vmerge.vim v9, v9, 1, v0
+; CHECK-NEXT:    vsetvli a2, zero, e32, m2, ta, ma
+; CHECK-NEXT:    vmv.v.i v10, 0
 ; CHECK-NEXT:    li a2, 0
 ; CHECK-NEXT:  .LBB43_1: # %vector.body
 ; CHECK-NEXT:    # =>This Inner Loop Header: Depth=1
 ; CHECK-NEXT:    vsetivli zero, 0, e8, mf2, ta, mu
 ; CHECK-NEXT:    vmv1r.v v0, v8
-; CHECK-NEXT:    vmv1r.v v10, v9
+; CHECK-NEXT:    vmv1r.v v12, v9
 ; CHECK-NEXT:    slli a2, a2, 32
 ; CHECK-NEXT:    srli a2, a2, 32
-; CHECK-NEXT:    vslideup.vx v10, v9, a2, v0.t
+; CHECK-NEXT:    vslideup.vx v12, v9, a2, v0.t
 ; CHECK-NEXT:    vsetvli zero, zero, e8, mf2, ta, ma
-; CHECK-NEXT:    vmsne.vi v0, v10, 0, v0.t
+; CHECK-NEXT:    vmsne.vi v0, v12, 0, v0.t
 ; CHECK-NEXT:    vsetvli a2, a1, e8, mf8, ta, ma
 ; CHECK-NEXT:    vsetvli zero, a2, e32, m2, ta, ma
-; CHECK-NEXT:    vmv.v.i v10, 0
 ; CHECK-NEXT:    vse32.v v10, (a0), v0.t
 ; CHECK-NEXT:    li a1, 1
 ; CHECK-NEXT:    j .LBB43_1

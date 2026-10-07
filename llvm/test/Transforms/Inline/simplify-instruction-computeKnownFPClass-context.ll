@@ -177,7 +177,7 @@ define i1 @simplify_fcmp_ord_ldexp_caller(double nofpclass(zero inf) %i0) {
 
 define internal i1 @simplify_fcmp_ord_ldexp_callee(double %a) {
   %ldexp = call double @llvm.ldexp.f64.i32(double %a, i32 42)
-  %cmp = fcmp one double %ldexp, 0x7FF0000000000000
+  %cmp = fcmp one double %ldexp, +inf
   ret i1 %cmp
 }
 
@@ -198,7 +198,7 @@ define i1 @simplify_fcmp_ord_frexp_caller(double nofpclass(zero inf) %i0) {
 define internal i1 @simplify_fcmp_ord_frexp_callee(double %a) {
   %frexp = call { double, i32 } @llvm.frexp.f64.i32(double %a)
   %frexp.0 = extractvalue { double, i32 } %frexp, 0
-  %cmp = fcmp one double %frexp.0, 0x7FF0000000000000
+  %cmp = fcmp one double %frexp.0, +inf
   ret i1 %cmp
 }
 

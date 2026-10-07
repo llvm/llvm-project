@@ -1,5 +1,7 @@
 # RUN: llc -mtriple=amdgpu9.0a-amd-amdhsa -verify-machineinstrs -run-pass=si-opt-vgpr-liverange -o - %s | FileCheck %s
 # RUN: llc -mtriple=amdgpu9.0a-amd-amdhsa -passes=si-opt-vgpr-liverange -o - %s | FileCheck %s
+# Run again using LiveIntervals instead of LiveVariables
+# RUN: llc -mtriple=amdgpu9.0a-amd-amdhsa -verify-machineinstrs -run-pass=liveintervals,si-opt-vgpr-liverange -o - %s | FileCheck %s
 #
 # This is a very rare case which comes from llvm-reduce. The SI_IF/SI_ELSE usage is quite different from normal.
 #

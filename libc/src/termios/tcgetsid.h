@@ -9,8 +9,8 @@
 #ifndef LLVM_LIBC_SRC_TERMIOS_TCGETSID_H
 #define LLVM_LIBC_SRC_TERMIOS_TCGETSID_H
 
+#include "hdr/types/pid_t.h"
 #include "src/__support/macros/config.h"
-#include <termios.h>
 
 namespace LIBC_NAMESPACE_DECL {
 

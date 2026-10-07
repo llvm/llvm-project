@@ -54,11 +54,9 @@ add_llvm_target(BPFCodeGen
   CodeGen
   CodeGenTypes
   Core
-  IRPrinter
   GlobalISel
   IPO
   MC
-  ObjCARC
   Passes
   Scalar
   SelectionDAG

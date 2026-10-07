@@ -39,7 +39,7 @@
 ; RUN:   | FileCheck -check-prefix=DEFAULTCLUSTER %s
 
 define i32 @load_clustering_1(ptr nocapture %p) {
-; NOCLUSTER: ********** MI Scheduling **********
+; NOCLUSTER: Current Schedule Region
 ; NOCLUSTER-LABEL: load_clustering_1:%bb.0
 ; NOCLUSTER: *** Final schedule for %bb.0 ***
 ; NOCLUSTER: SU(1): %1:gpr = LW %0:gpr, 12
@@ -47,7 +47,7 @@ define i32 @load_clustering_1(ptr nocapture %p) {
 ; NOCLUSTER: SU(4): %4:gpr = LW %0:gpr, 4
 ; NOCLUSTER: SU(5): %6:gpr = LW %0:gpr, 16
 ;
-; STCLUSTER: ********** MI Scheduling **********
+; STCLUSTER: Current Schedule Region
 ; STCLUSTER-LABEL: load_clustering_1:%bb.0
 ; STCLUSTER: *** Final schedule for %bb.0 ***
 ; STCLUSTER: SU(1): %1:gpr = LW %0:gpr, 12
@@ -55,7 +55,7 @@ define i32 @load_clustering_1(ptr nocapture %p) {
 ; STCLUSTER: SU(4): %4:gpr = LW %0:gpr, 4
 ; STCLUSTER: SU(5): %6:gpr = LW %0:gpr, 16
 ;
-; LDCLUSTER: ********** MI Scheduling **********
+; LDCLUSTER: Current Schedule Region
 ; LDCLUSTER-LABEL: load_clustering_1:%bb.0
 ; LDCLUSTER: *** Final schedule for %bb.0 ***
 ; LDCLUSTER: SU(4): %4:gpr = LW %0:gpr, 4
@@ -63,7 +63,7 @@ define i32 @load_clustering_1(ptr nocapture %p) {
 ; LDCLUSTER: SU(1): %1:gpr = LW %0:gpr, 12
 ; LDCLUSTER: SU(5): %6:gpr = LW %0:gpr, 16
 ;
-; DEFAULTCLUSTER: ********** MI Scheduling **********
+; DEFAULTCLUSTER: Current Schedule Region
 ; DEFAULTCLUSTER-LABEL: load_clustering_1:%bb.0
 ; DEFAULTCLUSTER: *** Final schedule for %bb.0 ***
 ; DEFAULTCLUSTER: SU(4): %4:gpr = LW %0:gpr, 4

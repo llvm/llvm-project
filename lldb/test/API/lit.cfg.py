@@ -254,7 +254,6 @@ if is_configured("lldb_module_cache"):
     dotest_cmd += ["--lldb-module-cache-dir", config.lldb_module_cache]
 
 if is_configured("clang_module_cache"):
-    delete_module_cache(config.clang_module_cache)
     dotest_cmd += ["--clang-module-cache-dir", config.clang_module_cache]
 
 if is_configured("lldb_executable"):
@@ -382,6 +381,7 @@ if is_configured("dotest_lit_args_str"):
     dotest_cmd.extend(shlex.split(config.dotest_lit_args_str))
 
 # Load LLDB test format.
+sys.path.append(os.path.join(config.lldb_src_root, "test"))
 sys.path.append(os.path.join(config.lldb_src_root, "test", "API"))
 import lldbtest
 

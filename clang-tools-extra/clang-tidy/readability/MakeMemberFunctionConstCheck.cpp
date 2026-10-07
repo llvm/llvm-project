@@ -177,10 +177,9 @@ public:
     const auto *Parent = getParentExprIgnoreParens(E);
 
     // Look through deref of this.
-    if (const auto *UnOp = dyn_cast_or_null<UnaryOperator>(Parent)) {
-      if (UnOp->getOpcode() == UO_Deref)
-        Parent = getParentExprIgnoreParens(UnOp);
-    }
+    if (const auto *UnOp = dyn_cast_or_null<UnaryOperator>(Parent);
+        UnOp && UnOp->getOpcode() == UO_Deref)
+      Parent = getParentExprIgnoreParens(UnOp);
 
     // It's okay to
     //  return (const S*)this;
@@ -195,9 +194,9 @@ public:
       //   (const T)(S->t)
       //   (LValueToRValue)(S->t)
       // when 't' is either of builtin type or a public member.
-    } else if (const auto *Member = dyn_cast_or_null<MemberExpr>(Parent)) {
-      if (visitUser(Member, /*OnConstObject=*/false))
-        return true;
+    } else if (const auto *Member = dyn_cast_or_null<MemberExpr>(Parent);
+               Member && visitUser(Member, /*OnConstObject=*/false)) {
+      return true;
     }
 
     // Unknown user of this.
@@ -244,7 +243,7 @@ static SourceLocation getConstInsertionPoint(const CXXMethodDecl *M) {
   if (!TSI)
     return {};
 
-  auto FTL = TSI->getTypeLoc().IgnoreParens().getAs<FunctionTypeLoc>();
+  const auto FTL = TSI->getTypeLoc().IgnoreParens().getAs<FunctionTypeLoc>();
   if (!FTL)
     return {};
 
@@ -257,10 +256,11 @@ void MakeMemberFunctionConstCheck::check(
 
   const auto *Declaration = Definition->getCanonicalDecl();
 
-  auto Diag = diag(Definition->getLocation(), "method %0 can be made const")
-              << Definition
-              << FixItHint::CreateInsertion(getConstInsertionPoint(Definition),
-                                            " const");
+  const auto Diag =
+      diag(Definition->getLocation(), "method %0 can be made const")
+      << Definition
+      << FixItHint::CreateInsertion(getConstInsertionPoint(Definition),
+                                    " const");
   if (Declaration != Definition) {
     Diag << FixItHint::CreateInsertion(getConstInsertionPoint(Declaration),
                                        " const");

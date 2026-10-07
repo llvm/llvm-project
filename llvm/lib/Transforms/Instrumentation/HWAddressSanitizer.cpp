@@ -139,14 +139,12 @@ static cl::opt<bool> ClInstrumentStack("hwasan-instrument-stack",
 
 static cl::opt<bool>
     ClUseStackSafety("hwasan-use-stack-safety", cl::Hidden, cl::init(true),
-                     cl::Hidden, cl::desc("Use Stack Safety analysis results"),
-                     cl::Optional);
+                     cl::Hidden, cl::desc("Use Stack Safety analysis results"));
 
 static cl::opt<size_t> ClMaxLifetimes(
     "hwasan-max-lifetimes-for-alloca", cl::Hidden, cl::init(3),
     cl::ReallyHidden,
-    cl::desc("How many lifetime ends to handle for a single alloca."),
-    cl::Optional);
+    cl::desc("How many lifetime ends to handle for a single alloca."));
 
 static cl::opt<bool>
     ClUseAfterScope("hwasan-use-after-scope",
@@ -1680,7 +1678,7 @@ void HWAddressSanitizer::sanitizeFunction(Function &F,
   assert(!ShadowBase);
 
   BasicBlock::iterator InsertPt = F.getEntryBlock().begin();
-  IRBuilder<> EntryIRB(&F.getEntryBlock(), InsertPt);
+  IRBuilder<> EntryIRB(InsertPt);
   emitPrologue(EntryIRB,
                /*WithFrameRecord*/ ClRecordStackHistory != none &&
                    Mapping.withFrameRecord() &&

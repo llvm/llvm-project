@@ -33,7 +33,6 @@
 #include "llvm/IR/Value.h"
 #include "llvm/InitializePasses.h"
 #include "llvm/Pass.h"
-#include "llvm/PassRegistry.h"
 #include "llvm/Support/CommandLine.h"
 #include "llvm/Support/Debug.h"
 #include "llvm/Transforms/Utils.h"
@@ -555,7 +554,7 @@ PHINode* HardwareLoop::InsertPHICounter(Value *NumElts, Value *EltsRem) {
   BasicBlock *Preheader = L->getLoopPreheader();
   BasicBlock *Header = L->getHeader();
   BasicBlock *Latch = ExitBranch->getParent();
-  IRBuilder<> Builder(Header, Header->getFirstNonPHIIt());
+  IRBuilder<> Builder(Header->getFirstNonPHIIt());
   PHINode *Index = Builder.CreatePHI(NumElts->getType(), 2);
   Index->addIncoming(NumElts, Preheader);
   Index->addIncoming(EltsRem, Latch);

@@ -616,8 +616,8 @@ bool GCOVProfiler::AddFlushBeforeForkAndExec() {
     for (auto &I : instructions(F)) {
       if (CallInst *CI = dyn_cast<CallInst>(&I)) {
         if (Function *Callee = CI->getCalledFunction()) {
-          LibFunc LF;
-          if (TLI->getLibFunc(*Callee, LF)) {
+          LibFunc LF = TLI->getLibFunc(*Callee);
+          if (LF != NotLibFunc) {
             if (LF == LibFunc_fork) {
 #if !defined(_WIN32)
               Forks.push_back(CI);
@@ -905,7 +905,7 @@ bool GCOVProfiler::emitProfileNotes(
 
         for (size_t I : llvm::seq<size_t>(0, Measured)) {
           const Edge &E = *MST.allEdges()[I];
-          IRBuilder<> Builder(E.Place, E.Place->getFirstInsertionPt());
+          IRBuilder<> Builder(E.Place->getFirstInsertionPt());
           Value *V = Builder.CreateConstInBoundsGEP2_64(
               Counters->getValueType(), Counters, 0, I);
           // Disable sanitizers to decrease size bloat. We don't expect

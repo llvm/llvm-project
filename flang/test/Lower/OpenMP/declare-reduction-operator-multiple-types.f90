@@ -54,8 +54,8 @@ end program
 ! One distinct op per listed type, each with its own element type. The op name
 ! carries the owning scope (mangled "_QQ...") plus a per-type suffix, so the two
 ! types get two ops rather than colliding.
-! CHECK-DAG: omp.declare_reduction @[[REDT1:_QQ[A-Za-z0-9_.]*op\.op\.[A-Za-z0-9_.]*t1]] : !fir.ref<!fir.type<{{[^>]*}}t1{v:i32}>>
-! CHECK-DAG: omp.declare_reduction @[[REDT2:_QQ[A-Za-z0-9_.]*op\.op\.[A-Za-z0-9_.]*t2]] : !fir.ref<!fir.type<{{[^>]*}}t2{v:f32}>>
+! CHECK-DAG: omp.declare_reduction @[[REDT1:_QQ[A-Za-z0-9_.]*op\.op\.[A-Za-z0-9_.]*t1]] byref_element_type({{.*}}) : !fir.ref<!fir.type<{{[^>]*}}t1{v:i32}>>
+! CHECK-DAG: omp.declare_reduction @[[REDT2:_QQ[A-Za-z0-9_.]*op\.op\.[A-Za-z0-9_.]*t2]] byref_element_type({{.*}}) : !fir.ref<!fir.type<{{[^>]*}}t2{v:f32}>>
 
 ! The bare operator spelling must never be a declare_reduction name (it would
 ! collide across scopes/types).

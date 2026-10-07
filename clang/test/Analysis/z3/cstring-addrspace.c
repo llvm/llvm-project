@@ -1,4 +1,4 @@
-// RUN: %clang_analyze_cc1 -triple amdgcn-unknown-unknown \
+// RUN: %clang_analyze_cc1 -triple amdgpu-unknown-unknown \
 // RUN: -analyzer-checker=core,alpha.unix.cstring,debug.ExprInspection \
 // RUN: -analyzer-config crosscheck-with-z3=true -verify %s \
 // RUN: -Wno-incompatible-library-redeclaration

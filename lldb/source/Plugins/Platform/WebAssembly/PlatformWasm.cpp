@@ -10,6 +10,7 @@
 #include "Plugins/Platform/WebAssembly/PlatformWasmRemoteGDBServer.h"
 #include "Plugins/Platform/WebAssembly/PlatformWebInspectorWasm.h"
 #include "Plugins/Process/wasm/ProcessWasm.h"
+#include "lldb/Core/Module.h"
 #include "lldb/Core/PluginManager.h"
 #include "lldb/Host/FileSystem.h"
 #include "lldb/Host/ProcessLaunchInfo.h"
@@ -145,6 +146,36 @@ lldb::ProcessSP PlatformWasm::Attach(ProcessAttachInfo &attach_info,
   return nullptr;
 }
 
+Args PlatformWasm::MakeRuntimeCommand(llvm::StringRef runtime_path,
+                                      const Args &runtime_args,
+                                      llvm::StringRef port_arg, uint16_t port,
+                                      llvm::StringRef env_arg,
+                                      const Environment &env,
+                                      llvm::StringRef module_path,
+                                      const Args &inferior_args) {
+  Args args({runtime_path});
+  args.AppendArguments(runtime_args);
+  args.AppendArgument(llvm::formatv("{0}{1}", port_arg, port).str());
+
+  if (!env_arg.empty())
+    for (const auto &kv : env)
+      args.AppendArgument(
+          llvm::formatv("{0}{1}", env_arg, Environment::compose(kv)).str());
+
+  // The runtime resolves the module as a host path, while arg0 is the name the
+  // platform reports for the executable and need not resolve here.
+  Args module_args = inferior_args;
+  if (!module_path.empty()) {
+    if (module_args.GetArgumentCount() > 0)
+      module_args.ReplaceArgumentAtIndex(0, module_path);
+    else
+      module_args.AppendArgument(module_path);
+  }
+  args.AppendArguments(module_args);
+
+  return args;
+}
+
 lldb::ProcessSP PlatformWasm::DebugProcess(ProcessLaunchInfo &launch_info,
                                            Debugger &debugger, Target &target,
                                            Status &error) {
@@ -172,18 +203,14 @@ lldb::ProcessSP PlatformWasm::DebugProcess(ProcessLaunchInfo &launch_info,
   }
   uint16_t port = *expected_port;
 
-  Args args({runtime.GetPath(),
-             llvm::formatv("{0}{1}", properties.GetPortArg(), port).str()});
-  args.AppendArguments(properties.GetRuntimeArgs());
+  std::string module_path;
+  if (ModuleSP exe_module_sp = target.GetExecutableModule())
+    module_path = exe_module_sp->GetFileSpec().GetPath();
 
-  // Forward the inferior's environment into the WASI runtime. How arguments are
-  // passed is configurable. When not configured, no environment is passed.
-  if (llvm::StringRef env_arg = properties.GetEnvArg(); !env_arg.empty())
-    for (const auto &kv : launch_info.GetEnvironment())
-      args.AppendArgument(
-          llvm::formatv("{0}{1}", env_arg, Environment::compose(kv)).str());
-
-  args.AppendArguments(launch_info.GetArguments());
+  Args args = MakeRuntimeCommand(
+      runtime.GetPath(), properties.GetRuntimeArgs(), properties.GetPortArg(),
+      port, properties.GetEnvArg(), launch_info.GetEnvironment(), module_path,
+      launch_info.GetArguments());
 
   launch_info.SetArguments(args, true);
   launch_info.SetLaunchInSeparateProcessGroup(true);

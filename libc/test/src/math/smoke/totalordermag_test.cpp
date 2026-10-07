@@ -10,4 +10,4 @@
 
 #include "src/math/totalordermag.h"
 
-LIST_TOTALORDERMAG_TESTS(double, LIBC_NAMESPACE::totalordermag)
+LIST_TOTALORDERMAG_TESTS(Totalordermag, double, LIBC_NAMESPACE::totalordermag)

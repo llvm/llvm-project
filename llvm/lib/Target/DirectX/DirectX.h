@@ -30,6 +30,12 @@ void initializeDXILPrepareModulePass(PassRegistry &);
 /// Pass to convert modules into DXIL-compatable modules
 ModulePass *createDXILPrepareModulePass();
 
+/// Initializer for DXIL debug info lowering.
+void initializeDXILDebugInfoLegacyPass(PassRegistry &);
+
+/// Pass to downgrade debug information to forms supported by DXIL.
+ModulePass *createDXILDebugInfoLegacyPass();
+
 /// Initializer for DXIL Intrinsic Expansion
 void initializeDXILIntrinsicExpansionLegacyPass(PassRegistry &);
 

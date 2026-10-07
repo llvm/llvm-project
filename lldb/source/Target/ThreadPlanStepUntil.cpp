@@ -33,45 +33,42 @@ ThreadPlanStepUntil::ThreadPlanStepUntil(Thread &thread,
       m_return_addr(LLDB_INVALID_ADDRESS), m_stepped_out(false),
       m_should_stop(false), m_ran_analyze(false), m_explains_stop(false),
       m_until_points(), m_stop_others(stop_others) {
-  // Stash away our "until" addresses:
-  TargetSP target_sp(thread.CalculateTarget());
-
   StackFrameSP frame_sp(thread.GetStackFrameAtIndex(frame_idx));
-  if (frame_sp) {
-    m_step_from_insn = frame_sp->GetStackID().GetPC();
+  if (!frame_sp)
+    return;
 
-    // Find the return address and set a breakpoint there:
-    // FIXME - can we do this more securely if we know first_insn?
+  m_step_from_insn = frame_sp->GetStackID().GetPC();
+  Target &target = GetTarget();
 
-    StackFrameSP return_frame_sp(thread.GetStackFrameAtIndex(frame_idx + 1));
-    if (return_frame_sp) {
-      // TODO: add inline functionality
-      m_return_addr = return_frame_sp->GetStackID().GetPC();
-      Breakpoint *return_bp =
-          target_sp->CreateBreakpoint(m_return_addr, true, false).get();
+  // Find the return address and set a breakpoint there:
+  // FIXME - can we do this more securely if we know first_insn?
 
-      if (return_bp != nullptr) {
-        if (return_bp->IsHardware() && !return_bp->HasResolvedLocations())
-          m_could_not_resolve_hw_bp = true;
-        return_bp->SetThreadID(m_tid);
-        m_return_bp_id = return_bp->GetID();
-        return_bp->SetBreakpointKind("until-return-backstop");
-      }
+  StackFrameSP return_frame_sp(thread.GetStackFrameAtIndex(frame_idx + 1));
+  if (return_frame_sp) {
+    // TODO: add inline functionality
+    m_return_addr = return_frame_sp->GetStackID().GetPC();
+    Breakpoint *return_bp =
+        target.CreateBreakpoint(m_return_addr, true, false).get();
+
+    if (return_bp != nullptr) {
+      if (return_bp->IsHardware() && !return_bp->HasResolvedLocations())
+        m_could_not_resolve_hw_bp = true;
+      return_bp->SetThreadID(m_tid);
+      m_return_bp_id = return_bp->GetID();
+      return_bp->SetBreakpointKind("until-return-backstop");
     }
+  }
 
-    m_stack_id = frame_sp->GetStackID();
+  m_stack_id = frame_sp->GetStackID();
 
-    // Now set breakpoints on all our return addresses:
-    for (addr_t address : address_list) {
-      Breakpoint *until_bp =
-          target_sp->CreateBreakpoint(address, true, false).get();
-      if (until_bp != nullptr) {
-        until_bp->SetThreadID(m_tid);
-        m_until_points[address] = until_bp->GetID();
-        until_bp->SetBreakpointKind("until-target");
-      } else {
-        m_until_points[address] = LLDB_INVALID_BREAK_ID;
-      }
+  for (addr_t address : address_list) {
+    Breakpoint *until_bp = target.CreateBreakpoint(address, true, false).get();
+    if (until_bp != nullptr) {
+      until_bp->SetThreadID(m_tid);
+      m_until_points[address] = until_bp->GetID();
+      until_bp->SetBreakpointKind("until-target");
+    } else {
+      m_until_points[address] = LLDB_INVALID_BREAK_ID;
     }
   }
 }
@@ -85,10 +82,8 @@ void ThreadPlanStepUntil::Clear() {
     m_return_bp_id = LLDB_INVALID_BREAK_ID;
   }
 
-  until_collection::iterator pos, end = m_until_points.end();
-  for (pos = m_until_points.begin(); pos != end; pos++) {
-    target.RemoveBreakpointByID((*pos).second);
-  }
+  for (const auto &[address, break_id] : m_until_points)
+    target.RemoveBreakpointByID(break_id);
   m_until_points.clear();
   m_could_not_resolve_hw_bp = false;
 }
@@ -96,28 +91,25 @@ void ThreadPlanStepUntil::Clear() {
 void ThreadPlanStepUntil::GetDescription(Stream *s,
                                          lldb::DescriptionLevel level) {
   if (level == lldb::eDescriptionLevelBrief) {
-    s->Printf("step until");
+    s->PutCString("step until");
     if (m_stepped_out)
-      s->Printf(" - stepped out");
-  } else {
-    if (m_until_points.size() == 1)
-      s->Printf("Stepping from address 0x%" PRIx64 " until we reach 0x%" PRIx64
-                " using breakpoint %d",
-                (uint64_t)m_step_from_insn,
-                (uint64_t)(*m_until_points.begin()).first,
-                (*m_until_points.begin()).second);
-    else {
-      until_collection::iterator pos, end = m_until_points.end();
-      s->Printf("Stepping from address 0x%" PRIx64 " until we reach one of:",
-                (uint64_t)m_step_from_insn);
-      for (pos = m_until_points.begin(); pos != end; pos++) {
-        s->Printf("\n\t0x%" PRIx64 " (bp: %d)", (uint64_t)(*pos).first,
-                  (*pos).second);
-      }
-    }
-    s->Printf(" stepped out address is 0x%" PRIx64 ".",
-              (uint64_t)m_return_addr);
+      s->PutCString(" - stepped out");
+    return;
   }
+
+  if (m_until_points.size() == 1) {
+    s->Printf("Stepping from address 0x%" PRIx64 " until we reach 0x%" PRIx64
+              " using breakpoint %d",
+              (uint64_t)m_step_from_insn,
+              (uint64_t)(*m_until_points.begin()).first,
+              (*m_until_points.begin()).second);
+  } else {
+    s->Printf("Stepping from address 0x%" PRIx64 " until we reach one of:",
+              (uint64_t)m_step_from_insn);
+    for (const auto &[address, break_id] : m_until_points)
+      s->Printf("\n\t0x%" PRIx64 " (bp: %d)", (uint64_t)address, break_id);
+  }
+  s->Printf(" stepped out address is 0x%" PRIx64 ".", (uint64_t)m_return_addr);
 }
 
 bool ThreadPlanStepUntil::ValidatePlan(Stream *error) {
@@ -126,18 +118,16 @@ bool ThreadPlanStepUntil::ValidatePlan(Stream *error) {
       error->PutCString(
           "Could not create hardware breakpoint for thread plan.");
     return false;
-  } else if (m_return_bp_id == LLDB_INVALID_BREAK_ID) {
+  }
+  if (m_return_bp_id == LLDB_INVALID_BREAK_ID) {
     if (error)
       error->PutCString("Could not create return breakpoint.");
     return false;
-  } else {
-    until_collection::iterator pos, end = m_until_points.end();
-    for (pos = m_until_points.begin(); pos != end; pos++) {
-      if (!LLDB_BREAK_ID_IS_VALID((*pos).second))
-        return false;
-    }
-    return true;
   }
+  for (const auto &[address, break_id] : m_until_points)
+    if (!LLDB_BREAK_ID_IS_VALID(break_id))
+      return false;
+  return true;
 }
 
 void ThreadPlanStepUntil::AnalyzeStop() {
@@ -273,6 +263,13 @@ bool ThreadPlanStepUntil::StopOthers() { return m_stop_others; }
 
 StateType ThreadPlanStepUntil::GetPlanRunState() { return eStateRunning; }
 
+void ThreadPlanStepUntil::SetUntilPointsEnabled(bool enabled) {
+  Target &target = GetTarget();
+  for (const auto &[address, break_id] : m_until_points)
+    if (BreakpointSP until_bp_sp = target.GetBreakpointByID(break_id))
+      until_bp_sp->SetEnabled(enabled);
+}
+
 bool ThreadPlanStepUntil::DoWillResume(StateType resume_state,
                                        bool current_plan) {
   if (current_plan) {
@@ -280,13 +277,7 @@ bool ThreadPlanStepUntil::DoWillResume(StateType resume_state,
     Breakpoint *return_bp = target.GetBreakpointByID(m_return_bp_id).get();
     if (return_bp != nullptr)
       return_bp->SetEnabled(true);
-
-    until_collection::iterator pos, end = m_until_points.end();
-    for (pos = m_until_points.begin(); pos != end; pos++) {
-      Breakpoint *until_bp = target.GetBreakpointByID((*pos).second).get();
-      if (until_bp != nullptr)
-        until_bp->SetEnabled(true);
-    }
+    SetUntilPointsEnabled(true);
   }
 
   m_should_stop = true;
@@ -300,29 +291,16 @@ bool ThreadPlanStepUntil::WillStop() {
   Breakpoint *return_bp = target.GetBreakpointByID(m_return_bp_id).get();
   if (return_bp != nullptr)
     return_bp->SetEnabled(false);
-
-  until_collection::iterator pos, end = m_until_points.end();
-  for (pos = m_until_points.begin(); pos != end; pos++) {
-    Breakpoint *until_bp = target.GetBreakpointByID((*pos).second).get();
-    if (until_bp != nullptr)
-      until_bp->SetEnabled(false);
-  }
+  SetUntilPointsEnabled(false);
   return true;
 }
 
 bool ThreadPlanStepUntil::MischiefManaged() {
-  // I'm letting "PlanExplainsStop" do all the work, and just reporting that
-  // here.
-  bool done = false;
-  if (IsPlanComplete()) {
-    Log *log = GetLog(LLDBLog::Step);
-    LLDB_LOGF(log, "Completed step until plan.");
+  if (!IsPlanComplete())
+    return false;
 
-    Clear();
-    done = true;
-  }
-  if (done)
-    ThreadPlan::MischiefManaged();
-
-  return done;
+  LLDB_LOGF(GetLog(LLDBLog::Step), "Completed step until plan.");
+  Clear();
+  ThreadPlan::MischiefManaged();
+  return true;
 }

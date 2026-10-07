@@ -759,7 +759,7 @@ void NumericalStabilitySanitizer::createShadowArguments(
       }))
     return;
 
-  IRBuilder<> Builder(&F.getEntryBlock(), F.getEntryBlock().getFirstNonPHIIt());
+  IRBuilder<> Builder(F.getEntryBlock().getFirstNonPHIIt());
   // The function has shadow args if the shadow args tag matches the function
   // address.
   Value *HasShadowArgs = Builder.CreateICmpEQ(
@@ -811,9 +811,9 @@ static bool shouldCheckArgs(CallBase &CI, const TargetLibraryInfo &TLI,
     return false;
 
   const auto ID = Fn->getIntrinsicID();
-  LibFunc LFunc = LibFunc::NotLibFunc;
+  LibFunc LFunc = TLI.getLibFunc(*Fn);
   // Always check args of unknown functions.
-  if (ID == Intrinsic::ID() && !TLI.getLibFunc(*Fn, LFunc))
+  if (ID == Intrinsic::ID() && LFunc == NotLibFunc)
     return true;
 
   // Do not check args of an `fabs` call that is used for a comparison.
@@ -856,8 +856,7 @@ void NumericalStabilitySanitizer::populateShadowStack(
 
   // Do not create shadow stacks for intrinsics/known lib funcs.
   if (Function *Fn = CI.getCalledFunction()) {
-    LibFunc LFunc;
-    if (Fn->isIntrinsic() || TLI.getLibFunc(*Fn, LFunc))
+    if (Fn->isIntrinsic() || TLI.getLibFunc(*Fn) != NotLibFunc)
       return;
   }
 
@@ -1532,8 +1531,8 @@ const KnownIntrinsic::WidenedIntrinsic *KnownIntrinsic::widen(StringRef Name) {
 // Returns the name of the LLVM intrinsic corresponding to the given function.
 static const char *getIntrinsicFromLibfunc(Function &Fn, Type *VT,
                                            const TargetLibraryInfo &TLI) {
-  LibFunc LFunc;
-  if (!TLI.getLibFunc(Fn, LFunc))
+  LibFunc LFunc = TLI.getLibFunc(Fn);
+  if (LFunc == NotLibFunc)
     return nullptr;
 
   if (const char *Name = KnownIntrinsic::get(LFunc))
@@ -1663,7 +1662,7 @@ Value *NumericalStabilitySanitizer::createShadowValueWithOperandsAvailable(
   if (auto *Call = dyn_cast<CallInst>(&Inst)) {
     // Insert after the call.
     BasicBlock::iterator It(Inst);
-    IRBuilder<> Builder(Call->getParent(), ++It);
+    IRBuilder<> Builder(++It);
     Builder.SetCurrentDebugLocation(Call->getDebugLoc());
     return handleCallBase(*Call, VT, ExtendedVT, TLI, Map, Builder);
   }

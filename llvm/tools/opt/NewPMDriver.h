@@ -25,8 +25,8 @@
 namespace llvm {
 class PassBuilder;
 class StringRef;
+struct PassPluginLibraryInfo;
 class Module;
-class PassPlugin;
 class TargetMachine;
 class ToolOutputFile;
 class TargetLibraryInfoImpl;
@@ -69,7 +69,7 @@ bool runPassPipeline(
     StringRef Arg0, Module &M, TargetMachine *TM, TargetLibraryInfoImpl *TLII,
     ToolOutputFile *Out, ToolOutputFile *ThinLinkOut,
     ToolOutputFile *OptRemarkFile, StringRef PassPipeline,
-    ArrayRef<PassPlugin> PassPlugins,
+    ArrayRef<PassPluginLibraryInfo> Extensions,
     ArrayRef<std::function<void(PassBuilder &)>> PassBuilderCallbacks,
     opt_tool::OutputKind OK, opt_tool::VerifierKind VK,
     bool ShouldPreserveAssemblyUseListOrder,

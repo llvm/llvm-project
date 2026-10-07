@@ -46,14 +46,14 @@ define ptx_kernel void @store_i32x2(i32 %0, ptr %p) {
 ; CHECK-SM100-NEXT:    .reg .b64 %rd<4>;
 ; CHECK-SM100-EMPTY:
 ; CHECK-SM100-NEXT:  // %bb.0:
-; CHECK-SM100-NEXT:    ld.param.b64 %rd1, [store_i32x2_param_1];
-; CHECK-SM100-NEXT:    ld.param.b32 %r1, [store_i32x2_param_0];
+; CHECK-SM100-NEXT:    ld.param::entry.b64 %rd1, [store_i32x2_param_1];
+; CHECK-SM100-NEXT:    ld.param::entry.b32 %r1, [store_i32x2_param_0];
 ; CHECK-SM100-NEXT:    { // callseq 0, 0
 ; CHECK-SM100-NEXT:    .param .b32 param0;
 ; CHECK-SM100-NEXT:    .param .align 8 .b8 retval0[8];
-; CHECK-SM100-NEXT:    st.param.b32 [param0], %r1;
+; CHECK-SM100-NEXT:    st.param::func.b32 [param0], %r1;
 ; CHECK-SM100-NEXT:    call.uni (retval0), return_i32x2, (param0);
-; CHECK-SM100-NEXT:    ld.param.b64 %rd2, [retval0];
+; CHECK-SM100-NEXT:    ld.param::func.b64 %rd2, [retval0];
 ; CHECK-SM100-NEXT:    } // callseq 0
 ; CHECK-SM100-NEXT:    add.rn.f32x2 %rd3, %rd2, %rd2;
 ; CHECK-SM100-NEXT:    st.b64 [%rd1], %rd3;
@@ -93,7 +93,7 @@ define ptx_kernel void @inlineasm(ptr %p) {
 ; CHECK-SM100-NEXT:    .reg .b64 %rd<5>;
 ; CHECK-SM100-EMPTY:
 ; CHECK-SM100-NEXT:  // %bb.0:
-; CHECK-SM100-NEXT:    ld.param.b64 %rd1, [inlineasm_param_0];
+; CHECK-SM100-NEXT:    ld.param::entry.b64 %rd1, [inlineasm_param_0];
 ; CHECK-SM100-NEXT:    mov.b32 %r3, 0;
 ; CHECK-SM100-NEXT:    mov.b32 %r4, %r3;
 ; CHECK-SM100-NEXT:    mov.b32 %r2, %r4;
@@ -138,7 +138,7 @@ define ptx_kernel void @trunc_v2i32(<2 x i32> %0) {
 ; CHECK-SM100-NEXT:    .reg .b64 %rd<3>;
 ; CHECK-SM100-EMPTY:
 ; CHECK-SM100-NEXT:  // %bb.0:
-; CHECK-SM100-NEXT:    ld.param.b64 %rd1, [trunc_v2i32_param_0];
+; CHECK-SM100-NEXT:    ld.param::entry.b64 %rd1, [trunc_v2i32_param_0];
 ; CHECK-SM100-NEXT:    mov.b64 {%r1, %r2}, %rd1;
 ; CHECK-SM100-NEXT:    mov.b32 %r3, 0;
 ; CHECK-SM100-NEXT:    prmt.b32 %r4, %r3, 0, 0x3340U;
@@ -182,7 +182,7 @@ define ptx_kernel void @zextend_to_v2i32(<2 x i8> %0) {
 ; CHECK-SM100-NEXT:    .reg .b64 %rd<8>;
 ; CHECK-SM100-EMPTY:
 ; CHECK-SM100-NEXT:  // %bb.0:
-; CHECK-SM100-NEXT:    ld.param.v2.b8 {%rs1, %rs2}, [zextend_to_v2i32_param_0];
+; CHECK-SM100-NEXT:    ld.param::entry.v2.b8 {%rs1, %rs2}, [zextend_to_v2i32_param_0];
 ; CHECK-SM100-NEXT:    mov.b32 %r1, {%rs1, %rs2};
 ; CHECK-SM100-NEXT:    cvt.u32.u16 %r2, %rs2;
 ; CHECK-SM100-NEXT:    cvt.u32.u16 %r3, %rs1;
@@ -236,7 +236,7 @@ define ptx_kernel void @sextend_to_v2i32(<2 x i8> %0) {
 ; CHECK-SM100-NEXT:    .reg .b64 %rd<7>;
 ; CHECK-SM100-EMPTY:
 ; CHECK-SM100-NEXT:  // %bb.0:
-; CHECK-SM100-NEXT:    ld.param.v2.b8 {%rs1, %rs2}, [sextend_to_v2i32_param_0];
+; CHECK-SM100-NEXT:    ld.param::entry.v2.b8 {%rs1, %rs2}, [sextend_to_v2i32_param_0];
 ; CHECK-SM100-NEXT:    mov.b32 %r1, {%rs1, %rs2};
 ; CHECK-SM100-NEXT:    cvt.u32.u16 %r2, %rs2;
 ; CHECK-SM100-NEXT:    cvt.s32.s8 %r3, %r2;

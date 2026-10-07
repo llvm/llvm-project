@@ -1,0 +1,11 @@
+@AUTO_GEN_COMMENT@
+
+#
+# This is the top-level Lit site configuration. It loads, in order:
+#   1. the harness configuration,
+#   2. the substitutions that are specific to libc++, and
+#   3. the chosen site configuration file, which describes how to build, link and run the tests.
+#
+lit_config.load_config(config, '@CMAKE_CURRENT_BINARY_DIR@/harness-configuration.cfg')
+lit_config.load_config(config, '@CMAKE_CURRENT_BINARY_DIR@/libcxx-substitutions.cfg')
+lit_config.load_config(config, '@LIBCXX_RESOLVED_TEST_CONFIG@')

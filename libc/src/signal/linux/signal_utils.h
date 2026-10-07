@@ -79,10 +79,9 @@ LIBC_INLINE constexpr sigset_t full_set() { return sigset_t{{-1UL}}; }
 LIBC_INLINE constexpr sigset_t empty_set() { return sigset_t{{0}}; }
 
 // Set the bit corresponding to |signal| in |set|. Return true on success
-// and false on failure. The function will fail if |signal| is greater than
-// NSIG or negative.
+// and false on failure. |signal| must be less than NSIG and be positive.
 LIBC_INLINE constexpr bool add_signal(sigset_t &set, int signal) {
-  if (signal > NSIG || signal <= 0)
+  if (signal >= NSIG || signal <= 0)
     return false;
   size_t n = size_t(signal) - 1;
   size_t word = n / BITS_PER_SIGWORD;
@@ -92,10 +91,9 @@ LIBC_INLINE constexpr bool add_signal(sigset_t &set, int signal) {
 }
 
 // Reset the bit corresponding to |signal| in |set|. Return true on success
-// and false on failure. The function will fail if |signal| is greater than
-// NSIG or negative.
+// and false on failure. |signal| must be less than NSIG and be positive.
 LIBC_INLINE constexpr bool delete_signal(sigset_t &set, int signal) {
-  if (signal > NSIG || signal <= 0)
+  if (signal >= NSIG || signal <= 0)
     return false;
   size_t n = size_t(signal) - 1;
   size_t word = n / BITS_PER_SIGWORD;

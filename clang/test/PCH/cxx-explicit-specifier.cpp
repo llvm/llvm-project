@@ -28,7 +28,7 @@ namespace inheriting_constructor {
 U<S, char> a = foo('0');
 }
 
-//CHECK: explicit(((void)char{} , true))
+//CHECK: explicit(((void)char{}, true))
 
 #endif
 

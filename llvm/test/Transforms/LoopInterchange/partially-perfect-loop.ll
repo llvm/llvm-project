@@ -17,39 +17,57 @@ define void @f(ptr noalias %A, ptr noalias %B) {
 ; CHECK-NEXT:  [[FOR_J_HEADER:.*]]:
 ; CHECK-NEXT:    br label %[[FOR_R_HEADER_SPLIT1:.*]]
 ; CHECK:       [[FOR_R_HEADER_SPLIT1]]:
-; CHECK-NEXT:    [[I:%.*]] = phi i64 [ 0, %[[FOR_J_HEADER]] ], [ [[I_NEXT:%.*]], %[[FOR_I_LATCH:.*]] ]
+; CHECK-NEXT:    [[I:%.*]] = phi i64 [ 0, %[[FOR_J_HEADER]] ], [ [[I_NEXT:%.*]], %[[FOR_I_LATCH1:.*]] ]
 ; CHECK-NEXT:    br label %[[FOR_R_HEADER:.*]]
-; CHECK:       [[FOR_R_HEADER]]:
-; CHECK-NEXT:    [[J:%.*]] = phi i64 [ 0, %[[FOR_R_HEADER_SPLIT1]] ], [ [[J_NEXT:%.*]], %[[FOR_J_LATCH:.*]] ]
+; CHECK:       [[FOR_J_HEADER_PREHEADER1:.*]]:
 ; CHECK-NEXT:    br label %[[FOR_J_HEADER_PREHEADER:.*]]
 ; CHECK:       [[FOR_J_HEADER_PREHEADER]]:
-; CHECK-NEXT:    [[R:%.*]] = phi i64 [ 0, %[[FOR_R_HEADER]] ], [ [[TMP0:%.*]], %[[FOR_J_HEADER_PREHEADER]] ]
+; CHECK-NEXT:    [[J:%.*]] = phi i64 [ [[J_NEXT:%.*]], %[[FOR_J_LATCH1:.*]] ], [ 0, %[[FOR_J_HEADER_PREHEADER1]] ]
+; CHECK-NEXT:    br label %[[FOR_R_HEADER_SPLIT2:.*]]
+; CHECK:       [[FOR_R_HEADER]]:
+; CHECK-NEXT:    br label %[[FOR_R_HEADER1:.*]]
+; CHECK:       [[FOR_R_HEADER1]]:
+; CHECK-NEXT:    [[R:%.*]] = phi i64 [ [[TMP4:%.*]], %[[FOR_J_LATCH:.*]] ], [ 0, %[[FOR_R_HEADER]] ]
+; CHECK-NEXT:    br label %[[FOR_J_HEADER_PREHEADER1]]
+; CHECK:       [[FOR_R_HEADER_SPLIT2]]:
 ; CHECK-NEXT:    [[A_ELEMENT:%.*]] = getelementptr [64 x i8], ptr [[A]], i64 [[J]], i64 [[R]]
 ; CHECK-NEXT:    store i8 0, ptr [[A_ELEMENT]], align 1
-; CHECK-NEXT:    [[TMP0]] = add i64 [[R]], 1
+; CHECK-NEXT:    [[TMP0:%.*]] = add i64 [[R]], 1
 ; CHECK-NEXT:    [[TMP1:%.*]] = icmp eq i64 [[TMP0]], 64
-; CHECK-NEXT:    br i1 [[TMP1]], label %[[FOR_J_LATCH]], label %[[FOR_J_HEADER_PREHEADER]]
+; CHECK-NEXT:    br label %[[FOR_J_LATCH1]]
 ; CHECK:       [[FOR_J_LATCH]]:
+; CHECK-NEXT:    [[TMP4]] = add i64 [[R]], 1
+; CHECK-NEXT:    [[TMP5:%.*]] = icmp eq i64 [[TMP4]], 64
+; CHECK-NEXT:    br i1 [[TMP5]], label %[[FOR_L_HEADER_PREHEADER1:.*]], label %[[FOR_R_HEADER1]]
+; CHECK:       [[FOR_J_LATCH1]]:
 ; CHECK-NEXT:    [[J_NEXT]] = add i64 [[J]], 1
 ; CHECK-NEXT:    [[J_DONE:%.*]] = icmp eq i64 [[J_NEXT]], 64
-; CHECK-NEXT:    br i1 [[J_DONE]], label %[[FOR_L_HEADER_PREHEADER:.*]], label %[[FOR_R_HEADER]]
-; CHECK:       [[FOR_L_HEADER_PREHEADER]]:
+; CHECK-NEXT:    br i1 [[J_DONE]], label %[[FOR_J_LATCH]], label %[[FOR_J_HEADER_PREHEADER]]
+; CHECK:       [[FOR_L_HEADER_PREHEADER:.*]]:
 ; CHECK-NEXT:    br label %[[FOR_L_HEADER:.*]]
 ; CHECK:       [[FOR_L_HEADER]]:
 ; CHECK-NEXT:    [[K:%.*]] = phi i64 [ [[K_NEXT:%.*]], %[[FOR_K_LATCH:.*]] ], [ 0, %[[FOR_L_HEADER_PREHEADER]] ]
 ; CHECK-NEXT:    br label %[[FOR_K_HEADER_PREHEADER:.*]]
+; CHECK:       [[FOR_L_HEADER_PREHEADER1]]:
+; CHECK-NEXT:    br label %[[FOR_L_HEADER1:.*]]
+; CHECK:       [[FOR_L_HEADER1]]:
+; CHECK-NEXT:    [[L:%.*]] = phi i64 [ [[TMP6:%.*]], %[[FOR_I_LATCH:.*]] ], [ 0, %[[FOR_L_HEADER_PREHEADER1]] ]
+; CHECK-NEXT:    br label %[[FOR_L_HEADER_PREHEADER]]
 ; CHECK:       [[FOR_K_HEADER_PREHEADER]]:
-; CHECK-NEXT:    [[L:%.*]] = phi i64 [ 0, %[[FOR_L_HEADER]] ], [ [[TMP2:%.*]], %[[FOR_K_HEADER_PREHEADER]] ]
 ; CHECK-NEXT:    [[B_ELEMENT:%.*]] = getelementptr [64 x i8], ptr [[B]], i64 [[L]], i64 [[K]]
 ; CHECK-NEXT:    store i8 0, ptr [[B_ELEMENT]], align 1
-; CHECK-NEXT:    [[TMP2]] = add i64 [[L]], 1
+; CHECK-NEXT:    [[TMP2:%.*]] = add i64 [[L]], 1
 ; CHECK-NEXT:    [[TMP3:%.*]] = icmp eq i64 [[TMP2]], 64
-; CHECK-NEXT:    br i1 [[TMP3]], label %[[FOR_K_LATCH]], label %[[FOR_K_HEADER_PREHEADER]]
+; CHECK-NEXT:    br label %[[FOR_K_LATCH]]
+; CHECK:       [[FOR_I_LATCH]]:
+; CHECK-NEXT:    [[TMP6]] = add i64 [[L]], 1
+; CHECK-NEXT:    [[TMP7:%.*]] = icmp eq i64 [[TMP6]], 64
+; CHECK-NEXT:    br i1 [[TMP7]], label %[[FOR_I_LATCH1]], label %[[FOR_L_HEADER1]]
 ; CHECK:       [[FOR_K_LATCH]]:
 ; CHECK-NEXT:    [[K_NEXT]] = add i64 [[K]], 1
 ; CHECK-NEXT:    [[K_DONE:%.*]] = icmp eq i64 [[K_NEXT]], 64
 ; CHECK-NEXT:    br i1 [[K_DONE]], label %[[FOR_I_LATCH]], label %[[FOR_L_HEADER]]
-; CHECK:       [[FOR_I_LATCH]]:
+; CHECK:       [[FOR_I_LATCH1]]:
 ; CHECK-NEXT:    [[I_NEXT]] = add i64 [[I]], 1
 ; CHECK-NEXT:    [[I_DONE:%.*]] = icmp eq i64 [[I_NEXT]], 64
 ; CHECK-NEXT:    br i1 [[I_DONE]], label %[[EXIT:.*]], label %[[FOR_R_HEADER_SPLIT1]]

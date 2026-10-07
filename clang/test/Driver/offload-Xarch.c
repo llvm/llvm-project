@@ -20,8 +20,8 @@
 // RUN: | FileCheck -check-prefix=OPENMP %s
 
 // OPENMP: # "x86_64-unknown-linux-gnu" - "clang", inputs: ["[[INPUT:.+]]"], output: "[[HOST_BC:.+]]"
-// OPENMP: # "amdgcn-amd-amdhsa" - "clang", inputs: ["[[INPUT]]", "[[HOST_BC]]"], output: "[[GFX1030_BC:.+]]"
-// OPENMP: # "amdgcn-amd-amdhsa" - "clang", inputs: ["[[INPUT]]", "[[HOST_BC]]"], output: "[[GFX90A_BC:.+]]"
+// OPENMP: # "amdgpu10.30-amd-amdhsa" - "clang", inputs: ["[[INPUT]]", "[[HOST_BC]]"], output: "[[GFX1030_BC:.+]]"
+// OPENMP: # "amdgpu9.0a-amd-amdhsa" - "clang", inputs: ["[[INPUT]]", "[[HOST_BC]]"], output: "[[GFX90A_BC:.+]]"
 // OPENMP: # "nvptx64-nvidia-cuda" - "clang", inputs: ["[[INPUT]]", "[[HOST_BC]]"], output: "[[SM52_PTX:.+]]"
 // OPENMP: # "nvptx64-nvidia-cuda" - "NVPTX::Assembler", inputs: ["[[SM52_PTX]]"], output: "[[SM52_CUBIN:.+]]"
 // OPENMP: # "nvptx64-nvidia-cuda" - "clang", inputs: ["[[INPUT]]", "[[HOST_BC]]"], output: "[[SM60_PTX:.+]]"
@@ -40,8 +40,16 @@
 // Make sure that `-Xarch_amdgcn` forwards libraries to the device linker.
 // RUN: %clang -fopenmp=libomp --offload-arch=gfx90a -nogpulib -nogpuinc \
 // RUN:   --target=x86_64-unknown-linux-gnu -Xarch_amdgcn -Wl,-lfoo -### %s 2>&1 \
-// RUN: | FileCheck -check-prefix=LIBS %s
+// RUN: | FileCheck -check-prefix=LIBS0 %s
+//
+// RUN: %clang -fopenmp=libomp --offload-arch=gfx90a -nogpulib -nogpuinc \
+// RUN:   -Xoffload-linker-amdgpu9.0a-amd-amdhsa -lfoo -### %s 2>&1 \
+// RUN: | FileCheck -check-prefix=LIBS0_SUBARCH %s
+
+// LIBS0: "--device-linker=amdgpu-amd-amdhsa=-lfoo"
+// LIBS0_SUBARCH: "--device-linker=amdgpu9.0a-amd-amdhsa=-lfoo"
+
 // RUN: %clang -fopenmp=libomp --offload-arch=gfx90a -nogpulib -nogpuinc \
 // RUN:   -Xoffload-linker-amdgcn-amd-amdhsa -lfoo -### %s 2>&1 \
-// RUN: | FileCheck -check-prefix=LIBS %s
-// LIBS: "--device-linker=amdgcn-amd-amdhsa=-lfoo"
+// RUN: | FileCheck -check-prefix=LIBS1 %s
+// LIBS1: "--device-linker=amdgpu-amd-amdhsa=-lfoo"

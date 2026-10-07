@@ -1925,6 +1925,7 @@ static bool isVariableIndexable(const DWARFDie &Die, DWARFContext &DCtx) {
     DWARFExpression Expression(Data, U->getAddressByteSize(),
                                U->getFormParams().Format);
     bool IsInteresting =
+        Expression.isMemoryLocation() &&
         any_of(Expression, [](const DWARFExpression::Operation &Op) {
           return !Op.isError() && (Op.getCode() == DW_OP_addr ||
                                    Op.getCode() == DW_OP_form_tls_address ||
@@ -1986,8 +1987,11 @@ void DWARFVerifier::verifyNameIndexCompleteness(
   case DW_TAG_GNU_template_template_param:
     return;
 
-  // Object members aren't globally visible.
+  // Object members aren't globally visible. Properties are accessed through
+  // their containing subprogram/type, not looked up globally by name, so
+  // they belong in the same category.
   case DW_TAG_member:
+  case DW_TAG_property:
     return;
 
   // DW_TAG_LLVM_annotation DIEs attach metadata to other DIEs.

@@ -1,5 +1,5 @@
-// RUN: llvm-mc -triple=amdgcn -mcpu=tahiti -show-encoding %s | FileCheck %s --check-prefix=SICI
-// RUN: llvm-mc -triple=amdgcn -mcpu=tonga -show-encoding %s | FileCheck %s --check-prefix=VI
+// RUN: llvm-mc -triple=amdgpu6.00 -show-encoding %s | FileCheck %s --check-prefix=SICI
+// RUN: llvm-mc -triple=amdgpu8.02 -show-encoding %s | FileCheck %s --check-prefix=VI
 // XFAIL: *
 
 // FIXME: We should be printing _e64 suffixes for these. 

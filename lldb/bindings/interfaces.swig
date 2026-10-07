@@ -91,6 +91,9 @@
 %include "./interface/SBWatchpointDocstrings.i"
 %include "./interface/SBWatchpointOptionsDocstrings.i"
 
+/* Method replacements, must be called before the including API headers. */
+REPLACE_BUF_GETTER_WITH_STRING(SBStructuredData, GetStringValue)
+
 /* API headers */
 %include "lldb/API/SBAddress.h"
 %include "lldb/API/SBAddressRange.h"

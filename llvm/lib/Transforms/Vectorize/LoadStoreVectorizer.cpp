@@ -108,7 +108,6 @@
 #include <cstdint>
 #include <cstdlib>
 #include <iterator>
-#include <numeric>
 #include <optional>
 #include <tuple>
 #include <type_traits>
@@ -1750,6 +1749,12 @@ Vectorizer::collectEquivalenceClasses(BasicBlock::iterator Begin,
 
     Type *Ty = getLoadStoreType(&I);
     if (!VectorType::isValidElementType(Ty->getScalarType()))
+      continue;
+
+    // Pointer loads and stores with external state must retain their pointer
+    // memory type so the out-of-band state is transferred. Do not vectorize
+    // these pointers.
+    if (DL.hasExternalState(Ty))
       continue;
 
     // Skip weird non-byte sizes. They probably aren't worth the effort of

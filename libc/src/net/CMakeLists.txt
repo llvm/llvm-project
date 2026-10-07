@@ -15,3 +15,17 @@ add_entrypoint_object(
   DEPENDS
     .${LIBC_TARGET_OS}.if_nametoindex
 )
+
+add_entrypoint_object(
+  if_nameindex
+  ALIAS
+  DEPENDS
+    .${LIBC_TARGET_OS}.if_nameindex
+)
+
+add_entrypoint_object(
+  if_freenameindex
+  ALIAS
+  DEPENDS
+    .${LIBC_TARGET_OS}.if_freenameindex
+)

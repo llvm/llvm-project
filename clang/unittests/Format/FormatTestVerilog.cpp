@@ -1109,6 +1109,16 @@ TEST_F(FormatTestVerilog, Operators) {
   verifyFormat("req dist {1};");                           // dist
   verifyFormat("a inside {b, c};");                        // inside
   verifyFormat("bus.randomize() with { atype == low; };"); // with
+
+  verifyFormat("x dist {100 := 1, 200 := 2, 300 := 5};");
+  verifyFormat("x dist {[100 : 102] := 1, 200 := 2, 300 := 5};");
+  verifyFormat("x dist {[100 : 102] :/ 1, 200 :/ 2, 300 :/ 5};");
+  auto Style = getDefaultStyle();
+  Style.Cpp11BracedListStyle = FormatStyle::BLS_Block;
+  verifyFormat("x dist { 100 := 1, 200 := 2, 300 := 5 };", Style);
+  verifyFormat("x dist { [100 : 102] := 1, 200 := 2, 300 := 5 };", Style);
+  verifyFormat("x dist { [100 : 102] :/ 1, 200 :/ 2, 300 :/ 5 };", Style);
+  verifyFormat("a inside { b, c };", Style);
 }
 
 TEST_F(FormatTestVerilog, Preprocessor) {
@@ -1410,6 +1420,27 @@ TEST_F(FormatTestVerilog, StringLiteral) {
                  "00000000000000000000000000000000000000000+0=\n"
                  "`pragma protect end_protected",
                  getStyleWithColumns(getDefaultStyle(), 29));
+}
+
+TEST_F(FormatTestVerilog, Struct) {
+  verifyFormat("struct packed signed {\n"
+               "  int a;\n"
+               "} pack1;");
+  verifyFormat("struct packed {\n"
+               "  int a;\n"
+               "} pack1;");
+  verifyFormat("struct {\n"
+               "  int a;\n"
+               "} pack1;");
+  verifyFormat("typedef struct packed signed {\n"
+               "  bit [3 : 0] GFC;\n"
+               "} s_atmcell;");
+  verifyFormat("typedef struct {\n"
+               "  bit [3 : 0] GFC;\n"
+               "} s_atmcell;");
+  verifyFormat("typedef struct packed {\n"
+               "  bit [3 : 0] GFC;\n"
+               "} s_atmcell;");
 }
 
 TEST_F(FormatTestVerilog, StructLiteral) {

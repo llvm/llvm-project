@@ -17,7 +17,6 @@
 #include "llvm/Support/MathExtras.h"
 
 #include <algorithm>
-#include <cmath>
 #include <deque>
 #include <functional>
 #include <map>

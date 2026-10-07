@@ -45,3 +45,31 @@ for.cond641:
   %conv724 = trunc i32 %or723 to i16
   br label %for.cond641
 }
+
+; The expression graph of a reachable trunc must not be extended into an
+; unreachable block through a phi node.
+
+define i16 @func_22() {
+; CHECK-LABEL: @func_22(
+; CHECK-NEXT:  entry:
+; CHECK-NEXT:    br label [[EXIT:%.*]]
+; CHECK:       for.cond641:
+; CHECK-NEXT:    [[OR722:%.*]] = or i32 [[OR722]], poison
+; CHECK-NEXT:    br i1 poison, label [[FOR_COND641:%.*]], label [[EXIT]]
+; CHECK:       exit:
+; CHECK-NEXT:    [[PHI:%.*]] = phi i32 [ 0, [[ENTRY:%.*]] ], [ [[OR722]], [[FOR_COND641]] ]
+; CHECK-NEXT:    [[CONV724:%.*]] = trunc i32 [[PHI]] to i16
+; CHECK-NEXT:    ret i16 [[CONV724]]
+;
+entry:
+  br label %exit
+
+for.cond641:                                      ; preds = %for.cond641
+  %or722 = or i32 %or722, poison
+  br i1 poison, label %for.cond641, label %exit
+
+exit:                                             ; preds = %for.cond641, %entry
+  %phi = phi i32 [ 0, %entry ], [ %or722, %for.cond641 ]
+  %conv724 = trunc i32 %phi to i16
+  ret i16 %conv724
+}

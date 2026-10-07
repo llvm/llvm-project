@@ -8,6 +8,7 @@ static_library("Utility") {
   ]
   sources = [
     "AcceleratorGDBRemotePackets.cpp",
+    "AddressSpace.cpp",
     "AddressableBits.cpp",
     "ArchSpec.cpp",
     "Args.cpp",
@@ -37,7 +38,8 @@ static_library("Utility") {
     "Policy.cpp",
     "ProcessInfo.cpp",
     "RealpathPrefixes.cpp",
-    "RegisterFlags.cpp",
+    "RegisterType.cpp",
+    "RegisterTypeFlags.cpp",
     "RegisterValue.cpp",
     "RegularExpression.cpp",
     "Scalar.cpp",

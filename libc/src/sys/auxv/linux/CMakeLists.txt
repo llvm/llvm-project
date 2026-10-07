@@ -1,7 +1,7 @@
 add_entrypoint_object(
   getauxval
   SRCS
-  getauxval.cpp
+    getauxval.cpp
   HDRS
     ../getauxval.h
   DEPENDS

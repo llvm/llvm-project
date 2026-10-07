@@ -217,8 +217,8 @@ const int &test_cond_const_true_throw_true() {
 // CIR:   cir.return %[[TMP_RET]] : !cir.ptr<!s32i>
 
 // LLVM-LABEL: define{{.*}} ptr @_Z31test_cond_const_true_throw_truev(
-// LLVM:  %[[RET_ADDR:.*]] = alloca ptr, i64 1, align 8
-// LLVM:  %[[A_ADDR:.*]] = alloca i32, i64 1, align 4
+// LLVM:  %[[RET_ADDR:.*]] = alloca ptr, align 8
+// LLVM:  %[[A_ADDR:.*]] = alloca i32, align 4
 // LLVM:  store i32 30, ptr %[[A_ADDR]], align 4
 // LLVM:  %[[EXCEPTION:.*]] = call ptr @__cxa_allocate_exception(i64 4)
 // LLVM:  store i32 0, ptr %[[EXCEPTION]], align 16
@@ -1034,6 +1034,7 @@ void test_agg_arg_throw(bool c) {
 }
 
 // CIR-LABEL: cir.func{{.*}} @_Z18test_agg_arg_throwb(
+// CIR:   %[[COERCE:.*]] = cir.alloca "coerce" {{.*}} : !cir.ptr<!rec_Agg>
 // CIR:   %[[TMP:.*]] = cir.alloca "agg.tmp0" {{.*}} : !cir.ptr<!rec_Agg>
 // CIR:   cir.if %{{.*}} {
 // CIR:     %[[EXC:.*]] = cir.alloc.exception{{.*}} -> !cir.ptr<!s32i>
@@ -1043,8 +1044,11 @@ void test_agg_arg_throw(bool c) {
 // CIR:     cir.get_member %[[TMP]][0] {name = "x"}
 // CIR:     cir.get_member %[[TMP]][1] {name = "y"}
 // CIR:   }
-// CIR:   %[[ARG:.*]] = cir.load{{.*}} %[[TMP]] : !cir.ptr<!rec_Agg>, !rec_Agg
-// CIR:   cir.call @_Z4take3Agg(%[[ARG]])
+// CIR:   %[[AGG:.*]] = cir.load{{.*}} %[[TMP]] : !cir.ptr<!rec_Agg>, !rec_Agg
+// CIR:   cir.store %[[AGG]], %[[COERCE]] : !rec_Agg, !cir.ptr<!rec_Agg>
+// CIR:   %[[COERCE_PTR:.*]] = cir.cast bitcast %[[COERCE]] : !cir.ptr<!rec_Agg> -> !cir.ptr<!u64i>
+// CIR:   %[[ARG:.*]] = cir.load %[[COERCE_PTR]] : !cir.ptr<!u64i>, !u64i
+// CIR:   cir.call @_Z4take3Agg(%[[ARG]]) : (!u64i) -> ()
 
 // LLVM-LABEL: define{{.*}} void @_Z18test_agg_arg_throwb(
 // LLVM:   br i1 %{{.*}}, label %[[TRUE_BB:.*]], label %[[FALSE_BB:.*]]

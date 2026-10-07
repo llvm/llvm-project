@@ -12,8 +12,8 @@ define i32 @test_int16_slt_vs_sgt(i16 %a, i16 %b) {
 ; CHECK-NEXT:    .reg .b32 %r<2>;
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  // %bb.0: // %entry
-; CHECK-NEXT:    ld.param.b16 %rs2, [test_int16_slt_vs_sgt_param_1];
-; CHECK-NEXT:    ld.param.b16 %rs1, [test_int16_slt_vs_sgt_param_0];
+; CHECK-NEXT:    ld.param::func.b16 %rs2, [test_int16_slt_vs_sgt_param_1];
+; CHECK-NEXT:    ld.param::func.b16 %rs1, [test_int16_slt_vs_sgt_param_0];
 ; CHECK-NEXT:    setp.lt.s16 %p1, %rs1, %rs2;
 ; CHECK-NEXT:    mov.b32 %r1, 0;
 ; CHECK-NEXT:    @%p1 bra $L__BB0_2;
@@ -25,7 +25,7 @@ define i32 @test_int16_slt_vs_sgt(i16 %a, i16 %b) {
 ; CHECK-NEXT:  // %bb.3: // %else
 ; CHECK-NEXT:    mov.b32 %r1, 0;
 ; CHECK-NEXT:  $L__BB0_4: // %merge2
-; CHECK-NEXT:    st.param.b32 [func_retval0], %r1;
+; CHECK-NEXT:    st.param::func.b32 [func_retval0], %r1;
 ; CHECK-NEXT:    ret;
 entry:
   %cmp = icmp slt i16 %a, %b
@@ -55,8 +55,8 @@ define i32 @test_int16_ult_vs_ugt(i16 %a, i16 %b) {
 ; CHECK-NEXT:    .reg .b32 %r<2>;
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  // %bb.0: // %entry
-; CHECK-NEXT:    ld.param.b16 %rs2, [test_int16_ult_vs_ugt_param_1];
-; CHECK-NEXT:    ld.param.b16 %rs1, [test_int16_ult_vs_ugt_param_0];
+; CHECK-NEXT:    ld.param::func.b16 %rs2, [test_int16_ult_vs_ugt_param_1];
+; CHECK-NEXT:    ld.param::func.b16 %rs1, [test_int16_ult_vs_ugt_param_0];
 ; CHECK-NEXT:    setp.lt.u16 %p1, %rs1, %rs2;
 ; CHECK-NEXT:    mov.b32 %r1, 0;
 ; CHECK-NEXT:    @%p1 bra $L__BB1_2;
@@ -68,7 +68,7 @@ define i32 @test_int16_ult_vs_ugt(i16 %a, i16 %b) {
 ; CHECK-NEXT:  // %bb.3: // %else
 ; CHECK-NEXT:    mov.b32 %r1, 0;
 ; CHECK-NEXT:  $L__BB1_4: // %merge2
-; CHECK-NEXT:    st.param.b32 [func_retval0], %r1;
+; CHECK-NEXT:    st.param::func.b32 [func_retval0], %r1;
 ; CHECK-NEXT:    ret;
 entry:
   %cmp = icmp ult i16 %a, %b
@@ -98,8 +98,8 @@ define i32 @test_int16_slt_vs_uge(i16 %a, i16 %b) {
 ; CHECK-NEXT:    .reg .b32 %r<2>;
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  // %bb.0: // %entry
-; CHECK-NEXT:    ld.param.b16 %rs2, [test_int16_slt_vs_uge_param_1];
-; CHECK-NEXT:    ld.param.b16 %rs1, [test_int16_slt_vs_uge_param_0];
+; CHECK-NEXT:    ld.param::func.b16 %rs2, [test_int16_slt_vs_uge_param_1];
+; CHECK-NEXT:    ld.param::func.b16 %rs1, [test_int16_slt_vs_uge_param_0];
 ; CHECK-NEXT:    setp.lt.s16 %p1, %rs1, %rs2;
 ; CHECK-NEXT:    mov.b32 %r1, 0;
 ; CHECK-NEXT:    @%p1 bra $L__BB2_2;
@@ -111,7 +111,7 @@ define i32 @test_int16_slt_vs_uge(i16 %a, i16 %b) {
 ; CHECK-NEXT:  // %bb.3: // %else
 ; CHECK-NEXT:    mov.b32 %r1, 0;
 ; CHECK-NEXT:  $L__BB2_4: // %merge2
-; CHECK-NEXT:    st.param.b32 [func_retval0], %r1;
+; CHECK-NEXT:    st.param::func.b32 [func_retval0], %r1;
 ; CHECK-NEXT:    ret;
 entry:
   %cmp = icmp slt i16 %a, %b
@@ -141,8 +141,8 @@ define i32 @test_int16_eq_vs_slt(i16 %a, i16 %b) {
 ; CHECK-NEXT:    .reg .b32 %r<2>;
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  // %bb.0: // %entry
-; CHECK-NEXT:    ld.param.b16 %rs2, [test_int16_eq_vs_slt_param_1];
-; CHECK-NEXT:    ld.param.b16 %rs1, [test_int16_eq_vs_slt_param_0];
+; CHECK-NEXT:    ld.param::func.b16 %rs2, [test_int16_eq_vs_slt_param_1];
+; CHECK-NEXT:    ld.param::func.b16 %rs1, [test_int16_eq_vs_slt_param_0];
 ; CHECK-NEXT:    setp.eq.b16 %p1, %rs1, %rs2;
 ; CHECK-NEXT:    mov.b32 %r1, 0;
 ; CHECK-NEXT:    @%p1 bra $L__BB3_2;
@@ -154,7 +154,7 @@ define i32 @test_int16_eq_vs_slt(i16 %a, i16 %b) {
 ; CHECK-NEXT:  // %bb.3: // %else
 ; CHECK-NEXT:    mov.b32 %r1, 0;
 ; CHECK-NEXT:  $L__BB3_4: // %merge2
-; CHECK-NEXT:    st.param.b32 [func_retval0], %r1;
+; CHECK-NEXT:    st.param::func.b32 [func_retval0], %r1;
 ; CHECK-NEXT:    ret;
 entry:
   %cmp = icmp eq i16 %a, %b
@@ -184,8 +184,8 @@ define i32 @test_int16_ult_vs_sge(i16 %a, i16 %b) {
 ; CHECK-NEXT:    .reg .b32 %r<2>;
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  // %bb.0: // %entry
-; CHECK-NEXT:    ld.param.b16 %rs2, [test_int16_ult_vs_sge_param_1];
-; CHECK-NEXT:    ld.param.b16 %rs1, [test_int16_ult_vs_sge_param_0];
+; CHECK-NEXT:    ld.param::func.b16 %rs2, [test_int16_ult_vs_sge_param_1];
+; CHECK-NEXT:    ld.param::func.b16 %rs1, [test_int16_ult_vs_sge_param_0];
 ; CHECK-NEXT:    setp.lt.u16 %p1, %rs1, %rs2;
 ; CHECK-NEXT:    mov.b32 %r1, 0;
 ; CHECK-NEXT:    @%p1 bra $L__BB4_2;
@@ -197,7 +197,7 @@ define i32 @test_int16_ult_vs_sge(i16 %a, i16 %b) {
 ; CHECK-NEXT:  // %bb.3: // %else
 ; CHECK-NEXT:    mov.b32 %r1, 0;
 ; CHECK-NEXT:  $L__BB4_4: // %merge2
-; CHECK-NEXT:    st.param.b32 [func_retval0], %r1;
+; CHECK-NEXT:    st.param::func.b32 [func_retval0], %r1;
 ; CHECK-NEXT:    ret;
 entry:
   %cmp = icmp ult i16 %a, %b
@@ -226,8 +226,8 @@ define i32 @test_int32_slt_vs_sgt(i32 %a, i32 %b) {
 ; CHECK-NEXT:    .reg .b32 %r<4>;
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  // %bb.0: // %entry
-; CHECK-NEXT:    ld.param.b32 %r2, [test_int32_slt_vs_sgt_param_1];
-; CHECK-NEXT:    ld.param.b32 %r1, [test_int32_slt_vs_sgt_param_0];
+; CHECK-NEXT:    ld.param::func.b32 %r2, [test_int32_slt_vs_sgt_param_1];
+; CHECK-NEXT:    ld.param::func.b32 %r1, [test_int32_slt_vs_sgt_param_0];
 ; CHECK-NEXT:    setp.lt.s32 %p1, %r1, %r2;
 ; CHECK-NEXT:    mov.b32 %r3, 0;
 ; CHECK-NEXT:    @%p1 bra $L__BB5_2;
@@ -239,7 +239,7 @@ define i32 @test_int32_slt_vs_sgt(i32 %a, i32 %b) {
 ; CHECK-NEXT:  // %bb.3: // %else
 ; CHECK-NEXT:    mov.b32 %r3, 0;
 ; CHECK-NEXT:  $L__BB5_4: // %merge2
-; CHECK-NEXT:    st.param.b32 [func_retval0], %r3;
+; CHECK-NEXT:    st.param::func.b32 [func_retval0], %r3;
 ; CHECK-NEXT:    ret;
 entry:
   %cmp = icmp slt i32 %a, %b
@@ -268,8 +268,8 @@ define i32 @test_int32_ult_vs_ugt(i32 %a, i32 %b) {
 ; CHECK-NEXT:    .reg .b32 %r<4>;
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  // %bb.0: // %entry
-; CHECK-NEXT:    ld.param.b32 %r2, [test_int32_ult_vs_ugt_param_1];
-; CHECK-NEXT:    ld.param.b32 %r1, [test_int32_ult_vs_ugt_param_0];
+; CHECK-NEXT:    ld.param::func.b32 %r2, [test_int32_ult_vs_ugt_param_1];
+; CHECK-NEXT:    ld.param::func.b32 %r1, [test_int32_ult_vs_ugt_param_0];
 ; CHECK-NEXT:    setp.lt.u32 %p1, %r1, %r2;
 ; CHECK-NEXT:    mov.b32 %r3, 0;
 ; CHECK-NEXT:    @%p1 bra $L__BB6_2;
@@ -281,7 +281,7 @@ define i32 @test_int32_ult_vs_ugt(i32 %a, i32 %b) {
 ; CHECK-NEXT:  // %bb.3: // %else
 ; CHECK-NEXT:    mov.b32 %r3, 0;
 ; CHECK-NEXT:  $L__BB6_4: // %merge2
-; CHECK-NEXT:    st.param.b32 [func_retval0], %r3;
+; CHECK-NEXT:    st.param::func.b32 [func_retval0], %r3;
 ; CHECK-NEXT:    ret;
 entry:
   %cmp = icmp ult i32 %a, %b
@@ -310,8 +310,8 @@ define i32 @test_int32_slt_vs_uge(i32 %a, i32 %b) {
 ; CHECK-NEXT:    .reg .b32 %r<4>;
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  // %bb.0: // %entry
-; CHECK-NEXT:    ld.param.b32 %r2, [test_int32_slt_vs_uge_param_1];
-; CHECK-NEXT:    ld.param.b32 %r1, [test_int32_slt_vs_uge_param_0];
+; CHECK-NEXT:    ld.param::func.b32 %r2, [test_int32_slt_vs_uge_param_1];
+; CHECK-NEXT:    ld.param::func.b32 %r1, [test_int32_slt_vs_uge_param_0];
 ; CHECK-NEXT:    setp.lt.s32 %p1, %r1, %r2;
 ; CHECK-NEXT:    mov.b32 %r3, 0;
 ; CHECK-NEXT:    @%p1 bra $L__BB7_2;
@@ -323,7 +323,7 @@ define i32 @test_int32_slt_vs_uge(i32 %a, i32 %b) {
 ; CHECK-NEXT:  // %bb.3: // %else
 ; CHECK-NEXT:    mov.b32 %r3, 0;
 ; CHECK-NEXT:  $L__BB7_4: // %merge2
-; CHECK-NEXT:    st.param.b32 [func_retval0], %r3;
+; CHECK-NEXT:    st.param::func.b32 [func_retval0], %r3;
 ; CHECK-NEXT:    ret;
 entry:
   %cmp = icmp slt i32 %a, %b
@@ -352,8 +352,8 @@ define i32 @test_int32_eq_vs_slt(i32 %a, i32 %b) {
 ; CHECK-NEXT:    .reg .b32 %r<4>;
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  // %bb.0: // %entry
-; CHECK-NEXT:    ld.param.b32 %r2, [test_int32_eq_vs_slt_param_1];
-; CHECK-NEXT:    ld.param.b32 %r1, [test_int32_eq_vs_slt_param_0];
+; CHECK-NEXT:    ld.param::func.b32 %r2, [test_int32_eq_vs_slt_param_1];
+; CHECK-NEXT:    ld.param::func.b32 %r1, [test_int32_eq_vs_slt_param_0];
 ; CHECK-NEXT:    setp.eq.b32 %p1, %r1, %r2;
 ; CHECK-NEXT:    mov.b32 %r3, 0;
 ; CHECK-NEXT:    @%p1 bra $L__BB8_2;
@@ -365,7 +365,7 @@ define i32 @test_int32_eq_vs_slt(i32 %a, i32 %b) {
 ; CHECK-NEXT:  // %bb.3: // %else
 ; CHECK-NEXT:    mov.b32 %r3, 0;
 ; CHECK-NEXT:  $L__BB8_4: // %merge2
-; CHECK-NEXT:    st.param.b32 [func_retval0], %r3;
+; CHECK-NEXT:    st.param::func.b32 [func_retval0], %r3;
 ; CHECK-NEXT:    ret;
 entry:
   %cmp = icmp eq i32 %a, %b
@@ -394,8 +394,8 @@ define i32 @test_int32_ult_vs_sge(i32 %a, i32 %b) {
 ; CHECK-NEXT:    .reg .b32 %r<4>;
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  // %bb.0: // %entry
-; CHECK-NEXT:    ld.param.b32 %r2, [test_int32_ult_vs_sge_param_1];
-; CHECK-NEXT:    ld.param.b32 %r1, [test_int32_ult_vs_sge_param_0];
+; CHECK-NEXT:    ld.param::func.b32 %r2, [test_int32_ult_vs_sge_param_1];
+; CHECK-NEXT:    ld.param::func.b32 %r1, [test_int32_ult_vs_sge_param_0];
 ; CHECK-NEXT:    setp.lt.u32 %p1, %r1, %r2;
 ; CHECK-NEXT:    mov.b32 %r3, 0;
 ; CHECK-NEXT:    @%p1 bra $L__BB9_2;
@@ -407,7 +407,7 @@ define i32 @test_int32_ult_vs_sge(i32 %a, i32 %b) {
 ; CHECK-NEXT:  // %bb.3: // %else
 ; CHECK-NEXT:    mov.b32 %r3, 0;
 ; CHECK-NEXT:  $L__BB9_4: // %merge2
-; CHECK-NEXT:    st.param.b32 [func_retval0], %r3;
+; CHECK-NEXT:    st.param::func.b32 [func_retval0], %r3;
 ; CHECK-NEXT:    ret;
 entry:
   %cmp = icmp ult i32 %a, %b
@@ -437,8 +437,8 @@ define i32 @test_int64_slt_vs_sgt(i64 %a, i64 %b) {
 ; CHECK-NEXT:    .reg .b64 %rd<3>;
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  // %bb.0: // %entry
-; CHECK-NEXT:    ld.param.b64 %rd2, [test_int64_slt_vs_sgt_param_1];
-; CHECK-NEXT:    ld.param.b64 %rd1, [test_int64_slt_vs_sgt_param_0];
+; CHECK-NEXT:    ld.param::func.b64 %rd2, [test_int64_slt_vs_sgt_param_1];
+; CHECK-NEXT:    ld.param::func.b64 %rd1, [test_int64_slt_vs_sgt_param_0];
 ; CHECK-NEXT:    setp.lt.s64 %p1, %rd1, %rd2;
 ; CHECK-NEXT:    mov.b32 %r1, 0;
 ; CHECK-NEXT:    @%p1 bra $L__BB10_2;
@@ -450,7 +450,7 @@ define i32 @test_int64_slt_vs_sgt(i64 %a, i64 %b) {
 ; CHECK-NEXT:  // %bb.3: // %else
 ; CHECK-NEXT:    mov.b32 %r1, 0;
 ; CHECK-NEXT:  $L__BB10_4: // %merge2
-; CHECK-NEXT:    st.param.b32 [func_retval0], %r1;
+; CHECK-NEXT:    st.param::func.b32 [func_retval0], %r1;
 ; CHECK-NEXT:    ret;
 entry:
   %cmp = icmp slt i64 %a, %b
@@ -480,8 +480,8 @@ define i32 @test_int64_ult_vs_ugt(i64 %a, i64 %b) {
 ; CHECK-NEXT:    .reg .b64 %rd<3>;
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  // %bb.0: // %entry
-; CHECK-NEXT:    ld.param.b64 %rd2, [test_int64_ult_vs_ugt_param_1];
-; CHECK-NEXT:    ld.param.b64 %rd1, [test_int64_ult_vs_ugt_param_0];
+; CHECK-NEXT:    ld.param::func.b64 %rd2, [test_int64_ult_vs_ugt_param_1];
+; CHECK-NEXT:    ld.param::func.b64 %rd1, [test_int64_ult_vs_ugt_param_0];
 ; CHECK-NEXT:    setp.lt.u64 %p1, %rd1, %rd2;
 ; CHECK-NEXT:    mov.b32 %r1, 0;
 ; CHECK-NEXT:    @%p1 bra $L__BB11_2;
@@ -493,7 +493,7 @@ define i32 @test_int64_ult_vs_ugt(i64 %a, i64 %b) {
 ; CHECK-NEXT:  // %bb.3: // %else
 ; CHECK-NEXT:    mov.b32 %r1, 0;
 ; CHECK-NEXT:  $L__BB11_4: // %merge2
-; CHECK-NEXT:    st.param.b32 [func_retval0], %r1;
+; CHECK-NEXT:    st.param::func.b32 [func_retval0], %r1;
 ; CHECK-NEXT:    ret;
 entry:
   %cmp = icmp ult i64 %a, %b
@@ -523,8 +523,8 @@ define i32 @test_int64_slt_vs_uge(i64 %a, i64 %b) {
 ; CHECK-NEXT:    .reg .b64 %rd<3>;
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  // %bb.0: // %entry
-; CHECK-NEXT:    ld.param.b64 %rd2, [test_int64_slt_vs_uge_param_1];
-; CHECK-NEXT:    ld.param.b64 %rd1, [test_int64_slt_vs_uge_param_0];
+; CHECK-NEXT:    ld.param::func.b64 %rd2, [test_int64_slt_vs_uge_param_1];
+; CHECK-NEXT:    ld.param::func.b64 %rd1, [test_int64_slt_vs_uge_param_0];
 ; CHECK-NEXT:    setp.lt.s64 %p1, %rd1, %rd2;
 ; CHECK-NEXT:    mov.b32 %r1, 0;
 ; CHECK-NEXT:    @%p1 bra $L__BB12_2;
@@ -536,7 +536,7 @@ define i32 @test_int64_slt_vs_uge(i64 %a, i64 %b) {
 ; CHECK-NEXT:  // %bb.3: // %else
 ; CHECK-NEXT:    mov.b32 %r1, 0;
 ; CHECK-NEXT:  $L__BB12_4: // %merge2
-; CHECK-NEXT:    st.param.b32 [func_retval0], %r1;
+; CHECK-NEXT:    st.param::func.b32 [func_retval0], %r1;
 ; CHECK-NEXT:    ret;
 entry:
   %cmp = icmp slt i64 %a, %b
@@ -566,8 +566,8 @@ define i32 @test_int64_eq_vs_slt(i64 %a, i64 %b) {
 ; CHECK-NEXT:    .reg .b64 %rd<3>;
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  // %bb.0: // %entry
-; CHECK-NEXT:    ld.param.b64 %rd2, [test_int64_eq_vs_slt_param_1];
-; CHECK-NEXT:    ld.param.b64 %rd1, [test_int64_eq_vs_slt_param_0];
+; CHECK-NEXT:    ld.param::func.b64 %rd2, [test_int64_eq_vs_slt_param_1];
+; CHECK-NEXT:    ld.param::func.b64 %rd1, [test_int64_eq_vs_slt_param_0];
 ; CHECK-NEXT:    setp.eq.b64 %p1, %rd1, %rd2;
 ; CHECK-NEXT:    mov.b32 %r1, 0;
 ; CHECK-NEXT:    @%p1 bra $L__BB13_2;
@@ -579,7 +579,7 @@ define i32 @test_int64_eq_vs_slt(i64 %a, i64 %b) {
 ; CHECK-NEXT:  // %bb.3: // %else
 ; CHECK-NEXT:    mov.b32 %r1, 0;
 ; CHECK-NEXT:  $L__BB13_4: // %merge2
-; CHECK-NEXT:    st.param.b32 [func_retval0], %r1;
+; CHECK-NEXT:    st.param::func.b32 [func_retval0], %r1;
 ; CHECK-NEXT:    ret;
 entry:
   %cmp = icmp eq i64 %a, %b
@@ -609,8 +609,8 @@ define i32 @test_int64_ult_vs_sge(i64 %a, i64 %b) {
 ; CHECK-NEXT:    .reg .b64 %rd<3>;
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  // %bb.0: // %entry
-; CHECK-NEXT:    ld.param.b64 %rd2, [test_int64_ult_vs_sge_param_1];
-; CHECK-NEXT:    ld.param.b64 %rd1, [test_int64_ult_vs_sge_param_0];
+; CHECK-NEXT:    ld.param::func.b64 %rd2, [test_int64_ult_vs_sge_param_1];
+; CHECK-NEXT:    ld.param::func.b64 %rd1, [test_int64_ult_vs_sge_param_0];
 ; CHECK-NEXT:    setp.lt.u64 %p1, %rd1, %rd2;
 ; CHECK-NEXT:    mov.b32 %r1, 0;
 ; CHECK-NEXT:    @%p1 bra $L__BB14_2;
@@ -622,7 +622,7 @@ define i32 @test_int64_ult_vs_sge(i64 %a, i64 %b) {
 ; CHECK-NEXT:  // %bb.3: // %else
 ; CHECK-NEXT:    mov.b32 %r1, 0;
 ; CHECK-NEXT:  $L__BB14_4: // %merge2
-; CHECK-NEXT:    st.param.b32 [func_retval0], %r1;
+; CHECK-NEXT:    st.param::func.b32 [func_retval0], %r1;
 ; CHECK-NEXT:    ret;
 entry:
   %cmp = icmp ult i64 %a, %b
@@ -652,8 +652,8 @@ define i32 @test_bfloat16_ueq_vs_une(bfloat %a, bfloat %b) {
 ; CHECK-NEXT:    .reg .b32 %r<2>;
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  // %bb.0: // %entry
-; CHECK-NEXT:    ld.param.b16 %rs2, [test_bfloat16_ueq_vs_une_param_1];
-; CHECK-NEXT:    ld.param.b16 %rs1, [test_bfloat16_ueq_vs_une_param_0];
+; CHECK-NEXT:    ld.param::func.b16 %rs2, [test_bfloat16_ueq_vs_une_param_1];
+; CHECK-NEXT:    ld.param::func.b16 %rs1, [test_bfloat16_ueq_vs_une_param_0];
 ; CHECK-NEXT:    setp.equ.bf16 %p1, %rs1, %rs2;
 ; CHECK-NEXT:    mov.b32 %r1, 0;
 ; CHECK-NEXT:    @%p1 bra $L__BB15_2;
@@ -665,7 +665,7 @@ define i32 @test_bfloat16_ueq_vs_une(bfloat %a, bfloat %b) {
 ; CHECK-NEXT:  // %bb.3: // %else
 ; CHECK-NEXT:    mov.b32 %r1, 0;
 ; CHECK-NEXT:  $L__BB15_4: // %merge2
-; CHECK-NEXT:    st.param.b32 [func_retval0], %r1;
+; CHECK-NEXT:    st.param::func.b32 [func_retval0], %r1;
 ; CHECK-NEXT:    ret;
 entry:
   %cmp = fcmp ueq bfloat %a, %b
@@ -695,8 +695,8 @@ define i32 @test_bfloat16_oeq_vs_one(bfloat %a, bfloat %b) {
 ; CHECK-NEXT:    .reg .b32 %r<2>;
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  // %bb.0: // %entry
-; CHECK-NEXT:    ld.param.b16 %rs2, [test_bfloat16_oeq_vs_one_param_1];
-; CHECK-NEXT:    ld.param.b16 %rs1, [test_bfloat16_oeq_vs_one_param_0];
+; CHECK-NEXT:    ld.param::func.b16 %rs2, [test_bfloat16_oeq_vs_one_param_1];
+; CHECK-NEXT:    ld.param::func.b16 %rs1, [test_bfloat16_oeq_vs_one_param_0];
 ; CHECK-NEXT:    setp.eq.bf16 %p1, %rs1, %rs2;
 ; CHECK-NEXT:    mov.b32 %r1, 0;
 ; CHECK-NEXT:    @%p1 bra $L__BB16_2;
@@ -708,7 +708,7 @@ define i32 @test_bfloat16_oeq_vs_one(bfloat %a, bfloat %b) {
 ; CHECK-NEXT:  // %bb.3: // %else
 ; CHECK-NEXT:    mov.b32 %r1, 0;
 ; CHECK-NEXT:  $L__BB16_4: // %merge2
-; CHECK-NEXT:    st.param.b32 [func_retval0], %r1;
+; CHECK-NEXT:    st.param::func.b32 [func_retval0], %r1;
 ; CHECK-NEXT:    ret;
 entry:
   %cmp = fcmp oeq bfloat %a, %b
@@ -738,8 +738,8 @@ define i32 @test_bfloat16_olt_vs_ogt(bfloat %a, bfloat %b) {
 ; CHECK-NEXT:    .reg .b32 %r<2>;
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  // %bb.0: // %entry
-; CHECK-NEXT:    ld.param.b16 %rs2, [test_bfloat16_olt_vs_ogt_param_1];
-; CHECK-NEXT:    ld.param.b16 %rs1, [test_bfloat16_olt_vs_ogt_param_0];
+; CHECK-NEXT:    ld.param::func.b16 %rs2, [test_bfloat16_olt_vs_ogt_param_1];
+; CHECK-NEXT:    ld.param::func.b16 %rs1, [test_bfloat16_olt_vs_ogt_param_0];
 ; CHECK-NEXT:    setp.lt.bf16 %p1, %rs1, %rs2;
 ; CHECK-NEXT:    mov.b32 %r1, 0;
 ; CHECK-NEXT:    @%p1 bra $L__BB17_2;
@@ -751,7 +751,7 @@ define i32 @test_bfloat16_olt_vs_ogt(bfloat %a, bfloat %b) {
 ; CHECK-NEXT:  // %bb.3: // %else
 ; CHECK-NEXT:    mov.b32 %r1, 0;
 ; CHECK-NEXT:  $L__BB17_4: // %merge2
-; CHECK-NEXT:    st.param.b32 [func_retval0], %r1;
+; CHECK-NEXT:    st.param::func.b32 [func_retval0], %r1;
 ; CHECK-NEXT:    ret;
 entry:
   %cmp = fcmp olt bfloat %a, %b
@@ -781,8 +781,8 @@ define i32 @test_bfloat16_ult_vs_ugt(bfloat %a, bfloat %b) {
 ; CHECK-NEXT:    .reg .b32 %r<2>;
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  // %bb.0: // %entry
-; CHECK-NEXT:    ld.param.b16 %rs2, [test_bfloat16_ult_vs_ugt_param_1];
-; CHECK-NEXT:    ld.param.b16 %rs1, [test_bfloat16_ult_vs_ugt_param_0];
+; CHECK-NEXT:    ld.param::func.b16 %rs2, [test_bfloat16_ult_vs_ugt_param_1];
+; CHECK-NEXT:    ld.param::func.b16 %rs1, [test_bfloat16_ult_vs_ugt_param_0];
 ; CHECK-NEXT:    setp.ltu.bf16 %p1, %rs1, %rs2;
 ; CHECK-NEXT:    mov.b32 %r1, 0;
 ; CHECK-NEXT:    @%p1 bra $L__BB18_2;
@@ -794,7 +794,7 @@ define i32 @test_bfloat16_ult_vs_ugt(bfloat %a, bfloat %b) {
 ; CHECK-NEXT:  // %bb.3: // %else
 ; CHECK-NEXT:    mov.b32 %r1, 0;
 ; CHECK-NEXT:  $L__BB18_4: // %merge2
-; CHECK-NEXT:    st.param.b32 [func_retval0], %r1;
+; CHECK-NEXT:    st.param::func.b32 [func_retval0], %r1;
 ; CHECK-NEXT:    ret;
 entry:
   %cmp = fcmp ult bfloat %a, %b
@@ -824,8 +824,8 @@ define i32 @test_bfloat16_oeq_vs_olt(bfloat %a, bfloat %b) {
 ; CHECK-NEXT:    .reg .b32 %r<2>;
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  // %bb.0: // %entry
-; CHECK-NEXT:    ld.param.b16 %rs2, [test_bfloat16_oeq_vs_olt_param_1];
-; CHECK-NEXT:    ld.param.b16 %rs1, [test_bfloat16_oeq_vs_olt_param_0];
+; CHECK-NEXT:    ld.param::func.b16 %rs2, [test_bfloat16_oeq_vs_olt_param_1];
+; CHECK-NEXT:    ld.param::func.b16 %rs1, [test_bfloat16_oeq_vs_olt_param_0];
 ; CHECK-NEXT:    setp.eq.bf16 %p1, %rs1, %rs2;
 ; CHECK-NEXT:    mov.b32 %r1, 0;
 ; CHECK-NEXT:    @%p1 bra $L__BB19_2;
@@ -837,7 +837,7 @@ define i32 @test_bfloat16_oeq_vs_olt(bfloat %a, bfloat %b) {
 ; CHECK-NEXT:  // %bb.3: // %else
 ; CHECK-NEXT:    mov.b32 %r1, 0;
 ; CHECK-NEXT:  $L__BB19_4: // %merge2
-; CHECK-NEXT:    st.param.b32 [func_retval0], %r1;
+; CHECK-NEXT:    st.param::func.b32 [func_retval0], %r1;
 ; CHECK-NEXT:    ret;
 entry:
   %cmp = fcmp oeq bfloat %a, %b
@@ -867,8 +867,8 @@ define i32 @test_float16_ueq_vs_une(half %a, half %b) {
 ; CHECK-NEXT:    .reg .b32 %r<2>;
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  // %bb.0: // %entry
-; CHECK-NEXT:    ld.param.b16 %rs2, [test_float16_ueq_vs_une_param_1];
-; CHECK-NEXT:    ld.param.b16 %rs1, [test_float16_ueq_vs_une_param_0];
+; CHECK-NEXT:    ld.param::func.b16 %rs2, [test_float16_ueq_vs_une_param_1];
+; CHECK-NEXT:    ld.param::func.b16 %rs1, [test_float16_ueq_vs_une_param_0];
 ; CHECK-NEXT:    setp.equ.f16 %p1, %rs1, %rs2;
 ; CHECK-NEXT:    mov.b32 %r1, 0;
 ; CHECK-NEXT:    @%p1 bra $L__BB20_2;
@@ -880,7 +880,7 @@ define i32 @test_float16_ueq_vs_une(half %a, half %b) {
 ; CHECK-NEXT:  // %bb.3: // %else
 ; CHECK-NEXT:    mov.b32 %r1, 0;
 ; CHECK-NEXT:  $L__BB20_4: // %merge2
-; CHECK-NEXT:    st.param.b32 [func_retval0], %r1;
+; CHECK-NEXT:    st.param::func.b32 [func_retval0], %r1;
 ; CHECK-NEXT:    ret;
 entry:
   %cmp = fcmp ueq half %a, %b
@@ -910,8 +910,8 @@ define i32 @test_float16_oeq_vs_one(half %a, half %b) {
 ; CHECK-NEXT:    .reg .b32 %r<2>;
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  // %bb.0: // %entry
-; CHECK-NEXT:    ld.param.b16 %rs2, [test_float16_oeq_vs_one_param_1];
-; CHECK-NEXT:    ld.param.b16 %rs1, [test_float16_oeq_vs_one_param_0];
+; CHECK-NEXT:    ld.param::func.b16 %rs2, [test_float16_oeq_vs_one_param_1];
+; CHECK-NEXT:    ld.param::func.b16 %rs1, [test_float16_oeq_vs_one_param_0];
 ; CHECK-NEXT:    setp.eq.f16 %p1, %rs1, %rs2;
 ; CHECK-NEXT:    mov.b32 %r1, 0;
 ; CHECK-NEXT:    @%p1 bra $L__BB21_2;
@@ -923,7 +923,7 @@ define i32 @test_float16_oeq_vs_one(half %a, half %b) {
 ; CHECK-NEXT:  // %bb.3: // %else
 ; CHECK-NEXT:    mov.b32 %r1, 0;
 ; CHECK-NEXT:  $L__BB21_4: // %merge2
-; CHECK-NEXT:    st.param.b32 [func_retval0], %r1;
+; CHECK-NEXT:    st.param::func.b32 [func_retval0], %r1;
 ; CHECK-NEXT:    ret;
 entry:
   %cmp = fcmp oeq half %a, %b
@@ -953,8 +953,8 @@ define i32 @test_float16_olt_vs_ogt(half %a, half %b) {
 ; CHECK-NEXT:    .reg .b32 %r<2>;
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  // %bb.0: // %entry
-; CHECK-NEXT:    ld.param.b16 %rs2, [test_float16_olt_vs_ogt_param_1];
-; CHECK-NEXT:    ld.param.b16 %rs1, [test_float16_olt_vs_ogt_param_0];
+; CHECK-NEXT:    ld.param::func.b16 %rs2, [test_float16_olt_vs_ogt_param_1];
+; CHECK-NEXT:    ld.param::func.b16 %rs1, [test_float16_olt_vs_ogt_param_0];
 ; CHECK-NEXT:    setp.lt.f16 %p1, %rs1, %rs2;
 ; CHECK-NEXT:    mov.b32 %r1, 0;
 ; CHECK-NEXT:    @%p1 bra $L__BB22_2;
@@ -966,7 +966,7 @@ define i32 @test_float16_olt_vs_ogt(half %a, half %b) {
 ; CHECK-NEXT:  // %bb.3: // %else
 ; CHECK-NEXT:    mov.b32 %r1, 0;
 ; CHECK-NEXT:  $L__BB22_4: // %merge2
-; CHECK-NEXT:    st.param.b32 [func_retval0], %r1;
+; CHECK-NEXT:    st.param::func.b32 [func_retval0], %r1;
 ; CHECK-NEXT:    ret;
 entry:
   %cmp = fcmp olt half %a, %b
@@ -996,8 +996,8 @@ define i32 @test_float16_ult_vs_ugt(half %a, half %b) {
 ; CHECK-NEXT:    .reg .b32 %r<2>;
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  // %bb.0: // %entry
-; CHECK-NEXT:    ld.param.b16 %rs2, [test_float16_ult_vs_ugt_param_1];
-; CHECK-NEXT:    ld.param.b16 %rs1, [test_float16_ult_vs_ugt_param_0];
+; CHECK-NEXT:    ld.param::func.b16 %rs2, [test_float16_ult_vs_ugt_param_1];
+; CHECK-NEXT:    ld.param::func.b16 %rs1, [test_float16_ult_vs_ugt_param_0];
 ; CHECK-NEXT:    setp.ltu.f16 %p1, %rs1, %rs2;
 ; CHECK-NEXT:    mov.b32 %r1, 0;
 ; CHECK-NEXT:    @%p1 bra $L__BB23_2;
@@ -1009,7 +1009,7 @@ define i32 @test_float16_ult_vs_ugt(half %a, half %b) {
 ; CHECK-NEXT:  // %bb.3: // %else
 ; CHECK-NEXT:    mov.b32 %r1, 0;
 ; CHECK-NEXT:  $L__BB23_4: // %merge2
-; CHECK-NEXT:    st.param.b32 [func_retval0], %r1;
+; CHECK-NEXT:    st.param::func.b32 [func_retval0], %r1;
 ; CHECK-NEXT:    ret;
 entry:
   %cmp = fcmp ult half %a, %b
@@ -1039,8 +1039,8 @@ define i32 @test_float16_oeq_vs_olt(half %a, half %b) {
 ; CHECK-NEXT:    .reg .b32 %r<2>;
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  // %bb.0: // %entry
-; CHECK-NEXT:    ld.param.b16 %rs2, [test_float16_oeq_vs_olt_param_1];
-; CHECK-NEXT:    ld.param.b16 %rs1, [test_float16_oeq_vs_olt_param_0];
+; CHECK-NEXT:    ld.param::func.b16 %rs2, [test_float16_oeq_vs_olt_param_1];
+; CHECK-NEXT:    ld.param::func.b16 %rs1, [test_float16_oeq_vs_olt_param_0];
 ; CHECK-NEXT:    setp.eq.f16 %p1, %rs1, %rs2;
 ; CHECK-NEXT:    mov.b32 %r1, 0;
 ; CHECK-NEXT:    @%p1 bra $L__BB24_2;
@@ -1052,7 +1052,7 @@ define i32 @test_float16_oeq_vs_olt(half %a, half %b) {
 ; CHECK-NEXT:  // %bb.3: // %else
 ; CHECK-NEXT:    mov.b32 %r1, 0;
 ; CHECK-NEXT:  $L__BB24_4: // %merge2
-; CHECK-NEXT:    st.param.b32 [func_retval0], %r1;
+; CHECK-NEXT:    st.param::func.b32 [func_retval0], %r1;
 ; CHECK-NEXT:    ret;
 entry:
   %cmp = fcmp oeq half %a, %b
@@ -1081,7 +1081,7 @@ define i32 @test_float32_ueq_vs_une(float %arg) {
 ; CHECK-NEXT:    .reg .b32 %r<3>;
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  // %bb.0: // %entry
-; CHECK-NEXT:    ld.param.b32 %r1, [test_float32_ueq_vs_une_param_0];
+; CHECK-NEXT:    ld.param::func.b32 %r1, [test_float32_ueq_vs_une_param_0];
 ; CHECK-NEXT:    setp.equ.f32 %p1, %r1, 0f00000000;
 ; CHECK-NEXT:    mov.b32 %r2, 0;
 ; CHECK-NEXT:    @%p1 bra $L__BB25_2;
@@ -1093,7 +1093,7 @@ define i32 @test_float32_ueq_vs_une(float %arg) {
 ; CHECK-NEXT:  // %bb.3: // %else
 ; CHECK-NEXT:    mov.b32 %r2, 0;
 ; CHECK-NEXT:  $L__BB25_4: // %merge2
-; CHECK-NEXT:    st.param.b32 [func_retval0], %r2;
+; CHECK-NEXT:    st.param::func.b32 [func_retval0], %r2;
 ; CHECK-NEXT:    ret;
 entry:
   %cmp = fcmp ueq float %arg, 0.000000e+00
@@ -1122,7 +1122,7 @@ define i32 @test_float32_oeq_vs_one(float %arg) {
 ; CHECK-NEXT:    .reg .b32 %r<3>;
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  // %bb.0: // %entry
-; CHECK-NEXT:    ld.param.b32 %r1, [test_float32_oeq_vs_one_param_0];
+; CHECK-NEXT:    ld.param::func.b32 %r1, [test_float32_oeq_vs_one_param_0];
 ; CHECK-NEXT:    setp.eq.f32 %p1, %r1, 0f00000000;
 ; CHECK-NEXT:    mov.b32 %r2, 0;
 ; CHECK-NEXT:    @%p1 bra $L__BB26_2;
@@ -1134,7 +1134,7 @@ define i32 @test_float32_oeq_vs_one(float %arg) {
 ; CHECK-NEXT:  // %bb.3: // %else
 ; CHECK-NEXT:    mov.b32 %r2, 0;
 ; CHECK-NEXT:  $L__BB26_4: // %merge2
-; CHECK-NEXT:    st.param.b32 [func_retval0], %r2;
+; CHECK-NEXT:    st.param::func.b32 [func_retval0], %r2;
 ; CHECK-NEXT:    ret;
 entry:
   %cmp = fcmp oeq float %arg, 0.000000e+00
@@ -1163,7 +1163,7 @@ define i32 @test_float32_olt_vs_ogt(float %arg) {
 ; CHECK-NEXT:    .reg .b32 %r<3>;
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  // %bb.0: // %entry
-; CHECK-NEXT:    ld.param.b32 %r1, [test_float32_olt_vs_ogt_param_0];
+; CHECK-NEXT:    ld.param::func.b32 %r1, [test_float32_olt_vs_ogt_param_0];
 ; CHECK-NEXT:    setp.lt.f32 %p1, %r1, 0f00000000;
 ; CHECK-NEXT:    mov.b32 %r2, 0;
 ; CHECK-NEXT:    @%p1 bra $L__BB27_2;
@@ -1175,7 +1175,7 @@ define i32 @test_float32_olt_vs_ogt(float %arg) {
 ; CHECK-NEXT:  // %bb.3: // %else
 ; CHECK-NEXT:    mov.b32 %r2, 0;
 ; CHECK-NEXT:  $L__BB27_4: // %merge2
-; CHECK-NEXT:    st.param.b32 [func_retval0], %r2;
+; CHECK-NEXT:    st.param::func.b32 [func_retval0], %r2;
 ; CHECK-NEXT:    ret;
 entry:
   %cmp = fcmp olt float %arg, 0.000000e+00
@@ -1204,7 +1204,7 @@ define i32 @test_float32_ult_vs_ugt(float %arg) {
 ; CHECK-NEXT:    .reg .b32 %r<3>;
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  // %bb.0: // %entry
-; CHECK-NEXT:    ld.param.b32 %r1, [test_float32_ult_vs_ugt_param_0];
+; CHECK-NEXT:    ld.param::func.b32 %r1, [test_float32_ult_vs_ugt_param_0];
 ; CHECK-NEXT:    setp.ltu.f32 %p1, %r1, 0f00000000;
 ; CHECK-NEXT:    mov.b32 %r2, 0;
 ; CHECK-NEXT:    @%p1 bra $L__BB28_2;
@@ -1216,7 +1216,7 @@ define i32 @test_float32_ult_vs_ugt(float %arg) {
 ; CHECK-NEXT:  // %bb.3: // %else
 ; CHECK-NEXT:    mov.b32 %r2, 0;
 ; CHECK-NEXT:  $L__BB28_4: // %merge2
-; CHECK-NEXT:    st.param.b32 [func_retval0], %r2;
+; CHECK-NEXT:    st.param::func.b32 [func_retval0], %r2;
 ; CHECK-NEXT:    ret;
 entry:
   %cmp = fcmp ult float %arg, 0.000000e+00
@@ -1245,7 +1245,7 @@ define i32 @test_float32_oeq_vs_olt(float %arg) {
 ; CHECK-NEXT:    .reg .b32 %r<3>;
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  // %bb.0: // %entry
-; CHECK-NEXT:    ld.param.b32 %r1, [test_float32_oeq_vs_olt_param_0];
+; CHECK-NEXT:    ld.param::func.b32 %r1, [test_float32_oeq_vs_olt_param_0];
 ; CHECK-NEXT:    setp.eq.f32 %p1, %r1, 0f00000000;
 ; CHECK-NEXT:    mov.b32 %r2, 0;
 ; CHECK-NEXT:    @%p1 bra $L__BB29_2;
@@ -1257,7 +1257,7 @@ define i32 @test_float32_oeq_vs_olt(float %arg) {
 ; CHECK-NEXT:  // %bb.3: // %else
 ; CHECK-NEXT:    mov.b32 %r2, 0;
 ; CHECK-NEXT:  $L__BB29_4: // %merge2
-; CHECK-NEXT:    st.param.b32 [func_retval0], %r2;
+; CHECK-NEXT:    st.param::func.b32 [func_retval0], %r2;
 ; CHECK-NEXT:    ret;
 entry:
   %cmp = fcmp oeq float %arg, 0.000000e+00
@@ -1287,7 +1287,7 @@ define i32 @test_float64_ueq_vs_une(double %arg) {
 ; CHECK-NEXT:    .reg .b64 %rd<2>;
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  // %bb.0: // %entry
-; CHECK-NEXT:    ld.param.b64 %rd1, [test_float64_ueq_vs_une_param_0];
+; CHECK-NEXT:    ld.param::func.b64 %rd1, [test_float64_ueq_vs_une_param_0];
 ; CHECK-NEXT:    setp.equ.f64 %p1, %rd1, 0d0000000000000000;
 ; CHECK-NEXT:    mov.b32 %r1, 0;
 ; CHECK-NEXT:    @%p1 bra $L__BB30_2;
@@ -1299,7 +1299,7 @@ define i32 @test_float64_ueq_vs_une(double %arg) {
 ; CHECK-NEXT:  // %bb.3: // %else
 ; CHECK-NEXT:    mov.b32 %r1, 0;
 ; CHECK-NEXT:  $L__BB30_4: // %merge2
-; CHECK-NEXT:    st.param.b32 [func_retval0], %r1;
+; CHECK-NEXT:    st.param::func.b32 [func_retval0], %r1;
 ; CHECK-NEXT:    ret;
 entry:
   %cmp = fcmp ueq double %arg, 0.000000e+00
@@ -1329,7 +1329,7 @@ define i32 @test_float64_oeq_vs_one(double %arg) {
 ; CHECK-NEXT:    .reg .b64 %rd<2>;
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  // %bb.0: // %entry
-; CHECK-NEXT:    ld.param.b64 %rd1, [test_float64_oeq_vs_one_param_0];
+; CHECK-NEXT:    ld.param::func.b64 %rd1, [test_float64_oeq_vs_one_param_0];
 ; CHECK-NEXT:    setp.eq.f64 %p1, %rd1, 0d0000000000000000;
 ; CHECK-NEXT:    mov.b32 %r1, 0;
 ; CHECK-NEXT:    @%p1 bra $L__BB31_2;
@@ -1341,7 +1341,7 @@ define i32 @test_float64_oeq_vs_one(double %arg) {
 ; CHECK-NEXT:  // %bb.3: // %else
 ; CHECK-NEXT:    mov.b32 %r1, 0;
 ; CHECK-NEXT:  $L__BB31_4: // %merge2
-; CHECK-NEXT:    st.param.b32 [func_retval0], %r1;
+; CHECK-NEXT:    st.param::func.b32 [func_retval0], %r1;
 ; CHECK-NEXT:    ret;
 entry:
   %cmp = fcmp oeq double %arg, 0.000000e+00
@@ -1371,7 +1371,7 @@ define i32 @test_float64_olt_vs_ogt(double %arg) {
 ; CHECK-NEXT:    .reg .b64 %rd<2>;
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  // %bb.0: // %entry
-; CHECK-NEXT:    ld.param.b64 %rd1, [test_float64_olt_vs_ogt_param_0];
+; CHECK-NEXT:    ld.param::func.b64 %rd1, [test_float64_olt_vs_ogt_param_0];
 ; CHECK-NEXT:    setp.lt.f64 %p1, %rd1, 0d0000000000000000;
 ; CHECK-NEXT:    mov.b32 %r1, 0;
 ; CHECK-NEXT:    @%p1 bra $L__BB32_2;
@@ -1383,7 +1383,7 @@ define i32 @test_float64_olt_vs_ogt(double %arg) {
 ; CHECK-NEXT:  // %bb.3: // %else
 ; CHECK-NEXT:    mov.b32 %r1, 0;
 ; CHECK-NEXT:  $L__BB32_4: // %merge2
-; CHECK-NEXT:    st.param.b32 [func_retval0], %r1;
+; CHECK-NEXT:    st.param::func.b32 [func_retval0], %r1;
 ; CHECK-NEXT:    ret;
 entry:
   %cmp = fcmp olt double %arg, 0.000000e+00
@@ -1413,7 +1413,7 @@ define i32 @test_float64_ult_vs_ugt(double %arg) {
 ; CHECK-NEXT:    .reg .b64 %rd<2>;
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  // %bb.0: // %entry
-; CHECK-NEXT:    ld.param.b64 %rd1, [test_float64_ult_vs_ugt_param_0];
+; CHECK-NEXT:    ld.param::func.b64 %rd1, [test_float64_ult_vs_ugt_param_0];
 ; CHECK-NEXT:    setp.ltu.f64 %p1, %rd1, 0d0000000000000000;
 ; CHECK-NEXT:    mov.b32 %r1, 0;
 ; CHECK-NEXT:    @%p1 bra $L__BB33_2;
@@ -1425,7 +1425,7 @@ define i32 @test_float64_ult_vs_ugt(double %arg) {
 ; CHECK-NEXT:  // %bb.3: // %else
 ; CHECK-NEXT:    mov.b32 %r1, 0;
 ; CHECK-NEXT:  $L__BB33_4: // %merge2
-; CHECK-NEXT:    st.param.b32 [func_retval0], %r1;
+; CHECK-NEXT:    st.param::func.b32 [func_retval0], %r1;
 ; CHECK-NEXT:    ret;
 entry:
   %cmp = fcmp ult double %arg, 0.000000e+00
@@ -1455,7 +1455,7 @@ define i32 @test_float64_oeq_vs_olt(double %arg) {
 ; CHECK-NEXT:    .reg .b64 %rd<2>;
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  // %bb.0: // %entry
-; CHECK-NEXT:    ld.param.b64 %rd1, [test_float64_oeq_vs_olt_param_0];
+; CHECK-NEXT:    ld.param::func.b64 %rd1, [test_float64_oeq_vs_olt_param_0];
 ; CHECK-NEXT:    setp.eq.f64 %p1, %rd1, 0d0000000000000000;
 ; CHECK-NEXT:    mov.b32 %r1, 0;
 ; CHECK-NEXT:    @%p1 bra $L__BB34_2;
@@ -1467,7 +1467,7 @@ define i32 @test_float64_oeq_vs_olt(double %arg) {
 ; CHECK-NEXT:  // %bb.3: // %else
 ; CHECK-NEXT:    mov.b32 %r1, 0;
 ; CHECK-NEXT:  $L__BB34_4: // %merge2
-; CHECK-NEXT:    st.param.b32 [func_retval0], %r1;
+; CHECK-NEXT:    st.param::func.b32 [func_retval0], %r1;
 ; CHECK-NEXT:    ret;
 entry:
   %cmp = fcmp oeq double %arg, 0.000000e+00

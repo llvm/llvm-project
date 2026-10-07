@@ -75,11 +75,11 @@ struct SourceInfo {
 
   struct SourceNames : public Section {
     struct Header {
-      uint32_t Flags;
-      uint32_t Count;
-      uint16_t EntriesSizeInBytes;
+      uint32_t Flags = 0;
+      uint32_t Count = 0;
+      uint16_t EntriesSizeInBytes = 0;
 
-      Header() {}
+      Header() = default;
       LLVM_ABI Header(const dxbc::SourceInfo::Names::HeaderOnDisk &H);
 
       void swapBytes() {

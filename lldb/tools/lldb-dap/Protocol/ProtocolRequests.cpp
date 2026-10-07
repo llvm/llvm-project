@@ -776,7 +776,8 @@ llvm::json::Value toJSON(const LocationsResponseBody &Body) {
 bool fromJSON(const llvm::json::Value &Params, CompileUnitsArguments &Args,
               llvm::json::Path Path) {
   json::ObjectMapper O(Params, Path);
-  return O && O.map("moduleId", Args.moduleId);
+  return O && O.map("moduleId", Args.moduleId) &&
+         O.mapOptional("compileUnitIds", Args.compileUnitIds);
 }
 
 llvm::json::Value toJSON(const CompileUnitsResponseBody &Body) {

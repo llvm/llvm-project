@@ -1,4 +1,4 @@
-// RUN: not llvm-mc -triple=amdgcn -mcpu=tonga %s -filetype=null 2>&1 | FileCheck %s --implicit-check-not=error: --strict-whitespace
+// RUN: not llvm-mc -triple=amdgpu8.02 %s -filetype=null 2>&1 | FileCheck %s --implicit-check-not=error: --strict-whitespace
 
 //==============================================================================
 // a16 modifier is not supported on this GPU

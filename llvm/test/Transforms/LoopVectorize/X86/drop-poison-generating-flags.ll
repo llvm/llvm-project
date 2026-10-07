@@ -294,10 +294,10 @@ define void @drop_nonvector_nuw_nsw_avx1(ptr noalias nocapture readonly %input, 
 ; CHECK-NEXT:    [[TMP11:%.*]] = getelementptr float, ptr [[INPUT]], i64 [[TMP7]]
 ; CHECK-NEXT:    [[TMP12:%.*]] = getelementptr float, ptr [[INPUT]], i64 [[TMP8]]
 ; CHECK-NEXT:    [[TMP13:%.*]] = getelementptr float, ptr [[INPUT]], i64 [[TMP9]]
-; CHECK-NEXT:    [[TMP14:%.*]] = insertelement <4 x ptr> poison, ptr [[TMP10]], i32 0
-; CHECK-NEXT:    [[TMP15:%.*]] = insertelement <4 x ptr> [[TMP14]], ptr [[TMP11]], i32 1
-; CHECK-NEXT:    [[TMP16:%.*]] = insertelement <4 x ptr> [[TMP15]], ptr [[TMP12]], i32 2
-; CHECK-NEXT:    [[TMP17:%.*]] = insertelement <4 x ptr> [[TMP16]], ptr [[TMP13]], i32 3
+; CHECK-NEXT:    [[TMP14:%.*]] = insertelement <4 x ptr> poison, ptr [[TMP10]], i64 0
+; CHECK-NEXT:    [[TMP15:%.*]] = insertelement <4 x ptr> [[TMP14]], ptr [[TMP11]], i64 1
+; CHECK-NEXT:    [[TMP16:%.*]] = insertelement <4 x ptr> [[TMP15]], ptr [[TMP12]], i64 2
+; CHECK-NEXT:    [[TMP17:%.*]] = insertelement <4 x ptr> [[TMP16]], ptr [[TMP13]], i64 3
 ; CHECK-NEXT:    store <4 x ptr> [[TMP17]], ptr [[PTRS]], align 8
 ; CHECK-NEXT:    [[WIDE_MASKED_LOAD:%.*]] = call <4 x float> @llvm.masked.load.v4f32.p0(ptr align 4 [[TMP10]], <4 x i1> <i1 false, i1 true, i1 true, i1 true>, <4 x float> poison), !invariant.load [[META0]]
 ; CHECK-NEXT:    [[PREDPHI:%.*]] = select <4 x i1> <i1 false, i1 true, i1 true, i1 true>, <4 x float> [[WIDE_MASKED_LOAD]], <4 x float> zeroinitializer

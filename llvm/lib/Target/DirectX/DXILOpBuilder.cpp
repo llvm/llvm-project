@@ -568,7 +568,7 @@ Expected<CallInst *> DXILOpBuilder::tryCreateOp(dxil::OpCode OpCode,
     return makeOpError(OpCode, Twine("No valid stage for DXIL version ") +
                                    DXILVersion.getAsString());
 
-  uint16_t ValidShaderKindMask = Prop->Stages[*StIndexOrErr].ValidStages;
+  uint32_t ValidShaderKindMask = Prop->Stages[*StIndexOrErr].ValidStages;
 
   // Ensure valid shader stage properties are specified
   if (ValidShaderKindMask == ShaderKind::removed)

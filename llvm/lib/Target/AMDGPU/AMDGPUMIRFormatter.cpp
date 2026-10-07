@@ -12,7 +12,6 @@
 //===----------------------------------------------------------------------===//
 
 #include "AMDGPUMIRFormatter.h"
-#include "AMDGPUWaitcntUtils.h"
 #include "SIMachineFunctionInfo.h"
 #include "llvm/TargetParser/AMDGPUTargetParser.h"
 

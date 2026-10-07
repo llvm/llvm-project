@@ -23,3 +23,38 @@ define <2 x i16> @test_atomicrmw_add_v2i16(ptr %ptr, <2 x i16> %value) {
   %res = atomicrmw add ptr %ptr, <2 x i16> %value seq_cst
   ret <2 x i16> %res
 }
+
+define <2 x i16> @test_atomicrmw_xchg_v2i16(ptr %ptr, <2 x i16> %value) {
+; CHECK-LABEL: @test_atomicrmw_xchg_v2i16(
+; CHECK-NEXT:    [[TMP1:%.*]] = bitcast <2 x i16> [[VALUE:%.*]] to i32
+; CHECK-NEXT:    [[TMP2:%.*]] = atomicrmw xchg ptr [[PTR:%.*]], i32 [[TMP1]] monotonic, align 4
+; CHECK-NEXT:    [[TMP3:%.*]] = bitcast i32 [[TMP2]] to <2 x i16>
+; CHECK-NEXT:    ret <2 x i16> [[TMP3]]
+;
+  %res = atomicrmw xchg ptr %ptr, <2 x i16> %value monotonic
+  ret <2 x i16> %res
+}
+
+define <2 x half> @test_atomicrmw_xchg_v2f16(ptr %ptr, <2 x half> %value) {
+; CHECK-LABEL: @test_atomicrmw_xchg_v2f16(
+; CHECK-NEXT:    [[TMP1:%.*]] = bitcast <2 x half> [[VALUE:%.*]] to i32
+; CHECK-NEXT:    [[TMP2:%.*]] = atomicrmw xchg ptr [[PTR:%.*]], i32 [[TMP1]] monotonic, align 4
+; CHECK-NEXT:    [[TMP3:%.*]] = bitcast i32 [[TMP2]] to <2 x half>
+; CHECK-NEXT:    ret <2 x half> [[TMP3]]
+;
+  %res = atomicrmw xchg ptr %ptr, <2 x half> %value monotonic
+  ret <2 x half> %res
+}
+
+define <2 x ptr> @test_atomicrmw_xchg_v2p0(ptr %ptr, <2 x ptr> %value) {
+; CHECK-LABEL: @test_atomicrmw_xchg_v2p0(
+; CHECK-NEXT:    [[TMP1:%.*]] = ptrtoint <2 x ptr> [[VALUE:%.*]] to <2 x i64>
+; CHECK-NEXT:    [[TMP2:%.*]] = bitcast <2 x i64> [[TMP1]] to i128
+; CHECK-NEXT:    [[TMP3:%.*]] = call i128 @__atomic_exchange_16(ptr [[PTR:%.*]], i128 [[TMP2]], i32 0)
+; CHECK-NEXT:    [[TMP4:%.*]] = bitcast i128 [[TMP3]] to <2 x i64>
+; CHECK-NEXT:    [[TMP5:%.*]] = inttoptr <2 x i64> [[TMP4]] to <2 x ptr>
+; CHECK-NEXT:    ret <2 x ptr> [[TMP5]]
+;
+  %res = atomicrmw xchg ptr %ptr, <2 x ptr> %value monotonic
+  ret <2 x ptr> %res
+}

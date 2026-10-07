@@ -54,4 +54,11 @@ struct B {
   void operator delete(void*) volatile; //expected-error {{static member function cannot have 'volatile' qualifier}}
   void operator delete[](void*) volatile; //expected-error {{static member function cannot have 'volatile' qualifier}}
 };
-}
+struct RefQualifierLValue {
+  void* operator new(size_t bytes) &; // expected-error {{static member function cannot have '&' qualifier}}
+};
+
+struct RefQualifierRValue {
+  void* operator new(size_t bytes) &&; // expected-error {{static member function cannot have '&&' qualifier}}
+};
+} // namespace GH79748

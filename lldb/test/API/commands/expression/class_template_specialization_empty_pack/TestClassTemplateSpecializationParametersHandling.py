@@ -11,8 +11,10 @@ from lldbsuite.test.lldbtest import *
 from lldbsuite.test import lldbutil
 
 
-@skipIfWasm  # no expression evaluation
+@requireExpressionEvaluation
 class TestClassTemplateSpecializationParametersHandling(TestBase):
+    TEST_WITH_PDB_DEBUG_INFO = True
+
     def test_class_template_specialization(self):
         self.build()
 

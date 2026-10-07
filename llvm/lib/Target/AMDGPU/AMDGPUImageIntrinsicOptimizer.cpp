@@ -111,7 +111,7 @@ void addInstToMergeableList(
     // Check all arguments (DMask, VAddr, RSrc etc).
     bool AllEqual = true;
     assert(IIList.front()->arg_size() == II->arg_size());
-    for (int I = 1, E = II->arg_size(); AllEqual && I != E; ++I) {
+    for (int I = 0, E = II->arg_size(); AllEqual && I != E; ++I) {
       Value *ArgList = IIList.front()->getArgOperand(I);
       Value *Arg = II->getArgOperand(I);
       if (I == ImageDimIntr->VAddrEnd - 1) {

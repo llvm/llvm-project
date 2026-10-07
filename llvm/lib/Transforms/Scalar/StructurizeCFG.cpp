@@ -1135,9 +1135,8 @@ void StructurizeCFG::setPrevNode(BasicBlock *BB) {
 /// Does BB dominate all the predicates of Node?
 bool StructurizeCFG::dominatesPredicates(BasicBlock *BB, RegionNode *Node) {
   BBPredicates &Preds = Predicates[Node->getEntry()];
-  return llvm::all_of(Preds, [&](std::pair<BasicBlock *, PredInfo> Pred) {
-    return DT->dominates(BB, Pred.first);
-  });
+  return llvm::all_of(
+      Preds, [&](const auto &Pred) { return DT->dominates(BB, Pred.first); });
 }
 
 /// Can we predict that this node will always be called?

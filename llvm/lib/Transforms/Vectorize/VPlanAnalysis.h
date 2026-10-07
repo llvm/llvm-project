@@ -52,9 +52,9 @@ struct VPRegisterUsage {
 /// by calculating the highest number of values that are live at a single
 /// location as a rough estimate. Returns the register usage for each VF in \p
 /// VFs.
-SmallVector<VPRegisterUsage, 8> calculateRegisterUsageForPlan(
-    VPlan &Plan, ArrayRef<ElementCount> VFs, const TargetTransformInfo &TTI,
-    const SmallPtrSetImpl<const Value *> &ValuesToIgnore);
+SmallVector<VPRegisterUsage, 8>
+calculateRegisterUsageForPlan(VPlan &Plan, ArrayRef<ElementCount> VFs,
+                              const TargetTransformInfo &TTI);
 
 } // end namespace llvm
 

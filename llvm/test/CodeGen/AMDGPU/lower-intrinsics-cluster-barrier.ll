@@ -5,39 +5,6 @@
 
 declare void @foo(i1)
 
-; Verify that the explicit use of a split cluster barrier isn't optimized away.
-define amdgpu_kernel void @split_barriers() "amdgpu-flat-work-group-size"="32,32" {
-; NOOPT-LABEL: define amdgpu_kernel void @split_barriers(
-; NOOPT-SAME: ) #[[ATTR0:[0-9]+]] {
-; NOOPT-NEXT:    call void @llvm.amdgcn.s.barrier.signal(i32 -3)
-; NOOPT-NEXT:    call void @llvm.amdgcn.s.barrier.wait(i16 -3)
-; NOOPT-NEXT:    [[ISFIRST:%.*]] = call i1 @llvm.amdgcn.s.barrier.signal.isfirst(i32 -3)
-; NOOPT-NEXT:    call void @foo(i1 [[ISFIRST]])
-; NOOPT-NEXT:    ret void
-;
-; OPT-WAVE32-LABEL: define amdgpu_kernel void @split_barriers(
-; OPT-WAVE32-SAME: ) #[[ATTR1:[0-9]+]] {
-; OPT-WAVE32-NEXT:    call void @llvm.amdgcn.s.barrier.signal(i32 -3)
-; OPT-WAVE32-NEXT:    call void @llvm.amdgcn.s.barrier.wait(i16 -3)
-; OPT-WAVE32-NEXT:    [[ISFIRST:%.*]] = call i1 @llvm.amdgcn.s.barrier.signal.isfirst(i32 -3)
-; OPT-WAVE32-NEXT:    call void @foo(i1 [[ISFIRST]])
-; OPT-WAVE32-NEXT:    ret void
-;
-; OPT-WAVE64-LABEL: define amdgpu_kernel void @split_barriers(
-; OPT-WAVE64-SAME: ) #[[ATTR1:[0-9]+]] {
-; OPT-WAVE64-NEXT:    call void @llvm.amdgcn.s.barrier.signal(i32 -3)
-; OPT-WAVE64-NEXT:    call void @llvm.amdgcn.s.barrier.wait(i16 -3)
-; OPT-WAVE64-NEXT:    [[ISFIRST:%.*]] = call i1 @llvm.amdgcn.s.barrier.signal.isfirst(i32 -3)
-; OPT-WAVE64-NEXT:    call void @foo(i1 [[ISFIRST]])
-; OPT-WAVE64-NEXT:    ret void
-;
-  call void @llvm.amdgcn.s.barrier.signal(i32 -3)
-  call void @llvm.amdgcn.s.barrier.wait(i16 -3)
-  %isfirst = call i1 @llvm.amdgcn.s.barrier.signal.isfirst(i32 -3)
-  call void @foo(i1 %isfirst)
-  ret void
-}
-
 define amdgpu_kernel void @s_cluster_barrier() {
 ; NOOPT-LABEL: define amdgpu_kernel void @s_cluster_barrier() {
 ; NOOPT-NEXT:    [[TMP1:%.*]] = call i1 @llvm.amdgcn.s.barrier.signal.isfirst(i32 -1)
@@ -80,7 +47,7 @@ define amdgpu_kernel void @s_cluster_barrier() {
 
 define amdgpu_kernel void @s_cluster_barrier_wg32() "amdgpu-flat-work-group-size"="32,32" {
 ; NOOPT-LABEL: define amdgpu_kernel void @s_cluster_barrier_wg32(
-; NOOPT-SAME: ) #[[ATTR0]] {
+; NOOPT-SAME: ) #[[ATTR0:[0-9]+]] {
 ; NOOPT-NEXT:    [[TMP1:%.*]] = call i1 @llvm.amdgcn.s.barrier.signal.isfirst(i32 -1)
 ; NOOPT-NEXT:    call void @llvm.amdgcn.s.barrier.wait(i16 -1)
 ; NOOPT-NEXT:    br i1 [[TMP1]], label %[[BB2:.*]], label %[[BB3:.*]]
@@ -92,14 +59,14 @@ define amdgpu_kernel void @s_cluster_barrier_wg32() "amdgpu-flat-work-group-size
 ; NOOPT-NEXT:    ret void
 ;
 ; OPT-WAVE32-LABEL: define amdgpu_kernel void @s_cluster_barrier_wg32(
-; OPT-WAVE32-SAME: ) #[[ATTR1]] {
+; OPT-WAVE32-SAME: ) #[[ATTR1:[0-9]+]] {
 ; OPT-WAVE32-NEXT:    call void @llvm.amdgcn.wave.barrier()
 ; OPT-WAVE32-NEXT:    call void @llvm.amdgcn.s.barrier.signal(i32 -3)
 ; OPT-WAVE32-NEXT:    call void @llvm.amdgcn.s.barrier.wait(i16 -3)
 ; OPT-WAVE32-NEXT:    ret void
 ;
 ; OPT-WAVE64-LABEL: define amdgpu_kernel void @s_cluster_barrier_wg32(
-; OPT-WAVE64-SAME: ) #[[ATTR1]] {
+; OPT-WAVE64-SAME: ) #[[ATTR1:[0-9]+]] {
 ; OPT-WAVE64-NEXT:    call void @llvm.amdgcn.wave.barrier()
 ; OPT-WAVE64-NEXT:    call void @llvm.amdgcn.s.barrier.signal(i32 -3)
 ; OPT-WAVE64-NEXT:    call void @llvm.amdgcn.s.barrier.wait(i16 -3)

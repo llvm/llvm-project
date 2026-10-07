@@ -1,7 +1,7 @@
 ; RUN: llc -mtriple=amdgpu7.00-amd-amdhsa -enable-misched=0 -filetype=obj -o - < %s | llvm-readelf --notes - | FileCheck --check-prefixes=CHECK,GFX700,WAVE64 %s
-; RUN: llc -mattr=-xnack -mtriple=amdgpu8.03-amd-amdhsa -enable-misched=0 -filetype=obj -o - < %s | llvm-readelf --notes - | FileCheck --check-prefixes=CHECK,GFX803,WAVE64 %s
-; RUN: llc -mattr=-xnack -mtriple=amdgpu9.00-amd-amdhsa -enable-misched=0 -filetype=obj -o - < %s | llvm-readelf --notes - | FileCheck --check-prefixes=CHECK,GFX900,WAVE64 %s
-; RUN: llc -mattr=-xnack -mtriple=amdgpu10.10-amd-amdhsa -enable-misched=0 -filetype=obj -o - < %s | llvm-readelf --notes - | FileCheck --check-prefixes=CHECK,GFX1010,WAVE32 %s
+; RUN: llc --amdgpu-xnack=false -mtriple=amdgpu8.03-amd-amdhsa -enable-misched=0 -filetype=obj -o - < %s | llvm-readelf --notes - | FileCheck --check-prefixes=CHECK,GFX803,WAVE64 %s
+; RUN: llc --amdgpu-xnack=false -mtriple=amdgpu9.00-amd-amdhsa -enable-misched=0 -filetype=obj -o - < %s | llvm-readelf --notes - | FileCheck --check-prefixes=CHECK,GFX900,WAVE64 %s
+; RUN: llc --amdgpu-xnack=false -mtriple=amdgpu10.10-amd-amdhsa -enable-misched=0 -filetype=obj -o - < %s | llvm-readelf --notes - | FileCheck --check-prefixes=CHECK,GFX1010,WAVE32 %s
 
 @var = addrspace(1) global float 0.0
 
@@ -47,10 +47,10 @@ entry:
 }
 
 ; CHECK:   .name:       num_spilled_sgprs
-; GFX700:   .sgpr_spill_count: 10
+; GFX700:   .sgpr_spill_count: 11
 ; GFX803:   .sgpr_spill_count: 10
-; GFX900:   .sgpr_spill_count: 62
-; GFX1010:  .sgpr_spill_count: 60
+; GFX900:   .sgpr_spill_count: 58
+; GFX1010:  .sgpr_spill_count: 56
 ; CHECK:   .symbol:     num_spilled_sgprs.kd
 define amdgpu_kernel void @num_spilled_sgprs(
     ptr addrspace(1) %out0, ptr addrspace(1) %out1, [8 x i32],

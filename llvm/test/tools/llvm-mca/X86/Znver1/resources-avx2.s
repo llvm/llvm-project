@@ -594,12 +594,12 @@ vpxor           (%rax), %ymm1, %ymm2
 # CHECK-NEXT:  2      11    2.00    *                   vpmaddwd	(%rax), %ymm1, %ymm2
 # CHECK-NEXT:  1      100   0.25    *                   vpmaskmovd	(%rax), %xmm0, %xmm2
 # CHECK-NEXT:  1      100   0.25    *                   vpmaskmovd	(%rax), %ymm0, %ymm2
-# CHECK-NEXT:  1      100   0.25    *      *            vpmaskmovd	%xmm0, %xmm1, (%rax)
-# CHECK-NEXT:  1      100   0.25    *      *            vpmaskmovd	%ymm0, %ymm1, (%rax)
+# CHECK-NEXT:  19     4     6.00    *      *            vpmaskmovd	%xmm0, %xmm1, (%rax)
+# CHECK-NEXT:  42     5     12.00   *      *            vpmaskmovd	%ymm0, %ymm1, (%rax)
 # CHECK-NEXT:  2      8     1.00    *                   vpmaskmovq	(%rax), %xmm0, %xmm2
 # CHECK-NEXT:  2      9     1.50    *                   vpmaskmovq	(%rax), %ymm0, %ymm2
-# CHECK-NEXT:  1      100   0.25    *      *            vpmaskmovq	%xmm0, %xmm1, (%rax)
-# CHECK-NEXT:  1      100   0.25    *      *            vpmaskmovq	%ymm0, %ymm1, (%rax)
+# CHECK-NEXT:  10     4     4.00    *      *            vpmaskmovq	%xmm0, %xmm1, (%rax)
+# CHECK-NEXT:  18     5     6.00    *      *            vpmaskmovq	%ymm0, %ymm1, (%rax)
 # CHECK-NEXT:  2      1     0.67                        vpmaxsb	%ymm0, %ymm1, %ymm2
 # CHECK-NEXT:  2      8     0.67    *                   vpmaxsb	(%rax), %ymm1, %ymm2
 # CHECK-NEXT:  2      1     0.67                        vpmaxsd	%ymm0, %ymm1, %ymm2
@@ -778,7 +778,7 @@ vpxor           (%rax), %ymm1, %ymm2
 
 # CHECK:      Resource pressure per iteration:
 # CHECK-NEXT: [0]    [1]    [2]    [3]    [4]    [5]    [6]    [7]    [8]    [9]    [10]   [11]
-# CHECK-NEXT: 67.00  67.00   -      -      -      -      -     126.17 242.17 161.00 66.67   -
+# CHECK-NEXT: 69.00  69.00   -      -      -      -      -     154.17 270.17 161.00 66.67   -
 
 # CHECK:      Resource pressure by instruction:
 # CHECK-NEXT: [0]    [1]    [2]    [3]    [4]    [5]    [6]    [7]    [8]    [9]    [10]   [11]   Instructions:
@@ -916,12 +916,12 @@ vpxor           (%rax), %ymm1, %ymm2
 # CHECK-NEXT: 0.50   0.50    -      -      -      -      -     2.00    -      -      -      -     vpmaddwd	(%rax), %ymm1, %ymm2
 # CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -      -      -     vpmaskmovd	(%rax), %xmm0, %xmm2
 # CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -      -      -     vpmaskmovd	(%rax), %ymm0, %ymm2
-# CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -      -      -     vpmaskmovd	%xmm0, %xmm1, (%rax)
-# CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -      -      -     vpmaskmovd	%ymm0, %ymm1, (%rax)
+# CHECK-NEXT: 0.50   0.50    -      -      -      -      -     6.00   6.00    -      -      -     vpmaskmovd	%xmm0, %xmm1, (%rax)
+# CHECK-NEXT: 0.50   0.50    -      -      -      -      -     12.00  12.00   -      -      -     vpmaskmovd	%ymm0, %ymm1, (%rax)
 # CHECK-NEXT: 0.50   0.50    -      -      -      -      -     1.00   1.00    -      -      -     vpmaskmovq	(%rax), %xmm0, %xmm2
 # CHECK-NEXT: 0.50   0.50    -      -      -      -      -     1.50   1.50    -      -      -     vpmaskmovq	(%rax), %ymm0, %ymm2
-# CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -      -      -     vpmaskmovq	%xmm0, %xmm1, (%rax)
-# CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -      -      -     vpmaskmovq	%ymm0, %ymm1, (%rax)
+# CHECK-NEXT: 0.50   0.50    -      -      -      -      -     4.00   4.00    -      -      -     vpmaskmovq	%xmm0, %xmm1, (%rax)
+# CHECK-NEXT: 0.50   0.50    -      -      -      -      -     6.00   6.00    -      -      -     vpmaskmovq	%ymm0, %ymm1, (%rax)
 # CHECK-NEXT:  -      -      -      -      -      -      -     0.67   0.67    -     0.67    -     vpmaxsb	%ymm0, %ymm1, %ymm2
 # CHECK-NEXT: 0.50   0.50    -      -      -      -      -     0.67   0.67    -     0.67    -     vpmaxsb	(%rax), %ymm1, %ymm2
 # CHECK-NEXT:  -      -      -      -      -      -      -     0.67   0.67    -     0.67    -     vpmaxsd	%ymm0, %ymm1, %ymm2

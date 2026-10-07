@@ -443,8 +443,8 @@ void __tsan_mutex_post_divert(void *addr, unsigned flagz) {
 static void ReportMutexHeldWrongContext(ThreadState *thr, uptr pc) {
   // Use alloca, because malloc during signal handling deadlocks
   ScopedReport *rep = (ScopedReport *)__builtin_alloca(sizeof(ScopedReport));
-  // Take a new scope as Apple platforms require the below locks released
-  // before symbolizing in order to avoid a deadlock
+  // Release locks before symbolizing and outputting the report to avoid
+  // deadlocks.
   {
     ThreadRegistryLock l(&ctx->thread_registry);
     new (rep) ScopedReport(ReportTypeMutexHeldWrongContext);
@@ -455,16 +455,11 @@ static void ReportMutexHeldWrongContext(ThreadState *thr, uptr pc) {
     VarSizeStackTrace trace;
     ObtainCurrentStack(thr, pc, &trace);
     rep->AddStack(trace, true);
-#if SANITIZER_APPLE
-  }  // Close this scope to release the locks
-#endif
-    OutputReport(thr, *rep);
-
-    // Need to manually destroy this because we used placement new to allocate
-    rep->~ScopedReport();
-#if !SANITIZER_APPLE
   }
-#endif
+  OutputReport(thr, *rep);
+
+  // Need to manually destroy this because we used placement new to allocate
+  rep->~ScopedReport();
 }
 
 INTERFACE_ATTRIBUTE

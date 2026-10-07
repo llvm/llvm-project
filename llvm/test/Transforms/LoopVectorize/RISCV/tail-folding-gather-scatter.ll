@@ -41,10 +41,9 @@ define void @gather_scatter(ptr noalias %in, ptr noalias %out, ptr noalias %inde
 ; NO-VP-NEXT:    [[MIN_ITERS_CHECK:%.*]] = icmp ult i64 [[N:%.*]], [[TMP12]]
 ; NO-VP-NEXT:    br i1 [[MIN_ITERS_CHECK]], label [[SCALAR_PH:%.*]], label [[ENTRY:%.*]]
 ; NO-VP:       vector.ph:
-; NO-VP-NEXT:    [[TMP3:%.*]] = shl nuw i64 [[TMP11]], 1
-; NO-VP-NEXT:    [[N_MOD_VF:%.*]] = urem i64 [[N]], [[TMP3]]
+; NO-VP-NEXT:    [[N_MOD_VF:%.*]] = urem i64 [[N]], [[TMP12]]
 ; NO-VP-NEXT:    [[N_VEC:%.*]] = sub i64 [[N]], [[N_MOD_VF]]
-; NO-VP-NEXT:    [[TMP4:%.*]] = trunc i64 [[TMP3]] to i32
+; NO-VP-NEXT:    [[TMP4:%.*]] = trunc i64 [[TMP12]] to i32
 ; NO-VP-NEXT:    br label [[FOR_BODY1:%.*]]
 ; NO-VP:       vector.body:
 ; NO-VP-NEXT:    [[INDVARS_IV1:%.*]] = phi i64 [ 0, [[ENTRY]] ], [ [[INDVARS_IV_NEXT1:%.*]], [[FOR_BODY1]] ]
@@ -55,7 +54,7 @@ define void @gather_scatter(ptr noalias %in, ptr noalias %out, ptr noalias %inde
 ; NO-VP-NEXT:    [[WIDE_MASKED_GATHER:%.*]] = call <vscale x 2 x float> @llvm.masked.gather.nxv2f32.nxv2p0(<vscale x 2 x ptr> align 4 [[TMP8]], <vscale x 2 x i1> splat (i1 true), <vscale x 2 x float> poison)
 ; NO-VP-NEXT:    [[TMP9:%.*]] = getelementptr inbounds float, ptr [[OUT:%.*]], <vscale x 2 x i64> [[TMP7]]
 ; NO-VP-NEXT:    call void @llvm.masked.scatter.nxv2f32.nxv2p0(<vscale x 2 x float> [[WIDE_MASKED_GATHER]], <vscale x 2 x ptr> align 4 [[TMP9]], <vscale x 2 x i1> splat (i1 true))
-; NO-VP-NEXT:    [[INDVARS_IV_NEXT1]] = add nuw i64 [[INDVARS_IV1]], [[TMP3]]
+; NO-VP-NEXT:    [[INDVARS_IV_NEXT1]] = add nuw i64 [[INDVARS_IV1]], [[TMP12]]
 ; NO-VP-NEXT:    [[TMP10:%.*]] = icmp eq i64 [[INDVARS_IV_NEXT1]], [[N_VEC]]
 ; NO-VP-NEXT:    br i1 [[TMP10]], label [[MIDDLE_BLOCK:%.*]], label [[FOR_BODY1]], !llvm.loop [[LOOP0:![0-9]+]]
 ; NO-VP:       middle.block:
@@ -99,4 +98,4 @@ for.end:
 
 !0 = distinct !{!0, !1, !2}
 !1 = !{!"llvm.loop.vectorize.width", i32 2}
-!2 = !{!"llvm.loop.vectorize.scalable.enable", i1 true}
+!2 = !{!"llvm.loop.vectorize.scalable.enable"}

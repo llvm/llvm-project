@@ -10,7 +10,6 @@
 /// This pass creates a unified init and fini kernel with the required metadata
 //===----------------------------------------------------------------------===//
 
-#include "NVPTXCtorDtorLowering.h"
 #include "MCTargetDesc/NVPTXBaseInfo.h"
 #include "NVPTX.h"
 #include "llvm/ADT/StringExtras.h"
@@ -245,7 +244,7 @@ public:
 } // End anonymous namespace
 
 PreservedAnalyses NVPTXCtorDtorLoweringPass::run(Module &M,
-                                                 ModuleAnalysisManager &AM) {
+                                                 ModuleAnalysisManager &MAM) {
   return lowerCtorsAndDtors(M) ? PreservedAnalyses::none()
                                : PreservedAnalyses::all();
 }

@@ -117,7 +117,7 @@ void UseRangesCheck::registerMatchers(MatchFinder *Finder) {
   Replacers.clear();
   llvm::DenseSet<Replacer *> SeenRepl;
   for (auto I = Replaces.begin(), E = Replaces.end(); I != E; ++I) {
-    auto Replacer = I->getValue();
+    const auto Replacer = I->getValue();
     if (!SeenRepl.insert(Replacer.get()).second)
       continue;
     Replacers.push_back(Replacer);
@@ -255,9 +255,9 @@ void UseRangesCheck::check(const MatchFinder::MatchResult &Result) {
     }
 
     const bool ResultUsed = isResultUsed(*Call, Result);
-    auto ResultPolicy = Replacer->getResultUsePolicy(*Function, false);
+    const auto ResultPolicy = Replacer->getResultUsePolicy(*Function, false);
 
-    auto Diag = createDiag(*Call);
+    const auto Diag = createDiag(*Call);
     if (auto ReplaceName = Replacer->getReplaceName(*Function))
       Diag << FixItHint::CreateReplacement(Call->getCallee()->getSourceRange(),
                                            *ReplaceName);

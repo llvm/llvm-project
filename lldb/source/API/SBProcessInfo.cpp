@@ -9,6 +9,7 @@
 #include "lldb/API/SBProcessInfo.h"
 #include "Utils.h"
 #include "lldb/API/SBFileSpec.h"
+#include "lldb/Utility/ConstString.h"
 #include "lldb/Utility/Instrumentation.h"
 #include "lldb/Utility/ProcessInfo.h"
 
@@ -71,6 +72,15 @@ SBFileSpec SBProcessInfo::GetExecutableFile() {
     file_spec.SetFileSpec(m_opaque_up->GetExecutableFile());
   }
   return file_spec;
+}
+
+const char *SBProcessInfo::GetArg0() {
+  LLDB_INSTRUMENT_VA(this);
+
+  if (!m_opaque_up)
+    return nullptr;
+
+  return ConstString(m_opaque_up->GetArg0()).GetCString();
 }
 
 lldb::pid_t SBProcessInfo::GetProcessID() {

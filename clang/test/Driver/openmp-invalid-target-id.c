@@ -9,6 +9,12 @@
 // RUN:   -Xopenmp-target=amdgcn-amd-amdhsa -march=gfx908xnack \
 // RUN:   %s 2>&1 | FileCheck -check-prefix=NOPLUS-L %s
 
+// RUN: not %clang -### -target x86_64-linux-gnu -fopenmp=libomp \
+// RUN:   -fopenmp-targets=amdgcn-amd-amdhsa,amdgcn-amd-amdhsa \
+// RUN:   -Xopenmp-target=amdgcn-amd-amdhsa -mcpu=gfx908 \
+// RUN:   -Xopenmp-target=amdgcn-amd-amdhsa -mcpu=gfx908xnack \
+// RUN:   %s 2>&1 | FileCheck -check-prefix=NOPLUS-L %s
+
 // NOPLUS-L: error: invalid target ID 'gfx908xnack'
 
 // RUN: not %clang -### -target x86_64-linux-gnu -fopenmp=libomp \

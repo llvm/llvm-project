@@ -1,4 +1,4 @@
-//===--- WebAssemblyExceptionInfo.cpp - Exception Infomation --------------===//
+//===--- WebAssemblyExceptionInfo.cpp - Exception Information -------------===//
 //
 // Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
 // See https://llvm.org/LICENSE.txt for license information.
@@ -14,8 +14,11 @@
 #include "WebAssemblyExceptionInfo.h"
 #include "WebAssemblyUtilities.h"
 #include "llvm/ADT/PostOrderIterator.h"
+#include "llvm/CodeGen/MachineBlockFrequencyInfo.h"
 #include "llvm/CodeGen/MachineDominanceFrontier.h"
 #include "llvm/CodeGen/MachineDominators.h"
+#include "llvm/CodeGen/MachineFunctionAnalysisManager.h"
+#include "llvm/IR/Analysis.h"
 #include "llvm/IR/Function.h"
 #include "llvm/InitializePasses.h"
 #include "llvm/MC/MCAsmInfo.h"
@@ -25,30 +28,60 @@ using namespace llvm;
 
 #define DEBUG_TYPE "wasm-exception-info"
 
-char WebAssemblyExceptionInfo::ID = 0;
+char WebAssemblyExceptionInfoWrapperPass::ID = 0;
 
-INITIALIZE_PASS_BEGIN(WebAssemblyExceptionInfo, DEBUG_TYPE,
+INITIALIZE_PASS_BEGIN(WebAssemblyExceptionInfoWrapperPass, DEBUG_TYPE,
                       "WebAssembly Exception Information", true, true)
 INITIALIZE_PASS_DEPENDENCY(MachineDominatorTreeWrapperPass)
 INITIALIZE_PASS_DEPENDENCY(MachineDominanceFrontierWrapperPass)
-INITIALIZE_PASS_END(WebAssemblyExceptionInfo, DEBUG_TYPE,
+INITIALIZE_PASS_END(WebAssemblyExceptionInfoWrapperPass, DEBUG_TYPE,
                     "WebAssembly Exception Information", true, true)
 
-bool WebAssemblyExceptionInfo::runOnMachineFunction(MachineFunction &MF) {
+static void computeWEI(WebAssemblyExceptionInfo &WEI, MachineFunction &MF,
+                       function_ref<MachineDominatorTree &()> GetMDT,
+                       function_ref<MachineDominanceFrontier &()> GetMDF) {
   LLVM_DEBUG(dbgs() << "********** Exception Info Calculation **********\n"
                        "********** Function: "
                     << MF.getName() << '\n');
-  releaseMemory();
   if (MF.getTarget().getMCAsmInfo().getExceptionHandlingType() !=
           ExceptionHandling::Wasm ||
       !MF.getFunction().hasPersonalityFn())
-    return false;
-  auto &MDT = getAnalysis<MachineDominatorTreeWrapperPass>().getDomTree();
-  auto &MDF = getAnalysis<MachineDominanceFrontierWrapperPass>().getMDF();
-  recalculate(MF, MDT, MDF);
-  LLVM_DEBUG(dump());
+    return;
+  MachineDominatorTree &MDT = GetMDT();
+  MachineDominanceFrontier &MDF = GetMDF();
+  WEI.recalculate(MF, MDT, MDF);
+}
+
+bool WebAssemblyExceptionInfoWrapperPass::runOnMachineFunction(
+    MachineFunction &MF) {
+  releaseMemory();
+  computeWEI(
+      WasmExceptionInfo, MF,
+      [&]() -> MachineDominatorTree & {
+        return getAnalysis<MachineDominatorTreeWrapperPass>().getDomTree();
+      },
+      [&]() -> MachineDominanceFrontier & {
+        return getAnalysis<MachineDominanceFrontierWrapperPass>().getMDF();
+      });
   return false;
 }
+
+WebAssemblyExceptionAnalysis::Result
+WebAssemblyExceptionAnalysis::run(MachineFunction &MF,
+                                  MachineFunctionAnalysisManager &MFAM) {
+  WebAssemblyExceptionInfo WEI;
+  computeWEI(
+      WEI, MF,
+      [&]() -> MachineDominatorTree & {
+        return MFAM.getResult<MachineDominatorTreeAnalysis>(MF);
+      },
+      [&]() -> MachineDominanceFrontier & {
+        return MFAM.getResult<MachineDominanceFrontierAnalysis>(MF);
+      });
+  return WEI;
+}
+
+AnalysisKey WebAssemblyExceptionAnalysis::Key;
 
 void WebAssemblyExceptionInfo::recalculate(
     MachineFunction &MF, MachineDominatorTree &MDT,
@@ -65,8 +98,8 @@ void WebAssemblyExceptionInfo::recalculate(
   }
 
   // Add BBs to exceptions' block set. This is a preparation to take out
-  // remaining incorect BBs from exceptions, because we need to iterate over BBs
-  // for each exception.
+  // remaining incorrect BBs from exceptions, because we need to iterate over
+  // BBs for each exception.
   for (auto *DomNode : post_order(&MDT)) {
     MachineBasicBlock *MBB = DomNode->getBlock();
     WebAssemblyException *WE = getExceptionFor(MBB);
@@ -107,7 +140,8 @@ void WebAssemblyExceptionInfo::releaseMemory() {
   TopLevelExceptions.clear();
 }
 
-void WebAssemblyExceptionInfo::getAnalysisUsage(AnalysisUsage &AU) const {
+void WebAssemblyExceptionInfoWrapperPass::getAnalysisUsage(
+    AnalysisUsage &AU) const {
   AU.setPreservesAll();
   AU.addRequired<MachineDominatorTreeWrapperPass>();
   AU.addRequired<MachineDominanceFrontierWrapperPass>();
@@ -204,4 +238,15 @@ raw_ostream &operator<<(raw_ostream &OS, const WebAssemblyException &WE) {
 void WebAssemblyExceptionInfo::print(raw_ostream &OS, const Module *) const {
   for (auto &WE : TopLevelExceptions)
     WE->print(OS);
+}
+
+bool WebAssemblyExceptionInfo::invalidate(
+    MachineFunction &MF, const PreservedAnalyses &PA,
+    MachineFunctionAnalysisManager::Invalidator &) {
+  // Check whether the analysis, all analyses on machine functions, or the
+  // machine function's CFG have been preserved.
+  auto PAC = PA.getChecker<WebAssemblyExceptionAnalysis>();
+  return !PAC.preserved() &&
+         !PAC.preservedSet<AllAnalysesOn<MachineFunction>>() &&
+         !PAC.preservedSet<CFGAnalyses>();
 }

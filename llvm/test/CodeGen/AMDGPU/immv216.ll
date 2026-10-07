@@ -1,7 +1,7 @@
 ; RUN:  llc -amdgpu-scalarize-global-loads=false  -mtriple=amdgpu11.00--amdhsa -mattr=-flat-for-global -show-mc-encoding < %s | FileCheck -enable-var-scope -check-prefixes=GCN,GFX10 %s
-; RUN:  llc -amdgpu-scalarize-global-loads=false  -mtriple=amdgpu10.10--amdhsa -mattr=-flat-for-global,-xnack -show-mc-encoding < %s | FileCheck -enable-var-scope -check-prefixes=GCN,GFX10 %s
-; RUN:  llc -amdgpu-scalarize-global-loads=false  -mtriple=amdgpu9.00--amdhsa -mattr=-flat-for-global,-xnack -show-mc-encoding < %s | FileCheck -enable-var-scope -check-prefixes=GCN,GFX9 %s
-; RUN:  llc -amdgpu-scalarize-global-loads=false  -mtriple=amdgpu8.03--amdhsa -mattr=-flat-for-global,-xnack -show-mc-encoding < %s | FileCheck -enable-var-scope -check-prefixes=GCN,VI %s
+; RUN:  llc -amdgpu-scalarize-global-loads=false  -mtriple=amdgpu10.10--amdhsa -mattr=-flat-for-global --amdgpu-xnack=false -show-mc-encoding < %s | FileCheck -enable-var-scope -check-prefixes=GCN,GFX10 %s
+; RUN:  llc -amdgpu-scalarize-global-loads=false  -mtriple=amdgpu9.00--amdhsa -mattr=-flat-for-global --amdgpu-xnack=false -show-mc-encoding < %s | FileCheck -enable-var-scope -check-prefixes=GCN,GFX9 %s
+; RUN:  llc -amdgpu-scalarize-global-loads=false  -mtriple=amdgpu8.03--amdhsa -mattr=-flat-for-global --amdgpu-xnack=false -show-mc-encoding < %s | FileCheck -enable-var-scope -check-prefixes=GCN,VI %s
 ; RUN:  llc -amdgpu-scalarize-global-loads=false  -mtriple=amdgpu7.00--amdhsa -mattr=-flat-for-global -show-mc-encoding < %s | FileCheck -enable-var-scope -check-prefixes=GCN %s
 ; FIXME: Merge into imm.ll
 

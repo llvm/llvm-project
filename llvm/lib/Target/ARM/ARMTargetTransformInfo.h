@@ -193,9 +193,11 @@ public:
 
   InstructionCost
   getShuffleCost(TTI::ShuffleKind Kind, VectorType *DstTy, VectorType *SrcTy,
-                 ArrayRef<int> Mask, TTI::TargetCostKind CostKind, int Index,
+                 TTI::TargetCostKind CostKind, ArrayRef<int> Mask, int Index,
                  VectorType *SubTp, ArrayRef<const Value *> Args = {},
-                 const Instruction *CxtI = nullptr) const override;
+                 const Instruction *CtxI = nullptr,
+                 TTI::VectorInstrContext VIC =
+                     TTI::VectorInstrContext::None) const override;
 
   bool preferInLoopReduction(RecurKind Kind, Type *Ty) const override;
 
@@ -222,13 +224,13 @@ public:
 
   using BaseT::getVectorInstrCost;
   InstructionCost
-  getVectorInstrCost(unsigned Opcode, Type *Val, TTI::TargetCostKind CostKind,
+  getVectorInstrCost(unsigned Opcode, Type *Ty, TTI::TargetCostKind CostKind,
                      unsigned Index, const Value *Op0, const Value *Op1,
                      TTI::VectorInstrContext VIC =
                          TTI::VectorInstrContext::None) const override;
 
   InstructionCost
-  getAddressComputationCost(Type *Val, ScalarEvolution *SE, const SCEV *Ptr,
+  getAddressComputationCost(Type *Ty, ScalarEvolution *SE, const SCEV *Ptr,
                             TTI::TargetCostKind CostKind) const override;
 
   InstructionCost getArithmeticInstrCost(
@@ -236,7 +238,7 @@ public:
       TTI::OperandValueInfo Op1Info = {TTI::OK_AnyValue, TTI::OP_None},
       TTI::OperandValueInfo Op2Info = {TTI::OK_AnyValue, TTI::OP_None},
       ArrayRef<const Value *> Args = {},
-      const Instruction *CxtI = nullptr) const override;
+      const Instruction *CtxI = nullptr) const override;
 
   InstructionCost getMemoryOpCost(
       unsigned Opcode, Type *Src, Align Alignment, unsigned AddressSpace,

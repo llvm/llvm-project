@@ -53,25 +53,22 @@ llvm::Expected<llvm::StringRef> IncrementalCUDADeviceParser::GeneratePTX() {
     return llvm::make_error<llvm::StringError>(std::move(Error),
                                                std::error_code());
   llvm::TargetOptions TO = llvm::TargetOptions();
-  llvm::TargetMachine *TargetMachine = Target->createTargetMachine(
+  std::unique_ptr<llvm::TargetMachine> TM(Target->createTargetMachine(
       PTU.TheModule->getTargetTriple(), TargetOpts.CPU, "", TO,
-      llvm::Reloc::Model::PIC_);
-  PTU.TheModule->setDataLayout(TargetMachine->createDataLayout());
+      llvm::Reloc::Model::PIC_));
 
   PTXCode.clear();
   llvm::raw_svector_ostream dest(PTXCode);
 
   llvm::legacy::PassManager PM;
-  if (TargetMachine->addPassesToEmitFile(PM, dest, nullptr,
-                                         llvm::CodeGenFileType::AssemblyFile)) {
+  if (TM->addPassesToEmitFile(PM, dest, nullptr,
+                              llvm::CodeGenFileType::AssemblyFile)) {
     return llvm::make_error<llvm::StringError>(
         "NVPTX backend cannot produce PTX code.",
         llvm::inconvertibleErrorCode());
   }
 
-  if (!PM.run(*PTU.TheModule))
-    return llvm::make_error<llvm::StringError>("Failed to emit PTX code.",
-                                               llvm::inconvertibleErrorCode());
+  PM.run(*PTU.TheModule);
 
   PTXCode += '\0';
   while (PTXCode.size() % 8)
@@ -152,7 +149,7 @@ llvm::Error IncrementalCUDADeviceParser::GenerateFatbinary() {
                    llvm::StringRef(FatbinContent.data(), FatbinContent.size()),
                    "", false));
 
-  CodeGenOpts.CudaGpuBinaryFileName = std::move(FatbinFileName);
+  CodeGenOpts.OffloadBinaryToEmbedFile = std::move(FatbinFileName);
 
   FatbinContent.clear();
 

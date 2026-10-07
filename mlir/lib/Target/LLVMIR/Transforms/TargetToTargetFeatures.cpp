@@ -37,7 +37,7 @@ struct TargetToTargetFeaturesPass
     if (initializeLLVMTargets)
       LLVM::detail::initializeBackendsOnce();
 
-    auto targetAttr = op->getAttrOfType<LLVM::TargetAttr>(
+    auto targetAttr = op->getDiscardableAttrOfType<LLVM::TargetAttr>(
         LLVM::LLVMDialect::getTargetAttrName());
     if (!targetAttr) {
       op->emitError() << "no LLVM::TargetAttr attribute at key \""
@@ -74,6 +74,7 @@ struct TargetToTargetFeaturesPass
         LLVM::TargetAttr::get(&getContext(), targetAttr.getTriple(),
                               targetAttr.getChip(), fullTargetFeaturesAttr);
 
-    op->setAttr(LLVM::LLVMDialect::getTargetAttrName(), updatedTargetAttr);
+    op->setDiscardableAttr(LLVM::LLVMDialect::getTargetAttrName(),
+                           updatedTargetAttr);
   }
 };

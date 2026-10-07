@@ -101,7 +101,7 @@ RISCVMachineFunctionInfo::getPushPopKind(const MachineFunction &MF) const {
 
   // Zcmp is not compatible with the frame pointer convention.
   if (MF.getSubtarget<RISCVSubtarget>().hasStdExtZcmp() &&
-      !MF.getTarget().Options.DisableFramePointerElim(MF))
+      !MF.disableFramePointerElim())
     return PushPopKind::StdExtZcmp;
 
   // Xqccmp is Zcmp but has a push order compatible with the frame-pointer

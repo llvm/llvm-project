@@ -211,7 +211,7 @@ Value *IRBuilderBase::CreateTypeSize(Type *Ty, TypeSize Size) {
 
 Value *IRBuilderBase::CreateAllocationSize(Type *DestTy, AllocaInst *AI) {
   const DataLayout &DL = BB->getDataLayout();
-  TypeSize ElemSize = DL.getTypeAllocSize(AI->getAllocatedType());
+  TypeSize ElemSize = AI->getAllocationBaseSize(DL);
   Value *Size = CreateTypeSize(DestTy, ElemSize);
   if (AI->isArrayAllocation())
     Size = CreateMul(CreateZExtOrTrunc(AI->getArraySize(), DestTy), Size);
@@ -342,8 +342,8 @@ static bool isConstantOne(const Value *Val) {
   return CVal && CVal->isOne();
 }
 
-CallInst *IRBuilderBase::CreateMalloc(Type *IntPtrTy, Type *AllocTy,
-                                      Value *AllocSize, Value *ArraySize,
+CallInst *IRBuilderBase::CreateMalloc(Type *IntPtrTy, Value *AllocSize,
+                                      Value *ArraySize,
                                       ArrayRef<OperandBundleDef> OpB,
                                       Function *MallocF, const Twine &Name) {
   // malloc(type) becomes:
@@ -385,12 +385,11 @@ CallInst *IRBuilderBase::CreateMalloc(Type *IntPtrTy, Type *AllocTy,
   return MCall;
 }
 
-CallInst *IRBuilderBase::CreateMalloc(Type *IntPtrTy, Type *AllocTy,
-                                      Value *AllocSize, Value *ArraySize,
-                                      Function *MallocF, const Twine &Name) {
+CallInst *IRBuilderBase::CreateMalloc(Type *IntPtrTy, Value *AllocSize,
+                                      Value *ArraySize, Function *MallocF,
+                                      const Twine &Name) {
 
-  return CreateMalloc(IntPtrTy, AllocTy, AllocSize, ArraySize, {}, MallocF,
-                      Name);
+  return CreateMalloc(IntPtrTy, AllocSize, ArraySize, {}, MallocF, Name);
 }
 
 /// CreateFree - Generate the IR for a call to the builtin free function.
@@ -495,6 +494,14 @@ Value *IRBuilderBase::CreateFPMaximumReduce(Value *Src) {
 
 Value *IRBuilderBase::CreateFPMinimumReduce(Value *Src) {
   return getReductionIntrinsic(Intrinsic::vector_reduce_fminimum, Src);
+}
+
+Value *IRBuilderBase::CreateFPMaximumNumReduce(Value *Src) {
+  return getReductionIntrinsic(Intrinsic::vector_reduce_fmaximumnum, Src);
+}
+
+Value *IRBuilderBase::CreateFPMinimumNumReduce(Value *Src) {
+  return getReductionIntrinsic(Intrinsic::vector_reduce_fminimumnum, Src);
 }
 
 CallInst *IRBuilderBase::CreateLifetimeStart(Value *Ptr) {
@@ -1198,23 +1205,6 @@ Value *IRBuilderBase::CreateLaunderInvariantGroup(Value *Ptr) {
          "LaunderInvariantGroup should take and return the same type");
 
   return CreateCall(FnLaunderInvariantGroup, {Ptr});
-}
-
-Value *IRBuilderBase::CreateStripInvariantGroup(Value *Ptr) {
-  assert(isa<PointerType>(Ptr->getType()) &&
-         "strip.invariant.group only applies to pointers.");
-
-  auto *PtrType = Ptr->getType();
-  Module *M = BB->getParent()->getParent();
-  Function *FnStripInvariantGroup = Intrinsic::getOrInsertDeclaration(
-      M, Intrinsic::strip_invariant_group, {PtrType});
-
-  assert(FnStripInvariantGroup->getReturnType() == PtrType &&
-         FnStripInvariantGroup->getFunctionType()->getParamType(0) ==
-             PtrType &&
-         "StripInvariantGroup should take and return the same type");
-
-  return CreateCall(FnStripInvariantGroup, {Ptr});
 }
 
 Value *IRBuilderBase::CreateVectorReverse(Value *V, const Twine &Name) {

@@ -10,6 +10,8 @@
 #include "llvm/Support/Parallel.h"
 #include "gtest/gtest.h"
 #include <cstdlib>
+#include <thread>
+#include <vector>
 
 using namespace llvm;
 using namespace parallel;
@@ -48,7 +50,30 @@ TEST(PerThreadBumpPtrAllocatorTest, ParallelAllocation) {
   });
 
   EXPECT_LE(sizeof(uint64_t) * NumAllocations, Allocator.getTotalMemory());
-  EXPECT_EQ(Allocator.getNumberOfAllocators(), parallel::getThreadCount());
+  // Sub-allocators are created lazily, one per thread that allocated.
+  EXPECT_GE(Allocator.getNumberOfAllocators(), 1u);
+  EXPECT_LE(Allocator.getNumberOfAllocators(), parallel::getThreadCount());
 }
+
+#if LLVM_ENABLE_THREADS
+TEST(PerThreadBumpPtrAllocatorTest, ArbitraryThreads) {
+  PerThreadBumpPtrAllocator Allocator;
+
+  constexpr size_t NumThreads = 4;
+  std::vector<std::thread> Threads;
+  for (size_t I = 0; I != NumThreads; ++I)
+    Threads.emplace_back([&Allocator, I] {
+      uint64_t *Var =
+          (uint64_t *)Allocator.Allocate(sizeof(uint64_t), alignof(uint64_t));
+      *Var = I;
+      EXPECT_EQ(I, *Var);
+    });
+  for (std::thread &T : Threads)
+    T.join();
+
+  EXPECT_EQ(NumThreads, Allocator.getNumberOfAllocators());
+  EXPECT_LE(sizeof(uint64_t) * NumThreads, Allocator.getTotalMemory());
+}
+#endif
 
 } // anonymous namespace

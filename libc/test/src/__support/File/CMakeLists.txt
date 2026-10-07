@@ -11,8 +11,6 @@ add_libc_test(
     libc-support-tests
   SRCS
     file_test.cpp
-  LINK_LIBRARIES
-    LibcMemoryHelpers
   DEPENDS
     libc.include.stdio
     libc.hdr.wchar_macros
@@ -21,6 +19,17 @@ add_libc_test(
     libc.src.__support.CPP.new
     libc.src.__support.File.file
     libc.src.__support.error_or
+    libc.test.UnitTest.MemoryMatcher
+)
+
+add_libc_test(
+  file_mode_test
+  SUITE
+    libc-support-tests
+  SRCS
+    file_mode_test.cpp
+  DEPENDS
+    libc.src.__support.File.file
 )
 
 add_libc_test(
@@ -30,9 +39,26 @@ add_libc_test(
   SRCS
     platform_file_test.cpp
   DEPENDS
+    libc.src.__support.error_or
     libc.src.__support.File.file
     libc.src.__support.File.platform_file
     libc.include.stdio
+)
+
+add_libc_test(
+  dir_scan_impl_test
+  SUITE
+    libc-support-tests
+  SRCS
+    dir_scan_impl_test.cpp
+  DEPENDS
+    libc.hdr.types.struct_dirent
+    libc.src.__support.CPP.limits
+    libc.src.__support.File.dir_scan_impl
+    libc.src.__support.error_or
+    libc.src.dirent.alphasort
+    libc.src.string.memory_utils.inline_memcpy
+    libc.src.string.strlen
 )
 
 set(platform_stream_targets "platform_stdout;platform_stdin;platform_stderr")
@@ -40,7 +66,7 @@ foreach(target IN LISTS platform_file_targets)
   if(TARGET libc.src.__support.File.${target})
     add_libc_test(
       ${target}_test
-      HERMETIC_TEST_ONLY
+      FULL_BUILD_ONLY
       SUITE
         libc-support-tests
       SRCS

@@ -22,10 +22,22 @@ cl::opt<bool> EmbedDebug("dx-embed-debug",
 cl::opt<bool>
     StripDebug("dx-strip-debug",
                cl::desc("Strip debug information from shader bytecode"));
+cl::opt<bool> SlimDebug("dx-slim-debug",
+                        cl::desc("Generate slim PDB without ILDB part"));
 
 MCDXContainerTargetWriter::~MCDXContainerTargetWriter() = default;
 
 MCDXContainerBaseWriter::~MCDXContainerBaseWriter() = default;
+
+bool MCDXContainerBaseWriter::shouldSkipSection(StringRef SectionName,
+                                                size_t SectionSize) {
+  // Skip empty and auxiliary sections.
+  if (SectionSize == 0 || SectionName == PdbFileNameSectionName ||
+      SectionName == ModuleHashSectionName)
+    return true;
+  // Slim debug omits ILDB from all DXContainer outputs.
+  return SlimDebug && SectionName == "ILDB";
+}
 
 void MCDXContainerBaseWriter::write(raw_ostream &OS, const Triple &TT) {
   ArrayRef<MCDXContainerPart> Parts = collectParts();
@@ -37,14 +49,22 @@ void MCDXContainerBaseWriter::write(raw_ostream &OS, const Triple &TT) {
   // 16 part offsets gives us a little room for growth.
   llvm::SmallVector<uint64_t, 16> PartOffsets;
   uint64_t PartOffset = 0;
+  bool HasPrivate = false;
   for (const MCDXContainerPart &Part : Parts) {
+    if (HasPrivate)
+      reportFatalInternalError(
+          "PRIV must be the last section in a DXContainer");
+    if (Part.Name == "PRIV")
+      HasPrivate = true;
+
     uint64_t SectionSize = Part.Data.size();
     assert(SectionSize < std::numeric_limits<uint32_t>::max() &&
            "Section size too large for DXContainer");
 
     PartOffsets.push_back(PartOffset);
     PartOffset += sizeof(dxbc::PartHeader) + SectionSize;
-    PartOffset = alignTo(PartOffset, Align(4ul));
+    if (!HasPrivate)
+      PartOffset = alignTo(PartOffset, Align(4ul));
     // The DXIL part also writes a program header, so we need to include its
     // size when computing the offset for a part after the DXIL part.
     if (dxbc::isProgramPart(Part.Name))
@@ -84,8 +104,10 @@ void MCDXContainerBaseWriter::write(raw_ostream &OS, const Triple &TT) {
 
     if (dxbc::isProgramPart(Part.Name))
       PartSize += sizeof(dxbc::ProgramHeader);
-    // DXContainer parts should be 4-byte aligned.
-    PartSize = alignTo(PartSize, Align(4));
+    // DXContainer part should be 4-byte aligned, unless it is PRIV part.
+    bool IsPrivate = Part.Name == "PRIV";
+    if (!IsPrivate)
+      PartSize = alignTo(PartSize, Align(4));
     W.write<uint32_t>(static_cast<uint32_t>(PartSize));
     if (dxbc::isProgramPart(Part.Name)) {
       dxbc::ProgramHeader Header;
@@ -115,8 +137,10 @@ void MCDXContainerBaseWriter::write(raw_ostream &OS, const Triple &TT) {
                                    sizeof(dxbc::ProgramHeader)));
     }
     W.write<char>(Part.Data);
-    unsigned Size = W.OS.tell() - Start;
-    W.OS.write_zeros(offsetToAlignment(Size, Align(4)));
+    if (!IsPrivate) {
+      unsigned Size = W.OS.tell() - Start;
+      W.OS.write_zeros(offsetToAlignment(Size, Align(4)));
+    }
   }
 }
 

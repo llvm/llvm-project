@@ -1,8 +1,8 @@
 ; Test passes if we don't generate conversion for both
 ; of the subregisters since only one is live at the use.
-;
-; UNSUPPORTED: asserts
 
+; XFAIL: *
+; Will re-enable once the fix for incorrect subregister liveness is upstreamed.
 ; REQUIRES: asserts
 ; RUN: llc -O2 -mtriple=hexagon -mattr=+hvxv81,+hvx-length128B \
 ; RUN: -enable-xqf-gen=true -hexagon-qfloat-mode=lossy \

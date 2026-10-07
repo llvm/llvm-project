@@ -59,6 +59,7 @@ MCOPT(bool, Crel)
 MCOPT(bool, ImplicitMapSyms)
 MCOPT(bool, X86RelaxRelocations)
 MCOPT(bool, X86Sse2Avx)
+MCOPT(bool, DisableIntegratedAS)
 MCOPT(RelocSectionSymType, RelocSectionSym)
 MCOPT(bool, LargeEHEncoding)
 MCSTROPT(ABIName)
@@ -172,6 +173,11 @@ llvm::mc::RegisterMCTargetOptionsFlags::RegisterMCTargetOptionsFlags() {
                               "instructions with VEX prefix"));
   MCBINDOPT(X86Sse2Avx);
 
+  static cl::opt<bool> DisableIntegratedAS(
+      "no-integrated-as", cl::desc("Disable integrated assembler"),
+      cl::init(false));
+  MCBINDOPT(DisableIntegratedAS);
+
   static cl::opt<RelocSectionSymType> RelocSectionSym(
       "reloc-section-sym",
       cl::desc("Control section symbol conversion for relocations"),
@@ -224,6 +230,7 @@ MCTargetOptions llvm::mc::InitMCTargetOptionsFromFlags() {
   Options.ImplicitMapSyms = getImplicitMapSyms();
   Options.X86RelaxRelocations = getX86RelaxRelocations();
   Options.X86Sse2Avx = getX86Sse2Avx();
+  Options.DisableIntegratedAS = getDisableIntegratedAS();
   Options.RelocSectionSym = getRelocSectionSym();
   Options.LargeEHEncoding = getLargeEHEncoding();
   Options.EmitDwarfUnwind = getEmitDwarfUnwind();

@@ -34,6 +34,11 @@ LIBC_INLINE int vfprintf_impl(::FILE *__restrict file,
   port.recv([&](rpc::Buffer *buffer, uint32_t) {
     args_size = static_cast<size_t>(buffer->data[0]);
   });
+  // If the underlying argument buffer is of known size we use it directly. A
+  // value of one uniquely indicates an empty argument list.
+  if (size_t arg_max = __builtin_object_size(vlist, /*max=*/0b00);
+      arg_max == __builtin_object_size(vlist, /*min=*/0b10))
+    args_size = arg_max;
   port.send_n(vlist, args_size);
 
   uint32_t ret = 0;
@@ -44,7 +49,7 @@ LIBC_INLINE int vfprintf_impl(::FILE *__restrict file,
       str = reinterpret_cast<const char *>(buffer->data[1]);
     });
     // If any lanes have a string argument it needs to be copied back.
-    if (!gpu::ballot(mask, str))
+    if (!gpu::ballot(mask, str && args_size != 1))
       break;
 
     uint64_t size = str ? internal::string_length(str) + 1 : 0;

@@ -62,6 +62,7 @@ public:
 
   public:
     CallbackID() = default;
+    bool operator==(const CallbackID &Other) const { return Val == Other.Val; }
     friend class Context;
     friend struct DenseMapInfo<CallbackID>;
   };
@@ -95,18 +96,18 @@ protected:
   /// Type objects.
   DenseMap<llvm::Type *, std::unique_ptr<Type, TypeDeleter>> LLVMTypeToTypeMap;
 
-  /// Callbacks called when an IR instruction is about to get erased. Keys are
-  /// used as IDs for deregistration.
-  MapVector<CallbackID, EraseInstrCallback> EraseInstrCallbacks;
-  /// Callbacks called when an IR instruction is about to get created. Keys are
-  /// used as IDs for deregistration.
-  MapVector<CallbackID, CreateInstrCallback> CreateInstrCallbacks;
-  /// Callbacks called when an IR instruction is about to get moved. Keys are
-  /// used as IDs for deregistration.
-  MapVector<CallbackID, MoveInstrCallback> MoveInstrCallbacks;
-  /// Callbacks called when a Use gets its source set. Keys are used as IDs for
-  /// deregistration.
-  MapVector<CallbackID, SetUseCallback> SetUseCallbacks;
+  /// Callbacks called when an IR instruction is about to get erased. CallbackID
+  /// is used as an identifier for deregistration.
+  SmallVector<std::pair<CallbackID, EraseInstrCallback>> EraseInstrCallbacks;
+  /// Callbacks called when an IR instruction is about to get created.
+  /// CallbackID is used as an identifier for deregistration.
+  SmallVector<std::pair<CallbackID, CreateInstrCallback>> CreateInstrCallbacks;
+  /// Callbacks called when an IR instruction is about to get moved. CallbackID
+  /// is used as an identifier for deregistration.
+  SmallVector<std::pair<CallbackID, MoveInstrCallback>> MoveInstrCallbacks;
+  /// Callbacks called when a Use gets its source set. CallbackID is used as an
+  /// identifier for deregistration.
+  SmallVector<std::pair<CallbackID, SetUseCallback>> SetUseCallbacks;
 
   /// A counter used for assigning callback IDs during registration. The same
   /// counter is used for all kinds of callbacks so we can detect mismatched
@@ -277,29 +278,69 @@ public:
   /// \Returns the number of values registered with Context.
   size_t getNumValues() const { return LLVMValueToValueMap.size(); }
 
+private:
+  // An arbitrary limit, to check for accidental misuse. We expect a small
+  // number of callbacks to be registered at a time, but we can increase this
+  // number if we discover we needed more.
+  [[maybe_unused]] static constexpr int MaxRegisteredCallbacks = 16;
+
+  template <typename CBT, typename CBVecT>
+  CallbackID registerCallbackCommon(CBT CB, CBVecT &CBVec,
+                                    std::optional<CallbackID> BeforeID) {
+    assert(CBVec.size() <= MaxRegisteredCallbacks &&
+           "EraseInstrCallbacks size limit exceeded");
+    auto BeforeIt = CBVec.end();
+    if (BeforeID) {
+      BeforeIt = find_if(CBVec, [BeforeID](const auto &Pair) {
+        return Pair.first == *BeforeID;
+      });
+      assert(BeforeIt != CBVec.end() && "Not found!");
+    }
+    CallbackID ID{NextCallbackID++};
+    CBVec.insert(BeforeIt, {ID, std::move(CB)});
+    return ID;
+  }
+
+public:
   /// Register a callback that gets called when a SandboxIR instruction is about
   /// to be removed from its parent. Note that this will also be called when
   /// reverting the creation of an instruction.
+  /// If \p BeforeID is specified, CB will be ordered just before \p BeforeID,
+  /// so it will be called first once the callbacks get executed.
   /// \Returns a callback ID for later deregistration.
-  CallbackID registerEraseInstrCallback(EraseInstrCallback CB);
+  CallbackID
+  registerEraseInstrCallback(EraseInstrCallback CB,
+                             std::optional<CallbackID> BeforeID = std::nullopt);
   void unregisterEraseInstrCallback(CallbackID ID);
 
   /// Register a callback that gets called right after a SandboxIR instruction
   /// is created. Note that this will also be called when reverting the removal
   /// of an instruction.
+  /// If \p BeforeID is specified, CB will be ordered just before \p BeforeID,
+  /// so it will be called first once the callbacks get executed.
   /// \Returns a callback ID for later deregistration.
-  CallbackID registerCreateInstrCallback(CreateInstrCallback CB);
+  CallbackID registerCreateInstrCallback(
+      CreateInstrCallback CB,
+      std::optional<CallbackID> BeforeID = std::nullopt);
   void unregisterCreateInstrCallback(CallbackID ID);
 
   /// Register a callback that gets called when a SandboxIR instruction is about
   /// to be moved. Note that this will also be called when reverting a move.
+  /// If \p BeforeID is specified, CB will be ordered just before \p BeforeID,
+  /// so it will be called first once the callbacks get executed.
   /// \Returns a callback ID for later deregistration.
-  CallbackID registerMoveInstrCallback(MoveInstrCallback CB);
+  CallbackID
+  registerMoveInstrCallback(MoveInstrCallback CB,
+                            std::optional<CallbackID> BeforeID = std::nullopt);
   void unregisterMoveInstrCallback(CallbackID ID);
 
   /// Register a callback that gets called when a Use gets set.
+  /// If \p BeforeID is specified, CB will be ordered just before \p BeforeID,
+  /// so it will be called first once the callbacks get executed.
   /// \Returns a callback ID for later deregistration.
-  CallbackID registerSetUseCallback(SetUseCallback CB);
+  CallbackID
+  registerSetUseCallback(SetUseCallback CB,
+                         std::optional<CallbackID> BeforeID = std::nullopt);
   void unregisterSetUseCallback(CallbackID ID);
 };
 

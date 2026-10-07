@@ -17,12 +17,12 @@ define void @global_8xi32(ptr addrspace(1) %a, ptr addrspace(1) %b) {
 ; SM90-NEXT:    .reg .b64 %rd<3>;
 ; SM90-EMPTY:
 ; SM90-NEXT:  // %bb.0:
-; SM90-NEXT:    ld.param.b64 %rd1, [global_8xi32_param_0];
+; SM90-NEXT:    ld.param::func.b64 %rd1, [global_8xi32_param_0];
 ; SM90-NEXT:    .pragma "used_bytes_mask 0xf000";
 ; SM90-NEXT:    ld.global.v4.b32 {%r1, %r2, %r3, %r4}, [%rd1+16];
 ; SM90-NEXT:    .pragma "used_bytes_mask 0xf0f";
 ; SM90-NEXT:    ld.global.v4.b32 {%r5, %r6, %r7, %r8}, [%rd1];
-; SM90-NEXT:    ld.param.b64 %rd2, [global_8xi32_param_1];
+; SM90-NEXT:    ld.param::func.b64 %rd2, [global_8xi32_param_1];
 ; SM90-NEXT:    st.global.b32 [%rd2], %r5;
 ; SM90-NEXT:    st.global.b32 [%rd2+8], %r7;
 ; SM90-NEXT:    st.global.b32 [%rd2+28], %r4;
@@ -34,10 +34,10 @@ define void @global_8xi32(ptr addrspace(1) %a, ptr addrspace(1) %b) {
 ; SM100-NEXT:    .reg .b64 %rd<3>;
 ; SM100-EMPTY:
 ; SM100-NEXT:  // %bb.0:
-; SM100-NEXT:    ld.param.b64 %rd1, [global_8xi32_param_0];
+; SM100-NEXT:    ld.param::func.b64 %rd1, [global_8xi32_param_0];
 ; SM100-NEXT:    .pragma "used_bytes_mask 0xf0000f0f";
 ; SM100-NEXT:    ld.global.v8.b32 {%r1, %r2, %r3, %r4, %r5, %r6, %r7, %r8}, [%rd1];
-; SM100-NEXT:    ld.param.b64 %rd2, [global_8xi32_param_1];
+; SM100-NEXT:    ld.param::func.b64 %rd2, [global_8xi32_param_1];
 ; SM100-NEXT:    st.global.v8.b32 [%rd2], {%r1, _, %r3, _, _, _, _, %r8};
 ; SM100-NEXT:    ret;
   %a.load = tail call <8 x i32> @llvm.masked.load.v8i32.p1(ptr addrspace(1) align 32 %a, <8 x i1> <i1 true, i1 false, i1 true, i1 false, i1 false, i1 false, i1 false, i1 true>, <8 x i32> poison)
@@ -55,7 +55,7 @@ define void @global_16xi16(ptr addrspace(1) %a, ptr addrspace(1) %b) {
 ; SM90-NEXT:    .reg .b64 %rd<3>;
 ; SM90-EMPTY:
 ; SM90-NEXT:  // %bb.0:
-; SM90-NEXT:    ld.param.b64 %rd1, [global_16xi16_param_0];
+; SM90-NEXT:    ld.param::func.b64 %rd1, [global_16xi16_param_0];
 ; SM90-NEXT:    .pragma "used_bytes_mask 0xf000";
 ; SM90-NEXT:    ld.global.v4.b32 {%r1, %r2, %r3, %r4}, [%rd1+16];
 ; SM90-NEXT:    mov.b32 {%rs1, %rs2}, %r4;
@@ -63,7 +63,7 @@ define void @global_16xi16(ptr addrspace(1) %a, ptr addrspace(1) %b) {
 ; SM90-NEXT:    ld.global.v4.b32 {%r5, %r6, %r7, %r8}, [%rd1];
 ; SM90-NEXT:    mov.b32 {%rs3, %rs4}, %r7;
 ; SM90-NEXT:    mov.b32 {%rs5, %rs6}, %r5;
-; SM90-NEXT:    ld.param.b64 %rd2, [global_16xi16_param_1];
+; SM90-NEXT:    ld.param::func.b64 %rd2, [global_16xi16_param_1];
 ; SM90-NEXT:    st.global.b16 [%rd2], %rs5;
 ; SM90-NEXT:    st.global.b16 [%rd2+2], %rs6;
 ; SM90-NEXT:    st.global.b16 [%rd2+8], %rs3;
@@ -79,13 +79,13 @@ define void @global_16xi16(ptr addrspace(1) %a, ptr addrspace(1) %b) {
 ; SM100-NEXT:    .reg .b64 %rd<3>;
 ; SM100-EMPTY:
 ; SM100-NEXT:  // %bb.0:
-; SM100-NEXT:    ld.param.b64 %rd1, [global_16xi16_param_0];
+; SM100-NEXT:    ld.param::func.b64 %rd1, [global_16xi16_param_0];
 ; SM100-NEXT:    .pragma "used_bytes_mask 0xf0000f0f";
 ; SM100-NEXT:    ld.global.v8.b32 {%r1, %r2, %r3, %r4, %r5, %r6, %r7, %r8}, [%rd1];
 ; SM100-NEXT:    mov.b32 {%rs1, %rs2}, %r8;
 ; SM100-NEXT:    mov.b32 {%rs3, %rs4}, %r3;
 ; SM100-NEXT:    mov.b32 {%rs5, %rs6}, %r1;
-; SM100-NEXT:    ld.param.b64 %rd2, [global_16xi16_param_1];
+; SM100-NEXT:    ld.param::func.b64 %rd2, [global_16xi16_param_1];
 ; SM100-NEXT:    st.global.b16 [%rd2], %rs5;
 ; SM100-NEXT:    st.global.b16 [%rd2+2], %rs6;
 ; SM100-NEXT:    st.global.b16 [%rd2+8], %rs3;
@@ -105,9 +105,9 @@ define void @global_8xi32_no_align(ptr addrspace(1) %a, ptr addrspace(1) %b) {
 ; CHECK-NEXT:    .reg .b64 %rd<3>;
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  // %bb.0:
-; CHECK-NEXT:    ld.param.b64 %rd1, [global_8xi32_no_align_param_0];
+; CHECK-NEXT:    ld.param::func.b64 %rd1, [global_8xi32_no_align_param_0];
 ; CHECK-NEXT:    ld.global.b32 %r1, [%rd1];
-; CHECK-NEXT:    ld.param.b64 %rd2, [global_8xi32_no_align_param_1];
+; CHECK-NEXT:    ld.param::func.b64 %rd2, [global_8xi32_no_align_param_1];
 ; CHECK-NEXT:    ld.global.b32 %r2, [%rd1+8];
 ; CHECK-NEXT:    ld.global.b32 %r3, [%rd1+28];
 ; CHECK-NEXT:    st.global.b32 [%rd2], %r1;
@@ -127,12 +127,12 @@ define void @global_8xi32_invariant(ptr addrspace(1) %a, ptr addrspace(1) %b) {
 ; SM90-NEXT:    .reg .b64 %rd<3>;
 ; SM90-EMPTY:
 ; SM90-NEXT:  // %bb.0:
-; SM90-NEXT:    ld.param.b64 %rd1, [global_8xi32_invariant_param_0];
+; SM90-NEXT:    ld.param::func.b64 %rd1, [global_8xi32_invariant_param_0];
 ; SM90-NEXT:    .pragma "used_bytes_mask 0xf000";
 ; SM90-NEXT:    ld.global.nc.v4.b32 {%r1, %r2, %r3, %r4}, [%rd1+16];
 ; SM90-NEXT:    .pragma "used_bytes_mask 0xf0f";
 ; SM90-NEXT:    ld.global.nc.v4.b32 {%r5, %r6, %r7, %r8}, [%rd1];
-; SM90-NEXT:    ld.param.b64 %rd2, [global_8xi32_invariant_param_1];
+; SM90-NEXT:    ld.param::func.b64 %rd2, [global_8xi32_invariant_param_1];
 ; SM90-NEXT:    st.global.b32 [%rd2], %r5;
 ; SM90-NEXT:    st.global.b32 [%rd2+8], %r7;
 ; SM90-NEXT:    st.global.b32 [%rd2+28], %r4;
@@ -144,10 +144,10 @@ define void @global_8xi32_invariant(ptr addrspace(1) %a, ptr addrspace(1) %b) {
 ; SM100-NEXT:    .reg .b64 %rd<3>;
 ; SM100-EMPTY:
 ; SM100-NEXT:  // %bb.0:
-; SM100-NEXT:    ld.param.b64 %rd1, [global_8xi32_invariant_param_0];
+; SM100-NEXT:    ld.param::func.b64 %rd1, [global_8xi32_invariant_param_0];
 ; SM100-NEXT:    .pragma "used_bytes_mask 0xf0000f0f";
 ; SM100-NEXT:    ld.global.nc.v8.b32 {%r1, %r2, %r3, %r4, %r5, %r6, %r7, %r8}, [%rd1];
-; SM100-NEXT:    ld.param.b64 %rd2, [global_8xi32_invariant_param_1];
+; SM100-NEXT:    ld.param::func.b64 %rd2, [global_8xi32_invariant_param_1];
 ; SM100-NEXT:    st.global.v8.b32 [%rd2], {%r1, _, %r3, _, _, _, _, %r8};
 ; SM100-NEXT:    ret;
   %a.load = tail call <8 x i32> @llvm.masked.load.v8i32.p1(ptr addrspace(1) align 32 %a, <8 x i1> <i1 true, i1 false, i1 true, i1 false, i1 false, i1 false, i1 false, i1 true>, <8 x i32> poison), !invariant.load !0
@@ -163,10 +163,10 @@ define void @global_2xi16(ptr addrspace(1) %a, ptr addrspace(1) %b) {
 ; CHECK-NEXT:    .reg .b64 %rd<3>;
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  // %bb.0:
-; CHECK-NEXT:    ld.param.b64 %rd1, [global_2xi16_param_0];
+; CHECK-NEXT:    ld.param::func.b64 %rd1, [global_2xi16_param_0];
 ; CHECK-NEXT:    .pragma "used_bytes_mask 0x3";
 ; CHECK-NEXT:    ld.global.b32 %r1, [%rd1];
-; CHECK-NEXT:    ld.param.b64 %rd2, [global_2xi16_param_1];
+; CHECK-NEXT:    ld.param::func.b64 %rd2, [global_2xi16_param_1];
 ; CHECK-NEXT:    mov.b32 {%rs1, _}, %r1;
 ; CHECK-NEXT:    st.global.b16 [%rd2], %rs1;
 ; CHECK-NEXT:    ret;
@@ -183,10 +183,10 @@ define void @global_2xi16_invariant(ptr addrspace(1) %a, ptr addrspace(1) %b) {
 ; CHECK-NEXT:    .reg .b64 %rd<3>;
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  // %bb.0:
-; CHECK-NEXT:    ld.param.b64 %rd1, [global_2xi16_invariant_param_0];
+; CHECK-NEXT:    ld.param::func.b64 %rd1, [global_2xi16_invariant_param_0];
 ; CHECK-NEXT:    .pragma "used_bytes_mask 0x3";
 ; CHECK-NEXT:    ld.global.nc.b32 %r1, [%rd1];
-; CHECK-NEXT:    ld.param.b64 %rd2, [global_2xi16_invariant_param_1];
+; CHECK-NEXT:    ld.param::func.b64 %rd2, [global_2xi16_invariant_param_1];
 ; CHECK-NEXT:    mov.b32 {%rs1, _}, %r1;
 ; CHECK-NEXT:    st.global.b16 [%rd2], %rs1;
 ; CHECK-NEXT:    ret;
@@ -202,9 +202,9 @@ define void @global_2xi16_no_align(ptr addrspace(1) %a, ptr addrspace(1) %b) {
 ; CHECK-NEXT:    .reg .b64 %rd<3>;
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  // %bb.0:
-; CHECK-NEXT:    ld.param.b64 %rd1, [global_2xi16_no_align_param_0];
+; CHECK-NEXT:    ld.param::func.b64 %rd1, [global_2xi16_no_align_param_0];
 ; CHECK-NEXT:    ld.global.b16 %rs1, [%rd1];
-; CHECK-NEXT:    ld.param.b64 %rd2, [global_2xi16_no_align_param_1];
+; CHECK-NEXT:    ld.param::func.b64 %rd2, [global_2xi16_no_align_param_1];
 ; CHECK-NEXT:    st.global.b16 [%rd2], %rs1;
 ; CHECK-NEXT:    ret;
   %a.load = tail call <2 x i16> @llvm.masked.load.v2i16.p1(ptr addrspace(1) align 2 %a, <2 x i1> <i1 true, i1 false>, <2 x i16> poison)
@@ -219,10 +219,10 @@ define void @global_4xi8(ptr addrspace(1) %a, ptr addrspace(1) %b) {
 ; CHECK-NEXT:    .reg .b64 %rd<3>;
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  // %bb.0:
-; CHECK-NEXT:    ld.param.b64 %rd1, [global_4xi8_param_0];
+; CHECK-NEXT:    ld.param::func.b64 %rd1, [global_4xi8_param_0];
 ; CHECK-NEXT:    .pragma "used_bytes_mask 0x5";
 ; CHECK-NEXT:    ld.global.b32 %r1, [%rd1];
-; CHECK-NEXT:    ld.param.b64 %rd2, [global_4xi8_param_1];
+; CHECK-NEXT:    ld.param::func.b64 %rd2, [global_4xi8_param_1];
 ; CHECK-NEXT:    st.global.b8 [%rd2], %r1;
 ; CHECK-NEXT:    prmt.b32 %r2, %r1, 0, 0x7772U;
 ; CHECK-NEXT:    st.global.b8 [%rd2+2], %r2;
@@ -239,10 +239,10 @@ define void @global_4xi8_invariant(ptr addrspace(1) %a, ptr addrspace(1) %b) {
 ; CHECK-NEXT:    .reg .b64 %rd<3>;
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  // %bb.0:
-; CHECK-NEXT:    ld.param.b64 %rd1, [global_4xi8_invariant_param_0];
+; CHECK-NEXT:    ld.param::func.b64 %rd1, [global_4xi8_invariant_param_0];
 ; CHECK-NEXT:    .pragma "used_bytes_mask 0x5";
 ; CHECK-NEXT:    ld.global.nc.b32 %r1, [%rd1];
-; CHECK-NEXT:    ld.param.b64 %rd2, [global_4xi8_invariant_param_1];
+; CHECK-NEXT:    ld.param::func.b64 %rd2, [global_4xi8_invariant_param_1];
 ; CHECK-NEXT:    st.global.b8 [%rd2], %r1;
 ; CHECK-NEXT:    prmt.b32 %r2, %r1, 0, 0x7772U;
 ; CHECK-NEXT:    st.global.b8 [%rd2+2], %r2;
@@ -259,9 +259,9 @@ define void @global_4xi8_no_align(ptr addrspace(1) %a, ptr addrspace(1) %b) {
 ; CHECK-NEXT:    .reg .b64 %rd<3>;
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  // %bb.0:
-; CHECK-NEXT:    ld.param.b64 %rd1, [global_4xi8_no_align_param_0];
+; CHECK-NEXT:    ld.param::func.b64 %rd1, [global_4xi8_no_align_param_0];
 ; CHECK-NEXT:    ld.global.b8 %rs1, [%rd1];
-; CHECK-NEXT:    ld.param.b64 %rd2, [global_4xi8_no_align_param_1];
+; CHECK-NEXT:    ld.param::func.b64 %rd2, [global_4xi8_no_align_param_1];
 ; CHECK-NEXT:    ld.global.b8 %rs2, [%rd1+2];
 ; CHECK-NEXT:    st.global.b8 [%rd2], %rs1;
 ; CHECK-NEXT:    st.global.b8 [%rd2+2], %rs2;
@@ -279,10 +279,10 @@ define void @global_2xf32(ptr addrspace(1) %a, ptr addrspace(1) %b) {
 ; SM90-NEXT:    .reg .b64 %rd<3>;
 ; SM90-EMPTY:
 ; SM90-NEXT:  // %bb.0:
-; SM90-NEXT:    ld.param.b64 %rd1, [global_2xf32_param_0];
+; SM90-NEXT:    ld.param::func.b64 %rd1, [global_2xf32_param_0];
 ; SM90-NEXT:    .pragma "used_bytes_mask 0xf";
 ; SM90-NEXT:    ld.global.v2.b32 {%r1, %r2}, [%rd1];
-; SM90-NEXT:    ld.param.b64 %rd2, [global_2xf32_param_1];
+; SM90-NEXT:    ld.param::func.b64 %rd2, [global_2xf32_param_1];
 ; SM90-NEXT:    st.global.b32 [%rd2], %r1;
 ; SM90-NEXT:    ret;
 ;
@@ -292,10 +292,10 @@ define void @global_2xf32(ptr addrspace(1) %a, ptr addrspace(1) %b) {
 ; SM100-NEXT:    .reg .b64 %rd<4>;
 ; SM100-EMPTY:
 ; SM100-NEXT:  // %bb.0:
-; SM100-NEXT:    ld.param.b64 %rd1, [global_2xf32_param_0];
+; SM100-NEXT:    ld.param::func.b64 %rd1, [global_2xf32_param_0];
 ; SM100-NEXT:    .pragma "used_bytes_mask 0xf";
 ; SM100-NEXT:    ld.global.b64 %rd2, [%rd1];
-; SM100-NEXT:    ld.param.b64 %rd3, [global_2xf32_param_1];
+; SM100-NEXT:    ld.param::func.b64 %rd3, [global_2xf32_param_1];
 ; SM100-NEXT:    mov.b64 {%r1, _}, %rd2;
 ; SM100-NEXT:    st.global.b32 [%rd3], %r1;
 ; SM100-NEXT:    ret;
@@ -311,10 +311,10 @@ define void @global_2xf32_invariant(ptr addrspace(1) %a, ptr addrspace(1) %b) {
 ; SM90-NEXT:    .reg .b64 %rd<3>;
 ; SM90-EMPTY:
 ; SM90-NEXT:  // %bb.0:
-; SM90-NEXT:    ld.param.b64 %rd1, [global_2xf32_invariant_param_0];
+; SM90-NEXT:    ld.param::func.b64 %rd1, [global_2xf32_invariant_param_0];
 ; SM90-NEXT:    .pragma "used_bytes_mask 0xf";
 ; SM90-NEXT:    ld.global.nc.v2.b32 {%r1, %r2}, [%rd1];
-; SM90-NEXT:    ld.param.b64 %rd2, [global_2xf32_invariant_param_1];
+; SM90-NEXT:    ld.param::func.b64 %rd2, [global_2xf32_invariant_param_1];
 ; SM90-NEXT:    st.global.b32 [%rd2], %r1;
 ; SM90-NEXT:    ret;
 ;
@@ -324,10 +324,10 @@ define void @global_2xf32_invariant(ptr addrspace(1) %a, ptr addrspace(1) %b) {
 ; SM100-NEXT:    .reg .b64 %rd<4>;
 ; SM100-EMPTY:
 ; SM100-NEXT:  // %bb.0:
-; SM100-NEXT:    ld.param.b64 %rd1, [global_2xf32_invariant_param_0];
+; SM100-NEXT:    ld.param::func.b64 %rd1, [global_2xf32_invariant_param_0];
 ; SM100-NEXT:    .pragma "used_bytes_mask 0xf";
 ; SM100-NEXT:    ld.global.nc.b64 %rd2, [%rd1];
-; SM100-NEXT:    ld.param.b64 %rd3, [global_2xf32_invariant_param_1];
+; SM100-NEXT:    ld.param::func.b64 %rd3, [global_2xf32_invariant_param_1];
 ; SM100-NEXT:    mov.b64 {%r1, _}, %rd2;
 ; SM100-NEXT:    st.global.b32 [%rd3], %r1;
 ; SM100-NEXT:    ret;
@@ -343,9 +343,9 @@ define void @global_2xf32_no_align(ptr addrspace(1) %a, ptr addrspace(1) %b) {
 ; CHECK-NEXT:    .reg .b64 %rd<3>;
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  // %bb.0:
-; CHECK-NEXT:    ld.param.b64 %rd1, [global_2xf32_no_align_param_0];
+; CHECK-NEXT:    ld.param::func.b64 %rd1, [global_2xf32_no_align_param_0];
 ; CHECK-NEXT:    ld.global.b32 %r1, [%rd1];
-; CHECK-NEXT:    ld.param.b64 %rd2, [global_2xf32_no_align_param_1];
+; CHECK-NEXT:    ld.param::func.b64 %rd2, [global_2xf32_no_align_param_1];
 ; CHECK-NEXT:    st.global.b32 [%rd2], %r1;
 ; CHECK-NEXT:    ret;
   %a.load = tail call <2 x float> @llvm.masked.load.v2f32.p1(ptr addrspace(1) align 4 %a, <2 x i1> <i1 true, i1 false>, <2 x float> poison)

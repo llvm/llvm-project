@@ -51,7 +51,7 @@ add_math_entrypoint_object(acoshf16)
 
 add_math_entrypoint_object(acospif)
 add_math_entrypoint_object(acospif16)
- 
+
 add_math_entrypoint_object(asin)
 add_math_entrypoint_object(asinbf16)
 add_math_entrypoint_object(asinf)
@@ -381,6 +381,7 @@ add_math_entrypoint_object(issignalingf16)
 add_math_entrypoint_object(issignalingf128)
 add_math_entrypoint_object(issignalingbf16)
 
+add_math_entrypoint_object(lgammaf)
 add_math_entrypoint_object(lgammaf16)
 
 add_math_entrypoint_object(llogb)

@@ -30,7 +30,7 @@ void foo() {
 // CHECK-NEXT:    ret void
 //
 //
-// CHECK: Function Attrs: noinline norecurse nounwind
+// CHECK: Function Attrs: noinline nounwind
 // CHECK-LABEL: define internal void @_Z3foov.omp_outlined(
 // CHECK-SAME: ptr noalias noundef [[DOTGLOBAL_TID_:%.*]], ptr noalias noundef [[DOTBOUND_TID_:%.*]]) #[[ATTR1:[0-9]+]] {
 // CHECK-NEXT:  [[ENTRY:.*:]]
@@ -41,7 +41,7 @@ void foo() {
 // CHECK-NEXT:    ret void
 //
 //
-// CHECK: Function Attrs: alwaysinline norecurse nounwind
+// CHECK: Function Attrs: alwaysinline nounwind
 // CHECK-LABEL: define internal void @_Z3foov.omp_outlined.1(
 // CHECK-SAME: ptr noalias noundef [[DOTGLOBAL_TID_:%.*]], ptr noalias noundef [[DOTBOUND_TID_:%.*]]) #[[ATTR3:[0-9]+]] {
 // CHECK-NEXT:  [[ENTRY:.*:]]
@@ -68,7 +68,7 @@ void foo() {
 // CHECK-NOINLINE-NEXT:    ret void
 //
 //
-// CHECK-NOINLINE: Function Attrs: noinline norecurse nounwind
+// CHECK-NOINLINE: Function Attrs: noinline nounwind
 // CHECK-NOINLINE-LABEL: define internal void @_Z3foov.omp_outlined(
 // CHECK-NOINLINE-SAME: ptr noalias noundef [[DOTGLOBAL_TID_:%.*]], ptr noalias noundef [[DOTBOUND_TID_:%.*]]) #[[ATTR1:[0-9]+]] {
 // CHECK-NOINLINE-NEXT:  [[ENTRY:.*:]]
@@ -79,7 +79,7 @@ void foo() {
 // CHECK-NOINLINE-NEXT:    ret void
 //
 //
-// CHECK-NOINLINE: Function Attrs: alwaysinline norecurse nounwind
+// CHECK-NOINLINE: Function Attrs: alwaysinline nounwind
 // CHECK-NOINLINE-LABEL: define internal void @_Z3foov.omp_outlined.1(
 // CHECK-NOINLINE-SAME: ptr noalias noundef [[DOTGLOBAL_TID_:%.*]], ptr noalias noundef [[DOTBOUND_TID_:%.*]]) #[[ATTR3:[0-9]+]] {
 // CHECK-NOINLINE-NEXT:  [[ENTRY:.*:]]

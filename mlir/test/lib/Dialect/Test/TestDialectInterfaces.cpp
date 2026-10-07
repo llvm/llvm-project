@@ -327,7 +327,7 @@ struct TestInlinerInterface : public DialectInlinerInterface {
   bool isLegalToInline(Operation *call, Operation *callable,
                        bool wouldBeCloned) const final {
     // Don't allow inlining calls that are marked `noinline`.
-    return !call->hasAttr("noinline");
+    return !call->hasDiscardableAttr("noinline");
   }
   bool isLegalToInline(Region *, Region *, bool, IRMapping &) const final {
     // Inlining into test dialect regions is legal.
@@ -420,7 +420,8 @@ struct TestInlinerInterface : public DialectInlinerInterface {
     // Set attributed on all ops in the inlined blocks.
     for (Block &block : inlinedBlocks) {
       block.walk([&](Operation *op) {
-        op->setAttr("inlined_conversion", UnitAttr::get(call->getContext()));
+        op->setDiscardableAttr("inlined_conversion",
+                               UnitAttr::get(call->getContext()));
       });
     }
   }

@@ -37,7 +37,9 @@ set(llvm_cmake_builddir "${llvm_cmake_builddir}/cmake/llvm")
 
 # Generate the 'MLIRTarget.cmake' file.
 get_property(MLIR_EXPORTS GLOBAL PROPERTY MLIR_EXPORTS)
-export(TARGETS ${MLIR_EXPORTS} FILE ${mlir_cmake_builddir}/MLIRTargets.cmake)
+if(NOT "mlir" IN_LIST LLVM_DEPENDENCY_ONLY_PROJECTS)
+  export(TARGETS ${MLIR_EXPORTS} FILE ${mlir_cmake_builddir}/MLIRTargets.cmake)
+endif()
 
 # Declare all the variables required by the 'MLIRConfig.cmake.in' template.
 get_property(MLIR_ALL_LIBS GLOBAL PROPERTY MLIR_ALL_LIBS)
@@ -50,7 +52,15 @@ get_property(MLIR_CAPI_LIBS GLOBAL PROPERTY MLIR_CAPI_LIBS)
 # Generate MlirConfig.cmake for the build tree.
 set(MLIR_CONFIG_CMAKE_DIR "${mlir_cmake_builddir}")
 set(MLIR_CONFIG_LLVM_CMAKE_DIR "${llvm_cmake_builddir}")
-set(MLIR_CONFIG_INCLUDE_EXPORTS "include(\"\${MLIR_CMAKE_DIR}/MLIRTargets.cmake\")")
+if("mlir" IN_LIST LLVM_DEPENDENCY_ONLY_PROJECTS)
+  # MLIR is enabled only to satisfy another project's dependency, so its
+  # targets file is not exported above. Leave the include out of the config
+  # rather than referring to a file that is never generated, which would make
+  # every find_package(MLIR) against this build tree fail.
+  set(MLIR_CONFIG_INCLUDE_EXPORTS "")
+else()
+  set(MLIR_CONFIG_INCLUDE_EXPORTS "include(\"\${MLIR_CMAKE_DIR}/MLIRTargets.cmake\")")
+endif()
 set(MLIR_CONFIG_INCLUDE_DIRS
   "${MLIR_SOURCE_DIR}/include"
   "${MLIR_BINARY_DIR}/include"
@@ -133,7 +143,8 @@ set(MLIR_CONFIG_CMAKE_DIR)
 set(MLIR_CONFIG_LLVM_CMAKE_DIR)
 set(MLIR_CONFIG_INCLUDE_DIRS)
 
-if (NOT LLVM_INSTALL_TOOLCHAIN_ONLY)
+if (NOT LLVM_INSTALL_TOOLCHAIN_ONLY AND
+    NOT "mlir" IN_LIST LLVM_DEPENDENCY_ONLY_PROJECTS)
   # Not TOOLCHAIN ONLY, so install the MLIR parts as well
   # Include the cmake files so other tools can use mlir-tblgen, etc.
   install_distribution_exports(MLIR)

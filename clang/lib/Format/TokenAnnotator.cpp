@@ -450,7 +450,7 @@ private:
       } else if (PrevNonComment->isOneOf(TT_TypenameMacro, tok::kw_decltype,
                                          tok::kw_typeof,
 #define TRANSFORM_TYPE_TRAIT_DEF(_, Trait) tok::kw___##Trait,
-#include "clang/Basic/Traits.inc"
+#include "clang/Basic/BuiltinTraits.inc"
                                          tok::kw__Atomic)) {
         OpeningParen.setType(TT_TypeDeclarationParen);
         // decltype() and typeof() usually contain expressions.
@@ -2308,7 +2308,8 @@ private:
           }
           if (Previous->opensScope())
             break;
-          if (Previous->isOneOf(TT_BinaryOperator, TT_UnaryOperator) &&
+          if (!Previous->isTypeFinalized() &&
+              Previous->isOneOf(TT_BinaryOperator, TT_UnaryOperator) &&
               Previous->isPointerOrReference() && Previous->Previous &&
               Previous->Previous->isNot(tok::equal)) {
             Previous->setType(TT_PointerOrReference);
@@ -5583,6 +5584,11 @@ bool TokenAnnotator::spaceRequiredBefore(const AnnotatedLine &Line,
     // Add space in attribute like `(* ASYNC_REG = "TRUE" *)`.
     if (Left.endsSequence(tok::star, tok::l_paren) && Right.is(tok::identifier))
       return true;
+    // Add space in the dist list like `x dist {100 := 1};`.
+    if (Right.is(tok::colon) &&
+        (Right.TokenText == ":=" || Right.TokenText == ":/")) {
+      return true;
+    }
     // Add space before drive strength like in `wire (strong1, pull0)`.
     if (Right.is(tok::l_paren) && Right.is(TT_VerilogStrength))
       return true;
@@ -6721,6 +6727,11 @@ bool TokenAnnotator::canBreakBefore(const AnnotatedLine &Line,
   if (Left.is(tok::r_square) && Right.is(TT_AttributeRSquare)) {
     assert(Left.isNot(TT_AttributeRSquare));
     return false;
+  }
+
+  if (Style.BraceWrapping.AfterRequiresExpression &&
+      Right.is(TT_RequiresExpressionLBrace)) {
+    return true;
   }
 
   auto ShortLambdaOption = Style.AllowShortLambdasOnASingleLine;

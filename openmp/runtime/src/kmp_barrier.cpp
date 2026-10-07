@@ -171,7 +171,7 @@ kmp_uint64 distributedBarrier::go_release() {
 void distributedBarrier::go_reset() {
   for (size_t j = 0; j < max_threads; ++j) {
     for (size_t i = 0; i < distributedBarrier::MAX_ITERS; ++i) {
-      flags[i][j].stillNeed = 1;
+      flags[i][j].stillNeed.store(1, std::memory_order_relaxed);
     }
     go[j].go.store(0);
     iter[j].iter = 0;
@@ -188,7 +188,7 @@ void distributedBarrier::init(size_t nthr) {
 
   for (size_t i = 0; i < max_threads; i++) {
     for (size_t j = 0; j < distributedBarrier::MAX_ITERS; j++) {
-      flags[j][i].stillNeed = 1;
+      flags[j][i].stillNeed.store(1, std::memory_order_relaxed);
     }
     go[i].go.store(0);
     iter[i].iter = 0;
@@ -291,8 +291,11 @@ static void __kmp_dist_barrier_gather(
       threads_pending = 0;
       // Check all the flags every time to avoid branch misspredict
       for (size_t thr = group_start; thr < group_end; thr++) {
-        // Each thread uses a different cache line
-        threads_pending += b->flags[my_current_iter][thr].stillNeed;
+        // Each thread uses a different cache line. Use relaxed loads while
+        // polling; the acquire is performed once after the loop observes that
+        // all threads have arrived.
+        threads_pending += b->flags[my_current_iter][thr].stillNeed.load(
+            std::memory_order_relaxed);
       }
       // Execute tasks here
       if (__kmp_tasking_mode != tskm_immediate_exec) {
@@ -320,6 +323,9 @@ static void __kmp_dist_barrier_gather(
         this_thr->th.th_reap_state = KMP_NOT_SAFE_TO_REAP;
       }
     } while (threads_pending > 0);
+    // Acquire: now that all monitored stillNeed=0 stores are observed, make the
+    // arrived threads' pre-barrier writes (incl. reduce_data) visible here.
+    std::atomic_thread_fence(std::memory_order_acquire);
 
     if (reduce) { // Perform reduction if needed
       OMPT_REDUCTION_DECL(this_thr, gtid);
@@ -333,15 +339,18 @@ static void __kmp_dist_barrier_gather(
     }
 
     // Set flag for next iteration
-    b->flags[my_next_iter][tid].stillNeed = 1;
+    b->flags[my_next_iter][tid].stillNeed.store(1, std::memory_order_relaxed);
     // Each thread uses a different cache line; resets stillNeed to 0 to
-    // indicate it has reached the barrier
-    b->flags[my_current_iter][tid].stillNeed = 0;
+    // indicate it has reached the barrier. Release so that this thread's
+    // pre-barrier writes are visible to whoever observes the 0.
+    b->flags[my_current_iter][tid].stillNeed.store(0,
+                                                   std::memory_order_release);
 
     do { // wait for all group leaders
       threads_pending = 0;
       for (size_t thr = 0; thr < nproc; thr += b->threads_per_group) {
-        threads_pending += b->flags[my_current_iter][thr].stillNeed;
+        threads_pending += b->flags[my_current_iter][thr].stillNeed.load(
+            std::memory_order_relaxed);
       }
       // Execute tasks here
       if (__kmp_tasking_mode != tskm_immediate_exec) {
@@ -369,6 +378,8 @@ static void __kmp_dist_barrier_gather(
         this_thr->th.th_reap_state = KMP_NOT_SAFE_TO_REAP;
       }
     } while (threads_pending > 0);
+    // Acquire: pair with the group leaders' releasing stillNeed=0 stores.
+    std::atomic_thread_fence(std::memory_order_acquire);
 
     if (reduce) { // Perform reduction if needed
       if (KMP_MASTER_TID(tid)) { // Master reduces over group leaders
@@ -384,10 +395,12 @@ static void __kmp_dist_barrier_gather(
     }
   } else {
     // Set flag for next iteration
-    b->flags[my_next_iter][tid].stillNeed = 1;
+    b->flags[my_next_iter][tid].stillNeed.store(1, std::memory_order_relaxed);
     // Each thread uses a different cache line; resets stillNeed to 0 to
-    // indicate it has reached the barrier
-    b->flags[my_current_iter][tid].stillNeed = 0;
+    // indicate it has reached the barrier. Release so that this thread's
+    // pre-barrier writes are visible to whoever observes the 0.
+    b->flags[my_current_iter][tid].stillNeed.store(0,
+                                                   std::memory_order_release);
   }
 
   KMP_MFENCE();

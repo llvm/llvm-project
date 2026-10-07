@@ -10,7 +10,6 @@ add_mlir_dialect_library(MLIRLinalgTransforms
   DropUnitDims.cpp
   ElementwiseOpFusion.cpp
   ElementwiseToLinalg.cpp
-  CategoryToNamedOp.cpp
   EliminateEmptyTensors.cpp
   EraseUnusedOperandsAndResults.cpp
   FoldAddIntoDest.cpp
@@ -27,7 +26,6 @@ add_mlir_dialect_library(MLIRLinalgTransforms
   TransposeMatmul.cpp
   ShardingInterfaceImpl.cpp
   SimplifyDepthwiseConv.cpp
-  NamedToElementwise.cpp
   BlockPackMatmul.cpp
   PackAndUnpackPatterns.cpp
   Padding.cpp

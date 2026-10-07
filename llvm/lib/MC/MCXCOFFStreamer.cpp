@@ -63,6 +63,10 @@ bool MCXCOFFStreamer::emitSymbolAttribute(MCSymbol *Sym,
   case MCSA_Cold:
     return false;
 
+  // XCOFF doesn't support the .weak_definition attribute; reject it like ELF.
+  case MCSA_WeakDefinition:
+    return false;
+
   case MCSA_Global:
   case MCSA_Extern:
     Symbol->setStorageClass(XCOFF::C_EXT);
