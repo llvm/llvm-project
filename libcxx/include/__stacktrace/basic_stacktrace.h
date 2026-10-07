@@ -154,6 +154,16 @@ public:
     basic_stacktrace __ret{__alloc};
 
     if (__max_depth) {
+      // Reserve upfront for the common case (default or small __max_depth)
+#  if _LIBCPP_HAS_EXCEPTIONS
+      try {
+#  endif
+        __ret.__entries_.reserve(__max_depth < __default_max_depth ? __max_depth : __default_max_depth);
+#  if _LIBCPP_HAS_EXCEPTIONS
+      } catch (...) {
+        return __ret;
+      }
+#  endif
 #  if defined(_WIN32)
       __ret.__windows_impl(__skip, __max_depth);
 #  else
