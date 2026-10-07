@@ -1892,7 +1892,7 @@ public:
   }
 
   CallInst *CreateStructuredAlloca(Type *BaseType, const Twine &Name = "") {
-    const DataLayout &DL = BB->getDataLayout();
+    const DataLayout &DL = getDataLayout();
     PointerType *PtrTy = DL.getAllocaPtrType(Context);
     auto *Output = CreateIntrinsicWithoutFolding(Intrinsic::structured_alloca,
                                                  {PtrTy}, {}, {}, Name);
