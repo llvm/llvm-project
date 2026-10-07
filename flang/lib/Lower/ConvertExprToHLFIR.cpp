@@ -1879,6 +1879,9 @@ private:
     mlir::Location loc = getLoc();
     fir::FirOpBuilder &builder = getBuilder();
     mlir::Type eleTy = hlfir::getFortranElementType(resType);
+    if (Fortran::evaluate::IsVariable(enumExpr) &&
+        Fortran::evaluate::HasVectorSubscript(enumExpr))
+      return genEnumerationIntVectorSubscripted(enumExpr, eleTy);
     hlfir::Entity base = hlfir::derefPointersAndAllocatables(
         loc, builder, hlfir::Entity{gen(enumExpr)});
     if (!base.isArray())
@@ -1903,6 +1906,38 @@ private:
     mlir::Value elemental =
         hlfir::genElementalOp(loc, builder, eleTy, shape, /*typeParams=*/{},
                               kernel, /*isUnordered=*/true);
+    fir::FirOpBuilder *bldr = &builder;
+    getStmtCtx().attachCleanup(
+        [=]() { hlfir::DestroyOp::create(*bldr, loc, elemental); });
+    return hlfir::EntityWithAttributes{elemental};
+  }
+
+  // Read each element of a vector-subscripted enumeration array through its
+  // address; a gathered record value cannot be associated once WHERE inlines
+  // it.
+  hlfir::EntityWithAttributes
+  genEnumerationIntVectorSubscripted(const Fortran::lower::SomeExpr &enumExpr,
+                                     mlir::Type eleTy) {
+    mlir::Location loc = getLoc();
+    fir::FirOpBuilder &builder = getBuilder();
+    hlfir::ElementalAddrOp addrOp =
+        Fortran::lower::convertVectorSubscriptedExprToElementalAddr(
+            loc, getConverter(), enumExpr, getSymMap(), getStmtCtx());
+    assert(addrOp.getCleanup().empty() && "no clean-up expected");
+    auto kernel = [&](mlir::Location l, fir::FirOpBuilder &b,
+                      mlir::ValueRange idx) -> hlfir::Entity {
+      mlir::IRMapping mapper;
+      auto alwaysFalse = [](hlfir::ElementalOp) -> bool { return false; };
+      hlfir::Entity elem{
+          hlfir::inlineElementalOp(l, b, addrOp, idx, mapper, alwaysFalse)};
+      mlir::Value ordinal = hlfir::loadTrivialScalar(
+          l, b, Fortran::lower::genEnumerationOrdinalDesignator(l, b, elem));
+      return hlfir::Entity{b.createConvert(l, eleTy, ordinal)};
+    };
+    mlir::Value elemental = hlfir::genElementalOp(
+        loc, builder, eleTy, addrOp.getShape(), /*typeParams=*/{}, kernel,
+        /*isUnordered=*/true);
+    addrOp.erase();
     fir::FirOpBuilder *bldr = &builder;
     getStmtCtx().attachCleanup(
         [=]() { hlfir::DestroyOp::create(*bldr, loc, elemental); });

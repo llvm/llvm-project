@@ -2930,7 +2930,7 @@ genEnumOrdinalStep(fir::FirOpBuilder &builder, mlir::Location loc,
 // pure; only a present STAT (elemental INTENT(OUT)) forces element order.
 // NOTE: STAT is listed as "scalar", but also as INTENT(OUT) and is in an
 // elemental function.  Taking them together, this means that, by
-// F2023 15.9.1 ¶4, it should be a conforming argument to A.
+// F2023 15.9.1 p4, it should be a conforming argument to A.
 class EnumerationStepCallBuilder
     : public ElementalCallBuilder<EnumerationStepCallBuilder> {
 public:
@@ -3063,23 +3063,40 @@ static std::optional<hlfir::EntityWithAttributes> genEnumerationNextOrPrevious(
   mlir::Location loc = callContext.loc;
   fir::FirOpBuilder &builder = callContext.getBuilder();
   const auto &args = callContext.procRef.arguments();
+  if (args.size() > 1 && args[1]) {
+    // FORALL scheduling ignores the STAT= write (see issue for #193571).
+    mlir::Operation *parent = builder.getInsertionBlock()->getParentOp();
+    if (mlir::isa<hlfir::ForallOp>(parent) ||
+        parent->getParentOfType<hlfir::ForallOp>())
+      TODO(loc, "NEXT/PREVIOUS with STAT= inside FORALL");
+  }
   const Fortran::lower::SomeExpr *argExpr =
       !args.empty() && args[0] ? args[0]->UnwrapExpr() : nullptr;
   assert(argExpr && "NEXT/PREVIOUS requires argument A");
-  hlfir::Entity arg = Fortran::lower::convertExprToHLFIR(
-      loc, callContext.converter, *argExpr, callContext.symMap,
-      callContext.stmtCtx);
-  if (arg.isScalar() && !arg.isVariable()) {
-    hlfir::AssociateOp associate =
-        hlfir::genAssociateExpr(loc, builder, arg, arg.getType(), ".enum.arg");
-    arg = hlfir::Entity{associate.getBase()};
-    fir::FirOpBuilder *bldr = &builder;
-    callContext.stmtCtx.attachCleanup(
-        [=]() { hlfir::EndAssociateOp::create(*bldr, loc, associate); });
-  }
   Fortran::lower::PreparedActualArguments loweredActuals;
-  loweredActuals.emplace_back(
-      Fortran::lower::PreparedActualArgument{arg, /*isPresent=*/std::nullopt});
+  if (Fortran::evaluate::IsVariable(*argExpr) &&
+      Fortran::evaluate::HasVectorSubscript(*argExpr)) {
+    // Address each element: a gathered record value cannot be associated once
+    // WHERE inlines it.
+    loweredActuals.emplace_back(Fortran::lower::PreparedActualArgument{
+        Fortran::lower::convertVectorSubscriptedExprToElementalAddr(
+            loc, callContext.converter, *argExpr, callContext.symMap,
+            callContext.stmtCtx)});
+  } else {
+    hlfir::Entity arg = Fortran::lower::convertExprToHLFIR(
+        loc, callContext.converter, *argExpr, callContext.symMap,
+        callContext.stmtCtx);
+    if (arg.isScalar() && !arg.isVariable()) {
+      hlfir::AssociateOp associate = hlfir::genAssociateExpr(
+          loc, builder, arg, arg.getType(), ".enum.arg");
+      arg = hlfir::Entity{associate.getBase()};
+      fir::FirOpBuilder *bldr = &builder;
+      callContext.stmtCtx.attachCleanup(
+          [=]() { hlfir::EndAssociateOp::create(*bldr, loc, associate); });
+    }
+    loweredActuals.emplace_back(Fortran::lower::PreparedActualArgument{
+        arg, /*isPresent=*/std::nullopt});
+  }
   const Fortran::lower::SomeExpr *statExpr =
       args.size() > 1 && args[1] ? args[1]->UnwrapExpr() : nullptr;
   if (!statExpr) {

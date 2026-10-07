@@ -236,6 +236,34 @@ subroutine test_int_volatile(c, arr)
   iarr = int(arr)
 end subroutine
 
+! A vector-subscripted argument is read through each element's address, not
+! a gathered record value, so WHERE can inline it (no hlfir.associate).
+
+! CHECK-LABEL: func.func @_QPtest_int_vector_subscript_where(
+subroutine test_int_vector_subscript_where(a, idx, mask)
+  use enum_mod
+  type(color), intent(in) :: a(3)
+  integer, intent(in) :: idx(3)
+  logical, intent(in) :: mask(3)
+  integer :: r(3)
+  logical :: l(3)
+  ! CHECK: %[[A:.*]]:2 = hlfir.declare %{{.*}} {{.*}}uniq_name("_QFtest_int_vector_subscript_whereEa")
+  ! CHECK: hlfir.region_assign {
+  ! CHECK-NOT: hlfir.associate
+  ! CHECK: hlfir.elemental %{{.*}} unordered : (!fir.shape<1>) -> !hlfir.expr<3xi32> {
+  ! CHECK: %[[E:.*]] = hlfir.designate %[[A]]#0 (%{{.*}}) {{.*}} -> !fir.ref<!fir.type<_QMenum_modTcolor{__ordinal:i32}>>
+  ! CHECK: %[[F:.*]] = hlfir.designate %[[E]]{"__ordinal"}
+  ! CHECK: fir.load %[[F]] : !fir.ref<i32>
+  ! CHECK: hlfir.yield_element %{{.*}} : i32
+  where (mask) r = int(a(idx))
+  ! CHECK: hlfir.region_assign {
+  ! CHECK-NOT: hlfir.associate
+  ! CHECK: %[[E2:.*]] = hlfir.designate %[[A]]#0 (%{{.*}}) {{.*}} -> !fir.ref<!fir.type<_QMenum_modTcolor{__ordinal:i32}>>
+  ! CHECK: hlfir.designate %[[E2]]{"__ordinal"}
+  ! CHECK: arith.cmpi slt
+  where (mask) l = a(idx) < green
+end subroutine
+
 ! -----------------------------------------------------------------------------
 !            Test HUGE() — returns the last enumerator
 ! -----------------------------------------------------------------------------

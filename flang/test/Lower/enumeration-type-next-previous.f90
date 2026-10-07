@@ -341,14 +341,22 @@ subroutine test_next_stat_nested_where(arr, mask)
   logical, intent(in) :: mask(3)
   type(color) :: narr(3)
   integer :: st(3), st2(3)
+  ! CHECK: %[[ST:.*]]:2 = hlfir.declare %{{.*}} uniq_name("_QFtest_next_stat_nested_whereEst")
+  ! CHECK: %[[ST2:.*]]:2 = hlfir.declare %{{.*}} uniq_name("_QFtest_next_stat_nested_whereEst2")
   ! CHECK: hlfir.region_assign {
   ! CHECK: %[[N1:.*]] = hlfir.elemental %{{[0-9]+}} unordered : (!fir.shape<1>) -> !hlfir.expr<3x!fir.type<_QMenum_np_modTcolor{__ordinal:i32}>> {
   ! CHECK-NOT: hlfir.associate %[[N1]](
   ! CHECK: %[[N2:.*]] = hlfir.elemental %{{[0-9]+}} : (!fir.shape<1>) -> !hlfir.expr<3x!fir.type<_QMenum_np_modTcolor{__ordinal:i32}>> {
-  ! CHECK: hlfir.apply %[[N1]], %{{.*}}
+  ! CHECK: ^bb0(%[[I2:.*]]: index):
+  ! CHECK: hlfir.apply %[[N1]], %[[I2]]
+  ! CHECK: %[[SE2:.*]] = hlfir.designate %[[ST2]]#0 (%[[I2]])
+  ! CHECK: hlfir.assign %{{.*}} to %[[SE2]] : i32, !fir.ref<i32>
   ! CHECK-NOT: hlfir.associate %[[N2]](
   ! CHECK: hlfir.elemental %{{[0-9]+}} : (!fir.shape<1>) -> !hlfir.expr<3x!fir.type<_QMenum_np_modTcolor{__ordinal:i32}>> {
-  ! CHECK: hlfir.apply %[[N2]], %{{.*}}
+  ! CHECK: ^bb0(%[[I1:.*]]: index):
+  ! CHECK: hlfir.apply %[[N2]], %[[I1]]
+  ! CHECK: %[[SE:.*]] = hlfir.designate %[[ST]]#0 (%[[I1]])
+  ! CHECK: hlfir.assign %{{.*}} to %[[SE]] : i32, !fir.ref<i32>
   where (mask) narr = next(next(next(arr), stat=st2), stat=st)
 end subroutine
 
@@ -375,6 +383,26 @@ subroutine test_next_where_stat(arr, mask)
   ! CHECK: hlfir.yield_element
   ! CHECK: } to {
   where (mask) narr = next(arr, stat=stat)
+end subroutine
+
+! A vector-subscripted A is read through each element's address, not a
+! gathered record value, so WHERE can inline it (no hlfir.associate).
+
+! CHECK-LABEL: func.func @_QPtest_next_vector_subscript_where(
+subroutine test_next_vector_subscript_where(arr, idx, mask)
+  use enum_np_mod
+  type(color), intent(in) :: arr(3)
+  integer, intent(in) :: idx(3)
+  logical, intent(in) :: mask(3)
+  type(color) :: narr(3)
+  ! CHECK: %[[A:.*]]:2 = hlfir.declare %{{.*}} {{.*}}uniq_name("_QFtest_next_vector_subscript_whereEarr")
+  ! CHECK: hlfir.region_assign {
+  ! CHECK-NOT: hlfir.associate
+  ! CHECK: hlfir.elemental %{{.*}} unordered : (!fir.shape<1>) -> !hlfir.expr<3x!fir.type<_QMenum_np_modTcolor{__ordinal:i32}>> {
+  ! CHECK: %[[E:.*]] = hlfir.designate %[[A]]#0 (%{{.*}}) {{.*}} -> !fir.ref<!fir.type<_QMenum_np_modTcolor{__ordinal:i32}>>
+  ! CHECK: hlfir.designate %[[E]]{"__ordinal"}
+  ! CHECK: hlfir.yield_element
+  where (mask) narr = next(arr(idx))
 end subroutine
 
 ! -----------------------------------------------------------------------------
