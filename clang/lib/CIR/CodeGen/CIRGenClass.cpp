@@ -987,14 +987,13 @@ void CIRGenFunction::destroyCXXObject(CIRGenFunction &cgf, Address addr,
                             /*delegating=*/false, addr, type);
 }
 
-namespace {
-mlir::Value loadThisForDtorDelete(CIRGenFunction &cgf,
-                                  const CXXDestructorDecl *dd) {
+mlir::Value CIRGenFunction::loadThisForDtorDelete(const CXXDestructorDecl *dd) {
   if (Expr *thisArg = dd->getOperatorDeleteThisArg())
-    return cgf.emitScalarExpr(thisArg);
-  return cgf.loadCXXThis();
+    return emitScalarExpr(thisArg);
+  return loadCXXThis();
 }
 
+namespace {
 /// Call the operator delete associated with the current destructor.
 struct CallDtorDelete final : EHScopeStack::Cleanup {
   CallDtorDelete() {}
@@ -1003,7 +1002,7 @@ struct CallDtorDelete final : EHScopeStack::Cleanup {
     const CXXDestructorDecl *dtor = cast<CXXDestructorDecl>(cgf.curFuncDecl);
     const CXXRecordDecl *classDecl = dtor->getParent();
     cgf.emitDeleteCall(dtor->getOperatorDelete(),
-                       loadThisForDtorDelete(cgf, dtor),
+                       cgf.loadThisForDtorDelete(dtor),
                        cgf.getContext().getCanonicalTagType(classDecl));
   }
 };
@@ -1035,38 +1034,31 @@ public:
 /// destructors on members and base classes in reverse order of their
 /// construction.
 ///
-/// For a deleting destructor, this instead pushes the cleanup that calls
-/// operator delete and delegates to the complete destructor. It also handles
-/// the case where a destroying operator delete completely overrides the
-/// definition.
+/// For a deleting destructor, this pushes the cleanup that calls operator
+/// delete. The caller handles a destroying operator delete.
 void CIRGenFunction::enterDtorCleanups(const CXXDestructorDecl *dd,
                                        CXXDtorType dtorType) {
   assert((!dd->isTrivial() || dd->hasAttr<DLLExportAttr>()) &&
          "Should not emit dtor epilogue for non-exported trivial dtor!");
 
-  // The deleting-destructor phase calls the appropriate operator delete
-  // that Sema picked up.
+  // The deleting-destructor phase just needs to call the appropriate
+  // operator delete that Sema picked up.
   if (dtorType == Dtor_Deleting) {
     assert(dd->getOperatorDelete() &&
            "operator delete missing - EnterDtorCleanups");
     if (cxxStructorImplicitParamValue) {
-      cgm.errorNYI(dd->getSourceRange(), "deleting destructor with vtt");
-    } else if (dd->getOperatorDelete()->isDestroyingOperatorDelete()) {
-      const CXXRecordDecl *classDecl = dd->getParent();
-      emitDeleteCall(dd->getOperatorDelete(), loadThisForDtorDelete(*this, dd),
-                     getContext().getCanonicalTagType(classDecl));
-      // A destroying operator delete destroys the object itself, so skip
-      // the delegation to the complete destructor below.
-      return;
+      // The implicit parameter of a deleting destructor is the Microsoft ABI
+      // flag word that selects whether and which operator delete is called.
+      assert(getTarget().getCXXABI().isMicrosoft() &&
+             "only the Microsoft ABI passes an implicit deleting dtor param");
+      cgm.errorNYI(dd->getSourceRange(),
+                   "deleting destructor with conditional delete: MSVC ABI");
+
     } else {
+      assert(!dd->getOperatorDelete()->isDestroyingOperatorDelete() &&
+             "destroying operator delete is handled by emitDestructorBody");
       ehStack.pushCleanup<CallDtorDelete>(NormalAndEHCleanup);
     }
-
-    // Delegate to the complete destructor. operator delete runs when
-    // the caller's cleanup scope exits.
-    QualType thisTy = dd->getFunctionObjectParameterType();
-    emitCXXDestructorCall(dd, Dtor_Complete, /*forVirtualBase=*/false,
-                          /*delegating=*/false, loadCXXThisAddress(), thisTy);
     return;
   }
 

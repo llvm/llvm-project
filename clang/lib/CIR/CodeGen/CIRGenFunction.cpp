@@ -924,12 +924,29 @@ void CIRGenFunction::emitDestructorBody(FunctionArgList &args) {
   // The call to operator delete in a deleting destructor happens
   // outside of the function-try-block, which means it's always
   // possible to delegate the destructor body to the complete
-  // destructor. enterDtorCleanups does that if necessary.
+  // destructor.  Do so.
   if (dtorType == Dtor_Deleting || dtorType == Dtor_VectorDeleting) {
     if (cxxStructorImplicitParamValue && dtorType == Dtor_VectorDeleting)
       cgm.errorNYI(dtor->getSourceRange(), "emitConditionalArrayDtorCall");
+
+    // A destroying operator delete destroys the object and deallocates its
+    // storage, so the deleting destructor only calls the operator delete.
+    const FunctionDecl *operatorDelete = dtor->getOperatorDelete();
+    if (operatorDelete->isDestroyingOperatorDelete()) {
+      if (cxxStructorImplicitParamValue) {
+        // The implicit parameter of a deleting destructor is the Microsoft ABI.
+        cgm.errorNYI(dtor->getSourceRange(), "emitConditionalArrayDtorCall");
+      }
+      emitDeleteCall(operatorDelete, loadThisForDtorDelete(dtor),
+                     getContext().getCanonicalTagType(dtor->getParent()));
+      return;
+    }
+
     RunCleanupsScope dtorEpilogue(*this);
     enterDtorCleanups(dtor, Dtor_Deleting);
+    QualType thisTy = dtor->getFunctionObjectParameterType();
+    emitCXXDestructorCall(dtor, Dtor_Complete, /*forVirtualBase=*/false,
+                          /*delegating=*/false, loadCXXThisAddress(), thisTy);
     return;
   }
 

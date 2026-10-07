@@ -881,6 +881,10 @@ public:
   /// base classes in reverse order of their construction.
   void enterDtorCleanups(const CXXDestructorDecl *dtor, CXXDtorType type);
 
+  /// Return the pointer to pass to the operator delete of the given
+  /// destructor, converted to the type of its first parameter if needed.
+  mlir::Value loadThisForDtorDelete(const CXXDestructorDecl *dd);
+
   /// Determines whether an EH cleanup is required to destroy a type
   /// with the given destruction kind.
   /// TODO(cir): could be shared with Clang LLVM codegen
