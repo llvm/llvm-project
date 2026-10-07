@@ -22,10 +22,14 @@
 
 #include "clang/AST/ExprCXX.h"
 #include "clang/AST/GlobalDecl.h"
+#include "clang/AST/Mangle.h"
 #include "clang/AST/TypeBase.h"
 #include "clang/AST/VTableBuilder.h"
 #include "clang/CIR/MissingFeatures.h"
+#include "clang/CodeGenUtils/ItaniumCXXABIUtils.h"
+#include "llvm/ADT/SmallString.h"
 #include "llvm/Support/ErrorHandling.h"
+#include "llvm/Support/raw_ostream.h"
 
 using namespace clang;
 using namespace clang::CIRGen;
@@ -357,6 +361,7 @@ void CIRGenItaniumCXXABI::emitCXXStructor(GlobalDecl gd) {
   auto *md = cast<CXXMethodDecl>(gd.getDecl());
   StructorCIRGen cirGenType = getCIRGenToUse(cgm, md);
   const auto *cd = dyn_cast<CXXConstructorDecl>(md);
+  const CXXDestructorDecl *dd = cd ? nullptr : cast<CXXDestructorDecl>(md);
 
   if (cd ? gd.getCtorType() == Ctor_Complete
          : gd.getDtorType() == Dtor_Complete) {
@@ -380,7 +385,19 @@ void CIRGenItaniumCXXABI::emitCXXStructor(GlobalDecl gd) {
 
   auto fn = cgm.codegenCXXStructor(gd);
 
-  cgm.maybeSetTrivialComdat(*md, fn);
+  if (cirGenType == StructorCIRGen::COMDAT) {
+    llvm::SmallString<256> comdatKey;
+    llvm::raw_svector_ostream out(comdatKey);
+    ItaniumMangleContext &mangler =
+        cast<ItaniumMangleContext>(cgm.getCXXABI().getMangleContext());
+    if (dd)
+      mangler.mangleCXXDtorComdat(dd, out);
+    else
+      mangler.mangleCXXCtorComdat(cd, out);
+    fn.setComdat(llvm::StringRef(comdatKey));
+  } else {
+    cgm.maybeSetTrivialComdat(*md, fn);
+  }
 }
 
 void CIRGenItaniumCXXABI::addImplicitStructorParams(CIRGenFunction &cgf,
@@ -497,7 +514,7 @@ void CIRGenItaniumCXXABI::emitVTableDefinitions(CIRGenVTables &cgvt,
   vtable.setLinkage(linkage);
 
   if (cgm.supportsCOMDAT() && cir::isWeakForLinker(linkage))
-    vtable.setComdat(true);
+    vtable.setSelfComdat();
 
   // Set the right visibility.
   cgm.setGVProperties(vtable, rd);
@@ -621,51 +638,7 @@ public:
 };
 } // namespace
 
-// TODO(cir): Will be removed after sharing them with the classical codegen
 namespace {
-
-// Pointer type info flags.
-enum {
-  /// PTI_Const - Type has const qualifier.
-  PTI_Const = 0x1,
-
-  /// PTI_Volatile - Type has volatile qualifier.
-  PTI_Volatile = 0x2,
-
-  /// PTI_Restrict - Type has restrict qualifier.
-  PTI_Restrict = 0x4,
-
-  /// PTI_Incomplete - Type is incomplete.
-  PTI_Incomplete = 0x8,
-
-  /// PTI_ContainingClassIncomplete - Containing class is incomplete.
-  /// (in pointer to member).
-  PTI_ContainingClassIncomplete = 0x10,
-
-  /// PTI_TransactionSafe - Pointee is transaction_safe function (C++ TM TS).
-  // PTI_TransactionSafe = 0x20,
-
-  /// PTI_Noexcept - Pointee is noexcept function (C++1z).
-  PTI_Noexcept = 0x40,
-};
-
-// VMI type info flags.
-enum {
-  /// VMI_NonDiamondRepeat - Class has non-diamond repeated inheritance.
-  VMI_NonDiamondRepeat = 0x1,
-
-  /// VMI_DiamondShaped - Class is diamond shaped.
-  VMI_DiamondShaped = 0x2
-};
-
-// Base class type info flags.
-enum {
-  /// BCTI_Virtual - Base class is virtual.
-  BCTI_Virtual = 0x1,
-
-  /// BCTI_Public - Base class is public.
-  BCTI_Public = 0x2
-};
 
 /// Given a builtin type, returns whether the type
 /// info for that type is defined in the standard library.
@@ -686,9 +659,6 @@ static bool typeInfoIsInStandardLibrary(const BuiltinType *ty) {
 
   // Types added here must also be added to emitFundamentalRTTIDescriptors.
   switch (ty->getKind()) {
-  case BuiltinType::WasmExternRef:
-  case BuiltinType::HLSLResource:
-    llvm_unreachable("NYI");
   case BuiltinType::Void:
   case BuiltinType::NullPtr:
   case BuiltinType::Bool:
@@ -736,8 +706,16 @@ static bool typeInfoIsInStandardLibrary(const BuiltinType *ty) {
 #include "clang/Basic/PPCTypes.def"
 #define RVV_TYPE(Name, Id, SingletonId) case BuiltinType::Id:
 #include "clang/Basic/RISCVVTypes.def"
+#define WASM_TYPE(Name, Id, SingletonId) case BuiltinType::Id:
+#include "clang/Basic/WebAssemblyReferenceTypes.def"
 #define AMDGPU_TYPE(Name, Id, SingletonId, Width, Align) case BuiltinType::Id:
 #include "clang/Basic/AMDGPUTypes.def"
+#define HLSL_INTANGIBLE_TYPE(Name, Id, SingletonId) case BuiltinType::Id:
+#include "clang/Basic/HLSLIntangibleTypes.def"
+#define HLSL_PACKED_TYPE(Name, Id, SingletonId) case BuiltinType::Id:
+#include "clang/Basic/HLSLPackedTypes.def"
+#define SPIRV_TYPE(Name, Id, SingletonId) case BuiltinType::Id:
+#include "clang/Basic/SPIRVTypes.def"
   case BuiltinType::ShortAccum:
   case BuiltinType::Accum:
   case BuiltinType::LongAccum:
@@ -763,6 +741,7 @@ static bool typeInfoIsInStandardLibrary(const BuiltinType *ty) {
   case BuiltinType::SatUFract:
   case BuiltinType::SatULongFract:
   case BuiltinType::BFloat16:
+  case BuiltinType::MetaInfo:
     return false;
 
   case BuiltinType::Dependent:
@@ -856,61 +835,6 @@ static bool shouldUseExternalRttiDescriptor(CIRGenModule &cgm, QualType ty) {
   return false;
 }
 
-/// Contains virtual and non-virtual bases seen when traversing a class
-/// hierarchy.
-struct SeenBases {
-  llvm::SmallPtrSet<const CXXRecordDecl *, 16> nonVirtualBases;
-  llvm::SmallPtrSet<const CXXRecordDecl *, 16> virtualBases;
-};
-
-/// Compute the value of the flags member in abi::__vmi_class_type_info.
-///
-static unsigned computeVmiClassTypeInfoFlags(const CXXBaseSpecifier *base,
-                                             SeenBases &bases) {
-
-  unsigned flags = 0;
-  auto *baseDecl = base->getType()->castAsCXXRecordDecl();
-
-  if (base->isVirtual()) {
-    // Mark the virtual base as seen.
-    if (!bases.virtualBases.insert(baseDecl).second) {
-      // If this virtual base has been seen before, then the class is diamond
-      // shaped.
-      flags |= VMI_DiamondShaped;
-    } else {
-      if (bases.nonVirtualBases.count(baseDecl))
-        flags |= VMI_NonDiamondRepeat;
-    }
-  } else {
-    // Mark the non-virtual base as seen.
-    if (!bases.nonVirtualBases.insert(baseDecl).second) {
-      // If this non-virtual base has been seen before, then the class has non-
-      // diamond shaped repeated inheritance.
-      flags |= VMI_NonDiamondRepeat;
-    } else {
-      if (bases.virtualBases.count(baseDecl))
-        flags |= VMI_NonDiamondRepeat;
-    }
-  }
-
-  // Walk all bases.
-  for (const auto &bs : baseDecl->bases())
-    flags |= computeVmiClassTypeInfoFlags(&bs, bases);
-
-  return flags;
-}
-
-static unsigned computeVmiClassTypeInfoFlags(const CXXRecordDecl *rd) {
-  unsigned flags = 0;
-  SeenBases bases;
-
-  // Walk all bases.
-  for (const auto &bs : rd->bases())
-    flags |= computeVmiClassTypeInfoFlags(&bs, bases);
-
-  return flags;
-}
-
 // Return whether the given record decl has a "single,
 // public, non-virtual base at offset zero (i.e. the derived class is dynamic
 // iff the base is)", according to Itanium C++ ABI, 2.95p6b.
@@ -935,67 +859,6 @@ static bool canUseSingleInheritance(const CXXRecordDecl *rd) {
   auto *baseDecl = base->getType()->castAsCXXRecordDecl();
   return baseDecl->isEmpty() ||
          baseDecl->isDynamicClass() == rd->isDynamicClass();
-}
-
-/// IsIncompleteClassType - Returns whether the given record type is incomplete.
-static bool isIncompleteClassType(const RecordType *recordTy) {
-  return !recordTy->getDecl()->getDefinitionOrSelf()->isCompleteDefinition();
-}
-
-/// Returns whether the given type contains an
-/// incomplete class type. This is true if
-///
-///   * The given type is an incomplete class type.
-///   * The given type is a pointer type whose pointee type contains an
-///     incomplete class type.
-///   * The given type is a member pointer type whose class is an incomplete
-///     class type.
-///   * The given type is a member pointer type whoise pointee type contains an
-///     incomplete class type.
-/// is an indirect or direct pointer to an incomplete class type.
-static bool containsIncompleteClassType(QualType ty) {
-  if (const auto *recordTy = dyn_cast<RecordType>(ty)) {
-    if (isIncompleteClassType(recordTy))
-      return true;
-  }
-
-  if (const auto *pointerTy = dyn_cast<PointerType>(ty))
-    return containsIncompleteClassType(pointerTy->getPointeeType());
-
-  if (const auto *memberPointerTy = dyn_cast<MemberPointerType>(ty)) {
-    // Check if the class type is incomplete.
-    if (!memberPointerTy->getMostRecentCXXRecordDecl()->hasDefinition())
-      return true;
-
-    return containsIncompleteClassType(memberPointerTy->getPointeeType());
-  }
-
-  return false;
-}
-
-static unsigned extractPBaseFlags(const ASTContext &ctx, QualType &ty) {
-  unsigned flags = 0;
-
-  if (ty.isConstQualified())
-    flags |= PTI_Const;
-  if (ty.isVolatileQualified())
-    flags |= PTI_Volatile;
-  if (ty.isRestrictQualified())
-    flags |= PTI_Restrict;
-
-  ty = ty.getUnqualifiedType();
-
-  if (containsIncompleteClassType(ty))
-    flags |= PTI_Incomplete;
-
-  if (const auto *proto = ty->getAs<FunctionProtoType>()) {
-    if (proto->isNothrow()) {
-      flags |= PTI_Noexcept;
-      ty = ctx.getFunctionTypeWithExceptionSpec(ty, EST_None);
-    }
-  }
-
-  return flags;
 }
 
 const char *vTableClassNameForType(const CIRGenModule &cgm, const Type *ty) {
@@ -1111,7 +974,7 @@ static cir::GlobalLinkageKind getTypeInfoLinkage(CIRGenModule &cgm,
   //   generated for the incomplete type that will not resolve to the final
   //   complete class RTTI (because the latter need not exist), possibly by
   //   making it a local static object.
-  if (containsIncompleteClassType(ty))
+  if (CodeGenUtils::containsIncompleteClassType(ty))
     return cir::GlobalLinkageKind::InternalLinkage;
 
   switch (ty->getLinkage()) {
@@ -1233,6 +1096,11 @@ void CIRGenItaniumRTTIBuilder::buildVTablePointer(mlir::Location loc,
   cir::GlobalOp vTable = cgm.createOrReplaceCXXRuntimeVariable(
       loc, vTableName, vtableGlobalTy, cir::GlobalLinkageKind::ExternalLinkage,
       CharUnits::fromQuantity(align));
+  // Note: createOrReplaceCXXRuntimeVariable isn't exactly what classic-codegen
+  // does here: it just does a getOrInsertGlobal at the module level. However,
+  // the above function does MOST of what we want, except it sets the global as
+  // constant, when we don't want that.  So set it here instead.
+  vTable.setConstant(false);
 
   // The vtable address point is 2.
   mlir::Attribute field{};
@@ -1275,7 +1143,7 @@ void CIRGenItaniumRTTIBuilder::buildVMIClassTypeInfo(mlir::Location loc,
   //   __flags is a word with flags describing details about the class
   //   structure, which may be referenced by using the __flags_masks
   //   enumeration. These flags refer to both direct and indirect bases.
-  unsigned flags = computeVmiClassTypeInfoFlags(rd);
+  unsigned flags = CodeGenUtils::computeVMIClassTypeInfoFlags(rd);
   fields.push_back(cir::IntAttr::get(unsignedIntLTy, flags));
 
   // Itanium C++ ABI 2.9.5p6c:
@@ -1342,9 +1210,9 @@ void CIRGenItaniumRTTIBuilder::buildVMIClassTypeInfo(mlir::Location loc,
     // The low-order byte of __offset_flags contains flags, as given by the
     // masks from the enumeration __offset_flags_masks.
     if (base.isVirtual())
-      offsetFlags |= BCTI_Virtual;
+      offsetFlags |= CodeGenUtils::BCTI_Virtual;
     if (base.getAccessSpecifier() == AS_public)
-      offsetFlags |= BCTI_Public;
+      offsetFlags |= CodeGenUtils::BCTI_Public;
 
     fields.push_back(cir::IntAttr::get(offsetFlagsLTy, offsetFlags));
   }
@@ -1371,7 +1239,8 @@ void CIRGenItaniumRTTIBuilder::buildPointerTypeInfo(mlir::Location loc,
   //         __noexcept_mask = 0x40
   //       };
   //   };
-  const unsigned int flags = extractPBaseFlags(cgm.getASTContext(), ty);
+  const unsigned int flags =
+      CodeGenUtils::extractPBaseFlags(cgm.getASTContext(), ty);
 
   mlir::Type unsignedIntTy = cgm.convertType(cgm.getASTContext().UnsignedIntTy);
   mlir::Attribute flagsAttr = cir::IntAttr::get(unsignedIntTy, flags);
@@ -1394,11 +1263,12 @@ void CIRGenItaniumRTTIBuilder::buildPointerToMemberTypeInfo(
   //    };
   QualType pointeeTy = ty->getPointeeType();
 
-  unsigned flags = extractPBaseFlags(cgm.getASTContext(), pointeeTy);
+  unsigned flags =
+      CodeGenUtils::extractPBaseFlags(cgm.getASTContext(), pointeeTy);
 
   const auto *rd = ty->getMostRecentCXXRecordDecl();
   if (!rd->hasDefinition())
-    flags |= PTI_ContainingClassIncomplete;
+    flags |= CodeGenUtils::PTI_ContainingClassIncomplete;
 
   mlir::Type unsignedIntTy = cgm.convertType(cgm.getASTContext().UnsignedIntTy);
   mlir::Attribute flagsAttr = cir::IntAttr::get(unsignedIntTy, flags);
@@ -1625,7 +1495,7 @@ mlir::Attribute CIRGenItaniumRTTIBuilder::buildTypeInfo(
   }
 
   if (cgm.supportsCOMDAT() && cir::isWeakForLinker(linkage))
-    gv.setComdat(true);
+    gv.setSelfComdat();
 
   CharUnits align = cgm.getASTContext().toCharUnitsFromBits(
       cgm.getTarget().getPointerAlign(LangAS::Default));
@@ -1805,7 +1675,7 @@ void CIRGenItaniumCXXABI::emitRethrow(CIRGenFunction &cgf, bool isNoReturn) {
   if (isNoReturn) {
     CIRGenBuilderTy &builder = cgf.getBuilder();
     assert(cgf.currSrcLoc && "expected source location");
-    mlir::Location loc = *cgf.currSrcLoc;
+    mlir::Location loc = cgf.getLoc(*cgf.currSrcLoc);
     insertThrowAndSplit(builder, loc);
   } else {
     cgm.errorNYI("emitRethrow with isNoReturn false");
@@ -2098,58 +1968,6 @@ void CIRGenItaniumCXXABI::emitBadCastCall(CIRGenFunction &cgf,
   emitCallToBadCast(cgf, loc);
 }
 
-// TODO(cir): This could be shared with classic codegen.
-static CharUnits computeOffsetHint(ASTContext &astContext,
-                                   const CXXRecordDecl *src,
-                                   const CXXRecordDecl *dst) {
-  CXXBasePaths paths(/*FindAmbiguities=*/true, /*RecordPaths=*/true,
-                     /*DetectVirtual=*/false);
-
-  // If Dst is not derived from Src we can skip the whole computation below and
-  // return that Src is not a public base of Dst.  Record all inheritance paths.
-  if (!dst->isDerivedFrom(src, paths))
-    return CharUnits::fromQuantity(-2);
-
-  unsigned numPublicPaths = 0;
-  CharUnits offset;
-
-  // Now walk all possible inheritance paths.
-  for (const CXXBasePath &path : paths) {
-    if (path.Access != AS_public) // Ignore non-public inheritance.
-      continue;
-
-    ++numPublicPaths;
-
-    for (const CXXBasePathElement &pathElement : path) {
-      // If the path contains a virtual base class we can't give any hint.
-      // -1: no hint.
-      if (pathElement.Base->isVirtual())
-        return CharUnits::fromQuantity(-1);
-
-      if (numPublicPaths > 1) // Won't use offsets, skip computation.
-        continue;
-
-      // Accumulate the base class offsets.
-      const ASTRecordLayout &L =
-          astContext.getASTRecordLayout(pathElement.Class);
-      offset += L.getBaseClassOffset(
-          pathElement.Base->getType()->getAsCXXRecordDecl());
-    }
-  }
-
-  // -2: Src is not a public base of Dst.
-  if (numPublicPaths == 0)
-    return CharUnits::fromQuantity(-2);
-
-  // -3: Src is a multiple public base type but never a virtual base type.
-  if (numPublicPaths > 1)
-    return CharUnits::fromQuantity(-3);
-
-  // Otherwise, the Src type is a unique public nonvirtual base type of Dst.
-  // Return the offset of Src from the origin of Dst.
-  return offset;
-}
-
 static cir::FuncOp getItaniumDynamicCastFn(CIRGenFunction &cgf) {
   // Prototype:
   // void *__dynamic_cast(const void *sub,
@@ -2330,7 +2148,8 @@ static cir::DynamicCastInfoAttr emitDynamicCastInfo(CIRGenFunction &cgf,
 
   const CXXRecordDecl *srcDecl = srcRecordTy->getAsCXXRecordDecl();
   const CXXRecordDecl *destDecl = destRecordTy->getAsCXXRecordDecl();
-  CharUnits offsetHint = computeOffsetHint(cgf.getContext(), srcDecl, destDecl);
+  CharUnits offsetHint =
+      CodeGenUtils::computeOffsetHint(cgf.getContext(), srcDecl, destDecl);
 
   mlir::Type ptrdiffTy = cgf.convertType(cgf.getContext().getPointerDiffType());
   auto offsetHintAttr = cir::IntAttr::get(ptrdiffTy, offsetHint.getQuantity());

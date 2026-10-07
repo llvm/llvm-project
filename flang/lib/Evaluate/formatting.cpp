@@ -247,6 +247,7 @@ llvm::raw_ostream &ActualArgument::AsFortran(llvm::raw_ostream &o) const {
           },
           [&](const AssumedType &assumedType) { assumedType.AsFortran(o); },
           [&](const common::Label &label) { o << '*' << label; },
+          [&](const ConditionalArg &condArg) { condArg.AsFortran(o); },
       },
       u_);
   if (isPercentVal() || isPercentRef()) {
@@ -260,6 +261,38 @@ std::string ActualArgument::AsFortran() const {
   llvm::raw_string_ostream sstream(result);
   AsFortran(sstream);
   return result;
+}
+
+// Helper: emit the inner part of a conditional arg without outer parens
+static void EmitConditionalArgInner(
+    llvm::raw_ostream &o, const ActualArgument::ConditionalArg &ca) {
+  auto emitConsequent{
+      [&](const ActualArgument::ConditionalArg::Consequent &cons) {
+        if (cons) {
+          cons->value().AsFortran(o);
+        } else {
+          o << ".NIL.";
+        }
+      }};
+  ca.condition().AsFortran(o);
+  o << " ? ";
+  emitConsequent(ca.consequent());
+  o << " : ";
+  ca.VisitTail(
+      [&](const ActualArgument::ConditionalArg &inner) {
+        EmitConditionalArgInner(o, inner);
+      },
+      [&](const ActualArgument::ConditionalArg::Consequent &cons) {
+        emitConsequent(cons);
+      });
+}
+
+llvm::raw_ostream &ActualArgument::ConditionalArg::AsFortran(
+    llvm::raw_ostream &o) const {
+  o << "( ";
+  EmitConditionalArgInner(o, *this);
+  o << " )";
+  return o;
 }
 
 llvm::raw_ostream &SpecificIntrinsic::AsFortran(llvm::raw_ostream &o) const {
@@ -379,22 +412,6 @@ template <typename T> static Precedence ToPrecedence(const Constant<T> &x) {
 }
 template <typename T> static Precedence ToPrecedence(const Expr<T> &expr) {
   return common::visit([](const auto &x) { return ToPrecedence(x); }, expr.u);
-}
-
-template <typename T> static bool IsNegatedScalarConstant(const Expr<T> &expr) {
-  static constexpr TypeCategory cat{T::category};
-  if constexpr (cat == TypeCategory::Integer || cat == TypeCategory::Real) {
-    if (auto n{GetScalarConstantValue<T>(expr)}) {
-      return n->IsNegative();
-    }
-  }
-  return false;
-}
-
-template <TypeCategory CAT>
-static bool IsNegatedScalarConstant(const Expr<SomeKind<CAT>> &expr) {
-  return common::visit(
-      [](const auto &x) { return IsNegatedScalarConstant(x); }, expr.u);
 }
 
 struct OperatorSpelling {
@@ -664,6 +681,14 @@ static std::string DerivedTypeSpecAsFortran(
 
 llvm::raw_ostream &StructureConstructor::AsFortran(llvm::raw_ostream &o) const {
   o << DerivedTypeSpecAsFortran(result_.derivedTypeSpec());
+  if (result_.derivedTypeSpec().IsEnumerationType()) {
+    // Print as enum_name(ordinal) without exposing the hidden __ordinal keyword
+    o << '(';
+    if (!values_.empty()) {
+      values_.begin()->second.value().AsFortran(o);
+    }
+    return o << ')';
+  }
   if (values_.empty()) {
     o << '(';
   } else {
@@ -851,6 +876,15 @@ llvm::raw_ostream &DescriptorInquiry::AsFortran(llvm::raw_ostream &o) const {
     }
   }
   return o << ",kind=" << DescriptorInquiry::Result::kind << ")";
+}
+
+llvm::raw_ostream &RankOneBoundElement::AsFortran(llvm::raw_ostream &o) const {
+  // A RankOneBoundElement extracts a single element from a rank-1 array that
+  // was used as an array bound in a declaration; it has no true Fortran
+  // surface syntax.  Render it in an internal, clearly-synthetic form.
+  base().AsFortran(o << "rank1BoundElement(")
+      << ",dim=" << (dimension_ + 1) << ')';
+  return o;
 }
 
 llvm::raw_ostream &Assignment::AsFortran(llvm::raw_ostream &o) const {

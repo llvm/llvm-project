@@ -31,6 +31,11 @@ def cv_tuimm2 : TImmLeaf<XLenVT, [{return isUInt<2>(Imm);}]>;
 def cv_tuimm5 : TImmLeaf<XLenVT, [{return isUInt<5>(Imm);}]>;
 def cv_uimm10 : ImmLeaf<XLenVT, [{return isUInt<10>(Imm);}]>;
 
+def cv_insert_is2 : RISCVUImmOp<5> {
+  let DecoderMethod = "decodeCVInsertIs2Operand";
+  let hasCompleteDecoder = false;
+}
+
 def CV_LO5: SDNodeXForm<imm, [{
   return CurDAG->getTargetConstant(N->getZExtValue() & 0x1f, SDLoc(N),
                                    N->getValueType(0));
@@ -272,7 +277,7 @@ class CVInstImmBranch<bits<3> funct3, dag outs, dag ins,
 let hasSideEffects = 0, mayLoad = 1, mayStore = 0 in {
 class CVLoad_ri_inc<bits<3> funct3, string opcodestr>
     : RVInstI<funct3, OPC_CUSTOM_0, (outs GPR:$rd, GPR:$rs1_wb),
-              (ins BasePtr:$rs1, simm12_lo:$imm12),
+              (ins BasePtr:$rs1, simm12:$imm12),
               opcodestr, "$rd, (${rs1}), ${imm12}"> {
   let Constraints = "$rs1_wb = $rs1";
 }
@@ -293,7 +298,7 @@ class CVLoad_rr<bits<7> funct7, bits<3> funct3, string opcodestr>
 let hasSideEffects = 0, mayLoad = 0, mayStore = 1 in {
 class CVStore_ri_inc<bits<3> funct3, string opcodestr>
     : RVInstS<funct3, OPC_CUSTOM_1, (outs GPR:$rs1_wb),
-              (ins GPR:$rs2, GPR:$rs1, simm12_lo:$imm12),
+              (ins GPR:$rs2, GPR:$rs1, simm12:$imm12),
               opcodestr, "$rs2, (${rs1}), ${imm12}"> {
   let Constraints = "$rs1_wb = $rs1";
 }
@@ -354,7 +359,7 @@ let Predicates = [HasVendorXCVbitmanip, IsRV32] in {
 
   let Constraints = "$rd = $rd_wb" in {
     def CV_INSERT : CVInstBitManipRII<0b10, 0b000, (outs GPR:$rd_wb),
-                             (ins GPR:$rd, GPR:$rs1, uimm5:$is3, uimm5:$is2),
+                             (ins GPR:$rd, GPR:$rs1, uimm5:$is3, cv_insert_is2:$is2),
                              "cv.insert", "$rd, $rs1, $is3, $is2">;
     let hasSideEffects = 0, mayLoad = 0, mayStore = 0 in
     def CV_INSERTR : RVInstR<0b0011010, 0b011, OPC_CUSTOM_1, (outs GPR:$rd_wb),
@@ -519,16 +524,23 @@ let Predicates = [HasVendorXCVsimd, IsRV32] in {
 
   // 0b10110xx: UNDEF
 
-  def CV_EXTRACT_H :    CVSIMDRU<0b10111, 0, 0b000, "cv.extract.h">;
-  def CV_EXTRACT_B :    CVSIMDRU<0b10111, 0, 0b001, "cv.extract.b">;
-  def CV_EXTRACTU_H :   CVSIMDRU<0b10111, 0, 0b010, "cv.extractu.h">;
-  def CV_EXTRACTU_B :   CVSIMDRU<0b10111, 0, 0b011, "cv.extractu.b">;
-  def CV_INSERT_H :     CVSIMDRUWb<0b10111, 0, 0b100, "cv.insert.h">;
-  def CV_INSERT_B :     CVSIMDRUWb<0b10111, 0, 0b101, "cv.insert.b">;
+  def CV_EXTRACT_H :
+      CVSIMDRI<0b10111, 0, 0b000, "cv.extract.h", uimm1>;
+  def CV_EXTRACT_B :
+      CVSIMDRI<0b10111, 0, 0b001, "cv.extract.b", uimm2>;
+  def CV_EXTRACTU_H :
+      CVSIMDRI<0b10111, 0, 0b010, "cv.extractu.h", uimm1>;
+  def CV_EXTRACTU_B :
+      CVSIMDRI<0b10111, 0, 0b011, "cv.extractu.b", uimm2>;
+  def CV_INSERT_H :
+      CVSIMDRIWb<0b10111, 0, 0b100, "cv.insert.h", uimm1>;
+  def CV_INSERT_B :
+      CVSIMDRIWb<0b10111, 0, 0b101, "cv.insert.b", uimm2>;
 
   def CV_SHUFFLE_H :    CVSIMDRR<0b11000, 0, 0, 0b000, "cv.shuffle.h">;
   def CV_SHUFFLE_B :    CVSIMDRR<0b11000, 0, 0, 0b001, "cv.shuffle.b">;
-  def CV_SHUFFLE_SCI_H :   CVSIMDRU<0b11000, 0, 0b110, "cv.shuffle.sci.h">;
+  def CV_SHUFFLE_SCI_H :
+      CVSIMDRI<0b11000, 0, 0b110, "cv.shuffle.sci.h", uimm2>;
   def CV_SHUFFLEI0_SCI_B : CVSIMDRU<0b11000, 0, 0b111, "cv.shufflei0.sci.b">;
 
   def CV_SHUFFLEI1_SCI_B : CVSIMDRU<0b11001, 0, 0b111, "cv.shufflei1.sci.b">;
@@ -682,8 +694,8 @@ class CVLdrrPat<PatFrag LoadOp, RVInst Inst>
           (Inst CVrr:$regreg)>;
 
 class CVStriPat<PatFrag StoreOp, RVInst Inst>
-    : Pat<(StoreOp (i32 GPR:$rs2), GPR:$rs1, simm12_lo:$imm12),
-          (Inst GPR:$rs2, GPR:$rs1, simm12_lo:$imm12)>;
+    : Pat<(StoreOp (i32 GPR:$rs2), GPR:$rs1, simm12:$imm12),
+          (Inst GPR:$rs2, GPR:$rs1, simm12:$imm12)>;
 
 class CVStrriPat<PatFrag StoreOp, RVInst Inst>
     : Pat<(StoreOp (i32 GPR:$rs2), GPR:$rs1, GPR:$rs3),
@@ -807,6 +819,11 @@ let Predicates = [HasVendorXCValu, IsRV32], AddedComplexity = 1 in {
 // Patterns for immediate branching operations
 //===----------------------------------------------------------------------===//
 
+// The condition codes supported by Select_GPR_Using_CC_SImm5_CV.
+def XCVbiCond : PatLeaf<(cond), [{
+  return ISD::isIntEqualitySetCC(N->get());
+}]>;
+
 let Predicates = [HasVendorXCVbi, IsRV32], AddedComplexity = 2 in {
   def : Pat<(riscv_brcc (i32 GPR:$rs1), simm5:$imm5, SETEQ, bb:$imm12),
             (CV_BEQIMM GPR:$rs1, simm5:$imm5, bare_simm13_lsb0_bb:$imm12)>;
@@ -815,14 +832,10 @@ let Predicates = [HasVendorXCVbi, IsRV32], AddedComplexity = 2 in {
 
   defm CC_SImm5_CV : SelectCC_GPR_riirr<GPR, simm5>;
 
-  class Selectbi<CondCode Cond>
-      : Pat<(riscv_selectcc (i32 GPR:$lhs), simm5:$Constant, Cond:$cc,
+  def : Pat<(riscv_selectcc (i32 GPR:$lhs), simm5:$Constant, XCVbiCond:$cc,
                             (i32 GPR:$truev), GPR:$falsev),
             (Select_GPR_Using_CC_SImm5_CV GPR:$lhs, simm5:$Constant,
              (CCtoRISCVCC $cc), GPR:$truev, GPR:$falsev)>;
-
-  def : Selectbi<SETEQ>;
-  def : Selectbi<SETNE>;
 }
 
 class PatCoreVMacGprGprGpr <string intr, string asm>

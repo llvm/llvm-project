@@ -43,55 +43,6 @@ using namespace llvm::omp::target::ompt;
 #endif
 using namespace llvm::omp::target::debug;
 
-int AsyncInfoTy::synchronize() {
-  int Result = OFFLOAD_SUCCESS;
-  if (!isQueueEmpty()) {
-    switch (SyncType) {
-    case SyncTy::BLOCKING:
-      // If we have a queue we need to synchronize it now.
-      Result = Device.synchronize(*this);
-      assert(AsyncInfo.Queue == nullptr &&
-             "The device plugin should have nulled the queue to indicate there "
-             "are no outstanding actions!");
-      break;
-    case SyncTy::NON_BLOCKING:
-      Result = Device.queryAsync(*this);
-      break;
-    }
-  }
-
-  // Run any pending post-processing function registered on this async object.
-  if (Result == OFFLOAD_SUCCESS && isQueueEmpty())
-    Result = runPostProcessing();
-
-  return Result;
-}
-
-void *&AsyncInfoTy::getVoidPtrLocation() {
-  BufferLocations.push_back(nullptr);
-  return BufferLocations.back();
-}
-
-bool AsyncInfoTy::isDone() const { return isQueueEmpty(); }
-
-int32_t AsyncInfoTy::runPostProcessing() {
-  size_t Size = PostProcessingFunctions.size();
-  for (size_t I = 0; I < Size; ++I) {
-    const int Result = PostProcessingFunctions[I]();
-    if (Result != OFFLOAD_SUCCESS)
-      return Result;
-  }
-
-  // Clear the vector up until the last known function, since post-processing
-  // procedures might add new procedures themselves.
-  const auto *PrevBegin = PostProcessingFunctions.begin();
-  PostProcessingFunctions.erase(PrevBegin, PrevBegin + Size);
-
-  return OFFLOAD_SUCCESS;
-}
-
-bool AsyncInfoTy::isQueueEmpty() const { return AsyncInfo.Queue == nullptr; }
-
 /* All begin addresses for partially mapped structs must be aligned, up to 16,
  * in order to ensure proper alignment of members. E.g.
  *
@@ -211,7 +162,7 @@ void *targetAllocExplicit(size_t Size, int DeviceNum, int Kind,
 
   void *Rc = NULL;
 
-  if (DeviceNum == omp_get_initial_device()) {
+  if (isInitialDevice(DeviceNum)) {
     Rc = malloc(Size);
     ODBG(ODT_Interface) << Name << " returns host ptr " << Rc;
     return Rc;
@@ -236,7 +187,7 @@ void targetFreeExplicit(void *DevicePtr, int DeviceNum, int Kind,
     return;
   }
 
-  if (DeviceNum == omp_get_initial_device()) {
+  if (isInitialDevice(DeviceNum)) {
     free(DevicePtr);
     ODBG(ODT_Interface) << Name << " deallocated host ptr";
     return;
@@ -353,6 +304,8 @@ static char *getOrCreateSourceBufferForSubmitData(AsyncInfoTy &AsyncInfo,
   // Create a dynamic buffer for larger data and schedule its deletion.
   char *DataBuffer = new char[Size];
   AsyncInfo.addPostProcessingFunction([DataBuffer]() {
+    ODBG(ODT_DataTransfer) << "Releasing submitData source buffer at "
+                           << static_cast<void *>(DataBuffer);
     delete[] DataBuffer;
     return OFFLOAD_SUCCESS;
   });
@@ -1692,8 +1645,6 @@ class PrivateArgumentManagerTy {
 
   /// A vector of information of all first-private arguments to be packed
   SmallVector<FirstPrivateArgInfoTy> FirstPrivateArgInfo;
-  /// Host buffer for all arguments to be packed
-  SmallVector<char> FirstPrivateArgBuffer;
   /// The total size of all arguments to be packed
   int64_t FirstPrivateArgSize = 0;
 
@@ -1966,8 +1917,17 @@ public:
     if (!FirstPrivateArgInfo.empty()) {
       assert(FirstPrivateArgSize != 0 &&
              "FirstPrivateArgSize is 0 but FirstPrivateArgInfo is empty");
-      FirstPrivateArgBuffer.resize(FirstPrivateArgSize, 0);
-      auto *Itr = FirstPrivateArgBuffer.begin();
+      // The packed buffer is the host source of the asynchronous submitData
+      // below, so its lifetime must outlive this object rather than be tied to
+      // it.
+      char *FirstPrivateArgBuffer =
+          getOrCreateSourceBufferForSubmitData(AsyncInfo, FirstPrivateArgSize);
+      // Not strictly necessary: the loop below writes every entry, and the
+      // inter-entry padding gaps it skips are never read by the device. Zero
+      // them anyway to keep the transferred buffer deterministic, which makes
+      // dumps easier to read and avoids tripping memory sanitizers.
+      std::memset(FirstPrivateArgBuffer, 0, FirstPrivateArgSize);
+      auto *Itr = FirstPrivateArgBuffer;
       // Copy all host data to this buffer
       for (FirstPrivateArgInfoTy &Info : FirstPrivateArgInfo) {
         // First pad the pointer as we (have to) pad it on the device too.
@@ -1983,7 +1943,7 @@ public:
       }
       // Allocate target memory
       void *TgtPtr =
-          Device.allocData(FirstPrivateArgSize, FirstPrivateArgBuffer.data());
+          Device.allocData(FirstPrivateArgSize, FirstPrivateArgBuffer);
       if (TgtPtr == nullptr) {
         ODBG(ODT_Alloc)
             << "Failed to allocate target memory for private arguments.";
@@ -1993,7 +1953,10 @@ public:
       ODBG(ODT_Alloc) << "Allocated " << FirstPrivateArgSize
                       << " bytes of target memory at " << TgtPtr;
       // Transfer data to target device
-      int Ret = Device.submitData(TgtPtr, FirstPrivateArgBuffer.data(),
+      ODBG(ODT_DataTransfer)
+          << "Submitting packed firstprivate arguments from host buffer at "
+          << static_cast<void *>(FirstPrivateArgBuffer);
+      int Ret = Device.submitData(TgtPtr, FirstPrivateArgBuffer,
                                   FirstPrivateArgSize, AsyncInfo);
       if (Ret != OFFLOAD_SUCCESS) {
         ODBG(ODT_DataTransfer) << "Failed to submit data of private arguments.";
@@ -2008,7 +1971,8 @@ public:
         TP += Info.Padding;
         Ptr = reinterpret_cast<void *>(TP);
         TP += Info.Size;
-        ODBG(ODT_Mapping) << "Firstprivate array " << Info.HstPtrBegin
+        ODBG(ODT_Mapping) << "Firstprivate array "
+                          << static_cast<void *>(Info.HstPtrBegin)
                           << " of size " << (Info.HstPtrEnd - Info.HstPtrBegin)
                           << " mapped to " << Ptr;
       }
@@ -2488,13 +2452,11 @@ int target_replay(ident_t *Loc, DeviceTy &Device, void *HostPtr,
   KernelArgs.UserThreadLimit[1] = 1;
   KernelArgs.UserThreadLimit[2] = 1;
   KernelArgs.DynCGroupMem = SharedMemorySize;
-  KernelArgs.Flags.StrictBlocksAndThreads = true;
-
-  KernelExtraArgsTy KernelExtraArgs{};
-  KernelExtraArgs.ReplayOutcome = ReplayOutcome;
+  KernelArgs.Flags.StrictBlocks = true;
+  KernelArgs.Flags.StrictThreads = true;
 
   int Ret = Device.launchKernel(Symbols[0].DevPtr, TgtArgs, TgtOffsets,
-                                KernelArgs, &KernelExtraArgs, AsyncInfo);
+                                KernelArgs, ReplayOutcome, AsyncInfo);
   if (Ret != OFFLOAD_SUCCESS) {
     REPORT() << "Failed to launch kernel replay.";
     return OFFLOAD_FAIL;

@@ -308,7 +308,7 @@ Status NativeRegisterContextWindows_arm64::GPRRead(const uint32_t reg,
 Status
 NativeRegisterContextWindows_arm64::GPRWrite(const uint32_t reg,
                                              const RegisterValue &reg_value) {
-  auto cleanup = llvm::make_scope_exit([&]() { m_context = nullptr; });
+  auto cleanup = llvm::scope_exit([&]() { m_context = nullptr; });
 
   PCONTEXT context = nullptr;
   DataBufferHeap context_buffer;
@@ -533,7 +533,7 @@ Status NativeRegisterContextWindows_arm64::FPRRead(const uint32_t reg,
 Status
 NativeRegisterContextWindows_arm64::FPRWrite(const uint32_t reg,
                                              const RegisterValue &reg_value) {
-  auto cleanup = llvm::make_scope_exit([&]() { m_context = nullptr; });
+  auto cleanup = llvm::scope_exit([&]() { m_context = nullptr; });
 
   PCONTEXT context = nullptr;
   DataBufferHeap context_buffer;
@@ -743,7 +743,7 @@ Status NativeRegisterContextWindows_arm64::ReadAllRegisterValues(
 
 Status NativeRegisterContextWindows_arm64::WriteAllRegisterValues(
     const lldb::DataBufferSP &data_sp) {
-  auto cleanup = llvm::make_scope_exit([&]() { m_context = nullptr; });
+  auto cleanup = llvm::scope_exit([&]() { m_context = nullptr; });
 
   Log *log = GetLog(WindowsLog::Registers);
   Status error;
@@ -796,7 +796,7 @@ llvm::Error NativeRegisterContextWindows_arm64::ReadHardwareDebugInfo() {
 
 llvm::Error
 NativeRegisterContextWindows_arm64::WriteHardwareDebugRegs(DREGType hwbType) {
-  auto cleanup = llvm::make_scope_exit([&]() { m_context = nullptr; });
+  auto cleanup = llvm::scope_exit([&]() { m_context = nullptr; });
 
   PCONTEXT context = nullptr;
   DataBufferHeap context_buffer;

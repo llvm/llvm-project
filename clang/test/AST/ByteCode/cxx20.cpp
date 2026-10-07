@@ -119,8 +119,8 @@ static_assert(!b2);
 constexpr auto name1() { return "name1"; }
 constexpr auto name2() { return "name2"; }
 
-constexpr auto b3 = name1() == name1(); // ref-error {{must be initialized by a constant expression}} \
-                                        // ref-note {{comparison of addresses of potentially overlapping literals}}
+constexpr auto b3 = name1() == name1(); // both-error {{must be initialized by a constant expression}} \
+                                        // both-note {{comparison of addresses of potentially overlapping literals}}
 constexpr auto b4 = name1() == name2();
 static_assert(!b4);
 
@@ -1099,8 +1099,7 @@ namespace Virtual {
   static_assert(d.b == 'B');
   static_assert(d.c == 'C');
   // During the construction of C, the dynamic type of B's A is B.
-  static_assert(d.ba == 'B'); // expected-error {{failed}} \
-                              // expected-note {{expression evaluates to}}
+  static_assert(d.ba == 'B');
   static_assert(d.d == 'D');
   static_assert(d.f() == 'D');
   constexpr const A &a = (B&)d;
@@ -1531,4 +1530,17 @@ namespace SubPtr {
     return r;
   }
   static_assert(dynAlloc() == 1);
+}
+
+namespace InvalidVirtualCall {
+  struct A {
+    virtual void foo(); // both-note {{overridden virtual function is here}}
+  };
+
+  struct B : A {
+    constexpr void bar() { foo(); } // both-error {{never produces a constant expression}} \
+                                    // both-note {{non-constexpr function 'foo' cannot be used in a constant expression}}
+    static void foo(); // both-error {{'static' member function 'foo' overrides a virtual function in a base class}} \
+                       // both-note {{declared here}}
+  };
 }

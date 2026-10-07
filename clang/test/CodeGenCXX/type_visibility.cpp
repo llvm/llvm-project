@@ -25,11 +25,11 @@ namespace temp0 {
 
   template struct B<A>;
   // FUNS-LABEL:        define weak_odr void @_ZN5temp01BINS_1AEE3fooEv(
-  // VARS:        @_ZTVN5temp01BINS_1AEEE = weak_odr constant
+  // VARS:        @_ZTVN5temp01BINS_1AEEE = weak_odr unnamed_addr constant
   // VARS:        @_ZTIN5temp01BINS_1AEEE = weak_odr constant
   // VARS:        @_ZTSN5temp01BINS_1AEEE = weak_odr constant
   // FUNS-HIDDEN-LABEL: define weak_odr hidden void @_ZN5temp01BINS_1AEE3fooEv(
-  // VARS-HIDDEN: @_ZTVN5temp01BINS_1AEEE = weak_odr hidden constant
+  // VARS-HIDDEN: @_ZTVN5temp01BINS_1AEEE = weak_odr hidden unnamed_addr constant
   // VARS-HIDDEN: @_ZTIN5temp01BINS_1AEEE = weak_odr hidden constant
   // VARS-HIDDEN: @_ZTSN5temp01BINS_1AEEE = weak_odr hidden constant
 }
@@ -42,11 +42,11 @@ namespace temp1 {
 
   template struct B<A>;
   // FUNS-LABEL:        define weak_odr void @_ZN5temp11BINS_1AEE3fooEv(
-  // VARS:        @_ZTVN5temp11BINS_1AEEE = weak_odr constant
+  // VARS:        @_ZTVN5temp11BINS_1AEEE = weak_odr unnamed_addr constant
   // VARS:        @_ZTIN5temp11BINS_1AEEE = weak_odr constant
   // VARS:        @_ZTSN5temp11BINS_1AEEE = weak_odr constant
   // FUNS-HIDDEN-LABEL: define weak_odr hidden void @_ZN5temp11BINS_1AEE3fooEv(
-  // VARS-HIDDEN: @_ZTVN5temp11BINS_1AEEE = weak_odr constant
+  // VARS-HIDDEN: @_ZTVN5temp11BINS_1AEEE = weak_odr unnamed_addr constant
   // VARS-HIDDEN: @_ZTIN5temp11BINS_1AEEE = weak_odr constant
   // VARS-HIDDEN: @_ZTSN5temp11BINS_1AEEE = weak_odr constant
 }
@@ -59,11 +59,11 @@ namespace temp2 {
 
   template struct B<A>;
   // FUNS-LABEL:        define weak_odr void @_ZN5temp21BINS_1AEE3fooEv(
-  // VARS:        @_ZTVN5temp21BINS_1AEEE = weak_odr constant
+  // VARS:        @_ZTVN5temp21BINS_1AEEE = weak_odr unnamed_addr constant
   // VARS:        @_ZTIN5temp21BINS_1AEEE = weak_odr constant
   // VARS:        @_ZTSN5temp21BINS_1AEEE = weak_odr constant
   // FUNS-HIDDEN-LABEL: define weak_odr hidden void @_ZN5temp21BINS_1AEE3fooEv(
-  // VARS-HIDDEN: @_ZTVN5temp21BINS_1AEEE = weak_odr hidden constant
+  // VARS-HIDDEN: @_ZTVN5temp21BINS_1AEEE = weak_odr hidden unnamed_addr constant
   // VARS-HIDDEN: @_ZTIN5temp21BINS_1AEEE = weak_odr hidden constant
   // VARS-HIDDEN: @_ZTSN5temp21BINS_1AEEE = weak_odr hidden constant
 }
@@ -76,11 +76,11 @@ namespace temp3 {
 
   template struct B<A>;
   // FUNS-LABEL:        define weak_odr hidden void @_ZN5temp31BINS_1AEE3fooEv(
-  // VARS:        @_ZTVN5temp31BINS_1AEEE = weak_odr hidden constant
+  // VARS:        @_ZTVN5temp31BINS_1AEEE = weak_odr hidden unnamed_addr constant
   // VARS:        @_ZTIN5temp31BINS_1AEEE = weak_odr hidden constant
   // VARS:        @_ZTSN5temp31BINS_1AEEE = weak_odr hidden constant
   // FUNS-HIDDEN-LABEL: define weak_odr hidden void @_ZN5temp31BINS_1AEE3fooEv(
-  // VARS-HIDDEN: @_ZTVN5temp31BINS_1AEEE = weak_odr hidden constant
+  // VARS-HIDDEN: @_ZTVN5temp31BINS_1AEEE = weak_odr hidden unnamed_addr constant
   // VARS-HIDDEN: @_ZTIN5temp31BINS_1AEEE = weak_odr hidden constant
   // VARS-HIDDEN: @_ZTSN5temp31BINS_1AEEE = weak_odr hidden constant
 }
@@ -93,11 +93,11 @@ namespace temp4 {
 
   template struct B<A>;
   // FUNS-LABEL:        define weak_odr void @_ZN5temp41BINS_1AEE3fooEv(
-  // VARS:        @_ZTVN5temp41BINS_1AEEE = weak_odr hidden constant
+  // VARS:        @_ZTVN5temp41BINS_1AEEE = weak_odr hidden unnamed_addr constant
   // VARS:        @_ZTIN5temp41BINS_1AEEE = weak_odr hidden constant
   // VARS:        @_ZTSN5temp41BINS_1AEEE = weak_odr hidden constant
   // FUNS-HIDDEN-LABEL: define weak_odr hidden void @_ZN5temp41BINS_1AEE3fooEv(
-  // VARS-HIDDEN: @_ZTVN5temp41BINS_1AEEE = weak_odr hidden constant
+  // VARS-HIDDEN: @_ZTVN5temp41BINS_1AEEE = weak_odr hidden unnamed_addr constant
   // VARS-HIDDEN: @_ZTIN5temp41BINS_1AEEE = weak_odr hidden constant
   // VARS-HIDDEN: @_ZTSN5temp41BINS_1AEEE = weak_odr hidden constant
 }

@@ -67,7 +67,7 @@ bool checkDevice(int64_t &DeviceID, ident_t *Loc) {
     return true;
   }
 
-  if (DeviceID == omp_get_initial_device()) {
+  if (isInitialDevice(static_cast<int>(DeviceID))) {
     ODBG(ODT_Device) << "Device is host (" << DeviceID
                      << "), returning as if offload is disabled";
     return true;
@@ -649,7 +649,22 @@ EXTERN void __tgt_register_rpc_callback(unsigned (*Callback)(void *,
   if (!PM)
     return;
 
-  for (auto &Plugin : PM->plugins())
-    if (Plugin.is_initialized())
-      Plugin.getRPCServer().registerCallback(Callback);
+  olIteratePlatforms(
+      [](ol_platform_handle_t Platform, void *Data) {
+        bool Active = false;
+        if (olGetPlatformInfo(Platform, OL_PLATFORM_INFO_ACTIVE, sizeof(Active),
+                              &Active) == OL_SUCCESS &&
+            Active)
+          olPlatformRegisterRPCCallback(
+              Platform, reinterpret_cast<ol_platform_rpc_cb_t>(Data));
+        return true;
+      },
+      reinterpret_cast<void *>(Callback));
+}
+
+EXTERN void *__tgt_get_mapped_ptr(int64_t DeviceId, const void *HostPtr) {
+  void *TargetPtr = omp_get_mapped_ptr(HostPtr, DeviceId);
+  if (!TargetPtr)
+    return const_cast<void *>(HostPtr);
+  return TargetPtr;
 }

@@ -15,8 +15,10 @@
 using namespace clang;
 using namespace ssaf;
 
-LLVM_DEFINE_REGISTRY(llvm::Registry<JSONFormat::FormatInfo>)
-LLVM_DEFINE_REGISTRY(llvm::Registry<JSONFormat::AnalysisResultRegistry::Codec>)
+LLVM_DEFINE_REGISTRY_EX(CLANG_ABI_EXPORT,
+                        llvm::Registry<JSONFormat::FormatInfo>)
+LLVM_DEFINE_REGISTRY_EX(
+    CLANG_ABI_EXPORT, llvm::Registry<JSONFormat::AnalysisResultRegistry::Codec>)
 
 static SerializationFormatRegistry::Add<JSONFormat>
     RegisterJSONFormat("json", "JSON serialization format");
@@ -53,7 +55,7 @@ llvm::Expected<Value> readJSON(llvm::StringRef Path) {
         .build();
   }
 
-  auto BufferOrError = llvm::MemoryBuffer::getFile(Path);
+  auto BufferOrError = llvm::MemoryBuffer::getFile(Path, /*IsText=*/true);
   if (!BufferOrError) {
     const std::error_code EC = BufferOrError.getError();
     return ErrorBuilder::create(EC, ErrorMessages::FailedToReadFile, Path,

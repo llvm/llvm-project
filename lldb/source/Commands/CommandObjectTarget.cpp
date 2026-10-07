@@ -61,16 +61,10 @@
 #include "lldb/lldb-forward.h"
 #include "lldb/lldb-private-enumerations.h"
 
-#include "clang/Driver/CreateInvocationFromArgs.h"
-#include "clang/Frontend/CompilerInstance.h"
-#include "clang/Frontend/CompilerInvocation.h"
-#include "clang/Frontend/FrontendActions.h"
-#include "clang/Serialization/ObjectFilePCHContainerReader.h"
 #include "llvm/ADT/ScopeExit.h"
 #include "llvm/ADT/StringRef.h"
 #include "llvm/Support/FileSystem.h"
 #include "llvm/Support/FormatAdapters.h"
-
 
 using namespace lldb;
 using namespace lldb_private;
@@ -100,7 +94,7 @@ static void DumpTargetInfo(uint32_t target_idx, Target *target,
 
   uint32_t properties = 0;
   if (target_arch.IsValid()) {
-    strm.Printf(" ( arch=");
+    strm.PutCString(" ( arch=");
     target_arch.DumpTriple(strm.AsRawOstream());
     properties++;
   }
@@ -1151,7 +1145,7 @@ public:
 
     const PathMappingList &list = target->GetImageSearchPathList();
     const size_t num = list.GetSize();
-    ConstString old_path, new_path;
+    std::string old_path, new_path;
     for (size_t i = 0; i < num; ++i) {
       if (!list.GetPathsAtIndex(i, old_path, new_path))
         break;
@@ -1249,12 +1243,12 @@ protected:
       return;
     }
 
-    ConstString orig(command.GetArgumentAtIndex(0));
-    ConstString transformed;
+    llvm::StringRef orig(command.GetArgumentAtIndex(0));
+    std::string transformed;
     if (target->GetImageSearchPathList().RemapPath(orig, transformed))
-      result.GetOutputStream().Printf("%s\n", transformed.GetCString());
+      result.GetOutputStream().Format("{0}\n", transformed);
     else
-      result.GetOutputStream().Printf("%s\n", orig.GetCString());
+      result.GetOutputStream().Format("{0}\n", orig);
 
     result.SetStatus(eReturnStatusSuccessFinishResult);
   }
@@ -1338,9 +1332,10 @@ static void DumpDirectory(Stream &strm, const FileSpec *file_spec_ptr,
                           uint32_t width) {
   if (file_spec_ptr) {
     if (width > 0)
-      strm.Printf("%-*s", width, file_spec_ptr->GetDirectory().AsCString(""));
+      strm.Format("{0}", fmt_align(file_spec_ptr->GetDirectory(),
+                                   llvm::AlignStyle::Left, width));
     else
-      file_spec_ptr->GetDirectory().Dump(&strm);
+      strm.PutCString(file_spec_ptr->GetDirectory());
     return;
   }
   // Keep the width spacing correct if things go wrong...
@@ -1352,9 +1347,10 @@ static void DumpBasename(Stream &strm, const FileSpec *file_spec_ptr,
                          uint32_t width) {
   if (file_spec_ptr) {
     if (width > 0)
-      strm.Printf("%-*s", width, file_spec_ptr->GetFilename().AsCString(""));
+      strm.Format("{0}", fmt_align(file_spec_ptr->GetFilename(),
+                                   llvm::AlignStyle::Left, width));
     else
-      file_spec_ptr->GetFilename().Dump(&strm);
+      strm.PutCString(file_spec_ptr->GetFilename());
     return;
   }
   // Keep the width spacing correct if things go wrong...
@@ -1458,7 +1454,7 @@ static void DumpDwoFilesTable(Stream &strm,
     if (dict->GetValueForKeyAsInteger("dwo_id", dwo_id))
       strm.Printf("0x%16.16" PRIx64 " ", dwo_id);
     else
-      strm.Printf("0x???????????????? ");
+      strm.PutCString("0x???????????????? ");
 
     llvm::StringRef error;
     if (dict->GetValueForKeyAsString("error", error))
@@ -2179,59 +2175,6 @@ protected:
   }
 };
 
-class CommandObjectTargetModulesDumpClangPCMInfo : public CommandObjectParsed {
-public:
-  CommandObjectTargetModulesDumpClangPCMInfo(CommandInterpreter &interpreter)
-      : CommandObjectParsed(
-            interpreter, "target modules dump pcm-info",
-            "Dump information about the given clang module (pcm).") {
-    // Take a single file argument.
-    AddSimpleArgumentList(eArgTypeFilename);
-  }
-
-  ~CommandObjectTargetModulesDumpClangPCMInfo() override = default;
-
-protected:
-  void DoExecute(Args &command, CommandReturnObject &result) override {
-    if (command.GetArgumentCount() != 1) {
-      result.AppendErrorWithFormat("'%s' takes exactly one pcm path argument",
-                                   m_cmd_name.c_str());
-      return;
-    }
-
-    const char *pcm_path = command.GetArgumentAtIndex(0);
-    const FileSpec pcm_file{pcm_path};
-
-    if (pcm_file.GetFileNameExtension() != ".pcm") {
-      result.AppendError("file must have a .pcm extension");
-      return;
-    }
-
-    if (!FileSystem::Instance().Exists(pcm_file)) {
-      result.AppendError("pcm file does not exist");
-      return;
-    }
-
-    const char *clang_args[] = {"clang", pcm_path};
-    clang::CompilerInstance compiler(clang::createInvocation(clang_args));
-    compiler.setVirtualFileSystem(
-        FileSystem::Instance().GetVirtualFileSystem());
-    compiler.createDiagnostics();
-
-    // Pass empty deleter to not attempt to free memory that was allocated
-    // outside of the current scope, possibly statically.
-    std::shared_ptr<llvm::raw_ostream> Out(
-        &result.GetOutputStream().AsRawOstream(), [](llvm::raw_ostream *) {});
-    clang::DumpModuleInfoAction dump_module_info(Out);
-    // DumpModuleInfoAction requires ObjectFilePCHContainerReader.
-    compiler.getPCHContainerOperations()->registerReader(
-        std::make_unique<clang::ObjectFilePCHContainerReader>());
-
-    if (compiler.ExecuteAction(dump_module_info))
-      result.SetStatus(eReturnStatusSuccessFinishResult);
-  }
-};
-
 #pragma mark CommandObjectTargetModulesDumpClangAST
 
 // Clang AST dumping command
@@ -2709,10 +2652,6 @@ public:
     LoadSubCommand("line-table",
                    CommandObjectSP(new CommandObjectTargetModulesDumpLineTable(
                        interpreter)));
-    LoadSubCommand(
-        "pcm-info",
-        CommandObjectSP(
-            new CommandObjectTargetModulesDumpClangPCMInfo(interpreter)));
     LoadSubCommand("separate-debug-info",
                    CommandObjectSP(
                        new CommandObjectTargetModulesDumpSeparateDebugInfoFiles(
@@ -2989,11 +2928,10 @@ protected:
                   const char *sect_name = args.GetArgumentAtIndex(i);
                   const char *load_addr_cstr = args.GetArgumentAtIndex(i + 1);
                   if (sect_name && load_addr_cstr) {
-                    ConstString const_sect_name(sect_name);
                     addr_t load_addr;
                     if (llvm::to_integer(load_addr_cstr, load_addr)) {
                       SectionSP section_sp(
-                          section_list->FindSectionByName(const_sect_name));
+                          section_list->FindSectionByName(sect_name));
                       if (section_sp) {
                         if (section_sp->IsThreadSpecific()) {
                           result.AppendErrorWithFormat(
@@ -6174,6 +6112,7 @@ protected:
     result.AppendMessageWithFormatv(
         "successfully registered scripted frame provider '{0}' for target",
         m_class_options.GetName().c_str());
+    result.SetStatus(eReturnStatusSuccessFinishResult);
   }
 
   OptionGroupPythonClassWithDict m_class_options;

@@ -1,4 +1,4 @@
-# RUN: llc -mtriple=x86_64-unknown-linux-gnu -run-pass=prologepilog %s -o - | FileCheck %s
+# RUN: llc -mtriple=x86_64-unknown-linux-gnu -run-pass=prolog-epilog %s -o - | FileCheck %s
 
 # MIR test case produced by compiling:
 #

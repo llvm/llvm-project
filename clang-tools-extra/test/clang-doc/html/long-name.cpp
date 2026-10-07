@@ -1,3 +1,4 @@
+// UNSUPPORTED: system-windows
 // RUN: rm -rf %t && mkdir -p %t
 // RUN: clang-doc --output=%t --format=html --executor=standalone %S/../Inputs/long-name.cpp
 // RUN: ls %t/html/GlobalNamespace | FileCheck %s -check-prefix=CHECK-HTML

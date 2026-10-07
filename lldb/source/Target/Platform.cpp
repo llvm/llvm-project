@@ -29,7 +29,9 @@
 #include "lldb/Interpreter/OptionValueProperties.h"
 #include "lldb/Interpreter/Property.h"
 #include "lldb/Interpreter/ScriptInterpreter.h"
+#include "lldb/Symbol/CompileUnit.h"
 #include "lldb/Symbol/ObjectFile.h"
+#include "lldb/Symbol/SymbolFile.h"
 #include "lldb/Target/ModuleCache.h"
 #include "lldb/Target/Platform.h"
 #include "lldb/Target/Process.h"
@@ -118,6 +120,15 @@ FileSpec PlatformProperties::GetModuleCacheDirectory() const {
 bool PlatformProperties::SetModuleCacheDirectory(const FileSpec &dir_spec) {
   return m_collection_sp->SetPropertyAtIndex(ePropertyModuleCacheDirectory,
                                              dir_spec);
+}
+
+Timeout<std::micro> PlatformProperties::GetShellExpandTimeout() const {
+  const auto idx = ePropertyShellExpandTimeout;
+  uint64_t seconds = GetPropertyAtIndexAs<uint64_t>(
+      idx, g_platform_properties[idx].default_uint_value);
+  if (seconds == 0)
+    return std::nullopt;
+  return std::chrono::seconds(seconds);
 }
 
 void PlatformProperties::SetDefaultModuleCacheDirectory(
@@ -257,7 +268,7 @@ Platform::LocateExecutableScriptingResources(Target *target, Module &module,
 }
 
 Status Platform::GetSharedModule(
-    const ModuleSpec &module_spec, Process *process, ModuleSP &module_sp,
+    const ModuleSpec &module_spec, Target &target, ModuleSP &module_sp,
     llvm::SmallVectorImpl<lldb::ModuleSP> *old_modules, bool *did_create_ptr) {
   if (IsHost())
     // Note: module_search_paths_ptr functionality is now handled internally
@@ -293,7 +304,7 @@ Status Platform::GetSharedModule(
     return error;
   };
 
-  return GetRemoteSharedModule(module_spec, process, module_sp, resolver,
+  return GetRemoteSharedModule(module_spec, &target, module_sp, resolver,
                                did_create_ptr);
 }
 
@@ -345,7 +356,7 @@ void Platform::GetStatus(Stream &strm) {
   ArchSpec arch(GetSystemArchitecture());
   if (arch.IsValid()) {
     if (!arch.GetTriple().str().empty()) {
-      strm.Printf("    Triple: ");
+      strm.PutCString("    Triple: ");
       arch.DumpTriple(strm.AsRawOstream());
       strm.EOL();
     }
@@ -490,7 +501,7 @@ RecurseCopy_Callback(void *baton, llvm::sys::fs::file_type ft,
   case fs::file_type::directory_file: {
     // make the new directory and get in there
     FileSpec dst_dir = rc_baton->dst;
-    if (!dst_dir.GetFilename())
+    if (dst_dir.GetFilename().empty())
       dst_dir.SetFilename(src.GetFilename());
     Status error = rc_baton->platform_ptr->MakeDirectory(
         dst_dir, lldb::eFilePermissionsDirectoryDefault);
@@ -521,7 +532,7 @@ RecurseCopy_Callback(void *baton, llvm::sys::fs::file_type ft,
   case fs::file_type::symlink_file: {
     // copy the file and keep going
     FileSpec dst_file = rc_baton->dst;
-    if (!dst_file.GetFilename())
+    if (dst_file.GetFilename().empty())
       dst_file.SetFilename(src.GetFilename());
 
     FileSpec src_resolved;
@@ -543,7 +554,7 @@ RecurseCopy_Callback(void *baton, llvm::sys::fs::file_type ft,
   case fs::file_type::regular_file: {
     // copy the file and keep going
     FileSpec dst_file = rc_baton->dst;
-    if (!dst_file.GetFilename())
+    if (dst_file.GetFilename().empty())
       dst_file.SetFilename(src.GetFilename());
     Status err = rc_baton->platform_ptr->PutFile(src, dst_file);
     if (err.Fail()) {
@@ -570,21 +581,21 @@ Status Platform::Install(const FileSpec &src, const FileSpec &dst) {
             src.GetPath().c_str(), dst.GetPath().c_str());
   FileSpec fixed_dst(dst);
 
-  if (!fixed_dst.GetFilename())
+  if (fixed_dst.GetFilename().empty())
     fixed_dst.SetFilename(src.GetFilename());
 
   FileSpec working_dir = GetWorkingDirectory();
 
   if (dst) {
-    if (dst.GetDirectory()) {
-      const char first_dst_dir_char = dst.GetDirectory().GetCString()[0];
+    if (!dst.GetDirectory().empty()) {
+      const char first_dst_dir_char = dst.GetDirectory().front();
       if (first_dst_dir_char == '/' || first_dst_dir_char == '\\') {
         fixed_dst.SetDirectory(dst.GetDirectory());
       }
       // If the fixed destination file doesn't have a directory yet, then we
       // must have a relative path. We will resolve this relative path against
       // the platform's working directory
-      if (!fixed_dst.GetDirectory()) {
+      if (fixed_dst.GetDirectory().empty()) {
         FileSpec relative_spec;
         if (working_dir) {
           relative_spec = working_dir;
@@ -791,8 +802,8 @@ const char *Platform::GetHostname() {
   return m_hostname.c_str();
 }
 
-ConstString Platform::GetFullNameForDylib(ConstString basename) {
-  return basename;
+std::string Platform::GetFullNameForDylib(llvm::StringRef basename) {
+  return basename.str();
 }
 
 bool Platform::SetRemoteWorkingDirectory(const FileSpec &working_dir) {
@@ -1072,7 +1083,8 @@ Status Platform::LaunchProcess(ProcessLaunchInfo &launch_info) {
 
 Status Platform::ShellExpandArguments(ProcessLaunchInfo &launch_info) {
   if (IsHost())
-    return Host::ShellExpandArguments(launch_info);
+    return Host::ShellExpandArguments(
+        launch_info, GetGlobalPlatformProperties().GetShellExpandTimeout());
   return Status::FromErrorString(
       "base lldb_private::Platform class can't expand arguments");
 }
@@ -1143,9 +1155,9 @@ lldb::ProcessSP Platform::DebugProcess(ProcessLaunchInfo &launch_info,
         // stdin/out/err after we have already opened the primary so we can
         // read/write stdin/out/err.
 #ifndef _WIN32
-        int pty_fd = launch_info.GetPTY().ReleasePrimaryFileDescriptor();
-        if (pty_fd != PseudoTerminal::invalid_fd) {
-          process_sp->SetSTDIOFileDescriptor(pty_fd);
+        if (launch_info.GetPTY().GetPrimaryFileDescriptor() !=
+            PseudoTerminal::invalid_fd) {
+          process_sp->SetSTDIOPseudoTerminal(launch_info.GetPTY());
         }
 #endif
       } else {
@@ -1542,7 +1554,7 @@ Status Platform::GetCachedExecutable(ModuleSpec &module_spec,
                                      lldb::ModuleSP &module_sp) {
   FileSpec platform_spec = module_spec.GetFileSpec();
   Status error = GetRemoteSharedModule(
-      module_spec, nullptr, module_sp,
+      module_spec, /*target=*/nullptr, module_sp,
       [&](const ModuleSpec &spec) {
         return Platform::ResolveExecutable(spec, module_sp);
       },
@@ -1556,7 +1568,7 @@ Status Platform::GetCachedExecutable(ModuleSpec &module_spec,
 }
 
 Status Platform::GetRemoteSharedModule(const ModuleSpec &module_spec,
-                                       Process *process,
+                                       Target *target,
                                        lldb::ModuleSP &module_sp,
                                        const ModuleResolver &module_resolver,
                                        bool *did_create_ptr) {
@@ -1564,7 +1576,7 @@ Status Platform::GetRemoteSharedModule(const ModuleSpec &module_spec,
   ModuleSpec resolved_module_spec;
   ArchSpec process_host_arch;
   bool got_module_spec = false;
-  if (process) {
+  if (Process *process = target ? target->GetProcessSP().get() : nullptr) {
     process_host_arch = process->GetSystemArchitecture();
     // Try to get module information from the process
     if (process->GetModuleSpec(module_spec.GetFileSpec(),
@@ -1951,9 +1963,8 @@ uint32_t Platform::LoadImageUsingPaths(lldb_private::Process *process,
 {
   FileSpec file_to_use;
   if (remote_filename.IsAbsolute())
-    file_to_use = FileSpec(remote_filename.GetFilename().GetStringRef(),
-
-                           remote_filename.GetPathStyle());
+    file_to_use =
+        FileSpec(remote_filename.GetFilename(), remote_filename.GetPathStyle());
   else
     file_to_use = remote_filename;
 
@@ -2254,6 +2265,67 @@ void Platform::WarnIfInvalidUnsanitizedScriptExists(
               "'{3}' and retry.\n",
               original_fspec.GetPath(), original_fspec.GetFilename(),
               std::move(reason_for_complaint), fspec.GetFilename());
+}
+
+llvm::Expected<std::pair<XcodeSDKAndSysroot, bool>>
+Platform::GetSDKPathFromDebugInfo(Module &module) {
+  SymbolFile *sym_file = module.GetSymbolFile();
+  if (!sym_file)
+    return llvm::createStringError(
+        llvm::formatv("No symbol file available for module '{0}'",
+                      module.GetFileSpec().GetFilename()));
+
+  if (sym_file->GetNumCompileUnits() == 0)
+    return llvm::createStringError(
+        llvm::formatv("Could not resolve SDK for module '{0}'. Symbol file has "
+                      "no compile units.",
+                      module.GetFileSpec()));
+
+  XcodeSDKAndSysroot merged_sdk;
+  for (unsigned i = 0; i < sym_file->GetNumCompileUnits(); ++i)
+    if (auto cu_sp = sym_file->GetCompileUnitAtIndex(i))
+      merged_sdk.Merge(sym_file->ParseXcodeSDK(*cu_sp));
+
+  // Only Darwin SDKs come in public and internal flavors, so a generic
+  // platform can never see the two conflict.
+  return std::pair{std::move(merged_sdk), /*found_mismatch=*/false};
+}
+
+llvm::Expected<std::string>
+Platform::ResolveSDKPathFromDebugInfo(Module &module) {
+  auto sdk_or_err = GetSDKPathFromDebugInfo(module);
+  if (!sdk_or_err)
+    return llvm::joinErrors(
+        llvm::createStringError("could not parse SDK path from debug-info"),
+        sdk_or_err.takeError());
+
+  return sdk_or_err->first.GetSysroot().GetPath();
+}
+
+llvm::Expected<XcodeSDKAndSysroot>
+Platform::GetSDKPathFromDebugInfo(CompileUnit &unit) {
+  ModuleSP module_sp = unit.CalculateSymbolContextModule();
+  if (!module_sp)
+    return llvm::createStringError("compile unit has no module");
+
+  SymbolFile *sym_file = module_sp->GetSymbolFile();
+  if (!sym_file)
+    return llvm::createStringError(
+        llvm::formatv("No symbol file available for module '{0}'",
+                      module_sp->GetFileSpec().GetFilename()));
+
+  return sym_file->ParseXcodeSDK(unit);
+}
+
+llvm::Expected<std::string>
+Platform::ResolveSDKPathFromDebugInfo(CompileUnit &unit) {
+  auto sdk_or_err = GetSDKPathFromDebugInfo(unit);
+  if (!sdk_or_err)
+    return llvm::joinErrors(
+        llvm::createStringError("could not parse SDK path from debug-info"),
+        sdk_or_err.takeError());
+
+  return sdk_or_err->GetSysroot().GetPath();
 }
 
 PlatformSP PlatformList::GetOrCreate(llvm::StringRef name) {

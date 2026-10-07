@@ -37,6 +37,7 @@
 #include "llvm/ADT/APInt.h"
 #include "llvm/ADT/ArrayRef.h"
 #include "llvm/ADT/DenseMap.h"
+#include "llvm/ADT/SetOperations.h"
 #include "llvm/ADT/SmallPtrSet.h"
 #include "llvm/ADT/SmallVector.h"
 #include "llvm/ADT/Statistic.h"
@@ -77,6 +78,7 @@
 #include "llvm/IR/Instructions.h"
 #include "llvm/IR/IntrinsicInst.h"
 #include "llvm/IR/Intrinsics.h"
+#include "llvm/IR/LLVMContext.h"
 #include "llvm/IR/Metadata.h"
 #include "llvm/IR/Operator.h"
 #include "llvm/IR/PassManager.h"
@@ -88,7 +90,6 @@
 #include "llvm/IR/ValueHandle.h"
 #include "llvm/InitializePasses.h"
 #include "llvm/Support/Casting.h"
-#include "llvm/Support/CommandLine.h"
 #include "llvm/Support/Compiler.h"
 #include "llvm/Support/Debug.h"
 #include "llvm/Support/DebugCounter.h"
@@ -131,40 +132,6 @@ STATISTIC(NumFactor   , "Number of factorizations");
 STATISTIC(NumReassoc  , "Number of reassociations");
 DEBUG_COUNTER(VisitCounter, "instcombine-visit",
               "Controls which instructions are visited");
-
-static cl::opt<bool> EnableCodeSinking("instcombine-code-sinking",
-                                       cl::desc("Enable code sinking"),
-                                       cl::init(true));
-
-static cl::opt<unsigned> MaxSinkNumUsers(
-    "instcombine-max-sink-users", cl::init(32),
-    cl::desc("Maximum number of undroppable users for instruction sinking"));
-
-static cl::opt<unsigned>
-MaxArraySize("instcombine-maxarray-size", cl::init(1024),
-             cl::desc("Maximum array size considered when doing a combine"));
-
-static cl::opt<unsigned> MaxAllocSiteRemovableUsers(
-    "instcombine-max-allocsite-removable-users", cl::Hidden, cl::init(2048),
-    cl::desc("Maximum number of users to visit in alloc-site "
-             "removability analysis"));
-
-namespace llvm {
-extern cl::opt<bool> ProfcheckDisableMetadataFixes;
-} // end namespace llvm
-
-// FIXME: Remove this flag when it is no longer necessary to convert
-// llvm.dbg.declare to avoid inaccurate debug info. Setting this to false
-// increases variable availability at the cost of accuracy. Variables that
-// cannot be promoted by mem2reg or SROA will be described as living in memory
-// for their entire lifetime. However, passes like DSE and instcombine can
-// delete stores to the alloca, leading to misleading and inaccurate debug
-// information. This flag can be removed when those passes are fixed.
-static cl::opt<unsigned> ShouldLowerDbgDeclare("instcombine-lower-dbg-declare",
-                                               cl::Hidden, cl::init(true));
-
-InstCombiner::IRBuilderInstCombineInserter::~IRBuilderInstCombineInserter() =
-    default;
 
 void InstCombiner::IRBuilderInstCombineInserter::InsertHelper(
     Instruction *I, const Twine &Name, BasicBlock::iterator InsertPt) const {
@@ -1131,9 +1098,7 @@ InstCombinerImpl::foldBinOpOfSelectAndCastOfSelectCondition(BinaryOperator &I) {
   else
     return nullptr;
 
-  SelectInst *SI = ProfcheckDisableMetadataFixes
-                       ? nullptr
-                       : cast<SelectInst>(CastOp == LHS ? RHS : LHS);
+  SelectInst *SI = cast<SelectInst>(CastOp == LHS ? RHS : LHS);
 
   auto NewFoldedConst = [&](bool IsTrueArm, Value *V) {
     bool IsCastOpRHS = (CastOp == RHS);
@@ -1367,9 +1332,7 @@ Value *InstCombinerImpl::SimplifySelectsFeedingBinaryOp(BinaryOperator &I,
   if (!LHSIsSelect && !RHSIsSelect)
     return nullptr;
 
-  SelectInst *SI = ProfcheckDisableMetadataFixes
-                       ? nullptr
-                       : cast<SelectInst>(LHSIsSelect ? LHS : RHS);
+  SelectInst *SI = cast<SelectInst>(LHSIsSelect ? LHS : RHS);
 
   FastMathFlags FMF;
   BuilderTy::FastMathFlagGuard Guard(Builder);
@@ -1382,6 +1345,20 @@ Value *InstCombinerImpl::SimplifySelectsFeedingBinaryOp(BinaryOperator &I,
   SimplifyQuery Q = SQ.getWithInstruction(&I);
 
   Value *Cond, *True = nullptr, *False = nullptr;
+
+  // If V is a select whose condition is implied by Cond, resolve it to the
+  // appropriate arm for this value of Cond.
+  auto simplifySelectWithImpliedCond = [&](Value *V, Value *Cond,
+                                           bool CondIsTrue) -> Value * {
+    auto *InnerSI = dyn_cast<SelectInst>(V);
+    if (!InnerSI || Cond->getType() != InnerSI->getCondition()->getType())
+      return V;
+
+    if (std::optional<bool> Implied =
+            isImpliedCondition(Cond, InnerSI->getCondition(), DL, CondIsTrue))
+      return InnerSI->getOperand(*Implied ? 1 : 2);
+    return V;
+  };
 
   // Special-case for add/negate combination. Replace the zero in the negation
   // with the trailing add operand:
@@ -1418,15 +1395,19 @@ Value *InstCombinerImpl::SimplifySelectsFeedingBinaryOp(BinaryOperator &I,
   } else if (LHSIsSelect && LHS->hasOneUse()) {
     // (A ? B : C) op Y -> A ? (B op Y) : (C op Y)
     Cond = A;
-    True = simplifyBinOp(Opcode, B, RHS, FMF, Q);
-    False = simplifyBinOp(Opcode, C, RHS, FMF, Q);
+    Value *TrueRHS = simplifySelectWithImpliedCond(RHS, Cond, true);
+    Value *FalseRHS = simplifySelectWithImpliedCond(RHS, Cond, false);
+    True = simplifyBinOp(Opcode, B, TrueRHS, FMF, Q);
+    False = simplifyBinOp(Opcode, C, FalseRHS, FMF, Q);
     if (Value *NewSel = foldAddNegate(B, C, RHS))
       return NewSel;
   } else if (RHSIsSelect && RHS->hasOneUse()) {
     // X op (D ? E : F) -> D ? (X op E) : (X op F)
     Cond = D;
-    True = simplifyBinOp(Opcode, LHS, E, FMF, Q);
-    False = simplifyBinOp(Opcode, LHS, F, FMF, Q);
+    Value *TrueLHS = simplifySelectWithImpliedCond(LHS, Cond, true);
+    Value *FalseLHS = simplifySelectWithImpliedCond(LHS, Cond, false);
+    True = simplifyBinOp(Opcode, TrueLHS, E, FMF, Q);
+    False = simplifyBinOp(Opcode, FalseLHS, F, FMF, Q);
     if (Value *NewSel = foldAddNegate(E, F, LHS))
       return NewSel;
   }
@@ -1836,12 +1817,11 @@ Instruction *InstCombinerImpl::FoldOpIntoSelect(Instruction &Op, SelectInst *SI,
 
   SelectInst *NewSel = SelectInst::Create(SI->getCondition(), NewTV, NewFV);
 
-  // Preserve metadata that remains valid for the transformed select.
+  // Preserve metadata that remains valid for the transformed select including
+  // source location information.
   NewSel->copyMetadata(*SI,
-                       {LLVMContext::MD_prof, LLVMContext::MD_unpredictable});
-
-  // Preserve source location information.
-  NewSel->setDebugLoc(SI->getDebugLoc());
+                       {LLVMContext::MD_prof, LLVMContext::MD_unpredictable,
+                        LLVMContext::MD_dbg});
 
   return NewSel;
 }
@@ -1926,9 +1906,7 @@ Instruction *InstCombinerImpl::foldBinOpSelectBinOp(BinaryOperator &Op) {
   if (!NewTV || !NewFV)
     return nullptr;
 
-  Value *NewSI =
-      Builder.CreateSelect(SI->getCondition(), NewTV, NewFV, "",
-                           ProfcheckDisableMetadataFixes ? nullptr : SI);
+  Value *NewSI = Builder.CreateSelect(SI->getCondition(), NewTV, NewFV, "", SI);
   return BinaryOperator::Create(Op.getOpcode(), NewSI, Input);
 }
 
@@ -2462,7 +2440,7 @@ Instruction *InstCombinerImpl::foldVectorBinop(BinaryOperator &Inst) {
           bool SplatLHS) -> Instruction * {
     Value *Idx;
     Constant *Splat, *SubVector, *Dest;
-    if (!match(MaybeSplat, m_ConstantSplat(m_Constant(Splat))) ||
+    if (!match(MaybeSplat, m_Splat(m_Constant(Splat))) ||
         !match(MaybeSubVector,
                m_VectorInsert(m_Constant(Dest), m_Constant(SubVector),
                               m_Value(Idx))))
@@ -2487,30 +2465,6 @@ Instruction *InstCombinerImpl::foldVectorBinop(BinaryOperator &Inst) {
   if (Instruction *Folded = foldConstantsThroughSubVectorInsertSplat(
           /*MaybeSubVector=*/RHS, /*MaybeSplat=*/LHS, /*SplatLHS=*/true))
     return Folded;
-
-  // If both operands of the binop are vector concatenations, then perform the
-  // narrow binop on each pair of the source operands followed by concatenation
-  // of the results.
-  Value *L0, *L1, *R0, *R1;
-  ArrayRef<int> Mask;
-  if (match(LHS, m_Shuffle(m_Value(L0), m_Value(L1), m_Mask(Mask))) &&
-      match(RHS, m_Shuffle(m_Value(R0), m_Value(R1), m_SpecificMask(Mask))) &&
-      LHS->hasOneUse() && RHS->hasOneUse() &&
-      cast<ShuffleVectorInst>(LHS)->isConcat() &&
-      cast<ShuffleVectorInst>(RHS)->isConcat()) {
-    // This transform does not have the speculative execution constraint as
-    // below because the shuffle is a concatenation. The new binops are
-    // operating on exactly the same elements as the existing binop.
-    // TODO: We could ease the mask requirement to allow different undef lanes,
-    //       but that requires an analysis of the binop-with-undef output value.
-    Value *NewBO0 = Builder.CreateBinOp(Opcode, L0, R0);
-    if (auto *BO = dyn_cast<BinaryOperator>(NewBO0))
-      BO->copyIRFlags(&Inst);
-    Value *NewBO1 = Builder.CreateBinOp(Opcode, L1, R1);
-    if (auto *BO = dyn_cast<BinaryOperator>(NewBO1))
-      BO->copyIRFlags(&Inst);
-    return new ShuffleVectorInst(NewBO0, NewBO1, Mask);
-  }
 
   auto createBinOpReverse = [&](Value *X, Value *Y) {
     Value *V = Builder.CreateBinOp(Opcode, X, Y, Inst.getName());
@@ -2596,9 +2550,10 @@ Instruction *InstCombinerImpl::foldVectorBinop(BinaryOperator &Inst) {
 
   // If both arguments of the binary operation are shuffles that use the same
   // mask and shuffle within a single vector, move the shuffle after the binop.
+  ArrayRef<int> Mask;
   if (match(LHS, m_Shuffle(m_Value(V1), m_Poison(), m_Mask(Mask))) &&
       match(RHS, m_Shuffle(m_Value(V2), m_Poison(), m_SpecificMask(Mask))) &&
-      V1->getType() == V2->getType() &&
+      Inst.getType() == V1->getType() && V1->getType() == V2->getType() &&
       (LHS->hasOneUse() || RHS->hasOneUse() || LHS == RHS)) {
     // Op(shuffle(V1, Mask), shuffle(V2, Mask)) -> shuffle(Op(V1, V2), Mask)
     return createBinOpShuffle(V1, V2, Mask);
@@ -2945,9 +2900,9 @@ Instruction *InstCombinerImpl::visitGEPOfGEP(GetElementPtrInst &GEP,
       APInt NewFalseVal = *ConstOffset + *FalseVal;
       Constant *NewTrue = ConstantInt::get(Select->getType(), NewTrueVal);
       Constant *NewFalse = ConstantInt::get(Select->getType(), NewFalseVal);
-      Value *NewSelect = Builder.CreateSelect(
-          Cond, NewTrue, NewFalse, /*Name=*/"",
-          /*MDFrom=*/(ProfcheckDisableMetadataFixes ? nullptr : Select));
+      Value *NewSelect =
+          Builder.CreateSelect(Cond, NewTrue, NewFalse, /*Name=*/"",
+                               /*MDFrom=*/Select);
       GEPNoWrapFlags Flags =
           getMergedGEPNoWrapFlags(*Src, *cast<GEPOperator>(&GEP));
       return replaceInstUsesWith(GEP,
@@ -3100,9 +3055,8 @@ Value *InstCombiner::getFreelyInvertedImpl(Value *V, bool WillInvertAllUses,
         if (auto *II = dyn_cast<IntrinsicInst>(V))
           return Builder->CreateBinaryIntrinsic(
               getInverseMinMaxIntrinsic(II->getIntrinsicID()), NotA, NotB);
-        return Builder->CreateSelect(
-            Cond, NotA, NotB, "",
-            ProfcheckDisableMetadataFixes ? nullptr : cast<Instruction>(V));
+        return Builder->CreateSelect(Cond, NotA, NotB, "",
+                                     cast<Instruction>(V));
       }
       return NonNull;
     }
@@ -3756,7 +3710,8 @@ static bool isRemovableWrite(CallBase &CB, Value *UsedV,
 
 static std::optional<ModRefInfo>
 isAllocSiteRemovable(Instruction *AI, SmallVectorImpl<Instruction *> &Users,
-                     const TargetLibraryInfo &TLI, bool KnowInit) {
+                     const TargetLibraryInfo &TLI, bool KnowInit,
+                     unsigned MaxUsers) {
   SmallVector<Instruction*, 4> Worklist;
   const std::optional<StringRef> Family = getAllocationFamily(AI, &TLI);
   Worklist.push_back(AI);
@@ -3766,7 +3721,7 @@ isAllocSiteRemovable(Instruction *AI, SmallVectorImpl<Instruction *> &Users,
     Instruction *PI = Worklist.pop_back_val();
     for (User *U : PI->users()) {
       Instruction *I = cast<Instruction>(U);
-      if (Users.size() >= MaxAllocSiteRemovableUsers)
+      if (Users.size() >= MaxUsers)
         return std::nullopt;
       switch (I->getOpcode()) {
       default:
@@ -3805,10 +3760,9 @@ isAllocSiteRemovable(Instruction *AI, SmallVectorImpl<Instruction *> &Users,
                  Alignment->isPowerOf2() && Size->urem(*Alignment).isZero();
         };
         auto *CB = dyn_cast<CallBase>(AI);
-        LibFunc TheLibFunc;
-        if (CB && TLI.getLibFunc(*CB->getCalledFunction(), TheLibFunc) &&
-            TLI.has(TheLibFunc) && TheLibFunc == LibFunc_aligned_alloc &&
-            !AlignmentAndSizeKnownValid(CB))
+        if (CB &&
+            TLI.getLibFunc(*CB->getCalledFunction()) == LibFunc_aligned_alloc &&
+            TLI.has(LibFunc_aligned_alloc) && !AlignmentAndSizeKnownValid(CB))
           return std::nullopt;
         Users.emplace_back(I);
         continue;
@@ -3845,7 +3799,6 @@ isAllocSiteRemovable(Instruction *AI, SmallVectorImpl<Instruction *> &Users,
             Users.emplace_back(I);
             continue;
           case Intrinsic::launder_invariant_group:
-          case Intrinsic::strip_invariant_group:
             Users.emplace_back(I);
             Worklist.push_back(I);
             continue;
@@ -3952,7 +3905,8 @@ Instruction *InstCombinerImpl::visitAllocSite(Instruction &MI) {
     KnowInitUndef = false;
 
   auto Removable =
-      isAllocSiteRemovable(&MI, RawUsers, TLI, KnowInitZero | KnowInitUndef);
+      isAllocSiteRemovable(&MI, RawUsers, TLI, KnowInitZero | KnowInitUndef,
+                           CLOpts.max_allocsite_removable_users);
   if (Removable) {
     SmallVector<WeakTrackingVH, 64> Users(RawUsers.begin(), RawUsers.end());
     for (WeakTrackingVH &User : Users) {
@@ -4190,8 +4144,7 @@ Instruction *InstCombinerImpl::visitFree(CallInst &FI, Value *Op) {
   // 'operator delete'; there is no 'operator delete' symbol for which we are
   // permitted to invent a call, even if we're passing in a null pointer.
   if (MinimizeSize) {
-    LibFunc Func;
-    if (TLI.getLibFunc(FI, Func) && TLI.has(Func) && Func == LibFunc_free)
+    if (TLI.getLibFunc(FI) == LibFunc_free && TLI.has(LibFunc_free))
       if (Instruction *I = tryToMoveFreeBeforeNullTest(FI, DL))
         return I;
   }
@@ -4207,12 +4160,11 @@ Instruction *InstCombinerImpl::visitReturnInst(ReturnInst &RI) {
   Function *F = RI.getFunction();
   Type *RetTy = RetVal->getType();
   if (RetTy->isPointerTy()) {
-    bool HasDereferenceable =
-        F->getAttributes().getRetDereferenceableBytes() > 0;
-    if (F->hasRetAttribute(Attribute::NonNull) ||
-        (HasDereferenceable &&
-         !NullPointerIsDefined(F, RetTy->getPointerAddressSpace()))) {
-      if (Value *V = simplifyNonNullOperand(RetVal, HasDereferenceable))
+    bool UseProvenance =
+        F->getAttributes().getRetDereferenceableBytes() > 0 &&
+        !NullPointerIsDefined(F, RetTy->getPointerAddressSpace());
+    if (F->hasRetAttribute(Attribute::NonNull) || UseProvenance) {
+      if (Value *V = simplifyNonNullOperand(RetVal, UseProvenance))
         return replaceOperand(RI, 0, V);
     }
   }
@@ -4386,16 +4338,13 @@ Instruction *InstCombinerImpl::visitCondBrInst(CondBrInst &BI) {
     Value *Or = Builder.CreateLogicalOr(NotX, Y);
 
     // Set weights for the new OR select instruction too.
-    if (!ProfcheckDisableMetadataFixes) {
-      if (auto *OrInst = dyn_cast<Instruction>(Or)) {
-        if (auto *CondInst = dyn_cast<Instruction>(Cond)) {
-          SmallVector<uint32_t> Weights;
-          if (extractBranchWeights(*CondInst, Weights)) {
-            assert(Weights.size() == 2 &&
-                   "Unexpected number of branch weights!");
-            std::swap(Weights[0], Weights[1]);
-            setBranchWeights(*OrInst, Weights, /*IsExpected=*/false);
-          }
+    if (auto *OrInst = dyn_cast<Instruction>(Or)) {
+      if (auto *CondInst = dyn_cast<Instruction>(Cond)) {
+        SmallVector<uint32_t> Weights;
+        if (extractBranchWeights(*CondInst, Weights)) {
+          assert(Weights.size() == 2 && "Unexpected number of branch weights!");
+          std::swap(Weights[0], Weights[1]);
+          setBranchWeights(*OrInst, Weights, /*IsExpected=*/false);
         }
       }
     }
@@ -4907,6 +4856,7 @@ static bool isCatchAll(EHPersonality Personality, Constant *TypeInfo) {
   case EHPersonality::Wasm_CXX:
   case EHPersonality::XL_CXX:
   case EHPersonality::ZOS_CXX:
+  case EHPersonality::Wasm_D:
     return isa<ConstantPointerNull>(TypeInfo);
   }
   llvm_unreachable("invalid enum");
@@ -5629,7 +5579,7 @@ bool InstCombinerImpl::tryToSinkInstruction(Instruction *I,
     for (BasicBlock::iterator Scan = std::next(I->getIterator()),
                               E = I->getParent()->end();
          Scan != E; ++Scan)
-      if (Scan->mayWriteToMemory())
+      if (Scan->mayWriteToMemory() && !isa<AssumeInst>(Scan))
         return false;
   }
 
@@ -5835,7 +5785,7 @@ bool InstCombinerImpl::run() {
     // Return the UserBlock if successful.
     auto getOptionalSinkBlockForInst =
         [this](Instruction *I) -> std::optional<BasicBlock *> {
-      if (!EnableCodeSinking)
+      if (!CLOpts.code_sinking)
         return std::nullopt;
 
       BasicBlock *BB = I->getParent();
@@ -5853,7 +5803,7 @@ bool InstCombinerImpl::run() {
             continue;
         }
 
-        if (NumUsers > MaxSinkNumUsers)
+        if (NumUsers > CLOpts.max_sink_users)
           return std::nullopt;
 
         Instruction *UserInst = cast<Instruction>(User);
@@ -6002,6 +5952,40 @@ bool InstCombinerImpl::run() {
 class AliasScopeTracker {
   SmallPtrSet<const MDNode *, 8> UsedAliasScopesAndLists;
   SmallPtrSet<const MDNode *, 8> UsedNoAliasScopesAndLists;
+  // Scopes used by every !alias.scope list that scopes from a disjoint-scope
+  // domain appears in. This is used to catch scopes that don't actually make
+  // anything noalias.
+  SmallDenseMap<const MDNode *, SmallPtrSet<const MDNode *, 4>, 4>
+      CommonScopesOfDisjointDomain;
+
+  // Record, for each disjoint-scope domain \p ScopeList uses, which of its
+  // scopes are used by \p ScopeList, adding to a running intersection.
+  void recordDisjointDomainScopes(const MDNode *ScopeList) {
+    SmallDenseMap<const MDNode *, SmallPtrSet<const MDNode *, 4>, 4> UsedScopes;
+    for (const MDOperand &MDOperand : ScopeList->operands()) {
+      const auto *MDScope = cast<MDNode>(MDOperand);
+      const MDNode *Domain = AliasScopeNode(MDScope).getDomain();
+      if (AliasScopeDomainNode(Domain).hasDisjointScopes())
+        UsedScopes[Domain].insert(MDScope);
+    }
+
+    for (auto &[Domain, Scopes] : UsedScopes) {
+      auto [It, Inserted] =
+          CommonScopesOfDisjointDomain.try_emplace(Domain, Scopes);
+      if (!Inserted)
+        llvm::set_intersect(It->second, Scopes);
+    }
+  }
+
+  // Return true if \p Scope is on the implicit !noalias list of one of the
+  // analysed accesses, that is, if it belongs to a disjoint-scope domain and
+  // some access uses that domain without using \p Scope.
+  bool isImplicitlyNoAlias(const MDNode *Scope) const {
+    auto It =
+        CommonScopesOfDisjointDomain.find(AliasScopeNode(Scope).getDomain());
+    return It != CommonScopesOfDisjointDomain.end() &&
+           !It->second.contains(Scope);
+  }
 
 public:
   void analyse(Instruction *I) {
@@ -6009,16 +5993,20 @@ public:
     if (!I->hasMetadataOtherThanDebugLoc())
       return;
 
-    auto Track = [](Metadata *ScopeList, auto &Container) {
+    auto Track = [](Metadata *ScopeList, auto &Container) -> const MDNode * {
       const auto *MDScopeList = dyn_cast_or_null<MDNode>(ScopeList);
       if (!MDScopeList || !Container.insert(MDScopeList).second)
-        return;
+        return nullptr;
       for (const auto &MDOperand : MDScopeList->operands())
         if (auto *MDScope = dyn_cast<MDNode>(MDOperand))
           Container.insert(MDScope);
+      return MDScopeList;
     };
 
-    Track(I->getMetadata(LLVMContext::MD_alias_scope), UsedAliasScopesAndLists);
+    if (const MDNode *AliasScopeList =
+            Track(I->getMetadata(LLVMContext::MD_alias_scope),
+                  UsedAliasScopesAndLists))
+      recordDisjointDomainScopes(AliasScopeList);
     Track(I->getMetadata(LLVMContext::MD_noalias), UsedNoAliasScopesAndLists);
   }
 
@@ -6033,9 +6021,13 @@ public:
     assert(MDSL->getNumOperands() == 1 &&
            "llvm.experimental.noalias.scope should refer to a single scope");
     auto &MDOperand = MDSL->getOperand(0);
+    // A scope is relevant if it appears in an !alias.scope list, and either it
+    // appears in a !noalias list, or it is on the implicit !noalias list of
+    // some access using its disjoint-scope domain.
     if (auto *MD = dyn_cast<MDNode>(MDOperand))
       return !UsedAliasScopesAndLists.contains(MD) ||
-             !UsedNoAliasScopesAndLists.contains(MD);
+             (!UsedNoAliasScopesAndLists.contains(MD) &&
+              !isImplicitlyNoAlias(MD));
 
     // Not an MDNode ? throw away.
     return true;
@@ -6213,8 +6205,9 @@ static bool combineInstructionsOverFunction(
 
   // Lower dbg.declare intrinsics otherwise their value may be clobbered
   // by instcombiner.
+  const InstCombineCLOptions &CLOpts = InstCombineCLOptions::Global;
   bool MadeIRChange = false;
-  if (ShouldLowerDbgDeclare)
+  if (CLOpts.lower_dbg_declare)
     MadeIRChange = LowerDbgDeclare(F);
 
   // Iterate while there is work to do.
@@ -6233,8 +6226,7 @@ static bool combineInstructionsOverFunction(
                       << F.getName() << "\n");
 
     InstCombinerImpl IC(Worklist, F, AA, AC, TLI, TTI, DT, ORE, BFI, BPI, PSI,
-                        DL, RPOT);
-    IC.MaxArraySizeForCombine = MaxArraySize;
+                        DL, RPOT, CLOpts);
     bool MadeChangeInThisIteration = IC.prepareWorklist(F);
     MadeChangeInThisIteration |= IC.run();
     if (!MadeChangeInThisIteration)
@@ -6321,9 +6313,7 @@ void InstructionCombiningPass::getAnalysisUsage(AnalysisUsage &AU) const {
   AU.addRequired<TargetTransformInfoWrapperPass>();
   AU.addRequired<DominatorTreeWrapperPass>();
   AU.addRequired<OptimizationRemarkEmitterWrapperPass>();
-  AU.addPreserved<DominatorTreeWrapperPass>();
   AU.addPreserved<AAResultsWrapperPass>();
-  AU.addPreserved<BasicAAWrapperPass>();
   AU.addPreserved<GlobalsAAWrapperPass>();
   AU.addRequired<ProfileSummaryInfoWrapperPass>();
   LazyBlockFrequencyInfoPass::getLazyBFIAnalysisUsage(AU);

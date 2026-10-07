@@ -1,7 +1,7 @@
-; RUN: llc -mtriple=amdgcn -mcpu=gfx1010 < %s | FileCheck --check-prefixes=GCN,W32 --enable-var-scope %s
-; RUN: llc -mtriple=amdgcn -mcpu=gfx1010 -mattr=+wavefrontsize64 < %s | FileCheck --check-prefixes=GCN,W64 --enable-var-scope %s
-; RUN: opt -mtriple=amdgcn-amd-amdhsa -mcpu=gfx1010 -S -amdgpu-annotate-uniform < %s | FileCheck --check-prefixes=OPT,OPT-W32 --enable-var-scope %s
-; RUN: opt -mtriple=amdgcn-amd-amdhsa -mcpu=gfx1010 -mattr=+wavefrontsize64 -S -amdgpu-annotate-uniform < %s | FileCheck --check-prefixes=OPT,OPT-W64 --enable-var-scope %s
+; RUN: llc -mtriple=amdgpu10.10 < %s | FileCheck --check-prefixes=GCN,W32 --enable-var-scope %s
+; RUN: llc -mtriple=amdgpu10.10 -mattr=+wavefrontsize64 < %s | FileCheck --check-prefixes=GCN,W64 --enable-var-scope %s
+; RUN: opt -mtriple=amdgpu10.10-amd-amdhsa -S -amdgpu-annotate-uniform < %s | FileCheck --check-prefixes=OPT,OPT-W32 --enable-var-scope %s
+; RUN: opt -mtriple=amdgpu10.10-amd-amdhsa -mattr=+wavefrontsize64 -S -amdgpu-annotate-uniform < %s | FileCheck --check-prefixes=OPT,OPT-W64 --enable-var-scope %s
 
 ; GCN-LABEL: {{^}}lshr_threadid:
 ; W64: global_load_dword
@@ -23,15 +23,12 @@ entry:
   ret void
 }
 
-; GCN-LABEL: {{^}}ashr_threadid:
-; W64: global_load_dword
-; W32: v_readfirstlane_b32 [[OFFSET:s[0-9]+]], v0
-; W32: s_load_dword s{{[0-9]+}}, s[{{[0-9:]+}}], [[OFFSET]]
+; GCN-LABEL: {{^}}negative_ashr_threadid:
+; GCN: global_load_dword
 
-; OPT-LABEL: @ashr_threadid
-; OPT-W64: %arrayidx = getelementptr inbounds i32, ptr addrspace(1) %in, i64 %div4{{$}}
-; OPT-W32: %arrayidx = getelementptr inbounds i32, ptr addrspace(1) %in, i64 %div4, !amdgpu.uniform
-define amdgpu_kernel void @ashr_threadid(ptr addrspace(1) align 4 %in, ptr addrspace(1) align 4 %out) "amdgpu-flat-work-group-size"="64,64" !reqd_work_group_size !0 {
+; OPT-LABEL: @negative_ashr_threadid
+; OPT: %arrayidx = getelementptr inbounds i32, ptr addrspace(1) %in, i64 %div4{{$}}
+define amdgpu_kernel void @negative_ashr_threadid(ptr addrspace(1) align 4 %in, ptr addrspace(1) align 4 %out) "amdgpu-flat-work-group-size"="64,64" !reqd_work_group_size !0 {
 entry:
   %lid = tail call i32 @llvm.amdgcn.workitem.id.x()
   %div = ashr i32 %lid, 5

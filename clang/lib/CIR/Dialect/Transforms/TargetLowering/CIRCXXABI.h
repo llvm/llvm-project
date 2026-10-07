@@ -57,6 +57,13 @@ public:
                           const mlir::DataLayout &layout,
                           const mlir::TypeConverter &typeConverter) const = 0;
 
+  /// Lower the given by-offset data member pointer constant (used for members
+  /// with no CIR field index, e.g. no_unique_address empty fields) to a
+  /// constant of the ABI type.
+  virtual mlir::TypedAttr lowerDataMemberOffsetConstant(
+      cir::DataMemberOffsetAttr attr, const mlir::DataLayout &layout,
+      const mlir::TypeConverter &typeConverter) const = 0;
+
   /// Lower the given member function pointer constant to a constant of the ABI
   /// type. The returned constant is represented as an attribute as well.
   virtual mlir::TypedAttr
@@ -132,11 +139,12 @@ public:
                          mlir::OpBuilder &builder) const = 0;
 
   /// Read the array cookie for a dynamically-allocated array whose first
-  /// element is at \p elementPtr. Returns the number of elements, the
-  /// original allocation pointer (before the cookie) as a void*, and the
-  /// cookie size in bytes. Delegates to getArrayCookieSizeImpl and
-  /// readArrayCookieImpl.
+  /// element is at \p elementPtr. \p elementAlign is the element type's
+  /// preferred alignment in bytes. Returns the number of elements, the original
+  /// allocation pointer (before the cookie) as a void*, and the cookie size in
+  /// bytes. Delegates to getArrayCookieSizeImpl and readArrayCookieImpl.
   void readArrayCookie(mlir::Location loc, mlir::Value elementPtr,
+                       clang::CharUnits elementAlign,
                        const mlir::DataLayout &dataLayout,
                        CIRBaseBuilderTy &builder, mlir::Value &numElements,
                        mlir::Value &allocPtr,
@@ -144,10 +152,10 @@ public:
 
 protected:
   /// Returns the cookie size in bytes for a dynamically-allocated array of
-  /// elements with the given type. Only called when a cookie is required.
+  /// elements with the given preferred alignment. Only called when a cookie
+  /// is required.
   virtual clang::CharUnits
-  getArrayCookieSizeImpl(mlir::Type elementType,
-                         const mlir::DataLayout &dataLayout) const = 0;
+  getArrayCookieSizeImpl(clang::CharUnits elementAlign) const = 0;
 
   /// Reads the element count from an array cookie. \p allocPtr is a byte
   /// pointer to the start of the allocation (the beginning of the cookie).
@@ -164,6 +172,9 @@ protected:
 
 /// Creates an Itanium-family ABI.
 std::unique_ptr<CIRCXXABI> createItaniumCXXABI(LowerModule &lm);
+
+/// Creates a Microsoft-family ABI.
+std::unique_ptr<CIRCXXABI> createMicrosoftCXXABI(LowerModule &lm);
 
 } // namespace cir
 

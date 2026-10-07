@@ -5,7 +5,7 @@ from lldbsuite.test import lldbutil
 
 
 class ObjCiVarIMPTestCase(TestBase):
-    @skipUnlessDarwin
+    @requireDarwin
     @no_debug_info_test
     def test_imp_ivar_type(self):
         self.build()

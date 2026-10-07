@@ -6,7 +6,6 @@
 //
 //===----------------------------------------------------------------------===//
 
-#include "MCTargetDesc/HexagonMCAsmInfo.h"
 #include "MCTargetDesc/HexagonMCChecker.h"
 #include "MCTargetDesc/HexagonMCELFStreamer.h"
 #include "MCTargetDesc/HexagonMCExpr.h"
@@ -51,7 +50,6 @@
 #include "llvm/Support/SourceMgr.h"
 #include "llvm/Support/raw_ostream.h"
 #include <cassert>
-#include <cctype>
 #include <cstddef>
 #include <cstdint>
 #include <memory>
@@ -869,7 +867,7 @@ bool HexagonAsmParser::ParseDirectiveComm(bool IsLocal, SMLoc Loc) {
 
 // validate register against architecture
 bool HexagonAsmParser::RegisterMatchesArch(MCRegister MatchNum) const {
-  if (HexagonMCRegisterClasses[Hexagon::V62RegsRegClassID].contains(MatchNum))
+  if (getHexagonMCRegisterClass(Hexagon::V62RegsRegClassID).contains(MatchNum))
     if (!getSTI().hasFeature(Hexagon::ArchV62))
       return false;
   return true;

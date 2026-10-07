@@ -16,6 +16,7 @@
 //===----------------------------------------------------------------------===//
 
 #include "AArch64.h"
+#include "AArch64Subtarget.h"
 #include "llvm/ADT/SetVector.h"
 #include "llvm/ADT/SmallString.h"
 #include "llvm/ADT/SmallVector.h"
@@ -29,7 +30,6 @@
 #include "llvm/IR/Module.h"
 #include "llvm/Object/COFF.h"
 #include "llvm/Pass.h"
-#include "llvm/Support/CommandLine.h"
 #include "llvm/TargetParser/Triple.h"
 
 using namespace llvm;
@@ -40,11 +40,6 @@ using OperandBundleDef = OperandBundleDefT<Value *>;
 #define DEBUG_TYPE "arm64eccalllowering"
 
 STATISTIC(Arm64ECCallsLowered, "Number of Arm64EC calls lowered");
-
-static cl::opt<bool> LowerDirectToIndirect("arm64ec-lower-direct-to-indirect",
-                                           cl::Hidden, cl::init(true));
-static cl::opt<bool> GenerateThunks("arm64ec-generate-thunks", cl::Hidden,
-                                    cl::init(true));
 
 namespace {
 
@@ -323,6 +318,12 @@ ThunkArgInfo AArch64Arm64ECCallLowering::canonicalizeThunkType(
     return direct(T);
   }
 
+  if (T->isBFloatTy()) {
+    // Prefix with `llvm` since MSVC doesn't specify `__bf16`
+    Out << "__llvm_bf16__";
+    return direct(T);
+  }
+
   if (T->isFloatTy()) {
     Out << "f";
     return direct(T);
@@ -333,9 +334,18 @@ ThunkArgInfo AArch64Arm64ECCallLowering::canonicalizeThunkType(
     return direct(T);
   }
 
+  if (T->isFP128Ty()) {
+    // Prefix with `llvm` since MSVC doesn't specify `_Float128`
+    Out << "__llvm_q__";
+    // On windows f128 is passed indirectly, and Clang/LLVM
+    // returns using sret for compatibility with GCC.
+    return pointerIndirection(T);
+  }
+
   if (T->isFloatingPointTy()) {
-    report_fatal_error("Only 16, 32, and 64 bit floating points are supported "
-                       "for ARM64EC thunks");
+    report_fatal_error(
+        "Only half, bfloat16, float, double, and fp128 are supported "
+        "for ARM64EC thunks");
   }
 
   auto &DL = M->getDataLayout();
@@ -349,15 +359,22 @@ ThunkArgInfo AArch64Arm64ECCallLowering::canonicalizeThunkType(
     uint64_t ElementCnt = T->getArrayNumElements();
     uint64_t ElementSizePerBytes = DL.getTypeSizeInBits(ElementTy) / 8;
     uint64_t TotalSizeBytes = ElementCnt * ElementSizePerBytes;
-    if (ElementTy->isHalfTy() || ElementTy->isFloatTy() ||
-        ElementTy->isDoubleTy()) {
+    if (ElementTy->isHalfTy() || ElementTy->isBFloatTy() ||
+        ElementTy->isFloatTy() || ElementTy->isDoubleTy() ||
+        ElementTy->isFP128Ty()) {
       if (ElementTy->isHalfTy())
         // Prefix with `llvm` since MSVC doesn't specify `_Float16`
         Out << "__llvm_H__";
+      else if (ElementTy->isBFloatTy())
+        // Prefix with `llvm` since MSVC doesn't specify `__bf16`
+        Out << "__llvm_BF16__";
       else if (ElementTy->isFloatTy())
         Out << "F";
       else if (ElementTy->isDoubleTy())
         Out << "D";
+      else if (ElementTy->isFP128Ty())
+        // Prefix with `llvm` since MSVC doesn't specify `_Float128`
+        Out << "__llvm_Q__";
       Out << TotalSizeBytes;
       if (Alignment.value() >= 16 && !Ret)
         Out << "a" << Alignment.value();
@@ -369,9 +386,9 @@ ThunkArgInfo AArch64Arm64ECCallLowering::canonicalizeThunkType(
         // Struct is passed directly on Arm64, but indirectly on X64.
         return pointerIndirection(T);
       }
-    } else if (T->isFloatingPointTy()) {
+    } else if (ElementTy->isFloatingPointTy()) {
       report_fatal_error(
-          "Only 16, 32, and 64 bit floating points are supported "
+          "Only half, bfloat16, float, double, and fp128 are supported "
           "for ARM64EC thunks");
     }
   }
@@ -437,6 +454,14 @@ Function *AArch64Arm64ECCallLowering::buildExitThunk(FunctionType *FT,
   Value *Callee = IRB.CreateLoad(PtrTy, CalleePtr);
   auto &DL = M->getDataLayout();
   SmallVector<Value *> Args;
+  FunctionType *DispatcherCallTy = X64Ty;
+  // If we have a vararg function, the SelectionDAG lowering will need to
+  // recognize this so it can copy the arguments described by x4 (pointer) and
+  // x5 (length) to set up the x86-64 context correctly.
+  if (FT->isVarArg())
+    DispatcherCallTy =
+        FunctionType::get(X64Ty->getReturnType(), X64Ty->params(),
+                          /*isVarArg=*/true);
 
   // Pass the called function in x9.
   auto X64TyOffset = 1;
@@ -488,7 +513,7 @@ Function *AArch64Arm64ECCallLowering::buildExitThunk(FunctionType *FT,
   }
   // FIXME: Transfer necessary attributes? sret? anything else?
 
-  CallInst *Call = IRB.CreateCall(X64Ty, Callee, Args);
+  CallInst *Call = IRB.CreateCall(DispatcherCallTy, Callee, Args);
   Call->setCallingConv(CallingConv::ARM64EC_Thunk_X64);
 
   Value *RetVal = Call;
@@ -795,7 +820,7 @@ void AArch64Arm64ECCallLowering::lowerCall(CallBase *CB) {
 }
 
 bool AArch64Arm64ECCallLowering::runOnModule(Module &Mod) {
-  if (!GenerateThunks)
+  if (!AArch64Options::Global.arm64ec_generate_thunks)
     return false;
 
   M = &Mod;
@@ -1007,8 +1032,9 @@ bool AArch64Arm64ECCallLowering::processFunction(
       // FIXME: getCalledFunction() fails if there's a bitcast (e.g.
       // unprototyped functions in C)
       if (Function *F = CB->getCalledFunction()) {
-        if (!LowerDirectToIndirect || F->hasLocalLinkage() ||
-            F->isIntrinsic() || !F->isDeclarationForLinker())
+        if (!AArch64Options::Global.arm64ec_lower_direct_to_indirect ||
+            F->hasLocalLinkage() || F->isIntrinsic() ||
+            !F->isDeclarationForLinker())
           continue;
 
         DirectCalledFns.insert(F);

@@ -66,6 +66,7 @@ include "RISCVSchedSyntacoreSCR1.td"
 include "RISCVSchedSyntacoreSCR345.td"
 include "RISCVSchedSyntacoreSCR7.td"
 include "RISCVSchedTTAscalonX.td"
+include "RISCVSchedXiangShanKunMingHu.td"
 include "RISCVSchedXiangShanNanHu.td"
 
 //===----------------------------------------------------------------------===//
@@ -91,6 +92,9 @@ def RISCVInstrInfo : InstrInfo {
 def RISCVAsmParser : AsmParser {
   let ShouldEmitMatchRegisterAltName = true;
   let AllowDuplicateRegisterNames = true;
+  let ReportMultipleNearMisses = true;
+  let PrioritizeFeatureInMultiMismatchFallback = true;
+  let EmitTokenDiagnosticTypes = true;
 }
 
 def RISCVAsmWriter : AsmWriter {

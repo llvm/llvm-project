@@ -66,6 +66,14 @@ TEST_F(NumericLiteralInfoTest, FloatingPointLiteral) {
   EXPECT_TRUE(verifyInfo(NumericLiteralInfo("0xF.Fp-9_Pa"), 1, 3, 5, 8));
 }
 
+TEST_F(NumericLiteralInfoTest, InvalidNumericLiteral) {
+  EXPECT_TRUE(verifyInfo(NumericLiteralInfo("1e"), npos, npos, 1, npos));
+  EXPECT_TRUE(verifyInfo(NumericLiteralInfo("1.0e"), npos, 1, 3, npos));
+  EXPECT_TRUE(verifyInfo(NumericLiteralInfo("0x"), 1, npos, npos, npos));
+  EXPECT_TRUE(verifyInfo(NumericLiteralInfo("0x_"), 1, npos, npos, npos));
+  EXPECT_TRUE(verifyInfo(NumericLiteralInfo("0x1p"), 1, npos, 3, npos));
+}
+
 } // namespace
 } // namespace format
 } // namespace clang

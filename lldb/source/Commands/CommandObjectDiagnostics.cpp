@@ -194,8 +194,17 @@ protected:
 
     Stream &out = result.GetOutputStream();
     out << "Bug report written to " << directory->GetPath() << "\n";
-    out << "WARNING: the report may contain file paths, command history and "
-           "program data. Review it before attaching it to a public issue.\n";
+    if (!report->attachments.files.empty()) {
+      out << "Attach the following files to the issue:\n";
+      for (const std::string &file : report->attachments.files)
+        out << "  [ ] " << file << "\n";
+    }
+    out << "Complete the report before sharing it:\n";
+    out << "  [ ] Give the report a descriptive title\n";
+    out << "  [ ] Answer the questions\n";
+    result.AppendWarning("the report may contain file paths, command history "
+                         "and program data. Review it before attaching it to a "
+                         "public issue");
 
     if (m_options.no_open) {
       result.SetStatus(eReturnStatusSuccessFinishResult);

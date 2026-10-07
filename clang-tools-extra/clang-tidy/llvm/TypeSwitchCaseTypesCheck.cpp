@@ -84,7 +84,8 @@ void TypeSwitchCaseTypesCheck::check(const MatchFinder::MatchResult &Result) {
       ParamBaseType->getCanonicalTypeUnqualified())
     return;
 
-  auto Diag = diag(Call->getExprLoc(), "redundant explicit template argument");
+  const auto Diag =
+      diag(Call->getExprLoc(), "redundant explicit template argument");
 
   // Skip fixit if template argument involves macros.
   const SourceLocation LAngleLoc = MemExpr->getLAngleLoc();

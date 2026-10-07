@@ -16,6 +16,8 @@
 #include "X86BaseInfo.h"
 #include "X86IntelInstPrinter.h"
 #include "X86MCAsmInfo.h"
+#include "X86MCLFIRewriter.h"
+#include "X86MCOptions.h"
 #include "X86TargetStreamer.h"
 #include "llvm-c/Visibility.h"
 #include "llvm/ADT/APInt.h"
@@ -27,6 +29,7 @@
 #include "llvm/MC/MCStreamer.h"
 #include "llvm/MC/MCSubtargetInfo.h"
 #include "llvm/MC/TargetRegistry.h"
+#include "llvm/Option/LibraryOptions.h"
 #include "llvm/Support/ErrorHandling.h"
 #include "llvm/TargetParser/Host.h"
 #include "llvm/TargetParser/Triple.h"
@@ -43,6 +46,9 @@ using namespace llvm;
 
 #define GET_SUBTARGETINFO_MC_DESC
 #include "X86GenSubtargetInfo.inc"
+
+#define OPTIONS_STRUCT_DEFS
+#include "X86MCOptions.inc"
 
 std::string X86_MC::ParseX86Triple(const Triple &TT) {
   std::string FS;
@@ -80,7 +86,7 @@ bool X86_MC::hasLockPrefix(const MCInst &MI) {
 static bool isMemOperand(const MCInst &MI, unsigned Op, unsigned RegClassID) {
   const MCOperand &Base = MI.getOperand(Op + X86::AddrBaseReg);
   const MCOperand &Index = MI.getOperand(Op + X86::AddrIndexReg);
-  const MCRegisterClass &RC = X86MCRegisterClasses[RegClassID];
+  const MCRegisterClass &RC = getX86MCRegisterClass(RegClassID);
 
   return (Base.isReg() && Base.getReg() && RC.contains(Base.getReg())) ||
          (Index.isReg() && Index.getReg() && RC.contains(Index.getReg()));
@@ -535,7 +541,12 @@ static MCAsmInfo *createX86MCAsmInfo(const MCRegisterInfo &MRI,
     // The default is ELF.
     MAI = new X86ELFMCAsmInfo(TheTriple, Options);
   }
-  populateReservedIdentifiers(*MAI, MRI);
+
+  // Only Intel-syntax output needs to avoid register/keyword collisions; AT&T
+  // disambiguates registers with '%' and doesn't treat `byte`, `ptr`, etc. as
+  // keywords.
+  if (MAI->getOutputAssemblerDialect() != 0)
+    populateReservedIdentifiers(*MAI, MRI);
 
   // Initialize initial frame state.
   // Calculate amount of bytes used for return address storing
@@ -624,7 +635,7 @@ bool X86MCInstrAnalysis::clearsSuperRegisters(const MCRegisterInfo &MRI,
   const MCRegisterClass &VR128XRC = MRI.getRegClass(X86::VR128XRegClassID);
   const MCRegisterClass &VR256XRC = MRI.getRegClass(X86::VR256XRegClassID);
 
-  auto ClearsSuperReg = [=](MCRegister RegID) {
+  auto ClearsSuperReg = [&](MCRegister RegID) {
     // On X86-64, a general purpose integer register is viewed as a 64-bit
     // register internal to the processor.
     // An update to the lower 32 bits of a 64 bit integer register is
@@ -734,10 +745,9 @@ std::optional<uint64_t> X86MCInstrAnalysis::evaluateMemoryOperandAddress(
     const MCInst &Inst, const MCSubtargetInfo *STI, uint64_t Addr,
     uint64_t Size) const {
   const MCInstrDesc &MCID = Info->get(Inst.getOpcode());
-  int MemOpStart = X86II::getMemoryOperandNo(MCID.TSFlags);
+  int MemOpStart = X86II::getMemoryOperandIdx(MCID);
   if (MemOpStart == -1)
     return std::nullopt;
-  MemOpStart += X86II::getOperandBias(MCID);
 
   const MCOperand &SegReg = Inst.getOperand(MemOpStart + X86::AddrSegmentReg);
   const MCOperand &BaseReg = Inst.getOperand(MemOpStart + X86::AddrBaseReg);
@@ -761,10 +771,9 @@ X86MCInstrAnalysis::getMemoryOperandRelocationOffset(const MCInst &Inst,
   if (Inst.getOpcode() != X86::LEA64r)
     return std::nullopt;
   const MCInstrDesc &MCID = Info->get(Inst.getOpcode());
-  int MemOpStart = X86II::getMemoryOperandNo(MCID.TSFlags);
+  int MemOpStart = X86II::getMemoryOperandIdx(MCID);
   if (MemOpStart == -1)
     return std::nullopt;
-  MemOpStart += X86II::getOperandBias(MCID);
   const MCOperand &SegReg = Inst.getOperand(MemOpStart + X86::AddrSegmentReg);
   const MCOperand &BaseReg = Inst.getOperand(MemOpStart + X86::AddrBaseReg);
   const MCOperand &IndexReg = Inst.getOperand(MemOpStart + X86::AddrIndexReg);
@@ -787,8 +796,17 @@ static MCInstrAnalysis *createX86MCInstrAnalysis(const MCInstrInfo *Info) {
   return new X86_MC::X86MCInstrAnalysis(Info);
 }
 
+static MCLFIRewriter *
+createX86MCLFIRewriter(MCContext &Ctx,
+                       std::unique_ptr<MCRegisterInfo> &&RegInfo,
+                       std::unique_ptr<MCInstrInfo> &&InstInfo) {
+  return new X86::X86MCLFIRewriter(Ctx, std::move(RegInfo),
+                                   std::move(InstInfo));
+}
+
 // Force static initialization.
 extern "C" LLVM_C_ABI void LLVMInitializeX86TargetMC() {
+  static opt::RegisterLibraryOptions<X86MCOptions> O;
   for (Target *T : {&getTheX86_32Target(), &getTheX86_64Target()}) {
     // Register the MC asm info.
     RegisterMCAsmInfoFn X(*T, createX86MCAsmInfo);
@@ -808,6 +826,9 @@ extern "C" LLVM_C_ABI void LLVMInitializeX86TargetMC() {
 
     // Register the code emitter.
     TargetRegistry::RegisterMCCodeEmitter(*T, createX86MCCodeEmitter);
+
+    // Register the LFI rewriter.
+    TargetRegistry::RegisterMCLFIRewriter(*T, createX86MCLFIRewriter);
 
     // Register the obj target streamer.
     TargetRegistry::RegisterObjectTargetStreamer(*T,

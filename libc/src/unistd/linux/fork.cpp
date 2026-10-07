@@ -7,7 +7,7 @@
 //===----------------------------------------------------------------------===//
 
 #include "src/unistd/fork.h"
-
+#include "hdr/signal_macros.h"            // For SIGCHLD
 #include "src/__support/OSUtil/syscall.h" // For internal syscall function.
 #include "src/__support/common.h"
 #include "src/__support/macros/config.h"
@@ -16,7 +16,6 @@
 #include "src/__support/threads/thread.h" // For thread self object
 
 #include "src/__support/libc_errno.h"
-#include <signal.h>      // For SIGCHLD
 #include <sys/syscall.h> // For syscall numbers.
 
 namespace LIBC_NAMESPACE_DECL {

@@ -74,6 +74,18 @@ public:
   llvm::Error writeStaticLibrary(const StaticLibrary &S,
                                  llvm::StringRef Path) override;
 
+  llvm::Expected<MultiArchStaticLibrary>
+  readMultiArchStaticLibrary(llvm::StringRef Path) override;
+
+  llvm::Error writeMultiArchStaticLibrary(const MultiArchStaticLibrary &M,
+                                          llvm::StringRef Path) override;
+
+  llvm::Expected<MultiArchSharedLibrary>
+  readMultiArchSharedLibrary(llvm::StringRef Path) override;
+
+  llvm::Error writeMultiArchSharedLibrary(const MultiArchSharedLibrary &M,
+                                          llvm::StringRef Path) override;
+
   llvm::Expected<WPASuite> readWPASuite(llvm::StringRef Path) override;
 
   llvm::Error writeWPASuite(const WPASuite &Suite,
@@ -132,10 +144,30 @@ private:
   /// See \c readTUSummaryFromObject for caller responsibilities.
   llvm::Expected<StaticLibrary> readStaticLibraryFromObject(const Object &Root);
 
+  /// Parses a MultiArchStaticLibrary from an already-validated root JSON
+  /// object. See \c readTUSummaryFromObject for caller responsibilities.
+  llvm::Expected<MultiArchStaticLibrary>
+  readMultiArchStaticLibraryFromObject(const Object &Root);
+
+  /// Parses a MultiArchSharedLibrary from an already-validated root JSON
+  /// object. See \c readTUSummaryFromObject for caller responsibilities.
+  llvm::Expected<MultiArchSharedLibrary>
+  readMultiArchSharedLibraryFromObject(const Object &Root);
+
   /// Serializes a TUSummaryEncoding to a JSON object including its
   /// self-describing \c type field. Used both by \c writeTUSummaryEncoding
   /// and by the StaticLibrary writer to emit member entries.
   Object tuSummaryEncodingToJSON(const TUSummaryEncoding &SE) const;
+
+  /// Serializes a StaticLibrary to a JSON object including its
+  /// self-describing \c type field. Used both by \c writeStaticLibrary
+  /// and by the MultiArchStaticLibrary writer to emit per-arch slices.
+  Object staticLibraryToJSON(const StaticLibrary &S) const;
+
+  /// Serializes an LUSummaryEncoding to a JSON object including its
+  /// self-describing \c type field. Used both by \c writeLUSummaryEncoding
+  /// and by the MultiArchSharedLibrary writer to emit per-arch slices.
+  Object luSummaryEncodingToJSON(const LUSummaryEncoding &E) const;
 
   /// Parses a WPASuite from an already-validated root JSON object. See
   /// \c readTUSummaryFromObject for caller responsibilities.
@@ -276,8 +308,10 @@ private:
 
 } // namespace clang::ssaf
 
-LLVM_DECLARE_REGISTRY(llvm::Registry<clang::ssaf::JSONFormat::FormatInfo>)
-LLVM_DECLARE_REGISTRY(
+LLVM_DECLARE_REGISTRY_EX(CLANG_ABI_EXPORT,
+                         llvm::Registry<clang::ssaf::JSONFormat::FormatInfo>)
+LLVM_DECLARE_REGISTRY_EX(
+    CLANG_ABI_EXPORT,
     llvm::Registry<clang::ssaf::JSONFormat::AnalysisResultRegistry::Codec>)
 
 #endif // LLVM_CLANG_SCALABLESTATICANALYSIS_CORE_SERIALIZATION_JSONFORMAT_H

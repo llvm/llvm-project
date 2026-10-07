@@ -11,6 +11,8 @@
 #include "flang/Runtime/CUDA/common.h"
 
 #include "cuda_runtime.h"
+#include <cstdint>
+#include <unistd.h>
 
 namespace Fortran::runtime::cuda {
 
@@ -48,20 +50,35 @@ void RTDEF(CUFRegisterVariable)(
   __cudaRegisterVar(module, varSym, varName, varName, 0, size, 0, 0);
 }
 
-void RTDEF(CUFRegisterExternalVariable)(
-    void **module, char *varSym, const char *varName, int64_t size) {
-  // Tell the CUDA driver to bind the device-side global <varName> to the
-  // host-resident storage at <varSym>. Kernel accesses to <varName> then go
-  // through the host address; HMM/ATS handles migration.
-  __cudaRegisterHostVar(module, varName, varSym, size);
-}
-
 void RTDEF(CUFRegisterManagedVariable)(
     void **module, void **varSym, char *varName, int64_t size) {
   __cudaRegisterManagedVar(module, varSym, varName, varName, 0, size, 0, 0);
 }
 
 void RTDEF(CUFInitModule)(void **module) { __cudaInitModule(module); }
+
+void RTDEF(CUFRegisterHostMemoryRange)(void *begin, void *end) {
+  if (!begin || end <= begin)
+    return;
+  const auto pageSize{static_cast<std::uintptr_t>(sysconf(_SC_PAGESIZE))};
+  const auto first{reinterpret_cast<std::uintptr_t>(begin) & ~(pageSize - 1)};
+  const auto last{
+      (reinterpret_cast<std::uintptr_t>(end) + pageSize - 1) & ~(pageSize - 1)};
+  cudaError_t err{cudaHostRegister(reinterpret_cast<void *>(first),
+      last - first, cudaHostRegisterPortable | cudaHostRegisterMapped)};
+  if (err == cudaErrorHostMemoryAlreadyRegistered) {
+    // Clear the error state left by the failed call.
+    (void)cudaGetLastError();
+    return;
+  }
+  if (err != cudaSuccess) {
+    const char *name{cudaGetErrorName(err)};
+    Terminator terminator{__FILE__, __LINE__};
+    terminator.Crash("cudaHostRegister(%p, %zu) failed with '%s'",
+        reinterpret_cast<void *>(first), static_cast<std::size_t>(last - first),
+        name ? name : "<unknown>");
+  }
+}
 
 } // extern "C"
 

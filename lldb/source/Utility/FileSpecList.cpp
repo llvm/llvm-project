@@ -7,7 +7,6 @@
 //===----------------------------------------------------------------------===//
 
 #include "lldb/Utility/FileSpecList.h"
-#include "lldb/Utility/ConstString.h"
 #include "lldb/Utility/LLDBLog.h"
 #include "lldb/Utility/Log.h"
 #include "lldb/Utility/RealpathPrefixes.h"
@@ -75,14 +74,12 @@ static size_t FindFileIndex(size_t start_idx, const FileSpec &file_spec,
                             std::function<const FileSpec &(size_t)> get_ith) {
   // When looking for files, we will compare only the filename if the FILE_SPEC
   // argument is empty
-  bool compare_filename_only = file_spec.GetDirectory().IsEmpty();
+  bool compare_filename_only = file_spec.GetDirectory().empty();
 
   for (size_t idx = start_idx; idx < num_files; ++idx) {
     const FileSpec &ith = get_ith(idx);
     if (compare_filename_only) {
-      if (ConstString::Equals(ith.GetFilename(), file_spec.GetFilename(),
-                              file_spec.IsCaseSensitive() ||
-                                  ith.IsCaseSensitive()))
+      if (file_spec.FileEquals(ith))
         return idx;
     } else {
       if (FileSpec::Equal(ith, file_spec, full))
@@ -122,7 +119,7 @@ IsCompatibleResult IsCompatible(const FileSpec &curr_file,
   const bool file_spec_case_sensitive = file_spec.IsCaseSensitive();
   // When looking for files, we will compare only the filename if the directory
   // argument is empty in file_spec
-  const bool full = !file_spec.GetDirectory().IsEmpty();
+  const bool full = !file_spec.GetDirectory().empty();
 
   // Always start by matching the filename first
   if (!curr_file.FileEquals(file_spec))
@@ -134,14 +131,14 @@ IsCompatibleResult IsCompatible(const FileSpec &curr_file,
   if (FileSpec::Equal(curr_file, file_spec, full)) {
     return IsCompatibleResult::kBothDirectoryAndFileMatch;
   } else if (curr_file.IsRelative() || file_spec_relative) {
-    llvm::StringRef curr_file_dir = curr_file.GetDirectory().GetStringRef();
+    llvm::StringRef curr_file_dir = curr_file.GetDirectory();
     if (curr_file_dir.empty())
       // Basename match only for this file in the list
       return IsCompatibleResult::kBothDirectoryAndFileMatch;
 
     // Check if we have a relative path in our file list, or if "file_spec" is
     // relative, if so, check if either ends with the other.
-    llvm::StringRef file_spec_dir = file_spec.GetDirectory().GetStringRef();
+    llvm::StringRef file_spec_dir = file_spec.GetDirectory();
     // We have a relative path in our file list, it matches if the
     // specified path ends with this path, but we must ensure the full
     // component matches (we don't want "foo/bar.cpp" to match "oo/bar.cpp").

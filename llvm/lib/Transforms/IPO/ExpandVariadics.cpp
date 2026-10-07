@@ -364,9 +364,8 @@ bool ExpandVariadics::runOnModule(Module &M) {
   if (!ABI->enableForTarget())
     return Changed;
 
-  auto &Ctx = M.getContext();
   const DataLayout &DL = M.getDataLayout();
-  IRBuilder<> Builder(Ctx);
+  IRBuilder<> Builder(M);
 
   // Lowering needs to run on all functions exactly once.
   // Optimize could run on functions containing va_start exactly once.
@@ -849,7 +848,7 @@ bool ExpandVariadics::expandCall(Module &M, IRBuilder<> &Builder, CallBase *CB,
   NewCB->setDebugLoc(DebugLoc());
 
   // DeadArgElim and ArgPromotion copy exactly this metadata
-  NewCB->copyMetadata(*CB, {LLVMContext::MD_prof, LLVMContext::MD_dbg});
+  NewCB->copyProfileAndDebugMetadata(*CB);
 
   CB->replaceAllUsesWith(NewCB);
   CB->eraseFromParent();
@@ -1067,8 +1066,13 @@ struct SPIRV final : public VariadicABIInfo {
     StringRef DemangledName(Demangled);
 
     // Skip any SPIR-V builtins.
+    // Note: an unmangled C `printf` declaration demangles to "printf" with no
+    // argument list, so the "printf(" prefix check below misses it. Match the
+    // bare name as well so OpenCL/HIP printf (emitted unmangled) is left as a
+    // variadic call for the backend's OpenCL.std printf lowering to expand
+    // inline, rather than being packed into a vararg buffer here.
     if (DemangledName.starts_with("__spirv_") ||
-        DemangledName.starts_with("printf("))
+        DemangledName.starts_with("printf(") || F->getName() == "printf")
       return true;
 
     return false;
@@ -1121,8 +1125,8 @@ struct Wasm final : public VariadicABIInfo {
 
 std::unique_ptr<VariadicABIInfo> VariadicABIInfo::create(const Triple &T) {
   switch (T.getArch()) {
-  case Triple::r600:
-  case Triple::amdgcn: {
+  case Triple::amdgpu:
+  case Triple::r600: {
     return std::make_unique<Amdgpu>();
   }
 

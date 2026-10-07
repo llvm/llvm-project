@@ -43,12 +43,15 @@ file(GLOB_RECURSE files
 
 set(check_format_depends clang-format)
 find_program(DIFF_EXE diff)
-if(DIFF_EXE)
+find_program(TOUCH_EXE touch)
+if(DIFF_EXE AND TOUCH_EXE)
+  file(TO_NATIVE_PATH "${DIFF_EXE}" DIFF_EXE_NATIVE_PATH)
+  file(TO_NATIVE_PATH "${TOUCH_EXE}" TOUCH_EXE_NATIVE_PATH)
   set(i 0)
   foreach(file IN LISTS files)
     add_custom_command(OUTPUT check_format_depend_${i}
-      COMMAND clang-format ${file} | diff -u ${file} - &&
-              touch check_format_depend_${i}
+      COMMAND clang-format ${file} | ${DIFF_EXE_NATIVE_PATH} -u ${file} - &&
+              ${TOUCH_EXE_NATIVE_PATH} check_format_depend_${i}
       VERBATIM
       COMMENT "Checking format of ${file}"
       DEPENDS clang-format
@@ -64,7 +67,7 @@ set(docs_tools_dir ${CLANG_SOURCE_DIR}/docs/tools)
 
 set(format_style_depend ${CMAKE_CURRENT_BINARY_DIR}/format_style_depend)
 set(dump_style dump_format_style.py)
-set(style_options_rst ${CLANG_SOURCE_DIR}/docs/ClangFormatStyleOptions.rst)
+set(style_options_md ${CLANG_SOURCE_DIR}/docs/ClangFormatStyleOptions.md)
 add_custom_command(OUTPUT ${format_style_depend}
   COMMAND ${Python3_EXECUTABLE} ${dump_style} && touch ${format_style_depend}
   WORKING_DIRECTORY ${docs_tools_dir}
@@ -80,7 +83,7 @@ add_custom_target(clang-format-style DEPENDS ${format_style_depend})
 
 set(format_help_depend ${CMAKE_CURRENT_BINARY_DIR}/format_help_depend)
 set(dump_help dump_format_help.py)
-set(clang_format_rst ${CLANG_SOURCE_DIR}/docs/ClangFormat.rst)
+set(clang_format_md ${CLANG_SOURCE_DIR}/docs/ClangFormat.md)
 add_custom_command(OUTPUT ${format_help_depend}
   COMMAND ${Python3_EXECUTABLE} ${dump_help} -d ${CMAKE_BINARY_DIR}/bin &&
           touch ${format_help_depend}

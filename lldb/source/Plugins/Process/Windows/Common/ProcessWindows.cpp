@@ -15,11 +15,13 @@
 #include <psapi.h>
 
 #include "lldb/Breakpoint/Watchpoint.h"
+#include "lldb/Core/Address.h"
 #include "lldb/Core/IOHandler.h"
 #include "lldb/Core/Module.h"
 #include "lldb/Core/ModuleSpec.h"
 #include "lldb/Core/PluginManager.h"
 #include "lldb/Core/Section.h"
+#include "lldb/Host/Config.h"
 #include "lldb/Host/FileSystem.h"
 #include "lldb/Host/HostInfo.h"
 #include "lldb/Host/HostNativeProcessBase.h"
@@ -28,6 +30,7 @@
 #include "lldb/Host/PseudoTerminal.h"
 #include "lldb/Host/windows/ConnectionConPTYWindows.h"
 #include "lldb/Host/windows/HostThreadWindows.h"
+#include "lldb/Host/windows/PathUtils.h"
 #include "lldb/Symbol/ObjectFile.h"
 #include "lldb/Target/DynamicLoader.h"
 #include "lldb/Target/MemoryRegionInfo.h"
@@ -70,7 +73,8 @@ std::string GetProcessExecutableName(HANDLE process_handle) {
   file_name.resize(copied);
   std::string result;
   llvm::convertWideToUTF8(file_name.data(), result);
-  return result;
+  // A process launched through an extended-length path has the "\\?\" prefix.
+  return StripExtendedLengthPrefix(result);
 }
 
 std::string GetProcessExecutableName(DWORD pid) {
@@ -97,11 +101,14 @@ ProcessSP ProcessWindows::CreateInstance(lldb::TargetSP target_sp,
 }
 
 static bool ShouldUseLLDBServer() {
-  llvm::StringRef use_lldb_server = ::getenv("LLDB_USE_LLDB_SERVER");
-  return use_lldb_server.equals_insensitive("on") ||
-         use_lldb_server.equals_insensitive("yes") ||
-         use_lldb_server.equals_insensitive("1") ||
-         use_lldb_server.equals_insensitive("true");
+  if (const char *env = ::getenv("LLDB_USE_LLDB_SERVER")) {
+    llvm::StringRef use_lldb_server(env);
+    return use_lldb_server.equals_insensitive("on") ||
+           use_lldb_server.equals_insensitive("yes") ||
+           use_lldb_server.equals_insensitive("1") ||
+           use_lldb_server.equals_insensitive("true");
+  }
+  return LLDB_ENABLE_LIBXML2;
 }
 
 void ProcessWindows::Initialize() {
@@ -227,6 +234,9 @@ ProcessWindows::DoAttachToProcessWithID(lldb::pid_t pid,
   Status error = AttachProcess(pid, attach_info, delegate);
   if (error.Success())
     SetID(GetDebuggedProcessId());
+
+  m_expecting_loader_int3 = true;
+
   return error;
 }
 
@@ -270,7 +280,7 @@ Status ProcessWindows::DoResume(RunDirection direction) {
     }
 
     ExceptionRecordSP active_exception =
-        m_session_data->m_debugger->GetActiveException().lock();
+        m_session_data->m_debugger->GetActiveException();
     if (active_exception) {
       // Resume the process and continue processing debug events.  Mask the
       // exception so that from the process's view, there is no indication that
@@ -293,8 +303,12 @@ Status ProcessWindows::DoDestroy() {
 
 Status ProcessWindows::DoHalt(bool &caused_stop) {
   StateType state = GetPrivateState();
-  if (state != eStateStopped)
-    return HaltProcess(caused_stop);
+  if (state != eStateStopped) {
+    m_pending_halt = true;
+    Status error = HaltProcess(caused_stop);
+    if (error.Fail() || !caused_stop)
+      m_pending_halt = false;
+  }
   caused_stop = false;
   return Status();
 }
@@ -325,9 +339,8 @@ void ProcessWindows::RefreshStateAfterStop() {
 
   m_thread_list.RefreshStateAfterStop();
 
-  std::weak_ptr<ExceptionRecord> exception_record =
+  ExceptionRecordSP active_exception =
       m_session_data->m_debugger->GetActiveException();
-  ExceptionRecordSP active_exception = exception_record.lock();
   if (!active_exception) {
     LLDB_LOG(log,
              "there is no active exception in process {0}.  Why is the "
@@ -535,8 +548,9 @@ ArchSpec ProcessWindows::GetSystemArchitecture() {
   return HostInfo::GetArchitecture();
 }
 
-size_t ProcessWindows::DoReadMemory(lldb::addr_t vm_addr, void *buf,
-                                    size_t size, Status &error) {
+size_t ProcessWindows::DoReadMemory(const ProcessAddress &process_addr,
+                                    void *buf, size_t size, Status &error) {
+  lldb::addr_t vm_addr = process_addr.GetValue();
   size_t bytes_read = 0;
   error = ProcessDebugger::ReadMemory(vm_addr, buf, size, bytes_read);
   return bytes_read;
@@ -567,7 +581,10 @@ Status ProcessWindows::DoGetMemoryRegionInfo(lldb::addr_t vm_addr,
 
 lldb::addr_t ProcessWindows::GetImageInfoAddress() {
   Target &target = GetTarget();
-  ObjectFile *obj_file = target.GetExecutableModule()->GetObjectFile();
+  ModuleSP executable_sp = target.GetExecutableModule();
+  if (!executable_sp)
+    return LLDB_INVALID_ADDRESS;
+  ObjectFile *obj_file = executable_sp->GetObjectFile();
   Address addr = obj_file->GetImageInfoAddress(&target);
   if (addr.IsValid())
     return addr.GetLoadAddress(&target);
@@ -600,7 +617,7 @@ void ProcessWindows::OnExitProcess(uint32_t exit_code) {
     ModuleSP executable_module = target->GetExecutableModule();
     ModuleList unloaded_modules;
     unloaded_modules.Append(executable_module);
-    target->ModulesDidUnload(unloaded_modules, true);
+    target->ModulesDidUnload(unloaded_modules, false);
   }
 
   SetExitStatus(exit_code, /*exit_string=*/"");
@@ -641,25 +658,23 @@ void ProcessWindows::OnDebuggerConnected(lldb::addr_t image_base) {
   LLDB_LOG(log, "Debugger connected to process {0}.  Image base = {1:x}",
            debugger->GetProcess().GetProcessId(), image_base);
 
-  ModuleSP module;
-  // During attach, we won't have the executable module, so find it now.
-  const DWORD pid = debugger->GetProcess().GetProcessId();
-  const std::string file_name = GetProcessExecutableName(pid);
-  if (file_name.empty()) {
-    return;
-  }
-
-  FileSpec executable_file(file_name);
-  FileSystem::Instance().Resolve(executable_file);
-  ModuleSpec module_spec(executable_file);
-  Status error;
-  module =
-      GetTarget().GetOrCreateModule(module_spec, true /* notify */, &error);
+  ModuleSP module = GetTarget().GetExecutableModule();
   if (!module) {
-    return;
-  }
+    const DWORD pid = debugger->GetProcess().GetProcessId();
+    const std::string file_name = GetProcessExecutableName(pid);
+    if (file_name.empty())
+      return;
 
-  GetTarget().SetExecutableModule(module, eLoadDependentsNo);
+    FileSpec executable_file(file_name);
+    FileSystem::Instance().Resolve(executable_file);
+    ModuleSpec module_spec(executable_file);
+    Status error;
+    module =
+        GetTarget().GetOrCreateModule(module_spec, /*notify=*/true, &error);
+    if (!module)
+      return;
+    GetTarget().RebuildModuleListWithExecutable(module, eLoadDependentsNo);
+  }
 
   if (auto dyld = GetDynamicLoader())
     dyld->OnLoadModule(module, ModuleSpec(), image_base);
@@ -710,7 +725,22 @@ ProcessWindows::OnDebugException(bool first_chance,
 
   ExceptionResult result = ExceptionResult::SendToApplication;
   switch (record.GetExceptionValue()) {
-  case EXCEPTION_BREAKPOINT:
+  case EXCEPTION_BREAKPOINT: {
+    const lldb::addr_t bp_addr = record.GetExceptionAddress();
+    if (m_pending_halt) {
+      m_pending_halt = false;
+    } else if (m_expecting_loader_int3 && first_chance &&
+               m_session_data->m_initial_stop_received &&
+               !GetBreakpointSiteList().FindByAddress(bp_addr) &&
+               IsSystemModuleAddress(bp_addr)) {
+      m_expecting_loader_int3 = false;
+      LLDB_LOG(log,
+               "Skipping expected loader breakpoint at address {0:x} in a "
+               "system module.",
+               bp_addr);
+      return ExceptionResult::MaskException;
+    }
+
     // Handle breakpoints at the first chance.
     result = ExceptionResult::BreakInDebugger;
 
@@ -733,6 +763,7 @@ ProcessWindows::OnDebugException(bool first_chance,
     DrainProcessStdout();
     SetPrivateState(eStateStopped);
     break;
+  }
   case EXCEPTION_SINGLE_STEP:
     result = ExceptionResult::BreakInDebugger;
     DrainProcessStdout();
@@ -793,15 +824,19 @@ void ProcessWindows::OnExitThread(lldb::tid_t thread_id, uint32_t exit_code) {
     m_session_data->m_exited_threads.insert(thread_id);
 }
 
-void ProcessWindows::OnLoadDll(const ModuleSpec &module_spec,
-                               lldb::addr_t module_addr) {
+DllEventAction ProcessWindows::OnLoadDll(const ModuleSpec &module_spec,
+                                         lldb::addr_t module_addr,
+                                         lldb::tid_t thread_id) {
   if (auto dyld = GetDynamicLoader())
     dyld->OnLoadModule(nullptr, module_spec, module_addr);
+  return DllEventAction::ContinueDebugLoop;
 }
 
-void ProcessWindows::OnUnloadDll(lldb::addr_t module_addr) {
+DllEventAction ProcessWindows::OnUnloadDll(lldb::addr_t module_addr,
+                                           lldb::tid_t thread_id) {
   if (auto dyld = GetDynamicLoader())
     dyld->OnUnloadModule(module_addr);
+  return DllEventAction::ContinueDebugLoop;
 }
 
 void ProcessWindows::OnDebugString(lldb::addr_t debug_string_addr,
@@ -871,7 +906,7 @@ std::optional<uint32_t> ProcessWindows::GetWatchpointSlotCount() {
 std::optional<DWORD> ProcessWindows::GetActiveExceptionCode() const {
   if (!m_session_data || !m_session_data->m_debugger)
     return std::nullopt;
-  auto exc = m_session_data->m_debugger->GetActiveException().lock();
+  auto exc = m_session_data->m_debugger->GetActiveException();
   if (!exc)
     return std::nullopt;
   return exc->GetExceptionValue();

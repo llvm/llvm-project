@@ -131,17 +131,14 @@ ModuleMacro *Preprocessor::addModuleMacro(Module *Mod, IdentifierInfo *II,
                                           MacroInfo *Macro,
                                           ArrayRef<ModuleMacro *> Overrides,
                                           bool &New) {
-  llvm::FoldingSetNodeID ID;
-  ModuleMacro::Profile(ID, Mod, II);
-
-  void *InsertPos;
-  if (auto *MM = ModuleMacros.FindNodeOrInsertPos(ID, InsertPos)) {
+  llvm::FoldingSetInsertToken InsertToken;
+  if (auto *MM = ModuleMacros.lookup({Mod, II}, InsertToken)) {
     New = false;
     return MM;
   }
 
   auto *MM = ModuleMacro::create(*this, Mod, II, Macro, Overrides);
-  ModuleMacros.InsertNode(MM, InsertPos);
+  ModuleMacros.insert(MM, InsertToken);
 
   // Each overridden macro is now overridden by one more macro.
   bool HidAny = false;
@@ -168,11 +165,8 @@ ModuleMacro *Preprocessor::addModuleMacro(Module *Mod, IdentifierInfo *II,
 
 ModuleMacro *Preprocessor::getModuleMacro(Module *Mod,
                                           const IdentifierInfo *II) {
-  llvm::FoldingSetNodeID ID;
-  ModuleMacro::Profile(ID, Mod, II);
-
-  void *InsertPos;
-  return ModuleMacros.FindNodeOrInsertPos(ID, InsertPos);
+  llvm::FoldingSetInsertToken InsertToken;
+  return ModuleMacros.lookup({Mod, II}, InsertToken);
 }
 
 void Preprocessor::updateModuleMacroInfo(const IdentifierInfo *II,
@@ -682,10 +676,8 @@ static bool GenerateNewArgTokens(Preprocessor &PP,
 
         // Add left paren
         if (FoundSeparatorToken) {
-          TempToken.startToken();
-          TempToken.setKind(tok::l_paren);
-          TempToken.setLocation(ArgStartIterator->getLocation());
-          TempToken.setLength(0);
+          TempToken =
+              Token::create(tok::l_paren, ArgStartIterator->getLocation());
           NewTokens.push_back(TempToken);
         }
 
@@ -695,10 +687,7 @@ static bool GenerateNewArgTokens(Preprocessor &PP,
         // Add right paren and store the paren locations in ParenHints
         if (FoundSeparatorToken) {
           SourceLocation Loc = PP.getLocForEndOfToken((I - 1)->getLocation());
-          TempToken.startToken();
-          TempToken.setKind(tok::r_paren);
-          TempToken.setLocation(Loc);
-          TempToken.setLength(0);
+          TempToken = Token::create(tok::r_paren, Loc);
           NewTokens.push_back(TempToken);
           ParenHints.push_back(SourceRange(ArgStartIterator->getLocation(),
                                            Loc));
@@ -854,17 +843,15 @@ MacroArgs *Preprocessor::ReadMacroCallArgumentList(Token &MacroName,
 
     // Empty arguments are standard in C99 and C++0x, and are supported as an
     // extension in other modes.
-    if (ArgTokens.size() == ArgTokenStart && !getLangOpts().C99)
-      Diag(Tok, getLangOpts().CPlusPlus11
-                    ? diag::warn_cxx98_compat_empty_fnmacro_arg
-                    : diag::ext_empty_fnmacro_arg);
+    if (ArgTokens.size() == ArgTokenStart && !getLangOpts().C99) {
+      if (getLangOpts().CPlusPlus)
+        DiagCompat(Tok, diag_compat::empty_fnmacro_arg);
+      else
+        Diag(Tok, diag::ext_empty_fnmacro_arg);
+    }
 
     // Add a marker EOF token to the end of the token list for this argument.
-    Token EOFTok;
-    EOFTok.startToken();
-    EOFTok.setKind(tok::eof);
-    EOFTok.setLocation(Tok.getLocation());
-    EOFTok.setLength(0);
+    Token EOFTok = Token::createEof(Tok.getLocation());
     ArgTokens.push_back(EOFTok);
     ++NumActuals;
     if (!ContainsCodeCompletionTok && NumFixedArgsLeft != 0)
@@ -921,11 +908,7 @@ MacroArgs *Preprocessor::ReadMacroCallArgumentList(Token &MacroName,
 
   if (ContainsCodeCompletionTok) {
     // Recover from not-fully-formed macro invocation during code-completion.
-    Token EOFTok;
-    EOFTok.startToken();
-    EOFTok.setKind(tok::eof);
-    EOFTok.setLocation(Tok.getLocation());
-    EOFTok.setLength(0);
+    Token EOFTok = Token::createEof(Tok.getLocation());
     for (; NumActuals < MinArgsExpected; ++NumActuals)
       ArgTokens.push_back(EOFTok);
   }
@@ -984,10 +967,7 @@ MacroArgs *Preprocessor::ReadMacroCallArgumentList(Token &MacroName,
 
     // Add a marker EOF token to the end of the token list for this argument.
     SourceLocation EndLoc = Tok.getLocation();
-    Tok.startToken();
-    Tok.setKind(tok::eof);
-    Tok.setLocation(EndLoc);
-    Tok.setLength(0);
+    Tok = Token::createEof(EndLoc);
     ArgTokens.push_back(Tok);
 
     // If we expect two arguments, add both as empty.
@@ -1609,7 +1589,7 @@ static bool IsBuiltinTrait(Token &Tok) {
   switch (Tok.getKind()) {
   default:
     return false;
-#include "clang/Basic/TokenKinds.def"
+#include "clang/Basic/BuiltinTraits.inc"
   }
 }
 
@@ -1619,6 +1599,7 @@ void Preprocessor::ExpandBuiltinMacro(Token &Tok) {
   // Figure out which token this is.
   IdentifierInfo *II = Tok.getIdentifierInfo();
   assert(II && "Can't be a macro without id info!");
+  SourceLocation MacroNameLoc = Tok.getLocation();
 
   // If this is an _Pragma or Microsoft __pragma directive, expand it,
   // invoke the pragma handler, then lex the token after it.
@@ -2096,7 +2077,7 @@ void Preprocessor::ExpandBuiltinMacro(Token &Tok) {
   } else {
     llvm_unreachable("Unknown identifier!");
   }
-  CreateString(OS.str(), Tok, Tok.getLocation(), Tok.getLocation());
+  CreateString(OS.str(), Tok, MacroNameLoc, Tok.getLocation());
   Tok.setFlagValue(Token::StartOfLine, IsAtStartOfLine);
   Tok.setFlagValue(Token::LeadingSpace, HasLeadingSpace);
   Tok.clearFlag(Token::NeedsCleaning);

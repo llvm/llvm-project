@@ -164,6 +164,16 @@ JSONFormat::readStaticLibraryFromObject(const Object &RootObject) {
 
 llvm::Error JSONFormat::writeStaticLibrary(const StaticLibrary &S,
                                            llvm::StringRef Path) {
+  if (auto Error = writeJSON(staticLibraryToJSON(S), Path)) {
+    return ErrorBuilder::wrap(std::move(Error))
+        .context(ErrorMessages::WritingToFile, "StaticLibrary", Path)
+        .build();
+  }
+
+  return llvm::Error::success();
+}
+
+Object JSONFormat::staticLibraryToJSON(const StaticLibrary &S) const {
   Object RootObject;
 
   RootObject[JSONTypeKey] = JSONTypeValueStaticLibrary;
@@ -180,13 +190,7 @@ llvm::Error JSONFormat::writeStaticLibrary(const StaticLibrary &S,
   }
   RootObject["members"] = std::move(MembersArray);
 
-  if (auto Error = writeJSON(std::move(RootObject), Path)) {
-    return ErrorBuilder::wrap(std::move(Error))
-        .context(ErrorMessages::WritingToFile, "StaticLibrary", Path)
-        .build();
-  }
-
-  return llvm::Error::success();
+  return RootObject;
 }
 
 } // namespace clang::ssaf

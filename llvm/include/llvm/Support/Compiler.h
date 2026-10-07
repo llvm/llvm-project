@@ -203,7 +203,7 @@
 #define LLVM_TEMPLATE_ABI LLVM_ABI
 #define LLVM_EXPORT_TEMPLATE
 #define LLVM_ABI_EXPORT LLVM_ABI
-#elif defined(__MACH__) || defined(__WASM__) || defined(__EMSCRIPTEN__)
+#elif defined(__MACH__) || defined(__wasm__) || defined(__EMSCRIPTEN__)
 #define LLVM_ABI __attribute__((visibility("default")))
 #define LLVM_TEMPLATE_ABI
 #define LLVM_EXPORT_TEMPLATE
@@ -238,6 +238,12 @@
 #define LLVM_ATTRIBUTE_USED
 #endif
 
+#if __has_attribute(warn_unused)
+#define LLVM_ATTRIBUTE_WARN_UNUSED __attribute__((warn_unused))
+#else
+#define LLVM_ATTRIBUTE_WARN_UNUSED
+#endif
+
 // Only enabled for clang:
 // See https://gcc.gnu.org/bugzilla/show_bug.cgi?id=99587
 // GCC may produce "warning: 'retain' attribute ignored" (despite
@@ -248,10 +254,13 @@
 #define LLVM_ATTRIBUTE_RETAIN
 #endif
 
+// For deprecations that are not a simple rename, use [[deprecated(MSG)]]
+// instead.
 #if defined(__clang__)
-#define LLVM_DEPRECATED(MSG, FIX) __attribute__((deprecated(MSG, FIX)))
+#define LLVM_DEPRECATED_WITH_FIXIT(MSG, FIX)                                   \
+  __attribute__((deprecated(MSG, FIX)))
 #else
-#define LLVM_DEPRECATED(MSG, FIX) [[deprecated(MSG)]]
+#define LLVM_DEPRECATED_WITH_FIXIT(MSG, FIX) [[deprecated(MSG)]]
 #endif
 
 // clang-format off
@@ -263,10 +272,10 @@
   _Pragma("GCC diagnostic pop")
 #elif defined(_MSC_VER)
 #define LLVM_SUPPRESS_DEPRECATED_DECLARATIONS_PUSH                             \
-  _Pragma("warning(push)")                                                     \
-  _Pragma("warning(disable : 4996)")
+  __pragma(warning(push))                                                     \
+  __pragma(warning(disable : 4996))
 #define LLVM_SUPPRESS_DEPRECATED_DECLARATIONS_POP                              \
-  _Pragma("warning(pop)")
+  __pragma(warning(pop))
 #else
 #define LLVM_SUPPRESS_DEPRECATED_DECLARATIONS_PUSH
 #define LLVM_SUPPRESS_DEPRECATED_DECLARATIONS_POP
@@ -303,6 +312,11 @@
 // FIXME: Provide this for PE/COFF targets.
 #if __has_attribute(weak) && !defined(__MINGW32__) && !defined(__CYGWIN__) &&  \
     !defined(_WIN32)
+#define LLVM_HAS_ATTRIBUTE_WEAK 1
+#else
+#define LLVM_HAS_ATTRIBUTE_WEAK 0
+#endif
+#if LLVM_HAS_ATTRIBUTE_WEAK
 #define LLVM_ATTRIBUTE_WEAK __attribute__((__weak__))
 #else
 #define LLVM_ATTRIBUTE_WEAK
@@ -356,6 +370,15 @@
 #define LLVM_ATTRIBUTE_ALWAYS_INLINE __forceinline
 #else
 #define LLVM_ATTRIBUTE_ALWAYS_INLINE inline
+#endif
+
+/// LLVM_ATTRIBUTE_ALWAYS_INLINE_UNLESS_DEBUG - Like
+/// LLVM_ATTRIBUTE_ALWAYS_INLINE but disabled in debug builds to avoid stack
+/// overflow with deep recursion.
+#if defined(NDEBUG)
+#define LLVM_ATTRIBUTE_ALWAYS_INLINE_UNLESS_DEBUG LLVM_ATTRIBUTE_ALWAYS_INLINE
+#else
+#define LLVM_ATTRIBUTE_ALWAYS_INLINE_UNLESS_DEBUG inline
 #endif
 
 /// LLVM_ATTRIBUTE_NO_DEBUG - On compilers where we have a directive to do
@@ -452,8 +475,8 @@
 #define LLVM_SUPPRESS_MSVC_ATTR_IS_VENDOR_EXT_POP
 #else // MSVC < 19.43
 #define LLVM_SUPPRESS_MSVC_ATTR_IS_VENDOR_EXT_PUSH                             \
-  _Pragma("warning(push)") _Pragma("warning(disable : 4848)")
-#define LLVM_SUPPRESS_MSVC_ATTR_IS_VENDOR_EXT_POP _Pragma("warning(pop)")
+  __pragma(warning(push)) __pragma(warning(disable : 4848))
+#define LLVM_SUPPRESS_MSVC_ATTR_IS_VENDOR_EXT_POP __pragma(warning(pop))
 #endif
 
 #if LLVM_HAS_CPP_ATTRIBUTE(no_unique_address)
@@ -763,5 +786,37 @@ void AnnotateIgnoreWritesEnd(const char *file, int line);
     virtual void anchor()
 #endif
 // clang-format on
+
+/// \macro LLVM_IS_X86
+/// Whether the target architecture is x86 / x86-64.
+#if defined(__x86_64__) || defined(__i386__)
+#define LLVM_IS_X86 1
+#else
+#define LLVM_IS_X86 0
+#endif
+
+/// \macro LLVM_TARGET_SSE42
+/// Function attribute to compile a function with SSE4.2 enabled.
+#if defined(__has_attribute) && __has_attribute(target)
+#define LLVM_TARGET_SSE42 __attribute__((target("sse4.2")))
+#else
+#define LLVM_TARGET_SSE42
+#endif
+
+#if __has_builtin(__builtin_cpu_supports) &&                                   \
+    (defined(__linux__) || defined(__APPLE__))
+#define LLVM_CPU_SUPPORTS(feature) __builtin_cpu_supports(feature)
+#else
+#define LLVM_CPU_SUPPORTS(feature) 0
+#endif
+
+/// \macro LLVM_CPU_SUPPORTS_SSE42
+/// Expands to true if the runtime cpu supports SSE4.2, or if compiled with
+/// SSE4.2 enabled.
+#if defined(__SSE4_2__)
+#define LLVM_CPU_SUPPORTS_SSE42 1
+#else
+#define LLVM_CPU_SUPPORTS_SSE42 LLVM_CPU_SUPPORTS("sse4.2")
+#endif
 
 #endif

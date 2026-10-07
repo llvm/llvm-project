@@ -49,7 +49,7 @@ class VPSingleDefRecipe;
 /// coming from the input IR, symbolic values and values defined by recipes.
 class LLVM_ABI_FOR_TEST VPValue {
   friend struct VPIRValue;
-  friend struct VPSymbolicValue;
+  friend class VPSymbolicValue;
   friend class VPRecipeValue;
   friend class VPRegionValue;
 
@@ -186,9 +186,8 @@ public:
   /// Go through the uses list for this VPValue and make each use point to \p
   /// New if the callback ShouldReplace returns true for the given use specified
   /// by a pair of (VPUser, the use index).
-  void replaceUsesWithIf(
-      VPValue *New,
-      llvm::function_ref<bool(VPUser &U, unsigned Idx)> ShouldReplace);
+  void replaceUsesWithIf(VPValue *New,
+                         llvm::function_ref<bool(VPUser &U)> ShouldReplace);
 
   /// Returns the recipe defining this VPValue or nullptr if it is not defined
   /// by a recipe, i.e. is a live-in.
@@ -198,9 +197,6 @@ public:
   /// Returns the scalar type of this VPValue, dispatching based on the
   /// concrete subclass.
   Type *getScalarType() const;
-
-  /// Returns true if this VPValue is defined by a recipe.
-  bool hasDefiningRecipe() const { return getDefiningRecipe(); }
 
   /// Returns true if the VPValue is defined outside any loop.
   bool isDefinedOutsideLoopRegions() const;
@@ -212,24 +208,56 @@ public:
   }
 };
 
-/// VPValues defined by a VPRegionBlock, like the canonical IV.
-class VPRegionValue : public VPValue {
-  VPRegionBlock *DefiningRegion;
+/// A symbolic live-in VPValue, used for values like vector trip count, VF, and
+/// VFxUF.
+class VPSymbolicValue : public VPValue {
+  /// The scalar type of this symbolic value.
   Type *Ty;
+
+  /// Track whether this value has been materialized (replaced). After
+  /// materialization, accessing users should trigger an assertion.
+  bool Materialized = false;
+
+protected:
+  VPSymbolicValue(unsigned char SC, Type *Ty) : VPValue(SC, nullptr), Ty(Ty) {}
+
+public:
+  VPSymbolicValue(Type *Ty) : VPSymbolicValue(VPVSymbolicSC, Ty) {}
+
+  /// Returns the scalar type of this symbolic value.
+  Type *getType() const { return Ty; }
+
+  /// Returns true if this value has been materialized.
+  bool isMaterialized() const { return Materialized; }
+
+  /// Mark this value as materialized.
+  void markMaterialized() {
+    assert(!Materialized && "VPSymbolicValue already materialized");
+    Materialized = true;
+  }
+
+  static bool classof(const VPValue *V) {
+    return V->getVPValueID() == VPVSymbolicSC ||
+           V->getVPValueID() == VPRegionValueSC;
+  }
+};
+
+/// VPValues are defined by a VPRegionBlock, like the canonical IV. They must
+/// be materialized when the containing region is dissolved, before VPlan
+/// execution.
+class VPRegionValue : public VPSymbolicValue {
+  VPRegionBlock *DefiningRegion;
   DebugLoc DL;
 
 public:
   VPRegionValue(Type *Ty, DebugLoc DL, VPRegionBlock *Region)
-      : VPValue(VPValue::VPRegionValueSC), DefiningRegion(Region), Ty(Ty),
+      : VPSymbolicValue(VPValue::VPRegionValueSC, Ty), DefiningRegion(Region),
         DL(DL) {}
 
   ~VPRegionValue() override = default;
 
   /// Returns the region that defines this value.
   VPRegionBlock *getDefiningRegion() const { return DefiningRegion; }
-
-  /// Returns the type of the VPRegionValue.
-  Type *getType() const { return Ty; }
 
   /// Returns the debug location of the VPRegionValue.
   DebugLoc getDebugLoc() const { return DL; }
@@ -260,13 +288,27 @@ struct VPIRValue : public VPValue {
   }
 };
 
-/// An overlay on VPIRValue for VPValues that wrap a ConstantInt. Provides
-/// convenient accessors for the underlying constant.
-struct VPConstantInt : public VPIRValue {
-  VPConstantInt(ConstantInt *CI) : VPIRValue(CI) {}
+/// An overlay on VPIRValue for VPValues that wrap a Constant. May be an
+/// integer, floating-point, or a vector constant.
+struct VPConstant : public VPIRValue {
+  VPConstant(Constant *C) : VPIRValue(C) {}
 
   static bool classof(const VPValue *V) {
-    return isa<VPIRValue>(V) && isa<ConstantInt>(V->getUnderlyingValue());
+    auto *IRV = dyn_cast<VPIRValue>(V);
+    return IRV && isa<Constant>(IRV->getValue());
+  }
+
+  const Constant *getConstant() const { return cast<Constant>(getValue()); }
+};
+
+/// An overlay on VPConstant for VPValues that wrap a ConstantInt. Provides
+/// convenient accessors for the underlying APInt.
+struct VPConstantInt : public VPConstant {
+  VPConstantInt(ConstantInt *CI) : VPConstant(CI) {}
+
+  static bool classof(const VPValue *V) {
+    auto *VPC = dyn_cast<VPConstant>(V);
+    return VPC && isa<ConstantInt>(VPC->getConstant());
   }
 
   bool isOne() const { return getAPInt().isOne(); }
@@ -280,36 +322,6 @@ struct VPConstantInt : public VPIRValue {
   unsigned getBitWidth() const { return getAPInt().getBitWidth(); }
 
   uint64_t getZExtValue() const { return getAPInt().getZExtValue(); }
-};
-
-/// A symbolic live-in VPValue, used for values like vector trip count, VF, and
-/// VFxUF.
-struct VPSymbolicValue : public VPValue {
-  VPSymbolicValue(Type *Ty) : VPValue(VPVSymbolicSC, nullptr), Ty(Ty) {}
-
-  static bool classof(const VPValue *V) {
-    return V->getVPValueID() == VPVSymbolicSC;
-  }
-
-  /// Returns the scalar type of this symbolic value.
-  Type *getType() const { return Ty; }
-
-  /// Returns true if this symbolic value has been materialized.
-  bool isMaterialized() const { return Materialized; }
-
-  /// Mark this symbolic value as materialized.
-  void markMaterialized() {
-    assert(!Materialized && "VPSymbolicValue already materialized");
-    Materialized = true;
-  }
-
-private:
-  /// The scalar type of this symbolic value.
-  Type *Ty;
-
-  /// Track whether this symbolic value has been materialized (replaced).
-  /// After materialization, accessing users should trigger an assertion.
-  bool Materialized = false;
 };
 
 /// Abstract base class for VPValues defined by a VPRecipeBase.
@@ -344,14 +356,14 @@ public:
 };
 
 /// A VPRecipeValue defined by a VPSingleDefRecipe.
-class VPSingleDefValue : public VPRecipeValue {
+class LLVM_ABI_FOR_TEST VPSingleDefValue : public VPRecipeValue {
   friend class VPDef;
   friend class VPSingleDefRecipe;
 
 protected:
   /// Construct a VPSingleDefValue. Must only be used by VPSingleDefRecipe.
-  LLVM_ABI_FOR_TEST VPSingleDefValue(VPSingleDefRecipe *Def,
-                                     Value *UV = nullptr, Type *Ty = nullptr);
+  VPSingleDefValue(VPSingleDefRecipe *Def, Value *UV = nullptr,
+                   Type *Ty = nullptr);
 
 public:
   ~VPSingleDefValue() override;
@@ -459,6 +471,7 @@ public:
   const_operand_range operands() const {
     return const_operand_range(op_begin(), op_end());
   }
+  bool operands_empty() const { return Operands.empty(); } // NOLINT
 
   /// Returns true if the VPUser uses scalars of operand \p Op. Conservatively
   /// returns if only first (scalar) lane is used, as default.

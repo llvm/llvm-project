@@ -212,7 +212,7 @@ public:
 protected:
   void DoExecute(Args &args, CommandReturnObject &result) override {
     Stream &ostrm = result.GetOutputStream();
-    ostrm.Printf("Available platforms:\n");
+    ostrm.PutCString("Available platforms:\n");
 
     PlatformSP host_platform_sp(Platform::GetHostPlatform());
     ostrm.Format("{0}: {1}\n", host_platform_sp->GetPluginName(),
@@ -1020,7 +1020,7 @@ public:
 
     FileSpec src_fs(src);
     FileSystem::Instance().Resolve(src_fs);
-    FileSpec dst_fs(dst ? dst : src_fs.GetFilename().GetCString());
+    FileSpec dst_fs(dst ? dst : src_fs.GetFilename());
 
     PlatformSP platform_sp(
         GetDebugger().GetPlatformList().GetSelectedPlatform());

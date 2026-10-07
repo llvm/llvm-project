@@ -1,4 +1,4 @@
-RUN: %dexter_regression_test_run --binary %s --use-script --skip-run -- %s 2>&1 | FileCheck %s
+RUN: %dexter_regression_test_run --binary %s --skip-run -- %s 2>&1 | FileCheck %s
 
 Tests that we can correctly parse+print !address nodes.
 

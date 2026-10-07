@@ -10,6 +10,7 @@
 #include "clang/AST/ASTConsumer.h"
 #include "clang/AST/ASTContext.h"
 #include "clang/AST/Decl.h"
+#include "clang/Basic/AtomicLineLogger.h"
 #include "clang/Basic/CharInfo.h"
 #include "clang/Basic/Diagnostic.h"
 #include "clang/Basic/DiagnosticFrontend.h"
@@ -34,6 +35,7 @@
 #include "clang/Lex/HeaderSearch.h"
 #include "clang/Lex/Preprocessor.h"
 #include "clang/Lex/PreprocessorOptions.h"
+#include "clang/Lex/TextEncoding.h"
 #include "clang/Sema/CodeCompleteConsumer.h"
 #include "clang/Sema/ParsedAttr.h"
 #include "clang/Sema/Sema.h"
@@ -58,6 +60,7 @@
 #include "llvm/Support/Path.h"
 #include "llvm/Support/Signals.h"
 #include "llvm/Support/SmallVectorMemoryBuffer.h"
+#include "llvm/Support/Threading.h"
 #include "llvm/Support/TimeProfiler.h"
 #include "llvm/Support/Timer.h"
 #include "llvm/Support/VirtualFileSystem.h"
@@ -183,6 +186,11 @@ void CompilerInstance::setSourceManager(
 
 void CompilerInstance::setPreprocessor(std::shared_ptr<Preprocessor> Value) {
   PP = std::move(Value);
+}
+
+IntrusiveRefCntPtr<ASTContext> CompilerInstance::getASTContextPtr() const {
+  assert(Context && "Compiler instance has no AST context!");
+  return Context;
 }
 
 void CompilerInstance::setASTContext(
@@ -559,6 +567,11 @@ void CompilerInstance::createPreprocessor(TranslationUnitKind TUKind) {
 
   if (GetDependencyDirectives)
     PP->setDependencyDirectivesGetter(*GetDependencyDirectives);
+
+  if (auto EC = TextEncoding::setConvertersFromOptions(PP->getTextEncoding(),
+                                                       getLangOpts()))
+    PP->getDiagnostics().Report(clang::diag::err_fe_text_encoding_config)
+        << PP->getTextEncoding().getLiteralEncoding();
 }
 
 // ASTContext
@@ -1102,7 +1115,7 @@ void CompilerInstance::LoadRequestedPlugins() {
 
   // Load and store pass plugins for the back-end.
   for (const std::string &Path : getCodeGenOpts().PassPlugins) {
-    if (auto PassPlugin = llvm::PassPlugin::Load(Path)) {
+    if (auto PassPlugin = llvm::PassPlugin::load(Path)) {
       PassPlugins.emplace_back(std::make_unique<llvm::PassPlugin>(*PassPlugin));
     } else {
       getDiagnostics().Report(diag::err_fe_unable_to_load_plugin)
@@ -1137,6 +1150,7 @@ static Language getLanguageFromOptions(const LangOptions &LangOpts) {
 std::unique_ptr<CompilerInstance> CompilerInstance::cloneForModuleCompileImpl(
     SourceLocation ImportLoc, StringRef ModuleName, FrontendInputFile Input,
     StringRef OriginalModuleMapFile, StringRef ModuleFileName,
+    ArrayRef<std::string> DirectoryDependencies,
     std::optional<ThreadSafeCloneConfig> ThreadSafeConfig) {
   // Construct a compiler invocation for creating this module.
   auto Invocation = std::make_shared<CompilerInvocation>(getInvocation());
@@ -1156,6 +1170,17 @@ std::unique_ptr<CompilerInstance> CompilerInstance::cloneForModuleCompileImpl(
                    return HSOpts.ModulesIgnoreMacros.contains(
                        llvm::CachedHashString(MacroDef.split('=').first));
                  });
+  HSOpts.ModulesIgnoreMacros.clear();
+
+  // Remove any search paths that are explicitly ignored by the module.
+  // They aren't supposed to affect how the module is built anyway.
+  if (!HSOpts.ModulesIgnoreSearchPaths.empty())
+    llvm::erase_if(HSOpts.UserEntries,
+                   [&HSOpts](const HeaderSearchOptions::Entry &E) {
+                     return HSOpts.ModulesIgnoreSearchPaths.contains(
+                         llvm::CachedHashString(E.Path));
+                   });
+  HSOpts.ModulesIgnoreSearchPaths.clear();
 
   // If the original compiler invocation had -fmodule-name, pass it through.
   Invocation->getLangOpts().ModuleName =
@@ -1239,6 +1264,11 @@ std::unique_ptr<CompilerInstance> CompilerInstance::cloneForModuleCompileImpl(
   // Make a copy for the new instance.
   Instance.FailedModules = FailedModules;
 
+  // An inferred framework is built from module map text printed by this
+  // instance rather than by repeating the inference, so directories the
+  // inference enumerated (its Frameworks subdirectory) are only known here.
+  Instance.setInheritedDirectoryDependencies(DirectoryDependencies);
+
   // Pass along the GenModuleActionWrapper callback.
   Instance.setGenModuleActionWrapper(getGenModuleActionWrapper());
 
@@ -1296,8 +1326,13 @@ CompilerInstance::compileModule(SourceLocation ImportLoc, StringRef ModuleName,
 
   // Execute the action to actually build the module in-place. Use a separate
   // thread so that we get a stack large enough.
+  uint64_t ParentTID = llvm::get_threadid();
   bool Crashed = !llvm::CrashRecoveryContext().RunSafelyOnNewStack(
       [&]() {
+        getModuleCache().getLogger().log()
+            << "module_compile_thread: parent=" << ParentTID
+            << " pcm_compile: " << ModuleFileName;
+
         auto OS = std::make_unique<llvm::raw_svector_ostream>(Buffer);
 
         std::unique_ptr<FrontendAction> Action =
@@ -1411,7 +1446,7 @@ std::unique_ptr<CompilerInstance> CompilerInstance::cloneForModuleCompile(
         ImportLoc, ModuleName,
         FrontendInputFile(ModuleMapFilePath, IK, IsSystem),
         ModMap.getModuleMapFileForUniquing(Module)->getName(), ModuleFileName,
-        std::move(ThreadSafeConfig));
+        Module->getDirectoryDependencies(), std::move(ThreadSafeConfig));
   }
 
   // FIXME: We only need to fake up an input file here as a way of
@@ -1429,7 +1464,7 @@ std::unique_ptr<CompilerInstance> CompilerInstance::cloneForModuleCompile(
       ImportLoc, ModuleName,
       FrontendInputFile(FakeModuleMapFile, IK, +Module->IsSystem),
       ModMap.getModuleMapFileForUniquing(Module)->getName(), ModuleFileName,
-      std::move(ThreadSafeConfig));
+      Module->getDirectoryDependencies(), std::move(ThreadSafeConfig));
 
   std::unique_ptr<llvm::MemoryBuffer> ModuleMapBuffer =
       llvm::MemoryBuffer::getMemBufferCopy(InferredModuleMapContent);

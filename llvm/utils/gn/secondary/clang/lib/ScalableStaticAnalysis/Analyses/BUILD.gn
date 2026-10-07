@@ -19,9 +19,15 @@ static_library("Analyses") {
     "PointerFlow/PointerFlowExtractor.cpp",
     "PointerFlow/PointerFlowFormat.cpp",
     "SSAFAnalysesCommon.cpp",
+    "SharedLexicalRepresentation/EntitySourceLocationExtractor.cpp",
+    "SharedLexicalRepresentation/SharedLexicalRepresentationFormat.cpp",
+    "TypeConstrainedPointers/TypeConstrainedPointers.cpp",
     "UnsafeBufferUsage/UnsafeBufferUsage.cpp",
     "UnsafeBufferUsage/UnsafeBufferUsageAnalysis.cpp",
     "UnsafeBufferUsage/UnsafeBufferUsageExtractor.cpp",
     "UnsafeBufferUsage/UnsafeBufferUsageFormat.cpp",
+    "VirtualMethodFamily/VirtualMethodEntityExtractor.cpp",
+    "VirtualMethodFamily/VirtualMethodFamilyAnalysis.cpp",
+    "VirtualMethodFamily/VirtualMethodFamilyFormat.cpp",
   ]
 }

@@ -1051,14 +1051,14 @@ TEST_CONSTEXPR(match_m256i(_mm256_mul_epu32((__m256i)(__v8si){+1, -2, +3, -4, +5
 
 __m256i test_mm256_mulhi_epu16(__m256i a, __m256i b) {
   // CHECK-LABEL: test_mm256_mulhi_epu16
-  // CHECK: call <16 x i16> @llvm.x86.avx2.pmulhu.w(<16 x i16> %{{.*}}, <16 x i16> %{{.*}})
+  // CHECK: call <16 x i16> @llvm.umulh.v16i16(<16 x i16> %{{.*}}, <16 x i16> %{{.*}})
   return _mm256_mulhi_epu16(a, b);
 }
 TEST_CONSTEXPR(match_v16hi(_mm256_mulhi_epu16((__m256i)(__v16hi){+1, -2, +3, -4, +5, -6, +7, -8, +9, -10, +11, -12, +13, -14, +15, -16}, (__m256i)(__v16hi){-32, -30, +28, +26, -24, -22, +20, +18, -16, -14, +12, +10, -8, +6, -4, +2}), 0, -32, 0, 25, 4, -28, 0, 17, 8, -24, 0, 9, 12, 5, 14, 1));
 
 __m256i test_mm256_mulhi_epi16(__m256i a, __m256i b) {
   // CHECK-LABEL: test_mm256_mulhi_epi16
-  // CHECK: call <16 x i16> @llvm.x86.avx2.pmulh.w(<16 x i16> %{{.*}}, <16 x i16> %{{.*}})
+  // CHECK: call <16 x i16> @llvm.smulh.v16i16(<16 x i16> %{{.*}}, <16 x i16> %{{.*}})
   return _mm256_mulhi_epi16(a, b);
 }
 TEST_CONSTEXPR(match_v16hi(_mm256_mulhi_epi16((__m256i)(__v16hi){+1, -2, +3, -4, +5, -6, +7, -8, +9, -10, +11, -12, +13, -14, +15, -16}, (__m256i)(__v16hi){-32, -30, +28, +26, -24, -22, +20, +18, -16, -14, +12, +10, -8, +6, -4, +2}), -1, 0, 0, -1, -1, 0, 0, -1, -1, 0, 0, -1, -1, -1, -1, -1));
@@ -1185,6 +1185,15 @@ __m256i test_mm256_sad_epu8(__m256i x, __m256i y) {
   // CHECK: call {{.*}}<4 x i64> @llvm.x86.avx2.psad.bw(<32 x i8> %{{.*}}, <32 x i8> %{{.*}})
   return _mm256_sad_epu8(x, y);
 }
+TEST_CONSTEXPR(match_m256i(_mm256_sad_epu8((__m256i)(__v32qu){0, 1, 2, 3, 4, 5, 6, 7,
+                                                             8, 9, 10, 11, 12, 13, 14, 15,
+                                                             16, 17, 18, 19, 20, 21, 22, 23,
+                                                             24, 25, 26, 27, 28, 29, 30, 31},
+                                           (__m256i)(__v32qu){31, 30, 29, 28, 27, 26, 25, 24,
+                                                             23, 22, 21, 20, 19, 18, 17, 16,
+                                                             15, 14, 13, 12, 11, 10, 9, 8,
+                                                             7, 6, 5, 4, 3, 2, 1, 0}),
+                            192ULL, 64ULL, 64ULL, 192ULL));
 
 __m256i test_mm256_shuffle_epi8(__m256i a, __m256i b) {
   // CHECK-LABEL: test_mm256_shuffle_epi8

@@ -51,6 +51,17 @@ let Definition = "modulelist", Path = "symbols" in {
     Global,
     DefaultFalse,
     Desc<"Enable on demand symbol loading in LLDB. LLDB will load debug info on demand for each module based on various conditions (e.g. matched breakpoint, resolved stack frame addresses and matched global variables/function symbols in symbol table) to improve performance. Please refer to docs/use/ondemand.rst for details.">;
+  def DemangledNameInfoCacheSize: Property<"demangled-name-info-cache-size", "UInt64">,
+    Global,
+    DefaultUnsignedValue<4096>,
+    Desc<"The maximum number of formatted function names to cache. A value of 0 disables the cache.">;
+}
+
+let Definition = "diagnostics", Path = "diagnostics" in {
+  def CollectBinaries: Property<"collect-binaries", "Boolean">,
+    Global,
+    DefaultFalse,
+    Desc<"When enabled, a diagnostics bundle also collects the main executable, its symbol file, and the core file (when debugging one) to help reproduce the bug. These files can be large and may contain sensitive data (a core file captures process memory), so this is off by default.">;
 }
 
 #ifndef NDEBUG
@@ -199,6 +210,30 @@ let Definition = "debugger", Path = "" in {
     Global,
     DefaultStringValue<"${ansi.normal}">,
     Desc<"When displaying progress in a color-enabled terminal, use the ANSI terminal code specified in this format immediately after the progress message.">;
+  def LabelAnsiPrefix: Property<"label-ansi-prefix", "String">,
+    Global,
+    DefaultStringValue<"${ansi.fg.green}${ansi.bold}">,
+    Desc<"When displaying a field label in command output in a color-enabled terminal, use the ANSI terminal code specified in this format immediately before the label.">;
+  def LabelAnsiSuffix: Property<"label-ansi-suffix", "String">,
+    Global,
+    DefaultStringValue<"${ansi.normal}">,
+    Desc<"When displaying a field label in command output in a color-enabled terminal, use the ANSI terminal code specified in this format immediately after the label.">;
+  def TitleAnsiPrefix: Property<"title-ansi-prefix", "String">,
+    Global,
+    DefaultStringValue<"${ansi.fg.cyan}${ansi.bold}">,
+    Desc<"When displaying the title of an entry in a list in a color-enabled terminal, use the ANSI terminal code specified in this format immediately before the title.">;
+  def TitleAnsiSuffix: Property<"title-ansi-suffix", "String">,
+    Global,
+    DefaultStringValue<"${ansi.normal}">,
+    Desc<"When displaying the title of an entry in a list in a color-enabled terminal, use the ANSI terminal code specified in this format immediately after the title.">;
+  def DividerAnsiPrefix: Property<"divider-ansi-prefix", "String">,
+    Global,
+    DefaultStringValue<"${ansi.faint}">,
+    Desc<"When displaying the divider between entries of a list in a color-enabled terminal, use the ANSI terminal code specified in this format immediately before the divider.">;
+  def DividerAnsiSuffix: Property<"divider-ansi-suffix", "String">,
+    Global,
+    DefaultStringValue<"${ansi.normal}">,
+    Desc<"When displaying the divider between entries of a list in a color-enabled terminal, use the ANSI terminal code specified in this format immediately after the divider.">;
   def ShowStatusline: Property<"show-statusline", "Boolean">,
     Global,
     DefaultTrue,
@@ -260,10 +295,11 @@ let Definition = "debugger", Path = "" in {
     Global,
     DefaultStringValue<"frame #${frame.index}: {${ansi.fg.cyan}${frame.pc}${ansi.normal} }{${module.file.basename}{`}}{${function.name-without-args}{${frame.no-debug}${function.pc-offset}}}{ at ${ansi.fg.cyan}${line.file.basename}${ansi.normal}:${ansi.fg.yellow}${line.number}${ansi.normal}{:${ansi.fg.yellow}${line.column}${ansi.normal}}}${frame.kind}{${function.is-optimized} [opt]}{${function.is-inlined} [inlined]}{${frame.is-artificial} [artificial]}\\\\n">,
     Desc<"The default frame format string to use when displaying stack frame information for threads from thread backtrace unique.">;
-  def ShowAutosuggestion: Property<"show-autosuggestion", "Boolean">,
+  def ShowAutosuggestion: Property<"show-autosuggestion", "Enum">,
     Global,
-    DefaultFalse,
-    Desc<"If true, LLDB will show suggestions to complete the command the user typed. Suggestions may be accepted using Ctrl-F.">;
+    DefaultEnumValue<"eAutosuggestionOff">,
+    EnumValues<"OptionEnumValues(g_show_autosuggestion_enum_values)">,
+    Desc<"Controls whether LLDB shows suggestions to complete the command the user typed. Suggestions may be accepted using Ctrl-F. Use 'true' to suggest from previously entered commands, 'tab-mode' to suggest the prefix that would be inserted by tab completion, or 'false' to disable suggestions.">;
   def ShowAutosuggestionAnsiPrefix: Property<"show-autosuggestion-ansi-prefix", "String">,
     Global,
     DefaultStringValue<"${ansi.faint}">,

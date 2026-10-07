@@ -199,13 +199,18 @@ Value *PHITransAddr::translateSubExpr(Value *V, BasicBlock *CurBB,
     }
 
     // Otherwise we have to see if a casted version of the incoming pointer
-    // is available.  If so, we can use it, otherwise we have to fail.
-    for (User *U : PHIIn->users()) {
-      if (CastInst *CastI = dyn_cast<CastInst>(U))
-        if (CastI->getOpcode() == Cast->getOpcode() &&
-            CastI->getType() == Cast->getType() &&
-            (!DT || DT->dominates(CastI->getParent(), PredBB)))
-          return CastI;
+    // is available.  If so, we can use it, otherwise we have to fail.  Don't
+    // scan the use list of a constant: ConstantData has no use list, and
+    // other constants may be used from different functions, whose blocks are
+    // not in this function's DominatorTree.
+    if (!isa<Constant>(PHIIn)) {
+      for (User *U : PHIIn->users()) {
+        if (CastInst *CastI = dyn_cast<CastInst>(U))
+          if (CastI->getOpcode() == Cast->getOpcode() &&
+              CastI->getType() == Cast->getType() &&
+              (!DT || DT->dominates(CastI->getParent(), PredBB)))
+            return CastI;
+      }
     }
     return nullptr;
   }
@@ -353,10 +358,10 @@ SelectAddr::SelectAddrs PHITransAddr::translateValue(BasicBlock *CurBB,
   return {TranslateSide(/*CondVal=*/true), TranslateSide(/*CondVal=*/false)};
 }
 
-Value *PHITransAddr::getSelectCondition() const {
+SelectInst *PHITransAddr::getSelect() const {
   for (Instruction *I : InstInputs)
     if (auto *SI = dyn_cast<SelectInst>(I))
-      return SI->getCondition();
+      return SI;
   return nullptr;
 }
 

@@ -1,5 +1,5 @@
-; RUN: llc -mtriple=amdgcn -mcpu=gfx600 < %s | FileCheck -check-prefix=SI -check-prefix=GCN -check-prefix=FUNC %s
-; RUN: llc -mtriple=amdgcn -mcpu=tonga -mattr=-flat-for-global < %s | FileCheck -check-prefix=VI -check-prefix=GCN -check-prefix=FUNC %s
+; RUN: llc -mtriple=amdgpu6.00 < %s | FileCheck -check-prefix=SI -check-prefix=GCN -check-prefix=FUNC %s
+; RUN: llc -mtriple=amdgpu8.02 -mattr=-flat-for-global < %s | FileCheck -check-prefix=VI -check-prefix=GCN -check-prefix=FUNC %s
 
 ; FUNC-LABEL: {{^}}fneg_f64:
 ; GCN: s_xor_b32 s{{[0-9]+}}, s{{[0-9]+}}, 0x80000000

@@ -9,55 +9,90 @@
 // <algorithm>
 
 // template <class InputIterator, class Predicate>
-//     constexpr bool       // constexpr after C++17
-//   all_of(InputIterator first, InputIterator last, Predicate pred);
+// constexpr bool all_of(InputIterator first, InputIterator last, Predicate pred); // constexpr since C++20
 
 #include <algorithm>
 #include <cassert>
-#include <iterator>
 
 #include "test_macros.h"
 #include "test_iterators.h"
+#include "type_algorithms.h"
 
-struct test1
-{
-    TEST_CONSTEXPR bool operator()(const int& i) const
-    {
-        return i % 2 == 0;
-    }
+struct is_odd {
+  TEST_CONSTEXPR bool operator()(const int& i) const { return i % 2 != 0; }
 };
 
-#if TEST_STD_VER > 17
-TEST_CONSTEXPR bool test_constexpr() {
-    int ia[] = {2, 4, 6, 8};
-    int ib[] = {2, 4, 5, 8};
-    return  std::all_of(std::begin(ia), std::end(ia), test1())
-        && !std::all_of(std::begin(ib), std::end(ib), test1())
-        ;
-    }
-#endif
+struct counting_predicate {
+  int* times_applied;
+  bool result;
+  TEST_CONSTEXPR counting_predicate(int* counter, bool r) : times_applied(counter), result(r) {}
+  TEST_CONSTEXPR_CXX14 bool operator()(int) const {
+    ++*times_applied;
+    return result;
+  }
+};
 
-int main(int, char**)
-{
-    {
-        int ia[] = {2, 4, 6, 8};
-        const unsigned sa = sizeof(ia)/sizeof(ia[0]);
-        assert(std::all_of(cpp17_input_iterator<const int*>(ia),
-                           cpp17_input_iterator<const int*>(ia + sa), test1()) == true);
-        assert(std::all_of(cpp17_input_iterator<const int*>(ia),
-                           cpp17_input_iterator<const int*>(ia), test1()) == true);
-    }
-    {
-        const int ia[] = {2, 4, 5, 8};
-        const unsigned sa = sizeof(ia)/sizeof(ia[0]);
-        assert(std::all_of(cpp17_input_iterator<const int*>(ia),
-                           cpp17_input_iterator<const int*>(ia + sa), test1()) == false);
-        assert(std::all_of(cpp17_input_iterator<const int*>(ia),
-                           cpp17_input_iterator<const int*>(ia), test1()) == true);
+struct Test {
+  template <class Iter>
+  TEST_CONSTEXPR_CXX20 void operator()() {
+    { // an empty range vacuously satisfies the predicate
+      int a[] = {2, 4, 6, 8};
+      // The return type is always `bool`, regardless of the iterator category.
+      ASSERT_SAME_TYPE(bool, decltype(std::all_of(Iter(a), Iter(a), is_odd())));
+      assert(std::all_of(Iter(a), Iter(a), is_odd()));
     }
 
-#if TEST_STD_VER > 17
-    static_assert(test_constexpr());
+    { // every element satisfies the predicate
+      int a[] = {1, 3, 5, 7};
+      assert(std::all_of(Iter(a), Iter(a + 4), is_odd()));
+    }
+
+    { // no element satisfies the predicate
+      int a[] = {2, 4, 6, 8};
+      assert(!std::all_of(Iter(a), Iter(a + 4), is_odd()));
+    }
+
+    { // the only non-satisfying element is the first one
+      int a[] = {2, 1, 3, 5};
+      assert(!std::all_of(Iter(a), Iter(a + 4), is_odd()));
+    }
+
+    { // the only non-satisfying element is in the middle
+      int a[] = {1, 3, 4, 5};
+      assert(!std::all_of(Iter(a), Iter(a + 4), is_odd()));
+    }
+
+    { // the only non-satisfying element is the last one
+      int a[] = {1, 3, 5, 8};
+      assert(!std::all_of(Iter(a), Iter(a + 4), is_odd()));
+    }
+
+    { // a single-element range, satisfying and not satisfying the predicate
+      int satisfies     = 1;
+      int not_satisfies = 2;
+      assert(std::all_of(Iter(&satisfies), Iter(&satisfies + 1), is_odd()));
+      assert(!std::all_of(Iter(&not_satisfies), Iter(&not_satisfies + 1), is_odd()));
+    }
+  }
+};
+
+TEST_CONSTEXPR_CXX20 bool test() {
+  types::for_each(types::cpp17_input_iterator_list<int*>(), Test());
+
+  { // the predicate is applied at most `last - first` times (complexity requirement)
+    int a[]     = {1, 2, 3, 4, 5};
+    int applied = 0;
+    assert(std::all_of(a, a + 5, counting_predicate(&applied, true)));
+    assert(applied == 5);
+  }
+
+  return true;
+}
+
+int main(int, char**) {
+  test();
+#if TEST_STD_VER >= 20
+  static_assert(test());
 #endif
 
   return 0;

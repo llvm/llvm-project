@@ -307,7 +307,7 @@ class raw_ostream;
     using Mi2IndexMap = DenseMap<const MachineInstr *, SlotIndex>;
     Mi2IndexMap mi2iMap;
 
-    /// MBBRanges - Map MBB number to (start, stop) indexes.
+    /// MBBRanges - Map analysis block number to (start, stop) indexes.
     SmallVector<std::pair<SlotIndex, SlotIndex>, 8> MBBRanges;
 
     /// Idx2MBBMap - Sorted list of pairs of index of first instruction
@@ -396,6 +396,20 @@ class raw_ostream;
       return index.listEntry()->getInstr();
     }
 
+    /// Returns true if \p Idx refers to an entry created to mark a basic block
+    /// boundary. Such entries never have an instruction attached.
+    LLVM_ABI bool isBlockBoundaryIndex(SlotIndex Idx) const;
+
+    /// Returns true if \p Idx refers to an instruction that has been erased.
+    bool isStaleIndex(SlotIndex Idx) const {
+      return !getInstructionFromIndex(Idx) && !isBlockBoundaryIndex(Idx);
+    }
+
+    /// Returns the register slot of the closest instruction preceding a stale
+    /// \p Idx, or the start index of its basic block if there is none. Returns
+    /// \p Idx unchanged if it is not stale.
+    LLVM_ABI SlotIndex canonicalizeIndex(SlotIndex Idx) const;
+
     /// Returns the next non-null index, if one exists.
     /// Otherwise returns getLastIndex().
     SlotIndex getNextNonNullIndex(SlotIndex Index) {
@@ -419,6 +433,8 @@ class raw_ostream;
         if (I == B)
           return getMBBStartIdx(MBB);
         --I;
+        if (I->isDebugInstr())
+          continue;
         Mi2IndexMap::const_iterator MapItr = mi2iMap.find(&*I);
         if (MapItr != mi2iMap.end())
           return MapItr->second;
@@ -436,37 +452,23 @@ class raw_ostream;
         ++I;
         if (I == E)
           return getMBBEndIdx(MBB);
+        if (I->isDebugInstr())
+          continue;
         Mi2IndexMap::const_iterator MapItr = mi2iMap.find(&*I);
         if (MapItr != mi2iMap.end())
           return MapItr->second;
       }
     }
 
-    /// Return the (start,end) range of the given basic block number.
-    const std::pair<SlotIndex, SlotIndex> &
-    getMBBRange(unsigned Num) const {
-      return MBBRanges[Num];
-    }
-
     /// Return the (start,end) range of the given basic block.
     const std::pair<SlotIndex, SlotIndex> &
     getMBBRange(const MachineBasicBlock *MBB) const {
-      return getMBBRange(MBB->getNumber());
-    }
-
-    /// Returns the first index in the given basic block number.
-    SlotIndex getMBBStartIdx(unsigned Num) const {
-      return getMBBRange(Num).first;
+      return MBBRanges[MBB->getAnalysisNumber()];
     }
 
     /// Returns the first index in the given basic block.
     SlotIndex getMBBStartIdx(const MachineBasicBlock *mbb) const {
       return getMBBRange(mbb).first;
-    }
-
-    /// Returns the index past the last valid index in the given basic block.
-    SlotIndex getMBBEndIdx(unsigned Num) const {
-      return getMBBRange(Num).second;
     }
 
     /// Returns the index past the last valid index in the given basic block.
@@ -630,9 +632,9 @@ class raw_ostream;
       SlotIndex startIdx(startEntry, SlotIndex::Slot_Block);
       SlotIndex endIdx(endEntry, SlotIndex::Slot_Block);
 
-      MBBRanges[prevMBB->getNumber()].second = startIdx;
+      MBBRanges[prevMBB->getAnalysisNumber()].second = startIdx;
 
-      assert(unsigned(mbb->getNumber()) == MBBRanges.size() &&
+      assert(unsigned(mbb->getAnalysisNumber()) == MBBRanges.size() &&
              "Blocks must be added in order");
       MBBRanges.push_back(std::make_pair(startIdx, endIdx));
       idx2MBBMap.push_back(IdxMBBPair(startIdx, mbb));
@@ -640,6 +642,11 @@ class raw_ostream;
       renumberIndexes(newItr);
       llvm::sort(idx2MBBMap, less_first());
     }
+
+    /// Inverse of insertMBBInMaps: merge \p MBB's slot range into its layout
+    /// predecessor and drop it from the maps. Call before erasing \p MBB and
+    /// after its instructions have been removed from the maps.
+    LLVM_ABI void removeMBBFromMaps(MachineBasicBlock &MBB);
 
     /// Renumber all indexes using the default instruction distance.
     LLVM_ABI void packIndexes();

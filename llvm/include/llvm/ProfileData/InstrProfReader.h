@@ -32,6 +32,7 @@
 #include "llvm/Support/MemoryBuffer.h"
 #include "llvm/Support/OnDiskHashTable.h"
 #include "llvm/Support/SwapByteOrder.h"
+#include "llvm/Support/VirtualFileSystemFwd.h"
 #include <algorithm>
 #include <cassert>
 #include <cstddef>
@@ -44,10 +45,6 @@
 namespace llvm {
 
 class InstrProfReader;
-
-namespace vfs {
-class FileSystem;
-} // namespace vfs
 
 /// A file format agnostic iterator over profiling data.
 template <class record_type = NamedInstrProfRecord,
@@ -477,7 +474,8 @@ private:
   bool atEnd() const { return Data == DataEnd; }
 
   void advanceData() {
-    // `CountersDelta` is a constant zero when using debug info correlation.
+    // `CountersDelta` and `BitmapDelta` are constant zero when using debug info
+    // correlation.
     if (!Correlator && !BIDFetcherCorrelator) {
       // The initial CountersDelta is the in-memory address difference between
       // the data and counts sections:

@@ -447,6 +447,19 @@ def uimm16 : Operand<i16>, ImmLeaf<i16, [{return Imm >= 0 && Imm < 65536;}]>{
   let OperandType = "OPERAND_IMMEDIATE";
 }
 
+def HinteUImm16Operand : AsmOperandClass {
+  let Name = "HinteUImm16";
+  let DiagnosticType = "InvalidHinteUImm16";
+  let RenderMethod = "addImmOperands";
+  let PredicateMethod = "isHinteUImm16";
+}
+
+def hinte_uimm16 : Operand<i64> {
+  let ParserMatchClass = HinteUImm16Operand;
+  let OperandType = "OPERAND_IMMEDIATE";
+  let DecoderMethod = "DecodeHinteUImm16";
+}
+
 def uimm6_64b : Operand<i64>, ImmLeaf<i64, [{ return Imm >= 0 && Imm < 64; }]> {
     let ParserMatchClass = UImm6Operand;
   let OperandType = "OPERAND_IMMEDIATE";
@@ -598,8 +611,6 @@ def simm7s16 : Operand<i32> {
   let PrintMethod = "printImmScale<16>";
   let OperandType = "OPERAND_IMMEDIATE";
 }
-
-def am_sve_fi : ComplexPattern<iPTR, 2, "SelectAddrModeFrameIndexSVE", []>;
 
 def am_indexed7s8   : ComplexPattern<iPTR, 2, "SelectAddrModeIndexed7S8", []>;
 def am_indexed7s16  : ComplexPattern<iPTR, 2, "SelectAddrModeIndexed7S16", []>;
@@ -870,6 +881,7 @@ class fixedpoint_recip_i32<ValueType FloatVT>
     ComplexPattern<FloatVT, 1, "SelectCVTFixedPosRecipOperand<32>", [fpimm, ld]> {
   let EncoderMethod = "getFixedPointScaleOpValue";
   let DecoderMethod = "DecodeFixedPointScaleImm32";
+  let ParserMatchClass = Imm1_32Operand;
   let OperandType = "OPERAND_IMMEDIATE";
 }
 
@@ -878,6 +890,7 @@ class fixedpoint_recip_i64<ValueType FloatVT>
     ComplexPattern<FloatVT, 1, "SelectCVTFixedPosRecipOperand<64>", [fpimm, ld]> {
   let EncoderMethod = "getFixedPointScaleOpValue";
   let DecoderMethod = "DecodeFixedPointScaleImm64";
+  let ParserMatchClass = Imm1_64Operand;
   let OperandType = "OPERAND_IMMEDIATE";
 }
 
@@ -1520,6 +1533,8 @@ def fpimm16 : Operand<f16>,
     }], fpimm16XForm> {
   let ParserMatchClass = FPImmOperand;
   let PrintMethod = "printFPImmOperand";
+  let OperandType = "OPERAND_IMM_UINT8";
+  let OperandNamespace = "AArch64";
 }
 
 def fpimmbf16 : Operand<bf16>,
@@ -1533,6 +1548,8 @@ def fpimm32 : Operand<f32>,
     }], fpimm32XForm> {
   let ParserMatchClass = FPImmOperand;
   let PrintMethod = "printFPImmOperand";
+  let OperandType = "OPERAND_IMM_UINT8";
+  let OperandNamespace = "AArch64";
 }
 
 def fpimm32SIMDModImmType4 : FPImmLeaf<f32, [{
@@ -1547,12 +1564,15 @@ def fpimm64 : Operand<f64>,
     }], fpimm64XForm> {
   let ParserMatchClass = FPImmOperand;
   let PrintMethod = "printFPImmOperand";
+  let OperandType = "OPERAND_IMM_UINT8";
+  let OperandNamespace = "AArch64";
 }
 
 def fpimm8 : Operand<i32> {
   let ParserMatchClass = FPImmOperand;
   let PrintMethod = "printFPImmOperand";
-  let OperandType = "OPERAND_IMMEDIATE";
+  let OperandType = "OPERAND_IMM_UINT8";
+  let OperandNamespace = "AArch64";
 }
 
 def fpimm0 : FPImmLeaf<fAny, [{
@@ -1861,27 +1881,18 @@ let mayStore = 1, mayLoad = 1, hasSideEffects = 1 in
     let Inst{11-5} = imm;
   }
 
-def PHintInstOperand : AsmOperandClass {
-    let Name = "PHint";
-    let ParserMethod = "tryParsePHintInstOperand";
-}
-
-def phint_op : Operand<i32> {
-    let ParserMatchClass = PHintInstOperand;
-    let PrintMethod = "printPHintOp";
-    let OperandType = "OPERAND_IMMEDIATE";
-    let MIOperandInfo = (ops i32imm: $policy);
-    let DecoderMethod = "DecodeUImm<3>";
-}
-
-class STSHHI
-    : SimpleSystemI<0, (ins phint_op:$policy), "stshh", "\t$policy", []>,
+// Hint instructions (extended).
+class HintE<string mnemonic>
+    : I<(outs), (ins hinte_uimm16:$imm16), mnemonic, "\t$imm16", "", []>,
       Sched<[WriteHint]> {
-  bits<1> policy;
-  let Inst{20-12} = 0b000110010;
-  let Inst{11-8} = 0b0110;
-  let Inst{7-6} = 0b00;
-  let Inst{5} = policy;
+  bits<16> imm16;
+  let Inst{31-22} = 0b1101010100;
+  let Inst{21}    = imm16{15};
+  let Inst{20-19} = 0b00;
+  let Inst{18-16} = imm16{14-12};
+  let Inst{15-12} = 0b0010;
+  let Inst{11-5}  = imm16{11-5};
+  let Inst{4-0}   = imm16{4-0};
 }
 
 // System instructions taking a single literal operand which encodes into
@@ -1952,55 +1963,6 @@ def msr_sysreg_op : Operand<i32> {
   let OperandType = "OPERAND_IMMEDIATE";
 }
 
-def PSBHintOperand : AsmOperandClass {
-  let Name = "PSBHint";
-  let ParserMethod = "tryParsePSBHint";
-}
-def psbhint_op : Operand<i32> {
-  let ParserMatchClass = PSBHintOperand;
-  let PrintMethod = "printPSBHintOp";
-  let MCOperandPredicate = [{
-    // Check, if operand is valid, to fix exhaustive aliasing in disassembly.
-    // "psb" is an alias to "hint" only for certain values of CRm:Op2 fields.
-    if (!MCOp.isImm())
-      return false;
-    return AArch64PSBHint::lookupPSBByEncoding(MCOp.getImm()) != nullptr;
-  }];
-  let OperandType = "OPERAND_IMMEDIATE";
-}
-
-def BTIHintOperand : AsmOperandClass {
-  let Name = "BTIHint";
-  let ParserMethod = "tryParseBTIHint";
-}
-def btihint_op : Operand<i32> {
-  let ParserMatchClass = BTIHintOperand;
-  let PrintMethod = "printBTIHintOp";
-  let MCOperandPredicate = [{
-    // "bti" is an alias to "hint" only for certain values of CRm:Op2 fields.
-    if (!MCOp.isImm())
-      return false;
-    return AArch64BTIHint::lookupBTIByEncoding(MCOp.getImm() ^ 32) != nullptr;
-  }];
-  let OperandType = "OPERAND_IMMEDIATE";
-}
-
-def CMHPriorityHintOperand : AsmOperandClass {
-  let Name = "CMHPriorityHint";
-  let ParserMethod = "tryParseCMHPriorityHint";
-}
-
-def CMHPriorityHint_op : Operand<i32> {
-  let ParserMatchClass = CMHPriorityHintOperand;
-  let PrintMethod = "printCMHPriorityHintOp";
-  let MCOperandPredicate = [{
-    if (!MCOp.isImm())
-      return false;
-    return AArch64CMHPriorityHint::lookupCMHPriorityHintByEncoding(MCOp.getImm()) != nullptr;
-  }];
-  let OperandType = "OPERAND_IMMEDIATE";
-}
-
 def TIndexHintOperand : AsmOperandClass {
   let Name = "TIndexHint";
   let ParserMethod = "tryParseTIndexHint";
@@ -2054,7 +2016,6 @@ def pstatefield4_op : Operand<i32> {
 }
 
 // Instructions to modify PSTATE, no input reg
-let Defs = [NZCV] in
 class PstateWriteSimple<dag iops, string asm, string operands>
   : SimpleSystemI<0, iops, asm, operands> {
 
@@ -2787,6 +2748,16 @@ class BaseShift<bit size, bits<2> shift_type, RegisterClass regtype, string asm,
   let Inst{11-10} = shift_type;
 }
 
+// ComplexPattern to match shift amounts with redundant AND masks.
+// AArch64 shift instructions only use the low 5 bits (i32) or 6 bits (i64),
+// so AND masks that exactly cover a narrow type are redundant.
+def shiftMask32 : ComplexPattern<i32, 1, "SelectShiftMask<32>", [], [], 0>;
+def gi_shift_mask32 : GIComplexOperandMatcher<s32, "selectShiftMask<32>">,
+                      GIComplexPatternEquiv<shiftMask32>;
+def shiftMask64 : ComplexPattern<i64, 1, "SelectShiftMask<64>", [], [], 0>;
+def gi_shift_mask64 : GIComplexOperandMatcher<s64, "selectShiftMask<64>">,
+                      GIComplexPatternEquiv<shiftMask64>;
+
 multiclass Shift<bits<2> shift_type, string asm, SDNode OpNode> {
   def Wr : BaseShift<0b0, shift_type, GPR32, asm>;
 
@@ -2812,6 +2783,11 @@ multiclass Shift<bits<2> shift_type, string asm, SDNode OpNode> {
   def : Pat<(i64 (OpNode GPR64:$Rn, (i64 (zext GPR32:$Rm)))),
             (!cast<Instruction>(NAME # "Xr") GPR64:$Rn,
                 (SUBREG_TO_REG GPR32:$Rm, sub_32))>;
+
+  def : Pat<(i32 (OpNode GPR32:$Rn, shiftMask32:$Rm)),
+            (!cast<Instruction>(NAME # "Wr") GPR32:$Rn, shiftMask32:$Rm)>;
+  def : Pat<(i64 (OpNode GPR64:$Rn, shiftMask64:$Rm)),
+            (!cast<Instruction>(NAME # "Xr") GPR64:$Rn, shiftMask64:$Rm)>;
 }
 
 class ShiftAlias<string asm, Instruction inst, RegisterClass regtype>
@@ -5062,7 +5038,7 @@ class LoadStoreExclusiveSimple<bits<2> sz, bit o2, bit L, bit o1, bit o0,
 }
 
 // Simple load acquires don't set the exclusive monitor
-let mayLoad = 1, mayStore = 0 in
+let mayLoad = 1, mayStore = 0, hasSideEffects = 0 in
 class LoadAcquire<bits<2> sz, bit o2, bit L, bit o1, bit o0,
                   RegisterClass regtype, string asm>
     : LoadStoreExclusiveSimple<sz, o2, L, o1, o0, (outs regtype:$Rt),
@@ -5200,7 +5176,7 @@ multiclass StoreUnprivilegedLSUI<bits<2> sz, RegisterClass regtype, string asm> 
 }
 
 // Simple store release operations do not check the exclusive monitor.
-let mayLoad = 0, mayStore = 1 in
+let mayLoad = 0, mayStore = 1, hasSideEffects = 0 in
 class StoreRelease<bits<2> sz, bit o2, bit L, bit o1, bit o0,
                    RegisterClass regtype, string asm>
     : LoadStoreExclusiveSimple<sz, o2, L, o1, o0, (outs),
@@ -7491,7 +7467,7 @@ class BaseSIMDDifferentThreeVectorTied<bit U, bits<3> size, bits<4> opcode,
 //        the high elements of the result register rather than the low
 //        elements). Until that's fixed, we can't code-gen those.
 multiclass SIMDNarrowThreeVectorBHS<bit U, bits<4> opc, string asm,
-                                    Intrinsic IntOp> {
+                                    SDPatternOperator IntOp> {
   def v8i16_v8i8   : BaseSIMDDifferentThreeVector<U, 0b000, opc,
                                                   V64, V128, V128,
                                                   asm, ".8b", ".8h", ".8h",
@@ -7724,8 +7700,8 @@ multiclass SIMDWideThreeVectorBHS<bit U, bits<4> opc, string asm,
 //----------------------------------------------------------------------------
 
 class BaseSIMDBitwiseExtract<bit size, RegisterOperand regtype, ValueType vty,
-                             string asm, string kind>
-  : I<(outs regtype:$Rd), (ins regtype:$Rn, regtype:$Rm, i32imm:$imm), asm,
+                             Operand immtype, string asm, string kind>
+  : I<(outs regtype:$Rd), (ins regtype:$Rn, regtype:$Rm, immtype:$imm), asm,
       "{\t$Rd" # kind # ", $Rn" # kind # ", $Rm" # kind # ", $imm" #
       "|" # kind # "\t$Rd, $Rn, $Rm, $imm}", "",
       [(set (vty regtype:$Rd),
@@ -7748,10 +7724,10 @@ class BaseSIMDBitwiseExtract<bit size, RegisterOperand regtype, ValueType vty,
 
 
 multiclass SIMDBitwiseExtract<string asm> {
-  def v8i8  : BaseSIMDBitwiseExtract<0, V64, v8i8, asm, ".8b"> {
+  def v8i8  : BaseSIMDBitwiseExtract<0, V64, v8i8, imm32_0_7, asm, ".8b"> {
     let imm{3} = 0;
   }
-  def v16i8 : BaseSIMDBitwiseExtract<1, V128, v16i8, asm, ".16b">;
+  def v16i8 : BaseSIMDBitwiseExtract<1, V128, v16i8, imm32_0_15, asm, ".16b">;
 }
 
 //----------------------------------------------------------------------------
@@ -13598,37 +13574,6 @@ multiclass SIMDThreeSameVectorFP8MatrixMul<string asm, SDPatternOperator OpNode>
                                                (v16i8 V128:$Rm)))]> {
       let Predicates = [HasNEON, HasF8F32MM];
     }
-}
-
-//----------------------------------------------------------------------------
-// Contention Management Hints - FEAT_CMH
-//----------------------------------------------------------------------------
-
-class SHUHInst<string asm> : I<
-    (outs),
-    (ins CMHPriorityHint_op:$priority),
-    asm, "\t$priority", "", []>, Sched<[]> {
-  bits<1> priority;
-  let Inst{31-12} = 0b11010101000000110010;
-  let Inst{11-8}  = 0b0110;
-  let Inst{7-6}   = 0b01;
-  let Inst{5}     = priority;
-  let Inst{4-0}   = 0b11111;
-}
-
-multiclass SHUH<string asm> {
-  def NAME : SHUHInst<asm>;
-  def      : InstAlias<asm, (!cast<Instruction>(NAME) 0), 1>;
-}
-
-class STCPHInst<string asm> : I<
-    (outs),
-    (ins),
-    asm, "", "", []>, Sched<[]> {
-    let Inst{31-12} = 0b11010101000000110010;
-    let Inst{11-8}  = 0b0110;
-    let Inst{7-5}   = 0b100;
-    let Inst{4-0}   = 0b11111;
 }
 
 //---

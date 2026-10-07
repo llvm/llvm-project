@@ -23,6 +23,10 @@ def err_fe_ast_file_modified : Error<
     DefaultFatal;
 def note_fe_ast_file_modified : Note<
     "%select{size|mtime|content}0 changed%select{| from expected %2 to %3}1">;
+def note_fe_ast_file_modified_finalized : Note<
+    "module '%0' was already finalized in this compilation and so cannot be "
+    "rebuilt; this is usually caused by an input changing due to "
+    "misconfigurations, or a compiler bug">;
 def err_fe_pch_file_overridden : Error<
     "file '%0' from the precompiled header has been overridden">;
 def note_ast_file_required_by : Note<"'%0' required by '%1'">;
@@ -105,6 +109,15 @@ def remark_module_validation : Remark<
   "validating %0 input files in module '%1' from '%2'">,
   ShowInSystemHeader,
   InGroup<ModuleValidation>;
+def remark_module_directory_dep_changed
+    : Remark<"module '%0' is out of date because the contents of directory "
+             "'%1' changed after it was built">,
+      ShowInSystemHeader,
+      InGroup<ModuleValidation>;
+def err_module_directory_dep_changed
+    : Error<"module '%0' cannot be reused because the contents of directory "
+            "'%1' changed after it was built">,
+      ShowInSystemHeader, DefaultFatal;
 def remark_module_check_relocation
     : Remark<"checking if module '%0' from '%1' has relocated">,
       ShowInSystemHeader,

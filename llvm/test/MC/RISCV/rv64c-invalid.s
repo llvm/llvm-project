@@ -3,9 +3,9 @@
 
 ## GPRC
 c.ld ra, 4(sp)
-# CHECK: :[[#@LINE-1]]:6: error: register must be a GPR from x8 to x15
+# CHECK: :[[#@LINE-1]]:1: error: invalid instruction
 c.sd sp, 4(sp)
-# CHECK: :[[#@LINE-1]]:6: error: register must be a GPR from x8 to x15
+# CHECK: :[[#@LINE-1]]:1: error: invalid instruction
 c.addw   a0, a7
 # CHECK: :[[#@LINE-1]]:14: error: register must be a GPR from x8 to x15
 c.subw   a0, a6
@@ -13,9 +13,9 @@ c.subw   a0, a6
 
 ## GPRNoX0
 c.ldsp  x0, 4(sp)
-# CHECK: :[[#@LINE-1]]:9: error: register must be a GPR excluding zero (x0)
+# CHECK: :[[#@LINE-1]]:1: error: invalid instruction
 c.ldsp  zero, 4(sp)
-# CHECK: :[[#@LINE-1]]:9: error: register must be a GPR excluding zero (x0)
+# CHECK: :[[#@LINE-1]]:1: error: invalid instruction
 
 # Out of range immediates
 
@@ -44,6 +44,6 @@ c.sdsp  ra, -8(sp)
 # CHECK: :[[#@LINE-1]]:13: error: immediate must be a multiple of 8 bytes in the range [0, 504]
 ## uimm8_lsb000
 c.ld  s0, -8(sp)
-# CHECK: :[[#@LINE-1]]:11: error: immediate must be a multiple of 8 bytes in the range [0, 248]
+# CHECK: :[[#@LINE-1]]:1: error: invalid instruction
 c.sd  s0, 256(sp)
-# CHECK: :[[#@LINE-1]]:11: error: immediate must be a multiple of 8 bytes in the range [0, 248]
+# CHECK: :[[#@LINE-1]]:1: error: invalid instruction

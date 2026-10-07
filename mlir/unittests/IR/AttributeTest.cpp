@@ -263,6 +263,17 @@ TEST(DenseSplatMapValuesTest, I32ToFalse) {
 } // namespace
 
 //===----------------------------------------------------------------------===//
+// AsmResourceBlob
+//===----------------------------------------------------------------------===//
+
+namespace {
+TEST(AsmResourceBlobTest, DefaultBlobIsImmutable) {
+  AsmResourceBlob blob;
+  EXPECT_FALSE(blob.isMutable());
+}
+} // namespace
+
+//===----------------------------------------------------------------------===//
 // DenseResourceElementsAttr
 //===----------------------------------------------------------------------===//
 

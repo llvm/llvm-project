@@ -28,6 +28,7 @@
 #include <cassert>
 #include <cstring>
 #include <limits>
+#include <list>
 
 namespace llvm::ubi {
 
@@ -78,8 +79,18 @@ static void applyAlignAttr(AnyValue &V, Align Alignment) {
 
 static bool violatesNoUndefAttr(AnyValue &V) {
   bool ContainsPoison = false;
-  forEachScalarValue(
-      V, [&](AnyValue &Scalar) { ContainsPoison |= Scalar.isPoison(); });
+  forEachScalarValue(V, [&](AnyValue &Scalar) {
+    if (Scalar.isPoison()) {
+      ContainsPoison = true;
+      return;
+    }
+    if (Scalar.isByte() && !ContainsPoison) {
+      // For non-byte-sized values, high bits are always zeroed out.
+      ContainsPoison = any_of(Scalar.asByte().bytes(), [](const Byte &V) {
+        return V.ConcreteMask != 255;
+      });
+    }
+  });
   return ContainsPoison;
 }
 
@@ -810,6 +821,152 @@ class InstExecutor : public InstVisitor<InstExecutor, void>,
     return AnyValue();
   }
 
+  static BooleanKind getMaskLane(const AnyValue &Mask, size_t I) {
+    return Mask.asAggregate()[I].asBoolean();
+  }
+
+  AnyValue callExperimentalVectorHistogramIntrinsic(CallBase &CB,
+                                                    ArrayRef<AnyValue> Args,
+                                                    Intrinsic::ID IID) {
+    struct LaneUpdate {
+      MemoryObject *MO;
+      uint64_t Offset;
+      uint64_t Count;
+      AnyValue Old;
+      AnyValue New;
+    };
+
+    const auto &Ptrs = Args[0].asAggregate();
+    const AnyValue &Update = Args[1];
+    const AnyValue &Mask = Args[2];
+    Type *ElemTy = CB.getArgOperand(1)->getType();
+    const uint64_t AccessSize = Ctx.getEffectiveTypeStoreSize(ElemTy);
+
+    SmallVector<LaneUpdate, 8> Lanes;
+    Lanes.reserve(Ptrs.size());
+    for (size_t I = 0, E = Ptrs.size(); I != E; ++I) {
+      switch (getMaskLane(Mask, I)) {
+      case BooleanKind::False:
+        continue;
+      case BooleanKind::Poison:
+        reportImmediateUB()
+            << "Poison mask lane in experimental vector histogram intrinsic.";
+        return AnyValue();
+      case BooleanKind::True:
+        break;
+      }
+
+      if (Ptrs[I].isPoison()) {
+        reportImmediateUB() << "Poison pointer lane in experimental vector "
+                               "histogram intrinsic.";
+        return AnyValue();
+      }
+
+      auto [MO, Offset] =
+          verifyMemAccess(Ptrs[I].asPointer(), AccessSize, Align(1),
+                          /*IsStore=*/true);
+      if (!MO)
+        return AnyValue();
+
+      Lanes.push_back({MO, Offset, 0, AnyValue(), AnyValue()});
+    }
+
+    for (LaneUpdate &Lane : Lanes) {
+      Lane.Count = count_if(Lanes, [&](const LaneUpdate &Other) {
+        return Other.MO == Lane.MO && Other.Offset == Lane.Offset;
+      });
+      Lane.Old = Ctx.load(*Lane.MO, Lane.Offset, ElemTy);
+    }
+
+    for (LaneUpdate &Lane : Lanes) {
+      const AnyValue &Old = Lane.Old;
+      AnyValue &New = Lane.New;
+
+      if (Old.isPoison() || Update.isPoison()) {
+        New = AnyValue::poison();
+      } else {
+        const APInt &OldInt = Old.asInteger();
+        const APInt &UpdateInt = Update.asInteger();
+
+        switch (IID) {
+        case Intrinsic::experimental_vector_histogram_add:
+          New = OldInt + UpdateInt * APInt(UpdateInt.getBitWidth(), Lane.Count,
+                                           /*isSigned=*/false,
+                                           /*implicitTrunc=*/true);
+          break;
+        case Intrinsic::experimental_vector_histogram_uadd_sat: {
+          APInt Acc = OldInt;
+          for (uint64_t I = 0; I != Lane.Count; ++I)
+            Acc = Acc.uadd_sat(UpdateInt);
+          New = Acc;
+          break;
+        }
+        case Intrinsic::experimental_vector_histogram_umax:
+          New = APIntOps::umax(OldInt, UpdateInt);
+          break;
+        case Intrinsic::experimental_vector_histogram_umin:
+          New = APIntOps::umin(OldInt, UpdateInt);
+          break;
+        default:
+          llvm_unreachable("Unexpected histogram intrinsic ID");
+        }
+      }
+    }
+
+    for (const LaneUpdate &Lane : Lanes)
+      Ctx.store(*Lane.MO, Lane.Offset, Lane.New, ElemTy);
+
+    return AnyValue();
+  }
+
+  /// Returns the oracle function if \p CB is an llvm.speculative.load in
+  /// oracle form, nullptr otherwise.
+  static Function *getSpeculativeLoadOracle(const CallBase &CB) {
+    return CB.getIntrinsicID() == Intrinsic::speculative_load
+               ? dyn_cast<Function>(CB.getArgOperand(2))
+               : nullptr;
+  }
+
+  AnyValue callSpeculativeLoadIntrinsic(CallBase &CB, const AnyValue &Ptr,
+                                        const AnyValue &NumBytes) {
+    Type *RetTy = CB.getType();
+    if (Ptr.isPoison()) {
+      reportImmediateUB() << "llvm.speculative.load with poison pointer.";
+      return AnyValue();
+    }
+    if (NumBytes.isPoison()) {
+      reportImmediateUB()
+          << "llvm.speculative.load with poison number of accessible bytes.";
+      return AnyValue();
+    }
+
+    const uint64_t Size = Ctx.getEffectiveTypeStoreSize(RetTy);
+    const APInt &NumBytesInt = NumBytes.asInteger();
+    if (NumBytesInt.ugt(Size)) {
+      reportImmediateUB() << "llvm.speculative.load number of accessible bytes "
+                          << NumBytesInt.getZExtValue()
+                          << " exceeds the loaded size " << Size << ".";
+      return AnyValue();
+    }
+
+    // Only the accessible bytes are read from memory and must be in bounds of
+    // the underlying object. All other bytes are poison.
+    const uint64_t N = NumBytesInt.getZExtValue();
+    SmallVector<Byte> Bytes(Size, Byte::poison());
+    if (N != 0) {
+      const bool FromEnd = cast<ConstantInt>(CB.getArgOperand(1))->isOne();
+      const uint64_t Start = FromEnd ? Size - N : 0;
+      const Pointer &PtrVal = Ptr.asPointer();
+      auto [MO, Offset] =
+          verifyMemAccess(PtrVal.getWithNewAddr(PtrVal.address() + Start), N,
+                          Align(1), /*IsStore=*/false);
+      if (!MO)
+        return AnyValue();
+      copy(MO->getBytes().slice(Offset, N), Bytes.begin() + Start);
+    }
+    return Ctx.fromBytes(Bytes, RetTy);
+  }
+
 public:
   InstExecutor(Context &C, EventHandler &H, Function &F,
                ArrayRef<AnyValue> Args, AnyValue &RetVal)
@@ -894,8 +1051,17 @@ public:
 
   void returnFromCallee() {
     auto &CB = cast<CallBase>(*CurrentFrame->PC);
-    CurrentFrame->CalleeArgs.clear();
     AnyValue &RetVal = CurrentFrame->CalleeRetVal;
+    if (Function *Oracle = getSpeculativeLoadOracle(CB)) {
+      // RetVal is the oracle's result; use it to complete the load.
+      handleAttributes(Oracle->getReturnType(), RetVal, AttributeSet(),
+                       Oracle->getAttributes().getRetAttrs());
+      RetVal =
+          callSpeculativeLoadIntrinsic(CB, CurrentFrame->CalleeArgs[0], RetVal);
+      if (hasProgramExited())
+        return;
+    }
+    CurrentFrame->CalleeArgs.clear();
     if (Type *RetTy = CB.getType(); !RetTy->isVoidTy()) {
       // Handle attributes on the return value (Attributes from resolved callee
       // should be applied if available).
@@ -1209,6 +1375,22 @@ public:
             }
           });
     }
+    case Intrinsic::smulh:
+    case Intrinsic::umulh:
+      return visitIntBinOpWithResult(
+          RetTy, Args[0], Args[1],
+          [IID](const APInt &LHS, const APInt &RHS) -> AnyValue {
+            return IID == Intrinsic::smulh ? APIntOps::mulhs(LHS, RHS)
+                                           : APIntOps::mulhu(LHS, RHS);
+          });
+    case Intrinsic::pdep:
+    case Intrinsic::pext:
+      return visitIntBinOpWithResult(
+          RetTy, Args[0], Args[1],
+          [IID](const APInt &Val, const APInt &Mask) -> AnyValue {
+            return IID == Intrinsic::pdep ? APIntOps::pdep(Val, Mask)
+                                          : APIntOps::pext(Val, Mask);
+          });
     case Intrinsic::vector_reduce_add:
     case Intrinsic::vector_reduce_mul:
     case Intrinsic::vector_reduce_and:
@@ -1410,7 +1592,9 @@ public:
     case Intrinsic::vector_reduce_fadd:
     case Intrinsic::vector_reduce_fmul:
     case Intrinsic::vector_reduce_fmaximum:
-    case Intrinsic::vector_reduce_fminimum: {
+    case Intrinsic::vector_reduce_fminimum:
+    case Intrinsic::vector_reduce_fmaximumnum:
+    case Intrinsic::vector_reduce_fminimumnum: {
       const auto DenormMode = getCurrentDenormalMode(RetTy);
       const bool HasStart = IID == Intrinsic::vector_reduce_fadd ||
                             IID == Intrinsic::vector_reduce_fmul;
@@ -1450,6 +1634,12 @@ public:
           break;
         case Intrinsic::vector_reduce_fminimum:
           *Res = minimum(*Res, Op);
+          break;
+        case Intrinsic::vector_reduce_fmaximumnum:
+          *Res = maximumnum(*Res, Op);
+          break;
+        case Intrinsic::vector_reduce_fminimumnum:
+          *Res = minimumnum(*Res, Op);
           break;
         default:
           llvm_unreachable("Unexpected intrinsic ID");
@@ -1626,9 +1816,164 @@ public:
     case Intrinsic::memset:
     case Intrinsic::memset_inline:
       return callMemSetIntrinsic(CB, Args);
+    case Intrinsic::speculative_load:
+      assert(!getSpeculativeLoadOracle(CB) &&
+             "oracle form must be handled earlier");
+      return callSpeculativeLoadIntrinsic(CB, Args[0], Args[2]);
     case Intrinsic::experimental_noalias_scope_decl:
       // FIXME: Not implemented yet. Currently it acts as a noop.
       return AnyValue();
+    case Intrinsic::experimental_cttz_elts: {
+      auto *IsZeroPoisonC = cast<ConstantInt>(CB.getArgOperand(1));
+      const bool IsZeroPoison = IsZeroPoisonC->isOne();
+
+      const auto &Vec = Args[0].asAggregate();
+      const unsigned RetBW = RetTy->getIntegerBitWidth();
+
+      if (!isUIntN(RetBW, Vec.size()))
+        return AnyValue::poison();
+
+      for (const AnyValue &V : Vec)
+        if (V.isPoison())
+          return AnyValue::poison();
+
+      uint64_t Count = 0;
+      for (const AnyValue &V : Vec) {
+        if (!V.asInteger().isZero())
+          break;
+        ++Count;
+      }
+
+      if (Count == Vec.size() && IsZeroPoison)
+        return AnyValue::poison();
+      return APInt(RetBW, Count);
+    }
+    case Intrinsic::experimental_get_vector_length: {
+      auto *VFC = cast<ConstantInt>(CB.getArgOperand(1));
+      auto *ScalableC = cast<ConstantInt>(CB.getArgOperand(2));
+
+      if (Args[0].isPoison())
+        return AnyValue::poison();
+
+      const APInt &Cnt = Args[0].asInteger();
+      const uint64_t VF = VFC->getZExtValue();
+      const bool Scalable = ScalableC->isOne();
+
+      const uint64_t MaxLanes = Ctx.getEVL(ElementCount::get(VF, Scalable));
+
+      uint64_t Res = 0;
+      if (!Cnt.isZero()) {
+        if (Cnt.getActiveBits() <= 64 && Cnt.getZExtValue() <= MaxLanes) {
+          Res = Cnt.getZExtValue();
+        } else {
+          APInt Max(Cnt.getBitWidth(), MaxLanes);
+          APInt NumIters =
+              APIntOps::RoundingUDiv(Cnt, Max, APInt::Rounding::UP);
+          uint64_t Lower =
+              APIntOps::RoundingUDiv(Cnt, NumIters, APInt::Rounding::UP)
+                  .getZExtValue();
+          uint64_t Range = MaxLanes - Lower + 1;
+          Res = Lower + Ctx.getRandomUInt64() % Range;
+        }
+      }
+
+      if (isIntN(32, Res))
+        return APInt(32, Res);
+      return AnyValue::poison();
+    }
+
+    case Intrinsic::experimental_vector_extract_last_active: {
+      const auto &Data = Args[0].asAggregate();
+      const AnyValue &Mask = Args[1];
+
+      for (size_t I = Data.size(); I != 0; --I) {
+        switch (getMaskLane(Mask, I - 1)) {
+        case BooleanKind::True:
+          return Data[I - 1];
+        case BooleanKind::False:
+          break;
+        case BooleanKind::Poison:
+          return AnyValue::poison();
+        }
+      }
+
+      return Args[2];
+    }
+
+    case Intrinsic::experimental_vector_compress: {
+      const auto &Val = Args[0].asAggregate();
+      const AnyValue &Mask = Args[1];
+      const auto &Passthru = Args[2].asAggregate();
+
+      std::vector<AnyValue> Res;
+      Res.reserve(Val.size());
+
+      for (size_t I = 0, E = Val.size(); I != E; ++I) {
+        switch (getMaskLane(Mask, I)) {
+        case BooleanKind::True:
+          Res.push_back(Val[I]);
+          break;
+        case BooleanKind::False:
+          break;
+        case BooleanKind::Poison:
+          return AnyValue::getPoisonValue(Ctx, RetTy);
+        }
+      }
+
+      for (size_t I = Res.size(), E = Val.size(); I != E; ++I)
+        Res.push_back(Passthru[I]);
+      return std::move(Res);
+    }
+
+    case Intrinsic::experimental_vector_match: {
+      const auto &Search = Args[0].asAggregate();
+      const auto &Needles = Args[1].asAggregate();
+      const auto &Mask = Args[2].asAggregate();
+
+      std::vector<AnyValue> Res;
+      Res.reserve(Search.size());
+
+      for (size_t I = 0, E = Search.size(); I != E; ++I) {
+        switch (Mask[I].asBoolean()) {
+        case BooleanKind::False:
+          Res.push_back(AnyValue::boolean(false));
+          continue;
+        case BooleanKind::Poison:
+          Res.push_back(AnyValue::poison());
+          continue;
+        case BooleanKind::True:
+          break;
+        }
+
+        if (Search[I].isPoison()) {
+          Res.push_back(AnyValue::poison());
+          continue;
+        }
+
+        bool Found = false;
+        bool SawPoison = false;
+        for (const AnyValue &Needle : Needles) {
+          if (Needle.isPoison()) {
+            SawPoison = true;
+            break;
+          }
+          if (Search[I].asInteger() == Needle.asInteger())
+            Found = true;
+        }
+
+        if (SawPoison)
+          Res.push_back(AnyValue::poison());
+        else
+          Res.push_back(AnyValue::boolean(Found));
+      }
+
+      return std::move(Res);
+    }
+    case Intrinsic::experimental_vector_histogram_add:
+    case Intrinsic::experimental_vector_histogram_uadd_sat:
+    case Intrinsic::experimental_vector_histogram_umax:
+    case Intrinsic::experimental_vector_histogram_umin:
+      return callExperimentalVectorHistogramIntrinsic(CB, Args, IID);
     default:
       Handler.onUnrecognizedInstruction(CB);
       setFailed();
@@ -1638,10 +1983,9 @@ public:
 
   AnyValue callLibFunc(CallBase &CB, Function *ResolvedCallee,
                        ArrayRef<AnyValue> CalleeArgs) {
-    LibFunc LF;
+    LibFunc LF = CurrentFrame->TLI.getLibFunc(*ResolvedCallee);
     // Respect nobuiltin attributes on call site.
-    if (CB.isNoBuiltin() ||
-        !CurrentFrame->TLI.getLibFunc(*ResolvedCallee, LF)) {
+    if (CB.isNoBuiltin() || LF == NotLibFunc) {
       Handler.onUnrecognizedInstruction(CB);
       setFailed();
       return AnyValue();
@@ -1897,6 +2241,15 @@ public:
     }
 
     CurrentFrame->ResolvedCallee = Callee;
+    ArrayRef<AnyValue> Args = CalleeArgs;
+    if (Function *Oracle = getSpeculativeLoadOracle(CB)) {
+      Args = Args.drop_front(3);
+      for (auto [Arg, ArgVal] :
+           zip_equal(Oracle->args(), MutableArrayRef(CalleeArgs).drop_front(3)))
+        handleAttributes(Arg.getType(), ArgVal, AttributeSet(),
+                         Arg.getAttributes());
+      Callee = Oracle;
+    }
     if (Callee->isIntrinsic()) {
       CurrentFrame->CalleeRetVal = callIntrinsic(CB, CalleeArgs);
       returnFromCallee();
@@ -1913,7 +2266,6 @@ public:
       }
       assert(!Callee->empty() && "Expected a defined function.");
       // Suspend the current frame and push the callee frame onto the stack.
-      ArrayRef<AnyValue> Args = CurrentFrame->CalleeArgs;
       AnyValue &RetVal = CurrentFrame->CalleeRetVal;
       CurrentFrame->State = FrameState::Pending;
       CallStack.emplace_back(*Callee, &CB, CurrentFrame, Args, RetVal,
@@ -2209,6 +2561,7 @@ public:
   void visitIntToFPInst(Instruction &I, bool IsSigned) {
     const fltSemantics &DstSem =
         I.getType()->getScalarType()->getFltSemantics();
+    FastMathFlags FMF = cast<FPMathOperator>(I).getFastMathFlags();
 
     visitUnOp(I, [&](const AnyValue &Operand) -> AnyValue {
       if (Operand.isPoison())
@@ -2224,7 +2577,8 @@ public:
       Res.convertFromAPInt(Operand.asInteger(), /*IsSigned=*/IsSigned,
                            Ctx.getCurrentRoundingMode());
 
-      return AnyValue(Res);
+      // We need IsInput=true here because the nsz flag applies to the output.
+      return handleFMFFlags(Res, FMF, /*IsInput=*/true);
     });
   }
 
@@ -2351,7 +2705,8 @@ public:
           ResVec.push_back(FV[I]);
           break;
         case BooleanKind::Poison:
-          ResVec.push_back(AnyValue::poison());
+          ResVec.push_back(
+              AnyValue::getPoisonValue(Ctx, SI.getType()->getScalarType()));
           break;
         }
       }
@@ -2368,7 +2723,7 @@ public:
   }
 
   void visitAllocaInst(AllocaInst &AI) {
-    uint64_t AllocSize = Ctx.getEffectiveTypeAllocSize(AI.getAllocatedType());
+    uint64_t AllocSize = Ctx.getEffectiveTypeSize(AI.getAllocationBaseSize(DL));
     if (AI.isArrayAllocation()) {
       auto &Size = getValue(AI.getArraySize());
       if (Size.isPoison()) {
@@ -2416,11 +2771,12 @@ public:
   }
 
   void visitPtrToInt(PtrToIntInst &I) {
-    return visitUnOp(I, [&](const AnyValue &V) -> AnyValue {
+    unsigned BitWidth = I.getType()->getScalarSizeInBits();
+    return visitUnOp(I, [this, BitWidth](const AnyValue &V) -> AnyValue {
       if (V.isPoison())
         return AnyValue::poison();
       Ctx.exposeProvenance(V.asPointer().provenance());
-      return V.asPointer().address();
+      return V.asPointer().address().zextOrTrunc(BitWidth);
     });
   }
 
@@ -2522,7 +2878,8 @@ public:
     for (uint32_t Off = 0; Off != DstLen; Off += Stride) {
       for (int Idx : SVI.getShuffleMask()) {
         if (Idx == PoisonMaskElem)
-          Res.push_back(AnyValue::poison());
+          Res.push_back(
+              AnyValue::getPoisonValue(Ctx, SVI.getType()->getScalarType()));
         else if (Idx < static_cast<int>(Size))
           Res.push_back(LHSVec[Idx]);
         else

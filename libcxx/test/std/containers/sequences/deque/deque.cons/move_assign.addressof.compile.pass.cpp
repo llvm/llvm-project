@@ -21,4 +21,5 @@ void test() {
   std::deque<operator_hijacker> dqo;
   std::deque<operator_hijacker> dq;
   dq = dqo;
+  (void)dq;
 }

@@ -41,7 +41,6 @@ module Clang_Basic {
   textual header "clang/Basic/BuiltinHeaders.def"
   textual header "clang/Basic/BuiltinsAArch64NeonSVEBridge.def"
   textual header "clang/Basic/BuiltinsAArch64NeonSVEBridge_cg.def"
-  textual header "clang/Basic/BuiltinsARM.def"
   textual header "clang/Basic/BuiltinsAVR.def"
   textual header "clang/Basic/BuiltinsHexagonMapCustomDep.def"
   textual header "clang/Basic/BuiltinsLoongArchBase.def"
@@ -60,6 +59,7 @@ module Clang_Basic {
   textual header "clang/Basic/FPOptions.def"
   textual header "clang/Basic/Features.def"
   textual header "clang/Basic/HLSLIntangibleTypes.def"
+  textual header "clang/Basic/HLSLPackedTypes.def"
   textual header "clang/Basic/LangOptions.def"
   textual header "clang/Basic/MSP430Target.def"
   textual header "clang/Basic/OpenACCClauses.def"
@@ -70,11 +70,11 @@ module Clang_Basic {
   textual header "clang/Basic/OperatorKinds.def"
   textual header "clang/Basic/PPCTypes.def"
   textual header "clang/Basic/RISCVVTypes.def"
+  textual header "clang/Basic/SPIRVTypes.def"
   textual header "clang/Basic/Sanitizers.def"
   textual header "clang/Basic/TargetCXXABI.def"
   textual header "clang/Basic/TargetOSMacros.def"
   textual header "clang/Basic/TokenKinds.def"
-  textual header "clang/Basic/TransformTypeTraits.def"
   textual header "clang/Basic/WebAssemblyReferenceTypes.def"
 
   module * { export * }

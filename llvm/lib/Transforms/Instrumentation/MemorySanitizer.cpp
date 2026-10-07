@@ -858,7 +858,7 @@ MemorySanitizer::getOrInsertMsanMetadataFunction(Module &M, StringRef Name,
 
 /// Create KMSAN API callbacks.
 void MemorySanitizer::createKernelApi(Module &M, const TargetLibraryInfo &TLI) {
-  IRBuilder<> IRB(*C);
+  IRBuilder<> IRB(M);
 
   // These will be initialized in insertKmsanPrologue().
   RetvalTLS = nullptr;
@@ -921,7 +921,7 @@ static Constant *getOrInsertGlobal(Module &M, StringRef Name, Type *Ty) {
 /// Insert declarations for userspace-specific functions and globals.
 void MemorySanitizer::createUserspaceApi(Module &M,
                                          const TargetLibraryInfo &TLI) {
-  IRBuilder<> IRB(*C);
+  IRBuilder<> IRB(M);
 
   // Create the callback.
   // FIXME: this function should have "Cold" calling conv,
@@ -998,7 +998,7 @@ void MemorySanitizer::initializeCallbacks(Module &M,
   if (CallbacksInitialized)
     return;
 
-  IRBuilder<> IRB(*C);
+  IRBuilder<> IRB(M);
   // Initialize callbacks that are common for kernel and userspace
   // instrumentation.
   MsanChainOriginFn = M.getOrInsertFunction(
@@ -1127,7 +1127,7 @@ void MemorySanitizer::initializeModule(Module &M) {
   }
 
   C = &(M.getContext());
-  IRBuilder<> IRB(*C);
+  IRBuilder<> IRB(M);
   IntptrTy = IRB.getIntPtrTy(DL);
   OriginTy = IRB.getInt32Ty();
   PtrTy = IRB.getPtrTy();
@@ -1267,7 +1267,7 @@ struct MemorySanitizerVisitor : public InstVisitor<MemorySanitizerVisitor> {
 
     MS.initializeCallbacks(*F.getParent(), TLI);
     FnPrologueEnd =
-        IRBuilder<>(&F.getEntryBlock(), F.getEntryBlock().getFirstNonPHIIt())
+        IRBuilder<>(F.getEntryBlock().getFirstNonPHIIt())
             .CreateIntrinsicWithoutFolding(Intrinsic::donothing, {});
 
     if (MS.CompileKernel) {
@@ -2609,6 +2609,13 @@ struct MemorySanitizerVisitor : public InstVisitor<MemorySanitizerVisitor> {
     setOrigin(&I, getOrigin(&I, 0));
   }
 
+  void visitPtrToAddrInst(PtrToAddrInst &I) {
+    IRBuilder<> IRB(&I);
+    setShadow(&I, IRB.CreateIntCast(getShadow(&I, 0), getShadowTy(&I), false,
+                                    "_msprop_ptrtoaddr"));
+    setOrigin(&I, getOrigin(&I, 0));
+  }
+
   void visitIntToPtrInst(IntToPtrInst &I) {
     IRBuilder<> IRB(&I);
     setShadow(&I, IRB.CreateIntCast(getShadow(&I, 0), getShadowTy(&I), false,
@@ -2651,7 +2658,8 @@ struct MemorySanitizerVisitor : public InstVisitor<MemorySanitizerVisitor> {
     Value *S0 = getShadow(&I, 0);
 
     /// For scalars:
-    /// Since they are converting from floating-point to integer, the output is
+    /// Since they are converting from floating-point to integer, or between
+    /// different width floating-point values, the output is:
     /// - fully uninitialized if *any* bit of the input is uninitialized
     /// - fully ininitialized if all bits of the input are ininitialized
     /// We apply the same principle on a per-field basis for vectors.
@@ -2673,8 +2681,13 @@ struct MemorySanitizerVisitor : public InstVisitor<MemorySanitizerVisitor> {
   void visitUIToFPInst(CastInst &I) {
     handleGenericVectorConvertIntrinsic(I, /*FixedPoint=*/false);
   }
-  void visitFPExtInst(CastInst &I) { handleShadowOr(I); }
-  void visitFPTruncInst(CastInst &I) { handleShadowOr(I); }
+
+  void visitFPExtInst(CastInst &I) {
+    handleGenericVectorConvertIntrinsic(I, /*FixedPoint=*/false);
+  }
+  void visitFPTruncInst(CastInst &I) {
+    handleGenericVectorConvertIntrinsic(I, /*FixedPoint=*/false);
+  }
 
   /// Generic handler to compute shadow for bitwise AND.
   ///
@@ -4617,6 +4630,37 @@ struct MemorySanitizerVisitor : public InstVisitor<MemorySanitizerVisitor> {
     setOrigin(&I, Origin);
   }
 
+  // e.g., <4 x i32> @llvm.masked.udiv.v4i32(<4 x i32> %dividend,
+  //                                         <4 x i32> %divisor,
+  //                                         <4 x i1>  %mask)
+  //
+  // As handleIntegerDiv(), but per-lane: strict on the divisor and propagating
+  // the dividend, both only on the enabled lanes. Disabled lanes cannot cause
+  // undefined behaviour, and their result is poison.
+  void handleMaskedIntegerDivRem(IntrinsicInst &I) {
+    assert(I.arg_size() == 3);
+    IRBuilder<> IRB(&I);
+    Value *Dividend = I.getArgOperand(0);
+    Value *Divisor = I.getArgOperand(1);
+    Value *Mask = I.getArgOperand(2);
+
+    insertCheckShadowOf(Mask, &I);
+
+    Value *MaskedDivisorShadow = IRB.CreateSelect(
+        Mask, getShadow(Divisor), getCleanShadow(Divisor), "_msmaskeddivisor");
+    insertCheckShadow(MaskedDivisorShadow, getOrigin(Divisor), &I);
+
+    if (!PropagateShadow) {
+      setShadow(&I, getCleanShadow(&I));
+      setOrigin(&I, getCleanOrigin());
+      return;
+    }
+
+    setShadow(&I, IRB.CreateSelect(Mask, getShadow(Dividend),
+                                   getPoisonedShadow(&I), "_msmaskeddiv"));
+    setOrigin(&I, getOrigin(Dividend));
+  }
+
   // e.g., void @llvm.x86.avx.maskstore.ps.256(ptr, <8 x i32>, <8 x float>)
   //                                           dst  mask       src
   //
@@ -5082,6 +5126,16 @@ struct MemorySanitizerVisitor : public InstVisitor<MemorySanitizerVisitor> {
     setOriginForNaryOp(I);
   }
 
+  void handleModfOrSincos(IntrinsicInst &I) {
+    IRBuilder<> IRB(&I);
+    Value *ArgShadow = getShadow(&I, 0);
+    Value *Shadow = PoisonValue::get(getShadowTy(&I));
+    Shadow = IRB.CreateInsertValue(Shadow, ArgShadow, 0);
+    Shadow = IRB.CreateInsertValue(Shadow, ArgShadow, 1);
+    setShadow(&I, Shadow);
+    setOrigin(&I, getOrigin(&I, 0));
+  }
+
   Value *extractLowerShadow(IRBuilder<> &IRB, Value *V) {
     assert(isa<FixedVectorType>(V->getType()));
     assert(cast<FixedVectorType>(V->getType())->getNumElements() > 0);
@@ -5288,6 +5342,50 @@ struct MemorySanitizerVisitor : public InstVisitor<MemorySanitizerVisitor> {
 
     Value *Shadow = IRB.CreateSelect(Mask, DataShadow, WriteThruShadow);
     setShadow(&I, Shadow);
+
+    setOriginForNaryOp(I);
+  }
+
+  // AVX512 Floating-Point Classification
+  //
+  // e.g.,
+  // - < 8 x i1> @llvm.x86.avx512.fpclass.pd.512
+  //                 (<8 x double> %input, i32 %classifiers)
+  // - <16 x i1> @llvm.x86.avx512.fpclass.ps.512
+  //                 (<16 x float> %input, i32 %classifiers)
+  void handleAVX512FPClass(IntrinsicInst &I) {
+    IRBuilder<> IRB(&I);
+
+    assert(I.arg_size() == 2);
+
+    Value *Input = I.getOperand(0);
+    assert(isFixedFPVector(Input));
+    [[maybe_unused]] FixedVectorType *InputType = cast<FixedVectorType>(Input->getType());
+
+    Value *Classifiers = I.getOperand(1);
+    assert(isa<ConstantInt>(Classifiers));
+    // No shadow check needed for constants
+
+    assert(isFixedIntVectorTy(I.getType()));
+    FixedVectorType *OutputType = cast<FixedVectorType>(I.getType());
+    assert(OutputType->getScalarSizeInBits() == 1);
+
+    assert(OutputType->getNumElements() == InputType->getNumElements());
+
+    Value *OutputShadow;
+    if (cast<ConstantInt>(Classifiers)->isZero())
+      // Each bit specifies whether a particular classifier is enabled.
+      // If Classifiers == 0, the output is trivially known to be zero, thus
+      // the output is fully initialized.
+      OutputShadow = getCleanShadow(OutputType);
+    else
+      // Approximate each bit of the output shadow based on whether the
+      // corresponding input element is fully initialized. It is only
+      // approximate because some classifications do not rely on all bits of
+      // the input element.
+      OutputShadow = IRB.CreateICmpNE(getShadow(Input), getCleanShadow(Input));
+
+    setShadow(&I, OutputShadow);
 
     setOriginForNaryOp(I);
   }
@@ -5717,6 +5815,13 @@ struct MemorySanitizerVisitor : public InstVisitor<MemorySanitizerVisitor> {
 
   /// Handle intrinsics by applying the intrinsic to the shadows.
   ///
+  /// For example, this can be applied to the Arm NEON vector table intrinsics
+  /// (tbl{1,2,3,4}).
+  ///
+  /// Typically, shadowIntrinsicID will be specified by the caller to be
+  /// I.getIntrinsicID(), but the caller can choose to replace it with another
+  /// intrinsic of the same type.
+  ///
   /// The trailing arguments are passed verbatim to the intrinsic, though any
   /// uninitialized trailing arguments can also taint the shadow e.g., for an
   /// intrinsic with one trailing verbatim argument:
@@ -5725,21 +5830,30 @@ struct MemorySanitizerVisitor : public InstVisitor<MemorySanitizerVisitor> {
   ///     shadow[out] =
   ///         intrinsic(shadow[var1], shadow[var2], opType) | shadow[opType]
   ///
-  /// Typically, shadowIntrinsicID will be specified by the caller to be
-  /// I.getIntrinsicID(), but the caller can choose to replace it with another
-  /// intrinsic of the same type.
+  /// If an intrinsic is called with floating-point arguments, we will
+  /// typically cast the shadows to floating-point, apply the intrinsic [*],
+  /// then cast the result back to integer/shadow.
   ///
-  /// CAUTION: this assumes that the intrinsic will handle arbitrary
-  ///          bit-patterns (for example, if the intrinsic accepts floats for
-  ///          var1, we require that it doesn't care if inputs are NaNs).
+  /// In cases where we know the intrinsic is compatible with integer
+  /// arguments, 'forceIntegerIntrinsic' will apply the integer variant, even
+  /// if the arguments are floating-point, thus avoiding unnecessary casts
+  /// e.g., if I is:
+  ///     <16 x float> @llvm.x86.avx512.mask.compress
+  ///                      (<16 x float>, <16 x float>, <16 x i1> %mask)
+  /// we would prefer to compute the shadows using:
+  ///     <16 x i32> @llvm.x86.avx512.mask.compress
+  ///                      (<16 x i32>, <16 x i32>, <16 x i1> %mask)
   ///
-  /// For example, this can be applied to the Arm NEON vector table intrinsics
-  /// (tbl{1,2,3,4}).
+  /// [*] CAUTION: this assumes that the intrinsic will handle arbitrary
+  ///              bit-patterns (for example, if the intrinsic accepts floats
+  ///              for var1, we require that it doesn't care if inputs are
+  ///              NaNs).
   ///
   /// The origin is approximated using setOriginForNaryOp.
   void handleIntrinsicByApplyingToShadow(IntrinsicInst &I,
                                          Intrinsic::ID shadowIntrinsicID,
-                                         unsigned int trailingVerbatimArgs) {
+                                         unsigned int trailingVerbatimArgs,
+                                         bool forceIntegerIntrinsic) {
     IRBuilder<> IRB(&I);
 
     assert(trailingVerbatimArgs < I.arg_size());
@@ -5749,20 +5863,30 @@ struct MemorySanitizerVisitor : public InstVisitor<MemorySanitizerVisitor> {
     for (unsigned int i = 0; i < I.arg_size() - trailingVerbatimArgs; i++) {
       Value *Shadow = getShadow(&I, i);
 
-      // Shadows are integer-ish types but some intrinsics require a
-      // different (e.g., floating-point) type.
-      ShadowArgs.push_back(
-          IRB.CreateBitCast(Shadow, I.getArgOperand(i)->getType()));
+      if (forceIntegerIntrinsic)
+        ShadowArgs.push_back(Shadow);
+      else
+        ShadowArgs.push_back(
+            IRB.CreateBitCast(Shadow, I.getArgOperand(i)->getType()));
     }
 
     for (unsigned int i = I.arg_size() - trailingVerbatimArgs; i < I.arg_size();
          i++) {
       Value *Arg = I.getArgOperand(i);
+      if (forceIntegerIntrinsic)
+        assert(Arg->getType()->isIntOrIntVectorTy());
       ShadowArgs.push_back(Arg);
     }
 
-    Value *CI = IRB.CreateIntrinsic(I.getType(), shadowIntrinsicID, ShadowArgs);
-    Value *CombinedShadow = CI;
+    Value *CombinedShadow;
+    if (forceIntegerIntrinsic) {
+      CombinedShadow =
+          IRB.CreateIntrinsic(getShadowTy(&I), shadowIntrinsicID, ShadowArgs);
+    } else {
+      Value *CI =
+          IRB.CreateIntrinsic(I.getType(), shadowIntrinsicID, ShadowArgs);
+      CombinedShadow = IRB.CreateBitCast(CI, getShadowTy(&I));
+    }
 
     // Combine the computed shadow with the shadow of trailing args
     for (unsigned int i = I.arg_size() - trailingVerbatimArgs; i < I.arg_size();
@@ -5772,7 +5896,7 @@ struct MemorySanitizerVisitor : public InstVisitor<MemorySanitizerVisitor> {
       CombinedShadow = IRB.CreateOr(Shadow, CombinedShadow, "_msprop");
     }
 
-    setShadow(&I, IRB.CreateBitCast(CombinedShadow, getShadowTy(&I)));
+    setShadow(&I, CombinedShadow);
 
     setOriginForNaryOp(I);
   }
@@ -5786,6 +5910,99 @@ struct MemorySanitizerVisitor : public InstVisitor<MemorySanitizerVisitor> {
     handleShadowOr(I);
   }
 
+  // Handles:
+  //   <4 x half> @llvm.aarch64.neon.fp8.fdot2.lane
+  //                  (<4 x half>, <8 x i8>, <16 x i8>, i32)
+  //                   accumulator A         B          lane
+  //
+  //   <8 x half> @llvm.aarch64.neon.fp8.fdot2.lane
+  //                  (<8 x half>, <16 x i8>, <16 x i8>, i32)
+  //   <2 x float> @llvm.aarch64.neon.fp8.fdot4.lane
+  //                  (<2 x float>, <8 x i8>, <16 x i8>, i32)
+  //   <4 x float> @llvm.aarch64.neon.fp8.fdot4.lane
+  //                  (<4 x float>, <16 x i8>, <16 x i8>, i32)
+  //
+  // The lane specifies which pair (fdot2) or quad (fdot4) of numbers to
+  // extract from B, which is then splatted before being used in the dot
+  // products e.g., for
+  //     <4 x half> @llvm.aarch64.neon.fp8.fdot2.lane:
+  //                    (<4 x half>, <8 x i8>, <16 x i8>, 1)
+  //
+  //       acc[0]     acc[1]     acc[2]     acc[3]
+  //       +    +     +    +     +    +     +    +
+  //     A[0] A[1]  A[2] A[3]  A[4] A[5]  A[6] A[7]
+  //      *    *     *    *     *    *     *    *
+  //     B[2] B[3]  B[2] B[3]  B[2] B[3]  B[2] B[3]
+  //
+  // Notice that if any bit of B[2] or B[3] is uninitialized, every accumulator
+  // value will become tainted; we approximate this by marking the output as
+  // fully uninitialized. This permits a 'Select' optimization.
+  //
+  // This function is separate from handleVectorDotProductIntrinsic(), because
+  // the non-overlapping features (e.g., odd/even lanes vs. numbered lanes,
+  // ZeroPurifies, EltSizeInBits) and optimizations make clean code reuse
+  // difficult.
+  void handleNEONDotProductLaneIntrinsic(IntrinsicInst &I,
+                                         unsigned ReductionFactor) {
+    IRBuilder<> IRB(&I);
+    assert(I.arg_size() == 4);
+
+    [[maybe_unused]] Value *VAcc = I.getOperand(0);
+    [[maybe_unused]] Value *Va = I.getOperand(1);
+    [[maybe_unused]] Value *Vb = I.getOperand(2);
+    Value *Lane = I.getOperand(3);
+
+    assert(isa<FixedVectorType>(VAcc->getType()));
+    assert(VAcc->getType() == I.getType());
+
+    assert(isa<FixedVectorType>(Va->getType()));
+    assert(Va->getType()->getPrimitiveSizeInBits() ==
+           I.getType()->getPrimitiveSizeInBits());
+
+    assert(cast<FixedVectorType>(Va->getType())->getNumElements() ==
+           cast<FixedVectorType>(I.getType())->getNumElements() *
+               ReductionFactor);
+
+    assert(isa<FixedVectorType>(Vb->getType()));
+    // Deliberately not strict equality
+    assert(Vb->getType()->getPrimitiveSizeInBits() >=
+           I.getType()->getPrimitiveSizeInBits());
+
+    assert(Lane->getType()->isIntegerTy());
+
+    // (<4 x 16>, <8 x i8>, <16 x i8>)
+    //  SAcc      Sa        Sb
+    Value *SAcc = getShadow(&I, 0);
+    Value *Sa = getShadow(&I, 1);
+    Value *Sb = getShadow(&I, 2);
+
+    // Cast the shadows to:
+    //     (<4 x i16>, <4 x i16>, <8 x i16>)
+    //      SAcc        Sa         Sb
+    Sa = IRB.CreateBitCast(Sa, SAcc->getType());
+    Sb = IRB.CreateBitCast(
+        Sb, FixedVectorType::getWithSizeAndScalar(
+                cast<FixedVectorType>(Sb->getType()),
+                cast<FixedVectorType>(SAcc->getType())->getElementType()));
+
+    // All-or-nothing shadows
+    Sa =
+        IRB.CreateSExt(IRB.CreateICmpNE(Sa, getCleanShadow(Sa)), Sa->getType());
+
+    // Extract the specific lane from Sb to get i16, then turn it into a single
+    // bit representing if it is fully initialized.
+    Sb = IRB.CreateExtractElement(Sb, Lane);
+    Value *SbClean = IRB.CreateIsNull(Sb);
+
+    Value *SOutput = IRB.CreateOr(SAcc, Sa);
+
+    // Select is cheaper than broadcasting Sb into <4 x i16>.
+    SOutput = IRB.CreateSelect(SbClean, SOutput, getPoisonedShadow(SOutput));
+
+    setShadow(&I, SOutput);
+    setOriginForNaryOp(I);
+  }
+
   bool maybeHandleCrossPlatformIntrinsic(IntrinsicInst &I) {
     switch (I.getIntrinsicID()) {
     case Intrinsic::uadd_with_overflow:
@@ -5796,12 +6013,18 @@ struct MemorySanitizerVisitor : public InstVisitor<MemorySanitizerVisitor> {
     case Intrinsic::smul_with_overflow:
       handleArithmeticWithOverflow(I);
       break;
+    case Intrinsic::modf:
+    case Intrinsic::sincos:
+    case Intrinsic::sincospi:
+      handleModfOrSincos(I);
+      break;
     case Intrinsic::abs:
       handleAbsIntrinsic(I);
       break;
     case Intrinsic::bitreverse:
       handleIntrinsicByApplyingToShadow(I, I.getIntrinsicID(),
-                                        /*trailingVerbatimArgs*/ 0);
+                                        /*trailingVerbatimArgs=*/0,
+                                        /*forceIntegerIntrinsic=*/false);
       break;
     case Intrinsic::is_fpclass:
       handleIsFpClass(I);
@@ -5810,7 +6033,6 @@ struct MemorySanitizerVisitor : public InstVisitor<MemorySanitizerVisitor> {
       handleLifetimeStart(I);
       break;
     case Intrinsic::launder_invariant_group:
-    case Intrinsic::strip_invariant_group:
       handleInvariantGroup(I);
       break;
     case Intrinsic::bswap:
@@ -5837,6 +6059,12 @@ struct MemorySanitizerVisitor : public InstVisitor<MemorySanitizerVisitor> {
       break;
     case Intrinsic::masked_load:
       handleMaskedLoad(I);
+      break;
+    case Intrinsic::masked_udiv:
+    case Intrinsic::masked_sdiv:
+    case Intrinsic::masked_urem:
+    case Intrinsic::masked_srem:
+      handleMaskedIntegerDivRem(I);
       break;
     case Intrinsic::vector_reduce_and:
       handleVectorReduceAndIntrinsic(I);
@@ -5896,6 +6124,17 @@ struct MemorySanitizerVisitor : public InstVisitor<MemorySanitizerVisitor> {
     case Intrinsic::fptoui_sat:
       handleGenericVectorConvertIntrinsic(I, /*FixedPoint=*/false);
       break;
+
+    // e.g.,
+    //     notail call void (...) @llvm.fake.use(i64 %x)
+    //     notail call void (...) @llvm.fake.use(i32 %y)
+    //     notail call void (...) @llvm.fake.use(ptr %z)
+    case Intrinsic::fake_use:
+      assert(I.getType()->isVoidTy());
+      // fake_uses aren't real, they can't hurt you. If the use isn't real, it
+      // can't be a real use-of-uninitialized memory. Silently skip over
+      // fake_use.
+      return true;
 
     default:
       return false;
@@ -6714,7 +6953,8 @@ struct MemorySanitizerVisitor : public InstVisitor<MemorySanitizerVisitor> {
     case Intrinsic::x86_ssse3_pshuf_b:
     case Intrinsic::x86_avx512_pshuf_b_512:
       handleIntrinsicByApplyingToShadow(I, I.getIntrinsicID(),
-                                        /*trailingVerbatimArgs=*/1);
+                                        /*trailingVerbatimArgs=*/1,
+                                        /*forceIntegerIntrinsic=*/false);
       break;
 
     // AVX512 PMOV: Packed MOV, with truncation
@@ -6736,7 +6976,8 @@ struct MemorySanitizerVisitor : public InstVisitor<MemorySanitizerVisitor> {
       // Intrinsic::x86_avx512_mask_pmov_{qd,wb}_{256,512} were removed in
       // f608dc1f5775ee880e8ea30e2d06ab5a4a935c22
       handleIntrinsicByApplyingToShadow(I, I.getIntrinsicID(),
-                                        /*trailingVerbatimArgs=*/1);
+                                        /*trailingVerbatimArgs=*/1,
+                                        /*forceIntegerIntrinsic=*/false);
       break;
     }
 
@@ -6745,104 +6986,104 @@ struct MemorySanitizerVisitor : public InstVisitor<MemorySanitizerVisitor> {
     // TODO: improve handleAVX512VectorDownConvert to precisely model saturation
     case Intrinsic::x86_avx512_mask_pmovs_dw_512:
     case Intrinsic::x86_avx512_mask_pmovus_dw_512: {
-      handleIntrinsicByApplyingToShadow(I,
-                                        Intrinsic::x86_avx512_mask_pmov_dw_512,
-                                        /*trailingVerbatimArgs=*/1);
+      handleIntrinsicByApplyingToShadow(
+          I, Intrinsic::x86_avx512_mask_pmov_dw_512,
+          /*trailingVerbatimArgs=*/1, /*forceIntegerIntrinsic=*/false);
       break;
     }
 
     case Intrinsic::x86_avx512_mask_pmovs_dw_256:
     case Intrinsic::x86_avx512_mask_pmovus_dw_256:
-      handleIntrinsicByApplyingToShadow(I,
-                                        Intrinsic::x86_avx512_mask_pmov_dw_256,
-                                        /*trailingVerbatimArgs=*/1);
+      handleIntrinsicByApplyingToShadow(
+          I, Intrinsic::x86_avx512_mask_pmov_dw_256,
+          /*trailingVerbatimArgs=*/1, /*forceIntegerIntrinsic=*/false);
       break;
 
     case Intrinsic::x86_avx512_mask_pmovs_dw_128:
     case Intrinsic::x86_avx512_mask_pmovus_dw_128:
-      handleIntrinsicByApplyingToShadow(I,
-                                        Intrinsic::x86_avx512_mask_pmov_dw_128,
-                                        /*trailingVerbatimArgs=*/1);
+      handleIntrinsicByApplyingToShadow(
+          I, Intrinsic::x86_avx512_mask_pmov_dw_128,
+          /*trailingVerbatimArgs=*/1, /*forceIntegerIntrinsic=*/false);
       break;
 
     case Intrinsic::x86_avx512_mask_pmovs_db_512:
     case Intrinsic::x86_avx512_mask_pmovus_db_512: {
-      handleIntrinsicByApplyingToShadow(I,
-                                        Intrinsic::x86_avx512_mask_pmov_db_512,
-                                        /*trailingVerbatimArgs=*/1);
+      handleIntrinsicByApplyingToShadow(
+          I, Intrinsic::x86_avx512_mask_pmov_db_512,
+          /*trailingVerbatimArgs=*/1, /*forceIntegerIntrinsic=*/false);
       break;
     }
 
     case Intrinsic::x86_avx512_mask_pmovs_db_256:
     case Intrinsic::x86_avx512_mask_pmovus_db_256:
-      handleIntrinsicByApplyingToShadow(I,
-                                        Intrinsic::x86_avx512_mask_pmov_db_256,
-                                        /*trailingVerbatimArgs=*/1);
+      handleIntrinsicByApplyingToShadow(
+          I, Intrinsic::x86_avx512_mask_pmov_db_256,
+          /*trailingVerbatimArgs=*/1, /*forceIntegerIntrinsic=*/false);
       break;
 
     case Intrinsic::x86_avx512_mask_pmovs_db_128:
     case Intrinsic::x86_avx512_mask_pmovus_db_128:
-      handleIntrinsicByApplyingToShadow(I,
-                                        Intrinsic::x86_avx512_mask_pmov_db_128,
-                                        /*trailingVerbatimArgs=*/1);
+      handleIntrinsicByApplyingToShadow(
+          I, Intrinsic::x86_avx512_mask_pmov_db_128,
+          /*trailingVerbatimArgs=*/1, /*forceIntegerIntrinsic=*/false);
       break;
 
     case Intrinsic::x86_avx512_mask_pmovs_qb_512:
     case Intrinsic::x86_avx512_mask_pmovus_qb_512: {
-      handleIntrinsicByApplyingToShadow(I,
-                                        Intrinsic::x86_avx512_mask_pmov_qb_512,
-                                        /*trailingVerbatimArgs=*/1);
+      handleIntrinsicByApplyingToShadow(
+          I, Intrinsic::x86_avx512_mask_pmov_qb_512,
+          /*trailingVerbatimArgs=*/1, /*forceIntegerIntrinsic=*/false);
       break;
     }
 
     case Intrinsic::x86_avx512_mask_pmovs_qb_256:
     case Intrinsic::x86_avx512_mask_pmovus_qb_256:
-      handleIntrinsicByApplyingToShadow(I,
-                                        Intrinsic::x86_avx512_mask_pmov_qb_256,
-                                        /*trailingVerbatimArgs=*/1);
+      handleIntrinsicByApplyingToShadow(
+          I, Intrinsic::x86_avx512_mask_pmov_qb_256,
+          /*trailingVerbatimArgs=*/1, /*forceIntegerIntrinsic=*/false);
       break;
 
     case Intrinsic::x86_avx512_mask_pmovs_qb_128:
     case Intrinsic::x86_avx512_mask_pmovus_qb_128:
-      handleIntrinsicByApplyingToShadow(I,
-                                        Intrinsic::x86_avx512_mask_pmov_qb_128,
-                                        /*trailingVerbatimArgs=*/1);
+      handleIntrinsicByApplyingToShadow(
+          I, Intrinsic::x86_avx512_mask_pmov_qb_128,
+          /*trailingVerbatimArgs=*/1, /*forceIntegerIntrinsic=*/false);
       break;
 
     case Intrinsic::x86_avx512_mask_pmovs_qw_512:
     case Intrinsic::x86_avx512_mask_pmovus_qw_512: {
-      handleIntrinsicByApplyingToShadow(I,
-                                        Intrinsic::x86_avx512_mask_pmov_qw_512,
-                                        /*trailingVerbatimArgs=*/1);
+      handleIntrinsicByApplyingToShadow(
+          I, Intrinsic::x86_avx512_mask_pmov_qw_512,
+          /*trailingVerbatimArgs=*/1, /*forceIntegerIntrinsic=*/false);
       break;
     }
 
     case Intrinsic::x86_avx512_mask_pmovs_qw_256:
     case Intrinsic::x86_avx512_mask_pmovus_qw_256:
-      handleIntrinsicByApplyingToShadow(I,
-                                        Intrinsic::x86_avx512_mask_pmov_qw_256,
-                                        /*trailingVerbatimArgs=*/1);
+      handleIntrinsicByApplyingToShadow(
+          I, Intrinsic::x86_avx512_mask_pmov_qw_256,
+          /*trailingVerbatimArgs=*/1, /*forceIntegerIntrinsic=*/false);
       break;
 
     case Intrinsic::x86_avx512_mask_pmovs_qw_128:
     case Intrinsic::x86_avx512_mask_pmovus_qw_128:
-      handleIntrinsicByApplyingToShadow(I,
-                                        Intrinsic::x86_avx512_mask_pmov_qw_128,
-                                        /*trailingVerbatimArgs=*/1);
+      handleIntrinsicByApplyingToShadow(
+          I, Intrinsic::x86_avx512_mask_pmov_qw_128,
+          /*trailingVerbatimArgs=*/1, /*forceIntegerIntrinsic=*/false);
       break;
 
     case Intrinsic::x86_avx512_mask_pmovs_qd_128:
     case Intrinsic::x86_avx512_mask_pmovus_qd_128:
-      handleIntrinsicByApplyingToShadow(I,
-                                        Intrinsic::x86_avx512_mask_pmov_qd_128,
-                                        /*trailingVerbatimArgs=*/1);
+      handleIntrinsicByApplyingToShadow(
+          I, Intrinsic::x86_avx512_mask_pmov_qd_128,
+          /*trailingVerbatimArgs=*/1, /*forceIntegerIntrinsic=*/false);
       break;
 
     case Intrinsic::x86_avx512_mask_pmovs_wb_128:
     case Intrinsic::x86_avx512_mask_pmovus_wb_128:
-      handleIntrinsicByApplyingToShadow(I,
-                                        Intrinsic::x86_avx512_mask_pmov_wb_128,
-                                        /*trailingVerbatimArgs=*/1);
+      handleIntrinsicByApplyingToShadow(
+          I, Intrinsic::x86_avx512_mask_pmov_wb_128,
+          /*trailingVerbatimArgs=*/1, /*forceIntegerIntrinsic=*/false);
       break;
 
     case Intrinsic::x86_avx512_mask_pmovs_qd_256:
@@ -6859,6 +7100,19 @@ struct MemorySanitizerVisitor : public InstVisitor<MemorySanitizerVisitor> {
       handleAVX512VectorDownConvert(I);
       break;
     }
+
+    // e.g.,
+    // <16 x float> @llvm.x86.avx512.mask.compress
+    //                  (<16 x float> %data, <16 x float> %passthru,
+    //                   <16 x i1> %mask)
+    // <16 x i32>   @llvm.x86.avx512.mask.compress
+    //                  (<16 x i32> %data, <16 x i32> %passthru,
+    //                   <16 x i1> %mask)
+    case Intrinsic::x86_avx512_mask_compress:
+      handleIntrinsicByApplyingToShadow(I, I.getIntrinsicID(),
+                                        /*trailingVerbatimArgs=*/1,
+                                        /*forceIntegerIntrinsic=*/true);
+      break;
 
     // AVX512/AVX10 Reciprocal
     //   <16 x float> @llvm.x86.avx512.rsqrt14.ps.512
@@ -7096,6 +7350,14 @@ struct MemorySanitizerVisitor : public InstVisitor<MemorySanitizerVisitor> {
       break;
     }
 
+    // AVX512 Floating-Point Classification
+    // - <8 x i1> @llvm.x86.avx512.fpclass.pd.512(<8 x double>, i32)
+    // - <16 x i1> @llvm.x86.avx512.fpclass.ps.512(<16 x float>, i32)
+    case Intrinsic::x86_avx512_fpclass_pd_512:
+    case Intrinsic::x86_avx512_fpclass_ps_512:
+      handleAVX512FPClass(I);
+      break;
+
     // AVX Galois Field New Instructions
     case Intrinsic::x86_vgf2p8affineqb_128:
     case Intrinsic::x86_vgf2p8affineqb_256:
@@ -7147,7 +7409,8 @@ struct MemorySanitizerVisitor : public InstVisitor<MemorySanitizerVisitor> {
     case Intrinsic::aarch64_neon_vsli:
     case Intrinsic::aarch64_neon_vsri:
       handleIntrinsicByApplyingToShadow(I, I.getIntrinsicID(),
-                                        /*trailingVerbatimArgs=*/1);
+                                        /*trailingVerbatimArgs=*/1,
+                                        /*forceIntegerIntrinsic=*/false);
       break;
 
     // TODO: handling max/min similarly to AND/OR may be more precise
@@ -7296,7 +7559,7 @@ struct MemorySanitizerVisitor : public InstVisitor<MemorySanitizerVisitor> {
       // The last trailing argument (index register) should be handled verbatim
       handleIntrinsicByApplyingToShadow(
           I, /*shadowIntrinsicID=*/I.getIntrinsicID(),
-          /*trailingVerbatimArgs*/ 1);
+          /*trailingVerbatimArgs=*/1, /*forceIntegerIntrinsic=*/false);
       break;
     }
 
@@ -7339,6 +7602,50 @@ struct MemorySanitizerVisitor : public InstVisitor<MemorySanitizerVisitor> {
                                       /*ZeroPurifies=*/false,
                                       /*EltSizeInBits=*/0,
                                       /*Lanes=*/kBothLanes);
+      break;
+
+    // <4 x half > @llvm.aarch64.neon.fp8.fdot2
+    //               (<4 x half >, < 8 x i8>, < 8 x i8>)
+    // <8 x half > @llvm.aarch64.neon.fp8.fdot2
+    //               (<8 x half >, <16 x i8>, <16 x i8>)
+    //
+    // N.B. although the multiplicands are i8, they are actually fp8, thus
+    //      ZeroPurifies is not applicable.
+    case Intrinsic::aarch64_neon_fp8_fdot2:
+      handleVectorDotProductIntrinsic(I, /*ReductionFactor=*/2,
+                                      /*ZeroPurifies=*/false,
+                                      /*EltSizeInBits=*/0,
+                                      /*Lanes=*/kBothLanes);
+      break;
+
+    // <2 x float> @llvm.aarch64.neon.fp8.fdot4
+    //               (<2 x float>, < 8 x i8>, < 8 x i8>)
+    // <4 x float> @llvm.aarch64.neon.fp8.fdot4
+    //               (<4 x float>, <16 x i8>, <16 x i8>)
+    //
+    // N.B. although the multiplicands are i8, they are actually fp8, thus
+    //      ZeroPurifies is not applicable.
+    case Intrinsic::aarch64_neon_fp8_fdot4:
+      handleVectorDotProductIntrinsic(I, /*ReductionFactor=*/4,
+                                      /*ZeroPurifies=*/false,
+                                      /*EltSizeInBits=*/0,
+                                      /*Lanes=*/kBothLanes);
+      break;
+
+    // <4 x half> @llvm.aarch64.neon.fp8.fdot2.lane
+    //                (<4 x half>, <8 x i8>, <16 x i8>, i32)
+    // <8 x half> @llvm.aarch64.neon.fp8.fdot2.lane
+    //                (<8 x half>, <16 x i8>, <16 x i8>, i32)
+    case Intrinsic::aarch64_neon_fp8_fdot2_lane:
+      handleNEONDotProductLaneIntrinsic(I, /*ReductionFactor=*/2);
+      break;
+
+    // <2 x float> @llvm.aarch64.neon.fp8.fdot4.lane
+    //                (<2 x float>, <8 x i8>, <16 x i8>, i32)
+    // <4 x float> @llvm.aarch64.neon.fp8.fdot4.lane
+    //                (<4 x float>, <16 x i8>, <16 x i8>, i32)
+    case Intrinsic::aarch64_neon_fp8_fdot4_lane:
+      handleNEONDotProductLaneIntrinsic(I, /*ReductionFactor=*/4);
       break;
 
     // Floating-Point Absolute Compare Greater Than/Equal
@@ -7438,8 +7745,8 @@ struct MemorySanitizerVisitor : public InstVisitor<MemorySanitizerVisitor> {
         visitInstruction(CB);
       return;
     }
-    LibFunc LF;
-    if (TLI->getLibFunc(CB, LF)) {
+    LibFunc LF = TLI->getLibFunc(CB);
+    if (LF != NotLibFunc) {
       // libatomic.a functions need to have special handling because there isn't
       // a good way to intercept them or compile the library with
       // instrumentation.
@@ -7504,7 +7811,7 @@ struct MemorySanitizerVisitor : public InstVisitor<MemorySanitizerVisitor> {
       unsigned Size = 0;
       const DataLayout &DL = F.getDataLayout();
 
-      bool ByVal = CB.paramHasAttr(i, Attribute::ByVal);
+      bool ByVal = CB.isByValArgument(i);
       bool NoUndef = CB.paramHasAttr(i, Attribute::NoUndef);
       bool EagerCheck = MayCheckCall && !ByVal && NoUndef;
 
@@ -8192,7 +8499,7 @@ struct VarArgAMD64Helper : public VarArgHelperBase {
 
     for (const auto &[ArgNo, A] : llvm::enumerate(CB.args())) {
       bool IsFixed = ArgNo < CB.getFunctionType()->getNumParams();
-      bool IsByVal = CB.paramHasAttr(ArgNo, Attribute::ByVal);
+      bool IsByVal = CB.isByValArgument(ArgNo);
       if (IsByVal) {
         // ByVal arguments always go to the overflow area.
         // Fixed arguments passed through the overflow area will be stepped
@@ -8621,7 +8928,7 @@ struct VarArgPowerPC64Helper : public VarArgHelperBase {
     const DataLayout &DL = F.getDataLayout();
     for (const auto &[ArgNo, A] : llvm::enumerate(CB.args())) {
       bool IsFixed = ArgNo < CB.getFunctionType()->getNumParams();
-      bool IsByVal = CB.paramHasAttr(ArgNo, Attribute::ByVal);
+      bool IsByVal = CB.isByValArgument(ArgNo);
       if (IsByVal) {
         assert(A->getType()->isPointerTy());
         Type *RealTy = CB.getParamByValType(ArgNo);
@@ -8751,7 +9058,7 @@ struct VarArgPowerPC32Helper : public VarArgHelperBase {
     unsigned IntptrSize = DL.getTypeStoreSize(MS.IntptrTy);
     for (const auto &[ArgNo, A] : llvm::enumerate(CB.args())) {
       bool IsFixed = ArgNo < CB.getFunctionType()->getNumParams();
-      bool IsByVal = CB.paramHasAttr(ArgNo, Attribute::ByVal);
+      bool IsByVal = CB.isByValArgument(ArgNo);
       if (IsByVal) {
         assert(A->getType()->isPointerTy());
         Type *RealTy = CB.getParamByValType(ArgNo);
@@ -8997,7 +9304,7 @@ struct VarArgSystemZHelper : public VarArgHelperBase {
     for (const auto &[ArgNo, A] : llvm::enumerate(CB.args())) {
       bool IsFixed = ArgNo < CB.getFunctionType()->getNumParams();
       // SystemZABIInfo does not produce ByVal parameters.
-      assert(!CB.paramHasAttr(ArgNo, Attribute::ByVal));
+      assert(!CB.isByValArgument(ArgNo));
       Type *T = A->getType();
       ArgKind AK = classifyArgument(T);
       if (AK == ArgKind::Indirect) {
@@ -9214,7 +9521,7 @@ struct VarArgI386Helper : public VarArgHelperBase {
     unsigned VAArgOffset = 0;
     for (const auto &[ArgNo, A] : llvm::enumerate(CB.args())) {
       bool IsFixed = ArgNo < CB.getFunctionType()->getNumParams();
-      bool IsByVal = CB.paramHasAttr(ArgNo, Attribute::ByVal);
+      bool IsByVal = CB.isByValArgument(ArgNo);
       if (IsByVal) {
         assert(A->getType()->isPointerTy());
         Type *RealTy = CB.getParamByValType(ArgNo);

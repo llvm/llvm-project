@@ -1,5 +1,5 @@
-// RUN: not llvm-mc -triple=amdgcn -mcpu=gfx950 %s -filetype=null 2>&1 | FileCheck -check-prefix=ERR %s
-// RUN: not llvm-mc -triple=amdgcn -mcpu=gfx950 -mattr=+wavefrontsize32,-wavefrontsize64 %s -filetype=null 2>&1 | FileCheck -check-prefix=W32-ERR %s
+// RUN: not llvm-mc -triple=amdgpu9.50 %s -filetype=null 2>&1 | FileCheck -check-prefix=ERR %s
+// RUN: not llvm-mc -triple=amdgpu9.50 -mattr=+wavefrontsize32,-wavefrontsize64 %s -filetype=null 2>&1 | FileCheck -check-prefix=W32-ERR %s
 
 //===----------------------------------------------------------------------===//
 // v_mfma_f32_32x32x4_xf32
@@ -249,4 +249,12 @@ ds_read_b96_tr_b6 v[0:3], s0
 
 ds_read_b96_tr_b6 v[2:4], v2 offset:-64
 // ERR: :[[@LINE-1]]:{{[0-9]+}}: error: expected a 16-bit unsigned offset
+// W32-ERR: :[[@LINE-2]]:{{[0-9]+}}: error: instruction not supported on this GPU
+
+//===----------------------------------------------------------------------===//
+// v_cvt_sr_pk_bf16_f32 was only added for gfx1250, not gfx950.
+//===----------------------------------------------------------------------===//
+
+v_cvt_sr_pk_bf16_f32 v0, v1, v2, s3
+// ERR: :[[@LINE-1]]:{{[0-9]+}}: error: instruction not supported on this GPU
 // W32-ERR: :[[@LINE-2]]:{{[0-9]+}}: error: instruction not supported on this GPU

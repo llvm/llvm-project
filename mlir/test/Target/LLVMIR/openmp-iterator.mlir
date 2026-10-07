@@ -323,7 +323,7 @@ llvm.func @omp_task_depend_iterator_simple(%addr : !llvm.ptr) {
 
 // CHECK-LABEL: define void @omp_task_depend_iterator_simple
 // CHECK-SAME: (ptr %[[ADDR:[0-9]+]])
-// CHECK: %[[DEP_ARR:.*]] = tail call ptr @malloc(i64 %mallocsize)
+// CHECK: %[[DEP_ARR:.*]] = tail call ptr @malloc(i64 200)
 //
 // Iterator loop: preheader -> header -> cond -> body -> inc -> header...
 // CHECK: omp_dep_iterator.header:
@@ -369,7 +369,7 @@ llvm.func @omp_task_depend_iterator_mixed(%addr : !llvm.ptr, %plain : !llvm.ptr)
 
 // CHECK-LABEL: define void @omp_task_depend_iterator_mixed
 // CHECK-SAME: (ptr %[[ADDR2:[0-9]+]], ptr %[[PLAIN:[0-9]+]])
-// CHECK: %[[DEP_ARR2:.*]] = tail call ptr @malloc(i64 %mallocsize)
+// CHECK: %[[DEP_ARR2:.*]] = tail call ptr @malloc(i64 220)
 //
 // Plain entry at index 0
 // CHECK: %[[PLAIN_ENTRY:.*]] = getelementptr inbounds %struct.kmp_dep_info, ptr %[[DEP_ARR2]], i64 0
@@ -472,7 +472,7 @@ module attributes {omp.is_target_device = false, omp.target_triples = ["amdgcn-a
       omp.yield(%addr : !llvm.ptr)
     } -> !omp.iterated<!llvm.ptr>
 
-    %map = omp.map.info var_ptr(%addr : !llvm.ptr, i32) map_clauses(to) capture(ByRef) -> !llvm.ptr {name = "data"}
+    %map = omp.map.info var_ptr(%addr : !llvm.ptr, i32) map_clauses(to) capture(ByRef) name("data") -> !llvm.ptr
     omp.target kernel_type(generic) depend(taskdependin -> %it : !omp.iterated<!llvm.ptr>) map_entries(%map -> %arg0 : !llvm.ptr) {
       omp.terminator
     }
@@ -482,7 +482,7 @@ module attributes {omp.is_target_device = false, omp.target_triples = ["amdgcn-a
 
 // TARGET-LABEL: define void @omp_target_depend_iterator
 // TARGET-SAME: (ptr %[[ADDR:[0-9]+]])
-// TARGET-DAG: %[[DEP_ARR:.*]] = tail call ptr @malloc(i64 %mallocsize)
+// TARGET-DAG: %[[DEP_ARR:.*]] = tail call ptr @malloc(i64 200)
 //
 // Iterator loop: preheader -> header -> cond -> body -> inc -> header...
 // TARGET: omp_dep_iterator.header:

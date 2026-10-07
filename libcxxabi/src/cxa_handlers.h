@@ -19,11 +19,11 @@
 namespace std
 {
 
-_LIBCXXABI_HIDDEN _LIBCXXABI_NORETURN
+[[noreturn]] _LIBCXXABI_HIDDEN
 void
 __unexpected(unexpected_handler func);
 
-_LIBCXXABI_HIDDEN _LIBCXXABI_NORETURN
+[[noreturn]] _LIBCXXABI_HIDDEN
 void
 __terminate(terminate_handler func) noexcept;
 

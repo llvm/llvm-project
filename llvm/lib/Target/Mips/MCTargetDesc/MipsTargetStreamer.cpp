@@ -76,6 +76,8 @@ void MipsTargetStreamer::emitDirectiveSetVirt() {}
 void MipsTargetStreamer::emitDirectiveSetNoVirt() {}
 void MipsTargetStreamer::emitDirectiveSetGINV() {}
 void MipsTargetStreamer::emitDirectiveSetNoGINV() {}
+void MipsTargetStreamer::emitDirectiveSetEVA() {}
+void MipsTargetStreamer::emitDirectiveSetNoEVA() {}
 void MipsTargetStreamer::emitDirectiveSetAt() { forbidModuleDirective(); }
 void MipsTargetStreamer::emitDirectiveSetAtWithArg(unsigned RegNo) {
   forbidModuleDirective();
@@ -526,6 +528,16 @@ void MipsTargetAsmStreamer::emitDirectiveSetNoGINV() {
   MipsTargetStreamer::emitDirectiveSetNoGINV();
 }
 
+void MipsTargetAsmStreamer::emitDirectiveSetEVA() {
+  OS << "\t.set\teva\n";
+  MipsTargetStreamer::emitDirectiveSetEVA();
+}
+
+void MipsTargetAsmStreamer::emitDirectiveSetNoEVA() {
+  OS << "\t.set\tnoeva\n";
+  MipsTargetStreamer::emitDirectiveSetNoEVA();
+}
+
 void MipsTargetAsmStreamer::emitDirectiveSetAt() {
   OS << "\t.set\tat\n";
   MipsTargetStreamer::emitDirectiveSetAt();
@@ -884,11 +896,8 @@ MipsTargetELFStreamer::MipsTargetELFStreamer(MCStreamer &S,
   // fully, but any external user of the API that uses the MCTargetStreamer
   // would otherwise crash on assertion failure.
 
-  ABI = MipsABIInfo(
-      STI.getTargetTriple().getArch() == Triple::ArchType::mipsel ||
-              STI.getTargetTriple().getArch() == Triple::ArchType::mips
-          ? MipsABIInfo::O32()
-          : MipsABIInfo::N64());
+  ABI = MipsABIInfo(STI.getTargetTriple().isMIPS32() ? MipsABIInfo::O32()
+                                                     : MipsABIInfo::N64());
 
   // Architecture
   if (Features[Mips::FeatureMips64r6])

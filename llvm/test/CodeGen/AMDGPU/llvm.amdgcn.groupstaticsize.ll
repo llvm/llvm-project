@@ -1,10 +1,10 @@
-; RUN: llc -mtriple=amdgcn -mcpu=tahiti < %s | FileCheck -check-prefixes=CHECK,NOHSA %s
-; RUN: llc -mtriple=amdgcn--amdhsa -mcpu=kaveri < %s | FileCheck -check-prefixes=CHECK,HSA %s
-; RUN: llc -mtriple=amdgcn--amdhsa -mcpu=fiji < %s | FileCheck -check-prefixes=CHECK,HSA %s
+; RUN: llc -mtriple=amdgpu6.00 < %s | FileCheck -check-prefixes=CHECK,NOHSA %s
+; RUN: llc -mtriple=amdgpu7.00--amdhsa < %s | FileCheck -check-prefixes=CHECK,HSA %s
+; RUN: llc -mtriple=amdgpu8.03--amdhsa < %s | FileCheck -check-prefixes=CHECK,HSA %s
 
-; RUN: llc -global-isel -mtriple=amdgcn -mcpu=tahiti < %s | FileCheck -check-prefixes=CHECK,NOHSA %s
-; RUN: llc -global-isel -mtriple=amdgcn--amdhsa -mcpu=kaveri < %s | FileCheck -check-prefixes=CHECK,HSA %s
-; RUN: llc -global-isel -mtriple=amdgcn--amdhsa -mcpu=fiji < %s | FileCheck -check-prefixes=CHECK,HSA %s
+; RUN: llc -global-isel -mtriple=amdgpu6.00 < %s | FileCheck -check-prefixes=CHECK,NOHSA %s
+; RUN: llc -global-isel -mtriple=amdgpu7.00--amdhsa < %s | FileCheck -check-prefixes=CHECK,HSA %s
+; RUN: llc -global-isel -mtriple=amdgpu8.03--amdhsa < %s | FileCheck -check-prefixes=CHECK,HSA %s
 
 @lds0 = addrspace(3) global [512 x float] poison, align 4
 @lds1 = addrspace(3) global [256 x float] poison, align 4

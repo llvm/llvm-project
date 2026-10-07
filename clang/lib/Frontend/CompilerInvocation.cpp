@@ -260,12 +260,8 @@ CowCompilerInvocation::getMutPreprocessorOutputOpts() {
 
 using ArgumentConsumer = CompilerInvocation::ArgumentConsumer;
 
-#define OPTTABLE_STR_TABLE_CODE
-#include "clang/Options/Options.inc"
-#undef OPTTABLE_STR_TABLE_CODE
-
 static llvm::StringRef lookupStrInTable(unsigned Offset) {
-  return OptionStrTable[Offset];
+  return getDriverOptTable().getStrTable()[Offset];
 }
 
 #define SIMPLE_ENUM_VALUE_TABLE
@@ -576,7 +572,7 @@ static bool FixupInvocation(CompilerInvocation &Invocation,
   CodeGenOpts.LargeDataThreshold = TargetOpts.LargeDataThreshold;
 
   if (CodeGenOpts.getExceptionHandling() !=
-          CodeGenOptions::ExceptionHandlingKind::None &&
+          CodeGenOptions::ExceptionHandlingKind::Default &&
       T.isWindowsMSVCEnvironment())
     Diags.Report(diag::err_fe_invalid_exception_model)
         << static_cast<unsigned>(CodeGenOpts.getExceptionHandling()) << T.str();
@@ -1480,18 +1476,19 @@ void CompilerInvocation::setDefaultPointerAuthOptions(
       Opts.CXXTypeInfoVTablePointer =
           PointerAuthSchema(Key::ASDA, false, Discrimination::None);
 
-    Opts.CXXVTTVTablePointers =
-        PointerAuthSchema(Key::ASDA, false, Discrimination::None);
+    if (LangOpts.PointerAuthVTTVTPtrDiscrimination)
+      Opts.CXXVTTVTablePointers = PointerAuthSchema(
+          Key::ASDA, LangOpts.PointerAuthVTPtrAddressDiscrimination,
+          LangOpts.PointerAuthVTPtrTypeDiscrimination ? Discrimination::Type
+                                                      : Discrimination::None);
+    else
+      Opts.CXXVTTVTablePointers =
+          PointerAuthSchema(Key::ASDA, false, Discrimination::None);
+
     Opts.CXXVirtualFunctionPointers = Opts.CXXVirtualVariadicFunctionPointers =
         PointerAuthSchema(Key::ASIA, true, Discrimination::Decl);
     Opts.CXXMemberFunctionPointers =
         PointerAuthSchema(Key::ASIA, false, Discrimination::Type);
-
-    if (LangOpts.PointerAuthInitFini) {
-      Opts.InitFiniPointers = PointerAuthSchema(
-          Key::ASIA, LangOpts.PointerAuthInitFiniAddressDiscrimination,
-          Discrimination::Constant, InitFiniPointerConstantDiscriminator);
-    }
 
     Opts.BlockInvocationFunctionPointers =
         PointerAuthSchema(Key::ASIA, true, Discrimination::None);
@@ -1682,6 +1679,9 @@ void CompilerInvocationBase::GenerateCodeGenArgs(const CodeGenOptions &Opts,
   if (Opts.SaveTempsFilePrefix == OutputFile)
     GenerateArg(Consumer, OPT_save_temps_EQ, "obj");
 
+  if (!Opts.SaveDynDbgTempsFilePrefix.empty())
+    GenerateArg(Consumer, OPT_save_dynamic_debugging_temps);
+
   StringRef MemProfileBasename("memprof.profraw");
   if (!Opts.MemoryProfileOutput.empty()) {
     if (Opts.MemoryProfileOutput == MemProfileBasename) {
@@ -1759,9 +1759,6 @@ void CompilerInvocationBase::GenerateCodeGenArgs(const CodeGenOptions &Opts,
         T.isPPC32() ? OPT_msvr4_struct_return : OPT_freg_struct_return;
     GenerateArg(Consumer, Opt);
   }
-
-  if (Opts.EnableAIXExtendedAltivecABI)
-    GenerateArg(Consumer, OPT_mabi_EQ_vec_extabi);
 
   if (Opts.XCOFFReadOnlyPointers)
     GenerateArg(Consumer, OPT_mxcoff_roptr);
@@ -1920,14 +1917,8 @@ bool CompilerInvocation::ParseCodeGenArgs(CodeGenOptions &Opts, ArgList &Args,
     Opts.CoveragePrefixMap.emplace_back(Split.first, Split.second);
   }
 
-  const llvm::Triple::ArchType DebugEntryValueArchs[] = {
-      llvm::Triple::x86,     llvm::Triple::x86_64, llvm::Triple::aarch64,
-      llvm::Triple::arm,     llvm::Triple::armeb,  llvm::Triple::mips,
-      llvm::Triple::mipsel,  llvm::Triple::mips64, llvm::Triple::mips64el,
-      llvm::Triple::riscv32, llvm::Triple::riscv64};
-
   if (Opts.OptimizationLevel > 0 && Opts.hasReducedDebugInfo() &&
-      llvm::is_contained(DebugEntryValueArchs, T.getArch()))
+      T.supportsDebugEntryValues())
     Opts.EmitCallSiteInfo = true;
 
   if (!Opts.EnableDIPreservationVerify && Opts.DIBugsReportFilePath.size()) {
@@ -1945,8 +1936,10 @@ bool CompilerInvocation::ParseCodeGenArgs(CodeGenOptions &Opts, ArgList &Args,
   Opts.UnrollLoops =
       Args.hasFlag(OPT_funroll_loops, OPT_fno_unroll_loops,
                    (Opts.OptimizationLevel > 1));
+  // Match the LLVM pipeline default (PipelineTuningOptions::LoopInterchange),
+  // which enables the pass whenever the optimization pipeline runs.
   Opts.InterchangeLoops =
-      Args.hasFlag(OPT_floop_interchange, OPT_fno_loop_interchange, false);
+      Args.hasFlag(OPT_floop_interchange, OPT_fno_loop_interchange, true);
   Opts.FuseLoops = Args.hasFlag(OPT_fexperimental_loop_fusion,
                                 OPT_fno_experimental_loop_fusion, false);
   Opts.BinutilsVersion =
@@ -2015,6 +2008,9 @@ bool CompilerInvocation::ParseCodeGenArgs(CodeGenOptions &Opts, ArgList &Args,
         llvm::StringSwitch<std::string>(A->getValue())
             .Case("obj", OutputFile)
             .Default(llvm::sys::path::filename(OutputFile).str());
+
+  if (Args.getLastArg(OPT_save_dynamic_debugging_temps))
+    Opts.SaveDynDbgTempsFilePrefix = OutputFile;
 
   // The memory profile runtime appends the pid to make this name more unique.
   const char *MemProfileBasename = "memprof.profraw";
@@ -2729,7 +2725,8 @@ unsigned clang::getOptimizationLevel(const ArgList &Args, InputKind IK,
     if (A->getOption().matches(options::OPT_O0))
       return 0;
 
-    if (A->getOption().matches(options::OPT_Ofast))
+    if (A->getOption().matches(options::OPT_Ofast) ||
+        A->getOption().matches(options::OPT_O4))
       return 3;
 
     assert(A->getOption().matches(options::OPT_O));
@@ -2842,7 +2839,6 @@ static const auto &getFrontendActionTable() {
       {frontend::VerifyPCH, OPT_verify_pch},
       {frontend::PrintPreamble, OPT_print_preamble},
       {frontend::PrintPreprocessedInput, OPT_E},
-      {frontend::TemplightDump, OPT_templight_dump},
       {frontend::RewriteMacros, OPT_rewrite_macros},
       {frontend::RewriteObjC, OPT_rewrite_objc},
       {frontend::RewriteTest, OPT_rewrite_test},
@@ -3183,7 +3179,7 @@ static bool ParseFrontendArgs(FrontendOptions &Opts, ArgList &Args,
   if (Opts.ProgramAction != frontend::GenerateModule && Opts.IsSystemModule)
     Diags.Report(diag::err_drv_argument_only_allowed_with) << "-fsystem-module"
                                                            << "-emit-module";
-  if (Args.hasArg(OPT_fclangir) || Args.hasArg(OPT_emit_cir))
+  if (Args.hasArg(OPT_emit_cir))
     Opts.UseClangIRPipeline = true;
 
 #if CLANG_ENABLE_CIR
@@ -3326,6 +3322,16 @@ static bool ParseFrontendArgs(FrontendOptions &Opts, ArgList &Args,
   if (Opts.UseClangIRPipeline && DashX.getLanguage() == Language::LLVM_IR)
     Opts.UseClangIRPipeline = false;
 
+  // Conversely, ClangIR input can only be consumed by the CIR pipeline, so it
+  // implies -fclangir, and is an error if that pipeline is not built in.
+  if (DashX.getLanguage() == Language::CIR) {
+#if CLANG_ENABLE_CIR
+    Opts.UseClangIRPipeline = true;
+#else
+    Diags.Report(diag::err_fe_cir_not_built);
+#endif
+  }
+
   return Diags.getNumErrors() == NumErrorsBefore;
 }
 
@@ -3348,6 +3354,9 @@ static void GenerateHeaderSearchArgs(const HeaderSearchOptions &Opts,
 
   for (const auto &Macro : Opts.ModulesIgnoreMacros)
     GenerateArg(Consumer, OPT_fmodules_ignore_macro, Macro.val());
+
+  for (const auto &Path : Opts.ModulesIgnoreSearchPaths)
+    GenerateArg(Consumer, OPT_fmodules_ignore_search_path, Path.val());
 
   auto Matches = [](const HeaderSearchOptions::Entry &Entry,
                     llvm::ArrayRef<frontend::IncludeDirGroup> Groups,
@@ -3472,6 +3481,9 @@ static bool ParseHeaderSearchArgs(HeaderSearchOptions &Opts, ArgList &Args,
     Opts.ModulesIgnoreMacros.insert(
         llvm::CachedHashString(MacroDef.split('=').first));
   }
+
+  for (const auto *A : Args.filtered(OPT_fmodules_ignore_search_path))
+    Opts.ModulesIgnoreSearchPaths.insert(llvm::CachedHashString(A->getValue()));
 
   // Add -I... and -F... options in order.
   bool IsSysrootSpecified =
@@ -3599,6 +3611,8 @@ static void GeneratePointerAuthArgs(const LangOptions &Opts,
     GenerateArg(Consumer, OPT_fptrauth_vtable_pointer_address_discrimination);
   if (Opts.PointerAuthVTPtrTypeDiscrimination)
     GenerateArg(Consumer, OPT_fptrauth_vtable_pointer_type_discrimination);
+  if (Opts.PointerAuthVTTVTPtrDiscrimination)
+    GenerateArg(Consumer, OPT_fptrauth_vtt_vtable_pointer_discrimination);
   if (Opts.PointerAuthTypeInfoVTPtrDiscrimination)
     GenerateArg(Consumer, OPT_fptrauth_type_info_vtable_pointer_discrimination);
   if (Opts.PointerAuthFunctionTypeDiscrimination)
@@ -3632,6 +3646,8 @@ static void ParsePointerAuthArgs(LangOptions &Opts, ArgList &Args,
       Args.hasArg(OPT_fptrauth_vtable_pointer_address_discrimination);
   Opts.PointerAuthVTPtrTypeDiscrimination =
       Args.hasArg(OPT_fptrauth_vtable_pointer_type_discrimination);
+  Opts.PointerAuthVTTVTPtrDiscrimination =
+      Args.hasArg(OPT_fptrauth_vtt_vtable_pointer_discrimination);
   Opts.PointerAuthTypeInfoVTPtrDiscrimination =
       Args.hasArg(OPT_fptrauth_type_info_vtable_pointer_discrimination);
   Opts.PointerAuthFunctionTypeDiscrimination =
@@ -4136,6 +4152,11 @@ bool CompilerInvocation::ParseLangArgs(LangOptions &Opts, ArgList &Args,
   PARSE_OPTION_WITH_MARSHALLING(Args, Diags, __VA_ARGS__)
 #include "clang/Options/Options.inc"
 #undef LANG_OPTION_WITH_MARSHALLING
+
+  // "Modules semantics" (e.g. cross-translation-unit declaration merging) are
+  // needed for both Clang (header) modules and C++20 modules, so enable them
+  // for either.
+  Opts.Modules = Opts.ClangModules || Opts.CPlusPlusModules;
 
   if (const Arg *A = Args.getLastArg(OPT_fcf_protection_EQ)) {
     StringRef Name = A->getValue();
@@ -4747,7 +4768,6 @@ static bool isStrictlyPreprocessorAction(frontend::ActionKind Action) {
   case frontend::RewriteObjC:
   case frontend::RewriteTest:
   case frontend::RunAnalysis:
-  case frontend::TemplightDump:
     return false;
 
   case frontend::DumpCompilerOptions:
@@ -4794,7 +4814,6 @@ static bool isCodeGenAction(frontend::ActionKind Action) {
   case frontend::RewriteObjC:
   case frontend::RewriteTest:
   case frontend::RunAnalysis:
-  case frontend::TemplightDump:
   case frontend::DumpCompilerOptions:
   case frontend::DumpRawTokens:
   case frontend::DumpTokens:
@@ -5030,6 +5049,18 @@ static void GenerateTargetArgs(const TargetOptions &Opts,
   if (!Opts.DarwinTargetVariantSDKVersion.empty())
     GenerateArg(Consumer, OPT_darwin_target_variant_sdk_version_EQ,
                 Opts.DarwinTargetVariantSDKVersion.getAsString());
+
+  // Generate AMDGPU xnack and sramecc flags.
+  if (Opts.AMDGPUXnackState == TargetOptions::AMDGPUFeatureState::Enabled)
+    GenerateArg(Consumer, OPT_mxnack);
+  else if (Opts.AMDGPUXnackState == TargetOptions::AMDGPUFeatureState::Disabled)
+    GenerateArg(Consumer, OPT_mno_xnack);
+
+  if (Opts.AMDGPUSramEccState == TargetOptions::AMDGPUFeatureState::Enabled)
+    GenerateArg(Consumer, OPT_msramecc);
+  else if (Opts.AMDGPUSramEccState ==
+           TargetOptions::AMDGPUFeatureState::Disabled)
+    GenerateArg(Consumer, OPT_mno_sramecc);
 }
 
 static bool ParseTargetArgs(TargetOptions &Opts, ArgList &Args,
@@ -5059,6 +5090,21 @@ static bool ParseTargetArgs(TargetOptions &Opts, ArgList &Args,
           << A->getAsString(Args) << A->getValue();
     else
       Opts.DarwinTargetVariantSDKVersion = Version;
+  }
+
+  if (Arg *A = Args.getLastArg(options::OPT_mxnack, options::OPT_mno_xnack)) {
+    bool IsEnabled = A->getOption().matches(options::OPT_mxnack);
+    Opts.AMDGPUXnackState = IsEnabled
+                                ? TargetOptions::AMDGPUFeatureState::Enabled
+                                : TargetOptions::AMDGPUFeatureState::Disabled;
+  }
+
+  if (Arg *A =
+          Args.getLastArg(options::OPT_msramecc, options::OPT_mno_sramecc)) {
+    bool IsEnabled = A->getOption().matches(options::OPT_msramecc);
+    Opts.AMDGPUSramEccState = IsEnabled
+                                  ? TargetOptions::AMDGPUFeatureState::Enabled
+                                  : TargetOptions::AMDGPUFeatureState::Disabled;
   }
 
   return Diags.getNumErrors() == NumErrorsBefore;
@@ -5232,20 +5278,28 @@ std::string CompilerInvocation::computeContextHash() const {
   HBuilder.add(serialization::VERSION_MAJOR, serialization::VERSION_MINOR);
 
   // Extend the signature with the language options
-  // FIXME: Replace with C++20 `using enum LangOptions::CompatibilityKind`.
-  using CK = LangOptions::CompatibilityKind;
+  const unsigned LanguageOptionValues[] = {
+#define HASH_LANGOPT_Benign(Value)
+#define HASH_LANGOPT_Compatible(Value) Value,
+#define HASH_LANGOPT_NotCompatible(Value) Value,
 #define LANGOPT(Name, Bits, Default, Compatibility, Description)               \
-  if constexpr (CK::Compatibility != CK::Benign)                               \
-    HBuilder.add(LangOpts->Name);
+  HASH_LANGOPT_##Compatibility(LangOpts->Name)
 #define ENUM_LANGOPT(Name, Type, Bits, Default, Compatibility, Description)    \
-  if constexpr (CK::Compatibility != CK::Benign)                               \
-    HBuilder.add(static_cast<unsigned>(LangOpts->get##Name()));
+  HASH_LANGOPT_##Compatibility(static_cast<unsigned>(LangOpts->get##Name()))
 #include "clang/Basic/LangOptions.def"
+  };
+#undef HASH_LANGOPT_Benign
+#undef HASH_LANGOPT_Compatible
+#undef HASH_LANGOPT_NotCompatible
+  // addRangeElements preserves the HBuilder.add sequence and excludes the
+  // LanguageOptionValues element count.
+  HBuilder.addRangeElements(LanguageOptionValues);
 
   HBuilder.addRange(getLangOpts().ModuleFeatures);
 
   HBuilder.add(getLangOpts().ObjCRuntime);
   HBuilder.addRange(getLangOpts().CommentOpts.BlockCommandNames);
+  HBuilder.add(getLangOpts().CommentOpts.RetainCommentsFromSystemHeaders);
 
   // Extend the signature with the target options.
   HBuilder.add(getTargetOpts().Triple, getTargetOpts().CPU,
@@ -5280,7 +5334,20 @@ std::string CompilerInvocation::computeContextHash() const {
 
   if (hsOpts.ModulesStrictContextHash) {
     HBuilder.addRange(hsOpts.SystemHeaderPrefixes);
-    HBuilder.addRange(hsOpts.UserEntries);
+
+    for (const auto &UserEntry : hsOpts.UserEntries) {
+      // If we're supposed to ignore this search path for the purposes of
+      // modules, don't put it into the hash.
+      if (!hsOpts.ModulesIgnoreSearchPaths.empty()) {
+        // Check whether we're ignoring this search path.
+        StringRef Path = UserEntry.Path;
+        if (hsOpts.ModulesIgnoreSearchPaths.count(llvm::CachedHashString(Path)))
+          continue;
+      }
+
+      HBuilder.add(UserEntry);
+    }
+
     HBuilder.addRange(hsOpts.VFSOverlayFiles);
 
     const DiagnosticOptions &diagOpts = getDiagnosticOpts();
@@ -5486,6 +5553,7 @@ void CompilerInvocation::clearImplicitModuleBuildOptions() {
   getHeaderSearchOpts().ImplicitModuleMaps = false;
   getHeaderSearchOpts().ModuleCachePath.clear();
   getHeaderSearchOpts().ModulesValidateOncePerBuildSession = false;
+  getHeaderSearchOpts().ModulesValidateDirectoryDependencies = false;
   getHeaderSearchOpts().BuildSessionTimestamp = 0;
   // The specific values we canonicalize to for pruning don't affect behaviour,
   /// so use the default values so they may be dropped from the command-line.

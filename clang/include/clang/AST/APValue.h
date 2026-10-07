@@ -13,6 +13,8 @@
 #ifndef LLVM_CLANG_AST_APVALUE_H
 #define LLVM_CLANG_AST_APVALUE_H
 
+#include "clang/AST/CharUnits.h"
+#include "clang/AST/Reflection.h"
 #include "clang/Basic/LLVM.h"
 #include "llvm/ADT/APFixedPoint.h"
 #include "llvm/ADT/APFloat.h"
@@ -20,7 +22,9 @@
 #include "llvm/ADT/FoldingSet.h"
 #include "llvm/ADT/PointerIntPair.h"
 #include "llvm/ADT/PointerUnion.h"
+#include "llvm/ADT/bit.h"
 #include "llvm/Support/AlignOf.h"
+#include "llvm/Support/Compiler.h"
 
 namespace clang {
 namespace serialization {
@@ -29,7 +33,6 @@ template <typename T> class BasicReaderBase;
 
   class AddrLabelExpr;
   class ASTContext;
-  class CharUnits;
   class CXXRecordDecl;
   class Decl;
   class DiagnosticBuilder;
@@ -61,33 +64,65 @@ public:
   void print(llvm::raw_ostream &Out, const PrintingPolicy &Policy) const;
 };
 
+/// Kind of source for a dynamic allocation.
+enum class DynAllocKind {
+  New,                // new expression
+  ArrayNew,           // new[] expression
+  StdAllocator,       // std::allocator::allocate call
+  None,               // not a dynamic allocation
+  BuiltinOperatorNew, // __operator_builtin_new call
+  ALLOC_KIND_MAX = BuiltinOperatorNew
+};
+
 /// Symbolic representation of a dynamic allocation.
 class DynamicAllocLValue {
-  unsigned Index;
+public:
+  static constexpr int NumLowBitsAvailable = 2;
+  static constexpr int NumAllocKindBits = 3;
+  static_assert((1 << NumAllocKindBits) - 1 >=
+                static_cast<int>(DynAllocKind::ALLOC_KIND_MAX));
+
+private:
+  // lower NumAlignmentBits: alignment exponent
+  // remaining bits: allocation index incremented by one
+  // value of zero indicates distinct empty state
+  LLVM_PREFERRED_TYPE(DynAllocKind)
+  uintptr_t AllocKind : NumAllocKindBits;
+  uintptr_t Index : sizeof(uintptr_t) * CHAR_BIT - NumAllocKindBits;
 
 public:
-  DynamicAllocLValue() : Index(0) {}
-  explicit DynamicAllocLValue(unsigned Index) : Index(Index + 1) {}
-  unsigned getIndex() { return Index - 1; }
+  DynamicAllocLValue() : AllocKind(0), Index(0) {}
+  explicit DynamicAllocLValue(unsigned Idx, DynAllocKind AllocKind)
+      : AllocKind(llvm::to_underlying(AllocKind)), Index(Idx + 1) {
+    assert(Idx <= getMaxIndex() && "Index is out of range");
+  }
+  unsigned getIndex() const { return Index - 1; }
+  DynAllocKind getAllocKind() const {
+    return static_cast<DynAllocKind>(AllocKind);
+  }
 
   explicit operator bool() const { return Index != 0; }
 
   const void *getOpaqueValue() const {
-    return reinterpret_cast<const void *>(static_cast<uintptr_t>(Index)
-                                          << NumLowBitsAvailable);
+    return reinterpret_cast<const void *>(
+        (Index << NumAllocKindBits | AllocKind) << NumLowBitsAvailable);
   }
   static DynamicAllocLValue getFromOpaqueValue(const void *Value) {
     DynamicAllocLValue V;
-    V.Index = reinterpret_cast<uintptr_t>(Value) >> NumLowBitsAvailable;
+    uintptr_t Combined =
+        reinterpret_cast<uintptr_t>(Value) >> NumLowBitsAvailable;
+    V.AllocKind = Combined & (1 << NumAllocKindBits) - 1;
+    V.Index = Combined >> NumAllocKindBits;
     return V;
   }
 
-  static unsigned getMaxIndex() {
-    return (std::numeric_limits<unsigned>::max() >> NumLowBitsAvailable) - 1;
+  static uintptr_t getMaxIndex() {
+    return (std::numeric_limits<uintptr_t>::max() >>
+            (NumLowBitsAvailable + NumAllocKindBits)) -
+           1;
   }
-
-  static constexpr int NumLowBitsAvailable = 3;
 };
+static_assert(sizeof(DynamicAllocLValue) == sizeof(uintptr_t));
 }
 
 namespace llvm {
@@ -119,7 +154,7 @@ namespace clang {
 /// APValue - This class implements a discriminated union of [uninitialized]
 /// [APSInt] [APFloat], [Complex APSInt] [Complex APFloat], [Expr + Offset],
 /// [Vector: N * APValue], [Array: N * APValue]
-class APValue {
+class LLVM_ATTRIBUTE_WARN_UNUSED APValue {
   typedef llvm::APFixedPoint APFixedPoint;
   typedef llvm::APSInt APSInt;
   typedef llvm::APFloat APFloat;
@@ -141,7 +176,8 @@ public:
     Struct,
     Union,
     MemberPointer,
-    AddrLabelDiff
+    AddrLabelDiff,
+    Reflection
   };
 
   class alignas(uint64_t) LValueBase {
@@ -297,7 +333,8 @@ private:
     APValue *Elts;
     unsigned NumBases;
     unsigned NumFields;
-    StructData(unsigned NumBases, unsigned NumFields);
+    unsigned NumVirtualBases;
+    StructData(unsigned NumBases, unsigned NumFields, unsigned NumVirtualBases);
     StructData(const StructData &) = delete;
     StructData &operator=(const StructData &) = delete;
     ~StructData();
@@ -314,12 +351,23 @@ private:
     const AddrLabelExpr* LHSExpr;
     const AddrLabelExpr* RHSExpr;
   };
+  struct ReflectionData {
+    // OperandKind will eventually have support for
+    // Null, TypeSourceInfo, TemplateReference, NamespaceReference, DeclRefExpr.
+    // Operand stores the opaque pointer of the reflection operand.
+    // Depending on the value of OperandKind, we can perform the
+    // corresponding cast to the associated type.
+    // If OperandKind is Null, then the ReflectionData represents
+    // a null reflection, and therefore Operand should be a nullptr.
+    ReflectionKind OperandKind;
+    const void *Operand;
+  };
   struct MemberPointerData;
 
   // We ensure elsewhere that Data is big enough for LV and MemberPointerData.
-  typedef llvm::AlignedCharArrayUnion<void *, APSInt, APFloat, ComplexAPSInt,
-                                      ComplexAPFloat, Vec, Mat, Arr, StructData,
-                                      UnionData, AddrLabelDiffData>
+  typedef llvm::AlignedCharArrayUnion<
+      void *, APSInt, APFloat, ComplexAPSInt, ComplexAPFloat, Vec, Mat, Arr,
+      StructData, UnionData, AddrLabelDiffData, ReflectionData>
       DataType;
   static const size_t DataSize = sizeof(DataType);
 
@@ -336,11 +384,11 @@ public:
   APValue() : Kind(None), AllowConstexprUnknown(false) {}
   /// Creates an integer APValue holding the given value.
   explicit APValue(APSInt I) : Kind(None), AllowConstexprUnknown(false) {
-    MakeInt(); setInt(std::move(I));
+    MakeInt(std::move(I));
   }
   /// Creates a float APValue holding the given value.
   explicit APValue(APFloat F) : Kind(None), AllowConstexprUnknown(false) {
-    MakeFloat(); setFloat(std::move(F));
+    MakeFloat(std::move(F));
   }
   /// Creates a fixed-point APValue holding the given value.
   explicit APValue(APFixedPoint FX) : Kind(None), AllowConstexprUnknown(false) {
@@ -374,7 +422,7 @@ public:
   /// \param Base The base of the lvalue.
   /// \param Offset The offset of the lvalue.
   /// \param IsNullPtr Whether this lvalue is a null pointer.
-  APValue(LValueBase Base, const CharUnits &Offset, NoLValuePath,
+  APValue(LValueBase Base, CharUnits Offset, NoLValuePath,
           bool IsNullPtr = false)
       : Kind(None), AllowConstexprUnknown(false) {
     MakeLValue();
@@ -387,9 +435,8 @@ public:
   /// \param OnePastTheEnd Whether this lvalue is one-past-the-end of the
   /// subobject it points to.
   /// \param IsNullPtr Whether this lvalue is a null pointer.
-  APValue(LValueBase Base, const CharUnits &Offset,
-          ArrayRef<LValuePathEntry> Path, bool OnePastTheEnd,
-          bool IsNullPtr = false)
+  APValue(LValueBase Base, CharUnits Offset, ArrayRef<LValuePathEntry> Path,
+          bool OnePastTheEnd, bool IsNullPtr = false)
       : Kind(None), AllowConstexprUnknown(false) {
     MakeLValue();
     setLValue(Base, Offset, Path, OnePastTheEnd, IsNullPtr);
@@ -398,7 +445,7 @@ public:
   /// \param Base The base of the lvalue.
   /// \param Offset The offset of the lvalue.
   /// \param IsNullPtr Whether this lvalue is a null pointer.
-  APValue(LValueBase Base, const CharUnits &Offset, ConstexprUnknown,
+  APValue(LValueBase Base, CharUnits Offset, ConstexprUnknown,
           bool IsNullPtr = false)
       : Kind(None), AllowConstexprUnknown(true) {
     MakeLValue();
@@ -414,13 +461,23 @@ public:
       : Kind(None), AllowConstexprUnknown(false) {
     MakeArray(InitElts, Size);
   }
+
+  /// Creates a new Reflection APValue.
+  /// \param OperandKind The kind of reflection.
+  /// \param Operand The entity being reflected.
+  APValue(ReflectionKind OperandKind, const void *Operand) : Kind(None) {
+    MakeReflection(OperandKind, Operand);
+  }
+
   /// Creates a new struct APValue.
   /// \param UninitStruct Marker. Pass an empty UninitStruct.
   /// \param NumBases Number of bases.
   /// \param NumMembers Number of members.
-  APValue(UninitStruct, unsigned NumBases, unsigned NumMembers)
+  /// \param NumVirtualBases Number of virtual bases.
+  APValue(UninitStruct, unsigned NumBases, unsigned NumMembers,
+          unsigned NumVirtualBases = 0)
       : Kind(None), AllowConstexprUnknown(false) {
-    MakeStruct(NumBases, NumMembers);
+    MakeStruct(NumBases, NumMembers, NumVirtualBases);
   }
   /// Creates a new union APValue.
   /// \param ActiveDecl The FieldDecl of the active union member.
@@ -495,6 +552,7 @@ public:
   bool isUnion() const { return Kind == Union; }
   bool isMemberPointer() const { return Kind == MemberPointer; }
   bool isAddrLabelDiff() const { return Kind == AddrLabelDiff; }
+  bool isReflection() const { return Kind == Reflection; }
 
   void dump() const;
   void dump(raw_ostream &OS, const ASTContext &Context) const;
@@ -569,7 +627,7 @@ public:
 
   const LValueBase getLValueBase() const;
   CharUnits &getLValueOffset();
-  const CharUnits &getLValueOffset() const {
+  CharUnits getLValueOffset() const {
     return const_cast<APValue*>(this)->getLValueOffset();
   }
   bool isLValueOnePastTheEnd() const;
@@ -659,6 +717,10 @@ public:
     assert(isStruct() && "Invalid accessor");
     return ((const StructData *)(const char *)&Data)->NumFields;
   }
+  unsigned getStructNumVirtualBases() const {
+    assert(isStruct() && "Invalid accessor");
+    return ((const StructData *)(const char *)&Data)->NumVirtualBases;
+  }
   APValue &getStructBase(unsigned i) {
     assert(isStruct() && "Invalid accessor");
     assert(i < getStructNumBases() && "base class index OOB");
@@ -669,11 +731,20 @@ public:
     assert(i < getStructNumFields() && "field index OOB");
     return ((StructData *)(char *)&Data)->Elts[getStructNumBases() + i];
   }
+  APValue &getStructVirtualBase(unsigned i) {
+    assert(isStruct() && "Invalid accessor");
+    assert(i < getStructNumVirtualBases() && "virtual base class index OOB");
+    return ((StructData *)(char *)&Data)
+        ->Elts[getStructNumBases() + getStructNumFields() + i];
+  }
   const APValue &getStructBase(unsigned i) const {
     return const_cast<APValue*>(this)->getStructBase(i);
   }
   const APValue &getStructField(unsigned i) const {
     return const_cast<APValue*>(this)->getStructField(i);
+  }
+  const APValue &getStructVirtualBase(unsigned i) const {
+    return const_cast<APValue *>(this)->getStructVirtualBase(i);
   }
 
   const FieldDecl *getUnionField() const {
@@ -699,6 +770,16 @@ public:
   const AddrLabelExpr* getAddrLabelDiffRHS() const {
     assert(isAddrLabelDiff() && "Invalid accessor");
     return ((const AddrLabelDiffData *)(const char *)&Data)->RHSExpr;
+  }
+
+  ReflectionKind getReflectionOperandKind() const {
+    assert(isReflection() && "Invalid accessor");
+    return ((const ReflectionData *)(const char *)&Data)->OperandKind;
+  }
+
+  const void *getReflectionOpaqueOperand() const {
+    assert(isReflection() && "Invalid accessor");
+    return ((const ReflectionData *)(const char *)&Data)->Operand;
   }
 
   void setInt(APSInt I) {
@@ -737,11 +818,9 @@ public:
     ((ComplexAPFloat *)(char *)&Data)->Real = std::move(R);
     ((ComplexAPFloat *)(char *)&Data)->Imag = std::move(I);
   }
-  void setLValue(LValueBase B, const CharUnits &O, NoLValuePath,
-                 bool IsNullPtr);
-  void setLValue(LValueBase B, const CharUnits &O,
-                 ArrayRef<LValuePathEntry> Path, bool OnePastTheEnd,
-                 bool IsNullPtr);
+  void setLValue(LValueBase B, CharUnits O, NoLValuePath, bool IsNullPtr);
+  void setLValue(LValueBase B, CharUnits O, ArrayRef<LValuePathEntry> Path,
+                 bool OnePastTheEnd, bool IsNullPtr);
   void setUnion(const FieldDecl *Field, const APValue &Value);
   void setAddrLabelDiff(const AddrLabelExpr* LHSExpr,
                         const AddrLabelExpr* RHSExpr) {
@@ -751,14 +830,29 @@ public:
 
 private:
   void DestroyDataAndMakeUninit();
-  void MakeInt() {
+  void MakeReflection(ReflectionKind OperandKind, const void *Operand) {
     assert(isAbsent() && "Bad state change");
-    new ((void *)&Data) APSInt(1);
+    new ((void *)(char *)Data.buffer) ReflectionData{OperandKind, Operand};
+    Kind = Reflection;
+  }
+  void MakeInt(const APSInt &I) {
+    assert(isAbsent() && "Bad state change");
+    new ((void *)&Data) APSInt(std::move(I));
     Kind = Int;
   }
-  void MakeFloat() {
+  void MakeInt(APSInt &&I) {
     assert(isAbsent() && "Bad state change");
-    new ((void *)(char *)&Data) APFloat(0.0);
+    new ((void *)&Data) APSInt(std::move(I));
+    Kind = Int;
+  }
+  void MakeFloat(const APFloat &F) {
+    assert(isAbsent() && "Bad state change");
+    new ((void *)(char *)&Data) APFloat(F);
+    Kind = Float;
+  }
+  void MakeFloat(APFloat &&F) {
+    assert(isAbsent() && "Bad state change");
+    new ((void *)(char *)&Data) APFloat(std::move(F));
     Kind = Float;
   }
   void MakeFixedPoint(APFixedPoint &&FX) {
@@ -788,9 +882,9 @@ private:
   }
   void MakeLValue();
   void MakeArray(unsigned InitElts, unsigned Size);
-  void MakeStruct(unsigned B, unsigned M) {
+  void MakeStruct(unsigned B, unsigned M, unsigned V) {
     assert(isAbsent() && "Bad state change");
-    new ((void *)(char *)&Data) StructData(B, M);
+    new ((void *)(char *)&Data) StructData(B, M, V);
     Kind = Struct;
   }
   void MakeUnion() {
@@ -826,9 +920,10 @@ private:
     M->NumCols = NumCols;
     return {M->Elts, NumElts};
   }
-  MutableArrayRef<LValuePathEntry>
-  setLValueUninit(LValueBase B, const CharUnits &O, unsigned Size,
-                  bool OnePastTheEnd, bool IsNullPtr);
+  MutableArrayRef<LValuePathEntry> setLValueUninit(LValueBase B, CharUnits O,
+                                                   unsigned Size,
+                                                   bool OnePastTheEnd,
+                                                   bool IsNullPtr);
   MutableArrayRef<const CXXRecordDecl *>
   setMemberPointerUninit(const ValueDecl *Member, bool IsDerivedMember,
                          unsigned Size);

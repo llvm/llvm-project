@@ -14,6 +14,7 @@
 #define LLVM_LIB_TARGET_AARCH64_MCTARGETDESC_AARCH64MCLFIREWRITER_H
 
 #include "AArch64AddressingModes.h"
+#include "AArch64MCOptions.h"
 #include "llvm/MC/MCInstrInfo.h"
 #include "llvm/MC/MCLFIRewriter.h"
 #include "llvm/MC/MCRegister.h"
@@ -44,19 +45,33 @@ class MCSymbol;
 /// - SP:  Stack pointer (always within sandbox)
 /// - X30: Link register (always within sandbox)
 class AArch64MCLFIRewriter : public MCLFIRewriter {
+  const AArch64MCOptions &CLOpts;
+
 public:
   AArch64MCLFIRewriter(MCContext &Ctx, std::unique_ptr<MCRegisterInfo> &&RI,
                        std::unique_ptr<MCInstrInfo> &&II)
-      : MCLFIRewriter(Ctx, std::move(RI), std::move(II)) {}
+      : MCLFIRewriter(Ctx, std::move(RI), std::move(II)),
+        CLOpts(AArch64MCOptions::Global) {}
 
   bool rewriteInst(const MCInst &Inst, MCStreamer &Out,
                    const MCSubtargetInfo &STI) override;
 
-  void onLabel(const MCSymbol *Symbol) override;
+  void onLabel(const MCSymbol *Symbol, MCStreamer &Out) override;
+  void finish(MCStreamer &Out) override;
 
 private:
   /// Recursion guard to prevent infinite loops when emitting instructions.
   bool Guard = false;
+
+  /// When set, an instruction has modified the link register but its guard
+  /// (`add x30, x27, w30, uxtw`) has not been emitted yet. The guard is
+  /// deferred until the next control-flow instruction so that pointer
+  /// authentication can run on the signed value before the mask overwrites the
+  /// upper bits of the pointer.
+  bool DeferredLRGuard = false;
+
+  /// Most recently seen MCSubtargetInfo.
+  const MCSubtargetInfo *LastSTI = nullptr;
 
   /// Deferred `.tlsdesccall` symbol. The directive attaches a
   /// R_AARCH64_TLSDESC_CALL relocation to the following BLR. Since LFI inserts
@@ -119,6 +134,13 @@ private:
   // Link register modification.
   void rewriteLRModification(const MCInst &Inst, MCStreamer &Out,
                              const MCSubtargetInfo &STI);
+
+  // PAC instructions.
+  void rewriteAuthenticatedReturn(const MCInst &Inst, MCStreamer &Out,
+                                  const MCSubtargetInfo &STI);
+  void rewriteAuthenticatedBranchOrCall(const MCInst &Inst,
+                                        unsigned BranchOpcode, MCStreamer &Out,
+                                        const MCSubtargetInfo &STI);
 
   // System instructions.
   void rewriteSyscall(const MCInst &Inst, MCStreamer &Out,

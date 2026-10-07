@@ -476,12 +476,16 @@ DeclRefExpr::DeclRefExpr(const ASTContext &Ctx,
   DeclRefExprBits.CapturedByCopyInLambdaWithExplicitObjectParameter = false;
   DeclRefExprBits.NonOdrUseReason = NOUR;
   if (TemplateArgs) {
-    auto Deps = TemplateArgumentDependence::None;
     getTrailingObjects<ASTTemplateKWAndArgsInfo>()->initializeFrom(
-        TemplateKWLoc, *TemplateArgs, getTrailingObjects<TemplateArgumentLoc>(),
-        Deps);
+        TemplateKWLoc, *TemplateArgs,
+        getTrailingObjects<TemplateArgumentLoc>());
+#ifndef NDEBUG
+    auto Deps = TemplateArgumentDependence::None;
+    for (const TemplateArgumentLoc &Loc : TemplateArgs->arguments())
+      Deps |= Loc.getArgument().getDependence();
     assert(!(Deps & TemplateArgumentDependence::Dependent) &&
            "built a DeclRefExpr with dependent template args");
+#endif
   } else if (TemplateKWLoc.isValid()) {
     getTrailingObjects<ASTTemplateKWAndArgsInfo>()->initializeFrom(
         TemplateKWLoc);
@@ -1407,6 +1411,28 @@ StringLiteral::getLocationOfByte(unsigned ByteNo, const SourceManager &SM,
   }
 }
 
+UnsignedOrNone StringLiteral::findZeroCodeUnit(unsigned StartIndex) const {
+  unsigned Length = getLength();
+  if (StartIndex > Length)
+    return std::nullopt;
+
+  if (getCharByteWidth() == 1) {
+    StringRef::size_type Pos = getString().substr(StartIndex).find('\0');
+    if (Pos == StringRef::npos)
+      return Length - StartIndex;
+    return Pos;
+  }
+
+  unsigned Result = 0;
+  for (unsigned I = StartIndex; I != Length; ++I) {
+    if (getCodeUnit(I) == 0)
+      break;
+    ++Result;
+  }
+
+  return Result;
+}
+
 /// getOpcodeStr - Turn an Opcode enum value into the punctuation char it
 /// corresponds to, e.g. "sizeof" or "[pre]++".
 StringRef UnaryOperator::getOpcodeStr(Opcode Op) {
@@ -1628,7 +1654,9 @@ QualType CallExpr::getCallReturnType(const ASTContext &Ctx) const {
     // dependent call to the call operator of that type.
     return Ctx.DependentTy;
   } else if (CalleeType->isDependentType() ||
-             CalleeType->isSpecificPlaceholderType(BuiltinType::Overload)) {
+             CalleeType->isSpecificPlaceholderType(BuiltinType::Overload) ||
+             CalleeType->isSpecificPlaceholderType(BuiltinType::BuiltinFn)) {
+    // Dependent builtin calls keep their placeholder until instantiation.
     return Ctx.DependentTy;
   }
 
@@ -1742,10 +1770,9 @@ MemberExpr::MemberExpr(Expr *Base, bool IsArrow, SourceLocation OperatorLoc,
   if (hasFoundDecl())
     *getTrailingObjects<DeclAccessPair>() = FoundDecl;
   if (TemplateArgs) {
-    auto Deps = TemplateArgumentDependence::None;
     getTrailingObjects<ASTTemplateKWAndArgsInfo>()->initializeFrom(
-        TemplateKWLoc, *TemplateArgs, getTrailingObjects<TemplateArgumentLoc>(),
-        Deps);
+        TemplateKWLoc, *TemplateArgs,
+        getTrailingObjects<TemplateArgumentLoc>());
   } else if (TemplateKWLoc.isValid()) {
     getTrailingObjects<ASTTemplateKWAndArgsInfo>()->initializeFrom(
         TemplateKWLoc);
@@ -3556,6 +3583,7 @@ bool Expr::isConstantInitializer(ASTContext &Ctx, bool IsForRef,
         CE->getCastKind() == CK_NonAtomicToAtomic ||
         CE->getCastKind() == CK_AtomicToNonAtomic ||
         CE->getCastKind() == CK_NullToPointer ||
+        CE->getCastKind() == CK_ARCReclaimReturnedObject ||
         CE->getCastKind() == CK_IntToOCLSampler)
       return CE->getSubExpr()->isConstantInitializer(Ctx, false, Culprit);
 
@@ -3711,6 +3739,7 @@ bool Expr::HasSideEffects(const ASTContext &Ctx,
     llvm_unreachable("unexpected Expr kind");
 
   case DependentScopeDeclRefExprClass:
+  case DependentTemplateIdExprClass:
   case CXXUnresolvedConstructExprClass:
   case CXXDependentScopeMemberExprClass:
   case UnresolvedLookupExprClass:
@@ -3720,6 +3749,7 @@ bool Expr::HasSideEffects(const ASTContext &Ctx,
   case FunctionParmPackExprClass:
   case RecoveryExprClass:
   case CXXFoldExprClass:
+  case CXXExpansionSelectExprClass:
     // Make a conservative assumption for dependent nodes.
     return IncludePossibleEffects;
 
@@ -4244,6 +4274,13 @@ FieldDecl *Expr::getSourceBitField() {
       E = ICE->getSubExpr()->IgnoreParens();
     else
       break;
+  }
+
+  if (StmtExpr *SE = dyn_cast<StmtExpr>(E)) {
+    CompoundStmt *CS = SE->getSubStmt();
+    if (ValueStmt *VS = dyn_cast_or_null<ValueStmt>(CS->body_back()))
+      if (Expr *EX = VS->getExprStmt())
+        return EX->getSourceBitField();
   }
 
   if (MemberExpr *MemRef = dyn_cast<MemberExpr>(E))

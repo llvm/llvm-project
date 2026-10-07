@@ -13,12 +13,14 @@
 #include "lldb/Host/FileSystem.h"
 #include "lldb/Host/HostInfo.h"
 #include "lldb/Interpreter/OptionValueProperties.h"
+#include "lldb/Interpreter/ScriptInterpreter.h"
 #include "lldb/Symbol/SaveCoreOptions.h"
 #include "lldb/Target/Process.h"
 #include "lldb/Utility/FileSpec.h"
 #include "lldb/Utility/Status.h"
 #include "lldb/Utility/StringList.h"
 #include "llvm/ADT/StringRef.h"
+#include "llvm/ADT/StringSet.h"
 #include "llvm/ADT/Twine.h"
 #include "llvm/Support/DynamicLibrary.h"
 #include "llvm/Support/ErrorExtras.h"
@@ -233,8 +235,7 @@ LoadPluginCallback(void *baton, llvm::sys::fs::file_type ft,
     // requested.
     PluginDir::LoadPolicy *policy = (PluginDir::LoadPolicy *)baton;
     if (*policy == PluginDir::LoadOnlyWithLLDBPrefix &&
-        !plugin_file_spec.GetFilename().GetStringRef().starts_with(
-            g_plugin_prefix))
+        !plugin_file_spec.GetFilename().starts_with(g_plugin_prefix))
       return FileSystem::eEnumerateDirectoryResultNext;
 
     // Don't try to load an already loaded plugin again.
@@ -2000,9 +2001,10 @@ struct TypeSystemInstance : public PluginInstance<TypeSystemCreateInstance> {
   TypeSystemInstance(llvm::StringRef name, llvm::StringRef description,
                      CallbackType create_callback,
                      LanguageSet supported_languages_for_types,
-                     LanguageSet supported_languages_for_expressions)
-      : PluginInstance<TypeSystemCreateInstance>(name, description,
-                                                 create_callback),
+                     LanguageSet supported_languages_for_expressions,
+                     DebuggerInitializeCallback debugger_init_callback)
+      : PluginInstance<TypeSystemCreateInstance>(
+            name, description, create_callback, debugger_init_callback),
         supported_languages_for_types(supported_languages_for_types),
         supported_languages_for_expressions(
             supported_languages_for_expressions) {}
@@ -2022,10 +2024,11 @@ bool PluginManager::RegisterPlugin(
     llvm::StringRef name, llvm::StringRef description,
     TypeSystemCreateInstance create_callback,
     LanguageSet supported_languages_for_types,
-    LanguageSet supported_languages_for_expressions) {
+    LanguageSet supported_languages_for_expressions,
+    DebuggerInitializeCallback debugger_init_callback) {
   return GetTypeSystemInstances().RegisterPlugin(
       name, description, create_callback, supported_languages_for_types,
-      supported_languages_for_expressions);
+      supported_languages_for_expressions, debugger_init_callback);
 }
 
 bool PluginManager::UnregisterPlugin(TypeSystemCreateInstance create_callback) {
@@ -2059,12 +2062,14 @@ struct ScriptedInterfaceInstance
     : public PluginInstance<ScriptedInterfaceCreateInstance> {
   ScriptedInterfaceInstance(llvm::StringRef name, llvm::StringRef description,
                             ScriptedInterfaceCreateInstance create_callback,
+                            lldb::ScriptedExtension extension,
                             lldb::ScriptLanguage language,
                             ScriptedInterfaceUsages usages)
       : PluginInstance<ScriptedInterfaceCreateInstance>(name, description,
                                                         create_callback),
-        language(language), usages(usages) {}
+        extension(extension), language(language), usages(usages) {}
 
+  lldb::ScriptedExtension extension;
   lldb::ScriptLanguage language;
   ScriptedInterfaceUsages usages;
 };
@@ -2079,9 +2084,10 @@ static ScriptedInterfaceInstances &GetScriptedInterfaceInstances() {
 bool PluginManager::RegisterPlugin(
     llvm::StringRef name, llvm::StringRef description,
     ScriptedInterfaceCreateInstance create_callback,
-    lldb::ScriptLanguage language, ScriptedInterfaceUsages usages) {
+    lldb::ScriptedExtension extension, lldb::ScriptLanguage language,
+    ScriptedInterfaceUsages usages) {
   return GetScriptedInterfaceInstances().RegisterPlugin(
-      name, description, create_callback, language, usages);
+      name, description, create_callback, extension, language, usages);
 }
 
 bool PluginManager::UnregisterPlugin(
@@ -2102,6 +2108,13 @@ PluginManager::GetScriptedInterfaceDescriptionAtIndex(uint32_t index) {
   return GetScriptedInterfaceInstances().GetDescriptionAtIndex(index);
 }
 
+lldb::ScriptedExtension
+PluginManager::GetScriptedInterfaceExtensionAtIndex(uint32_t index) {
+  if (auto instance = GetScriptedInterfaceInstances().GetInstanceAtIndex(index))
+    return instance->extension;
+  return ScriptedExtension::eScriptedExtensionInvalid;
+}
+
 lldb::ScriptLanguage
 PluginManager::GetScriptedInterfaceLanguageAtIndex(uint32_t idx) {
   if (auto instance = GetScriptedInterfaceInstances().GetInstanceAtIndex(idx))
@@ -2114,6 +2127,30 @@ PluginManager::GetScriptedInterfaceUsagesAtIndex(uint32_t idx) {
   if (auto instance = GetScriptedInterfaceInstances().GetInstanceAtIndex(idx))
     return instance->usages;
   return {};
+}
+
+void PluginManager::AutoCompleteScriptedExtension(
+    llvm::StringRef name, CompletionRequest &request,
+    lldb::ScriptLanguage language) {
+  llvm::StringSet<> emitted;
+  for (size_t idx = 0; idx < GetNumScriptedInterfaces(); idx++) {
+    auto instance = GetScriptedInterfaceInstances().GetInstanceAtIndex(idx);
+    if (!instance)
+      continue;
+    // Filter to the requested language when the caller pinned one via
+    // `-l`. `eScriptLanguageUnknown` means "no filter".
+    if (language != lldb::eScriptLanguageUnknown &&
+        instance->language != language)
+      continue;
+    llvm::StringLiteral extension_name =
+        ScriptInterpreter::ExtensionToString(instance->extension);
+    if (!extension_name.starts_with(name))
+      continue;
+    // A single extension can back multiple languages, so dedup entries
+    // we've already surfaced.
+    if (emitted.insert(extension_name).second)
+      request.AddCompletion(extension_name);
+  }
 }
 
 #pragma mark REPL
@@ -2210,6 +2247,7 @@ void PluginManager::DebuggerInitialize(Debugger &debugger) {
   GetStructuredDataPluginInstances().PerformDebuggerCallback(debugger);
   GetTracePluginInstances().PerformDebuggerCallback(debugger);
   GetScriptedInterfaceInstances().PerformDebuggerCallback(debugger);
+  GetTypeSystemInstances().PerformDebuggerCallback(debugger);
   GetLanguageInstances().PerformDebuggerCallback(debugger);
 }
 

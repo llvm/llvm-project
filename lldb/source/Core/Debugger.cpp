@@ -10,6 +10,7 @@
 
 #include "lldb/Breakpoint/Breakpoint.h"
 #include "lldb/Core/DebuggerEvents.h"
+#include "lldb/Core/Diagnostics.h"
 #include "lldb/Core/FormatEntity.h"
 #include "lldb/Core/Mangled.h"
 #include "lldb/Core/ModuleList.h"
@@ -71,6 +72,7 @@
 #include "llvm/Config/llvm-config.h"
 #include "llvm/Support/DynamicLibrary.h"
 #include "llvm/Support/FileSystem.h"
+#include "llvm/Support/FormatAdapters.h"
 #include "llvm/Support/Process.h"
 #include "llvm/Support/ThreadPool.h"
 #include "llvm/Support/Threading.h"
@@ -192,6 +194,25 @@ static constexpr OptionEnumValueElement s_stop_show_column_values[] = {
         eStopShowColumnNone,
         "none",
         "Do not highlight the stop column.",
+    },
+};
+
+static constexpr OptionEnumValueElement g_show_autosuggestion_enum_values[] = {
+    {
+        eAutosuggestionOff,
+        "false",
+        "Do not show any autosuggestion.",
+    },
+    {
+        eAutosuggestionOn,
+        "true",
+        "Show a suggestion sourced from previously entered commands.",
+    },
+    {
+        eAutosuggestionTabMode,
+        "tab-mode",
+        "Show the prefix that tab completion would insert for the current "
+        "line.",
     },
 };
 
@@ -557,6 +578,42 @@ llvm::StringRef Debugger::GetShowProgressAnsiSuffix() const {
       idx, g_debugger_properties[idx].default_cstr_value);
 }
 
+llvm::StringRef Debugger::GetLabelAnsiPrefix() const {
+  const uint32_t idx = ePropertyLabelAnsiPrefix;
+  return GetPropertyAtIndexAs<llvm::StringRef>(
+      idx, g_debugger_properties[idx].default_cstr_value);
+}
+
+llvm::StringRef Debugger::GetLabelAnsiSuffix() const {
+  const uint32_t idx = ePropertyLabelAnsiSuffix;
+  return GetPropertyAtIndexAs<llvm::StringRef>(
+      idx, g_debugger_properties[idx].default_cstr_value);
+}
+
+llvm::StringRef Debugger::GetTitleAnsiPrefix() const {
+  const uint32_t idx = ePropertyTitleAnsiPrefix;
+  return GetPropertyAtIndexAs<llvm::StringRef>(
+      idx, g_debugger_properties[idx].default_cstr_value);
+}
+
+llvm::StringRef Debugger::GetTitleAnsiSuffix() const {
+  const uint32_t idx = ePropertyTitleAnsiSuffix;
+  return GetPropertyAtIndexAs<llvm::StringRef>(
+      idx, g_debugger_properties[idx].default_cstr_value);
+}
+
+llvm::StringRef Debugger::GetDividerAnsiPrefix() const {
+  const uint32_t idx = ePropertyDividerAnsiPrefix;
+  return GetPropertyAtIndexAs<llvm::StringRef>(
+      idx, g_debugger_properties[idx].default_cstr_value);
+}
+
+llvm::StringRef Debugger::GetDividerAnsiSuffix() const {
+  const uint32_t idx = ePropertyDividerAnsiSuffix;
+  return GetPropertyAtIndexAs<llvm::StringRef>(
+      idx, g_debugger_properties[idx].default_cstr_value);
+}
+
 bool Debugger::GetShowStatusline() const {
   const uint32_t idx = ePropertyShowStatusline;
   return GetPropertyAtIndexAs<bool>(
@@ -600,10 +657,11 @@ bool Debugger::SetSeparator(llvm::StringRef s) {
   return ret;
 }
 
-bool Debugger::GetUseAutosuggestion() const {
+AutosuggestionMode Debugger::GetAutosuggestionMode() const {
   const uint32_t idx = ePropertyShowAutosuggestion;
-  return GetPropertyAtIndexAs<bool>(
-      idx, g_debugger_properties[idx].default_uint_value != 0);
+  return GetPropertyAtIndexAs<AutosuggestionMode>(
+      idx, static_cast<AutosuggestionMode>(
+               g_debugger_properties[idx].default_uint_value));
 }
 
 llvm::StringRef Debugger::GetAutosuggestionAnsiPrefix() const {
@@ -1047,6 +1105,9 @@ Debugger::Debugger(lldb::LogOutputCallback log_callback, void *baton)
   m_collection_sp->AppendProperty(
       LanguageProperties::GetSettingName(), "Language settings.", true,
       Language::GetGlobalLanguageProperties().GetValueProperties());
+  m_collection_sp->AppendProperty(
+      "diagnostics", "Diagnostics settings.", true,
+      Diagnostics::GetGlobalProperties().GetValueProperties());
   if (m_command_interpreter_up) {
     m_collection_sp->AppendProperty(
         "interpreter",
@@ -1879,11 +1940,11 @@ CreateLogHandler(LogHandlerKind log_handler_kind, int fd, bool should_close,
   return {};
 }
 
-bool Debugger::EnableLog(llvm::StringRef channel,
-                         llvm::ArrayRef<const char *> categories,
-                         llvm::StringRef log_file, uint32_t log_options,
-                         size_t buffer_size, LogHandlerKind log_handler_kind,
-                         llvm::raw_ostream &error_stream) {
+llvm::Error Debugger::EnableLog(llvm::StringRef channel,
+                                llvm::ArrayRef<const char *> categories,
+                                llvm::StringRef log_file, uint32_t log_options,
+                                size_t buffer_size,
+                                LogHandlerKind log_handler_kind) {
 
   std::shared_ptr<LogHandler> log_handler_sp;
   if (m_callback_handler_sp) {
@@ -1908,11 +1969,10 @@ bool Debugger::EnableLog(llvm::StringRef channel,
         flags |= File::eOpenOptionTruncate;
       llvm::Expected<FileUP> file = FileSystem::Instance().Open(
           FileSpec(log_file), flags, lldb::eFilePermissionsFileDefault, false);
-      if (!file) {
-        error_stream << "Unable to open log file '" << log_file
-                     << "': " << llvm::toString(file.takeError()) << "\n";
-        return false;
-      }
+      if (!file)
+        return llvm::createStringErrorV("Unable to open log file '{}': {}",
+                                        log_file,
+                                        llvm::fmt_consume(file.takeError()));
 
       log_handler_sp =
           CreateLogHandler(log_handler_kind, (*file)->GetDescriptor(),
@@ -1925,8 +1985,8 @@ bool Debugger::EnableLog(llvm::StringRef channel,
   if (log_options == 0)
     log_options = LLDB_LOG_OPTION_PREPEND_THREAD_NAME;
 
-  return Log::EnableLogChannel(log_handler_sp, log_options, channel, categories,
-                               error_stream);
+  return Log::EnableLogChannel(log_handler_sp, log_options, channel,
+                               categories);
 }
 
 ScriptInterpreter *
@@ -2334,15 +2394,14 @@ bool Debugger::StartEventHandlerThread() {
     // is up and running and listening to events before we return from this
     // function. We do this by listening to events for the
     // eBroadcastBitEventThreadIsListening from the m_sync_broadcaster
-    ConstString full_name("lldb.debugger.event-handler");
-    ListenerSP listener_sp(
-        Listener::MakeListener(full_name.AsCString(nullptr)));
+    llvm::StringRef full_name("lldb.debugger.event-handler");
+    ListenerSP listener_sp(Listener::MakeListener(full_name));
     listener_sp->StartListeningForEvents(&m_sync_broadcaster,
                                          eBroadcastBitEventThreadIsListening);
 
     llvm::StringRef thread_name =
-        full_name.GetLength() < llvm::get_max_thread_name_length()
-            ? full_name.GetStringRef()
+        full_name.size() < llvm::get_max_thread_name_length()
+            ? full_name
             : "dbg.evt-handler";
 
     // Use larger 8MB stack for this thread
@@ -2599,7 +2658,7 @@ StructuredData::DictionarySP Debugger::GetBuildConfiguration() {
       *config_up, "zlib", LLVM_ENABLE_ZLIB,
       "A boolean value that indicates if zlib support is enabled in LLDB");
   AddBoolConfigEntry(
-      *config_up, "lzma", LLDB_ENABLE_LZMA,
+      *config_up, "lzma", LLVM_ENABLE_LZMA,
       "A boolean value that indicates if lzma support is enabled in LLDB");
   AddBoolConfigEntry(
       *config_up, "python", LLDB_ENABLE_PYTHON,

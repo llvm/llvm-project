@@ -8,12 +8,14 @@
 // IO functions.
 //===----------------------------------------------------------------------===//
 
+#include "FuzzerIO.h"
 #include "FuzzerDefs.h"
 #include "FuzzerExtFunctions.h"
-#include "FuzzerIO.h"
 #include "FuzzerUtil.h"
 #include <algorithm>
+#include <cerrno>
 #include <cstdarg>
+#include <cstring>
 #include <fstream>
 #include <iterator>
 #include <sys/stat.h>
@@ -41,7 +43,7 @@ long GetEpoch(const std::string &Path) {
 Unit FileToVector(const std::string &Path, size_t MaxSize, bool ExitOnError) {
   std::ifstream T(Path, std::ios::binary);
   if (ExitOnError && !T) {
-    Printf("No such directory: %s; exiting\n", Path.c_str());
+    Printf("No such file: %s (%s); exiting\n", Path.c_str(), strerror(errno));
     exit(1);
   }
 

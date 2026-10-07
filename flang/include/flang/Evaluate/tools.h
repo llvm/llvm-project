@@ -22,6 +22,7 @@
 #include "flang/Semantics/attr.h"
 #include "flang/Semantics/scope.h"
 #include "flang/Semantics/symbol.h"
+#include <algorithm>
 #include <array>
 #include <optional>
 #include <set>
@@ -1079,6 +1080,10 @@ template <typename A> SymbolVector GetSymbolVector(const A &x) {
   return GetSymbolVectorHelper{}(x);
 }
 
+// The selector of an associate name when it is a variable that is not a
+// pointer returned by a function, else nullptr.
+const Expr<SomeType> *GetVariableSelector(const Symbol &);
+
 // GetLastTarget() returns the rightmost symbol in an object designator's
 // SymbolVector that has the POINTER or TARGET attribute, or a null pointer
 // when none is found.
@@ -1119,6 +1124,22 @@ bool HasConstant(const Expr<SomeType> &);
 
 // Predicate: Does an expression contain a component
 bool HasStructureComponent(const Expr<SomeType> &expr);
+
+// Predicate: does an expression contain a procedure reference?
+bool HasProcedureRef(const Expr<SomeType> &expr);
+
+// Predicate: does an expression contain a VOLATILE or ASYNCHRONOUS symbol?
+bool HasVolatileOrAsynchronousSymbol(const Expr<SomeType> &expr);
+
+// Can a scalar real or complex RHS expression in an assignment be rewritten
+// as a split sum expression tree?
+bool CanBuildSplitSumExpressionTree(
+    FoldingContext &, const Expr<SomeType> &lhs, const Expr<SomeType> &rhs);
+
+// Try to rewrite eligible scalar real or complex sums within an expression as
+// split sum expression trees.
+std::optional<Expr<SomeType>> TryBuildSplitSumExpressionTrees(
+    const Expr<SomeType> &expr);
 
 // Utilities for attaching the location of the declaration of a symbol
 // of interest to a message.  Handles the case of USE association gracefully.
@@ -1309,16 +1330,87 @@ std::vector<SymbolVector> GetSymbolVectors(const Expr<SomeType> &expr);
 bool IsCUDADeviceSymbol(const Symbol &sym);
 bool IsCUDADeviceOnlySymbol(const Symbol &sym);
 
+// True if the data designated by the symbol has the CUDA data attribute. An
+// associate name takes the attribute of the variable its selector designates.
+bool IsCUDADataAttrSymbol(const Symbol &sym, common::CUDADataAttr attr);
+
 inline bool IsCUDAManagedOrUnifiedSymbol(const Symbol &sym) {
-  if (const auto *details =
-          sym.GetUltimate().detailsIf<semantics::ObjectEntityDetails>()) {
-    if (details->cudaDataAttr() &&
-        (*details->cudaDataAttr() == common::CUDADataAttr::Managed ||
-            *details->cudaDataAttr() == common::CUDADataAttr::Unified)) {
-      return true;
+  return IsCUDADataAttrSymbol(sym, common::CUDADataAttr::Managed) ||
+      IsCUDADataAttrSymbol(sym, common::CUDADataAttr::Unified);
+}
+
+inline bool IsCUDAManagedSymbol(const Symbol &sym) {
+  return IsCUDADataAttrSymbol(sym, common::CUDADataAttr::Managed);
+}
+
+inline bool IsCUDAUnifiedSymbol(const Symbol &sym) {
+  return IsCUDADataAttrSymbol(sym, common::CUDADataAttr::Unified);
+}
+
+inline bool HasCUDADataAttr(const Symbol &sym) {
+  const auto *details{
+      sym.GetUltimate().detailsIf<semantics::ObjectEntityDetails>()};
+  return details && details->cudaDataAttr().has_value();
+}
+
+// Replace each associate name whose selector is a variable by the CUDA symbols
+// of its selector, the same way GetSymbolVector expands it.
+semantics::UnorderedSymbolSet ExpandCudaAssociations(
+    semantics::UnorderedSymbolSet &&symbols);
+
+// The data attribute of a component describes the data that the component
+// designates, so it hides the attribute of the object that the component is
+// taken from: in a%b, where a is managed and b is device, a%b designates
+// device data. Collect the symbols of the expression, leaving out the ones
+// that a component with an attribute hides.
+template <typename A>
+semantics::UnorderedSymbolSet CollectEffectiveCudaSymbols(const A &expr) {
+  // Associate names are expanded so that the set holds the symbols that
+  // GetSymbolVector lists, which the hiding below relies on.
+  semantics::UnorderedSymbolSet result{
+      ExpandCudaAssociations(CollectCudaSymbols(expr))};
+  SymbolVector symbols{GetSymbolVector(expr)};
+  // GetSymbolVector lists the base of a component chain before its components.
+  // Reverse it to visit the innermost component of a chain first.
+  std::reverse(symbols.begin(), symbols.end());
+  bool hidden{false};
+  for (const Symbol &sym : symbols) {
+    bool isComponent{sym.owner().IsDerivedType()};
+    if (hidden) {
+      result.erase(sym);
+    } else if (isComponent && HasCUDADataAttr(sym)) {
+      hidden = true;
+    }
+    if (!isComponent) {
+      hidden = false; // The base ends the component chain.
     }
   }
-  return false;
+  return result;
+}
+
+// Get the number of symbols with the CUDA managed attribute in a set.
+inline int CountCUDAManagedSymbols(
+    const semantics::UnorderedSymbolSet &symbols) {
+  int count{0};
+  for (const Symbol &sym : symbols) {
+    if (IsCUDAManagedSymbol(sym)) {
+      ++count;
+    }
+  }
+  return count;
+}
+
+// Get the number of symbols with a CUDA device attribute other than unified in
+// a set.
+inline int CountCUDANonUnifiedSymbols(
+    const semantics::UnorderedSymbolSet &symbols) {
+  int count{0};
+  for (const Symbol &sym : symbols) {
+    if (IsCUDADeviceSymbol(sym) && !IsCUDAUnifiedSymbol(sym)) {
+      ++count;
+    }
+  }
+  return count;
 }
 
 // Non-allocatable module-level managed/unified variables use pointer
@@ -1358,6 +1450,11 @@ template <typename A> inline int GetNbOfCUDADeviceSymbols(const A &expr) {
 // Get the number of unique symbols with CUDA device attribute.
 int GetNbOfUniqueCUDADeviceSymbols(const Expr<SomeType> &expr);
 
+// Get the number of unique symbols with CUDA device attribute that are managed
+// or unified. Symbols are counted the same way as in
+// GetNbOfUniqueCUDADeviceSymbols so the two counts can be compared.
+int GetNbOfUniqueCUDAManagedOrUnifiedSymbols(const Expr<SomeType> &expr);
+
 // Get the number of distinct symbols with CUDA managed or unified
 // attribute in the expression.
 template <typename A>
@@ -1377,38 +1474,94 @@ template <typename A> inline bool HasCUDADeviceAttrs(const A &expr) {
   return GetNbOfCUDADeviceSymbols(expr) > 0;
 }
 
-// Check if any of the symbols part of the lhs or rhs expression has a CUDA
-// device attribute.
+// True for a whole reference to a managed array: a whole array variable, or a
+// whole array component that itself has the managed attribute (a%b where b is
+// managed). An array section, an array element, a component of a managed object
+// and a computed value are all false.
+template <typename A> inline bool IsWholeManagedArray(const A &expr) {
+  const Symbol *sym{UnwrapWholeSymbolOrComponentDataRef(expr)};
+  return expr.Rank() > 0 && sym && IsCUDAManagedSymbol(*sym);
+}
+
+// CUDA Fortran Programming Guide 3.4.1 defines which assignments in host code
+// are copies. A copy that reads or writes device, managed or constant data runs
+// on stream zero, so it waits for previously launched kernels.
+// - Device or constant data on one side and host data on the other is a copy,
+//   and so is device data on both sides.
+// - A whole managed variable or array is copied when the other side is a
+//   constant, a host variable, a host array or a host array section.
+// - A managed array section is assigned by host code when the other side is
+//   host or managed data.
+// - A managed variable, array or array section is copied when the other side is
+//   device data, in both directions.
+// One difference from the guide is that a managed array section is copied when
+// the other side is a whole managed array, as the reference compiler does.
+// Unified data is host memory that the device can also access, so it takes the
+// place of host data in the rules above and an assignment between unified sides
+// is host code.
+// The side of an assignment is classified from the data it designates, so the
+// attribute of a component prevails over the attribute of the object it is
+// taken from.
+// Return true if the assignment is one of the copies above.
 template <typename A, typename B>
 inline bool IsCUDADataTransfer(const A &lhs, const B &rhs) {
-  int lhsNbManagedSymbols{GetNbOfCUDAManagedOrUnifiedSymbols(lhs)};
-  int rhsNbManagedSymbols{GetNbOfCUDAManagedOrUnifiedSymbols(rhs)};
-  int rhsNbSymbols{GetNbOfCUDADeviceSymbols(rhs)};
+  semantics::UnorderedSymbolSet lhsSymbols{CollectEffectiveCudaSymbols(lhs)};
+  semantics::UnorderedSymbolSet rhsSymbols{CollectEffectiveCudaSymbols(rhs)};
+  // Unified data is left out of these counts and checks so that it is handled
+  // as host data.
+  bool lhsHasManaged{CountCUDAManagedSymbols(lhsSymbols) > 0};
+  bool lhsIsHost{CountCUDANonUnifiedSymbols(lhsSymbols) == 0};
+  int rhsNbManagedSymbols{CountCUDAManagedSymbols(rhsSymbols)};
+  int rhsNbSymbols{CountCUDANonUnifiedSymbols(rhsSymbols)};
 
   if (HasNonAllocatableModuleCUDAManagedSymbols(lhs))
     return false;
 
-  if (lhsNbManagedSymbols >= 1 && lhs.Rank() > 0 && rhsNbSymbols == 0 &&
-      rhsNbManagedSymbols == 0 && (IsVariable(rhs) || IsConstantExpr(rhs))) {
-    return true; // Managed arrays initialization is performed on the device.
+  // The host can read and write managed data in place, and copying one section
+  // at a time in a loop is slow, so only whole arrays are copied.
+  bool wholeLhs{IsWholeManagedArray(lhs)};
+  bool wholeRhs{IsWholeManagedArray(rhs)};
+
+  if (wholeLhs && rhsNbSymbols == 0 && rhsNbManagedSymbols == 0 &&
+      (IsVariable(rhs) || IsConstantExpr(rhs))) {
+    return true; // Whole managed array copied from constant or host data.
   }
 
-  // Cases where no explicit data transfer is needed:
-  // - Both sides involve only managed/unified symbols (host-accessible).
-  // - LHS is host-only and RHS has only managed/unified symbols.
-  // - LHS is managed/unified and RHS is host-only.
-  if ((lhsNbManagedSymbols >= 1 && rhsNbManagedSymbols == rhsNbSymbols) ||
-      (lhsNbManagedSymbols == 0 && !HasCUDADeviceAttrs(lhs) &&
-          rhsNbManagedSymbols >= 1 && rhsNbManagedSymbols == rhsNbSymbols) ||
-      (lhsNbManagedSymbols >= 1 && rhsNbSymbols == 0)) {
+  // The host cannot reach device or constant data, unlike managed and unified
+  // data, so an assignment with such a side is a copy, sections included.
+  bool lhsIsDeviceOnly{!lhsHasManaged && !lhsIsHost};
+  // The right-hand side can be an expression, so one device operand is enough.
+  bool rhsHasDeviceOnly{rhsNbSymbols > rhsNbManagedSymbols};
+
+  // Assignments done on the host, with no copy.
+  // - A whole allocatable left-hand side with no device data. The assignment
+  //   may reallocate it, which is done on the host.
+  // - A managed left-hand side with no whole managed array on either side. Only
+  //   sections and elements are involved, and the host reads and writes them in
+  //   place.
+  // - A host left-hand side assigned from a managed section or element.
+  // - An expression involving managed data. Evaluating it on the host avoids a
+  //   temporary.
+  // - A managed left-hand side assigned from host data. Whole arrays are copied
+  //   by the early return above.
+  if ((IsAllocatableDesignator(lhs) && !lhsIsDeviceOnly && !rhsHasDeviceOnly &&
+          (lhsHasManaged || rhsNbManagedSymbols >= 1)) ||
+      (lhsHasManaged && !rhsHasDeviceOnly && !(wholeLhs || wholeRhs)) ||
+      (lhsIsHost && rhsNbManagedSymbols >= 1 && !rhsHasDeviceOnly &&
+          !wholeRhs) ||
+      (rhsNbManagedSymbols >= 1 && !IsVariable(rhs) && !lhsIsDeviceOnly) ||
+      (lhsHasManaged && rhsNbSymbols == 0)) {
     return false;
   }
-  return HasCUDADeviceAttrs(lhs) || rhsNbSymbols > 0;
+  return !lhsIsHost || rhsNbSymbols > 0;
 }
 
-/// Check if the expression is a mix of host and device variables that require
-/// implicit data transfer.
+/// Check if the expression uses device data in an operation evaluated on the
+/// host, which requires an implicit data transfer.
 bool HasCUDAImplicitTransfer(const Expr<SomeType> &expr);
+
+/// Check if the expression is a mix of host and constant variables.
+bool HasOnlyCUDAConstntImplicitTransfer(const Expr<SomeType> &expr);
 
 // Checks whether the symbol on the LHS is present in the RHS expression.
 bool CheckForSymbolMatch(const Expr<SomeType> *lhs, const Expr<SomeType> *rhs);
@@ -1570,6 +1723,11 @@ std::optional<Expr<SomeType>> GetConvertInput(const Expr<SomeType> &x);
 
 // How many ancestors does have a derived type have?
 std::optional<int> CountDerivedTypeAncestors(const semantics::Scope &);
+
+// For an expression of enumeration type, extract the value of the hidden
+// __ordinal component.  Returns std::nullopt if the expression is not a
+// constant or structure constructor of an enumeration-type value.
+std::optional<Expr<SomeType>> GetEnumerationOrdinal(Expr<SomeDerived> &);
 
 } // namespace Fortran::evaluate
 

@@ -202,7 +202,7 @@ public:
   }
 
   std::function<ProfileSummaryInfo *(Module &)> GetPSI;
-  std::function<StaticDataProfileInfo *(Module &)> GetSDPI;
+  std::function<const StaticDataProfileInfo *(Module &)> GetSDPI;
 };
 
 class X86AsmPrinterBeginPass

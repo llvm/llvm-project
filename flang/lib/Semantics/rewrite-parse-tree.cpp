@@ -81,6 +81,7 @@ public:
   bool Pre(parser::EndSubmoduleStmt &) { return false; }
   bool Pre(parser::EndSubroutineStmt &) { return false; }
   bool Pre(parser::EndTypeStmt &) { return false; }
+  bool Pre(parser::EndEnumerationTypeStmt &) { return false; }
 
   bool Pre(parser::OmpObject &);
   bool Pre(parser::OmpBlockConstruct &);
@@ -191,6 +192,11 @@ void RewriteMutator::OpenMPSimdOnly(
         } else if (auto *ompBlock{std::get_if<parser::OmpBlockConstruct>(
                        &omp->value().u)}) {
           it = replaceInlineBlock(std::get<parser::Block>(ompBlock->t), it);
+          continue;
+        } else if (auto *ompDispatch{
+                       std::get_if<parser::OpenMPDispatchConstruct>(
+                           &omp->value().u)}) {
+          it = replaceInlineBlock(std::get<parser::Block>(ompDispatch->t), it);
           continue;
         } else if (auto *ompLoop{std::get_if<parser::OpenMPLoopConstruct>(
                        &omp->value().u)}) {

@@ -25,6 +25,7 @@
 #include "llvm/ADT/FloatingPointMode.h"
 #include "llvm/ADT/StringRef.h"
 #include "llvm/BinaryFormat/DXContainer.h"
+#include "llvm/Frontend/OpenMP/OMPVersion.h"
 #include "llvm/Support/AllocToken.h"
 #include "llvm/TargetParser/Triple.h"
 #include <optional>
@@ -621,6 +622,9 @@ public:
   /// The allocation token mode.
   std::optional<llvm::AllocTokenMode> AllocTokenMode;
 
+  /// Name of the literal encoding to convert the internal encoding to.
+  std::string LiteralEncoding;
+
   LangOptions();
 
   /// Set language defaults for the given input language and
@@ -819,6 +823,11 @@ public:
     return OpenMPIsTargetDevice || CUDAIsDevice || SYCLIsDevice;
   }
 
+  /// Return the OpenMP version.
+  llvm::omp::Version getOpenMPVersion() const {
+    return llvm::omp::Version(OpenMP);
+  }
+
   /// Returns the most applicable C standard-compliant language version code.
   /// If none could be determined, returns \ref std::nullopt.
   std::optional<uint32_t> getCLangStd() const;
@@ -986,6 +995,10 @@ public:
 ///
 /// The is implemented as a value of the new FPOptions plus a mask showing which
 /// fields are actually set in it.
+///
+/// NOTE: This type is serialized into the AST format (e.g. for defaulted
+/// functions). When adding a new field here or in FPOptions, ensure that the
+/// AST VERSION_MAJOR is bumped if it changes the layout or size.
 class FPOptionsOverride {
   FPOptions Options = FPOptions::getFromOpaqueInt(0);
   FPOptions::storage_type OverrideMask = 0;

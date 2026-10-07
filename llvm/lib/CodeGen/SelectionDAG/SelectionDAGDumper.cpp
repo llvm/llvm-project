@@ -59,9 +59,70 @@ static cl::opt<bool>
     PrintSDNodeAddrs("print-sdnode-addrs", cl::Hidden,
                      cl::desc("Print addresses of SDNodes when dumping"));
 
+StringRef ISD::getCondCodeName(ISD::CondCode Operation) {
+  switch (Operation) {
+  default:
+    llvm_unreachable("Unknown setcc condition!");
+  case ISD::SETOEQ:
+    return "setoeq";
+  case ISD::SETOGT:
+    return "setogt";
+  case ISD::SETOGE:
+    return "setoge";
+  case ISD::SETOLT:
+    return "setolt";
+  case ISD::SETOLE:
+    return "setole";
+  case ISD::SETONE:
+    return "setone";
+
+  case ISD::SETO:
+    return "seto";
+  case ISD::SETUO:
+    return "setuo";
+  case ISD::SETUEQ:
+    return "setueq";
+  case ISD::SETUGT:
+    return "setugt";
+  case ISD::SETUGE:
+    return "setuge";
+  case ISD::SETULT:
+    return "setult";
+  case ISD::SETULE:
+    return "setule";
+  case ISD::SETUNE:
+    return "setune";
+
+  case ISD::SETEQ:
+    return "seteq";
+  case ISD::SETGT:
+    return "setgt";
+  case ISD::SETGE:
+    return "setge";
+  case ISD::SETLT:
+    return "setlt";
+  case ISD::SETLE:
+    return "setle";
+  case ISD::SETNE:
+    return "setne";
+
+  case ISD::SETTRUE:
+    return "settrue";
+  case ISD::SETTRUE2:
+    return "settrue2";
+  case ISD::SETFALSE:
+    return "setfalse";
+  case ISD::SETFALSE2:
+    return "setfalse2";
+  }
+}
+
 std::string SDNode::getOperationName(const SelectionDAG *G) const {
   switch (getOpcode()) {
   default:
+    // If this assert fails, add/remove the newly added/removed opcode from the
+    // switch and update the expected value.
+    static_assert(ISD::BUILTIN_OP_END == 476, "Unexpected number of opcodes");
     if (getOpcode() < ISD::BUILTIN_OP_END)
       return "<<Unknown DAG Node>>";
     if (isMachineOpcode()) {
@@ -87,6 +148,7 @@ std::string SDNode::getOperationName(const SelectionDAG *G) const {
   case ISD::DELETED_NODE:               return "<<Deleted Node!>>";
 #endif
   case ISD::PREFETCH:                   return "Prefetch";
+  case ISD::ARITH_FENCE:                return "ArithFence";
   case ISD::MEMBARRIER:                 return "MemBarrier";
   case ISD::ATOMIC_FENCE:               return "AtomicFence";
   case ISD::ATOMIC_CMP_SWAP:            return "AtomicCmpSwap";
@@ -105,10 +167,12 @@ std::string SDNode::getOperationName(const SelectionDAG *G) const {
   case ISD::ATOMIC_LOAD_UMAX:           return "AtomicLoadUMax";
   case ISD::ATOMIC_LOAD_FADD:           return "AtomicLoadFAdd";
   case ISD::ATOMIC_LOAD_FSUB:           return "AtomicLoadFSub";
-  case ISD::ATOMIC_LOAD_FMIN:           return "AtomicLoadFMin";
   case ISD::ATOMIC_LOAD_FMAX:           return "AtomicLoadFMax";
-  case ISD::ATOMIC_LOAD_FMINIMUM:       return "AtomicLoadFMinimum";
+  case ISD::ATOMIC_LOAD_FMIN:           return "AtomicLoadFMin";
   case ISD::ATOMIC_LOAD_FMAXIMUM:       return "AtomicLoadFMaximum";
+  case ISD::ATOMIC_LOAD_FMINIMUM:       return "AtomicLoadFMinimum";
+  case ISD::ATOMIC_LOAD_FMAXIMUMNUM:    return "AtomicLoadFMaximumNum";
+  case ISD::ATOMIC_LOAD_FMINIMUMNUM:    return "AtomicLoadFMinimumNum";
   case ISD::ATOMIC_LOAD_UINC_WRAP:
     return "AtomicLoadUIncWrap";
   case ISD::ATOMIC_LOAD_UDEC_WRAP:
@@ -220,6 +284,10 @@ std::string SDNode::getOperationName(const SelectionDAG *G) const {
   case ISD::STRICT_FMAXIMUM:            return "strict_fmaximum";
   case ISD::FMINIMUMNUM:                return "fminimumnum";
   case ISD::FMAXIMUMNUM:                return "fmaximumnum";
+  case ISD::PSEUDO_FMIN:                return "pseudo_fmin";
+  case ISD::PSEUDO_FMAX:                return "pseudo_fmax";
+  case ISD::STRICT_PSEUDO_FMIN:         return "strict_pseudo_fmin";
+  case ISD::STRICT_PSEUDO_FMAX:         return "strict_pseudo_fmax";
   case ISD::FNEG:                       return "fneg";
   case ISD::FSQRT:                      return "fsqrt";
   case ISD::STRICT_FSQRT:               return "strict_fsqrt";
@@ -356,6 +424,7 @@ std::string SDNode::getOperationName(const SelectionDAG *G) const {
   case ISD::EXTRACT_SUBVECTOR:          return "extract_subvector";
   case ISD::VECTOR_DEINTERLEAVE:        return "vector_deinterleave";
   case ISD::VECTOR_INTERLEAVE:          return "vector_interleave";
+  case ISD::VECTOR_REPEAT:              return "vector_repeat";
   case ISD::SCALAR_TO_VECTOR:           return "scalar_to_vector";
   case ISD::VECTOR_SHUFFLE:             return "vector_shuffle";
   case ISD::VECTOR_SPLICE_LEFT:         return "vector_splice_left";
@@ -538,36 +607,7 @@ std::string SDNode::getOperationName(const SelectionDAG *G) const {
     // clang-format on
 
   case ISD::CONDCODE:
-    switch (cast<CondCodeSDNode>(this)->get()) {
-    default: llvm_unreachable("Unknown setcc condition!");
-    case ISD::SETOEQ:                   return "setoeq";
-    case ISD::SETOGT:                   return "setogt";
-    case ISD::SETOGE:                   return "setoge";
-    case ISD::SETOLT:                   return "setolt";
-    case ISD::SETOLE:                   return "setole";
-    case ISD::SETONE:                   return "setone";
-
-    case ISD::SETO:                     return "seto";
-    case ISD::SETUO:                    return "setuo";
-    case ISD::SETUEQ:                   return "setueq";
-    case ISD::SETUGT:                   return "setugt";
-    case ISD::SETUGE:                   return "setuge";
-    case ISD::SETULT:                   return "setult";
-    case ISD::SETULE:                   return "setule";
-    case ISD::SETUNE:                   return "setune";
-
-    case ISD::SETEQ:                    return "seteq";
-    case ISD::SETGT:                    return "setgt";
-    case ISD::SETGE:                    return "setge";
-    case ISD::SETLT:                    return "setlt";
-    case ISD::SETLE:                    return "setle";
-    case ISD::SETNE:                    return "setne";
-
-    case ISD::SETTRUE:                  return "settrue";
-    case ISD::SETTRUE2:                 return "settrue2";
-    case ISD::SETFALSE:                 return "setfalse";
-    case ISD::SETFALSE2:                return "setfalse2";
-    }
+    return ISD::getCondCodeName(cast<CondCodeSDNode>(this)->get()).str();
   case ISD::VECREDUCE_FADD:             return "vecreduce_fadd";
   case ISD::VECREDUCE_SEQ_FADD:         return "vecreduce_seq_fadd";
   case ISD::VECREDUCE_FMUL:             return "vecreduce_fmul";
@@ -584,6 +624,10 @@ std::string SDNode::getOperationName(const SelectionDAG *G) const {
   case ISD::VECREDUCE_FMAX:             return "vecreduce_fmax";
   case ISD::VECREDUCE_FMIN:             return "vecreduce_fmin";
   case ISD::VECREDUCE_FMAXIMUM:         return "vecreduce_fmaximum";
+  case ISD::VECREDUCE_FMINIMUMNUM:
+    return "vecreduce_fminimumnum";
+  case ISD::VECREDUCE_FMAXIMUMNUM:
+    return "vecreduce_fmaximumnum";
   case ISD::VECREDUCE_FMINIMUM:         return "vecreduce_fminimum";
   case ISD::STACKMAP:
     return "stackmap";
@@ -591,6 +635,8 @@ std::string SDNode::getOperationName(const SelectionDAG *G) const {
     return "patchpoint";
   case ISD::CLEAR_CACHE:
     return "clear_cache";
+  case ISD::DEACTIVATION_SYMBOL:
+    return "deactivation_symbol";
 
   case ISD::EXPERIMENTAL_VECTOR_HISTOGRAM:
     return "histogram";
@@ -605,6 +651,9 @@ std::string SDNode::getOperationName(const SelectionDAG *G) const {
 
   case ISD::GET_ACTIVE_LANE_MASK:
     return "get_active_lane_mask";
+
+  case ISD::VECTOR_MATCH:
+    return "vector_match";
 
   case ISD::PARTIAL_REDUCE_UMLA:
     return "partial_reduce_umla";
@@ -728,6 +777,9 @@ void SDNode::print_details(raw_ostream &OS, const SelectionDAG *G) const {
 
   if (getFlags().hasNonNeg())
     OS << " nneg";
+
+  if (getFlags().hasNonNull())
+    OS << " nonnull";
 
   if (getFlags().hasNoNaNs())
     OS << " nnan";
@@ -1055,6 +1107,9 @@ LLVM_DUMP_METHOD void SDDbgValue::print(raw_ostream &OS) const {
       break;
     case SDDbgOperand::VREG:
       OS << "VREG=" << printReg(Op.getVReg());
+      break;
+    case SDDbgOperand::GLOBALADDR:
+      OS << "GLOBALADDR=" << Op.getGlobal()->getName();
       break;
     }
     Comma = true;

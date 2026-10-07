@@ -61,6 +61,8 @@ void exceptions() {
   alignof((3));
   // CHECK-MESSAGES: :[[@LINE-1]]:11: warning: redundant parentheses around expression [readability-redundant-parentheses]
   // CHECK-FIXES:    alignof(3);
+  __typeof__(1) t;
+  const __typeof__(1) ct = 1;
 }
 
 namespace std {
@@ -70,6 +72,20 @@ namespace std {
 void ignoreStdMaxMin() {
   (std::max)(1,2);
   (std::min)(1,2);
+}
+
+int global = 0;
+template <int &R> int &referenceTemplateArgument() {
+  return R;
+}
+int &useReferenceTemplateArgument() {
+  return referenceTemplateArgument<global>();
+}
+
+extern "C" int printf(const char *, ...);
+struct Dumped { int x; };
+void dumpStruct(Dumped *d) {
+  __builtin_dump_struct(d, printf);
 }
 
 struct Foo
@@ -97,6 +113,9 @@ struct Foo
     Y y{};
     return y;
   }
+
+  bool operator()(int);
+  bool operator[](int);
 };
 
 void memberExpr() {
@@ -120,6 +139,24 @@ void memberExpr() {
    // CHECK-MESSAGES: :[[@LINE-1]]:7: warning: redundant parentheses around expression [readability-redundant-parentheses]
    // CHECK-FIXES:    if (foo.fooBar().z) {
   }
+}
+
+void call(bool (&func)(), Foo f) {
+  if ((func())) {}
+  // CHECK-MESSAGES: :[[@LINE-1]]:7: warning: redundant parentheses around expression [readability-redundant-parentheses]
+  // CHECK-FIXES:    if (func()) {}
+  if ((f(1))) {}
+  // CHECK-MESSAGES: :[[@LINE-1]]:7: warning: redundant parentheses around expression [readability-redundant-parentheses]
+  // CHECK-FIXES:    if (f(1)) {}
+}
+
+void subscript(bool *arr, Foo f) {
+  if ((arr[1])) {}
+  // CHECK-MESSAGES: :[[@LINE-1]]:7: warning: redundant parentheses around expression [readability-redundant-parentheses]
+  // CHECK-FIXES:    if (arr[1]) {}
+  if ((f[1])) {}
+  // CHECK-MESSAGES: :[[@LINE-1]]:7: warning: redundant parentheses around expression [readability-redundant-parentheses]
+  // CHECK-FIXES:    if (f[1]) {}
 }
 
 enum class FoldLevel {

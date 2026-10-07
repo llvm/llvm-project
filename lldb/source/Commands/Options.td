@@ -141,13 +141,22 @@ let Command = "breakpoint modify" in {
         Group<1>,
         Arg<"Expression">,
         Desc<"The breakpoint stops only if this ${c}ondition expression "
-             "evaluates to true.">;
+             "evaluates to true. By default, DIL is used to evaluate the "
+             "expression, and if it fails, the evaluation falls back to "
+             "UserExpression. Use -Z (--condition-mode) to change this behavior.">;
+  def breakpoint_modify_condition_mode
+      : Option<"condition-mode", "Z">,
+        Group<1>,
+        EnumArg<"BreakpointConditionMode">,
+        Desc<"Specifies the mode to use when evaluating the breakpoint's "
+             "condition expression. The default value can be set by "
+             "`target.breakpoints-condition-mode` setting.">;
   def breakpoint_modify_condition_language
       : Option<"condition-language", "Y">,
         Group<1>,
         Arg<"Language">,
         Desc<"Specifies the Language to use when executing the breakpoint's "
-             "condition expression.">;
+             "condition expression using UserExpression.">;
   def breakpoint_modify_auto_continue
       : Option<"auto-continue", "G">,
         Group<1>,
@@ -488,6 +497,11 @@ let Command = "breakpoint add scripted" in {
 let Command = "breakpoint override add" in {
   def breakpoint_override_add_description : Option<"description", "d">,
     Desc<"Description string for this override resolver">, Arg<"HelpText">;
+  def breakpoint_override_add_mask : Option<"resolver-type-mask", "m">,
+    Desc<"Specifies which breakpoint resolver type the override operates on.  "
+    "The option can be repeated, lldb will 'and' the options together.  "
+    "If no options are specified, the default value is 'file_and_line'">,
+    EnumArg<"BreakpointResolverMask">;
 }
 
 let Command = "breakpoint clear" in {
@@ -1577,6 +1591,37 @@ let Command = "scripting extension list" in {
         Desc<"Specify the scripting "
              " language. If none is specified the default scripting language "
              "is used.">;
+  def scripting_extension_list_json
+      : Option<"json", "j">,
+        Desc<"Output the scripted extension list in json format.">;
+}
+
+let Command = "scripting extension generate" in {
+  def scripting_extension_generate_all_methods
+      : Option<"all", "a">,
+        Desc<"Generate all the extension methods, not only the abstract ones.">;
+  def scripting_extension_generate_language
+      : Option<"language", "l">,
+        EnumArg<"ScriptLang">,
+        Desc<"Specify the scripting language. If none is specified the "
+             "default scripting language is used.">;
+  def scripting_extension_generate_class_prefix
+      : Option<"name", "n">,
+        Arg<"ClassName">,
+        Required,
+        Desc<"Specify the class prefix name to include in the generated class "
+             "definitions.">;
+  def scripting_extension_generate_output_file
+      : Option<"output", "o">,
+        Arg<"Filename">,
+        Desc<"File location where the extension is generated.">;
+  def scripting_extension_generate_open_editor
+      : Option<"edit", "e">,
+        Arg<"Boolean">,
+        Desc<"Open the generated file in an external editor after writing "
+             "it to disk. Defaults to true; pass `-e false` to skip "
+             "opening the editor (e.g. under SSH without X forwarding, "
+             "or in scripted runs).">;
 }
 
 let Command = "source info" in {

@@ -782,7 +782,7 @@ bool LoopPredication::widenWidenableBranchGuardConditions(
   BI->setCondition(AllChecks);
   if (InsertAssumesOfPredicatedGuardsConditions) {
     BasicBlock *IfTrueBB = BI->getSuccessor(0);
-    Builder.SetInsertPoint(IfTrueBB, IfTrueBB->getFirstInsertionPt());
+    Builder.SetInsertPoint(IfTrueBB->getFirstInsertionPt());
     // If this block has other predecessors, we might not be able to use Cond.
     // In this case, create a Phi where every other input is `true` and input
     // from guard block is Cond.
@@ -877,7 +877,7 @@ bool LoopPredication::isLoopProfitableToPredicate() {
     return true;
 
   SmallVector<std::pair<BasicBlock *, BasicBlock *>, 8> ExitEdges;
-  L->getExitEdges(ExitEdges);
+  LI->getExitEdges(*L, ExitEdges);
   // If there is only one exiting edge in the loop, it is always profitable to
   // predicate the loop.
   if (ExitEdges.size() == 1)

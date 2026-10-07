@@ -1,4 +1,4 @@
-; RUN: llc -mtriple=amdgcn -mcpu=fiji < %s | FileCheck -check-prefixes=GCN %s
+; RUN: llc -mtriple=amdgpu8.03 < %s | FileCheck -check-prefixes=GCN %s
 
 
 ; There is no dependence between the store and the two loads. So we can combine
