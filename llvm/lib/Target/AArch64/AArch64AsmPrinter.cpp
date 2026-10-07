@@ -426,7 +426,7 @@ static bool getOptionalBooleanModuleFlag(Module &M, StringRef Name) {
 }
 
 void AArch64AsmPrinter::emitStartOfAsmFile(Module &M) {
-  const Triple &TT = TM.getTargetTriple();
+  const Triple &TT = M.getTargetTriple();
 
   if (TT.isOSBinFormatCOFF()) {
     emitCOFFFeatureSymbol(M);
@@ -641,7 +641,7 @@ void AArch64AsmPrinter::LowerPATCHABLE_EVENT_CALL(const MachineInstr &MI,
   auto &O = *OutStreamer;
   MCSymbol *CurSled = OutContext.createTempSymbol("xray_sled_", true);
   O.emitLabel(CurSled);
-  bool MachO = TM.getTargetTriple().isOSBinFormatMachO();
+  bool MachO = MMI->getModule()->getTargetTriple().isOSBinFormatMachO();
   auto *Sym = MCSymbolRefExpr::create(
       OutContext.getOrCreateSymbol(
           Twine(MachO ? "_" : "") +
@@ -834,7 +834,7 @@ void AArch64AsmPrinter::emitHwasanMemaccessSymbols(Module &M) {
   if (HwasanMemaccessSymbols.empty())
     return;
 
-  const Triple &TT = TM.getTargetTriple();
+  const Triple &TT = M.getTargetTriple();
   assert(TT.isOSBinFormatELF());
   // AArch64Subtarget is huge, so heap allocate it so we don't run out of stack
   // space.
@@ -1048,7 +1048,7 @@ static void emitAuthenticatedPointer(MCStreamer &OutStreamer,
 void AArch64AsmPrinter::emitEndOfAsmFile(Module &M) {
   emitHwasanMemaccessSymbols(M);
 
-  const Triple &TT = TM.getTargetTriple();
+  const Triple &TT = M.getTargetTriple();
   if (TT.isOSBinFormatMachO()) {
     // Output authenticated pointers as indirect symbols, if we have any.
     MachineModuleInfoMachO &MMIMacho =

@@ -670,6 +670,7 @@ private:
   // Float Result Expansion.
   void ExpandFloatResult(SDNode *N, unsigned ResNo);
   void ExpandFloatRes_ConstantFP(SDNode *N, SDValue &Lo, SDValue &Hi);
+  void ExpandFloatRes_NoLibcall(SDNode *N, SDValue &Lo, SDValue &Hi);
   void ExpandFloatRes_Unary(SDNode *N, RTLIB::Libcall LC,
                             SDValue &Lo, SDValue &Hi);
   void ExpandFloatRes_Binary(SDNode *N, RTLIB::Libcall LC,

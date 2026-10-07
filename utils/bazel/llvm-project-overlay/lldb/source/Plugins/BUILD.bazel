@@ -485,6 +485,7 @@ cc_library(
         ":PluginSymbolFileNativePDBHeaders",
         ":PluginSymbolFilePDBHeaders",
         ":PluginTypeSystemClangHeaders",
+        "//clang:basic",
         "//lldb:Core",
         "//lldb:ExpressionHeaders",
         "//lldb:Headers",

@@ -322,7 +322,7 @@ define void @test_atomic_store_stream_seqcst_double(ptr %ptr, double %val) nounw
 }
 
 ;
-; STCPH
+; STCPH, Relaxed
 ;
 
 define void @test_atomic_store_stcph_relaxed_i8(ptr %ptr, i8 %val) nounwind {
@@ -335,6 +335,70 @@ define void @test_atomic_store_stcph_relaxed_i8(ptr %ptr, i8 %val) nounwind {
   ret void
 }
 
+define void @test_atomic_store_stcph_relaxed_i16(ptr %ptr, i16 %val) nounwind {
+; CHECK-LABEL: test_atomic_store_stcph_relaxed_i16:
+; CHECK:       // %bb.0:
+; CHECK-NEXT:    stcph
+; CHECK-NEXT:    strh w1, [x0]
+; CHECK-NEXT:    ret
+  store atomic i16 %val, ptr %ptr monotonic, align 8, !mem.cache_hint !4
+  ret void
+}
+
+define void @test_atomic_store_stcph_relaxed_i32(ptr %ptr, i32 %val) nounwind {
+; CHECK-LABEL: test_atomic_store_stcph_relaxed_i32:
+; CHECK:       // %bb.0:
+; CHECK-NEXT:    stcph
+; CHECK-NEXT:    str w1, [x0]
+; CHECK-NEXT:    ret
+  store atomic i32 %val, ptr %ptr monotonic, align 8, !mem.cache_hint !4
+  ret void
+}
+
+define void @test_atomic_store_stcph_relaxed_i64(ptr %ptr, i64 %val) nounwind {
+; CHECK-LABEL: test_atomic_store_stcph_relaxed_i64:
+; CHECK:       // %bb.0:
+; CHECK-NEXT:    stcph
+; CHECK-NEXT:    str x1, [x0]
+; CHECK-NEXT:    ret
+  store atomic i64 %val, ptr %ptr monotonic, align 8, !mem.cache_hint !4
+  ret void
+}
+
+;
+; STCPH, Release
+;
+
+define void @test_atomic_store_stcph_release_i8(ptr %ptr, i8 %val) nounwind {
+; CHECK-LABEL: test_atomic_store_stcph_release_i8:
+; CHECK:       // %bb.0:
+; CHECK-NEXT:    stcph
+; CHECK-NEXT:    stlrb w1, [x0]
+; CHECK-NEXT:    ret
+  store atomic i8 %val, ptr %ptr release, align 8, !mem.cache_hint !4
+  ret void
+}
+
+define void @test_atomic_store_stcph_release_i16(ptr %ptr, i16 %val) nounwind {
+; CHECK-LABEL: test_atomic_store_stcph_release_i16:
+; CHECK:       // %bb.0:
+; CHECK-NEXT:    stcph
+; CHECK-NEXT:    stlrh w1, [x0]
+; CHECK-NEXT:    ret
+  store atomic i16 %val, ptr %ptr release, align 8, !mem.cache_hint !4
+  ret void
+}
+
+define void @test_atomic_store_stcph_release_i32(ptr %ptr, i32 %val) nounwind {
+; CHECK-LABEL: test_atomic_store_stcph_release_i32:
+; CHECK:       // %bb.0:
+; CHECK-NEXT:    stcph
+; CHECK-NEXT:    stlr w1, [x0]
+; CHECK-NEXT:    ret
+  store atomic i32 %val, ptr %ptr release, align 8, !mem.cache_hint !4
+  ret void
+}
+
 define void @test_atomic_store_stcph_release_i64(ptr %ptr, i64 %val) nounwind {
 ; CHECK-LABEL: test_atomic_store_stcph_release_i64:
 ; CHECK:       // %bb.0:
@@ -342,6 +406,40 @@ define void @test_atomic_store_stcph_release_i64(ptr %ptr, i64 %val) nounwind {
 ; CHECK-NEXT:    stlr x1, [x0]
 ; CHECK-NEXT:    ret
   store atomic i64 %val, ptr %ptr release, align 8, !mem.cache_hint !4
+  ret void
+}
+
+;
+; STCPH, SequentiallyConsistent
+;
+
+define void @test_atomic_store_stcph_seqcst_i8(ptr %ptr, i8 %val) nounwind {
+; CHECK-LABEL: test_atomic_store_stcph_seqcst_i8:
+; CHECK:       // %bb.0:
+; CHECK-NEXT:    stcph
+; CHECK-NEXT:    stlrb w1, [x0]
+; CHECK-NEXT:    ret
+  store atomic i8 %val, ptr %ptr seq_cst, align 8, !mem.cache_hint !4
+  ret void
+}
+
+define void @test_atomic_store_stcph_seqcst_i16(ptr %ptr, i16 %val) nounwind {
+; CHECK-LABEL: test_atomic_store_stcph_seqcst_i16:
+; CHECK:       // %bb.0:
+; CHECK-NEXT:    stcph
+; CHECK-NEXT:    stlrh w1, [x0]
+; CHECK-NEXT:    ret
+  store atomic i16 %val, ptr %ptr seq_cst, align 8, !mem.cache_hint !4
+  ret void
+}
+
+define void @test_atomic_store_stcph_seqcst_i32(ptr %ptr, i32 %val) nounwind {
+; CHECK-LABEL: test_atomic_store_stcph_seqcst_i32:
+; CHECK:       // %bb.0:
+; CHECK-NEXT:    stcph
+; CHECK-NEXT:    stlr w1, [x0]
+; CHECK-NEXT:    ret
+  store atomic i32 %val, ptr %ptr seq_cst, align 8, !mem.cache_hint !4
   ret void
 }
 
@@ -356,26 +454,124 @@ define void @test_atomic_store_stcph_seqcst_i64(ptr %ptr, i64 %val) nounwind {
 }
 
 ;
-; SHUH
+; SHUH, Relaxed
 ;
 
 define void @test_atomic_store_shuh_relaxed_i8(ptr %ptr, i8 %val) nounwind {
 ; CHECK-LABEL: test_atomic_store_shuh_relaxed_i8:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    shuh
+; CHECK-NEXT:    shuh{{$}}
 ; CHECK-NEXT:    strb w1, [x0]
 ; CHECK-NEXT:    ret
   store atomic i8 %val, ptr %ptr monotonic, align 8, !mem.cache_hint !6
   ret void
 }
 
+define void @test_atomic_store_shuh_relaxed_i16(ptr %ptr, i16 %val) nounwind {
+; CHECK-LABEL: test_atomic_store_shuh_relaxed_i16:
+; CHECK:       // %bb.0:
+; CHECK-NEXT:    shuh
+; CHECK-NEXT:    strh w1, [x0]
+; CHECK-NEXT:    ret
+  store atomic i16 %val, ptr %ptr monotonic, align 8, !mem.cache_hint !6
+  ret void
+}
+
+define void @test_atomic_store_shuh_relaxed_i32(ptr %ptr, i32 %val) nounwind {
+; CHECK-LABEL: test_atomic_store_shuh_relaxed_i32:
+; CHECK:       // %bb.0:
+; CHECK-NEXT:    shuh
+; CHECK-NEXT:    str w1, [x0]
+; CHECK-NEXT:    ret
+  store atomic i32 %val, ptr %ptr monotonic, align 8, !mem.cache_hint !6
+  ret void
+}
+
+define void @test_atomic_store_shuh_relaxed_i64(ptr %ptr, i64 %val) nounwind {
+; CHECK-LABEL: test_atomic_store_shuh_relaxed_i64:
+; CHECK:       // %bb.0:
+; CHECK-NEXT:    shuh
+; CHECK-NEXT:    str x1, [x0]
+; CHECK-NEXT:    ret
+  store atomic i64 %val, ptr %ptr monotonic, align 8, !mem.cache_hint !6
+  ret void
+}
+
+;
+; SHUH, Release
+;
+
+define void @test_atomic_store_shuh_release_i8(ptr %ptr, i8 %val) nounwind {
+; CHECK-LABEL: test_atomic_store_shuh_release_i8:
+; CHECK:       // %bb.0:
+; CHECK-NEXT:    shuh
+; CHECK-NEXT:    stlrb w1, [x0]
+; CHECK-NEXT:    ret
+  store atomic i8 %val, ptr %ptr release, align 8, !mem.cache_hint !6
+  ret void
+}
+
+define void @test_atomic_store_shuh_release_i16(ptr %ptr, i16 %val) nounwind {
+; CHECK-LABEL: test_atomic_store_shuh_release_i16:
+; CHECK:       // %bb.0:
+; CHECK-NEXT:    shuh
+; CHECK-NEXT:    stlrh w1, [x0]
+; CHECK-NEXT:    ret
+  store atomic i16 %val, ptr %ptr release, align 8, !mem.cache_hint !6
+  ret void
+}
+
+define void @test_atomic_store_shuh_release_i32(ptr %ptr, i32 %val) nounwind {
+; CHECK-LABEL: test_atomic_store_shuh_release_i32:
+; CHECK:       // %bb.0:
+; CHECK-NEXT:    shuh
+; CHECK-NEXT:    stlr w1, [x0]
+; CHECK-NEXT:    ret
+  store atomic i32 %val, ptr %ptr release, align 8, !mem.cache_hint !6
+  ret void
+}
+
 define void @test_atomic_store_shuh_release_i64(ptr %ptr, i64 %val) nounwind {
 ; CHECK-LABEL: test_atomic_store_shuh_release_i64:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    shuh
+; CHECK-NEXT:    shuh{{$}}
 ; CHECK-NEXT:    stlr x1, [x0]
 ; CHECK-NEXT:    ret
   store atomic i64 %val, ptr %ptr release, align 8, !mem.cache_hint !6
+  ret void
+}
+
+;
+; SHUH, SequentiallyConsistent
+;
+
+define void @test_atomic_store_shuh_seqcst_i8(ptr %ptr, i8 %val) nounwind {
+; CHECK-LABEL: test_atomic_store_shuh_seqcst_i8:
+; CHECK:       // %bb.0:
+; CHECK-NEXT:    shuh
+; CHECK-NEXT:    stlrb w1, [x0]
+; CHECK-NEXT:    ret
+  store atomic i8 %val, ptr %ptr seq_cst, align 8, !mem.cache_hint !6
+  ret void
+}
+
+define void @test_atomic_store_shuh_seqcst_i16(ptr %ptr, i16 %val) nounwind {
+; CHECK-LABEL: test_atomic_store_shuh_seqcst_i16:
+; CHECK:       // %bb.0:
+; CHECK-NEXT:    shuh
+; CHECK-NEXT:    stlrh w1, [x0]
+; CHECK-NEXT:    ret
+  store atomic i16 %val, ptr %ptr seq_cst, align 8, !mem.cache_hint !6
+  ret void
+}
+
+define void @test_atomic_store_shuh_seqcst_i32(ptr %ptr, i32 %val) nounwind {
+; CHECK-LABEL: test_atomic_store_shuh_seqcst_i32:
+; CHECK:       // %bb.0:
+; CHECK-NEXT:    shuh
+; CHECK-NEXT:    stlr w1, [x0]
+; CHECK-NEXT:    ret
+  store atomic i32 %val, ptr %ptr seq_cst, align 8, !mem.cache_hint !6
   ret void
 }
 
@@ -392,12 +588,12 @@ define void @test_atomic_store_shuh_seqcst_i64(ptr %ptr, i64 %val) nounwind {
 define i8 @test_atomic_fetch_add_shuh_relaxed_i8(ptr %ptr, i8 %val) nounwind {
 ; NOLSE-LABEL: test_atomic_fetch_add_shuh_relaxed_i8:
 ; NOLSE:       // %bb.0:
-; NOLSE-NEXT:  .LBB33_1: // %atomicrmw.start
+; NOLSE-NEXT:  .LBB51_1: // %atomicrmw.start
 ; NOLSE-NEXT:    // =>This Inner Loop Header: Depth=1
 ; NOLSE-NEXT:    ldxrb w8, [x0]
 ; NOLSE-NEXT:    add w9, w8, w1
 ; NOLSE-NEXT:    stxrb w10, w9, [x0]
-; NOLSE-NEXT:    cbnz w10, .LBB33_1
+; NOLSE-NEXT:    cbnz w10, .LBB51_1
 ; NOLSE-NEXT:  // %bb.2: // %atomicrmw.end
 ; NOLSE-NEXT:    mov w0, w8
 ; NOLSE-NEXT:    ret
@@ -424,12 +620,12 @@ define i8 @test_atomic_fetch_add_shuh_relaxed_i8(ptr %ptr, i8 %val) nounwind {
 define i8 @test_atomic_fetch_and_shuh_acq_rel_i8(ptr %ptr, i8 %val) nounwind {
 ; NOLSE-LABEL: test_atomic_fetch_and_shuh_acq_rel_i8:
 ; NOLSE:       // %bb.0:
-; NOLSE-NEXT:  .LBB34_1: // %atomicrmw.start
+; NOLSE-NEXT:  .LBB52_1: // %atomicrmw.start
 ; NOLSE-NEXT:    // =>This Inner Loop Header: Depth=1
 ; NOLSE-NEXT:    ldaxrb w8, [x0]
 ; NOLSE-NEXT:    and w9, w8, w1
 ; NOLSE-NEXT:    stlxrb w10, w9, [x0]
-; NOLSE-NEXT:    cbnz w10, .LBB34_1
+; NOLSE-NEXT:    cbnz w10, .LBB52_1
 ; NOLSE-NEXT:  // %bb.2: // %atomicrmw.end
 ; NOLSE-NEXT:    mov w0, w8
 ; NOLSE-NEXT:    ret
@@ -459,12 +655,12 @@ define i8 @test_atomic_fetch_and_shuh_acq_rel_i8(ptr %ptr, i8 %val) nounwind {
 define void @test_atomic_fetch_xor_shuh_seqcst_dead_i64(ptr %ptr, i64 %val) nounwind {
 ; NOLSE-LABEL: test_atomic_fetch_xor_shuh_seqcst_dead_i64:
 ; NOLSE:       // %bb.0:
-; NOLSE-NEXT:  .LBB35_1: // %atomicrmw.start
+; NOLSE-NEXT:  .LBB53_1: // %atomicrmw.start
 ; NOLSE-NEXT:    // =>This Inner Loop Header: Depth=1
 ; NOLSE-NEXT:    ldaxr x8, [x0]
 ; NOLSE-NEXT:    eor x8, x8, x1
 ; NOLSE-NEXT:    stlxr w9, x8, [x0]
-; NOLSE-NEXT:    cbnz w9, .LBB35_1
+; NOLSE-NEXT:    cbnz w9, .LBB53_1
 ; NOLSE-NEXT:  // %bb.2: // %atomicrmw.end
 ; NOLSE-NEXT:    ret
 ;
@@ -488,7 +684,7 @@ define void @test_atomic_fetch_xor_shuh_seqcst_dead_i64(ptr %ptr, i64 %val) noun
 }
 
 ;
-; SHUH PH
+; SHUH PH, Relaxed
 ;
 
 define void @test_atomic_store_shuh_ph_relaxed_i8(ptr %ptr, i8 %val) nounwind {
@@ -501,6 +697,70 @@ define void @test_atomic_store_shuh_ph_relaxed_i8(ptr %ptr, i8 %val) nounwind {
   ret void
 }
 
+define void @test_atomic_store_shuh_ph_relaxed_i16(ptr %ptr, i16 %val) nounwind {
+; CHECK-LABEL: test_atomic_store_shuh_ph_relaxed_i16:
+; CHECK:       // %bb.0:
+; CHECK-NEXT:    shuh ph
+; CHECK-NEXT:    strh w1, [x0]
+; CHECK-NEXT:    ret
+  store atomic i16 %val, ptr %ptr monotonic, align 8, !mem.cache_hint !8
+  ret void
+}
+
+define void @test_atomic_store_shuh_ph_relaxed_i32(ptr %ptr, i32 %val) nounwind {
+; CHECK-LABEL: test_atomic_store_shuh_ph_relaxed_i32:
+; CHECK:       // %bb.0:
+; CHECK-NEXT:    shuh ph
+; CHECK-NEXT:    str w1, [x0]
+; CHECK-NEXT:    ret
+  store atomic i32 %val, ptr %ptr monotonic, align 8, !mem.cache_hint !8
+  ret void
+}
+
+define void @test_atomic_store_shuh_ph_relaxed_i64(ptr %ptr, i64 %val) nounwind {
+; CHECK-LABEL: test_atomic_store_shuh_ph_relaxed_i64:
+; CHECK:       // %bb.0:
+; CHECK-NEXT:    shuh ph
+; CHECK-NEXT:    str x1, [x0]
+; CHECK-NEXT:    ret
+  store atomic i64 %val, ptr %ptr monotonic, align 8, !mem.cache_hint !8
+  ret void
+}
+
+;
+; SHUH PH, Release
+;
+
+define void @test_atomic_store_shuh_ph_release_i8(ptr %ptr, i8 %val) nounwind {
+; CHECK-LABEL: test_atomic_store_shuh_ph_release_i8:
+; CHECK:       // %bb.0:
+; CHECK-NEXT:    shuh ph
+; CHECK-NEXT:    stlrb w1, [x0]
+; CHECK-NEXT:    ret
+  store atomic i8 %val, ptr %ptr release, align 8, !mem.cache_hint !8
+  ret void
+}
+
+define void @test_atomic_store_shuh_ph_release_i16(ptr %ptr, i16 %val) nounwind {
+; CHECK-LABEL: test_atomic_store_shuh_ph_release_i16:
+; CHECK:       // %bb.0:
+; CHECK-NEXT:    shuh ph
+; CHECK-NEXT:    stlrh w1, [x0]
+; CHECK-NEXT:    ret
+  store atomic i16 %val, ptr %ptr release, align 8, !mem.cache_hint !8
+  ret void
+}
+
+define void @test_atomic_store_shuh_ph_release_i32(ptr %ptr, i32 %val) nounwind {
+; CHECK-LABEL: test_atomic_store_shuh_ph_release_i32:
+; CHECK:       // %bb.0:
+; CHECK-NEXT:    shuh ph
+; CHECK-NEXT:    stlr w1, [x0]
+; CHECK-NEXT:    ret
+  store atomic i32 %val, ptr %ptr release, align 8, !mem.cache_hint !8
+  ret void
+}
+
 define void @test_atomic_store_shuh_ph_release_i64(ptr %ptr, i64 %val) nounwind {
 ; CHECK-LABEL: test_atomic_store_shuh_ph_release_i64:
 ; CHECK:       // %bb.0:
@@ -508,6 +768,40 @@ define void @test_atomic_store_shuh_ph_release_i64(ptr %ptr, i64 %val) nounwind 
 ; CHECK-NEXT:    stlr x1, [x0]
 ; CHECK-NEXT:    ret
   store atomic i64 %val, ptr %ptr release, align 8, !mem.cache_hint !8
+  ret void
+}
+
+;
+; SHUH PH, SequentiallyConsistent
+;
+
+define void @test_atomic_store_shuh_ph_seqcst_i8(ptr %ptr, i8 %val) nounwind {
+; CHECK-LABEL: test_atomic_store_shuh_ph_seqcst_i8:
+; CHECK:       // %bb.0:
+; CHECK-NEXT:    shuh ph
+; CHECK-NEXT:    stlrb w1, [x0]
+; CHECK-NEXT:    ret
+  store atomic i8 %val, ptr %ptr seq_cst, align 8, !mem.cache_hint !8
+  ret void
+}
+
+define void @test_atomic_store_shuh_ph_seqcst_i16(ptr %ptr, i16 %val) nounwind {
+; CHECK-LABEL: test_atomic_store_shuh_ph_seqcst_i16:
+; CHECK:       // %bb.0:
+; CHECK-NEXT:    shuh ph
+; CHECK-NEXT:    stlrh w1, [x0]
+; CHECK-NEXT:    ret
+  store atomic i16 %val, ptr %ptr seq_cst, align 8, !mem.cache_hint !8
+  ret void
+}
+
+define void @test_atomic_store_shuh_ph_seqcst_i32(ptr %ptr, i32 %val) nounwind {
+; CHECK-LABEL: test_atomic_store_shuh_ph_seqcst_i32:
+; CHECK:       // %bb.0:
+; CHECK-NEXT:    shuh ph
+; CHECK-NEXT:    stlr w1, [x0]
+; CHECK-NEXT:    ret
+  store atomic i32 %val, ptr %ptr seq_cst, align 8, !mem.cache_hint !8
   ret void
 }
 
@@ -524,12 +818,12 @@ define void @test_atomic_store_shuh_ph_seqcst_i64(ptr %ptr, i64 %val) nounwind {
 define i32 @test_atomic_fetch_sub_shuh_ph_acquire_i32(ptr %ptr, i32 %val) nounwind {
 ; NOLSE-LABEL: test_atomic_fetch_sub_shuh_ph_acquire_i32:
 ; NOLSE:       // %bb.0:
-; NOLSE-NEXT:  .LBB39_1: // %atomicrmw.start
+; NOLSE-NEXT:  .LBB66_1: // %atomicrmw.start
 ; NOLSE-NEXT:    // =>This Inner Loop Header: Depth=1
 ; NOLSE-NEXT:    ldaxr w8, [x0]
 ; NOLSE-NEXT:    sub w9, w8, w1
 ; NOLSE-NEXT:    stxr w10, w9, [x0]
-; NOLSE-NEXT:    cbnz w10, .LBB39_1
+; NOLSE-NEXT:    cbnz w10, .LBB66_1
 ; NOLSE-NEXT:  // %bb.2: // %atomicrmw.end
 ; NOLSE-NEXT:    mov w0, w8
 ; NOLSE-NEXT:    ret
@@ -557,12 +851,12 @@ define i32 @test_atomic_fetch_sub_shuh_ph_acquire_i32(ptr %ptr, i32 %val) nounwi
 define i16 @test_atomic_fetch_or_shuh_ph_release_i16(ptr %ptr, i16 %val) nounwind {
 ; NOLSE-LABEL: test_atomic_fetch_or_shuh_ph_release_i16:
 ; NOLSE:       // %bb.0:
-; NOLSE-NEXT:  .LBB40_1: // %atomicrmw.start
+; NOLSE-NEXT:  .LBB67_1: // %atomicrmw.start
 ; NOLSE-NEXT:    // =>This Inner Loop Header: Depth=1
 ; NOLSE-NEXT:    ldxrh w8, [x0]
 ; NOLSE-NEXT:    orr w9, w8, w1
 ; NOLSE-NEXT:    stlxrh w10, w9, [x0]
-; NOLSE-NEXT:    cbnz w10, .LBB40_1
+; NOLSE-NEXT:    cbnz w10, .LBB67_1
 ; NOLSE-NEXT:  // %bb.2: // %atomicrmw.end
 ; NOLSE-NEXT:    mov w0, w8
 ; NOLSE-NEXT:    ret

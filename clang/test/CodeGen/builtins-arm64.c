@@ -241,6 +241,7 @@ void atomic_store_with_hint(int64_t *a, int64_t b) {
 
   // Invalid hint should be dropped
   __builtin_arm_atomic_store_with_hint(a, b, __ATOMIC_RELAXED, 5); // Invalid Hint
+  __builtin_arm_atomic_store_with_hint(a, b, __ATOMIC_RELAXED, 5); // Invalid Hint
   // CHECK: store atomic i64 {{.*}}, ptr {{.*}} monotonic, align 8
   // CHECK-NOT: !mem.cache_hint
   // CHECK-NEXT: ret void

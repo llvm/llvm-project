@@ -11,6 +11,9 @@
 #include "lldb/ValueObject/ValueObject.h"
 #include "lldb/ValueObject/ValueObjectConstResult.h"
 #include "lldb/lldb-forward.h"
+#include "llvm/ADT/APSInt.h"
+#include "llvm/ADT/SmallPtrSet.h"
+#include "llvm/ADT/SmallVector.h"
 #include "llvm/ADT/StringExtras.h"
 #include "llvm/Support/DataExtractor.h"
 #include "llvm/Support/Error.h"
@@ -79,6 +82,10 @@ std::string toString(const FormatterBytecode::DataStack &data) {
       os << '(' << type->GetTypeName(true) << ')';
     } else if (auto sel = std::get_if<FormatterBytecode::Selectors>(&d)) {
       os << toString(*sel);
+    } else if (auto *dict =
+                   std::get_if<std::shared_ptr<FormatterBytecode::Dictionary>>(
+                       &d)) {
+      os << "dict(" << (*dict ? (*dict)->size() : 0) << ')';
     }
     os << ' ';
   }
@@ -132,6 +139,8 @@ static llvm::Error FormatImpl(DataStack &data) {
       format(FormatFunctor(type->GetDisplayTypeName()));
     else if (auto sel = std::get_if<FormatterBytecode::Selectors>(&arg))
       format(FormatFunctor(toString(*sel)));
+    else if (std::holds_alternative<DictionarySP>(arg))
+      format(FormatFunctor("dict"));
   }
   data.Push(s);
   return llvm::Error::success();
@@ -174,6 +183,11 @@ static llvm::Error TypeCheck(llvm::ArrayRef<DataStackElement> data,
     if (!std::holds_alternative<llvm::APSInt>(elem))
       return llvm::createStringError("expected Integer");
     break;
+  case Dict:
+    if (!std::holds_alternative<std::shared_ptr<FormatterBytecode::Dictionary>>(
+            elem))
+      return llvm::createStringError("expected Dictionary");
+    break;
   }
   return llvm::Error::success();
 }
@@ -189,7 +203,7 @@ static llvm::Error TypeCheck(llvm::ArrayRef<DataStackElement> data,
                              DataType type1, DataType type2, DataType type3) {
   if (auto error = TypeCheck(data, type3))
     return error;
-  return TypeCheck(data.drop_back(1), type2, type1);
+  return TypeCheck(data.drop_back(), type1, type2);
 }
 
 /// Wrap the result of a binary operator applied to two APSInts back into a
@@ -203,6 +217,27 @@ static DataStackElement WrapAPSIntResult(T result, unsigned bit_width,
     return llvm::APSInt(llvm::APInt(bit_width, result), is_unsigned);
   else
     return DataStackElement(std::move(result));
+}
+
+/// Returns true if `target` is transitively reachable via `from`. Likewise,
+/// returns true if they are the same dictionary. This is used to prevent memory
+/// leaks caused by retain cycles. Dictionaries can be shared by multiple
+/// parents, so each one is visited only once to prevent exponential running
+/// time.
+static bool Reaches(const Dictionary *from, const Dictionary *target) {
+  llvm::SmallPtrSet<const Dictionary *, 8> visited;
+  llvm::SmallVector<const Dictionary *, 8> worklist = {from};
+  while (!worklist.empty()) {
+    const Dictionary *dict = worklist.pop_back_val();
+    if (dict == target)
+      return true;
+    if (!visited.insert(dict).second)
+      continue;
+    for (const auto &entry : *dict)
+      if (auto *nested = std::get_if<DictionarySP>(&entry.second))
+        worklist.push_back(nested->get());
+  }
+  return false;
 }
 
 llvm::Error Interpret(ControlStack &control, DataStack &data, Signatures sig) {
@@ -363,6 +398,9 @@ llvm::Error Interpret(ControlStack &control, DataStack &data, Signatures sig) {
       continue;
     case op_lit_selector:
       data.Push(Selectors(cur_block.getU8(pc)));
+      continue;
+    case op_lit_null:
+      data.Push(ValueObjectSP());
       continue;
     case op_lit_string: {
       uint64_t length = cur_block.getULEB128(pc);
@@ -724,6 +762,40 @@ llvm::Error Interpret(ControlStack &control, DataStack &data, Signatures sig) {
       default:
         return sel_error("selector not implemented");
       }
+      continue;
+    }
+
+    // Dictionary operations.
+    case op_dict:
+      data.Push(std::make_shared<Dictionary>());
+      continue;
+    case op_dict_set: {
+      TYPE_CHECK(Dict, String, Any);
+      auto value = data.PopAny();
+      auto key = data.Pop<std::string>();
+      auto dict_sp = data.Pop<DictionarySP>();
+      if (auto *nested_sp = std::get_if<DictionarySP>(&value))
+        if (Reaches(nested_sp->get(), dict_sp.get()))
+          return error("dict_set would create a reference cycle");
+      (*dict_sp)[key] = std::move(value);
+      continue;
+    }
+    case op_dict_get: {
+      TYPE_CHECK(Dict, String);
+      auto key = data.Pop<std::string>();
+      auto dict_sp = data.Pop<DictionarySP>();
+      auto it = dict_sp->find(key);
+      if (it == dict_sp->end())
+        return error("key not found in dictionary");
+      data.Push(it->second);
+      continue;
+    }
+    case op_dict_has: {
+      TYPE_CHECK(Dict, String);
+      auto key = data.Pop<std::string>();
+      auto dict_sp = data.Pop<DictionarySP>();
+      bool found = dict_sp->find(key) != dict_sp->end();
+      data.Push(llvm::APSInt::get(found));
       continue;
     }
     }
