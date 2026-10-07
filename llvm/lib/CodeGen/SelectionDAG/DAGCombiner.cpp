@@ -733,6 +733,8 @@ namespace {
           : MemNode(N), OffsetFromBase(Offset) {}
     };
 
+    static SDLoc getMergedMemOpLoc(ArrayRef<MemOpLink> Ops, unsigned NumOps);
+
     // Classify the origin of a stored value.
     enum class StoreSource { Unknown, Constant, Extract, Load };
     StoreSource getStoreSource(SDValue StoreVal) {
@@ -23246,6 +23248,36 @@ bool DAGCombiner::hasSameUnderlyingObj(ArrayRef<MemOpLink> StoreNodes) {
   return true;
 }
 
+/// Returns true if Loc is in Outer's function instance, either directly or
+/// in a function inlined into it.
+static bool isInFunctionInstance(const DILocation *Loc,
+                                 const DILocation *Outer) {
+  const DISubprogram *SP = Outer->getScope()->getSubprogram();
+  const DILocation *InlinedAt = Outer->getInlinedAt();
+  for (; Loc; Loc = Loc->getInlinedAt())
+    if (Loc->getScope()->getSubprogram() == SP &&
+        Loc->getInlinedAt() == InlinedAt)
+      return true;
+  return false;
+}
+
+// Keep the first operation's location when all inputs are within its function
+// instance, including inlined callees, to preserve lines for stepping and
+// breakpoints. Otherwise merge the locations to account for the other
+// instances, honoring the usual missing-location and explicit pick policies.
+SDLoc DAGCombiner::getMergedMemOpLoc(ArrayRef<MemOpLink> Ops, unsigned NumOps) {
+  SDLoc First(Ops[0].MemNode);
+  SDLoc Merged = First;
+  const DebugLoc &FirstDL = First.getDebugLoc();
+  bool KeepFirst = static_cast<bool>(FirstDL);
+  for (unsigned I = 1; I != NumOps; ++I) {
+    const DebugLoc &DL = Ops[I].MemNode->getDebugLoc();
+    Merged.mergeDebugLoc(DL);
+    KeepFirst = KeepFirst && DL && isInFunctionInstance(DL, FirstDL);
+  }
+  return KeepFirst ? First : Merged;
+}
+
 bool DAGCombiner::mergeStoresOfConstantsOrVecElts(
     SmallVectorImpl<MemOpLink> &StoreNodes, EVT MemVT, unsigned NumStores,
     bool IsConstantSrc, bool UseVector, bool UseTrunc) {
@@ -23256,11 +23288,8 @@ bool DAGCombiner::mergeStoresOfConstantsOrVecElts(
   assert((!UseTrunc || !UseVector) &&
          "This optimization cannot emit a vector truncating store");
 
-  // StoreDL merges the debug locations of the first NumStores stores for the
-  // new store. DL, used to build the stored value, is left unchanged. Both
-  // keep the IROrder of StoreNodes[0].
+  // DL, used to build the stored value, keeps StoreNodes[0]'s location.
   SDLoc DL(StoreNodes[0].MemNode);
-  SDLoc StoreDL = DL;
 
   TypeSize ElementSizeBits = MemVT.getStoreSizeInBits();
   unsigned SizeInBits = NumStores * ElementSizeBits;
@@ -23278,10 +23307,10 @@ bool DAGCombiner::mergeStoresOfConstantsOrVecElts(
     // Skip merging if there's an inconsistent flag.
     if (Flags != St->getMemOperand()->getFlags())
       return false;
-    StoreDL.mergeDebugLoc(St->getDebugLoc());
     // Concatenate AA metadata.
     AAInfo = AAInfo.concat(St->getAAInfo());
   }
+  SDLoc StoreDL = getMergedMemOpLoc(StoreNodes, NumStores);
 
   EVT StoreTy;
   if (UseVector) {
@@ -24185,16 +24214,12 @@ bool DAGCombiner::tryStoreMergeOfLoads(SmallVectorImpl<MemOpLink> &StoreNodes,
       continue;
     }
 
-    // Merge debug locations separately for the first NumElem loads and stores.
+    // Select locations separately for the first NumElem loads and stores.
     // LoadDL and StoreDL keep the IROrder of LoadNodes[0] and StoreNodes[0].
     // ValueDL keeps LoadNodes[0]'s location for value nodes (the rotate below).
-    SDLoc LoadDL(LoadNodes[0].MemNode);
-    SDLoc StoreDL(StoreNodes[0].MemNode);
-    SDLoc ValueDL = LoadDL;
-    for (unsigned I = 1; I != NumElem; ++I) {
-      LoadDL.mergeDebugLoc(LoadNodes[I].MemNode->getDebugLoc());
-      StoreDL.mergeDebugLoc(StoreNodes[I].MemNode->getDebugLoc());
-    }
+    SDLoc LoadDL = getMergedMemOpLoc(LoadNodes, NumElem);
+    SDLoc StoreDL = getMergedMemOpLoc(StoreNodes, NumElem);
+    SDLoc ValueDL(LoadNodes[0].MemNode);
 
     // The merged loads are required to have the same incoming chain, so
     // using the first's chain is acceptable.
