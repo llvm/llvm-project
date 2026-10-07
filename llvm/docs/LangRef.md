@@ -7230,6 +7230,57 @@ mandatory, and points at an {ref}`DILexicalBlockFile`, an
 !0 = !DILocation(line: 2900, column: 42, scope: !1, inlinedAt: !2)
 ```
 
+The optional `irlayers:` field points at a {ref}`DILayerLocList`, giving the
+instruction's position in one or more intermediate IRs it was lowered through, in
+addition to its primary source position. It is independent of `inlinedAt:`; a
+location may have either, both, or neither. A location with no intermediate
+position omits the field entirely. The field belongs to the location that
+carries it: locations in an `inlinedAt:` chain may each have their own, and LLVM
+defines no relationship between them.
+
+```text
+!0 = !DILocation(line: 2900, column: 42, scope: !1, irlayers: !3)
+```
+
+(DILayerLoc)=
+
+##### DILayerLoc
+
+`DILayerLoc` nodes represent a source position in one intermediate IR level that
+a program was lowered through — for example an MLIR module produced
+part-way through compilation. The `kind:` field names the level and the `file:`
+field points at a {ref}`DIFile` for it; both are mandatory. `line:` and
+`column:` are the position within that file.
+
+Unlike a {ref}`DILocation`, a `DILayerLoc` has no scope and no inlined-at
+context: it is a bare coordinate in a file, not a location in a scope tree.
+
+```text
+!0 = !DILayerLoc(line: 100, column: 1, file: !1, kind: "HighLevelIR")
+```
+
+(DILayerLocList)=
+
+##### DILayerLocList
+
+`DILayerLocList` nodes hold a non-empty list of {ref}`DILayerLoc` operands, and
+are referenced by a {ref}`DILocation`'s `irlayers:` field. A location with no
+intermediate position omits `irlayers:` rather than referencing an empty list.
+
+The operands are a sequence: order is part of the node's identity, so two lists
+with the same entries in a different order are different nodes. LLVM attaches no
+meaning to the order and does not require any particular arrangement.
+
+Both node types are normally uniqued, so instructions sharing a position at some
+level share the corresponding node. `distinct` forms are legal; nothing in LLVM
+requires a layer node to be shared.
+
+```text
+!0 = !DILayerLocList(!1, !2)
+!1 = !DILayerLoc(line: 100, column: 1, file: !3, kind: "HighLevelIR")
+!2 = !DILayerLoc(line: 7, column: 3, file: !4, kind: "LowLevelIR")
+```
+
 (DILocalVariable)=
 
 ##### DILocalVariable
@@ -7417,9 +7468,11 @@ The `name:` field is mandatory. The `configMacros:`, `includePath:`,
 dynamic length and location encoded as an expression.
 The `tag:` field is optional and defaults to `DW_TAG_string_type`. The `name:`,
 `stringLength:`, `stringLengthExpression`, `stringLocationExpression:`,
-`size:`, `align:`, and `encoding:` fields are optional.
+`size:`, `align:`, `encoding:`, and `charType:` fields are optional.
 
 If not present, the `size:` and `align:` fields default to the value zero.
+
+`charType:` specifies a non-default character type.
 
 The length in bits of the string is specified by the first of the following
 fields present:
@@ -9243,12 +9296,15 @@ allocation. This information is consumed by the `alloc-token` pass to
 instrument such calls with allocation token IDs.
 
 The metadata contains: string with the type of an allocation, and a boolean
-denoting if the type contains a pointer.
+denoting if the type contains a pointer. Optionally, it contains a string with
+the name of the function containing the allocation.
 
 ```
 call ptr @malloc(i64 64), !alloc_token !0
+call ptr @malloc(i64 64), !alloc_token !1
 
 !0 = !{!"<type-name>", i1 <contains-pointer>}
+!1 = !{!"<type-name>", i1 <contains-pointer>, !"<function-name>"}
 ```
 
 #### '`stack-protector`' Metadata

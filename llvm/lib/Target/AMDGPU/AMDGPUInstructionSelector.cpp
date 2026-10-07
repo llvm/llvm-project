@@ -5775,9 +5775,18 @@ AMDGPUInstructionSelector::selectVOP3OpSelMods(MachineOperand &Root) const {
   unsigned Mods;
   std::tie(Src, Mods) = selectVOP3ModsImpl(Root.getReg());
 
-  // FIXME: Handle op_sel
+  Register ExtractSrc;
+  if (!Subtarget->useRealTrue16Insts() &&
+      MRI->getType(Root.getReg()).getSizeInBits() == 16 &&
+      isExtractHiElt(*MRI, Src, ExtractSrc)) {
+    Src = ExtractSrc;
+    Mods |= SISrcMods::OP_SEL_0;
+  }
+
   return {{
-      [=](MachineInstrBuilder &MIB) { MIB.addReg(Src); },
+      [=](MachineInstrBuilder &MIB) {
+        MIB.addReg(copyToVGPRIfSrcFolded(Src, Mods, Root, MIB));
+      },
       [=](MachineInstrBuilder &MIB) { MIB.addImm(Mods); } // src_mods
   }};
 }
@@ -7487,14 +7496,6 @@ bool AMDGPUInstructionSelector::selectNamedBarrierInst(
 
   I.eraseFromParent();
   return true;
-}
-
-void AMDGPUInstructionSelector::renderTruncImm32(MachineInstrBuilder &MIB,
-                                                 const MachineInstr &MI,
-                                                 int OpIdx) const {
-  assert(MI.getOpcode() == TargetOpcode::G_CONSTANT && OpIdx == -1 &&
-         "Expected G_CONSTANT");
-  MIB.addImm(MI.getOperand(1).getCImm()->getSExtValue());
 }
 
 void AMDGPUInstructionSelector::renderNegateImm(MachineInstrBuilder &MIB,
