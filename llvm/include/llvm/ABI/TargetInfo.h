@@ -90,6 +90,11 @@ public:
   /// Width of `long long` in bits. Default 64.
   virtual unsigned getLongLongWidth() const { return 64; }
 
+  /// Alignment of the widest integer the target's data layout gives an
+  /// alignment to. An integer wider than that one is aligned to this. Default
+  /// 16, the alignment of i128 on AArch64 and x86-64.
+  virtual llvm::Align getMaxIntegerAlign() const { return llvm::Align(16); }
+
 protected:
   LLVM_ABI RecordArgABI getRecordArgABI(const RecordType *RT) const;
   LLVM_ABI RecordArgABI getRecordArgABI(const Type *Ty) const;
@@ -111,7 +116,8 @@ protected:
   /// is packed when a member offset or the record size is not a multiple of
   /// the converted member alignment, and then every gap is an explicit array.
   /// Any other record has an array only where that alignment does not already
-  /// produce the gap. A record with a virtual base has no layout here. An
+  /// produce the gap, and for the tail that alignment is capped at
+  /// getMaxIntegerAlign(). A record with a virtual base has no layout here. An
   /// array is rebuilt when its element type changes. Any other type is
   /// returned unchanged.
   LLVM_ABI const Type *convertTypeForMem(const Type *Ty) const;

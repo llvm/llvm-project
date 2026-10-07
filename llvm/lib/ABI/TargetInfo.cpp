@@ -72,10 +72,15 @@ const Type *TargetInfo::getStructOfTypes(llvm::ArrayRef<const Type *> Elems,
 // Returns the alignment of Ty, a type returned by convertTypeForMem, as a
 // member of the struct built there. A packed record has alignment 1. A record
 // that is not packed has the alignment of its most-aligned member. An array has
-// the alignment of its element type.
+// the alignment of its element type. A fixed-length vector is aligned to its
+// size rounded up to a power of two, which for an AArch64 fixed-length SVE type
+// is wider than the 2 or 16 bytes the source language gives it.
 static llvm::Align getConvertedAlign(const Type *Ty) {
   if (const auto *AT = dyn_cast<ArrayType>(Ty))
     return getConvertedAlign(AT->getElementType());
+
+  if (const auto *VT = dyn_cast<VectorType>(Ty); VT && VT->isFixedLength())
+    return llvm::Align(VT->getABISizeInBits() / 8);
 
   const auto *RT = dyn_cast<RecordType>(Ty);
   if (!RT)
@@ -158,8 +163,8 @@ const Type *TargetInfo::convertTypeForMem(const Type *Ty) const {
   // Padding in a packed record is explicit for every gap. Padding in any
   // other record is explicit only where the converted alignment does not place
   // the next member.
-  auto needsPadding = [&](uint64_t Offset, llvm::Align MemberAlign) {
-    uint64_t AlignBits = Packed ? 8 : MemberAlign.value() * 8;
+  auto needsPadding = [&](uint64_t Offset, llvm::Align Alignment) {
+    uint64_t AlignBits = Packed ? 8 : Alignment.value() * 8;
     return Offset != llvm::alignTo(Current, AlignBits);
   };
   for (const ConvertedMember &Member : Members) {
@@ -174,9 +179,12 @@ const Type *TargetInfo::convertTypeForMem(const Type *Ty) const {
                                     Member.Ty->getSizeInBits().getFixedValue());
   }
 
+  // The tail is placed by an integer as wide as the most aligned member, so
+  // the alignment that reaches it is capped at the widest integer's.
   if (RecordSize.isFixed()) {
     uint64_t Size = RecordSize.getFixedValue();
-    if (Size > Current && needsPadding(Size, MaxAlign)) {
+    llvm::Align TailAlign = std::min(MaxAlign, getMaxIntegerAlign());
+    if (Size > Current && needsPadding(Size, TailAlign)) {
       uint64_t PadBits = Size - Current;
       assert(PadBits % 8 == 0 && "tail padding is not a whole number of bytes");
       Fields.emplace_back(getI8Array(PadBits / 8), Current);

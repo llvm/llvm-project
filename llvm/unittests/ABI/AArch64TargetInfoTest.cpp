@@ -1466,6 +1466,67 @@ TEST_F(AArch64TargetInfoTest, ClassifyPureScalablePackedGapAndOveralign) {
   }
 }
 
+// A fixed-length SVE vector is 16-byte aligned however wide it is, but it
+// converts with the alignment of its size. A record holding a 256-bit vector
+// is therefore packed, and the gap or tail beside a narrower predicate is an
+// explicit i8 array.
+TEST_F(AArch64TargetInfoTest, ClassifyPureScalableWideVectorPadsNarrowMember) {
+  std::unique_ptr<TargetInfo> TI =
+      createAArch64TargetInfo(TB, AArch64ABIOptions(AArch64ABIKind::AAPCS));
+
+  // A 256-bit predicate is 4 bytes wide.
+  const llvm::abi::VectorType *Pred =
+      TB.getVectorType(U8, llvm::ElementCount::getFixed(4), llvm::Align(2),
+                       llvm::abi::VectorKind::SVEPredicate);
+  // Predicate at 0, data vector at byte 16. Size 48.
+  const ABIType *PredThenData =
+      makeRecord({FieldInfo(Pred, 0), FieldInfo(FixedSVInt32, 128)},
+                 /*SizeBits=*/384, llvm::Align(16),
+                 /*UnadjustedAlign=*/llvm::Align(16));
+  // Data vector at 0, predicate at byte 32. Size 48.
+  const ABIType *DataThenPred =
+      makeRecord({FieldInfo(FixedSVInt32, 0), FieldInfo(Pred, 256)},
+                 /*SizeBits=*/384, llvm::Align(16),
+                 /*UnadjustedAlign=*/llvm::Align(16));
+
+  {
+    std::unique_ptr<FunctionInfo> FI =
+        FunctionInfo::create(llvm::CallingConv::C, Void, {PredThenData});
+    TI->computeInfo(*FI);
+    const llvm::abi::RecordType *Padded =
+        expectPaddedCoerce(FI->getArgInfo(0).Info, 3);
+    ASSERT_NE(Padded, nullptr);
+    EXPECT_EQ(Padded->getFields()[0].FieldType, Pred);
+    const auto *Gap =
+        llvm::dyn_cast<llvm::abi::ArrayType>(Padded->getFields()[1].FieldType);
+    ASSERT_NE(Gap, nullptr);
+    EXPECT_EQ(Gap->getNumElements(), 12u);
+    EXPECT_EQ(Padded->getFields()[2].FieldType, FixedSVInt32);
+
+    const auto *Unpadded = llvm::dyn_cast<llvm::abi::RecordType>(
+        FI->getArgInfo(0).Info.getUnpaddedCoerceAndExpandType());
+    ASSERT_NE(Unpadded, nullptr);
+    ASSERT_EQ(Unpadded->getNumFields(), 2u);
+    expectScalablePredicate(Unpadded->getFields()[0].FieldType);
+    expectScalableData(Unpadded->getFields()[1].FieldType, I32, 4);
+  }
+
+  {
+    std::unique_ptr<FunctionInfo> FI =
+        FunctionInfo::create(llvm::CallingConv::C, Void, {DataThenPred});
+    TI->computeInfo(*FI);
+    const llvm::abi::RecordType *Padded =
+        expectPaddedCoerce(FI->getArgInfo(0).Info, 3);
+    ASSERT_NE(Padded, nullptr);
+    EXPECT_EQ(Padded->getFields()[0].FieldType, FixedSVInt32);
+    EXPECT_EQ(Padded->getFields()[1].FieldType, Pred);
+    const auto *Tail =
+        llvm::dyn_cast<llvm::abi::ArrayType>(Padded->getFields()[2].FieldType);
+    ASSERT_NE(Tail, nullptr);
+    EXPECT_EQ(Tail->getNumElements(), 12u);
+  }
+}
+
 // Arrays and base classes expand to the same register sequence as their
 // members.
 TEST_F(AArch64TargetInfoTest, ClassifyPureScalableArrayAndBase) {
