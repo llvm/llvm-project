@@ -493,10 +493,10 @@ features cannot lower the translation-unit ABI level;
 - `-Wunsafe-buffer-usage-in-container` now warns on unsafe calls to
   two-parameter constructors and factory functions annotated with
   `[[clang::unsafe_buffer_usage_in_container]]` or
-  `[[clang::unsafe_buffer_usage("container")]]`. In addition, the safe
-  `(.data(), .size())` and `(.begin(), .end())` argument checks now use duck
-  typing rather than a hardcoded type list, suppressing false positives when
-  both methods are called on the same user-defined container object.
+  `[[clang::unsafe_buffer_usage("container")]]`. For these annotated functions,
+  the safe `(.data(), .size())` and `(.begin(), .end())` argument checks use
+  duck typing rather than a hardcoded type list, suppressing false positives
+  when both methods are called on the same user-defined container object.
 
 - `-Wc++98-compat` now diagnoses explicit conversion functions in C++20 and
   later, matching the behavior in C++11 through C++17. (#GH161689)

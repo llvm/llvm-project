@@ -504,7 +504,8 @@ static const Expr *getSubExprInSizeOfExpr(const Expr &E) {
 // expression, returns true iff they follow one of the following safe
 // patterns:
 //  1. Ptr is `DRE.data()` and Size is `DRE.size()` (or `DRE.size_bytes()` for
-//     char pointers), called on the same container or view object `DRE`;
+//     char pointers), where `DRE` is a hardened container or view (or any
+//     container/view object when `AllowDuckTypedContainers` is true);
 //
 //  2. Ptr is `a` and Size is `n`, where `a` is of an array-of-T with constant
 //     size `n`;
@@ -514,7 +515,8 @@ static const Expr *getSubExprInSizeOfExpr(const Expr &E) {
 //
 //  4. Size is `0`;
 static bool isPtrBufferSafe(const Expr *Ptr, const Expr *Size,
-                            ASTContext &Ctx) {
+                            ASTContext &Ctx,
+                            bool AllowDuckTypedContainers = false) {
   // Pattern 1:
   if (auto *MCEPtr = dyn_cast<CXXMemberCallExpr>(Ptr->IgnoreParenImpCasts()))
     if (auto *MCESize =
@@ -547,7 +549,20 @@ static bool isPtrBufferSafe(const Expr *Ptr, const Expr *Size,
             MDSize->getName() == "size"))
         return false;
 
-      return true;
+      if (AllowDuckTypedContainers)
+        return true;
+
+      // `MCEPtr->getRecordDecl()` must be non-null as `DREOfPtr` is non-null:
+      if (!MCEPtr->getRecordDecl()->isInStdNamespace())
+        return false;
+
+      auto *ObjII = MCEPtr->getRecordDecl()->getIdentifier();
+
+      if (!ObjII)
+        return false;
+
+      return llvm::is_contained({SIZED_CONTAINER_OR_VIEW_LIST},
+                                ObjII->getName());
     }
 
   Expr::EvalResult ER;
@@ -588,12 +603,14 @@ static bool isPtrBufferSafe(const Expr *Ptr, const Expr *Size,
 //       `N, M` are parameter indexes to the allocating element number and size.
 //        Sometimes, there is only one parameter index representing the total
 //        size.
-//   4. `(x.begin(), x.end())` where `begin()` and `end()` are called on the
-//      same container/view object `x`.
+//   4. `(x.begin(), x.end())` where `x` is an object in the
+//      SIZED_CONTAINER_OR_VIEW_LIST (or any container/view object when
+//      `AllowDuckTypedContainers` is true).
 //   5. `isPtrBufferSafe` returns true for the two arguments.
 template <typename CallOrConstructExpr>
-static bool isSafeTwoParamContainerConstruct(const CallOrConstructExpr &Node,
-                                             ASTContext &Ctx) {
+static bool isSafeTwoParamContainerConstruct(
+    const CallOrConstructExpr &Node, ASTContext &Ctx,
+    bool AllowDuckTypedContainers = false) {
   assert(Node.getNumArgs() == 2 &&
          "expecting a two-parameter container constructor or factory call");
   const Expr *Arg0 = Node.getArg(0)->IgnoreParenImpCasts();
@@ -666,13 +683,22 @@ static bool isSafeTwoParamContainerConstruct(const CallOrConstructExpr &Node,
     }
   }
   // Check form 4:
-  auto IsMethodCallToSizedObject = [](const Stmt *Node, StringRef MethodName) {
-    if (const auto *MC = dyn_cast<CXXMemberCallExpr>(Node)) {
-      const auto *MD = MC->getMethodDecl();
-      return MD && MD->getName() == MethodName;
-    }
-    return false;
-  };
+  auto IsMethodCallToSizedObject =
+      [AllowDuckTypedContainers](const Stmt *Node, StringRef MethodName) {
+        if (const auto *MC = dyn_cast<CXXMemberCallExpr>(Node)) {
+          const auto *MD = MC->getMethodDecl();
+          if (!MD || MD->getName() != MethodName)
+            return false;
+          if (AllowDuckTypedContainers)
+            return true;
+          if (const auto *RD = MC->getRecordDecl())
+            if (auto *II = RD->getDeclName().getAsIdentifierInfo();
+                II && RD->isInStdNamespace())
+              return llvm::is_contained({SIZED_CONTAINER_OR_VIEW_LIST},
+                                        II->getName());
+        }
+        return false;
+      };
 
   if (IsMethodCallToSizedObject(Arg0, "begin") &&
       IsMethodCallToSizedObject(Arg1, "end"))
@@ -686,7 +712,7 @@ static bool isSafeTwoParamContainerConstruct(const CallOrConstructExpr &Node,
             ->IgnoreParenImpCasts());
 
   // Check 5:
-  return isPtrBufferSafe(Arg0, Arg1, Ctx);
+  return isPtrBufferSafe(Arg0, Arg1, Ctx, AllowDuckTypedContainers);
 }
 
 static bool isSafeStringViewTwoParamConstruct(const CXXConstructExpr &Node,
@@ -2004,7 +2030,8 @@ public:
     if (!Attr || Attr->getCategory() != "container")
       return false;
     return Node.getNumArgs() == 2 &&
-           !isSafeTwoParamContainerConstruct(Node, Ctx);
+           !isSafeTwoParamContainerConstruct(Node, Ctx,
+                                             /*AllowDuckTypedContainers=*/true);
   }
 
   static bool matches(const Stmt *S, ASTContext &Ctx,

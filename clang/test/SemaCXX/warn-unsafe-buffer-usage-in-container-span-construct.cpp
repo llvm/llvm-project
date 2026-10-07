@@ -274,17 +274,16 @@ namespace test_begin_end {
     int * begin();
     int * end();
   };
-  void safe_cases(std::span<int> Sp, std::array<int, 10> Arr, std::string Str,
-                  std::initializer_list<Object> Il, Object Obj) {
+  void safe_cases(std::span<int> Sp, std::array<int, 10> Arr, std::string Str, std::initializer_list<Object> Il) {
     std::span<int>{Sp.begin(), Sp.end()};
     std::span<int>{Arr.begin(), Arr.end()};
     std::span<char>{Str.begin(), Str.end()};
     std::span<Object>{Il.begin(), Il.end()};
-    std::span<int>{Obj.begin(), Obj.end()};
   }
 
   void unsafe_cases(std::span<int> Sp, std::array<int, 10> Arr, std::string Str, std::initializer_list<Object> Il,
 		    Object Obj) {
+    std::span<int>{Obj.begin(), Obj.end()}; // expected-warning {{the two-parameter std::span construction is unsafe as it can introduce mismatch between buffer size and the bound information}}
     std::span<int>{Sp.end(), Sp.begin()};   // expected-warning {{the two-parameter std::span construction is unsafe as it can introduce mismatch between buffer size and the bound information}}
     std::span<int>{Sp.begin(), Arr.end()};   // expected-warning {{the two-parameter std::span construction is unsafe as it can introduce mismatch between buffer size and the bound information}}
   }
