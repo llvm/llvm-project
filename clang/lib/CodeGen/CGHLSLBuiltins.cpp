@@ -41,6 +41,7 @@ getEffectiveBarrierMemoryFlags(uint64_t MemoryFlags,
                                Stage == llvm::Triple::Amplification;
   if (!HasVisibleGroup)
     MemoryFlags &= ~GroupSharedMemory;
+  // Clang has no node shader stage yet, so no known stage exposes node memory.
   return MemoryFlags & ~NodeMemory;
 }
 
@@ -1808,6 +1809,8 @@ Value *CodeGenFunction::EmitHLSLBuiltinExpr(unsigned BuiltinID,
         llvm::to_underlying(llvm::dxil::BarrierSemanticFlag::DeviceScope);
     constexpr uint64_t ScopeMask = GroupScope | DeviceScope;
     uint64_t SemanticFlagsValue = SemanticFlagsConstant->getZExtValue();
+    // DEVICE_SCOPE includes GROUP_SCOPE. Remove GROUP_SCOPE when both are
+    // set.
     if ((SemanticFlagsValue & ScopeMask) == ScopeMask)
       SemanticFlagsValue &= ~GroupScope;
     Value *SemanticFlags = llvm::ConstantInt::get(

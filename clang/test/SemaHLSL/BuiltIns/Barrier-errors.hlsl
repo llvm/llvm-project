@@ -17,10 +17,6 @@ void test_flags(uint Flags) {
 
   // expected-error@+1 {{invalid SemanticFlags for Barrier operation; expected 0 or some combination of GROUP_SYNC, GROUP_SCOPE, DEVICE_SCOPE flags}}
   Barrier(UAV_MEMORY, DEVICE_SCOPE | 0x8);
-
-  Barrier(0, 0);
-  Barrier(ALL_MEMORY, GROUP_SYNC | GROUP_SCOPE | DEVICE_SCOPE);
-  Barrier(UAVBuffer, DEVICE_SCOPE);
 }
 
 void test_resource() {

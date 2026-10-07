@@ -2817,8 +2817,8 @@ class DiagnoseHLSLAvailability : public DynamicRecursiveASTVisitor {
   unsigned CurrentShaderStageBit;
 
   // True if scanning a function that was already scanned in a different
-  // shader stage context, and therefore we should not report issues that
-  // depend only on shader model version because they would be duplicate.
+  // shader stage context. Suppress stage-independent diagnostics because
+  // they were reported during the first scan.
   bool ReportOnlyShaderStageIssues;
 
   // Helper methods for dealing with current stage context / environment
@@ -2874,6 +2874,14 @@ class DiagnoseHLSLAvailability : public DynamicRecursiveASTVisitor {
   const AvailabilityAttr *FindAvailabilityAttr(const Decl *D);
   bool HasMatchingEnvironmentOrNone(const AvailabilityAttr *AA);
   void DiagnoseBarrierCall(CallExpr *CE);
+  uint64_t DiagnoseBarrierGroupMemory(Expr *MemoryArg, uint64_t MemoryFlags,
+                                      bool HasVisibleGroup, bool IsAllMemory);
+  uint64_t DiagnoseBarrierNodeMemory(Expr *MemoryArg, uint64_t MemoryFlags,
+                                     bool HasKnownStage, bool IsAllMemory);
+  void DiagnoseBarrierGroupSemantic(Expr *SemanticArg, uint64_t SemanticFlags,
+                                    bool HasVisibleGroup);
+  void DiagnoseBarrierScope(Expr *SemanticArg, uint64_t MemoryFlags,
+                            uint64_t SemanticFlags);
 
 public:
   DiagnoseHLSLAvailability(Sema &SemaRef, bool DiagnoseAvailability)
@@ -2905,6 +2913,78 @@ public:
   }
 };
 
+uint64_t DiagnoseHLSLAvailability::DiagnoseBarrierGroupMemory(
+    Expr *MemoryArg, uint64_t MemoryFlags, bool HasVisibleGroup,
+    bool IsAllMemory) {
+  const uint64_t GroupSharedMemory =
+      barrierFlagValue(BarrierMemoryTypeFlag::GroupSharedMemory);
+  if (HasVisibleGroup || (MemoryFlags & GroupSharedMemory) == 0)
+    return MemoryFlags;
+
+  if (!IsAllMemory) {
+    SemaRef.Diag(MemoryArg->getExprLoc(),
+                 diag::err_hlsl_barrier_flag_requires_group)
+        << 0;
+    return MemoryFlags;
+  }
+
+  return MemoryFlags & ~GroupSharedMemory;
+}
+
+uint64_t DiagnoseHLSLAvailability::DiagnoseBarrierNodeMemory(
+    Expr *MemoryArg, uint64_t MemoryFlags, bool HasKnownStage,
+    bool IsAllMemory) {
+  const uint64_t NodeMemory =
+      barrierFlagValue(BarrierMemoryTypeFlag::NodeMemory);
+  if (!HasKnownStage || (MemoryFlags & NodeMemory) == 0)
+    return MemoryFlags;
+
+  if (!IsAllMemory) {
+    SemaRef.Diag(MemoryArg->getExprLoc(),
+                 diag::err_hlsl_barrier_node_memory_requires_node);
+    return MemoryFlags;
+  }
+
+  return MemoryFlags & ~NodeMemory;
+}
+
+void DiagnoseHLSLAvailability::DiagnoseBarrierGroupSemantic(
+    Expr *SemanticArg, uint64_t SemanticFlags, bool HasVisibleGroup) {
+  if (HasVisibleGroup ||
+      (SemanticFlags & barrierFlagValue(BarrierSemanticFlag::GroupFlags)) == 0)
+    return;
+
+  SemaRef.Diag(SemanticArg->getExprLoc(),
+               diag::err_hlsl_barrier_flag_requires_group)
+      << ((SemanticFlags & barrierFlagValue(BarrierSemanticFlag::GroupSync)) !=
+                  0
+              ? 1
+              : 2);
+}
+
+void DiagnoseHLSLAvailability::DiagnoseBarrierScope(Expr *SemanticArg,
+                                                    uint64_t MemoryFlags,
+                                                    uint64_t SemanticFlags) {
+  if (ReportOnlyShaderStageIssues)
+    return;
+
+  const uint64_t DeviceScopeMemory =
+      barrierFlagValue(BarrierMemoryTypeFlag::UAVMemory) |
+      barrierFlagValue(BarrierMemoryTypeFlag::NodeInputMemory);
+  if ((SemanticFlags & barrierFlagValue(BarrierSemanticFlag::DeviceScope)) !=
+          0 &&
+      (MemoryFlags & DeviceScopeMemory) == 0)
+    SemaRef.Diag(SemanticArg->getExprLoc(),
+                 diag::err_hlsl_barrier_scope_requires_memory)
+        << 1;
+  if ((SemanticFlags & barrierFlagValue(BarrierSemanticFlag::GroupScope)) !=
+          0 &&
+      MemoryFlags == 0)
+    SemaRef.Diag(SemanticArg->getExprLoc(),
+                 diag::err_hlsl_barrier_scope_requires_memory)
+        << 0;
+}
+
 void DiagnoseHLSLAvailability::DiagnoseBarrierCall(CallExpr *CE) {
   const FunctionDecl *FD = CE->getDirectCallee();
   if (!FD || FD->getBuiltinID() != Builtin::BI__builtin_hlsl_barrier)
@@ -2927,26 +3007,10 @@ void DiagnoseHLSLAvailability::DiagnoseBarrierCall(CallExpr *CE) {
     const bool IsAllMemory =
         MemoryFlags == barrierFlagValue(BarrierMemoryTypeFlag::ValidMask);
 
-    if (!HasVisibleGroup &&
-        (MemoryFlags &
-         barrierFlagValue(BarrierMemoryTypeFlag::GroupSharedMemory)) != 0) {
-      if (IsAllMemory)
-        MemoryFlags &=
-            ~barrierFlagValue(BarrierMemoryTypeFlag::GroupSharedMemory);
-      else
-        SemaRef.Diag(MemoryArg->getExprLoc(),
-                     diag::err_hlsl_barrier_group_memory_requires_group);
-    }
-
-    if (HasKnownStage &&
-        (MemoryFlags & barrierFlagValue(BarrierMemoryTypeFlag::NodeMemory)) !=
-            0) {
-      if (IsAllMemory)
-        MemoryFlags &= ~barrierFlagValue(BarrierMemoryTypeFlag::NodeMemory);
-      else
-        SemaRef.Diag(MemoryArg->getExprLoc(),
-                     diag::err_hlsl_barrier_node_memory_requires_node);
-    }
+    MemoryFlags = DiagnoseBarrierGroupMemory(MemoryArg, MemoryFlags,
+                                             HasVisibleGroup, IsAllMemory);
+    MemoryFlags = DiagnoseBarrierNodeMemory(MemoryArg, MemoryFlags,
+                                            HasKnownStage, IsAllMemory);
   } else if (!HasVisibleGroup) {
     SemaRef.Diag(MemoryArg->getExprLoc(),
                  diag::err_hlsl_barrier_resource_requires_group);
@@ -2960,27 +3024,10 @@ void DiagnoseHLSLAvailability::DiagnoseBarrierCall(CallExpr *CE) {
     return;
   const uint64_t SemanticFlags = Value->getZExtValue();
 
-  if (!HasVisibleGroup &&
-      (SemanticFlags & barrierFlagValue(BarrierSemanticFlag::GroupFlags)) != 0)
-    SemaRef.Diag(SemanticArg->getExprLoc(),
-                 diag::err_hlsl_barrier_group_semantic_requires_group);
+  DiagnoseBarrierGroupSemantic(SemanticArg, SemanticFlags, HasVisibleGroup);
 
-  if (MemoryArg->getType()->isUnsignedIntegerType() &&
-      !ReportOnlyShaderStageIssues) {
-    const uint64_t DeviceScopeMemory =
-        barrierFlagValue(BarrierMemoryTypeFlag::UAVMemory) |
-        barrierFlagValue(BarrierMemoryTypeFlag::NodeInputMemory);
-    if ((SemanticFlags & barrierFlagValue(BarrierSemanticFlag::DeviceScope)) !=
-            0 &&
-        (MemoryFlags & DeviceScopeMemory) == 0)
-      SemaRef.Diag(SemanticArg->getExprLoc(),
-                   diag::err_hlsl_barrier_no_device_scope_memory);
-    if ((SemanticFlags & barrierFlagValue(BarrierSemanticFlag::GroupScope)) !=
-            0 &&
-        MemoryFlags == 0)
-      SemaRef.Diag(SemanticArg->getExprLoc(),
-                   diag::err_hlsl_barrier_no_group_scope_memory);
-  }
+  if (MemoryArg->getType()->isUnsignedIntegerType())
+    DiagnoseBarrierScope(SemanticArg, MemoryFlags, SemanticFlags);
 }
 
 void DiagnoseHLSLAvailability::HandleFunctionOrMethodRef(FunctionDecl *FD,

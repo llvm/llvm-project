@@ -3,7 +3,7 @@
 // RUN:   -fhlsl-strict-availability -fsyntax-only -verify %s
 
 void barrier_helper() {
-  // expected-error@+1 {{GROUP_SCOPE specified for Barrier operation without applicable memory}}
+  // expected-error@+1 {{GROUP_SCOPE requires a nonzero MemoryTypeFlags argument}}
   Barrier(0, GROUP_SCOPE);
 }
 

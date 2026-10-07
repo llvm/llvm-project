@@ -5,25 +5,25 @@
 RWBuffer<float> UAVBuffer;
 
 export void invalid_scope_combinations() {
-  // expected-error@+1 {{GROUP_SCOPE specified for Barrier operation without applicable memory}}
+  // expected-error@+1 {{GROUP_SCOPE requires a nonzero MemoryTypeFlags argument}}
   Barrier(0, GROUP_SCOPE);
 
-  // expected-error@+1 {{DEVICE_SCOPE specified for Barrier operation without applicable memory}}
+  // expected-error@+1 {{DEVICE_SCOPE requires UAV_MEMORY or NODE_INPUT_MEMORY in MemoryTypeFlags}}
   Barrier(GROUP_SHARED_MEMORY, DEVICE_SCOPE);
 
-  // expected-error@+1 {{DEVICE_SCOPE specified for Barrier operation without applicable memory}}
+  // expected-error@+1 {{DEVICE_SCOPE requires UAV_MEMORY or NODE_INPUT_MEMORY in MemoryTypeFlags}}
   Barrier(NODE_OUTPUT_MEMORY, DEVICE_SCOPE);
-
-  Barrier(NODE_OUTPUT_MEMORY | NODE_INPUT_MEMORY, DEVICE_SCOPE);
-  Barrier(NODE_OUTPUT_MEMORY | UAV_MEMORY, DEVICE_SCOPE);
 }
 
 void group_barriers() {
   // expected-error@+1 {{GROUP_SHARED_MEMORY specified for Barrier operation when context has no visible group}}
   Barrier(GROUP_SHARED_MEMORY, 0);
 
-  // expected-error@+1 {{GROUP_SYNC or GROUP_SCOPE specified for Barrier operation when context has no visible group}}
+  // expected-error@+1 {{GROUP_SYNC specified for Barrier operation when context has no visible group}}
   Barrier(UAV_MEMORY, GROUP_SYNC);
+
+  // expected-error@+1 {{GROUP_SCOPE specified for Barrier operation when context has no visible group}}
+  Barrier(UAV_MEMORY, GROUP_SCOPE);
 
   // expected-error@+1 {{NODE_INPUT_MEMORY or NODE_OUTPUT_MEMORY may only be specified for Barrier operation in a node shader}}
   Barrier(NODE_INPUT_MEMORY, 0);
@@ -33,7 +33,7 @@ void group_barriers() {
 }
 
 void invalid_scope_helper() {
-  // expected-error@+1 {{DEVICE_SCOPE specified for Barrier operation without applicable memory}}
+  // expected-error@+1 {{DEVICE_SCOPE requires UAV_MEMORY or NODE_INPUT_MEMORY in MemoryTypeFlags}}
   Barrier(0, DEVICE_SCOPE);
 }
 
@@ -41,7 +41,6 @@ void invalid_scope_helper() {
 void vertex_main() {
   group_barriers();
   invalid_scope_helper();
-  Barrier(ALL_MEMORY, DEVICE_SCOPE);
 }
 
 [shader("compute")]
@@ -49,12 +48,9 @@ void vertex_main() {
 void compute_main() {
   invalid_scope_helper();
 
-  // expected-error@+1 {{GROUP_SCOPE specified for Barrier operation without applicable memory}}
+  // expected-error@+1 {{GROUP_SCOPE requires a nonzero MemoryTypeFlags argument}}
   Barrier(0, GROUP_SCOPE);
 
-  // expected-error@+1 {{DEVICE_SCOPE specified for Barrier operation without applicable memory}}
+  // expected-error@+1 {{DEVICE_SCOPE requires UAV_MEMORY or NODE_INPUT_MEMORY in MemoryTypeFlags}}
   Barrier(GROUP_SHARED_MEMORY, DEVICE_SCOPE);
-
-  Barrier(GROUP_SHARED_MEMORY, GROUP_SYNC | GROUP_SCOPE);
-  Barrier(UAVBuffer, DEVICE_SCOPE);
 }

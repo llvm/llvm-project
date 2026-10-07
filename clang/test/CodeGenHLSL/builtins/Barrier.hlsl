@@ -6,6 +6,12 @@ RWBuffer<float> UAVBuffer;
 RWByteAddressBuffer Bytes;
 
 void test_barrier() {
+  // CHECK: call void @llvm.dx.barrier.by.memory.type(i32 0, i32 0)
+  Barrier(0, 0);
+
+  // CHECK: call void @llvm.dx.barrier.by.memory.type(i32 15, i32 5)
+  Barrier(ALL_MEMORY, GROUP_SYNC | GROUP_SCOPE | DEVICE_SCOPE);
+
   // CHECK: call void @llvm.dx.barrier.by.memory.type(i32 3, i32 5)
   Barrier(UAV_MEMORY | GROUP_SHARED_MEMORY, GROUP_SYNC | DEVICE_SCOPE);
 
@@ -19,9 +25,19 @@ void test_barrier() {
   // CHECK: call void @llvm.dx.barrier.by.memory.type(i32 1, i32 4)
   Barrier(UAV_MEMORY, uint2(DEVICE_SCOPE, 0).x);
 
+  // CHECK: call void @llvm.dx.barrier.by.memory.type(i32 12, i32 4)
+  Barrier(NODE_OUTPUT_MEMORY | NODE_INPUT_MEMORY, DEVICE_SCOPE);
+
+  // CHECK: call void @llvm.dx.barrier.by.memory.type(i32 9, i32 4)
+  Barrier(NODE_OUTPUT_MEMORY | UAV_MEMORY, DEVICE_SCOPE);
+
   // CHECK: call void @llvm.dx.barrier.by.memory.handle.tdx.TypedBuffer
   // CHECK-SAME: (target("dx.TypedBuffer", float, 1, 0, 0) {{.*}}, i32 2)
   Barrier(UAVBuffer, GROUP_SCOPE);
+
+  // CHECK: call void @llvm.dx.barrier.by.memory.handle.tdx.TypedBuffer
+  // CHECK-SAME: (target("dx.TypedBuffer", float, 1, 0, 0) {{.*}}, i32 4)
+  Barrier(UAVBuffer, DEVICE_SCOPE);
 
   // CHECK: call void @llvm.dx.barrier.by.memory.handle.tdx.RawBuffer
   // CHECK-SAME: (target("dx.RawBuffer", i8, 1, 0) {{.*}}, i32 4)
