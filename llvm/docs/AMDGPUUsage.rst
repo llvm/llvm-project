@@ -7554,13 +7554,13 @@ A memory synchronization scope wider than work-group is not meaningful for the
 group (LDS) address space and is treated as work-group.
 
 When a work-group's maximum flat work-group size does not exceed the wavefront
-size, the work-group fits within a single wavefront. So long as no asynchronous
+size, the work-group fits within a single wavefront. So long as no LDSDMA
 operations occur, the LLVM ``workgroup`` synchronization scope is equivalent to
 its ``wavefront`` scope.
 
-If the compiler can determine these conditions (e.g., through the function attributes
-``amdgpu-flat-work-group-size`` and ``amdgpu-no-async``), the AMDGPU backend
-optimizes ``workgroup`` scope operations by lowering them to
+If the compiler can determine these conditions (e.g., through the function
+attributes ``amdgpu-flat-work-group-size`` and ``amdgpu-no-lds-dma``), the
+AMDGPU backend optimizes ``workgroup`` scope operations by lowering them to
 ``wavefront``-scoped machine instructions.
 
 The memory model does not support the region address space which is treated as
