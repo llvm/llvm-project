@@ -239,8 +239,9 @@ private:
     // built below has its own synthetic one, so turn it into a CONTINUE
     // statement to keep its label and source.
     if (auto *last{std::get_if<ExecutableConstruct>(&body.back().u)}) {
-      if (auto *endDoStmt{std::get_if<Statement<common::Indirection<EndDoStmt>>>(
-              &last->u)}) {
+      if (auto *endDoStmt{
+              std::get_if<Statement<common::Indirection<EndDoStmt>>>(
+                  &last->u)}) {
         Statement<ActionStmt> continueStmt{
             std::optional<Label>{endDoStmt->label}, ContinueStmt{}};
         continueStmt.source = endDoStmt->source;
