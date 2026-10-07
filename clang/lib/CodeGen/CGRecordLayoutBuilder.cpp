@@ -101,26 +101,8 @@ struct CGRecordLowering {
     return MemberInfo(Offset, MemberInfo::Field, Data);
   }
 
-  /// The Microsoft bitfield layout rule allocates discrete storage
-  /// units of the field's formal type and only combines adjacent
-  /// fields of the same formal type.  We want to emit a layout with
-  /// these discrete storage units instead of combining them into a
-  /// continuous run.
-  bool isDiscreteBitFieldABI() const {
-    return Context.getTargetInfo().getCXXABI().isMicrosoft() ||
-           D->isMsStruct(Context);
-  }
-
   /// Helper function to check if the target machine is BigEndian.
   bool isBE() const { return Context.getTargetInfo().isBigEndian(); }
-
-  /// The Itanium base layout rule allows virtual bases to overlap
-  /// other bases, which complicates layout in specific ways.
-  ///
-  /// Note specifically that the ms_struct attribute doesn't change this.
-  bool isOverlappingVBaseABI() const {
-    return !Context.getTargetInfo().getCXXABI().isMicrosoft();
-  }
 
   /// Wraps llvm::Type::getIntNTy with some implicit arguments.
   llvm::Type *getIntNType(uint64_t NumBits) const {
@@ -144,7 +126,8 @@ struct CGRecordLowering {
   llvm::Type *getStorageType(const FieldDecl *FD) const {
     llvm::Type *Type = Types.ConvertTypeForMem(FD->getType());
     if (!FD->isBitField()) return Type;
-    if (isDiscreteBitFieldABI()) return Type;
+    if (CodeGenUtils::isDiscreteBitFieldABI(Context, D))
+      return Type;
     return getIntNType(std::min(FD->getBitWidthValue(),
                                 (unsigned)Context.toBits(getSize(Type))));
   }
@@ -407,7 +390,7 @@ RecordDecl::field_iterator
 CGRecordLowering::accumulateBitFields(bool isNonVirtualBaseType,
                                       RecordDecl::field_iterator Field,
                                       RecordDecl::field_iterator FieldEnd) {
-  if (isDiscreteBitFieldABI()) {
+  if (CodeGenUtils::isDiscreteBitFieldABI(Context, D)) {
     // Run stores the first element of the current run of bitfields. FieldEnd is
     // used as a special value to note that we don't have a current run. A
     // bitfield run is a contiguous collection of bitfields that can be stored
@@ -875,7 +858,7 @@ CGRecordLowering::calculateTailClippingOffset(bool isNonVirtualBaseType) const {
   // smaller than the nvsize.  Here we check to see if such a base is placed
   // before the nvsize and set the scissor offset to that, instead of the
   // nvsize.
-  if (!isNonVirtualBaseType && isOverlappingVBaseABI())
+  if (!isNonVirtualBaseType && CodeGenUtils::isOverlappingVBaseABI(Context))
     for (const auto &Base : RD->vbases()) {
       const CXXRecordDecl *BaseDecl = Base.getType()->getAsCXXRecordDecl();
       if (CodeGenUtils::isEmptyRecordForLayout(Context, Base.getType()))
@@ -899,9 +882,8 @@ void CGRecordLowering::accumulateVBases() {
     CharUnits Offset = Layout.getVBaseClassOffset(BaseDecl);
     // If the vbase is a primary virtual base of some base, then it doesn't
     // get its own storage location but instead lives inside of that base.
-    if (isOverlappingVBaseABI() &&
-        Context.isNearlyEmpty(BaseDecl) &&
-        !hasOwnStorage(RD, BaseDecl)) {
+    if (CodeGenUtils::isOverlappingVBaseABI(Context) &&
+        Context.isNearlyEmpty(BaseDecl) && !hasOwnStorage(RD, BaseDecl)) {
       Members.push_back(MemberInfo(Offset, MemberInfo::VBase, nullptr,
                                    BaseDecl));
       continue;
