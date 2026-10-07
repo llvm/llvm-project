@@ -51,6 +51,10 @@ let Definition = "modulelist", Path = "symbols" in {
     Global,
     DefaultFalse,
     Desc<"Enable on demand symbol loading in LLDB. LLDB will load debug info on demand for each module based on various conditions (e.g. matched breakpoint, resolved stack frame addresses and matched global variables/function symbols in symbol table) to improve performance. Please refer to docs/use/ondemand.rst for details.">;
+  def DemangledNameInfoCacheSize: Property<"demangled-name-info-cache-size", "UInt64">,
+    Global,
+    DefaultUnsignedValue<4096>,
+    Desc<"The maximum number of formatted function names to cache. A value of 0 disables the cache.">;
 }
 
 let Definition = "diagnostics", Path = "diagnostics" in {

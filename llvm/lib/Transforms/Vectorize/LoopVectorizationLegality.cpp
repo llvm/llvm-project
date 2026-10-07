@@ -572,6 +572,21 @@ static bool canWidenTypes(Instruction &I, bool AllowStructCalls,
   return true;
 }
 
+/// Returns true if \p I does not use a swifterror value, otherwise reports a
+/// vectorization failure for \p TheLoop and returns false.
+/// TODO: Allow unmasked uniform accesses through loop-invariant swifterror
+/// pointers once memory operations on them are guaranteed to stay scalar.
+static bool canVectorizeSwiftErrorUses(Instruction &I,
+                                       OptimizationRemarkEmitter *ORE,
+                                       Loop *TheLoop) {
+  if (none_of(I.operands(), [](Value *Op) { return Op->isSwiftError(); }))
+    return true;
+  reportVectorizationFailure("Found a use of a swifterror value",
+                             "swifterror value cannot be vectorized",
+                             "CantVectorizeSwiftError", ORE, TheLoop, &I);
+  return false;
+}
+
 bool LoopVectorizationLegality::canVectorizeOuterLoop() {
   assert(!TheLoop->isInnermost() && "We are not vectorizing an outer loop.");
   // Store the result and return it at the end instead of exiting early, in case
@@ -582,8 +597,10 @@ bool LoopVectorizationLegality::canVectorizeOuterLoop() {
   for (BasicBlock *BB : TheLoop->blocks()) {
     // Instructions in the loop nest are widened, so the types they produce and
     // store must be widenable. Struct-returning calls are not supported yet.
+    // Uses of swifterror values must remain scalar.
     for (Instruction &I : *BB) {
-      if (canWidenTypes(I, /*AllowStructCalls=*/false, ORE, TheLoop))
+      if (canWidenTypes(I, /*AllowStructCalls=*/false, ORE, TheLoop) &&
+          canVectorizeSwiftErrorUses(I, ORE, TheLoop))
         continue;
       if (!DoExtraAnalysis)
         return false;
@@ -681,6 +698,16 @@ bool LoopVectorizationLegality::canVectorizeOuterLoop() {
       Result = false;
     else
       return false;
+  }
+
+  // Like for inner loops, the widest integer induction type is used for the
+  // canonical IV and trip count, so at least one integer induction is required.
+  if (!WidestIndTy) {
+    reportVectorizationFailure(
+        "Did not find one integer induction var",
+        "loop induction variable could not be identified",
+        "NoInductionVariable", ORE, TheLoop);
+    return false;
   }
 
   return Result;
@@ -900,6 +927,9 @@ bool LoopVectorizationLegality::canVectorizeInstr(Instruction &I) {
                                Phi);
     return false;
   } // end of PHI handling
+
+  if (!canVectorizeSwiftErrorUses(I, ORE, TheLoop))
+    return false;
 
   // We handle calls that:
   //   * Have a mapping to an IR intrinsic.

@@ -71,6 +71,8 @@ public:
 
   bool isAsCheapAsAMove(const MachineInstr &MI) const override;
 
+  int getJumpTableIndex(const MachineInstr &MI) const override;
+
   MachineBasicBlock *getBranchDestBlock(const MachineInstr &MI) const override;
 
   bool analyzeBranch(MachineBasicBlock &MBB, MachineBasicBlock *&TBB,

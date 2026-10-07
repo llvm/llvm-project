@@ -78,7 +78,7 @@ void addDxilValVersion(StringRef ValVersionStr, llvm::Module &M) {
   uint64_t Minor = *Version.getMinor();
 
   auto &Ctx = M.getContext();
-  IRBuilder<> B(M.getContext());
+  IRBuilder<> B(M);
   MDNode *Val = MDNode::get(Ctx, {ConstantAsMetadata::get(B.getInt32(Major)),
                                   ConstantAsMetadata::get(B.getInt32(Minor))});
   StringRef DXILValKey = "dx.valver";
@@ -91,7 +91,7 @@ void addRootSignatureMD(llvm::dxbc::RootSignatureVersion RootSigVer,
                         llvm::Function *Fn, llvm::Module &M) {
   auto &Ctx = M.getContext();
 
-  llvm::hlsl::rootsig::MetadataBuilder RSBuilder(Ctx, Elements);
+  llvm::hlsl::rootsig::MetadataBuilder RSBuilder(M, Elements);
   MDNode *RootSignature = RSBuilder.BuildRootSignature();
 
   ConstantAsMetadata *Version = ConstantAsMetadata::get(ConstantInt::get(
@@ -1075,7 +1075,7 @@ static Value *buildVectorInput(IRBuilder<> &B, Function *F, llvm::Type *Ty) {
 static void addSPIRVBuiltinDecoration(llvm::GlobalVariable *GV,
                                       unsigned BuiltIn) {
   LLVMContext &Ctx = GV->getContext();
-  IRBuilder<> B(GV->getContext());
+  IRBuilder<> B(*GV->getParent());
   MDNode *Operands = MDNode::get(
       Ctx,
       {ConstantAsMetadata::get(B.getInt32(/* Spirv::Decoration::BuiltIn */ 11)),
@@ -1086,7 +1086,7 @@ static void addSPIRVBuiltinDecoration(llvm::GlobalVariable *GV,
 
 static void addLocationDecoration(llvm::GlobalVariable *GV, unsigned Location) {
   LLVMContext &Ctx = GV->getContext();
-  IRBuilder<> B(GV->getContext());
+  IRBuilder<> B(*GV->getParent());
   MDNode *Operands =
       MDNode::get(Ctx, {ConstantAsMetadata::get(B.getInt32(/* Location */ 30)),
                         ConstantAsMetadata::get(B.getInt32(Location))});
@@ -1323,7 +1323,7 @@ llvm::Value *CGHLSLRuntime::emitDXILUserSemanticLoad(
   llvm::Type *RowTy = CGM.getTypes().ConvertTypeForMem(Shape.RowType);
 
   llvm::Function *IntrFn = llvm::Intrinsic::getOrInsertDeclaration(
-      B.GetInsertBlock()->getModule(), llvm::Intrinsic::dx_load_input, {RowTy});
+      B.getModule(), llvm::Intrinsic::dx_load_input, {RowTy});
 
   SmallVector<OperandBundleDef, 1> OB;
   if (auto *Token = getConvergenceToken(*B.GetInsertBlock())) {
@@ -1376,8 +1376,7 @@ void CGHLSLRuntime::emitDXILUserSemanticStore(llvm::IRBuilder<> &B,
   llvm::Type *RowTy = CGM.getTypes().ConvertTypeForMem(Shape.RowType);
 
   llvm::Function *IntrFn = llvm::Intrinsic::getOrInsertDeclaration(
-      B.GetInsertBlock()->getModule(), llvm::Intrinsic::dx_store_output,
-      {RowTy});
+      B.getModule(), llvm::Intrinsic::dx_store_output, {RowTy});
 
   SmallVector<OperandBundleDef, 1> OB;
   if (auto *Token = getConvergenceToken(*B.GetInsertBlock())) {
