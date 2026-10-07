@@ -6727,11 +6727,14 @@ Register AMDGPULegalizerInfo::fixStoreSourceType(MachineIRBuilder &B,
     Ty = getBitcastRegisterType(Ty);
     VData = B.buildBitcast(Ty, VData).getReg(0);
   }
-  // Fixup illegal register types for i8 stores.
-  if (Ty == LLT::integer(8) || Ty == LLT::integer(16) || Ty == F16) {
-    Register AnyExt = B.buildAnyExt(LLT::integer(32), VData).getReg(0);
-    return AnyExt;
+  if (Ty.isFloat(16)) {
+    Ty = LLT::integer(16);
+    VData = B.buildBitcast(Ty, VData).getReg(0);
   }
+
+  // Fixup illegal register types for i8 stores.
+  if (Ty == LLT::integer(8) || Ty == LLT::integer(16))
+    return B.buildAnyExt(LLT::integer(32), VData).getReg(0);
 
   if (Ty.isVector()) {
     if (Ty.getElementType().getSizeInBits() == 16 && Ty.getNumElements() <= 4) {
