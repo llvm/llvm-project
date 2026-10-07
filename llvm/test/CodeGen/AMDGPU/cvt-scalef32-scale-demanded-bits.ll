@@ -101,6 +101,68 @@ define <2 x i32> @e8m0_vector_load(<8 x bfloat> %a, <8 x bfloat> %b, ptr addrspa
   ret <2 x i32> %v1
 }
 
+; Each extracted scale feeds more than one conversion.
+define <4 x i32> @exponent_mask_vector_multi_use(<8 x bfloat> %a, <8 x bfloat> %b, ptr addrspace(1) %p) {
+; GFX1250-LABEL: exponent_mask_vector_multi_use:
+; GFX1250:       ; %bb.0:
+; GFX1250-NEXT:    s_wait_loadcnt_dscnt 0x0
+; GFX1250-NEXT:    s_wait_kmcnt 0x0
+; GFX1250-NEXT:    global_load_b64 v[10:11], v[8:9], off
+; GFX1250-NEXT:    s_wait_loadcnt 0x0
+; GFX1250-NEXT:    s_wait_xcnt 0x0
+; GFX1250-NEXT:    v_cvt_scalef32_pk8_fp4_bf16 v8, v[0:3], v10
+; GFX1250-NEXT:    v_cvt_scalef32_pk8_fp4_bf16 v9, v[4:7], v10
+; GFX1250-NEXT:    v_cvt_scalef32_pk8_fp4_bf16 v10, v[0:3], v11
+; GFX1250-NEXT:    v_cvt_scalef32_pk8_fp4_bf16 v3, v[4:7], v11
+; GFX1250-NEXT:    s_delay_alu instid0(VALU_DEP_3) | instskip(NEXT) | instid1(VALU_DEP_3)
+; GFX1250-NEXT:    v_dual_mov_b32 v0, v8 :: v_dual_mov_b32 v1, v9
+; GFX1250-NEXT:    v_mov_b32_e32 v2, v10
+; GFX1250-NEXT:    s_set_pc_i64 s[30:31]
+  %bits = load <2 x i32>, ptr addrspace(1) %p, align 8
+  %and = and <2 x i32> %bits, splat (i32 2139095040)
+  %scales = bitcast <2 x i32> %and to <2 x float>
+  %s0 = extractelement <2 x float> %scales, i64 0
+  %s1 = extractelement <2 x float> %scales, i64 1
+  %r0 = call i32 @llvm.amdgcn.cvt.scalef32.pk8.fp4.bf16(<8 x bfloat> %a, float %s0)
+  %r1 = call i32 @llvm.amdgcn.cvt.scalef32.pk8.fp4.bf16(<8 x bfloat> %b, float %s0)
+  %r2 = call i32 @llvm.amdgcn.cvt.scalef32.pk8.fp4.bf16(<8 x bfloat> %a, float %s1)
+  %r3 = call i32 @llvm.amdgcn.cvt.scalef32.pk8.fp4.bf16(<8 x bfloat> %b, float %s1)
+  %v0 = insertelement <4 x i32> poison, i32 %r0, i64 0
+  %v1 = insertelement <4 x i32> %v0, i32 %r1, i64 1
+  %v2 = insertelement <4 x i32> %v1, i32 %r2, i64 2
+  %v3 = insertelement <4 x i32> %v2, i32 %r3, i64 3
+  ret <4 x i32> %v3
+}
+
+; The vector mask is still needed for the store.
+define <2 x i32> @exponent_mask_vector_multi_use_store(<8 x bfloat> %a, <8 x bfloat> %b, ptr addrspace(1) %p, ptr addrspace(1) %out) {
+; GFX1250-LABEL: exponent_mask_vector_multi_use_store:
+; GFX1250:       ; %bb.0:
+; GFX1250-NEXT:    s_wait_loadcnt_dscnt 0x0
+; GFX1250-NEXT:    s_wait_kmcnt 0x0
+; GFX1250-NEXT:    global_load_b64 v[12:13], v[8:9], off
+; GFX1250-NEXT:    s_wait_loadcnt 0x0
+; GFX1250-NEXT:    s_wait_xcnt 0x0
+; GFX1250-NEXT:    v_cvt_scalef32_pk8_fp4_bf16 v8, v[0:3], v12
+; GFX1250-NEXT:    v_and_b32_e32 v15, 0x7f800000, v13
+; GFX1250-NEXT:    v_and_b32_e32 v14, 0x7f800000, v12
+; GFX1250-NEXT:    v_cvt_scalef32_pk8_fp4_bf16 v1, v[4:7], v12
+; GFX1250-NEXT:    s_delay_alu instid0(VALU_DEP_4)
+; GFX1250-NEXT:    v_mov_b32_e32 v0, v8
+; GFX1250-NEXT:    global_store_b64 v[10:11], v[14:15], off
+; GFX1250-NEXT:    s_set_pc_i64 s[30:31]
+  %bits = load <2 x i32>, ptr addrspace(1) %p, align 8
+  %and = and <2 x i32> %bits, splat (i32 2139095040)
+  store <2 x i32> %and, ptr addrspace(1) %out
+  %scales = bitcast <2 x i32> %and to <2 x float>
+  %s0 = extractelement <2 x float> %scales, i64 0
+  %r0 = call i32 @llvm.amdgcn.cvt.scalef32.pk8.fp4.bf16(<8 x bfloat> %a, float %s0)
+  %r1 = call i32 @llvm.amdgcn.cvt.scalef32.pk8.fp4.bf16(<8 x bfloat> %b, float %s0)
+  %v0 = insertelement <2 x i32> poison, i32 %r0, i64 0
+  %v1 = insertelement <2 x i32> %v0, i32 %r1, i64 1
+  ret <2 x i32> %v1
+}
+
 ; The mask is still needed for the store.
 define i32 @exponent_mask_multi_use(<8 x bfloat> %src, i32 %bits, ptr addrspace(1) %out) {
 ; GFX1250-LABEL: exponent_mask_multi_use:

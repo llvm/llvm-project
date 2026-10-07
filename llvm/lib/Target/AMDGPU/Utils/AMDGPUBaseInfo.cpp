@@ -3389,8 +3389,16 @@ struct AlwaysUniform {
 };
 const AlwaysUniform *lookupAlwaysUniform(unsigned Intr);
 
+struct ExponentOnlyScaleIntrinsic {
+  unsigned Intr;
+  uint8_t ScaleArg;
+};
+const ExponentOnlyScaleIntrinsic *
+lookupExponentOnlyScaleIntrinsic(unsigned Intr);
+
 #define GET_SourcesOfDivergence_IMPL
 #define GET_UniformIntrinsics_IMPL
+#define GET_ExponentOnlyScaleIntrinsics_IMPL
 #define GET_Gfx9BufferFormat_IMPL
 #define GET_Gfx10BufferFormat_IMPL
 #define GET_Gfx11PlusBufferFormat_IMPL
@@ -3408,75 +3416,10 @@ bool isIntrinsicAlwaysUniform(unsigned IntrID) {
 }
 
 std::optional<unsigned> getCvtScaleF32ScaleArgIdx(unsigned IntrID) {
-  switch (IntrID) {
-  case Intrinsic::amdgcn_cvt_scalef32_pk8_fp8_f32:
-  case Intrinsic::amdgcn_cvt_scalef32_pk8_bf8_f32:
-  case Intrinsic::amdgcn_cvt_scalef32_pk8_fp8_f16:
-  case Intrinsic::amdgcn_cvt_scalef32_pk8_bf8_f16:
-  case Intrinsic::amdgcn_cvt_scalef32_pk8_fp8_bf16:
-  case Intrinsic::amdgcn_cvt_scalef32_pk8_bf8_bf16:
-  case Intrinsic::amdgcn_cvt_scalef32_pk8_fp4_f32:
-  case Intrinsic::amdgcn_cvt_scalef32_pk8_fp4_f16:
-  case Intrinsic::amdgcn_cvt_scalef32_pk8_fp4_bf16:
-  case Intrinsic::amdgcn_cvt_scalef32_pk16_fp6_f32:
-  case Intrinsic::amdgcn_cvt_scalef32_pk16_bf6_f32:
-  case Intrinsic::amdgcn_cvt_scalef32_pk16_fp6_f16:
-  case Intrinsic::amdgcn_cvt_scalef32_pk16_bf6_f16:
-  case Intrinsic::amdgcn_cvt_scalef32_pk16_fp6_bf16:
-  case Intrinsic::amdgcn_cvt_scalef32_pk16_bf6_bf16:
-  case Intrinsic::amdgcn_cvt_scalef32_pk32_fp6_f32:
-  case Intrinsic::amdgcn_cvt_scalef32_pk32_bf6_f32:
-  case Intrinsic::amdgcn_cvt_scalef32_pk32_fp6_f16:
-  case Intrinsic::amdgcn_cvt_scalef32_pk32_bf6_f16:
-  case Intrinsic::amdgcn_cvt_scalef32_pk32_fp6_bf16:
-  case Intrinsic::amdgcn_cvt_scalef32_pk32_bf6_bf16:
-    return 1;
-  case Intrinsic::amdgcn_cvt_scalef32_sr_pk8_fp8_f32:
-  case Intrinsic::amdgcn_cvt_scalef32_sr_pk8_bf8_f32:
-  case Intrinsic::amdgcn_cvt_scalef32_sr_pk8_fp8_f16:
-  case Intrinsic::amdgcn_cvt_scalef32_sr_pk8_bf8_f16:
-  case Intrinsic::amdgcn_cvt_scalef32_sr_pk8_fp8_bf16:
-  case Intrinsic::amdgcn_cvt_scalef32_sr_pk8_bf8_bf16:
-  case Intrinsic::amdgcn_cvt_scalef32_sr_pk8_fp4_f32:
-  case Intrinsic::amdgcn_cvt_scalef32_sr_pk8_fp4_f16:
-  case Intrinsic::amdgcn_cvt_scalef32_sr_pk8_fp4_bf16:
-  case Intrinsic::amdgcn_cvt_scalef32_sr_pk16_fp6_f32:
-  case Intrinsic::amdgcn_cvt_scalef32_sr_pk16_bf6_f32:
-  case Intrinsic::amdgcn_cvt_scalef32_sr_pk16_fp6_f16:
-  case Intrinsic::amdgcn_cvt_scalef32_sr_pk16_bf6_f16:
-  case Intrinsic::amdgcn_cvt_scalef32_sr_pk16_fp6_bf16:
-  case Intrinsic::amdgcn_cvt_scalef32_sr_pk16_bf6_bf16:
-  case Intrinsic::amdgcn_cvt_scalef32_sr_pk32_fp6_f32:
-  case Intrinsic::amdgcn_cvt_scalef32_sr_pk32_bf6_f32:
-  case Intrinsic::amdgcn_cvt_scalef32_sr_pk32_fp6_f16:
-  case Intrinsic::amdgcn_cvt_scalef32_sr_pk32_bf6_f16:
-  case Intrinsic::amdgcn_cvt_scalef32_sr_pk32_fp6_bf16:
-  case Intrinsic::amdgcn_cvt_scalef32_sr_pk32_bf6_bf16:
-  case Intrinsic::amdgcn_cvt_scalef32_2xpk16_fp6_f32:
-  case Intrinsic::amdgcn_cvt_scalef32_2xpk16_bf6_f32:
-  case Intrinsic::amdgcn_cvt_scalef32_pk_fp8_f16:
-  case Intrinsic::amdgcn_cvt_scalef32_pk_bf8_f16:
-  case Intrinsic::amdgcn_cvt_scalef32_pk_fp8_bf16:
-  case Intrinsic::amdgcn_cvt_scalef32_pk_bf8_bf16:
-  case Intrinsic::amdgcn_cvt_scalef32_pk_fp4_f16:
-  case Intrinsic::amdgcn_cvt_scalef32_pk_fp4_bf16:
-    return 2;
-  case Intrinsic::amdgcn_cvt_scalef32_pk_fp8_f32:
-  case Intrinsic::amdgcn_cvt_scalef32_pk_bf8_f32:
-  case Intrinsic::amdgcn_cvt_scalef32_pk_fp4_f32:
-  case Intrinsic::amdgcn_cvt_scalef32_sr_pk_fp4_f32:
-  case Intrinsic::amdgcn_cvt_scalef32_sr_pk_fp4_f16:
-  case Intrinsic::amdgcn_cvt_scalef32_sr_pk_fp4_bf16:
-  case Intrinsic::amdgcn_cvt_scalef32_sr_fp8_f32:
-  case Intrinsic::amdgcn_cvt_scalef32_sr_bf8_f32:
-  case Intrinsic::amdgcn_cvt_scalef32_sr_fp8_f16:
-  case Intrinsic::amdgcn_cvt_scalef32_sr_bf8_f16:
-  case Intrinsic::amdgcn_cvt_scalef32_sr_fp8_bf16:
-  case Intrinsic::amdgcn_cvt_scalef32_sr_bf8_bf16:
-    return 3;
-  default:
-    return std::nullopt;
-  }
+  if (const ExponentOnlyScaleIntrinsic *Info =
+          lookupExponentOnlyScaleIntrinsic(IntrID))
+    return Info->ScaleArg;
+  return std::nullopt;
 }
 
 const GcnBufferFormatInfo *getGcnBufferFormatInfo(uint8_t BitsPerComp,
