@@ -1248,9 +1248,6 @@ bool Instruction::isVolatile() const {
 }
 
 bool Instruction::maySynchronize() const {
-  // FIXME: This currently treats atomics with monotonic ordering as
-  // synchronizing. This is unnecessarily conservative and does not match
-  // our LangRef definition of the property.
   switch (getOpcode()) {
   default:
     assert(!isAtomic() && "Unhandled atomic instruction");
@@ -1261,12 +1258,16 @@ bool Instruction::maySynchronize() const {
     return FI->getSyncScopeID() != SyncScope::SingleThread;
   }
   case Instruction::AtomicRMW:
-  case Instruction::AtomicCmpXchg:
-    return true;
+    return isStrongerThanMonotonic(cast<AtomicRMWInst>(this)->getOrdering());
+  case Instruction::AtomicCmpXchg: {
+    auto *ACXI = cast<AtomicCmpXchgInst>(this);
+    return isStrongerThanMonotonic(ACXI->getSuccessOrdering()) ||
+        isStrongerThanMonotonic(ACXI->getFailureOrdering());
+  }
   case Instruction::Store:
-    return isStrongerThanUnordered(cast<StoreInst>(this)->getOrdering());
+    return isStrongerThanMonotonic(cast<StoreInst>(this)->getOrdering());
   case Instruction::Load:
-    return isStrongerThanUnordered(cast<LoadInst>(this)->getOrdering());
+    return isStrongerThanMonotonic(cast<LoadInst>(this)->getOrdering());
   case Instruction::Call:
   case Instruction::Invoke:
   case Instruction::CallBr:
