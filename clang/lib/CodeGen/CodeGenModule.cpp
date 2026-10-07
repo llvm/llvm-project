@@ -95,8 +95,7 @@ static llvm::cl::opt<bool> LimitedCoverage(
     llvm::cl::desc("Emit limited coverage mapping information (experimental)"));
 
 static llvm::cl::opt<bool> EmitModuleLocalHints(
-    "clang-emit-module-local-hints", llvm::cl::Hidden,
-    llvm::cl::init(false),
+    "clang-emit-module-local-hints", llvm::cl::Hidden, llvm::cl::init(false),
     llvm::cl::desc("Mark inline and template functions defined in the main "
                    "source file with \"frontend-hint-likely-module-local\""));
 
