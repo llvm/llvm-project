@@ -123,9 +123,14 @@ private:
   bool checkMovImmInstr(MachineInstr &MI, MachineInstr *&MovMI,
                         MachineInstr *&SubregToRegMI);
 
-  template <typename T>
-  bool foldSharedAddSubConstant(MachineBasicBlock &MBB, unsigned AddOpc,
-                                unsigned SubOpc);
+  struct SharedConstEntry {
+    Register Reg;
+    bool IsNegative;
+  };
+  bool foldSharedAddSubConstant(MachineInstr &MI, unsigned AddOpc,
+                                unsigned SubOpc, bool Is64Bit,
+                                DenseMap<uint64_t, SharedConstEntry> &SameWidth,
+                                DenseMap<uint64_t, SharedConstEntry> &OtherWidth);
 
   template <typename T>
   bool visitADDSUB(unsigned PosOpc, unsigned NegOpc, MachineInstr &MI);
@@ -581,84 +586,111 @@ bool AArch64MIPeepholeOptImpl::checkMovImmInstr(MachineInstr &MI,
   return true;
 }
 
-template <typename T>
-bool AArch64MIPeepholeOptImpl::foldSharedAddSubConstant(MachineBasicBlock &MBB,
-                                                        unsigned AddOpc,
-                                                        unsigned SubOpc) {
-  using SignedT = std::make_signed_t<T>;
+bool AArch64MIPeepholeOptImpl::foldSharedAddSubConstant(
+    MachineInstr &MI, unsigned AddOpc, unsigned SubOpc, bool Is64Bit,
+    DenseMap<uint64_t, SharedConstEntry> &SameWidth,
+    DenseMap<uint64_t, SharedConstEntry> &OtherWidth) {
+  unsigned Opc = MI.getOpcode();
 
-  struct CanonicalConst {
-    Register Reg;
-    bool IsNegative;
-  };
-  DenseMap<T, CanonicalConst> Canonical;
-  bool Changed = false;
-
-  for (MachineInstr &MI : make_early_inc_range(MBB)) {
-    unsigned Opc = MI.getOpcode();
-    if (Opc != AddOpc && Opc != SubOpc)
-      continue;
-
-    Register SrcReg = MI.getOperand(2).getReg();
-    if (!SrcReg.isVirtual())
-      continue;
-    MachineInstr *MovMI = MRI->getUniqueVRegDef(SrcReg);
+  Register SrcReg = MI.getOperand(2).getReg();
+  if (!SrcReg.isVirtual())
+    return false;
+  MachineInstr *MovMI = MRI->getUniqueVRegDef(SrcReg);
+  if (!MovMI)
+    return false;
+  MachineInstr *SubregToRegMI = nullptr;
+  if (MovMI->getOpcode() == TargetOpcode::SUBREG_TO_REG) {
+    SubregToRegMI = MovMI;
+    MovMI = MRI->getUniqueVRegDef(MovMI->getOperand(1).getReg());
     if (!MovMI)
-      continue;
-    MachineInstr *SubregToRegMI = nullptr;
-    if (MovMI->getOpcode() == TargetOpcode::SUBREG_TO_REG) {
-      SubregToRegMI = MovMI;
-      MovMI = MRI->getUniqueVRegDef(MovMI->getOperand(1).getReg());
-      if (!MovMI)
-        continue;
+      return false;
+  }
+  if (MovMI->getOpcode() != AArch64::MOVi32imm &&
+      MovMI->getOpcode() != AArch64::MOVi64imm)
+    return false;
+
+  uint64_t RawImm = static_cast<uint64_t>(MovMI->getOperand(1).getImm());
+  bool IsNegative;
+  uint64_t Magnitude;
+  if (Is64Bit) {
+    int64_t SImm = static_cast<int64_t>(RawImm);
+    IsNegative = SImm < 0;
+    if (IsNegative && static_cast<uint64_t>(-SImm) == RawImm)
+      return false;
+    Magnitude = IsNegative ? static_cast<uint64_t>(-SImm) : RawImm;
+  } else {
+    uint32_t Imm32 = static_cast<uint32_t>(RawImm);
+    int32_t SImm = static_cast<int32_t>(Imm32);
+    IsNegative = SImm < 0;
+    if (IsNegative && static_cast<uint32_t>(-SImm) == Imm32)
+      return false;
+    Magnitude = IsNegative ? static_cast<uint64_t>(static_cast<uint32_t>(-SImm))
+                           : static_cast<uint64_t>(Imm32);
+  }
+  if (Magnitude == 0)
+    return false;
+
+  Register CanonReg;
+  bool CanonIsNegative;
+  bool Found = false;
+
+  auto SameIt = SameWidth.find(Magnitude);
+  if (SameIt != SameWidth.end()) {
+    if (SameIt->second.Reg == SrcReg)
+      return false;
+    CanonReg = SameIt->second.Reg;
+    CanonIsNegative = SameIt->second.IsNegative;
+    Found = true;
+  } else {
+    auto OtherIt = OtherWidth.find(Magnitude);
+    // Widening (32->64) zero-extends via SUBREG_TO_REG, which only
+    // reproduces the correct value when the source is non-negative.
+    // Narrowing (64->32) via EXTRACT_SUBREG just takes the low 32 bits,
+    // which two's-complement guarantees matches regardless of sign, since
+    // Magnitude is already known to fit in 32 bits in that case.
+    bool CanCross = OtherIt != OtherWidth.end() &&
+                    (!Is64Bit || !OtherIt->second.IsNegative);
+    if (CanCross) {
+      MachineBasicBlock *MBB = MI.getParent();
+      DebugLoc DL = MI.getDebugLoc();
+      if (Is64Bit) {
+        Register AdaptedReg = MRI->createVirtualRegister(&AArch64::GPR64RegClass);
+        BuildMI(*MBB, MI, DL, TII->get(TargetOpcode::SUBREG_TO_REG), AdaptedReg)
+            .addReg(OtherIt->second.Reg)
+            .addImm(AArch64::sub_32);
+        CanonReg = AdaptedReg;
+      } else {
+        Register AdaptedReg = MRI->createVirtualRegister(&AArch64::GPR32RegClass);
+        BuildMI(*MBB, MI, DL, TII->get(TargetOpcode::COPY), AdaptedReg)
+            .addReg(OtherIt->second.Reg, RegState::NoFlags, AArch64::sub_32);
+        CanonReg = AdaptedReg;
+      }
+      MRI->clearKillFlags(OtherIt->second.Reg);
+      CanonIsNegative = OtherIt->second.IsNegative;
+      Found = true;
+      SameWidth[Magnitude] = {CanonReg, CanonIsNegative};
     }
-    if (MovMI->getOpcode() != AArch64::MOVi32imm &&
-        MovMI->getOpcode() != AArch64::MOVi64imm)
-      continue;
-
-    MachineLoop *L = MLI->getLoopFor(&MBB);
-    if (L && !L->isLoopInvariant(MI))
-      continue;
-
-    T Imm = static_cast<T>(MovMI->getOperand(1).getImm());
-    if (SubregToRegMI)
-      Imm &= 0xFFFFFFFF;
-    if (Imm == 0)
-      continue;
-
-    SignedT SImm = static_cast<SignedT>(Imm);
-    bool IsNegative = SImm < 0;
-    if (IsNegative && static_cast<T>(-SImm) == Imm)
-      continue;
-    T Key = IsNegative ? static_cast<T>(-SImm) : Imm;
-
-    auto It = Canonical.find(Key);
-    if (It == Canonical.end()) {
-      Canonical[Key] = {SrcReg, IsNegative};
-      continue;
-    }
-
-    CanonicalConst &Canon = It->second;
-    if (Canon.Reg == SrcReg)
-      continue;
-
-    bool EffectIsAdd = (Opc == AddOpc) == !IsNegative;
-    bool NewIsAdd = EffectIsAdd == !Canon.IsNegative;
-    unsigned NewOpc = NewIsAdd ? AddOpc : SubOpc;
-
-    MI.getOperand(2).setReg(Canon.Reg);
-    MI.getOperand(2).setIsKill(false);
-    MI.setDesc(TII->get(NewOpc));
-
-    if (MRI->use_nodbg_empty(SrcReg)) {
-      if (SubregToRegMI)
-        SubregToRegMI->eraseFromParent();
-      MovMI->eraseFromParent();
-    }
-    Changed = true;
   }
 
-  return Changed;
+  if (!Found) {
+    SameWidth[Magnitude] = {SrcReg, IsNegative};
+    return false;
+  }
+
+  bool EffectIsAdd = (Opc == AddOpc) == !IsNegative;
+  bool NewIsAdd = EffectIsAdd == !CanonIsNegative;
+  unsigned NewOpc = NewIsAdd ? AddOpc : SubOpc;
+
+  MI.getOperand(2).setReg(CanonReg);
+  MI.setDesc(TII->get(NewOpc));
+  MRI->clearKillFlags(CanonReg);
+
+  if (MRI->use_nodbg_empty(SrcReg)) {
+    if (SubregToRegMI)
+      SubregToRegMI->eraseFromParent();
+    MovMI->eraseFromParent();
+  }
+  return true;
 }
 
 template <typename T>
@@ -1053,10 +1085,7 @@ bool AArch64MIPeepholeOptImpl::run(MachineFunction &MF) {
   bool Changed = false;
 
   for (MachineBasicBlock &MBB : MF) {
-    Changed |= foldSharedAddSubConstant<uint32_t>(MBB, AArch64::ADDWrr,
-                                                  AArch64::SUBWrr);
-    Changed |= foldSharedAddSubConstant<uint64_t>(MBB, AArch64::ADDXrr,
-                                                  AArch64::SUBXrr);
+    DenseMap<uint64_t, SharedConstEntry> SharedConsts32, SharedConsts64;
 
     for (MachineInstr &MI : make_early_inc_range(MBB)) {
       switch (MI.getOpcode()) {
@@ -1101,16 +1130,28 @@ bool AArch64MIPeepholeOptImpl::run(MachineFunction &MF) {
         Changed |= visitORR(MI);
         break;
       case AArch64::ADDWrr:
-        Changed |= visitADDSUB<uint32_t>(AArch64::ADDWri, AArch64::SUBWri, MI);
+        Changed |= foldSharedAddSubConstant(MI, AArch64::ADDWrr,
+                                            AArch64::SUBWrr, false,
+                                            SharedConsts32, SharedConsts64) ||
+                  visitADDSUB<uint32_t>(AArch64::ADDWri, AArch64::SUBWri, MI);
         break;
       case AArch64::SUBWrr:
-        Changed |= visitADDSUB<uint32_t>(AArch64::SUBWri, AArch64::ADDWri, MI);
+        Changed |= foldSharedAddSubConstant(MI, AArch64::ADDWrr,
+                                            AArch64::SUBWrr, false,
+                                            SharedConsts32, SharedConsts64) ||
+                  visitADDSUB<uint32_t>(AArch64::SUBWri, AArch64::ADDWri, MI);
         break;
       case AArch64::ADDXrr:
-        Changed |= visitADDSUB<uint64_t>(AArch64::ADDXri, AArch64::SUBXri, MI);
+        Changed |= foldSharedAddSubConstant(MI, AArch64::ADDXrr,
+                                            AArch64::SUBXrr, true,
+                                            SharedConsts64, SharedConsts32) ||
+                  visitADDSUB<uint64_t>(AArch64::ADDXri, AArch64::SUBXri, MI);
         break;
       case AArch64::SUBXrr:
-        Changed |= visitADDSUB<uint64_t>(AArch64::SUBXri, AArch64::ADDXri, MI);
+        Changed |= foldSharedAddSubConstant(MI, AArch64::ADDXrr,
+                                            AArch64::SUBXrr, true,
+                                            SharedConsts64, SharedConsts32) ||
+                  visitADDSUB<uint64_t>(AArch64::SUBXri, AArch64::ADDXri, MI);
         break;
       case AArch64::ADDSWrr:
         Changed |=
