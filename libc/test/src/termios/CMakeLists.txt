@@ -33,6 +33,7 @@ add_libc_test(
   DEPENDS
     libc.hdr.fcntl_macros
     libc.hdr.types.struct_winsize
+    libc.src.__support.CPP.scope
     libc.src.errno.errno
     libc.src.fcntl.open
     libc.src.termios.tcgetwinsize

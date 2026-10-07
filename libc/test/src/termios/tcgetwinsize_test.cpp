@@ -13,6 +13,7 @@
 
 #include "hdr/fcntl_macros.h"
 #include "hdr/types/struct_winsize.h"
+#include "src/__support/CPP/scope.h"
 #include "src/__support/libc_errno.h"
 #include "src/fcntl/open.h"
 #include "src/termios/tcgetwinsize.h"
@@ -33,33 +34,58 @@ TEST_F(LlvmLibcTcGetWinSizeTest, InvalidFileDescriptor) {
 TEST_F(LlvmLibcTcGetWinSizeTest, NonTerminalFileDescriptor) {
   int pipefd[2];
   ASSERT_THAT(LIBC_NAMESPACE::pipe(pipefd), Succeeds(0));
+  LIBC_NAMESPACE::cpp::scope_exit close_pipe([&] {
+    ASSERT_THAT(LIBC_NAMESPACE::close(pipefd[0]), Succeeds(0));
+    ASSERT_THAT(LIBC_NAMESPACE::close(pipefd[1]), Succeeds(0));
+  });
 
   struct winsize ws;
   ASSERT_THAT(LIBC_NAMESPACE::tcgetwinsize(pipefd[0], &ws), Fails(ENOTTY));
   ASSERT_THAT(LIBC_NAMESPACE::tcgetwinsize(pipefd[1], &ws), Fails(ENOTTY));
-
-  ASSERT_THAT(LIBC_NAMESPACE::close(pipefd[0]), Succeeds(0));
-  ASSERT_THAT(LIBC_NAMESPACE::close(pipefd[1]), Succeeds(0));
 }
 
 TEST_F(LlvmLibcTcGetWinSizeTest, TerminalSmokeTest) {
-  int fd = LIBC_NAMESPACE::open("/dev/tty", O_RDONLY);
+  // Use a pseudo-terminal master rather than /dev/tty so tests do not depend
+  // on an interactive terminal.
+  int fd = LIBC_NAMESPACE::open("/dev/ptmx", O_RDWR);
   if (fd < 0) {
-    // When /dev/tty is not available, gracefully skip the test.
+    // When /dev/ptmx is not available, gracefully skip the test.
     libc_errno = 0;
     return;
   }
   ASSERT_ERRNO_SUCCESS();
+  LIBC_NAMESPACE::cpp::scope_exit close_fd(
+      [&] { ASSERT_THAT(LIBC_NAMESPACE::close(fd), Succeeds(0)); });
 
   constexpr unsigned short SENTINEL_VAL = 0xFFFF;
   struct winsize ws = {SENTINEL_VAL, SENTINEL_VAL, SENTINEL_VAL, SENTINEL_VAL};
   int ret = LIBC_NAMESPACE::tcgetwinsize(fd, &ws);
-  if (ret < 0) {
+  if (ret < 0)
     ASSERT_ERRNO_EQ(ENOTTY);
-  } else {
+  else {
     ASSERT_ERRNO_SUCCESS();
     EXPECT_NE(ws.ws_row, SENTINEL_VAL);
     EXPECT_NE(ws.ws_col, SENTINEL_VAL);
   }
-  ASSERT_THAT(LIBC_NAMESPACE::close(fd), Succeeds(0));
+}
+
+TEST_F(LlvmLibcTcGetWinSizeTest, NullPointer) {
+  int fd = LIBC_NAMESPACE::open("/dev/ptmx", O_RDWR);
+  if (fd < 0) {
+    // When /dev/ptmx is not available, gracefully skip the test.
+    libc_errno = 0;
+    return;
+  }
+  ASSERT_ERRNO_SUCCESS();
+  LIBC_NAMESPACE::cpp::scope_exit close_fd(
+      [&] { ASSERT_THAT(LIBC_NAMESPACE::close(fd), Succeeds(0)); });
+
+  struct winsize ws;
+  int ret = LIBC_NAMESPACE::tcgetwinsize(fd, &ws);
+  if (ret < 0) {
+    ASSERT_ERRNO_EQ(ENOTTY);
+    return;
+  }
+
+  ASSERT_THAT(LIBC_NAMESPACE::tcgetwinsize(fd, nullptr), Fails(EFAULT));
 }

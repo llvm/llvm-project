@@ -170,10 +170,10 @@ add_entrypoint_object(
   HDRS
     ../tcgetwinsize.h
   DEPENDS
+    libc.hdr.sys_ioctl_macros
     libc.hdr.types.struct_winsize
     libc.src.__support.OSUtil.linux.syscall_wrappers.ioctl
     libc.src.errno.errno
     libc.src.__support.macros.config
-    libc.src.__support.macros.null_check
 )
 
