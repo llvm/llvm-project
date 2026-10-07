@@ -3534,12 +3534,14 @@ Instruction *InstCombinerImpl::visitCallInst(CallInst &CI) {
       Value *Select = nullptr;
       if (match(SelectRHS, m_ZeroInt())) {
         NewLdexp = Builder.CreateLdexp(Src, SelectLHS, II);
-        Select =
-            Builder.CreateSelect(SelectCond, NewLdexp, Src, "", SelectInst);
+        Select = Builder.CreateSelect(
+            SelectCond, NewLdexp, Src, "",
+            ProfcheckDisableMetadataFixes ? nullptr : SelectInst);
       } else if (match(SelectLHS, m_ZeroInt())) {
         NewLdexp = Builder.CreateLdexp(Src, SelectRHS, II);
-        Select =
-            Builder.CreateSelect(SelectCond, Src, NewLdexp, "", SelectInst);
+        Select = Builder.CreateSelect(
+            SelectCond, Src, NewLdexp, "",
+            ProfcheckDisableMetadataFixes ? nullptr : SelectInst);
       }
 
       if (NewLdexp) {
