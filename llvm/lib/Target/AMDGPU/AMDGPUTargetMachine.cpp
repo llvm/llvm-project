@@ -1333,6 +1333,14 @@ static OOBFlagValue getOOBFlagValue(const Module &M, StringRef FlagName) {
   return static_cast<OOBFlagValue>(Flag->getZExtValue());
 }
 
+/// Returns the LDS size limit in bytes encoded by the "amdgpu.lds.size.limit"
+/// module flag. An absent flag means no limit (0).
+static unsigned getLDSSizeLimit(const Module &M) {
+  const auto *Flag = mdconst::dyn_extract_or_null<ConstantInt>(
+      M.getModuleFlag("amdgpu.lds.size.limit"));
+  return Flag ? Flag->getZExtValue() : 0;
+}
+
 /// Returns the xnack/sramecc setting encoded by a module flag.
 /// Module flag values: 0 = disabled, 1 = enabled.
 /// An absent flag defaults to Any.
@@ -1368,6 +1376,7 @@ GCNTargetMachine::getSubtargetImpl(const Function &F) const {
   TargetIDSetting Xnack = getTargetIDSettingFromModuleFlag(M, "amdgpu.xnack");
   TargetIDSetting SramEcc =
       getTargetIDSettingFromModuleFlag(M, "amdgpu.sramecc");
+  unsigned LDSSizeLimit = getLDSSizeLimit(M);
 
   SmallString<128> SubtargetKey(GPU);
   SubtargetKey.append(FS);
@@ -1383,6 +1392,8 @@ GCNTargetMachine::getSubtargetImpl(const Function &F) const {
     SubtargetKey.append(",sramecc=");
     SubtargetKey.push_back(Xnack == TargetIDSetting::On ? '1' : '0');
   }
+  if (LDSSizeLimit)
+    (",lds-size-limit=" + Twine(LDSSizeLimit)).toVector(SubtargetKey);
 
   auto &I = SubtargetMap[SubtargetKey];
   if (!I) {
@@ -1406,7 +1417,8 @@ GCNTargetMachine::getSubtargetImpl(const Function &F) const {
     }
 
     I = std::make_unique<GCNSubtarget>(TargetTriple, GPU, FS, *this, BufRelaxed,
-                                       TBufRelaxed, Xnack, SramEcc);
+                                       TBufRelaxed, Xnack, SramEcc,
+                                       LDSSizeLimit);
   }
 
   I->setScalarizeGlobalBehavior(ScalarizeGlobal);

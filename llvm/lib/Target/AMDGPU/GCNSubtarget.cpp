@@ -181,10 +181,10 @@ GCNSubtarget &GCNSubtarget::initializeSubtargetDependencies(const Triple &TT,
   if (FlatOffsetBitWidth == 0)
     FlatOffsetBitWidth = 13;
 
-  LocalMemorySize =
-      AMDGPU::getLocalMemorySize(getTargetID().getGPUKind(), isFullSIMDMode());
+  LocalMemorySize = AMDGPU::getLocalMemorySize(getTargetID().getGPUKind(),
+                                               isFullSIMDMode(), LDSSizeLimit);
   AddressableLocalMemorySize = AMDGPU::getAddressableLocalMemorySize(
-      getTargetID().getGPUKind(), isFullSIMDMode());
+      getTargetID().getGPUKind(), isFullSIMDMode(), LDSSizeLimit);
   // LDS allocation granularity is in bytes.
   LDSAllocationGranularity =
       AMDGPU::getLDSAllocGranule(getTargetID().getGPUKind());
@@ -219,7 +219,8 @@ GCNSubtarget::GCNSubtarget(const Triple &TT, StringRef GPU, StringRef FS,
                            const GCNTargetMachine &TM, bool BufferOOBRelaxed,
                            bool TBufferOOBRelaxed,
                            AMDGPU::TargetIDSetting XnackSetting,
-                           AMDGPU::TargetIDSetting SramEccSetting)
+                           AMDGPU::TargetIDSetting SramEccSetting,
+                           unsigned LDSSizeLimit)
     : // clang-format off
     AMDGPUGenSubtargetInfo(TT, GPU, /*TuneCPU*/ GPU, FS),
     AMDGPUSubtarget(TT),
@@ -227,6 +228,7 @@ GCNSubtarget::GCNSubtarget(const Triple &TT, StringRef GPU, StringRef FS,
     InstrItins(getInstrItineraryForCPU(GPU)),
     BufferOOBRelaxed(BufferOOBRelaxed),
     TBufferOOBRelaxed(TBufferOOBRelaxed),
+    LDSSizeLimit(LDSSizeLimit),
     InstrInfo(initializeSubtargetDependencies(TT, GPU, FS)),
     TLInfo(TM, *this),
     // Frame index expansion sometimes assumes the low bit of SP is 0
