@@ -29,6 +29,214 @@ define i8 @orcond(i1 %inner.cond, i1 %alt.cond, i8 %inner.sel.trueval, i8 %inner
   ret i8 %outer.sel
 }
 
+; Correlated poison-blocking logical conditions
+
+define i8 @correlated_poison_blocking_conditions(i1 %a, i1 %b, i8 %t, i8 %f, i8 %x) {
+; CHECK-LABEL: @correlated_poison_blocking_conditions(
+; CHECK-NEXT:    [[MUX:%.*]] = select i1 [[B:%.*]], i8 [[T:%.*]], i8 [[X:%.*]]
+; CHECK-NEXT:    [[RET:%.*]] = select i1 [[A:%.*]], i8 [[MUX]], i8 [[F:%.*]]
+; CHECK-NEXT:    ret i8 [[RET]]
+;
+  %and = select i1 %a, i1 %b, i1 false
+  %not.a = xor i1 %a, true
+  %guard = select i1 %not.a, i1 true, i1 %b
+  %mux = select i1 %and, i8 %t, i8 %f
+  %ret = select i1 %guard, i8 %mux, i8 %x
+  ret i8 %ret
+}
+
+; Verify that foldSelectOfBools canonicalizes the guard before this fold.
+
+define i8 @correlated_poison_blocking_conditions_noncanonical_guard(i1 %a, i1 %b, i8 %t, i8 %f, i8 %x) {
+; CHECK-LABEL: @correlated_poison_blocking_conditions_noncanonical_guard(
+; CHECK-NEXT:    [[MUX:%.*]] = select i1 [[B:%.*]], i8 [[T:%.*]], i8 [[X:%.*]]
+; CHECK-NEXT:    [[RET:%.*]] = select i1 [[A:%.*]], i8 [[MUX]], i8 [[F:%.*]]
+; CHECK-NEXT:    ret i8 [[RET]]
+;
+  %and = select i1 %a, i1 %b, i1 false
+  %guard = select i1 %a, i1 %b, i1 true
+  %mux = select i1 %and, i8 %t, i8 %f
+  %ret = select i1 %guard, i8 %mux, i8 %x
+  ret i8 %ret
+}
+
+define <2 x i8> @correlated_poison_blocking_conditions_vec(<2 x i1> %a, <2 x i1> %b, <2 x i8> %t, <2 x i8> %f, <2 x i8> %x) {
+; CHECK-LABEL: @correlated_poison_blocking_conditions_vec(
+; CHECK-NEXT:    [[MUX:%.*]] = select <2 x i1> [[B:%.*]], <2 x i8> [[T:%.*]], <2 x i8> [[X:%.*]]
+; CHECK-NEXT:    [[RET:%.*]] = select <2 x i1> [[A:%.*]], <2 x i8> [[MUX]], <2 x i8> [[F:%.*]]
+; CHECK-NEXT:    ret <2 x i8> [[RET]]
+;
+  %and = select <2 x i1> %a, <2 x i1> %b, <2 x i1> zeroinitializer
+  %not.a = xor <2 x i1> %a, <i1 true, i1 true>
+  %guard = select <2 x i1> %not.a, <2 x i1> <i1 true, i1 true>, <2 x i1> %b
+  %mux = select <2 x i1> %and, <2 x i8> %t, <2 x i8> %f
+  %ret = select <2 x i1> %guard, <2 x i8> %mux, <2 x i8> %x
+  ret <2 x i8> %ret
+}
+
+; The existing profitability rule permits reassociation when the guard is
+; one-use, even if the inner mux has another use.
+
+define i8 @correlated_poison_blocking_conditions_mux_multiuse(i1 %a, i1 %b, i8 %t, i8 %f, i8 %x) {
+; CHECK-LABEL: @correlated_poison_blocking_conditions_mux_multiuse(
+; CHECK-NEXT:    [[AND:%.*]] = select i1 [[A:%.*]], i1 [[B:%.*]], i1 false
+; CHECK-NEXT:    [[OLD_MUX:%.*]] = select i1 [[AND]], i8 [[T:%.*]], i8 [[F:%.*]]
+; CHECK-NEXT:    call void @use.i8(i8 [[OLD_MUX]])
+; CHECK-NEXT:    [[MUX:%.*]] = select i1 [[B]], i8 [[T]], i8 [[X:%.*]]
+; CHECK-NEXT:    [[RET:%.*]] = select i1 [[A]], i8 [[MUX]], i8 [[F]]
+; CHECK-NEXT:    ret i8 [[RET]]
+;
+  %and = select i1 %a, i1 %b, i1 false
+  %not.a = xor i1 %a, true
+  %guard = select i1 %not.a, i1 true, i1 %b
+  %mux = select i1 %and, i8 %t, i8 %f
+  call void @use.i8(i8 %mux)
+  %ret = select i1 %guard, i8 %mux, i8 %x
+  ret i8 %ret
+}
+
+; Do not increase instruction count when neither the guard nor the mux is
+; one-use.
+
+define i8 @correlated_poison_blocking_conditions_both_multiuse(i1 %a, i1 %b, i8 %t, i8 %f, i8 %x) {
+; CHECK-LABEL: @correlated_poison_blocking_conditions_both_multiuse(
+; CHECK-NEXT:    [[AND:%.*]] = select i1 [[A:%.*]], i1 [[B:%.*]], i1 false
+; CHECK-NEXT:    [[NOT_A:%.*]] = xor i1 [[A]], true
+; CHECK-NEXT:    [[GUARD:%.*]] = select i1 [[NOT_A]], i1 true, i1 [[B]]
+; CHECK-NEXT:    call void @use.i1(i1 [[GUARD]])
+; CHECK-NEXT:    [[MUX:%.*]] = select i1 [[AND]], i8 [[T:%.*]], i8 [[F:%.*]]
+; CHECK-NEXT:    call void @use.i8(i8 [[MUX]])
+; CHECK-NEXT:    [[RET:%.*]] = select i1 [[GUARD]], i8 [[MUX]], i8 [[X:%.*]]
+; CHECK-NEXT:    ret i8 [[RET]]
+;
+  %and = select i1 %a, i1 %b, i1 false
+  %not.a = xor i1 %a, true
+  %guard = select i1 %not.a, i1 true, i1 %b
+  call void @use.i1(i1 %guard)
+  %mux = select i1 %and, i8 %t, i8 %f
+  call void @use.i8(i8 %mux)
+  %ret = select i1 %guard, i8 %mux, i8 %x
+  ret i8 %ret
+}
+
+; Bitwise or is not handled yet. It may also be valid, but it has not been
+; verified.
+
+define i8 @correlated_conditions_bitwise_or(i1 %a, i8 %b8, i8 %t, i8 %f, i8 %x) {
+; CHECK-LABEL: @correlated_conditions_bitwise_or(
+; CHECK-NEXT:    [[B:%.*]] = trunc i8 [[B8:%.*]] to i1
+; CHECK-NEXT:    [[AND:%.*]] = select i1 [[A:%.*]], i1 [[B]], i1 false
+; CHECK-NEXT:    [[NOT_A:%.*]] = xor i1 [[A]], true
+; CHECK-NEXT:    [[GUARD:%.*]] = or i1 [[NOT_A]], [[B]]
+; CHECK-NEXT:    [[MUX:%.*]] = select i1 [[AND]], i8 [[T:%.*]], i8 [[F:%.*]]
+; CHECK-NEXT:    [[RET:%.*]] = select i1 [[GUARD]], i8 [[MUX]], i8 [[X:%.*]]
+; CHECK-NEXT:    ret i8 [[RET]]
+;
+  %b = trunc i8 %b8 to i1
+  %and = select i1 %a, i1 %b, i1 false
+  %not.a = xor i1 %a, true
+  %guard = or i1 %not.a, %b
+  %mux = select i1 %and, i8 %t, i8 %f
+  %ret = select i1 %guard, i8 %mux, i8 %x
+  ret i8 %ret
+}
+
+; Bitwise and is not handled yet. It may also be valid, but it has not been
+; verified.
+
+define i8 @correlated_conditions_bitwise_and(i1 %a, i8 %b8, i8 %t, i8 %f, i8 %x) {
+; CHECK-LABEL: @correlated_conditions_bitwise_and(
+; CHECK-NEXT:    [[B:%.*]] = trunc i8 [[B8:%.*]] to i1
+; CHECK-NEXT:    [[AND:%.*]] = and i1 [[A:%.*]], [[B]]
+; CHECK-NEXT:    [[NOT_A:%.*]] = xor i1 [[A]], true
+; CHECK-NEXT:    [[GUARD:%.*]] = select i1 [[NOT_A]], i1 true, i1 [[B]]
+; CHECK-NEXT:    [[MUX:%.*]] = select i1 [[AND]], i8 [[T:%.*]], i8 [[F:%.*]]
+; CHECK-NEXT:    [[RET:%.*]] = select i1 [[GUARD]], i8 [[MUX]], i8 [[X:%.*]]
+; CHECK-NEXT:    ret i8 [[RET]]
+;
+  %b = trunc i8 %b8 to i1
+  %and = and i1 %a, %b
+  %not.a = xor i1 %a, true
+  %guard = select i1 %not.a, i1 true, i1 %b
+  %mux = select i1 %and, i8 %t, i8 %f
+  %ret = select i1 %guard, i8 %mux, i8 %x
+  ret i8 %ret
+}
+
+; Commuted AND operands are not handled yet. They may also be valid, but this
+; has not been verified.
+
+define i8 @correlated_conditions_swapped_and(i1 %a, i1 %b, i8 %t, i8 %f, i8 %x) {
+; CHECK-LABEL: @correlated_conditions_swapped_and(
+; CHECK-NEXT:    [[AND:%.*]] = select i1 [[B:%.*]], i1 [[A:%.*]], i1 false
+; CHECK-NEXT:    [[NOT_A:%.*]] = xor i1 [[A]], true
+; CHECK-NEXT:    [[GUARD:%.*]] = select i1 [[NOT_A]], i1 true, i1 [[B]]
+; CHECK-NEXT:    [[MUX:%.*]] = select i1 [[AND]], i8 [[T:%.*]], i8 [[F:%.*]]
+; CHECK-NEXT:    [[RET:%.*]] = select i1 [[GUARD]], i8 [[MUX]], i8 [[X:%.*]]
+; CHECK-NEXT:    ret i8 [[RET]]
+;
+  %and = select i1 %b, i1 %a, i1 false
+  %not.a = xor i1 %a, true
+  %guard = select i1 %not.a, i1 true, i1 %b
+  %mux = select i1 %and, i8 %t, i8 %f
+  %ret = select i1 %guard, i8 %mux, i8 %x
+  ret i8 %ret
+}
+
+; Commuted OR operands are not handled yet. They may also be valid, but this
+; has not been verified.
+
+define i8 @correlated_conditions_swapped_or(i1 %a, i1 %b, i8 %t, i8 %f, i8 %x) {
+; CHECK-LABEL: @correlated_conditions_swapped_or(
+; CHECK-NEXT:    [[AND:%.*]] = select i1 [[A:%.*]], i1 [[B:%.*]], i1 false
+; CHECK-NEXT:    [[NOT_A:%.*]] = xor i1 [[A]], true
+; CHECK-NEXT:    [[GUARD:%.*]] = select i1 [[B]], i1 true, i1 [[NOT_A]]
+; CHECK-NEXT:    [[MUX:%.*]] = select i1 [[AND]], i8 [[T:%.*]], i8 [[F:%.*]]
+; CHECK-NEXT:    [[RET:%.*]] = select i1 [[GUARD]], i8 [[MUX]], i8 [[X:%.*]]
+; CHECK-NEXT:    ret i8 [[RET]]
+;
+  %and = select i1 %a, i1 %b, i1 false
+  %not.a = xor i1 %a, true
+  %guard = select i1 %b, i1 true, i1 %not.a
+  %mux = select i1 %and, i8 %t, i8 %f
+  %ret = select i1 %guard, i8 %mux, i8 %x
+  ret i8 %ret
+}
+
+; A 'not' with a poison lane is not handled yet (m_NotForbidPoison). It may
+; also be valid, but it has not been verified.
+
+define <2 x i8> @correlated_conditions_poison_in_not(<2 x i1> %a, <2 x i1> %b, <2 x i8> %t, <2 x i8> %f, <2 x i8> %x) {
+; CHECK-LABEL: @correlated_conditions_poison_in_not(
+; CHECK-NEXT:    [[AND:%.*]] = select <2 x i1> [[A:%.*]], <2 x i1> [[B:%.*]], <2 x i1> zeroinitializer
+; CHECK-NEXT:    [[NOT_A:%.*]] = xor <2 x i1> [[A]], <i1 true, i1 poison>
+; CHECK-NEXT:    [[GUARD:%.*]] = select <2 x i1> [[NOT_A]], <2 x i1> splat (i1 true), <2 x i1> [[B]]
+; CHECK-NEXT:    [[MUX:%.*]] = select <2 x i1> [[AND]], <2 x i8> [[T:%.*]], <2 x i8> [[F:%.*]]
+; CHECK-NEXT:    [[RET:%.*]] = select <2 x i1> [[GUARD]], <2 x i8> [[MUX]], <2 x i8> [[X:%.*]]
+; CHECK-NEXT:    ret <2 x i8> [[RET]]
+;
+  %and = select <2 x i1> %a, <2 x i1> %b, <2 x i1> zeroinitializer
+  %not.a = xor <2 x i1> %a, <i1 true, i1 poison>
+  %guard = select <2 x i1> %not.a, <2 x i1> <i1 true, i1 true>, <2 x i1> %b
+  %mux = select <2 x i1> %and, <2 x i8> %t, <2 x i8> %f
+  %ret = select <2 x i1> %guard, <2 x i8> %mux, <2 x i8> %x
+  ret <2 x i8> %ret
+}
+
+define float @correlated_poison_blocking_conditions_fmf(i1 %a, i1 %b, float %t, float %f, float %x) {
+; CHECK-LABEL: @correlated_poison_blocking_conditions_fmf(
+; CHECK-NEXT:    [[MUX:%.*]] = select i1 [[B:%.*]], float [[T:%.*]], float [[X:%.*]]
+; CHECK-NEXT:    [[RET:%.*]] = select nnan i1 [[A:%.*]], float [[MUX]], float [[F:%.*]]
+; CHECK-NEXT:    ret float [[RET]]
+;
+  %and = select i1 %a, i1 %b, i1 false
+  %not.a = xor i1 %a, true
+  %guard = select i1 %not.a, i1 true, i1 %b
+  %mux = select ninf i1 %and, float %t, float %f
+  %ret = select nnan i1 %guard, float %mux, float %x
+  ret float %ret
+}
+
 ; Extra use tests (basic test, no inversions)
 
 define i8 @andcond.extrause0(i1 %inner.cond, i1 %alt.cond, i8 %inner.sel.trueval, i8 %inner.sel.falseval, i8 %outer.sel.trueval) {
