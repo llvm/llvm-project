@@ -304,8 +304,12 @@ static bool IsPlainScalar(const Symbol &symbol) {
       !ultimate.owner().IsDerivedType() && !IsAllocatableOrPointer(ultimate);
 }
 
+// [[maybe_unused]] works around a -Wunused-template false positive: this
+// overload is only reached through the if-constexpr-dispatched recursion in
+// ActionStmtChecker::WhyNotOk, a pattern Clang's use-tracking misses (see
+// llvm/llvm-project#218429). Remove once that is fixed upstream.
 template <typename A>
-static MaybeMsg CheckUnwrappedExpr(
+[[maybe_unused]] static MaybeMsg CheckUnwrappedExpr(
     SemanticsContext &context, const A &x, bool allowHostCallees = false) {
   if (const auto *expr{parser::Unwrap<parser::Expr>(x)}) {
     return DeviceExprChecker{context, allowHostCallees}(expr->typedExpr);
@@ -941,6 +945,21 @@ void CUDAChecker::Enter(const parser::AssignmentStmt &x) {
   if (nbLhs == 0 && nbRhs - nbRhsManaged > 1) {
     context_.Say(lhsLoc,
         "More than one reference to a CUDA object on the right hand side of the assignment"_err_en_US);
+  }
+
+  // An implicit data transfer copies the whole device object to the host, and
+  // the size of an assumed-size array is unknown.
+  if (evaluate::IsCUDADataTransfer(assign->lhs, assign->rhs) &&
+      evaluate::HasCUDAImplicitTransfer(assign->rhs)) {
+    for (const Symbol &sym : evaluate::CollectCudaSymbols(assign->rhs)) {
+      if (evaluate::IsCUDADeviceSymbol(sym) &&
+          IsAssumedSizeArray(sym.GetUltimate())) {
+        context_.Say(lhsLoc,
+            "Implicit data transfer of assumed-size device array '%s' is not supported"_err_en_US,
+            sym.name());
+        break;
+      }
+    }
   }
 
   if (evaluate::HasCUDADeviceAttrs(assign->lhs) &&

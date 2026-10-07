@@ -21,6 +21,11 @@
 #include <future>
 #include <thread>
 
+#ifdef _WIN32
+#include <fcntl.h>
+#include <io.h>
+#endif
+
 using namespace lldb_private;
 
 namespace {
@@ -147,6 +152,44 @@ TEST_F(MainLoopTest, MultipleReadsPipeObject) {
   ASSERT_TRUE(loop.Run().Success());
   ASSERT_EQ(5u, callback_count);
   async_writer.wait();
+}
+#endif
+
+// Registers read_fd, optionally lets the loop poll it once, and drops the
+// handle while the write end of the pipe is still open.
+static void UnregisterWithOpenWriter(int read_fd, bool poll) {
+  MainLoop loop;
+  Status error;
+  auto handle = loop.RegisterReadObject(
+      std::make_shared<NativeFile>(read_fd, File::eOpenOptionReadOnly, false),
+      [](MainLoopBase &) {}, error);
+  ASSERT_THAT_ERROR(error.ToError(), llvm::Succeeded());
+  if (poll) {
+    loop.AddPendingCallback(
+        [](MainLoopBase &loop) { loop.RequestTermination(); });
+    ASSERT_THAT_ERROR(loop.Run().ToError(), llvm::Succeeded());
+  }
+}
+
+TEST_F(MainLoopTest, UnregisterPipeWithOpenWriter) {
+  for (int i = 0; i < 100; ++i) {
+    Pipe pipe;
+    ASSERT_THAT_ERROR(pipe.CreateNew().ToError(), llvm::Succeeded());
+    ASSERT_NO_FATAL_FAILURE(
+        UnregisterWithOpenWriter(pipe.GetReadFileDescriptor(), i % 2));
+  }
+}
+
+#ifdef _WIN32
+// The CRT's pipes, unlike lldb's, are not opened for overlapped I/O.
+TEST_F(MainLoopTest, UnregisterSynchronousPipeWithOpenWriter) {
+  for (int i = 0; i < 100; ++i) {
+    int fds[2];
+    ASSERT_EQ(_pipe(fds, 4096, _O_BINARY), 0);
+    ASSERT_NO_FATAL_FAILURE(UnregisterWithOpenWriter(fds[0], i % 2));
+    _close(fds[0]);
+    _close(fds[1]);
+  }
 }
 #endif
 

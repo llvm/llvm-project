@@ -424,7 +424,24 @@ class SourceRange(Structure):
         return "<SourceRange start %r, end %r>" % (self.start, self.end)
 
 
-class Diagnostic:
+class OpaqueClangObject:
+    """
+    A helper for Python objects that mirror opaque types of the C API.
+    It stores an opaque pointer returned by the C API, and implements a
+    `from_param` method, allowing Python objects to be implicitly converted
+    to the stored opaque pointer when it is passed as an argument to the
+    C API.
+    """
+
+    def __init__(self, obj):
+        assert isinstance(obj, c_object_p) and obj
+        self.obj = self._as_parameter_ = obj
+
+    def from_param(self):
+        return self._as_parameter_
+
+
+class Diagnostic(OpaqueClangObject):
     """
     A Diagnostic is a single instance of a Clang diagnostic. It includes the
     diagnostic severity, the message, the location the diagnostic occurred, as
@@ -444,9 +461,6 @@ class Diagnostic:
     DisplayCategoryId = 0x10
     DisplayCategoryName = 0x20
     _FormatOptionsMask = 0x3F
-
-    def __init__(self, ptr):
-        self.ptr = ptr
 
     def __del__(self):
         conf.lib.clang_disposeDiagnostic(self)
@@ -559,9 +573,6 @@ class Diagnostic:
 
     def __str__(self):
         return self.format()
-
-    def from_param(self):
-        return self.ptr
 
 
 class FixIt:
@@ -3050,26 +3061,7 @@ class Type(Structure):
         return not self.__eq__(other)
 
 
-## CIndex Objects ##
-
-# CIndex objects (derived from ClangObject) are essentially lightweight
-# wrappers attached to some underlying object, which is exposed via CIndex as
-# a void*.
-
-
-class ClangObject:
-    """
-    A helper for Clang objects. This class helps act as an intermediary for
-    the ctypes library and the Clang CIndex library.
-    """
-
-    def __init__(self, obj):
-        assert isinstance(obj, c_object_p) and obj
-        self.obj = self._as_parameter_ = obj
-
-    def from_param(self):
-        return self._as_parameter_
-
+## Opaque Clang Objects ##
 
 ### Completion Chunk Kinds ###
 class CompletionChunkKind(BaseEnumeration):
@@ -3184,7 +3176,7 @@ class CompletionChunk:
         return CompletionString(res)
 
 
-class CompletionString(ClangObject):
+class CompletionString(OpaqueClangObject):
     def __len__(self) -> int:
         return self.num_chunks
 
@@ -3257,7 +3249,7 @@ class CCRStructure(Structure):
         return self.results[key]
 
 
-class CodeCompletionResults(ClangObject):
+class CodeCompletionResults(OpaqueClangObject):
     def __init__(self, ptr: _Pointer[CCRStructure]):
         assert isinstance(ptr, POINTER(CCRStructure)) and ptr
         self.ptr = self._as_parameter_ = ptr
@@ -3305,7 +3297,7 @@ class CodeCompletionResults(ClangObject):
         return DiagnosticsItr(self)
 
 
-class Index(ClangObject):
+class Index(OpaqueClangObject):
     """
     The Index type provides the primary interface to the Clang CIndex library,
     primarily by providing an interface for reading and parsing translation
@@ -3344,7 +3336,7 @@ class Index(ClangObject):
         return TranslationUnit.from_source(path, args, unsaved_files, options, self)
 
 
-class TranslationUnit(ClangObject):
+class TranslationUnit(OpaqueClangObject):
     """Represents a source code translation unit.
 
     This is one of the main types in the API. Any time you wish to interact
@@ -3512,7 +3504,7 @@ class TranslationUnit(ClangObject):
         """
         assert isinstance(index, Index)
         self.index = index
-        ClangObject.__init__(self, ptr)
+        OpaqueClangObject.__init__(self, ptr)
 
     def __del__(self) -> None:
         conf.lib.clang_disposeTranslationUnit(self)
@@ -3765,7 +3757,7 @@ class TranslationUnit(ClangObject):
         return TokenGroup.get_tokens(self, extent)
 
 
-class File(ClangObject):
+class File(OpaqueClangObject):
     """
     The File class represents a particular source file that is part of a
     translation unit.
@@ -3926,7 +3918,7 @@ class CompileCommands:
         return CompileCommands(res)
 
 
-class CompilationDatabase(ClangObject):
+class CompilationDatabase(OpaqueClangObject):
     """
     The CompilationDatabase is a wrapper class around
     clang::tooling::CompilationDatabase
@@ -4028,7 +4020,7 @@ class Token(Structure):
         return cursor
 
 
-class Rewriter(ClangObject):
+class Rewriter(OpaqueClangObject):
     """
     The Rewriter is a wrapper class around clang::Rewriter
 
@@ -4043,9 +4035,6 @@ class Rewriter(ClangObject):
         tu -- The translation unit for the target AST.
         """
         return Rewriter(conf.lib.clang_CXRewriter_create(tu))
-
-    def __init__(self, ptr):
-        ClangObject.__init__(self, ptr)
 
     def __del__(self):
         conf.lib.clang_CXRewriter_dispose(self)
@@ -4121,7 +4110,7 @@ class PrintingPolicyProperty(BaseEnumeration):
     FullyQualifiedName = 25
 
 
-class PrintingPolicy(ClangObject):
+class PrintingPolicy(OpaqueClangObject):
     """
     The PrintingPolicy is a wrapper class around clang::PrintingPolicy
 
@@ -4137,9 +4126,6 @@ class PrintingPolicy(ClangObject):
         cursor -- Any cursor for a translation unit.
         """
         return PrintingPolicy(conf.lib.clang_getCursorPrintingPolicy(cursor))
-
-    def __init__(self, ptr):
-        ClangObject.__init__(self, ptr)
 
     def __del__(self):
         conf.lib.clang_PrintingPolicy_dispose(self)
