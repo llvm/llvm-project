@@ -2336,6 +2336,13 @@ bool SIMemoryLegalizer::expandLoad(const SIMemOpInfo &MOI,
                                            MOI.getOrderingAddrSpace());
     }
 
+    // A monotonic load carries no ordering beyond its own scope, so a
+    // nontemporal hint can be combined with the scope's cache policy.
+    if (Order == AtomicOrdering::Monotonic && MOI.isNonTemporal())
+      Changed |= CC->enableVolatileAndOrNonTemporal(
+          MI, MOI.getInstrAddrSpace(), SIMemOp::LOAD, /*IsVolatile=*/false,
+          /*IsNonTemporal=*/true);
+
     // Handle cooperative atomics after cache bypass step, as it may override
     // the scope of the instruction to a greater scope.
     if (MOI.isCooperative())
@@ -2396,6 +2403,11 @@ bool SIMemoryLegalizer::expandStore(const SIMemOpInfo &MOI,
       Changed |= CC->enableStoreCacheBypass(MI, MOI.getScope(),
                                             MOI.getOrderingAddrSpace());
     }
+
+    if (MOI.getOrdering() == AtomicOrdering::Monotonic && MOI.isNonTemporal())
+      Changed |= CC->enableVolatileAndOrNonTemporal(
+          MI, MOI.getInstrAddrSpace(), SIMemOp::STORE, /*IsVolatile=*/false,
+          /*IsNonTemporal=*/true);
 
     // Handle cooperative atomics after cache bypass step, as it may override
     // the scope of the instruction to a greater scope.

@@ -4993,6 +4993,7 @@ static bool isValidOrderingForOp(int64_t Ordering, AtomicExpr::AtomicOp Op) {
   case AtomicExpr::AO__atomic_load_n:
   case AtomicExpr::AO__atomic_load:
   case AtomicExpr::AO__scoped_atomic_load_n:
+  case AtomicExpr::AO__scoped_atomic_nontemporal_load_n:
   case AtomicExpr::AO__scoped_atomic_load:
     return OrderingCABI != llvm::AtomicOrderingCABI::release &&
            OrderingCABI != llvm::AtomicOrderingCABI::acq_rel;
@@ -5004,6 +5005,7 @@ static bool isValidOrderingForOp(int64_t Ordering, AtomicExpr::AtomicOp Op) {
   case AtomicExpr::AO__atomic_store_n:
   case AtomicExpr::AO__scoped_atomic_store:
   case AtomicExpr::AO__scoped_atomic_store_n:
+  case AtomicExpr::AO__scoped_atomic_nontemporal_store_n:
   case AtomicExpr::AO__atomic_clear:
     return OrderingCABI != llvm::AtomicOrderingCABI::consume &&
            OrderingCABI != llvm::AtomicOrderingCABI::acquire &&
@@ -5183,6 +5185,8 @@ ExprResult Sema::BuildAtomicExpr(SourceRange CallRange, SourceRange ExprRange,
              Op == AtomicExpr::AO__atomic_compare_exchange_n ||
              Op == AtomicExpr::AO__scoped_atomic_load_n ||
              Op == AtomicExpr::AO__scoped_atomic_store_n ||
+             Op == AtomicExpr::AO__scoped_atomic_nontemporal_load_n ||
+             Op == AtomicExpr::AO__scoped_atomic_nontemporal_store_n ||
              Op == AtomicExpr::AO__scoped_atomic_exchange_n ||
              Op == AtomicExpr::AO__scoped_atomic_compare_exchange_n;
   // Bit mask for extra allowed value types other than integers for atomic
@@ -5207,6 +5211,7 @@ ExprResult Sema::BuildAtomicExpr(SourceRange CallRange, SourceRange ExprRange,
   case AtomicExpr::AO__hip_atomic_load:
   case AtomicExpr::AO__atomic_load_n:
   case AtomicExpr::AO__scoped_atomic_load_n:
+  case AtomicExpr::AO__scoped_atomic_nontemporal_load_n:
     ArithAllows = AOEVT_Pointer | AOEVT_FP;
     Form = Load;
     break;
@@ -5224,6 +5229,7 @@ ExprResult Sema::BuildAtomicExpr(SourceRange CallRange, SourceRange ExprRange,
   case AtomicExpr::AO__atomic_store_n:
   case AtomicExpr::AO__scoped_atomic_store:
   case AtomicExpr::AO__scoped_atomic_store_n:
+  case AtomicExpr::AO__scoped_atomic_nontemporal_store_n:
     ArithAllows = AOEVT_Pointer | AOEVT_FP;
     Form = Copy;
     break;

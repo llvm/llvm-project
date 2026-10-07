@@ -721,11 +721,14 @@ static void emitAtomicOp(CIRGenFunction &cgf, AtomicExpr *expr, Address dest,
   case AtomicExpr::AO__atomic_load_n:
   case AtomicExpr::AO__atomic_load:
   case AtomicExpr::AO__scoped_atomic_load_n:
+  case AtomicExpr::AO__scoped_atomic_nontemporal_load_n:
   case AtomicExpr::AO__scoped_atomic_load:
   case AtomicExpr::AO__hip_atomic_load:
   case AtomicExpr::AO__opencl_atomic_load: {
-    cir::LoadOp load =
-        builder.createLoad(loc, ptr, /*isVolatile=*/expr->isVolatile());
+    cir::LoadOp load = builder.createLoad(
+        loc, ptr, /*isVolatile=*/expr->isVolatile(),
+        /*isNontemporal=*/expr->getOp() ==
+            AtomicExpr::AO__scoped_atomic_nontemporal_load_n);
 
     load->setAttr("mem_order", orderAttr);
     load->setAttr("sync_scope", scopeAttr);
@@ -739,6 +742,7 @@ static void emitAtomicOp(CIRGenFunction &cgf, AtomicExpr *expr, Address dest,
   case AtomicExpr::AO__atomic_store:
   case AtomicExpr::AO__scoped_atomic_store:
   case AtomicExpr::AO__scoped_atomic_store_n:
+  case AtomicExpr::AO__scoped_atomic_nontemporal_store_n:
   case AtomicExpr::AO__hip_atomic_store:
   case AtomicExpr::AO__opencl_atomic_store: {
     cir::LoadOp loadVal1 = builder.createLoad(loc, val1);
@@ -746,7 +750,8 @@ static void emitAtomicOp(CIRGenFunction &cgf, AtomicExpr *expr, Address dest,
     assert(!cir::MissingFeatures::atomicSyncScopeID());
 
     builder.createStore(loc, loadVal1, ptr, expr->isVolatile(),
-                        /*isNontemporal=*/false,
+                        /*isNontemporal=*/expr->getOp() ==
+                            AtomicExpr::AO__scoped_atomic_nontemporal_store_n,
                         /*align=*/mlir::IntegerAttr{}, scopeAttr, orderAttr);
     return;
   }
@@ -1272,6 +1277,7 @@ static RValue emitLibCallForAtomicExpr(CIRGenFunction &cgf, AtomicExpr *e,
   case AtomicExpr::AO__opencl_atomic_store:
   case AtomicExpr::AO__scoped_atomic_store:
   case AtomicExpr::AO__scoped_atomic_store_n:
+  case AtomicExpr::AO__scoped_atomic_nontemporal_store_n:
     calleeName = "__atomic_store";
     retTy = cgf.getContext().VoidTy;
     hasRetTy = true;
@@ -1288,6 +1294,7 @@ static RValue emitLibCallForAtomicExpr(CIRGenFunction &cgf, AtomicExpr *e,
   case AtomicExpr::AO__opencl_atomic_load:
   case AtomicExpr::AO__scoped_atomic_load:
   case AtomicExpr::AO__scoped_atomic_load_n:
+  case AtomicExpr::AO__scoped_atomic_nontemporal_load_n:
     calleeName = "__atomic_load";
     break;
 
@@ -1440,6 +1447,7 @@ RValue CIRGenFunction::emitAtomicExpr(AtomicExpr *e) {
 
   case AtomicExpr::AO__atomic_load_n:
   case AtomicExpr::AO__scoped_atomic_load_n:
+  case AtomicExpr::AO__scoped_atomic_nontemporal_load_n:
   case AtomicExpr::AO__c11_atomic_load:
   case AtomicExpr::AO__opencl_atomic_load:
   case AtomicExpr::AO__hip_atomic_load:
@@ -1565,6 +1573,7 @@ RValue CIRGenFunction::emitAtomicExpr(AtomicExpr *e) {
   case AtomicExpr::AO__scoped_atomic_or_fetch:
   case AtomicExpr::AO__scoped_atomic_xor_fetch:
   case AtomicExpr::AO__scoped_atomic_store_n:
+  case AtomicExpr::AO__scoped_atomic_nontemporal_store_n:
   case AtomicExpr::AO__scoped_atomic_exchange_n:
   case AtomicExpr::AO__atomic_fetch_uinc:
   case AtomicExpr::AO__atomic_fetch_udec:
@@ -1648,21 +1657,24 @@ RValue CIRGenFunction::emitAtomicExpr(AtomicExpr *e) {
     return emitLibCallForAtomicExpr(*this, e, ptr, dest, val1, val2, size,
                                     resultTy);
 
-  bool isStore = e->getOp() == AtomicExpr::AO__c11_atomic_store ||
-                 e->getOp() == AtomicExpr::AO__opencl_atomic_store ||
-                 e->getOp() == AtomicExpr::AO__hip_atomic_store ||
-                 e->getOp() == AtomicExpr::AO__atomic_store ||
-                 e->getOp() == AtomicExpr::AO__atomic_store_n ||
-                 e->getOp() == AtomicExpr::AO__scoped_atomic_store ||
-                 e->getOp() == AtomicExpr::AO__scoped_atomic_store_n ||
-                 e->getOp() == AtomicExpr::AO__atomic_clear;
+  bool isStore =
+      e->getOp() == AtomicExpr::AO__c11_atomic_store ||
+      e->getOp() == AtomicExpr::AO__opencl_atomic_store ||
+      e->getOp() == AtomicExpr::AO__hip_atomic_store ||
+      e->getOp() == AtomicExpr::AO__atomic_store ||
+      e->getOp() == AtomicExpr::AO__atomic_store_n ||
+      e->getOp() == AtomicExpr::AO__scoped_atomic_store ||
+      e->getOp() == AtomicExpr::AO__scoped_atomic_store_n ||
+      e->getOp() == AtomicExpr::AO__scoped_atomic_nontemporal_store_n ||
+      e->getOp() == AtomicExpr::AO__atomic_clear;
   bool isLoad = e->getOp() == AtomicExpr::AO__c11_atomic_load ||
                 e->getOp() == AtomicExpr::AO__opencl_atomic_load ||
                 e->getOp() == AtomicExpr::AO__hip_atomic_load ||
                 e->getOp() == AtomicExpr::AO__atomic_load ||
                 e->getOp() == AtomicExpr::AO__atomic_load_n ||
                 e->getOp() == AtomicExpr::AO__scoped_atomic_load ||
-                e->getOp() == AtomicExpr::AO__scoped_atomic_load_n;
+                e->getOp() == AtomicExpr::AO__scoped_atomic_load_n ||
+                e->getOp() == AtomicExpr::AO__scoped_atomic_nontemporal_load_n;
 
   auto emitAtomicOpCallBackFn = [&](cir::MemOrder memOrder) {
     emitAtomicOp(*this, e, dest, ptr, val1, val2, originalVal1, isWeakExpr,

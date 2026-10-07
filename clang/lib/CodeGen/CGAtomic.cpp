@@ -557,6 +557,13 @@ static llvm::Value *EmitPostAtomicMinMax(CGBuilderTy &Builder,
   return Builder.CreateSelect(Cmp, OldVal, RHS, "newval");
 }
 
+static void setNontemporal(CodeGenFunction &CGF, llvm::Instruction *I) {
+  I->setMetadata(llvm::LLVMContext::MD_nontemporal,
+                 llvm::MDNode::get(
+                     CGF.getLLVMContext(),
+                     llvm::ConstantAsMetadata::get(CGF.Builder.getInt32(1))));
+}
+
 static void EmitAtomicOp(CodeGenFunction &CGF, AtomicExpr *E, Address Dest,
                          Address Ptr, Address Val1, Address Val2,
                          Address ExpectedResult, llvm::Value *IsWeak,
@@ -627,10 +634,13 @@ static void EmitAtomicOp(CodeGenFunction &CGF, AtomicExpr *E, Address Dest,
   case AtomicExpr::AO__atomic_load_n:
   case AtomicExpr::AO__atomic_load:
   case AtomicExpr::AO__scoped_atomic_load_n:
+  case AtomicExpr::AO__scoped_atomic_nontemporal_load_n:
   case AtomicExpr::AO__scoped_atomic_load: {
     llvm::LoadInst *Load = CGF.Builder.CreateLoad(Ptr);
     Load->setAtomic(Order, Scope);
     Load->setVolatile(E->isVolatile());
+    if (E->getOp() == AtomicExpr::AO__scoped_atomic_nontemporal_load_n)
+      setNontemporal(CGF, Load);
     CGF.getTargetHooks().setTargetAtomicMetadata(CGF, *Load, E);
     CGF.maybeAttachRangeForLoad(Load, E->getValueType(), E->getExprLoc());
     auto *I = CGF.Builder.CreateStore(Load, Dest);
@@ -644,11 +654,14 @@ static void EmitAtomicOp(CodeGenFunction &CGF, AtomicExpr *E, Address Dest,
   case AtomicExpr::AO__atomic_store:
   case AtomicExpr::AO__atomic_store_n:
   case AtomicExpr::AO__scoped_atomic_store:
-  case AtomicExpr::AO__scoped_atomic_store_n: {
+  case AtomicExpr::AO__scoped_atomic_store_n:
+  case AtomicExpr::AO__scoped_atomic_nontemporal_store_n: {
     llvm::Value *LoadVal1 = CGF.Builder.CreateLoad(Val1);
     llvm::StoreInst *Store = CGF.Builder.CreateStore(LoadVal1, Ptr);
     Store->setAtomic(Order, Scope);
     Store->setVolatile(E->isVolatile());
+    if (E->getOp() == AtomicExpr::AO__scoped_atomic_nontemporal_store_n)
+      setNontemporal(CGF, Store);
     CGF.getTargetHooks().setTargetAtomicMetadata(CGF, *Store, E);
     CGF.addInstToCurrentSourceAtom(Store, LoadVal1);
     return;
@@ -992,6 +1005,7 @@ RValue CodeGenFunction::EmitAtomicExpr(AtomicExpr *E) {
 
   case AtomicExpr::AO__atomic_load_n:
   case AtomicExpr::AO__scoped_atomic_load_n:
+  case AtomicExpr::AO__scoped_atomic_nontemporal_load_n:
   case AtomicExpr::AO__c11_atomic_load:
   case AtomicExpr::AO__opencl_atomic_load:
   case AtomicExpr::AO__hip_atomic_load:
@@ -1126,6 +1140,7 @@ RValue CodeGenFunction::EmitAtomicExpr(AtomicExpr *E) {
   case AtomicExpr::AO__scoped_atomic_or_fetch:
   case AtomicExpr::AO__scoped_atomic_xor_fetch:
   case AtomicExpr::AO__scoped_atomic_store_n:
+  case AtomicExpr::AO__scoped_atomic_nontemporal_store_n:
   case AtomicExpr::AO__scoped_atomic_exchange_n:
   case AtomicExpr::AO__scoped_atomic_fetch_uinc:
   case AtomicExpr::AO__scoped_atomic_fetch_udec:
@@ -1261,6 +1276,7 @@ RValue CodeGenFunction::EmitAtomicExpr(AtomicExpr *E) {
     case AtomicExpr::AO__opencl_atomic_store:
     case AtomicExpr::AO__scoped_atomic_store:
     case AtomicExpr::AO__scoped_atomic_store_n:
+    case AtomicExpr::AO__scoped_atomic_nontemporal_store_n:
       LibCallName = "__atomic_store";
       RetTy = getContext().VoidTy;
       HaveRetTy = true;
@@ -1276,6 +1292,7 @@ RValue CodeGenFunction::EmitAtomicExpr(AtomicExpr *E) {
     case AtomicExpr::AO__opencl_atomic_load:
     case AtomicExpr::AO__scoped_atomic_load:
     case AtomicExpr::AO__scoped_atomic_load_n:
+    case AtomicExpr::AO__scoped_atomic_nontemporal_load_n:
       LibCallName = "__atomic_load";
       break;
     case AtomicExpr::AO__atomic_add_fetch:
@@ -1379,21 +1396,24 @@ RValue CodeGenFunction::EmitAtomicExpr(AtomicExpr *E) {
                                RValTy, E->getExprLoc());
   }
 
-  bool IsStore = E->getOp() == AtomicExpr::AO__c11_atomic_store ||
-                 E->getOp() == AtomicExpr::AO__opencl_atomic_store ||
-                 E->getOp() == AtomicExpr::AO__hip_atomic_store ||
-                 E->getOp() == AtomicExpr::AO__atomic_store ||
-                 E->getOp() == AtomicExpr::AO__atomic_store_n ||
-                 E->getOp() == AtomicExpr::AO__scoped_atomic_store ||
-                 E->getOp() == AtomicExpr::AO__scoped_atomic_store_n ||
-                 E->getOp() == AtomicExpr::AO__atomic_clear;
+  bool IsStore =
+      E->getOp() == AtomicExpr::AO__c11_atomic_store ||
+      E->getOp() == AtomicExpr::AO__opencl_atomic_store ||
+      E->getOp() == AtomicExpr::AO__hip_atomic_store ||
+      E->getOp() == AtomicExpr::AO__atomic_store ||
+      E->getOp() == AtomicExpr::AO__atomic_store_n ||
+      E->getOp() == AtomicExpr::AO__scoped_atomic_store ||
+      E->getOp() == AtomicExpr::AO__scoped_atomic_store_n ||
+      E->getOp() == AtomicExpr::AO__scoped_atomic_nontemporal_store_n ||
+      E->getOp() == AtomicExpr::AO__atomic_clear;
   bool IsLoad = E->getOp() == AtomicExpr::AO__c11_atomic_load ||
                 E->getOp() == AtomicExpr::AO__opencl_atomic_load ||
                 E->getOp() == AtomicExpr::AO__hip_atomic_load ||
                 E->getOp() == AtomicExpr::AO__atomic_load ||
                 E->getOp() == AtomicExpr::AO__atomic_load_n ||
                 E->getOp() == AtomicExpr::AO__scoped_atomic_load ||
-                E->getOp() == AtomicExpr::AO__scoped_atomic_load_n;
+                E->getOp() == AtomicExpr::AO__scoped_atomic_load_n ||
+                E->getOp() == AtomicExpr::AO__scoped_atomic_nontemporal_load_n;
 
   if (isa<llvm::ConstantInt>(Order)) {
     auto ord = cast<llvm::ConstantInt>(Order)->getZExtValue();

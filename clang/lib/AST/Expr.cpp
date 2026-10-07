@@ -5323,6 +5323,7 @@ unsigned AtomicExpr::getNumSubExprs(AtomicOp Op) {
     return 2;
 
   case AO__scoped_atomic_load_n:
+  case AO__scoped_atomic_nontemporal_load_n:
   case AO__opencl_atomic_load:
   case AO__hip_atomic_load:
   case AO__c11_atomic_store:
@@ -5366,6 +5367,7 @@ unsigned AtomicExpr::getNumSubExprs(AtomicOp Op) {
   case AO__scoped_atomic_load:
   case AO__scoped_atomic_store:
   case AO__scoped_atomic_store_n:
+  case AO__scoped_atomic_nontemporal_store_n:
   case AO__scoped_atomic_fetch_add:
   case AO__scoped_atomic_fetch_sub:
   case AO__scoped_atomic_fetch_and:
