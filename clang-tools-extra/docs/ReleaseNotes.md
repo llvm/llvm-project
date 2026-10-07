@@ -246,6 +246,9 @@ infrastructure are described first, followed by tool-specific sections.
   nested expressions involving different macros or a mix of macro and
   non-macro operands.
 
+- Fixed false positive in {doc}`modernize-make-unique
+  <clang-tidy/checks/modernize/make-unique>` in presence of private destructor.
+
 - Fixed a crash in {doc}`modernize-raw-string-literal
   <clang-tidy/checks/modernize/raw-string-literal>` on synthetic string
   literals created for raw user-defined literal operators, such as `12_w`.
