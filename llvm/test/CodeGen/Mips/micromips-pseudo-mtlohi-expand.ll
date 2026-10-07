@@ -18,14 +18,14 @@ define i64 @test(i32 signext %a, i32 signext %b) {
 ; MMR2-NEXT:    mthi $2 # <MCInst #[[#MCINST3:]] MTHI_MM
 ; MMR2-NEXT:    # <MCOperand Reg:R2>>
 ; MMR2-NEXT:    madd $4, $5 # <MCInst #[[#MCINST4:]] MADD
-; MMR2-NEXT:    # <MCOperand Reg:A0>
-; MMR2-NEXT:    # <MCOperand Reg:A1>>
+; MMR2-NEXT:    # <MCOperand Reg:R4>
+; MMR2-NEXT:    # <MCOperand Reg:R5>>
 ; MMR2-NEXT:    mflo16 $2 # <MCInst #[[#MCINST5:]] MFLO16_MM
 ; MMR2-NEXT:    # <MCOperand Reg:R2>>
 ; MMR2-NEXT:    mfhi16 $3 # <MCInst #[[#MCINST6:]] MFHI16_MM
 ; MMR2-NEXT:    # <MCOperand Reg:R3>>
 ; MMR2-NEXT:    jrc $ra # <MCInst #[[#MCINST7:]] JRC16_MM
-; MMR2-NEXT:    # <MCOperand Reg:RA>>
+; MMR2-NEXT:    # <MCOperand Reg:R31>>
 ;
 ; MMR2-DSP-LABEL: test:
 ; MMR2-DSP:       # %bb.0: # %entry
@@ -43,14 +43,14 @@ define i64 @test(i32 signext %a, i32 signext %b) {
 ; MMR2-DSP-NEXT:    # <MCOperand Reg:R2>>
 ; MMR2-DSP-NEXT:    madd $ac0, $4, $5 # <MCInst #[[#MCINST10:]] MADD_DSP
 ; MMR2-DSP-NEXT:    # <MCOperand Reg:AC0>
-; MMR2-DSP-NEXT:    # <MCOperand Reg:A0>
-; MMR2-DSP-NEXT:    # <MCOperand Reg:A1>
+; MMR2-DSP-NEXT:    # <MCOperand Reg:R4>
+; MMR2-DSP-NEXT:    # <MCOperand Reg:R5>
 ; MMR2-DSP-NEXT:    # <MCOperand Reg:AC0>>
 ; MMR2-DSP-NEXT:    mflo $2, $ac0 # <MCInst #[[#MCINST11:]] MFLO_DSP
 ; MMR2-DSP-NEXT:    # <MCOperand Reg:R2>
 ; MMR2-DSP-NEXT:    # <MCOperand Reg:AC0>>
 ; MMR2-DSP-NEXT:    jr $ra # <MCInst #[[#MCINST12:]] JR_MM
-; MMR2-DSP-NEXT:    # <MCOperand Reg:RA>>
+; MMR2-DSP-NEXT:    # <MCOperand Reg:R31>>
 ; MMR2-DSP-NEXT:    mfhi $3, $ac0 # <MCInst #[[#MCINST13:]] MFHI_DSP
 ; MMR2-DSP-NEXT:    # <MCOperand Reg:R3>
 ; MMR2-DSP-NEXT:    # <MCOperand Reg:AC0>>

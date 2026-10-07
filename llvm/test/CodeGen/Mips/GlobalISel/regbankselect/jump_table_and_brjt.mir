@@ -72,8 +72,8 @@ body:             |
   ; MIPS32-LABEL: name: mod4_0_to_11
   ; MIPS32: bb.0.entry:
   ; MIPS32:   successors: %bb.6(0x40000000), %bb.1(0x40000000)
-  ; MIPS32:   liveins: $a0
-  ; MIPS32:   [[COPY:%[0-9]+]]:gprb(s32) = COPY $a0
+  ; MIPS32:   liveins: $r4
+  ; MIPS32:   [[COPY:%[0-9]+]]:gprb(s32) = COPY $r4
   ; MIPS32:   [[C:%[0-9]+]]:gprb(s32) = G_CONSTANT i32 7
   ; MIPS32:   [[C1:%[0-9]+]]:gprb(s32) = G_CONSTANT i32 3
   ; MIPS32:   [[C2:%[0-9]+]]:gprb(s32) = G_CONSTANT i32 2
@@ -137,9 +137,9 @@ body:             |
   ; MIPS32:   $r2 = COPY [[C5]](s32)
   ; MIPS32:   RetRA implicit $r2
   bb.1.entry:
-    liveins: $a0
+    liveins: $r4
 
-    %0:_(s32) = COPY $a0
+    %0:_(s32) = COPY $r4
     %4:_(s32) = G_CONSTANT i32 7
     %8:_(s32) = G_CONSTANT i32 3
     %9:_(s32) = G_CONSTANT i32 2

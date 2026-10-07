@@ -6,11 +6,11 @@
 # CHECK: ![[VARA:.*]] = !DILocalVariable(name: "a"
 # CHECK: ![[VARB:.*]] = !DILocalVariable(name: "b"
 # CHECK: ![[VARC:.*]] = !DILocalVariable(name: "c"
-# CHECK: $at = COPY $a2
-# CHECK-NEXT: DBG_VALUE $at, $noreg, ![[VARC]], !DIExpression(), debug-location
-# CHECK: $s0 = COPY $a1
-# CHECK-NEXT: DBG_VALUE $a0, $noreg, ![[VARA]], !DIExpression(), debug-location
-# CHECK-NEXT: DBG_VALUE $s0, $noreg, ![[VARB]], !DIExpression(), debug-location
+# CHECK: $r1 = COPY $r6
+# CHECK-NEXT: DBG_VALUE $r1, $noreg, ![[VARC]], !DIExpression(), debug-location
+# CHECK: $r16 = COPY $r5
+# CHECK-NEXT: DBG_VALUE $r4, $noreg, ![[VARA]], !DIExpression(), debug-location
+# CHECK-NEXT: DBG_VALUE $r16, $noreg, ![[VARB]], !DIExpression(), debug-location
 
 --- |
   ; ModuleID = 'test.c'
@@ -87,31 +87,31 @@ registers:
   - { id: 7, class: gpr32, preferred-register: '' }
   - { id: 8, class: gpr32, preferred-register: '' }
 liveins:
-  - { reg: '$a0', virtual-reg: '%0' }
-  - { reg: '$a1', virtual-reg: '%1' }
-  - { reg: '$a2', virtual-reg: '%2' }
+  - { reg: '$r4', virtual-reg: '%0' }
+  - { reg: '$r5', virtual-reg: '%1' }
+  - { reg: '$r6', virtual-reg: '%2' }
 body:             |
   bb.0.entry:
-    liveins: $a0, $a1, $a2
+    liveins: $r4, $r5, $r6
   
-    DBG_VALUE $a0, $noreg, !12, !DIExpression(), debug-location !16
-    DBG_VALUE $a1, $noreg, !13, !DIExpression(), debug-location !16
-    DBG_VALUE $a2, $noreg, !14, !DIExpression(), debug-location !16
-    %2:gpr32 = COPY $a2
+    DBG_VALUE $r4, $noreg, !12, !DIExpression(), debug-location !16
+    DBG_VALUE $r5, $noreg, !13, !DIExpression(), debug-location !16
+    DBG_VALUE $r6, $noreg, !14, !DIExpression(), debug-location !16
+    %2:gpr32 = COPY $r6
     DBG_VALUE %2, $noreg, !14, !DIExpression(), debug-location !16
-    %8:gpr32 = COPY $a1
+    %8:gpr32 = COPY $r5
     DBG_VALUE %8, $noreg, !13, !DIExpression(), debug-location !16
-    %0:gpr32 = COPY $a0
+    %0:gpr32 = COPY $r4
     DBG_VALUE %0, $noreg, !12, !DIExpression(), debug-location !16
     %3:gpr32 = nsw ADDu %8, %0, debug-location !17
-    ADJCALLSTACKDOWN 16, 0, implicit-def dead $sp, implicit $sp, debug-location !19
+    ADJCALLSTACKDOWN 16, 0, implicit-def dead $r29, implicit $r29, debug-location !19
     %4:gpr32 = nsw ADDiu %8, 10, debug-location !18
-    $a0 = COPY %3, debug-location !19
-    $a1 = COPY %2, debug-location !19
-    DBG_VALUE $a1, $noreg, !14, !DIExpression(), debug-location !16
-    $a2 = COPY %4, debug-location !19
-    JAL @fn1, csr_o32, implicit-def dead $ra, implicit $a0, implicit $a1, implicit $a2, implicit-def $sp, implicit-def $r2, debug-location !19
-    ADJCALLSTACKUP 16, 0, implicit-def dead $sp, implicit $sp, debug-location !19
+    $r4 = COPY %3, debug-location !19
+    $r5 = COPY %2, debug-location !19
+    DBG_VALUE $r5, $noreg, !14, !DIExpression(), debug-location !16
+    $r6 = COPY %4, debug-location !19
+    JAL @fn1, csr_o32, implicit-def dead $r31, implicit $r4, implicit $r5, implicit $r6, implicit-def $r29, implicit-def $r2, debug-location !19
+    ADJCALLSTACKUP 16, 0, implicit-def dead $r29, implicit $r29, debug-location !19
     %5:gpr32 = COPY killed $r2, debug-location !19
     DBG_VALUE %5, $noreg, !15, !DIExpression(), debug-location !16
     %6:gpr32 = SLTi %5, 11, debug-location !22

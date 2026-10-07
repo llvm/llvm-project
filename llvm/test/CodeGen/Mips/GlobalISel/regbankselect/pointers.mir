@@ -14,15 +14,15 @@ legalized:       true
 tracksRegLiveness: true
 body:             |
   bb.1.entry:
-    liveins: $a0
+    liveins: $r4
 
     ; MIPS32-LABEL: name: ptr_arg_in_regs
-    ; MIPS32: liveins: $a0
-    ; MIPS32: [[COPY:%[0-9]+]]:gprb(p0) = COPY $a0
+    ; MIPS32: liveins: $r4
+    ; MIPS32: [[COPY:%[0-9]+]]:gprb(p0) = COPY $r4
     ; MIPS32: [[LOAD:%[0-9]+]]:gprb(s32) = G_LOAD [[COPY]](p0) :: (load (s32) from %ir.p)
     ; MIPS32: $r2 = COPY [[LOAD]](s32)
     ; MIPS32: RetRA implicit $r2
-    %0:_(p0) = COPY $a0
+    %0:_(p0) = COPY $r4
     %1:_(s32) = G_LOAD %0(p0) :: (load (s32) from %ir.p)
     $r2 = COPY %1(s32)
     RetRA implicit $r2
@@ -37,23 +37,23 @@ fixedStack:
   - { id: 0, offset: 16, size: 4, alignment: 8, stack-id: default, isImmutable: true }
 body:             |
   bb.1.entry:
-    liveins: $a0, $a1, $a2, $a3
+    liveins: $r4, $r5, $r6, $r7
 
     ; MIPS32-LABEL: name: ptr_arg_on_stack
-    ; MIPS32: liveins: $a0, $a1, $a2, $a3
-    ; MIPS32: [[COPY:%[0-9]+]]:gprb(s32) = COPY $a0
-    ; MIPS32: [[COPY1:%[0-9]+]]:gprb(s32) = COPY $a1
-    ; MIPS32: [[COPY2:%[0-9]+]]:gprb(s32) = COPY $a2
-    ; MIPS32: [[COPY3:%[0-9]+]]:gprb(s32) = COPY $a3
+    ; MIPS32: liveins: $r4, $r5, $r6, $r7
+    ; MIPS32: [[COPY:%[0-9]+]]:gprb(s32) = COPY $r4
+    ; MIPS32: [[COPY1:%[0-9]+]]:gprb(s32) = COPY $r5
+    ; MIPS32: [[COPY2:%[0-9]+]]:gprb(s32) = COPY $r6
+    ; MIPS32: [[COPY3:%[0-9]+]]:gprb(s32) = COPY $r7
     ; MIPS32: [[FRAME_INDEX:%[0-9]+]]:gprb(p0) = G_FRAME_INDEX %fixed-stack.0
     ; MIPS32: [[LOAD:%[0-9]+]]:gprb(p0) = G_LOAD [[FRAME_INDEX]](p0) :: (load (p0) from %fixed-stack.0, align 8)
     ; MIPS32: [[LOAD1:%[0-9]+]]:gprb(s32) = G_LOAD [[LOAD]](p0) :: (load (s32) from %ir.p)
     ; MIPS32: $r2 = COPY [[LOAD1]](s32)
     ; MIPS32: RetRA implicit $r2
-    %0:_(s32) = COPY $a0
-    %1:_(s32) = COPY $a1
-    %2:_(s32) = COPY $a2
-    %3:_(s32) = COPY $a3
+    %0:_(s32) = COPY $r4
+    %1:_(s32) = COPY $r5
+    %2:_(s32) = COPY $r6
+    %3:_(s32) = COPY $r7
     %5:_(p0) = G_FRAME_INDEX %fixed-stack.0
     %4:_(p0) = G_LOAD %5(p0) :: (load (p0) from %fixed-stack.0, align 8)
     %6:_(s32) = G_LOAD %4(p0) :: (load (s32) from %ir.p)
@@ -68,14 +68,14 @@ legalized:       true
 tracksRegLiveness: true
 body:             |
   bb.1.entry:
-    liveins: $a0
+    liveins: $r4
 
     ; MIPS32-LABEL: name: ret_ptr
-    ; MIPS32: liveins: $a0
-    ; MIPS32: [[COPY:%[0-9]+]]:gprb(p0) = COPY $a0
+    ; MIPS32: liveins: $r4
+    ; MIPS32: [[COPY:%[0-9]+]]:gprb(p0) = COPY $r4
     ; MIPS32: $r2 = COPY [[COPY]](p0)
     ; MIPS32: RetRA implicit $r2
-    %0:_(p0) = COPY $a0
+    %0:_(p0) = COPY $r4
     $r2 = COPY %0(p0)
     RetRA implicit $r2
 

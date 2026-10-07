@@ -58,18 +58,18 @@ frameInfo:
   hasVAStart:      false
   hasMustTailInVarArgFunc: false
 stack:
-  - { id: 0, type: spill-slot, offset: -4, size: 4, alignment: 4, callee-saved-register: '$ra' }
+  - { id: 0, type: spill-slot, offset: -4, size: 4, alignment: 4, callee-saved-register: '$r31' }
 body:             |
   bb.0.entry:
     successors: %bb.1.if.then(0x50000000), %bb.4.if.end(0x30000000)
-    liveins: $ra
+    liveins: $r31
 
-    $sp = ADDiu $sp, -24
+    $r29 = ADDiu $r29, -24
     CFI_INSTRUCTION def_cfa_offset 24
-    SW killed $ra, $sp, 20 :: (store (s32) into %stack.0)
-    CFI_INSTRUCTION offset $ra_64, -4
-    JAL @k, csr_o32_fp64, implicit-def dead $ra, implicit-def $sp, implicit-def $r2
-    BLEZ $r2, %bb.4.if.end, implicit-def $at
+    SW killed $r31, $r29, 20 :: (store (s32) into %stack.0)
+    CFI_INSTRUCTION offset $r31_64, -4
+    JAL @k, csr_o32_fp64, implicit-def dead $r31, implicit-def $r29, implicit-def $r2
+    BLEZ $r2, %bb.4.if.end, implicit-def $r1
 
   bb.1.if.then:
     successors: %bb.2.if.then(0x80000000)
@@ -80,12 +80,12 @@ body:             |
   bb.3.if.then:
     successors: %bb.4.if.end(0x80000000)
 
-    $a0 = ADDiu $zero, 2
-    JAL @f, csr_o32_fp64, implicit-def dead $ra, implicit killed $a0, implicit-def $sp
+    $r4 = ADDiu $r0, 2
+    JAL @f, csr_o32_fp64, implicit-def dead $r31, implicit killed $r4, implicit-def $r29
 
   bb.4.if.end:
-    $ra = LW $sp, 20 :: (load (s32) from %stack.0)
-    $sp = ADDiu $sp, 24
-    PseudoReturn undef $ra
+    $r31 = LW $r29, 20 :: (load (s32) from %stack.0)
+    $r29 = ADDiu $r29, 24
+    PseudoReturn undef $r31
 
 ...

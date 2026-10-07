@@ -23,8 +23,8 @@ body:             |
   ; MIPS32-LABEL: name: indirectbr
   ; MIPS32: bb.0.entry:
   ; MIPS32:   successors: %bb.1(0x40000000), %bb.2(0x40000000)
-  ; MIPS32:   liveins: $a0
-  ; MIPS32:   [[COPY:%[0-9]+]]:gprb(p0) = COPY $a0
+  ; MIPS32:   liveins: $r4
+  ; MIPS32:   [[COPY:%[0-9]+]]:gprb(p0) = COPY $r4
   ; MIPS32:   [[C:%[0-9]+]]:gprb(s32) = G_CONSTANT i32 1
   ; MIPS32:   [[C1:%[0-9]+]]:gprb(s32) = G_CONSTANT i32 0
   ; MIPS32:   G_BRINDIRECT [[COPY]](p0)
@@ -36,9 +36,9 @@ body:             |
   ; MIPS32:   RetRA implicit $r2
   bb.1.entry:
     successors: %bb.2, %bb.3
-    liveins: $a0
+    liveins: $r4
 
-    %0:_(p0) = COPY $a0
+    %0:_(p0) = COPY $r4
     %1:_(s32) = G_CONSTANT i32 1
     %2:_(s32) = G_CONSTANT i32 0
     G_BRINDIRECT %0(p0)

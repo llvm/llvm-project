@@ -6,9 +6,9 @@
 define  signext i8 @sext_arg_i8(i8 signext %a) {
   ; MIPS32-LABEL: name: sext_arg_i8
   ; MIPS32: bb.1.entry:
-  ; MIPS32-NEXT:   liveins: $a0
+  ; MIPS32-NEXT:   liveins: $r4
   ; MIPS32-NEXT: {{  $}}
-  ; MIPS32-NEXT:   [[COPY:%[0-9]+]]:_(s32) = COPY $a0
+  ; MIPS32-NEXT:   [[COPY:%[0-9]+]]:_(s32) = COPY $r4
   ; MIPS32-NEXT:   [[ASSERT_SEXT:%[0-9]+]]:_(s32) = G_ASSERT_SEXT [[COPY]], 8
   ; MIPS32-NEXT:   [[TRUNC:%[0-9]+]]:_(s8) = G_TRUNC [[ASSERT_SEXT]](s32)
   ; MIPS32-NEXT:   [[SEXT:%[0-9]+]]:_(s32) = G_SEXT [[TRUNC]](s8)
@@ -21,9 +21,9 @@ entry:
 define zeroext i8 @zext_arg_i8(i8 zeroext %a) {
   ; MIPS32-LABEL: name: zext_arg_i8
   ; MIPS32: bb.1.entry:
-  ; MIPS32-NEXT:   liveins: $a0
+  ; MIPS32-NEXT:   liveins: $r4
   ; MIPS32-NEXT: {{  $}}
-  ; MIPS32-NEXT:   [[COPY:%[0-9]+]]:_(s32) = COPY $a0
+  ; MIPS32-NEXT:   [[COPY:%[0-9]+]]:_(s32) = COPY $r4
   ; MIPS32-NEXT:   [[ASSERT_ZEXT:%[0-9]+]]:_(s32) = G_ASSERT_ZEXT [[COPY]], 8
   ; MIPS32-NEXT:   [[TRUNC:%[0-9]+]]:_(s8) = G_TRUNC [[ASSERT_ZEXT]](s32)
   ; MIPS32-NEXT:   [[ZEXT:%[0-9]+]]:_(s32) = G_ZEXT [[TRUNC]](s8)
@@ -36,9 +36,9 @@ entry:
 define i8 @aext_arg_i8(i8 %a) {
   ; MIPS32-LABEL: name: aext_arg_i8
   ; MIPS32: bb.1.entry:
-  ; MIPS32-NEXT:   liveins: $a0
+  ; MIPS32-NEXT:   liveins: $r4
   ; MIPS32-NEXT: {{  $}}
-  ; MIPS32-NEXT:   [[COPY:%[0-9]+]]:_(s32) = COPY $a0
+  ; MIPS32-NEXT:   [[COPY:%[0-9]+]]:_(s32) = COPY $r4
   ; MIPS32-NEXT:   [[TRUNC:%[0-9]+]]:_(s8) = G_TRUNC [[COPY]](s32)
   ; MIPS32-NEXT:   [[ANYEXT:%[0-9]+]]:_(s32) = G_ANYEXT [[TRUNC]](s8)
   ; MIPS32-NEXT:   $r2 = COPY [[ANYEXT]](s32)
@@ -54,31 +54,31 @@ declare i8 @aext_stack_arg_i8(i32 %x1, i32 %x2, i32 %x3, i32 %x4, i8 %a)
 define signext i8 @call_sext_stack_arg_i8(i32 %x1, i32 %x2, i32 %x3, i32 %x4, i8 signext %a) {
   ; MIPS32-LABEL: name: call_sext_stack_arg_i8
   ; MIPS32: bb.1.entry:
-  ; MIPS32-NEXT:   liveins: $a0, $a1, $a2, $a3
+  ; MIPS32-NEXT:   liveins: $r4, $r5, $r6, $r7
   ; MIPS32-NEXT: {{  $}}
-  ; MIPS32-NEXT:   [[COPY:%[0-9]+]]:_(s32) = COPY $a0
-  ; MIPS32-NEXT:   [[COPY1:%[0-9]+]]:_(s32) = COPY $a1
-  ; MIPS32-NEXT:   [[COPY2:%[0-9]+]]:_(s32) = COPY $a2
-  ; MIPS32-NEXT:   [[COPY3:%[0-9]+]]:_(s32) = COPY $a3
+  ; MIPS32-NEXT:   [[COPY:%[0-9]+]]:_(s32) = COPY $r4
+  ; MIPS32-NEXT:   [[COPY1:%[0-9]+]]:_(s32) = COPY $r5
+  ; MIPS32-NEXT:   [[COPY2:%[0-9]+]]:_(s32) = COPY $r6
+  ; MIPS32-NEXT:   [[COPY3:%[0-9]+]]:_(s32) = COPY $r7
   ; MIPS32-NEXT:   [[FRAME_INDEX:%[0-9]+]]:_(p0) = G_FRAME_INDEX %fixed-stack.0
   ; MIPS32-NEXT:   [[LOAD:%[0-9]+]]:_(s32) = G_LOAD [[FRAME_INDEX]](p0) :: (load (s32) from %fixed-stack.0, align 8)
   ; MIPS32-NEXT:   [[ASSERT_SEXT:%[0-9]+]]:_(s32) = G_ASSERT_SEXT [[LOAD]], 8
   ; MIPS32-NEXT:   [[TRUNC:%[0-9]+]]:_(s8) = G_TRUNC [[ASSERT_SEXT]](s32)
-  ; MIPS32-NEXT:   ADJCALLSTACKDOWN 24, 0, implicit-def $sp, implicit $sp
+  ; MIPS32-NEXT:   ADJCALLSTACKDOWN 24, 0, implicit-def $r29, implicit $r29
   ; MIPS32-NEXT:   [[SEXT:%[0-9]+]]:_(s32) = G_SEXT [[TRUNC]](s8)
-  ; MIPS32-NEXT:   [[COPY4:%[0-9]+]]:_(p0) = COPY $sp
+  ; MIPS32-NEXT:   [[COPY4:%[0-9]+]]:_(p0) = COPY $r29
   ; MIPS32-NEXT:   [[C:%[0-9]+]]:_(s32) = G_CONSTANT i32 16
   ; MIPS32-NEXT:   [[PTR_ADD:%[0-9]+]]:_(p0) = G_PTR_ADD [[COPY4]], [[C]](s32)
   ; MIPS32-NEXT:   G_STORE [[SEXT]](s32), [[PTR_ADD]](p0) :: (store (s32) into stack + 16, align 8)
-  ; MIPS32-NEXT:   $a0 = COPY [[COPY]](s32)
-  ; MIPS32-NEXT:   $a1 = COPY [[COPY1]](s32)
-  ; MIPS32-NEXT:   $a2 = COPY [[COPY2]](s32)
-  ; MIPS32-NEXT:   $a3 = COPY [[COPY3]](s32)
-  ; MIPS32-NEXT:   JAL @sext_stack_arg_i8, csr_o32, implicit-def dead $ra, implicit-def $sp, implicit $a0, implicit $a1, implicit $a2, implicit $a3, implicit-def $r2
+  ; MIPS32-NEXT:   $r4 = COPY [[COPY]](s32)
+  ; MIPS32-NEXT:   $r5 = COPY [[COPY1]](s32)
+  ; MIPS32-NEXT:   $r6 = COPY [[COPY2]](s32)
+  ; MIPS32-NEXT:   $r7 = COPY [[COPY3]](s32)
+  ; MIPS32-NEXT:   JAL @sext_stack_arg_i8, csr_o32, implicit-def dead $r31, implicit-def $r29, implicit $r4, implicit $r5, implicit $r6, implicit $r7, implicit-def $r2
   ; MIPS32-NEXT:   [[COPY5:%[0-9]+]]:_(s32) = COPY $r2
   ; MIPS32-NEXT:   [[ASSERT_SEXT1:%[0-9]+]]:_(s32) = G_ASSERT_SEXT [[COPY5]], 8
   ; MIPS32-NEXT:   [[TRUNC1:%[0-9]+]]:_(s8) = G_TRUNC [[ASSERT_SEXT1]](s32)
-  ; MIPS32-NEXT:   ADJCALLSTACKUP 24, 0, implicit-def $sp, implicit $sp
+  ; MIPS32-NEXT:   ADJCALLSTACKUP 24, 0, implicit-def $r29, implicit $r29
   ; MIPS32-NEXT:   [[SEXT1:%[0-9]+]]:_(s32) = G_SEXT [[TRUNC1]](s8)
   ; MIPS32-NEXT:   $r2 = COPY [[SEXT1]](s32)
   ; MIPS32-NEXT:   RetRA implicit $r2
@@ -90,31 +90,31 @@ entry:
 define zeroext i8 @call_zext_stack_arg_i8(i32 %x1, i32 %x2, i32 %x3, i32 %x4, i8 zeroext %a) {
   ; MIPS32-LABEL: name: call_zext_stack_arg_i8
   ; MIPS32: bb.1.entry:
-  ; MIPS32-NEXT:   liveins: $a0, $a1, $a2, $a3
+  ; MIPS32-NEXT:   liveins: $r4, $r5, $r6, $r7
   ; MIPS32-NEXT: {{  $}}
-  ; MIPS32-NEXT:   [[COPY:%[0-9]+]]:_(s32) = COPY $a0
-  ; MIPS32-NEXT:   [[COPY1:%[0-9]+]]:_(s32) = COPY $a1
-  ; MIPS32-NEXT:   [[COPY2:%[0-9]+]]:_(s32) = COPY $a2
-  ; MIPS32-NEXT:   [[COPY3:%[0-9]+]]:_(s32) = COPY $a3
+  ; MIPS32-NEXT:   [[COPY:%[0-9]+]]:_(s32) = COPY $r4
+  ; MIPS32-NEXT:   [[COPY1:%[0-9]+]]:_(s32) = COPY $r5
+  ; MIPS32-NEXT:   [[COPY2:%[0-9]+]]:_(s32) = COPY $r6
+  ; MIPS32-NEXT:   [[COPY3:%[0-9]+]]:_(s32) = COPY $r7
   ; MIPS32-NEXT:   [[FRAME_INDEX:%[0-9]+]]:_(p0) = G_FRAME_INDEX %fixed-stack.0
   ; MIPS32-NEXT:   [[LOAD:%[0-9]+]]:_(s32) = G_LOAD [[FRAME_INDEX]](p0) :: (load (s32) from %fixed-stack.0, align 8)
   ; MIPS32-NEXT:   [[ASSERT_ZEXT:%[0-9]+]]:_(s32) = G_ASSERT_ZEXT [[LOAD]], 8
   ; MIPS32-NEXT:   [[TRUNC:%[0-9]+]]:_(s8) = G_TRUNC [[ASSERT_ZEXT]](s32)
-  ; MIPS32-NEXT:   ADJCALLSTACKDOWN 24, 0, implicit-def $sp, implicit $sp
+  ; MIPS32-NEXT:   ADJCALLSTACKDOWN 24, 0, implicit-def $r29, implicit $r29
   ; MIPS32-NEXT:   [[ZEXT:%[0-9]+]]:_(s32) = G_ZEXT [[TRUNC]](s8)
-  ; MIPS32-NEXT:   [[COPY4:%[0-9]+]]:_(p0) = COPY $sp
+  ; MIPS32-NEXT:   [[COPY4:%[0-9]+]]:_(p0) = COPY $r29
   ; MIPS32-NEXT:   [[C:%[0-9]+]]:_(s32) = G_CONSTANT i32 16
   ; MIPS32-NEXT:   [[PTR_ADD:%[0-9]+]]:_(p0) = G_PTR_ADD [[COPY4]], [[C]](s32)
   ; MIPS32-NEXT:   G_STORE [[ZEXT]](s32), [[PTR_ADD]](p0) :: (store (s32) into stack + 16, align 8)
-  ; MIPS32-NEXT:   $a0 = COPY [[COPY]](s32)
-  ; MIPS32-NEXT:   $a1 = COPY [[COPY1]](s32)
-  ; MIPS32-NEXT:   $a2 = COPY [[COPY2]](s32)
-  ; MIPS32-NEXT:   $a3 = COPY [[COPY3]](s32)
-  ; MIPS32-NEXT:   JAL @zext_stack_arg_i8, csr_o32, implicit-def dead $ra, implicit-def $sp, implicit $a0, implicit $a1, implicit $a2, implicit $a3, implicit-def $r2
+  ; MIPS32-NEXT:   $r4 = COPY [[COPY]](s32)
+  ; MIPS32-NEXT:   $r5 = COPY [[COPY1]](s32)
+  ; MIPS32-NEXT:   $r6 = COPY [[COPY2]](s32)
+  ; MIPS32-NEXT:   $r7 = COPY [[COPY3]](s32)
+  ; MIPS32-NEXT:   JAL @zext_stack_arg_i8, csr_o32, implicit-def dead $r31, implicit-def $r29, implicit $r4, implicit $r5, implicit $r6, implicit $r7, implicit-def $r2
   ; MIPS32-NEXT:   [[COPY5:%[0-9]+]]:_(s32) = COPY $r2
   ; MIPS32-NEXT:   [[ASSERT_ZEXT1:%[0-9]+]]:_(s32) = G_ASSERT_ZEXT [[COPY5]], 8
   ; MIPS32-NEXT:   [[TRUNC1:%[0-9]+]]:_(s8) = G_TRUNC [[ASSERT_ZEXT1]](s32)
-  ; MIPS32-NEXT:   ADJCALLSTACKUP 24, 0, implicit-def $sp, implicit $sp
+  ; MIPS32-NEXT:   ADJCALLSTACKUP 24, 0, implicit-def $r29, implicit $r29
   ; MIPS32-NEXT:   [[ZEXT1:%[0-9]+]]:_(s32) = G_ZEXT [[TRUNC1]](s8)
   ; MIPS32-NEXT:   $r2 = COPY [[ZEXT1]](s32)
   ; MIPS32-NEXT:   RetRA implicit $r2
@@ -126,29 +126,29 @@ entry:
 define i8 @call_aext_stack_arg_i8(i32 %x1, i32 %x2, i32 %x3, i32 %x4, i8 %a) {
   ; MIPS32-LABEL: name: call_aext_stack_arg_i8
   ; MIPS32: bb.1.entry:
-  ; MIPS32-NEXT:   liveins: $a0, $a1, $a2, $a3
+  ; MIPS32-NEXT:   liveins: $r4, $r5, $r6, $r7
   ; MIPS32-NEXT: {{  $}}
-  ; MIPS32-NEXT:   [[COPY:%[0-9]+]]:_(s32) = COPY $a0
-  ; MIPS32-NEXT:   [[COPY1:%[0-9]+]]:_(s32) = COPY $a1
-  ; MIPS32-NEXT:   [[COPY2:%[0-9]+]]:_(s32) = COPY $a2
-  ; MIPS32-NEXT:   [[COPY3:%[0-9]+]]:_(s32) = COPY $a3
+  ; MIPS32-NEXT:   [[COPY:%[0-9]+]]:_(s32) = COPY $r4
+  ; MIPS32-NEXT:   [[COPY1:%[0-9]+]]:_(s32) = COPY $r5
+  ; MIPS32-NEXT:   [[COPY2:%[0-9]+]]:_(s32) = COPY $r6
+  ; MIPS32-NEXT:   [[COPY3:%[0-9]+]]:_(s32) = COPY $r7
   ; MIPS32-NEXT:   [[FRAME_INDEX:%[0-9]+]]:_(p0) = G_FRAME_INDEX %fixed-stack.0
   ; MIPS32-NEXT:   [[LOAD:%[0-9]+]]:_(s32) = G_LOAD [[FRAME_INDEX]](p0) :: (load (s32) from %fixed-stack.0, align 8)
   ; MIPS32-NEXT:   [[TRUNC:%[0-9]+]]:_(s8) = G_TRUNC [[LOAD]](s32)
-  ; MIPS32-NEXT:   ADJCALLSTACKDOWN 24, 0, implicit-def $sp, implicit $sp
+  ; MIPS32-NEXT:   ADJCALLSTACKDOWN 24, 0, implicit-def $r29, implicit $r29
   ; MIPS32-NEXT:   [[ANYEXT:%[0-9]+]]:_(s32) = G_ANYEXT [[TRUNC]](s8)
-  ; MIPS32-NEXT:   [[COPY4:%[0-9]+]]:_(p0) = COPY $sp
+  ; MIPS32-NEXT:   [[COPY4:%[0-9]+]]:_(p0) = COPY $r29
   ; MIPS32-NEXT:   [[C:%[0-9]+]]:_(s32) = G_CONSTANT i32 16
   ; MIPS32-NEXT:   [[PTR_ADD:%[0-9]+]]:_(p0) = G_PTR_ADD [[COPY4]], [[C]](s32)
   ; MIPS32-NEXT:   G_STORE [[ANYEXT]](s32), [[PTR_ADD]](p0) :: (store (s32) into stack + 16, align 8)
-  ; MIPS32-NEXT:   $a0 = COPY [[COPY]](s32)
-  ; MIPS32-NEXT:   $a1 = COPY [[COPY1]](s32)
-  ; MIPS32-NEXT:   $a2 = COPY [[COPY2]](s32)
-  ; MIPS32-NEXT:   $a3 = COPY [[COPY3]](s32)
-  ; MIPS32-NEXT:   JAL @aext_stack_arg_i8, csr_o32, implicit-def dead $ra, implicit-def $sp, implicit $a0, implicit $a1, implicit $a2, implicit $a3, implicit-def $r2
+  ; MIPS32-NEXT:   $r4 = COPY [[COPY]](s32)
+  ; MIPS32-NEXT:   $r5 = COPY [[COPY1]](s32)
+  ; MIPS32-NEXT:   $r6 = COPY [[COPY2]](s32)
+  ; MIPS32-NEXT:   $r7 = COPY [[COPY3]](s32)
+  ; MIPS32-NEXT:   JAL @aext_stack_arg_i8, csr_o32, implicit-def dead $r31, implicit-def $r29, implicit $r4, implicit $r5, implicit $r6, implicit $r7, implicit-def $r2
   ; MIPS32-NEXT:   [[COPY5:%[0-9]+]]:_(s32) = COPY $r2
   ; MIPS32-NEXT:   [[TRUNC1:%[0-9]+]]:_(s8) = G_TRUNC [[COPY5]](s32)
-  ; MIPS32-NEXT:   ADJCALLSTACKUP 24, 0, implicit-def $sp, implicit $sp
+  ; MIPS32-NEXT:   ADJCALLSTACKUP 24, 0, implicit-def $r29, implicit $r29
   ; MIPS32-NEXT:   [[ANYEXT1:%[0-9]+]]:_(s32) = G_ANYEXT [[TRUNC1]](s8)
   ; MIPS32-NEXT:   $r2 = COPY [[ANYEXT1]](s32)
   ; MIPS32-NEXT:   RetRA implicit $r2
@@ -161,9 +161,9 @@ entry:
 define  signext i16 @sext_arg_i16(i16 signext %a) {
   ; MIPS32-LABEL: name: sext_arg_i16
   ; MIPS32: bb.1.entry:
-  ; MIPS32-NEXT:   liveins: $a0
+  ; MIPS32-NEXT:   liveins: $r4
   ; MIPS32-NEXT: {{  $}}
-  ; MIPS32-NEXT:   [[COPY:%[0-9]+]]:_(s32) = COPY $a0
+  ; MIPS32-NEXT:   [[COPY:%[0-9]+]]:_(s32) = COPY $r4
   ; MIPS32-NEXT:   [[ASSERT_SEXT:%[0-9]+]]:_(s32) = G_ASSERT_SEXT [[COPY]], 16
   ; MIPS32-NEXT:   [[TRUNC:%[0-9]+]]:_(s16) = G_TRUNC [[ASSERT_SEXT]](s32)
   ; MIPS32-NEXT:   [[SEXT:%[0-9]+]]:_(s32) = G_SEXT [[TRUNC]](s16)
@@ -176,9 +176,9 @@ entry:
 define zeroext i16 @zext_arg_i16(i16 zeroext %a) {
   ; MIPS32-LABEL: name: zext_arg_i16
   ; MIPS32: bb.1.entry:
-  ; MIPS32-NEXT:   liveins: $a0
+  ; MIPS32-NEXT:   liveins: $r4
   ; MIPS32-NEXT: {{  $}}
-  ; MIPS32-NEXT:   [[COPY:%[0-9]+]]:_(s32) = COPY $a0
+  ; MIPS32-NEXT:   [[COPY:%[0-9]+]]:_(s32) = COPY $r4
   ; MIPS32-NEXT:   [[ASSERT_ZEXT:%[0-9]+]]:_(s32) = G_ASSERT_ZEXT [[COPY]], 16
   ; MIPS32-NEXT:   [[TRUNC:%[0-9]+]]:_(s16) = G_TRUNC [[ASSERT_ZEXT]](s32)
   ; MIPS32-NEXT:   [[ZEXT:%[0-9]+]]:_(s32) = G_ZEXT [[TRUNC]](s16)
@@ -191,9 +191,9 @@ entry:
 define i16 @aext_arg_i16(i16 %a) {
   ; MIPS32-LABEL: name: aext_arg_i16
   ; MIPS32: bb.1.entry:
-  ; MIPS32-NEXT:   liveins: $a0
+  ; MIPS32-NEXT:   liveins: $r4
   ; MIPS32-NEXT: {{  $}}
-  ; MIPS32-NEXT:   [[COPY:%[0-9]+]]:_(s32) = COPY $a0
+  ; MIPS32-NEXT:   [[COPY:%[0-9]+]]:_(s32) = COPY $r4
   ; MIPS32-NEXT:   [[TRUNC:%[0-9]+]]:_(s16) = G_TRUNC [[COPY]](s32)
   ; MIPS32-NEXT:   [[ANYEXT:%[0-9]+]]:_(s32) = G_ANYEXT [[TRUNC]](s16)
   ; MIPS32-NEXT:   $r2 = COPY [[ANYEXT]](s32)
@@ -209,31 +209,31 @@ declare i16 @aext_stack_arg_i16(i32 %x1, i32 %x2, i32 %x3, i32 %x4, i16 %a)
 define signext i16 @call_sext_stack_arg_i16(i32 %x1, i32 %x2, i32 %x3, i32 %x4, i16 signext %a) {
   ; MIPS32-LABEL: name: call_sext_stack_arg_i16
   ; MIPS32: bb.1.entry:
-  ; MIPS32-NEXT:   liveins: $a0, $a1, $a2, $a3
+  ; MIPS32-NEXT:   liveins: $r4, $r5, $r6, $r7
   ; MIPS32-NEXT: {{  $}}
-  ; MIPS32-NEXT:   [[COPY:%[0-9]+]]:_(s32) = COPY $a0
-  ; MIPS32-NEXT:   [[COPY1:%[0-9]+]]:_(s32) = COPY $a1
-  ; MIPS32-NEXT:   [[COPY2:%[0-9]+]]:_(s32) = COPY $a2
-  ; MIPS32-NEXT:   [[COPY3:%[0-9]+]]:_(s32) = COPY $a3
+  ; MIPS32-NEXT:   [[COPY:%[0-9]+]]:_(s32) = COPY $r4
+  ; MIPS32-NEXT:   [[COPY1:%[0-9]+]]:_(s32) = COPY $r5
+  ; MIPS32-NEXT:   [[COPY2:%[0-9]+]]:_(s32) = COPY $r6
+  ; MIPS32-NEXT:   [[COPY3:%[0-9]+]]:_(s32) = COPY $r7
   ; MIPS32-NEXT:   [[FRAME_INDEX:%[0-9]+]]:_(p0) = G_FRAME_INDEX %fixed-stack.0
   ; MIPS32-NEXT:   [[LOAD:%[0-9]+]]:_(s32) = G_LOAD [[FRAME_INDEX]](p0) :: (load (s32) from %fixed-stack.0, align 8)
   ; MIPS32-NEXT:   [[ASSERT_SEXT:%[0-9]+]]:_(s32) = G_ASSERT_SEXT [[LOAD]], 16
   ; MIPS32-NEXT:   [[TRUNC:%[0-9]+]]:_(s16) = G_TRUNC [[ASSERT_SEXT]](s32)
-  ; MIPS32-NEXT:   ADJCALLSTACKDOWN 24, 0, implicit-def $sp, implicit $sp
+  ; MIPS32-NEXT:   ADJCALLSTACKDOWN 24, 0, implicit-def $r29, implicit $r29
   ; MIPS32-NEXT:   [[SEXT:%[0-9]+]]:_(s32) = G_SEXT [[TRUNC]](s16)
-  ; MIPS32-NEXT:   [[COPY4:%[0-9]+]]:_(p0) = COPY $sp
+  ; MIPS32-NEXT:   [[COPY4:%[0-9]+]]:_(p0) = COPY $r29
   ; MIPS32-NEXT:   [[C:%[0-9]+]]:_(s32) = G_CONSTANT i32 16
   ; MIPS32-NEXT:   [[PTR_ADD:%[0-9]+]]:_(p0) = G_PTR_ADD [[COPY4]], [[C]](s32)
   ; MIPS32-NEXT:   G_STORE [[SEXT]](s32), [[PTR_ADD]](p0) :: (store (s32) into stack + 16, align 8)
-  ; MIPS32-NEXT:   $a0 = COPY [[COPY]](s32)
-  ; MIPS32-NEXT:   $a1 = COPY [[COPY1]](s32)
-  ; MIPS32-NEXT:   $a2 = COPY [[COPY2]](s32)
-  ; MIPS32-NEXT:   $a3 = COPY [[COPY3]](s32)
-  ; MIPS32-NEXT:   JAL @sext_stack_arg_i16, csr_o32, implicit-def dead $ra, implicit-def $sp, implicit $a0, implicit $a1, implicit $a2, implicit $a3, implicit-def $r2
+  ; MIPS32-NEXT:   $r4 = COPY [[COPY]](s32)
+  ; MIPS32-NEXT:   $r5 = COPY [[COPY1]](s32)
+  ; MIPS32-NEXT:   $r6 = COPY [[COPY2]](s32)
+  ; MIPS32-NEXT:   $r7 = COPY [[COPY3]](s32)
+  ; MIPS32-NEXT:   JAL @sext_stack_arg_i16, csr_o32, implicit-def dead $r31, implicit-def $r29, implicit $r4, implicit $r5, implicit $r6, implicit $r7, implicit-def $r2
   ; MIPS32-NEXT:   [[COPY5:%[0-9]+]]:_(s32) = COPY $r2
   ; MIPS32-NEXT:   [[ASSERT_SEXT1:%[0-9]+]]:_(s32) = G_ASSERT_SEXT [[COPY5]], 16
   ; MIPS32-NEXT:   [[TRUNC1:%[0-9]+]]:_(s16) = G_TRUNC [[ASSERT_SEXT1]](s32)
-  ; MIPS32-NEXT:   ADJCALLSTACKUP 24, 0, implicit-def $sp, implicit $sp
+  ; MIPS32-NEXT:   ADJCALLSTACKUP 24, 0, implicit-def $r29, implicit $r29
   ; MIPS32-NEXT:   [[SEXT1:%[0-9]+]]:_(s32) = G_SEXT [[TRUNC1]](s16)
   ; MIPS32-NEXT:   $r2 = COPY [[SEXT1]](s32)
   ; MIPS32-NEXT:   RetRA implicit $r2
@@ -245,31 +245,31 @@ entry:
 define zeroext i16 @call_zext_stack_arg_i16(i32 %x1, i32 %x2, i32 %x3, i32 %x4, i16 zeroext %a) {
   ; MIPS32-LABEL: name: call_zext_stack_arg_i16
   ; MIPS32: bb.1.entry:
-  ; MIPS32-NEXT:   liveins: $a0, $a1, $a2, $a3
+  ; MIPS32-NEXT:   liveins: $r4, $r5, $r6, $r7
   ; MIPS32-NEXT: {{  $}}
-  ; MIPS32-NEXT:   [[COPY:%[0-9]+]]:_(s32) = COPY $a0
-  ; MIPS32-NEXT:   [[COPY1:%[0-9]+]]:_(s32) = COPY $a1
-  ; MIPS32-NEXT:   [[COPY2:%[0-9]+]]:_(s32) = COPY $a2
-  ; MIPS32-NEXT:   [[COPY3:%[0-9]+]]:_(s32) = COPY $a3
+  ; MIPS32-NEXT:   [[COPY:%[0-9]+]]:_(s32) = COPY $r4
+  ; MIPS32-NEXT:   [[COPY1:%[0-9]+]]:_(s32) = COPY $r5
+  ; MIPS32-NEXT:   [[COPY2:%[0-9]+]]:_(s32) = COPY $r6
+  ; MIPS32-NEXT:   [[COPY3:%[0-9]+]]:_(s32) = COPY $r7
   ; MIPS32-NEXT:   [[FRAME_INDEX:%[0-9]+]]:_(p0) = G_FRAME_INDEX %fixed-stack.0
   ; MIPS32-NEXT:   [[LOAD:%[0-9]+]]:_(s32) = G_LOAD [[FRAME_INDEX]](p0) :: (load (s32) from %fixed-stack.0, align 8)
   ; MIPS32-NEXT:   [[ASSERT_ZEXT:%[0-9]+]]:_(s32) = G_ASSERT_ZEXT [[LOAD]], 16
   ; MIPS32-NEXT:   [[TRUNC:%[0-9]+]]:_(s16) = G_TRUNC [[ASSERT_ZEXT]](s32)
-  ; MIPS32-NEXT:   ADJCALLSTACKDOWN 24, 0, implicit-def $sp, implicit $sp
+  ; MIPS32-NEXT:   ADJCALLSTACKDOWN 24, 0, implicit-def $r29, implicit $r29
   ; MIPS32-NEXT:   [[ZEXT:%[0-9]+]]:_(s32) = G_ZEXT [[TRUNC]](s16)
-  ; MIPS32-NEXT:   [[COPY4:%[0-9]+]]:_(p0) = COPY $sp
+  ; MIPS32-NEXT:   [[COPY4:%[0-9]+]]:_(p0) = COPY $r29
   ; MIPS32-NEXT:   [[C:%[0-9]+]]:_(s32) = G_CONSTANT i32 16
   ; MIPS32-NEXT:   [[PTR_ADD:%[0-9]+]]:_(p0) = G_PTR_ADD [[COPY4]], [[C]](s32)
   ; MIPS32-NEXT:   G_STORE [[ZEXT]](s32), [[PTR_ADD]](p0) :: (store (s32) into stack + 16, align 8)
-  ; MIPS32-NEXT:   $a0 = COPY [[COPY]](s32)
-  ; MIPS32-NEXT:   $a1 = COPY [[COPY1]](s32)
-  ; MIPS32-NEXT:   $a2 = COPY [[COPY2]](s32)
-  ; MIPS32-NEXT:   $a3 = COPY [[COPY3]](s32)
-  ; MIPS32-NEXT:   JAL @zext_stack_arg_i16, csr_o32, implicit-def dead $ra, implicit-def $sp, implicit $a0, implicit $a1, implicit $a2, implicit $a3, implicit-def $r2
+  ; MIPS32-NEXT:   $r4 = COPY [[COPY]](s32)
+  ; MIPS32-NEXT:   $r5 = COPY [[COPY1]](s32)
+  ; MIPS32-NEXT:   $r6 = COPY [[COPY2]](s32)
+  ; MIPS32-NEXT:   $r7 = COPY [[COPY3]](s32)
+  ; MIPS32-NEXT:   JAL @zext_stack_arg_i16, csr_o32, implicit-def dead $r31, implicit-def $r29, implicit $r4, implicit $r5, implicit $r6, implicit $r7, implicit-def $r2
   ; MIPS32-NEXT:   [[COPY5:%[0-9]+]]:_(s32) = COPY $r2
   ; MIPS32-NEXT:   [[ASSERT_ZEXT1:%[0-9]+]]:_(s32) = G_ASSERT_ZEXT [[COPY5]], 16
   ; MIPS32-NEXT:   [[TRUNC1:%[0-9]+]]:_(s16) = G_TRUNC [[ASSERT_ZEXT1]](s32)
-  ; MIPS32-NEXT:   ADJCALLSTACKUP 24, 0, implicit-def $sp, implicit $sp
+  ; MIPS32-NEXT:   ADJCALLSTACKUP 24, 0, implicit-def $r29, implicit $r29
   ; MIPS32-NEXT:   [[ZEXT1:%[0-9]+]]:_(s32) = G_ZEXT [[TRUNC1]](s16)
   ; MIPS32-NEXT:   $r2 = COPY [[ZEXT1]](s32)
   ; MIPS32-NEXT:   RetRA implicit $r2
@@ -281,29 +281,29 @@ entry:
 define i16 @call_aext_stack_arg_i16(i32 %x1, i32 %x2, i32 %x3, i32 %x4, i16 %a) {
   ; MIPS32-LABEL: name: call_aext_stack_arg_i16
   ; MIPS32: bb.1.entry:
-  ; MIPS32-NEXT:   liveins: $a0, $a1, $a2, $a3
+  ; MIPS32-NEXT:   liveins: $r4, $r5, $r6, $r7
   ; MIPS32-NEXT: {{  $}}
-  ; MIPS32-NEXT:   [[COPY:%[0-9]+]]:_(s32) = COPY $a0
-  ; MIPS32-NEXT:   [[COPY1:%[0-9]+]]:_(s32) = COPY $a1
-  ; MIPS32-NEXT:   [[COPY2:%[0-9]+]]:_(s32) = COPY $a2
-  ; MIPS32-NEXT:   [[COPY3:%[0-9]+]]:_(s32) = COPY $a3
+  ; MIPS32-NEXT:   [[COPY:%[0-9]+]]:_(s32) = COPY $r4
+  ; MIPS32-NEXT:   [[COPY1:%[0-9]+]]:_(s32) = COPY $r5
+  ; MIPS32-NEXT:   [[COPY2:%[0-9]+]]:_(s32) = COPY $r6
+  ; MIPS32-NEXT:   [[COPY3:%[0-9]+]]:_(s32) = COPY $r7
   ; MIPS32-NEXT:   [[FRAME_INDEX:%[0-9]+]]:_(p0) = G_FRAME_INDEX %fixed-stack.0
   ; MIPS32-NEXT:   [[LOAD:%[0-9]+]]:_(s32) = G_LOAD [[FRAME_INDEX]](p0) :: (load (s32) from %fixed-stack.0, align 8)
   ; MIPS32-NEXT:   [[TRUNC:%[0-9]+]]:_(s16) = G_TRUNC [[LOAD]](s32)
-  ; MIPS32-NEXT:   ADJCALLSTACKDOWN 24, 0, implicit-def $sp, implicit $sp
+  ; MIPS32-NEXT:   ADJCALLSTACKDOWN 24, 0, implicit-def $r29, implicit $r29
   ; MIPS32-NEXT:   [[ANYEXT:%[0-9]+]]:_(s32) = G_ANYEXT [[TRUNC]](s16)
-  ; MIPS32-NEXT:   [[COPY4:%[0-9]+]]:_(p0) = COPY $sp
+  ; MIPS32-NEXT:   [[COPY4:%[0-9]+]]:_(p0) = COPY $r29
   ; MIPS32-NEXT:   [[C:%[0-9]+]]:_(s32) = G_CONSTANT i32 16
   ; MIPS32-NEXT:   [[PTR_ADD:%[0-9]+]]:_(p0) = G_PTR_ADD [[COPY4]], [[C]](s32)
   ; MIPS32-NEXT:   G_STORE [[ANYEXT]](s32), [[PTR_ADD]](p0) :: (store (s32) into stack + 16, align 8)
-  ; MIPS32-NEXT:   $a0 = COPY [[COPY]](s32)
-  ; MIPS32-NEXT:   $a1 = COPY [[COPY1]](s32)
-  ; MIPS32-NEXT:   $a2 = COPY [[COPY2]](s32)
-  ; MIPS32-NEXT:   $a3 = COPY [[COPY3]](s32)
-  ; MIPS32-NEXT:   JAL @aext_stack_arg_i16, csr_o32, implicit-def dead $ra, implicit-def $sp, implicit $a0, implicit $a1, implicit $a2, implicit $a3, implicit-def $r2
+  ; MIPS32-NEXT:   $r4 = COPY [[COPY]](s32)
+  ; MIPS32-NEXT:   $r5 = COPY [[COPY1]](s32)
+  ; MIPS32-NEXT:   $r6 = COPY [[COPY2]](s32)
+  ; MIPS32-NEXT:   $r7 = COPY [[COPY3]](s32)
+  ; MIPS32-NEXT:   JAL @aext_stack_arg_i16, csr_o32, implicit-def dead $r31, implicit-def $r29, implicit $r4, implicit $r5, implicit $r6, implicit $r7, implicit-def $r2
   ; MIPS32-NEXT:   [[COPY5:%[0-9]+]]:_(s32) = COPY $r2
   ; MIPS32-NEXT:   [[TRUNC1:%[0-9]+]]:_(s16) = G_TRUNC [[COPY5]](s32)
-  ; MIPS32-NEXT:   ADJCALLSTACKUP 24, 0, implicit-def $sp, implicit $sp
+  ; MIPS32-NEXT:   ADJCALLSTACKUP 24, 0, implicit-def $r29, implicit $r29
   ; MIPS32-NEXT:   [[ANYEXT1:%[0-9]+]]:_(s32) = G_ANYEXT [[TRUNC1]](s16)
   ; MIPS32-NEXT:   $r2 = COPY [[ANYEXT1]](s32)
   ; MIPS32-NEXT:   RetRA implicit $r2

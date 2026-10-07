@@ -31,7 +31,7 @@
 define i32 @load3align1(ptr %S) {
 ; MIPS32-LABEL: load3align1:
 ; MIPS32:       # %bb.0: # %entry
-; MIPS32-NEXT:    # implicit-def: $at
+; MIPS32-NEXT:    # implicit-def: $r1
 ; MIPS32-NEXT:    lwl $1, 3($4)
 ; MIPS32-NEXT:    lwr $1, 0($4)
 ; MIPS32-NEXT:    lui $2, 255
@@ -56,7 +56,7 @@ entry:
 define i32 @load3align2(ptr %S) {
 ; MIPS32-LABEL: load3align2:
 ; MIPS32:       # %bb.0: # %entry
-; MIPS32-NEXT:    # implicit-def: $at
+; MIPS32-NEXT:    # implicit-def: $r1
 ; MIPS32-NEXT:    lwl $1, 3($4)
 ; MIPS32-NEXT:    lwr $1, 0($4)
 ; MIPS32-NEXT:    lui $2, 255
@@ -234,7 +234,7 @@ define i64 @load6align1(ptr %S) {
 ; MIPS32-NEXT:    # implicit-def: $r2
 ; MIPS32-NEXT:    lwl $2, 3($4)
 ; MIPS32-NEXT:    lwr $2, 0($4)
-; MIPS32-NEXT:    # implicit-def: $at
+; MIPS32-NEXT:    # implicit-def: $r1
 ; MIPS32-NEXT:    lwl $1, 7($4)
 ; MIPS32-NEXT:    lwr $1, 4($4)
 ; MIPS32-NEXT:    addiu $3, $zero, 65535
@@ -340,7 +340,7 @@ define i64 @load7align1(ptr %S) {
 ; MIPS32-NEXT:    # implicit-def: $r2
 ; MIPS32-NEXT:    lwl $2, 3($4)
 ; MIPS32-NEXT:    lwr $2, 0($4)
-; MIPS32-NEXT:    # implicit-def: $at
+; MIPS32-NEXT:    # implicit-def: $r1
 ; MIPS32-NEXT:    lwl $1, 7($4)
 ; MIPS32-NEXT:    lwr $1, 4($4)
 ; MIPS32-NEXT:    addiu $4, $zero, 65535
@@ -373,7 +373,7 @@ define i64 @load7align2(ptr %S) {
 ; MIPS32-NEXT:    # implicit-def: $r2
 ; MIPS32-NEXT:    lwl $2, 3($4)
 ; MIPS32-NEXT:    lwr $2, 0($4)
-; MIPS32-NEXT:    # implicit-def: $at
+; MIPS32-NEXT:    # implicit-def: $r1
 ; MIPS32-NEXT:    lwl $1, 7($4)
 ; MIPS32-NEXT:    lwr $1, 4($4)
 ; MIPS32-NEXT:    addiu $4, $zero, 65535
@@ -463,7 +463,7 @@ define double @load_double_align1() {
 ; MIPS32:       # %bb.0: # %entry
 ; MIPS32-NEXT:    lui $1, %hi(double_align1)
 ; MIPS32-NEXT:    addiu $3, $1, %lo(double_align1)
-; MIPS32-NEXT:    # implicit-def: $at
+; MIPS32-NEXT:    # implicit-def: $r1
 ; MIPS32-NEXT:    lwl $1, 3($3)
 ; MIPS32-NEXT:    lwr $1, 0($3)
 ; MIPS32-NEXT:    # implicit-def: $r2
@@ -490,7 +490,7 @@ define double @load_double_align2() {
 ; MIPS32:       # %bb.0: # %entry
 ; MIPS32-NEXT:    lui $1, %hi(double_align2)
 ; MIPS32-NEXT:    addiu $3, $1, %lo(double_align2)
-; MIPS32-NEXT:    # implicit-def: $at
+; MIPS32-NEXT:    # implicit-def: $r1
 ; MIPS32-NEXT:    lwl $1, 3($3)
 ; MIPS32-NEXT:    lwr $1, 0($3)
 ; MIPS32-NEXT:    # implicit-def: $r2

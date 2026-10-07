@@ -4,8 +4,8 @@
 define i32 @shl(i32 %a) {
   ; MIPS32-LABEL: name: shl
   ; MIPS32: bb.1.entry:
-  ; MIPS32:   liveins: $a0
-  ; MIPS32:   [[COPY:%[0-9]+]]:_(s32) = COPY $a0
+  ; MIPS32:   liveins: $r4
+  ; MIPS32:   [[COPY:%[0-9]+]]:_(s32) = COPY $r4
   ; MIPS32:   [[C:%[0-9]+]]:_(s32) = G_CONSTANT i32 1
   ; MIPS32:   [[SHL:%[0-9]+]]:_(s32) = G_SHL [[COPY]], [[C]]
   ; MIPS32:   $r2 = COPY [[SHL]](s32)
@@ -18,8 +18,8 @@ entry:
 define i32 @ashr(i32 %a) {
   ; MIPS32-LABEL: name: ashr
   ; MIPS32: bb.1.entry:
-  ; MIPS32:   liveins: $a0
-  ; MIPS32:   [[COPY:%[0-9]+]]:_(s32) = COPY $a0
+  ; MIPS32:   liveins: $r4
+  ; MIPS32:   [[COPY:%[0-9]+]]:_(s32) = COPY $r4
   ; MIPS32:   [[C:%[0-9]+]]:_(s32) = G_CONSTANT i32 1
   ; MIPS32:   [[ASHR:%[0-9]+]]:_(s32) = G_ASHR [[COPY]], [[C]]
   ; MIPS32:   $r2 = COPY [[ASHR]](s32)
@@ -32,8 +32,8 @@ entry:
 define i32 @lshr(i32 %a) {
   ; MIPS32-LABEL: name: lshr
   ; MIPS32: bb.1.entry:
-  ; MIPS32:   liveins: $a0
-  ; MIPS32:   [[COPY:%[0-9]+]]:_(s32) = COPY $a0
+  ; MIPS32:   liveins: $r4
+  ; MIPS32:   [[COPY:%[0-9]+]]:_(s32) = COPY $r4
   ; MIPS32:   [[C:%[0-9]+]]:_(s32) = G_CONSTANT i32 1
   ; MIPS32:   [[LSHR:%[0-9]+]]:_(s32) = G_LSHR [[COPY]], [[C]]
   ; MIPS32:   $r2 = COPY [[LSHR]](s32)
@@ -46,9 +46,9 @@ entry:
 define i32 @shlv(i32 %a, i32 %b) {
   ; MIPS32-LABEL: name: shlv
   ; MIPS32: bb.1.entry:
-  ; MIPS32:   liveins: $a0, $a1
-  ; MIPS32:   [[COPY:%[0-9]+]]:_(s32) = COPY $a0
-  ; MIPS32:   [[COPY1:%[0-9]+]]:_(s32) = COPY $a1
+  ; MIPS32:   liveins: $r4, $r5
+  ; MIPS32:   [[COPY:%[0-9]+]]:_(s32) = COPY $r4
+  ; MIPS32:   [[COPY1:%[0-9]+]]:_(s32) = COPY $r5
   ; MIPS32:   [[SHL:%[0-9]+]]:_(s32) = G_SHL [[COPY]], [[COPY1]]
   ; MIPS32:   $r2 = COPY [[SHL]](s32)
   ; MIPS32:   RetRA implicit $r2
@@ -60,9 +60,9 @@ entry:
 define i32 @ashrv(i32 %a, i32 %b) {
   ; MIPS32-LABEL: name: ashrv
   ; MIPS32: bb.1.entry:
-  ; MIPS32:   liveins: $a0, $a1
-  ; MIPS32:   [[COPY:%[0-9]+]]:_(s32) = COPY $a0
-  ; MIPS32:   [[COPY1:%[0-9]+]]:_(s32) = COPY $a1
+  ; MIPS32:   liveins: $r4, $r5
+  ; MIPS32:   [[COPY:%[0-9]+]]:_(s32) = COPY $r4
+  ; MIPS32:   [[COPY1:%[0-9]+]]:_(s32) = COPY $r5
   ; MIPS32:   [[ASHR:%[0-9]+]]:_(s32) = G_ASHR [[COPY]], [[COPY1]]
   ; MIPS32:   $r2 = COPY [[ASHR]](s32)
   ; MIPS32:   RetRA implicit $r2
@@ -74,9 +74,9 @@ entry:
 define i32 @lshrv(i32 %a, i32 %b) {
   ; MIPS32-LABEL: name: lshrv
   ; MIPS32: bb.1.entry:
-  ; MIPS32:   liveins: $a0, $a1
-  ; MIPS32:   [[COPY:%[0-9]+]]:_(s32) = COPY $a0
-  ; MIPS32:   [[COPY1:%[0-9]+]]:_(s32) = COPY $a1
+  ; MIPS32:   liveins: $r4, $r5
+  ; MIPS32:   [[COPY:%[0-9]+]]:_(s32) = COPY $r4
+  ; MIPS32:   [[COPY1:%[0-9]+]]:_(s32) = COPY $r5
   ; MIPS32:   [[LSHR:%[0-9]+]]:_(s32) = G_LSHR [[COPY]], [[COPY1]]
   ; MIPS32:   $r2 = COPY [[LSHR]](s32)
   ; MIPS32:   RetRA implicit $r2

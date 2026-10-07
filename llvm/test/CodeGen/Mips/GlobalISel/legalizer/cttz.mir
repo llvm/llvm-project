@@ -6,12 +6,12 @@ alignment:       4
 tracksRegLiveness: true
 body:             |
   bb.1.entry:
-    liveins: $a0
+    liveins: $r4
 
     ; MIPS32-LABEL: name: cttz_i32
-    ; MIPS32: liveins: $a0
+    ; MIPS32: liveins: $r4
     ; MIPS32-NEXT: {{  $}}
-    ; MIPS32-NEXT: [[COPY:%[0-9]+]]:_(s32) = COPY $a0
+    ; MIPS32-NEXT: [[COPY:%[0-9]+]]:_(s32) = COPY $r4
     ; MIPS32-NEXT: [[C:%[0-9]+]]:_(s32) = G_CONSTANT i32 -1
     ; MIPS32-NEXT: [[XOR:%[0-9]+]]:_(s32) = G_XOR [[COPY]], [[C]]
     ; MIPS32-NEXT: [[ADD:%[0-9]+]]:_(s32) = G_ADD [[COPY]], [[C]]
@@ -21,7 +21,7 @@ body:             |
     ; MIPS32-NEXT: [[SUB:%[0-9]+]]:_(s32) = G_SUB [[C1]], [[CTLZ]]
     ; MIPS32-NEXT: $r2 = COPY [[SUB]](s32)
     ; MIPS32-NEXT: RetRA implicit $r2
-    %0:_(s32) = COPY $a0
+    %0:_(s32) = COPY $r4
     %1:_(s32) = G_CTTZ %0(s32)
     $r2 = COPY %1(s32)
     RetRA implicit $r2
@@ -33,13 +33,13 @@ alignment:       4
 tracksRegLiveness: true
 body:             |
   bb.1.entry:
-    liveins: $a0, $a1
+    liveins: $r4, $r5
 
     ; MIPS32-LABEL: name: cttz_i64
-    ; MIPS32: liveins: $a0, $a1
+    ; MIPS32: liveins: $r4, $r5
     ; MIPS32-NEXT: {{  $}}
-    ; MIPS32-NEXT: [[COPY:%[0-9]+]]:_(s32) = COPY $a0
-    ; MIPS32-NEXT: [[COPY1:%[0-9]+]]:_(s32) = COPY $a1
+    ; MIPS32-NEXT: [[COPY:%[0-9]+]]:_(s32) = COPY $r4
+    ; MIPS32-NEXT: [[COPY1:%[0-9]+]]:_(s32) = COPY $r5
     ; MIPS32-NEXT: [[C:%[0-9]+]]:_(s32) = G_CONSTANT i32 0
     ; MIPS32-NEXT: [[ICMP:%[0-9]+]]:_(s32) = G_ICMP intpred(eq), [[COPY]](s32), [[C]]
     ; MIPS32-NEXT: [[C1:%[0-9]+]]:_(s32) = G_CONSTANT i32 -1
@@ -59,8 +59,8 @@ body:             |
     ; MIPS32-NEXT: $r2 = COPY [[SELECT]](s32)
     ; MIPS32-NEXT: $r3 = COPY [[C]](s32)
     ; MIPS32-NEXT: RetRA implicit $r2, implicit $r3
-    %1:_(s32) = COPY $a0
-    %2:_(s32) = COPY $a1
+    %1:_(s32) = COPY $r4
+    %2:_(s32) = COPY $r5
     %0:_(s64) = G_MERGE_VALUES %1(s32), %2(s32)
     %3:_(s64) = G_CTTZ %0(s64)
     %4:_(s32), %5:_(s32) = G_UNMERGE_VALUES %3(s64)
@@ -75,12 +75,12 @@ alignment:       4
 tracksRegLiveness: true
 body:             |
   bb.1.entry:
-    liveins: $a0
+    liveins: $r4
 
     ; MIPS32-LABEL: name: ffs_i32_expansion
-    ; MIPS32: liveins: $a0
+    ; MIPS32: liveins: $r4
     ; MIPS32-NEXT: {{  $}}
-    ; MIPS32-NEXT: [[COPY:%[0-9]+]]:_(s32) = COPY $a0
+    ; MIPS32-NEXT: [[COPY:%[0-9]+]]:_(s32) = COPY $r4
     ; MIPS32-NEXT: [[C:%[0-9]+]]:_(s32) = G_CONSTANT i32 1
     ; MIPS32-NEXT: [[C1:%[0-9]+]]:_(s32) = G_CONSTANT i32 0
     ; MIPS32-NEXT: [[C2:%[0-9]+]]:_(s32) = G_CONSTANT i32 -1
@@ -95,7 +95,7 @@ body:             |
     ; MIPS32-NEXT: [[SELECT:%[0-9]+]]:_(s32) = G_SELECT [[ICMP]](s32), [[C1]], [[ADD1]]
     ; MIPS32-NEXT: $r2 = COPY [[SELECT]](s32)
     ; MIPS32-NEXT: RetRA implicit $r2
-    %0:_(s32) = COPY $a0
+    %0:_(s32) = COPY $r4
     %2:_(s32) = G_CONSTANT i32 1
     %4:_(s32) = G_CONSTANT i32 0
     %1:_(s32) = G_CTTZ_ZERO_POISON %0(s32)
@@ -112,13 +112,13 @@ alignment:       4
 tracksRegLiveness: true
 body:             |
   bb.1.entry:
-    liveins: $a0, $a1
+    liveins: $r4, $r5
 
     ; MIPS32-LABEL: name: ffs_i64_expansion
-    ; MIPS32: liveins: $a0, $a1
+    ; MIPS32: liveins: $r4, $r5
     ; MIPS32-NEXT: {{  $}}
-    ; MIPS32-NEXT: [[COPY:%[0-9]+]]:_(s32) = COPY $a0
-    ; MIPS32-NEXT: [[COPY1:%[0-9]+]]:_(s32) = COPY $a1
+    ; MIPS32-NEXT: [[COPY:%[0-9]+]]:_(s32) = COPY $r4
+    ; MIPS32-NEXT: [[COPY1:%[0-9]+]]:_(s32) = COPY $r5
     ; MIPS32-NEXT: [[C:%[0-9]+]]:_(s32) = G_CONSTANT i32 1
     ; MIPS32-NEXT: [[C1:%[0-9]+]]:_(s32) = G_CONSTANT i32 0
     ; MIPS32-NEXT: [[MV:%[0-9]+]]:_(s64) = G_MERGE_VALUES [[C1]](s32), [[C1]](s32)
@@ -153,8 +153,8 @@ body:             |
     ; MIPS32-NEXT: $r2 = COPY [[UV]](s32)
     ; MIPS32-NEXT: $r3 = COPY [[UV1]](s32)
     ; MIPS32-NEXT: RetRA implicit $r2, implicit $r3
-    %1:_(s32) = COPY $a0
-    %2:_(s32) = COPY $a1
+    %1:_(s32) = COPY $r4
+    %2:_(s32) = COPY $r5
     %0:_(s64) = G_MERGE_VALUES %1(s32), %2(s32)
     %4:_(s64) = G_CONSTANT i64 1
     %6:_(s64) = G_CONSTANT i64 0

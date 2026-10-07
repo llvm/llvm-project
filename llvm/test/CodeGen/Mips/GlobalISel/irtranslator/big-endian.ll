@@ -8,10 +8,10 @@
 ; Check high-word-first ABI assignments on BE.
 define i64 @integer_regs(i64 %x) {
 ; CHECK-LABEL: name: integer_regs
-; BE: [[LO:%[0-9]+]]:_(s32) = COPY $a1
-; BE-NEXT: [[HI:%[0-9]+]]:_(s32) = COPY $a0
-; LE: [[LO:%[0-9]+]]:_(s32) = COPY $a0
-; LE-NEXT: [[HI:%[0-9]+]]:_(s32) = COPY $a1
+; BE: [[LO:%[0-9]+]]:_(s32) = COPY $r5
+; BE-NEXT: [[HI:%[0-9]+]]:_(s32) = COPY $r4
+; LE: [[LO:%[0-9]+]]:_(s32) = COPY $r4
+; LE-NEXT: [[HI:%[0-9]+]]:_(s32) = COPY $r5
 ; CHECK-NEXT: [[X:%[0-9]+]]:_(s64) = G_MERGE_VALUES [[LO]](s32), [[HI]](s32)
 ; CHECK-NEXT: [[RLO:%[0-9]+]]:_(s32), [[RHI:%[0-9]+]]:_(s32) = G_UNMERGE_VALUES [[X]](s64)
 ; BE-NEXT: $r3 = COPY [[RLO]](s32)
@@ -27,11 +27,11 @@ define i64 @integer_call(i64 %x) {
 ; CHECK-LABEL: name: integer_call
 ; CHECK: [[X:%[0-9]+]]:_(s64) = G_MERGE_VALUES
 ; CHECK: [[LO:%[0-9]+]]:_(s32), [[HI:%[0-9]+]]:_(s32) = G_UNMERGE_VALUES [[X]](s64)
-; CHECK: $a0 = COPY
-; BE-NEXT: $a3 = COPY [[LO]](s32)
-; BE-NEXT: $a2 = COPY [[HI]](s32)
-; LE-NEXT: $a2 = COPY [[LO]](s32)
-; LE-NEXT: $a3 = COPY [[HI]](s32)
+; CHECK: $r4 = COPY
+; BE-NEXT: $r7 = COPY [[LO]](s32)
+; BE-NEXT: $r6 = COPY [[HI]](s32)
+; LE-NEXT: $r6 = COPY [[LO]](s32)
+; LE-NEXT: $r7 = COPY [[HI]](s32)
 ; CHECK-NEXT: JAL @callee_integer,
 ; BE-NEXT: [[RLO:%[0-9]+]]:_(s32) = COPY $r3
 ; BE-NEXT: [[RHI:%[0-9]+]]:_(s32) = COPY $r2
@@ -74,8 +74,8 @@ define void @integer_stack_call(i64 %x) {
 ; Doubles passed in GPRs use the target's custom assignment handler.
 define double @double_regs(i32 %a, double %x) {
 ; CHECK-LABEL: name: double_regs
-; CHECK: [[A2:%[0-9]+]]:_(s32) = COPY $a2
-; CHECK-NEXT: [[A3:%[0-9]+]]:_(s32) = COPY $a3
+; CHECK: [[A2:%[0-9]+]]:_(s32) = COPY $r6
+; CHECK-NEXT: [[A3:%[0-9]+]]:_(s32) = COPY $r7
 ; BE-NEXT: [[X:%[0-9]+]]:_(s64) = G_MERGE_VALUES [[A3]](s32), [[A2]](s32)
 ; LE-NEXT: [[X:%[0-9]+]]:_(s64) = G_MERGE_VALUES [[A2]](s32), [[A3]](s32)
 ; FP32-NEXT: $d0 = COPY [[X]](s64)
@@ -89,11 +89,11 @@ define double @double_call(double %x) {
 ; FP32: [[X:%[0-9]+]]:_(s64) = COPY $d6
 ; FP64: [[X:%[0-9]+]]:_(s64) = COPY $d12_64
 ; CHECK: [[LO:%[0-9]+]]:_(s32), [[HI:%[0-9]+]]:_(s32) = G_UNMERGE_VALUES [[X]](s64)
-; CHECK: $a0 = COPY
-; BE-NEXT: $a2 = COPY [[HI]](s32)
-; BE-NEXT: $a3 = COPY [[LO]](s32)
-; LE-NEXT: $a2 = COPY [[LO]](s32)
-; LE-NEXT: $a3 = COPY [[HI]](s32)
+; CHECK: $r4 = COPY
+; BE-NEXT: $r6 = COPY [[HI]](s32)
+; BE-NEXT: $r7 = COPY [[LO]](s32)
+; LE-NEXT: $r6 = COPY [[LO]](s32)
+; LE-NEXT: $r7 = COPY [[HI]](s32)
 ; CHECK-NEXT: JAL @callee_double,
 ; FP32-NEXT: [[R:%[0-9]+]]:_(s64) = COPY $d0
 ; FP64-NEXT: [[R:%[0-9]+]]:_(s64) = COPY $d0_64

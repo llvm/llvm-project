@@ -50,12 +50,12 @@ body:             |
 
     ; FP32-LABEL: name: false_s
     ; FP32: liveins: $f12, $f14
-    ; FP32: [[ORi:%[0-9]+]]:gpr32 = ORi $zero, 0
+    ; FP32: [[ORi:%[0-9]+]]:gpr32 = ORi $r0, 0
     ; FP32: $r2 = COPY [[ORi]]
     ; FP32: RetRA implicit $r2
     ; FP64-LABEL: name: false_s
     ; FP64: liveins: $f12, $f14
-    ; FP64: [[ORi:%[0-9]+]]:gpr32 = ORi $zero, 0
+    ; FP64: [[ORi:%[0-9]+]]:gpr32 = ORi $r0, 0
     ; FP64: $r2 = COPY [[ORi]]
     ; FP64: RetRA implicit $r2
     %5:gprb(s32) = G_CONSTANT i32 0
@@ -76,12 +76,12 @@ body:             |
 
     ; FP32-LABEL: name: true_s
     ; FP32: liveins: $f12, $f14
-    ; FP32: [[ADDiu:%[0-9]+]]:gpr32 = ADDiu $zero, 65535
+    ; FP32: [[ADDiu:%[0-9]+]]:gpr32 = ADDiu $r0, 65535
     ; FP32: $r2 = COPY [[ADDiu]]
     ; FP32: RetRA implicit $r2
     ; FP64-LABEL: name: true_s
     ; FP64: liveins: $f12, $f14
-    ; FP64: [[ADDiu:%[0-9]+]]:gpr32 = ADDiu $zero, 65535
+    ; FP64: [[ADDiu:%[0-9]+]]:gpr32 = ADDiu $r0, 65535
     ; FP64: $r2 = COPY [[ADDiu]]
     ; FP64: RetRA implicit $r2
     %5:gprb(s32) = G_CONSTANT i32 -1
@@ -104,18 +104,18 @@ body:             |
     ; FP32: liveins: $f12, $f14
     ; FP32: [[COPY:%[0-9]+]]:fgr32 = COPY $f12
     ; FP32: [[COPY1:%[0-9]+]]:fgr32 = COPY $f14
-    ; FP32: [[ADDiu:%[0-9]+]]:gpr32 = ADDiu $zero, 1
+    ; FP32: [[ADDiu:%[0-9]+]]:gpr32 = ADDiu $r0, 1
     ; FP32: FCMP_S32 [[COPY]], [[COPY1]], 1, implicit-def $fcc0
-    ; FP32: [[MOVF_I:%[0-9]+]]:gpr32 = MOVF_I $zero, $fcc0, [[ADDiu]]
+    ; FP32: [[MOVF_I:%[0-9]+]]:gpr32 = MOVF_I $r0, $fcc0, [[ADDiu]]
     ; FP32: $r2 = COPY [[MOVF_I]]
     ; FP32: RetRA implicit $r2
     ; FP64-LABEL: name: uno_s
     ; FP64: liveins: $f12, $f14
     ; FP64: [[COPY:%[0-9]+]]:fgr32 = COPY $f12
     ; FP64: [[COPY1:%[0-9]+]]:fgr32 = COPY $f14
-    ; FP64: [[ADDiu:%[0-9]+]]:gpr32 = ADDiu $zero, 1
+    ; FP64: [[ADDiu:%[0-9]+]]:gpr32 = ADDiu $r0, 1
     ; FP64: FCMP_S32 [[COPY]], [[COPY1]], 1, implicit-def $fcc0
-    ; FP64: [[MOVF_I:%[0-9]+]]:gpr32 = MOVF_I $zero, $fcc0, [[ADDiu]]
+    ; FP64: [[MOVF_I:%[0-9]+]]:gpr32 = MOVF_I $r0, $fcc0, [[ADDiu]]
     ; FP64: $r2 = COPY [[MOVF_I]]
     ; FP64: RetRA implicit $r2
     %0:fprb(s32) = COPY $f12
@@ -140,18 +140,18 @@ body:             |
     ; FP32: liveins: $f12, $f14
     ; FP32: [[COPY:%[0-9]+]]:fgr32 = COPY $f12
     ; FP32: [[COPY1:%[0-9]+]]:fgr32 = COPY $f14
-    ; FP32: [[ADDiu:%[0-9]+]]:gpr32 = ADDiu $zero, 1
+    ; FP32: [[ADDiu:%[0-9]+]]:gpr32 = ADDiu $r0, 1
     ; FP32: FCMP_S32 [[COPY]], [[COPY1]], 1, implicit-def $fcc0
-    ; FP32: [[MOVT_I:%[0-9]+]]:gpr32 = MOVT_I $zero, $fcc0, [[ADDiu]]
+    ; FP32: [[MOVT_I:%[0-9]+]]:gpr32 = MOVT_I $r0, $fcc0, [[ADDiu]]
     ; FP32: $r2 = COPY [[MOVT_I]]
     ; FP32: RetRA implicit $r2
     ; FP64-LABEL: name: ord_s
     ; FP64: liveins: $f12, $f14
     ; FP64: [[COPY:%[0-9]+]]:fgr32 = COPY $f12
     ; FP64: [[COPY1:%[0-9]+]]:fgr32 = COPY $f14
-    ; FP64: [[ADDiu:%[0-9]+]]:gpr32 = ADDiu $zero, 1
+    ; FP64: [[ADDiu:%[0-9]+]]:gpr32 = ADDiu $r0, 1
     ; FP64: FCMP_S32 [[COPY]], [[COPY1]], 1, implicit-def $fcc0
-    ; FP64: [[MOVT_I:%[0-9]+]]:gpr32 = MOVT_I $zero, $fcc0, [[ADDiu]]
+    ; FP64: [[MOVT_I:%[0-9]+]]:gpr32 = MOVT_I $r0, $fcc0, [[ADDiu]]
     ; FP64: $r2 = COPY [[MOVT_I]]
     ; FP64: RetRA implicit $r2
     %0:fprb(s32) = COPY $f12
@@ -176,18 +176,18 @@ body:             |
     ; FP32: liveins: $f12, $f14
     ; FP32: [[COPY:%[0-9]+]]:fgr32 = COPY $f12
     ; FP32: [[COPY1:%[0-9]+]]:fgr32 = COPY $f14
-    ; FP32: [[ADDiu:%[0-9]+]]:gpr32 = ADDiu $zero, 1
+    ; FP32: [[ADDiu:%[0-9]+]]:gpr32 = ADDiu $r0, 1
     ; FP32: FCMP_S32 [[COPY]], [[COPY1]], 2, implicit-def $fcc0
-    ; FP32: [[MOVF_I:%[0-9]+]]:gpr32 = MOVF_I $zero, $fcc0, [[ADDiu]]
+    ; FP32: [[MOVF_I:%[0-9]+]]:gpr32 = MOVF_I $r0, $fcc0, [[ADDiu]]
     ; FP32: $r2 = COPY [[MOVF_I]]
     ; FP32: RetRA implicit $r2
     ; FP64-LABEL: name: oeq_s
     ; FP64: liveins: $f12, $f14
     ; FP64: [[COPY:%[0-9]+]]:fgr32 = COPY $f12
     ; FP64: [[COPY1:%[0-9]+]]:fgr32 = COPY $f14
-    ; FP64: [[ADDiu:%[0-9]+]]:gpr32 = ADDiu $zero, 1
+    ; FP64: [[ADDiu:%[0-9]+]]:gpr32 = ADDiu $r0, 1
     ; FP64: FCMP_S32 [[COPY]], [[COPY1]], 2, implicit-def $fcc0
-    ; FP64: [[MOVF_I:%[0-9]+]]:gpr32 = MOVF_I $zero, $fcc0, [[ADDiu]]
+    ; FP64: [[MOVF_I:%[0-9]+]]:gpr32 = MOVF_I $r0, $fcc0, [[ADDiu]]
     ; FP64: $r2 = COPY [[MOVF_I]]
     ; FP64: RetRA implicit $r2
     %0:fprb(s32) = COPY $f12
@@ -212,18 +212,18 @@ body:             |
     ; FP32: liveins: $f12, $f14
     ; FP32: [[COPY:%[0-9]+]]:fgr32 = COPY $f12
     ; FP32: [[COPY1:%[0-9]+]]:fgr32 = COPY $f14
-    ; FP32: [[ADDiu:%[0-9]+]]:gpr32 = ADDiu $zero, 1
+    ; FP32: [[ADDiu:%[0-9]+]]:gpr32 = ADDiu $r0, 1
     ; FP32: FCMP_S32 [[COPY]], [[COPY1]], 2, implicit-def $fcc0
-    ; FP32: [[MOVT_I:%[0-9]+]]:gpr32 = MOVT_I $zero, $fcc0, [[ADDiu]]
+    ; FP32: [[MOVT_I:%[0-9]+]]:gpr32 = MOVT_I $r0, $fcc0, [[ADDiu]]
     ; FP32: $r2 = COPY [[MOVT_I]]
     ; FP32: RetRA implicit $r2
     ; FP64-LABEL: name: une_s
     ; FP64: liveins: $f12, $f14
     ; FP64: [[COPY:%[0-9]+]]:fgr32 = COPY $f12
     ; FP64: [[COPY1:%[0-9]+]]:fgr32 = COPY $f14
-    ; FP64: [[ADDiu:%[0-9]+]]:gpr32 = ADDiu $zero, 1
+    ; FP64: [[ADDiu:%[0-9]+]]:gpr32 = ADDiu $r0, 1
     ; FP64: FCMP_S32 [[COPY]], [[COPY1]], 2, implicit-def $fcc0
-    ; FP64: [[MOVT_I:%[0-9]+]]:gpr32 = MOVT_I $zero, $fcc0, [[ADDiu]]
+    ; FP64: [[MOVT_I:%[0-9]+]]:gpr32 = MOVT_I $r0, $fcc0, [[ADDiu]]
     ; FP64: $r2 = COPY [[MOVT_I]]
     ; FP64: RetRA implicit $r2
     %0:fprb(s32) = COPY $f12
@@ -248,18 +248,18 @@ body:             |
     ; FP32: liveins: $f12, $f14
     ; FP32: [[COPY:%[0-9]+]]:fgr32 = COPY $f12
     ; FP32: [[COPY1:%[0-9]+]]:fgr32 = COPY $f14
-    ; FP32: [[ADDiu:%[0-9]+]]:gpr32 = ADDiu $zero, 1
+    ; FP32: [[ADDiu:%[0-9]+]]:gpr32 = ADDiu $r0, 1
     ; FP32: FCMP_S32 [[COPY]], [[COPY1]], 3, implicit-def $fcc0
-    ; FP32: [[MOVF_I:%[0-9]+]]:gpr32 = MOVF_I $zero, $fcc0, [[ADDiu]]
+    ; FP32: [[MOVF_I:%[0-9]+]]:gpr32 = MOVF_I $r0, $fcc0, [[ADDiu]]
     ; FP32: $r2 = COPY [[MOVF_I]]
     ; FP32: RetRA implicit $r2
     ; FP64-LABEL: name: ueq_s
     ; FP64: liveins: $f12, $f14
     ; FP64: [[COPY:%[0-9]+]]:fgr32 = COPY $f12
     ; FP64: [[COPY1:%[0-9]+]]:fgr32 = COPY $f14
-    ; FP64: [[ADDiu:%[0-9]+]]:gpr32 = ADDiu $zero, 1
+    ; FP64: [[ADDiu:%[0-9]+]]:gpr32 = ADDiu $r0, 1
     ; FP64: FCMP_S32 [[COPY]], [[COPY1]], 3, implicit-def $fcc0
-    ; FP64: [[MOVF_I:%[0-9]+]]:gpr32 = MOVF_I $zero, $fcc0, [[ADDiu]]
+    ; FP64: [[MOVF_I:%[0-9]+]]:gpr32 = MOVF_I $r0, $fcc0, [[ADDiu]]
     ; FP64: $r2 = COPY [[MOVF_I]]
     ; FP64: RetRA implicit $r2
     %0:fprb(s32) = COPY $f12
@@ -284,18 +284,18 @@ body:             |
     ; FP32: liveins: $f12, $f14
     ; FP32: [[COPY:%[0-9]+]]:fgr32 = COPY $f12
     ; FP32: [[COPY1:%[0-9]+]]:fgr32 = COPY $f14
-    ; FP32: [[ADDiu:%[0-9]+]]:gpr32 = ADDiu $zero, 1
+    ; FP32: [[ADDiu:%[0-9]+]]:gpr32 = ADDiu $r0, 1
     ; FP32: FCMP_S32 [[COPY]], [[COPY1]], 3, implicit-def $fcc0
-    ; FP32: [[MOVT_I:%[0-9]+]]:gpr32 = MOVT_I $zero, $fcc0, [[ADDiu]]
+    ; FP32: [[MOVT_I:%[0-9]+]]:gpr32 = MOVT_I $r0, $fcc0, [[ADDiu]]
     ; FP32: $r2 = COPY [[MOVT_I]]
     ; FP32: RetRA implicit $r2
     ; FP64-LABEL: name: one_s
     ; FP64: liveins: $f12, $f14
     ; FP64: [[COPY:%[0-9]+]]:fgr32 = COPY $f12
     ; FP64: [[COPY1:%[0-9]+]]:fgr32 = COPY $f14
-    ; FP64: [[ADDiu:%[0-9]+]]:gpr32 = ADDiu $zero, 1
+    ; FP64: [[ADDiu:%[0-9]+]]:gpr32 = ADDiu $r0, 1
     ; FP64: FCMP_S32 [[COPY]], [[COPY1]], 3, implicit-def $fcc0
-    ; FP64: [[MOVT_I:%[0-9]+]]:gpr32 = MOVT_I $zero, $fcc0, [[ADDiu]]
+    ; FP64: [[MOVT_I:%[0-9]+]]:gpr32 = MOVT_I $r0, $fcc0, [[ADDiu]]
     ; FP64: $r2 = COPY [[MOVT_I]]
     ; FP64: RetRA implicit $r2
     %0:fprb(s32) = COPY $f12
@@ -320,18 +320,18 @@ body:             |
     ; FP32: liveins: $f12, $f14
     ; FP32: [[COPY:%[0-9]+]]:fgr32 = COPY $f12
     ; FP32: [[COPY1:%[0-9]+]]:fgr32 = COPY $f14
-    ; FP32: [[ADDiu:%[0-9]+]]:gpr32 = ADDiu $zero, 1
+    ; FP32: [[ADDiu:%[0-9]+]]:gpr32 = ADDiu $r0, 1
     ; FP32: FCMP_S32 [[COPY]], [[COPY1]], 4, implicit-def $fcc0
-    ; FP32: [[MOVF_I:%[0-9]+]]:gpr32 = MOVF_I $zero, $fcc0, [[ADDiu]]
+    ; FP32: [[MOVF_I:%[0-9]+]]:gpr32 = MOVF_I $r0, $fcc0, [[ADDiu]]
     ; FP32: $r2 = COPY [[MOVF_I]]
     ; FP32: RetRA implicit $r2
     ; FP64-LABEL: name: olt_s
     ; FP64: liveins: $f12, $f14
     ; FP64: [[COPY:%[0-9]+]]:fgr32 = COPY $f12
     ; FP64: [[COPY1:%[0-9]+]]:fgr32 = COPY $f14
-    ; FP64: [[ADDiu:%[0-9]+]]:gpr32 = ADDiu $zero, 1
+    ; FP64: [[ADDiu:%[0-9]+]]:gpr32 = ADDiu $r0, 1
     ; FP64: FCMP_S32 [[COPY]], [[COPY1]], 4, implicit-def $fcc0
-    ; FP64: [[MOVF_I:%[0-9]+]]:gpr32 = MOVF_I $zero, $fcc0, [[ADDiu]]
+    ; FP64: [[MOVF_I:%[0-9]+]]:gpr32 = MOVF_I $r0, $fcc0, [[ADDiu]]
     ; FP64: $r2 = COPY [[MOVF_I]]
     ; FP64: RetRA implicit $r2
     %0:fprb(s32) = COPY $f12
@@ -356,18 +356,18 @@ body:             |
     ; FP32: liveins: $f12, $f14
     ; FP32: [[COPY:%[0-9]+]]:fgr32 = COPY $f12
     ; FP32: [[COPY1:%[0-9]+]]:fgr32 = COPY $f14
-    ; FP32: [[ADDiu:%[0-9]+]]:gpr32 = ADDiu $zero, 1
+    ; FP32: [[ADDiu:%[0-9]+]]:gpr32 = ADDiu $r0, 1
     ; FP32: FCMP_S32 [[COPY]], [[COPY1]], 4, implicit-def $fcc0
-    ; FP32: [[MOVT_I:%[0-9]+]]:gpr32 = MOVT_I $zero, $fcc0, [[ADDiu]]
+    ; FP32: [[MOVT_I:%[0-9]+]]:gpr32 = MOVT_I $r0, $fcc0, [[ADDiu]]
     ; FP32: $r2 = COPY [[MOVT_I]]
     ; FP32: RetRA implicit $r2
     ; FP64-LABEL: name: uge_s
     ; FP64: liveins: $f12, $f14
     ; FP64: [[COPY:%[0-9]+]]:fgr32 = COPY $f12
     ; FP64: [[COPY1:%[0-9]+]]:fgr32 = COPY $f14
-    ; FP64: [[ADDiu:%[0-9]+]]:gpr32 = ADDiu $zero, 1
+    ; FP64: [[ADDiu:%[0-9]+]]:gpr32 = ADDiu $r0, 1
     ; FP64: FCMP_S32 [[COPY]], [[COPY1]], 4, implicit-def $fcc0
-    ; FP64: [[MOVT_I:%[0-9]+]]:gpr32 = MOVT_I $zero, $fcc0, [[ADDiu]]
+    ; FP64: [[MOVT_I:%[0-9]+]]:gpr32 = MOVT_I $r0, $fcc0, [[ADDiu]]
     ; FP64: $r2 = COPY [[MOVT_I]]
     ; FP64: RetRA implicit $r2
     %0:fprb(s32) = COPY $f12
@@ -392,18 +392,18 @@ body:             |
     ; FP32: liveins: $f12, $f14
     ; FP32: [[COPY:%[0-9]+]]:fgr32 = COPY $f12
     ; FP32: [[COPY1:%[0-9]+]]:fgr32 = COPY $f14
-    ; FP32: [[ADDiu:%[0-9]+]]:gpr32 = ADDiu $zero, 1
+    ; FP32: [[ADDiu:%[0-9]+]]:gpr32 = ADDiu $r0, 1
     ; FP32: FCMP_S32 [[COPY]], [[COPY1]], 5, implicit-def $fcc0
-    ; FP32: [[MOVF_I:%[0-9]+]]:gpr32 = MOVF_I $zero, $fcc0, [[ADDiu]]
+    ; FP32: [[MOVF_I:%[0-9]+]]:gpr32 = MOVF_I $r0, $fcc0, [[ADDiu]]
     ; FP32: $r2 = COPY [[MOVF_I]]
     ; FP32: RetRA implicit $r2
     ; FP64-LABEL: name: ult_s
     ; FP64: liveins: $f12, $f14
     ; FP64: [[COPY:%[0-9]+]]:fgr32 = COPY $f12
     ; FP64: [[COPY1:%[0-9]+]]:fgr32 = COPY $f14
-    ; FP64: [[ADDiu:%[0-9]+]]:gpr32 = ADDiu $zero, 1
+    ; FP64: [[ADDiu:%[0-9]+]]:gpr32 = ADDiu $r0, 1
     ; FP64: FCMP_S32 [[COPY]], [[COPY1]], 5, implicit-def $fcc0
-    ; FP64: [[MOVF_I:%[0-9]+]]:gpr32 = MOVF_I $zero, $fcc0, [[ADDiu]]
+    ; FP64: [[MOVF_I:%[0-9]+]]:gpr32 = MOVF_I $r0, $fcc0, [[ADDiu]]
     ; FP64: $r2 = COPY [[MOVF_I]]
     ; FP64: RetRA implicit $r2
     %0:fprb(s32) = COPY $f12
@@ -428,18 +428,18 @@ body:             |
     ; FP32: liveins: $f12, $f14
     ; FP32: [[COPY:%[0-9]+]]:fgr32 = COPY $f12
     ; FP32: [[COPY1:%[0-9]+]]:fgr32 = COPY $f14
-    ; FP32: [[ADDiu:%[0-9]+]]:gpr32 = ADDiu $zero, 1
+    ; FP32: [[ADDiu:%[0-9]+]]:gpr32 = ADDiu $r0, 1
     ; FP32: FCMP_S32 [[COPY]], [[COPY1]], 5, implicit-def $fcc0
-    ; FP32: [[MOVT_I:%[0-9]+]]:gpr32 = MOVT_I $zero, $fcc0, [[ADDiu]]
+    ; FP32: [[MOVT_I:%[0-9]+]]:gpr32 = MOVT_I $r0, $fcc0, [[ADDiu]]
     ; FP32: $r2 = COPY [[MOVT_I]]
     ; FP32: RetRA implicit $r2
     ; FP64-LABEL: name: oge_s
     ; FP64: liveins: $f12, $f14
     ; FP64: [[COPY:%[0-9]+]]:fgr32 = COPY $f12
     ; FP64: [[COPY1:%[0-9]+]]:fgr32 = COPY $f14
-    ; FP64: [[ADDiu:%[0-9]+]]:gpr32 = ADDiu $zero, 1
+    ; FP64: [[ADDiu:%[0-9]+]]:gpr32 = ADDiu $r0, 1
     ; FP64: FCMP_S32 [[COPY]], [[COPY1]], 5, implicit-def $fcc0
-    ; FP64: [[MOVT_I:%[0-9]+]]:gpr32 = MOVT_I $zero, $fcc0, [[ADDiu]]
+    ; FP64: [[MOVT_I:%[0-9]+]]:gpr32 = MOVT_I $r0, $fcc0, [[ADDiu]]
     ; FP64: $r2 = COPY [[MOVT_I]]
     ; FP64: RetRA implicit $r2
     %0:fprb(s32) = COPY $f12
@@ -464,18 +464,18 @@ body:             |
     ; FP32: liveins: $f12, $f14
     ; FP32: [[COPY:%[0-9]+]]:fgr32 = COPY $f12
     ; FP32: [[COPY1:%[0-9]+]]:fgr32 = COPY $f14
-    ; FP32: [[ADDiu:%[0-9]+]]:gpr32 = ADDiu $zero, 1
+    ; FP32: [[ADDiu:%[0-9]+]]:gpr32 = ADDiu $r0, 1
     ; FP32: FCMP_S32 [[COPY]], [[COPY1]], 6, implicit-def $fcc0
-    ; FP32: [[MOVF_I:%[0-9]+]]:gpr32 = MOVF_I $zero, $fcc0, [[ADDiu]]
+    ; FP32: [[MOVF_I:%[0-9]+]]:gpr32 = MOVF_I $r0, $fcc0, [[ADDiu]]
     ; FP32: $r2 = COPY [[MOVF_I]]
     ; FP32: RetRA implicit $r2
     ; FP64-LABEL: name: ole_s
     ; FP64: liveins: $f12, $f14
     ; FP64: [[COPY:%[0-9]+]]:fgr32 = COPY $f12
     ; FP64: [[COPY1:%[0-9]+]]:fgr32 = COPY $f14
-    ; FP64: [[ADDiu:%[0-9]+]]:gpr32 = ADDiu $zero, 1
+    ; FP64: [[ADDiu:%[0-9]+]]:gpr32 = ADDiu $r0, 1
     ; FP64: FCMP_S32 [[COPY]], [[COPY1]], 6, implicit-def $fcc0
-    ; FP64: [[MOVF_I:%[0-9]+]]:gpr32 = MOVF_I $zero, $fcc0, [[ADDiu]]
+    ; FP64: [[MOVF_I:%[0-9]+]]:gpr32 = MOVF_I $r0, $fcc0, [[ADDiu]]
     ; FP64: $r2 = COPY [[MOVF_I]]
     ; FP64: RetRA implicit $r2
     %0:fprb(s32) = COPY $f12
@@ -500,18 +500,18 @@ body:             |
     ; FP32: liveins: $f12, $f14
     ; FP32: [[COPY:%[0-9]+]]:fgr32 = COPY $f12
     ; FP32: [[COPY1:%[0-9]+]]:fgr32 = COPY $f14
-    ; FP32: [[ADDiu:%[0-9]+]]:gpr32 = ADDiu $zero, 1
+    ; FP32: [[ADDiu:%[0-9]+]]:gpr32 = ADDiu $r0, 1
     ; FP32: FCMP_S32 [[COPY]], [[COPY1]], 6, implicit-def $fcc0
-    ; FP32: [[MOVT_I:%[0-9]+]]:gpr32 = MOVT_I $zero, $fcc0, [[ADDiu]]
+    ; FP32: [[MOVT_I:%[0-9]+]]:gpr32 = MOVT_I $r0, $fcc0, [[ADDiu]]
     ; FP32: $r2 = COPY [[MOVT_I]]
     ; FP32: RetRA implicit $r2
     ; FP64-LABEL: name: ugt_s
     ; FP64: liveins: $f12, $f14
     ; FP64: [[COPY:%[0-9]+]]:fgr32 = COPY $f12
     ; FP64: [[COPY1:%[0-9]+]]:fgr32 = COPY $f14
-    ; FP64: [[ADDiu:%[0-9]+]]:gpr32 = ADDiu $zero, 1
+    ; FP64: [[ADDiu:%[0-9]+]]:gpr32 = ADDiu $r0, 1
     ; FP64: FCMP_S32 [[COPY]], [[COPY1]], 6, implicit-def $fcc0
-    ; FP64: [[MOVT_I:%[0-9]+]]:gpr32 = MOVT_I $zero, $fcc0, [[ADDiu]]
+    ; FP64: [[MOVT_I:%[0-9]+]]:gpr32 = MOVT_I $r0, $fcc0, [[ADDiu]]
     ; FP64: $r2 = COPY [[MOVT_I]]
     ; FP64: RetRA implicit $r2
     %0:fprb(s32) = COPY $f12
@@ -536,18 +536,18 @@ body:             |
     ; FP32: liveins: $f12, $f14
     ; FP32: [[COPY:%[0-9]+]]:fgr32 = COPY $f12
     ; FP32: [[COPY1:%[0-9]+]]:fgr32 = COPY $f14
-    ; FP32: [[ADDiu:%[0-9]+]]:gpr32 = ADDiu $zero, 1
+    ; FP32: [[ADDiu:%[0-9]+]]:gpr32 = ADDiu $r0, 1
     ; FP32: FCMP_S32 [[COPY]], [[COPY1]], 7, implicit-def $fcc0
-    ; FP32: [[MOVF_I:%[0-9]+]]:gpr32 = MOVF_I $zero, $fcc0, [[ADDiu]]
+    ; FP32: [[MOVF_I:%[0-9]+]]:gpr32 = MOVF_I $r0, $fcc0, [[ADDiu]]
     ; FP32: $r2 = COPY [[MOVF_I]]
     ; FP32: RetRA implicit $r2
     ; FP64-LABEL: name: ule_s
     ; FP64: liveins: $f12, $f14
     ; FP64: [[COPY:%[0-9]+]]:fgr32 = COPY $f12
     ; FP64: [[COPY1:%[0-9]+]]:fgr32 = COPY $f14
-    ; FP64: [[ADDiu:%[0-9]+]]:gpr32 = ADDiu $zero, 1
+    ; FP64: [[ADDiu:%[0-9]+]]:gpr32 = ADDiu $r0, 1
     ; FP64: FCMP_S32 [[COPY]], [[COPY1]], 7, implicit-def $fcc0
-    ; FP64: [[MOVF_I:%[0-9]+]]:gpr32 = MOVF_I $zero, $fcc0, [[ADDiu]]
+    ; FP64: [[MOVF_I:%[0-9]+]]:gpr32 = MOVF_I $r0, $fcc0, [[ADDiu]]
     ; FP64: $r2 = COPY [[MOVF_I]]
     ; FP64: RetRA implicit $r2
     %0:fprb(s32) = COPY $f12
@@ -572,18 +572,18 @@ body:             |
     ; FP32: liveins: $f12, $f14
     ; FP32: [[COPY:%[0-9]+]]:fgr32 = COPY $f12
     ; FP32: [[COPY1:%[0-9]+]]:fgr32 = COPY $f14
-    ; FP32: [[ADDiu:%[0-9]+]]:gpr32 = ADDiu $zero, 1
+    ; FP32: [[ADDiu:%[0-9]+]]:gpr32 = ADDiu $r0, 1
     ; FP32: FCMP_S32 [[COPY]], [[COPY1]], 7, implicit-def $fcc0
-    ; FP32: [[MOVT_I:%[0-9]+]]:gpr32 = MOVT_I $zero, $fcc0, [[ADDiu]]
+    ; FP32: [[MOVT_I:%[0-9]+]]:gpr32 = MOVT_I $r0, $fcc0, [[ADDiu]]
     ; FP32: $r2 = COPY [[MOVT_I]]
     ; FP32: RetRA implicit $r2
     ; FP64-LABEL: name: ogt_s
     ; FP64: liveins: $f12, $f14
     ; FP64: [[COPY:%[0-9]+]]:fgr32 = COPY $f12
     ; FP64: [[COPY1:%[0-9]+]]:fgr32 = COPY $f14
-    ; FP64: [[ADDiu:%[0-9]+]]:gpr32 = ADDiu $zero, 1
+    ; FP64: [[ADDiu:%[0-9]+]]:gpr32 = ADDiu $r0, 1
     ; FP64: FCMP_S32 [[COPY]], [[COPY1]], 7, implicit-def $fcc0
-    ; FP64: [[MOVT_I:%[0-9]+]]:gpr32 = MOVT_I $zero, $fcc0, [[ADDiu]]
+    ; FP64: [[MOVT_I:%[0-9]+]]:gpr32 = MOVT_I $r0, $fcc0, [[ADDiu]]
     ; FP64: $r2 = COPY [[MOVT_I]]
     ; FP64: RetRA implicit $r2
     %0:fprb(s32) = COPY $f12
@@ -606,12 +606,12 @@ body:             |
 
     ; FP32-LABEL: name: false_d
     ; FP32: liveins: $d6, $d7
-    ; FP32: [[ORi:%[0-9]+]]:gpr32 = ORi $zero, 0
+    ; FP32: [[ORi:%[0-9]+]]:gpr32 = ORi $r0, 0
     ; FP32: $r2 = COPY [[ORi]]
     ; FP32: RetRA implicit $r2
     ; FP64-LABEL: name: false_d
     ; FP64: liveins: $d6, $d7
-    ; FP64: [[ORi:%[0-9]+]]:gpr32 = ORi $zero, 0
+    ; FP64: [[ORi:%[0-9]+]]:gpr32 = ORi $r0, 0
     ; FP64: $r2 = COPY [[ORi]]
     ; FP64: RetRA implicit $r2
     %5:gprb(s32) = G_CONSTANT i32 0
@@ -632,12 +632,12 @@ body:             |
 
     ; FP32-LABEL: name: true_d
     ; FP32: liveins: $d6, $d7
-    ; FP32: [[ADDiu:%[0-9]+]]:gpr32 = ADDiu $zero, 65535
+    ; FP32: [[ADDiu:%[0-9]+]]:gpr32 = ADDiu $r0, 65535
     ; FP32: $r2 = COPY [[ADDiu]]
     ; FP32: RetRA implicit $r2
     ; FP64-LABEL: name: true_d
     ; FP64: liveins: $d6, $d7
-    ; FP64: [[ADDiu:%[0-9]+]]:gpr32 = ADDiu $zero, 65535
+    ; FP64: [[ADDiu:%[0-9]+]]:gpr32 = ADDiu $r0, 65535
     ; FP64: $r2 = COPY [[ADDiu]]
     ; FP64: RetRA implicit $r2
     %5:gprb(s32) = G_CONSTANT i32 -1
@@ -660,18 +660,18 @@ body:             |
     ; FP32: liveins: $d6, $d7
     ; FP32: [[COPY:%[0-9]+]]:afgr64 = COPY $d6
     ; FP32: [[COPY1:%[0-9]+]]:afgr64 = COPY $d7
-    ; FP32: [[ADDiu:%[0-9]+]]:gpr32 = ADDiu $zero, 1
+    ; FP32: [[ADDiu:%[0-9]+]]:gpr32 = ADDiu $r0, 1
     ; FP32: FCMP_D32 [[COPY]], [[COPY1]], 1, implicit-def $fcc0
-    ; FP32: [[MOVF_I:%[0-9]+]]:gpr32 = MOVF_I $zero, $fcc0, [[ADDiu]]
+    ; FP32: [[MOVF_I:%[0-9]+]]:gpr32 = MOVF_I $r0, $fcc0, [[ADDiu]]
     ; FP32: $r2 = COPY [[MOVF_I]]
     ; FP32: RetRA implicit $r2
     ; FP64-LABEL: name: uno_d
     ; FP64: liveins: $d6, $d7
     ; FP64: [[COPY:%[0-9]+]]:fgr64 = COPY $d6
     ; FP64: [[COPY1:%[0-9]+]]:fgr64 = COPY $d7
-    ; FP64: [[ADDiu:%[0-9]+]]:gpr32 = ADDiu $zero, 1
+    ; FP64: [[ADDiu:%[0-9]+]]:gpr32 = ADDiu $r0, 1
     ; FP64: FCMP_D64 [[COPY]], [[COPY1]], 1, implicit-def $fcc0
-    ; FP64: [[MOVF_I:%[0-9]+]]:gpr32 = MOVF_I $zero, $fcc0, [[ADDiu]]
+    ; FP64: [[MOVF_I:%[0-9]+]]:gpr32 = MOVF_I $r0, $fcc0, [[ADDiu]]
     ; FP64: $r2 = COPY [[MOVF_I]]
     ; FP64: RetRA implicit $r2
     %0:fprb(s64) = COPY $d6
@@ -696,18 +696,18 @@ body:             |
     ; FP32: liveins: $d6, $d7
     ; FP32: [[COPY:%[0-9]+]]:afgr64 = COPY $d6
     ; FP32: [[COPY1:%[0-9]+]]:afgr64 = COPY $d7
-    ; FP32: [[ADDiu:%[0-9]+]]:gpr32 = ADDiu $zero, 1
+    ; FP32: [[ADDiu:%[0-9]+]]:gpr32 = ADDiu $r0, 1
     ; FP32: FCMP_D32 [[COPY]], [[COPY1]], 1, implicit-def $fcc0
-    ; FP32: [[MOVT_I:%[0-9]+]]:gpr32 = MOVT_I $zero, $fcc0, [[ADDiu]]
+    ; FP32: [[MOVT_I:%[0-9]+]]:gpr32 = MOVT_I $r0, $fcc0, [[ADDiu]]
     ; FP32: $r2 = COPY [[MOVT_I]]
     ; FP32: RetRA implicit $r2
     ; FP64-LABEL: name: ord_d
     ; FP64: liveins: $d6, $d7
     ; FP64: [[COPY:%[0-9]+]]:fgr64 = COPY $d6
     ; FP64: [[COPY1:%[0-9]+]]:fgr64 = COPY $d7
-    ; FP64: [[ADDiu:%[0-9]+]]:gpr32 = ADDiu $zero, 1
+    ; FP64: [[ADDiu:%[0-9]+]]:gpr32 = ADDiu $r0, 1
     ; FP64: FCMP_D64 [[COPY]], [[COPY1]], 1, implicit-def $fcc0
-    ; FP64: [[MOVT_I:%[0-9]+]]:gpr32 = MOVT_I $zero, $fcc0, [[ADDiu]]
+    ; FP64: [[MOVT_I:%[0-9]+]]:gpr32 = MOVT_I $r0, $fcc0, [[ADDiu]]
     ; FP64: $r2 = COPY [[MOVT_I]]
     ; FP64: RetRA implicit $r2
     %0:fprb(s64) = COPY $d6
@@ -732,18 +732,18 @@ body:             |
     ; FP32: liveins: $d6, $d7
     ; FP32: [[COPY:%[0-9]+]]:afgr64 = COPY $d6
     ; FP32: [[COPY1:%[0-9]+]]:afgr64 = COPY $d7
-    ; FP32: [[ADDiu:%[0-9]+]]:gpr32 = ADDiu $zero, 1
+    ; FP32: [[ADDiu:%[0-9]+]]:gpr32 = ADDiu $r0, 1
     ; FP32: FCMP_D32 [[COPY]], [[COPY1]], 2, implicit-def $fcc0
-    ; FP32: [[MOVF_I:%[0-9]+]]:gpr32 = MOVF_I $zero, $fcc0, [[ADDiu]]
+    ; FP32: [[MOVF_I:%[0-9]+]]:gpr32 = MOVF_I $r0, $fcc0, [[ADDiu]]
     ; FP32: $r2 = COPY [[MOVF_I]]
     ; FP32: RetRA implicit $r2
     ; FP64-LABEL: name: oeq_d
     ; FP64: liveins: $d6, $d7
     ; FP64: [[COPY:%[0-9]+]]:fgr64 = COPY $d6
     ; FP64: [[COPY1:%[0-9]+]]:fgr64 = COPY $d7
-    ; FP64: [[ADDiu:%[0-9]+]]:gpr32 = ADDiu $zero, 1
+    ; FP64: [[ADDiu:%[0-9]+]]:gpr32 = ADDiu $r0, 1
     ; FP64: FCMP_D64 [[COPY]], [[COPY1]], 2, implicit-def $fcc0
-    ; FP64: [[MOVF_I:%[0-9]+]]:gpr32 = MOVF_I $zero, $fcc0, [[ADDiu]]
+    ; FP64: [[MOVF_I:%[0-9]+]]:gpr32 = MOVF_I $r0, $fcc0, [[ADDiu]]
     ; FP64: $r2 = COPY [[MOVF_I]]
     ; FP64: RetRA implicit $r2
     %0:fprb(s64) = COPY $d6
@@ -768,18 +768,18 @@ body:             |
     ; FP32: liveins: $d6, $d7
     ; FP32: [[COPY:%[0-9]+]]:afgr64 = COPY $d6
     ; FP32: [[COPY1:%[0-9]+]]:afgr64 = COPY $d7
-    ; FP32: [[ADDiu:%[0-9]+]]:gpr32 = ADDiu $zero, 1
+    ; FP32: [[ADDiu:%[0-9]+]]:gpr32 = ADDiu $r0, 1
     ; FP32: FCMP_D32 [[COPY]], [[COPY1]], 2, implicit-def $fcc0
-    ; FP32: [[MOVT_I:%[0-9]+]]:gpr32 = MOVT_I $zero, $fcc0, [[ADDiu]]
+    ; FP32: [[MOVT_I:%[0-9]+]]:gpr32 = MOVT_I $r0, $fcc0, [[ADDiu]]
     ; FP32: $r2 = COPY [[MOVT_I]]
     ; FP32: RetRA implicit $r2
     ; FP64-LABEL: name: une_d
     ; FP64: liveins: $d6, $d7
     ; FP64: [[COPY:%[0-9]+]]:fgr64 = COPY $d6
     ; FP64: [[COPY1:%[0-9]+]]:fgr64 = COPY $d7
-    ; FP64: [[ADDiu:%[0-9]+]]:gpr32 = ADDiu $zero, 1
+    ; FP64: [[ADDiu:%[0-9]+]]:gpr32 = ADDiu $r0, 1
     ; FP64: FCMP_D64 [[COPY]], [[COPY1]], 2, implicit-def $fcc0
-    ; FP64: [[MOVT_I:%[0-9]+]]:gpr32 = MOVT_I $zero, $fcc0, [[ADDiu]]
+    ; FP64: [[MOVT_I:%[0-9]+]]:gpr32 = MOVT_I $r0, $fcc0, [[ADDiu]]
     ; FP64: $r2 = COPY [[MOVT_I]]
     ; FP64: RetRA implicit $r2
     %0:fprb(s64) = COPY $d6
@@ -804,18 +804,18 @@ body:             |
     ; FP32: liveins: $d6, $d7
     ; FP32: [[COPY:%[0-9]+]]:afgr64 = COPY $d6
     ; FP32: [[COPY1:%[0-9]+]]:afgr64 = COPY $d7
-    ; FP32: [[ADDiu:%[0-9]+]]:gpr32 = ADDiu $zero, 1
+    ; FP32: [[ADDiu:%[0-9]+]]:gpr32 = ADDiu $r0, 1
     ; FP32: FCMP_D32 [[COPY]], [[COPY1]], 3, implicit-def $fcc0
-    ; FP32: [[MOVF_I:%[0-9]+]]:gpr32 = MOVF_I $zero, $fcc0, [[ADDiu]]
+    ; FP32: [[MOVF_I:%[0-9]+]]:gpr32 = MOVF_I $r0, $fcc0, [[ADDiu]]
     ; FP32: $r2 = COPY [[MOVF_I]]
     ; FP32: RetRA implicit $r2
     ; FP64-LABEL: name: ueq_d
     ; FP64: liveins: $d6, $d7
     ; FP64: [[COPY:%[0-9]+]]:fgr64 = COPY $d6
     ; FP64: [[COPY1:%[0-9]+]]:fgr64 = COPY $d7
-    ; FP64: [[ADDiu:%[0-9]+]]:gpr32 = ADDiu $zero, 1
+    ; FP64: [[ADDiu:%[0-9]+]]:gpr32 = ADDiu $r0, 1
     ; FP64: FCMP_D64 [[COPY]], [[COPY1]], 3, implicit-def $fcc0
-    ; FP64: [[MOVF_I:%[0-9]+]]:gpr32 = MOVF_I $zero, $fcc0, [[ADDiu]]
+    ; FP64: [[MOVF_I:%[0-9]+]]:gpr32 = MOVF_I $r0, $fcc0, [[ADDiu]]
     ; FP64: $r2 = COPY [[MOVF_I]]
     ; FP64: RetRA implicit $r2
     %0:fprb(s64) = COPY $d6
@@ -840,18 +840,18 @@ body:             |
     ; FP32: liveins: $d6, $d7
     ; FP32: [[COPY:%[0-9]+]]:afgr64 = COPY $d6
     ; FP32: [[COPY1:%[0-9]+]]:afgr64 = COPY $d7
-    ; FP32: [[ADDiu:%[0-9]+]]:gpr32 = ADDiu $zero, 1
+    ; FP32: [[ADDiu:%[0-9]+]]:gpr32 = ADDiu $r0, 1
     ; FP32: FCMP_D32 [[COPY]], [[COPY1]], 3, implicit-def $fcc0
-    ; FP32: [[MOVT_I:%[0-9]+]]:gpr32 = MOVT_I $zero, $fcc0, [[ADDiu]]
+    ; FP32: [[MOVT_I:%[0-9]+]]:gpr32 = MOVT_I $r0, $fcc0, [[ADDiu]]
     ; FP32: $r2 = COPY [[MOVT_I]]
     ; FP32: RetRA implicit $r2
     ; FP64-LABEL: name: one_d
     ; FP64: liveins: $d6, $d7
     ; FP64: [[COPY:%[0-9]+]]:fgr64 = COPY $d6
     ; FP64: [[COPY1:%[0-9]+]]:fgr64 = COPY $d7
-    ; FP64: [[ADDiu:%[0-9]+]]:gpr32 = ADDiu $zero, 1
+    ; FP64: [[ADDiu:%[0-9]+]]:gpr32 = ADDiu $r0, 1
     ; FP64: FCMP_D64 [[COPY]], [[COPY1]], 3, implicit-def $fcc0
-    ; FP64: [[MOVT_I:%[0-9]+]]:gpr32 = MOVT_I $zero, $fcc0, [[ADDiu]]
+    ; FP64: [[MOVT_I:%[0-9]+]]:gpr32 = MOVT_I $r0, $fcc0, [[ADDiu]]
     ; FP64: $r2 = COPY [[MOVT_I]]
     ; FP64: RetRA implicit $r2
     %0:fprb(s64) = COPY $d6
@@ -876,18 +876,18 @@ body:             |
     ; FP32: liveins: $d6, $d7
     ; FP32: [[COPY:%[0-9]+]]:afgr64 = COPY $d6
     ; FP32: [[COPY1:%[0-9]+]]:afgr64 = COPY $d7
-    ; FP32: [[ADDiu:%[0-9]+]]:gpr32 = ADDiu $zero, 1
+    ; FP32: [[ADDiu:%[0-9]+]]:gpr32 = ADDiu $r0, 1
     ; FP32: FCMP_D32 [[COPY]], [[COPY1]], 4, implicit-def $fcc0
-    ; FP32: [[MOVF_I:%[0-9]+]]:gpr32 = MOVF_I $zero, $fcc0, [[ADDiu]]
+    ; FP32: [[MOVF_I:%[0-9]+]]:gpr32 = MOVF_I $r0, $fcc0, [[ADDiu]]
     ; FP32: $r2 = COPY [[MOVF_I]]
     ; FP32: RetRA implicit $r2
     ; FP64-LABEL: name: olt_d
     ; FP64: liveins: $d6, $d7
     ; FP64: [[COPY:%[0-9]+]]:fgr64 = COPY $d6
     ; FP64: [[COPY1:%[0-9]+]]:fgr64 = COPY $d7
-    ; FP64: [[ADDiu:%[0-9]+]]:gpr32 = ADDiu $zero, 1
+    ; FP64: [[ADDiu:%[0-9]+]]:gpr32 = ADDiu $r0, 1
     ; FP64: FCMP_D64 [[COPY]], [[COPY1]], 4, implicit-def $fcc0
-    ; FP64: [[MOVF_I:%[0-9]+]]:gpr32 = MOVF_I $zero, $fcc0, [[ADDiu]]
+    ; FP64: [[MOVF_I:%[0-9]+]]:gpr32 = MOVF_I $r0, $fcc0, [[ADDiu]]
     ; FP64: $r2 = COPY [[MOVF_I]]
     ; FP64: RetRA implicit $r2
     %0:fprb(s64) = COPY $d6
@@ -912,18 +912,18 @@ body:             |
     ; FP32: liveins: $d6, $d7
     ; FP32: [[COPY:%[0-9]+]]:afgr64 = COPY $d6
     ; FP32: [[COPY1:%[0-9]+]]:afgr64 = COPY $d7
-    ; FP32: [[ADDiu:%[0-9]+]]:gpr32 = ADDiu $zero, 1
+    ; FP32: [[ADDiu:%[0-9]+]]:gpr32 = ADDiu $r0, 1
     ; FP32: FCMP_D32 [[COPY]], [[COPY1]], 4, implicit-def $fcc0
-    ; FP32: [[MOVT_I:%[0-9]+]]:gpr32 = MOVT_I $zero, $fcc0, [[ADDiu]]
+    ; FP32: [[MOVT_I:%[0-9]+]]:gpr32 = MOVT_I $r0, $fcc0, [[ADDiu]]
     ; FP32: $r2 = COPY [[MOVT_I]]
     ; FP32: RetRA implicit $r2
     ; FP64-LABEL: name: uge_d
     ; FP64: liveins: $d6, $d7
     ; FP64: [[COPY:%[0-9]+]]:fgr64 = COPY $d6
     ; FP64: [[COPY1:%[0-9]+]]:fgr64 = COPY $d7
-    ; FP64: [[ADDiu:%[0-9]+]]:gpr32 = ADDiu $zero, 1
+    ; FP64: [[ADDiu:%[0-9]+]]:gpr32 = ADDiu $r0, 1
     ; FP64: FCMP_D64 [[COPY]], [[COPY1]], 4, implicit-def $fcc0
-    ; FP64: [[MOVT_I:%[0-9]+]]:gpr32 = MOVT_I $zero, $fcc0, [[ADDiu]]
+    ; FP64: [[MOVT_I:%[0-9]+]]:gpr32 = MOVT_I $r0, $fcc0, [[ADDiu]]
     ; FP64: $r2 = COPY [[MOVT_I]]
     ; FP64: RetRA implicit $r2
     %0:fprb(s64) = COPY $d6
@@ -948,18 +948,18 @@ body:             |
     ; FP32: liveins: $d6, $d7
     ; FP32: [[COPY:%[0-9]+]]:afgr64 = COPY $d6
     ; FP32: [[COPY1:%[0-9]+]]:afgr64 = COPY $d7
-    ; FP32: [[ADDiu:%[0-9]+]]:gpr32 = ADDiu $zero, 1
+    ; FP32: [[ADDiu:%[0-9]+]]:gpr32 = ADDiu $r0, 1
     ; FP32: FCMP_D32 [[COPY]], [[COPY1]], 5, implicit-def $fcc0
-    ; FP32: [[MOVF_I:%[0-9]+]]:gpr32 = MOVF_I $zero, $fcc0, [[ADDiu]]
+    ; FP32: [[MOVF_I:%[0-9]+]]:gpr32 = MOVF_I $r0, $fcc0, [[ADDiu]]
     ; FP32: $r2 = COPY [[MOVF_I]]
     ; FP32: RetRA implicit $r2
     ; FP64-LABEL: name: ult_d
     ; FP64: liveins: $d6, $d7
     ; FP64: [[COPY:%[0-9]+]]:fgr64 = COPY $d6
     ; FP64: [[COPY1:%[0-9]+]]:fgr64 = COPY $d7
-    ; FP64: [[ADDiu:%[0-9]+]]:gpr32 = ADDiu $zero, 1
+    ; FP64: [[ADDiu:%[0-9]+]]:gpr32 = ADDiu $r0, 1
     ; FP64: FCMP_D64 [[COPY]], [[COPY1]], 5, implicit-def $fcc0
-    ; FP64: [[MOVF_I:%[0-9]+]]:gpr32 = MOVF_I $zero, $fcc0, [[ADDiu]]
+    ; FP64: [[MOVF_I:%[0-9]+]]:gpr32 = MOVF_I $r0, $fcc0, [[ADDiu]]
     ; FP64: $r2 = COPY [[MOVF_I]]
     ; FP64: RetRA implicit $r2
     %0:fprb(s64) = COPY $d6
@@ -984,18 +984,18 @@ body:             |
     ; FP32: liveins: $d6, $d7
     ; FP32: [[COPY:%[0-9]+]]:afgr64 = COPY $d6
     ; FP32: [[COPY1:%[0-9]+]]:afgr64 = COPY $d7
-    ; FP32: [[ADDiu:%[0-9]+]]:gpr32 = ADDiu $zero, 1
+    ; FP32: [[ADDiu:%[0-9]+]]:gpr32 = ADDiu $r0, 1
     ; FP32: FCMP_D32 [[COPY]], [[COPY1]], 5, implicit-def $fcc0
-    ; FP32: [[MOVT_I:%[0-9]+]]:gpr32 = MOVT_I $zero, $fcc0, [[ADDiu]]
+    ; FP32: [[MOVT_I:%[0-9]+]]:gpr32 = MOVT_I $r0, $fcc0, [[ADDiu]]
     ; FP32: $r2 = COPY [[MOVT_I]]
     ; FP32: RetRA implicit $r2
     ; FP64-LABEL: name: oge_d
     ; FP64: liveins: $d6, $d7
     ; FP64: [[COPY:%[0-9]+]]:fgr64 = COPY $d6
     ; FP64: [[COPY1:%[0-9]+]]:fgr64 = COPY $d7
-    ; FP64: [[ADDiu:%[0-9]+]]:gpr32 = ADDiu $zero, 1
+    ; FP64: [[ADDiu:%[0-9]+]]:gpr32 = ADDiu $r0, 1
     ; FP64: FCMP_D64 [[COPY]], [[COPY1]], 5, implicit-def $fcc0
-    ; FP64: [[MOVT_I:%[0-9]+]]:gpr32 = MOVT_I $zero, $fcc0, [[ADDiu]]
+    ; FP64: [[MOVT_I:%[0-9]+]]:gpr32 = MOVT_I $r0, $fcc0, [[ADDiu]]
     ; FP64: $r2 = COPY [[MOVT_I]]
     ; FP64: RetRA implicit $r2
     %0:fprb(s64) = COPY $d6
@@ -1020,18 +1020,18 @@ body:             |
     ; FP32: liveins: $d6, $d7
     ; FP32: [[COPY:%[0-9]+]]:afgr64 = COPY $d6
     ; FP32: [[COPY1:%[0-9]+]]:afgr64 = COPY $d7
-    ; FP32: [[ADDiu:%[0-9]+]]:gpr32 = ADDiu $zero, 1
+    ; FP32: [[ADDiu:%[0-9]+]]:gpr32 = ADDiu $r0, 1
     ; FP32: FCMP_D32 [[COPY]], [[COPY1]], 6, implicit-def $fcc0
-    ; FP32: [[MOVF_I:%[0-9]+]]:gpr32 = MOVF_I $zero, $fcc0, [[ADDiu]]
+    ; FP32: [[MOVF_I:%[0-9]+]]:gpr32 = MOVF_I $r0, $fcc0, [[ADDiu]]
     ; FP32: $r2 = COPY [[MOVF_I]]
     ; FP32: RetRA implicit $r2
     ; FP64-LABEL: name: ole_d
     ; FP64: liveins: $d6, $d7
     ; FP64: [[COPY:%[0-9]+]]:fgr64 = COPY $d6
     ; FP64: [[COPY1:%[0-9]+]]:fgr64 = COPY $d7
-    ; FP64: [[ADDiu:%[0-9]+]]:gpr32 = ADDiu $zero, 1
+    ; FP64: [[ADDiu:%[0-9]+]]:gpr32 = ADDiu $r0, 1
     ; FP64: FCMP_D64 [[COPY]], [[COPY1]], 6, implicit-def $fcc0
-    ; FP64: [[MOVF_I:%[0-9]+]]:gpr32 = MOVF_I $zero, $fcc0, [[ADDiu]]
+    ; FP64: [[MOVF_I:%[0-9]+]]:gpr32 = MOVF_I $r0, $fcc0, [[ADDiu]]
     ; FP64: $r2 = COPY [[MOVF_I]]
     ; FP64: RetRA implicit $r2
     %0:fprb(s64) = COPY $d6
@@ -1056,18 +1056,18 @@ body:             |
     ; FP32: liveins: $d6, $d7
     ; FP32: [[COPY:%[0-9]+]]:afgr64 = COPY $d6
     ; FP32: [[COPY1:%[0-9]+]]:afgr64 = COPY $d7
-    ; FP32: [[ADDiu:%[0-9]+]]:gpr32 = ADDiu $zero, 1
+    ; FP32: [[ADDiu:%[0-9]+]]:gpr32 = ADDiu $r0, 1
     ; FP32: FCMP_D32 [[COPY]], [[COPY1]], 6, implicit-def $fcc0
-    ; FP32: [[MOVT_I:%[0-9]+]]:gpr32 = MOVT_I $zero, $fcc0, [[ADDiu]]
+    ; FP32: [[MOVT_I:%[0-9]+]]:gpr32 = MOVT_I $r0, $fcc0, [[ADDiu]]
     ; FP32: $r2 = COPY [[MOVT_I]]
     ; FP32: RetRA implicit $r2
     ; FP64-LABEL: name: ugt_d
     ; FP64: liveins: $d6, $d7
     ; FP64: [[COPY:%[0-9]+]]:fgr64 = COPY $d6
     ; FP64: [[COPY1:%[0-9]+]]:fgr64 = COPY $d7
-    ; FP64: [[ADDiu:%[0-9]+]]:gpr32 = ADDiu $zero, 1
+    ; FP64: [[ADDiu:%[0-9]+]]:gpr32 = ADDiu $r0, 1
     ; FP64: FCMP_D64 [[COPY]], [[COPY1]], 6, implicit-def $fcc0
-    ; FP64: [[MOVT_I:%[0-9]+]]:gpr32 = MOVT_I $zero, $fcc0, [[ADDiu]]
+    ; FP64: [[MOVT_I:%[0-9]+]]:gpr32 = MOVT_I $r0, $fcc0, [[ADDiu]]
     ; FP64: $r2 = COPY [[MOVT_I]]
     ; FP64: RetRA implicit $r2
     %0:fprb(s64) = COPY $d6
@@ -1092,18 +1092,18 @@ body:             |
     ; FP32: liveins: $d6, $d7
     ; FP32: [[COPY:%[0-9]+]]:afgr64 = COPY $d6
     ; FP32: [[COPY1:%[0-9]+]]:afgr64 = COPY $d7
-    ; FP32: [[ADDiu:%[0-9]+]]:gpr32 = ADDiu $zero, 1
+    ; FP32: [[ADDiu:%[0-9]+]]:gpr32 = ADDiu $r0, 1
     ; FP32: FCMP_D32 [[COPY]], [[COPY1]], 7, implicit-def $fcc0
-    ; FP32: [[MOVF_I:%[0-9]+]]:gpr32 = MOVF_I $zero, $fcc0, [[ADDiu]]
+    ; FP32: [[MOVF_I:%[0-9]+]]:gpr32 = MOVF_I $r0, $fcc0, [[ADDiu]]
     ; FP32: $r2 = COPY [[MOVF_I]]
     ; FP32: RetRA implicit $r2
     ; FP64-LABEL: name: ule_d
     ; FP64: liveins: $d6, $d7
     ; FP64: [[COPY:%[0-9]+]]:fgr64 = COPY $d6
     ; FP64: [[COPY1:%[0-9]+]]:fgr64 = COPY $d7
-    ; FP64: [[ADDiu:%[0-9]+]]:gpr32 = ADDiu $zero, 1
+    ; FP64: [[ADDiu:%[0-9]+]]:gpr32 = ADDiu $r0, 1
     ; FP64: FCMP_D64 [[COPY]], [[COPY1]], 7, implicit-def $fcc0
-    ; FP64: [[MOVF_I:%[0-9]+]]:gpr32 = MOVF_I $zero, $fcc0, [[ADDiu]]
+    ; FP64: [[MOVF_I:%[0-9]+]]:gpr32 = MOVF_I $r0, $fcc0, [[ADDiu]]
     ; FP64: $r2 = COPY [[MOVF_I]]
     ; FP64: RetRA implicit $r2
     %0:fprb(s64) = COPY $d6
@@ -1128,18 +1128,18 @@ body:             |
     ; FP32: liveins: $d6, $d7
     ; FP32: [[COPY:%[0-9]+]]:afgr64 = COPY $d6
     ; FP32: [[COPY1:%[0-9]+]]:afgr64 = COPY $d7
-    ; FP32: [[ADDiu:%[0-9]+]]:gpr32 = ADDiu $zero, 1
+    ; FP32: [[ADDiu:%[0-9]+]]:gpr32 = ADDiu $r0, 1
     ; FP32: FCMP_D32 [[COPY]], [[COPY1]], 7, implicit-def $fcc0
-    ; FP32: [[MOVT_I:%[0-9]+]]:gpr32 = MOVT_I $zero, $fcc0, [[ADDiu]]
+    ; FP32: [[MOVT_I:%[0-9]+]]:gpr32 = MOVT_I $r0, $fcc0, [[ADDiu]]
     ; FP32: $r2 = COPY [[MOVT_I]]
     ; FP32: RetRA implicit $r2
     ; FP64-LABEL: name: ogt_d
     ; FP64: liveins: $d6, $d7
     ; FP64: [[COPY:%[0-9]+]]:fgr64 = COPY $d6
     ; FP64: [[COPY1:%[0-9]+]]:fgr64 = COPY $d7
-    ; FP64: [[ADDiu:%[0-9]+]]:gpr32 = ADDiu $zero, 1
+    ; FP64: [[ADDiu:%[0-9]+]]:gpr32 = ADDiu $r0, 1
     ; FP64: FCMP_D64 [[COPY]], [[COPY1]], 7, implicit-def $fcc0
-    ; FP64: [[MOVT_I:%[0-9]+]]:gpr32 = MOVT_I $zero, $fcc0, [[ADDiu]]
+    ; FP64: [[MOVT_I:%[0-9]+]]:gpr32 = MOVT_I $r0, $fcc0, [[ADDiu]]
     ; FP64: $r2 = COPY [[MOVT_I]]
     ; FP64: RetRA implicit $r2
     %0:fprb(s64) = COPY $d6
