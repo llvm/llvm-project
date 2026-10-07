@@ -51,6 +51,34 @@ void CIRGenFunction::emitInvariantStart(CharUnits size, mlir::Value addr,
       mlir::ValueRange{sizeValue, addr});
 }
 
+/// The ctor and dtor regions of a global (or static local) hold a single block,
+/// but an initializer can have control flow: a `throw` or a trap ends the block
+/// it is in, and the rest of the initializer goes in a new, unreachable one.
+/// If emitting into \p region produced more than one block, move them all into
+/// a cir.scope, leaving the region with one block that holds the scope.
+static void wrapMultiBlockRegionInScope(CIRGenBuilderTy &builder,
+                                        mlir::Region &region,
+                                        mlir::Location loc) {
+  if (region.empty() || region.hasOneBlock())
+    return;
+
+  mlir::OpBuilder::InsertionGuard guard(builder);
+  mlir::Block *wrapper = builder.createBlock(&region, region.begin());
+  builder.setInsertionPointToStart(wrapper);
+  auto scope = cir::ScopeOp::create(builder, loc,
+                                    [](mlir::OpBuilder &, mlir::Location) {});
+
+  // Swap the scope's empty block for the original blocks, which already end in
+  // the cir.yield that terminates the scope.
+  mlir::Region &scopeRegion = scope.getRegion();
+  scopeRegion.getBlocks().clear();
+  scopeRegion.getBlocks().splice(scopeRegion.end(), region.getBlocks(),
+                                 std::next(region.begin()), region.end());
+
+  builder.setInsertionPointToEnd(wrapper);
+  cir::YieldOp::create(builder, loc);
+}
+
 static void emitDeclInit(CIRGenFunction &cgf, const VarDecl *varDecl,
                          cir::GlobalOp globalOp, mlir::Region &ctorRegion) {
   assert((varDecl->hasGlobalStorage() ||
@@ -95,7 +123,7 @@ static void emitDeclInit(CIRGenFunction &cgf, const VarDecl *varDecl,
   }
 
   // Finish the ctor region.
-  builder.setInsertionPointToEnd(block);
+  builder.setInsertionPointToEnd(builder.getInsertionBlock());
   cir::YieldOp::create(builder, globalOp.getLoc());
 }
 
@@ -325,6 +353,8 @@ void CIRGenModule::emitCXXSpecialVarDeclInit(const VarDecl *varDecl,
     // PerformInit, constant store invariant / destroy handled below.
     if (performInit) {
       emitDeclInit(cgf, varDecl, addr, ctorRegion);
+      // Do this before anything else is added to the end of the region.
+      wrapMultiBlockRegionInScope(cgf.getBuilder(), ctorRegion, addr.getLoc());
       // For constant storage, emit invariant.start in the ctor region after
       // initialization but before the yield.
       if (isConstantStorage) {
@@ -345,8 +375,10 @@ void CIRGenModule::emitCXXSpecialVarDeclInit(const VarDecl *varDecl,
       emitDeclInvariant(cgf, varDecl);
     }
 
-    if (!isConstantStorage)
+    if (!isConstantStorage) {
       emitDeclDestroy(cgf, varDecl, addr, dtorRegion);
+      wrapMultiBlockRegionInScope(cgf.getBuilder(), dtorRegion, addr.getLoc());
+    }
     return;
   }
 
@@ -383,8 +415,9 @@ void CIRGenModule::emitCXXSpecialVarDeclInit(const VarDecl *varDecl,
                           LValueBaseInfo{});
   }
 
-  builder.setInsertionPointToEnd(block);
+  builder.setInsertionPointToEnd(builder.getInsertionBlock());
   cir::YieldOp::create(builder, addr->getLoc());
+  wrapMultiBlockRegionInScope(builder, ctorRegion, addr.getLoc());
 }
 
 void CIRGenModule::emitCXXGlobalVarDeclInit(const VarDecl *varDecl,
