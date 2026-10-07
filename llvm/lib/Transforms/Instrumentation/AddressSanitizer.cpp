@@ -2361,7 +2361,7 @@ StringRef ModuleAddressSanitizer::getGlobalMetadataSection() const {
 }
 
 void ModuleAddressSanitizer::initializeCallbacks() {
-  IRBuilder<> IRB(*C);
+  IRBuilder<> IRB(M);
 
   // Declare our poisoning and unpoisoning functions.
   AsanPoisonGlobals = Inserter.insertFunction(kAsanPoisonGlobalsName,
@@ -2910,7 +2910,7 @@ bool ModuleAddressSanitizer::instrumentModule() {
       IRBuilder<> IRB(AsanCtorFunction->getEntryBlock().getTerminator());
       instrumentGlobals(IRB, &CtorComdat);
     } else {
-      IRBuilder<> IRB(*C);
+      IRBuilder<> IRB(M);
       instrumentGlobals(IRB, &CtorComdat);
     }
   }
@@ -2940,7 +2940,7 @@ bool ModuleAddressSanitizer::instrumentModule() {
 }
 
 void AddressSanitizer::initializeCallbacks(const TargetLibraryInfo *TLI) {
-  IRBuilder<> IRB(*C);
+  IRBuilder<> IRB(M);
   // Create __asan_report* callbacks.
   // IsWrite, TypeSize and Exp are encoded in the function name.
   for (int Exp = 0; Exp < 2; Exp++) {
@@ -3273,8 +3273,8 @@ bool AddressSanitizer::LooksLikeCodeInBug11395(Instruction *I) {
   return true;
 }
 
-void FunctionStackPoisoner::initializeCallbacks(Module &) {
-  IRBuilder<> IRB(*C);
+void FunctionStackPoisoner::initializeCallbacks(Module &M) {
+  IRBuilder<> IRB(M);
   if (ASan.UseAfterReturn == AsanDetectStackUseAfterReturnMode::Always ||
       ASan.UseAfterReturn == AsanDetectStackUseAfterReturnMode::Runtime) {
     const char *MallocNameTemplate =

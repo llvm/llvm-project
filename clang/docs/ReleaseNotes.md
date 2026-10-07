@@ -259,6 +259,11 @@ features cannot lower the translation-unit ABI level;
 
 ### New Compiler Flags
 
+- New option `-fmodules-validate-directory-dependencies` makes an implicitly
+  built module out of date when a header is added to a directory it enumerated,
+  such as an umbrella directory or the directory of an umbrella header, after it
+  was built. Off by default.
+
 - New option `-fdefined-pointer-subtraction` added to preserve stable semantics
   when subtracting pointers to unrelated objects.
 
@@ -300,6 +305,11 @@ features cannot lower the translation-unit ABI level;
   `-ftrivial-auto-var-init=` entry in the User's Manual for the details,
   including where C deliberately departs from C 6.2.4p6.
 
+- `--config` files now support trailing `#` comments after an option, in
+  addition to whole-line comments. Mid-line comment-denoting `#`s must be
+  separated from surrounding arguments by whitespace. Quoted arguments can no
+  longer be split across multiple lines using a backslash.
+
 ### Removed Compiler Flags
 
 ### Attribute Changes in Clang
@@ -309,6 +319,10 @@ features cannot lower the translation-unit ABI level;
 - Clang now recognizes the `[[gnu::flag_enum]]` attribute and treats it equivalent to `[[clang::flag_enum]]`
 
 - Clang now accepts `_single_inheritance` under `-fms-compatibility` as an alias for `__single_inheritance`; `_multiple_inheritance` and `_virtual_inheritance` were already correctly supported as aliases.
+
+- Fixed a bug with handling a `nonnull` attribute with an invalid argument
+  index such that it would inadvertently apply the attribute with no arguments,
+  causing all function parameters of pointer type to be considered nonnull. (#GH228670)
 
 ### Improvements to Clang's diagnostics
 
@@ -609,6 +623,8 @@ features cannot lower the translation-unit ABI level;
 - No longer crashing due to follow-on diagnostics when there is an invalid operand in a logical operator involving a vector operand. (#GH227588)
 - Fixed assertion failures caused by stale linkage information when an extern variable or function declaration is merged with a preceding static declaration. (#GH204759, #GH204754)
 - Fixed a crash due to typo correction mishandling custom keywords `_virtual_inheritance` and `_multiple_inheritance` in `-fms-compatibility` mode. (#GH228003)
+- Clang no longer treats a file-scope `thread_local` declaration without an initializer as a tentative definition in C23 mode. As specified by C23 6.9.3, such a declaration is a definition, so declaring the same variable more that once is now diagnosed as a redefinition. (#GH217636)
+
 #### Bug Fixes to Compiler Builtins
 
 - Fixed a crash when classifying a call to a builtin with dependent arguments,
@@ -617,6 +633,8 @@ features cannot lower the translation-unit ABI level;
   inside a member function call synthesized by ``__builtin_invoke``. (#GH185241)
 - Fixed a crash in ``__builtin_dump_struct`` when ``-Werror`` promotes
   format warnings to errors. (#GH211943)
+- Fixed a crash when `__atomic_always_lock_free` or `__atomic_is_lock_free` is
+  called with a size of zero. (#GH170139, #GH120082)
 - Fixed wrong code generation in `__builtin_clear_padding` wherein the wrong
   bits of the following types were cleared: `_BitInt`, struct bitfields, and
   packed boolean vectors. (#GH215809), (#GH216063), (#GH224033)
@@ -624,8 +642,10 @@ features cannot lower the translation-unit ABI level;
   reference to a vector type; `vec_step` (in C++ for OpenCL) and
   `__builtin_ptrauth_type_discriminator` similarly no longer accept reference
   types that their evaluation silently mishandled. (#GH216997)
+- Fix a crash when using `__builtin_assume_aligned` with dynamic allocations
+  during constant evaluation. (#GH173767)
 - Fixed a crash when constant-evaluating `__builtin_align_up`, `__builtin_align_down`,
-  or `__builtin_is_aligned` with pointers without an underlying object. Null pointers 
+  or `__builtin_is_aligned` with pointers without an underlying object. Null pointers
   are handled as aligned values, while other base-less pointers are rejected during constant
   evaluation.
 
@@ -636,6 +656,10 @@ features cannot lower the translation-unit ABI level;
 - Fixed a crash on `bool` vectors declared with `ext_vector_type` and more than
   2^23 elements; `ext_vector_type` and `vector_size` now both reject vectors
   with more than 2^23 elements or larger than 2^28 bytes. (#GH165458)
+
+- Fixed an assertion failure when an unscoped enumeration type was used as
+  the element type of a vector declared with `ext_vector_type`. Clang now
+  diagnoses such element types as invalid. (#GH225037)
 
 - The `counted_by`/`counted_by_or_null` diagnostic that rejects a pointer whose
   pointee is a struct with a flexible array member (e.g.
@@ -822,9 +846,9 @@ features cannot lower the translation-unit ABI level;
 - Fixed ambiguous overload where two non-static member functions with
   different signatures could be incorrectly considered equivalent. (#GH224499)
 
-- Fixed an assertion failure when explicitly instantiating a nested member with 
-  an ill-formed template argument. Clang now checks for a failed declaration 
-  lookup before asserting that the name is not dependent, avoiding an assertion 
+- Fixed an assertion failure when explicitly instantiating a nested member with
+  an ill-formed template argument. Clang now checks for a failed declaration
+  lookup before asserting that the name is not dependent, avoiding an assertion
   after an earlier diagnostic has caused the declaration to be unavailable. (#GH220525)
 
 - Fixed a crash in constant evaluation when a new-expression selects a
