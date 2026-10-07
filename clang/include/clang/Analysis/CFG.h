@@ -924,12 +924,12 @@ private:
   AdjacentBlocks Succs;
 
   /// The kind of noreturn element a block contains.
-  enum NoReturnKind : unsigned {
-    NR_None,
+  enum class NoReturnKind : unsigned {
+    None,
     /// A function call attributed as 'analyzer_noreturn'.
-    NR_AnalyzerOnly,
+    AnalyzerOnly,
     /// A function call or implicit destructor attributed as 'noreturn'.
-    NR_Real
+    Real
   };
 
   /// This bit is set when the basic block contains a function call
@@ -942,7 +942,7 @@ private:
   ///
   /// Optimization Note: These bits could be profitably folded with Terminator's
   /// storage if the memory usage of CFGBlock becomes an issue.
-  unsigned NoReturn : 2;
+  NoReturnKind NoReturn : 2;
 
   /// The parent CFG that owns this CFGBlock.
   CFG *Parent;
@@ -950,7 +950,7 @@ private:
 public:
   explicit CFGBlock(unsigned blockid, BumpVectorContext &C, CFG *parent)
       : Elements(C), Terminator(nullptr), BlockID(blockid), Preds(C, 1),
-        Succs(C, 1), NoReturn(NR_None), Parent(parent) {}
+        Succs(C, 1), NoReturn(NoReturnKind::None), Parent(parent) {}
 
   // Statement iterators
   using iterator = ElementList::iterator;
@@ -1134,8 +1134,9 @@ public:
   void setLoopTarget(const Stmt *loopTarget) { LoopTarget = loopTarget; }
   /// Mark the block as ending in a noreturn element.
   void setHasNoReturnElement(bool AnalyzerOnly = false) {
-    assert(NoReturn == NR_None && "block already has a noreturn element");
-    NoReturn = AnalyzerOnly ? NR_AnalyzerOnly : NR_Real;
+    assert(NoReturn == NoReturnKind::None &&
+           "block already has a noreturn element");
+    NoReturn = AnalyzerOnly ? NoReturnKind::AnalyzerOnly : NoReturnKind::Real;
   }
 
   /// Returns true if the block would eventually end with a sink (a noreturn
@@ -1164,14 +1165,14 @@ public:
 
   /// Returns true if the block has a noreturn element, whether it is a real
   /// 'noreturn' or an 'analyzer_noreturn'.
-  bool hasNoReturnElement() const { return NoReturn != NR_None; }
+  bool hasNoReturnElement() const { return NoReturn != NoReturnKind::None; }
 
   /// Returns true if the block ends in an 'analyzer_noreturn' call (as opposed
   /// to a real 'noreturn' one). Most analyses treat the two indistinguishably
   /// (see hasNoReturnElement). This is for clients that need to tell them
   /// apart (e.g., -Wunreachable-code).
   bool hasOnlyAnalyzerNoReturnElement() const {
-    return NoReturn == NR_AnalyzerOnly;
+    return NoReturn == NoReturnKind::AnalyzerOnly;
   }
 
   unsigned getBlockID() const { return BlockID; }
