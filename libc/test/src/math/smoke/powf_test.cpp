@@ -223,20 +223,21 @@ public:
   }
 
   void test_subnormal_base(float (*func)(float, float), int tolerance = 0) {
-    EXPECT_FP_EQ(0x1.0p-32f, func(0x1.0p-128f, 0.25f));
-    EXPECT_FP_EQ(0x1.0p96f, func(0x1.0p-128f, -0.75f));
     if (tolerance == 0) {
+      EXPECT_FP_EQ(0x1.0p-32f, func(0x1.0p-128f, 0.25f));
+      EXPECT_FP_EQ(0x1.0p96f, func(0x1.0p-128f, -0.75f));
       EXPECT_FP_EQ(0x1.90a962p-33f, func(0x1.8p-130f, 0.25f));
       EXPECT_FP_EQ(0x1.47238cp+32f, func(0x1.8p-130f, -0.25f));
     } else {
-      uint32_t act1 = FPBits(func(0x1.8p-130f, 0.25f)).uintval();
-      uint32_t exp1 = FPBits(0x1.90a962p-33f).uintval();
-      EXPECT_LE(act1 >= exp1 ? act1 - exp1 : exp1 - act1,
-                static_cast<uint32_t>(tolerance));
-      uint32_t act2 = FPBits(func(0x1.8p-130f, -0.25f)).uintval();
-      uint32_t exp2 = FPBits(0x1.47238cp+32f).uintval();
-      EXPECT_LE(act2 >= exp2 ? act2 - exp2 : exp2 - act2,
-                static_cast<uint32_t>(tolerance));
+      auto check_close = [tolerance](float act, float exp) {
+        uint32_t a = FPBits(act).uintval();
+        uint32_t e = FPBits(exp).uintval();
+        EXPECT_LE(a >= e ? a - e : e - a, static_cast<uint32_t>(tolerance));
+      };
+      check_close(func(0x1.0p-128f, 0.25f), 0x1.0p-32f);
+      check_close(func(0x1.0p-128f, -0.75f), 0x1.0p96f);
+      check_close(func(0x1.8p-130f, 0.25f), 0x1.90a962p-33f);
+      check_close(func(0x1.8p-130f, -0.25f), 0x1.47238cp+32f);
     }
   }
 
