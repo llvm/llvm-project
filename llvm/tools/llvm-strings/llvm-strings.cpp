@@ -504,10 +504,9 @@ int main(int argc, char **argv) {
 
     case Encoding::Utf8:
       return Strings<Encoding::Utf8>::run;
-
-    default:
-      llvm_unreachable("unhandled encoding");
     }
+
+    llvm_unreachable("unhandled encoding");
   }();
 
   std::vector<std::string> InputFileNames = Args.getAllArgValues(OPT_INPUT);
