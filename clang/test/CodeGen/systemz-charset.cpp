@@ -92,7 +92,11 @@ constexpr string_view getfoo() { return "\174foo"; }
 
 void function()
 {
+  asm("\174foo");
+  // CHECK: asm{{.*}}@foo
+  // CHECK-UTF8: asm{{.*}}@foo
   asm((getfoo()));
+  // CHECK: asm{{.*}}|\86\96\96
+  // CHECK-UTF8: asm{{.*}}|foo
 }
-// CHECK: asm{{.*}}|\86\96\96
-// CHECK-UTF8: asm{{.*}}|foo
+
