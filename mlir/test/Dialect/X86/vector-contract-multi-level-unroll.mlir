@@ -683,6 +683,113 @@ module attributes {transform.with_named_sequence} {
 
 // -----
 
+#map = affine_map<(d0, d1, d2) -> (d0, d2)>
+#map1 = affine_map<(d0, d1, d2) -> (d2, d1)>
+#map2 = affine_map<(d0, d1, d2) -> (d0, d1)>
+
+// Loop order K-batch, accumulating over both loops: the inner batch loop
+// carries the accumulator, its IV appears exactly once in each operand read and
+// its step is 1. It is a valid accumulation loop, indistinguishable from a
+// K-loop over a blocked layout, and is treated as such.
+//
+// Again, spilling the accumulator value to memory in the outer loop is correct,
+// but not ideal.
+func.func @amx_bf16_flat_k_batch_order(%A: memref<?x?x?xbf16>, %B: memref<?x?x?xbf16>, %C: memref<?x?xf32>,
+                                       %m: index, %n: index) {
+  %c0 = arith.constant 0 : index
+  %c1 = arith.constant 1 : index
+  %c2 = arith.constant 2 : index
+  %c32 = arith.constant 32 : index
+  %c0_0 = arith.constant 0.0 : bf16
+  %c0_0_f32 = arith.constant 0.0 : f32
+  %batch = memref.dim %A, %c0 : memref<?x?x?xbf16>
+  %K = memref.dim %A, %c2 : memref<?x?x?xbf16>
+  %c = vector.transfer_read %C[%m, %n], %c0_0_f32 {in_bounds = [true, true]} : memref<?x?xf32>, vector<64x96xf32>
+  %res = scf.for %k = %c0 to %K step %c32 iter_args(%acc_k = %c) -> (vector<64x96xf32>) {
+    %res_k = scf.for %bi = %c0 to %batch step %c1 iter_args(%acc = %acc_k) -> (vector<64x96xf32>) {
+      %a = vector.transfer_read %A[%bi, %m, %k], %c0_0 {in_bounds = [true, true]} : memref<?x?x?xbf16>, vector<64x32xbf16>
+      %b = vector.transfer_read %B[%bi, %k, %n], %c0_0 {in_bounds = [true, true]} : memref<?x?x?xbf16>, vector<32x96xbf16>
+      %d = vector.contract {
+        indexing_maps = [#map, #map1, #map2],
+        iterator_types = ["parallel", "parallel", "reduction"],
+        kind = #vector.kind<add>}
+        %a, %b, %acc : vector<64x32xbf16>, vector<32x96xbf16> into vector<64x96xf32>
+      scf.yield %d : vector<64x96xf32>
+    }
+    scf.yield %res_k : vector<64x96xf32>
+  }
+  vector.transfer_write %res, %C[%m, %n] {in_bounds = [true, true]} : vector<64x96xf32>, memref<?x?xf32>
+  func.return
+}
+
+// CHECK-LABEL: func.func @amx_bf16_flat_k_batch_order(
+// CHECK-SAME:    %[[A:.+]]: memref<?x?x?xbf16>, %[[B:.+]]: memref<?x?x?xbf16>, %[[C:.+]]: memref<?x?xf32>,
+// CHECK-SAME:    %[[M:.+]]: index, %[[N:.+]]: index)
+// CHECK-DAG:     %[[C0:.+]] = arith.constant 0 : index
+// CHECK-DAG:     %[[C1:.+]] = arith.constant 1 : index
+// CHECK-DAG:     %[[C2:.+]] = arith.constant 2 : index
+// CHECK-DAG:     %[[C16:.+]] = arith.constant 16 : index
+// CHECK-DAG:     %[[C32:.+]] = arith.constant 32 : index
+// CHECK-DAG:     %[[C64:.+]] = arith.constant 64 : index
+// CHECK-DAG:     %[[C96:.+]] = arith.constant 96 : index
+// CHECK-DAG:     %[[BATCH:.+]] = memref.dim %[[A]], %[[C0]]
+// CHECK-DAG:     %[[K:.+]] = memref.dim %[[A]], %[[C2]]
+// CHECK-NOT:     memref.alloca
+// CHECK-NOT:     memref.subview
+// CHECK:         %[[ACC_INIT:.+]] = vector.transfer_read %[[C]][%[[M]], %[[N]]]
+// CHECK:         %[[ACC_RES:.+]] = scf.for %[[IV_K:.+]] = %[[C0]] to %[[K]] step %[[C32]] iter_args(%[[ACC_K:.+]] = %[[ACC_INIT]])
+// CHECK:           %[[BUF:.+]] = memref.alloca() : memref<64x96xf32>
+// CHECK:           vector.transfer_write %[[ACC_K]], %[[BUF]][%[[C0]], %[[C0]]]
+// CHECK-NOT:       memref.alloca
+// CHECK:           scf.for %[[IV_M:.+]] = %[[C0]] to %[[C64]] step %[[C32]] {
+// CHECK:             scf.for %[[IV_N:.+]] = %[[C0]] to %[[C96]] step %[[C32]] {
+// CHECK:               %[[ACC_VIEW:.+]] = memref.subview %[[BUF]][%[[IV_M]], %[[IV_N]]] [32, 32] [1, 1]
+// CHECK-COUNT-4:       vector.transfer_read %[[ACC_VIEW]]{{.*}} vector<16x16xf32>
+// CHECK:               %[[OFF_M:.+]] = arith.addi %[[M]], %[[IV_M]]
+// CHECK:               %[[OFF_N:.+]] = arith.addi %[[N]], %[[IV_N]]
+// CHECK:               %[[RES:.+]]:4 = scf.for %[[IV_B:.+]] = %[[C0]] to %[[BATCH]] step %[[C1]]
+// CHECK-NOT:             arith.addi
+// CHECK:                 %[[A_VIEW:.+]] = memref.subview %[[A]][%[[IV_B]], %[[OFF_M]], %[[IV_K]]] [1, 32, 32] [1, 1, 1]
+// CHECK:                 %[[B_VIEW:.+]] = memref.subview %[[B]][%[[IV_B]], %[[IV_K]], %[[OFF_N]]] [1, 32, 32] [1, 1, 1]
+// CHECK:                 vector.transfer_read %[[A_VIEW]][%[[C0]], %[[C0]]], {{.*}} vector<16x32xbf16>
+// CHECK:                 vector.transfer_read %[[A_VIEW]][%[[C16]], %[[C0]]], {{.*}} vector<16x32xbf16>
+// CHECK:                 vector.transfer_read %[[B_VIEW]][%[[C0]], %[[C0]]], {{.*}} vector<32x16xbf16>
+// CHECK:                 vector.transfer_read %[[B_VIEW]][%[[C0]], %[[C16]]], {{.*}} vector<32x16xbf16>
+// CHECK-COUNT-4:         vector.contract {{.*}} {x86_vcmlu_native_shape = array<i64: 16, 16, 32>} : vector<16x32xbf16>, vector<32x16xbf16> into vector<16x16xf32>
+// CHECK:                 scf.yield
+// CHECK:               }
+// CHECK-NOT:           memref.subview %[[BUF]]
+// CHECK-COUNT-4:       vector.transfer_write %[[RES]]#{{[0-3]}}, %[[ACC_VIEW]]
+// CHECK:             }
+// CHECK:           }
+// CHECK:           %[[ACC_NEXT:.+]] = vector.transfer_read %[[BUF]][%[[C0]], %[[C0]]], {{.*}} vector<64x96xf32>
+// CHECK:           scf.yield %[[ACC_NEXT]]
+// CHECK:         }
+// CHECK:         vector.transfer_write %[[ACC_RES]], %[[C]][%[[M]], %[[N]]]
+
+// NANO-LABEL: func.func @amx_bf16_flat_k_batch_order(
+
+module attributes {transform.with_named_sequence} {
+  transform.named_sequence @__transform_main(%arg1: !transform.any_op {transform.readonly}) {
+    %func = transform.structured.match ops{["func.func"]} in %arg1 : (!transform.any_op) -> !transform.any_op
+    transform.apply_patterns to %func {
+      transform.apply_patterns.x86.vector_contract_multi_level_unroll target = "amx-bf16"
+    } : !transform.any_op
+    transform.yield
+  }
+
+  transform.named_sequence @__transform_nano(%arg1: !transform.any_op {transform.readonly}) {
+    %func = transform.structured.match ops{["func.func"]} in %arg1 : (!transform.any_op) -> !transform.any_op
+    transform.apply_patterns to %func {
+      transform.apply_patterns.x86.vector_contract_multi_level_unroll target = "amx-bf16"
+      transform.apply_patterns.x86.vector_contract_to_amx_dot_product
+    } : !transform.any_op
+    transform.yield
+  }
+}
+
+// -----
+
 #map = affine_map<(d0, d1, d2, d3) -> (d0, d2, d3)>
 #map1 = affine_map<(d0, d1, d2, d3) -> (d2, d1, d3)>
 #map2 = affine_map<(d0, d1, d2, d3) -> (d0, d1)>
@@ -1213,13 +1320,74 @@ func.func @negative_transposed_operand(%A: memref<?x?xbf16>, %B: memref<?x?xbf16
 }
 
 // CHECK-LABEL: func.func @negative_transposed_operand(
-// CHECK-NOT:     memref.alloca
-// CHECK:         scf.for
-// CHECK:           vector.contract {{.*}} : vector<64x32xbf16>, vector<96x32xbf16> into vector<64x96xf32>
-// CHECK-NOT:     memref.alloca
+// CHECK:         vector.contract {{.*}} : vector<64x32xbf16>, vector<96x32xbf16> into vector<64x96xf32>
 
-// NANO-LABEL: func.func @negative_transposed_operand(
-// NANO:         vector.contract
+// NANO-LABEL:  func.func @negative_transposed_operand(
+// NANO:          vector.contract
+
+module attributes {transform.with_named_sequence} {
+  transform.named_sequence @__transform_main(%arg1: !transform.any_op {transform.readonly}) {
+    %func = transform.structured.match ops{["func.func"]} in %arg1 : (!transform.any_op) -> !transform.any_op
+    transform.apply_patterns to %func {
+      transform.apply_patterns.x86.vector_contract_multi_level_unroll target = "amx-bf16"
+    } : !transform.any_op
+    transform.yield
+  }
+
+  transform.named_sequence @__transform_nano(%arg1: !transform.any_op {transform.readonly}) {
+    %func = transform.structured.match ops{["func.func"]} in %arg1 : (!transform.any_op) -> !transform.any_op
+    transform.apply_patterns to %func {
+      transform.apply_patterns.x86.vector_contract_multi_level_unroll target = "amx-bf16"
+      transform.apply_patterns.x86.vector_contract_to_amx_dot_product
+    } : !transform.any_op
+    transform.yield
+  }
+}
+
+// -----
+
+#map = affine_map<(d0, d1, d2) -> (d0, d2)>
+#map1 = affine_map<(d0, d1, d2) -> (d2, d1)>
+#map2 = affine_map<(d0, d1, d2) -> (d0, d1)>
+
+// Loop order M-K-N, accumulating over both K and N: the IV of the innermost
+// loop carrying the accumulator (N) is not present in both operand loads'
+// indices.
+func.func @negative_k_loop_not_innermost(%A: memref<?x?xbf16>, %B: memref<?x?xbf16>, %C: memref<?x?xf32>) {
+  %c0 = arith.constant 0 : index
+  %c1 = arith.constant 1 : index
+  %c32 = arith.constant 32 : index
+  %c64 = arith.constant 64 : index
+  %c0_0 = arith.constant 0.0 : bf16
+  %c0_0_f32 = arith.constant 0.0 : f32
+  %M = memref.dim %C, %c0 : memref<?x?xf32>
+  %N = memref.dim %C, %c1 : memref<?x?xf32>
+  %K = memref.dim %A, %c1 : memref<?x?xbf16>
+  scf.for %m = %c0 to %M step %c64 {
+    %c = vector.transfer_read %C[%m, %c0], %c0_0_f32 {in_bounds = [true, true]} : memref<?x?xf32>, vector<64x32xf32>
+    %res = scf.for %k = %c0 to %K step %c32 iter_args(%acc_k = %c) -> (vector<64x32xf32>) {
+      %res_k = scf.for %n = %c0 to %N step %c32 iter_args(%acc = %acc_k) -> (vector<64x32xf32>) {
+        %a = vector.transfer_read %A[%m, %k], %c0_0 {in_bounds = [true, true]} : memref<?x?xbf16>, vector<64x32xbf16>
+        %b = vector.transfer_read %B[%k, %n], %c0_0 {in_bounds = [true, true]} : memref<?x?xbf16>, vector<32x32xbf16>
+        %d = vector.contract {
+          indexing_maps = [#map, #map1, #map2],
+          iterator_types = ["parallel", "parallel", "reduction"],
+          kind = #vector.kind<add>}
+          %a, %b, %acc : vector<64x32xbf16>, vector<32x32xbf16> into vector<64x32xf32>
+        scf.yield %d : vector<64x32xf32>
+      }
+      scf.yield %res_k : vector<64x32xf32>
+    }
+    vector.transfer_write %res, %C[%m, %c0] {in_bounds = [true, true]} : vector<64x32xf32>, memref<?x?xf32>
+  }
+  func.return
+}
+
+// CHECK-LABEL: func.func @negative_k_loop_not_innermost(
+// CHECK:         vector.contract {{.*}} : vector<64x32xbf16>, vector<32x32xbf16> into vector<64x32xf32>
+
+// NANO-LABEL:  func.func @negative_k_loop_not_innermost(
+// NANO:          vector.contract
 
 module attributes {transform.with_named_sequence} {
   transform.named_sequence @__transform_main(%arg1: !transform.any_op {transform.readonly}) {
@@ -1269,8 +1437,8 @@ func.func @negative_operand_read_out_of_bounds(%A: memref<?x?xbf16>, %B: memref<
 // CHECK-LABEL: func.func @negative_operand_read_out_of_bounds(
 // CHECK:         vector.contract {{.*}} : vector<64x32xbf16>, vector<32x96xbf16> into vector<64x96xf32>
 
-// NANO-LABEL: func.func @negative_operand_read_out_of_bounds(
-// NANO:         vector.contract
+// NANO-LABEL:  func.func @negative_operand_read_out_of_bounds(
+// NANO:          vector.contract
 
 module attributes {transform.with_named_sequence} {
   transform.named_sequence @__transform_main(%arg1: !transform.any_op {transform.readonly}) {
@@ -1320,8 +1488,8 @@ func.func @negative_unsupported_type(%A: memref<?x?xi16>, %B: memref<?x?xi16>, %
 // CHECK-LABEL: func.func @negative_unsupported_type(
 // CHECK:         vector.contract {{.*}} : vector<64x32xi16>, vector<32x96xi16> into vector<64x96xi32>
 
-// NANO-LABEL: func.func @negative_unsupported_type(
-// NANO:         vector.contract
+// NANO-LABEL:  func.func @negative_unsupported_type(
+// NANO:          vector.contract
 
 module attributes {transform.with_named_sequence} {
   transform.named_sequence @__transform_main(%arg1: !transform.any_op {transform.readonly}) {
@@ -1373,8 +1541,8 @@ func.func @negative_shape_not_unrollable(%A: memref<?x?xbf16>, %B: memref<?x?xbf
 // CHECK-LABEL: func.func @negative_shape_not_unrollable(
 // CHECK:         vector.contract {{.*}} : vector<48x32xbf16>, vector<32x96xbf16> into vector<48x96xf32>
 
-// NANO-LABEL: func.func @negative_shape_not_unrollable(
-// NANO:         vector.contract
+// NANO-LABEL:  func.func @negative_shape_not_unrollable(
+// NANO:          vector.contract
 
 module attributes {transform.with_named_sequence} {
   transform.named_sequence @__transform_main(%arg1: !transform.any_op {transform.readonly}) {
@@ -1427,10 +1595,10 @@ func.func @negative_vnni_native_shape(%A: memref<?x?x2xbf16>, %B: memref<?x?x2xb
 // CHECK:         vector.contract {{.*}} : vector<16x16x2xbf16>, vector<16x16x2xbf16> into vector<16x16xf32>
 // CHECK-NOT:     x86_vcmlu_native_shape
 
-// NANO-LABEL: func.func @negative_vnni_native_shape(
+// NANO-LABEL:  func.func @negative_vnni_native_shape(
 // Operands are read directly from a function argument; the AMX lowering
 // requires an op (e.g. memref.subview) to define the read source.
-// NANO:         vector.contract
+// NANO:          vector.contract
 
 module attributes {transform.with_named_sequence} {
   transform.named_sequence @__transform_main(%arg1: !transform.any_op {transform.readonly}) {
