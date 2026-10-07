@@ -63,6 +63,7 @@
 #include "llvm/Analysis/BlockFrequencyInfo.h"
 #include "llvm/Analysis/BranchProbabilityInfo.h"
 #include "llvm/Analysis/CFG.h"
+#include "llvm/Analysis/GlobalsModRef.h"
 #include "llvm/Analysis/LoopInfo.h"
 #include "llvm/Analysis/OptimizationRemarkEmitter.h"
 #include "llvm/Analysis/ProfileSummaryInfo.h"
@@ -1926,7 +1927,10 @@ PreservedAnalyses PGOInstrumentationGen::run(Module &M,
                               LookupLI, InstrumentationType))
     return PreservedAnalyses::all();
 
-  return PreservedAnalyses::none();
+  PreservedAnalyses PA = PreservedAnalyses::none();
+  // GlobalsAA is only invalidated when explicitly abandoned.
+  PA.abandon<GlobalsAA>();
+  return PA;
 }
 
 // Using the ratio b/w sums of profile count values and BFI count values to
