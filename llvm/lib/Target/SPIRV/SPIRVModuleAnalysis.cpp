@@ -26,6 +26,7 @@
 #include "SPIRVTargetMachine.h"
 #include "SPIRVUtils.h"
 #include "llvm/ADT/STLExtras.h"
+#include "llvm/CodeGen/MachineFunctionAnalysis.h"
 #include "llvm/CodeGen/MachineModuleInfo.h"
 #include "llvm/CodeGen/TargetPassConfig.h"
 
@@ -51,10 +52,10 @@ struct AvoidCapabilitiesSet {
   AvoidCapabilitiesSet() { S.insert_range(AvoidCapabilities); }
 };
 
-char llvm::SPIRVModuleAnalysis::ID = 0;
+char llvm::SPIRVModuleAnalysisWrapperPass::ID = 0;
 
-INITIALIZE_PASS(SPIRVModuleAnalysis, DEBUG_TYPE, "SPIRV module analysis", true,
-                true)
+INITIALIZE_PASS(SPIRVModuleAnalysisWrapperPass, DEBUG_TYPE,
+                "SPIRV module analysis", true, true)
 
 static void reportUnsupported(const MachineInstr &MI, const char *Msg) {
   const Function &Func = MI.getMF()->getFunction();
@@ -141,7 +142,7 @@ getSymbolicOperandRequirements(SPIRV::OperandCategory::OperandCategory Category,
   return {false, {}, {}, VersionTuple(), VersionTuple()};
 }
 
-void SPIRVModuleAnalysis::setBaseInfo(const Module &M) {
+void SPIRVModuleAnalysisImpl::setBaseInfo(const Module &M) {
   MAI.MaxID = 0;
   for (int i = 0; i < SPIRV::NUM_MODULE_SECTIONS; i++)
     MAI.MS[i].clear();
@@ -348,8 +349,8 @@ static unsigned getInvokeOperandIdx(unsigned Opcode) {
   }
 }
 
-bool SPIRVModuleAnalysis::isDeclSection(const MachineRegisterInfo &MRI,
-                                        const MachineInstr &MI) {
+bool SPIRVModuleAnalysisImpl::isDeclSection(const MachineRegisterInfo &MRI,
+                                            const MachineInstr &MI) {
   unsigned Opcode = MI.getOpcode();
   switch (Opcode) {
   case SPIRV::OpTypeForwardPointer:
@@ -402,7 +403,7 @@ bool SPIRVModuleAnalysis::isDeclSection(const MachineRegisterInfo &MRI,
 // FunPtrOp is the MachineOperand previously recorded via
 // SPIRVGlobalRegistry::recordFunctionPointer, identifying which Function
 // this placeholder refers to.
-void SPIRVModuleAnalysis::visitFunPtrUse(
+void SPIRVModuleAnalysisImpl::visitFunPtrUse(
     Register OpReg, const MachineOperand *FunPtrOp,
     InstrGRegsMap &SignatureToGReg,
     std::map<const Value *, unsigned> &GlobalToGReg,
@@ -429,7 +430,7 @@ void SPIRVModuleAnalysis::visitFunPtrUse(
 
 // Depth first recursive traversal of dependencies. Repeated visits are guarded
 // by MAI.hasRegisterAlias().
-void SPIRVModuleAnalysis::visitDecl(
+void SPIRVModuleAnalysisImpl::visitDecl(
     const MachineRegisterInfo &MRI, InstrGRegsMap &SignatureToGReg,
     std::map<const Value *, unsigned> &GlobalToGReg, const MachineFunction *MF,
     const MachineInstr &MI) {
@@ -511,7 +512,7 @@ void SPIRVModuleAnalysis::visitDecl(
     MAI.setSkipEmission(&MI);
 }
 
-MCRegister SPIRVModuleAnalysis::handleFunctionOrParameter(
+MCRegister SPIRVModuleAnalysisImpl::handleFunctionOrParameter(
     const MachineFunction *MF, const MachineInstr &MI,
     std::map<const Value *, unsigned> &GlobalToGReg, bool &IsFunDef) {
   const Value *GObj = GR->getGlobalObject(MF, MI.getOperand(0).getReg());
@@ -531,9 +532,8 @@ MCRegister SPIRVModuleAnalysis::handleFunctionOrParameter(
   return GReg;
 }
 
-MCRegister
-SPIRVModuleAnalysis::handleTypeDeclOrConstant(const MachineInstr &MI,
-                                              InstrGRegsMap &SignatureToGReg) {
+MCRegister SPIRVModuleAnalysisImpl::handleTypeDeclOrConstant(
+    const MachineInstr &MI, InstrGRegsMap &SignatureToGReg) {
   InstrSignature MISign = instrToSignature(MI, MAI, false);
   auto [It, Inserted] = SignatureToGReg.try_emplace(MISign);
   if (!Inserted)
@@ -544,7 +544,7 @@ SPIRVModuleAnalysis::handleTypeDeclOrConstant(const MachineInstr &MI,
   return GReg;
 }
 
-MCRegister SPIRVModuleAnalysis::handleVariable(
+MCRegister SPIRVModuleAnalysisImpl::handleVariable(
     const MachineFunction *MF, const MachineInstr &MI,
     std::map<const Value *, unsigned> &GlobalToGReg) {
   MAI.GlobalVarList.push_back(&MI);
@@ -561,11 +561,11 @@ MCRegister SPIRVModuleAnalysis::handleVariable(
   return GReg;
 }
 
-void SPIRVModuleAnalysis::collectDeclarations(const Module &M) {
+void SPIRVModuleAnalysisImpl::collectDeclarations(const Module &M) {
   InstrGRegsMap SignatureToGReg;
   std::map<const Value *, unsigned> GlobalToGReg;
   for (const Function &F : M) {
-    MachineFunction *MF = MMI->getMachineFunction(F);
+    MachineFunction *MF = GetMF(F);
     if (!MF)
       continue;
     const MachineRegisterInfo &MRI = MF->getRegInfo();
@@ -633,8 +633,8 @@ void SPIRVModuleAnalysis::collectDeclarations(const Module &M) {
 // to the register defining that variable (which will usually be the result of
 // an OpFunction). This lets us call externally imported functions using
 // the correct ID registers.
-void SPIRVModuleAnalysis::collectFuncNames(MachineInstr &MI,
-                                           const Function *F) {
+void SPIRVModuleAnalysisImpl::collectFuncNames(MachineInstr &MI,
+                                               const Function *F) {
   if (MI.getOpcode() == SPIRV::OpDecorate) {
     // If it's got Import linkage.
     auto Dec = MI.getOperand(1).getImm();
@@ -723,12 +723,12 @@ static void collectOtherInstr(MachineInstr &MI, SPIRV::ModuleAnalysisInfo &MAI,
 
 // Some global instructions make reference to function-local ID regs, so cannot
 // be correctly collected until these registers are globally numbered.
-void SPIRVModuleAnalysis::processOtherInstrs(const Module &M) {
+void SPIRVModuleAnalysisImpl::processOtherInstrs(const Module &M) {
   InstrTraces IS;
   for (const Function &F : M) {
     if (F.isDeclaration())
       continue;
-    MachineFunction *MF = MMI->getMachineFunction(F);
+    MachineFunction *MF = GetMF(F);
     assert(MF);
 
     for (MachineBasicBlock &MBB : *MF)
@@ -802,11 +802,11 @@ void SPIRVModuleAnalysis::processOtherInstrs(const Module &M) {
 // Number registers in all functions globally from 0 onwards and store
 // the result in global register alias table. Some registers are already
 // numbered.
-void SPIRVModuleAnalysis::numberRegistersGlobally(const Module &M) {
+void SPIRVModuleAnalysisImpl::numberRegistersGlobally(const Module &M) {
   for (const Function &F : M) {
     if (F.isDeclaration())
       continue;
-    MachineFunction *MF = MMI->getMachineFunction(F);
+    MachineFunction *MF = GetMF(F);
     assert(MF);
     for (MachineBasicBlock &MBB : *MF) {
       for (MachineInstr &MI : MBB) {
@@ -2680,10 +2680,10 @@ void addInstrRequirements(const MachineInstr &MI,
 }
 
 static void collectReqs(const Module &M, SPIRV::ModuleAnalysisInfo &MAI,
-                        MachineModuleInfo *MMI, const SPIRVSubtarget &ST) {
+                        MachineFunctionGetter GetMF, const SPIRVSubtarget &ST) {
   // Collect requirements for existing instructions.
   for (const Function &F : M) {
-    MachineFunction *MF = MMI->getMachineFunction(F);
+    MachineFunction *MF = GetMF(F);
     if (!MF)
       continue;
     for (const MachineBasicBlock &MBB : *MF)
@@ -2947,11 +2947,12 @@ static void handleMIFlagDecoration(
 
 // Walk all functions and add decorations related to MI flags.
 static void addDecorations(const Module &M, const SPIRVInstrInfo &TII,
-                           MachineModuleInfo *MMI, const SPIRVSubtarget &ST,
+                           MachineFunctionGetter GetMF,
+                           const SPIRVSubtarget &ST,
                            SPIRV::ModuleAnalysisInfo &MAI,
                            const SPIRVGlobalRegistry *GR) {
   for (const Function &F : M) {
-    MachineFunction *MF = MMI->getMachineFunction(F);
+    MachineFunction *MF = GetMF(F);
     if (!MF)
       continue;
 
@@ -2963,10 +2964,10 @@ static void addDecorations(const Module &M, const SPIRVInstrInfo &TII,
 }
 
 static void addMBBNames(const Module &M, const SPIRVInstrInfo &TII,
-                        MachineModuleInfo *MMI, const SPIRVSubtarget &ST,
+                        MachineFunctionGetter GetMF, const SPIRVSubtarget &ST,
                         SPIRV::ModuleAnalysisInfo &MAI) {
   for (const Function &F : M) {
-    MachineFunction *MF = MMI->getMachineFunction(F);
+    MachineFunction *MF = GetMF(F);
     if (!MF)
       continue;
     if (MF->getFunction()
@@ -2989,9 +2990,9 @@ static void addMBBNames(const Module &M, const SPIRVInstrInfo &TII,
 
 // patching Instruction::PHI to SPIRV::OpPhi
 static void patchPhis(const Module &M, SPIRVGlobalRegistry *GR,
-                      const SPIRVInstrInfo &TII, MachineModuleInfo *MMI) {
+                      const SPIRVInstrInfo &TII, MachineFunctionGetter GetMF) {
   for (const Function &F : M) {
-    MachineFunction *MF = MMI->getMachineFunction(F);
+    MachineFunction *MF = GetMF(F);
     if (!MF)
       continue;
     for (auto &MBB : *MF) {
@@ -3113,29 +3114,22 @@ static void collectFPFastMathDefaults(const Module &M,
   }
 }
 
-void SPIRVModuleAnalysis::getAnalysisUsage(AnalysisUsage &AU) const {
-  AU.addRequired<TargetPassConfig>();
-  AU.addRequired<MachineModuleInfoWrapperPass>();
-}
+SPIRVModuleAnalysisImpl::SPIRVModuleAnalysisImpl(const SPIRVSubtarget &ST,
+                                                 SPIRV::ModuleAnalysisInfo &MAI,
+                                                 MachineFunctionGetter GetMF)
+    : ST(&ST), GR(ST.getSPIRVGlobalRegistry()), TII(ST.getInstrInfo()),
+      MAI(MAI), GetMF(GetMF) {}
 
-bool SPIRVModuleAnalysis::runOnModule(Module &M) {
-  SPIRVTargetMachine &TM =
-      getAnalysis<TargetPassConfig>().getTM<SPIRVTargetMachine>();
-  ST = TM.getSubtargetImpl();
-  GR = ST->getSPIRVGlobalRegistry();
-  TII = ST->getInstrInfo();
-
-  MMI = &getAnalysis<MachineModuleInfoWrapperPass>().getMMI();
-
+void SPIRVModuleAnalysisImpl::run(const Module &M) {
   setBaseInfo(M);
 
-  patchPhis(M, GR, *TII, MMI);
+  patchPhis(M, GR, *TII, GetMF);
 
-  addMBBNames(M, *TII, MMI, *ST, MAI);
+  addMBBNames(M, *TII, GetMF, *ST, MAI);
   collectFPFastMathDefaults(M, MAI, *ST);
-  addDecorations(M, *TII, MMI, *ST, MAI, GR);
+  addDecorations(M, *TII, GetMF, *ST, MAI, GR);
 
-  collectReqs(M, MAI, MMI, *ST);
+  collectReqs(M, MAI, GetMF, *ST);
 
   // Process type/const/global var/func decl instructions, number their
   // destination registers from 0 to N, collect Extensions and Capabilities.
@@ -3153,6 +3147,42 @@ bool SPIRVModuleAnalysis::runOnModule(Module &M) {
 
   // Set maximum ID used.
   GR->setBound(MAI.MaxID);
+}
 
+void SPIRVModuleAnalysisWrapperPass::getAnalysisUsage(AnalysisUsage &AU) const {
+  AU.addRequired<TargetPassConfig>();
+  AU.addRequired<MachineModuleInfoWrapperPass>();
+}
+
+bool SPIRVModuleAnalysisWrapperPass::runOnModule(Module &M) {
+  SPIRVTargetMachine &TM =
+      getAnalysis<TargetPassConfig>().getTM<SPIRVTargetMachine>();
+  MachineModuleInfo &MMI = getAnalysis<MachineModuleInfoWrapperPass>().getMMI();
+  SPIRVModuleAnalysisImpl(
+      *TM.getSubtargetImpl(), MAI,
+      [&MMI](const Function &F) { return MMI.getMachineFunction(F); })
+      .run(M);
   return false;
+}
+
+AnalysisKey SPIRVModuleAnalysis::Key;
+
+SPIRVModuleAnalysis::Result
+SPIRVModuleAnalysis::run(Module &M, ModuleAnalysisManager &MAM) {
+  const auto &TM = static_cast<const SPIRVTargetMachine &>(
+      MAM.getResult<MachineModuleAnalysis>(M).getMMI().getTarget());
+  FunctionAnalysisManager &FAM =
+      MAM.getResult<FunctionAnalysisManagerModuleProxy>(M).getManager();
+  Result MAI;
+  SPIRVModuleAnalysisImpl(*TM.getSubtargetImpl(), MAI,
+                          [&FAM](const Function &F) -> MachineFunction * {
+                            MachineFunctionAnalysis::Result *MFA =
+                                FAM.getCachedResult<MachineFunctionAnalysis>(
+                                    const_cast<Function &>(F));
+                            assert((MFA || F.isDeclaration()) &&
+                                   "Missing MachineFunction for definition");
+                            return MFA ? &MFA->getMF() : nullptr;
+                          })
+      .run(M);
+  return MAI;
 }
