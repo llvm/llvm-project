@@ -454,7 +454,7 @@ void PredicateInfoBuilder::processBranch(
         }
       }
 
-      if (isa<Instruction>(Cond) || isa<Argument>(Cond)) {
+      if (shouldRename(Cond)) {
         for (User *U : Cond->users()) {
           auto *SI = dyn_cast<SelectInst>(U);
           if (!SI || SI->getCondition() != Cond ||
