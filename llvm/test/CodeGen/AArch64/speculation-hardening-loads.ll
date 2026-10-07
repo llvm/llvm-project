@@ -96,8 +96,8 @@ define i64 @no_masking_with_full_control_flow_barriers(i64 %a, i64 %b, ptr %p) s
 ; CHECK-NEXT:    dsb sy
 ; CHECK-NEXT:    isb
 ; CHECK-NEXT:    ldr x8, [x2]
-; CHECK-NEXT:    mov x17, x0
 ; CHECK-NEXT:    mov x16, x1
+; CHECK-NEXT:    mov x17, x0
 ; CHECK-NEXT:    //APP
 ; CHECK-NEXT:    hint #12
 ; CHECK-NEXT:    //NO_APP
