@@ -38,6 +38,7 @@
 #include "clang/CIR/MissingFeatures.h"
 #include "clang/CodeGenUtils/CodeGenUtils.h"
 #include "clang/CodeGenUtils/ModuleUtils.h"
+#include "clang/CodeGenUtils/RecordLayoutUtils.h"
 #include "llvm/ADT/STLExtras.h"
 #include "llvm/ADT/StringExtras.h"
 #include "llvm/ADT/StringRef.h"
@@ -1603,7 +1604,7 @@ void CIRGenModule::emitGlobalVarDefinition(const clang::VarDecl *vd,
     // exists. A use may still exists, however, so we still may need
     // to do a RAUW.
     assert(!vd->getType()->isIncompleteType() && "Unexpected incomplete type");
-    init = builder.getZeroInitAttr(convertType(vd->getType()));
+    init = emitNullConstantAttr(vd->getType());
   } else {
     emitter.emplace(*this);
     mlir::Attribute initializer = emitter->tryEmitForInitializer(*initDecl);
@@ -1616,7 +1617,7 @@ void CIRGenModule::emitGlobalVarDefinition(const clang::VarDecl *vd,
         if (initDecl->hasFlexibleArrayInit(astContext))
           errorNYI(vd->getSourceRange(),
                    "emitGlobalVarDefinition: flexible array initializer");
-        init = builder.getZeroInitAttr(convertType(qt));
+        init = emitNullConstantAttr(qt);
         if (!isDefinitionAvailableExternally)
           needsGlobalCtor = true;
       } else {
@@ -1733,8 +1734,25 @@ void CIRGenModule::emitGlobalVarDefinition(const clang::VarDecl *vd,
   maybeSetTrivialComdat(*vd, gv);
 
   // Emit the initializer function if necessary.
-  if (needsGlobalCtor || needsGlobalDtor)
+  if (needsGlobalCtor || needsGlobalDtor) {
+    // We need to make sure that these are emitted 'in order' of definition,
+    // rather than reference, so make sure this is now 'last', if it needs a
+    // global ctor/dtor, so that initialization happens in the correct order.
+    // Other uses of 'lastGlobalOp' just make sure we emit all our globals
+    // before functions/etc, so it might have ended up out of order/referenced
+    // earlier, so this is a 'move to the end' once we see definition thing
+    // happening here.
+    if (lastGlobalOp != gv.getOperation()) {
+      if (lastGlobalOp)
+        gv->moveAfter(lastGlobalOp);
+      else
+        gv->moveBefore(getModule().getBody(), getModule().getBody()->begin());
+
+      lastGlobalOp = gv.getOperation();
+    }
+
     emitCXXGlobalVarDeclInitFunc(vd, gv, needsGlobalCtor);
+  }
 }
 
 bool CIRGenModule::shouldEmitFunction(GlobalDecl gd) {
@@ -2493,7 +2511,7 @@ bool CIRGenModule::findFieldMemberPath(const CXXRecordDecl *currentClass,
 
 bool CIRGenModule::isEmptyFieldForMemberPointer(const FieldDecl *field) {
   if (!field->isPotentiallyOverlapping() ||
-      !isEmptyFieldForLayout(astContext, field))
+      !CodeGenUtils::isEmptyFieldForLayout(astContext, field))
     return false;
 
   // Unions always have a field even if they are empty.

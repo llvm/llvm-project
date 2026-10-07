@@ -2454,6 +2454,15 @@ cc_library(
     ],
 )
 
+gentbl_cc_library(
+    name = "CodeGenOptionsTableGen",
+    strip_include_prefix = "lib/CodeGen",
+    tbl_outs = {"lib/CodeGen/CodeGenOptions.inc": ["-gen-opt-parser-defs"]},
+    tblgen = ":llvm-min-tblgen",
+    td_file = "lib/CodeGen/CodeGenOptions.td",
+    deps = [":OptParserTdFiles"],
+)
+
 cc_library(
     name = "CodeGen",
     srcs = glob(
@@ -2485,6 +2494,7 @@ cc_library(
         ":BitWriter",
         ":CFGuard",
         ":CGData",
+        ":CodeGenOptionsTableGen",
         ":CodeGenTypes",
         ":Core",
         ":DebugInfoCodeView",
@@ -2497,6 +2507,7 @@ cc_library(
         ":MCParser",
         ":ObjCARC",
         ":Object",
+        ":Option",
         ":ProfileData",
         ":Remarks",
         ":Scalar",
@@ -3527,6 +3538,10 @@ llvm_target_lib_list = [lib for lib in [
                 "lib/Target/SystemZ/SystemZGenDisassemblerTables.inc",
             ),
             (
+                ["-gen-insn-directive-match-table"],
+                "lib/Target/SystemZ/SystemZGenInsnMatchTable.inc",
+            ),
+            (
                 ["-gen-emitter"],
                 "lib/Target/SystemZ/SystemZGenMCCodeEmitter.inc",
             ),
@@ -3767,6 +3782,10 @@ llvm_target_lib_list = [lib for lib in [
                 "lib/Target/X86/X86GenMnemonicTables.inc",
             ),
         ],
+        "tbl_deps": [
+            ":X86MCOptionsTableGen",
+            ":X86OptionsTableGen",
+        ],
     },
     {
         "name": "XCore",
@@ -3986,6 +4005,24 @@ gentbl_cc_library(
     tbl_outs = {"lib/Target/Sparc/SparcOptions.inc": ["-gen-opt-parser-defs"]},
     tblgen = ":llvm-tblgen",
     td_file = "lib/Target/Sparc/SparcOptions.td",
+    deps = [":OptParserTdFiles"],
+)
+
+gentbl_cc_library(
+    name = "X86MCOptionsTableGen",
+    strip_include_prefix = "lib/Target/X86",
+    tbl_outs = {"lib/Target/X86/X86MCOptions.inc": ["-gen-opt-parser-defs"]},
+    tblgen = ":llvm-tblgen",
+    td_file = "lib/Target/X86/MCTargetDesc/X86MCOptions.td",
+    deps = [":OptParserTdFiles"],
+)
+
+gentbl_cc_library(
+    name = "X86OptionsTableGen",
+    strip_include_prefix = "lib/Target/X86",
+    tbl_outs = {"lib/Target/X86/X86Options.inc": ["-gen-opt-parser-defs"]},
+    tblgen = ":llvm-tblgen",
+    td_file = "lib/Target/X86/X86Options.td",
     deps = [":OptParserTdFiles"],
 )
 
