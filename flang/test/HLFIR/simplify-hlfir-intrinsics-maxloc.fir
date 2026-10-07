@@ -475,6 +475,14 @@ func.func @test_character(%input: !fir.box<!fir.array<?x!fir.char<1>>>) -> !hlfi
 // CHECK-LABEL:   func.func @test_character(
 // CHECK:           hlfir.maxloc
 
+// UNSIGNED comparisons are not supported yet.
+func.func @test_unsigned(%input: !fir.box<!fir.array<?xui32>>) -> !hlfir.expr<1xi32> {
+  %0 = hlfir.maxloc %input : (!fir.box<!fir.array<?xui32>>) -> !hlfir.expr<1xi32>
+  return %0 : !hlfir.expr<1xi32>
+}
+// CHECK-LABEL:   func.func @test_unsigned(
+// CHECK:           hlfir.maxloc
+
 // BACK is not supported yet.
 func.func @test_back(%input: !hlfir.expr<?xi32>) -> !hlfir.expr<1xi32> {
   %back = arith.constant true

@@ -187,6 +187,13 @@ public:
     return BB->getDataLayout();
   }
 
+  /// Get the module. Requires that an insertion point is set and connected
+  /// to a module.
+  Module *getModule() const {
+    assert(BB && "Must have insertion point to get module");
+    return BB->getModule();
+  }
+
   /// This specifies that created instructions should be appended to the
   /// end of the specified block.
   void SetInsertPoint(BasicBlock *TheBB) {
