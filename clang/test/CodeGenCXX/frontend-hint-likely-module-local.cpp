@@ -1,7 +1,10 @@
 // RUN: rm -rf %t
 // RUN: split-file %s %t
 // RUN: %clang_cc1 -triple arm64-apple-macosx14.0.0 -std=c++20 -emit-llvm -mllvm -clang-emit-module-local-hints -o %t/on.ll %t/main.cpp
-// RUN: FileCheck %s < %t/on.ll
+// RUN: FileCheck %s --check-prefix=INL < %t/on.ll
+// RUN: FileCheck %s --check-prefix=TMPL < %t/on.ll
+// RUN: FileCheck %s --check-prefix=LAMBDA < %t/on.ll
+// RUN: FileCheck %s --check-prefix=MEMBER < %t/on.ll
 // RUN: FileCheck %s --check-prefix=PLAIN < %t/on.ll
 // RUN: FileCheck %s --check-prefix=HDR < %t/on.ll
 // RUN: FileCheck %s --check-prefix=HDRTMPL < %t/on.ll
@@ -25,14 +28,18 @@ int use(int x) {
 }
 
 // Inline functions, template instantiations and lambdas defined in main.cpp.
-// CHECK-DAG: define{{.*}} i32 @_Z11main_inlinei({{.*}}) #[[INL:[0-9]+]]
-// CHECK-DAG: define{{.*}} i32 @_Z9main_tmplIiEiT_({{.*}}) #[[TMPL:[0-9]+]]
-// CHECK-DAG: define{{.*}} i32 @_ZZ9main_tmplIiEiT_ENKUlvE_clEv({{.*}}) #[[LAMBDA:[0-9]+]]
-// CHECK-DAG: define{{.*}} i32 @_ZN1S1mEi({{.*}}) #[[MEMBER:[0-9]+]]
-// CHECK-DAG: attributes #[[INL]] = { {{.*}}"frontend-hint-likely-module-local"{{.*}} }
-// CHECK-DAG: attributes #[[TMPL]] = { {{.*}}"frontend-hint-likely-module-local"{{.*}} }
-// CHECK-DAG: attributes #[[LAMBDA]] = { {{.*}}"frontend-hint-likely-module-local"{{.*}} }
-// CHECK-DAG: attributes #[[MEMBER]] = { {{.*}}"frontend-hint-likely-module-local"{{.*}} }
+// These may share an attribute group, so each is checked by a separate run.
+// INL: define{{.*}} i32 @_Z11main_inlinei({{.*}}) #[[INL:[0-9]+]]
+// INL: attributes #[[INL]] = { {{.*}}"frontend-hint-likely-module-local"{{.*}} }
+
+// TMPL: define{{.*}} i32 @_Z9main_tmplIiEiT_({{.*}}) #[[TMPL:[0-9]+]]
+// TMPL: attributes #[[TMPL]] = { {{.*}}"frontend-hint-likely-module-local"{{.*}} }
+
+// LAMBDA: define{{.*}} i32 @_ZZ9main_tmplIiEiT_ENKUlvE_clEv({{.*}}) #[[LAMBDA:[0-9]+]]
+// LAMBDA: attributes #[[LAMBDA]] = { {{.*}}"frontend-hint-likely-module-local"{{.*}} }
+
+// MEMBER: define{{.*}} i32 @_ZN1S1mEi({{.*}}) #[[MEMBER:[0-9]+]]
+// MEMBER: attributes #[[MEMBER]] = { {{.*}}"frontend-hint-likely-module-local"{{.*}} }
 
 // Non-inline functions in main.cpp.
 // PLAIN-DAG: define{{.*}} i32 @_Z10main_plaini({{.*}}) #[[PLAIN:[0-9]+]]
@@ -53,4 +60,4 @@ int use(int x) {
 // HDRTMPL-NOT: frontend-hint-likely-module-local
 // HDRTMPL-SAME: }
 
-// OFF-NOT: frontend-hint-likely-module-local
+// OFF-NOT: "frontend-hint-likely-module-local"
