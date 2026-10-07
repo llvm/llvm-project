@@ -25,10 +25,6 @@ using namespace llvm;
 
 #define DEBUG_TYPE "x86-selectiondag-info"
 
-static cl::opt<bool>
-    UseFSRMForMemcpy("x86-use-fsrm-for-memcpy", cl::Hidden, cl::init(false),
-                     cl::desc("Use fast short rep mov in memcpy lowering"));
-
 X86SelectionDAGInfo::X86SelectionDAGInfo()
     : SelectionDAGGenTargetInfo(X86GenSDNodeInfo) {}
 
@@ -70,16 +66,6 @@ void X86SelectionDAGInfo::verifyTargetNode(const SelectionDAG &DAG,
   switch (N->getOpcode()) {
   default:
     break;
-  case X86ISD::VP2INTERSECT:
-    // invalid number of results; expected 1, got 2
-  case X86ISD::FSETCCM_SAE:
-    // invalid number of operands; expected 3, got 4
-  case X86ISD::CVTTP2SI_SAE:
-  case X86ISD::CVTTP2UI_SAE:
-  case X86ISD::CVTTP2IBS_SAE:
-    // invalid number of operands; expected 1, got 2
-  case X86ISD::CMPMM_SAE:
-    // invalid number of operands; expected 4, got 5
   case X86ISD::CALL:
   case X86ISD::NT_BRIND:
     // operand #1 must have type i32 (iPTR), but has type i64
@@ -437,7 +423,7 @@ SDValue X86SelectionDAGInfo::EmitTargetCodeForMemcpy(
     return SDValue();
 
   // If enabled and available, use fast short rep mov.
-  if (UseFSRMForMemcpy && Subtarget.hasFSRM())
+  if (Subtarget.getCLOpts().use_fsrm_for_memcpy && Subtarget.hasFSRM())
     return emitRepmovs(Subtarget, DAG, dl, Chain, Dst, Src, Size, MVT::i8);
 
   // Handle constant sizes
