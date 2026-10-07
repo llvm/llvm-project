@@ -18,3 +18,60 @@ define fastcc void @foo() nounwind {
 	store i8 1, ptr %t, align 1
 	ret void
 }
+
+; A compile-time constant used as a base address in a loop was not being
+; folded into the x86 displacement field, causing a redundant MOV
+;LLVM Issue- 198228
+
+@g_align = dso_local global i64 16, align 8
+@g_idx = dso_local global i64 5, align 8
+@g_out = dso_local global i64 0, align 8
+
+
+define dso_local void @const_disp_fold()  {
+; CHECK-LABEL: const_disp_fold:
+; CHECK:       # %bb.0: # %entry
+; CHECK-NEXT:    movq g_align(%rip), %rax
+; CHECK-NEXT:    decq %rax
+; CHECK-NEXT:    movq g_idx(%rip), %rcx
+; CHECK-NEXT:    movzwl 536875250(%rcx,%rcx), %ecx
+; CHECK-NEXT:    testl %eax, 536888780(,%rcx,4)
+; CHECK-NEXT:    je .LBB1_2
+; CHECK-NEXT:    .p2align 4
+; CHECK-NEXT:  .LBB1_1: # %do.body
+; CHECK-NEXT:    # =>This Inner Loop Header: Depth=1
+; CHECK-NEXT:    testl %eax, 536888784(,%rcx,4)
+; CHECK-NEXT:    leaq 1(%rcx), %rcx
+; CHECK-NEXT:    jne .LBB1_1
+; CHECK-NEXT:  .LBB1_2: # %if.end
+; CHECK-NEXT:    movq %rcx, g_out(%rip)
+; CHECK-NEXT:    retq
+entry:
+  %0 = load volatile i64, ptr @g_align, align 8
+  %sub = add i64 %0, -1
+  %1 = load volatile i64, ptr @g_idx, align 8
+  %arrayidx = getelementptr inbounds nuw [2 x i8], ptr inttoptr (i64 536875250 to ptr), i64 %1
+  %2 = load i16, ptr %arrayidx, align 2
+  %conv = zext i16 %2 to i64
+  %arrayidx1 = getelementptr inbounds nuw [4 x i8], ptr inttoptr (i64 536888780 to ptr), i64 %conv
+  %3 = load i32, ptr %arrayidx1, align 4
+  %conv2 = zext i32 %3 to i64
+  %and = and i64 %sub, %conv2
+  %tobool.not = icmp eq i64 %and, 0
+  br i1 %tobool.not, label %if.end, label %do.body
+
+do.body:                                          ; preds = %entry, %do.body
+  %size_class.0 = phi i64 [ %inc, %do.body ], [ %conv, %entry ]
+  %inc = add i64 %size_class.0, 1
+  %arrayidx4 = getelementptr inbounds nuw [4 x i8], ptr inttoptr (i64 536888780 to ptr), i64 %inc
+  %4 = load i32, ptr %arrayidx4, align 4
+  %conv5 = zext i32 %4 to i64
+  %and6 = and i64 %sub, %conv5
+  %tobool8.not = icmp eq i64 %and6, 0
+  br i1 %tobool8.not, label %if.end, label %do.body
+
+if.end:                                           ; preds = %do.body, %entry
+  %size_class.1 = phi i64 [ %conv, %entry ], [ %inc, %do.body ]
+  store volatile i64 %size_class.1, ptr @g_out, align 8
+  ret void
+}
