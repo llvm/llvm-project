@@ -31178,6 +31178,10 @@ static SDValue tryCombineMULLWithUZP1(SDNode *N,
                          DAG.isSplatValue(TruncLowOp, false)))
     return SDValue();
 
+  if (HasFoundMULLow && (TruncLow->isPredecessorOf(TruncHighOp.getNode()) ||
+                         TruncHigh->isPredecessorOf(TruncLowOp.getNode())))
+    return SDValue();
+
   // Create uzp1, extract_high and extract_low.
   if (TruncHighOpVT != UZP1VT)
     TruncHighOp = DAG.getNode(ISD::BITCAST, DL, UZP1VT, TruncHighOp);
