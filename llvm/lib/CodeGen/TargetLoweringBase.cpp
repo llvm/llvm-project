@@ -952,10 +952,9 @@ void TargetLoweringBase::initActions() {
 
     // Only some target support these vector operations. Default them to Expand.
     setOperationAction({ISD::VECTOR_COMPRESS, ISD::VECTOR_MATCH}, VT, Expand);
-
-    // cttz.elts defaults to expand.
     setOperationAction({ISD::CTTZ_ELTS, ISD::CTTZ_ELTS_ZERO_POISON}, VT,
                        Expand);
+    setOperationAction(ISD::GET_ACTIVE_LANE_MASK, VT, Expand);
 
     // VP operations default to expand.
 #define BEGIN_REGISTER_VP_SDNODE(SDOPC, ...)                                   \
@@ -1068,9 +1067,10 @@ bool TargetLoweringBase::canOpTrap(unsigned Op, EVT VT) const {
   }
 }
 
-bool TargetLoweringBase::isFreeAddrSpaceCast(unsigned SrcAS,
+bool TargetLoweringBase::isFreeAddrSpaceCast(const DataLayout &DL,
+                                             unsigned SrcAS,
                                              unsigned DestAS) const {
-  return TM.isNoopAddrSpaceCast(SrcAS, DestAS);
+  return TM.isNoopAddrSpaceCast(DL, SrcAS, DestAS);
 }
 
 unsigned TargetLoweringBase::getBitWidthForCttzElements(
@@ -1951,6 +1951,7 @@ int TargetLoweringBase::InstructionOpcodeToISD(unsigned Opcode) const {
 #define LAST_OTHER_INST(NUM) InstructionOpcodesCount = NUM
 #include "llvm/IR/Instruction.def"
   };
+  // clang-format off
   switch (static_cast<InstructionOpcodes>(Opcode)) {
   case Ret:            return 0;
   case UncondBr:       return 0;
@@ -2021,8 +2022,10 @@ int TargetLoweringBase::InstructionOpcodeToISD(unsigned Opcode) const {
   case InsertValue:    return ISD::MERGE_VALUES;
   case LandingPad:     return 0;
   case Freeze:         return ISD::FREEZE;
+  case BitInsert:      return 0;
+  case BitExtract:     return 0;
   }
-
+  // clang-format on
   llvm_unreachable("Unknown instruction type encountered!");
 }
 
@@ -2218,10 +2221,10 @@ void TargetLoweringBase::insertSSPDeclarations(
 
         // FreeBSD has "__stack_chk_guard" defined externally on libc.so
         if (M.getDirectAccessExternalData() &&
-            !TM.getTargetTriple().isOSCygMing() &&
-            !(TM.getTargetTriple().isPPC64() &&
-              TM.getTargetTriple().isOSFreeBSD()) &&
-            (!TM.getTargetTriple().isOSDarwin() ||
+            !M.getTargetTriple().isOSCygMing() &&
+            !(M.getTargetTriple().isPPC64() &&
+              M.getTargetTriple().isOSFreeBSD()) &&
+            (!M.getTargetTriple().isOSDarwin() ||
              TM.getRelocationModel() == Reloc::Static))
           GV->setDSOLocal(true);
 
@@ -2282,7 +2285,8 @@ void TargetLoweringBase::setMinimumBitTestCmps(unsigned Val) {
   MinimumBitTestCmps = Val;
 }
 
-Align TargetLoweringBase::getPrefLoopAlignment(MachineLoop *ML) const {
+Align TargetLoweringBase::getPrefLoopAlignment(
+    MachineLoop *ML, const MachineBasicBlock *BlockToAlign) const {
   if (TM.Options.LoopAlignment)
     return Align(TM.Options.LoopAlignment);
   return PrefLoopAlignment;
@@ -2299,9 +2303,12 @@ unsigned TargetLoweringBase::getMaxPermittedBytesForAlignment(
 
 /// Get the reciprocal estimate attribute string for a function that will
 /// override the target defaults.
-static StringRef getRecipEstimateForFunc(MachineFunction &MF) {
-  const Function &F = MF.getFunction();
+static StringRef getRecipEstimateForFunc(const Function &F) {
   return F.getFnAttribute("reciprocal-estimates").getValueAsString();
+}
+
+static StringRef getRecipEstimateForFunc(MachineFunction &MF) {
+  return getRecipEstimateForFunc(MF.getFunction());
 }
 
 /// Construct a string for the given reciprocal operation of the given type.
@@ -2457,6 +2464,11 @@ static int getOpRefinementSteps(bool IsSqrt, EVT VT, StringRef Override) {
   }
 
   return TargetLoweringBase::ReciprocalEstimate::Unspecified;
+}
+
+int TargetLoweringBase::getRecipEstimateSqrtEnabled(EVT VT,
+                                                    const Function &F) const {
+  return getOpEnabled(true, VT, getRecipEstimateForFunc(F));
 }
 
 int TargetLoweringBase::getRecipEstimateSqrtEnabled(EVT VT,

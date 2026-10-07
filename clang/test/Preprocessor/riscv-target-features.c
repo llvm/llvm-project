@@ -1799,12 +1799,12 @@
 // CHECK-ZVFBFA-EXT: __riscv_zvfbfa 1000{{$}}
 
 // RUN: %clang --target=riscv32 -menable-experimental-extensions \
-// RUN:   -march=rv32ifzvfofp8min0p2 -E -dM %s \
+// RUN:   -march=rv32ifzvfofp8min0p9 -E -dM %s \
 // RUN:   -o - | FileCheck --check-prefix=CHECK-ZVFOFP8MIN-EXT %s
 // RUN: %clang --target=riscv64 -menable-experimental-extensions \
-// RUN:   -march=rv64ifzvfofp8min0p2 -E -dM %s \
+// RUN:   -march=rv64ifzvfofp8min0p9 -E -dM %s \
 // RUN:   -o - | FileCheck --check-prefix=CHECK-ZVFOFP8MIN-EXT %s
-// CHECK-ZVFOFP8MIN-EXT: __riscv_zvfofp8min 2000{{$}}
+// CHECK-ZVFOFP8MIN-EXT: __riscv_zvfofp8min 9000{{$}}
 
 // RUN: %clang --target=riscv32 -menable-experimental-extensions \
 // RUN:   -march=rv32i_zve32x_zvbc32e0p7 -E -dM %s \

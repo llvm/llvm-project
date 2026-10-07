@@ -235,7 +235,8 @@ bool CodeGenAction::beginSourceFileAction() {
     }
 
     mlirModule = std::move(module);
-    const llvm::DataLayout &dl = targetMachine.createDataLayout();
+    const llvm::DataLayout dl(targetMachine.getTargetTriple().computeDataLayout(
+        ci.getInvocation().getTargetOpts().abi));
     fir::support::setMLIRDataLayout(*mlirModule, dl);
     return true;
   }
@@ -652,6 +653,8 @@ void CodeGenAction::lowerHLFIRToFIR() {
   if (ci.getInvocation().getFortranOpts().features.IsEnabled(
           Fortran::common::LanguageFeature::CUDA))
     config.EnableCUDA = true;
+  // Give plugins a chance to register passes at the extension points.
+  fir::invokePassPipelineConfigCallbacks(config);
   // Create the pass pipeline
   fir::createHLFIRToFIRPassPipeline(pm, enableOpenMP, config);
   (void)mlir::applyPassManagerCLOptions(pm);
@@ -796,6 +799,10 @@ void CodeGenAction::generateLLVMIR() {
     config.NSWOnLoopVarInc = false;
 
   config.ComplexRange = opts.getComplexRange();
+
+  // Give plugins a chance to register passes at the extension points, once the
+  // config is fully set up.
+  fir::invokePassPipelineConfigCallbacks(config);
 
   // Create the pass pipeline
   fir::createMLIRToLLVMPassPipeline(pm, config, getCurrentFile());
@@ -1435,7 +1442,7 @@ void CodeGenAction::executeAction() {
   // Note that this overwrites any datalayout stored in the LLVM-IR. This avoids
   // an assert for incompatible data layout when the code-generation happens.
   llvmModule->setTargetTriple(theTriple);
-  llvmModule->setDataLayout(targetMachine.createDataLayout());
+  llvmModule->setDataLayout(theTriple.computeDataLayout(targetOpts.abi));
 
   // Link in builtin bitcode libraries
   if (!codeGenOpts.BuiltinBCLibs.empty())

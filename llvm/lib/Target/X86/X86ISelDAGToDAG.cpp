@@ -41,16 +41,6 @@ using namespace llvm;
 
 STATISTIC(NumLoadMoved, "Number of loads moved below TokenFactor");
 
-static cl::opt<bool> AndImmShrink("x86-and-imm-shrink", cl::init(true),
-    cl::desc("Enable setting constant bits to reduce size of mask immediates"),
-    cl::Hidden);
-
-static cl::opt<bool> EnablePromoteAnyextLoad(
-    "x86-promote-anyext-load", cl::init(true),
-    cl::desc("Enable promoting aligned anyext load to wider load"), cl::Hidden);
-
-extern cl::opt<bool> IndirectBranchTracking;
-
 //===----------------------------------------------------------------------===//
 //                      Pattern Matcher Implementation
 //===----------------------------------------------------------------------===//
@@ -535,6 +525,23 @@ namespace {
       return Mask.countr_one() >= Width;
     }
 
+    // Any instruction that defines a 32-bit result zeroes the upper 32 bits of
+    // the 64-bit register. Truncate can be lowered to EXTRACT_SUBREG.
+    // CopyFromReg may be copying from a truncate. AssertSext/AssertZext/
+    // AssertAlign aren't saying anything about the upper 32 bits. FREEZE may
+    // be coming from a truncate. BitScan fall through values may not zero the
+    // upper bits correctly. Called from the def32 PatLeaf in tablegen.
+    bool isDef32(SDNode *N) const {
+      unsigned Opc = N->getOpcode();
+      return Opc != ISD::TRUNCATE && Opc != TargetOpcode::EXTRACT_SUBREG &&
+             Opc != ISD::CopyFromReg && Opc != ISD::AssertSext &&
+             Opc != ISD::AssertZext && Opc != ISD::AssertAlign &&
+             Opc != ISD::FREEZE &&
+             !((Opc == X86ISD::BSF || Opc == X86ISD::BSR) &&
+               !N->getOperand(0).isUndef() &&
+               !isa<ConstantSDNode>(N->getOperand(0)));
+    }
+
     /// Return an SDNode that returns the value of the global base register.
     /// Output instructions required to initialize the global base register,
     /// if necessary.
@@ -1001,7 +1008,8 @@ void X86DAGToDAGISel::PreprocessISelDAG() {
         Metadata *CFProtectionBranch =
             MF->getFunction().getParent()->getModuleFlag(
                 "cf-protection-branch");
-        if (CFProtectionBranch || IndirectBranchTracking) {
+        if (CFProtectionBranch ||
+            Subtarget->getCLOpts().indirect_branch_tracking) {
           SDLoc dl(N);
           uint64_t ComplementImm =
               (~Imm) & maskTrailingOnes<uint64_t>(VT.getSizeInBits());
@@ -4129,11 +4137,12 @@ bool X86DAGToDAGISel::foldLoadStoreIntoMemOperand(SDNode *Node) {
 //   c) x &  (-1 >> (32 - y))
 //   d) x << (32 - y) >> (32 - y)
 //   e) (1 << nbits) - 1
+//   f) ~(-1 << nbits)
 bool X86DAGToDAGISel::matchBitExtract(SDNode *Node) {
-  assert(
-      (Node->getOpcode() == ISD::ADD || Node->getOpcode() == ISD::AND ||
-       Node->getOpcode() == ISD::SRL) &&
-      "Should be either an and-mask, or right-shift after clearing high bits.");
+  assert((Node->getOpcode() == ISD::ADD || Node->getOpcode() == ISD::AND ||
+          Node->getOpcode() == ISD::XOR || Node->getOpcode() == ISD::SRL) &&
+         "Should be either an and-mask, a standalone low-bits mask, or "
+         "right-shift after clearing high bits.");
 
   // BEXTR is BMI instruction, BZHI is BMI2 instruction. We need at least one.
   if (!Subtarget->hasBMI() && !Subtarget->hasBMI2())
@@ -5195,6 +5204,10 @@ bool X86DAGToDAGISel::shrinkAndImmediate(SDNode *And) {
   // Check if the mask is -1. In that case, this is an unnecessary instruction
   // that escaped earlier analysis.
   if (NegMaskVal.isAllOnes()) {
+    // The already-selected users of a 32-bit 'and' may rely on it zeroing the
+    // upper 32 bits (def32), which a truncate operand doesn't guarantee.
+    if (VT == MVT::i32 && !isDef32(And0.getNode()))
+      return false;
     ReplaceNode(And, And0.getNode());
     return true;
   }
@@ -5791,12 +5804,17 @@ void X86DAGToDAGISel::Select(SDNode *Node) {
     }
     if (matchBitExtract(Node))
       return;
-    if (AndImmShrink && shrinkAndImmediate(Node))
+    if (Subtarget->getCLOpts().and_imm_shrink && shrinkAndImmediate(Node))
       return;
 
     [[fallthrough]];
-  case ISD::OR:
   case ISD::XOR:
+    // A standalone ~(-1 << n) mask is (-1 & lowmask(n)): mov -1; bzhi beats
+    // mov -1; shlx; not. AND falls through to here and has already tried.
+    if (Opcode == ISD::XOR && Subtarget->hasBMI2() && matchBitExtract(Node))
+      return;
+    [[fallthrough]];
+  case ISD::OR:
     if (tryShrinkShlLogicImm(Node))
       return;
     if (Opcode == ISD::OR && tryMatchBitSelect(Node))

@@ -166,7 +166,7 @@ TEST(AArch64ReservedRegs, ArtificialHIRegistersAreReserved) {
   // Create an empty machine function
   LLVMContext Context;
   Module M("", Context);
-  M.setDataLayout(TM->createDataLayout());
+  M.setDataLayout(TM->getTargetTriple().computeDataLayout());
   Function *F = Function::Create(
       FunctionType::get(Type::getVoidTy(Context), /*isVarArg=*/false),
       GlobalValue::ExternalLinkage, "f", &M);
@@ -199,7 +199,7 @@ TEST(AArch64RegAllocationHints, NoDuplicates) {
 
   LLVMContext Context;
   Module M("", Context);
-  M.setDataLayout(TM->createDataLayout());
+  M.setDataLayout(TM->getTargetTriple().computeDataLayout());
   Function *F = Function::Create(
       FunctionType::get(Type::getVoidTy(Context), /*isVarArg=*/false),
       GlobalValue::ExternalLinkage, "f", &M);
@@ -216,7 +216,7 @@ TEST(AArch64RegAllocationHints, NoDuplicates) {
   MRI.addRegAllocationHint(VirtReg, AArch64::X0);
 
   ArrayRef<MCPhysReg> Order = AArch64::GPR64RegClass.getRegisters();
-  SmallVector<MCPhysReg, 4> Hints;
+  SmallSetVector<MCPhysReg, 16> Hints;
 
   // Calling getRegAllocationHints once should not produce duplicate hints
   // from fallthrough to TargetRegisterInfo::getRegAllocationHints.

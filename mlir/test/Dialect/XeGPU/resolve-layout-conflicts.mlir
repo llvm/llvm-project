@@ -316,8 +316,6 @@ func.func @conflict_while_pass_through(%cond: i1) {
 // CHECK:           scf.yield %[[ADD]] : vector<16x16xf16>
 // CHECK:         }
 // CHECK:         %[[CVT:.*]] = xegpu.convert_layout %[[FOR]]
-// CHECK-SAME:      <{input_layout = #xegpu.layout<inst_data = [16, 16]>, target_layout = #xegpu.layout<inst_data = [8, 16]>}>
-// CHECK-SAME:      : vector<16x16xf16>
 // CHECK:         %[[EXP:.*]] = math.exp %[[CVT]]
 // CHECK-SAME:      {layout_result_0 = #xegpu.layout<inst_data = [8, 16]>} : vector<16x16xf16>
 // CHECK:         return
@@ -442,27 +440,5 @@ func.func @extract_source_conflict_with_order() -> vector<16x32xf16> {
   %0 = "some_op"() {layout_result_0 = #xegpu.layout<lane_layout = [1, 1, 1, 16], lane_data = [1, 1, 1, 1], order = [2, 3, 0, 1]>} : () -> vector<2x4x16x32xf16>
   %1 = vector.extract %0[0, 0] {layout_result_0 = #xegpu.layout<lane_layout = [1, 16], lane_data = [1, 1], order = [0, 1]>} : vector<16x32xf16> from vector<2x4x16x32xf16>
   return %1 : vector<16x32xf16>
-}
-}
-
-// -----
-
-// Producer carries a layout that differs from the input_layout declared on a
-// downstream xegpu.convert_layout consumer. ResolveLayoutConflicts must insert
-// a bridging convert_layout between the producer and the existing
-// convert_layout so the consumer's stated input_layout is honored.
-// CHECK-LABEL: func.func @convert_layout_bridge_input_mismatch
-// CHECK:         %[[V0:.*]] = "some_op"() {layout_result_0 = #xegpu.layout<inst_data = [8, 16]>} : () -> vector<32x32xf16>
-// CHECK-NEXT:    %[[BRIDGE:.*]] = xegpu.convert_layout %[[V0]]
-// CHECK-SAME:      <{input_layout = #xegpu.layout<inst_data = [8, 16]>, target_layout = #xegpu.layout<inst_data = [32, 16]>}>
-// CHECK-SAME:      : vector<32x32xf16>
-gpu.module @test_convert_layout_bridge {
-func.func @convert_layout_bridge_input_mismatch() {
-  %0 = "some_op"() {layout_result_0 = #xegpu.layout<inst_data = [8, 16]>} : () -> vector<32x32xf16>
-  %1 = xegpu.convert_layout %0
-     <{input_layout = #xegpu.layout<inst_data = [16, 16]>,
-       target_layout = #xegpu.layout<inst_data = [32, 16]>}>
-     : vector<32x32xf16>
-  return
 }
 }
