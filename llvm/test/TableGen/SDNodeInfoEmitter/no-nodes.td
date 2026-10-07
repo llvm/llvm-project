@@ -35,6 +35,10 @@ def MyTarget : Target;
 // CHECK-NEXT:  static constexpr llvm::StringTable
 // CHECK-NEXT:  MyTargetSDNodeNames = MyTargetSDNodeNamesStorage;
 // CHECK-EMPTY:
+// CHECK-NEXT:  static const SDNodeDesc MyTargetSDNodeDescs[] = {
+// CHECK-NEXT:  };
+// CHECK-EMPTY:
+// CHECK-NEXT:  #ifndef NDEBUG
 // CHECK-NEXT:  static const VTByHwModePair MyTargetVTByHwModeTable[] = {
 // CHECK-NEXT:   /* dummy */ {0, MVT::INVALID_SIMPLE_VALUE_TYPE}
 // CHECK-NEXT:  };
@@ -43,12 +47,23 @@ def MyTarget : Target;
 // CHECK-NEXT:    /* dummy */ {SDTCisVT, 0, 0, 0, MVT::INVALID_SIMPLE_VALUE_TYPE}
 // CHECK-NEXT:  };
 // CHECK-EMPTY:
-// CHECK-NEXT:  static const SDNodeDesc MyTargetSDNodeDescs[] = {
+// CHECK-NEXT:  static const SDNodeVerifyDesc MyTargetSDNodeVerifyDescs[] = {
 // CHECK-NEXT:  };
 // CHECK-EMPTY:
+// CHECK-NEXT:  static const SDNodeVerifyInfo MyTargetSDNodeVerifyInfo = {
+// CHECK-NEXT:      MyTargetSDNodeVerifyDescs, MyTargetVTByHwModeTable,
+// CHECK-NEXT:      MyTargetSDTypeConstraints};
+// CHECK-NEXT:  #endif // NDEBUG
+// CHECK-EMPTY:
+// CHECK-NEXT:  #ifndef NDEBUG
 // CHECK-NEXT:  static const SDNodeInfo MyTargetGenSDNodeInfo(
 // CHECK-NEXT:      /*NumOpcodes=*/0, MyTargetSDNodeDescs, MyTargetSDNodeNames,
-// CHECK-NEXT:      MyTargetVTByHwModeTable, MyTargetSDTypeConstraints);
+// CHECK-NEXT:      &MyTargetSDNodeVerifyInfo);
+// CHECK-NEXT:  #else
+// CHECK-NEXT:  static const SDNodeInfo MyTargetGenSDNodeInfo(
+// CHECK-NEXT:      /*NumOpcodes=*/0, MyTargetSDNodeDescs, MyTargetSDNodeNames,
+// CHECK-NEXT:      nullptr);
+// CHECK-NEXT:  #endif // NDEBUG
 // CHECK-EMPTY:
 // CHECK-NEXT:  } // namespace llvm
 // CHECK-EMPTY:
