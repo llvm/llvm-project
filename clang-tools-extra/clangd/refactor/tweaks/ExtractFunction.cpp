@@ -1203,13 +1203,17 @@ bool createParameters(NewFunction &ExtractedFunc,
         TypeInfo = Context.getArrayDecayedType(TypeInfo);
         Kind = ParamPassKind::Value;
       } else {
-        // Bail out rather than rewrite a use whose location can't be
-        // mapped back to a single, unambiguous spot in the source (e.g.
-        // one produced by macro expansion).
+        // Bail out rather than rewrite a use whose location (or, for a
+        // member-access rewrite, whose dot's location) can't be mapped
+        // back to a single, unambiguous spot in the source (e.g. one
+        // produced by macro expansion) -- the dot can be a macro
+        // expansion even when the identifier itself isn't, e.g.
+        // `#define DOT .` used as `s DOT x`.
         if (llvm::any_of(
                 DeclInfo.ZoneOccurrences,
                 [](const CapturedZoneInfo::DeclInformation::Occurrence &O) {
-                  return O.Loc.isMacroID();
+                  return O.Loc.isMacroID() ||
+                         (O.DotLoc && O.DotLoc->isMacroID());
                 }))
           return false;
         TypeInfo = Context.getPointerType(TypeInfo);
@@ -1299,10 +1303,14 @@ llvm::Expected<NewFunction> getExtractedFunction(ExtractionZone &ExtZone,
 
   // A free function declared `static` has internal linkage: an extracted
   // sibling should keep that, or it'd default to external linkage instead.
-  // For a method, this gets overridden just below by the more precise
-  // (and differently-meaning) CXXMethodDecl::isStatic().
+  // Checked on the canonical (first) declaration, not this one: a
+  // definition following an earlier `static` forward declaration doesn't
+  // need to (and often doesn't) repeat `static` itself, but is still
+  // static. For a method, this gets overridden just below by the more
+  // precise (and differently-meaning) CXXMethodDecl::isStatic().
   ExtractedFunc.Static =
-      ExtZone.EnclosingFunction->getStorageClass() == SC_Static;
+      ExtZone.EnclosingFunction->getCanonicalDecl()->getStorageClass() ==
+      SC_Static;
   if (const auto *Method =
           llvm::dyn_cast<CXXMethodDecl>(ExtZone.EnclosingFunction))
     captureMethodInfo(ExtractedFunc, Method);

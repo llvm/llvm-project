@@ -1103,6 +1103,23 @@ TEST_F(ExtractFunctionTest, CFileStructMixedUses) {
               AllOf(HasSubstr("use((*p));"), HasSubstr("i = p->v1;")));
 }
 
+TEST_F(ExtractFunctionTest, CFileRejectMacroDot) {
+  // The identifier itself need not be a macro expansion for the
+  // member-access ".", immediately following it, to be one -- that dot
+  // is a separate token with its own location, which also needs
+  // checking before relying on it to splice in "->".
+  FileName = "a.c";
+  Context = File;
+  EXPECT_EQ(apply(R"cpp(
+      #define DOT .
+      struct pair { int v1; int v2; };
+      void foo() {
+         struct pair p;
+         [[p DOT v1 = 1;]]
+    })cpp"),
+            "fail: Too complex to extract.");
+}
+
 TEST_F(ExtractFunctionTest, CFileModifiedArrayStaysPlainPointer) {
   // Unlike other non-scalar types, an array decays to a pointer on its
   // own wherever it's used, so it needs neither an address-of at the
@@ -1129,6 +1146,22 @@ TEST_F(ExtractFunctionTest, CFileStaticFunctionStaysStatic) {
   Context = File;
   EXPECT_THAT(apply(R"cpp(
       static void foo() {
+         int j = 0;
+         [[int k = j;]]
+    })cpp"),
+              HasSubstr("static void extracted"));
+}
+
+TEST_F(ExtractFunctionTest, CFileStaticForwardDeclaredFunctionStaysStatic) {
+  // Same as above, but the definition itself omits `static` (legal in C:
+  // once a prior declaration gives the function internal linkage, a
+  // later one doesn't need to repeat it, and still has it). Checking
+  // only the current declaration's storage class would miss this.
+  FileName = "a.c";
+  Context = File;
+  EXPECT_THAT(apply(R"cpp(
+      static void foo();
+      void foo() {
          int j = 0;
          [[int k = j;]]
     })cpp"),
