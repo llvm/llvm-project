@@ -502,11 +502,9 @@ public:
   bool findStoreLoadForwardingHazardForLoad(LoadInst *BaseLoad, unsigned VF);
 
   /// \returns true if \p StoreE's store-side STLF check (in getEntryCost)
-  /// will actually run and charge for a hazard with it: a plain
-  /// TreeEntry::Vectorize store, or a TreeEntry::StridedVectorize store
-  /// whose intra-lane byte stride resolves to a compile-time constant
-  /// (needed to derive its real, possibly non-contiguous byte span). Used to
-  /// keep the store-side and load-side STLF checks mutually exclusive so a
+  /// will actually run and charge for a hazard with it: a
+  /// TreeEntry::Vectorize or TreeEntry::StridedVectorize store. Used to keep
+  /// the store-side and load-side STLF checks mutually exclusive so a
   /// StridedVectorize store is charged from exactly one side.
   bool isStoreSideSTLFHandled(const TreeEntry *StoreE) const;
 
@@ -17972,16 +17970,13 @@ BoUpSLP::getEntryCost(const TreeEntry *E, ArrayRef<Value *> VectorizedVals,
         if (STLFCost != 0) {
           unsigned StoreSTLFVF = E->Scalars.size();
           std::optional<uint64_t> StoreSizeOverride;
-          // A runtime stride has no fixed byte window. Leave the override
-          // unset so the search below is skipped for that entry.
+          // Leave the override unset when no fixed byte window can be formed,
+          // so the search below is skipped for that entry.
           if (E->State == TreeEntry::StridedVectorize) {
             const StridedPtrInfo &SPtrInfo = TreeEntryToStridedPtrInfoMap.at(E);
-            std::optional<int64_t> StrideUnits;
-            if (auto *CI = dyn_cast_or_null<ConstantInt>(SPtrInfo.StrideVal))
-              StrideUnits = CI->getSExtValue();
-            else if (auto *SC =
-                         dyn_cast_or_null<SCEVConstant>(SPtrInfo.StrideSCEV))
-              StrideUnits = SC->getAPInt().getSExtValue();
+            // Strided stores are only built from a constant stride.
+            std::optional<int64_t> StrideUnits =
+                cast<ConstantInt>(SPtrInfo.StrideVal)->getSExtValue();
             TypeSize StoreScalarSize =
                 DL->getTypeStoreSize(BaseSI->getValueOperand()->getType());
             if (StrideUnits && SPtrInfo.Ty && !StoreScalarSize.isScalable() &&
@@ -29898,13 +29893,13 @@ bool BoUpSLP::findStoreLoadForwardingConflict(
     // A k == 0 overlap is a store-to-load *forwarding* hazard only when the
     // store executes before the load in program order, so the load reads bytes
     // the store just wrote (RAW). If the load precedes the store (a WAR
-    // overlap, e.g. a read-then-write sweep), nothing is forwarded. Only same-
-    // block order is considered; when the order cannot be established we stay
-    // conservative and do not treat it as a current-iteration hazard.
-    bool StoreBeforeLoad = BaseStore->getParent() == LoadI->getParent() &&
-                           BaseStore->comesBefore(LoadI);
+    // overlap, e.g. a read-then-write sweep), nothing is forwarded. Dominance
+    // lets a store in an earlier block count; when the store does not
+    // dominate the load, the order is not established and it is not treated
+    // as a current-iteration hazard.
     bool OverlapsCurrentStore = (!WidenedLoadEntry || IsWidenedBaseLane) &&
-                                Distance < LoadElementSize && StoreBeforeLoad;
+                                Distance < LoadElementSize &&
+                                DT->dominates(BaseStore, LoadI);
     // Both pointers are loop-invariant, so their byte distance never changes
     // across iterations: if they do not overlap now, they never will.
     if (!OverlapsCurrentStore && StoreStride && LoadStride &&
@@ -29927,15 +29922,12 @@ bool BoUpSLP::findStoreLoadForwardingConflict(
         continue;
       }
     }
-    // A negative common stride moves both pointers by the same amount each
-    // iteration, so their relative byte distance is invariant across
-    // iterations; if there is no hazard now (no current-iteration overlap),
-    // no future iteration introduces one either. getPointersDiff only
-    // resolves a constant Diff via ScalarEvolution's computeConstantDifference,
-    // which requires the load and store SCEV AddRecs to have identical step
-    // recurrences, so reaching this point already guarantees
-    // LoadStride == StoreStride; no separate correlation check is needed.
-    if (!OverlapsCurrentStore && StoreStride && *StoreStride < 0) {
+    // With a negative common stride a later iteration's load sits |S| bytes
+    // further below the store base per iteration, so it reaches the store's
+    // bytes only while Distance + k * |S| < LoadElementSize.
+    if (!OverlapsCurrentStore && StoreStride && *StoreStride < 0 &&
+        Distance + (0 - static_cast<uint64_t>(*StoreStride)) >=
+            LoadElementSize) {
       LLVM_DEBUG(dbgs() << "SLP: STLF: negative common stride (" << *StoreStride
                         << "), distance invariant -> no conflict\n");
       continue;
@@ -29962,15 +29954,9 @@ bool BoUpSLP::findStoreLoadForwardingConflict(
 }
 
 bool BoUpSLP::isStoreSideSTLFHandled(const TreeEntry *StoreE) const {
-  if (!StoreE->hasState() || StoreE->getOpcode() != Instruction::Store)
-    return false;
-  if (StoreE->State == TreeEntry::Vectorize)
-    return true;
-  if (StoreE->State != TreeEntry::StridedVectorize)
-    return false;
-  const StridedPtrInfo &SPtrInfo = TreeEntryToStridedPtrInfoMap.at(StoreE);
-  return isa_and_nonnull<ConstantInt>(SPtrInfo.StrideVal) ||
-         isa_and_nonnull<SCEVConstant>(SPtrInfo.StrideSCEV);
+  return StoreE->hasState() && StoreE->getOpcode() == Instruction::Store &&
+         (StoreE->State == TreeEntry::Vectorize ||
+          StoreE->State == TreeEntry::StridedVectorize);
 }
 
 bool BoUpSLP::findStoreLoadForwardingHazardForLoad(LoadInst *BaseLoad,
