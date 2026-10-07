@@ -1534,5 +1534,10 @@ int32_t __ol_tgt_GetPluginDeviceId(ol_device_handle_t Device) {
 }
 } // namespace tmp
 
+extern "C" __tgt_async_info *
+__ol_tgt_GetAsyncInfoFromQueue(ol_queue_handle_t Queue) {
+  return Queue->AsyncInfo;
+}
+
 } // namespace offload
 } // namespace llvm
