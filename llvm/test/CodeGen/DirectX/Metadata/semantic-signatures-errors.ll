@@ -28,6 +28,7 @@
 ; FUNCTION: signature entry must be a defined function in the module
 
 ;--- triple.ll
+; Invalid record shape: four operands instead of entry/input/output.
 target triple = "dxil-pc-shadermodel6.8-vertex"
 define void @main() #0 { ret void }
 attributes #0 = { "hlsl.shader"="vertex" }
@@ -35,6 +36,7 @@ attributes #0 = { "hlsl.shader"="vertex" }
 !0 = !{ptr @main, null, null, null}
 
 ;--- duplicate.ll
+; Invalid table: the same entry record appears twice.
 target triple = "dxil-pc-shadermodel6.8-vertex"
 define void @main() #0 { ret void }
 attributes #0 = { "hlsl.shader"="vertex" }
@@ -42,6 +44,7 @@ attributes #0 = { "hlsl.shader"="vertex" }
 !0 = !{ptr @main, null, null}
 
 ;--- width.ll
+; Invalid signature ID width (operand 0): i128 instead of i32.
 target triple = "dxil-pc-shadermodel6.8-vertex"
 define void @main() #0 { ret void }
 attributes #0 = { "hlsl.shader"="vertex" }
@@ -52,16 +55,18 @@ attributes #0 = { "hlsl.shader"="vertex" }
 !3 = !{i32 0}
 
 ;--- id.ll
+; Invalid signature ID (operand 0): the first element must have ID 0.
 target triple = "dxil-pc-shadermodel6.8-vertex"
 define void @main() #0 { ret void }
 attributes #0 = { "hlsl.shader"="vertex" }
 !dx.semantic.signatures = !{!0}
 !0 = !{ptr @main, !1, null}
 !1 = !{!2}
-!2 = !{i32 2, !"A", i32 9, i32 0, !3, i32 0, i32 1, i8 1, i32 -1, i8 -1, i8 0, i8 0, i32 0}
+!2 = !{i32 123456789, !"A", i32 9, i32 0, !3, i32 0, i32 1, i8 1, i32 -1, i8 -1, i8 0, i8 0, i32 0}
 !3 = !{i32 0}
 
 ;--- rows.ll
+; Invalid row count (operand 6): zero rows, with a matching empty index list.
 target triple = "dxil-pc-shadermodel6.8-vertex"
 define void @main() #0 { ret void }
 attributes #0 = { "hlsl.shader"="vertex" }
@@ -72,6 +77,7 @@ attributes #0 = { "hlsl.shader"="vertex" }
 !3 = !{}
 
 ;--- component.ll
+; Unsupported component type (operand 2): F64 (10), rather than F32 (9).
 target triple = "dxil-pc-shadermodel6.8-vertex"
 define void @main() #0 { ret void }
 attributes #0 = { "hlsl.shader"="vertex" }
@@ -82,6 +88,7 @@ attributes #0 = { "hlsl.shader"="vertex" }
 !3 = !{i32 0}
 
 ;--- stage.ll
+; Unsupported entry stage: geometry rather than vertex or pixel.
 target triple = "dxil-pc-shadermodel6.8-geometry"
 define void @main() #0 { ret void }
 attributes #0 = { "hlsl.shader"="geometry" }
@@ -92,9 +99,10 @@ attributes #0 = { "hlsl.shader"="geometry" }
 !3 = !{i32 0}
 
 ;--- access.ll
+; Invalid access column (intrinsic operand 2): outside this scalar element.
 target triple = "dxil-pc-shadermodel6.8-vertex"
 define void @main() #0 {
-  %x = call float @llvm.dx.load.input.f32(i32 0, i32 0, i8 1, i32 poison)
+  %x = call float @llvm.dx.load.input.f32(i32 0, i32 0, i8 123, i32 poison)
   ret void
 }
 attributes #0 = { "hlsl.shader"="vertex" }
@@ -105,6 +113,7 @@ attributes #0 = { "hlsl.shader"="vertex" }
 !3 = !{i32 0}
 
 ;--- missing.ll
+; Missing signature table for an entry that accesses an input.
 target triple = "dxil-pc-shadermodel6.8-vertex"
 define void @main() #0 {
   %x = call float @llvm.dx.load.input.f32(i32 0, i32 0, i8 0, i32 poison)
@@ -113,6 +122,7 @@ define void @main() #0 {
 attributes #0 = { "hlsl.shader"="vertex" }
 
 ;--- overflow.ll
+; Invalid total extent: A fills all 32 rows, leaving no space for B.
 target triple = "dxil-pc-shadermodel6.8-vertex"
 define void @main() #0 { ret void }
 attributes #0 = { "hlsl.shader"="vertex" }
@@ -125,6 +135,7 @@ attributes #0 = { "hlsl.shader"="vertex" }
 !5 = !{i32 0}
 
 ;--- partial.ll
+; Invalid mixed allocation: A has a location (operands 8/9), but B does not.
 target triple = "dxil-pc-shadermodel6.8-vertex"
 define void @main() #0 { ret void }
 attributes #0 = { "hlsl.shader"="vertex" }
@@ -136,6 +147,7 @@ attributes #0 = { "hlsl.shader"="vertex" }
 !4 = !{i32 1, !"B", i32 9, i32 0, !3, i32 0, i32 1, i8 1, i32 -1, i8 -1, i8 0, i8 0, i32 0}
 
 ;--- name.ll
+; Invalid semantic name (operand 1): null instead of a metadata string.
 target triple = "dxil-pc-shadermodel6.8-vertex"
 define void @main() #0 { ret void }
 attributes #0 = { "hlsl.shader"="vertex" }
@@ -146,6 +158,7 @@ attributes #0 = { "hlsl.shader"="vertex" }
 !3 = !{i32 0}
 
 ;--- function.ll
+; Invalid entry (record operand 0): a global variable instead of a function.
 target triple = "dxil-pc-shadermodel6.8-vertex"
 @global = global i32 0
 !dx.semantic.signatures = !{!0}
