@@ -35,8 +35,8 @@
 #include "llvm/IR/DiagnosticInfo.h"
 #include "llvm/IR/IntrinsicsAMDGPU.h"
 #include "llvm/IR/IntrinsicsR600.h"
-#include "llvm/Support/CheckedArithmetic.h"
 #include "llvm/Support/AMDGPUAddrSpace.h"
+#include "llvm/Support/CheckedArithmetic.h"
 
 #define DEBUG_TYPE "amdgpu-legalinfo"
 
