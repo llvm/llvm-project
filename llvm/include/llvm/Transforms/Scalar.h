@@ -173,6 +173,15 @@ createSeparateConstOffsetFromGEPPass(bool LowerGEP = false);
 
 //===----------------------------------------------------------------------===//
 //
+// ShareScalableVectorGEPBase - Share the varying vector
+// base of compatible scalable-vector GEPs without
+// applying the scalar GEP transformations performed by
+// SeparateConstOffsetFromGEP.
+//
+LLVM_ABI FunctionPass *createShareScalableVectorGEPBasePass();
+
+//===----------------------------------------------------------------------===//
+//
 // SpeculativeExecution - Aggressively hoist instructions to enable
 // speculative execution on targets where branches are expensive.
 //
