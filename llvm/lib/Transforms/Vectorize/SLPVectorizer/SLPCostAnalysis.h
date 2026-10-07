@@ -21,6 +21,7 @@
 #include "llvm/ADT/DenseMap.h"
 #include "llvm/ADT/SmallVector.h"
 #include "llvm/Analysis/TargetTransformInfo.h"
+#include "llvm/IR/DataLayout.h"
 #include "llvm/Support/InstructionCost.h"
 
 #include <tuple>
@@ -42,12 +43,20 @@ enum class RecurKind;
 
 namespace llvm::slpvectorizer {
 
+/// Returns \p Stride scaled by the allocation size of \p ScalarTy, negated if
+/// \p IsReverse is set, or nullptr if \p Stride is not a constant.
+ConstantInt *getStrideBytesIfConstant(Value *Stride, Type *ScalarTy,
+                                      const DataLayout &DL,
+                                      bool IsReverse = false);
+
 /// Return the cost of a strided load and accompanying bitcast.
-InstructionCost
-getStridedLoadCost(const TargetTransformInfo &TTI, Type *StridedLoadTy,
-                   Type *VecTy, Value *Ptr, Align CommonAlignment,
-                   TargetTransformInfo::CastContextHint Ctx,
-                   TargetTransformInfo::TargetCostKind CostKind);
+InstructionCost getStridedLoadCost(const TargetTransformInfo &TTI,
+                                   const DataLayout &DL, Value *StrideVal,
+                                   Type *StridedLoadTy, Type *VecTy, Value *Ptr,
+                                   Align CommonAlignment,
+                                   TargetTransformInfo::CastContextHint Ctx,
+                                   TargetTransformInfo::TargetCostKind CostKind,
+                                   bool IsReverse = false);
 
 struct CompressedLoadInfo {
   bool IsMasked = false;

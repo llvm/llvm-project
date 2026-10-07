@@ -23,6 +23,7 @@
 namespace llvm {
 class AssumptionCache;
 class BasicBlock;
+class ConstantInt;
 class DataLayout;
 class DominatorTree;
 class FixedVectorType;
