@@ -240,7 +240,9 @@ $ gh attestation verify --repo llvm/llvm-project <package file name> --bundle <p
 
 
 def get_release(repo, release):
-    return next((r for r in repo.get_releases() if r.tag_name == f"llvmorg-{release}"), False)
+    return next(
+        (r for r in repo.get_releases() if r.tag_name == f"llvmorg-{release}"), False
+    )
 
 def upload_files(repo, release, files):
     release = get_release(repo, release)
