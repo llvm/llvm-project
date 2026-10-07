@@ -583,13 +583,12 @@ private:
   const TargetTransformInfo &TTI;
 
 public:
-  LoopFuser(LoopInfo &LI, DominatorTree &DT, DependenceInfo &DI,
-            AAResults &AA, ScalarEvolution &SE, PostDominatorTree &PDT,
+  LoopFuser(LoopInfo &LI, DominatorTree &DT, DependenceInfo &DI, AAResults &AA,
+            ScalarEvolution &SE, PostDominatorTree &PDT,
             OptimizationRemarkEmitter &ORE, AssumptionCache &AC,
             const TargetTransformInfo &TTI)
       : LDT(LI), DTU(DT, PDT, DomTreeUpdater::UpdateStrategy::Lazy), LI(LI),
-        DT(DT), DI(DI), AA(AA), SE(SE), PDT(PDT), ORE(ORE), AC(AC),
-        TTI(TTI) {}
+        DT(DT), DI(DI), AA(AA), SE(SE), PDT(PDT), ORE(ORE), AC(AC), TTI(TTI) {}
 
   /// This is the main entry point for loop fusion. It will traverse the
   /// specified function and collect candidate loops to fuse, starting at the
@@ -1229,8 +1228,7 @@ private:
   /// Return true if a write between the corresponding loads may overwrite
   /// either loaded memory location.
   bool hasInterveningWrite(BatchAAResults &BAA, const LoadInst &Load0,
-                           const LoadInst &Load1,
-                           const FusionCandidate &FC0,
+                           const LoadInst &Load1, const FusionCandidate &FC0,
                            const FusionCandidate &FC1) const {
     MemoryLocation Loc0 = MemoryLocation::get(&Load0);
     MemoryLocation Loc1 = MemoryLocation::get(&Load1);
