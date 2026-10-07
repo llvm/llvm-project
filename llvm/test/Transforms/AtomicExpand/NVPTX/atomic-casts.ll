@@ -42,3 +42,33 @@ define ptr @xchg_ptr(ptr %addr, ptr %val) {
   %old = atomicrmw xchg ptr %addr, ptr %val monotonic, align 8
   ret ptr %old
 }
+
+define <1 x i32> @xchg_v1i32(ptr %addr, <1 x i32> %val) {
+; CHECK-LABEL: define <1 x i32> @xchg_v1i32(
+; CHECK-SAME: ptr [[ADDR:%.*]], <1 x i32> [[VAL:%.*]]) {
+; CHECK-NEXT:    [[OLD:%.*]] = atomicrmw xchg ptr [[ADDR]], <1 x i32> [[VAL]] monotonic, align 4
+; CHECK-NEXT:    ret <1 x i32> [[OLD]]
+;
+  %old = atomicrmw xchg ptr %addr, <1 x i32> %val monotonic, align 4
+  ret <1 x i32> %old
+}
+
+define <4 x i8> @xchg_v4i8(ptr %addr, <4 x i8> %val) {
+; CHECK-LABEL: define <4 x i8> @xchg_v4i8(
+; CHECK-SAME: ptr [[ADDR:%.*]], <4 x i8> [[VAL:%.*]]) {
+; CHECK-NEXT:    [[OLD:%.*]] = atomicrmw xchg ptr [[ADDR]], <4 x i8> [[VAL]] monotonic, align 4
+; CHECK-NEXT:    ret <4 x i8> [[OLD]]
+;
+  %old = atomicrmw xchg ptr %addr, <4 x i8> %val monotonic, align 4
+  ret <4 x i8> %old
+}
+
+define <4 x i16> @xchg_v4i16(ptr %addr, <4 x i16> %val) {
+; CHECK-LABEL: define <4 x i16> @xchg_v4i16(
+; CHECK-SAME: ptr [[ADDR:%.*]], <4 x i16> [[VAL:%.*]]) {
+; CHECK-NEXT:    [[OLD:%.*]] = atomicrmw xchg ptr [[ADDR]], <4 x i16> [[VAL]] monotonic, align 8
+; CHECK-NEXT:    ret <4 x i16> [[OLD]]
+;
+  %old = atomicrmw xchg ptr %addr, <4 x i16> %val monotonic, align 8
+  ret <4 x i16> %old
+}

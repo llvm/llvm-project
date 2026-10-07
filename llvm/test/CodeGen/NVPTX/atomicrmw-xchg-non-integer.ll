@@ -46,3 +46,57 @@ define ptr @xchg_ptr(ptr %addr, ptr %val) {
   %old = atomicrmw xchg ptr %addr, ptr %val monotonic, align 8
   ret ptr %old
 }
+
+define <1 x i32> @xchg_v1i32(ptr %addr, <1 x i32> %val) {
+; CHECK-LABEL: xchg_v1i32(
+; CHECK:       {
+; CHECK-NEXT:    .reg .b32 %r<3>;
+; CHECK-NEXT:    .reg .b64 %rd<2>;
+; CHECK-EMPTY:
+; CHECK-NEXT:  // %bb.0:
+; CHECK-NEXT:    ld.param.b64 %rd1, [xchg_v1i32_param_0];
+; CHECK-NEXT:    ld.param.b32 %r1, [xchg_v1i32_param_1];
+; CHECK-NEXT:    atom.relaxed.sys.exch.b32 %r2, [%rd1], %r1;
+; CHECK-NEXT:    st.param.b32 [func_retval0], %r2;
+; CHECK-NEXT:    ret;
+  %old = atomicrmw xchg ptr %addr, <1 x i32> %val monotonic, align 4
+  ret <1 x i32> %old
+}
+
+define <4 x i8> @xchg_v4i8(ptr %addr, <4 x i8> %val) {
+; CHECK-LABEL: xchg_v4i8(
+; CHECK:       {
+; CHECK-NEXT:    .reg .b32 %r<3>;
+; CHECK-NEXT:    .reg .b64 %rd<2>;
+; CHECK-EMPTY:
+; CHECK-NEXT:  // %bb.0:
+; CHECK-NEXT:    ld.param.b64 %rd1, [xchg_v4i8_param_0];
+; CHECK-NEXT:    ld.param.b32 %r1, [xchg_v4i8_param_1];
+; CHECK-NEXT:    atom.relaxed.sys.exch.b32 %r2, [%rd1], %r1;
+; CHECK-NEXT:    st.param.b32 [func_retval0], %r2;
+; CHECK-NEXT:    ret;
+  %old = atomicrmw xchg ptr %addr, <4 x i8> %val monotonic, align 4
+  ret <4 x i8> %old
+}
+
+define <4 x i16> @xchg_v4i16(ptr %addr, <4 x i16> %val) {
+; CHECK-LABEL: xchg_v4i16(
+; CHECK:       {
+; CHECK-NEXT:    .reg .b32 %r<5>;
+; CHECK-NEXT:    .reg .b64 %rd<7>;
+; CHECK-EMPTY:
+; CHECK-NEXT:  // %bb.0:
+; CHECK-NEXT:    ld.param.b64 %rd1, [xchg_v4i16_param_0];
+; CHECK-NEXT:    ld.param.v2.b32 {%r1, %r2}, [xchg_v4i16_param_1];
+; CHECK-NEXT:    cvt.u64.u32 %rd2, %r1;
+; CHECK-NEXT:    cvt.u64.u32 %rd3, %r2;
+; CHECK-NEXT:    shl.b64 %rd4, %rd3, 32;
+; CHECK-NEXT:    or.b64 %rd5, %rd2, %rd4;
+; CHECK-NEXT:    atom.relaxed.sys.exch.b64 %rd6, [%rd1], %rd5;
+; CHECK-NEXT:    { .reg .b32 tmp; mov.b64 {tmp, %r3}, %rd6; }
+; CHECK-NEXT:    cvt.u32.u64 %r4, %rd6;
+; CHECK-NEXT:    st.param.v2.b32 [func_retval0], {%r4, %r3};
+; CHECK-NEXT:    ret;
+  %old = atomicrmw xchg ptr %addr, <4 x i16> %val monotonic, align 8
+  ret <4 x i16> %old
+}
