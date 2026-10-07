@@ -1047,6 +1047,14 @@ uint8_t *RuntimeDyldImpl::createStubFunction(uint8_t *Addr,
     writeBytesUnaligned(JrATInstr, Addr + 24, 4);
     writeBytesUnaligned(NopInstr, Addr + 28, 4);
     return Addr;
+  } else if (Arch == Triple::ppc) {
+    // Load the target address into r12 and branch to it. r12 is volatile
+    // and is not used to pass arguments.
+    writeInt32BE(Addr, 0x3D800000);      // lis   r12, hi(addr)
+    writeInt32BE(Addr + 4, 0x618C0000);  // ori   r12, r12, lo(addr)
+    writeInt32BE(Addr + 8, 0x7D8903A6);  // mtctr r12
+    writeInt32BE(Addr + 12, 0x4E800420); // bctr
+    return Addr;
   } else if (Arch == Triple::ppc64 || Arch == Triple::ppc64le) {
     // Depending on which version of the ELF ABI is in use, we need to
     // generate one of two variants of the stub.  They both start with
