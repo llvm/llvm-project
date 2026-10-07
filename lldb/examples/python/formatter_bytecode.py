@@ -90,6 +90,11 @@ define_opcode(0x55, ">=", "ge")
 
 define_opcode(0x60, "call", "call")
 
+define_opcode(0x70, "dict", "dict")
+define_opcode(0x71, "dict_set", "dict_set")
+define_opcode(0x72, "dict_get", "dict_get")
+define_opcode(0x73, "dict_has", "dict_has")
+
 # Function signatures
 sig_summary = 0
 sig_init = 1
@@ -140,6 +145,9 @@ define_selector(0x21, "get_value_as_unsigned")
 define_selector(0x22, "get_value_as_signed")
 define_selector(0x23, "get_value_as_address")
 define_selector(0x24, "clone")
+define_selector(0x25, "get_pointee_type")
+define_selector(0x26, "get_byte_size")
+define_selector(0x27, "create_child_at_offset")
 
 define_selector(0x40, "read_memory_byte")
 define_selector(0x41, "read_memory_uint32")
@@ -217,7 +225,7 @@ class BytecodeSection:
         bin = bytearray()
         bin.extend(_to_uleb(len(self.type_name)))
         bin.extend(bytes(self.type_name, encoding="utf-8"))
-        bin.extend(_to_byte(self.flags))
+        bin.extend(_to_uleb(self.flags))
         for sig, bc in self.signatures:
             bin.extend(_to_byte(SIGNATURES[sig]))
             bin.extend(_to_uleb(len(bc)))
@@ -293,7 +301,7 @@ class BytecodeSection:
         builder.emit_uleb(size, "remaining record size")
         builder.emit_uleb(len(self.type_name), "type name size")
         builder.emit_string(self.type_name, "type name")
-        builder.emit_byte(self.flags, "flags")
+        builder.emit_uleb(self.flags, "flags")
         for sig, bc in self.signatures:
             builder.emit_byte(SIGNATURES[sig], f"sig_{sig}")
             builder.emit_uleb(len(bc), "program size")
@@ -436,7 +444,7 @@ def disassemble_file(input: BinaryIO, output: TextIO) -> None:
 
     name_size = _from_uleb(stream)
     _type_name = stream.read(name_size).decode()
-    _flags = stream.read(1)[0]
+    _flags = _from_uleb(stream)
 
     while True:
         sig_byte = stream.read(1)
@@ -735,6 +743,18 @@ def interpret(bytecode: bytes, control: list, data: list, tracing: bool = False)
                 new_name = data.pop()
                 valobj = data.pop()
                 data.append(valobj.Clone(new_name))
+            elif sel == sel_get_pointee_type:
+                sbtype = data.pop()
+                data.append(sbtype.GetPointeeType())
+            elif sel == sel_get_byte_size:
+                sbtype = data.pop()
+                data.append(sbtype.GetByteSize())
+            elif sel == sel_create_child_at_offset:
+                sbtype = data.pop()
+                offset = data.pop()
+                name = data.pop()
+                valobj = data.pop()
+                data.append(valobj.CreateChildAtOffset(name, offset, sbtype))
             elif sel == sel_strlen:
                 s = data.pop()
                 data.append(len(s) if s else 0)
@@ -748,6 +768,24 @@ def interpret(bytecode: bytes, control: list, data: list, tracing: bool = False)
             else:
                 print("not implemented: " + selector[sel])
                 assert False
+
+        # Dictionary operations.
+        elif b == op_dict:
+            data.append(dict())
+        elif b == op_dict_set:
+            value = data.pop()
+            key = data.pop()
+            d = data.pop()
+            d[key] = value
+            data.append(d)
+        elif b == op_dict_get:
+            key = data.pop()
+            d = data.pop()
+            data.append(d[key])
+        elif b == op_dict_has:
+            key = data.pop()
+            d = data.pop()
+            data.append(int(key in d))
     return data[-1]
 
 
@@ -758,12 +796,15 @@ def interpret(bytecode: bytes, control: list, data: list, tracing: bool = False)
 _BUILTINS = {
     "Cast": "@cast",
     "Clone": "@clone",
+    "CreateChildAtOffset": "@create_child_at_offset",
+    "GetByteSize": "@get_byte_size",
     "GetChildAtIndex": "@get_child_at_index",
     "GetChildMemberWithName": "@get_child_with_name",
     "GetIndexOfChildWithName": "@get_child_index",
     "GetNonSyntheticValue": "@get_non_synthetic_value",
     "GetNumChildren": "@get_num_children",
     "GetParent": "@get_parent",
+    "GetPointeeType": "@get_pointee_type",
     "GetSummary": "@summary",
     "GetSyntheticValue": "@get_synthetic_value",
     "GetTemplateArgumentType": "@get_template_argument_type",
@@ -1361,5 +1402,19 @@ if __name__ == "__main__":
             out2 = io.StringIO()
             BytecodeSection("std::vector<int>", 0, []).write_source(out2, language="c")
             self.assertIn("_std__vector_int__formatter[] =", out2.getvalue())
+
+            # Flags are ULEB128 encoded to allow values wider than 7 bits.
+            flags = 1 << 10
+            wide = BytecodeSection("T", flags, [("summary", bytes([0x13]))])
+            out3 = io.StringIO()
+            wide.write_source(out3, language="c")
+            expected = "".join(f"\\x{b:02x}" for b in _to_uleb(flags))
+            self.assertIn(f'"{expected}"', out3.getvalue())
+            binary = io.BytesIO()
+            wide.write_binary(binary)
+            binary.seek(0)
+            dis = io.StringIO()
+            disassemble_file(binary, dis)
+            self.assertEqual(dis.getvalue(), "@summary: return\n")
 
     unittest.main(argv=[__file__])

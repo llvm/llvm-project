@@ -54,6 +54,8 @@ public:
 
   MachinePointerInfo getKernargSegmentPtrInfo(MachineFunction &MF) const;
 
+  bool isUniformLoad(const LoadSDNode *Load) const;
+
 private:
   SDValue lowerKernArgParameterPtr(SelectionDAG &DAG, const SDLoc &SL,
                                    SDValue Chain, uint64_t Offset) const;
@@ -417,6 +419,7 @@ public:
   bool isExtractVecEltCheap(EVT VT, unsigned Index) const override;
 
   bool isTypeDesirableForOp(unsigned Op, EVT VT) const override;
+  bool isTypeDesirableForOp(SDNode *N, EVT VT) const override;
 
   bool isOffsetFoldingLegal(const GlobalAddressSDNode *GA) const override;
 
