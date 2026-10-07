@@ -2505,10 +2505,6 @@ module std {
   module hash_table           { header "__hash_table" }
   module node_handle          { header "__node_handle" }
   module split_buffer         { header "__split_buffer" }
-  module std_mbstate_t {
-    header "__fwd/mbstate_t.h"
-    export *
-  }
   module tree                 {
     header "__tree"
     export std.memory.unique_ptr
