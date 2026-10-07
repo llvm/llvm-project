@@ -83,7 +83,6 @@
 #include "llvm/Support/AtomicOrdering.h"
 #include "llvm/Support/Casting.h"
 #include "llvm/Support/CodeGen.h"
-#include "llvm/Support/CommandLine.h"
 #include "llvm/Support/Debug.h"
 #include "llvm/Support/ErrorHandling.h"
 #include "llvm/Support/InstructionCost.h"
@@ -113,111 +112,6 @@ using namespace llvm;
 
 STATISTIC(NumTailCalls, "Number of tail calls");
 STATISTIC(NumOptimizedImms, "Number of times immediates were optimized");
-
-// FIXME: The necessary dtprel relocations don't seem to be supported
-// well in the GNU bfd and gold linkers at the moment. Therefore, by
-// default, for now, fall back to GeneralDynamic code generation.
-cl::opt<bool> EnableAArch64ELFLocalDynamicTLSGeneration(
-    "aarch64-elf-ldtls-generation", cl::Hidden,
-    cl::desc("Allow AArch64 Local Dynamic TLS code generation"),
-    cl::init(false));
-
-static cl::opt<bool>
-EnableOptimizeLogicalImm("aarch64-enable-logical-imm", cl::Hidden,
-                         cl::desc("Enable AArch64 logical imm instruction "
-                                  "optimization"),
-                         cl::init(true));
-
-// Temporary option added for the purpose of testing functionality added
-// to DAGCombiner.cpp in D92230. It is expected that this can be removed
-// in future when both implementations will be based off MGATHER rather
-// than the GLD1 nodes added for the SVE gather load intrinsics.
-static cl::opt<bool>
-EnableCombineMGatherIntrinsics("aarch64-enable-mgather-combine", cl::Hidden,
-                                cl::desc("Combine extends of AArch64 masked "
-                                         "gather intrinsics"),
-                                cl::init(true));
-
-static cl::opt<bool> EnableExtToTBL("aarch64-enable-ext-to-tbl", cl::Hidden,
-                                    cl::desc("Combine ext and trunc to TBL"),
-                                    cl::init(true));
-
-// All of the XOR, OR and CMP use ALU ports, and data dependency will become the
-// bottleneck after this transform on high end CPU. So this max leaf node
-// limitation is guard cmp+ccmp will be profitable.
-static cl::opt<unsigned> MaxXors("aarch64-max-xors", cl::init(16), cl::Hidden,
-                                 cl::desc("Maximum of xors"));
-
-// By turning this on, we will not fallback to DAG ISel when encountering
-// scalable vector types for all instruction, even if SVE is not yet supported
-// with some instructions.
-// See [AArch64TargetLowering::fallbackToDAGISel] for implementation details.
-cl::opt<bool> EnableSVEGISel(
-    "aarch64-enable-gisel-sve", cl::Hidden,
-    cl::desc("Enable / disable SVE scalable vectors in Global ISel"),
-    cl::init(false));
-
-static cl::opt<int> BrMergingBaseCostThresh(
-    "aarch64-br-merging-base-cost", cl::init(2),
-    cl::desc(
-        "Cost threshold for merging multiple conditionals into one branch "
-        "versus splitting into multiple branches: conditionals are merged when "
-        "their instruction cost is below this limit and split above it. Set to "
-        "-1 to never merge branches."),
-    cl::Hidden);
-
-static cl::opt<int> BrMergingCcmpBias(
-    "aarch64-br-merging-ccmp-bias", cl::init(6),
-    cl::desc("Increases 'aarch64-br-merging-base-cost' to account for the "
-             "CCMP instruction, which is always available on AArch64 and "
-             "makes merging branch conditions cheaper."),
-    cl::Hidden);
-
-static cl::opt<int> BrMergingCbzTbnzBias(
-    "aarch64-br-merging-cbz-tbnz-bias", cl::init(6),
-    cl::desc("Decreases 'aarch64-br-merging-base-cost' when a condition can "
-             "lower to a single CBZ/CBNZ or TBZ/TBNZ compare-and-branch, to "
-             "bias toward splitting. Set to 0 to disable."),
-    cl::Hidden);
-
-static cl::opt<int> BrMergingLikelyBias(
-    "aarch64-br-merging-likely-bias", cl::init(0),
-    cl::desc("Increases 'aarch64-br-merging-base-cost' when all conditionals "
-             "are likely to be executed, biasing toward merging. Set to -1 to "
-             "never merge likely branches."),
-    cl::Hidden);
-
-static cl::opt<int> BrMergingUnlikelyBias(
-    "aarch64-br-merging-unlikely-bias", cl::init(-1),
-    cl::desc(
-        "Decreases 'aarch64-br-merging-base-cost' when all conditionals are "
-        "unlikely to be executed, biasing toward splitting. Set to -1 to never "
-        "merge unlikely branches."),
-    cl::Hidden);
-
-// TODO: This option should be removed once we switch to always using PTRADD in
-// the SelectionDAG.
-static cl::opt<bool> UseFEATCPACodegen(
-    "aarch64-use-featcpa-codegen", cl::Hidden,
-    cl::desc("Generate ISD::PTRADD nodes for pointer arithmetic in "
-             "SelectionDAG for FEAT_CPA"),
-    cl::init(false));
-
-// FPMR writes might be a synchronization barrier and thus carry a significant
-// cost. Give users the option to skip writes when the requested value is
-// already set.
-static cl::opt<bool> UseConditionalFPMRWrite(
-    "aarch64-use-conditional-fpmr-write", cl::Hidden,
-    cl::desc("Only write FPMR when the requested value differs from the "
-             "current value"),
-    cl::init(false));
-
-// Development flag to allow incremental bring up. Will be removed once the
-// implementation is complete.
-static cl::opt<bool> EnableSVEFixedLengthBfloatSupport(
-    "aarch64-sve-vls-bfloat-support", cl::Hidden,
-    cl::desc("Use SVE for fixed-length vector bfloat operations"),
-    cl::init(false));
 
 /// Value type used for condition codes.
 constexpr MVT CondCodeVT = MVT::i32;
@@ -1678,6 +1572,7 @@ AArch64TargetLowering::AArch64TargetLowering(const TargetMachine &TM,
     }
 
     setOperationAction(ISD::GET_ACTIVE_LANE_MASK, MVT::nxv1i1, Custom);
+    setOperationAction(ISD::VECTOR_REVERSE, MVT::nxv1i1, Custom);
 
     if (Subtarget->isSVEorStreamingSVEAvailable() &&
         (Subtarget->hasSVE2p1() || Subtarget->hasSME2()))
@@ -2911,7 +2806,7 @@ bool AArch64TargetLowering::targetShrinkDemandedConstant(
   if (!TLO.LegalOps)
     return false;
 
-  if (!EnableOptimizeLogicalImm)
+  if (!Subtarget->getCLOpts().enable_logical_imm)
     return false;
 
   EVT VT = Op.getValueType();
@@ -3358,7 +3253,7 @@ AArch64TargetLowering::EmitLoweredSetFpmr(MachineInstr &MI,
   const TargetInstrInfo *TII = Subtarget->getInstrInfo();
   DebugLoc DL = MI.getDebugLoc();
 
-  if (!UseConditionalFPMRWrite) {
+  if (!Subtarget->getCLOpts().use_conditional_fpmr_write) {
     BuildMI(*MBB, MI, DL, TII->get(AArch64::MSR))
         .addImm(0xda22)
         .add(MI.getOperand(0))
@@ -3379,7 +3274,7 @@ AArch64TargetLowering::EmitLoweredSetFpmr(MachineInstr &MI,
       .addImm(0xda22)
       .addUse(AArch64::FPMR, RegState::Implicit);
   BuildMI(*MBB, MI, DL, TII->get(AArch64::SUBSXrs), AArch64::XZR)
-      .addReg(CurrentFpmrVal, RegState::Kill)
+      .addReg(CurrentFpmrVal)
       .addReg(NewFpmrVal)
       .addImm(0);
   BuildMI(*MBB, MI, DL, TII->get(AArch64::Bcc))
@@ -3387,7 +3282,7 @@ AArch64TargetLowering::EmitLoweredSetFpmr(MachineInstr &MI,
       .addMBB(EndBB);
   BuildMI(*MsrBB, MsrBB->begin(), DL, TII->get(AArch64::MSR))
       .addImm(0xda22)
-      .addReg(NewFpmrVal, getKillRegState(MI.getOperand(0).isDead()))
+      .addReg(NewFpmrVal)
       .addDef(AArch64::FPMR, RegState::Implicit);
 
   MBB->addSuccessor(MsrBB);
@@ -8889,6 +8784,8 @@ SDValue AArch64TargetLowering::LowerOperation(SDValue Op,
     return LowerVECTOR_REPEAT(Op, DAG);
   case ISD::VECTOR_SHUFFLE:
     return LowerVECTOR_SHUFFLE(Op, DAG);
+  case ISD::VECTOR_REVERSE:
+    return LowerVECTOR_REVERSE(Op, DAG);
   case ISD::SPLAT_VECTOR:
     return LowerSPLAT_VECTOR(Op, DAG);
   case ISD::EXTRACT_SUBVECTOR:
@@ -9211,7 +9108,7 @@ bool AArch64TargetLowering::useSVEForFixedLengthVectorVT(
   default:
     return false;
   case MVT::bf16:
-    if (!EnableSVEFixedLengthBfloatSupport)
+    if (!Subtarget->getCLOpts().sve_vls_bfloat_support)
       return false;
     break;
   case MVT::i8:
@@ -9288,6 +9185,8 @@ CCAssignFn *AArch64TargetLowering::CCAssignFnForCall(CallingConv::ID CC,
   switch (CC) {
   default:
     reportFatalUsageError("unsupported calling convention");
+  case CallingConv::AnyReg:
+    return CC_AArch64_AnyReg;
   case CallingConv::GHC:
     return CC_AArch64_GHC;
   case CallingConv::PreserveNone:
@@ -10093,26 +9992,23 @@ static void analyzeCallOperands(const AArch64TargetLowering &TLI,
     NumArgs -= 2;
   }
 
+  // On Windows, the fixed arguments in a vararg call are passed in GPRs too, so
+  // use the vararg CC to force them to integer registers.
+  bool FixedUseVarArgCC = IsVarArg && IsCalleeWin64;
+  CCAssignFn *FixedAssignFn = TLI.CCAssignFnForCall(CalleeCC, FixedUseVarArgCC);
+  CCAssignFn *VarArgAssignFn =
+      IsVarArg ? TLI.CCAssignFnForCall(CalleeCC, /*IsVarArg=*/true) : nullptr;
+
   for (unsigned i = 0; i != NumArgs; ++i) {
     MVT ArgVT = Outs[i].VT;
     ISD::ArgFlagsTy ArgFlags = Outs[i].Flags;
-
-    bool UseVarArgCC = false;
-    if (IsVarArg) {
-      // On Windows, the fixed arguments in a vararg call are passed in GPRs
-      // too, so use the vararg CC to force them to integer registers.
-      if (IsCalleeWin64) {
-        UseVarArgCC = true;
-      } else {
-        UseVarArgCC = ArgFlags.isVarArg();
-      }
-    }
+    bool UseVarArgCC = FixedUseVarArgCC || (IsVarArg && ArgFlags.isVarArg());
 
     if (!UseVarArgCC) {
       // Get type of the original argument.
-      EVT ActualVT =
-          TLI.getValueType(DAG.getDataLayout(), CLI.Args[Outs[i].OrigArgIndex].Ty,
-                       /*AllowUnknown*/ true);
+      EVT ActualVT = TLI.getValueType(DAG.getDataLayout(),
+                                      CLI.Args[Outs[i].OrigArgIndex].Ty,
+                                      /*AllowUnknown*/ true);
       MVT ActualMVT = ActualVT.isSimple() ? ActualVT.getSimpleVT() : ArgVT;
       // If ActualMVT is i1/i8/i16, we should set LocVT to i8/i8/i16.
       if (ActualMVT == MVT::i1 || ActualMVT == MVT::i8)
@@ -10121,9 +10017,7 @@ static void analyzeCallOperands(const AArch64TargetLowering &TLI,
         ArgVT = MVT::i16;
     }
 
-    // FIXME: CCAssignFnForCall should be called once, for the call and not per
-    // argument. This logic should exactly mirror LowerFormalArguments.
-    CCAssignFn *AssignFn = TLI.CCAssignFnForCall(CalleeCC, UseVarArgCC);
+    CCAssignFn *AssignFn = UseVarArgCC ? VarArgAssignFn : FixedAssignFn;
     bool Res = AssignFn(i, ArgVT, ArgVT, CCValAssign::Full, ArgFlags,
                         Outs[i].OrigTy, CCInfo);
     assert(!Res && "Call operand has unhandled type");
@@ -10224,7 +10118,7 @@ bool AArch64TargetLowering::isEligibleForTailCallOptimization(
   // cannot rely on the linker replacing the tail call with a return.
   if (GlobalAddressSDNode *G = dyn_cast<GlobalAddressSDNode>(Callee)) {
     const GlobalValue *GV = G->getGlobal();
-    const Triple &TT = getTargetMachine().getTargetTriple();
+    const Triple &TT = GV->getParent()->getTargetTriple();
     if (GV->hasExternalWeakLinkage() &&
         (!TT.isOSWindows() || TT.isOSBinFormatELF() || TT.isOSBinFormatMachO()))
       return false;
@@ -10600,6 +10494,9 @@ AArch64TargetLowering::LowerCall(CallLoweringInfo &CLI,
   // Determine whether we need any streaming mode changes.
   SMECallAttrs CallAttrs =
       getSMECallAttrs(MF.getFunction(), getRuntimeLibcallsInfo(), CLI);
+  if (CallAttrs.requiresNonLazySaveZA())
+    reportFatalUsageError(
+        "Calls that require saving ZA non-lazily is not yet implemented");
 
   std::optional<unsigned> ZAMarkerNode = getZAMarkerForCall(CallAttrs);
 
@@ -11833,13 +11730,12 @@ SDValue AArch64TargetLowering::LowerELFTLSDescCallSeq(SDValue SymAddr,
 }
 
 TLSModel::Model AArch64::getELFTLSModel(const GlobalValue *GV,
-                                        const TargetMachine &TM,
+                                        const AArch64TargetMachine &TM,
                                         bool HasELFSignedGOT) {
   TLSModel::Model Model =
       HasELFSignedGOT ? TLSModel::GeneralDynamic : TM.getTLSModel(GV);
 
-  if (!EnableAArch64ELFLocalDynamicTLSGeneration &&
-      Model == TLSModel::LocalDynamic)
+  if (!TM.getCLOpts().elf_ldtls_generation && Model == TLSModel::LocalDynamic)
     Model = TLSModel::GeneralDynamic;
 
   if (TM.getCodeModel() == CodeModel::Large && Model != TLSModel::LocalExec)
@@ -11863,8 +11759,8 @@ AArch64TargetLowering::LowerELFGlobalTLSAddress(SDValue Op,
   const GlobalAddressSDNode *GA = cast<GlobalAddressSDNode>(Op);
   AArch64FunctionInfo *MFI =
       DAG.getMachineFunction().getInfo<AArch64FunctionInfo>();
-  TLSModel::Model Model = AArch64::getELFTLSModel(
-      GA->getGlobal(), getTargetMachine(), MFI->hasELFSignedGOT());
+  TLSModel::Model Model =
+      AArch64::getELFTLSModel(GA->getGlobal(), getTM(), MFI->hasELFSignedGOT());
 
   SDValue TPOff;
   EVT PtrVT = getPointerTy(DAG.getDataLayout());
@@ -12233,8 +12129,8 @@ SDValue AArch64TargetLowering::LowerBR_CC(SDValue Op, SelectionDAG &DAG) const {
     SDValue Flags;
     uint64_t InverseCC;
     // `CSET <Wd>, <cond>` is an alias of `CSINC <Wd>, WZR, WZR, invert(<cond>)`
-    auto m_CSET = m_Node(AArch64ISD::CSINC, m_Zero(), m_Zero(),
-                         m_ConstInt(InverseCC), m_Value(Flags));
+    auto m_CSET = m_Node<AArch64ISD::CSINC>(
+        m_Zero(), m_Zero(), m_ConstInt(InverseCC), m_Value(Flags));
     // Note: We look through `& 1` as the result of CSET is known to be 0 or 1.
     if ((CC == ISD::SETEQ || CC == ISD::SETNE) && isNullConstant(RHS) &&
         sd_match(LHS, m_AnyOf(m_CSET, m_And(m_CSET, m_One())))) {
@@ -12751,7 +12647,7 @@ static bool
 isOrXorChain(SDValue N, SelectionDAG &DAG, unsigned &NumLeaves,
              unsigned &NumXors, bool &SawXor, bool RequireLegalCmpImmediates,
              SmallVectorImpl<std::pair<SDValue, SDValue>> &WorkList) {
-  if (NumLeaves == MaxXors)
+  if (NumLeaves == DAG.getSubtarget<AArch64Subtarget>().getCLOpts().max_xors)
     return false;
 
   // Skip the one-use zext
@@ -12831,7 +12727,7 @@ static SDValue performOrXorChainCombine(SDNode *N, SelectionDAG &DAG) {
         Limit = std::min<unsigned>(8, NumXors);
     }
     if (F.hasMinSize())
-      Limit = MaxXors;
+      Limit = DAG.getSubtarget<AArch64Subtarget>().getCLOpts().max_xors;
     if (WorkList.size() > Limit)
       return SDValue();
 
@@ -13425,6 +13321,18 @@ SDValue AArch64TargetLowering::LowerVECTOR_SPLICE(SDValue Op,
     return Op;
 
   return SDValue();
+}
+
+SDValue AArch64TargetLowering::LowerVECTOR_REVERSE(SDValue Op,
+                                                   SelectionDAG &DAG) const {
+  assert(Op.getValueType() == MVT::nxv1i1 && "Unexpected vector type!");
+
+  SDLoc DL(Op);
+  // Select nxv1i1 vector_reverse by widening to nxv2i1.
+  SDValue Widened = DAG.getInsertSubvector(DL, DAG.getPOISON(MVT::nxv2i1),
+                                           Op.getOperand(0), 0);
+  SDValue Reversed = DAG.getNode(ISD::VECTOR_REVERSE, DL, MVT::nxv2i1, Widened);
+  return DAG.getExtractSubvector(DL, MVT::nxv1i1, Reversed, 1);
 }
 
 SDValue AArch64TargetLowering::LowerSELECT_CC(SDValue Op,
@@ -19251,7 +19159,8 @@ bool AArch64TargetLowering::optimizeExtendOrTruncateConversion(
     Instruction *I, Loop *L, const TargetTransformInfo &TTI) const {
   // shuffle_vector instructions are serialized when targeting SVE,
   // see LowerSPLAT_VECTOR. This peephole is not beneficial.
-  if (!EnableExtToTBL || Subtarget->useSVEForFixedLengthVectors())
+  if (!Subtarget->getCLOpts().enable_ext_to_tbl ||
+      Subtarget->useSVEForFixedLengthVectors())
     return false;
 
   // Try to optimize conversions using tbl. This requires materializing constant
@@ -19914,7 +19823,7 @@ bool AArch64TargetLowering::lowerDeinterleaveIntrinsicToLoad(
 
   VectorType *VTy = getDeinterleavedVectorType(DI);
 
-  const DataLayout &DL = LI->getModule()->getDataLayout();
+  const DataLayout &DL = LI->getDataLayout();
   bool UseScalable;
   if (!isLegalInterleavedAccessType(VTy, DL, UseScalable))
     return false;
@@ -19992,7 +19901,7 @@ bool AArch64TargetLowering::lowerInterleaveIntrinsicToStore(
   assert(!Mask && "Unexpected mask on plain store");
 
   VectorType *VTy = cast<VectorType>(InterleavedValues[0]->getType());
-  const DataLayout &DL = SI->getModule()->getDataLayout();
+  const DataLayout &DL = SI->getDataLayout();
 
   bool UseScalable;
   if (!isLegalInterleavedAccessType(VTy, DL, UseScalable))
@@ -22257,7 +22166,7 @@ static SDValue performSVEAndCombine(SDNode *N,
   if (isAllActivePredicate(DAG, N->getOperand(1)))
     return N->getOperand(0);
 
-  if (!EnableCombineMGatherIntrinsics)
+  if (!DAG.getSubtarget<AArch64Subtarget>().getCLOpts().enable_mgather_combine)
     return SDValue();
 
   SDValue Mask = N->getOperand(1);
@@ -22547,6 +22456,8 @@ performLastTrueTestVectorCombine(SDNode *N,
 static SDValue
 performExtractLastActiveCombine(SDNode *N, TargetLowering::DAGCombinerInfo &DCI,
                                 const AArch64Subtarget *Subtarget) {
+  if (!Subtarget->isSVEorStreamingSVEAvailable())
+    return SDValue();
   assert(N->getOpcode() == ISD::EXTRACT_VECTOR_ELT);
   SelectionDAG &DAG = DCI.DAG;
   SDValue Vec = N->getOperand(0);
@@ -22563,8 +22474,19 @@ performExtractLastActiveCombine(SDNode *N, TargetLowering::DAGCombinerInfo &DCI,
     return SDValue();
 
   SDValue Mask = Idx.getOperand(0);
-  const TargetLowering &TLI = DAG.getTargetLoweringInfo();
-  if (!TLI.isOperationLegal(ISD::VECTOR_FIND_LAST_ACTIVE, Mask.getValueType()))
+  if (Mask.getValueType().isFixedLengthVector()) {
+    EVT VecVT = Vec.getValueType();
+    EVT ContainerVT = getContainerForFixedLengthVector(DAG, VecVT);
+    // Match the promoted mask's element width to the data's SVE lane width.
+    EVT MaskVT = VecVT.changeTypeToInteger();
+    if (Mask.getValueType() != MaskVT)
+      Mask = DAG.getNode(ISD::SIGN_EXTEND, SDLoc(Mask), MaskVT, Mask);
+    Vec = convertToScalableVector(DAG, ContainerVT, Vec);
+    Mask = convertFixedMaskToScalableVector(Mask, DAG);
+  }
+
+  if (!DAG.getTargetLoweringInfo().isOperationLegal(
+          ISD::VECTOR_FIND_LAST_ACTIVE, Mask.getValueType()))
     return SDValue();
 
   return DAG.getNode(AArch64ISD::LASTB, SDLoc(N), N->getValueType(0), Mask,
@@ -22579,14 +22501,14 @@ static bool hasSVEMultiVectorOps(const AArch64Subtarget *Subtarget) {
 
 static auto m_PredicateAsCounterWhile() {
   using namespace llvm::SDPatternMatch;
-  return m_AnyOf(m_SpecificOpc(AArch64ISD::WHILEGE_PRED_COUNTER),
-                 m_SpecificOpc(AArch64ISD::WHILEGT_PRED_COUNTER),
-                 m_SpecificOpc(AArch64ISD::WHILELT_PRED_COUNTER),
-                 m_SpecificOpc(AArch64ISD::WHILELE_PRED_COUNTER),
-                 m_SpecificOpc(AArch64ISD::WHILEHS_PRED_COUNTER),
-                 m_SpecificOpc(AArch64ISD::WHILEHI_PRED_COUNTER),
-                 m_SpecificOpc(AArch64ISD::WHILELO_PRED_COUNTER),
-                 m_SpecificOpc(AArch64ISD::WHILELS_PRED_COUNTER));
+  return m_AnyOf(m_SpecificOpc<AArch64ISD::WHILEGE_PRED_COUNTER>(),
+                 m_SpecificOpc<AArch64ISD::WHILEGT_PRED_COUNTER>(),
+                 m_SpecificOpc<AArch64ISD::WHILELT_PRED_COUNTER>(),
+                 m_SpecificOpc<AArch64ISD::WHILELE_PRED_COUNTER>(),
+                 m_SpecificOpc<AArch64ISD::WHILEHS_PRED_COUNTER>(),
+                 m_SpecificOpc<AArch64ISD::WHILEHI_PRED_COUNTER>(),
+                 m_SpecificOpc<AArch64ISD::WHILELO_PRED_COUNTER>(),
+                 m_SpecificOpc<AArch64ISD::WHILELS_PRED_COUNTER>());
 }
 
 /// Folds extracting the first lane from the first segment of a
@@ -30818,7 +30740,7 @@ performSignExtendInRegCombine(SDNode *N, TargetLowering::DAGCombinerInfo &DCI,
   if (DCI.isBeforeLegalizeOps())
     return SDValue();
 
-  if (!EnableCombineMGatherIntrinsics)
+  if (!DAG.getSubtarget<AArch64Subtarget>().getCLOpts().enable_mgather_combine)
     return SDValue();
 
   // SVE load nodes (e.g. AArch64ISD::GLD1) are straightforward candidates
@@ -31254,6 +31176,10 @@ static SDValue tryCombineMULLWithUZP1(SDNode *N,
   EVT TruncLowOpVT = TruncLowOp.getValueType();
   if (HasFoundMULLow && (TruncLowOp.getOpcode() == AArch64ISD::DUP ||
                          DAG.isSplatValue(TruncLowOp, false)))
+    return SDValue();
+
+  if (HasFoundMULLow && (TruncLow->isPredecessorOf(TruncHighOp.getNode()) ||
+                         TruncHigh->isPredecessorOf(TruncLowOp.getNode())))
     return SDValue();
 
   // Create uzp1, extract_high and extract_low.
@@ -33409,7 +33335,7 @@ AArch64TargetLowering::shouldExpandAtomicCmpXchgInIR(
 Value *AArch64TargetLowering::emitLoadLinked(IRBuilderBase &Builder,
                                              Type *ValueTy, Value *Addr,
                                              AtomicOrdering Ord) const {
-  Module *M = Builder.GetInsertBlock()->getParent()->getParent();
+  Module *M = Builder.getModule();
   bool IsAcquire = isAcquireOrStronger(Ord);
 
   // Since i128 isn't legal and intrinsics don't get type-lowered, the ldrexd
@@ -33457,7 +33383,7 @@ void AArch64TargetLowering::emitAtomicCmpXchgNoStoreLLBalance(
 Value *AArch64TargetLowering::emitStoreConditional(IRBuilderBase &Builder,
                                                    Value *Val, Value *Addr,
                                                    AtomicOrdering Ord) const {
-  Module *M = Builder.GetInsertBlock()->getParent()->getParent();
+  Module *M = Builder.getModule();
   bool IsRelease = isReleaseOrStronger(Ord);
 
   // Since the intrinsics must have legal type, the i128 intrinsics take two
@@ -33534,7 +33460,7 @@ Value *AArch64TargetLowering::emitCanLoadSpeculatively(
 
   // Narrow only after the comparison above, so that a size exceeding the
   // address width is not truncated into the accepted range.
-  const DataLayout &DL = Builder.GetInsertBlock()->getDataLayout();
+  const DataLayout &DL = Builder.getDataLayout();
   Type *AddrTy = DL.getAddressType(Ptr->getType());
   Value *SizeAddr = Builder.CreateZExtOrTrunc(SizeInBytes, AddrTy);
 
@@ -33568,7 +33494,7 @@ bool AArch64TargetLowering::shouldNormalizeToSelectSequence(LLVMContext &, EVT,
 }
 
 static Value *UseTlsOffset(IRBuilderBase &IRB, unsigned Offset) {
-  Module *M = IRB.GetInsertBlock()->getParent()->getParent();
+  Module *M = IRB.getModule();
   Function *ThreadPointerFunc = Intrinsic::getOrInsertDeclaration(
       M, Intrinsic::thread_pointer, IRB.getPtrTy());
   return IRB.CreatePointerCast(
@@ -33738,7 +33664,8 @@ AArch64TargetLowering::getJumpConditionMergingParams(Instruction::BinaryOps Opc,
   if (ComparesLoadedValue(Lhs) && ComparesLoadedValue(Rhs))
     return {-1, -1, -1};
 
-  int BaseCost = BrMergingBaseCostThresh.getValue();
+  const AArch64Options &CLOpts = Subtarget->getCLOpts();
+  int BaseCost = CLOpts.br_merging_base_cost;
   // CCMP folds the second compare and the branch into a single cheap op, so
   // merging is worth tolerating extra speculated work on the RHS dependency
   // chain. The bias budgets that tolerance in TTI latency units, standing in
@@ -33747,9 +33674,9 @@ AArch64TargetLowering::getJumpConditionMergingParams(Instruction::BinaryOps Opc,
   // default 6 ~= MispredictPenalty/2). The likely/unlikely biases below refine
   // that.
   if (BaseCost >= 0)
-    BaseCost += BrMergingCcmpBias;
+    BaseCost += CLOpts.br_merging_ccmp_bias;
 
-  if (BaseCost >= 0 && BrMergingCbzTbnzBias > 0) {
+  if (BaseCost >= 0 && CLOpts.br_merging_cbz_tbnz_bias > 0) {
     bool LhsIsFusedBranch = IsCbzTbnzCandidate(Lhs);
     bool RhsIsFusedBranch = IsCbzTbnzCandidate(Rhs);
     // If both conditions would each lower to a single CBZ/CBNZ or TBZ/TBNZ, the
@@ -33765,11 +33692,11 @@ AArch64TargetLowering::getJumpConditionMergingParams(Instruction::BinaryOps Opc,
     // side may still be worth a CMP/CCMP, so leave that to the dependency-chain
     // cost.
     if (LhsIsFusedBranch || RhsIsFusedBranch)
-      BaseCost -= BrMergingCbzTbnzBias;
+      BaseCost -= CLOpts.br_merging_cbz_tbnz_bias;
   }
 
-  return {BaseCost, BrMergingLikelyBias.getValue(),
-          BrMergingUnlikelyBias.getValue()};
+  return {BaseCost, CLOpts.br_merging_likely_bias,
+          CLOpts.br_merging_unlikely_bias};
 }
 
 TargetLowering::ShiftLegalizationStrategy
@@ -34049,9 +33976,9 @@ bool AArch64TargetLowering::shouldLocalize(
 
 bool AArch64TargetLowering::fallBackToDAGISel(const Instruction &Inst) const {
   // Fallback for scalable vectors.
-  // Note that if EnableSVEGISel is true, we allow scalable vector types for
-  // all instructions, regardless of whether they are actually supported.
-  if (!EnableSVEGISel) {
+  // Note that with -aarch64-enable-gisel-sve, we allow scalable vector types
+  // for all instructions, regardless of whether they are actually supported.
+  if (!Subtarget->getCLOpts().enable_gisel_sve) {
     if (Inst.getType()->isScalableTy()) {
       return true;
     }
@@ -36514,7 +36441,7 @@ bool AArch64TargetLowering::isTypeDesirableForOp(unsigned Opc, EVT VT) const {
 
 bool AArch64TargetLowering::shouldPreservePtrArith(const Function &F,
                                                    EVT VT) const {
-  return Subtarget->hasCPA() && UseFEATCPACodegen;
+  return Subtarget->hasCPA() && Subtarget->getCLOpts().use_featcpa_codegen;
 }
 
 SDValue AArch64TargetLowering::LowerFCANONICALIZE(SDValue Op,

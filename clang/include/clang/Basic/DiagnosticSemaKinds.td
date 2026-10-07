@@ -1007,6 +1007,10 @@ def warn_fortify_source_size_mismatch : Warning<
   "'%0' size argument is too large; destination buffer has size %1,"
   " but size argument is %2">, InGroup<FortifySource>;
 
+def warn_fortify_source_negative_size : Warning<
+  "'%0' size argument is negative">,
+  InGroup<FortifySource>;
+
 def warn_stringop_overread
     : Warning<"'%0' reading %1 byte%s1 from a region of size %2">,
       InGroup<DiagGroup<"stringop-overread">>;
@@ -1048,6 +1052,11 @@ def warn_format_truncation_non_kprintf: Warning<
 def warn_fortify_scanf_overflow : Warning<
   "'%0' may overflow; destination buffer in argument %1 has size "
   "%2, but the corresponding specifier may require size %3">,
+  InGroup<FortifySource>;
+
+def warn_fortify_source_overread : Warning<
+  "'%0' will always read past the end of the source buffer; source buffer has "
+  "size %1, but the size is %2">,
   InGroup<FortifySource>;
 
 def err_function_start_invalid_type: Error<
@@ -8901,7 +8910,9 @@ def warn_cdtor_function_try_handler_mem_expr : Warning<
   "%select{constructor|destructor}0 function try block">, InGroup<Exceptions>;
 def err_throw_object_throwing_dtor : Error<
   "cannot throw object of type %0 with a potentially-throwing destructor">;
-
+def err_throw_or_catch_address_space_qualified_ptr : Error<
+  "cannot %select{throw|catch}0 %select{pointer|reference}1 with non-default address space "
+  "(type %2)">;
 let CategoryName = "Lambda Issue" in {
   def err_capture_more_than_once : Error<
     "%0 can appear only once in a capture list">;
@@ -11357,6 +11368,11 @@ def warn_empty_defer_body : Warning<
 def note_empty_body_on_separate_line : Note<
   "put the semicolon on a separate line to silence this warning">;
 
+def warn_redundant_defer : Warning<
+  "redundant use of '%0'; the deferred statement is executed immediately">,
+  InGroup<DiagGroup<"redundant-defer">>;
+def note_redundant_defer_if : Note<"did you mean to use '%0 if'?">;
+
 def err_va_start_captured_stmt : Error<
   "'va_start' cannot be used in a captured statement">;
 def err_va_start_outside_function : Error<
@@ -13728,6 +13744,19 @@ def err_hlsl_numthreads_invalid : Error<"total number of threads cannot exceed %
 def err_hlsl_missing_numthreads : Error<"missing numthreads attribute for %0 shader entry">;
 def err_hlsl_attribute_param_mismatch : Error<"%0 attribute parameters do not match the previous declaration">;
 def err_hlsl_duplicate_parameter_modifier : Error<"duplicate parameter modifier %0">;
+def err_hlsl_interpolation_conflict : Error<
+  "'nointerpolation' cannot be combined with other interpolation modifiers">;
+def err_hlsl_interpolation_position : Error<
+  "'nointerpolation' cannot be used on SV_Position">;
+def err_hlsl_interpolation_type : Error<
+  "interpolation modifiers other than 'nointerpolation' cannot be used with type %0">;
+def warn_hlsl_duplicate_interpolation : Warning<
+  "duplicate interpolation modifier %0">,
+  InGroup<DuplicateDeclSpecifier>;
+def warn_hlsl_interpolation_override : Warning<
+  "interpolation modifier '%select{centroid|sample}0' overrides "
+  "'%select{center|centroid}1'">,
+  InGroup<IgnoredAttributes>;
 def err_hlsl_missing_semantic_annotation : Error<
   "semantic annotations must be present for all parameters of an entry "
   "function or patch constant function">;

@@ -1377,6 +1377,16 @@ static void handleNonNullAttr(Sema &S, Decl *D, const ParsedAttr &AL) {
     NonNullArgs.push_back(Idx);
   }
 
+  // If an argument was specified and there was an attribute ignored warning
+  // issued for it, do not apply the nonnull attribute without any arguments as
+  // that has incorrect semantics in a function like:
+  //   __attribute__((nonnull(1))) void f(int val, int *ptr);
+  // because that will signal that 'ptr' is nonnull when it's not intended to
+  // be marked as such. However, continue on if there is at least one valid
+  // parameter index.
+  if (AL.getNumArgs() != 0 && NonNullArgs.empty())
+    return;
+
   // If no arguments were specified to __attribute__((nonnull)) then all pointer
   // arguments have a nonnull attribute; warn if there aren't any. Skip this
   // check if the attribute came from a macro expansion or a template
@@ -8284,6 +8294,9 @@ ProcessDeclAttribute(Sema &S, Decl *D, const ParsedAttr &AL,
     break;
   case ParsedAttr::AT_HLSLResourceBinding:
     S.HLSL().handleResourceBindingAttr(D, AL);
+    break;
+  case ParsedAttr::AT_HLSLInterpolationModifier:
+    S.HLSL().handleInterpolationModifierAttr(D, AL);
     break;
   case ParsedAttr::AT_HLSLParamModifier:
     S.HLSL().handleParamModifierAttr(D, AL);

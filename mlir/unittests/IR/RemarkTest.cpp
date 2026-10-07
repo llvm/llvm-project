@@ -440,6 +440,25 @@ static LogicalResult enableFinalPolicy(MLIRContext &context,
       /*printAsEmitRemarks=*/false);
 }
 
+// The final policy emits remarks in creation order. A later report of an
+// identity replaces the earlier one and takes its own position.
+TEST(Remark, TestRemarkFinalOrder) {
+  std::vector<std::string> emitted;
+  {
+    MLIRContext context;
+    ASSERT_TRUE(succeeded(enableFinalPolicy(context, emitted, "LoopUnroll")));
+    Location locA = FileLineColLoc::get(&context, "test.cpp", 2, 5);
+    Location locB = FileLineColLoc::get(&context, "test.cpp", 1, 5);
+    auto opts = remark::RemarkOpts::name("Unroller").category("LoopUnroll");
+
+    remark::passed(locA, opts) << "A first";
+    remark::passed(locB, opts) << "B";
+    // The function name is not part of the identity.
+    remark::passed(locA, opts.function("other")) << "A last";
+  }
+  EXPECT_THAT(emitted, ElementsAre("Unroller: B", "Unroller: A last"));
+}
+
 // finalize() drains the stored remarks. mlir-opt calls it explicitly and the
 // engine destructor calls it again; each call emits only the remarks reported
 // since the previous one, and an identity drained by one call can be reported
@@ -457,8 +476,7 @@ TEST(Remark, TestRemarkFinalDrains) {
     remark::passed(loc, first) << "first";
     remark::passed(loc, second) << "second";
     policy->finalize();
-    EXPECT_THAT(emitted,
-                UnorderedElementsAre("First: first", "Second: second"));
+    EXPECT_THAT(emitted, ElementsAre("First: first", "Second: second"));
 
     // Nothing pending: a repeated call emits nothing.
     policy->finalize();
@@ -469,8 +487,8 @@ TEST(Remark, TestRemarkFinalDrains) {
     remark::passed(loc, first) << "first again";
     EXPECT_EQ(emitted.size(), 2u);
   }
-  ASSERT_EQ(emitted.size(), 3u);
-  EXPECT_EQ(emitted[2], "First: first again");
+  EXPECT_THAT(emitted, ElementsAre("First: first", "Second: second",
+                                   "First: first again"));
 }
 
 // A RelatedTo link only resolves between remarks drained by the same
