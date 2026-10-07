@@ -2584,16 +2584,17 @@ public:
         break;
       case Intrinsic::vector_partial_reduce_add:
         Opcode = Instruction::Add;
-        ISD = ISD::PARTIAL_REDUCE_UMLA;
         break;
       case Intrinsic::vector_partial_reduce_fadd:
         Opcode = Instruction::FAdd;
-        ISD = ISD::PARTIAL_REDUCE_FMLA;
         break;
       }
-      // Check for a simple unordered reduction step with no extensions first.
-      if (InTy == AccTy)
-        return thisT()->getArithmeticInstrCost(Opcode, AccTy, CostKind);
+
+      // For a type-only query, model as (possibly multiple) basic instructions
+      // for the accumulator type.
+      return InTy->getElementCount().getKnownScalarFactor(
+                 AccTy->getElementCount()) *
+             thisT()->getArithmeticInstrCost(Opcode, AccTy, CostKind);
       break;
     }
     case Intrinsic::experimental_vector_match: {
