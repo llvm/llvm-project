@@ -615,7 +615,7 @@ void initializeAMDGPUUnifyDivergentExitNodesLegacyPass(PassRegistry &);
 extern char &AMDGPUUnifyDivergentExitNodesID;
 
 ImmutablePass *createAMDGPUAAWrapperPass();
-void initializeAMDGPUAAWrapperPassPass(PassRegistry&);
+void initializeAMDGPUAAWrapperPassPass(PassRegistry &);
 void initializeAMDGPUExternalAAWrapperPass(PassRegistry&);
 
 ModulePass *createAMDGPUExportKernelRuntimeHandlesLegacyPass();
