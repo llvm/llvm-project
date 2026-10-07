@@ -76,7 +76,8 @@ body:             |
 ...
 
 # The high-byte IMPLICIT_DEF in the loop latch is erased by coalescing. The
-# high byte must stay live around the backedge.
+# high byte must stay live around the backedge by extending the segment of
+# value 2 to the beginning of bb.3.
 
 # INTERVALS-LABEL: Live intervals for machine function: loop_backedge:
 # INTERVALS: %0 [16r,48B:0)[48B,192r:1) 0@16r 1@48B-phi  L0000000000000002 [16r,48B:0)[48B,176B:2) 0@16r 1@x 2@48B-phi  L0000000000000001 [16r,192r:0) 0@16r  weight:
