@@ -250,6 +250,60 @@ TEST(MemProf, FillsValue) {
                               FrameContains("abc", 5U, 30U, false)))));
 }
 
+// A frame whose line is smaller than its function's start line, as is the case
+// for compiler generated code with line 0 such as the forwarding call in a C++
+// non-virtual thunk, is recorded with line offset 0 (matching the offset the
+// compiler computes for it) rather than a wrapped around value.
+TEST(MemProf, LineBelowStartLineHasZeroOffset) {
+  auto Symbolizer = std::make_unique<MockSymbolizer>();
+
+  EXPECT_CALL(*Symbolizer, symbolizeInlinedCode(SectionedAddress{0x1000},
+                                                specifier(), false))
+      .Times(1)
+      .WillRepeatedly(Return(makeInliningInfo({
+          {"foo", 10, 5, 30},
+      })));
+
+  EXPECT_CALL(*Symbolizer, symbolizeInlinedCode(SectionedAddress{0x2000},
+                                                specifier(), false))
+      .Times(1)
+      .WillRepeatedly(Return(makeInliningInfo({
+          {"_ZThn16_N1C1gEv", 0, 4, 0},
+      })));
+
+  CallStackMap CSM;
+  CSM[0x1] = {0x1000, 0x2000};
+
+  llvm::MapVector<uint64_t, MemInfoBlock> Prof;
+  Prof[0x1].AllocCount = 1;
+
+  auto Seg = makeSegments();
+
+  RawMemProfReader Reader(std::move(Symbolizer), Seg, Prof, CSM,
+                          /*KeepName=*/true);
+
+  llvm::DenseMap<llvm::GlobalValue::GUID, MemProfRecord> Records;
+  for (const auto &Pair : Reader)
+    Records.insert({Pair.first, Pair.second});
+
+  const llvm::GlobalValue::GUID FooId = memprof::getGUID("foo");
+  ASSERT_TRUE(Records.contains(FooId));
+  const MemProfRecord &Foo = Records[FooId];
+  ASSERT_THAT(Foo.AllocSites, SizeIs(1));
+  EXPECT_THAT(Foo.AllocSites[0].CallStack[0],
+              FrameContains("foo", 5U, 30U, false));
+  EXPECT_THAT(Foo.AllocSites[0].CallStack[1],
+              FrameContains("_ZThn16_N1C1gEv", 0U, 0U, false));
+
+  const llvm::GlobalValue::GUID ThunkId = memprof::getGUID("_ZThn16_N1C1gEv");
+  ASSERT_TRUE(Records.contains(ThunkId));
+  EXPECT_THAT(
+      Records[ThunkId].CallSites,
+      ElementsAre(testing::Field(
+          &CallSiteInfo::Frames,
+          ElementsAre(FrameContains("_ZThn16_N1C1gEv", 0U, 0U, false)))));
+}
+
 TEST(MemProf, PortableWrapper) {
   MemInfoBlock Info(/*size=*/16, /*access_count=*/7, /*alloc_timestamp=*/1000,
                     /*dealloc_timestamp=*/2000, /*alloc_cpu=*/3,
