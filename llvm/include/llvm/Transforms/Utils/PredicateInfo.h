@@ -190,8 +190,8 @@ public:
   }
 };
 
-// Provides predicate information for select instructions whose condition is
-// co(ntra)variant with a corresponding branch.
+// Provides predicate information along a branch's edges for select instructions
+// in the same block that share the condition of the branch.
 class PredicateSelect : public PredicateWithEdge {
 public:
   // If true, SplitBB is the true successor, otherwise it's the false successor.
