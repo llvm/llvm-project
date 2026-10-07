@@ -22577,7 +22577,7 @@ static SDValue lowerVectorFP_TO_INT_SAT(SDValue Op, SelectionDAG &DAG,
       EVT CCVT =
           TLI.getSetCCResultType(DAG.getDataLayout(), *DAG.getContext(), SrcVT);
       if (SrcVT.getScalarType() == MVT::f64) {
-        SDValue Clamped = DAG.getNode(X86ISD::FMINC, dl, SrcVT, Src,
+        SDValue Clamped = DAG.getNode(ISD::PSEUDO_FMIN, dl, SrcVT, Src,
                                       DAG.getConstantFP(INT32_MAX, dl, SrcVT));
         SDValue NotNaN = DAG.getSetCC(dl, CCVT, Src, Src, ISD::SETO);
         Clamped = DAG.getSelect(dl, SrcVT, NotNaN, Clamped,
