@@ -2812,8 +2812,7 @@ int GCNHazardRecognizer::checkWMMACoexecutionHazards(MachineInstr *MI) const {
   const int MaxWaitStates =
       IsWMMA ? (IsLowestRateWMMA ? 17 : 9) : (IsLowestRateWMMA ? 16 : 8);
 
-  auto WindowFor = [MI, TII, IsWMMA, RequiredWaitStates,
-                    this](const MachineInstr &I) -> std::optional<int> {
+  auto WindowFor = [=](const MachineInstr &I) -> std::optional<int> {
     if (!TII->isXDLWMMA(I))
       return std::nullopt;
     if (IsWMMA ? !hasWMMAToWMMARegOverlap(I, *MI)
