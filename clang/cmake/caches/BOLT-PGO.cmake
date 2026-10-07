@@ -3,11 +3,13 @@ set(LLVM_ENABLE_PROJECTS "bolt;clang;lld" CACHE STRING "")
 
 set(CLANG_BOOTSTRAP_TARGETS
   stage2-clang-bolt
+  stage2-check-clang
   stage2-distribution
   stage2-install-distribution
   CACHE STRING "")
 set(BOOTSTRAP_CLANG_BOOTSTRAP_TARGETS
   clang-bolt
+  check-clang
   distribution
   install-distribution
   CACHE STRING "")
