@@ -314,9 +314,9 @@ unsigned getCompletionActionImplicitArgPosition(unsigned CodeObjectVersion) {
 int getMIMGOpcode(unsigned BaseOpcode, unsigned MIMGEncoding,
                   unsigned VDataDwords, unsigned VAddrDwords, bool IndexedRsrc,
                   bool IndexedSamp) {
-  const MIMGInfo *Info = getMIMGOpcodeHelper(
-      BaseOpcode, MIMGEncoding, static_cast<uint8_t>(VDataDwords),
-      static_cast<uint8_t>(VAddrDwords), IndexedRsrc, IndexedSamp);
+  const MIMGInfo *Info =
+      getMIMGOpcodeHelper(BaseOpcode, MIMGEncoding, VDataDwords, VAddrDwords,
+                          IndexedRsrc, IndexedSamp);
   return Info ? Info->Opcode : -1;
 }
 
@@ -328,9 +328,8 @@ const MIMGBaseOpcodeInfo *getMIMGBaseOpcode(unsigned Opc) {
 int getMaskedMIMGOp(unsigned Opc, unsigned NewChannels) {
   const MIMGInfo *OrigInfo = getMIMGInfo(Opc);
   const MIMGInfo *NewInfo = getMIMGOpcodeHelper(
-      OrigInfo->BaseOpcode, OrigInfo->MIMGEncoding,
-      static_cast<uint8_t>(NewChannels), OrigInfo->VAddrDwords,
-      OrigInfo->IndexedRsrc, OrigInfo->IndexedSamp);
+      OrigInfo->BaseOpcode, OrigInfo->MIMGEncoding, NewChannels,
+      OrigInfo->VAddrDwords, OrigInfo->IndexedRsrc, OrigInfo->IndexedSamp);
   return NewInfo ? NewInfo->Opcode : -1;
 }
 
@@ -490,8 +489,8 @@ int getMTBUFBaseOpcode(unsigned Opc) {
 }
 
 int getMTBUFOpcode(unsigned BaseOpc, unsigned Elements) {
-  const MTBUFInfo *Info = getMTBUFInfoFromBaseOpcodeAndElements(
-      BaseOpc, static_cast<uint8_t>(Elements));
+  const MTBUFInfo *Info =
+      getMTBUFInfoFromBaseOpcodeAndElements(BaseOpc, Elements);
   return Info ? Info->Opcode : -1;
 }
 
@@ -521,8 +520,8 @@ int getMUBUFBaseOpcode(unsigned Opc) {
 }
 
 int getMUBUFOpcode(unsigned BaseOpc, unsigned Elements) {
-  const MUBUFInfo *Info = getMUBUFInfoFromBaseOpcodeAndElements(
-      BaseOpc, static_cast<uint8_t>(Elements));
+  const MUBUFInfo *Info =
+      getMUBUFInfoFromBaseOpcodeAndElements(BaseOpc, Elements);
   return Info ? Info->Opcode : -1;
 }
 
