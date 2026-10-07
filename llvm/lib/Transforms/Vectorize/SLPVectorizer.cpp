@@ -398,12 +398,6 @@ class slpvectorizer::BoUpSLP {
   class ShuffleInstructionBuilder;
 
 public:
-  struct CandidateState;
-
-  /// Access the graph and state for the current vectorization candidate.
-  CandidateState &getCandidate() { return Candidate; }
-  const CandidateState &getCandidate() const { return Candidate; }
-
   /// If we decide to generate strided load / store, this struct contains all
   /// the necessary info. It's fields are calculated by analyzeRtStrideCandidate
   /// and analyzeConstantStrideCandidate. Note that Stride can be given either
@@ -504,6 +498,57 @@ public:
 
   /// Construct a vectorizable tree that starts at \p Roots.
   void buildTree(ArrayRef<Value *> Roots);
+
+  /// Returns the number of entries in the current candidate.
+  unsigned getTreeSize() const { return Candidate.getTreeSize(); }
+
+  /// Returns the graph size before transformations.
+  unsigned getCanonicalGraphSize() const {
+    return Candidate.getCanonicalGraphSize();
+  }
+
+  /// Returns the number of entries added for the auxiliary splat subtrees.
+  unsigned getNumSplatSubtreeEntries() const {
+    return Candidate.getNumSplatSubtreeEntries();
+  }
+
+  bool isReductionTree() const { return Candidate.isReductionTree(); }
+  bool hasNonConstantGathers() const {
+    return Candidate.hasNonConstantGathers();
+  }
+  bool hasSameNode(const InstructionsState &S, ArrayRef<Value *> VL) const {
+    return Candidate.hasSameNode(S, VL);
+  }
+  bool isVectorized(const Value *V) const { return Candidate.isVectorized(V); }
+  bool isGathered(const Value *V) const { return Candidate.isGathered(V); }
+  bool isNotScheduled(const Value *V) const {
+    return Candidate.isNotScheduled(V);
+  }
+
+  /// Returns the lane of \p V in the candidate's root node.
+  unsigned findRootLaneForValue(Value *V) const {
+    return Candidate.findRootLaneForValue(V);
+  }
+
+  /// Returns whether the candidate encountered runtime-checkable blockers.
+  bool hasRuntimeCheckableBlockers() const {
+    return Candidate.hasRuntimeCheckableBlockers();
+  }
+
+  /// Returns whether a kept memory dependency cannot be checked at runtime.
+  bool hasNonCheckableMemBlocker() const {
+    return Candidate.hasNonCheckableMemBlocker();
+  }
+
+  /// Returns whether the candidate has collected runtime alias checks.
+  bool hasRuntimeAliasChecks() const {
+    return Candidate.hasRuntimeAliasChecks();
+  }
+
+  /// Resets the candidate's runtime alias check data.
+  void resetRuntimeAliasCheckState() {
+    Candidate.resetRuntimeAliasCheckState();
+  }
 
   /// Returns true if the current vectorization attempt may drop
   /// runtime-checkable may-alias dependencies and guard the region with
@@ -963,7 +1008,7 @@ public:
 
             auto AllUsersVectorized = [U1, U2, this](Value *V) {
               return llvm::all_of(V->users(), [U1, U2, this](Value *U) {
-                return U == U1 || U == U2 || R.getCandidate().isVectorized(U);
+                return U == U1 || U == U2 || R.Candidate.isVectorized(U);
               });
             };
             return AllUsersVectorized(V1) && AllUsersVectorized(V2);
@@ -983,10 +1028,10 @@ public:
       }
 
       auto CheckSameEntryOrFail = [&]() {
-        if (ArrayRef<TreeEntry *> TEs1 = R.getCandidate().getTreeEntries(V1);
+        if (ArrayRef<TreeEntry *> TEs1 = R.Candidate.getTreeEntries(V1);
             !TEs1.empty()) {
           SmallPtrSet<TreeEntry *, 4> Set(llvm::from_range, TEs1);
-          if (ArrayRef<TreeEntry *> TEs2 = R.getCandidate().getTreeEntries(V2);
+          if (ArrayRef<TreeEntry *> TEs2 = R.Candidate.getTreeEntries(V2);
               !TEs2.empty() &&
               any_of(TEs2, [&](TreeEntry *E) { return Set.contains(E); }))
             return LookAheadHeuristics::ScoreSplatLoads;
@@ -3333,7 +3378,6 @@ private:
   void verifyCandidateOwnership() const;
 #endif
 
-public:
   /// Owns the graph and the state discarded before building a new candidate.
   /// Keep this object in place while its entries exist: TreeEntry::Container
   /// refers to its graph.
@@ -3905,9 +3949,38 @@ public:
     }
   };
 
-private:
   // Destroy scheduler references before the candidate entries they refer to.
   CandidateState Candidate;
+
+  /// Candidate operations used by graph traits and horizontal reduction.
+  TreeEntry &getRootNode() { return Candidate.getRootNode(); }
+  const TreeEntry &getRootNode() const { return Candidate.getRootNode(); }
+  ArrayRef<std::unique_ptr<TreeEntry>> getTreeEntries() const {
+    return Candidate.getTreeEntries();
+  }
+  ArrayRef<ExternalUser> getExternalUses() const {
+    return Candidate.getExternalUses();
+  }
+  ArrayRef<Value *> getRootNodeScalars() const {
+    return Candidate.getRootNodeScalars();
+  }
+  std::optional<std::pair<Type *, bool>> getRootNodeTypeWithNoCast() const {
+    return Candidate.getRootNodeTypeWithNoCast();
+  }
+  bool isSignedMinBitwidthRootNode() const {
+    return Candidate.isSignedMinBitwidthRootNode();
+  }
+  bool isReducedBitcastRoot() const { return Candidate.isReducedBitcastRoot(); }
+  bool isReducedCmpBitcastRoot() const {
+    return Candidate.isReducedCmpBitcastRoot();
+  }
+  bool isAnyGathered(const SmallDenseSet<Value *> &Vals) const {
+    return Candidate.isAnyGathered(Vals);
+  }
+  void setNarrowedChainInsts(ArrayRef<Instruction *> Insts) {
+    Candidate.setNarrowedChainInsts(Insts);
+  }
+
   /// When true, scheduling drops may-alias memory dependencies between
   /// distinct, range-checkable base objects and records them as runtime alias
   /// checks instead.
@@ -4593,7 +4666,7 @@ private:
       if (ScheduleCopyableDataMap.empty())
         return false;
       SmallDenseMap<TreeEntry *, unsigned> PotentiallyReorderedEntriesCount;
-      ArrayRef<TreeEntry *> Entries = SLP.getCandidate().getTreeEntries(User);
+      ArrayRef<TreeEntry *> Entries = SLP.Candidate.getTreeEntries(User);
       if (Entries.empty())
         return false;
       unsigned CurNumOps = 0;
@@ -5322,7 +5395,7 @@ private:
         SmallVector<std::unique_ptr<ScheduleBundle>> PseudoBundles;
         SmallVector<ScheduleBundle *> Bundles;
         Instruction *In = SD->getInst();
-        ArrayRef<TreeEntry *> Entries = R.getCandidate().getTreeEntries(In);
+        ArrayRef<TreeEntry *> Entries = R.Candidate.getTreeEntries(In);
         if (!Entries.empty()) {
           for (TreeEntry *TE : make_filter_range(Entries, [&](TreeEntry *TE) {
                  return isa<ExtractValueInst, ExtractElementInst, CallBase>(
@@ -5374,7 +5447,7 @@ private:
           // against double counting by the per-operand use counter.
           if (isa<ScheduleCopyableData>(SD) ||
               (ScheduleCopyableDataMap.empty() &&
-               none_of(R.getCandidate().getTreeEntries(In),
+               none_of(R.Candidate.getTreeEntries(In),
                        [&](const TreeEntry *TE) {
                          return TE->isExpandedBinOp(In);
                        }))) {
@@ -5386,7 +5459,7 @@ private:
           SmallVector<ScheduleBundle *> AllBundles(SDBundles.begin(),
                                                    SDBundles.end());
           for (TreeEntry *TE : make_filter_range(
-                   R.getCandidate().getTreeEntries(In),
+                   R.Candidate.getTreeEntries(In),
                    [&](TreeEntry *TE) { return !TE->isCopyableElement(In); })) {
             if (!isa<ExtractValueInst, ExtractElementInst, CallBase>(In) &&
                 In->getNumOperands() != TE->getNumOperands() &&
@@ -5704,9 +5777,7 @@ template <> struct llvm::GraphTraits<BoUpSLP *> {
     NodeRef operator*() { return I->UserTE; }
   };
 
-  static NodeRef getEntryNode(BoUpSLP &R) {
-    return &R.getCandidate().getRootNode();
-  }
+  static NodeRef getEntryNode(BoUpSLP &R) { return &R.getRootNode(); }
 
   static ChildIteratorType child_begin(NodeRef N) {
     return {&N->UserTreeIndex, N->Container};
@@ -5733,14 +5804,14 @@ template <> struct llvm::GraphTraits<BoUpSLP *> {
   };
 
   static nodes_iterator nodes_begin(BoUpSLP *R) {
-    return nodes_iterator(R->getCandidate().getTreeEntries().begin());
+    return nodes_iterator(R->getTreeEntries().begin());
   }
 
   static nodes_iterator nodes_end(BoUpSLP *R) {
-    return nodes_iterator(R->getCandidate().getTreeEntries().end());
+    return nodes_iterator(R->getTreeEntries().end());
   }
 
-  static unsigned size(BoUpSLP *R) { return R->getCandidate().getTreeSize(); }
+  static unsigned size(BoUpSLP *R) { return R->getTreeSize(); }
 };
 
 template <>
@@ -5758,7 +5829,7 @@ struct llvm::DOTGraphTraits<BoUpSLP *> : public DefaultDOTGraphTraits {
     for (auto *V : Entry->Scalars) {
       OS << *V;
       if (llvm::any_of(
-              R->getCandidate().getExternalUses(),
+              R->getExternalUses(),
               [&](const BoUpSLP::ExternalUser &EU) { return EU.Scalar == V; }))
         OS << " <extract>";
       OS << "\n";
@@ -8665,7 +8736,7 @@ static void gatherPossiblyVectorizableLoads(
   SmallVector<SmallVector<std::pair<LoadInst *, int64_t>>> ClusteredLoads;
   SmallVector<DenseMap<int64_t, LoadInst *>> ClusteredDistToLoad;
   for (LoadInst *LI : make_isa_range<LoadInst>(VL)) {
-    if (R.isDeleted(LI) || R.getCandidate().isVectorized(LI) || !LI->isSimple())
+    if (R.isDeleted(LI) || R.isVectorized(LI) || !LI->isSimple())
       continue;
     bool IsFound = false;
     for (auto [Map, Data] : zip(ClusteredDistToLoad, ClusteredLoads)) {
@@ -10505,8 +10576,8 @@ static bool tryToFindDuplicates(SmallVectorImpl<Value *> &VL,
         return std::make_pair(true, UseOriginal);
       }
     }
-    bool CanSkipBVCost = (!BuildGatherOnly && !RequireScheduling) ||
-                         R.getCandidate().hasSameNode(S, VL);
+    bool CanSkipBVCost =
+        (!BuildGatherOnly && !RequireScheduling) || R.hasSameNode(S, VL);
     InstructionCost InsertsCost =
         CanSkipBVCost
             ? InstructionCost(TTI::TCC_Free)
@@ -10579,8 +10650,8 @@ static bool tryToFindDuplicates(SmallVectorImpl<Value *> &VL,
     }
     InstructionCost CostDiff = UniquesCost - InsertsCost;
     if (CostDiff < TTI::TCC_Expensive ||
-        (R.getCandidate().getTreeSize() == 0 &&
-         R.getCandidate().isReductionTree() && CostDiff == TTI::TCC_Expensive))
+        (R.getTreeSize() == 0 && R.isReductionTree() &&
+         CostDiff == TTI::TCC_Expensive))
       return std::make_pair(S && (!S.isAltShuffle() || !BuildGatherOnly),
                             false);
     // Otherwise, use original values, if values do not require scheduling and
@@ -10821,8 +10892,7 @@ class InstructionsCompatibilityAnalysis {
       if (AnyUndef && (I->isIntDivRem() || I->isFPDivRem() || isa<CallInst>(I)))
         return false;
       return I && isSupportedMainOp(I) &&
-             (!doesNotNeedToBeScheduled(I) ||
-              !R.getCandidate().isVectorized(I));
+             (!doesNotNeedToBeScheduled(I) || !R.isVectorized(I));
     };
     // Exclude operands instructions immediately to improve compile time, it
     // will be unable to schedule anyway.
@@ -11271,7 +11341,7 @@ class InstructionsCompatibilityAnalysis {
                             const InstructionsState &CopyableS) {
     // If all elements are vectorized already - keep as is.
     if (all_of(VL, [&](Value *V) {
-          return isa<PoisonValue>(V) || R.getCandidate().isVectorized(V);
+          return isa<PoisonValue>(V) || R.isVectorized(V);
         }))
       return false;
     Instruction *SMain = S.getMainOp();
@@ -11554,7 +11624,7 @@ public:
     if (isa<CastInst>(MainOp) &&
         (CopyableNum * 2 >= VL.size() || none_of(VL, [&](Value *V) {
            return !S.isCopyableElement(V) && !isa<PoisonValue>(V) &&
-                  !R.getCandidate().isVectorized(V);
+                  !R.isVectorized(V);
          })))
       return OrigS;
     // Absorb copyable single-use fmuls/fadds as fmuladd(a, b, -0.0) or
@@ -15757,7 +15827,7 @@ class BoUpSLP::ShuffleCostEstimator : public BaseShuffleAnalysis {
         if (DstSz > SrcSz)
           CastOpcode = IsSigned ? Instruction::SExt : Instruction::ZExt;
         TTI::CastContextHint CCH = TTI::CastContextHint::None;
-        if (ArrayRef<TreeEntry *> TEs = R.getCandidate().getTreeEntries(V);
+        if (ArrayRef<TreeEntry *> TEs = R.Candidate.getTreeEntries(V);
             TEs.size() == 1)
           CCH = R.getCastContextHint(*TEs.front());
         return TTI.getCastInstrCost(
@@ -15987,7 +16057,7 @@ public:
         auto *EE = cast<ExtractElementInst>(V);
         VecBase = EE->getVectorOperand();
         UniqueBases.insert(VecBase);
-        ArrayRef<TreeEntry *> VEs = R.getCandidate().getTreeEntries(V);
+        ArrayRef<TreeEntry *> VEs = R.Candidate.getTreeEntries(V);
         if (!CheckedExtracts.insert(V).second ||
             !R.areAllUsersVectorized(cast<Instruction>(V), &VectorizedVals) ||
             any_of(VEs,
@@ -15996,7 +16066,7 @@ public:
                             R.Candidate.TransformedToGatherNodes.contains(TE);
                    }) ||
             (E->UserTreeIndex && E->UserTreeIndex.EdgeIdx == UINT_MAX &&
-             !R.getCandidate().isVectorized(EE) &&
+             !R.Candidate.isVectorized(EE) &&
              count_if(E->Scalars, [&](Value *V) { return V == EE; }) !=
                  count_if(E->UserTreeIndex.UserTE->Scalars,
                           [&](Value *V) { return V == EE; })) ||
@@ -16263,8 +16333,7 @@ public:
     if (R.Candidate.UserIgnoreList &&
         (!E.UserTreeIndex || E.UserTreeIndex.UserTE->Idx == 0))
       for (Instruction *I : make_isa_range<Instruction>(E.Scalars))
-        if (CheckedExtracts.insert(I).second &&
-            !R.getCandidate().isVectorized(I) &&
+        if (CheckedExtracts.insert(I).second && !R.Candidate.isVectorized(I) &&
             R.areAllUsersVectorized(I, &VectorizedVals))
           Cost -= isa<CastInst>(I)
                       ? TTI.getCastInstrCost(I->getOpcode(), I->getType(),
@@ -23007,7 +23076,7 @@ public:
         continue;
       auto *EI = cast<ExtractElementInst>(VL[I]);
       VecBase = EI->getVectorOperand();
-      if (ArrayRef<TreeEntry *> TEs = R.getCandidate().getTreeEntries(VecBase);
+      if (ArrayRef<TreeEntry *> TEs = R.Candidate.getTreeEntries(VecBase);
           !TEs.empty())
         VecBase = TEs.front()->VectorizedValue;
       assert(VecBase && "Expected vectorized value.");
@@ -23017,13 +23086,13 @@ public:
       if (!EI->hasOneUse() ||
           R.Candidate.ExternalUsesAsOriginalScalar.contains(EI) ||
           (E->UserTreeIndex && E->UserTreeIndex.EdgeIdx == UINT_MAX &&
-           !R.getCandidate().isVectorized(EI) &&
+           !R.Candidate.isVectorized(EI) &&
            count_if(E->Scalars, [&](Value *V) { return V == EI; }) !=
                count_if(E->UserTreeIndex.UserTE->Scalars,
                         [&](Value *V) { return V == EI; })) ||
           (NumParts != 1 && count(VL, EI) > 1) ||
           any_of(EI->users(), [&](User *U) {
-            ArrayRef<TreeEntry *> UTEs = R.getCandidate().getTreeEntries(U);
+            ArrayRef<TreeEntry *> UTEs = R.Candidate.getTreeEntries(U);
             return UTEs.empty() || UTEs.size() > 1 ||
                    any_of(
                        UTEs,
@@ -23075,8 +23144,7 @@ public:
               return S;
             Value *VecOp =
                 cast<ExtractElementInst>(std::get<0>(D))->getVectorOperand();
-            if (ArrayRef<TreeEntry *> TEs =
-                    R.getCandidate().getTreeEntries(VecOp);
+            if (ArrayRef<TreeEntry *> TEs = R.Candidate.getTreeEntries(VecOp);
                 !TEs.empty())
               VecOp = TEs.front()->VectorizedValue;
             assert(VecOp && "Expected vectorized value.");
@@ -23088,7 +23156,7 @@ public:
              return std::get<1>(P) != PoisonMaskElem;
            })) {
         Value *VecOp = cast<ExtractElementInst>(V)->getVectorOperand();
-        if (ArrayRef<TreeEntry *> TEs = R.getCandidate().getTreeEntries(VecOp);
+        if (ArrayRef<TreeEntry *> TEs = R.Candidate.getTreeEntries(VecOp);
             !TEs.empty())
           VecOp = TEs.front()->VectorizedValue;
         assert(VecOp && "Expected vectorized value.");
@@ -23293,7 +23361,7 @@ public:
       R.GatherShuffleExtractSeq.insert(I);
       R.CSEBlocks.insert(I->getParent());
       // A vectorized source scalar is erased; extract it for the bitcast.
-      ArrayRef<TreeEntry *> TEs = R.getCandidate().getTreeEntries(Src);
+      ArrayRef<TreeEntry *> TEs = R.Candidate.getTreeEntries(Src);
       const auto *It = find_if_not(TEs, [&](const TreeEntry *TE) {
         return R.Candidate.TransformedToGatherNodes.contains(TE) ||
                R.Candidate.DeletedNodes.contains(TE);
@@ -27556,7 +27624,7 @@ BoUpSLP::BlockScheduling::tryScheduleBundle(ArrayRef<Value *> VL, BoUpSLP *SLP,
         if (isUsedOutsideBlock(V)) {
           for (Instruction *I :
                make_isa_range<Instruction>(cast<Instruction>(V)->operands()))
-            return SLP->getCandidate().isVectorized(I) && I->getNextNode() == V;
+            return SLP->Candidate.isVectorized(I) && I->getNextNode() == V;
         }
         return false;
       }))
@@ -27595,8 +27663,7 @@ BoUpSLP::BlockScheduling::tryScheduleBundle(ArrayRef<Value *> VL, BoUpSLP *SLP,
             if (EI.UserTE->hasCopyableElements() &&
                 EI.UserTE->isCopyableElement(V))
               return false;
-            ArrayRef<TreeEntry *> Entries =
-                SLP->getCandidate().getTreeEntries(V);
+            ArrayRef<TreeEntry *> Entries = SLP->Candidate.getTreeEntries(V);
             return any_of(Entries, [](const TreeEntry *TE) {
               return TE->doesNotNeedToSchedule() && TE->UserTreeIndex &&
                      TE->UserTreeIndex.UserTE->hasState() &&
@@ -28228,7 +28295,7 @@ void BoUpSLP::BlockScheduling::calculateDependencies(
           continue;
         unsigned ExtraDeps = 1;
         // Increment twice, since the operand was expanded in binop.
-        for (const TreeEntry *UserTE : SLP->getCandidate().getTreeEntries(U)) {
+        for (const TreeEntry *UserTE : SLP->Candidate.getTreeEntries(U)) {
           if (UserTE->isExpandedBinOp(U))
             ++ExtraDeps;
         }
@@ -28386,7 +28453,7 @@ void BoUpSLP::BlockScheduling::calculateDependencies(
               IgnoredMemDeps.insert(Key);
               Dropped = true;
             }
-          } else if (!SLP->getCandidate().hasNonCheckableMemBlocker()) {
+          } else if (!SLP->Candidate.hasNonCheckableMemBlocker()) {
             // A dependency on a non-simple access (call, a volatile/atomic, or
             // anything without a single load/store pointer) cannot be
             // range-checked, so it is a hard blocker a retry cannot drop. A
@@ -28395,10 +28462,10 @@ void BoUpSLP::BlockScheduling::calculateDependencies(
             // resolved statically and are not blockers.
             if (IsNonSimpleSrc || !getLoadStorePointerOperand(DepInst) ||
                 !isSimple(DepInst))
-              SLP->getCandidate().setHasNonCheckableMemBlocker(true);
-            else if (!SLP->getCandidate().hasRuntimeCheckableBlockers() &&
+              SLP->Candidate.setHasNonCheckableMemBlocker(true);
+            else if (!SLP->Candidate.hasRuntimeCheckableBlockers() &&
                      SLP->isRuntimeCheckableAliasPair(SrcInst, DepInst))
-              SLP->getCandidate().setHasRuntimeCheckableBlockers(true);
+              SLP->Candidate.setHasRuntimeCheckableBlockers(true);
           }
         }
 
@@ -29849,8 +29916,7 @@ SLPVectorizerPass::vectorizeStoreChain(ArrayRef<Value *> Chain, BoUpSLP &R,
   // region also kept a non-checkable blocker, dropping the checkable deps
   // cannot unblock it.
   if (Res.has_value() || !SLPEnableRuntimeAliasChecks ||
-      !R.getCandidate().hasRuntimeCheckableBlockers() ||
-      R.getCandidate().hasNonCheckableMemBlocker())
+      !R.hasRuntimeCheckableBlockers() || R.hasNonCheckableMemBlocker())
     return Res;
   // getTreeCost() unconditionally rejects a VF=2 tree whose vector
   // instruction count exceeds its scalar instruction count (the
@@ -29868,9 +29934,8 @@ SLPVectorizerPass::vectorizeStoreChain(ArrayRef<Value *> Chain, BoUpSLP &R,
   // gather again, so the second buildTree() would be pure overhead with no
   // vectorization benefit.
   Value *FirstStore = Chain.front();
-  if (!R.getCandidate().isNotScheduled(FirstStore) &&
-      !R.getCandidate().isNotScheduled(
-          cast<StoreInst>(FirstStore)->getValueOperand()))
+  if (!R.isNotScheduled(FirstStore) &&
+      !R.isNotScheduled(cast<StoreInst>(FirstStore)->getValueOperand()))
     return Res;
   BasicBlock *BB = cast<Instruction>(FirstStore)->getParent();
   // If an earlier optimistic attempt already failed for this block, do not
@@ -29902,7 +29967,7 @@ SLPVectorizerPass::vectorizeStoreChainImpl(ArrayRef<Value *> Chain, BoUpSLP &R,
                                            unsigned Idx, unsigned MinVF,
                                            unsigned &Size) {
   Size = 0;
-  R.getCandidate().resetRuntimeAliasCheckState();
+  R.resetRuntimeAliasCheckState();
   LLVM_DEBUG(dbgs() << "SLP: Analyzing a store chain of length " << Chain.size()
                     << "\n");
   const unsigned Sz = R.getVectorElementSize(Chain[0]);
@@ -29997,11 +30062,10 @@ SLPVectorizerPass::vectorizeStoreChainImpl(ArrayRef<Value *> Chain, BoUpSLP &R,
   R.buildTree(Chain);
   // Check if tree tiny and store itself or its value is not vectorized.
   if (R.isTreeTinyAndNotFullyVectorizable()) {
-    if (R.getCandidate().isGathered(Chain.front()) ||
-        R.getCandidate().isNotScheduled(
-            cast<StoreInst>(Chain.front())->getValueOperand()))
+    if (R.isGathered(Chain.front()) ||
+        R.isNotScheduled(cast<StoreInst>(Chain.front())->getValueOperand()))
       return std::nullopt;
-    Size = R.getCandidate().getCanonicalGraphSize();
+    Size = R.getCanonicalGraphSize();
     return false;
   }
   if (R.isProfitableToReorder()) {
@@ -30016,8 +30080,7 @@ SLPVectorizerPass::vectorizeStoreChainImpl(ArrayRef<Value *> Chain, BoUpSLP &R,
   InstructionCost TreeCost = R.calculateTreeCostAndTrimNonProfitable();
   R.buildExternalUses();
 
-  Size = R.getCandidate().getCanonicalGraphSize() -
-         R.getCandidate().getNumSplatSubtreeEntries();
+  Size = R.getCanonicalGraphSize() - R.getNumSplatSubtreeEntries();
   if (S && S.getOpcode() == Instruction::Load)
     Size = 2; // cut off masked gather small trees
   InstructionCost Cost = R.getTreeCost(TreeCost);
@@ -30029,8 +30092,7 @@ SLPVectorizerPass::vectorizeStoreChainImpl(ArrayRef<Value *> Chain, BoUpSLP &R,
   // The full check cost is charged against the vector-path benefit here; the
   // scalar-path overhead is bounded separately in canVersionForRuntimeChecks()
   // (a fraction of the scalar body cost).
-  if (R.isTryingRuntimeAliasChecks() &&
-      R.getCandidate().hasRuntimeAliasChecks()) {
+  if (R.isTryingRuntimeAliasChecks() && R.hasRuntimeAliasChecks()) {
     // getRuntimeChecksCost() only ever sums non-negative per-instruction
     // throughput costs (address adds, compares, and/or, the guard branch), so
     // adding it can only push Cost up, never down, and an already-invalid
@@ -30059,7 +30121,7 @@ SLPVectorizerPass::vectorizeStoreChainImpl(ArrayRef<Value *> Chain, BoUpSLP &R,
                                         cast<StoreInst>(Chain[0]))
                      << "Stores SLP vectorized with cost " << NV("Cost", Cost)
                      << " and with tree size "
-                     << NV("TreeSize", R.getCandidate().getTreeSize()));
+                     << NV("TreeSize", R.getTreeSize()));
 
     R.vectorizeTree();
     return true;
@@ -31117,12 +31179,11 @@ bool SLPVectorizerPass::tryToVectorizeList(ArrayRef<Value *> VL, BoUpSLP &R,
                         << " for VF=" << ActualVF << "\n");
       if (Cost < -SLPCostThreshold) {
         LLVM_DEBUG(dbgs() << "SLP: Vectorizing list at cost:" << Cost << ".\n");
-        R.getORE()->emit(
-            OptimizationRemark(SV_NAME, "VectorizedList",
-                               cast<Instruction>(Ops[0]))
-            << "SLP vectorized with cost " << ore::NV("Cost", Cost)
-            << " and with tree size "
-            << ore::NV("TreeSize", R.getCandidate().getTreeSize()));
+        R.getORE()->emit(OptimizationRemark(SV_NAME, "VectorizedList",
+                                            cast<Instruction>(Ops[0]))
+                         << "SLP vectorized with cost " << ore::NV("Cost", Cost)
+                         << " and with tree size "
+                         << ore::NV("TreeSize", R.getTreeSize()));
 
         R.vectorizeTree();
         // Move to the next bundle. The skipped dependent seeds are fed by the
@@ -32592,9 +32653,8 @@ public:
                      unsigned Pos, unsigned ReduxWidth, bool OptReusedScalars,
                      bool SameScaleFactor) const {
       if (!Phi || VectorizedTree || HasVectorizedSlices || Pos != 0 ||
-          (OptReusedScalars && SameScaleFactor) ||
-          R.getCandidate().isReducedBitcastRoot() ||
-          R.getCandidate().isReducedCmpBitcastRoot() ||
+          (OptReusedScalars && SameScaleFactor) || R.isReducedBitcastRoot() ||
+          R.isReducedCmpBitcastRoot() ||
           (NumCalls != 0 && !Root->getType()->isFloatingPointTy()))
         return false;
       if (!all_of(ArrayRef(Candidates).drop_front(ReduxWidth),
@@ -32609,9 +32669,8 @@ public:
       if (R.getReductionType()->getElementType() != Root->getType())
         return false;
       return IsSupportedHorRdxIdentityOp ||
-             all_of(Candidates.slice(Pos, ReduxWidth), [&](Value *RdxVal) {
-               return R.getCandidate().isVectorized(RdxVal);
-             });
+             all_of(Candidates.slice(Pos, ReduxWidth),
+                    [&](Value *RdxVal) { return R.isVectorized(RdxVal); });
     }
 
     /// \returns the cost delta of the vector accumulator form vs the
@@ -32629,11 +32688,10 @@ public:
       InstructionCost AccVecCost =
           HorVecCost - RdxOpCost + getAccumulationCost(FMF, VectorTy, ScalarTy);
       Loop *L = LI.getLoopFor(Phi->getParent());
-      InstructionCost Delta =
-          AccVecCost * R.getLoopNestScale(L) -
-          HorVecCost * R.getScaleToLoopIterations(
-                           R.getCandidate().getRootNode(), nullptr, Root) +
-          getExitCost(FMF, L);
+      InstructionCost Delta = AccVecCost * R.getLoopNestScale(L) -
+                              HorVecCost * R.getScaleToLoopIterations(
+                                               R.getRootNode(), nullptr, Root) +
+                              getExitCost(FMF, L);
       LLVM_DEBUG(dbgs() << "SLP: Loop accumulator cost delta " << Delta
                         << "\n");
       return Delta;
@@ -33316,8 +33374,8 @@ public:
       bool CheckForReusedReductionOpsLocal = false;
       auto AdjustReducedVals = [&](bool IgnoreVL = false) {
         bool IsAnyRedOpGathered =
-            !IgnoreVL && (RK == ReductionOrdering::Ordered ||
-                          V.getCandidate().isAnyGathered(IgnoreList));
+            !IgnoreVL &&
+            (RK == ReductionOrdering::Ordered || V.isAnyGathered(IgnoreList));
         if (!CheckForReusedReductionOpsLocal && PrevReduxWidth == ReduxWidth) {
           // Check if any of the reduction ops are gathered. If so, worth
           // trying again with less number of reduction ops.
@@ -33372,7 +33430,7 @@ public:
           V.buildTree(VL);
         } else {
           V.buildTree(VL, IgnoreList);
-          V.getCandidate().setNarrowedChainInsts(NarrowedChainInsts);
+          V.setNarrowedChainInsts(NarrowedChainInsts);
         }
         if (V.isTreeTinyAndNotFullyVectorizable(RK ==
                                                 ReductionOrdering::Unordered)) {
@@ -33459,9 +33517,8 @@ public:
 
         // Estimate cost.
         InstructionCost ReductionCost, HorVecCost = 0, RdxOpCost = 0;
-        if (RK == ReductionOrdering::Ordered ||
-            V.getCandidate().isReducedBitcastRoot() ||
-            V.getCandidate().isReducedCmpBitcastRoot())
+        if (RK == ReductionOrdering::Ordered || V.isReducedBitcastRoot() ||
+            V.isReducedCmpBitcastRoot())
           ReductionCost = 0;
         else
           ReductionCost = getReductionCost(
@@ -33513,8 +33570,7 @@ public:
                    VF = getFloorFullVectorNumberOfElements(
                        *TTI, VL.front()->getType(), VF - 1, SLPReVec)) {
                 if (has_single_bit(VF) &&
-                    V.getCandidate().getCanonicalGraphSize() !=
-                        V.getCandidate().getTreeSize())
+                    V.getCanonicalGraphSize() != V.getTreeSize())
                   continue;
                 for (unsigned Idx : seq<unsigned>(ReduxWidth - VF))
                   IgnoredCandidates.insert(std::make_pair(Offset + Idx, VF));
@@ -33531,7 +33587,7 @@ public:
                                     ReducedValsToOps.at(VL[0]).front())
                  << "Vectorized horizontal reduction with cost "
                  << ore::NV("Cost", Cost) << " and with tree size "
-                 << ore::NV("TreeSize", V.getCandidate().getTreeSize());
+                 << ore::NV("TreeSize", V.getTreeSize());
         });
 
         Builder.setFastMathFlags(RdxFMF);
@@ -33579,11 +33635,11 @@ public:
           // the root node, which may be reordered, split or have copyable
           // elements. Place each counter at the lane the matching candidate is
           // vectorized to, so the counter is applied to the correct lane.
-          ArrayRef<Value *> RootVL = V.getCandidate().getRootNodeScalars();
+          ArrayRef<Value *> RootVL = V.getRootNodeScalars();
           ArrayRef<Value *> CandSlice(Candidates.begin() + Pos, ReduxWidth);
           SmallVector<Value *> RootTrackedToOrig(RootVL.size());
           for (auto [Idx, Val] : enumerate(CandSlice))
-            RootTrackedToOrig[V.getCandidate().findRootLaneForValue(Val)] =
+            RootTrackedToOrig[V.findRootLaneForValue(Val)] =
                 TrackedToOrig[Pos + Idx];
           VectorizedRoot = emitReusedOps(VectorizedRoot, Builder, V,
                                          SameValuesCounter, RootTrackedToOrig);
@@ -33602,7 +33658,7 @@ public:
           if (VectorizedRoot->getType()->getScalarType() != NarrowTy) {
             VectorizedRoot = Builder.CreateIntCast(
                 VectorizedRoot, getWidenedType(NarrowTy, VF),
-                V.getCandidate().isSignedMinBitwidthRootNode());
+                V.isSignedMinBitwidthRootNode());
             ++NumVectorInstructions;
           }
           SmallVector<Constant *> ShiftConsts(VF, ConstantInt::get(WideTy, 0));
@@ -33613,7 +33669,7 @@ public:
           for (auto [Idx, Val] : enumerate(VL)) {
             const NarrowedLeafInfo &L =
                 NarrowedLeafShifts.at(TrackedToOrig[Pos + Idx]);
-            unsigned Lane = V.getCandidate().findRootLaneForValue(Val);
+            unsigned Lane = V.findRootLaneForValue(Val);
             ShiftConsts[Lane] = ConstantInt::get(WideTy, L.Shift);
             AnyShift |= L.Shift != 0;
             if (!L.Mask.isAllOnes()) {
@@ -33653,11 +33709,9 @@ public:
                  ? SameValuesCounter.front().second
                  : 1,
              RedScalarTy != ScalarTy->getScalarType()
-                 ? NarrowedLeafShifts.empty() &&
-                       V.getCandidate().isSignedMinBitwidthRootNode()
+                 ? NarrowedLeafShifts.empty() && V.isSignedMinBitwidthRootNode()
                  : true,
-             V.getCandidate().isReducedBitcastRoot() ||
-                 V.getCandidate().isReducedCmpBitcastRoot() ||
+             V.isReducedBitcastRoot() || V.isReducedCmpBitcastRoot() ||
                  !VectorizedRoot->getType()->isVectorTy(),
              GroupNegated});
         LoopAccVectorized = UseLoopAccForm;
@@ -33670,7 +33724,7 @@ public:
             continue;
           }
           ++VectorizedVals.try_emplace(OrigV).first->getSecond();
-          if (!V.getCandidate().isVectorized(RdxVal))
+          if (!V.isVectorized(RdxVal))
             RequiredExtract.insert(RdxVal);
         }
         Pos += ReduxWidth;
@@ -33720,9 +33774,8 @@ public:
         Builder, RdxFMF, LoopAccVectorized, VectorizedTree, LeftoverReductions,
         VectorValuesAndScales, RequiredExtract, ReducedValsToOps, ReductionOps,
         [this, TTI = TTI, &V](Value *Vec, IRBuilderBase &B, Type *Ty) {
-          return emitReduction(
-              Vec, B, TTI, V.getCastContextHint(V.getCandidate().getRootNode()),
-              Ty);
+          return emitReduction(Vec, B, TTI,
+                               V.getCastContextHint(V.getRootNode()), Ty);
         });
     if (AccV)
       VectorizedTree = AccV;
@@ -33747,7 +33800,7 @@ public:
                                          V.getCostKind());
       if (!Res)
         std::tie(Res, ResNegated) = emitReduction(
-            Builder, *TTI, V.getCastContextHint(V.getCandidate().getRootNode()),
+            Builder, *TTI, V.getCastContextHint(V.getRootNode()),
             BoolReduxWideTy ? BoolReduxWideTy : ReductionRoot->getType());
       Builder.setFastMathFlags(RdxFMF);
       // The reduction result of the all-negated parts is subtracted in the
@@ -34088,7 +34141,7 @@ public:
       LLVM_DEBUG(dbgs() << "SLP: Found cost = " << Cost
                         << " for ordered reduction\n");
       if (Cost > -SLPCostThreshold ||
-          (Cost == -SLPCostThreshold && V.getCandidate().getTreeSize() > 1)) {
+          (Cost == -SLPCostThreshold && V.getTreeSize() > 1)) {
         if (Cost.isValid())
           V.getORE()->emit([&]() {
             return OptimizationRemarkMissed(SV_NAME, "HorSLPNotBeneficial",
@@ -34109,7 +34162,7 @@ public:
                                   ReducedValsToOps.at(VL[0]).front())
                << "Vectorized ordered reduction with cost "
                << ore::NV("Cost", Cost) << " and with tree size "
-               << ore::NV("TreeSize", V.getCandidate().getTreeSize());
+               << ore::NV("TreeSize", V.getTreeSize());
       });
 
       Builder.setFastMathFlags(RdxFMF);
@@ -34199,11 +34252,11 @@ public:
              "Expected floating point types for ordered reduction");
       Builder.SetCurrentDebugLocation(
           cast<Instruction>(ReductionRoot)->getDebugLoc());
-      VectorizedTree = createSingleOp(
-          Builder, *TTI, V.getCastContextHint(V.getCandidate().getRootNode()),
-          SuccessRoot, /*Scale=*/1,
-          /*IsSigned=*/false, DestTy,
-          /*ReducedInTree=*/false, VectorizedTree);
+      VectorizedTree =
+          createSingleOp(Builder, *TTI, V.getCastContextHint(V.getRootNode()),
+                         SuccessRoot, /*Scale=*/1,
+                         /*IsSigned=*/false, DestTy,
+                         /*ReducedInTree=*/false, VectorizedTree);
 
       // Fold trailing scalars [SuccessStart+SuccessWidth, N).
       for (Value *RdxVal :
@@ -34312,7 +34365,7 @@ private:
     SmallVector<int> PermMask(VL.size(), PoisonMaskElem);
     for (auto [Idx, Val] : enumerate(VL))
       PermMask[NarrowedLeafShifts.at(TrackedToOrig[Pos + Idx]).Shift] =
-          R.getCandidate().findRootLaneForValue(Val);
+          R.findRootLaneForValue(Val);
     return PermMask;
   }
 
@@ -34336,7 +34389,7 @@ private:
     // Applies only when the whole reduction is a single vector part.
     if (NarrowedLeafShifts.size() != VL.size() || VF != VL.size() ||
         !VectorValuesAndScales.empty() ||
-        !R.getCandidate().getRootNode().ReuseShuffleIndices.empty())
+        !R.getRootNode().ReuseShuffleIndices.empty())
       return nullptr;
     if (Match == BoolBitmask::None)
       return nullptr;
@@ -34534,9 +34587,8 @@ private:
           BoolBitmask Match =
               VectorValuesAndScales.empty() &&
                       NarrowedLeafShifts.size() == ReduxWidth &&
-                      R.getCandidate().getRootNode().getVectorFactor() ==
-                          ReduxWidth &&
-                      R.getCandidate().getRootNode().ReuseShuffleIndices.empty()
+                      R.getRootNode().getVectorFactor() == ReduxWidth &&
+                      R.getRootNode().ReuseShuffleIndices.empty()
                   ? isBoolBitmaskRdx(RdxKind, NarrowedLeafShifts, DL)
                   : BoolBitmask::None;
           if (Match != BoolBitmask::None) {
@@ -34570,9 +34622,8 @@ private:
             }
           } else {
             Type *RedTy = VectorTy->getElementType();
-            auto [RType, IsSigned] =
-                R.getCandidate().getRootNodeTypeWithNoCast().value_or(
-                    std::make_pair(RedTy, true));
+            auto [RType, IsSigned] = R.getRootNodeTypeWithNoCast().value_or(
+                std::make_pair(RedTy, true));
             if (BoolReduxWideTy) {
               auto *WideVecTy = cast<FixedVectorType>(
                   getWidenedType(BoolReduxWideTy, ReduxWidth));
@@ -34592,10 +34643,9 @@ private:
                     (RdxKind == RecurKind::And || RdxKind == RecurKind::Or)) ||
                    (RdxKind == RecurKind::Add && !ScalarTy->isIntegerTy(1)))) {
                 VectorCost =
-                    getI1ReductionCost(
-                        RdxKind, *TTI, VectorTy, ScalarTy,
-                        R.getCastContextHint(R.getCandidate().getRootNode()),
-                        CostKind)
+                    getI1ReductionCost(RdxKind, *TTI, VectorTy, ScalarTy,
+                                       R.getCastContextHint(R.getRootNode()),
+                                       CostKind)
                         .first;
               } else {
                 VectorCost = TTI->getArithmeticReductionCost(
@@ -34611,9 +34661,8 @@ private:
           }
         } else {
           Type *RedTy = VectorTy->getElementType();
-          auto [RType, IsSigned] =
-              R.getCandidate().getRootNodeTypeWithNoCast().value_or(
-                  std::make_pair(RedTy, true));
+          auto [RType, IsSigned] = R.getRootNodeTypeWithNoCast().value_or(
+              std::make_pair(RedTy, true));
           VectorType *RVecTy =
               cast<VectorType>(getWidenedType(RType, ReduxWidth));
           InstructionCost FMACost = InstructionCost::getInvalid();
@@ -34709,9 +34758,8 @@ private:
           // Check if the previous reduction already exists and account it as
           // series of operations + single reduction.
           Type *RedTy = VectorTy->getElementType();
-          auto [RType, IsSigned] =
-              R.getCandidate().getRootNodeTypeWithNoCast().value_or(
-                  std::make_pair(RedTy, true));
+          auto [RType, IsSigned] = R.getRootNodeTypeWithNoCast().value_or(
+              std::make_pair(RedTy, true));
           VectorType *RVecTy =
               cast<VectorType>(getWidenedType(RType, ReduxWidth));
           IntrinsicCostAttributes ICA(Id, RVecTy, {RVecTy, RVecTy}, FMF);
@@ -35113,13 +35161,13 @@ private:
     assert(IsSupportedHorRdxIdentityOp &&
            "The optimization of matched scalar identity horizontal reductions "
            "must be supported.");
-    ArrayRef<Value *> VL = R.getCandidate().getRootNodeScalars();
+    ArrayRef<Value *> VL = R.getRootNodeScalars();
     auto *VTy = cast<FixedVectorType>(VectorizedValue->getType());
     if (VTy->getElementType() != VL.front()->getType()) {
       VectorizedValue = Builder.CreateIntCast(
           VectorizedValue,
           getWidenedType(VL.front()->getType(), VTy->getNumElements()),
-          R.getCandidate().isSignedMinBitwidthRootNode());
+          R.isSignedMinBitwidthRootNode());
     }
     switch (RdxKind) {
     case RecurKind::Add: {
@@ -35743,13 +35791,13 @@ static bool vectorizePackedAggregate(InsertValueInst *IVI, BoUpSLP &R,
   InstructionCost TreeCost = R.calculateTreeCostAndTrimNonProfitable(Fields);
   R.buildExternalUses();
   // The gathered operands of the fields are unpacked better for each pack.
-  if (R.getCandidate().hasNonConstantGathers())
+  if (R.hasNonConstantGathers())
     return false;
   // The packs take the lanes in the order of the fields.
   SmallVector<int> OrderMask(Fields.size());
   SmallBitVector Seen(Fields.size());
   for (auto [Idx, F] : enumerate(Fields)) {
-    unsigned Lane = R.getCandidate().findRootLaneForValue(F);
+    unsigned Lane = R.findRootLaneForValue(F);
     if (Lane >= Fields.size() || Seen.test(Lane))
       return false;
     Seen.set(Lane);
@@ -36950,7 +36998,7 @@ bool SLPVectorizerPass::vectorizeOnceUsedSeeds(BasicBlock *BB, BoUpSLP &R) {
   PoorThroughputOpCache PoorThroughputCache;
   for (Instruction &I : make_filter_range(*BB, [&](Instruction &I) {
          return !R.isDeleted(&I) && I.hasOneUse() && !R.isEphemeralValue(&I) &&
-                !R.getCandidate().isVectorized(&I) && !R.isAnalyzedScalar(&I) &&
+                !R.isVectorized(&I) && !R.isAnalyzedScalar(&I) &&
                 isValidElementType(getValueType(&I, SLPReVec), SLPReVec) &&
                 isOnceUsedSeed(&I) && !isNonVectorizableInst(&I, TLI) &&
                 !R.hasResolvedUser(&I);
