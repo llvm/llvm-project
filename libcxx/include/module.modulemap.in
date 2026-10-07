@@ -1516,7 +1516,6 @@ module std {
   }
 
   module iosfwd {
-    module fwd { header "__fwd/mbstate_t.h" }
     header "iosfwd"
     export *
   }
@@ -2598,3 +2597,9 @@ module std_wctype_h {
   export *
 }
 
+// This header provides std::mbstate_t as a standalone module so that other
+// C compatibility headers can import it without pulling in all of cwchar.
+module std_private_mbstate_t {
+  header "__fwd/mbstate_t.h"
+  export *
+}
