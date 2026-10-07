@@ -2221,10 +2221,10 @@ void TargetLoweringBase::insertSSPDeclarations(
 
         // FreeBSD has "__stack_chk_guard" defined externally on libc.so
         if (M.getDirectAccessExternalData() &&
-            !TM.getTargetTriple().isOSCygMing() &&
-            !(TM.getTargetTriple().isPPC64() &&
-              TM.getTargetTriple().isOSFreeBSD()) &&
-            (!TM.getTargetTriple().isOSDarwin() ||
+            !M.getTargetTriple().isOSCygMing() &&
+            !(M.getTargetTriple().isPPC64() &&
+              M.getTargetTriple().isOSFreeBSD()) &&
+            (!M.getTargetTriple().isOSDarwin() ||
              TM.getRelocationModel() == Reloc::Static))
           GV->setDSOLocal(true);
 
@@ -2285,7 +2285,8 @@ void TargetLoweringBase::setMinimumBitTestCmps(unsigned Val) {
   MinimumBitTestCmps = Val;
 }
 
-Align TargetLoweringBase::getPrefLoopAlignment(MachineLoop *ML) const {
+Align TargetLoweringBase::getPrefLoopAlignment(
+    MachineLoop *ML, const MachineBasicBlock *BlockToAlign) const {
   if (TM.Options.LoopAlignment)
     return Align(TM.Options.LoopAlignment);
   return PrefLoopAlignment;
@@ -2302,9 +2303,12 @@ unsigned TargetLoweringBase::getMaxPermittedBytesForAlignment(
 
 /// Get the reciprocal estimate attribute string for a function that will
 /// override the target defaults.
-static StringRef getRecipEstimateForFunc(MachineFunction &MF) {
-  const Function &F = MF.getFunction();
+static StringRef getRecipEstimateForFunc(const Function &F) {
   return F.getFnAttribute("reciprocal-estimates").getValueAsString();
+}
+
+static StringRef getRecipEstimateForFunc(MachineFunction &MF) {
+  return getRecipEstimateForFunc(MF.getFunction());
 }
 
 /// Construct a string for the given reciprocal operation of the given type.
@@ -2460,6 +2464,11 @@ static int getOpRefinementSteps(bool IsSqrt, EVT VT, StringRef Override) {
   }
 
   return TargetLoweringBase::ReciprocalEstimate::Unspecified;
+}
+
+int TargetLoweringBase::getRecipEstimateSqrtEnabled(EVT VT,
+                                                    const Function &F) const {
+  return getOpEnabled(true, VT, getRecipEstimateForFunc(F));
 }
 
 int TargetLoweringBase::getRecipEstimateSqrtEnabled(EVT VT,

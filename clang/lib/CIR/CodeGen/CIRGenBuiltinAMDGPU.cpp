@@ -14,6 +14,7 @@
 
 #include "mlir/IR/Value.h"
 #include "clang/Basic/TargetBuiltins.h"
+#include "llvm/IR/IntrinsicsAMDGPU.h"
 #include "llvm/Support/AMDGPUAddrSpace.h"
 #include "llvm/Support/ErrorHandling.h"
 
@@ -89,7 +90,7 @@ static mlir::Value emitLogbBuiltin(CIRGenFunction &cgf, const CallExpr *e,
 
   mlir::Value negativeOne =
       builder.getConstant(loc, cir::IntAttr::get(int32Ty, -1));
-  mlir::Value expMinus1 = builder.createAdd(loc, exp, negativeOne);
+  mlir::Value expMinus1 = builder.createNSWAdd(loc, exp, negativeOne);
 
   mlir::Value siToFp = cir::CastOp::create(
       builder, loc, srcTy, cir::CastKind::int_to_float, expMinus1);
@@ -100,7 +101,7 @@ static mlir::Value emitLogbBuiltin(CIRGenFunction &cgf, const CallExpr *e,
   mlir::Value inf = builder.getConstant(loc, cir::FPAttr::get(srcTy, infVal));
 
   mlir::Value fabsNegInf =
-      builder.createCompare(loc, cir::CmpOpKind::ne, fabs, inf);
+      builder.createCompare(loc, cir::CmpOpKind::one, fabs, inf);
 
   mlir::Value sel = builder.createSelect(loc, fabsNegInf, siToFp, fabs);
 
@@ -223,15 +224,10 @@ CIRGenFunction::emitAMDGPUBuiltinExpr(unsigned builtinId,
     bool isUpdateDpp = builtinId == AMDGPU::BI__builtin_amdgcn_update_dpp;
     llvm::StringRef intrinsicName =
         isMovDpp8 ? "amdgcn.mov.dpp8" : "amdgcn.update.dpp";
-
-    // Fixed parameter types of the target LLVM intrinsics, following the
-    // "old"/"data" operands which share the overloaded integer type.
-    llvm::SmallVector<mlir::Type, 4> fixedTailTypes;
-    mlir::Type ui32 = builder.getUInt32Ty();
-    if (isMovDpp8)
-      fixedTailTypes = {ui32};
-    else
-      fixedTailTypes = {ui32, ui32, ui32, builder.getUIntNTy(1)};
+    cir::FuncType intrinsicTy =
+        getIntrinsicType(isMovDpp8 ? llvm::Intrinsic::amdgcn_mov_dpp8
+                                   : llvm::Intrinsic::amdgcn_update_dpp,
+                         {intTy});
 
     auto coerceTo = [&](mlir::Value from, mlir::Type to) -> mlir::Value {
       if (from.getType() == to)
@@ -252,7 +248,6 @@ CIRGenFunction::emitAMDGPUBuiltinExpr(unsigned builtinId,
     // Number of builtin-level leading args that need zero-extend promotion when
     // the data type is narrower than 32 bits.
     unsigned numPromotedArgs = isUpdateDpp ? 2u : 1u;
-    unsigned numIntTyFinalPos = isMovDpp8 ? 1u : 2u;
     for (unsigned i = 0; i != expr->getNumArgs(); ++i) {
       mlir::Value v =
           emitScalarOrConstFoldImmArg(iceArguments, i, expr->getArg(i));
@@ -262,11 +257,7 @@ CIRGenFunction::emitAMDGPUBuiltinExpr(unsigned builtinId,
           v = builder.createBitcast(v, sameWidthUTy);
         v = builder.createIntCast(v, intTy);
       }
-      unsigned finalIdx = i + unsigned(isMovDpp);
-      mlir::Type finalTy = finalIdx < numIntTyFinalPos
-                               ? intTy
-                               : fixedTailTypes[finalIdx - numIntTyFinalPos];
-      args.push_back(coerceTo(v, finalTy));
+      args.push_back(coerceTo(v, intrinsicTy.getInput(i + unsigned(isMovDpp))));
     }
 
     mlir::Value result = builder.emitIntrinsicCallOp(loc, intrinsicName, intTy,
