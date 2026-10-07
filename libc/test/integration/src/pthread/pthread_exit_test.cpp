@@ -10,6 +10,7 @@
 #include "src/pthread/pthread_exit.h"
 #include "src/pthread/pthread_join.h"
 #include "test/IntegrationTest/test.h"
+#include "src/stdlib/__cxa_thread_atexit_impl.h"
 
 #include <pthread.h>
 
