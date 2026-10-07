@@ -52,5 +52,5 @@ define void @lds_async_dma_wg_fence_release_single32(ptr addrspace(1) inreg %g, 
   ret void
 }
 
-attributes #0 = { nounwind "amdgpu-flat-work-group-size"="32,32" "amdgpu-no-async" }
+attributes #0 = { nounwind "amdgpu-flat-work-group-size"="32,32" "amdgpu-no-lds-dma" }
 attributes #1 = { nounwind "amdgpu-flat-work-group-size"="32,32" }
