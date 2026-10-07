@@ -4931,10 +4931,6 @@ struct BitfieldOversizedValueTypes {
 // ITANIUM64-LE-NEXT:    [[TMP5:%.*]] = load i8, ptr [[TMP4]], align 2
 // ITANIUM64-LE-NEXT:    [[TMP6:%.*]] = and i8 [[TMP5]], -16
 // ITANIUM64-LE-NEXT:    store i8 [[TMP6]], ptr [[TMP4]], align 2
-// ITANIUM64-LE-NEXT:    [[TMP7:%.*]] = getelementptr i8, ptr [[TMP0]], i32 3
-// ITANIUM64-LE-NEXT:    [[TMP8:%.*]] = load i8, ptr [[TMP7]], align 1
-// ITANIUM64-LE-NEXT:    [[TMP9:%.*]] = and i8 [[TMP8]], 31
-// ITANIUM64-LE-NEXT:    store i8 [[TMP9]], ptr [[TMP7]], align 1
 // ITANIUM64-LE-NEXT:    ret void
 //
 // ARM-LE-LABEL: define dso_local void @testBitfieldOversizedValueTypes(
@@ -4951,10 +4947,6 @@ struct BitfieldOversizedValueTypes {
 // ARM-LE-NEXT:    [[TMP5:%.*]] = load i8, ptr [[TMP4]], align 2
 // ARM-LE-NEXT:    [[TMP6:%.*]] = and i8 [[TMP5]], -16
 // ARM-LE-NEXT:    store i8 [[TMP6]], ptr [[TMP4]], align 2
-// ARM-LE-NEXT:    [[TMP7:%.*]] = getelementptr i8, ptr [[TMP0]], i32 3
-// ARM-LE-NEXT:    [[TMP8:%.*]] = load i8, ptr [[TMP7]], align 1
-// ARM-LE-NEXT:    [[TMP9:%.*]] = and i8 [[TMP8]], 31
-// ARM-LE-NEXT:    store i8 [[TMP9]], ptr [[TMP7]], align 1
 // ARM-LE-NEXT:    ret void
 //
 // ARM-BE-LABEL: define dso_local void @testBitfieldOversizedValueTypes(
@@ -4995,9 +4987,8 @@ extern "C" void testBitfieldOversizedValueTypes(
 }
 
 // Within a single byte, padding follows the occupied bits: it is in the high
-// bits on little endian and in the low bits on big endian. On big endian the
-// _BitInt(5) value is stored in the low-order bits of the 6-bit field, so the
-// whole field is kept.
+// bits on little endian and in the low bits on big endian. The _BitInt(5)
+// field is kept up to the storage size of _BitInt(5), i.e. all 6 bits.
 struct BitfieldOversizedSubByte {
   _BitInt(5) precise : 6;
   bool flag : 6;
@@ -5011,7 +5002,7 @@ struct BitfieldOversizedSubByte {
 // ITANIUM64-LE-NEXT:    [[TMP0:%.*]] = load ptr, ptr [[S_ADDR]], align 8
 // ITANIUM64-LE-NEXT:    [[TMP1:%.*]] = getelementptr i8, ptr [[TMP0]], i32 0
 // ITANIUM64-LE-NEXT:    [[TMP2:%.*]] = load i8, ptr [[TMP1]], align 1
-// ITANIUM64-LE-NEXT:    [[TMP3:%.*]] = and i8 [[TMP2]], 31
+// ITANIUM64-LE-NEXT:    [[TMP3:%.*]] = and i8 [[TMP2]], 63
 // ITANIUM64-LE-NEXT:    store i8 [[TMP3]], ptr [[TMP1]], align 1
 // ITANIUM64-LE-NEXT:    [[TMP4:%.*]] = getelementptr i8, ptr [[TMP0]], i32 1
 // ITANIUM64-LE-NEXT:    [[TMP5:%.*]] = load i8, ptr [[TMP4]], align 1
@@ -5027,7 +5018,7 @@ struct BitfieldOversizedSubByte {
 // ARM-LE-NEXT:    [[TMP0:%.*]] = load ptr, ptr [[S_ADDR]], align 4
 // ARM-LE-NEXT:    [[TMP1:%.*]] = getelementptr i8, ptr [[TMP0]], i32 0
 // ARM-LE-NEXT:    [[TMP2:%.*]] = load i8, ptr [[TMP1]], align 1
-// ARM-LE-NEXT:    [[TMP3:%.*]] = and i8 [[TMP2]], 31
+// ARM-LE-NEXT:    [[TMP3:%.*]] = and i8 [[TMP2]], 63
 // ARM-LE-NEXT:    store i8 [[TMP3]], ptr [[TMP1]], align 1
 // ARM-LE-NEXT:    [[TMP4:%.*]] = getelementptr i8, ptr [[TMP0]], i32 1
 // ARM-LE-NEXT:    [[TMP5:%.*]] = load i8, ptr [[TMP4]], align 1
