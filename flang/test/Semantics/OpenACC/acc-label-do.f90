@@ -75,3 +75,14 @@ subroutine simple_label(c, np)
      c(n) = 0
 100 enddo
 end subroutine
+
+subroutine shared_end_do(a, n, m)
+  integer :: n, m, i, j
+  real :: a(n, m)
+
+  !$acc parallel loop collapse(2)
+  do 100 j = 1, m
+    do 100 i = 1, n
+      a(i, j) = 1.0
+100 end do
+end subroutine
