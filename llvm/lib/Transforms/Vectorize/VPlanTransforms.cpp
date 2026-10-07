@@ -6100,9 +6100,10 @@ static CallWideningDecision decideCallWidening(VPInstruction &VPI,
   return CallWideningDecision::KindTy::Scalarize;
 }
 
-void VPlanTransforms::makeCallWideningDecisions(VPlan &Plan, VFRange &Range,
+bool VPlanTransforms::makeCallWideningDecisions(VPlan &Plan, VFRange &Range,
                                                 VPRecipeBuilder &RecipeBuilder,
                                                 VPCostContext &CostCtx) {
+  bool Widened = false;
   for (VPBasicBlock *VPBB : VPBlockUtils::blocksAs<VPBasicBlock>(
            vp_depth_first_shallow(Plan.getVectorLoopRegion()->getEntry()))) {
     for (VPInstruction &VPI :
@@ -6129,6 +6130,7 @@ void VPlanTransforms::makeCallWideningDecisions(VPlan &Plan, VFRange &Range,
         Type *ResultTy = VPI.getScalarType();
         Replacement = new VPWidenIntrinsicRecipe(*CI, ID, Ops, ResultTy, VPI,
                                                  VPI, VPI.getDebugLoc());
+        Widened = true;
         break;
       }
       case CallWideningDecision::KindTy::VectorVariant: {
@@ -6141,6 +6143,7 @@ void VPlanTransforms::makeCallWideningDecisions(VPlan &Plan, VFRange &Range,
         Ops.push_back(VPI.getOperand(VPI.getNumOperandsWithoutMask() - 1));
         Replacement = new VPWidenCallRecipe(CI, Decision.Variant, Ops, VPI, VPI,
                                             VPI.getDebugLoc());
+        Widened = true;
         break;
       }
       case CallWideningDecision::KindTy::Scalarize:
@@ -6153,6 +6156,7 @@ void VPlanTransforms::makeCallWideningDecisions(VPlan &Plan, VFRange &Range,
       VPI.eraseFromParent();
     }
   }
+  return Widened;
 }
 
 void VPlanTransforms::narrowInductionTruncates(VPlan &Plan, VFRange &Range,
