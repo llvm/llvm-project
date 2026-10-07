@@ -11,11 +11,11 @@
 #include "MCTargetDesc/X86IntelInstPrinter.h"
 #include "MCTargetDesc/X86MCAsmInfo.h"
 #include "MCTargetDesc/X86MCExpr.h"
+#include "MCTargetDesc/X86MCOptions.h"
 #include "MCTargetDesc/X86MCTargetDesc.h"
 #include "MCTargetDesc/X86TargetStreamer.h"
 #include "TargetInfo/X86TargetInfo.h"
 #include "X86Operand.h"
-#include "X86RegisterInfo.h"
 #include "llvm-c/Visibility.h"
 #include "llvm/ADT/STLExtras.h"
 #include "llvm/ADT/SmallString.h"
@@ -38,7 +38,6 @@
 #include "llvm/MC/MCSubtargetInfo.h"
 #include "llvm/MC/MCSymbol.h"
 #include "llvm/MC/TargetRegistry.h"
-#include "llvm/Support/CommandLine.h"
 #include "llvm/Support/Compiler.h"
 #include "llvm/Support/SourceMgr.h"
 #include "llvm/Support/raw_ostream.h"
@@ -48,11 +47,6 @@
 #include <optional>
 
 using namespace llvm;
-
-static cl::opt<bool> LVIInlineAsmHardening(
-    "x86-experimental-lvi-inline-asm-hardening",
-    cl::desc("Harden inline assembly code that may be vulnerable to Load Value"
-             " Injection (LVI). This feature is experimental."), cl::Hidden);
 
 static bool checkScale(unsigned Scale, StringRef &ErrMsg) {
   if (Scale != 1 && Scale != 2 && Scale != 4 && Scale != 8) {
@@ -94,6 +88,7 @@ static const char OpPrecedence[] = {
 };
 
 class X86AsmParser : public MCTargetAsmParser {
+  const X86MCOptions &CLOpts;
   ParseInstructionInfo *InstInfo;
   bool Code16GCC;
   unsigned ForcedDataPrefix = 0;
@@ -1406,7 +1401,8 @@ public:
 
   X86AsmParser(const MCSubtargetInfo &sti, MCAsmParser &Parser,
                const MCInstrInfo &mii)
-      : MCTargetAsmParser(sti, mii), InstInfo(nullptr), Code16GCC(false) {
+      : MCTargetAsmParser(sti, mii), CLOpts(X86MCOptions::Global),
+        InstInfo(nullptr), Code16GCC(false) {
 
     Parser.addAliasForDirective(".word", ".2byte");
 
@@ -3269,7 +3265,11 @@ bool X86AsmParser::ParseMemOperand(MCRegister SegReg, const MCExpr *Disp,
     if (!isAtMemOperand()) {
       if (Parser.parseTokenLoc(Loc) || Parser.parseExpression(Disp, EndLoc))
         return true;
-      assert(!isa<X86MCExpr>(Disp) && "Expected non-register here.");
+      // A register here is a second segment override, or a register standing
+      // where the displacement belongs.
+      if (isa<X86MCExpr>(Disp))
+        return Error(Loc, "unexpected register in memory operand",
+                     SMRange(Loc, EndLoc));
     } else {
       // Disp is implicitly zero if we haven't parsed it yet.
       Disp = MCConstantExpr::create(0, Parser.getContext());
@@ -4332,13 +4332,13 @@ void X86AsmParser::applyLVILoadHardeningMitigation(MCInst &Inst,
 
 void X86AsmParser::emitInstruction(MCInst &Inst, OperandVector &Operands,
                                    MCStreamer &Out) {
-  if (LVIInlineAsmHardening &&
+  if (CLOpts.experimental_lvi_inline_asm_hardening &&
       getSTI().hasFeature(X86::FeatureLVIControlFlowIntegrity))
     applyLVICFIMitigation(Inst, Out);
 
   Out.emitInstruction(Inst, getSTI());
 
-  if (LVIInlineAsmHardening &&
+  if (CLOpts.experimental_lvi_inline_asm_hardening &&
       getSTI().hasFeature(X86::FeatureLVILoadHardening))
     applyLVILoadHardeningMitigation(Inst, Out);
 }

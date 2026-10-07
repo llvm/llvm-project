@@ -1320,43 +1320,41 @@ static std::optional<uint64_t> getMaxLinearizedIndex(ArrayRef<int64_t> shape,
   return maxLinearIndex;
 }
 
-static std::optional<uint64_t> getStorageBufferElementCount(Value basePtr) {
+static spirv::ArrayType getStorageBufferArrayType(Value basePtr) {
   auto pointerType = dyn_cast<spirv::PointerType>(basePtr.getType());
   if (!pointerType ||
       pointerType.getStorageClass() != spirv::StorageClass::StorageBuffer)
-    return std::nullopt;
+    return {};
 
   Type pointeeType = pointerType.getPointeeType();
   if (auto structType = dyn_cast<spirv::StructType>(pointeeType)) {
     if (structType.getNumElements() != 1)
-      return std::nullopt;
+      return {};
     pointeeType = structType.getElementType(0);
   }
-  auto arrayType = dyn_cast<spirv::ArrayType>(pointeeType);
-  if (!arrayType)
-    return std::nullopt;
-  return arrayType.getNumElements();
+  return dyn_cast<spirv::ArrayType>(pointeeType);
 }
 
 static bool shouldEmitInBoundsAccessChain(MemRefType baseType, Value basePtr,
                                           ArrayRef<int64_t> strides,
                                           int64_t offset,
                                           uint64_t accessElementCount) {
-  // Sub-16-bit integer memrefs may be stored using a wider SPIR-V array element
-  // than the source element. Keep a plain access chain so later bitwidth
-  // emulation can adjust the final index in storage-element units.
-  if (auto integerType = dyn_cast<IntegerType>(baseType.getElementType()))
-    if (integerType.getWidth() < 16)
-      return false;
-
   std::optional<uint64_t> maxSourceElementIndex =
       getMaxLinearizedIndex(baseType.getShape(), strides, offset);
-  std::optional<uint64_t> storageElementCount =
-      getStorageBufferElementCount(basePtr);
-  if (!maxSourceElementIndex || !storageElementCount)
+  spirv::ArrayType storageArrayType = getStorageBufferArrayType(basePtr);
+  if (!maxSourceElementIndex || !storageArrayType)
     return false;
 
-  if (accessElementCount == 0 || accessElementCount > *storageElementCount)
+  // Source indices and storage element counts use the same units only when
+  // each source element maps to one SPIR-V array element. An i16 or a narrower
+  // memref source may be stored using a wider SPIR-V array element than that
+  // of the source. Keep a plain access chain so later bitwidth emulation can
+  // adjust the final index in storage-element units.
+  if (baseType.getElementType() != storageArrayType.getElementType())
+    return false;
+
+  uint64_t storageElementCount = storageArrayType.getNumElements();
+  if (accessElementCount == 0 || accessElementCount > storageElementCount)
     return false;
 
   // `InBoundsAccessChain` requires the computed pointer to stay within the
@@ -1365,7 +1363,7 @@ static bool shouldEmitInBoundsAccessChain(MemRefType baseType, Value basePtr,
   // rejects widths that cannot fit in the fixed StorageBuffer object at all.
   // The static proof here is that the memref layout's linear index space maps
   // into that same object.
-  return *maxSourceElementIndex < *storageElementCount;
+  return *maxSourceElementIndex < storageElementCount;
 }
 
 } // namespace

@@ -10,7 +10,7 @@ define void @simple(ptr nocapture readonly %x, ptr nocapture readnone %y, ptr no
 ; CHECK-NEXT:    ldr r1, [sp, #8]
 ; CHECK-NEXT:    mov r12, r3
 ; CHECK-NEXT:    adds r3, r1, #3
-; CHECK-NEXT:    lsrs r3, r3, #2
+; CHECK-NEXT:    lsrs.w lr, r3, #2
 ; CHECK-NEXT:    beq .LBB0_3
 ; CHECK-NEXT:  @ %bb.1: @ %do.body.preheader
 ; CHECK-NEXT:    dlstp.32 lr, r1
@@ -73,14 +73,14 @@ define void @nested(ptr nocapture readonly %x, ptr nocapture readnone %y, ptr no
 ; CHECK-NEXT:  .LBB1_4: @ %for.body
 ; CHECK-NEXT:    @ =>This Loop Header: Depth=1
 ; CHECK-NEXT:    @ Child Loop BB1_6 Depth 2
-; CHECK-NEXT:    add.w r6, r12, #3
-; CHECK-NEXT:    lsrs r7, r6, #2
+; CHECK-NEXT:    add.w r7, r12, #3
+; CHECK-NEXT:    lsrs r5, r7, #2
 ; CHECK-NEXT:    beq .LBB1_2
 ; CHECK-NEXT:  @ %bb.5: @ %do.body.preheader
 ; CHECK-NEXT:    @ in Loop: Header=BB1_4 Depth=1
-; CHECK-NEXT:    bic r5, r6, #3
+; CHECK-NEXT:    bic r7, r7, #3
+; CHECK-NEXT:    add.w r8, r0, r7, lsl #2
 ; CHECK-NEXT:    mov r4, r3
-; CHECK-NEXT:    add.w r8, r0, r5, lsl #2
 ; CHECK-NEXT:    dlstp.32 lr, r12
 ; CHECK-NEXT:  .LBB1_6: @ %do.body
 ; CHECK-NEXT:    @ Parent Loop BB1_4 Depth=1
@@ -90,7 +90,7 @@ define void @nested(ptr nocapture readonly %x, ptr nocapture readnone %y, ptr no
 ; CHECK-NEXT:    letp lr, .LBB1_6
 ; CHECK-NEXT:  @ %bb.7: @ %if.end.loopexit
 ; CHECK-NEXT:    @ in Loop: Header=BB1_4 Depth=1
-; CHECK-NEXT:    sub.w r12, r12, r5
+; CHECK-NEXT:    sub.w r12, r12, r7
 ; CHECK-NEXT:    mov r0, r8
 ; CHECK-NEXT:    b .LBB1_3
 ; CHECK-NEXT:  .LBB1_8:

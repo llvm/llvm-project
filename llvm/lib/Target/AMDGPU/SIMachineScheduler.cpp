@@ -12,7 +12,6 @@
 //===----------------------------------------------------------------------===//
 
 #include "SIMachineScheduler.h"
-#include "MCTargetDesc/AMDGPUMCTargetDesc.h"
 #include "SIInstrInfo.h"
 #include "llvm/CodeGen/LiveIntervals.h"
 #include "llvm/CodeGen/MachineRegisterInfo.h"
@@ -181,7 +180,7 @@ void SIScheduleBlock::addUnit(SUnit *SU) {
 #ifndef NDEBUG
 void SIScheduleBlock::traceCandidate(const SISchedCandidate &Cand) {
 
-  dbgs() << "  SU(" << Cand.SU->NodeNum << ") " << getReasonStr(Cand.Reason);
+  dbgs() << "  " << *Cand.SU << " " << getReasonStr(Cand.Reason);
   dbgs() << '\n';
 }
 #endif
@@ -1904,7 +1903,7 @@ void SIScheduleDAGMI::schedule()
       IsLowLatencySU[i] = 1;
       bool OffsetIsScalable;
       if (SITII->getMemOperandWithOffset(*SU->getInstr(), BaseLatOp, OffLatReg,
-                                         OffsetIsScalable, TRI))
+                                         OffsetIsScalable))
         LowLatencyOffset[i] = OffLatReg;
     } else if (SITII->isHighLatencyDef(SU->getInstr()->getOpcode()))
       IsHighLatencySU[i] = 1;
@@ -1976,8 +1975,7 @@ void SIScheduleDAGMI::schedule()
 
     scheduleMI(SU, true);
 
-    LLVM_DEBUG(dbgs() << "Scheduling SU(" << SU->NodeNum << ") "
-                      << *SU->getInstr());
+    LLVM_DEBUG(dbgs() << "Scheduling " << *SU << " " << *SU->getInstr());
   }
 
   assert(CurrentTop == CurrentBottom && "Nonempty unscheduled zone.");

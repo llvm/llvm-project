@@ -1,4 +1,4 @@
-; RUN: llc -mtriple=m68k -global-isel -stop-after=irtranslator < %s | FileCheck %s
+; RUN: llc -mtriple=m68k -global-isel -stop-after=ir-translator < %s | FileCheck %s
 
 
 ; CHECK: name: noArgRetVoid

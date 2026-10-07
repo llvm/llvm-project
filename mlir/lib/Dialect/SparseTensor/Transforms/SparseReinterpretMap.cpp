@@ -19,6 +19,8 @@
 #include "mlir/IR/AffineExprVisitor.h"
 #include "mlir/IR/AffineMap.h"
 
+#include <type_traits>
+
 using namespace mlir;
 using namespace mlir::sparse_tensor;
 
@@ -613,6 +615,22 @@ struct TensorAllocDemapper : public OpRewritePattern<AllocOp> {
     auto stt = getSparseTensorType(op.getResult());
     if (stt.getEncoding().getDimToLvl().getNumSymbols() != 0)
       return failure();
+
+    if constexpr (std::is_same_v<AllocOp, bufferization::AllocTensorOp>) {
+      // `bufferization.alloc_tensor` does not carry any dynamic size
+      // operands when it has a `copy` operand -- the shape (and the
+      // contents) are inherited from `copy` instead. Simply demap the
+      // `copy` operand and forward it to a newly created (demapped)
+      // `alloc_tensor` op.
+      if (Value copy = op.getCopy()) {
+        Value demappedCopy = genDemap(rewriter, stt.getEncoding(), copy);
+        auto allocOp = AllocOp::create(rewriter, loc, stt.getDemappedType(),
+                                       ValueRange{}, demappedCopy);
+        Value t = genRemap(rewriter, stt.getEncoding(), allocOp.getResult());
+        rewriter.replaceOp(op, t);
+        return success();
+      }
+    }
 
     SmallVector<Value> maxDimCrds;
     maxDimCrds.reserve(stt.getDimRank());

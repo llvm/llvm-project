@@ -61,7 +61,6 @@
 #include <iterator>
 #include <memory>
 #include <string>
-#include <system_error>
 #include <type_traits>
 
 using namespace llvm;
@@ -83,7 +82,7 @@ static cl::list<std::string>
     ConfigFiles("instrumentor-read-config-files",
                 cl::desc("Read the instrumentor configuration from the "
                          "specified JSON files (comma separated)"),
-                cl::ZeroOrMore, cl::CommaSeparated);
+                cl::CommaSeparated);
 
 /// The user option to specify an input file to read the configuration file
 /// paths from.
@@ -433,7 +432,7 @@ bool InstrumentorImpl::instrumentModule() {
         IConf.getRTName(Ctor ? "ctor" : "dtor", ""), M);
 
     auto *EntryBB = BasicBlock::Create(IIRB.Ctx, "entry", YtorFn);
-    IIRB.IRB.SetInsertPoint(EntryBB, EntryBB->begin());
+    IIRB.IRB.SetInsertPoint(EntryBB->begin());
     ensureDbgLoc(IIRB.IRB);
     IIRB.IRB.CreateRetVoid();
 
@@ -730,8 +729,7 @@ Value *InstrumentationOpportunity::forceCast(Value &V, Type &Ty,
                                              InstrumentorIRBuilderTy &IIRB) {
   if (V.getType()->isVoidTy())
     return Ty.isVoidTy() ? &V : Constant::getNullValue(&Ty);
-  return tryToCast(IIRB.IRB, &V, &Ty,
-                   IIRB.IRB.GetInsertBlock()->getDataLayout());
+  return tryToCast(IIRB.IRB, &V, &Ty, IIRB.IRB.getDataLayout());
 }
 
 Value *InstrumentationOpportunity::replaceValue(Value &V, Value &NewV,
@@ -1172,22 +1170,7 @@ void AllocaIO::init(InstrumentationConfig &IConf, InstrumentorIRBuilderTy &IIRB,
 Value *AllocaIO::getSize(Value &V, Type &Ty, InstrumentationConfig &IO,
                          InstrumentorIRBuilderTy &IIRB) {
   auto &AI = cast<AllocaInst>(V);
-  const DataLayout &DL = AI.getDataLayout();
-  Value *SizeValue = nullptr;
-  TypeSize TypeSize = DL.getTypeAllocSize(AI.getAllocatedType());
-  if (TypeSize.isFixed()) {
-    SizeValue = getCI(&Ty, TypeSize.getFixedValue());
-  } else {
-    auto *NullPtr = ConstantPointerNull::get(AI.getType());
-    SizeValue = IIRB.IRB.CreatePtrToInt(
-        IIRB.IRB.CreateGEP(AI.getAllocatedType(), NullPtr,
-                           {IIRB.IRB.getInt32(1)}),
-        &Ty);
-  }
-  if (AI.isArrayAllocation())
-    SizeValue = IIRB.IRB.CreateMul(
-        SizeValue, IIRB.IRB.CreateZExtOrBitCast(AI.getArraySize(), &Ty));
-  return SizeValue;
+  return IIRB.IRB.CreateAllocationSize(&Ty, &AI);
 }
 
 Value *AllocaIO::setSize(Value &V, Value &NewV, InstrumentationConfig &IO,

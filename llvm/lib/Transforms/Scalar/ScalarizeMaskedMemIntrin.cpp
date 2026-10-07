@@ -229,12 +229,9 @@ static void scalarizeMaskedLoad(const DataLayout &DL, bool HasBranchDivergence,
 
   Type *EltTy = VecType->getElementType();
 
-  IRBuilder<> Builder(CI->getContext());
   Instruction *InsertPt = CI;
+  IRBuilder<> Builder(InsertPt);
   BasicBlock *IfBlock = CI->getParent();
-
-  Builder.SetInsertPoint(InsertPt);
-  Builder.SetCurrentDebugLocation(CI->getDebugLoc());
 
   // Short-cut if the mask is all-true.
   if (isa<Constant>(Mask) && cast<Constant>(Mask)->isAllOnesValue()) {
@@ -277,9 +274,13 @@ static void scalarizeMaskedLoad(const DataLayout &DL, bool HasBranchDivergence,
   if (isSplatValue(Mask, /*Index=*/0)) {
     Value *Predicate = Builder.CreateExtractElement(Mask, uint64_t(0ull),
                                                     Mask->getName() + ".first");
+    // We mark the branch weights as explicitly unknown given they would only
+    // be derivable from the mask which we do not have VP information for.
     Instruction *ThenTerm =
         SplitBlockAndInsertIfThen(Predicate, InsertPt, /*Unreachable=*/false,
-                                  /*BranchWeights=*/nullptr, DTU);
+                                  getExplicitlyUnknownBranchWeightsIfProfiled(
+                                      *CI->getFunction(), DEBUG_TYPE),
+                                  DTU);
 
     BasicBlock *CondBlock = ThenTerm->getParent();
     CondBlock->setName("cond.load");
@@ -290,7 +291,7 @@ static void scalarizeMaskedLoad(const DataLayout &DL, bool HasBranchDivergence,
                                   std::nullopt);
 
     BasicBlock *PostLoad = ThenTerm->getSuccessor(0);
-    Builder.SetInsertPoint(PostLoad, PostLoad->begin());
+    Builder.SetInsertPoint(PostLoad->begin());
     PHINode *Phi = Builder.CreatePHI(VecType, /*NumReservedValues=*/2);
     Phi->addIncoming(Load, CondBlock);
     Phi->addIncoming(Src0, IfBlock);
@@ -336,9 +337,13 @@ static void scalarizeMaskedLoad(const DataLayout &DL, bool HasBranchDivergence,
     //  %Elt = load i32* %EltAddr
     //  VResult = insertelement <16 x i32> VResult, i32 %Elt, i32 Idx
     //
+    // We mark the branch weights as explicitly unknown given they would only
+    // be derivable from the mask which we do not have VP information for.
     Instruction *ThenTerm =
         SplitBlockAndInsertIfThen(Predicate, InsertPt, /*Unreachable=*/false,
-                                  /*BranchWeights=*/nullptr, DTU);
+                                  getExplicitlyUnknownBranchWeightsIfProfiled(
+                                      *CI->getFunction(), DEBUG_TYPE),
+                                  DTU);
 
     BasicBlock *CondBlock = ThenTerm->getParent();
     CondBlock->setName("cond.load");
@@ -358,7 +363,7 @@ static void scalarizeMaskedLoad(const DataLayout &DL, bool HasBranchDivergence,
     IfBlock = NewIfBlock;
 
     // Create the phi to join the new and previous value.
-    Builder.SetInsertPoint(NewIfBlock, NewIfBlock->begin());
+    Builder.SetInsertPoint(NewIfBlock->begin());
     PHINode *Phi = Builder.CreatePHI(VecType, 2, "res.phi.else");
     Phi->addIncoming(NewVResult, CondBlock);
     Phi->addIncoming(VResult, PrevIfBlock);
@@ -409,10 +414,8 @@ static void scalarizeMaskedStore(const DataLayout &DL, bool HasBranchDivergence,
 
   Type *EltTy = VecType->getElementType();
 
-  IRBuilder<> Builder(CI->getContext());
   Instruction *InsertPt = CI;
-  Builder.SetInsertPoint(InsertPt);
-  Builder.SetCurrentDebugLocation(CI->getDebugLoc());
+  IRBuilder<> Builder(InsertPt);
 
   // Short-cut if the mask is all-true.
   if (isa<Constant>(Mask) && cast<Constant>(Mask)->isAllOnesValue()) {
@@ -453,9 +456,13 @@ static void scalarizeMaskedStore(const DataLayout &DL, bool HasBranchDivergence,
   if (isSplatValue(Mask, /*Index=*/0)) {
     Value *Predicate = Builder.CreateExtractElement(Mask, uint64_t(0ull),
                                                     Mask->getName() + ".first");
+    // We mark the branch weights as explicitly unknown given they would only
+    // be derivable from the mask which we do not have VP information for.
     Instruction *ThenTerm =
         SplitBlockAndInsertIfThen(Predicate, InsertPt, /*Unreachable=*/false,
-                                  /*BranchWeights=*/nullptr, DTU);
+                                  getExplicitlyUnknownBranchWeightsIfProfiled(
+                                      *CI->getFunction(), DEBUG_TYPE),
+                                  DTU);
     BasicBlock *CondBlock = ThenTerm->getParent();
     CondBlock->setName("cond.store");
     Builder.SetInsertPoint(CondBlock->getTerminator());
@@ -507,9 +514,13 @@ static void scalarizeMaskedStore(const DataLayout &DL, bool HasBranchDivergence,
     //  %EltAddr = getelementptr i32* %1, i32 0
     //  %store i32 %OneElt, i32* %EltAddr
     //
+    // We mark the branch weights as explicitly unknown given they would only
+    // be derivable from the mask which we do not have VP information for.
     Instruction *ThenTerm =
         SplitBlockAndInsertIfThen(Predicate, InsertPt, /*Unreachable=*/false,
-                                  /*BranchWeights=*/nullptr, DTU);
+                                  getExplicitlyUnknownBranchWeightsIfProfiled(
+                                      *CI->getFunction(), DEBUG_TYPE),
+                                  DTU);
 
     BasicBlock *CondBlock = ThenTerm->getParent();
     CondBlock->setName("cond.store");
@@ -527,7 +538,7 @@ static void scalarizeMaskedStore(const DataLayout &DL, bool HasBranchDivergence,
     BasicBlock *NewIfBlock = ThenTerm->getSuccessor(0);
     NewIfBlock->setName("else");
 
-    Builder.SetInsertPoint(NewIfBlock, NewIfBlock->begin());
+    Builder.SetInsertPoint(NewIfBlock->begin());
   }
   CI->eraseFromParent();
 
@@ -573,13 +584,10 @@ static void scalarizeMaskedGather(const DataLayout &DL,
   auto *VecType = cast<FixedVectorType>(CI->getType());
   Type *EltTy = VecType->getElementType();
 
-  IRBuilder<> Builder(CI->getContext());
   Instruction *InsertPt = CI;
+  IRBuilder<> Builder(InsertPt);
   BasicBlock *IfBlock = CI->getParent();
-  Builder.SetInsertPoint(InsertPt);
   Align AlignVal = CI->getParamAlign(0).valueOrOne();
-
-  Builder.SetCurrentDebugLocation(CI->getDebugLoc());
 
   // The result vector
   Value *VResult = Src0;
@@ -666,7 +674,7 @@ static void scalarizeMaskedGather(const DataLayout &DL,
     IfBlock = NewIfBlock;
 
     // Create the phi to join the new and previous value.
-    Builder.SetInsertPoint(NewIfBlock, NewIfBlock->begin());
+    Builder.SetInsertPoint(NewIfBlock->begin());
     PHINode *Phi = Builder.CreatePHI(VecType, 2, "res.phi.else");
     Phi->addIncoming(NewVResult, CondBlock);
     Phi->addIncoming(VResult, PrevIfBlock);
@@ -719,10 +727,8 @@ static void scalarizeMaskedScatter(const DataLayout &DL,
       isa<PointerType>(cast<VectorType>(Ptrs->getType())->getElementType()) &&
       "Vector of pointers is expected in masked scatter intrinsic");
 
-  IRBuilder<> Builder(CI->getContext());
   Instruction *InsertPt = CI;
-  Builder.SetInsertPoint(InsertPt);
-  Builder.SetCurrentDebugLocation(CI->getDebugLoc());
+  IRBuilder<> Builder(InsertPt);
 
   Align AlignVal = CI->getParamAlign(1).valueOrOne();
   unsigned VectorWidth = SrcFVTy->getNumElements();
@@ -801,7 +807,7 @@ static void scalarizeMaskedScatter(const DataLayout &DL,
     BasicBlock *NewIfBlock = ThenTerm->getSuccessor(0);
     NewIfBlock->setName("else");
 
-    Builder.SetInsertPoint(NewIfBlock, NewIfBlock->begin());
+    Builder.SetInsertPoint(NewIfBlock->begin());
   }
   CI->eraseFromParent();
 
@@ -820,12 +826,9 @@ static void scalarizeMaskedExpandLoad(const DataLayout &DL,
 
   Type *EltTy = VecType->getElementType();
 
-  IRBuilder<> Builder(CI->getContext());
   Instruction *InsertPt = CI;
+  IRBuilder<> Builder(InsertPt);
   BasicBlock *IfBlock = CI->getParent();
-
-  Builder.SetInsertPoint(InsertPt);
-  Builder.SetCurrentDebugLocation(CI->getDebugLoc());
 
   unsigned VectorWidth = VecType->getNumElements();
 
@@ -905,9 +908,13 @@ static void scalarizeMaskedExpandLoad(const DataLayout &DL,
     //  %Elt = load i32* %EltAddr
     //  VResult = insertelement <16 x i32> VResult, i32 %Elt, i32 Idx
     //
+    // We mark the branch weights as explicitly unknown given they would only
+    // be derivable from the mask which we do not have VP information for.
     Instruction *ThenTerm =
         SplitBlockAndInsertIfThen(Predicate, InsertPt, /*Unreachable=*/false,
-                                  /*BranchWeights=*/nullptr, DTU);
+                                  getExplicitlyUnknownBranchWeightsIfProfiled(
+                                      *CI->getFunction(), DEBUG_TYPE),
+                                  DTU);
 
     BasicBlock *CondBlock = ThenTerm->getParent();
     CondBlock->setName("cond.load");
@@ -930,7 +937,7 @@ static void scalarizeMaskedExpandLoad(const DataLayout &DL,
     IfBlock = NewIfBlock;
 
     // Create the phi to join the new and previous value.
-    Builder.SetInsertPoint(NewIfBlock, NewIfBlock->begin());
+    Builder.SetInsertPoint(NewIfBlock->begin());
     PHINode *ResultPhi = Builder.CreatePHI(VecType, 2, "res.phi.else");
     ResultPhi->addIncoming(NewVResult, CondBlock);
     ResultPhi->addIncoming(VResult, PrevIfBlock);
@@ -962,12 +969,9 @@ static void scalarizeMaskedCompressStore(const DataLayout &DL,
 
   auto *VecType = cast<FixedVectorType>(Src->getType());
 
-  IRBuilder<> Builder(CI->getContext());
   Instruction *InsertPt = CI;
+  IRBuilder<> Builder(InsertPt);
   BasicBlock *IfBlock = CI->getParent();
-
-  Builder.SetInsertPoint(InsertPt);
-  Builder.SetCurrentDebugLocation(CI->getDebugLoc());
 
   Type *EltTy = VecType->getElementType();
 
@@ -1031,9 +1035,13 @@ static void scalarizeMaskedCompressStore(const DataLayout &DL,
     //  %EltAddr = getelementptr i32* %1, i32 0
     //  %store i32 %OneElt, i32* %EltAddr
     //
+    // We mark the branch weights as explicitly unknown given they would only
+    // be derivable from the mask which we do not have VP information for.
     Instruction *ThenTerm =
         SplitBlockAndInsertIfThen(Predicate, InsertPt, /*Unreachable=*/false,
-                                  /*BranchWeights=*/nullptr, DTU);
+                                  getExplicitlyUnknownBranchWeightsIfProfiled(
+                                      *CI->getFunction(), DEBUG_TYPE),
+                                  DTU);
 
     BasicBlock *CondBlock = ThenTerm->getParent();
     CondBlock->setName("cond.store");
@@ -1056,7 +1064,7 @@ static void scalarizeMaskedCompressStore(const DataLayout &DL,
     BasicBlock *PrevIfBlock = IfBlock;
     IfBlock = NewIfBlock;
 
-    Builder.SetInsertPoint(NewIfBlock, NewIfBlock->begin());
+    Builder.SetInsertPoint(NewIfBlock->begin());
 
     // Add a PHI for the pointer if this isn't the last iteration.
     if ((Idx + 1) != VectorWidth) {
@@ -1084,11 +1092,8 @@ static void scalarizeMaskedVectorHistogram(const DataLayout &DL, CallInst *CI,
   auto *AddrType = cast<FixedVectorType>(Ptrs->getType());
   Type *EltTy = Inc->getType();
 
-  IRBuilder<> Builder(CI->getContext());
   Instruction *InsertPt = CI;
-  Builder.SetInsertPoint(InsertPt);
-
-  Builder.SetCurrentDebugLocation(CI->getDebugLoc());
+  IRBuilder<> Builder(InsertPt);
 
   // FIXME: Do we need to add an alignment parameter to the intrinsic?
   unsigned VectorWidth = AddrType->getNumElements();
@@ -1140,9 +1145,13 @@ static void scalarizeMaskedVectorHistogram(const DataLayout &DL, CallInst *CI,
     Value *Predicate =
         Builder.CreateExtractElement(Mask, Idx, "Mask" + Twine(Idx));
 
+    // We mark the branch weights as explicitly unknown given they would only
+    // be derivable from the mask which we do not have VP information for.
     Instruction *ThenTerm =
         SplitBlockAndInsertIfThen(Predicate, InsertPt, /*Unreachable=*/false,
-                                  /*BranchWeights=*/nullptr, DTU);
+                                  getExplicitlyUnknownBranchWeightsIfProfiled(
+                                      *CI->getFunction(), DEBUG_TYPE),
+                                  DTU);
 
     BasicBlock *CondBlock = ThenTerm->getParent();
     CondBlock->setName("cond.histogram.update");
@@ -1162,7 +1171,7 @@ static void scalarizeMaskedVectorHistogram(const DataLayout &DL, CallInst *CI,
     // Create "else" block, fill it in the next iteration
     BasicBlock *NewIfBlock = ThenTerm->getSuccessor(0);
     NewIfBlock->setName("else");
-    Builder.SetInsertPoint(NewIfBlock, NewIfBlock->begin());
+    Builder.SetInsertPoint(NewIfBlock->begin());
   }
 
   CI->eraseFromParent();

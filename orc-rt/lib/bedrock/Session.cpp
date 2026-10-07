@@ -11,8 +11,8 @@
 //===----------------------------------------------------------------------===//
 
 #include "orc-rt/bedrock/Session.h"
-#include "orc-rt-c/Logging.h"
-#include "orc-rt-c/Session.h"
+#include "orc-rt-c/bedrock/Session.h"
+#include "orc-rt-c/support/Logging.h"
 
 namespace orc_rt {
 
@@ -253,6 +253,17 @@ void Session::addOnShutdown(OnShutdownFn OnShutdown) {
   OnShutdown();
 }
 
+#if ORC_RT_LOG_ENABLED(Error)
+void Session::logErrors(Session &S, Error Err) noexcept {
+  // Take the message outside ORC_RT_LOG: the os_log backend only evaluates
+  // log arguments if the log type is enabled at runtime, which would leave
+  // Err unchecked otherwise.
+  auto ErrMsg = toString(std::move(Err));
+  ORC_RT_LOG(Error, Session, "Session %p error: " ORC_RT_LOG_PUB_S, &S,
+             ErrMsg.c_str());
+}
+#endif // ORC_RT_LOG_ENABLED(Error)
+
 void Session::appendService(std::unique_ptr<Service> Srv) {
 
   bool ShuttingDown = false;
@@ -431,15 +442,20 @@ void Session::wrapperReturn(orc_rt_SessionRef S,
 
 // --- C API Implementation ---
 
-extern "C" void orc_rt_Session_callController(
-    orc_rt_SessionRef S, orc_rt_ControllerHandlerTag T,
-    orc_rt_WrapperFunctionBuffer ArgBytes,
-    orc_rt_Session_CallControllerReturn Return, void *ReturnCtx) {
+extern "C" {
+
+void orc_rt_Session_callController(orc_rt_SessionRef S,
+                                   orc_rt_ControllerHandlerTag T,
+                                   orc_rt_WrapperFunctionBuffer ArgBytes,
+                                   orc_rt_Session_CallControllerReturn Return,
+                                   void *ReturnCtx) {
   unwrap(S)->callController(
       [S, Return, ReturnCtx](WrapperFunctionBuffer ResultBytes) {
         Return(S, ResultBytes.release(), ReturnCtx);
       },
       T, WrapperFunctionBuffer(ArgBytes));
 }
+
+} // extern "C"
 
 } // namespace orc_rt

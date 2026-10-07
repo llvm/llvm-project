@@ -83,9 +83,8 @@ void ModuloScheduleExpander::expand() {
       Register Reg = Op.getReg();
       unsigned MaxDiff = 0;
       bool PhiIsSwapped = false;
-      for (MachineOperand &UseOp : MRI.use_operands(Reg)) {
-        MachineInstr *UseMI = UseOp.getParent();
-        int UseStage = Schedule.getStage(UseMI);
+      for (MachineInstr &UseMI : MRI.use_instructions(Reg)) {
+        int UseStage = Schedule.getStage(&UseMI);
         unsigned Diff = 0;
         if (UseStage != -1 && UseStage >= DefStage)
           Diff = UseStage - DefStage;
@@ -359,8 +358,8 @@ static void replaceRegUsesAfterLoop(Register FromReg, Register ToReg,
 /// specified loop.
 static bool hasUseAfterLoop(Register Reg, MachineBasicBlock *BB,
                             MachineRegisterInfo &MRI) {
-  for (const MachineOperand &MO : MRI.use_operands(Reg))
-    if (MO.getParent()->getParent() != BB)
+  for (const MachineInstr &UseMI : MRI.use_instructions(Reg))
+    if (UseMI.getParent() != BB)
       return true;
   return false;
 }
@@ -775,10 +774,10 @@ void ModuloScheduleExpander::removeDeadInstructions(MachineBasicBlock *KernelBB,
           continue;
         }
         unsigned realUses = 0;
-        for (const MachineOperand &U : MRI.use_operands(reg)) {
+        for (const MachineInstr &UseMI : MRI.use_instructions(reg)) {
           // Check if there are any uses that occur only in the original
           // loop.  If so, that's not a real use.
-          if (U.getParent()->getParent() != BB) {
+          if (UseMI.getParent() != BB) {
             realUses++;
             used = true;
             break;
@@ -934,11 +933,10 @@ void ModuloScheduleExpander::addBranches(MachineBasicBlock &PreheaderBB,
 /// Return true if we can compute the amount the instruction changes
 /// during each iteration. Set Delta to the amount of the change.
 bool ModuloScheduleExpander::computeDelta(MachineInstr &MI, unsigned &Delta) {
-  const TargetRegisterInfo *TRI = MF.getSubtarget().getRegisterInfo();
   const MachineOperand *BaseOp;
   int64_t Offset;
   bool OffsetIsScalable;
-  if (!TII->getMemOperandWithOffset(MI, BaseOp, Offset, OffsetIsScalable, TRI))
+  if (!TII->getMemOperandWithOffset(MI, BaseOp, Offset, OffsetIsScalable))
     return false;
 
   // FIXME: This algorithm assumes instructions have fixed-size offsets.
@@ -993,7 +991,7 @@ void ModuloScheduleExpander::updateMemOperands(MachineInstr &NewMI,
     }
     unsigned Delta;
     if (Num != UINT_MAX && computeDelta(OldMI, Delta)) {
-      int64_t AdjOffset = Delta * Num;
+      int64_t AdjOffset = static_cast<int64_t>(Delta) * Num;
       NewMMOs.push_back(
           MF.getMachineMemOperand(MMO, AdjOffset, MMO->getSize()));
     } else {

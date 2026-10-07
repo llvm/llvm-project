@@ -594,6 +594,16 @@ TEST_F(TargetDeclTest, ClassTemplate) {
                {"struct Test", Rel::TemplatePattern});
 
   Code = R"cpp(
+    // Deduced specialization of a template template parameter
+    template <template<typename> class X>
+    void foo() {
+      [[X]] a;
+    }
+  )cpp";
+  EXPECT_DECLS("DeducedTemplateSpecializationTypeLoc",
+               "template <typename> class X");
+
+  Code = R"cpp(
     // Deduction guide
     template <typename T>
     struct Test {
@@ -657,6 +667,51 @@ TEST_F(TargetDeclTest, Concept) {
   )cpp";
   EXPECT_DECLS("ConceptReference",
                {"template <typename T, typename U> concept Fooable = true"});
+}
+
+TEST_F(TargetDeclTest, PackIndexing) {
+  Flags.push_back("-std=c++2d");
+
+  Code = R"cpp(
+    // Deduced specialization of an indexed template template parameter pack
+    template <template <typename> class... X>
+    void foo() {
+      [[X]]...[0] a(1);
+    }
+  )cpp";
+  EXPECT_DECLS("DeducedTemplateSpecializationTypeLoc",
+               "template <typename> class ...X");
+
+  Code = R"cpp(
+    // Specialization of an indexed template template parameter pack
+    template <template <typename> class... X>
+    void foo() {
+      [[X]]...[0]<int> x;
+    }
+  )cpp";
+  EXPECT_DECLS("TemplateSpecializationTypeLoc",
+               "template <typename> class ...X");
+}
+
+TEST_F(TargetDeclTest, PackIndexedConcept) {
+  Flags.push_back("-std=c++2d");
+
+  // constrained-parameter
+  Code = R"cpp(
+    template <template <class> concept... CC>
+    struct S {
+      template <[[CC]]...[0] T>
+      void bar(T t);
+    };
+  )cpp";
+  EXPECT_DECLS("ConceptReference", {"template <class> concept ...CC"});
+
+  // constrained placeholder type
+  Code = R"cpp(
+    template <template <class> concept... CC>
+    void bar([[CC]]...[0] auto t);
+  )cpp";
+  EXPECT_DECLS("ConceptReference", {"template <class> concept ...CC"});
 }
 
 TEST_F(TargetDeclTest, Coroutine) {
@@ -820,6 +875,12 @@ TEST_F(TargetDeclTest, BuiltinTemplates) {
   Code = R"cpp(
     template <template <class...> class Templ, class... Types>
     using dedup_types = Templ<[[__builtin_dedup_pack]]<Types...>...>;
+  )cpp";
+  EXPECT_DECLS("TemplateSpecializationTypeLoc", );
+
+  Code = R"cpp(
+    template <template <class...> class Templ, class... Types>
+    using sort_types = Templ<[[__builtin_sort_pack]]<Types...>...>;
   )cpp";
   EXPECT_DECLS("TemplateSpecializationTypeLoc", );
 }

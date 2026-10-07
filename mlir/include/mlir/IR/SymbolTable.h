@@ -11,6 +11,7 @@
 
 #include "mlir/IR/Attributes.h"
 #include "mlir/IR/OpDefinition.h"
+#include "llvm/ADT/DenseSet.h"
 #include "llvm/ADT/SetVector.h"
 #include "llvm/ADT/StringMap.h"
 #include "llvm/Support/RWMutex.h"
@@ -118,6 +119,9 @@ public:
   /// Returns the name of the given symbol operation, aborting if no symbol is
   /// present.
   static StringAttr getSymbolName(Operation *symbol);
+  /// Compatibility alias for generated interface code that still refers to the
+  /// symbol name attribute by convention.
+  static StringRef getSymbolAttrName() { return "sym_name"; }
 
   /// Sets the name of the given symbol operation.
   static void setSymbolName(Operation *symbol, StringAttr name);
@@ -404,19 +408,24 @@ public:
   /// extend beyond that of this map.
   SymbolUserMap(SymbolTableCollection &symbolTable, Operation *symbolTableOp);
 
-  /// Return the users of the provided symbol operation.
+  /// Return the users of the provided symbol operation within this map's scope.
   ArrayRef<Operation *> getUsers(Operation *symbol) const {
     auto it = symbolToUsers.find(symbol);
     return it != symbolToUsers.end() ? it->second.getArrayRef()
                                      : ArrayRef<Operation *>();
   }
 
-  /// Return true if the given symbol has no uses.
+  /// Return true if all uses of the symbol within the IR are within this scope.
+  /// The symbol must belong to this map's scope.
+  bool areAllUsesVisible(Operation *symbol) const;
+
+  /// Return true if the given symbol has no uses within this map's scope.
   bool useEmpty(Operation *symbol) const {
     return !symbolToUsers.count(symbol);
   }
 
-  /// Replace all of the uses of the given symbol with `newSymbolName`.
+  /// Replace all uses of the symbol within this map's scope with
+  /// `newSymbolName`.
   void replaceAllUsesWith(Operation *symbol, StringAttr newSymbolName);
 
 private:
@@ -425,6 +434,9 @@ private:
 
   /// A map of symbol operations to symbol users.
   DenseMap<Operation *, SetVector<Operation *>> symbolToUsers;
+
+  /// Non-private symbols whose uses are all visible within this map's scope.
+  DenseSet<Operation *> symbolsWithAllUsesVisible;
 };
 
 //===----------------------------------------------------------------------===//
@@ -463,28 +475,29 @@ public:
 template <typename ConcreteType>
 class SymbolVisibility : public TraitBase<ConcreteType, SymbolVisibility> {
 public:
-  SymbolTable::Visibility getVisibility() {
+  ::mlir::SymbolTable::Visibility getVisibility() {
     auto concrete = cast<ConcreteType>(this->getOperation());
     StringAttr visibility = concrete.getSymVisibilityAttr();
     if (!visibility || visibility.getValue() == "public")
-      return SymbolTable::Visibility::Public;
+      return ::mlir::SymbolTable::Visibility::Public;
     if (visibility.getValue() == "private")
-      return SymbolTable::Visibility::Private;
+      return ::mlir::SymbolTable::Visibility::Private;
     assert(visibility.getValue() == "nested" && "invalid symbol visibility");
-    return SymbolTable::Visibility::Nested;
+    return ::mlir::SymbolTable::Visibility::Nested;
   }
 
-  void setVisibility(SymbolTable::Visibility visibility) {
+  void setVisibility(::mlir::SymbolTable::Visibility visibility) {
     auto concrete = cast<ConcreteType>(this->getOperation());
-    if (visibility == SymbolTable::Visibility::Public) {
+    if (visibility == ::mlir::SymbolTable::Visibility::Public) {
       concrete.setSymVisibilityAttr({});
       return;
     }
-    assert((visibility == SymbolTable::Visibility::Private ||
-            visibility == SymbolTable::Visibility::Nested) &&
+    assert((visibility == ::mlir::SymbolTable::Visibility::Private ||
+            visibility == ::mlir::SymbolTable::Visibility::Nested) &&
            "invalid symbol visibility");
-    StringRef value =
-        visibility == SymbolTable::Visibility::Private ? "private" : "nested";
+    StringRef value = visibility == ::mlir::SymbolTable::Visibility::Private
+                          ? "private"
+                          : "nested";
     concrete.setSymVisibilityAttr(
         StringAttr::get(this->getOperation()->getContext(), value));
   }

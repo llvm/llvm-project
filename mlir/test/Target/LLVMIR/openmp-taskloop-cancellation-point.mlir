@@ -42,7 +42,7 @@ llvm.func @_QPtest(%arg0: !llvm.ptr {fir.bindc_name = "arg", llvm.noalias, llvm.
 // CHECK:       entry:                                            ; preds = %[[VAL_2:.*]]
 // CHECK:         br label %[[VAL_3:.*]]
 // CHECK:       omp.private.init:                                 ; preds = %[[VAL_1]]
-// CHECK:         %[[VAL_4:.*]] = tail call ptr @malloc(i64 ptrtoint (ptr getelementptr ({ i32 }, ptr null, i32 1) to i64))
+// CHECK:         %[[VAL_4:.*]] = tail call ptr @malloc(i64 4)
 // CHECK:         %[[VAL_5:.*]] = getelementptr { i32 }, ptr %[[VAL_4]], i32 0, i32 0
 // CHECK:         call void @_init(ptr %[[VAL_6:.*]], ptr %[[VAL_5]])
 // CHECK:         br label %[[VAL_7:.*]]
@@ -180,7 +180,7 @@ llvm.func @_QPtest2(%arg0: !llvm.ptr {fir.bindc_name = "arg", llvm.noalias, llvm
 // CHECK:       omp.taskgroup.region:                             ; preds = %[[VAL_67]]
 // CHECK:         br label %[[VAL_71:.*]]
 // CHECK:       omp.private.init:                                 ; preds = %[[VAL_70]]
-// CHECK:         %[[VAL_72:.*]] = tail call ptr @malloc(i64 ptrtoint (ptr getelementptr ({ i32 }, ptr null, i32 1) to i64))
+// CHECK:         %[[VAL_72:.*]] = tail call ptr @malloc(i64 4)
 // CHECK:         %[[VAL_73:.*]] = getelementptr { i32 }, ptr %[[VAL_72]], i32 0, i32 0
 // CHECK:         call void @_init(ptr %[[VAL_74:.*]], ptr %[[VAL_73]])
 // CHECK:         br label %[[VAL_75:.*]]

@@ -67,6 +67,7 @@ public:
 
   bool runOnMachineFunction(MachineFunction &MF) override;
   bool matchLoadD16FromBuildVector(SDNode *N) const;
+  bool widenRegionLoad16(SDNode *N) const;
   void PreprocessISelDAG() override;
   void Select(SDNode *N) override;
   void PostprocessISelDAG() override;
@@ -90,7 +91,6 @@ private:
   }
 
   bool isVGPRImm(const SDNode *N) const;
-  bool isUniformLoad(const SDNode *N) const;
   bool isUniformBr(const SDNode *N) const;
 
   MachineSDNode *buildRegSequence16(SmallVectorImpl<SDValue> &Elts,
@@ -287,7 +287,6 @@ private:
 
   SDValue getMaterializedScalarImm32(int64_t Val, const SDLoc &DL) const;
 
-  void SelectADD_SUB_I64(SDNode *N);
   void SelectAddcSubb(SDNode *N);
   void SelectAddcSubbI64(SDNode *N);
   void SelectUADDO_USUBO(SDNode *N);

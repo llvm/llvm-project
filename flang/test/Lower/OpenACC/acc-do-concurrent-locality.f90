@@ -47,7 +47,7 @@ end subroutine
 ! CHECK: acc.loop {{.*}}reduction(%[[RED]] : !fir.ref<f32>)
 ! CHECK: } inclusiveUpperbound(array<i1: true>) independent
 
-! Combined kernels loop with reduce (auto)
+! Combined kernels loop with reduce (independent by default extension)
 ! CHECK-LABEL: func.func @_QPreduce_kernels_loop
 subroutine reduce_kernels_loop()
   real :: a(16,16), b(16,16), s
@@ -63,7 +63,7 @@ end subroutine
 ! CHECK: acc.kernels combined(loop)
 ! CHECK: %[[RED:.*]] = acc.reduction varPtr(%{{.*}} : !fir.ref<f32>) recipe(@reduction_add{{.*}}) name("s") -> !fir.ref<f32>
 ! CHECK: acc.loop combined(kernels) {{.*}}reduction(%[[RED]] : !fir.ref<f32>)
-! CHECK: } inclusiveUpperbound(array<i1: true, true>) auto_
+! CHECK: } inclusiveUpperbound(array<i1: true, true>) independent
 
 ! Combined parallel loop with reduce (independent)
 ! CHECK-LABEL: func.func @_QPreduce_parallel_loop

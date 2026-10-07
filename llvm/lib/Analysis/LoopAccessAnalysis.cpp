@@ -13,8 +13,10 @@
 
 #include "llvm/Analysis/LoopAccessAnalysis.h"
 #include "llvm/ADT/APInt.h"
+#include "llvm/ADT/BitVector.h"
 #include "llvm/ADT/DenseMap.h"
 #include "llvm/ADT/EquivalenceClasses.h"
+#include "llvm/ADT/MapVector.h"
 #include "llvm/ADT/PointerIntPair.h"
 #include "llvm/ADT/STLExtras.h"
 #include "llvm/ADT/SetVector.h"
@@ -93,12 +95,42 @@ static cl::opt<unsigned, true> RuntimeMemoryCheckThreshold(
     cl::location(VectorizerParams::RuntimeMemoryCheckThreshold), cl::init(8));
 unsigned VectorizerParams::RuntimeMemoryCheckThreshold;
 
+static cl::opt<unsigned, true> VectorizeMemoryCheckThreshold(
+    "vectorize-memory-check-threshold", cl::Hidden,
+    cl::desc("The maximum allowed number of runtime memory checks"),
+    cl::location(VectorizerParams::VectorizeMemoryCheckThreshold),
+    cl::init(128));
+unsigned VectorizerParams::VectorizeMemoryCheckThreshold;
+
 /// The maximum iterations used to merge memory checks
 static cl::opt<unsigned> MemoryCheckMergeThreshold(
     "memory-check-merge-threshold", cl::Hidden,
     cl::desc("Maximum number of comparisons done when trying to merge "
              "runtime memory checks. (default = 100)"),
     cl::init(100));
+
+enum class StencilMergePolicy { Off, Auto, Force };
+
+static cl::opt<StencilMergePolicy> StencilMerge(
+    "stencil-runtime-check-merge", cl::Hidden,
+    cl::desc("Control stencil-pattern merging of runtime memory checks"),
+    cl::init(StencilMergePolicy::Off),
+    cl::values(
+        clEnumValN(StencilMergePolicy::Off, "off",
+                   "Disable stencil merge (default)"),
+        clEnumValN(StencilMergePolicy::Auto, "auto",
+                   "Enable stencil merge when runtime check count exceeds "
+                   "-vectorize-memory-check-threshold"),
+        clEnumValN(StencilMergePolicy::Force, "force",
+                   "Always attempt stencil merge regardless of check "
+                   "count")));
+
+static cl::opt<unsigned> StencilMergeMaxGroups(
+    "stencil-merge-max-groups", cl::Hidden,
+    cl::desc(
+        "Skip stencil group merging when the number of runtime checking groups "
+        "exceeds this limit, to bound compile time (default =4096)."),
+    cl::init(4096));
 
 /// Maximum SIMD width.
 const unsigned VectorizerParams::MaxVectorWidth = 64;
@@ -153,23 +185,18 @@ bool VectorizerParams::isInterleaveForced() {
   return ::VectorizationInterleave.getNumOccurrences() > 0;
 }
 
-const SCEV *llvm::replaceSymbolicStrideSCEV(PredicatedScalarEvolution &PSE,
-                                            const DenseMap<Value *, const SCEV *> &PtrToStride,
-                                            Value *Ptr) {
+const SCEV *
+llvm::replaceSymbolicStrideSCEV(PredicatedScalarEvolution &PSE,
+                                const SymbolicStrideMap &PtrToStride,
+                                Value *Ptr) {
   const SCEV *OrigSCEV = PSE.getSCEV(Ptr);
 
   // If there is an entry in the map return the SCEV of the pointer with the
   // symbolic stride replaced by one.
-  const SCEV *StrideSCEV = PtrToStride.lookup(Ptr);
+  const SCEVUnknown *StrideSCEV = PtrToStride.lookup(Ptr);
   if (!StrideSCEV)
     // For a non-symbolic stride, just return the original expression.
     return OrigSCEV;
-
-  // Note: This assert is both overly strong and overly weak.  The actual
-  // invariant here is that StrideSCEV should be loop invariant.  The only
-  // such invariant strides we happen to speculate right now are unknowns
-  // and thus this is a reasonable proxy of the actual invariant.
-  assert(isa<SCEVUnknown>(StrideSCEV) && "shouldn't be in map");
 
   ScalarEvolution *SE = PSE.getSE();
   const SCEV *CT = SE->getOne(StrideSCEV->getType());
@@ -330,6 +357,80 @@ static bool evaluatePtrAddRecAtMaxBTCWillNotWrap(
   return SE.isKnownPredicate(CmpInst::ICMP_ULE, MaxOffset, DerefBytesSCEV);
 }
 
+/// Return true if \p S is known to be monotonically non-decreasing
+/// (in the unsigned sense, without unsigned wrap) across iterations of \p L.
+static bool isKnownNonDecreasingInLoop(const SCEV *S, const Loop *L,
+                                       ScalarEvolution &SE) {
+  if (SE.isLoopInvariant(S, L))
+    return true;
+
+  switch (S->getSCEVType()) {
+  case scUDivExpr: {
+    // Non-decreasing in the numerator when the divisor is loop-invariant.
+    const auto *UDiv = cast<SCEVUDivExpr>(S);
+    return SE.isLoopInvariant(UDiv->getRHS(), L) &&
+           isKnownNonDecreasingInLoop(UDiv->getLHS(), L, SE);
+  }
+  case scAddRecExpr: {
+    auto *AR = cast<SCEVAddRecExpr>(S);
+    assert(AR->getLoop() == L &&
+           "trying to check for AddRec in different loop");
+    return SE.getMonotonicPredicateType(AR, ICmpInst::ICMP_UGE) ==
+           ScalarEvolution::MonotonicPredicateType::MonotonicallyIncreasing;
+  }
+  case scAddExpr:
+  case scMulExpr: {
+    const auto *NAry = cast<SCEVNAryExpr>(S);
+    if (!NAry->hasNoUnsignedWrap())
+      return false;
+    // With NUW, the exact sum or product fits in the type, so it is
+    // non-decreasing if every operandis.
+    return all_of(NAry->operands(), [&](const SCEV *Op) {
+      return isKnownNonDecreasingInLoop(Op, L, SE);
+    });
+  }
+  default:
+    return false;
+  }
+}
+
+/// Try to bound a loop-variant pointer that is not an affine AddRec.
+///
+/// If the offset is provably monotonically non-decreasing the accessed range is
+/// bounded by the offset's value at the first iteration (via
+/// SplitIntoInitAndPostInc) and last iteration (via getSCEVAtScope). The
+/// returned range is half-open: \p EltSizeSCEV is added to the address of the
+/// last accessed element to form the end.
+///
+/// Returns {nullptr, nullptr} if no such bound can be formed.
+static std::pair<const SCEV *, const SCEV *>
+getNonAffineMonotonicBounds(const Loop *Lp, const SCEV *PtrExpr,
+                            const SCEV *EltSizeSCEV, ScalarEvolution *SE) {
+  const auto *PtrAdd = dyn_cast<SCEVAddExpr>(PtrExpr);
+  if (!PtrAdd || !PtrAdd->hasNoUnsignedWrap())
+    return {nullptr, nullptr};
+
+  const SCEV *Base = *find_if(PtrAdd->operands(), [](const auto &Op) {
+    return Op->getType()->isPointerTy();
+  });
+  if (isa<SCEVCouldNotCompute>(Base) || !SE->isLoopInvariant(Base, Lp))
+    return {nullptr, nullptr};
+
+  const SCEV *Offset = SE->getMinusSCEV(PtrExpr, Base);
+  if (isa<SCEVCouldNotCompute>(Offset) ||
+      !isKnownNonDecreasingInLoop(Offset, Lp, *SE))
+    return {nullptr, nullptr};
+
+  const SCEV *OffStart = SE->SplitIntoInitAndPostInc(Lp, Offset).first;
+  const SCEV *OffEnd = SE->getSCEVAtScope(Offset, Lp->getParentLoop());
+  if (isa<SCEVCouldNotCompute>(OffStart) || isa<SCEVCouldNotCompute>(OffEnd) ||
+      !SE->isLoopInvariant(OffStart, Lp) || !SE->isLoopInvariant(OffEnd, Lp))
+    return {nullptr, nullptr};
+
+  return {SE->getAddExpr(Base, OffStart),
+          SE->getAddExpr(Base, OffEnd, EltSizeSCEV)};
+}
+
 std::pair<const SCEV *, const SCEV *> llvm::getStartAndEndForAccess(
     const Loop *Lp, const SCEV *PtrExpr, Type *AccessTy, const SCEV *BTC,
     const SCEV *MaxBTC, ScalarEvolution *SE,
@@ -363,61 +464,68 @@ std::pair<const SCEV *, const SCEV *> llvm::getStartAndEndForAccess(
     PtrBoundsPair = &Iter->second;
   }
 
+  // ScStart is the lowest accessed address; ScEnd is the highest one plus the
+  // size of the accessed element.
   const SCEV *ScStart;
   const SCEV *ScEnd;
 
   auto &DL = Lp->getHeader()->getDataLayout();
   if (SE->isLoopInvariant(PtrExpr, Lp)) {
-    ScStart = ScEnd = PtrExpr;
+    ScStart = PtrExpr;
+    ScEnd = SE->getAddExpr(PtrExpr, EltSizeSCEV);
   } else if (auto *AR = dyn_cast<SCEVAddRecExpr>(PtrExpr)) {
-    ScStart = AR->getStart();
-    if (!isa<SCEVCouldNotCompute>(BTC))
+    const SCEV *Step = AR->getStepRecurrence(*SE);
+    // The address of the last accessed element, if it can be computed
+    // precisely.
+    const SCEV *LastAddr = nullptr;
+    if (!isa<SCEVCouldNotCompute>(BTC)) {
       // Evaluating AR at an exact BTC is safe: LAA separately checks that
       // accesses cannot wrap in the loop. If evaluating AR at BTC wraps, then
       // the loop either triggers UB when executing a memory access with a
       // poison pointer or the wrapping/poisoned pointer is not used.
-      ScEnd = AR->evaluateAtIteration(BTC, *SE);
-    else {
-      // Evaluating AR at MaxBTC may wrap and create an expression that is less
-      // than the start of the AddRec due to wrapping (for example consider
-      // MaxBTC = -2). If that's the case, set ScEnd to -(EltSize + 1). ScEnd
-      // will get incremented by EltSize before returning, so this effectively
-      // sets ScEnd to the maximum unsigned value for the type. Note that LAA
-      // separately checks that accesses cannot not wrap, so unsigned max
-      // represents an upper bound.
-      if (evaluatePtrAddRecAtMaxBTCWillNotWrap(AR, MaxBTC, EltSizeSCEV, *SE, DL,
-                                               DT, AC, LoopGuards)) {
-        ScEnd = AR->evaluateAtIteration(MaxBTC, *SE);
-      } else {
-        ScEnd = SE->getAddExpr(
-            SE->getNegativeSCEV(EltSizeSCEV),
-            SE->getSCEV(ConstantExpr::getIntToPtr(
-                ConstantInt::getAllOnesValue(EltSizeSCEV->getType()),
-                AR->getType())));
-      }
+      LastAddr = AR->evaluateAtIteration(BTC, *SE);
+    } else if (evaluatePtrAddRecAtMaxBTCWillNotWrap(
+                   AR, MaxBTC, EltSizeSCEV, *SE, DL, DT, AC, LoopGuards)) {
+      LastAddr = AR->evaluateAtIteration(MaxBTC, *SE);
     }
-    const SCEV *Step = AR->getStepRecurrence(*SE);
-
-    // For expressions with negative step, the upper bound is ScStart and the
-    // lower bound is ScEnd.
-    if (const auto *CStep = dyn_cast<SCEVConstant>(Step)) {
-      if (CStep->getValue()->isNegative())
-        std::swap(ScStart, ScEnd);
+    const SCEV *Start = AR->getStart();
+    Type *PtrTy = AR->getType();
+    if (SE->isKnownNegative(Step)) {
+      ScStart =
+          LastAddr
+              ? LastAddr
+              : SE->getSCEV(ConstantExpr::getIntToPtr(
+                    Constant::getNullValue(DL.getIndexType(PtrTy)), PtrTy));
+      ScEnd = SE->getAddExpr(Start, EltSizeSCEV);
+    } else if (SE->isKnownNonNegative(Step)) {
+      ScStart = Start;
+      // The highest address for the type saturates; adding EltSize to it would
+      // wrap to the start of the address space.
+      if (LastAddr)
+        ScEnd = SE->getAddExpr(LastAddr, EltSizeSCEV);
+      else
+        ScEnd = SE->getSCEV(ConstantExpr::getIntToPtr(
+            Constant::getAllOnesValue(DL.getIndexType(PtrTy)), PtrTy));
     } else {
+      if (!LastAddr)
+        return {SE->getCouldNotCompute(), SE->getCouldNotCompute()};
       // Fallback case: the step is not constant, but we can still
       // get the upper and lower bounds of the interval by using min/max
       // expressions.
-      ScStart = SE->getUMinExpr(ScStart, ScEnd);
-      ScEnd = SE->getUMaxExpr(AR->getStart(), ScEnd);
+      ScStart = SE->getUMinExpr(Start, LastAddr);
+      ScEnd = SE->getAddExpr(SE->getUMaxExpr(Start, LastAddr), EltSizeSCEV);
     }
-  } else
-    return {SE->getCouldNotCompute(), SE->getCouldNotCompute()};
+  } else {
+    // The pointer is loop-variant but not an affine AddRec. Try to form a
+    // tight bound for a monotonic offset (see getNonAffineMonotonicBounds).
+    std::tie(ScStart, ScEnd) =
+        getNonAffineMonotonicBounds(Lp, PtrExpr, EltSizeSCEV, SE);
+    if (!ScStart)
+      return {SE->getCouldNotCompute(), SE->getCouldNotCompute()};
+  }
 
   assert(SE->isLoopInvariant(ScStart, Lp) && "ScStart needs to be invariant");
   assert(SE->isLoopInvariant(ScEnd, Lp) && "ScEnd needs to be invariant");
-
-  // Add the size of the pointed element to ScEnd.
-  ScEnd = SE->getAddExpr(ScEnd, EltSizeSCEV);
 
   std::pair<const SCEV *, const SCEV *> Res = {ScStart, ScEnd};
   if (PointerBounds)
@@ -427,21 +535,21 @@ std::pair<const SCEV *, const SCEV *> llvm::getStartAndEndForAccess(
 
 /// Calculate Start and End points of memory access using
 /// getStartAndEndForAccess.
-void RuntimePointerChecking::insert(Loop *Lp, Value *Ptr, const SCEV *PtrExpr,
+bool RuntimePointerChecking::insert(Loop *Lp, Value *Ptr, const SCEV *PtrExpr,
                                     Type *AccessTy, bool WritePtr,
                                     unsigned DepSetId, unsigned ASId,
                                     PredicatedScalarEvolution &PSE,
-                                    bool NeedsFreeze) {
+                                    bool NeedsFreeze, bool IsForked) {
   const SCEV *SymbolicMaxBTC = PSE.getSymbolicMaxBackedgeTakenCount();
   const SCEV *BTC = PSE.getBackedgeTakenCount();
   const auto &[ScStart, ScEnd] = getStartAndEndForAccess(
       Lp, PtrExpr, AccessTy, BTC, SymbolicMaxBTC, PSE.getSE(),
       &DC.getPointerBounds(), DC.getDT(), DC.getAC(), LoopGuards);
-  assert(!isa<SCEVCouldNotCompute>(ScStart) &&
-         !isa<SCEVCouldNotCompute>(ScEnd) &&
-         "must be able to compute both start and end expressions");
+  if (isa<SCEVCouldNotCompute>(ScStart) || isa<SCEVCouldNotCompute>(ScEnd))
+    return false;
   Pointers.emplace_back(Ptr, ScStart, ScEnd, WritePtr, DepSetId, ASId, PtrExpr,
-                        NeedsFreeze);
+                        NeedsFreeze, IsForked);
+  return true;
 }
 
 bool RuntimePointerChecking::tryToCreateDiffCheck(
@@ -566,6 +674,7 @@ void RuntimePointerChecking::generateChecks(
     MemoryDepChecker::DepCandidates &DepCands) {
   assert(Checks.empty() && "Checks is not empty");
   groupChecks(DepCands);
+  mergeStencilGroups();
   Checks = generateChecks();
 }
 
@@ -671,9 +780,10 @@ void RuntimePointerChecking::groupChecks(
 
   unsigned TotalComparisons = 0;
 
-  DenseMap<Value *, SmallVector<unsigned>> PositionMap;
+  DenseMap<MemoryDepChecker::MemAccessInfo, SmallVector<unsigned>> PositionMap;
   for (unsigned Index = 0; Index < Pointers.size(); ++Index)
-    PositionMap[Pointers[Index].PointerValue].push_back(Index);
+    PositionMap[{Pointers[Index].PointerValue, Pointers[Index].IsWritePtr}]
+        .push_back(Index);
 
   // We need to keep track of what pointers we've already seen so we
   // don't process them twice.
@@ -706,15 +816,10 @@ void RuntimePointerChecking::groupChecks(
     // the order in which unions and insertions are performed on the
     // equivalence class, the iteration order is deterministic.
     for (auto M : DepCands.members(Access)) {
-      auto PointerI = PositionMap.find(M.getPointer());
-      // If we can't find the pointer in PositionMap that means we can't
-      // generate a memcheck for it.
-      if (PointerI == PositionMap.end())
-        continue;
-      for (unsigned Pointer : PointerI->second) {
-        bool Merged = false;
-        // Mark this pointer as seen.
+      for (unsigned Pointer : PositionMap.lookup(M)) {
+        assert(!Seen.contains(Pointer) && "pointer already processed");
         Seen.insert(Pointer);
+        bool Merged = false;
 
         // Go through all the existing sets and see if we can find one
         // which can include this pointer.
@@ -745,6 +850,760 @@ void RuntimePointerChecking::groupChecks(
     // We've computed the grouped checks for this partition.
     // Save the results and continue with the next one.
     llvm::append_range(CheckingGroups, Groups);
+  }
+}
+
+/// Result of decomposing a SCEV expression into stencil offset form:
+///   Offset = Constant + sum(Coefficients[stride] * stride)
+/// where each stride is a loop-invariant SCEV expression.
+struct StencilDecomposition {
+  int64_t Constant = 0;
+  /// Map from loop-invariant stride SCEV to its integer coefficient.
+  SmallMapVector<const SCEV *, int64_t, 4> Coefficients;
+};
+
+/// Recursion cap for addScaledStencilTerm. Depth counts how deep a term
+/// sits inside the offset expression. For example, the offset
+///   8 + (64 * (s1 + s2 + (4 * s3)))
+/// is visited like this:
+///   depth 0: the whole add
+///   depth 1: its operands 8 and (64 * (s1 + s2 + (4 * s3)))
+///   depth 2: (s1 + s2 + (4 * s3)), the operand of the multiply
+///   depth 3: s1, s2 and (4 * s3), the operands of that add
+/// At depth 3 addScaledStencilTerm stops going deeper. s1 and s2 are plain
+/// strides anyway. (4 * s3) is not split into 4 times s3: it becomes one
+/// stride key as it is, with coefficient 64. The result is Constant = 8
+/// and coefficients {s1: 64, s2: 64, (4 * s3): 64}.
+/// Three levels cover the stencil offsets we care about: a top-level add,
+/// a constant times a sum inside it, and the strides in that sum. A deeper
+/// term is kept whole as one stride key. The merge does not care what is
+/// inside a key. It only needs a loop-invariant value with a
+/// positive-stride predicate, and a whole term has both. The only cost is
+/// precision, when another member uses a part of that term, here s3 alone,
+/// as a key of its own. isNeverAbove sees two unrelated keys, so a member
+/// that is in fact always lower or higher may stay a candidate.
+constexpr unsigned MaxStencilDecomposeDepth = 3;
+
+/// Add one term of a stencil offset to \p D. \p Mult is the factor in
+/// front of the term; the top-level call passes 1.
+/// Example: the offset 8 + (-64 * (s1 + s2)) + (-32 * s1), Mult = 1. It is
+/// an add, so each operand is visited in turn with the same Mult = 1:
+///   8                  a constant: D.Constant += 1 * 8
+///   (-64 * (s1 + s2))  a constant times X: visit X = (s1 + s2) with
+///                      Mult = 1 * -64. X is an add, so each operand is
+///                      visited with Mult = -64:
+///     s1                 a stride: D.Coefficients[s1] += -64
+///     s2                 a stride: D.Coefficients[s2] += -64
+///   (-32 * s1)         a constant times X: visit X = s1 with Mult = -32:
+///     s1                 a stride: D.Coefficients[s1] += -32
+/// Result: Constant = 8, Coefficients {s1: -96, s2: -64}. The -64 and the
+/// -32 for s1 come from two different terms and add up in the map.
+/// So, by the kind of term:
+///   constant K       D.Constant += Mult * K
+///   (K * X)          visit X with Mult * K
+///   (a + b + ...)    visit a, b, ... each with this same Mult
+///   anything else    a stride key: D.Coefficients[Term] += Mult
+/// The two recursive cases only fire while Depth is below
+/// MaxStencilDecomposeDepth. At the cap, (K * X) and (a + b + ...) are
+/// stride keys like anything else; that is not a bailout.
+/// Returns false when a constant does not fit in int64_t or an update
+/// overflows. The caller then drops the whole decomposition.
+static bool addScaledStencilTerm(const SCEV *Term, int64_t Mult, unsigned Depth,
+                                 StencilDecomposition &D) {
+  const SCEVConstant *C;
+  // A constant folds into the running constant at any depth.
+  if (match(Term, m_SCEVConstant(C))) {
+    std::optional<int64_t> V = C->getAPInt().trySExtValue();
+    int64_t Scaled;
+    return V && !MulOverflow(Mult, *V, Scaled) &&
+           !AddOverflow(D.Constant, Scaled, D.Constant);
+  }
+
+  if (Depth < MaxStencilDecomposeDepth) {
+    const SCEV *Inner;
+    if (match(Term, m_scev_Mul(m_SCEVConstant(C), m_SCEV(Inner)))) {
+      std::optional<int64_t> V = C->getAPInt().trySExtValue();
+      int64_t NewMult;
+      return V && !MulOverflow(Mult, *V, NewMult) &&
+             addScaledStencilTerm(Inner, NewMult, Depth + 1, D);
+    }
+    if (auto *Add = dyn_cast<SCEVAddExpr>(Term))
+      return all_of(Add->operands(), [&](const SCEV *Op) {
+        return addScaledStencilTerm(Op, Mult, Depth + 1, D);
+      });
+  }
+
+  // Anything else is one stride key.
+  int64_t &Coeff = D.Coefficients[Term];
+  return !AddOverflow(Coeff, Mult, Coeff);
+}
+
+/// Try to decompose \p Expr into a stencil offset function of loop-invariant
+/// strides: C + a1*s1 + a2*s2 + ...
+/// \p Expr is the difference of two access "Start" SCEVs (Start_member -
+/// Start_base). A "Start" is the low bound of a memory access range as computed
+/// by getStartAndEndForAccess: the address of the first byte the access can
+/// touch. The result describes where one member's range sits relative to the
+/// base member's range.
+/// Constant factors are distributed over sums. SCEV can keep a factored form:
+/// -64*s1 + -64*s2 is stored as (-64 * (s1 + s2)). Distributing the -64 gives
+/// the coefficients {s1: -64, s2: -64}, so every member of a group is keyed
+/// on the same base strides.
+/// Relies on SCEV's canonical form: AddExpr operands are flattened (N-ary),
+/// MulExpr has the constant operand first when present.
+/// Returns std::nullopt if a constant, multiplier, or coefficient update does
+/// not fit in int64_t.
+static std::optional<StencilDecomposition>
+decomposeStencilOffset(const SCEV *Expr, ScalarEvolution &SE, const Loop &L) {
+  // A "Start" is always loop-invariant (getStartAndEndForAccess asserts it), so
+  // the difference Expr passed in by the caller is loop-invariant too, and so
+  // is every term addScaledStencilTerm visits.
+  assert(SE.isLoopInvariant(Expr, &L) && "expected a loop-invariant offset");
+
+  StencilDecomposition D;
+  if (!addScaledStencilTerm(Expr, /*Mult=*/1, /*Depth=*/0, D))
+    return std::nullopt;
+  return D;
+}
+
+/// Find a common upper limit M for the positive strides in D. If every stride
+/// is between 1 and M, the decomposed offset fits in the signed index type.
+/// This lets isNeverAbove compare offsets as ordinary signed integers.
+///
+/// Subtract abs(Constant) from SignedMax, then divide the remaining budget by
+/// the sum of absolute coefficients:
+///   M = (SignedMax - abs(Constant)) / sum(abs(Coefficient)).
+/// For example, both 8 + 4*s and 8 - 4*s get M = (SignedMax - 8) / 4.
+///
+/// Return nullopt if abs(Constant) exceeds SignedMax or no positive stride
+/// fits. Otherwise, if all coefficients are zero, no stride limit is needed;
+/// return SignedMax.
+static std::optional<APInt>
+getStencilStrideUpperLimit(const StencilDecomposition &D, unsigned BitWidth) {
+  uint64_t SignedMax = maxIntN(BitWidth);
+  uint64_t AbsConstant = AbsoluteValue(D.Constant);
+  if (AbsConstant > SignedMax)
+    return std::nullopt;
+  uint64_t Budget = SignedMax - AbsConstant;
+  uint64_t CoeffSum = 0;
+  for (const auto &[Stride, Coeff] : D.Coefficients) {
+    uint64_t AbsCoeff = AbsoluteValue(Coeff);
+    if (AbsCoeff > Budget - CoeffSum)
+      return std::nullopt;
+    CoeffSum += AbsCoeff;
+  }
+  return APInt(BitWidth, CoeffSum ? Budget / CoeffSum : SignedMax);
+}
+
+namespace {
+/// The runtime checks the merge needs on each stride.
+/// Example:
+///   s1: {NeedsPositive = true, Max = 1000} means the checks 1 <= s1 <= 1000
+///   s2: {Max = 50} means the check s2 <= 50
+/// The lower limit is always 1, so a flag is enough for it.
+/// Several members can each ask for an upper limit on the same stride, but only
+/// the smallest one is kept.
+class StrideLimits {
+  struct Limit {
+    bool NeedsPositive = false;
+    std::optional<APInt> Max;
+  };
+  SmallMapVector<const SCEV *, Limit, 4> Limits;
+
+public:
+  void requireLowerLimit(const SCEV *Stride) {
+    Limits[Stride].NeedsPositive = true;
+  }
+
+  void requireUpperLimit(const SCEV *Stride, const APInt &Max) {
+    std::optional<APInt> &Current = Limits[Stride].Max;
+    if (!Current || Max.ult(*Current))
+      Current = Max;
+  }
+
+  /// Add every new or more strict check in \p Other to this set.
+  void addFrom(const StrideLimits &Other) {
+    for (const auto &[Stride, L] : Other.Limits) {
+      if (L.NeedsPositive)
+        requireLowerLimit(Stride);
+      if (L.Max)
+        requireUpperLimit(Stride, *L.Max);
+    }
+  }
+
+  /// Count the strides that have no check in \p Committed yet.
+  unsigned countNew(const StrideLimits &Committed) const {
+    return count_if(Limits, [&](const auto &Entry) {
+      return !Committed.Limits.contains(Entry.first);
+    });
+  }
+
+  /// Add the checks to \p PSE as SCEV predicates.
+  void addPredicates(PredicatedScalarEvolution &PSE) const {
+    ScalarEvolution &SE = *PSE.getSE();
+    for (const auto &[Stride, L] : Limits) {
+      if (L.NeedsPositive) {
+        const SCEV *Zero = SE.getZero(Stride->getType());
+        PSE.addPredicate(
+            *SE.getComparePredicate(ICmpInst::ICMP_SGT, Stride, Zero));
+        LLVM_DEBUG(dbgs() << "LAA:   Adding positive-stride predicate for "
+                          << *Stride << "\n");
+      }
+      if (L.Max) {
+        PSE.addPredicate(*SE.getComparePredicate(ICmpInst::ICMP_SLE, Stride,
+                                                 SE.getConstant(*L.Max)));
+        LLVM_DEBUG(dbgs() << "LAA:   Adding stride upper-limit predicate "
+                          << *Stride << " <= " << *L.Max << "\n");
+      }
+    }
+  }
+};
+} // namespace
+
+/// Add to \p Limits the checks each stride s of \p D needs:
+///   1 <= s     isNeverAbove assumes every stride is 1 or more.
+///   s <= Max   Max is from getStencilStrideUpperLimit.
+/// A check is skipped when SCEV already proves it.
+/// Returns false if getStencilStrideUpperLimit finds no Max, or if SCEV proves
+/// that a check always fails. Example: s = smin(x, -1) can never pass 1 <= s,
+/// so a merge would send every run to the scalar loop.
+static bool collectStrideLimits(const StencilDecomposition &D,
+                                unsigned BitWidth, ScalarEvolution &SE,
+                                StrideLimits &Limits) {
+  std::optional<APInt> UpperLimit = getStencilStrideUpperLimit(D, BitWidth);
+  if (!UpperLimit)
+    return false;
+
+  const SCEV *Max = SE.getConstant(*UpperLimit);
+  for (const auto &[Stride, Coeff] : D.Coefficients) {
+    if (SE.isKnownNonPositive(Stride) ||
+        SE.isKnownPredicate(ICmpInst::ICMP_SGT, Stride, Max))
+      return false;
+    if (!SE.isKnownPositive(Stride))
+      Limits.requireLowerLimit(Stride);
+    if (!SE.isKnownPredicate(ICmpInst::ICMP_SLE, Stride, Max))
+      Limits.requireUpperLimit(Stride, *UpperLimit);
+  }
+  return true;
+}
+
+/// Return true if offset A is never higher than offset B.
+/// A and B are these sums:
+///   A = A.Constant + CoefA_1 * stride_1 + CoefA_2 * stride_2 + ...
+///   B = B.Constant + CoefB_1 * stride_1 + CoefB_2 * stride_2 + ...
+/// A stride missing from a member's map has coefficient 0. Every stride
+/// is 1 or more: the caller proves or predicates each stride to be positive
+/// and that the whole expression does not overflow.
+/// Example:
+///   A: 0   - 80*s1
+///   B: -40 - 40*s1
+/// At s1 = 1 both are -80. For bigger s1, A goes down faster. So A is
+/// never above B.
+/// The rule checks two things:
+/// 1. CoefA_i <= CoefB_i for every stride. So when a stride grows, B - A
+///    grows too, or stays the same.
+/// 2. B - A >= 0 when every stride is 1. That is ACorner <= BCorner, with
+///    ACorner = A.Constant + the sum of all CoefA_i, same for BCorner.
+/// B - A starts at or above zero and never goes down, so B - A >= 0 for
+/// all stride values.
+/// Offsets are signed and addresses are unsigned, but both members read
+/// one object, and an object does not wrap around the address space, so
+/// the smaller offset is the smaller address.
+/// Returns false when ACorner or BCorner overflows int64_t. The caller
+/// then keeps the member, which is the safe side.
+static bool isNeverAbove(const StencilDecomposition &A,
+                         const StencilDecomposition &B) {
+  int64_t ACorner = A.Constant, BCorner = B.Constant;
+  for (const auto &[Stride, ACoeff] : A.Coefficients) {
+    if (ACoeff > B.Coefficients.lookup(Stride))
+      return false;
+    if (AddOverflow(ACorner, ACoeff, ACorner))
+      return false;
+  }
+  for (const auto &[Stride, BCoeff] : B.Coefficients) {
+    if (A.Coefficients.lookup(Stride) > BCoeff)
+      return false;
+    if (AddOverflow(BCorner, BCoeff, BCorner))
+      return false;
+  }
+  return ACorner <= BCorner;
+}
+
+/// Find the members that can define the merged bound on one side.
+/// Example for the minimum side (\p ForMin == true), two members:
+///   A: 0   - 80*s1
+///   B: -40 - 40*s1
+/// For every s1 >= 1, A sits at or below B, so B can never be the lowest
+/// member: A beats B. The members nobody beats are the candidates.
+/// The maximum side works the same way with the comparison flipped.
+/// When two members have equal offsets, only the first one is kept.
+/// In other words: "beats" is a partial order on the offsets, and the
+/// candidates are its minimal elements.
+/// Returns indices into \p Offsets.
+/// TODO: Worst case compares every pair of members: O(N^2). Fine for real
+/// stencils.
+static SmallVector<unsigned, 4>
+collectCandidateMembers(ArrayRef<StencilDecomposition> Offsets, bool ForMin) {
+  // A beats B when A always bounds at least as well as B: for the minimum
+  // side A is never above B, for the maximum side A is never below B.
+  auto Beats = [&](unsigned A, unsigned B) {
+    return ForMin ? isNeverAbove(Offsets[A], Offsets[B])
+                  : isNeverAbove(Offsets[B], Offsets[A]);
+  };
+  // Skipping a beaten member loses nothing: Beats is transitive, so
+  // whoever beat it also beats anyone it would have beaten.
+  BitVector Beaten(Offsets.size());
+  for (unsigned K = 0; K < Offsets.size(); ++K) {
+    if (Beaten.test(K))
+      continue;
+    // Walk J = K + 1 .. N to avoid checking the same pair twice, as
+    // (K, J) and again as (J, K). The order in a pair does not matter.
+    for (unsigned J = K + 1; J < Offsets.size(); ++J) {
+      if (Beaten.test(J))
+        continue;
+      // Checking K first settles ties: on equal offsets K survives.
+      if (Beats(K, J)) {
+        Beaten.set(J);
+      } else if (Beats(J, K)) {
+        Beaten.set(K);
+        break;
+      }
+    }
+  }
+  SmallVector<unsigned, 4> Candidates;
+  for (unsigned K = 0; K < Offsets.size(); ++K)
+    if (!Beaten.test(K))
+      Candidates.push_back(K);
+  return Candidates;
+}
+
+/// Local cost model: count the runtime checks required before and after
+/// replacing one DepSet's groups (\p GroupIndices) with the single merged
+/// group. Everything is counted in the same unit, one check, even though a
+/// stride predicate or an extra umin/umax operand is cheaper at runtime
+/// than a full group-pair check. The cheaper items only appear on the
+/// After side, and we merge only when After < Before, so the rounding
+/// always errs toward not merging.
+///
+/// Before = NumGroups * NumExternalChecks, where NumExternalChecks is the
+/// number of groups outside this DepSet that need a check against it. The
+/// product is exact: needsChecking() looks only at (DependencySetId,
+/// AliasSetId) and at whether a group writes, and all groups in this
+/// DepSet agree on those, so an external group is checked against all of
+/// them or against none.
+///
+/// After = NumExternalChecks + NewPredicates + NumBoundOperands:
+/// - the merged group keeps the same IDs, so it is checked against exactly
+///   the same external groups;
+/// - one check per stride needing a lower or upper limit, unless an earlier
+///   DepSet already paid for either limit;
+/// - a umin over k members costs k-1 compare+selects, same for the umax.
+///   \p NumBoundOperands is the sum of the two. A single candidate costs
+///   nothing: the bound is that member's own address.
+///
+/// Returns {ChecksBefore, ChecksAfter}.
+static std::pair<unsigned, unsigned> computeStencilMergeCost(
+    const RuntimePointerChecking &RtCheck, ArrayRef<unsigned> GroupIndices,
+    const StrideLimits &Local, const StrideLimits &Committed,
+    unsigned NumBoundOperands) {
+  unsigned NumGroups = GroupIndices.size();
+  unsigned NumExternalChecks =
+      count_if(RtCheck.CheckingGroups, [&](const RuntimeCheckingPtrGroup &G) {
+        return any_of(GroupIndices, [&](unsigned GI) {
+          return RtCheck.needsChecking(RtCheck.CheckingGroups[GI], G);
+        });
+      });
+
+  unsigned NewPredicates = Local.countNew(Committed);
+
+  LLVM_DEBUG(dbgs() << "LAA:   Cost model: NumGroups=" << NumGroups
+                    << ", NumExternalChecks=" << NumExternalChecks
+                    << ", predicates=" << NewPredicates
+                    << ", bound operands=" << NumBoundOperands << ", checks "
+                    << NumGroups * NumExternalChecks << "->"
+                    << NumExternalChecks + NewPredicates + NumBoundOperands
+                    << "\n");
+
+  return {NumGroups * NumExternalChecks,
+          NumExternalChecks + NewPredicates + NumBoundOperands};
+}
+
+/// Build the merged stencil group for one DepSet, after the cost model has
+/// decided the merge is profitable. Constructs the bounding group over
+/// \p AllMembers with bounds [\p MergedLow, \p MergedHigh]. Returns the new
+/// group.
+static RuntimeCheckingPtrGroup
+buildMergedStencilGroup(const RuntimePointerChecking &RtCheck,
+                        ArrayRef<unsigned> AllMembers, const SCEV *MergedLow,
+                        const SCEV *MergedHigh,
+                        ArrayRef<unsigned> GroupIndices) {
+  RuntimeCheckingPtrGroup CandidateGroup(AllMembers[0], RtCheck);
+  CandidateGroup.Low = MergedLow;
+  CandidateGroup.High = MergedHigh;
+  append_range(CandidateGroup.Members, drop_begin(AllMembers));
+  CandidateGroup.NeedsFreeze = any_of(GroupIndices, [&](unsigned GI) {
+    return RtCheck.CheckingGroups[GI].NeedsFreeze;
+  });
+  return CandidateGroup;
+}
+
+void RuntimePointerChecking::mergeStencilGroups() {
+  LLVM_DEBUG(dbgs() << "LAA: Attempting stencil group merging on "
+                    << CheckingGroups.size() << " groups\n");
+
+  if (CheckingGroups.size() < 2)
+    return;
+
+  // groupChecks merges two pointers only when their bounds differ by a
+  // compile-time constant, because only then it can tell which bound is
+  // lower or higher. A stencil kernel reads one object at several
+  // loop-invariant offsets, so its bounds differ by expressions like
+  // -40 - 40*s1, and every such pointer stays in its own group - often
+  // too many checks. Here we merge those groups anyway: what we cannot
+  // compare at compile time we compare at runtime, with a umin/umax over
+  // the few members that can be lowest or highest. The cost: the merged
+  // range also covers the gaps between the members, so the merged check
+  // can report a conflict where the per-group checks would not.
+  //
+  // We only merge ranges for reads that happen on every loop iteration.
+  // These reads must stay inside the array; otherwise, the original loop
+  // already has undefined behaviour. We choose the merged bounds from
+  // these ranges.
+  //
+  // We use the following algorithm to construct a merged stencil group:
+  //   - collect checking groups that share both DependencySetId and AliasSetId;
+  //   - reject groups with writes, predicated accesses, forked pointers,
+  //     different access ranges, or different recurrence steps;
+  //   - use one member as the base and decompose each other member's offset
+  //     from that base as C + sum(Coeff[Stride] * Stride), where Stride is
+  //     loop-invariant;
+  //   - keep the members that can hold the lowest or the highest address at
+  //     runtime (the candidate members), and build the merged bounds as a
+  //     umin over their Start values and a umax over their End values,
+  //     adding predicates for strides not already known positive and within
+  //     their limits;
+  //   - commit the merge only if the local cost model reduces the number of
+  //     checks after accounting for any new predicates.
+
+  // Stencil merging runs when either:
+  //   - the flag is set to 'force' (-stencil-runtime-check-merge=force), or
+  //   - the flag is set to 'auto' (-stencil-runtime-check-merge=auto) AND the
+  //     current check count exceeds the auto-trigger threshold, which defaults
+  //     to the vectorizer's own runtime-check cutoff
+  //     (-vectorize-memory-check-threshold). Above it the vectorizer would
+  //     otherwise reject the loop for having too many runtime checks. In that
+  //     case the merge can only improve things: at worst we decline to merge
+  //     and behave as before.
+  if (StencilMerge == StencilMergePolicy::Off) {
+    LLVM_DEBUG(dbgs() << "LAA: stencil merge disabled\n");
+    return;
+  }
+
+  const Loop &L = *DC.getInnermostLoop();
+
+  // visitPointers expands non-header pointer PHIs before runtime checks are
+  // created, so their alternatives are not marked IsForked. An unused
+  // alternative may wrap and make the merged bounds miss a real overlap.
+  for (BasicBlock *BB : L.blocks())
+    if (BB != L.getHeader())
+      for (PHINode &PN : BB->phis())
+        if (PN.getType()->isPointerTy())
+          return;
+
+  // For each checking group this pass decomposes each member's offset into
+  // stencil form, keeps the candidate members (the ones that can hold the
+  // lowest or highest address at runtime), and builds the merged bounds from
+  // their own Start and End values. That extra SCEV work adds up on a loop
+  // with very many groups, so bail out above a configurable limit as a
+  // safety net against pathological inputs.
+  if (CheckingGroups.size() > StencilMergeMaxGroups) {
+    LLVM_DEBUG(
+        dbgs() << "LAA: " << CheckingGroups.size()
+               << " groups exceeds stencil-merge-max-groups, skipping\n");
+    return;
+  }
+
+  if (StencilMerge == StencilMergePolicy::Auto) {
+    unsigned TotalChecks = 0;
+    for (unsigned I = 0; I < CheckingGroups.size(); ++I)
+      for (unsigned J = I + 1; J < CheckingGroups.size(); ++J)
+        if (needsChecking(CheckingGroups[I], CheckingGroups[J]))
+          ++TotalChecks;
+
+    // Above this many checks the vectorizer gives up on the loop, so that is
+    // where merging starts to matter.
+    if (TotalChecks <= VectorizerParams::VectorizeMemoryCheckThreshold) {
+      LLVM_DEBUG(dbgs() << "LAA: " << TotalChecks
+                        << " checks <= threshold, skipping stencil merge\n");
+      return;
+    }
+    LLVM_DEBUG(
+        dbgs() << "LAA: " << TotalChecks
+               << " checks > threshold, proceeding with stencil merge\n");
+  } else {
+    LLVM_DEBUG(dbgs() << "LAA: stencil merge forced via flag\n");
+  }
+
+  // Group CheckingGroups by (DependencySetId, AliasSetId) pair.
+  // DependencySetId alone is not unique: it resets per alias set, so
+  // pointers in different alias sets can share the same DependencySetId.
+  // Use MapVector for deterministic iteration order across platforms.
+  using DepAliasKey = std::pair<unsigned, unsigned>;
+  MapVector<DepAliasKey, SmallVector<unsigned, 4>> DepSetToGroups;
+  for (unsigned I = 0; I < CheckingGroups.size(); ++I) {
+    const auto &P = Pointers[CheckingGroups[I].Members[0]];
+    DepSetToGroups[{P.DependencySetId, P.AliasSetId}].push_back(I);
+  }
+
+  SmallDenseSet<unsigned, 4> MergedGroupIndices;
+  SmallVector<RuntimeCheckingPtrGroup, 2> NewMergedGroups;
+  // Stride checks from the accepted DepSets. A later DepSet can lower an
+  // upper limit, so the predicates are added only after the last DepSet.
+  StrideLimits CommittedStrideLimits;
+
+  for (auto &[DepAliasKey, GroupIndices] : DepSetToGroups) {
+    [[maybe_unused]] auto [DepId, ASId] = DepAliasKey;
+    if (GroupIndices.size() < 2)
+      continue;
+
+    // Collect all member pointers across these groups. Only merge read-only
+    // groups: stencil patterns read an array at multiple offsets and write to a
+    // different array (a different DepSet). Mixing reads and writes within a
+    // merged group complicates the cost model and doesn't match known stencil
+    // patterns, so stop and skip the whole DepSet as soon as we see a write.
+    SmallVector<unsigned, 8> AllMembers;
+    bool CanMerge = true;
+    for (unsigned GI : GroupIndices) {
+      ArrayRef<unsigned> Members = CheckingGroups[GI].Members;
+      if (any_of(Members,
+                 [&](unsigned Idx) { return Pointers[Idx].IsWritePtr; })) {
+        LLVM_DEBUG(dbgs() << "LAA: Skipping DepSet(" << DepId << "," << ASId
+                          << ") with write access\n");
+        CanMerge = false;
+        break;
+      }
+      // For a forked pointer, LAA considers both possible addresses, even if
+      // the loop only uses one of them. The unused address can be outside the
+      // array. Its bounds can underflow or overflow, so merging them can hide
+      // an overlap and allow unsafe vectorization.
+      if (any_of(Members,
+                 [&](unsigned Idx) { return Pointers[Idx].IsForked; })) {
+        LLVM_DEBUG(dbgs() << "LAA: Skipping DepSet(" << DepId << "," << ASId
+                          << ") with forked pointer\n");
+        CanMerge = false;
+        break;
+      }
+      append_range(AllMembers, Members);
+    }
+    if (!CanMerge)
+      continue;
+
+    // A predicated access does not happen in every iteration. In the skipped
+    // iterations its address can be outside the array. Its bounds can
+    // underflow or overflow, so merging them can hide an overlap and allow
+    // unsafe vectorization.
+    // Look at the block of the actual load/store, not of the pointer: a
+    // loop-invariant address is computed in the preheader, outside the loop.
+    if (any_of(AllMembers, [&](unsigned Idx) {
+          const PointerInfo &P = Pointers[Idx];
+          assert(!P.IsWritePtr && "only read members reach this point");
+          return any_of(
+              DC.getInstructionsForAccess(P.PointerValue, /*isWrite=*/false),
+              [&](Instruction *I) {
+                return LoopAccessInfo::blockNeedsPredication(I->getParent(), &L,
+                                                             DC.getDT());
+              });
+        })) {
+      LLVM_DEBUG(dbgs() << "LAA: Skipping DepSet(" << DepId << "," << ASId
+                        << ") with predicated access\n");
+      continue;
+    }
+
+    // Use the first member as the reference for decomposition. All offsets
+    // are computed relative to BaseLow. BaseHigh is only used to check that
+    // every member covers the same range. The merged bounds are built later
+    // from the members' own Start and End values.
+    unsigned Member0 = AllMembers[0];
+    const SCEV *BaseLow = Pointers[Member0].Start;
+    const SCEV *BaseHigh = Pointers[Member0].End;
+
+    // Keep stencil decomposition and stride-limit arithmetic within 64 bits.
+    // All offsets relative to BaseLow have the same index width.
+    if (SE->getTypeSizeInBits(BaseLow->getType()) > 64)
+      continue;
+
+    LLVM_DEBUG(dbgs() << "LAA: Analyzing DepSet(" << DepId << "," << ASId
+                      << ") with " << AllMembers.size()
+                      << " members, base: " << *BaseLow << "\n");
+
+    auto GetStepForPointer = [&](unsigned Idx) -> const SCEV * {
+      if (const auto *AR = dyn_cast<SCEVAddRecExpr>(Pointers[Idx].Expr))
+        if (AR->getLoop() == &L)
+          return AR->getStepRecurrence(*SE);
+      return nullptr;
+    };
+
+    const SCEV *BaseStep = GetStepForPointer(Member0);
+    if (!BaseStep)
+      continue;
+
+    // Verify all members have the same access range (End - Start). The
+    // merged upper bound is a umax over the members' own End values. The
+    // same decompositions order both the Start and the End values
+    // only when End = Start + Range with one shared Range for every member.
+    // That is what this check enforces.
+    // Compare each member's range (End - Start) and test Range - BaseRange ==
+    // 0, rather than Range == BaseRange, so algebraically equal but
+    // non-identical SCEVs still match. Bail out if any subtraction produces
+    // SCEVCouldNotCompute.
+    const SCEV *BaseRange = SE->getMinusSCEV(BaseHigh, BaseLow);
+    if (isa<SCEVCouldNotCompute>(BaseRange)) {
+      LLVM_DEBUG(dbgs() << "LAA:   Base access range not computable, "
+                           "skipping DepSet\n");
+      continue;
+    }
+    if (any_of(drop_begin(AllMembers), [&](unsigned Idx) {
+          const SCEV *Range =
+              SE->getMinusSCEV(Pointers[Idx].End, Pointers[Idx].Start);
+          if (isa<SCEVCouldNotCompute>(Range))
+            return true;
+          if (Range == BaseRange)
+            return false;
+          const SCEV *RangeDiff = SE->getMinusSCEV(Range, BaseRange);
+          return isa<SCEVCouldNotCompute>(RangeDiff) || !RangeDiff->isZero();
+        })) {
+      LLVM_DEBUG(
+          dbgs() << "LAA:   Member with different or not computable access "
+                    "range, skipping DepSet\n");
+      continue;
+    }
+
+    // Require all members to have the same recurrence step. Equal ranges
+    // (checked above) are what the merged bounds actually need, and a different
+    // step usually means a different range. But ranges can be equal by accident
+    // - e.g. an invariant access whose range matches the stride, or a loop with
+    // a single iteration. The base member is picked arbitrarily, so together
+    // with the BaseStep check above this keeps the decision the same no matter
+    // which member comes first: we only merge recurrences with one common step.
+    if (any_of(drop_begin(AllMembers), [&](unsigned Idx) {
+          return GetStepForPointer(Idx) != BaseStep;
+        })) {
+      LLVM_DEBUG(dbgs() << "LAA:   Member with different step, "
+                           "skipping DepSet\n");
+      continue;
+    }
+    // One decomposition per member, in AllMembers order. Each entry holds the
+    // member's constant offset and its coefficient for each stride, all
+    // relative to BaseLow.
+    SmallVector<StencilDecomposition, 8> MemberOffsets;
+    MemberOffsets.reserve(AllMembers.size());
+    // The base member's offset from itself is zero: Constant 0, no strides.
+    MemberOffsets.emplace_back();
+    // Stride checks this DepSet needs if it is merged.
+    StrideLimits LocalStrideLimits;
+
+    // Decompose one member's offset (relative to BaseLow) and append it to
+    // MemberOffsets. Returns false if the offset is not in stencil form (so
+    // the whole DepSet is skipped).
+    const auto CollectOffset = [&](unsigned Idx) -> bool {
+      const SCEV *LowOffset = SE->getMinusSCEV(Pointers[Idx].Start, BaseLow);
+      if (isa<SCEVCouldNotCompute>(LowOffset))
+        return false;
+      auto DLow = decomposeStencilOffset(LowOffset, *SE, L);
+      if (!DLow) {
+        LLVM_DEBUG(dbgs() << "LAA:   Member " << Idx
+                          << " NOT decomposable: " << *LowOffset << "\n");
+        return false;
+      }
+      if (!collectStrideLimits(*DLow,
+                               SE->getTypeSizeInBits(LowOffset->getType()), *SE,
+                               LocalStrideLimits))
+        return false;
+
+      LLVM_DEBUG(dbgs() << "LAA:   Member " << Idx
+                        << ": Const=" << DLow->Constant
+                        << ", strides=" << DLow->Coefficients.size() << "\n");
+      MemberOffsets.push_back(std::move(*DLow));
+      return true;
+    };
+
+    if (!all_of(drop_begin(AllMembers), CollectOffset))
+      continue;
+
+    SmallVector<unsigned, 4> MinCandidates =
+        collectCandidateMembers(MemberOffsets, /*ForMin=*/true);
+    SmallVector<unsigned, 4> MaxCandidates =
+        collectCandidateMembers(MemberOffsets, /*ForMin=*/false);
+    assert(!MinCandidates.empty() && !MaxCandidates.empty() &&
+           "a non-empty member list always has a candidate");
+    LLVM_DEBUG(dbgs() << "LAA:   Candidate members: min="
+                      << MinCandidates.size()
+                      << ", max=" << MaxCandidates.size() << " of "
+                      << MemberOffsets.size() << "\n");
+
+    // Extra bound operands: one compare-and-select per operand past the first
+    // in the merged umin, and the same for the umax.
+    unsigned NumBoundOperands =
+        (MinCandidates.size() - 1) + (MaxCandidates.size() - 1);
+
+    // Local cost model: decide whether replacing this DepSet's groups with the
+    // single merged group actually reduces the number of runtime checks. Run
+    // it before building the merged bounds: a rejected DepSet then creates no
+    // umin/umax expressions that would only be thrown away.
+    auto [ChecksBefore, ChecksAfter] =
+        computeStencilMergeCost(*this, GroupIndices, LocalStrideLimits,
+                                CommittedStrideLimits, NumBoundOperands);
+    if (ChecksAfter >= ChecksBefore) {
+      LLVM_DEBUG(dbgs() << "LAA:   Not beneficial, skipping DepSet\n");
+      continue;
+    }
+
+    // Build one side of the merged bounds from its candidate members.
+    // With one candidate the bound is that member's own Start (or End): the
+    // exact value the member's own check used before the merge. With several
+    // candidates the bound is a umin (umax) over their Starts (Ends). Either
+    // way every value is a real member address, so the merge computes no new
+    // address and no new overflow is possible.
+    // The umin/umax are on pointers. The expander turns them into the same
+    // icmp and select that a plain check uses, so no address conversion is
+    // needed.
+    const auto BuildBound = [&](ArrayRef<unsigned> Candidates, bool IsLow) {
+      SmallVector<SCEVUse, 4> Ops;
+      for (unsigned K : Candidates) {
+        const PointerInfo &P = Pointers[AllMembers[K]];
+        Ops.push_back(IsLow ? P.Start : P.End);
+      }
+      return IsLow ? SE->getUMinExpr(Ops) : SE->getUMaxExpr(Ops);
+    };
+
+    const SCEV *MergedLow = BuildBound(MinCandidates, /*IsLow=*/true);
+    const SCEV *MergedHigh = BuildBound(MaxCandidates, /*IsLow=*/false);
+
+    LLVM_DEBUG(dbgs() << "LAA:   Merged bounds: Low=" << *MergedLow
+                      << ", High=" << *MergedHigh << "\n");
+    LLVM_DEBUG(dbgs() << "LAA:   Merging, net saving "
+                      << ChecksBefore - ChecksAfter << "\n");
+
+    NewMergedGroups.push_back(buildMergedStencilGroup(
+        *this, AllMembers, MergedLow, MergedHigh, GroupIndices));
+    CommittedStrideLimits.addFrom(LocalStrideLimits);
+    MergedGroupIndices.insert(GroupIndices.begin(), GroupIndices.end());
+  }
+
+  CommittedStrideLimits.addPredicates(DC.getPSE());
+
+  // Rebuild CheckingGroups if we merged anything.
+  if (!NewMergedGroups.empty()) {
+    SmallVector<RuntimeCheckingPtrGroup, 2> FinalGroups;
+    for (unsigned I = 0; I < CheckingGroups.size(); ++I)
+      if (!MergedGroupIndices.contains(I))
+        FinalGroups.push_back(std::move(CheckingGroups[I]));
+    FinalGroups.append(std::make_move_iterator(NewMergedGroups.begin()),
+                       std::make_move_iterator(NewMergedGroups.end()));
+    CheckingGroups = std::move(FinalGroups);
+
+    LLVM_DEBUG(dbgs() << "LAA: After stencil merging: " << CheckingGroups.size()
+                      << " groups\n");
   }
 }
 
@@ -862,7 +1721,7 @@ public:
   /// the bounds of the pointer.
   bool createCheckForAccess(RuntimePointerChecking &RtCheck,
                             MemAccessInfo Access, Type *AccessTy,
-                            const DenseMap<Value *, const SCEV *> &Strides,
+                            const SymbolicStrideMap &Strides,
                             DenseMap<Value *, unsigned> &DepSetId,
                             Loop *TheLoop, unsigned &RunningDepId,
                             unsigned ASId, bool Assume);
@@ -877,7 +1736,7 @@ public:
   /// pointers we could analyze. \p DepChecker is used to remove unknown
   /// dependences from DepCands.
   bool canCheckPtrAtRT(RuntimePointerChecking &RtCheck, Loop *TheLoop,
-                       const DenseMap<Value *, const SCEV *> &Strides,
+                       const SymbolicStrideMap &Strides,
                        Value *&UncomputablePtr, bool AllowPartial,
                        const MemoryDepChecker &DepChecker);
 
@@ -1040,10 +1899,7 @@ isNoWrap(PredicatedScalarEvolution &PSE, const SCEVAddRecExpr *AR, Value *Ptr,
          std::optional<int64_t> Stride = std::nullopt,
          SmallVectorImpl<const SCEVPredicate *> *Predicates = nullptr) {
   // FIXME: This should probably only return true for NUW.
-  if (any(AR->getNoWrapFlags(SCEV::NoWrapMask)))
-    return true;
-
-  if (Ptr && PSE.hasNoOverflow(Ptr, SCEVWrapPredicate::IncrementNUSW))
+  if (any(AR->getNoWrapFlags()))
     return true;
 
   // An nusw getelementptr that is an AddRec cannot wrap. If it would wrap,
@@ -1079,12 +1935,11 @@ isNoWrap(PredicatedScalarEvolution &PSE, const SCEVAddRecExpr *AR, Value *Ptr,
       return true;
   }
 
+  ScalarEvolution &SE = *PSE.getSE();
+  const SCEVPredicate *WrapPred =
+      SE.getWrapPredicate(AR, SCEVWrapPredicate::IncrementNUSW);
   if (Ptr && Predicates) {
-    ScalarEvolution &SE = *PSE.getSE();
-    SCEVWrapPredicate::IncrementWrapFlags Flags = SCEVWrapPredicate::clearFlags(
-        SCEVWrapPredicate::IncrementNUSW,
-        SCEVWrapPredicate::getImpliedFlags(AR, SE));
-    Predicates->push_back(SE.getWrapPredicate(AR, Flags));
+    Predicates->push_back(WrapPred);
     LLVM_DEBUG(dbgs() << "LAA: Pointer may wrap:\n"
                       << "LAA:   Pointer: " << *Ptr << "\n"
                       << "LAA:   SCEV: " << *AR << "\n"
@@ -1092,7 +1947,10 @@ isNoWrap(PredicatedScalarEvolution &PSE, const SCEVAddRecExpr *AR, Value *Ptr,
     return true;
   }
 
-  return false;
+  // Without adding a new predicate, AR may still be known not to wrap if the
+  // predicates of PSE already imply it, e.g. because a wrap predicate for AR
+  // was added while analyzing the dependences of the loop.
+  return PSE.getPredicate().implies(WrapPred, SE);
 }
 
 static void visitPointers(Value *StartPtr, const Loop &InnermostLoop,
@@ -1155,7 +2013,8 @@ static void findForkedSCEVs(
     return get<1>(S);
   };
 
-  auto GetBinOpExpr = [&SE](unsigned Opcode, const SCEV *L, const SCEV *R) {
+  auto GetBinOpExpr = [&SE](unsigned Opcode, const SCEV *L,
+                            const SCEV *R) -> const SCEV * {
     switch (Opcode) {
     case Instruction::Add:
       return SE->getAddExpr(L, R);
@@ -1281,13 +2140,15 @@ static void findForkedSCEVs(
   }
 }
 
-bool AccessAnalysis::createCheckForAccess(
-    RuntimePointerChecking &RtCheck, MemAccessInfo Access, Type *AccessTy,
-    const DenseMap<Value *, const SCEV *> &StridesMap,
-    DenseMap<Value *, unsigned> &DepSetId, Loop *TheLoop,
-    unsigned &RunningDepId, unsigned ASId, bool Assume) {
+bool AccessAnalysis::createCheckForAccess(RuntimePointerChecking &RtCheck,
+                                          MemAccessInfo Access, Type *AccessTy,
+                                          const SymbolicStrideMap &StridesMap,
+                                          DenseMap<Value *, unsigned> &DepSetId,
+                                          Loop *TheLoop, unsigned &RunningDepId,
+                                          unsigned ASId, bool Assume) {
   Value *Ptr = Access.getPointer();
   ScalarEvolution *SE = PSE.getSE();
+  const DataLayout &DL = TheLoop->getHeader()->getDataLayout();
   assert(SE->isSCEVable(Ptr->getType()) && "Value is not SCEVable!");
 
   SmallVector<PointerIntPair<const SCEV *, 1, bool>> RTCheckPtrs;
@@ -1321,8 +2182,16 @@ bool AccessAnalysis::createCheckForAccess(
     const SCEVAddRecExpr *AR = dyn_cast<SCEVAddRecExpr>(P.getPointer());
     if (!AR && Assume)
       AR = PSE.getAsAddRec(Ptr, &Predicates);
-    if (!AR || !AR->isAffine())
-      return false;
+    if (!AR || !AR->isAffine()) {
+      // Check if bounds for non-affine monotonic expressions can be formed.
+      const SCEV *EltSizeSCEV = SE->getStoreSizeOfExpr(
+          DL.getIndexType(P.getPointer()->getType()), AccessTy);
+      if (!Assume ||
+          !getNonAffineMonotonicBounds(TheLoop, P.getPointer(), EltSizeSCEV, SE)
+               .first)
+        return false;
+      continue;
+    }
 
     // If there's only one option for Ptr, commit the predicates collected by
     // getAsAddRec and look Ptr up again afterwards: the lookup below reads the
@@ -1343,6 +2212,10 @@ bool AccessAnalysis::createCheckForAccess(
   }
   PSE.addPredicates(Predicates);
 
+  // Remember the number of pointers inserted so far, to remove the pointers of
+  // this access again if the bounds of any of them cannot be computed, to avoid
+  // partial inserts.
+  unsigned NumPointers = RtCheck.Pointers.size();
   for (const auto &[PtrExpr, NeedsFreeze] : RTCheckPtrs) {
     // The id of the dependence set.
     unsigned DepId;
@@ -1358,18 +2231,23 @@ bool AccessAnalysis::createCheckForAccess(
       DepId = RunningDepId++;
 
     bool IsWrite = Access.getInt();
-    RtCheck.insert(TheLoop, Ptr, PtrExpr, AccessTy, IsWrite, DepId, ASId, PSE,
-                   NeedsFreeze);
+    if (!RtCheck.insert(TheLoop, Ptr, PtrExpr, AccessTy, IsWrite, DepId, ASId,
+                        PSE, NeedsFreeze,
+                        /*IsForked=*/RTCheckPtrs.size() > 1)) {
+      RtCheck.Pointers.truncate(NumPointers);
+      return false;
+    }
     LLVM_DEBUG(dbgs() << "LAA: Found a runtime check ptr:" << *Ptr << '\n');
   }
 
   return true;
 }
 
-bool AccessAnalysis::canCheckPtrAtRT(
-    RuntimePointerChecking &RtCheck, Loop *TheLoop,
-    const DenseMap<Value *, const SCEV *> &StridesMap, Value *&UncomputablePtr,
-    bool AllowPartial, const MemoryDepChecker &DepChecker) {
+bool AccessAnalysis::canCheckPtrAtRT(RuntimePointerChecking &RtCheck,
+                                     Loop *TheLoop,
+                                     const SymbolicStrideMap &StridesMap,
+                                     Value *&UncomputablePtr, bool AllowPartial,
+                                     const MemoryDepChecker &DepChecker) {
   // Find pointers with computable bounds. We are going to use this information
   // to place a runtime bound check.
   bool CanDoRT = true;
@@ -1670,10 +2548,11 @@ void AccessAnalysis::buildDependenceSets() {
 }
 
 /// Check whether the access through \p Ptr has a constant stride.
-std::optional<int64_t> llvm::getPtrStride(
-    PredicatedScalarEvolution &PSE, Type *AccessTy, Value *Ptr, const Loop *Lp,
-    const DominatorTree &DT, const DenseMap<Value *, const SCEV *> &StridesMap,
-    bool ShouldCheckWrap, SmallVectorImpl<const SCEVPredicate *> *Predicates) {
+std::optional<int64_t>
+llvm::getPtrStride(PredicatedScalarEvolution &PSE, Type *AccessTy, Value *Ptr,
+                   const Loop *Lp, const DominatorTree &DT,
+                   const SymbolicStrideMap &StridesMap, bool ShouldCheckWrap,
+                   SmallVectorImpl<const SCEVPredicate *> *Predicates) {
   const SCEV *PtrScev = replaceSymbolicStrideSCEV(PSE, StridesMap, Ptr);
   if (PSE.getSE()->isLoopInvariant(PtrScev, Lp))
     return 0;
@@ -1707,11 +2586,12 @@ std::optional<int64_t> llvm::getPtrStride(
 }
 
 /// Check whether the access through \p Ptr has a constant stride.
-std::optional<int64_t>
-llvm::getPtrStride(PredicatedScalarEvolution &PSE, Type *AccessTy, Value *Ptr,
-                   const Loop *Lp, const DominatorTree &DT,
-                   const DenseMap<Value *, const SCEV *> &StridesMap,
-                   bool Assume, bool ShouldCheckWrap) {
+std::optional<int64_t> llvm::getPtrStride(PredicatedScalarEvolution &PSE,
+                                          Type *AccessTy, Value *Ptr,
+                                          const Loop *Lp,
+                                          const DominatorTree &DT,
+                                          const SymbolicStrideMap &StridesMap,
+                                          bool Assume, bool ShouldCheckWrap) {
   SmallVector<const SCEVPredicate *> Predicates;
   std::optional<int64_t> Stride =
       getPtrStride(PSE, AccessTy, Ptr, Lp, DT, StridesMap, ShouldCheckWrap,
@@ -1936,20 +2816,16 @@ bool MemoryDepChecker::couldPreventStoreLoadForward(uint64_t Distance,
   //   place. Vectorizing in such cases does not make sense.
   // Store-load forwarding distance.
 
-  // After this many iterations store-to-load forwarding conflicts should not
-  // cause any slowdowns.
-  const uint64_t NumItersForStoreLoadThroughMemory = 8 * TypeByteSize;
   // Maximum vector factor.
   uint64_t MaxVFWithoutSLForwardIssuesPowerOf2 =
       std::min(VectorizerParams::MaxVectorWidth * TypeByteSize,
                MaxStoreLoadForwardSafeDistanceInBits);
 
-  // Compute the smallest VF at which the store and load would be misaligned.
+  // Compute the smallest VF at which the store and load would be misaligned
+  // and recent enough to still be in the store buffer.
   for (uint64_t VF = 2 * TypeByteSize;
        VF <= MaxVFWithoutSLForwardIssuesPowerOf2; VF *= 2) {
-    // If the number of vector iteration between the store and the load are
-    // small we could incur conflicts.
-    if (Distance % VF && Distance / VF < NumItersForStoreLoadThroughMemory) {
+    if (isStoreLoadForwardingConflict(Distance, VF, TypeByteSize, VF)) {
       MaxVFWithoutSLForwardIssuesPowerOf2 = (VF >> 1);
       break;
     }
@@ -2312,8 +3188,20 @@ MemoryDepChecker::isDependent(const MemAccessInfo &A, unsigned AIdx,
   // Negative distances are not plausible dependencies.
   if (SE.isKnownNonPositive(Dist)) {
     if (SE.isKnownNonNegative(Dist)) {
-      if (HasSameSize) {
-        // Write to the same location with the same size.
+      // Equal-sized accesses to the same location are forward.
+      if (HasSameSize)
+        return Dependence::Forward;
+
+      if (CommonStride) {
+        // For mixed sizes, CommonStride is asserted to cover both accesses when
+        // computed in getDependenceDistanceStrideAndSize, so different
+        // iterations cannot overlap.
+        [[maybe_unused]] uint64_t ASz =
+            DL.getTypeAllocSize(getLoadStoreType(InstMap[AIdx]));
+        [[maybe_unused]] uint64_t BSz =
+            DL.getTypeAllocSize(getLoadStoreType(InstMap[BIdx]));
+        assert(*CommonStride >= std::max(ASz, BSz) &&
+               "Invariant from getDependenceDistanceStrideAndSize broken!");
         return Dependence::Forward;
       }
       LLVM_DEBUG(dbgs() << "LAA: possibly zero dependence difference but "
@@ -2699,7 +3587,6 @@ bool LoopAccessInfo::analyzeLoop(AAResults *AA, const LoopInfo *LI,
           HasComplexMemInst = true;
           continue;
         }
-        NumLoads++;
         Loads.push_back(Ld);
         DepChecker->addAccess(Ld);
         if (EnableMemAccessVersioningOfLoop)
@@ -2723,7 +3610,6 @@ bool LoopAccessInfo::analyzeLoop(AAResults *AA, const LoopInfo *LI,
           HasComplexMemInst = true;
           continue;
         }
-        NumStores++;
         Stores.push_back(St);
         DepChecker->addAccess(St);
         if (EnableMemAccessVersioningOfLoop)
@@ -3187,6 +4073,8 @@ void LoopAccessInfo::collectStridedAccess(Value *MemAccess) {
   const SCEV *StrideBase = StrideExpr;
   if (const auto *C = dyn_cast<SCEVIntegralCastExpr>(StrideBase))
     StrideBase = C->getOperand();
+  assert(SE->isLoopInvariant(StrideBase, TheLoop) &&
+         "users of the map rely on the stride being loop invariant");
   SymbolicStrides[Ptr] = cast<SCEVUnknown>(StrideBase);
 }
 
