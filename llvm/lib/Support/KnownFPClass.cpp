@@ -950,9 +950,19 @@ KnownFPClass KnownFPClass::atan(const KnownFPClass &KnownSrc) {
   // atan is bounded to (-pi/2, pi/2), never Inf. atan(+-Inf) = +-pi/2 (finite).
   Known.knownNot(fcInf);
 
-  // atan is sign-preserving: atan(x) < 0 iff x < 0.
-  if (KnownSrc.isKnownNever(fcNegative))
-    Known.knownNot(fcNegative);
+  // For non-zero numeric inputs, atan preserves the sign.
+  if (KnownSrc.isKnownNever(fcNegSubnormal | fcNegNormal | fcNegInf))
+    Known.knownNot(fcNegSubnormal | fcNegNormal);
+
+  if (KnownSrc.isKnownNever(fcPosSubnormal | fcPosNormal | fcPosInf))
+    Known.knownNot(fcPosSubnormal | fcPosNormal);
+
+  // atan(-0.0) = -0.0 and atan(+0.0) = +0.0.
+  if (KnownSrc.isKnownNever(fcNegZero))
+    Known.knownNot(fcNegZero);
+
+  if (KnownSrc.isKnownNever(fcPosZero))
+    Known.knownNot(fcPosZero);
 
   Known.propagateNonNaN(KnownSrc);
 
