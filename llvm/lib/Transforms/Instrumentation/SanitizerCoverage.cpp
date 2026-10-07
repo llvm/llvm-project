@@ -384,8 +384,9 @@ ModuleSanitizerCoverage::CreateSecStartEnd(Module &M, const char *Section,
 
   // Account for the fact that on windows-msvc __start_* symbols actually
   // point to a uint64_t before the start of the array.
-  auto *GEP = ConstantExpr::getPtrAdd(
-      SecStart, ConstantInt::get(IntptrTy, sizeof(uint64_t)));
+  auto *GEP =
+      ConstantExpr::getPtrAdd(M.getDataLayout(), SecStart,
+                              ConstantInt::get(IntptrTy, sizeof(uint64_t)));
   return std::make_pair(GEP, SecEnd);
 }
 

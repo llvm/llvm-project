@@ -154,7 +154,7 @@ static bool splitGlobal(GlobalVariable &GV) {
   for (const GEPInfo &Info : Infos) {
     assert(Info.MemberIndex < SplitGlobals.size() && "Invalid member");
     auto *NewGEP = ConstantExpr::getPtrAdd(
-        SplitGlobals[Info.MemberIndex],
+        DL, SplitGlobals[Info.MemberIndex],
         ConstantInt::get(GV.getContext(), Info.MemberRelativeOffset),
         Info.GEP->isInBounds());
     Info.GEP->replaceAllUsesWith(NewGEP);

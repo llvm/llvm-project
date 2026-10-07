@@ -703,7 +703,7 @@ external const_sub : llvalue -> llvalue -> llvalue = "llvm_const_sub"
 external const_nsw_sub : llvalue -> llvalue -> llvalue = "llvm_const_nsw_sub"
 external const_nuw_sub : llvalue -> llvalue -> llvalue = "llvm_const_nuw_sub"
 external const_xor : llvalue -> llvalue -> llvalue = "llvm_const_xor"
-external const_ptradd : llvalue -> llvalue -> int -> llvalue
+external const_ptradd : DataLayout.t -> llvalue -> llvalue -> int -> llvalue
                       = "llvm_const_ptradd"
 external const_ptradd_from_indices : DataLayout.t -> lltype -> llvalue ->
                                      llvalue array -> int -> llvalue option

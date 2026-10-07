@@ -297,8 +297,8 @@ let test_constants () =
   ignore (define_global "const_trunc" (const_trunc (const_add foldbomb five)
                                                i8_type) m);
   ignore (define_global "const_ptrtoint" (const_ptrtoint
-    (const_ptradd (const_null (pointer_type context)) (const_int i32_type 1)
-                   GEPNoWrapFlags.none)
+    (const_ptradd (data_layout m) (const_null (pointer_type context))
+                  (const_int i32_type 1) GEPNoWrapFlags.none)
     i32_type) m);
   ignore (define_global "const_inttoptr" (const_inttoptr (const_add foldbomb five)
                                                   void_ptr) m);
@@ -317,11 +317,13 @@ let test_constants () =
    * CHECK: const_shufflevector = global <4 x i32> <i32 0, i32 1, i32 1, i32 0>
    *)
   ignore (define_global "const_ptradd"
-          (const_ptradd foldbomb_gv five GEPNoWrapFlags.none) m);
+          (const_ptradd (data_layout m) foldbomb_gv five GEPNoWrapFlags.none)
+          m);
   ignore (define_global "const_ptradd_inbounds"
-          (const_ptradd foldbomb_gv five GEPNoWrapFlags.inbounds) m);
+          (const_ptradd (data_layout m) foldbomb_gv five GEPNoWrapFlags.inbounds)
+          m);
   ignore (define_global "const_ptradd_inbounds_nuw"
-          (const_ptradd foldbomb_gv five
+          (const_ptradd (data_layout m) foldbomb_gv five
            (GEPNoWrapFlags.inbounds lor GEPNoWrapFlags.nuw)) m);
   ignore (define_global "const_ptradd_from_indices"
           (Option.get (const_ptradd_from_indices (data_layout m) i32_type

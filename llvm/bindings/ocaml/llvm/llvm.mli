@@ -1205,11 +1205,12 @@ val const_nuw_sub : llvalue -> llvalue -> llvalue
     See the method [llvm::ConstantExpr::getXor]. *)
 val const_xor : llvalue -> llvalue -> llvalue
 
-(** [const_ptradd pc offset flags] returns the constant ptradd
-    (getelementptr i8) of [pc] with constant [offset] and the given
+(** [const_ptradd dl pc offset flags] returns the constant ptradd
+    (getelementptr iN) of [pc] with constant [offset] and the given
     {!GEPNoWrapFlags} no-wrap flags (combined with [lor]).
+    iN is the width of a byte derived from the data layout [dl].
     See the method [llvm::ConstantExpr::getPtrAdd]. *)
-val const_ptradd : llvalue -> llvalue -> int -> llvalue
+val const_ptradd : DataLayout.t -> llvalue -> llvalue -> int -> llvalue
 
 (** [const_ptradd_from_indices dl srcty pc indices flags] returns the constant
     ptradd of [pc] with the offset derived from the data layout [dl], the

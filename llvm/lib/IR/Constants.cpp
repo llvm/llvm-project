@@ -2750,8 +2750,9 @@ Constant *ConstantExpr::getGetElementPtr(const DataLayout &DL, Type *Ty,
                                          std::optional<ConstantRange> InRange,
                                          Type *OnlyIfReducedTy) {
   // Handle already canonical GEP.
-  if (Ty->isIntegerTy(8) && Idxs[0]->getType() == DL.getIndexType(C->getType()))
-    return getPtrAdd(C, Idxs[0], NW, InRange, OnlyIfReducedTy);
+  if (Ty->isIntegerTy(DL.getByteWidth()) &&
+      Idxs[0]->getType() == DL.getIndexType(C->getType()))
+    return getPtrAdd(DL, C, Idxs[0], NW, InRange, OnlyIfReducedTy);
 
   // Some API require an ArrayRef of Value * instead of Constant *.
   ArrayRef<Value *> ValIdxs =
@@ -2819,7 +2820,17 @@ Constant *ConstantExpr::getGetElementPtr(const DataLayout &DL, Type *Ty,
       return nullptr;
   }
 
-  return getPtrAdd(C, Offset, NW, InRange, OnlyIfReducedTy);
+  return getPtrAdd(DL, C, Offset, NW, InRange, OnlyIfReducedTy);
+}
+
+Constant *ConstantExpr::getPtrAdd(const DataLayout &DL, Constant *Ptr,
+                                  Constant *Offset, GEPNoWrapFlags NW,
+                                  std::optional<ConstantRange> InRange,
+                                  Type *OnlyIfReduced) {
+  LLVM_SUPPRESS_DEPRECATED_DECLARATIONS_PUSH
+  return getGetElementPtr(Type::getIntNTy(Ptr->getContext(), DL.getByteWidth()),
+                          Ptr, Offset, NW, InRange, OnlyIfReduced);
+  LLVM_SUPPRESS_DEPRECATED_DECLARATIONS_POP
 }
 
 Constant *ConstantExpr::getExtractElement(Constant *Val, Constant *Idx,

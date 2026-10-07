@@ -1944,10 +1944,12 @@ LLVMValueRef LLVMConstGEPWithNoWrapFlags(LLVMTypeRef Ty,
   LLVM_SUPPRESS_DEPRECATED_DECLARATIONS_POP
 }
 
-LLVMValueRef LLVMConstPtrAdd(LLVMValueRef ConstantVal,
+LLVMValueRef LLVMConstPtrAdd(LLVMTargetDataRef DataLayout,
+                             LLVMValueRef ConstantVal,
                              LLVMValueRef ConstantOffset,
                              LLVMGEPNoWrapFlags NoWrapFlags) {
-  return wrap(ConstantExpr::getPtrAdd(unwrap<Constant>(ConstantVal),
+  return wrap(ConstantExpr::getPtrAdd(*unwrap(DataLayout),
+                                      unwrap<Constant>(ConstantVal),
                                       unwrap<Constant>(ConstantOffset),
                                       mapFromLLVMGEPNoWrapFlags(NoWrapFlags)));
 }
