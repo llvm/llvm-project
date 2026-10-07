@@ -346,6 +346,16 @@ static cl::opt<unsigned> SLPVecLoopRTChecksCostPercent(
              "guarded scalar region cost, for blocks of loops already "
              "vectorized by the loop vectorizer."));
 
+/// The loop vectorizer joins its pointer range checks with a long chain of
+/// `or i1`. Each leaf is `and (icmp ult ptr, ptr), (icmp ult ptr, ptr)`. Trying
+/// to reduce such a chain is slow and rarely pays off, because the block runs
+/// once per loop entry. The skip only applies in front of a loop marked as
+/// vectorized. 0 disables the skip.
+static cl::opt<unsigned> SLPMaxRuntimeCheckReductionLeaves(
+    "slp-max-runtime-check-reduction-leaves", cl::init(32), cl::Hidden,
+    cl::desc("Skip `or i1` reductions in a loop guard block with more than "
+             "this number of pointer range check leaves (0 = never skip)."));
+
 // Limit the number of alias checks. The limit is chosen so that
 // it has no negative effect on the llvm benchmarks.
 static const unsigned AliasedCheckLimit = 10;
@@ -32413,6 +32423,60 @@ public:
     }
   };
 
+  /// Checks if the reduction looks like the runtime checks the loop vectorizer
+  /// puts in front of a loop. For example:
+  ///   %bound0 = icmp ult ptr %a, %b.end
+  ///   %bound1 = icmp ult ptr %b, %a.end
+  ///   %found.conflict = and i1 %bound0, %bound1
+  ///   %conflict.rdx = or i1 %conflict.rdx.prev, %found.conflict
+  ///   br i1 %conflict.rdx, label %scalar.loop, label %vector.ph
+  /// The root must be `or i1` with many such leaves. It must be the branch
+  /// condition of its block. The block must branch into a loop marked as
+  /// vectorized, from outside of that loop.
+  bool isLoopRuntimeCheckChain(const LoopInfo &LI) const {
+    if (!SLPMaxRuntimeCheckReductionLeaves || RdxKind != RecurKind::Or ||
+        !ReductionRoot->getType()->isIntegerTy(1))
+      return false;
+    BasicBlock *BB = cast<Instruction>(ReductionRoot)->getParent();
+    auto *Br = dyn_cast<CondBrInst>(BB->getTerminator());
+    if (!Br || Br->getCondition() != ReductionRoot)
+      return false;
+    // Succ is the header or the preheader of a vectorized loop that does not
+    // contain BB.
+    auto EntersVectorizedLoop = [&](BasicBlock *Succ) {
+      BasicBlock *Header = Succ;
+      if (!LI.isLoopHeader(Header)) {
+        Header = Succ->getSingleSuccessor();
+        if (!Header || !LI.isLoopHeader(Header))
+          return false;
+      }
+      Loop *L = LI.getLoopFor(Header);
+      if (L->contains(BB) || (Header != Succ && L->getLoopPreheader() != Succ))
+        return false;
+      return getBooleanLoopAttribute(L, "llvm.loop.isvectorized");
+    };
+    if (none_of(successors(BB), EntersVectorizedLoop))
+      return false;
+    unsigned NumLeaves = 0;
+    for (ArrayRef<Value *> Vals : ReducedVals)
+      NumLeaves += Vals.size();
+    if (NumLeaves <= SLPMaxRuntimeCheckReductionLeaves)
+      return false;
+    auto IsPtrULT = [](Value *V) {
+      CmpPredicate Pred;
+      Value *A;
+      return match(V, m_ICmp(Pred, m_Value(A), m_Value())) &&
+             Pred == CmpInst::ICMP_ULT && A->getType()->isPointerTy();
+    };
+    return all_of(ReducedVals, [&](ArrayRef<Value *> Vals) {
+      return all_of(Vals, [&](Value *V) {
+        Value *L, *R;
+        return match(V, m_And(m_Value(L), m_Value(R))) && IsPtrULT(L) &&
+               IsPtrULT(R);
+      });
+    });
+  }
+
   /// Attempt to vectorize the tree found by matchAssociativeReduction.
   /// \p IsSeedRoot allows vectorizing the groups at the minimum vector
   /// factor. Set for single-use seed-level roots only.
@@ -32452,6 +32516,13 @@ public:
           for (Value *RdxOp : RdxOps)
             V.analyzedReductionRoot(cast<Instruction>(RdxOp));
       }
+      return nullptr;
+    }
+
+    if (isLoopRuntimeCheckChain(LI)) {
+      for (ReductionOpsType &RdxOps : ReductionOps)
+        for (Value *RdxOp : RdxOps)
+          V.analyzedReductionRoot(cast<Instruction>(RdxOp));
       return nullptr;
     }
 
