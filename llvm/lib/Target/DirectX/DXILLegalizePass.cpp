@@ -63,21 +63,16 @@ static Value *maskToIntegerWidth(Value *V, unsigned Width,
 static bool isKnownZeroExtendedFromWidth(Value *V, unsigned Width,
                                          const DataLayout &DL) {
   unsigned LegalWidth = V->getType()->getIntegerBitWidth();
-  ConstantRange Range = computeConstantRangeIncludingKnownBits(
-      V, /*ForSigned=*/false, SimplifyQuery(DL, dyn_cast<Instruction>(V)));
-  return Range.getUnsignedMax().ult(APInt::getOneBitSet(LegalWidth, Width));
+  return MaskedValueIsZero(V, APInt::getBitsSetFrom(LegalWidth, Width),
+                           SimplifyQuery(DL, dyn_cast<Instruction>(V)));
 }
 
 // Return true when V is already a sign-extended Width-bit value.
 static bool isKnownSignExtendedFromWidth(Value *V, unsigned Width,
                                          const DataLayout &DL) {
   unsigned LegalWidth = V->getType()->getIntegerBitWidth();
-  ConstantRange Range = computeConstantRangeIncludingKnownBits(
-      V, /*ForSigned=*/true, SimplifyQuery(DL, dyn_cast<Instruction>(V)));
-  APInt SignedMin = APInt::getSignedMinValue(Width).sext(LegalWidth);
-  APInt SignedMax = APInt::getSignedMaxValue(Width).sext(LegalWidth);
-  return Range.getSignedMin().sge(SignedMin) &&
-         Range.getSignedMax().sle(SignedMax);
+  return ComputeNumSignBits(V, DL, /*AC=*/nullptr, dyn_cast<Instruction>(V)) >
+         LegalWidth - Width;
 }
 
 // Get an operand's legal carrier, normalizing it only when a consumer requires

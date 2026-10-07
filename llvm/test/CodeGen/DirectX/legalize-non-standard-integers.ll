@@ -141,6 +141,70 @@ define ptr @inttoptr_from_i37(i64 %value) {
   ret ptr %result
 }
 
+define i32 @known_zero_extended_i3(i32 %value) {
+; CHECK-LABEL: define i32 @known_zero_extended_i3(
+; CHECK-NEXT: [[MASKED:%.*]] = and i32 %value, 7
+; CHECK-NEXT: ret i32 [[MASKED]]
+  %masked = and i32 %value, 7
+  %narrow = trunc i32 %masked to i3
+  %result = zext i3 %narrow to i32
+  ret i32 %result
+}
+
+define i32 @known_sign_extended_i3(i32 %value) {
+; CHECK-LABEL: define i32 @known_sign_extended_i3(
+; CHECK-NEXT: [[SIGNED:%.*]] = ashr i32 %value, 29
+; CHECK-NEXT: ret i32 [[SIGNED]]
+  %signed = ashr i32 %value, 29
+  %narrow = trunc i32 %signed to i3
+  %result = sext i3 %narrow to i32
+  ret i32 %result
+}
+
+define i32 @insufficient_sign_bits_i3(i32 %value) {
+; CHECK-LABEL: define i32 @insufficient_sign_bits_i3(
+; CHECK-NEXT: [[VALUE:%.*]] = ashr i32 %value, 28
+; CHECK-NEXT: [[SHL:%.*]] = shl i32 [[VALUE]], 29
+; CHECK-NEXT: [[SIGNED:%.*]] = ashr i32 [[SHL]], 29
+; CHECK-NEXT: ret i32 [[SIGNED]]
+  %shifted = ashr i32 %value, 28
+  %narrow = trunc i32 %shifted to i3
+  %result = sext i3 %narrow to i32
+  ret i32 %result
+}
+
+define i64 @known_zero_extended_i37(i64 %value) {
+; CHECK-LABEL: define i64 @known_zero_extended_i37(
+; CHECK-NEXT: [[MASKED:%.*]] = and i64 %value, 137438953471
+; CHECK-NEXT: ret i64 [[MASKED]]
+  %masked = and i64 %value, 137438953471
+  %narrow = trunc i64 %masked to i37
+  %result = zext i37 %narrow to i64
+  ret i64 %result
+}
+
+define i64 @known_sign_extended_i37(i64 %value) {
+; CHECK-LABEL: define i64 @known_sign_extended_i37(
+; CHECK-NEXT: [[SIGNED:%.*]] = ashr i64 %value, 27
+; CHECK-NEXT: ret i64 [[SIGNED]]
+  %signed = ashr i64 %value, 27
+  %narrow = trunc i64 %signed to i37
+  %result = sext i37 %narrow to i64
+  ret i64 %result
+}
+
+define i64 @insufficient_sign_bits_i37(i64 %value) {
+; CHECK-LABEL: define i64 @insufficient_sign_bits_i37(
+; CHECK-NEXT: [[VALUE:%.*]] = ashr i64 %value, 26
+; CHECK-NEXT: [[SHL:%.*]] = shl i64 [[VALUE]], 27
+; CHECK-NEXT: [[SIGNED:%.*]] = ashr i64 [[SHL]], 27
+; CHECK-NEXT: ret i64 [[SIGNED]]
+  %shifted = ashr i64 %value, 26
+  %narrow = trunc i64 %shifted to i37
+  %result = sext i37 %narrow to i64
+  ret i64 %result
+}
+
 define i32 @weighted_select(i1 %condition, i32 %lhs, i32 %rhs) {
 ; CHECK-LABEL: define i32 @weighted_select(
 ; CHECK: [[SELECT:%.*]] = select i1 %condition, i32 %lhs, i32 %rhs, !prof [[PROF:![0-9]+]]
