@@ -819,15 +819,16 @@ define void @string_type() !dbg !3 {
 !3 = distinct !DISubprogram(name: "string_type", scope: !2, file: !2, spFlags: DISPFlagDefinition, unit: !1, type: !4)
 !4 = !DISubroutineType(types: !5)
 !5 = !{!6, !9}
-!6 = !DIStringType(name: "character(*)", stringLength: !7, size: 32, align: 8, stringLengthExpression: !8, stringLocationExpression: !10, charType: !11)
+!6 = !DIStringType(name: "character(*)", stringLength: !7, size: 32, align: 8, stringLengthExpression: !8, stringLocationExpression: !10, charType: !12)
 !7 = !DILocalVariable(scope: !3, name: "string_size", file: !2, type: !11)
 !8 = !DIExpression(DW_OP_push_object_address, DW_OP_plus_uconst, 8)
 !9 = !DIStringType()
 !10 = !DIExpression(DW_OP_push_object_address, DW_OP_deref)
 !11 = !DIBasicType(name: "int", size: 32, encoding: DW_ATE_signed)
+!12 = !DIBasicType(name: "character(kind=4)", size: 32, encoding: DW_ATE_UTF)
 
 ; CHECK-DAG: #[[VAR:.+]] = #llvm.di_local_variable<{{.*}}name = "string_size"{{.*}}>
-; CHECK-DAG: #[[CHARTYPE:.+]] = #llvm.di_basic_type<tag = DW_TAG_base_type, name = "int", sizeInBits = 32, encoding = DW_ATE_signed>
+; CHECK-DAG: #[[CHARTYPE:.+]] = #llvm.di_basic_type<tag = DW_TAG_base_type, name = "character(kind=4)", sizeInBits = 32, encoding = DW_ATE_UTF>
 ; CHECK-DAG: #[[STR1:.+]] = #llvm.di_string_type<tag = DW_TAG_string_type, name = "character(*)", sizeInBits = 32, alignInBits = 8, stringLength = #[[VAR]], stringLengthExp = <[DW_OP_push_object_address, DW_OP_plus_uconst(8)]>, stringLocationExp = <[DW_OP_push_object_address, DW_OP_deref]>, charType = #[[CHARTYPE]]>
 ; CHECK-DAG: #[[STR2:.+]] = #llvm.di_string_type<tag = DW_TAG_string_type>
 ; CHECK-DAG: #llvm.di_subroutine_type<types = #[[STR1]], #[[STR2]]>

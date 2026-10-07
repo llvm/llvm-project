@@ -394,7 +394,7 @@ static void testDebugInfoAttributes(MlirContext ctx) {
   MlirAttribute string_type = mlirLLVMDIStringTypeAttrGet(
       ctx, 0x0, foo, 16, 0, local_var, expression, expression,
       MlirLLVMTypeEncodingSigned, basic_type);
-  // CHECK: #llvm.di_string_type<{{.*}}>
+  // CHECK: #llvm.di_string_type<{{.*}}charType = {{.*}}>
   mlirAttributeDump(string_type);
 
   // CHECK: #llvm.di_composite_type<recId = {{.*}}, isRecSelf = true>
