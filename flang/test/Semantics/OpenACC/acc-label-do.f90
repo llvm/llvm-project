@@ -53,3 +53,25 @@ subroutine missing_label(a, n)
     do 60 i = 1, n
 60    a(i) = 0.
 end
+
+subroutine simple_collapse(a, n, m)
+  integer :: n, m, jk, jl
+  real :: a(n,m)
+  !$ACC PARALLEL DEFAULT(PRESENT) ASYNC(1)
+  !$ACC LOOP GANG VECTOR COLLAPSE(2)
+  DO 214 jk=1,m
+    DO 213 jl=1,n
+      a(jl,jk) = 1.0
+213 END DO
+214 END DO
+  !$ACC END PARALLEL
+end subroutine
+
+subroutine simple_label(c, np)
+  integer :: np, n
+  real :: c(np)
+  !$acc parallel loop present(c)
+  do 100 n = 1, np
+     c(n) = 0
+100 enddo
+end subroutine

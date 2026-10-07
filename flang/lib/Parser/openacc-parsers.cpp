@@ -237,10 +237,15 @@ private:
 
     // The terminating statement may be an END DO statement; the DO construct
     // built below has its own synthetic one, so turn it into a CONTINUE
-    // statement to keep its label.
-    if (Unwrap<EndDoStmt>(body.back())) {
-      std::get<ExecutableConstruct>(body.back().u).u =
-          Statement<ActionStmt>{GetStatementLabel(body.back()), ContinueStmt{}};
+    // statement to keep its label and source.
+    if (auto *last{std::get_if<ExecutableConstruct>(&body.back().u)}) {
+      if (auto *endDoStmt{std::get_if<Statement<common::Indirection<EndDoStmt>>>(
+              &last->u)}) {
+        Statement<ActionStmt> continueStmt{
+            std::optional<Label>{endDoStmt->label}, ContinueStmt{}};
+        continueStmt.source = endDoStmt->source;
+        last->u = std::move(continueStmt);
+      }
     }
 
     Statement<NonLabelDoStmt> nonLabelDoStmt{std::move(doStmt.label),
