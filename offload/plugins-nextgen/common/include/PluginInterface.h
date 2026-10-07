@@ -1165,9 +1165,6 @@ struct GenericDeviceTy : public DeviceAllocatorTy {
   Expected<InfoTreeNode> obtainInfo();
   virtual Expected<InfoTreeNode> obtainInfoImpl() = 0;
 
-  /// Print information about the device.
-  Error printInfo();
-
   /// Return true if the device has work that is either queued or currently
   /// running
   ///
@@ -1719,12 +1716,6 @@ public:
 
   /// Query the current state of an asynchronous queue.
   int32_t query_async(int32_t DeviceId, __tgt_async_info *AsyncInfoPtr);
-
-  /// Obtain information about the given device.
-  InfoTreeNode obtain_device_info(int32_t DeviceId);
-
-  /// Prints information about the given devices supported by the plugin.
-  void print_device_info(int32_t DeviceId);
 
   /// Creates an event in the given plugin if supported.
   int32_t create_event(int32_t DeviceId, void **EventPtr);

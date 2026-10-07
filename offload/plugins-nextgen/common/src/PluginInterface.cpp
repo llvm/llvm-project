@@ -935,19 +935,6 @@ Expected<InfoTreeNode> GenericDeviceTy::obtainInfo() {
   return InfoOrErr;
 }
 
-Error GenericDeviceTy::printInfo() {
-  auto InfoOrErr = obtainInfo();
-
-  // Get the vendor-specific info entries describing the device properties.
-  if (auto Err = InfoOrErr.takeError())
-    return Err;
-
-  // Print all info entries.
-  InfoOrErr->print();
-
-  return Plugin::success();
-}
-
 Error GenericDeviceTy::createEvent(void **EventPtrStorage,
                                    bool EnableProfiling) {
   return createEventImpl(EventPtrStorage, EnableProfiling);
@@ -1449,22 +1436,6 @@ int32_t GenericPluginTy::query_async(int32_t DeviceId,
   }
 
   return OFFLOAD_SUCCESS;
-}
-
-InfoTreeNode GenericPluginTy::obtain_device_info(int32_t DeviceId) {
-  auto InfoOrErr = getDevice(DeviceId).obtainInfo();
-  if (auto Err = InfoOrErr.takeError()) {
-    REPORT() << "Failure to obtain device " << DeviceId
-             << " info: " << toString(std::move(Err));
-    return InfoTreeNode{};
-  }
-  return std::move(*InfoOrErr);
-}
-
-void GenericPluginTy::print_device_info(int32_t DeviceId) {
-  if (auto Err = getDevice(DeviceId).printInfo())
-    REPORT() << "Failure to print device " << DeviceId
-             << " info: " << toString(std::move(Err));
 }
 
 int32_t GenericPluginTy::create_event(int32_t DeviceId, void **EventPtr) {
