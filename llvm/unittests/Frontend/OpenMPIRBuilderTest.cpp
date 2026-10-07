@@ -7999,7 +7999,166 @@ TEST_F(OpenMPIRBuilderTest, CreateIteratorLoopInvalidLoopBody) {
   OpenMPIRBuilder::LocationDescription Loc(Builder.saveIP(), DL);
   OpenMPIRBuilder::InsertPointOrErrorTy AfterIP = OMPBuilder.createIteratorLoop(
       Loc, Builder.getInt64(4), BodyGenCB, "iterator");
-  ASSERT_TRUE(errorToBool(AfterIP.takeError()));
+  EXPECT_EQ(toString(AfterIP.takeError()),
+            "iterator bodygen must reach the loop latch");
+}
+
+TEST_F(OpenMPIRBuilderTest, CreateIteratorLoopMultiBlockBody) {
+  using InsertPointTy = OpenMPIRBuilder::InsertPointTy;
+  OpenMPIRBuilder OMPBuilder(*M);
+  OMPBuilder.initialize();
+  F->setName("func");
+  IRBuilder<> Builder(BB);
+
+  BasicBlock *Merge = nullptr;
+  auto BodyGenCB = [&](InsertPointTy BodyIP, Value *LinearIV) -> Error {
+    Builder.restoreIP(BodyIP);
+    Value *IsZero = Builder.CreateICmpEQ(LinearIV, Builder.getInt64(0));
+    BasicBlock *Then = BasicBlock::Create(Ctx, "iterator.then", F);
+    BasicBlock *Else = BasicBlock::Create(Ctx, "iterator.else", F);
+    Merge = BasicBlock::Create(Ctx, "iterator.merge", F);
+    Builder.CreateCondBr(IsZero, Then, Else);
+    Builder.SetInsertPoint(Then);
+    Builder.CreateBr(Merge);
+    Builder.SetInsertPoint(Else);
+    Builder.CreateBr(Merge);
+    Builder.SetInsertPoint(Merge);
+    Builder.CreateAdd(LinearIV, Builder.getInt64(1));
+    return Error::success();
+  };
+
+  OpenMPIRBuilder::LocationDescription Loc(Builder.saveIP(), DL);
+  ASSERT_EXPECTED_INIT(InsertPointTy, AfterIP,
+                       OMPBuilder.createIteratorLoop(Loc, Builder.getInt64(4),
+                                                     BodyGenCB, "iterator"));
+  Builder.restoreIP(AfterIP);
+  Builder.CreateRetVoid();
+
+  auto *MergeBr = dyn_cast<UncondBrInst>(Merge->getTerminator());
+  ASSERT_NE(MergeBr, nullptr);
+  EXPECT_EQ(MergeBr->getSuccessor()->getName(), "omp_iterator.inc");
+  EXPECT_FALSE(verifyFunction(*F, &errs()));
+}
+
+TEST_F(OpenMPIRBuilderTest, CreateIteratorLoopBodyBranchesToLatch) {
+  using InsertPointTy = OpenMPIRBuilder::InsertPointTy;
+  OpenMPIRBuilder OMPBuilder(*M);
+  OMPBuilder.initialize();
+  F->setName("func");
+  IRBuilder<> Builder(BB);
+
+  // Every block is terminated, and both arms branch to the latch themselves.
+  BasicBlock *Latch = nullptr;
+  auto BodyGenCB = [&](InsertPointTy BodyIP, Value *LinearIV) -> Error {
+    Latch = cast<PHINode>(LinearIV)->getIncomingBlock(1);
+    Builder.restoreIP(BodyIP);
+    Value *IsZero = Builder.CreateICmpEQ(LinearIV, Builder.getInt64(0));
+    BasicBlock *Then = BasicBlock::Create(Ctx, "iterator.then", F);
+    BasicBlock *Else = BasicBlock::Create(Ctx, "iterator.else", F);
+    Builder.CreateCondBr(IsZero, Then, Else);
+    Builder.SetInsertPoint(Then);
+    Builder.CreateBr(Latch);
+    Builder.SetInsertPoint(Else);
+    Builder.CreateBr(Latch);
+    return Error::success();
+  };
+
+  OpenMPIRBuilder::LocationDescription Loc(Builder.saveIP(), DL);
+  ASSERT_EXPECTED_INIT(InsertPointTy, AfterIP,
+                       OMPBuilder.createIteratorLoop(Loc, Builder.getInt64(4),
+                                                     BodyGenCB, "iterator"));
+  Builder.restoreIP(AfterIP);
+  Builder.CreateRetVoid();
+
+  ASSERT_NE(Latch, nullptr);
+  EXPECT_EQ(Latch->getName(), "omp_iterator.inc");
+  EXPECT_EQ(pred_size(Latch), 2u);
+  EXPECT_FALSE(verifyFunction(*F, &errs()));
+}
+
+TEST_F(OpenMPIRBuilderTest, CreateIteratorLoopInnerLoopBody) {
+  using InsertPointTy = OpenMPIRBuilder::InsertPointTy;
+  OpenMPIRBuilder OMPBuilder(*M);
+  OMPBuilder.initialize();
+  F->setName("func");
+  IRBuilder<> Builder(BB);
+
+  // The body contains its own loop; only its exit block is left open.
+  BasicBlock *InnerExit = nullptr;
+  auto BodyGenCB = [&](InsertPointTy BodyIP, Value *LinearIV) -> Error {
+    Builder.restoreIP(BodyIP);
+    BasicBlock *Entry = Builder.GetInsertBlock();
+    BasicBlock *InnerHeader = BasicBlock::Create(Ctx, "inner.header", F);
+    BasicBlock *InnerBody = BasicBlock::Create(Ctx, "inner.body", F);
+    InnerExit = BasicBlock::Create(Ctx, "inner.exit", F);
+    Builder.CreateBr(InnerHeader);
+    Builder.SetInsertPoint(InnerHeader);
+    PHINode *K = Builder.CreatePHI(Builder.getInt64Ty(), 2, "k");
+    K->addIncoming(Builder.getInt64(0), Entry);
+    Value *Done = Builder.CreateICmpSGE(K, LinearIV);
+    Builder.CreateCondBr(Done, InnerExit, InnerBody);
+    Builder.SetInsertPoint(InnerBody);
+    K->addIncoming(Builder.CreateAdd(K, Builder.getInt64(1)), InnerBody);
+    Builder.CreateBr(InnerHeader);
+    Builder.SetInsertPoint(InnerExit);
+    return Error::success();
+  };
+
+  OpenMPIRBuilder::LocationDescription Loc(Builder.saveIP(), DL);
+  ASSERT_EXPECTED_INIT(InsertPointTy, AfterIP,
+                       OMPBuilder.createIteratorLoop(Loc, Builder.getInt64(4),
+                                                     BodyGenCB, "iterator"));
+  Builder.restoreIP(AfterIP);
+  Builder.CreateRetVoid();
+
+  auto *ExitBr = dyn_cast<UncondBrInst>(InnerExit->getTerminator());
+  ASSERT_NE(ExitBr, nullptr);
+  EXPECT_EQ(ExitBr->getSuccessor()->getName(), "omp_iterator.inc");
+  EXPECT_FALSE(verifyFunction(*F, &errs()));
+}
+
+TEST_F(OpenMPIRBuilderTest, CreateIteratorLoopInvalidMultiBlockBody) {
+  using InsertPointTy = OpenMPIRBuilder::InsertPointTy;
+  OpenMPIRBuilder OMPBuilder(*M);
+  OMPBuilder.initialize();
+  F->setName("func");
+  IRBuilder<> Builder(BB);
+
+  // Two blocks are left open, so the latch branch has no unique home.
+  auto TwoOpenCB = [&](InsertPointTy BodyIP, Value *LinearIV) -> Error {
+    Builder.restoreIP(BodyIP);
+    Value *IsZero = Builder.CreateICmpEQ(LinearIV, Builder.getInt64(0));
+    BasicBlock *Then = BasicBlock::Create(Ctx, "iterator.then", F);
+    BasicBlock *Else = BasicBlock::Create(Ctx, "iterator.else", F);
+    Builder.CreateCondBr(IsZero, Then, Else);
+    return Error::success();
+  };
+  OpenMPIRBuilder::LocationDescription Loc(Builder.saveIP(), DL);
+  OpenMPIRBuilder::InsertPointOrErrorTy AfterIP = OMPBuilder.createIteratorLoop(
+      Loc, Builder.getInt64(4), TwoOpenCB, "iterator");
+  EXPECT_EQ(toString(AfterIP.takeError()),
+            "iterator bodygen must leave at most one unterminated block");
+}
+
+TEST_F(OpenMPIRBuilderTest, CreateIteratorLoopBodyEscapes) {
+  using InsertPointTy = OpenMPIRBuilder::InsertPointTy;
+  OpenMPIRBuilder OMPBuilder(*M);
+  OMPBuilder.initialize();
+  F->setName("func");
+  IRBuilder<> Builder(BB);
+
+  // An unterminated block outside the loop must not receive the latch branch.
+  BasicBlock *Outside = BasicBlock::Create(Ctx, "outside", F);
+  auto EscapeCB = [&](InsertPointTy BodyIP, Value *LinearIV) -> Error {
+    Builder.restoreIP(BodyIP);
+    Builder.CreateBr(Outside);
+    return Error::success();
+  };
+  OpenMPIRBuilder::LocationDescription Loc(Builder.saveIP(), DL);
+  OpenMPIRBuilder::InsertPointOrErrorTy AfterIP = OMPBuilder.createIteratorLoop(
+      Loc, Builder.getInt64(4), EscapeCB, "iterator");
+  EXPECT_EQ(toString(AfterIP.takeError()),
+            "iterator bodygen must not branch out of the loop body");
 }
 
 TEST_F(OpenMPIRBuilderTest, CreateTaskgroup) {
