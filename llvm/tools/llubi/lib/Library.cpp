@@ -239,6 +239,18 @@ AnyValue Library::executePrintf(ArrayRef<AnyValue> Args) {
       return AnyValue::poison();
     }
 
+    bool TypeMismatch =
+        (StringRef("diuoxXc").contains(Specifier) && !Arg.isInteger()) ||
+        (StringRef("feEgG").contains(Specifier) && !Arg.isFloat()) ||
+        (StringRef("nps").contains(Specifier) && !Arg.isPointer());
+
+    if (TypeMismatch) {
+      Executor.reportImmediateUB()
+          << "Argument type mismatch in printf for format specifier '"
+          << Specifier << "' at argument index " << (ArgIndex - 1) << ".";
+      return AnyValue::poison();
+    }
+
     switch (Specifier) {
     case 'd':
     case 'i': {
