@@ -16,6 +16,7 @@
 #include "clang/AST/Attr.h"
 #include "clang/AST/Decl.h"
 #include "clang/CIR/Dialect/IR/CIRDialect.h"
+#include "clang/CodeGenUtils/CodeGenUtils.h"
 
 using namespace clang;
 using namespace clang::CIRGen;
@@ -39,6 +40,41 @@ public:
         cir::LangAddressSpace::OffloadPrivate);
   }
 
+  void setTargetAttributes(const clang::Decl *decl, mlir::Operation *global,
+                           CIRGenModule &cgm) const override {
+    auto func = mlir::dyn_cast<cir::FuncOp>(global);
+    if (!func || func.isDeclaration())
+      return;
+
+    const auto *fd = dyn_cast_or_null<FunctionDecl>(decl);
+    if (!fd)
+      return;
+
+    if (!cgm.getLangOpts().HIP || !cgm.getTriple().isSPIRV() ||
+        cgm.getTriple().getVendor() != llvm::Triple::AMD)
+      return;
+
+    if (!fd->hasAttr<CUDAGlobalAttr>())
+      return;
+
+    unsigned n = cgm.getLangOpts().GPUMaxThreadsPerBlock;
+    if (const auto *flatWGS = fd->getAttr<AMDGPUFlatWorkGroupSizeAttr>()) {
+      n = flatWGS->getMax()
+              ->EvaluateKnownConstInt(cgm.getASTContext())
+              .getExtValue();
+    } else if (const auto *lb = fd->getAttr<CUDALaunchBoundsAttr>()) {
+      if (uint64_t maxThreads = lb->getMaxThreads()
+                                    ->EvaluateKnownConstInt(cgm.getASTContext())
+                                    .getExtValue())
+        n = maxThreads;
+    }
+
+    // Only x carries the flat WG size, reverse translated for AMDGPU targets.
+    func->setAttr(
+        cir::CIRDialect::getMaxWorkGroupSizeAttrName(),
+        cir::MaxWorkGroupSizeAttr::get(func.getContext(), n, /*y=*/1, /*z=*/1));
+  }
+
   cir::CallingConv getDeviceKernelCallingConv() const override {
     return cir::CallingConv::SpirKernel;
   }
@@ -54,9 +90,28 @@ public:
       ft = getABIInfo().cgt.getASTContext().adjustFunctionType(
           ft, ft->getExtInfo().withCallingConv(CC_DeviceKernel));
   }
+
+  mlir::Value getNullPointer(CIRGenModule &cgm, cir::PointerType ptrTy,
+                             QualType qt, mlir::Location loc) const override;
 };
 
 } // namespace
+
+// The bit pattern of null in non-generic AS is unspecified for SPIR(-V), so
+// materialize it via an address space cast from null in generic AS.
+mlir::Value
+CommonSPIRTargetCIRGenInfo::getNullPointer(CIRGenModule &cgm,
+                                           cir::PointerType ptrTy, QualType qt,
+                                           mlir::Location loc) const {
+  CIRGenBuilderTy &builder = cgm.getBuilder();
+  if (!CodeGenUtils::spirNullPointerNeedsGenericCast(qt, cgm.getTriple()))
+    return builder.getNullPtr(ptrTy, loc);
+
+  cir::PointerType genericPtrTy =
+      builder.getPointerTo(ptrTy.getPointee(), LangAS::opencl_generic);
+  return builder.createAddrSpaceCast(loc, builder.getNullPtr(genericPtrTy, loc),
+                                     ptrTy);
+}
 
 std::unique_ptr<TargetCIRGenInfo>
 clang::CIRGen::createCommonSPIRTargetCIRGenInfo(CIRGenTypes &cgt) {

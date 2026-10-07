@@ -197,6 +197,9 @@ TEST(ConstraintSolverTest, IsConditionImpliedOverflow) {
   // Make sure isConditionImplied returns false when there is an overflow.
   int64_t Limit = std::numeric_limits<int64_t>::max();
   addVariableRow(CS, {Limit - 1, Limit - 2, Limit - 3});
-  EXPECT_FALSE(isConditionImplied(CS, {Limit - 1, Limit - 2, Limit - 3}));
+  EXPECT_FALSE(isConditionImplied(CS, {Limit - 1, Limit - 2, Limit - 4}));
+  // The same row is implied by the single row of the system, without
+  // Fourier-Motzkin elimination.
+  EXPECT_TRUE(isConditionImplied(CS, {Limit - 1, Limit - 2, Limit - 3}));
 }
 } // namespace

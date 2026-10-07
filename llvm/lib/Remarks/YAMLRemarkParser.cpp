@@ -273,7 +273,9 @@ Expected<StringRef> YAMLRemarkParser::parseStr(yaml::KeyValueNode &Node) {
     ValueBlock = dyn_cast_if_present<yaml::BlockScalarNode>(Node.getValue());
     if (!ValueBlock)
       return error("expected a value of scalar type.", Node);
-    Result = ValueBlock->getValue();
+    // The block value lives in the YAML document, which next() frees before
+    // returning the remark.
+    Result = ValueBlock->getValue().copy(Alloc);
   } else
     Result = Value->getRawValue();
 

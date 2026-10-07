@@ -4670,7 +4670,16 @@ def MSInheritance : InheritableAttr {
   let Spellings = [CustomKeyword<"__single_inheritance">,
                    CustomKeyword<"__multiple_inheritance">,
                    CustomKeyword<"__virtual_inheritance">,
-                   CustomKeyword<"__unspecified_inheritance">];
+                   CustomKeyword<"__unspecified_inheritance">,
+                   // The single underscore spellings are aliases defined in
+                   // TokenKinds.def; they must come *after* all of the other
+                   // spellings because otherwise the MSInheritanceModel
+                   // enumeration will break (we're relying on token
+                   // normalization converting the alias to the normal form).
+                   CustomKeyword<"_single_inheritance">,
+                   CustomKeyword<"_multiple_inheritance">,
+                   CustomKeyword<"_virtual_inheritance">
+                   ];
   let AdditionalMembers = [{
   MSInheritanceModel getInheritanceModel() const {
     // The spelling enum should agree with MSInheritanceModel.

@@ -189,7 +189,6 @@ TEST(ConfigParseTest, ParsesConfigurationBools) {
   CHECK_PARSE_BOOL(DerivePointerAlignment);
   CHECK_PARSE_BOOL_FIELD(DerivePointerAlignment, "DerivePointerBinding");
   CHECK_PARSE_BOOL(DisableFormat);
-  CHECK_PARSE_BOOL(IndentAccessModifiers);
   CHECK_PARSE_BOOL(IndentCaseBlocks);
   CHECK_PARSE_BOOL(IndentCaseLabels);
   CHECK_PARSE_BOOL(IndentExportBlock);
@@ -1029,6 +1028,19 @@ TEST(ConfigParseTest, ParsesConfiguration) {
   CHECK_PARSE("AllowShortIfStatementsOnASingleLine: true",
               AllowShortIfStatementsOnASingleLine,
               FormatStyle::SIS_WithoutElse);
+
+  Style.IndentAccessModifiers = FormatStyle::IAMS_Always;
+  CHECK_PARSE("IndentAccessModifiers: Never", IndentAccessModifiers,
+              FormatStyle::IAMS_Never);
+  CHECK_PARSE("IndentAccessModifiers: Always", IndentAccessModifiers,
+              FormatStyle::IAMS_Always);
+  CHECK_PARSE("IndentAccessModifiers: AfterFirstAccessModifier",
+              IndentAccessModifiers,
+              FormatStyle::IAMS_AfterFirstAccessModifier);
+  CHECK_PARSE("IndentAccessModifiers: false", IndentAccessModifiers,
+              FormatStyle::IAMS_Never);
+  CHECK_PARSE("IndentAccessModifiers: true", IndentAccessModifiers,
+              FormatStyle::IAMS_Always);
 
   Style.IndentExternBlock = FormatStyle::IEBS_NoIndent;
   CHECK_PARSE("IndentExternBlock: AfterExternBlock", IndentExternBlock,

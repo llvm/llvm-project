@@ -50,6 +50,12 @@ struct ol_platform_impl_t {
     return llvm::ArrayRef(Devices);
   }
 
+  /// Whether the platform has been initialized and has at least one device.
+  /// Does not trigger initialization.
+  bool isActive() const {
+    return Plugin && Plugin->is_initialized() && Plugin->getNumDevices() > 0;
+  }
+
   /// Direct access to the plugin, may be uninitialized if accessed here.
   std::unique_ptr<GenericPluginTy> Plugin;
 
@@ -461,6 +467,8 @@ Error olGetPlatformInfoImplDetail(ol_platform_handle_t Platform,
   case OL_PLATFORM_INFO_BACKEND: {
     return Info.write<ol_platform_backend_t>(Platform->BackendType);
   }
+  case OL_PLATFORM_INFO_ACTIVE:
+    return Info.write<bool>(Platform->isActive());
   default:
     return createOffloadError(ErrorCode::INVALID_ENUMERATION,
                               "getPlatformInfo enum '%i' is invalid", PropName);
@@ -673,9 +681,32 @@ Error olIterateDevices_impl(ol_device_iterate_cb_t Callback, void *UserData) {
     if (!DevicesOrErr)
       return DevicesOrErr.takeError();
     for (auto &Device : *DevicesOrErr) {
-      if (!Callback(Device.get(), UserData)) {
+      if (!Callback(Device.get(), UserData))
         return Error::success();
-      }
+    }
+  }
+
+  return Error::success();
+}
+
+Error olIterateCompatibleDevices_impl(const void *ProgData, size_t ProgDataSize,
+                                      ol_device_iterate_cb_t Callback,
+                                      void *UserData) {
+  StringRef Buffer(reinterpret_cast<const char *>(ProgData), ProgDataSize);
+
+  for (auto &Platform : OffloadContext::get().Platforms) {
+    if (!Platform->Plugin || !Platform->Plugin->isPluginCompatible(Buffer))
+      continue;
+    auto DevicesOrErr = Platform->getDevices();
+    if (!DevicesOrErr)
+      return DevicesOrErr.takeError();
+    for (auto &Device : *DevicesOrErr) {
+      if (!Device->Platform.Plugin->isDeviceCompatible(Device->DeviceNum,
+                                                       Buffer))
+        continue;
+
+      if (!Callback(Device.get(), UserData))
+        return Error::success();
     }
   }
 
@@ -1504,6 +1535,10 @@ namespace tmp {
 // Temporary helpers to help transition of libomptarget to liboffload
 GenericPluginTy *__ol_tgt_GetPluginFromPlatform(ol_platform_handle_t Platform) {
   return Platform->Plugin.get();
+}
+
+int32_t __ol_tgt_GetPluginDeviceId(ol_device_handle_t Device) {
+  return Device->DeviceNum;
 }
 } // namespace tmp
 
