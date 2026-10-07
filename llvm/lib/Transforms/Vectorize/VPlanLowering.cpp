@@ -277,8 +277,8 @@ expandVPWidenIntOrFpInduction(VPWidenIntOrFpInductionRecipe *WidenIVR) {
     // NSW as intermediate vector lane offsets (e.g., lane * step) may wrap
     // signed bounds even if scalar additions do not. Reconstructed
     // multiplications cannot preserve NSW or NUW from scalar additions.
-    AddFlags = VPIRFlags::WrapFlagsTy(
-        Flags.getNoWrapFlagsOrNone().HasNUW, /*HasNSW=*/false);
+    AddFlags = VPIRFlags::WrapFlagsTy(Flags.getNoWrapFlagsOrNone().HasNUW,
+                                      /*HasNSW=*/false);
     MulFlags = {};
   } else {
     AddOp = ID.getInductionOpcode();
