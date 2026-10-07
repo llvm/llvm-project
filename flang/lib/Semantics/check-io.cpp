@@ -1184,61 +1184,43 @@ using VisitedSymbolSet = std::unordered_set<const Symbol *>;
 
 // Seeks out an allocatable or pointer ultimate component that is not
 // nested in a nonallocatable/nonpointer component with a specific defined I/O
-// procedure.
-//
-// This is a two-color DFS to prevent missing unsafe components following a
-// shielded instantiation: 'onPath' holds the scopes on the recursion stack
-// (a repeat entry is a back edge from a recursive type and is pruned without
-// caching), and 'cache' memorizes each fully-walked subtree.
-using UnsafeComponentPathSet = std::unordered_set<const Scope *>;
-using UnsafeComponentCache = std::unordered_map<const Scope *, const Symbol *>;
-
+// procedure. The 'visited' set tracks derived types to break cycles caused by
+// an illegal recursive type definition (F2023 C749).
 static const Symbol *FindUnsafeIoDirectComponent(common::DefinedIo which,
     const DerivedTypeSpec &derived, const Scope &scope,
-    UnsafeComponentPathSet &onPath, UnsafeComponentCache &cache) {
+    VisitedSymbolSet &visited) {
   if (HasDefinedIo(which, derived, &scope)) {
     return nullptr;
   }
-  const Scope *dtScope{derived.scope()};
-  if (!dtScope) {
+  if (!visited.insert(&derived.typeSymbol()).second) {
     return nullptr;
   }
-  if (auto it{cache.find(dtScope)}; it != cache.end()) {
-    return it->second;
-  }
-  if (!onPath.insert(dtScope).second) {
-    return nullptr; // cycle: prune without caching
-  }
-  const Symbol *result{nullptr};
-  for (const auto &pair : *dtScope) {
-    const Symbol &symbol{*pair.second};
-    if (IsAllocatableOrPointer(symbol)) {
-      result = &symbol;
-      break;
-    }
-    if (const auto *details{symbol.detailsIf<ObjectEntityDetails>()}) {
-      if (const DeclTypeSpec *type{details->type()}) {
-        if (type->category() == DeclTypeSpec::Category::TypeDerived) {
-          const DerivedTypeSpec &componentDerived{type->derivedTypeSpec()};
-          if (const Symbol *bad{FindUnsafeIoDirectComponent(
-                  which, componentDerived, scope, onPath, cache)}) {
-            result = bad;
-            break;
+  if (const Scope *dtScope{derived.scope()}) {
+    for (const auto &pair : *dtScope) {
+      const Symbol &symbol{*pair.second};
+      if (IsAllocatableOrPointer(symbol)) {
+        return &symbol;
+      }
+      if (const auto *details{symbol.detailsIf<ObjectEntityDetails>()}) {
+        if (const DeclTypeSpec *type{details->type()}) {
+          if (type->category() == DeclTypeSpec::Category::TypeDerived) {
+            const DerivedTypeSpec &componentDerived{type->derivedTypeSpec()};
+            if (const Symbol *bad{FindUnsafeIoDirectComponent(
+                    which, componentDerived, scope, visited)}) {
+              return bad;
+            }
           }
         }
       }
     }
   }
-  onPath.erase(dtScope);
-  cache.emplace(dtScope, result);
-  return result;
+  return nullptr;
 }
 
 static const Symbol *FindUnsafeIoDirectComponent(common::DefinedIo which,
     const DerivedTypeSpec &derived, const Scope &scope) {
-  UnsafeComponentPathSet onPath;
-  UnsafeComponentCache cache;
-  return FindUnsafeIoDirectComponent(which, derived, scope, onPath, cache);
+  VisitedSymbolSet visited;
+  return FindUnsafeIoDirectComponent(which, derived, scope, visited);
 }
 
 // For a type that does not have a defined I/O subroutine, finds a direct
