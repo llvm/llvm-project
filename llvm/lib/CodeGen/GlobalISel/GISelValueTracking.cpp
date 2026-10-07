@@ -2778,13 +2778,13 @@ unsigned GISelValueTracking::computeNumSignBits(Register R,
     break;
   }
   case TargetOpcode::G_MUL: {
-    unsigned Src1NumSignBits =
-        computeNumSignBits(MI.getOperand(1).getReg(), DemandedElts, Depth + 1);
-    if (Src1NumSignBits == 1)
-      break;
     unsigned Src2NumSignBits =
         computeNumSignBits(MI.getOperand(2).getReg(), DemandedElts, Depth + 1);
     if (Src2NumSignBits == 1)
+      break;
+    unsigned Src1NumSignBits =
+        computeNumSignBits(MI.getOperand(1).getReg(), DemandedElts, Depth + 1);
+    if (Src1NumSignBits == 1)
       break;
 
     // The product needs at most the sum of the operands' signed widths.
