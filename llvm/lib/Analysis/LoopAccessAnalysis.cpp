@@ -52,6 +52,7 @@
 #include "llvm/IR/Instructions.h"
 #include "llvm/IR/IntrinsicInst.h"
 #include "llvm/IR/PassManager.h"
+#include "llvm/IR/PatternMatch.h"
 #include "llvm/IR/Type.h"
 #include "llvm/IR/Value.h"
 #include "llvm/IR/ValueHandle.h"
@@ -71,6 +72,7 @@
 
 using namespace llvm;
 using namespace llvm::SCEVPatternMatch;
+using namespace llvm::PatternMatch;
 
 #define DEBUG_TYPE "loop-accesses"
 
@@ -3530,6 +3532,11 @@ bool LoopAccessInfo::analyzeLoop(AAResults *AA, const LoopInfo *LI,
     // Scan the BB and collect legal loads and stores. Also detect any
     // convergent instructions.
     for (Instruction &I : *BB) {
+      // Prefetches are optional hints and are dropped by the loop vectorizer.
+      // Do not let their pointer operands affect memory dependence analysis.
+      if (match(&I, m_Intrinsic<Intrinsic::prefetch>()))
+        continue;
+
       if (auto *Call = dyn_cast<CallBase>(&I)) {
         if (Call->isConvergent())
           HasConvergentOp = true;
