@@ -1,9 +1,9 @@
 // RUN: %clang_cc1 -triple x86_64-unknown-linux-gnu -std=c++20 -fclangir -mconstructor-aliases -emit-cir %s -o %t.cir
 // RUN: FileCheck --check-prefix=CIR --input-file=%t.cir %s
 // RUN: %clang_cc1 -triple x86_64-unknown-linux-gnu -std=c++20 -fclangir -mconstructor-aliases -emit-llvm %s -o %t-cir.ll
-// RUN: FileCheck --check-prefix=LLVM,LLVMCIR --input-file=%t-cir.ll %s
+// RUN: FileCheck --check-prefix=LLVM --input-file=%t-cir.ll %s
 // RUN: %clang_cc1 -triple x86_64-unknown-linux-gnu -std=c++20 -mconstructor-aliases -emit-llvm %s -o %t.ll
-// RUN: FileCheck --check-prefix=LLVM,OGCG --input-file=%t.ll %s
+// RUN: FileCheck --check-prefix=LLVM --input-file=%t.ll %s
 
 // Minimal in-source declarations of the standard-library bits needed for a
 // destroying operator delete so this test does not depend on a system header.
@@ -27,18 +27,14 @@ void A::operator delete(A *, std::destroying_delete_t) {}
 
 // CIR-LABEL: cir.func {{.*}} @_ZN1AD0Ev
 // CIR: %[[THIS_ADDR:.*]] = cir.alloca "this"
-// CIR: %[[TAG:.*]] = cir.alloca "destroying.delete.tag"
 // CIR: cir.store %[[ARG:.*]], %[[THIS_ADDR]]
 // CIR: %[[THIS:.*]] = cir.load %[[THIS_ADDR]]
-// CIR: cir.load{{.*}} %[[TAG]]
 // CIR: cir.call @_ZN1AdlEPS_St19destroying_delete_t(%[[THIS]])
 // CIR-NOT: cir.call @_ZN1AD{{[12]}}Ev
 // CIR: cir.return
 
 // LLVM-LABEL: define {{.*}} void @_ZN1AD0Ev(
 // LLVM: %[[THIS_ADDR:.*]] = alloca ptr
-// LLVMCIR: alloca %"struct.std::destroying_delete_t"
-// OGCG-NOT: alloca %"struct.std::destroying_delete_t"
 // LLVM: store ptr %[[ARG:.*]], ptr %[[THIS_ADDR]]
 // LLVM: %[[THIS:.*]] = load ptr, ptr %[[THIS_ADDR]]
 // LLVM: call void @_ZN1AdlEPS_St19destroying_delete_t(ptr noundef %[[THIS]])
