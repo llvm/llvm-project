@@ -93,6 +93,7 @@ char* test_deref_only(B &s) {
 // CHECK: [[_ZTS1BPTR_TBAA24]] = !{[[META25:![0-9]+]], [[META25]], i64 0}
 // CHECK: [[META25]] = !{!"p1 _ZTS1B", [[META8]], i64 0}
 // CHECK: [[CHAR_TBAA26]] = !{[[META27:![0-9]+]], [[META4]], i64 16}
-// CHECK: [[META27]] = !{!"_ZTS1B", [[META28:![0-9]+]], i64 8, [[META4]], i64 16}
-// CHECK: [[META28]] = !{!"long long", [[META4]], i64 0}
+// CHECK: [[META27]] = !{!"_ZTS1B", [[META28:![0-9]+]], i64 0, [[META29:![0-9]+]], i64 8, [[META4]], i64 16}
+// CHECK: [[META28]] = !{!"vtable pointer", [[META5]], i64 0}
+// CHECK: [[META29]] = !{!"long long", [[META4]], i64 0}
 //.
