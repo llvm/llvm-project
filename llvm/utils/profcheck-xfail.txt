@@ -26,10 +26,8 @@ Transforms/IndVarSimplify/debugloc-rem-subst.ll
 Transforms/IndVarSimplify/eliminate-rem.ll
 Transforms/IndVarSimplify/preserving-debugloc-rem-div.ll
 Transforms/IndirectBrExpand/basic.ll
-Transforms/InstCombine/fcmp-select.ll
 Transforms/InstCombine/ffs-1.ll
 Transforms/InstCombine/ffs-i16.ll
-Transforms/InstCombine/fmul.ll
 Transforms/InstCombine/ldexp-ext.ll
 Transforms/InstCombine/ldexp.ll
 Transforms/InstCombine/logical-select.ll
@@ -38,7 +36,6 @@ Transforms/InstCombine/memrchr-3.ll
 Transforms/InstCombine/memrchr-4.ll
 Transforms/InstCombine/minmax-fold.ll
 Transforms/InstCombine/minmax-intrinsics.ll
-Transforms/InstCombine/mul-inseltpoison.ll
 Transforms/InstCombine/mul.ll
 Transforms/InstCombine/select-factorize.ll
 Transforms/InstCombine/select-min-max.ll
