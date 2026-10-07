@@ -1746,3 +1746,19 @@ func.func @bad_pack_mask_shape(%arg0: !hlfir.expr<2x3xi32>, %arg1: !hlfir.expr<2
   %0 = hlfir.pack %arg0 %arg1 : (!hlfir.expr<2x3xi32>, !hlfir.expr<2x4x!fir.logical<4>>) -> !hlfir.expr<?xi32>
   return
 }
+
+// -----
+
+func.func @bad_pack_vector_rank(%arg0: !hlfir.expr<2x3xi32>, %arg1: !fir.logical<4>, %arg2: !hlfir.expr<?x?xi32>) {
+  // expected-error@+1 {{'hlfir.pack' op VECTOR must be an array of rank 1}}
+  %0 = hlfir.pack %arg0 %arg1 vector %arg2 : (!hlfir.expr<2x3xi32>, !fir.logical<4>, !hlfir.expr<?x?xi32>) -> !hlfir.expr<?xi32>
+  return
+}
+
+// -----
+
+func.func @bad_pack_vector_type(%arg0: !hlfir.expr<2x3xi32>, %arg1: !fir.logical<4>, %arg2: !hlfir.expr<?xf32>) {
+  // expected-error@+1 {{'hlfir.pack' op ARRAY and VECTOR must have the same element type}}
+  %0 = hlfir.pack %arg0 %arg1 vector %arg2 : (!hlfir.expr<2x3xi32>, !fir.logical<4>, !hlfir.expr<?xf32>) -> !hlfir.expr<?xi32>
+  return
+}

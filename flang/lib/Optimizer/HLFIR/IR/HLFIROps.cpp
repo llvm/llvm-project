@@ -1721,6 +1721,17 @@ llvm::LogicalResult hlfir::PackOp::verify() {
       }
     }
   }
+  if (mlir::Value vector = getVector()) {
+    auto vectorType = mlir::cast<fir::SequenceType>(
+        hlfir::getFortranElementOrSequenceType(vector.getType()));
+    if (vectorType.getDimension() != 1)
+      return emitOpError("VECTOR must be an array of rank 1");
+    if (auto match = areMatchingTypes(
+            *this, vectorType.getElementType(), arrayType.getElementType(),
+            /*allowCharacterLenMismatch=*/!useStrictIntrinsicVerifier);
+        match.failed())
+      return emitOpError("ARRAY and VECTOR must have the same element type");
+  }
   return mlir::success();
 }
 
