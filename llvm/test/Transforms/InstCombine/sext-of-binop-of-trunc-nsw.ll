@@ -251,3 +251,19 @@ define i128 @sext_add_nsw_past_legal_type(i128 %x) {
   %e = sext i64 %s to i128
   ret i128 %e
 }
+
+; Negative: the nsw add is the trunc operand, not an operation between the
+; trunc and the sext. sext(trunc(add nsw X) to i1) is 0 or -1, not X.
+
+define i64 @sext_of_trunc_of_nsw_add(i64 %x) {
+; CHECK-LABEL: define i64 @sext_of_trunc_of_nsw_add(
+; CHECK-SAME: i64 [[X:%.*]]) {
+; CHECK-NEXT:    [[TMP1:%.*]] = or i64 [[X]], -2
+; CHECK-NEXT:    [[NEG:%.*]] = add nsw i64 [[TMP1]], 1
+; CHECK-NEXT:    ret i64 [[NEG]]
+;
+  %a = add nuw nsw i64 %x, 1
+  %t = trunc i64 %a to i1
+  %e = sext i1 %t to i64
+  ret i64 %e
+}
