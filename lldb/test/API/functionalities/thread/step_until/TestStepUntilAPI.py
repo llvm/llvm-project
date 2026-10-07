@@ -123,7 +123,7 @@ class TestStepUntilAPI(TestBase):
             self, "At the start", self.main_spec
         )
         self.assertIn(
-            "step until target not in current function",
+            "Until target outside of the current function",
             thread.StepOverUntil(
                 self.frame(), self.main_spec, self.in_foo
             ).GetCString(),
@@ -145,7 +145,7 @@ class TestStepUntilAPI(TestBase):
             self.skipTest(f"failed to build with linker script.")
 
         self.assertIn(
-            "step until target not in current function",
+            "Until target outside of the current function",
             thread.StepOverUntil(
                 self.frame(), self.main_spec, self.in_foo
             ).GetCString(),

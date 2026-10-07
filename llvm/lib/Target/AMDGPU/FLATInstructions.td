@@ -2187,6 +2187,8 @@ let SubtargetPredicate = HasAtomicCondSubClampFlatInsts in {
   defm : FlatAtomicRtnPat<"FLAT_ATOMIC_COND_SUB_U32", "atomic_load_usub_cond_"  #as, i32 >;
 
   defm : FlatAtomicNoRtnPat<"FLAT_ATOMIC_COND_SUB_U32", "atomic_load_usub_cond_"#as, i32>;
+
+  defm : FlatAtomicPat<"FLAT_ATOMIC_CSUB_U32", "atomic_load_usub_sat_"#as, i32>;
 }
 } // end foreach as
 
