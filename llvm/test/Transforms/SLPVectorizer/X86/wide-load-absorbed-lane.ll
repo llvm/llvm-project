@@ -399,3 +399,39 @@ entry:
   store i32 %m3, ptr getelementptr inbounds nuw (i8, ptr @out, i64 12), align 4
   ret void
 }
+
+; The or of the absorbing all-ones lane must not keep the disjoint flag: the
+; other operand of the lane is not known to be zero.
+define void @or_disjoint_absorbed_first(i32 noundef %x) {
+; CHECK-LABEL: define void @or_disjoint_absorbed_first(
+; CHECK-SAME: i32 noundef [[X:%.*]]) #[[ATTR0]] {
+; CHECK-NEXT:  [[ENTRY:.*:]]
+; CHECK-NEXT:    store i32 -1, ptr @out, align 16
+; CHECK-NEXT:    [[TMP0:%.*]] = load <2 x i32>, ptr getelementptr inbounds nuw (i8, ptr @in, i64 4), align 4
+; CHECK-NEXT:    [[TMP1:%.*]] = insertelement <2 x i32> poison, i32 [[X]], i64 0
+; CHECK-NEXT:    [[TMP2:%.*]] = shufflevector <2 x i32> [[TMP1]], <2 x i32> poison, <2 x i32> zeroinitializer
+; CHECK-NEXT:    [[TMP3:%.*]] = add <2 x i32> [[TMP0]], [[TMP2]]
+; CHECK-NEXT:    [[TMP4:%.*]] = or disjoint <2 x i32> [[TMP3]], <i32 256, i32 512>
+; CHECK-NEXT:    store <2 x i32> [[TMP4]], ptr getelementptr inbounds nuw (i8, ptr @out, i64 4), align 4
+; CHECK-NEXT:    [[L3:%.*]] = load i32, ptr getelementptr inbounds nuw (i8, ptr @in, i64 12), align 4
+; CHECK-NEXT:    [[A3:%.*]] = add i32 [[L3]], [[X]]
+; CHECK-NEXT:    [[M3:%.*]] = or disjoint i32 [[A3]], 1024
+; CHECK-NEXT:    store i32 [[M3]], ptr getelementptr inbounds nuw (i8, ptr @out, i64 12), align 4
+; CHECK-NEXT:    ret void
+;
+entry:
+  store i32 -1, ptr @out, align 16
+  %l1 = load i32, ptr getelementptr inbounds nuw (i8, ptr @in, i64 4), align 4
+  %a1 = add i32 %l1, %x
+  %m1 = or disjoint i32 %a1, 256
+  store i32 %m1, ptr getelementptr inbounds nuw (i8, ptr @out, i64 4), align 4
+  %l2 = load i32, ptr getelementptr inbounds nuw (i8, ptr @in, i64 8), align 4
+  %a2 = add i32 %l2, %x
+  %m2 = or disjoint i32 %a2, 512
+  store i32 %m2, ptr getelementptr inbounds nuw (i8, ptr @out, i64 8), align 4
+  %l3 = load i32, ptr getelementptr inbounds nuw (i8, ptr @in, i64 12), align 4
+  %a3 = add i32 %l3, %x
+  %m3 = or disjoint i32 %a3, 1024
+  store i32 %m3, ptr getelementptr inbounds nuw (i8, ptr @out, i64 12), align 4
+  ret void
+}

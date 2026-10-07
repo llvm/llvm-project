@@ -2856,7 +2856,7 @@ void AsmConstraintsInfo::EmitAsmStmt() {
   if (IsGCCAsmGoto && !CBRRegResults.empty()) {
     for (llvm::BasicBlock *Succ : CBR->getIndirectDests()) {
       llvm::IRBuilderBase::InsertPointGuard IPG(Builder);
-      Builder.SetInsertPoint(Succ, --(Succ->end()));
+      Builder.SetInsertPoint(--(Succ->end()));
       EmitAsmStores(CBRRegResults[Succ]);
     }
   }

@@ -340,12 +340,39 @@ public:
     Visit(e->getSelectedExpr());
   }
   void VisitConstantExpr(ConstantExpr *e) {
-    ensureDest(cgf.getLoc(e->getSourceRange()), e->getType());
+    mlir::Location loc = cgf.getLoc(e->getSourceRange());
+    ensureDest(loc, e->getType());
 
     if (mlir::Attribute result = ConstantEmitter(cgf).tryEmitConstantExpr(e)) {
+      QualType ty = e->getType();
+
+      // If the destination's tail padding may overlap another object's
+      // storage (e.g. a [[no_unique_address]] member or base), only store
+      // the type's data size rather than its full size, so we don't
+      // clobber bytes that belong to that other object. In particular, a
+      // genuinely empty class has a data size of zero, so nothing should
+      // be stored at all.
+      if (dest.mayOverlap()) {
+        CharUnits dataSize =
+            cgf.getContext().getTypeInfoDataSizeInChars(ty).Width;
+        if (dataSize.isZero())
+          return;
+
+        if (dataSize != cgf.getContext().getTypeSizeInChars(ty)) {
+          Address temp = cgf.createMemTemp(ty, loc);
+          mlir::Value resultVal = cgf.getBuilder().getConstant(
+              loc, mlir::cast<mlir::TypedAttr>(result));
+          cgf.getBuilder().createStore(loc, resultVal, temp);
+          cgf.getBuilder().createCopy(dest.getAddress(), temp,
+                                      /*isVolatile=*/false,
+                                      /*skipTailPadding=*/true);
+          return;
+        }
+      }
+
       mlir::Value resultVal = cgf.getBuilder().getConstant(
-          cgf.getLoc(e->getSourceRange()), mlir::cast<mlir::TypedAttr>(result));
-      LValue destLVal = cgf.makeAddrLValue(dest.getAddress(), e->getType());
+          loc, mlir::cast<mlir::TypedAttr>(result));
+      LValue destLVal = cgf.makeAddrLValue(dest.getAddress(), ty);
       cgf.emitStoreThroughLValue(RValue::get(resultVal), destLVal);
       return;
     }
@@ -1257,6 +1284,10 @@ AggValueSlot::Overlap_t CIRGenFunction::getOverlapForBaseInit(
   if (isVirtual)
     return AggValueSlot::MayOverlap;
 
+  // Empty bases can overlap earlier bases.
+  if (baseRD->isEmpty())
+    return AggValueSlot::MayOverlap;
+
   // If the base class is laid out entirely within the nvsize of the derived
   // class, its tail padding cannot yet be initialized, so we can issue
   // stores at the full width of the base class.
@@ -1346,6 +1377,10 @@ AggValueSlot::Overlap_t
 CIRGenFunction::getOverlapForFieldInit(const FieldDecl *fd) {
   if (!fd->hasAttr<NoUniqueAddressAttr>() || !fd->getType()->isRecordType())
     return AggValueSlot::DoesNotOverlap;
+
+  // Empty fields can overlap earlier fields.
+  if (fd->getType()->getAsCXXRecordDecl()->isEmpty())
+    return AggValueSlot::MayOverlap;
 
   // If the field lies entirely within the enclosing class's nvsize, its tail
   // padding cannot overlap any already-initialized object. (The only subobjects
