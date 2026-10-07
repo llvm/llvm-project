@@ -80,7 +80,7 @@ static bool isKnownSignExtendedFromWidth(Value *V, unsigned Width,
 static Value *
 getLegalizedIntegerOperand(Value *Operand, IntegerType *LegalTy,
                            IntegerExtension Extension, IRBuilder<> &Builder,
-                           DenseMap<Value *, Value *> &ReplacedValues,
+                           const DenseMap<Value *, Value *> &ReplacedValues,
                            const DataLayout &DL) {
   if (Value *Replacement = ReplacedValues.lookup(Operand)) {
     Replacement = Builder.CreateZExtOrTrunc(Replacement, LegalTy);
@@ -135,7 +135,8 @@ legalizeNonStandardIntegerBitCast(BitCastInst &BitCast,
   IRBuilder<> Builder(&BitCast);
   Value *Packed = ConstantInt::get(LegalTy, 0);
   unsigned ElementWidth = SourceTy->getScalarSizeInBits();
-  for (unsigned Index = 0; Index < SourceTy->getNumElements(); ++Index) {
+  unsigned VecSize = SourceTy->getNumElements();
+  for (unsigned Index = 0; Index < VecSize; ++Index) {
     Value *Element =
         Builder.CreateExtractElement(BitCast.getOperand(0), uint64_t(Index));
     Element = Builder.CreateZExt(Element, LegalTy);
@@ -153,8 +154,8 @@ static bool
 legalizeNonStandardIntegerTrunc(TruncInst &Trunc,
                                 SmallVectorImpl<Instruction *> &ToRemove,
                                 DenseMap<Value *, Value *> &ReplacedValues) {
-  auto *LegalSrcTy = getLegalIntegerType(Trunc.getSrcTy());
-  auto *LegalDstTy = getLegalIntegerType(Trunc.getDestTy());
+  IntegerType *LegalSrcTy = getLegalIntegerType(Trunc.getSrcTy());
+  IntegerType *LegalDstTy = getLegalIntegerType(Trunc.getDestTy());
   if (!LegalSrcTy && !LegalDstTy)
     return false;
 
