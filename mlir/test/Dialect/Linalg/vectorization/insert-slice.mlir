@@ -348,30 +348,40 @@ func.func private @insert_slice_non_zero_offset_for_dyn_dim(%source: tensor<?x3x
 
 // -----
 
-/// The vector shape (1x4) equals the trailing result dims (1x4), but dim 1 is
-/// dropped, so the vector is written to result dims 0 and 2. Result dim 0 is
-/// dynamic, so the write needs a mask.
+/// Dim 1 is dropped, so the vector is written to result dims 0 and 2. Its shape
+/// (1x4) equals the trailing result dims (1x4), but result dim 0 is dynamic, so
+/// the write needs a mask. The mask sizes come from result dims 0 and 2.
 
 func.func private @insert_slice_non_leading_unit_dim_dropped_dynamic_dest_dim(
-    %source: tensor<?x4xi32>, %dest_size: index, %size: index, %offset: index) -> tensor<?x1x4xi32> {
-  %pad = arith.constant 0 : i32
-  %empty = tensor.empty(%dest_size) : tensor<?x1x4xi32>
-  %init = linalg.fill ins(%pad : i32) outs(%empty : tensor<?x1x4xi32>) -> tensor<?x1x4xi32>
-  %res = tensor.insert_slice %source into %init[%offset, 0, 0] [%size, 1, 4] [1, 1, 1] : tensor<?x4xi32> into tensor<?x1x4xi32>
+    %source: tensor<?x4xi32>, %dest: tensor<?x1x4xi32>, %size: index, %offset: index) -> tensor<?x1x4xi32> {
+  %res = tensor.insert_slice %source into %dest[%offset, 0, 0] [%size, 1, 4] [1, 1, 1] : tensor<?x4xi32> into tensor<?x1x4xi32>
   return %res : tensor<?x1x4xi32>
 }
 
 // CHECK-DAG: #[[$MAP_D0_D2:.*]] = affine_map<(d0, d1, d2) -> (d0, d2)>
 
 // CHECK-LABEL:   func.func private @insert_slice_non_leading_unit_dim_dropped_dynamic_dest_dim(
-// CHECK-SAME:      %[[OFFSET:[a-zA-Z0-9_]+]]: index) -> tensor<?x1x4xi32> {
-// CHECK:           %[[INIT:.*]] = linalg.fill
-// CHECK:           %[[READ:.*]] = vector.mask %{{.*}} { vector.transfer_read
-// CHECK:           %[[DIM_0:.*]] = tensor.dim %[[INIT]], %{{.*}} : tensor<?x1x4xi32>
-// CHECK:           %[[SIZE_0:.*]] = arith.subi %[[DIM_0]], %[[OFFSET]] : index
+// CHECK-SAME:      %[[SRC:.*]]: tensor<?x4xi32>,
+// CHECK-SAME:      %[[DEST:.*]]: tensor<?x1x4xi32>,
+// CHECK-SAME:      %[[SIZE:.*]]: index,
+// CHECK-SAME:      %[[OFFSET:.*]]: index) -> tensor<?x1x4xi32> {
+// CHECK:           %[[PAD:.*]] = arith.constant 0 : i32
+// CHECK:           %[[C_0:.*]] = arith.constant 0 : index
+// CHECK:           %[[C_0_1:.*]] = arith.constant 0 : index
+// CHECK:           %[[C_0_2:.*]] = arith.constant 0 : index
+// CHECK:           %[[SRC_DIM_0:.*]] = tensor.dim %[[SRC]], %[[C_0_2]] : tensor<?x4xi32>
 // CHECK:           %[[C_4:.*]] = arith.constant 4 : index
-// CHECK:           %[[MASK_WRITE:.*]] = vector.create_mask %[[SIZE_0]], %[[C_4]] : vector<1x4xi1>
-// CHECK:           vector.mask %[[MASK_WRITE]] { vector.transfer_write %[[READ]], %[[INIT]][%[[OFFSET]], %{{.*}}, %{{.*}}] {{.*}}permutation_map = #[[$MAP_D0_D2]]{{.*}} : vector<1x4xi32>, tensor<?x1x4xi32> }
+// CHECK:           %[[MASK_READ:.*]] = vector.create_mask %[[SRC_DIM_0]], %[[C_4]] : vector<1x4xi1>
+// CHECK:           %[[READ:.*]] = vector.mask %[[MASK_READ]] { vector.transfer_read %[[SRC]][%[[C_0_1]], %[[C_0_1]]], %[[PAD]] {in_bounds = [true, true]} : tensor<?x4xi32>, vector<1x4xi32> } : vector<1x4xi1> -> vector<1x4xi32>
+// CHECK:           %[[C_0_3:.*]] = arith.constant 0 : index
+// CHECK:           %[[C_0_4:.*]] = arith.constant 0 : index
+// CHECK:           %[[C_0_5:.*]] = arith.constant 0 : index
+// CHECK:           %[[DEST_DIM_0:.*]] = tensor.dim %[[DEST]], %[[C_0_5]] : tensor<?x1x4xi32>
+// CHECK:           %[[SIZE_0:.*]] = arith.subi %[[DEST_DIM_0]], %[[OFFSET]] : index
+// CHECK:           %[[C_4_1:.*]] = arith.constant 4 : index
+// CHECK:           %[[MASK_WRITE:.*]] = vector.create_mask %[[SIZE_0]], %[[C_4_1]] : vector<1x4xi1>
+// CHECK:           %[[RES:.*]] = vector.mask %[[MASK_WRITE]] { vector.transfer_write %[[READ]], %[[DEST]][%[[OFFSET]], %[[C_0_3]], %[[C_0_4]]] {in_bounds = [true, true], permutation_map = #[[$MAP_D0_D2]]} : vector<1x4xi32>, tensor<?x1x4xi32> } : vector<1x4xi1> -> tensor<?x1x4xi32>
+// CHECK:           return %[[RES]] : tensor<?x1x4xi32>
 
  module attributes {transform.with_named_sequence} {
   transform.named_sequence @__transform_main(%arg0: !transform.any_op {transform.readonly}) {
@@ -384,25 +394,34 @@ func.func private @insert_slice_non_leading_unit_dim_dropped_dynamic_dest_dim(
 // -----
 
 /// The leading unit dim is dropped and the insert index for result dim 1 is
-/// != 0. The mask size for that dim is the dim minus its own index (8 - 6).
+/// != 0. The source has fewer dims than the result, so each mask size must be
+/// computed from the result dim and the index of that same dim (8 - 6, 8 - 0).
 
 func.func private @insert_slice_leading_unit_dim_dropped_non_zero_offset(
-    %source: tensor<?x?xi32>, %size_0: index, %size_1: index) -> tensor<1x8x8xi32> {
-  %pad = arith.constant 0 : i32
-  %empty = tensor.empty() : tensor<1x8x8xi32>
-  %init = linalg.fill ins(%pad : i32) outs(%empty : tensor<1x8x8xi32>) -> tensor<1x8x8xi32>
-  %res = tensor.insert_slice %source into %init[0, 6, 0] [1, %size_0, %size_1] [1, 1, 1] : tensor<?x?xi32> into tensor<1x8x8xi32>
+    %source: tensor<2x2xi32>, %dest: tensor<1x8x8xi32>) -> tensor<1x8x8xi32> {
+  %res = tensor.insert_slice %source into %dest[0, 6, 0] [1, 2, 2] [1, 1, 1] : tensor<2x2xi32> into tensor<1x8x8xi32>
   return %res : tensor<1x8x8xi32>
 }
 
 // CHECK-LABEL:   func.func private @insert_slice_leading_unit_dim_dropped_non_zero_offset(
-// CHECK:           %[[INIT:.*]] = linalg.fill
-// CHECK:           %[[READ:.*]] = vector.mask %{{.*}} { vector.transfer_read
-// CHECK:           %[[C_6:.*]] = arith.constant 6 : index
+// CHECK-SAME:      %[[SRC:.*]]: tensor<2x2xi32>,
+// CHECK-SAME:      %[[DEST:.*]]: tensor<1x8x8xi32>) -> tensor<1x8x8xi32> {
+// CHECK:           %[[PAD:.*]] = arith.constant 0 : i32
+// CHECK:           %[[C_0:.*]] = arith.constant 0 : index
+// CHECK:           %[[C_0_1:.*]] = arith.constant 0 : index
 // CHECK:           %[[C_2:.*]] = arith.constant 2 : index
+// CHECK:           %[[C_2_1:.*]] = arith.constant 2 : index
+// CHECK:           %[[MASK_READ:.*]] = vector.create_mask %[[C_2]], %[[C_2_1]] : vector<4x2xi1>
+// CHECK:           %[[READ:.*]] = vector.mask %[[MASK_READ]] { vector.transfer_read %[[SRC]][%[[C_0_1]], %[[C_0_1]]], %[[PAD]] {in_bounds = [true, true]} : tensor<2x2xi32>, vector<4x2xi32> } : vector<4x2xi1> -> vector<4x2xi32>
+// CHECK:           %[[C_0_2:.*]] = arith.constant 0 : index
+// CHECK:           %[[C_6:.*]] = arith.constant 6 : index
+// CHECK:           %[[C_0_3:.*]] = arith.constant 0 : index
 // CHECK:           %[[C_8:.*]] = arith.constant 8 : index
-// CHECK:           %[[MASK_WRITE:.*]] = vector.create_mask %[[C_2]], %[[C_8]] : vector<4x2xi1>
-// CHECK:           vector.mask %[[MASK_WRITE]] { vector.transfer_write %[[READ]], %[[INIT]][%{{.*}}, %[[C_6]], %{{.*}}] {{.*}} : vector<4x2xi32>, tensor<1x8x8xi32> }
+// CHECK:           %[[C_2_2:.*]] = arith.constant 2 : index
+// CHECK:           %[[C_8_1:.*]] = arith.constant 8 : index
+// CHECK:           %[[MASK_WRITE:.*]] = vector.create_mask %[[C_2_2]], %[[C_8_1]] : vector<4x2xi1>
+// CHECK:           %[[RES:.*]] = vector.mask %[[MASK_WRITE]] { vector.transfer_write %[[READ]], %[[DEST]][%[[C_0_2]], %[[C_6]], %[[C_0_3]]] {in_bounds = [true, true]} : vector<4x2xi32>, tensor<1x8x8xi32> } : vector<4x2xi1> -> tensor<1x8x8xi32>
+// CHECK:           return %[[RES]] : tensor<1x8x8xi32>
 
  module attributes {transform.with_named_sequence} {
   transform.named_sequence @__transform_main(%arg0: !transform.any_op {transform.readonly}) {
