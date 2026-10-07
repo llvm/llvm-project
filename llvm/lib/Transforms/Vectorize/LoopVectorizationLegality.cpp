@@ -81,8 +81,9 @@ LoopVectorizeHints::LoopVectorizeHints(const VectorizeOptions &Opts,
       [TTI](ScalableForceKind ForceScalableHint,
             ScalableForceKind ForceScalableOpt, unsigned ForceWidth,
             ElementCount ForceWidthOpt) -> ScalableForceKind {
-    // -scalable-vectorization=(always|off|on) has the highest precedence.
-    if (ForceScalableOpt != SK_Unspecified)
+    // -scalable-vectorization=(always|off) has the highest precedence.
+    if (ForceScalableOpt == SK_AlwaysScalable ||
+        ForceScalableOpt == SK_FixedWidthOnly)
       return ForceScalableOpt;
 
     // Then, consider loop hints.
@@ -90,6 +91,10 @@ LoopVectorizeHints::LoopVectorizeHints(const VectorizeOptions &Opts,
     if (ForceScalableHint == SK_PreferScalable ||
         ForceScalableHint == SK_FixedWidthOnly)
       return ForceScalableHint;
+
+    // Then, -scalable-vectorization=on.
+    if (ForceScalableOpt == SK_PreferScalable)
+      return SK_PreferScalable;
 
     // Then, infer scalability from a preferred VF.
     assert(ForceScalableOpt == SK_Unspecified);
