@@ -92,6 +92,11 @@ CIRGenModule::CIRGenModule(mlir::MLIRContext &mlirContext,
       diags(diags), target(astContext.getTargetInfo()),
       abi(createCXXABI(*this)), genTypes(*this), vtables(*this) {
 
+  // The name of a C++20 module initializer has only an Itanium mangling.
+  cxx20ModuleInits =
+      langOpts.CPlusPlusModules &&
+      getCXXABI().getMangleContext().getKind() == MangleContext::MK_Itanium;
+
   // Initialize cached types
   voidTy = cir::VoidType::get(&getMLIRContext());
   voidPtrTy = cir::PointerType::get(voidTy);
@@ -2556,6 +2561,58 @@ void CIRGenModule::emitTopLevelDecl(Decl *decl) {
       emitGlobal(fd);
     break;
   }
+
+  case Decl::Import: {
+    auto *import = cast<ImportDecl>(decl);
+    clang::Module *mod = import->getImportedModule();
+
+    // If we've already imported this module, we're done.
+    if (!importedModules.insert(mod))
+      break;
+
+    assert(!cir::MissingFeatures::generateDebugInfo());
+
+    // A C++20 named module has its own initializer function, so its
+    // initializers are not emitted here. Classic CodeGen's global init
+    // function of the importing translation unit calls that initializer,
+    // which in turn covers the modules it imports itself; that call is not
+    // emitted yet.
+    if (cxx20ModuleInits && mod->isNamedModule()) {
+      assert(!cir::MissingFeatures::emitCXXModuleInitFunc());
+      break;
+    }
+
+    // For clang C++ module map modules the initializers for sub-modules are
+    // emitted here.
+
+    // Find all of the submodules and emit the module initializers.
+    llvm::SmallPtrSet<clang::Module *, 16> visited;
+    SmallVector<clang::Module *, 16> stack;
+    visited.insert(mod);
+    stack.push_back(mod);
+
+    while (!stack.empty()) {
+      clang::Module *cur = stack.pop_back_val();
+      if (!emittedModuleInitializers.insert(cur).second)
+        continue;
+
+      for (Decl *initializer : astContext.getModuleInitializers(cur))
+        emitTopLevelDecl(initializer);
+
+      // Visit the submodules of this module.
+      for (clang::Module *submodule : cur->submodules()) {
+        // Skip explicit children; they need to be explicitly imported to emit
+        // the initializers.
+        if (submodule->IsExplicit)
+          continue;
+
+        if (visited.insert(submodule).second)
+          stack.push_back(submodule);
+      }
+    }
+    break;
+  }
+
   case Decl::Export:
     emitDeclContext(cast<ExportDecl>(decl));
     break;
@@ -3975,9 +4032,7 @@ void CIRGenModule::release() {
   // Itanium mangler because no Microsoft mangling for them has been settled
   // on yet.  Non-Itanium named modules fall back to `_GLOBAL__sub_I_` exactly
   // as they do in classic codegen.
-  if (langOpts.CPlusPlusModules &&
-      getCXXABI().getMangleContext().getKind() ==
-          clang::ItaniumMangleContext::MK_Itanium) {
+  if (cxx20ModuleInits) {
     if (clang::Module *primary = astContext.getCurrentNamedModule();
         primary && !primary->isModuleImplementation()) {
       llvm::SmallString<256> fnName;
@@ -3988,6 +4043,9 @@ void CIRGenModule::release() {
                          builder.getStringAttr(fnName));
     }
   }
+
+  // Autolink metadata for the imported modules is not emitted yet.
+  assert(!cir::MissingFeatures::emitModuleLinkOptions());
 
   // Classic codegen calls `checkAliases` here to validate any alias
   // definitions emitted during codegen.

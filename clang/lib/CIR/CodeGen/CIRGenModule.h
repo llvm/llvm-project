@@ -36,6 +36,8 @@
 #include "clang/Basic/SourceManager.h"
 #include "clang/Basic/TargetInfo.h"
 #include "clang/CIR/Dialect/IR/CIROpsEnums.h"
+#include "llvm/ADT/SetVector.h"
+#include "llvm/ADT/SmallPtrSet.h"
 #include "llvm/ADT/StringMap.h"
 #include "llvm/ADT/StringRef.h"
 #include "llvm/TargetParser/Triple.h"
@@ -112,6 +114,16 @@ private:
 
   /// Accumulated record layout entries, materialized in release().
   llvm::SmallVector<mlir::NamedAttribute> recordLayoutEntries;
+
+  /// Whether C++20 named modules get their own module initializer function,
+  /// which requires the Itanium mangling of the initializer name.
+  bool cxx20ModuleInits = false;
+
+  /// The complete set of modules that has been imported.
+  llvm::SetVector<clang::Module *> importedModules;
+
+  /// The set of modules for which the module initializers have been emitted.
+  llvm::SmallPtrSet<clang::Module *, 16> emittedModuleInitializers;
 
   llvm::DenseSet<clang::GlobalDecl> diagnosedConflictingDefinitions;
 
