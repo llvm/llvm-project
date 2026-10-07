@@ -493,9 +493,9 @@ lldb::ProcessSP PlatformPOSIX::DebugProcess(ProcessLaunchInfo &launch_info,
     // Hook up process PTY if we have one (which we should for local debugging
     // with llgs).
 #ifndef _WIN32 // TODO: Implement on Windows
-    int pty_fd = launch_info.GetPTY().ReleasePrimaryFileDescriptor();
-    if (pty_fd != PseudoTerminal::invalid_fd) {
-      process_sp->SetSTDIOFileDescriptor(pty_fd);
+    if (launch_info.GetPTY().GetPrimaryFileDescriptor() !=
+        PseudoTerminal::invalid_fd) {
+      process_sp->SetSTDIOPseudoTerminal(launch_info.GetPTY());
       LLDB_LOG(log, "hooked up STDIO pty to process");
     } else
       LLDB_LOG(log, "not using process STDIO pty");
@@ -553,9 +553,8 @@ Status PlatformPOSIX::EvaluateLibdlExpression(
   return Status();
 }
 
-std::unique_ptr<UtilityFunction>
-PlatformPOSIX::MakeLoadImageUtilityFunction(ExecutionContext &exe_ctx,
-                                            Status &error) {
+llvm::Expected<std::unique_ptr<UtilityFunction>>
+PlatformPOSIX::MakeLoadImageUtilityFunction(ExecutionContext &exe_ctx) {
   // Remember to prepend this with the prefix from
   // GetLibdlFunctionDeclarations. The returned values are all in
   // __lldb_dlopen_result for consistency. The wrapper returns a void * but
@@ -630,23 +629,21 @@ PlatformPOSIX::MakeLoadImageUtilityFunction(ExecutionContext &exe_ctx,
       std::move(expr), dlopen_wrapper_name, eLanguageTypeC_plus_plus, exe_ctx);
   if (!utility_fn_or_error) {
     std::string error_str = llvm::toString(utility_fn_or_error.takeError());
-    error = Status::FromErrorStringWithFormat(
+    return llvm::createStringError(
         "dlopen error: could not create utility function: %s",
         error_str.c_str());
-    return nullptr;
   }
   std::unique_ptr<UtilityFunction> dlopen_utility_func_up =
       std::move(*utility_fn_or_error);
 
   Value value;
   ValueList arguments;
-  FunctionCaller *do_dlopen_function = nullptr;
 
   // Fetch the clang types we will need:
   TypeSystemClangSP scratch_ts_sp =
       ScratchTypeSystemClang::GetForTarget(process->GetTarget());
   if (!scratch_ts_sp)
-    return nullptr;
+    return llvm::createStringError("dlopen error: no scratch type system");
 
   CompilerType clang_void_pointer_type =
       scratch_ts_sp->GetBasicType(eBasicTypeVoid).GetPointerType();
@@ -663,24 +660,18 @@ PlatformPOSIX::MakeLoadImageUtilityFunction(ExecutionContext &exe_ctx,
   arguments.PushValue(value);
   arguments.PushValue(value);
   arguments.PushValue(value);
-  
-  do_dlopen_function = dlopen_utility_func_up->MakeFunctionCaller(
+
+  dlopen_utility_func_up->MakeFunctionCaller(
       clang_void_pointer_type, arguments, exe_ctx.GetThreadSP(), utility_error);
-  if (utility_error.Fail()) {
-    error = Status::FromErrorStringWithFormat(
+  if (utility_error.Fail())
+    return llvm::createStringError(
         "dlopen error: could not make function caller: %s",
         utility_error.AsCString());
-    return nullptr;
-  }
-  
-  do_dlopen_function = dlopen_utility_func_up->GetFunctionCaller();
-  if (!do_dlopen_function) {
-    error =
-        Status::FromErrorString("dlopen error: could not get function caller.");
-    return nullptr;
-  }
-  
-  // We made a good utility function, so cache it in the process:
+
+  if (!dlopen_utility_func_up->GetFunctionCaller())
+    return llvm::createStringError(
+        "dlopen error: could not get function caller.");
+
   return dlopen_utility_func_up;
 }
 
@@ -708,21 +699,20 @@ uint32_t PlatformPOSIX::DoLoadImage(lldb_private::Process *process,
   thread_sp->CalculateExecutionContext(exe_ctx);
 
   Status utility_error;
-  UtilityFunction *dlopen_utility_func;
   ValueList arguments;
-  FunctionCaller *do_dlopen_function = nullptr;
 
   // The UtilityFunction is held in the Process.  Platforms don't track the
   // lifespan of the Targets that use them, we can't put this in the Platform.
-  dlopen_utility_func = process->GetLoadImageUtilityFunction(
-      this, [&]() -> std::unique_ptr<UtilityFunction> {
-        return MakeLoadImageUtilityFunction(exe_ctx, error);
-      });
-  // If we couldn't make it, the error will be in error, so we can exit here.
-  if (!dlopen_utility_func)
+  llvm::Expected<UtilityFunction &> dlopen_utility_func_or_err =
+      process->GetLoadImageUtilityFunction(
+          this, [&]() { return MakeLoadImageUtilityFunction(exe_ctx); });
+  if (!dlopen_utility_func_or_err) {
+    error = Status::FromError(dlopen_utility_func_or_err.takeError());
     return LLDB_INVALID_IMAGE_TOKEN;
-    
-  do_dlopen_function = dlopen_utility_func->GetFunctionCaller();
+  }
+
+  FunctionCaller *do_dlopen_function =
+      dlopen_utility_func_or_err->GetFunctionCaller();
   if (!do_dlopen_function) {
     error =
         Status::FromErrorString("dlopen error: could not get function caller.");
