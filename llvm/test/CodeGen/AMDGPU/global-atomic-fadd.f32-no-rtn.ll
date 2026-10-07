@@ -58,7 +58,7 @@ define amdgpu_ps void @global_atomic_fadd_f32_saddr_no_rtn_atomicrmw(ptr addrspa
   ; GFX908-NEXT:   [[COPY7:%[0-9]+]]:vgpr_32 = COPY [[S_MOV_B32_]]
   ; GFX908-NEXT:   [[V_MBCNT_LO_U32_B32_e64_:%[0-9]+]]:vgpr_32 = V_MBCNT_LO_U32_B32_e64 killed [[COPY6]], [[COPY7]], implicit $exec
   ; GFX908-NEXT:   [[V_MBCNT_HI_U32_B32_e64_:%[0-9]+]]:vgpr_32 = V_MBCNT_HI_U32_B32_e64 killed [[COPY5]], killed [[V_MBCNT_LO_U32_B32_e64_]], implicit $exec
-  ; GFX908-NEXT:   [[WAVE_REDUCE_FADD_PSEUDO_F32_:%[0-9]+]]:sgpr_32 = WAVE_REDUCE_FADD_PSEUDO_F32 [[COPY]], 2, implicit $exec
+  ; GFX908-NEXT:   [[WAVE_REDUCE_FADD_PSEUDO_F32_:%[0-9]+]]:sgpr_32 = WAVE_REDUCE_FADD_PSEUDO_F32 [[COPY]], 2, implicit-def dead $scc, implicit $exec
   ; GFX908-NEXT:   [[COPY8:%[0-9]+]]:vgpr_32 = COPY [[WAVE_REDUCE_FADD_PSEUDO_F32_]]
   ; GFX908-NEXT:   [[V_CMP_EQ_U32_e64_:%[0-9]+]]:sreg_64 = V_CMP_EQ_U32_e64 killed [[V_MBCNT_HI_U32_B32_e64_]], [[S_MOV_B32_]], implicit $exec
   ; GFX908-NEXT:   [[SI_IF1:%[0-9]+]]:sreg_64 = SI_IF killed [[V_CMP_EQ_U32_e64_]], %bb.3, implicit-def dead $exec, implicit-def dead $scc, implicit $exec
@@ -103,7 +103,7 @@ define amdgpu_ps void @global_atomic_fadd_f32_saddr_no_rtn_atomicrmw(ptr addrspa
   ; GFX90A_GFX942-NEXT:   [[COPY7:%[0-9]+]]:vgpr_32 = COPY [[S_MOV_B32_]]
   ; GFX90A_GFX942-NEXT:   [[V_MBCNT_LO_U32_B32_e64_:%[0-9]+]]:vgpr_32 = V_MBCNT_LO_U32_B32_e64 killed [[COPY6]], [[COPY7]], implicit $exec
   ; GFX90A_GFX942-NEXT:   [[V_MBCNT_HI_U32_B32_e64_:%[0-9]+]]:vgpr_32 = V_MBCNT_HI_U32_B32_e64 killed [[COPY5]], killed [[V_MBCNT_LO_U32_B32_e64_]], implicit $exec
-  ; GFX90A_GFX942-NEXT:   [[WAVE_REDUCE_FADD_PSEUDO_F32_:%[0-9]+]]:sgpr_32 = WAVE_REDUCE_FADD_PSEUDO_F32 [[COPY]], 2, implicit $exec
+  ; GFX90A_GFX942-NEXT:   [[WAVE_REDUCE_FADD_PSEUDO_F32_:%[0-9]+]]:sgpr_32 = WAVE_REDUCE_FADD_PSEUDO_F32 [[COPY]], 2, implicit-def dead $scc, implicit $exec
   ; GFX90A_GFX942-NEXT:   [[COPY8:%[0-9]+]]:av_32 = COPY [[WAVE_REDUCE_FADD_PSEUDO_F32_]]
   ; GFX90A_GFX942-NEXT:   [[V_CMP_EQ_U32_e64_:%[0-9]+]]:sreg_64 = V_CMP_EQ_U32_e64 killed [[V_MBCNT_HI_U32_B32_e64_]], [[S_MOV_B32_]], implicit $exec
   ; GFX90A_GFX942-NEXT:   [[SI_IF1:%[0-9]+]]:sreg_64 = SI_IF killed [[V_CMP_EQ_U32_e64_]], %bb.3, implicit-def dead $exec, implicit-def dead $scc, implicit $exec
@@ -144,7 +144,7 @@ define amdgpu_ps void @global_atomic_fadd_f32_saddr_no_rtn_atomicrmw(ptr addrspa
   ; GFX11_GFX12-NEXT:   [[COPY4:%[0-9]+]]:sreg_32 = COPY $exec_lo
   ; GFX11_GFX12-NEXT:   [[S_MOV_B32_:%[0-9]+]]:sreg_32 = S_MOV_B32 0
   ; GFX11_GFX12-NEXT:   [[V_MBCNT_LO_U32_B32_e64_:%[0-9]+]]:vgpr_32 = V_MBCNT_LO_U32_B32_e64 [[COPY4]], [[S_MOV_B32_]], implicit $exec
-  ; GFX11_GFX12-NEXT:   [[WAVE_REDUCE_FADD_PSEUDO_F32_:%[0-9]+]]:sgpr_32 = WAVE_REDUCE_FADD_PSEUDO_F32 [[COPY]], 2, implicit $exec
+  ; GFX11_GFX12-NEXT:   [[WAVE_REDUCE_FADD_PSEUDO_F32_:%[0-9]+]]:sgpr_32 = WAVE_REDUCE_FADD_PSEUDO_F32 [[COPY]], 2, implicit-def dead $scc, implicit $exec
   ; GFX11_GFX12-NEXT:   [[COPY5:%[0-9]+]]:vgpr_32 = COPY [[WAVE_REDUCE_FADD_PSEUDO_F32_]]
   ; GFX11_GFX12-NEXT:   [[V_CMP_EQ_U32_e64_:%[0-9]+]]:sreg_32 = V_CMP_EQ_U32_e64 killed [[V_MBCNT_LO_U32_B32_e64_]], [[S_MOV_B32_]], implicit $exec
   ; GFX11_GFX12-NEXT:   [[SI_IF1:%[0-9]+]]:sreg_32 = SI_IF killed [[V_CMP_EQ_U32_e64_]], %bb.3, implicit-def dead $exec, implicit-def dead $scc, implicit $exec
