@@ -3,9 +3,9 @@
 ;; clang gives the forwarding call in a C++ non-virtual thunk (a DISubprogram
 ;; with DIFlagThunk) a DILocation with line 0, and the profiler records the
 ;; thunk frame with line offset 0. Previously the compiler computed the offset
-;; as (0 - <subprogram line>) & 0xffff, so the thunk's call never received
-;; !callsite metadata and, once the method was inlined into the thunk, the
-;; thunk's private copy of the call chain could not be redirected to the cold
+;; as (0 - <subprogram line>), so the thunk's call never received  !callsite 
+;; metadata and, once the method was inlined into the thunk, the thunk's private
+;; copy of the call chain could not be redirected to the cold
 ;; clone during context disambiguation.
 ;;
 ;; The test case is generated from (with -O2 -gmlt -fdebug-info-for-profiling):
