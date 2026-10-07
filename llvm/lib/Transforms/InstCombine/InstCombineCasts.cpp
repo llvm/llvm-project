@@ -1943,14 +1943,14 @@ bool TypeEvaluationHelper::canEvaluateSExtdPred(Value *V, Type *Ty) {
 /// cannot treat as a non-wrapping recurrence.
 static Instruction *
 foldSExtOfNSWBinOpOfTrunc(SExtInst &Sext, InstCombiner::BuilderTy &Builder) {
-  auto *BinOp = dyn_cast<OverflowingBinaryOperator>(Sext.getOperand(0));
-  if (!BinOp || !BinOp->hasOneUse() || !BinOp->hasNoSignedWrap())
+  auto *BinOp = dyn_cast<BinaryOperator>(Sext.getOperand(0));
+  if (!BinOp || !BinOp->hasOneUse())
     return nullptr;
 
-  Instruction::BinaryOps Opc =
-      static_cast<Instruction::BinaryOps>(BinOp->getOpcode());
-  if (Opc != Instruction::Add && Opc != Instruction::Sub &&
-      Opc != Instruction::Mul)
+  Instruction::BinaryOps Opc = BinOp->getOpcode();
+  if ((Opc != Instruction::Add && Opc != Instruction::Sub &&
+       Opc != Instruction::Mul) ||
+      !BinOp->hasNoSignedWrap())
     return nullptr;
 
   // At least one operand must be an existing iM value recovered from trunc nsw,
