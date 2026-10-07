@@ -685,6 +685,7 @@ static Error removeNotes(Object &Obj, endianness Endianness,
       }
     }
   }
+
   // updateSectionData below can reallocate the object sections, invalidating
   // range-for iterators.
   SmallVector<SectionBase *, 8> NoteSections;
@@ -692,6 +693,7 @@ static Error removeNotes(Object &Obj, endianness Endianness,
     if (Sec.Type == SHT_NOTE && Sec.hasContents())
       NoteSections.push_back(&Sec);
   }
+
   for (SectionBase *Sec : NoteSections) {
     // TODO: Support note sections in segments.
     if (Sec->ParentSegment) {
