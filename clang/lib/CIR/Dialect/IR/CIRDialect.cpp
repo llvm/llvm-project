@@ -4995,20 +4995,6 @@ void cir::TryOp::getSuccessorRegions(
     regions.push_back(mlir::RegionSuccessor(&handlerRegion));
 }
 
-/// Return the cir.construct_catch_param that starts the catch handler with
-/// entry block \p entryBlock, or null if there is none.  The handler must
-/// already have passed cir::TryOp::verify.
-static cir::ConstructCatchParamOp
-getLeadingConstructCatchParam(mlir::Block &entryBlock) {
-  mlir::Operation *firstOp = &entryBlock.front();
-  if (mlir::isa<cir::LifetimeStartOp>(firstOp)) {
-    auto lifetimeScope =
-        mlir::cast<cir::CleanupScopeOp>(firstOp->getNextNode());
-    firstOp = &lifetimeScope.getBodyRegion().front().front();
-  }
-  return mlir::dyn_cast<cir::ConstructCatchParamOp>(firstOp);
-}
-
 /// Verify that each cir.init_catch_param in \p handlerRegion, outside any
 /// nested cir.try, agrees with the handler's leading cir.construct_catch_param
 /// \p constructOp, which may be null.  A cir.init_catch_param of kind
@@ -5051,7 +5037,7 @@ verifyCatchParamPairing(mlir::Region &handlerRegion,
   return failure(result.wasInterrupted());
 }
 
-LogicalResult cir::TryOp::verify() {
+LogicalResult cir::TryOp::verifyRegions() {
   mlir::ArrayAttr handlerTypes = getHandlerTypes();
   if (!handlerTypes) {
     if (!getHandlerRegions().empty())
@@ -5144,33 +5130,18 @@ LogicalResult cir::TryOp::verify() {
       firstOp = scopeBody.empty() ? nullptr : &scopeBody.front();
     }
 
-    if (mlir::isa_and_present<cir::ConstructCatchParamOp>(firstOp))
+    auto constructOp =
+        mlir::dyn_cast_if_present<cir::ConstructCatchParamOp>(firstOp);
+    if (constructOp)
       firstOp = firstOp->getNextNode();
     if (!mlir::isa_and_present<cir::BeginCatchOp>(firstOp))
       return emitOpError(
           "catch handler region must start with 'cir.begin_catch'");
-  }
 
-  return success();
-}
-
-LogicalResult cir::TryOp::verifyRegions() {
-  mlir::ArrayAttr handlerTypes = getHandlerTypes();
-  if (!handlerTypes)
-    return success();
-
-  for (const auto &[typeAttr, handlerRegion] :
-       llvm::zip(handlerTypes, getHandlerRegions())) {
-    if (mlir::isa<cir::UnwindAttr, cir::EhFilterAttr, cir::EhUnexpectedAttr>(
-            typeAttr))
-      continue;
-    mlir::Block &entryBlock = handlerRegion.front();
-    if (mlir::isa<cir::EhTerminateOp>(entryBlock.front()))
-      continue;
-    if (failed(verifyCatchParamPairing(
-            handlerRegion, getLeadingConstructCatchParam(entryBlock))))
+    if (failed(verifyCatchParamPairing(handlerRegion, constructOp)))
       return failure();
   }
+
   return success();
 }
 
@@ -5295,8 +5266,8 @@ static mlir::ParseResult parseTryHandlerRegions(
   }
 
   // A filter handler carries the type info symbols permitted by the enclosing
-  // function's dynamic exception specification. TryOp::verify enforces that it
-  // is paired with an unexpected handler and that the two stand alone.
+  // function's dynamic exception specification. TryOp::verifyRegions enforces
+  // that it is paired with an unexpected handler and that the two stand alone.
   if (parser.parseOptionalKeyword("filter").succeeded()) {
     mlir::SMLoc filterLoc = parser.getCurrentLocation();
     llvm::SmallVector<mlir::Attribute, 4> permittedTypes;

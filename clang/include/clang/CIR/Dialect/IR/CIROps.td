@@ -8699,7 +8699,6 @@ def CIR_TryOp : CIR_RegionBranchOpBase<"try", [
     }]>
   ];
 
-  let hasVerifier = 1;
   let hasRegionVerifier = 1;
   let hasLLVMLowering = false;
 }
