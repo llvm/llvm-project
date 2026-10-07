@@ -1009,7 +1009,7 @@ define void @gather() {
 ; ARGBASED-NEXT:  Cost Model: Found an estimated cost of 4 for instruction: %9 = call <vscale x 2 x i8> @llvm.vp.gather.nxv2i8.nxv2p0(<vscale x 2 x ptr> poison, <vscale x 2 x i1> poison, i32 poison)
 ; ARGBASED-NEXT:  Cost Model: Found an estimated cost of 8 for instruction: %10 = call <vscale x 4 x i8> @llvm.vp.gather.nxv4i8.nxv4p0(<vscale x 4 x ptr> poison, <vscale x 4 x i1> poison, i32 poison)
 ; ARGBASED-NEXT:  Cost Model: Found an estimated cost of 16 for instruction: %11 = call <vscale x 8 x i8> @llvm.vp.gather.nxv8i8.nxv8p0(<vscale x 8 x ptr> poison, <vscale x 8 x i1> poison, i32 poison)
-; ARGBASED-NEXT:  Cost Model: Found an estimated cost of 32 for instruction: %12 = call <vscale x 16 x i8> @llvm.vp.gather.nxv16i8.nxv16p0(<vscale x 16 x ptr> poison, <vscale x 16 x i1> poison, i32 poison)
+; ARGBASED-NEXT:  Cost Model: Found an estimated cost of 40 for instruction: %12 = call <vscale x 16 x i8> @llvm.vp.gather.nxv16i8.nxv16p0(<vscale x 16 x ptr> poison, <vscale x 16 x i1> poison, i32 poison)
 ; ARGBASED-NEXT:  Cost Model: Invalid cost for instruction: %13 = call <vscale x 2 x i64> @llvm.vp.gather.nxv2i64.nxv2p0(<vscale x 2 x ptr> poison, <vscale x 2 x i1> poison, i32 poison)
 ; ARGBASED-NEXT:  Cost Model: Invalid cost for instruction: %14 = call <vscale x 4 x i64> @llvm.vp.gather.nxv4i64.nxv4p0(<vscale x 4 x ptr> poison, <vscale x 4 x i1> poison, i32 poison)
 ; ARGBASED-NEXT:  Cost Model: Invalid cost for instruction: %15 = call <vscale x 8 x i64> @llvm.vp.gather.nxv8i64.nxv8p0(<vscale x 8 x ptr> poison, <vscale x 8 x i1> poison, i32 poison)
@@ -1067,7 +1067,7 @@ define void @scatter() {
 ; ARGBASED-NEXT:  Cost Model: Found an estimated cost of 4 for instruction: call void @llvm.vp.scatter.nxv2i8.nxv2p0(<vscale x 2 x i8> poison, <vscale x 2 x ptr> poison, <vscale x 2 x i1> poison, i32 poison)
 ; ARGBASED-NEXT:  Cost Model: Found an estimated cost of 8 for instruction: call void @llvm.vp.scatter.nxv4i8.nxv4p0(<vscale x 4 x i8> poison, <vscale x 4 x ptr> poison, <vscale x 4 x i1> poison, i32 poison)
 ; ARGBASED-NEXT:  Cost Model: Found an estimated cost of 16 for instruction: call void @llvm.vp.scatter.nxv8i8.nxv8p0(<vscale x 8 x i8> poison, <vscale x 8 x ptr> poison, <vscale x 8 x i1> poison, i32 poison)
-; ARGBASED-NEXT:  Cost Model: Found an estimated cost of 32 for instruction: call void @llvm.vp.scatter.nxv16i8.nxv16p0(<vscale x 16 x i8> poison, <vscale x 16 x ptr> poison, <vscale x 16 x i1> poison, i32 poison)
+; ARGBASED-NEXT:  Cost Model: Found an estimated cost of 40 for instruction: call void @llvm.vp.scatter.nxv16i8.nxv16p0(<vscale x 16 x i8> poison, <vscale x 16 x ptr> poison, <vscale x 16 x i1> poison, i32 poison)
 ; ARGBASED-NEXT:  Cost Model: Invalid cost for instruction: call void @llvm.vp.scatter.nxv2i64.nxv2p0(<vscale x 2 x i64> poison, <vscale x 2 x ptr> poison, <vscale x 2 x i1> poison, i32 poison)
 ; ARGBASED-NEXT:  Cost Model: Invalid cost for instruction: call void @llvm.vp.scatter.nxv4i64.nxv4p0(<vscale x 4 x i64> poison, <vscale x 4 x ptr> poison, <vscale x 4 x i1> poison, i32 poison)
 ; ARGBASED-NEXT:  Cost Model: Invalid cost for instruction: call void @llvm.vp.scatter.nxv8i64.nxv8p0(<vscale x 8 x i64> poison, <vscale x 8 x ptr> poison, <vscale x 8 x i1> poison, i32 poison)
@@ -1137,7 +1137,7 @@ define void @strided_load() {
 ; ARGBASED-NEXT:  Cost Model: Found an estimated cost of 4 for instruction: %t25 = call <vscale x 2 x i64> @llvm.experimental.vp.strided.load.nxv2i64.p0.i64(ptr undef, i64 undef, <vscale x 2 x i1> undef, i32 undef)
 ; ARGBASED-NEXT:  Cost Model: Found an estimated cost of 8 for instruction: %t27 = call <vscale x 4 x i64> @llvm.experimental.vp.strided.load.nxv4i64.p0.i64(ptr undef, i64 undef, <vscale x 4 x i1> undef, i32 undef)
 ; ARGBASED-NEXT:  Cost Model: Found an estimated cost of 16 for instruction: %t29 = call <vscale x 8 x i64> @llvm.experimental.vp.strided.load.nxv8i64.p0.i64(ptr undef, i64 undef, <vscale x 8 x i1> undef, i32 undef)
-; ARGBASED-NEXT:  Cost Model: Found an estimated cost of 32 for instruction: %t31 = call <vscale x 16 x i64> @llvm.experimental.vp.strided.load.nxv16i64.p0.i64(ptr undef, i64 undef, <vscale x 16 x i1> undef, i32 undef)
+; ARGBASED-NEXT:  Cost Model: Found an estimated cost of 40 for instruction: %t31 = call <vscale x 16 x i64> @llvm.experimental.vp.strided.load.nxv16i64.p0.i64(ptr undef, i64 undef, <vscale x 16 x i1> undef, i32 undef)
 ; ARGBASED-NEXT:  Cost Model: Found an estimated cost of 0 for instruction: ret void
 ;
 ; TYPEBASED-LABEL: 'strided_load'
@@ -1164,7 +1164,7 @@ define void @strided_load() {
 ; TYPEBASED-NEXT:  Cost Model: Found an estimated cost of 4 for instruction: %t25 = call <vscale x 2 x i64> @llvm.experimental.vp.strided.load.nxv2i64.p0.i64(ptr undef, i64 undef, <vscale x 2 x i1> undef, i32 undef)
 ; TYPEBASED-NEXT:  Cost Model: Found an estimated cost of 8 for instruction: %t27 = call <vscale x 4 x i64> @llvm.experimental.vp.strided.load.nxv4i64.p0.i64(ptr undef, i64 undef, <vscale x 4 x i1> undef, i32 undef)
 ; TYPEBASED-NEXT:  Cost Model: Found an estimated cost of 16 for instruction: %t29 = call <vscale x 8 x i64> @llvm.experimental.vp.strided.load.nxv8i64.p0.i64(ptr undef, i64 undef, <vscale x 8 x i1> undef, i32 undef)
-; TYPEBASED-NEXT:  Cost Model: Found an estimated cost of 32 for instruction: %t31 = call <vscale x 16 x i64> @llvm.experimental.vp.strided.load.nxv16i64.p0.i64(ptr undef, i64 undef, <vscale x 16 x i1> undef, i32 undef)
+; TYPEBASED-NEXT:  Cost Model: Found an estimated cost of 40 for instruction: %t31 = call <vscale x 16 x i64> @llvm.experimental.vp.strided.load.nxv16i64.p0.i64(ptr undef, i64 undef, <vscale x 16 x i1> undef, i32 undef)
 ; TYPEBASED-NEXT:  Cost Model: Found an estimated cost of 0 for instruction: ret void
 ;
   %ti1_2 = call <2 x i1> @llvm.experimental.vp.strided.load.v2i1.i64(ptr undef, i64 undef, <2 x i1> undef, i32 undef)
@@ -1215,7 +1215,7 @@ define void @strided_store() {
 ; CHECK-NEXT:  Cost Model: Found an estimated cost of 4 for instruction: call void @llvm.experimental.vp.strided.store.nxv2i64.p0.i64(<vscale x 2 x i64> undef, ptr undef, i64 undef, <vscale x 2 x i1> undef, i32 undef)
 ; CHECK-NEXT:  Cost Model: Found an estimated cost of 8 for instruction: call void @llvm.experimental.vp.strided.store.nxv4i64.p0.i64(<vscale x 4 x i64> undef, ptr undef, i64 undef, <vscale x 4 x i1> undef, i32 undef)
 ; CHECK-NEXT:  Cost Model: Found an estimated cost of 16 for instruction: call void @llvm.experimental.vp.strided.store.nxv8i64.p0.i64(<vscale x 8 x i64> undef, ptr undef, i64 undef, <vscale x 8 x i1> undef, i32 undef)
-; CHECK-NEXT:  Cost Model: Found an estimated cost of 32 for instruction: call void @llvm.experimental.vp.strided.store.nxv16i64.p0.i64(<vscale x 16 x i64> undef, ptr undef, i64 undef, <vscale x 16 x i1> undef, i32 undef)
+; CHECK-NEXT:  Cost Model: Found an estimated cost of 40 for instruction: call void @llvm.experimental.vp.strided.store.nxv16i64.p0.i64(<vscale x 16 x i64> undef, ptr undef, i64 undef, <vscale x 16 x i1> undef, i32 undef)
 ; CHECK-NEXT:  Cost Model: Found an estimated cost of 0 for instruction: ret void
 ;
   call void @llvm.experimental.vp.strided.store.v2i8.i64(<2 x i8> undef, ptr undef, i64 undef, <2 x i1> undef, i32 undef)
@@ -1241,7 +1241,44 @@ define void @strided_store() {
   ret void
 }
 
+define void @constant_strided_load() {
+; ARGBASED-LABEL: 'constant_strided_load'
+; ARGBASED-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %t9 = call <2 x i64> @llvm.experimental.vp.strided.load.v2i64.p0.i64(ptr poison, i64 8, <2 x i1> poison, i32 poison)
+; ARGBASED-NEXT:  Cost Model: Found an estimated cost of 2 for instruction: %t10 = call <4 x i64> @llvm.experimental.vp.strided.load.v4i64.p0.i64(ptr poison, i64 8, <4 x i1> poison, i32 poison)
+; ARGBASED-NEXT:  Cost Model: Found an estimated cost of 16 for instruction: %t15 = call <16 x i64> @llvm.experimental.vp.strided.load.v16i64.p0.i64(ptr poison, i64 64, <16 x i1> poison, i32 poison)
+; ARGBASED-NEXT:  Cost Model: Found an estimated cost of 7 for instruction: %t27 = call <vscale x 4 x i64> @llvm.experimental.vp.strided.load.nxv4i64.p0.i64(ptr poison, i64 56, <vscale x 4 x i1> poison, i32 poison)
+; ARGBASED-NEXT:  Cost Model: Found an estimated cost of 24 for instruction: %t31 = call <vscale x 16 x i64> @llvm.experimental.vp.strided.load.nxv16i64.p0.i64(ptr poison, i64 8, <vscale x 16 x i1> poison, i32 poison)
+; ARGBASED-NEXT:  Cost Model: Found an estimated cost of 2 for instruction: call void @llvm.experimental.vp.strided.store.v4i8.p0.i64(<4 x i8> poison, ptr poison, i64 14, <4 x i1> poison, i32 poison)
+; ARGBASED-NEXT:  Cost Model: Found an estimated cost of 8 for instruction: call void @llvm.experimental.vp.strided.store.v16i64.p0.i64(<16 x i64> poison, ptr poison, i64 -24, <16 x i1> poison, i32 poison)
+; ARGBASED-NEXT:  Cost Model: Found an estimated cost of 4 for instruction: call void @llvm.experimental.vp.strided.store.nxv4i64.p0.i64(<vscale x 4 x i64> poison, ptr poison, i64 32, <vscale x 4 x i1> poison, i32 poison)
+; ARGBASED-NEXT:  Cost Model: Found an estimated cost of 28 for instruction: call void @llvm.experimental.vp.strided.store.nxv16i64.p0.i64(<vscale x 16 x i64> poison, ptr poison, i64 40, <vscale x 16 x i1> poison, i32 poison)
+; ARGBASED-NEXT:  Cost Model: Found an estimated cost of 0 for instruction: ret void
+;
+; TYPEBASED-LABEL: 'constant_strided_load'
+; TYPEBASED-NEXT:  Cost Model: Found an estimated cost of 2 for instruction: %t9 = call <2 x i64> @llvm.experimental.vp.strided.load.v2i64.p0.i64(ptr poison, i64 8, <2 x i1> poison, i32 poison)
+; TYPEBASED-NEXT:  Cost Model: Found an estimated cost of 4 for instruction: %t10 = call <4 x i64> @llvm.experimental.vp.strided.load.v4i64.p0.i64(ptr poison, i64 8, <4 x i1> poison, i32 poison)
+; TYPEBASED-NEXT:  Cost Model: Found an estimated cost of 16 for instruction: %t15 = call <16 x i64> @llvm.experimental.vp.strided.load.v16i64.p0.i64(ptr poison, i64 64, <16 x i1> poison, i32 poison)
+; TYPEBASED-NEXT:  Cost Model: Found an estimated cost of 8 for instruction: %t27 = call <vscale x 4 x i64> @llvm.experimental.vp.strided.load.nxv4i64.p0.i64(ptr poison, i64 56, <vscale x 4 x i1> poison, i32 poison)
+; TYPEBASED-NEXT:  Cost Model: Found an estimated cost of 40 for instruction: %t31 = call <vscale x 16 x i64> @llvm.experimental.vp.strided.load.nxv16i64.p0.i64(ptr poison, i64 8, <vscale x 16 x i1> poison, i32 poison)
+; TYPEBASED-NEXT:  Cost Model: Found an estimated cost of 4 for instruction: call void @llvm.experimental.vp.strided.store.v4i8.p0.i64(<4 x i8> poison, ptr poison, i64 14, <4 x i1> poison, i32 poison)
+; TYPEBASED-NEXT:  Cost Model: Found an estimated cost of 16 for instruction: call void @llvm.experimental.vp.strided.store.v16i64.p0.i64(<16 x i64> poison, ptr poison, i64 -24, <16 x i1> poison, i32 poison)
+; TYPEBASED-NEXT:  Cost Model: Found an estimated cost of 8 for instruction: call void @llvm.experimental.vp.strided.store.nxv4i64.p0.i64(<vscale x 4 x i64> poison, ptr poison, i64 32, <vscale x 4 x i1> poison, i32 poison)
+; TYPEBASED-NEXT:  Cost Model: Found an estimated cost of 40 for instruction: call void @llvm.experimental.vp.strided.store.nxv16i64.p0.i64(<vscale x 16 x i64> poison, ptr poison, i64 40, <vscale x 16 x i1> poison, i32 poison)
+; TYPEBASED-NEXT:  Cost Model: Found an estimated cost of 0 for instruction: ret void
+;
+  %t9 = call <2 x i64> @llvm.experimental.vp.strided.load.v2i64.i64(ptr poison, i64 8, <2 x i1> poison, i32 poison) ; Make sure cost doesn't go to zero
+  %t10 = call <4 x i64> @llvm.experimental.vp.strided.load.v4i64.i64(ptr poison, i64 8, <4 x i1> poison, i32 poison)
+  %t15 = call <16 x i64> @llvm.experimental.vp.strided.load.v16i64.i64(ptr poison, i64 64, <16 x i1> poison, i32 poison) ; No overlap
+  %t27 = call <vscale x 4 x i64> @llvm.experimental.vp.strided.load.nxv4i64.i64(ptr poison, i64 56, <vscale x 4 x i1> poison, i32 poison) ; Barely overlap
+  %t31 = call <vscale x 16 x i64> @llvm.experimental.vp.strided.load.nxv16i64.i64(ptr poison, i64 8, <vscale x 16 x i1> poison, i32 poison) ; Should be limited by MaxCombines
 
+  call void @llvm.experimental.vp.strided.store.v4i8.i64(<4 x i8> poison, ptr poison, i64 14, <4 x i1> poison, i32 poison)
+  call void @llvm.experimental.vp.strided.store.v16i64.i64(<16 x i64> poison, ptr poison, i64 -24, <16 x i1> poison, i32 poison) ; Negative stride
+  call void @llvm.experimental.vp.strided.store.nxv4i64.i64(<vscale x 4 x i64> poison, ptr poison, i64 32, <vscale x 4 x i1> poison, i32 poison)
+  call void @llvm.experimental.vp.strided.store.nxv16i64.i64(<vscale x 16 x i64> poison, ptr poison, i64 40, <vscale x 16 x i1> poison, i32 poison)
+
+  ret void
+}
 
 define void @reduce_add() {
 ; CHECK-LABEL: 'reduce_add'

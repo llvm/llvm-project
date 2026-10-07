@@ -24,7 +24,8 @@ struct Options {
   using Predefinition = std::pair<std::string, std::optional<std::string>>;
 
   bool isFixedForm{false};
-  int fixedFormColumns{72};
+  // Fixed-form column limit; std::nullopt means no limit.
+  std::optional<int> fixedFormColumns{72};
   common::LanguageFeatureControl features;
   std::vector<std::string> searchDirectories;
   std::vector<std::string> intrinsicModuleDirectories;
@@ -34,6 +35,7 @@ struct Options {
   bool needProvenanceRangeToCharBlockMappings{false};
   Fortran::parser::Encoding encoding{Fortran::parser::Encoding::UTF_8};
   bool prescanAndReformat{false}; // -E
+  bool preprocessingEnabled{false};
   bool expandIncludeLinesInPreprocessedOutput{true};
   bool showColors{false};
   std::vector<std::string> compilerDirectiveSentinels;

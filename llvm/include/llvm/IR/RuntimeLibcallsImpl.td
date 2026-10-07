@@ -123,6 +123,22 @@ class LibcallLibrary<string name, dag impls,
   // Availability guard for the library. Libraries sharing a LibraryName merge
   // into one function, each variant under its own Pred.
   RuntimeLibcallAvailability Pred = pred;
+
+  // When set, emit this library as its own setup function instead of merging it
+  // with others sharing its LibraryName, so a consumer gets exactly these members
+  // rather than the merged core. For a target providing a strict subset or a
+  // name-decorated variant of a library. LibraryName stays the
+  // isLibraryAvailable() key.
+  bit Isolated = false;
+}
+
+// Reference a shared LibcallLibrary from a SystemRuntimeLibrary, dropping the
+// impls in `exclude`, so a target can pull a provider (e.g. compiler-rt) but
+// keep its own versions of a few entries. A bare LibcallLibrary member is
+// equivalent to LibraryRef<Lib>.
+class LibraryRef<LibcallLibrary lib, list<RuntimeLibcallImpl> exclude = []> {
+  LibcallLibrary Library = lib;
+  list<RuntimeLibcallImpl> Exclude = exclude;
 }
 
 /// Define a complete top level set of runtime libcalls for a target.

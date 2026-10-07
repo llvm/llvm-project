@@ -201,8 +201,12 @@ static Value generateInBoundsCheck(
     Value base = xferOp.getIndices()[*dim];
     Value memrefIdx =
         affine::makeComposedAffineApply(b, loc, d0 + d1, {base, iv});
-    cond = arith::CmpIOp::create(lb, arith::CmpIPredicate::sgt, memrefDim,
-                                 memrefIdx);
+    Value zero = arith::ConstantIndexOp::create(lb, 0);
+    Value nonNegative =
+        arith::CmpIOp::create(lb, arith::CmpIPredicate::sge, memrefIdx, zero);
+    Value inRange = arith::CmpIOp::create(lb, arith::CmpIPredicate::slt,
+                                          memrefIdx, memrefDim);
+    cond = arith::AndIOp::create(lb, nonNegative, inRange);
   }
 
   // Condition check 2: Masked in?
@@ -619,7 +623,8 @@ struct PrepareTransferReadConversion
     Location loc = xferOp.getLoc();
     memref::StoreOp::create(rewriter, loc, newXfer->getResult(0),
                             buffers.dataBuffer);
-    rewriter.replaceOpWithNewOp<memref::LoadOp>(xferOp, buffers.dataBuffer);
+    rewriter.replaceOpWithNewOp<memref::LoadOp>(xferOp, buffers.dataBuffer,
+                                                ValueRange{});
 
     return success();
   }
@@ -662,7 +667,8 @@ struct PrepareTransferWriteConversion
     auto buffers = allocBuffers(rewriter, xferOp);
     memref::StoreOp::create(rewriter, loc, xferOp.getVector(),
                             buffers.dataBuffer);
-    auto loadedVec = memref::LoadOp::create(rewriter, loc, buffers.dataBuffer);
+    auto loadedVec =
+        memref::LoadOp::create(rewriter, loc, buffers.dataBuffer, ValueRange{});
     rewriter.modifyOpInPlace(xferOp, [&]() {
       xferOp.getValueToStoreMutable().assign(loadedVec);
       xferOp->setDiscardableAttr(kPassLabel, rewriter.getUnitAttr());

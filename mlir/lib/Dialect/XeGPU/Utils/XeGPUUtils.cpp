@@ -247,22 +247,9 @@ xegpu::getDistributeLayoutAttr(const OpOperand &opr) {
     if (isa<xegpu::StoreNdOp, xegpu::StoreMatrixOp>(op) && (idx < 2))
       return layout;
 
-    if (isa<xegpu::StoreScatterOp>(op)) {
-      xegpu::StoreScatterOp store(op);
-      int chunkSize = store.getChunkSize().value_or(1);
-      if (layout && idx >= 2 && chunkSize > 1)
-        return layout.dropDims(llvm::to_vector(
-            llvm::seq<int64_t>(layout.getRank() - 1, layout.getRank())));
+    // For gather/scatter ops the mask and offsets share the value's layout.
+    if (isa<xegpu::StoreScatterOp, xegpu::LoadGatherOp>(op))
       return layout;
-    }
-    if (isa<xegpu::LoadGatherOp>(op)) {
-      xegpu::LoadGatherOp load(op);
-      int chunkSize = load.getChunkSize().value_or(1);
-      if (layout && idx >= 1 && chunkSize > 1)
-        return layout.dropDims(llvm::to_vector(
-            llvm::seq<int64_t>(layout.getRank() - 1, layout.getRank())));
-      return layout;
-    }
   }
 
   std::string layoutName = xegpu::getTemporaryLayoutName(opr);
@@ -501,6 +488,24 @@ std::optional<std::string> xegpu::getChipStr(Operation *op) {
   }
 
   return std::nullopt;
+}
+
+FailureOr<int64_t> xegpu::getNumSubgroupsFromBlockSize(Operation *op,
+                                                       int64_t subgroupSize) {
+  auto gpuFunc = op->getParentOfType<gpu::GPUFuncOp>();
+  if (!gpuFunc)
+    return failure();
+  std::optional<ArrayRef<int32_t>> blockSize = gpuFunc.getKnownBlockSize();
+  if (!blockSize)
+    return failure();
+  if (!llvm::all_of(*blockSize, [](int32_t dim) {
+        return dim > 0 && llvm::isPowerOf2_32(dim);
+      }))
+    return failure();
+  int64_t numSubgroups = llvm::product_of(*blockSize) / subgroupSize;
+  if (numSubgroups < 1)
+    return failure();
+  return numSubgroups;
 }
 
 /// Generates element-wise addition ops of two arrays with same length.
@@ -763,18 +768,26 @@ Value xegpu::createReductionNeutralValue(OpBuilder &builder, Location loc,
           elemTy, APInt::getSignedMinValue(intTy.getWidth())));
     return nullptr;
 
-  case vector::CombiningKind::MINNUMF:
   case vector::CombiningKind::MINIMUMF:
     if (auto floatTy = dyn_cast<FloatType>(elemTy))
       return makeConst(builder.getFloatAttr(
           elemTy, APFloat::getInf(floatTy.getFloatSemantics())));
     return nullptr;
 
-  case vector::CombiningKind::MAXNUMF:
   case vector::CombiningKind::MAXIMUMF:
     if (auto floatTy = dyn_cast<FloatType>(elemTy))
       return makeConst(builder.getFloatAttr(
-          elemTy, APFloat::getInf(floatTy.getFloatSemantics(), true)));
+          elemTy,
+          APFloat::getInf(floatTy.getFloatSemantics(), /*Negative=*/true)));
+    return nullptr;
+
+  case vector::CombiningKind::MINNUMF:
+  case vector::CombiningKind::MINIMUMNUMF:
+  case vector::CombiningKind::MAXNUMF:
+  case vector::CombiningKind::MAXIMUMNUMF:
+    if (auto floatTy = dyn_cast<FloatType>(elemTy))
+      return makeConst(builder.getFloatAttr(
+          elemTy, APFloat::getQNaN(floatTy.getFloatSemantics())));
     return nullptr;
   }
   return nullptr;

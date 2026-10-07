@@ -23,6 +23,7 @@
 
 #include "llvm/ADT/APInt.h"
 #include "llvm/ADT/ArrayRef.h"
+#include "llvm/ADT/DenseMap.h"
 #include "llvm/ADT/SmallVector.h"
 #include "llvm/Frontend/OpenMP/OMPContext.h"
 #include "llvm/Frontend/OpenMP/OMPVersion.h"
@@ -53,6 +54,24 @@ template <typename T, typename U = std::remove_const_t<T>> U AsRvalue(T &t) {
 }
 
 template <typename T> T &&AsRvalue(T &&t) { return std::move(t); }
+
+struct SemanticOverrides {
+  // Map of clauses and which directives they are considered to be allowed on
+  // for the purpose of this compilation despite not being allowed by strict
+  // interpretation of the selected spec version.
+  // This is to record cases where we allow a clause because a past/future
+  // spec allows it. This is needed for consistent treatment of clauses as
+  // allowed/disallowed.
+  llvm::DenseMap<llvm::omp::Clause, llvm::omp::Directives> allowedClauses;
+};
+
+bool IsClauseAllowedOnDirective(llvm::omp::Clause clauseId,
+    llvm::omp::Directive dirId, llvm::omp::Version ver,
+    SemanticOverrides *overrides);
+
+bool IsClauseAllowedOnDirective(llvm::omp::Clause clauseId,
+    llvm::omp::Directive dirId, llvm::omp::Version version,
+    SemanticsContext *semaCtx);
 
 const Scope &GetScopingUnit(const Scope &scope);
 const Scope &GetProgramUnit(const Scope &scope);
@@ -353,6 +372,8 @@ struct OmpErrorArgs {
 
 /// Scan the clause list of an `!$omp error` directive for its AT, SEVERITY, and
 /// MESSAGE clause values.
+OmpErrorArgs GetErrorDirectiveArgs(
+    const parser::OmpDirectiveSpecification &spec);
 OmpErrorArgs GetErrorDirectiveArgs(const parser::OmpErrorDirective &errDir);
 
 inline bool IsDoConcurrentLegal(llvm::omp::Version version) {

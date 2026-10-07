@@ -20,7 +20,6 @@
 #include "llvm/ADT/DenseMap.h"
 #include "llvm/ADT/DepthFirstIterator.h"
 #include "llvm/ADT/SmallPtrSet.h"
-#include "llvm/ADT/SmallSet.h"
 #include "llvm/ADT/SmallVector.h"
 #include "llvm/ADT/Statistic.h"
 #include "llvm/ADT/StringExtras.h"
@@ -222,8 +221,7 @@ static cl::opt<bool> ClInstrumentWrites(
 
 static cl::opt<bool>
     ClUseStackSafety("asan-use-stack-safety", cl::Hidden, cl::init(true),
-                     cl::Hidden, cl::desc("Use Stack Safety analysis results"),
-                     cl::Optional);
+                     cl::Hidden, cl::desc("Use Stack Safety analysis results"));
 
 static cl::opt<bool> ClInstrumentAtomics(
     "asan-instrument-atomics",
@@ -444,13 +442,10 @@ static cl::opt<AsanDtorKind> ClOverrideDestructorKind(
                           "Use global destructors")),
     cl::init(AsanDtorKind::Invalid), cl::Hidden);
 
-static SmallSet<unsigned, 8> SrcAddrSpaces;
 static cl::list<unsigned> ClAddrSpaces(
     "asan-instrument-address-spaces",
     cl::desc("Only instrument variables in the specified address spaces."),
-    cl::Hidden, cl::CommaSeparated, cl::callback([](const unsigned &AddrSpace) {
-      SrcAddrSpaces.insert(AddrSpace);
-    }));
+    cl::Hidden, cl::CommaSeparated);
 
 // Debug flags.
 
@@ -1412,8 +1407,8 @@ static bool isSupportedAddrspace(const Triple &TargetTriple, Value *Addr) {
   Type *PtrTy = cast<PointerType>(Addr->getType()->getScalarType());
   unsigned int AddrSpace = PtrTy->getPointerAddressSpace();
 
-  if (!SrcAddrSpaces.empty())
-    return SrcAddrSpaces.count(AddrSpace);
+  if (!ClAddrSpaces.empty())
+    return is_contained(ClAddrSpaces, AddrSpace);
 
   if (TargetTriple.isAMDGPU())
     return !isUnsupportedAMDGPUAddrspace(Addr);
@@ -1693,11 +1688,23 @@ bool AddressSanitizer::GlobalIsLinkerInitialized(GlobalVariable *G) {
   return true;
 }
 
+static bool isPointerPairOperand(Value *V, Type *IntptrTy) {
+  Type *Ty = V->getType();
+  if (Ty->isPtrOrPtrVectorTy())
+    return true;
+  return Ty->isIntOrIntVectorTy() &&
+         Ty->getScalarSizeInBits() == IntptrTy->getScalarSizeInBits();
+}
+
 bool AddressSanitizer::instrumentPointerComparisonOrSubtraction(
     Instruction *I, RuntimeCallInserter &RTCI) {
+  Value *Param[2] = {I->getOperand(0), I->getOperand(1)};
+  if (!isPointerPairOperand(Param[0], IntptrTy) ||
+      !isPointerPairOperand(Param[1], IntptrTy))
+    return false;
+
   IRBuilder<> IRB(I);
   FunctionCallee F = isa<ICmpInst>(I) ? AsanPtrCmpFunction : AsanPtrSubFunction;
-  Value *Param[2] = {I->getOperand(0), I->getOperand(1)};
 
   if (const auto *Ty = Param[0]->getType(); Ty->isVectorTy()) {
     const auto *VTy = dyn_cast<FixedVectorType>(Ty);
@@ -2108,8 +2115,7 @@ void AddressSanitizer::instrumentUnusualSizeOrAlignment(
 
 void ModuleAddressSanitizer::poisonOneInitializer(Function &GlobalInit) {
   // Set up the arguments to our poison/unpoison functions.
-  IRBuilder<> IRB(&GlobalInit.front(),
-                  GlobalInit.front().getFirstInsertionPt());
+  IRBuilder<> IRB(GlobalInit.front().getFirstInsertionPt());
 
   // Add a call to poison all external globals before the given function starts.
   Value *ModuleNameAddr =
@@ -2355,7 +2361,7 @@ StringRef ModuleAddressSanitizer::getGlobalMetadataSection() const {
 }
 
 void ModuleAddressSanitizer::initializeCallbacks() {
-  IRBuilder<> IRB(*C);
+  IRBuilder<> IRB(M);
 
   // Declare our poisoning and unpoisoning functions.
   AsanPoisonGlobals = Inserter.insertFunction(kAsanPoisonGlobalsName,
@@ -2904,7 +2910,7 @@ bool ModuleAddressSanitizer::instrumentModule() {
       IRBuilder<> IRB(AsanCtorFunction->getEntryBlock().getTerminator());
       instrumentGlobals(IRB, &CtorComdat);
     } else {
-      IRBuilder<> IRB(*C);
+      IRBuilder<> IRB(M);
       instrumentGlobals(IRB, &CtorComdat);
     }
   }
@@ -2934,7 +2940,7 @@ bool ModuleAddressSanitizer::instrumentModule() {
 }
 
 void AddressSanitizer::initializeCallbacks(const TargetLibraryInfo *TLI) {
-  IRBuilder<> IRB(*C);
+  IRBuilder<> IRB(M);
   // Create __asan_report* callbacks.
   // IsWrite, TypeSize and Exp are encoded in the function name.
   for (int Exp = 0; Exp < 2; Exp++) {
@@ -3023,7 +3029,7 @@ bool AddressSanitizer::maybeInsertAsanInitAtFunctionEntry(Function &F) {
   if (F.getName().contains(" load]")) {
     FunctionCallee AsanInitFunction =
         declareSanitizerInitFunction(*F.getParent(), kAsanInitName, {});
-    IRBuilder<> IRB(&F.front(), F.front().begin());
+    IRBuilder<> IRB(F.front().begin());
     IRB.CreateCall(AsanInitFunction, {});
     return true;
   }
@@ -3267,8 +3273,8 @@ bool AddressSanitizer::LooksLikeCodeInBug11395(Instruction *I) {
   return true;
 }
 
-void FunctionStackPoisoner::initializeCallbacks(Module &) {
-  IRBuilder<> IRB(*C);
+void FunctionStackPoisoner::initializeCallbacks(Module &M) {
+  IRBuilder<> IRB(M);
   if (ASan.UseAfterReturn == AsanDetectStackUseAfterReturnMode::Always ||
       ASan.UseAfterReturn == AsanDetectStackUseAfterReturnMode::Runtime) {
     const char *MallocNameTemplate =
