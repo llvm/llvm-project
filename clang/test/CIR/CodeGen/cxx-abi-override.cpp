@@ -7,7 +7,7 @@
 // RUN: %clang_cc1 -std=c++17 -triple aarch64-unknown-linux-gnu \
 // RUN:   -fclangir -emit-llvm %s -o - | FileCheck %s --check-prefix=LLVM-ARM
 
-// Make sure CXXABI can be overridden with a flag. Check that by excersizing
+// Make sure CXXABI can be overridden with a flag. Check that by exercising
 // pointer to member on arm with itanium cxxabi.
 
 // CIR-ITANIUM: cir.cxx_abi = "itanium"
