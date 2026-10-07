@@ -149,7 +149,7 @@ static uint32_t getLineOffset(const DILocation *DIL) {
   unsigned SubprogramLine = DIL->getScope()->getSubprogram()->getLine();
   if (Line < SubprogramLine)
     return 0;
-  return (Line - SubprogramLine) & 0xffff;
+  return Line - SubprogramLine;
 }
 
 static AllocationType getAllocType(const AllocationInfo *AllocInfo) {
