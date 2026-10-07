@@ -501,8 +501,7 @@ static bool isStride64(unsigned Opc) {
 
 bool SIInstrInfo::getMemOperandsWithOffsetWidth(
     const MachineInstr &LdSt, SmallVectorImpl<const MachineOperand *> &BaseOps,
-    int64_t &Offset, bool &OffsetIsScalable, LocationSize &Width,
-    const TargetRegisterInfo *TRI) const {
+    int64_t &Offset, bool &OffsetIsScalable, LocationSize &Width) const {
   if (!LdSt.mayLoadOrStore())
     return false;
 
@@ -550,11 +549,11 @@ bool SIInstrInfo::getMemOperandsWithOffsetWidth(
 
       unsigned EltSize;
       if (LdSt.mayLoad())
-        EltSize = TRI->getRegSizeInBits(*getOpRegClass(LdSt, 0)) / 16;
+        EltSize = RI.getRegSizeInBits(*getOpRegClass(LdSt, 0)) / 16;
       else {
         assert(LdSt.mayStore());
         int Data0Idx = AMDGPU::getNamedOperandIdx(Opc, AMDGPU::OpName::data0);
-        EltSize = TRI->getRegSizeInBits(*getOpRegClass(LdSt, Data0Idx)) / 8;
+        EltSize = RI.getRegSizeInBits(*getOpRegClass(LdSt, Data0Idx)) / 8;
       }
 
       if (isStride64(Opc))
@@ -4268,9 +4267,9 @@ bool SIInstrInfo::checkInstOffsetsDoNotOverlap(const MachineInstr &MIa,
   LocationSize Dummy1 = LocationSize::precise(0);
   bool Offset0IsScalable, Offset1IsScalable;
   if (!getMemOperandsWithOffsetWidth(MIa, BaseOps0, Offset0, Offset0IsScalable,
-                                     Dummy0, &RI) ||
+                                     Dummy0) ||
       !getMemOperandsWithOffsetWidth(MIb, BaseOps1, Offset1, Offset1IsScalable,
-                                     Dummy1, &RI))
+                                     Dummy1))
     return false;
 
   if (!memOpsHaveSameBaseOperands(BaseOps0, BaseOps1))

@@ -29931,12 +29931,10 @@ bool RISCVTargetLowering::splitValueIntoRegisterParts(
                    PartNF * RISCV::RVVBitsPerBlock);
     assert(ValNF == PartNF && ValLMUL == PartLMUL &&
            "RISC-V vector tuple type only accepts same register class type "
-           "TUPLE_INSERT");
+           "TUPLE_CAST");
 #endif
 
-    Val = DAG.getNode(RISCVISD::TUPLE_INSERT, DL, PartVT, DAG.getUNDEF(PartVT),
-                      Val, DAG.getTargetConstant(0, DL, MVT::i32));
-    Parts[0] = Val;
+    Parts[0] = DAG.getNode(RISCVISD::TUPLE_CAST, DL, PartVT, Val);
     return true;
   }
 
