@@ -51,6 +51,19 @@ void do_things() {
 #pragma omp teams distribute collapse(1)
   for (int j = 0; j < 10; j++) {
   }
+
+  // The composite `distribute parallel for` construct routes clauses to its
+  // `distribute` and `for` directives, both of which report every clause as
+  // not-yet-implemented.
+  // expected-error@+1{{ClangIR code gen Not Yet Implemented: OpenMP DISTRIBUTE 'dist_schedule' clause}}
+#pragma omp teams distribute parallel for dist_schedule(static)
+  for (int j = 0; j < 10; j++) {
+  }
+
+  // expected-error@+1{{ClangIR code gen Not Yet Implemented: OpenMP FOR 'schedule' clause}}
+#pragma omp teams distribute parallel for schedule(static)
+  for (int j = 0; j < 10; j++) {
+  }
 }
 
 void loop_continue(int *a) {
@@ -71,6 +84,12 @@ void loop_continue(int *a) {
   }
 
 #pragma omp target teams distribute map(tofrom: s)
+  for (int i = 0; i < 10; ++i) {
+    // expected-error@+1{{ClangIR code gen Not Yet Implemented: continue in an OpenMP loop body}}
+    if (i == 3) continue;
+  }
+
+#pragma omp target teams distribute parallel for map(tofrom: s)
   for (int i = 0; i < 10; ++i) {
     // expected-error@+1{{ClangIR code gen Not Yet Implemented: continue in an OpenMP loop body}}
     if (i == 3) continue;
