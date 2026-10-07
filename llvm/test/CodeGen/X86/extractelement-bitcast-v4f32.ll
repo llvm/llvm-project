@@ -8,19 +8,14 @@
 ; rather than (V)EXTRACTPS $0.
 
 define i32 @extract_i32_elt0(<4 x float> %v) nounwind {
-; SSE2-LABEL: extract_i32_elt0:
-; SSE2:       # %bb.0:
-; SSE2-NEXT:    movd %xmm0, %eax
-; SSE2-NEXT:    retq
-;
-; SSE41-LABEL: extract_i32_elt0:
-; SSE41:       # %bb.0:
-; SSE41-NEXT:    extractps $0, %xmm0, %eax
-; SSE41-NEXT:    retq
+; SSE-LABEL: extract_i32_elt0:
+; SSE:       # %bb.0:
+; SSE-NEXT:    movd %xmm0, %eax
+; SSE-NEXT:    retq
 ;
 ; AVX-LABEL: extract_i32_elt0:
 ; AVX:       # %bb.0:
-; AVX-NEXT:    vextractps $0, %xmm0, %eax
+; AVX-NEXT:    vmovd %xmm0, %eax
 ; AVX-NEXT:    retq
   %b = bitcast <4 x float> %v to <4 x i32>
   %e = extractelement <4 x i32> %b, i32 0
@@ -28,21 +23,15 @@ define i32 @extract_i32_elt0(<4 x float> %v) nounwind {
 }
 
 define i16 @extract_i16_elt0(<4 x float> %v) nounwind {
-; SSE2-LABEL: extract_i16_elt0:
-; SSE2:       # %bb.0:
-; SSE2-NEXT:    movd %xmm0, %eax
-; SSE2-NEXT:    # kill: def $ax killed $ax killed $eax
-; SSE2-NEXT:    retq
-;
-; SSE41-LABEL: extract_i16_elt0:
-; SSE41:       # %bb.0:
-; SSE41-NEXT:    extractps $0, %xmm0, %eax
-; SSE41-NEXT:    # kill: def $ax killed $ax killed $eax
-; SSE41-NEXT:    retq
+; SSE-LABEL: extract_i16_elt0:
+; SSE:       # %bb.0:
+; SSE-NEXT:    movd %xmm0, %eax
+; SSE-NEXT:    # kill: def $ax killed $ax killed $eax
+; SSE-NEXT:    retq
 ;
 ; AVX-LABEL: extract_i16_elt0:
 ; AVX:       # %bb.0:
-; AVX-NEXT:    vextractps $0, %xmm0, %eax
+; AVX-NEXT:    vmovd %xmm0, %eax
 ; AVX-NEXT:    # kill: def $ax killed $ax killed $eax
 ; AVX-NEXT:    retq
   %b = bitcast <4 x float> %v to <8 x i16>
@@ -51,21 +40,15 @@ define i16 @extract_i16_elt0(<4 x float> %v) nounwind {
 }
 
 define i8 @extract_i8_elt0(<4 x float> %v) nounwind {
-; SSE2-LABEL: extract_i8_elt0:
-; SSE2:       # %bb.0:
-; SSE2-NEXT:    movd %xmm0, %eax
-; SSE2-NEXT:    # kill: def $al killed $al killed $eax
-; SSE2-NEXT:    retq
-;
-; SSE41-LABEL: extract_i8_elt0:
-; SSE41:       # %bb.0:
-; SSE41-NEXT:    extractps $0, %xmm0, %eax
-; SSE41-NEXT:    # kill: def $al killed $al killed $eax
-; SSE41-NEXT:    retq
+; SSE-LABEL: extract_i8_elt0:
+; SSE:       # %bb.0:
+; SSE-NEXT:    movd %xmm0, %eax
+; SSE-NEXT:    # kill: def $al killed $al killed $eax
+; SSE-NEXT:    retq
 ;
 ; AVX-LABEL: extract_i8_elt0:
 ; AVX:       # %bb.0:
-; AVX-NEXT:    vextractps $0, %xmm0, %eax
+; AVX-NEXT:    vmovd %xmm0, %eax
 ; AVX-NEXT:    # kill: def $al killed $al killed $eax
 ; AVX-NEXT:    retq
   %b = bitcast <4 x float> %v to <16 x i8>
@@ -74,22 +57,16 @@ define i8 @extract_i8_elt0(<4 x float> %v) nounwind {
 }
 
 define i32 @extract_i32_elt0_fadd(<4 x float> %x, <4 x float> %y) nounwind {
-; SSE2-LABEL: extract_i32_elt0_fadd:
-; SSE2:       # %bb.0:
-; SSE2-NEXT:    addps %xmm1, %xmm0
-; SSE2-NEXT:    movd %xmm0, %eax
-; SSE2-NEXT:    retq
-;
-; SSE41-LABEL: extract_i32_elt0_fadd:
-; SSE41:       # %bb.0:
-; SSE41-NEXT:    addps %xmm1, %xmm0
-; SSE41-NEXT:    extractps $0, %xmm0, %eax
-; SSE41-NEXT:    retq
+; SSE-LABEL: extract_i32_elt0_fadd:
+; SSE:       # %bb.0:
+; SSE-NEXT:    addss %xmm1, %xmm0
+; SSE-NEXT:    movd %xmm0, %eax
+; SSE-NEXT:    retq
 ;
 ; AVX-LABEL: extract_i32_elt0_fadd:
 ; AVX:       # %bb.0:
-; AVX-NEXT:    vaddps %xmm1, %xmm0, %xmm0
-; AVX-NEXT:    vextractps $0, %xmm0, %eax
+; AVX-NEXT:    vaddss %xmm1, %xmm0, %xmm0
+; AVX-NEXT:    vmovd %xmm0, %eax
 ; AVX-NEXT:    retq
   %v = fadd <4 x float> %x, %y
   %b = bitcast <4 x float> %v to <4 x i32>
@@ -98,22 +75,16 @@ define i32 @extract_i32_elt0_fadd(<4 x float> %x, <4 x float> %y) nounwind {
 }
 
 define i32 @extract_i32_elt0_cmpss(<4 x float> %x, <4 x float> %y) nounwind {
-; SSE2-LABEL: extract_i32_elt0_cmpss:
-; SSE2:       # %bb.0:
-; SSE2-NEXT:    cmpeqss %xmm1, %xmm0
-; SSE2-NEXT:    movd %xmm0, %eax
-; SSE2-NEXT:    retq
-;
-; SSE41-LABEL: extract_i32_elt0_cmpss:
-; SSE41:       # %bb.0:
-; SSE41-NEXT:    cmpeqss %xmm1, %xmm0
-; SSE41-NEXT:    extractps $0, %xmm0, %eax
-; SSE41-NEXT:    retq
+; SSE-LABEL: extract_i32_elt0_cmpss:
+; SSE:       # %bb.0:
+; SSE-NEXT:    cmpeqss %xmm1, %xmm0
+; SSE-NEXT:    movd %xmm0, %eax
+; SSE-NEXT:    retq
 ;
 ; AVX-LABEL: extract_i32_elt0_cmpss:
 ; AVX:       # %bb.0:
 ; AVX-NEXT:    vcmpeqss %xmm1, %xmm0, %xmm0
-; AVX-NEXT:    vextractps $0, %xmm0, %eax
+; AVX-NEXT:    vmovd %xmm0, %eax
 ; AVX-NEXT:    retq
   %c = call <4 x float> @llvm.x86.sse.cmp.ss(<4 x float> %x, <4 x float> %y, i8 0)
   %b = bitcast <4 x float> %c to <4 x i32>
@@ -122,19 +93,14 @@ define i32 @extract_i32_elt0_cmpss(<4 x float> %x, <4 x float> %y) nounwind {
 }
 
 define i32 @extract_i32_elt0_v8f32(<8 x float> %v) nounwind {
-; SSE2-LABEL: extract_i32_elt0_v8f32:
-; SSE2:       # %bb.0:
-; SSE2-NEXT:    movd %xmm0, %eax
-; SSE2-NEXT:    retq
-;
-; SSE41-LABEL: extract_i32_elt0_v8f32:
-; SSE41:       # %bb.0:
-; SSE41-NEXT:    extractps $0, %xmm0, %eax
-; SSE41-NEXT:    retq
+; SSE-LABEL: extract_i32_elt0_v8f32:
+; SSE:       # %bb.0:
+; SSE-NEXT:    movd %xmm0, %eax
+; SSE-NEXT:    retq
 ;
 ; AVX-LABEL: extract_i32_elt0_v8f32:
 ; AVX:       # %bb.0:
-; AVX-NEXT:    vextractps $0, %xmm0, %eax
+; AVX-NEXT:    vmovd %xmm0, %eax
 ; AVX-NEXT:    vzeroupper
 ; AVX-NEXT:    retq
   %b = bitcast <8 x float> %v to <8 x i32>
@@ -143,19 +109,14 @@ define i32 @extract_i32_elt0_v8f32(<8 x float> %v) nounwind {
 }
 
 define i32 @bitcast_f32_elt0(<4 x float> %v) nounwind {
-; SSE2-LABEL: bitcast_f32_elt0:
-; SSE2:       # %bb.0:
-; SSE2-NEXT:    movd %xmm0, %eax
-; SSE2-NEXT:    retq
-;
-; SSE41-LABEL: bitcast_f32_elt0:
-; SSE41:       # %bb.0:
-; SSE41-NEXT:    extractps $0, %xmm0, %eax
-; SSE41-NEXT:    retq
+; SSE-LABEL: bitcast_f32_elt0:
+; SSE:       # %bb.0:
+; SSE-NEXT:    movd %xmm0, %eax
+; SSE-NEXT:    retq
 ;
 ; AVX-LABEL: bitcast_f32_elt0:
 ; AVX:       # %bb.0:
-; AVX-NEXT:    vextractps $0, %xmm0, %eax
+; AVX-NEXT:    vmovd %xmm0, %eax
 ; AVX-NEXT:    retq
   %e = extractelement <4 x float> %v, i32 0
   %b = bitcast float %e to i32
@@ -163,19 +124,14 @@ define i32 @bitcast_f32_elt0(<4 x float> %v) nounwind {
 }
 
 define void @store_i32_elt0(<4 x float> %v, ptr %p) nounwind {
-; SSE2-LABEL: store_i32_elt0:
-; SSE2:       # %bb.0:
-; SSE2-NEXT:    movss %xmm0, (%rdi)
-; SSE2-NEXT:    retq
-;
-; SSE41-LABEL: store_i32_elt0:
-; SSE41:       # %bb.0:
-; SSE41-NEXT:    extractps $0, %xmm0, (%rdi)
-; SSE41-NEXT:    retq
+; SSE-LABEL: store_i32_elt0:
+; SSE:       # %bb.0:
+; SSE-NEXT:    movss %xmm0, (%rdi)
+; SSE-NEXT:    retq
 ;
 ; AVX-LABEL: store_i32_elt0:
 ; AVX:       # %bb.0:
-; AVX-NEXT:    vextractps $0, %xmm0, (%rdi)
+; AVX-NEXT:    vmovss %xmm0, (%rdi)
 ; AVX-NEXT:    retq
   %b = bitcast <4 x float> %v to <4 x i32>
   %e = extractelement <4 x i32> %b, i32 0
@@ -231,4 +187,3 @@ declare <4 x float> @llvm.x86.sse.cmp.ss(<4 x float>, <4 x float>, i8)
 ;; NOTE: These prefixes are unused and the list is autogenerated. Do not add tests below this line:
 ; AVX1: {{.*}}
 ; AVX512: {{.*}}
-; SSE: {{.*}}
