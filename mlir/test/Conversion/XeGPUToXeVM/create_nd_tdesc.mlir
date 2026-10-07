@@ -154,3 +154,62 @@ gpu.module @create_nd_tdesc {
         gpu.return %c : vector<8xi32>
     }
 }
+
+// -----
+// A row stride of 17 f32 elements is a 68 byte pitch. Xe3p only requires the
+// pitch to be 4 byte aligned, so this lowers (Xe2 requires 16 and rejects it,
+// see failed_conversion.mlir).
+gpu.module @create_nd_tdesc_pitch_xe3p [#xevm.target<chip = "cri">] {
+    // CHECK-LABEL: gpu.func @pitch_4byte_aligned
+    gpu.func @pitch_4byte_aligned(%src: memref<8x16xf32, strided<[17, 1]>>) -> vector<8xi32> {
+        // CHECK: %[[C17:.*]] = arith.constant 17 : i64
+        // CHECK: %[[PITCH:.*]] = arith.trunci %[[C17]] : i64 to i32
+        // CHECK: vector.insert %[[PITCH]], %{{.*}} [4] : i32 into vector<8xi32>
+        %t = xegpu.create_nd_tdesc %src : memref<8x16xf32, strided<[17, 1]>> -> !xegpu.tensor_desc<8x16xf32>
+        %c = builtin.unrealized_conversion_cast %t : !xegpu.tensor_desc<8x16xf32> to vector<8xi32>
+        gpu.return %c : vector<8xi32>
+    }
+}
+
+// -----
+// Xe3p has no minimum width or pitch, only a 4 byte granularity, so a 16 byte
+// wide f16 surface lowers. Xe2 requires 32 bytes and rejects the same source,
+// see failed_conversion.mlir.
+gpu.module @create_nd_tdesc_narrow_xe3p [#xevm.target<chip = "cri">] {
+    // CHECK-LABEL: gpu.func @narrow_surface_xe3p
+    gpu.func @narrow_surface_xe3p(%src: memref<8x8xf16, strided<[16, 1]>>) -> vector<8xi32> {
+        // CHECK: vector.insert %{{.*}} [4] : i32 into vector<8xi32>
+        %t = xegpu.create_nd_tdesc %src : memref<8x8xf16, strided<[16, 1]>> -> !xegpu.tensor_desc<8x8xf16>
+        %c = builtin.unrealized_conversion_cast %t : !xegpu.tensor_desc<8x8xf16> to vector<8xi32>
+        gpu.return %c : vector<8xi32>
+    }
+}
+
+// -----
+// A memref with dynamic shape or strides carries nothing statically checkable,
+// and its shape/strides are recovered via memref.extract_strided_metadata
+// rather than from the op, so the restriction check must skip it entirely
+// instead of querying the op's mixed sizes.
+gpu.module @create_nd_tdesc_dyn_chip [#xevm.target<chip = "pvc">] {
+    // CHECK-LABEL: gpu.func @dynamic_source_with_chip
+    gpu.func @dynamic_source_with_chip(%src: memref<?x?xf16>) -> vector<8xi32> {
+        // CHECK: memref.extract_strided_metadata
+        // CHECK: vector.insert %{{.*}} [4] : i32 into vector<8xi32>
+        %t = xegpu.create_nd_tdesc %src : memref<?x?xf16> -> !xegpu.tensor_desc<8x16xf16>
+        %c = builtin.unrealized_conversion_cast %t : !xegpu.tensor_desc<8x16xf16> to vector<8xi32>
+        gpu.return %c : vector<8xi32>
+    }
+}
+
+// -----
+// Without a target chip there is no uArch to check against, so a surface too
+// narrow for Xe2 is still lowered as-is.
+gpu.module @create_nd_tdesc_no_chip {
+    // CHECK-LABEL: gpu.func @narrow_surface_without_chip
+    gpu.func @narrow_surface_without_chip(%src: memref<8x8xf16, strided<[16, 1]>>) -> vector<8xi32> {
+        // CHECK: vector.insert %{{.*}} [4] : i32 into vector<8xi32>
+        %t = xegpu.create_nd_tdesc %src : memref<8x8xf16, strided<[16, 1]>> -> !xegpu.tensor_desc<8x8xf16>
+        %c = builtin.unrealized_conversion_cast %t : !xegpu.tensor_desc<8x8xf16> to vector<8xi32>
+        gpu.return %c : vector<8xi32>
+    }
+}

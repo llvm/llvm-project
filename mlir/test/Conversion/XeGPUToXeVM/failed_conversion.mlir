@@ -135,3 +135,44 @@ gpu.module @test_kernel {
     gpu.return
   }
 }
+
+// -----
+
+// On Xe2 the 2D block surface width must be at least 32 bytes. Eight f16
+// columns are only 16 bytes wide; the explicit row stride keeps the pitch at a
+// legal 32 bytes so that only the width is at fault. Xe3p has no minimum width,
+// see create_nd_tdesc.mlir.
+
+gpu.module @test_kernel [#xevm.target<chip = "pvc">] {
+  gpu.func @create_nd_tdesc_width_too_narrow(%src: memref<8x8xf16, strided<[16, 1]>>) kernel {
+    // expected-error@+1 {{failed to legalize operation 'xegpu.create_nd_tdesc' that was explicitly marked illegal}}
+    %t = xegpu.create_nd_tdesc %src : memref<8x8xf16, strided<[16, 1]>> -> !xegpu.tensor_desc<8x8xf16>
+    gpu.return
+  }
+}
+
+// -----
+
+// The width must be a multiple of 4 bytes on both Xe2 and Xe3p. A f16 row of 33
+// elements is 66 bytes: past the Xe2 32 byte minimum, but not 4 byte aligned.
+
+gpu.module @test_kernel [#xevm.target<chip = "pvc">] {
+  gpu.func @create_nd_tdesc_width_misaligned(%src: memref<8x33xf16>) kernel {
+    // expected-error@+1 {{failed to legalize operation 'xegpu.create_nd_tdesc' that was explicitly marked illegal}}
+    %t = xegpu.create_nd_tdesc %src : memref<8x33xf16> -> !xegpu.tensor_desc<8x16xf16>
+    gpu.return
+  }
+}
+
+// -----
+
+// On Xe2 the surface pitch must be a multiple of 16 bytes. A row stride of 17
+// f32 elements is 68 bytes.
+
+gpu.module @test_kernel [#xevm.target<chip = "pvc">] {
+  gpu.func @create_nd_tdesc_pitch_misaligned_xe2(%src: memref<8x16xf32, strided<[17, 1]>>) kernel {
+    // expected-error@+1 {{failed to legalize operation 'xegpu.create_nd_tdesc' that was explicitly marked illegal}}
+    %t = xegpu.create_nd_tdesc %src : memref<8x16xf32, strided<[17, 1]>> -> !xegpu.tensor_desc<8x16xf32>
+    gpu.return
+  }
+}

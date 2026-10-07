@@ -245,6 +245,116 @@ translateStoreXeGPUCacheHint(std::optional<xegpu::CachePolicy> L1hint,
 class CreateNdDescToXeVMPattern
     : public OpConversionPattern<xegpu::CreateNdDescOp> {
   using OpConversionPattern::OpConversionPattern;
+
+  // A descriptor is lowered before its consumers are known, so a restriction
+  // may only be enforced here if it holds for every 2D block instruction the
+  // target supports. Fold the supported instructions' restrictions into the
+  // weakest common requirement -- the smallest of the minimum sizes and the GCD
+  // of the alignments -- so that a violation means the surface is unusable by
+  // any consumer. Returns std::nullopt if the target has no 2D block
+  // instruction at all.
+  static std::optional<xegpu::uArch::BlockIOMemoryRestrictions>
+  getWeakestBlockIORestrictions(const xegpu::uArch::uArch *uArch) {
+    std::optional<xegpu::uArch::BlockIOMemoryRestrictions> weakest;
+    for (xegpu::uArch::InstructionKind kind :
+         {xegpu::uArch::InstructionKind::Subgroup2DBlockLoad,
+          xegpu::uArch::InstructionKind::Subgroup2DBlockStore,
+          xegpu::uArch::InstructionKind::Subgroup2DBlockPrefetch}) {
+      if (!uArch->isSupportedInstruction(kind))
+        continue;
+      const auto *blockIo =
+          llvm::dyn_cast<xegpu::uArch::BlockIOInstructionInterface>(
+              uArch->getInstruction(kind));
+      if (!blockIo)
+        continue;
+      const xegpu::uArch::BlockIOMemoryRestrictions &r =
+          blockIo->getMemoryRestrictions();
+      if (!weakest) {
+        weakest = r;
+        continue;
+      }
+      weakest->baseAddressAlignmentBytes = std::gcd(
+          weakest->baseAddressAlignmentBytes, r.baseAddressAlignmentBytes);
+      weakest->minBaseWidthBytes =
+          std::min(weakest->minBaseWidthBytes, r.minBaseWidthBytes);
+      weakest->baseWidthAlignmentBytes =
+          std::gcd(weakest->baseWidthAlignmentBytes, r.baseWidthAlignmentBytes);
+      weakest->minBasePitchBytes =
+          std::min(weakest->minBasePitchBytes, r.minBasePitchBytes);
+      weakest->basePitchAlignmentBytes =
+          std::gcd(weakest->basePitchAlignmentBytes, r.basePitchAlignmentBytes);
+    }
+    return weakest;
+  }
+
+  // Checks the surface width and pitch against the target's 2D block memory
+  // restrictions. Only these two are enforced: both are derived from the
+  // source's static shape and strides, whereas the base address alignment is a
+  // property of the allocation that is not visible here. Dimensions that are
+  // only known at runtime are left unchecked -- guarding them inside the kernel
+  // would cost far more than it is worth.
+  LogicalResult
+  checkMemoryRestrictions(xegpu::CreateNdDescOp op, int64_t rank,
+                          ConversionPatternRewriter &rewriter) const {
+    const auto *uArch =
+        xegpu::uArch::getUArch(xegpu::getChipStr(op).value_or(""));
+    // Without a known target chip there is no uArch to check against, so the
+    // descriptor must be accepted as-is.
+    if (!uArch)
+      return success();
+    std::optional<xegpu::uArch::BlockIOMemoryRestrictions> limits =
+        getWeakestBlockIORestrictions(uArch);
+    if (!limits)
+      return success();
+
+    // `getMixedSizes` / `getMixedStrides` may only be queried when the op
+    // itself carries the shape and strides, which is the same condition under
+    // which the lowering below trusts them; for a memref with dynamic shape or
+    // strides they are recovered from memref.extract_strided_metadata instead.
+    // Nothing is statically known in that case, so there is nothing to check.
+    auto memrefTy = dyn_cast<MemRefType>(op.getSource().getType());
+    if (memrefTy && !xegpu::hasStaticShapeAndStrides(memrefTy))
+      return success();
+
+    unsigned elemBitSize =
+        op.getType().getElementType().getIntOrFloatBitWidth();
+    // Converts a static number of elements into bytes. Returns std::nullopt if
+    // the count is dynamic, or if it does not land on a byte boundary (possible
+    // for sub-byte element types).
+    auto toBytes = [&](OpFoldResult ofr) -> std::optional<int64_t> {
+      std::optional<int64_t> elems = getConstantIntValue(ofr);
+      if (!elems || (*elems * elemBitSize) % 8 != 0)
+        return std::nullopt;
+      return *elems * elemBitSize / 8;
+    };
+    auto check = [&](std::optional<int64_t> bytes, int64_t minBytes,
+                     int64_t alignBytes,
+                     llvm::StringRef what) -> LogicalResult {
+      if (!bytes)
+        return success();
+      if (*bytes < minBytes)
+        return rewriter.notifyMatchFailure(
+            op, llvm::formatv("Expected 2D block surface {0} to be at least "
+                              "{1} bytes on this target, got {2}.",
+                              what, minBytes, *bytes));
+      if (alignBytes > 0 && *bytes % alignBytes != 0)
+        return rewriter.notifyMatchFailure(
+            op, llvm::formatv("Expected 2D block surface {0} to be a multiple "
+                              "of {1} bytes on this target, got {2}.",
+                              what, alignBytes, *bytes));
+      return success();
+    };
+
+    SmallVector<OpFoldResult> sizes = op.getMixedSizes();
+    SmallVector<OpFoldResult> strides = op.getMixedStrides();
+    if (failed(check(toBytes(sizes[rank - 1]), limits->minBaseWidthBytes,
+                     limits->baseWidthAlignmentBytes, "width")))
+      return failure();
+    // The pitch is the row stride of the innermost 2D tile.
+    return check(toBytes(strides[rank - 2]), limits->minBasePitchBytes,
+                 limits->basePitchAlignmentBytes, "pitch");
+  }
+
   LogicalResult
   matchAndRewrite(xegpu::CreateNdDescOp op,
                   xegpu::CreateNdDescOp::Adaptor adaptor,
@@ -303,6 +413,11 @@ class CreateNdDescToXeVMPattern
         }
       }
     }
+    // Enforce the target's 2D block memory restrictions. A rank-1 descriptor is
+    // just a base address and is not consumed by a 2D block op, so it is
+    // exempt.
+    if (rank >= 2 && failed(checkMemoryRestrictions(op, rank, rewriter)))
+      return failure();
 
     Type payloadElemTy = rewriter.getI32Type();
     Type i64Ty = rewriter.getI64Type();
