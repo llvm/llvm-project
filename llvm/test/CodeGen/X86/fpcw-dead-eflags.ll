@@ -8,9 +8,9 @@ define i32 @fptosi_f64(double %x) nounwind {
   ; X86-NEXT:   [[LD_Fp64m:%[0-9]+]]:rfp64 = nofpexcept LD_Fp64m %fixed-stack.0, 1, $noreg, 0, $noreg, implicit-def dead $fpsw, implicit $fpcw :: (load (s64) from %fixed-stack.0, align 4)
   ; X86-NEXT:   FNSTCW16m %stack.1, 1, $noreg, 0, $noreg, implicit-def $fpsw, implicit $fpcw :: (store (s16) into %stack.1)
   ; X86-NEXT:   [[MOVZX32rm16_:%[0-9]+]]:gr32 = MOVZX32rm16 %stack.1, 1, $noreg, 0, $noreg :: (load (s16) from %stack.1)
-  ; X86-NEXT:   [[OR32ri:%[0-9]+]]:gr32 = OR32ri killed [[MOVZX32rm16_]], 3072, implicit-def dead $eflags
-  ; X86-NEXT:   [[COPY:%[0-9]+]]:gr16 = COPY killed [[OR32ri]].sub_16bit
-  ; X86-NEXT:   MOV16mr %stack.2, 1, $noreg, 0, $noreg, killed [[COPY]] :: (store (s16) into %stack.2)
+  ; X86-NEXT:   [[OR32ri:%[0-9]+]]:gr32 = OR32ri [[MOVZX32rm16_]], 3072, implicit-def dead $eflags
+  ; X86-NEXT:   [[COPY:%[0-9]+]]:gr16 = COPY [[OR32ri]].sub_16bit
+  ; X86-NEXT:   MOV16mr %stack.2, 1, $noreg, 0, $noreg, [[COPY]] :: (store (s16) into %stack.2)
   ; X86-NEXT:   FLDCW16m %stack.2, 1, $noreg, 0, $noreg, implicit-def $fpsw, implicit-def $fpcw :: (load (s16) from %stack.2)
   ; X86-NEXT:   IST_Fp32m64 %stack.0, 1, $noreg, 0, $noreg, [[LD_Fp64m]], implicit-def $fpsw, implicit $fpcw
   ; X86-NEXT:   FLDCW16m %stack.1, 1, $noreg, 0, $noreg, implicit-def $fpsw, implicit-def $fpcw :: (load (s16) from %stack.1)
@@ -23,9 +23,9 @@ define i32 @fptosi_f64(double %x) nounwind {
   ; WIN-NEXT:   [[LD_Fp64m:%[0-9]+]]:rfp64 = nofpexcept LD_Fp64m %fixed-stack.0, 1, $noreg, 0, $noreg, implicit-def dead $fpsw, implicit $fpcw :: (load (s64) from %fixed-stack.0, align 4)
   ; WIN-NEXT:   FNSTCW16m %stack.1, 1, $noreg, 0, $noreg, implicit-def $fpsw, implicit $fpcw :: (store (s16) into %stack.1)
   ; WIN-NEXT:   [[MOVZX32rm16_:%[0-9]+]]:gr32 = MOVZX32rm16 %stack.1, 1, $noreg, 0, $noreg :: (load (s16) from %stack.1)
-  ; WIN-NEXT:   [[OR32ri:%[0-9]+]]:gr32 = OR32ri killed [[MOVZX32rm16_]], 3072, implicit-def dead $eflags
-  ; WIN-NEXT:   [[COPY:%[0-9]+]]:gr16 = COPY killed [[OR32ri]].sub_16bit
-  ; WIN-NEXT:   MOV16mr %stack.2, 1, $noreg, 0, $noreg, killed [[COPY]] :: (store (s16) into %stack.2)
+  ; WIN-NEXT:   [[OR32ri:%[0-9]+]]:gr32 = OR32ri [[MOVZX32rm16_]], 3072, implicit-def dead $eflags
+  ; WIN-NEXT:   [[COPY:%[0-9]+]]:gr16 = COPY [[OR32ri]].sub_16bit
+  ; WIN-NEXT:   MOV16mr %stack.2, 1, $noreg, 0, $noreg, [[COPY]] :: (store (s16) into %stack.2)
   ; WIN-NEXT:   FLDCW16m %stack.2, 1, $noreg, 0, $noreg, implicit-def $fpsw, implicit-def $fpcw :: (load (s16) from %stack.2)
   ; WIN-NEXT:   IST_Fp32m64 %stack.0, 1, $noreg, 0, $noreg, [[LD_Fp64m]], implicit-def $fpsw, implicit $fpcw
   ; WIN-NEXT:   FLDCW16m %stack.1, 1, $noreg, 0, $noreg, implicit-def $fpsw, implicit-def $fpcw :: (load (s16) from %stack.1)
@@ -60,9 +60,9 @@ define float @uitofp_i64(i64 %x) nounwind {
   ; WIN-NEXT:   [[ILD_Fp64m80_:%[0-9]+]]:rfp80 = ILD_Fp64m80 %stack.0, 1, $noreg, 0, $noreg, implicit-def dead $fpsw, implicit $fpcw :: (load (s64) from %stack.0)
   ; WIN-NEXT:   FNSTCW16m %stack.2, 1, $noreg, 0, $noreg, implicit-def $fpsw, implicit $fpcw :: (store (s16) into %stack.2)
   ; WIN-NEXT:   [[MOVZX32rm16_:%[0-9]+]]:gr32 = MOVZX32rm16 %stack.2, 1, $noreg, 0, $noreg :: (load (s16) from %stack.2)
-  ; WIN-NEXT:   [[OR32ri:%[0-9]+]]:gr32 = OR32ri killed [[MOVZX32rm16_]], 768, implicit-def dead $eflags
-  ; WIN-NEXT:   [[COPY:%[0-9]+]]:gr16 = COPY killed [[OR32ri]].sub_16bit
-  ; WIN-NEXT:   MOV16mr %stack.3, 1, $noreg, 0, $noreg, killed [[COPY]] :: (store (s16) into %stack.3)
+  ; WIN-NEXT:   [[OR32ri:%[0-9]+]]:gr32 = OR32ri [[MOVZX32rm16_]], 768, implicit-def dead $eflags
+  ; WIN-NEXT:   [[COPY:%[0-9]+]]:gr16 = COPY [[OR32ri]].sub_16bit
+  ; WIN-NEXT:   MOV16mr %stack.3, 1, $noreg, 0, $noreg, [[COPY]] :: (store (s16) into %stack.3)
   ; WIN-NEXT:   FLDCW16m %stack.3, 1, $noreg, 0, $noreg, implicit-def $fpsw, implicit-def $fpcw :: (load (s16) from %stack.3)
   ; WIN-NEXT:   [[ADD_Fp80m32_:%[0-9]+]]:rfp80 = ADD_Fp80m32 killed [[ILD_Fp64m80_]], $noreg, 4, killed [[SHR32ri]], %const.0, $noreg, implicit-def $fpsw, implicit $fpcw
   ; WIN-NEXT:   FLDCW16m %stack.2, 1, $noreg, 0, $noreg, implicit-def $fpsw, implicit-def $fpcw :: (load (s16) from %stack.2)
