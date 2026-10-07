@@ -24,6 +24,7 @@ add_clang_library(clangTidyMiscModule STATIC
   CoroutineHostileRAIICheck.cpp
   DefinitionsInHeadersCheck.cpp
   ExplicitConstructorCheck.cpp
+  FunctionPointerEqualityCheck.cpp
   HeaderIncludeCycleCheck.cpp
   IncludeCleanerCheck.cpp
   MiscTidyModule.cpp

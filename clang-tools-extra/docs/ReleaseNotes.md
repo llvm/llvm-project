@@ -150,6 +150,13 @@ infrastructure are described first, followed by tool-specific sections.
 
   Detects malformed regex patterns defined in a single string literal.
 
+- New {doc}`misc-function-pointer-equality
+  <clang-tidy/checks/misc/function-pointer-equality>` check.
+
+  Detects equality comparisons between function pointers and containers keyed
+  by function pointers, which can behave unpredictably and unsoundly when
+  aggressive Identical Code Folding (`--icf=all`) is enabled.
+
 - New {doc}`modernize-use-if-consteval
   <clang-tidy/checks/modernize/use-if-consteval>` check.
 

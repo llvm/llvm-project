@@ -270,6 +270,7 @@ readability/*
 | {doc}`misc-coroutine-hostile-raii <misc/coroutine-hostile-raii>` |  |
 | {doc}`misc-definitions-in-headers <misc/definitions-in-headers>` | Yes |
 | {doc}`misc-explicit-constructor <misc/explicit-constructor>` | Yes |
+| {doc}`misc-function-pointer-equality <misc/function-pointer-equality>` |  |
 | {doc}`misc-header-include-cycle <misc/header-include-cycle>` |  |
 | {doc}`misc-include-cleaner <misc/include-cleaner>` | Yes |
 | {doc}`misc-misleading-bidirectional <misc/misleading-bidirectional>` |  |
