@@ -19,9 +19,9 @@ subroutine test_next(c)
   type(color), intent(in) :: c
   type(color) :: result
   integer :: stat
-  ! CHECK: %[[C:.*]]:2 = hlfir.declare %{{.*}} {{.*}}uniq_name = "_QFtest_nextEc"}
-  ! CHECK: %[[RESULT:.*]]:2 = hlfir.declare %{{.*}} {uniq_name = "_QFtest_nextEresult"}
-  ! CHECK: %[[STAT:.*]]:2 = hlfir.declare %{{.*}} {uniq_name = "_QFtest_nextEstat"}
+  ! CHECK: %[[C:.*]]:2 = hlfir.declare %{{.*}} {{.*}}uniq_name("_QFtest_nextEc")
+  ! CHECK: %[[RESULT:.*]]:2 = hlfir.declare %{{.*}} uniq_name("_QFtest_nextEresult")
+  ! CHECK: %[[STAT:.*]]:2 = hlfir.declare %{{.*}} uniq_name("_QFtest_nextEstat")
   ! CHECK: %[[F:.*]] = hlfir.designate %[[C]]#0{"__ordinal"}
   ! CHECK: %[[ORD:.*]] = fir.load %[[F]] : !fir.ref<i32>
   ! Result ordinal is min(ordinal + 1, 3).
@@ -37,7 +37,7 @@ subroutine test_next(c)
   ! CHECK-DAG: %[[C0:.*]] = arith.constant 0 : i32
   ! CHECK: %[[S:.*]] = arith.select %[[BOUND]], %[[C112]], %[[C0]] : i32
   ! CHECK: hlfir.assign %[[S]] to %[[STAT]]#0 : i32, !fir.ref<i32>
-  ! CHECK: %[[TMP:.*]]:2 = hlfir.declare %{{.*}} {uniq_name = ".tmp.intrinsic_result"}
+  ! CHECK: %[[TMP:.*]]:2 = hlfir.declare %{{.*}} uniq_name(".tmp.intrinsic_result")
   ! CHECK: %[[TF:.*]] = hlfir.designate %[[TMP]]#0{"__ordinal"}
   ! CHECK: hlfir.assign %[[NEXT]] to %[[TF]] : i32, !fir.ref<i32>
   ! CHECK: %[[E:.*]] = hlfir.as_expr %[[TMP]]#0
@@ -56,7 +56,7 @@ subroutine test_previous(c)
   type(color), intent(in) :: c
   type(color) :: result
   integer :: stat
-  ! CHECK: %[[C:.*]]:2 = hlfir.declare %{{.*}} {{.*}}uniq_name = "_QFtest_previousEc"}
+  ! CHECK: %[[C:.*]]:2 = hlfir.declare %{{.*}} {{.*}}uniq_name("_QFtest_previousEc")
   ! CHECK: %[[F:.*]] = hlfir.designate %[[C]]#0{"__ordinal"}
   ! CHECK: %[[ORD:.*]] = fir.load %[[F]] : !fir.ref<i32>
   ! Result ordinal is max(ordinal - 1, 1).
@@ -67,7 +67,7 @@ subroutine test_previous(c)
   ! CHECK: %[[BOUND:.*]] = arith.cmpi eq, %[[ORD]], %[[ONE]] : i32
   ! CHECK: arith.select %[[BOUND]]
   ! CHECK: hlfir.assign
-  ! CHECK: %[[TMP:.*]]:2 = hlfir.declare %{{.*}} {uniq_name = ".tmp.intrinsic_result"}
+  ! CHECK: %[[TMP:.*]]:2 = hlfir.declare %{{.*}} uniq_name(".tmp.intrinsic_result")
   ! CHECK: %[[TF:.*]] = hlfir.designate %[[TMP]]#0{"__ordinal"}
   ! CHECK: hlfir.assign %[[PREV]] to %[[TF]] : i32, !fir.ref<i32>
   result = previous(c, stat=stat)
@@ -87,7 +87,7 @@ subroutine test_next_no_stat(c)
   ! CHECK:   fir.call @_FortranAReportFatalUserError
   ! CHECK: }
   ! CHECK-NOT: arith.constant 112
-  ! CHECK: hlfir.declare %{{.*}} {uniq_name = ".tmp.intrinsic_result"}
+  ! CHECK: hlfir.declare %{{.*}} uniq_name(".tmp.intrinsic_result")
   result = next(c)
 end subroutine
 
@@ -105,7 +105,7 @@ subroutine test_next_optional_stat(c, stat)
   type(color), intent(in) :: c
   integer, optional, intent(out) :: stat
   type(color) :: result
-  ! CHECK: %[[STAT:.*]]:2 = hlfir.declare %{{.*}} {{.*}}uniq_name = "_QFtest_next_optional_statEstat"}
+  ! CHECK: %[[STAT:.*]]:2 = hlfir.declare %{{.*}} {{.*}}uniq_name("_QFtest_next_optional_statEstat")
   ! CHECK: %[[PRES:.*]] = fir.is_present %[[STAT]]#0 : (!fir.ref<i32>) -> i1
   ! CHECK: %[[BOUND:.*]] = arith.cmpi eq
   ! CHECK: fir.if %[[PRES]] {
@@ -164,7 +164,7 @@ subroutine test_next_allocatable_a(a)
   use enum_np_mod
   type(color), allocatable, intent(in) :: a
   type(color) :: nc
-  ! CHECK: %[[A:.*]]:2 = hlfir.declare %{{.*}} {{.*}}uniq_name = "_QFtest_next_allocatable_aEa"}
+  ! CHECK: %[[A:.*]]:2 = hlfir.declare %{{.*}} {{.*}}uniq_name("_QFtest_next_allocatable_aEa")
   ! CHECK: %[[BOX:.*]] = fir.load %[[A]]#0 : !fir.ref<!fir.box<!fir.heap<!fir.type<_QMenum_np_modTcolor{__ordinal:i32}>>>>
   ! CHECK: %[[ADDR:.*]] = fir.box_addr %[[BOX]]
   ! CHECK: %[[F:.*]] = hlfir.designate %[[ADDR]]{"__ordinal"} : (!fir.heap<!fir.type<_QMenum_np_modTcolor{__ordinal:i32}>>) -> !fir.ref<i32>
@@ -178,8 +178,8 @@ subroutine test_next_allocatable_array_a(a)
   type(color), allocatable, intent(in) :: a(:)
   type(color) :: narr(3)
   integer :: stat(3)
-  ! CHECK: %[[A:.*]]:2 = hlfir.declare %{{.*}} {{.*}}uniq_name = "_QFtest_next_allocatable_array_aEa"}
-  ! CHECK: %[[STAT:.*]]:2 = hlfir.declare %{{.*}} {uniq_name = "_QFtest_next_allocatable_array_aEstat"}
+  ! CHECK: %[[A:.*]]:2 = hlfir.declare %{{.*}} {{.*}}uniq_name("_QFtest_next_allocatable_array_aEa")
+  ! CHECK: %[[STAT:.*]]:2 = hlfir.declare %{{.*}} uniq_name("_QFtest_next_allocatable_array_aEstat")
   ! CHECK: %[[BOX:.*]] = fir.load %[[A]]#0 : !fir.ref<!fir.box<!fir.heap<!fir.array<?x!fir.type<_QMenum_np_modTcolor{__ordinal:i32}>>>>>
   ! CHECK: %[[DIMS:.*]]:3 = fir.box_dims %[[BOX]], %{{.*}}
   ! CHECK: %[[SHAPE:.*]] = fir.shape %[[DIMS]]#1
@@ -197,7 +197,7 @@ subroutine test_previous_pointer_a(p)
   use enum_np_mod
   type(color), pointer, intent(in) :: p(:)
   type(color) :: parr(3)
-  ! CHECK: %[[P:.*]]:2 = hlfir.declare %{{.*}} {{.*}}uniq_name = "_QFtest_previous_pointer_aEp"}
+  ! CHECK: %[[P:.*]]:2 = hlfir.declare %{{.*}} {{.*}}uniq_name("_QFtest_previous_pointer_aEp")
   ! CHECK: %[[BOX:.*]] = fir.load %[[P]]#0
   ! CHECK: %[[DIMS:.*]]:3 = fir.box_dims %[[BOX]], %{{.*}}
   ! CHECK: %[[SHAPE:.*]] = fir.shape %[[DIMS]]#1
@@ -221,7 +221,7 @@ subroutine test_next_array(arr)
   type(color), intent(in) :: arr(3)
   type(color) :: narr(3)
   integer :: stat(3)
-  ! CHECK: %[[STAT:.*]]:2 = hlfir.declare %{{.*}} {uniq_name = "_QFtest_next_arrayEstat"}
+  ! CHECK: %[[STAT:.*]]:2 = hlfir.declare %{{.*}} uniq_name("_QFtest_next_arrayEstat")
   ! CHECK: %[[RES:.*]] = hlfir.elemental %{{[0-9]+}} : (!fir.shape<1>) -> !hlfir.expr<3x!fir.type<_QMenum_np_modTcolor{__ordinal:i32}>> {
   ! CHECK: ^bb0(%[[I:.*]]: index):
   ! CHECK: %[[ELT:.*]] = hlfir.designate %{{.*}} (%[[I]])
@@ -261,7 +261,7 @@ subroutine test_next_array_optional_stat(arr, stat)
   type(color), intent(in) :: arr(3)
   integer, optional, intent(out) :: stat(3)
   type(color) :: narr(3)
-  ! CHECK: %[[STAT:.*]]:2 = hlfir.declare %{{.*}} {{.*}}uniq_name = "_QFtest_next_array_optional_statEstat"}
+  ! CHECK: %[[STAT:.*]]:2 = hlfir.declare %{{.*}} {{.*}}uniq_name("_QFtest_next_array_optional_statEstat")
   ! CHECK: %[[PRES:.*]] = fir.is_present %[[STAT]]#0 : (!fir.ref<!fir.array<3xi32>>) -> i1
   ! CHECK: hlfir.elemental %{{[0-9]+}} : (!fir.shape<1>)
   ! CHECK: ^bb0(%[[I:.*]]: index):
@@ -362,7 +362,7 @@ subroutine test_next_where_stat(arr, mask)
   logical, intent(in) :: mask(3)
   type(color) :: narr(3)
   integer :: stat(3)
-  ! CHECK: %[[STAT:.*]]:2 = hlfir.declare %{{.*}} {uniq_name = "_QFtest_next_where_statEstat"}
+  ! CHECK: %[[STAT:.*]]:2 = hlfir.declare %{{.*}} uniq_name("_QFtest_next_where_statEstat")
   ! CHECK: hlfir.where {
   ! CHECK: } do {
   ! CHECK: hlfir.region_assign {
@@ -389,8 +389,8 @@ subroutine test_next_scalar_a_array_stat(c)
   type(color), intent(in) :: c
   type(color) :: narr(3)
   integer :: stat(3)
-  ! CHECK: %[[C:.*]]:2 = hlfir.declare %{{.*}} {{.*}}uniq_name = "_QFtest_next_scalar_a_array_statEc"}
-  ! CHECK: %[[STAT:.*]]:2 = hlfir.declare %{{.*}}(%[[SHAPE:.*]]) {uniq_name = "_QFtest_next_scalar_a_array_statEstat"}
+  ! CHECK: %[[C:.*]]:2 = hlfir.declare %{{.*}} {{.*}}uniq_name("_QFtest_next_scalar_a_array_statEc")
+  ! CHECK: %[[STAT:.*]]:2 = hlfir.declare %{{.*}}(%[[SHAPE:.*]]) uniq_name("_QFtest_next_scalar_a_array_statEstat")
   ! CHECK: hlfir.elemental %[[SHAPE]] : (!fir.shape<1>) -> !hlfir.expr<3x!fir.type<_QMenum_np_modTcolor{__ordinal:i32}>> {
   ! CHECK: ^bb0(%[[I:.*]]: index):
   ! CHECK: hlfir.designate %[[C]]#0{"__ordinal"}
@@ -410,7 +410,7 @@ subroutine test_next_vector_subscript_stat(arr, idx)
   integer, intent(in) :: idx(3)
   type(color) :: narr(3)
   integer :: stat(5)
-  ! CHECK: %[[STAT:.*]]:2 = hlfir.declare %{{.*}} {uniq_name = "_QFtest_next_vector_subscript_statEstat"}
+  ! CHECK: %[[STAT:.*]]:2 = hlfir.declare %{{.*}} uniq_name("_QFtest_next_vector_subscript_statEstat")
   ! CHECK: %[[IDX:.*]] = hlfir.elemental %{{.*}} unordered : (!fir.shape<1>) -> !hlfir.expr<3xi64> {
   ! CHECK: hlfir.elemental %{{[0-9]+}} : (!fir.shape<1>) -> !hlfir.expr<3x!fir.type<_QMenum_np_modTcolor{__ordinal:i32}>> {
   ! CHECK: ^bb0(%[[I:.*]]: index):
@@ -434,8 +434,8 @@ subroutine test_next_stat_kinds(c, arr)
   type(color) :: nc, parr(3)
   integer(8) :: stat8
   integer(2) :: stat2(3)
-  ! CHECK: %[[S2:.*]]:2 = hlfir.declare %{{.*}} {uniq_name = "_QFtest_next_stat_kindsEstat2"} : (!fir.ref<!fir.array<3xi16>>
-  ! CHECK: %[[S8:.*]]:2 = hlfir.declare %{{.*}} {uniq_name = "_QFtest_next_stat_kindsEstat8"} : (!fir.ref<i64>)
+  ! CHECK: %[[S2:.*]]:2 = hlfir.declare %{{.*}} uniq_name("_QFtest_next_stat_kindsEstat2") : (!fir.ref<!fir.array<3xi16>>
+  ! CHECK: %[[S8:.*]]:2 = hlfir.declare %{{.*}} uniq_name("_QFtest_next_stat_kindsEstat8") : (!fir.ref<i64>)
   ! CHECK-DAG: %[[C112_8:.*]] = arith.constant 112 : i64
   ! CHECK-DAG: %[[C0_8:.*]] = arith.constant 0 : i64
   ! CHECK: %[[V8:.*]] = arith.select %{{.*}}, %[[C112_8]], %[[C0_8]] : i64

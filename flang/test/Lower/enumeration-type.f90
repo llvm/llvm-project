@@ -35,7 +35,7 @@ end subroutine
 subroutine test_enumerator_constants()
   use enum_mod
   type(color) :: c
-  ! CHECK: %[[C:.*]]:2 = hlfir.declare %{{.*}} {uniq_name = "_QFtest_enumerator_constantsEc"}
+  ! CHECK: %[[C:.*]]:2 = hlfir.declare %{{.*}} uniq_name("_QFtest_enumerator_constantsEc")
   ! CHECK: %[[RED_ADDR:.*]] = fir.address_of(@[[RED:_QQro\._QMenum_modTcolor\.[0-9]+]])
   ! CHECK: %[[RED_DECL:.*]]:2 = hlfir.declare %[[RED_ADDR]]
   ! CHECK: hlfir.assign %[[RED_DECL]]#0 to %[[C]]#0 : !fir.ref<!fir.type<_QMenum_modTcolor{__ordinal:i32}>>, !fir.ref<!fir.type<_QMenum_modTcolor{__ordinal:i32}>>
@@ -78,7 +78,7 @@ subroutine test_constructor_runtime(i)
   use enum_mod
   integer, intent(in) :: i
   type(color) :: c
-  ! CHECK: %[[C:.*]]:2 = hlfir.declare %{{.*}} {uniq_name = "_QFtest_constructor_runtimeEc"}
+  ! CHECK: %[[C:.*]]:2 = hlfir.declare %{{.*}} uniq_name("_QFtest_constructor_runtimeEc")
   ! CHECK: %[[ORD:.*]] = fir.load %{{.*}} : !fir.ref<i32>
   ! CHECK-DAG: %[[ONE:.*]] = arith.constant 1 : i32
   ! CHECK-DAG: %[[MAX:.*]] = arith.constant 3 : i32
@@ -88,7 +88,7 @@ subroutine test_constructor_runtime(i)
   ! CHECK: fir.if %[[OOR]] {
   ! CHECK:   fir.call @{{.*}}ReportFatalUserError
   ! CHECK: }
-  ! CHECK: %[[TMP:.*]]:2 = hlfir.declare %{{.*}} {uniq_name = "ctor.temp"}
+  ! CHECK: %[[TMP:.*]]:2 = hlfir.declare %{{.*}} uniq_name("ctor.temp")
   ! CHECK: %[[F:.*]] = hlfir.designate %[[TMP]]#0{"__ordinal"}
   ! CHECK: hlfir.assign %[[ORD]] to %[[F]] : i32, !fir.ref<i32>
   ! CHECK: hlfir.assign %[[TMP]]#0 to %[[C]]#0
@@ -114,7 +114,7 @@ subroutine test_constructor_int8(i)
   ! CHECK:   fir.call @{{.*}}ReportFatalUserError
   ! CHECK: }
   ! CHECK: %[[ORD:.*]] = fir.convert %[[I]] : (i64) -> i32
-  ! CHECK: %[[TMP:.*]]:2 = hlfir.declare %{{.*}} {uniq_name = "ctor.temp"}
+  ! CHECK: %[[TMP:.*]]:2 = hlfir.declare %{{.*}} uniq_name("ctor.temp")
   ! CHECK: %[[F:.*]] = hlfir.designate %[[TMP]]#0{"__ordinal"}
   ! CHECK: hlfir.assign %[[ORD]] to %[[F]] : i32, !fir.ref<i32>
   c = color(i)
@@ -139,7 +139,7 @@ subroutine test_constructor_int1(i)
   ! CHECK: fir.if %[[OOR]] {
   ! CHECK:   fir.call @{{.*}}ReportFatalUserError
   ! CHECK: }
-  ! CHECK: %[[TMP:.*]]:2 = hlfir.declare %{{.*}} {uniq_name = "ctor.temp"}
+  ! CHECK: %[[TMP:.*]]:2 = hlfir.declare %{{.*}} uniq_name("ctor.temp")
   ! CHECK: %[[F:.*]] = hlfir.designate %[[TMP]]#0{"__ordinal"}
   ! CHECK: hlfir.assign %[[ORD]] to %[[F]] : i32, !fir.ref<i32>
   c = color(i)
@@ -155,8 +155,8 @@ subroutine test_comparisons(c1, c2)
   use enum_mod
   type(color), intent(in) :: c1, c2
   logical :: l
-  ! CHECK: %[[C1:.*]]:2 = hlfir.declare %{{.*}} {{.*}}uniq_name = "_QFtest_comparisonsEc1"}
-  ! CHECK: %[[C2:.*]]:2 = hlfir.declare %{{.*}} {{.*}}uniq_name = "_QFtest_comparisonsEc2"}
+  ! CHECK: %[[C1:.*]]:2 = hlfir.declare %{{.*}} {{.*}}uniq_name("_QFtest_comparisonsEc1")
+  ! CHECK: %[[C2:.*]]:2 = hlfir.declare %{{.*}} {{.*}}uniq_name("_QFtest_comparisonsEc2")
   ! CHECK: %[[F1:.*]] = hlfir.designate %[[C1]]#0{"__ordinal"}
   ! CHECK: %[[V1:.*]] = fir.load %[[F1]] : !fir.ref<i32>
   ! CHECK: %[[F2:.*]] = hlfir.designate %[[C2]]#0{"__ordinal"}
@@ -183,7 +183,7 @@ end subroutine
 subroutine test_int_conversion()
   use enum_mod
   integer :: i
-  ! CHECK: %[[I:.*]]:2 = hlfir.declare %{{.*}} {uniq_name = "_QFtest_int_conversionEi"}
+  ! CHECK: %[[I:.*]]:2 = hlfir.declare %{{.*}} uniq_name("_QFtest_int_conversionEi")
   ! CHECK: %[[C1:.*]] = arith.constant 1 : i32
   ! CHECK: hlfir.assign %[[C1]] to %[[I]]#0 : i32, !fir.ref<i32>
   i = int(red)
@@ -195,11 +195,11 @@ subroutine test_int_variable(c, arr)
   type(color), intent(in) :: c, arr(3)
   integer :: i, iarr(3)
   integer(8) :: j
-  ! CHECK: %[[ARR:.*]]:2 = hlfir.declare %{{.*}}(%[[SHAPE:[0-9]+]]) dummy_scope %{{.*}} {{.*}}uniq_name = "_QFtest_int_variableEarr"}
-  ! CHECK: %[[C:.*]]:2 = hlfir.declare %{{.*}} {{.*}}uniq_name = "_QFtest_int_variableEc"}
-  ! CHECK: %[[I:.*]]:2 = hlfir.declare %{{.*}} {uniq_name = "_QFtest_int_variableEi"}
-  ! CHECK: %[[IARR:.*]]:2 = hlfir.declare %{{.*}} {uniq_name = "_QFtest_int_variableEiarr"}
-  ! CHECK: %[[J:.*]]:2 = hlfir.declare %{{.*}} {uniq_name = "_QFtest_int_variableEj"}
+  ! CHECK: %[[ARR:.*]]:2 = hlfir.declare %{{.*}}(%[[SHAPE:[0-9]+]]) dummy_scope %{{.*}} {{.*}}uniq_name("_QFtest_int_variableEarr")
+  ! CHECK: %[[C:.*]]:2 = hlfir.declare %{{.*}} {{.*}}uniq_name("_QFtest_int_variableEc")
+  ! CHECK: %[[I:.*]]:2 = hlfir.declare %{{.*}} uniq_name("_QFtest_int_variableEi")
+  ! CHECK: %[[IARR:.*]]:2 = hlfir.declare %{{.*}} uniq_name("_QFtest_int_variableEiarr")
+  ! CHECK: %[[J:.*]]:2 = hlfir.declare %{{.*}} uniq_name("_QFtest_int_variableEj")
   ! CHECK: %[[F1:.*]] = hlfir.designate %[[C]]#0{"__ordinal"}
   ! CHECK: %[[V1:.*]] = fir.load %[[F1]] : !fir.ref<i32>
   ! CHECK: hlfir.assign %[[V1]] to %[[I]]#0 : i32, !fir.ref<i32>
@@ -224,8 +224,8 @@ subroutine test_int_volatile(c, arr)
   use enum_mod
   type(color), volatile :: c, arr(3)
   integer :: i, iarr(3)
-  ! CHECK: %[[ARR:.*]]:2 = hlfir.declare %{{.*}}(%[[SHAPE:[0-9]+]]) dummy_scope %{{.*}} {{.*}}uniq_name = "_QFtest_int_volatileEarr"}
-  ! CHECK: %[[C:.*]]:2 = hlfir.declare %{{.*}} {{.*}}uniq_name = "_QFtest_int_volatileEc"}
+  ! CHECK: %[[ARR:.*]]:2 = hlfir.declare %{{.*}}(%[[SHAPE:[0-9]+]]) dummy_scope %{{.*}} {{.*}}uniq_name("_QFtest_int_volatileEarr")
+  ! CHECK: %[[C:.*]]:2 = hlfir.declare %{{.*}} {{.*}}uniq_name("_QFtest_int_volatileEc")
   ! CHECK: %[[F:.*]] = hlfir.designate %[[C]]#0{"__ordinal"} {{.*}} -> !fir.ref<i32, volatile>
   ! CHECK: fir.load %[[F]] : !fir.ref<i32, volatile>
   i = int(c)
@@ -258,7 +258,7 @@ subroutine test_select_case(c)
   use enum_mod
   type(color), intent(in) :: c
   integer :: result
-  ! CHECK: %[[C:.*]]:2 = hlfir.declare %{{.*}} {{.*}}uniq_name = "_QFtest_select_caseEc"}
+  ! CHECK: %[[C:.*]]:2 = hlfir.declare %{{.*}} {{.*}}uniq_name("_QFtest_select_caseEc")
   ! CHECK: %[[F:.*]] = hlfir.designate %[[C]]#0{"__ordinal"}
   ! CHECK: %[[SEL:.*]] = fir.load %[[F]] : !fir.ref<i32>
   ! CHECK: %[[C1:.*]] = arith.constant 1 : i32
@@ -284,7 +284,7 @@ end subroutine
 subroutine test_formatted_write(c)
   use enum_mod
   type(color), intent(in) :: c
-  ! CHECK: %[[C:.*]]:2 = hlfir.declare %{{.*}} {{.*}}uniq_name = "_QFtest_formatted_writeEc"}
+  ! CHECK: %[[C:.*]]:2 = hlfir.declare %{{.*}} {{.*}}uniq_name("_QFtest_formatted_writeEc")
   ! CHECK: fir.call @_FortranAioBeginExternalFormattedOutput
   ! CHECK: %[[BOX:.*]] = fir.embox %[[C]]#0 : (!fir.ref<!fir.type<_QMenum_modTcolor{__ordinal:i32}>>) -> !fir.box<!fir.type<_QMenum_modTcolor{__ordinal:i32}>>
   ! CHECK: %[[ARG:.*]] = fir.convert %[[BOX]]
@@ -302,7 +302,7 @@ end subroutine
 subroutine test_formatted_read(c)
   use enum_mod
   type(color), intent(inout) :: c
-  ! CHECK: %[[C:.*]]:2 = hlfir.declare %{{.*}} {{.*}}uniq_name = "_QFtest_formatted_readEc"}
+  ! CHECK: %[[C:.*]]:2 = hlfir.declare %{{.*}} {{.*}}uniq_name("_QFtest_formatted_readEc")
   ! CHECK: fir.call @_FortranAioBeginExternalFormattedInput
   ! CHECK: %[[BOX:.*]] = fir.embox %[[C]]#0 : (!fir.ref<!fir.type<_QMenum_modTcolor{__ordinal:i32}>>) -> !fir.box<!fir.type<_QMenum_modTcolor{__ordinal:i32}>>
   ! CHECK: %[[ARG:.*]] = fir.convert %[[BOX]]
@@ -342,8 +342,8 @@ subroutine test_func_result()
   use enum_func_mod
   type(color2) :: c
   logical :: l
-  ! CHECK: %[[C:.*]]:2 = hlfir.declare %{{.*}} {uniq_name = "_QFtest_func_resultEc"}
-  ! CHECK: %[[TMP:.*]]:2 = hlfir.declare %{{.*}} {uniq_name = ".tmp.func_result"}
+  ! CHECK: %[[C:.*]]:2 = hlfir.declare %{{.*}} uniq_name("_QFtest_func_resultEc")
+  ! CHECK: %[[TMP:.*]]:2 = hlfir.declare %{{.*}} uniq_name(".tmp.func_result")
   ! CHECK: %[[RES:.*]] = fir.call @_QMenum_func_modPpick() {{.*}}: () -> !fir.type<_QMenum_func_modTcolor2{__ordinal:i32}>
   ! CHECK: fir.save_result %[[RES]] to %[[TMP]]#0
   ! CHECK: %[[E:.*]] = hlfir.as_expr %[[TMP]]#0
@@ -384,7 +384,7 @@ end subroutine
 subroutine test_enum_arg_pass()
   use enum_mod
   type(color) :: c
-  ! CHECK: %[[C:.*]]:2 = hlfir.declare %{{.*}} {uniq_name = "_QFtest_enum_arg_passEc"}
+  ! CHECK: %[[C:.*]]:2 = hlfir.declare %{{.*}} uniq_name("_QFtest_enum_arg_passEc")
   ! CHECK: hlfir.assign %{{.*}} to %[[C]]#0
   ! CHECK: fir.call @_QPtake_enum(%[[C]]#0) {{.*}}: (!fir.ref<!fir.type<_QMenum_modTcolor{__ordinal:i32}>>) -> ()
   c = green
@@ -407,7 +407,7 @@ subroutine test_enum_parameter()
   use enum_mod
   type(color), parameter :: cRed = red
   type(color) :: c
-  ! CHECK: hlfir.declare %{{.*}} {fortran_attrs = #fir.var_attrs<parameter>, uniq_name = "_QFtest_enum_parameterECcred"} : (!fir.ref<!fir.type<_QMenum_modTcolor{__ordinal:i32}>>)
+  ! CHECK: hlfir.declare %{{.*}} uniq_name("_QFtest_enum_parameterECcred") fortran_attrs<parameter> : (!fir.ref<!fir.type<_QMenum_modTcolor{__ordinal:i32}>>)
   ! CHECK: fir.address_of(@[[RED]])
   ! CHECK: hlfir.assign
   c = cRed
@@ -436,7 +436,7 @@ subroutine test_array_parameter()
   use enum_mod
   type(color), parameter :: pal(3) = [red, green, blue]
   type(color) :: arr(3)
-  ! CHECK: hlfir.declare %{{.*}} {fortran_attrs = #fir.var_attrs<parameter>, uniq_name = "_QFtest_array_parameterECpal"} : (!fir.ref<!fir.array<3x!fir.type<_QMenum_modTcolor{__ordinal:i32}>>>, !fir.shape<1>)
+  ! CHECK: hlfir.declare %{{.*}} uniq_name("_QFtest_array_parameterECpal") fortran_attrs<parameter> : (!fir.ref<!fir.array<3x!fir.type<_QMenum_modTcolor{__ordinal:i32}>>>, !fir.shape<1>)
   ! CHECK: hlfir.assign
   arr = pal
 end subroutine
