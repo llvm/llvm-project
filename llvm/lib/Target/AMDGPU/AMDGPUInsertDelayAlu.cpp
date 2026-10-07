@@ -546,13 +546,13 @@ public:
         }
       }
 
+      Register VccReg = AMDGPU::LaneMaskConstants::get(*ST).VccReg;
       if (instructionWaitsForVALU(MI)) {
         // Forget about all outstanding VALU delays.
         // TODO: This is overkill since it also forgets about SALU delays.
         State = DelayState();
       } else if (Type != OTHER) {
         DelayInfo Delay;
-        Register VccReg = AMDGPU::LaneMaskConstants::get(*ST).VccReg;
         Register ExecReg = AMDGPU::LaneMaskConstants::get(*ST).ExecReg;
 
         // C-reuse: back-to-back WMMAs into the same C register forward the
@@ -602,7 +602,7 @@ public:
         }
 
         if (SII->isVALU(MI.getOpcode(), /*AllowLDSDMA=*/true)) {
-          for (const auto &Op : MI.defs()) {
+          for (const auto &Op : MI.all_defs()) {
             Register Reg = Op.getReg();
             if (AMDGPU::isSGPR(Reg, TRI)) {
               LastSGPRFromVALU = *TRI->regunits(Reg).begin();
@@ -623,7 +623,8 @@ public:
           unsigned OperandNo = MI.getOperandNo(&Op);
           Register Reg = Op.getReg();
           if (OperandNo >= MI.getDesc().getNumOperands() &&
-              !MI.getDesc().hasImplicitDefOfPhysReg(Reg))
+              !MI.getDesc().hasImplicitDefOfPhysReg(Reg == VccReg ? AMDGPU::VCC
+                                                                  : Reg))
             continue;
 
           unsigned Latency = SchedModel->computeOperandLatency(
