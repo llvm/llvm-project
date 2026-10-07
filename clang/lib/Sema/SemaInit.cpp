@@ -8581,6 +8581,7 @@ ExprResult InitializationSequence::Perform(Sema &S,
         // respectively.
         Expr::EvalResult ER;
         if (Entity.getType()->getAs<PointerType>() &&
+            !CurInit.get()->isValueDependent() &&
             CurInit.get()->EvaluateAsRValue(ER, S.Context) &&
             (ER.Val.isLValue() && !ER.Val.isNullPointer())) {
           S.Diag(Kind.getLocation(), diag::err_c23_constexpr_pointer_not_null);
