@@ -268,8 +268,29 @@ cir::CIRDialect::verifyOperationAttribute(mlir::Operation *op,
       return op->emitOpError()
              << "expects '" << getCXXABIAttrName() << "' to be a string";
 
-    if (!clang::TargetCXXABI::isABI(abi.getValue()))
+    StringRef abival = abi.getValue();
+    if (!clang::TargetCXXABI::isABI(abival))
       return op->emitOpError() << "unknown C++ ABI '" << abi.getValue() << "'";
+
+    clang::TargetCXXABI::Kind kind =
+        clang::TargetCXXABI::getKind(abival);
+    if (auto triple = op->getAttrOfType<mlir::StringAttr>(getTripleAttrName()))
+      if (!clang::TargetCXXABI::isSupportedCXXABI(
+              llvm::Triple(triple.getValue()), kind))
+        return op->emitOpError()
+               << "C++ ABI '" << abi.getValue()
+               << "' is not supported on target '" << triple.getValue() << "'";
+
+    switch (kind) {
+    case clang::TargetCXXABI::GenericItanium:
+    case clang::TargetCXXABI::GenericAArch64:
+    case clang::TargetCXXABI::AppleARM64:
+    case clang::TargetCXXABI::Microsoft:
+      break;
+    default:
+      return op->emitOpError() << "C++ ABI '" << abi.getValue()
+                               << "' is not yet supported by CIR";
+    }
     return success();
   }
 

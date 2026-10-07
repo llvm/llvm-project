@@ -18,3 +18,15 @@ module {
     cir.return
   }
 }
+
+// -----
+
+// expected-error@+1 {{C++ ABI 'microsoft' is not supported on target 'x86_64-unknown-linux-gnu'}}
+module attributes {cir.triple = "x86_64-unknown-linux-gnu", cir.cxx_abi = "microsoft"} {
+}
+
+// -----
+
+// expected-error@+1 {{C++ ABI 'fuchsia' is not yet supported by CIR}}
+module attributes {cir.triple = "aarch64-unknown-fuchsia", cir.cxx_abi = "fuchsia"} {
+}
