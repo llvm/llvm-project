@@ -2566,6 +2566,10 @@ void CIRGenModule::emitTopLevelDecl(Decl *decl) {
     auto *importDecl = cast<ImportDecl>(decl);
     clang::Module *mod = importDecl->getImportedModule();
 
+    // Nothing to record or to emit without a module.
+    if (!mod)
+      break;
+
     // If we've already imported this module, we're done.
     if (!importedModules.insert(mod))
       break;
