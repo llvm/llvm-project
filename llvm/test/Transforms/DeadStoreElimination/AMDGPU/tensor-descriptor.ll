@@ -5,8 +5,8 @@ target triple = "amdgpu12.50-amd-amdhsa"
 
 ; The descriptor can name the same global allocation as %global, even though
 ; its address is passed in integer vector lanes rather than as a pointer.
-define amdgpu_ps void @tensor_load(<4 x i32> %d0, <8 x i32> %d1, ptr addrspace(1) %global) {
-; CHECK-LABEL: define amdgpu_ps void @tensor_load(
+define void @tensor_load(<4 x i32> inreg %d0, <8 x i32> inreg %d1, ptr addrspace(1) %global) {
+; CHECK-LABEL: define void @tensor_load(
 ; CHECK: store i32 1, ptr addrspace(1) %global
 ; CHECK: call void @llvm.amdgcn.tensor.load.to.lds(
 ; CHECK: call void @llvm.amdgcn.s.wait.tensorcnt(i16 0)
@@ -19,8 +19,8 @@ define amdgpu_ps void @tensor_load(<4 x i32> %d0, <8 x i32> %d1, ptr addrspace(1
 }
 
 ; A tensor store can read the same LDS allocation named by %lds.
-define amdgpu_ps void @tensor_store(<4 x i32> %d0, <8 x i32> %d1, ptr addrspace(3) %lds) {
-; CHECK-LABEL: define amdgpu_ps void @tensor_store(
+define void @tensor_store(<4 x i32> inreg %d0, <8 x i32> inreg %d1, ptr addrspace(3) %lds) {
+; CHECK-LABEL: define void @tensor_store(
 ; CHECK: store i32 1, ptr addrspace(3) %lds
 ; CHECK: call void @llvm.amdgcn.tensor.store.from.lds(
 ; CHECK: call void @llvm.amdgcn.s.wait.tensorcnt(i16 0)
