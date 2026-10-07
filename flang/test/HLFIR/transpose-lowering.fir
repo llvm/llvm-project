@@ -5,11 +5,11 @@ func.func @_QPtranspose1(%arg0: !fir.ref<!fir.array<1x2xi32>> {fir.bindc_name = 
   %c1 = arith.constant 1 : index
   %c2 = arith.constant 2 : index
   %0 = fir.shape %c1, %c2 : (index, index) -> !fir.shape<2>
-  %1:2 = hlfir.declare %arg0(%0) {uniq_name = "_QFtranspose1Em"} : (!fir.ref<!fir.array<1x2xi32>>, !fir.shape<2>) -> (!fir.ref<!fir.array<1x2xi32>>, !fir.ref<!fir.array<1x2xi32>>)
+  %1:2 = hlfir.declare %arg0(%0) uniq_name("_QFtranspose1Em") : (!fir.ref<!fir.array<1x2xi32>>, !fir.shape<2>) -> (!fir.ref<!fir.array<1x2xi32>>, !fir.ref<!fir.array<1x2xi32>>)
   %c2_0 = arith.constant 2 : index
   %c1_1 = arith.constant 1 : index
   %2 = fir.shape %c2_0, %c1_1 : (index, index) -> !fir.shape<2>
-  %3:2 = hlfir.declare %arg1(%2) {uniq_name = "_QFtranspose1Eres"} : (!fir.ref<!fir.array<2x1xi32>>, !fir.shape<2>) -> (!fir.ref<!fir.array<2x1xi32>>, !fir.ref<!fir.array<2x1xi32>>)
+  %3:2 = hlfir.declare %arg1(%2) uniq_name("_QFtranspose1Eres") : (!fir.ref<!fir.array<2x1xi32>>, !fir.shape<2>) -> (!fir.ref<!fir.array<2x1xi32>>, !fir.ref<!fir.array<2x1xi32>>)
   %4 = hlfir.transpose %1#0 : (!fir.ref<!fir.array<1x2xi32>>) -> !hlfir.expr<2x1xi32>
   hlfir.assign %4 to %3#0 : !hlfir.expr<2x1xi32>, !fir.ref<!fir.array<2x1xi32>>
   hlfir.destroy %4 : !hlfir.expr<2x1xi32>
@@ -40,7 +40,7 @@ func.func @_QPtranspose1(%arg0: !fir.ref<!fir.array<1x2xi32>> {fir.bindc_name = 
 // CHECK-DAG:     %[[ADDR:.*]] = fir.box_addr %[[RET]]
 // CHECK-NEXT:    %[[SHIFT:.*]] = fir.shape_shift %[[BOX_DIMS]]#0, %[[BOX_DIMS]]#1
 // TODO: fix alias analysis in hlfir.assign bufferization
-// CHECK-NEXT:    %[[TMP:.*]]:2 = hlfir.declare %[[ADDR]](%[[SHIFT]]) {uniq_name = ".tmp.intrinsic_result"}
+// CHECK-NEXT:    %[[TMP:.*]]:2 = hlfir.declare %[[ADDR]](%[[SHIFT]]) uniq_name(".tmp.intrinsic_result")
 // CHECK:         %[[ASEXPR:.*]] = hlfir.as_expr %[[TMP]]#0 move %[[TRUE]] : (!fir.box<!fir.array<?x?xi32>>, i1) -> !hlfir.expr<?x?xi32>
 // CHECK:         hlfir.assign %[[ASEXPR]] to %[[RES_VAR]]#0
 // CHECK:         hlfir.destroy %[[ASEXPR]]

@@ -4245,8 +4245,10 @@ template <class Emitter>
 bool Compiler<Emitter>::VisitCXXInheritedCtorInitExpr(
     const CXXInheritedCtorInitExpr *E) {
   const CXXConstructorDecl *Ctor = E->getConstructor();
-  assert(!Ctor->isTrivial() &&
-         "Trivial CXXInheritedCtorInitExpr, implement. (possible?)");
+
+  if (Ctor->isTrivial())
+    return true;
+
   const Function *F = this->getFunction(Ctor);
   if (!F)
     return false;
@@ -4630,6 +4632,26 @@ bool Compiler<Emitter>::VisitObjCArrayLiteral(const ObjCArrayLiteral *E) {
   if (E->isExpressibleAsConstantInitializer())
     return this->emitDummyPtr(E, E);
   return this->emitError(E);
+}
+
+template <class Emitter>
+bool Compiler<Emitter>::VisitCXXReflectExpr(const CXXReflectExpr *E) {
+  if (DiscardResult)
+    return true;
+
+  switch (E->getKind()) {
+  case ReflectionKind::Null: {
+    assert(false && "null reflection can't be constructed from parsing a "
+                    "reflection operand");
+    return false;
+  }
+  case ReflectionKind::Type: {
+    return this->emitReflectValue(E->getKind(), E->getOpaqueValue(), E);
+  }
+  }
+
+  assert(false && "unknown or unimplemented reflection entities");
+  return false;
 }
 
 template <class Emitter>
@@ -5166,6 +5188,8 @@ bool Compiler<Emitter>::visitZeroInitializer(PrimType T, QualType QT,
     auto Sem = Ctx.getASTContext().getFixedPointSemantics(QT);
     return this->emitConstFixedPoint(FixedPoint::zero(Sem), E);
   }
+  case PT_Reflect:
+    return this->emitReflectValue(ReflectionKind::Null, nullptr, E);
   }
   llvm_unreachable("unknown primitive type");
 }
@@ -5395,6 +5419,7 @@ bool Compiler<Emitter>::emitConst(T Value, PrimType Ty, SourceInfo Info) {
   case PT_IntAP:
   case PT_IntAPS:
   case PT_FixedPoint:
+  case PT_Reflect:
     llvm_unreachable("Invalid integral type");
     break;
   }

@@ -22,7 +22,7 @@ define void @alias_scope(ptr %arg1) {
   ret void
 }
 
-!0 = distinct !{!0, !"The domain"}
+!0 = distinct !{!0, i1 false, !"The domain"}
 !1 = distinct !{!1, !0, !"The first scope"}
 !2 = distinct !{!2, !0}
 !3 = distinct !{!3, !0}
@@ -49,8 +49,8 @@ define void @two_domains(ptr %arg1) {
   ret void
 }
 
-!0 = distinct !{!0, !"The domain"}
-!1 = distinct !{!1}
+!0 = distinct !{!0, i1 false, !"The domain"}
+!1 = distinct !{!1, i1 false}
 !2 = !{!2, !0}
 !3 = !{!3, !1}
 !4 = !{!2}
@@ -89,7 +89,7 @@ declare void @llvm.memcpy.p0.p0.i32(ptr noalias nocapture writeonly, ptr noalias
 declare void @llvm.memset.p0.i32(ptr nocapture writeonly, i8, i32, i1 immarg)
 declare void @foo(ptr %arg1)
 
-!0 = distinct !{!0, !"The domain"}
+!0 = distinct !{!0, i1 false, !"The domain"}
 !1 = !{!1, !0}
 !2 = !{!1}
 
@@ -117,7 +117,7 @@ define void @alias_scope(ptr %arg1) {
   ret void
 }
 
-!0 = !{!"domain1"}
+!0 = !{!"domain1", i1 false}
 !1 = !{!"scopeid1", !0, !"The first scope"}
 !2 = !{!"scopeid2", !0}
 !3 = !{!"scopeid3", !0}

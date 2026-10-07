@@ -140,6 +140,14 @@ getDominatingDataClauses(mlir::Operation *computeConstructOp,
                          mlir::DominanceInfo &domInfo,
                          mlir::PostDominanceInfo &postDomInfo);
 
+/// Returns true if `op` is in a branch that does not execute on the target.
+/// `deviceTypes` lists the `acc_device_t` values for which `acc.on_device` is
+/// true. That branch is the `then` of a constant `acc.on_device` outside the
+/// list, or the `else` of one in the list. A non-constant operand is ignored.
+/// An empty list returns false.
+bool isInOffTargetBranch(mlir::Operation *op,
+                         llvm::ArrayRef<int64_t> deviceTypes);
+
 /// Emit an OpenACC remark with lazy message generation.
 ///
 /// The messageFn is only invoked if remarks are enabled, allowing callers

@@ -23,7 +23,7 @@ MCAsmInfoXCOFF::MCAsmInfoXCOFF(const MCTargetOptions &Options)
 
   InternalSymbolPrefix = "L..";
   SupportsQuotedNames = false;
-  if (!MCCLOptions::Global.use_leb128_directives)
+  if (MCCLOptions::Global.use_leb128_directives == BoolOrDefault::Default)
     HasLEB128Directives = false;
   ZeroDirective = "\t.space\t";
   AsciiDirective = nullptr; // not supported
