@@ -111,6 +111,21 @@ loop:
   br label %loop
 }
 
+; A BTI inserted at the function entry already makes the entry block non-empty,
+; so no NOP is needed.
+define void @bti_entry() #3 {
+; CHECK-LABEL: bti_entry:
+; CHECK:       // %bb.0:
+; CHECK-NEXT:  hint #34
+; CHECK-NEXT:  [[LOOP:\.LBB[0-9]+_[0-9]+]]:
+; CHECK:       b [[LOOP]]
+entry:
+  br label %loop
+loop:
+  br label %loop
+}
+
 attributes #0 = { "patchable-function"="prologue-short-redirect" }
 attributes #1 = { "patchable-function"="prologue-short-redirect" "patchable-function-entry"="0" }
 attributes #2 = { "patchable-function"="prologue-short-redirect" "patchable-function-entry"="1" }
+attributes #3 = { "patchable-function"="prologue-short-redirect" "branch-target-enforcement" }
