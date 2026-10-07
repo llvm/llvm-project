@@ -198,7 +198,7 @@ class VFLAT_Real <bits<8> op, FLAT_Pseudo ps, string opName = ps.Mnemonic> :
 
   bits<7> saddr;
   bits<8> vdst;
-  bits<12> cpol;
+  bits<10> cpol;
   bits<8> vdata; // vsrc
   bits<8> vaddr;
   bits<24> offset;
@@ -3739,6 +3739,7 @@ class VFLAT_Real_Base_gfx13 <bits<8> op, FLAT_Pseudo ps, string opName = ps.Mnem
   let AssemblerPredicate = isGFX13Only;
   let DecoderNamespace = "GFX13";
 
+  let Inst{9-8} = cpol{8-7}; // cache fill size
   let Inst{48} = cpol{CPolBit.SCAL}; // scale offset
 }
 

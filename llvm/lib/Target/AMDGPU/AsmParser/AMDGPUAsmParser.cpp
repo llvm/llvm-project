@@ -1372,6 +1372,10 @@ public:
     return getFeatureBits()[AMDGPU::FeatureGloballyAddressableScratch];
   }
 
+  bool hasCacheFillSize() const {
+    return getFeatureBits()[AMDGPU::FeatureCacheFillSize];
+  }
+
   unsigned getNSAMaxSize(bool HasSampler = false) const {
     return AMDGPU::getNSAMaxSize(getSTI(), HasSampler);
   }
@@ -1467,6 +1471,7 @@ public:
   ParseStatus parseCPol(OperandVector &Operands);
   ParseStatus parseScope(OperandVector &Operands, int64_t &Scope);
   ParseStatus parseTH(OperandVector &Operands, int64_t &TH);
+  ParseStatus parseCFS(OperandVector &Operands, int64_t &CFS);
   ParseStatus parseStringWithPrefix(StringRef Prefix, StringRef &Value,
                                     SMLoc &StringLoc);
   ParseStatus parseStringOrIntWithPrefix(OperandVector &Operands,
@@ -1658,6 +1663,7 @@ private:
                              SMLoc IDLoc);
   bool validateTHAndScopeBits(const MCInst &Inst, const OperandVector &Operands,
                               const unsigned CPol);
+  bool validateCFSBits(const MCInst &Inst, const OperandVector &Operands);
   bool validateTFE(const MCInst &Inst, const OperandVector &Operands);
   bool validateLdsDirect(const MCInst &Inst, const OperandVector &Operands);
   bool validateWMMA(const MCInst &Inst, const OperandVector &Operands);
@@ -5297,6 +5303,17 @@ bool AMDGPUAsmParser::validateCoherencyBits(const MCInst &Inst,
 
   unsigned CPol = Inst.getOperand(CPolPos).getImm();
 
+  if (CPol & CPol::CFS) {
+    if (!hasCacheFillSize()) {
+      SMLoc S = getImmLoc(AMDGPUOperand::ImmTyCPol, Operands);
+      StringRef CStr(S.getPointer());
+      S = SMLoc::getFromPointer(&CStr.data()[CStr.find("CFS")]);
+      Error(S, "Cache fill size is not supported on this GPU");
+    } else if (!validateCFSBits(Inst, Operands)) {
+      return false;
+    }
+  }
+
   if (!isGFX1250Plus()) {
     if (CPol & CPol::SCAL) {
       SMLoc S = getImmLoc(AMDGPUOperand::ImmTyCPol, Operands);
@@ -5419,6 +5436,23 @@ bool AMDGPUAsmParser::validateTHAndScopeBits(const MCInst &Inst,
   }
 
   return true;
+}
+
+bool AMDGPUAsmParser::validateCFSBits(const MCInst &Inst,
+                                      const OperandVector &Operands) {
+  const unsigned Opcode = Inst.getOpcode();
+  const MCInstrDesc &Desc = MII.get(Opcode);
+
+  auto PrintError = [&](StringRef Msg) {
+    SMLoc S = getImmLoc(AMDGPUOperand::ImmTyCPol, Operands);
+    Error(S, Msg);
+    return false;
+  };
+
+  if (SIInstrFlags::isVMEM(Desc))
+    return true;
+
+  return PrintError("Cache fill size is only supported for VC operations");
 }
 
 bool AMDGPUAsmParser::validateTFE(const MCInst &Inst,
@@ -7406,6 +7440,7 @@ ParseStatus AMDGPUAsmParser::parseCPol(OperandVector &Operands) {
     ParseStatus ResScope = ParseStatus::NoMatch;
     ParseStatus ResNV = ParseStatus::NoMatch;
     ParseStatus ResScal = ParseStatus::NoMatch;
+    ParseStatus ResCFS = ParseStatus::NoMatch;
 
     for (;;) {
       if (ResTH.isNoMatch()) {
@@ -7455,11 +7490,22 @@ ParseStatus AMDGPUAsmParser::parseCPol(OperandVector &Operands) {
         }
       }
 
+      if (ResCFS.isNoMatch()) {
+        int64_t CFS;
+        ResCFS = parseCFS(Operands, CFS);
+        if (ResCFS.isFailure())
+          return ResCFS;
+        if (ResCFS.isSuccess()) {
+          CPolVal |= CFS;
+          continue;
+        }
+      }
+
       break;
     }
 
     if (ResTH.isNoMatch() && ResScope.isNoMatch() && ResNV.isNoMatch() &&
-        ResScal.isNoMatch())
+        ResScal.isNoMatch() && ResCFS.isNoMatch())
       return ParseStatus::NoMatch;
 
     Operands.push_back(AMDGPUOperand::CreateImm(this, CPolVal, StringLoc,
@@ -7576,6 +7622,19 @@ ParseStatus AMDGPUAsmParser::parseTH(OperandVector &Operands, int64_t &TH) {
     return Error(StringLoc, "invalid th value");
 
   return ParseStatus::Success;
+}
+
+ParseStatus AMDGPUAsmParser::parseCFS(OperandVector &Operands, int64_t &CFS) {
+  static const unsigned CFSVals[] = {CPol::CFS_256B, CPol::CFS_128B,
+                                     CPol::CFS_64B, CPol::CFS_32B};
+
+  ParseStatus Res = parseStringOrIntWithPrefix(
+      Operands, "cfs", {"CFS_256B", "CFS_128B", "CFS_64B", "CFS_32B"}, CFS);
+
+  if (Res.isSuccess())
+    CFS = CFSVals[CFS];
+
+  return Res;
 }
 
 static void
