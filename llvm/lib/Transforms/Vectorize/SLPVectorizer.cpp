@@ -499,55 +499,25 @@ public:
   /// Construct a vectorizable tree that starts at \p Roots.
   void buildTree(ArrayRef<Value *> Roots);
 
-  /// Returns the number of entries in the current candidate.
-  unsigned getTreeSize() const { return Candidate.getTreeSize(); }
-
-  /// Returns the graph size before transformations.
-  unsigned getCanonicalGraphSize() const {
-    return Candidate.getCanonicalGraphSize();
+  /// Sets the narrowed reduction chain instructions, dropped together with
+  /// the reduction.
+  void setNarrowedChainInsts(ArrayRef<Instruction *> Insts) {
+    Candidate.setNarrowedChainInsts(Insts);
   }
 
-  /// Returns the number of entries added for the auxiliary splat subtrees.
-  unsigned getNumSplatSubtreeEntries() const {
-    return Candidate.getNumSplatSubtreeEntries();
-  }
-
-  bool isReductionTree() const { return Candidate.isReductionTree(); }
-  bool hasNonConstantGathers() const {
-    return Candidate.hasNonConstantGathers();
-  }
-  bool hasSameNode(const InstructionsState &S, ArrayRef<Value *> VL) const {
-    return Candidate.hasSameNode(S, VL);
-  }
-  bool isVectorized(const Value *V) const { return Candidate.isVectorized(V); }
-  bool isGathered(const Value *V) const { return Candidate.isGathered(V); }
-  bool isNotScheduled(const Value *V) const {
-    return Candidate.isNotScheduled(V);
-  }
-
-  /// Returns the lane of \p V in the candidate's root node.
-  unsigned findRootLaneForValue(Value *V) const {
-    return Candidate.findRootLaneForValue(V);
-  }
-
-  /// Returns whether the candidate encountered runtime-checkable blockers.
+  /// Returns true if the last buildTree() observed a may-alias memory
+  /// dependency between two distinct, range-checkable base objects, i.e. a
+  /// dependency that could be turned into a runtime alias check.
   bool hasRuntimeCheckableBlockers() const {
     return Candidate.hasRuntimeCheckableBlockers();
   }
 
-  /// Returns whether a kept memory dependency cannot be checked at runtime.
+  /// Returns true if the last buildTree() kept a may-alias memory dependency
+  /// that is not runtime-checkable (call or a non-simple mem access). Such a
+  /// dependency cannot be dropped, so a runtime-checks retry cannot unblock the
+  /// region and would be pure overhead.
   bool hasNonCheckableMemBlocker() const {
     return Candidate.hasNonCheckableMemBlocker();
-  }
-
-  /// Returns whether the candidate has collected runtime alias checks.
-  bool hasRuntimeAliasChecks() const {
-    return Candidate.hasRuntimeAliasChecks();
-  }
-
-  /// Resets the candidate's runtime alias check data.
-  void resetRuntimeAliasCheckState() {
-    Candidate.resetRuntimeAliasCheckState();
   }
 
   /// Returns true if the current vectorization attempt may drop
@@ -558,6 +528,11 @@ public:
   /// Enables or disables dropping runtime-checkable may-alias dependencies in
   /// favor of runtime alias checks for the current vectorization attempt.
   void setTryRuntimeAliasChecks(bool V) { TryRuntimeAliasChecks = V; }
+
+  /// Resets the runtime alias check data.
+  void resetRuntimeAliasCheckState() {
+    Candidate.resetRuntimeAliasCheckState();
+  }
 
   /// Snapshots RTChecks.BB's body (non-PHI, non-alloca, non-terminator) into
   /// RTOrigBodyOrder in program order, for the scalar fallback.
@@ -596,9 +571,41 @@ public:
   /// last (optimistic) buildTree().
   InstructionCost getRuntimeChecksCost() const;
 
+  /// Returns true if the last (optimistic) buildTree() collected any runtime
+  /// alias checks that must guard the vectorized region.
+  bool hasRuntimeAliasChecks() const {
+    return Candidate.hasRuntimeAliasChecks();
+  }
+
   /// Returns true if vectorization changed the CFG (i.e. a block was versioned
   /// with runtime alias checks). When true, CFG analyses must not be preserved.
   bool isCFGChanged() const { return CFGChanged; }
+
+  TreeEntry &getRootNode() { return Candidate.getRootNode(); }
+
+  const TreeEntry &getRootNode() const { return Candidate.getRootNode(); }
+
+  /// Returns the scalars of the root node.
+  ArrayRef<Value *> getRootNodeScalars() const {
+    return Candidate.getRootNodeScalars();
+  }
+
+  /// Returns the lane the given value is vectorized to in the root node.
+  unsigned findRootLaneForValue(Value *V) const {
+    return Candidate.findRootLaneForValue(V);
+  }
+
+  /// Returns the type/is-signed info for the root node in the graph without
+  /// casting.
+  std::optional<std::pair<Type *, bool>> getRootNodeTypeWithNoCast() const {
+    return Candidate.getRootNodeTypeWithNoCast();
+  }
+
+  /// Checks if the root graph node can be emitted with narrower bitwidth at
+  /// codegen and returns it signedness, if so.
+  bool isSignedMinBitwidthRootNode() const {
+    return Candidate.isSignedMinBitwidthRootNode();
+  }
 
   /// Returns reduction type after minbitdth analysis.
   FixedVectorType *getReductionType() const {
@@ -615,6 +622,17 @@ public:
                          Candidate.ReductionBitWidth),
         Candidate.getRootNode().getVectorFactor()));
   }
+
+  /// Returns true if the tree results in one of the reduced bitcasts variants.
+  bool isReducedBitcastRoot() const { return Candidate.isReducedBitcastRoot(); }
+
+  /// Returns true if the tree results in the reduced cmp bitcast root.
+  bool isReducedCmpBitcastRoot() const {
+    return Candidate.isReducedCmpBitcastRoot();
+  }
+
+  /// Returns true if the tree is a reduction tree.
+  bool isReductionTree() const { return Candidate.isReductionTree(); }
 
   /// Builds external uses of the vectorized scalars, i.e. the list of
   /// vectorized scalars to be extracted, their lanes and their scalar users. \p
@@ -645,6 +663,23 @@ public:
              "Scheduler still refers to the previous candidate");
     }
     Candidate.clear();
+  }
+
+  unsigned getTreeSize() const { return Candidate.getTreeSize(); }
+
+  /// Returns true if the tree gathers any scalars other than constants.
+  bool hasNonConstantGathers() const {
+    return Candidate.hasNonConstantGathers();
+  }
+
+  /// Returns the base graph size, before any transformations.
+  unsigned getCanonicalGraphSize() const {
+    return Candidate.getCanonicalGraphSize();
+  }
+
+  /// Number of tree entries that form the splat gather subtrees.
+  unsigned getNumSplatSubtreeEntries() const {
+    return Candidate.getNumSplatSubtreeEntries();
   }
 
   /// Perform LICM and CSE on the newly generated gather sequences.
@@ -882,6 +917,13 @@ public:
                                StridedPtrInfo &SPtrInfo,
                                unsigned *BestVF = nullptr,
                                bool TryRecursiveCheck = true) const;
+
+  /// Checks whether some existing tree entry has scalars equal to \p VL.
+  /// \p S is the common opcode of \p VL when one exists; an empty \p S means
+  /// the values have no common opcode (mixed buildvector/gather candidates).
+  bool hasSameNode(const InstructionsState &S, ArrayRef<Value *> VL) const {
+    return Candidate.hasSameNode(S, VL);
+  }
 
   /// Registers non-vectorizable sequence of loads
   template <typename T> void registerNonVectorizableLoads(ArrayRef<T *> VL) {
@@ -2260,6 +2302,20 @@ public:
     AnalyzedBundles.clear();
     AnalyzedMinBWVals.clear();
   }
+  /// Checks if the given value is gathered in one of the nodes.
+  bool isAnyGathered(const SmallDenseSet<Value *> &Vals) const {
+    return Candidate.isAnyGathered(Vals);
+  }
+  /// Checks if the given value is gathered in one of the nodes.
+  bool isGathered(const Value *V) const { return Candidate.isGathered(V); }
+  /// Checks if the specified value was not schedule.
+  bool isNotScheduled(const Value *V) const {
+    return Candidate.isNotScheduled(V);
+  }
+
+  /// Check if the value is vectorized in the tree.
+  bool isVectorized(const Value *V) const { return Candidate.isVectorized(V); }
+
   /// Returns true if the role of \p I is already decided by its user: a deleted
   /// user was folded into some other vector by an earlier attempt.
   bool hasResolvedUser(Instruction *I) const {
@@ -3952,35 +4008,13 @@ private:
   // Destroy scheduler references before the candidate entries they refer to.
   CandidateState Candidate;
 
-  /// Candidate operations used by graph traits and horizontal reduction.
-  TreeEntry &getRootNode() { return Candidate.getRootNode(); }
-  const TreeEntry &getRootNode() const { return Candidate.getRootNode(); }
+  /// Candidate views used by graph traits.
   ArrayRef<std::unique_ptr<TreeEntry>> getTreeEntries() const {
     return Candidate.getTreeEntries();
   }
   ArrayRef<ExternalUser> getExternalUses() const {
     return Candidate.getExternalUses();
   }
-  ArrayRef<Value *> getRootNodeScalars() const {
-    return Candidate.getRootNodeScalars();
-  }
-  std::optional<std::pair<Type *, bool>> getRootNodeTypeWithNoCast() const {
-    return Candidate.getRootNodeTypeWithNoCast();
-  }
-  bool isSignedMinBitwidthRootNode() const {
-    return Candidate.isSignedMinBitwidthRootNode();
-  }
-  bool isReducedBitcastRoot() const { return Candidate.isReducedBitcastRoot(); }
-  bool isReducedCmpBitcastRoot() const {
-    return Candidate.isReducedCmpBitcastRoot();
-  }
-  bool isAnyGathered(const SmallDenseSet<Value *> &Vals) const {
-    return Candidate.isAnyGathered(Vals);
-  }
-  void setNarrowedChainInsts(ArrayRef<Instruction *> Insts) {
-    Candidate.setNarrowedChainInsts(Insts);
-  }
-
   /// When true, scheduling drops may-alias memory dependencies between
   /// distinct, range-checkable base objects and records them as runtime alias
   /// checks instead.
