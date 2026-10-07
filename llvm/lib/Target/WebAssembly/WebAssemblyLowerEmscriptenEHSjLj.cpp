@@ -361,8 +361,7 @@ public:
   WebAssemblyLowerEmscriptenEHSjLjImpl(
       bool EnableEmEH,
       std::function<DominatorTree &(Function &F)> GetDominatorTree)
-      : EnableEmEH(EnableEmEH || WebAssembly::WasmEnableEmEH),
-        EnableEmSjLj(WebAssembly::WasmEnableEmSjLj),
+      : EnableEmEH(EnableEmEH), EnableEmSjLj(WebAssembly::WasmEnableEmSjLj),
         EnableWasmSjLj(WebAssembly::WasmEnableSjLj),
         GetDominatorTree(GetDominatorTree) {
     assert(!(EnableEmSjLj && EnableWasmSjLj) &&
@@ -537,8 +536,7 @@ Value *WebAssemblyLowerEmscriptenEHSjLjImpl::wrapInvoke(CallBase *CI) {
   Module *M = CI->getModule();
   LLVMContext &C = M->getContext();
 
-  IRBuilder<> IRB(C);
-  IRB.SetInsertPoint(CI);
+  IRBuilder<> IRB(CI);
 
   // Pre-invoke
   // __THREW__ = 0;
@@ -731,11 +729,10 @@ void WebAssemblyLowerEmscriptenEHSjLjImpl::wrapTestSetjmp(
   Function *F = BB->getParent();
   Module *M = F->getParent();
   LLVMContext &C = M->getContext();
-  IRBuilder<> IRB(C);
+  IRBuilder<> IRB(BB);
   IRB.SetCurrentDebugLocation(DL);
 
   // if (%__THREW__.val != 0 & %__threwValue.val != 0)
-  IRB.SetInsertPoint(BB);
   BasicBlock *ThenBB1 = BasicBlock::Create(C, "if.then1", F);
   BasicBlock *ElseBB1 = BasicBlock::Create(C, "if.else1", F);
   BasicBlock *EndBB1 = BasicBlock::Create(C, "if.end", F);
@@ -927,6 +924,11 @@ static void nullifySetjmp(Function *F) {
 
 bool WebAssemblyLowerEmscriptenEHSjLjImpl::runOnModule(Module &M) {
   LLVM_DEBUG(dbgs() << "********** Lower Emscripten EH & SjLj **********\n");
+
+  // The Emscripten EH model may come from the "exception-model" module flag
+  // (e.g. when this pass is run standalone via opt) in addition to being
+  // threaded in from the TargetMachine.
+  EnableEmEH |= M.getExceptionModel() == ExceptionHandling::Emscripten;
 
   LLVMContext &C = M.getContext();
   IRBuilder<> IRB(C);
@@ -1375,7 +1377,7 @@ bool WebAssemblyLowerEmscriptenEHSjLjImpl::runSjLjOnFunction(Function &F) {
     // Add a phi to the tail, which will be the output of setjmp, which
     // indicates if this is the first call or a longjmp back. The phi directly
     // uses the right value based on where we arrive from
-    IRB.SetInsertPoint(Tail, Tail->getFirstNonPHIIt());
+    IRB.SetInsertPoint(Tail->getFirstNonPHIIt());
     PHINode *SetjmpRet = IRB.CreatePHI(IRB.getInt32Ty(), 2, "setjmp.ret");
 
     // setjmp initial call returns 0

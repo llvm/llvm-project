@@ -283,7 +283,7 @@ public:
       Register DestReg, int FrameIdx, const TargetRegisterClass *RC,
       Register VReg, unsigned SubReg = 0,
       MachineInstr::MIFlag Flags = MachineInstr::NoFlags) const override;
-  MachineInstr *convertToThreeAddress(MachineInstr &MI, LiveVariables *LV,
+  MachineInstr *convertToThreeAddress(MachineInstr &MI,
                                       LiveIntervals *LIS) const override;
 
   bool useMachineCombiner() const override { return true; }
@@ -308,6 +308,11 @@ public:
 
   // Return the SystemZRegisterInfo, which this class owns.
   const SystemZRegisterInfo &getRegisterInfo() const { return RI; }
+
+  const TargetRegisterClass *getInlineAsmMemoryOperandRegClass(
+      InlineAsm::ConstraintCode C) const override {
+    return &SystemZ::ADDR64BitRegClass;
+  }
 
   // Return the size in bytes of MI.
   unsigned getInstSizeInBytes(const MachineInstr &MI) const override;

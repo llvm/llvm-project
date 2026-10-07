@@ -1076,6 +1076,72 @@ MaybeExpr ExpressionAnalyzer::Analyze(const parser::BOZLiteralConstant &x) {
 }
 
 // Names and named constants
+static void WarnForNumericStorageSize(
+    semantics::SemanticsContext &context, const parser::Name &name) {
+  const semantics::Symbol *associated{name.symbol};
+  const semantics::UseDetails *use{nullptr};
+  bool isNumericStorageSize{false};
+  while (associated) {
+    if (const auto *host{
+            associated->detailsIf<semantics::HostAssocDetails>()}) {
+      associated = &host->symbol();
+    } else if (const auto *nextUse{
+                   associated->detailsIf<semantics::UseDetails>()}) {
+      if (!use) {
+        use = nextUse;
+      }
+      const semantics::Symbol &used{nextUse->symbol()};
+      const semantics::Symbol &module{semantics::GetUsedModule(*nextUse)};
+      isNumericStorageSize |= used.name() == "numeric_storage_size" &&
+          module.name() == "iso_fortran_env" &&
+          module.attrs().test(semantics::Attr::INTRINSIC);
+      associated = &used;
+    } else {
+      break;
+    }
+  }
+  if (!isNumericStorageSize) {
+    return;
+  }
+  const auto &defaults{context.defaultKinds()};
+  const auto &targetCharacteristics{context.targetCharacteristics()};
+  const int intKind{defaults.GetDefaultKind(TypeCategory::Integer)};
+  const int realKind{defaults.GetDefaultKind(TypeCategory::Real)};
+  const std::size_t intBytes{
+      targetCharacteristics.GetByteSize(TypeCategory::Integer, intKind)};
+  const std::size_t realBytes{
+      targetCharacteristics.GetByteSize(TypeCategory::Real, realKind)};
+  if (intBytes != realBytes) {
+    if (auto *message{context.messages().Warn(
+            /*isInModuleFile=*/false, context.languageFeatures(),
+            common::UsageWarning::FoldingValueChecks, name.source,
+            "NUMERIC_STORAGE_SIZE from ISO_FORTRAN_ENV is not well-defined because compiler options make default INTEGER(KIND=%d) and REAL(KIND=%d) have different storage sizes (%zu and %zu bytes, respectively)"_warn_en_US,
+            intKind, realKind, intBytes, realBytes)}) {
+      if (use) {
+        message->Attach(use->location(), "USE-associated here"_en_US);
+      }
+    }
+  }
+}
+
+class NumericStorageSizeWarningVisitor {
+public:
+  explicit NumericStorageSizeWarningVisitor(
+      semantics::SemanticsContext &context)
+      : context_{context} {}
+  template <typename A> bool Pre(const A &) { return true; }
+  bool Pre(const parser::Name &name) {
+    if (!context_.HasError(name.symbol)) {
+      WarnForNumericStorageSize(context_, name);
+    }
+    return false;
+  }
+  template <typename A> void Post(const A &) {}
+
+private:
+  semantics::SemanticsContext &context_;
+};
+
 MaybeExpr ExpressionAnalyzer::Analyze(const parser::Name &n) {
   auto restorer{GetContextualMessages().SetLocation(n.source)};
   if (std::optional<int> kind{IsImpliedDo(n.source)}) {
@@ -1085,6 +1151,10 @@ MaybeExpr ExpressionAnalyzer::Analyze(const parser::Name &n) {
   if (context_.HasError(n.symbol)) { // includes case of no symbol
     return std::nullopt;
   } else {
+    // Most expression references are diagnosed here. Analyze(Expr) below
+    // performs the same check explicitly when returning a saved typed
+    // expression, since that path does not call Analyze(Name).
+    WarnForNumericStorageSize(context_, n);
     const Symbol &ultimate{n.symbol->GetUltimate()};
     if (ultimate.has<semantics::TypeParamDetails>()) {
       // A bare reference to a derived type parameter within a parameterized
@@ -2725,12 +2795,14 @@ auto ExpressionAnalyzer::AnalyzeProcedureComponentRef(
                 }
                 return true;
               }};
-          auto result{ResolveGeneric(
+          auto result{CheckAndResolveGenericReference(
               generic, arguments, adjustment, isSubroutine, SymbolVector{})};
           sym = result.specific;
           if (!sym) {
-            EmitGenericResolutionError(generic, result.failedDueToAmbiguity,
-                isSubroutine, arguments, result.tried, adjustment);
+            if (!result.errorReported) {
+              EmitGenericResolutionError(generic, result.failedDueToAmbiguity,
+                  isSubroutine, arguments, result.tried, adjustment);
+            }
             return std::nullopt;
           }
           // re-resolve the name to the specific binding
@@ -2980,6 +3052,7 @@ static int CompareCudaMatchingDistance(
 // "ACC use_dev" column applies to actuals appearing in a surrounding
 // ACC HOST_DATA USE_DEVICE clause.
 static int GetMatchingDistance(const common::LanguageFeatureControl &features,
+    semantics::SemanticsContext &context,
     const characteristics::DummyArgument &dummy,
     const std::optional<ActualArgument> &actual) {
   bool isCudaManaged{features.IsEnabled(common::LanguageFeature::CudaManaged)};
@@ -2988,21 +3061,45 @@ static int GetMatchingDistance(const common::LanguageFeatureControl &features,
 
   std::optional<common::CUDADataAttr> actualDataAttr, dummyDataAttr;
   // True when an unattributed actual may use the implicit CUDA memory mode
-  // matching enabled by -gpu=mem:unified or -gpu=mem:managed.
+  // matching enabled by -gpu=mem:unified (any variable) or -gpu=mem:managed
+  // (allocatable/pointer objects only).
   bool actualCanUseImplicitCudaMemoryMode{false};
   if (actual) {
     if (auto *expr{actual->UnwrapExpr()}) {
       if (evaluate::IsVariable(*expr)) {
-        actualCanUseImplicitCudaMemoryMode = true;
+        bool actualIsAllocatableOrPointer{false};
         // Match check-call.cpp: walk the whole designator so e.g. b%a picks up
         // ATTRIBUTES(DEVICE) from the base b when the component a has no CUDA
         // attribute (OpenACC use_device(b) + doit(b%a)), not only from the
         // last symbol (GetLastSymbol would only see a).
         for (const Symbol &s : evaluate::GetSymbolVector(*expr)) {
+          if (semantics::IsAllocatableOrPointer(
+                  semantics::ResolveAssociations(s))) {
+            actualIsAllocatableOrPointer = true;
+          }
           if (const auto *object{
                   s.detailsIf<semantics::ObjectEntityDetails>()}) {
             if (auto cudaAttr{object->cudaDataAttr()}) {
               actualDataAttr = *cudaAttr;
+            }
+          }
+        }
+        actualCanUseImplicitCudaMemoryMode =
+            isCudaUnified || (isCudaManaged && actualIsAllocatableOrPointer);
+        // An object mapped by an enclosing structured OpenACC data construct
+        // has a device copy that a Device dummy can be associated with, but
+        // ordinary references to it still denote the host object.
+        if (!actualDataAttr && context.AnyOpenACCDataMapping()) {
+          if (std::optional<parser::CharBlock> source{
+                  actual->sourceLocation()}) {
+            if (const semantics::Scope *scope{
+                    context.FindScopeIfAny(*source)}) {
+              for (const Symbol &symbol : evaluate::GetSymbolVector(*expr)) {
+                if (semantics::IsOpenACCMapped(symbol, *scope)) {
+                  actualDataAttr = common::CUDADataAttr::UseDevice;
+                  break;
+                }
+              }
             }
           }
         }
@@ -3117,7 +3214,7 @@ static int GetMatchingDistance(const common::LanguageFeatureControl &features,
 }
 
 static CudaMatchingDistance ComputeCudaMatchingDistance(
-    const common::LanguageFeatureControl &features,
+    semantics::SemanticsContext &context,
     const characteristics::Procedure &procedure,
     const ActualArguments &actuals) {
   const auto &dummies{procedure.dummyArguments};
@@ -3131,7 +3228,8 @@ static CudaMatchingDistance ComputeCudaMatchingDistance(
       // Omitted optional arguments do not affect CUDA matching distances.
       continue;
     }
-    int d{GetMatchingDistance(features, dummy, actual)};
+    int d{GetMatchingDistance(
+        context.languageFeatures(), context, dummy, actual)};
     if (d == cudaInfMatchingValue) {
       distance.isInfinite = true;
       return distance;
@@ -3260,8 +3358,8 @@ auto ExpressionAnalyzer::ResolveGeneric(const Symbol &symbol,
                 context_, false /* no integer conversions */) &&
             CheckCompatibleArguments(
                 *procedure, localActuals, foldingContext_)) {
-          CudaMatchingDistance d{ComputeCudaMatchingDistance(
-              context_.languageFeatures(), *procedure, localActuals)};
+          CudaMatchingDistance d{
+              ComputeCudaMatchingDistance(context_, *procedure, localActuals)};
           if ((procedure->IsElemental() && elemental) ||
               (!procedure->IsElemental() && nonElemental)) {
             if (crtMatchingDistance) {
@@ -3342,6 +3440,29 @@ auto ExpressionAnalyzer::ResolveGeneric(const Symbol &symbol,
     }
   }
   return {nullptr, false, std::move(tried)};
+}
+
+auto ExpressionAnalyzer::CheckAndResolveGenericReference(const Symbol &symbol,
+    const ActualArguments &actuals, const AdjustActuals &adjustActuals,
+    bool isSubroutine, SymbolVector &&tried, bool mightBeStructureConstructor)
+    -> GenericResolution {
+  const Symbol &ultimate{symbol.GetUltimate()};
+  // Attr::INTRINSIC is set for specific intrinsic names such as DSIN as well,
+  // and a reference to one of those is not a reference to a generic procedure.
+  if ((ultimate.has<semantics::GenericDetails>() ||
+          (ultimate.attrs().test(semantics::Attr::INTRINSIC) &&
+              context_.intrinsics().IsGenericIntrinsic(
+                  ultimate.name().ToString()))) &&
+      semantics::CheckConditionalArgsInGenericReference(
+          actuals, GetContextualMessages())) {
+    // Not resolving also leaves the parse tree symbol generic, so a second
+    // analysis of the expression reports the violation again.
+    GenericResolution result;
+    result.errorReported = true;
+    return result;
+  }
+  return ResolveGeneric(symbol, actuals, adjustActuals, isSubroutine,
+      std::move(tried), mightBeStructureConstructor);
 }
 
 const Symbol &ExpressionAnalyzer::AccessSpecific(
@@ -3461,8 +3582,12 @@ auto ExpressionAnalyzer::GetCalleeAndArguments(const parser::Name &name,
   SymbolVector tried;
   if (isGenericInterface || isExplicitIntrinsic) {
     ExpressionAnalyzer::AdjustActuals noAdjustment;
-    auto result{ResolveGeneric(*symbol, arguments, noAdjustment, isSubroutine,
-        SymbolVector{}, mightBeStructureConstructor)};
+    auto result{
+        CheckAndResolveGenericReference(*symbol, arguments, noAdjustment,
+            isSubroutine, SymbolVector{}, mightBeStructureConstructor)};
+    if (result.errorReported) {
+      return std::nullopt;
+    }
     resolution = result.specific;
     dueToAmbiguity = result.failedDueToAmbiguity;
     tried = std::move(result.tried);
@@ -3481,6 +3606,12 @@ auto ExpressionAnalyzer::GetCalleeAndArguments(const parser::Name &name,
     if (resolution) {
       if (context_.GetPPCBuiltinsScope() &&
           resolution->name().ToString().rfind("__ppc_", 0) == 0) {
+        // The PowerPC intrinsic checks and PowerPC lowering require constant
+        // values for some arguments; now that the call is committed to this
+        // resolution, fold any named-constant designators that were retained
+        // for storage association.
+        evaluate::FoldNamedConstantActualArguments(
+            GetFoldingContext(), arguments);
         semantics::CheckPPCIntrinsic(
             *symbol, *resolution, arguments, GetFoldingContext());
       }
@@ -4679,6 +4810,10 @@ MaybeExpr ExpressionAnalyzer::Analyze(const parser::Expr &expr) {
   MaybeExpr result;
   if (useSavedTypedExprs_) {
     if (expr.typedExpr) {
+      // Returning a saved typed expression bypasses Analyze(Name), so walk the
+      // original expression to perform its numeric_storage_size checks.
+      NumericStorageSizeWarningVisitor visitor{context_};
+      parser::Walk(expr, visitor);
       return expr.typedExpr->v;
     }
     if (!wasIterativelyAnalyzing) {
@@ -5849,7 +5984,49 @@ MaybeExpr ArgumentAnalyzer::AnalyzeExprOrWholeAssumedSizeArray(
     }
   }
   auto restorer{context_.AllowNullPointer()};
-  return context_.Analyze(expr);
+  MaybeExpr result{context_.Analyze(expr)};
+  // For actual arguments of procedure references, retain a designator whose
+  // base is a named constant in designator form instead of replacing it by
+  // its folded Constant value, so that lowering associates the dummy argument
+  // with the named constant's storage.  This matters for sequence association
+  // of an array element actual argument (F'2023 15.5.2.12) and whenever the
+  // dummy's address is meaningful (e.g. OpenACC/OpenMP present checks).
+  // The inner Analyze calls below do not apply the outer folding performed
+  // by Analyze(parser::Expr), and folding still sees through the retained
+  // designator wherever a constant value is needed later.
+  if (isProcedureCall_ && result) {
+    // Look only at an expression that is itself a designator: a
+    // parenthesized designator is a primary, i.e. an expression
+    // (F'2023 R1001), and must keep its folded value.  Substring actual
+    // arguments (the F'2023 15.5.2.12 p4 form of character sequence
+    // association) are not retained here and keep their folded values.
+    if (const auto *designator{
+            std::get_if<common::Indirection<parser::Designator>>(&expr.u)}) {
+      if (const auto *name{parser::Unwrap<parser::Name>(designator->value())}) {
+        // Whole named-constant array.
+        if (name->symbol &&
+            semantics::IsNamedConstant(name->symbol->GetUltimate()) &&
+            name->symbol->Rank() > 0) {
+          return context_.Analyze(*name);
+        }
+      } else {
+        // Named-constant array element or section (or array component of a
+        // scalar named constant of derived type), e.g. a(1), a(1:3), a(2:*),
+        // pt%arr(1).  A section with a vector subscript or a component of a
+        // section is retained too; those are not contiguous, and lowering
+        // copies them like any other actual argument that needs a copy.
+        if (const auto *ae{
+                parser::Unwrap<parser::ArrayElement>(designator->value())}) {
+          const auto &baseName{parser::GetFirstName(ae->Base())};
+          if (baseName.symbol &&
+              semantics::IsNamedConstant(baseName.symbol->GetUltimate())) {
+            return context_.Analyze(*ae);
+          }
+        }
+      }
+    }
+  }
+  return result;
 }
 
 bool ArgumentAnalyzer::AreConformable() const {
