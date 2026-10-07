@@ -2253,12 +2253,10 @@ bool AccessAnalysis::createCheckForAccess(RuntimePointerChecking &RtCheck,
 static bool areAddrSpacesComparable(unsigned AS0, unsigned AS1,
                                     const DataLayout &DL,
                                     const TargetTransformInfo *TTI) {
-  return AS0 == AS1 ||
-         (TTI && TTI->isNoopAddrSpaceCast(AS0, AS1) &&
-          TTI->isNoopAddrSpaceCast(AS1, AS0) &&
-          !DL.isNonIntegralAddressSpace(AS0) &&
-          !DL.isNonIntegralAddressSpace(AS1) &&
-          DL.getPointerSizeInBits(AS0) == DL.getPointerSizeInBits(AS1));
+  return AS0 == AS1 || (TTI && TTI->isNoopAddrSpaceCast(AS0, AS1) &&
+                        TTI->isNoopAddrSpaceCast(AS1, AS0) &&
+                        !DL.isNonIntegralAddressSpace(AS0) &&
+                        !DL.isNonIntegralAddressSpace(AS1));
 }
 
 bool AccessAnalysis::canCheckPtrAtRT(RuntimePointerChecking &RtCheck,
