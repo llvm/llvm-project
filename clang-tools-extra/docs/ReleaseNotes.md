@@ -268,6 +268,11 @@ infrastructure are described first, followed by tool-specific sections.
   offered when an argument covers only part of a macro expansion, as it then
   has no source text of its own.
 
+- Improved {doc}`performance-inefficient-vector-operation
+  <clang-tidy/checks/performance/inefficient-vector-operation>` by adding the
+  {option}`ForRangeLoopClasses` to configure container classes that can be used
+  as sources in range-based `for` loops.
+
 - Improved {doc}`readability-convert-member-functions-to-static
   <clang-tidy/checks/readability/convert-member-functions-to-static>` check by
   fixing a crash when checking a const-qualified method declared with the
@@ -323,8 +328,14 @@ infrastructure are described first, followed by tool-specific sections.
   `atomic_compare_exchange_strong()`.
 
 - Improved {doc}`readability-redundant-parentheses
-  <clang-tidy/checks/readability/redundant-parentheses>` check by fixing a false
-  positive on the required parentheses of `typeof` and `typeof_unqual` operands.
+  <clang-tidy/checks/readability/redundant-parentheses>` check:
+
+  - Fixed a false positive on the required parentheses of `typeof` and
+    `typeof_unqual` operands.
+
+  - Fixed false positives and incorrect fixes caused by synthetic parentheses
+    in reference non-type template parameter uses, `__builtin_dump_struct` calls,
+    and OpenMP `linear` clauses.
 
 - Fixed {doc}`readability-simplify-boolean-expr
   <clang-tidy/checks/readability/simplify-boolean-expr>` producing invalid
