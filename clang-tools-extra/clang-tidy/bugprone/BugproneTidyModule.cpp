@@ -25,12 +25,9 @@
 #include "CopyConstructorMutatesArgumentCheck.h"
 #include "CrtpConstructorAccessibilityCheck.h"
 #include "DanglingHandleCheck.h"
-<<<<<<< HEAD
 #include "DefaultOperatorNewOnOveralignedTypeCheck.h"
 #include "DerivedMethodShadowingBaseMethodCheck.h"
-=======
 #include "DataflowDeadCodeCheck.h"
->>>>>>> faca1abebdd4 ([clang][dataflow] Add bugprone-dataflow-dead-code check)
 #include "DynamicStaticInitializersCheck.h"
 #include "EasilySwappableParametersCheck.h"
 #include "EmptyCatchCheck.h"
@@ -160,12 +157,12 @@ public:
         "bugprone-copy-constructor-mutates-argument");
     CheckFactories.registerCheck<DanglingHandleCheck>(
         "bugprone-dangling-handle");
+    CheckFactories.registerCheck<DataflowDeadCodeCheck>(
+        "bugprone-dataflow-dead-code");
     CheckFactories.registerCheck<DefaultOperatorNewOnOveralignedTypeCheck>(
         "bugprone-default-operator-new-on-overaligned-type");
     CheckFactories.registerCheck<DerivedMethodShadowingBaseMethodCheck>(
         "bugprone-derived-method-shadowing-base-method");
-    CheckFactories.registerCheck<DataflowDeadCodeCheck>(
-        "bugprone-dataflow-dead-code");
     CheckFactories.registerCheck<DynamicStaticInitializersCheck>(
         "bugprone-dynamic-static-initializers");
     CheckFactories.registerCheck<EasilySwappableParametersCheck>(

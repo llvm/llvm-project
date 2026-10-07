@@ -97,6 +97,7 @@ readability/*
 | {doc}`bugprone-copy-constructor-mutates-argument <bugprone/copy-constructor-mutates-argument>` |  |
 | {doc}`bugprone-crtp-constructor-accessibility <bugprone/crtp-constructor-accessibility>` | Yes |
 | {doc}`bugprone-dangling-handle <bugprone/dangling-handle>` |  |
+| {doc}`bugprone-dataflow-dead-code <bugprone/bugprone-dataflow-dead-code>` |  |
 | {doc}`bugprone-default-operator-new-on-overaligned-type <bugprone/default-operator-new-on-overaligned-type>` |  |
 | {doc}`bugprone-derived-method-shadowing-base-method <bugprone/derived-method-shadowing-base-method>` |  |
 | {doc}`bugprone-dynamic-static-initializers <bugprone/dynamic-static-initializers>` |  |
