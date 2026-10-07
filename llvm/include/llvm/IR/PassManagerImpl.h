@@ -203,7 +203,8 @@ inline void AnalysisManager<IRUnitT, ExtraArgTs...>::invalidate(
     // iterator.
     bool Invalidated = Result.invalidate(IR, PA, Inv);
     AnyInvalidated |= Invalidated;
-    [[maybe_unused]] bool Inserted = IsResultInvalidated.insert({ID, Invalidated}).second;
+    [[maybe_unused]] bool Inserted =
+        IsResultInvalidated.insert({ID, Invalidated}).second;
     assert(Inserted && "Should never have already inserted this ID, likely "
                        "indicates a cycle!");
   }
