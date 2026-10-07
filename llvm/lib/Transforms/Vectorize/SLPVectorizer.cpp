@@ -34171,7 +34171,7 @@ private:
             // reduce.add(mul(ext(A), ext(B))) may lower to a single
             // multiply-accumulate reduction (e.g. a dot product). The multiply
             // and the extends are already counted in the tree cost, so
-            // subtract them to avoid double counting (as VPlan does).
+            // subtract them to avoid double counting.
             if (RdxKind == RecurKind::Add && !ReducedVals.empty()) {
               Type *SrcElemTy = nullptr;
               bool IsZExt = true;
