@@ -1,4 +1,4 @@
-// RUN: %check_clang_tidy -std=c++17-or-later %s readability-redundant-inline-specifier %t
+// RUN: %check_clang_tidy -std=c++17-or-later -check-suffixes=,STATIC %s readability-redundant-inline-specifier %t
 // RUN: %check_clang_tidy -std=c++17-or-later -check-suffixes=,STRICT %s readability-redundant-inline-specifier %t -- -config="{CheckOptions: {readability-redundant-inline-specifier.StrictMode: 'true'}}"
 
 template <typename T> inline T f()
@@ -61,10 +61,13 @@ constexpr inline int Get42() { return 42; }
 
 
 static constexpr inline int NAMESPACE_STATIC = 42;
+// CHECK-MESSAGES: :[[@LINE-1]]:18: warning: variable 'NAMESPACE_STATIC' is declared 'static inline' outside of a header; use 'static' instead [readability-redundant-inline-specifier]
+// CHECK-FIXES: static constexpr int NAMESPACE_STATIC = 42;
 
 inline static int fn0(int i)
 // CHECK-MESSAGES-STRICT: :[[@LINE-1]]:1: warning: function 'fn0' has inline specifier but is implicitly inlined [readability-redundant-inline-specifier]
-// CHECK-FIXES-STRICT: static int fn0(int i)
+// CHECK-MESSAGES-STATIC: :[[@LINE-2]]:1: warning: function 'fn0' is declared 'static inline' outside of a header; use 'static' instead [readability-redundant-inline-specifier]
+// CHECK-FIXES: static int fn0(int i)
 {
     return i - 1;
 }
@@ -159,3 +162,15 @@ public:
 
 inline B::~B() = default;
 }
+
+static inline int fn11(int i)
+// CHECK-MESSAGES-STRICT: :[[@LINE-1]]:8: warning: function 'fn11' has inline specifier but is implicitly inlined [readability-redundant-inline-specifier]
+// CHECK-MESSAGES-STATIC: :[[@LINE-2]]:8: warning: function 'fn11' is declared 'static inline' outside of a header; use 'static' instead [readability-redundant-inline-specifier]
+// CHECK-FIXES: static int fn11(int i)
+{
+    return i - 1;
+}
+
+static inline int STATIC_INLINE_VAR = 42;
+// CHECK-MESSAGES: :[[@LINE-1]]:8: warning: variable 'STATIC_INLINE_VAR' is declared 'static inline' outside of a header; use 'static' instead [readability-redundant-inline-specifier]
+// CHECK-FIXES: static int STATIC_INLINE_VAR = 42;
