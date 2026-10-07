@@ -15154,6 +15154,23 @@ SDValue RISCVTargetLowering::lowerVECTOR_INTERLEAVE(SDValue Op,
   const unsigned Factor = Op.getNumOperands();
   assert(Factor <= 8);
 
+  // Keep both halves of a fixed-length interleave together while widening an
+  // i1 vector. Widening each result independently requires two comparisons to
+  // recreate the mask and then has to concatenate those masks again.
+  if (VecVT.getVectorElementType() == MVT::i1 && Factor == 2 &&
+      VecVT.isFixedLengthVector()) {
+    unsigned NumElts = VecVT.getVectorNumElements();
+    MVT InterleavedVT = VecVT.getDoubleNumVectorElementsVT();
+    SDValue Concat = DAG.getNode(ISD::CONCAT_VECTORS, DL, InterleavedVT,
+                                 Op.getOperand(0), Op.getOperand(1));
+    SDValue Interleaved = DAG.getVectorShuffle(
+        InterleavedVT, DL, Concat, DAG.getUNDEF(InterleavedVT),
+        createInterleaveMask(NumElts, Factor));
+    SDValue Lo = DAG.getExtractSubvector(DL, VecVT, Interleaved, 0);
+    SDValue Hi = DAG.getExtractSubvector(DL, VecVT, Interleaved, NumElts);
+    return DAG.getMergeValues({Lo, Hi}, DL);
+  }
+
   // i1 vectors need to be widened to i8
   if (VecVT.getVectorElementType() == MVT::i1)
     return widenVectorOpsToi8(Op, DL, DAG);
