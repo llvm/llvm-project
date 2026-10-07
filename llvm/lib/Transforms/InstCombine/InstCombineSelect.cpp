@@ -3676,8 +3676,11 @@ static Instruction *foldNestedSelects(SelectInst &OuterSelVal,
     return nullptr;
 
   // Canonicalize inversion of the innermost `select`'s condition.
-  if (match(InnerSel.Cond, m_Not(m_Value(InnerSel.Cond))))
+  bool SwapInnerSelCond = false;
+  if (match(InnerSel.Cond, m_Not(m_Value(InnerSel.Cond)))) {
     std::swap(InnerSel.TrueVal, InnerSel.FalseVal);
+    SwapInnerSelCond = !SwapInnerSelCond;
+  }
 
   Value *AltCond = nullptr;
   auto matchOuterCond = [OuterSel, IsAndVariant, &AltCond](auto m_InnerCond) {
@@ -3702,16 +3705,25 @@ static Instruction *foldNestedSelects(SelectInst &OuterSelVal,
     // Done!
     std::swap(InnerSel.TrueVal, InnerSel.FalseVal);
     InnerSel.Cond = NotInnerCond;
+    SwapInnerSelCond = !SwapInnerSelCond;
   } else // Not the pattern we were looking for.
     return nullptr;
 
-  Value *SelInner = Builder.CreateSelect(
+  // We mark the select with AltCond as having an unknown profile given the
+  // condition is derived from an and/or. We might have profile information on
+  // the operands of the and/or, but there is no guarantee that they are
+  // independent.
+  Value *SelInner = Builder.CreateSelectWithUnknownProfile(
       AltCond, IsAndVariant ? OuterSel.TrueVal : InnerSel.FalseVal,
-      IsAndVariant ? InnerSel.TrueVal : OuterSel.FalseVal);
+      IsAndVariant ? InnerSel.TrueVal : OuterSel.FalseVal, DEBUG_TYPE);
   SelInner->takeName(InnerSelVal);
-  return SelectInst::Create(InnerSel.Cond,
-                            IsAndVariant ? SelInner : InnerSel.TrueVal,
-                            !IsAndVariant ? SelInner : InnerSel.FalseVal);
+  SelectInst *SI = SelectInst::Create(
+      InnerSel.Cond, IsAndVariant ? SelInner : InnerSel.TrueVal,
+      !IsAndVariant ? SelInner : InnerSel.FalseVal, "", nullptr,
+      ProfcheckDisableMetadataFixes ? nullptr : cast<Instruction>(InnerSelVal));
+  if (SwapInnerSelCond)
+    SI->swapProfMetadata();
+  return SI;
 }
 
 /// Return true if V is poison or \p Expected given that ValAssumedPoison is
