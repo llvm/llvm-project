@@ -4406,7 +4406,7 @@ struct MemorySanitizerVisitor : public InstVisitor<MemorySanitizerVisitor> {
 
     // If we applied vector.partial.reduce.add to (<M x i1>, <N x i1>) shadows,
     // the sums might wrap around. Zero-extend to avoid this.
-    // 16-bit for each sum (up to 65536) ought to be enough for anybody.
+    // 16-bit for each sum (up to 65535) ought to be enough for anybody.
     SAcc = IRB.CreateZExt(
         SAcc,
         VectorType::get(IRB.getInt16Ty(),
