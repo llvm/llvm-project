@@ -11,6 +11,7 @@
 #include "SLPCostAnalysis.h"
 #include "SLPUtils.h"
 
+#include "llvm/ADT/STLExtras.h"
 #include "llvm/ADT/SmallBitVector.h"
 #include "llvm/Analysis/IVDescriptors.h"
 #include "llvm/Analysis/ValueTracking.h"
@@ -94,6 +95,33 @@ BoolBitmask isBoolBitmaskRdx(
     NeedMask |= !(Known.Zero | L.Mask).isAllOnes();
   }
   return NeedMask ? BoolBitmask::NeedMask : BoolBitmask::NoMask;
+}
+
+bool matchPackedFields(Value *V, unsigned MaxDepth,
+                       SmallVectorImpl<Value *> &Fields,
+                       SmallVectorImpl<Instruction *> &Chain) {
+  auto *PackTy = dyn_cast<IntegerType>(V->getType());
+  if (!PackTy)
+    return false;
+  SmallVector<NarrowedLeafInfo> Leaves;
+  collectNarrowedLeaves(V, Instruction::Or, PackTy->getBitWidth(), MaxDepth,
+                        Leaves, Chain);
+  if (Leaves.size() < 2)
+    return false;
+  Type *FieldTy = Leaves.front().V->getType();
+  if (!FieldTy->isIntegerTy() ||
+      PackTy->getBitWidth() != Leaves.size() * FieldTy->getIntegerBitWidth())
+    return false;
+  llvm::sort(Leaves, [](const NarrowedLeafInfo &A, const NarrowedLeafInfo &B) {
+    return A.Shift < B.Shift;
+  });
+  for (const auto &[Pos, L] : enumerate(Leaves))
+    if (L.V->getType() != FieldTy || !L.Mask.isAllOnes() ||
+        L.Shift != Pos * FieldTy->getIntegerBitWidth())
+      return false;
+  append_range(
+      Fields, map_range(Leaves, [](const NarrowedLeafInfo &L) { return L.V; }));
+  return true;
 }
 
 Value *tryEmitBoolReduxBitcastCmp(IRBuilderBase &Builder,

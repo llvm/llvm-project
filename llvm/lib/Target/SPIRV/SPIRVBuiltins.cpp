@@ -18,6 +18,7 @@
 #include "llvm/ADT/StringExtras.h"
 #include "llvm/ADT/StringTable.h"
 #include "llvm/Analysis/ValueTracking.h"
+#include "llvm/IR/DiagnosticInfo.h"
 #include "llvm/IR/IntrinsicsSPIRV.h"
 #include <regex>
 #include <string>
@@ -804,23 +805,30 @@ static bool buildAtomicRMWInst(const SPIRV::IncomingCall *Call, unsigned Opcode,
                               GR->getSPIRVTypeID(Call->ReturnType));
 
   MachineRegisterInfo *MRI = MIRBuilder.getMRI();
+  StringRef Name = Call->Builtin->name();
+  // The registry prefixes atomic_fetch_min/max with "s_" or "u_".
+  bool IsOCL20 =
+      Name.contains("atomic_fetch_") || Name.starts_with("atomic_exchange");
+  SPIRV::Scope::Scope DefaultScope =
+      IsOCL20 ? SPIRV::Scope::Device : SPIRV::Scope::Workgroup;
   Register ScopeRegister =
       Call->Arguments.size() >= 4 ? Call->Arguments[3] : Register();
 
   assert(Call->Arguments.size() <= 4 &&
          "Too many args for explicit atomic RMW");
-  ScopeRegister = buildScopeReg(ScopeRegister, SPIRV::Scope::Workgroup,
-                                MIRBuilder, GR, MRI);
+  ScopeRegister =
+      buildScopeReg(ScopeRegister, DefaultScope, MIRBuilder, GR, MRI);
 
   Register PtrRegister = Call->Arguments[0];
   SPIRV::MemorySemantics::MemorySemantics Ordering =
-      SPIRV::MemorySemantics::None;
+      IsOCL20 ? SPIRV::MemorySemantics::SequentiallyConsistent
+              : SPIRV::MemorySemantics::None;
   unsigned StorageClassSem = SPIRV::MemorySemantics::None;
-  if (Call->Arguments.size() >= 3) {
+  if (Call->Arguments.size() >= 3)
     Ordering = getMemOrdering(Call->Arguments[2], MRI);
+  if (IsOCL20 || Call->Arguments.size() >= 3)
     StorageClassSem =
         getMemSemanticsForStorageClass(GR->getPointerStorageClass(PtrRegister));
-  }
   Register MemSemanticsReg =
       buildMemSemanticsReg(Ordering, StorageClassSem, MIRBuilder, GR);
   Register ValueReg = Call->Arguments[1];
@@ -919,6 +927,12 @@ static bool buildAtomicFlagInst(const SPIRV::IncomingCall *Call,
   return true;
 }
 
+static void reportUnsupported(MachineIRBuilder &MIRBuilder, const Twine &Msg) {
+  const Function &F = MIRBuilder.getMF().getFunction();
+  F.getContext().diagnose(
+      DiagnosticInfoUnsupported(F, Msg, MIRBuilder.getDebugLoc()));
+}
+
 /// Helper function for building barriers, i.e., memory/control ordering
 /// operations.
 static bool buildBarrierInst(const SPIRV::IncomingCall *Call, unsigned Opcode,
@@ -940,6 +954,19 @@ static bool buildBarrierInst(const SPIRV::IncomingCall *Call, unsigned Opcode,
     return buildOpFromWrapper(MIRBuilder, Opcode, Call, Register(0));
 
   MachineRegisterInfo *MRI = MIRBuilder.getMRI();
+  bool IsSubgroupBarrier = Builtin->name() == "sub_group_barrier";
+  if (IsSubgroupBarrier) {
+    // TODO: Support runtime flags and scopes for OpenCL barriers.
+    for (Register Arg : Call->Arguments) {
+      const MachineInstr *MI = getDefInstrMaybeConstant(Arg, MRI);
+      if (!MI || MI->getOpcode() != TargetOpcode::G_CONSTANT) {
+        reportUnsupported(
+            MIRBuilder,
+            "sub_group_barrier with non-constant arguments is not supported");
+        return false;
+      }
+    }
+  }
   unsigned MemFlags = getIConstVal(Call->Arguments[0], MRI);
   unsigned MemSemantics = SPIRV::MemorySemantics::None;
 
@@ -968,7 +995,8 @@ static bool buildBarrierInst(const SPIRV::IncomingCall *Call, unsigned Opcode,
           ? Call->Arguments[0]
           : buildConstantIntReg32(MemSemantics, MIRBuilder, GR);
   Register ScopeReg;
-  SPIRV::Scope::Scope Scope = SPIRV::Scope::Workgroup;
+  SPIRV::Scope::Scope Scope =
+      IsSubgroupBarrier ? SPIRV::Scope::Subgroup : SPIRV::Scope::Workgroup;
   SPIRV::Scope::Scope MemScope = Scope;
   if (Call->Arguments.size() >= 2) {
     assert(
@@ -980,8 +1008,7 @@ static bool buildBarrierInst(const SPIRV::IncomingCall *Call, unsigned Opcode,
     SPIRV::CLMemoryScope CLScope =
         static_cast<SPIRV::CLMemoryScope>(getIConstVal(ScopeArg, MRI));
     MemScope = getSPIRVScope(CLScope);
-    if (!(MemFlags & SPIRV::CLK_LOCAL_MEM_FENCE) ||
-        (Opcode == SPIRV::OpMemoryBarrier))
+    if (Opcode == SPIRV::OpMemoryBarrier)
       Scope = MemScope;
     if (CLScope == static_cast<unsigned>(Scope))
       ScopeReg = Call->Arguments[1];
@@ -1922,6 +1949,29 @@ static bool generateCastToPtrInst(const SPIRV::IncomingCall *Call,
         .addUse(GR->getSPIRVTypeID(Call->ReturnType))
         .addUse(Call->Arguments[0])
         .addImm(ResSC);
+  } else if (Opcode == SPIRV::OpGenericPtrMemSemantics) {
+    if (GR->getPointerStorageClass(Call->Arguments[0]) !=
+        SPIRV::StorageClass::Generic)
+      return false;
+
+    // Shift the WorkgroupMemory/CrossWorkgroupMemory bits down to
+    // CLK_LOCAL/GLOBAL_MEM_FENCE.
+    MachineRegisterInfo *MRI = MIRBuilder.getMRI();
+    SPIRVTypeInst RetTy = Call->ReturnType;
+    Register SemReg =
+        MRI->createGenericVirtualRegister(MRI->getType(Call->ReturnRegister));
+    MRI->setRegClass(SemReg, GR->getRegClass(RetTy));
+    GR->assignSPIRVTypeToVReg(RetTy, SemReg, MIRBuilder.getMF());
+    MIRBuilder.buildInstr(Opcode)
+        .addDef(SemReg)
+        .addUse(GR->getSPIRVTypeID(RetTy))
+        .addUse(Call->Arguments[0]);
+    Register ShiftReg =
+        GR->buildConstantInt(8, MIRBuilder, RetTy, /*EmitIR=*/true);
+    MIRBuilder.buildInstr(TargetOpcode::G_LSHR)
+        .addDef(Call->ReturnRegister)
+        .addUse(SemReg)
+        .addUse(ShiftReg);
   } else {
     MIRBuilder.buildInstr(TargetOpcode::G_ADDRSPACE_CAST)
         .addDef(Call->ReturnRegister)
