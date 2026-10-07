@@ -383,40 +383,59 @@ def _memref_type_attr(x, context):
     return _typeAttr(x, context)
 
 
-try:
-    import numpy as np
+def _import_numpy():
+    """Imports NumPy on first use of a dense elements attribute builder."""
+    try:
+        import numpy
+    except ModuleNotFoundError as e:
+        if e.name != "numpy":
+            raise
+        import sys
 
-    @register_attribute_builder("F64ElementsAttr")
-    def _f64ElementsAttr(x, context):
-        return DenseElementsAttr.get(
-            np.array(x, dtype=np.float64),
-            type=F64Type.get(context=context),
-            context=context,
-        )
+        raise ModuleNotFoundError(
+            "Building a dense elements attribute from Python values requires "
+            "NumPy but it was not installed. "
+            f"Recommend: {sys.executable} -m pip install numpy",
+            name="numpy",
+        ) from e
+    return numpy
 
-    @register_attribute_builder("I32ElementsAttr")
-    def _i32ElementsAttr(x, context):
-        return DenseElementsAttr.get(
-            np.array(x, dtype=np.int32),
-            type=IntegerType.get_signless(32, context=context),
-            context=context,
-        )
 
-    @register_attribute_builder("I64ElementsAttr")
-    def _i64ElementsAttr(x, context):
-        return DenseElementsAttr.get(
-            np.array(x, dtype=np.int64),
-            type=IntegerType.get_signless(64, context=context),
-            context=context,
-        )
+@register_attribute_builder("F64ElementsAttr")
+def _f64ElementsAttr(x, context):
+    np = _import_numpy()
+    return DenseElementsAttr.get(
+        np.array(x, dtype=np.float64),
+        type=F64Type.get(context=context),
+        context=context,
+    )
 
-    @register_attribute_builder("IndexElementsAttr")
-    def _indexElementsAttr(x, context):
-        return DenseElementsAttr.get(
-            np.array(x, dtype=np.int64),
-            type=IndexType.get(context=context),
-            context=context,
-        )
 
-except ImportError:
-    pass
+@register_attribute_builder("I32ElementsAttr")
+def _i32ElementsAttr(x, context):
+    np = _import_numpy()
+    return DenseElementsAttr.get(
+        np.array(x, dtype=np.int32),
+        type=IntegerType.get_signless(32, context=context),
+        context=context,
+    )
+
+
+@register_attribute_builder("I64ElementsAttr")
+def _i64ElementsAttr(x, context):
+    np = _import_numpy()
+    return DenseElementsAttr.get(
+        np.array(x, dtype=np.int64),
+        type=IntegerType.get_signless(64, context=context),
+        context=context,
+    )
+
+
+@register_attribute_builder("IndexElementsAttr")
+def _indexElementsAttr(x, context):
+    np = _import_numpy()
+    return DenseElementsAttr.get(
+        np.array(x, dtype=np.int64),
+        type=IndexType.get(context=context),
+        context=context,
+    )
