@@ -27,6 +27,11 @@
 ; MODERN: ExclusiveMask: 14
 ; PSV0: Name: PSV0
 ; PSV0: Version: 0
+; PSV0-NOT: SigInputVectors:
+; PSV0-NOT: SigOutputVectors:
+; PSV0-NOT: SigInputElements:
+; PSV0-NOT: SigOutputElements:
+; PSV0-NOT: InputOutputMap:
 ; PSV1: Name: PSV0
 ; PSV1: Version: 1
 ; PSV1: SigInputVectors: 1
