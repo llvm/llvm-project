@@ -197,6 +197,8 @@ def LLVM_FshrOp : LLVM_TernarySameArgsIntrOpI<"fshr">;
 def LLVM_ClmulOp : LLVM_BinarySameArgsIntrOpI<"clmul">;
 def LLVM_PdepOp : LLVM_BinarySameArgsIntrOpI<"pdep">;
 def LLVM_PextOp : LLVM_BinarySameArgsIntrOpI<"pext">;
+def LLVM_SMulHOp : LLVM_BinarySameArgsIntrOpI<"smulh">;
+def LLVM_UMulHOp : LLVM_BinarySameArgsIntrOpI<"umulh">;
 def LLVM_MaxNumOp : LLVM_BinarySameArgsIntrOpF<"maxnum">;
 def LLVM_MinNumOp : LLVM_BinarySameArgsIntrOpF<"minnum">;
 def LLVM_MaximumOp : LLVM_BinarySameArgsIntrOpF<"maximum">;
@@ -1304,8 +1306,7 @@ def LLVM_MatrixColumnMajorLoadOp : LLVM_OneResultIntrOp<"matrix.column.major.loa
 
   string llvmBuilder = [{
     llvm::MatrixBuilder mb(builder);
-    const llvm::DataLayout &dl =
-      builder.GetInsertBlock()->getModule()->getDataLayout();
+    const llvm::DataLayout &dl = builder.getDataLayout();
     llvm::Type *ElemTy = moduleTranslation.convertType(
         op.getType().getElementType());
     llvm::Align align = dl.getABITypeAlign(ElemTy);
@@ -1340,8 +1341,7 @@ def LLVM_MatrixColumnMajorStoreOp : LLVM_ZeroResultIntrOp<"matrix.column.major.s
 
   string llvmBuilder = [{
     llvm::MatrixBuilder mb(builder);
-    const llvm::DataLayout &dl =
-      builder.GetInsertBlock()->getModule()->getDataLayout();
+    const llvm::DataLayout &dl = builder.getDataLayout();
     Type elementType = op.getMatrix().getType().getElementType();
     llvm::Align align = dl.getABITypeAlign(
       moduleTranslation.convertType(elementType));

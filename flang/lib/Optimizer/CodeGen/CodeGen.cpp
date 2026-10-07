@@ -62,6 +62,7 @@
 #include "mlir/Dialect/OpenMP/OpenMPDialect.h"
 #include "mlir/IR/BuiltinTypes.h"
 #include "mlir/IR/Matchers.h"
+#include "mlir/IR/TypeUtilities.h"
 #include "mlir/Pass/Pass.h"
 #include "mlir/Pass/PassManager.h"
 #include "mlir/Target/LLVMIR/Import.h"
@@ -321,8 +322,8 @@ public:
       if (auto varAttr =
               mlir::dyn_cast_or_null<mlir::LLVM::DILocalVariableAttr>(
                   fusedLoc.getMetadata())) {
-        mlir::LLVM::DbgDeclareOp::create(rewriter, memRef.getLoc(), memRef,
-                                         varAttr, nullptr);
+        mlir::LLVM::DbgDeclareOp::create(rewriter, fusedLoc, memRef, varAttr,
+                                         nullptr);
       }
     }
     rewriter.replaceOp(declareOp, memRef);
@@ -342,7 +343,7 @@ public:
       if (auto varAttr =
               mlir::dyn_cast_or_null<mlir::LLVM::DILocalVariableAttr>(
                   fusedLoc.getMetadata())) {
-        mlir::LLVM::DbgValueOp::create(rewriter, value.getLoc(), value, varAttr,
+        mlir::LLVM::DbgValueOp::create(rewriter, fusedLoc, value, varAttr,
                                        nullptr);
       }
     }
@@ -1182,31 +1183,19 @@ struct ConvertOpConversion : public fir::FIROpConversion<fir::ConvertOp> {
         return mlir::success();
       }
       if (mlir::isa<mlir::IntegerType>(toTy)) {
-        if (options.unsafeFPConversion) {
-          // Under unsafe FP math (e.g. -ffast-math), use plain fptosi/fptoui
-          // instead of saturating intrinsics. This avoids expensive
-          // overflow/NAN checking in the generated code.
-          mlir::Value res;
-          if (toFirTy.isUnsignedInteger())
-            res = mlir::LLVM::FPToUIOp::create(rewriter, loc, toTy, op0);
-          else
-            res = mlir::LLVM::FPToSIOp::create(rewriter, loc, toTy, op0);
-          rewriter.replaceOp(convert, res);
+        // NOTE: We are checking the fir type here because toTy is an LLVM type
+        // which is signless, and we need to use the intrinsic that matches the
+        // sign of the output in fir.
+        if (toFirTy.isUnsignedInteger()) {
+          auto intrinsicName =
+              mlir::StringAttr::get(convert.getContext(), "llvm.fptoui.sat");
+          rewriter.replaceOpWithNewOp<mlir::LLVM::CallIntrinsicOp>(
+              convert, toTy, intrinsicName, op0);
         } else {
-          // NOTE: We are checking the fir type here because toTy is an LLVM
-          // type which is signless, and we need to use the intrinsic that
-          // matches the sign of the output in fir.
-          if (toFirTy.isUnsignedInteger()) {
-            auto intrinsicName =
-                mlir::StringAttr::get(convert.getContext(), "llvm.fptoui.sat");
-            rewriter.replaceOpWithNewOp<mlir::LLVM::CallIntrinsicOp>(
-                convert, toTy, intrinsicName, op0);
-          } else {
-            auto intrinsicName =
-                mlir::StringAttr::get(convert.getContext(), "llvm.fptosi.sat");
-            rewriter.replaceOpWithNewOp<mlir::LLVM::CallIntrinsicOp>(
-                convert, toTy, intrinsicName, op0);
-          }
+          auto intrinsicName =
+              mlir::StringAttr::get(convert.getContext(), "llvm.fptosi.sat");
+          rewriter.replaceOpWithNewOp<mlir::LLVM::CallIntrinsicOp>(
+              convert, toTy, intrinsicName, op0);
         }
         return mlir::success();
       }
@@ -4581,26 +4570,26 @@ struct NegcOpConversion : public fir::FIROpConversion<fir::NegcOp> {
   }
 };
 
-/// Normalize a logical value to i1 by comparing with zero.
+/// Normalize a logical value, or a vector thereof, to i1 by comparing with
+/// zero.
 static mlir::Value
 normalizeLogicalToI1(mlir::ConversionPatternRewriter &rewriter,
                      mlir::Location loc, mlir::Value value) {
   mlir::Type ty = value.getType();
-  auto i1Ty = mlir::IntegerType::get(rewriter.getContext(), 1);
-  if (ty == i1Ty)
+  if (mlir::getElementTypeOrSelf(ty).isSignlessInteger(1))
     return value;
-  mlir::Value zero = fir::genConstantIndex(loc, ty, rewriter, 0);
+  mlir::Value zero = mlir::LLVM::ConstantOp::create(rewriter, loc, ty,
+                                                    rewriter.getZeroAttr(ty));
   return mlir::LLVM::ICmpOp::create(rewriter, loc,
                                     mlir::LLVM::ICmpPredicate::ne, value, zero);
 }
 
-/// Extend an i1 value to the given integer type. Returns the value unchanged
-/// if it is already the target type.
+/// Extend an i1 value, or a vector thereof, to the given integer type. Returns
+/// the value unchanged if it is already the target type.
 static mlir::Value extendI1ToType(mlir::ConversionPatternRewriter &rewriter,
                                   mlir::Location loc, mlir::Value i1Val,
                                   mlir::Type toTy) {
-  auto i1Ty = mlir::IntegerType::get(rewriter.getContext(), 1);
-  if (toTy == i1Ty)
+  if (toTy == i1Val.getType())
     return i1Val;
   return mlir::LLVM::ZExtOp::create(rewriter, loc, toTy, i1Val);
 }
@@ -4927,9 +4916,6 @@ public:
       options.unifiedHeapAllocSuffix = unifiedHeapAllocSuffix;
     if (!managedHeapAllocSuffix.empty())
       options.managedHeapAllocSuffix = managedHeapAllocSuffix;
-
-    if (unsafeFPConversion)
-      options.unsafeFPConversion = unsafeFPConversion;
 
     // Run dynamic pass pipeline for converting Math dialect
     // operations into other dialects (llvm, func, etc.).
