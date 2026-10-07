@@ -21,6 +21,7 @@ add_llvm_component_library(LLVMObject
   Minidump.cpp
   ModuleSymbolTable.cpp
   Object.cpp
+  ObjectFactories.cpp
   ObjectFile.cpp
   OffloadBinary.cpp
   OffloadBundle.cpp
