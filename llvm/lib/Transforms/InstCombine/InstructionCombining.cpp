@@ -5586,20 +5586,50 @@ bool InstCombinerImpl::tryToSinkInstruction(Instruction *I,
         return false;
   }
 
+  // Collect assume instructions in SrcBlock whose non-I operands all dominate
+  // DestBlock. SrcBlock dominates DestBlock (unique-predecessor invariant
+  // above), so any instruction defined in SrcBlock or a dominator of SrcBlock
+  // qualifies. We sink these assumes together with I so the alignment/attribute
+  // information they carry is not silently lost.
+  SmallPtrSet<AssumeInst *, 2> AssumesToSink;
+  for (User *U : I->users()) {
+    auto *Assume = dyn_cast<AssumeInst>(U);
+    if (!Assume || Assume->getParent() != SrcBlock)
+      continue;
+    bool CanSink = true;
+    for (Value *Op : Assume->operands()) {
+      auto *OpInst = dyn_cast<Instruction>(Op);
+      if (!OpInst || OpInst == I)
+        continue;
+      if (!DT.dominates(OpInst->getParent(), DestBlock)) {
+        CanSink = false;
+        break;
+      }
+    }
+    if (CanSink)
+      AssumesToSink.insert(Assume);
+  }
+
   I->dropDroppableUses([&](const Use *U) {
-    auto *I = dyn_cast<Instruction>(U->getUser());
-    if (I && I->getParent() != DestBlock) {
-      Worklist.add(I);
+    auto *User = dyn_cast<Instruction>(U->getUser());
+    if (User && User->getParent() != DestBlock) {
+      // Don't drop assumes that we are going to sink to DestBlock.
+      if (auto *A = dyn_cast<AssumeInst>(User); A && AssumesToSink.count(A))
+        return false;
+      Worklist.add(User);
       return true;
     }
     return false;
   });
-  /// FIXME: We could remove droppable uses that are not dominated by
-  /// the new position.
 
   BasicBlock::iterator InsertPos = DestBlock->getFirstInsertionPt();
   I->moveBefore(*DestBlock, InsertPos);
   ++NumSunkInst;
+
+  // Sink the collected assumes right after I in DestBlock so that the
+  // alignment/attribute guarantees they encode remain visible to later passes.
+  for (AssumeInst *Assume : AssumesToSink)
+    Assume->moveAfter(I);
 
   // Also sink all related debug uses from the source basic block. Otherwise we
   // get debug use before the def. Attempt to salvage debug uses first, to
