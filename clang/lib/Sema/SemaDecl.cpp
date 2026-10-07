@@ -14345,6 +14345,19 @@ void Sema::AddInitializerToDecl(Decl *RealDecl, Expr *Init, bool DirectInit) {
     Init = Result.get();
   }
 
+  // Set return type of builtin call using type of LHS variable.
+  // This is done for builtin calls that return cooperative matrix.
+  if (getLangOpts().OpenCL && BuiltinReturnsCoopMatrix(Init)) {
+    if (!VDecl->getType()->isCooperativeMatrixType()) {
+      Diag(VDecl->getLocation(), diag::err_coop_matrix_assignment);
+      return;
+    }
+
+    auto call = dyn_cast<CallExpr>(Init);
+    assert(call);
+    call->setType(VDecl->getType());
+  }
+
   // Perform the initialization.
   bool InitializedFromParenListExpr = false;
   bool IsParenListInit = false;
@@ -14647,19 +14660,6 @@ void Sema::AddInitializerToDecl(Decl *RealDecl, Expr *Init, bool DirectInit) {
 
   if (LangOpts.OpenACC && !InitType.isNull())
     OpenACC().ActOnVariableInit(VDecl, InitType);
-
-  // Set return type of builtin call using type of LHS variable.
-  // This is done for builtin calls that return cooperative matrix.
-  if (getLangOpts().OpenCL && BuiltinReturnsCoopMatrix(Init)) {
-    if (!VDecl->getType()->isCooperativeMatrixType()) {
-      Diag(VDecl->getLocation(), diag::err_coop_matrix_assignment);
-      return;
-    }
-
-    auto call = dyn_cast<CallExpr>(Init);
-    assert(call);
-    call->setType(VDecl->getType());
-  }
 }
 
 void Sema::ActOnInitializerError(Decl *D) {
