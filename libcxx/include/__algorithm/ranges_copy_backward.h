@@ -47,7 +47,10 @@ struct __copy_backward {
     requires indirectly_copyable<iterator_t<_Range>, _Iter>
   _LIBCPP_HIDE_FROM_ABI constexpr copy_backward_result<borrowed_iterator_t<_Range>, _Iter>
   operator()(_Range&& __r, _Iter __result) const {
-    return std::__copy_backward<_RangeAlgPolicy>(ranges::begin(__r), ranges::end(__r), std::move(__result));
+    auto __first = ranges::begin(__r);
+    auto __last  = _IterOps<_RangeAlgPolicy>::__end(__r);
+
+    return std::__copy_backward<_RangeAlgPolicy>(std::move(__first), std::move(__last), std::move(__result));
   }
 };
 

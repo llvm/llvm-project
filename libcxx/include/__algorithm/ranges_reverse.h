@@ -9,6 +9,7 @@
 #ifndef _LIBCPP___ALGORITHM_RANGES_REVERSE_H
 #define _LIBCPP___ALGORITHM_RANGES_REVERSE_H
 
+#include <__algorithm/iterator_operations.h>
 #include <__config>
 #include <__iterator/concepts.h>
 #include <__iterator/iter_swap.h>
@@ -17,10 +18,14 @@
 #include <__ranges/access.h>
 #include <__ranges/concepts.h>
 #include <__ranges/dangling.h>
+#include <__utility/move.h>
 
 #if !defined(_LIBCPP_HAS_NO_PRAGMA_SYSTEM_HEADER)
 #  pragma GCC system_header
 #endif
+
+_LIBCPP_PUSH_MACROS
+#include <__undef_macros>
 
 #if _LIBCPP_STD_VER >= 20
 
@@ -61,7 +66,10 @@ struct __reverse {
   template <bidirectional_range _Range>
     requires permutable<iterator_t<_Range>>
   _LIBCPP_HIDE_FROM_ABI constexpr borrowed_iterator_t<_Range> operator()(_Range&& __range) const {
-    return (*this)(ranges::begin(__range), ranges::end(__range));
+    auto __first = ranges::begin(__range);
+    auto __last  = _IterOps<_RangeAlgPolicy>::__end(__range);
+
+    return (*this)(std::move(__first), std::move(__last));
   }
 };
 
@@ -73,5 +81,7 @@ inline constexpr auto reverse = __reverse{};
 _LIBCPP_END_NAMESPACE_STD
 
 #endif // _LIBCPP_STD_VER >= 20
+
+_LIBCPP_POP_MACROS
 
 #endif // _LIBCPP___ALGORITHM_RANGES_REVERSE_H
