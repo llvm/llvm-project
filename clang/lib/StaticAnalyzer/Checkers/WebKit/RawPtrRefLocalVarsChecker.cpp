@@ -415,7 +415,8 @@ public:
         const Expr *Origin = nullptr;
         if (Model->checksForInteriorDestruction()) {
           const Expr *Source = InitList ? InitList->getInit(Index) : Value;
-          if (isPtrOriginSafe(V, Source, DeclWithIssue, Origin))
+          if (isPtrOriginSafe(V, Source, DeclWithIssue, Origin,
+                              Binding->getType()))
             continue;
         }
         reportBug(V, V->getType(), nullptr, BD, DeclWithIssue, Origin);
@@ -426,7 +427,7 @@ public:
     if (IsUncountedPtr && *IsUncountedPtr) {
       const Expr *Origin = nullptr;
       if (Value) {
-        if (isPtrOriginSafe(V, Value, DeclWithIssue, Origin))
+        if (isPtrOriginSafe(V, Value, DeclWithIssue, Origin, SinkType))
           return;
       } else if (Model->checksForInteriorDestruction())
         return;
@@ -435,7 +436,8 @@ public:
   }
 
   bool isPtrOriginSafe(const VarDecl *V, const Expr *Value,
-                       const Decl *DeclWithIssue, const Expr *&Origin) const {
+                       const Decl *DeclWithIssue, const Expr *&Origin,
+                       QualType SinkType = QualType()) const {
     return tryToFindPtrOrigin(
         Value, /*StopAtFirstRefCountedObj=*/false,
         Model->checksForInteriorDestruction(),
@@ -475,7 +477,8 @@ public:
           if (EFA.isACallToEnsureFn(InitArgOrigin))
             return true;
 
-          if (Model->isSafeExpr(InitArgOrigin, PtrIsLifetimeBoundToOrigin))
+          if (Model->isSafeExpr(InitArgOrigin, PtrIsLifetimeBoundToOrigin,
+                                SinkType))
             return true;
 
           if (!Model->checksForInteriorDestruction() &&

@@ -12236,8 +12236,8 @@ SDValue AArch64TargetLowering::LowerBR_CC(SDValue Op, SelectionDAG &DAG) const {
     SDValue Flags;
     uint64_t InverseCC;
     // `CSET <Wd>, <cond>` is an alias of `CSINC <Wd>, WZR, WZR, invert(<cond>)`
-    auto m_CSET = m_Node(AArch64ISD::CSINC, m_Zero(), m_Zero(),
-                         m_ConstInt(InverseCC), m_Value(Flags));
+    auto m_CSET = m_Node<AArch64ISD::CSINC>(
+        m_Zero(), m_Zero(), m_ConstInt(InverseCC), m_Value(Flags));
     // Note: We look through `& 1` as the result of CSET is known to be 0 or 1.
     if ((CC == ISD::SETEQ || CC == ISD::SETNE) && isNullConstant(RHS) &&
         sd_match(LHS, m_AnyOf(m_CSET, m_And(m_CSET, m_One())))) {
@@ -22594,14 +22594,14 @@ static bool hasSVEMultiVectorOps(const AArch64Subtarget *Subtarget) {
 
 static auto m_PredicateAsCounterWhile() {
   using namespace llvm::SDPatternMatch;
-  return m_AnyOf(m_SpecificOpc(AArch64ISD::WHILEGE_PRED_COUNTER),
-                 m_SpecificOpc(AArch64ISD::WHILEGT_PRED_COUNTER),
-                 m_SpecificOpc(AArch64ISD::WHILELT_PRED_COUNTER),
-                 m_SpecificOpc(AArch64ISD::WHILELE_PRED_COUNTER),
-                 m_SpecificOpc(AArch64ISD::WHILEHS_PRED_COUNTER),
-                 m_SpecificOpc(AArch64ISD::WHILEHI_PRED_COUNTER),
-                 m_SpecificOpc(AArch64ISD::WHILELO_PRED_COUNTER),
-                 m_SpecificOpc(AArch64ISD::WHILELS_PRED_COUNTER));
+  return m_AnyOf(m_SpecificOpc<AArch64ISD::WHILEGE_PRED_COUNTER>(),
+                 m_SpecificOpc<AArch64ISD::WHILEGT_PRED_COUNTER>(),
+                 m_SpecificOpc<AArch64ISD::WHILELT_PRED_COUNTER>(),
+                 m_SpecificOpc<AArch64ISD::WHILELE_PRED_COUNTER>(),
+                 m_SpecificOpc<AArch64ISD::WHILEHS_PRED_COUNTER>(),
+                 m_SpecificOpc<AArch64ISD::WHILEHI_PRED_COUNTER>(),
+                 m_SpecificOpc<AArch64ISD::WHILELO_PRED_COUNTER>(),
+                 m_SpecificOpc<AArch64ISD::WHILELS_PRED_COUNTER>());
 }
 
 /// Folds extracting the first lane from the first segment of a
