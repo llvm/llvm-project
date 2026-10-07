@@ -5065,7 +5065,6 @@ define <2 x half> @local_atomic_fmax_ret_v2f16(ptr addrspace(3) %ptr, <2 x half>
 ; GFX942-NEXT:    ; =>This Inner Loop Header: Depth=1
 ; GFX942-NEXT:    s_waitcnt lgkmcnt(0)
 ; GFX942-NEXT:    v_pk_max_f16 v1, v3, v3
-; GFX942-NEXT:    s_nop 0
 ; GFX942-NEXT:    v_pk_max_f16 v1, v1, v2
 ; GFX942-NEXT:    ds_cmpst_rtn_b32 v1, v0, v3, v1
 ; GFX942-NEXT:    s_waitcnt lgkmcnt(0)
@@ -5327,7 +5326,6 @@ define <2 x half> @local_atomic_fmax_ret_v2f16__offset(ptr addrspace(3) %ptr, <2
 ; GFX942-NEXT:    ; =>This Inner Loop Header: Depth=1
 ; GFX942-NEXT:    s_waitcnt lgkmcnt(0)
 ; GFX942-NEXT:    v_pk_max_f16 v1, v3, v3
-; GFX942-NEXT:    s_nop 0
 ; GFX942-NEXT:    v_pk_max_f16 v1, v1, v2
 ; GFX942-NEXT:    ds_cmpst_rtn_b32 v1, v0, v3, v1 offset:65532
 ; GFX942-NEXT:    s_waitcnt lgkmcnt(0)
@@ -5588,7 +5586,6 @@ define void @local_atomic_fmax_noret_v2f16(ptr addrspace(3) %ptr, <2 x half> %va
 ; GFX942-NEXT:    ; =>This Inner Loop Header: Depth=1
 ; GFX942-NEXT:    s_waitcnt lgkmcnt(0)
 ; GFX942-NEXT:    v_pk_max_f16 v3, v2, v2
-; GFX942-NEXT:    s_nop 0
 ; GFX942-NEXT:    v_pk_max_f16 v3, v3, v1
 ; GFX942-NEXT:    ds_cmpst_rtn_b32 v3, v0, v2, v3
 ; GFX942-NEXT:    s_waitcnt lgkmcnt(0)
@@ -5835,7 +5832,6 @@ define void @local_atomic_fmax_noret_v2f16__offset(ptr addrspace(3) %ptr, <2 x h
 ; GFX942-NEXT:    ; =>This Inner Loop Header: Depth=1
 ; GFX942-NEXT:    s_waitcnt lgkmcnt(0)
 ; GFX942-NEXT:    v_pk_max_f16 v3, v2, v2
-; GFX942-NEXT:    s_nop 0
 ; GFX942-NEXT:    v_pk_max_f16 v3, v3, v1
 ; GFX942-NEXT:    ds_cmpst_rtn_b32 v3, v0, v2, v3 offset:65532
 ; GFX942-NEXT:    s_waitcnt lgkmcnt(0)

@@ -295,6 +295,10 @@ public:
         IsFake16 ? AMDGPU::VS_32RegClassID : AMDGPU::VS_16RegClassID, MVT::f16);
   }
 
+  bool isRegOrImmWithFPT16_LO16InputMods() const {
+    return isRegOrImmWithInputMods(AMDGPU::VS_16_LO16RegClassID, MVT::f16);
+  }
+
   bool isRegOrImmWithFP32InputMods() const {
     return isRegOrImmWithInputMods(AMDGPU::VS_32RegClassID, MVT::f32);
   }
@@ -362,6 +366,7 @@ public:
   bool isVRegWithInputMods() const;
   template <bool IsFake16> bool isT16_Lo128VRegWithInputMods() const;
   template <bool IsFake16> bool isT16VRegWithInputMods() const;
+  bool isT16_LO16VRegWithInputMods() const;
 
   bool isSDWAOperand(MVT type) const;
   bool isSDWAFP16Operand() const;
@@ -584,6 +589,10 @@ public:
     return isRegOrInlineNoMods(AMDGPU::VS_16RegClassID, MVT::f16);
   }
 
+  bool isVCSrcTF16_LO16() const {
+    return isRegOrInlineNoMods(AMDGPU::VS_16_LO16RegClassID, MVT::f16);
+  }
+
   bool isVCSrcTBF16_Lo128() const {
     return isRegOrInlineNoMods(AMDGPU::VS_16_Lo128RegClassID, MVT::bf16);
   }
@@ -664,6 +673,10 @@ public:
   }
 
   bool isVSrcT_f16() const { return isVCSrcT_f16() || isLiteralImm(MVT::f16); }
+
+  bool isVSrcT_f16_LO16() const {
+    return isVCSrcTF16_LO16() || isLiteralImm(MVT::f16);
+  }
 
   bool isVSrcT_bf16_Lo128() const {
     return isVCSrcTBF16_Lo128() || isLiteralImm(MVT::bf16);
@@ -2313,6 +2326,10 @@ bool AMDGPUOperand::isT16_Lo128VRegWithInputMods() const {
 template <bool IsFake16> bool AMDGPUOperand::isT16VRegWithInputMods() const {
   return isRegClass(IsFake16 ? AMDGPU::VGPR_32RegClassID
                              : AMDGPU::VGPR_16RegClassID);
+}
+
+bool AMDGPUOperand::isT16_LO16VRegWithInputMods() const {
+  return isRegClass(AMDGPU::VGPR_16_LO16RegClassID);
 }
 
 bool AMDGPUOperand::isSDWAOperand(MVT type) const {
@@ -6446,6 +6463,11 @@ bool AMDGPUAsmParser::ParseDirectiveAMDHSAKernel() {
       EXPR_RESOLVE_OR_ERROR(EvaluatableExpr);
       if (ISA.Major < 10)
         return Error(IDRange.Start, "directive requires gfx10+", IDRange);
+      if (!(getFeatureBits().test(AMDGPU::FeatureSupportsWave32) &&
+            getFeatureBits().test(AMDGPU::FeatureSupportsWave64))) {
+        return Error(IDRange.Start,
+                     "directive unsupported on " + getSTI().getCPU(), IDRange);
+      }
       EnableWavefrontSize32 = Val;
       PARSE_BITS_ENTRY(KD.kernel_code_properties,
                        KERNEL_CODE_PROPERTY_ENABLE_WAVEFRONT_SIZE32, ExprVal,

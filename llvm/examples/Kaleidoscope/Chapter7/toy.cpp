@@ -744,8 +744,7 @@ Function *getFunction(std::string Name) {
 /// the function.  This is used for mutable variables etc.
 static AllocaInst *CreateEntryBlockAlloca(Function *TheFunction,
                                           StringRef VarName) {
-  IRBuilder<> TmpB(&TheFunction->getEntryBlock(),
-                   TheFunction->getEntryBlock().begin());
+  IRBuilder<> TmpB(TheFunction->getEntryBlock().begin());
   return TmpB.CreateAlloca(Type::getDoubleTy(*TheContext), nullptr, VarName);
 }
 
@@ -1129,7 +1128,7 @@ static void InitializeModuleAndManagers() {
   TheModule->setDataLayout(TheJIT->getDataLayout());
 
   // Create a new builder for the module.
-  Builder = std::make_unique<IRBuilder<>>(*TheContext);
+  Builder = std::make_unique<IRBuilder<>>(*TheModule);
 
   // Create new pass and analysis managers.
   TheFPM = std::make_unique<FunctionPassManager>();

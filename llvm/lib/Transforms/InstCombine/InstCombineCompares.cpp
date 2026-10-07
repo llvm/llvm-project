@@ -538,7 +538,7 @@ static Value *rewriteGEPAsOffset(Value *Start, Value *Base, GEPNoWrapFlags NW,
           PHINode::Create(IndexType, PHI->getNumIncomingValues(),
                           PHI->getName() + ".idx", PHI->getIterator());
   }
-  IRBuilder<> Builder(Base->getContext());
+  IRBuilder<> Builder(IC.getModule());
 
   // Create all the other instructions.
   for (Value *Val : Explored) {
@@ -3575,6 +3575,22 @@ Instruction *InstCombinerImpl::foldICmpBitCast(ICmpInst &Cmp) {
         }
       }
     }
+  }
+
+  // Fold the canonicalized form of vector_reduce_or if the arg is
+  // get_active_lane mask.
+  // icmp ne (bitcast <N x i1> to iN (get_active_lane_mask(l, h))), 0 ->
+  //            icmp ult l, h
+  // icmp eq (bitcast <N x i1> to iN (get_active_lane_mask(l, h))), 0 ->
+  //            icmp uge l, h
+  Value *Upper, *Lower;
+  if (match(BCSrcOp, m_Intrinsic<Intrinsic::get_active_lane_mask>(
+                         m_Value(Lower), m_Value(Upper))) &&
+      match(Op1, m_Zero()) && DstType->isIntegerTy()) {
+    if (Pred == ICmpInst::ICMP_NE)
+      return new ICmpInst(ICmpInst::ICMP_ULT, Lower, Upper);
+    if (Pred == ICmpInst::ICMP_EQ)
+      return new ICmpInst(ICmpInst::ICMP_UGE, Lower, Upper);
   }
 
   const APInt *C;
