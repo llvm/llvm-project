@@ -879,6 +879,11 @@ sizeof...($TemplateParameter[[Elements]]);
             const char *$LocalVariable_def_readonly[[s]] = $LocalVariable_readonly_static[[__func__]];
         }
       )cpp",
+      R"cpp(
+        #define $Macro_decl_deprecated[[FOO]] 1
+        #pragma clang deprecated(FOO)
+        int $Variable_def[[x]] = $Macro_deprecated[[FOO]];
+      )cpp",
       // override and final
       R"cpp(
         class $Class_def_abstract[[Base]] { virtual void $Method_decl_abstract_virtual[[m]]() = 0; };

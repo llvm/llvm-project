@@ -740,6 +740,16 @@ ParsedAST::build(llvm::StringRef Filename, const ParseInputs &Inputs,
     Marks = Patch->marks();
   }
   auto &PP = Clang->getPreprocessor();
+  if (Preamble) {
+    for (const auto &[Name, Msg] : Preamble->DeprecatedMacros) {
+      auto &II = PP.getIdentifierTable().get(Name);
+      II.setIsDeprecatedMacro(true);
+      SourceLocation Loc;
+      if (const auto *MI = PP.getMacroDefinition(&II).getMacroInfo())
+        Loc = MI->getDefinitionLoc();
+      PP.addMacroDeprecationMsg(&II, Msg, Loc);
+    }
+  }
   auto MacroCollector = std::make_unique<CollectMainFileMacros>(PP, Macros);
   auto *MacroCollectorPtr = MacroCollector.get(); // so we can call doneParse()
   PP.addPPCallbacks(std::move(MacroCollector));
