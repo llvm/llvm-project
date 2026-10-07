@@ -470,6 +470,113 @@ module attributes {transform.with_named_sequence} {
 
 // -----
 
+#map = affine_map<(d0, d1, d2) -> (d0, d2)>
+#map1 = affine_map<(d0, d1, d2) -> (d2, d1)>
+#map2 = affine_map<(d0, d1, d2) -> (d0, d1)>
+
+// The accumulation loop sits inside an existing batch-M-N loop nest.
+func.func @amx_int8_flat_batched_loop_nest(%A: memref<?x?x?xi8>, %B: memref<?x?x?xi8>, %C: memref<?x?x?xi32>) {
+  %c0 = arith.constant 0 : index
+  %c1 = arith.constant 1 : index
+  %c2 = arith.constant 2 : index
+  %c64 = arith.constant 64 : index
+  %c128 = arith.constant 128 : index
+  %c0_i8 = arith.constant 0 : i8
+  %c0_i32 = arith.constant 0 : i32
+  %batch = memref.dim %C, %c0 : memref<?x?x?xi32>
+  %M = memref.dim %C, %c1 : memref<?x?x?xi32>
+  %N = memref.dim %C, %c2 : memref<?x?x?xi32>
+  %K = memref.dim %A, %c2 : memref<?x?x?xi8>
+  scf.for %bi = %c0 to %batch step %c1 {
+    scf.for %m = %c0 to %M step %c64 {
+      scf.for %n = %c0 to %N step %c128 {
+        %c = vector.transfer_read %C[%bi, %m, %n], %c0_i32 {in_bounds = [true, true]} : memref<?x?x?xi32>, vector<64x128xi32>
+        %res = scf.for %k = %c0 to %K step %c64 iter_args(%acc = %c) -> (vector<64x128xi32>) {
+          %a = vector.transfer_read %A[%bi, %m, %k], %c0_i8 {in_bounds = [true, true]} : memref<?x?x?xi8>, vector<64x64xi8>
+          %b = vector.transfer_read %B[%bi, %k, %n], %c0_i8 {in_bounds = [true, true]} : memref<?x?x?xi8>, vector<64x128xi8>
+          %d = vector.contract {
+            indexing_maps = [#map, #map1, #map2],
+            iterator_types = ["parallel", "parallel", "reduction"],
+            kind = #vector.kind<add>}
+            %a, %b, %acc : vector<64x64xi8>, vector<64x128xi8> into vector<64x128xi32>
+          scf.yield %d : vector<64x128xi32>
+        }
+        vector.transfer_write %res, %C[%bi, %m, %n] {in_bounds = [true, true]} : vector<64x128xi32>, memref<?x?x?xi32>
+      }
+    }
+  }
+  func.return
+}
+
+// CHECK-LABEL: func.func @amx_int8_flat_batched_loop_nest(
+// CHECK-SAME:    %[[A:.+]]: memref<?x?x?xi8>, %[[B:.+]]: memref<?x?x?xi8>, %[[C:.+]]: memref<?x?x?xi32>)
+// CHECK-DAG:     %[[C0:.+]] = arith.constant 0 : index
+// CHECK-DAG:     %[[C1:.+]] = arith.constant 1 : index
+// CHECK-DAG:     %[[C2:.+]] = arith.constant 2 : index
+// CHECK-DAG:     %[[C16:.+]] = arith.constant 16 : index
+// CHECK-DAG:     %[[C32:.+]] = arith.constant 32 : index
+// CHECK-DAG:     %[[C64:.+]] = arith.constant 64 : index
+// CHECK-DAG:     %[[C128:.+]] = arith.constant 128 : index
+// CHECK-DAG:     %[[BATCH:.+]] = memref.dim %[[C]], %[[C0]]
+// CHECK-DAG:     %[[M:.+]] = memref.dim %[[C]], %[[C1]]
+// CHECK-DAG:     %[[N:.+]] = memref.dim %[[C]], %[[C2]]
+// CHECK-DAG:     %[[K:.+]] = memref.dim %[[A]], %[[C2]]
+// CHECK-NOT:     memref.alloca
+// CHECK:         scf.for %[[IV_B:.+]] = %[[C0]] to %[[BATCH]] step %[[C1]] {
+// CHECK:           scf.for %[[OFF_M:.+]] = %[[C0]] to %[[M]] step %[[C64]] {
+// CHECK:             scf.for %[[OFF_N:.+]] = %[[C0]] to %[[N]] step %[[C128]] {
+// CHECK:               %[[ACC_BUF:.+]] = memref.subview %[[C]][%[[IV_B]], %[[OFF_M]], %[[OFF_N]]] [1, 64, 128] [1, 1, 1]
+// CHECK-SAME:            memref<?x?x?xi32> to memref<64x128xi32, strided<[?, 1], offset: ?>>
+// CHECK:               scf.for %[[IV_M:.+]] = %[[C0]] to %[[C64]] step %[[C32]] {
+// CHECK:                 scf.for %[[IV_N:.+]] = %[[C0]] to %[[C128]] step %[[C32]] {
+// CHECK:                   %[[ACC_VIEW:.+]] = memref.subview %[[ACC_BUF]][%[[IV_M]], %[[IV_N]]] [32, 32] [1, 1]
+// CHECK-COUNT-4:           vector.transfer_read %[[ACC_VIEW]]{{.*}} vector<16x16xi32>
+// CHECK:                   %[[A_OFF_M:.+]] = arith.addi %[[OFF_M]], %[[IV_M]]
+// CHECK:                   %[[B_OFF_N:.+]] = arith.addi %[[OFF_N]], %[[IV_N]]
+// CHECK:                   %[[RES:.+]]:4 = scf.for %[[IV_K:.+]] = %[[C0]] to %[[K]] step %[[C64]]
+// CHECK-NOT:                 arith.addi
+// CHECK:                     %[[A_VIEW:.+]] = memref.subview %[[A]][%[[IV_B]], %[[A_OFF_M]], %[[IV_K]]] [1, 32, 64] [1, 1, 1]
+// CHECK:                     %[[B_VIEW:.+]] = memref.subview %[[B]][%[[IV_B]], %[[IV_K]], %[[B_OFF_N]]] [1, 64, 32] [1, 1, 1]
+// CHECK:                     vector.transfer_read %[[A_VIEW]][%[[C0]], %[[C0]]], {{.*}} vector<16x64xi8>
+// CHECK:                     vector.transfer_read %[[A_VIEW]][%[[C16]], %[[C0]]], {{.*}} vector<16x64xi8>
+// CHECK:                     vector.transfer_read %[[B_VIEW]][%[[C0]], %[[C0]]], {{.*}} vector<64x16xi8>
+// CHECK:                     vector.transfer_read %[[B_VIEW]][%[[C0]], %[[C16]]], {{.*}} vector<64x16xi8>
+// CHECK-COUNT-4:             vector.contract {{.*}} {x86_vcmlu_native_shape = array<i64: 16, 16, 64>} : vector<16x64xi8>, vector<64x16xi8> into vector<16x16xi32>
+// CHECK:                     scf.yield
+// CHECK:                   }
+// CHECK-COUNT-4:           vector.transfer_write %[[RES]]#{{[0-3]}}, %[[ACC_VIEW]]
+// CHECK:                 }
+// CHECK:               }
+// CHECK-NOT:           vector.transfer_read
+// CHECK-NOT:           vector.transfer_write
+// CHECK:             }
+// CHECK:           }
+// CHECK:         }
+// CHECK:         return
+
+// NANO-LABEL: func.func @amx_int8_flat_batched_loop_nest(
+
+module attributes {transform.with_named_sequence} {
+  transform.named_sequence @__transform_main(%arg1: !transform.any_op {transform.readonly}) {
+    %func = transform.structured.match ops{["func.func"]} in %arg1 : (!transform.any_op) -> !transform.any_op
+    transform.apply_patterns to %func {
+      transform.apply_patterns.x86.vector_contract_multi_level_unroll target = "amx-int8"
+    } : !transform.any_op
+    transform.yield
+  }
+
+  transform.named_sequence @__transform_nano(%arg1: !transform.any_op {transform.readonly}) {
+    %func = transform.structured.match ops{["func.func"]} in %arg1 : (!transform.any_op) -> !transform.any_op
+    transform.apply_patterns to %func {
+      transform.apply_patterns.x86.vector_contract_multi_level_unroll target = "amx-int8"
+      transform.apply_patterns.x86.vector_contract_to_amx_dot_product
+    } : !transform.any_op
+    transform.yield
+  }
+}
+
+// -----
+
 #map = affine_map<(d0, d1, d2, d3) -> (d0, d2, d3)>
 #map1 = affine_map<(d0, d1, d2, d3) -> (d2, d1, d3)>
 #map2 = affine_map<(d0, d1, d2, d3) -> (d0, d1)>
