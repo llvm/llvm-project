@@ -1,4 +1,4 @@
-# RUN: llc -run-pass none -o - %s | FileCheck %s
+# RUN: llc -run-pass=none -o - %s | FileCheck %s
 # This test ensures that the MIR parser parses machine functions correctly.
 
 --- |
@@ -14,6 +14,16 @@
   }
 
   define i32 @test() {
+  start:
+    ret i32 0
+  }
+
+  define i32 @maxbytes() {
+  start:
+    ret i32 0
+  }
+
+  define i32 @maxbytesmax() {
   start:
     ret i32 0
   }
@@ -46,4 +56,24 @@ name:            test
 body: |
   bb.0.start (align 4, machine-block-address-taken):
   bb.1 (machine-block-address-taken, align 4):
+...
+---
+# CHECK-LABEL: name: maxbytes
+# CHECK: body:
+# CHECK-NEXT: bb.0.start (align 32, max-bytes-for-alignment 8):
+# CHECK:      bb.1 (align 32, max-bytes-for-alignment 8):
+# CHECK:      bb.2 (align 16):
+name:            maxbytes
+body: |
+  bb.0.start (align 32, max-bytes-for-alignment 8):
+  bb.1 (max-bytes-for-alignment 8, align 32):
+  bb.2 (align 16):
+...
+---
+# CHECK-LABEL: name: maxbytesmax
+# CHECK: body:
+# CHECK-NEXT: bb.0.start (align 4, max-bytes-for-alignment 4294967295):
+name:            maxbytesmax
+body: |
+  bb.0.start (align 4, max-bytes-for-alignment 4294967295):
 ...
