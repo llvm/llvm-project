@@ -5050,6 +5050,10 @@ bool IRTranslatorImpl::emitSPDescriptorParent(StackProtectorDescriptor &SPD,
   } else {
     // TODO: test using android subtarget when we support @llvm.thread.pointer.
     const Value *IRGuard = TLI->getSDagStackGuard(M, *Libcalls);
+    if (!IRGuard) {
+      LLVM_DEBUG(dbgs() << "Failed to find stack guard global\n");
+      return false;
+    }
     Register GuardPtr = getOrCreateVReg(*IRGuard);
 
     Guard = CurBuilder
