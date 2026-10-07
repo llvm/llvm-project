@@ -4402,6 +4402,10 @@ bool Compiler<Emitter>::VisitCXXNewExpr(const CXXNewExpr *E) {
             DynamicInit = ILE->getArrayFiller();
           else if (StaticInitElems > 0 && isa<StringLiteral>(ILE->getInit(0)))
             ElemT = classifyPrim(CAT->getElementType());
+        } else if (const auto *PLI = dyn_cast<CXXParenListInitExpr>(Init)) {
+          DynamicInit = PLI->getArrayFiller();
+          if (StaticInitElems > 0 && isa<StringLiteral>(PLI->getInitExprs()[0]))
+            ElemT = classifyPrim(CAT->getElementType());
         }
       }
 
@@ -4411,9 +4415,9 @@ bool Compiler<Emitter>::VisitCXXNewExpr(const CXXNewExpr *E) {
       // There are three cases:
       //   1) For the form 'new Struct[n];', the initializer is a
       //      CXXConstructExpr and its type is an IncompleteArrayType.
-      //   2) For the form 'new Struct[n]{1,2,3}', the initializer is an
-      //      InitListExpr and the initializer for the remaining elements
-      //      is the array filler.
+      //   2) For the forms 'new Struct[n]{1,2,3}' and 'new Struct[n](1,2,3)',
+      //      the initializer is an InitListExpr or CXXParenListInitExpr and
+      //      the initializer for the remaining elements is the array filler.
       //   3) StringLiterals don't have an array filler, so we need to zero
       //      the remaining elements.
 
