@@ -41,7 +41,6 @@ Transforms/InstCombine/minmax-fold.ll
 Transforms/InstCombine/minmax-intrinsics.ll
 Transforms/InstCombine/mul-inseltpoison.ll
 Transforms/InstCombine/mul.ll
-Transforms/InstCombine/nested-select.ll
 Transforms/InstCombine/pow-1.ll
 Transforms/InstCombine/pow-3.ll
 Transforms/InstCombine/pow-sqrt.ll
