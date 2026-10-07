@@ -75,7 +75,7 @@ template <class BlockT, class LoopT> class LoopBase {
   unsigned BlockLen = 0;
   unsigned BlockCapacity = 0;
 
-  static constexpr unsigned BorrowedCapacity = -1u;
+  static constexpr unsigned BorrowedCapacity = ~0u;
 
   // The LoopInfo that owns this loop. Used to answer contains(BlockT *) from
   // the central block-to-loop map.

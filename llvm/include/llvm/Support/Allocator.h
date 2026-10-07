@@ -478,7 +478,7 @@ operator new(size_t Size,
   // alignof(T) is unknown but Size%alignof(T)==0, so the lowest set bit of Size
   // bounds it (capped at alignof(max_align_t)).
   auto S = Size | alignof(std::max_align_t);
-  return Allocator.Allocate(Size, llvm::Align(S & -S));
+  return Allocator.Allocate(Size, llvm::Align(S & (~S + 1)));
 }
 
 template <typename AllocatorT, size_t SlabSize, size_t SizeThreshold,
