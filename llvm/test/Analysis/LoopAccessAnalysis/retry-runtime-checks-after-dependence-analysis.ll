@@ -388,22 +388,27 @@ define void @unknown_dep_load_and_store_via_non_header_phis(ptr %a, ptr %b, i64 
 ; CHECK-NEXT:        Comparing group GRP0:
 ; CHECK-NEXT:          %gep.b = getelementptr inbounds float, ptr %b, i64 %iv
 ; CHECK-NEXT:        Against group GRP1:
-; CHECK-NEXT:          %gep.a.offset = getelementptr inbounds float, ptr %a, i64 %iv.offset
+; CHECK-NEXT:          %gep.a = getelementptr inbounds float, ptr %a, i64 %iv
 ; CHECK-NEXT:      Check 1:
 ; CHECK-NEXT:        Comparing group GRP0:
 ; CHECK-NEXT:          %gep.b = getelementptr inbounds float, ptr %b, i64 %iv
 ; CHECK-NEXT:        Against group GRP2:
+; CHECK-NEXT:          %gep.a.offset = getelementptr inbounds float, ptr %a, i64 %iv.offset
+; CHECK-NEXT:      Check 2:
+; CHECK-NEXT:        Comparing group GRP1:
 ; CHECK-NEXT:          %gep.a = getelementptr inbounds float, ptr %a, i64 %iv
+; CHECK-NEXT:        Against group GRP2:
+; CHECK-NEXT:          %gep.a.offset = getelementptr inbounds float, ptr %a, i64 %iv.offset
 ; CHECK-NEXT:      Grouped accesses:
 ; CHECK-NEXT:        Group GRP0:
 ; CHECK-NEXT:          (Low: %b High: ((4 * %n) + %b))
 ; CHECK-NEXT:            Member: {%b,+,4}<%loop.header>
 ; CHECK-NEXT:        Group GRP1:
-; CHECK-NEXT:          (Low: ((4 * %offset) + %a) High: ((4 * %offset) + (4 * %n) + %a))
-; CHECK-NEXT:            Member: {((4 * %offset) + %a),+,4}<%loop.header>
-; CHECK-NEXT:        Group GRP2:
 ; CHECK-NEXT:          (Low: %a High: ((4 * %n) + %a))
 ; CHECK-NEXT:            Member: {%a,+,4}<%loop.header>
+; CHECK-NEXT:        Group GRP2:
+; CHECK-NEXT:          (Low: ((4 * %offset) + %a) High: ((4 * %offset) + (4 * %n) + %a))
+; CHECK-NEXT:            Member: {((4 * %offset) + %a),+,4}<%loop.header>
 ; CHECK-EMPTY:
 ; CHECK-NEXT:      Non vectorizable stores to invariant address were not found in loop.
 ; CHECK-NEXT:      SCEV assumptions:
