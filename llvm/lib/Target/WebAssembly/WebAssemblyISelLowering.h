@@ -56,6 +56,7 @@ private:
   bool isIntDivCheap(EVT VT, AttributeList Attr) const override;
   bool isVectorLoadExtDesirable(SDValue ExtVal) const override;
   bool isOffsetFoldingLegal(const GlobalAddressSDNode *GA) const override;
+  bool shouldFoldSelectOfLoads(unsigned AddressSpace) const override;
   EVT getSetCCResultType(const DataLayout &DL, LLVMContext &Context,
                          EVT VT) const override;
   void getTgtMemIntrinsic(SmallVectorImpl<IntrinsicInfo> &Infos,
