@@ -65,6 +65,39 @@ spirv.module Logical GLSL450 attributes {
 // Capability
 //===----------------------------------------------------------------------===//
 
+// Test requirements carried by BuiltIn decorations.
+
+// SubgroupId requires GroupNonUniform or Kernel. Select the capability allowed
+// by the target environment.
+// CHECK: requires #spirv.vce<v1.3, [GroupNonUniform, Shader, Matrix], []>
+spirv.module Logical GLSL450 attributes {
+  spirv.target_env = #spirv.target_env<
+    #spirv.vce<v1.3, [Shader, GroupNonUniform], []>, #spirv.resource_limits<>>
+} {
+  spirv.GlobalVariable @subgroup_id built_in("SubgroupId") : !spirv.ptr<i32, Input>
+}
+
+// SubgroupEqMask requires SPIR-V 1.3 and GroupNonUniformBallot or
+// SubgroupBallotKHR.
+// CHECK: requires #spirv.vce<v1.3, [GroupNonUniformBallot, Shader, GroupNonUniform, Matrix], []>
+spirv.module Logical GLSL450 attributes {
+  spirv.target_env = #spirv.target_env<
+    #spirv.vce<v1.3, [Shader, GroupNonUniformBallot], []>, #spirv.resource_limits<>>
+} {
+  spirv.GlobalVariable @subgroup_eq_mask built_in("SubgroupEqMask") : !spirv.ptr<vector<4xi32>, Input>
+}
+
+// BaseVertex requires the DrawParameters capability and
+// SPV_KHR_shader_draw_parameters extension.
+// CHECK: requires #spirv.vce<v1.0, [DrawParameters, Shader, Matrix], [SPV_KHR_shader_draw_parameters]>
+spirv.module Logical GLSL450 attributes {
+  spirv.target_env = #spirv.target_env<
+    #spirv.vce<v1.0, [Shader, DrawParameters], [SPV_KHR_shader_draw_parameters]>,
+    #spirv.resource_limits<>>
+} {
+  spirv.GlobalVariable @base_vertex built_in("BaseVertex") : !spirv.ptr<i32, Input>
+}
+
 // Test minimal capabilities.
 
 // CHECK: requires #spirv.vce<v1.0, [Shader, Matrix], []>
