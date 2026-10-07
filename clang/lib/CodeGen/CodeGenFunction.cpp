@@ -962,10 +962,11 @@ void CodeGenFunction::StartFunction(GlobalDecl GD, QualType RetTy,
     if (!Section.empty())
       Fn->addFnAttr("patchable-function-entry-section", Section);
   }
-  // Ensure that the entry block contains a patchable instruction. AArch64
-  // instructions are already atomically patchable, but an empty entry block
-  // would let branches to the next block target the function's first
-  // instruction.
+  // Ensure that the function entry can be hotpatched. On x86, the first
+  // instruction must be at least two bytes, so that it can be atomically
+  // replaced by a short jump. AArch64 instructions are already atomically
+  // patchable, but an empty entry block would let branches to the next block
+  // target the function's first instruction.
   if (CGM.getCodeGenOpts().HotPatch &&
       (getContext().getTargetInfo().getTriple().isX86() ||
        getContext().getTargetInfo().getTriple().isAArch64()) &&
