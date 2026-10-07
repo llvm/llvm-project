@@ -2341,9 +2341,6 @@ RValue CIRGenFunction::emitBuiltinExpr(const GlobalDecl &gd, unsigned builtinID,
   case Builtin::BIcoop_mat_scalar_neg:
   case Builtin::BIcoop_mat_init:
   case Builtin::BIcoop_mat_length:
-  case Builtin::BI__builtin_matrix_transpose:
-  case Builtin::BI__builtin_matrix_column_major_load:
-  case Builtin::BI__builtin_matrix_column_major_store:
     return errorBuiltinNYI(*this, e, builtinID);
   case Builtin::BI__builtin_isinf_sign: {
     CIRGenFunction::CIRGenFPOptionsRAII FPOptsRAII(*this, e);
