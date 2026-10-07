@@ -1195,7 +1195,7 @@ llvm::UnrollLoop(Loop *L, UnrollLoopOptions ULO, LoopInfo *LI,
 
   // Snapshot the blocks to be cloned after remainder generation, which may
   // delete blocks from L, but before cloning adds new blocks to L.
-  const std::vector<BasicBlock *> OriginalLoopBlocks = L->getBlocks();
+  const std::vector<BasicBlock *> PostRemainderLoopBlocks = L->getBlocks();
 
   // Loop Unrolling might create new loops. While we do preserve LoopInfo, we
   // might break loop-simplified form for these loops (as they, e.g., would
@@ -1415,7 +1415,7 @@ llvm::UnrollLoop(Loop *L, UnrollLoopOptions ULO, LoopInfo *LI,
   // routes which can lead to the exit: we can now reach it from the copied
   // iterations too.
   if (ULO.Count > 1) {
-    for (auto *BB : OriginalLoopBlocks) {
+    for (auto *BB : PostRemainderLoopBlocks) {
       auto *BBDomNode = DT->getNode(BB);
       SmallVector<BasicBlock *, 16> ChildrenToUpdate;
       for (auto *ChildDomNode : BBDomNode->children()) {
