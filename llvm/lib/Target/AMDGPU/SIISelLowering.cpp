@@ -3029,34 +3029,6 @@ void SITargetLowering::allocateSpecialEntryInputVGPRs(
   }
 }
 
-// Try to allocate a VGPR at the end of the argument list, or if no argument
-// VGPRs are left allocating a stack slot.
-// If \p Mask is given it indicates bitfield position in the register.
-// If \p Arg is given use it with new ]p Mask instead of allocating new.
-static ArgDescriptor allocateVGPR32Input(CCState &CCInfo, unsigned Mask = ~0u,
-                                         ArgDescriptor Arg = ArgDescriptor()) {
-  if (Arg.isSet())
-    return ArgDescriptor::createArg(Arg, Mask);
-
-  ArrayRef<MCPhysReg> ArgVGPRs = ArrayRef(AMDGPU::VGPR_32RegClass.begin(), 32);
-  unsigned RegIdx = CCInfo.getFirstUnallocated(ArgVGPRs);
-  if (RegIdx == ArgVGPRs.size()) {
-    // Spill to stack required.
-    int64_t Offset = CCInfo.AllocateStack(4, Align(4));
-
-    return ArgDescriptor::createStack(Offset, Mask);
-  }
-
-  unsigned Reg = ArgVGPRs[RegIdx];
-  Reg = CCInfo.AllocateReg(Reg);
-  assert(Reg != AMDGPU::NoRegister);
-
-  MachineFunction &MF = CCInfo.getMachineFunction();
-  Register LiveInVReg = MF.addLiveIn(Reg, &AMDGPU::VGPR_32RegClass);
-  MF.getRegInfo().setType(LiveInVReg, LLT::scalar(32));
-  return ArgDescriptor::createRegister(Reg, Mask);
-}
-
 static ArgDescriptor allocateSGPR32InputImpl(CCState &CCInfo,
                                              const TargetRegisterClass *RC,
                                              unsigned NumArgRegs) {
@@ -3100,28 +3072,6 @@ static void allocateSGPR64Input(CCState &CCInfo, ArgDescriptor &Arg) {
                                Arg.getRegister());
   } else
     Arg = allocateSGPR32InputImpl(CCInfo, &AMDGPU::SGPR_64RegClass, 16);
-}
-
-/// Allocate implicit function VGPR arguments at the end of allocated user
-/// arguments.
-void SITargetLowering::allocateSpecialInputVGPRs(
-    CCState &CCInfo, MachineFunction &MF, const SIRegisterInfo &TRI,
-    SIMachineFunctionInfo &Info) const {
-  const unsigned Mask = 0x3ff;
-  ArgDescriptor Arg;
-
-  if (Info.hasWorkItemIDX()) {
-    Arg = allocateVGPR32Input(CCInfo, Mask);
-    Info.setWorkItemIDX(Arg);
-  }
-
-  if (Info.hasWorkItemIDY()) {
-    Arg = allocateVGPR32Input(CCInfo, Mask << 10, Arg);
-    Info.setWorkItemIDY(Arg);
-  }
-
-  if (Info.hasWorkItemIDZ())
-    Info.setWorkItemIDZ(allocateVGPR32Input(CCInfo, Mask << 20, Arg));
 }
 
 /// Allocate implicit function VGPR arguments in fixed registers.
@@ -5171,8 +5121,6 @@ SDValue SITargetLowering::lowerSET_FPENV(SDValue Op, SelectionDAG &DAG) const {
 
 Register SITargetLowering::getRegisterByName(const char *RegName, LLT VT,
                                              const MachineFunction &MF) const {
-  const Function &Fn = MF.getFunction();
-
   Register Reg =
       StringSwitch<Register>(RegName)
           .Case("m0", AMDGPU::M0)
@@ -5189,18 +5137,14 @@ Register SITargetLowering::getRegisterByName(const char *RegName, LLT VT,
   if (!Reg)
     return Reg;
 
+  const SIRegisterInfo *TRI = Subtarget->getRegisterInfo();
   if (!Subtarget->hasFlatScrRegister() &&
-      Subtarget->getRegisterInfo()->regsOverlap(Reg, AMDGPU::FLAT_SCR)) {
-    Fn.getContext().emitError(Twine("invalid register \"" + StringRef(RegName) +
-                                    "\" for subtarget."));
-  }
+      TRI->regsOverlap(Reg, AMDGPU::FLAT_SCR))
+    return Register();
 
   if (!Subtarget->hasGloballyAddressableScratch() &&
-      Subtarget->getRegisterInfo()->regsOverlap(
-          Reg, AMDGPU::SRC_FLAT_SCRATCH_BASE)) {
-    Fn.getContext().emitError(Twine("invalid register \"" + StringRef(RegName) +
-                                    "\" for subtarget."));
-  }
+      TRI->regsOverlap(Reg, AMDGPU::SRC_FLAT_SCRATCH_BASE))
+    return Register();
 
   switch (Reg) {
   case AMDGPU::M0:
@@ -21123,8 +21067,15 @@ SITargetLowering::shouldExpandAtomicRMWInIR(const AtomicRMWInst *RMW) const {
   case AtomicRMWInst::USubSat: {
     if (Op == AtomicRMWInst::USubCond && !Subtarget->hasCondSubInsts())
       return AtomicExpansionKind::CmpXChg;
-    if (Op == AtomicRMWInst::USubSat && !Subtarget->hasSubClampInsts())
-      return AtomicExpansionKind::CmpXChg;
+    if (Op == AtomicRMWInst::USubSat) {
+      // The global and buffer forms predate the LDS and flat ones.
+      if (!Subtarget->hasSubClampInsts() ||
+          (AS == AMDGPUAS::LOCAL_ADDRESS &&
+           !Subtarget->hasAtomicDsCondSubClampInsts()) ||
+          (AS == AMDGPUAS::FLAT_ADDRESS &&
+           !Subtarget->hasAtomicCondSubClampFlatInsts()))
+        return AtomicExpansionKind::CmpXChg;
+    }
     if (Op == AtomicRMWInst::USubCond || Op == AtomicRMWInst::USubSat) {
       auto *IT = dyn_cast<IntegerType>(RMW->getType());
       if (!IT || IT->getBitWidth() != 32)

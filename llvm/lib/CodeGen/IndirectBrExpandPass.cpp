@@ -25,12 +25,9 @@
 ///
 //===----------------------------------------------------------------------===//
 
-#include "llvm/ADT/STLExtras.h"
 #include "llvm/ADT/Sequence.h"
 #include "llvm/ADT/SmallVector.h"
-#include "llvm/Analysis/BlockFrequencyInfo.h"
 #include "llvm/Analysis/DomTreeUpdater.h"
-#include "llvm/Analysis/LazyBlockFrequencyInfo.h"
 #include "llvm/CodeGen/IndirectBrExpand.h"
 #include "llvm/CodeGen/TargetPassConfig.h"
 #include "llvm/CodeGen/TargetSubtargetInfo.h"
@@ -39,21 +36,15 @@
 #include "llvm/IR/Dominators.h"
 #include "llvm/IR/Function.h"
 #include "llvm/IR/Instructions.h"
-#include "llvm/IR/ProfDataUtils.h"
 #include "llvm/InitializePasses.h"
 #include "llvm/Pass.h"
 #include "llvm/Support/ErrorHandling.h"
-#include "llvm/Support/ScaledNumber.h"
 #include "llvm/Target/TargetMachine.h"
 #include <optional>
 
 using namespace llvm;
 
 #define DEBUG_TYPE "indirectbr-expand"
-
-namespace llvm {
-extern cl::opt<bool> ProfcheckDisableMetadataFixes;
-} // namespace llvm
 
 namespace {
 
@@ -64,7 +55,6 @@ public:
   IndirectBrExpandLegacyPass() : FunctionPass(ID) {}
 
   void getAnalysisUsage(AnalysisUsage &AU) const override {
-    LazyBlockFrequencyInfoPass::getLazyBFIAnalysisUsage(AU);
     AU.addPreserved<DominatorTreeWrapperPass>();
   }
 
@@ -73,8 +63,8 @@ public:
 
 } // end anonymous namespace
 
-static bool runImpl(Function &F, const TargetLowering *TLI, DomTreeUpdater *DTU,
-                    function_ref<BlockFrequencyInfo *()> GetBFI);
+static bool runImpl(Function &F, const TargetLowering *TLI,
+                    DomTreeUpdater *DTU);
 
 PreservedAnalyses IndirectBrExpandPass::run(Function &F,
                                             FunctionAnalysisManager &FAM) {
@@ -86,9 +76,7 @@ PreservedAnalyses IndirectBrExpandPass::run(Function &F,
   auto *DT = FAM.getCachedResult<DominatorTreeAnalysis>(F);
   DomTreeUpdater DTU(DT, DomTreeUpdater::UpdateStrategy::Lazy);
 
-  bool Changed = runImpl(F, TLI, DT ? &DTU : nullptr, [&]() {
-    return &FAM.getResult<BlockFrequencyAnalysis>(F);
-  });
+  bool Changed = runImpl(F, TLI, DT ? &DTU : nullptr);
   if (!Changed)
     return PreservedAnalyses::all();
   PreservedAnalyses PA;
@@ -108,26 +96,13 @@ FunctionPass *llvm::createIndirectBrExpandPass() {
   return new IndirectBrExpandLegacyPass();
 }
 
-bool runImpl(Function &F, const TargetLowering *TLI, DomTreeUpdater *DTU,
-             function_ref<BlockFrequencyInfo *()> GetBFI) {
+bool runImpl(Function &F, const TargetLowering *TLI, DomTreeUpdater *DTU) {
   auto &DL = F.getDataLayout();
 
   SmallVector<IndirectBrInst *, 1> IndirectBrs;
-  SmallVector<uint64_t, 1> IndirectBrsBlockFrequencies;
-  SmallVector<uint64_t, 1> IndirectBrsBranchWeightSums;
-  bool SkipProfileUpdates = false;
-  BlockFrequencyInfo *BFI = nullptr;
-
-  struct IndirectBrSuccessor {
-    // The index into the IndirectBrs, IndirectBrsBlockFrequencies, and
-    // IndirectBrsBranchWeightSums vectors.
-    size_t IndirectBrIndex = 0;
-    uint64_t SuccessorBranchWeight = 0;
-  };
 
   // Set of all potential successors for indirectbr instructions.
-  DenseMap<const BasicBlock *, SmallVector<IndirectBrSuccessor>>
-      IndirectBrSuccToIndirectBr;
+  SmallPtrSet<BasicBlock *, 4> IndirectBrSuccs;
 
   // Build a list of indirectbrs that we want to rewrite.
   for (BasicBlock &BB : F)
@@ -141,34 +116,7 @@ bool runImpl(Function &F, const TargetLowering *TLI, DomTreeUpdater *DTU,
       }
 
       IndirectBrs.push_back(IBr);
-      const size_t CurrentIndirectBrIndex = IndirectBrs.size() - 1;
-      for (const BasicBlock *SuccessorBB : IBr->successors())
-        IndirectBrSuccToIndirectBr.insert({SuccessorBB, {}});
-
-      if (SkipProfileUpdates)
-        continue;
-      if (!BFI)
-        BFI = GetBFI();
-      std::optional<uint64_t> BlockFrequency = BFI->getBlockProfileCount(&BB);
-      if (!BlockFrequency.has_value()) {
-        SkipProfileUpdates = true;
-        continue;
-      }
-      IndirectBrsBlockFrequencies.push_back(*BlockFrequency);
-      SmallVector<uint32_t> IndirectBrBranchWeights;
-      bool HasBranchWeights =
-          extractBranchWeights(*IBr, IndirectBrBranchWeights);
-      if (!HasBranchWeights) {
-        SkipProfileUpdates = true;
-        continue;
-      }
-      for (const auto [SuccessorBB, SuccessorBranchWeight] :
-           zip_equal(IBr->successors(), IndirectBrBranchWeights))
-        IndirectBrSuccToIndirectBr[SuccessorBB].push_back(
-            {CurrentIndirectBrIndex, SuccessorBranchWeight});
-      IndirectBrsBranchWeightSums.push_back(sum_of(IndirectBrBranchWeights));
-      assert(IndirectBrsBranchWeightSums.size() == IndirectBrs.size() &&
-             "expected an identical number of blocks in both vectors");
+      IndirectBrSuccs.insert_range(IBr->successors());
     }
 
   if (IndirectBrs.empty())
@@ -179,13 +127,11 @@ bool runImpl(Function &F, const TargetLowering *TLI, DomTreeUpdater *DTU,
   // whose address escapes. We do that here and rewrite all the blockaddress
   // constants to just be those integer constants cast to a pointer type.
   SmallVector<BasicBlock *, 4> BBs;
-  SmallVector<ScaledNumber<uint64_t>, 4> BBWeights;
 
   for (BasicBlock &BB : F) {
     // Skip blocks that aren't successors to an indirectbr we're going to
     // rewrite.
-    auto IndirectBrSuccToIndirectBrIt = IndirectBrSuccToIndirectBr.find(&BB);
-    if (IndirectBrSuccToIndirectBrIt == IndirectBrSuccToIndirectBr.end())
+    if (!IndirectBrSuccs.count(&BB))
       continue;
 
     auto *BA = BlockAddress::lookup(&BB);
@@ -208,28 +154,6 @@ bool runImpl(Function &F, const TargetLowering *TLI, DomTreeUpdater *DTU,
     // expressions, for instance, where they are used to pass labels to
     // asm-goto. This part of the pass needs a rework.
     BA->replaceAllUsesWith(ConstantExpr::getIntToPtr(BBIndexC, BA->getType()));
-
-    if (SkipProfileUpdates)
-      continue;
-    ScaledNumber<uint64_t> BranchWeightSumsProduct(1, 0);
-    for (uint64_t BranchWeightSum : IndirectBrsBranchWeightSums)
-      BranchWeightSumsProduct *= ScaledNumber<uint64_t>(BranchWeightSum, 0);
-    ScaledNumber<uint64_t> BlockWeight(0, 0);
-    for (const auto &[IndirectBrIndex, BlockBranchProbability] :
-         IndirectBrSuccToIndirectBrIt->second) {
-      // If the branch weight sum is zero, skip adding the block weight or
-      // otherwise we end up dividing by zero.
-      const uint64_t CurrentBranchWeightSum =
-          IndirectBrsBranchWeightSums[IndirectBrIndex];
-      if (CurrentBranchWeightSum == 0)
-        continue;
-      BlockWeight += ScaledNumber<uint64_t>(
-                         IndirectBrsBlockFrequencies[IndirectBrIndex], 0) *
-                     ScaledNumber<uint64_t>(BlockBranchProbability, 0) *
-                     (BranchWeightSumsProduct /
-                      ScaledNumber<uint64_t>(CurrentBranchWeightSum, 0));
-    }
-    BBWeights.push_back(BlockWeight);
   }
 
   if (BBs.empty()) {
@@ -237,7 +161,7 @@ bool runImpl(Function &F, const TargetLowering *TLI, DomTreeUpdater *DTU,
     // cannot get a valid input and we can replace all of them with unreachable.
     SmallVector<DominatorTree::UpdateType, 8> Updates;
     if (DTU)
-      Updates.reserve(IndirectBrSuccToIndirectBr.size());
+      Updates.reserve(IndirectBrSuccs.size());
     for (auto *IBr : IndirectBrs) {
       if (DTU) {
         for (BasicBlock *SuccBB : IBr->successors())
@@ -247,7 +171,7 @@ bool runImpl(Function &F, const TargetLowering *TLI, DomTreeUpdater *DTU,
       IBr->eraseFromParent();
     }
     if (DTU) {
-      assert(Updates.size() == IndirectBrSuccToIndirectBr.size() &&
+      assert(Updates.size() == IndirectBrSuccs.size() &&
              "Got unexpected update count.");
       DTU->applyUpdates(Updates);
     }
@@ -282,10 +206,10 @@ bool runImpl(Function &F, const TargetLowering *TLI, DomTreeUpdater *DTU,
     SwitchBB = IBr->getParent();
     SwitchValue = GetSwitchValue(IBr);
     if (DTU) {
-      Updates.reserve(IndirectBrSuccToIndirectBr.size());
+      Updates.reserve(IndirectBrSuccs.size());
       for (BasicBlock *SuccBB : IBr->successors())
         Updates.push_back({DominatorTree::Delete, IBr->getParent(), SuccBB});
-      assert(Updates.size() == IndirectBrSuccToIndirectBr.size() &&
+      assert(Updates.size() == IndirectBrSuccs.size() &&
              "Got unexpected update count.");
     }
     IBr->eraseFromParent();
@@ -301,8 +225,7 @@ bool runImpl(Function &F, const TargetLowering *TLI, DomTreeUpdater *DTU,
     // Now replace the indirectbr instructions with direct branches to the
     // switch block and fill out the PHI operands.
     if (DTU)
-      Updates.reserve(IndirectBrs.size() +
-                      2 * IndirectBrSuccToIndirectBr.size());
+      Updates.reserve(IndirectBrs.size() + 2 * IndirectBrSuccs.size());
     for (auto *IBr : IndirectBrs) {
       SwitchPN->addIncoming(GetSwitchValue(IBr), IBr->getParent());
       UncondBrInst::Create(SwitchBB, IBr->getIterator());
@@ -335,28 +258,6 @@ bool runImpl(Function &F, const TargetLowering *TLI, DomTreeUpdater *DTU,
     DTU->applyUpdates(Updates);
   }
 
-  if (SkipProfileUpdates || ProfcheckDisableMetadataFixes) {
-    setExplicitlyUnknownBranchWeightsIfProfiled(*SI, DEBUG_TYPE);
-    return true;
-  }
-
-  // We need to convert the ScaledNumber weights (which might not be
-  // representable in 64 bits) back to normal 64 bit integers so we can apply
-  // them as metadata. They might not have the same scale though, so we find the
-  // max scale and then scale down any weights that have a scale less than the
-  // max scale. This ensures that all the weights have the same scale.
-  int16_t MaxScale = 0;
-  for (const ScaledNumber<uint64_t> &BBWeight : BBWeights)
-    MaxScale = std::max(MaxScale, BBWeight.getScale());
-  SmallVector<uint64_t, 4> ExtractedBBWeights;
-  ExtractedBBWeights.reserve(BBWeights.size());
-  for (ScaledNumber<uint64_t> &BBWeight : BBWeights) {
-    int16_t Shift = MaxScale - BBWeight.getScale();
-    assert(Shift >= 0 && "expected non-negative shift");
-    ExtractedBBWeights.push_back(BBWeight.getDigits() >> Shift);
-  }
-  setFittedBranchWeights(*SI, ExtractedBBWeights, false);
-
   return true;
 }
 
@@ -375,7 +276,5 @@ bool IndirectBrExpandLegacyPass::runOnFunction(Function &F) {
   if (auto *DTWP = getAnalysisIfAvailable<DominatorTreeWrapperPass>())
     DTU.emplace(DTWP->getDomTree(), DomTreeUpdater::UpdateStrategy::Lazy);
 
-  return runImpl(F, TLI, DTU ? &*DTU : nullptr, [&]() {
-    return &getAnalysis<LazyBlockFrequencyInfoPass>().getBFI();
-  });
+  return runImpl(F, TLI, DTU ? &*DTU : nullptr);
 }

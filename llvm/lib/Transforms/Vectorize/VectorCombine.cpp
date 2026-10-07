@@ -80,7 +80,7 @@ public:
                 const DominatorTree &DT, AAResults &AA, AssumptionCache &AC,
                 const DataLayout *DL, TTI::TargetCostKind CostKind,
                 bool TryEarlyFoldsOnly)
-      : F(F), Builder(F.getContext(), InstSimplifyFolder(*DL)), TTI(TTI),
+      : F(F), Builder(*F.getParent(), InstSimplifyFolder(*DL)), TTI(TTI),
         DT(DT), AA(AA), DL(DL), CostKind(CostKind),
         SQ(*DL, /*TLI=*/nullptr, &DT, &AC),
         TryEarlyFoldsOnly(TryEarlyFoldsOnly) {}
@@ -6586,8 +6586,11 @@ bool VectorCombine::foldDeinterleaveIntrinsics(Instruction &I) {
   Value *NewVecCast = Builder.CreateBitCast(DeinterleavedVal, NewVecTy);
   Value *NewDeinterleave = Builder.CreateIntrinsic(
       Intrinsic::vector_deinterleave2, {NewVecTy}, {NewVecCast});
+  Worklist.pushValue(NewVecCast);
+  Worklist.pushValue(NewDeinterleave);
   for (auto [Idx, MergeInst] : enumerate(MergeInsts)) {
     Value *NewField = Builder.CreateExtractValue(NewDeinterleave, Idx);
+    Worklist.pushValue(NewField);
     NewField = Builder.CreateBitCast(NewField, MergeInst->getType());
     replaceValue(*MergeInst, *NewField);
   }
