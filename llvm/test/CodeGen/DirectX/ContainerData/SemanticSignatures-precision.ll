@@ -4,7 +4,9 @@
 ; RUN: llc -filetype=obj %t/min.ll -o - | obj2yaml | FileCheck %s --check-prefix=MIN-PARTS
 ; RUN: llc -filetype=obj %t/native.ll -o - | obj2yaml | FileCheck %s --check-prefix=NATIVE-PARTS
 
-; The 16-bit elements are unused: flags must still describe the signature.
+; The frontend-provided layouts share a row in min-precision mode and use
+; separate rows in native 16-bit mode. The 16-bit elements are unused: flags
+; must still describe the signature.
 ; MIN: Outputs: 2 elements, 1 vectors
 ; MIN-NEXT: 0: A rows=1 cols=1 at 0:0 usage=0 dynamic=0
 ; MIN-NEXT: 1: B rows=1 cols=1 at 0:1 usage=0 dynamic=0
@@ -45,8 +47,8 @@ attributes #0 = { "hlsl.shader"="vertex" }
 !dx.semantic.signatures = !{!0}
 !0 = !{ptr @main, null, !1}
 !1 = !{!2, !3}
-!2 = !{i32 0, !"A", i32 8, i32 0, !4, i32 0, i32 1, i8 1, i32 -1, i8 -1, i8 0, i8 0, i32 0}
-!3 = !{i32 1, !"B", i32 9, i32 0, !4, i32 0, i32 1, i8 1, i32 -1, i8 -1, i8 0, i8 0, i32 0}
+!2 = !{i32 0, !"A", i32 8, i32 0, !4, i32 0, i32 1, i8 1, i32 0, i8 0, i8 0, i8 0, i32 0}
+!3 = !{i32 1, !"B", i32 9, i32 0, !4, i32 0, i32 1, i8 1, i32 0, i8 1, i8 0, i8 0, i32 0}
 !4 = !{i32 0}
 
 ;--- native.ll
@@ -58,6 +60,6 @@ attributes #0 = { "hlsl.shader"="vertex" }
 !dx.semantic.signatures = !{!0}
 !0 = !{ptr @main, null, !1}
 !1 = !{!2, !3}
-!2 = !{i32 0, !"A", i32 8, i32 0, !4, i32 0, i32 1, i8 1, i32 -1, i8 -1, i8 0, i8 0, i32 0}
-!3 = !{i32 1, !"B", i32 9, i32 0, !4, i32 0, i32 1, i8 1, i32 -1, i8 -1, i8 0, i8 0, i32 0}
+!2 = !{i32 0, !"A", i32 8, i32 0, !4, i32 0, i32 1, i8 1, i32 0, i8 0, i8 0, i8 0, i32 0}
+!3 = !{i32 1, !"B", i32 9, i32 0, !4, i32 0, i32 1, i8 1, i32 1, i8 0, i8 0, i8 0, i32 0}
 !4 = !{i32 0}

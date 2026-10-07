@@ -53,7 +53,7 @@ attributes #0 = { "hlsl.shader"="vertex" }
 !0 = !{ptr @main, !1, !2}
 !1 = !{!3}
 !2 = !{!4}
-; Already allocated canonical signatures are accepted. Stale masks are ignored.
+; Signatures have frontend-provided locations. Stale masks are ignored.
 !3 = !{i32 0, !"A", i32 9, i32 0, !5, i32 0, i32 1, i8 1, i32 0, i8 0, i8 15, i8 15, i32 0}
 !4 = !{i32 0, !"B", i32 9, i32 0, !5, i32 0, i32 1, i8 1, i32 0, i8 0, i8 15, i8 15, i32 0}
 !5 = !{i32 0}

@@ -103,7 +103,7 @@ attributes #0 = { "hlsl.shader"="vertex" }
 !dx.semantic.signatures = !{!0}
 !0 = !{ptr @main, !1, null}
 !1 = !{!2}
-!2 = !{i32 0, !"A", i32 9, i32 0, !3, i32 0, i32 1, i8 1, i32 -1, i8 -1, i8 0, i8 0, i32 0}
+!2 = !{i32 0, !"A", i32 9, i32 0, !3, i32 0, i32 1, i8 1, i32 0, i8 0, i8 0, i8 0, i32 0}
 !3 = !{i32 0}
 
 ;--- missing.ll
@@ -117,21 +117,21 @@ define void @main() #0 {
 attributes #0 = { "hlsl.shader"="vertex" }
 
 ;--- overflow.ll
-; OVERFLOW: entry 'main' output signature: signature elements do not fit in 32 rows (element 1)
-; Invalid total extent: A fills all 32 rows, leaving no space for B.
+; OVERFLOW: entry 'main' output signature: allocated signature element exceeds register bounds
+; Invalid start row (operand 8): B starts at 32, beyond the register space.
 target triple = "dxil-pc-shadermodel6.8-vertex"
 define void @main() #0 { ret void }
 attributes #0 = { "hlsl.shader"="vertex" }
 !dx.semantic.signatures = !{!0}
 !0 = !{ptr @main, null, !1}
 !1 = !{!2, !4}
-!2 = !{i32 0, !"A", i32 9, i32 0, !3, i32 0, i32 32, i8 4, i32 -1, i8 -1, i8 0, i8 0, i32 0}
+!2 = !{i32 0, !"A", i32 9, i32 0, !3, i32 0, i32 32, i8 4, i32 0, i8 0, i8 0, i8 0, i32 0}
 !3 = !{i32 0, i32 1, i32 2, i32 3, i32 4, i32 5, i32 6, i32 7, i32 8, i32 9, i32 10, i32 11, i32 12, i32 13, i32 14, i32 15, i32 16, i32 17, i32 18, i32 19, i32 20, i32 21, i32 22, i32 23, i32 24, i32 25, i32 26, i32 27, i32 28, i32 29, i32 30, i32 31}
-!4 = !{i32 1, !"B", i32 9, i32 0, !5, i32 0, i32 1, i8 1, i32 -1, i8 -1, i8 0, i8 0, i32 0}
+!4 = !{i32 1, !"B", i32 9, i32 0, !5, i32 0, i32 1, i8 1, i32 32, i8 0, i8 0, i8 0, i32 0}
 !5 = !{i32 0}
 
 ;--- partial.ll
-; PARTIAL: entry 'main' input signature: partially allocated signatures are not supported
+; PARTIAL: entry 'main' input signature: signature element 1 ('B') has no allocated location
 ; Invalid mixed allocation: A has a location (operands 8/9), but B does not.
 target triple = "dxil-pc-shadermodel6.8-vertex"
 define void @main() #0 { ret void }
