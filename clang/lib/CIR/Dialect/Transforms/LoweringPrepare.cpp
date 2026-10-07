@@ -495,7 +495,12 @@ struct LoweringPreparePass
       if (!dtorRegion.empty()) {
         assert(dtorRegion.hasOneBlock() && "Enforced by MaxSizedRegion<1>");
 
-        emitGlobalGuardedDtorRegion(builder, globalOp, dtorRegion, !threadsafe,
+        // Whether the destructor is registered with __cxa_thread_atexit depends
+        // on the variable being thread_local, not on the guard being
+        // thread-safe, so make sure we use getTlsModel here instead of
+        // threadsafe.
+        emitGlobalGuardedDtorRegion(builder, globalOp, dtorRegion,
+                                    globalOp.getTlsModel().has_value(),
                                     *insertBlock);
       }
       builder.setInsertionPointToEnd(insertBlock);
