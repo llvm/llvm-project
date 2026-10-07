@@ -63,7 +63,12 @@ static SourceLocation getMacroDebugLoc(const CodeGenModule &CGM,
                                        SourceLocation Loc) {
   if (CGM.getCodeGenOpts().DebugInfoMacroExpansionLoc)
     return Loc;
-  return CGM.getContext().getSourceManager().getFileLoc(Loc);
+  // Resolving the file location of very deep macro expansion chains is
+  // expensive, so fall back to the expansion location for them.
+  const SourceManager &SM = CGM.getContext().getSourceManager();
+  SourceLocation FileLoc =
+      SM.getFileLoc(Loc, CGM.getCodeGenOpts().DebugInfoMacroMaxDepth);
+  return FileLoc.isValid() ? FileLoc : SM.getExpansionLoc(Loc);
 }
 
 static uint32_t getTypeAlignIfRequired(const Type *Ty, const ASTContext &Ctx) {
