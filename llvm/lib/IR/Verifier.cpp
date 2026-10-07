@@ -6208,10 +6208,8 @@ void Verifier::visitIntrinsicCall(Intrinsic::ID ID, CallBase &Call) {
             "const x86_amx is not allowed in argument!");
   }
 
-  // The signature is already checked against the .td files, so the checks
-  // below can safely assume the argument and return types match the
-  // specification. Bail out silently if it is invalid. The error is reported
-  // at the intrinsic declaration.
+  // Verify intrinsic signature, so following checks can rely on it. The actual
+  // error is reported at the intrinsic declaration.
   SmallVector<Type *, 4> OverloadTys;
   if (!Intrinsic::isSignatureValid(ID, Call.getFunctionType(), OverloadTys))
     return;
