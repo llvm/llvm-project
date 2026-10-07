@@ -302,8 +302,8 @@ PPCTargetMachine::PPCTargetMachine(const Target &T, const Triple &TT,
                                getEffectivePPCCodeModel(TT, CM, JIT), OL),
       TLOF(createTLOF(getTargetTriple())),
       Endianness(TT.isLittleEndian() ? Endian::LITTLE : Endian::BIG) {
-  // TODO: RegAllocFast adds copies when an untied read of the tied value precedes the
-  // tied use, e.g. XXPERM.
+  // TODO: RegAllocFast adds copies when an untied read of the tied value
+  // precedes the tied use, e.g. XXPERM.
   setEnableTiedFastRegAlloc(false);
   initAsmInfo();
 }
