@@ -537,16 +537,26 @@ KnownFPClass KnownFPClass::fsub(const KnownFPClass &KnownLHS,
   return fadd(KnownLHS, fneg(KnownRHS), Mode);
 }
 
-KnownFPClass KnownFPClass::fmul(const KnownFPClass &KnownLHS,
-                                const KnownFPClass &KnownRHS,
+KnownFPClass KnownFPClass::fmul(const KnownFPClass &KnownLHS_,
+                                const KnownFPClass &KnownRHS_,
                                 DenormalMode Mode) {
+  KnownFPClass KnownLHS = applyInputDenormalMode(KnownLHS_, Mode);
+  KnownFPClass KnownRHS = applyInputDenormalMode(KnownRHS_, Mode);
+
   KnownFPClass Known;
 
   Known.propagateNonSNaN(KnownLHS, KnownRHS);
 
   // +X * +Y or -X * -Y => +Q
   // +X * -Y or -X * +Y => -Q
-  Known.propagateXorSign(KnownLHS, KnownRHS, Mode);
+  if ((KnownLHS.isKnownNever(fcNegative) &&
+       KnownRHS.isKnownNever(fcNegative)) ||
+      (KnownLHS.isKnownNever(fcPositive) && KnownRHS.isKnownNever(fcPositive)))
+    Known.knownNot(fcNegative);
+  if ((KnownLHS.isKnownNever(fcPositive) &&
+       KnownRHS.isKnownNever(fcNegative)) ||
+      (KnownLHS.isKnownNever(fcNegative) && KnownRHS.isKnownNever(fcPositive)))
+    Known.knownNot(fcPositive);
 
   // Inf * Y => Inf or NaN
   if (KnownLHS.isKnownAlways(fcInf | fcNan) ||
@@ -558,17 +568,13 @@ KnownFPClass KnownFPClass::fmul(const KnownFPClass &KnownLHS,
       KnownLHS.isKnownAlways(fcZero | fcNan))
     Known.knownNot(fcNormal | fcSubnormal | fcInf);
 
-  if (!KnownLHS.isKnownNeverNaN() || !KnownRHS.isKnownNeverNaN())
-    return Known;
-
   // 0 * +/-inf => NaN
-  if ((KnownRHS.isKnownNeverInfinity() ||
-       KnownLHS.isKnownNeverLogicalZero(Mode)) &&
-      (KnownLHS.isKnownNeverInfinity() ||
-       KnownRHS.isKnownNeverLogicalZero(Mode)))
+  if (KnownLHS.isKnownNeverNaN() && KnownRHS.isKnownNeverNaN() &&
+      (KnownRHS.isKnownNeverInfinity() || KnownLHS.isKnownNeverZero()) &&
+      (KnownLHS.isKnownNeverInfinity() || KnownRHS.isKnownNeverZero()))
     Known.knownNot(fcNan);
 
-  return Known;
+  return applyOutputDenormalMode(Known, Mode);
 }
 
 // TODO: This generalizes to known ranges
@@ -600,9 +606,12 @@ KnownFPClass KnownFPClass::fmul(const KnownFPClass &KnownLHS,
   return Known;
 }
 
-KnownFPClass KnownFPClass::fdiv(const KnownFPClass &KnownLHS,
-                                const KnownFPClass &KnownRHS,
+KnownFPClass KnownFPClass::fdiv(const KnownFPClass &KnownLHS_,
+                                const KnownFPClass &KnownRHS_,
                                 DenormalMode Mode) {
+  KnownFPClass KnownLHS = applyInputDenormalMode(KnownLHS_, Mode);
+  KnownFPClass KnownRHS = applyInputDenormalMode(KnownRHS_, Mode);
+
   KnownFPClass Known;
 
   Known.propagateNonSNaN(KnownLHS, KnownRHS);
@@ -610,15 +619,21 @@ KnownFPClass KnownFPClass::fdiv(const KnownFPClass &KnownLHS,
   // Only 0/0, Inf/Inf produce NaN.
   if (KnownLHS.isKnownNeverNaN() && KnownRHS.isKnownNeverNaN() &&
       (KnownLHS.isKnownNeverInfinity() || KnownRHS.isKnownNeverInfinity()) &&
-      (KnownLHS.isKnownNeverLogicalZero(Mode) ||
-       KnownRHS.isKnownNeverLogicalZero(Mode))) {
+      (KnownLHS.isKnownNeverZero() || KnownRHS.isKnownNeverZero())) {
     Known.knownNot(fcNan);
   }
 
   //  X / -0.0 => -Inf (or NaN)
   // +X / +Y or -X / -Y => +Q
   // +X / -Y or -X / +Y => -Q
-  Known.propagateXorSign(KnownLHS, KnownRHS, Mode);
+  if ((KnownLHS.isKnownNever(fcNegative) &&
+       KnownRHS.isKnownNever(fcNegative)) ||
+      (KnownLHS.isKnownNever(fcPositive) && KnownRHS.isKnownNever(fcPositive)))
+    Known.knownNot(fcNegative);
+  if ((KnownLHS.isKnownNever(fcPositive) &&
+       KnownRHS.isKnownNever(fcNegative)) ||
+      (KnownLHS.isKnownNever(fcNegative) && KnownRHS.isKnownNever(fcPositive)))
+    Known.knownNot(fcPositive);
 
   // Normal and subnormal results require two non-zero finite operands.
   if ((KnownLHS.isKnownNever(fcNegNormal | fcNegSubnormal) &&
@@ -640,7 +655,7 @@ KnownFPClass KnownFPClass::fdiv(const KnownFPClass &KnownLHS,
   if (KnownRHS.isKnownAlways(fcZero))
     Known.knownNot(fcFinite);
 
-  return Known;
+  return applyOutputDenormalMode(Known, Mode);
 }
 
 KnownFPClass KnownFPClass::fdiv_self(const KnownFPClass &KnownSrc,

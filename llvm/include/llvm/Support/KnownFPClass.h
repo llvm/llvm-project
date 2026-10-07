@@ -451,27 +451,6 @@ struct KnownFPClass {
       knownNot(fcNan);
   }
 
-  // Propagate knowledge for operations whose result sign is the xor of the
-  // operand signs, such as multiply and divide. This only rules out possible
-  // non-NaN sign classes. NaNs do not have a constrained sign class here.
-  void propagateXorSign(const KnownFPClass &LHS, const KnownFPClass &RHS,
-                        DenormalMode Mode) {
-    const bool LHSCannotHavePositiveInput =
-        LHS.isKnownNever(fcPositive) && LHS.isKnownNeverLogicalPosZero(Mode);
-    const bool RHSCannotHavePositiveInput =
-        RHS.isKnownNever(fcPositive) && RHS.isKnownNeverLogicalPosZero(Mode);
-    if ((LHS.isKnownNever(fcNegative) && RHS.isKnownNever(fcNegative)) ||
-        (LHSCannotHavePositiveInput && RHSCannotHavePositiveInput))
-      knownNot(fcNegative);
-
-    if ((LHSCannotHavePositiveInput && RHS.isKnownNever(fcNegative)) ||
-        (LHS.isKnownNever(fcNegative) && RHSCannotHavePositiveInput)) {
-      knownNot(fcPosInf | fcPosNormal | fcPosSubnormal);
-      if (!Mode.outputsMayBePositiveZero())
-        knownNot(fcPosZero);
-    }
-  }
-
   /// Propagate knowledge from a source value that could be a denormal or
   /// zero. We have to be conservative since output flushing is not guaranteed,
   /// so known-never-zero may not hold.
