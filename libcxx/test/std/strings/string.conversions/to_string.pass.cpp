@@ -102,7 +102,7 @@ void test_float() {
   }
 }
 
-# if TEST_STD_VER >= 26
+#if TEST_STD_VER >= 26
 constexpr bool test_constexpr() {
   assert(std::to_string(0) == "0");
   assert(std::to_string(-12345) == "-12345");
@@ -115,7 +115,7 @@ constexpr bool test_constexpr() {
   assert(std::to_string(std::numeric_limits<unsigned long long>::max()) == "18446744073709551615");
   return true;
 }
-# endif
+#endif
 
 int main(int, char**) {
   test_signed<int>();
