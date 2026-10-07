@@ -3109,19 +3109,23 @@ public:
           builder, loc, totalSize,
           builder.createConvert(loc, indexType, extent));
 
+    mlir::Type shapeElementType = builder.getIntPtrType();
+    mlir::Value totalSizeAsShapeElement =
+        builder.createConvert(loc, shapeElementType, totalSize);
+
     mlir::Value one = builder.createIntegerConstant(loc, indexType, 1);
     mlir::Value unitShape = fir::ShapeOp::create(builder, loc, one);
     mlir::Type shapeExprType =
-        hlfir::ExprType::get(builder.getContext(), {1}, indexType,
+        hlfir::ExprType::get(builder.getContext(), {1}, shapeElementType,
                              /*polymorphic=*/false);
 
     auto genShapeKernel = [&](mlir::Location loc, fir::FirOpBuilder &builder,
                               mlir::ValueRange) -> hlfir::Entity {
-      return hlfir::Entity{totalSize};
+      return hlfir::Entity{totalSizeAsShapeElement};
     };
     mlir::Value shapeExpr = hlfir::genElementalOp(
-        loc, builder, indexType, unitShape, /*typeParams=*/{}, genShapeKernel,
-        /*isUnordered=*/true,
+        loc, builder, shapeElementType, unitShape, /*typeParams=*/{},
+        genShapeKernel, /*isUnordered=*/true,
         /*polymorphicMold=*/mlir::Value{}, shapeExprType);
 
     auto reshape = hlfir::ReshapeOp::create(
