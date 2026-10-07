@@ -121,3 +121,12 @@ abstract interface
   end function
 end interface
 end submodule
+
+program p
+abstract interface
+  !ERROR: 'f4' may not have a MODULE prefix in an ABSTRACT interface body
+  module function f4()
+    integer :: f4
+  end function
+end interface
+end program
