@@ -62,5 +62,5 @@
 ; CHECK-DAG: .b8 splat_field_pad[32] = {0, 0, 128, 63, 0, 0, 128, 63, 0, 0, 128, 63, 0, 0, 0, 0, 254, 255, 255, 255};
 @splat_field_pad = global {<3 x float>, i32} {<3 x float> splat(float 1.0), i32 -2}
 
-; CHECK-DAG: .b8 splat_arr_pad[16] = {205, 171, 205, 171, 205, 171, 0, 0, 1, 0, 1, 0, 1};
-@splat_arr_pad = global [2 x <3 x i16>] [<3 x i16> splat(i16 43981), <3 x i16> splat(i16 1)]
+; CHECK-DAG: .b8 splat_arr_pad[16] = {205, 171, 205, 171, 205, 171, 0, 0, 1, 1, 1, 1, 1, 1};
+@splat_arr_pad = global [2 x <3 x i16>] [<3 x i16> splat(i16 43981), <3 x i16> splat(i16 257)]
