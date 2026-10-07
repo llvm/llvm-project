@@ -430,10 +430,12 @@ def LLVM_LoadOp : LLVM_MemAccessOpBase<"load",
   let assemblyFormat = [{
     (`volatile` $volatile_^)? $addr
     (`atomic` (`syncscope` `(` $syncscope^ `)`)? $ordering^)?
-    (`invariant` $invariant^)?
-    (`invariant_group` $invariantGroup^)?
-    (`dereferenceable` `` $dereferenceable^)?
-    (`range` `` $range^)?
+    oilist(
+      `invariant` $invariant |
+      `invariant_group` $invariantGroup |
+      `dereferenceable` `` $dereferenceable |
+      `range` `` $range
+    )
     prop-dict
     attr-dict `:` qualified(type($addr)) `->` type($res)
   }];
@@ -524,7 +526,7 @@ def LLVM_StoreOp : LLVM_MemAccessOpBase<"store",
   let assemblyFormat = [{
     (`volatile` $volatile_^)? $value `,` $addr
     (`atomic` (`syncscope` `(` $syncscope^ `)`)? $ordering^)?
-    (`invariant_group` $invariantGroup^)?
+    oilist(`invariant_group` $invariantGroup)
     prop-dict
     attr-dict `:` type($value) `,` qualified(type($addr))
   }];
@@ -1427,7 +1429,8 @@ def LLVM_AddressOfOp : LLVM_Op<"mlir.addressof",
 
 def LLVM_GlobalOp : LLVM_Op<"mlir.global",
     [IsolatedFromAbove, SingleBlockImplicitTerminator<"ReturnOp">, SymbolName,
-     SymbolVisibility, Symbol]> {
+     SymbolVisibility, Symbol,
+     DeclareOpInterfaceMethods<SymbolUserOpInterface>]> {
   let arguments = (ins
     TypeAttr:$global_type,
     UnitAttr:$constant,
@@ -2078,7 +2081,8 @@ def LLVM_ComdatOp
 
 def LLVM_LLVMFuncOp : LLVM_Op<"func", [
     AffineScope, AutomaticAllocationScope, IsolatedFromAbove, SymbolName,
-    SymbolVisibility, FunctionOpInterface
+    SymbolVisibility, FunctionOpInterface,
+    DeclareOpInterfaceMethods<SymbolUserOpInterface>
   ]> {
   let summary = "LLVM dialect function.";
 

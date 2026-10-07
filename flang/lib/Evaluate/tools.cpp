@@ -1327,8 +1327,12 @@ GetHostAndDeviceSymbols(const Expr<SomeType> &expr) {
 
 bool HasCUDAImplicitTransfer(const Expr<SomeType> &expr) {
   auto [hostSymbols, deviceSymbols] = GetHostAndDeviceSymbols(expr);
-  bool hasConstant{HasConstant(expr)};
-  return (hasConstant || (hostSymbols.size() > 0)) && deviceSymbols.size() > 0;
+  if (deviceSymbols.empty()) {
+    return false;
+  }
+  // Device data used in an operation, even one with no other operand such as
+  // a negation or a conversion, is copied to the host to evaluate it there.
+  return HasConstant(expr) || !hostSymbols.empty() || !IsVariable(expr);
 }
 
 bool HasOnlyCUDAConstntImplicitTransfer(const Expr<SomeType> &expr) {
@@ -1548,11 +1552,6 @@ static SignedNumericExpr<CAT, KIND> buildSignedAdd(
       true};
 }
 
-template <typename T>
-static std::optional<Expr<SomeType>> tryBuildSplitSumExpressionTree(const T &) {
-  return std::nullopt;
-}
-
 template <common::TypeCategory CAT, int KIND>
 static std::optional<NumericExpr<CAT, KIND>> tryBuildSplitSumExpressionTree(
     const NumericExpr<CAT, KIND> &expr) {
@@ -1596,24 +1595,6 @@ static std::optional<NumericExpr<CAT, KIND>> tryBuildSplitSumExpressionTree(
   assert(result.isPositive &&
       "the first flattened term and therefore the split sum are positive");
   return std::move(result.expr);
-}
-
-template <common::TypeCategory CAT>
-static std::optional<Expr<SomeType>> tryBuildSplitSumExpressionTree(
-    const Expr<SomeKind<CAT>> &expr) {
-  // Keep the supported categories explicit: integer reassociation requires a
-  // separate intermediate-range policy.
-  if constexpr (CAT == common::TypeCategory::Real ||
-      CAT == common::TypeCategory::Complex) {
-    return common::visit(
-        [&](const auto &typedExpr) -> std::optional<Expr<SomeType>> {
-          if (auto result = tryBuildSplitSumExpressionTree(typedExpr))
-            return Expr<SomeType>{std::move(*result)};
-          return std::nullopt;
-        },
-        expr.u);
-  }
-  return std::nullopt;
 }
 
 template <typename> struct IsExpr : std::false_type {};

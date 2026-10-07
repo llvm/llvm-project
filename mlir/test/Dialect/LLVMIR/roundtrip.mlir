@@ -614,6 +614,13 @@ func.func @invariant_group_load(%ptr : !llvm.ptr) -> i32 {
   func.return %0 : i32
 }
 
+// CHECK-LABEL: @load_flags_any_order
+func.func @load_flags_any_order(%ptr : !llvm.ptr) -> !llvm.ptr {
+  // CHECK: llvm.load %{{.+}} invariant invariant_group dereferenceable<bytes = 4> : !llvm.ptr -> !llvm.ptr
+  %0 = llvm.load %ptr dereferenceable<bytes = 4> invariant_group invariant : !llvm.ptr -> !llvm.ptr
+  func.return %0 : !llvm.ptr
+}
+
 // CHECK-LABEL: @invariant_group_store
 func.func @invariant_group_store(%val: i32, %ptr : !llvm.ptr) {
   // CHECK: llvm.store %{{.+}}, %{{.+}} invariant_group : i32, !llvm.ptr
