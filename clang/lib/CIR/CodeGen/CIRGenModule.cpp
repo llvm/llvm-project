@@ -4048,25 +4048,10 @@ void CIRGenModule::release() {
           builder.getStringAttr(getModuleInitializerName(primary)));
 
     // The imported modules whose initializers the global init function of
-    // this translation unit calls first. A module interface or partition unit
-    // calls those of the modules it exports, imports, or imports in its
-    // global or private module fragment; any other translation unit calls
-    // those of the modules it imported. A header-like module has no
-    // initializer function, and a named module that needs none is skipped.
-    llvm::SmallSetVector<clang::Module *, 8> imports;
-    if (isInterfaceUnit) {
-      for (auto exported : primary->Exports)
-        imports.insert(exported.first);
-      imports.insert_range(primary->Imports);
-      for (clang::Module *sub : primary->submodules())
-        imports.insert_range(sub->Imports);
-    } else {
-      imports.insert_range(importedModules);
-    }
+    // this translation unit calls first, selected as in classic CodeGen.
     llvm::SmallVector<mlir::Attribute> importedInits;
-    for (clang::Module *mod : imports) {
-      if (mod->isHeaderLikeModule() || !mod->isNamedModuleInterfaceHasInit())
-        continue;
+    for (clang::Module *mod : CodeGenUtils::importedModulesToInitialize(
+             primary, importedModules.getArrayRef())) {
       // A module that only the interface unit's export or import lists name
       // takes the location of the module declaration.
       auto importLoc = moduleImportLocs.find(mod);
