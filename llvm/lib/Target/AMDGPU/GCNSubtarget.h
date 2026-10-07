@@ -124,8 +124,10 @@ public:
       AMDGPU::TargetIDSetting SramEccSetting = AMDGPU::TargetIDSetting::Any);
   ~GCNSubtarget() override;
 
-  GCNSubtarget &initializeSubtargetDependencies(const Triple &TT, StringRef GPU,
-                                                StringRef FS);
+  GCNSubtarget &
+  initializeSubtargetDependencies(const Triple &TT, StringRef GPU, StringRef FS,
+                                  AMDGPU::TargetIDSetting XnackSetting,
+                                  AMDGPU::TargetIDSetting SramEccSetting);
 
   /// Diagnose inconsistent subtarget features before attempting to codegen
   /// function \p F.
