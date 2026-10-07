@@ -2891,11 +2891,10 @@ bool PPCInstrInfo::optimizeCmpPostRA(MachineInstr &CmpMI) const {
 
 bool PPCInstrInfo::getMemOperandsWithOffsetWidth(
     const MachineInstr &LdSt, SmallVectorImpl<const MachineOperand *> &BaseOps,
-    int64_t &Offset, bool &OffsetIsScalable, LocationSize &Width,
-    const TargetRegisterInfo *TRI) const {
+    int64_t &Offset, bool &OffsetIsScalable, LocationSize &Width) const {
   const MachineOperand *BaseOp;
   OffsetIsScalable = false;
-  if (!getMemOperandWithOffsetWidth(LdSt, BaseOp, Offset, Width, TRI))
+  if (!getMemOperandWithOffsetWidth(LdSt, BaseOp, Offset, Width, &RI))
     return false;
   BaseOps.push_back(BaseOp);
   return true;

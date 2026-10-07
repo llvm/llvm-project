@@ -18820,8 +18820,7 @@ NamedDecl *Sema::ActOnFriendFunctionDecl(Scope *S, Declarator &D,
     FriendDecl *Friend = FriendDecl::Create(
         Context, CurContext, D.getIdentifierLoc(), ND, DS.getFriendSpecLoc());
     Friend->setAccess(AS_public);
-    if (!isa<FunctionTemplateDecl>(ND))
-      Friend->setInvalidDecl();
+    Friend->setInvalidDecl();
     CurContext->addDecl(Friend);
     return ND;
   }

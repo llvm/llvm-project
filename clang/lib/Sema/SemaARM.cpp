@@ -434,7 +434,7 @@ bool SemaARM::BuiltinARMAtomicStoreHintCall(unsigned BuiltinID,
              << Hint->getType() << Hint->getSourceRange();
 
     if (llvm::toAArch64MemoryHint(HintAP->getZExtValue()) ==
-        llvm::AArch64MemoryHint::HINT_NONE) {
+        llvm::AArch64MemoryHint::NONE) {
       Diag(TheCall->getBeginLoc(), diag::warn_atomic_hint_has_invalid_hint_type)
           << *HintAP << Hint->getSourceRange();
       return false;
@@ -1316,9 +1316,11 @@ bool SemaARM::CheckAArch64BuiltinFunctionCall(const TargetInfo &TI,
   // Only check the valid encoding range. Any constant in this range would be
   // converted to a register of the form S2_2_C3_C4_5. Let the hardware throw
   // an exception for incorrect registers. This matches MSVC behavior.
+  // Bit 14 is o0, i.e. op0 - 2, so op0 == 2 registers have it clear and encode
+  // below 0x4000.
   if (BuiltinID == AArch64::BI_ReadStatusReg ||
       BuiltinID == AArch64::BI_WriteStatusReg)
-    return SemaRef.BuiltinConstantArgRange(TheCall, 0, 0x4000, 0x7fff);
+    return SemaRef.BuiltinConstantArgRange(TheCall, 0, 0, 0x7fff);
 
   if (BuiltinID == AArch64::BI__sys)
     return SemaRef.BuiltinConstantArgRange(TheCall, 0, 0, 0x3fff);

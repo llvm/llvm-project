@@ -240,7 +240,7 @@ void ConcatInputSection::writeTo(uint8_t *buf) {
       const Symbol *fromSym = cast<Symbol *>(r.referent);
       const Relocation &minuend = relocs[++i];
       uint64_t minuendVA;
-      if (const Symbol *toSym = minuend.referent.dyn_cast<Symbol *>())
+      if (const Symbol *toSym = dyn_cast<Symbol *>(minuend.referent))
         minuendVA = toSym->getVA() + minuend.addend;
       else {
         auto *referentIsec = cast<InputSection *>(minuend.referent);

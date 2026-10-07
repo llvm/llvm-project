@@ -268,9 +268,16 @@ public:
           // workaround that.
           if (Name == "WTF" && PreviousName == "switchOn")
             return true;
-          // Treat every argument of functions in std::ranges as noescape.
-          if (Name == "std" && PreviousName == "ranges")
-            return true;
+          if (Name == "std") {
+            // Treat every argument of functions in std::ranges as noescape.
+            if (PreviousName == "ranges")
+              return true;
+            // Treat every argument of call_once as noescape even though only
+            // the second argument is lambda since we can't add annotation to
+            // a std function.
+            if (PreviousName == "call_once")
+              return true;
+          }
           PreviousName = Name;
         }
         return false;
@@ -583,7 +590,8 @@ public:
         if (Model->checksForInteriorDestruction()) {
           if (!CaptureInit)
             continue;
-          if (isCaptureOriginSafeForInteriorDestruction(CaptureInit, Origin))
+          if (isCaptureOriginSafeForInteriorDestruction(CaptureInit, Origin,
+                                                        CapturedVarQualType))
             continue;
         }
         reportBug(C, CapturedVar, CapturedVarQualType, L, Origin);
@@ -596,7 +604,8 @@ public:
   }
 
   bool isCaptureOriginSafeForInteriorDestruction(const Expr *CaptureInit,
-                                                 const Expr *&Origin) const {
+                                                 const Expr *&Origin,
+                                                 QualType SinkType) const {
     return tryToFindPtrOrigin(
         CaptureInit, /*StopAtFirstRefCountedObj=*/false,
         Model->checksForInteriorDestruction(),
@@ -624,7 +633,8 @@ public:
           }
           if (IsSafe)
             return true;
-          if (Model->isSafeExpr(CaptureOrigin, PtrIsLifetimeBoundToOrigin))
+          if (Model->isSafeExpr(CaptureOrigin, PtrIsLifetimeBoundToOrigin,
+                                SinkType))
             return true;
           if (!Origin)
             Origin = CaptureOrigin;

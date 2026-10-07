@@ -279,6 +279,14 @@ public:
 
   bool isLegalMaskedExpandLoad(Type *DataTy, Align Alignment) const override;
 
+  bool isLegalSpeculativeLoad(Type *DataType,
+                              unsigned AddressSpace) const override;
+
+  bool hasMultiVectorLoadStore(
+      unsigned NumVectors, TTI::MaskSource Mask, VectorType *VectorTy,
+      bool IsStore,
+      std::optional<Instruction::CastOps> CastHint) const override;
+
   void getUnrollingPreferences(Loop *L, ScalarEvolution &SE,
                                TTI::UnrollingPreferences &UP,
                                OptimizationRemarkEmitter *ORE) const override;
@@ -527,6 +535,11 @@ public:
                                        StackOffset BaseOffset, bool HasBaseReg,
                                        int64_t Scale,
                                        unsigned AddrSpace) const override;
+
+  bool isLegalAddressingMode(Type *Ty, GlobalValue *BaseGV, int64_t BaseOffset,
+                             bool HasBaseReg, int64_t Scale, unsigned AddrSpace,
+                             Instruction *I = nullptr,
+                             int64_t ScalableOffset = 0) const override;
 
   bool enableSelectOptimize() const override {
     return ST->enableSelectOptimize();

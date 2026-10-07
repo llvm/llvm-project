@@ -8,6 +8,7 @@
 
 #include "RISCVTargetTransformInfo.h"
 #include "MCTargetDesc/RISCVMatInt.h"
+#include "RISCVVectorUtils.h"
 #include "llvm/ADT/STLExtras.h"
 #include "llvm/Analysis/TargetTransformInfo.h"
 #include "llvm/CodeGen/BasicTTIImpl.h"
@@ -19,6 +20,7 @@
 #include "llvm/IR/PatternMatch.h"
 #include "llvm/Transforms/InstCombine/InstCombiner.h"
 #include <cmath>
+#include <limits>
 #include <optional>
 using namespace llvm;
 using namespace llvm::PatternMatch;
@@ -497,9 +499,15 @@ RISCVTTIImpl::getConstantPoolLoadCost(Type *Ty,
   // Add a cost of address generation + the cost of the load. The address
   // is expected to be a PC relative offset to a constant pool entry
   // using auipc/addi.
-  return getStaticDataAddrGenerationCost(CostKind) +
+  InstructionCost Cost = 0;
+  Cost = getStaticDataAddrGenerationCost(CostKind) +
          getMemoryOpCost(Instruction::Load, Ty, DL.getABITypeAlign(Ty),
                          /*AddressSpace=*/0, CostKind);
+  // Estimate the amount of 4 byte instructions that could fit
+  // instead of the constant pool, ignoring any extra padding.
+  if (CostKind == TTI::TCK_CodeSize)
+    Cost += ((InstructionCost)DL.getTypeAllocSize(Ty)) / 4;
+  return Cost;
 }
 
 static bool isRepeatedConcatMask(ArrayRef<int> Mask, int &SubVectorSize) {
@@ -708,6 +716,14 @@ InstructionCost RISCVTTIImpl::getSlideCost(FixedVectorType *Tp,
   if (SrcInfo[1].second == 0)
     std::swap(SrcInfo[0], SrcInfo[1]);
 
+  if (ST->hasStdExtZvzip() && LT.second.getScalarSizeInBits() != 1) {
+    unsigned Factor;
+    if (isPairEven(SrcInfo, Mask, Factor) && Factor == 1)
+      return getRISCVInstructionCost(RISCV::VPAIRE_VV, LT.second, CostKind);
+    if (isPairOdd(SrcInfo, Mask, Factor) && Factor == 1)
+      return getRISCVInstructionCost(RISCV::VPAIRO_VV, LT.second, CostKind);
+  }
+
   InstructionCost FirstSlideCost = 0;
   if (SrcInfo[0].second != 0) {
     unsigned Opcode = GetSlideOpcode(SrcInfo[0].second);
@@ -731,6 +747,32 @@ InstructionCost RISCVTTIImpl::getSlideCost(FixedVectorType *Tp,
       VectorType::get(IntegerType::getInt1Ty(Tp->getContext()), EC);
   InstructionCost MaskCost = getConstantPoolLoadCost(MaskTy, CostKind);
   return FirstSlideCost + SecondSlideCost + MaskCost;
+}
+
+std::optional<MVT> RISCVTTIImpl::getZvzipVZIPCostVT(MVT InterleavedVT) const {
+  assert(InterleavedVT.isScalableVector() && "Expected a scalable vector type");
+  if (!InterleavedVT.getVectorElementCount().isKnownEven())
+    return std::nullopt;
+
+  unsigned EltBits = InterleavedVT.getScalarSizeInBits();
+  unsigned MinSize = InterleavedVT.getSizeInBits().getKnownMinValue();
+  unsigned LMULOctuple = MinSize / (RISCV::RVVBitsPerBlock / 8);
+  // Perform the 2 * SEW <= LMUL * min(ELEN, VLEN) check.
+  if (EltBits * 16 >
+      LMULOctuple * std::min(ST->getELen(), ST->getRealMinVLen()))
+    return std::nullopt;
+  return InterleavedVT;
+}
+
+std::optional<MVT> RISCVTTIImpl::getZvzipVUNZIPCostVT(MVT InterleavedVT) const {
+  assert(InterleavedVT.isScalableVector() && "Expected a scalable vector type");
+  if (!InterleavedVT.getVectorElementCount().isKnownEven())
+    return std::nullopt;
+
+  MVT DeinterleavedVT = InterleavedVT.getHalfNumVectorElementsVT();
+  if (RISCVTargetLowering::getLMUL(DeinterleavedVT) == RISCVVType::LMUL_8)
+    return std::nullopt;
+  return InterleavedVT;
 }
 
 InstructionCost RISCVTTIImpl::getShuffleCost(
@@ -1409,6 +1451,28 @@ RISCVTTIImpl::getStridedMemoryOpCost(const MemIntrinsicCostAttributes &MICA,
   // know exactly what VL will be.
   auto &VTy = *cast<VectorType>(DataTy);
   unsigned NumLoads = getEstimatedVLFor(&VTy);
+  // Performant implementations of the vector extension will coalesce
+  // elements if they fall on the same cache line
+  uint64_t CacheLineBytes = ST->getCacheLineSize();
+  if (!CacheLineBytes) // If no value, use default value of 64
+    CacheLineBytes = 64;
+  if (const ConstantInt *StrideCI =
+          dyn_cast_or_null<ConstantInt>(MICA.getStrideVal())) {
+    int64_t Stride = StrideCI->getSExtValue();
+    // Bail early to avoid UB with std:abs() call
+    if (Stride != std::numeric_limits<int64_t>::min() && Stride != 0) {
+      uint64_t AbsStride = (uint64_t)std::abs(Stride);
+      if (AbsStride < CacheLineBytes) {
+        uint64_t MaxCombines = ST->getMaxVectorCoalesceElts();
+        if ((CacheLineBytes / AbsStride) >= MaxCombines)
+          NumLoads = divideCeil(NumLoads, MaxCombines);
+        else
+          // If we were to calculate CacheLineBytes / AbsStride first, would
+          // lose accuracy
+          NumLoads = divideCeil((NumLoads * AbsStride), CacheLineBytes);
+      }
+    }
+  }
   return SplitCost + NumLoads * TTI::TCC_Basic;
 }
 
@@ -1899,6 +1963,48 @@ RISCVTTIImpl::getIntrinsicInstrCost(const IntrinsicCostAttributes &ICA,
             getRISCVInstructionCost({RISCV::VSLIDEDOWN_VI, RISCV::VMV_X_S},
                                     ValLT.second, CostKind);
     return Cost;
+  }
+  case Intrinsic::vector_interleave2:
+  case Intrinsic::vector_deinterleave2: {
+    if (!ST->hasStdExtZvzip())
+      break;
+
+    bool IsInterleave = ICA.getID() == Intrinsic::vector_interleave2;
+    Type *InterleavedTy = IsInterleave ? RetTy : ICA.getArgTypes().front();
+    // ISel does not select vzip.vv if either interleave2 input is undef.
+    if (IsInterleave && !ICA.isTypeBasedOnly() &&
+        any_of(ICA.getArgs(),
+               [](const Value *Arg) { return isa<UndefValue>(Arg); }))
+      break;
+    if (InterleavedTy->getScalarSizeInBits() == 1)
+      break;
+
+    if (auto *FVT = dyn_cast<FixedVectorType>(InterleavedTy)) {
+      auto *HalfFVT = FixedVectorType::getHalfElementsVectorType(FVT);
+      unsigned HalfVF = HalfFVT->getNumElements();
+      if (IsInterleave)
+        return getShuffleCost(TTI::SK_PermuteTwoSrc, FVT, HalfFVT, CostKind,
+                              createInterleaveMask(HalfVF, 2), 0, nullptr);
+      InstructionCost Cost = 0;
+      for (unsigned Start = 0; Start != 2; ++Start)
+        Cost += getShuffleCost(TTI::SK_PermuteSingleSrc, HalfFVT, FVT, CostKind,
+                               createStrideMask(Start, 2, HalfVF), 0, nullptr);
+      return Cost;
+    }
+
+    std::pair<InstructionCost, MVT> LT = getTypeLegalizationCost(InterleavedTy);
+    if (!LT.second.isScalableVector())
+      break;
+    if (IsInterleave) {
+      if (std::optional<MVT> CostVT = getZvzipVZIPCostVT(LT.second))
+        return LT.first *
+               getRISCVInstructionCost(RISCV::VZIP_VV, *CostVT, CostKind);
+    } else if (std::optional<MVT> CostVT = getZvzipVUNZIPCostVT(LT.second)) {
+      return LT.first *
+             getRISCVInstructionCost({RISCV::VUNZIPE_V, RISCV::VUNZIPO_V},
+                                     *CostVT, CostKind);
+    }
+    break;
   }
   }
 
