@@ -21,6 +21,7 @@
 #include "llvm/MC/DXContainerPSVInfo.h"
 #include "llvm/Support/Error.h"
 #include "llvm/Support/raw_ostream.h"
+#include <array>
 #include <set>
 
 using namespace llvm;
@@ -73,7 +74,7 @@ bool isIntegerComponent(ElementType Type) {
 Error parseSignature(Metadata *MD,
                      SmallVectorImpl<SemanticSignatureElement> &Out,
                      ModuleSignatureInfo &Info, Triple::EnvironmentType Stage,
-                     IOType IO) {
+                     IOType IO, unsigned &Extent) {
   if (!MD)
     return Error::success();
   auto *List = dyn_cast<MDNode>(MD);
@@ -83,6 +84,7 @@ Error parseSignature(Metadata *MD,
     return signatureError("too many signature elements");
 
   std::set<std::pair<std::string, uint32_t>> Semantics;
+  std::array<uint8_t, MaxSignatureRows> AllocatedColumns = {};
   for (const MDOperand &Op : List->operands()) {
     auto *Node = dyn_cast_or_null<MDNode>(Op);
     if (Error Err = checkElementNode(Node))
@@ -100,23 +102,30 @@ Error parseSignature(Metadata *MD,
       return signatureError("signature row count must be within 1-32");
     if (E.SemanticName.empty() || E.SemanticName.contains('\0'))
       return signatureError("invalid semantic name");
-    if (getSemanticKind(E.SemanticName) != E.SemanticKind)
-      return signatureError("semantic name and kind disagree");
     if (E.CompType != ElementType::F16 && E.CompType != ElementType::F32 &&
         !isIntegerComponent(E.CompType))
       return signatureError("unsupported signature component type");
     if (E.GSStream != 0)
       return signatureError("nonzero stream requires a geometry output");
-    auto Interpretation = getInterpretationKind(E.SemanticKind, Stage, IO);
+    auto NamedKind = getSemanticKind(E.SemanticName);
+    auto Interpretation = getInterpretationKind(NamedKind, Stage, IO);
     if (Interpretation == SemanticInterpretation::Invalid)
       return signatureError("invalid or unsupported semantic for this stage "
                             "and signature category");
     if (Interpretation == SemanticInterpretation::NotAllocated)
       return signatureError("semantic accessed by a dedicated intrinsic must "
                             "not appear in an input/output signature");
-    if (E.isAllocated() &&
-        (E.StartRow >= MaxSignatureRows ||
-         E.Rows > MaxSignatureRows - E.StartRow || E.StartCol + E.Cols > 4))
+    auto ExpectedKind = Interpretation == SemanticInterpretation::Arbitrary
+                            ? dxbc::PSV::SemanticKind::Arbitrary
+                            : NamedKind;
+    if (E.SemanticKind != ExpectedKind)
+      return signatureError("semantic name and kind disagree at this signature "
+                            "point");
+    if (!E.isAllocated())
+      return signatureError("signature element " + Twine(E.SigId) + " ('" +
+                            E.SemanticName + "') has no allocated location");
+    if (E.StartRow >= MaxSignatureRows ||
+        E.Rows > MaxSignatureRows - E.StartRow || E.StartCol + E.Cols > 4)
       return signatureError(
           "allocated signature element exceeds register bounds");
     if (E.InterpMode == dxbc::PSV::InterpolationMode::Invalid)
@@ -139,59 +148,36 @@ Error parseSignature(Metadata *MD,
          (E.CompType != ElementType::I32 && E.CompType != ElementType::U32)))
       return signatureError("SV_VertexID requires a scalar 32-bit integer");
 
-    // SV names can be interpreted as arbitrary semantics at a signature point.
-    if (Interpretation == SemanticInterpretation::Arbitrary)
-      E.SemanticKind = dxbc::PSV::SemanticKind::Arbitrary;
-    if (Stage == Triple::Pixel && IO == IOType::In) {
-      using Mode = dxbc::PSV::InterpolationMode;
-      if (E.InterpMode == Mode::Undefined)
-        E.InterpMode = isIntegerComponent(E.CompType) ? Mode::Constant
-                       : E.SemanticKind == dxbc::PSV::SemanticKind::Position
-                           ? Mode::LinearNoperspective
-                           : Mode::Linear;
-      if (isIntegerComponent(E.CompType) && E.InterpMode != Mode::Constant)
-        return signatureError(
-            "integer pixel inputs require constant interpolation");
-    }
-    E.SemanticName = Info.Names.insert(E.SemanticName).first->getKey();
-    // Recompute masks from the surviving signature accesses, not stale
-    // metadata.
-    E.UsageMask = E.DynIndexMask = 0;
-    Out.push_back(std::move(E));
-  }
-  return Error::success();
-}
+    if (Stage == Triple::Vertex && IO == IOType::In &&
+        (E.StartRow != Extent || E.StartCol != 0))
+      return signatureError("vertex inputs require stacked locations in "
+                            "signature order (element " +
+                            Twine(E.SigId) + ")");
+    if (Interpretation == SemanticInterpretation::Target &&
+        (E.StartRow != E.SemanticIndices.front() || E.StartCol != 0))
+      return signatureError("pixel target location must match its semantic "
+                            "index at column 0");
+    if (Stage == Triple::Pixel && IO == IOType::In &&
+        isIntegerComponent(E.CompType) &&
+        E.InterpMode != dxbc::PSV::InterpolationMode::Constant)
+      return signatureError(
+          "integer pixel inputs require constant interpolation");
 
-Error packSignature(SmallVectorImpl<SemanticSignatureElement> &Elements,
-                    Triple::EnvironmentType Stage, IOType IO, bool Native16,
-                    unsigned &Extent) {
-  if (Elements.empty())
-    return Error::success();
-  SmallVector<std::pair<uint32_t, uint8_t>> Locations;
-  bool AnyAllocated = false, AllAllocated = true;
-  for (auto &E : Elements) {
-    AnyAllocated |= E.isAllocated();
-    AllAllocated &= E.isAllocated();
-    Locations.emplace_back(E.StartRow, E.StartCol);
-    E.StartRow = UnallocatedRow;
-    E.StartCol = UnallocatedCol;
-  }
-  if (AnyAllocated && !AllAllocated)
-    return signatureError("partially allocated signatures are not supported");
-  Expected<unsigned> Packed =
-      Stage == Triple::Vertex && IO == IOType::In
-          ? packSignatureStacked(Elements, Stage, IO)
-      : Stage == Triple::Pixel && IO == IOType::Out
-          ? packSignatureIndexed(Elements, Stage, IO)
-          : packSignaturePrefixStable(Elements, Stage, IO, Native16);
-  if (!Packed)
-    return Packed.takeError();
-  Extent = *Packed;
-  for (auto [E, Loc] : zip(Elements, Locations)) {
-    if (AllAllocated && Loc != std::make_pair(E.StartRow, E.StartCol))
-      return signatureError("preallocated signature does not match the "
-                            "stage's packing layout");
-    E.UsageMask <<= E.StartCol;
+    // Ensure that signatures are packed without overlap.
+    uint8_t Mask = E.getDeclaredMask();
+    for (unsigned Row = E.StartRow; Row != E.StartRow + E.Rows; ++Row) {
+      if (AllocatedColumns[Row] & Mask)
+        return signatureError("signature elements overlap at row " +
+                              Twine(Row) + " (element " + Twine(E.SigId) + ")");
+      AllocatedColumns[Row] |= Mask;
+    }
+    Extent = std::max(Extent, E.StartRow + E.Rows);
+    E.SemanticName = Info.Names.insert(E.SemanticName).first->getKey();
+
+    // Access masks will be recomputed so reset to 0 here.
+    E.UsageMask = 0;
+    E.DynIndexMask = 0;
+    Out.push_back(std::move(E));
   }
   return Error::success();
 }
@@ -257,8 +243,7 @@ Error analyzeAccess(const IntrinsicInst &I, EntrySignature &Sig) {
   if (!CorrectType)
     return AccessError("signature access type disagrees with its element");
   uint8_t Mask = ((1U << Width) - 1) << Col->getZExtValue();
-  // As in DXC, the input usage mask includes conditional reads as well.
-  E.UsageMask |= Mask;
+  E.UsageMask |= Mask << E.StartCol;
   if (!Row)
     E.DynIndexMask |= Mask;
   return Error::success();
@@ -325,10 +310,10 @@ Expected<ModuleSignatureInfo> analyzeModule(Module &M,
                               " signature: " + toString(std::move(Err)));
       };
       if (Error Err = parseSignature(Record->getOperand(1), Sig.Inputs, Info,
-                                     Sig.Stage, IOType::In))
+                                     Sig.Stage, IOType::In, Sig.InputVectors))
         return AddContext(std::move(Err), "input");
       if (Error Err = parseSignature(Record->getOperand(2), Sig.Outputs, Info,
-                                     Sig.Stage, IOType::Out))
+                                     Sig.Stage, IOType::Out, Sig.OutputVectors))
         return AddContext(std::move(Err), "output");
       for (const Instruction &I : instructions(F))
         if (auto *II = dyn_cast<IntrinsicInst>(&I);
@@ -336,12 +321,6 @@ Expected<ModuleSignatureInfo> analyzeModule(Module &M,
           if (Error Err = analyzeAccess(*II, Sig))
             return signatureError("entry '" + F->getName() +
                                   "': " + toString(std::move(Err)));
-      if (Error Err = packSignature(Sig.Inputs, Sig.Stage, IOType::In,
-                                    Sig.UseNative16Bit, Sig.InputVectors))
-        return AddContext(std::move(Err), "input");
-      if (Error Err = packSignature(Sig.Outputs, Sig.Stage, IOType::Out,
-                                    Sig.UseNative16Bit, Sig.OutputVectors))
-        return AddContext(std::move(Err), "output");
       buildDependencyMap(Sig);
       Info.Entries.try_emplace(F, std::move(Sig));
     }

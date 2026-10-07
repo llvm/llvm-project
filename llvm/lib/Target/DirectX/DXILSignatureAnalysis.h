@@ -25,9 +25,6 @@ struct PSVRuntimeInfo;
 
 namespace dxil {
 
-/// Finalized signature information, independent of the source metadata and of
-/// instructions replaced by op lowering. Element usage masks are register-
-/// relative; dynamic-index masks are element-relative, as in the DXIL ABI.
 struct EntrySignature {
   Triple::EnvironmentType Stage;
   SmallVector<hlsl::SemanticSignatureElement> Inputs;

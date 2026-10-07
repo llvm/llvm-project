@@ -1,9 +1,12 @@
-; RUN: opt -S -dxil-intrinsic-expansion -dxil-translate-metadata %s | FileCheck %s
-; RUN: opt -S -passes='dxil-intrinsic-expansion,dxil-translate-metadata,dxil-op-lower,print<dxil-signature>' %s 2>&1 | FileCheck %s --check-prefix=ANALYSIS
-; RUN: llc -O0 -filetype=obj %s -o %t.dxbc
+; RUN: split-file %s %t
+; RUN: opt -S -dxil-intrinsic-expansion -dxil-translate-metadata %t/shader.ll | FileCheck %s
+; RUN: opt -S -passes='dxil-intrinsic-expansion,dxil-translate-metadata,dxil-op-lower,print<dxil-signature>' %t/shader.ll 2>&1 | FileCheck %s --check-prefix=ANALYSIS
+; RUN: opt -S -passes=dxil-translate-metadata %t/unused-masks.ll | FileCheck %s --check-prefix=UNUSED
+; RUN: llc -O0 -filetype=obj %t/shader.ll -o %t.dxbc
 ; RUN: llvm-objcopy --dump-section=DXIL=%t.bc %t.dxbc
 ; RUN: llvm-dis %t.bc -o - | FileCheck %s --check-prefixes=CHECK,OPS
 
+;--- shader.ll
 target triple = "dxil-pc-shadermodel6.8-vertex"
 
 define void @main() #0 {
@@ -60,3 +63,15 @@ attributes #0 = { "hlsl.shader"="vertex" }
 ; CHECK-DAG: ![[USE2]] = !{i32 3, i32 3}
 ; CHECK-DAG: ![[USE1]] = !{i32 3, i32 1}
 ; CHECK-NOT: !dx.semantic.signatures
+
+;--- unused-masks.ll
+; Stale masks must be cleared on unused elements, not copied into DXIL metadata.
+; UNUSED: !{i32 0, !"A", i8 9, i8 0, !{{[0-9]+}}, i8 0, i32 1, i8 1, i32 0, i8 0, null}
+target triple = "dxil-pc-shadermodel6.8-vertex"
+define void @main() #0 { ret void }
+attributes #0 = { "hlsl.shader"="vertex" }
+!dx.semantic.signatures = !{!0}
+!0 = !{ptr @main, !1, !1}
+!1 = !{!2}
+!2 = !{i32 0, !"A", i32 9, i32 0, !3, i32 0, i32 1, i8 1, i32 0, i8 0, i8 15, i8 15, i32 0}
+!3 = !{i32 0}
