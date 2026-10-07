@@ -14,7 +14,7 @@ module attributes {
     cuda_is_device = false, hip = false, gpu_rdc = false, openmp = false,
     openmp_is_target_device = false, clang_abi_compat = 16>
 } {
-  cir.global "private" internal dso_local static_local_guard<"_ZGVZ1gvE1x"> @_ZZ1gvE1x = #cir.int<0> : !s32i align(4) static_local_info<local = true, tls = none, is_inline = false, tsk = undeclared>
+  cir.global "private" internal dso_local dynamic_init_guard<"_ZGVZ1gvE1x"> @_ZZ1gvE1x = #cir.int<0> : !s32i align(4) dynamic_init_info<local = true, tls = none, is_inline = false, tsk = undeclared>
 
   cir.func private @_Z1fv() -> !s32i
 
