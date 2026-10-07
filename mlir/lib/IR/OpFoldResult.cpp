@@ -40,6 +40,24 @@ OpFoldResults::OpFoldResults(LogicalResult status) {
   inPlace = status.succeeded();
 }
 
+OpFoldResults::OpFoldResults(OpFoldResult replacement) {
+  if (replacement)
+    replacements.push_back(replacement);
+}
+
+OpFoldResults OpFoldResults::fromLegacy(LogicalResult status,
+                                        ArrayRef<OpFoldResult> results) {
+  if (failed(status))
+    return failure();
+  if (results.empty())
+    return success();
+  assert(llvm::all_of(results, llvm::identity{}) &&
+         "legacy fold returned a null result");
+  return results;
+}
+
+void OpFoldResults::setModifiedInPlace(bool modified) { inPlace = modified; }
+
 //===----------------------------------------------------------------------===//
 // NormalizedOpFoldResults
 //===----------------------------------------------------------------------===//
@@ -95,4 +113,11 @@ bool NormalizedOpFoldResults::replacesAll() const {
 
 ArrayRef<OpFoldResult> NormalizedOpFoldResults::getReplacements() const {
   return replacements;
+}
+
+OpFoldResults detail::convertSingleResultFold(Operation *op,
+                                              OpFoldResult result) {
+  if (dyn_cast_if_present<Value>(result) == op->getResult(0))
+    return success();
+  return result;
 }

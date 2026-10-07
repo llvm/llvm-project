@@ -85,6 +85,16 @@ def TestSimpleEnum : I32Enum<"SimpleEnum", "", [
   let cppNamespace = "::test";
 }
 
+// The kinds of `#test.fold_ref`.
+def TestFoldRefKind : I32Enum<"FoldRefKind", "", [
+    I32EnumCase<"Keep", 0, "keep">,
+    I32EnumCase<"Result", 1, "result">,
+    I32EnumCase<"Operand", 2, "operand">,
+    I32EnumCase<"OperandAttr", 3, "operand_attr">,
+  ]> {
+  let cppNamespace = "::test";
+}
+
 def TestSimpleEnum8: I8Enum<"SimpleEnum8", "", [
     I8EnumCase<"a", 254>,
     I8EnumCase<"b", 255>,

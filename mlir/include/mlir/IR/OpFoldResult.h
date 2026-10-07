@@ -88,8 +88,15 @@ protected:
 /// NormalizedOpFoldResults before a driver reads it.
 class [[nodiscard]] OpFoldResults : public detail::OpFoldResultsBase {
 public:
+  /// Failure: the fold did not apply and the IR is unchanged.
+  OpFoldResults() = default;
   /// success(): the op changed in place. failure(): the fold did not apply.
   OpFoldResults(LogicalResult status);
+  /// One replacement. Valid only when the op has exactly one result at run
+  /// time. A null replacement, or the op's own result, keeps the result, so the
+  /// fold fails. Unlike `OpFoldResult fold`, the op's own result does not mean
+  /// in place; use success() or setModifiedInPlace() for an in-place change.
+  OpFoldResults(OpFoldResult replacement);
   /// One replacement per range element. An empty range is a failure.
   template <typename RangeT,
             typename = std::enable_if_t<
@@ -100,6 +107,16 @@ public:
   OpFoldResults(RangeT &&range) {
     llvm::append_range(replacements, range);
   }
+
+  /// Convert the result of a legacy vector fold with the strict legacy
+  /// contract: failure stays failure, success with an empty vector means "in
+  /// place", and success with a full vector has one replacement per result.
+  static OpFoldResults fromLegacy(LogicalResult status,
+                                  ArrayRef<OpFoldResult> results);
+
+  /// Set whether the fold changed the op in place (operands, attributes,
+  /// properties, or regions).
+  void setModifiedInPlace(bool modified = true);
 };
 
 /// The result of a fold as drivers read it: no replacement, or one replacement
@@ -139,6 +156,12 @@ inline bool succeeded(const NormalizedOpFoldResults &results) {
 inline bool failed(const NormalizedOpFoldResults &results) {
   return !succeeded(results);
 }
+
+namespace detail {
+/// Convert the result of a single-result fold of `op`: null is a failure, the
+/// op's own result means "in place", and anything else replaces the result.
+OpFoldResults convertSingleResultFold(Operation *op, OpFoldResult result);
+} // namespace detail
 } // namespace mlir
 
 #endif // MLIR_IR_OPFOLDRESULT_H

@@ -224,6 +224,18 @@ LogicalResult TestCopyCountAttr::verify(
 }
 
 //===----------------------------------------------------------------------===//
+// TestFoldRefAttr
+//===----------------------------------------------------------------------===//
+
+LogicalResult
+TestFoldRefAttr::verify(function_ref<InFlightDiagnostic()> emitError,
+                        FoldRefKind kind, std::optional<unsigned> index) {
+  if ((kind == FoldRefKind::Keep) == index.has_value())
+    return emitError() << "`keep` takes no index, and the other kinds need one";
+  return success();
+}
+
+//===----------------------------------------------------------------------===//
 // TestSymbolRefAttr
 //===----------------------------------------------------------------------===//
 
