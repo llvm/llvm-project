@@ -711,10 +711,10 @@ public:
   }
 
   /// Return true if bounds attributes follow the -fbounds-safety programming
-  /// model, including its attributes-only mode.
-  ///
-  /// Always false until that model is implemented upstream.
-  bool hasBoundsSafetyAttributes() const { return false; }
+  /// model. Downstream, which has the full -fbounds-safety implementation, uses
+  /// this predicate to gate behavior that differs from upstream. Remove it once
+  /// that divergence is resolved.
+  bool hasBoundsSafetyAttributes() const { return BoundsSafety; }
 
   /// Return true if atomicrmw operations targeting allocations in private
   /// memory are undefined.

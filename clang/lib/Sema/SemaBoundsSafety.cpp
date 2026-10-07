@@ -146,7 +146,7 @@ bool Sema::ValidateBoundsAttrTypeShape(QualType Ty, SourceLocation AttrLoc,
     InvalidTypeKind = CountedByInvalidPointeeTypeKind::FUNCTION;
   } else if (!Flags.CountInBytes &&
              PointeeTy->isStructureTypeWithFlexibleArrayMember()) {
-    if (Ty->isArrayType() && !getLangOpts().BoundsSafety) {
+    if (Ty->isArrayType()) {
       // Warn for compatibility with Linux kernel code using counted_by on a FAM
       // of structs with FAMs. Computing these bounds requires traversing the
       // elements at runtime.
