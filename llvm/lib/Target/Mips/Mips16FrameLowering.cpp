@@ -51,7 +51,7 @@ void Mips16FrameLowering::emitPrologue(MachineFunction &MF,
   if (StackSize == 0 && !MFI.adjustsStack()) return;
 
   // Adjust stack.
-  TII.makeFrame(Mips::SP, StackSize, MBB, MBBI);
+  TII.makeFrame(Mips::R29, StackSize, MBB, MBBI);
 
   CFIInstBuilder CFIBuilder(MBB, MBBI, MachineInstr::NoFlags);
   CFIBuilder.buildDefCFAOffset(StackSize);
@@ -64,8 +64,8 @@ void Mips16FrameLowering::emitPrologue(MachineFunction &MF,
   }
 
   if (hasFP(MF))
-    BuildMI(MBB, MBBI, dl, TII.get(Mips::MoveR3216), Mips::S0)
-      .addReg(Mips::SP).setMIFlag(MachineInstr::FrameSetup);
+    BuildMI(MBB, MBBI, dl, TII.get(Mips::MoveR3216), Mips::R16)
+      .addReg(Mips::R29).setMIFlag(MachineInstr::FrameSetup);
 }
 
 void Mips16FrameLowering::emitEpilogue(MachineFunction &MF,
@@ -81,12 +81,12 @@ void Mips16FrameLowering::emitEpilogue(MachineFunction &MF,
     return;
 
   if (hasFP(MF))
-    BuildMI(MBB, MBBI, dl, TII.get(Mips::Move32R16), Mips::SP)
-      .addReg(Mips::S0);
+    BuildMI(MBB, MBBI, dl, TII.get(Mips::Move32R16), Mips::R29)
+      .addReg(Mips::R16);
 
   // Adjust stack.
   // assumes stacksize multiple of 8
-  TII.restoreFrame(Mips::SP, StackSize, MBB, MBBI);
+  TII.restoreFrame(Mips::R29, StackSize, MBB, MBBI);
 }
 
 bool Mips16FrameLowering::spillCalleeSavedRegisters(
@@ -106,7 +106,7 @@ bool Mips16FrameLowering::spillCalleeSavedRegisters(
     // It's killed at the spill, unless the register is RA and return address
     // is taken.
     MCRegister Reg = I.getReg();
-    bool IsRAAndRetAddrIsTaken = (Reg == Mips::RA)
+    bool IsRAAndRetAddrIsTaken = (Reg == Mips::R31)
       && MF->getFrameInfo().isReturnAddressTaken();
     if (!IsRAAndRetAddrIsTaken)
       MBB.addLiveIn(Reg);
@@ -144,11 +144,11 @@ void Mips16FrameLowering::determineCalleeSaves(MachineFunction &MF,
       *static_cast<const Mips16InstrInfo *>(STI.getInstrInfo());
   const MipsRegisterInfo &RI = TII.getRegisterInfo();
   const BitVector Reserved = RI.getReservedRegs(MF);
-  bool SaveS2 = Reserved[Mips::S2];
+  bool SaveS2 = Reserved[Mips::R18];
   if (SaveS2)
-    SavedRegs.set(Mips::S2);
+    SavedRegs.set(Mips::R18);
   if (hasFP(MF))
-    SavedRegs.set(Mips::S0);
+    SavedRegs.set(Mips::R16);
 }
 
 const MipsFrameLowering *

@@ -104,8 +104,8 @@ class HWR<bits<16> Enc, string n> : MipsReg<Enc, n>;
 let Namespace = "Mips" in {
   // General Purpose Registers
   // Registers whose ABI names differ between the O, N and P ABIs use
-  // ABI-independent R<n> record names; see the ABI aliases below.
-  // Use MipsABIInfo accessors for ABI roles.
+  // ABI-independent R<n> record names. For ABI-specific roles use the
+  // aliases above (TableGen) or MipsABIInfo accessors (C++).
   let isConstant = true in
   def R0   : MipsGPRReg< 0, "zero", "zero">,              DwarfRegNum<[0]>;
   def R1   : MipsGPRReg< 1, "1", "at">,                   DwarfRegNum<[1]>;
@@ -301,232 +301,110 @@ let Namespace = "Mips" in {
 }
 
 //===----------------------------------------------------------------------===//
-//  ABI register aliases
-//===----------------------------------------------------------------------===//
-
-// R2-R3 and R8-R15 have different names in the O32 (O), N32/N64 (N) and
-// P32/P64 (P) ABIs. Provide aliases for each ABI; the unsuffixed O names are
-// kept for compatibility. MipsMCTargetDesc.h has the matching C++ aliases.
-
-// O32 names.
-defvar V0 = R2;
-defvar V1 = R3;
-defvar T0 = R8;
-defvar T1 = R9;
-defvar T2 = R10;
-defvar T3 = R11;
-defvar T4 = R12;
-defvar T5 = R13;
-defvar T6 = R14;
-defvar T7 = R15;
-defvar V0_64 = R2_64;
-defvar V1_64 = R3_64;
-defvar T0_64 = R8_64;
-defvar T1_64 = R9_64;
-defvar T2_64 = R10_64;
-defvar T3_64 = R11_64;
-defvar T4_64 = R12_64;
-defvar T5_64 = R13_64;
-defvar T6_64 = R14_64;
-defvar T7_64 = R15_64;
-
-// N32/N64 names.
-defvar V0_N = R2;
-defvar V1_N = R3;
-defvar A4_N = R8;
-defvar A5_N = R9;
-defvar A6_N = R10;
-defvar A7_N = R11;
-defvar T0_N = R12;
-defvar T1_N = R13;
-defvar T2_N = R14;
-defvar T3_N = R15;
-defvar V0_N_64 = R2_64;
-defvar V1_N_64 = R3_64;
-defvar A4_N_64 = R8_64;
-defvar A5_N_64 = R9_64;
-defvar A6_N_64 = R10_64;
-defvar A7_N_64 = R11_64;
-defvar T0_N_64 = R12_64;
-defvar T1_N_64 = R13_64;
-defvar T2_N_64 = R14_64;
-defvar T3_N_64 = R15_64;
-
-// P32/P64 names.
-defvar T4_P = R2;
-defvar T5_P = R3;
-defvar A4_P = R8;
-defvar A5_P = R9;
-defvar A6_P = R10;
-defvar A7_P = R11;
-defvar T0_P = R12;
-defvar T1_P = R13;
-defvar T2_P = R14;
-defvar T3_P = R15;
-defvar T4_P_64 = R2_64;
-defvar T5_P_64 = R3_64;
-defvar A4_P_64 = R8_64;
-defvar A5_P_64 = R9_64;
-defvar A6_P_64 = R10_64;
-defvar A7_P_64 = R11_64;
-defvar T0_P_64 = R12_64;
-defvar T1_P_64 = R13_64;
-defvar T2_P_64 = R14_64;
-defvar T3_P_64 = R15_64;
-
-// O32-role aliases for the remaining registers; ABI-independent names
-// above. MipsMCTargetDesc.h has the matching C++ aliases. To be removed
-// in favour of MipsABIInfo accessors or plain R<n> names.
-defvar ZERO = R0;
-defvar AT = R1;
-defvar A0 = R4;
-defvar A1 = R5;
-defvar A2 = R6;
-defvar A3 = R7;
-defvar S0 = R16;
-defvar S1 = R17;
-defvar S2 = R18;
-defvar S3 = R19;
-defvar S4 = R20;
-defvar S5 = R21;
-defvar S6 = R22;
-defvar S7 = R23;
-defvar T8 = R24;
-defvar T9 = R25;
-defvar K0 = R26;
-defvar K1 = R27;
-defvar GP = R28;
-defvar SP = R29;
-defvar FP = R30;
-defvar RA = R31;
-defvar ZERO_64 = R0_64;
-defvar AT_64 = R1_64;
-defvar A0_64 = R4_64;
-defvar A1_64 = R5_64;
-defvar A2_64 = R6_64;
-defvar A3_64 = R7_64;
-defvar S0_64 = R16_64;
-defvar S1_64 = R17_64;
-defvar S2_64 = R18_64;
-defvar S3_64 = R19_64;
-defvar S4_64 = R20_64;
-defvar S5_64 = R21_64;
-defvar S6_64 = R22_64;
-defvar S7_64 = R23_64;
-defvar T8_64 = R24_64;
-defvar T9_64 = R25_64;
-defvar K0_64 = R26_64;
-defvar K1_64 = R27_64;
-defvar GP_64 = R28_64;
-defvar SP_64 = R29_64;
-defvar FP_64 = R30_64;
-defvar RA_64 = R31_64;
-
-//===----------------------------------------------------------------------===//
 // Register Classes
 //===----------------------------------------------------------------------===//
 
 class GPR32Class<list<ValueType> regTypes> :
   RegisterClass<"Mips", regTypes, 32, (add
   // Reserved
-  ZERO, AT,
+  R0, R1,
   // Return Values and Arguments
-  V0, V1, A0, A1, A2, A3,
+  R2, R3, R4, R5, R6, R7,
   // Not preserved across procedure calls
-  T0, T1, T2, T3, T4, T5, T6, T7,
+  R8, R9, R10, R11, R12, R13, R14, R15,
   // Callee save
-  S0, S1, S2, S3, S4, S5, S6, S7,
+  R16, R17, R18, R19, R20, R21, R22, R23,
   // Not preserved across procedure calls
-  T8, T9,
+  R24, R25,
   // Reserved
-  K0, K1, GP, SP, FP, RA)>;
+  R26, R27, R28, R29, R30, R31)>;
 
 def GPR32 : GPR32Class<[i32]>;
 
 def GPR32ZERO : RegisterClass<"Mips", [i32], 32, (add
   // Reserved
-  ZERO)>;
+  R0)>;
 
 def GPR32NONZERO : RegisterClass<"Mips", [i32], 32, (add
   // Reserved
-  AT,
+  R1,
   // Return Values and Arguments
-  V0, V1, A0, A1, A2, A3,
+  R2, R3, R4, R5, R6, R7,
   // Not preserved across procedure calls
-  T0, T1, T2, T3, T4, T5, T6, T7,
+  R8, R9, R10, R11, R12, R13, R14, R15,
   // Callee save
-  S0, S1, S2, S3, S4, S5, S6, S7,
+  R16, R17, R18, R19, R20, R21, R22, R23,
   // Not preserved across procedure calls
-  T8, T9,
+  R24, R25,
   // Reserved
-  K0, K1, GP, SP, FP, RA)>;
+  R26, R27, R28, R29, R30, R31)>;
 
 def DSPR  : GPR32Class<[v4i8, v2i16, i32]>;
 
 def GPRMM16 : RegisterClass<"Mips", [i32], 32, (add
   // Callee save
-  S0, S1,
+  R16, R17,
   // Return Values and Arguments
-  V0, V1, A0, A1, A2, A3)>;
+  R2, R3, R4, R5, R6, R7)>;
 
 def GPRMM16Zero : RegisterClass<"Mips", [i32], 32, (add
   // Reserved
-  ZERO,
+  R0,
   // Callee save
-  S1,
+  R17,
   // Return Values and Arguments
-  V0, V1, A0, A1, A2, A3)>;
+  R2, R3, R4, R5, R6, R7)>;
 
 def GPRMM16MoveP : RegisterClass<"Mips", [i32], 32, (add
   // Reserved
-  ZERO,
+  R0,
   // Callee save
-  S1,
+  R17,
   // Return Values and Arguments
-  V0, V1,
+  R2, R3,
   // Callee save
-  S0, S2, S3, S4)>;
+  R16, R18, R19, R20)>;
 
 def GPRMM16MovePPairFirst : RegisterClass<"Mips", [i32], 32, (add
   // Arguments
-  A0, A1, A2)>;
+  R4, R5, R6)>;
 
 def GPRMM16MovePPairSecond : RegisterClass<"Mips", [i32], 32, (add
   // Arguments
-  A1, A2, A3,
+  R5, R6, R7,
   // Callee save
-  S5, S6)>;
+  R21, R22)>;
 
 def GPR64 : RegisterClass<"Mips", [i64], 64, (add
   // Reserved
-  ZERO_64, AT_64,
+  R0_64, R1_64,
   // Return Values and Arguments
-  V0_64, V1_64, A0_64, A1_64, A2_64, A3_64,
+  R2_64, R3_64, R4_64, R5_64, R6_64, R7_64,
   // Not preserved across procedure calls
-  T0_64, T1_64, T2_64, T3_64, T4_64, T5_64, T6_64, T7_64,
+  R8_64, R9_64, R10_64, R11_64, R12_64, R13_64, R14_64, R15_64,
   // Callee save
-  S0_64, S1_64, S2_64, S3_64, S4_64, S5_64, S6_64, S7_64,
+  R16_64, R17_64, R18_64, R19_64, R20_64, R21_64, R22_64, R23_64,
   // Not preserved across procedure calls
-  T8_64, T9_64,
+  R24_64, R25_64,
   // Reserved
-  K0_64, K1_64, GP_64, SP_64, FP_64, RA_64)>;
+  R26_64, R27_64, R28_64, R29_64, R30_64, R31_64)>;
 
 def CPU16Regs : RegisterClass<"Mips", [i32], 32, (add
   // Return Values and Arguments
-  V0, V1, A0, A1, A2, A3,
+  R2, R3, R4, R5, R6, R7,
   // Callee save
-  S0, S1)>;
+  R16, R17)>;
 
 def CPU16RegsPlusSP : RegisterClass<"Mips", [i32], 32, (add
   // Return Values and Arguments
-  V0, V1, A0, A1, A2, A3,
+  R2, R3, R4, R5, R6, R7,
   // Callee save
-  S0, S1,
-  SP)>;
+  R16, R17,
+  R29)>;
 
-def CPURAReg : RegisterClass<"Mips", [i32], 32, (add RA)>, Unallocatable;
+def CPURAReg : RegisterClass<"Mips", [i32], 32, (add R31)>, Unallocatable;
 
-def CPUSPReg : RegisterClass<"Mips", [i32], 32, (add SP)>, Unallocatable;
+def CPUSPReg : RegisterClass<"Mips", [i32], 32, (add R29)>, Unallocatable;
 
 // 64bit fp:
 // * FGR64  - 32 64-bit registers
@@ -634,10 +512,10 @@ def COP3 : RegisterClass<"Mips", [i32], 32, (sequence "COP3%u", 0, 31)>,
 
 // Stack pointer and global pointer classes for instructions that are limited
 // to a single register such as lwgp/lwsp in microMIPS.
-def SP32 : RegisterClass<"Mips", [i32], 32, (add SP)>, Unallocatable;
-def SP64 : RegisterClass<"Mips", [i64], 64, (add SP_64)>, Unallocatable;
-def GP32 : RegisterClass<"Mips", [i32], 32, (add GP)>, Unallocatable;
-def GP64 : RegisterClass<"Mips", [i64], 64, (add GP_64)>, Unallocatable;
+def SP32 : RegisterClass<"Mips", [i32], 32, (add R29)>, Unallocatable;
+def SP64 : RegisterClass<"Mips", [i64], 64, (add R29_64)>, Unallocatable;
+def GP32 : RegisterClass<"Mips", [i32], 32, (add R28)>, Unallocatable;
+def GP64 : RegisterClass<"Mips", [i64], 64, (add R28_64)>, Unallocatable;
 
 // Octeon multiplier and product registers
 def OCTEON_MPL : RegisterClass<"Mips", [i64], 64, (add MPL0, MPL1, MPL2)>,

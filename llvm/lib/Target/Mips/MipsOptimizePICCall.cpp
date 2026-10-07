@@ -165,7 +165,7 @@ static bool eraseGPOpnd(MachineInstr &MI) {
 
   MachineFunction &MF = *MI.getParent()->getParent();
   MVT::SimpleValueType Ty = getRegTy(MI.getOperand(0).getReg(), MF);
-  unsigned Reg = Ty == MVT::i32 ? Mips::GP : Mips::GP_64;
+  unsigned Reg = Ty == MVT::i32 ? Mips::R28 : Mips::R28_64;
 
   for (unsigned I = 0; I < MI.getNumOperands(); ++I) {
     MachineOperand &MO = MI.getOperand(I);
@@ -264,9 +264,9 @@ bool OptimizePICCall::visitNode(MBBInfo &MBBI) {
       setCallTargetReg(MBB, I);
     }
 
-    if (MachineOperand *Def = I->findRegisterDefOperand(Mips::GP, &TRI))
+    if (MachineOperand *Def = I->findRegisterDefOperand(Mips::R28, &TRI))
       GPDef = Def;
-    else if (I->readsRegister(Mips::GP, &TRI))
+    else if (I->readsRegister(Mips::R28, &TRI))
       GPDef = nullptr;
   }
 

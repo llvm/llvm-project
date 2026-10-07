@@ -54,13 +54,13 @@ TEST_F(MipsBenchmarkResultTest, WriteToAndReadFromDisk) {
   Benchmark ToDisk;
 
   ToDisk.Key.Instructions.push_back(MCInstBuilder(Mips::XOR)
-                                        .addReg(Mips::T0)
-                                        .addReg(Mips::T1)
-                                        .addReg(Mips::T2));
+                                        .addReg(Mips::R8)
+                                        .addReg(Mips::R9)
+                                        .addReg(Mips::R10));
   ToDisk.Key.Config = "config";
   ToDisk.Key.RegisterInitialValues = {
-      RegisterValue{Mips::T1, APInt(8, "123", 10)},
-      RegisterValue{Mips::T2, APInt(8, "456", 10)}};
+      RegisterValue{Mips::R9, APInt(8, "123", 10)},
+      RegisterValue{Mips::R10, APInt(8, "456", 10)}};
   ToDisk.Mode = Benchmark::Latency;
   ToDisk.CpuName = "cpu_name";
   ToDisk.LLVMTriple = "llvm_triple";

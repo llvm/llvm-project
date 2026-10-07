@@ -39,11 +39,11 @@ using namespace llvm;
 #include "MipsGenRegisterInfo.inc"
 
 MipsRegisterInfo::MipsRegisterInfo(const MipsSubtarget &STI)
-    : MipsGenRegisterInfo(Mips::RA), ArePtrs64bit(STI.getABI().ArePtrs64bit()) {
+    : MipsGenRegisterInfo(Mips::R31), ArePtrs64bit(STI.getABI().ArePtrs64bit()) {
   MIPS_MC::initLLVMToCVRegMapping(this);
 }
 
-unsigned MipsRegisterInfo::getPICCallReg() { return Mips::T9; }
+unsigned MipsRegisterInfo::getPICCallReg() { return Mips::R25; }
 
 unsigned
 MipsRegisterInfo::getRegPressureLimit(const TargetRegisterClass *RC,
@@ -163,11 +163,11 @@ const uint32_t *MipsRegisterInfo::getMips16RetHelperMask() {
 BitVector MipsRegisterInfo::
 getReservedRegs(const MachineFunction &MF) const {
   static const MCPhysReg ReservedGPR32[] = {
-    Mips::ZERO, Mips::K0, Mips::K1, Mips::SP
+    Mips::R0, Mips::R26, Mips::R27, Mips::R29
   };
 
   static const MCPhysReg ReservedGPR64[] = {
-    Mips::ZERO_64, Mips::K0_64, Mips::K1_64, Mips::SP_64
+    Mips::R0_64, Mips::R26_64, Mips::R27_64, Mips::R29_64
   };
 
   BitVector Reserved(getNumRegs());
@@ -183,7 +183,7 @@ getReservedRegs(const MachineFunction &MF) const {
   // including jumps within a function. Keep it out of register allocation.
   const auto &TM = static_cast<const MipsTargetMachine &>(MF.getTarget());
   if (TM.isJIT() && TM.getRelocationModel() == Reloc::Static)
-    markSuperRegs(Reserved, Mips::T9);
+    markSuperRegs(Reserved, Mips::R25);
 
   // Mark user-reserved GPRs and their 64-bit super-registers.
   for (unsigned I = 1; I < 32; ++I)
@@ -193,8 +193,8 @@ getReservedRegs(const MachineFunction &MF) const {
   // For mno-abicalls, GP is a program invariant!
   bool GPIsGlobal = isGPUsedAsGlobalRegister(MF);
   if (!Subtarget.isABICalls() || GPIsGlobal) {
-    Reserved.set(Mips::GP);
-    Reserved.set(Mips::GP_64);
+    Reserved.set(Mips::R28);
+    Reserved.set(Mips::R28_64);
   }
 
   if (Subtarget.isFP64bit()) {
@@ -209,17 +209,18 @@ getReservedRegs(const MachineFunction &MF) const {
   // Reserve FP if this function should have a dedicated frame pointer register.
   if (Subtarget.getFrameLowering()->hasFP(MF)) {
     if (Subtarget.inMips16Mode())
-      Reserved.set(Mips::S0);
+      Reserved.set(Mips::R16);
     else {
-      Reserved.set(Mips::FP);
-      Reserved.set(Mips::FP_64);
+      Reserved.set(Mips::R30);
+      Reserved.set(Mips::R30_64);
 
       // Reserve the base register if we need to both realign the stack and
       // allocate variable-sized objects at runtime. This should test the
       // same conditions as MipsFrameLowering::hasBP().
       if (hasStackRealignment(MF) && MF.getFrameInfo().hasVarSizedObjects()) {
-        Reserved.set(Mips::S7);
-        Reserved.set(Mips::S7_64);
+        const MipsABIInfo &ABI = Subtarget.getABI();
+        Reserved.set(ABI.getSavedReg(7, false));
+        Reserved.set(ABI.getSavedReg(7, true));
       }
     }
   }
@@ -244,18 +245,18 @@ getReservedRegs(const MachineFunction &MF) const {
   // Reserve RA if in mips16 mode.
   if (Subtarget.inMips16Mode()) {
     const MipsFunctionInfo *MipsFI = MF.getInfo<MipsFunctionInfo>();
-    Reserved.set(Mips::RA);
-    Reserved.set(Mips::RA_64);
-    Reserved.set(Mips::T0);
-    Reserved.set(Mips::T1);
+    Reserved.set(Mips::R31);
+    Reserved.set(Mips::R31_64);
+    Reserved.set(Mips::R8);
+    Reserved.set(Mips::R9);
     if (MF.getFunction().hasFnAttribute("saveS2") || MipsFI->hasSaveS2())
-      Reserved.set(Mips::S2);
+      Reserved.set(Mips::R18);
   }
 
   // Reserve GP if small section is used.
   if (Subtarget.useSmallSection()) {
-    Reserved.set(Mips::GP);
-    Reserved.set(Mips::GP_64);
+    Reserved.set(Mips::R28);
+    Reserved.set(Mips::R28_64);
   }
 
   return Reserved;
@@ -296,10 +297,10 @@ getFrameRegister(const MachineFunction &MF) const {
   bool IsN64 = Subtarget.getABI().IsN64();
 
   if (Subtarget.inMips16Mode())
-    return TFI->hasFP(MF) ? Mips::S0 : Mips::SP;
+    return TFI->hasFP(MF) ? Mips::R16 : Mips::R29;
   else
-    return TFI->hasFP(MF) ? (IsN64 ? Mips::FP_64 : Mips::FP) :
-                            (IsN64 ? Mips::SP_64 : Mips::SP);
+    return TFI->hasFP(MF) ? (IsN64 ? Mips::R30_64 : Mips::R30) :
+                            (IsN64 ? Mips::R29_64 : Mips::R29);
 }
 
 bool MipsRegisterInfo::canRealignStack(const MachineFunction &MF) const {
@@ -314,7 +315,7 @@ bool MipsRegisterInfo::canRealignStack(const MachineFunction &MF) const {
     return false;
 
   const MipsSubtarget &Subtarget = MF.getSubtarget<MipsSubtarget>();
-  unsigned FP = Subtarget.isGP32bit() ? Mips::FP : Mips::FP_64;
+  unsigned FP = Subtarget.isGP32bit() ? Mips::R30 : Mips::R30_64;
   unsigned BP = Subtarget.getABI().getSavedReg(7, Subtarget.isGP64bit());
 
   // Support dynamic stack realignment for all targets except Mips16.

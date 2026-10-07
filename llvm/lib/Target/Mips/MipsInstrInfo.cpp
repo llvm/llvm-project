@@ -63,8 +63,8 @@ bool MipsInstrInfo::isZeroImm(const MachineOperand &op) const {
 
 MCInst MipsInstrInfo::getNop() const {
   return MCInstBuilder(Mips::SLL)
-      .addReg(Mips::ZERO)
-      .addReg(Mips::ZERO)
+      .addReg(Mips::R0)
+      .addReg(Mips::R0)
       .addImm(0);
 }
 
@@ -86,8 +86,8 @@ MachineInstrBuilder MipsInstrInfo::insertNop(MachineBasicBlock &MBB,
       Subtarget.hasMips32r6() ? Mips::SLL_MMR6 : Mips::SLL_MM;
   const unsigned Opc =
       Subtarget.inMicroMipsMode() ? MMOpc : (unsigned)Mips::SLL;
-  return BuildMI(MBB, MI, DL, get(Opc), Mips::ZERO)
-      .addReg(Mips::ZERO)
+  return BuildMI(MBB, MI, DL, get(Opc), Mips::R0)
+      .addReg(Mips::R0)
       .addImm(0);
 }
 
@@ -501,11 +501,11 @@ unsigned MipsInstrInfo::getEquivalentCompactForm(
   // MIPSR6 forbids both operands being the zero register.
   if (Subtarget.hasMips32r6() && (I->getNumOperands() > 1) &&
       (I->getOperand(0).isReg() &&
-       (I->getOperand(0).getReg() == Mips::ZERO ||
-        I->getOperand(0).getReg() == Mips::ZERO_64)) &&
+       (I->getOperand(0).getReg() == Mips::R0 ||
+        I->getOperand(0).getReg() == Mips::R0_64)) &&
       (I->getOperand(1).isReg() &&
-       (I->getOperand(1).getReg() == Mips::ZERO ||
-        I->getOperand(1).getReg() == Mips::ZERO_64)))
+       (I->getOperand(1).getReg() == Mips::R0 ||
+        I->getOperand(1).getReg() == Mips::R0_64)))
     return 0;
 
   if (Subtarget.hasMips32r6() || canUseShortMicroMipsCTI) {
@@ -713,8 +713,8 @@ bool MipsInstrInfo::isAsCheapAsAMove(const MachineInstr &MI) const {
   case Mips::DADDiu:
     return ((MI.getOperand(2).isImm() && MI.getOperand(2).getImm() == 0) ||
             (MI.getOperand(1).isReg() &&
-             (MI.getOperand(1).getReg() == Mips::ZERO ||
-              MI.getOperand(1).getReg() == Mips::ZERO_64)));
+             (MI.getOperand(1).getReg() == Mips::R0 ||
+              MI.getOperand(1).getReg() == Mips::R0_64)));
   }
   return MI.isAsCheapAsAMove();
 }
@@ -768,14 +768,14 @@ MipsInstrInfo::genInstrWithNewOpc(unsigned NewOpc,
   // Additional MIPSR6 does not permit the use of register $zero for compact
   // branches.
   // FIXME: Certain atomic sequences on mips64 generate 32bit references to
-  // Mips::ZERO, which is incorrect. This test should be updated to use
+  // Mips::R0, which is incorrect. This test should be updated to use
   // Subtarget.getABI().GetZeroReg() when those atomic sequences and others
   // are fixed.
   int ZeroOperandPosition = -1;
   bool BranchWithZeroOperand = false;
   if (I->isBranch() && !I->isPseudo()) {
     auto TRI = I->getParent()->getParent()->getSubtarget().getRegisterInfo();
-    ZeroOperandPosition = I->findRegisterUseOperandIdx(Mips::ZERO, TRI, false);
+    ZeroOperandPosition = I->findRegisterUseOperandIdx(Mips::R0, TRI, false);
     BranchWithZeroOperand = ZeroOperandPosition != -1;
   }
 
@@ -1020,7 +1020,7 @@ MipsInstrInfo::describeLoadedValue(const MachineInstr &MI, Register Reg) const {
     int64_t Offset = RegImm->Imm;
     // When SrcReg is $zero, treat loaded value as immediate only.
     // Ex. $a2 = ADDiu $zero, 10
-    if (SrcReg == Mips::ZERO || SrcReg == Mips::ZERO_64) {
+    if (SrcReg == Mips::R0 || SrcReg == Mips::R0_64) {
       return ParamLoadedValue(MI.getOperand(2), Expr);
     }
     Expr = DIExpression::prepend(Expr, DIExpression::ApplyOffset, Offset);

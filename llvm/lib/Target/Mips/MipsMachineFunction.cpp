@@ -143,13 +143,13 @@ void MipsFunctionInfo::initGlobalBaseReg(MachineFunction &MF) {
   // The two instructions are emitted during lowering to MC layer in order to
   // avoid any reordering.
   //
-  // Register $2 (Mips::V0) is added to the list of live-in registers to ensure
+  // Register $2 (Mips::R2) is added to the list of live-in registers to ensure
   // the value instruction 1 (addiu) defines is valid when instruction 2 (addu)
   // reads it.
-  MF.getRegInfo().addLiveIn(Mips::V0);
-  MBB.addLiveIn(Mips::V0);
+  MF.getRegInfo().addLiveIn(Mips::R2);
+  MBB.addLiveIn(Mips::R2);
   BuildMI(MBB, I, DL, TII.get(Mips::ADDu), GlobalBaseReg)
-      .addReg(Mips::V0)
+      .addReg(Mips::R2)
       .addReg(T9);
 }
 

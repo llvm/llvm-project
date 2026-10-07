@@ -182,7 +182,7 @@ Register MipsOutgoingValueHandler::getStackAddress(uint64_t Size,
 
   LLT p0 = LLT::pointer(0, 32);
   LLT s32 = LLT::scalar(32);
-  auto SPReg = MIRBuilder.buildCopy(p0, Register(Mips::SP));
+  auto SPReg = MIRBuilder.buildCopy(p0, Register(Mips::R29));
 
   auto OffsetReg = MIRBuilder.buildConstant(s32, Offset);
   auto AddrReg = MIRBuilder.buildPtrAdd(p0, SPReg, OffsetReg);
@@ -420,7 +420,7 @@ bool MipsCallLowering::lowerCall(MachineIRBuilder &MIRBuilder,
   MachineInstrBuilder MIB = MIRBuilder.buildInstrNoInsert(
       Info.Callee.isReg() || IsCalleeGlobalPIC ? Mips::JALRPseudo : Mips::JAL);
   MIB.setOperandDead(0); // implicit-def $ra
-  MIB.addDef(Mips::SP, RegState::Implicit);
+  MIB.addDef(Mips::R29, RegState::Implicit);
   if (IsCalleeGlobalPIC) {
     Register CalleeReg =
         MF.getRegInfo().createGenericVirtualRegister(LLT::pointer(0, 32));
@@ -475,9 +475,9 @@ bool MipsCallLowering::lowerCall(MachineIRBuilder &MIRBuilder,
 
   if (IsCalleeGlobalPIC) {
     MIRBuilder.buildCopy(
-      Register(Mips::GP),
+      Register(Mips::R28),
       MF.getInfo<MipsFunctionInfo>()->getGlobalBaseRegForGlobalISel(MF));
-    MIB.addUse(Mips::GP, RegState::Implicit);
+    MIB.addUse(Mips::R28, RegState::Implicit);
   }
   MIRBuilder.insertInstr(MIB);
   if (MIB->getOpcode() == Mips::JALRPseudo) {

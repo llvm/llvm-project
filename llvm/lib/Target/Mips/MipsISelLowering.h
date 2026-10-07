@@ -273,7 +273,7 @@ using TargetRegisterClass = MCRegisterClass;
       SDValue GPRel = getTargetNode(N, Ty, DAG, MipsII::MO_GPREL);
       return DAG.getNode(
           ISD::ADD, DL, Ty,
-          DAG.getRegister(IsN64 ? Mips::GP_64 : Mips::GP, Ty),
+          DAG.getRegister(IsN64 ? Mips::R28_64 : Mips::R28, Ty),
           DAG.getNode(MipsISD::GPRel, DL, DAG.getVTList(Ty), GPRel));
     }
 

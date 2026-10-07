@@ -7,6 +7,7 @@
 //===----------------------------------------------------------------------===//
 #include "../Error.h"
 #include "../Target.h"
+#include "MCTargetDesc/MipsABIInfo.h"
 #include "MCTargetDesc/MipsBaseInfo.h"
 #include "Mips.h"
 #include "MipsRegisterInfo.h"
@@ -78,12 +79,12 @@ static std::vector<MCInst> loadImmediate(MCRegister Reg, bool IsGPR32,
   unsigned ZeroReg;
   unsigned ORi, LUi, SLL;
   if (IsGPR32) {
-    ZeroReg = Mips::ZERO;
+    ZeroReg = Mips::R0;
     ORi = Mips::ORi;
     SLL = Mips::SLL;
     LUi = Mips::LUi;
   } else {
-    ZeroReg = Mips::ZERO_64;
+    ZeroReg = Mips::R0_64;
     ORi = Mips::ORi64;
     SLL = Mips::SLL64_64;
     LUi = Mips::LUi64;
@@ -136,7 +137,9 @@ static std::vector<MCInst> loadImmediate(MCRegister Reg, bool IsGPR32,
 
 MCRegister
 ExegesisMipsTarget::getScratchMemoryRegister(const Triple &TT) const {
-  return TT.isArch64Bit() ? Mips::A0_64 : Mips::A0;
+  const MipsABIInfo ABI =
+      TT.isArch64Bit() ? MipsABIInfo::N64() : MipsABIInfo::O32();
+  return ABI.getArgReg(0);
 }
 
 void ExegesisMipsTarget::fillMemoryOperands(InstructionTemplate &IT,

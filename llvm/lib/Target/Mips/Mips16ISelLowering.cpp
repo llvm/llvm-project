@@ -426,7 +426,7 @@ void Mips16TargetLowering::getOpndList(
   // T9 should contain the address of the callee function if
   // -relocation-model=pic or it is an indirect call.
   if (IsPICCall || !GlobalOrExternal) {
-    unsigned V0Reg = Mips::V0;
+    unsigned V0Reg = Mips::R2;
     if (NeedMips16Helper) {
       RegsToPass.push_front(std::make_pair(V0Reg, Callee));
       JumpTarget = DAG.getExternalSymbol(Mips16HelperFunction,
@@ -436,7 +436,7 @@ void Mips16TargetLowering::getOpndList(
                                  MipsII::MO_GOT, Chain,
                                  FuncInfo->callPtrInfo(MF, S->getSymbol()));
     } else
-      RegsToPass.push_front(std::make_pair((unsigned)Mips::T9, Callee));
+      RegsToPass.push_front(std::make_pair((unsigned)Mips::R25, Callee));
   }
 
   Ops.push_back(JumpTarget);
@@ -704,7 +704,7 @@ Mips16TargetLowering::emitFEXT_CCRX16_ins(unsigned SltOpc, MachineInstr &MI,
       .addReg(regX)
       .addReg(regY);
   BuildMI(*BB, MI, MI.getDebugLoc(), TII->get(Mips::MoveR3216), CC)
-      .addReg(Mips::T8);
+      .addReg(Mips::R24);
   MI.eraseFromParent(); // The pseudo instruction is gone now.
   return BB;
 }
@@ -722,7 +722,7 @@ Mips16TargetLowering::emitFEXT_CCRXI16_ins(unsigned SltiOpc, unsigned SltiXOpc,
   unsigned SltOpc = Mips16WhichOp8uOr16simm(SltiOpc, SltiXOpc, Imm);
   BuildMI(*BB, MI, MI.getDebugLoc(), TII->get(SltOpc)).addReg(regX).addImm(Imm);
   BuildMI(*BB, MI, MI.getDebugLoc(), TII->get(Mips::MoveR3216), CC)
-      .addReg(Mips::T8);
+      .addReg(Mips::R24);
   MI.eraseFromParent(); // The pseudo instruction is gone now.
   return BB;
 

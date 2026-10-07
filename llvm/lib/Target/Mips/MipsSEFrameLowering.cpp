@@ -301,7 +301,7 @@ bool ExpandPseudo::expandBuildPairF64(MachineBasicBlock &MBB,
   // implicit operand, so other passes (like ShrinkWrapping) are aware that
   // stack is used.
   if (I->getNumOperands() == 4 && I->getOperand(3).isReg()
-      && I->getOperand(3).getReg() == Mips::SP) {
+      && I->getOperand(3).getReg() == Mips::R29) {
     Register DstReg = I->getOperand(0).getReg();
     Register LoReg = I->getOperand(1).getReg();
     Register HiReg = I->getOperand(2).getReg();
@@ -358,7 +358,7 @@ bool ExpandPseudo::expandExtractElementF64(MachineBasicBlock &MBB,
   // implicit operand, so other passes (like ShrinkWrapping) are aware that
   // stack is used.
   if (I->getNumOperands() == 4 && I->getOperand(3).isReg()
-      && I->getOperand(3).getReg() == Mips::SP) {
+      && I->getOperand(3).getReg() == Mips::R29) {
     Register DstReg = I->getOperand(0).getReg();
     Register SrcReg = Op1.getReg();
     unsigned N = Op2.getImm();
@@ -544,13 +544,13 @@ void MipsSEFrameLowering::emitInterruptPrologueStub(
   if (IntKind == "eic") {
     // Coprocessor registers are always live per se.
     MBB.addLiveIn(Mips::COP013);
-    BuildMI(MBB, MBBI, DL, STI.getInstrInfo()->get(Mips::MFC0), Mips::K0)
+    BuildMI(MBB, MBBI, DL, STI.getInstrInfo()->get(Mips::MFC0), Mips::R26)
         .addReg(Mips::COP013)
         .addImm(0)
         .setMIFlag(MachineInstr::FrameSetup);
 
-    BuildMI(MBB, MBBI, DL, STI.getInstrInfo()->get(Mips::EXT), Mips::K0)
-        .addReg(Mips::K0)
+    BuildMI(MBB, MBBI, DL, STI.getInstrInfo()->get(Mips::EXT), Mips::R26)
+        .addReg(Mips::R26)
         .addImm(10)
         .addImm(6)
         .setMIFlag(MachineInstr::FrameSetup);
@@ -558,34 +558,34 @@ void MipsSEFrameLowering::emitInterruptPrologueStub(
 
   // Fetch and spill EPC
   MBB.addLiveIn(Mips::COP014);
-  BuildMI(MBB, MBBI, DL, STI.getInstrInfo()->get(Mips::MFC0), Mips::K1)
+  BuildMI(MBB, MBBI, DL, STI.getInstrInfo()->get(Mips::MFC0), Mips::R27)
       .addReg(Mips::COP014)
       .addImm(0)
       .setMIFlag(MachineInstr::FrameSetup);
 
-  STI.getInstrInfo()->storeRegToStack(MBB, MBBI, Mips::K1, false,
+  STI.getInstrInfo()->storeRegToStack(MBB, MBBI, Mips::R27, false,
                                       MipsFI->getISRRegFI(0), PtrRC, 0);
 
   // Fetch and Spill Status
   MBB.addLiveIn(Mips::COP012);
-  BuildMI(MBB, MBBI, DL, STI.getInstrInfo()->get(Mips::MFC0), Mips::K1)
+  BuildMI(MBB, MBBI, DL, STI.getInstrInfo()->get(Mips::MFC0), Mips::R27)
       .addReg(Mips::COP012)
       .addImm(0)
       .setMIFlag(MachineInstr::FrameSetup);
 
-  STI.getInstrInfo()->storeRegToStack(MBB, MBBI, Mips::K1, false,
+  STI.getInstrInfo()->storeRegToStack(MBB, MBBI, Mips::R27, false,
                                       MipsFI->getISRRegFI(1), PtrRC, 0);
 
   // Build the configuration for disabling lower priority interrupts. Non EIC
   // interrupts need to be masked off with zero, EIC from the Cause register.
   unsigned InsPosition = 8;
   unsigned InsSize = 0;
-  unsigned SrcReg = Mips::ZERO;
+  unsigned SrcReg = Mips::R0;
 
   // If the interrupt we're tied to is the EIC, switch the source for the
   // masking off interrupts to the cause register.
   if (IntKind == "eic") {
-    SrcReg = Mips::K0;
+    SrcReg = Mips::R26;
     InsPosition = 10;
     InsSize = 6;
   } else
@@ -601,33 +601,33 @@ void MipsSEFrameLowering::emitInterruptPrologueStub(
                   .Default(0);
   assert(InsSize != 0 && "Unknown interrupt type!");
 
-  BuildMI(MBB, MBBI, DL, STI.getInstrInfo()->get(Mips::INS), Mips::K1)
+  BuildMI(MBB, MBBI, DL, STI.getInstrInfo()->get(Mips::INS), Mips::R27)
       .addReg(SrcReg)
       .addImm(InsPosition)
       .addImm(InsSize)
-      .addReg(Mips::K1)
+      .addReg(Mips::R27)
       .setMIFlag(MachineInstr::FrameSetup);
 
   // Mask off KSU, ERL, EXL
-  BuildMI(MBB, MBBI, DL, STI.getInstrInfo()->get(Mips::INS), Mips::K1)
-      .addReg(Mips::ZERO)
+  BuildMI(MBB, MBBI, DL, STI.getInstrInfo()->get(Mips::INS), Mips::R27)
+      .addReg(Mips::R0)
       .addImm(1)
       .addImm(4)
-      .addReg(Mips::K1)
+      .addReg(Mips::R27)
       .setMIFlag(MachineInstr::FrameSetup);
 
   // Disable the FPU as we are not spilling those register sets.
   if (!STI.useSoftFloat())
-    BuildMI(MBB, MBBI, DL, STI.getInstrInfo()->get(Mips::INS), Mips::K1)
-        .addReg(Mips::ZERO)
+    BuildMI(MBB, MBBI, DL, STI.getInstrInfo()->get(Mips::INS), Mips::R27)
+        .addReg(Mips::R0)
         .addImm(29)
         .addImm(1)
-        .addReg(Mips::K1)
+        .addReg(Mips::R27)
         .setMIFlag(MachineInstr::FrameSetup);
 
   // Set the new status
   BuildMI(MBB, MBBI, DL, STI.getInstrInfo()->get(Mips::MTC0), Mips::COP012)
-      .addReg(Mips::K1)
+      .addReg(Mips::R27)
       .addImm(0)
       .setMIFlag(MachineInstr::FrameSetup);
 }
@@ -699,21 +699,21 @@ void MipsSEFrameLowering::emitInterruptEpilogueStub(
   const TargetRegisterClass *PtrRC = &Mips::GPR32RegClass;
 
   // Disable Interrupts.
-  BuildMI(MBB, MBBI, DL, STI.getInstrInfo()->get(Mips::DI), Mips::ZERO);
+  BuildMI(MBB, MBBI, DL, STI.getInstrInfo()->get(Mips::DI), Mips::R0);
   BuildMI(MBB, MBBI, DL, STI.getInstrInfo()->get(Mips::EHB));
 
   // Restore EPC
   STI.getInstrInfo()->loadRegFromStackSlot(
-      MBB, MBBI, Mips::K1, MipsFI->getISRRegFI(0), PtrRC, Register());
+      MBB, MBBI, Mips::R27, MipsFI->getISRRegFI(0), PtrRC, Register());
   BuildMI(MBB, MBBI, DL, STI.getInstrInfo()->get(Mips::MTC0), Mips::COP014)
-      .addReg(Mips::K1)
+      .addReg(Mips::R27)
       .addImm(0);
 
   // Restore Status
   STI.getInstrInfo()->loadRegFromStackSlot(
-      MBB, MBBI, Mips::K1, MipsFI->getISRRegFI(1), PtrRC, Register());
+      MBB, MBBI, Mips::R27, MipsFI->getISRRegFI(1), PtrRC, Register());
   BuildMI(MBB, MBBI, DL, STI.getInstrInfo()->get(Mips::MTC0), Mips::COP012)
-      .addReg(Mips::K1)
+      .addReg(Mips::R27)
       .addImm(0);
 }
 
@@ -746,7 +746,7 @@ bool MipsSEFrameLowering::spillCalleeSavedRegisters(
     // It's killed at the spill, unless the register is RA and return address
     // is taken.
     MCRegister Reg = I.getReg();
-    bool IsRAAndRetAddrIsTaken = (Reg == Mips::RA || Reg == Mips::RA_64)
+    bool IsRAAndRetAddrIsTaken = (Reg == Mips::R31 || Reg == Mips::R31_64)
         && MF->getFrameInfo().isReturnAddressTaken();
     if (!IsRAAndRetAddrIsTaken)
       MBB.addLiveIn(Reg);
@@ -762,12 +762,12 @@ bool MipsSEFrameLowering::spillCalleeSavedRegisters(
       unsigned Op = 0;
       if (!STI.getABI().ArePtrs64bit()) {
         Op = (Reg == Mips::HI0) ? Mips::MFHI : Mips::MFLO;
-        Reg = Mips::K0;
+        Reg = Mips::R26;
       } else {
         Op = (Reg == Mips::HI0) ? Mips::MFHI64 : Mips::MFLO64;
-        Reg = Mips::K0_64;
+        Reg = Mips::R26_64;
       }
-      BuildMI(MBB, MI, DL, TII.get(Op), Mips::K0)
+      BuildMI(MBB, MI, DL, TII.get(Op), Mips::R26)
           .setMIFlag(MachineInstr::FrameSetup);
     }
 
@@ -807,7 +807,7 @@ void MipsSEFrameLowering::determineCalleeSaves(MachineFunction &MF,
   const TargetRegisterInfo *TRI = MF.getSubtarget().getRegisterInfo();
   MipsFunctionInfo *MipsFI = MF.getInfo<MipsFunctionInfo>();
   MipsABIInfo ABI = STI.getABI();
-  unsigned RA = ABI.IsN64() ? Mips::RA_64 : Mips::RA;
+  unsigned RA = ABI.IsN64() ? Mips::R31_64 : Mips::R31;
   unsigned FP = ABI.GetFramePtr();
   unsigned BP = ABI.GetBasePtr();
 

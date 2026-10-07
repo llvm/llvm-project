@@ -1311,7 +1311,7 @@ class MSA_CBRANCH_DESC_BASE<string instr_asm, RegisterOperand ROWD> {
   bit isBranch = 1;
   bit isTerminator = 1;
   bit hasDelaySlot = 1;
-  list<Register> Defs = [AT];
+  list<Register> Defs = [R1];
 }
 
 class MSA_INSERT_DESC_BASE<string instr_asm, SDPatternOperator OpNode,

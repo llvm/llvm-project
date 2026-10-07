@@ -439,8 +439,8 @@ let AddedComplexity = 40 in {
 def : MipsPat<(MipsMTC1_D64 GPR32Opnd:$src),
               (MTC1_D64_MM GPR32Opnd:$src)>, ISA_MICROMIPS, FGR_64;
 
-def : MipsPat<(f32 fpimm0), (MTC1_MM ZERO)>, ISA_MICROMIPS32_NOT_MIPS32R6;
-def : MipsPat<(f32 fpimm0neg), (FNEG_S_MM (MTC1_MM ZERO))>,
+def : MipsPat<(f32 fpimm0), (MTC1_MM R0)>, ISA_MICROMIPS32_NOT_MIPS32R6;
+def : MipsPat<(f32 fpimm0neg), (FNEG_S_MM (MTC1_MM R0))>,
       ISA_MICROMIPS32_NOT_MIPS32R6;
 
 def : MipsPat<(f32 (fpround FGR64Opnd:$src)),
