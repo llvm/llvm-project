@@ -266,6 +266,17 @@ TEST(ParsedASTTest, NoCrashOnTokensWithTidyCheck) {
   EXPECT_EQ(T.expandedTokens().drop_back().back().text(SM), "}");
 }
 
+TEST(ParsedASTTest, PreprocessedInputLifecycle) {
+  TestTU TU;
+  TU.Filename = "TestTU.i";
+  TU.Code = "";
+  TU.build();
+
+  TU.Filename = "TestTU.cc";
+  TU.ExtraArgs = {"-x", "c++-cpp-output"};
+  TU.build();
+}
+
 TEST(ParsedASTTest, CanBuildInvocationWithUnknownArgs) {
   MockFS FS;
   FS.Files = {{testPath("foo.cpp"), "void test() {}"}};
