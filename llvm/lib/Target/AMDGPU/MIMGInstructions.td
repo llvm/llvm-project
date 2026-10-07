@@ -224,8 +224,8 @@ class MIMG <dag outs, string dns = "">
   Instruction Opcode = !cast<Instruction>(NAME);
   MIMGBaseOpcode BaseOpcode;
   MIMGEncoding MIMGEncoding;
-  bits<8> VDataDwords;
-  bits<8> VAddrDwords;
+  bits<32> VDataDwords;
+  bits<32> VAddrDwords;
 
   // If NSA is used this counts number of operands VAddrDwords is split into.
   bits<8> VAddrOperands;
