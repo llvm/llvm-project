@@ -4036,22 +4036,22 @@ TEST(DataLayoutTest, NVPTX) {
     return Specs;
   };
 
-  // The 32-bit target uses a single 32-bit pointer specification and is
-  // unaffected by the ABI name.
+  // Fabric handles (addrspace:8) are 128-bit and non-integral.
   EXPECT_THAT(PointerLayoutSpecs(TT32.computeDataLayout("")),
-              testing::ElementsAre("p:32:32"));
+              testing::ElementsAre("p:32:32", "p8:128:128"));
   EXPECT_THAT(PointerLayoutSpecs(TT32.computeDataLayout("shortptr")),
-              testing::ElementsAre("p:32:32"));
+              testing::ElementsAre("p:32:32", "p8:128:128"));
 
   // The default 64-bit target only shrinks Tensor Memory (addrspace:6).
   EXPECT_THAT(PointerLayoutSpecs(TT64.computeDataLayout("")),
-              testing::ElementsAre("p6:32:32"));
+              testing::ElementsAre("p6:32:32", "p8:128:128"));
 
   // In shortptr mode the extra address spaces become 32-bit. The pointer
   // specifications must remain sorted by address space.
   EXPECT_THAT(PointerLayoutSpecs(TT64.computeDataLayout("shortptr")),
               testing::ElementsAre("p3:32:32", "p4:32:32", "p5:32:32",
-                                   "p6:32:32", "p7:32:32", "p101:32:32"));
+                                   "p6:32:32", "p7:32:32", "p8:128:128",
+                                   "p101:32:32"));
 }
 
 TEST(DataLayoutTest, CheriRISCV32) {

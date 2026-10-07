@@ -92,6 +92,11 @@ static AliasResult::Kind getAliasResult(unsigned AS1, unsigned AS2) {
       ((AS1 == ADDRESS_SPACE_SHARED_CLUSTER) && (AS2 == ADDRESS_SPACE_SHARED)))
     return AliasResult::MayAlias;
 
+  // Fabric endpoint resources may also be accessed through global pointers.
+  if (((AS1 == ADDRESS_SPACE_FABRIC_HANDLE) && (AS2 == ADDRESS_SPACE_GLOBAL)) ||
+      ((AS1 == ADDRESS_SPACE_GLOBAL) && (AS2 == ADDRESS_SPACE_FABRIC_HANDLE)))
+    return AliasResult::MayAlias;
+
   return (AS1 == AS2 ? AliasResult::MayAlias : AliasResult::NoAlias);
 }
 

@@ -7193,6 +7193,60 @@ foreach dim = ["x", "y", "z"] in {
 }
 
 //
+// Fabric Instructions
+//
+
+def FabricMultimemFlag : Operand<i32> {
+  let PrintMethod = "printMultimem";
+}
+
+multiclass FABRIC_TRY_PUT_ASYNC_S2F_INTR {
+  defvar ins_base = (ins B32:$leId, B64:$offset, ADDR:$src, ADDR:$mbar,
+                     B32:$size);
+  defvar ins_multimem = (ins FabricMultimemFlag:$is_multimem);
+  defvar asm_head = "fabric.try_put.async.${is_multimem}shared::cta"
+                    ".mbarrier::complete_tx::16B.mbarrier::report::fabric";
+  defvar asm_body = ".relaxed.sys.b128"
+                    "\t[$leId, $offset], [$src], $size, [$mbar]";
+  defvar args_mask = ", $mask";
+  defvar args_ch = ", $cache_hint";
+
+  def "" : NVPTXInst<(outs), !con(ins_base, ins_multimem),
+      asm_head # asm_body # ";", []>;
+  def _MASK : NVPTXInst<(outs), !con(ins_base, (ins B16:$mask), ins_multimem),
+      asm_head # ".cp_mask" # asm_body # args_mask # ";", []>;
+  def _CH : NVPTXInst<(outs),
+      !con(ins_base, (ins B64:$cache_hint), ins_multimem),
+      asm_head # ".L2::cache_hint" # asm_body # args_ch # ";", []>;
+  def _MASK_CH : NVPTXInst<(outs),
+      !con(ins_base, (ins B16:$mask, B64:$cache_hint), ins_multimem),
+      asm_head # ".L2::cache_hint.cp_mask" # asm_body # args_mask # args_ch
+      # ";", []>;
+}
+defm FABRIC_TRY_PUT_ASYNC_S2F : FABRIC_TRY_PUT_ASYNC_S2F_INTR;
+
+// .counted::bytes form (counter-based completion; two offsets from the shared
+// leId: data offset then counter offset.
+multiclass FABRIC_TRY_PUT_ASYNC_S2F_COUNTED_WRITES_INTR {
+  defvar ins_base = (ins B32:$leId, B64:$offset1, B64:$offset2, ADDR:$src,
+                     ADDR:$mbar, B32:$size);
+  defvar ins_multimem = (ins FabricMultimemFlag:$is_multimem);
+  defvar asm_head = "fabric.try_put.async.${is_multimem}shared::cta"
+                    ".mbarrier::complete_tx::16B.mbarrier::report::fabric"
+                    ".counted::bytes";
+  defvar asm_body = ".relaxed.sys.b128"
+                    "\t[$leId, $offset1, $offset2], [$src], $size, [$mbar]";
+  defvar args_ch = ", $cache_hint";
+
+  def "" : NVPTXInst<(outs), !con(ins_base, ins_multimem),
+      asm_head # asm_body # ";", []>;
+  def _CH : NVPTXInst<(outs),
+      !con(ins_base, (ins B64:$cache_hint), ins_multimem),
+      asm_head # ".L2::cache_hint" # asm_body # args_ch # ";", []>;
+}
+defm FABRIC_TRY_PUT_ASYNC_S2F_COUNTED_WRITES : FABRIC_TRY_PUT_ASYNC_S2F_COUNTED_WRITES_INTR;
+
+//
 // tcgen05.mma Helpers
 //
 

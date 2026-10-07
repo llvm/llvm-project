@@ -324,6 +324,7 @@ enum AddressSpace : AddressSpaceUnderlyingType {
   Const = NVPTXAS::ADDRESS_SPACE_CONST,
   Local = NVPTXAS::ADDRESS_SPACE_LOCAL,
   SharedCluster = NVPTXAS::ADDRESS_SPACE_SHARED_CLUSTER,
+  FabricHandle = NVPTXAS::ADDRESS_SPACE_FABRIC_HANDLE,
   EntryParam = NVPTXAS::ADDRESS_SPACE_ENTRY_PARAM,
 
   // DeviceParam is not a real address space, as it does not support pointers

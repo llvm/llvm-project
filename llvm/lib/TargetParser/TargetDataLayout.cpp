@@ -495,7 +495,6 @@ static std::string computeNVPTXDataLayout(const Triple &T, StringRef ABIName) {
     // - constant (addrspace:4)
     // - local (addrspace:5)
     // - shared cluster (addrspace:7)
-    // - entry parameter (addrspace:101)
     if (IsShortPtr)
       Ret += "-p3:32:32-p4:32:32-p5:32:32";
 
@@ -503,8 +502,14 @@ static std::string computeNVPTXDataLayout(const Triple &T, StringRef ABIName) {
     Ret += "-p6:32:32";
 
     if (IsShortPtr)
-      Ret += "-p7:32:32-p101:32:32";
+      Ret += "-p7:32:32";
   }
+
+  // Fabric handles (addrspace:8)
+  Ret += "-p8:128:128-ni:8";
+
+  if (!Is32Bit && IsShortPtr)
+    Ret += "-p101:32:32";
 
   Ret += "-i64:64-i128:128-i256:256-v16:16-v32:32-n16:32:64";
 
