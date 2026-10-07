@@ -595,9 +595,14 @@ def mif_DeallocCoarrayOp
 //===----------------------------------------------------------------------===//
 // Events 
 //===----------------------------------------------------------------------===//
-
-def mif_EventPostOp : mif_Op<"event_post", [AttrSizedOperandSegments,
-                                            MemoryEffects<[MemWrite]>]> {
+// NOTE: EVENT POST and EVENT WAIT each qualify as a Fortran 
+//   "image control statement" (F23 11.7.1). This means they end a Fortran 
+//   "segment" and start another (F23 11.7.2), which affects the memory 
+//   consistency semantics of surrounding accesses in the multi-image execution. 
+//   For now we've modeled this by *deliberately* omitting mlir::MemoryEffects
+//   on these operations, to ensure analysis treats these ops conservatively.
+//===----------------------------------------------------------------------===//
+def mif_EventPostOp : mif_Op<"event_post", [AttrSizedOperandSegments]> {
   let summary = "Posts an event.";
   let description = [{
     This is a post-event operation.
@@ -607,21 +612,17 @@ def mif_EventPostOp : mif_Op<"event_post", [AttrSizedOperandSegments,
       - `event_var`: Shall be a coarray or be part of a coarray of 
         type EVENT_TYPE from the intrinsic module ISO_FORTRAN_ENV.
   }];
-
-  let arguments = (ins Arg<AnyRefOrBoxType, "", [MemRead]>:$event,
+  let arguments = (ins Arg<AnyRefOrBoxType>:$event,
       Variadic<AnyInteger>:$cosubscripts,
-      Arg<Optional<AnyReferenceLike>, "", [MemWrite]>:$stat,
-      Arg<Optional<AnyRefOrBoxType>, "", [MemWrite]>:$errmsg);
-
+      Arg<Optional<AnyReferenceLike>>:$stat,
+      Arg<Optional<AnyRefOrBoxType>>:$errmsg);
   let assemblyFormat = [{
     $event (`[` $cosubscripts^ `]` )? 
     (`stat` $stat^ )?  (`errmsg` $errmsg^ )?
     attr-dict `:` functional-type(operands, results)
   }];
 }
-
-def mif_EventWaitOp : mif_Op<"event_wait", [AttrSizedOperandSegments,
-                                            MemoryEffects<[MemWrite]>]> {
+def mif_EventWaitOp : mif_Op<"event_wait", [AttrSizedOperandSegments]> {
   let summary = "Waits until an event is posted.";
   let description = [{
     Arguments: 
@@ -630,12 +631,10 @@ def mif_EventWaitOp : mif_Op<"event_wait", [AttrSizedOperandSegments,
       - `until_count`(optional) : Shall be an integer scalar and indicate the count of 
         the given event variable to be waited for.
   }];
-
-  let arguments = (ins Arg<AnyRefOrBoxType, "", [MemRead]>:$event,
+  let arguments = (ins Arg<AnyRefOrBoxType>:$event,
       Optional<AnyIntegerType>:$until_count,
-      Arg<Optional<AnyReferenceLike>, "", [MemWrite]>:$stat,
-      Arg<Optional<AnyRefOrBoxType>, "", [MemWrite]>:$errmsg);
-
+      Arg<Optional<AnyReferenceLike>>:$stat,
+      Arg<Optional<AnyRefOrBoxType>>:$errmsg);
   let assemblyFormat = [{
     $event 
     (`until_count` $until_count^ )?
