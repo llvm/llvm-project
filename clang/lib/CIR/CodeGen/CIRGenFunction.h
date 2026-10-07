@@ -1854,6 +1854,8 @@ public:
   LValue emitArraySubscriptExpr(const clang::ArraySubscriptExpr *e);
   LValue emitInitListLValue(const InitListExpr *e);
 
+  mlir::Value emitMatrixIndexExpr(const Expr *e);
+
   LValue emitExtVectorElementExpr(const ExtVectorElementExpr *e);
 
   Address emitArrayToPointerDecay(const Expr *e,

@@ -5271,6 +5271,28 @@ mlir::LogicalResult CIRToLLVMVecTernaryOpLowering::matchAndRewrite(
   return mlir::success();
 }
 
+mlir::LogicalResult CIRToLLVMMatrixExtractOpLowering::matchAndRewrite(
+    cir::MatrixExtractOp op, OpAdaptor adaptor,
+    mlir::ConversionPatternRewriter &rewriter) const {
+  cir::MatrixType matrixTy = op.getMatrix().getType();
+  mlir::Value rowIdx = adaptor.getRowIdx();
+  mlir::Value columnIdx = adaptor.getColumnIdx();
+  mlir::Type indexTy = rowIdx.getType();
+  mlir::Value numRows = mlir::LLVM::ConstantOp::create(
+      rewriter, op.getLoc(), indexTy,
+      rewriter.getI64IntegerAttr(matrixTy.getRowNum()));
+
+  // Column major index = (columnIdx * numRows) + rowIdx
+  mlir::Value flatIndex = mlir::LLVM::MulOp::create(
+      rewriter, op->getLoc(), {columnIdx, numRows}, /*properties'clang=*/{},
+      /*discardableAttributes=*/{});
+  flatIndex = mlir::LLVM::AddOp::create(rewriter, op->getLoc(), flatIndex,
+                                        rowIdx, /*overflowFlags=*/{});
+  rewriter.replaceOpWithNewOp<mlir::LLVM::ExtractElementOp>(
+      op, adaptor.getMatrix(), flatIndex);
+  return mlir::success();
+}
+
 mlir::LogicalResult CIRToLLVMMatrixColumnMajorLoadOpLowering::matchAndRewrite(
     cir::MatrixColumnMajorLoadOp op, OpAdaptor adaptor,
     mlir::ConversionPatternRewriter &rewriter) const {

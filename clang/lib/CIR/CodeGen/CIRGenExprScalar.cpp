@@ -320,9 +320,11 @@ public:
   }
 
   mlir::Value VisitMatrixSubscriptExpr(MatrixSubscriptExpr *e) {
-    cgf.cgm.errorNYI(e->getSourceRange(),
-                     "ScalarExprEmitter: matrix subscript");
-    return {};
+    mlir::Value matrix = Visit(e->getBase());
+    mlir::Value rowIdx = cgf.emitMatrixIndexExpr(e->getRowIdx());
+    mlir::Value columnIdx = cgf.emitMatrixIndexExpr(e->getColumnIdx());
+    mlir::Location loc = cgf.getLoc(e->getSourceRange());
+    return builder.createMatrixExtract(loc, matrix, rowIdx, columnIdx);
   }
 
   mlir::Value VisitMatrixSingleSubscriptExpr(MatrixSingleSubscriptExpr *e) {

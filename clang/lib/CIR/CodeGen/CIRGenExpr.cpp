@@ -1552,6 +1552,12 @@ CIRGenFunction::emitArraySubscriptExpr(const clang::ArraySubscriptExpr *e) {
   return lv;
 }
 
+mlir::Value CIRGenFunction::emitMatrixIndexExpr(const Expr *e) {
+  mlir::Value idx = emitScalarExpr(e);
+  return idx.getType() == uIntPtrTy ? idx
+                                    : builder.createIntCast(idx, uIntPtrTy);
+}
+
 LValue CIRGenFunction::emitExtVectorElementExpr(const ExtVectorElementExpr *e) {
   // Emit the base vector as an l-value.
   LValue base;

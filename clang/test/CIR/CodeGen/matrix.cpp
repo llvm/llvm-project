@@ -158,3 +158,22 @@ void column_major_volatile_store() {
 // LLVM: %[[TMP_MATRIX:.*]] = load <9 x float>, ptr %[[MATRIX_ADDR]], align 4
 // LLVM: %[[TMP_PTR:.*]] = load ptr, ptr %[[PTR_ADDR]], align 8
 // LLVM: call void @llvm.matrix.column.major.store.v9f32.i64(<9 x float> %[[TMP_MATRIX]], ptr align 4 %[[TMP_PTR]], i64 3, i1 true, i32 3, i32 3)
+
+void matrix_subscript_expr() {
+  matrix3x3 matrix;
+  float b = matrix[1][2];
+}
+
+// CIR: %[[MATRIX_ADDR:.*]] = cir.alloca "matrix" {{.*}} : !cir.ptr<!cir.matrix<3 x 3 x !cir.float>>
+// CIR: %[[B_ADDR:.*]] = cir.alloca "b" {{.*}} init : !cir.ptr<!cir.float>
+// CIR: %[[TMP_MATRIX:.*]] = cir.load {{.*}} %[[MATRIX_ADDR]] : !cir.ptr<!cir.matrix<3 x 3 x !cir.float>>, !cir.matrix<3 x 3 x !cir.float>
+// CIR: %[[ROW_IDX:.*]] = cir.const #cir.int<1> : !u64i
+// CIR: %[[COLUMN_IDX:.*]] = cir.const #cir.int<2> : !u64i
+// CIR: %[[ELEM:.*]] = cir.matrix.extract %[[TMP_MATRIX]][%[[ROW_IDX]] : !u64i, %[[COLUMN_IDX]] : !u64i] : !cir.matrix<3 x 3 x !cir.float>
+// CIR: cir.store {{.*}} %[[ELEM]], %[[B_ADDR]] : !cir.float, !cir.ptr<!cir.float>
+
+// LLVM: %[[MATRIX_ADDR:.*]] = alloca [9 x float], align 4
+// LLVM: %[[B_ADDR:.*]] = alloca float, align 4
+// LLVM: %[[TMP_MATRIX:.*]] = load <9 x float>, ptr %[[MATRIX_ADDR]], align 4
+// LLVM: %[[ELEM:.*]] = extractelement <9 x float> %[[TMP_MATRIX]], i64 7
+// LLVM: store float %[[ELEM]], ptr %[[B_ADDR]], align 4
