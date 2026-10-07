@@ -120,10 +120,10 @@ body:             |
   bb.0:
     liveins: $r0, $r1
 
-    %0(s32) = COPY $r0
-    %1(s32) = COPY $r1
-    %2(s32) = G_ADD %0, %1
-    $r0 = COPY %2(s32)
+    %0(i32) = COPY $r0
+    %1(i32) = COPY $r1
+    %2(i32) = G_ADD %0, %1
+    $r0 = COPY %2(i32)
     BX_RET 14, $noreg, implicit $r0
 
 ...
@@ -146,10 +146,10 @@ body:             |
   bb.0:
     liveins: $r0, $r1
 
-    %0(s32) = COPY $r0
-    %1(s32) = COPY $r1
-    %2(s32) = G_SUB %0, %1
-    $r0 = COPY %2(s32)
+    %0(i32) = COPY $r0
+    %1(i32) = COPY $r1
+    %2(i32) = G_SUB %0, %1
+    $r0 = COPY %2(i32)
     BX_RET 14, $noreg, implicit $r0
 
 ...
@@ -172,10 +172,10 @@ body:             |
   bb.0:
     liveins: $r0, $r1
 
-    %0(s32) = COPY $r0
-    %1(s32) = COPY $r1
-    %2(s32) = G_MUL %0, %1
-    $r0 = COPY %2(s32)
+    %0(i32) = COPY $r0
+    %1(i32) = COPY $r1
+    %2(i32) = G_MUL %0, %1
+    $r0 = COPY %2(i32)
     BX_RET 14, $noreg, implicit $r0
 
 ...
@@ -198,10 +198,10 @@ body:             |
   bb.0:
     liveins: $r0, $r1
 
-    %0(s32) = COPY $r0
-    %1(s32) = COPY $r1
-    %2(s32) = G_SDIV %0, %1
-    $r0 = COPY %2(s32)
+    %0(i32) = COPY $r0
+    %1(i32) = COPY $r1
+    %2(i32) = G_SDIV %0, %1
+    $r0 = COPY %2(i32)
     BX_RET 14, $noreg, implicit $r0
 
 ...
@@ -224,10 +224,10 @@ body:             |
   bb.0:
     liveins: $r0, $r1
 
-    %0(s32) = COPY $r0
-    %1(s32) = COPY $r1
-    %2(s32) = G_UDIV %0, %1
-    $r0 = COPY %2(s32)
+    %0(i32) = COPY $r0
+    %1(i32) = COPY $r1
+    %2(i32) = G_UDIV %0, %1
+    $r0 = COPY %2(i32)
     BX_RET 14, $noreg, implicit $r0
 
 ...
@@ -250,10 +250,10 @@ body:             |
   bb.0:
     liveins: $r0, $r1
 
-    %0(s32) = COPY $r0
-    %1(s32) = COPY $r1
-    %2(s32) = G_AND %0, %1
-    $r0 = COPY %2(s32)
+    %0(i32) = COPY $r0
+    %1(i32) = COPY $r1
+    %2(i32) = G_AND %0, %1
+    $r0 = COPY %2(i32)
     BX_RET 14, $noreg, implicit $r0
 
 ...
@@ -276,10 +276,10 @@ body:             |
   bb.0:
     liveins: $r0, $r1
 
-    %0(s32) = COPY $r0
-    %1(s32) = COPY $r1
-    %2(s32) = G_OR %0, %1
-    $r0 = COPY %2(s32)
+    %0(i32) = COPY $r0
+    %1(i32) = COPY $r1
+    %2(i32) = G_OR %0, %1
+    $r0 = COPY %2(i32)
     BX_RET 14, $noreg, implicit $r0
 
 ...
@@ -302,10 +302,10 @@ body:             |
   bb.0:
     liveins: $r0, $r1
 
-    %0(s32) = COPY $r0
-    %1(s32) = COPY $r1
-    %2(s32) = G_XOR %0, %1
-    $r0 = COPY %2(s32)
+    %0(i32) = COPY $r0
+    %1(i32) = COPY $r1
+    %2(i32) = G_XOR %0, %1
+    $r0 = COPY %2(i32)
     BX_RET 14, $noreg, implicit $r0
 
 ...
@@ -328,10 +328,10 @@ body:             |
   bb.0:
     liveins: $r0, $r1
 
-    %0(s32) = COPY $r0
-    %1(s32) = COPY $r1
-    %2(s32) = G_LSHR %0, %1
-    $r0 = COPY %2(s32)
+    %0(i32) = COPY $r0
+    %1(i32) = COPY $r1
+    %2(i32) = G_LSHR %0, %1
+    $r0 = COPY %2(i32)
     BX_RET 14, $noreg, implicit $r0
 
 ...
@@ -354,10 +354,10 @@ body:             |
   bb.0:
     liveins: $r0, $r1
 
-    %0(s32) = COPY $r0
-    %1(s32) = COPY $r1
-    %2(s32) = G_ASHR %0, %1
-    $r0 = COPY %2(s32)
+    %0(i32) = COPY $r0
+    %1(i32) = COPY $r1
+    %2(i32) = G_ASHR %0, %1
+    $r0 = COPY %2(i32)
     BX_RET 14, $noreg, implicit $r0
 
 ...
@@ -380,10 +380,10 @@ body:             |
   bb.0:
     liveins: $r0, $r1
 
-    %0(s32) = COPY $r0
-    %1(s32) = COPY $r1
-    %2(s32) = G_SHL %0, %1
-    $r0 = COPY %2(s32)
+    %0(i32) = COPY $r0
+    %1(i32) = COPY $r1
+    %2(i32) = G_SHL %0, %1
+    $r0 = COPY %2(i32)
     BX_RET 14, $noreg, implicit $r0
 
 ...
@@ -413,10 +413,10 @@ body:             |
   bb.0:
     liveins: $r0
     %0(p0) = COPY $r0
-    %5(s64) = G_LOAD %0 :: (load (s64))
-    %1(s32) = G_LOAD %0 :: (load (s32))
-    %2(s16) = G_LOAD %0 :: (load (s16))
-    %3(s8)  = G_LOAD %0 :: (load (s8))
+    %5(i64) = G_LOAD %0 :: (load (i64))
+    %1(i32) = G_LOAD %0 :: (load (i32))
+    %2(i16) = G_LOAD %0 :: (load (i16))
+    %3(i8)  = G_LOAD %0 :: (load (i8))
     %4(p0)  = G_LOAD %0 :: (load (p0))
     BX_RET 14, $noreg, implicit $r0
 
@@ -445,14 +445,14 @@ body:             |
   bb.0:
     liveins: $r0, $r1, $r5, $d6
     %0(p0) = COPY $r0
-    %1(s32) = COPY $r1
-    G_STORE %1(s32), %0 :: (store (s32))
-    %2(s16) = G_TRUNC %1(s32)
-    G_STORE %2(s16), %0 :: (store (s16))
-    %3(s8) = G_TRUNC %1(s32)
-    G_STORE %3(s8), %0 :: (store (s8))
-    %4(s64) = COPY $d6
-    G_STORE %4(s64), %0 :: (store (s64))
+    %1(i32) = COPY $r1
+    G_STORE %1(i32), %0 :: (store (i32))
+    %2(i16) = G_TRUNC %1(i32)
+    G_STORE %2(i16), %0 :: (store (i16))
+    %3(i8) = G_TRUNC %1(i32)
+    G_STORE %3(i8), %0 :: (store (i8))
+    %4(i64) = COPY $d6
+    G_STORE %4(i64), %0 :: (store (i64))
     BX_RET 14, $noreg, implicit $r0
 
 ...
@@ -479,12 +479,12 @@ fixedStack:
 body:             |
   bb.0:
     %0(p0) = G_FRAME_INDEX %fixed-stack.0
-    %1(s32) = G_LOAD %0(p0) :: (load (s32) from %fixed-stack.0, align 4)
+    %1(i32) = G_LOAD %0(p0) :: (load (i32) from %fixed-stack.0, align 4)
 
     %2(p0) = COPY $sp
-    %3(s32) = G_CONSTANT i32 8
-    %4(p0) = G_PTR_ADD %2, %3(s32)
-    G_STORE %1(s32), %4(p0) :: (store (s32))
+    %3(i32) = G_CONSTANT i32 8
+    %4(p0) = G_PTR_ADD %2, %3(i32)
+    G_STORE %1(i32), %4(p0) :: (store (i32))
 
     BX_RET 14, $noreg
 
@@ -509,8 +509,8 @@ body:             |
     liveins: $r0, $r1
 
     %0(p0) = COPY $r0
-    %1(s32) = COPY $r1
-    %2(p0) = G_PTR_ADD %0, %1(s32)
+    %1(i32) = COPY $r1
+    %2(p0) = G_PTR_ADD %0, %1(i32)
     $r0 = COPY %2(p0)
     BX_RET 14, $noreg, implicit $r0
 ...
@@ -526,8 +526,8 @@ registers:
   - { id: 0, class: _ }
 body:             |
   bb.0:
-    %0(s32) = G_CONSTANT i32 42
-    $r0 = COPY %0(s32)
+    %0(i32) = G_CONSTANT i32 42
+    $r0 = COPY %0(i32)
     BX_RET 14, $noreg, implicit $r0
 ...
 ---
@@ -544,8 +544,8 @@ registers:
   - { id: 1, class: _ }
 body:             |
   bb.0:
-    %0(s32) = COPY $r0
-    %1(p0) = G_INTTOPTR %0(s32)
+    %0(i32) = COPY $r0
+    %1(p0) = G_INTTOPTR %0(i32)
     $r0 = COPY %1(p0)
     BX_RET 14, $noreg, implicit $r0
 ...
@@ -564,8 +564,8 @@ registers:
 body:             |
   bb.0:
     %0(p0) = COPY $r0
-    %1(s32) = G_PTRTOINT %0(p0)
-    $r0 = COPY %1(s32)
+    %1(i32) = G_PTRTOINT %0(p0)
+    $r0 = COPY %1(i32)
     BX_RET 14, $noreg, implicit $r0
 ...
 ---
@@ -582,9 +582,9 @@ registers:
   - { id: 1, class: _ }
 body:             |
   bb.0:
-    %0(s32) = COPY $r0
-    %1(s32) = G_CTLZ %0(s32)
-    $r0 = COPY %1(s32)
+    %0(i32) = COPY $r0
+    %1(i32) = G_CTLZ %0(i32)
+    $r0 = COPY %1(i32)
     BX_RET 14, $noreg, implicit $r0
 ...
 ---
@@ -621,10 +621,10 @@ body:             |
   bb.0:
     liveins: $r0
 
-    %0(s32) = COPY $r0
-    %1(s8) = G_TRUNC %0(s32)
-    %2(s32) = G_ANYEXT %1(s8)
-    $r0 = COPY %2(s32)
+    %0(i32) = COPY $r0
+    %1(i8) = G_TRUNC %0(i32)
+    %2(i32) = G_ANYEXT %1(i8)
+    $r0 = COPY %2(i32)
     BX_RET 14, $noreg, implicit $r0
 ...
 ---
@@ -645,10 +645,10 @@ body:             |
   bb.0:
     liveins: $r0
 
-    %0(s32) = COPY $r0
-    %1(s16) = G_TRUNC %0(s32)
-    %2(s32) = G_ANYEXT %1(s16)
-    $r0 = COPY %2(s32)
+    %0(i32) = COPY $r0
+    %1(i16) = G_TRUNC %0(i32)
+    %2(i32) = G_ANYEXT %1(i16)
+    $r0 = COPY %2(i32)
     BX_RET 14, $noreg, implicit $r0
 ...
 ---
@@ -669,10 +669,10 @@ body:             |
   bb.0:
     liveins: $r0, $r1
 
-    %0(s32) = COPY $r0
+    %0(i32) = COPY $r0
     %2(p0) = COPY $r1
-    %1(s16) = G_TRUNC %0(s32)
-    G_STORE %1(s16), %2 :: (store (s16))
+    %1(i16) = G_TRUNC %0(i32)
+    G_STORE %1(i16), %2 :: (store (i16))
     BX_RET 14, $noreg
 ...
 ---
@@ -696,11 +696,11 @@ body:             |
   bb.0:
     liveins: $r0, $r1
 
-    %0(s32) = COPY $r0
-    %1(s32) = COPY $r1
-    %2(s1) = G_ICMP intpred(eq), %0(s32), %1
-    %3(s32) = G_ZEXT %2(s1)
-    $r0 = COPY %3(s32)
+    %0(i32) = COPY $r0
+    %1(i32) = COPY $r1
+    %2(i1) = G_ICMP intpred(eq), %0(i32), %1
+    %3(i32) = G_ZEXT %2(i1)
+    $r0 = COPY %3(i32)
     BX_RET 14, $noreg, implicit $r0
 
 ...
@@ -725,11 +725,11 @@ body:             |
   bb.0:
     liveins: $s0, $s1
 
-    %0(s32) = COPY $s0
-    %1(s32) = COPY $s1
-    %2(s1) = G_FCMP floatpred(one), %0(s32), %1
-    %3(s32) = G_ZEXT %2(s1)
-    $r0 = COPY %3(s32)
+    %0(f32) = COPY $s0
+    %1(f32) = COPY $s1
+    %2(i1) = G_FCMP floatpred(one), %0(f32), %1
+    %3(i32) = G_ZEXT %2(i1)
+    $r0 = COPY %3(i32)
     BX_RET 14, $noreg, implicit $r0
 
 ...
@@ -754,11 +754,11 @@ body:             |
   bb.0:
     liveins: $d0, $d1
 
-    %0(s64) = COPY $d0
-    %1(s64) = COPY $d1
-    %2(s1) = G_FCMP floatpred(ugt), %0(s64), %1
-    %3(s32) = G_ZEXT %2(s1)
-    $r0 = COPY %3(s32)
+    %0(f64) = COPY $d0
+    %1(f64) = COPY $d1
+    %2(i1) = G_FCMP floatpred(ugt), %0(f64), %1
+    %3(i32) = G_ZEXT %2(i1)
+    $r0 = COPY %3(i32)
     BX_RET 14, $noreg, implicit $r0
 
 ...
@@ -785,12 +785,12 @@ body:             |
   bb.0:
     liveins: $r0, $r1, $r2
 
-    %0(s32) = COPY $r0
-    %1(s32) = COPY $r1
-    %2(s32) = COPY $r2
-    %3(s1) = G_TRUNC %2(s32)
-    %4(s32) = G_SELECT %3(s1), %0, %1
-    $r0 = COPY %4(s32)
+    %0(i32) = COPY $r0
+    %1(i32) = COPY $r1
+    %2(i32) = COPY $r2
+    %3(i1) = G_TRUNC %2(i32)
+    %4(i32) = G_SELECT %3(i1), %0, %1
+    $r0 = COPY %4(i32)
     BX_RET 14, $noreg, implicit $r0
 
 ...
@@ -813,9 +813,9 @@ body:             |
     successors: %bb.1(0x40000000), %bb.2(0x40000000)
     liveins: $r0
 
-    %0(s32) = COPY $r0
-    %1(s1) = G_TRUNC %0(s32)
-    G_BRCOND %1(s1), %bb.1
+    %0(i32) = COPY $r0
+    %1(i1) = G_TRUNC %0(i32)
+    G_BRCOND %1(i1), %bb.1
     G_BR %bb.2
 
   bb.1:
@@ -849,21 +849,21 @@ body:             |
     successors: %bb.1(0x40000000), %bb.2(0x40000000)
     liveins: $r0, $r1, $r2
 
-    %0(s32) = COPY $r0
-    %1(s1) = G_TRUNC %0(s32)
+    %0(i32) = COPY $r0
+    %1(i1) = G_TRUNC %0(i32)
 
-    %2(s32) = COPY $r1
-    %3(s32) = COPY $r2
+    %2(i32) = COPY $r1
+    %3(i32) = COPY $r2
 
-    G_BRCOND %1(s1), %bb.1
+    G_BRCOND %1(i1), %bb.1
     G_BR %bb.2
 
   bb.1:
     successors: %bb.2(0x80000000)
 
   bb.2:
-    %4(s32) = G_PHI %2(s32), %bb.0, %3(s32), %bb.1
-    $r0 = COPY %4(s32)
+    %4(i32) = G_PHI %2(i32), %bb.0, %3(i32), %bb.1
+    $r0 = COPY %4(i32)
     BX_RET 14, $noreg, implicit $r0
 ...
 ---
@@ -890,21 +890,21 @@ body:             |
     successors: %bb.1(0x40000000), %bb.2(0x40000000)
     liveins: $r0, $d0, $d1
 
-    %0(s32) = COPY $r0
-    %1(s1) = G_TRUNC %0(s32)
+    %0(i32) = COPY $r0
+    %1(i1) = G_TRUNC %0(i32)
 
-    %2(s64) = COPY $d0
-    %3(s64) = COPY $d1
+    %2(i64) = COPY $d0
+    %3(i64) = COPY $d1
 
-    G_BRCOND %1(s1), %bb.1
+    G_BRCOND %1(i1), %bb.1
     G_BR %bb.2
 
   bb.1:
     successors: %bb.2(0x80000000)
 
   bb.2:
-    %4(s64) = G_PHI %2(s64), %bb.0, %3(s64), %bb.1
-    $d0 = COPY %4(s64)
+    %4(i64) = G_PHI %2(i64), %bb.0, %3(i64), %bb.1
+    $d0 = COPY %4(i64)
     BX_RET 14, $noreg, implicit $d0
 ...
 ---
@@ -926,10 +926,10 @@ body:             |
   bb.0:
     liveins: $s0, $s1
 
-    %0(s32) = COPY $s0
-    %1(s32) = COPY $s1
-    %2(s32) = G_FADD %0, %1
-    $s0 = COPY %2(s32)
+    %0(f32) = COPY $s0
+    %1(f32) = COPY $s1
+    %2(f32) = G_FADD %0, %1
+    $s0 = COPY %2(f32)
     BX_RET 14, $noreg, implicit $s0
 
 ...
@@ -952,10 +952,10 @@ body:             |
   bb.0:
     liveins: $d0, $d1
 
-    %0(s64) = COPY $d0
-    %1(s64) = COPY $d1
-    %2(s64) = G_FADD %0, %1
-    $d0 = COPY %2(s64)
+    %0(f64) = COPY $d0
+    %1(f64) = COPY $d1
+    %2(f64) = G_FADD %0, %1
+    $d0 = COPY %2(f64)
     BX_RET 14, $noreg, implicit $d0
 
 ...
@@ -978,10 +978,10 @@ body:             |
   bb.0:
     liveins: $s0, $s1
 
-    %0(s32) = COPY $s0
-    %1(s32) = COPY $s1
-    %2(s32) = G_FSUB %0, %1
-    $s0 = COPY %2(s32)
+    %0(f32) = COPY $s0
+    %1(f32) = COPY $s1
+    %2(f32) = G_FSUB %0, %1
+    $s0 = COPY %2(f32)
     BX_RET 14, $noreg, implicit $s0
 
 ...
@@ -1004,10 +1004,10 @@ body:             |
   bb.0:
     liveins: $d0, $d1
 
-    %0(s64) = COPY $d0
-    %1(s64) = COPY $d1
-    %2(s64) = G_FSUB %0, %1
-    $d0 = COPY %2(s64)
+    %0(f64) = COPY $d0
+    %1(f64) = COPY $d1
+    %2(f64) = G_FSUB %0, %1
+    $d0 = COPY %2(f64)
     BX_RET 14, $noreg, implicit $d0
 
 ...
@@ -1030,10 +1030,10 @@ body:             |
   bb.0:
     liveins: $s0, $s1
 
-    %0(s32) = COPY $s0
-    %1(s32) = COPY $s1
-    %2(s32) = G_FMUL %0, %1
-    $s0 = COPY %2(s32)
+    %0(f32) = COPY $s0
+    %1(f32) = COPY $s1
+    %2(f32) = G_FMUL %0, %1
+    $s0 = COPY %2(f32)
     BX_RET 14, $noreg, implicit $s0
 
 ...
@@ -1056,10 +1056,10 @@ body:             |
   bb.0:
     liveins: $d0, $d1
 
-    %0(s64) = COPY $d0
-    %1(s64) = COPY $d1
-    %2(s64) = G_FMUL %0, %1
-    $d0 = COPY %2(s64)
+    %0(f64) = COPY $d0
+    %1(f64) = COPY $d1
+    %2(f64) = G_FMUL %0, %1
+    $d0 = COPY %2(f64)
     BX_RET 14, $noreg, implicit $d0
 
 ...
@@ -1082,10 +1082,10 @@ body:             |
   bb.0:
     liveins: $s0, $s1
 
-    %0(s32) = COPY $s0
-    %1(s32) = COPY $s1
-    %2(s32) = G_FDIV %0, %1
-    $s0 = COPY %2(s32)
+    %0(f32) = COPY $s0
+    %1(f32) = COPY $s1
+    %2(f32) = G_FDIV %0, %1
+    $s0 = COPY %2(f32)
     BX_RET 14, $noreg, implicit $s0
 
 ...
@@ -1108,10 +1108,10 @@ body:             |
   bb.0:
     liveins: $d0, $d1
 
-    %0(s64) = COPY $d0
-    %1(s64) = COPY $d1
-    %2(s64) = G_FDIV %0, %1
-    $d0 = COPY %2(s64)
+    %0(f64) = COPY $d0
+    %1(f64) = COPY $d1
+    %2(f64) = G_FDIV %0, %1
+    $d0 = COPY %2(f64)
     BX_RET 14, $noreg, implicit $d0
 
 ...
@@ -1131,9 +1131,9 @@ body:             |
   bb.0:
     liveins: $s0
 
-    %0(s32) = COPY $s0
-    %1(s32) = G_FNEG %0
-    $s0 = COPY %1(s32)
+    %0(f32) = COPY $s0
+    %1(f32) = G_FNEG %0
+    $s0 = COPY %1(f32)
     BX_RET 14, $noreg, implicit $s0
 
 ...
@@ -1153,9 +1153,9 @@ body:             |
   bb.0:
     liveins: $d0
 
-    %0(s64) = COPY $d0
-    %1(s64) = G_FNEG %0
-    $d0 = COPY %1(s64)
+    %0(f64) = COPY $d0
+    %1(f64) = G_FNEG %0
+    $d0 = COPY %1(f64)
     BX_RET 14, $noreg, implicit $d0
 
 ...
@@ -1179,11 +1179,11 @@ body:             |
   bb.0:
     liveins: $s0, $s1, $s2
 
-    %0(s32) = COPY $s0
-    %1(s32) = COPY $s1
-    %2(s32) = COPY $s2
-    %3(s32) = G_FMA %0, %1, %2
-    $s0 = COPY %3(s32)
+    %0(f32) = COPY $s0
+    %1(f32) = COPY $s1
+    %2(f32) = COPY $s2
+    %3(f32) = G_FMA %0, %1, %2
+    $s0 = COPY %3(f32)
     BX_RET 14, $noreg, implicit $s0
 ...
 ---
@@ -1206,11 +1206,11 @@ body:             |
   bb.0:
     liveins: $d0, $d1, $d2
 
-    %0(s64) = COPY $d0
-    %1(s64) = COPY $d1
-    %2(s64) = COPY $d2
-    %3(s64) = G_FMA %0, %1, %2
-    $d0 = COPY %3(s64)
+    %0(f64) = COPY $d0
+    %1(f64) = COPY $d1
+    %2(f64) = COPY $d2
+    %3(f64) = G_FMA %0, %1, %2
+    $d0 = COPY %3(f64)
     BX_RET 14, $noreg, implicit $d0
 ...
 ---
@@ -1229,9 +1229,9 @@ body:             |
   bb.0:
     liveins: $s0
 
-    %0(s32) = COPY $s0
-    %1(s64) = G_FPEXT %0
-    $d0 = COPY %1(s64)
+    %0(f32) = COPY $s0
+    %1(f64) = G_FPEXT %0
+    $d0 = COPY %1(f64)
     BX_RET 14, $noreg, implicit $d0
 ...
 ---
@@ -1250,9 +1250,9 @@ body:             |
   bb.0:
     liveins: $d0
 
-    %0(s64) = COPY $d0
-    %1(s32) = G_FPTRUNC %0
-    $s0 = COPY %1(s32)
+    %0(f64) = COPY $d0
+    %1(f32) = G_FPTRUNC %0
+    $s0 = COPY %1(f32)
     BX_RET 14, $noreg, implicit $s0
 ...
 ---
@@ -1269,8 +1269,8 @@ body:             |
   bb.0:
     liveins:
 
-    %0(s32) = G_FCONSTANT float -1.25
-    $s0 = COPY %0(s32)
+    %0(f32) = G_FCONSTANT float -1.25
+    $s0 = COPY %0(f32)
     BX_RET 14, $noreg, implicit $s0
 ...
 ---
@@ -1287,8 +1287,8 @@ body:             |
   bb.0:
     liveins:
 
-    %0(s64) = G_FCONSTANT double -2.4
-    $d0 = COPY %0(s64)
+    %0(f64) = G_FCONSTANT double -2.4
+    $d0 = COPY %0(f64)
     BX_RET 14, $noreg, implicit $d0
 ...
 ---
@@ -1307,9 +1307,9 @@ body:             |
   bb.0:
     liveins: $s0
 
-    %0(s32) = COPY $s0
-    %1(s32) = G_FPTOSI %0
-    $r0 = COPY %1(s32)
+    %0(f32) = COPY $s0
+    %1(i32) = G_FPTOSI %0
+    $r0 = COPY %1(i32)
     BX_RET 14, $noreg, implicit $r0
 
 ...
@@ -1329,9 +1329,9 @@ body:             |
   bb.0:
     liveins: $d0
 
-    %0(s64) = COPY $d0
-    %1(s32) = G_FPTOSI %0
-    $r0 = COPY %1(s32)
+    %0(f64) = COPY $d0
+    %1(i32) = G_FPTOSI %0
+    $r0 = COPY %1(i32)
     BX_RET 14, $noreg, implicit $r0
 ...
 ---
@@ -1350,9 +1350,9 @@ body:             |
   bb.0:
     liveins: $s0
 
-    %0(s32) = COPY $s0
-    %1(s32) = G_FPTOUI %0
-    $r0 = COPY %1(s32)
+    %0(f32) = COPY $s0
+    %1(i32) = G_FPTOUI %0
+    $r0 = COPY %1(i32)
     BX_RET 14, $noreg, implicit $r0
 
 ...
@@ -1372,9 +1372,9 @@ body:             |
   bb.0:
     liveins: $d0
 
-    %0(s64) = COPY $d0
-    %1(s32) = G_FPTOUI %0
-    $r0 = COPY %1(s32)
+    %0(f64) = COPY $d0
+    %1(i32) = G_FPTOUI %0
+    $r0 = COPY %1(i32)
     BX_RET 14, $noreg, implicit $r0
 ...
 ---
@@ -1393,9 +1393,9 @@ body:             |
   bb.0:
     liveins: $r0
 
-    %0(s32) = COPY $r0
-    %1(s32) = G_SITOFP %0
-    $s0 = COPY %1(s32)
+    %0(i32) = COPY $r0
+    %1(f32) = G_SITOFP %0
+    $s0 = COPY %1(f32)
     BX_RET 14, $noreg, implicit $s0
 
 ...
@@ -1415,9 +1415,9 @@ body:             |
   bb.0:
     liveins: $r0
 
-    %0(s32) = COPY $r0
-    %1(s64) = G_SITOFP %0
-    $d0 = COPY %1(s64)
+    %0(i32) = COPY $r0
+    %1(f64) = G_SITOFP %0
+    $d0 = COPY %1(f64)
     BX_RET 14, $noreg, implicit $d0
 ...
 ---
@@ -1436,9 +1436,9 @@ body:             |
   bb.0:
     liveins: $r0
 
-    %0(s32) = COPY $r0
-    %1(s32) = G_UITOFP %0
-    $s0 = COPY %1(s32)
+    %0(i32) = COPY $r0
+    %1(f32) = G_UITOFP %0
+    $s0 = COPY %1(f32)
     BX_RET 14, $noreg, implicit $s0
 
 ...
@@ -1458,9 +1458,9 @@ body:             |
   bb.0:
     liveins: $r0
 
-    %0(s32) = COPY $r0
-    %1(s64) = G_UITOFP %0
-    $d0 = COPY %1(s64)
+    %0(i32) = COPY $r0
+    %1(f64) = G_UITOFP %0
+    $d0 = COPY %1(f64)
     BX_RET 14, $noreg, implicit $d0
 ...
 ---
@@ -1486,12 +1486,12 @@ body:             |
   bb.0:
     liveins: $r0, $r1
 
-    %0(s32) = COPY $r0
-    %1(s32) = COPY $r1
-    %2(s64) = G_MERGE_VALUES %0(s32), %1(s32)
-    %3(s32), %4(s32) = G_UNMERGE_VALUES %2(s64)
-    $r0 = COPY %3(s32)
-    $r1 = COPY %4(s32)
+    %0(i32) = COPY $r0
+    %1(i32) = COPY $r1
+    %2(i64) = G_MERGE_VALUES %0(i32), %1(i32)
+    %3(i32), %4(i32) = G_UNMERGE_VALUES %2(i64)
+    $r0 = COPY %3(i32)
+    $r1 = COPY %4(i32)
     BX_RET 14, $noreg, implicit $r0, implicit $r1
 
 ...
@@ -1513,35 +1513,35 @@ body:             |
   bb.0:
     liveins: $r0, $s1, $d2
 
-    %0(s32) = COPY $r0
+    %0(i32) = COPY $r0
 
-    ; CHECK: {{%[0-9]+}}:gprb(s32) = G_ADD
-    %1(s32) = G_ADD %0, %0
+    ; CHECK: {{%[0-9]+}}:gprb(i32) = G_ADD
+    %1(i32) = G_ADD %0, %0
 
-    ; CHECK: DBG_VALUE {{%[0-9]+}}(s32), $noreg
-    DBG_VALUE %1(s32), $noreg, !7, !DIExpression(), debug-location !9
+    ; CHECK: DBG_VALUE {{%[0-9]+}}(i32), $noreg
+    DBG_VALUE %1(i32), $noreg, !7, !DIExpression(), debug-location !9
 
-    $r0 = COPY %1(s32)
+    $r0 = COPY %1(i32)
 
-    %2(s32) = COPY $s1
+    %2(f32) = COPY $s1
 
-    ; CHECK: {{%[0-9]+}}:fprb(s32) = G_FADD
-    %3(s32) = G_FADD %2, %2
+    ; CHECK: {{%[0-9]+}}:fprb(f32) = G_FADD
+    %3(f32) = G_FADD %2, %2
 
-    ; CHECK: DBG_VALUE {{%[0-9]+}}(s32), $noreg
-    DBG_VALUE %3(s32), $noreg, !7, !DIExpression(), debug-location !9
+    ; CHECK: DBG_VALUE {{%[0-9]+}}(f32), $noreg
+    DBG_VALUE %3(f32), $noreg, !7, !DIExpression(), debug-location !9
 
-    $s1 = COPY %3(s32)
+    $s1 = COPY %3(f32)
 
-    %4(s64) = COPY $d2
+    %4(f64) = COPY $d2
 
-    ; CHECK: {{%[0-9]+}}:fprb(s64) = G_FADD
-    %5(s64) = G_FADD %4, %4
+    ; CHECK: {{%[0-9]+}}:fprb(f64) = G_FADD
+    %5(f64) = G_FADD %4, %4
 
-    ; CHECK: DBG_VALUE {{%[0-9]+}}(s64), $noreg
-    DBG_VALUE %5(s64), $noreg, !7, !DIExpression(), debug-location !9
+    ; CHECK: DBG_VALUE {{%[0-9]+}}(f64), $noreg
+    DBG_VALUE %5(f64), $noreg, !7, !DIExpression(), debug-location !9
 
-    $d2 = COPY %5(s64)
+    $d2 = COPY %5(f64)
 
     ; CHECK: DBG_VALUE i32 42, 0
     DBG_VALUE i32 42, 0, !7, !DIExpression(), debug-location !9
@@ -1552,7 +1552,7 @@ body:             |
     ; CHECK: DBG_VALUE $noreg, 0
     DBG_VALUE $noreg, 0, !7, !DIExpression(), debug-location !9
 
-    $d2 = COPY %5(s64)
+    $d2 = COPY %5(f64)
     BX_RET 14, $noreg, implicit $r0, implicit $s1, implicit $d2
 
 ...
