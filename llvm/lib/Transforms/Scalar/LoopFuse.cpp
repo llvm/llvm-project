@@ -566,9 +566,8 @@ private:
 public:
   LoopFuser(const ScalarOptions &Opts, LoopInfo &LI, DominatorTree &DT,
             DependenceInfo &DI, AAResults &AA, ScalarEvolution &SE,
-            PostDominatorTree &PDT,
-            OptimizationRemarkEmitter &ORE, AssumptionCache &AC,
-            const TargetTransformInfo &TTI)
+            PostDominatorTree &PDT, OptimizationRemarkEmitter &ORE,
+            AssumptionCache &AC, const TargetTransformInfo &TTI)
       : Opts(Opts), LDT(LI), DTU(DT, PDT, DomTreeUpdater::UpdateStrategy::Lazy),
         LI(LI), DT(DT), DI(DI), AA(AA), SE(SE), PDT(PDT), ORE(ORE), AC(AC),
         TTI(TTI) {}
@@ -1211,8 +1210,7 @@ private:
   /// Return true if a write between the corresponding loads may overwrite
   /// either loaded memory location.
   bool hasInterveningWrite(BatchAAResults &BAA, const LoadInst &Load0,
-                           const LoadInst &Load1,
-                           const FusionCandidate &FC0,
+                           const LoadInst &Load1, const FusionCandidate &FC0,
                            const FusionCandidate &FC1) const {
     MemoryLocation Loc0 = MemoryLocation::get(&Load0);
     MemoryLocation Loc1 = MemoryLocation::get(&Load1);
@@ -1835,9 +1833,9 @@ private:
         << RemarkMsg);
   }
 
-  void reportFusionInsufficientReuse(
-      const FusionCandidate &FC0, const FusionCandidate &FC1,
-      unsigned ReusedValueCount) {
+  void reportFusionInsufficientReuse(const FusionCandidate &FC0,
+                                     const FusionCandidate &FC1,
+                                     unsigned ReusedValueCount) {
     assert(ReusedValueCount < Opts.loop_fusion_min_reused_values &&
            "Expected insufficient reuse");
 
