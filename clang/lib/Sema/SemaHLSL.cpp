@@ -1214,8 +1214,6 @@ void SemaHLSL::diagnoseSemanticType(const Decl *D,
 
   bool IsSPIRV = getASTContext().getTargetInfo().getTriple().isSPIRV();
 
-  // Numeric selectors below choose the shape and element-type wording in
-  // err_hlsl_semantic_invalid_type.
   switch (Kind) {
   case SemanticKind::DispatchThreadID:
   case SemanticKind::GroupID:
