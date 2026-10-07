@@ -1512,7 +1512,7 @@ class CBranch<string opstr, DAGOperand opnd, PatFrag cond_op,
   let isBranch = 1;
   let isTerminator = 1;
   let hasDelaySlot = 1;
-  let Defs = [AT];
+  let Defs = [R1];
   bit isCTI = 1;
 }
 
@@ -1522,7 +1522,7 @@ class CBranchLikely<string opstr, DAGOperand opnd, RegisterOperand RO> :
   let isBranch = 1;
   let isTerminator = 1;
   let hasDelaySlot = 1;
-  let Defs = [AT];
+  let Defs = [R1];
   bit isCTI = 1;
 }
 
@@ -1535,7 +1535,7 @@ class CBranchZero<string opstr, DAGOperand opnd, PatFrag cond_op,
   let isBranch = 1;
   let isTerminator = 1;
   let hasDelaySlot = 1;
-  let Defs = [AT];
+  let Defs = [R1];
   bit isCTI = 1;
 }
 
@@ -1545,7 +1545,7 @@ class CBranchZeroLikely<string opstr, DAGOperand opnd, RegisterOperand RO> :
   let isBranch = 1;
   let isTerminator = 1;
   let hasDelaySlot = 1;
-  let Defs = [AT];
+  let Defs = [R1];
   bit isCTI = 1;
 }
 
@@ -1572,20 +1572,20 @@ class JumpFJ<DAGOperand opnd, string opstr, SDPatternOperator operator,
   let isBarrier=1;
   let hasDelaySlot = 1;
   let DecoderMethod = "DecodeJumpTarget";
-  let Defs = [AT];
+  let Defs = [R1];
   bit isCTI = 1;
 }
 
 // Unconditional branch
 class UncondBranch<Instruction BEQInst, DAGOperand opnd> :
   PseudoSE<(outs), (ins brtarget:$offset), [(br bb:$offset)]>,
-  PseudoInstExpansion<(BEQInst ZERO, ZERO, opnd:$offset)> {
+  PseudoInstExpansion<(BEQInst R0, R0, opnd:$offset)> {
   let isBranch = 1;
   let isTerminator = 1;
   let isBarrier = 1;
   let hasDelaySlot = 1;
   let AdditionalPredicates = [RelocPIC];
-  let Defs = [AT];
+  let Defs = [R1];
   bit isCTI = 1;
 }
 
@@ -1603,7 +1603,7 @@ class IndirectBranch<string opstr, RegisterOperand RO> : JumpFR<opstr, RO> {
 }
 
 // Jump and Link (Call)
-let isCall=1, hasDelaySlot=1, isCTI=1, Defs = [RA] in {
+let isCall=1, hasDelaySlot=1, isCTI=1, Defs = [R31] in {
   class JumpLink<string opstr, DAGOperand opnd> :
     InstSE<(outs), (ins opnd:$target), !strconcat(opstr, "\t$target"),
            [(MipsJmpLink tglobaladdr:$target)], FrmJ, opstr> {
@@ -1633,7 +1633,7 @@ let isCall=1, hasDelaySlot=1, isCTI=1, Defs = [RA] in {
 }
 
 let isCall = 1, isTerminator = 1, isReturn = 1, isBarrier = 1, hasDelaySlot = 1,
-    hasExtraSrcRegAllocReq = 1, isCTI = 1, Defs = [AT] in {
+    hasExtraSrcRegAllocReq = 1, isCTI = 1, Defs = [R1] in {
   class TailCall<Instruction JumpInst, DAGOperand Opnd> :
     PseudoSE<(outs), (ins calltarget:$target), []>,
     PseudoInstExpansion<(JumpInst Opnd:$target)>;
@@ -1647,12 +1647,12 @@ let isCall = 1, isTerminator = 1, isReturn = 1, isBarrier = 1, hasDelaySlot = 1,
 
 class BAL_BR_Pseudo<Instruction RealInst, DAGOperand opnd> :
   PseudoSE<(outs), (ins opnd:$offset), []>,
-  PseudoInstExpansion<(RealInst ZERO, opnd:$offset)> {
+  PseudoInstExpansion<(RealInst R0, opnd:$offset)> {
   let isBranch = 1;
   let isTerminator = 1;
   let isBarrier = 1;
   let hasDelaySlot = 1;
-  let Defs = [RA];
+  let Defs = [R31];
   bit isCTI = 1;
 }
 
@@ -1922,7 +1922,7 @@ let isReturn=1, isTerminator=1, isBarrier=1, hasCtrlDep=1, isCTI=1 in {
   def ERet : PseudoSE<(outs), (ins), [(MipsERet)]>;
 }
 
-let Defs = [SP], Uses = [SP], hasSideEffects = 1, hasNoSchedulingInfo = 1 in {
+let Defs = [R29], Uses = [R29], hasSideEffects = 1, hasNoSchedulingInfo = 1 in {
 def ADJCALLSTACKDOWN : MipsPseudo<(outs), (ins i32imm:$amt1, i32imm:$amt2),
                                   [(callseq_start timm:$amt1, timm:$amt2)]>;
 def ADJCALLSTACKUP   : MipsPseudo<(outs), (ins i32imm:$amt1, i32imm:$amt2),
@@ -2300,7 +2300,7 @@ def JAL  : MMRel, JumpLink<"jal", calltarget>, FJ<3>, ISA_MIPS1;
 
 let AdditionalPredicates = [NotInMicroMips, NoIndirectJumpGuards] in {
   def JALR : JumpLinkReg<"jalr", GPR32Opnd>, JALR_FM, ISA_MIPS1;
-  def JALRPseudo : JumpLinkRegPseudo<GPR32Opnd, JALR, RA>, ISA_MIPS1;
+  def JALRPseudo : JumpLinkRegPseudo<GPR32Opnd, JALR, R31>, ISA_MIPS1;
 }
 
 let AdditionalPredicates = [NotInMicroMips] in {
@@ -2373,7 +2373,7 @@ def SDT_MipsEHRET : SDTypeProfile<0, 2, [SDTCisInt<0>, SDTCisPtrTy<1>]>;
 def MIPSehret : SDNode<"MipsISD::EH_RETURN", SDT_MipsEHRET,
                       [SDNPHasChain, SDNPOptInGlue, SDNPVariadic]>;
 
-let Uses = [V0, V1], isTerminator = 1, isReturn = 1,
+let Uses = [R2, R3], isTerminator = 1, isReturn = 1,
            isBarrier = 1, isCTI = 1, hasNoSchedulingInfo = 1 in {
   def MIPSeh_return32 : MipsPseudo<(outs), (ins GPR32:$spoff, GPR32:$dst),
                                    [(MIPSehret GPR32:$spoff, GPR32:$dst)]>;
@@ -2418,7 +2418,7 @@ let AdditionalPredicates = [NotInMicroMips] in {
 
   /// No operation.
   def NOP : PseudoSE<(outs), (ins), []>,
-                     PseudoInstExpansion<(SLL ZERO, ZERO, 0)>, ISA_MIPS1;
+                     PseudoInstExpansion<(SLL R0, R0, 0)>, ISA_MIPS1;
 
   // FrameIndexes are legalized when they are operands from load/store
   // instructions. The same not happens for stack address copies, so an
@@ -2542,7 +2542,7 @@ def JR_HB : MMRel, JR_HB_DESC<GPR32Opnd>, JR_HB_ENC,
 def JALR_HB : MMRel, JALR_HB_DESC<GPR32Opnd>, JALR_HB_ENC, ISA_MIPS32;
 
 let AdditionalPredicates = [NotInMicroMips, UseIndirectJumpsHazard] in
-  def JALRHBPseudo : JumpLinkRegPseudo<GPR32Opnd, JALR_HB, RA>;
+  def JALRHBPseudo : JumpLinkRegPseudo<GPR32Opnd, JALR_HB, R31>;
 
 
 let AdditionalPredicates = [NotInMips16Mode, NotInMicroMips,
@@ -2722,32 +2722,32 @@ multiclass OneOrTwoOperandMacroImmediateAlias<string Memnomic,
 
 let AdditionalPredicates = [NotInMicroMips] in {
   def : MipsInstAlias<"move $dst, $src",
-                      (OR GPR32Opnd:$dst, GPR32Opnd:$src, ZERO), 1>,
+                      (OR GPR32Opnd:$dst, GPR32Opnd:$src, R0), 1>,
         GPR_32, ISA_MIPS1;
   def : MipsInstAlias<"move $dst, $src",
-                      (ADDu GPR32Opnd:$dst, GPR32Opnd:$src, ZERO), 1>,
+                      (ADDu GPR32Opnd:$dst, GPR32Opnd:$src, R0), 1>,
         GPR_32, ISA_MIPS1;
 
-  def : MipsInstAlias<"bal $offset", (BGEZAL ZERO, brtarget:$offset), 1>,
+  def : MipsInstAlias<"bal $offset", (BGEZAL R0, brtarget:$offset), 1>,
         ISA_MIPS1_NOT_32R6_64R6;
 
   def : MipsInstAlias<"j $rs", (JR GPR32Opnd:$rs), 0>, ISA_MIPS1_NOT_32R6_64R6;
 
-  def : MipsInstAlias<"j $rs", (JALR RA, GPR32Opnd:$rs), 0>, ISA_MIPS32R6;
+  def : MipsInstAlias<"j $rs", (JALR R31, GPR32Opnd:$rs), 0>, ISA_MIPS32R6;
 
-  def : MipsInstAlias<"jalr $rs", (JALR RA, GPR32Opnd:$rs), 0>;
+  def : MipsInstAlias<"jalr $rs", (JALR R31, GPR32Opnd:$rs), 0>;
 
-  def : MipsInstAlias<"jalr.hb $rs", (JALR_HB RA, GPR32Opnd:$rs), 1>,
+  def : MipsInstAlias<"jalr.hb $rs", (JALR_HB R31, GPR32Opnd:$rs), 1>,
         ISA_MIPS32;
 
   def : MipsInstAlias<"neg $rt, $rs",
-                      (SUB GPR32Opnd:$rt, ZERO, GPR32Opnd:$rs), 1>, ISA_MIPS1;
+                      (SUB GPR32Opnd:$rt, R0, GPR32Opnd:$rs), 1>, ISA_MIPS1;
   def : MipsInstAlias<"neg $rt",
-                      (SUB GPR32Opnd:$rt, ZERO, GPR32Opnd:$rt), 1>, ISA_MIPS1;
+                      (SUB GPR32Opnd:$rt, R0, GPR32Opnd:$rt), 1>, ISA_MIPS1;
   def : MipsInstAlias<"negu $rt, $rs",
-                      (SUBu GPR32Opnd:$rt, ZERO, GPR32Opnd:$rs), 1>, ISA_MIPS1;
+                      (SUBu GPR32Opnd:$rt, R0, GPR32Opnd:$rs), 1>, ISA_MIPS1;
   def : MipsInstAlias<"negu $rt",
-                      (SUBu GPR32Opnd:$rt, ZERO, GPR32Opnd:$rt), 1>, ISA_MIPS1;
+                      (SUBu GPR32Opnd:$rt, R0, GPR32Opnd:$rt), 1>, ISA_MIPS1;
 
   def SGE : MipsAsmPseudoInst<(outs GPR32Opnd:$rd),
                               (ins GPR32Opnd:$rs, GPR32Opnd:$rt),
@@ -2836,12 +2836,12 @@ let AdditionalPredicates = [NotInMicroMips] in {
 
   def : MipsInstAlias<
           "not $rt, $rs",
-          (NOR GPR32Opnd:$rt, GPR32Opnd:$rs, ZERO), 0>, ISA_MIPS1;
+          (NOR GPR32Opnd:$rt, GPR32Opnd:$rs, R0), 0>, ISA_MIPS1;
   def : MipsInstAlias<
           "not $rt",
-          (NOR GPR32Opnd:$rt, GPR32Opnd:$rt, ZERO), 0>, ISA_MIPS1;
+          (NOR GPR32Opnd:$rt, GPR32Opnd:$rt, R0), 0>, ISA_MIPS1;
 
-  def : MipsInstAlias<"nop", (SLL ZERO, ZERO, 0), 1>, ISA_MIPS1;
+  def : MipsInstAlias<"nop", (SLL R0, R0, 0), 1>, ISA_MIPS1;
 
   defm : OneOrTwoOperandMacroImmediateAlias<"add", ADDi>,
          ISA_MIPS1_NOT_32R6_64R6;
@@ -2879,28 +2879,28 @@ let AdditionalPredicates = [NotInMicroMips] in {
   def : MipsInstAlias<"mtc2 $rt, $rd", (MTC2 COP2Opnd:$rd, GPR32Opnd:$rt, 0), 0>,
         ISA_MIPS1;
 
-  def : MipsInstAlias<"b $offset", (BEQ ZERO, ZERO, brtarget:$offset), 0>,
+  def : MipsInstAlias<"b $offset", (BEQ R0, R0, brtarget:$offset), 0>,
         ISA_MIPS1;
 
   def : MipsInstAlias<"bnez $rs,$offset",
-                      (BNE GPR32Opnd:$rs, ZERO, brtarget:$offset), 0>,
+                      (BNE GPR32Opnd:$rs, R0, brtarget:$offset), 0>,
         ISA_MIPS1;
   def : MipsInstAlias<"bnezl $rs, $offset",
-                      (BNEL GPR32Opnd:$rs, ZERO, brtarget:$offset), 1>,
+                      (BNEL GPR32Opnd:$rs, R0, brtarget:$offset), 1>,
         ISA_MIPS2;
   def : MipsInstAlias<"beqz $rs,$offset",
-                      (BEQ GPR32Opnd:$rs, ZERO, brtarget:$offset), 0>,
+                      (BEQ GPR32Opnd:$rs, R0, brtarget:$offset), 0>,
         ISA_MIPS1;
   def : MipsInstAlias<"beqzl $rs, $offset",
-                      (BEQL GPR32Opnd:$rs, ZERO, brtarget:$offset), 1>,
+                      (BEQL GPR32Opnd:$rs, R0, brtarget:$offset), 1>,
         ISA_MIPS2;
 
   def : MipsInstAlias<"syscall", (SYSCALL 0), 1>, ISA_MIPS1;
 
   def : MipsInstAlias<"break", (BREAK 0, 0), 1>, ISA_MIPS1;
   def : MipsInstAlias<"break $imm", (BREAK uimm10:$imm, 0), 1>, ISA_MIPS1;
-  def : MipsInstAlias<"ei", (EI ZERO), 1>, ISA_MIPS32R2;
-  def : MipsInstAlias<"di", (DI ZERO), 1>, ISA_MIPS32R2;
+  def : MipsInstAlias<"ei", (EI R0), 1>, ISA_MIPS32R2;
+  def : MipsInstAlias<"di", (DI R0), 1>, ISA_MIPS32R2;
 
   def : MipsInstAlias<"teq $rs, $rt",
                       (TEQ GPR32Opnd:$rs, GPR32Opnd:$rt, 0), 1>, ISA_MIPS2;
@@ -3099,7 +3099,7 @@ def : MipsInstAlias<"divu $rd, $imm", (UDivIMacro GPR32Opnd:$rd, GPR32Opnd:$rd,
       ISA_MIPS1_NOT_32R6_64R6;
 
 
-def : MipsInstAlias<"nal", (BLTZAL ZERO, 0), 1>, ISA_MIPS1_NOT_32R6_64R6;
+def : MipsInstAlias<"nal", (BLTZAL R0, 0), 1>, ISA_MIPS1_NOT_32R6_64R6;
 
 def SRemMacro : MipsAsmPseudoInst<(outs GPR32Opnd:$rd),
                                   (ins GPR32Opnd:$rs, GPR32Opnd:$rt),
@@ -3186,7 +3186,7 @@ def : MipsPat<(VT immSExt16:$imm), (ADDiuOp ZEROReg, imm:$imm)>;
 }
 
 let AdditionalPredicates = [NotInMicroMips] in
-  defm : MaterializeImms<i32, ZERO, ADDiu, LUi, ORi>, ISA_MIPS1;
+  defm : MaterializeImms<i32, R0, ADDiu, LUi, ORi>, ISA_MIPS1;
 
 // Carry MipsPatterns
 let AdditionalPredicates = [NotInMicroMips] in {
@@ -3262,7 +3262,7 @@ class WrapperPat<SDNode node, Instruction ADDiuOp, RegisterClass RC>:
       MipsPat<(MipsWrapper RC:$gp, node:$in), (ADDiuOp RC:$gp, node:$in)>;
 
 let AdditionalPredicates = [NotInMicroMips] in {
-  defm : MipsHiLoRelocs<LUi, ADDiu, ZERO, GPR32Opnd>, ISA_MIPS1;
+  defm : MipsHiLoRelocs<LUi, ADDiu, R0, GPR32Opnd>, ISA_MIPS1;
 
   def : MipsPat<(MipsGotHi tglobaladdr:$in), (LUi tglobaladdr:$in)>, ISA_MIPS1;
   def : MipsPat<(MipsGotHi texternalsym:$in), (LUi texternalsym:$in)>,
@@ -3286,7 +3286,7 @@ let AdditionalPredicates = [NotInMicroMips] in {
 
   // Mips does not have "not", so we expand our way
   def : MipsPat<(not GPR32:$in),
-                (NOR GPR32Opnd:$in, ZERO)>, ISA_MIPS1;
+                (NOR GPR32Opnd:$in, R0)>, ISA_MIPS1;
 }
 
 // extended loads
@@ -3296,7 +3296,7 @@ let AdditionalPredicates = [NotInMicroMips] in {
   def : MipsPat<(i32 (extloadi16 addr:$src)), (LHu addr:$src)>, ISA_MIPS1;
 
   // peepholes
-  def : MipsPat<(store (i32 0), addr:$dst), (SW ZERO, addr:$dst)>, ISA_MIPS1;
+  def : MipsPat<(store (i32 0), addr:$dst), (SW R0, addr:$dst)>, ISA_MIPS1;
 }
 
 // brcond patterns
@@ -3310,28 +3310,28 @@ def : MipsPat<(brcond (i32 (seteq RC:$lhs, 0)), bb:$dst),
               (BEQOp RC:$lhs, ZEROReg, bb:$dst)>;
 
 def : MipsPat<(brcond (i32 (setge RC:$lhs, RC:$rhs)), bb:$dst),
-              (BEQOp1 (SLTOp RC:$lhs, RC:$rhs), ZERO, bb:$dst)>;
+              (BEQOp1 (SLTOp RC:$lhs, RC:$rhs), R0, bb:$dst)>;
 def : MipsPat<(brcond (i32 (setuge RC:$lhs, RC:$rhs)), bb:$dst),
-              (BEQOp1 (SLTuOp RC:$lhs, RC:$rhs), ZERO, bb:$dst)>;
+              (BEQOp1 (SLTuOp RC:$lhs, RC:$rhs), R0, bb:$dst)>;
 def : MipsPat<(brcond (i32 (setge RC:$lhs, immSExt16:$rhs)), bb:$dst),
-              (BEQOp1 (SLTiOp RC:$lhs, immSExt16:$rhs), ZERO, bb:$dst)>;
+              (BEQOp1 (SLTiOp RC:$lhs, immSExt16:$rhs), R0, bb:$dst)>;
 def : MipsPat<(brcond (i32 (setuge RC:$lhs, immSExt16:$rhs)), bb:$dst),
-              (BEQOp1 (SLTiuOp RC:$lhs, immSExt16:$rhs), ZERO, bb:$dst)>;
+              (BEQOp1 (SLTiuOp RC:$lhs, immSExt16:$rhs), R0, bb:$dst)>;
 def : MipsPat<(brcond (i32 (setgt RC:$lhs, immSExt16Plus1:$rhs)), bb:$dst),
-              (BEQOp1 (SLTiOp RC:$lhs, (Plus1 imm:$rhs)), ZERO, bb:$dst)>;
+              (BEQOp1 (SLTiOp RC:$lhs, (Plus1 imm:$rhs)), R0, bb:$dst)>;
 def : MipsPat<(brcond (i32 (setugt RC:$lhs, immSExt16Plus1:$rhs)), bb:$dst),
-              (BEQOp1 (SLTiuOp RC:$lhs, (Plus1 imm:$rhs)), ZERO, bb:$dst)>;
+              (BEQOp1 (SLTiuOp RC:$lhs, (Plus1 imm:$rhs)), R0, bb:$dst)>;
 
 def : MipsPat<(brcond (i32 (setle RC:$lhs, RC:$rhs)), bb:$dst),
-              (BEQOp1 (SLTOp RC:$rhs, RC:$lhs), ZERO, bb:$dst)>;
+              (BEQOp1 (SLTOp RC:$rhs, RC:$lhs), R0, bb:$dst)>;
 def : MipsPat<(brcond (i32 (setule RC:$lhs, RC:$rhs)), bb:$dst),
-              (BEQOp1 (SLTuOp RC:$rhs, RC:$lhs), ZERO, bb:$dst)>;
+              (BEQOp1 (SLTuOp RC:$rhs, RC:$lhs), R0, bb:$dst)>;
 
 def : MipsPat<(brcond RC:$cond, bb:$dst),
               (BNEOp RC:$cond, ZEROReg, bb:$dst)>;
 }
 let AdditionalPredicates = [NotInMicroMips] in {
-  defm : BrcondPats<GPR32, BEQ, BEQ, BNE, SLT, SLTu, SLTi, SLTiu, ZERO>,
+  defm : BrcondPats<GPR32, BEQ, BEQ, BNE, SLT, SLTu, SLTi, SLTiu, R0>,
          ISA_MIPS1;
   def : MipsPat<(brcond (i32 (setlt i32:$lhs, 1)), bb:$dst),
                 (BLEZ i32:$lhs, bb:$dst)>, ISA_MIPS1;
@@ -3384,7 +3384,7 @@ multiclass SetgeImmPats<RegisterClass RC, Instruction XORiOp,
 }
 
 let AdditionalPredicates = [NotInMicroMips] in {
-  defm : SeteqPats<GPR32, SLTiu, XOR, SLTu, ZERO>, ISA_MIPS1;
+  defm : SeteqPats<GPR32, SLTiu, XOR, SLTu, R0>, ISA_MIPS1;
   defm : SetlePats<GPR32, XORi, SLT, SLTu>, ISA_MIPS1;
   defm : SetgtPats<GPR32, SLT, SLTu>, ISA_MIPS1;
   defm : SetgePats<GPR32, XORi, SLT, SLTu>, ISA_MIPS1;
