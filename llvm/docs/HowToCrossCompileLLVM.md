@@ -89,7 +89,7 @@ set(CMAKE_C_COMPILER_TARGET $TARGET)
 set(CMAKE_CXX_COMPILER_TARGET $TARGET)
 set(CMAKE_C_FLAGS_INIT "$CFLAGS")
 set(CMAKE_CXX_FLAGS_INIT "$CFLAGS")
-set(CMAKE_LINKER_TYPE LLD)
+set(CMAKE_LINKER_TYPE LLD) # Requires CMake 3.29 or later
 set(CMAKE_C_COMPILER clang)
 set(CMAKE_CXX_COMPILER clang++)
 set(CMAKE_FIND_ROOT_PATH_MODE_PROGRAM NEVER)
@@ -112,6 +112,12 @@ cmake -G Ninja \
   -B build/$TARGET
 cmake --build build/$TARGET
 ```
+
+`CMAKE_LINKER_TYPE` is only available in CMake 3.29 or later. On older
+CMake versions the toolchain file will be ignored for that variable and
+the host linker may be used, which breaks the compiler test. Install a
+newer CMake, or replace `set(CMAKE_LINKER_TYPE LLD)` with an equivalent
+`CMAKE_C_FLAGS`/`CMAKE_CXX_FLAGS` `-fuse-ld=lld` setting.
 
 These options from the toolchain file and `cmake` invocation above are
 important:
