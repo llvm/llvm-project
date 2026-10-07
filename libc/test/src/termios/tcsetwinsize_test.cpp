@@ -49,12 +49,11 @@ TEST_F(LlvmLibcTcSetWinSizeTest, NonTerminalFileDescriptor) {
 }
 
 TEST_F(LlvmLibcTcSetWinSizeTest, TerminalSmokeTest) {
+  // Use a pseudo-terminal master rather than /dev/tty so running tests in an
+  // interactive terminal does not resize the user's window.
   int fd = LIBC_NAMESPACE::open("/dev/ptmx", O_RDWR);
-  if (fd < 0)
-    fd = LIBC_NAMESPACE::open("/dev/tty", O_RDWR);
-
   if (fd < 0) {
-    // When no terminal is available, gracefully skip the test.
+    // When /dev/ptmx is not available, gracefully skip the test.
     libc_errno = 0;
     return;
   }
@@ -74,17 +73,23 @@ TEST_F(LlvmLibcTcSetWinSizeTest, TerminalSmokeTest) {
 
 TEST_F(LlvmLibcTcSetWinSizeTest, NullPointer) {
   int fd = LIBC_NAMESPACE::open("/dev/ptmx", O_RDWR);
-  if (fd < 0)
-    fd = LIBC_NAMESPACE::open("/dev/tty", O_RDWR);
-
   if (fd < 0) {
-    // When no terminal is available, gracefully skip the test.
+    // When /dev/ptmx is not available, gracefully skip the test.
     libc_errno = 0;
     return;
   }
   ASSERT_ERRNO_SUCCESS();
   LIBC_NAMESPACE::cpp::scope_exit close_fd(
       [&] { ASSERT_THAT(LIBC_NAMESPACE::close(fd), Succeeds(0)); });
+
+  constexpr unsigned short TEST_ROWS = 24;
+  constexpr unsigned short TEST_COLS = 80;
+  struct winsize ws = {TEST_ROWS, TEST_COLS, 0, 0};
+  int ret = LIBC_NAMESPACE::tcsetwinsize(fd, &ws);
+  if (ret < 0) {
+    ASSERT_ERRNO_EQ(ENOTTY);
+    return;
+  }
 
   ASSERT_THAT(LIBC_NAMESPACE::tcsetwinsize(fd, nullptr), Fails(EFAULT));
 }

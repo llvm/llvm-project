@@ -13,13 +13,12 @@
 
 #include "src/termios/tcsetwinsize.h"
 
+#include "hdr/sys_ioctl_macros.h"
 #include "hdr/types/struct_winsize.h"
 #include "src/__support/OSUtil/linux/syscall_wrappers/ioctl.h"
 #include "src/__support/common.h"
 #include "src/__support/libc_errno.h"
 #include "src/__support/macros/config.h"
-
-#include <asm/ioctls.h> // Safe to include without the risk of name pollution.
 
 namespace LIBC_NAMESPACE_DECL {
 
