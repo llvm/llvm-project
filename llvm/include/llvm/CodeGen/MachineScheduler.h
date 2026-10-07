@@ -105,6 +105,7 @@ namespace impl_detail {
 // FIXME: Remove these declarations once RegisterClassInfo is queryable as an
 // analysis.
 class MachineSchedulerImpl;
+class SSAMachineSchedulerImpl;
 class PostMachineSchedulerImpl;
 } // namespace impl_detail
 
@@ -117,8 +118,10 @@ enum Direction {
 };
 } // namespace MISched
 
-LLVM_ABI extern cl::opt<MISched::Direction> PreRADirection;
-LLVM_ABI extern cl::opt<bool> VerifyScheduling;
+/// Returns -misched-prera-direction.
+LLVM_ABI MISched::Direction getPreRADirection();
+/// Returns whether -verify-misched is set.
+LLVM_ABI bool shouldVerifyScheduling();
 
 #ifndef NDEBUG
 extern cl::opt<bool> ViewMISchedDAGs;
@@ -1459,6 +1462,21 @@ public:
   LLVM_ABI MachineSchedulerPass(const TargetMachine *TM);
   LLVM_ABI MachineSchedulerPass(MachineSchedulerPass &&Other);
   LLVM_ABI ~MachineSchedulerPass();
+  LLVM_ABI PreservedAnalyses run(MachineFunction &MF,
+                                 MachineFunctionAnalysisManager &MFAM);
+};
+
+class SSAMachineSchedulerPass
+    : public OptionalPassInfoMixin<SSAMachineSchedulerPass> {
+  // FIXME: Remove this member once RegisterClassInfo is queryable as an
+  // analysis.
+  std::unique_ptr<impl_detail::SSAMachineSchedulerImpl> Impl;
+  const TargetMachine *TM;
+
+public:
+  LLVM_ABI SSAMachineSchedulerPass(const TargetMachine *TM);
+  LLVM_ABI SSAMachineSchedulerPass(SSAMachineSchedulerPass &&Other);
+  LLVM_ABI ~SSAMachineSchedulerPass();
   LLVM_ABI PreservedAnalyses run(MachineFunction &MF,
                                  MachineFunctionAnalysisManager &MFAM);
 };

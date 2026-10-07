@@ -1258,10 +1258,10 @@ void RISCVFrameLowering::emitPrologue(MachineFunction &MF,
       Align MaxAlignment = MFI.getMaxAlign();
 
       const RISCVInstrInfo *TII = STI.getInstrInfo();
-      if (isInt<12>(-(int)MaxAlignment.value())) {
+      if (isInt<12>(-(int64_t)MaxAlignment.value())) {
         BuildMI(MBB, MBBI, DL, TII->get(RISCV::ANDI), SPReg)
             .addReg(SPReg)
-            .addImm(-(int)MaxAlignment.value())
+            .addImm(-(int64_t)MaxAlignment.value())
             .setMIFlag(MachineInstr::FrameSetup);
       } else {
         unsigned ShiftAmount = Log2(MaxAlignment);
@@ -2752,18 +2752,7 @@ bool RISCVFrameLowering::canUseAsEpilogue(const MachineBasicBlock &MBB) const {
 }
 
 bool RISCVFrameLowering::isSupportedStackID(TargetStackID::Value ID) const {
-  switch (ID) {
-  case TargetStackID::Default:
-  case TargetStackID::ScalableVector:
-    return true;
-  case TargetStackID::NoAlloc:
-  case TargetStackID::SGPRSpill:
-  case TargetStackID::WasmLocal:
-  case TargetStackID::ScalablePredicateVector:
-  case TargetStackID::AvrAlign:
-    return false;
-  }
-  llvm_unreachable("Invalid TargetStackID::Value");
+  return ID == TargetStackID::Default || ID == TargetStackID::ScalableVector;
 }
 
 TargetStackID::Value RISCVFrameLowering::getStackIDForScalableVectors() const {

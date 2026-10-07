@@ -2540,11 +2540,12 @@ void GlobalOp::print(OpAsmPrinter &p) {
 }
 
 static LogicalResult verifyComdat(Operation *op,
-                                  std::optional<SymbolRefAttr> attr) {
+                                  std::optional<SymbolRefAttr> attr,
+                                  SymbolTableCollection &symbolTable) {
   if (!attr)
     return success();
 
-  auto *comdatSelector = SymbolTable::lookupNearestSymbolFrom(op, *attr);
+  auto *comdatSelector = symbolTable.lookupNearestSymbolFrom(op, *attr);
   if (!isa_and_nonnull<ComdatSelectorOp>(comdatSelector))
     return op->emitError() << "expected comdat symbol";
 
@@ -2705,6 +2706,10 @@ static bool isZeroAttribute(Attribute value) {
   return false;
 }
 
+LogicalResult GlobalOp::verifySymbolUses(SymbolTableCollection &symbolTable) {
+  return verifyComdat(*this, getComdat(), symbolTable);
+}
+
 LogicalResult GlobalOp::verify() {
   bool validType = isCompatibleOuterType(getType())
                        ? !llvm::isa<LLVMVoidType, TokenType, LLVMMetadataType,
@@ -2754,9 +2759,6 @@ LogicalResult GlobalOp::verify() {
                            << "' linkage";
     }
   }
-
-  if (failed(verifyComdat(*this, getComdat())))
-    return failure();
 
   std::optional<uint64_t> alignAttr = getAlignment();
   if (alignAttr.has_value()) {
@@ -3378,6 +3380,10 @@ void LLVMFuncOp::print(OpAsmPrinter &p) {
   }
 }
 
+LogicalResult LLVMFuncOp::verifySymbolUses(SymbolTableCollection &symbolTable) {
+  return verifyComdat(*this, getComdat(), symbolTable);
+}
+
 // Verifies LLVM- and implementation-specific properties of the LLVM func Op:
 // - functions don't have 'common' linkage
 // - external functions have 'external' or 'extern_weak' linkage;
@@ -3387,9 +3393,6 @@ LogicalResult LLVMFuncOp::verify() {
     return emitOpError() << "functions cannot have '"
                          << stringifyLinkage(LLVM::Linkage::Common)
                          << "' linkage";
-
-  if (failed(verifyComdat(*this, getComdat())))
-    return failure();
 
   if (isExternal()) {
     if (getFunctionEntryCountAttr())

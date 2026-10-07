@@ -474,35 +474,34 @@ static int loadImagesOntoDevice(DeviceTy &Device) {
             REPORT() << "Failed to load kernel " << Entry.SymbolName;
           } else {
             // Read this kernel's launch-geometry properties once, from its
-            // "<name>_kernel_environment" device global, and cache them on
-            // the device for use at launch time.
-
+            // "<name>_kernel_environment" global, and cache them on the device
+            // for use at launch time.
             SmallString<128> EnvName(Entry.SymbolName);
             EnvName += "_kernel_environment";
+            llvm::omp::target::plugin::GenericDeviceTy &GenericDevice =
+                Device.RTL->getDevice(Device.RTLDeviceID);
             KernelEnvironmentTy KernelEnv{};
-            void *KernelEnvPtr = nullptr;
-            bool ReadOk =
-                Device.RTL->get_global(Binary, sizeof(KernelEnv),
-                                       EnvName.c_str(),
-                                       &KernelEnvPtr) == OFFLOAD_SUCCESS &&
-                Device.RTL->data_retrieve(Device.RTLDeviceID, &KernelEnv,
-                                          KernelEnvPtr,
-                                          sizeof(KernelEnv)) == OFFLOAD_SUCCESS;
-            if (!ReadOk) {
+            llvm::omp::target::plugin::GlobalTy KernelEnvGlobal(
+                EnvName, sizeof(KernelEnv), &KernelEnv);
+            auto &Image =
+                *reinterpret_cast<llvm::omp::target::plugin::DeviceImageTy *>(
+                    Binary.handle);
+            if (auto Err =
+                    GenericDevice.Plugin.getGlobalHandler().readGlobalFromImage(
+                        GenericDevice, Image, KernelEnvGlobal)) {
+              std::string ErrStr = toString(std::move(Err));
               KernelEnv = KernelEnvironmentTy{};
               KernelEnv.Configuration.ExecMode =
                   llvm::omp::OMP_TGT_EXEC_MODE_BARE;
               ODBG(ODT_Mapping)
                   << "Failed to read kernel environment for '"
-                  << Entry.SymbolName << "', using default "
+                  << Entry.SymbolName << "' (" << ErrStr << "), using default "
                   << KernelLaunchInfoTy::getExecutionModeName(
                          static_cast<llvm::omp::OMPTgtExecModeFlags>(
                              KernelEnv.Configuration.ExecMode))
                   << " execution mode";
             }
 
-            llvm::omp::target::plugin::GenericDeviceTy &GenericDevice =
-                Device.RTL->getDevice(Device.RTLDeviceID);
             auto *Kernel =
                 reinterpret_cast<llvm::omp::target::plugin::GenericKernelTy *>(
                     DeviceEntry.Address);
@@ -511,6 +510,7 @@ static int loadImagesOntoDevice(DeviceTy &Device) {
             LaunchInfo.Mode =
                 static_cast<llvm::omp::OMPTgtExecModeFlags>(Cfg.ExecMode);
             LaunchInfo.ReductionDataSize = Cfg.ReductionDataSize;
+            LaunchInfo.StaticBlockMemSize = Kernel->getStaticBlockMemSize();
             // Max = Config.Max > 0 ? min(Config.Max, Device.Max) : Device.Max,
             // further clamped to the kernel function's own driver-reported
             // maximum.
