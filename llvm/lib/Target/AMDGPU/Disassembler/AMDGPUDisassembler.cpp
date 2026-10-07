@@ -1216,8 +1216,8 @@ bool AMDGPUDisassembler::convertMAIInst(MCInst &MI) const {
   int CbszIdx =
       AMDGPU::getNamedOperandIdx(MI.getOpcode(), AMDGPU::OpName::cbsz);
 
-  unsigned CBSZ = static_cast<unsigned>(MI.getOperand(CbszIdx).getImm());
-  unsigned BLGP = static_cast<unsigned>(MI.getOperand(BlgpIdx).getImm());
+  unsigned CBSZ = MI.getOperand(CbszIdx).getImm();
+  unsigned BLGP = MI.getOperand(BlgpIdx).getImm();
 
   const AMDGPU::MFMA_F8F6F4_Info *AdjustedRegClassOpcode =
       AMDGPU::getMFMA_F8F6F4_WithFormatArgs(CBSZ, BLGP, MI.getOpcode());
