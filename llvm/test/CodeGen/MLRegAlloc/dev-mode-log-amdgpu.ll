@@ -15,18 +15,26 @@
 ; RUN:   -regalloc-priority-training-log=%t2 < %s
 ; RUN: FileCheck --input-file %t2 %s
 
+; CHECK:     {"context":""}
+; CHECK-NOT: {"context"
+; CHECK:     {"context":""}
+; CHECK-NOT: {"context"
 ; CHECK:     {"context":"f"}
 ; CHECK-NOT: {"context"
-; CHECK:     {"context":"g"}
-; CHECK-NOT: {"context"
 
-define amdgpu_kernel void @f(ptr addrspace(1) %p) {
+define amdgpu_kernel void @0(ptr addrspace(1) %p) {
   %v = load volatile i32, ptr addrspace(1) %p
   store volatile i32 %v, ptr addrspace(1) %p
   ret void
 }
 
-define amdgpu_kernel void @g(ptr addrspace(1) %p) {
+define amdgpu_kernel void @1(ptr addrspace(1) %p) {
+  %v = load volatile i32, ptr addrspace(1) %p
+  store volatile i32 %v, ptr addrspace(1) %p
+  ret void
+}
+
+define amdgpu_kernel void @f(ptr addrspace(1) %p) {
   %v = load volatile i32, ptr addrspace(1) %p
   store volatile i32 %v, ptr addrspace(1) %p
   ret void

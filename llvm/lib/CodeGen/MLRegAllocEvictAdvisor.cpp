@@ -570,8 +570,10 @@ public:
              MachineBlockFrequencyInfo *MBFI, MachineLoopInfo *Loops) override {
     if (!Runner)
       return nullptr;
-    if (Log && Log->currentContext() != MF.getName())
+    if (Log && LastFunctionNumber != MF.getFunctionNumber()) {
+      LastFunctionNumber = MF.getFunctionNumber();
       Log->switchContext(MF.getName());
+    }
     assert(MBFI && Loops &&
            "Invalid provider state: must have analysis available");
     return std::make_unique<DevelopmentModeEvictAdvisor>(
@@ -584,6 +586,7 @@ private:
 
   std::unique_ptr<MLModelRunner> Runner;
   std::unique_ptr<Logger> Log;
+  std::optional<unsigned> LastFunctionNumber;
 };
 
 class DevelopmentModeEvictionAdvisorAnalysisLegacy final
