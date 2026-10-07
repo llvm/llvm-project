@@ -2842,7 +2842,7 @@ bool ARMTargetLowering::IsEligibleForTailCallOptimization(
   // cannot rely on the linker replacing the tail call with a return.
   if (GlobalAddressSDNode *G = dyn_cast<GlobalAddressSDNode>(Callee)) {
     const GlobalValue *GV = G->getGlobal();
-    const Triple &TT = getTargetMachine().getTargetTriple();
+    const Triple &TT = GV->getParent()->getTargetTriple();
     if (GV->hasExternalWeakLinkage() &&
         (!TT.isOSWindows() || TT.isOSBinFormatELF() ||
          TT.isOSBinFormatMachO())) {
@@ -11525,6 +11525,7 @@ ARMTargetLowering::EmitLowered__chkstk(MachineInstr &MI,
     BuildMI(*MBB, MI, DL, TII.get(ARM::tBL))
         .add(predOps(ARMCC::AL))
         .addExternalSymbol(ChkStk)
+        .setOperandDead(3) // implicit-def $lr
         .addReg(ARM::R4, RegState::Implicit | RegState::Kill)
         .addReg(ARM::R4, RegState::Implicit | RegState::Define)
         .addReg(ARM::R12,
@@ -11541,6 +11542,7 @@ ARMTargetLowering::EmitLowered__chkstk(MachineInstr &MI,
     BuildMI(*MBB, MI, DL, TII.get(gettBLXrOpcode(*MBB->getParent())))
         .add(predOps(ARMCC::AL))
         .addReg(Reg, RegState::Kill)
+        .setOperandDead(3) // implicit-def $lr
         .addReg(ARM::R4, RegState::Implicit | RegState::Kill)
         .addReg(ARM::R4, RegState::Implicit | RegState::Define)
         .addReg(ARM::R12,
@@ -12265,6 +12267,7 @@ void ARMTargetLowering::AdjustInstrPostInstrSelection(MachineInstr &MI,
   MachineOperand &MO = MI.getOperand(ccOutIdx);
   MO.setReg(ARM::CPSR);
   MO.setIsDef(true);
+  MO.setIsDead(deadCPSR);
 }
 
 //===----------------------------------------------------------------------===//
@@ -20481,7 +20484,7 @@ RCPair ARMTargetLowering::getRegForInlineAsmConstraint(
 
   // r14 is an alias of lr.
   if (StringRef("{r14}").equals_insensitive(Constraint))
-    return std::make_pair(unsigned(ARM::LR), getRegClassFor(MVT::i32));
+    Constraint = "{lr}";
 
   auto RCP = TargetLowering::getRegForInlineAsmConstraint(TRI, Constraint, VT);
   if (isIncompatibleReg(RCP.first, VT))

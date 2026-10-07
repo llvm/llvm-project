@@ -2268,7 +2268,7 @@ VarDecl::isThisDeclarationADefinition(ASTContext &C) const {
                     TSK_ExplicitSpecialization) ||
          isa<VarTemplatePartialSpecializationDecl>(this)))
       return Definition;
-    if (!isOutOfLine() && isInline())
+    if (!isOutOfLine() && (isInline() || hasDefiningAttr()))
       return Definition;
     return DeclarationOnly;
   }
@@ -2309,16 +2309,21 @@ VarDecl::isThisDeclarationADefinition(ASTContext &C) const {
   if (isSingleLineLanguageLinkage(*this))
     return DeclarationOnly;
 
-  // C99 6.9.2p2:
-  //   A declaration of an object that has file scope without an initializer,
-  //   and without a storage class specifier or the scs 'static', constitutes
-  //   a tentative definition.
-  // No such thing in C++.
-  if (!C.getLangOpts().CPlusPlus && isFileVarDecl())
+  // C23 6.9.3p2:
+  //   A declaration of an identifier for an object that has file scope
+  //   without an initializer, and without the storage-class specifier extern
+  //   or thread_local, constitutes a tentative definition.
+  // In C23 and later, file-scope thread_local / _Thread_local / __thread
+  // declarations without initializers are full external definitions
+  // (C23 6.9.3p1). Pre-C23 standards allowed tentative TLS definitions, so we
+  // preserve that behavior in earlier language modes.
+  if (!C.getLangOpts().CPlusPlus && isFileVarDecl() &&
+      (getTLSKind() == TLS_None || !C.getLangOpts().C23))
     return TentativeDefinition;
 
-  // What's left is (in C, block-scope) declarations without initializers or
-  // external storage. These are definitions.
+  // What's left is (in C) block-scope declarations and, in C23, file-scope
+  // thread_local declarations without initializers or external storage. These
+  // are definitions.
   return Definition;
 }
 
@@ -4922,7 +4927,13 @@ const FieldDecl *FieldDecl::findCountedByField() const {
   if (!CAT)
     return nullptr;
 
-  const auto *CountDRE = cast<DeclRefExpr>(CAT->getCountExpr());
+  // A late-parsed attribute whose argument was rejected keeps the node with the
+  // raw argument as its count (see Sema::ActOnLateParsedTypeAttrArgument). That
+  // argument may not be a simple declaration reference (e.g. it may be an error
+  // expression or a `sizeof`), in which case it refers to no field.
+  const auto *CountDRE = dyn_cast<DeclRefExpr>(CAT->getCountExpr());
+  if (!CountDRE)
+    return nullptr;
   const auto *CountDecl = CountDRE->getDecl();
   if (const auto *IFD = dyn_cast<IndirectFieldDecl>(CountDecl))
     CountDecl = IFD->getAnonField();
