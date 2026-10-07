@@ -36,6 +36,84 @@ exit:
   ret void
 }
 
+define void @known_safe_negative_stride(ptr %p, i8 %a) {
+; CHECK-LABEL: 'known_safe_negative_stride'
+; CHECK-NEXT:    header:
+; CHECK-NEXT:      Memory dependences are safe
+; CHECK-NEXT:      Dependences:
+; CHECK-NEXT:      Run-time memory checks:
+; CHECK-NEXT:      Grouped accesses:
+; CHECK-EMPTY:
+; CHECK-NEXT:      Non vectorizable stores to invariant address were not found in loop.
+; CHECK-NEXT:      SCEV assumptions:
+; CHECK-EMPTY:
+; CHECK-NEXT:      Expressions re-written:
+;
+entry:
+  %a.zext = zext i8 %a to i64
+  %positive = add i64 %a.zext, 1
+  %stride = sub i64 0, %positive
+  br label %header
+
+header:
+  %iv = phi i64 [ 0, %entry ], [ %iv.next, %header ]
+  %iv.next = add nsw i64 %iv, 1
+  %idx = mul i64 %iv, %stride
+
+  %gep = getelementptr inbounds i64, ptr %p, i64 %idx
+  %ld = load i64, ptr %gep
+  %add = add i64 %ld, %iv
+  store i64 %add, ptr %gep
+
+  %exitcond = icmp slt i64 %iv.next, 128
+  br i1 %exitcond, label %header, label %exit
+
+exit:
+  ret void
+}
+
+; Unsafe due to potential wraparound.
+define void @potentially_wrapping_known_positive_stride(ptr %p, i32 %a, i64 %n) {
+; CHECK-LABEL: 'potentially_wrapping_known_positive_stride'
+; CHECK-NEXT:    header:
+; CHECK-NEXT:      Report: unsafe dependent memory operations in loop. Use #pragma clang loop distribute(enable) to allow loop distribution to attempt to isolate the offending operations into a separate loop
+; CHECK-NEXT:  Unsafe indirect dependence.
+; CHECK-NEXT:      Dependences:
+; CHECK-NEXT:        IndirectUnsafe:
+; CHECK-NEXT:            %ld = load i64, ptr %gep, align 4 ->
+; CHECK-NEXT:            store i64 %add, ptr %gep, align 4
+; CHECK-EMPTY:
+; CHECK-NEXT:      Run-time memory checks:
+; CHECK-NEXT:      Grouped accesses:
+; CHECK-EMPTY:
+; CHECK-NEXT:      Non vectorizable stores to invariant address were not found in loop.
+; CHECK-NEXT:      SCEV assumptions:
+; CHECK-NEXT:      {%p,+,(8 + (8 * (zext i32 %a to i64))<nuw><nsw>)<nuw><nsw>}<%header> Added Flags: <nusw>
+; CHECK-EMPTY:
+; CHECK-NEXT:      Expressions re-written:
+;
+entry:
+  %a.zext = zext i32 %a to i64
+  %stride = add nuw i64 %a.zext, 1
+  br label %header
+
+header:
+  %iv = phi i64 [ 0, %entry ], [ %iv.next, %header ]
+  %iv.next = add nsw i64 %iv, 1
+  %idx = mul i64 %iv, %stride
+
+  %gep = getelementptr i64, ptr %p, i64 %idx
+  %ld = load i64, ptr %gep
+  %add = add i64 %ld, %iv
+  store i64 %add, ptr %gep
+
+  %exitcond = icmp slt i64 %iv.next, %n
+  br i1 %exitcond, label %header, label %exit
+
+exit:
+  ret void
+}
+
 define void @known_safe_byte_gep(ptr %p, i8 %a) {
 ; CHECK-LABEL: 'known_safe_byte_gep'
 ; CHECK-NEXT:    header:
@@ -182,6 +260,49 @@ header:
   %idx = mul nsw nuw i64 %iv, %stride
 
   %gep = getelementptr inbounds i8, ptr %p, i64 %idx
+  %ld = load i64, ptr %gep
+  %add = add i64 %ld, %iv
+  store i64 %add, ptr %gep
+
+  %exitcond = icmp slt i64 %iv.next, 128
+  br i1 %exitcond, label %header, label %exit
+
+exit:
+  ret void
+}
+
+; TODO: This is safe as well.
+define void @unknown_sign_nonzero_stride(ptr %p, i8 %a, i1 %negative) {
+; CHECK-LABEL: 'unknown_sign_nonzero_stride'
+; CHECK-NEXT:    header:
+; CHECK-NEXT:      Report: unsafe dependent memory operations in loop. Use #pragma clang loop distribute(enable) to allow loop distribution to attempt to isolate the offending operations into a separate loop
+; CHECK-NEXT:  Unsafe indirect dependence.
+; CHECK-NEXT:      Dependences:
+; CHECK-NEXT:        IndirectUnsafe:
+; CHECK-NEXT:            %ld = load i64, ptr %gep, align 4 ->
+; CHECK-NEXT:            store i64 %add, ptr %gep, align 4
+; CHECK-EMPTY:
+; CHECK-NEXT:      Run-time memory checks:
+; CHECK-NEXT:      Grouped accesses:
+; CHECK-EMPTY:
+; CHECK-NEXT:      Non vectorizable stores to invariant address were not found in loop.
+; CHECK-NEXT:      SCEV assumptions:
+; CHECK-EMPTY:
+; CHECK-NEXT:      Expressions re-written:
+;
+entry:
+  %a.zext = zext i8 %a to i64
+  %abs_stride = add i64 %a.zext, 1
+  %neg_stride = sub i64 0, %abs_stride
+  %stride = select i1 %negative, i64 %neg_stride, i64 %abs_stride
+  br label %header
+
+header:
+  %iv = phi i64 [ 0, %entry ], [ %iv.next, %header ]
+  %iv.next = add nsw i64 %iv, 1
+  %idx = mul i64 %iv, %stride
+
+  %gep = getelementptr inbounds i64, ptr %p, i64 %idx
   %ld = load i64, ptr %gep
   %add = add i64 %ld, %iv
   store i64 %add, ptr %gep
