@@ -52,7 +52,10 @@ static parser::CharBlock getSource(const lower::pft::Evaluation &eval) {
         return parser::omp::GetOmpDirectiveName(x).source;
       },
       [&](const parser::OpenMPDeclarativeConstruct &x) { return x.source; },
-      [&](const auto &x) { return parser::CharBlock{}; },
+      [&](const auto &x) {
+        std::optional<parser::CharBlock> source = parser::GetSource(x);
+        return source.has_value() ? source.value() : parser::CharBlock{};
+      },
   });
 }
 
@@ -491,7 +494,7 @@ void DataSharingProcessor::collectSymbolsInNestedRegions(
     llvm::SetVector<const semantics::Symbol *> &symbolsInNestedRegions) {
   if (!eval.hasNestedEvaluations())
     return;
-  const semantics::Scope *curScope = getCurrentScope(semaCtx, eval);
+  const semantics::Scope *curScope = getCurrentScope(semaCtx, this->eval);
   if (!curScope)
     return;
   llvm::SetVector<const semantics::Symbol *> collectedSymbols;
