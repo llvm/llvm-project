@@ -673,8 +673,7 @@ Value *llvm::lowerObjectSizeCall(
         isUIntN(ResultType->getBitWidth(), Size))
       return ConstantInt::get(ResultType, Size);
   } else {
-    LLVMContext &Ctx = ObjectSize->getFunction()->getContext();
-    ObjectSizeOffsetEvaluator Eval(DL, TLI, Ctx, EvalOptions);
+    ObjectSizeOffsetEvaluator Eval(*ObjectSize->getModule(), TLI, EvalOptions);
     SizeOffsetValue SizeOffsetPair = Eval.compute(ObjectSize->getArgOperand(0));
 
     if (SizeOffsetPair != ObjectSizeOffsetEvaluator::unknown()) {
@@ -1231,10 +1230,9 @@ SizeOffsetValue::SizeOffsetValue(const SizeOffsetWeakTrackingVH &SOT)
     : SizeOffsetType(SOT.Size, SOT.Offset) {}
 
 ObjectSizeOffsetEvaluator::ObjectSizeOffsetEvaluator(
-    const DataLayout &DL, const TargetLibraryInfo *TLI, LLVMContext &Context,
-    ObjectSizeOpts EvalOpts)
-    : DL(DL), TLI(TLI), Context(Context),
-      Builder(Context, TargetFolder(DL),
+    Module &M, const TargetLibraryInfo *TLI, ObjectSizeOpts EvalOpts)
+    : DL(M.getDataLayout()), TLI(TLI), Context(M.getContext()),
+      Builder(M, TargetFolder(DL),
               IRBuilderCallbackInserter(
                   [&](Instruction *I) { InsertedInstructions.insert(I); })),
       EvalOpts(EvalOpts) {

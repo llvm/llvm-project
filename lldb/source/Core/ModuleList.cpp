@@ -198,6 +198,12 @@ bool ModuleListProperties::GetLoadSymbolOnDemand() const {
       idx, g_modulelist_properties[idx].default_uint_value != 0);
 }
 
+uint64_t ModuleListProperties::GetDemangledNameInfoCacheSize() const {
+  const uint32_t idx = ePropertyDemangledNameInfoCacheSize;
+  return GetPropertyAtIndexAs<uint64_t>(
+      idx, g_modulelist_properties[idx].default_uint_value);
+}
+
 ModuleList::ModuleList() : m_modules(), m_modules_mutex() {}
 
 ModuleList::ModuleList(const ModuleList &rhs) : m_modules(), m_modules_mutex() {
