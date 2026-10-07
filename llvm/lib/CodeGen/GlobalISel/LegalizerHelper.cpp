@@ -3792,8 +3792,8 @@ LegalizerHelper::lowerBitcast(MachineInstr &MI) {
           return Legalized;
         }
 
-        LLT PiecesVecTy = LLT::vector(
-            SrcEC.multiplyCoefficientBy(SrcEltSize / PieceSize), PieceTy);
+        LLT PiecesVecTy =
+            LLT::vector(SrcEC * (SrcEltSize / PieceSize), PieceTy);
         Register PiecesReg =
             MIRBuilder.buildBitcast(PiecesVecTy, Src).getReg(0);
         MIRBuilder.buildBitcast(Dst, PiecesReg);
