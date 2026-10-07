@@ -31737,9 +31737,52 @@ static unsigned getReductionForOpcode(unsigned Op) {
   }
 }
 
+// umin(abs(X), signed_max) is a saturating absolute value. In particular,
+// abs(signed_min) has the unsigned value signed_max + 1 and must be clamped.
+static SDValue trySQABSCombine(SDNode *N, SelectionDAG &DAG,
+                               const AArch64TargetLowering &TLI) {
+  using namespace llvm::SDPatternMatch;
+  EVT VT = N->getValueType(0);
+  if (N->getOpcode() != ISD::UMIN || !VT.isVector() || !VT.isInteger() ||
+      VT.getScalarSizeInBits() < 8 || VT.getScalarSizeInBits() > 64 ||
+      !TLI.isTypeLegal(VT))
+    return SDValue();
+
+  SDValue Abs = N->getOperand(0);
+  SDValue X;
+  ConstantSDNode *Clamp = isConstOrConstSplat(N->getOperand(1));
+  if (!sd_match(Abs, m_Abs(m_Value(X))) || !Clamp ||
+      !Clamp->getAPIntValue()
+           .zextOrTrunc(VT.getScalarSizeInBits())
+           .isMaxSignedValue())
+    return SDValue();
+
+  const auto &Subtarget = DAG.getSubtarget<AArch64Subtarget>();
+  SDLoc DL(N);
+  if (VT.isScalableVector()) {
+    if (VT.getSizeInBits().getKnownMinValue() != 128 ||
+        !Subtarget.isSVEorStreamingSVEAvailable() ||
+        !(Subtarget.hasSVE2() || Subtarget.hasSME()))
+      return SDValue();
+    return DAG.getNode(
+        ISD::INTRINSIC_WO_CHAIN, DL, VT,
+        DAG.getTargetConstant(Intrinsic::aarch64_sve_sqabs, DL, MVT::i32),
+        DAG.getPOISON(VT), getPredicateForVector(DAG, DL, VT), X);
+  }
+
+  if (!Subtarget.isNeonAvailable() ||
+      !(VT.is64BitVector() || VT.is128BitVector()))
+    return SDValue();
+  return DAG.getNode(
+      ISD::INTRINSIC_WO_CHAIN, DL, VT,
+      DAG.getTargetConstant(Intrinsic::aarch64_neon_sqabs, DL, MVT::i32), X);
+}
+
 static SDValue performMINMAXCombine(SDNode *N, SelectionDAG &DAG,
                                     const AArch64TargetLowering &TLI) {
   using namespace llvm::SDPatternMatch;
+  if (SDValue V = trySQABSCombine(N, DAG, TLI))
+    return V;
   if (SDValue V = trySQDMULHCombine(N, DAG))
     return V;
 

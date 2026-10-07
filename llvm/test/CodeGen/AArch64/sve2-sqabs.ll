@@ -7,8 +7,7 @@ define <vscale x 16 x i8> @sqabs_nxv16i8(<vscale x 16 x i8> %x) {
 ; SVE2-LABEL: sqabs_nxv16i8:
 ; SVE2:       // %bb.0:
 ; SVE2-NEXT:    ptrue p0.b
-; SVE2-NEXT:    abs z0.b, p0/m, z0.b
-; SVE2-NEXT:    umin z0.b, z0.b, #127
+; SVE2-NEXT:    sqabs z0.b, p0/m, z0.b
 ; SVE2-NEXT:    ret
 ;
 ; SVE-LABEL: sqabs_nxv16i8:
@@ -21,8 +20,7 @@ define <vscale x 16 x i8> @sqabs_nxv16i8(<vscale x 16 x i8> %x) {
 ; SME-LABEL: sqabs_nxv16i8:
 ; SME:       // %bb.0:
 ; SME-NEXT:    ptrue p0.b
-; SME-NEXT:    abs z0.b, p0/m, z0.b
-; SME-NEXT:    umin z0.b, z0.b, #127
+; SME-NEXT:    sqabs z0.b, p0/m, z0.b
 ; SME-NEXT:    ret
   %a = call <vscale x 16 x i8> @llvm.abs.nxv16i8(<vscale x 16 x i8> %x, i1 false)
   %r = call <vscale x 16 x i8> @llvm.umin.nxv16i8(<vscale x 16 x i8> %a, <vscale x 16 x i8> splat (i8 127))
@@ -33,9 +31,7 @@ define <vscale x 8 x i16> @sqabs_nxv8i16(<vscale x 8 x i16> %x) {
 ; SVE2-LABEL: sqabs_nxv8i16:
 ; SVE2:       // %bb.0:
 ; SVE2-NEXT:    ptrue p0.h
-; SVE2-NEXT:    mov z1.h, #32767 // =0x7fff
-; SVE2-NEXT:    abs z0.h, p0/m, z0.h
-; SVE2-NEXT:    umin z0.h, p0/m, z0.h, z1.h
+; SVE2-NEXT:    sqabs z0.h, p0/m, z0.h
 ; SVE2-NEXT:    ret
 ;
 ; SVE-LABEL: sqabs_nxv8i16:
@@ -49,9 +45,7 @@ define <vscale x 8 x i16> @sqabs_nxv8i16(<vscale x 8 x i16> %x) {
 ; SME-LABEL: sqabs_nxv8i16:
 ; SME:       // %bb.0:
 ; SME-NEXT:    ptrue p0.h
-; SME-NEXT:    mov z1.h, #32767 // =0x7fff
-; SME-NEXT:    abs z0.h, p0/m, z0.h
-; SME-NEXT:    umin z0.h, p0/m, z0.h, z1.h
+; SME-NEXT:    sqabs z0.h, p0/m, z0.h
 ; SME-NEXT:    ret
   %a = call <vscale x 8 x i16> @llvm.abs.nxv8i16(<vscale x 8 x i16> %x, i1 false)
   %r = call <vscale x 8 x i16> @llvm.umin.nxv8i16(<vscale x 8 x i16> %a, <vscale x 8 x i16> splat (i16 32767))
@@ -62,9 +56,7 @@ define <vscale x 4 x i32> @sqabs_nxv4i32(<vscale x 4 x i32> %x) {
 ; SVE2-LABEL: sqabs_nxv4i32:
 ; SVE2:       // %bb.0:
 ; SVE2-NEXT:    ptrue p0.s
-; SVE2-NEXT:    mov z1.s, #0x7fffffff
-; SVE2-NEXT:    abs z0.s, p0/m, z0.s
-; SVE2-NEXT:    umin z0.s, p0/m, z0.s, z1.s
+; SVE2-NEXT:    sqabs z0.s, p0/m, z0.s
 ; SVE2-NEXT:    ret
 ;
 ; SVE-LABEL: sqabs_nxv4i32:
@@ -78,9 +70,7 @@ define <vscale x 4 x i32> @sqabs_nxv4i32(<vscale x 4 x i32> %x) {
 ; SME-LABEL: sqabs_nxv4i32:
 ; SME:       // %bb.0:
 ; SME-NEXT:    ptrue p0.s
-; SME-NEXT:    mov z1.s, #0x7fffffff
-; SME-NEXT:    abs z0.s, p0/m, z0.s
-; SME-NEXT:    umin z0.s, p0/m, z0.s, z1.s
+; SME-NEXT:    sqabs z0.s, p0/m, z0.s
 ; SME-NEXT:    ret
   %a = call <vscale x 4 x i32> @llvm.abs.nxv4i32(<vscale x 4 x i32> %x, i1 false)
   %r = call <vscale x 4 x i32> @llvm.umin.nxv4i32(<vscale x 4 x i32> %a, <vscale x 4 x i32> splat (i32 2147483647))
@@ -91,9 +81,7 @@ define <vscale x 2 x i64> @sqabs_nxv2i64(<vscale x 2 x i64> %x) {
 ; SVE2-LABEL: sqabs_nxv2i64:
 ; SVE2:       // %bb.0:
 ; SVE2-NEXT:    ptrue p0.d
-; SVE2-NEXT:    mov z1.d, #0x7fffffffffffffff
-; SVE2-NEXT:    abs z0.d, p0/m, z0.d
-; SVE2-NEXT:    umin z0.d, p0/m, z0.d, z1.d
+; SVE2-NEXT:    sqabs z0.d, p0/m, z0.d
 ; SVE2-NEXT:    ret
 ;
 ; SVE-LABEL: sqabs_nxv2i64:
@@ -107,9 +95,7 @@ define <vscale x 2 x i64> @sqabs_nxv2i64(<vscale x 2 x i64> %x) {
 ; SME-LABEL: sqabs_nxv2i64:
 ; SME:       // %bb.0:
 ; SME-NEXT:    ptrue p0.d
-; SME-NEXT:    mov z1.d, #0x7fffffffffffffff
-; SME-NEXT:    abs z0.d, p0/m, z0.d
-; SME-NEXT:    umin z0.d, p0/m, z0.d, z1.d
+; SME-NEXT:    sqabs z0.d, p0/m, z0.d
 ; SME-NEXT:    ret
   %a = call <vscale x 2 x i64> @llvm.abs.nxv2i64(<vscale x 2 x i64> %x, i1 false)
   %r = call <vscale x 2 x i64> @llvm.umin.nxv2i64(<vscale x 2 x i64> %a, <vscale x 2 x i64> splat (i64 9223372036854775807))
@@ -120,11 +106,8 @@ define <vscale x 8 x i32> @sqabs_nxv8i32(<vscale x 8 x i32> %x) {
 ; SVE2-LABEL: sqabs_nxv8i32:
 ; SVE2:       // %bb.0:
 ; SVE2-NEXT:    ptrue p0.s
-; SVE2-NEXT:    mov z2.s, #0x7fffffff
-; SVE2-NEXT:    abs z1.s, p0/m, z1.s
-; SVE2-NEXT:    abs z0.s, p0/m, z0.s
-; SVE2-NEXT:    umin z0.s, p0/m, z0.s, z2.s
-; SVE2-NEXT:    umin z1.s, p0/m, z1.s, z2.s
+; SVE2-NEXT:    sqabs z0.s, p0/m, z0.s
+; SVE2-NEXT:    sqabs z1.s, p0/m, z1.s
 ; SVE2-NEXT:    ret
 ;
 ; SVE-LABEL: sqabs_nxv8i32:
@@ -140,11 +123,8 @@ define <vscale x 8 x i32> @sqabs_nxv8i32(<vscale x 8 x i32> %x) {
 ; SME-LABEL: sqabs_nxv8i32:
 ; SME:       // %bb.0:
 ; SME-NEXT:    ptrue p0.s
-; SME-NEXT:    mov z2.s, #0x7fffffff
-; SME-NEXT:    abs z1.s, p0/m, z1.s
-; SME-NEXT:    abs z0.s, p0/m, z0.s
-; SME-NEXT:    umin z0.s, p0/m, z0.s, z2.s
-; SME-NEXT:    umin z1.s, p0/m, z1.s, z2.s
+; SME-NEXT:    sqabs z0.s, p0/m, z0.s
+; SME-NEXT:    sqabs z1.s, p0/m, z1.s
 ; SME-NEXT:    ret
   %a = call <vscale x 8 x i32> @llvm.abs.nxv8i32(<vscale x 8 x i32> %x, i1 false)
   %r = call <vscale x 8 x i32> @llvm.umin.nxv8i32(<vscale x 8 x i32> %a, <vscale x 8 x i32> splat (i32 2147483647))
@@ -187,9 +167,7 @@ define <vscale x 8 x i16> @sqabs_nxv8i16_commuted(<vscale x 8 x i16> %x) {
 ; SVE2-LABEL: sqabs_nxv8i16_commuted:
 ; SVE2:       // %bb.0:
 ; SVE2-NEXT:    ptrue p0.h
-; SVE2-NEXT:    mov z1.h, #32767 // =0x7fff
-; SVE2-NEXT:    abs z0.h, p0/m, z0.h
-; SVE2-NEXT:    umin z0.h, p0/m, z0.h, z1.h
+; SVE2-NEXT:    sqabs z0.h, p0/m, z0.h
 ; SVE2-NEXT:    ret
 ;
 ; SVE-LABEL: sqabs_nxv8i16_commuted:
@@ -203,9 +181,7 @@ define <vscale x 8 x i16> @sqabs_nxv8i16_commuted(<vscale x 8 x i16> %x) {
 ; SME-LABEL: sqabs_nxv8i16_commuted:
 ; SME:       // %bb.0:
 ; SME-NEXT:    ptrue p0.h
-; SME-NEXT:    mov z1.h, #32767 // =0x7fff
-; SME-NEXT:    abs z0.h, p0/m, z0.h
-; SME-NEXT:    umin z0.h, p0/m, z0.h, z1.h
+; SME-NEXT:    sqabs z0.h, p0/m, z0.h
 ; SME-NEXT:    ret
   %a = call <vscale x 8 x i16> @llvm.abs.nxv8i16(<vscale x 8 x i16> %x, i1 false)
   %r = call <vscale x 8 x i16> @llvm.umin.nxv8i16(<vscale x 8 x i16> splat (i16 32767), <vscale x 8 x i16> %a)
@@ -270,9 +246,7 @@ define <vscale x 8 x i16> @sqabs_nxv8i16_poison(<vscale x 8 x i16> %x) {
 ; SVE2-LABEL: sqabs_nxv8i16_poison:
 ; SVE2:       // %bb.0:
 ; SVE2-NEXT:    ptrue p0.h
-; SVE2-NEXT:    mov z1.h, #32767 // =0x7fff
-; SVE2-NEXT:    abs z0.h, p0/m, z0.h
-; SVE2-NEXT:    umin z0.h, p0/m, z0.h, z1.h
+; SVE2-NEXT:    sqabs z0.h, p0/m, z0.h
 ; SVE2-NEXT:    ret
 ;
 ; SVE-LABEL: sqabs_nxv8i16_poison:
@@ -286,9 +260,7 @@ define <vscale x 8 x i16> @sqabs_nxv8i16_poison(<vscale x 8 x i16> %x) {
 ; SME-LABEL: sqabs_nxv8i16_poison:
 ; SME:       // %bb.0:
 ; SME-NEXT:    ptrue p0.h
-; SME-NEXT:    mov z1.h, #32767 // =0x7fff
-; SME-NEXT:    abs z0.h, p0/m, z0.h
-; SME-NEXT:    umin z0.h, p0/m, z0.h, z1.h
+; SME-NEXT:    sqabs z0.h, p0/m, z0.h
 ; SME-NEXT:    ret
   %a = call <vscale x 8 x i16> @llvm.abs.nxv8i16(<vscale x 8 x i16> %x, i1 true)
   %r = call <vscale x 8 x i16> @llvm.umin.nxv8i16(<vscale x 8 x i16> %a, <vscale x 8 x i16> splat (i16 32767))
@@ -299,9 +271,9 @@ define <vscale x 8 x i16> @sqabs_nxv8i16_multiuse(<vscale x 8 x i16> %x) {
 ; SVE2-LABEL: sqabs_nxv8i16_multiuse:
 ; SVE2:       // %bb.0:
 ; SVE2-NEXT:    ptrue p0.h
-; SVE2-NEXT:    mov z1.h, #32767 // =0x7fff
+; SVE2-NEXT:    movprfx z1, z0
+; SVE2-NEXT:    sqabs z1.h, p0/m, z0.h
 ; SVE2-NEXT:    abs z0.h, p0/m, z0.h
-; SVE2-NEXT:    umin z1.h, p0/m, z1.h, z0.h
 ; SVE2-NEXT:    add z0.h, z0.h, z1.h
 ; SVE2-NEXT:    ret
 ;
@@ -317,9 +289,9 @@ define <vscale x 8 x i16> @sqabs_nxv8i16_multiuse(<vscale x 8 x i16> %x) {
 ; SME-LABEL: sqabs_nxv8i16_multiuse:
 ; SME:       // %bb.0:
 ; SME-NEXT:    ptrue p0.h
-; SME-NEXT:    mov z1.h, #32767 // =0x7fff
+; SME-NEXT:    movprfx z1, z0
+; SME-NEXT:    sqabs z1.h, p0/m, z0.h
 ; SME-NEXT:    abs z0.h, p0/m, z0.h
-; SME-NEXT:    umin z1.h, p0/m, z1.h, z0.h
 ; SME-NEXT:    add z0.h, z0.h, z1.h
 ; SME-NEXT:    ret
   %a = call <vscale x 8 x i16> @llvm.abs.nxv8i16(<vscale x 8 x i16> %x, i1 false)

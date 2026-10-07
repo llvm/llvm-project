@@ -4,9 +4,7 @@
 define <8 x i8> @sqabs_v8i8(<8 x i8> %x) {
 ; CHECK-LABEL: sqabs_v8i8:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    movi v1.8b, #127
-; CHECK-NEXT:    abs v0.8b, v0.8b
-; CHECK-NEXT:    umin v0.8b, v0.8b, v1.8b
+; CHECK-NEXT:    sqabs v0.8b, v0.8b
 ; CHECK-NEXT:    ret
   %a = call <8 x i8> @llvm.abs.v8i8(<8 x i8> %x, i1 false)
   %r = call <8 x i8> @llvm.umin.v8i8(<8 x i8> %a, <8 x i8> splat (i8 127))
@@ -16,9 +14,7 @@ define <8 x i8> @sqabs_v8i8(<8 x i8> %x) {
 define <16 x i8> @sqabs_v16i8(<16 x i8> %x) {
 ; CHECK-LABEL: sqabs_v16i8:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    movi v1.16b, #127
-; CHECK-NEXT:    abs v0.16b, v0.16b
-; CHECK-NEXT:    umin v0.16b, v0.16b, v1.16b
+; CHECK-NEXT:    sqabs v0.16b, v0.16b
 ; CHECK-NEXT:    ret
   %a = call <16 x i8> @llvm.abs.v16i8(<16 x i8> %x, i1 false)
   %r = call <16 x i8> @llvm.umin.v16i8(<16 x i8> %a, <16 x i8> splat (i8 127))
@@ -28,9 +24,7 @@ define <16 x i8> @sqabs_v16i8(<16 x i8> %x) {
 define <4 x i16> @sqabs_v4i16(<4 x i16> %x) {
 ; CHECK-LABEL: sqabs_v4i16:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    mvni v1.4h, #128, lsl #8
-; CHECK-NEXT:    abs v0.4h, v0.4h
-; CHECK-NEXT:    umin v0.4h, v0.4h, v1.4h
+; CHECK-NEXT:    sqabs v0.4h, v0.4h
 ; CHECK-NEXT:    ret
   %a = call <4 x i16> @llvm.abs.v4i16(<4 x i16> %x, i1 false)
   %r = call <4 x i16> @llvm.umin.v4i16(<4 x i16> %a, <4 x i16> splat (i16 32767))
@@ -40,9 +34,7 @@ define <4 x i16> @sqabs_v4i16(<4 x i16> %x) {
 define <8 x i16> @sqabs_v8i16(<8 x i16> %x) {
 ; CHECK-LABEL: sqabs_v8i16:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    mvni v1.8h, #128, lsl #8
-; CHECK-NEXT:    abs v0.8h, v0.8h
-; CHECK-NEXT:    umin v0.8h, v0.8h, v1.8h
+; CHECK-NEXT:    sqabs v0.8h, v0.8h
 ; CHECK-NEXT:    ret
   %a = call <8 x i16> @llvm.abs.v8i16(<8 x i16> %x, i1 false)
   %r = call <8 x i16> @llvm.umin.v8i16(<8 x i16> %a, <8 x i16> splat (i16 32767))
@@ -52,9 +44,7 @@ define <8 x i16> @sqabs_v8i16(<8 x i16> %x) {
 define <2 x i32> @sqabs_v2i32(<2 x i32> %x) {
 ; CHECK-LABEL: sqabs_v2i32:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    mvni v1.2s, #128, lsl #24
-; CHECK-NEXT:    abs v0.2s, v0.2s
-; CHECK-NEXT:    umin v0.2s, v0.2s, v1.2s
+; CHECK-NEXT:    sqabs v0.2s, v0.2s
 ; CHECK-NEXT:    ret
   %a = call <2 x i32> @llvm.abs.v2i32(<2 x i32> %x, i1 false)
   %r = call <2 x i32> @llvm.umin.v2i32(<2 x i32> %a, <2 x i32> splat (i32 2147483647))
@@ -64,9 +54,7 @@ define <2 x i32> @sqabs_v2i32(<2 x i32> %x) {
 define <4 x i32> @sqabs_v4i32(<4 x i32> %x) {
 ; CHECK-LABEL: sqabs_v4i32:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    mvni v1.4s, #128, lsl #24
-; CHECK-NEXT:    abs v0.4s, v0.4s
-; CHECK-NEXT:    umin v0.4s, v0.4s, v1.4s
+; CHECK-NEXT:    sqabs v0.4s, v0.4s
 ; CHECK-NEXT:    ret
   %a = call <4 x i32> @llvm.abs.v4i32(<4 x i32> %x, i1 false)
   %r = call <4 x i32> @llvm.umin.v4i32(<4 x i32> %a, <4 x i32> splat (i32 2147483647))
@@ -76,11 +64,7 @@ define <4 x i32> @sqabs_v4i32(<4 x i32> %x) {
 define <1 x i64> @sqabs_v1i64(<1 x i64> %x) {
 ; CHECK-LABEL: sqabs_v1i64:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    movi d1, #0xffffffffffffffff
-; CHECK-NEXT:    abs d0, d0
-; CHECK-NEXT:    fneg d1, d1
-; CHECK-NEXT:    cmhi d2, d1, d0
-; CHECK-NEXT:    bif v0.8b, v1.8b, v2.8b
+; CHECK-NEXT:    sqabs d0, d0
 ; CHECK-NEXT:    ret
   %a = call <1 x i64> @llvm.abs.v1i64(<1 x i64> %x, i1 false)
   %r = call <1 x i64> @llvm.umin.v1i64(<1 x i64> %a, <1 x i64> splat (i64 9223372036854775807))
@@ -90,11 +74,7 @@ define <1 x i64> @sqabs_v1i64(<1 x i64> %x) {
 define <2 x i64> @sqabs_v2i64(<2 x i64> %x) {
 ; CHECK-LABEL: sqabs_v2i64:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    movi v1.2d, #0xffffffffffffffff
-; CHECK-NEXT:    abs v0.2d, v0.2d
-; CHECK-NEXT:    fneg v1.2d, v1.2d
-; CHECK-NEXT:    cmhi v2.2d, v1.2d, v0.2d
-; CHECK-NEXT:    bif v0.16b, v1.16b, v2.16b
+; CHECK-NEXT:    sqabs v0.2d, v0.2d
 ; CHECK-NEXT:    ret
   %a = call <2 x i64> @llvm.abs.v2i64(<2 x i64> %x, i1 false)
   %r = call <2 x i64> @llvm.umin.v2i64(<2 x i64> %a, <2 x i64> splat (i64 9223372036854775807))
@@ -132,9 +112,7 @@ define <4 x i8> @sqabs_v4i8(<4 x i8> %x) {
 define <8 x i16> @sqabs_v8i16_commuted(<8 x i16> %x) {
 ; CHECK-LABEL: sqabs_v8i16_commuted:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    mvni v1.8h, #128, lsl #8
-; CHECK-NEXT:    abs v0.8h, v0.8h
-; CHECK-NEXT:    umin v0.8h, v0.8h, v1.8h
+; CHECK-NEXT:    sqabs v0.8h, v0.8h
 ; CHECK-NEXT:    ret
   %a = call <8 x i16> @llvm.abs.v8i16(<8 x i16> %x, i1 false)
   %r = call <8 x i16> @llvm.umin.v8i16(<8 x i16> splat (i16 32767), <8 x i16> %a)
@@ -144,9 +122,7 @@ define <8 x i16> @sqabs_v8i16_commuted(<8 x i16> %x) {
 define <8 x i16> @sqabs_v8i16_poison(<8 x i16> %x) {
 ; CHECK-LABEL: sqabs_v8i16_poison:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    mvni v1.8h, #128, lsl #8
-; CHECK-NEXT:    abs v0.8h, v0.8h
-; CHECK-NEXT:    umin v0.8h, v0.8h, v1.8h
+; CHECK-NEXT:    sqabs v0.8h, v0.8h
 ; CHECK-NEXT:    ret
   %a = call <8 x i16> @llvm.abs.v8i16(<8 x i16> %x, i1 true)
   %r = call <8 x i16> @llvm.umin.v8i16(<8 x i16> %a, <8 x i16> splat (i16 32767))
@@ -156,11 +132,9 @@ define <8 x i16> @sqabs_v8i16_poison(<8 x i16> %x) {
 define <8 x i16> @sqabs_v8i16_multiuse(<8 x i16> %x) {
 ; CHECK-LABEL: sqabs_v8i16_multiuse:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    mvni v1.8h, #128, lsl #8
-; CHECK-NEXT:    abs v2.8h, v0.8h
-; CHECK-NEXT:    movi v3.2d, #0000000000000000
-; CHECK-NEXT:    umin v1.8h, v2.8h, v1.8h
-; CHECK-NEXT:    saba v1.8h, v0.8h, v3.8h
+; CHECK-NEXT:    movi v2.2d, #0000000000000000
+; CHECK-NEXT:    sqabs v1.8h, v0.8h
+; CHECK-NEXT:    saba v1.8h, v0.8h, v2.8h
 ; CHECK-NEXT:    mov v0.16b, v1.16b
 ; CHECK-NEXT:    ret
   %a = call <8 x i16> @llvm.abs.v8i16(<8 x i16> %x, i1 false)
