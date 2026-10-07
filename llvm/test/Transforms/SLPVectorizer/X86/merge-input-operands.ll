@@ -11,17 +11,12 @@
 define void @merge_products_of_sums(ptr %A, ptr %Out) {
 ; CHECK-LABEL: @merge_products_of_sums(
 ; CHECK-NEXT:  entry:
-; CHECK-NEXT:    [[P2:%.*]] = getelementptr float, ptr [[A:%.*]], i64 2
-; CHECK-NEXT:    [[P4:%.*]] = getelementptr float, ptr [[A]], i64 4
-; CHECK-NEXT:    [[P6:%.*]] = getelementptr float, ptr [[A]], i64 6
-; CHECK-NEXT:    [[TMP0:%.*]] = load <2 x float>, ptr [[A]], align 4
-; CHECK-NEXT:    [[TMP1:%.*]] = load <2 x float>, ptr [[P2]], align 4
-; CHECK-NEXT:    [[TMP2:%.*]] = load <2 x float>, ptr [[P4]], align 4
-; CHECK-NEXT:    [[TMP3:%.*]] = load <2 x float>, ptr [[P6]], align 4
-; CHECK-NEXT:    [[TMP4:%.*]] = fadd <2 x float> [[TMP0]], [[TMP2]]
-; CHECK-NEXT:    [[TMP5:%.*]] = shufflevector <2 x float> [[TMP4]], <2 x float> poison, <4 x i32> <i32 0, i32 1, i32 0, i32 1>
-; CHECK-NEXT:    [[TMP6:%.*]] = fadd <2 x float> [[TMP1]], [[TMP3]]
-; CHECK-NEXT:    [[TMP7:%.*]] = shufflevector <2 x float> [[TMP6]], <2 x float> poison, <4 x i32> <i32 0, i32 1, i32 1, i32 0>
+; CHECK-NEXT:    [[P4:%.*]] = getelementptr float, ptr [[A:%.*]], i64 4
+; CHECK-NEXT:    [[TMP0:%.*]] = load <4 x float>, ptr [[A]], align 4
+; CHECK-NEXT:    [[TMP1:%.*]] = load <4 x float>, ptr [[P4]], align 4
+; CHECK-NEXT:    [[TMP2:%.*]] = fadd <4 x float> [[TMP0]], [[TMP1]]
+; CHECK-NEXT:    [[TMP5:%.*]] = shufflevector <4 x float> [[TMP2]], <4 x float> poison, <4 x i32> <i32 0, i32 1, i32 0, i32 1>
+; CHECK-NEXT:    [[TMP7:%.*]] = shufflevector <4 x float> [[TMP2]], <4 x float> poison, <4 x i32> <i32 2, i32 3, i32 3, i32 2>
 ; CHECK-NEXT:    [[TMP8:%.*]] = fmul <4 x float> [[TMP5]], [[TMP7]]
 ; CHECK-NEXT:    store <4 x float> [[TMP8]], ptr [[OUT:%.*]], align 4
 ; CHECK-NEXT:    ret void
@@ -180,17 +175,12 @@ entry:
 define void @merge_fmf_uniform(ptr %A, ptr %Out) {
 ; CHECK-LABEL: @merge_fmf_uniform(
 ; CHECK-NEXT:  entry:
-; CHECK-NEXT:    [[P2:%.*]] = getelementptr float, ptr [[A:%.*]], i64 2
-; CHECK-NEXT:    [[P4:%.*]] = getelementptr float, ptr [[A]], i64 4
-; CHECK-NEXT:    [[P6:%.*]] = getelementptr float, ptr [[A]], i64 6
-; CHECK-NEXT:    [[TMP0:%.*]] = load <2 x float>, ptr [[A]], align 4
-; CHECK-NEXT:    [[TMP1:%.*]] = load <2 x float>, ptr [[P2]], align 4
-; CHECK-NEXT:    [[TMP2:%.*]] = load <2 x float>, ptr [[P4]], align 4
-; CHECK-NEXT:    [[TMP3:%.*]] = load <2 x float>, ptr [[P6]], align 4
-; CHECK-NEXT:    [[TMP4:%.*]] = fadd fast <2 x float> [[TMP0]], [[TMP2]]
-; CHECK-NEXT:    [[TMP5:%.*]] = shufflevector <2 x float> [[TMP4]], <2 x float> poison, <4 x i32> <i32 0, i32 1, i32 0, i32 1>
-; CHECK-NEXT:    [[TMP6:%.*]] = fadd fast <2 x float> [[TMP1]], [[TMP3]]
-; CHECK-NEXT:    [[TMP7:%.*]] = shufflevector <2 x float> [[TMP6]], <2 x float> poison, <4 x i32> <i32 0, i32 1, i32 1, i32 0>
+; CHECK-NEXT:    [[P4:%.*]] = getelementptr float, ptr [[A:%.*]], i64 4
+; CHECK-NEXT:    [[TMP0:%.*]] = load <4 x float>, ptr [[A]], align 4
+; CHECK-NEXT:    [[TMP1:%.*]] = load <4 x float>, ptr [[P4]], align 4
+; CHECK-NEXT:    [[TMP2:%.*]] = fadd fast <4 x float> [[TMP0]], [[TMP1]]
+; CHECK-NEXT:    [[TMP5:%.*]] = shufflevector <4 x float> [[TMP2]], <4 x float> poison, <4 x i32> <i32 0, i32 1, i32 0, i32 1>
+; CHECK-NEXT:    [[TMP7:%.*]] = shufflevector <4 x float> [[TMP2]], <4 x float> poison, <4 x i32> <i32 2, i32 3, i32 3, i32 2>
 ; CHECK-NEXT:    [[TMP8:%.*]] = fmul fast <4 x float> [[TMP5]], [[TMP7]]
 ; CHECK-NEXT:    store <4 x float> [[TMP8]], ptr [[OUT:%.*]], align 4
 ; CHECK-NEXT:    ret void
@@ -238,17 +228,12 @@ entry:
 define void @merge_fmf_mixed(ptr %A, ptr %Out) {
 ; CHECK-LABEL: @merge_fmf_mixed(
 ; CHECK-NEXT:  entry:
-; CHECK-NEXT:    [[P2:%.*]] = getelementptr float, ptr [[A:%.*]], i64 2
-; CHECK-NEXT:    [[P4:%.*]] = getelementptr float, ptr [[A]], i64 4
-; CHECK-NEXT:    [[P6:%.*]] = getelementptr float, ptr [[A]], i64 6
-; CHECK-NEXT:    [[TMP0:%.*]] = load <2 x float>, ptr [[A]], align 4
-; CHECK-NEXT:    [[TMP1:%.*]] = load <2 x float>, ptr [[P2]], align 4
-; CHECK-NEXT:    [[TMP2:%.*]] = load <2 x float>, ptr [[P4]], align 4
-; CHECK-NEXT:    [[TMP3:%.*]] = load <2 x float>, ptr [[P6]], align 4
-; CHECK-NEXT:    [[TMP4:%.*]] = fadd fast <2 x float> [[TMP0]], [[TMP2]]
-; CHECK-NEXT:    [[TMP5:%.*]] = shufflevector <2 x float> [[TMP4]], <2 x float> poison, <4 x i32> <i32 0, i32 1, i32 0, i32 1>
-; CHECK-NEXT:    [[TMP6:%.*]] = fadd nnan ninf <2 x float> [[TMP1]], [[TMP3]]
-; CHECK-NEXT:    [[TMP7:%.*]] = shufflevector <2 x float> [[TMP6]], <2 x float> poison, <4 x i32> <i32 0, i32 1, i32 1, i32 0>
+; CHECK-NEXT:    [[P4:%.*]] = getelementptr float, ptr [[A:%.*]], i64 4
+; CHECK-NEXT:    [[TMP0:%.*]] = load <4 x float>, ptr [[A]], align 4
+; CHECK-NEXT:    [[TMP1:%.*]] = load <4 x float>, ptr [[P4]], align 4
+; CHECK-NEXT:    [[TMP2:%.*]] = fadd nnan ninf <4 x float> [[TMP0]], [[TMP1]]
+; CHECK-NEXT:    [[TMP5:%.*]] = shufflevector <4 x float> [[TMP2]], <4 x float> poison, <4 x i32> <i32 0, i32 1, i32 0, i32 1>
+; CHECK-NEXT:    [[TMP7:%.*]] = shufflevector <4 x float> [[TMP2]], <4 x float> poison, <4 x i32> <i32 2, i32 3, i32 3, i32 2>
 ; CHECK-NEXT:    [[TMP8:%.*]] = fmul fast <4 x float> [[TMP5]], [[TMP7]]
 ; CHECK-NEXT:    store <4 x float> [[TMP8]], ptr [[OUT:%.*]], align 4
 ; CHECK-NEXT:    ret void
@@ -295,17 +280,12 @@ entry:
 define void @merge_int_wrap_uniform(ptr %A, ptr %Out) {
 ; CHECK-LABEL: @merge_int_wrap_uniform(
 ; CHECK-NEXT:  entry:
-; CHECK-NEXT:    [[P2:%.*]] = getelementptr i32, ptr [[A:%.*]], i64 2
-; CHECK-NEXT:    [[P4:%.*]] = getelementptr i32, ptr [[A]], i64 4
-; CHECK-NEXT:    [[P6:%.*]] = getelementptr i32, ptr [[A]], i64 6
-; CHECK-NEXT:    [[TMP0:%.*]] = load <2 x i32>, ptr [[A]], align 4
-; CHECK-NEXT:    [[TMP1:%.*]] = load <2 x i32>, ptr [[P2]], align 4
-; CHECK-NEXT:    [[TMP2:%.*]] = load <2 x i32>, ptr [[P4]], align 4
-; CHECK-NEXT:    [[TMP3:%.*]] = load <2 x i32>, ptr [[P6]], align 4
-; CHECK-NEXT:    [[TMP4:%.*]] = add nuw nsw <2 x i32> [[TMP0]], [[TMP2]]
-; CHECK-NEXT:    [[TMP5:%.*]] = shufflevector <2 x i32> [[TMP4]], <2 x i32> poison, <4 x i32> <i32 0, i32 1, i32 0, i32 1>
-; CHECK-NEXT:    [[TMP6:%.*]] = add nuw nsw <2 x i32> [[TMP1]], [[TMP3]]
-; CHECK-NEXT:    [[TMP7:%.*]] = shufflevector <2 x i32> [[TMP6]], <2 x i32> poison, <4 x i32> <i32 0, i32 1, i32 1, i32 0>
+; CHECK-NEXT:    [[P4:%.*]] = getelementptr i32, ptr [[A:%.*]], i64 4
+; CHECK-NEXT:    [[TMP0:%.*]] = load <4 x i32>, ptr [[A]], align 4
+; CHECK-NEXT:    [[TMP1:%.*]] = load <4 x i32>, ptr [[P4]], align 4
+; CHECK-NEXT:    [[TMP2:%.*]] = add nuw nsw <4 x i32> [[TMP0]], [[TMP1]]
+; CHECK-NEXT:    [[TMP5:%.*]] = shufflevector <4 x i32> [[TMP2]], <4 x i32> poison, <4 x i32> <i32 0, i32 1, i32 0, i32 1>
+; CHECK-NEXT:    [[TMP7:%.*]] = shufflevector <4 x i32> [[TMP2]], <4 x i32> poison, <4 x i32> <i32 2, i32 3, i32 3, i32 2>
 ; CHECK-NEXT:    [[TMP8:%.*]] = mul <4 x i32> [[TMP5]], [[TMP7]]
 ; CHECK-NEXT:    store <4 x i32> [[TMP8]], ptr [[OUT:%.*]], align 4
 ; CHECK-NEXT:    ret void
@@ -352,17 +332,12 @@ entry:
 define void @merge_int_wrap_mixed(ptr %A, ptr %Out) {
 ; CHECK-LABEL: @merge_int_wrap_mixed(
 ; CHECK-NEXT:  entry:
-; CHECK-NEXT:    [[P2:%.*]] = getelementptr i32, ptr [[A:%.*]], i64 2
-; CHECK-NEXT:    [[P4:%.*]] = getelementptr i32, ptr [[A]], i64 4
-; CHECK-NEXT:    [[P6:%.*]] = getelementptr i32, ptr [[A]], i64 6
-; CHECK-NEXT:    [[TMP0:%.*]] = load <2 x i32>, ptr [[A]], align 4
-; CHECK-NEXT:    [[TMP1:%.*]] = load <2 x i32>, ptr [[P2]], align 4
-; CHECK-NEXT:    [[TMP2:%.*]] = load <2 x i32>, ptr [[P4]], align 4
-; CHECK-NEXT:    [[TMP3:%.*]] = load <2 x i32>, ptr [[P6]], align 4
-; CHECK-NEXT:    [[TMP4:%.*]] = add nuw nsw <2 x i32> [[TMP0]], [[TMP2]]
-; CHECK-NEXT:    [[TMP5:%.*]] = shufflevector <2 x i32> [[TMP4]], <2 x i32> poison, <4 x i32> <i32 0, i32 1, i32 0, i32 1>
-; CHECK-NEXT:    [[TMP6:%.*]] = add nsw <2 x i32> [[TMP1]], [[TMP3]]
-; CHECK-NEXT:    [[TMP7:%.*]] = shufflevector <2 x i32> [[TMP6]], <2 x i32> poison, <4 x i32> <i32 0, i32 1, i32 1, i32 0>
+; CHECK-NEXT:    [[P4:%.*]] = getelementptr i32, ptr [[A:%.*]], i64 4
+; CHECK-NEXT:    [[TMP0:%.*]] = load <4 x i32>, ptr [[A]], align 4
+; CHECK-NEXT:    [[TMP1:%.*]] = load <4 x i32>, ptr [[P4]], align 4
+; CHECK-NEXT:    [[TMP2:%.*]] = add nsw <4 x i32> [[TMP0]], [[TMP1]]
+; CHECK-NEXT:    [[TMP5:%.*]] = shufflevector <4 x i32> [[TMP2]], <4 x i32> poison, <4 x i32> <i32 0, i32 1, i32 0, i32 1>
+; CHECK-NEXT:    [[TMP7:%.*]] = shufflevector <4 x i32> [[TMP2]], <4 x i32> poison, <4 x i32> <i32 2, i32 3, i32 3, i32 2>
 ; CHECK-NEXT:    [[TMP8:%.*]] = mul <4 x i32> [[TMP5]], [[TMP7]]
 ; CHECK-NEXT:    store <4 x i32> [[TMP8]], ptr [[OUT:%.*]], align 4
 ; CHECK-NEXT:    ret void
@@ -409,17 +384,12 @@ entry:
 define void @merge_exact_shift(ptr %A, ptr %Out) {
 ; CHECK-LABEL: @merge_exact_shift(
 ; CHECK-NEXT:  entry:
-; CHECK-NEXT:    [[P2:%.*]] = getelementptr i32, ptr [[A:%.*]], i64 2
-; CHECK-NEXT:    [[P4:%.*]] = getelementptr i32, ptr [[A]], i64 4
-; CHECK-NEXT:    [[P6:%.*]] = getelementptr i32, ptr [[A]], i64 6
-; CHECK-NEXT:    [[TMP0:%.*]] = load <2 x i32>, ptr [[A]], align 4
-; CHECK-NEXT:    [[TMP1:%.*]] = load <2 x i32>, ptr [[P2]], align 4
-; CHECK-NEXT:    [[TMP2:%.*]] = load <2 x i32>, ptr [[P4]], align 4
-; CHECK-NEXT:    [[TMP3:%.*]] = load <2 x i32>, ptr [[P6]], align 4
-; CHECK-NEXT:    [[TMP4:%.*]] = lshr exact <2 x i32> [[TMP0]], [[TMP2]]
-; CHECK-NEXT:    [[TMP5:%.*]] = shufflevector <2 x i32> [[TMP4]], <2 x i32> poison, <4 x i32> <i32 0, i32 1, i32 0, i32 1>
-; CHECK-NEXT:    [[TMP6:%.*]] = lshr exact <2 x i32> [[TMP1]], [[TMP3]]
-; CHECK-NEXT:    [[TMP7:%.*]] = shufflevector <2 x i32> [[TMP6]], <2 x i32> poison, <4 x i32> <i32 0, i32 1, i32 1, i32 0>
+; CHECK-NEXT:    [[P4:%.*]] = getelementptr i32, ptr [[A:%.*]], i64 4
+; CHECK-NEXT:    [[TMP0:%.*]] = load <4 x i32>, ptr [[A]], align 4
+; CHECK-NEXT:    [[TMP1:%.*]] = load <4 x i32>, ptr [[P4]], align 4
+; CHECK-NEXT:    [[TMP2:%.*]] = lshr exact <4 x i32> [[TMP0]], [[TMP1]]
+; CHECK-NEXT:    [[TMP5:%.*]] = shufflevector <4 x i32> [[TMP2]], <4 x i32> poison, <4 x i32> <i32 0, i32 1, i32 0, i32 1>
+; CHECK-NEXT:    [[TMP7:%.*]] = shufflevector <4 x i32> [[TMP2]], <4 x i32> poison, <4 x i32> <i32 2, i32 3, i32 3, i32 2>
 ; CHECK-NEXT:    [[TMP8:%.*]] = mul <4 x i32> [[TMP5]], [[TMP7]]
 ; CHECK-NEXT:    store <4 x i32> [[TMP8]], ptr [[OUT:%.*]], align 4
 ; CHECK-NEXT:    ret void
@@ -450,6 +420,113 @@ entry:
   %m1 = mul i32 %s1, %s3
   %m2 = mul i32 %s0, %s3
   %m3 = mul i32 %s1, %s2
+
+  store i32 %m0, ptr %Out
+  %q1 = getelementptr i32, ptr %Out, i64 1
+  store i32 %m1, ptr %q1
+  %q2 = getelementptr i32, ptr %Out, i64 2
+  store i32 %m2, ptr %q2
+  %q3 = getelementptr i32, ptr %Out, i64 3
+  store i32 %m3, ptr %q3
+  ret void
+}
+
+; Flag propagation on the merged-inputs node itself: the four fmul lanes carry
+; different fast-math flags, so the fmul emitted from the two shuffles must keep
+; only the common subset ("nnan ninf"). The merged fadd operand is uniformly
+; "fast" and keeps the full set.
+define void @merge_fmf_mixed_user(ptr %A, ptr %Out) {
+; CHECK-LABEL: @merge_fmf_mixed_user(
+; CHECK-NEXT:  entry:
+; CHECK-NEXT:    [[P4:%.*]] = getelementptr float, ptr [[A:%.*]], i64 4
+; CHECK-NEXT:    [[TMP0:%.*]] = load <4 x float>, ptr [[A]], align 4
+; CHECK-NEXT:    [[TMP1:%.*]] = load <4 x float>, ptr [[P4]], align 4
+; CHECK-NEXT:    [[TMP2:%.*]] = fadd fast <4 x float> [[TMP0]], [[TMP1]]
+; CHECK-NEXT:    [[TMP3:%.*]] = shufflevector <4 x float> [[TMP2]], <4 x float> poison, <4 x i32> <i32 0, i32 1, i32 0, i32 1>
+; CHECK-NEXT:    [[TMP4:%.*]] = shufflevector <4 x float> [[TMP2]], <4 x float> poison, <4 x i32> <i32 2, i32 3, i32 3, i32 2>
+; CHECK-NEXT:    [[TMP5:%.*]] = fmul nnan ninf <4 x float> [[TMP3]], [[TMP4]]
+; CHECK-NEXT:    store <4 x float> [[TMP5]], ptr [[OUT:%.*]], align 4
+; CHECK-NEXT:    ret void
+;
+entry:
+  %a0 = load float, ptr %A
+  %p1 = getelementptr float, ptr %A, i64 1
+  %a1 = load float, ptr %p1
+  %p2 = getelementptr float, ptr %A, i64 2
+  %a2 = load float, ptr %p2
+  %p3 = getelementptr float, ptr %A, i64 3
+  %a3 = load float, ptr %p3
+  %p4 = getelementptr float, ptr %A, i64 4
+  %a4 = load float, ptr %p4
+  %p5 = getelementptr float, ptr %A, i64 5
+  %a5 = load float, ptr %p5
+  %p6 = getelementptr float, ptr %A, i64 6
+  %a6 = load float, ptr %p6
+  %p7 = getelementptr float, ptr %A, i64 7
+  %a7 = load float, ptr %p7
+
+  %s0 = fadd fast float %a0, %a4
+  %s1 = fadd fast float %a1, %a5
+  %s2 = fadd fast float %a2, %a6
+  %s3 = fadd fast float %a3, %a7
+
+  %m0 = fmul fast float %s0, %s2
+  %m1 = fmul fast float %s1, %s3
+  %m2 = fmul nnan ninf float %s0, %s3
+  %m3 = fmul nnan ninf float %s1, %s2
+
+  store float %m0, ptr %Out
+  %q1 = getelementptr float, ptr %Out, i64 1
+  store float %m1, ptr %q1
+  %q2 = getelementptr float, ptr %Out, i64 2
+  store float %m2, ptr %q2
+  %q3 = getelementptr float, ptr %Out, i64 3
+  store float %m3, ptr %q3
+  ret void
+}
+
+; Flag propagation on the merged-inputs node itself: integer wrap flags. Two mul
+; lanes carry "nsw nuw" and two carry only "nsw", so the mul emitted from the two
+; shuffles must keep only "nsw", while the merged add operand keeps both.
+define void @merge_int_wrap_mixed_user(ptr %A, ptr %Out) {
+; CHECK-LABEL: @merge_int_wrap_mixed_user(
+; CHECK-NEXT:  entry:
+; CHECK-NEXT:    [[P4:%.*]] = getelementptr i32, ptr [[A:%.*]], i64 4
+; CHECK-NEXT:    [[TMP0:%.*]] = load <4 x i32>, ptr [[A]], align 4
+; CHECK-NEXT:    [[TMP1:%.*]] = load <4 x i32>, ptr [[P4]], align 4
+; CHECK-NEXT:    [[TMP2:%.*]] = add nuw nsw <4 x i32> [[TMP0]], [[TMP1]]
+; CHECK-NEXT:    [[TMP3:%.*]] = shufflevector <4 x i32> [[TMP2]], <4 x i32> poison, <4 x i32> <i32 0, i32 1, i32 0, i32 1>
+; CHECK-NEXT:    [[TMP4:%.*]] = shufflevector <4 x i32> [[TMP2]], <4 x i32> poison, <4 x i32> <i32 2, i32 3, i32 3, i32 2>
+; CHECK-NEXT:    [[TMP5:%.*]] = mul nsw <4 x i32> [[TMP3]], [[TMP4]]
+; CHECK-NEXT:    store <4 x i32> [[TMP5]], ptr [[OUT:%.*]], align 4
+; CHECK-NEXT:    ret void
+;
+entry:
+  %a0 = load i32, ptr %A
+  %p1 = getelementptr i32, ptr %A, i64 1
+  %a1 = load i32, ptr %p1
+  %p2 = getelementptr i32, ptr %A, i64 2
+  %a2 = load i32, ptr %p2
+  %p3 = getelementptr i32, ptr %A, i64 3
+  %a3 = load i32, ptr %p3
+  %p4 = getelementptr i32, ptr %A, i64 4
+  %a4 = load i32, ptr %p4
+  %p5 = getelementptr i32, ptr %A, i64 5
+  %a5 = load i32, ptr %p5
+  %p6 = getelementptr i32, ptr %A, i64 6
+  %a6 = load i32, ptr %p6
+  %p7 = getelementptr i32, ptr %A, i64 7
+  %a7 = load i32, ptr %p7
+
+  %s0 = add nsw nuw i32 %a0, %a4
+  %s1 = add nsw nuw i32 %a1, %a5
+  %s2 = add nsw nuw i32 %a2, %a6
+  %s3 = add nsw nuw i32 %a3, %a7
+
+  %m0 = mul nsw nuw i32 %s0, %s2
+  %m1 = mul nsw nuw i32 %s1, %s3
+  %m2 = mul nsw i32 %s0, %s3
+  %m3 = mul nsw i32 %s1, %s2
 
   store i32 %m0, ptr %Out
   %q1 = getelementptr i32, ptr %Out, i64 1
