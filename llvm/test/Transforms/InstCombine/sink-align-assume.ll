@@ -32,79 +32,78 @@ exit:
   ret void
 }
 
-; GEP and align assume are in if.end, but the GEP is only used 
-; (non-droppably) in the loop through a phi.
-; After sinking, both GEP and assume must appear in for.body.preheader.
-define void @test_sink_align_assume_loop(ptr %y, i32 %n, float %val) {
-; CHECK-LABEL: define void @test_sink_align_assume_loop(
-; CHECK-SAME: ptr [[Y:%.*]], i32 [[N:%.*]], float [[VAL:%.*]]) {
+; Assumes in the source block sink with the GEP, but an assume in a sibling
+; block must be dropped because the sunk GEP no longer dominates that block.
+define void @test_sink_some_align_assumes(ptr %p, i32 %offset, i1 %cond) {
+; CHECK-LABEL: define void @test_sink_some_align_assumes(
+; CHECK-SAME: ptr [[P:%.*]], i32 [[OFFSET:%.*]], i1 [[COND:%.*]]) {
 ; CHECK-NEXT:  [[ENTRY:.*]]:
-; CHECK-NEXT:    [[TMP0:%.*]] = ptrtoint ptr [[Y]] to i64
-; CHECK-NEXT:    [[AND1:%.*]] = and i64 [[TMP0]], 7
-; CHECK-NEXT:    [[TOBOOL_NOT:%.*]] = icmp eq i64 [[AND1]], 0
-; CHECK-NEXT:    br i1 [[TOBOOL_NOT]], label %[[IF_END:.*]], label %[[IF_THEN:.*]]
-; CHECK:       [[IF_THEN]]:
-; CHECK-NEXT:    store float [[VAL]], ptr [[Y]], align 4
-; CHECK-NEXT:    br label %[[IF_END]]
-; CHECK:       [[IF_END]]:
-; CHECK-NEXT:    [[I_0:%.*]] = phi i32 [ 1, %[[IF_THEN]] ], [ 0, %[[ENTRY]] ]
-; CHECK-NEXT:    [[SUB:%.*]] = sub i32 [[N]], [[I_0]]
-; CHECK-NEXT:    [[DIV19:%.*]] = lshr i32 [[SUB]], 1
-; CHECK-NEXT:    [[CMP20_NOT:%.*]] = icmp eq i32 [[DIV19]], 0
-; CHECK-NEXT:    br i1 [[CMP20_NOT]], label %[[FOR_COND_CLEANUP:.*]], label %[[FOR_BODY_PREHEADER:.*]]
-; CHECK:       [[FOR_BODY_PREHEADER]]:
-; CHECK-NEXT:    [[TMP1:%.*]] = zext nneg i32 [[I_0]] to i64
-; CHECK-NEXT:    [[ARRAYIDX1:%.*]] = getelementptr inbounds nuw [4 x i8], ptr [[Y]], i64 [[TMP1]]
-; CHECK-NEXT:    call void @llvm.assume(i1 true) [ "align"(ptr [[ARRAYIDX1]], i32 8) ]
-; CHECK-NEXT:    br label %[[FOR_BODY:.*]]
-; CHECK:       [[FOR_COND_CLEANUP]]:
+; CHECK-NEXT:    br i1 [[COND]], label %[[THEN:.*]], label %[[ELSE:.*]]
+; CHECK:       [[THEN]]:
+; CHECK-NEXT:    [[TMP0:%.*]] = sext i32 [[OFFSET]] to i64
+; CHECK-NEXT:    [[GEP:%.*]] = getelementptr inbounds [4 x i8], ptr [[P]], i64 [[TMP0]]
+; CHECK-NEXT:    call void @llvm.assume(i1 true) [ "align"(ptr [[GEP]], i32 8) ]
+; CHECK-NEXT:    call void @llvm.assume(i1 true) [ "align"(ptr [[GEP]], i32 16) ]
+; CHECK-NEXT:    store i8 0, ptr [[GEP]], align 8
+; CHECK-NEXT:    br label %[[EXIT:.*]]
+; CHECK:       [[ELSE]]:
+; CHECK-NEXT:    br label %[[EXIT]]
+; CHECK:       [[EXIT]]:
 ; CHECK-NEXT:    ret void
-; CHECK:       [[FOR_BODY]]:
-; CHECK-NEXT:    [[ARRAYIDX2_PHI:%.*]] = phi ptr [ [[ARRAYIDX1]], %[[FOR_BODY_PREHEADER]] ], [ [[ARRAYIDX2_INC:%.*]], %[[FOR_BODY]] ]
-; CHECK-NEXT:    [[J_021:%.*]] = phi i32 [ 0, %[[FOR_BODY_PREHEADER]] ], [ [[INC7:%.*]], %[[FOR_BODY]] ]
-; CHECK-NEXT:    store float [[VAL]], ptr [[ARRAYIDX2_PHI]], align 8
-; CHECK-NEXT:    [[ARRAYIDX6:%.*]] = getelementptr inbounds nuw i8, ptr [[ARRAYIDX2_PHI]], i64 4
-; CHECK-NEXT:    store float [[VAL]], ptr [[ARRAYIDX6]], align 4
-; CHECK-NEXT:    [[INC7]] = add nuw nsw i32 [[J_021]], 1
-; CHECK-NEXT:    [[EXITCOND_NOT:%.*]] = icmp eq i32 [[INC7]], [[DIV19]]
-; CHECK-NEXT:    [[ARRAYIDX2_INC]] = getelementptr i8, ptr [[ARRAYIDX2_PHI]], i64 8
-; CHECK-NEXT:    br i1 [[EXITCOND_NOT]], label %[[FOR_COND_CLEANUP]], label %[[FOR_BODY]]
 ;
 entry:
-  %0 = ptrtoint ptr %y to i32
-  %and = and i32 %0, 7
-  %tobool.not = icmp eq i32 %and, 0
-  br i1 %tobool.not, label %if.end, label %if.then
+  %gep = getelementptr inbounds [4 x i8], ptr %p, i32 %offset
+  call void @llvm.assume(i1 true) [ "align"(ptr %gep, i32 8) ]
+  call void @llvm.assume(i1 true) [ "align"(ptr %gep, i32 16) ]
+  br i1 %cond, label %then, label %else
 
-if.then:
-  store float %val, ptr %y, align 4
-  br label %if.end
+then:
+  store i8 0, ptr %gep, align 8
+  br label %exit
 
-if.end:
-  %i.0 = phi i32 [ 1, %if.then ], [ 0, %entry ]
-  %arrayidx1 = getelementptr inbounds nuw [4 x i8], ptr %y, i32 %i.0
-  call void @llvm.assume(i1 true) [ "align"(ptr %arrayidx1, i32 8) ]
-  %sub = sub i32 %n, %i.0
-  %div19 = lshr i32 %sub, 1
-  %cmp20.not = icmp eq i32 %div19, 0
-  br i1 %cmp20.not, label %for.cond.cleanup, label %for.body.preheader
+else:
+  call void @llvm.assume(i1 true) [ "align"(ptr %gep, i32 32) ]
+  br label %exit
 
-for.body.preheader:
-  br label %for.body
-
-for.cond.cleanup:
+exit:
   ret void
+}
 
-for.body:
-  %arrayidx2.phi = phi ptr [ %arrayidx1, %for.body.preheader ], [ %arrayidx2.inc, %for.body ]
-  %j.021 = phi i32 [ 0, %for.body.preheader ], [ %inc7, %for.body ]
-  store float %val, ptr %arrayidx2.phi, align 8
-  %arrayidx6 = getelementptr inbounds nuw i8, ptr %arrayidx2.phi, i32 4
-  store float %val, ptr %arrayidx6, align 4
-  %inc7 = add nuw nsw i32 %j.021, 1
-  %exitcond.not = icmp eq i32 %inc7, %div19
-  %arrayidx2.inc = getelementptr i8, ptr %arrayidx2.phi, i32 8
-  br i1 %exitcond.not, label %for.cond.cleanup, label %for.body
+; The GEP is used only as the loop PHI's incoming value, so it and its align
+; assume must sink to the loop preheader.
+define void @test_sink_align_assume_loop(ptr %p, i64 %offset, i1 %cond) {
+; CHECK-LABEL: define void @test_sink_align_assume_loop(
+; CHECK-SAME: ptr [[P:%.*]], i64 [[OFFSET:%.*]], i1 [[COND:%.*]]) {
+; CHECK-NEXT:  [[ENTRY:.*]]:
+; CHECK-NEXT:    br label %[[LOOP_PREHEADER:.*]]
+; CHECK:       [[LOOP_PREHEADER]]:
+; CHECK-NEXT:    [[GEP:%.*]] = getelementptr inbounds [4 x i8], ptr [[P]], i64 [[OFFSET]]
+; CHECK-NEXT:    call void @llvm.assume(i1 true) [ "align"(ptr [[GEP]], i32 8) ]
+; CHECK-NEXT:    br label %[[LOOP:.*]]
+; CHECK:       [[LOOP]]:
+; CHECK-NEXT:    [[PTR:%.*]] = phi ptr [ [[GEP]], %[[LOOP_PREHEADER]] ], [ [[NEXT:%.*]], %[[LOOP]] ]
+; CHECK-NEXT:    store i8 0, ptr [[PTR]], align 8
+; CHECK-NEXT:    [[NEXT]] = getelementptr i8, ptr [[PTR]], i64 1
+; CHECK-NEXT:    br i1 [[COND]], label %[[LOOP]], label %[[EXIT]]
+; CHECK:       [[EXIT]]:
+; CHECK-NEXT:    ret void
+;
+entry:
+  %gep = getelementptr inbounds [4 x i8], ptr %p, i64 %offset
+  call void @llvm.assume(i1 true) [ "align"(ptr %gep, i32 8) ]
+  br label %loop.preheader
+
+loop.preheader:
+  br label %loop
+
+loop:
+  %ptr = phi ptr [ %gep, %loop.preheader ], [ %next, %loop ]
+  store i8 0, ptr %ptr, align 8
+  %next = getelementptr i8, ptr %ptr, i64 1
+  br i1 %cond, label %loop, label %exit
+
+exit:
+  ret void
 }
 
 
