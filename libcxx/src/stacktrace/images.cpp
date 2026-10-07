@@ -30,9 +30,13 @@ void __populate_images(_Context& __cx) {
   std::lock_guard<std::mutex> __lock(images.mutex_);
   for (auto& entry : __cx.__entry_iters_(__cx.__self_)) {
     auto __i = images.find(entry.__addr_);
-    if (auto& image = images[__i]) {
-      entry.__image_ = &image;
-      entry.__file_  = image.name_; // tentatively used as source filename unless lookup succeeds later
+    if (__i == _Images::npos) {
+      continue;
+    }
+    auto& image    = images[__i];
+    entry.__image_ = &image;
+    if (image) {
+      entry.__file_ = image.name_; // tentatively used as source filename unless lookup succeeds later
     }
   }
 }

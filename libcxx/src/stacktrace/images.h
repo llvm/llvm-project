@@ -62,18 +62,12 @@ struct _Names {
 
 // Contains _Image objects in sorted order, according to `_Image::operator<`.
 struct _Images {
-  // Includes two dummy low/high "sentinel" entries in addition to this max number of images
   constexpr static size_t __max_images = 256;
-  std::array<_Image, __max_images + 2> images_{}; // includes left/right sentinels
-  unsigned count_{};                              // image count, including sentinels
+  std::array<_Image, __max_images> images_{};
+  unsigned count_{};
   std::mutex mutex_{};
 
   static _Images instance_;
-
-  _Images() {
-    images_[count_++] = {0uz, 0};  // sentinel at low end
-    images_[count_++] = {~0uz, 0}; // sentinel at high end
-  }
 
   // OS-specific: enumerate program images in this process's space. Exactly one of
   // aix_impl.cpp/dl_iterate_images.cpp/dyld_images.cpp/noop_impl.cpp provides the definition,
@@ -87,14 +81,17 @@ struct _Images {
 
   // Image representing the main program, or nullptr if we couldn't find it
   _Image* main_prog_image() {
-    for (size_t __i = 1; __i < count_ - 1; __i++) {
-      auto& __image = images_[__i];
-      if (__image.is_main_prog_) {
-        return &__image;
+    for (size_t __i = 0; __i < count_; __i++) {
+      if (images_[__i].is_main_prog_) {
+        return &images_[__i];
       }
     }
     return nullptr;
   }
+
+  // Returned by `find()` when `__addr` is before every registered image, or no images are
+  // registered at all.
+  constexpr static size_t npos = size_t(-1);
 
   // Search the sorted images array for one containing this address.
   size_t find(uintptr_t __addr) const {
@@ -102,6 +99,9 @@ struct _Images {
     auto __it  = std::upper_bound(images_.begin(), __end, __addr, [](uintptr_t __a, _Image const& __img) {
       return __a < __img.load_addr_;
     });
+    if (__it == images_.begin()) {
+      return npos;
+    }
     return size_t(__it - images_.begin()) - 1;
   }
 };
