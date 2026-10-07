@@ -4980,7 +4980,7 @@ Value *InstCombinerImpl::foldXorOfICmps(ICmpInst *LHS, ICmpInst *RHS,
           // users are freely-invertible, so that 'not' *will* get folded away.
           BuilderTy::InsertPointGuard Guard(Builder);
           // Set insertion point to right after the Y.
-          Builder.SetInsertPoint(Y->getParent(), ++(Y->getIterator()));
+          Builder.SetInsertPoint(++(Y->getIterator()));
           Value *NotY = Builder.CreateNot(Y, Y->getName() + ".not");
           // Replace all uses of Y (excluding the one in NotY!) with NotY.
           Worklist.pushUsersToWorkList(*Y);
@@ -5228,10 +5228,15 @@ bool InstCombinerImpl::sinkNotIntoOtherHandOfLogicalOp(Instruction &I) {
 
   Builder.SetInsertPoint(*I.getInsertionPointAfterDef());
   Value *NewBinOp;
-  if (IsBinaryOp)
+  if (IsBinaryOp) {
     NewBinOp = Builder.CreateBinOp(NewOpc, Op0, Op1, I.getName() + ".not");
-  else
-    NewBinOp = Builder.CreateLogicalOp(NewOpc, Op0, Op1, I.getName() + ".not");
+  } else {
+    NewBinOp =
+        Builder.CreateLogicalOp(NewOpc, Op0, Op1, I.getName() + ".not",
+                                ProfcheckDisableMetadataFixes ? nullptr : &I);
+    if (auto *NewSI = dyn_cast<SelectInst>(NewBinOp))
+      NewSI->swapProfMetadata();
+  }
   replaceInstUsesWith(I, NewBinOp);
   // We can not just create an outer `not`, it will most likely be immediately
   // folded back, reconstructing our initial pattern, and causing an
