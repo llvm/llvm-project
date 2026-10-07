@@ -635,10 +635,12 @@ mlir::linalg::getCombinerOpKind(Operation *combinerOp) {
       .Case([&](arith::MaxUIOp op) { return CombiningKind::MAXUI; })
       .Case([&](arith::MaximumFOp op) { return CombiningKind::MAXIMUMF; })
       .Case([&](arith::MaxNumFOp op) { return CombiningKind::MAXNUMF; })
+      .Case([&](arith::MaximumNumFOp op) { return CombiningKind::MAXIMUMNUMF; })
       .Case([&](arith::MinSIOp op) { return CombiningKind::MINSI; })
       .Case([&](arith::MinUIOp op) { return CombiningKind::MINUI; })
       .Case([&](arith::MinimumFOp op) { return CombiningKind::MINIMUMF; })
       .Case([&](arith::MinNumFOp op) { return CombiningKind::MINNUMF; })
+      .Case([&](arith::MinimumNumFOp op) { return CombiningKind::MINIMUMNUMF; })
       .Case<arith::MulIOp, arith::MulFOp>(
           [&](auto op) { return CombiningKind::MUL; })
       .Case([&](arith::OrIOp op) { return CombiningKind::OR; })
@@ -1951,7 +1953,9 @@ vectorizeDynamicLinalgOpPrecondition(linalg::LinalgOp op,
 static LogicalResult
 vectorizeUnPackOpPrecondition(linalg::UnPackOp unpackOp,
                               ArrayRef<int64_t> inputVectorSizes) {
-  // TODO: Support Memref UnPackOp. Temporarily return failure.
+  // Pack/unpack memref transformations are unsupported. The memref forms
+  // are mainly for bufferization and scalar lowering. Other uses are not
+  // recommended, see #225650 for details.
   if (!unpackOp.hasPureTensorSemantics())
     return failure();
 
@@ -2203,10 +2207,12 @@ static bool isSupportedPoolKind(vector::CombiningKind kind) {
   case vector::CombiningKind::ADD:
   case vector::CombiningKind::MAXNUMF:
   case vector::CombiningKind::MAXIMUMF:
+  case vector::CombiningKind::MAXIMUMNUMF:
   case vector::CombiningKind::MAXSI:
   case vector::CombiningKind::MAXUI:
   case vector::CombiningKind::MINNUMF:
   case vector::CombiningKind::MINIMUMF:
+  case vector::CombiningKind::MINIMUMNUMF:
   case vector::CombiningKind::MINSI:
   case vector::CombiningKind::MINUI:
     return true;
@@ -2329,7 +2335,9 @@ static LogicalResult vectorizeLinalgOpPrecondition(
 static LogicalResult
 vectorizePackOpPrecondition(linalg::PackOp packOp,
                             ArrayRef<int64_t> inputVectorSizes) {
-  // TODO: Support Memref PackOp. Temporarily return failure.
+  // Pack/unpack memref transformations are unsupported. The memref forms
+  // are mainly for bufferization and scalar lowering. Other uses are not
+  // recommended, see #225650 for details.
   if (!packOp.hasPureTensorSemantics())
     return failure();
 

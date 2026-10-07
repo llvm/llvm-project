@@ -117,7 +117,6 @@ private:
   void Select(SDNode *N) override;
   bool tryIntrinsicChain(SDNode *N);
   bool tryIntrinsicVoid(SDNode *N);
-  void SelectTexSurfHandle(SDNode *N);
   bool tryLoad(SDNode *N);
   bool tryLoadVector(SDNode *N);
   bool tryLDU(SDNode *N);
@@ -127,15 +126,12 @@ private:
   bool tryFence(SDNode *N);
   bool tryBFE(SDNode *N);
   bool tryBF16ArithToFMA(SDNode *N);
-  bool tryConstantFP(SDNode *N);
   bool SelectSETP_F16X2(SDNode *N);
   bool SelectSETP_BF16X2(SDNode *N);
   bool tryUNPACK_VECTOR(SDNode *N);
   bool tryEXTRACT_VECTOR_ELEMENT(SDNode *N);
   void SelectV2I64toI128(SDNode *N);
   void SelectI128toV2I64(SDNode *N);
-  void SelectCpAsyncBulkTensorReduceCommon(SDNode *N, unsigned RedOp,
-                                           bool IsIm2Col = false);
   void SelectTcgen05Ld(SDNode *N, bool hasOffset = false);
   void SelectTcgen05St(SDNode *N, bool hasOffset = false);
   void selectAtomicSwap128(SDNode *N);
@@ -1777,6 +1773,11 @@ bool NVPTXDAGToDAGISel::tryStoreVector(SDNode *N) {
 /// SelectBFE - Look for instruction sequences that can be made more efficient
 /// by using the 'bfe' (bit-field extract) PTX instruction
 bool NVPTXDAGToDAGISel::tryBFE(SDNode *N) {
+  // BFE is not a native instruction starting with sm_70. Let ptxas see the
+  // original operations so it can optimize them for the target architecture.
+  if (Subtarget->hasFeature(NVPTX::SM70))
+    return false;
+
   SDLoc DL(N);
   SDValue LHS = N->getOperand(0);
   SDValue RHS = N->getOperand(1);
@@ -1820,7 +1821,7 @@ bool NVPTXDAGToDAGISel::tryBFE(SDNode *N) {
         uint64_t StartVal = StartConst->getZExtValue();
         // How many "good" bits do we have left?  "good" is defined here as bits
         // that exist in the original value, not shifted in.
-        int64_t GoodBits = Start.getValueSizeInBits() - StartVal;
+        int64_t GoodBits = Val.getValueSizeInBits() - StartVal;
         if (NumBits > GoodBits) {
           // Do not handle the case where bits have been shifted in. In theory
           // we could handle this, but the cost is likely higher than just
@@ -1957,27 +1958,11 @@ bool NVPTXDAGToDAGISel::tryBFE(SDNode *N) {
     // No can do...
     return false;
   }
-
-
-  unsigned Opc;
-  // For the BFE operations we form here from "and" and "srl", always use the
-  // unsigned variants.
-  if (Val.getValueType() == MVT::i32) {
-    if (IsSigned) {
-      Opc = NVPTX::BFE_S32rii;
-    } else {
-      Opc = NVPTX::BFE_U32rii;
-    }
-  } else if (Val.getValueType() == MVT::i64) {
-    if (IsSigned) {
-      Opc = NVPTX::BFE_S64rii;
-    } else {
-      Opc = NVPTX::BFE_U64rii;
-    }
-  } else {
-    // We cannot handle this type
+  // Only 32-bit BFE has a native SASS implementation.
+  if (Val.getValueType() != MVT::i32)
     return false;
-  }
+
+  unsigned Opc = IsSigned ? NVPTX::BFE_S32rii : NVPTX::BFE_U32rii;
 
   SDValue Ops[] = {
     Val, Start, Len

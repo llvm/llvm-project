@@ -100,10 +100,11 @@ uint64_t macho::resolveSymbolOffsetVA(const Symbol *sym, uint8_t type,
     // function's layout, which an interposed replacement wouldn't preserve.
     // There's no meaningful way to "interpose" an interior offset.
     symVA = (offset != 0) ? sym->getVA() : sym->resolveBranchVA();
-  } else if (relocAttrs.hasAttr(RelocAttrBits::GOT)) {
-    symVA = sym->resolveGotVA();
-  } else if (relocAttrs.hasAttr(RelocAttrBits::TLV)) {
-    symVA = sym->resolveTlvVA();
+  } else if (relocAttrs.hasAttr(RelocAttrBits::GOT) ||
+             relocAttrs.hasAttr(RelocAttrBits::TLV)) {
+    // Both kinds read the symbol's single non-lazy pointer slot; for a
+    // thread-local that slot holds the address of its TLV descriptor.
+    symVA = sym->resolveNonLazyPtrVA();
   } else {
     symVA = sym->getVA();
   }
@@ -239,7 +240,7 @@ void ConcatInputSection::writeTo(uint8_t *buf) {
       const Symbol *fromSym = cast<Symbol *>(r.referent);
       const Relocation &minuend = relocs[++i];
       uint64_t minuendVA;
-      if (const Symbol *toSym = minuend.referent.dyn_cast<Symbol *>())
+      if (const Symbol *toSym = dyn_cast<Symbol *>(minuend.referent))
         minuendVA = toSym->getVA() + minuend.addend;
       else {
         auto *referentIsec = cast<InputSection *>(minuend.referent);

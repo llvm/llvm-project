@@ -4257,6 +4257,11 @@ static bool RenderModulesOptions(Compilation &C, const Driver &D,
                      ImplicitModules))
       CmdArgs.push_back("-fmodules-validate-system-headers");
 
+    if (Args.hasFlag(options::OPT_fmodules_validate_directory_dependencies,
+                     options::OPT_fno_modules_validate_directory_dependencies,
+                     false))
+      CmdArgs.push_back("-fmodules-validate-directory-dependencies");
+
     Args.AddLastArg(CmdArgs,
                     options::OPT_fmodules_disable_diagnostic_validation);
   } else {
@@ -4265,6 +4270,8 @@ static bool RenderModulesOptions(Compilation &C, const Driver &D,
     Args.ClaimAllArgs(options::OPT_fmodules_validate_once_per_build_session);
     Args.ClaimAllArgs(options::OPT_fmodules_validate_system_headers);
     Args.ClaimAllArgs(options::OPT_fno_modules_validate_system_headers);
+    Args.ClaimAllArgs(options::OPT_fmodules_validate_directory_dependencies);
+    Args.ClaimAllArgs(options::OPT_fno_modules_validate_directory_dependencies);
     Args.ClaimAllArgs(options::OPT_fmodules_disable_diagnostic_validation);
   }
 
@@ -4553,6 +4560,9 @@ static void RenderDiagnosticsOptions(const Driver &D, const ArgList &Args,
 
   Args.addOptInFlag(CmdArgs, options::OPT_fdiagnostics_show_hotness,
                     options::OPT_fno_diagnostics_show_hotness);
+
+  Args.addOptOutFlag(CmdArgs, options::OPT_flifetime_safety_c,
+                     options::OPT_fno_lifetime_safety_c);
 
   if (const Arg *A =
           Args.getLastArg(options::OPT_fdiagnostics_hotness_threshold_EQ)) {
@@ -5645,6 +5655,14 @@ void Clang::ConstructJob(Compilation &C, const JobAction &JA,
     MemProfUseArg->render(Args, CmdArgs);
   }
 
+  auto *CopyProfArg =
+      Args.getLastArg(options::OPT_fcopyprof, options::OPT_fno_copyprof);
+  if (CopyProfArg &&
+      !CopyProfArg->getOption().matches(options::OPT_fno_copyprof)) {
+    CopyProfArg->render(Args, CmdArgs);
+    Args.AddLastArg(CmdArgs, options::OPT_fcopyprof_static_size_threshold_EQ);
+  }
+
   // Embed-bitcode option.
   // Only white-listed flags below are allowed to be embedded.
   if (C.getDriver().embedBitcodeInObject() && !IsUsingLTO &&
@@ -5779,15 +5797,8 @@ void Clang::ConstructJob(Compilation &C, const JobAction &JA,
 
   // Discard value names in no-asserts builds unless otherwise specified.
   if (Args.hasFlag(options::OPT_fdiscard_value_names,
-                   options::OPT_fno_discard_value_names, !IsAssertBuild)) {
-    if (Args.hasArg(options::OPT_fdiscard_value_names) &&
-        llvm::any_of(Inputs, [](const clang::driver::InputInfo &II) {
-          return types::isLLVMIR(II.getType());
-        })) {
-      D.Diag(diag::warn_ignoring_fdiscard_for_bitcode);
-    }
+                   options::OPT_fno_discard_value_names, !IsAssertBuild))
     CmdArgs.push_back("-discard-value-names");
-  }
 
   // Set the main file name, so that debug info works even with
   // -save-temps.
@@ -8154,6 +8165,8 @@ void Clang::ConstructJob(Compilation &C, const JobAction &JA,
   Args.AddAllArgs(CmdArgs, options::OPT_fcomment_block_commands);
   // Forward -fparse-all-comments to -cc1.
   Args.AddAllArgs(CmdArgs, options::OPT_fparse_all_comments);
+  // Forward -fretain-comments to -cc1.
+  Args.AddAllArgs(CmdArgs, options::OPT_fretain_comments);
 
   // Turn -fplugin=name.so into -load name.so
   for (const Arg *A : Args.filtered(options::OPT_fplugin_EQ)) {

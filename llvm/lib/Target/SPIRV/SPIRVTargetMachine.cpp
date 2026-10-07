@@ -46,7 +46,7 @@ extern "C" LLVM_ABI LLVM_EXTERNAL_VISIBILITY void LLVMInitializeSPIRVTarget() {
 
   PassRegistry &PR = *PassRegistry::getPassRegistry();
   initializeGlobalISel(PR);
-  initializeSPIRVModuleAnalysisPass(PR);
+  initializeSPIRVModuleAnalysisWrapperPassPass(PR);
   initializeSPIRVAsmPrinterPass(PR);
   initializeSPIRVConvergenceRegionAnalysisWrapperPassPass(PR);
   initializeSPIRVStructurizerPass(PR);
@@ -266,7 +266,7 @@ static cl::opt<bool> SPVEnableNonSemanticDI(
     "spv-emit-nonsemantic-debug-info",
     cl::desc("Deprecated. Use -g to emit SPIR-V NonSemantic.Shader.DebugInfo "
              "instructions"),
-    cl::Optional, cl::init(false));
+    cl::init(false));
 
 // Add the custom SPIRVInstructionSelect from above.
 bool SPIRVPassConfig::addGlobalInstructionSelect() {
