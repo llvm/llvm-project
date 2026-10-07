@@ -2,12 +2,11 @@
 ; RUN: opt -S -passes=slp-vectorizer -mtriple=aarch64-unknown-linux-gnu -mcpu=neoverse-v2 < %s | FileCheck %s
 
 ; The fmul operands of the fadds are computed in different blocks, so they
-; cannot form a vector node and would be gathered. In the scalar code every
-; fadd fuses with its fmul into an fmadd, so a vectorized fadd lane only saves
-; (fmadd - fmul) = 0 on neoverse-v2: the vector fadd plus the gather of the
-; four products is not profitable and the fadds are not vectorized on their
-; own. Previously the scalar fadd lanes were priced as whole fmadds (2 each)
-; and the tree was vectorized.
+; cannot form a vector node and are gathered. The backend fuses an fmul with
+; its fadd user in the same block only, so only the last fadd fuses with its
+; fmul into an fmadd in the scalar code, and a vectorized lane saves
+; (fmadd - fmul) = 0 for it on neoverse-v2. The first two fadds are vectorized
+; with their gathered products, the last two stay scalar.
 define void @fadd_with_gathered_fmul_operands(double %a0, double %b0, double %a1, double %b1, double %a2, double %b2, double %a3, double %b3, ptr %x, ptr %out) {
 ;
 ; CHECK-LABEL: define void @fadd_with_gathered_fmul_operands(
@@ -23,13 +22,21 @@ define void @fadd_with_gathered_fmul_operands(double %a0, double %b0, double %a1
 ; CHECK-NEXT:    br label %[[MUL3:.*]]
 ; CHECK:       [[MUL3]]:
 ; CHECK-NEXT:    [[M3:%.*]] = fmul contract double [[A3]], [[B3]]
-; CHECK-NEXT:    [[TMP0:%.*]] = load <4 x double>, ptr [[X]], align 8
-; CHECK-NEXT:    [[TMP1:%.*]] = insertelement <4 x double> poison, double [[M0]], i64 0
-; CHECK-NEXT:    [[TMP2:%.*]] = insertelement <4 x double> [[TMP1]], double [[M1]], i64 1
-; CHECK-NEXT:    [[TMP3:%.*]] = insertelement <4 x double> [[TMP2]], double [[M2]], i64 2
-; CHECK-NEXT:    [[TMP4:%.*]] = insertelement <4 x double> [[TMP3]], double [[M3]], i64 3
-; CHECK-NEXT:    [[TMP5:%.*]] = fadd contract <4 x double> [[TMP4]], [[TMP0]]
-; CHECK-NEXT:    store <4 x double> [[TMP5]], ptr [[OUT]], align 8
+; CHECK-NEXT:    [[X2P:%.*]] = getelementptr inbounds double, ptr [[X]], i64 2
+; CHECK-NEXT:    [[X2:%.*]] = load double, ptr [[X2P]], align 8
+; CHECK-NEXT:    [[X3P:%.*]] = getelementptr inbounds double, ptr [[X]], i64 3
+; CHECK-NEXT:    [[X3:%.*]] = load double, ptr [[X3P]], align 8
+; CHECK-NEXT:    [[S2:%.*]] = fadd contract double [[M2]], [[X2]]
+; CHECK-NEXT:    [[S3:%.*]] = fadd contract double [[M3]], [[X3]]
+; CHECK-NEXT:    [[TMP0:%.*]] = load <2 x double>, ptr [[X]], align 8
+; CHECK-NEXT:    [[TMP1:%.*]] = insertelement <2 x double> poison, double [[M0]], i64 0
+; CHECK-NEXT:    [[TMP2:%.*]] = insertelement <2 x double> [[TMP1]], double [[M1]], i64 1
+; CHECK-NEXT:    [[TMP3:%.*]] = fadd contract <2 x double> [[TMP2]], [[TMP0]]
+; CHECK-NEXT:    store <2 x double> [[TMP3]], ptr [[OUT]], align 8
+; CHECK-NEXT:    [[O2:%.*]] = getelementptr inbounds double, ptr [[OUT]], i64 2
+; CHECK-NEXT:    store double [[S2]], ptr [[O2]], align 8
+; CHECK-NEXT:    [[O3:%.*]] = getelementptr inbounds double, ptr [[OUT]], i64 3
+; CHECK-NEXT:    store double [[S3]], ptr [[O3]], align 8
 ; CHECK-NEXT:    ret void
 ;
 entry:

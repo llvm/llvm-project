@@ -1227,7 +1227,7 @@ InstructionCost ARMTTIImpl::getMemcpyCost(const Instruction *I) const {
 InstructionCost ARMTTIImpl::getShuffleCost(
     TTI::ShuffleKind Kind, VectorType *DstTy, VectorType *SrcTy,
     TTI::TargetCostKind CostKind, ArrayRef<int> Mask, int Index,
-    VectorType *SubTp, ArrayRef<const Value *> Args, const Instruction *CxtI,
+    VectorType *SubTp, ArrayRef<const Value *> Args, const Instruction *CtxI,
     TTI::VectorInstrContext VIC) const {
   assert((Mask.empty() || DstTy->isScalableTy() ||
           Mask.size() == DstTy->getElementCount().getKnownMinValue()) &&
@@ -1311,10 +1311,17 @@ InstructionCost ARMTTIImpl::getShuffleCost(
     // instructions for, for example REV.
     if (!Mask.empty()) {
       std::pair<InstructionCost, MVT> LT = getTypeLegalizationCost(SrcTy);
+      unsigned Unused;
       if (LT.second.isVector() &&
           Mask.size() <= LT.second.getVectorNumElements() &&
           (isVREVMask(Mask, LT.second, 16) || isVREVMask(Mask, LT.second, 32) ||
-           isVREVMask(Mask, LT.second, 64)))
+           isVREVMask(Mask, LT.second, 64) ||
+           isVTRNMask(Mask, LT.second, Unused) ||
+           isVTRN_v_undef_Mask(Mask, LT.second, Unused) ||
+           isVZIPMask(Mask, LT.second, Unused) ||
+           isVZIP_v_undef_Mask(Mask, LT.second, Unused) ||
+           isVUZPMask(Mask, LT.second, Unused) ||
+           isVUZP_v_undef_Mask(Mask, LT.second, Unused)))
         return LT.first;
     }
   }
@@ -1356,7 +1363,7 @@ InstructionCost ARMTTIImpl::getShuffleCost(
       // store(interleaving-shuffle). The shuffle cost could potentially be
       // free, but we model it with a cost of LT.first so that ST2/ST4 have a
       // higher cost than just the store.
-      if (CxtI && CxtI->hasOneUse() && isa<StoreInst>(*CxtI->user_begin()) &&
+      if (CtxI && CtxI->hasOneUse() && isa<StoreInst>(*CtxI->user_begin()) &&
           (LT.second.getScalarSizeInBits() == 8 ||
            LT.second.getScalarSizeInBits() == 16 ||
            LT.second.getScalarSizeInBits() == 32) &&
@@ -1390,7 +1397,7 @@ InstructionCost ARMTTIImpl::getShuffleCost(
 InstructionCost ARMTTIImpl::getArithmeticInstrCost(
     unsigned Opcode, Type *Ty, TTI::TargetCostKind CostKind,
     TTI::OperandValueInfo Op1Info, TTI::OperandValueInfo Op2Info,
-    ArrayRef<const Value *> Args, const Instruction *CxtI) const {
+    ArrayRef<const Value *> Args, const Instruction *CtxI) const {
   int ISDOpcode = TLI->InstructionOpcodeToISD(Opcode);
   if (ST->isThumb() && CostKind == TTI::TCK_CodeSize && Ty->isIntegerTy(1)) {
     // Make operations on i1 relatively expensive as this often involves
@@ -1478,13 +1485,13 @@ InstructionCost ARMTTIImpl::getArithmeticInstrCost(
     if (ST->isThumb1Only() || Ty->isVectorTy())
       return false;
 
-    if (!CxtI || !CxtI->hasOneUse() || !CxtI->isShift())
+    if (!CtxI || !CtxI->hasOneUse() || !CtxI->isShift())
       return false;
     if (!Op2Info.isUniform() || !Op2Info.isConstant())
       return false;
 
     // Folded into a ADC/ADD/AND/BIC/CMP/EOR/MVN/ORR/ORN/RSB/SBC/SUB
-    switch (cast<Instruction>(CxtI->user_back())->getOpcode()) {
+    switch (cast<Instruction>(CtxI->user_back())->getOpcode()) {
     case Instruction::Add:
     case Instruction::Sub:
     case Instruction::And:
@@ -1553,7 +1560,7 @@ InstructionCost ARMTTIImpl::getArithmeticInstrCost(
     return false;
   };
 
-  if (MulInDSPMLALPattern(CxtI, Opcode, Ty))
+  if (MulInDSPMLALPattern(CtxI, Opcode, Ty))
     return 0;
 
   // Default to cheap (throughput/size of 1 instruction) but adjust throughput

@@ -59,14 +59,14 @@ template <class IteratorTy, class ParentTy>
 class iterator_parent_access<IteratorTy, ParentTy, true> {
 public:
   inline const ParentTy *getNodeParent() const {
-    return static_cast<IteratorTy *>(this)->NodePtr->getParent();
+    return static_cast<const IteratorTy *>(this)->NodePtr->getParent();
   }
 };
 template <class IteratorTy, class ParentTy>
 class iterator_parent_access<IteratorTy, ParentTy, false> {
 public:
-  inline ParentTy *getNodeParent() {
-    return static_cast<IteratorTy *>(this)->NodePtr->getParent();
+  inline ParentTy *getNodeParent() const {
+    return static_cast<const IteratorTy *>(this)->NodePtr->getParent();
   }
 };
 template <class IteratorTy>

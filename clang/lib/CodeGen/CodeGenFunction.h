@@ -302,6 +302,19 @@ public:
   // because of jumps.
   VarBypassDetector Bypasses;
 
+  // Addresses of bypassed variables, for re-emitting their
+  // trivial-auto-var-init at a jump that re-enters their scope.
+  llvm::SmallDenseMap<const VarDecl *, Address, 4> BypassedVarInits;
+
+  // Jumps, like gotos or switches, that may bypass a declaration that has not
+  // been emitted yet. EmitAutoVarAlloca patches the init in before the jump
+  // once the alloca exists.
+  struct BypassingForwardJump {
+    llvm::AssertingVH<llvm::BasicBlock> Block;
+    const Stmt *Source;
+  };
+  llvm::SmallVector<BypassingForwardJump, 4> BypassingForwardJumps;
+
   /// List of recently emitted OMPCanonicalLoops.
   ///
   /// Since OMPCanonicalLoops are nested inside other statements (in particular
@@ -2020,10 +2033,10 @@ public:
     /// \param IP	Insertion point for generating the finalization code.
     static void FinalizeOMPRegion(CodeGenFunction &CGF, InsertPointTy IP) {
       CGBuilderTy::InsertPointGuard IPG(CGF.Builder);
-      assert(IP.getBlock()->end() != IP.getPoint() &&
+      llvm::BasicBlock *IPBB = IP.getNodeParent();
+      assert(IPBB->end() != IP &&
              "OpenMP IR Builder should cause terminated block!");
 
-      llvm::BasicBlock *IPBB = IP.getBlock();
       llvm::BasicBlock *DestBB = IPBB->getUniqueSuccessor();
       assert(DestBB && "Finalization block should have one successor!");
 
@@ -2047,10 +2060,10 @@ public:
                                          InsertPointTy CodeGenIP,
                                          Twine RegionName);
 
-    static void EmitCaptureStmt(CodeGenFunction &CGF, InsertPointTy CodeGenIP,
+    static void EmitCaptureStmt(CodeGenFunction &CGF,
+                                llvm::BasicBlock *CodeGenIPBB,
                                 llvm::BasicBlock &FiniBB, llvm::Function *Fn,
                                 ArrayRef<llvm::Value *> Args) {
-      llvm::BasicBlock *CodeGenIPBB = CodeGenIP.getBlock();
       if (llvm::Instruction *CodeGenIPBBTI = CodeGenIPBB->getTerminatorOrNull())
         CodeGenIPBBTI->eraseFromParent();
 
@@ -2061,7 +2074,7 @@ public:
       else
         CGF.EmitRuntimeCall(Fn, Args);
 
-      if (CGF.Builder.saveIP().isSet())
+      if (CGF.Builder.saveIP().isValid())
         CGF.Builder.CreateBr(&FiniBB);
     }
 
@@ -2090,10 +2103,10 @@ public:
       OutlinedRegionBodyRAII(CodeGenFunction &cgf, InsertPointTy &AllocaIP,
                              llvm::BasicBlock &RetBB)
           : CGF(cgf) {
-        assert(AllocaIP.isSet() &&
+        assert(AllocaIP.isValid() &&
                "Must specify Insertion point for allocas of outlined function");
         OldAllocaIP = CGF.AllocaInsertPt;
-        CGF.AllocaInsertPt = &*AllocaIP.getPoint();
+        CGF.AllocaInsertPt = &*AllocaIP;
 
         OldReturnBlock = CGF.ReturnBlock;
         CGF.ReturnBlock = CGF.getJumpDestInCurrentScope(&RetBB);
@@ -2119,13 +2132,13 @@ public:
         // function so it expects an empty AllocaIP in which case will reuse the
         // old alloca insertion point, or a new AllocaIP in the same block as
         // the old one
-        assert((!AllocaIP.isSet() ||
-                CGF.AllocaInsertPt->getParent() == AllocaIP.getBlock()) &&
+        assert((!AllocaIP.isValid() ||
+                CGF.AllocaInsertPt->getParent() == AllocaIP.getNodeParent()) &&
                "Insertion point should be in the entry block of containing "
                "function!");
         OldAllocaIP = CGF.AllocaInsertPt;
-        if (AllocaIP.isSet())
-          CGF.AllocaInsertPt = &*AllocaIP.getPoint();
+        if (AllocaIP.isValid())
+          CGF.AllocaInsertPt = &*AllocaIP;
 
         // TODO: Remove the call, after making sure the counter is not used by
         //       the EHStack.
@@ -3592,6 +3605,11 @@ public:
   void emitAutoVarTypeCleanup(const AutoVarEmission &emission,
                               QualType::DestructionKind dtorKind);
 
+  /// Re-emit trivial-auto-var-init stores for variables bypassed by the jump
+  /// Source. No-op in a function containing a computed goto, where jump sources
+  /// are unknown and a single function-scope init is used instead.
+  void emitBypassedVarInitsForSource(const Stmt *Source);
+
   void MaybeEmitDeferredVarDeclInit(const VarDecl *var);
 
   /// Emits the alloca and debug information for the size expressions for each
@@ -3992,6 +4010,7 @@ public:
   void EmitOMPReverseDirective(const OMPReverseDirective &S);
   void EmitOMPSplitDirective(const OMPSplitDirective &S);
   void EmitOMPInterchangeDirective(const OMPInterchangeDirective &S);
+  void EmitOMPFlattenDirective(const OMPFlattenDirective &S);
   void EmitOMPFuseDirective(const OMPFuseDirective &S);
   void EmitOMPForDirective(const OMPForDirective &S);
   void EmitOMPForSimdDirective(const OMPForSimdDirective &S);
@@ -5624,6 +5643,8 @@ private:
 
   void emitZeroOrPatternForAutoVarInit(QualType type, const VarDecl &D,
                                        Address Loc);
+  LangOptions::TrivialAutoVarInitKind getAutoVarInitKind(QualType Ty,
+                                                         const VarDecl &D);
 
 public:
   enum class EvaluationOrder {
