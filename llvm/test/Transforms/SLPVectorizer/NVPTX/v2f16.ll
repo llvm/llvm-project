@@ -115,3 +115,77 @@ declare noundef i32 @llvm.nvvm.read.ptx.sreg.tid.x() #1
 
 attributes #0 = { nounwind }
 attributes #1 = { nocallback nofree nosync nounwind speculatable willreturn memory(none) }
+
+define void @quad_f16_add(ptr %out, ptr %a, ptr %b) {
+; VECTOR-LABEL: @quad_f16_add(
+; VECTOR-NEXT:  entry:
+; VECTOR-NEXT:    [[A2P:%.*]] = getelementptr half, ptr [[A:%.*]], i64 2
+; VECTOR-NEXT:    [[B2P:%.*]] = getelementptr half, ptr [[B:%.*]], i64 2
+; VECTOR-NEXT:    [[O2:%.*]] = getelementptr half, ptr [[OUT:%.*]], i64 2
+; VECTOR-NEXT:    [[TMP0:%.*]] = load <2 x half>, ptr [[A]], align 8
+; VECTOR-NEXT:    [[TMP1:%.*]] = load <2 x half>, ptr [[B]], align 8
+; VECTOR-NEXT:    [[TMP2:%.*]] = fadd <2 x half> [[TMP0]], [[TMP1]]
+; VECTOR-NEXT:    [[TMP3:%.*]] = load <2 x half>, ptr [[A2P]], align 4
+; VECTOR-NEXT:    [[TMP4:%.*]] = load <2 x half>, ptr [[B2P]], align 4
+; VECTOR-NEXT:    [[TMP5:%.*]] = fadd <2 x half> [[TMP3]], [[TMP4]]
+; VECTOR-NEXT:    store <2 x half> [[TMP2]], ptr [[OUT]], align 8
+; VECTOR-NEXT:    store <2 x half> [[TMP5]], ptr [[O2]], align 4
+; VECTOR-NEXT:    ret void
+;
+; NOVECTOR-LABEL: @quad_f16_add(
+; NOVECTOR-NEXT:  entry:
+; NOVECTOR-NEXT:    [[A1P:%.*]] = getelementptr half, ptr [[A:%.*]], i64 1
+; NOVECTOR-NEXT:    [[A2P:%.*]] = getelementptr half, ptr [[A]], i64 2
+; NOVECTOR-NEXT:    [[A3P:%.*]] = getelementptr half, ptr [[A]], i64 3
+; NOVECTOR-NEXT:    [[B1P:%.*]] = getelementptr half, ptr [[B:%.*]], i64 1
+; NOVECTOR-NEXT:    [[B2P:%.*]] = getelementptr half, ptr [[B]], i64 2
+; NOVECTOR-NEXT:    [[B3P:%.*]] = getelementptr half, ptr [[B]], i64 3
+; NOVECTOR-NEXT:    [[A0:%.*]] = load half, ptr [[A]], align 8
+; NOVECTOR-NEXT:    [[A1:%.*]] = load half, ptr [[A1P]], align 2
+; NOVECTOR-NEXT:    [[A2:%.*]] = load half, ptr [[A2P]], align 4
+; NOVECTOR-NEXT:    [[A3:%.*]] = load half, ptr [[A3P]], align 2
+; NOVECTOR-NEXT:    [[B0:%.*]] = load half, ptr [[B]], align 8
+; NOVECTOR-NEXT:    [[B1:%.*]] = load half, ptr [[B1P]], align 2
+; NOVECTOR-NEXT:    [[B2:%.*]] = load half, ptr [[B2P]], align 4
+; NOVECTOR-NEXT:    [[B3:%.*]] = load half, ptr [[B3P]], align 2
+; NOVECTOR-NEXT:    [[R0:%.*]] = fadd half [[A0]], [[B0]]
+; NOVECTOR-NEXT:    [[R1:%.*]] = fadd half [[A1]], [[B1]]
+; NOVECTOR-NEXT:    [[R2:%.*]] = fadd half [[A2]], [[B2]]
+; NOVECTOR-NEXT:    [[R3:%.*]] = fadd half [[A3]], [[B3]]
+; NOVECTOR-NEXT:    [[O1:%.*]] = getelementptr half, ptr [[OUT:%.*]], i64 1
+; NOVECTOR-NEXT:    [[O2:%.*]] = getelementptr half, ptr [[OUT]], i64 2
+; NOVECTOR-NEXT:    [[O3:%.*]] = getelementptr half, ptr [[OUT]], i64 3
+; NOVECTOR-NEXT:    store half [[R0]], ptr [[OUT]], align 8
+; NOVECTOR-NEXT:    store half [[R1]], ptr [[O1]], align 2
+; NOVECTOR-NEXT:    store half [[R2]], ptr [[O2]], align 4
+; NOVECTOR-NEXT:    store half [[R3]], ptr [[O3]], align 2
+; NOVECTOR-NEXT:    ret void
+;
+entry:
+  %a1p = getelementptr half, ptr %a, i64 1
+  %a2p = getelementptr half, ptr %a, i64 2
+  %a3p = getelementptr half, ptr %a, i64 3
+  %b1p = getelementptr half, ptr %b, i64 1
+  %b2p = getelementptr half, ptr %b, i64 2
+  %b3p = getelementptr half, ptr %b, i64 3
+  %a0 = load half, ptr %a, align 8
+  %a1 = load half, ptr %a1p, align 2
+  %a2 = load half, ptr %a2p, align 4
+  %a3 = load half, ptr %a3p, align 2
+  %b0 = load half, ptr %b, align 8
+  %b1 = load half, ptr %b1p, align 2
+  %b2 = load half, ptr %b2p, align 4
+  %b3 = load half, ptr %b3p, align 2
+  %r0 = fadd half %a0, %b0
+  %r1 = fadd half %a1, %b1
+  %r2 = fadd half %a2, %b2
+  %r3 = fadd half %a3, %b3
+  %o1 = getelementptr half, ptr %out, i64 1
+  %o2 = getelementptr half, ptr %out, i64 2
+  %o3 = getelementptr half, ptr %out, i64 3
+  store half %r0, ptr %out, align 8
+  store half %r1, ptr %o1, align 2
+  store half %r2, ptr %o2, align 4
+  store half %r3, ptr %o3, align 2
+  ret void
+}

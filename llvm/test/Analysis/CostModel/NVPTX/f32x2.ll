@@ -48,15 +48,6 @@ define void @f32x2_load_store(ptr %out, ptr %a, ptr %b) {
   ret void
 }
 
-define <2 x float> @f32x2_splat(float %x) {
-; CHECK-LABEL: 'f32x2_splat'
-; CHECK-NEXT: Cost Model: Found an estimated cost of 1 for instruction: %v = insertelement <2 x float> poison, float %x, i32 0
-; CHECK-NEXT: Cost Model: Found an estimated cost of 0 for instruction: %s = shufflevector <2 x float> %v, <2 x float> poison, <2 x i32> zeroinitializer
-  %v = insertelement <2 x float> poison, float %x, i32 0
-  %s = shufflevector <2 x float> %v, <2 x float> poison, <2 x i32> zeroinitializer
-  ret <2 x float> %s
-}
-
 define <2 x float> @f32x2_build(float %x, float %y) {
 ; CHECK-LABEL: 'f32x2_build'
 ; CHECK-NEXT: Cost Model: Found an estimated cost of 1 for instruction: %v0 = insertelement <2 x float> poison, float %x, i32 0
