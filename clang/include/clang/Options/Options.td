@@ -3815,6 +3815,16 @@ defm modules_validate_system_headers : BoolOption<"f", "modules-validate-system-
   PosFlag<SetTrue, [], [ClangOption, CC1Option],
           "Validate the system headers that a module depends on when loading the module">,
   NegFlag<SetFalse, [], []>>, Group<i_Group>;
+defm modules_validate_directory_dependencies
+    : BoolOption<"f", "modules-validate-directory-dependencies",
+                 HeaderSearchOpts<"ModulesValidateDirectoryDependencies">,
+                 DefaultFalse,
+                 PosFlag<SetTrue, [], [ClangOption, CC1Option],
+                         "Treat an implicitly built module as out of date if "
+                         "a directory it depends on the listing of, such as "
+                         "an umbrella directory, changed after it was built">,
+                 NegFlag<SetFalse, [], []>>,
+      Group<i_Group>;
 def fno_modules_validate_textual_header_includes :
   Flag<["-"], "fno-modules-validate-textual-header-includes">,
   Group<f_Group>, Flags<[]>, Visibility<[ClangOption, CC1Option]>,
@@ -8664,6 +8674,13 @@ def ast_dump_filter : Separate<["-"], "ast-dump-filter">,
   MarshallingInfoString<FrontendOpts<"ASTDumpFilter">>;
 def ast_dump_filter_EQ : Joined<["-"], "ast-dump-filter=">,
   Alias<ast_dump_filter>;
+def ast_dump_filter_path : Separate<["-"], "ast-dump-filter-path">,
+  MetaVarName<"<path_filter>">,
+  HelpText<"Use with '-ast-dump' or '-ast-print' to dump/print only AST declaration"
+           " nodes whose source file path matches a glob pattern.">,
+  MarshallingInfoString<FrontendOpts<"ASTDumpFilterPath">>;
+def ast_dump_filter_path_EQ : Joined<["-"], "ast-dump-filter-path=">,
+  Alias<ast_dump_filter_path>;
 def fno_modules_global_index : Flag<["-"], "fno-modules-global-index">,
   HelpText<"Do not automatically generate or update the global module index">,
   MarshallingInfoNegativeFlag<FrontendOpts<"UseGlobalModuleIndex">>;

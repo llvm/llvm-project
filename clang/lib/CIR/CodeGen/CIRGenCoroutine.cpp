@@ -661,6 +661,31 @@ emitSuspendExpression(CIRGenFunction &cgf, CGCoroData &coro,
   CIRGenFunction::OpaqueValueMapping binder =
       CIRGenFunction::OpaqueValueMapping(cgf, s.getOpaqueValue());
   CIRGenBuilderTy &builder = cgf.getBuilder();
+
+  // Exception handling requires additional IR. We avoid generating it when
+  // the resume expression is a direct call to a 'noexcept' member function.
+  const bool resumeInTry = coro.exceptionHandler &&
+                           kind == cir::AwaitKind::Init &&
+                           memberCallExpressionCanThrow(s.getResumeExpr());
+
+  // If the await_resume() result needs a destructor, take over its
+  // destruction, unless the destination owns it. The try/catch path destroys
+  // the result itself.
+  const CXXBindTemporaryExpr *resultBind = nullptr;
+  if (!resumeInTry && !aggSlot.isExternallyDestructed())
+    resultBind = dyn_cast<CXXBindTemporaryExpr>(s.getResumeExpr());
+  if (resultBind) {
+    // Emit the result into a slot created outside of the cir.await, so that it
+    // is still available after it.
+    if (aggSlot.isIgnored())
+      aggSlot = cgf.createAggTemp(resultBind->getType(),
+                                  cgf.getLoc(resultBind->getSourceRange()),
+                                  "agg.tmp.ensured");
+    // Don't push the destructor from within the resume region, where its
+    // cir.cleanup.scope would capture the region's terminator.
+    aggSlot.setExternallyDestructed();
+  }
+
   [[maybe_unused]] cir::AwaitOp awaitOp = cir::AwaitOp::create(
       builder, cgf.getLoc(s.getSourceRange()), kind,
       /*readyBuilder=*/
@@ -687,11 +712,7 @@ emitSuspendExpression(CIRGenFunction &cgf, CGCoroData &coro,
       },
       /*resumeBuilder=*/
       [&](mlir::OpBuilder &b, mlir::Location loc) {
-        // Exception handling requires additional IR. If the 'await_resume'
-        // function is marked as 'noexcept', we avoid generating this additional
-        // IR.
-        if (coro.exceptionHandler && kind == cir::AwaitKind::Init &&
-            memberCallExpressionCanThrow(s.getResumeExpr())) {
+        if (resumeInTry) {
           // we are basically just emitting:
           // resumeEh = false;
           // try {
@@ -770,6 +791,14 @@ emitSuspendExpression(CIRGenFunction &cgf, CGCoroData &coro,
         // Returns control back to parent.
         cir::YieldOp::create(builder, loc);
       });
+
+  // Push the destructor right after the cir.await, where the result starts to
+  // exist, and not around it: destroying the coroutine at the suspend point
+  // would destroy the not yet constructed result. The cleanup runs at the end
+  // of the full-expression.
+  if (resultBind)
+    cgf.emitCXXTemporary(resultBind->getTemporary(), resultBind->getType(),
+                         aggSlot.getAddress());
 
   assert(awaitBuild.succeeded() && "Should know how to codegen");
   return awaitRes;
