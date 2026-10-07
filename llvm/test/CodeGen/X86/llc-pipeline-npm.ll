@@ -49,7 +49,6 @@
 ; O0-NEXT:     x86-dyn-alloca-expander
 ; O0-NEXT:     x86-fast-pre-tile-config
 ; O0-NEXT:     phi-node-elimination
-; O0-NEXT:     two-address-instruction
 ; O0-NEXT:     regallocfast
 ; O0-NEXT:     x86-lower-tile-copy
 ; O0-NEXT:     x86-fp-stackifier
@@ -142,6 +141,7 @@
 ; O2-NEXT:     dead-mi-elimination
 ; O2-NEXT:     LiveRangeShrinkPass
 ; O2-NEXT:     x86-fixup-setcc
+; O2-NEXT:     x86-optimize-leas
 ; O2-NEXT:     x86-cf-opt
 ; O2-NEXT:     x86-avoid-sfb
 ; O2-NEXT:     x86-suppress-apx-for-relocation
@@ -252,7 +252,6 @@
 ; O0-WINDOWS-NEXT:     x86-dyn-alloca-expander
 ; O0-WINDOWS-NEXT:     x86-fast-pre-tile-config
 ; O0-WINDOWS-NEXT:     phi-node-elimination
-; O0-WINDOWS-NEXT:     two-address-instruction
 ; O0-WINDOWS-NEXT:     regallocfast
 ; O0-WINDOWS-NEXT:     x86-lower-tile-copy
 ; O0-WINDOWS-NEXT:     x86-fp-stackifier
@@ -348,6 +347,7 @@
 ; O3-WINDOWS-NEXT:     dead-mi-elimination
 ; O3-WINDOWS-NEXT:     LiveRangeShrinkPass
 ; O3-WINDOWS-NEXT:     x86-fixup-setcc
+; O3-WINDOWS-NEXT:     x86-optimize-leas
 ; O3-WINDOWS-NEXT:     x86-cf-opt
 ; O3-WINDOWS-NEXT:     x86-avoid-sfb
 ; O3-WINDOWS-NEXT:     x86-suppress-apx-for-relocation

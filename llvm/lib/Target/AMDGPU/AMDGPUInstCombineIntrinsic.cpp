@@ -340,7 +340,7 @@ simplifyAMDGCNImageIntrinsic(const GCNSubtarget *ST,
         II.mutateType(HalfVecTy);
         II.setCalledFunction(HalfDecl);
 
-        IRBuilder<> Builder(II.getContext());
+        IRBuilder<> Builder(*M);
         for (auto &[Ext, Tr] : ExtractTruncPairs) {
           Value *Idx = Ext->getIndexOperand();
 

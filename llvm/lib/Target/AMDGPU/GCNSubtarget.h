@@ -124,8 +124,10 @@ public:
       AMDGPU::TargetIDSetting SramEccSetting = AMDGPU::TargetIDSetting::Any);
   ~GCNSubtarget() override;
 
-  GCNSubtarget &initializeSubtargetDependencies(const Triple &TT, StringRef GPU,
-                                                StringRef FS);
+  GCNSubtarget &
+  initializeSubtargetDependencies(const Triple &TT, StringRef GPU, StringRef FS,
+                                  AMDGPU::TargetIDSetting XnackSetting,
+                                  AMDGPU::TargetIDSetting SramEccSetting);
 
   /// Diagnose inconsistent subtarget features before attempting to codegen
   /// function \p F.
@@ -479,6 +481,8 @@ public:
 
   bool enableMachineScheduler() const override { return true; }
 
+  bool enableSSAMachineScheduler() const override { return true; }
+
   bool useAA() const override;
 
   bool enableSubRegLiveness() const override { return true; }
@@ -625,6 +629,8 @@ public:
   }
 
   bool hasCvtScaleForwardingHazard() const { return HasGFX950Insts; }
+
+  bool hasPermlaneForwardingHazard() const { return HasGFX950Insts; }
 
   // All GFX9 targets experience a fetch delay when an instruction at the start
   // of a loop header is split by a 32-byte fetch window boundary, but GFX950
