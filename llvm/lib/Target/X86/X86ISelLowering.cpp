@@ -22574,6 +22574,16 @@ static SDValue lowerVectorFP_TO_INT_SAT(SDValue Op, SelectionDAG &DAG,
   if (SatWidth == 32 && (SrcVT.getScalarType() == MVT::f32 ||
                          SrcVT.getScalarType() == MVT::f64)) {
     if (IsSigned) {
+      EVT CCVT =
+          TLI.getSetCCResultType(DAG.getDataLayout(), *DAG.getContext(), SrcVT);
+      if (SrcVT.getScalarType() == MVT::f64) {
+        SDValue Clamped = DAG.getNode(X86ISD::FMINC, dl, SrcVT, Src,
+                                      DAG.getConstantFP(INT32_MAX, dl, SrcVT));
+        SDValue NotNaN = DAG.getSetCC(dl, CCVT, Src, Src, ISD::SETO);
+        Clamped = DAG.getSelect(dl, SrcVT, NotNaN, Clamped,
+                                DAG.getConstantFP(0.0, dl, SrcVT));
+        return DAG.getNode(X86ISD::CVTTP2SI, dl, DstVT, Clamped);
+      }
       // Use X86ISD::CVTTP2SI (CVTTPS2DQ/CVTTPD2DQ) which has defined
       // out-of-range behavior: maps overflow and NaN to 0x80000000 (INT_MIN).
       SDValue Cvt = DAG.getNode(X86ISD::CVTTP2SI, dl, DstVT, Src);
@@ -22583,8 +22593,6 @@ static SDValue lowerVectorFP_TO_INT_SAT(SDValue Op, SelectionDAG &DAG,
                                       APFloat::rmTowardZero);
       PosOvfBoundFlt.changeSign();
       SDValue PosOvfBound = DAG.getConstantFP(PosOvfBoundFlt, dl, SrcVT);
-      EVT CCVT = TLI.getSetCCResultType(DAG.getDataLayout(),
-                                        *DAG.getContext(), SrcVT);
       EVT SelCCVT = TLI.getSetCCResultType(DAG.getDataLayout(),
                                            *DAG.getContext(), DstVT);
 

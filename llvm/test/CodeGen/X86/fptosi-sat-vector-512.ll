@@ -2031,26 +2031,12 @@ define <8 x i16> @test_signed_v8i16_v8f64(<8 x double> %f) nounwind {
 }
 
 define <8 x i32> @test_signed_v8i32_v8f64(<8 x double> %f) nounwind {
-; AVX512F-LABEL: test_signed_v8i32_v8f64:
-; AVX512F:       # %bb.0:
-; AVX512F-NEXT:    vcvttpd2dq %zmm0, %ymm1
-; AVX512F-NEXT:    vcmpgepd {{\.?LCPI[0-9]+_[0-9]+}}(%rip){1to8}, %zmm0, %k1
-; AVX512F-NEXT:    vpternlogd {{.*#+}} zmm2 {%k1} {z} = -1
-; AVX512F-NEXT:    vpxor %ymm2, %ymm1, %ymm1
-; AVX512F-NEXT:    vcmpunordpd %zmm0, %zmm0, %k1
-; AVX512F-NEXT:    vpternlogd {{.*#+}} zmm0 {%k1} {z} = -1
-; AVX512F-NEXT:    vpandn %ymm1, %ymm0, %ymm0
-; AVX512F-NEXT:    retq
-;
-; AVX512-LABEL: test_signed_v8i32_v8f64:
-; AVX512:       # %bb.0:
-; AVX512-NEXT:    vcmpgepd {{\.?LCPI[0-9]+_[0-9]+}}(%rip){1to8}, %zmm0, %k1
-; AVX512-NEXT:    vcvttpd2dq %zmm0, %ymm1
-; AVX512-NEXT:    vpbroadcastd {{.*#+}} ymm1 {%k1} = [2147483647,2147483647,2147483647,2147483647,2147483647,2147483647,2147483647,2147483647]
-; AVX512-NEXT:    vcmpunordpd %zmm0, %zmm0, %k0
-; AVX512-NEXT:    knotb %k0, %k1
-; AVX512-NEXT:    vmovdqa32 %ymm1, %ymm0 {%k1} {z}
-; AVX512-NEXT:    retq
+; CHECK-LABEL: test_signed_v8i32_v8f64:
+; CHECK:       # %bb.0:
+; CHECK-NEXT:    vcmpordpd %zmm0, %zmm0, %k1
+; CHECK-NEXT:    vminpd {{\.?LCPI[0-9]+_[0-9]+}}(%rip){1to8}, %zmm0, %zmm0 {%k1} {z}
+; CHECK-NEXT:    vcvttpd2dq %zmm0, %ymm0
+; CHECK-NEXT:    retq
   %x = call <8 x i32> @llvm.fptosi.sat.v8i32.v8f64(<8 x double> %f)
   ret <8 x i32> %x
 }

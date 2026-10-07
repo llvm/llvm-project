@@ -875,27 +875,19 @@ define <4 x i16> @test_signed_v4i16_v4f64(<4 x double> %f) nounwind {
 define <4 x i32> @test_signed_v4i32_v4f64(<4 x double> %f) nounwind {
 ; AVX2-LABEL: test_signed_v4i32_v4f64:
 ; AVX2:       # %bb.0:
-; AVX2-NEXT:    vbroadcastsd {{.*#+}} ymm1 = [2.147483648E+9,2.147483648E+9,2.147483648E+9,2.147483648E+9]
-; AVX2-NEXT:    vcmplepd %ymm0, %ymm1, %ymm1
-; AVX2-NEXT:    vextractf128 $1, %ymm1, %xmm2
-; AVX2-NEXT:    vpackssdw %xmm2, %xmm1, %xmm1
-; AVX2-NEXT:    vcvttpd2dq %ymm0, %xmm2
-; AVX2-NEXT:    vxorpd %xmm1, %xmm2, %xmm1
-; AVX2-NEXT:    vcmpunordpd %ymm0, %ymm0, %ymm0
-; AVX2-NEXT:    vextractf128 $1, %ymm0, %xmm2
-; AVX2-NEXT:    vpackssdw %xmm2, %xmm0, %xmm0
-; AVX2-NEXT:    vpandn %xmm1, %xmm0, %xmm0
+; AVX2-NEXT:    vbroadcastsd {{.*#+}} ymm1 = [2.147483647E+9,2.147483647E+9,2.147483647E+9,2.147483647E+9]
+; AVX2-NEXT:    vminpd %ymm1, %ymm0, %ymm1
+; AVX2-NEXT:    vcmpordpd %ymm0, %ymm0, %ymm0
+; AVX2-NEXT:    vandpd %ymm1, %ymm0, %ymm0
+; AVX2-NEXT:    vcvttpd2dq %ymm0, %xmm0
 ; AVX2-NEXT:    vzeroupper
 ; AVX2-NEXT:    retq
 ;
 ; AVX512-LABEL: test_signed_v4i32_v4f64:
 ; AVX512:       # %bb.0:
-; AVX512-NEXT:    vcmpgepd {{\.?LCPI[0-9]+_[0-9]+}}(%rip){1to4}, %ymm0, %k1
-; AVX512-NEXT:    vcvttpd2dq %ymm0, %xmm1
-; AVX512-NEXT:    vpbroadcastd {{.*#+}} xmm1 {%k1} = [2147483647,2147483647,2147483647,2147483647]
-; AVX512-NEXT:    vcmpunordpd %ymm0, %ymm0, %k0
-; AVX512-NEXT:    knotw %k0, %k1
-; AVX512-NEXT:    vmovdqa32 %xmm1, %xmm0 {%k1} {z}
+; AVX512-NEXT:    vcmpordpd %ymm0, %ymm0, %k1
+; AVX512-NEXT:    vminpd {{\.?LCPI[0-9]+_[0-9]+}}(%rip){1to4}, %ymm0, %ymm0 {%k1} {z}
+; AVX512-NEXT:    vcvttpd2dq %ymm0, %xmm0
 ; AVX512-NEXT:    vzeroupper
 ; AVX512-NEXT:    retq
   %x = call <4 x i32> @llvm.fptosi.sat.v4i32.v4f64(<4 x double> %f)
