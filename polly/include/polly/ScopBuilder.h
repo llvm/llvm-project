@@ -674,7 +674,9 @@ class ScopBuilder final {
   }
 
   /// Check if the base ptr of @p MA is in the SCoP but not hoistable.
-  bool hasNonHoistableBasePtrInScop(MemoryAccess *MA, isl::union_map Writes);
+  bool hasNonHoistableBasePtrInScop(
+      MemoryAccess *MA, isl::union_map Writes,
+      const llvm::DenseSet<const ScopArrayInfo *> &WrittenSAIs);
 
   /// Return the context under which the access cannot be hoisted.
   ///
@@ -683,7 +685,9 @@ class ScopBuilder final {
   ///
   /// @return Return the context under which the access cannot be hoisted or a
   ///         nullptr if it cannot be hoisted at all.
-  isl::set getNonHoistableCtx(MemoryAccess *Access, isl::union_map Writes);
+  isl::set
+  getNonHoistableCtx(MemoryAccess *Access, isl::union_map Writes,
+                     const llvm::DenseSet<const ScopArrayInfo *> &WrittenSAIs);
 
   /// Build the access relation of all memory accesses of @p Stmt.
   void buildAccessRelations(ScopStmt &Stmt);
