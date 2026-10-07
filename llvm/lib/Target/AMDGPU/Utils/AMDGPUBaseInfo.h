@@ -1778,8 +1778,8 @@ bool isIntrinsicSourceOfDivergence(unsigned IntrID);
 /// \returns true if the intrinsic is uniform
 bool isIntrinsicAlwaysUniform(unsigned IntrID);
 
-/// \returns true if the intrinsic executes an asynchronous operation
-bool isAsyncIntrinsic(unsigned IntrID);
+/// \returns true if the intrinsic executes an LDSDMA operation
+bool isLDSDMAIntrinsic(unsigned IntrID);
 
 /// \returns a register class for the physical register \p Reg if it is a VGPR
 /// or nullptr otherwise.

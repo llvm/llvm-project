@@ -3404,7 +3404,7 @@ bool isIntrinsicAlwaysUniform(unsigned IntrID) {
   return lookupAlwaysUniform(IntrID);
 }
 
-bool isAsyncIntrinsic(unsigned IntrID) {
+bool isLDSDMAIntrinsic(unsigned IntrID) {
   switch (IntrID) {
   case Intrinsic::amdgcn_raw_buffer_load_lds:
   case Intrinsic::amdgcn_raw_buffer_load_async_lds:
@@ -3432,11 +3432,6 @@ bool isAsyncIntrinsic(unsigned IntrID) {
   case Intrinsic::amdgcn_global_store_async_from_lds_b128:
   case Intrinsic::amdgcn_tensor_load_to_lds:
   case Intrinsic::amdgcn_tensor_store_from_lds:
-  case Intrinsic::amdgcn_asyncmark:
-  case Intrinsic::amdgcn_wait_asyncmark:
-  case Intrinsic::amdgcn_s_wait_asynccnt:
-  case Intrinsic::amdgcn_s_wait_tensorcnt:
-  case Intrinsic::amdgcn_ds_atomic_async_barrier_arrive_b64:
     return true;
   default:
     return false;
