@@ -407,10 +407,12 @@ TEST(SparseElementsAttrTest, GetZero) {
 
   IntegerType intTy = IntegerType::get(&context, 32);
   FloatType floatTy = Float32Type::get(&context);
+  Type ocpInt8Ty = OCPInt8Type::get(&context);
   Type stringTy = OpaqueType::get(StringAttr::get(&context, "test"), "string");
 
   ShapedType tensorI32 = RankedTensorType::get({2, 2}, intTy);
   ShapedType tensorF32 = RankedTensorType::get({2, 2}, floatTy);
+  ShapedType tensorOCPInt8 = RankedTensorType::get({2, 2}, ocpInt8Ty);
   ShapedType tensorString = RankedTensorType::get({2, 2}, stringTy);
 
   auto indicesType =
@@ -424,11 +426,19 @@ TEST(SparseElementsAttrTest, GetZero) {
   RankedTensorType floatValueTy = RankedTensorType::get({1}, floatTy);
   auto floatValue = DenseFPElementsAttr::get(floatValueTy, {1.0f});
 
+  RankedTensorType ocpInt8ValueTy = RankedTensorType::get({1}, ocpInt8Ty);
+  Attribute ocpInt8EncodedValue =
+      IntegerAttr::get(IntegerType::get(&context, 8), 64);
+  auto ocpInt8Value = DenseElementsAttr::get(
+      ocpInt8ValueTy, ArrayRef<Attribute>(ocpInt8EncodedValue));
+
   RankedTensorType stringValueTy = RankedTensorType::get({1}, stringTy);
   auto stringValue = DenseElementsAttr::get(stringValueTy, {StringRef("foo")});
 
   auto sparseInt = SparseElementsAttr::get(tensorI32, indices, intValue);
   auto sparseFloat = SparseElementsAttr::get(tensorF32, indices, floatValue);
+  auto sparseOCPInt8 =
+      SparseElementsAttr::get(tensorOCPInt8, indices, ocpInt8Value);
   auto sparseString =
       SparseElementsAttr::get(tensorString, indices, stringValue);
 
@@ -443,6 +453,15 @@ TEST(SparseElementsAttrTest, GetZero) {
       cast<FloatAttr>(sparseFloat.getValues<Attribute>()[{1, 1}]);
   EXPECT_EQ(zeroFloatValue.getValueAsDouble(), 0.0f);
   EXPECT_TRUE(zeroFloatValue.getType() == floatTy);
+
+  auto zeroOCPInt8Value =
+      cast<IntegerAttr>(sparseOCPInt8.getValues<Attribute>()[{1, 1}]);
+  EXPECT_EQ(zeroOCPInt8Value.getInt(), 0);
+  EXPECT_TRUE(zeroOCPInt8Value.getType().isSignlessInteger(8));
+  auto storedOCPInt8Value =
+      cast<IntegerAttr>(sparseOCPInt8.getValues<Attribute>()[{0, 0}]);
+  EXPECT_EQ(storedOCPInt8Value.getInt(), 64);
+  EXPECT_TRUE(storedOCPInt8Value.getType().isSignlessInteger(8));
 
   auto zeroStringValue =
       cast<StringAttr>(sparseString.getValues<Attribute>()[{1, 1}]);

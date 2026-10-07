@@ -604,6 +604,18 @@ DenseElementsAttr TensorLiteralParser::getAttr(SMLoc loc, ShapedType type) {
     }
     return DenseElementsAttr::get(type, intValues);
   }
+  // OCP INT8 stores encoded values as signless i8 attributes.
+  if (isa<OCPInt8Type>(eltType)) {
+    std::vector<APInt> intValues;
+    Type storageType = IntegerType::get(p.getContext(), 8);
+    if (failed(getIntAttrElements(loc, storageType, intValues)))
+      return nullptr;
+    SmallVector<Attribute> attrs;
+    attrs.reserve(intValues.size());
+    for (const APInt &value : intValues)
+      attrs.push_back(IntegerAttr::get(storageType, value));
+    return DenseElementsAttr::get(type, attrs);
+  }
   // Handle floating point types.
   if (FloatType floatTy = dyn_cast<FloatType>(eltType)) {
     std::vector<APFloat> floatValues;
