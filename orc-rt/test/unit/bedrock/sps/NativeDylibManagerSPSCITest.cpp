@@ -9,7 +9,7 @@
 // Tests for NativeDylibManager's SPS Controller Interface.
 //
 //===----------------------------------------------------------------------===//
-
+#ifndef _WIN32
 #include "orc-rt/bedrock/sps/NativeDylibManagerSPSCI.h"
 #include "orc-rt/bedrock/NativeDylibManager.h"
 #include "orc-rt/bedrock/Session.h"
@@ -18,9 +18,13 @@
 #include "BedrockTestUtils.h"
 #include "CommonTestUtils.h"
 #include "DirectCaller.h"
+#include "ErrorMatchers.h"
 #include "gtest/gtest.h"
 
 using namespace orc_rt;
+using namespace orc_rt::test;
+
+using ::testing::Ne;
 
 namespace orc_rt {
 
@@ -80,7 +84,9 @@ protected:
   void SetUp() override {
     S = std::make_unique<Session>(mockExecutorProcessInfo(), noDispatch,
                                   noErrors);
-    NDM = cantFail(NativeDylibManager::Create(*S, CI));
+    auto NDMOrErr = NativeDylibManager::Create(*S, CI);
+    ASSERT_THAT_EXPECTED(NDMOrErr, Succeeded());
+    NDM = std::move(*NDMOrErr);
   }
 
   template <typename OnCompleteFn>
@@ -118,16 +124,17 @@ TEST_F(NativeDylibManagerSPSCITest, Registration) {
 TEST_F(NativeDylibManagerSPSCITest, Load) {
   std::future<Expected<Expected<void *>>> LoadResult;
   spsLoad(waitFor(LoadResult), NDM_TEST_LIB_PATH);
-  void *Handle = cantFail(cantFail(LoadResult.get()));
-  EXPECT_NE(Handle, nullptr);
+  auto HandleOrErr = LoadResult.get();
+  ASSERT_THAT_EXPECTED(HandleOrErr, Succeeded());
+  EXPECT_THAT_EXPECTED(*HandleOrErr, HasValue(Ne(nullptr)));
 }
 
 TEST_F(NativeDylibManagerSPSCITest, LoadNonExistent) {
   std::future<Expected<Expected<void *>>> LoadResult;
   spsLoad(waitFor(LoadResult), "/no/such/library.dylib");
-  auto Handle = cantFail(LoadResult.get());
-  EXPECT_FALSE(!!Handle);
-  consumeError(Handle.takeError());
+  auto HandleOrErr = LoadResult.get();
+  ASSERT_THAT_EXPECTED(HandleOrErr, Succeeded());
+  EXPECT_THAT_EXPECTED(*HandleOrErr, Failed());
 }
 
 TEST_F(NativeDylibManagerSPSCITest, LoadEmptyPathReturnsGlobalHandle) {
@@ -135,12 +142,17 @@ TEST_F(NativeDylibManagerSPSCITest, LoadEmptyPathReturnsGlobalHandle) {
   // up through it.
   std::future<Expected<Expected<void *>>> LoadResult;
   spsLoad(waitFor(LoadResult), "");
-  void *Handle = cantFail(cantFail(LoadResult.get()));
+  auto Handle = LoadResult.get();
+  ASSERT_THAT_EXPECTED(Handle, Succeeded());
+  ASSERT_THAT_EXPECTED(*Handle, Succeeded());
 
   std::future<Expected<Expected<std::vector<std::optional<void *>>>>>
       LookupResult;
-  spsLookup(waitFor(LookupResult), Handle, {{MANGLED("malloc"), Req}});
-  auto Addrs = cantFail(cantFail(LookupResult.get()));
+  spsLookup(waitFor(LookupResult), **Handle, {{MANGLED("malloc"), Req}});
+  auto AddrsOrErr = LookupResult.get();
+  ASSERT_THAT_EXPECTED(AddrsOrErr, Succeeded());
+  ASSERT_THAT_EXPECTED(*AddrsOrErr, Succeeded());
+  auto &Addrs = **AddrsOrErr;
   ASSERT_EQ(Addrs.size(), 1U);
   ASSERT_TRUE(Addrs[0].has_value())
       << "malloc should be findable via the process's global lookup handle";
@@ -150,13 +162,18 @@ TEST_F(NativeDylibManagerSPSCITest, LoadEmptyPathReturnsGlobalHandle) {
 TEST_F(NativeDylibManagerSPSCITest, LookupSingleSymbol) {
   std::future<Expected<Expected<void *>>> LoadResult;
   spsLoad(waitFor(LoadResult), NDM_TEST_LIB_PATH);
-  void *Handle = cantFail(cantFail(LoadResult.get()));
+  auto Handle = LoadResult.get();
+  ASSERT_THAT_EXPECTED(Handle, Succeeded());
+  ASSERT_THAT_EXPECTED(*Handle, Succeeded());
 
   std::future<Expected<Expected<std::vector<std::optional<void *>>>>>
       LookupResult;
-  spsLookup(waitFor(LookupResult), Handle,
+  spsLookup(waitFor(LookupResult), **Handle,
             {{MANGLED("NativeDylibManagerTestFunc"), Req}});
-  auto Addrs = cantFail(cantFail(LookupResult.get()));
+  auto AddrsOrErr = LookupResult.get();
+  ASSERT_THAT_EXPECTED(AddrsOrErr, Succeeded());
+  ASSERT_THAT_EXPECTED(*AddrsOrErr, Succeeded());
+  auto &Addrs = **AddrsOrErr;
   ASSERT_EQ(Addrs.size(), 1U);
   ASSERT_TRUE(Addrs[0].has_value());
   EXPECT_NE(*Addrs[0], nullptr);
@@ -168,14 +185,19 @@ TEST_F(NativeDylibManagerSPSCITest, LookupSingleSymbol) {
 TEST_F(NativeDylibManagerSPSCITest, LookupMultipleSymbols) {
   std::future<Expected<Expected<void *>>> LoadResult;
   spsLoad(waitFor(LoadResult), NDM_TEST_LIB_PATH);
-  void *Handle = cantFail(cantFail(LoadResult.get()));
+  auto Handle = LoadResult.get();
+  ASSERT_THAT_EXPECTED(Handle, Succeeded());
+  ASSERT_THAT_EXPECTED(*Handle, Succeeded());
 
   std::future<Expected<Expected<std::vector<std::optional<void *>>>>>
       LookupResult;
-  spsLookup(waitFor(LookupResult), Handle,
+  spsLookup(waitFor(LookupResult), **Handle,
             {{MANGLED("NativeDylibManagerTestFunc"), Req},
              {MANGLED("NativeDylibManagerTestFunc2"), Req}});
-  auto Addrs = cantFail(cantFail(LookupResult.get()));
+  auto AddrsOrErr = LookupResult.get();
+  ASSERT_THAT_EXPECTED(AddrsOrErr, Succeeded());
+  ASSERT_THAT_EXPECTED(*AddrsOrErr, Succeeded());
+  auto &Addrs = **AddrsOrErr;
   ASSERT_EQ(Addrs.size(), 2U);
   ASSERT_TRUE(Addrs[0].has_value());
   ASSERT_TRUE(Addrs[1].has_value());
@@ -191,12 +213,18 @@ TEST_F(NativeDylibManagerSPSCITest, LookupMultipleSymbols) {
 TEST_F(NativeDylibManagerSPSCITest, LookupWeakMissingSymbol) {
   std::future<Expected<Expected<void *>>> LoadResult;
   spsLoad(waitFor(LoadResult), NDM_TEST_LIB_PATH);
-  void *Handle = cantFail(cantFail(LoadResult.get()));
+  auto Handle = LoadResult.get();
+  ASSERT_THAT_EXPECTED(Handle, Succeeded());
+  ASSERT_THAT_EXPECTED(*Handle, Succeeded());
 
   std::future<Expected<Expected<std::vector<std::optional<void *>>>>>
       LookupResult;
-  spsLookup(waitFor(LookupResult), Handle, {{MANGLED("no_such_symbol"), Weak}});
-  auto Addrs = cantFail(cantFail(LookupResult.get()));
+  spsLookup(waitFor(LookupResult), **Handle,
+            {{MANGLED("no_such_symbol"), Weak}});
+  auto AddrsOrErr = LookupResult.get();
+  ASSERT_THAT_EXPECTED(AddrsOrErr, Succeeded());
+  ASSERT_THAT_EXPECTED(*AddrsOrErr, Succeeded());
+  auto &Addrs = **AddrsOrErr;
   ASSERT_EQ(Addrs.size(), 1U);
   ASSERT_TRUE(Addrs[0].has_value())
       << "weak-missing symbol should be reported as a present optional";
@@ -206,12 +234,18 @@ TEST_F(NativeDylibManagerSPSCITest, LookupWeakMissingSymbol) {
 TEST_F(NativeDylibManagerSPSCITest, LookupRequiredMissingSymbol) {
   std::future<Expected<Expected<void *>>> LoadResult;
   spsLoad(waitFor(LoadResult), NDM_TEST_LIB_PATH);
-  void *Handle = cantFail(cantFail(LoadResult.get()));
+  auto Handle = LoadResult.get();
+  ASSERT_THAT_EXPECTED(Handle, Succeeded());
+  ASSERT_THAT_EXPECTED(*Handle, Succeeded());
 
   std::future<Expected<Expected<std::vector<std::optional<void *>>>>>
       LookupResult;
-  spsLookup(waitFor(LookupResult), Handle, {{MANGLED("no_such_symbol"), Req}});
-  auto Addrs = cantFail(cantFail(LookupResult.get()));
+  spsLookup(waitFor(LookupResult), **Handle,
+            {{MANGLED("no_such_symbol"), Req}});
+  auto AddrsOrErr = LookupResult.get();
+  ASSERT_THAT_EXPECTED(AddrsOrErr, Succeeded());
+  ASSERT_THAT_EXPECTED(*AddrsOrErr, Succeeded());
+  auto &Addrs = **AddrsOrErr;
   ASSERT_EQ(Addrs.size(), 1U);
   EXPECT_FALSE(Addrs[0].has_value())
       << "required-missing symbol should be reported as an empty optional";
@@ -220,14 +254,19 @@ TEST_F(NativeDylibManagerSPSCITest, LookupRequiredMissingSymbol) {
 TEST_F(NativeDylibManagerSPSCITest, LookupMixedRequiredAndWeak) {
   std::future<Expected<Expected<void *>>> LoadResult;
   spsLoad(waitFor(LoadResult), NDM_TEST_LIB_PATH);
-  void *Handle = cantFail(cantFail(LoadResult.get()));
+  auto Handle = LoadResult.get();
+  ASSERT_THAT_EXPECTED(Handle, Succeeded());
+  ASSERT_THAT_EXPECTED(*Handle, Succeeded());
 
   std::future<Expected<Expected<std::vector<std::optional<void *>>>>>
       LookupResult;
-  spsLookup(waitFor(LookupResult), Handle,
+  spsLookup(waitFor(LookupResult), **Handle,
             {{MANGLED("NativeDylibManagerTestFunc"), Req},
              {MANGLED("no_such_symbol"), Weak}});
-  auto Addrs = cantFail(cantFail(LookupResult.get()));
+  auto AddrsOrErr = LookupResult.get();
+  ASSERT_THAT_EXPECTED(AddrsOrErr, Succeeded());
+  ASSERT_THAT_EXPECTED(*AddrsOrErr, Succeeded());
+  auto &Addrs = **AddrsOrErr;
   ASSERT_EQ(Addrs.size(), 2U);
   ASSERT_TRUE(Addrs[0].has_value());
   EXPECT_NE(*Addrs[0], nullptr);
@@ -235,3 +274,4 @@ TEST_F(NativeDylibManagerSPSCITest, LookupMixedRequiredAndWeak) {
       << "weak-missing symbol should be reported as a present optional";
   EXPECT_EQ(*Addrs[1], nullptr);
 }
+#endif

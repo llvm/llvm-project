@@ -527,7 +527,7 @@ struct InstrumentationOpportunity {
       return nullptr;
 
     Changed = true;
-    const DataLayout &DL = IIRB.IRB.GetInsertBlock()->getDataLayout();
+    const DataLayout &DL = IIRB.IRB.getDataLayout();
     IRTCallDescription IRTCallDesc(*this, getRetTy(V->getContext()));
     auto *CI = IRTCallDesc.createLLVMCall(V, IConf, IIRB, DL, ICaches);
     return CI;

@@ -10,4 +10,4 @@
 
 #include "src/math/isnanf16.h"
 
-LIST_ISNAN_TESTS(float16, LIBC_NAMESPACE::isnanf16)
+LIST_ISNAN_TESTS(Isnanf16, float16, LIBC_NAMESPACE::isnanf16)

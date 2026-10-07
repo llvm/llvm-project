@@ -92,14 +92,16 @@ class CGBuilderTy : public CGBuilderBaseTy {
 
 public:
   CGBuilderTy(const CodeGenModule &CGM, llvm::LLVMContext &C)
-      : CGBuilderBaseTy(C, llvm::TargetFolder(CGM.getDataLayout())),
+      : CGBuilderBaseTy(CGM.getModule(),
+                        llvm::TargetFolder(CGM.getDataLayout())),
         TypeCache(CGM) {}
   CGBuilderTy(const CodeGenModule &CGM, llvm::LLVMContext &C,
               const CGBuilderInserterTy &Inserter)
-      : CGBuilderBaseTy(C, llvm::TargetFolder(CGM.getDataLayout()), Inserter),
+      : CGBuilderBaseTy(CGM.getModule(),
+                        llvm::TargetFolder(CGM.getDataLayout()), Inserter),
         TypeCache(CGM) {}
   CGBuilderTy(const CodeGenModule &CGM, llvm::Instruction *I)
-      : CGBuilderBaseTy(I->getParent(), I->getIterator(),
+      : CGBuilderBaseTy(I->getIterator(),
                         llvm::TargetFolder(CGM.getDataLayout())),
         TypeCache(CGM) {}
   CGBuilderTy(const CodeGenModule &CGM, llvm::BasicBlock *BB)
@@ -468,12 +470,6 @@ public:
   using CGBuilderBaseTy::CreateLaunderInvariantGroup;
   Address CreateLaunderInvariantGroup(Address Addr) {
     Addr.replaceBasePointer(CreateLaunderInvariantGroup(Addr.getBasePointer()));
-    return Addr;
-  }
-
-  using CGBuilderBaseTy::CreateStripInvariantGroup;
-  Address CreateStripInvariantGroup(Address Addr) {
-    Addr.replaceBasePointer(CreateStripInvariantGroup(Addr.getBasePointer()));
     return Addr;
   }
 };
