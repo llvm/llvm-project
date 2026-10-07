@@ -13,6 +13,7 @@
 
 #include "SIInstrInfo.h"
 #include "AMDGPU.h"
+#include "AMDGPUCoExecInfo.h"
 #include "AMDGPUInstrInfo.h"
 #include "AMDGPULaneMaskUtils.h"
 #include "GCNHazardRecognizer.h"
@@ -56,6 +57,34 @@ struct AMDGPUBlockingCyclesInfo {
 
 #include "AMDGPUGenSearchableTables.inc"
 } // namespace llvm::AMDGPU
+
+AMDGPU::WMMAProperties
+SIInstrInfo::getWMMAProperties(const MachineInstr &MI) const {
+  auto GetImmediate =
+      [&](AMDGPU::OpName OperandName) -> std::optional<int64_t> {
+    const MachineOperand *Operand = getNamedOperand(MI, OperandName);
+    if (!Operand || !Operand->isImm())
+      return std::nullopt;
+    return Operand->getImm();
+  };
+
+  return AMDGPU::getWMMAProperties(MI.getOpcode(),
+                                   GetImmediate(AMDGPU::OpName::matrix_a_fmt),
+                                   GetImmediate(AMDGPU::OpName::matrix_b_fmt));
+}
+
+AMDGPU::CoExecInfo llvm::AMDGPU::getCoExecInfo(const MachineInstr &MI,
+                                               const SIInstrInfo &TII) {
+  if (TII.isMFMA(MI.getOpcode()))
+    return getMFMACoExecInfo(MI.getOpcode());
+
+  if (std::optional<CoExecInfo> Info =
+          getKnownCoExecInfo(TII.getWMMAProperties(MI)))
+    return *Info;
+
+  // Use a permissive window for variants without a modeled slot pattern.
+  return CoExecInfo::build(0, 9, "AAAAAAAAA");
+}
 
 // Must be at least 4 to be able to branch over minimum unconditional branch
 // code. This is only for making it possible to write reasonably small tests for

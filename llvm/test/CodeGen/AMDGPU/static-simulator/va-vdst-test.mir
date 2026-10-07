@@ -1,0 +1,88 @@
+# RUN: llc -mtriple=amdgpu12.50 -amdgpu-enable-static-simulator -amdgpu-static-sim-verbose -debug-only=amdgpu-static-simulator -run-pass=amdgpu-static-simulator -filetype=null %s 2>&1 | FileCheck %s
+# REQUIRES: asserts
+
+---
+# s_wait_alu va_vdst(0) waits for all pending VALU writes
+name: simple_va_vdst_wait
+# CHECK-LABEL: simple_va_vdst_wait
+# CHECK: V_ADD_F32_e32
+# CHECK: S_WAITCNT_DEPCTR .VaVdst_0
+# CHECK: VaVdst:{{[1-9]}}
+tracksRegLiveness: true
+body: |
+  bb.0:
+    liveins: $vgpr1, $vgpr2
+    $vgpr0 = V_ADD_F32_e32 $vgpr1, $vgpr2, implicit $mode, implicit $exec
+    S_WAITCNT_DEPCTR 3999  ; va_vdst(0)
+    S_ENDPGM 0
+...
+
+
+---
+# Multiple pending VALUs, partial wait va_vdst(1)
+name: multiple_pending_valu
+# CHECK-LABEL: multiple_pending_valu
+# CHECK: V_ADD_F32_e32
+# CHECK: V_MUL_F32_e32
+# CHECK: V_FMA_F32_e64
+# CHECK: S_WAITCNT_DEPCTR .VaVdst_1
+tracksRegLiveness: true
+body: |
+  bb.0:
+    liveins: $vgpr1, $vgpr2, $vgpr4, $vgpr5, $vgpr7, $vgpr8, $vgpr9
+    $vgpr0 = V_ADD_F32_e32 $vgpr1, $vgpr2, implicit $mode, implicit $exec
+    $vgpr3 = V_MUL_F32_e32 $vgpr4, $vgpr5, implicit $mode, implicit $exec
+    $vgpr6 = V_FMA_F32_e64 0, $vgpr7, 0, $vgpr8, 0, $vgpr9, 0, 0, implicit $mode, implicit $exec
+    S_WAITCNT_DEPCTR 8095  ; va_vdst(1)
+    S_ENDPGM 0
+...
+
+
+---
+# No stall when va_vdst already <= target
+name: no_stall_satisfied
+# CHECK-LABEL: no_stall_satisfied
+# CHECK: V_ADD_F32_e32
+# CHECK: S_WAITCNT_DEPCTR .VaVdst_2
+# CHECK: Stalls: (none)
+tracksRegLiveness: true
+body: |
+  bb.0:
+    liveins: $vgpr1, $vgpr2
+    $vgpr0 = V_ADD_F32_e32 $vgpr1, $vgpr2, implicit $mode, implicit $exec
+    S_WAITCNT_DEPCTR 12191  ; va_vdst(2), 1 <= 2 -> no stall
+    S_ENDPGM 0
+...
+
+
+---
+# TRANS also increments va_vdst
+name: trans_increments_va_vdst
+# CHECK-LABEL: trans_increments_va_vdst
+# CHECK: V_EXP_F32_e32
+# CHECK: S_WAITCNT_DEPCTR .VaVdst_0
+tracksRegLiveness: true
+body: |
+  bb.0:
+    liveins: $vgpr1
+    $vgpr0 = V_EXP_F32_e32 $vgpr1, implicit $mode, implicit $exec
+    S_WAITCNT_DEPCTR 3999  ; va_vdst(0)
+    S_ENDPGM 0
+...
+
+
+---
+# WMMA also increments va_vdst (XDL recorded as TRANS per ISA)
+name: wmma_increments_va_vdst
+# CHECK-LABEL: wmma_increments_va_vdst
+# CHECK: V_WMMA_F32_16X16X32_BF16
+# CHECK: Occupancy: 8 | Window: 9
+# CHECK: S_WAITCNT_DEPCTR .VaVdst_0
+tracksRegLiveness: true
+body: |
+  bb.0:
+    liveins: $vgpr0_vgpr1_vgpr2_vgpr3_vgpr4_vgpr5_vgpr6_vgpr7, $vgpr8_vgpr9_vgpr10_vgpr11_vgpr12_vgpr13_vgpr14_vgpr15, $vgpr16_vgpr17_vgpr18_vgpr19_vgpr20_vgpr21_vgpr22_vgpr23
+    $vgpr16_vgpr17_vgpr18_vgpr19_vgpr20_vgpr21_vgpr22_vgpr23 = V_WMMA_F32_16X16X32_BF16_w32_twoaddr $vgpr0_vgpr1_vgpr2_vgpr3_vgpr4_vgpr5_vgpr6_vgpr7, $vgpr8_vgpr9_vgpr10_vgpr11_vgpr12_vgpr13_vgpr14_vgpr15, 8, $vgpr16_vgpr17_vgpr18_vgpr19_vgpr20_vgpr21_vgpr22_vgpr23, 0, 0, 0, 0, implicit $exec
+    S_WAITCNT_DEPCTR 3999  ; va_vdst(0) - waits for WMMA
+    S_ENDPGM 0
+...

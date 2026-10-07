@@ -1,0 +1,127 @@
+# RUN: llc -mtriple=amdgpu12.50 -amdgpu-enable-static-simulator -run-pass=amdgpu-static-simulator -filetype=null %s 2>&1 | FileCheck %s
+
+---
+name: blocks_output
+# CHECK-LABEL: blocks_output
+# CHECK: ; === Derived Metrics ===
+# CHECK-NEXT: ;   Compute IPC: 0.67 | Stall ratio: 16.7%
+# CHECK-NEXT: ;
+# CHECK-NEXT: ; ============================================================
+# CHECK-NEXT: ;
+# CHECK-NEXT: ; === Block Metrics (layout order) ===
+# CHECK-NEXT: ;   bb.0: 4 cycles
+# CHECK-NEXT: ;     VALU: 0 | SALU: 0 | TRANS: 2 | WMMA: 0
+# CHECK-NEXT: ;     DS_RD: 0 | DS_WR: 0 | VMEM: 0 | SMEM: 0 | TDM: 0
+# CHECK-NEXT: ;     Branch: 1 | Barrier: 0 | Waitcnt: 0 | NOP: 0
+# CHECK-NEXT: ;     delay_alu: 0 | MSB_set: 0 (exposed: 0, masked: 0)
+# CHECK-NEXT: ;     Stall: 1 cycles (25%)
+# CHECK-NEXT: ;       FU:1
+# CHECK-NEXT: ;   bb.1: 2 cycles
+# CHECK-NEXT: ;     VALU: 1 | SALU: 1 | TRANS: 0 | WMMA: 0
+# CHECK-NEXT: ;     DS_RD: 0 | DS_WR: 0 | VMEM: 0 | SMEM: 0 | TDM: 0
+# CHECK-NEXT: ;     Branch: 0 | Barrier: 0 | Waitcnt: 0 | NOP: 0
+# CHECK-NEXT: ;     delay_alu: 0 | MSB_set: 0 (exposed: 0, masked: 0)
+tracksRegLiveness: true
+body: |
+  bb.0:
+    liveins: $vgpr0, $vgpr1
+
+    $vgpr10 = V_EXP_F32_e32 $vgpr0, implicit $exec, implicit $mode
+    $vgpr11 = V_EXP_F32_e32 $vgpr1, implicit $exec, implicit $mode
+    S_BRANCH %bb.1
+
+  bb.1:
+    liveins: $vgpr10, $vgpr11
+
+    $vgpr12 = V_MOV_B32_e32 42, implicit $exec
+    S_ENDPGM 0, implicit $vgpr10, implicit $vgpr11, implicit $vgpr12
+...
+
+---
+name: complex_wmma_diamond
+# CHECK-LABEL: ; complex_wmma_diamond - STATIC PERFORMANCE ESTIMATE (gfx1250)
+# CHECK: ; === Raw Metrics (single layout-order traversal) ===
+# CHECK-NEXT: ;   Instructions: 22
+# CHECK-NEXT: ;   Bytes:        100
+# CHECK-NEXT: ;   Cycles:       32
+# CHECK-NEXT: ;   Stall:        10
+# CHECK-NEXT: ;   FU:3 | WMMACoExec:7(VALU:3+TRANS:4)
+# CHECK-NEXT: ;   Waitcnts:     0
+# CHECK-NEXT: ;   WMMA occupancy cycles: 24 | Co-executed: 11 (46%) | Blocked: 4
+# CHECK-NEXT: ;   I-slots: 1 used by VALU/TRANS | 5 used by other instructions
+# CHECK: ; === Instruction Breakdown ===
+# CHECK-NEXT: ;   VALU: 4 | SALU: 9 | TRANS: 2 | WMMA: 3
+# CHECK-NEXT: ;   DS_RD: 0 | DS_WR: 0 | VMEM: 0 | SMEM: 0 | TDM: 0
+# CHECK-NEXT: ;   Branch: 4 | Barrier: 0 | Waitcnt: 0 | NOP: 0
+# CHECK-NEXT: ;   delay_alu: 0 | MSB_set: 0 (exposed: 0, masked: 0)
+# CHECK: ; === Derived Metrics ===
+# CHECK-NEXT: ;   Compute IPC: 0.56 | Stall ratio: 31.2%
+# CHECK-NEXT: ;
+# CHECK-NEXT: ; ============================================================
+# CHECK-NEXT: ;
+# CHECK-NEXT: ; === Block Metrics (layout order) ===
+# CHECK-NEXT: ;   bb.0: 5 cycles
+# CHECK-NEXT: ;     VALU: 1 | SALU: 1 | TRANS: 0 | WMMA: 1
+# CHECK-NEXT: ;     DS_RD: 0 | DS_WR: 0 | VMEM: 0 | SMEM: 0 | TDM: 0
+# CHECK-NEXT: ;     Branch: 2 | Barrier: 0 | Waitcnt: 0 | NOP: 0
+# CHECK-NEXT: ;     delay_alu: 0 | MSB_set: 0 (exposed: 0, masked: 0)
+# CHECK-NEXT: ;   bb.1: 14 cycles
+# CHECK-NEXT: ;     VALU: 1 | SALU: 7 | TRANS: 0 | WMMA: 1
+# CHECK-NEXT: ;     DS_RD: 0 | DS_WR: 0 | VMEM: 0 | SMEM: 0 | TDM: 0
+# CHECK-NEXT: ;     Branch: 1 | Barrier: 0 | Waitcnt: 0 | NOP: 0
+# CHECK-NEXT: ;     delay_alu: 0 | MSB_set: 0 (exposed: 0, masked: 0)
+# CHECK-NEXT: ;     Stall: 4 cycles (29%)
+# CHECK-NEXT: ;       FU:3 | WMMACoExec:1(VALU:1)
+# CHECK-NEXT: ;   bb.2: 11 cycles
+# CHECK-NEXT: ;     VALU: 1 | SALU: 0 | TRANS: 2 | WMMA: 1
+# CHECK-NEXT: ;     DS_RD: 0 | DS_WR: 0 | VMEM: 0 | SMEM: 0 | TDM: 0
+# CHECK-NEXT: ;     Branch: 1 | Barrier: 0 | Waitcnt: 0 | NOP: 0
+# CHECK-NEXT: ;     delay_alu: 0 | MSB_set: 0 (exposed: 0, masked: 0)
+# CHECK-NEXT: ;     Stall: 6 cycles (55%)
+# CHECK-NEXT: ;       WMMACoExec:6(VALU:2+TRANS:4)
+# CHECK-NEXT: ;   bb.3: 2 cycles
+# CHECK-NEXT: ;     VALU: 1 | SALU: 1 | TRANS: 0 | WMMA: 0
+# CHECK-NEXT: ;     DS_RD: 0 | DS_WR: 0 | VMEM: 0 | SMEM: 0 | TDM: 0
+# CHECK-NEXT: ;     Branch: 0 | Barrier: 0 | Waitcnt: 0 | NOP: 0
+# CHECK-NEXT: ;     delay_alu: 0 | MSB_set: 0 (exposed: 0, masked: 0)
+tracksRegLiveness: true
+body: |
+  bb.0:
+    liveins: $sgpr0, $sgpr1, $vgpr0_vgpr1_vgpr2_vgpr3_vgpr4_vgpr5_vgpr6_vgpr7, $vgpr8_vgpr9_vgpr10_vgpr11_vgpr12_vgpr13_vgpr14_vgpr15, $vgpr16_vgpr17_vgpr18_vgpr19_vgpr20_vgpr21_vgpr22_vgpr23
+    successors: %bb.1(0x40000000), %bb.2(0x40000000)
+
+    $vgpr16_vgpr17_vgpr18_vgpr19_vgpr20_vgpr21_vgpr22_vgpr23 = V_WMMA_F32_16X16X32_BF16_w32_twoaddr $vgpr0_vgpr1_vgpr2_vgpr3_vgpr4_vgpr5_vgpr6_vgpr7, $vgpr8_vgpr9_vgpr10_vgpr11_vgpr12_vgpr13_vgpr14_vgpr15, 8, $vgpr16_vgpr17_vgpr18_vgpr19_vgpr20_vgpr21_vgpr22_vgpr23, 0, 0, 0, 0, implicit $exec
+    $sgpr2 = S_AND_B32 $sgpr0, $sgpr1, implicit-def $scc
+    $vgpr24 = V_MOV_B32_e32 40, implicit $exec
+    S_CBRANCH_SCC1 %bb.1, implicit $scc
+    S_BRANCH %bb.2
+
+  bb.1:
+    liveins: $vgpr0_vgpr1_vgpr2_vgpr3_vgpr4_vgpr5_vgpr6_vgpr7, $vgpr8_vgpr9_vgpr10_vgpr11_vgpr12_vgpr13_vgpr14_vgpr15, $vgpr16_vgpr17_vgpr18_vgpr19_vgpr20_vgpr21_vgpr22_vgpr23
+    successors: %bb.3(0x80000000)
+
+    $vgpr16_vgpr17_vgpr18_vgpr19_vgpr20_vgpr21_vgpr22_vgpr23 = V_WMMA_F32_16X16X32_BF16_w32_twoaddr $vgpr0_vgpr1_vgpr2_vgpr3_vgpr4_vgpr5_vgpr6_vgpr7, $vgpr8_vgpr9_vgpr10_vgpr11_vgpr12_vgpr13_vgpr14_vgpr15, 8, $vgpr16_vgpr17_vgpr18_vgpr19_vgpr20_vgpr21_vgpr22_vgpr23, 0, 0, 0, 0, implicit $exec
+    $sgpr20 = S_MOV_B32 0
+    $sgpr21 = S_MOV_B32 1
+    $sgpr22 = S_MOV_B32 2
+    $sgpr23 = S_MOV_B32 3
+    $sgpr24 = S_MOV_B32 4
+    $sgpr25 = S_MOV_B32 5
+    $sgpr26 = S_MOV_B32 6
+    $vgpr25 = V_MOV_B32_e32 41, implicit $exec
+    S_BRANCH %bb.3
+
+  bb.2:
+    liveins: $vgpr0_vgpr1_vgpr2_vgpr3_vgpr4_vgpr5_vgpr6_vgpr7, $vgpr8_vgpr9_vgpr10_vgpr11_vgpr12_vgpr13_vgpr14_vgpr15, $vgpr16_vgpr17_vgpr18_vgpr19_vgpr20_vgpr21_vgpr22_vgpr23, $vgpr30, $vgpr31
+    successors: %bb.3(0x80000000)
+
+    $vgpr16_vgpr17_vgpr18_vgpr19_vgpr20_vgpr21_vgpr22_vgpr23 = V_WMMA_F32_16X16X32_BF16_w32_twoaddr $vgpr0_vgpr1_vgpr2_vgpr3_vgpr4_vgpr5_vgpr6_vgpr7, $vgpr8_vgpr9_vgpr10_vgpr11_vgpr12_vgpr13_vgpr14_vgpr15, 8, $vgpr16_vgpr17_vgpr18_vgpr19_vgpr20_vgpr21_vgpr22_vgpr23, 0, 0, 0, 0, implicit $exec
+    $vgpr26 = V_EXP_F32_e32 $vgpr30, implicit $exec, implicit $mode
+    $vgpr27 = V_EXP_F32_e32 $vgpr31, implicit $exec, implicit $mode
+    $vgpr28 = V_MOV_B32_e32 42, implicit $exec
+    S_BRANCH %bb.3
+
+  bb.3:
+    $vgpr29 = V_MOV_B32_e32 43, implicit $exec
+    S_ENDPGM 0, implicit $vgpr29
+...

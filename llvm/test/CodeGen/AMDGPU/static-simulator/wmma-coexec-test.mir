@@ -1,0 +1,384 @@
+# RUN: llc -mtriple=amdgpu12.50 -amdgpu-enable-static-simulator -amdgpu-static-sim-verbose -debug-only=amdgpu-static-simulator -run-pass=amdgpu-static-simulator -filetype=null %s 2>&1 | FileCheck %s
+# REQUIRES: asserts
+
+# ============================================================================
+# WMMA Co-execution Tests
+# ============================================================================
+# BF16 16x16x32 pattern: 0EIIEEIIV (9 cycles, occupancy 8)
+# E0: CTRL | E: CTRL/SALU/MEM | I: CTRL/SALU/MEM/VALU/TRANS
+# V: CTRL/SALU/MEM/WMMA
+# F8F6F4 wider inputs: 0EEIEEIIVV, or 0EEIEEISVV when scaled (occupancy 8)
+# Two FP4 inputs: 0EEIVV, or 0EESVV when scaled (occupancy 4)
+# ============================================================================
+
+---
+# MSB_SET fused free, SALU in E-slot, VALU in I-slots - no stalls
+name: wmma_basic_coexec
+# CHECK-LABEL: wmma_basic_coexec
+# CHECK: End BB#0: 7 insts, 5 cycles, 0 stalls
+tracksRegLiveness: true
+body: |
+  bb.0:
+    liveins: $vgpr0_vgpr1_vgpr2_vgpr3_vgpr4_vgpr5_vgpr6_vgpr7, $vgpr8_vgpr9_vgpr10_vgpr11_vgpr12_vgpr13_vgpr14_vgpr15, $vgpr16_vgpr17_vgpr18_vgpr19_vgpr20_vgpr21_vgpr22_vgpr23
+    $vgpr16_vgpr17_vgpr18_vgpr19_vgpr20_vgpr21_vgpr22_vgpr23 = V_WMMA_F32_16X16X32_BF16_w32_twoaddr $vgpr0_vgpr1_vgpr2_vgpr3_vgpr4_vgpr5_vgpr6_vgpr7, $vgpr8_vgpr9_vgpr10_vgpr11_vgpr12_vgpr13_vgpr14_vgpr15, 8, $vgpr16_vgpr17_vgpr18_vgpr19_vgpr20_vgpr21_vgpr22_vgpr23, 0, 0, 0, 0, implicit $exec
+    S_SET_VGPR_MSB 4, implicit-def $mode
+    $sgpr0 = S_MOV_B32 100
+    $vgpr24 = V_MOV_B32_e32 40, implicit $exec
+    S_SET_VGPR_MSB 2, implicit-def $mode
+    $vgpr25 = V_MOV_B32_e32 41, implicit $exec
+    S_ENDPGM 0, implicit $vgpr16, implicit $vgpr24, implicit $vgpr25, implicit $sgpr0
+...
+
+---
+# Memory ops co-execute in E/I slots
+name: wmma_with_memory_coexec
+# CHECK-LABEL: wmma_with_memory_coexec
+# CHECK: End BB#0: 4 insts, 4 cycles, 0 stalls
+tracksRegLiveness: true
+body: |
+  bb.0:
+    liveins: $vgpr0_vgpr1_vgpr2_vgpr3_vgpr4_vgpr5_vgpr6_vgpr7, $vgpr8_vgpr9_vgpr10_vgpr11_vgpr12_vgpr13_vgpr14_vgpr15, $vgpr16_vgpr17_vgpr18_vgpr19_vgpr20_vgpr21_vgpr22_vgpr23, $vgpr24
+    $vgpr16_vgpr17_vgpr18_vgpr19_vgpr20_vgpr21_vgpr22_vgpr23 = V_WMMA_F32_16X16X32_BF16_w32_twoaddr $vgpr0_vgpr1_vgpr2_vgpr3_vgpr4_vgpr5_vgpr6_vgpr7, $vgpr8_vgpr9_vgpr10_vgpr11_vgpr12_vgpr13_vgpr14_vgpr15, 8, $vgpr16_vgpr17_vgpr18_vgpr19_vgpr20_vgpr21_vgpr22_vgpr23, 0, 0, 0, 0, implicit $exec
+    $vgpr28_vgpr29_vgpr30_vgpr31 = DS_READ_B128_gfx9 $vgpr24, 0, 0, implicit $exec
+    $vgpr32_vgpr33_vgpr34_vgpr35 = DS_READ_B128_gfx9 $vgpr24, 16, 0, implicit $exec
+    S_ENDPGM 0, implicit $vgpr16, implicit $vgpr28, implicit $vgpr32
+...
+
+---
+# Verify that DS_READ stalls in E0 of a scaled WMMA with two F4 inputs.
+name: wmma_scale_e0_blocks_ds_then_ssrc
+# CHECK-LABEL: wmma_scale_e0_blocks_ds_then_ssrc
+# CHECK: Class: WMMA | Unit: XDL | Occupancy: 4 | Window: 6
+# CHECK: End BB#0: 6 insts, 7 cycles, 1 stalls
+tracksRegLiveness: true
+body: |
+  bb.0:
+    liveins: $vgpr50_vgpr51_vgpr52_vgpr53_vgpr54_vgpr55_vgpr56_vgpr57_vgpr58_vgpr59_vgpr60_vgpr61_vgpr62_vgpr63_vgpr64_vgpr65, $vgpr114_vgpr115_vgpr116_vgpr117_vgpr118_vgpr119_vgpr120_vgpr121_vgpr122_vgpr123_vgpr124_vgpr125_vgpr126_vgpr127_vgpr128_vgpr129, $vgpr154_vgpr155_vgpr156_vgpr157_vgpr158_vgpr159_vgpr160_vgpr161, $sgpr86, $sgpr87, $vgpr200
+    early-clobber $vgpr154_vgpr155_vgpr156_vgpr157_vgpr158_vgpr159_vgpr160_vgpr161 = V_WMMA_SCALE_F32_16X16X128_F8F6F4_f8_f8_w32_threeaddr $vgpr114_vgpr115_vgpr116_vgpr117_vgpr118_vgpr119_vgpr120_vgpr121_vgpr122_vgpr123_vgpr124_vgpr125_vgpr126_vgpr127_vgpr128_vgpr129, $vgpr50_vgpr51_vgpr52_vgpr53_vgpr54_vgpr55_vgpr56_vgpr57_vgpr58_vgpr59_vgpr60_vgpr61_vgpr62_vgpr63_vgpr64_vgpr65, 8, 0, $sgpr87, $sgpr86, 4, 4, 0, 0, 0, 0, 0, 0, 0, 0, implicit $exec
+    $vgpr28_vgpr29_vgpr30_vgpr31 = DS_READ_B128_gfx9 $vgpr200, 0, 0, implicit $exec
+    $vgpr32_vgpr33_vgpr34_vgpr35 = DS_READ_B128_gfx9 $vgpr200, 16, 0, implicit $exec
+    $vgpr36_vgpr37_vgpr38_vgpr39 = DS_READ_B128_gfx9 $vgpr200, 32, 0, implicit $exec
+    $vgpr40_vgpr41_vgpr42_vgpr43 = DS_READ_B128_gfx9 $vgpr200, 48, 0, implicit $exec
+    S_ENDPGM 0, implicit $vgpr154, implicit $vgpr28, implicit $vgpr32, implicit $vgpr36, implicit $vgpr40
+...
+
+---
+# 7 SALUs fill slots 1-7, VALU lands in V-slot (8) - stall=1
+name: valu_blocked_in_v_stage
+# CHECK-LABEL: valu_blocked_in_v_stage
+# CHECK: End BB#0: 10 insts, 11 cycles, 1 stalls
+# CHECK: WMMACoExec:1(VALU:1)
+tracksRegLiveness: true
+body: |
+  bb.0:
+    liveins: $vgpr0_vgpr1_vgpr2_vgpr3_vgpr4_vgpr5_vgpr6_vgpr7, $vgpr8_vgpr9_vgpr10_vgpr11_vgpr12_vgpr13_vgpr14_vgpr15, $vgpr16_vgpr17_vgpr18_vgpr19_vgpr20_vgpr21_vgpr22_vgpr23
+    $vgpr16_vgpr17_vgpr18_vgpr19_vgpr20_vgpr21_vgpr22_vgpr23 = V_WMMA_F32_16X16X32_BF16_w32_twoaddr $vgpr0_vgpr1_vgpr2_vgpr3_vgpr4_vgpr5_vgpr6_vgpr7, $vgpr8_vgpr9_vgpr10_vgpr11_vgpr12_vgpr13_vgpr14_vgpr15, 8, $vgpr16_vgpr17_vgpr18_vgpr19_vgpr20_vgpr21_vgpr22_vgpr23, 0, 0, 0, 0, implicit $exec
+    $sgpr0 = S_MOV_B32 0
+    $sgpr1 = S_MOV_B32 1
+    $sgpr2 = S_MOV_B32 2
+    $sgpr3 = S_MOV_B32 3
+    $sgpr4 = S_MOV_B32 4
+    $sgpr5 = S_MOV_B32 5
+    $sgpr6 = S_MOV_B32 6
+    $vgpr24 = V_MOV_B32_e32 40, implicit $exec
+    S_ENDPGM 0, implicit $vgpr16, implicit $vgpr24, implicit $sgpr0, implicit $sgpr1, implicit $sgpr2, implicit $sgpr3, implicit $sgpr4, implicit $sgpr5, implicit $sgpr6
+...
+
+---
+# 5 SALUs, then V_EXP in I-slot OK; 2nd V_EXP waits FU+V-slot - stall=2
+name: trans_fu_lands_in_v_stage
+# CHECK-LABEL: trans_fu_lands_in_v_stage
+# CHECK: End BB#0: 9 insts, 11 cycles, 2 stalls
+# CHECK: WMMACoExec:2(TRANS:2)
+tracksRegLiveness: true
+body: |
+  bb.0:
+    liveins: $vgpr0_vgpr1_vgpr2_vgpr3_vgpr4_vgpr5_vgpr6_vgpr7, $vgpr8_vgpr9_vgpr10_vgpr11_vgpr12_vgpr13_vgpr14_vgpr15, $vgpr16_vgpr17_vgpr18_vgpr19_vgpr20_vgpr21_vgpr22_vgpr23
+    $vgpr16_vgpr17_vgpr18_vgpr19_vgpr20_vgpr21_vgpr22_vgpr23 = V_WMMA_F32_16X16X32_BF16_w32_twoaddr $vgpr0_vgpr1_vgpr2_vgpr3_vgpr4_vgpr5_vgpr6_vgpr7, $vgpr8_vgpr9_vgpr10_vgpr11_vgpr12_vgpr13_vgpr14_vgpr15, 8, $vgpr16_vgpr17_vgpr18_vgpr19_vgpr20_vgpr21_vgpr22_vgpr23, 0, 0, 0, 0, implicit $exec
+    $sgpr0 = S_MOV_B32 0
+    $sgpr1 = S_MOV_B32 1
+    $sgpr2 = S_MOV_B32 2
+    $sgpr3 = S_MOV_B32 3
+    $sgpr4 = S_MOV_B32 4
+    $vgpr24 = V_EXP_F32_e32 $vgpr0, implicit $exec, implicit $mode, implicit $sgpr0, implicit $sgpr1, implicit $sgpr2, implicit $sgpr3, implicit $sgpr4
+    $vgpr25 = V_EXP_F32_e32 $vgpr1, implicit $exec, implicit $mode
+    S_ENDPGM 0, implicit $vgpr16, implicit $vgpr24, implicit $vgpr25, implicit $sgpr0, implicit $sgpr1, implicit $sgpr2, implicit $sgpr3, implicit $sgpr4
+...
+
+---
+# Back-to-back WMMA: VALU blocked in E-slots - 4 stalls
+name: wmma_back_to_back
+# CHECK-LABEL: wmma_back_to_back
+# CHECK: End BB#0: 9 insts, 13 cycles, 4 stalls
+# CHECK: WMMACoExec:4(VALU:4)
+tracksRegLiveness: true
+body: |
+  bb.0:
+    liveins: $vgpr0_vgpr1_vgpr2_vgpr3_vgpr4_vgpr5_vgpr6_vgpr7, $vgpr8_vgpr9_vgpr10_vgpr11_vgpr12_vgpr13_vgpr14_vgpr15, $vgpr16_vgpr17_vgpr18_vgpr19_vgpr20_vgpr21_vgpr22_vgpr23, $vgpr24_vgpr25_vgpr26_vgpr27_vgpr28_vgpr29_vgpr30_vgpr31
+    $vgpr16_vgpr17_vgpr18_vgpr19_vgpr20_vgpr21_vgpr22_vgpr23 = V_WMMA_F32_16X16X32_BF16_w32_twoaddr $vgpr0_vgpr1_vgpr2_vgpr3_vgpr4_vgpr5_vgpr6_vgpr7, $vgpr8_vgpr9_vgpr10_vgpr11_vgpr12_vgpr13_vgpr14_vgpr15, 8, $vgpr16_vgpr17_vgpr18_vgpr19_vgpr20_vgpr21_vgpr22_vgpr23, 0, 0, 0, 0, implicit $exec
+    $vgpr32 = V_MOV_B32_e32 40, implicit $exec
+    $vgpr33 = V_MOV_B32_e32 41, implicit $exec
+    $vgpr34 = V_MOV_B32_e32 42, implicit $exec
+    $vgpr35 = V_MOV_B32_e32 43, implicit $exec
+    $vgpr24_vgpr25_vgpr26_vgpr27_vgpr28_vgpr29_vgpr30_vgpr31 = V_WMMA_F32_16X16X32_BF16_w32_twoaddr $vgpr0_vgpr1_vgpr2_vgpr3_vgpr4_vgpr5_vgpr6_vgpr7, $vgpr8_vgpr9_vgpr10_vgpr11_vgpr12_vgpr13_vgpr14_vgpr15, 8, $vgpr24_vgpr25_vgpr26_vgpr27_vgpr28_vgpr29_vgpr30_vgpr31, 0, 0, 0, 0, implicit $exec
+    $vgpr36 = V_MOV_B32_e32 44, implicit $exec
+    $vgpr37 = V_MOV_B32_e32 45, implicit $exec
+    S_ENDPGM 0, implicit $vgpr16, implicit $vgpr24, implicit $vgpr32, implicit $vgpr33, implicit $vgpr34, implicit $vgpr35, implicit $vgpr36, implicit $vgpr37
+...
+
+---
+# WMMA_SCALE at V-slot (cycle 8): scale read blocked (V-slot), waits to cycle 9, WMMA at 10
+name: wmma_scale_in_vslot_back_to_back
+# CHECK-LABEL: wmma_scale_in_vslot_back_to_back
+# CHECK: Stalls: VALUSlot=1
+# CHECK: End BB#0: 8 insts, 19 cycles, 11 stalls
+tracksRegLiveness: true
+body: |
+  bb.0:
+    liveins: $vgpr0_vgpr1_vgpr2_vgpr3_vgpr4_vgpr5_vgpr6_vgpr7, $vgpr8_vgpr9_vgpr10_vgpr11_vgpr12_vgpr13_vgpr14_vgpr15, $vgpr16_vgpr17_vgpr18_vgpr19_vgpr20_vgpr21_vgpr22_vgpr23, $vgpr50_vgpr51_vgpr52_vgpr53_vgpr54_vgpr55_vgpr56_vgpr57_vgpr58_vgpr59_vgpr60_vgpr61_vgpr62_vgpr63_vgpr64_vgpr65, $vgpr114_vgpr115_vgpr116_vgpr117_vgpr118_vgpr119_vgpr120_vgpr121_vgpr122_vgpr123_vgpr124_vgpr125_vgpr126_vgpr127_vgpr128_vgpr129, $vgpr154_vgpr155_vgpr156_vgpr157_vgpr158_vgpr159_vgpr160_vgpr161, $sgpr86, $sgpr87
+    ; WMMA#1 at cycle 0, window 0-9
+    $vgpr16_vgpr17_vgpr18_vgpr19_vgpr20_vgpr21_vgpr22_vgpr23 = V_WMMA_F32_16X16X32_BF16_w32_twoaddr $vgpr0_vgpr1_vgpr2_vgpr3_vgpr4_vgpr5_vgpr6_vgpr7, $vgpr8_vgpr9_vgpr10_vgpr11_vgpr12_vgpr13_vgpr14_vgpr15, 8, $vgpr16_vgpr17_vgpr18_vgpr19_vgpr20_vgpr21_vgpr22_vgpr23, 0, 0, 0, 0, implicit $exec
+    $vgpr32 = V_MOV_B32_e32 40, implicit $exec
+    $vgpr33 = V_MOV_B32_e32 41, implicit $exec
+    $vgpr34 = V_MOV_B32_e32 42, implicit $exec
+    $vgpr35 = V_MOV_B32_e32 43, implicit $exec
+    early-clobber $vgpr154_vgpr155_vgpr156_vgpr157_vgpr158_vgpr159_vgpr160_vgpr161 = V_WMMA_SCALE_F32_16X16X128_F8F6F4_f8_f8_w32_threeaddr $vgpr114_vgpr115_vgpr116_vgpr117_vgpr118_vgpr119_vgpr120_vgpr121_vgpr122_vgpr123_vgpr124_vgpr125_vgpr126_vgpr127_vgpr128_vgpr129, $vgpr50_vgpr51_vgpr52_vgpr53_vgpr54_vgpr55_vgpr56_vgpr57_vgpr58_vgpr59_vgpr60_vgpr61_vgpr62_vgpr63_vgpr64_vgpr65, 8, 0, $sgpr87, $sgpr86, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, implicit $exec
+    $vgpr36 = V_MOV_B32_e32 44, implicit $exec
+    S_ENDPGM 0, implicit $vgpr16, implicit $vgpr32, implicit $vgpr33, implicit $vgpr34, implicit $vgpr35, implicit $vgpr36, implicit $vgpr154
+...
+
+---
+# MSB_SET after DS_READ can't fuse (exposed), VALU blocked in E-slot
+name: msb_set_exposed_after_mem_op
+# CHECK-LABEL: msb_set_exposed_after_mem_op
+# CHECK: End BB#0: 6 insts, 8 cycles, 4 stalls
+tracksRegLiveness: true
+body: |
+  bb.0:
+    liveins: $vgpr0_vgpr1_vgpr2_vgpr3_vgpr4_vgpr5_vgpr6_vgpr7, $vgpr8_vgpr9_vgpr10_vgpr11_vgpr12_vgpr13_vgpr14_vgpr15, $vgpr16_vgpr17_vgpr18_vgpr19_vgpr20_vgpr21_vgpr22_vgpr23, $vgpr24
+    $vgpr16_vgpr17_vgpr18_vgpr19_vgpr20_vgpr21_vgpr22_vgpr23 = V_WMMA_F32_16X16X32_BF16_w32_twoaddr $vgpr0_vgpr1_vgpr2_vgpr3_vgpr4_vgpr5_vgpr6_vgpr7, $vgpr8_vgpr9_vgpr10_vgpr11_vgpr12_vgpr13_vgpr14_vgpr15, 8, $vgpr16_vgpr17_vgpr18_vgpr19_vgpr20_vgpr21_vgpr22_vgpr23, 0, 0, 0, 0, implicit $exec
+    $vgpr28_vgpr29_vgpr30_vgpr31 = DS_READ_B128_gfx9 $vgpr24, 0, 0, implicit $exec
+    S_SET_VGPR_MSB 776, implicit-def $mode
+    $sgpr0 = S_MOV_B32 100
+    $vgpr25 = V_MOV_B32_e32 50, implicit $exec
+    S_ENDPGM 0, implicit $vgpr16, implicit $vgpr28, implicit $vgpr25, implicit $sgpr0
+...
+
+---
+# VALU in V-slot blocked (1 stall), then WMMA_SCALE with SSRC stall
+name: valu_blocked_then_wmma_scale_ssrc
+# CHECK-LABEL: valu_blocked_then_wmma_scale_ssrc
+# CHECK: End BB#0: 11 insts, 20 cycles, 9 stalls
+tracksRegLiveness: true
+body: |
+  bb.0:
+    liveins: $vgpr0_vgpr1_vgpr2_vgpr3_vgpr4_vgpr5_vgpr6_vgpr7, $vgpr8_vgpr9_vgpr10_vgpr11_vgpr12_vgpr13_vgpr14_vgpr15, $vgpr16_vgpr17_vgpr18_vgpr19_vgpr20_vgpr21_vgpr22_vgpr23, $vgpr50_vgpr51_vgpr52_vgpr53_vgpr54_vgpr55_vgpr56_vgpr57_vgpr58_vgpr59_vgpr60_vgpr61_vgpr62_vgpr63_vgpr64_vgpr65, $vgpr114_vgpr115_vgpr116_vgpr117_vgpr118_vgpr119_vgpr120_vgpr121_vgpr122_vgpr123_vgpr124_vgpr125_vgpr126_vgpr127_vgpr128_vgpr129, $vgpr154_vgpr155_vgpr156_vgpr157_vgpr158_vgpr159_vgpr160_vgpr161, $sgpr86, $sgpr87
+    $vgpr16_vgpr17_vgpr18_vgpr19_vgpr20_vgpr21_vgpr22_vgpr23 = V_WMMA_F32_16X16X32_BF16_w32_twoaddr $vgpr0_vgpr1_vgpr2_vgpr3_vgpr4_vgpr5_vgpr6_vgpr7, $vgpr8_vgpr9_vgpr10_vgpr11_vgpr12_vgpr13_vgpr14_vgpr15, 8, $vgpr16_vgpr17_vgpr18_vgpr19_vgpr20_vgpr21_vgpr22_vgpr23, 0, 0, 0, 0, implicit $exec
+    $sgpr0 = S_MOV_B32 1
+    $sgpr1 = S_MOV_B32 2
+    $sgpr2 = S_MOV_B32 3
+    $sgpr3 = S_MOV_B32 4
+    $sgpr4 = S_MOV_B32 5
+    $sgpr5 = S_MOV_B32 6
+    $sgpr6 = S_MOV_B32 7
+    $vgpr24 = V_MOV_B32_e32 100, implicit $exec
+    early-clobber $vgpr154_vgpr155_vgpr156_vgpr157_vgpr158_vgpr159_vgpr160_vgpr161 = V_WMMA_SCALE_F32_16X16X128_F8F6F4_f8_f8_w32_threeaddr $vgpr114_vgpr115_vgpr116_vgpr117_vgpr118_vgpr119_vgpr120_vgpr121_vgpr122_vgpr123_vgpr124_vgpr125_vgpr126_vgpr127_vgpr128_vgpr129, $vgpr50_vgpr51_vgpr52_vgpr53_vgpr54_vgpr55_vgpr56_vgpr57_vgpr58_vgpr59_vgpr60_vgpr61_vgpr62_vgpr63_vgpr64_vgpr65, 8, 0, $sgpr87, $sgpr86, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, implicit $exec
+    S_ENDPGM 0, implicit $vgpr16, implicit $vgpr24, implicit $vgpr154
+...
+
+---
+# SALU allowed in V-slot, WMMA_SCALE issues, SSRC stalls S_ENDPGM
+name: salu_in_vslot_then_wmma_scale_ssrc
+# CHECK-LABEL: salu_in_vslot_then_wmma_scale_ssrc
+# CHECK: End BB#0: 11 insts, 19 cycles, 8 stalls
+tracksRegLiveness: true
+body: |
+  bb.0:
+    liveins: $vgpr0_vgpr1_vgpr2_vgpr3_vgpr4_vgpr5_vgpr6_vgpr7, $vgpr8_vgpr9_vgpr10_vgpr11_vgpr12_vgpr13_vgpr14_vgpr15, $vgpr16_vgpr17_vgpr18_vgpr19_vgpr20_vgpr21_vgpr22_vgpr23, $vgpr50_vgpr51_vgpr52_vgpr53_vgpr54_vgpr55_vgpr56_vgpr57_vgpr58_vgpr59_vgpr60_vgpr61_vgpr62_vgpr63_vgpr64_vgpr65, $vgpr114_vgpr115_vgpr116_vgpr117_vgpr118_vgpr119_vgpr120_vgpr121_vgpr122_vgpr123_vgpr124_vgpr125_vgpr126_vgpr127_vgpr128_vgpr129, $vgpr154_vgpr155_vgpr156_vgpr157_vgpr158_vgpr159_vgpr160_vgpr161, $sgpr86, $sgpr87
+    $vgpr16_vgpr17_vgpr18_vgpr19_vgpr20_vgpr21_vgpr22_vgpr23 = V_WMMA_F32_16X16X32_BF16_w32_twoaddr $vgpr0_vgpr1_vgpr2_vgpr3_vgpr4_vgpr5_vgpr6_vgpr7, $vgpr8_vgpr9_vgpr10_vgpr11_vgpr12_vgpr13_vgpr14_vgpr15, 8, $vgpr16_vgpr17_vgpr18_vgpr19_vgpr20_vgpr21_vgpr22_vgpr23, 0, 0, 0, 0, implicit $exec
+    $sgpr0 = S_MOV_B32 1
+    $sgpr1 = S_MOV_B32 2
+    $sgpr2 = S_MOV_B32 3
+    $sgpr3 = S_MOV_B32 4
+    $sgpr4 = S_MOV_B32 5
+    $sgpr5 = S_MOV_B32 6
+    $sgpr6 = S_MOV_B32 7
+    $sgpr7 = S_MOV_B32 8
+    early-clobber $vgpr154_vgpr155_vgpr156_vgpr157_vgpr158_vgpr159_vgpr160_vgpr161 = V_WMMA_SCALE_F32_16X16X128_F8F6F4_f8_f8_w32_threeaddr $vgpr114_vgpr115_vgpr116_vgpr117_vgpr118_vgpr119_vgpr120_vgpr121_vgpr122_vgpr123_vgpr124_vgpr125_vgpr126_vgpr127_vgpr128_vgpr129, $vgpr50_vgpr51_vgpr52_vgpr53_vgpr54_vgpr55_vgpr56_vgpr57_vgpr58_vgpr59_vgpr60_vgpr61_vgpr62_vgpr63_vgpr64_vgpr65, 8, 0, $sgpr87, $sgpr86, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, implicit $exec
+    S_ENDPGM 0, implicit $vgpr16, implicit $vgpr154
+...
+
+---
+# V_EXP at I-slot (cycle 7), back-to-back non-scaled WMMA at V-slot (cycle 8), no stall
+name: trans_rule_exp_then_wmma
+# CHECK-LABEL: trans_rule_exp_then_wmma
+# CHECK: End BB#0: 10 insts, 10 cycles, 0 stalls
+tracksRegLiveness: true
+body: |
+  bb.0:
+    liveins: $vgpr0_vgpr1_vgpr2_vgpr3_vgpr4_vgpr5_vgpr6_vgpr7, $vgpr8_vgpr9_vgpr10_vgpr11_vgpr12_vgpr13_vgpr14_vgpr15, $vgpr16_vgpr17_vgpr18_vgpr19_vgpr20_vgpr21_vgpr22_vgpr23, $vgpr50_vgpr51_vgpr52_vgpr53_vgpr54_vgpr55_vgpr56_vgpr57_vgpr58_vgpr59_vgpr60_vgpr61_vgpr62_vgpr63_vgpr64_vgpr65, $vgpr114_vgpr115_vgpr116_vgpr117_vgpr118_vgpr119_vgpr120_vgpr121_vgpr122_vgpr123_vgpr124_vgpr125_vgpr126_vgpr127_vgpr128_vgpr129, $vgpr154_vgpr155_vgpr156_vgpr157_vgpr158_vgpr159_vgpr160_vgpr161, $sgpr86, $sgpr87
+    $vgpr16_vgpr17_vgpr18_vgpr19_vgpr20_vgpr21_vgpr22_vgpr23 = V_WMMA_F32_16X16X32_BF16_w32_twoaddr $vgpr0_vgpr1_vgpr2_vgpr3_vgpr4_vgpr5_vgpr6_vgpr7, $vgpr8_vgpr9_vgpr10_vgpr11_vgpr12_vgpr13_vgpr14_vgpr15, 8, $vgpr16_vgpr17_vgpr18_vgpr19_vgpr20_vgpr21_vgpr22_vgpr23, 0, 0, 0, 0, implicit $exec
+    $sgpr0 = S_MOV_B32 1
+    $sgpr1 = S_MOV_B32 2
+    $sgpr2 = S_MOV_B32 3
+    $sgpr3 = S_MOV_B32 4
+    $sgpr4 = S_MOV_B32 5
+    $sgpr5 = S_MOV_B32 6
+    $vgpr24 = V_EXP_F32_e32 $vgpr0, implicit $exec, implicit $mode
+    $vgpr16_vgpr17_vgpr18_vgpr19_vgpr20_vgpr21_vgpr22_vgpr23 = V_WMMA_F32_16X16X32_BF16_w32_twoaddr $vgpr0_vgpr1_vgpr2_vgpr3_vgpr4_vgpr5_vgpr6_vgpr7, $vgpr8_vgpr9_vgpr10_vgpr11_vgpr12_vgpr13_vgpr14_vgpr15, 8, $vgpr16_vgpr17_vgpr18_vgpr19_vgpr20_vgpr21_vgpr22_vgpr23, 0, 0, 0, 0, implicit $exec
+    S_ENDPGM 0, implicit $vgpr16, implicit $vgpr24
+...
+
+---
+# TRANS/VALU interleaved - TRANS holds VALU, VALU blocked in E-slots
+name: trans_valu_interleaved_stalls
+# CHECK-LABEL: trans_valu_interleaved_stalls
+# CHECK: End BB#0: 7 insts, 11 cycles, 4 stalls
+# CHECK: WMMACoExec:3(VALU:3)
+tracksRegLiveness: true
+body: |
+  bb.0:
+    liveins: $vgpr0_vgpr1_vgpr2_vgpr3_vgpr4_vgpr5_vgpr6_vgpr7, $vgpr8_vgpr9_vgpr10_vgpr11_vgpr12_vgpr13_vgpr14_vgpr15, $vgpr16_vgpr17_vgpr18_vgpr19_vgpr20_vgpr21_vgpr22_vgpr23
+    $vgpr16_vgpr17_vgpr18_vgpr19_vgpr20_vgpr21_vgpr22_vgpr23 = V_WMMA_F32_16X16X32_BF16_w32_twoaddr $vgpr0_vgpr1_vgpr2_vgpr3_vgpr4_vgpr5_vgpr6_vgpr7, $vgpr8_vgpr9_vgpr10_vgpr11_vgpr12_vgpr13_vgpr14_vgpr15, 8, $vgpr16_vgpr17_vgpr18_vgpr19_vgpr20_vgpr21_vgpr22_vgpr23, 0, 0, 0, 0, implicit $exec
+    $sgpr0 = S_MOV_B32 1
+    $vgpr24 = V_EXP_F32_e32 $vgpr0, implicit $exec, implicit $mode
+    $vgpr25 = V_MOV_B32_e32 100, implicit $exec
+    $vgpr26 = V_EXP_F32_e32 $vgpr1, implicit $exec, implicit $mode
+    $vgpr27 = V_MOV_B32_e32 200, implicit $exec
+    S_ENDPGM 0, implicit $vgpr16, implicit $vgpr24, implicit $vgpr25, implicit $vgpr26, implicit $vgpr27
+...
+
+---
+# TRANS at 6, SALU at 7, WMMA at 8: VALU free exactly at 8 - no stall
+name: trans_rule_with_gap_no_stall
+# CHECK-LABEL: trans_rule_with_gap_no_stall
+# CHECK: End BB#0: 10 insts, 10 cycles, 0 stalls
+tracksRegLiveness: true
+body: |
+  bb.0:
+    liveins: $vgpr0_vgpr1_vgpr2_vgpr3_vgpr4_vgpr5_vgpr6_vgpr7, $vgpr8_vgpr9_vgpr10_vgpr11_vgpr12_vgpr13_vgpr14_vgpr15, $vgpr16_vgpr17_vgpr18_vgpr19_vgpr20_vgpr21_vgpr22_vgpr23
+    $vgpr16_vgpr17_vgpr18_vgpr19_vgpr20_vgpr21_vgpr22_vgpr23 = V_WMMA_F32_16X16X32_BF16_w32_twoaddr $vgpr0_vgpr1_vgpr2_vgpr3_vgpr4_vgpr5_vgpr6_vgpr7, $vgpr8_vgpr9_vgpr10_vgpr11_vgpr12_vgpr13_vgpr14_vgpr15, 8, $vgpr16_vgpr17_vgpr18_vgpr19_vgpr20_vgpr21_vgpr22_vgpr23, 0, 0, 0, 0, implicit $exec
+    $sgpr0 = S_MOV_B32 1
+    $sgpr1 = S_MOV_B32 2
+    $sgpr2 = S_MOV_B32 3
+    $sgpr3 = S_MOV_B32 4
+    $sgpr4 = S_MOV_B32 5
+    $vgpr24 = V_EXP_F32_e32 $vgpr0, implicit $exec, implicit $mode
+    $sgpr5 = S_MOV_B32 6
+    $vgpr16_vgpr17_vgpr18_vgpr19_vgpr20_vgpr21_vgpr22_vgpr23 = V_WMMA_F32_16X16X32_BF16_w32_twoaddr $vgpr0_vgpr1_vgpr2_vgpr3_vgpr4_vgpr5_vgpr6_vgpr7, $vgpr8_vgpr9_vgpr10_vgpr11_vgpr12_vgpr13_vgpr14_vgpr15, 8, $vgpr16_vgpr17_vgpr18_vgpr19_vgpr20_vgpr21_vgpr22_vgpr23, 0, 0, 0, 0, implicit $exec
+    S_ENDPGM 0, implicit $vgpr16, implicit $vgpr24
+...
+
+---
+# TRANS holds VALU 2 cycles in WMMA I-slot, subsequent VALU stalls
+name: trans_holds_valu_in_wmma_window
+# CHECK-LABEL: trans_holds_valu_in_wmma_window
+# CHECK: V_EXP_F32_e32
+# CHECK: V_MOV_B32_e32 42
+# CHECK: Stalls:{{.*}}FU={{[1-9]}}
+# CHECK: End BB#0: 5 insts, 8 cycles, 3 stalls
+tracksRegLiveness: true
+body: |
+  bb.0:
+    liveins: $vgpr0_vgpr1_vgpr2_vgpr3_vgpr4_vgpr5_vgpr6_vgpr7, $vgpr8_vgpr9_vgpr10_vgpr11_vgpr12_vgpr13_vgpr14_vgpr15, $vgpr16_vgpr17_vgpr18_vgpr19_vgpr20_vgpr21_vgpr22_vgpr23, $vgpr24
+    $vgpr16_vgpr17_vgpr18_vgpr19_vgpr20_vgpr21_vgpr22_vgpr23 = V_WMMA_F32_16X16X32_BF16_w32_twoaddr $vgpr0_vgpr1_vgpr2_vgpr3_vgpr4_vgpr5_vgpr6_vgpr7, $vgpr8_vgpr9_vgpr10_vgpr11_vgpr12_vgpr13_vgpr14_vgpr15, 8, $vgpr16_vgpr17_vgpr18_vgpr19_vgpr20_vgpr21_vgpr22_vgpr23, 0, 0, 0, 0, implicit $exec
+    $sgpr10 = S_MOV_B32 1
+    $vgpr30 = V_EXP_F32_e32 $vgpr24, implicit $exec, implicit $mode
+    $vgpr31 = V_MOV_B32_e32 42, implicit $exec
+    S_ENDPGM 0, implicit $vgpr31
+...
+
+---
+# TRANS -> TRANS in WMMA window, second stalls for FU
+name: trans_holds_trans_in_wmma_window
+# CHECK-LABEL: trans_holds_trans_in_wmma_window
+# CHECK: V_EXP_F32_e32 $vgpr24
+# CHECK: V_EXP_F32_e32 $vgpr25
+# CHECK: Stalls:{{.*}}FU={{[1-9]}}
+# CHECK: End BB#0: 5 insts, 8 cycles, 3 stalls
+tracksRegLiveness: true
+body: |
+  bb.0:
+    liveins: $vgpr0_vgpr1_vgpr2_vgpr3_vgpr4_vgpr5_vgpr6_vgpr7, $vgpr8_vgpr9_vgpr10_vgpr11_vgpr12_vgpr13_vgpr14_vgpr15, $vgpr16_vgpr17_vgpr18_vgpr19_vgpr20_vgpr21_vgpr22_vgpr23, $vgpr24, $vgpr25
+    $vgpr16_vgpr17_vgpr18_vgpr19_vgpr20_vgpr21_vgpr22_vgpr23 = V_WMMA_F32_16X16X32_BF16_w32_twoaddr $vgpr0_vgpr1_vgpr2_vgpr3_vgpr4_vgpr5_vgpr6_vgpr7, $vgpr8_vgpr9_vgpr10_vgpr11_vgpr12_vgpr13_vgpr14_vgpr15, 8, $vgpr16_vgpr17_vgpr18_vgpr19_vgpr20_vgpr21_vgpr22_vgpr23, 0, 0, 0, 0, implicit $exec
+    $sgpr10 = S_MOV_B32 1
+    $vgpr30 = V_EXP_F32_e32 $vgpr24, implicit $exec, implicit $mode
+    $vgpr31 = V_EXP_F32_e32 $vgpr25, implicit $exec, implicit $mode
+    S_ENDPGM 0, implicit $vgpr31
+...
+
+---
+# Long-lat VALU waits for WMMA window end; TRANS can co-execute
+name: longlatvalu_waits_for_wmma_window
+# CHECK-LABEL: longlatvalu_waits_for_wmma_window
+# CHECK: V_EXP_F32_e32
+# CHECK: WMMACoExecMiss=1
+# CHECK: V_CVT_SCALE_PK8_F16_FP8
+# CHECK: LongLatVALU={{[5-9]}}
+# CHECK: End BB#0: 4 insts, 11 cycles, 7 stalls
+tracksRegLiveness: true
+body: |
+  bb.0:
+    liveins: $vgpr0_vgpr1_vgpr2_vgpr3_vgpr4_vgpr5_vgpr6_vgpr7, $vgpr8_vgpr9_vgpr10_vgpr11_vgpr12_vgpr13_vgpr14_vgpr15, $vgpr16_vgpr17_vgpr18_vgpr19_vgpr20_vgpr21_vgpr22_vgpr23, $vgpr24_vgpr25, $vgpr26, $vgpr27
+    $vgpr16_vgpr17_vgpr18_vgpr19_vgpr20_vgpr21_vgpr22_vgpr23 = V_WMMA_F32_16X16X32_BF16_w32_twoaddr $vgpr0_vgpr1_vgpr2_vgpr3_vgpr4_vgpr5_vgpr6_vgpr7, $vgpr8_vgpr9_vgpr10_vgpr11_vgpr12_vgpr13_vgpr14_vgpr15, 8, $vgpr16_vgpr17_vgpr18_vgpr19_vgpr20_vgpr21_vgpr22_vgpr23, 0, 0, 0, 0, implicit $exec
+    $vgpr30 = V_EXP_F32_e32 $vgpr27, implicit $exec, implicit $mode
+    $vgpr32_vgpr33_vgpr34_vgpr35 = V_CVT_SCALE_PK8_F16_FP8_e64 $vgpr24_vgpr25, $vgpr26, 0, implicit $mode, implicit $exec
+    S_ENDPGM 0, implicit $vgpr35
+...
+
+---
+# The second scaled WMMA reads its scale in the first WMMA's IS slot and
+# starts its matrix operation in the following V slot.
+name: scaled_wmma_absorbs_at_is
+# CHECK-LABEL: scaled_wmma_absorbs_at_is
+# CHECK: ActiveWMMA: cycles 1-11
+# CHECK: Stalls: FU=7, VALUSlot=7
+# CHECK: Advancing cycle: 1 -> 8
+# CHECK: ActiveWMMA: cycles 9-19 [back-to-back]
+# CHECK: End BB#0: 3 insts, 18 cycles, 15 stalls
+tracksRegLiveness: true
+body: |
+  bb.0:
+    liveins: $vgpr50_vgpr51_vgpr52_vgpr53_vgpr54_vgpr55_vgpr56_vgpr57_vgpr58_vgpr59_vgpr60_vgpr61_vgpr62_vgpr63_vgpr64_vgpr65, $vgpr114_vgpr115_vgpr116_vgpr117_vgpr118_vgpr119_vgpr120_vgpr121_vgpr122_vgpr123_vgpr124_vgpr125_vgpr126_vgpr127_vgpr128_vgpr129, $sgpr86, $sgpr87
+    early-clobber $vgpr154_vgpr155_vgpr156_vgpr157_vgpr158_vgpr159_vgpr160_vgpr161 = V_WMMA_SCALE_F32_16X16X128_F8F6F4_f8_f8_w32_threeaddr $vgpr114_vgpr115_vgpr116_vgpr117_vgpr118_vgpr119_vgpr120_vgpr121_vgpr122_vgpr123_vgpr124_vgpr125_vgpr126_vgpr127_vgpr128_vgpr129, $vgpr50_vgpr51_vgpr52_vgpr53_vgpr54_vgpr55_vgpr56_vgpr57_vgpr58_vgpr59_vgpr60_vgpr61_vgpr62_vgpr63_vgpr64_vgpr65, 8, 0, $sgpr87, $sgpr86, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, implicit $exec
+    early-clobber $vgpr162_vgpr163_vgpr164_vgpr165_vgpr166_vgpr167_vgpr168_vgpr169 = V_WMMA_SCALE_F32_16X16X128_F8F6F4_f8_f8_w32_threeaddr $vgpr114_vgpr115_vgpr116_vgpr117_vgpr118_vgpr119_vgpr120_vgpr121_vgpr122_vgpr123_vgpr124_vgpr125_vgpr126_vgpr127_vgpr128_vgpr129, $vgpr50_vgpr51_vgpr52_vgpr53_vgpr54_vgpr55_vgpr56_vgpr57_vgpr58_vgpr59_vgpr60_vgpr61_vgpr62_vgpr63_vgpr64_vgpr65, 8, 0, $sgpr87, $sgpr86, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, implicit $exec
+    S_ENDPGM 0, implicit $vgpr154, implicit $vgpr162
+...
+
+---
+# The second unscaled WMMA waits for XDL and starts in the first window's
+# trailing V stage.
+name: unscaled_wmma_waits_for_xdl
+# CHECK-LABEL: unscaled_wmma_waits_for_xdl
+# CHECK: ActiveWMMA: cycles 0-9
+# CHECK: Stalls: FU=7
+# CHECK: Advancing cycle: 1 -> 8
+# CHECK: ActiveWMMA: cycles 8-17 [back-to-back]
+# CHECK: End BB#0: 3 insts, 10 cycles, 7 stalls
+tracksRegLiveness: true
+body: |
+  bb.0:
+    liveins: $vgpr0_vgpr1_vgpr2_vgpr3_vgpr4_vgpr5_vgpr6_vgpr7, $vgpr8_vgpr9_vgpr10_vgpr11_vgpr12_vgpr13_vgpr14_vgpr15, $vgpr16_vgpr17_vgpr18_vgpr19_vgpr20_vgpr21_vgpr22_vgpr23, $vgpr24_vgpr25_vgpr26_vgpr27_vgpr28_vgpr29_vgpr30_vgpr31
+    $vgpr16_vgpr17_vgpr18_vgpr19_vgpr20_vgpr21_vgpr22_vgpr23 = V_WMMA_F32_16X16X32_BF16_w32_twoaddr $vgpr0_vgpr1_vgpr2_vgpr3_vgpr4_vgpr5_vgpr6_vgpr7, $vgpr8_vgpr9_vgpr10_vgpr11_vgpr12_vgpr13_vgpr14_vgpr15, 8, $vgpr16_vgpr17_vgpr18_vgpr19_vgpr20_vgpr21_vgpr22_vgpr23, 0, 0, 0, 0, implicit $exec
+    $vgpr24_vgpr25_vgpr26_vgpr27_vgpr28_vgpr29_vgpr30_vgpr31 = V_WMMA_F32_16X16X32_BF16_w32_twoaddr $vgpr0_vgpr1_vgpr2_vgpr3_vgpr4_vgpr5_vgpr6_vgpr7, $vgpr8_vgpr9_vgpr10_vgpr11_vgpr12_vgpr13_vgpr14_vgpr15, 8, $vgpr24_vgpr25_vgpr26_vgpr27_vgpr28_vgpr29_vgpr30_vgpr31, 0, 0, 0, 0, implicit $exec
+    S_ENDPGM 0, implicit $vgpr16, implicit $vgpr24
+...
+
+---
+# A scaled WMMA reads its scale in the trailing I stage of an unscaled WMMA
+# and starts its matrix operation in the following V stage.
+name: scaled_wmma_absorbs_after_unscaled
+# CHECK-LABEL: scaled_wmma_absorbs_after_unscaled
+# CHECK: ActiveWMMA: cycles 0-9
+# CHECK: Stalls: FU=6, VALUSlot=6
+# CHECK: Advancing cycle: 1 -> 7
+# CHECK: ActiveWMMA: cycles 8-18 [back-to-back]
+# CHECK: End BB#0: 3 insts, 17 cycles, 14 stalls
+tracksRegLiveness: true
+body: |
+  bb.0:
+    liveins: $vgpr0_vgpr1_vgpr2_vgpr3_vgpr4_vgpr5_vgpr6_vgpr7, $vgpr8_vgpr9_vgpr10_vgpr11_vgpr12_vgpr13_vgpr14_vgpr15, $vgpr16_vgpr17_vgpr18_vgpr19_vgpr20_vgpr21_vgpr22_vgpr23, $vgpr50_vgpr51_vgpr52_vgpr53_vgpr54_vgpr55_vgpr56_vgpr57_vgpr58_vgpr59_vgpr60_vgpr61_vgpr62_vgpr63_vgpr64_vgpr65, $vgpr114_vgpr115_vgpr116_vgpr117_vgpr118_vgpr119_vgpr120_vgpr121_vgpr122_vgpr123_vgpr124_vgpr125_vgpr126_vgpr127_vgpr128_vgpr129, $sgpr86, $sgpr87
+    $vgpr16_vgpr17_vgpr18_vgpr19_vgpr20_vgpr21_vgpr22_vgpr23 = V_WMMA_F32_16X16X32_BF16_w32_twoaddr $vgpr0_vgpr1_vgpr2_vgpr3_vgpr4_vgpr5_vgpr6_vgpr7, $vgpr8_vgpr9_vgpr10_vgpr11_vgpr12_vgpr13_vgpr14_vgpr15, 8, $vgpr16_vgpr17_vgpr18_vgpr19_vgpr20_vgpr21_vgpr22_vgpr23, 0, 0, 0, 0, implicit $exec
+    early-clobber $vgpr154_vgpr155_vgpr156_vgpr157_vgpr158_vgpr159_vgpr160_vgpr161 = V_WMMA_SCALE_F32_16X16X128_F8F6F4_f8_f8_w32_threeaddr $vgpr114_vgpr115_vgpr116_vgpr117_vgpr118_vgpr119_vgpr120_vgpr121_vgpr122_vgpr123_vgpr124_vgpr125_vgpr126_vgpr127_vgpr128_vgpr129, $vgpr50_vgpr51_vgpr52_vgpr53_vgpr54_vgpr55_vgpr56_vgpr57_vgpr58_vgpr59_vgpr60_vgpr61_vgpr62_vgpr63_vgpr64_vgpr65, 8, 0, $sgpr87, $sgpr86, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, implicit $exec
+    S_ENDPGM 0, implicit $vgpr16, implicit $vgpr154
+...
