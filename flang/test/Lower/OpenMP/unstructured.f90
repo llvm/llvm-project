@@ -61,12 +61,12 @@ end
 
 ! CHECK-LABEL: func @_QPss3{{.*}} {
 ! CHECK:   omp.parallel private(@_QFss3Ei_private_i32 {{.*}} @_QFss3Ek_private_i32 {{.*}} -> %[[K_PRIV:[^ ]*]] {{.*}}) {
-! CHECK:      %[[K_DECL:.*]]:2 = hlfir.declare %[[K_PRIV]] {uniq_name = "_QFss3Ek"} : (!fir.ref<i32>) -> (!fir.ref<i32>, !fir.ref<i32>)
+! CHECK:     %[[K_DECL:.*]]:2 = hlfir.declare %[[K_PRIV]] uniq_name("_QFss3Ek") : (!fir.ref<i32>) -> (!fir.ref<i32>, !fir.ref<i32>)
 
 ! CHECK:     fir.do_loop
 ! CHECK:       omp.wsloop private(@_QFss3Ek_private_i32 %{{.*}}#0 -> %[[OMP_LOOP_K_PRIV:.*]] : !fir.ref<i32>) {
 ! CHECK:         omp.loop_nest (%[[ARG1:.*]]) : {{.*}} {
-! CHECK:           %[[OMP_LOOP_K_DECL:.*]]:2 = hlfir.declare %[[OMP_LOOP_K_PRIV]] {uniq_name = "_QFss3Ek"} : (!fir.ref<i32>) -> (!fir.ref<i32>, !fir.ref<i32>)
+! CHECK:           %[[OMP_LOOP_K_DECL:.*]]:2 = hlfir.declare %[[OMP_LOOP_K_PRIV]] uniq_name("_QFss3Ek") : (!fir.ref<i32>) -> (!fir.ref<i32>, !fir.ref<i32>)
 ! CHECK:           hlfir.assign %[[ARG1]] to %[[OMP_LOOP_K_DECL]]#0 : i32, !fir.ref<i32>
 ! CHECK:           @_FortranAioBeginExternalListOutput
 ! CHECK:           %[[LOAD_1:.*]] = fir.load %[[OMP_LOOP_K_DECL]]#0 : !fir.ref<i32>
@@ -77,7 +77,7 @@ end
 
 ! CHECK:       omp.wsloop private(@_QFss3Ej_private_i32 %{{.*}}#0 -> %[[J_PRIV:.*]] : !fir.ref<i32>) {
 ! CHECK:         omp.loop_nest (%[[ARG2:.*]]) : {{.*}} {
-! CHECK:           %[[OMP_LOOP_J_DECL:.*]]:2 = hlfir.declare %[[J_PRIV]] {uniq_name = "_QFss3Ej"} : (!fir.ref<i32>) -> (!fir.ref<i32>, !fir.ref<i32>)
+! CHECK:           %[[OMP_LOOP_J_DECL:.*]]:2 = hlfir.declare %[[J_PRIV]] uniq_name("_QFss3Ej") : (!fir.ref<i32>) -> (!fir.ref<i32>, !fir.ref<i32>)
 ! CHECK:           hlfir.assign %[[ARG2]] to %[[OMP_LOOP_J_DECL]]#0 : i32, !fir.ref<i32>
 ! CHECK:           scf.execute_region no_inline {
 ! CHECK:             cf.br ^bb1
@@ -128,7 +128,7 @@ end
 ! CHECK:       omp.parallel private(@{{.*}} %{{.*}}#0 -> %{{.*}} : {{.*}}) {
 ! CHECK:         omp.wsloop private(@{{.*}} %{{.*}}#0 -> %[[ALLOCA:.*]] : !fir.ref<i32>) {
 ! CHECK-NEXT:      omp.loop_nest (%[[ARG:.*]]) : {{.*}} {
-! CHECK:             %[[OMP_LOOP_J_DECL:.*]]:2 = hlfir.declare %[[ALLOCA]] {uniq_name = "_QFss4Ej"} : (!fir.ref<i32>) -> (!fir.ref<i32>, !fir.ref<i32>)
+! CHECK:             %[[OMP_LOOP_J_DECL:.*]]:2 = hlfir.declare %[[ALLOCA]] uniq_name("_QFss4Ej") : (!fir.ref<i32>) -> (!fir.ref<i32>, !fir.ref<i32>)
 ! CHECK:             hlfir.assign %[[ARG]] to %[[OMP_LOOP_J_DECL]]#0 : i32, !fir.ref<i32>
 ! CHECK:             %[[COND:.*]] = arith.cmpi eq, %{{.*}}, %{{.*}}
 ! CHECK:             %[[COND_XOR:.*]] = arith.xori %[[COND]], %{{.*}}

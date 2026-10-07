@@ -206,14 +206,14 @@ static bool addBoundsChecking(Function &F, TargetLibraryInfo &TLI,
   ObjectSizeOpts EvalOpts;
   EvalOpts.RoundToAlign = true;
   EvalOpts.EvalMode = ObjectSizeOpts::Mode::ExactUnderlyingSizeAndOffset;
-  ObjectSizeOffsetEvaluator ObjSizeEval(DL, &TLI, F.getContext(), EvalOpts);
+  ObjectSizeOffsetEvaluator ObjSizeEval(*F.getParent(), &TLI, EvalOpts);
 
   // check HANDLE_MEMORY_INST in include/llvm/Instruction.def for memory
   // touching instructions
   SmallVector<std::pair<Instruction *, Value *>, 4> TrapInfo;
   for (Instruction &I : instructions(F)) {
     Value *Or = nullptr;
-    BuilderTy IRB(I.getParent(), BasicBlock::iterator(&I), TargetFolder(DL));
+    BuilderTy IRB(I.getIterator(), TargetFolder(DL));
     if (LoadInst *LI = dyn_cast<LoadInst>(&I)) {
       if (!LI->isVolatile())
         Or = getBoundsCheckCond(LI->getPointerOperand(), LI, DL, TLI,
@@ -294,7 +294,7 @@ static bool addBoundsChecking(Function &F, TargetLibraryInfo &TLI,
 
   for (const auto &Entry : TrapInfo) {
     Instruction *Inst = Entry.first;
-    BuilderTy IRB(Inst->getParent(), BasicBlock::iterator(Inst), TargetFolder(DL));
+    BuilderTy IRB(Inst->getIterator(), TargetFolder(DL));
     insertBoundsCheck(Entry.second, IRB, GetTrapBB);
   }
 

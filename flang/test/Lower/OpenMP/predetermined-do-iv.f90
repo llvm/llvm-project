@@ -3,13 +3,13 @@
 ! RUN: %flang_fc1 -emit-hlfir -fopenmp %s -o - | FileCheck %s
 
 ! CHECK-LABEL: func @_QPparallel_do()
-! CHECK:         %[[I3_HOST:.*]]:2 = hlfir.declare %{{.*}} {uniq_name = "_QFparallel_doEi3"}
+! CHECK:         %[[I3_HOST:.*]]:2 = hlfir.declare %{{.*}} uniq_name("_QFparallel_doEi3")
 ! CHECK:         omp.parallel private({{.*}}Ei3_private_i32 %[[I3_HOST]]#0 -> %[[I3_PRIV:[^ ]+]] : !fir.ref<i32>) {
 ! CHECK-NOT:       fir.alloca {{.*}}bindc_name = "i3"
-! CHECK:           %[[I3_PRIV_DECL:.*]]:2 = hlfir.declare %[[I3_PRIV]] {uniq_name = "_QFparallel_doEi3"}
+! CHECK:           %[[I3_PRIV_DECL:.*]]:2 = hlfir.declare %[[I3_PRIV]] uniq_name("_QFparallel_doEi3")
 ! CHECK:           omp.wsloop private({{.*}}Ei2_private_i32 %{{[^#]+}}#0 -> %[[I2_PRIV:[^ ]+]] : !fir.ref<i32>) {
 ! CHECK:             omp.loop_nest
-! CHECK:               hlfir.declare %[[I2_PRIV]] {uniq_name = "_QFparallel_doEi2"}
+! CHECK:               hlfir.declare %[[I2_PRIV]] uniq_name("_QFparallel_doEi2")
 ! CHECK:               fir.do_loop
 ! CHECK:                 fir.store %{{.*}} to %[[I3_PRIV_DECL]]#0
 ! CHECK:               omp.yield
@@ -32,15 +32,15 @@ subroutine parallel_do()
 end subroutine
 
 ! CHECK-LABEL: func @_QPcollapsed_do()
-! CHECK:         %[[K_HOST:.*]]:2 = hlfir.declare %{{.*}} {uniq_name = "_QFcollapsed_doEk"}
-! CHECK:         %[[L_HOST:.*]]:2 = hlfir.declare %{{.*}} {uniq_name = "_QFcollapsed_doEl"}
+! CHECK:         %[[K_HOST:.*]]:2 = hlfir.declare %{{.*}} uniq_name("_QFcollapsed_doEk")
+! CHECK:         %[[L_HOST:.*]]:2 = hlfir.declare %{{.*}} uniq_name("_QFcollapsed_doEl")
 ! CHECK:         omp.parallel private(
 ! CHECK:             @_QFcollapsed_doEk_private_i32 %[[K_HOST]]#0 -> %[[K_PAR:[a-z0-9]+]]
 ! CHECK:             @_QFcollapsed_doEl_private_i32 %[[L_HOST]]#0 -> %[[L_PAR:[a-z0-9]+]]
 ! CHECK-NOT:       fir.alloca {{.*}}bindc_name = "k"
 ! CHECK-NOT:       fir.alloca {{.*}}bindc_name = "l"
-! CHECK:           %[[K_PAR_DECL:.*]]:2 = hlfir.declare %[[K_PAR]] {uniq_name = "_QFcollapsed_doEk"}
-! CHECK:           %[[L_PAR_DECL:.*]]:2 = hlfir.declare %[[L_PAR]] {uniq_name = "_QFcollapsed_doEl"}
+! CHECK:           %[[K_PAR_DECL:.*]]:2 = hlfir.declare %[[K_PAR]] uniq_name("_QFcollapsed_doEk")
+! CHECK:           %[[L_PAR_DECL:.*]]:2 = hlfir.declare %[[L_PAR]] uniq_name("_QFcollapsed_doEl")
 ! CHECK:           omp.wsloop private(@_QFcollapsed_doEi_private_i32 %{{[^,]+}}, @_QFcollapsed_doEj_private_i32 %{{[^:]+}}
 ! CHECK-SAME:                           : !fir.ref<i32>, !fir.ref<i32>) {
 ! CHECK:             fir.do_loop
@@ -70,10 +70,10 @@ subroutine collapsed_do()
 end subroutine
 
 ! CHECK-LABEL: func @_QPnested_parallel()
-! CHECK:         %[[J_HOST:.*]]:2 = hlfir.declare %{{.*}} {uniq_name = "_QFnested_parallelEj"}
+! CHECK:         %[[J_HOST:.*]]:2 = hlfir.declare %{{.*}} uniq_name("_QFnested_parallelEj")
 ! CHECK:         omp.parallel {
 ! CHECK:           omp.parallel private(@_QFnested_parallelEj_private_i32 %[[J_HOST]]#0 -> %[[J_PAR:[a-z0-9]+]] : !fir.ref<i32>) {
-! CHECK:             %[[J_PAR_DECL:.*]]:2 = hlfir.declare %[[J_PAR]] {uniq_name = "_QFnested_parallelEj"}
+! CHECK:             %[[J_PAR_DECL:.*]]:2 = hlfir.declare %[[J_PAR]] uniq_name("_QFnested_parallelEj")
 ! CHECK:             fir.do_loop
 ! CHECK:               fir.store %{{.*}} to %[[J_PAR_DECL]]#0
 subroutine nested_parallel()
@@ -87,11 +87,11 @@ subroutine nested_parallel()
 end subroutine
 
 ! CHECK-LABEL: func @_QPparallel_task()
-! CHECK:         %[[K_HOST:.*]]:2 = hlfir.declare %{{.*}} {uniq_name = "_QFparallel_taskEk"}
+! CHECK:         %[[K_HOST:.*]]:2 = hlfir.declare %{{.*}} uniq_name("_QFparallel_taskEk")
 ! CHECK:         omp.parallel {
 ! CHECK:           omp.single
 ! CHECK:             omp.task private(@_QFparallel_taskEk_private_i32 %[[K_HOST]]#0 -> %[[K_TASK:[a-z0-9]+]] : !fir.ref<i32>) {
-! CHECK:               %[[K_TASK_DECL:.*]]:2 = hlfir.declare %[[K_TASK]] {uniq_name = "_QFparallel_taskEk"}
+! CHECK:               %[[K_TASK_DECL:.*]]:2 = hlfir.declare %[[K_TASK]] uniq_name("_QFparallel_taskEk")
 ! CHECK:               fir.do_loop
 ! CHECK:                 fir.store %{{.*}} to %[[K_TASK_DECL]]#0
 ! CHECK:               %[[C11:.*]] = arith.constant 11 : i32
@@ -113,9 +113,9 @@ subroutine parallel_task()
 end subroutine
 
 ! CHECK-LABEL: func @_QPparallel_single()
-! CHECK:         %[[J_HOST:.*]]:2 = hlfir.declare %{{.*}} {uniq_name = "_QFparallel_singleEj"}
+! CHECK:         %[[J_HOST:.*]]:2 = hlfir.declare %{{.*}} uniq_name("_QFparallel_singleEj")
 ! CHECK:         omp.parallel private(@_QFparallel_singleEj_private_i32 %[[J_HOST]]#0 -> %[[J_PAR:[a-z0-9]+]] : !fir.ref<i32>) {
-! CHECK:           %[[J_PAR_DECL:.*]]:2 = hlfir.declare %[[J_PAR]] {uniq_name = "_QFparallel_singleEj"}
+! CHECK:           %[[J_PAR_DECL:.*]]:2 = hlfir.declare %[[J_PAR]] uniq_name("_QFparallel_singleEj")
 ! CHECK:           omp.single {
 ! CHECK-NOT:         fir.alloca {{.*}}bindc_name = "j"
 ! CHECK-NOT:         hlfir.declare {{.*}}uniq_name = "_QFparallel_singleEj"
@@ -131,12 +131,10 @@ subroutine parallel_single()
   !$omp end parallel
 end subroutine
 
-! XXX STOPPED HERE
-
 ! CHECK-LABEL: func @_QPblock_local_iv()
 ! CHECK:         omp.parallel {
 ! CHECK:           %[[I_ALLOCA:.*]] = fir.alloca i32 {{.*}}bindc_name = "i"
-! CHECK:           %[[I_DECL:.*]]:2 = hlfir.declare %[[I_ALLOCA]] {uniq_name = "{{.*}}Ei"}
+! CHECK:           %[[I_DECL:.*]]:2 = hlfir.declare %[[I_ALLOCA]] uniq_name("{{.*}}Ei")
 ! CHECK:           fir.do_loop
 ! CHECK:             fir.store %{{.*}} to %[[I_DECL]]#0
 subroutine block_local_iv()
@@ -150,13 +148,13 @@ subroutine block_local_iv()
 end subroutine
 
 ! CHECK-LABEL: func @_QPorphaned_do(
-! CHECK:         %[[I_HOST:.*]]:2 = hlfir.declare %{{.*}} {uniq_name = "_QForphaned_doEi"}
-! CHECK:         %[[J_HOST:.*]]:2 = hlfir.declare %{{.*}} {uniq_name = "_QForphaned_doEj"}
+! CHECK:         %[[I_HOST:.*]]:2 = hlfir.declare %{{.*}} uniq_name("_QForphaned_doEi")
+! CHECK:         %[[J_HOST:.*]]:2 = hlfir.declare %{{.*}} uniq_name("_QForphaned_doEj")
 ! CHECK:         omp.wsloop private(@_QForphaned_doEi_private_i32 %[[I_HOST]]#0 ->
 ! CHECK-SAME:          %[[I_PRIV:[a-z0-9]+]] : !fir.ref<i32>) {
 ! CHECK:         omp.loop_nest (%[[ARG:[a-z0-9]+]])
 ! CHECK-NOT:       hlfir.declare {{.*}}uniq_name = "_QForphaned_doEj"
-! CHECK:           %[[I_PRIV_DECL:.*]]:2 = hlfir.declare %[[I_PRIV]] {uniq_name = "_QForphaned_doEi"
+! CHECK:           %[[I_PRIV_DECL:.*]]:2 = hlfir.declare %[[I_PRIV]] uniq_name("_QForphaned_doEi")
 ! CHECK:           hlfir.assign %[[ARG]] to %[[I_PRIV_DECL]]#0
 ! CHECK:           fir.do_loop
 ! CHECK:             fir.store %{{.*}} to %[[J_HOST]]#0
@@ -171,16 +169,16 @@ subroutine orphaned_do()
 end subroutine
 
 ! CHECK-LABEL: func @_QPparallel_dos()
-! CHECK:         %[[K_HOST:.*]]:2 = hlfir.declare %{{.*}} {uniq_name = "_QFparallel_dosEk"}
+! CHECK:         %[[K_HOST:.*]]:2 = hlfir.declare %{{.*}} uniq_name("_QFparallel_dosEk")
 ! CHECK:         omp.parallel private(@_QFparallel_dosEi_private_i32 {{[^,]+}},
 ! CHECK-SAME:        @_QFparallel_dosEk_private_i32 %[[K_HOST]]#0 -> %[[K_PAR:[^ ]+]]
 ! CHECK-SAME:        : !fir.ref<i32>, !fir.ref<i32>) {
-! CHECK:           %[[K_PAR_DECL:.*]]:2 = hlfir.declare %[[K_PAR]] {uniq_name = "_QFparallel_dosEk"}
+! CHECK:           %[[K_PAR_DECL:.*]]:2 = hlfir.declare %[[K_PAR]] uniq_name("_QFparallel_dosEk")
 ! CHECK:           fir.do_loop
 ! CHECK:             omp.wsloop private(@_QFparallel_dosEk_private_i32 %[[K_PAR_DECL]]#0 ->
 ! CHECK-SAME:            %[[K_WSLOOP:[^ ]+]] : !fir.ref<i32>) {
 ! CHECK:               omp.loop_nest (%[[ARG1:[^)]*]])
-! CHECK:                 %[[K_WSLOOP_DECL:.*]]:2 = hlfir.declare %[[K_WSLOOP]] {uniq_name = "_QFparallel_dosEk"}
+! CHECK:                 %[[K_WSLOOP_DECL:.*]]:2 = hlfir.declare %[[K_WSLOOP]] uniq_name("_QFparallel_dosEk")
 ! CHECK:                 hlfir.assign %[[ARG1]] to %[[K_WSLOOP_DECL]]#0
 ! CHECK:             omp.wsloop private(@_QFparallel_dosEj_private_i32 {{[^,:]*}} : !fir.ref<i32>) {
 ! CHECK-NOT:           fir.alloca {{.*}}bindc_name = "k"

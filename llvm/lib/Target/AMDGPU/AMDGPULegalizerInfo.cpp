@@ -993,14 +993,20 @@ AMDGPULegalizerInfo::AMDGPULegalizerInfo(const GCNSubtarget &ST_,
   }
 
   if (ST.hasBF16PackedInsts()) {
-    FPOpActions.legalFor({V2BF16}).clampMaxNumElementsStrict(0, BF16, 2);
-    FCanonicalizeActions.legalFor({V2BF16}).clampMaxNumElementsStrict(0, BF16,
-                                                                      2);
-    StrictFPOpActions.legalFor({V2BF16}).clampMaxNumElementsStrict(0, BF16, 2);
+    // Promote scalar bf16 operations to v2bf16 (packed) operations
+    FPOpActions.moreElementsIf(typeIs(0, BF16), changeTo(0, V2BF16))
+        .legalFor({V2BF16})
+        .clampMaxNumElementsStrict(0, BF16, 2);
+    FCanonicalizeActions.moreElementsIf(typeIs(0, BF16), changeTo(0, V2BF16))
+        .legalFor({V2BF16})
+        .clampMaxNumElementsStrict(0, BF16, 2);
+    StrictFPOpActions.moreElementsIf(typeIs(0, BF16), changeTo(0, V2BF16))
+        .legalFor({V2BF16})
+        .clampMaxNumElementsStrict(0, BF16, 2);
+  } else {
+    FPOpActions.widenScalarFor({BF16}, changeElementTo(0, F32));
+    FCanonicalizeActions.widenScalarFor({BF16}, changeElementTo(0, F32));
   }
-
-  FPOpActions.widenScalarFor({BF16}, changeElementTo(0, F32));
-  FCanonicalizeActions.widenScalarFor({BF16}, changeElementTo(0, F32));
 
   if (ST.hasAnyPackedFP32Ops()) {
     FPOpActions.legalFor({V2F32});
@@ -1055,14 +1061,12 @@ AMDGPULegalizerInfo::AMDGPULegalizerInfo(const GCNSubtarget &ST_,
 
   // V2BF16
   if (ST.hasBF16PackedInsts()) {
-    MinNumMaxNumIeee.legalFor({V2BF16})
-        .moreElementsIf(all(elementTypeIs(0, BF16), isSmallOddVector(0)),
-                        oneMoreElement(0))
-        .clampMaxNumElements(0, BF16, 2);
-    MinNumMaxNum.customFor({V2BF16})
-        .moreElementsIf(all(elementTypeIs(0, BF16), isSmallOddVector(0)),
-                        oneMoreElement(0))
-        .clampMaxNumElements(0, BF16, 2);
+    MinNumMaxNumIeee.legalFor({V2BF16}).clampMaxNumElementsStrict(0, BF16, 2);
+    MinNumMaxNum.moreElementsIf(typeIs(0, BF16), changeTo(0, V2BF16))
+        .customFor({V2BF16})
+        .clampMaxNumElementsStrict(0, BF16, 2);
+  } else {
+    MinNumMaxNum.widenScalarFor({BF16}, changeElementTo(0, F32));
   }
 
   MinNumMaxNumIeee.scalarize(0);
@@ -1201,7 +1205,11 @@ AMDGPULegalizerInfo::AMDGPULegalizerInfo(const GCNSubtarget &ST_,
   }
 
   if (ST.hasBF16PackedInsts()) {
-    FSubActions.lowerFor({V2BF16}).clampMaxNumElements(0, BF16, 2);
+    FSubActions.moreElementsIf(typeIs(0, BF16), changeTo(0, V2BF16))
+        .lowerFor({V2BF16})
+        .clampMaxNumElementsStrict(0, BF16, 2);
+  } else {
+    FSubActions.widenScalarFor({BF16}, changeElementTo(0, F32));
   }
 
   if (ST.hasAnyPackedFP32Ops())
@@ -1588,6 +1596,10 @@ AMDGPULegalizerInfo::AMDGPULegalizerInfo(const GCNSubtarget &ST_,
                                           AtomicOrdering::NotAtomic))
       return true;
 
+    if (AS == AMDGPUAS::LOCAL_ADDRESS && MemSize == 64 &&
+        !ST.hasUsableDSOffset() && Query.MMODescrs[0].AlignInBits == 32)
+      return true;
+
     // Catch weird sized loads that don't evenly divide into the access sizes
     // TODO: May be able to widen depending on alignment etc.
     unsigned NumRegs = (MemSize + 31) / 32;
@@ -1606,6 +1618,7 @@ AMDGPULegalizerInfo::AMDGPULegalizerInfo(const GCNSubtarget &ST_,
   unsigned GlobalAlign32 = ST.hasUnalignedBufferAccessEnabled() ? 0 : 32;
   unsigned GlobalAlign16 = ST.hasUnalignedBufferAccessEnabled() ? 0 : 16;
   unsigned GlobalAlign8 = ST.hasUnalignedBufferAccessEnabled() ? 0 : 8;
+  unsigned LocalAlign64 = ST.hasUsableDSOffset() ? 32 : 64;
 
   // TODO: Refine based on subtargets which support unaligned access or 128-bit
   // LDS
@@ -1617,32 +1630,32 @@ AMDGPULegalizerInfo::AMDGPULegalizerInfo(const GCNSubtarget &ST_,
     auto &Actions = getActionDefinitionsBuilder(Op);
     // Explicitly list some common cases.
     // TODO: Does this help compile time at all?
-    Actions.legalForTypesWithMemDesc({{S32, GlobalPtr, S32, GlobalAlign32},
-                                      {V2S32, GlobalPtr, V2S32, GlobalAlign32},
-                                      {V4S32, GlobalPtr, V4S32, GlobalAlign32},
-                                      {S64, GlobalPtr, S64, GlobalAlign32},
-                                      {V2S64, GlobalPtr, V2S64, GlobalAlign32},
-                                      {V2S16, GlobalPtr, V2S16, GlobalAlign32},
-                                      {S32, GlobalPtr, S8, GlobalAlign8},
-                                      {S32, GlobalPtr, S16, GlobalAlign16},
+    Actions.legalForTypesWithMemDesc(
+        {{S32, GlobalPtr, S32, GlobalAlign32},
+         {V2S32, GlobalPtr, V2S32, GlobalAlign32},
+         {V4S32, GlobalPtr, V4S32, GlobalAlign32},
+         {S64, GlobalPtr, S64, GlobalAlign32},
+         {V2S64, GlobalPtr, V2S64, GlobalAlign32},
+         {V2S16, GlobalPtr, V2S16, GlobalAlign32},
+         {S32, GlobalPtr, S8, GlobalAlign8},
+         {S32, GlobalPtr, S16, GlobalAlign16},
 
-                                      {S32, LocalPtr, S32, 32},
-                                      {S64, LocalPtr, S64, 32},
-                                      {V2S32, LocalPtr, V2S32, 32},
-                                      {S32, LocalPtr, S8, 8},
-                                      {S32, LocalPtr, S16, 16},
-                                      {V2S16, LocalPtr, S32, 32},
+         {S32, LocalPtr, S32, 32},
+         {S64, LocalPtr, S64, LocalAlign64},
+         {V2S32, LocalPtr, V2S32, LocalAlign64},
+         {S32, LocalPtr, S8, 8},
+         {S32, LocalPtr, S16, 16},
+         {V2S16, LocalPtr, S32, 32},
 
-                                      {S32, PrivatePtr, S32, 32},
-                                      {S32, PrivatePtr, S8, 8},
-                                      {S32, PrivatePtr, S16, 16},
-                                      {V2S16, PrivatePtr, S32, 32},
+         {S32, PrivatePtr, S32, 32},
+         {S32, PrivatePtr, S8, 8},
+         {S32, PrivatePtr, S16, 16},
+         {V2S16, PrivatePtr, S32, 32},
 
-                                      {S32, ConstantPtr, S32, GlobalAlign32},
-                                      {V2S32, ConstantPtr, V2S32, GlobalAlign32},
-                                      {V4S32, ConstantPtr, V4S32, GlobalAlign32},
-                                      {S64, ConstantPtr, S64, GlobalAlign32},
-                                      {V2S32, ConstantPtr, V2S32, GlobalAlign32}});
+         {S32, ConstantPtr, S32, GlobalAlign32},
+         {V2S32, ConstantPtr, V2S32, GlobalAlign32},
+         {V4S32, ConstantPtr, V4S32, GlobalAlign32},
+         {S64, ConstantPtr, S64, GlobalAlign32}});
 
     Actions.legalForTypesWithMemDesc(ST.useRealTrue16Insts(), /* Pred */
                                      {{S16, GlobalPtr, S8, GlobalAlign8},
@@ -1713,16 +1726,16 @@ AMDGPULegalizerInfo::AMDGPULegalizerInfo(const GCNSubtarget &ST_,
 
               // Split extloads.
               if (DstSize > MemSize)
-                return std::pair(0, LLT::scalar(MemSize));
+                return std::pair(0, LLT::integer(MemSize));
 
               unsigned MaxSize = maxSizeForAddrSpace(
                   ST, PtrTy.getAddressSpace(), Op == G_LOAD,
                   Query.MMODescrs[0].Ordering != AtomicOrdering::NotAtomic);
               if (MemSize > MaxSize)
-                return std::pair(0, LLT::scalar(MaxSize));
+                return std::pair(0, LLT::integer(MaxSize));
 
               uint64_t Align = Query.MMODescrs[0].AlignInBits;
-              return std::pair(0, LLT::scalar(Align));
+              return std::pair(0, LLT::integer(Align));
             })
         .fewerElementsIf(
             [=](const LegalityQuery &Query) -> bool {
@@ -2310,9 +2323,9 @@ AMDGPULegalizerInfo::AMDGPULegalizerInfo(const GCNSubtarget &ST_,
 
   getActionDefinitionsBuilder(
       {G_VECREDUCE_SMIN, G_VECREDUCE_SMAX, G_VECREDUCE_UMIN, G_VECREDUCE_UMAX,
-       G_VECREDUCE_ADD, G_VECREDUCE_MUL, G_VECREDUCE_FMUL, G_VECREDUCE_FMIN,
-       G_VECREDUCE_FMAX, G_VECREDUCE_FMINIMUM, G_VECREDUCE_FMAXIMUM,
-       G_VECREDUCE_OR, G_VECREDUCE_AND, G_VECREDUCE_XOR})
+       G_VECREDUCE_ADD, G_VECREDUCE_MUL, G_VECREDUCE_FADD, G_VECREDUCE_FMUL,
+       G_VECREDUCE_FMIN, G_VECREDUCE_FMAX, G_VECREDUCE_FMINIMUM,
+       G_VECREDUCE_FMAXIMUM, G_VECREDUCE_OR, G_VECREDUCE_AND, G_VECREDUCE_XOR})
       .legalFor(AllVectors)
       .scalarize(1)
       .lower();
@@ -6728,11 +6741,14 @@ Register AMDGPULegalizerInfo::fixStoreSourceType(MachineIRBuilder &B,
     Ty = getBitcastRegisterType(Ty);
     VData = B.buildBitcast(Ty, VData).getReg(0);
   }
-  // Fixup illegal register types for i8 stores.
-  if (Ty == LLT::integer(8) || Ty == LLT::integer(16) || Ty == F16) {
-    Register AnyExt = B.buildAnyExt(LLT::integer(32), VData).getReg(0);
-    return AnyExt;
+  if (Ty.isFloat(16)) {
+    Ty = LLT::integer(16);
+    VData = B.buildBitcast(Ty, VData).getReg(0);
   }
+
+  // Fixup illegal register types for i8 stores.
+  if (Ty == LLT::integer(8) || Ty == LLT::integer(16))
+    return B.buildAnyExt(LLT::integer(32), VData).getReg(0);
 
   if (Ty.isVector()) {
     if (Ty.getElementType().getSizeInBits() == 16 && Ty.getNumElements() <= 4) {
@@ -8386,12 +8402,14 @@ bool AMDGPULegalizerInfo::legalizeIntrinsic(LegalizerHelper &Helper,
         B.buildInstr(AMDGPU::SI_IF)
             .addDef(NewDef)
             .addUse(NewUse)
-            .addMBB(UncondBrTarget);
+            .addMBB(UncondBrTarget)
+            .setOperandDead(4); // implicit-def $scc
       } else {
         B.buildInstr(AMDGPU::SI_ELSE)
             .addDef(NewDef)
             .addUse(NewUse)
-            .addMBB(UncondBrTarget);
+            .addMBB(UncondBrTarget)
+            .setOperandDead(4); // implicit-def $scc
       }
 
       if (Br) {
@@ -8434,7 +8452,10 @@ bool AMDGPULegalizerInfo::legalizeIntrinsic(LegalizerHelper &Helper,
 
       B.setInsertPt(B.getMBB(), BrCond->getIterator());
       B.buildCopy(NewReg, Reg);
-      B.buildInstr(AMDGPU::SI_LOOP).addUse(NewReg).addMBB(UncondBrTarget);
+      B.buildInstr(AMDGPU::SI_LOOP)
+          .addUse(NewReg)
+          .addMBB(UncondBrTarget)
+          .setOperandDead(3); // implicit-def $scc
 
       if (Br)
         Br->getOperand(0).setMBB(CondBrTarget);
