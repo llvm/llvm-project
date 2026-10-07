@@ -191,7 +191,7 @@ public:
                               const ProgramPointTag *Tag = nullptr) {
     if ((!State || State == Pred->getState()) && !Tag)
       return Pred;
-    return addTransitionImpl(State ? State : getState(), false, nullptr, Tag);
+    return addTransitionImpl(State, false, nullptr, Tag);
   }
 
   /// Generates a new transition with the given predecessor.
@@ -218,7 +218,7 @@ public:
   /// checkers should use generateErrorNode() instead.
   ExplodedNode *generateSink(ProgramStateRef State, ExplodedNode *Pred,
                              const ProgramPointTag *Tag = nullptr) {
-    return addTransitionImpl(State ? State : getState(), true, Pred, Tag);
+    return addTransitionImpl(State, true, Pred, Tag);
   }
 
   /// Add a sink node to the current path of execution, halting analysis.
@@ -236,7 +236,7 @@ public:
   ///        the default tag for the checker will be used.
   ExplodedNode *generateErrorNode(ProgramStateRef State = nullptr,
                                   const ProgramPointTag *Tag = nullptr) {
-    return addTransitionImpl(State ? State : getState(), true, Pred, Tag);
+    return addTransitionImpl(State, true, Pred, Tag);
   }
 
   /// Generate a transition to a node that will be used to report
@@ -251,7 +251,7 @@ public:
   ExplodedNode *generateErrorNode(ProgramStateRef State,
                                   ExplodedNode *Pred,
                                   const ProgramPointTag *Tag = nullptr) {
-    return addTransitionImpl(State ? State : getState(), true, Pred, Tag);
+    return addTransitionImpl(State, true, Pred, Tag);
   }
 
   /// Generate a transition to a node that will be used to report
@@ -264,7 +264,7 @@ public:
   ExplodedNode *
   generateNonFatalErrorNode(ProgramStateRef State = nullptr,
                             const ProgramPointTag *Tag = nullptr) {
-    return addTransitionImpl(State ? State : getState(), false, nullptr, Tag);
+    return addTransitionImpl(State, false, nullptr, Tag);
   }
 
   /// Generate a transition to a node that will be used to report
@@ -450,6 +450,9 @@ private:
 
     Changed = true;
     const ProgramPoint &LocalLoc = (Tag ? Location.withTag(Tag) : Location);
+
+    if (!State)
+      State = getState();
     if (!P)
       P = Pred;
 
