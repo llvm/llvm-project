@@ -43,37 +43,41 @@ __m256h test_mm256_maskz_cvtx2ps_ph(__mmask16 __U, __m256 __A, __m256 __B) {
 
 __m128i test_mm_cvtbiasph_bf8(__m128i __A, __m128h __B) {
   // CHECK-LABEL: @test_mm_cvtbiasph_bf8(
-  // CHECK: call <16 x i8> @llvm.x86.avx10.mask.vcvtbiasph2bf8128(
+  // CHECK: call <16 x i8> @llvm.x86.avx10.vcvtbiasph2bf8128(
   return _mm_cvtbiasph_bf8(__A, __B);
 }
 
 __m128i test_mm_mask_cvtbiasph_bf8(__m128i __W, __mmask8 __U, __m128i __A, __m128h __B) {
   // CHECK-LABEL: @test_mm_mask_cvtbiasph_bf8(
-  // CHECK: call <16 x i8> @llvm.x86.avx10.mask.vcvtbiasph2bf8128(
+  // CHECK: call <16 x i8> @llvm.x86.avx10.vcvtbiasph2bf8128(
+  // CHECK: call <16 x i8> @llvm.x86.avx512.select.v16i8(
   return _mm_mask_cvtbiasph_bf8(__W, __U, __A, __B);
 }
 
 __m128i test_mm_maskz_cvtbiasph_bf8(__mmask8 __U, __m128i __A, __m128h __B) {
   // CHECK-LABEL: @test_mm_maskz_cvtbiasph_bf8(
-  // CHECK: call <16 x i8> @llvm.x86.avx10.mask.vcvtbiasph2bf8128(
+  // CHECK: call <16 x i8> @llvm.x86.avx10.vcvtbiasph2bf8128(
+  // CHECK: call <16 x i8> @llvm.x86.avx512.select.v16i8(
   return _mm_maskz_cvtbiasph_bf8(__U, __A, __B);
 }
 
 __m128i test_mm256_cvtbiasph_bf8(__m256i __A, __m256h __B) {
   // CHECK-LABEL: @test_mm256_cvtbiasph_bf8(
-  // CHECK: call <16 x i8> @llvm.x86.avx10.mask.vcvtbiasph2bf8256(
+  // CHECK: call <16 x i8> @llvm.x86.avx10.vcvtbiasph2bf8256(
   return _mm256_cvtbiasph_bf8(__A, __B);
 }
 
 __m128i test_mm256_mask_cvtbiasph_bf8(__m128i __W, __mmask16 __U, __m256i __A, __m256h __B) {
   // CHECK-LABEL: @test_mm256_mask_cvtbiasph_bf8(
-  // CHECK: call <16 x i8> @llvm.x86.avx10.mask.vcvtbiasph2bf8256(
+  // CHECK: call <16 x i8> @llvm.x86.avx10.vcvtbiasph2bf8256(
+  // CHECK: call <16 x i8> @llvm.x86.avx512.select.v16i8(
   return _mm256_mask_cvtbiasph_bf8(__W, __U, __A, __B);
 }
 
 __m128i test_mm256_maskz_cvtbiasph_bf8(__mmask16 __U, __m256i __A, __m256h __B) {
   // CHECK-LABEL: @test_mm256_maskz_cvtbiasph_bf8(
-  // CHECK: call <16 x i8> @llvm.x86.avx10.mask.vcvtbiasph2bf8256(
+  // CHECK: call <16 x i8> @llvm.x86.avx10.vcvtbiasph2bf8256(
+  // CHECK: call <16 x i8> @llvm.x86.avx512.select.v16i8(
   return _mm256_maskz_cvtbiasph_bf8(__U, __A, __B);
 }
 
