@@ -241,7 +241,9 @@ AnyValue Library::executePrintf(ArrayRef<AnyValue> Args) {
 
     bool TypeMismatch =
         (StringRef("diuoxXc").contains(Specifier) && !Arg.isInteger()) ||
-        (StringRef("feEgG").contains(Specifier) && !Arg.isFloat()) ||
+        (StringRef("feEgGaA").contains(Specifier) &&
+         !(Arg.isFloat() &&
+           &Arg.asFloat().getSemantics() == &APFloat::IEEEdouble())) ||
         (StringRef("nps").contains(Specifier) && !Arg.isPointer());
 
     if (TypeMismatch) {
