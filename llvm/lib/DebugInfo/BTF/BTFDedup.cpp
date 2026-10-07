@@ -119,6 +119,7 @@ class BTFDedupState {
   bool isEquivEnum64(const BTF::CommonType *Cand, const BTF::CommonType *Canon);
   bool isEquivFuncProto(uint32_t CandId, uint32_t CanonId);
   bool isEquivArray(uint32_t CandId, uint32_t CanonId);
+  bool isEquivDataSec(uint32_t CandId, uint32_t CanonId);
 
   // Reset the hypothetical map.
   void clearHypot() {
@@ -149,7 +150,7 @@ public:
 //===----------------------------------------------------------------------===//
 
 uint64_t BTFDedupState::hashCommon(const BTF::CommonType *T) {
-  return hash_combine(T->getKind(), dedupStrOff(T->NameOff), T->Size);
+  return hash_combine(T->Info, dedupStrOff(T->NameOff), T->Size);
 }
 
 uint64_t BTFDedupState::hashStruct(const BTF::CommonType *T) {
@@ -232,9 +233,9 @@ uint64_t BTFDedupState::hashType(uint32_t Id) {
 
 bool BTFDedupState::isEquivCommon(const BTF::CommonType *Cand,
                                   const BTF::CommonType *Canon) {
-  return Cand->getKind() == Canon->getKind() &&
+  return Cand->Info == Canon->Info &&
          dedupStrOff(Cand->NameOff) == dedupStrOff(Canon->NameOff) &&
-         Cand->Size == Canon->Size && Cand->getVlen() == Canon->getVlen();
+         Cand->Size == Canon->Size;
 }
 
 bool BTFDedupState::isEquivEnum(const BTF::CommonType *Cand,
@@ -340,6 +341,25 @@ bool BTFDedupState::isEquivArray(uint32_t CandId, uint32_t CanonId) {
          isEquiv(CandArr->IndexType, CanonArr->IndexType);
 }
 
+bool BTFDedupState::isEquivDataSec(uint32_t CandId, uint32_t CanonId) {
+  const BTF::CommonType *Cand = Builder.findType(CandId);
+  const BTF::CommonType *Canon = Builder.findType(CanonId);
+  if (!Cand || !Canon || !isEquivCommon(Cand, Canon))
+    return false;
+
+  auto *CandVars = reinterpret_cast<const BTF::BTFDataSec *>(
+      reinterpret_cast<const uint8_t *>(Cand) + sizeof(BTF::CommonType));
+  auto *CanonVars = reinterpret_cast<const BTF::BTFDataSec *>(
+      reinterpret_cast<const uint8_t *>(Canon) + sizeof(BTF::CommonType));
+  for (unsigned I = 0, N = Cand->getVlen(); I < N; ++I) {
+    if (CandVars[I].Offset != CanonVars[I].Offset ||
+        CandVars[I].Size != CanonVars[I].Size ||
+        !isEquiv(CandVars[I].Type, CanonVars[I].Type))
+      return false;
+  }
+  return true;
+}
+
 bool BTFDedupState::isEquiv(uint32_t CandId, uint32_t CanonId) {
   CandId = resolve(CandId);
   CanonId = resolve(CanonId);
@@ -363,11 +383,15 @@ bool BTFDedupState::isEquiv(uint32_t CandId, uint32_t CanonId) {
   if (!Cand || !Canon)
     return false;
 
-  if (Cand->getKind() != Canon->getKind())
+  if (Cand->Info != Canon->Info)
     return false;
 
   switch (Cand->getKind()) {
   case BTF::BTF_KIND_INT:
+    return isEquivCommon(Cand, Canon) &&
+           Builder.getTypeBytes(CandId).drop_front(sizeof(BTF::CommonType)) ==
+               Builder.getTypeBytes(CanonId).drop_front(
+                   sizeof(BTF::CommonType));
   case BTF::BTF_KIND_FLOAT:
   case BTF::BTF_KIND_FWD:
     return isEquivCommon(Cand, Canon);
@@ -406,12 +430,15 @@ bool BTFDedupState::isEquiv(uint32_t CandId, uint32_t CanonId) {
   case BTF::BTF_KIND_VAR:
     if (dedupStrOff(Cand->NameOff) != dedupStrOff(Canon->NameOff))
       return false;
+    if (Builder.getTypeBytes(CandId).drop_front(sizeof(BTF::CommonType)) !=
+        Builder.getTypeBytes(CanonId).drop_front(sizeof(BTF::CommonType)))
+      return false;
     if (Cand->Type != 0 && Canon->Type != 0)
       return isEquiv(Cand->Type, Canon->Type);
     return Cand->Type == Canon->Type;
 
   case BTF::BTF_KIND_DATASEC:
-    return isEquivCommon(Cand, Canon);
+    return isEquivDataSec(CandId, CanonId);
 
   case BTF::BTF_KIND_DECL_TAG:
     if (dedupStrOff(Cand->NameOff) != dedupStrOff(Canon->NameOff))

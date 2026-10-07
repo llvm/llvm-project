@@ -121,6 +121,124 @@ TEST(BTFDedupTest, differentInts) {
   EXPECT_EQ(B.typesCount(), 2u);
 }
 
+TEST(BTFDedupTest, differentIntEncoding) {
+  BTFBuilder B;
+  uint32_t Name = B.addString("int");
+  B.addType({Name, mkInfo(BTF::BTF_KIND_INT), {4}});
+  B.addTail(uint32_t(32));
+  B.addType({Name, mkInfo(BTF::BTF_KIND_INT), {4}});
+  B.addTail(uint32_t(BTF::INT_SIGNED) << 24 | 32);
+
+  ASSERT_SUCCEEDED(BTF::dedup(B));
+  EXPECT_EQ(B.typesCount(), 2u);
+}
+
+TEST(BTFDedupTest, differentFwdKinds) {
+  BTFBuilder B;
+  uint32_t Name = B.addString("tag");
+  B.addType({Name, mkInfo(BTF::BTF_KIND_FWD), {0}});
+  B.addType({Name, mkInfo(BTF::BTF_KIND_FWD) | BTF::FWD_UNION_FLAG, {0}});
+
+  ASSERT_SUCCEEDED(BTF::dedup(B));
+  ASSERT_EQ(B.typesCount(), 2u);
+  EXPECT_EQ(B.findType(1)->Info & BTF::FWD_UNION_FLAG, 0u);
+  EXPECT_EQ(B.findType(2)->Info & BTF::FWD_UNION_FLAG, BTF::FWD_UNION_FLAG);
+}
+
+TEST(BTFDedupTest, differentEnumSignedness) {
+  for (uint32_t Kind : {BTF::BTF_KIND_ENUM, BTF::BTF_KIND_ENUM64}) {
+    SCOPED_TRACE(Kind);
+    BTFBuilder B;
+    uint32_t Name = B.addString("tag");
+    uint32_t Value = B.addString("ZERO");
+    for (uint32_t Flag : {0u, BTF::ENUM_SIGNED_FLAG}) {
+      B.addType({Name,
+                 mkInfo(Kind) | Flag | 1,
+                 {Kind == BTF::BTF_KIND_ENUM ? 4u : 8u}});
+      if (Kind == BTF::BTF_KIND_ENUM)
+        B.addTail(BTF::BTFEnum({Value, 0}));
+      else
+        B.addTail(BTF::BTFEnum64({Value, 0, 0}));
+    }
+
+    ASSERT_SUCCEEDED(BTF::dedup(B));
+    ASSERT_EQ(B.typesCount(), 2u);
+    EXPECT_EQ(B.findType(1)->Info & BTF::ENUM_SIGNED_FLAG, 0u);
+    EXPECT_EQ(B.findType(2)->Info & BTF::ENUM_SIGNED_FLAG,
+              BTF::ENUM_SIGNED_FLAG);
+  }
+}
+
+TEST(BTFDedupTest, differentVarLinkage) {
+  BTFBuilder B;
+  uint32_t Type =
+      B.addType({B.addString("float"), mkInfo(BTF::BTF_KIND_FLOAT), {4}});
+  uint32_t Name = B.addString("value");
+  B.addType({Name, mkInfo(BTF::BTF_KIND_VAR), {Type}});
+  B.addTail(uint32_t(BTF::VAR_STATIC));
+  B.addType({Name, mkInfo(BTF::BTF_KIND_VAR), {Type}});
+  B.addTail(uint32_t(BTF::VAR_GLOBAL_ALLOCATED));
+
+  ASSERT_SUCCEEDED(BTF::dedup(B));
+  EXPECT_EQ(B.typesCount(), 3u);
+}
+
+TEST(BTFDedupTest, differentFuncLinkage) {
+  BTFBuilder B;
+  uint32_t Proto = B.addType({0, mkInfo(BTF::BTF_KIND_FUNC_PROTO), {0}});
+  uint32_t Name = B.addString("function");
+  B.addType({Name, mkInfo(BTF::BTF_KIND_FUNC) | BTF::FUNC_STATIC, {Proto}});
+  B.addType({Name, mkInfo(BTF::BTF_KIND_FUNC) | BTF::FUNC_GLOBAL, {Proto}});
+
+  ASSERT_SUCCEEDED(BTF::dedup(B));
+  EXPECT_EQ(B.typesCount(), 3u);
+}
+
+TEST(BTFDedupTest, dataSecDifferentOffsets) {
+  BTFBuilder B;
+  uint32_t Type =
+      B.addType({B.addString("float"), mkInfo(BTF::BTF_KIND_FLOAT), {4}});
+  uint32_t Var =
+      B.addType({B.addString("value"), mkInfo(BTF::BTF_KIND_VAR), {Type}});
+  B.addTail(uint32_t(BTF::VAR_GLOBAL_ALLOCATED));
+  uint32_t Name = B.addString(".data");
+  for (uint32_t Offset : {0u, 4u, 0u}) {
+    B.addType({Name, mkInfo(BTF::BTF_KIND_DATASEC) | 1, {8}});
+    B.addTail(BTF::BTFDataSec({Var, Offset, 4}));
+  }
+
+  ASSERT_SUCCEEDED(BTF::dedup(B));
+  ASSERT_EQ(B.typesCount(), 4u);
+  auto Entries = [&](uint32_t Id) {
+    return reinterpret_cast<const BTF::BTFDataSec *>(B.getTypeBytes(Id).data() +
+                                                     sizeof(BTF::CommonType));
+  };
+  EXPECT_EQ(Entries(3)->Offset, 0u);
+  EXPECT_EQ(Entries(4)->Offset, 4u);
+  EXPECT_EQ(Entries(3)->Type, 2u);
+  EXPECT_EQ(Entries(4)->Type, 2u);
+}
+
+TEST(BTFDedupTest, dataSecDifferentVariables) {
+  BTFBuilder B;
+  uint32_t Type =
+      B.addType({B.addString("float"), mkInfo(BTF::BTF_KIND_FLOAT), {4}});
+  uint32_t First =
+      B.addType({B.addString("first"), mkInfo(BTF::BTF_KIND_VAR), {Type}});
+  B.addTail(uint32_t(BTF::VAR_GLOBAL_ALLOCATED));
+  uint32_t Second =
+      B.addType({B.addString("second"), mkInfo(BTF::BTF_KIND_VAR), {Type}});
+  B.addTail(uint32_t(BTF::VAR_GLOBAL_ALLOCATED));
+  uint32_t Name = B.addString(".data");
+  for (uint32_t Var : {First, Second}) {
+    B.addType({Name, mkInfo(BTF::BTF_KIND_DATASEC) | 1, {4}});
+    B.addTail(BTF::BTFDataSec({Var, 0, 4}));
+  }
+
+  ASSERT_SUCCEEDED(BTF::dedup(B));
+  EXPECT_EQ(B.typesCount(), 5u);
+}
+
 TEST(BTFDedupTest, duplicateEnums) {
   BTFBuilder B;
   uint32_t EnumS = B.addString("color");
