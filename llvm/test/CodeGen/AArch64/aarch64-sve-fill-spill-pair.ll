@@ -122,8 +122,8 @@ define void @nxv16i8_outside_range(ptr %ldptr, ptr %stptr) {
 ; CHECK:       // %bb.0:
 ; CHECK-NEXT:    ldr z0, [x0, #-65, mul vl]
 ; CHECK-NEXT:    ldr z1, [x0, #-64, mul vl]
-; CHECK-NEXT:    str z0, [x1, #64, mul vl]
-; CHECK-NEXT:    str z1, [x1, #65, mul vl]
+; CHECK-NEXT:    add x9, x1, #1024
+; CHECK-NEXT:    stp q0, q1, [x9]
 ; CHECK-NEXT:    ret
 ;
 ; CHECK-BE-LABEL: nxv16i8_outside_range:
@@ -149,8 +149,8 @@ define void @nxv16i8_outside_range(ptr %ldptr, ptr %stptr) {
 ; CHECK-LDPALIGNEDONLY:       // %bb.0:
 ; CHECK-LDPALIGNEDONLY-NEXT:    ldr z0, [x0, #-65, mul vl]
 ; CHECK-LDPALIGNEDONLY-NEXT:    ldr z1, [x0, #-64, mul vl]
-; CHECK-LDPALIGNEDONLY-NEXT:    str z0, [x1, #64, mul vl]
-; CHECK-LDPALIGNEDONLY-NEXT:    str z1, [x1, #65, mul vl]
+; CHECK-LDPALIGNEDONLY-NEXT:    add x9, x1, #1024
+; CHECK-LDPALIGNEDONLY-NEXT:    stp q0, q1, [x9]
 ; CHECK-LDPALIGNEDONLY-NEXT:    ret
 ;
 ; CHECK-STPALIGNEDONLY-LABEL: nxv16i8_outside_range:
@@ -279,5 +279,52 @@ define void @nxv2f64_32b_aligned(ptr %ldptr, ptr %stptr) {
   %ld2 = load <vscale x 2 x double>, ptr %ldptr2, align 32
   store <vscale x 2 x double> %ld1, ptr %stptr, align 32
   store <vscale x 2 x double> %ld2, ptr %stptr2, align 32
+  ret void
+}
+
+; SVE base-adjust: under VLS-128, SVE fills/spills pair into Q-register
+; LDP/STP. When the pair offset exceeds STPQi's 7-bit range (64 * 16 = 1024
+; bytes), base-adjust inserts an ADDXri to materialize a scratch base. Under
+; scalable or VLS-256, the VLS-128 guard in isCandidateToMergeOrPair rejects
+; pairing, so no base-adjust occurs and the accesses stay as ldr/str z.
+define void @sve_base_adjust_vls128_vs_scalable(ptr %ldptr, ptr %stptr) {
+; CHECK-LABEL: sve_base_adjust_vls128_vs_scalable:
+; CHECK:       // %bb.0:
+; CHECK-NEXT:    add x9, x0, #1024
+; CHECK-NEXT:    ldp q0, q1, [x9]
+; CHECK-NEXT:    add x9, x1, #1024
+; CHECK-NEXT:    stp q0, q1, [x9]
+; CHECK-NEXT:    ret
+;
+; CHECK-BE-LABEL: sve_base_adjust_vls128_vs_scalable:
+; CHECK-BE:       // %bb.0:
+; CHECK-BE-NEXT:    rdvl x8, #1
+; CHECK-BE-NEXT:    mov w9, #1024
+; CHECK-BE-NEXT:    mov w10, #1040
+; CHECK-BE-NEXT:    lsr x8, x8, #4
+; CHECK-BE-NEXT:    ptrue p0.b
+; CHECK-BE-NEXT:    mul x9, x8, x9
+; CHECK-BE-NEXT:    mul x8, x8, x10
+; CHECK-BE-NEXT:    ld1b { z0.b }, p0/z, [x0, x9]
+; CHECK-BE-NEXT:    ld1b { z1.b }, p0/z, [x0, x8]
+; CHECK-BE-NEXT:    st1b { z0.b }, p0, [x1, x9]
+; CHECK-BE-NEXT:    st1b { z1.b }, p0, [x1, x8]
+; CHECK-BE-NEXT:    ret
+;
+; CHECK-OFF-LABEL: sve_base_adjust_vls128_vs_scalable:
+; CHECK-OFF:       // %bb.0:
+; CHECK-OFF-NEXT:    ldr z0, [x0, #64, mul vl]
+; CHECK-OFF-NEXT:    ldr z1, [x0, #65, mul vl]
+; CHECK-OFF-NEXT:    str z0, [x1, #64, mul vl]
+; CHECK-OFF-NEXT:    str z1, [x1, #65, mul vl]
+; CHECK-OFF-NEXT:    ret
+  %ldptr1 = getelementptr inbounds nuw <vscale x 16 x i8>, ptr %ldptr, i64 64
+  %ldptr2 = getelementptr inbounds nuw <vscale x 16 x i8>, ptr %ldptr, i64 65
+  %stptr1 = getelementptr inbounds nuw <vscale x 16 x i8>, ptr %stptr, i64 64
+  %stptr2 = getelementptr inbounds nuw <vscale x 16 x i8>, ptr %stptr, i64 65
+  %ld1 = load <vscale x 16 x i8>, ptr %ldptr1, align 16
+  %ld2 = load <vscale x 16 x i8>, ptr %ldptr2, align 16
+  store <vscale x 16 x i8> %ld1, ptr %stptr1, align 16
+  store <vscale x 16 x i8> %ld2, ptr %stptr2, align 16
   ret void
 }
