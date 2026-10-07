@@ -2641,6 +2641,7 @@ ExprResult Sema::BuildCXXNew(SourceRange Range, bool UseGlobal,
       } else {
         Diag(TypeRange.getEnd(), diag::err_new_array_size_unknown_from_init)
             << Initializer->getSourceRange();
+        return ExprError();
       }
     }
   }
@@ -5406,6 +5407,12 @@ Sema::PerformImplicitConversion(Expr *From, QualType ToType,
                              From->getValueKind()).get();
     break;
 
+  case ICK_HLSL_Packed_Type_Conversion: {
+    From = ImpCastExprToType(From, ToType, CK_IntegralCast,
+                             From->getValueKind(), nullptr, CCK)
+               .get();
+    break;
+  }
   case ICK_Lvalue_To_Rvalue:
   case ICK_Array_To_Pointer:
   case ICK_Function_To_Pointer:
@@ -5968,8 +5975,7 @@ QualType Sema::CheckVectorConditionalTypes(ExprResult &Cond, ExprResult &LHS,
       ResultType = CheckVectorOperands(
           LHS, RHS, QuestionLoc, /*isCompAssign*/ false, /*AllowBothBool*/ true,
           /*AllowBoolConversions*/ false,
-          /*AllowBoolOperation*/ true,
-          /*ReportInvalid*/ true);
+          /*AllowBoolOperation*/ true);
     if (ResultType.isNull())
       return {};
   } else {
@@ -6268,8 +6274,7 @@ QualType Sema::CXXCheckConditionalOperands(ExprResult &Cond, ExprResult &LHS,
     return CheckVectorOperands(LHS, RHS, QuestionLoc, /*isCompAssign*/ false,
                                /*AllowBothBool*/ true,
                                /*AllowBoolConversions*/ false,
-                               /*AllowBoolOperation*/ false,
-                               /*ReportInvalid*/ true);
+                               /*AllowBoolOperation*/ false);
 
   //   -- The second and third operands have arithmetic or enumeration type;
   //      the usual arithmetic conversions are performed to bring them to a

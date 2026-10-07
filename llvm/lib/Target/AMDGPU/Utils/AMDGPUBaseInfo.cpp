@@ -383,12 +383,10 @@ struct MTBUFInfo {
 
 struct SMInfo {
   uint32_t Opcode;
-  bool IsBuffer;
 };
 
 struct VOPInfo {
   uint32_t Opcode;
-  bool IsSingle;
 };
 
 struct VOPC64DPPInfo {
@@ -396,10 +394,6 @@ struct VOPC64DPPInfo {
 };
 
 struct VOPCDPPAsmOnlyInfo {
-  uint32_t Opcode;
-};
-
-struct VOP3CDPPAsmOnlyInfo {
   uint32_t Opcode;
 };
 
@@ -418,7 +412,6 @@ struct VOPDInfo {
 
 struct VOPTrue16Info {
   uint32_t Opcode;
-  bool IsTrue16;
 };
 
 struct VOPDXYInfo {
@@ -432,7 +425,6 @@ struct VOPDXYInfo {
 
 struct DPMACCInstructionInfo {
   uint32_t Opcode;
-  bool IsDPMACCInstruction;
 };
 
 struct FP4FP8DstByteSelInfo {
@@ -556,23 +548,19 @@ bool getMUBUFTfe(unsigned Opc) {
 }
 
 bool getSMEMIsBuffer(unsigned Opc) {
-  const SMInfo *Info = getSMEMOpcodeHelper(Opc);
-  return Info && Info->IsBuffer;
+  return isSMEMOpcodeHelper(Opc) != nullptr;
 }
 
 bool getVOP1IsSingle(unsigned Opc) {
-  const VOPInfo *Info = getVOP1OpcodeHelper(Opc);
-  return !Info || Info->IsSingle;
+  return isVOP1SingleOpcodeHelper(Opc) != nullptr;
 }
 
 bool getVOP2IsSingle(unsigned Opc) {
-  const VOPInfo *Info = getVOP2OpcodeHelper(Opc);
-  return !Info || Info->IsSingle;
+  return isVOP2SingleOpcodeHelper(Opc) != nullptr;
 }
 
 bool getVOP3IsSingle(unsigned Opc) {
-  const VOPInfo *Info = getVOP3OpcodeHelper(Opc);
-  return !Info || Info->IsSingle;
+  return isVOP3SingleOpcodeHelper(Opc) != nullptr;
 }
 
 bool isVOPC64DPP(unsigned Opc) {
@@ -703,7 +691,7 @@ CanBeVOPD getCanBeVOPD(unsigned Opc, unsigned EncodingFamily, bool VOPD3) {
     return {false, false};
   unsigned Key =
       (Info->VOPDOp << 5) | (EncodingFamily << 1) | (VOPD3 ? 1u : 0u);
-  const VOPDXYInfo *XYInfo = getVOPDXYInfo(Key);
+  const VOPDXYInfo *XYInfo = getVOPDXYInfo(static_cast<uint16_t>(Key));
   if (!XYInfo)
     return {false, false};
   return {XYInfo->IsX, XYInfo->IsY};
@@ -832,10 +820,7 @@ unsigned getTemporalHintType(const MCInstrDesc TID) {
   return CPol::TH_TYPE_LOAD;
 }
 
-bool isTrue16Inst(unsigned Opc) {
-  const VOPTrue16Info *Info = getTrue16OpcodeHelper(Opc);
-  return Info && Info->IsTrue16;
-}
+bool isTrue16Inst(unsigned Opc) { return isTrue16Opcode(Opc) != nullptr; }
 
 FPType getFPDstSelType(unsigned Opc) {
   const FP4FP8DstByteSelInfo *Info = getFP4FP8DstByteSelHelper(Opc);
@@ -850,18 +835,12 @@ FPType getFPDstSelType(unsigned Opc) {
 }
 
 bool isDPMACCInstruction(unsigned Opc) {
-  const DPMACCInstructionInfo *Info = getDPMACCInstructionHelper(Opc);
-  return Info && Info->IsDPMACCInstruction;
+  return isDPMACCInstructionHelper(Opc) != nullptr;
 }
 
 unsigned mapWMMA2AddrTo3AddrOpcode(unsigned Opc) {
   const WMMAOpcodeMappingInfo *Info = getWMMAMappingInfoFrom2AddrOpcode(Opc);
   return Info ? Info->Opcode3Addr : ~0u;
-}
-
-unsigned mapWMMA3AddrTo2AddrOpcode(unsigned Opc) {
-  const WMMAOpcodeMappingInfo *Info = getWMMAMappingInfoFrom3AddrOpcode(Opc);
-  return Info ? Info->Opcode2Addr : ~0u;
 }
 
 // Wrapper for Tablegen'd function.  enum Subtarget is not defined in any
@@ -890,8 +869,9 @@ int getVOPDFull(unsigned OpX, unsigned OpY, unsigned EncodingFamily,
                 bool VOPD3) {
   bool IsConvertibleToBitOp = VOPD3 ? getBitOp2(OpY) : 0;
   OpY = IsConvertibleToBitOp ? (unsigned)AMDGPU::V_BITOP3_B32_e64 : OpY;
-  const VOPDInfo *Info =
-      getVOPDInfoFromComponentOpcodes(OpX, OpY, EncodingFamily, VOPD3);
+  const VOPDInfo *Info = getVOPDInfoFromComponentOpcodes(
+      static_cast<uint8_t>(OpX), static_cast<uint8_t>(OpY),
+      static_cast<uint8_t>(EncodingFamily), VOPD3);
   return Info ? Info->Opcode : -1;
 }
 
@@ -1456,13 +1436,6 @@ unsigned getMaxNumVGPRs(const MCSubtargetInfo &STI, unsigned WavesPerEU,
   return std::min(MaxNumVGPRs, AddressableNumVGPRs);
 }
 
-unsigned getEncodedNumVGPRBlocks(const MCSubtargetInfo &STI, unsigned NumVGPRs,
-                                 std::optional<bool> EnableWavefrontSize32) {
-  return getGranulatedNumRegisterBlocks(
-             NumVGPRs, getVGPREncodingGranule(STI, EnableWavefrontSize32)) -
-         1;
-}
-
 unsigned getAllocatedNumVGPRBlocks(const MCSubtargetInfo &STI,
                                    unsigned NumVGPRs,
                                    unsigned DynamicVGPRBlockSize,
@@ -1507,14 +1480,6 @@ void initDefaultAMDKernelCodeT(AMDGPUMCKernelCodeT &KernelCode,
   }
 }
 
-bool isGroupSegment(const GlobalValue *GV) {
-  return GV->getAddressSpace() == AMDGPUAS::LOCAL_ADDRESS;
-}
-
-bool isGlobalSegment(const GlobalValue *GV) {
-  return GV->getAddressSpace() == AMDGPUAS::GLOBAL_ADDRESS;
-}
-
 bool isReadOnlySegment(const GlobalValue *GV) {
   unsigned AS = GV->getAddressSpace();
   return AS == AMDGPUAS::CONSTANT_ADDRESS ||
@@ -1530,6 +1495,9 @@ static bool isValidRegPrefix(char C) {
 }
 
 std::tuple<char, unsigned, unsigned> parseAsmPhysRegName(StringRef RegName) {
+  if (RegName.empty())
+    return {};
+
   char Kind = RegName.front();
   if (!isValidRegPrefix(Kind))
     return {};
@@ -1906,7 +1874,7 @@ static int encodeCustomOperandVal(const CustomOperandVal &Op,
                                   int64_t InputVal) {
   if (InputVal < 0 || InputVal > Op.Max)
     return OPR_VAL_INVALID;
-  return Op.encode(InputVal);
+  return Op.encode(static_cast<unsigned>(InputVal));
 }
 
 static int encodeCustomOperand(const CustomOperandVal *Opr, int Size,
@@ -2332,7 +2300,7 @@ bool msgSupportsStream(int64_t MsgId, int64_t OpId,
 
 void decodeMsg(unsigned Val, uint16_t &MsgId, uint16_t &OpId,
                uint16_t &StreamId, const MCSubtargetInfo &STI) {
-  MsgId = Val & getMsgIdMask(STI);
+  MsgId = static_cast<uint16_t>(Val & getMsgIdMask(STI));
   if (isGFX11Plus(STI)) {
     OpId = 0;
     StreamId = 0;
@@ -2380,7 +2348,8 @@ bool msgDoesNotUseM0(int64_t MsgId, const MCSubtargetInfo &STI) {
 //===----------------------------------------------------------------------===//
 
 unsigned getInitialPSInputAddr(const Function &F) {
-  return F.getFnAttributeAsParsedInteger("InitialPSInputAddr", 0);
+  return static_cast<unsigned>(
+      F.getFnAttributeAsParsedInteger("InitialPSInputAddr", 0));
 }
 
 bool getHasColorExport(const Function &F) {
@@ -2395,20 +2364,13 @@ bool getHasDepthExport(const Function &F) {
 }
 
 unsigned getDynamicVGPRBlockSize(const Function &F) {
-  unsigned BlockSize =
-      F.getFnAttributeAsParsedInteger("amdgpu-dynamic-vgpr-block-size", 0);
+  unsigned BlockSize = static_cast<unsigned>(
+      F.getFnAttributeAsParsedInteger("amdgpu-dynamic-vgpr-block-size", 0));
 
   if (BlockSize == 16 || BlockSize == 32)
     return BlockSize;
 
   return 0;
-}
-
-bool hasXNACK(const MCSubtargetInfo &STI) {
-  // Only hardwired-on xnack (gfx1250) is knowable from the subtarget alone;
-  // toggleable targets take their mode from the TargetID.
-  return STI.hasFeature(AMDGPU::FeatureSupportsXNACK) &&
-         !STI.hasFeature(AMDGPU::FeatureXNACKOnOffModes);
 }
 
 bool hasMIMG_R128(const MCSubtargetInfo &STI) {
@@ -2779,15 +2741,6 @@ bool isSISrcFPOperand(const MCInstrDesc &Desc, unsigned OpNo) {
   default:
     return false;
   }
-}
-
-bool isSISrcInlinableOperand(const MCInstrDesc &Desc, unsigned OpNo) {
-  assert(OpNo < Desc.NumOperands);
-  unsigned OpType = Desc.operands()[OpNo].OperandType;
-  return (OpType >= AMDGPU::OPERAND_REG_INLINE_C_FIRST &&
-          OpType <= AMDGPU::OPERAND_REG_INLINE_C_LAST) ||
-         (OpType >= AMDGPU::OPERAND_REG_INLINE_AC_FIRST &&
-          OpType <= AMDGPU::OPERAND_REG_INLINE_AC_LAST);
 }
 
 // Avoid using MCRegisterClass::getSize, since that function will go away
@@ -3472,7 +3425,7 @@ MCRegister getVGPRWithMSBs(MCRegister Reg, unsigned MSBs,
 }
 
 static std::optional<unsigned>
-convertSetRegImmToVgprMSBs(unsigned Imm, unsigned Simm16,
+convertSetRegImmToVgprMSBs(uint64_t Imm, uint64_t Simm16,
                            bool HasSetregVGPRMSBFixup) {
   constexpr unsigned VGPRMSBShift =
       llvm::countr_zero_constexpr<unsigned>(AMDGPU::Hwreg::DST_VGPR_MSB);
@@ -3616,8 +3569,9 @@ bool supportsScaleOffset(const MCInstrInfo &MII, unsigned Opcode) {
   return false;
 }
 
-bool hasAny64BitVGPROperands(const MCInstrDesc &OpDesc, const MCInstrInfo &MII,
-                             const MCSubtargetInfo &ST) {
+static bool hasAny64BitVGPROperands(const MCInstrDesc &OpDesc,
+                                    const MCInstrInfo &MII,
+                                    const MCSubtargetInfo &ST) {
   for (auto OpName : {OpName::vdst, OpName::src0, OpName::src1, OpName::src2}) {
     int Idx = getNamedOperandIdx(OpDesc.getOpcode(), OpName);
     if (Idx == -1)
@@ -3656,27 +3610,10 @@ bool isDPALU_DPP32BitOpc(unsigned Opc) {
 
 bool isDPALU_DPP(const MCInstrDesc &OpDesc, const MCInstrInfo &MII,
                  const MCSubtargetInfo &ST) {
-  if (!ST.hasFeature(AMDGPU::FeatureDPALU_DPP))
-    return false;
-
   if (isDPALU_DPP32BitOpc(OpDesc.getOpcode()))
-    return ST.hasFeature(AMDGPU::FeatureGFX1250Insts);
+    return true;
 
   return hasAny64BitVGPROperands(OpDesc, MII, ST);
-}
-
-unsigned getLdsDwGranularity(const MCSubtargetInfo &ST) {
-  if (ST.getFeatureBits().test(FeatureAddressableLocalMemorySize32768))
-    return 64;
-  if (ST.getFeatureBits().test(FeatureAddressableLocalMemorySize65536))
-    return 128;
-  if (ST.getFeatureBits().test(FeatureAddressableLocalMemorySize196608))
-    return 256;
-  if (ST.getFeatureBits().test(FeatureAddressableLocalMemorySize163840))
-    return 320;
-  if (ST.getFeatureBits().test(FeatureAddressableLocalMemorySize327680))
-    return 512;
-  return 64; // In sync with getAddressableLocalMemorySize
 }
 
 bool isPackedSingleSGPRFP32Inst(unsigned Opc) {

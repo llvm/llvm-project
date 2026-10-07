@@ -16,6 +16,10 @@
 ///
 /// Each block is walked backwards: a use is the first reference reached and
 /// acquires a register, a def is the last and releases one.
+///
+/// Where the target enables it, TwoAddressInstructionPass is left out of the
+/// pipeline: this pass lowers tied operands and expands REG_SEQUENCE and
+/// INSERT_SUBREG itself.
 //
 //===----------------------------------------------------------------------===//
 
@@ -60,10 +64,6 @@ using namespace llvm;
 STATISTIC(NumStores, "Number of stores added");
 STATISTIC(NumLoads, "Number of loads added");
 STATISTIC(NumCoalesced, "Number of copies coalesced");
-
-// FIXME: Remove this switch when all testcases are fixed!
-static cl::opt<bool> IgnoreMissingDefs("rafast-ignore-missing-defs",
-                                       cl::Hidden);
 
 static RegisterRegAlloc fastRegAlloc("fast", "fast register allocator",
                                      createFastRegisterAllocator);
@@ -197,6 +197,10 @@ private:
   RegisterClassInfo RegClassInfo;
   const RegAllocFilterFunc ShouldAllocateRegisterImpl;
 
+  /// Tied operands reach this pass unrewritten (TwoAddressInstructionPass was
+  /// left out of the pipeline): lower them here.
+  bool LowerTiedOps = false;
+
   /// Basic block currently being allocated.
   MachineBasicBlock *MBB = nullptr;
 
@@ -275,6 +279,11 @@ private:
   uint32_t InstrGen;
   SmallVector<unsigned, 0> UsedInInstr;
 
+  /// Register units defined by a non-dead physreg def of the current
+  /// instruction, indexed by MCRegUnit. Stamped with InstrGen like
+  /// UsedInInstr, so a unit is set if LiveDefUnits[Unit] == InstrGen.
+  SmallVector<uint32_t, 0> LiveDefUnits;
+
   SmallVector<unsigned, 8> DefOperandIndexes;
   // Register masks attached to the current instruction.
   SmallVector<const uint32_t *> RegMasks;
@@ -328,6 +337,21 @@ private:
       UsedInInstr[static_cast<unsigned>(Unit)] = 0;
   }
 
+  /// Record that a non-dead def of the current instruction keeps every register
+  /// unit of \p PhysReg live.
+  void markLiveDefUnits(MCRegister PhysReg) {
+    for (MCRegUnit Unit : TRI->regunits(PhysReg))
+      LiveDefUnits[static_cast<unsigned>(Unit)] = InstrGen;
+  }
+
+  /// Check if every register unit of \p PhysReg is defined by a non-dead def of
+  /// the current instruction.
+  bool hasLiveDefUnits(MCRegister PhysReg) const {
+    return all_of(TRI->regunits(PhysReg), [this](MCRegUnit Unit) {
+      return LiveDefUnits[static_cast<unsigned>(Unit)] == InstrGen;
+    });
+  }
+
   enum : unsigned {
     spillClean = 50,
     spillDirty = 100,
@@ -342,6 +366,7 @@ public:
 
 private:
   void allocateBasicBlock(MachineBasicBlock &MBB);
+  void expandSubregPseudo(MachineInstr &MI);
 
   void addRegClassDefCounts(MutableArrayRef<unsigned> RegClassDefCounts,
                             Register Reg) const;
@@ -378,6 +403,7 @@ private:
   bool defineVirtReg(MachineInstr &MI, unsigned OpNum, Register VirtReg,
                      bool LookAtPhysRegUses = false);
   bool useVirtReg(MachineInstr &MI, MachineOperand &MO, Register VirtReg);
+  bool lowerTiedUse(MachineInstr &MI, MachineOperand &MO, LiveReg &LR);
 
   MCPhysReg getErrorAssignment(const LiveReg &LR, MachineInstr &MI,
                                const TargetRegisterClass &RC);
@@ -433,11 +459,10 @@ public:
   }
 
   MachineFunctionProperties getSetProperties() const override {
-    if (Impl.ClearVirtRegs) {
-      return MachineFunctionProperties().setNoVRegs();
-    }
-
-    return MachineFunctionProperties();
+    MachineFunctionProperties P;
+    if (Impl.ClearVirtRegs)
+      P.setNoVRegs().setTiedOpsRewritten();
+    return P;
   }
 
   MachineFunctionProperties getClearedProperties() const override {
@@ -732,7 +757,7 @@ void RegAllocFastImpl::reloadAtBegin(MachineBasicBlock &MBB) {
     if (getRegUnitState(FirstUnit) == regLiveIn)
       continue;
 
-    assert((&MBB != &MBB.getParent()->front() || IgnoreMissingDefs) &&
+    assert(&MBB != &MBB.getParent()->front() &&
            "no reload in start block. Missing vreg def?");
 
     if (PrologLiveIns.count(PhysReg)) {
@@ -760,8 +785,9 @@ bool RegAllocFastImpl::usePhysReg(MachineInstr &MI, MCRegister Reg) {
 
 /// Displace whatever holds \p Reg and reserve it, so a virtual register def
 /// cannot land on a register this instruction already writes. Released in the
-/// free-def-operands step, or after the uses for an early clobber; if the
-/// instruction also reads \p Reg it ends up reserved for the code above.
+/// free-def-operands step, after the uses for an early clobber, or by
+/// lowerTiedUse(); if the instruction also reads \p Reg it ends up reserved
+/// for the code above.
 bool RegAllocFastImpl::definePhysReg(MachineInstr &MI, MCRegister Reg) {
   bool displacedAny = displacePhysReg(MI, Reg);
   setPhysRegState(Reg, regPreAssigned);
@@ -862,11 +888,14 @@ void RegAllocFastImpl::assignDanglingDebugValues(MachineInstr &Definition,
       continue;
 
     // Test whether the physreg survives from the definition to the DBG_VALUE.
+    // A tied use that took over its def's register is assigned at an
+    // instruction that overwrites it, so start the scan there.
     MCRegister SetToReg = Reg;
     unsigned Limit = 20;
-    for (MachineBasicBlock::iterator I = std::next(Definition.getIterator()),
-                                     E = DbgValue->getIterator();
-         I != E; ++I) {
+    MachineBasicBlock::iterator I = Definition.getIterator();
+    if (!Definition.definesRegister(Reg, TRI))
+      ++I;
+    for (MachineBasicBlock::iterator E = DbgValue->getIterator(); I != E; ++I) {
       if (I->modifiesRegister(Reg, TRI) || --Limit == 0) {
         LLVM_DEBUG(dbgs() << "Register did not survive for " << *DbgValue
                           << '\n');
@@ -901,6 +930,22 @@ void RegAllocFastImpl::assignVirtToPhysReg(MachineInstr &AtMI, LiveReg &LR,
 
 static bool isCoalescable(const MachineInstr &MI) { return MI.isFullCopy(); }
 
+/// The operand \p MO is tied to.
+static const MachineOperand &getTiedOperand(const MachineInstr &MI,
+                                            const MachineOperand &MO) {
+  return MI.getOperand(MI.findTiedOperandIdx(MI.getOperandNo(&MO)));
+}
+
+/// The register \p DefMO's tied use reads, when the two end up in the same
+/// register: a subregister index on either side makes them differ.
+static Register getTiedUseReg(const MachineInstr &MI,
+                              const MachineOperand &DefMO) {
+  if (!DefMO.isTied() || DefMO.getSubReg())
+    return Register();
+  const MachineOperand &UseMO = getTiedOperand(MI, DefMO);
+  return UseMO.getSubReg() ? Register() : UseMO.getReg();
+}
+
 Register RegAllocFastImpl::traceCopyChain(Register Reg) const {
   static const unsigned ChainLengthLimit = 3;
   for (unsigned C = 0; C <= ChainLengthLimit; ++C) {
@@ -912,22 +957,33 @@ Register RegAllocFastImpl::traceCopyChain(Register Reg) const {
     if (!DefMO)
       return Register();
     const MachineInstr *Def = DefMO->getParent();
-    if (!isCoalescable(*Def))
+    if (isCoalescable(*Def)) {
+      Reg = Def->getOperand(1).getReg();
+      continue;
+    }
+    // A two-address instruction's def and tied use end up in the same
+    // register, so the tie continues the chain.
+    Reg = LowerTiedOps ? getTiedUseReg(*Def, *DefMO) : Register();
+    if (!Reg)
       return Register();
-    Reg = Def->getOperand(1).getReg();
   }
   return Register();
 }
 
-/// Check if any of \p VirtReg's definitions is a copy. If it is follow the
-/// chain of copies to check whether we reach a physical register we can
-/// coalesce with.
+/// Check if any of \p VirtReg's definitions is a copy or a tied def. If it is
+/// follow the chain of copies to check whether we reach a physical register we
+/// can coalesce with.
 Register RegAllocFastImpl::traceCopies(Register VirtReg) const {
   static const unsigned DefLimit = 3;
   unsigned C = 0;
-  for (const MachineInstr &MI : MRI->def_instructions(VirtReg)) {
-    if (isCoalescable(MI)) {
-      Register Reg = MI.getOperand(1).getReg();
+  for (const MachineOperand &DefMO : MRI->def_operands(VirtReg)) {
+    const MachineInstr &MI = *DefMO.getParent();
+    Register Reg;
+    if (isCoalescable(MI))
+      Reg = MI.getOperand(1).getReg();
+    else if (LowerTiedOps)
+      Reg = getTiedUseReg(MI, DefMO);
+    if (Reg) {
       Reg = traceCopyChain(Reg);
       if (Reg.isValid())
         return Reg;
@@ -1037,10 +1093,7 @@ void RegAllocFastImpl::allocVirtRegUndef(MachineOperand &MO) {
   for (const MachineOperand &Tied : MI.all_uses()) {
     if (!Tied.isTied() || Tied.getReg() != VirtReg)
       continue;
-    MCRegister DefReg =
-        MI.getOperand(MI.findTiedOperandIdx(MI.getOperandNo(&Tied)))
-            .getReg()
-            .asMCReg();
+    MCRegister DefReg = getTiedOperand(MI, Tied).getReg().asMCReg();
     for (MachineOperand &O : MI.all_uses()) {
       if (O.getReg() != VirtReg)
         continue;
@@ -1180,6 +1233,9 @@ bool RegAllocFastImpl::defineVirtReg(MachineInstr &MI, unsigned OpNum,
       }
 
       LRI->LastUse = nullptr;
+    } else if (!LRI->LastUse) {
+      // No spill was inserted, so nothing below reads this def.
+      MO.setIsDead(true);
     }
     // A def above spills only if a displacement above reloads again.
     LRI->LiveOut = false;
@@ -1190,6 +1246,71 @@ bool RegAllocFastImpl::defineVirtReg(MachineInstr &MI, unsigned OpNum,
   }
   markRegUsedInInstr(PhysReg);
   return setPhysReg(MI, MO, *LRI);
+}
+
+/// Place MO's value in its tied def's register, by taking the register over or
+/// copying into it. Return false if useVirtReg() should finish MO.
+bool RegAllocFastImpl::lowerTiedUse(MachineInstr &MI, MachineOperand &MO,
+                                    LiveReg &LR) {
+  const MachineOperand &DefMO = getTiedOperand(MI, MO);
+  assert(DefMO.getReg().isPhysical() && "tied def allocated before its use");
+  MCRegister DefReg = DefMO.getReg().asMCReg();
+  unsigned SubReg = MO.getSubReg();
+  if (!LR.PhysReg) {
+    // No register holds the value below MI, so it can live in DefReg, unless
+    // MO reads a subregister, DefReg cannot hold the value, or an early-clobber
+    // def would overwrite DefReg before another operand reads the value.
+    bool MustCopy = SubReg || !MRI->isAllocatable(DefReg) ||
+                    !MRI->getRegClass(LR.VirtReg)->contains(DefReg) ||
+                    (DefMO.isEarlyClobber() &&
+                     any_of(MI.all_uses(), [&](const MachineOperand &O) {
+                       return &O != &MO && O.getReg() == LR.VirtReg;
+                     }));
+    if (!MustCopy) {
+      // The def is not live above MI, so the value can occupy DefReg there.
+      freePhysReg(DefReg);
+      assignVirtToPhysReg(MI, LR, DefReg);
+      return false;
+    }
+    allocVirtReg(MI, LR, Register(), false);
+    // The def phase marked DefReg used in MI, so allocVirtReg skips it.
+    assert((LR.Error || !TRI->regsOverlap(LR.PhysReg, DefReg)) &&
+           "copy source overlaps the tied def");
+  }
+
+  MCRegister SrcReg = SubReg ? TRI->getSubReg(LR.PhysReg, SubReg) : LR.PhysReg;
+  // Only an already rewritten tie (%x = OP %x) finds the value in DefReg.
+  if (SrcReg == DefReg)
+    return false;
+
+  // The copy reads SrcReg above MI, so no other operand may take it.
+  BuildMI(*MBB, MI, MI.getDebugLoc(), TII->get(TargetOpcode::COPY), DefReg)
+      .addReg(SrcReg);
+  LR.LastUse = &MI;
+  markRegUsedInInstr(LR.PhysReg);
+
+  bool Renamable = !MRI->isReserved(DefReg);
+  auto ReadDefReg = [&](MachineOperand &O) {
+    O.setReg(DefReg);
+    O.setSubReg(0);
+    O.setIsRenamable(Renamable);
+  };
+  ReadDefReg(MO);
+  // The other reads of the value follow it into DefReg, so SrcReg dies at the
+  // copy. They cannot when an early-clobber def overwrites DefReg first, and a
+  // read tied to another def owes that def's register.
+  if (!DefMO.isEarlyClobber()) {
+    for (MachineOperand &O : MI.all_uses()) {
+      if (O.isTied() || O.getReg() != LR.VirtReg || O.getSubReg() != SubReg)
+        continue;
+      ReadDefReg(O);
+      O.setIsKill(false);
+    }
+  }
+
+  // The free-defs step skips tied defs, so DefReg still holds the def.
+  freePhysReg(DefReg);
+  return true;
 }
 
 /// Allocates a register for a VirtReg use.
@@ -1214,6 +1335,9 @@ bool RegAllocFastImpl::useVirtReg(MachineInstr &MI, MachineOperand &MO,
   } else {
     assert((!MO.isKill() || LRI->LastUse == &MI) && "Invalid kill flag");
   }
+
+  if (LowerTiedOps && MO.isTied() && lowerTiedUse(MI, MO, *LRI))
+    return false;
 
   // If necessary allocate a register.
   if (!LRI->PhysReg) {
@@ -1416,6 +1540,16 @@ void RegAllocFastImpl::addRegClassDefCounts(
   }
 }
 
+/// Early clobber, partial def, or tied to a use that carries a value: the
+/// register is occupied while the uses are read.
+static bool isLiveThroughDef(const MachineInstr &MI, const MachineOperand &MO) {
+  assert(MO.isDef() && "expected def operand");
+  if (MO.isEarlyClobber() || MO.readsReg())
+    return true;
+  return MO.isTied() &&
+         !MI.getOperand(MI.findTiedOperandIdx(MI.getOperandNo(&MO))).isUndef();
+}
+
 /// Compute \ref DefOperandIndexes so it contains the indices of "def" operands
 /// that are to be allocated. Those are ordered in a way that small classes,
 /// early clobbers and livethroughs are allocated first.
@@ -1475,10 +1609,8 @@ void RegAllocFastImpl::findAndSortDefOperandIndexes(const MachineInstr &MI) {
       return false;
 
     // Allocate early clobbers and livethrough operands first.
-    bool Livethrough0 = MO0.isEarlyClobber() || MO0.isTied() ||
-                        (MO0.getSubReg() == 0 && !MO0.isUndef());
-    bool Livethrough1 = MO1.isEarlyClobber() || MO1.isTied() ||
-                        (MO1.getSubReg() == 0 && !MO1.isUndef());
+    bool Livethrough0 = isLiveThroughDef(MI, MO0);
+    bool Livethrough1 = isLiveThroughDef(MI, MO1);
     if (Livethrough0 > Livethrough1)
       return true;
     if (Livethrough0 < Livethrough1)
@@ -1489,17 +1621,6 @@ void RegAllocFastImpl::findAndSortDefOperandIndexes(const MachineInstr &MI) {
   });
 }
 
-// Returns true if this def (MO) ties to a use that actually carries a value
-// (not undef).
-static bool isTiedToNotUndef(const MachineInstr &MI, const MachineOperand &MO) {
-  assert(MO.isDef() && "expected a def operand");
-  if (!MO.isTied())
-    return false;
-  unsigned TiedIdx = MI.findTiedOperandIdx(MI.getOperandNo(&MO));
-  const MachineOperand &TiedMO = MI.getOperand(TiedIdx);
-  return !TiedMO.isUndef();
-}
-
 void RegAllocFastImpl::allocateInstruction(MachineInstr &MI) {
   // Backwards, a def frees a register and a use occupies it. The phases:
   // * pre-assigned physreg defs
@@ -1507,7 +1628,7 @@ void RegAllocFastImpl::allocateInstruction(MachineInstr &MI) {
   // * free the def operands' registers
   // * displace registers clobbered by regmasks
   // * pre-assigned physreg uses
-  // * virtual register uses, inserting reloads
+  // * virtual register uses, inserting reloads and tied-operand copies
   // * undef uses
   // * free early-clobber defs
   //
@@ -1520,6 +1641,7 @@ void RegAllocFastImpl::allocateInstruction(MachineInstr &MI) {
   // In the event we ever get more than 2**31 instructions...
   if (LLVM_UNLIKELY(InstrGen == 0)) {
     UsedInInstr.assign(UsedInInstr.size(), 0);
+    LiveDefUnits.assign(LiveDefUnits.size(), 0);
     InstrGen = 2;
   }
   RegMasks.clear();
@@ -1531,6 +1653,7 @@ void RegAllocFastImpl::allocateInstruction(MachineInstr &MI) {
   bool HasVRegDef = false;
   bool HasDef = false;
   bool HasEarlyClobber = false;
+  bool HasTiedDef = false;
   bool NeedToAssignLiveThroughs = false;
   for (MachineOperand &MO : MI.operands()) {
     if (MO.isReg()) {
@@ -1541,12 +1664,11 @@ void RegAllocFastImpl::allocateInstruction(MachineInstr &MI) {
         if (MO.isDef()) {
           HasDef = true;
           HasVRegDef = true;
-          if (MO.isEarlyClobber()) {
+          if (MO.isEarlyClobber())
             HasEarlyClobber = true;
-            NeedToAssignLiveThroughs = true;
-          }
-          if (isTiedToNotUndef(MI, MO) ||
-              (MO.getSubReg() != 0 && !MO.isUndef()))
+          if (LowerTiedOps && MO.isTied())
+            HasTiedDef = true;
+          if (isLiveThroughDef(MI, MO))
             NeedToAssignLiveThroughs = true;
         }
       } else if (Reg.isPhysical()) {
@@ -1558,6 +1680,8 @@ void RegAllocFastImpl::allocateInstruction(MachineInstr &MI) {
               HasEarlyClobber = true;
             if (!displacedAny)
               MO.setIsDead(true);
+            if (!MO.isDead())
+              markLiveDefUnits(Reg.asMCReg());
           }
           if (MO.readsReg())
             HasPhysRegUse = true;
@@ -1590,8 +1714,7 @@ void RegAllocFastImpl::allocateInstruction(MachineInstr &MI) {
             MachineOperand &MO = MI.getOperand(OpIdx);
             LLVM_DEBUG(dbgs() << "Allocating " << MO << '\n');
             Register Reg = MO.getReg();
-            if (MO.isEarlyClobber() || isTiedToNotUndef(MI, MO) ||
-                (MO.getSubReg() && !MO.isUndef())) {
+            if (isLiveThroughDef(MI, MO)) {
               ReArrangedImplicitOps = defineLiveThroughVirtReg(MI, OpIdx, Reg);
             } else {
               ReArrangedImplicitOps = defineVirtReg(MI, OpIdx, Reg);
@@ -1625,6 +1748,11 @@ void RegAllocFastImpl::allocateInstruction(MachineInstr &MI) {
     for (MachineOperand &MO : reverse(MI.all_defs())) {
       Register Reg = MO.getReg();
 
+      // A dead def whose register units are all covered by non-dead aliasing
+      // defs is kept alive by them, so clear the inconsistent dead flag.
+      if (Reg.isPhysical() && MO.isDead() && hasLiveDefUnits(Reg.asMCReg()))
+        MO.setIsDead(false);
+
       // subreg defs don't free the full register. We left the subreg number
       // around as a marker in setPhysReg() to recognize this case here.
       if (Reg.isPhysical() && MO.getSubReg() != 0) {
@@ -1635,8 +1763,8 @@ void RegAllocFastImpl::allocateInstruction(MachineInstr &MI) {
       assert((!MO.isTied() || !isClobberedByRegMasks(MO.getReg())) &&
              "tied def assigned to clobbered register");
 
-      // Do not free tied operands and early clobbers.
-      if (isTiedToNotUndef(MI, MO) || MO.isEarlyClobber())
+      // Do not free live-through defs.
+      if (isLiveThroughDef(MI, MO))
         continue;
       if (!Reg)
         continue;
@@ -1686,6 +1814,7 @@ void RegAllocFastImpl::allocateInstruction(MachineInstr &MI) {
   // Implicit MOs can get moved/removed by useVirtReg(), so loop multiple
   // times to ensure no operand is missed.
   bool HasUndefUse = false;
+  bool TiedOnly = HasTiedDef;
   bool ReArrangedImplicitMOs = true;
   while (ReArrangedImplicitMOs) {
     ReArrangedImplicitMOs = false;
@@ -1693,7 +1822,8 @@ void RegAllocFastImpl::allocateInstruction(MachineInstr &MI) {
       if (!MO.isReg() || !MO.isUse())
         continue;
       Register Reg = MO.getReg();
-      if (!Reg.isVirtual() || !shouldAllocateRegister(Reg))
+      if (!Reg.isVirtual() || !shouldAllocateRegister(Reg) ||
+          (TiedOnly && !MO.isTied()))
         continue;
 
       if (MO.isUndef()) {
@@ -1710,6 +1840,13 @@ void RegAllocFastImpl::allocateInstruction(MachineInstr &MI) {
       ReArrangedImplicitMOs = useVirtReg(MI, MO, Reg);
       if (ReArrangedImplicitMOs)
         break;
+    }
+    // Given %1 = OP %0, %0(tied-def 0), allocate tied %0 first, so that %0
+    // takes %1's register. In operand order, the untied %0 would take another
+    // register and the tied use would need a copy.
+    if (TiedOnly && !ReArrangedImplicitMOs) {
+      TiedOnly = false;
+      ReArrangedImplicitMOs = true;
     }
   }
 
@@ -1844,8 +1981,10 @@ void RegAllocFastImpl::allocateBasicBlock(MachineBasicBlock &MBB) {
 
   Coalesced.clear();
 
-  // Traverse block in reverse order allocating instructions one by one.
-  for (MachineInstr &MI : reverse(MBB)) {
+  // Lowering a tied operand inserts a copy ahead of MI. Its registers are
+  // already assigned, so visiting it would evict what still lives in the
+  // source.
+  for (MachineInstr &MI : make_early_inc_range(reverse(MBB))) {
     LLVM_DEBUG(dbgs() << "\n>> " << MI << "Regs:"; dumpState());
 
     // Special handling for debug values. Note that they are not allowed to
@@ -1892,6 +2031,65 @@ void RegAllocFastImpl::allocateBasicBlock(MachineBasicBlock &MBB) {
   LLVM_DEBUG(MBB.dump());
 }
 
+/// Expand REG_SEQUENCE and INSERT_SUBREG into subregister COPYs: the lowering
+/// TwoAddressInstructionPass performs when it runs before allocation, plus the
+/// base-value copy its tie processing provides.
+void RegAllocFastImpl::expandSubregPseudo(MachineInstr &MI) {
+  MachineBasicBlock &MBB = *MI.getParent();
+  const DebugLoc &DL = MI.getDebugLoc();
+  if (MI.isInsertSubreg()) {
+    // %d = INSERT_SUBREG %base, %sub, idx  ->  %d = COPY %base
+    //                                          %d.idx = COPY %sub
+    const MachineOperand &BaseMO = MI.getOperand(1);
+    if (!BaseMO.isUndef())
+      BuildMI(MBB, MI, DL, TII->get(TargetOpcode::COPY),
+              MI.getOperand(0).getReg())
+          .addReg(BaseMO.getReg(), RegState::NoFlags, BaseMO.getSubReg());
+    unsigned SubIdx = MI.getOperand(3).getImm();
+    MI.removeOperand(3);
+    assert(MI.getOperand(0).getSubReg() == 0 && "Unexpected subreg idx");
+    MI.getOperand(0).setSubReg(SubIdx);
+    MI.getOperand(0).setIsUndef(MI.getOperand(1).isUndef());
+    MI.removeOperand(1);
+    MI.setDesc(TII->get(TargetOpcode::COPY));
+    return;
+  }
+
+  // %d = REG_SEQUENCE %s1, idx1, ...  ->  undef %d.idx1 = COPY %s1
+  //                                       %d.idx2 = COPY %s2 ...
+  assert(MI.isRegSequence());
+  Register Dst = MI.getOperand(0).getReg();
+  // An undef source needs no copy: the read-undef flag on the first copy
+  // defines the whole register. One is still needed where a use reads that
+  // lane on its own, which would otherwise read an undefined subregister.
+  LaneBitmask ReadLanes = LaneBitmask::getNone();
+  for (const MachineOperand &Use : MRI->use_nodbg_operands(Dst))
+    if (unsigned UseSubIdx = Use.getSubReg())
+      ReadLanes |= TRI->getSubRegIndexLaneMask(UseSubIdx);
+
+  bool DefEmitted = false;
+  for (unsigned I = 1, E = MI.getNumOperands(); I + 1 < E; I += 2) {
+    const MachineOperand &SrcMO = MI.getOperand(I);
+    unsigned SubIdx = MI.getOperand(I + 1).getImm();
+    if (SrcMO.isUndef() &&
+        (ReadLanes & TRI->getSubRegIndexLaneMask(SubIdx)).none())
+      continue;
+    BuildMI(MBB, MI, DL, TII->get(TargetOpcode::COPY))
+        .addReg(Dst, RegState::Define | getUndefRegState(!DefEmitted), SubIdx)
+        .addReg(SrcMO.getReg(), getUndefRegState(SrcMO.isUndef()),
+                SrcMO.getSubReg());
+    DefEmitted = true;
+  }
+  // Every source was undef: uses of Dst still need a definition.
+  if (!DefEmitted) {
+    MI.setDesc(TII->get(TargetOpcode::IMPLICIT_DEF));
+    while (MI.getNumOperands() > 1)
+      MI.removeOperand(MI.getNumOperands() - 1);
+    return;
+  }
+  MI.eraseFromParent();
+}
+
 bool RegAllocFastImpl::runOnMachineFunction(MachineFunction &MF) {
   LLVM_DEBUG(dbgs() << "********** FAST REGISTER ALLOCATION **********\n"
                     << "********** Function: " << MF.getName() << '\n');
@@ -1905,6 +2103,18 @@ bool RegAllocFastImpl::runOnMachineFunction(MachineFunction &MF) {
   unsigned NumRegUnits = TRI->getNumRegUnits();
   InstrGen = 0;
   UsedInInstr.assign(NumRegUnits, 0);
+  LiveDefUnits.assign(NumRegUnits, 0);
+
+  // MIR that already went through TwoAddressInstructionPass carries
+  // TiedOpsRewritten, so partial pipelines (-run-pass, -start-before) follow
+  // the input they are given.
+  LowerTiedOps = !MF.getProperties().hasTiedOpsRewritten();
+  if (LowerTiedOps) {
+    for (MachineBasicBlock &MBB : MF)
+      for (MachineInstr &MI : make_early_inc_range(MBB))
+        if (MI.isRegSequence() || MI.isInsertSubreg())
+          expandSubregPseudo(MI);
+  }
 
   // initialize the virtual->physical register map to have a 'null'
   // mapping for all virtual registers

@@ -371,10 +371,9 @@ static mlir::Value genMinMaxInitValue(mlir::Location loc,
     return builder.createRealConstant(loc, type, limit);
   }
   unsigned bits = type.getIntOrFloatBitWidth();
-  int64_t limitInt = IS_MAX
-                         ? llvm::APInt::getSignedMinValue(bits).getSExtValue()
-                         : llvm::APInt::getSignedMaxValue(bits).getSExtValue();
-  return builder.createIntegerConstant(loc, type, limitInt);
+  llvm::APInt limit = IS_MAX ? llvm::APInt::getSignedMinValue(bits)
+                             : llvm::APInt::getSignedMaxValue(bits);
+  return builder.createIntegerConstant(loc, type, limit);
 }
 
 /// Generate a comparison of an array element value \p elem
@@ -503,6 +502,12 @@ private:
       return rewriter.notifyMatchFailure(
           getOp(),
           "CHARACTER type is not supported for MINLOC/MAXLOC inlining");
+    if (auto intType =
+            mlir::dyn_cast<mlir::IntegerType>(getSourceElementType()))
+      if (intType.isUnsigned())
+        return rewriter.notifyMatchFailure(
+            getOp(),
+            "UNSIGNED type is not supported for MINLOC/MAXLOC inlining");
     return mlir::success();
   }
 

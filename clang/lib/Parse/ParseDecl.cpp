@@ -2536,7 +2536,7 @@ Decl *Parser::ParseDeclarationAfterDeclaratorAndAttributes(
   // If a '==' or '+=' is found, suggest a fixit to '='.
   if (isTokenEqualOrEqualTypo())
     TheInitKind = InitKind::Equal;
-  else if (Tok.is(tok::l_paren))
+  else if (getLangOpts().CPlusPlus && Tok.is(tok::l_paren))
     TheInitKind = InitKind::CXXDirect;
   else if (getLangOpts().CPlusPlus11 && Tok.is(tok::l_brace) &&
            (!CurParsedObjCImpl || !D.isFunctionDeclarator()))
@@ -4119,6 +4119,20 @@ void Parser::ParseDeclarationSpecifiers(
       break;
     case tok::kw_auto:
       if (getLangOpts().CPlusPlus11 || getLangOpts().C23) {
+        auto IsTypedefName = [&](const Token &T) {
+          if (!T.is(tok::identifier))
+            return false;
+          IdentifierInfo *II = T.getIdentifierInfo();
+          if (!II)
+            return false;
+          // Suppress diagnostics; the real parse will emit them later.
+          LookupResult R(Actions, II, T.getLocation(),
+                         Sema::LookupOrdinaryName);
+          Actions.LookupName(R, getCurScope(),
+                             /*AllowBuiltinCreation=*/false);
+          R.suppressDiagnostics();
+          return R.isSingleResult() && isa<TypeDecl>(R.getFoundDecl());
+        };
         auto MayBeTypeSpecifier = [&]() {
           // In pre-C23 C, auto can be used as a storage-class specifier.
           // C23 removes auto from the storage-class specifiers and repurposes
@@ -4131,6 +4145,15 @@ void Parser::ParseDeclarationSpecifiers(
           while (true) {
             const Token &T = GetLookAheadToken(I);
             if (isKnownToBeTypeSpecifier(T))
+              return true;
+
+            // C23: a bare identifier that names a typedef is a type
+            // specifier here, so `auto typedefName varName;` should be
+            // parsed with `auto` as the storage-class specifier — not as
+            // type inference. Without this check the parser would consume
+            // `auto` as type-inference and then error on the missing
+            // initializer for what it thinks is `typedefName`.
+            if (getLangOpts().C23 && IsTypedefName(T))
               return true;
 
             if (getLangOpts().C23 && isTypeSpecifierQualifier(T))
@@ -4672,6 +4695,13 @@ void Parser::ParseDeclarationSpecifiers(
     break;
 #include "clang/Basic/HLSLIntangibleTypes.def"
 
+#define HLSL_PACKED_TYPE(Name, Id, SingletonId)                                \
+  case tok::kw_##Name:                                                         \
+    isInvalid = DS.SetTypeSpecType(DeclSpec::TST_##Name, Loc, PrevSpec,        \
+                                   DiagID, Policy);                            \
+    break;
+#include "clang/Basic/HLSLPackedTypes.def"
+
     case tok::less:
       // GCC ObjC supports types like "<SomeProtocol>" as a synonym for
       // "id<SomeProtocol>".  This is hopelessly old fashioned and dangerous,
@@ -4848,33 +4878,28 @@ void Parser::ParseStructDeclaration(
   }
 }
 
-ParsedAttributes Parser::ParseLexedCAttributeTokens(LateParsedAttribute &LA) {
+ParsedAttributes Parser::ParseLexedAttributeTokens(LateParsedAttribute &LPA) {
   // Create a fake EOF so that attribute parsing won't go off the end of the
   // attribute.
-  Token AttrEnd;
-  AttrEnd.startToken();
-  AttrEnd.setKind(tok::eof);
-  AttrEnd.setLocation(Tok.getLocation());
-  AttrEnd.setEofData(LA.Toks.data());
-  LA.Toks.push_back(AttrEnd);
+  Token AttrEnd = Token::createEof(Tok.getLocation(), LPA.Toks.data());
+  LPA.Toks.push_back(AttrEnd);
 
   // Append the current token at the end of the new token stream so that it
   // doesn't get lost.
-  LA.Toks.push_back(Tok);
-  PP.EnterTokenStream(LA.Toks, /*DisableMacroExpansion=*/true,
+  LPA.Toks.push_back(Tok);
+  PP.EnterTokenStream(LPA.Toks, /*DisableMacroExpansion=*/true,
                       /*IsReinject=*/true);
+
   // Drop the current token and bring the first cached one. It's the same token
   // as when we entered this function.
   ConsumeAnyToken(/*ConsumeCodeCompletionTok=*/true);
 
   ParsedAttributes Attrs(AttrFactory);
 
-  assert(LA.Decls.size() <= 1 &&
-         "late field attribute expects to have at most one declaration.");
-
-  // Dispatch based on the attribute and parse it
-  ParseGNUAttributeArgs(&LA.AttrName, LA.AttrNameLoc, Attrs, nullptr, nullptr,
-                        SourceLocation(), ParsedAttr::Form::GNU(), nullptr);
+  ParseGNUAttributeArgs(&LPA.AttrName, LPA.AttrNameLoc, Attrs,
+                        /*EndLoc=*/nullptr, /*ScopeName=*/nullptr,
+                        SourceLocation(), ParsedAttr::Form::GNU(),
+                        /*D=*/nullptr);
 
   // Due to a parsing error, we either went over the cached tokens or
   // there are still cached tokens left, so we skip the leftover tokens.
@@ -4890,8 +4915,48 @@ ParsedAttributes Parser::ParseLexedCAttributeTokens(LateParsedAttribute &LA) {
 
 void Parser::ParseLexedTypeAttribute(LateParsedTypeAttribute &LA,
                                      ParsedAttributes &OutAttrs) {
-  ParsedAttributes Attrs = ParseLexedCAttributeTokens(LA);
+  assert(LA.Decls.size() <= 1 &&
+         "late field attribute expects to have at most one declaration.");
+
+  ParsedAttributes Attrs = ParseLexedAttributeTokens(LA);
   OutAttrs.takeAllAppendingFrom(Attrs);
+}
+
+void Parser::CompleteLateParsedTypeAttributes(
+    SmallVectorImpl<LateParsedTypeAttribute *> &LateTypeAttrs) {
+  for (LateParsedTypeAttribute *RawLTA : LateTypeAttrs) {
+    std::unique_ptr<LateParsedTypeAttribute> LTA(RawLTA);
+
+    BoundsAttributedType *BATy = LTA->TypeToComplete;
+    if (!BATy || Actions.isLateParsedBoundsTypeRejected(BATy))
+      continue;
+
+    ArrayRef<Decl *> Fields = LTA->Decls;
+
+    AttributeFactory AF;
+    ParsedAttributes Attrs(AF);
+    ParseLexedTypeAttribute(*LTA, Attrs);
+
+    // An unparseable argument leaves no attribute behind; already diagnosed.
+    if (Attrs.empty())
+      continue;
+    assert(Attrs.size() == 1);
+
+    Expr *Arg = Attrs[0].getArgAsExpr(0);
+    assert(Arg);
+
+    bool Valid = true;
+    assert(!Fields.empty());
+    for (Decl *FD : Fields)
+      Valid &= Actions.ActOnLateParsedTypeAttrArgument(
+          BATy, cast<FieldDecl>(FD), Arg);
+
+    if (Valid)
+      Attrs[0].setUsedAsTypeAttr();
+    else
+      Attrs[0].setInvalid();
+  }
+  LateTypeAttrs.clear();
 }
 
 void LateParsedTypeAttribute::ParseInto(ParsedAttributes &OutAttrs) {
@@ -5170,8 +5235,15 @@ void Parser::ParseEnumSpecifier(SourceLocation StartLoc, DeclSpec &DS,
   bool CanBeBitfield =
       getCurScope()->isClassScope() && ScopedEnumKWLoc.isInvalid() && Name;
 
+  auto IsCXXTypeAhead = [this]() {
+    RevertingTentativeParsingAction PA(*this);
+    ConsumeToken();
+    return Parser::isCXXTypeId(TentativeCXXTypeIdContext::Unambiguous);
+  };
+
   // Parse the fixed underlying type.
-  if (Tok.is(tok::colon)) {
+  if (Tok.is(tok::colon) &&
+      (!ParsingGenericAssociationType || IsCXXTypeAhead())) {
     // This might be an enum-base or part of some unrelated enclosing context.
     //
     // 'enum E : base' is permitted in two circumstances:
@@ -5612,6 +5684,8 @@ bool Parser::isKnownToBeTypeSpecifier(const Token &Tok) const {
 #include "clang/Basic/OpenCLImageTypes.def"
 #define HLSL_INTANGIBLE_TYPE(Name, Id, SingletonId) case tok::kw_##Name:
 #include "clang/Basic/HLSLIntangibleTypes.def"
+#define HLSL_PACKED_TYPE(Name, Id, SingletonId) case tok::kw_##Name:
+#include "clang/Basic/HLSLPackedTypes.def"
 
     // struct-or-union-specifier (C99) or class-specifier (C++)
   case tok::kw_class:
@@ -5702,6 +5776,8 @@ bool Parser::isTypeSpecifierQualifier(const Token &Tok) {
 #include "clang/Basic/OpenCLImageTypes.def"
 #define HLSL_INTANGIBLE_TYPE(Name, Id, SingletonId) case tok::kw_##Name:
 #include "clang/Basic/HLSLIntangibleTypes.def"
+#define HLSL_PACKED_TYPE(Name, Id, SingletonId) case tok::kw_##Name:
+#include "clang/Basic/HLSLPackedTypes.def"
 
     // struct-or-union-specifier (C99) or class-specifier (C++)
   case tok::kw_class:
@@ -6048,6 +6124,8 @@ bool Parser::isDeclarationSpecifier(
 #include "clang/Basic/OpenCLImageTypes.def"
 #define HLSL_INTANGIBLE_TYPE(Name, Id, SingletonId) case tok::kw_##Name:
 #include "clang/Basic/HLSLIntangibleTypes.def"
+#define HLSL_PACKED_TYPE(Name, Id, SingletonId) case tok::kw_##Name:
+#include "clang/Basic/HLSLPackedTypes.def"
 
   case tok::kw___funcref:
   case tok::kw_groupshared:
@@ -8252,10 +8330,7 @@ TypeResult Parser::ParseTypeFromString(StringRef TypeStr, StringRef Context,
   // Replace the "eod" token with an "eof" token identifying the end of
   // the provided string.
   Token &EndToken = Tokens.back();
-  EndToken.startToken();
-  EndToken.setKind(tok::eof);
-  EndToken.setLocation(Tok.getLocation());
-  EndToken.setEofData(TypeStr.data());
+  EndToken = Token::createEof(Tok.getLocation(), TypeStr.data());
 
   // Add the current token back.
   Tokens.push_back(Tok);
