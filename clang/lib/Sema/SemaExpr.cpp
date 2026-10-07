@@ -4652,10 +4652,12 @@ bool Sema::CheckVecStepExpr(Expr *E) {
   return CheckUnaryExprOrTypeTraitOperand(E, UETT_VecStep);
 }
 
-static void captureVariablyModifiedType(ASTContext &Context, QualType T,
-                                        CapturingScopeInfo *CSI) {
+/// Walk down into the variably modified type \p T and call \p Fn for each
+/// variable length array type in it.
+static void forEachVariableArrayType(
+    ASTContext &Context, QualType T,
+    llvm::function_ref<void(const VariableArrayType *)> Fn) {
   assert(T->isVariablyModifiedType());
-  assert(CSI != nullptr);
 
   // We're going to walk down into the type and look for VLA expressions.
   do {
@@ -4716,14 +4718,7 @@ static void captureVariablyModifiedType(ASTContext &Context, QualType T,
     case Type::VariableArray: {
       // Losing element qualification here is fine.
       const VariableArrayType *VAT = cast<VariableArrayType>(Ty);
-
-      // Unknown size indication requires no size computation.
-      // Otherwise, evaluate and record it.
-      auto Size = VAT->getSizeExpr();
-      if (Size && !CSI->isVLATypeCaptured(VAT) &&
-          (isa<CapturedRegionScopeInfo>(CSI) || isa<LambdaScopeInfo>(CSI)))
-        CSI->addVLATypeCapture(Size->getExprLoc(), VAT, Context.getSizeType());
-
+      Fn(VAT);
       T = VAT->getElementType();
       break;
     }
@@ -4772,6 +4767,89 @@ static void captureVariablyModifiedType(ASTContext &Context, QualType T,
       break;
     }
   } while (!T.isNull() && T->isVariablyModifiedType());
+}
+
+static void captureVariablyModifiedType(ASTContext &Context, QualType T,
+                                        CapturingScopeInfo *CSI) {
+  assert(CSI != nullptr);
+  forEachVariableArrayType(Context, T, [&](const VariableArrayType *VAT) {
+    // Unknown size indication requires no size computation.
+    // Otherwise, evaluate and record it.
+    auto Size = VAT->getSizeExpr();
+    if (Size && !CSI->isVLATypeCaptured(VAT) &&
+        (isa<CapturedRegionScopeInfo>(CSI) || isa<LambdaScopeInfo>(CSI)))
+      CSI->addVLATypeCapture(Size->getExprLoc(), VAT, Context.getSizeType());
+  });
+}
+
+/// Find what separates \p DC from \p Owner, the context in which a VLA bound
+/// is evaluated: 0 for a local class, 1 for a block, or std::nullopt if the
+/// bound is available in \p DC or \p Owner does not enclose it.
+static std::optional<unsigned> findVLABoundBarrier(const DeclContext *DC,
+                                                   const DeclContext *Owner) {
+  std::optional<unsigned> Barrier;
+  for (; DC; DC = DC->getParent()) {
+    if (DC == Owner)
+      return Barrier;
+    // Lambdas and captured regions can capture a VLA bound (see
+    // captureVariablyModifiedType), so they are not barriers here.
+    if (isLambdaCallOperator(DC) || isa<CapturedDecl>(DC))
+      continue;
+    if (const auto *RD = dyn_cast<CXXRecordDecl>(DC); RD && RD->isLambda())
+      continue;
+    if (isa<BlockDecl>(DC)) {
+      if (!Barrier)
+        Barrier = 1;
+      continue;
+    }
+    if (isa<RecordDecl>(DC) && !Barrier)
+      Barrier = 0;
+  }
+  return std::nullopt;
+}
+
+static bool isInLocalClassOrBlock(const DeclContext *DC) {
+  for (; DC; DC = DC->getParent()) {
+    if (isa<BlockDecl>(DC))
+      return true;
+    if (const auto *RD = dyn_cast<RecordDecl>(DC)) {
+      if (const auto *CRD = dyn_cast<CXXRecordDecl>(RD); CRD && CRD->isLambda())
+        continue;
+      if (RD->getParentFunctionOrMethod())
+        return true;
+    }
+  }
+  return false;
+}
+
+bool Sema::CheckVariablyModifiedTypeUse(QualType T, SourceLocation Loc) {
+  if (VLASizeExprOwners.empty() || T.isNull())
+    return true;
+  // Deduced types (auto, __auto_type) do not propagate the variably modified
+  // bit, so look at the canonical type.
+  QualType CanonT = T.getCanonicalType();
+  if (!CanonT->isVariablyModifiedType() || !isInLocalClassOrBlock(CurContext))
+    return true;
+
+  const Expr *BadSize = nullptr;
+  std::optional<unsigned> Barrier;
+  forEachVariableArrayType(Context, CanonT, [&](const VariableArrayType *VAT) {
+    const Expr *Size = VAT->getSizeExpr();
+    if (BadSize || !Size)
+      return;
+    auto It = VLASizeExprOwners.find(Size);
+    if (It == VLASizeExprOwners.end())
+      return;
+    Barrier = findVLABoundBarrier(CurContext, It->second);
+    if (Barrier)
+      BadSize = Size;
+  });
+  if (!BadSize)
+    return true;
+
+  Diag(Loc, diag::err_vm_type_from_enclosing_function) << T << *Barrier;
+  Diag(BadSize->getBeginLoc(), diag::note_vm_type_size_evaluated_here);
+  return false;
 }
 
 bool Sema::CheckUnaryExprOrTypeTraitOperand(QualType ExprType,

@@ -9002,6 +9002,14 @@ void Sema::CheckVariableDeclarationType(VarDecl *NewVD) {
   if (NewVD->isInvalidDecl())
     return;
 
+  SourceLocation VMLoc = NewVD->getLocation();
+  if (TypeSourceInfo *TSI = NewVD->getTypeSourceInfo())
+    VMLoc = TSI->getTypeLoc().getBeginLoc();
+  if (!CheckVariablyModifiedTypeUse(NewVD->getType(), VMLoc)) {
+    NewVD->setInvalidDecl();
+    return;
+  }
+
   QualType T = NewVD->getType();
 
   // Defer checking an 'auto' type until its initializer is attached.
@@ -16134,6 +16142,10 @@ ParmVarDecl *Sema::CheckParameter(DeclContext *DC, SourceLocation StartLoc,
   ParmVarDecl *New = ParmVarDecl::Create(Context, DC, StartLoc, NameLoc, Name,
                                          Context.getAdjustedParameterType(T),
                                          TSInfo, SC, nullptr);
+
+  SourceLocation VMLoc = TSInfo ? TSInfo->getTypeLoc().getBeginLoc() : NameLoc;
+  if (!CheckVariablyModifiedTypeUse(T, VMLoc))
+    New->setInvalidDecl();
 
   // Make a note if we created a new pack in the scope of a lambda, so that
   // we know that references to that pack must also be expanded within the
