@@ -665,6 +665,8 @@ public:
 
   LLVMContext &getContext() const { return F.getContext(); }
 
+  Module &getModule() const { return *F.getParent(); }
+
   /// Test if values of the given type are analyzable within the SCEV
   /// framework. This primarily includes integer types, and it can optionally
   /// include pointer types if the ScalarEvolution class has access to

@@ -32,8 +32,8 @@ module attributes {omp.is_target_device = false} {
   }
 }
 // CHECK: %[[MAP0:.*]] = omp.map.info var_ptr({{.*}} : !fir.ref<i32>, i32) map_clauses(to) capture(ByRef) name("a") -> !fir.ref<i32>
-// CHECK: %[[MAP1:.*]] = omp.map.info var_ptr({{.*}} : !fir.ref<!fir.box<!fir.heap<i32>>>, !fir.box<!fir.heap<i32>>) map_clauses(tofrom) capture(ByRef) name("simple_var") -> !fir.ref<!fir.box<!fir.heap<i32>>>
-// CHECK: %[[MAP2:.*]] = omp.map.info var_ptr({{.*}} : !fir.ref<i32>, i32) map_clauses(to) capture(ByCopy) name("fp_int") -> !fir.ref<i32>
+// CHECK: %[[MAP1:.*]] = omp.map.info var_ptr({{.*}} : !fir.ref<!fir.box<!fir.heap<i32>>>, !fir.box<!fir.heap<i32>>) map_clauses(tofrom) capture(ByRef) -> !fir.ref<!fir.box<!fir.heap<i32>>>
+// CHECK: %[[MAP2:.*]] = omp.map.info var_ptr({{.*}} : !fir.ref<i32>, i32) map_clauses(to) capture(ByCopy) -> !fir.ref<i32>
 // CHECK:  omp.target kernel_type(generic) map_entries(%[[MAP0]] -> %arg0, %[[MAP1]] -> %arg1, %[[MAP2]] -> %arg2 : !fir.ref<i32>, !fir.ref<!fir.box<!fir.heap<i32>>>, !fir.ref<i32>)
 
 // -----
@@ -54,7 +54,7 @@ module attributes {omp.is_target_device = false} {
   }
 }
 // CHECK: omp.declare_mapper @[[GEN_MAPPER:_QFTgen_t_omp_default_mapper]]
-// CHECK: %[[GEN_MAP:.*]] = omp.map.info var_ptr({{.*}} : !fir.ref<!fir.type<_QFTgen_t{{.*}}>>, !fir.type<_QFTgen_t{{.*}}>) map_clauses(tofrom) capture(ByRef) mapper(@[[GEN_MAPPER]]) name("dt") -> !fir.ref<!fir.type<_QFTgen_t{{.*}}>>
+// CHECK: %[[GEN_MAP:.*]] = omp.map.info var_ptr({{.*}} : !fir.ref<!fir.type<_QFTgen_t{{.*}}>>, !fir.type<_QFTgen_t{{.*}}>) map_clauses(tofrom) capture(ByRef) mapper(@[[GEN_MAPPER]]) -> !fir.ref<!fir.type<_QFTgen_t{{.*}}>>
 // CHECK: omp.target kernel_type(generic) map_entries(%[[GEN_MAP]] -> %arg0 : !fir.ref<!fir.type<_QFTgen_t{{.*}}>>)
 
 // -----
@@ -76,5 +76,5 @@ module attributes {omp.is_target_device = false} {
 }
 
 // CHECK-NOT: omp.declare_mapper @_QFTplain_t_omp_default_mapper
-// CHECK: %[[PLAIN_MAP:.*]] = omp.map.info var_ptr({{.*}} : !fir.ref<!fir.type<_QFTplain_t{{.*}}>>, !fir.type<_QFTplain_t{{.*}}>) map_clauses(tofrom) capture(ByRef) name("dt") -> !fir.ref<!fir.type<_QFTplain_t{{.*}}>>
+// CHECK: %[[PLAIN_MAP:.*]] = omp.map.info var_ptr({{.*}} : !fir.ref<!fir.type<_QFTplain_t{{.*}}>>, !fir.type<_QFTplain_t{{.*}}>) map_clauses(tofrom) capture(ByRef) -> !fir.ref<!fir.type<_QFTplain_t{{.*}}>>
 // CHECK-NOT: mapper(

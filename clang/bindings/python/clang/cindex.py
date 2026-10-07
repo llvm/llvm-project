@@ -424,7 +424,24 @@ class SourceRange(Structure):
         return "<SourceRange start %r, end %r>" % (self.start, self.end)
 
 
-class Diagnostic:
+class OpaqueClangObject:
+    """
+    A helper for Python objects that mirror opaque types of the C API.
+    It stores an opaque pointer returned by the C API, and implements a
+    `from_param` method, allowing Python objects to be implicitly converted
+    to the stored opaque pointer when it is passed as an argument to the
+    C API.
+    """
+
+    def __init__(self, obj):
+        assert isinstance(obj, c_object_p) and obj
+        self.obj = self._as_parameter_ = obj
+
+    def from_param(self):
+        return self._as_parameter_
+
+
+class Diagnostic(OpaqueClangObject):
     """
     A Diagnostic is a single instance of a Clang diagnostic. It includes the
     diagnostic severity, the message, the location the diagnostic occurred, as
@@ -444,9 +461,6 @@ class Diagnostic:
     DisplayCategoryId = 0x10
     DisplayCategoryName = 0x20
     _FormatOptionsMask = 0x3F
-
-    def __init__(self, ptr):
-        self.ptr = ptr
 
     def __del__(self):
         conf.lib.clang_disposeDiagnostic(self)
@@ -559,9 +573,6 @@ class Diagnostic:
 
     def __str__(self):
         return self.format()
-
-    def from_param(self):
-        return self.ptr
 
 
 class FixIt:
@@ -3052,23 +3063,6 @@ class Type(Structure):
 
 ## Opaque Clang Objects ##
 
-class OpaqueClangObject:
-    """
-    A helper for Python objects that mirror opaque types of the C API.
-    It stores an opaque pointer returned by the C API, and implements a
-    `from_param` method, allowing Python objects to be implicitly converted
-    to the stored opaque pointer when it is passed as an argument to the
-    C API.
-    """
-
-    def __init__(self, obj):
-        assert isinstance(obj, c_object_p) and obj
-        self.obj = self._as_parameter_ = obj
-
-    def from_param(self):
-        return self._as_parameter_
-
-
 ### Completion Chunk Kinds ###
 class CompletionChunkKind(BaseEnumeration):
     """
@@ -4042,9 +4036,6 @@ class Rewriter(OpaqueClangObject):
         """
         return Rewriter(conf.lib.clang_CXRewriter_create(tu))
 
-    def __init__(self, ptr):
-        OpaqueClangObject.__init__(self, ptr)
-
     def __del__(self):
         conf.lib.clang_CXRewriter_dispose(self)
 
@@ -4135,9 +4126,6 @@ class PrintingPolicy(OpaqueClangObject):
         cursor -- Any cursor for a translation unit.
         """
         return PrintingPolicy(conf.lib.clang_getCursorPrintingPolicy(cursor))
-
-    def __init__(self, ptr):
-        OpaqueClangObject.__init__(self, ptr)
 
     def __del__(self):
         conf.lib.clang_PrintingPolicy_dispose(self)
