@@ -3525,17 +3525,21 @@ Instruction *InstCombinerImpl::visitCallInst(CallInst &CI) {
     ///
     // TODO: If we cared, should insert a canonicalize for x
     Value *SelectCond, *SelectLHS, *SelectRHS;
+    Instruction *SelectInst;
     if (match(II->getArgOperand(1),
-              m_OneUse(m_Select(m_Value(SelectCond), m_Value(SelectLHS),
-                                m_Value(SelectRHS))))) {
+              m_OneUse(m_Instruction(
+                  SelectInst, m_Select(m_Value(SelectCond), m_Value(SelectLHS),
+                                       m_Value(SelectRHS)))))) {
       Value *NewLdexp = nullptr;
       Value *Select = nullptr;
       if (match(SelectRHS, m_ZeroInt())) {
         NewLdexp = Builder.CreateLdexp(Src, SelectLHS, II);
-        Select = Builder.CreateSelect(SelectCond, NewLdexp, Src);
+        Select =
+            Builder.CreateSelect(SelectCond, NewLdexp, Src, "", SelectInst);
       } else if (match(SelectLHS, m_ZeroInt())) {
         NewLdexp = Builder.CreateLdexp(Src, SelectRHS, II);
-        Select = Builder.CreateSelect(SelectCond, Src, NewLdexp);
+        Select =
+            Builder.CreateSelect(SelectCond, Src, NewLdexp, "", SelectInst);
       }
 
       if (NewLdexp) {
