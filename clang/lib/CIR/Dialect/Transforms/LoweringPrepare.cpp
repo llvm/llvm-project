@@ -2272,15 +2272,15 @@ void LoweringPreparePass::buildCXXGlobalInitFunc() {
   mlir::Location loc = mlirModule.getLoc();
 
   // The initializers of the imported C++20 named modules, recorded by CIRGen
-  // as the mangled names of functions this translation unit declares and
-  // calls before its own initializers.
+  // as the mangled names of functions this translation unit declares, at the
+  // location of the import, and calls before its own initializers.
   llvm::SmallVector<cir::FuncOp> importedInits;
-  if (auto names = mlirModule->getAttrOfType<mlir::ArrayAttr>(
+  if (auto inits = mlirModule->getAttrOfType<mlir::ArrayAttr>(
           cir::CIRDialect::getCXXModuleImportedInitsAttrName()))
-    for (mlir::Attribute name : names)
+    for (auto init : inits.getAsRange<cir::CXXModuleInitAttr>())
       importedInits.push_back(
-          buildRuntimeFunction(builder, cast<mlir::StringAttr>(name).getValue(),
-                               loc, builder.getVoidFnTy()));
+          buildRuntimeFunction(builder, init.getName().getValue(),
+                               init.getLoc(), builder.getVoidFnTy()));
 
   // The C++20 named-module init function name is precomputed by CIRGen and
   // stored as a module-level attribute.  Its presence is what marks this

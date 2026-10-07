@@ -2576,6 +2576,7 @@ void CIRGenModule::emitTopLevelDecl(Decl *decl) {
     // If we've already imported this module, we're done.
     if (!importedModules.insert(mod))
       break;
+    moduleImportLocs[mod] = importDecl->getLocation();
 
     assert(!cir::MissingFeatures::generateDebugInfo());
 
@@ -4066,8 +4067,15 @@ void CIRGenModule::release() {
     for (clang::Module *mod : imports) {
       if (mod->isHeaderLikeModule() || !mod->isNamedModuleInterfaceHasInit())
         continue;
-      importedInits.push_back(
-          builder.getStringAttr(getModuleInitializerName(mod)));
+      // A module that only the interface unit's export or import lists name
+      // takes the location of the module declaration.
+      auto importLoc = moduleImportLocs.find(mod);
+      mlir::Location loc =
+          getLoc(importLoc != moduleImportLocs.end() ? importLoc->second
+                                                     : primary->DefinitionLoc);
+      importedInits.push_back(cir::CXXModuleInitAttr::get(
+          &getMLIRContext(),
+          builder.getStringAttr(getModuleInitializerName(mod)), loc));
     }
     if (!importedInits.empty())
       theModule->setAttr(cir::CIRDialect::getCXXModuleImportedInitsAttrName(),

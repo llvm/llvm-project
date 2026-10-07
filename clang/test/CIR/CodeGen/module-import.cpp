@@ -124,7 +124,7 @@ import a;
 
 int use() { return a_func(a_val); }
 
-// CIR: cir.cxx_module_imported_inits = ["_ZGIW1a"]
+// CIR: cir.cxx_module_imported_inits = [#cir.cxx_module_init<"_ZGIW1a", {{[^>]*}}>]
 // CIR: cir.global "private" external {{.*}}@_ZW1a5a_val : !s32i
 // CIR: cir.func {{.*}}@_Z3usev()
 // CIR:   cir.get_global @_ZW1a5a_val : !cir.ptr<!s32i>
@@ -149,7 +149,7 @@ export module b;
 import a;
 export int b_func() { return a_func(a_val); }
 
-// CIR: cir.cxx_module_imported_inits = ["_ZGIW1a"]
+// CIR: cir.cxx_module_imported_inits = [#cir.cxx_module_init<"_ZGIW1a", {{[^>]*}}>]
 // CIR: cir.cxx_module_init_fn_name = "_ZGIW1b"
 // CIR: cir.global {{.*}}internal @_ZGIW1b__in_chrg = #cir.int<0> : !s8i
 // CIR: cir.func private @_ZGIW1a()

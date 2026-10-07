@@ -122,6 +122,9 @@ private:
   /// The complete set of modules that have been imported.
   llvm::SetVector<clang::Module *> importedModules;
 
+  /// The location of the first import declaration of each imported module.
+  llvm::DenseMap<clang::Module *, clang::SourceLocation> moduleImportLocs;
+
   /// The set of modules for which the module initializers have been emitted.
   llvm::SmallPtrSet<clang::Module *, 16> emittedModuleInitializers;
 
