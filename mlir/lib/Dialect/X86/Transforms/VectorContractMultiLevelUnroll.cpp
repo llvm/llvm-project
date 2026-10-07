@@ -84,6 +84,18 @@ struct MLUCandidate {
 // Utilities                                                                  //
 //----------------------------------------------------------------------------//
 
+// Return true if the argument is an all-zero vector.
+static bool isZeroVector(Value v) {
+  auto constOp = v.getDefiningOp<arith::ConstantOp>();
+  if (!constOp)
+    return false;
+  auto denseAttr = dyn_cast<DenseElementsAttr>(constOp.getValue());
+  if (!denseAttr || !denseAttr.isSplat())
+    return false;
+
+  return isZeroIntegerOrFloat(denseAttr.getSplatValue<Attribute>());
+}
+
 // Return true if given vector.transfer_read/write has a default permutation
 // map, no mask and no out-of-bounds check.
 static bool isSimpleTransferOp(VectorTransferOpInterface op) {
@@ -448,8 +460,8 @@ static LogicalResult matchAccumulationLoop(MLUCandidate &candidate,
     return rewriter.notifyMatchFailure(contract,
                                        "accumulator is not loop-carried");
 
-  bool accIsZeroInit = isa_and_present<arith::ConstantOp>(
-      x86::traceToVectorReadLikeParentOperation(contract.getAcc()));
+  Value accInitVal = accLoop.getTiedLoopInit(accIterArg)->get();
+  bool accIsZeroInit = isZeroVector(accInitVal);
 
   auto lhsRead = contract.getLhs().getDefiningOp<vector::TransferReadOp>();
   auto rhsRead = contract.getRhs().getDefiningOp<vector::TransferReadOp>();
@@ -476,7 +488,7 @@ static LogicalResult matchAccumulationLoop(MLUCandidate &candidate,
     return failure();
 
   candidate.accLoop = accLoop;
-  candidate.accInitVal = accLoop.getTiedLoopInit(accIterArg)->get();
+  candidate.accInitVal = accInitVal;
   candidate.accIsZeroInit = accIsZeroInit;
   candidate.lhsRead = lhsRead;
   candidate.rhsRead = rhsRead;
