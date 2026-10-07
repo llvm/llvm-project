@@ -1,20 +1,16 @@
 ; RUN: llc --verify-machineinstrs --spirv-ext=+SPV_KHR_non_semantic_info -O0 -mtriple=spirv64-unknown-unknown %s -o - | FileCheck %s --check-prefix=CHECK-SPIRV
 ; RUN: %if spirv-tools %{ llc --verify-machineinstrs --spirv-ext=+SPV_KHR_non_semantic_info -O0 -mtriple=spirv64-unknown-unknown %s -o - -filetype=obj | spirv-val %}
-; RUN: llc --verify-machineinstrs --spirv-ext=+SPV_KHR_non_semantic_info,+SPV_KHR_relaxed_extended_instruction -O0 -mtriple=spirv64-unknown-unknown %s -o - | FileCheck %s --check-prefix=FWD
-; RUN: %if spirv-tools %{ llc --verify-machineinstrs --spirv-ext=+SPV_KHR_non_semantic_info,+SPV_KHR_relaxed_extended_instruction -O0 -mtriple=spirv64-unknown-unknown %s -o - -filetype=obj | not spirv-val 2>&1 | FileCheck %s --check-prefix=VAL %}
+; RUN: llc --verify-machineinstrs --spirv-ext=+SPV_KHR_non_semantic_info,+SPV_KHR_relaxed_extended_instruction --spirv-debug-scope-forward-refs=true -O0 -mtriple=spirv64-unknown-unknown %s -o - | FileCheck %s --check-prefix=FWD
+; RUN: %if spirv-tools %{ llc --verify-machineinstrs --spirv-ext=+SPV_KHR_non_semantic_info,+SPV_KHR_relaxed_extended_instruction --spirv-debug-scope-forward-refs=true -O0 -mtriple=spirv64-unknown-unknown %s -o - -filetype=obj | spirv-val %}
 
 ; typedef U whose base is T, and T whose base is U. T is scoped in an
 ; unsupported enumeration.
 ;
-; With SPV_KHR_relaxed_extended_instruction, U is emitted while T is open, so
+; With SPV_KHR_relaxed_extended_instruction and
+; -spirv-debug-scope-forward-refs, U is emitted while T is open, so
 ; U's Base Type is T's reserved id. T then fails, and that id is defined as
 ; DebugInfoNone. Without the extension the back edge is dropped and neither
 ; typedef is emitted.
-;
-; NonSemantic.Shader.DebugInfo says DebugTypedef's Base Type is a debugging
-; instruction for the named type, and DebugInfoNone is what other instructions
-; refer to when the information is unknown. spirv-val still rejects this: it
-; requires DebugTypeBasic. That check does not match the spec.
 
 ; CHECK-SPIRV-NOT: DebugTypedef
 ; CHECK-SPIRV-NOT: OpExtInstWithForwardRefsKHR
@@ -26,8 +22,6 @@
 ; FWD: [[u:%[0-9]+]] = OpExtInstWithForwardRefsKHR [[void]] [[ext]] DebugTypedef [[name_u]] [[base:%[0-9]+]]
 ; FWD: [[base]] = OpExtInst [[void]] [[ext]] DebugInfoNone
 ; FWD-NOT: DebugTypedef
-
-; VAL: DebugTypedef: expected operand Base Type must be a result id of DebugTypeBasic
 
 define spir_func void @test() !dbg !6 {
 entry:

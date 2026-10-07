@@ -144,7 +144,8 @@ class SPIRVNonSemanticDebugHandler : public DebugHandlerBase {
   // Types and scopes whose instruction is currently being built.
   SmallDenseMap<const DIScope *, InProgressScope, 8> ScopesInProgress;
 
-  // True when prepareModuleOutput saw SPV_KHR_relaxed_extended_instruction.
+  // True when -spirv-debug-scope-forward-refs is set and prepareModuleOutput
+  // saw SPV_KHR_relaxed_extended_instruction.
   bool HasRelaxedExtInst = false;
 
   // Types and scopes that are not supported.
