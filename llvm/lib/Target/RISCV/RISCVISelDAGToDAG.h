@@ -99,6 +99,7 @@ public:
 
   bool SelectAddrRegReg(SDValue Addr, SDValue &Base, SDValue &Offset);
 
+  bool tryPExtNarrowUnsigned(SDNode *Node);
   bool tryShrinkShlLogicImm(SDNode *Node);
   bool trySignedBitfieldExtract(SDNode *Node);
   bool trySignedBitfieldInsertInSign(SDNode *Node);
