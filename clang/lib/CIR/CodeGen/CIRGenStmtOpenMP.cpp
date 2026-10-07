@@ -99,16 +99,31 @@ findNestedOMPLoopDirective(const OMPExecutableDirective &s) {
   return findNestedOMPLoopDirective(*nested);
 }
 
-/// Returns true if \p s is a target SPMD construct: a combined
-/// `target parallel for`, or an explicitly nested `target` whose body is a
-/// parallel directive.
+/// Returns true if \p s is a target SPMD construct.
 static bool isTargetSPMD(const OMPExecutableDirective &s) {
   switch (s.getDirectiveKind()) {
   case llvm::omp::OMPD_target_parallel_for:
+  case llvm::omp::OMPD_target_teams_distribute_parallel_for:
     return true;
   case llvm::omp::OMPD_target: {
     const OMPExecutableDirective *nested = getSingleNestedOMPDirective(s);
-    return nested && isOpenMPParallelDirective(nested->getDirectiveKind());
+    if (!nested)
+      return false;
+    if (isOpenMPParallelDirective(nested->getDirectiveKind()))
+      return true;
+    if (nested->getDirectiveKind() != llvm::omp::OMPD_teams)
+      return false;
+    const OMPExecutableDirective *distribute =
+        getSingleNestedOMPDirective(*nested);
+    return distribute && distribute->getDirectiveKind() ==
+                             llvm::omp::OMPD_distribute_parallel_for;
+  }
+  case llvm::omp::OMPD_target_teams: {
+    // `target teams` (combined) with a separately, explicitly nested
+    // `distribute parallel for` (composite, split off).
+    const OMPExecutableDirective *distribute = getSingleNestedOMPDirective(s);
+    return distribute && distribute->getDirectiveKind() ==
+                             llvm::omp::OMPD_distribute_parallel_for;
   }
   default:
     return false;
@@ -161,26 +176,42 @@ emitParallelClauses(CIRGenFunction &cgf, CIRGenModule &cgm,
       llvm::omp::Directive::OMPD_parallel);
 }
 
+/// Emits an omp.parallel op. When \p isComposite is set, this omp.parallel is
+/// a leaf of a composite construct, e.g. the `parallel` in `distribute
+/// parallel for`, and gets the `composite` attribute set. \p counterMolds is
+/// only used by composite callers. Used to create privatized induction
+/// variable(s) that can be used inside the loop nest.
 template <typename DirectiveTy>
-static mlir::LogicalResult
-emitParallelOp(CIRGenFunction &cgf, const DirectiveTy &s,
-               const omp::ConstructQueue &queue,
-               omp::ConstructQueue::const_iterator item, mlir::Location begin,
-               mlir::Location end, const mlir::omp::ParallelOperands &clauseOps,
-               llvm::function_ref<mlir::LogicalResult()> emitBody) {
+static mlir::LogicalResult emitParallelOp(
+    CIRGenFunction &cgf, const DirectiveTy &s, const omp::ConstructQueue &queue,
+    omp::ConstructQueue::const_iterator item, mlir::Location begin,
+    mlir::Location end, const mlir::omp::ParallelOperands &clauseOps,
+    llvm::function_ref<mlir::LogicalResult()> emitBody,
+    bool isComposite = false,
+    llvm::ArrayRef<std::pair<const VarDecl *, Address>> counterMolds = {}) {
   CIRGenBuilderTy &builder = cgf.getBuilder();
   CIRGenModule &cgm = cgf.getCIRGenModule();
 
   auto parallelOp = mlir::omp::ParallelOp::create(builder, begin, clauseOps);
-  if (!omp::isLastItemInQueue(item, queue) ||
-      hasCombinableNestedLeaf(static_cast<const OMPExecutableDirective &>(s)))
-    parallelOp.setCombined(true);
 
   mlir::Block &block = parallelOp.getRegion().emplaceBlock();
+  for (auto &counterMold : counterMolds)
+    block.addArgument(counterMold.second.getPointer().getType(), begin);
+
   mlir::OpBuilder::InsertionGuard guard(builder);
   builder.setInsertionPointToEnd(&block);
 
   CIRGenFunction::LexicalScope ls{cgf, begin, builder.getInsertionBlock()};
+
+  // Bind each composite loop counter to its private block argument.
+  for (auto [idx, counterMold] : llvm::enumerate(counterMolds)) {
+    const VarDecl *vd = counterMold.first;
+    Address moldAddr = counterMold.second;
+    Address privAddr(block.getArgument(idx), moldAddr.getElementType(),
+                     moldAddr.getAlignment());
+    cgf.replaceAddrOfLocalVar(vd, privAddr);
+    cgf.symbolTable.insert(vd, privAddr.getPointer());
+  }
 
   // hasCancel() reports a nested cancel/cancellation point directive in the
   // body, not a clause on `parallel`, so it can't be an emitParallelClauses()
@@ -195,6 +226,19 @@ emitParallelOp(CIRGenFunction &cgf, const DirectiveTy &s,
 
   mlir::LogicalResult res = emitBody();
   mlir::omp::TerminatorOp::create(builder, end);
+
+  // omp.composite/omp.combined describe the nested leaves emitted by the body
+  // above, so they are only attached once that succeeded: a body that bailed
+  // out leaves an empty region, which omp.composite's verifier rejects with
+  // an error that would mask the original diagnostic.
+  if (res.succeeded()) {
+    if (isComposite)
+      parallelOp.setComposite(true);
+    else if (!omp::isLastItemInQueue(item, queue) ||
+             hasCombinableNestedLeaf(
+                 static_cast<const OMPExecutableDirective &>(s)))
+      parallelOp.setCombined(true);
+  }
   return res;
 }
 
@@ -452,6 +496,37 @@ emitHostEvalLoopBounds(CIRGenFunction &cgf, const OMPLoopDirective &s) {
   return hev;
 }
 
+/// Computes an OMPLoopDirective's normalized `[0, tripCount)` bounds, as
+/// builtin-integer values ready for an omp.loop_nest.
+///
+/// If \p consumingHostEval is true, the enclosing omp.target already
+/// host_eval'd this loop's trip count, so that value is reused here instead
+/// of re-emitting the trip-count expression. Otherwise, the caller must have
+/// already run preinits (see emitPreinits) before calling this function.
+static void emitOMPLoopNestBounds(CIRGenFunction &cgf,
+                                  const OMPLoopDirective &s,
+                                  bool consumingHostEval, mlir::Value &zero,
+                                  mlir::Value &tripCount, mlir::Value &one) {
+  CIRGenBuilderTy &builder = cgf.getBuilder();
+  mlir::Location loc = cgf.getLoc(s.getBeginLoc());
+
+  if (consumingHostEval) {
+    // Consume the host_eval bounds forwarded by the enclosing omp.target.
+    cgf.ompHostEvalBounds->applied = true;
+    zero = cgf.ompHostEvalBounds->zero;
+    tripCount = cgf.ompHostEvalBounds->tripCount;
+    one = cgf.ompHostEvalBounds->one;
+  } else {
+    mlir::Value tripCountCir = cgf.emitScalarExpr(s.getNumIterations());
+    auto cirIntType = mlir::cast<cir::IntType>(tripCountCir.getType());
+    zero = builder.createBuiltinIntCast(
+        loc, builder.getConstInt(loc, cirIntType, 0));
+    one = builder.createBuiltinIntCast(loc,
+                                       builder.getConstInt(loc, cirIntType, 1));
+    tripCount = builder.createBuiltinIntCast(loc, tripCountCir);
+  }
+}
+
 /// Lowers an OMPLoopDirective to an omp.loop_nest wrapped by an \p OpTy
 /// (omp.wsloop or omp.distribute).
 template <typename OpTy, typename OperandsTy>
@@ -492,21 +567,7 @@ static mlir::LogicalResult emitOMPLoop(CIRGenFunction &cgf,
   }
 
   mlir::Value zero, tripCount, one;
-  if (consumingHostEval) {
-    // Consume the host_eval bounds forwarded by the enclosing omp.target.
-    cgf.ompHostEvalBounds->applied = true;
-    zero = cgf.ompHostEvalBounds->zero;
-    tripCount = cgf.ompHostEvalBounds->tripCount;
-    one = cgf.ompHostEvalBounds->one;
-  } else {
-    mlir::Value tripCountCir = cgf.emitScalarExpr(s.getNumIterations());
-    auto cirIntType = mlir::cast<cir::IntType>(tripCountCir.getType());
-    zero = builder.createBuiltinIntCast(
-        loc, builder.getConstInt(loc, cirIntType, 0));
-    one = builder.createBuiltinIntCast(loc,
-                                       builder.getConstInt(loc, cirIntType, 1));
-    tripCount = builder.createBuiltinIntCast(loc, tripCountCir);
-  }
+  emitOMPLoopNestBounds(cgf, s, consumingHostEval, zero, tripCount, one);
 
   auto loopOp = OpTy::create(builder, loc, clauseOps);
   mlir::Block *innerBlock = new mlir::Block();
@@ -583,6 +644,160 @@ emitOMPDistributeLoop(CIRGenFunction &cgf, const OMPLoopDirective &s,
     return mlir::failure();
 
   return emitOMPLoop<mlir::omp::DistributeOp>(cgf, s, clauseOps);
+}
+
+/// Lowers the `distribute parallel for` composite construct's loop leaves
+/// into the stacked omp.distribute + omp.wsloop sharing a single
+/// omp.loop_nest, with both wrappers marked composite. This runs inside the
+/// composite omp.parallel created by the caller (emitOMPDistributeParallelFor
+/// below), which privatizes the shared loop counter(s) on itself (matching
+/// Flang -- see distribute-parallel-do.f90): the two loop wrappers here stay
+/// bare, consuming the same private block argument(s) already bound by the
+/// enclosing omp.parallel.
+static mlir::LogicalResult emitOMPDistributeParallelForLoop(
+    CIRGenFunction &cgf, const OMPLoopDirective &s,
+    const mlir::omp::DistributeOperands &distributeClauseOps,
+    const mlir::omp::WsloopOperands &wsloopClauseOps) {
+  CIRGenBuilderTy &builder = cgf.getBuilder();
+  mlir::Location loc = cgf.getLoc(s.getBeginLoc());
+
+  const CapturedStmt *capturedStmt = s.getInnermostCapturedStmt();
+  const auto *forStmt = cast<ForStmt>(capturedStmt->getCapturedStmt());
+
+  // Allocate storage for Sema's synthetic 0-based loop counter here, inside
+  // the composite omp.parallel's region (whose insertion point the caller
+  // has already switched to): like the real per-thread counter(s) bound by
+  // the enclosing omp.parallel, this storage must live inside the parallel
+  // region to get a per-thread copy once the region is outlined, rather
+  // than racing across threads if it were hoisted outside like the
+  // counter(s)' mold allocas are.
+  const auto *ivDecl =
+      cast<VarDecl>(cast<DeclRefExpr>(s.getIterationVariable())->getDecl());
+  cgf.emitVarDecl(*ivDecl);
+
+  // The counter(s) were already privatized on the enclosing omp.parallel by
+  // the caller, so unlike emitOMPLoop this never runs preinits
+  // itself: that already happened (or didn't, if host_eval is being
+  // consumed) before this composite's omp.parallel was created.
+  bool consumingHostEval =
+      cgf.ompHostEvalBounds && !cgf.ompHostEvalBounds->applied;
+  mlir::Value zero, tripCount, one;
+  emitOMPLoopNestBounds(cgf, s, consumingHostEval, zero, tripCount, one);
+
+  // Stack the composite loop wrappers around a single shared omp.loop_nest:
+  // omp.distribute {composite} > omp.wsloop {composite} > omp.loop_nest.
+  mlir::OpBuilder::InsertionGuard guard(builder);
+  auto distributeOp =
+      mlir::omp::DistributeOp::create(builder, loc, distributeClauseOps);
+  distributeOp.getRegion().push_back(new mlir::Block());
+  builder.setInsertionPointToStart(&distributeOp.getRegion().front());
+
+  auto wsloopOp = mlir::omp::WsloopOp::create(builder, loc, wsloopClauseOps);
+  wsloopOp.getRegion().push_back(new mlir::Block());
+  builder.setInsertionPointToStart(&wsloopOp.getRegion().front());
+
+  // Composite is only attached once the loop body has been emitted: a body
+  // that bailed out leaves an empty region, which omp.composite's verifier
+  // rejects with an error that would mask the original diagnostic.
+  mlir::LogicalResult res = emitOMPLoopNest(cgf, *forStmt, zero, tripCount, one,
+                                            ivDecl, s.updates()[0]);
+  if (res.succeeded()) {
+    distributeOp.setComposite(/*val=*/true);
+    wsloopOp.setComposite(/*val=*/true);
+  }
+  return res;
+}
+
+/// Emits the `distribute parallel for` composite construct's `distribute`,
+/// `parallel` and `for` leaves: \p distributeItem (the first of the three,
+/// located in \p queue) and the two leaves following it. Lowers to a
+/// composite omp.parallel wrapping the composite omp.distribute + omp.wsloop
+/// + omp.loop_nest stack (see emitOMPDistributeParallelForLoop). Shared by
+/// emitOMPDistributeParallelForDirective and its `teams`/`target teams`
+/// combinations below, which call this once they've peeled off their own
+/// (non-composite) outer wrapper(s).
+///
+/// Templated on \p DirectiveTy (rather than just taking an OMPLoopDirective,
+/// like emitOMPDistributeParallelForLoop below does) so the concrete
+/// directive type reaches emitParallelOp, which needs it: hasCancel() and
+/// getTaskReductionRefExpr() are declared per-concrete-class, not on the
+/// common OMPLoopDirective base.
+template <typename DirectiveTy>
+static mlir::LogicalResult
+emitOMPDistributeParallelFor(CIRGenFunction &cgf, const DirectiveTy &s,
+                             const omp::ConstructQueue &queue,
+                             omp::ConstructQueue::const_iterator distributeItem,
+                             mlir::Location begin, mlir::Location end) {
+  CIRGenBuilderTy &builder = cgf.getBuilder();
+  CIRGenModule &cgm = cgf.getCIRGenModule();
+  mlir::Location loc = cgf.getLoc(s.getBeginLoc());
+
+  assert(distributeItem->id == llvm::omp::OMPD_distribute &&
+         "expected 'distribute' to be the first directive of the composite "
+         "construct");
+  omp::ConstructQueue::const_iterator parallelItem = std::next(distributeItem);
+  assert(parallelItem != queue.end() &&
+         parallelItem->id == llvm::omp::OMPD_parallel &&
+         "expected a 'parallel' directive nested in 'distribute'");
+  omp::ConstructQueue::const_iterator forItem = std::next(parallelItem);
+  assert(forItem != queue.end() && forItem->id == llvm::omp::OMPD_for &&
+         "expected a 'for' directive nested in 'parallel'");
+
+  if (mlir::failed(checkSynthesizedClauses(cgf, s, distributeItem)))
+    return mlir::failure();
+  mlir::omp::DistributeOperands distributeOps;
+  if (emitDistributeClauses(cgf, cgm, builder, loc, distributeItem->clauses,
+                            distributeOps)
+          .failed())
+    return mlir::failure();
+
+  if (mlir::failed(checkSynthesizedClauses(cgf, s, parallelItem)))
+    return mlir::failure();
+  mlir::omp::ParallelOperands parallelOps;
+  if (mlir::failed(emitParallelClauses(cgf, cgm, builder, loc,
+                                       parallelItem->clauses, parallelOps)))
+    return mlir::failure();
+
+  if (mlir::failed(checkSynthesizedClauses(cgf, s, forItem)))
+    return mlir::failure();
+  mlir::omp::WsloopOperands wsloopOps;
+  if (emitWsloopClauses(cgf, cgm, builder, loc, forItem->clauses, wsloopOps)
+          .failed())
+    return mlir::failure();
+
+  // If the enclosing omp.target already host_eval'd this loop's trip count,
+  // the preinits below are skipped, matching emitOMPLoop.
+  bool consumingHostEval =
+      cgf.ompHostEvalBounds && !cgf.ompHostEvalBounds->applied;
+  if (!consumingHostEval && emitPreinits(cgf, s.getPreInits()).failed())
+    return mlir::failure();
+
+  // The composite loop's shared counter(s) are privatized on the enclosing
+  // omp.parallel (matching Flang: see distribute-parallel-do.f90), not on
+  // the omp.distribute/omp.wsloop stack below, which stays bare. (The
+  // synthetic 0-based `.omp.iv` counter is allocated separately, inside the
+  // omp.parallel region -- see emitOMPDistributeParallelForLoop.)
+  llvm::SmallVector<CIRGenFunction::DeclMapRevertingRAII, 4> counterShadows;
+  llvm::SmallVector<std::pair<const VarDecl *, Address>, 4> counterMolds;
+  counterShadows.reserve(s.counters().size());
+  counterMolds.reserve(s.counters().size());
+  for (auto [counter, privateCounter] :
+       llvm::zip_equal(s.counters(), s.private_counters())) {
+    const auto *vd = cast<VarDecl>(cast<DeclRefExpr>(counter)->getDecl());
+    const auto *privateVd =
+        cast<VarDecl>(cast<DeclRefExpr>(privateCounter)->getDecl());
+    counterShadows.emplace_back(cgf, vd);
+    counterMolds.emplace_back(
+        vd, addPrivateCounter(cgf, cgm, loc, privateVd, parallelOps));
+  }
+
+  return emitParallelOp(
+      cgf, s, queue, parallelItem, begin, end, parallelOps,
+      [&]() -> mlir::LogicalResult {
+        return emitOMPDistributeParallelForLoop(cgf, s, distributeOps,
+                                                wsloopOps);
+      },
+      /*isComposite=*/true, counterMolds);
 }
 
 mlir::LogicalResult
@@ -1113,9 +1328,15 @@ CIRGenFunction::emitOMPDistributeDirective(const OMPDistributeDirective &s) {
 }
 mlir::LogicalResult CIRGenFunction::emitOMPDistributeParallelForDirective(
     const OMPDistributeParallelForDirective &s) {
-  getCIRGenModule().errorNYI(s.getSourceRange(),
-                             "OpenMP OMPDistributeParallelForDirective");
-  return mlir::failure();
+  mlir::Location begin = getLoc(s.getBeginLoc());
+  mlir::Location end = getLoc(s.getEndLoc());
+
+  // `distribute parallel for` is a composite construct: a composite
+  // omp.parallel wrapping the composite omp.distribute + omp.wsloop stack.
+  omp::ConstructQueue queue =
+      omp::buildConstructQueue(getContext().getLangOpts().OpenMP, s);
+  return emitOMPDistributeParallelFor(*this, s, queue, queue.begin(), begin,
+                                      end);
 }
 mlir::LogicalResult CIRGenFunction::emitOMPDistributeParallelForSimdDirective(
     const OMPDistributeParallelForSimdDirective &s) {
@@ -1196,9 +1417,24 @@ CIRGenFunction::emitOMPTeamsDistributeParallelForSimdDirective(
 }
 mlir::LogicalResult CIRGenFunction::emitOMPTeamsDistributeParallelForDirective(
     const OMPTeamsDistributeParallelForDirective &s) {
-  getCIRGenModule().errorNYI(s.getSourceRange(),
-                             "OpenMP OMPTeamsDistributeParallelForDirective");
-  return mlir::failure();
+  mlir::Location begin = getLoc(s.getBeginLoc());
+  mlir::Location end = getLoc(s.getEndLoc());
+
+  // `teams distribute parallel for` nests the composite `distribute parallel
+  // for` stack inside an omp.teams.
+  omp::ConstructQueue queue =
+      omp::buildConstructQueue(getContext().getLangOpts().OpenMP, s);
+  omp::ConstructQueue::const_iterator teamsItem = queue.begin();
+  assert(teamsItem->id == llvm::omp::OMPD_teams &&
+         "expected 'teams' to be the outermost directive");
+
+  return emitTeams(*this, s, queue, teamsItem, begin, end,
+                   [&]() -> mlir::LogicalResult {
+                     omp::ConstructQueue::const_iterator distributeItem =
+                         std::next(teamsItem);
+                     return emitOMPDistributeParallelFor(
+                         *this, s, queue, distributeItem, begin, end);
+                   });
 }
 mlir::LogicalResult CIRGenFunction::emitOMPTeamsGenericLoopDirective(
     const OMPTeamsGenericLoopDirective &s) {
@@ -1266,10 +1502,32 @@ mlir::LogicalResult CIRGenFunction::emitOMPTargetTeamsDistributeDirective(
 mlir::LogicalResult
 CIRGenFunction::emitOMPTargetTeamsDistributeParallelForDirective(
     const OMPTargetTeamsDistributeParallelForDirective &s) {
-  getCIRGenModule().errorNYI(
-      s.getSourceRange(),
-      "OpenMP OMPTargetTeamsDistributeParallelForDirective");
-  return mlir::failure();
+  mlir::Location begin = getLoc(s.getBeginLoc());
+  mlir::Location end = getLoc(s.getEndLoc());
+
+  // `target teams distribute parallel for` nests the composite `distribute
+  // parallel for` stack inside omp.teams inside an (SPMD) omp.target.
+  omp::ConstructQueue queue =
+      omp::buildConstructQueue(getContext().getLangOpts().OpenMP, s);
+  omp::ConstructQueue::const_iterator targetItem = queue.begin();
+  assert(targetItem->id == llvm::omp::OMPD_target &&
+         "expected 'target' to be the outermost directive");
+
+  return emitTarget(
+      *this, s, queue, targetItem, begin, end, [&]() -> mlir::LogicalResult {
+        omp::ConstructQueue::const_iterator teamsItem = std::next(targetItem);
+        assert(teamsItem != queue.end() &&
+               teamsItem->id == llvm::omp::OMPD_teams &&
+               "expected a 'teams' directive nested in 'target'");
+
+        return emitTeams(*this, s, queue, teamsItem, begin, end,
+                         [&]() -> mlir::LogicalResult {
+                           omp::ConstructQueue::const_iterator distributeItem =
+                               std::next(teamsItem);
+                           return emitOMPDistributeParallelFor(
+                               *this, s, queue, distributeItem, begin, end);
+                         });
+      });
 }
 mlir::LogicalResult
 CIRGenFunction::emitOMPTargetTeamsDistributeParallelForSimdDirective(
