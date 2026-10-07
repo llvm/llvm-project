@@ -454,6 +454,31 @@ def Builtin_Float8E5M3FNU : Builtin_FloatType<"Float8E5M3FNU", "f8E5M3FNU"> {
 }
 
 //===----------------------------------------------------------------------===//
+// OCPInt8Type
+//===----------------------------------------------------------------------===//
+
+def Builtin_OCPInt8 : Builtin_Type<"OCPInt8", "ocp_int8",
+    [VectorElementTypeInterface,
+     DeclareTypeInterfaceMethods<DenseElementTypeInterface, [
+         "getDenseElementBitSize", "convertToAttribute",
+         "convertFromAttribute"]>]> {
+  let summary = "OCP INT8 element type";
+  let description = [{
+    The INT8 element type of the OCP MXINT8 block format. It is an 8-bit signed
+    two's-complement type with six fractional bits. Its values are multiples of
+    1/64 in the range [-2, 127/64]. The shared E8M0 scale is not part of this
+    type.
+
+    Open Compute Project (OCP) microscaling formats (MX) specification,
+    Section 5.3.4 (INT8):
+    https://www.opencompute.org/documents/ocp-microscaling-formats-mx-v1-0-spec-final-pdf
+  }];
+  let extraClassDeclaration = [{
+    static llvm::FixedPointSemantics getFixedPointSemantics();
+  }];
+}
+
+//===----------------------------------------------------------------------===//
 // BFloat16Type
 //===----------------------------------------------------------------------===//
 

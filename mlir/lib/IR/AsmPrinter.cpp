@@ -2824,6 +2824,7 @@ void AsmPrinter::Impl::printTypeImpl(Type type) {
       .Case<Float64Type>([&](Type) { os << "f64"; })
       .Case<Float80Type>([&](Type) { os << "f80"; })
       .Case<Float128Type>([&](Type) { os << "f128"; })
+      .Case<OCPInt8Type>([&](Type) { os << "ocp_int8"; })
       .Case([&](IntegerType integerTy) {
         if (integerTy.isSigned())
           os << 's';

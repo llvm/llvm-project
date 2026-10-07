@@ -596,6 +596,17 @@ func.func @tf32_elements_attr() {
 
 // -----
 
+// Test OCP INT8 dense elements at both storage endpoints and around zero.
+
+// CHECK-LABEL: func @ocp_int8_elements_attr
+func.func @ocp_int8_elements_attr() {
+  // CHECK: "foo"() {attr = dense<tensor<4xocp_int8> : [-128 : i8, -1 : i8, 0 : i8, 127 : i8]>} : () -> ()
+  "foo"() {attr = dense<tensor<4xocp_int8> : [-128 : i8, -1 : i8, 0 : i8, 127 : i8]>} : () -> ()
+  return
+}
+
+// -----
+
 //===----------------------------------------------------------------------===//
 // Test StringElementsAttr
 //===----------------------------------------------------------------------===//
