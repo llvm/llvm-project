@@ -49022,12 +49022,8 @@ static SDValue combineSelect(SDNode *N, SelectionDAG &DAG,
       if (Subtarget.hasFP16())
         return DAG.getBitcast(
             VT, DAG.getSelect(DL, MVT::f16, Cond, F16LHS, F16RHS));
-      SDValue VLHS =
-          DAG.getBitcast(MVT::v8i16, DAG.getNode(ISD::SCALAR_TO_VECTOR, DL,
-                                                 MVT::v8f16, F16LHS));
-      SDValue VRHS =
-          DAG.getBitcast(MVT::v8i16, DAG.getNode(ISD::SCALAR_TO_VECTOR, DL,
-                                                 MVT::v8f16, F16RHS));
+      SDValue VLHS = DAG.getNode(ISD::SCALAR_TO_VECTOR, DL, MVT::v8f16, F16LHS);
+      SDValue VRHS = DAG.getNode(ISD::SCALAR_TO_VECTOR, DL, MVT::v8f16, F16RHS);
       // With AVX512, select the whole low 32-bit lane via a masked VMOVSS; the
       // upper 16 bits of the result are don't care.
       if (Subtarget.hasAVX512()) {
@@ -49050,7 +49046,9 @@ static SDValue combineSelect(SDNode *N, SelectionDAG &DAG,
       SDValue Mask =
           DAG.getNegative(DAG.getZExtOrTrunc(Cond, DL, MVT::i16), DL, MVT::i16);
       SDValue VMask = DAG.getNode(ISD::SCALAR_TO_VECTOR, DL, MVT::v8i16, Mask);
-      SDValue VSel = DAG.getSelect(DL, MVT::v8i16, VMask, VLHS, VRHS);
+      SDValue VSel =
+          DAG.getSelect(DL, MVT::v8i16, VMask, DAG.getBitcast(MVT::v8i16, VLHS),
+                        DAG.getBitcast(MVT::v8i16, VRHS));
       SDValue Res = DAG.getExtractVectorElt(DL, MVT::i16, VSel, 0);
       return DAG.getBitcast(VT, Res);
     }
