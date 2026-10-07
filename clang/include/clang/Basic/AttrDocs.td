@@ -1521,7 +1521,7 @@ chmat44 vmat2;
 The base component type must be a scalar numerical type.
 Implicit and explicit casts between cooperative matrix types are not generally permitted.
 Conversion between cooperative matrix types is allowed only when the types have identical scope, dimensions, and use parameters, and their component types are compatible according to the OpenCL C conversion rules.
-Cooperative matrix types are intended to be used with the cooperative matrix functions, including coop_mat_load, coop_mat_store, coop_matmul_add, and coop_mat_length.
+Cooperative matrix types are intended to be used with the cooperative matrix functions, including coop_mat_load, coop_mat_store, coop_mat_mulAdd, coop_mat_length and element-wise arithmetic operations.
 See the OpenCL documentation for some more complete examples.
   }];
 }
