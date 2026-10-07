@@ -228,7 +228,7 @@ int useNonThreadSafe() {
 
 // LLVM: [[UNINIT]]:
 // LLVM-NOT: call {{.*}}@__cxa_guard_acquire
-// LLVM:   store i{{.*}} 1, ptr @_ZGVN13NonThreadSafeIiE1fE
+// LLVM:   store i8 1, ptr @_ZGVN13NonThreadSafeIiE1fE
 // LLVM:   %[[CALL:.*]] = call noundef i32 @_Z5get_iv()
 // LLVM:   store i32 %[[CALL]], ptr @_ZN13NonThreadSafeIiE1fE
 // LLVM-NOT: call {{.*}}@__cxa_guard_release
