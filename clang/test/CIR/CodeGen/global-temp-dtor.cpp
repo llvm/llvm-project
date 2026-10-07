@@ -262,3 +262,31 @@ thread_local const NonTrivialArr &thread_arr_ref = NonTrivialArr{};
 // OGCG:         %[[DONE:.*]] = icmp eq ptr
 // OGCG:         br i1 %[[DONE]], label %[[LOOP_EXIT_BLOCK:.*]], label %[[LOOP_BODY_BLOCK]]
 // OGCG:       [[LOOP_EXIT_BLOCK]]:
+
+struct ExtendedTemp {
+  ExtendedTemp();
+  ~ExtendedTemp();
+};
+struct OwnsTemp {
+  const ExtendedTemp &r;
+  ~OwnsTemp();
+};
+OwnsTemp owns_temp{ExtendedTemp()};
+
+// CIR-BEFORE: cir.global external @owns_temp = ctor : !rec_OwnsTemp {
+// CIR-BEFORE: } dtor {
+// CIR-BEFORE-NEXT: %[[OWNER:.*]] = cir.get_global @owns_temp
+// CIR-BEFORE-NEXT: cir.call @_ZN8OwnsTempD1Ev(%[[OWNER]])
+// CIR-BEFORE-NEXT: %[[TEMP:.*]] = cir.get_global @_ZGR9owns_temp_
+// CIR-BEFORE-NEXT: cir.call @_ZN12ExtendedTempD1Ev(%[[TEMP]])
+// CIR-BEFORE-NEXT: }
+
+// CIR registers one helper that destroys both.
+// LLVMCIR-LABEL: define internal void @__cxx_global_array_dtor.{{.*}}(ptr
+// LLVMCIR:         call void @_ZN8OwnsTempD1Ev(ptr
+// LLVMCIR-NEXT:    call void @_ZN12ExtendedTempD1Ev(ptr @_ZGR9owns_temp_)
+// LLVMCIR:       call i32 @__cxa_atexit(ptr @__cxx_global_array_dtor.{{.*}}, ptr @owns_temp, ptr @__dso_handle)
+
+// Classic registers each separately; the temporary's goes first so it runs last.
+// OGCG:          call i32 @__cxa_atexit(ptr @_ZN12ExtendedTempD1Ev, ptr @_ZGR9owns_temp_, ptr @__dso_handle)
+// OGCG:          call i32 @__cxa_atexit(ptr @_ZN8OwnsTempD1Ev, ptr @owns_temp, ptr @__dso_handle)
