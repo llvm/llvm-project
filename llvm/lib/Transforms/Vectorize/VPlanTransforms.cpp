@@ -2737,8 +2737,6 @@ void VPlanTransforms::optimize(VPlan &Plan) {
   RUN_VPLAN_PASS(createAndOptimizeReplicateRegions, Plan);
   RUN_VPLAN_PASS(mergeBlocksIntoPredecessors, Plan);
   RUN_VPLAN_PASS(licm, Plan);
-  RUN_VPLAN_PASS(cse, Plan);
-  RUN_VPLAN_PASS(removeDeadRecipes, Plan);
 }
 
 void VPlanTransforms::simplifyLiveInsWithSCEV(VPlan &Plan,
@@ -3235,7 +3233,7 @@ getRecipesForUncountableExit(SmallVectorImpl<VPInstruction *> &Recipes,
 
     VPValue *Op1, *Op2;
     // Walk back through recipes until we find at least one load from memory.
-    if (match(V, m_ICmp(m_VPValue(Op1), m_VPValue(Op2)))) {
+    if (match(V, m_Cmp(m_VPValue(Op1), m_VPValue(Op2)))) {
       Worklist.push_back(Op1);
       Worklist.push_back(Op2);
       Recipes.push_back(cast<VPInstruction>(V->getDefiningRecipe()));
