@@ -3498,10 +3498,12 @@ bool AArch64InstrInfo::isTailCallReturnInst(const MachineInstr &MI) {
   case AArch64::TCRETURNri:
   case AArch64::TCRETURNrix16x17:
   case AArch64::TCRETURNrix17:
-  case AArch64::TCRETURNrinotx16:
+  case AArch64::TCRETURNrinotx15x16x17:
   case AArch64::TCRETURNriALL:
   case AArch64::AUTH_TCRETURN:
   case AArch64::AUTH_TCRETURN_BTI:
+  case AArch64::AUTH_TCRETURNnotx15x16x17:
+  case AArch64::AUTH_TCRETURN_BTIx17:
     return true;
   }
 }
@@ -11841,18 +11843,8 @@ void AArch64InstrInfo::createPauthEpilogueInstr(MachineBasicBlock &MBB,
 
   MachineFunction &MF = *MBB.getParent();
   const auto *AFI = MF.getInfo<AArch64FunctionInfo>();
-  auto &AFL = *static_cast<const AArch64FrameLowering *>(
-      MF.getSubtarget().getFrameLowering());
-  if (AFL.getArgumentStackToRestore(MF, MBB)) {
-    Builder.addReg(AArch64::X17, RegState::ImplicitDefine);
-    Builder.addReg(AArch64::X16, RegState::ImplicitDefine);
-    if (AFI->branchProtectionPAuthLR())
-      Builder.addReg(AArch64::X15, RegState::ImplicitDefine);
-    return;
-  }
-
-  if (AFI->branchProtectionPAuthLR() && !Subtarget.hasPAuthLR())
-    Builder.addReg(AArch64::X16, RegState::ImplicitDefine);
+  for (MCPhysReg Reg : AFI->getPauthEpilogueClobberedRegs(MF, &MBB))
+    Builder.addReg(Reg, RegState::ImplicitDefine);
 }
 
 MachineBasicBlock::iterator

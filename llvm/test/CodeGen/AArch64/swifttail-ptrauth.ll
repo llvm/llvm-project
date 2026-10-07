@@ -156,7 +156,7 @@ define swifttailcc void @caller_to0_from8([8 x i64], i64) "branch-protection-pau
 ; MIR-LABEL:  name: caller_to0_from8
 ; MIR-COMPAT:   frame-destroy PAUTH_EPILOGUE implicit-def $lr, implicit $lr, implicit $sp, implicit-def $x17, implicit-def $x16, implicit-def $x15{{$}}
 ; MIR-V9A:      frame-destroy PAUTH_EPILOGUE implicit-def $lr, implicit $lr, implicit $sp, implicit-def $x17, implicit-def $x16, implicit-def $x15{{$}}
-; MIR-PAUTH:    frame-destroy PAUTH_EPILOGUE implicit-def $lr, implicit $lr, implicit $sp, implicit-def $x17, implicit-def $x16{{$}}
+; MIR-PAUTH:    frame-destroy PAUTH_EPILOGUE implicit-def $lr, implicit $lr, implicit $sp, implicit-def $x16{{$}}
   tail call swifttailcc void @callee_stack0()
   ret void
 }
@@ -230,7 +230,7 @@ define swifttailcc void @caller_to8_from0() "branch-protection-pauth-lr" "sign-r
 ; MIR-LABEL:  name: caller_to8_from0
 ; MIR-COMPAT:   frame-destroy PAUTH_EPILOGUE implicit-def $lr, implicit $lr, implicit $sp, implicit-def $x17, implicit-def $x16, implicit-def $x15{{$}}
 ; MIR-V9A:      frame-destroy PAUTH_EPILOGUE implicit-def $lr, implicit $lr, implicit $sp, implicit-def $x17, implicit-def $x16, implicit-def $x15{{$}}
-; MIR-PAUTH:    frame-destroy PAUTH_EPILOGUE implicit-def $lr, implicit $lr, implicit $sp, implicit-def $x17, implicit-def $x16{{$}}
+; MIR-PAUTH:    frame-destroy PAUTH_EPILOGUE implicit-def $lr, implicit $lr, implicit $sp, implicit-def $x16{{$}}
   tail call swifttailcc void @callee_stack8([8 x i64] poison, i64 42)
   ret void
 }
@@ -351,7 +351,7 @@ define swifttailcc void @crash_tc(i1 %c, [8 x i64] %pad, i64 %x) "branch-protect
 ; MIR-LABEL:  name: crash_tc
 ; MIR-COMPAT:   frame-destroy PAUTH_EPILOGUE implicit-def $lr, implicit $lr, implicit $sp, implicit-def $x17, implicit-def $x16, implicit-def $x15{{$}}
 ; MIR-V9A:      frame-destroy PAUTH_EPILOGUE implicit-def $lr, implicit $lr, implicit $sp, implicit-def $x17, implicit-def $x16, implicit-def $x15{{$}}
-; MIR-PAUTH:    frame-destroy PAUTH_EPILOGUE implicit-def $lr, implicit $lr, implicit $sp, implicit-def $x17, implicit-def $x16{{$}}
+; MIR-PAUTH:    frame-destroy PAUTH_EPILOGUE implicit-def $lr, implicit $lr, implicit $sp, implicit-def $x16{{$}}
 entry:
   br i1 %c, label %work, label %exit
 

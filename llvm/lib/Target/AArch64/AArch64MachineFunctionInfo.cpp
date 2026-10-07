@@ -14,6 +14,7 @@
 //===----------------------------------------------------------------------===//
 
 #include "AArch64MachineFunctionInfo.h"
+#include "AArch64FrameLowering.h"
 #include "AArch64InstrInfo.h"
 #include "AArch64Subtarget.h"
 #include "llvm/ADT/StringSwitch.h"
@@ -178,6 +179,54 @@ static bool isLRSpilled(const MachineFunction &MF) {
   return llvm::any_of(
       MF.getFrameInfo().getCalleeSavedInfo(),
       [](const auto &Info) { return Info.getReg() == AArch64::LR; });
+}
+
+// Declare the registers that AArch64PointerAuthImpl::authenticateLR has to
+// clobber when implementing PAUTH_EPILOGUE.
+SmallVector<MCPhysReg, 3> AArch64FunctionInfo::getPauthEpilogueClobberedRegs(
+    const MachineFunction &MF, const MachineBasicBlock *MBB) const {
+  if (!BranchProtectionPAuthLR && SignCondition == SignReturnAddress::None)
+    return {};
+
+  const auto &STI = MF.getSubtarget<AArch64Subtarget>();
+  const bool HasPAuth = STI.hasPAuth();
+  const bool HasPAuthLR = STI.hasPAuthLR();
+  const bool HasArgStackToRestore =
+      !MBB || static_cast<const AArch64FrameLowering *>(STI.getFrameLowering())
+                      ->getArgumentStackToRestore(MF, *MBB) != 0;
+
+  if (!HasArgStackToRestore) {
+    // Combinable terminators such as RETAASPPCi/RETABSPPCi or
+    // AUTIASPPCi/AUTIBSPPCi don't need scratch registers.
+    if (BranchProtectionPAuthLR && HasPAuthLR)
+      return {};
+
+    // PACM emulation of PAuth_LR: signing instruction's address in x16.
+    if (BranchProtectionPAuthLR)
+      return {AArch64::X16};
+
+    // PAuth combinable terminators such as RETAA/RETAB or AUTIASP/AUTIBSP don't
+    // need scratch registers.
+    return {};
+  }
+
+  // Otherwise there's an SP adjustment. The entry SP is reconstructed in x16,
+  // which is also the modifier of the AUTI[AB] forms.
+
+  // AUTI[AB]171615: LR is moved into x17, signing instruction's address in x15.
+  if (BranchProtectionPAuthLR && HasPAuthLR)
+    return {AArch64::X17, AArch64::X16, AArch64::X15};
+
+  // PACM emulation of PAuth_LR with AUTI[AB]1716 uses the same registers.
+  if (BranchProtectionPAuthLR)
+    return {AArch64::X17, AArch64::X16, AArch64::X15};
+
+  // AUTI[AB] LR, x16.
+  if (HasPAuth)
+    return {AArch64::X16};
+
+  // AUTI[AB]1716: LR in x17.
+  return {AArch64::X17, AArch64::X16};
 }
 
 bool AArch64FunctionInfo::shouldSignReturnAddress(SignReturnAddress Condition,

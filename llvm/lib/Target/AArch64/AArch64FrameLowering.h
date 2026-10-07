@@ -93,8 +93,8 @@ public:
   /// tail call to a function that uses less stack space for arguments) or
   /// negative (for a tail call to a function that needs more stack space than
   /// us for arguments).
-  int64_t getArgumentStackToRestore(MachineFunction &MF,
-                                    MachineBasicBlock &MBB) const;
+  int64_t getArgumentStackToRestore(const MachineFunction &MF,
+                                    const MachineBasicBlock &MBB) const;
 
   bool hasReservedCallFrame(const MachineFunction &MF) const override;
 

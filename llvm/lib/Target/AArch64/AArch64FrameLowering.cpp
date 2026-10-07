@@ -304,17 +304,17 @@ static cl::opt<bool> DisableMultiVectorSpillFill(
     cl::Hidden);
 
 int64_t
-AArch64FrameLowering::getArgumentStackToRestore(MachineFunction &MF,
-                                                MachineBasicBlock &MBB) const {
-  MachineBasicBlock::iterator MBBI = MBB.getLastNonDebugInstr();
-  AArch64FunctionInfo *AFI = MF.getInfo<AArch64FunctionInfo>();
+AArch64FrameLowering::getArgumentStackToRestore(
+    const MachineFunction &MF, const MachineBasicBlock &MBB) const {
+  MachineBasicBlock::const_iterator MBBI = MBB.getLastNonDebugInstr();
+  const AArch64FunctionInfo *AFI = MF.getInfo<AArch64FunctionInfo>();
   bool IsTailCallReturn = (MBB.end() != MBBI)
                               ? AArch64InstrInfo::isTailCallReturnInst(*MBBI)
                               : false;
 
   int64_t ArgumentPopSize = 0;
   if (IsTailCallReturn) {
-    MachineOperand &StackAdjust = MBBI->getOperand(1);
+    const MachineOperand &StackAdjust = MBBI->getOperand(1);
 
     // For a tail-call in a callee-pops-arguments environment, some or all of
     // the stack may actually be in use for the call's arguments, this is

@@ -33906,7 +33906,7 @@ AArch64TargetLowering::EmitKCFICheck(MachineBasicBlock &MBB,
   case AArch64::TCRETURNri:
   case AArch64::TCRETURNrix16x17:
   case AArch64::TCRETURNrix17:
-  case AArch64::TCRETURNrinotx16:
+  case AArch64::TCRETURNrinotx15x16x17:
     break;
   default:
     llvm_unreachable("Unexpected CFI call opcode");

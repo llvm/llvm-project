@@ -25,26 +25,25 @@ entry:
 }
 ;; Ensure the specific tail call pseudo instruction is used.
 ; MIR-LABEL: name: test_scratch_reg_nobti
-; MIR:         AUTH_TCRETURN{{ }}
+; MIR:         AUTH_TCRETURNnotx15x16x17{{ }}
 ;
 ; ASM-LABEL: test_scratch_reg_nobti:
 ; ASM-NEXT:    pacibsp
 ; ASM-NEXT:    sub     sp, sp, #112
 ; ASM-NEXT:    stp     x29, x30, [sp, #16]
-; ASM-NEXT:    mov     x16, x1
 ; ASM-NEXT:    stp     x28, x27, [sp, #32]
 ; ASM-NEXT:    stp     x26, x25, [sp, #48]
 ; ASM-NEXT:    stp     x24, x23, [sp, #64]
 ; ASM-NEXT:    stp     x22, x21, [sp, #80]
 ; ASM-NEXT:    stp     x20, x19, [sp, #96]
-; ASM-NEXT:    str     x0, [sp, #8]
+; ASM-NEXT:    stp     x0, x1, [sp]
 ; ASM-NEXT:    //APP
 ; ASM-NEXT:    //NO_APP
 ; ASM-NEXT:    //APP
 ; ASM-NEXT:    //NO_APP
 ; ASM-NEXT:    //APP
 ; ASM-NEXT:    //NO_APP
-; ASM-NEXT:    ldr     x0, [sp, #8]
+; ASM-NEXT:    ldp     x1, x0, [sp]
 ; ASM-NEXT:    ldp     x20, x19, [sp, #96]
 ; ASM-NEXT:    ldp     x22, x21, [sp, #80]
 ; ASM-NEXT:    ldp     x24, x23, [sp, #64]
@@ -53,11 +52,11 @@ entry:
 ; ASM-NEXT:    ldp     x29, x30, [sp, #16]
 ; ASM-NEXT:    add     sp, sp, #112
 ; ASM-NEXT:    autibsp
-; ASM-NEXT:    eor     x17, x30, x30, lsl #1
-; ASM-NEXT:    tbz     x17, #62, .Lauth_success_0
+; ASM-NEXT:    eor     x16, x30, x30, lsl #1
+; ASM-NEXT:    tbz     x16, #62, .Lauth_success_0
 ; ASM-NEXT:    brk     #0xc471
 ; ASM-NEXT:  .Lauth_success_0:
-; ASM-NEXT:    braa    x0, x16
+; ASM-NEXT:    braa    x1, x0
 ; ASM-NEXT:  .Lfunc_end0:
 
 ;; The same for AUTH_TCRETURN_BTI.
@@ -75,13 +74,13 @@ entry:
 }
 ;; Ensure the specific tail call pseudo instruction is used.
 ; MIR-LABEL: name: test_scratch_reg_bti
-; MIR:         AUTH_TCRETURN_BTI
+; MIR:         AUTH_TCRETURN_BTIx17
 ;
 ; ASM-LABEL: test_scratch_reg_bti:
 ; ASM-NEXT:    pacibsp
 ; ASM-NEXT:    sub     sp, sp, #112
 ; ASM-NEXT:    stp     x29, x30, [sp, #16]
-; ASM-NEXT:    mov     x16, x0
+; ASM-NEXT:    mov     x17, x0
 ; ASM-NEXT:    stp     x28, x27, [sp, #32]
 ; ASM-NEXT:    stp     x26, x25, [sp, #48]
 ; ASM-NEXT:    stp     x24, x23, [sp, #64]
@@ -103,11 +102,11 @@ entry:
 ; ASM-NEXT:    ldp     x29, x30, [sp, #16]
 ; ASM-NEXT:    add     sp, sp, #112
 ; ASM-NEXT:    autibsp
-; ASM-NEXT:    eor     x17, x30, x30, lsl #1
-; ASM-NEXT:    tbz     x17, #62, .Lauth_success_1
+; ASM-NEXT:    eor     x16, x30, x30, lsl #1
+; ASM-NEXT:    tbz     x16, #62, .Lauth_success_1
 ; ASM-NEXT:    brk     #0xc471
 ; ASM-NEXT:  .Lauth_success_1:
-; ASM-NEXT:    braa    x16, x0
+; ASM-NEXT:    braa    x17, x0
 ; ASM-NEXT:  .Lfunc_end1:
 
 attributes #0 = { nounwind "ptrauth-auth-traps" "ptrauth-calls" "ptrauth-returns" "target-features"="+pauth" }
