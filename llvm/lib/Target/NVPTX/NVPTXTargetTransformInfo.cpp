@@ -513,8 +513,6 @@ static bool isSplat(ArrayRef<Value *> VL, const APInt &DemandedElts) {
 
   Value *Splat = VL[0];
   for (Value *V : VL) {
-    if (isa<UndefValue>(V))
-      continue;
     if (V != Splat)
       return false;
   }
