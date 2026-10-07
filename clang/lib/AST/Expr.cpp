@@ -329,6 +329,9 @@ ConstantExpr::getStorageKind(const Type *T, const ASTContext &Context) {
 ConstantExpr::ConstantExpr(Expr *SubExpr, ConstantResultStorageKind StorageKind,
                            bool IsImmediateInvocation)
     : FullExpr(ConstantExprClass, SubExpr) {
+
+  if (!SubExpr->getType()->isVoidType())
+    assert(StorageKind != ConstantResultStorageKind::None);
   ConstantExprBits.ResultKind = llvm::to_underlying(StorageKind);
   ConstantExprBits.APValueKind = APValue::None;
   ConstantExprBits.IsUnsigned = false;
@@ -344,6 +347,8 @@ ConstantExpr *ConstantExpr::Create(const ASTContext &Context, Expr *E,
                                    ConstantResultStorageKind StorageKind,
                                    bool IsImmediateInvocation) {
   assert(!isa<ConstantExpr>(E));
+  if (!E->getType()->isVoidType())
+    assert(StorageKind != ConstantResultStorageKind::None);
   AssertResultStorageKind(StorageKind);
 
   unsigned Size = totalSizeToAlloc<APValue, uint64_t>(
