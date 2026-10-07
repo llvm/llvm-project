@@ -20,6 +20,7 @@
 
 #include "llvm/Support/ConvertUTF.h"
 #include "llvm/Support/FileSystem.h"
+#include "llvm/Support/Windows/WindowsSupport.h"
 
 using namespace lldb_private;
 
@@ -100,12 +101,12 @@ FILE *FileSystem::Fopen(const char *path, const char *mode) {
 }
 
 int FileSystem::Open(const char *path, int flags, int mode) {
-  std::wstring wpath;
-  if (!llvm::ConvertUTF8toWide(path, wpath))
+  llvm::SmallVector<wchar_t, MAX_PATH> wpath;
+  if (llvm::sys::windows::widenPath(path, wpath))
     return -1;
   // All other bits are rejected by _wsopen_s
   mode = mode & (_S_IREAD | _S_IWRITE);
   int result;
-  ::_wsopen_s(&result, wpath.c_str(), flags, _SH_DENYNO, mode);
+  ::_wsopen_s(&result, wpath.data(), flags, _SH_DENYNO, mode);
   return result;
 }
