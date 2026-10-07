@@ -482,134 +482,37 @@ entry:
   ret float %s7
 }
 
-; The same reduction over products of sign extended i16 loads. On targets
-; where converting the vector of i16 lanes costs more than the scalar
-; conversions, the loads and conversions are left scalar and only the
-; products are left to vectorize. A vector fmul of the products gives up the
-; fmas, so the reduction stays scalar. gfx1030 emits the vector fmul lane by
-; lane, fuses every lane and keeps the vector form.
+; The same reduction over products of sign extended i16 loads. The i16 loads
+; coalesce like the float loads, so the reduction stays scalar and fuses into
+; fmas. gfx1030 emits the vector fmul lane by lane, fuses every lane and keeps
+; the vector form.
 define float @dot8_sitofp_i16(ptr addrspace(1) noalias readonly align 16 %a, ptr addrspace(1) noalias readonly align 16 %b) {
-; GFX9-LABEL: define float @dot8_sitofp_i16(
-; GFX9-SAME: ptr addrspace(1) noalias readonly align 16 [[A:%.*]], ptr addrspace(1) noalias readonly align 16 [[B:%.*]]) {
-; GFX9-NEXT:  [[ENTRY:.*:]]
-; GFX9-NEXT:    [[PA0:%.*]] = getelementptr inbounds i16, ptr addrspace(1) [[A]], i64 0
-; GFX9-NEXT:    [[PB0:%.*]] = getelementptr inbounds i16, ptr addrspace(1) [[B]], i64 0
-; GFX9-NEXT:    [[TMP0:%.*]] = load <8 x i16>, ptr addrspace(1) [[PA0]], align 16
-; GFX9-NEXT:    [[TMP1:%.*]] = sitofp <8 x i16> [[TMP0]] to <8 x float>
-; GFX9-NEXT:    [[TMP2:%.*]] = load <8 x i16>, ptr addrspace(1) [[PB0]], align 16
-; GFX9-NEXT:    [[TMP3:%.*]] = sitofp <8 x i16> [[TMP2]] to <8 x float>
-; GFX9-NEXT:    [[TMP4:%.*]] = fmul contract <8 x float> [[TMP1]], [[TMP3]]
-; GFX9-NEXT:    [[TMP5:%.*]] = extractelement <8 x float> [[TMP4]], i64 0
-; GFX9-NEXT:    [[TMP6:%.*]] = extractelement <8 x float> [[TMP4]], i64 1
-; GFX9-NEXT:    [[S1:%.*]] = fadd contract float [[TMP5]], [[TMP6]]
-; GFX9-NEXT:    [[TMP7:%.*]] = extractelement <8 x float> [[TMP4]], i64 2
-; GFX9-NEXT:    [[S2:%.*]] = fadd contract float [[S1]], [[TMP7]]
-; GFX9-NEXT:    [[TMP8:%.*]] = extractelement <8 x float> [[TMP4]], i64 3
-; GFX9-NEXT:    [[S3:%.*]] = fadd contract float [[S2]], [[TMP8]]
-; GFX9-NEXT:    [[TMP9:%.*]] = extractelement <8 x float> [[TMP4]], i64 4
-; GFX9-NEXT:    [[S4:%.*]] = fadd contract float [[S3]], [[TMP9]]
-; GFX9-NEXT:    [[TMP10:%.*]] = extractelement <8 x float> [[TMP4]], i64 5
-; GFX9-NEXT:    [[S5:%.*]] = fadd contract float [[S4]], [[TMP10]]
-; GFX9-NEXT:    [[TMP11:%.*]] = extractelement <8 x float> [[TMP4]], i64 6
-; GFX9-NEXT:    [[S6:%.*]] = fadd contract float [[S5]], [[TMP11]]
-; GFX9-NEXT:    [[TMP12:%.*]] = extractelement <8 x float> [[TMP4]], i64 7
-; GFX9-NEXT:    [[S7:%.*]] = fadd contract float [[S6]], [[TMP12]]
-; GFX9-NEXT:    ret float [[S7]]
-;
-; GFX1030-LABEL: define float @dot8_sitofp_i16(
-; GFX1030-SAME: ptr addrspace(1) noalias readonly align 16 [[A:%.*]], ptr addrspace(1) noalias readonly align 16 [[B:%.*]]) {
-; GFX1030-NEXT:  [[ENTRY:.*:]]
-; GFX1030-NEXT:    [[PA0:%.*]] = getelementptr inbounds i16, ptr addrspace(1) [[A]], i64 0
-; GFX1030-NEXT:    [[PB0:%.*]] = getelementptr inbounds i16, ptr addrspace(1) [[B]], i64 0
-; GFX1030-NEXT:    [[TMP0:%.*]] = load <8 x i16>, ptr addrspace(1) [[PA0]], align 16
-; GFX1030-NEXT:    [[TMP1:%.*]] = sitofp <8 x i16> [[TMP0]] to <8 x float>
-; GFX1030-NEXT:    [[TMP2:%.*]] = load <8 x i16>, ptr addrspace(1) [[PB0]], align 16
-; GFX1030-NEXT:    [[TMP3:%.*]] = sitofp <8 x i16> [[TMP2]] to <8 x float>
-; GFX1030-NEXT:    [[TMP4:%.*]] = fmul contract <8 x float> [[TMP1]], [[TMP3]]
-; GFX1030-NEXT:    [[TMP5:%.*]] = extractelement <8 x float> [[TMP4]], i64 0
-; GFX1030-NEXT:    [[TMP6:%.*]] = extractelement <8 x float> [[TMP4]], i64 1
-; GFX1030-NEXT:    [[S1:%.*]] = fadd contract float [[TMP5]], [[TMP6]]
-; GFX1030-NEXT:    [[TMP7:%.*]] = extractelement <8 x float> [[TMP4]], i64 2
-; GFX1030-NEXT:    [[S2:%.*]] = fadd contract float [[S1]], [[TMP7]]
-; GFX1030-NEXT:    [[TMP8:%.*]] = extractelement <8 x float> [[TMP4]], i64 3
-; GFX1030-NEXT:    [[S3:%.*]] = fadd contract float [[S2]], [[TMP8]]
-; GFX1030-NEXT:    [[TMP9:%.*]] = extractelement <8 x float> [[TMP4]], i64 4
-; GFX1030-NEXT:    [[S4:%.*]] = fadd contract float [[S3]], [[TMP9]]
-; GFX1030-NEXT:    [[TMP10:%.*]] = extractelement <8 x float> [[TMP4]], i64 5
-; GFX1030-NEXT:    [[S5:%.*]] = fadd contract float [[S4]], [[TMP10]]
-; GFX1030-NEXT:    [[TMP11:%.*]] = extractelement <8 x float> [[TMP4]], i64 6
-; GFX1030-NEXT:    [[S6:%.*]] = fadd contract float [[S5]], [[TMP11]]
-; GFX1030-NEXT:    [[TMP12:%.*]] = extractelement <8 x float> [[TMP4]], i64 7
-; GFX1030-NEXT:    [[S7:%.*]] = fadd contract float [[S6]], [[TMP12]]
-; GFX1030-NEXT:    ret float [[S7]]
-;
-; GFX1250-LABEL: define float @dot8_sitofp_i16(
-; GFX1250-SAME: ptr addrspace(1) noalias readonly align 16 [[A:%.*]], ptr addrspace(1) noalias readonly align 16 [[B:%.*]]) {
-; GFX1250-NEXT:  [[ENTRY:.*:]]
-; GFX1250-NEXT:    [[PA0:%.*]] = getelementptr inbounds i16, ptr addrspace(1) [[A]], i64 0
-; GFX1250-NEXT:    [[LA0:%.*]] = load i16, ptr addrspace(1) [[PA0]], align 16
-; GFX1250-NEXT:    [[FA0:%.*]] = sitofp i16 [[LA0]] to float
-; GFX1250-NEXT:    [[PB0:%.*]] = getelementptr inbounds i16, ptr addrspace(1) [[B]], i64 0
-; GFX1250-NEXT:    [[LB0:%.*]] = load i16, ptr addrspace(1) [[PB0]], align 16
-; GFX1250-NEXT:    [[FB0:%.*]] = sitofp i16 [[LB0]] to float
-; GFX1250-NEXT:    [[M0:%.*]] = fmul contract float [[FA0]], [[FB0]]
-; GFX1250-NEXT:    [[PA1:%.*]] = getelementptr inbounds i16, ptr addrspace(1) [[A]], i64 1
-; GFX1250-NEXT:    [[LA1:%.*]] = load i16, ptr addrspace(1) [[PA1]], align 2
-; GFX1250-NEXT:    [[FA1:%.*]] = sitofp i16 [[LA1]] to float
-; GFX1250-NEXT:    [[PB1:%.*]] = getelementptr inbounds i16, ptr addrspace(1) [[B]], i64 1
-; GFX1250-NEXT:    [[LB1:%.*]] = load i16, ptr addrspace(1) [[PB1]], align 2
-; GFX1250-NEXT:    [[FB1:%.*]] = sitofp i16 [[LB1]] to float
-; GFX1250-NEXT:    [[M1:%.*]] = fmul contract float [[FA1]], [[FB1]]
-; GFX1250-NEXT:    [[S1:%.*]] = fadd contract float [[M0]], [[M1]]
-; GFX1250-NEXT:    [[PA2:%.*]] = getelementptr inbounds i16, ptr addrspace(1) [[A]], i64 2
-; GFX1250-NEXT:    [[LA2:%.*]] = load i16, ptr addrspace(1) [[PA2]], align 4
-; GFX1250-NEXT:    [[FA2:%.*]] = sitofp i16 [[LA2]] to float
-; GFX1250-NEXT:    [[PB2:%.*]] = getelementptr inbounds i16, ptr addrspace(1) [[B]], i64 2
-; GFX1250-NEXT:    [[LB2:%.*]] = load i16, ptr addrspace(1) [[PB2]], align 4
-; GFX1250-NEXT:    [[FB2:%.*]] = sitofp i16 [[LB2]] to float
-; GFX1250-NEXT:    [[M2:%.*]] = fmul contract float [[FA2]], [[FB2]]
-; GFX1250-NEXT:    [[S2:%.*]] = fadd contract float [[S1]], [[M2]]
-; GFX1250-NEXT:    [[PA3:%.*]] = getelementptr inbounds i16, ptr addrspace(1) [[A]], i64 3
-; GFX1250-NEXT:    [[LA3:%.*]] = load i16, ptr addrspace(1) [[PA3]], align 2
-; GFX1250-NEXT:    [[FA3:%.*]] = sitofp i16 [[LA3]] to float
-; GFX1250-NEXT:    [[PB3:%.*]] = getelementptr inbounds i16, ptr addrspace(1) [[B]], i64 3
-; GFX1250-NEXT:    [[LB3:%.*]] = load i16, ptr addrspace(1) [[PB3]], align 2
-; GFX1250-NEXT:    [[FB3:%.*]] = sitofp i16 [[LB3]] to float
-; GFX1250-NEXT:    [[M3:%.*]] = fmul contract float [[FA3]], [[FB3]]
-; GFX1250-NEXT:    [[S3:%.*]] = fadd contract float [[S2]], [[M3]]
-; GFX1250-NEXT:    [[PA4:%.*]] = getelementptr inbounds i16, ptr addrspace(1) [[A]], i64 4
-; GFX1250-NEXT:    [[LA4:%.*]] = load i16, ptr addrspace(1) [[PA4]], align 8
-; GFX1250-NEXT:    [[FA4:%.*]] = sitofp i16 [[LA4]] to float
-; GFX1250-NEXT:    [[PB4:%.*]] = getelementptr inbounds i16, ptr addrspace(1) [[B]], i64 4
-; GFX1250-NEXT:    [[LB4:%.*]] = load i16, ptr addrspace(1) [[PB4]], align 8
-; GFX1250-NEXT:    [[FB4:%.*]] = sitofp i16 [[LB4]] to float
-; GFX1250-NEXT:    [[M4:%.*]] = fmul contract float [[FA4]], [[FB4]]
-; GFX1250-NEXT:    [[S4:%.*]] = fadd contract float [[S3]], [[M4]]
-; GFX1250-NEXT:    [[PA5:%.*]] = getelementptr inbounds i16, ptr addrspace(1) [[A]], i64 5
-; GFX1250-NEXT:    [[LA5:%.*]] = load i16, ptr addrspace(1) [[PA5]], align 2
-; GFX1250-NEXT:    [[FA5:%.*]] = sitofp i16 [[LA5]] to float
-; GFX1250-NEXT:    [[PB5:%.*]] = getelementptr inbounds i16, ptr addrspace(1) [[B]], i64 5
-; GFX1250-NEXT:    [[LB5:%.*]] = load i16, ptr addrspace(1) [[PB5]], align 2
-; GFX1250-NEXT:    [[FB5:%.*]] = sitofp i16 [[LB5]] to float
-; GFX1250-NEXT:    [[M5:%.*]] = fmul contract float [[FA5]], [[FB5]]
-; GFX1250-NEXT:    [[S5:%.*]] = fadd contract float [[S4]], [[M5]]
-; GFX1250-NEXT:    [[PA6:%.*]] = getelementptr inbounds i16, ptr addrspace(1) [[A]], i64 6
-; GFX1250-NEXT:    [[LA6:%.*]] = load i16, ptr addrspace(1) [[PA6]], align 4
-; GFX1250-NEXT:    [[FA6:%.*]] = sitofp i16 [[LA6]] to float
-; GFX1250-NEXT:    [[PB6:%.*]] = getelementptr inbounds i16, ptr addrspace(1) [[B]], i64 6
-; GFX1250-NEXT:    [[LB6:%.*]] = load i16, ptr addrspace(1) [[PB6]], align 4
-; GFX1250-NEXT:    [[FB6:%.*]] = sitofp i16 [[LB6]] to float
-; GFX1250-NEXT:    [[M6:%.*]] = fmul contract float [[FA6]], [[FB6]]
-; GFX1250-NEXT:    [[S6:%.*]] = fadd contract float [[S5]], [[M6]]
-; GFX1250-NEXT:    [[PA7:%.*]] = getelementptr inbounds i16, ptr addrspace(1) [[A]], i64 7
-; GFX1250-NEXT:    [[LA7:%.*]] = load i16, ptr addrspace(1) [[PA7]], align 2
-; GFX1250-NEXT:    [[FA7:%.*]] = sitofp i16 [[LA7]] to float
-; GFX1250-NEXT:    [[PB7:%.*]] = getelementptr inbounds i16, ptr addrspace(1) [[B]], i64 7
-; GFX1250-NEXT:    [[LB7:%.*]] = load i16, ptr addrspace(1) [[PB7]], align 2
-; GFX1250-NEXT:    [[FB7:%.*]] = sitofp i16 [[LB7]] to float
-; GFX1250-NEXT:    [[M7:%.*]] = fmul contract float [[FA7]], [[FB7]]
-; GFX1250-NEXT:    [[S7:%.*]] = fadd contract float [[S6]], [[M7]]
-; GFX1250-NEXT:    ret float [[S7]]
+; CHECK-LABEL: define float @dot8_sitofp_i16(
+; CHECK-SAME: ptr addrspace(1) noalias readonly align 16 [[A:%.*]], ptr addrspace(1) noalias readonly align 16 [[B:%.*]]) {
+; CHECK-NEXT:  [[ENTRY:.*:]]
+; CHECK-NEXT:    [[PA0:%.*]] = getelementptr inbounds i16, ptr addrspace(1) [[A]], i64 0
+; CHECK-NEXT:    [[PB0:%.*]] = getelementptr inbounds i16, ptr addrspace(1) [[B]], i64 0
+; CHECK-NEXT:    [[TMP0:%.*]] = load <8 x i16>, ptr addrspace(1) [[PA0]], align 16
+; CHECK-NEXT:    [[TMP1:%.*]] = sitofp <8 x i16> [[TMP0]] to <8 x float>
+; CHECK-NEXT:    [[TMP2:%.*]] = load <8 x i16>, ptr addrspace(1) [[PB0]], align 16
+; CHECK-NEXT:    [[TMP3:%.*]] = sitofp <8 x i16> [[TMP2]] to <8 x float>
+; CHECK-NEXT:    [[TMP4:%.*]] = fmul contract <8 x float> [[TMP1]], [[TMP3]]
+; CHECK-NEXT:    [[TMP5:%.*]] = extractelement <8 x float> [[TMP4]], i64 0
+; CHECK-NEXT:    [[TMP6:%.*]] = extractelement <8 x float> [[TMP4]], i64 1
+; CHECK-NEXT:    [[S1:%.*]] = fadd contract float [[TMP5]], [[TMP6]]
+; CHECK-NEXT:    [[TMP7:%.*]] = extractelement <8 x float> [[TMP4]], i64 2
+; CHECK-NEXT:    [[S2:%.*]] = fadd contract float [[S1]], [[TMP7]]
+; CHECK-NEXT:    [[TMP8:%.*]] = extractelement <8 x float> [[TMP4]], i64 3
+; CHECK-NEXT:    [[S3:%.*]] = fadd contract float [[S2]], [[TMP8]]
+; CHECK-NEXT:    [[TMP9:%.*]] = extractelement <8 x float> [[TMP4]], i64 4
+; CHECK-NEXT:    [[S4:%.*]] = fadd contract float [[S3]], [[TMP9]]
+; CHECK-NEXT:    [[TMP10:%.*]] = extractelement <8 x float> [[TMP4]], i64 5
+; CHECK-NEXT:    [[S5:%.*]] = fadd contract float [[S4]], [[TMP10]]
+; CHECK-NEXT:    [[TMP11:%.*]] = extractelement <8 x float> [[TMP4]], i64 6
+; CHECK-NEXT:    [[S6:%.*]] = fadd contract float [[S5]], [[TMP11]]
+; CHECK-NEXT:    [[TMP12:%.*]] = extractelement <8 x float> [[TMP4]], i64 7
+; CHECK-NEXT:    [[S7:%.*]] = fadd contract float [[S6]], [[TMP12]]
+; CHECK-NEXT:    ret float [[S7]]
 ;
 entry:
   %pa0 = getelementptr inbounds i16, ptr addrspace(1) %a, i64 0
@@ -677,3 +580,7 @@ entry:
   %s7 = fadd contract float %s6, %m7
   ret float %s7
 }
+;; NOTE: These prefixes are unused and the list is autogenerated. Do not add tests below this line:
+; GFX1030: {{.*}}
+; GFX1250: {{.*}}
+; GFX9: {{.*}}
