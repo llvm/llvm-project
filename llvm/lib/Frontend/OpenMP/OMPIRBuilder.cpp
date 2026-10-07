@@ -5015,7 +5015,7 @@ OpenMPIRBuilder::InsertPointOrErrorTy OpenMPIRBuilder::createReductionsGPU(
         RuntimeRL = Builder.CreatePointerBitCastOrAddrSpaceCast(
             PerThreadRedListAlloca, PtrTy,
             PerThreadRedListAlloca->getName() + ".ascast");
-      };
+      }
 
       // Iterate over the reduction variables and copy the team-local value to
       // the thread-local buffer.
