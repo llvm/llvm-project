@@ -133,9 +133,10 @@ class LibcallLibrary<string name, dag impls,
 }
 
 // Reference a shared LibcallLibrary from a SystemRuntimeLibrary, dropping the
-// impls in `exclude`. Lets an override target pull a provider library (e.g.
-// compiler-rt) but keep its own versions of a few entries.
-class LibraryRef<LibcallLibrary lib, list<RuntimeLibcallImpl> exclude> {
+// impls in `exclude`, so a target can pull a provider (e.g. compiler-rt) but
+// keep its own versions of a few entries. A bare LibcallLibrary member is
+// equivalent to LibraryRef<Lib>.
+class LibraryRef<LibcallLibrary lib, list<RuntimeLibcallImpl> exclude = []> {
   LibcallLibrary Library = lib;
   list<RuntimeLibcallImpl> Exclude = exclude;
 }
