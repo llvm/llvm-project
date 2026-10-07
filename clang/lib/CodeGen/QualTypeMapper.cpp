@@ -103,11 +103,14 @@ const llvm::abi::Type *QualTypeMapper::convertTypeImpl(QualType QT) {
   case Type::Builtin:
     return convertBuiltinType(cast<BuiltinType>(QT));
   case Type::Pointer:
-    return createPointerTypeForPointee(cast<PointerType>(QT)->getPointeeType());
+    return createPointerTypeForPointee(
+        cast<PointerType>(QT)->getPointeeType(),
+        llvm::abi::PointerFlags::IsPointerOrReference);
   case Type::LValueReference:
   case Type::RValueReference:
     return createPointerTypeForPointee(
-        cast<ReferenceType>(QT)->getPointeeType());
+        cast<ReferenceType>(QT)->getPointeeType(),
+        llvm::abi::PointerFlags::IsPointerOrReference);
   case Type::ConstantArray:
   case Type::ArrayParameter:
   case Type::IncompleteArray:
@@ -129,7 +132,8 @@ const llvm::abi::Type *QualTypeMapper::convertTypeImpl(QualType QT) {
   }
   case Type::BlockPointer:
   case Type::Pipe:
-    return createPointerTypeForPointee(ASTCtx.VoidPtrTy);
+    return createPointerTypeForPointee(ASTCtx.VoidPtrTy,
+                                       llvm::abi::PointerFlags::None);
   case Type::ConstantMatrix: {
     const auto *MT = cast<ConstantMatrixType>(QT);
     return Builder.getArrayType(convertType(MT->getElementType()),
@@ -146,13 +150,18 @@ const llvm::abi::Type *QualTypeMapper::convertTypeImpl(QualType QT) {
   }
   case Type::ObjCObject:
   case Type::ObjCInterface:
-  case Type::ObjCObjectPointer:
+  case Type::ObjCObjectPointer: {
     // Objective-C objects are represented as pointers in the ABI.
+    llvm::abi::PointerFlags Flags = llvm::abi::PointerFlags::None;
+    if (QT.hasAddressSpace())
+      Flags |= llvm::abi::PointerFlags::IsPointeeAddressSpaceQualified;
     return Builder.getPointerType(
         ASTCtx.getTargetInfo().getPointerWidth(QT.getAddressSpace()),
         llvm::Align(
             ASTCtx.getTargetInfo().getPointerAlign(QT.getAddressSpace()) / 8),
-        ASTCtx.getTargetInfo().getTargetAddressSpace(QT.getAddressSpace()));
+        ASTCtx.getTargetInfo().getTargetAddressSpace(QT.getAddressSpace()),
+        Flags);
+  }
   case Type::OverflowBehavior:
     return convertType(cast<OverflowBehaviorType>(QT)->getUnderlyingType());
   case Type::Auto:
@@ -178,7 +187,7 @@ QualTypeMapper::convertBuiltinType(const BuiltinType *BT) {
     return Builder.getVoidType();
 
   case BuiltinType::NullPtr:
-    return createPointerTypeForPointee(QT);
+    return createPointerTypeForPointee(QT, llvm::abi::PointerFlags::None);
 
   case BuiltinType::Bool:
     return Builder.getIntegerType(1, getTypeAlign(QT), /*Signed=*/false,
@@ -265,13 +274,13 @@ QualTypeMapper::convertBuiltinType(const BuiltinType *BT) {
   case BuiltinType::OCLClkEvent:
   case BuiltinType::OCLQueue:
   case BuiltinType::OCLReserveID:
-    return createPointerTypeForPointee(QT);
+    return createPointerTypeForPointee(QT, llvm::abi::PointerFlags::None);
 
   // Objective-C builtin types are represented as opaque pointers.
   case BuiltinType::ObjCId:
   case BuiltinType::ObjCClass:
   case BuiltinType::ObjCSel:
-    return createPointerTypeForPointee(QT);
+    return createPointerTypeForPointee(QT, llvm::abi::PointerFlags::None);
 
     // AArch64 SVE data and predicate types, including the x2/x3/x4 tuples.
 #define SVE_VECTOR_TYPE(Name, MangledName, Id, SingletonId)                    \
@@ -356,7 +365,8 @@ QualTypeMapper::convertArrayType(const clang::ArrayType *AT) {
   if (isa<IncompleteArrayType>(AT))
     return Builder.getArrayType(ElementType, 0, 0);
   if (const auto *VAT = dyn_cast<VariableArrayType>(AT))
-    return createPointerTypeForPointee(VAT->getPointeeType());
+    return createPointerTypeForPointee(VAT->getPointeeType(),
+                                       llvm::abi::PointerFlags::None);
   llvm::reportFatalInternalError(
       "unexpected array type in ABI lowering (dependent array types should be "
       "resolved before reaching this point)");
@@ -480,8 +490,8 @@ QualTypeMapper::convertCXXRecordType(const CXXRecordDecl *RD) {
 
   // Add vtable pointer for polymorphic classes
   if (RD->isPolymorphic()) {
-    const llvm::abi::Type *VtablePointer =
-        createPointerTypeForPointee(ASTCtx.VoidPtrTy);
+    const llvm::abi::Type *VtablePointer = createPointerTypeForPointee(
+        ASTCtx.VoidPtrTy, llvm::abi::PointerFlags::IsPointerOrReference);
     Fields.emplace_back(VtablePointer, 0);
   }
 
@@ -620,7 +630,8 @@ llvm::Align QualTypeMapper::getTypeAlign(QualType QT) const {
 }
 
 const llvm::abi::Type *
-QualTypeMapper::createPointerTypeForPointee(QualType PointeeType) {
+QualTypeMapper::createPointerTypeForPointee(QualType PointeeType,
+                                            llvm::abi::PointerFlags Flags) {
   auto AddrSpace = PointeeType.getAddressSpace();
   auto PointerSize = ASTCtx.getTargetInfo().getPointerWidth(AddrSpace);
   llvm::Align Alignment =
@@ -632,8 +643,10 @@ QualTypeMapper::createPointerTypeForPointee(QualType PointeeType) {
       PointeeType->isFunctionType() && !PointeeType.hasAddressSpace()
           ? DL.getProgramAddressSpace()
           : ASTCtx.getTargetInfo().getTargetAddressSpace(AddrSpace);
+  if (PointeeType.hasAddressSpace())
+    Flags |= llvm::abi::PointerFlags::IsPointeeAddressSpaceQualified;
   return Builder.getPointerType(PointerSize, llvm::Align(Alignment.value() / 8),
-                                TargetAddrSpace);
+                                TargetAddrSpace, Flags);
 }
 
 /// Processes the fields of a record (struct/class/union) and populates

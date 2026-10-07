@@ -106,7 +106,9 @@ protected:
         F16(TB.getFloatType(llvm::APFloat::IEEEhalf(), llvm::Align(2))),
         F32(TB.getFloatType(llvm::APFloat::IEEEsingle(), llvm::Align(4))),
         F64(TB.getFloatType(llvm::APFloat::IEEEdouble(), llvm::Align(8))),
-        Ptr(TB.getPointerType(64, llvm::Align(8))), Void(TB.getVoidType()),
+        Ptr(TB.getPointerType(64, llvm::Align(8), /*Addrspace=*/0,
+                              llvm::abi::PointerFlags::IsPointerOrReference)),
+        Void(TB.getVoidType()),
         Matrix(TB.getArrayType(F32, /*NumElements=*/4, /*SizeInBits=*/128,
                                /*IsMatrixType=*/true)),
         V2F32(TB.getVectorType(F32, llvm::ElementCount::getFixed(2),
@@ -213,12 +215,57 @@ static void expectExtendInteger(const ArgInfo &Info, const ABIType *Ty,
   EXPECT_EQ(Info.getCoerceToType(), Ty);
 }
 
-static void expectDirectCoercedInteger(const ArgInfo &Info, uint64_t BitWidth) {
+static void
+expectDirectCoercedInteger(const ArgInfo &Info, uint64_t BitWidth,
+                           llvm::MaybeAlign ExpectedAlignment = std::nullopt) {
   EXPECT_TRUE(Info.isDirect());
   const llvm::abi::IntegerType *IT =
       llvm::dyn_cast<llvm::abi::IntegerType>(Info.getCoerceToType());
   ASSERT_NE(IT, nullptr);
   EXPECT_EQ(IT->getSizeInBits().getFixedValue(), BitWidth);
+  if (ExpectedAlignment)
+    EXPECT_EQ(IT->getAlignment(), *ExpectedAlignment);
+}
+
+static void expectDirectCoercedIntegerArray(const ArgInfo &Info,
+                                            uint64_t BitWidth,
+                                            uint64_t NumElements,
+                                            llvm::Align Alignment) {
+  EXPECT_TRUE(Info.isDirect());
+  const auto *AT = llvm::dyn_cast<llvm::abi::ArrayType>(Info.getCoerceToType());
+  ASSERT_NE(AT, nullptr);
+  EXPECT_EQ(AT->getNumElements(), NumElements);
+  EXPECT_EQ(AT->getSizeInBits().getFixedValue(), BitWidth * NumElements);
+  EXPECT_EQ(AT->getAlignment(), Alignment);
+  const auto *IT = llvm::dyn_cast<llvm::abi::IntegerType>(AT->getElementType());
+  ASSERT_NE(IT, nullptr);
+  EXPECT_EQ(IT->getSizeInBits().getFixedValue(), BitWidth);
+  EXPECT_EQ(IT->getAlignment(), Alignment);
+}
+
+static void expectDirectCoercedPointer(const ArgInfo &Info) {
+  EXPECT_TRUE(Info.isDirect());
+  const auto *PT =
+      llvm::dyn_cast<llvm::abi::PointerType>(Info.getCoerceToType());
+  ASSERT_NE(PT, nullptr);
+  EXPECT_EQ(PT->getSizeInBits().getFixedValue(), 64u);
+  EXPECT_EQ(PT->getAlignment(), llvm::Align(8));
+  EXPECT_EQ(PT->getAddrSpace(), 0u);
+}
+
+static void expectDirectCoercedPointerArray(const ArgInfo &Info,
+                                            uint64_t NumElements) {
+  EXPECT_TRUE(Info.isDirect());
+  const auto *AT = llvm::dyn_cast<llvm::abi::ArrayType>(Info.getCoerceToType());
+  ASSERT_NE(AT, nullptr);
+  EXPECT_EQ(AT->getNumElements(), NumElements);
+  EXPECT_EQ(AT->getSizeInBits().getFixedValue(), NumElements * 64);
+  EXPECT_EQ(AT->getAlignment(), llvm::Align(8));
+  const auto *PT = llvm::dyn_cast<llvm::abi::PointerType>(AT->getElementType());
+  ASSERT_NE(PT, nullptr);
+  EXPECT_EQ(PT->getSizeInBits().getFixedValue(), 64u);
+  EXPECT_EQ(PT->getAlignment(), llvm::Align(8));
+  EXPECT_EQ(PT->getAddrSpace(), 0u);
 }
 
 static void expectDirectCoercedI32Vector(const ArgInfo &Info,
@@ -898,6 +945,162 @@ TEST_F(AArch64TargetInfoTest, ClassifyArgumentTransparentUnion) {
         FunctionInfo::create(llvm::CallingConv::C, Void, {TUChar});
     TI->computeInfo(*FI);
     expectUncoercedDirect(FI->getArgInfo(0).Info);
+  }
+}
+
+TEST_F(AArch64TargetInfoTest, ClassifyArgumentFixedAggregatesAAPCS) {
+  const ABIType *Agg24 =
+      makeRecord({FieldInfo(TB.getArrayType(I8, 3, /*SizeInBits=*/24), 0)}, 24,
+                 llvm::Align(1), llvm::Align(1));
+  const ABIType *Agg72 =
+      makeRecord({FieldInfo(TB.getArrayType(I8, 9, /*SizeInBits=*/72), 0)}, 72,
+                 llvm::Align(1), llvm::Align(1));
+  const ABIType *Agg128Align8 =
+      makeRecord({FieldInfo(I64, 0), FieldInfo(I64, 64)}, 128, llvm::Align(8),
+                 llvm::Align(8));
+  const ABIType *Agg128Align16 =
+      makeRecord({FieldInfo(I128, 0)}, 128, llvm::Align(16), llvm::Align(16));
+  const ABIType *Agg136 =
+      makeRecord({FieldInfo(TB.getArrayType(I8, 17, /*SizeInBits=*/136), 0)},
+                 136, llvm::Align(1), llvm::Align(1));
+
+  std::unique_ptr<TargetInfo> TI =
+      createAArch64TargetInfo(TB, AArch64ABIOptions(AArch64ABIKind::AAPCS));
+  auto Classify = [&](const ABIType *Ty) -> ArgInfo {
+    std::unique_ptr<FunctionInfo> FI =
+        FunctionInfo::create(llvm::CallingConv::C, Void, {Ty});
+    TI->computeInfo(*FI);
+    return FI->getArgInfo(0).Info;
+  };
+
+  expectDirectCoercedInteger(Classify(Agg24), 64, llvm::Align(8));
+  expectDirectCoercedIntegerArray(Classify(Agg72), 64, 2, llvm::Align(8));
+  expectDirectCoercedIntegerArray(Classify(Agg128Align8), 64, 2,
+                                  llvm::Align(8));
+  expectDirectCoercedInteger(Classify(Agg128Align16), 128, llvm::Align(16));
+  expectNaturalAlignIndirect(Classify(Agg136), llvm::Align(1),
+                             /*ByVal=*/false);
+}
+
+TEST_F(AArch64TargetInfoTest, ClassifyArgumentFixedAggregatesILP32) {
+  const ABIType *Agg24 =
+      makeRecord({FieldInfo(TB.getArrayType(I8, 3, /*SizeInBits=*/24), 0)}, 24,
+                 llvm::Align(1), llvm::Align(1));
+  const ABIType *Agg72 =
+      makeRecord({FieldInfo(TB.getArrayType(I8, 9, /*SizeInBits=*/72), 0)}, 72,
+                 llvm::Align(1), llvm::Align(1));
+
+  AArch64ABIOptions Opts(AArch64ABIKind::DarwinPCS);
+  Opts.IsILP32 = true;
+  std::unique_ptr<TargetInfo> TI = createAArch64TargetInfo(TB, Opts);
+
+  {
+    std::unique_ptr<FunctionInfo> FI =
+        FunctionInfo::create(llvm::CallingConv::C, Void, {Agg24});
+    TI->computeInfo(*FI);
+    expectDirectCoercedInteger(FI->getArgInfo(0).Info, 32, llvm::Align(4));
+  }
+  {
+    std::unique_ptr<FunctionInfo> FI =
+        FunctionInfo::create(llvm::CallingConv::C, Void, {Agg72});
+    TI->computeInfo(*FI);
+    expectDirectCoercedIntegerArray(FI->getArgInfo(0).Info, 32, 3,
+                                    llvm::Align(4));
+  }
+}
+
+TEST_F(AArch64TargetInfoTest, ClassifyArgumentAggregateAlignmentByABI) {
+  const ABIType *RecordAligned16 =
+      makeRecord({FieldInfo(TB.getArrayType(I8, 16, /*SizeInBits=*/128), 0)},
+                 128, llvm::Align(16), llvm::Align(1));
+
+  for (AArch64ABIKind Kind :
+       {AArch64ABIKind::AAPCS, AArch64ABIKind::DarwinPCS}) {
+    std::unique_ptr<TargetInfo> TI =
+        createAArch64TargetInfo(TB, AArch64ABIOptions(Kind));
+    std::unique_ptr<FunctionInfo> FI =
+        FunctionInfo::create(llvm::CallingConv::C, Void, {RecordAligned16});
+    TI->computeInfo(*FI);
+    if (Kind == AArch64ABIKind::AAPCS)
+      expectDirectCoercedIntegerArray(FI->getArgInfo(0).Info, 64, 2,
+                                      llvm::Align(8));
+    else
+      expectDirectCoercedInteger(FI->getArgInfo(0).Info, 128, llvm::Align(16));
+  }
+}
+
+TEST_F(AArch64TargetInfoTest, ClassifyArgumentPointerAggregates) {
+  const ABIType *Ptr1 =
+      makeRecord({FieldInfo(Ptr, 0)}, 64, llvm::Align(8), llvm::Align(8));
+  const ABIType *Reference =
+      TB.getPointerType(64, llvm::Align(8), /*Addrspace=*/0,
+                        llvm::abi::PointerFlags::IsPointerOrReference);
+  const ABIType *ReferenceRecord =
+      makeRecord({FieldInfo(Reference, 0)}, 64, llvm::Align(8), llvm::Align(8));
+  const ABIType *Ptr2 = makeRecord({FieldInfo(Ptr, 0), FieldInfo(Ptr, 64)}, 128,
+                                   llvm::Align(8), llvm::Align(8));
+  const ABIType *PtrArray =
+      makeRecord({FieldInfo(TB.getArrayType(Ptr, 2, /*SizeInBits=*/128), 0)},
+                 128, llvm::Align(8), llvm::Align(8));
+  const ABIType *NestedPtrs =
+      makeRecord({FieldInfo(Ptr1, 0), FieldInfo(Ptr, 64)}, 128, llvm::Align(8),
+                 llvm::Align(8));
+  const ABIType *PointerBase =
+      makeRecord({FieldInfo(Ptr, 0)}, 64, llvm::Align(8), llvm::Align(8),
+                 passableRecordFlags(/*IsCXX=*/true));
+  const ABIType *DerivedPtrs =
+      makeRecord({FieldInfo(Ptr, 64)}, 128, llvm::Align(8), llvm::Align(8),
+                 passableRecordFlags(/*IsCXX=*/true),
+                 /*Bases=*/{FieldInfo(PointerBase, 0)});
+  const ABIType *Mixed = makeRecord({FieldInfo(Ptr, 0), FieldInfo(I64, 64)},
+                                    128, llvm::Align(8), llvm::Align(8));
+  const ABIType *NonzeroTargetASPtr =
+      TB.getPointerType(64, llvm::Align(8), /*Addrspace=*/1,
+                        llvm::abi::PointerFlags::IsPointerOrReference);
+  const ABIType *NonzeroTargetAS = makeRecord(
+      {FieldInfo(NonzeroTargetASPtr, 0)}, 64, llvm::Align(8), llvm::Align(8));
+  const ABIType *AS1Ptr = TB.getPointerType(
+      64, llvm::Align(8), /*Addrspace=*/1,
+      llvm::abi::PointerFlags::IsPointerOrReference |
+          llvm::abi::PointerFlags::IsPointeeAddressSpaceQualified);
+  const ABIType *NonDefaultAS =
+      makeRecord({FieldInfo(AS1Ptr, 0)}, 64, llvm::Align(8), llvm::Align(8));
+  const ABIType *ExplicitAS0Ptr = TB.getPointerType(
+      64, llvm::Align(8), /*Addrspace=*/0,
+      llvm::abi::PointerFlags::IsPointerOrReference |
+          llvm::abi::PointerFlags::IsPointeeAddressSpaceQualified);
+  const ABIType *ExplicitAS0 = makeRecord({FieldInfo(ExplicitAS0Ptr, 0)}, 64,
+                                          llvm::Align(8), llvm::Align(8));
+  const ABIType *OtherPointerLike = TB.getPointerType(
+      64, llvm::Align(8), /*Addrspace=*/0, llvm::abi::PointerFlags::None);
+  const ABIType *OtherPointerLikeRecord = makeRecord(
+      {FieldInfo(OtherPointerLike, 0)}, 64, llvm::Align(8), llvm::Align(8));
+
+  for (AArch64ABIKind Kind :
+       {AArch64ABIKind::AAPCS, AArch64ABIKind::DarwinPCS, AArch64ABIKind::Win64,
+        AArch64ABIKind::AAPCSSoft}) {
+    std::unique_ptr<TargetInfo> TI =
+        createAArch64TargetInfo(TB, AArch64ABIOptions(Kind));
+
+    auto Classify = [&](const ABIType *Ty) {
+      std::unique_ptr<FunctionInfo> FI =
+          FunctionInfo::create(llvm::CallingConv::C, Void, {Ty});
+      TI->computeInfo(*FI);
+      return FI->getArgInfo(0).Info;
+    };
+
+    expectDirectCoercedPointer(Classify(Ptr1));
+    expectDirectCoercedPointer(Classify(ReferenceRecord));
+    expectDirectCoercedPointerArray(Classify(Ptr2), 2);
+    expectDirectCoercedPointerArray(Classify(PtrArray), 2);
+    expectDirectCoercedPointerArray(Classify(NestedPtrs), 2);
+    expectDirectCoercedPointerArray(Classify(DerivedPtrs), 2);
+    expectDirectCoercedPointer(Classify(NonzeroTargetAS));
+    expectDirectCoercedIntegerArray(Classify(Mixed), 64, 2, llvm::Align(8));
+    expectDirectCoercedInteger(Classify(NonDefaultAS), 64, llvm::Align(8));
+    expectDirectCoercedInteger(Classify(ExplicitAS0), 64, llvm::Align(8));
+    expectDirectCoercedInteger(Classify(OtherPointerLikeRecord), 64,
+                               llvm::Align(8));
   }
 }
 

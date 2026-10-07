@@ -60,6 +60,26 @@ TEST_F(ABITypesTest, AtomicTypeProperties) {
   EXPECT_FALSE(Atomic->isEmptyRecord());
 }
 
+TEST_F(ABITypesTest, PointerSourceFlagsAreExplicit) {
+  const auto *NonzeroTargetAS =
+      TB.getPointerType(64, Align(8), /*Addrspace=*/1,
+                        llvm::abi::PointerFlags::IsPointerOrReference);
+  EXPECT_TRUE(NonzeroTargetAS->isPointerOrReference());
+  EXPECT_FALSE(NonzeroTargetAS->isPointeeAddressSpaceQualified());
+
+  const auto *ExplicitSourceAS0 = TB.getPointerType(
+      64, Align(8), /*Addrspace=*/0,
+      llvm::abi::PointerFlags::IsPointerOrReference |
+          llvm::abi::PointerFlags::IsPointeeAddressSpaceQualified);
+  EXPECT_TRUE(ExplicitSourceAS0->isPointerOrReference());
+  EXPECT_TRUE(ExplicitSourceAS0->isPointeeAddressSpaceQualified());
+
+  const auto *OtherPointerRepresentation = TB.getPointerType(
+      64, Align(8), /*Addrspace=*/0, llvm::abi::PointerFlags::None);
+  EXPECT_FALSE(OtherPointerRepresentation->isPointerOrReference());
+  EXPECT_FALSE(OtherPointerRepresentation->isPointeeAddressSpaceQualified());
+}
+
 TEST_F(ABITypesTest, EmptyCRecord) {
   const RecordType *Empty = makeRecord({}, 0, RecordFlags::CanPassInRegisters);
   EXPECT_TRUE(Empty->isEmpty());
@@ -128,7 +148,9 @@ TEST_F(ABITypesTest, DirectVirtualBasesAndVTablePointer) {
   const RecordType *IntField = makeRecord(
       {FieldInfo(TB.getIntegerType(32, Align(4), /*Signed=*/true), 0)}, 32,
       CXXFlags, /*Bases=*/{}, /*VBases=*/{}, Align(4));
-  const llvm::abi::Type *VPtr = TB.getPointerType(64, Align(8));
+  const llvm::abi::Type *VPtr =
+      TB.getPointerType(64, Align(8), /*Addrspace=*/0,
+                        llvm::abi::PointerFlags::IsPointerOrReference);
   FieldInfo VTable(VPtr, 0);
 
   // Empty vbase with vtable

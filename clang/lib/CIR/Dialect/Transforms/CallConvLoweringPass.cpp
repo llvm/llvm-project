@@ -361,16 +361,19 @@ static const llvm::abi::Type *mapCIRType(mlir::Type type,
                 dyn_cast_if_present<cir::TargetAddressSpaceAttr>(
                     ptrTy.getAddrSpace()))
           addrSpace = targetAsAttr.getValue();
+        // CIR does not preserve source-level pointer-kind information.
         return tb.getPointerType(dl.getTypeSizeInBits(type),
                                  llvm::Align(dl.getTypeABIAlignment(type)),
-                                 addrSpace);
+                                 addrSpace, llvm::abi::PointerFlags::None);
       })
       .Case([&](cir::VPtrType) {
         // cir::VPtrType carries no address-space parameter yet, so this
         // always maps into the default one until that gap closes.
         assert(!cir::MissingFeatures::addressSpace());
         return tb.getPointerType(dl.getTypeSizeInBits(type),
-                                 llvm::Align(dl.getTypeABIAlignment(type)));
+                                 llvm::Align(dl.getTypeABIAlignment(type)),
+                                 /*Addrspace=*/0,
+                                 llvm::abi::PointerFlags::IsPointerOrReference);
       })
       .Case([&](cir::BoolType) {
         return tb.getIntegerType(dl.getTypeSizeInBits(type),

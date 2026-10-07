@@ -27,6 +27,8 @@
 namespace llvm {
 namespace abi {
 
+LLVM_ENABLE_BITMASK_ENUMS_IN_NAMESPACE();
+
 enum class TypeKind {
   Void,
   Atomic,
@@ -202,11 +204,32 @@ public:
   }
 };
 
+/// Source-level pointer properties, independent of the target address space.
+enum class PointerFlags {
+  None = 0,
+  IsPointerOrReference = 1 << 0,
+  IsPointeeAddressSpaceQualified = 1 << 1,
+  LLVM_MARK_AS_BITMASK_ENUM(/*LargestValue=*/IsPointeeAddressSpaceQualified)
+};
+
 class PointerType : public PointerLikeType {
+  PointerFlags Flags;
+
 public:
-  PointerType(uint64_t Size, Align ABIAlign, unsigned AddressSpace = 0)
+  PointerType(uint64_t Size, Align ABIAlign, unsigned AddressSpace,
+              PointerFlags Flags)
       : PointerLikeType(TypeKind::Pointer, TypeSize::getFixed(Size), ABIAlign,
-                        AddressSpace) {}
+                        AddressSpace),
+        Flags(Flags) {}
+
+  PointerFlags getFlags() const { return Flags; }
+  bool isPointerOrReference() const {
+    return (Flags & PointerFlags::IsPointerOrReference) != PointerFlags::None;
+  }
+  bool isPointeeAddressSpaceQualified() const {
+    return (Flags & PointerFlags::IsPointeeAddressSpaceQualified) !=
+           PointerFlags::None;
+  }
 
   static bool classof(const Type *T) {
     return T->getKind() == TypeKind::Pointer;
@@ -499,9 +522,9 @@ public:
   }
 
   const PointerType *getPointerType(uint64_t Size, Align Align,
-                                    unsigned Addrspace = 0) {
+                                    unsigned Addrspace, PointerFlags Flags) {
     return new (Allocator.Allocate<PointerType>())
-        PointerType(Size, Align, Addrspace);
+        PointerType(Size, Align, Addrspace, Flags);
   }
 
   const ArrayType *getArrayType(const Type *ElementType, uint64_t NumElements,
