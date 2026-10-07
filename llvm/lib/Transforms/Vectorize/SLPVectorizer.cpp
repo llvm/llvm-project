@@ -17788,12 +17788,13 @@ BoUpSLP::getEntryCost(const TreeEntry *E, ArrayRef<Value *> VectorizedVals,
       // loop-carried store that stays scalar (or narrower) in this tree.
       // Mirror the store-side model: add the target's modeled STLF penalty
       // instead of rejecting the tree, and only under throughput/latency cost
-      // kinds. Use the number of distinct loaded scalars (not the reuse-
-      // inflated vector factor) for both the hazard's distance check and the
-      // penalty type. For an interleaved entry, Scalars already lists every
-      // lane across all streams (buildTreeRec is handed the full segmented
-      // slice, sized InterleaveFactor * per-stream VF), so it is not rescaled
-      // by the interleave factor again here.
+      // kinds. Use HazardCheckVF (not the reuse-inflated vector factor) for
+      // both the hazard's distance check and the penalty type: the number of
+      // distinct loaded scalars, or, for CompressVectorize, the masked load's
+      // element count (the real span). For an interleaved entry, Scalars
+      // already lists every lane across all streams (buildTreeRec is handed
+      // the full segmented slice, sized InterleaveFactor * per-stream VF), so
+      // it is not rescaled by the interleave factor again here.
       //
       // Covers Vectorize (plain contiguous window) and CompressVectorize
       // (single masked-load window, real span pulled from
@@ -17808,8 +17809,7 @@ BoUpSLP::getEntryCost(const TreeEntry *E, ArrayRef<Value *> VectorizedVals,
       //     BlendedLoadVectorize (two candidate bases blended by a select)
       //     have no single contiguous byte window / no single base pointer
       //     compatible with this LoadInst*-keyed hazard model.
-      unsigned STLFLoadVF = E->Scalars.size();
-      unsigned HazardCheckVF = STLFLoadVF;
+      unsigned HazardCheckVF = E->Scalars.size();
       // findStoreLoadForwardingHazardForLoad checks its BaseLoad argument
       // directly (bypassing the general loop scan), so BaseLoad must already
       // be the widened access's base (lowest-address) lane, or the
@@ -17846,11 +17846,11 @@ BoUpSLP::getEntryCost(const TreeEntry *E, ArrayRef<Value *> VectorizedVals,
            E->State == TreeEntry::CompressVectorize) &&
           (CostKind == TTI::TCK_RecipThroughput ||
            CostKind == TTI::TCK_Latency)) {
-        // Query the target's modeled penalty once, up front: on targets
-        // without a real STLF penalty (the target-independent default is 0)
-        // this skips the loop-scanning hazard search entirely instead of
-        // running it just to multiply its result by a cost of 0.
-        Type *STLFVecTy = getWidenedType(LI0->getType(), STLFLoadVF);
+        // Query the modeled penalty before scanning. A cost of 0 means the
+        // stall is not modeled (a command-line override, or a target that
+        // sets the penalty to 0); skip the hazard search in that case. The
+        // scheduling-model default is non-zero, so modeled targets still scan.
+        Type *STLFVecTy = getWidenedType(LI0->getType(), HazardCheckVF);
         InstructionCost STLFCost =
             TTI->getStoreLoadForwardingConflictCost(STLFVecTy, CostKind);
         if (STLFCost != 0) {
@@ -17958,43 +17958,52 @@ BoUpSLP::getEntryCost(const TreeEntry *E, ArrayRef<Value *> VectorizedVals,
       // stride is only known at runtime (a general SCEV/Value, not a
       // constant) is also excluded, since no single fixed byte window can be
       // derived for it at compile time.
-      bool IsStoreStateSupported = E->State == TreeEntry::Vectorize;
-      unsigned StoreSTLFVF = E->Scalars.size();
-      std::optional<uint64_t> StoreSizeOverride;
-      if (E->State == TreeEntry::StridedVectorize) {
-        const StridedPtrInfo &SPtrInfo = TreeEntryToStridedPtrInfoMap.at(E);
-        std::optional<int64_t> StrideUnits;
-        if (auto *CI = dyn_cast_or_null<ConstantInt>(SPtrInfo.StrideVal))
-          StrideUnits = CI->getSExtValue();
-        else if (auto *SC = dyn_cast_or_null<SCEVConstant>(SPtrInfo.StrideSCEV))
-          StrideUnits = SC->getAPInt().getSExtValue();
-        TypeSize StoreScalarSize =
-            DL->getTypeStoreSize(BaseSI->getValueOperand()->getType());
-        if (StrideUnits && SPtrInfo.Ty && !StoreScalarSize.isScalable() &&
-            StoreScalarSize.getFixedValue() != 0) {
-          uint64_t ScalarBytes = StoreScalarSize.getFixedValue();
-          uint64_t ByteStride =
-              static_cast<uint64_t>(std::abs(*StrideUnits)) *
-              DL->getTypeAllocSize(BaseSI->getValueOperand()->getType())
-                  .getFixedValue();
-          unsigned StridedVF = SPtrInfo.Ty->getNumElements();
-          if (StridedVF > 0) {
-            StoreSizeOverride = (StridedVF - 1) * ByteStride + ScalarBytes;
-            StoreSTLFVF = StridedVF;
-            IsStoreStateSupported = true;
-          }
-        }
-      }
-      if (EnableSLPStoreLoadForwardCheck && IsStoreStateSupported &&
+      if (EnableSLPStoreLoadForwardCheck &&
+          (E->State == TreeEntry::Vectorize ||
+           E->State == TreeEntry::StridedVectorize) &&
           (CostKind == TTI::TCK_RecipThroughput ||
            CostKind == TTI::TCK_Latency)) {
-        // Query the target's modeled penalty once, up front: on targets
-        // without a real STLF penalty (the target-independent default is 0)
-        // this skips the loop-scanning conflict search entirely instead of
-        // running it just to multiply its result by a cost of 0.
+        // Query the modeled penalty before scanning. A cost of 0 means the
+        // stall is not modeled (a command-line override, or a target that
+        // sets the penalty to 0); skip the conflict search in that case. The
+        // scheduling-model default is non-zero, so modeled targets still scan.
         InstructionCost STLFCost =
             TTI->getStoreLoadForwardingConflictCost(VecTy, CostKind);
         if (STLFCost != 0) {
+          unsigned StoreSTLFVF = E->Scalars.size();
+          std::optional<uint64_t> StoreSizeOverride;
+          // A runtime stride has no fixed byte window. Leave the override
+          // unset so the search below is skipped for that entry.
+          if (E->State == TreeEntry::StridedVectorize) {
+            const StridedPtrInfo &SPtrInfo =
+                TreeEntryToStridedPtrInfoMap.at(E);
+            std::optional<int64_t> StrideUnits;
+            if (auto *CI = dyn_cast_or_null<ConstantInt>(SPtrInfo.StrideVal))
+              StrideUnits = CI->getSExtValue();
+            else if (auto *SC =
+                         dyn_cast_or_null<SCEVConstant>(SPtrInfo.StrideSCEV))
+              StrideUnits = SC->getAPInt().getSExtValue();
+            TypeSize StoreScalarSize =
+                DL->getTypeStoreSize(BaseSI->getValueOperand()->getType());
+            if (StrideUnits && SPtrInfo.Ty && !StoreScalarSize.isScalable() &&
+                StoreScalarSize.getFixedValue() != 0) {
+              uint64_t ScalarBytes = StoreScalarSize.getFixedValue();
+              // abs(INT64_MIN) is undefined; clamp before taking the magnitude.
+              int64_t AbsStrideUnits = std::max(
+                  *StrideUnits, std::numeric_limits<int64_t>::min() + 1);
+              uint64_t ByteStride =
+                  static_cast<uint64_t>(std::abs(AbsStrideUnits)) *
+                  DL->getTypeAllocSize(BaseSI->getValueOperand()->getType())
+                      .getFixedValue();
+              unsigned StridedVF = SPtrInfo.Ty->getNumElements();
+              if (StridedVF > 0) {
+                StoreSizeOverride = (StridedVF - 1) * ByteStride + ScalarBytes;
+                StoreSTLFVF = StridedVF;
+              }
+            }
+          }
+          if (E->State == TreeEntry::StridedVectorize && !StoreSizeOverride)
+            return VecStCost + CommonCost;
           SmallVector<LoadInst *> ConflictingLoads;
           // Contiguous Vectorize stores are emitted at VL0. Reverse
           // StridedVectorize rebinds the pointer to ReorderIndices.front()
