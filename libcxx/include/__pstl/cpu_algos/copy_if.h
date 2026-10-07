@@ -115,27 +115,32 @@ struct __cpu_parallel_copy_if {
 
       _ForwardIterator2 __out_iter = __result;
 
-      // TODO: support the case when the worker context was not allocated
+      // TODO: support the case when the worker context was not allocated due to malloc failure?
 
       auto __scan_head =
           [&](__dynamic_bitset& __worker_ctx,
               _ForwardIterator1 __chunk_first,
               _ForwardIterator1 __chunk_last,
               __decoupled_lookback_partition<size_t>* __optional_lookback_partition) {
+            // Reset the local storage by setting all flags to false
             __worker_ctx.__reset();
 
+            // Populate the bitset for each of the elements in the chunk and get the occupancy
             size_t __occupied_count =
                 __pstl::__count_and_cache_predicate_results(__chunk_first, __chunk_last, __pred, __worker_ctx);
 
+            // If we're not the only chunk - publish the final occupancy
             if (__optional_lookback_partition != nullptr) {
               __optional_lookback_partition->__construct_inclusive_prefix(__occupied_count);
             }
 
+            // Copy the elements depending on the bitset flags
             _ForwardIterator2 __chunk_result =
                 __pstl::__copy_if_flag_set(__chunk_first, __chunk_last, __result, __worker_ctx);
 
+            // If we're the last chunk - also the report the position of the last iterator in the result range
             if (__optional_lookback_partition == nullptr) {
-              __out_iter = __chunk_result; // TODO: explain
+              __out_iter = __chunk_result;
             }
           };
 
@@ -144,20 +149,27 @@ struct __cpu_parallel_copy_if {
               _ForwardIterator1 __chunk_first,
               _ForwardIterator1 __chunk_last,
               __decoupled_lookback_partition<size_t>* __lookback_partition) {
+            // Reset the local storage by setting all flags to false
             __worker_ctx.__reset();
 
+            // Populate the bitset for each of the elements in the chunk and get the occupancy
             size_t __occupied_count =
                 __pstl::__count_and_cache_predicate_results(__chunk_first, __chunk_last, __pred, __worker_ctx);
 
+            // Publish the occupancy as a local aggregate first
             __lookback_partition->__construct_aggregate(__occupied_count);
+
+            // Obtain the exclusive prefix
             __decoupled_lookback_partition<size_t>* __prev_partition = __lookback_partition - 1;
             size_t __exclusive_prefix =
                 (__prev_partition->__acquire_available_status() & __decoupled_lookback_status_prefix_available)
                     ? __prev_partition->__inclusive_prefix()
                     : __pstl::__calculate_inclusive_prefix_of_partition(__prev_partition, plus<>{});
 
+            // Publish the final occupancy
             __lookback_partition->__construct_inclusive_prefix(__exclusive_prefix + __occupied_count);
 
+            // Copy the elements depending on the bitset flags
             __pstl::__copy_if_flag_set(__chunk_first, __chunk_last, __result + __exclusive_prefix, __worker_ctx);
           };
 
@@ -166,20 +178,24 @@ struct __cpu_parallel_copy_if {
               _ForwardIterator1 __chunk_first,
               _ForwardIterator1 __chunk_last,
               __decoupled_lookback_partition<size_t>* __nonexistent_lookback_partition) {
+            // Reset the local storage by setting all flags to false
             __worker_ctx.__reset();
 
+            // Populate the bitset for each of the elements in the chunk and get the occupancy
             __pstl::__count_and_cache_predicate_results(__chunk_first, __chunk_last, __pred, __worker_ctx);
 
+            // Obtain the exclusive prefix
             __decoupled_lookback_partition< size_t >* __prev_partition = __nonexistent_lookback_partition - 1;
-
             size_t __exclusive_prefix =
                 (__prev_partition->__acquire_available_status() & __decoupled_lookback_status_prefix_available)
                     ? __prev_partition->__inclusive_prefix()
                     : __pstl::__calculate_inclusive_prefix_of_partition(__prev_partition, plus<>{});
 
+            // Copy the elements depending on the bitset flags
             _ForwardIterator2 __chunk_result =
                 __pstl::__copy_if_flag_set(__chunk_first, __chunk_last, __result + __exclusive_prefix, __worker_ctx);
 
+            // Report the position of the last iterator in the result range
             __out_iter = __chunk_result;
           };
 
@@ -187,7 +203,6 @@ struct __cpu_parallel_copy_if {
           __first, __last, __prologue, __scan_head, __scan_middle, __scan_tail, __epilogue);
       if (!__ret)
         return nullopt;
-
       return __out_iter;
     } else {
       return std::copy_if(std::move(__first), std::move(__last), std::move(__result), std::move(__pred));
