@@ -356,9 +356,6 @@ private:
   ComplexRendererFns selectVOP3PMadMixModsExtNeg(MachineOperand &Root) const;
   ComplexRendererFns selectVOP3PMadMixModsNeg(MachineOperand &Root) const;
 
-  void renderTruncImm32(MachineInstrBuilder &MIB, const MachineInstr &MI,
-                        int OpIdx = -1) const;
-
   void renderTruncTImm(MachineInstrBuilder &MIB, const MachineInstr &MI,
                        int OpIdx) const;
   void renderZextBoolTImm(MachineInstrBuilder &MIB, const MachineInstr &MI,

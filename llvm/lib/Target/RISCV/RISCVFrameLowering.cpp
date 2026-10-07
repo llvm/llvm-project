@@ -2781,18 +2781,7 @@ bool RISCVFrameLowering::canUseAsEpilogue(const MachineBasicBlock &MBB) const {
 }
 
 bool RISCVFrameLowering::isSupportedStackID(TargetStackID::Value ID) const {
-  switch (ID) {
-  case TargetStackID::Default:
-  case TargetStackID::ScalableVector:
-    return true;
-  case TargetStackID::NoAlloc:
-  case TargetStackID::SGPRSpill:
-  case TargetStackID::WasmLocal:
-  case TargetStackID::ScalablePredicateVector:
-  case TargetStackID::AvrAlign:
-    return false;
-  }
-  llvm_unreachable("Invalid TargetStackID::Value");
+  return ID == TargetStackID::Default || ID == TargetStackID::ScalableVector;
 }
 
 TargetStackID::Value RISCVFrameLowering::getStackIDForScalableVectors() const {

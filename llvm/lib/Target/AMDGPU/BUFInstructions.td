@@ -1076,7 +1076,6 @@ defm : MUBUF_Pseudo_Load_Pats<"BUFFER_LOAD_UBYTE", i32, extloadi8_global>;
 defm : MUBUF_Pseudo_Load_Pats<"BUFFER_LOAD_UBYTE", i32, zextloadi8_global>;
 defm : MUBUF_Pseudo_Load_Pats<"BUFFER_LOAD_SBYTE", i32, sextloadi8_global>;
 defm : MUBUF_Pseudo_Load_Pats<"BUFFER_LOAD_SBYTE", i32, atomic_load_sext_8_global>;
-defm : MUBUF_Pseudo_Load_Pats<"BUFFER_LOAD_SBYTE", i32, atomic_load_sext_16_global>;
 defm : MUBUF_Pseudo_Load_Pats<"BUFFER_LOAD_USHORT", i32, extloadi16_global>;
 defm : MUBUF_Pseudo_Load_Pats<"BUFFER_LOAD_USHORT", i32, zextloadi16_global>;
 defm : MUBUF_Pseudo_Load_Pats<"BUFFER_LOAD_SSHORT", i32, sextloadi16_global>;

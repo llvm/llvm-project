@@ -2536,7 +2536,7 @@ Decl *Parser::ParseDeclarationAfterDeclaratorAndAttributes(
   // If a '==' or '+=' is found, suggest a fixit to '='.
   if (isTokenEqualOrEqualTypo())
     TheInitKind = InitKind::Equal;
-  else if (Tok.is(tok::l_paren))
+  else if (getLangOpts().CPlusPlus && Tok.is(tok::l_paren))
     TheInitKind = InitKind::CXXDirect;
   else if (getLangOpts().CPlusPlus11 && Tok.is(tok::l_brace) &&
            (!CurParsedObjCImpl || !D.isFunctionDeclarator()))
@@ -4881,11 +4881,7 @@ void Parser::ParseStructDeclaration(
 ParsedAttributes Parser::ParseLexedAttributeTokens(LateParsedAttribute &LPA) {
   // Create a fake EOF so that attribute parsing won't go off the end of the
   // attribute.
-  Token AttrEnd;
-  AttrEnd.startToken();
-  AttrEnd.setKind(tok::eof);
-  AttrEnd.setLocation(Tok.getLocation());
-  AttrEnd.setEofData(LPA.Toks.data());
+  Token AttrEnd = Token::createEof(Tok.getLocation(), LPA.Toks.data());
   LPA.Toks.push_back(AttrEnd);
 
   // Append the current token at the end of the new token stream so that it
@@ -8334,10 +8330,7 @@ TypeResult Parser::ParseTypeFromString(StringRef TypeStr, StringRef Context,
   // Replace the "eod" token with an "eof" token identifying the end of
   // the provided string.
   Token &EndToken = Tokens.back();
-  EndToken.startToken();
-  EndToken.setKind(tok::eof);
-  EndToken.setLocation(Tok.getLocation());
-  EndToken.setEofData(TypeStr.data());
+  EndToken = Token::createEof(Tok.getLocation(), TypeStr.data());
 
   // Add the current token back.
   Tokens.push_back(Tok);

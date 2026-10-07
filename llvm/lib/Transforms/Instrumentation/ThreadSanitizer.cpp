@@ -205,7 +205,7 @@ void ThreadSanitizer::initialize(Module &M, const TargetLibraryInfo &TLI) {
   LLVMContext &Ctx = M.getContext();
   IntptrTy = DL.getIntPtrType(Ctx);
 
-  IRBuilder<> IRB(Ctx);
+  IRBuilder<> IRB(M);
   AttributeList Attr;
   Attr = Attr.addFnAttribute(Ctx, Attribute::NoUnwind);
   // Initialize the callbacks.
