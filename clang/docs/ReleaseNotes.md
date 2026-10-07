@@ -397,10 +397,10 @@ documentation](CIR/index.md) for more information regarding ClangIR's status and
   times.
 
 - Added the `__addrspaceof` operator, which returns a Clang address-space
-  identifier for a type, directly named entity, or lvalue expression. It can
+  identifier for a type, directly named entity, or expression. It can
   report CUDA/HIP storage address spaces for known `__device__`, `__shared__`,
   and `__constant__` variables. Clang also now emits predefined
-  `__ADDRSPACE_*` macros for these values.
+  `__ADDRSPACE_*` macros and `__ADDRSPACE_TARGET(N)` for these values.
 
 ### New Compiler Flags
 
