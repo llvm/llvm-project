@@ -15,7 +15,7 @@ def FirestormModel : SchedMachineModel {
   let IssueWidth = 6; // 6 micro-ops are dispatched per cycle.
   let MicroOpBufferSize = 192; // Based on the reorder buffer.
   let LoadLatency = 4; // Optimistic load latency.
-  let MispredictPenalty = 16; // 14-19 cycles are typical.
+  let MispredictPenalty = 13;
   let CompleteModel = 1;
 
   list<Predicate> UnsupportedFeatures = !listconcat(SVEUnsupported.F,
