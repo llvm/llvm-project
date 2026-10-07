@@ -1,4 +1,4 @@
-# RUN: llc -mtriple=x86_64-- %s -o - -run-pass=processimpdefs -run-pass=unreachable-mbb-elimination | FileCheck %s
+# RUN: llc -mtriple=x86_64-- %s -o - -run-pass=process-imp-defs -run-pass=unreachable-mbb-elimination | FileCheck %s
 # RUN: llc -mtriple=x86_64-- %s -o - -passes=process-imp-defs,unreachable-mbb-elimination | FileCheck %s
 ---
 name:            f
