@@ -608,9 +608,11 @@ void MLIRContext::allowUnregisteredDialects(bool allowing) {
 }
 
 /// Return true if multi-threading is enabled by the context.
+#if LLVM_ENABLE_THREADS
 bool MLIRContext::isMultithreadingEnabled() {
-  return impl->threadingIsEnabled && llvm::llvm_is_multithreaded();
+  return impl->threadingIsEnabled;
 }
+#endif
 
 /// Set the flag specifying if multi-threading is disabled by the context.
 void MLIRContext::disableMultithreading(bool disable) {
