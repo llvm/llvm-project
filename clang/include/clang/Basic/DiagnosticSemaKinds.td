@@ -5333,7 +5333,7 @@ def note_ovl_candidate_disabled_by_requirement : Note<
 def note_ovl_candidate_has_pass_object_size_params: Note<
     "candidate address cannot be taken because parameter %0 has "
     "pass_object_size attribute">;
-def err_diagnose_if_succeeded : Error<"%0">;
+def err_diagnose_if_succeeded : Error<"%0">, SFINAESuppress;
 def warn_diagnose_if_succeeded : Warning<"%0">, InGroup<UserDefinedWarnings>,
     ShowInSystemHeader;
 def note_ovl_candidate_disabled_by_function_cond_attr : Note<

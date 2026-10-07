@@ -10765,9 +10765,7 @@ public:
   ///
   /// Argument-dependent diagnose_if attributes should be checked each time a
   /// function is used as a direct callee of a function call.
-  ///
-  /// Returns true if any errors were emitted.
-  bool diagnoseArgDependentDiagnoseIfAttrs(const FunctionDecl *Function,
+  void diagnoseArgDependentDiagnoseIfAttrs(const FunctionDecl *Function,
                                            const Expr *ThisArg,
                                            ArrayRef<const Expr *> Args,
                                            SourceLocation Loc);
@@ -10777,9 +10775,7 @@ public:
   ///
   /// Argument-independent diagnose_if attributes should be checked on every use
   /// of a function.
-  ///
-  /// Returns true if any errors were emitted.
-  bool diagnoseArgIndependentDiagnoseIfAttrs(const NamedDecl *ND,
+  void diagnoseArgIndependentDiagnoseIfAttrs(const NamedDecl *ND,
                                              SourceLocation Loc);
 
   /// Determine if \p A and \p B are equivalent internal linkage declarations
