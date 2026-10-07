@@ -4516,8 +4516,8 @@ bool AMDGPUAsmParser::validateMFMA(const MCInst &Inst,
     if (const MFMA_F8F6F4_Info *Info = AMDGPU::isMFMA_F8F6F4(Opc)) {
       int CbszIdx = AMDGPU::getNamedOperandIdx(Opc, AMDGPU::OpName::cbsz);
 
-      unsigned CBSZ = static_cast<unsigned>(Inst.getOperand(CbszIdx).getImm());
-      unsigned BLGP = static_cast<unsigned>(Inst.getOperand(BlgpIdx).getImm());
+      unsigned CBSZ = Inst.getOperand(CbszIdx).getImm();
+      unsigned BLGP = Inst.getOperand(BlgpIdx).getImm();
 
       // Validate the correct register size was used for the floating point
       // format operands
