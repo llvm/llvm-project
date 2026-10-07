@@ -123,6 +123,18 @@ const Scope *FindOpenACCConstructContaining(const Scope *scope) {
                : nullptr;
 }
 
+bool IsOpenACCMapped(const Symbol &symbol, const Scope &scope) {
+  for (const Scope *current{&scope};; current = &current->parent()) {
+    if (current->kind() == Scope::Kind::OpenACCConstruct &&
+        current->IsOpenACCMappedSymbol(symbol)) {
+      return true;
+    }
+    if (current->IsGlobal()) {
+      return false;
+    }
+  }
+}
+
 bool HasOpenACCRoutineDirective(const Scope *scope) {
   if (!scope) {
     return false;

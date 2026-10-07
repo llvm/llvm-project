@@ -479,6 +479,8 @@ public:
 
   bool enableMachineScheduler() const override { return true; }
 
+  bool enableSSAMachineScheduler() const override { return true; }
+
   bool useAA() const override;
 
   bool enableSubRegLiveness() const override { return true; }
@@ -624,11 +626,9 @@ public:
     return getGeneration() == GFX11;
   }
 
-  /// GFX11 VOPD dest-buffer forwarding can drop the interlock when SRC0 or
-  /// SRC1 X/Y are distinct VGPRs with the same parity.
-  bool hasGFX11VOPDInterlockHazard() const { return getGeneration() == GFX11; }
-
   bool hasCvtScaleForwardingHazard() const { return HasGFX950Insts; }
+
+  bool hasPermlaneForwardingHazard() const { return HasGFX950Insts; }
 
   // All GFX9 targets experience a fetch delay when an instruction at the start
   // of a loop header is split by a 32-byte fetch window boundary, but GFX950
@@ -1026,10 +1026,6 @@ public:
   bool requiresWaitXCntForSingleAccessInstructions() const {
     return HasGFX1250Insts;
   }
-
-  /// True if VALU pipe occupancy is modeled with GFX1250BlockingCycles
-  /// (gfx1250 pipeline property, not gfx1250 ISA feature).
-  bool hasGFX1250VALUBlockingCycles() const { return AMDGPU::isGFX1250(*this); }
 
   /// \returns the number of significant bits in the immediate field of the
   /// S_NOP instruction.

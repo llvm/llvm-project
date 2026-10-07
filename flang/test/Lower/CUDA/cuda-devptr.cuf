@@ -47,7 +47,7 @@ subroutine sub2()
 end
 
 ! CHECK-LABEL: func.func @_QPsub2()
-! CHECK: %[[X:.*]] = fir.declare %{{.*}} {data_attr = #cuf.cuda<device>, fortran_attrs = #fir.var_attrs<pointer>, uniq_name = "_QFsub2Ex"} : (!fir.ref<!fir.box<!fir.ptr<!fir.array<?xf32>>>>) -> !fir.ref<!fir.box<!fir.ptr<!fir.array<?xf32>>>>
+! CHECK: %[[X:.*]] = fir.declare %{{.*}} uniq_name("_QFsub2Ex") fortran_attrs<pointer> data_attr(#cuf.cuda<device>) : (!fir.ref<!fir.box<!fir.ptr<!fir.array<?xf32>>>>) -> !fir.ref<!fir.box<!fir.ptr<!fir.array<?xf32>>>>
 ! CHECK: %[[CPTR_COORD:.*]] = fir.coordinate_of %{{.*}}, cptr : (!fir.ref<!fir.type<_QM__fortran_builtinsT__builtin_c_devptr{{[<]?}}{cptr:!fir.type<_QM__fortran_builtinsT__builtin_c_ptr{__address:i64}>}{{[>]?}}>>) -> !fir.ref<!fir.type<_QM__fortran_builtinsT__builtin_c_ptr{__address:i64}>>
 ! CHECK: %[[ADDRESS_COORD:.*]] = fir.coordinate_of %[[CPTR_COORD]], __address : (!fir.ref<!fir.type<_QM__fortran_builtinsT__builtin_c_ptr{__address:i64}>>) -> !fir.ref<i64>
 ! CHECK: %[[ADDRESS_LOADED:.*]] = fir.load %[[ADDRESS_COORD]] : !fir.ref<i64>
@@ -64,8 +64,8 @@ attributes(global) subroutine assign_c_devptr(p, a)
 end subroutine
 
 ! CHECK-LABEL: func.func @_QPassign_c_devptr
-! CHECK: %[[P:.*]] = fir.declare %arg0 dummy_scope %{{.*}} {data_attr = #cuf.cuda<device>, uniq_name = "_QFassign_c_devptrEp"}
-! CHECK: %[[C_DEVLOC_RES:.*]] = fir.declare %15 {uniq_name = ".tmp.intrinsic_result"} : (!fir.ref<!fir.type<_QM__fortran_builtinsT__builtin_c_devptr{cptr:!fir.type<_QM__fortran_builtinsT__builtin_c_ptr{__address:i64}>}>>) -> !fir.ref<!fir.type<_QM__fortran_builtinsT__builtin_c_devptr{cptr:!fir.type<_QM__fortran_builtinsT__builtin_c_ptr{__address:i64}>}>>
+! CHECK: %[[P:.*]] = fir.declare %arg0 dummy_scope %{{.*}} uniq_name("_QFassign_c_devptrEp") data_attr(#cuf.cuda<device>)
+! CHECK: %[[C_DEVLOC_RES:.*]] = fir.declare %15 uniq_name(".tmp.intrinsic_result") : (!fir.ref<!fir.type<_QM__fortran_builtinsT__builtin_c_devptr{cptr:!fir.type<_QM__fortran_builtinsT__builtin_c_ptr{__address:i64}>}>>) -> !fir.ref<!fir.type<_QM__fortran_builtinsT__builtin_c_devptr{cptr:!fir.type<_QM__fortran_builtinsT__builtin_c_ptr{__address:i64}>}>>
 ! CHECK-NOT: fir.coordinate_of
 ! CHECK: fir.copy %[[C_DEVLOC_RES]] to %[[P]] no_overlap : !fir.ref<!fir.type<_QM__fortran_builtinsT__builtin_c_devptr{cptr:!fir.type<_QM__fortran_builtinsT__builtin_c_ptr{__address:i64}>}>>, !fir.ref<!fir.type<_QM__fortran_builtinsT__builtin_c_devptr{cptr:!fir.type<_QM__fortran_builtinsT__builtin_c_ptr{__address:i64}>}>>
 

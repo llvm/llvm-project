@@ -3,6 +3,11 @@ on:
   pull_request:
     paths:
       - 'libcxx/**'
+      - 'libcxxabi/**'
+      - 'libunwind/**'
+      - 'runtimes/**'
+      - 'cmake/**'
+      - '.github/workflows/libcxx-pr-check-generated-files.yml'
 
 permissions:
   contents: read
@@ -13,15 +18,9 @@ jobs:
     if: github.repository == 'llvm/llvm-project'
     steps:
       - name: Fetch LLVM sources
-        uses: actions/checkout@df4cb1c069e1874edd31b4311f1884172cec0e10 # v6.0.3
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
           persist-credentials: false
-
-      - name: Install dependencies
-        uses: aminya/setup-cpp@8170d66c458f4a045220b7b0966c10940bb2a15d # v1.8.1
-        with:
-          clangformat: 17.0.1
-          ninja: true
 
       - name: Check generated files
         run: libcxx/utils/ci/run-buildbot check-generated-output
