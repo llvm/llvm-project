@@ -1823,6 +1823,13 @@ void LoweringPreparePass::lowerGlobalOp(GlobalOp op) {
       if (getTargetInfo().getTriple().isOSBinFormatELF() ||
           getTargetInfo().getCXXABI().isMicrosoft())
         addUsedGlobal(op);
+
+      // Since the global ctor entry is keyed to the variable, the init function
+      // can be discarded along with it, so put it in the variable's COMDAT.
+      std::optional<llvm::StringRef> comdat = op.getComdat();
+      if (comdat && (getTargetInfo().getTriple().isOSBinFormatELF() ||
+                     getTargetInfo().getTriple().isOSBinFormatWasm()))
+        f.setComdat(comdat->empty() ? op.getSymName() : *comdat);
     } else {
       dynamicInitializers.push_back(f);
     }
