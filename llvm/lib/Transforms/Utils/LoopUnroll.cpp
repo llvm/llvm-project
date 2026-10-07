@@ -1602,7 +1602,7 @@ llvm::UnrollLoop(Loop *L, UnrollLoopOptions ULO, LoopInfo *LI,
         continue;
       if (!RdxResult) {
         RdxResult = PartialReductions.front();
-        IRBuilder Builder(ExitBlock, ExitBlock->getFirstNonPHIIt());
+        IRBuilder Builder(ExitBlock->getFirstNonPHIIt());
         Builder.setFastMathFlags(Reductions.begin()->second.getFastMathFlags());
         RecurKind RK = Reductions.begin()->second.getRecurrenceKind();
         for (Instruction *RdxPart : drop_begin(PartialReductions)) {
