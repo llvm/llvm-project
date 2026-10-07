@@ -3894,6 +3894,15 @@ public:
   void EmitOMPAggregateAssign(
       Address DestAddr, Address SrcAddr, QualType OriginalType,
       const llvm::function_ref<void(Address, Address)> CopyGen);
+  /// Initialize \p Dst, a task's private copy, with \p Init, the initializer
+  /// of the copy's declaration \p PrivateCopy.  For a firstprivate,
+  /// \p ElemInit is the element the initializer reads, which is \p Src, and an
+  /// array is initialized element by element; for any other copy \p Src is
+  /// unused.  The initializer is emitted under \p CapturesInfo if it is
+  /// non-null, and under the current captured-statement info otherwise.
+  void EmitOMPPrivateCopyInit(const Expr *Init, const VarDecl *PrivateCopy,
+                              const VarDecl *ElemInit, LValue Dst, LValue Src,
+                              CGCapturedStmtInfo *CapturesInfo);
   /// Emit proper copying of data from one variable to another.
   ///
   /// \param OriginalType Original type of the copied variables.

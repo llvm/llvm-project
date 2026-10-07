@@ -3189,6 +3189,9 @@ struct PrivateHelpersTy {
   const VarDecl *Original = nullptr;
   const VarDecl *PrivateCopy = nullptr;
   const VarDecl *PrivateElemInit = nullptr;
+  /// The body's own copy of a firstprivate, beside its initial value (see
+  /// OMPTaskDataTy::BodyConstructsPrivates).
+  bool WorkingCopy = false;
   bool isLocalPrivate() const {
     return !OriginalRef && !PrivateCopy && !PrivateElemInit;
   }
@@ -3202,6 +3205,17 @@ static const VarDecl *getOriginalVarDecl(const ValueDecl *Decl) {
   if (const auto *BD = dyn_cast<BindingDecl>(Decl))
     return cast<VarDecl>(BD->getDecomposedDecl());
   return cast<VarDecl>(Decl);
+}
+
+/// Whether \p P is constructed with the task descriptor and destroyed with it.
+/// That is every copy but a private local of an untied task, unless the body
+/// constructs its own copies (OMPTaskDataTy::BodyConstructsPrivates), when it
+/// is only a firstprivate's initial value.
+static bool isDescriptorCopy(const PrivateHelpersTy &P,
+                             const OMPTaskDataTy &Data) {
+  if (P.isLocalPrivate())
+    return false;
+  return !Data.BodyConstructsPrivates || (P.PrivateElemInit && !P.WorkingCopy);
 }
 
 static bool isAllocatableDecl(const VarDecl *VD) {
@@ -3251,6 +3265,17 @@ createPrivatesRecordDecl(CodeGenModule &CGM, ArrayRef<PrivateDataTy> Privates) {
              E(VD->getAttrs().end());
              I != E; ++I)
           FD->addAttr(*I);
+      }
+      // The body accesses its copy of a firstprivate as the variable, which
+      // can be aligned beyond its type.
+      if (Pair.second.WorkingCopy && Pair.first > C.getTypeAlignInChars(Type)) {
+        llvm::APInt Align(32, Pair.first.getQuantity());
+        FD->addAttr(AlignedAttr::CreateImplicit(
+            C, /*IsAlignmentExpr=*/true,
+            IntegerLiteral::Create(C, Align,
+                                   C.getIntTypeForBitwidth(32, /*Signed=*/0),
+                                   SourceLocation()),
+            {}, AlignedAttr::GNU_aligned));
       }
     }
     RD->completeDefinition();
@@ -3438,11 +3463,10 @@ emitProxyTaskFunction(CodeGenModule &CGM, SourceLocation Loc,
   return TaskEntry;
 }
 
-static llvm::Value *emitDestructorsFunction(CodeGenModule &CGM,
-                                            SourceLocation Loc,
-                                            QualType KmpInt32Ty,
-                                            QualType KmpTaskTWithPrivatesPtrQTy,
-                                            QualType KmpTaskTWithPrivatesQTy) {
+static llvm::Value *emitDestructorsFunction(
+    CodeGenModule &CGM, SourceLocation Loc, QualType KmpInt32Ty,
+    QualType KmpTaskTWithPrivatesPtrQTy, QualType KmpTaskTWithPrivatesQTy,
+    const OMPTaskDataTy &Data, ArrayRef<PrivateDataTy> Privates) {
   ASTContext &C = CGM.getContext();
   auto *GtidArg =
       ImplicitParamDecl::Create(C, /*DC=*/nullptr, Loc, /*Id=*/nullptr,
@@ -3476,7 +3500,12 @@ static llvm::Value *emitDestructorsFunction(CodeGenModule &CGM,
       KmpTaskTWithPrivatesQTy->castAsRecordDecl();
   auto FI = std::next(KmpTaskTWithPrivatesQTyRD->field_begin());
   Base = CGF.EmitLValueForField(Base, *FI);
+  auto PI = Privates.begin();
   for (const auto *Field : FI->getType()->castAsRecordDecl()->fields()) {
+    const PrivateHelpersTy &P = (PI++)->second;
+    // The body destroys the copies it constructs.
+    if (Data.BodyConstructsPrivates && !isDescriptorCopy(P, Data))
+      continue;
     if (QualType::DestructionKind DtorKind =
             Field->getType().isDestructedType()) {
       LValue FieldLValue = CGF.EmitLValueForField(Base, Field);
@@ -3567,6 +3596,22 @@ emitTaskPrivateMappingFunction(CodeGenModule &CGM, SourceLocation Loc,
     PrivateVarsPos[VD] = Counter;
     ++Counter;
   }
+  // The body's own copies of the firstprivates, keyed by canonical declaration
+  // since a firstprivate may be a BindingDecl.
+  llvm::SmallDenseMap<const ValueDecl *, unsigned> WorkingCopyPos;
+  if (Data.BodyConstructsPrivates) {
+    for (const Expr *E : Data.FirstprivateVars) {
+      Args.push_back(ImplicitParamDecl::Create(
+          C, /*DC=*/nullptr, Loc, /*Id=*/nullptr,
+          C.getPointerType(C.getPointerType(E->getType()))
+              .withConst()
+              .withRestrict(),
+          ImplicitParamKind::Other));
+      const ValueDecl *VD = cast<DeclRefExpr>(E)->getDecl();
+      WorkingCopyPos[cast<ValueDecl>(VD->getCanonicalDecl())] = Counter;
+      ++Counter;
+    }
+  }
   const auto &TaskPrivatesMapFnInfo =
       CGM.getTypes().arrangeBuiltinFunctionDeclaration(C.VoidTy, Args);
   llvm::FunctionType *TaskPrivatesMapTy =
@@ -3599,12 +3644,12 @@ emitTaskPrivateMappingFunction(CodeGenModule &CGM, SourceLocation Loc,
   for (const FieldDecl *Field : PrivatesQTyRD->fields()) {
     LValue FieldLVal = CGF.EmitLValueForField(Base, Field);
     // Lookup by the original declaration (BindingDecl or VarDecl).
+    const PrivateHelpersTy &P = Privates[Counter].second;
     const ValueDecl *LookupVD;
-    if (Privates[Counter].second.OriginalRef) {
-      LookupVD =
-          cast<DeclRefExpr>(Privates[Counter].second.OriginalRef)->getDecl();
+    if (P.OriginalRef) {
+      LookupVD = cast<DeclRefExpr>(P.OriginalRef)->getDecl();
     } else {
-      LookupVD = Privates[Counter].second.Original;
+      LookupVD = P.Original;
     }
 
     // For BindingDecls, the privates record now stores each binding's type
@@ -3612,7 +3657,11 @@ emitTaskPrivateMappingFunction(CodeGenModule &CGM, SourceLocation Loc,
     // correct.
 
     unsigned Position;
-    if (const auto *BD = dyn_cast<BindingDecl>(LookupVD)) {
+    if (P.WorkingCopy) {
+      Position =
+          WorkingCopyPos.lookup(cast<ValueDecl>(LookupVD->getCanonicalDecl()));
+      assert(Position && "working copy not in privates mapping");
+    } else if (const auto *BD = dyn_cast<BindingDecl>(LookupVD)) {
       Position =
           BindingDeclPos.lookup(cast<BindingDecl>(BD->getCanonicalDecl()));
       assert(Position && "binding not in privates mapping");
@@ -3664,8 +3713,8 @@ static void emitPrivatesInit(CodeGenFunction &CGF,
   }
   FI = FI->getType()->castAsRecordDecl()->field_begin();
   for (const PrivateDataTy &Pair : Privates) {
-    // Do not initialize private locals.
-    if (Pair.second.isLocalPrivate()) {
+    // Do not initialize the copies the body constructs.
+    if (!isDescriptorCopy(Pair.second, Data)) {
       ++FI;
       continue;
     }
@@ -3742,38 +3791,8 @@ static void emitPrivatesInit(CodeGenFunction &CGF,
               /*HasCancel=*/false, /*NoInheritance=*/true);
           SharedRefLValue = CGF.EmitLValue(Pair.second.OriginalRef);
         }
-        if (Type->isArrayType()) {
-          // Initialize firstprivate array.
-          if (!isa<CXXConstructExpr>(Init) || CGF.isTrivialInitializer(Init)) {
-            // Perform simple memcpy.
-            CGF.EmitAggregateAssign(PrivateLValue, SharedRefLValue, Type);
-          } else {
-            // Initialize firstprivate array using element-by-element
-            // initialization.
-            CGF.EmitOMPAggregateAssign(
-                PrivateLValue.getAddress(), SharedRefLValue.getAddress(), Type,
-                [&CGF, Elem, Init, &CapturesInfo](Address DestElement,
-                                                  Address SrcElement) {
-                  // Clean up any temporaries needed by the initialization.
-                  CodeGenFunction::OMPPrivateScope InitScope(CGF);
-                  InitScope.addPrivate(Elem, SrcElement);
-                  (void)InitScope.Privatize();
-                  // Emit initialization for single element.
-                  CodeGenFunction::CGCapturedStmtRAII CapInfoRAII(
-                      CGF, &CapturesInfo);
-                  CGF.EmitAnyExprToMem(Init, DestElement,
-                                       Init->getType().getQualifiers(),
-                                       /*IsInitializer=*/false);
-                });
-          }
-        } else {
-          CodeGenFunction::OMPPrivateScope InitScope(CGF);
-          InitScope.addPrivate(Elem, SharedRefLValue.getAddress());
-          (void)InitScope.Privatize();
-          CodeGenFunction::CGCapturedStmtRAII CapInfoRAII(CGF, &CapturesInfo);
-          CGF.EmitExprAsInit(Init, VD, PrivateLValue,
-                             /*capturedByInit=*/false);
-        }
+        CGF.EmitOMPPrivateCopyInit(Init, VD, Elem, PrivateLValue,
+                                   SharedRefLValue, &CapturesInfo);
       } else {
         CGF.EmitExprAsInit(Init, VD, PrivateLValue, /*capturedByInit=*/false);
       }
@@ -3850,10 +3869,11 @@ static void emitPrivatesInit(CodeGenFunction &CGF,
 
 /// Check if duplication function is required for taskloops.
 static bool checkInitIsRequired(CodeGenFunction &CGF,
-                                ArrayRef<PrivateDataTy> Privates) {
+                                ArrayRef<PrivateDataTy> Privates,
+                                const OMPTaskDataTy &Data) {
   bool InitRequired = false;
   for (const PrivateDataTy &Pair : Privates) {
-    if (Pair.second.isLocalPrivate())
+    if (!isDescriptorCopy(Pair.second, Data))
       continue;
     const VarDecl *VD = Pair.second.PrivateCopy;
     const Expr *Init = VD->getAnyInitializer();
@@ -3864,7 +3884,6 @@ static bool checkInitIsRequired(CodeGenFunction &CGF,
   }
   return InitRequired;
 }
-
 
 /// Emit task_dup function (for initialization of
 /// private/firstprivate/lastprivate vars and last_iter flag)
@@ -3947,11 +3966,10 @@ emitTaskDupFunction(CodeGenModule &CGM, SourceLocation Loc,
 
 /// Checks if destructor function is required to be generated.
 /// \return true if cleanups are required, false otherwise.
-static bool
-checkDestructorsRequired(const RecordDecl *KmpTaskTWithPrivatesQTyRD,
-                         ArrayRef<PrivateDataTy> Privates) {
+static bool checkDestructorsRequired(ArrayRef<PrivateDataTy> Privates,
+                                     const OMPTaskDataTy &Data) {
   for (const PrivateDataTy &P : Privates) {
-    if (P.second.isLocalPrivate())
+    if (!isDescriptorCopy(P.second, Data))
       continue;
     QualType Ty = P.second.Original->getType().getNonReferenceType();
     if (Ty.isDestructedType())
@@ -4116,6 +4134,21 @@ CGOpenMPRuntime::TaskResultTy CGOpenMPRuntime::emitTaskInit(
     ++I;
     ++IElemInitRef;
   }
+  // The body's own copies of the firstprivates, beside their initial values.
+  if (Data.BodyConstructsPrivates) {
+    I = Data.FirstprivateCopies.begin();
+    IElemInitRef = Data.FirstprivateInits.begin();
+    for (const Expr *E : Data.FirstprivateVars) {
+      const auto *VD = getOriginalVarDecl(cast<DeclRefExpr>(E)->getDecl());
+      PrivateHelpersTy Copy(
+          E, VD, cast<VarDecl>(cast<DeclRefExpr>(*I)->getDecl()),
+          cast<VarDecl>(cast<DeclRefExpr>(*IElemInitRef)->getDecl()));
+      Copy.WorkingCopy = true;
+      Privates.emplace_back(C.getDeclAlign(VD), Copy);
+      ++I;
+      ++IElemInitRef;
+    }
+  }
   I = Data.LastprivateCopies.begin();
   for (const Expr *E : Data.LastprivateVars) {
     const auto *Decl = cast<DeclRefExpr>(E)->getDecl();
@@ -4209,8 +4242,7 @@ CGOpenMPRuntime::TaskResultTy CGOpenMPRuntime::emitTaskInit(
   unsigned Flags = Data.Tied ? TiedFlag : 0;
   bool NeedsCleanup = false;
   if (!Privates.empty()) {
-    NeedsCleanup =
-        checkDestructorsRequired(KmpTaskTWithPrivatesQTyRD, Privates);
+    NeedsCleanup = checkDestructorsRequired(Privates, Data);
     if (NeedsCleanup)
       Flags = Flags | DestructorsFlag;
   }
@@ -4451,7 +4483,8 @@ CGOpenMPRuntime::TaskResultTy CGOpenMPRuntime::emitTaskInit(
                      SharedsTy, SharedsPtrTy, Data, Privates,
                      /*ForDup=*/false);
     if (isOpenMPTaskLoopDirective(D.getDirectiveKind()) &&
-        (!Data.LastprivateVars.empty() || checkInitIsRequired(CGF, Privates))) {
+        (!Data.LastprivateVars.empty() ||
+         checkInitIsRequired(CGF, Privates, Data))) {
       Result.TaskDupFn = emitTaskDupFunction(
           CGM, Loc, D, KmpTaskTWithPrivatesPtrQTy, KmpTaskTWithPrivatesQTyRD,
           KmpTaskTQTyRD, SharedsTy, SharedsPtrTy, Data, Privates,
@@ -4467,7 +4500,7 @@ CGOpenMPRuntime::TaskResultTy CGOpenMPRuntime::emitTaskInit(
   if (NeedsCleanup) {
     llvm::Value *DestructorFn = emitDestructorsFunction(
         CGM, Loc, KmpInt32Ty, KmpTaskTWithPrivatesPtrQTy,
-        KmpTaskTWithPrivatesQTy);
+        KmpTaskTWithPrivatesQTy, Data, Privates);
     LValue Data1LV = CGF.EmitLValueForField(TDBase, *FI);
     LValue DestructorsLV = CGF.EmitLValueForField(
         Data1LV, *std::next(KmpCmplrdataUD->field_begin(), Destructors));

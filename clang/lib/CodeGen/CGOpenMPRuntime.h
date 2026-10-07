@@ -124,6 +124,12 @@ struct OMPTaskDataTy final {
   bool HasNowaitClause = false;
   bool HasModifier = false;
   const Expr *ReplayableCond = nullptr;
+  /// The task may be recorded into a taskgraph, whose replays run its recorded
+  /// descriptor again, so running the body must leave the descriptor as it
+  /// was.  The descriptor holds only the initial values of the firstprivates;
+  /// the body constructs its own copy of every private list item, from those
+  /// or by default initialization, and destroys it when the body ends.
+  bool BodyConstructsPrivates = false;
 };
 
 /// Class intended to support codegen of all kind of the reduction clauses.

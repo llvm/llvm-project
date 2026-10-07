@@ -1161,6 +1161,49 @@ void CodeGenFunction::EmitOMPAggregateAssign(
   EmitBlock(DoneBB, /*IsFinished=*/true);
 }
 
+void CodeGenFunction::EmitOMPPrivateCopyInit(const Expr *Init,
+                                             const VarDecl *PrivateCopy,
+                                             const VarDecl *ElemInit,
+                                             LValue Dst, LValue Src,
+                                             CGCapturedStmtInfo *CapturesInfo) {
+  if (!CapturesInfo)
+    CapturesInfo = CapturedStmtInfo;
+  if (!ElemInit) {
+    EmitExprAsInit(Init, PrivateCopy, Dst, /*capturedByInit=*/false);
+    return;
+  }
+  QualType Type = Dst.getType();
+  if (Type->isArrayType()) {
+    // Initialize firstprivate array.
+    if (!isa<CXXConstructExpr>(Init) || isTrivialInitializer(Init)) {
+      // Perform simple memcpy.
+      EmitAggregateAssign(Dst, Src, Type);
+    } else {
+      // Initialize firstprivate array using element-by-element
+      // initialization.
+      EmitOMPAggregateAssign(
+          Dst.getAddress(), Src.getAddress(), Type,
+          [this, ElemInit, Init, CapturesInfo](Address DestElement,
+                                               Address SrcElement) {
+            // Clean up any temporaries needed by the initialization.
+            OMPPrivateScope InitScope(*this);
+            InitScope.addPrivate(ElemInit, SrcElement);
+            (void)InitScope.Privatize();
+            // Emit initialization for single element.
+            CGCapturedStmtRAII CapInfoRAII(*this, CapturesInfo);
+            EmitAnyExprToMem(Init, DestElement, Init->getType().getQualifiers(),
+                             /*IsInitializer=*/false);
+          });
+    }
+    return;
+  }
+  OMPPrivateScope InitScope(*this);
+  InitScope.addPrivate(ElemInit, Src.getAddress());
+  (void)InitScope.Privatize();
+  CGCapturedStmtRAII CapInfoRAII(*this, CapturesInfo);
+  EmitExprAsInit(Init, PrivateCopy, Dst, /*capturedByInit=*/false);
+}
+
 void CodeGenFunction::EmitOMPCopy(QualType OriginalType, Address DestAddr,
                                   Address SrcAddr, const VarDecl *DestVD,
                                   const VarDecl *SrcVD, const Expr *Copy) {
@@ -5544,6 +5587,13 @@ void CodeGenFunction::EmitOMPTaskBasedDirective(
     Data.PrivateLocals.append(Checker.getPrivateDecls().begin(),
                               Checker.getPrivateDecls().end());
   }
+  // A task that may be recorded into a taskgraph is replayed from its recorded
+  // descriptor, so its body works on copies of its own.
+  if (const Expr *Cond = Data.ReplayableCond) {
+    bool KnownValue;
+    Data.BodyConstructsPrivates =
+        !ConstantFoldsToSimpleInteger(Cond, KnownValue) || KnownValue;
+  }
   auto &&CodeGen = [&Data, &S, CS, &BodyGen, &LastprivateDstsOrigs,
                     &LastprivateSrcsOrigs, CapturedRegion](
                        CodeGenFunction &CGF, PrePostActionTy &Action) {
@@ -5612,6 +5662,16 @@ void CodeGenFunction::EmitOMPTaskBasedDirective(
     }
     llvm::SmallVector<std::pair<const ValueDecl *, Address>, 16>
         FirstprivatePtrs;
+    // The copies the body constructs itself (BodyConstructsPrivates), with
+    // the declaration whose initializer constructs each and, for a
+    // firstprivate, the element the initializer reads and its initial value.
+    struct BodyCopyTy {
+      const VarDecl *PrivateCopy;
+      const VarDecl *ElemInit;
+      LValue Dst;
+      LValue Src;
+    };
+    SmallVector<BodyCopyTy, 4> BodyCopies;
     if (!Data.PrivateVars.empty() || !Data.FirstprivateVars.empty() ||
         !Data.LastprivateVars.empty() || !Data.PrivateLocals.empty()) {
       enum { PrivatesParam = 2, CopyFnParam = 3 };
@@ -5638,7 +5698,9 @@ void CodeGenFunction::EmitOMPTaskBasedDirective(
         RawAddress PrivatePtr = CGF.CreateMemTempWithoutCast(
             CGF.getContext().getPointerType(E->getType()),
             ".firstpriv.ptr.addr");
-        PrivatePtrs.emplace_back(VD, PrivatePtr);
+        // The body reads the initial value only to construct its own copy.
+        if (!Data.BodyConstructsPrivates)
+          PrivatePtrs.emplace_back(VD, PrivatePtr);
         FirstprivatePtrs.emplace_back(VD, PrivatePtr);
         CallArgs.push_back(PrivatePtr.getPointer());
         ParamTypes.push_back(PrivatePtr.getType());
@@ -5669,6 +5731,18 @@ void CodeGenFunction::EmitOMPTaskBasedDirective(
         CallArgs.push_back(PrivatePtr.getPointer());
         ParamTypes.push_back(PrivatePtr.getType());
       }
+      // The body's own copies of the firstprivates.
+      if (Data.BodyConstructsPrivates) {
+        for (const Expr *E : Data.FirstprivateVars) {
+          const auto *VD = cast<DeclRefExpr>(E)->getDecl();
+          RawAddress PrivatePtr = CGF.CreateMemTempWithoutCast(
+              CGF.getContext().getPointerType(E->getType()),
+              ".firstpriv.copy.ptr.addr");
+          PrivatePtrs.emplace_back(VD, PrivatePtr);
+          CallArgs.push_back(PrivatePtr.getPointer());
+          ParamTypes.push_back(PrivatePtr.getType());
+        }
+      }
       auto *CopyFnTy = llvm::FunctionType::get(CGF.Builder.getVoidTy(),
                                                ParamTypes, /*isVarArg=*/false);
       CGF.CGM.getOpenMPRuntime().emitOutlinedFunctionCall(
@@ -5690,6 +5764,7 @@ void CodeGenFunction::EmitOMPTaskBasedDirective(
           Scope.addPrivate(Pair.first, CGF.EmitLValue(&DRE).getAddress());
         }
       }
+      llvm::DenseMap<const ValueDecl *, Address> PrivateAddrs;
       for (const auto &Pair : PrivatePtrs) {
         Address Replacement = Address(
             CGF.Builder.CreateLoad(Pair.second),
@@ -5707,6 +5782,7 @@ void CodeGenFunction::EmitOMPTaskBasedDirective(
             }
           }
         }
+        PrivateAddrs.try_emplace(Pair.first, Replacement);
 
         if (auto *DI = CGF.getDebugInfo())
           if (CGF.CGM.getCodeGenOpts().hasReducedDebugInfo())
@@ -5715,6 +5791,41 @@ void CodeGenFunction::EmitOMPTaskBasedDirective(
               (void)DI->EmitDeclareOfAutoVariable(
                   VD, Pair.second.getBasePointer(), CGF.Builder,
                   /*UsePointerValue*/ true);
+      }
+      if (Data.BodyConstructsPrivates) {
+        // A field of the privates record is aligned as its type is, which
+        // can be less than the variable's declared alignment.
+        auto AddCopy = [&](const Expr *Ref, const Expr *CopyRef,
+                           const VarDecl *ElemInit, Address Src) {
+          const auto *VD = cast<DeclRefExpr>(Ref)->getDecl();
+          QualType Ty = VD->getType().getNonReferenceType();
+          CharUnits Align = CGF.getContext().getTypeAlignInChars(Ty);
+          LValue SrcLV;
+          if (Src.isValid())
+            SrcLV = CGF.MakeAddrLValue(Src.withAlignment(Align), Ty);
+          BodyCopies.push_back(
+              {cast<VarDecl>(cast<DeclRefExpr>(CopyRef)->getDecl()), ElemInit,
+               CGF.MakeAddrLValue(
+                   PrivateAddrs.find(VD)->second.withAlignment(Align), Ty),
+               SrcLV});
+        };
+        for (unsigned I = 0, E = Data.PrivateVars.size(); I < E; ++I)
+          AddCopy(Data.PrivateVars[I], Data.PrivateCopies[I],
+                  /*ElemInit=*/nullptr, Address::invalid());
+        for (unsigned I = 0, E = Data.FirstprivateVars.size(); I < E; ++I) {
+          const ValueDecl *VD = FirstprivatePtrs[I].first;
+          Address Initial(
+              CGF.Builder.CreateLoad(FirstprivatePtrs[I].second),
+              CGF.ConvertTypeForMem(VD->getType().getNonReferenceType()),
+              CGF.getContext().getDeclAlign(VD));
+          AddCopy(Data.FirstprivateVars[I], Data.FirstprivateCopies[I],
+                  cast<VarDecl>(
+                      cast<DeclRefExpr>(Data.FirstprivateInits[I])->getDecl()),
+                  Initial);
+        }
+        for (unsigned I = 0, E = Data.LastprivateVars.size(); I < E; ++I)
+          AddCopy(Data.LastprivateVars[I], Data.LastprivateCopies[I],
+                  /*ElemInit=*/nullptr, Address::invalid());
       }
       // Adjust mapping for internal locals by mapping actual memory instead of
       // a pointer to this memory.
@@ -5838,6 +5949,21 @@ void CodeGenFunction::EmitOMPTaskBasedDirective(
     CGOpenMPRuntime::UntiedTaskLocalDeclsRAII LocalVarsScope(CGF,
                                                              UntiedLocalVars);
     Action.Enter(CGF);
+    // Construct the body's copies, once, in an untied task's first part, and
+    // destroy them when the body ends.
+    for (const BodyCopyTy &Copy : BodyCopies) {
+      if (const Expr *Init = Copy.PrivateCopy->getAnyInitializer())
+        CGF.EmitOMPPrivateCopyInit(Init, Copy.PrivateCopy, Copy.ElemInit,
+                                   Copy.Dst, Copy.Src,
+                                   /*CapturesInfo=*/nullptr);
+      else if (Copy.ElemInit)
+        // A firstprivate of an array structured binding has no initializer:
+        // its bytes are copied, as emitPrivatesInit does for its initial value.
+        CGF.EmitAggregateAssign(Copy.Dst, Copy.Src, Copy.Dst.getType());
+      QualType Ty = Copy.Dst.getType();
+      if (QualType::DestructionKind DtorKind = Ty.isDestructedType())
+        CGF.pushDestroy(DtorKind, Copy.Dst.getAddress(), Ty);
+    }
     BodyGen(CGF);
   };
   OpenMPDirectiveKind EKind = getEffectiveDirectiveKind(S);
