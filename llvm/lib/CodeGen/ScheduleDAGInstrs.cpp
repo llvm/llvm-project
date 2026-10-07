@@ -777,8 +777,10 @@ private:
     /// if the store should be promoted to a sequencing store and false
     /// otherwise.
     bool shouldUpdate(const UnderlyingObjectsVector &Objs);
+
     /// Returns true if any of \p Objs does not belong to #BaseObjects.
     bool escapesBaseObjects(const UnderlyingObjectsVector &Objs);
+
     /// Clears the frontier.
     void clear();
   };
@@ -838,11 +840,7 @@ bool ScheduleDAGDependencyBuilder::UnanalyzableFrontier::shouldUpdate(
     const UnderlyingObjectsVector &Objs) {
   if (!EnableStoreSequencing)
     return false;
-  if (!SequencingStore)
-    return true;
-  if (SeenSequencingLoad)
-    return true;
-  return escapesBaseObjects(Objs);
+  return !SequencingStore || SeenSequencingLoad || escapesBaseObjects(Objs);
 }
 
 bool ScheduleDAGDependencyBuilder::UnanalyzableFrontier::escapesBaseObjects(
@@ -936,9 +934,11 @@ void ScheduleDAGDependencyBuilder::updateSequencingStore(
     UF.SequencingStore->addPredBarrier(SU);
 
   // Sequence all stores against the sequencing store and clear the map.
-  for (auto &[V, SUs] : UF.Stores)
+  for (auto &[V, SUs] : UF.Stores) {
     for (SUnit *S : SUs)
       S->addPredBarrier(SU);
+  }
+
   UF.Stores.clear();
 
   // For loads, we can do slightly better. Rather than naively adding pred

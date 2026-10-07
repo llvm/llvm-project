@@ -1,5 +1,5 @@
 ; REQUIRES: asserts
-; RUN: llc < %s -mtriple=aarch64-unknown-linux-gnu -debug-only=machine-scheduler -enable-unanalyzable-store-sequencing 2>&1 | FileCheck %s
+; RUN: llc < %s -mtriple=arm64-apple-ios -debug-only=machine-scheduler -enable-unanalyzable-store-sequencing 2>&1 | FileCheck %s
 
 define void @test_first_store_promoted(ptr %p) {
 ; CHECK-LABEL: test_first_store_promoted:%bb.0
@@ -8,7 +8,6 @@ define void @test_first_store_promoted(ptr %p) {
 
 ; CHECK:       SU([[S]]): STRWui $wzr, %{{[0-9]+}}:gpr64common, 0 :: (store (s32) into %ir.p)
   store i32 0, ptr %p
-
   ret void
 }
 
@@ -24,7 +23,6 @@ define void @test_store_to_escaping_base_object_promoted(ptr %p, ptr %q) {
 ; CHECK:       SU([[Q]]): STRWui $wzr, %{{[0-9]+}}:gpr64common, 0 :: (store (s32) into %ir.q)
   store i32 0, ptr %p
   store i32 0, ptr %q
-
   ret void
 }
 
@@ -50,7 +48,6 @@ define void @test_repeated_stores_to_same_base_object_unpromoted(ptr %p, i64 %i)
   store i32 0, ptr %p.gep.1
   store i32 0, ptr %p.gep.2
   store i32 0, ptr %p
-
   ret void
 }
 
@@ -74,7 +71,6 @@ define void @test_disjoint_frontier_stores_unordered(ptr %p, i64 %i) {
   store i32 0, ptr %p
   store i32 0, ptr %p.gep.3
   store i32 0, ptr %p.gep.i
-
   ret void
 }
 
@@ -238,7 +234,6 @@ define void @test_known_no_alias_store_precedes_sequencing_store(ptr noalias %p,
   store i32 0, ptr %p
   store i32 0, ptr %q.gep.1
   store i32 0, ptr %q
-
   ret void
 }
 
@@ -301,7 +296,6 @@ define void @test_global_memory_object_clears_frontier(ptr %p) {
   store i32 0, ptr %p
   fence seq_cst
   store i32 0, ptr %p
-
   ret void
 }
 
@@ -323,7 +317,6 @@ define void @test_volatile_store_clears_frontier(ptr %p, ptr %q) {
   store i32 0, ptr %p
   store volatile i32 0, ptr %q
   store i32 0, ptr %p
-
   ret void
 }
 
@@ -338,6 +331,5 @@ define void @test_unordered_atomic_store_unpromoted(ptr %p, ptr %q) {
 ; CHECK:       SU([[S]]): STRWui $wzr, %{{[0-9]+}}:gpr64common, 0 :: (store (s32) into %ir.p)
   store atomic i32 0, ptr %q unordered, align 4
   store i32 0, ptr %p
-
   ret void
 }
