@@ -124,8 +124,10 @@ public:
       AMDGPU::TargetIDSetting SramEccSetting = AMDGPU::TargetIDSetting::Any);
   ~GCNSubtarget() override;
 
-  GCNSubtarget &initializeSubtargetDependencies(const Triple &TT, StringRef GPU,
-                                                StringRef FS);
+  GCNSubtarget &
+  initializeSubtargetDependencies(const Triple &TT, StringRef GPU, StringRef FS,
+                                  AMDGPU::TargetIDSetting XnackSetting,
+                                  AMDGPU::TargetIDSetting SramEccSetting);
 
   /// Diagnose inconsistent subtarget features before attempting to codegen
   /// function \p F.
@@ -221,8 +223,6 @@ public:
   /// the original value.
   bool zeroesHigh16BitsOfDest(unsigned Opcode) const;
 
-  bool hasHWFP64() const { return HasFP64; }
-
   bool hasAddr64() const {
     return (getGeneration() < AMDGPUSubtarget::VOLCANIC_ISLANDS);
   }
@@ -303,11 +303,6 @@ public:
     return getGeneration() <= SEA_ISLANDS ? 1 : 2;
   }
 
-  /// Return the amount of LDS that can be used that will not restrict the
-  /// occupancy lower than WaveCount.
-  unsigned getMaxLocalMemSizeWithWaveCount(unsigned WaveCount,
-                                           const Function &) const;
-
   bool supportsMinMaxDenormModes() const {
     return getGeneration() >= AMDGPUSubtarget::GFX9;
   }
@@ -349,9 +344,7 @@ public:
     return HasUnalignedScratchAccess && HasUnalignedAccessMode;
   }
 
-  bool isXNACKEnabled() const {
-    return enableXNACK() || TargetID.isXnackOnOrAny();
-  }
+  bool isXNACKEnabled() const { return TargetID.isXnackOnOrAny(); }
 
   bool hasRelaxedBufferOOBMode() const { return BufferOOBRelaxed; }
   bool hasRelaxedTBufferOOBMode() const { return TBufferOOBRelaxed; }
@@ -365,6 +358,11 @@ public:
   }
 
   bool isCuModeEnabled() const { return EnableCuMode; }
+
+  /// \returns Whether a work-group runs on all of the block's SIMDs.
+  bool isFullSIMDMode() const {
+    return (HasGFX1250Insts && getGeneration() < GFX13) || !EnableCuMode;
+  }
 
   bool isPreciseMemoryEnabled() const { return EnablePreciseMemory; }
 
@@ -383,10 +381,6 @@ public:
     return hasArchitectedFlatScratch() ||
            (EnableFlatScratch && hasFlatScratchInsts());
   }
-
-  bool hasGlobalAddTidInsts() const { return HasGFX10_BEncoding; }
-
-  bool hasAtomicCSub() const { return HasGFX10_BEncoding; }
 
   bool hasExportInsts() const {
     return !hasGFX940Insts() && !hasGFX1250Insts();
@@ -481,6 +475,8 @@ public:
 
   bool enableMachineScheduler() const override { return true; }
 
+  bool enableSSAMachineScheduler() const override { return true; }
+
   bool useAA() const override;
 
   bool enableSubRegLiveness() const override { return true; }
@@ -529,6 +525,8 @@ public:
 
   // Has V_PK_MOV_B32 opcode
   bool hasPkMovB32() const { return HasGFX90AInsts; }
+
+  bool hasBufferTFEFormatD16() const { return !HasGFX90AInsts; }
 
   bool hasFmaakFmamkF32Insts() const {
     return getGeneration() >= GFX10 || hasGFX940Insts();
@@ -625,6 +623,8 @@ public:
   }
 
   bool hasCvtScaleForwardingHazard() const { return HasGFX950Insts; }
+
+  bool hasPermlaneForwardingHazard() const { return HasGFX950Insts; }
 
   // All GFX9 targets experience a fetch delay when an instruction at the start
   // of a loop header is split by a 32-byte fetch window boundary, but GFX950
@@ -858,7 +858,7 @@ public:
 
   /// \returns Total number of VGPRs supported by the subtarget.
   unsigned getTotalNumVGPRs() const {
-    return AMDGPU::IsaInfo::getTotalNumVGPRs(*this);
+    return AMDGPU::getTotalNumVGPRs(getTargetID().getGPUKind(), isWave32());
   }
 
   /// \returns Addressable number of architectural VGPRs supported by the
@@ -869,7 +869,14 @@ public:
 
   /// \returns Addressable number of VGPRs supported by the subtarget.
   unsigned getAddressableNumVGPRs(unsigned DynamicVGPRBlockSize) const {
-    return AMDGPU::IsaInfo::getAddressableNumVGPRs(*this, DynamicVGPRBlockSize);
+    // Dynamic VGPR mode is a per-kernel mode, so it is not covered by the
+    // TargetParser query.
+    if (DynamicVGPRBlockSize != 0) {
+      return AMDGPU::IsaInfo::getAddressableNumVGPRs(*this,
+                                                     DynamicVGPRBlockSize);
+    }
+    return AMDGPU::getAddressableNumVGPRs(getTargetID().getGPUKind(),
+                                          isWave32());
   }
 
   /// \returns the minimum number of VGPRs that will prevent achieving more than
@@ -903,8 +910,6 @@ public:
   /// subtarget's specifications, or does not meet number of waves per execution
   /// unit requirement.
   unsigned getMaxNumVGPRs(const Function &F) const;
-
-  unsigned getMaxNumAGPRs(const Function &F) const { return getMaxNumVGPRs(F); }
 
   /// Return a pair of maximum numbers of VGPRs and AGPRs that meet the number
   /// of waves per execution unit required for the function \p MF.
@@ -944,12 +949,12 @@ public:
 
   /// \returns Minimum flat work group size supported by the subtarget.
   unsigned getMinFlatWorkGroupSize() const override {
-    return AMDGPU::IsaInfo::getMinFlatWorkGroupSize(*this);
+    return AMDGPU::getMinFlatWorkGroupSize();
   }
 
   /// \returns Maximum flat work group size supported by the subtarget.
   unsigned getMaxFlatWorkGroupSize() const override {
-    return AMDGPU::IsaInfo::getMaxFlatWorkGroupSize();
+    return AMDGPU::getMaxFlatWorkGroupSize();
   }
 
   /// \returns Number of waves per execution unit required to support the given
@@ -1053,6 +1058,18 @@ public:
   bool useDFAforSMS() const override { return false; }
 
   bool enableWindowScheduler() const override { return false; }
+
+  // \returns true if ISel should select the native i64 min/max instructions
+  // (V_MIN/MAX_{I|U}64).
+  bool useMinMaxI64Insts() const {
+    return hasMinMaxI64Insts() && !hasSlowMaxMinMulI64Insts();
+  }
+
+  // \returns true if ISel should select the native i64 mul instruction
+  // V_MUL_U64.
+  bool useVMulU64Inst() const {
+    return hasVMulU64Inst() && !hasSlowMaxMinMulI64Insts();
+  }
 };
 
 class GCNUserSGPRUsageInfo {
@@ -1074,8 +1091,6 @@ public:
   bool hasPrivateSegmentSize() const { return PrivateSegmentSize; }
 
   unsigned getNumKernargPreloadSGPRs() const { return NumKernargPreloadSGPRs; }
-
-  unsigned getNumUsedUserSGPRs() const { return NumUsedUserSGPRs; }
 
   unsigned getNumFreeUserSGPRs();
 

@@ -168,6 +168,8 @@ private:
                                  MachineOperand Root, MachineInstr *InsertPt,
                                  bool ForceVGPR = false) const;
 
+  Register widenSrcIfVGPR16(Register Src, MachineInstr *InsertPt) const;
+
   InstructionSelector::ComplexRendererFns
   selectVCSRC(MachineOperand &Root) const;
 
@@ -353,9 +355,6 @@ private:
   ComplexRendererFns selectVOP3PMadMixMods(MachineOperand &Root) const;
   ComplexRendererFns selectVOP3PMadMixModsExtNeg(MachineOperand &Root) const;
   ComplexRendererFns selectVOP3PMadMixModsNeg(MachineOperand &Root) const;
-
-  void renderTruncImm32(MachineInstrBuilder &MIB, const MachineInstr &MI,
-                        int OpIdx = -1) const;
 
   void renderTruncTImm(MachineInstrBuilder &MIB, const MachineInstr &MI,
                        int OpIdx) const;

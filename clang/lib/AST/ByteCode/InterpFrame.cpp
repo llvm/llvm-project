@@ -15,7 +15,6 @@
 #include "MemberPointer.h"
 #include "Pointer.h"
 #include "PrimType.h"
-#include "Program.h"
 #include "clang/AST/ASTContext.h"
 #include "clang/AST/DeclCXX.h"
 #include "clang/AST/ExprCXX.h"
@@ -32,12 +31,10 @@ InterpFrame::InterpFrame(InterpState &S, const Function *Func,
     : Caller(Caller), S(S), Func(Func), RetPC(RetPC),
       Args(static_cast<char *>(S.Stk.top())), ArgSize(ArgSize),
       Depth(Caller ? Caller->Depth + 1 : 0) {
+  assert(Func);
 #ifndef NDEBUG
   FrameOffset = S.Stk.size();
 #endif
-
-  if (!Func)
-    return;
 
   FuncFlags |= Func->hasRVO() * HasRVOFlag;
   FuncFlags |= Func->hasThisPointer() * HasThisFlag;
@@ -79,15 +76,9 @@ InterpFrame::~InterpFrame() {
   for (unsigned I = 0, N = Func->getNumWrittenParams(); I != N; ++I)
     S.deallocate(argBlock(I));
 
-  // When destroying the InterpFrame, call the Dtor for all block
+  // When destroying the InterpFrame, call the Dtor for all blocks
   // that haven't been destroyed via a destroy() op yet.
   // This happens when the execution is interruped midway-through.
-  destroyScopes();
-}
-
-void InterpFrame::destroyScopes() {
-  if (!Func || Func->getFrameSize() == 0)
-    return;
   for (auto &Scope : Func->scopes()) {
     for (auto &Local : Scope.locals()) {
       S.deallocate(localBlock(Local.Offset));
@@ -163,7 +154,7 @@ void InterpFrame::describe(llvm::raw_ostream &OS) const {
 
   const ASTContext &ASTCtx = S.getASTContext();
   const Expr *CallExpr = Caller->getExpr(getRetOpPC());
-  const FunctionDecl *F = getCallee();
+  const FunctionDecl *F = Func->getDecl();
   auto PrintingPolicy = ASTCtx.getPrintingPolicy();
   PrintingPolicy.SuppressLambdaBody = true;
 

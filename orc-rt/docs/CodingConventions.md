@@ -42,15 +42,15 @@ flattened C name, and both are spelled with a trailing underscore.
 | Symbol                        | Kind     |
 |-------------------------------|----------|
 | `orc_rt_ErrorRef`             | type     |
-| `orc_rt_Error_getTypeId`      | function |
+| `orc_rt_Error_toString`       | function |
 | `orc_rt_StringError_create`   | function |
 | `orc_rt_log_Category`         | type     |
 | `orc_rt_log_Category_General` | value    |
 | `orc_rt_log_formatCheck`      | function |
 | `ORC_RT_LOG`                  | macro    |
 
-Reading these: `orc_rt_Error_getTypeId` is the `getTypeId` function scoped to
-the `Error` type; `orc_rt_log_formatCheck` is the `formatCheck` function in the
+Reading these: `orc_rt_Error_toString` is the `toString` function scoped to the
+`Error` type; `orc_rt_log_formatCheck` is the `formatCheck` function in the
 `log` namespace; and `orc_rt_log_Category_General` is the `General` value of the
 `Category` type in the `log` namespace.
 

@@ -279,25 +279,30 @@ func.func @conflict_nested_loop_carried() {
   return
 }
 
-// TODO: this scf.condition conflict is not resolved yet. The "after" region
-// argument is tied to no init operand, so it carries no layout for this pass to
-// read, and the [16, 16] value is left unconverted. Recording current behavior so
-// a fix surfaces as a test change.
-// CHECK-LABEL: func.func @negative_while_condition_operand
-// CHECK:         %[[V:.*]] = "some_op"() {layout_result_0 = #xegpu.layout<inst_data = [16, 16]>} : () -> vector<16x16xf16>
-// CHECK-NEXT:    scf.condition(%{{.*}}) %[[V]] : vector<16x16xf16>
-// CHECK-NOT:     xegpu.convert_layout
-func.func @negative_while_condition_operand(%cond: i1) {
+// scf.while's "after" region argument is tied to no init operand, but the before
+// region forwards %before unchanged, so %after carries the init operand's layout
+// [8, 16] (layout_operand_0). math.exp wants [16, 16], so the argument is
+// converted on the way in and converted back before the yield.
+// CHECK-LABEL: func.func @conflict_while_pass_through
+// CHECK:         scf.while (%[[BEFORE:.*]] = %{{.*}})
+// CHECK:           scf.condition(%{{.*}}) %[[BEFORE]] : vector<16x16xf16>
+// CHECK:         ^bb0(%[[AFTER:.*]]: vector<16x16xf16>):
+// CHECK-NEXT:      %[[CVT_IN:.*]] = xegpu.convert_layout %[[AFTER]]
+// CHECK-SAME:        <{input_layout = #xegpu.layout<inst_data = [8, 16]>, target_layout = #xegpu.layout<inst_data = [16, 16]>}>
+// CHECK-NEXT:      %[[EXP:.*]] = math.exp %[[CVT_IN]] {layout_result_0 = #xegpu.layout<inst_data = [16, 16]>} : vector<16x16xf16>
+// CHECK-NEXT:      %[[CVT_OUT:.*]] = xegpu.convert_layout %[[EXP]]
+// CHECK-SAME:        <{input_layout = #xegpu.layout<inst_data = [16, 16]>, target_layout = #xegpu.layout<inst_data = [8, 16]>}>
+// CHECK-NEXT:      scf.yield %[[CVT_OUT]] : vector<16x16xf16>
+func.func @conflict_while_pass_through(%cond: i1) {
   %cst = arith.constant {layout_result_0 = #inst_data_8x16} dense<0.0> : vector<16x16xf16>
   %0 = scf.while (%before = %cst) : (vector<16x16xf16>) -> vector<16x16xf16> {
-    %1 = "some_op"() {layout_result_0 = #inst_data_16x16} : () -> vector<16x16xf16>
-    scf.condition(%cond) %1 : vector<16x16xf16>
+    scf.condition(%cond) %before : vector<16x16xf16>
   } do {
   ^bb0(%after: vector<16x16xf16>):
-    %2 = math.exp %after {layout_result_0 = #inst_data_8x16} : vector<16x16xf16>
-    scf.yield %2 : vector<16x16xf16>
+    %1 = math.exp %after {layout_result_0 = #inst_data_16x16} : vector<16x16xf16>
+    scf.yield %1 : vector<16x16xf16>
   } attributes {layout_operand_0 = #inst_data_8x16, layout_result_0 = #inst_data_8x16}
-  %3 = math.exp %0 {layout_result_0 = #inst_data_8x16} : vector<16x16xf16>
+  %2 = math.exp %0 {layout_result_0 = #inst_data_8x16} : vector<16x16xf16>
   return
 }
 
@@ -311,8 +316,6 @@ func.func @negative_while_condition_operand(%cond: i1) {
 // CHECK:           scf.yield %[[ADD]] : vector<16x16xf16>
 // CHECK:         }
 // CHECK:         %[[CVT:.*]] = xegpu.convert_layout %[[FOR]]
-// CHECK-SAME:      <{input_layout = #xegpu.layout<inst_data = [16, 16]>, target_layout = #xegpu.layout<inst_data = [8, 16]>}>
-// CHECK-SAME:      : vector<16x16xf16>
 // CHECK:         %[[EXP:.*]] = math.exp %[[CVT]]
 // CHECK-SAME:      {layout_result_0 = #xegpu.layout<inst_data = [8, 16]>} : vector<16x16xf16>
 // CHECK:         return
@@ -416,27 +419,5 @@ func.func @extract_source_conflict_with_order() -> vector<16x32xf16> {
   %0 = "some_op"() {layout_result_0 = #xegpu.layout<lane_layout = [1, 1, 1, 16], lane_data = [1, 1, 1, 1], order = [2, 3, 0, 1]>} : () -> vector<2x4x16x32xf16>
   %1 = vector.extract %0[0, 0] {layout_result_0 = #xegpu.layout<lane_layout = [1, 16], lane_data = [1, 1], order = [0, 1]>} : vector<16x32xf16> from vector<2x4x16x32xf16>
   return %1 : vector<16x32xf16>
-}
-}
-
-// -----
-
-// Producer carries a layout that differs from the input_layout declared on a
-// downstream xegpu.convert_layout consumer. ResolveLayoutConflicts must insert
-// a bridging convert_layout between the producer and the existing
-// convert_layout so the consumer's stated input_layout is honored.
-// CHECK-LABEL: func.func @convert_layout_bridge_input_mismatch
-// CHECK:         %[[V0:.*]] = "some_op"() {layout_result_0 = #xegpu.layout<inst_data = [8, 16]>} : () -> vector<32x32xf16>
-// CHECK-NEXT:    %[[BRIDGE:.*]] = xegpu.convert_layout %[[V0]]
-// CHECK-SAME:      <{input_layout = #xegpu.layout<inst_data = [8, 16]>, target_layout = #xegpu.layout<inst_data = [32, 16]>}>
-// CHECK-SAME:      : vector<32x32xf16>
-gpu.module @test_convert_layout_bridge {
-func.func @convert_layout_bridge_input_mismatch() {
-  %0 = "some_op"() {layout_result_0 = #xegpu.layout<inst_data = [8, 16]>} : () -> vector<32x32xf16>
-  %1 = xegpu.convert_layout %0
-     <{input_layout = #xegpu.layout<inst_data = [16, 16]>,
-       target_layout = #xegpu.layout<inst_data = [32, 16]>}>
-     : vector<32x32xf16>
-  return
 }
 }

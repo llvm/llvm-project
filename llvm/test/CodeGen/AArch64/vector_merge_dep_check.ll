@@ -30,7 +30,7 @@ attributes #0 = { noinline norecurse nounwind ssp uwtable "disable-tail-calls"="
 
 !0 = !{!"Snapdragon LLVM ARM Compiler 3.8.0 (based on LLVM 3.8.0)"}
 !1 = distinct !{!1, !2, !"polly.alias.scope.rhs"}
-!2 = distinct !{!2, !"polly.alias.scope.domain"}
+!2 = distinct !{!2, i1 false, !"polly.alias.scope.domain"}
 !3 = !{!4, !5, !6, !7, !8}
 !4 = distinct !{!4, !2, !"polly.alias.scope.blockB"}
 !5 = distinct !{!5, !2, !"polly.alias.scope.add28.lcssa.reg2mem"}

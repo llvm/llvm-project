@@ -958,6 +958,11 @@ multiclass DSReadPat_mc<DS_Pseudo inst, ValueType vt, string frag> {
   let OtherPredicates = [NotLDSRequiresM0Init] in {
     def : DSReadPat<!cast<DS_Pseudo>(!cast<string>(inst)#"_gfx9"), vt, !cast<PatFrag>(frag)>;
   }
+
+  let OtherPredicates = [HasGDS] in {
+    def : DSReadPat<inst, vt, !cast<PatFrag>(!subst("_local", "_region", frag)#"_m0"),
+                    /*gds=*/1>;
+  }
 }
 
 multiclass DSReadPat_t16<DS_Pseudo inst, ValueType vt, string frag> {
@@ -974,6 +979,11 @@ multiclass DSReadPat_t16<DS_Pseudo inst, ValueType vt, string frag> {
   }
   let OtherPredicates = [NotLDSRequiresM0Init], True16Predicate = UseTrue16WithSramECC in {
     def : DSReadPat_t16<!cast<DS_Pseudo>(!cast<string>(inst)#"_gfx9"), vt, !cast<PatFrag>(frag)>;
+  }
+
+  let OtherPredicates = [HasGDS], True16Predicate = NotUseRealTrue16Insts in {
+    def : DSReadPat<inst, vt, !cast<PatFrag>(!subst("_local", "_region", frag)#"_m0"),
+                    /*gds=*/1>;
   }
 }
 
@@ -1035,6 +1045,12 @@ class DSWritePat <DS_Pseudo inst, ValueType vt, PatFrag frag, int gds=0> : GCNPa
   (inst $ptr, getVregSrcForVT<vt>.ret:$value, Offset:$offset, (i1 gds))
 >;
 
+class DSWritePat_t16 <DS_Pseudo inst, ValueType vt, PatFrag frag, int gds=0> : GCNPat <
+  (frag vt:$value, (DS1Addr1Offset i32:$ptr, i32:$offset)),
+  (inst $ptr, (REG_SEQUENCE VGPR_32, $value, lo16, (i16 (IMPLICIT_DEF)), hi16),
+        Offset:$offset, (i1 gds))
+>;
+
 multiclass DSWritePat_mc <DS_Pseudo inst, ValueType vt, string frag> {
   let OtherPredicates = [LDSRequiresM0Init] in {
     def : DSWritePat<inst, vt, !cast<PatFrag>(frag#"_m0")>;
@@ -1042,6 +1058,11 @@ multiclass DSWritePat_mc <DS_Pseudo inst, ValueType vt, string frag> {
 
   let OtherPredicates = [NotLDSRequiresM0Init] in {
     def : DSWritePat<!cast<DS_Pseudo>(!cast<string>(inst)#"_gfx9"), vt, !cast<PatFrag>(frag)>;
+  }
+
+  let OtherPredicates = [HasGDS] in {
+    def : DSWritePat<inst, vt, !cast<PatFrag>(!subst("_local", "_region", frag)#"_m0"),
+                     /*gds=*/1>;
   }
 }
 
@@ -1056,6 +1077,16 @@ multiclass DSWritePat_t16 <DS_Pseudo inst, ValueType vt, string frag> {
     }
     let True16Predicate = UseRealTrue16Insts in {
       def : DSWritePat<!cast<DS_Pseudo>(!cast<string>(inst)#"_t16"), vt, !cast<PatFrag>(frag)>;
+    }
+  }
+
+  defvar region_frag = !cast<PatFrag>(!subst("_local", "_region", frag)#"_m0");
+  let OtherPredicates = [HasGDS] in {
+    let True16Predicate = NotUseRealTrue16Insts in {
+      def : DSWritePat<inst, vt, region_frag, /*gds=*/1>;
+    }
+    let True16Predicate = UseRealTrue16Insts in {
+      def : DSWritePat_t16<inst, vt, region_frag, /*gds=*/1>;
     }
   }
 }
@@ -1084,35 +1115,40 @@ def : DSWritePat <DS_WRITE_B16_D16_HI, i32, store_hi16_local>;
 def : DSWritePat <DS_WRITE_B8_D16_HI, i32, truncstorei8_hi16_local>;
 }
 
-class DS64Bit4ByteAlignedReadPat<DS_Pseudo inst, ValueType vt, PatFrag frag> : GCNPat <
+class DS64Bit4ByteAlignedReadPat<DS_Pseudo inst, ValueType vt, PatFrag frag, int gds=0> : GCNPat <
   (vt:$value (frag (DS64Bit4ByteAligned i32:$ptr, i32:$offset0, i32:$offset1))),
-  (inst $ptr, $offset0, $offset1, (i1 0))
+  (inst $ptr, $offset0, $offset1, (i1 gds))
 >;
 
 // TODO: Should this use AVLdSt_64 for the class?
-class DS64Bit4ByteAlignedWritePat<DS_Pseudo inst, ValueType vt, PatFrag frag> : GCNPat<
+class DS64Bit4ByteAlignedWritePat<DS_Pseudo inst, ValueType vt, PatFrag frag, int gds=0> : GCNPat<
   (frag vt:$value, (DS64Bit4ByteAligned i32:$ptr, i32:$offset0, i32:$offset1)),
   (inst $ptr, (i32 (EXTRACT_SUBREG VReg_64:$value, sub0)),
               (i32 (EXTRACT_SUBREG VReg_64:$value, sub1)), $offset0, $offset1,
-              (i1 0))
+              (i1 gds))
 >;
 
-class DS128Bit8ByteAlignedReadPat<DS_Pseudo inst, ValueType vt, PatFrag frag> : GCNPat <
+class DS128Bit8ByteAlignedReadPat<DS_Pseudo inst, ValueType vt, PatFrag frag, int gds=0> : GCNPat <
   (vt:$value (frag (DS128Bit8ByteAligned i32:$ptr, i32:$offset0, i32:$offset1))),
-  (inst $ptr, $offset0, $offset1, (i1 0))
+  (inst $ptr, $offset0, $offset1, (i1 gds))
 >;
 
-class DS128Bit8ByteAlignedWritePat<DS_Pseudo inst, ValueType vt, PatFrag frag> : GCNPat<
+class DS128Bit8ByteAlignedWritePat<DS_Pseudo inst, ValueType vt, PatFrag frag, int gds=0> : GCNPat<
   (frag vt:$value, (DS128Bit8ByteAligned i32:$ptr, i32:$offset0, i32:$offset1)),
   (inst $ptr, (i64 (EXTRACT_SUBREG VReg_128:$value, sub0_sub1)),
               (i64 (EXTRACT_SUBREG VReg_128:$value, sub2_sub3)), $offset0, $offset1,
-              (i1 0))
+              (i1 gds))
 >;
 
 multiclass DS64Bit4ByteAlignedPat_mc<ValueType vt> {
-  let OtherPredicates = [LDSRequiresM0Init, isGFX7Plus] in {
+  let SubtargetPredicate = HasUsableDSOffset, OtherPredicates = [LDSRequiresM0Init] in {
     def : DS64Bit4ByteAlignedReadPat<DS_READ2_B32, vt, load_local_m0>;
     def : DS64Bit4ByteAlignedWritePat<DS_WRITE2_B32, vt, store_local_m0>;
+  }
+
+  let SubtargetPredicate = HasUsableDSOffset, OtherPredicates = [HasGDS] in {
+    def : DS64Bit4ByteAlignedReadPat<DS_READ2_B32, vt, load_region_m0, /*gds=*/1>;
+    def : DS64Bit4ByteAlignedWritePat<DS_WRITE2_B32, vt, store_region_m0, /*gds=*/1>;
   }
 
   let OtherPredicates = [NotLDSRequiresM0Init, NotNeedsAligned2addrDS] in {
@@ -1127,9 +1163,14 @@ multiclass DS64Bit4ByteAlignedPat_mc<ValueType vt> {
 }
 
 multiclass DS128Bit8ByteAlignedPat_mc<ValueType vt> {
-  let OtherPredicates = [LDSRequiresM0Init, isGFX7Plus] in {
+  let SubtargetPredicate = HasUsableDSOffset, OtherPredicates = [LDSRequiresM0Init] in {
     def : DS128Bit8ByteAlignedReadPat<DS_READ2_B64, vt, load_local_m0>;
     def : DS128Bit8ByteAlignedWritePat<DS_WRITE2_B64, vt, store_local_m0>;
+  }
+
+  let SubtargetPredicate = HasUsableDSOffset, OtherPredicates = [HasGDS] in {
+    def : DS128Bit8ByteAlignedReadPat<DS_READ2_B64, vt, load_region_m0, /*gds=*/1>;
+    def : DS128Bit8ByteAlignedWritePat<DS_WRITE2_B64, vt, store_region_m0, /*gds=*/1>;
   }
 
   let OtherPredicates = [NotLDSRequiresM0Init, NotNeedsAligned2addrDS] in {
@@ -1454,13 +1495,15 @@ multiclass DS_Real_gfx12<bits<8> op,
 multiclass DS_Real_gfx13<bits<8> op,
                          DS_Pseudo ps = !cast<DS_Pseudo>(NAME),
                          string name = !tolower(NAME)> {
-  let AssemblerPredicate = isGFX13Only, DecoderNamespace = "GFX13" in
-    def _gfx13 :
-      Base_DS_Real_gfx6_gfx7_gfx10_gfx11_gfx12_gfx13<op, ps,
-                                                     SIEncodingFamily.GFX13,
-                                                     name, /*hasGDS=*/false>;
-  if !ne(ps.Mnemonic, name) then
-    def : MnemonicAlias<ps.Mnemonic, name>, Requires<[isGFX13Only]>;
+  let AssemblerPredicate = isGFX13Only in {
+    let DecoderNamespace = "GFX13" in
+      def _gfx13 :
+        Base_DS_Real_gfx6_gfx7_gfx10_gfx11_gfx12_gfx13<op, ps,
+                                                       SIEncodingFamily.GFX13,
+                                                       name, /*hasGDS=*/false>;
+    if !ne(ps.Mnemonic, name) then
+      def : AMDGPUMnemonicAlias<ps.Mnemonic, name>;
+  } // End AssemblerPredicate
 }
 
 // Helper to avoid repeating the pseudo-name if we only need to set
@@ -1541,6 +1584,12 @@ multiclass DS_Real_gfx11<bits<8> op, DS_Pseudo ps = !cast<DS_Pseudo>(NAME#"_gfx9
       def _gfx11 :
         Base_DS_Real_gfx6_gfx7_gfx10_gfx11_gfx12_gfx13<op, ps, SIEncodingFamily.GFX11,
                                                        name>;
+    if !eq(!cast<string>(ps), NAME#"_gfx9") then {
+      let isCodeGenOnly = 1 in
+      def _m0_gfx11 :
+        Base_DS_Real_gfx6_gfx7_gfx10_gfx11_gfx12_gfx13<op,
+          !cast<DS_Pseudo>(NAME), SIEncodingFamily.GFX11, name>;
+    }
     if !ne(ps.Mnemonic, name) then
       def : AMDGPUMnemonicAlias<ps.Mnemonic, name>;
   } // End AssemblerPredicate
@@ -1624,6 +1673,11 @@ let AssemblerPredicate = isGFX10Only, DecoderNamespace = "GFX10" in {
   multiclass DS_Real_gfx10<bits<8> op, DS_Pseudo ps = !cast<DS_Pseudo>(NAME)>  {
     def _gfx10 : Base_DS_Real_gfx6_gfx7_gfx10_gfx11_gfx12_gfx13<op,
       ps, SIEncodingFamily.GFX10>;
+    if !eq(!cast<string>(ps), NAME#"_gfx9") then {
+      let isCodeGenOnly = 1 in
+      def _m0_gfx10 : Base_DS_Real_gfx6_gfx7_gfx10_gfx11_gfx12_gfx13<op,
+        !cast<DS_Pseudo>(NAME), SIEncodingFamily.GFX10>;
+    }
   }
 } // End AssemblerPredicate = isGFX10Only, DecoderNamespace = "GFX10"
 

@@ -24,6 +24,7 @@
 #include "llvm/CodeGen/MachineFrameInfo.h"
 #include "llvm/IR/DiagnosticInfo.h"
 #include "llvm/IR/IntrinsicsAMDGPU.h"
+#include "llvm/Support/AMDGPUAddrSpace.h"
 #include "llvm/Support/CommandLine.h"
 #include "llvm/Support/KnownBits.h"
 #include "llvm/Target/TargetMachine.h"
@@ -412,9 +413,9 @@ AMDGPUTargetLowering::AMDGPUTargetLowering(const TargetMachine &TM,
 
   // Library functions.  These default to Expand, but we have instructions
   // for them.
-  setOperationAction({ISD::FCEIL, ISD::FPOW, ISD::FABS, ISD::FFLOOR,
-                      ISD::FROUNDEVEN, ISD::FTRUNC},
-                     {MVT::f16, MVT::f32}, Legal);
+  setOperationAction(
+      {ISD::FCEIL, ISD::FABS, ISD::FFLOOR, ISD::FROUNDEVEN, ISD::FTRUNC},
+      {MVT::f16, MVT::f32}, Legal);
   setOperationAction({ISD::FMINNUM, ISD::FMAXNUM}, MVT::f32, Legal);
 
   setOperationAction(ISD::FLOG2, MVT::f32, Custom);
@@ -423,8 +424,8 @@ AMDGPUTargetLowering::AMDGPUTargetLowering(const TargetMachine &TM,
                      {MVT::f16, MVT::f32, MVT::f64}, Expand);
 
   setOperationAction(
-      {ISD::FLOG, ISD::FLOG10, ISD::FEXP, ISD::FEXP2, ISD::FEXP10}, MVT::f32,
-      Custom);
+      {ISD::FLOG, ISD::FLOG10, ISD::FEXP, ISD::FEXP2, ISD::FEXP10, ISD::FPOW},
+      MVT::f32, Custom);
   setOperationAction({ISD::FEXP, ISD::FEXP2, ISD::FEXP10}, MVT::f64, Custom);
 
   setOperationAction(ISD::FNEARBYINT, {MVT::f16, MVT::f32, MVT::f64}, Custom);
@@ -845,7 +846,14 @@ bool AMDGPUTargetLowering::shouldReduceLoadWidth(
   unsigned AS = MN->getAddressSpace();
   // Do not shrink an aligned scalar load to sub-dword.
   // Scalar engine cannot do sub-dword loads.
-  // TODO: Update this for GFX12 which does have scalar sub-dword loads.
+  // Do not enable for gfx1250+ even though it has sub-dword loads because
+  // this will convert:
+  //   i16 = trunc (zextload i16->i32)
+  // to:
+  //   i16 = (load i16)
+  // This transformation will be reversed by LowerLOAD resulting in an infinite
+  // loop. Also, tablegen already has a pattern to match zextload i16->i32, but
+  // load i16 will not be matched since there is no instruction that does it.
   if (OldSize >= 32 && NewSize < 32 && MN->getAlign() >= Align(4) &&
       (AS == AMDGPUAS::CONSTANT_ADDRESS ||
        AS == AMDGPUAS::CONSTANT_ADDRESS_32BIT ||
@@ -1051,6 +1059,7 @@ bool AMDGPUTargetLowering::isNarrowingProfitable(SDNode *N, EVT SrcVT,
   case ISD::UMIN:
   case ISD::UMAX:
   case ISD::USUBSAT:
+  case ISD::UADDSAT:
     if (isTypeLegal(MVT::i16) &&
         (!DestVT.isVector() ||
          !isOperationLegal(ISD::ADD, MVT::v2i16))) { // Check if VOP3P
@@ -1460,6 +1469,8 @@ SDValue AMDGPUTargetLowering::LowerOperation(SDValue Op,
     return lowerFEXP(Op, DAG);
   case ISD::FEXP2:
     return lowerFEXP2(Op, DAG);
+  case ISD::FPOW:
+    return lowerFPOW(Op, DAG);
   case ISD::SINT_TO_FP: return LowerSINT_TO_FP(Op, DAG);
   case ISD::UINT_TO_FP: return LowerUINT_TO_FP(Op, DAG);
   case ISD::FP_TO_FP16: return LowerFP_TO_FP16(Op, DAG);
@@ -1538,29 +1549,33 @@ SDValue AMDGPUTargetLowering::LowerGlobalAddress(AMDGPUMachineFunctionInfo *MFI,
   GlobalAddressSDNode *G = cast<GlobalAddressSDNode>(Op);
   const GlobalValue *GV = G->getGlobal();
 
+  if (G->getAddressSpace() == AMDGPUAS::BARRIER) {
+    const GlobalVariable *GVar = cast<GlobalVariable>(GV);
+
+    if (!AMDGPU::isNamedBarrier(*GVar)) {
+      const Function &Fn = DAG.getMachineFunction().getFunction();
+      DAG.getContext()->diagnose(DiagnosticInfoUnsupported(
+          Fn, "unsupported use of BARRIER address space",
+          SDLoc(Op).getDebugLoc(), DS_Error));
+      return DAG.getPOISON(Op.getValueType());
+    }
+
+    unsigned Offset = MFI->allocateBarrierGlobal(DL, *cast<GlobalVariable>(GV));
+    return DAG.getConstant(Offset, SDLoc(Op), Op.getValueType());
+  }
+
   if (!MFI->isModuleEntryFunction()) {
-    bool IsNamedBarrier = AMDGPU::isNamedBarrier(*cast<GlobalVariable>(GV));
-    std::optional<uint32_t> Address =
-        AMDGPUMachineFunctionInfo::getLDSAbsoluteAddress(*GV);
-    if (!Address && IsNamedBarrier)
-      llvm_unreachable("named barrier should have an assigned address");
-    if (Address) {
-      if (IsNamedBarrier) {
-        unsigned BarCnt = cast<GlobalVariable>(GV)->getGlobalSize(DL) / 16;
-        MFI->recordNumNamedBarriers(Address.value(), BarCnt);
-      }
-      // A constant byte offset (e.g. from a GEP into an array of named
-      // barriers) folds directly into the fixed LDS address.
-      return DAG.getConstant(*Address + G->getOffset(), SDLoc(Op),
-                             Op.getValueType());
+    if (std::optional<uint32_t> Address =
+            AMDGPUMachineFunctionInfo::get32BitAbsoluteAddress(
+                *GV, AMDGPUAS::LOCAL_ADDRESS)) {
+      return DAG.getConstant(*Address, SDLoc(Op), Op.getValueType());
     }
   }
 
   if (G->getAddressSpace() == AMDGPUAS::LOCAL_ADDRESS ||
       G->getAddressSpace() == AMDGPUAS::REGION_ADDRESS) {
     if (!MFI->isModuleEntryFunction() &&
-        GV->getName() != "llvm.amdgcn.module.lds" &&
-        !AMDGPU::isNamedBarrier(*cast<GlobalVariable>(GV))) {
+        GV->getName() != "llvm.amdgcn.module.lds") {
       SDLoc DL(Op);
       const Function &Fn = DAG.getMachineFunction().getFunction();
       DAG.getContext()->diagnose(DiagnosticInfoUnsupported(
@@ -1669,92 +1684,94 @@ static SDValue peekFNeg(SDValue Val) {
   return Val;
 }
 
-static SDValue peekFPSignOps(SDValue Val) {
-  if (Val.getOpcode() == ISD::FNEG)
-    Val = Val.getOperand(0);
-  if (Val.getOpcode() == ISD::FABS)
-    Val = Val.getOperand(0);
-  if (Val.getOpcode() == ISD::FCOPYSIGN)
-    Val = Val.getOperand(0);
-  return Val;
+// SelectionDAG twin of AMDGPUCombinerHelper::canIgnoreLegacyMinMaxTies.
+static bool canIgnoreLegacyMinMaxTies(const SelectionDAG &DAG,
+                                      SDNodeFlags Flags, SDValue LHS,
+                                      SDValue RHS) {
+  return Flags.hasNoSignedZeros() || DAG.isKnownNeverLogicalZero(LHS) ||
+         DAG.isKnownNeverLogicalZero(RHS);
 }
 
 SDValue AMDGPUTargetLowering::combineFMinMaxLegacyImpl(
     const SDLoc &DL, EVT VT, SDValue LHS, SDValue RHS, SDValue True,
-    SDValue False, SDValue CC, DAGCombinerInfo &DCI) const {
+    SDValue False, SDValue CC, SDNodeFlags Flags, DAGCombinerInfo &DCI) const {
   SelectionDAG &DAG = DCI.DAG;
   ISD::CondCode CCOpcode = cast<CondCodeSDNode>(CC)->get();
+  assert(CCOpcode != ISD::SETCC_INVALID && "Invalid setcc condcode!");
+
   switch (CCOpcode) {
-  case ISD::SETOEQ:
-  case ISD::SETONE:
-  case ISD::SETUNE:
-  case ISD::SETNE:
-  case ISD::SETUEQ:
-  case ISD::SETEQ:
-  case ISD::SETFALSE:
-  case ISD::SETFALSE2:
-  case ISD::SETTRUE:
-  case ISD::SETTRUE2:
-  case ISD::SETUO:
-  case ISD::SETO:
-    break;
-  case ISD::SETULE:
-  case ISD::SETULT: {
-    if (LHS == True)
-      return DAG.getNode(AMDGPUISD::FMIN_LEGACY, DL, VT, RHS, LHS);
-    return DAG.getNode(AMDGPUISD::FMAX_LEGACY, DL, VT, LHS, RHS);
-  }
   case ISD::SETOLE:
   case ISD::SETOLT:
   case ISD::SETLE:
-  case ISD::SETLT: {
-    // Ordered. Assume ordered for undefined.
-
+  case ISD::SETLT:
+  case ISD::SETOGE:
+  case ISD::SETOGT:
+  case ISD::SETGE:
+  case ISD::SETGT:
     // Only do this after legalization to avoid interfering with other combines
     // which might occur.
     if (DCI.getDAGCombineLevel() < AfterLegalizeDAG &&
         !DCI.isCalledByLegalizer())
       return SDValue();
+    break;
+  default:
+    break;
+  }
 
-    // We need to permute the operands to get the correct NaN behavior. The
-    // selected operand is the second one based on the failing compare with NaN,
-    // so permute it based on the compare type the hardware uses.
-    if (LHS == True)
-      return DAG.getNode(AMDGPUISD::FMIN_LEGACY, DL, VT, LHS, RHS);
-    return DAG.getNode(AMDGPUISD::FMAX_LEGACY, DL, VT, RHS, LHS);
-  }
-  case ISD::SETUGE:
-  case ISD::SETUGT: {
-    if (LHS == True)
-      return DAG.getNode(AMDGPUISD::FMAX_LEGACY, DL, VT, RHS, LHS);
-    return DAG.getNode(AMDGPUISD::FMIN_LEGACY, DL, VT, LHS, RHS);
-  }
-  case ISD::SETGT:
-  case ISD::SETGE:
+  // Canonicalize so the select returns the compare's LHS on a true predicate.
+  if (LHS != True)
+    CCOpcode = ISD::getSetCCInverse(CCOpcode, VT);
+
+  unsigned Opc;
+  bool Swap; // Emit (rhs, lhs) instead of (lhs, rhs).
+  switch (CCOpcode) {
+  case ISD::SETOLT:
+  case ISD::SETLT:
+  case ISD::SETOLE:
+    Opc = AMDGPUISD::FMIN_LEGACY;
+    Swap = false;
+    break;
+  case ISD::SETULE:
+  case ISD::SETLE:
+  case ISD::SETULT:
+    Opc = AMDGPUISD::FMIN_LEGACY;
+    Swap = true;
+    break;
   case ISD::SETOGE:
-  case ISD::SETOGT: {
-    if (DCI.getDAGCombineLevel() < AfterLegalizeDAG &&
-        !DCI.isCalledByLegalizer())
-      return SDValue();
+  case ISD::SETGE:
+  case ISD::SETOGT:
+    Opc = AMDGPUISD::FMAX_LEGACY;
+    Swap = false;
+    break;
+  case ISD::SETUGT:
+  case ISD::SETGT:
+  case ISD::SETUGE:
+    Opc = AMDGPUISD::FMAX_LEGACY;
+    Swap = true;
+    break;
+  default:
+    return SDValue();
+  }
 
-    if (LHS == True)
-      return DAG.getNode(AMDGPUISD::FMAX_LEGACY, DL, VT, LHS, RHS);
-    return DAG.getNode(AMDGPUISD::FMIN_LEGACY, DL, VT, RHS, LHS);
-  }
-  case ISD::SETCC_INVALID:
-    llvm_unreachable("Invalid setcc condcode!");
-  }
-  return SDValue();
+  // For these predicates the NaN-correct operand order is the signed zero
+  // tie-incorrect one, so the fold needs the tie to be unobservable.
+  if ((CCOpcode == ISD::SETOLE || CCOpcode == ISD::SETULT ||
+       CCOpcode == ISD::SETOGT || CCOpcode == ISD::SETUGE) &&
+      !canIgnoreLegacyMinMaxTies(DAG, Flags, LHS, RHS))
+    return SDValue();
+
+  if (Swap)
+    std::swap(LHS, RHS);
+  return DAG.getNode(Opc, DL, VT, LHS, RHS, Flags);
 }
 
 /// Generate Min/Max node
-SDValue AMDGPUTargetLowering::combineFMinMaxLegacy(const SDLoc &DL, EVT VT,
-                                                   SDValue LHS, SDValue RHS,
-                                                   SDValue True, SDValue False,
-                                                   SDValue CC,
-                                                   DAGCombinerInfo &DCI) const {
+SDValue AMDGPUTargetLowering::combineFMinMaxLegacy(
+    const SDLoc &DL, EVT VT, SDValue LHS, SDValue RHS, SDValue True,
+    SDValue False, SDValue CC, SDNodeFlags Flags, DAGCombinerInfo &DCI) const {
   if ((LHS == True && RHS == False) || (LHS == False && RHS == True))
-    return combineFMinMaxLegacyImpl(DL, VT, LHS, RHS, True, False, CC, DCI);
+    return combineFMinMaxLegacyImpl(DL, VT, LHS, RHS, True, False, CC, Flags,
+                                    DCI);
 
   SelectionDAG &DAG = DCI.DAG;
 
@@ -1775,8 +1792,8 @@ SDValue AMDGPUTargetLowering::combineFMinMaxLegacy(const SDLoc &DL, EVT VT,
   if (LHS == NegTrue && CFalse && CRHS) {
     APFloat NegRHS = neg(CRHS->getValueAPF());
     if (NegRHS == CFalse->getValueAPF()) {
-      SDValue Combined =
-          combineFMinMaxLegacyImpl(DL, VT, LHS, RHS, NegTrue, False, CC, DCI);
+      SDValue Combined = combineFMinMaxLegacyImpl(DL, VT, LHS, RHS, NegTrue,
+                                                  False, CC, Flags, DCI);
       if (Combined)
         return DAG.getNode(ISD::FNEG, DL, VT, Combined);
       return SDValue();
@@ -1799,14 +1816,6 @@ AMDGPUTargetLowering::split64BitValue(SDValue Op, SelectionDAG &DAG) const {
   SDValue Hi = DAG.getNode(ISD::EXTRACT_VECTOR_ELT, SL, MVT::i32, Vec, One);
 
   return std::pair(Lo, Hi);
-}
-
-SDValue AMDGPUTargetLowering::getLoHalf64(SDValue Op, SelectionDAG &DAG) const {
-  SDLoc SL(Op);
-
-  SDValue Vec = DAG.getNode(ISD::BITCAST, SL, MVT::v2i32, Op);
-  const SDValue Zero = DAG.getConstant(0, SL, MVT::i32);
-  return DAG.getNode(ISD::EXTRACT_VECTOR_ELT, SL, MVT::i32, Vec, Zero);
 }
 
 SDValue AMDGPUTargetLowering::getHiHalf64(SDValue Op, SelectionDAG &DAG) const {
@@ -2656,24 +2665,6 @@ bool AMDGPUTargetLowering::needsDenormHandlingF32(const SelectionDAG &DAG,
                  .Input != DenormalMode::PreserveSign;
 }
 
-SDValue AMDGPUTargetLowering::getIsLtSmallestNormal(SelectionDAG &DAG,
-                                                    SDValue Src,
-                                                    SDNodeFlags Flags) const {
-  SDLoc SL(Src);
-  EVT VT = Src.getValueType();
-  const fltSemantics &Semantics = VT.getFltSemantics();
-  SDValue SmallestNormal =
-      DAG.getConstantFP(APFloat::getSmallestNormalized(Semantics), SL, VT);
-
-  // Want to scale denormals up, but negatives and 0 work just as well on the
-  // scaled path.
-  SDValue IsLtSmallestNormal = DAG.getSetCC(
-      SL, getSetCCResultType(DAG.getDataLayout(), *DAG.getContext(), VT), Src,
-      SmallestNormal, ISD::SETOLT);
-
-  return IsLtSmallestNormal;
-}
-
 SDValue AMDGPUTargetLowering::getIsFinite(SelectionDAG &DAG, SDValue Src,
                                           SDNodeFlags Flags) const {
   SDLoc SL(Src);
@@ -2860,10 +2851,6 @@ SDValue AMDGPUTargetLowering::LowerFLOGCommon(SDValue Op,
   }
 
   return R;
-}
-
-SDValue AMDGPUTargetLowering::LowerFLOG10(SDValue Op, SelectionDAG &DAG) const {
-  return LowerFLOGCommon(Op, DAG);
 }
 
 // Do f32 fast math expansion for flog2 or flog10. This is accurate enough for a
@@ -3307,6 +3294,77 @@ SDValue AMDGPUTargetLowering::lowerFEXP(SDValue Op, SelectionDAG &DAG) const {
   return R;
 }
 
+// No pow instruction or libcall to fall back on. fmul_legacy returns 0 for a
+// zero operand even against an infinity or a NaN, so pow(x, 0) and pow(1, y)
+// fall out as exp2(0) = 1.
+SDValue AMDGPUTargetLowering::lowerFPOW(SDValue Op, SelectionDAG &DAG) const {
+  EVT VT = Op.getValueType();
+  assert(VT == MVT::f32);
+
+  SDLoc SL(Op);
+  SDValue X = Op.getOperand(0);
+  SDValue Y = Op.getOperand(1);
+  SDNodeFlags Flags = Op->getFlags();
+
+  // log2(0) is -inf, which exp2 turns back into a finite result, so the core
+  // goes infinite for inputs a ninf fpow still asserts about, like pow(0, 2).
+  SDNodeFlags CoreFlags = Flags;
+  CoreFlags.setNoInfs(false);
+
+  // Fast expansion: ignores denormals, NaN for a negative base.
+  if (allowApproxFunc(DAG, Flags)) {
+    SDValue Log = DAG.getNode(AMDGPUISD::LOG, SL, VT, X, CoreFlags);
+    SDValue Mul =
+        DAG.getNode(AMDGPUISD::FMUL_LEGACY, SL, VT, Y, Log, CoreFlags);
+    return DAG.getNode(AMDGPUISD::EXP, SL, VT, Mul, CoreFlags);
+  }
+
+  SDValue Abs = DAG.getNode(ISD::FABS, SL, VT, X, Flags);
+  SDValue Log = DAG.getNode(ISD::FLOG2, SL, VT, Abs, CoreFlags);
+  SDValue Mul = DAG.getNode(AMDGPUISD::FMUL_LEGACY, SL, VT, Y, Log, CoreFlags);
+  SDValue R = DAG.getNode(ISD::FEXP2, SL, VT, Mul, CoreFlags);
+
+  // A base that is never negative needs neither the sign fixup nor the NaN.
+  if (DAG.computeKnownFPClass(X, fcNegative).signBitIsZeroOrNaN())
+    return R;
+
+  EVT SetCCVT = getSetCCResultType(DAG.getDataLayout(), *DAG.getContext(), VT);
+
+  // Infinities count as integers, and every f32 >= 2^24 in magnitude is even.
+  SDValue YTrunc = DAG.getNode(ISD::FTRUNC, SL, VT, Y);
+  SDValue YIsInt = DAG.getSetCC(SL, SetCCVT, YTrunc, Y, ISD::SETOEQ);
+  SDValue YHalf =
+      DAG.getNode(ISD::FMUL, SL, VT, Y, DAG.getConstantFP(0.5, SL, VT));
+  SDValue YHalfTrunc = DAG.getNode(ISD::FTRUNC, SL, VT, YHalf);
+  SDValue YIsOdd =
+      DAG.getNode(ISD::AND, SL, SetCCVT, YIsInt,
+                  DAG.getSetCC(SL, SetCCVT, YHalfTrunc, YHalf, ISD::SETONE));
+
+  // pow(-x, odd y) = -pow(x, y). Selecting the copysign lets even y fold it.
+  R = DAG.getNode(ISD::SELECT, SL, VT, YIsOdd,
+                  DAG.getNode(ISD::FCOPYSIGN, SL, VT, R, X), R);
+
+  if (Flags.hasNoNaNs())
+    return R;
+
+  // A negative finite base to a non-integral power is NaN. -inf is excluded:
+  // the core already gives pow(+inf, y). So are subnormals when flushed.
+  FPClassTest NegFiniteMask = fcNegNormal;
+  if (!DAG.getMachineFunction()
+           .getDenormalMode(APFloat::IEEEsingle())
+           .inputsAreZero())
+    NegFiniteMask |= fcNegSubnormal;
+  SDValue XNegFinite =
+      DAG.getNode(ISD::IS_FPCLASS, SL, SetCCVT, X,
+                  DAG.getTargetConstant(NegFiniteMask, SL, MVT::i32));
+  // Not a SETONE compare: pow(-1, NaN) needs the NaN-true behavior of !SETOEQ.
+  SDValue NegNonInt = DAG.getNode(ISD::AND, SL, SetCCVT, XNegFinite,
+                                  DAG.getNOT(SL, YIsInt, SetCCVT));
+  SDValue NaN =
+      DAG.getConstantFP(APFloat::getQNaN(VT.getFltSemantics()), SL, VT);
+  return DAG.getNode(ISD::SELECT, SL, VT, NegNonInt, NaN, R);
+}
+
 static bool isCtlzOpc(unsigned Opc) {
   return Opc == ISD::CTLZ || Opc == ISD::CTLZ_ZERO_POISON;
 }
@@ -3576,21 +3634,21 @@ SDValue AMDGPUTargetLowering::LowerINT_TO_FP64(SDValue Op, SelectionDAG &DAG,
   return DAG.getNode(ISD::FADD, SL, MVT::f64, LdExp, CvtLo);
 }
 
-SDValue AMDGPUTargetLowering::LowerUINT_TO_FP(SDValue Op,
-                                               SelectionDAG &DAG) const {
-  // TODO: Factor out code common with LowerSINT_TO_FP.
+SDValue AMDGPUTargetLowering::lowerINT_TO_FPImpl(SDValue Op, SelectionDAG &DAG,
+                                                 bool Signed) const {
   EVT DestVT = Op.getValueType();
   SDValue Src = Op.getOperand(0);
   EVT SrcVT = Src.getValueType();
+  unsigned ExtOpc = Signed ? ISD::SIGN_EXTEND : ISD::ZERO_EXTEND;
+  unsigned CvtOpc = Signed ? ISD::SINT_TO_FP : ISD::UINT_TO_FP;
 
   if (SrcVT == MVT::i16) {
     if (DestVT == MVT::f16)
       return Op;
-    SDLoc DL(Op);
 
-    // Promote src to i32
-    SDValue Ext = DAG.getNode(ISD::ZERO_EXTEND, DL, MVT::i32, Src);
-    return DAG.getNode(ISD::UINT_TO_FP, DL, DestVT, Ext);
+    SDLoc DL(Op);
+    SDValue Ext = DAG.getNode(ExtOpc, DL, MVT::i32, Src);
+    return DAG.getNode(CvtOpc, DL, DestVT, Ext);
   }
 
   if (DestVT == MVT::bf16 || DestVT == MVT::f16)
@@ -3600,42 +3658,20 @@ SDValue AMDGPUTargetLowering::LowerUINT_TO_FP(SDValue Op,
     return Op;
 
   if (DestVT == MVT::f32)
-    return LowerINT_TO_FP32(Op, DAG, false);
+    return LowerINT_TO_FP32(Op, DAG, Signed);
 
   assert(DestVT == MVT::f64);
-  return LowerINT_TO_FP64(Op, DAG, false);
+  return LowerINT_TO_FP64(Op, DAG, Signed);
+}
+
+SDValue AMDGPUTargetLowering::LowerUINT_TO_FP(SDValue Op,
+                                              SelectionDAG &DAG) const {
+  return lowerINT_TO_FPImpl(Op, DAG, false);
 }
 
 SDValue AMDGPUTargetLowering::LowerSINT_TO_FP(SDValue Op,
                                               SelectionDAG &DAG) const {
-  EVT DestVT = Op.getValueType();
-
-  SDValue Src = Op.getOperand(0);
-  EVT SrcVT = Src.getValueType();
-
-  if (SrcVT == MVT::i16) {
-    if (DestVT == MVT::f16)
-      return Op;
-
-    SDLoc DL(Op);
-    // Promote src to i32
-    SDValue Ext = DAG.getNode(ISD::SIGN_EXTEND, DL, MVT::i32, Src);
-    return DAG.getNode(ISD::SINT_TO_FP, DL, DestVT, Ext);
-  }
-
-  if (DestVT == MVT::bf16 || DestVT == MVT::f16)
-    return LowerINT_TO_FP16(Op, DAG, DestVT);
-
-  if (SrcVT != MVT::i64)
-    return Op;
-
-  // TODO: Factor out code common with LowerUINT_TO_FP.
-
-  if (DestVT == MVT::f32)
-    return LowerINT_TO_FP32(Op, DAG, true);
-
-  assert(DestVT == MVT::f64);
-  return LowerINT_TO_FP64(Op, DAG, true);
+  return lowerINT_TO_FPImpl(Op, DAG, true);
 }
 
 SDValue AMDGPUTargetLowering::LowerFP_TO_INT64(SDValue Op, SelectionDAG &DAG,
@@ -4028,22 +4064,25 @@ static SDValue simplifyMul24(SDNode *Node24,
 
   APInt Demanded = APInt::getLowBitsSet(LHS.getValueSizeInBits(), 24);
 
-  // First try to simplify using SimplifyMultipleUseDemandedBits which allows
-  // the operands to have other uses, but will only perform simplifications that
-  // involve bypassing some nodes for this user.
+  if (isNullConstant(LHS) || isNullConstant(RHS))
+    return DAG.getConstant(0, SDLoc(Node24), Node24->getValueType(0));
+
+  // First try SimplifyDemandedBits which can simplify the nodes used by our
+  // operands if this node is the only user.
+  if (LHS.hasOneUse() && TLI.SimplifyDemandedBits(LHS, Demanded, DCI))
+    return SDValue(Node24, 0);
+  if (RHS.hasOneUse() && TLI.SimplifyDemandedBits(RHS, Demanded, DCI))
+    return SDValue(Node24, 0);
+
+  // Then try SimplifyMultipleUseDemandedBits which allows the operands to have
+  // other uses, but will only perform simplifications that involve bypassing
+  // some nodes for this user.
   SDValue DemandedLHS = TLI.SimplifyMultipleUseDemandedBits(LHS, Demanded, DAG);
   SDValue DemandedRHS = TLI.SimplifyMultipleUseDemandedBits(RHS, Demanded, DAG);
   if (DemandedLHS || DemandedRHS)
     return DAG.getNode(NewOpcode, SDLoc(Node24), Node24->getVTList(),
                        DemandedLHS ? DemandedLHS : LHS,
                        DemandedRHS ? DemandedRHS : RHS);
-
-  // Now try SimplifyDemandedBits which can simplify the nodes used by our
-  // operands if this node is the only user.
-  if (TLI.SimplifyDemandedBits(LHS, Demanded, DCI))
-    return SDValue(Node24, 0);
-  if (TLI.SimplifyDemandedBits(RHS, Demanded, DCI))
-    return SDValue(Node24, 0);
 
   return SDValue();
 }
@@ -5113,8 +5152,8 @@ SDValue AMDGPUTargetLowering::performSelectCombine(SDNode *N,
     }
 
     if (VT == MVT::f32 && Subtarget->hasFminFmaxLegacy()) {
-      SDValue MinMax
-        = combineFMinMaxLegacy(SDLoc(N), VT, LHS, RHS, True, False, CC, DCI);
+      SDValue MinMax = combineFMinMaxLegacy(SDLoc(N), VT, LHS, RHS, True, False,
+                                            CC, N->getFlags(), DCI);
       // Revisit this node so we can catch min3/max3/med3 patterns.
       //DCI.AddToWorklist(MinMax.getNode());
       return MinMax;
@@ -5151,12 +5190,6 @@ AMDGPUTargetLowering::getConstantNegateCost(const ConstantFPSDNode *C) const {
 bool AMDGPUTargetLowering::isConstantCostlierToNegate(SDValue N) const {
   if (const ConstantFPSDNode *C = isConstOrConstSplatFP(N))
     return getConstantNegateCost(C) == NegatibleCost::Expensive;
-  return false;
-}
-
-bool AMDGPUTargetLowering::isConstantCheaperToNegate(SDValue N) const {
-  if (const ConstantFPSDNode *C = isConstOrConstSplatFP(N))
-    return getConstantNegateCost(C) == NegatibleCost::Cheaper;
   return false;
 }
 
@@ -5219,10 +5252,14 @@ SDValue AMDGPUTargetLowering::performFNegCombine(SDNode *N,
   if (!shouldFoldFNegIntoSrc(N, N0))
     return SDValue();
 
+  bool MayIgnoreSignedZeroForAllUses =
+      N0->getFlags().hasNoSignedZeros() ||
+      (N0.hasOneUse() && N->getFlags().hasNoSignedZeros());
+
   SDLoc SL(N);
   switch (Opc) {
   case ISD::FADD: {
-    if (!N0->getFlags().hasNoSignedZeros() && !N->getFlags().hasNoSignedZeros())
+    if (!MayIgnoreSignedZeroForAllUses)
       return SDValue();
 
     // (fneg (fadd x, y)) -> (fadd (fneg x), (fneg y))
@@ -5270,7 +5307,7 @@ SDValue AMDGPUTargetLowering::performFNegCombine(SDNode *N,
   case ISD::FMA:
   case ISD::FMAD: {
     // TODO: handle llvm.amdgcn.fma.legacy
-    if (!N0->getFlags().hasNoSignedZeros() && !N->getFlags().hasNoSignedZeros())
+    if (!MayIgnoreSignedZeroForAllUses)
       return SDValue();
 
     // (fneg (fma x, y, z)) -> (fma x, (fneg y), (fneg z))
@@ -5318,6 +5355,11 @@ SDValue AMDGPUTargetLowering::performFNegCombine(SDNode *N,
     // 0 doesn't have a negated inline immediate.
     // TODO: This constant check should be generalized to other operations.
     if (isConstantCostlierToNegate(RHS))
+      return SDValue();
+
+    // Swapping min<->max flips which operand a signed zero tie selects.
+    if ((Opc == AMDGPUISD::FMIN_LEGACY || Opc == AMDGPUISD::FMAX_LEGACY) &&
+        !canIgnoreLegacyMinMaxTies(DAG, N0->getFlags(), LHS, RHS))
       return SDValue();
 
     SDValue NegLHS = DAG.getNode(ISD::FNEG, SL, VT, LHS);
@@ -6154,6 +6196,11 @@ void AMDGPUTargetLowering::computeKnownBitsForTargetNode(
       Known.Zero.setHighBits(llvm::countl_zero(MaxValue));
       break;
     }
+    case Intrinsic::amdgcn_readfirstlane:
+    case Intrinsic::amdgcn_readlane:
+      // Result is the data operand's value from some lane.
+      Known = DAG.computeKnownBits(Op.getOperand(1), DemandedElts, Depth + 1);
+      break;
     default:
       break;
     }
