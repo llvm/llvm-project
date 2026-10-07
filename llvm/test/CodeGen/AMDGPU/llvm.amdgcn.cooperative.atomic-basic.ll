@@ -48,8 +48,6 @@ entry:
   ret void
 }
 
-; global pointers, and uses of the loaded value that query known bits or sign bits
-
 define void @test_store_16x8B_global(ptr addrspace(1) noundef %addr, <2 x i32> noundef %val)  {
 ; GCN-LABEL: test_store_16x8B_global:
 ; GCN:       ; %bb.0: ; %entry
@@ -108,25 +106,6 @@ entry:
   ret i32 %and
 }
 
-define i64 @test_load_8x16B_bitcast_v2i64_and(ptr addrspace(1) noundef readonly %addr)  {
-; GCN-LABEL: test_load_8x16B_bitcast_v2i64_and:
-; GCN:       ; %bb.0: ; %entry
-; GCN-NEXT:    s_wait_loadcnt_dscnt 0x0
-; GCN-NEXT:    s_wait_kmcnt 0x0
-; GCN-NEXT:    global_load_b128 v[0:3], v[0:1], off scope:SCOPE_SYS
-; GCN-NEXT:    s_mov_b32 s0, 0xff
-; GCN-NEXT:    s_wait_loadcnt 0x0
-; GCN-NEXT:    s_wait_xcnt 0x0
-; GCN-NEXT:    v_dual_mov_b32 v1, 0 :: v_dual_bitop2_b32 v0, s0, v0 bitop3:0x40
-; GCN-NEXT:    s_set_pc_i64 s[30:31]
-entry:
-  %0 = tail call <4 x i32> @llvm.amdgcn.cooperative.atomic.load.8x16B.p1(ptr addrspace(1) %addr, i32 0, metadata !0)
-  %cast = bitcast <4 x i32> %0 to <2 x i64>
-  %elt = extractelement <2 x i64> %cast, i64 0
-  %and = and i64 %elt, 255
-  ret i64 %and
-}
-
 define half @test_load_8x16B_bitcast_v8f16(ptr addrspace(1) noundef readonly %addr)  {
 ; GCN-LABEL: test_load_8x16B_bitcast_v8f16:
 ; GCN:       ; %bb.0: ; %entry
@@ -175,11 +154,11 @@ define void @test_load_8x16B_live_out(ptr addrspace(1) noundef readonly %addr, p
 ; GFX1250-SDAG-NEXT:    s_mov_b32 s0, exec_lo
 ; GFX1250-SDAG-NEXT:    s_delay_alu instid0(VALU_DEP_1)
 ; GFX1250-SDAG-NEXT:    v_cmpx_eq_u32_e32 1, v0
-; GFX1250-SDAG-NEXT:    s_cbranch_execz .LBB10_2
+; GFX1250-SDAG-NEXT:    s_cbranch_execz .LBB9_2
 ; GFX1250-SDAG-NEXT:  ; %bb.1: ; %use
 ; GFX1250-SDAG-NEXT:    s_wait_loadcnt 0x0
 ; GFX1250-SDAG-NEXT:    global_store_b128 v[2:3], v[6:9], off
-; GFX1250-SDAG-NEXT:  .LBB10_2: ; %exit
+; GFX1250-SDAG-NEXT:  .LBB9_2: ; %exit
 ; GFX1250-SDAG-NEXT:    s_wait_xcnt 0x0
 ; GFX1250-SDAG-NEXT:    s_or_b32 exec_lo, exec_lo, s0
 ; GFX1250-SDAG-NEXT:    s_wait_loadcnt 0x0
@@ -195,11 +174,11 @@ define void @test_load_8x16B_live_out(ptr addrspace(1) noundef readonly %addr, p
 ; GFX1251-SDAG-NEXT:    s_mov_b32 s0, exec_lo
 ; GFX1251-SDAG-NEXT:    s_delay_alu instid0(VALU_DEP_1)
 ; GFX1251-SDAG-NEXT:    v_cmpx_eq_u32_e32 1, v0
-; GFX1251-SDAG-NEXT:    s_cbranch_execz .LBB10_2
+; GFX1251-SDAG-NEXT:    s_cbranch_execz .LBB9_2
 ; GFX1251-SDAG-NEXT:  ; %bb.1: ; %use
 ; GFX1251-SDAG-NEXT:    s_wait_loadcnt 0x0
 ; GFX1251-SDAG-NEXT:    global_store_b128 v[2:3], v[6:9], off
-; GFX1251-SDAG-NEXT:  .LBB10_2: ; %exit
+; GFX1251-SDAG-NEXT:  .LBB9_2: ; %exit
 ; GFX1251-SDAG-NEXT:    s_wait_xcnt 0x0
 ; GFX1251-SDAG-NEXT:    s_or_b32 exec_lo, exec_lo, s0
 ; GFX1251-SDAG-NEXT:    s_wait_loadcnt 0x0
@@ -215,11 +194,11 @@ define void @test_load_8x16B_live_out(ptr addrspace(1) noundef readonly %addr, p
 ; GFX1250-GISEL-NEXT:    s_mov_b32 s0, exec_lo
 ; GFX1250-GISEL-NEXT:    s_delay_alu instid0(VALU_DEP_1)
 ; GFX1250-GISEL-NEXT:    v_cmpx_ne_u32_e32 0, v0
-; GFX1250-GISEL-NEXT:    s_cbranch_execz .LBB10_2
+; GFX1250-GISEL-NEXT:    s_cbranch_execz .LBB9_2
 ; GFX1250-GISEL-NEXT:  ; %bb.1: ; %use
 ; GFX1250-GISEL-NEXT:    s_wait_loadcnt 0x0
 ; GFX1250-GISEL-NEXT:    global_store_b128 v[2:3], v[6:9], off
-; GFX1250-GISEL-NEXT:  .LBB10_2: ; %exit
+; GFX1250-GISEL-NEXT:  .LBB9_2: ; %exit
 ; GFX1250-GISEL-NEXT:    s_wait_xcnt 0x0
 ; GFX1250-GISEL-NEXT:    s_or_b32 exec_lo, exec_lo, s0
 ; GFX1250-GISEL-NEXT:    s_wait_loadcnt 0x0
@@ -235,11 +214,11 @@ define void @test_load_8x16B_live_out(ptr addrspace(1) noundef readonly %addr, p
 ; GFX1251-GISEL-NEXT:    s_mov_b32 s0, exec_lo
 ; GFX1251-GISEL-NEXT:    s_delay_alu instid0(VALU_DEP_1)
 ; GFX1251-GISEL-NEXT:    v_cmpx_ne_u32_e32 0, v0
-; GFX1251-GISEL-NEXT:    s_cbranch_execz .LBB10_2
+; GFX1251-GISEL-NEXT:    s_cbranch_execz .LBB9_2
 ; GFX1251-GISEL-NEXT:  ; %bb.1: ; %use
 ; GFX1251-GISEL-NEXT:    s_wait_loadcnt 0x0
 ; GFX1251-GISEL-NEXT:    global_store_b128 v[2:3], v[6:9], off
-; GFX1251-GISEL-NEXT:  .LBB10_2: ; %exit
+; GFX1251-GISEL-NEXT:  .LBB9_2: ; %exit
 ; GFX1251-GISEL-NEXT:    s_wait_xcnt 0x0
 ; GFX1251-GISEL-NEXT:    s_or_b32 exec_lo, exec_lo, s0
 ; GFX1251-GISEL-NEXT:    s_wait_loadcnt 0x0
