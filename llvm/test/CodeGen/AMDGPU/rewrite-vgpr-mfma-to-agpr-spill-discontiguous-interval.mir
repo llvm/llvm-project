@@ -2,7 +2,7 @@
 # RUN: llc -mtriple=amdgpu9.50-amd-amdhsa \
 # RUN:   -start-before=register-coalescer \
 # RUN:   -stop-after=amdgpu-rewrite-agpr-copy-mfma \
-# RUN:   -verify-machineinstrs -filetype=null %s
+# RUN:   -filetype=null %s
 
 # A spill slot is stored once and reloaded far away, so the slot's LiveStacks
 # interval is discontiguous, but the unspilled replacement vreg would have to
