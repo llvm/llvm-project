@@ -204,6 +204,8 @@ public:
   /// to the active checker). This is arguably a bug and should be fixed.
   ExplodedNode *addTransition(ProgramStateRef State, ExplodedNode *Pred,
                               const ProgramPointTag *Tag = nullptr) {
+    if (!State)
+      return this->Pred;
     return addTransitionImpl(State, false, Pred, Tag);
   }
 
@@ -279,6 +281,8 @@ public:
   generateNonFatalErrorNode(ProgramStateRef State,
                             ExplodedNode *Pred,
                             const ProgramPointTag *Tag = nullptr) {
+    if (!State)
+      return this->Pred;
     return addTransitionImpl(State, false, Pred,
                              (Tag ? Tag : Location.getTag()));
   }
@@ -445,9 +449,6 @@ private:
     // clients to their mistake, but several checkers (including
     // DereferenceChecker, CallAndMessageChecker, and DynamicTypePropagation)
     // rely upon the defensive behavior and would need to be updated.
-    if (!State)
-      return Pred;
-
     if (State == Pred->getState() && !Tag && !MarkAsSink)
       return Pred;
 
