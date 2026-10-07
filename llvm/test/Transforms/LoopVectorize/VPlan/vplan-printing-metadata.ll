@@ -325,13 +325,13 @@ define void @test_noalias_metadata(ptr %a, ptr %b, i64 %n) {
 ; CHECK-NEXT:      vp<[[VP4:%[0-9]+]]> = SCALAR-STEPS vp<[[VP3]]>, ir<1>, vp<[[VP0]]>
 ; CHECK-NEXT:      CLONE ir<%gep.a> = getelementptr inbounds ir<%a>, vp<[[VP4]]>
 ; CHECK-NEXT:      vp<[[VP5:%[0-9]+]]> = vector-pointer inbounds i32, ir<%gep.a>, ir<1>
-; CHECK-NEXT:      WIDEN ir<%l> = load vp<[[VP5]]> (!alias.scope !28, !noalias !27)
+; CHECK-NEXT:      WIDEN ir<%l> = load vp<[[VP5]]>
 ; CHECK-NEXT:      CLONE ir<%gep.b> = getelementptr inbounds ir<%b>, vp<[[VP4]]>
 ; CHECK-NEXT:      vp<[[VP6:%[0-9]+]]> = vector-pointer inbounds i32, ir<%gep.b>, ir<1>
-; CHECK-NEXT:      WIDEN ir<%l2> = load vp<[[VP6]]> (!alias.scope !27)
+; CHECK-NEXT:      WIDEN ir<%l2> = load vp<[[VP6]]>
 ; CHECK-NEXT:      WIDEN ir<%add> = add ir<%l>, ir<%l2>
 ; CHECK-NEXT:      vp<[[VP7:%[0-9]+]]> = vector-pointer inbounds i32, ir<%gep.a>, ir<1>
-; CHECK-NEXT:      WIDEN store vp<[[VP7]]>, ir<%add> (!alias.scope !28, !noalias !27)
+; CHECK-NEXT:      WIDEN store vp<[[VP7]]>, ir<%add>
 ; CHECK-NEXT:      EMIT vp<%index.next> = add nuw vp<[[VP3]]>, vp<[[VP1]]>
 ; CHECK-NEXT:      EMIT branch-on-count vp<%index.next>, vp<[[VP2]]>
 ; CHECK-NEXT:    No successors

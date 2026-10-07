@@ -21,6 +21,8 @@ define void @vector_reverse_mask_nxv4i1(ptr %a, ptr %cond, i64 %N) #0 {
 ; CHECK-LABEL: define void @vector_reverse_mask_nxv4i1(
 ; CHECK-SAME: ptr [[A:%.*]], ptr [[COND:%.*]], i64 [[N:%.*]]) #[[ATTR0:[0-9]+]] {
 ; CHECK-NEXT:  [[ENTRY:.*:]]
+; CHECK-NEXT:    [[A2:%.*]] = ptrtoaddr ptr [[A]] to i64
+; CHECK-NEXT:    [[COND1:%.*]] = ptrtoaddr ptr [[COND]] to i64
 ; CHECK-NEXT:    [[CMP7:%.*]] = icmp sgt i64 [[N]], 0
 ; CHECK-NEXT:    br i1 [[CMP7]], label %[[FOR_BODY_PREHEADER:.*]], [[FOR_COND_CLEANUP:label %.*]]
 ; CHECK:       [[FOR_BODY_PREHEADER]]:
@@ -29,12 +31,12 @@ define void @vector_reverse_mask_nxv4i1(ptr %a, ptr %cond, i64 %N) #0 {
 ; CHECK-NEXT:    [[MIN_ITERS_CHECK:%.*]] = icmp ult i64 [[N]], [[TMP1]]
 ; CHECK-NEXT:    br i1 [[MIN_ITERS_CHECK]], label %[[SCALAR_PH:.*]], label %[[VECTOR_MEMCHECK:.*]]
 ; CHECK:       [[VECTOR_MEMCHECK]]:
-; CHECK-NEXT:    [[TMP2:%.*]] = shl i64 [[N]], 3
-; CHECK-NEXT:    [[TMP3:%.*]] = getelementptr i8, ptr [[A]], i64 [[TMP2]]
-; CHECK-NEXT:    [[TMP16:%.*]] = getelementptr i8, ptr [[COND]], i64 [[TMP2]]
-; CHECK-NEXT:    [[BOUND0:%.*]] = icmp ult ptr [[A]], [[TMP16]]
-; CHECK-NEXT:    [[BOUND1:%.*]] = icmp ult ptr [[COND]], [[TMP3]]
-; CHECK-NEXT:    [[FOUND_CONFLICT:%.*]] = and i1 [[BOUND0]], [[BOUND1]]
+; CHECK-NEXT:    [[TMP2:%.*]] = call i64 @llvm.vscale.i64()
+; CHECK-NEXT:    [[TMP3:%.*]] = shl i64 [[TMP2]], 5
+; CHECK-NEXT:    [[TMP16:%.*]] = add i64 [[TMP3]], -1
+; CHECK-NEXT:    [[TMP17:%.*]] = sub i64 [[COND1]], [[A2]]
+; CHECK-NEXT:    [[TMP18:%.*]] = sub i64 [[TMP17]], 1
+; CHECK-NEXT:    [[FOUND_CONFLICT:%.*]] = icmp ult i64 [[TMP18]], [[TMP16]]
 ; CHECK-NEXT:    br i1 [[FOUND_CONFLICT]], label %[[SCALAR_PH]], label %[[VECTOR_PH:.*]]
 ; CHECK:       [[VECTOR_PH]]:
 ; CHECK-NEXT:    [[N_MOD_VF:%.*]] = urem i64 [[N]], [[TMP1]]
@@ -49,18 +51,18 @@ define void @vector_reverse_mask_nxv4i1(ptr %a, ptr %cond, i64 %N) #0 {
 ; CHECK-NEXT:    [[TMP8:%.*]] = sub nuw nsw i64 [[TMP1]], 1
 ; CHECK-NEXT:    [[TMP9:%.*]] = sub i64 0, [[TMP8]]
 ; CHECK-NEXT:    [[TMP10:%.*]] = getelementptr inbounds double, ptr [[TMP7]], i64 [[TMP9]]
-; CHECK-NEXT:    [[WIDE_LOAD:%.*]] = load <vscale x 4 x double>, ptr [[TMP10]], align 8, !alias.scope [[META0:![0-9]+]]
+; CHECK-NEXT:    [[WIDE_LOAD:%.*]] = load <vscale x 4 x double>, ptr [[TMP10]], align 8
 ; CHECK-NEXT:    [[REVERSE:%.*]] = call <vscale x 4 x double> @llvm.vector.reverse.nxv4f64(<vscale x 4 x double> [[WIDE_LOAD]])
 ; CHECK-NEXT:    [[TMP11:%.*]] = fcmp une <vscale x 4 x double> [[REVERSE]], zeroinitializer
 ; CHECK-NEXT:    [[TMP12:%.*]] = getelementptr double, ptr [[A]], i64 [[TMP6]]
 ; CHECK-NEXT:    [[TMP13:%.*]] = getelementptr double, ptr [[TMP12]], i64 [[TMP9]]
 ; CHECK-NEXT:    [[REVERSE2:%.*]] = call <vscale x 4 x i1> @llvm.vector.reverse.nxv4i1(<vscale x 4 x i1> [[TMP11]])
-; CHECK-NEXT:    [[REVERSE3:%.*]] = call <vscale x 4 x double> @llvm.masked.load.nxv4f64.p0(ptr align 8 [[TMP13]], <vscale x 4 x i1> [[REVERSE2]], <vscale x 4 x double> poison), !alias.scope [[META3:![0-9]+]], !noalias [[META0]]
+; CHECK-NEXT:    [[REVERSE3:%.*]] = call <vscale x 4 x double> @llvm.masked.load.nxv4f64.p0(ptr align 8 [[TMP13]], <vscale x 4 x i1> [[REVERSE2]], <vscale x 4 x double> poison)
 ; CHECK-NEXT:    [[TMP14:%.*]] = fadd <vscale x 4 x double> [[REVERSE3]], splat (double 1.000000e+00)
-; CHECK-NEXT:    call void @llvm.masked.store.nxv4f64.p0(<vscale x 4 x double> [[TMP14]], ptr align 8 [[TMP13]], <vscale x 4 x i1> [[REVERSE2]]), !alias.scope [[META3]], !noalias [[META0]]
+; CHECK-NEXT:    call void @llvm.masked.store.nxv4f64.p0(<vscale x 4 x double> [[TMP14]], ptr align 8 [[TMP13]], <vscale x 4 x i1> [[REVERSE2]])
 ; CHECK-NEXT:    [[INDEX_NEXT]] = add nuw i64 [[INDEX]], [[TMP1]]
 ; CHECK-NEXT:    [[TMP15:%.*]] = icmp eq i64 [[INDEX_NEXT]], [[N_VEC]]
-; CHECK-NEXT:    br i1 [[TMP15]], label %[[MIDDLE_BLOCK:.*]], label %[[VECTOR_BODY]], !llvm.loop [[LOOP5:![0-9]+]]
+; CHECK-NEXT:    br i1 [[TMP15]], label %[[MIDDLE_BLOCK:.*]], label %[[VECTOR_BODY]], !llvm.loop [[LOOP0:![0-9]+]]
 ; CHECK:       [[MIDDLE_BLOCK]]:
 ; CHECK-NEXT:    [[CMP_N:%.*]] = icmp eq i64 [[N]], [[N_VEC]]
 ; CHECK-NEXT:    br i1 [[CMP_N]], [[FOR_COND_CLEANUP_LOOPEXIT:label %.*]], label %[[SCALAR_PH]]

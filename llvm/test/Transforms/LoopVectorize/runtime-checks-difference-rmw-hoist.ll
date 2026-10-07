@@ -28,20 +28,20 @@ define void @rmw_variant_distance(ptr %dst, ptr %src, i64 %rows) {
 ; NO-HOIST-LABEL: define void @rmw_variant_distance(
 ; NO-HOIST-SAME: ptr [[DST:%.*]], ptr [[SRC:%.*]], i64 [[ROWS:%.*]]) {
 ; NO-HOIST-NEXT:  [[ENTRY:.*]]:
-; NO-HOIST-NEXT:    [[SCEVGEP1:%.*]] = getelementptr i8, ptr [[SRC]], i64 64
+; NO-HOIST-NEXT:    [[SRC2:%.*]] = ptrtoaddr ptr [[SRC]] to i64
+; NO-HOIST-NEXT:    [[DST1:%.*]] = ptrtoaddr ptr [[DST]] to i64
+; NO-HOIST-NEXT:    [[TMP0:%.*]] = sub i64 [[DST1]], [[SRC2]]
 ; NO-HOIST-NEXT:    br label %[[OUTER_HEADER:.*]]
 ; NO-HOIST:       [[OUTER_HEADER]]:
 ; NO-HOIST-NEXT:    [[OUTER_IV:%.*]] = phi i64 [ 0, %[[ENTRY]] ], [ [[OUTER_IV_NEXT:%.*]], [[OUTER_LATCH:%.*]] ]
 ; NO-HOIST-NEXT:    [[TMP1:%.*]] = shl i64 [[OUTER_IV]], 6
-; NO-HOIST-NEXT:    [[TMP2:%.*]] = add i64 [[TMP1]], 64
-; NO-HOIST-NEXT:    [[SCEVGEP:%.*]] = getelementptr i8, ptr [[DST]], i64 [[TMP2]]
+; NO-HOIST-NEXT:    [[TMP2:%.*]] = add i64 [[TMP0]], [[TMP1]]
 ; NO-HOIST-NEXT:    [[OFFSET:%.*]] = mul i64 [[OUTER_IV]], 16
 ; NO-HOIST-NEXT:    [[DST_BASE:%.*]] = getelementptr inbounds i32, ptr [[DST]], i64 [[OFFSET]]
 ; NO-HOIST-NEXT:    br label %[[VECTOR_MEMCHECK:.*]]
 ; NO-HOIST:       [[VECTOR_MEMCHECK]]:
-; NO-HOIST-NEXT:    [[BOUND0:%.*]] = icmp ult ptr [[DST_BASE]], [[SCEVGEP1]]
-; NO-HOIST-NEXT:    [[BOUND1:%.*]] = icmp ult ptr [[SRC]], [[SCEVGEP]]
-; NO-HOIST-NEXT:    [[DIFF_CHECK:%.*]] = and i1 [[BOUND0]], [[BOUND1]]
+; NO-HOIST-NEXT:    [[TMP3:%.*]] = sub i64 [[TMP2]], 1
+; NO-HOIST-NEXT:    [[DIFF_CHECK:%.*]] = icmp ult i64 [[TMP3]], 15
 ; NO-HOIST-NEXT:    br i1 [[DIFF_CHECK]], [[SCALAR_PH:label %.*]], label %[[VECTOR_PH:.*]]
 ; NO-HOIST:       [[VECTOR_PH]]:
 ;
@@ -80,9 +80,9 @@ define void @rmw_invariant_distance(ptr %dst, ptr %src, i64 %rows) {
 ; HOIST-LABEL: define void @rmw_invariant_distance(
 ; HOIST-SAME: ptr [[DST:%.*]], ptr [[SRC:%.*]], i64 [[ROWS:%.*]]) {
 ; HOIST-NEXT:  [[ENTRY:.*]]:
-; HOIST-NEXT:    [[TMP0:%.*]] = shl i64 [[ROWS]], 6
-; HOIST-NEXT:    [[SCEVGEP:%.*]] = getelementptr i8, ptr [[DST]], i64 [[TMP0]]
-; HOIST-NEXT:    [[SCEVGEP1:%.*]] = getelementptr i8, ptr [[SRC]], i64 [[TMP0]]
+; HOIST-NEXT:    [[SRC2:%.*]] = ptrtoaddr ptr [[SRC]] to i64
+; HOIST-NEXT:    [[DST1:%.*]] = ptrtoaddr ptr [[DST]] to i64
+; HOIST-NEXT:    [[TMP0:%.*]] = sub i64 [[DST1]], [[SRC2]]
 ; HOIST-NEXT:    br label %[[OUTER_HEADER:.*]]
 ; HOIST:       [[OUTER_HEADER]]:
 ; HOIST-NEXT:    [[OUTER_IV:%.*]] = phi i64 [ 0, %[[ENTRY]] ], [ [[OUTER_IV_NEXT:%.*]], [[OUTER_LATCH:%.*]] ]
@@ -91,30 +91,27 @@ define void @rmw_invariant_distance(ptr %dst, ptr %src, i64 %rows) {
 ; HOIST-NEXT:    [[SRC_BASE:%.*]] = getelementptr inbounds i32, ptr [[SRC]], i64 [[OFFSET]]
 ; HOIST-NEXT:    br label %[[VECTOR_MEMCHECK:.*]]
 ; HOIST:       [[VECTOR_MEMCHECK]]:
-; HOIST-NEXT:    [[BOUND0:%.*]] = icmp ult ptr [[DST]], [[SCEVGEP1]]
-; HOIST-NEXT:    [[BOUND1:%.*]] = icmp ult ptr [[SRC]], [[SCEVGEP]]
-; HOIST-NEXT:    [[DIFF_CHECK:%.*]] = and i1 [[BOUND0]], [[BOUND1]]
+; HOIST-NEXT:    [[TMP1:%.*]] = sub i64 [[TMP0]], 1
+; HOIST-NEXT:    [[DIFF_CHECK:%.*]] = icmp ult i64 [[TMP1]], 15
 ; HOIST-NEXT:    br i1 [[DIFF_CHECK]], [[SCALAR_PH:label %.*]], label %[[VECTOR_PH:.*]]
 ; HOIST:       [[VECTOR_PH]]:
 ;
 ; NO-HOIST-LABEL: define void @rmw_invariant_distance(
 ; NO-HOIST-SAME: ptr [[DST:%.*]], ptr [[SRC:%.*]], i64 [[ROWS:%.*]]) {
 ; NO-HOIST-NEXT:  [[ENTRY:.*]]:
+; NO-HOIST-NEXT:    [[SRC2:%.*]] = ptrtoaddr ptr [[SRC]] to i64
+; NO-HOIST-NEXT:    [[DST1:%.*]] = ptrtoaddr ptr [[DST]] to i64
+; NO-HOIST-NEXT:    [[TMP0:%.*]] = sub i64 [[DST1]], [[SRC2]]
 ; NO-HOIST-NEXT:    br label %[[OUTER_HEADER:.*]]
 ; NO-HOIST:       [[OUTER_HEADER]]:
 ; NO-HOIST-NEXT:    [[OUTER_IV:%.*]] = phi i64 [ 0, %[[ENTRY]] ], [ [[OUTER_IV_NEXT:%.*]], [[OUTER_LATCH:%.*]] ]
-; NO-HOIST-NEXT:    [[TMP0:%.*]] = shl i64 [[OUTER_IV]], 6
-; NO-HOIST-NEXT:    [[TMP1:%.*]] = add i64 [[TMP0]], 64
-; NO-HOIST-NEXT:    [[SCEVGEP:%.*]] = getelementptr i8, ptr [[DST]], i64 [[TMP1]]
-; NO-HOIST-NEXT:    [[SCEVGEP1:%.*]] = getelementptr i8, ptr [[SRC]], i64 [[TMP1]]
 ; NO-HOIST-NEXT:    [[OFFSET:%.*]] = mul i64 [[OUTER_IV]], 16
 ; NO-HOIST-NEXT:    [[DST_BASE:%.*]] = getelementptr inbounds i32, ptr [[DST]], i64 [[OFFSET]]
 ; NO-HOIST-NEXT:    [[SRC_BASE:%.*]] = getelementptr inbounds i32, ptr [[SRC]], i64 [[OFFSET]]
 ; NO-HOIST-NEXT:    br label %[[VECTOR_MEMCHECK:.*]]
 ; NO-HOIST:       [[VECTOR_MEMCHECK]]:
-; NO-HOIST-NEXT:    [[BOUND0:%.*]] = icmp ult ptr [[DST_BASE]], [[SCEVGEP1]]
-; NO-HOIST-NEXT:    [[BOUND1:%.*]] = icmp ult ptr [[SRC_BASE]], [[SCEVGEP]]
-; NO-HOIST-NEXT:    [[DIFF_CHECK:%.*]] = and i1 [[BOUND0]], [[BOUND1]]
+; NO-HOIST-NEXT:    [[TMP1:%.*]] = sub i64 [[TMP0]], 1
+; NO-HOIST-NEXT:    [[DIFF_CHECK:%.*]] = icmp ult i64 [[TMP1]], 15
 ; NO-HOIST-NEXT:    br i1 [[DIFF_CHECK]], [[SCALAR_PH:label %.*]], label %[[VECTOR_PH:.*]]
 ; NO-HOIST:       [[VECTOR_PH]]:
 ;

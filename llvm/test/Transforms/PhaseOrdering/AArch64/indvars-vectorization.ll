@@ -11,36 +11,21 @@ define void @s172(i32 noundef %xa, i32 noundef %xb, ptr noundef %a, ptr noundef 
 ; CHECK-NEXT:    [[CMP1:%.*]] = icmp slt i32 [[XA]], 32001
 ; CHECK-NEXT:    br i1 [[CMP1]], label [[FOR_BODY_PREHEADER:%.*]], label [[FOR_END:%.*]]
 ; CHECK:       for.body.preheader:
+; CHECK-NEXT:    [[TMP12:%.*]] = ptrtoaddr ptr [[A]] to i64
+; CHECK-NEXT:    [[SMAX:%.*]] = ptrtoaddr ptr [[B]] to i64
 ; CHECK-NEXT:    [[SUB:%.*]] = add i32 [[XA]], -1
 ; CHECK-NEXT:    [[TMP0:%.*]] = sext i32 [[SUB]] to i64
 ; CHECK-NEXT:    [[TMP1:%.*]] = sext i32 [[XB]] to i64
 ; CHECK-NEXT:    [[TMP2:%.*]] = tail call i64 @llvm.smax.i64(i64 [[TMP0]], i64 31999)
 ; CHECK-NEXT:    [[SMAX10:%.*]] = add nuw nsw i64 [[TMP2]], 1
 ; CHECK-NEXT:    [[TMP8:%.*]] = sub i64 [[SMAX10]], [[TMP0]]
-; CHECK-NEXT:    [[MIN_ITERS_CHECK:%.*]] = icmp ugt i64 [[TMP8]], 23
-; CHECK-NEXT:    [[IDENT_CHECK_NOT:%.*]] = icmp eq i32 [[XB]], 1
-; CHECK-NEXT:    [[OR_COND:%.*]] = and i1 [[MIN_ITERS_CHECK]], [[IDENT_CHECK_NOT]]
-; CHECK-NEXT:    br i1 [[OR_COND]], label [[VECTOR_MEMCHECK:%.*]], label [[FOR_BODY_PREHEADER13:%.*]]
-; CHECK:       vector.memcheck:
-; CHECK-NEXT:    [[TMP5:%.*]] = shl nsw i64 [[TMP0]], 2
-; CHECK-NEXT:    [[TMP6:%.*]] = getelementptr i8, ptr [[A]], i64 [[TMP5]]
-; CHECK-NEXT:    [[TMP7:%.*]] = add nsw i64 [[TMP1]], [[TMP0]]
-; CHECK-NEXT:    [[SMAX:%.*]] = tail call i64 @llvm.smax.i64(i64 [[TMP7]], i64 32000)
-; CHECK-NEXT:    [[TMP9:%.*]] = icmp slt i64 [[TMP7]], 32000
-; CHECK-NEXT:    [[TMP10:%.*]] = zext i1 [[TMP9]] to i64
-; CHECK-NEXT:    [[TMP12:%.*]] = add nsw i64 [[TMP7]], [[TMP10]]
+; CHECK-NEXT:    [[MIN_ITERS_CHECK:%.*]] = icmp ult i64 [[TMP8]], 8
+; CHECK-NEXT:    [[IDENT_CHECK_NOT:%.*]] = icmp ne i32 [[XB]], 1
+; CHECK-NEXT:    [[OR_COND_NOT10:%.*]] = or i1 [[MIN_ITERS_CHECK]], [[IDENT_CHECK_NOT]]
 ; CHECK-NEXT:    [[TMP13:%.*]] = sub i64 [[SMAX]], [[TMP12]]
-; CHECK-NEXT:    [[TMP27:%.*]] = add i64 [[TMP13]], [[TMP10]]
-; CHECK-NEXT:    [[TMP14:%.*]] = add i64 [[TMP27]], [[TMP0]]
-; CHECK-NEXT:    [[TMP15:%.*]] = shl i64 [[TMP14]], 2
-; CHECK-NEXT:    [[TMP16:%.*]] = add i64 [[TMP15]], 4
-; CHECK-NEXT:    [[TMP17:%.*]] = getelementptr i8, ptr [[A]], i64 [[TMP16]]
-; CHECK-NEXT:    [[TMP18:%.*]] = getelementptr i8, ptr [[B]], i64 [[TMP5]]
-; CHECK-NEXT:    [[TMP19:%.*]] = getelementptr i8, ptr [[B]], i64 [[TMP16]]
-; CHECK-NEXT:    [[BOUND0:%.*]] = icmp ult ptr [[TMP6]], [[TMP19]]
-; CHECK-NEXT:    [[BOUND1:%.*]] = icmp ult ptr [[TMP18]], [[TMP17]]
-; CHECK-NEXT:    [[FOUND_CONFLICT:%.*]] = and i1 [[BOUND0]], [[BOUND1]]
-; CHECK-NEXT:    br i1 [[FOUND_CONFLICT]], label [[FOR_BODY_PREHEADER13]], label [[VECTOR_PH:%.*]]
+; CHECK-NEXT:    [[DIFF_CHECK:%.*]] = icmp ugt i64 [[TMP13]], -32
+; CHECK-NEXT:    [[FOUND_CONFLICT:%.*]] = or i1 [[OR_COND_NOT10]], [[DIFF_CHECK]]
+; CHECK-NEXT:    br i1 [[FOUND_CONFLICT]], label [[FOR_BODY_PREHEADER13:%.*]], label [[VECTOR_PH:%.*]]
 ; CHECK:       vector.ph:
 ; CHECK-NEXT:    [[N_VEC:%.*]] = and i64 [[TMP8]], -8
 ; CHECK-NEXT:    [[IND_END:%.*]] = add i64 [[N_VEC]], [[TMP0]]
@@ -50,24 +35,24 @@ define void @s172(i32 noundef %xa, i32 noundef %xb, ptr noundef %a, ptr noundef 
 ; CHECK-NEXT:    [[OFFSET_IDX:%.*]] = add i64 [[INDEX]], [[TMP0]]
 ; CHECK-NEXT:    [[TMP20:%.*]] = getelementptr inbounds [4 x i8], ptr [[B]], i64 [[OFFSET_IDX]]
 ; CHECK-NEXT:    [[TMP21:%.*]] = getelementptr inbounds nuw i8, ptr [[TMP20]], i64 16
-; CHECK-NEXT:    [[WIDE_LOAD:%.*]] = load <4 x i32>, ptr [[TMP20]], align 4, !alias.scope [[META0:![0-9]+]]
-; CHECK-NEXT:    [[WIDE_LOAD10:%.*]] = load <4 x i32>, ptr [[TMP21]], align 4, !alias.scope [[META0]]
+; CHECK-NEXT:    [[WIDE_LOAD:%.*]] = load <4 x i32>, ptr [[TMP20]], align 4
+; CHECK-NEXT:    [[WIDE_LOAD10:%.*]] = load <4 x i32>, ptr [[TMP21]], align 4
 ; CHECK-NEXT:    [[TMP22:%.*]] = getelementptr inbounds [4 x i8], ptr [[A]], i64 [[OFFSET_IDX]]
 ; CHECK-NEXT:    [[TMP23:%.*]] = getelementptr inbounds nuw i8, ptr [[TMP22]], i64 16
-; CHECK-NEXT:    [[WIDE_LOAD11:%.*]] = load <4 x i32>, ptr [[TMP22]], align 4, !alias.scope [[META3:![0-9]+]], !noalias [[META0]]
-; CHECK-NEXT:    [[WIDE_LOAD12:%.*]] = load <4 x i32>, ptr [[TMP23]], align 4, !alias.scope [[META3]], !noalias [[META0]]
+; CHECK-NEXT:    [[WIDE_LOAD11:%.*]] = load <4 x i32>, ptr [[TMP22]], align 4
+; CHECK-NEXT:    [[WIDE_LOAD12:%.*]] = load <4 x i32>, ptr [[TMP23]], align 4
 ; CHECK-NEXT:    [[TMP24:%.*]] = add nsw <4 x i32> [[WIDE_LOAD11]], [[WIDE_LOAD]]
 ; CHECK-NEXT:    [[TMP25:%.*]] = add nsw <4 x i32> [[WIDE_LOAD12]], [[WIDE_LOAD10]]
-; CHECK-NEXT:    store <4 x i32> [[TMP24]], ptr [[TMP22]], align 4, !alias.scope [[META3]], !noalias [[META0]]
-; CHECK-NEXT:    store <4 x i32> [[TMP25]], ptr [[TMP23]], align 4, !alias.scope [[META3]], !noalias [[META0]]
+; CHECK-NEXT:    store <4 x i32> [[TMP24]], ptr [[TMP22]], align 4
+; CHECK-NEXT:    store <4 x i32> [[TMP25]], ptr [[TMP23]], align 4
 ; CHECK-NEXT:    [[INDEX_NEXT]] = add nuw i64 [[INDEX]], 8
 ; CHECK-NEXT:    [[TMP26:%.*]] = icmp eq i64 [[INDEX_NEXT]], [[N_VEC]]
-; CHECK-NEXT:    br i1 [[TMP26]], label [[MIDDLE_BLOCK:%.*]], label [[VECTOR_BODY]], !llvm.loop [[LOOP5:![0-9]+]]
+; CHECK-NEXT:    br i1 [[TMP26]], label [[MIDDLE_BLOCK:%.*]], label [[VECTOR_BODY]], !llvm.loop [[LOOP0:![0-9]+]]
 ; CHECK:       middle.block:
 ; CHECK-NEXT:    [[CMP_N:%.*]] = icmp eq i64 [[TMP8]], [[N_VEC]]
 ; CHECK-NEXT:    br i1 [[CMP_N]], label [[FOR_END]], label [[FOR_BODY_PREHEADER13]]
-; CHECK:       for.body.preheader10:
-; CHECK-NEXT:    [[INDVARS_IV_PH:%.*]] = phi i64 [ [[TMP0]], [[VECTOR_MEMCHECK]] ], [ [[TMP0]], [[FOR_BODY_PREHEADER]] ], [ [[IND_END]], [[MIDDLE_BLOCK]] ]
+; CHECK:       for.body.preheader11:
+; CHECK-NEXT:    [[INDVARS_IV_PH:%.*]] = phi i64 [ [[TMP0]], [[FOR_BODY_PREHEADER]] ], [ [[IND_END]], [[MIDDLE_BLOCK]] ]
 ; CHECK-NEXT:    br label [[FOR_BODY:%.*]]
 ; CHECK:       for.body:
 ; CHECK-NEXT:    [[INDVARS_IV:%.*]] = phi i64 [ [[INDVARS_IV_NEXT:%.*]], [[FOR_BODY]] ], [ [[INDVARS_IV_PH]], [[FOR_BODY_PREHEADER13]] ]
@@ -79,7 +64,7 @@ define void @s172(i32 noundef %xa, i32 noundef %xb, ptr noundef %a, ptr noundef 
 ; CHECK-NEXT:    store i32 [[ADD]], ptr [[GEP_A]], align 4
 ; CHECK-NEXT:    [[INDVARS_IV_NEXT]] = add nsw i64 [[INDVARS_IV]], [[TMP1]]
 ; CHECK-NEXT:    [[CMP:%.*]] = icmp slt i64 [[INDVARS_IV_NEXT]], 32000
-; CHECK-NEXT:    br i1 [[CMP]], label [[FOR_BODY]], label [[FOR_END]], !llvm.loop [[LOOP9:![0-9]+]]
+; CHECK-NEXT:    br i1 [[CMP]], label [[FOR_BODY]], label [[FOR_END]], !llvm.loop [[LOOP4:![0-9]+]]
 ; CHECK:       for.end:
 ; CHECK-NEXT:    ret void
 ;
