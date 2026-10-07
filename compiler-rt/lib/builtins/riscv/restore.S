@@ -79,6 +79,9 @@ DEFINE_COMPILERRT_FUNCTION_ALIAS(__riscv_restore_0, __riscv_restore_3)
   lw      s0,  8(sp)
   lw      ra,  12(sp)
   addi    sp, sp, 16
+#if defined(__riscv_shadow_stack)
+  sspopchk ra
+#endif
   ret
 END_COMPILERRT_FUNCTION(__riscv_restore_12)
 END_COMPILERRT_FUNCTION(__riscv_restore_11)
@@ -100,6 +103,9 @@ DEFINE_COMPILERRT_OVERLAPPING_FUNCTION(__riscv_restore_1)
 DEFINE_COMPILERRT_OVERLAPPING_FUNCTION(__riscv_restore_0)
   lw      ra, 0(sp)
   addi    sp, sp, 4
+#if defined(__riscv_shadow_stack)
+  sspopchk ra
+#endif
   ret
 END_COMPILERRT_FUNCTION(__riscv_restore_2)
 END_COMPILERRT_FUNCTION(__riscv_restore_1)
@@ -156,6 +162,9 @@ DEFINE_COMPILERRT_FUNCTION_ALIAS(__riscv_restore_0, __riscv_restore_1)
   ld      s0,  0(sp)
   ld      ra,  8(sp)
   addi    sp, sp, 16
+#if defined(__riscv_shadow_stack)
+  sspopchk ra
+#endif
   ret
 END_COMPILERRT_FUNCTION(__riscv_restore_12)
 END_COMPILERRT_FUNCTION(__riscv_restore_11)
@@ -180,6 +189,9 @@ DEFINE_COMPILERRT_OVERLAPPING_FUNCTION(__riscv_restore_1)
 DEFINE_COMPILERRT_OVERLAPPING_FUNCTION(__riscv_restore_0)
   ld      ra, 0(sp)
   addi    sp, sp, 8
+#if defined(__riscv_shadow_stack)
+  sspopchk ra
+#endif
   ret
 
 #endif
