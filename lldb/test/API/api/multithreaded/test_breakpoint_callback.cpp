@@ -42,8 +42,8 @@ void test(SBDebugger &dbg, vector<string> args) {
     throw Exception("invalid breakpoint");
   breakpoint.SetCallback(BPCallback, 0);
 
-  std::unique_ptr<char> working_dir(get_working_dir());
-  SBProcess process = target.LaunchSimple(0, 0, working_dir.get());
+  std::string working_dir = get_working_dir();
+  SBProcess process = target.LaunchSimple(0, 0, working_dir.c_str());
 
   {
     unique_lock<mutex> lock(g_mutex);

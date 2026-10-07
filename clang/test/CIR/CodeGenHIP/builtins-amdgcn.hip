@@ -382,3 +382,12 @@ __device__ void test_sbfe(unsigned int* out, unsigned int src0, unsigned int src
                           unsigned int src2) {
   *out = __builtin_amdgcn_sbfe(src0, src1, src2);
 }
+
+// CIR-LABEL: @_Z17test_wave_shufflePiii
+// CIR: cir.call_llvm_intrinsic "amdgcn.wave.shuffle" {{.*}} : (!s32i, !s32i) -> !s32i
+// LLVM: define{{.*}} void @_Z17test_wave_shufflePiii
+// LLVM: {{.*}}call{{.*}} i32 @llvm.amdgcn.wave.shuffle.i32(i32 %{{.+}}, i32 %{{.+}})
+__device__ void test_wave_shuffle(int* out, int a, int b)
+{
+  *out = __builtin_amdgcn_wave_shuffle(a, b);
+}

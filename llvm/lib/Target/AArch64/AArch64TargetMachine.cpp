@@ -231,6 +231,12 @@ static cl::opt<bool> EnableSVEShuffleOpt(
              "instructions like tbl or the bottom/top variants"),
     cl::init(true), cl::Hidden);
 
+static cl::opt<bool> EnablePredicateAsCounterLoopRewrites(
+    "aarch64-enable-predicate-as-counter-loop-rewrites",
+    cl::desc("Enable rewriting loops with wide loop-carried masks to use "
+             "predicate-as-counter"),
+    cl::init(false), cl::Hidden);
+
 extern "C" LLVM_ABI LLVM_EXTERNAL_VISIBILITY void
 LLVMInitializeAArch64Target() {
   // Register the target.
@@ -258,6 +264,7 @@ LLVMInitializeAArch64Target() {
   initializeAArch64PTrueCoalescingLegacyPass(PR);
   initializeAArch64SIMDInstrOptLegacyPass(PR);
   initializeAArch64O0PreLegalizerCombinerLegacyPass(PR);
+  initializeAArch64PredicateAsCounterLoopRewritesPass(PR);
   initializeAArch64PreLegalizerCombinerLegacyPass(PR);
   initializeAArch64PointerAuthLegacyPass(PR);
   initializeAArch64PostCoalescerLegacyPass(PR);
@@ -365,8 +372,7 @@ AArch64TargetMachine::AArch64TargetMachine(const Target &T, const Triple &TT,
                                            std::optional<CodeModel::Model> CM,
                                            CodeGenOptLevel OL, bool JIT,
                                            bool LittleEndian)
-    : CodeGenTargetMachineImpl(T, TT.computeDataLayout(), TT,
-                               computeDefaultCPU(TT, CPU), FS, Options,
+    : CodeGenTargetMachineImpl(T, TT, computeDefaultCPU(TT, CPU), FS, Options,
                                getEffectiveRelocModel(TT, RM),
                                getEffectiveAArch64CodeModel(TT, CM, JIT), OL),
       TLOF(createTLOF(getTargetTriple())), isLittle(LittleEndian) {
@@ -536,8 +542,8 @@ ScheduleDAGInstrs *
 AArch64TargetMachine::createMachineScheduler(MachineSchedContext *C) const {
   const AArch64Subtarget &ST = C->MF->getSubtarget<AArch64Subtarget>();
   ScheduleDAGMILive *DAG = createSchedLive(C);
-  DAG->addMutation(createLoadClusterDAGMutation(DAG->TII, DAG->TRI));
-  DAG->addMutation(createStoreClusterDAGMutation(DAG->TII, DAG->TRI));
+  DAG->addMutation(createLoadClusterDAGMutation(DAG->TII));
+  DAG->addMutation(createStoreClusterDAGMutation(DAG->TII));
   if (ST.hasFusion())
     DAG->addMutation(createAArch64MacroFusionDAGMutation());
   if (ST.hasSME() && ST.isStreaming())
@@ -661,6 +667,10 @@ void AArch64PassConfig::addIRPasses() {
   // ourselves.
   addPass(createAtomicExpandLegacyPass());
 
+  if (getOptLevel() >= CodeGenOptLevel::Default &&
+      EnablePredicateAsCounterLoopRewrites)
+    addPass(createAArch64PredicateAsCounterLoopRewritesPass());
+
   // Cmpxchg instructions are often used with a subsequent comparison to
   // determine whether it succeeded. We can exploit existing control-flow in
   // ldrex/strex loops to simplify this, but it needs tidying up.
@@ -708,8 +718,8 @@ void AArch64PassConfig::addIRPasses() {
   // Try to use tbl in place of other shuffling operations if doing so would
   // reduce the total number of instructions. Shuffle masks for big endian may
   // be different, so require a little endian target.
-  if (TM->createDataLayout().isLittleEndian() &&
-      getOptLevel() >= CodeGenOptLevel::Default && EnableSVEShuffleOpt)
+  if (getOptLevel() >= CodeGenOptLevel::Default && EnableSVEShuffleOpt &&
+      TM->getTargetTriple().isLittleEndian())
     addPass(createSVEShuffleOptsPass());
 
   // Match complex arithmetic patterns
@@ -770,13 +780,6 @@ void AArch64PassConfig::addCodeGenPrepare() {
 
 bool AArch64PassConfig::addInstSelector() {
   addPass(createAArch64ISelDag(getAArch64TargetMachine(), getOptLevel()));
-
-  // For ELF, cleanup any local-dynamic TLS accesses (i.e. combine as many
-  // references to _TLS_MODULE_BASE_ as possible.
-  if (TM->getTargetTriple().isOSBinFormatELF() &&
-      getOptLevel() != CodeGenOptLevel::None)
-    addPass(createAArch64CleanupLocalDynamicTLSPass());
-
   return false;
 }
 
@@ -822,10 +825,17 @@ bool AArch64PassConfig::addGlobalInstructionSelect() {
   addPass(new InstructionSelectLegacy(getOptLevel()));
   if (!getAArch64TargetMachine().isGlobalISelOptNone())
     addPass(createAArch64PostSelectOptimize());
+
   return false;
 }
 
 void AArch64PassConfig::addMachineSSAOptimization() {
+  // For ELF, cleanup any local-dynamic TLS accesses
+  // (i.e. combine as many references to _TLS_MODULE_BASE_ as possible.
+  if (TM->getTargetTriple().isOSBinFormatELF() &&
+      getOptLevel() != CodeGenOptLevel::None)
+    addPass(createAArch64CleanupLocalDynamicTLSPass());
+
   if (TM->getOptLevel() != CodeGenOptLevel::None)
     addPass(createMachineSMEABIPass(TM->getOptLevel()));
 

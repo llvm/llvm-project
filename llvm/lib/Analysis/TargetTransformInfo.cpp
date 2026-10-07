@@ -83,8 +83,8 @@ IntrinsicCostAttributes::IntrinsicCostAttributes(
 
   if (!TypeBasedOnly)
     Arguments.insert(Arguments.begin(), CI.arg_begin(), CI.arg_end());
-  FunctionType *FTy = CI.getCalledFunction()->getFunctionType();
-  ParamTys.insert(ParamTys.begin(), FTy->param_begin(), FTy->param_end());
+  for (const Value *Arg : CI.args())
+    ParamTys.push_back(Arg->getType());
 }
 
 IntrinsicCostAttributes::IntrinsicCostAttributes(Intrinsic::ID Id, Type *RTy,
@@ -316,6 +316,12 @@ unsigned TargetTransformInfo::getFlatAddressSpace() const {
   return TTIImpl->getFlatAddressSpace();
 }
 
+unsigned TargetTransformInfo::getAddressSpaceJoin(unsigned AS1,
+                                                  unsigned AS2) const {
+  assert(AS1 != AS2 && "Expected distinct address spaces");
+  return TTIImpl->getAddressSpaceJoin(AS1, AS2);
+}
+
 bool TargetTransformInfo::collectFlatAddressOperands(
     SmallVectorImpl<int> &OpIndexes, Intrinsic::ID IID) const {
   return TTIImpl->collectFlatAddressOperands(OpIndexes, IID);
@@ -349,10 +355,6 @@ bool TargetTransformInfo::canHaveNonUndefGlobalInitializerInAddressSpace(
 
 unsigned TargetTransformInfo::getAssumedAddrSpace(const Value *V) const {
   return TTIImpl->getAssumedAddrSpace(V);
-}
-
-bool TargetTransformInfo::isSingleThreaded() const {
-  return TTIImpl->isSingleThreaded();
 }
 
 std::pair<const Value *, unsigned>
@@ -492,6 +494,11 @@ bool TargetTransformInfo::isLegalMaskedLoad(Type *DataType, Align Alignment,
                                     MaskKind);
 }
 
+bool TargetTransformInfo::isLegalSpeculativeLoad(Type *DataType,
+                                                 unsigned AddressSpace) const {
+  return TTIImpl->isLegalSpeculativeLoad(DataType, AddressSpace);
+}
+
 bool TargetTransformInfo::isLegalNTStore(Type *DataType,
                                          Align Alignment) const {
   return TTIImpl->isLegalNTStore(DataType, Alignment);
@@ -545,6 +552,13 @@ bool TargetTransformInfo::isLegalMaskedExpandLoad(Type *DataType,
 bool TargetTransformInfo::isLegalStridedLoadStore(Type *DataType,
                                                   Align Alignment) const {
   return TTIImpl->isLegalStridedLoadStore(DataType, Alignment);
+}
+
+bool TargetTransformInfo::hasMultiVectorLoadStore(
+    unsigned NumVectors, TTI::MaskSource Mask, VectorType *VectorTy,
+    bool IsStore, std::optional<Instruction::CastOps> CastHint) const {
+  return TTIImpl->hasMultiVectorLoadStore(NumVectors, Mask, VectorTy, IsStore,
+                                          CastHint);
 }
 
 bool TargetTransformInfo::isLegalInterleavedAccessType(
@@ -648,6 +662,13 @@ bool TargetTransformInfo::isTargetIntrinsicWithStructReturnOverloadAtField(
 }
 
 TargetTransformInfo::VectorInstrContext
+TargetTransformInfo::combineVectorInstrContexts(
+    TargetTransformInfo::VectorInstrContext Ctx1,
+    TargetTransformInfo::VectorInstrContext Ctx2) {
+  return Ctx1 == Ctx2 ? Ctx1 : TargetTransformInfo::VectorInstrContext::None;
+}
+
+TargetTransformInfo::VectorInstrContext
 TargetTransformInfo::getVectorInstrContextHint(const Instruction *I) {
   if (!I)
     return VectorInstrContext::None;
@@ -664,6 +685,14 @@ TargetTransformInfo::getVectorInstrContextHint(const Instruction *I) {
     return VectorInstrContext::Store;
 
   return VectorInstrContext::None;
+}
+
+TargetTransformInfo::VectorInstrContext
+TargetTransformInfo::getBuildVectorContextHint(
+    ArrayRef<int> Mask, ArrayRef<Value *> Scalars,
+    function_ref<bool(SmallVectorImpl<BuildVectorUseOp> &)> GatherUseOps)
+    const {
+  return TTIImpl->getBuildVectorContextHint(Mask, Scalars, GatherUseOps);
 }
 
 InstructionCost TargetTransformInfo::getScalarizationOverhead(
@@ -998,6 +1027,48 @@ TargetTransformInfo::getOperandInfo(const Value *V) {
 }
 
 TargetTransformInfo::OperandValueInfo
+TargetTransformInfo::getOperandInfo(ArrayRef<Value *> Ops) {
+  assert(!Ops.empty());
+  const auto *Op0 = Ops.front();
+
+  const bool IsConstant = all_of(Ops, [](Value *V) {
+    // TODO: We should allow undef elements here
+    return isa<Constant>(V) && !isa<ConstantExpr, GlobalValue>(V) &&
+           !isa<UndefValue>(V);
+  });
+  const bool IsUniform = all_of(Ops, [=](Value *V) {
+    // TODO: We should allow undef elements here
+    return V == Op0;
+  });
+  const bool IsPowerOfTwo = all_of(Ops, [](Value *V) {
+    // TODO: We should allow undef elements here
+    if (auto *CI = dyn_cast<ConstantInt>(V))
+      return CI->getValue().isPowerOf2();
+    return false;
+  });
+  const bool IsNegatedPowerOfTwo = all_of(Ops, [](Value *V) {
+    // TODO: We should allow undef elements here
+    if (auto *CI = dyn_cast<ConstantInt>(V))
+      return CI->getValue().isNegatedPowerOf2();
+    return false;
+  });
+
+  TTI::OperandValueKind VK = TTI::OK_AnyValue;
+  if (IsConstant && IsUniform)
+    VK = TTI::OK_UniformConstantValue;
+  else if (IsConstant)
+    VK = TTI::OK_NonUniformConstantValue;
+  else if (IsUniform)
+    VK = TTI::OK_UniformValue;
+
+  TTI::OperandValueProperties VP = TTI::OP_None;
+  VP = IsPowerOfTwo ? TTI::OP_PowerOf2 : VP;
+  VP = IsNegatedPowerOfTwo ? TTI::OP_NegatedPowerOf2 : VP;
+
+  return {VK, VP};
+}
+
+TargetTransformInfo::OperandValueInfo
 TargetTransformInfo::commonOperandInfo(const Value *X, const Value *Y) {
   OperandValueInfo OpInfoX = getOperandInfo(X);
   if (X == Y)
@@ -1008,7 +1079,7 @@ TargetTransformInfo::commonOperandInfo(const Value *X, const Value *Y) {
 InstructionCost TargetTransformInfo::getArithmeticInstrCost(
     unsigned Opcode, Type *Ty, TTI::TargetCostKind CostKind,
     OperandValueInfo Op1Info, OperandValueInfo Op2Info,
-    ArrayRef<const Value *> Args, const Instruction *CxtI,
+    ArrayRef<const Value *> Args, const Instruction *CtxI,
     const TargetLibraryInfo *TLibInfo) const {
 
   // Use call cost for frem intructions that have platform specific vector math
@@ -1024,7 +1095,7 @@ InstructionCost TargetTransformInfo::getArithmeticInstrCost(
   }
 
   InstructionCost Cost = TTIImpl->getArithmeticInstrCost(
-      Opcode, Ty, CostKind, Op1Info, Op2Info, Args, CxtI);
+      Opcode, Ty, CostKind, Op1Info, Op2Info, Args, CtxI);
   assert(Cost >= 0 && "TTI should not produce negative costs!");
   return Cost;
 }
@@ -1041,15 +1112,15 @@ InstructionCost TargetTransformInfo::getAltInstrCost(
 InstructionCost TargetTransformInfo::getShuffleCost(
     ShuffleKind Kind, VectorType *DstTy, VectorType *SrcTy,
     TTI::TargetCostKind CostKind, ArrayRef<int> Mask, int Index,
-    VectorType *SubTp, ArrayRef<const Value *> Args,
-    const Instruction *CxtI) const {
+    VectorType *SubTp, ArrayRef<const Value *> Args, const Instruction *CtxI,
+    TTI::VectorInstrContext VIC) const {
   assert((Mask.empty() || DstTy->isScalableTy() ||
           Mask.size() == DstTy->getElementCount().getKnownMinValue()) &&
          "Expected the Mask to match the return size if given");
   assert(SrcTy->getScalarType() == DstTy->getScalarType() &&
          "Expected the same scalar types");
   InstructionCost Cost = TTIImpl->getShuffleCost(
-      Kind, DstTy, SrcTy, CostKind, Mask, Index, SubTp, Args, CxtI);
+      Kind, DstTy, SrcTy, CostKind, Mask, Index, SubTp, Args, CtxI, VIC);
   assert(Cost >= 0 && "TTI should not produce negative costs!");
   return Cost;
 }

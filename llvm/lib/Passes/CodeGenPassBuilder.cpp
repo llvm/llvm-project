@@ -78,6 +78,7 @@
 #include "llvm/CodeGen/RemoveRedundantDebugValues.h"
 #include "llvm/CodeGen/RenameIndependentSubregs.h"
 #include "llvm/CodeGen/ReplaceWithVeclib.h"
+#include "llvm/CodeGen/ResetMachineFunctionPass.h"
 #include "llvm/CodeGen/SafeStack.h"
 #include "llvm/CodeGen/SanitizerBinaryMetadata.h"
 #include "llvm/CodeGen/SelectOptimize.h"
@@ -93,7 +94,6 @@
 #include "llvm/CodeGen/TwoAddressInstructionPass.h"
 #include "llvm/CodeGen/UnreachableBlockElim.h"
 #include "llvm/CodeGen/VirtRegMap.h"
-#include "llvm/CodeGen/WasmEHPrepare.h"
 #include "llvm/CodeGen/WinEHPrepare.h"
 #include "llvm/CodeGen/XRayInstrumentation.h"
 #include "llvm/IR/PassManager.h"
@@ -149,6 +149,10 @@ CodeGenPassBuilder::CodeGenPassBuilder(TargetMachine &TM,
 
   if (Opt.EnableGlobalISelAbort)
     TM.Options.GlobalISelAbort = *Opt.EnableGlobalISelAbort;
+
+  if (Opt.EnableRegAllocFastTied != cl::boolOrDefault::BOU_UNSET)
+    TM.setEnableTiedFastRegAlloc(Opt.EnableRegAllocFastTied ==
+                                 cl::boolOrDefault::BOU_TRUE);
 
   // An explicit RegAlloc choice implies its pipeline: only the fast
   // allocator uses the unoptimized one.
@@ -469,9 +473,9 @@ void CodeGenPassBuilder::addPassesToHandleExceptions(PassManagerWrapper &PMW) {
     // on catchpads and cleanuppads because it does not outline them into
     // funclets. Catchswitch blocks are not lowered in SelectionDAG, so we
     // should remove PHIs there.
-    addFunctionPass(WinEHPreparePass(/*DemoteCatchSwitchPHIOnly=*/false), PMW);
-    addFunctionPass(WasmEHPreparePass(), PMW);
+    addFunctionPass(WinEHPreparePass(), PMW);
     break;
+  case ExceptionHandling::Default:
   case ExceptionHandling::None:
   case ExceptionHandling::Emscripten:
     // Emscripten EH is lowered earlier by WebAssemblyLowerEmscriptenEHSjLj, so
@@ -703,15 +707,15 @@ Error CodeGenPassBuilder::addMachinePasses(PassManagerWrapper &PMW) {
 
   addMachineFunctionPass(RemoveLoadsIntoFakeUsesPass(), PMW);
   addMachineFunctionPass(StackMapLivenessPass(), PMW);
-  addMachineFunctionPass(
-      LiveDebugValuesPass(TM.Options.ShouldEmitDebugEntryValues()), PMW);
+  addMachineFunctionPass(LiveDebugValuesPass(TM.shouldEmitDebugEntryValues()),
+                         PMW);
   addMachineFunctionPass(MachineSanitizerBinaryMetadataPass(), PMW);
 
   if (TM.Options.EnableMachineOutliner &&
       getOptLevel() != CodeGenOptLevel::None &&
       Opt.EnableMachineOutliner != RunOutliner::NeverOutline) {
     if (Opt.EnableMachineOutliner != RunOutliner::TargetDefault ||
-        TM.Options.SupportsDefaultOutlining) {
+        TM.supportsDefaultOutlining()) {
       flushFPMsToMPM(PMW);
       addModulePass(MachineOutlinerPass(Opt.EnableMachineOutliner), PMW);
     }
@@ -842,7 +846,8 @@ CodeGenPassBuilder::addRegAssignAndRewriteOptimized(PassManagerWrapper &PMW) {
 /// register allocation. No coalescing or scheduling.
 Error CodeGenPassBuilder::addFastRegAlloc(PassManagerWrapper &PMW) {
   addMachineFunctionPass(PHIEliminationPass(), PMW);
-  addMachineFunctionPass(TwoAddressInstructionPass(), PMW);
+  if (!TM.enableTiedFastRegAlloc())
+    addMachineFunctionPass(TwoAddressInstructionPass(), PMW);
   return addRegAssignAndRewriteFast(PMW);
 }
 
@@ -875,10 +880,12 @@ Error CodeGenPassBuilder::addOptimizedRegAlloc(PassManagerWrapper &PMW) {
       RequireAnalysisPass<MachineLoopAnalysis, MachineFunction>(), PMW);
   addMachineFunctionPass(PHIEliminationPass(), PMW);
 
-  // Eventually, we want to run LiveIntervals before PHI elimination.
-  if (Opt.EarlyLiveIntervals)
-    addMachineFunctionPass(
-        RequireAnalysisPass<LiveIntervalsAnalysis, MachineFunction>(), PMW);
+  // LiveIntervals is computed unconditionally before TwoAddressInstruction so
+  // that pass can rely on it instead of LiveVariables. This is a step toward
+  // removing LiveVariables entirely.
+  // FIXME: Eventually, we want to run LiveIntervals before PHI elimination.
+  addMachineFunctionPass(
+      RequireAnalysisPass<LiveIntervalsAnalysis, MachineFunction>(), PMW);
 
   addMachineFunctionPass(TwoAddressInstructionPass(), PMW);
   addMachineFunctionPass(RegisterCoalescerPass(), PMW);
