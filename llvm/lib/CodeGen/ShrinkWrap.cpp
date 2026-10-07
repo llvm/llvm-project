@@ -303,6 +303,11 @@ INITIALIZE_PASS_END(ShrinkWrapLegacy, DEBUG_TYPE, "Shrink Wrap Pass", false,
 
 bool ShrinkWrapImpl::useOrDefCSROrFI(const MachineInstr &MI, RegScavenger *RS,
                                      bool StackAddressUsed) const {
+  // Debug instructions must not affect code generation. Their register
+  // operands are debug uses, which readsReg() still reports as reads.
+  if (MI.isDebugInstr())
+    return false;
+
   /// Check if \p Op is known to access an address not on the function's stack .
   /// At the moment, accesses where the underlying object is a global, function
   /// argument, or jump table are considered non-stack accesses. Note that the
@@ -339,7 +344,7 @@ bool ShrinkWrapImpl::useOrDefCSROrFI(const MachineInstr &MI, RegScavenger *RS,
   for (const MachineOperand &MO : MI.operands()) {
     bool UseOrDefCSR = false;
     if (MO.isReg()) {
-      // Ignore instructions like DBG_VALUE which don't read/def the register.
+      // Ignore operands which don't read/def the register.
       if (!MO.isDef() && !MO.readsReg())
         continue;
       Register PhysReg = MO.getReg();
@@ -372,8 +377,7 @@ bool ShrinkWrapImpl::useOrDefCSROrFI(const MachineInstr &MI, RegScavenger *RS,
         }
       }
     }
-    // Skip FrameIndex operands in DBG_VALUE instructions.
-    if (UseOrDefCSR || (MO.isFI() && !MI.isDebugValue())) {
+    if (UseOrDefCSR || MO.isFI()) {
       LLVM_DEBUG(dbgs() << "Use or define CSR(" << UseOrDefCSR << ") or FI("
                         << MO.isFI() << "): " << MI << '\n');
       return true;
