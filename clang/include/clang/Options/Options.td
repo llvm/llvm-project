@@ -6289,7 +6289,7 @@ HelpText<"Not emit the visibility attribute for asm in AIX OS or give all symbol
 defm backchain : BoolMOption<"backchain",
   CodeGenOpts<"Backchain">, DefaultFalse,
   PosFlag<SetTrue, [], [ClangOption], "Link stack frames through backchain on System Z">,
-  NegFlag<SetFalse>, BothFlags<[], [ClangOption, CC1Option]>>;
+  NegFlag<SetFalse>, BothFlags<[], [ClangOption, CC1Option, FlangOption]>>;
 
 defm zos_ppa1_name : BoolMOption<"zos-ppa1-name",
   CodeGenOpts<"ZOSPPA1Name">, DefaultTrue,
