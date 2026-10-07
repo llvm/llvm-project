@@ -3553,8 +3553,8 @@ public:
     /// escaping block.
     bool IsEscapingByRef;
 
-    /// True if the variable is of aggregate type and has a constant
-    /// initializer.
+    /// If the variable is of aggregate type and has a constant initializer,
+    /// a constant representing that initializer.
     llvm::Constant *ConstantAggregateInitializer;
 
     /// True if lifetime markers should be used.
