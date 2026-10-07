@@ -122,47 +122,44 @@ public:
       LDBG() << "Checking alloc op: " << allocOp;
 
       SmallVector<OpResult> allocationResults = collectAllocations(allocOp);
-      // Multiple allocations from a single op are not considered here yet.
-      if (allocationResults.size() != 1)
-        return WalkResult::advance();
 
-      OpResult allocResult = allocationResults[0];
-      LDBG() << "On allocation result: " << allocResult;
+      for (OpResult allocResult : allocationResults) {
+        LDBG() << "On allocation result: " << allocResult;
 
-      auto *deallocOp = findUserWithFreeSideEffect(allocResult);
-      if (!deallocOp || (deallocOp->getBlock() != allocOp->getBlock())) {
-        // The pass handles allocations that have a single dealloc op in the
-        // same block. We also should not hoist the dealloc op out of
-        // conditionals.
-        return WalkResult::advance();
-      }
+        auto *deallocOp = findUserWithFreeSideEffect(allocResult);
+        if (!deallocOp || (deallocOp->getBlock() != allocOp->getBlock())) {
+          // Skip results whose dealloc is in a different block. Moving
+          // across blocks could hoist the dealloc out of conditionals.
+          continue;
+        }
 
-      Operation *lastUser = nullptr;
-      const BufferViewFlowAnalysis::ValueSetT &deps =
-          analysis.resolve(allocResult);
-      for (auto dep : llvm::make_early_inc_range(deps)) {
-        for (auto *user : dep.getUsers()) {
-          // We are looking for a non dealloc op user.
-          // check if user is the dealloc op itself.
-          if (user == deallocOp)
-            continue;
+        Operation *lastUser = nullptr;
+        const BufferViewFlowAnalysis::ValueSetT &deps =
+            analysis.resolve(allocResult);
+        for (auto dep : llvm::make_early_inc_range(deps)) {
+          for (auto *user : dep.getUsers()) {
+            // We are looking for a non dealloc op user.
+            // check if user is the dealloc op itself.
+            if (user == deallocOp)
+              continue;
 
-          // find the ancestor of user that is in the same block as the allocOp.
-          auto *topUser = allocOp->getBlock()->findAncestorOpInBlock(*user);
-          if (!lastUser || happensBefore(lastUser, topUser)) {
-            lastUser = topUser;
+            // find the ancestor of user that is in the same block as the allocOp.
+            auto *topUser = allocOp->getBlock()->findAncestorOpInBlock(*user);
+            if (!lastUser || happensBefore(lastUser, topUser)) {
+              lastUser = topUser;
+            }
           }
         }
+        if (lastUser == nullptr)
+          continue;
+
+        LDBG() << "Last user found: " << *lastUser;
+        assert(lastUser->getBlock() == allocOp->getBlock());
+        assert(lastUser->getBlock() == deallocOp->getBlock());
+        // Move the dealloc op after the last user.
+        deallocOp->moveAfter(lastUser);
+        LDBG() << "Moved dealloc op after: " << *lastUser;
       }
-      if (lastUser == nullptr) {
-        return WalkResult::advance();
-      }
-      LDBG() << "Last user found: " << *lastUser;
-      assert(lastUser->getBlock() == allocOp->getBlock());
-      assert(lastUser->getBlock() == deallocOp->getBlock());
-      // Move the dealloc op after the last user.
-      deallocOp->moveAfter(lastUser);
-      LDBG() << "Moved dealloc op after: " << *lastUser;
 
       return WalkResult::advance();
     });
