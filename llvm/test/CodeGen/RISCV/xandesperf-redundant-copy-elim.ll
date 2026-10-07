@@ -8,12 +8,10 @@ define i32 @test_beqc(i32 %a) nounwind {
 ; RV32I-LABEL: test_beqc:
 ; RV32I:       # %bb.0: # %entry
 ; RV32I-NEXT:    li a1, 7
-; RV32I-NEXT:    bne a0, a1, .LBB0_2
-; RV32I-NEXT:  # %bb.1: # %if.end
-; RV32I-NEXT:    li a0, 7
-; RV32I-NEXT:    ret
-; RV32I-NEXT:  .LBB0_2: # %if.then
+; RV32I-NEXT:    beq a0, a1, .LBB0_2
+; RV32I-NEXT:  # %bb.1: # %if.then
 ; RV32I-NEXT:    li a0, 1
+; RV32I-NEXT:  .LBB0_2: # %if.end
 ; RV32I-NEXT:    ret
 ;
 ; RV32IXANDESPERF-LABEL: test_beqc:
@@ -41,7 +39,6 @@ define i32 @test_bnec(i32 %a) nounwind {
 ; RV32I-NEXT:    li a0, 1
 ; RV32I-NEXT:    ret
 ; RV32I-NEXT:  .LBB1_2: # %if.then
-; RV32I-NEXT:    li a0, 7
 ; RV32I-NEXT:    ret
 ;
 ; RV32IXANDESPERF-LABEL: test_bnec:

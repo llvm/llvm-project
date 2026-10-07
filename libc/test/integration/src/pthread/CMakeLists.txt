@@ -226,6 +226,7 @@ add_integration_test(
   SRCS
     pthread_tss_test.cpp
   DEPENDS
+    libc.hdr.limits_macros
     libc.include.pthread
     libc.src.pthread.pthread_create
     libc.src.pthread.pthread_exit
@@ -270,6 +271,21 @@ add_integration_test(
     libc.src.pthread.pthread_create
     libc.src.pthread.pthread_join
     libc.src.pthread.pthread_self
+)
+
+add_integration_test(
+  pthread_join_main_test
+  SUITE
+    libc-pthread-integration-tests
+  SRCS
+    pthread_join_main_test.cpp
+  DEPENDS
+    libc.include.pthread
+    libc.src.pthread.pthread_create
+    libc.src.pthread.pthread_exit
+    libc.src.pthread.pthread_join
+    libc.src.pthread.pthread_self
+    libc.src.stdlib.exit
 )
 
 add_integration_test(
@@ -403,4 +419,28 @@ add_integration_test(
     libc.src.signal.sigaction
     libc.src.signal.sigaddset
     libc.src.signal.sigemptyset
+)
+
+add_integration_test(
+  pthread_cleanup_test
+  SUITE
+    libc-pthread-integration-tests
+  SRCS
+    pthread_cleanup_test.cpp
+  DEPENDS
+    libc.hdr.pthread_macros
+    libc.src.pthread.pthread_create
+    libc.src.pthread.pthread_join
+    libc.src.pthread.pthread_exit
+    libc.src.pthread.__pthread_cleanup_push
+    libc.src.pthread.__pthread_cleanup_pop
+    libc.src.pthread.pthread_key_create
+    libc.src.pthread.pthread_key_delete
+    libc.src.pthread.pthread_setspecific
+    libc.src.pthread.pthread_getspecific
+    libc.src.pthread.pthread_mutex_destroy
+    libc.src.pthread.pthread_mutex_init
+    libc.src.pthread.pthread_mutex_lock
+    libc.src.pthread.pthread_mutex_trylock
+    libc.src.pthread.pthread_mutex_unlock
 )

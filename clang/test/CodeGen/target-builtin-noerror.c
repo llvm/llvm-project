@@ -140,6 +140,7 @@ void verifyfeaturestrings(void) {
   (void)__builtin_cpu_supports("usermsr");
   (void)__builtin_cpu_supports("avx10.1");
   (void)__builtin_cpu_supports("avx10.2");
+  (void)__builtin_cpu_supports("avx10v2aux");
   (void)__builtin_cpu_supports("movrs");
 }
 
