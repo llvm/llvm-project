@@ -57,7 +57,7 @@ struct MLUCandidate {
   VectorType accNativeType;
   VectorType lhsNativeType;
   VectorType rhsNativeType;
-  SmallVector<int64_t, 4> contractNativeShape;
+  SmallVector<int64_t> contractNativeShape;
 
   // Bookkeeping for the accumulation loop and operands.
   scf::ForOp accLoop;
@@ -76,7 +76,7 @@ struct MLUCandidate {
 
   // Keep track of operations that should be deleted after transformation
   // (depending on which ops could be integrated into the new loop nest).
-  SmallVector<Operation *, 2> opsToDelete;
+  SmallVector<Operation *> opsToDelete;
 };
 } // anonymous namespace
 
