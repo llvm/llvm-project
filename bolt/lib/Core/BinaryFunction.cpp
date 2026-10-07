@@ -1828,12 +1828,11 @@ bool BinaryFunction::scanExternalRefs() {
         // relocation value encoding.
         Rel->setOptional();
 
-        // The compact code model may allow conditional branches target
-        // addresses to be out of range, therefore be conservative and patch the
-        // target function.
-        const bool IsConditionalBranch = Rel->Type == ELF::R_AARCH64_CONDBR19 ||
-                                         Rel->Type == ELF::R_AARCH64_TSTBR14;
-        if (!opts::CompactCodeModel || IsConditionalBranch)
+        // In compact code model, only CALL26/JUMP26 relocations are assumed to
+        // reach the moved target; patch the target for other branch types.
+        const bool IsBranch26 = Rel->Type == ELF::R_AARCH64_CALL26 ||
+                                Rel->Type == ELF::R_AARCH64_JUMP26;
+        if (!opts::CompactCodeModel || !IsBranch26)
           if (BinaryFunction *TargetBF = BC.getFunctionForSymbol(Rel->Symbol))
             TargetBF->setNeedsPatch(true);
       }

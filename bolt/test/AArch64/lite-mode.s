@@ -129,9 +129,8 @@ cold_function:
 # CHECK-INPUT-NEXT: b {{.*}} <_start>
 # CHECK-NEXT:       b {{.*}} <_start.org.0>
 
-## Quick test for conditional tail calls. A proper test is being added in:
-## https://github.com/llvm/llvm-project/pull/139565
-## For now check that llvm-bolt doesn't choke on CTCs.
+## Exercise conditional tail calls in the non-compact variant. Exclude them
+## from the compact variant, which checks that B/BL need no entry patch.
 .ifndef COMPACT
   b.eq _start
   cbz x0, _start
