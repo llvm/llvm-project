@@ -17672,7 +17672,7 @@ ExprResult Sema::BuiltinCoopMatrixMulAdd(CallExpr *TheCall,
     Expr *Operands = TheCall->getArg(3);
     QualType OperandsTy = Operands->getType().getCanonicalType();
 
-    if (!OperandsTy->isEnumeralType()) {
+    if (!OperandsTy->isIntegerType() && !OperandsTy->isEnumeralType()) {
       Diag(Operands->getBeginLoc(), diag::err_coop_matrix_operands_type);
       return ExprError();
     }
@@ -17710,9 +17710,18 @@ ExprResult Sema::BuiltinCoopMatrixMulAdd(CallExpr *TheCall,
     return ExprError();
   }
 
-  if (M0Ty->getElementType().getUnqualifiedType() !=
-      M1Ty->getElementType().getUnqualifiedType())
+  QualType M0ElemTy =
+      M0Ty->getElementType().getUnqualifiedType().getCanonicalType();
+  QualType M1ElemTy =
+      M1Ty->getElementType().getUnqualifiedType().getCanonicalType();
+  bool SameElementType = M0ElemTy == M1ElemTy;
+  bool SameIntegerWidth =
+      M0ElemTy->isIntegerType() && M1ElemTy->isIntegerType() &&
+      Context.getTypeSize(M0ElemTy) == Context.getTypeSize(M1ElemTy);
+
+  if (!SameElementType && !SameIntegerWidth) {
     return ExprError(Diag(Loc0, diag::err_mismatched_coop_matrix_element_type));
+  }
 
   if (!isValidMatAMatCElementTypeCombination(M0Ty->getElementType(),
                                              M2Ty->getElementType()))
