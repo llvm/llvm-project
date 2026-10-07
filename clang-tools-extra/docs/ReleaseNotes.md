@@ -268,6 +268,11 @@ infrastructure are described first, followed by tool-specific sections.
   <clang-tidy/checks/modernize/use-nullptr>` to turn `decltype(nullptr)` into
   `std::nullptr_t` from `<cstdef>`.
 
+- Improved {doc}`modernize-use-nullptr
+  <clang-tidy/checks/modernize/use-nullptr>` check to avoid replacing `0`
+  with `nullptr` in comparisons with ordering types such as
+  `std::strong_ordering`.
+
 - Improved {doc}`modernize-use-ranges
   <clang-tidy/checks/modernize/use-ranges>` check by preserving used output
   iterator results when replacing output algorithms such as `std::copy`.
