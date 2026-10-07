@@ -63,23 +63,35 @@ entry:
 }
 
 define half @fptrunc_afn(double %d) #0 {
-; ALL-LABEL: fptrunc_afn:
-; ALL:       # %bb.0:
-; ALL-NEXT:    pushq %rax
-; ALL-NEXT:    callq __truncdfhf2@PLT
-; ALL-NEXT:    popq %rax
-; ALL-NEXT:    retq
+; F16C-LABEL: fptrunc_afn:
+; F16C:       # %bb.0:
+; F16C-NEXT:    vcvtsd2ss %xmm0, %xmm0, %xmm0
+; F16C-NEXT:    vcvtps2ph $4, %xmm0, %xmm0
+; F16C-NEXT:    retq
+;
+; AVX-LABEL: fptrunc_afn:
+; AVX:       # %bb.0:
+; AVX-NEXT:    pushq %rax
+; AVX-NEXT:    callq __truncdfhf2@PLT
+; AVX-NEXT:    popq %rax
+; AVX-NEXT:    retq
   %r = fptrunc afn double %d to half
   ret half %r
 }
 
 define half @fptrunc_afn_twostep(double %d) #0 {
-; ALL-LABEL: fptrunc_afn_twostep:
-; ALL:       # %bb.0:
-; ALL-NEXT:    pushq %rax
-; ALL-NEXT:    callq __truncdfhf2@PLT
-; ALL-NEXT:    popq %rax
-; ALL-NEXT:    retq
+; F16C-LABEL: fptrunc_afn_twostep:
+; F16C:       # %bb.0:
+; F16C-NEXT:    vcvtsd2ss %xmm0, %xmm0, %xmm0
+; F16C-NEXT:    vcvtps2ph $4, %xmm0, %xmm0
+; F16C-NEXT:    retq
+;
+; AVX-LABEL: fptrunc_afn_twostep:
+; AVX:       # %bb.0:
+; AVX-NEXT:    pushq %rax
+; AVX-NEXT:    callq __truncdfhf2@PLT
+; AVX-NEXT:    popq %rax
+; AVX-NEXT:    retq
   %f = fptrunc contract afn double %d to float
   %r = fptrunc contract afn float %f to half
   ret half %r
@@ -88,32 +100,21 @@ define half @fptrunc_afn_twostep(double %d) #0 {
 define <4 x half> @fptrunc_afn_v4f64(<4 x double> %d) #0 {
 ; F16C-LABEL: fptrunc_afn_v4f64:
 ; F16C:       # %bb.0:
-; F16C-NEXT:    subq $72, %rsp
-; F16C-NEXT:    vmovups %ymm0, {{[-0-9]+}}(%r{{[sb]}}p) # 32-byte Spill
-; F16C-NEXT:    vextractf128 $1, %ymm0, %xmm0
-; F16C-NEXT:    vmovaps %xmm0, (%rsp) # 16-byte Spill
+; F16C-NEXT:    vextractf128 $1, %ymm0, %xmm1
+; F16C-NEXT:    vcvtsd2ss %xmm1, %xmm1, %xmm2
+; F16C-NEXT:    vcvtps2ph $4, %xmm2, %xmm2
+; F16C-NEXT:    vshufpd {{.*#+}} xmm1 = xmm1[1,0]
+; F16C-NEXT:    vcvtsd2ss %xmm1, %xmm1, %xmm1
+; F16C-NEXT:    vcvtps2ph $4, %xmm1, %xmm1
+; F16C-NEXT:    vpunpcklwd {{.*#+}} xmm1 = xmm2[0],xmm1[0],xmm2[1],xmm1[1],xmm2[2],xmm1[2],xmm2[3],xmm1[3]
+; F16C-NEXT:    vcvtsd2ss %xmm0, %xmm0, %xmm2
+; F16C-NEXT:    vcvtps2ph $4, %xmm2, %xmm2
+; F16C-NEXT:    vshufpd {{.*#+}} xmm0 = xmm0[1,0]
+; F16C-NEXT:    vcvtsd2ss %xmm0, %xmm0, %xmm0
+; F16C-NEXT:    vcvtps2ph $4, %xmm0, %xmm0
+; F16C-NEXT:    vpunpcklwd {{.*#+}} xmm0 = xmm2[0],xmm0[0],xmm2[1],xmm0[1],xmm2[2],xmm0[2],xmm2[3],xmm0[3]
+; F16C-NEXT:    vinsertps {{.*#+}} xmm0 = xmm0[0],xmm1[0],zero,zero
 ; F16C-NEXT:    vzeroupper
-; F16C-NEXT:    callq __truncdfhf2@PLT
-; F16C-NEXT:    vmovaps %xmm0, {{[-0-9]+}}(%r{{[sb]}}p) # 16-byte Spill
-; F16C-NEXT:    vpermilpd $1, (%rsp), %xmm0 # 16-byte Folded Reload
-; F16C-NEXT:    # xmm0 = mem[1,0]
-; F16C-NEXT:    callq __truncdfhf2@PLT
-; F16C-NEXT:    vmovdqa {{[-0-9]+}}(%r{{[sb]}}p), %xmm1 # 16-byte Reload
-; F16C-NEXT:    vpunpcklwd {{.*#+}} xmm0 = xmm1[0],xmm0[0],xmm1[1],xmm0[1],xmm1[2],xmm0[2],xmm1[3],xmm0[3]
-; F16C-NEXT:    vmovdqa %xmm0, {{[-0-9]+}}(%r{{[sb]}}p) # 16-byte Spill
-; F16C-NEXT:    vmovups {{[-0-9]+}}(%r{{[sb]}}p), %ymm0 # 32-byte Reload
-; F16C-NEXT:    # kill: def $xmm0 killed $xmm0 killed $ymm0
-; F16C-NEXT:    vzeroupper
-; F16C-NEXT:    callq __truncdfhf2@PLT
-; F16C-NEXT:    vmovaps %xmm0, (%rsp) # 16-byte Spill
-; F16C-NEXT:    vpermilpd $1, {{[-0-9]+}}(%r{{[sb]}}p), %xmm0 # 16-byte Folded Reload
-; F16C-NEXT:    # xmm0 = mem[1,0]
-; F16C-NEXT:    callq __truncdfhf2@PLT
-; F16C-NEXT:    vmovdqa (%rsp), %xmm1 # 16-byte Reload
-; F16C-NEXT:    vpunpcklwd {{.*#+}} xmm0 = xmm1[0],xmm0[0],xmm1[1],xmm0[1],xmm1[2],xmm0[2],xmm1[3],xmm0[3]
-; F16C-NEXT:    vinsertps $28, {{[-0-9]+}}(%r{{[sb]}}p), %xmm0, %xmm0 # 16-byte Folded Reload
-; F16C-NEXT:    # xmm0 = xmm0[0],mem[0],zero,zero
-; F16C-NEXT:    addq $72, %rsp
 ; F16C-NEXT:    retq
 ;
 ; AVX-LABEL: fptrunc_afn_v4f64:

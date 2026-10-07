@@ -20890,7 +20890,8 @@ SDValue DAGCombiner::visitFP_ROUND(SDNode *N) {
         N0IsTrunc)
       return DAG.getNode(
           ISD::FP_ROUND, DL, VT, N0.getOperand(0),
-          DAG.getIntPtrConstant(NIsTrunc && N0IsTrunc, DL, /*isTarget=*/true));
+          DAG.getIntPtrConstant(NIsTrunc && N0IsTrunc, DL, /*isTarget=*/true),
+          N->getFlags() & N0->getFlags());
   }
 
   // fold (fp_round (copysign X, Y)) -> (copysign (fp_round X), Y)
