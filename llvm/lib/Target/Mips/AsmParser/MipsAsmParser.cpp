@@ -2135,7 +2135,7 @@ bool MipsAsmParser::processInstruction(MCInst &Inst, SMLoc IDLoc,
   }
 
   if (inMicroMipsMode()) {
-    if (MCID.mayLoad() && Opcode != Mips::LWP_MM) {
+    if (Opcode == Mips::LW_MM || Opcode == Mips::LW_MMR6) {
       // Try to create 16-bit GP relative load instruction.
       for (unsigned i = 0; i < MCID.getNumOperands(); i++) {
         const MCOperandInfo &OpInfo = MCID.operands()[i];
@@ -2159,7 +2159,7 @@ bool MipsAsmParser::processInstruction(MCInst &Inst, SMLoc IDLoc,
           }
         }
       } // for
-    }   // if load
+    } // if load
 
     // TODO: Handle this with the AsmOperandClass.PredicateMethod.
 
