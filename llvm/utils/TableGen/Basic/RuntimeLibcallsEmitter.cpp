@@ -846,44 +846,38 @@ void RuntimeLibcallEmitter::emitSystemRuntimeLibrarySetCalls(
       }
     }
 
-    // Split the top-level member list into named LibcallLibrary references
-    // (dispatched to their own setAvailableLibFuncs_<name> under an
-    // isLibraryAvailable guard) and the remaining bare impl / LibcallImpls
-    // members (emitted inline below). A LibraryRef also records impls to drop.
-    // Name is the linker library (the isLibraryAvailable guard); FuncSuffix is
-    // the function suffix, which differs from Name only when isolated.
+    // Split the member list into library references, each dispatched to
+    // setAvailableLibFuncs_<FuncSuffix> under an isLibraryAvailable(Name)
+    // guard, and the remaining members, emitted inline below. LibraryRef
+    // exclusions are applied inside the library function.
     struct DispatchLib {
       StringRef Name;
       StringRef FuncSuffix;
-      std::vector<const RuntimeLibcallImpl *> Exclude;
     };
     const DagInit *MemberDag =
         R->getValueAsDef("MemberList")->getValueAsDag("MemberList");
     SmallVector<DispatchLib, 4> DispatchLibs;
     SmallVector<const Init *, 16> InlineArgs;
     SmallVector<const StringInit *, 16> InlineArgNames;
+    // A provider referenced both as a base opt-out and a same-name re-add
+    // variant resolves to the same function; dispatch it once.
+    DenseSet<std::pair<StringRef, StringRef>> SeenDispatch;
+    auto AddDispatch = [&](StringRef Name, StringRef FuncSuffix) {
+      if (SeenDispatch.insert({Name, FuncSuffix}).second)
+        DispatchLibs.push_back({Name, FuncSuffix});
+    };
     for (auto [Arg, ArgName] :
          zip_equal(MemberDag->getArgs(), MemberDag->getArgNames())) {
       if (const auto *DI = dyn_cast<DefInit>(Arg)) {
         const Record *Def = DI->getDef();
         if (Def->isSubClassOf("LibcallLibrary")) {
-          DispatchLibs.push_back(
-              {Def->getValueAsString("LibraryName"), libFuncKey(Def), {}});
+          AddDispatch(Def->getValueAsString("LibraryName"), libFuncKey(Def));
           continue;
         }
 
         if (Def->isSubClassOf("LibraryRef")) {
           const Record *Lib = Def->getValueAsDef("Library");
-          DispatchLib DL{
-              Lib->getValueAsString("LibraryName"), libFuncKey(Lib), {}};
-          for (const Record *ExcludeRec :
-               Def->getValueAsListOfDefs("Exclude")) {
-            if (const RuntimeLibcallImpl *Impl =
-                    Libcalls.getRuntimeLibcallImpl(ExcludeRec))
-              DL.Exclude.push_back(Impl);
-          }
-
-          DispatchLibs.push_back(std::move(DL));
+          AddDispatch(Lib->getValueAsString("LibraryName"), libFuncKey(Lib));
           continue;
         }
       }
