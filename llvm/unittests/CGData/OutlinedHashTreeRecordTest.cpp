@@ -115,4 +115,48 @@ TEST(OutlinedHashTreeRecordTest, SerializeYAML) {
   EXPECT_EQ(TreeDump1, TreeDump2);
 }
 
+TEST(OutlinedHashTreeRecordTest, InPlaceRead) {
+  // A tree with a branch, so a node has two successors and the in-place
+  // binary search is exercised.
+  OutlinedHashTreeRecord Eager;
+  Eager.HashTree->insert({{1, 2}, 4});
+  Eager.HashTree->insert({{1, 3}, 5});
+
+  // Serialize, then read the same bytes in place.
+  SmallVector<char> Out;
+  raw_svector_ostream OS(Out);
+  Eager.serialize(OS);
+  std::shared_ptr<MemoryBuffer> Buffer =
+      MemoryBuffer::getMemBufferCopy(StringRef(Out.data(), Out.size()));
+
+  std::unique_ptr<OutlinedHashTree> LazyTree =
+      OutlinedHashTreeRecord::createReadInPlace(Buffer, /*BlobOffset=*/0);
+  ASSERT_TRUE(LazyTree->isReadInPlace());
+
+  // empty() and find() read the buffer in place and agree with the eagerly
+  // loaded tree. A read-only tree exposes only this consume path.
+  EXPECT_FALSE(LazyTree->empty());
+  EXPECT_EQ(LazyTree->find({1, 2}), Eager.HashTree->find({1, 2}));
+  EXPECT_EQ(LazyTree->find({1, 3}), Eager.HashTree->find({1, 3}));
+  EXPECT_EQ(*LazyTree->find({1, 2}), 4u);
+  EXPECT_EQ(*LazyTree->find({1, 3}), 5u);
+  // A missing successor and a missing first instruction both miss.
+  EXPECT_EQ(LazyTree->find({1, 9}), 0u);
+  EXPECT_EQ(LazyTree->find({9}), 0u);
+  // A non-terminal prefix has no terminal count.
+  EXPECT_FALSE(LazyTree->find({1}).has_value());
+  EXPECT_TRUE(LazyTree->isReadInPlace());
+
+  // Converting the read-in-place tree materializes it once; its whole-tree
+  // counts match the eager tree.
+  auto InMem = OutlinedHashTreeRecord::createInMemory(std::move(LazyTree));
+  EXPECT_FALSE(InMem->isReadInPlace());
+  EXPECT_EQ(InMem->size(), Eager.HashTree->size());
+  EXPECT_EQ(InMem->size(/*GetTerminalCountOnly=*/true),
+            Eager.HashTree->size(/*GetTerminalCountOnly=*/true));
+  EXPECT_EQ(InMem->depth(), Eager.HashTree->depth());
+  // find() still works on the materialized tree.
+  EXPECT_EQ(*InMem->find({1, 3}), 5u);
+}
+
 } // end namespace

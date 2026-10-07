@@ -15,7 +15,7 @@ using namespace llvm;
 namespace {
 
 TEST(OutlinedHashTreeTest, Empty) {
-  OutlinedHashTree HashTree;
+  MutableOutlinedHashTree HashTree;
   EXPECT_TRUE(HashTree.empty());
   // The header node is always present.
   EXPECT_EQ(HashTree.size(), 1u);
@@ -23,7 +23,7 @@ TEST(OutlinedHashTreeTest, Empty) {
 }
 
 TEST(OutlinedHashTreeTest, Insert) {
-  OutlinedHashTree HashTree;
+  MutableOutlinedHashTree HashTree;
   HashTree.insert({{1, 2, 3}, 1});
   // The node count is 4 (including the root node).
   EXPECT_EQ(HashTree.size(), 4u);
@@ -43,7 +43,7 @@ TEST(OutlinedHashTreeTest, Insert) {
 }
 
 TEST(OutlinedHashTreeTest, Find) {
-  OutlinedHashTree HashTree;
+  MutableOutlinedHashTree HashTree;
   HashTree.insert({{1, 2, 3}, 1});
   HashTree.insert({{1, 2, 3}, 2});
 
@@ -57,15 +57,15 @@ TEST(OutlinedHashTreeTest, Find) {
 
 TEST(OutlinedHashTreeTest, Merge) {
   // Build HashTree1 inserting 2 sequences.
-  OutlinedHashTree HashTree1;
+  MutableOutlinedHashTree HashTree1;
 
   HashTree1.insert({{1, 2}, 20});
   HashTree1.insert({{1, 4}, 30});
 
   // Build HashTree2 and HashTree3 for each
-  OutlinedHashTree HashTree2;
+  MutableOutlinedHashTree HashTree2;
   HashTree2.insert({{1, 2}, 20});
-  OutlinedHashTree HashTree3;
+  MutableOutlinedHashTree HashTree3;
   HashTree3.insert({{1, 4}, 30});
 
   // Merge HashTree3 into HashTree2.
