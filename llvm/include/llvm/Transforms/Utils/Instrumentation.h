@@ -67,6 +67,9 @@ struct GCOVOptions {
   // Specify whether to emit .gcno files.
   bool EmitNotes;
 
+  // Specify whether to force absolute paths in coverage notes files.
+  bool UseAbsolutePathsInNotes;
+
   // Specify whether to modify the program to emit .gcda files when run.
   bool EmitData;
 
