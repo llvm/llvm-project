@@ -299,7 +299,9 @@ infrastructure are described first, followed by tool-specific sections.
   <clang-tidy/checks/readability/enum-initial-value>` check by adding
   the {option}`AllowReferencedInitialValues` to support the
   `INT09-C-EX1` exception, allowing enumerators initialized by referencing
-  another enumerator in the same enum (e.g., `last = first`).
+  another enumerator in the same enum (e.g., `last = first`), including
+  references to earlier enumerators that occur after implicitly initialized
+  enumerators.
 
 - Improved {doc}`readability-function-cognitive-complexity
   <clang-tidy/checks/readability/function-cognitive-complexity>` check by fixing

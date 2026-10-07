@@ -94,8 +94,9 @@ enum G {
 ````{option} AllowReferencedInitialValues
 When `true`, enumerators initialized by referencing another enumerator
 in the same enum are allowed, and the remaining enumerators are checked for
-consistency. This implements the `INT09-C-EX1` exception from the CERT C
-Coding Standard.
+consistency. References to earlier enumerators are also recognized when they
+occur after implicitly initialized enumerators. This implements the
+`INT09-C-EX1` exception from the CERT C Coding Standard.
 Default is `false`.
 
 ```c++
