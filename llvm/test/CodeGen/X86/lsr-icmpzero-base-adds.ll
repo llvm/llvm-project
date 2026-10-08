@@ -208,3 +208,94 @@ done:
   %r = phi i64 [ 0, %entry ], [ %s.next, %outer ], [ %s.next, %inner.latch ], [ 0, %first.skip ]
   ret i64 %r
 }
+
+; Too many formulae for a full search, so LSR narrows the search space by
+; committing to the register used by the most uses. {%start,+,1} and
+; {(1 + %start),+,1} tie; the latter makes each equality exit add up the IV and
+; a negated bound before the compare.
+define float @winner_reg_tie(ptr %p, i64 %start, i64 %stop, i64 %a, i64 %b, i64 %stride, i64 %off) {
+; CHECK-LABEL: winner_reg_tie:
+; CHECK:       # %bb.0: # %entry
+; CHECK-NEXT:    pushq %rax
+; CHECK-NEXT:    .cfi_def_cfa_offset 16
+; CHECK-NEXT:    movq {{[0-9]+}}(%rsp), %rax
+; CHECK-NEXT:    cmpq %rsi, %rcx
+; CHECK-NEXT:    cmovbeq %rsi, %rcx
+; CHECK-NEXT:    negq %rdx
+; CHECK-NEXT:    leaq (%rdi,%rax,4), %rax
+; CHECK-NEXT:    movq %r9, %rdi
+; CHECK-NEXT:    imulq %rsi, %rdi
+; CHECK-NEXT:    incq %rsi
+; CHECK-NEXT:    decq %rdi
+; CHECK-NEXT:    negq %r8
+; CHECK-NEXT:    negq %rcx
+; CHECK-NEXT:    xorps %xmm0, %xmm0
+; CHECK-NEXT:    .p2align 4
+; CHECK-NEXT:  .LBB2_1: # %loop
+; CHECK-NEXT:    # =>This Inner Loop Header: Depth=1
+; CHECK-NEXT:    leaq (%rcx,%rsi), %r10
+; CHECK-NEXT:    cmpq $1, %r10
+; CHECK-NEXT:    je .LBB2_5
+; CHECK-NEXT:  # %bb.2: # %bb2
+; CHECK-NEXT:    # in Loop: Header=BB2_1 Depth=1
+; CHECK-NEXT:    leaq (%r8,%rsi), %r10
+; CHECK-NEXT:    cmpq $1, %r10
+; CHECK-NEXT:    je .LBB2_5
+; CHECK-NEXT:  # %bb.3: # %latch
+; CHECK-NEXT:    # in Loop: Header=BB2_1 Depth=1
+; CHECK-NEXT:    movss {{.*#+}} xmm1 = mem[0],zero,zero,zero
+; CHECK-NEXT:    mulss -4(%rax,%rsi,4), %xmm1
+; CHECK-NEXT:    addss %xmm1, %xmm0
+; CHECK-NEXT:    leaq 1(%rdx,%rsi), %r10
+; CHECK-NEXT:    incq %rsi
+; CHECK-NEXT:    addq %r9, %rdi
+; CHECK-NEXT:    cmpq $2, %r10
+; CHECK-NEXT:    jne .LBB2_1
+; CHECK-NEXT:  # %bb.4: # %exit
+; CHECK-NEXT:    popq %rax
+; CHECK-NEXT:    .cfi_def_cfa_offset 8
+; CHECK-NEXT:    retq
+; CHECK-NEXT:  .LBB2_5: # %exit2
+; CHECK-NEXT:    .cfi_def_cfa_offset 16
+; CHECK-NEXT:    movq %rsi, %rdi
+; CHECK-NEXT:    callq throw@PLT
+entry:
+  %ub = call i64 @llvm.umax.i64(i64 %a, i64 %start)
+  br label %loop
+
+loop:
+  %iv = phi i64 [ %start, %entry ], [ %iv.next, %latch ]
+  %acc = phi float [ 0.0, %entry ], [ %acc.next, %latch ]
+  %iv.next = add i64 %iv, 1
+  %c1 = icmp eq i64 %iv, %ub
+  br i1 %c1, label %exit1, label %bb2
+
+bb2:
+  %c2 = icmp eq i64 %iv, %b
+  br i1 %c2, label %exit2, label %latch
+
+latch:
+  %m = mul i64 %iv, %stride
+  %i1 = add i64 %m, %off
+  %gep1 = getelementptr float, ptr %p, i64 %i1
+  %gep1m = getelementptr i8, ptr %gep1, i64 -4
+  %x = load float, ptr %gep1m, align 4
+  %i2 = add i64 %iv, %off
+  %gep2 = getelementptr float, ptr %p, i64 %i2
+  %y = load float, ptr %gep2, align 4
+  %xy = fmul float %x, %y
+  %acc.next = fadd float %acc, %xy
+  %c3 = icmp eq i64 %iv, %stop
+  br i1 %c3, label %exit, label %loop
+
+exit1:
+  call void @throw(i64 %iv.next)
+  unreachable
+
+exit2:
+  call void @throw(i64 %iv.next)
+  unreachable
+
+exit:
+  ret float %acc.next
+}
