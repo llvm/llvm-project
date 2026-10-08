@@ -858,30 +858,30 @@ define void @bitcasts() {
 ; CHECK-LABEL: 'bitcasts'
 ; CHECK-NEXT:  Cost Model: Found costs of 0 for: %a = bitcast i32 poison to i32
 ; CHECK-NEXT:  Cost Model: Found costs of 0 for: %b = bitcast float poison to float
-; CHECK-NEXT:  Cost Model: Found costs of 1 for: %c = bitcast i32 poison to float
-; CHECK-NEXT:  Cost Model: Found costs of 1 for: %d = bitcast float poison to i32
-; CHECK-NEXT:  Cost Model: Found costs of 1 for: %e = bitcast i64 poison to double
-; CHECK-NEXT:  Cost Model: Found costs of 1 for: %f = bitcast double poison to i64
-; CHECK-NEXT:  Cost Model: Found costs of 1 for: %g1 = bitcast half poison to i16
-; CHECK-NEXT:  Cost Model: Found costs of 1 for: %h1 = bitcast i16 poison to half
+; CHECK-NEXT:  Cost Model: Found costs of RThru:2 CodeSize:1 Lat:2 SizeLat:2 for: %c = bitcast i32 poison to float
+; CHECK-NEXT:  Cost Model: Found costs of RThru:2 CodeSize:1 Lat:2 SizeLat:2 for: %d = bitcast float poison to i32
+; CHECK-NEXT:  Cost Model: Found costs of RThru:2 CodeSize:1 Lat:2 SizeLat:2 for: %e = bitcast i64 poison to double
+; CHECK-NEXT:  Cost Model: Found costs of RThru:2 CodeSize:1 Lat:2 SizeLat:2 for: %f = bitcast double poison to i64
+; CHECK-NEXT:  Cost Model: Found costs of RThru:2 CodeSize:1 Lat:2 SizeLat:2 for: %g1 = bitcast half poison to i16
+; CHECK-NEXT:  Cost Model: Found costs of RThru:2 CodeSize:1 Lat:2 SizeLat:2 for: %h1 = bitcast i16 poison to half
 ; CHECK-NEXT:  Cost Model: Found costs of 0 for: %g2 = bitcast half poison to bfloat
 ; CHECK-NEXT:  Cost Model: Found costs of 0 for: %h2 = bitcast bfloat poison to half
-; CHECK-NEXT:  Cost Model: Found costs of 1 for: %g3 = bitcast bfloat poison to i16
-; CHECK-NEXT:  Cost Model: Found costs of 1 for: %h3 = bitcast i16 poison to bfloat
-; CHECK-NEXT:  Cost Model: Found costs of 1 for: %v4i8 = bitcast <4 x i8> poison to i32
-; CHECK-NEXT:  Cost Model: Found costs of 1 for: %v4i8r = bitcast i32 poison to <4 x i8>
-; CHECK-NEXT:  Cost Model: Found costs of 1 for: %v4i16 = bitcast <4 x i16> poison to i64
-; CHECK-NEXT:  Cost Model: Found costs of 1 for: %v4i16r = bitcast i64 poison to <4 x i16>
-; CHECK-NEXT:  Cost Model: Found costs of RThru:8 CodeSize:4 Lat:8 SizeLat:8 for: %v4i32 = bitcast <4 x i32> poison to i128
-; CHECK-NEXT:  Cost Model: Found costs of RThru:8 CodeSize:4 Lat:8 SizeLat:8 for: %v4i32r = bitcast i128 poison to <4 x i32>
+; CHECK-NEXT:  Cost Model: Found costs of RThru:2 CodeSize:1 Lat:2 SizeLat:2 for: %g3 = bitcast bfloat poison to i16
+; CHECK-NEXT:  Cost Model: Found costs of RThru:2 CodeSize:1 Lat:2 SizeLat:2 for: %h3 = bitcast i16 poison to bfloat
+; CHECK-NEXT:  Cost Model: Found costs of RThru:2 CodeSize:1 Lat:2 SizeLat:2 for: %v4i8 = bitcast <4 x i8> poison to i32
+; CHECK-NEXT:  Cost Model: Found costs of RThru:2 CodeSize:1 Lat:2 SizeLat:2 for: %v4i8r = bitcast i32 poison to <4 x i8>
+; CHECK-NEXT:  Cost Model: Found costs of RThru:2 CodeSize:1 Lat:2 SizeLat:2 for: %v4i16 = bitcast <4 x i16> poison to i64
+; CHECK-NEXT:  Cost Model: Found costs of RThru:2 CodeSize:1 Lat:2 SizeLat:2 for: %v4i16r = bitcast i64 poison to <4 x i16>
+; CHECK-NEXT:  Cost Model: Found costs of RThru:4 CodeSize:2 Lat:4 SizeLat:4 for: %v4i32 = bitcast <4 x i32> poison to i128
+; CHECK-NEXT:  Cost Model: Found costs of RThru:4 CodeSize:2 Lat:4 SizeLat:4 for: %v4i32r = bitcast i128 poison to <4 x i32>
 ; CHECK-NEXT:  Cost Model: Found costs of RThru:8 CodeSize:4 Lat:8 SizeLat:8 for: %v4i64 = bitcast <4 x i64> poison to i256
 ; CHECK-NEXT:  Cost Model: Found costs of RThru:8 CodeSize:4 Lat:8 SizeLat:8 for: %v4i64r = bitcast i256 poison to <4 x i64>
-; CHECK-NEXT:  Cost Model: Found costs of 8 for: %v4i128 = bitcast <4 x i128> poison to i512
-; CHECK-NEXT:  Cost Model: Found costs of 8 for: %v4i128r = bitcast i512 poison to <4 x i128>
-; CHECK-NEXT:  Cost Model: Found costs of RThru:4 CodeSize:2 Lat:4 SizeLat:4 for: %v2f8 = bitcast <2 x i8> poison to half
-; CHECK-NEXT:  Cost Model: Found costs of 1 for: %v2f8r = bitcast half poison to <2 x i8>
-; CHECK-NEXT:  Cost Model: Found costs of 1 for: %v2f16 = bitcast <2 x i16> poison to float
-; CHECK-NEXT:  Cost Model: Found costs of 1 for: %v2f16r = bitcast float poison to <2 x i16>
+; CHECK-NEXT:  Cost Model: Found costs of 0 for: %v4i128 = bitcast <4 x i128> poison to i512
+; CHECK-NEXT:  Cost Model: Found costs of 0 for: %v4i128r = bitcast i512 poison to <4 x i128>
+; CHECK-NEXT:  Cost Model: Found costs of RThru:2 CodeSize:1 Lat:2 SizeLat:2 for: %v2f8 = bitcast <2 x i8> poison to half
+; CHECK-NEXT:  Cost Model: Found costs of RThru:2 CodeSize:1 Lat:2 SizeLat:2 for: %v2f8r = bitcast half poison to <2 x i8>
+; CHECK-NEXT:  Cost Model: Found costs of RThru:2 CodeSize:1 Lat:2 SizeLat:2 for: %v2f16 = bitcast <2 x i16> poison to float
+; CHECK-NEXT:  Cost Model: Found costs of RThru:2 CodeSize:1 Lat:2 SizeLat:2 for: %v2f16r = bitcast float poison to <2 x i16>
 ; CHECK-NEXT:  Cost Model: Found costs of 0 for: %v2f32 = bitcast <2 x i32> poison to double
 ; CHECK-NEXT:  Cost Model: Found costs of 0 for: %v2f32r = bitcast double poison to <2 x i32>
 ; CHECK-NEXT:  Cost Model: Found costs of 0 for: %v2f64 = bitcast <2 x i64> poison to fp128
@@ -889,7 +889,11 @@ define void @bitcasts() {
 ; CHECK-NEXT:  Cost Model: Found costs of 0 for: %vec8 = bitcast <4 x i8> poison to <2 x i16>
 ; CHECK-NEXT:  Cost Model: Found costs of 0 for: %vec16 = bitcast <4 x i16> poison to <2 x i32>
 ; CHECK-NEXT:  Cost Model: Found costs of 0 for: %vec32 = bitcast <4 x i32> poison to <2 x i64>
-; CHECK-NEXT:  Cost Model: Found costs of RThru:10 CodeSize:6 Lat:10 SizeLat:10 for: %vec64 = bitcast <4 x i64> poison to <2 x i128>
+; CHECK-NEXT:  Cost Model: Found costs of RThru:8 CodeSize:4 Lat:8 SizeLat:8 for: %vec64 = bitcast <4 x i64> poison to <2 x i128>
+; CHECK-NEXT:  Cost Model: Found costs of RThru:2 CodeSize:1 Lat:2 SizeLat:2 for: %i1v2 = bitcast <16 x i1> poison to <2 x i8>
+; CHECK-NEXT:  Cost Model: Found costs of RThru:2 CodeSize:1 Lat:2 SizeLat:2 for: %i1v2r = bitcast <2 x i8> poison to <16 x i1>
+; CHECK-NEXT:  Cost Model: Found costs of RThru:2 CodeSize:1 Lat:2 SizeLat:2 for: %i1i = bitcast <16 x i1> poison to i16
+; CHECK-NEXT:  Cost Model: Found costs of RThru:2 CodeSize:1 Lat:2 SizeLat:2 for: %i1ir = bitcast i16 poison to <16 x i1>
 ; CHECK-NEXT:  Cost Model: Found costs of RThru:0 CodeSize:1 Lat:1 SizeLat:1 for: ret void
 ;
   %a = bitcast i32 poison to i32
@@ -929,6 +933,11 @@ define void @bitcasts() {
   %vec16 = bitcast <4 x i16> poison to <2 x i32>
   %vec32 = bitcast <4 x i32> poison to <2 x i64>
   %vec64 = bitcast <4 x i64> poison to <2 x i128>
+
+  %i1v2 = bitcast <16 x i1> poison to <2 x i8>
+  %i1v2r = bitcast <2 x i8> poison to <16 x i1>
+  %i1i = bitcast <16 x i1> poison to i16
+  %i1ir = bitcast i16 poison to <16 x i1>
   ret void
 }
 
