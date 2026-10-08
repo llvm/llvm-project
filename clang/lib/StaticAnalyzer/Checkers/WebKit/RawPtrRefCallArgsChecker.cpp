@@ -323,8 +323,8 @@ public:
             if (isPtrOriginSafe(MCE->getImplicitObjectArgument()))
               return true;
           }
-          if (Model->isSafeExpr(ArgOrigin, PtrIsLifetimeBoundToOrigin,
-                                SinkType))
+          if (Model->isSafeExpr(ArgOrigin, PtrIsLifetimeBoundToOrigin, SinkType,
+                                /*SinkMayEscape=*/false))
             return true;
           if (Origin && !*Origin)
             *Origin = ArgOrigin;
@@ -575,7 +575,7 @@ class UnborrowedCallArgsChecker final : public RawPtrRefCallArgsChecker {
 public:
   UnborrowedCallArgsChecker()
       : RawPtrRefCallArgsChecker("Loan on a CanBorrow object not guarded by "
-                                 "a Borrow",
+                                 "const or a Borrow",
                                  makeBorrowSafetyModel()) {}
 };
 

@@ -1005,6 +1005,11 @@ defm : DSReadPat_t16 <DS_READ_U16, i16, "load_local">;
 
 foreach vt = Reg32Types.types in {
 defm : DSReadPat_mc <DS_READ_B32, vt, "load_local">;
+defm : DSReadPat_mc <DS_READ_B32, vt, "atomic_load_local">;
+}
+
+foreach vt = VReg_64.RegTypes in {
+defm : DSReadPat_mc <DS_READ_B64, vt, "atomic_load_local">;
 }
 
 defm : DSReadPat_t16 <DS_READ_U8, i16, "atomic_load_aext_8_local">;
@@ -1017,11 +1022,6 @@ defm : DSReadPat_t16 <DS_READ_U16, i16, "atomic_load_nonext_16_local">;
 defm : DSReadPat_mc <DS_READ_U16, i32, "atomic_load_aext_16_local">;
 defm : DSReadPat_mc <DS_READ_U16, i32, "atomic_load_zext_16_local">;
 defm : DSReadPat_mc <DS_READ_I16, i32, "atomic_load_sext_16_local">;
-defm : DSReadPat_mc <DS_READ_B32, i32, "atomic_load_nonext_32_local">;
-defm : DSReadPat_mc <DS_READ_B32, v2i16, "atomic_load_nonext_32_local">;
-defm : DSReadPat_mc <DS_READ_B64, i64, "atomic_load_nonext_64_local">;
-defm : DSReadPat_mc <DS_READ_B64, v2i32, "atomic_load_nonext_64_local">;
-defm : DSReadPat_mc <DS_READ_B64, v4i16, "atomic_load_nonext_64_local">;
 
 let OtherPredicates = [D16PreservesUnusedBits] in {
 // TODO: Atomic loads
@@ -1098,17 +1098,17 @@ defm : DSWritePat_t16 <DS_WRITE_B16, i16, "store_local">;
 
 foreach vt = Reg32Types.types in {
 defm : DSWritePat_mc <DS_WRITE_B32, vt, "store_local">;
+defm : DSWritePat_mc <DS_WRITE_B32, vt, "atomic_store_local">;
+}
+
+foreach vt = VReg_64.RegTypes in {
+defm : DSWritePat_mc <DS_WRITE_B64, vt, "atomic_store_local">;
 }
 
 defm : DSWritePat_t16 <DS_WRITE_B8, i16, "atomic_store_8_local">;
 defm : DSWritePat_mc <DS_WRITE_B8, i32, "atomic_store_8_local">;
 defm : DSWritePat_t16 <DS_WRITE_B16, i16, "atomic_store_16_local">;
 defm : DSWritePat_mc <DS_WRITE_B16, i32, "atomic_store_16_local">;
-defm : DSWritePat_mc <DS_WRITE_B32, i32, "atomic_store_32_local">;
-defm : DSWritePat_mc <DS_WRITE_B32, v2i16, "atomic_store_32_local">;
-defm : DSWritePat_mc <DS_WRITE_B64, i64, "atomic_store_64_local">;
-defm : DSWritePat_mc <DS_WRITE_B64, v2i32, "atomic_store_64_local">;
-defm : DSWritePat_mc <DS_WRITE_B64, v4i16, "atomic_store_64_local">;
 
 let OtherPredicates = [HasD16LoadStore] in {
 def : DSWritePat <DS_WRITE_B16_D16_HI, i32, store_hi16_local>;

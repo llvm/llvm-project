@@ -3216,9 +3216,9 @@ void LoopVectorizationPlanner::emitInvalidCostRemarks(
         } else {
           auto *WidenCall = dyn_cast<VPWidenCallRecipe>(R);
           Function *CalledFn =
-              WidenCall ? WidenCall->getCalledScalarFunction()
-                        : cast<Function>(R->getOperand(R->getNumOperands() - 1)
-                                             ->getLiveInIRValue());
+              WidenCall
+                  ? WidenCall->getCalledScalarFunction()
+                  : cast<Function>(R->getLastOperand()->getLiveInIRValue());
           Name = CalledFn->getName();
         }
         OS << " call to " << Name;
