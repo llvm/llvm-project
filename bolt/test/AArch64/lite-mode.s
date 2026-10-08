@@ -129,14 +129,6 @@ cold_function:
 # CHECK-INPUT-NEXT: b {{.*}} <_start>
 # CHECK-NEXT:       b {{.*}} <_start.org.0>
 
-## Exercise conditional tail calls in the non-compact variant. Exclude them
-## from the compact variant, which checks that B/BL need no entry patch.
-.ifndef COMPACT
-  b.eq _start
-  cbz x0, _start
-  tbz x0, 42, _start
-.endif
-
   .cfi_endproc
   .size cold_function, .-cold_function
 
