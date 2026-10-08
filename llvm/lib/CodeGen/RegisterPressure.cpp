@@ -632,10 +632,12 @@ void RegisterOperands::adjustLaneLiveness(const LiveIntervals &LIS,
   }
 }
 
-void RegisterOperands::restoreLivenessFlags(
-    MachineInstr &MI, const TargetRegisterInfo &TRI,
-    const MachineRegisterInfo &MRI, const LiveIntervals &LIS,
-    bool TrackLaneMasks, ArrayRef<Register> OnlyRegs) {
+void RegisterOperands::restoreLivenessFlags(MachineInstr &MI,
+                                            const TargetRegisterInfo &TRI,
+                                            const MachineRegisterInfo &MRI,
+                                            const LiveIntervals &LIS,
+                                            bool TrackLaneMasks,
+                                            ArrayRef<Register> OnlyRegs) {
   assert(!MI.isDebugInstr() && "No flags to restore on debug instructions");
   // Clear potentially-stale read-undef flags. They are re-added below for the
   // lanes that are still dead.

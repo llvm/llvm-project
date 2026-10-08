@@ -210,11 +210,12 @@ public:
   /// recompute is skipped when \p MI has none); otherwise all defs are
   /// cleared. This is used after moving an already-scheduled instruction,
   /// which can invalidate the flags set for its previous position.
-  LLVM_ABI static void
-  restoreLivenessFlags(MachineInstr &MI, const TargetRegisterInfo &TRI,
-                       const MachineRegisterInfo &MRI,
-                       const LiveIntervals &LIS, bool TrackLaneMasks = true,
-                       ArrayRef<Register> OnlyRegs = {});
+  LLVM_ABI static void restoreLivenessFlags(MachineInstr &MI,
+                                            const TargetRegisterInfo &TRI,
+                                            const MachineRegisterInfo &MRI,
+                                            const LiveIntervals &LIS,
+                                            bool TrackLaneMasks = true,
+                                            ArrayRef<Register> OnlyRegs = {});
 
 private:
   /// Adjusts the \p Def based on \p LiveAfterDef. The \p Def is moved from the
