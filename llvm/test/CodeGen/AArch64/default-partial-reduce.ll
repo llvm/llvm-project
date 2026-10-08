@@ -1147,4 +1147,72 @@ define <vscale x 4 x double> @pr_nx4xdouble(<vscale x 4 x double> %in, <vscale x
   ret <vscale x 4 x double> %res
 }
 
+; Test combining with a multiply.
+
+define <4 x i32> @pr_mla_4xi32(<4 x i32> %acc, <4 x i32> %lhs, <4 x i32> %rhs) #0 {
+; NEON-NOBF16-LABEL: pr_mla_4xi32:
+; NEON-NOBF16:       // %bb.0:
+; NEON-NOBF16-NEXT:    mla v0.4s, v1.4s, v2.4s
+; NEON-NOBF16-NEXT:    ret
+;
+; NEON-BF16-LABEL: pr_mla_4xi32:
+; NEON-BF16:       // %bb.0:
+; NEON-BF16-NEXT:    mla v0.4s, v1.4s, v2.4s
+; NEON-BF16-NEXT:    ret
+;
+; SVE-LABEL: pr_mla_4xi32:
+; SVE:       // %bb.0:
+; SVE-NEXT:    mla v0.4s, v1.4s, v2.4s
+; SVE-NEXT:    ret
+  %mul = mul <4 x i32> %lhs, %rhs
+  %res = call <4 x i32> @llvm.vector.partial.reduce.add(<4 x i32> %acc, <4 x i32> %mul)
+  ret <4 x i32> %res
+}
+
+define <vscale x 2 x double> @pr_fma_nx2xdouble(<vscale x 2 x double> %acc, <vscale x 2 x double> %lhs, <vscale x 2 x double> %rhs) #0 {
+; NEON-NOBF16-LABEL: pr_fma_nx2xdouble:
+; NEON-NOBF16:       // %bb.0:
+; NEON-NOBF16-NEXT:    fmul z1.d, z1.d, z2.d
+; NEON-NOBF16-NEXT:    fadd z0.d, z0.d, z1.d
+; NEON-NOBF16-NEXT:    ret
+;
+; NEON-BF16-LABEL: pr_fma_nx2xdouble:
+; NEON-BF16:       // %bb.0:
+; NEON-BF16-NEXT:    fmul z1.d, z1.d, z2.d
+; NEON-BF16-NEXT:    fadd z0.d, z0.d, z1.d
+; NEON-BF16-NEXT:    ret
+;
+; SVE-LABEL: pr_fma_nx2xdouble:
+; SVE:       // %bb.0:
+; SVE-NEXT:    fmul z1.d, z1.d, z2.d
+; SVE-NEXT:    fadd z0.d, z0.d, z1.d
+; SVE-NEXT:    ret
+  %fmul = fmul contract <vscale x 2 x double> %lhs, %rhs
+  %res = call <vscale x 2 x double> @llvm.vector.partial.reduce.fadd(<vscale x 2 x double> %acc, <vscale x 2 x double> %fmul)
+  ret <vscale x 2 x double> %res
+}
+
+define <vscale x 2 x double> @pr_fma_nx2xdouble_non_contract(<vscale x 2 x double> %acc, <vscale x 2 x double> %lhs, <vscale x 2 x double> %rhs) #0 {
+; NEON-NOBF16-LABEL: pr_fma_nx2xdouble_non_contract:
+; NEON-NOBF16:       // %bb.0:
+; NEON-NOBF16-NEXT:    fmul z1.d, z1.d, z2.d
+; NEON-NOBF16-NEXT:    fadd z0.d, z0.d, z1.d
+; NEON-NOBF16-NEXT:    ret
+;
+; NEON-BF16-LABEL: pr_fma_nx2xdouble_non_contract:
+; NEON-BF16:       // %bb.0:
+; NEON-BF16-NEXT:    fmul z1.d, z1.d, z2.d
+; NEON-BF16-NEXT:    fadd z0.d, z0.d, z1.d
+; NEON-BF16-NEXT:    ret
+;
+; SVE-LABEL: pr_fma_nx2xdouble_non_contract:
+; SVE:       // %bb.0:
+; SVE-NEXT:    fmul z1.d, z1.d, z2.d
+; SVE-NEXT:    fadd z0.d, z0.d, z1.d
+; SVE-NEXT:    ret
+  %fmul = fmul <vscale x 2 x double> %lhs, %rhs
+  %res = call <vscale x 2 x double> @llvm.vector.partial.reduce.fadd(<vscale x 2 x double> %acc, <vscale x 2 x double> %fmul)
+  ret <vscale x 2 x double> %res
+}
+
 attributes #0 = { nounwind "target-features"="+sve2,+bf16,+sve-b16b16" vscale_range(1,16) }
