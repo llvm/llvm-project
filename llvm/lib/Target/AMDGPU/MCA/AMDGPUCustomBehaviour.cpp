@@ -47,7 +47,7 @@ void AMDGPUInstrPostProcess::postProcessInstruction(Instruction &Inst,
 // which are lost during the MCInst -> mca::Instruction lowering.
 void AMDGPUInstrPostProcess::processWaitCnt(Instruction &Inst,
                                             const MCInst &MCI) {
-  for (int Idx = 0, N = static_cast<int>(MCI.size()); Idx < N; Idx++) {
+  for (unsigned Idx = 0, N = MCI.getNumOperands(); Idx < N; Idx++) {
     MCAOperand Op;
     const MCOperand &MCOp = MCI.getOperand(Idx);
     if (MCOp.isReg()) {
