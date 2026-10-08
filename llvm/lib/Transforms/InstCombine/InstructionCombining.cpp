@@ -37,6 +37,7 @@
 #include "llvm/ADT/APInt.h"
 #include "llvm/ADT/ArrayRef.h"
 #include "llvm/ADT/DenseMap.h"
+#include "llvm/ADT/SetOperations.h"
 #include "llvm/ADT/SmallPtrSet.h"
 #include "llvm/ADT/SmallVector.h"
 #include "llvm/ADT/Statistic.h"
@@ -131,9 +132,6 @@ STATISTIC(NumFactor   , "Number of factorizations");
 STATISTIC(NumReassoc  , "Number of reassociations");
 DEBUG_COUNTER(VisitCounter, "instcombine-visit",
               "Controls which instructions are visited");
-
-InstCombiner::IRBuilderInstCombineInserter::~IRBuilderInstCombineInserter() =
-    default;
 
 void InstCombiner::IRBuilderInstCombineInserter::InsertHelper(
     Instruction *I, const Twine &Name, BasicBlock::iterator InsertPt) const {
@@ -5954,6 +5952,40 @@ bool InstCombinerImpl::run() {
 class AliasScopeTracker {
   SmallPtrSet<const MDNode *, 8> UsedAliasScopesAndLists;
   SmallPtrSet<const MDNode *, 8> UsedNoAliasScopesAndLists;
+  // Scopes used by every !alias.scope list that scopes from a disjoint-scope
+  // domain appears in. This is used to catch scopes that don't actually make
+  // anything noalias.
+  SmallDenseMap<const MDNode *, SmallPtrSet<const MDNode *, 4>, 4>
+      CommonScopesOfDisjointDomain;
+
+  // Record, for each disjoint-scope domain \p ScopeList uses, which of its
+  // scopes are used by \p ScopeList, adding to a running intersection.
+  void recordDisjointDomainScopes(const MDNode *ScopeList) {
+    SmallDenseMap<const MDNode *, SmallPtrSet<const MDNode *, 4>, 4> UsedScopes;
+    for (const MDOperand &MDOperand : ScopeList->operands()) {
+      const auto *MDScope = cast<MDNode>(MDOperand);
+      const MDNode *Domain = AliasScopeNode(MDScope).getDomain();
+      if (AliasScopeDomainNode(Domain).hasDisjointScopes())
+        UsedScopes[Domain].insert(MDScope);
+    }
+
+    for (auto &[Domain, Scopes] : UsedScopes) {
+      auto [It, Inserted] =
+          CommonScopesOfDisjointDomain.try_emplace(Domain, Scopes);
+      if (!Inserted)
+        llvm::set_intersect(It->second, Scopes);
+    }
+  }
+
+  // Return true if \p Scope is on the implicit !noalias list of one of the
+  // analysed accesses, that is, if it belongs to a disjoint-scope domain and
+  // some access uses that domain without using \p Scope.
+  bool isImplicitlyNoAlias(const MDNode *Scope) const {
+    auto It =
+        CommonScopesOfDisjointDomain.find(AliasScopeNode(Scope).getDomain());
+    return It != CommonScopesOfDisjointDomain.end() &&
+           !It->second.contains(Scope);
+  }
 
 public:
   void analyse(Instruction *I) {
@@ -5961,16 +5993,20 @@ public:
     if (!I->hasMetadataOtherThanDebugLoc())
       return;
 
-    auto Track = [](Metadata *ScopeList, auto &Container) {
+    auto Track = [](Metadata *ScopeList, auto &Container) -> const MDNode * {
       const auto *MDScopeList = dyn_cast_or_null<MDNode>(ScopeList);
       if (!MDScopeList || !Container.insert(MDScopeList).second)
-        return;
+        return nullptr;
       for (const auto &MDOperand : MDScopeList->operands())
         if (auto *MDScope = dyn_cast<MDNode>(MDOperand))
           Container.insert(MDScope);
+      return MDScopeList;
     };
 
-    Track(I->getMetadata(LLVMContext::MD_alias_scope), UsedAliasScopesAndLists);
+    if (const MDNode *AliasScopeList =
+            Track(I->getMetadata(LLVMContext::MD_alias_scope),
+                  UsedAliasScopesAndLists))
+      recordDisjointDomainScopes(AliasScopeList);
     Track(I->getMetadata(LLVMContext::MD_noalias), UsedNoAliasScopesAndLists);
   }
 
@@ -5985,9 +6021,13 @@ public:
     assert(MDSL->getNumOperands() == 1 &&
            "llvm.experimental.noalias.scope should refer to a single scope");
     auto &MDOperand = MDSL->getOperand(0);
+    // A scope is relevant if it appears in an !alias.scope list, and either it
+    // appears in a !noalias list, or it is on the implicit !noalias list of
+    // some access using its disjoint-scope domain.
     if (auto *MD = dyn_cast<MDNode>(MDOperand))
       return !UsedAliasScopesAndLists.contains(MD) ||
-             !UsedNoAliasScopesAndLists.contains(MD);
+             (!UsedNoAliasScopesAndLists.contains(MD) &&
+              !isImplicitlyNoAlias(MD));
 
     // Not an MDNode ? throw away.
     return true;

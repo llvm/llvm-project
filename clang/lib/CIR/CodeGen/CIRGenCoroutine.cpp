@@ -282,6 +282,21 @@ CIRGenFunction::emitCoroDestroyBuiltinCall(const CallExpr *e) {
                                     emitScalarExpr(e->getArg(0)));
 }
 
+cir::CoroNoopOp CIRGenFunction::emitCoroNoopBuiltinCall(const CallExpr *e) {
+  mlir::Location loc = getLoc(e->getBeginLoc());
+  return cir::CoroNoopOp::create(cgm.getBuilder(), loc);
+}
+
+cir::CoroSuspendOp
+CIRGenFunction::emitCoroSuspendBuiltinCall(const CallExpr *e) {
+  mlir::Location loc = getLoc(e->getBeginLoc());
+  llvm::SmallVector<mlir::Value, 2> args;
+  args.push_back(cir::TokenNoneOp::create(builder, loc));
+  args.push_back(emitScalarExpr(e->getArg(0)));
+
+  return cir::CoroSuspendOp::create(cgm.getBuilder(), loc, args);
+}
+
 static mlir::LogicalResult
 coroutineBodyExceptionHelper(CIRGenFunction &cgf, const CoroutineBodyStmt &s) {
 
@@ -649,6 +664,31 @@ emitSuspendExpression(CIRGenFunction &cgf, CGCoroData &coro,
   CIRGenFunction::OpaqueValueMapping binder =
       CIRGenFunction::OpaqueValueMapping(cgf, s.getOpaqueValue());
   CIRGenBuilderTy &builder = cgf.getBuilder();
+
+  // Exception handling requires additional IR. We avoid generating it when
+  // the resume expression is a direct call to a 'noexcept' member function.
+  const bool resumeInTry = coro.exceptionHandler &&
+                           kind == cir::AwaitKind::Init &&
+                           memberCallExpressionCanThrow(s.getResumeExpr());
+
+  // If the await_resume() result needs a destructor, take over its
+  // destruction, unless the destination owns it. The try/catch path destroys
+  // the result itself.
+  const CXXBindTemporaryExpr *resultBind = nullptr;
+  if (!resumeInTry && !aggSlot.isExternallyDestructed())
+    resultBind = dyn_cast<CXXBindTemporaryExpr>(s.getResumeExpr());
+  if (resultBind) {
+    // Emit the result into a slot created outside of the cir.await, so that it
+    // is still available after it.
+    if (aggSlot.isIgnored())
+      aggSlot = cgf.createAggTemp(resultBind->getType(),
+                                  cgf.getLoc(resultBind->getSourceRange()),
+                                  "agg.tmp.ensured");
+    // Don't push the destructor from within the resume region, where its
+    // cir.cleanup.scope would capture the region's terminator.
+    aggSlot.setExternallyDestructed();
+  }
+
   [[maybe_unused]] cir::AwaitOp awaitOp = cir::AwaitOp::create(
       builder, cgf.getLoc(s.getSourceRange()), kind,
       /*readyBuilder=*/
@@ -666,7 +706,7 @@ emitSuspendExpression(CIRGenFunction &cgf, CGCoroData &coro,
             CoroutineSuspendExpr::SuspendReturnType::SuspendBool) {
           mlir::Value suspendRet = cgf.evaluateExprAsBool(s.getSuspendExpr());
           // Veto suspension if requested by bool returning await_suspend.
-          builder.createCondition(suspendRet);
+          cir::CoroSuspendPoint::create(builder, loc, suspendRet);
         } else if (s.getSuspendReturnType() ==
                    CoroutineSuspendExpr::SuspendReturnType::SuspendVoid) {
           cgf.emitScalarExpr(s.getSuspendExpr());
@@ -680,11 +720,7 @@ emitSuspendExpression(CIRGenFunction &cgf, CGCoroData &coro,
       },
       /*resumeBuilder=*/
       [&](mlir::OpBuilder &b, mlir::Location loc) {
-        // Exception handling requires additional IR. If the 'await_resume'
-        // function is marked as 'noexcept', we avoid generating this additional
-        // IR.
-        if (coro.exceptionHandler && kind == cir::AwaitKind::Init &&
-            memberCallExpressionCanThrow(s.getResumeExpr())) {
+        if (resumeInTry) {
           // we are basically just emitting:
           // resumeEh = false;
           // try {
@@ -763,6 +799,14 @@ emitSuspendExpression(CIRGenFunction &cgf, CGCoroData &coro,
         // Returns control back to parent.
         cir::YieldOp::create(builder, loc);
       });
+
+  // Push the destructor right after the cir.await, where the result starts to
+  // exist, and not around it: destroying the coroutine at the suspend point
+  // would destroy the not yet constructed result. The cleanup runs at the end
+  // of the full-expression.
+  if (resultBind)
+    cgf.emitCXXTemporary(resultBind->getTemporary(), resultBind->getType(),
+                         aggSlot.getAddress());
 
   assert(awaitBuild.succeeded() && "Should know how to codegen");
   return awaitRes;

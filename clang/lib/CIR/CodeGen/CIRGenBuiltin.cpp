@@ -1132,13 +1132,19 @@ static RValue tryEmitFPMathIntrinsic(CIRGenFunction &cgf, const CallExpr *e,
 static mlir::Type
 decodeFixedType(CIRGenFunction &cgf,
                 ArrayRef<llvm::Intrinsic::IITDescriptor> &infos,
-                mlir::MLIRContext *context) {
+                ArrayRef<mlir::Type> overloadTys, mlir::MLIRContext *context) {
   using namespace llvm::Intrinsic;
 
   IITDescriptor descriptor = infos.front();
   infos = infos.slice(1);
 
   switch (descriptor.Kind) {
+  case IITDescriptor::Overloaded:
+  case IITDescriptor::Match:
+    if (descriptor.getOverloadIndex() < overloadTys.size())
+      return overloadTys[descriptor.getOverloadIndex()];
+    cgf.cgm.errorNYI("Overloaded intrinsic type without overload types");
+    return cir::VoidType::get(context);
   case IITDescriptor::Void:
     return cir::VoidType::get(context);
   case IITDescriptor::Half:
@@ -1157,7 +1163,7 @@ decodeFixedType(CIRGenFunction &cgf,
     return cir::IntType::get(context, descriptor.IntegerWidth,
                              /*isSigned=*/true);
   case IITDescriptor::Vector: {
-    mlir::Type elementType = decodeFixedType(cgf, infos, context);
+    mlir::Type elementType = decodeFixedType(cgf, infos, overloadTys, context);
     unsigned numElements = descriptor.VectorWidth.getFixedValue();
     return cir::VectorType::get(elementType, numElements);
   }
@@ -1227,19 +1233,20 @@ static mlir::Value getCorrectedPtr(mlir::Value argValue, mlir::Type expectedTy,
   return builder.createBitcast(argValue, expectedTy);
 }
 
-static cir::FuncType getIntrinsicType(CIRGenFunction &cgf,
-                                      mlir::MLIRContext *context,
-                                      llvm::Intrinsic::ID id) {
+cir::FuncType
+CIRGenFunction::getIntrinsicType(llvm::Intrinsic::ID id,
+                                 ArrayRef<mlir::Type> overloadTys) {
   using namespace llvm::Intrinsic;
 
+  mlir::MLIRContext *context = &getMLIRContext();
   SmallVector<IITDescriptor, 8> table;
   auto [tableRef, _, isVarArg] = getIntrinsicInfoTableEntries(id, table);
 
-  mlir::Type resultTy = decodeFixedType(cgf, tableRef, context);
+  mlir::Type resultTy = decodeFixedType(*this, tableRef, overloadTys, context);
 
   SmallVector<mlir::Type, 8> argTypes;
   while (!tableRef.empty())
-    argTypes.push_back(decodeFixedType(cgf, tableRef, context));
+    argTypes.push_back(decodeFixedType(*this, tableRef, overloadTys, context));
 
   // CIR convention: no explicit void return type
   if (isa<cir::VoidType>(resultTy))
@@ -1811,17 +1818,18 @@ RValue CIRGenFunction::emitBuiltinExpr(const GlobalDecl &gd, unsigned builtinID,
     return RValue::get(nullptr);
   }
   case Builtin::BI__builtin_coro_noop:
-    cgm.errorNYI(e->getSourceRange(), "BI__builtin_coro_noop NYI");
-    return getUndefRValue(e->getType());
+    return RValue::get(emitCoroNoopBuiltinCall(e).getResult());
   case Builtin::BI__builtin_coro_destroy: {
     emitCoroDestroyBuiltinCall(e);
     return RValue::get(nullptr);
   }
   case Builtin::BI__builtin_coro_done:
     return RValue::get(emitCoroDoneBuiltinCall(e).getResult());
-  case Builtin::BI__builtin_coro_suspend:
-    cgm.errorNYI(e->getSourceRange(), "BI__builtin_coro_suspend NYI");
-    return getUndefRValue(e->getType());
+  case Builtin::BI__builtin_coro_suspend: {
+    mlir::Value result = emitCoroSuspendBuiltinCall(e).getResult();
+    return RValue::get(
+        builder.createIntCast(result, convertType(e->getType())));
+  }
   case Builtin::BI__builtin_coro_align:
     cgm.errorNYI(e->getSourceRange(), "BI__builtin_coro_align NYI");
     return getUndefRValue(e->getType());
@@ -2240,22 +2248,41 @@ RValue CIRGenFunction::emitBuiltinExpr(const GlobalDecl &gd, unsigned builtinID,
         cast<cir::VectorType>(convertType(e->getArg(0)->getType()))
             .getElementType());
   case Builtin::BI__builtin_reduce_assoc_fadd:
-    return errorBuiltinNYI(*this, e, builtinID);
   case Builtin::BI__builtin_reduce_in_order_fadd: {
-    assert(e->getNumArgs() == 2 &&
-           "__builtin_reduce_in_order_fadd requires a start value");
+    bool isAssociative =
+        builtinIDIfNoAsmLabel == Builtin::BI__builtin_reduce_assoc_fadd;
+
+    assert((isAssociative ? e->getNumArgs() == 1 || e->getNumArgs() == 2
+                          : e->getNumArgs() == 2) &&
+           "invalid argument count for floating-point reduction");
     mlir::Value vector = emitScalarExpr(e->getArg(0));
     auto vectorTy = cast<cir::VectorType>(vector.getType());
     mlir::Type scalarTy = vectorTy.getElementType();
     mlir::Location loc = getLoc(e->getExprLoc());
-    mlir::Value startValue = emitScalarExpr(e->getArg(1));
-    if (startValue.getType() != scalarTy)
-      startValue =
-          builder.createCast(getLoc(e->getArg(1)->getExprLoc()),
-                             cir::CastKind::floating, startValue, scalarTy);
+    mlir::Value startValue;
+    if (e->getNumArgs() == 2) {
+      startValue = emitScalarExpr(e->getArg(1));
+      if (startValue.getType() != scalarTy)
+        startValue =
+            builder.createCast(getLoc(e->getArg(1)->getExprLoc()),
+                               cir::CastKind::floating, startValue, scalarTy);
+    } else {
+      auto fpTy = cast<cir::FPTypeInterface>(scalarTy);
+      startValue = cir::ConstantOp::create(
+          builder, loc,
+          cir::FPAttr::get(scalarTy,
+                           llvm::APFloat::getZero(fpTy.getFloatSemantics(),
+                                                  /*Negative=*/true)));
+    }
+
     SmallVector<mlir::Value, 2> args = {startValue, vector};
-    mlir::Value result =
-        builder.emitIntrinsicCallOp(loc, "vector.reduce.fadd", scalarTy, args);
+    cir::FastMathFlagsAttr fastMath;
+    if (isAssociative)
+      fastMath = cir::FastMathFlagsAttr::get(&getMLIRContext(),
+                                             cir::FastMathFlags::reassoc);
+
+    mlir::Value result = builder.emitIntrinsicCallOp(loc, "vector.reduce.fadd",
+                                                     scalarTy, fastMath, args);
     return RValue::get(result);
   }
   case Builtin::BI__builtin_reduce_maximum:
@@ -2266,8 +2293,39 @@ RValue CIRGenFunction::emitBuiltinExpr(const GlobalDecl &gd, unsigned builtinID,
     mlir::Value result = builder.createMatrixTranspose(loc, matrix);
     return RValue::get(result);
   }
-  case Builtin::BI__builtin_matrix_column_major_load:
-  case Builtin::BI__builtin_matrix_column_major_store:
+  case Builtin::BI__builtin_matrix_column_major_load: {
+    // Emit everything that isn't dependent on the first parameter type
+    mlir::Value stride = emitScalarExpr(e->getArg(3));
+    const QualType resultTy = e->getType();
+    mlir::Type resultType = convertType(resultTy);
+    auto *ptrTy = e->getArg(0)->getType()->getAs<PointerType>();
+    assert(ptrTy && "arg0 must be of pointer type");
+    bool isVolatile = ptrTy->getPointeeType().isVolatileQualified();
+    Address src = emitPointerWithAlignment(e->getArg(0));
+    emitNonNullArgCheck(RValue::get(src.emitRawPointer()),
+                        e->getArg(0)->getType(), e->getArg(0)->getExprLoc(), fd,
+                        0);
+    mlir::Value dataPtr = src.emitRawPointer();
+    mlir::Value result = builder.createMatrixColumnMajorLoad(
+        loc, resultType, dataPtr, stride, isVolatile);
+    return RValue::get(result);
+  }
+  case Builtin::BI__builtin_matrix_column_major_store: {
+    mlir::Value matrix = emitScalarExpr(e->getArg(0));
+    Address dst = emitPointerWithAlignment(e->getArg(1));
+    mlir::Value stride = emitScalarExpr(e->getArg(2));
+
+    auto *ptrTy = e->getArg(1)->getType()->getAs<PointerType>();
+    assert(ptrTy && "arg1 must be of pointer type");
+    bool isVolatile = ptrTy->getPointeeType().isVolatileQualified();
+
+    emitNonNullArgCheck(RValue::get(dst.emitRawPointer()),
+                        e->getArg(1)->getType(), e->getArg(1)->getExprLoc(), fd,
+                        0);
+    builder.createMatrixColumnMajorStore(loc, matrix, dst.emitRawPointer(),
+                                         stride, isVolatile);
+    return RValue::get(nullptr);
+  }
   case Builtin::BI__builtin_masked_load:
   case Builtin::BI__builtin_masked_expand_load:
   case Builtin::BI__builtin_masked_gather:
@@ -2430,6 +2488,9 @@ RValue CIRGenFunction::emitBuiltinExpr(const GlobalDecl &gd, unsigned builtinID,
     mlir::Value len = emitScalarExpr(e->getArg(2));
     mlir::Value res = cir::MemChrOp::create(builder, getLoc(e->getExprLoc()),
                                             src, pattern, len);
+    // builtin_char_memchr needs its type converted to 'char', but MemChrOp is a
+    // 'void' result type.
+    res = builder.createBitcast(res, convertType(e->getType()));
     return RValue::get(res);
   }
   case Builtin::BImemcpy:
@@ -3173,6 +3234,9 @@ RValue CIRGenFunction::emitBuiltinExpr(const GlobalDecl &gd, unsigned builtinID,
       llvm::Triple::getArchTypePrefix(getTarget().getTriple().getArch());
   if (!prefix.empty()) {
     intrinsicID = Intrinsic::getIntrinsicForClangBuiltin(prefix, name);
+    if (intrinsicID == Intrinsic::not_intrinsic && prefix == "spv" &&
+        getTarget().getTriple().getOS() == llvm::Triple::OSType::AMDHSA)
+      intrinsicID = Intrinsic::getIntrinsicForClangBuiltin("amdgcn", name);
     // NOTE we don't need to perform a compatibility flag check here since the
     // intrinsics are declared in Builtins*.def via LANGBUILTIN which filter the
     // MS builtins via ALL_MS_LANGUAGES and are filtered earlier.
@@ -3193,8 +3257,7 @@ RValue CIRGenFunction::emitBuiltinExpr(const GlobalDecl &gd, unsigned builtinID,
     assert(name.starts_with("llvm.") && "expected llvm. prefix");
     name = name.drop_front(/*strlen("llvm.")=*/5);
 
-    cir::FuncType intrinsicType =
-        getIntrinsicType(*this, &getMLIRContext(), intrinsicID);
+    cir::FuncType intrinsicType = getIntrinsicType(intrinsicID);
 
     SmallVector<mlir::Value> args;
     const FunctionDecl *fd = e->getDirectCallee();
@@ -3361,6 +3424,11 @@ emitTargetArchBuiltinExpr(CIRGenFunction *cgf, unsigned builtinID,
   case llvm::Triple::riscv32:
   case llvm::Triple::riscv64:
     return cgf->emitRISCVBuiltinExpr(builtinID, e);
+  case llvm::Triple::spirv32:
+  case llvm::Triple::spirv64:
+    if (cgf->getTarget().getTriple().getOS() == llvm::Triple::OSType::AMDHSA)
+      return cgf->emitAMDGPUBuiltinExpr(builtinID, e);
+    return std::nullopt;
   default:
     return std::nullopt;
   }

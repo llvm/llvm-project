@@ -29,7 +29,7 @@ Task await_bool_veto() {
   // CIR:   cir.condition(%[[READY]])
   // CIR: }, suspend : {
   // CIR:   %[[SUSPEND_RET:.*]] = cir.call @_ZN11BoolAwaiter13await_suspendESt16coroutine_handleIvE(%{{.*}}) : (!cir.ptr<!rec_BoolAwaiter>{{.*}}) -> (!cir.bool{{.*}})
-  // CIR:   cir.condition(%[[SUSPEND_RET]])
+  // CIR:   cir.coro.suspend_point(%[[SUSPEND_RET]])
   // CIR: }, resume : {
   // CIR:   cir.call @_ZN11BoolAwaiter12await_resumeEv(%{{.*}}) : (!cir.ptr<!rec_BoolAwaiter>{{.*}}) -> ()
   // CIR:   cir.yield

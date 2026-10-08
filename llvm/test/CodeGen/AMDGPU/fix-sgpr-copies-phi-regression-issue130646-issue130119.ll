@@ -12,9 +12,10 @@ define double @issue130646(i64 %arg) {
 ; CHECK-NEXT:    v_mov_b32_e32 v2, 0
 ; CHECK-NEXT:    v_mov_b32_e32 v3, 0
 ; CHECK-NEXT:    s_mov_b64 s[4:5], 0
-; CHECK-NEXT:    s_branch .LBB0_2
+; CHECK-NEXT:    s_cmp_eq_u64 s[4:5], 0
+; CHECK-NEXT:    s_cbranch_scc1 .LBB0_2
 ; CHECK-NEXT:  .LBB0_1: ; %for.body.5
-; CHECK-NEXT:    ; in Loop: Header=BB0_2 Depth=1
+; CHECK-NEXT:    ; =>This Inner Loop Header: Depth=1
 ; CHECK-NEXT:    s_lshr_b64 s[6:7], s[4:5], 1
 ; CHECK-NEXT:    v_or_b32_e32 v3, s7, v3
 ; CHECK-NEXT:    v_or_b32_e32 v2, s6, v2
@@ -23,20 +24,9 @@ define double @issue130646(i64 %arg) {
 ; CHECK-NEXT:    v_or3_b32 v3, v3, v1, s7
 ; CHECK-NEXT:    v_or3_b32 v2, v2, v0, s6
 ; CHECK-NEXT:    s_lshr_b64 s[4:5], s[4:5], 8
-; CHECK-NEXT:    s_mov_b64 s[6:7], 0
-; CHECK-NEXT:    s_and_b64 s[6:7], s[6:7], exec
-; CHECK-NEXT:    s_cbranch_scc1 .LBB0_4
-; CHECK-NEXT:  .LBB0_2: ; %for.body
-; CHECK-NEXT:    ; =>This Inner Loop Header: Depth=1
 ; CHECK-NEXT:    s_cmp_eq_u64 s[4:5], 0
 ; CHECK-NEXT:    s_cbranch_scc0 .LBB0_1
-; CHECK-NEXT:  ; %bb.3: ; in Loop: Header=BB0_2 Depth=1
-; CHECK-NEXT:    s_mov_b64 s[6:7], -1
-; CHECK-NEXT:    ; implicit-def: $vgpr2_vgpr3
-; CHECK-NEXT:    ; implicit-def: $sgpr4_sgpr5
-; CHECK-NEXT:    s_and_b64 s[6:7], s[6:7], exec
-; CHECK-NEXT:    s_cbranch_scc0 .LBB0_2
-; CHECK-NEXT:  .LBB0_4: ; %for.cond.cleanup
+; CHECK-NEXT:  .LBB0_2: ; %for.cond.cleanup
 ; CHECK-NEXT:    v_mov_b32_e32 v0, 0
 ; CHECK-NEXT:    v_mov_b32_e32 v1, 0
 ; CHECK-NEXT:    s_setpc_b64 s[30:31]

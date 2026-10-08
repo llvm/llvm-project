@@ -1711,6 +1711,14 @@ void CodeGenModule::Release() {
               LangOpts.PointerAuthInitFiniAddressDiscrimination);
     }
 
+    if (LangOpts.hasSignReturnAddressHardening()) {
+      TargetInfo::BranchProtectionInfo BPI(LangOpts);
+      getModule().addModuleFlag(
+          llvm::Module::Error, "sign-return-address-harden",
+          llvm::MDString::get(getLLVMContext(),
+                              BPI.getSignReturnAddressHardeningStr()));
+    }
+
     if (getTriple().isOSLinux()) {
       getModule().addModuleFlag(llvm::Module::Error, "ptrauth-sign-personality",
                                 LangOpts.PointerAuthCalls);
@@ -6450,22 +6458,7 @@ LangAS CodeGenModule::GetGlobalVarAddressSpace(const VarDecl *D) {
 }
 
 LangAS CodeGenModule::GetGlobalConstantAddressSpace() const {
-  // OpenCL v1.2 s6.5.3: a string literal is in the constant address space.
-  if (LangOpts.OpenCL)
-    return LangAS::opencl_constant;
-  if (LangOpts.SYCLIsDevice)
-    return LangAS::sycl_global;
-  if (LangOpts.HIP && LangOpts.CUDAIsDevice && getTriple().isSPIRV())
-    // For HIPSPV map literals to cuda_device (maps to CrossWorkGroup in SPIR-V)
-    // instead of default AS (maps to Generic in SPIR-V). Otherwise, we end up
-    // with OpVariable instructions with Generic storage class which is not
-    // allowed (SPIR-V V1.6 s3.42.8). Also, mapping literals to SPIR-V
-    // UniformConstant storage class is not viable as pointers to it may not be
-    // casted to Generic pointers which are used to model HIP's "flat" pointers.
-    return LangAS::cuda_device;
-  if (auto AS = getTarget().getConstantAddressSpace())
-    return *AS;
-  return LangAS::Default;
+  return CodeGenUtils::getGlobalConstantAddressSpace(LangOpts, getTarget());
 }
 
 // In address space agnostic languages, string literals are in default address
@@ -6547,6 +6540,8 @@ void CodeGenModule::EmitGlobalVarDefinition(const VarDecl *D,
   QualType ASTTy = D->getType();
   if (getLangOpts().OpenCL && ASTTy->isSamplerT())
     return;
+
+  // TODO(Reflection): add support for consteval-only types.
 
   // HLSL default buffer constants will be emitted during HLSLBufferDecl codegen
   if (getLangOpts().HLSL &&
