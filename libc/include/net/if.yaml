@@ -1,4 +1,8 @@
 header: net/if.h
+public_includes:
+  # glibc's <net/if.h> pulls in <sys/socket.h> and callers use AF_INET and
+  # SOCK_DGRAM on the strength of it.
+  - sys/socket.h
 standards:
   - posix
 macros:

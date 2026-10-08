@@ -11,6 +11,16 @@ add_libc_test(
 )
 
 add_libc_test(
+  net_if_socket_test
+  SUITE
+    libc-include-tests
+  SRCS
+    net_if_socket_test.cpp
+  DEPENDS
+    libc.include.net_if
+)
+
+add_libc_test(
   assert_test
   SUITE
     libc-include-tests
