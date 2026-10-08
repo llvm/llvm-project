@@ -1978,12 +1978,20 @@ FailureOr<Value> ModuleImport::convertConstant(llvm::Constant *constant) {
     // getAsInstruction() does not preserve GEP `inrange`, which exists only on
     // constant expressions. Reattach it to the imported GEPOp.
     if (constExpr->getOpcode() == llvm::Instruction::GetElementPtr) {
+      auto *gepOperator = llvm::cast<llvm::GEPOperator>(constExpr);
       if (std::optional<llvm::ConstantRange> inRange =
-              llvm::cast<llvm::GEPOperator>(constExpr)->getInRange()) {
+              gepOperator->getInRange()) {
         auto gepOp = result.getDefiningOp<GEPOp>();
         assert(gepOp && "expected GEPOp for getelementptr constexpr");
+        // The range is not always built at the index width of the base
+        // pointer (clang uses 32 bits for vtable address points); bring it to
+        // that width, as the textual IR parser does.
+        unsigned indexWidth =
+            llvmModule->getDataLayout().getIndexTypeSizeInBits(
+                gepOperator->getPointerOperandType());
         gepOp.setInrangeAttr(LLVM::ConstantRangeAttr::get(
-            context, inRange->getLower(), inRange->getUpper()));
+            context, inRange->getLower().sextOrTrunc(indexWidth),
+            inRange->getUpper().sextOrTrunc(indexWidth)));
       }
     }
     return result;

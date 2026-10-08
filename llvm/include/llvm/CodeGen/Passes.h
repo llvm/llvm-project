@@ -184,6 +184,9 @@ LLVM_ABI extern char &MachineSchedulerID;
 /// PostMachineScheduler - This pass schedules machine instructions postRA.
 LLVM_ABI extern char &PostMachineSchedulerID;
 
+/// SSAMachineScheduler - This pass schedules machine instructions in SSA.
+LLVM_ABI extern char &SSAMachineSchedulerID;
+
 /// SpillPlacement analysis. Suggest optimal placement of spill code between
 /// basic blocks.
 LLVM_ABI extern char &SpillPlacementID;
@@ -547,7 +550,7 @@ LLVM_ABI FunctionPass *createExpandIRInstsPass(CodeGenOptLevel);
 LLVM_ABI FunctionPass *createBreakFalseDepsLegacyPass();
 
 // This pass expands indirectbr instructions.
-LLVM_ABI FunctionPass *createIndirectBrExpandPass();
+LLVM_ABI FunctionPass *createIndirectBrExpandPass(CodeGenOptLevel OptLevel);
 
 /// Creates CFI Fixup pass. \see CFIFixup.cpp
 LLVM_ABI FunctionPass *createCFIFixupLegacy();

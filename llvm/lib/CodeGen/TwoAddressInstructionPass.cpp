@@ -63,7 +63,7 @@
 
 using namespace llvm;
 
-#define DEBUG_TYPE "twoaddressinstruction"
+#define DEBUG_TYPE "two-address-instruction"
 
 STATISTIC(NumTwoAddressInstrs, "Number of two-address instructions");
 STATISTIC(NumCommuted        , "Number of instructions commuted to coalesce");
@@ -2065,7 +2065,7 @@ void TwoAddressInstructionImpl::eliminateRegSequence(
           if (DefVN != VN)
             continue;
           LaneBitmask LaneMask = TRI->getSubRegIndexLaneMask(SubReg);
-          if ((UndefLanes & LaneMask).any())
+          if ((LaneMask & UndefLanes) == LaneMask)
             UseOp.setIsUndef(true);
         }
         LIS->removeInterval(DstReg);

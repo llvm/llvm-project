@@ -546,7 +546,7 @@ bool ModuleMemProfiler::instrumentModule(Module &M) {
 }
 
 void MemProfiler::initializeCallbacks(Module &M) {
-  IRBuilder<> IRB(*C);
+  IRBuilder<> IRB(M);
 
   for (size_t AccessIsWrite = 0; AccessIsWrite <= 1; AccessIsWrite++) {
     const std::string TypeStr = AccessIsWrite ? "store" : "load";
