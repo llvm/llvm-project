@@ -107,5 +107,54 @@ exit:
 }
 
 !0 = !{!0}
+
+
+; Decl is called between the two loops. The load and store do not alias, but the
+; decl is still inside a loop, so the scope is dropped and DA cannot prove it.
+define void @decl_between_nested_loops(ptr %A, i64 %n, i64 %offset0, i64 %offset1) {
+; CHECK-LABEL: 'decl_between_nested_loops'
+; CHECK-NEXT:  Src: call void @llvm.experimental.noalias.scope.decl(metadata !5) --> Dst: call void @llvm.experimental.noalias.scope.decl(metadata !5)
+; CHECK-NEXT:    da analyze - confused!
+; CHECK-NEXT:  Src: call void @llvm.experimental.noalias.scope.decl(metadata !5) --> Dst: %v = load i8, ptr %src, align 1, !alias.scope !5
+; CHECK-NEXT:    da analyze - confused!
+; CHECK-NEXT:  Src: call void @llvm.experimental.noalias.scope.decl(metadata !5) --> Dst: store i8 %v, ptr %dst, align 1, !noalias !5
+; CHECK-NEXT:    da analyze - confused!
+; CHECK-NEXT:  Src: %v = load i8, ptr %src, align 1, !alias.scope !5 --> Dst: %v = load i8, ptr %src, align 1, !alias.scope !5
+; CHECK-NEXT:    da analyze - input [* *]!
+; CHECK-NEXT:  Src: %v = load i8, ptr %src, align 1, !alias.scope !5 --> Dst: store i8 %v, ptr %dst, align 1, !noalias !5
+; CHECK-NEXT:    da analyze - anti [* *|<]!
+; CHECK-NEXT:  Src: store i8 %v, ptr %dst, align 1, !noalias !5 --> Dst: store i8 %v, ptr %dst, align 1, !noalias !5
+; CHECK-NEXT:    da analyze - output [* *]!
+;
+entry:
+  br label %for.i.header
+
+for.i.header:
+  %i = phi i64 [ 0, %entry ], [ %i.inc, %for.i.latch ]
+  %i100 = add i64 %i, 100
+  call void @llvm.experimental.noalias.scope.decl(metadata !2)
+  br label %for.j
+
+for.j:
+  %j = phi i64 [ 0, %for.i.header ], [ %j.inc, %for.j ]
+  %idx0 = add i64 %j, %offset0
+  %idx1 = add i64 %j, %offset1
+  %src = getelementptr i8, ptr %A, i64 %idx0
+  %v = load i8, ptr %src, !alias.scope !2
+  %dst = getelementptr i8, ptr %A, i64 %idx1
+  store i8 %v, ptr %dst, !noalias !2
+  %j.inc = add i64 %j, 1
+  %ec.j = icmp eq i64 %j.inc, %n
+  br i1 %ec.j, label %for.i.latch, label %for.j
+
+for.i.latch:
+  %i.inc = add i64 %i, 1
+  %ec.i = icmp eq i64 %i.inc, 100
+  br i1 %ec.i, label %exit, label %for.i.header
+
+exit:
+  ret void
+}
+
 !1 = !{!1, !0}
 !2 = !{!1}

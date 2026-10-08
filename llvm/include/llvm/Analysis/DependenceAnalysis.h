@@ -334,9 +334,9 @@ private:
   Function *F;
 
   SmallPtrSet<const MDNode *, 4> LoopAliasScopes;
-  bool LoopAliasScopesPopulated = false;
+  SmallPtrSet<const Loop *, 8> AlreadyCheckedLoops;
 
-  const SmallPtrSetImpl<const MDNode *> &getLoopAliasScopes();
+  void updateLoopAliasScopes(const Loop *L);
 
   /// Subscript - This private struct represents a pair of subscripts from
   /// a pair of potentially multi-dimensional array references. We use a

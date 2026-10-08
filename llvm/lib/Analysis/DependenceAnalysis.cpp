@@ -578,31 +578,31 @@ adjustAliasScopeList(MDNode *ScopeList,
   return ScopeList;
 }
 
-// Returns NoAlias/MayAlias/MustAlias for two memory locations based upon their
-// underlying objects. If LocA and LocB are known to not alias (for any reason:
-// tbaa, non-overlapping regions etc), then it is known there is no dependency.
+  // Location is spanned accross iteration
+  // and single iteration alias scope are dropped
+  static MemoryLocation
+  adjustLoc(MemoryLocation Loc,
+            const SmallPtrSetImpl<const MDNode *> &LoopAliasScopes) {
+    MemoryLocation Adj = MemoryLocation::getBeforeOrAfter(Loc.Ptr, Loc.AATags);
+    Adj.AATags.Scope = adjustAliasScopeList(Adj.AATags.Scope, LoopAliasScopes);
+    Adj.AATags.NoAlias =
+        adjustAliasScopeList(Adj.AATags.NoAlias, LoopAliasScopes);
+    return Adj;
+  }
+
+// Returns NoAlias/MayAliass/MustAlias for two memory locations based upon their
+// underlaying objects. If LocA and LocB are known to not alias (for any reason:
+// tbaa, non-overlapping regions etc), then it is known there is no dependecy.
 // Otherwise the underlying objects are checked to see if they point to
 // different identifiable objects.
 static AliasResult
 underlyingObjectsAlias(AAResults *AA, const DataLayout &DL,
                        const MemoryLocation &LocA, const MemoryLocation &LocB,
-                       const SmallPtrSetImpl<const MDNode *> *LoopAliasScopes) {
-  // Check the original locations (minus size) for noalias, which can happen for
-  // tbaa, incompatible underlying object locations, etc.
-  MemoryLocation LocAS =
-      MemoryLocation::getBeforeOrAfter(LocA.Ptr, LocA.AATags);
-  MemoryLocation LocBS =
-      MemoryLocation::getBeforeOrAfter(LocB.Ptr, LocB.AATags);
-  if (LoopAliasScopes) {
-    LocAS.AATags.Scope =
-        adjustAliasScopeList(LocAS.AATags.Scope, *LoopAliasScopes);
-    LocAS.AATags.NoAlias =
-        adjustAliasScopeList(LocAS.AATags.NoAlias, *LoopAliasScopes);
-    LocBS.AATags.Scope =
-        adjustAliasScopeList(LocBS.AATags.Scope, *LoopAliasScopes);
-    LocBS.AATags.NoAlias =
-        adjustAliasScopeList(LocBS.AATags.NoAlias, *LoopAliasScopes);
-  }
+                       const SmallPtrSetImpl<const MDNode *> &LoopAliasScopes) {
+  
+  MemoryLocation LocAS = adjustLoc(LocA, LoopAliasScopes);
+  MemoryLocation LocBS = adjustLoc(LocB, LoopAliasScopes);
+
   BatchAAResults BAA(*AA);
   BAA.enableCrossIterationMode();
 
@@ -2677,27 +2677,31 @@ bool DependenceInfo::invalidate(Function &F, const PreservedAnalyses &PA,
          Inv.invalidate<LoopAnalysis>(F, PA);
 }
 
-const SmallPtrSetImpl<const MDNode *> &DependenceInfo::getLoopAliasScopes() {
-  if (!LoopAliasScopesPopulated) {
-    LoopAliasScopesPopulated = true;
-    Function *DeclFn = F->getParent()
-                           ? F->getParent()->getFunction(Intrinsic::getName(
-                                 Intrinsic::experimental_noalias_scope_decl))
-                           : nullptr;
-    if (!LI->empty() && (!F->getParent() || (DeclFn && !DeclFn->use_empty()))) {
-      for (const BasicBlock &BB : *F) {
-        if (!LI->getLoopFor(&BB))
-          continue;
-        for (const Instruction &I : BB) {
-          if (const auto *Decl = dyn_cast<NoAliasScopeDeclInst>(&I)) {
-            for (Metadata *Op : Decl->getScopeList()->operands())
-              LoopAliasScopes.insert(cast<MDNode>(Op));
-          }
-        }
+void DependenceInfo::updateLoopAliasScopes(const Loop *L) {
+  if (!L || !AlreadyCheckedLoops.insert(L).second)
+    return;
+
+  Function *DeclFn = F->getParent()
+                         ? F->getParent()->getFunction(Intrinsic::getName(
+                               Intrinsic::experimental_noalias_scope_decl))
+                         : nullptr;
+  // No decls in this module. Parent loops cannot add any either.
+  if (F->getParent() && !(DeclFn && !DeclFn->use_empty()))
+    return;
+
+  for (BasicBlock *BB : L->blocks()) {
+    // Subloop blocks belong to the inner loop. Scan them when that loop
+    // is updated. The parent walk below picks up a decl between two loops.
+    if (LI->getLoopFor(BB) != L)
+      continue;
+    for (const Instruction &I : *BB) {
+      if (const auto *Decl = dyn_cast<NoAliasScopeDeclInst>(&I)) {
+        for (Metadata *Op : Decl->getScopeList()->operands())
+          LoopAliasScopes.insert(cast<MDNode>(Op));
       }
     }
   }
-  return LoopAliasScopes;
+  updateLoopAliasScopes(L->getParentLoop());
 }
 
 // depends -
@@ -2731,25 +2735,26 @@ DependenceInfo::depends(Instruction *Src, Instruction *Dst,
   const MemoryLocation &DstLoc = MemoryLocation::get(Dst);
   const MemoryLocation &SrcLoc = MemoryLocation::get(Src);
 
-  bool HasAliasScopes = DstLoc.AATags.Scope || DstLoc.AATags.NoAlias ||
-                        SrcLoc.AATags.Scope || SrcLoc.AATags.NoAlias;
-  const SmallPtrSetImpl<const MDNode *> *LoopAliasScopes =
-      HasAliasScopes ? &getLoopAliasScopes() : nullptr;
+  if (DstLoc.AATags.Scope || DstLoc.AATags.NoAlias || SrcLoc.AATags.Scope ||
+      SrcLoc.AATags.NoAlias) {
+    updateLoopAliasScopes(LI->getLoopFor(Src->getParent()));
+    updateLoopAliasScopes(LI->getLoopFor(Dst->getParent()));
+  }
 
-  switch (underlyingObjectsAlias(AA, F->getDataLayout(), DstLoc, SrcLoc,
-                                 LoopAliasScopes)) {
-  case AliasResult::MayAlias:
-  case AliasResult::PartialAlias:
-    // cannot analyse objects if we don't understand their aliasing.
-    LLVM_DEBUG(dbgs() << "can't analyze may or partial alias\n");
-    return std::make_unique<Dependence>(Src, Dst,
-                                        SCEVUnionPredicate(Assume, *SE));
-  case AliasResult::NoAlias:
-    // If the objects noalias, they are distinct, accesses are independent.
-    LLVM_DEBUG(dbgs() << "no alias\n");
-    return nullptr;
-  case AliasResult::MustAlias:
-    break; // The underlying objects alias; test accesses for dependence.
+  switch (underlyingObjectsAlias(AA, F->getDataLayout(), DstLoc, SrcLoc, 
+  LoopAliasScopes)) {
+    case AliasResult::MayAlias:
+    case AliasResult::PartialAlias:
+      // cannot analyse objects if we don't understand their aliasing.
+      LLVM_DEBUG(dbgs() << "can't analyze may or partial alias\n");
+      return std::make_unique<Dependence>(Src, Dst,
+                                          SCEVUnionPredicate(Assume, *SE));
+    case AliasResult::NoAlias:
+      // If the objects noalias, they are distinct, accesses are independent.
+      LLVM_DEBUG(dbgs() << "no alias\n");
+      return nullptr;
+    case AliasResult::MustAlias:
+      break; // The underlying objects alias; test accesses for dependence.
   }
 
   if (DstLoc.Size != SrcLoc.Size || !DstLoc.Size.isPrecise() ||
