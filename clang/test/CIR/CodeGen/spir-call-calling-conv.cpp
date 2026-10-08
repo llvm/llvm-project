@@ -20,8 +20,8 @@ const S &r = S();
 // CIR-BEFORE-LPP:   cir.call @_ZN1SD1Ev(%{{.*}}) cc(spir_function)
 // CIR-BEFORE-LPP: cir.global external {{.*}}@r = {{.*}} : !cir.ptr<!rec_S> ctor {
 // CIR-BEFORE-LPP:   cir.call @_ZN1SC1Ev(%{{.*}}) cc(spir_function)
-// CIR-BEFORE-LPP: } dtor {
-// CIR-BEFORE-LPP:   cir.call @_ZN1SD1Ev(%{{.*}}) cc(spir_function)
+// CIR-BEFORE-LPP:   cir.register_exit_dtor @_ZGR1r_ {
+// CIR-BEFORE-LPP:     cir.call @_ZN1SD1Ev(%{{.*}}) cc(spir_function)
 
 // TODO(cir): The global init functions and the __cxa_atexit call do not use
 // the runtime calling convention yet.
