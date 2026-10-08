@@ -1852,11 +1852,13 @@ llvm.func @invalid_var_callee_type_return_type_mismatch(%arg: i32)  {
 // -----
 
 llvm.func @non_variadic(%arg: i32)
+llvm.func @__gxx_personality_v0(...) -> i32
 
-llvm.func @invalid_var_callee_type(%arg: i32)  {
+llvm.func @invalid_var_callee_type(%arg: i32) attributes { personality = @__gxx_personality_v0 } {
   // expected-error@below {{expected var_callee_type to be a variadic function type}}
   llvm.invoke @non_variadic(%arg) to ^bb2 unwind ^bb1 vararg(!llvm.func<void (i32)>) : (i32) -> ()
 ^bb1:
+  %lp = llvm.landingpad cleanup : !llvm.struct<(ptr, i32)>
   llvm.return
 ^bb2:
   llvm.return
@@ -1865,11 +1867,13 @@ llvm.func @invalid_var_callee_type(%arg: i32)  {
 // -----
 
 llvm.func @variadic(%arg: i32, ...)
+llvm.func @__gxx_personality_v0(...) -> i32
 
-llvm.func @invalid_var_callee_type_num_parameters(%arg: i32)  {
+llvm.func @invalid_var_callee_type_num_parameters(%arg: i32) attributes { personality = @__gxx_personality_v0 } {
   // expected-error@below {{expected var_callee_type to have at most 1 parameters}}
   llvm.invoke @variadic(%arg) to ^bb2 unwind ^bb1 vararg(!llvm.func<void (i32, i64, ...)>) : (i32) -> ()
 ^bb1:
+  %lp = llvm.landingpad cleanup : !llvm.struct<(ptr, i32)>
   llvm.return
 ^bb2:
   llvm.return
@@ -1877,10 +1881,13 @@ llvm.func @invalid_var_callee_type_num_parameters(%arg: i32)  {
 
 // -----
 
-llvm.func @invalid_var_callee_type_num_parameters_indirect(%callee : !llvm.ptr, %arg: i32)  {
+llvm.func @__gxx_personality_v0(...) -> i32
+
+llvm.func @invalid_var_callee_type_num_parameters_indirect(%callee : !llvm.ptr, %arg: i32) attributes { personality = @__gxx_personality_v0 } {
   // expected-error@below {{expected var_callee_type to have at most 1 parameters}}
   llvm.invoke %callee(%arg) to ^bb2 unwind ^bb1 vararg(!llvm.func<void (i32, i64, ...)>) : !llvm.ptr, (i32) -> ()
 ^bb1:
+  %lp = llvm.landingpad cleanup : !llvm.struct<(ptr, i32)>
   llvm.return
 ^bb2:
   llvm.return
@@ -1889,11 +1896,13 @@ llvm.func @invalid_var_callee_type_num_parameters_indirect(%callee : !llvm.ptr, 
 // -----
 
 llvm.func @variadic(%arg: i32, ...)
+llvm.func @__gxx_personality_v0(...) -> i32
 
-llvm.func @invalid_var_callee_type_parameter_type_mismatch(%arg: i32)  {
+llvm.func @invalid_var_callee_type_parameter_type_mismatch(%arg: i32) attributes { personality = @__gxx_personality_v0 } {
   // expected-error@below {{var_callee_type parameter type mismatch: 'i64' != 'i32'}}
   llvm.invoke @variadic(%arg) to ^bb2 unwind ^bb1 vararg(!llvm.func<void (i64, ...)>) : (i32) -> ()
 ^bb1:
+  %lp = llvm.landingpad cleanup : !llvm.struct<(ptr, i32)>
   llvm.return
 ^bb2:
   llvm.return
@@ -1901,10 +1910,13 @@ llvm.func @invalid_var_callee_type_parameter_type_mismatch(%arg: i32)  {
 
 // -----
 
-llvm.func @invalid_var_callee_type_parameter_type_mismatch_indirect(%callee : !llvm.ptr, %arg: i32)  {
+llvm.func @__gxx_personality_v0(...) -> i32
+
+llvm.func @invalid_var_callee_type_parameter_type_mismatch_indirect(%callee : !llvm.ptr, %arg: i32) attributes { personality = @__gxx_personality_v0 } {
   // expected-error@below {{var_callee_type parameter type mismatch: 'i64' != 'i32'}}
   llvm.invoke %callee(%arg) to ^bb2 unwind ^bb1 vararg(!llvm.func<void (i64, ...)>) : !llvm.ptr, (i32) -> ()
 ^bb1:
+  %lp = llvm.landingpad cleanup : !llvm.struct<(ptr, i32)>
   llvm.return
 ^bb2:
   llvm.return
@@ -1913,11 +1925,13 @@ llvm.func @invalid_var_callee_type_parameter_type_mismatch_indirect(%callee : !l
 // -----
 
 llvm.func @variadic(%arg: i32, ...)
+llvm.func @__gxx_personality_v0(...) -> i32
 
-llvm.func @invalid_var_callee_type_non_void(%arg: i32)  {
+llvm.func @invalid_var_callee_type_non_void(%arg: i32) attributes { personality = @__gxx_personality_v0 } {
   // expected-error@below {{expected var_callee_type to return void}}
   llvm.invoke @variadic(%arg) to ^bb2 unwind ^bb1 vararg(!llvm.func<i8 (i32, ...)>) : (i32) -> ()
 ^bb1:
+  %lp = llvm.landingpad cleanup : !llvm.struct<(ptr, i32)>
   llvm.return
 ^bb2:
   llvm.return
@@ -1926,11 +1940,13 @@ llvm.func @invalid_var_callee_type_non_void(%arg: i32)  {
 // -----
 
 llvm.func @variadic(%arg: i32, ...) -> i32
+llvm.func @__gxx_personality_v0(...) -> i32
 
-llvm.func @invalid_var_callee_type_return_type_mismatch(%arg: i32)  {
+llvm.func @invalid_var_callee_type_return_type_mismatch(%arg: i32) attributes { personality = @__gxx_personality_v0 } {
   // expected-error@below {{var_callee_type return type mismatch: 'i8' != 'i32'}}
   %0 = llvm.invoke @variadic(%arg) to ^bb2 unwind ^bb1 vararg(!llvm.func<i8 (i32, ...)>) : (i32) -> (i32)
 ^bb1:
+  %lp = llvm.landingpad cleanup : !llvm.struct<(ptr, i32)>
   llvm.return
 ^bb2:
   llvm.return

@@ -1302,8 +1302,8 @@ LogicalResult CallOp::verify() { return verifyOperandBundles(*this); }
 template <typename OpTy>
 static LogicalResult
 verifyCallOpSymbolUses(OpTy callOp, SymbolTableCollection &symbolTable) {
-  // Note: no variadic-callee-type check here. CallOp runs it in
-  // verifySymbolUses below; InvokeOp already runs it in verify().
+  if (failed(verifyCallOpVarCalleeType(callOp)))
+    return failure();
   // Type for the callee, we'll get it differently depending if it is a direct
   // or indirect call.
   Type fnType;
@@ -1387,8 +1387,6 @@ verifyCallOpSymbolUses(OpTy callOp, SymbolTableCollection &symbolTable) {
 }
 
 LogicalResult CallOp::verifySymbolUses(SymbolTableCollection &symbolTable) {
-  if (failed(verifyCallOpVarCalleeType(*this)))
-    return failure();
   return verifyCallOpSymbolUses(*this, symbolTable);
 }
 
@@ -1710,9 +1708,6 @@ LogicalResult InvokeOp::verifySymbolUses(SymbolTableCollection &symbolTable) {
 }
 
 LogicalResult InvokeOp::verify() {
-  if (failed(verifyCallOpVarCalleeType(*this)))
-    return failure();
-
   Block *unwindDest = getUnwindDest();
   if (unwindDest->empty())
     return emitError("must have at least one operation in unwind destination");
