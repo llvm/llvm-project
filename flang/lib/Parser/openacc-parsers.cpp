@@ -237,11 +237,17 @@ private:
 
     // The terminating statement may be an END DO statement; the DO construct
     // built below has its own synthetic one, so turn it into a CONTINUE
-    // statement to keep its label and source.
+    // statement to keep its label and source.  A labeled DO statement has no
+    // construct name, so diagnose a name on the END DO statement before it is
+    // lost (C1135).
     if (auto *last{std::get_if<ExecutableConstruct>(&body.back().u)}) {
       if (auto *endDoStmt{
               std::get_if<Statement<common::Indirection<EndDoStmt>>>(
                   &last->u)}) {
+        if (const auto &name{endDoStmt->statement.value().v}) {
+          state.Say(name->source, "Unexpected DO construct name '%s'"_err_en_US,
+              name->source);
+        }
         Statement<ActionStmt> continueStmt{
             std::optional<Label>{endDoStmt->label}, ContinueStmt{}};
         continueStmt.source = endDoStmt->source;
