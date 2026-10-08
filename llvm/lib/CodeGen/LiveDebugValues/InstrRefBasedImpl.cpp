@@ -133,7 +133,7 @@ using namespace LiveDebugValues;
 
 // SSAUpdaterImple sets DEBUG_TYPE, change it.
 #undef DEBUG_TYPE
-#define DEBUG_TYPE "livedebugvalues"
+#define DEBUG_TYPE "live-debug-values"
 
 // Act more like the VarLoc implementation, by propagating some locations too
 // far and ignoring some transfers.

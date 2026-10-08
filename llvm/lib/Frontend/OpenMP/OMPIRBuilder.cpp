@@ -5647,15 +5647,15 @@ OpenMPIRBuilder::InsertPointOrErrorTy OpenMPIRBuilder::emitScanReduction(
     llvm::BasicBlock *ExitBB =
         splitBB(Builder, false, "omp.outer.log.scan.exit");
     llvm::Function *F = llvm::Intrinsic::getOrInsertDeclaration(
-        Builder.GetInsertBlock()->getModule(),
-        (llvm::Intrinsic::ID)llvm::Intrinsic::log2, Builder.getDoubleTy());
+        Builder.getModule(), (llvm::Intrinsic::ID)llvm::Intrinsic::log2,
+        Builder.getDoubleTy());
     llvm::BasicBlock *InputBB = Builder.GetInsertBlock();
     llvm::Value *Arg =
         Builder.CreateUIToFP(ScanRedInfo->Span, Builder.getDoubleTy());
     llvm::Value *LogVal = emitNoUnwindRuntimeCall(Builder, F, Arg, "");
     F = llvm::Intrinsic::getOrInsertDeclaration(
-        Builder.GetInsertBlock()->getModule(),
-        (llvm::Intrinsic::ID)llvm::Intrinsic::ceil, Builder.getDoubleTy());
+        Builder.getModule(), (llvm::Intrinsic::ID)llvm::Intrinsic::ceil,
+        Builder.getDoubleTy());
     LogVal = emitNoUnwindRuntimeCall(Builder, F, LogVal, "");
     LogVal = Builder.CreateFPToUI(LogVal, Builder.getInt32Ty());
     llvm::Value *NMin1 = Builder.CreateNUWSub(
@@ -10090,8 +10090,7 @@ OpenMPIRBuilder::InsertPointOrErrorTy OpenMPIRBuilder::emitTargetTask(
   LLVM_DEBUG(dbgs() << "Insert block after emitKernelLaunch = \n"
                     << *(Builder.GetInsertBlock()) << "\n");
   LLVM_DEBUG(dbgs() << "Module after emitKernelLaunch = \n"
-                    << *(Builder.GetInsertBlock()->getParent()->getParent())
-                    << "\n");
+                    << *(Builder.getModule()) << "\n");
   return Builder.saveIP();
 }
 

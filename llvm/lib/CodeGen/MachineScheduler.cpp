@@ -2214,15 +2214,13 @@ class BaseMemOpClusterMutation : public ScheduleDAGMutation {
   };
 
   const TargetInstrInfo *TII;
-  const TargetRegisterInfo *TRI;
   bool IsLoad;
   bool ReorderWhileClustering;
 
 public:
-  BaseMemOpClusterMutation(const TargetInstrInfo *tii,
-                           const TargetRegisterInfo *tri, bool IsLoad,
+  BaseMemOpClusterMutation(const TargetInstrInfo *tii, bool IsLoad,
                            bool ReorderWhileClustering)
-      : TII(tii), TRI(tri), IsLoad(IsLoad),
+      : TII(tii), IsLoad(IsLoad),
         ReorderWhileClustering(ReorderWhileClustering) {}
 
   void apply(ScheduleDAGInstrs *DAGInstrs) override;
@@ -2238,36 +2236,31 @@ protected:
 
 class StoreClusterMutation : public BaseMemOpClusterMutation {
 public:
-  StoreClusterMutation(const TargetInstrInfo *tii,
-                       const TargetRegisterInfo *tri,
-                       bool ReorderWhileClustering)
-      : BaseMemOpClusterMutation(tii, tri, false, ReorderWhileClustering) {}
+  StoreClusterMutation(const TargetInstrInfo *tii, bool ReorderWhileClustering)
+      : BaseMemOpClusterMutation(tii, false, ReorderWhileClustering) {}
 };
 
 class LoadClusterMutation : public BaseMemOpClusterMutation {
 public:
-  LoadClusterMutation(const TargetInstrInfo *tii, const TargetRegisterInfo *tri,
-                      bool ReorderWhileClustering)
-      : BaseMemOpClusterMutation(tii, tri, true, ReorderWhileClustering) {}
+  LoadClusterMutation(const TargetInstrInfo *tii, bool ReorderWhileClustering)
+      : BaseMemOpClusterMutation(tii, true, ReorderWhileClustering) {}
 };
 
 } // end anonymous namespace
 
 std::unique_ptr<ScheduleDAGMutation>
 llvm::createLoadClusterDAGMutation(const TargetInstrInfo *TII,
-                                   const TargetRegisterInfo *TRI,
                                    bool ReorderWhileClustering) {
   return EnableMemOpCluster ? std::make_unique<LoadClusterMutation>(
-                                  TII, TRI, ReorderWhileClustering)
+                                  TII, ReorderWhileClustering)
                             : nullptr;
 }
 
 std::unique_ptr<ScheduleDAGMutation>
 llvm::createStoreClusterDAGMutation(const TargetInstrInfo *TII,
-                                    const TargetRegisterInfo *TRI,
                                     bool ReorderWhileClustering) {
   return EnableMemOpCluster ? std::make_unique<StoreClusterMutation>(
-                                  TII, TRI, ReorderWhileClustering)
+                                  TII, ReorderWhileClustering)
                             : nullptr;
 }
 
@@ -2397,7 +2390,7 @@ void BaseMemOpClusterMutation::collectMemOpRecords(
     bool OffsetIsScalable;
     LocationSize Width = LocationSize::precise(0);
     if (TII->getMemOperandsWithOffsetWidth(MI, BaseOps, Offset,
-                                           OffsetIsScalable, Width, TRI)) {
+                                           OffsetIsScalable, Width)) {
       if (!Width.hasValue())
         continue;
 
@@ -2488,7 +2481,7 @@ class CopyConstrain : public ScheduleDAGMutation {
   SlotIndex RegionEndIdx;
 
 public:
-  CopyConstrain(const TargetInstrInfo *, const TargetRegisterInfo *) {}
+  CopyConstrain(const TargetInstrInfo *) {}
 
   void apply(ScheduleDAGInstrs *DAGInstrs) override;
 
@@ -2499,9 +2492,8 @@ protected:
 } // end anonymous namespace
 
 std::unique_ptr<ScheduleDAGMutation>
-llvm::createCopyConstrainDAGMutation(const TargetInstrInfo *TII,
-                                     const TargetRegisterInfo *TRI) {
-  return std::make_unique<CopyConstrain>(TII, TRI);
+llvm::createCopyConstrainDAGMutation(const TargetInstrInfo *TII) {
+  return std::make_unique<CopyConstrain>(TII);
 }
 
 /// constrainLocalCopy handles two possibilities:

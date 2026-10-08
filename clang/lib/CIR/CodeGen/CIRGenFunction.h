@@ -890,6 +890,10 @@ public:
   /// base classes in reverse order of their construction.
   void enterDtorCleanups(const CXXDestructorDecl *dtor, CXXDtorType type);
 
+  /// Return the pointer to pass to the operator delete of the given
+  /// destructor, converted to the type of its first parameter if needed.
+  mlir::Value loadThisForDtorDelete(const CXXDestructorDecl *dd);
+
   /// Determines whether an EH cleanup is required to destroy a type
   /// with the given destruction kind.
   /// TODO(cir): could be shared with Clang LLVM codegen
@@ -1253,12 +1257,12 @@ public:
                         ArrayRef<mlir::Value *> valuesToReload = {});
   void popCleanupBlock(bool forDeactivation = false);
 
-  /// Emit the cleanups captured for a loop's condition variable (those pushed
-  /// above \p depth while EHScopeStack was capturing condition cleanups) at
-  /// the current insertion point, which must be inside the loop op's cleanup
-  /// region, and pop them off the EH stack.
-  void emitLoopConditionCleanups(EHScopeStack::stable_iterator depth,
-                                 mlir::Location loc);
+  /// Emit the captured cleanups (those pushed above \p depth while EHScopeStack
+  /// was capturing cleanups) at the current insertion point, which must be
+  /// inside the cleanup region of the op that owns them, and pop them off the
+  /// EH stack. Every cleanup above \p depth must have been captured.
+  void emitCapturedCleanups(EHScopeStack::stable_iterator depth,
+                            mlir::Location loc);
 
   void terminateStructuredRegionBody(mlir::Region &r, mlir::Location loc);
 
@@ -1492,50 +1496,55 @@ public:
     void operator=(const FullExprCleanupScope &) = delete;
   };
 
-  /// Captures cleanups for a loop's condition variable so that they can be
-  /// emitted into the loop op's per-iteration cleanup region.
-  class DeferredLoopConditionCleanup {
+  /// Captures cleanups for variables whose lifetime ends in a region owned by
+  /// an enclosing op rather than at the end of a cir.cleanup.scope, so that
+  /// they can be emitted into that region later. Examples for uses are:
+  ///   * A loop condition variable's cleanups in the loop op's per-iteration
+  ///     cleanup region.
+  ///   * Coroutine parameters and promises, which are cleaned up in a separate
+  ///     destroy region
+  class CapturedCleanups {
     CIRGenFunction &cgf;
     EHScopeStack::stable_iterator depth;
     bool active;
 
   public:
-    DeferredLoopConditionCleanup(CIRGenFunction &cgf, bool active)
+    CapturedCleanups(CIRGenFunction &cgf, bool active)
         : cgf(cgf), depth(cgf.ehStack.stable_begin()), active(active) {}
 
     /// An RAII class that suppresses cir.cleanup.scope creation for cleanups
-    /// pushed onto the EH stack while a loop condition variable is being
-    /// emitted and instead captures these cleanups so that they can be emitted
-    /// into the loop op's cleanup region after the condition region is built.
+    /// pushed onto the EH stack while such a variable is being emitted and
+    /// instead captures these cleanups so that they can be emitted into the
+    /// owning op's cleanup region later.
     class CaptureScope {
       EHScopeStack &ehStack;
 
     public:
-      explicit CaptureScope(DeferredLoopConditionCleanup &scope)
+      explicit CaptureScope(CapturedCleanups &scope)
           : ehStack(scope.cgf.ehStack) {
         // Capture scopes deliberately wrap individual cleanup-producing
         // operations, so they must never nest.
-        assert(!ehStack.isCapturingLoopConditionCleanups() &&
-               "loop condition cleanup capturing should not nest");
+        assert(!ehStack.isCapturingCleanups() &&
+               "cleanup capturing should not nest");
         if (scope.active)
-          ehStack.setCapturingLoopConditionCleanups(true);
+          ehStack.setCapturingCleanups(true);
       }
-      ~CaptureScope() { ehStack.setCapturingLoopConditionCleanups(false); }
+      ~CaptureScope() { ehStack.setCapturingCleanups(false); }
 
       CaptureScope(const CaptureScope &) = delete;
       void operator=(const CaptureScope &) = delete;
     };
 
-    /// Emit the captured condition-variable cleanups into the current insertion
-    /// point (the loop's cleanup region).
-    void emitIntoLoopCleanupRegion(mlir::Location loc) {
+    /// Emit the captured cleanups into the current insertion point, which must
+    /// be inside the owning op's cleanup region.
+    void emitIntoCleanupRegion(mlir::Location loc) {
       if (active)
-        cgf.emitLoopConditionCleanups(depth, loc);
+        cgf.emitCapturedCleanups(depth, loc);
     }
 
   private:
-    DeferredLoopConditionCleanup(const DeferredLoopConditionCleanup &) = delete;
-    void operator=(const DeferredLoopConditionCleanup &) = delete;
+    CapturedCleanups(const CapturedCleanups &) = delete;
+    void operator=(const CapturedCleanups &) = delete;
   };
 
 public:
@@ -1901,7 +1910,7 @@ public:
   /// Emit a loop's condition-variable declaration. This needs special handling
   /// so that we can manage per-iteration cleanups for the loop condition.
   void emitLoopConditionVariable(const clang::VarDecl &d,
-                                 DeferredLoopConditionCleanup &condCleanup);
+                                 CapturedCleanups &condCleanup);
 
   /// Emit the initializer for an allocated variable.  If this call is not
   /// associated with the call to emitAutoVarAlloca (as the address of the
@@ -2049,6 +2058,7 @@ public:
   cir::CoroResumeOp emitCoroResumeBuiltinCall(const CallExpr *e);
   cir::CoroDestroyOp emitCoroDestroyBuiltinCall(const CallExpr *e);
   cir::CoroNoopOp emitCoroNoopBuiltinCall(const CallExpr *e);
+  cir::CoroSuspendOp emitCoroSuspendBuiltinCall(const CallExpr *e);
 
   cir::CoroSizeOp emitCoroSizeBuiltinCall(const CallExpr *e);
   cir::CoroFreeOp emitCoroFreeBuiltin(const CallExpr *e);
