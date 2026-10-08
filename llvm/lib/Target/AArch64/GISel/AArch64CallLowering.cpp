@@ -57,8 +57,6 @@
 using namespace llvm;
 using namespace AArch64GISelUtils;
 
-extern cl::opt<bool> EnableSVEGISel;
-
 static bool isSimpleGPRCallValue(const CallLowering::ArgInfo &Arg) {
   if (Arg.Regs.size() != 1 || any_of(Arg.Flags, [](ISD::ArgFlagsTy Flags) {
         auto FlagVals = Flags.getFlags();
@@ -635,10 +633,11 @@ bool AArch64CallLowering::fallBackToDAGISel(const MachineFunction &MF) const {
   auto &F = MF.getFunction();
   const auto &TM = static_cast<const AArch64TargetMachine &>(MF.getTarget());
 
-  if (!EnableSVEGISel && (F.getReturnType()->isScalableTy() ||
-                          llvm::any_of(F.args(), [](const Argument &A) {
-                            return A.getType()->isScalableTy();
-                          })))
+  if (!TM.getCLOpts().enable_gisel_sve &&
+      (F.getReturnType()->isScalableTy() ||
+       llvm::any_of(F.args(), [](const Argument &A) {
+         return A.getType()->isScalableTy();
+       })))
     return true;
   const auto &ST = MF.getSubtarget<AArch64Subtarget>();
   if (!ST.hasNEON() || !ST.hasFPARMv8()) {

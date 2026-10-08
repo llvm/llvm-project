@@ -18,11 +18,15 @@ let Definition = "platformwasm", Path = "platform.plugin.wasm" in {
   def EnvArg : Property<"env-arg", "String">,
                Global,
                DefaultStringValue<"">,
-               Desc<"Argument to the WebAssembly runtime to forward an "
-                    "environment variable to the inferior. A `key=value` pair "
-                    "is concatenated to this argument, once per variable in the "
-                    "inferior's environment. For example: `--env=`. If empty, "
-                    "no environment is forwarded to the runtime.">;
+               Desc<"Prefix of the argument that forwards an environment "
+                    "variable to the WebAssembly runtime. LLDB does not read "
+                    "the variables from this setting. It takes them from the "
+                    "launch environment, such as `target.env-vars` or "
+                    "`process launch -E`, and appends each `key=value` pair "
+                    "to this prefix, one argument per variable. For example, "
+                    "`--env=` yields `--env=A=1 --env=B=2`. The host "
+                    "environment is not forwarded. If empty, no environment "
+                    "is forwarded.">;
   def RuntimeArgs : Property<"runtime-args", "Args">,
                     Global,
                     DefaultStringValue<"">,

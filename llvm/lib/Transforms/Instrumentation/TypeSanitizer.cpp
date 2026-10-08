@@ -145,7 +145,7 @@ TypeSanitizer::TypeSanitizer(Module &M)
 
 void TypeSanitizer::initializeCallbacks(Module &M) {
   LLVMContext &C = M.getContext();
-  IRBuilder<> IRB(C);
+  IRBuilder<> IRB(M);
   OrdTy = IRB.getInt32Ty();
   U64Ty = IRB.getInt64Ty();
   Type *BoolType = IRB.getInt1Ty();
