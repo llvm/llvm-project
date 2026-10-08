@@ -461,6 +461,21 @@ print *, is_contiguous(a(::2))                   ! prints T in Flang
 * When a name is brought into a scope by multiple ways,
   such as USE-association as well as an `IMPORT` from its host,
   it's an error only if the resolution is ambiguous.
+* When USE association brings an equivalent external procedure interface
+  and a legacy BLAS generic from the intrinsic `cublas` or `cublas_v2`
+  module into the same scope under the same local name, Flang selects
+  the intrinsic module's generic, regardless of the order of the two USE
+  statements. A generic already merged from both `cublas` and `cublas_v2`
+  is not covered, including when it is re-exported by another module.
+  The generic must contain a same-named host specific with characteristics
+  equal to those of the external interface, and at least one specific
+  with a CUDA dummy data attribute.
+  Generic names beginning with `cublas` are excluded.
+  A warning is emitted by default, including with `-pedantic`.
+  Use `-Wno-prefer-intrinsic-module-use-association` to suppress the warning,
+  or `-fno-prefer-intrinsic-module-use-association` to disable the extension.
+  This extension is deprecated and may be removed at any time; it was added
+  to support BerkeleyGW.
 * An entity may appear in a `DATA` statement before its explicit
   type declaration under `IMPLICIT NONE(TYPE)`.
 * `INCLUDE` lines can start in any column, can be preceded in
@@ -663,6 +678,7 @@ end program
   multiple modules, the name must refer to a generic interface; PGI
   allows a name to be a procedure from one module and a generic interface
   from another.
+  Flang supports the limited intrinsic CUBLAS exception described above.
 * Type parameter declarations must come first in a derived type definition;
   some compilers allow them to follow `PRIVATE`, or be intermixed with the
   component declarations.

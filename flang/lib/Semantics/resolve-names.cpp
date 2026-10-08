@@ -4302,6 +4302,15 @@ static bool CheckCompatibleDistinctUltimates(SemanticsContext &context,
   return true; // don't try to merge generics (or whatever)
 }
 
+// Check whether two symbols identify the same procedure. Otherwise, require
+// matching names and procedure kinds: intrinsic procedures must both be
+// intrinsic, module procedures must identify the same module symbol, and
+// external procedures must both be declared by interface bodies with equal
+// characteristics.
+// For intrinsic-module compatibility rules, a future, separate check could
+// compare the basic shapes of host and CUDA specifics, including dummy argument
+// and result types and ranks, while ignoring CUDA-specific attributes.
+// That shape comparison is not performed here.
 static bool AreSameProcedureForUseAssociation(
     SemanticsContext &context, const Symbol &p1, const Symbol &p2) {
   const Symbol &ultimate1{p1.GetUltimate()};
@@ -4353,20 +4362,26 @@ static bool HasCUDADummyDataAttribute(const Symbol &procedure) {
 
 struct IntrinsicModuleUseAssociationRule {
   const char *moduleName;
-  const char *genericName;
-  bool (*matches)(SemanticsContext &, const GenericDetails &, const Symbol &);
+  bool (*matches)(SemanticsContext &, const Symbol &, const Symbol &);
 };
 
-static bool MatchesCublasGemm(SemanticsContext &context,
-    const GenericDetails &generic, const Symbol &other) {
-  const Symbol *specific{generic.specific()};
+static bool MatchesCublasBlas(
+    SemanticsContext &context, const Symbol &generic, const Symbol &other) {
+  // Exclude CUBLAS-prefixed API names from the legacy BLAS compatibility rule.
+  const SourceName &genericName{generic.GetUltimate().name()};
+  const llvm::StringRef genericNameRef{genericName.begin(), genericName.size()};
+  if (genericNameRef.starts_with("cublas")) {
+    return false;
+  }
+  const auto &details{generic.get<GenericDetails>()};
+  const Symbol *specific{details.specific()};
   if (!specific ||
       !AreSameProcedureForUseAssociation(context, *specific, other)) {
     return false;
   }
   bool containsSpecific{false};
   bool hasCUDAOverload{false};
-  for (const Symbol &candidate : generic.specificProcs()) {
+  for (const Symbol &candidate : details.specificProcs()) {
     containsSpecific |= &candidate.GetUltimate() == &specific->GetUltimate();
     hasCUDAOverload |= HasCUDADummyDataAttribute(candidate);
   }
@@ -4379,9 +4394,8 @@ FindIntrinsicModuleUseAssociationRule(
   // Add entries here for intrinsic module generics that should take precedence
   // over an equivalent external interface during USE association.
   static const IntrinsicModuleUseAssociationRule rules[]{
-      {"cublas", "sgemm", MatchesCublasGemm},
-      {"cublas", "dgemm", MatchesCublasGemm},
-      {"cublas", "zgemm", MatchesCublasGemm},
+      {"cublas", MatchesCublasBlas},
+      {"cublas_v2", MatchesCublasBlas},
   };
   const Scope &owner{generic.GetUltimate().owner()};
   if (!owner.IsModule() || !owner.parent().IsIntrinsicModules() ||
@@ -4390,8 +4404,7 @@ FindIntrinsicModuleUseAssociationRule(
   }
   for (const auto &rule : rules) {
     if (owner.GetName().value() == rule.moduleName &&
-        generic.GetUltimate().name() == rule.genericName &&
-        rule.matches(context, generic.get<GenericDetails>(), other)) {
+        rule.matches(context, generic, other)) {
       return &rule;
     }
   }
