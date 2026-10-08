@@ -22,6 +22,7 @@
 #include "src/__support/printf_core/core_structs.h"
 #include "src/__support/printf_core/float_inf_nan_converter.h"
 #include "src/__support/printf_core/writer.h"
+#include "src/__support/wctype_utils.h"
 
 #include <inttypes.h>
 #include <stddef.h>

@@ -18,6 +18,7 @@
 #endif // LIBC_COPT_PRINTF_DISABLE_WIDE
 
 #include "hdr/limits_macros.h"
+#include "src/__support/CPP/type_traits.h"
 #include "src/__support/macros/config.h"
 #include "src/__support/printf_core/converter_utils.h"
 #include "src/__support/printf_core/core_structs.h"

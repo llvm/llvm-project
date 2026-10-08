@@ -47,12 +47,14 @@
 #include "src/__support/FPUtil/FPBits.h"
 #include "src/__support/FPUtil/dyadic_float.h"
 #include "src/__support/FPUtil/rounding_mode.h"
+#include "src/__support/ctype_utils.h"
 #include "src/__support/integer_to_string.h"
 #include "src/__support/libc_assert.h"
 #include "src/__support/macros/config.h"
 #include "src/__support/printf_core/core_structs.h"
 #include "src/__support/printf_core/float_inf_nan_converter.h"
 #include "src/__support/printf_core/writer.h"
+#include "src/__support/wctype_utils.h"
 #include "src/string/memory_utils/inline_memcpy.h"
 
 namespace LIBC_NAMESPACE_DECL {

@@ -63,7 +63,6 @@ num_to_strview(uintmax_t num, cpp::span<CharT> bufref, CharT conv_name) {
   case CharT{'X'}:
     return HexFmtUppercase<CharT>::format_to(bufref, num);
   case CharT{'o'}:
-  case CharT{'O'}:
     return OctFmt<CharT>::format_to(bufref, num);
   case CharT('b'):
   case CharT('B'):

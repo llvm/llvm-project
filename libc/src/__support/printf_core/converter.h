@@ -55,12 +55,19 @@ LIBC_PRINTF_MODULE((template <OverflowMode mode, typename CharT>
 #define HANDLE_OVERFLOW_MODE(MODE)                                             \
   template int convert_float<OverflowMode::MODE, char>(                        \
       Writer<OverflowMode::MODE, char> * writer,                               \
-      const FormatSection<char> &to_conv);                                     \
+      const FormatSection<char> &to_conv);
+#include "src/__support/printf_core/overflow_modes.def"
+#undef HANDLE_OVERFLOW_MODE
+
+#if !defined(LIBC_COPT_PRINTF_DISABLE_WIDE)
+#define HANDLE_OVERFLOW_MODE(MODE)                                             \
   template int convert_float<OverflowMode::MODE, wchar_t>(                     \
       Writer<OverflowMode::MODE, wchar_t> * writer,                            \
       const FormatSection<wchar_t> &to_conv);
 #include "src/__support/printf_core/overflow_modes.def"
 #undef HANDLE_OVERFLOW_MODE
+#endif // !LIBC_COPT_PRINTF_DISABLE_WIDE
+
 #endif // LIBC_PRINTF_DEFINE_MODULES
 
 // convert will call a conversion function to convert the FormatSection into

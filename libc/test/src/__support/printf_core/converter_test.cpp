@@ -131,6 +131,21 @@ TYPED_TEST(LlvmLibcPrintfConverterTest, CharConversionLeftJustified,
 
 #if !defined(LIBC_COPT_PRINTF_DISABLE_WIDE)
 
+TEST(LlvmLibcPrintfConverterTest, CharConversionInvalidAscii) {
+  // For *wprintf functions, a "%c" conversion should convert the argument to
+  // wchar_t as if by calling btowc(), which is an error for an invalid
+  // multibyte sequence of length 1 (i.e. not a valid ASCII value).
+
+  wchar_t str[60];
+  Writer writer = make_drop_overflow_writer(str, sizeof(str) - 1);
+  FormatSection<wchar_t> invalid_conv;
+  invalid_conv.has_conv = true;
+  invalid_conv.raw_string = L"%c";
+  invalid_conv.conv_name = L'c';
+  invalid_conv.conv_val_raw = 128;
+  ASSERT_LT(LIBC_NAMESPACE::printf_core::convert(&writer, invalid_conv), 0);
+}
+
 TYPED_TEST(LlvmLibcPrintfConverterTest, WideCharConversionSimple,
            TestCharTypes) {
   using CharT = ParamType;

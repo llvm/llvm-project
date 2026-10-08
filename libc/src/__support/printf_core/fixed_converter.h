@@ -19,6 +19,7 @@
 #include "src/__support/printf_core/converter_utils.h"
 #include "src/__support/printf_core/core_structs.h"
 #include "src/__support/printf_core/writer.h"
+#include "src/__support/wctype_utils.h"
 
 #include <inttypes.h>
 #include <stddef.h>
