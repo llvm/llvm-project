@@ -1132,8 +1132,11 @@ public:
   struct BuildVectorUseOp {
     unsigned Opcode;
     int OperandIndex;
-    BuildVectorUseOp(unsigned Opcode, int OperandIndex)
-        : Opcode(Opcode), OperandIndex(OperandIndex) {}
+    /// The user is fused into its own vector user (e.g. an fmul into an
+    /// fmuladd).
+    bool IsFused;
+    BuildVectorUseOp(unsigned Opcode, int OperandIndex, bool IsFused = false)
+        : Opcode(Opcode), OperandIndex(OperandIndex), IsFused(IsFused) {}
   };
 
   /// Calculates a VectorInstrContext from \p I.

@@ -213,6 +213,12 @@ public:
                      TTI::VectorInstrContext VIC =
                          TTI::VectorInstrContext::None) const override;
 
+  TargetTransformInfo::VectorInstrContext getBuildVectorContextHint(
+      ArrayRef<int> Mask, ArrayRef<Value *> Scalars,
+      function_ref<
+          bool(SmallVectorImpl<TargetTransformInfo::BuildVectorUseOp> &)>
+          GatherUseOps) const override;
+
   /// \param ScalarUserAndIdx encodes the information about extracts from a
   /// vector with 'Scalar' being the value being extracted,'User' being the user
   /// of the extract(nullptr if user is not known before vectorization) and

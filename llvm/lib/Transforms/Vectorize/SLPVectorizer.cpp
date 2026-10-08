@@ -2527,10 +2527,14 @@ private:
 
   /// Collects into \p UserOps the user operations of the gathers of the scalars
   /// of \p E, for TTI::getBuildVectorContextHint(). Returns false if no user is
-  /// found or some user cannot be described.
+  /// found or some user cannot take the splat as a scalar operand.
   bool
   collectGatherUserOps(const TreeEntry &E,
                        SmallVectorImpl<TTI::BuildVectorUseOp> &UserOps) const;
+
+  /// Returns true if the target folds the splat gather \p TE into all its
+  /// users, so that no broadcast is emitted.
+  bool isSplatFolded(const TreeEntry &TE) const;
 
   /// \returns the fadd/fsub user of the single-use fmul \p I, which the
   /// backend fuses with \p I into an fmuladd in the scalar code, and the cost
@@ -13456,9 +13460,30 @@ bool BoUpSLP::collectGatherUserOps(
     if (!UserTE || !UserTE->hasState() || UserTE->isAltShuffle() ||
         TransformedToGatherNodes.contains(UserTE))
       return false;
-    UserOps.emplace_back(UserTE->getOpcode(), TE->UserTreeIndex.EdgeIdx);
+    // A binary operation takes at most one of its operands as a scalar.
+    unsigned OpIdx = TE->UserTreeIndex.EdgeIdx;
+    if (UserTE->getNumOperands() == 2) {
+      ArrayRef<Value *> Other = UserTE->getOperand(1 - OpIdx);
+      if (all_equal(Other) && !isConstant(Other.front()))
+        return false;
+    }
+    UserOps.emplace_back(UserTE->getOpcode(), OpIdx,
+                         UserTE->State == TreeEntry::CombinedVectorize);
   }
   return !UserOps.empty();
+}
+
+bool BoUpSLP::isSplatFolded(const TreeEntry &TE) const {
+  if (allConstant(TE.Scalars) || !isSplat(TE.Scalars))
+    return false;
+  SmallVector<int> Mask(
+      TE.Scalars.size(),
+      TE.findLaneForValue(*find_if_not(TE.Scalars, IsaPred<UndefValue>)));
+  return TTI->getBuildVectorContextHint(
+             Mask, TE.Scalars,
+             [&](SmallVectorImpl<TTI::BuildVectorUseOp> &UserOps) {
+               return collectGatherUserOps(TE, UserOps);
+             }) == TTI::VectorInstrContext::SplatOpFolded;
 }
 
 uint64_t BoUpSLP::getNumScalarInsts(bool HasTreeLoop) {
@@ -13593,6 +13618,18 @@ uint64_t BoUpSLP::getNumVectorInsts(bool HasTreeLoop, bool CountExtracts) {
   // Source vector -> max scale among the gather entries sharing it, so the
   // combined shufflevector is still weighted like an in-loop entry below.
   SmallDenseMap<Value *, uint64_t, 4> GatherExtractSourceVecs;
+  // The gathers of the same fully defined splat share their users, query them
+  // once.
+  SmallDenseMap<std::pair<Value *, unsigned>, bool, 4> FoldedSplats;
+  auto IsFoldedSplat = [&](const TreeEntry &TE) {
+    if (!all_equal(TE.Scalars))
+      return isSplatFolded(TE);
+    auto [It, Inserted] = FoldedSplats.try_emplace(
+        std::make_pair(TE.Scalars.front(), TE.Scalars.size()));
+    if (Inserted)
+      It->second = isSplatFolded(TE);
+    return It->second;
+  };
   for (const std::unique_ptr<TreeEntry> &Ptr : VectorizableTree) {
     const TreeEntry &TE = *Ptr;
     if (DeletedNodes.contains(&TE))
@@ -13629,8 +13666,9 @@ uint64_t BoUpSLP::getNumVectorInsts(bool HasTreeLoop, bool CountExtracts) {
                   .first->second;
           VecScale = std::max(VecScale, Scale);
         }
-      } else {
-        // A splat is a single broadcast.
+      } else if (!IsFoldedSplat(TE)) {
+        // A splat is a single broadcast, unless the target folds it into its
+        // users.
         if (HasFusedAlt && isSplat(TE.Scalars))
           Count = !isConstant(TE.Scalars.front());
         else
