@@ -48,8 +48,8 @@ STATISTIC(NumLDFormed, "Number of LD instructions formed");
 STATISTIC(NumSDFormed, "Number of SD instructions formed");
 
 static cl::opt<bool>
-    DisableZilsdOpt("disable-riscv-zilsd-opt", cl::Hidden, cl::init(false),
-                    cl::desc("Disable Zilsd load/store optimization"));
+    EnableZilsdOpt("riscv-zilsd-opt", cl::Hidden, cl::init(true),
+                   cl::desc("Enable Zilsd load/store optimization"));
 
 static cl::opt<unsigned> MaxRescheduleDistance(
     "riscv-zilsd-max-reschedule-distance", cl::Hidden, cl::init(10),
@@ -130,7 +130,7 @@ INITIALIZE_PASS_END(RISCVPreAllocZilsdOpt, "riscv-prera-zilsd-opt",
 
 bool RISCVPreAllocZilsdOpt::runOnMachineFunction(MachineFunction &MF) {
 
-  if (DisableZilsdOpt || skipFunction(MF.getFunction()))
+  if (!EnableZilsdOpt || skipFunction(MF.getFunction()))
     return false;
 
   STI = &MF.getSubtarget<RISCVSubtarget>();
@@ -351,8 +351,8 @@ bool RISCVPreAllocZilsdOpt::rescheduleOps(
 
     if (IsLoad) {
       MIB = BuildMI(*MBB, InsertPos, DL, TII->get(RISCV::PseudoLD_RV32_OPT))
-                .addReg(FirstReg, RegState::Define)
-                .addReg(SecondReg, RegState::Define);
+                .addDef(FirstReg)
+                .addDef(SecondReg);
       ++NumLDFormed;
       LLVM_DEBUG(dbgs() << "Formed LD: " << *MIB << "\n");
     } else {

@@ -20,6 +20,7 @@
 
 #include "BedrockTestUtils.h"
 #include "CommonTestUtils.h"
+#include "ErrorMatchers.h"
 
 #include "orc-rt/support/sps/SimplePackedSerialization.h"
 
@@ -108,7 +109,7 @@ TEST(SimpleRemoteCATest, SetupMessageRoundTrips) {
   SimpleSymbolTable Symbols;
   std::vector<std::pair<SymbolNameSpec, const void *>> SymbolDefs = {
       {SymbolNameSpec::linker("foo"), &SomeSymbol}};
-  cantFail(Symbols.addUnique(SymbolDefs));
+  ASSERT_THAT_ERROR(Symbols.addUnique(SymbolDefs), Succeeded());
 
   BootstrapInfo BI(S, std::move(Symbols),
                    BootstrapInfo::ValueMap{{"key", "value"}});
@@ -133,7 +134,7 @@ TEST(SimpleRemoteCATest, SetupMessageRoundTrips) {
   // controller would be left to interpret.
   EXPECT_EQ(static_cast<size_t>(IB.data() - Payload.data()), Payload.size());
 
-  S.detach([] {});
+  S.detach();
 }
 
 TEST(SimpleRemoteCATest, MessageHeaderRoundTrips) {
@@ -170,25 +171,25 @@ TEST(SimpleRemoteCATest, MessageHeaderRoundTripsWithNoPayload) {
 TEST(SimpleRemoteCATest, OrderlyHangupRoundTrips) {
   // Both ends encode and decode hang-ups through these, so a success value must
   // survive the trip as a success.
-  auto Err = TestCA::decodeHangup(TestCA::encodeHangup(Error::success()));
-  EXPECT_FALSE(!!Err) << "an orderly hang-up is not an error";
+  EXPECT_THAT_ERROR(
+      TestCA::decodeHangup(TestCA::encodeHangup(Error::success())), Succeeded())
+      << "an orderly hang-up is not an error";
 }
 
 TEST(SimpleRemoteCATest, HangupReasonRoundTrips) {
-  auto Err = TestCA::decodeHangup(
-      TestCA::encodeHangup(make_error<StringError>("controller ran out of x")));
-  ASSERT_TRUE(!!Err);
-  EXPECT_EQ(toString(std::move(Err)), "controller ran out of x");
+  EXPECT_THAT_ERROR(TestCA::decodeHangup(TestCA::encodeHangup(
+                        make_error<StringError>("controller ran out of x"))),
+                    FailedWithMessage("controller ran out of x"));
 }
 
 TEST(SimpleRemoteCATest, DecodeHangupRejectsAnEmptyPayload) {
   // Never valid: the two ends are rev-locked, so this is a bug in the peer
   // rather than version skew. It comes back as an error like any other reason,
   // since both outcomes end the session.
-  auto Err = TestCA::decodeHangup(WrapperFunctionBuffer());
-  ASSERT_TRUE(!!Err);
-  EXPECT_EQ(toString(std::move(Err)),
-            "Malformed hang-up message: could not deserialize reason");
+  EXPECT_THAT_ERROR(
+      TestCA::decodeHangup(WrapperFunctionBuffer()),
+      FailedWithMessage(
+          "Malformed hang-up message: could not deserialize reason"));
 }
 
 TEST(SimpleRemoteCATest, ResultValueRoundTrips) {
@@ -239,13 +240,12 @@ TEST(SimpleRemoteCATest, ResultWithAnUnknownKindIsRejected) {
 
   uint64_t UnknownKind =
       static_cast<uint64_t>(TestCA::ResultKind::LastResultKind) + 1;
-  auto A = CA->handleMessage(static_cast<uint64_t>(TestCA::Opcode::Result),
-                             /*SeqNo=*/1, UnknownKind, WrapperFunctionBuffer());
-  ASSERT_FALSE(!!A);
-  EXPECT_EQ(toString(A.takeError()),
-            "Malformed result message: invalid kind 2");
+  EXPECT_THAT_EXPECTED(
+      CA->handleMessage(static_cast<uint64_t>(TestCA::Opcode::Result),
+                        /*SeqNo=*/1, UnknownKind, WrapperFunctionBuffer()),
+      FailedWithMessage("Malformed result message: invalid kind 2"));
 
-  S.detach([] {});
+  S.detach();
 }
 
 TEST(SimpleRemoteCATest, DecodeResultOfMalformedOutOfBandErrorIsNotTerminal) {
@@ -274,7 +274,7 @@ TEST(SimpleRemoteCATest, RegisterCallReturnsDistinctNonZeroSequenceNumbers) {
   EXPECT_NE(Second, 0u);
   EXPECT_NE(First, Second);
 
-  S.detach([] {});
+  S.detach();
 }
 
 TEST(SimpleRemoteCATest, TakeCallYieldsTheHandlerExactlyOnce) {
@@ -293,7 +293,7 @@ TEST(SimpleRemoteCATest, TakeCallYieldsTheHandlerExactlyOnce) {
   EXPECT_FALSE(!!CA->takeCall(/*SeqNo=*/9999)) << "never registered";
 
   CA->failPendingControllerCall(std::move(Taken));
-  S.detach([] {});
+  S.detach();
 }
 
 TEST(SimpleRemoteCATest, TakeAllCallsEmptiesTheTable) {
@@ -316,5 +316,5 @@ TEST(SimpleRemoteCATest, TakeAllCallsEmptiesTheTable) {
 
   for (auto &[SeqNo, OnComplete] : All)
     CA->failPendingControllerCall(std::move(OnComplete));
-  S.detach([] {});
+  S.detach();
 }

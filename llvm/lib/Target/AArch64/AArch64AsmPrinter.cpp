@@ -63,7 +63,6 @@
 #include "llvm/MC/MCValue.h"
 #include "llvm/MC/TargetRegistry.h"
 #include "llvm/Support/Casting.h"
-#include "llvm/Support/CommandLine.h"
 #include "llvm/Support/Compiler.h"
 #include "llvm/Support/ErrorHandling.h"
 #include "llvm/Support/raw_ostream.h"
@@ -76,6 +75,7 @@
 #include <memory>
 
 using namespace llvm;
+using AArch64PAuth::PtrauthCheckMode;
 
 #define DEBUG_TYPE "AArch64AsmPrinter"
 
@@ -84,14 +84,6 @@ using namespace llvm;
 STATISTIC(NumZCZeroingInstrsFPR,
           "Number of zero-cycle FPR zeroing instructions expanded from "
           "canonical pseudo instructions");
-
-enum PtrauthCheckMode { Unchecked, Poison, Trap };
-static cl::opt<PtrauthCheckMode> PtrauthAuthChecks(
-    "aarch64-ptrauth-auth-checks", cl::Hidden,
-    cl::values(clEnumValN(Unchecked, "none", "don't test for failure"),
-               clEnumValN(Poison, "poison", "poison on failure"),
-               clEnumValN(Trap, "trap", "trap on failure")),
-    cl::desc("Check pointer authentication auth/resign failures"));
 
 namespace {
 
@@ -290,6 +282,11 @@ public:
   // Emit expansion of Compare-and-branch pseudo instructions
   void emitCBPseudoExpansion(const MachineInstr *MI);
 
+  // Emit expansion of atomic store with hint pseudo instructions
+  void emitAtomicHintPseudoExpansion(const MachineInstr *MI);
+  void emitAtomicHintPseudoExpansionRO(const MachineInstr *MI);
+  void emitAtomicHintPseudoExpansionImm(const MachineInstr *MI);
+
   void EmitToStreamer(MCStreamer &S, const MCInst &Inst);
   void EmitToStreamer(const MCInst &Inst) {
     EmitToStreamer(*OutStreamer, Inst);
@@ -418,7 +415,7 @@ static bool getOptionalBooleanModuleFlag(Module &M, StringRef Name) {
 }
 
 void AArch64AsmPrinter::emitStartOfAsmFile(Module &M) {
-  const Triple &TT = TM.getTargetTriple();
+  const Triple &TT = M.getTargetTriple();
 
   if (TT.isOSBinFormatCOFF()) {
     emitCOFFFeatureSymbol(M);
@@ -633,7 +630,7 @@ void AArch64AsmPrinter::LowerPATCHABLE_EVENT_CALL(const MachineInstr &MI,
   auto &O = *OutStreamer;
   MCSymbol *CurSled = OutContext.createTempSymbol("xray_sled_", true);
   O.emitLabel(CurSled);
-  bool MachO = TM.getTargetTriple().isOSBinFormatMachO();
+  bool MachO = MMI->getModule()->getTargetTriple().isOSBinFormatMachO();
   auto *Sym = MCSymbolRefExpr::create(
       OutContext.getOrCreateSymbol(
           Twine(MachO ? "_" : "") +
@@ -826,7 +823,7 @@ void AArch64AsmPrinter::emitHwasanMemaccessSymbols(Module &M) {
   if (HwasanMemaccessSymbols.empty())
     return;
 
-  const Triple &TT = TM.getTargetTriple();
+  const Triple &TT = M.getTargetTriple();
   assert(TT.isOSBinFormatELF());
   // AArch64Subtarget is huge, so heap allocate it so we don't run out of stack
   // space.
@@ -1040,7 +1037,7 @@ static void emitAuthenticatedPointer(MCStreamer &OutStreamer,
 void AArch64AsmPrinter::emitEndOfAsmFile(Module &M) {
   emitHwasanMemaccessSymbols(M);
 
-  const Triple &TT = TM.getTargetTriple();
+  const Triple &TT = M.getTargetTriple();
   if (TT.isOSBinFormatMachO()) {
     // Output authenticated pointers as indirect symbols, if we have any.
     MachineModuleInfoMachO &MMIMacho =
@@ -2367,8 +2364,9 @@ static PtrauthCheckMode getCheckMode(const MachineFunction *MF) {
   const AArch64Subtarget &STI = MF->getSubtarget<AArch64Subtarget>();
 
   // If an override is passed via command line argument, just use that value.
-  if (PtrauthAuthChecks.getNumOccurrences())
-    return PtrauthAuthChecks;
+  if (std::optional<PtrauthCheckMode> Mode =
+          STI.getCLOpts().ptrauth_auth_checks)
+    return *Mode;
 
   // Otherwise, on an FPAC CPU, you get traps whether you want them or not:
   // there's no point in emitting checks or traps.
@@ -2486,14 +2484,14 @@ void AArch64AsmPrinter::emitPtrauthAuthResign(
   }
 
   switch (CheckMode) {
-  case Unchecked:
+  case PtrauthCheckMode::Unchecked:
     EmitResignOnSuccess();
     break;
-  case Trap:
+  case PtrauthCheckMode::Trap:
     EmitCheck();
     EmitResignOnSuccess();
     break;
-  case Poison:
+  case PtrauthCheckMode::Poison:
     MCSymbol *OnFailure = createTempSymbol("resign_end_");
     EmitCheck(OnFailure);
     EmitResignOnSuccess();
@@ -3249,6 +3247,161 @@ void AArch64AsmPrinter::emitCBPseudoExpansion(const MachineInstr *MI) {
   EmitToStreamer(*OutStreamer, Inst);
 }
 
+void AArch64AsmPrinter::emitAtomicHintPseudoExpansion(const MachineInstr *MI) {
+
+  unsigned StOpc;
+  unsigned Relaxed = MI->getOperand(2).getImm();
+  assert(Relaxed < 2 && "Atomic hint relaxed immediate out-of-bounds");
+  switch (MI->getOpcode()) {
+  case AArch64::ATOMIC_STORE_HINT_B:
+    StOpc = Relaxed ? AArch64::STRBBui : AArch64::STLRB;
+    break;
+  case AArch64::ATOMIC_STORE_HINT_H:
+    StOpc = Relaxed ? AArch64::STRHHui : AArch64::STLRH;
+    break;
+  case AArch64::ATOMIC_STORE_HINT_W:
+    StOpc = Relaxed ? AArch64::STRWui : AArch64::STLRW;
+    break;
+  case AArch64::ATOMIC_STORE_HINT_X:
+    StOpc = Relaxed ? AArch64::STRXui : AArch64::STLRX;
+    break;
+  default:
+    llvm_unreachable("Unexpected atomic hint size.");
+  }
+
+  EmitToStreamer(
+      MCInstBuilder(AArch64::HINT).addImm(MI->getOperand(3).getImm()));
+
+  MCInst Store;
+  Store.setOpcode(StOpc);
+  Store.addOperand(MCOperand::createReg(MI->getOperand(0).getReg()));
+  Store.addOperand(MCOperand::createReg(MI->getOperand(1).getReg()));
+  Store.setFlags(MI->getFlags());
+  if (Relaxed)
+    Store.addOperand(MCOperand::createImm(0));
+  EmitToStreamer(*OutStreamer, Store);
+}
+
+void AArch64AsmPrinter::emitAtomicHintPseudoExpansionRO(
+    const MachineInstr *MI) {
+  unsigned StOpc;
+  assert(MI->getOperand(5).getImm() == 1 &&
+         "Atomic store addressing mode only supports relaxed stores");
+
+  switch (MI->getOpcode()) {
+  case AArch64::ATOMIC_STORE_HINT_BroW:
+    StOpc = AArch64::STRBBroW;
+    break;
+  case AArch64::ATOMIC_STORE_HINT_HroW:
+    StOpc = AArch64::STRHHroW;
+    break;
+  case AArch64::ATOMIC_STORE_HINT_WroW:
+    StOpc = AArch64::STRWroW;
+    break;
+  case AArch64::ATOMIC_STORE_HINT_XroW:
+    StOpc = AArch64::STRXroW;
+    break;
+  case AArch64::ATOMIC_STORE_HINT_SroW:
+    StOpc = AArch64::STRSroW;
+    break;
+  case AArch64::ATOMIC_STORE_HINT_DroW:
+    StOpc = AArch64::STRDroW;
+    break;
+  case AArch64::ATOMIC_STORE_HINT_BroX:
+    StOpc = AArch64::STRBBroX;
+    break;
+  case AArch64::ATOMIC_STORE_HINT_HroX:
+    StOpc = AArch64::STRHHroX;
+    break;
+  case AArch64::ATOMIC_STORE_HINT_WroX:
+    StOpc = AArch64::STRWroX;
+    break;
+  case AArch64::ATOMIC_STORE_HINT_XroX:
+    StOpc = AArch64::STRXroX;
+    break;
+  case AArch64::ATOMIC_STORE_HINT_SroX:
+    StOpc = AArch64::STRSroX;
+    break;
+  case AArch64::ATOMIC_STORE_HINT_DroX:
+    StOpc = AArch64::STRDroX;
+    break;
+  default:
+    llvm_unreachable("Unexpected atomic hint opcode.");
+  }
+
+  EmitToStreamer(
+      MCInstBuilder(AArch64::HINT).addImm(MI->getOperand(6).getImm()));
+
+  MCInst Store;
+  Store.setOpcode(StOpc);
+  Store.addOperand(MCOperand::createReg(MI->getOperand(0).getReg())); // Rn
+  Store.addOperand(MCOperand::createReg(MI->getOperand(1).getReg())); // Rm
+  Store.addOperand(MCOperand::createReg(MI->getOperand(2).getReg())); // Data
+  Store.addOperand(MCOperand::createImm(MI->getOperand(3).getImm())); // Signed
+  Store.addOperand(MCOperand::createImm(MI->getOperand(4).getImm())); // Shift
+  Store.setFlags(MI->getFlags());
+  EmitToStreamer(*OutStreamer, Store);
+}
+
+void AArch64AsmPrinter::emitAtomicHintPseudoExpansionImm(
+    const MachineInstr *MI) {
+  unsigned StOpc;
+  assert(MI->getOperand(3).getImm() == 1 &&
+         "Atomic store addressing mode only supports relaxed stores");
+
+  switch (MI->getOpcode()) {
+  case AArch64::ATOMIC_STORE_HINT_Bui:
+    StOpc = AArch64::STRBBui;
+    break;
+  case AArch64::ATOMIC_STORE_HINT_Hui:
+    StOpc = AArch64::STRHHui;
+    break;
+  case AArch64::ATOMIC_STORE_HINT_Wui:
+    StOpc = AArch64::STRWui;
+    break;
+  case AArch64::ATOMIC_STORE_HINT_Xui:
+    StOpc = AArch64::STRXui;
+    break;
+  case AArch64::ATOMIC_STORE_HINT_Sui:
+    StOpc = AArch64::STRSui;
+    break;
+  case AArch64::ATOMIC_STORE_HINT_Dui:
+    StOpc = AArch64::STRDui;
+    break;
+  case AArch64::ATOMIC_STORE_HINT_Bi:
+    StOpc = AArch64::STURBBi;
+    break;
+  case AArch64::ATOMIC_STORE_HINT_Hi:
+    StOpc = AArch64::STURHHi;
+    break;
+  case AArch64::ATOMIC_STORE_HINT_Wi:
+    StOpc = AArch64::STURWi;
+    break;
+  case AArch64::ATOMIC_STORE_HINT_Xi:
+    StOpc = AArch64::STURXi;
+    break;
+  case AArch64::ATOMIC_STORE_HINT_Si:
+    StOpc = AArch64::STURSi;
+    break;
+  case AArch64::ATOMIC_STORE_HINT_Di:
+    StOpc = AArch64::STURDi;
+    break;
+  default:
+    llvm_unreachable("Unexpected atomic hint opcode.");
+  }
+
+  EmitToStreamer(
+      MCInstBuilder(AArch64::HINT).addImm(MI->getOperand(4).getImm()));
+
+  MCInst Store;
+  Store.setOpcode(StOpc);
+  Store.addOperand(MCOperand::createReg(MI->getOperand(0).getReg())); // Rn
+  Store.addOperand(MCOperand::createReg(MI->getOperand(1).getReg())); // Data
+  Store.addOperand(MCOperand::createImm(MI->getOperand(2).getImm())); // Imm
+  Store.setFlags(MI->getFlags());
+  EmitToStreamer(*OutStreamer, Store);
+}
+
 // Simple pseudo-instructions have their lowering (with expansion to real
 // instructions) auto-generated.
 #include "AArch64GenMCPseudoLowering.inc"
@@ -3965,6 +4118,40 @@ void AArch64AsmPrinter::emitInstruction(const MachineInstr *MI) {
   case AArch64::CBWPrr:
   case AArch64::CBXPrr:
     emitCBPseudoExpansion(MI);
+    return;
+  case AArch64::ATOMIC_STORE_HINT_B:
+  case AArch64::ATOMIC_STORE_HINT_H:
+  case AArch64::ATOMIC_STORE_HINT_W:
+  case AArch64::ATOMIC_STORE_HINT_X:
+    emitAtomicHintPseudoExpansion(MI);
+    return;
+  case AArch64::ATOMIC_STORE_HINT_BroW:
+  case AArch64::ATOMIC_STORE_HINT_HroW:
+  case AArch64::ATOMIC_STORE_HINT_WroW:
+  case AArch64::ATOMIC_STORE_HINT_XroW:
+  case AArch64::ATOMIC_STORE_HINT_SroW:
+  case AArch64::ATOMIC_STORE_HINT_DroW:
+  case AArch64::ATOMIC_STORE_HINT_BroX:
+  case AArch64::ATOMIC_STORE_HINT_HroX:
+  case AArch64::ATOMIC_STORE_HINT_WroX:
+  case AArch64::ATOMIC_STORE_HINT_XroX:
+  case AArch64::ATOMIC_STORE_HINT_SroX:
+  case AArch64::ATOMIC_STORE_HINT_DroX:
+    emitAtomicHintPseudoExpansionRO(MI);
+    return;
+  case AArch64::ATOMIC_STORE_HINT_Bui:
+  case AArch64::ATOMIC_STORE_HINT_Hui:
+  case AArch64::ATOMIC_STORE_HINT_Wui:
+  case AArch64::ATOMIC_STORE_HINT_Xui:
+  case AArch64::ATOMIC_STORE_HINT_Sui:
+  case AArch64::ATOMIC_STORE_HINT_Dui:
+  case AArch64::ATOMIC_STORE_HINT_Bi:
+  case AArch64::ATOMIC_STORE_HINT_Hi:
+  case AArch64::ATOMIC_STORE_HINT_Wi:
+  case AArch64::ATOMIC_STORE_HINT_Xi:
+  case AArch64::ATOMIC_STORE_HINT_Si:
+  case AArch64::ATOMIC_STORE_HINT_Di:
+    emitAtomicHintPseudoExpansionImm(MI);
     return;
   }
 

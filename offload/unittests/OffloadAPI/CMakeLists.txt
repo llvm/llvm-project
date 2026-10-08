@@ -48,11 +48,14 @@ target_compile_definitions("memory_host.unittests" PRIVATE DISABLE_WRAPPER)
 
 add_offload_unittest("platform"
     platform/olGetPlatformInfo.cpp
-    platform/olGetPlatformInfoSize.cpp)
+    platform/olGetPlatformInfoSize.cpp
+    platform/olRegisterRPCCallback.cpp
+    platform/olIteratePlatforms.cpp)
 
 add_offload_unittest("program"
     program/olCreateProgram.cpp
     program/olIsValidBinary.cpp
+    program/olIterateCompatibleDevices.cpp
     program/olDestroyProgram.cpp)
 
 add_offload_unittest("queue"
