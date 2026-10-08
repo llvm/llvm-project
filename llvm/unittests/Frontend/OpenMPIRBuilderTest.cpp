@@ -77,7 +77,7 @@ namespace {
 /// executed here.
 static CallInst *createPrintfCall(IRBuilder<> &Builder, StringRef FormatStr,
                                   ArrayRef<Value *> Values) {
-  Module *M = Builder.GetInsertBlock()->getParent()->getParent();
+  Module *M = Builder.getModule();
 
   GlobalVariable *GV = Builder.CreateGlobalString(FormatStr, "", 0, M);
 
@@ -5178,7 +5178,7 @@ static bool findGEPZeroOne(Value *Ptr, Value *&Zero, Value *&One) {
 static OpenMPIRBuilder::InsertPointTy
 sumReduction(OpenMPIRBuilder::InsertPointTy IP, Value *LHS, Value *RHS,
              Value *&Result) {
-  IRBuilder<> Builder(IP.getNodeParent(), IP);
+  IRBuilder<> Builder(IP);
   Result = Builder.CreateFAdd(LHS, RHS, "red.add");
   return Builder.saveIP();
 }
@@ -5186,7 +5186,7 @@ sumReduction(OpenMPIRBuilder::InsertPointTy IP, Value *LHS, Value *RHS,
 static OpenMPIRBuilder::InsertPointTy
 sumAtomicReduction(OpenMPIRBuilder::InsertPointTy IP, Type *Ty, Value *LHS,
                    Value *RHS) {
-  IRBuilder<> Builder(IP.getNodeParent(), IP);
+  IRBuilder<> Builder(IP);
   Value *Partial = Builder.CreateLoad(Ty, RHS, "red.partial");
   Builder.CreateAtomicRMW(AtomicRMWInst::FAdd, LHS, Partial, std::nullopt,
                           AtomicOrdering::Monotonic);
@@ -5196,7 +5196,7 @@ sumAtomicReduction(OpenMPIRBuilder::InsertPointTy IP, Type *Ty, Value *LHS,
 static OpenMPIRBuilder::InsertPointTy
 xorReduction(OpenMPIRBuilder::InsertPointTy IP, Value *LHS, Value *RHS,
              Value *&Result) {
-  IRBuilder<> Builder(IP.getNodeParent(), IP);
+  IRBuilder<> Builder(IP);
   Result = Builder.CreateXor(LHS, RHS, "red.xor");
   return Builder.saveIP();
 }
@@ -5204,7 +5204,7 @@ xorReduction(OpenMPIRBuilder::InsertPointTy IP, Value *LHS, Value *RHS,
 static OpenMPIRBuilder::InsertPointTy
 xorAtomicReduction(OpenMPIRBuilder::InsertPointTy IP, Type *Ty, Value *LHS,
                    Value *RHS) {
-  IRBuilder<> Builder(IP.getNodeParent(), IP);
+  IRBuilder<> Builder(IP);
   Value *Partial = Builder.CreateLoad(Ty, RHS, "red.partial");
   Builder.CreateAtomicRMW(AtomicRMWInst::Xor, LHS, Partial, std::nullopt,
                           AtomicOrdering::Monotonic);
@@ -8355,11 +8355,11 @@ TEST_F(OpenMPIRBuilderTest, splitBB) {
 
   Builder.SetCurrentDebugLocation(DL);
   AllocaInst *alloc = Builder.CreateAlloca(Builder.getInt32Ty());
-  EXPECT_TRUE(DL == alloc->getStableDebugLoc());
+  EXPECT_TRUE(DL == alloc->getDebugLoc());
   BasicBlock *AllocaBB = Builder.GetInsertBlock();
   splitBB(Builder, /*CreateBranch=*/true, "test");
   if (AllocaBB->getTerminator())
-    EXPECT_TRUE(DL == AllocaBB->getTerminator()->getStableDebugLoc());
+    EXPECT_TRUE(DL == AllocaBB->getTerminator()->getDebugLoc());
 }
 
 TEST_F(OpenMPIRBuilderTest, spliceBBWithEmptyBB) {

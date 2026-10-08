@@ -79,3 +79,15 @@ double4 test_min_double4_mismatch(double4 p0, double p1) { return min(p0, p1); }
 // CHECK: [[MIN:%.*]] = call reassoc nnan ninf nsz arcp afn noundef nofpclass(nan inf) <4 x double> @llvm.minnum.v4f64(<4 x double> [[CONV1]], <4 x double> %{{.*}})
 // CHECK: ret <4 x double> [[MIN]]
 double4 test_min_double4_mismatch2(double4 p0, double p1) { return min(p1, p0); }
+
+// CHECK-LABEL: define hidden noundef nofpclass(nan inf) float {{.*}}test_min_float_int_mismatch
+// CHECK: [[CONV:%.*]] = sitofp reassoc nnan ninf nsz arcp afn i32 %{{.*}} to float
+// CHECK: [[MIN:%.*]] = call reassoc nnan ninf nsz arcp afn noundef nofpclass(nan inf) float @llvm.minnum.f32(float {{%.*}}, float [[CONV]])
+// CHECK: ret float [[MIN]]
+float test_min_float_int_mismatch(float p0, int p1) { return min(p0, p1); }
+
+// CHECK-LABEL: define hidden noundef nofpclass(nan inf) float {{.*}}test_min_float_int_mismatch2
+// CHECK: [[CONV:%.*]] = sitofp reassoc nnan ninf nsz arcp afn i32 %{{.*}} to float
+// CHECK: [[MIN:%.*]] = call reassoc nnan ninf nsz arcp afn noundef nofpclass(nan inf) float @llvm.minnum.f32(float [[CONV]], float %{{.*}})
+// CHECK: ret float [[MIN]]
+float test_min_float_int_mismatch2(float p0, int p1) { return min(p1, p0); }

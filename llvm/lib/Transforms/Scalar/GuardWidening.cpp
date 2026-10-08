@@ -792,7 +792,7 @@ Value *GuardWideningImpl::hoistChecks(SmallVectorImpl<Value *> &ChecksToHoist,
                                       Value *OldCondition,
                                       BasicBlock::iterator InsertPt) {
   assert(!ChecksToHoist.empty());
-  IRBuilder<> Builder(InsertPt->getParent(), InsertPt);
+  IRBuilder<> Builder(InsertPt);
   makeAvailableAt(ChecksToHoist, InsertPt);
   makeAvailableAt(OldCondition, InsertPt);
   Value *Result = Builder.CreateAnd(ChecksToHoist);

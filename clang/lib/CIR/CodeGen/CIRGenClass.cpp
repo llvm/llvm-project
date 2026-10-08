@@ -987,14 +987,13 @@ void CIRGenFunction::destroyCXXObject(CIRGenFunction &cgf, Address addr,
                             /*delegating=*/false, addr, type);
 }
 
-namespace {
-mlir::Value loadThisForDtorDelete(CIRGenFunction &cgf,
-                                  const CXXDestructorDecl *dd) {
+mlir::Value CIRGenFunction::loadThisForDtorDelete(const CXXDestructorDecl *dd) {
   if (Expr *thisArg = dd->getOperatorDeleteThisArg())
-    return cgf.emitScalarExpr(thisArg);
-  return cgf.loadCXXThis();
+    return emitScalarExpr(thisArg);
+  return loadCXXThis();
 }
 
+namespace {
 /// Call the operator delete associated with the current destructor.
 struct CallDtorDelete final : EHScopeStack::Cleanup {
   CallDtorDelete() {}
@@ -1003,7 +1002,7 @@ struct CallDtorDelete final : EHScopeStack::Cleanup {
     const CXXDestructorDecl *dtor = cast<CXXDestructorDecl>(cgf.curFuncDecl);
     const CXXRecordDecl *classDecl = dtor->getParent();
     cgf.emitDeleteCall(dtor->getOperatorDelete(),
-                       loadThisForDtorDelete(cgf, dtor),
+                       cgf.loadThisForDtorDelete(dtor),
                        cgf.getContext().getCanonicalTagType(classDecl));
   }
 };
@@ -1035,8 +1034,8 @@ public:
 /// destructors on members and base classes in reverse order of their
 /// construction.
 ///
-/// For a deleting destructor, this also handles the case where a destroying
-/// operator delete completely overrides the definition.
+/// For a deleting destructor, this pushes the cleanup that calls operator
+/// delete. The caller handles a destroying operator delete.
 void CIRGenFunction::enterDtorCleanups(const CXXDestructorDecl *dd,
                                        CXXDtorType dtorType) {
   assert((!dd->isTrivial() || dd->hasAttr<DLLExportAttr>()) &&
@@ -1048,14 +1047,17 @@ void CIRGenFunction::enterDtorCleanups(const CXXDestructorDecl *dd,
     assert(dd->getOperatorDelete() &&
            "operator delete missing - EnterDtorCleanups");
     if (cxxStructorImplicitParamValue) {
-      cgm.errorNYI(dd->getSourceRange(), "deleting destructor with vtt");
+      // The implicit parameter of a deleting destructor is the Microsoft ABI
+      // flag word that selects whether and which operator delete is called.
+      assert(getTarget().getCXXABI().isMicrosoft() &&
+             "only the Microsoft ABI passes an implicit deleting dtor param");
+      cgm.errorNYI(dd->getSourceRange(),
+                   "deleting destructor with conditional delete: MSVC ABI");
+
     } else {
-      if (dd->getOperatorDelete()->isDestroyingOperatorDelete()) {
-        cgm.errorNYI(dd->getSourceRange(),
-                     "deleting destructor with destroying operator delete");
-      } else {
-        ehStack.pushCleanup<CallDtorDelete>(NormalAndEHCleanup);
-      }
+      assert(!dd->getOperatorDelete()->isDestroyingOperatorDelete() &&
+             "destroying operator delete is handled by emitDestructorBody");
+      ehStack.pushCleanup<CallDtorDelete>(NormalAndEHCleanup);
     }
     return;
   }
@@ -1423,9 +1425,9 @@ void CIRGenFunction::emitInheritedCXXConstructorCall(
 
   if (inheritedFromVBase &&
       cgm.getTarget().getCXXABI().hasConstructorVariants()) {
-    cgm.errorNYI(e->getSourceRange(), "emitInheritedCXXConstructorCall "
-                                      "inheritedFromVBase with ctor variants");
-    return;
+    // The base-object variant doesn't construct virtual bases, so the
+    // inherited constructor's arguments aren't passed.
+    ctorArgs.push_back(thisArg);
   } else if (!cxxInheritedCtorInitExprArgs.empty()) {
     // The inheriting constructor was inlined; just inject its arguments.
     assert(cxxInheritedCtorInitExprArgs.size() >= d->getNumParams() &&
