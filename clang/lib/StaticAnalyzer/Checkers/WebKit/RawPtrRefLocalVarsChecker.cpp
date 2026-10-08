@@ -478,7 +478,7 @@ public:
             return true;
 
           if (Model->isSafeExpr(InitArgOrigin, PtrIsLifetimeBoundToOrigin,
-                                SinkType))
+                                SinkType, /*SinkMayEscape=*/false))
             return true;
 
           if (!Model->checksForInteriorDestruction() &&
@@ -606,7 +606,7 @@ class UnborrowedLocalVarsChecker final : public RawPtrRefLocalVarsChecker {
 public:
   UnborrowedLocalVarsChecker()
       : RawPtrRefLocalVarsChecker("Loan on a CanBorrow object not guarded by "
-                                  "a Borrow",
+                                  "const or a Borrow",
                                   makeBorrowSafetyModel()) {}
 };
 

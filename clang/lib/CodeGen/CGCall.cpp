@@ -2454,8 +2454,10 @@ static void getTrivialDefaultFunctionAttributes(
     FuncAttrs.addAttribute(Var, Value);
   }
 
-  TargetInfo::BranchProtectionInfo BPI(LangOpts);
-  TargetCodeGenInfo::initBranchProtectionFnAttributes(BPI, FuncAttrs);
+  if (!AttrOnCallSite) {
+    TargetInfo::BranchProtectionInfo BPI(LangOpts);
+    TargetCodeGenInfo::initBranchProtectionFnAttributes(BPI, FuncAttrs);
+  }
 }
 
 /// Merges `target-features` from \TargetOpts and \F, and sets the result in
