@@ -53869,7 +53869,6 @@ static SDValue combineAddOrSubToADCOrSBB(bool IsSub, const SDLoc &DL, EVT VT,
 
   X86::CondCode CC;
   SDValue EFLAGS;
-  SDNode *SrlBy1Node = nullptr;
   if (Y.getOpcode() == X86ISD::SETCC && Y.hasOneUse()) {
     CC = (X86::CondCode)Y.getConstantOperandVal(0);
     EFLAGS = Y.getOperand(1);
@@ -53879,8 +53878,7 @@ static SDValue combineAddOrSubToADCOrSBB(bool IsSub, const SDLoc &DL, EVT VT,
     // If so, we can use X86ISD::SHR_FLAG to get both the shifted result
     // and the carry flag (which contains the LSB), avoiding a separate BT.
     SDValue D = Y.getOperand(0);
-    SrlBy1Node = findSrlBy1User(D);
-    if (SrlBy1Node) {
+    if (SDNode *SrlBy1Node = findSrlBy1User(D)) {
       // Create X86ISD::SHR_FLAG which produces (D >> 1, EFLAGS with CF = D & 1)
       EVT SrlVT = SrlBy1Node->getValueType(0);
       SDVTList VTs = DAG.getVTList(SrlVT, MVT::i32);
