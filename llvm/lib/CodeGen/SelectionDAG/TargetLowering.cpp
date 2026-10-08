@@ -11478,6 +11478,18 @@ SDValue TargetLowering::expandLoopDependenceMask(SDNode *N,
   return DAG.getNode(ISD::GET_ACTIVE_LANE_MASK, DL, VT, LaneOffset, MaskN);
 }
 
+SDValue TargetLowering::expandMaskBeforeFirst(SDNode *N,
+                                              SelectionDAG &DAG) const {
+  // Expand to (get_active_lane_mask 0, (cttz_elts x))
+  SDLoc DL(N);
+  EVT VT = N->getValueType(0);
+  EVT VecIdxVT = getVectorIdxTy(DAG.getDataLayout());
+  SDValue CttzElts =
+      DAG.getNode(ISD::CTTZ_ELTS, DL, VecIdxVT, N->getOperand(0));
+  return DAG.getNode(ISD::GET_ACTIVE_LANE_MASK, DL, VT,
+                     DAG.getConstant(0, DL, VecIdxVT), CttzElts);
+}
+
 SDValue TargetLowering::expandABS(SDNode *N, SelectionDAG &DAG,
                                   bool IsNegative) const {
   SDLoc dl(N);
