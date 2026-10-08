@@ -1155,9 +1155,9 @@ lldb::ProcessSP Platform::DebugProcess(ProcessLaunchInfo &launch_info,
         // stdin/out/err after we have already opened the primary so we can
         // read/write stdin/out/err.
 #ifndef _WIN32
-        int pty_fd = launch_info.GetPTY().ReleasePrimaryFileDescriptor();
-        if (pty_fd != PseudoTerminal::invalid_fd) {
-          process_sp->SetSTDIOFileDescriptor(pty_fd);
+        if (launch_info.GetPTY().GetPrimaryFileDescriptor() !=
+            PseudoTerminal::invalid_fd) {
+          process_sp->SetSTDIOPseudoTerminal(launch_info.GetPTY());
         }
 #endif
       } else {
