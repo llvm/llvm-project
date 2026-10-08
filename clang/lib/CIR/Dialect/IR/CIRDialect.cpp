@@ -2371,6 +2371,12 @@ mlir::LogicalResult cir::GlobalOp::verify() {
       return failure();
   }
 
+  // The initial value can't be recomputed from the type once the ctor is
+  // lowered (e.g. a null member pointer becomes -1 after CXXABILowering).
+  if (!getCtorRegion().empty() && !getInitialValue().has_value())
+    return emitOpError(
+        "cannot have a constructor region without an initial value");
+
   std::optional<DynamicInitInfoAttr> info = getDynamicInitInfo();
 
   if ((getDynamicInitGuard().has_value()) && (!info || info->getLocal()) &&
@@ -2519,17 +2525,14 @@ static void printGlobalOpTypeAndInitialValue(OpAsmPrinter &p, cir::GlobalOp op,
   }
 
   p << "= ";
+  if (initAttr)
+    printConstant(p, initAttr);
+
   if (!ctorRegion.empty()) {
-    p << "ctor ";
-    printType();
-    p << " ";
+    p << " ctor ";
     p.printRegion(ctorRegion,
                   /*printEntryBlockArgs=*/false,
                   /*printBlockTerminators=*/false);
-  } else {
-    // This also prints the type...
-    if (initAttr)
-      printConstant(p, initAttr);
   }
 
   if (!dtorRegion.empty()) {
@@ -2552,26 +2555,24 @@ static ParseResult parseGlobalOpTypeAndInitialValue(OpAsmParser &parser,
     if (parser.parseColonType(opTy))
       return failure();
   } else {
-    // Parse contructor, example:
-    //  cir.global @rgb = ctor : type { ... }
+    // Parse constant with initializer, examples:
+    //  cir.global @y = 3.400000e+00 : f32
+    //  cir.global @rgb = #cir.const_array<[...] : !cir.array<i8 x 3>>
+    if (parseConstantValue(parser, initialValueAttr).failed())
+      return failure();
+
+    assert(mlir::isa<mlir::TypedAttr>(initialValueAttr) &&
+           "Non-typed attrs shouldn't appear here.");
+    opTy = mlir::cast<mlir::TypedAttr>(initialValueAttr).getType();
+
+    // Parse constructor, example:
+    //  cir.global @rgb = #cir.zero : type ctor { ... }
     if (!parser.parseOptionalKeyword("ctor")) {
-      if (parser.parseColonType(opTy))
-        return failure();
       auto parseLoc = parser.getCurrentLocation();
       if (parser.parseRegion(ctorRegion, /*arguments=*/{}, /*argTypes=*/{}))
         return failure();
       if (ensureRegionTerm(parser, ctorRegion, parseLoc).failed())
         return failure();
-    } else {
-      // Parse constant with initializer, examples:
-      //  cir.global @y = 3.400000e+00 : f32
-      //  cir.global @rgb = #cir.const_array<[...] : !cir.array<i8 x 3>>
-      if (parseConstantValue(parser, initialValueAttr).failed())
-        return failure();
-
-      assert(mlir::isa<mlir::TypedAttr>(initialValueAttr) &&
-             "Non-typed attrs shouldn't appear here.");
-      opTy = mlir::cast<mlir::TypedAttr>(initialValueAttr).getType();
     }
 
     // Parse destructor, example:
@@ -5017,7 +5018,49 @@ void cir::TryOp::getSuccessorRegions(
     regions.push_back(mlir::RegionSuccessor(&handlerRegion));
 }
 
-LogicalResult cir::TryOp::verify() {
+/// Verify that each cir.init_catch_param in \p handlerRegion, outside any
+/// nested cir.try, agrees with the handler's leading cir.construct_catch_param
+/// \p constructOp, which may be null.  A cir.init_catch_param of kind
+/// reference_to_pointer or non_trivial_copy needs \p constructOp on its
+/// parameter, and a cir.init_catch_param on the parameter of \p constructOp
+/// must have the kind of \p constructOp.
+static LogicalResult
+verifyCatchParamPairing(mlir::Region &handlerRegion,
+                        cir::ConstructCatchParamOp constructOp) {
+  mlir::WalkResult result =
+      handlerRegion.walk<mlir::WalkOrder::PreOrder>([&](mlir::Operation *op) {
+        if (mlir::isa<cir::TryOp>(op))
+          return mlir::WalkResult::skip();
+        auto initOp = mlir::dyn_cast<cir::InitCatchParamOp>(op);
+        if (!initOp)
+          return mlir::WalkResult::advance();
+
+        cir::InitCatchKind kind = initOp.getKind();
+        bool sameParam =
+            constructOp && constructOp.getParamAddr() == initOp.getParamAddr();
+        if (sameParam && constructOp.getKind() != kind) {
+          initOp.emitOpError("kind '")
+              << cir::stringifyInitCatchKind(kind)
+              << "' does not match the kind '"
+              << cir::stringifyInitCatchKind(constructOp.getKind())
+              << "' of the preceding 'cir.construct_catch_param'";
+          return mlir::WalkResult::interrupt();
+        }
+        if ((kind == cir::InitCatchKind::ReferenceToPointer ||
+             kind == cir::InitCatchKind::NonTrivialCopy) &&
+            !sameParam) {
+          initOp.emitOpError("'")
+              << cir::stringifyInitCatchKind(kind)
+              << "' requires a preceding 'cir.construct_catch_param' of the "
+                 "same kind on the same parameter";
+          return mlir::WalkResult::interrupt();
+        }
+        return mlir::WalkResult::advance();
+      });
+  return failure(result.wasInterrupted());
+}
+
+LogicalResult cir::TryOp::verifyRegions() {
   mlir::ArrayAttr handlerTypes = getHandlerTypes();
   if (!handlerTypes) {
     if (!getHandlerRegions().empty())
@@ -5110,11 +5153,16 @@ LogicalResult cir::TryOp::verify() {
       firstOp = scopeBody.empty() ? nullptr : &scopeBody.front();
     }
 
-    if (mlir::isa_and_present<cir::ConstructCatchParamOp>(firstOp))
+    auto constructOp =
+        mlir::dyn_cast_if_present<cir::ConstructCatchParamOp>(firstOp);
+    if (constructOp)
       firstOp = firstOp->getNextNode();
     if (!mlir::isa_and_present<cir::BeginCatchOp>(firstOp))
       return emitOpError(
           "catch handler region must start with 'cir.begin_catch'");
+
+    if (failed(verifyCatchParamPairing(handlerRegion, constructOp)))
+      return failure();
   }
 
   return success();
@@ -5241,8 +5289,8 @@ static mlir::ParseResult parseTryHandlerRegions(
   }
 
   // A filter handler carries the type info symbols permitted by the enclosing
-  // function's dynamic exception specification. TryOp::verify enforces that it
-  // is paired with an unexpected handler and that the two stand alone.
+  // function's dynamic exception specification. TryOp::verifyRegions enforces
+  // that it is paired with an unexpected handler and that the two stand alone.
   if (parser.parseOptionalKeyword("filter").succeeded()) {
     mlir::SMLoc filterLoc = parser.getCurrentLocation();
     llvm::SmallVector<mlir::Attribute, 4> permittedTypes;
@@ -5367,8 +5415,39 @@ LogicalResult cir::MemChrOp::verify() {
 }
 
 //===----------------------------------------------------------------------===//
+// InitCatchParamOp
+//===----------------------------------------------------------------------===//
+
+/// For the reference_to_pointer and reference_to_record_pointer kinds, emit an
+/// error on \p op unless \p paramAddrType is the type of the address of a
+/// reference to a pointer.  Any other \p kind is accepted.
+static LogicalResult verifyCatchParamAddr(mlir::Operation *op,
+                                          cir::InitCatchKind kind,
+                                          cir::PointerType paramAddrType) {
+  if (kind != cir::InitCatchKind::ReferenceToPointer &&
+      kind != cir::InitCatchKind::ReferenceToRecordPointer)
+    return success();
+
+  auto refType = mlir::dyn_cast<cir::PointerType>(paramAddrType.getPointee());
+  if (!refType || !mlir::isa<cir::PointerType>(refType.getPointee()))
+    return op->emitOpError("'")
+           << cir::stringifyInitCatchKind(kind)
+           << "' requires 'param_addr' to be the address of a reference to a "
+              "pointer";
+  return success();
+}
+
+LogicalResult cir::InitCatchParamOp::verify() {
+  return verifyCatchParamAddr(*this, getKind(), getParamAddr().getType());
+}
+
+//===----------------------------------------------------------------------===//
 // ConstructCatchParamOp
 //===----------------------------------------------------------------------===//
+
+LogicalResult cir::ConstructCatchParamOp::verify() {
+  return verifyCatchParamAddr(*this, getKind(), getParamAddr().getType());
+}
 
 LogicalResult cir::ConstructCatchParamOp::verifySymbolUses(
     SymbolTableCollection &symbolTable) {

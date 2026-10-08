@@ -61,6 +61,28 @@ CharUnits computeOffsetHint(ASTContext &Ctx, const CXXRecordDecl *Src,
   return Offset;
 }
 
+bool canUseSingleInheritance(const CXXRecordDecl *RD) {
+  // Check the number of bases.
+  if (RD->getNumBases() != 1)
+    return false;
+
+  // Get the base.
+  CXXRecordDecl::base_class_const_iterator Base = RD->bases_begin();
+
+  // Check that the base is not virtual.
+  if (Base->isVirtual())
+    return false;
+
+  // Check that the base is public.
+  if (Base->getAccessSpecifier() != AS_public)
+    return false;
+
+  // Check that the class is dynamic iff the base is.
+  auto *BaseDecl = Base->getType()->castAsCXXRecordDecl();
+  return BaseDecl->isEmpty() ||
+         BaseDecl->isDynamicClass() == RD->isDynamicClass();
+}
+
 namespace {
 /// Contains virtual and non-virtual bases seen when traversing a class
 /// hierarchy.

@@ -846,8 +846,7 @@ static void legalizeAndOptimizeInductions(VPlan &Plan) {
     // We can preserve nuw when the step is non-negative.
     const APInt *Step;
     if (match(WideIV->getStepValue(), m_APInt(Step)) && Step->isNonNegative())
-      WrapFlags = {static_cast<bool>(WideIV->getNoWrapFlagsOrNone().HasNUW),
-                   false};
+      WrapFlags = WideIV->getNoWrapFlagsOrNone().withoutNoSignedWrap();
     VPScalarIVStepsRecipe *Steps = vputils::createScalarIVSteps(
         Plan, ID.getKind(), ID.getInductionOpcode(),
         dyn_cast_or_null<FPMathOperator>(ID.getInductionBinOp()),
@@ -1298,7 +1297,7 @@ static VPValue *simplifyRecipe(VPlan &Plan, VPSingleDefRecipe *Def) {
   if (match(Def, m_ExtractLastLane(m_VPValue(A)))) {
     if (match(A, m_BuildVector())) {
       auto *BuildVector = cast<VPInstruction>(A);
-      return BuildVector->getOperand(BuildVector->getNumOperands() - 1);
+      return BuildVector->getLastOperand();
     }
 
     if (match(A, m_Broadcast(m_VPValue(B))))
@@ -5175,8 +5174,7 @@ createPartialReductionExpression(VPReductionRecipe *Red) {
   // -> VPExpressionRecipe(op, sub/neg, red)
   if (match(VecOp, m_AnyNeg(m_WidenAnyExtend(m_VPValue())))) {
     auto *Neg = cast<VPWidenRecipe>(VecOp);
-    auto *Ext =
-        cast<VPWidenCastRecipe>(Neg->getOperand(Neg->getNumOperands() - 1));
+    auto *Ext = cast<VPWidenCastRecipe>(Neg->getLastOperand());
     return new VPExpressionRecipe(Ext, Neg, Red);
   }
 

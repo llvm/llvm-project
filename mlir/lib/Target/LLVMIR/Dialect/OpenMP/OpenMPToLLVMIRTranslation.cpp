@@ -1999,7 +1999,7 @@ static llvm::Expected<llvm::BasicBlock *> allocatePrivateVars(
   llvm::BasicBlock *allocaBB = allocaIP.getNodeParent();
   llvm::Instruction *allocaTerminator = allocaBB->getTerminator();
   splitBB(allocaTerminator->getIterator(), true,
-          allocaTerminator->getStableDebugLoc(), "omp.region.after_alloca");
+          allocaTerminator->getDebugLoc(), "omp.region.after_alloca");
   // Update the allocaTerminator since the alloca block was split above.
   allocaTerminator = allocaBB->getTerminator();
   // The new terminator is an uncondition branch created by the splitBB above.
@@ -2014,7 +2014,7 @@ static llvm::Expected<llvm::BasicBlock *> allocatePrivateVars(
     allocatorTerminator = allocatorBB->getTerminator();
     afterAllocatorAllocations = splitBB(
         allocatorTerminator->getIterator(), true,
-        allocatorTerminator->getStableDebugLoc(), "omp.region.after_allocate");
+        allocatorTerminator->getDebugLoc(), "omp.region.after_allocate");
     allocatorTerminator = allocatorBB->getTerminator();
     assert(allocatorTerminator->getNumSuccessors() == 1 &&
            "This is an unconditional branch created by splitBB");

@@ -2892,13 +2892,17 @@ bool SemaHLSL::diagnoseMatrixLayoutInstantiation(attr::Kind K, QualType T,
 // Elementwise builtins reuse the operand layout instead.
 namespace {
 
-/// This class implements HLSL availability diagnostics for default
-/// and relaxed mode
+using llvm::dxil::BarrierMemoryTypeFlag;
+using llvm::dxil::BarrierSemanticFlag;
+
+template <typename T> constexpr uint64_t barrierFlagValue(T Flag) {
+  return llvm::to_underlying(Flag);
+}
+
+/// This class implements reachable HLSL diagnostics.
 ///
-/// The goal of this diagnostic is to emit an error or warning when an
-/// unavailable API is found in code that is reachable from the shader
-/// entry function or from an exported function (when compiling a shader
-/// library).
+/// It diagnoses unavailable APIs in default and relaxed availability modes.
+/// It also validates Barrier calls in all availability modes.
 ///
 /// This is done by traversing the AST of all shader entry point functions
 /// and of all exported functions, and any functions that are referenced
@@ -2906,6 +2910,7 @@ namespace {
 /// the entry points.
 class DiagnoseHLSLAvailability : public DynamicRecursiveASTVisitor {
   Sema &SemaRef;
+  bool DiagnoseAvailability;
 
   // Stack of functions to be scaned
   llvm::SmallVector<const FunctionDecl *, 8> DeclsToScan;
@@ -2940,8 +2945,8 @@ class DiagnoseHLSLAvailability : public DynamicRecursiveASTVisitor {
   unsigned CurrentShaderStageBit;
 
   // True if scanning a function that was already scanned in a different
-  // shader stage context, and therefore we should not report issues that
-  // depend only on shader model version because they would be duplicate.
+  // shader stage context. Suppress stage-independent diagnostics because
+  // they were reported during the first scan.
   bool ReportOnlyShaderStageIssues;
 
   // Helper methods for dealing with current stage context / environment
@@ -2996,10 +3001,19 @@ class DiagnoseHLSLAvailability : public DynamicRecursiveASTVisitor {
                              SourceRange Range);
   const AvailabilityAttr *FindAvailabilityAttr(const Decl *D);
   bool HasMatchingEnvironmentOrNone(const AvailabilityAttr *AA);
+  void DiagnoseBarrierCall(CallExpr *CE);
+  uint64_t DiagnoseBarrierGroupMemory(Expr *MemoryArg, uint64_t MemoryFlags,
+                                      bool HasVisibleGroup, bool IsAllMemory);
+  uint64_t DiagnoseBarrierNodeMemory(Expr *MemoryArg, uint64_t MemoryFlags,
+                                     bool HasKnownStage, bool IsAllMemory);
+  void DiagnoseBarrierGroupSemantic(Expr *SemanticArg, uint64_t SemanticFlags,
+                                    bool HasVisibleGroup);
+  void DiagnoseBarrierScope(Expr *SemanticArg, uint64_t MemoryFlags,
+                            uint64_t SemanticFlags);
 
 public:
-  DiagnoseHLSLAvailability(Sema &SemaRef)
-      : SemaRef(SemaRef),
+  DiagnoseHLSLAvailability(Sema &SemaRef, bool DiagnoseAvailability)
+      : SemaRef(SemaRef), DiagnoseAvailability(DiagnoseAvailability),
         CurrentShaderEnvironment(llvm::Triple::UnknownEnvironment),
         CurrentShaderStageBit(0), ReportOnlyShaderStageIssues(false) {}
 
@@ -3020,16 +3034,139 @@ public:
       HandleFunctionOrMethodRef(FD, ME);
     return true;
   }
+
+  bool VisitCallExpr(CallExpr *CE) override {
+    DiagnoseBarrierCall(CE);
+    return true;
+  }
 };
+
+uint64_t DiagnoseHLSLAvailability::DiagnoseBarrierGroupMemory(
+    Expr *MemoryArg, uint64_t MemoryFlags, bool HasVisibleGroup,
+    bool IsAllMemory) {
+  const uint64_t GroupSharedMemory =
+      barrierFlagValue(BarrierMemoryTypeFlag::GroupSharedMemory);
+  if (HasVisibleGroup || (MemoryFlags & GroupSharedMemory) == 0)
+    return MemoryFlags;
+
+  if (!IsAllMemory) {
+    SemaRef.Diag(MemoryArg->getExprLoc(),
+                 diag::err_hlsl_barrier_flag_requires_group)
+        << 0;
+    return MemoryFlags;
+  }
+
+  return MemoryFlags & ~GroupSharedMemory;
+}
+
+uint64_t DiagnoseHLSLAvailability::DiagnoseBarrierNodeMemory(
+    Expr *MemoryArg, uint64_t MemoryFlags, bool HasKnownStage,
+    bool IsAllMemory) {
+  const uint64_t NodeMemory =
+      barrierFlagValue(BarrierMemoryTypeFlag::NodeMemory);
+  if (!HasKnownStage || (MemoryFlags & NodeMemory) == 0)
+    return MemoryFlags;
+
+  if (!IsAllMemory) {
+    SemaRef.Diag(MemoryArg->getExprLoc(),
+                 diag::err_hlsl_barrier_node_memory_requires_node);
+    return MemoryFlags;
+  }
+
+  return MemoryFlags & ~NodeMemory;
+}
+
+void DiagnoseHLSLAvailability::DiagnoseBarrierGroupSemantic(
+    Expr *SemanticArg, uint64_t SemanticFlags, bool HasVisibleGroup) {
+  if (HasVisibleGroup ||
+      (SemanticFlags & barrierFlagValue(BarrierSemanticFlag::GroupFlags)) == 0)
+    return;
+
+  SemaRef.Diag(SemanticArg->getExprLoc(),
+               diag::err_hlsl_barrier_flag_requires_group)
+      << ((SemanticFlags & barrierFlagValue(BarrierSemanticFlag::GroupSync)) !=
+                  0
+              ? 1
+              : 2);
+}
+
+void DiagnoseHLSLAvailability::DiagnoseBarrierScope(Expr *SemanticArg,
+                                                    uint64_t MemoryFlags,
+                                                    uint64_t SemanticFlags) {
+  if (ReportOnlyShaderStageIssues)
+    return;
+
+  const uint64_t DeviceScopeMemory =
+      barrierFlagValue(BarrierMemoryTypeFlag::UAVMemory) |
+      barrierFlagValue(BarrierMemoryTypeFlag::NodeInputMemory);
+  if ((SemanticFlags & barrierFlagValue(BarrierSemanticFlag::DeviceScope)) !=
+          0 &&
+      (MemoryFlags & DeviceScopeMemory) == 0)
+    SemaRef.Diag(SemanticArg->getExprLoc(),
+                 diag::err_hlsl_barrier_scope_requires_memory)
+        << 1;
+  if ((SemanticFlags & barrierFlagValue(BarrierSemanticFlag::GroupScope)) !=
+          0 &&
+      MemoryFlags == 0)
+    SemaRef.Diag(SemanticArg->getExprLoc(),
+                 diag::err_hlsl_barrier_scope_requires_memory)
+        << 0;
+}
+
+void DiagnoseHLSLAvailability::DiagnoseBarrierCall(CallExpr *CE) {
+  const FunctionDecl *FD = CE->getDirectCallee();
+  if (!FD || FD->getBuiltinID() != Builtin::BI__builtin_hlsl_barrier)
+    return;
+
+  const llvm::Triple::EnvironmentType Stage = GetCurrentShaderEnvironment();
+  const bool HasKnownStage = !InUnknownShaderStageContext();
+  const bool HasVisibleGroup =
+      !HasKnownStage || Stage == llvm::Triple::Compute ||
+      Stage == llvm::Triple::Mesh || Stage == llvm::Triple::Amplification;
+
+  uint64_t MemoryFlags = barrierFlagValue(BarrierMemoryTypeFlag::ValidMask);
+  Expr *MemoryArg = CE->getArg(0);
+  if (MemoryArg->getType()->isUnsignedIntegerType()) {
+    std::optional<llvm::APSInt> Value =
+        MemoryArg->getIntegerConstantExpr(SemaRef.Context);
+    if (!Value)
+      return;
+    MemoryFlags = Value->getZExtValue();
+    const bool IsAllMemory =
+        MemoryFlags == barrierFlagValue(BarrierMemoryTypeFlag::ValidMask);
+
+    MemoryFlags = DiagnoseBarrierGroupMemory(MemoryArg, MemoryFlags,
+                                             HasVisibleGroup, IsAllMemory);
+    MemoryFlags = DiagnoseBarrierNodeMemory(MemoryArg, MemoryFlags,
+                                            HasKnownStage, IsAllMemory);
+  } else if (!HasVisibleGroup) {
+    SemaRef.Diag(MemoryArg->getExprLoc(),
+                 diag::err_hlsl_barrier_resource_requires_group);
+    return;
+  }
+
+  Expr *SemanticArg = CE->getArg(1);
+  std::optional<llvm::APSInt> Value =
+      SemanticArg->getIntegerConstantExpr(SemaRef.Context);
+  if (!Value)
+    return;
+  const uint64_t SemanticFlags = Value->getZExtValue();
+
+  DiagnoseBarrierGroupSemantic(SemanticArg, SemanticFlags, HasVisibleGroup);
+
+  if (MemoryArg->getType()->isUnsignedIntegerType())
+    DiagnoseBarrierScope(SemanticArg, MemoryFlags, SemanticFlags);
+}
 
 void DiagnoseHLSLAvailability::HandleFunctionOrMethodRef(FunctionDecl *FD,
                                                          Expr *RefExpr) {
   assert((isa<DeclRefExpr>(RefExpr) || isa<MemberExpr>(RefExpr)) &&
          "expected DeclRefExpr or MemberExpr");
 
-  if (const AvailabilityAttr *AA = FindAvailabilityAttr(FD))
-    CheckDeclAvailability(
-        FD, AA, SourceRange(RefExpr->getBeginLoc(), RefExpr->getEndLoc()));
+  if (DiagnoseAvailability)
+    if (const AvailabilityAttr *AA = FindAvailabilityAttr(FD))
+      CheckDeclAvailability(
+          FD, AA, SourceRange(RefExpr->getBeginLoc(), RefExpr->getEndLoc()));
 
   // has a definition -> add to stack to be scanned
   const FunctionDecl *FDWithBody = nullptr;
@@ -3371,16 +3508,15 @@ SemaHLSL::tryPerformConstantBufferConversion(Expr *BaseExpr) {
 }
 
 void SemaHLSL::diagnoseAvailabilityViolations(TranslationUnitDecl *TU) {
-  // Skip running the diagnostics scan if the diagnostic mode is
-  // strict (-fhlsl-strict-availability) and the target shader stage is known
-  // because all relevant diagnostics were already emitted in the
-  // DiagnoseUnguardedAvailability scan (SemaAvailability.cpp).
+  // Strict mode diagnoses availability during the
+  // DiagnoseUnguardedAvailability scan in SemaAvailability.cpp. The reachable
+  // function scan must still run to validate Barrier calls.
   const TargetInfo &TI = SemaRef.getASTContext().getTargetInfo();
-  if (SemaRef.getLangOpts().HLSLStrictAvailability &&
-      TI.getTriple().getEnvironment() != llvm::Triple::EnvironmentType::Library)
-    return;
-
-  DiagnoseHLSLAvailability(SemaRef).RunOnTranslationUnit(TU);
+  const bool DiagnoseAvailability =
+      !SemaRef.getLangOpts().HLSLStrictAvailability ||
+      TI.getTriple().getEnvironment() == llvm::Triple::EnvironmentType::Library;
+  DiagnoseHLSLAvailability(SemaRef, DiagnoseAvailability)
+      .RunOnTranslationUnit(TU);
 }
 
 static bool CheckAllArgsHaveSameType(Sema *S, CallExpr *TheCall) {
@@ -4356,6 +4492,70 @@ static bool CheckInterlockedBuiltin(Sema &S, CallExpr *TheCall,
 // returning an ExprError
 bool SemaHLSL::CheckBuiltinFunctionCall(unsigned BuiltinID, CallExpr *TheCall) {
   switch (BuiltinID) {
+  case Builtin::BI__builtin_hlsl_barrier: {
+    if (SemaRef.checkArgCount(TheCall, 2))
+      return true;
+
+    if (SemaRef.Context.getTargetInfo().getTriple().getArch() !=
+        llvm::Triple::dxil) {
+      SemaRef.Diag(TheCall->getExprLoc(), diag::err_hlsl_dxil_only)
+          << "Barrier";
+      return true;
+    }
+
+    Expr *MemoryArg = TheCall->getArg(0);
+    if (MemoryArg->getType()->isUnsignedIntegerType()) {
+      std::optional<llvm::APSInt> MemoryFlags =
+          MemoryArg->getIntegerConstantExpr(SemaRef.Context);
+      if (!MemoryFlags) {
+        SemaRef.Diag(MemoryArg->getExprLoc(),
+                     diag::err_constant_integer_arg_type)
+            << "Barrier";
+        return true;
+      }
+      if ((MemoryFlags->getZExtValue() &
+           ~barrierFlagValue(BarrierMemoryTypeFlag::ValidMask)) != 0) {
+        SemaRef.Diag(MemoryArg->getExprLoc(),
+                     diag::err_hlsl_invalid_barrier_memory_flags);
+        return true;
+      }
+    } else {
+      const HLSLAttributedResourceType *ResTy =
+          HLSLAttributedResourceType::findHandleTypeOnResource(
+              MemoryArg->getType().getTypePtr());
+      if (!ResTy) {
+        SemaRef.Diag(MemoryArg->getExprLoc(),
+                     diag::err_typecheck_expect_hlsl_resource)
+            << MemoryArg->getType();
+        return true;
+      }
+      if (ResTy->getAttrs().ResourceClass != ResourceClass::UAV) {
+        SemaRef.Diag(MemoryArg->getExprLoc(),
+                     diag::err_invalid_hlsl_resource_type)
+            << MemoryArg->getType();
+        return true;
+      }
+    }
+
+    Expr *SemanticArg = TheCall->getArg(1);
+    std::optional<llvm::APSInt> SemanticFlags =
+        SemanticArg->getIntegerConstantExpr(SemaRef.Context);
+    if (!SemanticFlags) {
+      SemaRef.Diag(SemanticArg->getExprLoc(),
+                   diag::err_constant_integer_arg_type)
+          << "Barrier";
+      return true;
+    }
+    if ((SemanticFlags->getZExtValue() &
+         ~barrierFlagValue(BarrierSemanticFlag::ValidMask)) != 0) {
+      SemaRef.Diag(SemanticArg->getExprLoc(),
+                   diag::err_hlsl_invalid_barrier_semantic_flags);
+      return true;
+    }
+
+    TheCall->setType(SemaRef.Context.VoidTy);
+    break;
+  }
   case Builtin::BI__builtin_hlsl_adduint64: {
     if (SemaRef.checkArgCount(TheCall, 2))
       return true;

@@ -3709,13 +3709,18 @@ bool Sema::checkTargetAttr(SourceLocation LiteralLoc, StringRef AttrStr) {
              << Unsupported << None << CurFeature << Target;
   }
 
+  if (ParsedAttrs.BranchProtection.empty()) {
+    if (!ParsedAttrs.SignReturnAddrHardening.empty())
+      return Diag(LiteralLoc,
+                  diag::warn_attribute_harden_pac_ret_requires_pac_ret);
+    return false;
+  }
+
   TargetInfo::BranchProtectionInfo BPI{};
   StringRef DiagMsg;
-  if (ParsedAttrs.BranchProtection.empty())
-    return false;
+
   if (!Context.getTargetInfo().validateBranchProtection(
-          ParsedAttrs.BranchProtection, ParsedAttrs.CPU, BPI,
-          Context.getLangOpts(), DiagMsg)) {
+          ParsedAttrs, BPI, Context.getLangOpts(), DiagMsg)) {
     if (DiagMsg.empty())
       return Diag(LiteralLoc, diag::warn_unsupported_target_attribute)
              << Unsupported << None << "branch-protection" << Target;
@@ -3724,6 +3729,19 @@ bool Sema::checkTargetAttr(SourceLocation LiteralLoc, StringRef AttrStr) {
   }
   if (!DiagMsg.empty())
     Diag(LiteralLoc, diag::warn_unsupported_branch_protection_spec) << DiagMsg;
+
+  if (!ParsedAttrs.SignReturnAddrHardening.empty()) {
+    auto SignReturnAddrHardenOpt =
+        Context.getTargetInfo().parseSignReturnAddressHardening(
+            ParsedAttrs.SignReturnAddrHardening);
+    if (!SignReturnAddrHardenOpt)
+      return Diag(LiteralLoc, diag::err_invalid_harden_pac_ret_spec)
+             << ParsedAttrs.SignReturnAddrHardening;
+
+    if (BPI.SignReturnAddr == LangOptions::SignReturnAddressScopeKind::None)
+      return Diag(LiteralLoc,
+                  diag::warn_attribute_harden_pac_ret_requires_pac_ret);
+  }
 
   return false;
 }
@@ -7236,9 +7254,22 @@ static void handleHandleAttr(Sema &S, Decl *D, const ParsedAttr &AL) {
   D->addAttr(Attr::Create(S.Context, Argument, AL));
 }
 
-template<typename Attr>
 static void handleUnsafeBufferUsage(Sema &S, Decl *D, const ParsedAttr &AL) {
-  D->addAttr(Attr::Create(S.Context, AL));
+  StringRef Category;
+  if (AL.getAttrName()->getName() == "unsafe_buffer_usage_in_container") {
+    if (!AL.checkExactlyNumArgs(S, 0))
+      return;
+    Category = "container";
+  } else if (AL.getNumArgs() != 0) {
+    SourceLocation Loc;
+    if (!S.checkStringLiteralArgumentAttr(AL, 0, Category, &Loc))
+      return;
+    if (Category != "container") {
+      S.Diag(Loc, diag::warn_attribute_type_not_supported) << AL << Category;
+      return;
+    }
+  }
+  D->addAttr(UnsafeBufferUsageAttr::Create(S.Context, Category, AL));
 }
 
 static void handleCFGuardAttr(Sema &S, Decl *D, const ParsedAttr &AL) {
@@ -8467,7 +8498,7 @@ ProcessDeclAttribute(Sema &S, Decl *D, const ParsedAttr &AL,
     break;
 
   case ParsedAttr::AT_UnsafeBufferUsage:
-    handleUnsafeBufferUsage<UnsafeBufferUsageAttr>(S, D, AL);
+    handleUnsafeBufferUsage(S, D, AL);
     break;
 
   case ParsedAttr::AT_UseHandle:
