@@ -75,7 +75,7 @@ entry:
 define i32 @mul_4xi4_cz(<4 x i4> %a, i32 %c) {
 ; AVXVNNI-AVX-LABEL: mul_4xi4_cz:
 ; AVXVNNI-AVX:       # %bb.0: # %entry
-; AVXVNNI-AVX-NEXT:    vpshufb {{.*#+}} xmm0 = xmm0[0,4,8,12,u,u,u,u,u,u,u,u,u,u,u,u]
+; AVXVNNI-AVX-NEXT:    vpshufb {{.*#+}} xmm0 = xmm0[0,4,8,12],zero,zero,zero,zero,zero,zero,zero,zero,zero,zero,zero,zero
 ; AVXVNNI-AVX-NEXT:    vpand {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm0, %xmm0
 ; AVXVNNI-AVX-NEXT:    vpxor %xmm1, %xmm1, %xmm1
 ; AVXVNNI-AVX-NEXT:    {vex} vpdpbusd {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm0, %xmm1
@@ -96,7 +96,7 @@ define i32 @mul_4xi4_cz(<4 x i4> %a, i32 %c) {
 ; AVX512VNNI-LABEL: mul_4xi4_cz:
 ; AVX512VNNI:       # %bb.0: # %entry
 ; AVX512VNNI-NEXT:    vpxor %xmm1, %xmm1, %xmm1
-; AVX512VNNI-NEXT:    vpshufb {{.*#+}} xmm0 = xmm0[0,4,8,12,u,u,u,u,u,u,u,u,u,u,u,u]
+; AVX512VNNI-NEXT:    vpshufb {{.*#+}} xmm0 = xmm0[0,4,8,12],zero,zero,zero,zero,zero,zero,zero,zero,zero,zero,zero,zero
 ; AVX512VNNI-NEXT:    vpand {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm0, %xmm0
 ; AVX512VNNI-NEXT:    vpdpbusd {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %zmm0, %zmm1
 ; AVX512VNNI-NEXT:    vmovd %xmm1, %eax
