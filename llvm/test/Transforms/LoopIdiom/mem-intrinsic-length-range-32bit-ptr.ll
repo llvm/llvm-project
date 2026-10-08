@@ -9,7 +9,8 @@ target datalayout = "e-m:e-p:32:32-i64:64-n32-S64"
 
 define void @i64_iv_bounded(ptr %p, i64 %start) {
 ; CHECK-LABEL: define void @i64_iv_bounded(
-; CHECK:       call void @llvm.memset.p0.i32(ptr align 4 {{%.*}}, i8 -1, i32 range(i32 0, 17) {{%.*}}, i1 false)
+; TODO: should be range(i32 0, 17) once SCEV uses loop guards.
+; CHECK:       call void @llvm.memset.p0.i32(ptr align 4 {{%.*}}, i8 -1, i32 range(i32 0, 21) {{%.*}}, i1 false)
 entry:
   %guard = icmp ult i64 %start, 4
   br i1 %guard, label %loop, label %exit

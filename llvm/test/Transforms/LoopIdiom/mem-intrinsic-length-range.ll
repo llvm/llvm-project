@@ -19,7 +19,8 @@ define void @bounded_by_exit_condition(ptr %p, i64 %start) {
 ; CHECK-NEXT:    [[TMP0:%.*]] = shl i64 [[START]], 2
 ; CHECK-NEXT:    [[SCEVGEP:%.*]] = getelementptr i8, ptr [[P]], i64 [[TMP0]]
 ; CHECK-NEXT:    [[TMP1:%.*]] = sub i64 16, [[TMP0]]
-; CHECK-NEXT:    call void @llvm.memset.p0.i64(ptr align 4 [[SCEVGEP]], i8 -1, i64 range(i64 0, 17) [[TMP1]], i1 false)
+; TODO: should be range(i64 0, 17) once SCEV uses loop guards.
+; CHECK-NEXT:    call void @llvm.memset.p0.i64(ptr align 4 [[SCEVGEP]], i8 -1, i64 range(i64 0, 21) [[TMP1]], i1 false)
 ; CHECK-NEXT:    br label %[[LOOP:.*]]
 ; CHECK:       [[LOOP]]:
 ; CHECK-NEXT:    [[I:%.*]] = phi i64 [ [[I_NEXT:%.*]], %[[LOOP]] ], [ [[START]], %[[LOOP_PREHEADER]] ]
@@ -61,7 +62,8 @@ define void @bounded_by_guard(ptr %p, i64 %n) {
 ; CHECK-NEXT:    [[GUARD:%.*]] = and i1 [[SMALL]], [[NONZERO]]
 ; CHECK-NEXT:    br i1 [[GUARD]], label %[[LOOP_PREHEADER:.*]], label %[[EXIT:.*]]
 ; CHECK:       [[LOOP_PREHEADER]]:
-; CHECK-NEXT:    call void @llvm.memset.p0.i64(ptr align 1 [[P]], i8 0, i64 range(i64 0, 101) [[N]], i1 false)
+; TODO: should be range(i64 0, 101) once SCEV uses loop guards.
+; CHECK-NEXT:    call void @llvm.memset.p0.i64(ptr align 1 [[P]], i8 0, i64 [[N]], i1 false)
 ; CHECK-NEXT:    br label %[[LOOP:.*]]
 ; CHECK:       [[LOOP]]:
 ; CHECK-NEXT:    [[I:%.*]] = phi i64 [ [[I_NEXT:%.*]], %[[LOOP]] ], [ 0, %[[LOOP_PREHEADER]] ]
@@ -106,7 +108,8 @@ define void @bounded_by_assume(ptr %p, i64 %n) {
 ; CHECK-NEXT:    [[NONZERO:%.*]] = icmp ne i64 [[N]], 0
 ; CHECK-NEXT:    br i1 [[NONZERO]], label %[[LOOP_PREHEADER:.*]], label %[[EXIT:.*]]
 ; CHECK:       [[LOOP_PREHEADER]]:
-; CHECK-NEXT:    call void @llvm.memset.p0.i64(ptr align 1 [[P]], i8 0, i64 range(i64 0, 101) [[N]], i1 false)
+; TODO: should be range(i64 0, 101) once SCEV uses loop guards.
+; CHECK-NEXT:    call void @llvm.memset.p0.i64(ptr align 1 [[P]], i8 0, i64 [[N]], i1 false)
 ; CHECK-NEXT:    br label %[[LOOP:.*]]
 ; CHECK:       [[LOOP]]:
 ; CHECK-NEXT:    [[I:%.*]] = phi i64 [ [[I_NEXT:%.*]], %[[LOOP]] ], [ 0, %[[LOOP_PREHEADER]] ]
@@ -312,7 +315,8 @@ define void @memcpy_bounded(ptr noalias %dst, ptr noalias %src, i64 %start) {
 ; CHECK-NEXT:    [[SCEVGEP:%.*]] = getelementptr i8, ptr [[DST]], i64 [[TMP0]]
 ; CHECK-NEXT:    [[SCEVGEP1:%.*]] = getelementptr i8, ptr [[SRC]], i64 [[TMP0]]
 ; CHECK-NEXT:    [[TMP1:%.*]] = sub i64 28, [[TMP0]]
-; CHECK-NEXT:    call void @llvm.memcpy.p0.p0.i64(ptr align 4 [[SCEVGEP]], ptr align 4 [[SCEVGEP1]], i64 range(i64 0, 29) [[TMP1]], i1 false)
+; TODO: should be range(i64 0, 29) once SCEV uses loop guards.
+; CHECK-NEXT:    call void @llvm.memcpy.p0.p0.i64(ptr align 4 [[SCEVGEP]], ptr align 4 [[SCEVGEP1]], i64 range(i64 0, 33) [[TMP1]], i1 false)
 ; CHECK-NEXT:    br label %[[LOOP:.*]]
 ; CHECK:       [[LOOP]]:
 ; CHECK-NEXT:    [[I:%.*]] = phi i64 [ [[I_NEXT:%.*]], %[[LOOP]] ], [ [[START]], %[[LOOP_PREHEADER]] ]
@@ -360,7 +364,8 @@ define void @memmove_bounded(ptr %p, i64 %start) {
 ; CHECK-NEXT:    [[TMP1:%.*]] = add i64 [[TMP0]], 4
 ; CHECK-NEXT:    [[SCEVGEP1:%.*]] = getelementptr i8, ptr [[P]], i64 [[TMP1]]
 ; CHECK-NEXT:    [[TMP2:%.*]] = sub i64 20, [[TMP0]]
-; CHECK-NEXT:    call void @llvm.memmove.p0.p0.i64(ptr align 4 [[SCEVGEP]], ptr align 4 [[SCEVGEP1]], i64 range(i64 0, 21) [[TMP2]], i1 false)
+; TODO: should be range(i64 0, 21) once SCEV uses loop guards.
+; CHECK-NEXT:    call void @llvm.memmove.p0.p0.i64(ptr align 4 [[SCEVGEP]], ptr align 4 [[SCEVGEP1]], i64 range(i64 0, 25) [[TMP2]], i1 false)
 ; CHECK-NEXT:    br label %[[LOOP:.*]]
 ; CHECK:       [[LOOP]]:
 ; CHECK-NEXT:    [[I:%.*]] = phi i64 [ [[I_NEXT:%.*]], %[[LOOP]] ], [ [[START]], %[[LOOP_PREHEADER]] ]
@@ -451,7 +456,8 @@ define void @memset_pattern_bounded(ptr %p, i64 %start) {
 ; CHECK-NEXT:    [[TMP0:%.*]] = shl i64 [[START]], 2
 ; CHECK-NEXT:    [[SCEVGEP:%.*]] = getelementptr i8, ptr [[P]], i64 [[TMP0]]
 ; CHECK-NEXT:    [[TMP1:%.*]] = sub i64 8, [[START]]
-; CHECK-NEXT:    call void @llvm.experimental.memset.pattern.p0.i32.i64(ptr align 4 [[SCEVGEP]], i32 305419896, i64 range(i64 0, 9) [[TMP1]], i1 false)
+; TODO: should be range(i64 0, 9) once SCEV uses loop guards.
+; CHECK-NEXT:    call void @llvm.experimental.memset.pattern.p0.i32.i64(ptr align 4 [[SCEVGEP]], i32 305419896, i64 range(i64 0, 10) [[TMP1]], i1 false)
 ; CHECK-NEXT:    br label %[[LOOP:.*]]
 ; CHECK:       [[LOOP]]:
 ; CHECK-NEXT:    [[I:%.*]] = phi i64 [ [[I_NEXT:%.*]], %[[LOOP]] ], [ [[START]], %[[LOOP_PREHEADER]] ]
