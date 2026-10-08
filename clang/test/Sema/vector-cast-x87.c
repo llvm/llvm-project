@@ -1,6 +1,5 @@
-// RUN: %clang_cc1 -triple x86_64-unknown-linux-gnu -target-feature +aes -fsyntax-only -Wno-unused-value -verify %s
-// RUN: %clang_cc1 -triple x86_64-unknown-linux-gnu -target-feature +aes -fsyntax-only -Wno-unused-value -mlong-double-128 -verify=quad %s
-// quad-no-diagnostics
+// RUN: %clang_cc1 -triple x86_64-unknown-linux-gnu -target-feature +aes -fsyntax-only -Wno-unused-value -verify=expected,both %s
+// RUN: %clang_cc1 -triple x86_64-unknown-linux-gnu -target-feature +aes -fsyntax-only -Wno-unused-value -mlong-double-128 -verify=quad,both %s
 
 // GH173254
 typedef long double v16dl __attribute__ ((vector_size (16)));
@@ -21,6 +20,11 @@ typedef __int128 v1i128 __attribute__((vector_size(16)));
 
 v16d vector_cast(v16dl a) {
   return (v16d)a; // expected-error {{invalid conversion between vector type 'v16d' (vector of 2 'double' values) and 'v16dl' (vector of 1 'long double' value) of different size}}
+}
+
+void size_mismatch(v16dl a, v32d b) {
+  (void)(v32d)a; // both-error {{invalid conversion between vector type 'v32d' (vector of 4 'double' values) and 'v16dl' (vector of 1 'long double' value) of different size}}
+  (void)(v16dl)b; // both-error {{invalid conversion between vector type 'v16dl' (vector of 1 'long double' value) and 'v32d' (vector of 4 'double' values) of different size}}
 }
 
 __int128 integer_cast(v16dl a) {
