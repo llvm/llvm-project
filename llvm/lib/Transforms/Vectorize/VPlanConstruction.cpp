@@ -1599,7 +1599,7 @@ static VPValue *createDiffRuntimeChecks(VPlan &Plan, VPBuilder &Builder,
   // Set of operand pairs of already created compares, to allow detecting and
   // re-using redundant compares.
   SmallDenseSet<std::pair<const SCEV *, const SCEV *>> SeenCompares;
-  VPValue *Cond = nullptr;
+  VPValue *Cond = Plan.getFalse();
   for (const auto &[SrcStart, SinkStart, AccessSize, NeedsFreeze] : Checks) {
     assert(UF * AccessSize > 0 &&
            "Threshold must be non-zero to use diff-check");
@@ -1616,7 +1616,7 @@ static VPValue *createDiffRuntimeChecks(VPlan &Plan, VPBuilder &Builder,
 
     VPValue *ThresholdMinusOne = Expander.expand(ThresholdMinusOneSCEV);
     VPValue *Diff = Expander.expand(DiffSCEV);
-    // Use (Diff - 1) <u (Threshold - 1), equivalent to 0 < Diff <u Threshold,
+    // Use (Diff - 1) <u (Threshold - 1), equivalent to 0 <u Diff <u Threshold,
     // to exclude Diff == 0 (equal pointers are safe).
     VPValue *DiffMinusOne =
         Builder.createSub(Diff, Plan.getConstantInt(Ty, 1), DL);
@@ -1624,8 +1624,7 @@ static VPValue *createDiffRuntimeChecks(VPlan &Plan, VPBuilder &Builder,
         CmpInst::ICMP_ULT, DiffMinusOne, ThresholdMinusOne, DL, "diff.check");
     if (NeedsFreeze)
       IsConflict = Builder.createFreeze(IsConflict, DL, "diff.check.fr");
-    Cond = Cond ? Builder.createOr(Cond, IsConflict, DL, "conflict.rdx")
-                : IsConflict;
+    Cond = Builder.createOr(Cond, IsConflict, DL, "conflict.rdx");
   }
   return Cond;
 }

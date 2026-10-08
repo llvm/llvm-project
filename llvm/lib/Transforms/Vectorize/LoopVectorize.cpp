@@ -7002,13 +7002,14 @@ void LoopVectorizationPlanner::attachRuntimeChecks(
                   "(e.g., adding 'restrict').";
       });
     }
-    // VPSCEVExpander expands AddRecs in the plan's entry, not the check block.
-    auto IsUnsupported = [](const SCEV *S) {
-      return SCEVExprContains(S, IsaPred<SCEVAddRecExpr>);
-    };
     const auto &RtPtrChecking = *Legal->getRuntimePointerChecking();
     auto DiffChecks = RtPtrChecking.getDiffChecks();
     auto HasUnsupportedBounds = [&]() {
+      // VPSCEVExpander expands AddRecs in the plan's entry, not the check
+      // block.
+      auto IsUnsupported = [](const SCEV *S) {
+        return SCEVExprContains(S, IsaPred<SCEVAddRecExpr>);
+      };
       if (DiffChecks)
         return any_of(*DiffChecks, [&](const PointerDiffInfo &C) {
           return IsUnsupported(C.SrcStart) || IsUnsupported(C.SinkStart);
