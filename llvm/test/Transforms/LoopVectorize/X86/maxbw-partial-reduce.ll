@@ -20,59 +20,59 @@ define i32 @dot_u8_i8(ptr %a, ptr %b, i32 %n) {
 ; MAXBW-NEXT:    br i1 [[CMP]], label %[[ITER_CHECK:.*]], label %[[EXIT:.*]]
 ; MAXBW:       [[ITER_CHECK]]:
 ; MAXBW-NEXT:    [[TC:%.*]] = zext nneg i32 [[N]] to i64
-; MAXBW-NEXT:    [[MIN_ITERS_CHECK:%.*]] = icmp ult i64 [[TC]], 4
+; MAXBW-NEXT:    [[MIN_ITERS_CHECK:%.*]] = icmp ult i64 [[TC]], 8
 ; MAXBW-NEXT:    br i1 [[MIN_ITERS_CHECK]], label %[[VEC_EPILOG_SCALAR_PH:.*]], label %[[VECTOR_MAIN_LOOP_ITER_CHECK:.*]]
 ; MAXBW:       [[VECTOR_MAIN_LOOP_ITER_CHECK]]:
-; MAXBW-NEXT:    [[MIN_ITERS_CHECK1:%.*]] = icmp ult i64 [[TC]], 16
+; MAXBW-NEXT:    [[MIN_ITERS_CHECK1:%.*]] = icmp ult i64 [[TC]], 64
 ; MAXBW-NEXT:    br i1 [[MIN_ITERS_CHECK1]], label %[[VEC_EPILOG_PH:.*]], label %[[VECTOR_PH:.*]]
 ; MAXBW:       [[VECTOR_PH]]:
-; MAXBW-NEXT:    [[TMP0:%.*]] = and i64 [[TC]], 15
+; MAXBW-NEXT:    [[TMP0:%.*]] = and i64 [[TC]], 63
 ; MAXBW-NEXT:    [[N_VEC:%.*]] = sub i64 [[TC]], [[TMP0]]
 ; MAXBW-NEXT:    br label %[[VECTOR_BODY:.*]]
 ; MAXBW:       [[VECTOR_BODY]]:
 ; MAXBW-NEXT:    [[INDEX:%.*]] = phi i64 [ 0, %[[VECTOR_PH]] ], [ [[INDEX_NEXT:%.*]], %[[VECTOR_BODY]] ]
-; MAXBW-NEXT:    [[VEC_PHI:%.*]] = phi <4 x i32> [ zeroinitializer, %[[VECTOR_PH]] ], [ [[PARTIAL_REDUCE:%.*]], %[[VECTOR_BODY]] ]
+; MAXBW-NEXT:    [[VEC_PHI:%.*]] = phi <16 x i32> [ zeroinitializer, %[[VECTOR_PH]] ], [ [[PARTIAL_REDUCE:%.*]], %[[VECTOR_BODY]] ]
 ; MAXBW-NEXT:    [[TMP1:%.*]] = getelementptr inbounds i8, ptr [[A]], i64 [[INDEX]]
-; MAXBW-NEXT:    [[WIDE_LOAD:%.*]] = load <16 x i8>, ptr [[TMP1]], align 1
+; MAXBW-NEXT:    [[WIDE_LOAD:%.*]] = load <64 x i8>, ptr [[TMP1]], align 1
 ; MAXBW-NEXT:    [[TMP2:%.*]] = getelementptr inbounds i8, ptr [[B]], i64 [[INDEX]]
-; MAXBW-NEXT:    [[WIDE_LOAD2:%.*]] = load <16 x i8>, ptr [[TMP2]], align 1
-; MAXBW-NEXT:    [[TMP3:%.*]] = zext <16 x i8> [[WIDE_LOAD]] to <16 x i32>
-; MAXBW-NEXT:    [[TMP4:%.*]] = sext <16 x i8> [[WIDE_LOAD2]] to <16 x i32>
-; MAXBW-NEXT:    [[TMP5:%.*]] = mul nsw <16 x i32> [[TMP3]], [[TMP4]]
-; MAXBW-NEXT:    [[PARTIAL_REDUCE]] = call <4 x i32> @llvm.vector.partial.reduce.add.v4i32.v16i32(<4 x i32> [[VEC_PHI]], <16 x i32> [[TMP5]])
-; MAXBW-NEXT:    [[INDEX_NEXT]] = add nuw i64 [[INDEX]], 16
+; MAXBW-NEXT:    [[WIDE_LOAD2:%.*]] = load <64 x i8>, ptr [[TMP2]], align 1
+; MAXBW-NEXT:    [[TMP3:%.*]] = zext <64 x i8> [[WIDE_LOAD]] to <64 x i32>
+; MAXBW-NEXT:    [[TMP4:%.*]] = sext <64 x i8> [[WIDE_LOAD2]] to <64 x i32>
+; MAXBW-NEXT:    [[TMP5:%.*]] = mul nsw <64 x i32> [[TMP3]], [[TMP4]]
+; MAXBW-NEXT:    [[PARTIAL_REDUCE]] = call <16 x i32> @llvm.vector.partial.reduce.add.v16i32.v64i32(<16 x i32> [[VEC_PHI]], <64 x i32> [[TMP5]])
+; MAXBW-NEXT:    [[INDEX_NEXT]] = add nuw i64 [[INDEX]], 64
 ; MAXBW-NEXT:    [[TMP6:%.*]] = icmp eq i64 [[INDEX_NEXT]], [[N_VEC]]
 ; MAXBW-NEXT:    br i1 [[TMP6]], label %[[MIDDLE_BLOCK:.*]], label %[[VECTOR_BODY]], !llvm.loop [[LOOP0:![0-9]+]]
 ; MAXBW:       [[MIDDLE_BLOCK]]:
-; MAXBW-NEXT:    [[TMP7:%.*]] = call i32 @llvm.vector.reduce.add.v4i32(<4 x i32> [[PARTIAL_REDUCE]])
+; MAXBW-NEXT:    [[TMP7:%.*]] = call i32 @llvm.vector.reduce.add.v16i32(<16 x i32> [[PARTIAL_REDUCE]])
 ; MAXBW-NEXT:    [[CMP_N:%.*]] = icmp eq i64 [[TC]], [[N_VEC]]
 ; MAXBW-NEXT:    br i1 [[CMP_N]], label %[[EXIT_LE:.*]], label %[[VEC_EPILOG_ITER_CHECK:.*]]
 ; MAXBW:       [[VEC_EPILOG_ITER_CHECK]]:
-; MAXBW-NEXT:    [[MIN_EPILOG_ITERS_CHECK:%.*]] = icmp ult i64 [[TMP0]], 4
+; MAXBW-NEXT:    [[MIN_EPILOG_ITERS_CHECK:%.*]] = icmp ult i64 [[TMP0]], 8
 ; MAXBW-NEXT:    br i1 [[MIN_EPILOG_ITERS_CHECK]], label %[[VEC_EPILOG_SCALAR_PH]], label %[[VEC_EPILOG_PH]], !prof [[PROF3:![0-9]+]]
 ; MAXBW:       [[VEC_EPILOG_PH]]:
 ; MAXBW-NEXT:    [[VEC_EPILOG_RESUME_VAL:%.*]] = phi i64 [ [[N_VEC]], %[[VEC_EPILOG_ITER_CHECK]] ], [ 0, %[[VECTOR_MAIN_LOOP_ITER_CHECK]] ]
 ; MAXBW-NEXT:    [[BC_MERGE_RDX:%.*]] = phi i32 [ [[TMP7]], %[[VEC_EPILOG_ITER_CHECK]] ], [ 0, %[[VECTOR_MAIN_LOOP_ITER_CHECK]] ]
-; MAXBW-NEXT:    [[TMP8:%.*]] = and i64 [[TC]], 3
+; MAXBW-NEXT:    [[TMP8:%.*]] = and i64 [[TC]], 7
 ; MAXBW-NEXT:    [[N_VEC3:%.*]] = sub i64 [[TC]], [[TMP8]]
-; MAXBW-NEXT:    [[TMP9:%.*]] = insertelement <4 x i32> zeroinitializer, i32 [[BC_MERGE_RDX]], i64 0
+; MAXBW-NEXT:    [[TMP9:%.*]] = insertelement <8 x i32> zeroinitializer, i32 [[BC_MERGE_RDX]], i64 0
 ; MAXBW-NEXT:    br label %[[VEC_EPILOG_VECTOR_BODY:.*]]
 ; MAXBW:       [[VEC_EPILOG_VECTOR_BODY]]:
 ; MAXBW-NEXT:    [[INDEX4:%.*]] = phi i64 [ [[VEC_EPILOG_RESUME_VAL]], %[[VEC_EPILOG_PH]] ], [ [[INDEX_NEXT8:%.*]], %[[VEC_EPILOG_VECTOR_BODY]] ]
-; MAXBW-NEXT:    [[VEC_PHI5:%.*]] = phi <4 x i32> [ [[TMP9]], %[[VEC_EPILOG_PH]] ], [ [[TMP15:%.*]], %[[VEC_EPILOG_VECTOR_BODY]] ]
+; MAXBW-NEXT:    [[VEC_PHI5:%.*]] = phi <8 x i32> [ [[TMP9]], %[[VEC_EPILOG_PH]] ], [ [[TMP15:%.*]], %[[VEC_EPILOG_VECTOR_BODY]] ]
 ; MAXBW-NEXT:    [[TMP10:%.*]] = getelementptr inbounds i8, ptr [[A]], i64 [[INDEX4]]
-; MAXBW-NEXT:    [[WIDE_LOAD6:%.*]] = load <4 x i8>, ptr [[TMP10]], align 1
-; MAXBW-NEXT:    [[TMP11:%.*]] = zext <4 x i8> [[WIDE_LOAD6]] to <4 x i32>
+; MAXBW-NEXT:    [[WIDE_LOAD6:%.*]] = load <8 x i8>, ptr [[TMP10]], align 1
+; MAXBW-NEXT:    [[TMP11:%.*]] = zext <8 x i8> [[WIDE_LOAD6]] to <8 x i32>
 ; MAXBW-NEXT:    [[TMP12:%.*]] = getelementptr inbounds i8, ptr [[B]], i64 [[INDEX4]]
-; MAXBW-NEXT:    [[WIDE_LOAD7:%.*]] = load <4 x i8>, ptr [[TMP12]], align 1
-; MAXBW-NEXT:    [[TMP13:%.*]] = sext <4 x i8> [[WIDE_LOAD7]] to <4 x i32>
-; MAXBW-NEXT:    [[TMP14:%.*]] = mul nsw <4 x i32> [[TMP11]], [[TMP13]]
-; MAXBW-NEXT:    [[TMP15]] = add <4 x i32> [[VEC_PHI5]], [[TMP14]]
-; MAXBW-NEXT:    [[INDEX_NEXT8]] = add nuw i64 [[INDEX4]], 4
+; MAXBW-NEXT:    [[WIDE_LOAD7:%.*]] = load <8 x i8>, ptr [[TMP12]], align 1
+; MAXBW-NEXT:    [[TMP13:%.*]] = sext <8 x i8> [[WIDE_LOAD7]] to <8 x i32>
+; MAXBW-NEXT:    [[TMP14:%.*]] = mul nsw <8 x i32> [[TMP11]], [[TMP13]]
+; MAXBW-NEXT:    [[TMP15]] = add <8 x i32> [[VEC_PHI5]], [[TMP14]]
+; MAXBW-NEXT:    [[INDEX_NEXT8]] = add nuw i64 [[INDEX4]], 8
 ; MAXBW-NEXT:    [[TMP16:%.*]] = icmp eq i64 [[INDEX_NEXT8]], [[N_VEC3]]
 ; MAXBW-NEXT:    br i1 [[TMP16]], label %[[VEC_EPILOG_MIDDLE_BLOCK:.*]], label %[[VEC_EPILOG_VECTOR_BODY]], !llvm.loop [[LOOP4:![0-9]+]]
 ; MAXBW:       [[VEC_EPILOG_MIDDLE_BLOCK]]:
-; MAXBW-NEXT:    [[TMP17:%.*]] = call i32 @llvm.vector.reduce.add.v4i32(<4 x i32> [[TMP15]])
+; MAXBW-NEXT:    [[TMP17:%.*]] = call i32 @llvm.vector.reduce.add.v8i32(<8 x i32> [[TMP15]])
 ; MAXBW-NEXT:    [[CMP_N9:%.*]] = icmp eq i64 [[TC]], [[N_VEC3]]
 ; MAXBW-NEXT:    br i1 [[CMP_N9]], label %[[EXIT_LE]], label %[[VEC_EPILOG_SCALAR_PH]]
 ; MAXBW:       [[VEC_EPILOG_SCALAR_PH]]:
@@ -226,28 +226,30 @@ define i32 @sad(ptr %a, ptr %b, i32 %n) {
 ; MAXBW-NEXT:    br i1 [[CMP]], label %[[ITER_CHECK:.*]], label %[[EXIT:.*]]
 ; MAXBW:       [[ITER_CHECK]]:
 ; MAXBW-NEXT:    [[TC:%.*]] = zext nneg i32 [[N]] to i64
-; MAXBW-NEXT:    [[MIN_ITERS_CHECK:%.*]] = icmp ult i64 [[TC]], 4
+; MAXBW-NEXT:    [[MIN_ITERS_CHECK:%.*]] = icmp ult i64 [[TC]], 8
 ; MAXBW-NEXT:    br i1 [[MIN_ITERS_CHECK]], label %[[VEC_EPILOG_SCALAR_PH:.*]], label %[[VECTOR_MAIN_LOOP_ITER_CHECK:.*]]
 ; MAXBW:       [[VECTOR_MAIN_LOOP_ITER_CHECK]]:
-; MAXBW-NEXT:    [[MIN_ITERS_CHECK1:%.*]] = icmp ult i64 [[TC]], 16
+; MAXBW-NEXT:    [[MIN_ITERS_CHECK1:%.*]] = icmp ult i64 [[TC]], 64
 ; MAXBW-NEXT:    br i1 [[MIN_ITERS_CHECK1]], label %[[VEC_EPILOG_PH:.*]], label %[[VECTOR_PH:.*]]
 ; MAXBW:       [[VECTOR_PH]]:
-; MAXBW-NEXT:    [[TMP0:%.*]] = and i64 [[TC]], 15
+; MAXBW-NEXT:    [[TMP0:%.*]] = and i64 [[TC]], 63
 ; MAXBW-NEXT:    [[N_VEC:%.*]] = sub i64 [[TC]], [[TMP0]]
 ; MAXBW-NEXT:    br label %[[VECTOR_BODY:.*]]
 ; MAXBW:       [[VECTOR_BODY]]:
 ; MAXBW-NEXT:    [[INDEX:%.*]] = phi i64 [ 0, %[[VECTOR_PH]] ], [ [[INDEX_NEXT:%.*]], %[[VECTOR_BODY]] ]
 ; MAXBW-NEXT:    [[VEC_PHI:%.*]] = phi <16 x i32> [ zeroinitializer, %[[VECTOR_PH]] ], [ [[PARTIAL_REDUCE:%.*]], %[[VECTOR_BODY]] ]
 ; MAXBW-NEXT:    [[TMP1:%.*]] = getelementptr inbounds i8, ptr [[A]], i64 [[INDEX]]
-; MAXBW-NEXT:    [[WIDE_LOAD:%.*]] = load <16 x i8>, ptr [[TMP1]], align 1
-; MAXBW-NEXT:    [[TMP3:%.*]] = zext <16 x i8> [[WIDE_LOAD]] to <16 x i32>
+; MAXBW-NEXT:    [[WIDE_LOAD:%.*]] = load <64 x i8>, ptr [[TMP1]], align 1
 ; MAXBW-NEXT:    [[TMP2:%.*]] = getelementptr inbounds i8, ptr [[B]], i64 [[INDEX]]
-; MAXBW-NEXT:    [[WIDE_LOAD2:%.*]] = load <16 x i8>, ptr [[TMP2]], align 1
-; MAXBW-NEXT:    [[TMP4:%.*]] = zext <16 x i8> [[WIDE_LOAD2]] to <16 x i32>
-; MAXBW-NEXT:    [[TMP5:%.*]] = sub nsw <16 x i32> [[TMP3]], [[TMP4]]
-; MAXBW-NEXT:    [[TMP6:%.*]] = call <16 x i32> @llvm.abs.v16i32(<16 x i32> [[TMP5]], i1 true)
-; MAXBW-NEXT:    [[PARTIAL_REDUCE]] = add <16 x i32> [[VEC_PHI]], [[TMP6]]
-; MAXBW-NEXT:    [[INDEX_NEXT]] = add nuw i64 [[INDEX]], 16
+; MAXBW-NEXT:    [[WIDE_LOAD2:%.*]] = load <64 x i8>, ptr [[TMP2]], align 1
+; MAXBW-NEXT:    [[TMP3:%.*]] = freeze <64 x i8> [[WIDE_LOAD]]
+; MAXBW-NEXT:    [[TMP4:%.*]] = freeze <64 x i8> [[WIDE_LOAD2]]
+; MAXBW-NEXT:    [[TMP5:%.*]] = call <64 x i8> @llvm.umax.v64i8(<64 x i8> [[TMP3]], <64 x i8> [[TMP4]])
+; MAXBW-NEXT:    [[TMP6:%.*]] = call <64 x i8> @llvm.umin.v64i8(<64 x i8> [[TMP3]], <64 x i8> [[TMP4]])
+; MAXBW-NEXT:    [[TMP7:%.*]] = sub <64 x i8> [[TMP5]], [[TMP6]]
+; MAXBW-NEXT:    [[TMP8:%.*]] = zext <64 x i8> [[TMP7]] to <64 x i32>
+; MAXBW-NEXT:    [[PARTIAL_REDUCE]] = call <16 x i32> @llvm.vector.partial.reduce.add.v16i32.v64i32(<16 x i32> [[VEC_PHI]], <64 x i32> [[TMP8]])
+; MAXBW-NEXT:    [[INDEX_NEXT]] = add nuw i64 [[INDEX]], 64
 ; MAXBW-NEXT:    [[TMP9:%.*]] = icmp eq i64 [[INDEX_NEXT]], [[N_VEC]]
 ; MAXBW-NEXT:    br i1 [[TMP9]], label %[[MIDDLE_BLOCK:.*]], label %[[VECTOR_BODY]], !llvm.loop [[LOOP6:![0-9]+]]
 ; MAXBW:       [[MIDDLE_BLOCK]]:
@@ -255,32 +257,32 @@ define i32 @sad(ptr %a, ptr %b, i32 %n) {
 ; MAXBW-NEXT:    [[CMP_N:%.*]] = icmp eq i64 [[TC]], [[N_VEC]]
 ; MAXBW-NEXT:    br i1 [[CMP_N]], label %[[EXIT_LE:.*]], label %[[VEC_EPILOG_ITER_CHECK:.*]]
 ; MAXBW:       [[VEC_EPILOG_ITER_CHECK]]:
-; MAXBW-NEXT:    [[MIN_EPILOG_ITERS_CHECK:%.*]] = icmp ult i64 [[TMP0]], 4
+; MAXBW-NEXT:    [[MIN_EPILOG_ITERS_CHECK:%.*]] = icmp ult i64 [[TMP0]], 8
 ; MAXBW-NEXT:    br i1 [[MIN_EPILOG_ITERS_CHECK]], label %[[VEC_EPILOG_SCALAR_PH]], label %[[VEC_EPILOG_PH]], !prof [[PROF3]]
 ; MAXBW:       [[VEC_EPILOG_PH]]:
 ; MAXBW-NEXT:    [[VEC_EPILOG_RESUME_VAL:%.*]] = phi i64 [ [[N_VEC]], %[[VEC_EPILOG_ITER_CHECK]] ], [ 0, %[[VECTOR_MAIN_LOOP_ITER_CHECK]] ]
 ; MAXBW-NEXT:    [[BC_MERGE_RDX:%.*]] = phi i32 [ [[TMP10]], %[[VEC_EPILOG_ITER_CHECK]] ], [ 0, %[[VECTOR_MAIN_LOOP_ITER_CHECK]] ]
-; MAXBW-NEXT:    [[TMP11:%.*]] = and i64 [[TC]], 3
+; MAXBW-NEXT:    [[TMP11:%.*]] = and i64 [[TC]], 7
 ; MAXBW-NEXT:    [[N_VEC3:%.*]] = sub i64 [[TC]], [[TMP11]]
-; MAXBW-NEXT:    [[TMP12:%.*]] = insertelement <4 x i32> zeroinitializer, i32 [[BC_MERGE_RDX]], i64 0
+; MAXBW-NEXT:    [[TMP12:%.*]] = insertelement <8 x i32> zeroinitializer, i32 [[BC_MERGE_RDX]], i64 0
 ; MAXBW-NEXT:    br label %[[VEC_EPILOG_VECTOR_BODY:.*]]
 ; MAXBW:       [[VEC_EPILOG_VECTOR_BODY]]:
 ; MAXBW-NEXT:    [[INDEX4:%.*]] = phi i64 [ [[VEC_EPILOG_RESUME_VAL]], %[[VEC_EPILOG_PH]] ], [ [[INDEX_NEXT8:%.*]], %[[VEC_EPILOG_VECTOR_BODY]] ]
-; MAXBW-NEXT:    [[VEC_PHI5:%.*]] = phi <4 x i32> [ [[TMP12]], %[[VEC_EPILOG_PH]] ], [ [[TMP18:%.*]], %[[VEC_EPILOG_VECTOR_BODY]] ]
+; MAXBW-NEXT:    [[VEC_PHI5:%.*]] = phi <8 x i32> [ [[TMP12]], %[[VEC_EPILOG_PH]] ], [ [[TMP19:%.*]], %[[VEC_EPILOG_VECTOR_BODY]] ]
 ; MAXBW-NEXT:    [[TMP13:%.*]] = getelementptr inbounds i8, ptr [[A]], i64 [[INDEX4]]
-; MAXBW-NEXT:    [[WIDE_LOAD6:%.*]] = load <4 x i8>, ptr [[TMP13]], align 1
-; MAXBW-NEXT:    [[TMP14:%.*]] = zext <4 x i8> [[WIDE_LOAD6]] to <4 x i32>
+; MAXBW-NEXT:    [[WIDE_LOAD6:%.*]] = load <8 x i8>, ptr [[TMP13]], align 1
+; MAXBW-NEXT:    [[TMP14:%.*]] = zext <8 x i8> [[WIDE_LOAD6]] to <8 x i32>
 ; MAXBW-NEXT:    [[TMP15:%.*]] = getelementptr inbounds i8, ptr [[B]], i64 [[INDEX4]]
-; MAXBW-NEXT:    [[WIDE_LOAD7:%.*]] = load <4 x i8>, ptr [[TMP15]], align 1
-; MAXBW-NEXT:    [[TMP19:%.*]] = zext <4 x i8> [[WIDE_LOAD7]] to <4 x i32>
-; MAXBW-NEXT:    [[TMP16:%.*]] = sub nsw <4 x i32> [[TMP14]], [[TMP19]]
-; MAXBW-NEXT:    [[TMP17:%.*]] = call <4 x i32> @llvm.abs.v4i32(<4 x i32> [[TMP16]], i1 true)
-; MAXBW-NEXT:    [[TMP18]] = add <4 x i32> [[VEC_PHI5]], [[TMP17]]
-; MAXBW-NEXT:    [[INDEX_NEXT8]] = add nuw i64 [[INDEX4]], 4
+; MAXBW-NEXT:    [[WIDE_LOAD7:%.*]] = load <8 x i8>, ptr [[TMP15]], align 1
+; MAXBW-NEXT:    [[TMP16:%.*]] = zext <8 x i8> [[WIDE_LOAD7]] to <8 x i32>
+; MAXBW-NEXT:    [[TMP17:%.*]] = sub nsw <8 x i32> [[TMP14]], [[TMP16]]
+; MAXBW-NEXT:    [[TMP18:%.*]] = call <8 x i32> @llvm.abs.v8i32(<8 x i32> [[TMP17]], i1 true)
+; MAXBW-NEXT:    [[TMP19]] = add <8 x i32> [[VEC_PHI5]], [[TMP18]]
+; MAXBW-NEXT:    [[INDEX_NEXT8]] = add nuw i64 [[INDEX4]], 8
 ; MAXBW-NEXT:    [[TMP20:%.*]] = icmp eq i64 [[INDEX_NEXT8]], [[N_VEC3]]
 ; MAXBW-NEXT:    br i1 [[TMP20]], label %[[VEC_EPILOG_MIDDLE_BLOCK:.*]], label %[[VEC_EPILOG_VECTOR_BODY]], !llvm.loop [[LOOP7:![0-9]+]]
 ; MAXBW:       [[VEC_EPILOG_MIDDLE_BLOCK]]:
-; MAXBW-NEXT:    [[TMP21:%.*]] = call i32 @llvm.vector.reduce.add.v4i32(<4 x i32> [[TMP18]])
+; MAXBW-NEXT:    [[TMP21:%.*]] = call i32 @llvm.vector.reduce.add.v8i32(<8 x i32> [[TMP19]])
 ; MAXBW-NEXT:    [[CMP_N9:%.*]] = icmp eq i64 [[TC]], [[N_VEC3]]
 ; MAXBW-NEXT:    br i1 [[CMP_N9]], label %[[EXIT_LE]], label %[[VEC_EPILOG_SCALAR_PH]]
 ; MAXBW:       [[VEC_EPILOG_SCALAR_PH]]:
@@ -435,7 +437,7 @@ declare i32 @llvm.abs.i32(i32, i1)
 ; MAXBW: [[LOOP0]] = distinct !{[[LOOP0]], [[META1:![0-9]+]], [[META2:![0-9]+]]}
 ; MAXBW: [[META1]] = !{!"llvm.loop.isvectorized", i32 1}
 ; MAXBW: [[META2]] = !{!"llvm.loop.unroll.runtime.disable"}
-; MAXBW: [[PROF3]] = !{!"branch_weights", i32 4, i32 12}
+; MAXBW: [[PROF3]] = !{!"branch_weights", i32 8, i32 56}
 ; MAXBW: [[LOOP4]] = distinct !{[[LOOP4]], [[META1]], [[META2]]}
 ; MAXBW: [[LOOP5]] = distinct !{[[LOOP5]], [[META2]], [[META1]]}
 ; MAXBW: [[LOOP6]] = distinct !{[[LOOP6]], [[META1]], [[META2]]}
