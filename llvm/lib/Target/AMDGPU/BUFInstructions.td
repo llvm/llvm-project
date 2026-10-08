@@ -1306,7 +1306,7 @@ defm BUFFER_STORE_FORMAT_D16_HI_X : MUBUF_Pseudo_Stores <
 
 } // End HasD16LoadStore
 
-let True16Predicate = UseRealTrue16Insts in {
+let True16Predicate = UseTrue16WithD16PreservesUnusedBits in {
 defm : MUBUF_Pseudo_Load_Pats<"BUFFER_LOAD_UBYTE_D16_t16", i16, atomic_load_aext_8_global>;
 defm : MUBUF_Pseudo_Load_Pats<"BUFFER_LOAD_UBYTE_D16_t16", i16, atomic_load_zext_8_global>;
 foreach vt = Reg16Types.types in
