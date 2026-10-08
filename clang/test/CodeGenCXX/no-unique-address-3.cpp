@@ -65,8 +65,8 @@ Bar J;
 // CHECK-NEXT:             | [sizeof=8, dsize=8, align=4,
 // CHECK-NEXT:             |  nvsize=8, nvalign=4]
 
-// CHECK-LABEL:   LLVMType:%class.IntFieldClass = type { [2 x i8], %class.Second.base, i32 }
-// CHECK-NEXT:    NonVirtualBaseLLVMType:%class.IntFieldClass = type { [2 x i8], %class.Second.base, i32 }
+// CHECK-LABEL:   LLVMType:%class.IntFieldClass = type { [2 x i8], %class.Second, i32 }
+// CHECK-NEXT:    NonVirtualBaseLLVMType:%class.IntFieldClass = type { [2 x i8], %class.Second, i32 }
 class IntFieldClass : Empty {
   [[no_unique_address]] Second Field;
   int C;
