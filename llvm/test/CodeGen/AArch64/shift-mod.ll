@@ -359,4 +359,3 @@ define i32 @rotr_i32_sub(i32 %x, i32 %amt) {
   ret i32 %r
 }
 
-declare i32 @llvm.fshr.i32(i32, i32, i32)
