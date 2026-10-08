@@ -1,12 +1,11 @@
-// RUN: %clang_cc1 -std=c++98 %s -Wno-unused -verify=cxx98
+// RUN: %clang_cc1 -std=c++98 %s -Wno-unused -verify
 // RUN: %clang_cc1 -std=c++11 %s -Wno-unused -verify
 // RUN: %clang_cc1 -std=c++2a %s -Wno-unused -verify
-// cxx98-no-diagnostics
 
 void use(int);
 
 void f() {
-  const int a = 1;
+  const int a = 1; // expected-note {{here}}
 
 #if __cplusplus >= 201103L
   constexpr int arr[3] = {1, 2, 3}; // expected-note 2{{here}}
@@ -58,7 +57,9 @@ void f() {
 
       // comma expression
       use((i, a));
-      use((a, a));
+      // FIXME: This is not an odr-use because it is a discarded-value
+      // expression applied to an expression whose potential result is 'a'.
+      use((a, a)); // expected-error {{reference to local variable}}
 
       // (and combinations thereof)
       use(a ? (i, a) : a);

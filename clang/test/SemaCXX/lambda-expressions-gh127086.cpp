@@ -1,5 +1,4 @@
 // RUN: %clang_cc1 -std=c++20 -fsyntax-only -verify -Wno-unused-value %s
-// expected-no-diagnostics
 
 void discarded_value() {
   constexpr bool b = true;
@@ -43,6 +42,11 @@ void discarded_potential_results() {
   [] { static_cast<void>(object.x); };
   [] { array[0]; };
   [] { (side_effect(), i); };
+}
+
+void discarded_array_subscript() {
+  int array[3]{};
+  [array] { array[(void)1, 2]; }; // expected-warning {{top-level comma expression in array subscript is deprecated}}
 }
 
 template <int>

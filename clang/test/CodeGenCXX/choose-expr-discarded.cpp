@@ -3,13 +3,13 @@
 int left();
 int right();
 
-void test() {
+int test() {
   const int a = 0;
   const int b = 0;
-  __builtin_choose_expr(false, left() ? a : a, (right(), b));
+  return __builtin_choose_expr(false, left() ? a : a, (right(), b));
 }
 
-// CHECK-LABEL: define{{.*}} void @_Z4testv()
+// CHECK-LABEL: define{{.*}} i32 @_Z4testv()
 // CHECK-NOT: call{{.*}} @_Z4leftv()
 // CHECK: call{{.*}} @_Z5rightv()
-// CHECK: ret void
+// CHECK: ret i32

@@ -18295,7 +18295,8 @@ Sema::PushExpressionEvaluationContext(
   ExprEvalContexts.back().InImmediateEscalatingFunctionContext =
       Prev.InImmediateEscalatingFunctionContext;
 
-  if (LambdaScopeInfo *LSI = getCurLambda(/*IgnoreCapturedRegions=*/true)) {
+  if (LambdaScopeInfo *LSI = getCurLambda(/*IgnoreCapturedRegions=*/true);
+      LSI && LSI->AfterParameterList) {
     ExprEvalContexts.back().PotentialCaptureContext = LSI;
     ExprEvalContexts.back().NumPotentialVariableCaptures =
         LSI->getNumPotentialVariableCaptures();
@@ -20351,25 +20352,8 @@ static ExprResult rebuildPotentialResultsAsNonOdrUsed(Sema &S, Expr *E,
   // Mark that this expression does not constitute an odr-use.
   auto MarkNotOdrUsed = [&] {
     if (!MaybeCUDAODRUsed()) {
-      LambdaScopeInfo *LSI = S.getCurLambda();
-      bool PreserveCaptureDefault = false;
-      if (NOUR == NOUR_Discarded && LSI &&
-          LSI->ImpCaptureStyle != CapturingScopeInfo::ImpCap_None &&
-          S.MaybeODRUseExprs.count(E)) {
-        if (auto *DRE = dyn_cast<DeclRefExpr>(E))
-          PreserveCaptureDefault =
-              !cast<VarDecl>(DRE->getDecl())
-                   ->isUsableInConstantExpressions(S.Context);
-        else if (auto *ME = dyn_cast<MemberExpr>(E))
-          PreserveCaptureDefault =
-              !cast<VarDecl>(ME->getMemberDecl())
-                   ->isUsableInConstantExpressions(S.Context);
-        else
-          PreserveCaptureDefault = isa<FunctionParmPackExpr>(E);
-      }
-      if (!PreserveCaptureDefault)
-        S.MaybeODRUseExprs.remove(E);
-      if (LSI)
+      S.MaybeODRUseExprs.remove(E);
+      if (LambdaScopeInfo *LSI = S.getCurLambda())
         LSI->markVariableExprAsNonODRUsed(E, NOUR);
     }
   };
@@ -20416,11 +20400,15 @@ static ExprResult rebuildPotentialResultsAsNonOdrUsed(Sema &S, Expr *E,
     ExprResult Base = Rebuild(OldBase);
     if (!Base.isUsable())
       return Base;
+    // The subscript has already been checked; rebuilding must not diagnose it.
+    Base = S.DefaultFunctionArrayConversion(Base.get(), /*Diagnose=*/false);
+    if (!Base.isUsable())
+      return Base;
     Expr *LHS = ASE->getBase() == ASE->getLHS() ? Base.get() : ASE->getLHS();
     Expr *RHS = ASE->getBase() == ASE->getRHS() ? Base.get() : ASE->getRHS();
-    SourceLocation LBracketLoc = ASE->getBeginLoc(); // FIXME: Not stored.
-    return S.ActOnArraySubscriptExpr(nullptr, LHS, LBracketLoc, RHS,
-                                     ASE->getRBracketLoc());
+    return new (S.Context)
+        ArraySubscriptExpr(LHS, RHS, ASE->getType(), ASE->getValueKind(),
+                           ASE->getObjectKind(), ASE->getRBracketLoc());
   }
 
   case Expr::MemberExprClass: {
@@ -20683,6 +20671,10 @@ ExprResult Sema::CheckLValueToRValueConversionOperand(Expr *E) {
 }
 
 ExprResult Sema::CheckDiscardedValueExpression(Expr *E) {
+  // Blocks and captured statements have their own capture requirements.
+  if (!getCurLambda())
+    return E;
+
   ExprResult Result =
       rebuildPotentialResultsAsNonOdrUsed(*this, E, NOUR_Discarded);
   if (Result.isInvalid())
@@ -20910,8 +20902,9 @@ static void DoMarkVarDeclReferenced(
   // Delay marking variables usable in constant expressions until the
   // enclosing full-expression determines whether an lvalue-to-rvalue
   // conversion is applied. Also delay non-reference variables that are
-  // potential lambda captures so a discarded-value expression can obviate
-  // their capture.
+  // potential lambda captures without a capture-default so a discarded-value
+  // expression can obviate their capture. Preserve eager capture elsewhere,
+  // including capture order and captures in blocks and captured statements.
   // FIXME: Implement the third bullet for non-capturing contexts too.
 
   // If we already know this isn't an odr-use, there's nothing more to do.
@@ -20943,7 +20936,11 @@ static void DoMarkVarDeclReferenced(
         getLambdaForPotentialCapture(SemaRef, Var);
     if (E && (Var->isUsableInConstantExpressions(SemaRef.Context) ||
               (!Var->getType()->isReferenceType() && PotentialCaptureLSI &&
-               PotentialCaptureLSI->AfterParameterList)))
+               PotentialCaptureLSI == SemaRef.getCurLambda() &&
+               PotentialCaptureLSI->AfterParameterList &&
+               PotentialCaptureLSI->ImpCaptureStyle ==
+                   CapturingScopeInfo::ImpCap_None &&
+               !PotentialCaptureLSI->isCaptured(Var))))
       SemaRef.MaybeODRUseExprs.insert(E);
     else
       MarkVarDeclODRUsed(Var, Loc, SemaRef);
