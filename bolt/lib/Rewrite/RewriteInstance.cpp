@@ -1491,6 +1491,10 @@ void RewriteInstance::discoverFileObjects() {
 }
 
 void RewriteInstance::discoverBOLTReserved() {
+  // Ignore reserved syms in aggregation/heatmap mode.
+  if (opts::AggregateOnly || opts::HeatmapMode != opts::HM_None)
+    return;
+
   BinaryData *StartBD = BC->getBinaryDataByName(getBOLTReservedStart());
   BinaryData *EndBD = BC->getBinaryDataByName(getBOLTReservedEnd());
   if (!StartBD != !EndBD) {
