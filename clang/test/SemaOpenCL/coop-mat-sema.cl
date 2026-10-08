@@ -1,9 +1,5 @@
-// clang/test/SemaOpenCL/coop-mat-sema.cl
+// Tests for semantic checking etc.
 //
-// Patch 4: Sema -- BuildCooperativeMatrixType, diagnostics,
-//          builtin validation, expr handling, TreeTransform.
-//
-// Valid code -- expected-no-diagnostics
 // RUN: %clang_cc1 -triple spirv64-unknown-unknown \
 // RUN:   -cl-std=CL2.0 -cl-ext=+cl_khr_cooperative_matrix \
 // RUN:   -finclude-default-header -fsyntax-only -verify %s
@@ -23,9 +19,7 @@ typedef float __attribute__((coop_mat(SCOPE, 16, 16, USE_B))) MatB_t;
 typedef float __attribute__((coop_mat(SCOPE, 16, 16, USE_C))) MatC_t;
 
 // ---------------------------------------------------------------------------
-// 4b. load builtin -- return type is fixed up by AddInitializerToDecl to
-//     match the LHS variable type.  Declare first, then assign so that
-//     Sema's BuiltinReturnsCoopMatrix path fires correctly.
+// load builtin test
 // ---------------------------------------------------------------------------
 kernel void test_load_store(__global float *ptr,
                             __global float *out_ptr) {
@@ -35,7 +29,7 @@ kernel void test_load_store(__global float *ptr,
 }
 
 // ---------------------------------------------------------------------------
-// 4c. mulAdd builtin -- same two-step pattern for each matrix.
+// mulAdd builtin test
 // ---------------------------------------------------------------------------
 kernel void test_muladd(__global float *ptr) {
     MatA_t a;
@@ -50,7 +44,7 @@ kernel void test_muladd(__global float *ptr) {
 }
 
 // ---------------------------------------------------------------------------
-// 4d. Binary element-wise operators (+, -)
+// Binary element-wise operators (+, -) test
 // ---------------------------------------------------------------------------
 void test_binary_ops(MatA_t a, MatA_t b) {
     MatA_t r_add = a + b;
@@ -59,7 +53,7 @@ void test_binary_ops(MatA_t a, MatA_t b) {
 }
 
 // ---------------------------------------------------------------------------
-// 4e. Scalar multiply operator
+// Scalar multiply operator test
 // ---------------------------------------------------------------------------
 void test_scalar_ops(MatA_t a, float s) {
     MatA_t r = a * s;
@@ -67,7 +61,7 @@ void test_scalar_ops(MatA_t a, float s) {
 }
 
 // ---------------------------------------------------------------------------
-// 4f. Unary minus
+// Unary minus test
 // ---------------------------------------------------------------------------
 void test_unary_minus(MatA_t a) {
     MatA_t r = -a;
@@ -75,8 +69,7 @@ void test_unary_minus(MatA_t a) {
 }
 
 // ---------------------------------------------------------------------------
-// 4g. Assignment -- coop_mat_load return assigned to a pre-declared var.
-//     This exercises the SemaDecl AddInitializerToDecl fixup path directly.
+// Assignment test.
 // ---------------------------------------------------------------------------
 kernel void test_assignment(__global float *ptr) {
     MatA_t a;
