@@ -1349,6 +1349,17 @@ InstructionCost GCNTTIImpl::getVectorInstrCost(
                                        VIC);
     }
 
+    // Packed f32 pair formation for v_pk_*_f32. Only a lane holding a computed
+    // value costs the real packing work, scaled by legalization for wider
+    // vectors. A loaded lane lands in place, and arguments and constants are
+    // already in a register, so both are free.
+    auto *VecTy = dyn_cast<FixedVectorType>(ValTy);
+    const auto *InsertedInst = dyn_cast_or_null<Instruction>(Op1);
+    if (Opcode == Instruction::InsertElement && EltSize == 32 &&
+        ST->hasAnyPackedFP32Ops() && InsertedInst && VecTy &&
+        VecTy->getElementType()->isFloatTy() && !isa<LoadInst>(InsertedInst))
+      return getTypeLegalizationCost(ValTy).first;
+
     // Extracts are just reads of a subregister, so are free. Inserts are
     // considered free because we don't want to have any cost for scalarizing
     // operations, and we don't have to copy into a different register class.
