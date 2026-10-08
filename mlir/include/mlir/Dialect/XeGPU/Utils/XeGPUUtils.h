@@ -17,7 +17,6 @@
 #include <optional>
 
 namespace mlir {
-
 class UnrealizedConversionCastOp;
 class VectorType;
 class OpOperand;
@@ -38,7 +37,6 @@ struct uArch;
 } // namespace xegpu
 
 namespace xegpu {
-
 /// Flatten a set of ValueRange into a single SmallVector<Value>
 SmallVector<Value> flattenValues(ArrayRef<ValueRange> values);
 
@@ -247,8 +245,8 @@ bool hasStaticShapeAndStrides(MemRefType type);
 bool matchUnitDimExpansion(ArrayRef<int64_t> src, ArrayRef<int64_t> dst,
                            SmallVector<int64_t> &expandedUnitDims);
 
-// Checks if dst shape is an expansion of src shape where each dimension in src
-// is split into one or more consecutive dimensions in dst
+// Checks if dst shape is a non-unit expansion of src shape where each
+// dimension in src is split into one or more consecutive dimensions in dst.
 bool matchSplitDimExpansion(ArrayRef<int64_t> src, ArrayRef<int64_t> dst,
                             SmallVector<SmallVector<int64_t>> &splitDimGroups);
 
@@ -304,9 +302,7 @@ void cleanupUnrealizedConversionCasts(
 // dst=[1,4096] -> true, collapseDims=[[],[0,1,2]].
 bool matchDimCollapse(ArrayRef<int64_t> src, ArrayRef<int64_t> dst,
                       SmallVector<SmallVector<int64_t>> &collapseDims);
-
 } // namespace xegpu
-
 } // namespace mlir
 
 #endif // MLIR_DIALECT_XEGPU_UTILS_XEGPUUTILS_H_

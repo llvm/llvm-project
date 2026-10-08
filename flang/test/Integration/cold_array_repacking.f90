@@ -30,7 +30,7 @@
 ! CHECK:  [[BB48]]:
 ! CHECK:    br i1 [[TMP55:.*]], label %[[BB56:.*]], label %[[NO_COPY_BACK:.*]], !prof [[PROF2]]
 ! CHECK:  [[BB56]]:
-! CHECK:    call void @_FortranAShallowCopyDirect
+! CHECK:    call void @_FortranACopyOutAssignDirect
 ! CHECK:    br label %[[NO_COPY_BACK]]
 ! CHECK:  [[NO_COPY_BACK]]:
 ! CHECK-NEXT: br label %[[BB57]]
