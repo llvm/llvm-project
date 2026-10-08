@@ -6793,8 +6793,8 @@ void LoopVectorizationPlanner::addReductionResultComputation(
     }
 
     RecurKind RecurrenceKind = PhiR->getRecurrenceKind();
-    const RecurrenceDescriptor &RdxDesc = Legal->getRecurrenceDescriptor(
-        cast<PHINode>(PhiR->getUnderlyingInstr()));
+    const RecurrenceDescriptor &RdxDesc =
+        Legal->getRecurrenceDescriptor(PhiR->getPHINode());
     Type *PhiTy = PhiR->getScalarType();
 
     // Convert a VPBlendRecipe backedge to a select.
@@ -7451,8 +7451,8 @@ static void preparePlanForEpilogueVectorLoop(
           vputils::findRecipe(ReductionPhi->getBackedgeValue(), IsReductionResult));
       assert(RdxResult && "expected to find reduction result");
 
-      VPInstruction *ResumeForEpi = IRPhiToResumeForEpi.at(
-          cast<PHINode>(ReductionPhi->getUnderlyingInstr()));
+      VPInstruction *ResumeForEpi =
+          IRPhiToResumeForEpi.at(ReductionPhi->getPHINode());
 
       // Check for FindIV pattern by looking for icmp user of RdxResult.
       // The pattern is: select(icmp ne RdxResult, Sentinel), RdxResult, Start

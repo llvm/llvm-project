@@ -708,7 +708,7 @@ createWidenInductionRecipe(PHINode *Phi, VPPhi *PhiR, VPIRValue *Start,
 
   if (IndDesc.getKind() == InductionDescriptor::IK_PtrInduction) {
     auto *WideIV = new VPWidenPointerInductionRecipe(
-        Phi, Start, Step, &Plan.getVFxUF(), IndDesc, DL);
+        PhiR, Phi, Start, Step, &Plan.getVFxUF(), IndDesc, DL);
     ReplaceExtractsWithExitingIVValueIfPossible(WideIV);
     return WideIV;
   }
@@ -729,7 +729,7 @@ createWidenInductionRecipe(PHINode *Phi, VPPhi *PhiR, VPIRValue *Start,
   VPIRFlags Flags = vputils::getFlagsForInduction(IndDesc, PhiR);
 
   auto *WideIV = new VPWidenIntOrFpInductionRecipe(
-      Phi, Start, Step, &Plan.getVF(), IndDesc, Flags, DL);
+      PhiR, Phi, Start, Step, &Plan.getVF(), IndDesc, Flags, DL);
 
   ReplaceExtractsWithExitingIVValueIfPossible(WideIV);
   return WideIV;
@@ -969,7 +969,8 @@ bool VPlanTransforms::createHeaderPhiRecipes(
       // first-order recurrences. If there are no users of the intermediate
       // recurrences in the chain, the fixed order recurrence should be
       // modeled directly, enabling more efficient codegen.
-      return new VPFirstOrderRecurrencePHIRecipe(Phi, *Start, *BackedgeValue);
+      return new VPFirstOrderRecurrencePHIRecipe(PhiR, Phi, *Start,
+                                                 *BackedgeValue);
     }
 
     auto InductionIt = Inductions.find(Phi);
@@ -987,7 +988,7 @@ bool VPlanTransforms::createHeaderPhiRecipes(
     unsigned ScaleFactor = 1;
     bool UseOrderedReductions = !AllowReordering && RdxDesc.isOrdered();
     return new VPReductionPHIRecipe(
-        Phi, RdxDesc.getRecurrenceKind(), *Start, *BackedgeValue,
+        PhiR, Phi, RdxDesc.getRecurrenceKind(), *Start, *BackedgeValue,
         getReductionStyle(InLoopReductions.contains(Phi), UseOrderedReductions,
                           ScaleFactor),
         Phi->getType()->isFloatingPointTy() ? RdxDesc.getFastMathFlags()
@@ -2080,7 +2081,7 @@ static bool handleFirstArgMinOrMax(
     VPIRValue *Zero = Plan.getConstantInt(Ty, 0);
     VPIRValue *One = Plan.getConstantInt(Ty, 1);
     auto *WidenCanIV = new VPWidenIntOrFpInductionRecipe(
-        nullptr, Zero, One, WideIV->getVFValue(),
+        nullptr, nullptr, Zero, One, WideIV->getVFValue(),
         WideIV->getInductionDescriptor(),
         VPIRFlags::WrapFlagsTy(/*HasNUW=*/true, /*HasNSW=*/false),
         WideIV->getDebugLoc());
