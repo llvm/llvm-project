@@ -9627,7 +9627,6 @@ analyzeDefaultedPostfixOperator(Sema &S, FunctionDecl *FD,
                            << FD << /*copy construction*/ 0 << C),
               S, OCD_AmbiguousCandidates, Args, /*Opc=*/"", Loc);
           break;
-        case OR_Success:
         case OR_No_Viable_Function:
           Cands.NoteCandidates(
               PartialDiagnosticAt(
@@ -9635,6 +9634,8 @@ analyzeDefaultedPostfixOperator(Sema &S, FunctionDecl *FD,
                            << FD << /*copy construction*/ 0 << C),
               S, OCD_AllCandidates, Args, /*Opc=*/"", Loc);
           break;
+        case OR_Success:
+          llvm_unreachable("initialization sequence did not fail");
         }
       }
       return Deleted();
