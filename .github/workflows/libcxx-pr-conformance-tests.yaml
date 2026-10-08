@@ -215,7 +215,7 @@ jobs:
         include:
         - config: generic-cxx03
           xcode-version: '26.6'
-        - config: generic-cxx23
+        - config: generic-cxx26
           xcode-version: '26.6'
         - config: generic-modules
           xcode-version: '26.6'
