@@ -34,6 +34,8 @@
 #include "clang/CIR/Interfaces/CIROpInterfaces.h"
 #include "clang/CIR/MissingFeatures.h"
 
+#include <mutex>
+
 using BuilderCallbackRef =
     llvm::function_ref<void(mlir::OpBuilder &, mlir::Location)>;
 using BuilderOpStateCallbackRef = llvm::function_ref<void(
