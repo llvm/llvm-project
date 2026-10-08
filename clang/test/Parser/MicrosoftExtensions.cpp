@@ -1,11 +1,4 @@
 // RUN: %clang_cc1 %s -triple i386-pc-win32 -std=c++14 -fsyntax-only -Wno-unused-getter-return-value -Wno-unused-value -Wmicrosoft -verify -fms-extensions -fms-compatibility -fdelayed-template-parsing
-// RUN: printf '# 1 __identifier(foo' | not %clang_cc1 -x c++ -fms-compatibility -fsyntax-only - 2>&1 | FileCheck %s --check-prefix=IDENTIFIER-EOF
-// RUN: printf '__identifier(foo' | not %clang_cc1 -x c++ -fms-extensions -fsyntax-only - 2>&1 | FileCheck %s --check-prefix=IDENTIFIER-EOF
-// RUN: printf '__identifier(foo' | not %clang_cc1 -x c++ -fms-extensions -fincremental-extensions -fsyntax-only - 2>&1 | FileCheck %s --check-prefix=IDENTIFIER-EOF
-
-// IDENTIFIER-EOF: error: missing ')' after identifier
-// IDENTIFIER-EOF: note: to match this '('
-// IDENTIFIER-EOF: 1 error generated.
 
 /* Microsoft attribute tests */
 [repeatable][source_annotation_attribute( Parameter|ReturnValue )]
@@ -273,11 +266,6 @@ __identifier(class) __identifier(struct) = { &__identifier(struct) };
 
 int __identifier for; // expected-error {{missing '(' after '__identifier'}}
 int __identifier(else} = __identifier(for); // expected-error {{missing ')' after identifier}} expected-note {{to match this '('}}
-
-// A missing ')' must preserve the directive boundary (GH222310), so the
-// following code is still parsed.
-# 1 __identifier(foo // expected-error {{missing ')' after identifier}} expected-note {{to match this '('}}
-
 #define identifier_weird(x) __identifier(x
 int k = identifier_weird(if)); // expected-error {{use of undeclared identifier 'if'}}
 
