@@ -7974,6 +7974,14 @@ struct AAMemoryBehaviorImpl : public AAMemoryBehavior {
       }
     }
 
+    // The effects of the anchor instruction itself only bound the accesses of
+    // call site (argument) positions. For floating and call site returned
+    // positions the memory can still be accessed through the users of the
+    // value.
+    IRPosition::Kind PK = IRP.getPositionKind();
+    if (PK != IRP_CALL_SITE && PK != IRP_CALL_SITE_ARGUMENT)
+      return;
+
     if (auto *I = dyn_cast<Instruction>(&IRP.getAnchorValue())) {
       if (!I->mayReadFromMemory())
         State.addKnownBits(NO_READS);
