@@ -376,7 +376,7 @@ struct basic_format_string {
 
   _LIBCPP_HIDE_FROM_ABI constexpr basic_string_view<_CharT> get() const noexcept { return __str_; }
 #  if _LIBCPP_STD_VER >= 26
-  _LIBCPP_HIDE_FROM_ABI basic_format_string(__dynamic_format_string<_CharT> __s) noexcept : __str_(__s.__str_) {}
+  _LIBCPP_HIDE_FROM_ABI constexpr basic_format_string(__dynamic_format_string<_CharT> __s) noexcept : __str_(__s.__str_) {}
 #  endif
 
 private:

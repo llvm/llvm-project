@@ -31,7 +31,7 @@ namespace std {
 
     public:
       template<class T> consteval basic_format_string(const T& s);
-      basic_format_string(dynamic-format-string<charT> s) noexcept : str(s.str) {}   // since C++26
+      constexpr basic_format_string(dynamic-format-string<charT> s) noexcept : str(s.str) {}   // constexpr since C++26
 
       constexpr basic_string_view<charT> get() const noexcept { return str; }
     };
