@@ -150,6 +150,11 @@ struct SCEVUseT : private PointerIntPair<SCEVPtrT, 2> {
   /// Return the canonical SCEV for this SCEVUse.
   const SCEV *getCanonical() const;
 
+  /// Return a SCEVUse that can replace both \p A and \p B. Both must be
+  /// operands of the same poison-propagating expression, so the use flags of
+  /// both hold for either.
+  static SCEVUseT getCommon(SCEVUseT A, SCEVUseT B);
+
   /// Return the flags for this SCEVUse, which is the union of the use-specific
   /// flags and the underlying SCEV's flags, masked by \p Mask.
   SCEVFlags getNoWrapFlags(SCEVFlags Mask = SCEVFlags::FlagsNoWrapMask) const;
@@ -2794,6 +2799,17 @@ template <> struct DenseMapInfo<ScalarEvolution::FoldID> {
 
 template <> inline const SCEV *SCEVUseT<const SCEV *>::getCanonical() const {
   return getPointer()->getCanonical();
+}
+
+template <>
+inline SCEVUse SCEVUseT<const SCEV *>::getCommon(SCEVUse A, SCEVUse B) {
+  if (A.getPointer() == B.getPointer()) {
+    A.setInt(A.getInt() | B.getInt());
+    return A;
+  }
+  if (A.getCanonical() == B.getCanonical())
+    return A.getCanonical();
+  return SCEVUse();
 }
 
 template <typename SCEVPtrT>

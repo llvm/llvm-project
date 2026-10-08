@@ -2206,12 +2206,11 @@ const SCEV *ScalarEvolution::getAnyExtendExpr(SCEVUse Op, Type *Ty) {
 /// may be exposed. This helps getAddRecExpr short-circuit extra work in
 /// the common case where no interesting opportunities are present, and
 /// is also used as a check to avoid infinite recursion.
-static bool CollectAddOperandsWithScales(SmallDenseMap<SCEVUse, APInt, 16> &M,
-                                         SmallVectorImpl<SCEVUse> &NewOps,
-                                         APInt &AccumulatedConstant,
-                                         ArrayRef<SCEVUse> Ops,
-                                         const APInt &Scale,
-                                         ScalarEvolution &SE) {
+static bool
+CollectAddOperandsWithScales(SmallDenseMap<const SCEV *, APInt, 16> &M,
+                             SmallVectorImpl<SCEVUse> &NewOps,
+                             APInt &AccumulatedConstant, ArrayRef<SCEVUse> Ops,
+                             const APInt &Scale, ScalarEvolution &SE) {
   bool Interesting = false;
 
   // Iterate over the add operands. They are sorted, with constants first.
@@ -2542,16 +2541,19 @@ SCEVUse ScalarEvolution::getAddExpr(SmallVectorImpl<SCEVUse> &Ops,
   Type *Ty = Ops[0]->getType();
   bool FoundMatch = false;
   for (unsigned i = 0, e = Ops.size(); i != e-1; ++i)
-    if (Ops[i]->getCanonical() == Ops[i + 1]->getCanonical()) {
+    if (SCEVUse Op = SCEVUse::getCommon(Ops[i], Ops[i + 1])) {
       //  X + Y + Y  -->  X + Y*2
       // Scan ahead to count how many equal operands there are.
-      const SCEV *Op = Ops[i]->getCanonical();
       unsigned Count = 2;
-      while (i + Count != e && Ops[i + Count]->getCanonical() == Op)
-        ++Count;
+      for (; i + Count != e; ++Count) {
+        SCEVUse Common = SCEVUse::getCommon(Op, Ops[i + Count]);
+        if (!Common)
+          break;
+        Op = Common;
+      }
       // Merge the values into a multiply.
       SCEVUse Scale = getConstant(Ty, Count);
-      const SCEV *Mul = getMulExpr(Scale, Op, SCEV::FlagNone, Depth + 1);
+      SCEVUse Mul = getMulExpr(Scale, Op, SCEV::FlagNone, Depth + 1);
       if (Ops.size() == Count)
         return Mul;
       Ops[i] = Mul;
@@ -2727,7 +2729,7 @@ SCEVUse ScalarEvolution::getAddExpr(SmallVectorImpl<SCEVUse> &Ops,
   // operands multiplied by constant values.
   if (Idx < Ops.size() && isa<SCEVMulExpr>(Ops[Idx])) {
     uint64_t BitWidth = getTypeSizeInBits(Ty);
-    SmallDenseMap<SCEVUse, APInt, 16> M;
+    SmallDenseMap<const SCEV *, APInt, 16> M;
     SmallVector<SCEVUse, 8> NewOps;
     APInt AccumulatedConstant(BitWidth, 0);
     if (CollectAddOperandsWithScales(M, NewOps, AccumulatedConstant,
@@ -2785,7 +2787,7 @@ SCEVUse ScalarEvolution::getAddExpr(SmallVectorImpl<SCEVUse> &Ops,
       // Scan all terms to find every occurrence of common factor MulOpSCEV
       // and fold them in one shot:
       //   A1*X + A2*X + ... + An*X  -->  X * (A1 + A2 + ... + An)
-      const SCEV *MulOpSCEV = Mul->getOperand(MulOp)->getCanonical();
+      SCEVUse MulOpSCEV = Mul->getOperand(MulOp);
       if (isa<SCEVConstant>(MulOpSCEV))
         continue;
 
@@ -2794,8 +2796,9 @@ SCEVUse ScalarEvolution::getAddExpr(SmallVectorImpl<SCEVUse> &Ops,
       SmallVector<SCEVUse, 4> Cofactors;
       SmallVector<unsigned, 4> DeadIndices;
       for (unsigned AddOp = 0, e = Ops.size(); AddOp != e; ++AddOp) {
-        if (MulOpSCEV == Ops[AddOp]->getCanonical()) {
+        if (SCEVUse Common = SCEVUse::getCommon(MulOpSCEV, Ops[AddOp])) {
           // W + X + (X * Y * Z)  -->  W + (X * ((Y*Z)+1))
+          MulOpSCEV = Common;
           Cofactors.push_back(getOne(Ty));
           DeadIndices.push_back(AddOp);
           continue;
@@ -2807,8 +2810,10 @@ SCEVUse ScalarEvolution::getAddExpr(SmallVectorImpl<SCEVUse> &Ops,
         const SCEVMulExpr *OtherMul = cast<SCEVMulExpr>(Ops[AddOp]);
         for (unsigned OMulOp = 0, OE = OtherMul->getNumOperands(); OMulOp != OE;
              ++OMulOp) {
-          if (OtherMul->getOperand(OMulOp)->getCanonical() == MulOpSCEV) {
+          if (SCEVUse Common =
+                  SCEVUse::getCommon(MulOpSCEV, OtherMul->getOperand(OMulOp))) {
             // (A*B*C) + (A*D*E)  -->  A * (B*C + D*E)
+            MulOpSCEV = Common;
             Cofactors.push_back(StripFactor(OtherMul, OMulOp));
             DeadIndices.push_back(AddOp);
             break;
@@ -3947,9 +3952,8 @@ const SCEV *ScalarEvolution::getMinMaxExpr(SCEVTypes Kind,
   llvm::CmpInst::Predicate FirstPred = IsMax ? GEPred : LEPred;
   llvm::CmpInst::Predicate SecondPred = IsMax ? LEPred : GEPred;
   for (unsigned i = 0, e = Ops.size() - 1; i != e; ++i) {
-    if (Ops[i] != Ops[i + 1] &&
-        Ops[i]->getCanonical() == Ops[i + 1]->getCanonical())
-      Ops[i] = Ops[i + 1] = Ops[i]->getCanonical();
+    if (SCEVUse Common = SCEVUse::getCommon(Ops[i], Ops[i + 1]))
+      Ops[i] = Ops[i + 1] = Common;
     if (Ops[i] == Ops[i + 1] ||
         isKnownViaNonRecursiveReasoning(FirstPred, Ops[i], Ops[i + 1])) {
       //  X op Y op Y  -->  X op Y
