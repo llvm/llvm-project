@@ -387,16 +387,15 @@ static void fixupVFUsersForEVL(VPlan &Plan, VPValue &EVL) {
   // Also replace VF with EVL for truncated widen induction.
   for (VPBasicBlock *VPBB : VPBlockUtils::blocksOnly<VPBasicBlock>(
            vp_depth_first_deep(Plan.getVectorLoopRegion()->getEntry()))) {
-    for (auto &R :
+    for (auto &WidenIV :
          make_isa_range<VPWidenIntOrFpInductionRecipe>(VPBB->phis())) {
-      if (!WidenIV->isTruncated())
+      if (!WidenIV.isTruncated())
         continue;
       VPValue *TruncEVL =
           VPBuilder::getToInsertAfter(EVL.getDefiningRecipe())
-              .createScalarZExtOrTrunc(
-                  &EVL, cast<VPSingleDefRecipe>(R).getScalarType(),
-                  DebugLoc::getUnknown());
-      R.setOperand(2, TruncEVL);
+              .createScalarZExtOrTrunc(&EVL, WidenIV.getScalarType(),
+                                       DebugLoc::getUnknown());
+      WidenIV.setOperand(2, TruncEVL);
     }
   }
 

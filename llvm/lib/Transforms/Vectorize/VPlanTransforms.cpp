@@ -2081,7 +2081,8 @@ static bool optimizeVectorInductionWidthForTCAndVFUF(VPlan &Plan,
     auto *NewWideIV = new VPWidenIntOrFpInductionRecipe(
         WideIV->getPHINode(), Plan.getZero(NewIVTy),
         Plan.getConstantInt(NewIVTy, 1), WideIV->getVFValue(),
-        WideIV->getInductionDescriptor(), *WideIV, WideIV->getDebugLoc());
+        WideIV->getInductionDescriptor(), WideIV->isTruncated(), *WideIV,
+        WideIV->getDebugLoc());
     NewWideIV->insertBefore(WideIV);
 
     auto *NewBTC = new VPWidenCastRecipe(
@@ -6233,9 +6234,8 @@ void VPlanTransforms::narrowInductionTruncates(VPlan &Plan, VFRange &Range,
       // type, so do not propagate them.
       auto *NarrowIV = new VPWidenIntOrFpInductionRecipe(
           WideIV->getPHINode(), NewStart, NewStep, NewVF,
-          WideIV->getInductionDescriptor(),
-          VPIRFlags::WrapFlagsTy(false, false), VPI.getDebugLoc(),
-          /*IsTruncated*/ true);
+          WideIV->getInductionDescriptor(), /*Truncated=*/true,
+          VPIRFlags::WrapFlagsTy(false, false), VPI.getDebugLoc());
       NarrowIV->insertBefore(*HeaderVPBB, HeaderVPBB->getFirstNonPhi());
       VPI.replaceAllUsesWith(NarrowIV);
       VPI.eraseFromParent();

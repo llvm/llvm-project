@@ -2631,8 +2631,8 @@ class VPWidenIntOrFpInductionRecipe : public VPWidenInductionRecipe,
 public:
   VPWidenIntOrFpInductionRecipe(PHINode *IV, VPValue *Start, VPValue *Step,
                                 VPValue *VF, const InductionDescriptor &IndDesc,
-                                const VPIRFlags &Flags, DebugLoc DL,
-                                bool IsTruncated = false)
+                                bool IsTruncated, const VPIRFlags &Flags,
+                                DebugLoc DL)
       : VPWidenInductionRecipe(VPRecipeBase::VPWidenIntOrFpInductionSC, IV,
                                Start, Step, IndDesc, DL),
         VPIRFlags(Flags), IsTruncated(IsTruncated) {
@@ -2644,7 +2644,7 @@ public:
   VPWidenIntOrFpInductionRecipe *clone() override {
     return new VPWidenIntOrFpInductionRecipe(
         getPHINode(), getStartValue(), getStepValue(), getVFValue(),
-        getInductionDescriptor(), *this, getDebugLoc(), isTruncated());
+        getInductionDescriptor(), isTruncated(), *this, getDebugLoc());
   }
 
   VP_CLASSOF_IMPL(VPRecipeBase::VPWidenIntOrFpInductionSC)

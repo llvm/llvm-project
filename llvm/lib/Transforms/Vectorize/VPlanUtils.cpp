@@ -635,7 +635,7 @@ VPScalarIVStepsRecipe *vputils::createScalarIVSteps(
   assert(!CanonicalIVTy->isIntegerTy() || !StepTy->isIntegerTy() ||
          CanonicalIVTy->getScalarSizeInBits() >=
                  StepTy->getScalarSizeInBits() &&
-             "Truncations reqiures integer type and a narrower step.");
+             "Truncation reqiures integer type and a narrower step.");
   if (CanonicalIVTy->isIntegerTy() && StepTy->isIntegerTy() &&
       CanonicalIVTy->getScalarSizeInBits() > StepTy->getScalarSizeInBits())
     CanonicalIV = Builder.createScalarZExtOrTrunc(CanonicalIV, StepTy, DL);
