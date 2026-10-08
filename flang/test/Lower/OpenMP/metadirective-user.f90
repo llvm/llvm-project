@@ -3,6 +3,41 @@
 
 ! RUN: %flang_fc1 -fopenmp -emit-hlfir -fopenmp-version=51 %s -o - | FileCheck %s
 ! RUN: %flang_fc1 -fopenmp -emit-hlfir -fopenmp-version=52 -cpp -DOMP_52 %s -o - | FileCheck %s
+! RUN: %flang_fc1 -fopenmp -emit-hlfir -fopenmp-version=50 -cpp -DOMP_50 %s \
+! RUN:   -o - | FileCheck --check-prefix=OMP50 %s
+
+#ifdef OMP_50
+! OpenMP 5.0 has no NOTHING directive, so it gets its own runtime cases.
+
+! A strict subset loses to its dynamic superset despite a higher score.
+! OMP50-LABEL: func.func @_QPtest_omp50_dynamic_subset_order(
+! OMP50: fir.if
+! OMP50-NEXT: omp.barrier
+! OMP50-NEXT: } else {
+! OMP50-NEXT: omp.taskwait
+! OMP50-NOT: omp.taskyield
+! OMP50: return
+subroutine test_omp50_dynamic_subset_order(flag)
+  logical :: flag
+  !$omp metadirective &
+  !$omp& when(implementation={vendor(score(100): llvm)}: taskyield) &
+  !$omp& when(implementation={vendor(score(1): llvm)}, &
+  !$omp& user={condition(score(20): flag)}: barrier) &
+  !$omp& when(user={condition(score(10): .true.)}: taskwait)
+end subroutine
+
+! DEFAULT supplies the fallback when the runtime condition is false.
+! OMP50-LABEL: func.func @_QPtest_omp50_default(
+! OMP50: fir.if
+! OMP50-NEXT: omp.barrier
+! OMP50-NEXT: } else {
+! OMP50-NEXT: omp.taskwait
+! OMP50: return
+subroutine test_omp50_default(flag)
+  logical :: flag
+  !$omp metadirective when(user={condition(flag)}: barrier) default(taskwait)
+end subroutine
+#else
 
 !===----------------------------------------------------------------------===!
 ! Unknown ARCH retains its weight even when only the runtime condition matches.
@@ -713,3 +748,4 @@ subroutine test_dynamic_subset_nothing_order(flag)
   !$omp& user={condition(score(20): flag)}:) &
   !$omp& when(user={condition(score(10): .true.)}: taskwait)
 end subroutine
+#endif
