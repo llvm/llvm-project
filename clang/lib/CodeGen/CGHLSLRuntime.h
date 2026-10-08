@@ -33,21 +33,24 @@
 #include <optional>
 #include <vector>
 
-// A function generator macro for picking the right intrinsic
-// for the target backend
-#define GENERATE_HLSL_INTRINSIC_FUNCTION(FunctionName, IntrinsicPostfix)       \
+// Function generator macros for picking the right intrinsic for the target.
+#define GENERATE_HLSL_INTRINSIC_FUNCTION_BASE(FunctionName, DxilPostfix,       \
+                                              SpirvPostfix)                    \
   llvm::Intrinsic::ID get##FunctionName##Intrinsic() {                         \
     llvm::Triple::ArchType Arch = getArch();                                   \
     switch (Arch) {                                                            \
     case llvm::Triple::dxil:                                                   \
-      return llvm::Intrinsic::dx_##IntrinsicPostfix;                           \
+      return llvm::Intrinsic::dx_##DxilPostfix;                                \
     case llvm::Triple::spirv:                                                  \
-      return llvm::Intrinsic::spv_##IntrinsicPostfix;                          \
+      return llvm::Intrinsic::spv_##SpirvPostfix;                              \
     default:                                                                   \
-      llvm_unreachable("Intrinsic " #IntrinsicPostfix                          \
-                       " not supported by target architecture");               \
+      llvm_unreachable(#FunctionName " not supported by target architecture"); \
     }                                                                          \
   }
+
+#define GENERATE_HLSL_INTRINSIC_FUNCTION(FunctionName, IntrinsicPostfix)       \
+  GENERATE_HLSL_INTRINSIC_FUNCTION_BASE(FunctionName, IntrinsicPostfix,        \
+                                        IntrinsicPostfix)
 
 using ResourceClass = llvm::dxil::ResourceClass;
 
@@ -152,7 +155,8 @@ public:
   GENERATE_HLSL_INTRINSIC_FUNCTION(WaveActiveUMin, wave_reduce_umin)
   GENERATE_HLSL_INTRINSIC_FUNCTION(WaveActiveCountBits, wave_active_countbits)
   GENERATE_HLSL_INTRINSIC_FUNCTION(WaveIsFirstLane, wave_is_first_lane)
-  GENERATE_HLSL_INTRINSIC_FUNCTION(WaveGetLaneCount, wave_get_lane_count)
+  GENERATE_HLSL_INTRINSIC_FUNCTION_BASE(WaveGetLaneCount, wave_get_lane_count,
+                                        subgroup_size)
   GENERATE_HLSL_INTRINSIC_FUNCTION(WaveReadLaneAt, wave_readlane)
   GENERATE_HLSL_INTRINSIC_FUNCTION(WaveReadLaneFirst, wave_readlane_first)
   GENERATE_HLSL_INTRINSIC_FUNCTION(QuadReadAcrossX, quad_read_across_x)
