@@ -2533,12 +2533,6 @@ class VPWidenInductionRecipe : public VPHeaderPHIRecipe {
 public:
   VPWidenInductionRecipe(VPRecipeTy Kind, PHINode *IV, VPValue *Start,
                          VPValue *Step, const InductionDescriptor &IndDesc,
-                         DebugLoc DL)
-      : VPWidenInductionRecipe(Kind, IV, Start, Step, IndDesc,
-                               Start->getScalarType(), DL) {}
-
-  VPWidenInductionRecipe(VPRecipeTy Kind, PHINode *IV, VPValue *Start,
-                         VPValue *Step, const InductionDescriptor &IndDesc,
                          Type *ResultTy, DebugLoc DL)
       : VPHeaderPHIRecipe(Kind, IV, Start, ResultTy, DL), IndDesc(IndDesc) {
     addOperand(Step);
@@ -2632,7 +2626,8 @@ public:
                                 VPValue *VF, const InductionDescriptor &IndDesc,
                                 const VPIRFlags &Flags, DebugLoc DL)
       : VPWidenInductionRecipe(VPRecipeBase::VPWidenIntOrFpInductionSC, IV,
-                               Start, Step, IndDesc, DL),
+                               Start, Step, IndDesc, Start->getScalarType(),
+                               DL),
         VPIRFlags(Flags), Trunc(nullptr) {
     addOperand(VF);
   }
@@ -2716,7 +2711,8 @@ public:
                                 VPValue *NumUnrolledElems,
                                 const InductionDescriptor &IndDesc, DebugLoc DL)
       : VPWidenInductionRecipe(VPRecipeBase::VPWidenPointerInductionSC, Phi,
-                               Start, Step, IndDesc, DL) {
+                               Start, Step, IndDesc, Start->getScalarType(),
+                               DL) {
     addOperand(NumUnrolledElems);
   }
 
