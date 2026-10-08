@@ -2602,6 +2602,13 @@ struct MemorySanitizerVisitor : public InstVisitor<MemorySanitizerVisitor> {
     setOrigin(&I, getOrigin(&I, 0));
   }
 
+  void visitAddrSpaceCastInst(AddrSpaceCastInst &I) {
+    IRBuilder<> IRB(&I);
+    setShadow(&I, IRB.CreateIntCast(getShadow(&I, 0), getShadowTy(&I), false,
+                                    "_msprop_addrspacecast"));
+    setOrigin(&I, getOrigin(&I, 0));
+  }
+
   void visitPtrToIntInst(PtrToIntInst &I) {
     IRBuilder<> IRB(&I);
     setShadow(&I, IRB.CreateIntCast(getShadow(&I, 0), getShadowTy(&I), false,

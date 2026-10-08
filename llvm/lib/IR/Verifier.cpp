@@ -2748,6 +2748,18 @@ void Verifier::verifyFunctionAttrs(FunctionType *FT, AttributeList Attrs,
     }
   }
 
+  if (auto A = Attrs.getFnAttr("sign-return-address-harden"); A.isValid()) {
+    StringRef S = A.getValueAsString();
+    if (S != "load-return-address" && S != "none")
+      CheckFailed(
+          "invalid value for 'sign-return-address-harden' attribute: " + S, V);
+    auto SignRetA = Attrs.getFnAttr("sign-return-address");
+    auto PAuthRetA = Attrs.getFnAttr("ptrauth-returns");
+    if (!SignRetA.isValid() && !PAuthRetA.isValid())
+      CheckFailed("'sign-return-address-harden' present without "
+                  "'sign-return-address' or 'ptrauth-returns'");
+  }
+
   if (auto A = Attrs.getFnAttr("branch-target-enforcement"); A.isValid()) {
     StringRef S = A.getValueAsString();
     if (S != "" && S != "true" && S != "false")
@@ -6869,11 +6881,10 @@ void Verifier::visitIntrinsicCall(Intrinsic::ID ID, CallBase &Call) {
     break;
   }
   case Intrinsic::get_dynamic_area_offset: {
-    auto *IntTy = dyn_cast<IntegerType>(Call.getType());
-    Check(IntTy && DL.getPointerSizeInBits(DL.getAllocaAddrSpace()) ==
-                       IntTy->getBitWidth(),
-          "get_dynamic_area_offset result type must be scalar integer matching "
-          "alloca address space width",
+    Check(DL.getPointerSizeInBits(DL.getAllocaAddrSpace()) ==
+              Call.getType()->getIntegerBitWidth(),
+          "get_dynamic_area_offset result type must match alloca address "
+          "space width",
           Call);
     break;
   }
@@ -6938,7 +6949,7 @@ void Verifier::visitIntrinsicCall(Intrinsic::ID ID, CallBase &Call) {
     Value *Stride = nullptr;
     ConstantInt *NumRows;
     ConstantInt *NumColumns;
-    VectorType *ResultTy;
+    FixedVectorType *ResultTy;
     Type *Op0ElemTy = nullptr;
     Type *Op1ElemTy = nullptr;
     switch (ID) {
@@ -6946,45 +6957,53 @@ void Verifier::visitIntrinsicCall(Intrinsic::ID ID, CallBase &Call) {
       NumRows = cast<ConstantInt>(Call.getArgOperand(2));
       ConstantInt *N = cast<ConstantInt>(Call.getArgOperand(3));
       NumColumns = cast<ConstantInt>(Call.getArgOperand(4));
-      Check(cast<FixedVectorType>(Call.getArgOperand(0)->getType())
-                    ->getNumElements() ==
+      auto *Op0Ty = dyn_cast<FixedVectorType>(Call.getArgOperand(0)->getType());
+      auto *Op1Ty = dyn_cast<FixedVectorType>(Call.getArgOperand(1)->getType());
+      auto *RetTy = dyn_cast<FixedVectorType>(Call.getType());
+      Check(Op0Ty && Op1Ty && RetTy,
+            "Matrix operations require fixed-length vectors!", &Call);
+      Check(Op0Ty->getNumElements() ==
                 NumRows->getZExtValue() * N->getZExtValue(),
             "First argument of a matrix operation does not match specified "
             "shape!");
-      Check(cast<FixedVectorType>(Call.getArgOperand(1)->getType())
-                    ->getNumElements() ==
+      Check(Op1Ty->getNumElements() ==
                 N->getZExtValue() * NumColumns->getZExtValue(),
             "Second argument of a matrix operation does not match specified "
             "shape!");
 
-      ResultTy = cast<VectorType>(Call.getType());
-      Op0ElemTy =
-          cast<VectorType>(Call.getArgOperand(0)->getType())->getElementType();
-      Op1ElemTy =
-          cast<VectorType>(Call.getArgOperand(1)->getType())->getElementType();
+      ResultTy = RetTy;
+      Op0ElemTy = Op0Ty->getElementType();
+      Op1ElemTy = Op1Ty->getElementType();
       break;
     }
-    case Intrinsic::matrix_transpose:
+    case Intrinsic::matrix_transpose: {
       NumRows = cast<ConstantInt>(Call.getArgOperand(1));
       NumColumns = cast<ConstantInt>(Call.getArgOperand(2));
-      ResultTy = cast<VectorType>(Call.getType());
-      Op0ElemTy =
-          cast<VectorType>(Call.getArgOperand(0)->getType())->getElementType();
+      auto *Op0Ty = dyn_cast<FixedVectorType>(Call.getArgOperand(0)->getType());
+      auto *RetTy = dyn_cast<FixedVectorType>(Call.getType());
+      Check(Op0Ty && RetTy, "Matrix operations require fixed-length vectors!",
+            &Call);
+      ResultTy = RetTy;
+      Op0ElemTy = Op0Ty->getElementType();
       break;
+    }
     case Intrinsic::matrix_column_major_load: {
       Stride = Call.getArgOperand(1);
       NumRows = cast<ConstantInt>(Call.getArgOperand(3));
       NumColumns = cast<ConstantInt>(Call.getArgOperand(4));
-      ResultTy = cast<VectorType>(Call.getType());
+      auto *RetTy = dyn_cast<FixedVectorType>(Call.getType());
+      Check(RetTy, "Matrix operations require fixed-length vectors!", &Call);
+      ResultTy = RetTy;
       break;
     }
     case Intrinsic::matrix_column_major_store: {
       Stride = Call.getArgOperand(2);
       NumRows = cast<ConstantInt>(Call.getArgOperand(4));
       NumColumns = cast<ConstantInt>(Call.getArgOperand(5));
-      ResultTy = cast<VectorType>(Call.getArgOperand(0)->getType());
-      Op0ElemTy =
-          cast<VectorType>(Call.getArgOperand(0)->getType())->getElementType();
+      auto *Op0Ty = dyn_cast<FixedVectorType>(Call.getArgOperand(0)->getType());
+      Check(Op0Ty, "Matrix operations require fixed-length vectors!", &Call);
+      ResultTy = Op0Ty;
+      Op0ElemTy = Op0Ty->getElementType();
       break;
     }
     default:
@@ -7007,7 +7026,7 @@ void Verifier::visitIntrinsicCall(Intrinsic::ID ID, CallBase &Call) {
             "vector!",
             IF);
 
-    Check(cast<FixedVectorType>(ResultTy)->getNumElements() ==
+    Check(ResultTy->getNumElements() ==
               NumRows->getZExtValue() * NumColumns->getZExtValue(),
           "Result of a matrix operation does not fit in the returned vector!");
 
@@ -7019,8 +7038,7 @@ void Verifier::visitIntrinsicCall(Intrinsic::ID ID, CallBase &Call) {
   }
   case Intrinsic::stepvector: {
     auto *VecTy = cast<VectorType>(Call.getType());
-    Check(VecTy->getScalarType()->isIntegerTy() &&
-              VecTy->getScalarSizeInBits() >= 8,
+    Check(VecTy->getScalarSizeInBits() >= 8,
           "stepvector only supported for vectors of integers "
           "with a bitwidth of at least 8.",
           &Call);
@@ -7035,8 +7053,6 @@ void Verifier::visitIntrinsicCall(Intrinsic::ID ID, CallBase &Call) {
 
     Check(isa<FixedVectorType>(Op2Ty),
           "Second operand must be a fixed length vector.", &Call);
-    Check(Op1Ty->getElementType()->isIntegerTy(),
-          "First operand must be a vector of integers.", &Call);
     Check(Op1Ty->getElementType() == Op2Ty->getElementType(),
           "First two operands must have the same element type.", &Call);
     break;
@@ -7210,6 +7226,11 @@ void Verifier::visitIntrinsicCall(Intrinsic::ID ID, CallBase &Call) {
           "reduction. The width of the input vector "
           "must be a positive integer multiple of "
           "the width of the accumulator vector.");
+
+    Check(AccTy->getElementType() == VecTy->getElementType(),
+          "The element type of the input vector must match the element type "
+          "of the accumulator vector.",
+          &Call);
     break;
   }
   case Intrinsic::experimental_noalias_scope_decl: {
@@ -7482,6 +7503,7 @@ void Verifier::visitIntrinsicCall(Intrinsic::ID ID, CallBase &Call) {
 
   // Target-specific intrinsic call checks.
   verifyAMDGPUIntrinsicCall(*this, ID, Call);
+  verifyNVVMIntrinsicCall(*this, ID, Call);
 }
 
 /// Carefully grab the subprogram from a local scope.

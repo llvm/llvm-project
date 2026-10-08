@@ -5129,13 +5129,54 @@ def CIR_CoroFreeOp : CIR_CoroIntrinsicOp<"free",
 // Coroutine intrinsic SizeOp
 //===----------------------------------------------------------------------===//
 
-def CIR_CoroSizeOp : CIR_CoroIntrinsicOp<"size", (ins),
-    (outs CIR_UInt64:$result)> {
+def CIR_CoroSizeOp
+    : CIR_CoroIntrinsicOp<"size", (ins),
+                          (outs CIR_AnyFundamentalUIntType:$result)> {
   let summary = "Represents llvm.coro.size";
   let description = [{
     Returns the size, in bytes, of the coroutine frame.
   }];
   let llvmOp = "CoroSizeOp";
+}
+
+//===----------------------------------------------------------------------===//
+// Coroutine intrinsic AlignOp
+//===----------------------------------------------------------------------===//
+
+def CIR_CoroAlignOp
+    : CIR_CoroIntrinsicOp<"align", (ins),
+                          (outs CIR_AnyFundamentalUIntType:$result)> {
+  let summary = "Represents llvm.coro.align";
+  let description = [{
+    Returns the alignment requirement, in bytes, of the coroutine frame.
+  }];
+  let llvmOp = "CoroAlignOp";
+}
+
+//===----------------------------------------------------------------------===//
+// Coroutine intrinsic SuspendOp
+//===----------------------------------------------------------------------===//
+
+def CIR_CoroSuspendOp : CIR_CoroIntrinsicOp<"suspend",
+    (ins Token:$save, CIR_AnyBoolType: $final),
+    (outs CIR_SInt8:$result), [TokenConsumerTrait]> {
+  let summary = "Represents llvm.coro.suspend";
+  let description = [{
+    `cir.coro.intrinsic.suspend` represents the `llvm.coro.suspend` intrinsic.
+
+    It marks the point where execution of a switched-resume coroutine is
+    suspended and control returns to the caller. The result value indicates
+    how the coroutine should proceed: -1 if suspended, 0 if resumed, or 1
+    if destroyed.
+
+    The `id` operand is the token produced by a `cir.coro.save` that marks
+    the point when the coroutine state is prepared for suspension.
+
+    The `final` operand indicates whether this is a final suspend point.
+    If more than one suspend point is marked final, the resume and destroy
+    branches must lead to the same basic blocks.
+  }];
+  let llvmOp = "CoroSuspendOp";
 }
 
 //===----------------------------------------------------------------------===//
@@ -8700,7 +8741,7 @@ def CIR_TryOp : CIR_RegionBranchOpBase<"try", [
     }]>
   ];
 
-  let hasVerifier = 1;
+  let hasRegionVerifier = 1;
   let hasLLVMLowering = false;
 }
 
@@ -9287,6 +9328,8 @@ def CIR_InitCatchKind : CIR_I32Enum<
     I32EnumCase<"Objc", 3, "objc">,
     I32EnumCase<"TrivialCopy", 4, "trivial_copy">,
     I32EnumCase<"NonTrivialCopy", 5, "non_trivial_copy">,
+    I32EnumCase<"ReferenceToPointer", 6, "reference_to_pointer">,
+    I32EnumCase<"ReferenceToRecordPointer", 7, "reference_to_record_pointer">,
 ]>;
 
 def CIR_InitCatchKindAttr : CIR_EnumAttr<CIR_InitCatchKind, "init_catch">;
@@ -9304,6 +9347,16 @@ def CIR_InitCatchParamOp : CIR_Op<"init_catch_param"> {
     the Itanium C++ ABI may emit a load and store for scalar/pointer catch
     types, an aggregate copy for record types, or a call to a copy
     constructor when one is required).
+
+    A catch parameter that is a reference to a pointer uses the
+    `reference_to_record_pointer` kind when the pointer's source-level pointee
+    type is a record (class, struct, or union), and `reference_to_pointer`
+    otherwise. A reference to any other type uses `reference`.
+
+    A `reference_to_pointer` or `non_trivial_copy` operation requires its catch
+    handler to start with a `cir.construct_catch_param` of the same kind on the
+    same parameter. When the handler starts with a `cir.construct_catch_param`
+    on the parameter of the operation, the two must have the same kind.
 
     Example:
 
@@ -9327,6 +9380,7 @@ def CIR_InitCatchParamOp : CIR_Op<"init_catch_param"> {
       qualified(type($exn_ptr)) `,` qualified(type($param_addr)) attr-dict
   }];
 
+  let hasVerifier = 1;
   let hasLLVMLowering = false;
 }
 
@@ -9350,9 +9404,11 @@ def CIR_ConstructCatchParamOp : CIR_Op<"construct_catch_param", [
     copy of the object before `__cxa_begin_catch` is invoked.
 
     This operation takes a `!cir.eh_token` that represents the in-flight
-    exception and the alloca value that is used for the local copy of the
-    exception object. The `copy_fn` attribute is a flat symbol reference to a
-    `cir.func` thunk that copies the exception object to a local alloca value.
+    exception and the alloca value for the catch parameter. The optional
+    `copy_fn` attribute, present for `non_trivial_copy`, is a flat symbol
+    reference to a `cir.func` thunk that copies the exception object to a
+    local alloca value. For `reference_to_pointer`, the operation binds the
+    reference to the exception object itself.
 
     This operation is replaced with a target-specific representation during
     the EHABI lowering pass. For some targets, such as the Microsoft ABI,
@@ -9378,6 +9434,7 @@ def CIR_ConstructCatchParamOp : CIR_Op<"construct_catch_param", [
       qualified(type($param_addr)) attr-dict
   }];
 
+  let hasVerifier = 1;
   let hasLLVMLowering = false;
 }
 
