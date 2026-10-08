@@ -499,10 +499,10 @@ void RegisterBankEmitter::emitPartialMapImplementation(
   if (Order.front() > Order.back())
     return false;
 
-  return std::adjacent_find(Order.begin(), Order.end(),
-                            [](PartialMappingIdx LHS, PartialMappingIdx RHS) {
-                              return RHS != LHS + 1;
-                            }) == Order.end();
+  return llvm::adjacent_find(Order,
+                             [](PartialMappingIdx LHS, PartialMappingIdx RHS) {
+                               return RHS != LHS + 1;
+                             }) == Order.end();
 }
 )";
 
