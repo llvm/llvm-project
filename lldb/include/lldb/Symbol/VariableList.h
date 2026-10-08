@@ -47,6 +47,14 @@ public:
   lldb::VariableSP FindVariable(ConstString name, lldb::ValueType value_type,
                                 bool include_static_members = true) const;
 
+  /// Find a variable by name.
+  ///
+  /// If multiple variables have the same name, return the one who's location is
+  /// valid in the given frame. If no variable's location is valid, the first
+  /// one is returned.
+  lldb::VariableSP FindVariable(ConstString name, StackFrame &frame,
+                                bool include_static_members = true) const;
+
   uint32_t FindVariableIndex(const lldb::VariableSP &var_sp);
 
   size_t AppendVariablesIfUnique(VariableList &var_list);
