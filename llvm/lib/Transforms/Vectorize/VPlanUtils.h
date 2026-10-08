@@ -136,9 +136,9 @@ getOpcodeOrIntrinsicID(const VPValue *V);
 std::optional<MemoryLocation> getMemoryLocation(const VPRecipeBase &R);
 
 /// Extracts and returns NoWrap flags from \p PhiR and fast-math flags from \p
-/// ID.
-VPIRFlags getFlagsForInduction(const InductionDescriptor &ID,
-                               const VPPhi *PhiR);
+/// ID. \p MaxVF is needed to preserve nsw.
+VPIRFlags getFlagsForInduction(const InductionDescriptor &ID, const VPPhi *PhiR,
+                               ElementCount MaxVF);
 
 /// Search \p Start's users for a recipe satisfying \p Pred, looking through
 /// recipes with definitions.
