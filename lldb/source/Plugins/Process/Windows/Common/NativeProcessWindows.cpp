@@ -117,6 +117,7 @@ Status NativeProcessWindows::Resume(const ResumeActionList &resume_actions) {
     bool failed = false;
     for (uint32_t i = 0; i < m_threads.size(); ++i) {
       auto thread = static_cast<NativeThreadWindows *>(m_threads[i].get());
+      thread->ClearSingleStepping();
       const ResumeAction *const action =
           resume_actions.GetActionForThread(thread->GetID(), true);
       if (action == nullptr)
