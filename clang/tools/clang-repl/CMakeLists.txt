@@ -3,17 +3,30 @@ set( LLVM_LINK_COMPONENTS
   Core
   LineEditor
   Option
-  OrcJIT
-  OrcShared
   Support
   TargetParser
   )
+
+if(NOT EMSCRIPTEN)
+  list(APPEND LLVM_LINK_COMPONENTS OrcJIT OrcShared)
+endif()
 
 add_clang_tool(clang-repl
   ClangRepl.cpp
 
   EXPORT_SYMBOLS
   )
+
+if(EMSCRIPTEN)
+  # Incremental modules use dlopen and resolve symbols from the tool.
+  target_link_options(clang-repl PRIVATE
+    "-fwasm-exceptions"
+    "SHELL:-s MAIN_MODULE=1"
+    "LINKER:--export=__clang_Interpreter_SetValueWithAlloc"
+    "LINKER:--export=__clang_Interpreter_SetValueNoAlloc"
+    "LINKER:--export=_ZnwmPv26__clang_Interpreter_NewTag"
+  )
+endif()
 
 if(MSVC)
   set_target_properties(clang-repl PROPERTIES WINDOWS_EXPORT_ALL_SYMBOLS 1)
