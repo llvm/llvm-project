@@ -6456,9 +6456,22 @@ bool Sema::diagnoseQualifiedDeclaration(CXXScopeSpec &SS, DeclContext *DC,
         // The cases that DC is not NamespaceDecl should be handled in
         // CheckRedeclarationExported.
         return false;
-    } else
+    } else {
+      unsigned DCKind = 0; // namespace by default
+      if (auto *TD = dyn_cast<TagDecl>(DC)) {
+        if (TD->isStruct())
+          DCKind = 1;
+        else if (TD->isClass())
+          DCKind = 2;
+        else if (TD->isUnion())
+          DCKind = 3;
+        else if (TD->isEnum())
+          DCKind = 4;
+      }
       Diag(Loc, diag::err_invalid_declarator_scope)
-      << Name << cast<NamedDecl>(Cur) << cast<NamedDecl>(DC) << SS.getRange();
+          << Name << cast<NamedDecl>(Cur) << DCKind << cast<NamedDecl>(DC)
+          << SS.getRange();
+    }
 
     return true;
   }
