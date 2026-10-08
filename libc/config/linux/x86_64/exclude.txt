@@ -16,6 +16,7 @@ if(NOT has_sys_random)
   if(NOT LLVM_LIBC_FULL_BUILD)
     list(APPEND TARGET_LLVMLIBC_REMOVED_ENTRYPOINTS
       libc.src.sys.random.getrandom
+      libc.src.sys.random.getentropy
     )
   endif()
 endif()
