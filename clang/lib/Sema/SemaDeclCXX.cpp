@@ -9412,65 +9412,80 @@ void Sema::DeclareImplicitEqualityComparison(CXXRecordDecl *RD,
   popCodeSynthesisContext();
 }
 
-void Sema::DefineDefaultedComparison(SourceLocation UseLoc, FunctionDecl *FD,
-                                     DefaultedComparisonKind DCK) {
+/// Define a defaulted function whose body is synthesized by \p BuildBody: a
+/// defaulted comparison operator function or a defaulted postfix increment or
+/// decrement operator function.
+static void defineDefaultedFunctionWithSynthesizedBody(
+    Sema &S, SourceLocation UseLoc, FunctionDecl *FD,
+    llvm::function_ref<StmtResult(SourceLocation BodyLoc)> BuildBody) {
   assert(FD->isDefaulted() && !FD->isDeleted() &&
          !FD->doesThisDeclarationHaveABody());
   if (FD->willHaveBody() || FD->isInvalidDecl())
     return;
 
-  SynthesizedFunctionScope Scope(*this, FD);
+  Sema::SynthesizedFunctionScope Scope(S, FD);
 
   // Add a context note for diagnostics produced after this point.
   Scope.addContextNote(UseLoc);
 
-  DefaultedFunctionFPFeaturesRAII RestoreFP(*this, FD);
+  DefaultedFunctionFPFeaturesRAII RestoreFP(S, FD);
 
   {
     // Build and set up the function body.
-    // The first parameter has type maybe-ref-to maybe-const T, use that to get
-    // the type of the class being compared.
-    auto PT = FD->getParamDecl(0)->getType();
-    CXXRecordDecl *RD = PT.getNonReferenceType()->getAsCXXRecordDecl();
     SourceLocation BodyLoc =
         FD->getEndLoc().isValid() ? FD->getEndLoc() : FD->getLocation();
-    StmtResult Body =
-        DefaultedComparisonSynthesizer(*this, RD, FD, DCK, BodyLoc).build();
+    StmtResult Body = BuildBody(BodyLoc);
     if (Body.isInvalid()) {
       FD->setInvalidDecl();
       return;
     }
     FD->setBody(Body.get());
-    FD->markUsed(Context);
+    FD->markUsed(S.Context);
   }
 
   // The exception specification is needed because we are defining the
   // function. Note that this will reuse the body we just built.
-  ResolveExceptionSpec(UseLoc, FD->getType()->castAs<FunctionProtoType>());
+  S.ResolveExceptionSpec(UseLoc, FD->getType()->castAs<FunctionProtoType>());
 
-  if (ASTMutationListener *L = getASTMutationListener())
+  if (ASTMutationListener *L = S.getASTMutationListener())
     L->CompletedImplicitDefinition(FD);
 }
 
+void Sema::DefineDefaultedComparison(SourceLocation UseLoc, FunctionDecl *FD,
+                                     DefaultedComparisonKind DCK) {
+  defineDefaultedFunctionWithSynthesizedBody(
+      *this, UseLoc, FD, [&](SourceLocation BodyLoc) {
+        // The first parameter has type maybe-ref-to maybe-const T, use that to
+        // get the type of the class being compared.
+        auto PT = FD->getParamDecl(0)->getType();
+        CXXRecordDecl *RD = PT.getNonReferenceType()->getAsCXXRecordDecl();
+        return DefaultedComparisonSynthesizer(*this, RD, FD, DCK, BodyLoc)
+            .build();
+      });
+}
+
+/// Compute the exception specification of a defaulted function whose body is
+/// synthesized by \p BuildBody: a defaulted comparison operator function or a
+/// defaulted postfix increment or decrement operator function.
 static Sema::ImplicitExceptionSpecification
-ComputeDefaultedComparisonExceptionSpec(Sema &S, SourceLocation Loc,
-                                        FunctionDecl *FD,
-                                        DefaultedComparisonKind DCK) {
+computeExceptionSpecFromSynthesizedBody(
+    Sema &S, SourceLocation Loc, FunctionDecl *FD,
+    llvm::function_ref<StmtResult(SourceLocation BodyLoc)> BuildBody) {
   ComputingExceptionSpec CES(S, FD, Loc);
   Sema::ImplicitExceptionSpecification ExceptSpec(S);
 
   if (FD->isInvalidDecl())
     return ExceptSpec;
 
-  // The common case is that we just defined the comparison function. In that
-  // case, just look at whether the body can throw.
+  // The common case is that we just defined the function. In that case, just
+  // look at whether the body can throw.
   if (Stmt *FunctionBody = FD->getBody()) {
     ExceptSpec.CalledStmt(FunctionBody);
   } else {
     // Otherwise, build a body so we can check it. This should ideally only
     // happen when we're not actually marking the function referenced. (This is
     // only really important for efficiency: we don't want to build and throw
-    // away bodies for comparison functions more than we strictly need to.)
+    // away bodies for defaulted functions more than we strictly need to.)
 
     // Pretend to synthesize the function body in an unevaluated context.
     // Note that we can't actually just go ahead and define the function here:
@@ -9479,14 +9494,9 @@ ComputeDefaultedComparisonExceptionSpec(Sema &S, SourceLocation Loc,
     EnterExpressionEvaluationContext Context(
         S, Sema::ExpressionEvaluationContext::Unevaluated);
 
-    CXXRecordDecl *RD =
-        cast<CXXRecordDecl>(FD->getFriendObjectKind() == Decl::FOK_None
-                                ? FD->getDeclContext()
-                                : FD->getLexicalDeclContext());
     SourceLocation BodyLoc =
         FD->getEndLoc().isValid() ? FD->getEndLoc() : FD->getLocation();
-    StmtResult Body =
-        DefaultedComparisonSynthesizer(S, RD, FD, DCK, BodyLoc).build();
+    StmtResult Body = BuildBody(BodyLoc);
     if (!Body.isInvalid())
       ExceptSpec.CalledStmt(Body.get());
 
@@ -9497,6 +9507,20 @@ ComputeDefaultedComparisonExceptionSpec(Sema &S, SourceLocation Loc,
   }
 
   return ExceptSpec;
+}
+
+static Sema::ImplicitExceptionSpecification
+ComputeDefaultedComparisonExceptionSpec(Sema &S, SourceLocation Loc,
+                                        FunctionDecl *FD,
+                                        DefaultedComparisonKind DCK) {
+  return computeExceptionSpecFromSynthesizedBody(
+      S, Loc, FD, [&](SourceLocation BodyLoc) {
+        CXXRecordDecl *RD =
+            cast<CXXRecordDecl>(FD->getFriendObjectKind() == Decl::FOK_None
+                                    ? FD->getDeclContext()
+                                    : FD->getLexicalDeclContext());
+        return DefaultedComparisonSynthesizer(S, RD, FD, DCK, BodyLoc).build();
+      });
 }
 
 //===----------------------------------------------------------------------===//
@@ -10060,70 +10084,20 @@ bool Sema::CheckExplicitlyDefaultedPostfixOperator(Scope *S, FunctionDecl *FD,
 void Sema::DefineDefaultedPostfixOperator(SourceLocation UseLoc,
                                           FunctionDecl *FD,
                                           PostfixOperatorKind Kind) {
-  assert(FD->isDefaulted() && !FD->isDeleted() &&
-         !FD->doesThisDeclarationHaveABody());
-  if (FD->willHaveBody() || FD->isInvalidDecl())
-    return;
-
-  SynthesizedFunctionScope Scope(*this, FD);
-
-  // Add a context note for diagnostics produced after this point.
-  Scope.addContextNote(UseLoc);
-
-  DefaultedFunctionFPFeaturesRAII RestoreFP(*this, FD);
-
-  {
-    // Build and set up the function body.
-    SourceLocation BodyLoc =
-        FD->getEndLoc().isValid() ? FD->getEndLoc() : FD->getLocation();
-    StmtResult Body =
-        buildDefaultedPostfixOperatorBody(*this, FD, Kind, BodyLoc);
-    if (Body.isInvalid()) {
-      FD->setInvalidDecl();
-      return;
-    }
-    FD->setBody(Body.get());
-    FD->markUsed(Context);
-  }
-
-  // The exception specification is needed because we are defining the
-  // function. Note that this will reuse the body we just built.
-  ResolveExceptionSpec(UseLoc, FD->getType()->castAs<FunctionProtoType>());
-
-  if (ASTMutationListener *L = getASTMutationListener())
-    L->CompletedImplicitDefinition(FD);
+  defineDefaultedFunctionWithSynthesizedBody(
+      *this, UseLoc, FD, [&](SourceLocation BodyLoc) {
+        return buildDefaultedPostfixOperatorBody(*this, FD, Kind, BodyLoc);
+      });
 }
 
 static Sema::ImplicitExceptionSpecification
 ComputeDefaultedPostfixOperatorExceptionSpec(Sema &S, SourceLocation Loc,
                                              FunctionDecl *FD,
                                              PostfixOperatorKind Kind) {
-  ComputingExceptionSpec CES(S, FD, Loc);
-  Sema::ImplicitExceptionSpecification ExceptSpec(S);
-
-  if (FD->isInvalidDecl())
-    return ExceptSpec;
-
-  // The common case is that we just defined the function. In that case, just
-  // look at whether the body can throw.
-  if (Stmt *FunctionBody = FD->getBody()) {
-    ExceptSpec.CalledStmt(FunctionBody);
-  } else {
-    // Otherwise, build a body so we can check it. Pretend to synthesize the
-    // function body in an unevaluated context: we are not permitted to mark
-    // its callees as referenced.
-    Sema::SynthesizedFunctionScope Scope(S, FD);
-    EnterExpressionEvaluationContext Context(
-        S, Sema::ExpressionEvaluationContext::Unevaluated);
-
-    SourceLocation BodyLoc =
-        FD->getEndLoc().isValid() ? FD->getEndLoc() : FD->getLocation();
-    StmtResult Body = buildDefaultedPostfixOperatorBody(S, FD, Kind, BodyLoc);
-    if (!Body.isInvalid())
-      ExceptSpec.CalledStmt(Body.get());
-  }
-
-  return ExceptSpec;
+  return computeExceptionSpecFromSynthesizedBody(
+      S, Loc, FD, [&](SourceLocation BodyLoc) {
+        return buildDefaultedPostfixOperatorBody(S, FD, Kind, BodyLoc);
+      });
 }
 
 void Sema::CheckDelayedMemberExceptionSpecs() {
