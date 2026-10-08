@@ -1591,6 +1591,60 @@ TSAN_INTERCEPTOR(int, __pthread_mutex_unlock, void *m) {
 #  endif
 #endif
 
+#if SANITIZER_INTERCEPT_C11_THREADS
+TSAN_INTERCEPTOR(int, mtx_init, void* m, int type) {
+  SCOPED_TSAN_INTERCEPTOR(mtx_init, m, type);
+  int res = REAL(mtx_init)(m, type);
+  if (res == 0) {
+    MutexCreate(thr, pc, (uptr)m,
+                (type & threads_mtx_recursive) ? MutexFlagWriteReentrant : 0);
+  }
+  return res;
+}
+
+TSAN_INTERCEPTOR(void, mtx_destroy, void* m) {
+  SCOPED_TSAN_INTERCEPTOR(mtx_destroy, m);
+  REAL(mtx_destroy)(m);
+  MutexDestroy(thr, pc, (uptr)m);
+}
+
+TSAN_INTERCEPTOR(int, mtx_lock, void* m) {
+  SCOPED_TSAN_INTERCEPTOR(mtx_lock, m);
+  MutexPreLock(thr, pc, (uptr)m);
+  AdaptiveDelay::SyncOp();
+  int res = BLOCK_REAL(mtx_lock)(m);
+  if (res == 0)
+    MutexPostLock(thr, pc, (uptr)m);
+  return res;
+}
+
+TSAN_INTERCEPTOR(int, mtx_trylock, void* m) {
+  SCOPED_TSAN_INTERCEPTOR(mtx_trylock, m);
+  AdaptiveDelay::SyncOp();
+  int res = REAL(mtx_trylock)(m);
+  if (res == 0)
+    MutexPostLock(thr, pc, (uptr)m, MutexFlagTryLock);
+  return res;
+}
+
+TSAN_INTERCEPTOR(int, mtx_timedlock, void* m, void* ts) {
+  SCOPED_TSAN_INTERCEPTOR(mtx_timedlock, m, ts);
+  AdaptiveDelay::SyncOp();
+  int res = REAL(mtx_timedlock)(m, ts);
+  if (res == 0)
+    MutexPostLock(thr, pc, (uptr)m, MutexFlagTryLock);
+  return res;
+}
+
+TSAN_INTERCEPTOR(int, mtx_unlock, void* m) {
+  SCOPED_TSAN_INTERCEPTOR(mtx_unlock, m);
+  MutexUnlock(thr, pc, (uptr)m);
+  int res = REAL(mtx_unlock)(m);
+  AdaptiveDelay::SyncOp();
+  return res;
+}
+#endif  // SANITIZER_INTERCEPT_C11_THREADS
+
 #if !SANITIZER_APPLE
 TSAN_INTERCEPTOR(int, pthread_spin_init, void *m, int pshared) {
   SCOPED_TSAN_INTERCEPTOR(pthread_spin_init, m, pshared);
@@ -3210,6 +3264,14 @@ void InitializeInterceptors() {
   TSAN_INTERCEPT(__pthread_mutex_lock);
   TSAN_INTERCEPT(__pthread_mutex_unlock);
 #  endif
+#endif
+#if SANITIZER_INTERCEPT_C11_THREADS
+  TSAN_INTERCEPT(mtx_init);
+  TSAN_INTERCEPT(mtx_destroy);
+  TSAN_INTERCEPT(mtx_lock);
+  TSAN_INTERCEPT(mtx_trylock);
+  TSAN_INTERCEPT(mtx_timedlock);
+  TSAN_INTERCEPT(mtx_unlock);
 #endif
 
   TSAN_INTERCEPT(pthread_spin_init);
