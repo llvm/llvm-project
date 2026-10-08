@@ -508,11 +508,11 @@ feature_test_macros = [
         {
             "name": "__cpp_lib_debugging",
             "values": {
-                "c++26": 202311, # P2546R5 Debugging Support
-                # "c++26": 202403, # P2810R4: is_debugger_present is_replaceable
+                "c++26": 202403,  # P2810R4: is_debugger_present is_replaceable
             },
             "headers": ["debugging"],
-            "unimplemented": True,
+            "test_suite_guard": "!defined(_LIBCPP_VERSION) || _LIBCPP_AVAILABILITY_HAS_DEBUGGING",
+            "libcxx_guard": "_LIBCPP_AVAILABILITY_HAS_DEBUGGING",
         },
         {
             "name": "__cpp_lib_default_template_type_for_algorithm_values",
@@ -904,11 +904,7 @@ feature_test_macros = [
         },
         {
             "name": "__cpp_lib_is_within_lifetime",
-            # Note this name was changed from "__cpp_lib_within_lifetime" when the paper was adopted
-            # https://github.com/cplusplus/draft/commit/0facada4cadd97e1ba15bfaea76a804f1dc5c309
-            "values": {
-                "c++26": 202306  # P2641R4 Checking if a union alternative is active
-            },
+            "values": {"c++26": 202603},
             "headers": ["type_traits"],
             "test_suite_guard": "__has_builtin(__builtin_is_within_lifetime)",
             "libcxx_guard": "__has_builtin(__builtin_is_within_lifetime)",

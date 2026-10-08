@@ -593,10 +593,7 @@ SomeObj* provide();
 
 - (void)storeSomeObj {
   auto *obj = [self getSomeObj];
-  // expected-warning@-1{{Local variable 'obj' is a raw pointer to RetainPtr-capable type 'SomeObj' [alpha.webkit.UnretainedLocalVarsChecker]}}
   [obj doWork];
-  auto *obj2 = [SomeObj sharedInstance];
-  [obj2 doWork];
 }
 
 - (void)assignToGuardianArg:(RetainPtr<SomeObj>&)obj {

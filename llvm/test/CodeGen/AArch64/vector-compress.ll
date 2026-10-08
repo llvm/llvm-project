@@ -107,94 +107,97 @@ define <16 x i8> @test_compress_v16i8(<16 x i8> %vec, <16 x i1> %mask) {
 ; CHECK-NEXT:    sub sp, sp, #16
 ; CHECK-NEXT:    .cfi_def_cfa_offset 16
 ; CHECK-NEXT:    shl.16b v1, v1, #7
-; CHECK-NEXT:    mov x12, sp
-; CHECK-NEXT:    mov x8, sp
-; CHECK-NEXT:    str b0, [sp]
+; CHECK-NEXT:    mov x10, sp
+; CHECK-NEXT:    mov x11, sp
 ; CHECK-NEXT:    mov x13, sp
+; CHECK-NEXT:    str b0, [sp]
 ; CHECK-NEXT:    cmlt.16b v1, v1, #0
-; CHECK-NEXT:    umov.b w9, v1[0]
-; CHECK-NEXT:    umov.b w10, v1[1]
-; CHECK-NEXT:    umov.b w11, v1[2]
+; CHECK-NEXT:    umov.b w8, v1[0]
+; CHECK-NEXT:    umov.b w9, v1[1]
+; CHECK-NEXT:    umov.b w12, v1[2]
 ; CHECK-NEXT:    umov.b w14, v1[3]
-; CHECK-NEXT:    bfxil x12, x9, #0, #1
-; CHECK-NEXT:    and x10, x10, #0x1
+; CHECK-NEXT:    bfxil x10, x8, #0, #1
 ; CHECK-NEXT:    and x9, x9, #0x1
-; CHECK-NEXT:    add x9, x9, x10
-; CHECK-NEXT:    umov.b w10, v1[4]
-; CHECK-NEXT:    and x11, x11, #0x1
-; CHECK-NEXT:    st1.b { v0 }[1], [x12]
-; CHECK-NEXT:    orr x12, x8, x9
-; CHECK-NEXT:    add x9, x9, x11
-; CHECK-NEXT:    umov.b w11, v1[5]
-; CHECK-NEXT:    and x14, x14, #0x1
-; CHECK-NEXT:    st1.b { v0 }[2], [x12]
-; CHECK-NEXT:    add x14, x9, x14
-; CHECK-NEXT:    umov.b w12, v1[6]
-; CHECK-NEXT:    orr x9, x8, x9
-; CHECK-NEXT:    and x10, x10, #0x1
-; CHECK-NEXT:    st1.b { v0 }[3], [x9]
-; CHECK-NEXT:    orr x9, x8, x14
-; CHECK-NEXT:    add x10, x14, x10
-; CHECK-NEXT:    umov.b w14, v1[7]
-; CHECK-NEXT:    st1.b { v0 }[4], [x9]
-; CHECK-NEXT:    and x11, x11, #0x1
-; CHECK-NEXT:    bfxil x13, x10, #0, #4
-; CHECK-NEXT:    mov x9, sp
-; CHECK-NEXT:    add x10, x10, x11
-; CHECK-NEXT:    umov.b w11, v1[8]
+; CHECK-NEXT:    and x8, x8, #0x1
+; CHECK-NEXT:    add x8, x8, x9
+; CHECK-NEXT:    umov.b w9, v1[4]
 ; CHECK-NEXT:    and x12, x12, #0x1
-; CHECK-NEXT:    bfxil x9, x10, #0, #4
-; CHECK-NEXT:    st1.b { v0 }[5], [x13]
-; CHECK-NEXT:    umov.b w13, v1[9]
-; CHECK-NEXT:    add x10, x10, x12
-; CHECK-NEXT:    mov x12, sp
+; CHECK-NEXT:    bfxil x11, x8, #0, #4
+; CHECK-NEXT:    add x8, x8, x12
+; CHECK-NEXT:    umov.b w12, v1[5]
+; CHECK-NEXT:    st1.b { v0 }[1], [x10]
 ; CHECK-NEXT:    and x14, x14, #0x1
+; CHECK-NEXT:    bfxil x13, x8, #0, #4
+; CHECK-NEXT:    st1.b { v0 }[2], [x11]
+; CHECK-NEXT:    umov.b w11, v1[6]
+; CHECK-NEXT:    mov x10, sp
+; CHECK-NEXT:    add x8, x8, x14
+; CHECK-NEXT:    and x9, x9, #0x1
+; CHECK-NEXT:    mov x14, sp
+; CHECK-NEXT:    bfxil x10, x8, #0, #4
+; CHECK-NEXT:    add x8, x8, x9
+; CHECK-NEXT:    st1.b { v0 }[3], [x13]
+; CHECK-NEXT:    umov.b w13, v1[7]
+; CHECK-NEXT:    and x12, x12, #0x1
+; CHECK-NEXT:    mov x9, sp
+; CHECK-NEXT:    bfxil x14, x8, #0, #4
+; CHECK-NEXT:    add x8, x8, x12
+; CHECK-NEXT:    and x11, x11, #0x1
+; CHECK-NEXT:    mov x12, sp
+; CHECK-NEXT:    st1.b { v0 }[4], [x10]
+; CHECK-NEXT:    umov.b w10, v1[8]
+; CHECK-NEXT:    bfxil x9, x8, #0, #4
+; CHECK-NEXT:    add x8, x8, x11
+; CHECK-NEXT:    st1.b { v0 }[5], [x14]
+; CHECK-NEXT:    umov.b w14, v1[9]
+; CHECK-NEXT:    bfxil x12, x8, #0, #4
+; CHECK-NEXT:    and x13, x13, #0x1
 ; CHECK-NEXT:    st1.b { v0 }[6], [x9]
 ; CHECK-NEXT:    umov.b w9, v1[10]
-; CHECK-NEXT:    bfxil x12, x10, #0, #4
-; CHECK-NEXT:    add x10, x10, x14
-; CHECK-NEXT:    mov x14, sp
-; CHECK-NEXT:    and x11, x11, #0x1
-; CHECK-NEXT:    bfxil x14, x10, #0, #4
-; CHECK-NEXT:    add x10, x10, x11
 ; CHECK-NEXT:    mov x11, sp
-; CHECK-NEXT:    and x13, x13, #0x1
+; CHECK-NEXT:    add x8, x8, x13
 ; CHECK-NEXT:    st1.b { v0 }[7], [x12]
-; CHECK-NEXT:    mov x12, sp
-; CHECK-NEXT:    bfxil x11, x10, #0, #4
-; CHECK-NEXT:    add x10, x10, x13
-; CHECK-NEXT:    umov.b w13, v1[11]
-; CHECK-NEXT:    st1.b { v0 }[8], [x14]
-; CHECK-NEXT:    umov.b w14, v1[12]
-; CHECK-NEXT:    and x9, x9, #0x1
-; CHECK-NEXT:    bfxil x12, x10, #0, #4
-; CHECK-NEXT:    add x9, x10, x9
-; CHECK-NEXT:    mov x10, sp
-; CHECK-NEXT:    st1.b { v0 }[9], [x11]
-; CHECK-NEXT:    umov.b w11, v1[13]
-; CHECK-NEXT:    bfxil x10, x9, #0, #4
-; CHECK-NEXT:    st1.b { v0 }[10], [x12]
-; CHECK-NEXT:    umov.b w12, v1[14]
-; CHECK-NEXT:    and x13, x13, #0x1
+; CHECK-NEXT:    umov.b w12, v1[11]
+; CHECK-NEXT:    and x10, x10, #0x1
+; CHECK-NEXT:    bfxil x11, x8, #0, #4
+; CHECK-NEXT:    mov x13, sp
+; CHECK-NEXT:    add x8, x8, x10
 ; CHECK-NEXT:    and x14, x14, #0x1
-; CHECK-NEXT:    add x9, x9, x13
-; CHECK-NEXT:    st1.b { v0 }[11], [x10]
 ; CHECK-NEXT:    mov x10, sp
-; CHECK-NEXT:    add x13, x9, x14
+; CHECK-NEXT:    bfxil x13, x8, #0, #4
+; CHECK-NEXT:    add x8, x8, x14
+; CHECK-NEXT:    st1.b { v0 }[8], [x11]
+; CHECK-NEXT:    umov.b w11, v1[12]
+; CHECK-NEXT:    and x9, x9, #0x1
 ; CHECK-NEXT:    mov x14, sp
-; CHECK-NEXT:    bfxil x10, x9, #0, #4
-; CHECK-NEXT:    and x9, x11, #0x1
+; CHECK-NEXT:    bfxil x10, x8, #0, #4
+; CHECK-NEXT:    add x8, x8, x9
+; CHECK-NEXT:    and x9, x12, #0x1
+; CHECK-NEXT:    umov.b w12, v1[13]
+; CHECK-NEXT:    st1.b { v0 }[9], [x13]
+; CHECK-NEXT:    bfxil x14, x8, #0, #4
+; CHECK-NEXT:    add x8, x8, x9
+; CHECK-NEXT:    mov x9, sp
+; CHECK-NEXT:    umov.b w13, v1[14]
+; CHECK-NEXT:    bfxil x9, x8, #0, #4
+; CHECK-NEXT:    st1.b { v0 }[10], [x10]
+; CHECK-NEXT:    and x10, x11, #0x1
+; CHECK-NEXT:    st1.b { v0 }[11], [x14]
+; CHECK-NEXT:    add x8, x8, x10
+; CHECK-NEXT:    mov x10, sp
+; CHECK-NEXT:    st1.b { v0 }[12], [x9]
+; CHECK-NEXT:    and x9, x12, #0x1
+; CHECK-NEXT:    bfxil x10, x8, #0, #4
+; CHECK-NEXT:    add x8, x8, x9
+; CHECK-NEXT:    mov x9, sp
+; CHECK-NEXT:    and w11, w13, #0x1
+; CHECK-NEXT:    bfxil x9, x8, #0, #4
+; CHECK-NEXT:    add w8, w8, w11
 ; CHECK-NEXT:    mov x11, sp
-; CHECK-NEXT:    add x9, x13, x9
-; CHECK-NEXT:    and w12, w12, #0x1
-; CHECK-NEXT:    bfxil x14, x13, #0, #4
-; CHECK-NEXT:    bfxil x11, x9, #0, #4
-; CHECK-NEXT:    add w9, w9, w12
-; CHECK-NEXT:    st1.b { v0 }[12], [x10]
-; CHECK-NEXT:    bfxil x8, x9, #0, #4
-; CHECK-NEXT:    st1.b { v0 }[13], [x14]
-; CHECK-NEXT:    st1.b { v0 }[14], [x11]
-; CHECK-NEXT:    st1.b { v0 }[15], [x8]
+; CHECK-NEXT:    bfxil x11, x8, #0, #4
+; CHECK-NEXT:    st1.b { v0 }[13], [x10]
+; CHECK-NEXT:    st1.b { v0 }[14], [x9]
+; CHECK-NEXT:    st1.b { v0 }[15], [x11]
 ; CHECK-NEXT:    ldr q0, [sp], #16
 ; CHECK-NEXT:    ret
     %out = call <16 x i8> @llvm.experimental.vector.compress(<16 x i8> %vec, <16 x i1> %mask, <16 x i8> undef)
@@ -358,14 +361,15 @@ define <4 x i8> @test_compress_small(<4 x i8> %vec, <4 x i1> %mask) {
 ; CHECK-NEXT:    and x10, x10, #0x1
 ; CHECK-NEXT:    and x9, x9, #0x1
 ; CHECK-NEXT:    add x9, x9, x10
-; CHECK-NEXT:    and w11, w11, #0x1
 ; CHECK-NEXT:    add x10, sp, #8
-; CHECK-NEXT:    add w11, w9, w11
-; CHECK-NEXT:    orr x9, x10, x9, lsl #1
+; CHECK-NEXT:    and x11, x11, #0x1
+; CHECK-NEXT:    bfi x10, x9, #1, #2
+; CHECK-NEXT:    add x9, x9, x11
+; CHECK-NEXT:    add x11, sp, #8
+; CHECK-NEXT:    bfi x11, x9, #1, #2
 ; CHECK-NEXT:    st1.h { v0 }[1], [x8]
-; CHECK-NEXT:    bfi x10, x11, #1, #2
-; CHECK-NEXT:    st1.h { v0 }[2], [x9]
-; CHECK-NEXT:    st1.h { v0 }[3], [x10]
+; CHECK-NEXT:    st1.h { v0 }[2], [x10]
+; CHECK-NEXT:    st1.h { v0 }[3], [x11]
 ; CHECK-NEXT:    ldr d0, [sp, #8]
 ; CHECK-NEXT:    add sp, sp, #16
 ; CHECK-NEXT:    ret
@@ -390,14 +394,15 @@ define <4 x i4> @test_compress_illegal_element_type(<4 x i4> %vec, <4 x i1> %mas
 ; CHECK-NEXT:    and x10, x10, #0x1
 ; CHECK-NEXT:    and x9, x9, #0x1
 ; CHECK-NEXT:    add x9, x9, x10
-; CHECK-NEXT:    and w11, w11, #0x1
 ; CHECK-NEXT:    add x10, sp, #8
-; CHECK-NEXT:    add w11, w9, w11
-; CHECK-NEXT:    orr x9, x10, x9, lsl #1
+; CHECK-NEXT:    and x11, x11, #0x1
+; CHECK-NEXT:    bfi x10, x9, #1, #2
+; CHECK-NEXT:    add x9, x9, x11
+; CHECK-NEXT:    add x11, sp, #8
+; CHECK-NEXT:    bfi x11, x9, #1, #2
 ; CHECK-NEXT:    st1.h { v0 }[1], [x8]
-; CHECK-NEXT:    bfi x10, x11, #1, #2
-; CHECK-NEXT:    st1.h { v0 }[2], [x9]
-; CHECK-NEXT:    st1.h { v0 }[3], [x10]
+; CHECK-NEXT:    st1.h { v0 }[2], [x10]
+; CHECK-NEXT:    st1.h { v0 }[3], [x11]
 ; CHECK-NEXT:    ldr d0, [sp, #8]
 ; CHECK-NEXT:    add sp, sp, #16
 ; CHECK-NEXT:    ret
@@ -459,9 +464,9 @@ define <3 x i3> @test_compress_narrow_illegal_element_type(<3 x i3> %vec, <3 x i
 ; CHECK-NEXT:    bfi x10, x8, #1, #1
 ; CHECK-NEXT:    add x8, x11, x9
 ; CHECK-NEXT:    add x9, sp, #8
-; CHECK-NEXT:    orr x8, x9, x8, lsl #1
+; CHECK-NEXT:    bfi x9, x8, #1, #2
 ; CHECK-NEXT:    strh w1, [x10]
-; CHECK-NEXT:    strh w2, [x8]
+; CHECK-NEXT:    strh w2, [x9]
 ; CHECK-NEXT:    ldrh w0, [sp, #8]
 ; CHECK-NEXT:    ldrh w1, [sp, #10]
 ; CHECK-NEXT:    ldrh w2, [sp, #12]

@@ -722,6 +722,10 @@ ExprResult Sema::DefaultLvalueConversion(Expr *E) {
   if (T.hasQualifiers())
     T = T.getUnqualifiedType();
 
+  if (getLangOpts().HLSL)
+    if (const auto *MT = T->getAs<ConstantMatrixType>(); MT && MT->getLayout())
+      T = Context.getCanonicalType(T);
+
   // Under the MS ABI, lock down the inheritance model now.
   if (T->isMemberPointerType() &&
       Context.getTargetInfo().getCXXABI().isMicrosoft())
@@ -5918,39 +5922,51 @@ static FieldDecl *FindFieldDeclInstantiationPattern(const ASTContext &Ctx,
   return cast<FieldDecl>(*Rng.begin());
 }
 
-ExprResult Sema::BuildCXXDefaultInitExpr(SourceLocation Loc, FieldDecl *Field) {
-  assert(Field->hasInClassInitializer());
-
-  CXXThisScopeRAII This(*this, Field->getParent(), Qualifiers());
-
+ExprResult Sema::BuildCXXDefaultInitInternal(SourceLocation Loc,
+                                             FieldDecl *Field,
+                                             const InitializedEntity &Entity,
+                                             bool NestedDefaultChecking,
+                                             bool NeedRebuild) {
   auto *ParentRD = cast<CXXRecordDecl>(Field->getParent());
 
-  std::optional<ExpressionEvaluationContextRecord::InitializationContext>
-      InitializationContext =
-          OutermostDeclarationWithDelayedImmediateInvocations();
-  if (!InitializationContext.has_value())
-    InitializationContext.emplace(Loc, Field, CurContext);
-
-  Expr *Init = nullptr;
-
-  bool NestedDefaultChecking = isCheckingDefaultArgumentOrInitializer();
-  bool NeedRebuild = needsRebuildOfDefaultArgOrInit();
-  EnterExpressionEvaluationContext EvalContext(
-      *this, ExpressionEvaluationContext::PotentiallyEvaluated, Field);
-
-  if (!Field->getInClassInitializer()) {
+  if (!Field->getInClassInitializer() &&
+      isTemplateInstantiation(ParentRD->getTemplateSpecializationKind())) {
     // Maybe we haven't instantiated the in-class initializer. Go check the
     // pattern FieldDecl to see if it has one.
-    if (isTemplateInstantiation(ParentRD->getTemplateSpecializationKind())) {
-      FieldDecl *Pattern =
-          FindFieldDeclInstantiationPattern(getASTContext(), Field);
-      assert(Pattern && "We must have set the Pattern!");
-      if (!Pattern->hasInClassInitializer() ||
-          InstantiateInClassInitializer(Loc, Field, Pattern,
-                                        getTemplateInstantiationArgs(Field))) {
-        return ExprError();
-      }
-    }
+    FieldDecl *Pattern =
+        FindFieldDeclInstantiationPattern(getASTContext(), Field);
+    assert(Pattern && "We must have set the Pattern!");
+    if (!Pattern->hasInClassInitializer() ||
+        InstantiateInClassInitializer(Loc, Field, Pattern,
+                                      getTemplateInstantiationArgs(Field)))
+      return ExprError();
+  }
+
+  Expr *InClassInit = Field->getInClassInitializer();
+  if (!InClassInit) {
+    // DR1351:
+    //   If the brace-or-equal-initializer of a non-static data member
+    //   invokes a defaulted default constructor of its class or of an
+    //   enclosing class in a potentially evaluated subexpression, the
+    //   program is ill-formed.
+    //
+    // This resolution is unworkable: the exception specification of the
+    // default constructor can be needed in an unevaluated context, in
+    // particular, in the operand of a noexcept-expression, and we can be
+    // unable to compute an exception specification for an enclosed class.
+    //
+    // Any attempt to resolve the exception specification of a defaulted default
+    // constructor before the initializer is lexically complete will ultimately
+    // come here at which point we can diagnose it.
+    RecordDecl *OutermostClass = ParentRD->getOuterLexicalRecordContext();
+    Diag(Loc, diag::err_default_member_initializer_not_yet_parsed)
+        << OutermostClass << Field;
+    Diag(Field->getEndLoc(),
+         diag::note_default_member_initializer_not_yet_parsed);
+    // Recover by marking the field invalid, unless we're in a SFINAE context.
+    if (!isSFINAEContext())
+      Field->setInvalidDecl();
+    return ExprError();
   }
 
   // CWG2631
@@ -5969,27 +5985,27 @@ ExprResult Sema::BuildCXXDefaultInitExpr(SourceLocation Loc, FieldDecl *Field) {
   // expression is an ExprWithCleanups. Then make sure the normal lifetime
   // extension code recurses into the default initializer and does lifetime
   // extension when warranted.
-  bool ContainsAnyTemporaries =
-      isa_and_present<ExprWithCleanups>(Field->getInClassInitializer());
-  if (Field->getInClassInitializer() &&
-      !Field->getInClassInitializer()->containsErrors() &&
+  bool ContainsAnyTemporaries = isa<ExprWithCleanups>(InClassInit);
+  Expr *Init = InClassInit;
+  if (!InClassInit->containsErrors() &&
       (V.HasImmediateCalls || (NeedRebuild && ContainsAnyTemporaries))) {
     ExprEvalContexts.back().DelayedDefaultInitializationContext = {Loc, Field,
                                                                    CurContext};
     ExprEvalContexts.back().IsCurrentlyCheckingDefaultArgumentOrInitializer =
         NestedDefaultChecking;
     // Pass down lifetime extending flag, and collect temporaries in
-    // CreateMaterializeTemporaryExpr when we rewrite the call argument.
+    // CreateMaterializeTemporaryExpr when we rewrite the initializer.
     currentEvaluationContext().InLifetimeExtendingContext =
         parentEvaluationContext().InLifetimeExtendingContext;
+
     EnsureImmediateInvocationInDefaultArgs Immediate(*this);
     ExprResult Res;
     runWithSufficientStackSpace(Loc, [&] {
-      Res = Immediate.TransformInitializer(Field->getInClassInitializer(),
+      Res = Immediate.TransformInitializer(InClassInit,
                                            /*CXXDirectInit=*/false);
     });
     if (!Res.isInvalid())
-      Res = ConvertMemberDefaultInitExpression(Field, Res.get(), Loc);
+      Res = ConvertMemberDefaultInitExpression(Field, Entity, Res.get(), Loc);
     if (Res.isInvalid()) {
       Field->setInvalidDecl();
       return ExprError();
@@ -5997,52 +6013,106 @@ ExprResult Sema::BuildCXXDefaultInitExpr(SourceLocation Loc, FieldDecl *Field) {
     Init = Res.get();
   }
 
-  if (Field->getInClassInitializer()) {
-    Expr *E = Init ? Init : Field->getInClassInitializer();
-    if (!NestedDefaultChecking)
-      runWithSufficientStackSpace(Loc, [&] {
-        MarkDeclarationsReferencedInExpr(E, /*SkipLocalVariables=*/false);
-      });
-    if (isInLifetimeExtendingContext())
-      DiscardCleanupsInEvaluationContext();
-    // C++11 [class.base.init]p7:
-    //   The initialization of each base and member constitutes a
-    //   full-expression.
-    ExprResult Res = ActOnFinishFullExpr(E, /*DiscardedValue=*/false);
-    if (Res.isInvalid()) {
-      Field->setInvalidDecl();
-      return ExprError();
-    }
-    Init = Res.get();
+  if (!NestedDefaultChecking)
+    runWithSufficientStackSpace(Loc, [&] {
+      MarkDeclarationsReferencedInExpr(Init, /*SkipLocalVariables=*/false);
+    });
+  return Init;
+}
 
-    return CXXDefaultInitExpr::Create(Context, InitializationContext->Loc,
-                                      Field, InitializationContext->Context,
-                                      Init);
-  }
+ExprResult Sema::BuildCXXCtorDefaultInitExpr(SourceLocation Loc,
+                                             FieldDecl *Field) {
+  assert(Field->hasInClassInitializer());
 
-  // DR1351:
-  //   If the brace-or-equal-initializer of a non-static data member
-  //   invokes a defaulted default constructor of its class or of an
-  //   enclosing class in a potentially evaluated subexpression, the
-  //   program is ill-formed.
+  bool NestedDefaultChecking = isCheckingDefaultArgumentOrInitializer();
+
+  // C++11 [class.base.init]p7:
+  //   The initialization of each base and member constitutes a
+  //   full-expression.
+  // So this initializer gets an evaluation context of its own, and is finished
+  // as a full-expression below.
+  EnterExpressionEvaluationContext EvalContext(
+      *this, ExpressionEvaluationContext::PotentiallyEvaluated, Field);
+  CXXThisScopeRAII This(*this, Field->getParent(), Qualifiers());
+
+  auto InitContext = OutermostDeclarationWithDelayedImmediateInvocations();
+  if (!InitContext)
+    InitContext.emplace(Loc, Field, CurContext);
+
+  // [class.temporary]/p7:
+  // If such a temporary object would otherwise be destroyed at the end of the
+  // for-range-initializer full-expression, the object persists for the lifetime
+  // of the reference initialized by the for-range-initializer.
   //
-  // This resolution is unworkable: the exception specification of the
-  // default constructor can be needed in an unevaluated context, in
-  // particular, in the operand of a noexcept-expression, and we can be
-  // unable to compute an exception specification for an enclosed class.
-  //
-  // Any attempt to resolve the exception specification of a defaulted default
-  // constructor before the initializer is lexically complete will ultimately
-  // come here at which point we can diagnose it.
-  RecordDecl *OutermostClass = ParentRD->getOuterLexicalRecordContext();
-  Diag(Loc, diag::err_default_member_initializer_not_yet_parsed)
-      << OutermostClass << Field;
-  Diag(Field->getEndLoc(),
-       diag::note_default_member_initializer_not_yet_parsed);
-  // Recover by marking the field invalid, unless we're in a SFINAE context.
-  if (!isSFINAEContext())
+  // A default member initializer used by a constructor is a separate
+  // full-expression, we don't need extend temporaries lifetime in this
+  // situation, the NeedRebuild will always false.
+  ExprResult Init = BuildCXXDefaultInitInternal(
+      Loc, Field,
+      InitializedEntity::InitializeMemberFromDefaultMemberInitializer(Field),
+      NestedDefaultChecking, /*NeedRebuild=*/false);
+  if (Init.isInvalid())
+    return ExprError();
+
+  Init = ActOnFinishFullExpr(Init.get(), /*DiscardedValue=*/false);
+  if (Init.isInvalid()) {
     Field->setInvalidDecl();
-  return ExprError();
+    return ExprError();
+  }
+
+  return CXXDefaultInitExpr::Create(
+      Context, InitContext->Loc, Field, InitContext->Context,
+      Init.get() == Field->getInClassInitializer() ? nullptr : Init.get());
+}
+
+ExprResult
+Sema::BuildCXXAggregateDefaultInitExpr(SourceLocation Loc, FieldDecl *Field,
+                                       const InitializedEntity &MemberEntity) {
+  assert(Field->hasInClassInitializer());
+
+  bool NestedDefaultChecking = isCheckingDefaultArgumentOrInitializer();
+
+  // Unlike a mem-initializer, this initializer is a subexpression of the
+  // full-expression containing the aggregate initialization. It is evaluated
+  // exactly as that full-expression is, so inherit the enclosing context kind
+  // rather than forcing a potentially evaluated one.
+  EnterExpressionEvaluationContext EvalContext(
+      *this, currentEvaluationContext().Context, Field);
+  CXXThisScopeRAII This(*this, Field->getParent(), Qualifiers());
+
+  auto InitContext = OutermostDeclarationWithDelayedImmediateInvocations();
+  if (!InitContext)
+    InitContext.emplace(Loc, Field, CurContext);
+
+  // [class.temporary]/p7:
+  // If such a temporary object would otherwise be destroyed at the end of the
+  // for-range-initializer full-expression, the object persists for the lifetime
+  // of the reference initialized by the for-range-initializer.
+  //
+  // A default member initializer used by an aggregate initialization belongs to
+  // the full-expression containing the aggregate initialization. we need extend
+  // temporaries lifetime in this situation, the NeedRebuild will always true.
+
+  // CWG1815: always rebuild, never share the AST built when the field was
+  // declared. Only a copy rebuilt here has its MaterializeTemporaryExprs
+  // collected in this context, which is what lets the aggregate initialization
+  // lifetime-extend them; sharing one AST would also make several uses of the
+  // same field fight over its extension. A mem-initializer has no such need,
+  // as its temporaries die at the end of the initializer itself.
+  ExprResult Init = BuildCXXDefaultInitInternal(
+      Loc, Field, MemberEntity, NestedDefaultChecking, /*NeedRebuild=*/true);
+  if (Init.isInvalid())
+    return ExprError();
+
+  // Deliberately not finished as a full-expression: leaving the temporaries it
+  // created on ExprCleanupObjects lets PopExpressionEvaluationContext merge
+  // them into the enclosing context, which eventually wraps them all in a
+  // single ExprWithCleanups. They are then destroyed at the end of the
+  // containing full-expression, in reverse construction order.
+
+  return CXXDefaultInitExpr::Create(
+      Context, InitContext->Loc, Field, InitContext->Context,
+      Init.get() == Field->getInClassInitializer() ? nullptr : Init.get());
 }
 
 VariadicCallType Sema::getVariadicCallType(FunctionDecl *FDecl,
@@ -6514,6 +6584,8 @@ static bool isPlaceholderToRemoveAsArg(QualType type) {
 #include "clang/Basic/AMDGPUTypes.def"
 #define HLSL_INTANGIBLE_TYPE(Name, Id, SingletonId) case BuiltinType::Id:
 #include "clang/Basic/HLSLIntangibleTypes.def"
+#define HLSL_PACKED_TYPE(Name, Id, SingletonId) case BuiltinType::Id:
+#include "clang/Basic/HLSLPackedTypes.def"
 #define SPIRV_TYPE(Name, Id, SingletonId) case BuiltinType::Id:
 #include "clang/Basic/SPIRVTypes.def"
 #define PLACEHOLDER_TYPE(ID, SINGLETON_ID)
@@ -8899,8 +8971,7 @@ OpenCLCheckVectorConditional(Sema &S, ExprResult &Cond,
                               /*isCompAssign*/ false,
                               /*AllowBothBool*/ true,
                               /*AllowBoolConversions*/ false,
-                              /*AllowBooleanOperation*/ IsBoolVecLang,
-                              /*ReportInvalid*/ true);
+                              /*AllowBooleanOperation*/ IsBoolVecLang);
     if (VecResTy.isNull())
       return QualType();
     // The result type must match the condition type as specified in
@@ -8983,8 +9054,7 @@ QualType Sema::CheckConditionalOperands(ExprResult &Cond, ExprResult &LHS,
     return CheckVectorOperands(LHS, RHS, QuestionLoc, /*isCompAssign*/ false,
                                /*AllowBothBool*/ true,
                                /*AllowBoolConversions*/ false,
-                               /*AllowBooleanOperation*/ false,
-                               /*ReportInvalid*/ true);
+                               /*AllowBooleanOperation*/ false);
 
   QualType ResTy = UsualArithmeticConversions(LHS, RHS, QuestionLoc,
                                               ArithConvKind::Conditional);
@@ -10357,9 +10427,10 @@ AssignConvertType Sema::CheckSingleAssignmentConstraints(QualType LHSType,
       // a macro expansion because the use of a macro may indicate different
       // code between C and C++. Consider: char *s = NULL; where NULL is
       // defined as (void *)0 in C (which would be invalid in C++), but 0 in
-      // C++, which is valid in C++.
+      // C++, which is valid in C++. Ignore parentheses around the macro when
+      // checking where the expression originates.
       if (Kind != CK_NoOp && !getLangOpts().CPlusPlus &&
-          !RHS.get()->getBeginLoc().isMacroID()) {
+          !RHS.get()->IgnoreParens()->getBeginLoc().isMacroID()) {
         QualType CanRHS =
             RHS.get()->getType().getCanonicalType().getUnqualifiedType();
         QualType CanLHS = LHSType.getCanonicalType().getUnqualifiedType();
@@ -10794,8 +10865,7 @@ QualType Sema::CheckVectorOperands(ExprResult &LHS, ExprResult &RHS,
                                    SourceLocation Loc, bool IsCompAssign,
                                    bool AllowBothBool,
                                    bool AllowBoolConversions,
-                                   bool AllowBoolOperation,
-                                   bool ReportInvalid) {
+                                   bool AllowBoolOperation) {
   if (!IsCompAssign) {
     LHS = DefaultFunctionArrayLvalueConversion(LHS.get());
     if (LHS.isInvalid())
@@ -10828,12 +10898,12 @@ QualType Sema::CheckVectorOperands(ExprResult &LHS, ExprResult &RHS,
   if (!AllowBothBool && LHSVecType &&
       LHSVecType->getVectorKind() == VectorKind::AltiVecBool && RHSVecType &&
       RHSVecType->getVectorKind() == VectorKind::AltiVecBool)
-    return ReportInvalid ? InvalidOperands(Loc, LHS, RHS) : QualType();
+    return InvalidOperands(Loc, LHS, RHS);
 
   // This operation may not be performed on boolean vectors.
   if (!AllowBoolOperation &&
       (LHSType->isExtVectorBoolType() || RHSType->isExtVectorBoolType()))
-    return ReportInvalid ? InvalidOperands(Loc, LHS, RHS) : QualType();
+    return InvalidOperands(Loc, LHS, RHS);
 
   // If the vector types are identical, return.
   if (Context.hasSameType(LHSType, RHSType))
@@ -11324,8 +11394,7 @@ QualType Sema::CheckMultiplyDivideOperands(ExprResult &LHS, ExprResult &RHS,
     return CheckVectorOperands(LHS, RHS, Loc, IsCompAssign,
                                /*AllowBothBool*/ getLangOpts().AltiVec,
                                /*AllowBoolConversions*/ false,
-                               /*AllowBooleanOperation*/ false,
-                               /*ReportInvalid*/ true);
+                               /*AllowBooleanOperation*/ false);
   if (LHSTy->isSveVLSBuiltinType() || RHSTy->isSveVLSBuiltinType())
     return CheckSizelessVectorOperands(LHS, RHS, Loc, IsCompAssign,
                                        ArithConvKind::Arithmetic);
@@ -11387,8 +11456,7 @@ QualType Sema::CheckRemainderOperands(
       return CheckVectorOperands(LHS, RHS, Loc, IsCompAssign,
                                  /*AllowBothBool*/ getLangOpts().AltiVec,
                                  /*AllowBoolConversions*/ false,
-                                 /*AllowBooleanOperation*/ false,
-                                 /*ReportInvalid*/ true);
+                                 /*AllowBooleanOperation*/ false);
     return InvalidOperands(Loc, LHS, RHS);
   }
 
@@ -11713,8 +11781,7 @@ QualType Sema::CheckAdditionOperands(ExprResult &LHS, ExprResult &RHS,
         CheckVectorOperands(LHS, RHS, Loc, CompLHSTy,
                             /*AllowBothBool*/ getLangOpts().AltiVec,
                             /*AllowBoolConversions*/ getLangOpts().ZVector,
-                            /*AllowBooleanOperation*/ false,
-                            /*ReportInvalid*/ true);
+                            /*AllowBooleanOperation*/ false);
     if (CompLHSTy) *CompLHSTy = compType;
     return compType;
   }
@@ -11860,8 +11927,7 @@ QualType Sema::CheckSubtractionOperands(ExprResult &LHS, ExprResult &RHS,
         CheckVectorOperands(LHS, RHS, Loc, CompLHSTy,
                             /*AllowBothBool*/ getLangOpts().AltiVec,
                             /*AllowBoolConversions*/ getLangOpts().ZVector,
-                            /*AllowBooleanOperation*/ false,
-                            /*ReportInvalid*/ true);
+                            /*AllowBooleanOperation*/ false);
     if (CompLHSTy) *CompLHSTy = compType;
     return compType;
   }
@@ -13118,6 +13184,13 @@ QualType Sema::CheckCompareOperands(ExprResult &LHS, ExprResult &RHS,
         *CCT, Loc, ComparisonCategoryUsage::OperatorInExpression);
   };
 
+  if (LHSType->isMetaInfoType() && RHSType->isMetaInfoType()) {
+    if (!BinaryOperator::isEqualityOp(Opc)) {
+      return InvalidOperands(Loc, LHS, RHS);
+    }
+    return computeResultTy();
+  }
+
   if (!IsOrdered && LHSIsNull != RHSIsNull) {
     bool IsEquality = Opc == BO_EQ;
     if (RHSIsNull)
@@ -13587,8 +13660,7 @@ QualType Sema::CheckVectorCompareOperands(ExprResult &LHS, ExprResult &RHS,
       CheckVectorOperands(LHS, RHS, Loc, /*isCompAssign*/ false,
                           /*AllowBothBool*/ true,
                           /*AllowBoolConversions*/ getLangOpts().ZVector,
-                          /*AllowBooleanOperation*/ true,
-                          /*ReportInvalid*/ true);
+                          /*AllowBooleanOperation*/ true);
   if (vType.isNull())
     return vType;
 
@@ -13834,10 +13906,9 @@ QualType Sema::CheckVectorLogicalOperands(ExprResult &LHS, ExprResult &RHS,
   QualType vType = CheckVectorOperands(LHS, RHS, Loc, false,
                                        /*AllowBothBool*/ true,
                                        /*AllowBoolConversions*/ false,
-                                       /*AllowBooleanOperation*/ false,
-                                       /*ReportInvalid*/ false);
+                                       /*AllowBooleanOperation*/ false);
   if (vType.isNull())
-    return InvalidOperands(Loc, LHS, RHS);
+    return QualType();
   if (getLangOpts().OpenCL &&
       getLangOpts().getOpenCLCompatibleVersion() < 120 &&
       vType->hasFloatingRepresentation())
@@ -13866,7 +13937,7 @@ QualType Sema::CheckMatrixLogicalOperands(ExprResult &LHS, ExprResult &RHS,
                                           BinaryOperatorKind Opc) {
 
   if (!getLangOpts().HLSL) {
-    assert(false && "Logical operands are not supported in C\\C++");
+    SemaRef.Diag(Loc, diag::err_matrix_logical_operations_supported_for_hlsl);
     return QualType();
   }
 
@@ -13991,11 +14062,11 @@ inline QualType Sema::CheckBitwiseOperands(ExprResult &LHS, ExprResult &RHS,
       RHS.get()->getType()->isVectorType()) {
     if (LHS.get()->getType()->hasIntegerRepresentation() &&
         RHS.get()->getType()->hasIntegerRepresentation())
-      return CheckVectorOperands(LHS, RHS, Loc, IsCompAssign,
-                                 /*AllowBothBool*/ true,
-                                 /*AllowBoolConversions*/ getLangOpts().ZVector,
-                                 /*AllowBooleanOperation*/ LegalBoolVecOperator,
-                                 /*ReportInvalid*/ true);
+      return CheckVectorOperands(
+          LHS, RHS, Loc, IsCompAssign,
+          /*AllowBothBool*/ true,
+          /*AllowBoolConversions*/ getLangOpts().ZVector,
+          /*AllowBooleanOperation*/ LegalBoolVecOperator);
     return InvalidOperands(Loc, LHS, RHS);
   }
 
@@ -14547,9 +14618,20 @@ static bool CheckForModifiableLvalue(Expr *E, SourceLocation Loc, Sema &S) {
     llvm_unreachable("did not take early return for MLV_Valid");
   case Expr::MLV_InvalidExpression:
   case Expr::MLV_MemberFunction:
-  case Expr::MLV_ClassTemporary:
+  case Expr::MLV_ClassTemporary: {
+    if (const auto *UnaryOp = dyn_cast<UnaryOperator>(E)) {
+      const Expr *Op = UnaryOp->getSubExpr()->IgnoreParens();
+      if (UnaryOp->getOpcode() == UO_Imag &&
+          !Op->getType()->isAnyComplexType()) {
+        DiagID = diag::err_typecheck_lvalue_imag_not_modifiable_lvalue;
+        NeedType = true;
+        break;
+      }
+    }
+
     DiagID = diag::err_typecheck_expression_not_modifiable_lvalue;
     break;
+  }
   case Expr::MLV_IncompleteType:
   case Expr::MLV_IncompleteVoidType:
     return S.RequireCompleteType(Loc, E->getType(),
@@ -16507,7 +16589,11 @@ ExprResult Sema::CreateBuiltinUnaryOp(SourceLocation OpLoc,
                          << resultType << Input.get()->getSourceRange());
       }
 
-      if (resultType->isScalarType() && !isScopedEnumerationType(resultType)) {
+      if (resultType->isScalarType() && !isScopedEnumerationType(resultType) &&
+          !resultType->isMetaInfoType()) {
+        // Before C++26, scalar types are contextually converted to bool,
+        // std::meta::info is a scalar type but not an arithmetic type.
+
         // C99 6.5.3.3p1: ok, fallthrough;
         if (Context.getLangOpts().CPlusPlus) {
           // C++03 [expr.unary.op]p8, C++0x [expr.unary.op]p9:
@@ -19473,7 +19559,8 @@ void Sema::MarkCaptureUsedInEnclosingContext(ValueDecl *Capture,
 static void diagnoseUncapturableValueReferenceOrBinding(Sema &S,
                                                         SourceLocation loc,
                                                         ValueDecl *var) {
-  DeclContext *VarDC = var->getDeclContext();
+  DeclContext *VarDC =
+      var->getDeclContext()->getEnclosingNonExpansionStatementContext();
 
   //  If the parameter still belongs to the translation unit, then
   //  we're actually just using one parameter in the declaration of
@@ -19578,6 +19665,15 @@ static bool isVariableCapturable(CapturingScopeInfo *CSI, ValueDecl *Var,
   bool IsBlock = isa<BlockScopeInfo>(CSI);
   bool IsLambda = isa<LambdaScopeInfo>(CSI);
 
+  // Reject bindings referenced from a lambda or block that wraps an OpenMP
+  // region.
+  if ((IsLambda || IsBlock) && S.getLangOpts().OpenMP &&
+      isa<DecompositionDecl>(Var)) {
+    if (Diagnose)
+      S.Diag(Loc, diag::err_omp_unsupported_on_binding) << 3;
+    return false;
+  }
+
   // Lambdas are not allowed to capture unnamed variables
   // (e.g. anonymous unions).
   // FIXME: The C++11 rule don't actually state this explicitly, but I'm
@@ -19629,7 +19725,23 @@ static bool isVariableCapturable(CapturingScopeInfo *CSI, ValueDecl *Var,
     return false;
   }
 
-  if (isa<BindingDecl>(Var)) {
+  if (auto *BD = dyn_cast<BindingDecl>(Var)) {
+    if (auto *RSI = dyn_cast<CapturedRegionScopeInfo>(CSI)) {
+      if (RSI->CapRegionKind == CR_OpenMP) {
+        if (BD->getHoldingVar()) {
+          if (Diagnose) {
+            S.Diag(Loc, diag::err_capture_tuple_binding_openmp) << Var;
+            S.Diag(Var->getLocation(), diag::note_entity_declared_at) << Var;
+          }
+          return false;
+        }
+        if (Diagnose && S.getLangOpts().CPlusPlus) {
+          S.DiagCompat(Loc, diag_compat::capture_binding) << Var;
+          S.Diag(Var->getLocation(), diag::note_entity_declared_at) << Var;
+        }
+        return true;
+      }
+    }
     if (!IsLambda || !S.getLangOpts().CPlusPlus) {
       if (Diagnose)
         diagnoseUncapturableValueReferenceOrBinding(S, Loc, Var);
@@ -19719,23 +19831,46 @@ static bool captureInCapturedRegion(
     Sema &S, bool Invalid) {
   // By default, capture variables by reference.
   bool ByRef = true;
+  bool IsBindingDecl = isa<BindingDecl>(Var);
+  ValueDecl *DSAVar = Var;
   if (IsTopScope && Kind != TryCaptureKind::Implicit) {
     ByRef = (Kind == TryCaptureKind::ExplicitByRef);
   } else if (S.getLangOpts().OpenMP && RSI->CapRegionKind == CR_OpenMP) {
     // Using an LValue reference type is consistent with Lambdas (see below).
-    if (S.OpenMP().isOpenMPCapturedDecl(Var)) {
+    if (VarDecl *VD = S.OpenMP().isOpenMPCapturedDecl(Var)) {
+      Var = VD; // Capture the DecompositionDecl.
       bool HasConst = DeclRefType.isConstQualified();
+      // Note: DeclRefType should remain the BindingDecl's type (e.g., int),
+      // not the DecompositionDecl's type (e.g., Point). The variable being
+      // captured is the DecompositionDecl, but expressions still reference
+      // the individual binding's type.
       DeclRefType = DeclRefType.getUnqualifiedType();
       // Don't lose diagnostics about assignments to const.
       if (HasConst)
         DeclRefType.addConst();
     }
-    // Do not capture firstprivates in tasks.
-    if (S.OpenMP().isOpenMPPrivateDecl(Var, RSI->OpenMPLevel,
-                                       RSI->OpenMPCaptureLevel) != OMPC_unknown)
+    // Do not capture firstprivates in tasks. For bindings the DSA is on the
+    // binding, not on the DecompositionDecl; the task firstprivate path still
+    // needs the DecompositionDecl capture, so skip only private.
+    OpenMPClauseKind PrivateKind = S.OpenMP().isOpenMPPrivateDecl(
+        IsBindingDecl ? DSAVar : Var, RSI->OpenMPLevel,
+        RSI->OpenMPCaptureLevel);
+    if (IsBindingDecl ? PrivateKind == OMPC_private
+                      : PrivateKind != OMPC_unknown)
       return true;
-    ByRef = S.OpenMP().isOpenMPCapturedByRef(Var, RSI->OpenMPLevel,
+    ByRef = S.OpenMP().isOpenMPCapturedByRef(DSAVar, RSI->OpenMPLevel,
                                              RSI->OpenMPCaptureLevel);
+    // Bindings share the DecompositionDecl storage; a second capture with
+    // a different capture kind is not representable.
+    if (BuildAndDiagnose && IsBindingDecl) {
+      unsigned Idx = RSI->CaptureMap.lookup(Var);
+      if (Idx != 0 && RSI->Captures[Idx - 1].isReferenceCapture() != ByRef) {
+        S.Diag(Loc,
+               diag::err_omp_decomposition_bindings_different_capture_kinds)
+            << DSAVar;
+        return false;
+      }
+    }
   }
 
   if (ByRef)
@@ -19747,6 +19882,11 @@ static bool captureInCapturedRegion(
   if (BuildAndDiagnose)
     RSI->addCapture(Var, /*isBlock*/ false, ByRef, RefersToCapturedVariable,
                     Loc, SourceLocation(), CaptureType, Invalid);
+
+  if (BuildAndDiagnose && IsBindingDecl)
+    // Key the binding to its own capture entry so repeated uses hit the
+    // already-captured path.
+    RSI->CaptureMap[DSAVar] = RSI->Captures.size();
 
   return !Invalid;
 }
@@ -20134,14 +20274,6 @@ bool Sema::tryCaptureVariable(
         // just break here. Similarly, global variables that are captured in a
         // target region should not be captured outside the scope of the region.
         if (RSI->CapRegionKind == CR_OpenMP) {
-          // FIXME: We should support capturing structured bindings in OpenMP.
-          if (isa<BindingDecl>(Var)) {
-            if (BuildAndDiagnose) {
-              Diag(ExprLoc, diag::err_capture_binding_openmp) << Var;
-              Diag(Var->getLocation(), diag::note_entity_declared_at) << Var;
-            }
-            return true;
-          }
           OpenMPClauseKind IsOpenMPPrivateDecl = OpenMP().isOpenMPPrivateDecl(
               Var, RSI->OpenMPLevel, RSI->OpenMPCaptureLevel);
           // If the variable is private (i.e. not captured) and has variably
@@ -22255,6 +22387,8 @@ ExprResult Sema::CheckPlaceholderExpr(Expr *E) {
 #include "clang/Basic/AMDGPUTypes.def"
 #define HLSL_INTANGIBLE_TYPE(Name, Id, SingletonId) case BuiltinType::Id:
 #include "clang/Basic/HLSLIntangibleTypes.def"
+#define HLSL_PACKED_TYPE(Name, Id, SingletonId) case BuiltinType::Id:
+#include "clang/Basic/HLSLPackedTypes.def"
 #define SPIRV_TYPE(Name, Id, SingletonId) case BuiltinType::Id:
 #include "clang/Basic/SPIRVTypes.def"
 #define BUILTIN_TYPE(Id, SingletonId) case BuiltinType::Id:

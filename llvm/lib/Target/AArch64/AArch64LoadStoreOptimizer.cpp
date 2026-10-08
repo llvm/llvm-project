@@ -39,7 +39,6 @@
 #include "llvm/MC/MCAsmInfo.h"
 #include "llvm/MC/MCDwarf.h"
 #include "llvm/Pass.h"
-#include "llvm/Support/CommandLine.h"
 #include "llvm/Support/Debug.h"
 #include "llvm/Support/DebugCounter.h"
 #include "llvm/Support/ErrorHandling.h"
@@ -70,29 +69,6 @@ STATISTIC(NumUMOVFoldedToFPRStore,
 
 DEBUG_COUNTER(RegRenamingCounter, DEBUG_TYPE "-reg-renaming",
               "Controls which pairs are considered for renaming");
-
-// The LdStLimit limits how far we search for load/store pairs.
-static cl::opt<unsigned> LdStLimit("aarch64-load-store-scan-limit",
-                                   cl::init(20), cl::Hidden);
-
-// The UpdateLimit limits how far we search for update instructions when we form
-// pre-/post-index instructions.
-static cl::opt<unsigned> UpdateLimit("aarch64-update-scan-limit", cl::init(100),
-                                     cl::Hidden);
-
-// The LdStConstLimit limits how far we search for const offset instructions
-// when we form index address load/store instructions.
-static cl::opt<unsigned> LdStConstLimit("aarch64-load-store-const-scan-limit",
-                                        cl::init(10), cl::Hidden);
-
-// The UMOVFoldLimit limits how far back we scan from a GPR store to find a
-// UMOV that can be folded into a direct FPR store.
-static cl::opt<unsigned> UMOVFoldLimit("aarch64-umov-fold-scan-limit",
-                                       cl::init(16), cl::Hidden);
-
-// Enable register renaming to find additional store pairing opportunities.
-static cl::opt<bool> EnableRenaming("aarch64-load-store-renaming",
-                                    cl::init(true), cl::Hidden);
 
 #define AARCH64_LOAD_STORE_OPT_NAME "AArch64 load / store optimization pass"
 
@@ -1107,7 +1083,7 @@ AArch64LoadStoreOpt::mergePairedInsns(MachineBasicBlock::iterator I,
                 else
                   MatchingReg = GetMatchingSubReg(
                       TRI->getMinimalPhysRegClass(MOP.getReg()));
-                assert(MatchingReg != AArch64::NoRegister &&
+                assert(MatchingReg.isValid() &&
                        "Cannot find matching regs for renaming");
                 MOP.setReg(MatchingReg);
               }
@@ -1871,7 +1847,10 @@ canRenameUpToDef(MachineInstr &FirstMI, LiveRegUnits &UsedInBetween,
     return true;
   };
 
-  if (!forAllMIsUntilDef(FirstMI, RegToRename, TRI, LdStLimit, CheckMIs))
+  const AArch64Options &CLOpts =
+      FirstMI.getMF()->getSubtarget<AArch64Subtarget>().getCLOpts();
+  if (!forAllMIsUntilDef(FirstMI, RegToRename, TRI,
+                         CLOpts.load_store_scan_limit, CheckMIs))
     return false;
 
   if (!FoundDef) {
@@ -2030,7 +2009,7 @@ AArch64LoadStoreOpt::findMatchingInsn(MachineBasicBlock::iterator I,
   bool IsPromotableZeroStore = isPromotableZeroStoreInst(FirstMI);
 
   std::optional<bool> MaybeCanRename;
-  if (!EnableRenaming)
+  if (!Subtarget->getCLOpts().load_store_renaming)
     MaybeCanRename = {false};
 
   SmallPtrSet<const TargetRegisterClass *, 5> RequiredClasses;
@@ -2654,7 +2633,7 @@ MachineBasicBlock::iterator AArch64LoadStoreOpt::findMatchingUpdateInsnBackward(
   bool IsPairedInsn = AArch64InstrInfo::isPairedLdSt(MemMI);
   Register DestReg[] = {getLdStRegOp(MemMI, 0).getReg(),
                         IsPairedInsn ? getLdStRegOp(MemMI, 1).getReg()
-                                     : AArch64::NoRegister};
+                                     : Register()};
 
   // If the load/store is the first instruction in the block, there's obviously
   // not any matching update. Ditto if the memory offset isn't zero.
@@ -2719,12 +2698,10 @@ MachineBasicBlock::iterator AArch64LoadStoreOpt::findMatchingUpdateInsnBackward(
     // i.e. the combined instruction is put in the place of the memory
     // instruction. Same applies if we see a memory access or side effects.
     if (MI.mayLoadOrStore() || MI.hasUnmodeledSideEffects() ||
-        (DestReg[0] != AArch64::NoRegister &&
-         !(ModifiedRegUnits.available(DestReg[0]) &&
-           UsedRegUnits.available(DestReg[0]))) ||
-        (DestReg[1] != AArch64::NoRegister &&
-         !(ModifiedRegUnits.available(DestReg[1]) &&
-           UsedRegUnits.available(DestReg[1]))))
+        (DestReg[0].isValid() && !(ModifiedRegUnits.available(DestReg[0]) &&
+                                   UsedRegUnits.available(DestReg[0]))) ||
+        (DestReg[1].isValid() && !(ModifiedRegUnits.available(DestReg[1]) &&
+                                   UsedRegUnits.available(DestReg[1]))))
       MergeEither = false;
 
     // Keep track if we have a memory access before an SP pre-increment, in this
@@ -2805,9 +2782,10 @@ bool AArch64LoadStoreOpt::tryToPromoteLoadFromStore(
   if (!AArch64InstrInfo::getLdStOffsetOp(MI).isImm())
     return false;
 
-  // Look backward up to LdStLimit instructions.
+  // Look backward up to the scan limit.
   MachineBasicBlock::iterator StoreI;
-  if (findMatchingStore(MBBI, LdStLimit, StoreI)) {
+  if (findMatchingStore(MBBI, Subtarget->getCLOpts().load_store_scan_limit,
+                        StoreI)) {
     ++NumLoadsFromStoresPromoted;
     // Promote the load. Keeping the iterator straight is a
     // pain, so we let the merge routine tell us what the next instruction
@@ -2828,10 +2806,11 @@ bool AArch64LoadStoreOpt::tryToMergeZeroStInst(
   if (!TII->isCandidateToMergeOrPair(MI))
     return false;
 
-  // Look ahead up to LdStLimit instructions for a mergeable instruction.
+  // Look ahead up to the scan limit for a mergeable instruction.
   LdStPairFlags Flags;
-  MachineBasicBlock::iterator MergeMI =
-      findMatchingInsn(MBBI, Flags, LdStLimit, /* FindNarrowMerge = */ true);
+  MachineBasicBlock::iterator MergeMI = findMatchingInsn(
+      MBBI, Flags, Subtarget->getCLOpts().load_store_scan_limit,
+      /*FindNarrowMerge=*/true);
   if (MergeMI != E) {
     ++NumZeroStoresPromoted;
 
@@ -2872,10 +2851,11 @@ bool AArch64LoadStoreOpt::tryToPairLdStInst(MachineBasicBlock::iterator &MBBI) {
   if (!inBoundsForPair(IsUnscaled, Offset, OffsetStride))
     return false;
 
-  // Look ahead up to LdStLimit instructions for a pairable instruction.
+  // Look ahead up to the scan limit for a pairable instruction.
   LdStPairFlags Flags;
-  MachineBasicBlock::iterator Paired =
-      findMatchingInsn(MBBI, Flags, LdStLimit, /* FindNarrowMerge = */ false);
+  MachineBasicBlock::iterator Paired = findMatchingInsn(
+      MBBI, Flags, Subtarget->getCLOpts().load_store_scan_limit,
+      /*FindNarrowMerge=*/false);
 
   if (Paired == E)
     return false;
@@ -2945,7 +2925,8 @@ bool AArch64LoadStoreOpt::tryToMergeLdStUpdate
   // add x20, x20, #32
   //   merged into:
   // ldr x0, [x20], #32
-  Update = findMatchingUpdateInsnForward(MBBI, 0, UpdateLimit);
+  Update = findMatchingUpdateInsnForward(
+      MBBI, 0, Subtarget->getCLOpts().update_scan_limit);
   if (Update != E) {
     // Merge the update into the ld/st.
     if (auto NextI = mergeUpdateInsn(MBBI, Update, /*IsForward=*/false,
@@ -2966,7 +2947,8 @@ bool AArch64LoadStoreOpt::tryToMergeLdStUpdate
   //   merged into:
   // ldr x1, [x0, #8]!
   bool MergeEither;
-  Update = findMatchingUpdateInsnBackward(MBBI, UpdateLimit, MergeEither);
+  Update = findMatchingUpdateInsnBackward(
+      MBBI, Subtarget->getCLOpts().update_scan_limit, MergeEither);
   if (Update != E) {
     // Merge the update into the ld/st.
     if (auto NextI = mergeUpdateInsn(MBBI, Update, /*IsForward=*/true,
@@ -2987,7 +2969,8 @@ bool AArch64LoadStoreOpt::tryToMergeLdStUpdate
   // add x0, x0, #64
   //   merged into:
   // ldr x1, [x0, #64]!
-  Update = findMatchingUpdateInsnForward(MBBI, UnscaledOffset, UpdateLimit);
+  Update = findMatchingUpdateInsnForward(
+      MBBI, UnscaledOffset, Subtarget->getCLOpts().update_scan_limit);
   if (Update != E) {
     // Merge the update into the ld/st.
     if (auto NextI = mergeUpdateInsn(MBBI, Update, /*IsForward=*/false,
@@ -3019,7 +3002,8 @@ bool AArch64LoadStoreOpt::tryToMergeIndexLdSt(MachineBasicBlock::iterator &MBBI,
   // add x8, x0, a * (1<<12)
   // ldr x1, [x8, imm12]
   unsigned Offset;
-  Update = findMatchingConstOffsetBackward(MBBI, LdStConstLimit, Offset);
+  Update = findMatchingConstOffsetBackward(
+      MBBI, Subtarget->getCLOpts().load_store_const_scan_limit, Offset);
   if (Update != E && (Offset & (Scale - 1)) == 0) {
     // Merge the imm12 into the ld/st.
     MBBI = mergeConstOffsetInsn(MBBI, Update, Offset, Scale);
@@ -3123,7 +3107,7 @@ bool AArch64LoadStoreOpt::tryToReplaceUMOVStore(
     MachineInstr &MI = *--It;
     if (MI.isDebugInstr())
       continue;
-    if (++Count > UMOVFoldLimit)
+    if (++Count > Subtarget->getCLOpts().umov_fold_scan_limit)
       return false;
     if (MI.readsRegister(StoreValReg, TRI))
       return false;

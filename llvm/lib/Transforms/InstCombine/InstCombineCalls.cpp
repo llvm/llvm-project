@@ -53,6 +53,7 @@
 #include "llvm/IR/LLVMContext.h"
 #include "llvm/IR/Metadata.h"
 #include "llvm/IR/PatternMatch.h"
+#include "llvm/IR/ProfDataUtils.h"
 #include "llvm/IR/Statepoint.h"
 #include "llvm/IR/Type.h"
 #include "llvm/IR/User.h"
@@ -60,7 +61,6 @@
 #include "llvm/IR/ValueHandle.h"
 #include "llvm/Support/AtomicOrdering.h"
 #include "llvm/Support/Casting.h"
-#include "llvm/Support/CommandLine.h"
 #include "llvm/Support/Compiler.h"
 #include "llvm/Support/Debug.h"
 #include "llvm/Support/ErrorHandling.h"
@@ -87,12 +87,6 @@ using namespace llvm;
 using namespace PatternMatch;
 
 STATISTIC(NumSimplified, "Number of library calls simplified");
-
-static cl::opt<unsigned> GuardWideningWindow(
-    "instcombine-guard-widening-window",
-    cl::init(3),
-    cl::desc("How wide an instruction window to bypass looking for "
-             "another guard"));
 
 /// Return the specified type promoted as it would be to pass though a va_arg
 /// area.
@@ -447,12 +441,8 @@ Instruction *InstCombinerImpl::simplifyMaskedScatter(IntrinsicInst &II) {
   return nullptr;
 }
 
-/// This function transforms launder.invariant.group and strip.invariant.group
-/// like:
+/// This function transforms launder.invariant.group like:
 /// launder(launder(%x)) -> launder(%x)       (the result is not the argument)
-/// launder(strip(%x)) -> launder(%x)
-/// strip(strip(%x)) -> strip(%x)             (the result is not the argument)
-/// strip(launder(%x)) -> strip(%x)
 /// This is legal because it preserves the most recent information about
 /// the presence or absence of invariant.group.
 static Instruction *simplifyInvariantGroupIntrinsic(IntrinsicInst &II,
@@ -461,23 +451,15 @@ static Instruction *simplifyInvariantGroupIntrinsic(IntrinsicInst &II,
   auto *StrippedArg = Arg->stripPointerCasts();
   auto *StrippedInvariantGroupsArg = StrippedArg;
   while (auto *Intr = dyn_cast<IntrinsicInst>(StrippedInvariantGroupsArg)) {
-    if (Intr->getIntrinsicID() != Intrinsic::launder_invariant_group &&
-        Intr->getIntrinsicID() != Intrinsic::strip_invariant_group)
+    if (Intr->getIntrinsicID() != Intrinsic::launder_invariant_group)
       break;
     StrippedInvariantGroupsArg = Intr->getArgOperand(0)->stripPointerCasts();
   }
   if (StrippedArg == StrippedInvariantGroupsArg)
-    return nullptr; // No launders/strips to remove.
+    return nullptr; // No launders to remove.
 
-  Value *Result = nullptr;
-
-  if (II.getIntrinsicID() == Intrinsic::launder_invariant_group)
-    Result = IC.Builder.CreateLaunderInvariantGroup(StrippedInvariantGroupsArg);
-  else if (II.getIntrinsicID() == Intrinsic::strip_invariant_group)
-    Result = IC.Builder.CreateStripInvariantGroup(StrippedInvariantGroupsArg);
-  else
-    llvm_unreachable(
-        "simplifyInvariantGroupIntrinsic only handles launder and strip");
+  Value *Result =
+      IC.Builder.CreateLaunderInvariantGroup(StrippedInvariantGroupsArg);
   if (Result->getType()->getPointerAddressSpace() !=
       II.getType()->getPointerAddressSpace())
     Result = IC.Builder.CreateAddrSpaceCast(Result, II.getType());
@@ -1009,6 +991,13 @@ static bool inputDenormalIsDAZ(const Function &F, const Type *Ty) {
   return F.getDenormalMode(Ty->getFltSemantics()).inputsAreZero();
 }
 
+/// Flushing a denormal to +0.0 breaks f(-x) = -f(x) for odd f.
+static bool mayFlushDenormalsToPositiveZero(const CallInst *CI) {
+  DenormalMode Mode = CI->getFunction()->getDenormalMode(
+      CI->getType()->getScalarType()->getFltSemantics());
+  return Mode.inputsMayBePositiveZero() || Mode.outputsMayBePositiveZero();
+}
+
 /// \returns the compare predicate type if the test performed by
 /// llvm.is.fpclass(x, \p Mask) is equivalent to fcmp o__ x, 0.0 with the
 /// floating-point environment assumed for \p F for type \p Ty
@@ -1219,7 +1208,7 @@ static std::optional<bool> getKnownSign(Value *Op, const SimplifyQuery &SQ) {
 
   Value *X, *Y;
   if (match(Op, m_NSWSub(m_Value(X), m_Value(Y))))
-    return isImpliedByDomCondition(ICmpInst::ICMP_SLT, X, Y, SQ.CxtI, SQ.DL);
+    return isImpliedByDomCondition(ICmpInst::ICMP_SLT, X, Y, SQ.CtxI, SQ.DL);
 
   return std::nullopt;
 }
@@ -1231,7 +1220,7 @@ static std::optional<bool> getKnownSignOrZero(Value *Op,
 
   Value *X, *Y;
   if (match(Op, m_NSWSub(m_Value(X), m_Value(Y))))
-    return isImpliedByDomCondition(ICmpInst::ICMP_SLE, X, Y, SQ.CxtI, SQ.DL);
+    return isImpliedByDomCondition(ICmpInst::ICMP_SLE, X, Y, SQ.CtxI, SQ.DL);
 
   return std::nullopt;
 }
@@ -1961,7 +1950,7 @@ static Value *foldSinAndCosToSinCos(IntrinsicInst *II, IRBuilderBase &B,
     B.SetInsertPoint(*InsertPt);
   } else {
     BasicBlock &EntryBB = II->getFunction()->getEntryBlock();
-    B.SetInsertPoint(&EntryBB, EntryBB.begin());
+    B.SetInsertPoint(EntryBB.begin());
   }
 
   Function *SinCosFunc = Intrinsic::getOrInsertDeclaration(
@@ -2568,8 +2557,13 @@ Instruction *InstCombinerImpl::visitCallInst(CallInst &CI) {
         X->getType()->isIntOrIntVectorTy(1)) {
       Type *Ty = II->getType();
       APInt SignBit = APInt::getSignMask(Ty->getScalarSizeInBits());
-      return SelectInst::Create(X, ConstantInt::get(Ty, SignBit),
-                                ConstantInt::getNullValue(Ty));
+      SelectInst *SI = SelectInst::Create(X, ConstantInt::get(Ty, SignBit),
+                                          ConstantInt::getNullValue(Ty));
+      // Mark the branch weights explicitly unknown as in the general case we
+      // cannot infer the probability of the condition without additional value
+      // profiling.
+      setExplicitlyUnknownBranchWeightsIfProfiled(*SI, DEBUG_TYPE, &F);
+      return SI;
     }
 
     if (Instruction *crossLogicOpFold =
@@ -2644,7 +2638,6 @@ Instruction *InstCombinerImpl::visitCallInst(CallInst &CI) {
   case Intrinsic::masked_scatter:
     return simplifyMaskedScatter(*II);
   case Intrinsic::launder_invariant_group:
-  case Intrinsic::strip_invariant_group:
     if (auto *SkippedBarrier = simplifyInvariantGroupIntrinsic(*II, *this))
       return replaceInstUsesWith(*II, SkippedBarrier);
     break;
@@ -2895,6 +2888,18 @@ Instruction *InstCombinerImpl::visitCallInst(CallInst &CI) {
       return &CI;
     break;
   }
+
+  case Intrinsic::smulh: {
+    Value *Arg0 = II->getArgOperand(0);
+    Value *Arg1 = II->getArgOperand(1);
+    unsigned BitWidth = II->getType()->getScalarSizeInBits();
+
+    // Multiply by one.
+    if (BitWidth > 1 && match(Arg1, m_One()))
+      return replaceInstUsesWith(CI, Builder.CreateAShr(Arg0, BitWidth - 1));
+    break;
+  }
+
   case Intrinsic::uadd_with_overflow:
   case Intrinsic::sadd_with_overflow: {
     if (Instruction *I = foldIntrinsicWithOverflowCommon(II))
@@ -3362,7 +3367,11 @@ Instruction *InstCombinerImpl::visitCallInst(CallInst &CI) {
                            : (isa<Constant>(TVal) && isa<Constant>(FVal))) {
         CallInst *AbsT = Builder.CreateCall(II->getCalledFunction(), {TVal});
         CallInst *AbsF = Builder.CreateCall(II->getCalledFunction(), {FVal});
-        SelectInst *SI = SelectInst::Create(Cond, AbsT, AbsF);
+        // Given the condition is the same, we pull metadata (particularly
+        // profile metadata) from the original select instruction.
+        SelectInst *SI = SelectInst::Create(
+            Cond, AbsT, AbsF, "", nullptr,
+            ProfcheckDisableMetadataFixes ? nullptr : cast<Instruction>(Arg));
         SI->setFastMathFlags(II->getFastMathFlags() |
                              cast<SelectInst>(Arg)->getFastMathFlags());
         // Can't copy nsz to select, as even with the nsz flag the fabs result
@@ -3428,7 +3437,8 @@ Instruction *InstCombinerImpl::visitCallInst(CallInst &CI) {
   case Intrinsic::tan:
   case Intrinsic::tanh: {
     Value *X;
-    if (match(II->getArgOperand(0), m_OneUse(m_FNeg(m_Value(X))))) {
+    if (match(II->getArgOperand(0), m_OneUse(m_FNeg(m_Value(X)))) &&
+        !mayFlushDenormalsToPositiveZero(II)) {
       // f(-x) --> -f(x)
       // for f in {sin, sinh, tan, tanh}
       Value *NewFunc = Builder.CreateUnaryIntrinsic(IID, X, II);
@@ -3494,19 +3504,22 @@ Instruction *InstCombinerImpl::visitCallInst(CallInst &CI) {
 
     // ldexp(x, zext(i1 y)) -> fmul x, (select y, 2.0, 1.0)
     // ldexp(x, sext(i1 y)) -> fmul x, (select y, 0.5, 1.0)
+    // For both of the cases below, we have no information on the distribution
+    // of x in the general case, so we mark the created selects as having
+    // unknown branch weights.
     Value *ExtSrc;
     if (match(Exp, m_ZExt(m_Value(ExtSrc))) &&
         ExtSrc->getType()->getScalarSizeInBits() == 1) {
-      Value *Select =
-          Builder.CreateSelect(ExtSrc, ConstantFP::get(II->getType(), 2.0),
-                               ConstantFP::get(II->getType(), 1.0));
+      Value *Select = Builder.CreateSelectWithUnknownProfile(
+          ExtSrc, ConstantFP::get(II->getType(), 2.0),
+          ConstantFP::get(II->getType(), 1.0), DEBUG_TYPE);
       return BinaryOperator::CreateFMulFMF(Src, Select, II);
     }
     if (match(Exp, m_SExt(m_Value(ExtSrc))) &&
         ExtSrc->getType()->getScalarSizeInBits() == 1) {
-      Value *Select =
-          Builder.CreateSelect(ExtSrc, ConstantFP::get(II->getType(), 0.5),
-                               ConstantFP::get(II->getType(), 1.0));
+      Value *Select = Builder.CreateSelectWithUnknownProfile(
+          ExtSrc, ConstantFP::get(II->getType(), 0.5),
+          ConstantFP::get(II->getType(), 1.0), DEBUG_TYPE);
       return BinaryOperator::CreateFMulFMF(Src, Select, II);
     }
 
@@ -4079,7 +4092,7 @@ Instruction *InstCombinerImpl::visitCallInst(CallInst &CI) {
     // fixed window of instructions to handle common cases with conditions
     // computed between guards.
     Instruction *NextInst = II->getNextNode();
-    for (unsigned i = 0; i < GuardWideningWindow; i++) {
+    for (unsigned i = 0; i < CLOpts.guard_widening_window; i++) {
       // Note: Using context-free form to avoid compile time blow up
       if (!isSafeToSpeculativelyExecute(NextInst))
         break;
@@ -4159,13 +4172,13 @@ Instruction *InstCombinerImpl::visitCallInst(CallInst &CI) {
     Type *ReturnType = II->getType();
     // (extract_vector (insert_vector InsertTuple, InsertValue, InsertIdx),
     // ExtractIdx)
-    unsigned ExtractIdx = cast<ConstantInt>(Idx)->getZExtValue();
+    uint64_t ExtractIdx = cast<ConstantInt>(Idx)->getZExtValue();
     Value *InsertTuple, *InsertIdx, *InsertValue;
     if (match(Vec, m_Intrinsic<Intrinsic::vector_insert>(m_Value(InsertTuple),
                                                          m_Value(InsertValue),
                                                          m_Value(InsertIdx))) &&
         InsertValue->getType() == ReturnType) {
-      unsigned Index = cast<ConstantInt>(InsertIdx)->getZExtValue();
+      uint64_t Index = cast<ConstantInt>(InsertIdx)->getZExtValue();
       // Case where we get the same index right after setting it.
       // extract.vector(insert.vector(InsertTuple, InsertValue, Idx), Idx) -->
       // InsertValue
@@ -5048,12 +5061,12 @@ Instruction *InstCombinerImpl::visitCallBase(CallBase &Call) {
     if (V->getType()->isPointerTy()) {
       // Simplify the nonnull operand if the parameter is known to be nonnull.
       // Otherwise, try to infer nonnull for it.
-      bool HasDereferenceable = Call.getParamDereferenceableBytes(ArgNo) > 0;
-      if (Call.paramHasAttr(ArgNo, Attribute::NonNull) ||
-          (HasDereferenceable &&
-           !NullPointerIsDefined(Call.getFunction(),
-                                 V->getType()->getPointerAddressSpace()))) {
-        if (Value *Res = simplifyNonNullOperand(V, HasDereferenceable)) {
+      bool UseProvenance =
+          Call.getParamDereferenceableBytes(ArgNo) > 0 &&
+          !NullPointerIsDefined(Call.getFunction(),
+                                V->getType()->getPointerAddressSpace());
+      if (Call.paramHasAttr(ArgNo, Attribute::NonNull) || UseProvenance) {
+        if (Value *Res = simplifyNonNullOperand(V, UseProvenance)) {
           replaceOperand(Call, ArgNo, Res);
           Changed = true;
         }

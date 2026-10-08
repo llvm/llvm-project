@@ -1,5 +1,5 @@
 // REQUIRES: ubsan-hip
-// RUN: %clang_ubsan_hip %s -o %t %hip_libs -fno-sanitize-recover=undefined
+// RUN: %clang_hip -fsanitize=undefined %s -o %t %hip_libs -fno-sanitize-recover=undefined
 // RUN: not %run %t 2>&1 | FileCheck %s
 
 __global__ void gone(int *Out) {

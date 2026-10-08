@@ -100,7 +100,7 @@ __cpp_lib_containers_ranges                             202202L <deque> <forward
                                                                 <unordered_set> <vector>
 __cpp_lib_copyable_function                             202306L <functional>
 __cpp_lib_coroutine                                     201902L <coroutine>
-__cpp_lib_debugging                                     202311L <debugging>
+__cpp_lib_debugging                                     202403L <debugging>
 __cpp_lib_default_template_type_for_algorithm_values    202403L <algorithm> <deque> <forward_list>
                                                                 <list> <ranges> <string>
                                                                 <vector>
@@ -168,7 +168,7 @@ __cpp_lib_is_scoped_enum                                202011L <type_traits>
 __cpp_lib_is_sufficiently_aligned                       202411L <memory>
 __cpp_lib_is_swappable                                  201603L <type_traits>
 __cpp_lib_is_virtual_base_of                            202406L <type_traits>
-__cpp_lib_is_within_lifetime                            202306L <type_traits>
+__cpp_lib_is_within_lifetime                            202603L <type_traits>
 __cpp_lib_jthread                                       201911L <stop_token> <thread>
 __cpp_lib_latch                                         201907L <latch>
 __cpp_lib_launder                                       201606L <new>
@@ -597,7 +597,9 @@ __cpp_lib_void_t                                        201411L <type_traits>
 # define __cpp_lib_constexpr_set                        202502L
 # define __cpp_lib_constrained_equality                 202411L
 // # define __cpp_lib_copyable_function                    202306L
-// # define __cpp_lib_debugging                            202311L
+# if _LIBCPP_AVAILABILITY_HAS_DEBUGGING
+#   define __cpp_lib_debugging                          202403L
+# endif
 // # define __cpp_lib_default_template_type_for_algorithm_values 202403L
 // # define __cpp_lib_format_path                          202403L
 // # define __cpp_lib_freestanding_algorithm               202311L
@@ -622,7 +624,7 @@ __cpp_lib_void_t                                        201411L <type_traits>
 #   define __cpp_lib_is_virtual_base_of                 202406L
 # endif
 # if __has_builtin(__builtin_is_within_lifetime)
-#   define __cpp_lib_is_within_lifetime                 202306L
+#   define __cpp_lib_is_within_lifetime                 202603L
 # endif
 // # define __cpp_lib_linalg                               202311L
 # undef  __cpp_lib_mdspan

@@ -1,5 +1,5 @@
-# RUN: llc -start-before=livedebugvalues -filetype=obj -o - %s | llvm-dwarfdump - | FileCheck %s
-# RUN: llc --force-instr-ref-livedebugvalues -start-before=livedebugvalues -filetype=obj -o - %s | llvm-dwarfdump - | FileCheck %s
+# RUN: llc -start-before=live-debug-values -filetype=obj -o - %s | llvm-dwarfdump - | FileCheck %s
+# RUN: llc --force-instr-ref-livedebugvalues -start-before=live-debug-values -filetype=obj -o - %s | llvm-dwarfdump - | FileCheck %s
 
 # Based on the following C++ code:
 # struct A { A(A &) {} };
