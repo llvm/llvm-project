@@ -261,6 +261,30 @@ def TestAttrWithCharParam : Test_SyntaxAttr<"TestAttrWithCharParam"> {
   let mnemonic = "attr_with_char_param";
 }
 
+def TestAttrWithOptionalChar : Test_SyntaxAttr<"TestAttrWithOptionalChar"> {
+  let parameters = (ins OptionalParameter<"std::optional<char>">:$value);
+  let assemblyFormat = "`<` $value `>`";
+  let mnemonic = "attr_with_optional_char";
+}
+
+def TestAttrWithOptionalUInt8 : Test_SyntaxAttr<"TestAttrWithOptionalUInt8"> {
+  let parameters = (ins OptionalParameter<"std::optional<uint8_t>">:$value);
+  let assemblyFormat = "`<` $value `>`";
+  let mnemonic = "attr_with_optional_uint8";
+}
+
+def TestAttrWithUInt8Array : Test_SyntaxAttr<"TestAttrWithUInt8Array"> {
+  let parameters = (ins ArrayRefParameter<"uint8_t">:$values);
+  let assemblyFormat = "`<` `[` $values `]` `>`";
+  let mnemonic = "attr_with_uint8_array";
+}
+
+def TestAttrWithCharArray : Test_SyntaxAttr<"TestAttrWithCharArray"> {
+  let parameters = (ins ArrayRefParameter<"char">:$values);
+  let assemblyFormat = "`<` `[` $values `]` `>`";
+  let mnemonic = "attr_with_char_array";
+}
+
 def TestAttrWithOptionalEnum : Test_SyntaxAttr<"TestAttrWithOptionalEnum"> {
   let parameters = (ins OptionalParameter<"std::optional<SimpleEnum>">:$value);
   let assemblyFormat = "`<` $value `>`";
