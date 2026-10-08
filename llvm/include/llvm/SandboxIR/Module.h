@@ -10,6 +10,7 @@
 #define LLVM_SANDBOXIR_MODULE_H
 
 #include "llvm/ADT/STLExtras.h"
+#include "llvm/IR/IRBuilder.h"
 #include "llvm/IR/Module.h"
 #include "llvm/Support/Compiler.h"
 #include <string>
