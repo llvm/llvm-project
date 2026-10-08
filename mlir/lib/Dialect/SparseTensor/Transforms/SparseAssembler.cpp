@@ -193,8 +193,10 @@ struct SparseFuncAssembler : public OpRewritePattern<func::FuncOp> {
     // Modify the original method into an internal, private method.
     auto orgName = funcOp.getName();
     std::string wrapper = llvm::formatv("_internal_{0}", orgName).str();
-    funcOp.setName(wrapper);
-    funcOp.setPrivate();
+    rewriter.modifyOpInPlace(funcOp, [&]() {
+      funcOp.setName(wrapper);
+      funcOp.setPrivate();
+    });
 
     // Start the new public wrapper method with original name.
     Location loc = funcOp.getLoc();
@@ -231,11 +233,14 @@ struct SparseFuncAssembler : public OpRewritePattern<func::FuncOp> {
     func::ReturnOp::create(rewriter, loc, outputs);
 
     // Finally, migrate a potential c-interface property.
-    if (funcOp->getAttrOfType<UnitAttr>(
+    if (funcOp->getDiscardableAttrOfType<UnitAttr>(
             LLVM::LLVMDialect::getEmitCWrapperAttrName())) {
-      func->setAttr(LLVM::LLVMDialect::getEmitCWrapperAttrName(),
-                    UnitAttr::get(context));
-      funcOp->removeAttr(LLVM::LLVMDialect::getEmitCWrapperAttrName());
+      func->setDiscardableAttr(LLVM::LLVMDialect::getEmitCWrapperAttrName(),
+                               UnitAttr::get(context));
+      rewriter.modifyOpInPlace(funcOp, [&]() {
+        funcOp->removeDiscardableAttr(
+            LLVM::LLVMDialect::getEmitCWrapperAttrName());
+      });
     }
     return success();
   }

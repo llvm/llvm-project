@@ -23,50 +23,12 @@
 #include "llvm/Support/JSON.h"
 #include "llvm/Support/ScopedPrinter.h"
 #include "llvm/Support/raw_ostream.h"
+#include "llvm/Telemetry/Telemetry.h"
 #include <chrono>
 #include <string>
+#include <utility>
 
 namespace lldb_dap {
-
-/// Run a list of LLDB commands in the LLDB command interpreter.
-///
-/// All output from every command, including the prompt + the command
-/// is placed into the "strm" argument.
-///
-/// Each individual command can be prefixed with \b ! and/or \b ? in no
-/// particular order. If \b ? is provided, then the output of that command is
-/// only emitted if it fails, and if \b ! is provided, then the output is
-/// emitted regardless, and \b false is returned without executing the
-/// remaining commands.
-///
-/// \param[in] debugger
-///     The debugger that will execute the lldb commands.
-///
-/// \param[in] prefix
-///     A string that will be printed into \a strm prior to emitting
-///     the prompt + command and command output. Can be NULL.
-///
-/// \param[in] commands
-///     An array of LLDB commands to execute.
-///
-/// \param[in] strm
-///     The stream that will receive the prefix, prompt + command and
-///     all command output.
-///
-/// \param[in] parse_command_directives
-///     If \b false, then command prefixes like \b ! or \b ? are not parsed and
-///     each command is executed verbatim.
-///
-/// \param[in] echo_commands
-///     If \b true, the command are echoed to the stream.
-///
-/// \return
-///     \b true, unless a command prefixed with \b ! fails and parsing of
-///     command directives is enabled.
-bool RunLLDBCommands(lldb::SBDebugger &debugger, llvm::StringRef prefix,
-                     const llvm::ArrayRef<protocol::String> &commands,
-                     llvm::raw_ostream &strm, bool parse_command_directives,
-                     bool echo_commands);
 
 /// Run a list of LLDB commands in the LLDB command interpreter.
 ///
@@ -75,6 +37,9 @@ bool RunLLDBCommands(lldb::SBDebugger &debugger, llvm::StringRef prefix,
 ///
 /// \param[in] debugger
 ///     The debugger that will execute the lldb commands.
+///
+/// \param[in] mutex
+///     The mutex protecting this target.
 ///
 /// \param[in] prefix
 ///     A string that will be printed into \a strm prior to emitting
@@ -97,7 +62,8 @@ bool RunLLDBCommands(lldb::SBDebugger &debugger, llvm::StringRef prefix,
 /// \return
 ///     A std::string that contains the prefix and all commands and
 ///     command output.
-std::string RunLLDBCommands(lldb::SBDebugger &debugger, llvm::StringRef prefix,
+std::string RunLLDBCommands(lldb::SBDebugger &debugger, lldb::SBMutex mutex,
+                            llvm::StringRef prefix,
                             const llvm::ArrayRef<protocol::String> &commands,
                             bool &required_command_failed,
                             bool parse_command_directives = true,
@@ -175,26 +141,22 @@ std::string GetSBFileSpecPath(const lldb::SBFileSpec &file_spec);
 lldb::SBLineEntry GetLineEntryForAddress(lldb::SBTarget &target,
                                          const lldb::SBAddress &address);
 
-/// Helper for sending telemetry to lldb server, if client-telemetry is enabled.
-class TelemetryDispatcher {
+namespace detail {
+
+template <bool Enabled = llvm::telemetry::Config::BuildTimeEnableTelemetry>
+class TelemetryDispatcherImpl {
 public:
-  TelemetryDispatcher(lldb::SBDebugger *debugger) {
-    m_telemetry_json = llvm::json::Object();
+  TelemetryDispatcherImpl(lldb::SBDebugger *debugger) : debugger(debugger) {
     m_telemetry_json.try_emplace(
         "start_time",
         std::chrono::steady_clock::now().time_since_epoch().count());
-    this->debugger = debugger;
   }
 
-  void Set(std::string key, std::string value) {
-    m_telemetry_json.try_emplace(key, value);
+  template <typename T> void Set(llvm::StringRef key, T &&value) {
+    m_telemetry_json.try_emplace(key, std::forward<T>(value));
   }
 
-  void Set(std::string key, int64_t value) {
-    m_telemetry_json.try_emplace(key, value);
-  }
-
-  ~TelemetryDispatcher() {
+  ~TelemetryDispatcherImpl() {
     m_telemetry_json.try_emplace(
         "end_time",
         std::chrono::steady_clock::now().time_since_epoch().count());
@@ -211,6 +173,18 @@ private:
   llvm::json::Object m_telemetry_json;
   lldb::SBDebugger *debugger;
 };
+
+template <> class TelemetryDispatcherImpl<false> {
+public:
+  TelemetryDispatcherImpl(lldb::SBDebugger *) {}
+  template <typename T> void Set(llvm::StringRef, T &&) {}
+};
+
+} // namespace detail
+
+/// Helper for sending telemetry to lldb server, if built with telemetry and
+/// client-telemetry is enabled.
+using TelemetryDispatcher = detail::TelemetryDispatcherImpl<>;
 
 /// RAII utility to put the debugger temporarily  into synchronous mode.
 class ScopeSyncMode {

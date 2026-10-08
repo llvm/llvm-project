@@ -18,6 +18,7 @@
 #include "mlir/IR/Diagnostics.h"
 #include "mlir/IR/MLIRContext.h"
 #include "mlir/Target/SPIRV/SPIRVBinaryUtils.h"
+#include "mlir/Target/SPIRV/SPIRVExtInstSets.h"
 #include "gmock/gmock.h"
 
 #include <memory>
@@ -72,9 +73,23 @@ protected:
     binary.append(operands.begin(), operands.end());
   }
 
+  uint32_t addDebugInfoExtInstImport() {
+    SmallVector<uint32_t, 4> importOperands = {nextID++};
+    uint32_t extInstSetID = importOperands[0];
+    spirv::encodeStringLiteralInto(importOperands, spirv::extDebugInfo);
+    addInstruction(spirv::Opcode::OpExtInstImport, importOperands);
+    return extInstSetID;
+  }
+
   uint32_t addVoidType() {
     auto id = nextID++;
     addInstruction(spirv::Opcode::OpTypeVoid, {id});
+    return id;
+  }
+
+  uint32_t addBoolType() {
+    auto id = nextID++;
+    addInstruction(spirv::Opcode::OpTypeBool, {id});
     return id;
   }
 
@@ -160,6 +175,72 @@ TEST_F(DeserializationTest, InsufficientWordFailure) {
 
   ASSERT_FALSE(deserialize());
   expectDiagnostic("insufficient words for the last instruction");
+}
+
+TEST_F(DeserializationTest, OpExtInstMissingOperands) {
+  addHeader();
+  addInstruction(spirv::Opcode::OpExtInst, {1, 2});
+
+  ASSERT_FALSE(deserialize());
+  expectDiagnostic("OpExtInst must have at least 4 operands, result type <id>, "
+                   "result <id>, set <id> and instruction opcode");
+}
+
+TEST_F(DeserializationTest, DebugInfoExtInstMissingOperands) {
+  addHeader();
+  uint32_t extInstSetID = addDebugInfoExtInstImport();
+
+  uint32_t voidType = addVoidType();
+  addInstruction(
+      spirv::Opcode::OpExtInst,
+      {voidType, nextID++, extInstSetID,
+       static_cast<uint32_t>(spirv::GraphDebugInfoExtInst::DebugTensor)});
+
+  ASSERT_FALSE(deserialize());
+  expectDiagnostic("DebugTensor must have tensor and string IDs");
+}
+
+TEST_F(DeserializationTest, DebugOperationMissingInstructionIDs) {
+  addHeader();
+  uint32_t extInstSetID = addDebugInfoExtInstImport();
+
+  uint32_t voidType = addVoidType();
+  addInstruction(
+      spirv::Opcode::OpExtInst,
+      {voidType, nextID++, extInstSetID,
+       static_cast<uint32_t>(spirv::GraphDebugInfoExtInst::DebugOperation),
+       /*debugGraphID=*/42, /*stringID=*/43});
+
+  ASSERT_FALSE(deserialize());
+  expectDiagnostic(
+      "DebugOperation must have graph, string and instruction IDs");
+}
+
+TEST_F(DeserializationTest, DebugInfoExtInstNonVoidResultType) {
+  addHeader();
+  uint32_t extInstSetID = addDebugInfoExtInstImport();
+
+  uint32_t boolType = addBoolType();
+  addInstruction(
+      spirv::Opcode::OpExtInst,
+      {boolType, nextID++, extInstSetID,
+       static_cast<uint32_t>(spirv::GraphDebugInfoExtInst::DebugTensor), 42,
+       43});
+
+  ASSERT_FALSE(deserialize());
+  expectDiagnostic("DebugInfo instructions must have OpTypeVoid result type");
+}
+
+TEST_F(DeserializationTest, DebugInfoExtInstUnknownOpcode) {
+  addHeader();
+  uint32_t extInstSetID = addDebugInfoExtInstImport();
+
+  uint32_t voidType = addVoidType();
+  addInstruction(spirv::Opcode::OpExtInst,
+                 {voidType, nextID++, extInstSetID, 99});
+
+  ASSERT_FALSE(deserialize());
+  expectDiagnostic("unknown DebugInfo instruction opcode: 99");
 }
 
 //===----------------------------------------------------------------------===//

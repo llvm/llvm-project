@@ -42,14 +42,14 @@ void WinCFGuard::endFunction(const MachineFunction *MF) {
 /// it an indirect call target. Function::hasAddressTaken gives different
 /// results when a function is called directly with a function prototype
 /// mismatch, which requires a cast.
-static bool isPossibleIndirectCallTarget(const Function *F) {
-  SmallVector<const Value *, 4> Users{F};
+static bool isPossibleIndirectCallTarget(const GlobalValue *GV) {
+  SmallVector<const Value *, 4> Users{GV};
   while (!Users.empty()) {
     const Value *FnOrCast = Users.pop_back_val();
     for (const Use &U : FnOrCast->uses()) {
       const User *FnUser = U.getUser();
       if (const auto *Call = dyn_cast<CallBase>(FnUser)) {
-        if ((!Call->isCallee(&U) || U.get() != F) &&
+        if ((!Call->isCallee(&U) || U.get() != GV) &&
             !Call->getFunction()->getName().ends_with("$exit_thunk")) {
           // Passing a function pointer to a call may lead to an indirect
           // call. As an exception, ignore ARM64EC exit thunks.
@@ -60,6 +60,10 @@ static bool isPossibleIndirectCallTarget(const Function *F) {
         // consequences like no-op intrinsics being an escape or a store *to* a
         // function address being an escape.
         return true;
+      } else if (isa<GlobalAlias>(FnUser)) {
+        // If the function is used via the alias, it's really the alias that's
+        // a possible call target. See "Consider aliases" in endModule().
+        continue;
       } else if (const auto *G = dyn_cast<GlobalValue>(FnUser)) {
         // Ignore llvm.arm64ec.symbolmap; it doesn't lower to an actual address.
         if (G->getName() == "llvm.arm64ec.symbolmap")
@@ -102,6 +106,13 @@ void WinCFGuard::endModule() {
       // section, since this does not introduce security risks.
       GFIDsEntries.push_back(Asm->getSymbol(&F));
     }
+  }
+
+  for (const GlobalAlias &GA : M->aliases()) {
+    // Consider aliases to functions as possible call targets.
+    const GlobalObject *Aliasee = GA.getAliaseeObject();
+    if (Aliasee && isa<Function>(Aliasee) && isPossibleIndirectCallTarget(&GA))
+      GFIDsEntries.push_back(Asm->getSymbol(&GA));
   }
 
   if (GFIDsEntries.empty() && GIATsEntries.empty() && LongjmpTargets.empty())

@@ -61,16 +61,6 @@ public:
       constructNamesAndLevels_.emplace(
           constructName.value().ToString(), level_);
     }
-    if (level_ >= 0) {
-      if (dc.IsDoWhile()) {
-        context_.Say(doStmt.source,
-            "The associated loop of a loop-associated directive cannot be a DO WHILE."_err_en_US);
-      }
-      if (!dc.GetLoopControl()) {
-        context_.Say(doStmt.source,
-            "The associated loop of a loop-associated directive cannot be a DO without control."_err_en_US);
-      }
-    }
     return true;
   }
 
@@ -170,7 +160,7 @@ void OmpStructureChecker::HasInvalidLoopBinding(
         "strictly nested inside a `TEAMS` region."_err_en_US);
   }
 
-  if (OmpDirectiveSet{
+  if (llvm::omp::Directives{
           llvm::omp::OMPD_teams_loop, llvm::omp::OMPD_target_teams_loop}
           .test(beginName.v)) {
     teamsBindingChecker(
@@ -196,7 +186,8 @@ void OmpStructureChecker::CheckSIMDNest(const parser::OpenMPConstruct &c) {
           // Allow `!$OMP ORDERED SIMD`
           [&](const parser::OmpBlockConstruct &c) {
             const parser::OmpDirectiveSpecification &beginSpec{c.BeginDir()};
-            if (beginSpec.DirId() == llvm::omp::Directive::OMPD_ordered) {
+            if (beginSpec.DirId() ==
+                llvm::omp::Directive::OMPD_ordered_blockassoc) {
               if (parser::omp::FindClause(
                       beginSpec, llvm::omp::Clause::OMPC_simd)) {
                 eligibleSIMD = true;
@@ -207,7 +198,7 @@ void OmpStructureChecker::CheckSIMDNest(const parser::OpenMPConstruct &c) {
             if (auto *ssc{std::get_if<parser::OpenMPSimpleStandaloneConstruct>(
                     &c.u)}) {
               llvm::omp::Directive dirId{ssc->v.DirId()};
-              if (dirId == llvm::omp::Directive::OMPD_ordered) {
+              if (dirId == llvm::omp::Directive::OMPD_ordered_standalone) {
                 if (parser::omp::FindClause(
                         ssc->v, llvm::omp::Clause::OMPC_simd)) {
                   eligibleSIMD = true;
@@ -242,11 +233,41 @@ void OmpStructureChecker::CheckSIMDNest(const parser::OpenMPConstruct &c) {
   }
 }
 
+void OmpStructureChecker::CheckRectangularNest(
+    const parser::OmpDirectiveSpecification &spec, const LoopSequence &nest) {
+  llvm::omp::Version version{context_.langOptions().getOpenMPVersion()};
+  auto depth{GetRectangularNestDepthWithReason(spec, version)};
+  if (!depth || *depth.value == 0) {
+    return;
+  }
+
+  int64_t height{0};
+  std::vector<const LoopSequence *> outer;
+  for (const LoopSequence *n{&nest}; n;) {
+    if (n->owner()) {
+      WithReason<bool> rect{n->isRectangular(outer)};
+      if (!rect.value.value_or(true)) {
+        auto &msg{context_.Say(spec.DirName().source,
+            "This construct requires a rectangular loop nest, but the associated nest is not"_err_en_US)};
+        depth.reason.AttachTo(msg);
+        rect.reason.AttachTo(msg);
+      }
+      outer.push_back(n);
+    }
+    height += n->height().value.value_or(1);
+    if (height >= *depth.value) {
+      break;
+    }
+    n = n->children().empty() ? nullptr : &n->children().front();
+  }
+}
+
 void OmpStructureChecker::CheckNestedConstruct(
     const parser::OpenMPLoopConstruct &x) {
   const parser::OmpDirectiveSpecification &beginSpec{x.BeginDir()};
   llvm::omp::Directive dir{beginSpec.DirId()};
-  unsigned version{context_.langOptions().OpenMPVersion};
+  llvm::omp::Version version{context_.langOptions().getOpenMPVersion()};
+  parser::CharBlock beginSource{beginSpec.DirName().source};
 
   // End-directive is not allowed in such cases:
   //   do 100 i = ...
@@ -257,7 +278,6 @@ void OmpStructureChecker::CheckNestedConstruct(
   auto &flags{std::get<parser::OmpDirectiveSpecification::Flags>(beginSpec.t)};
   if (flags.test(parser::OmpDirectiveSpecification::Flag::CrossesLabelDo)) {
     if (auto &endSpec{x.EndDir()}) {
-      parser::CharBlock beginSource{beginSpec.DirName().source};
       context_
           .Say(endSpec->DirName().source,
               "END %s directive is not allowed when the construct does not contain all loops that share a loop-terminating statement"_err_en_US,
@@ -268,98 +288,110 @@ void OmpStructureChecker::CheckNestedConstruct(
 
   // Check constructs contained in the body of the loop construct.
   auto &body{std::get<parser::Block>(x.t)};
+
   for (auto &stmt : BlockRange(body, BlockRange::Step::Over)) {
     if (auto *d{parser::Unwrap<parser::CompilerDirective>(stmt)}) {
       context_.Say(d->source,
           "Compiler directives are not allowed inside OpenMP loop constructs"_warn_en_US);
-    } else if (auto *omp{parser::Unwrap<parser::OpenMPLoopConstruct>(stmt)}) {
-      if (!IsLoopTransforming(omp->BeginDir().DirId())) {
-        context_.Say(omp->source,
-            "Only loop-transforming OpenMP constructs are allowed inside OpenMP loop constructs"_err_en_US);
-      }
-      if (IsFullUnroll(*omp)) {
-        context_.Say(x.source,
-            "OpenMP loop construct cannot apply to a fully unrolled loop"_err_en_US);
-      }
-    } else if (!parser::Unwrap<parser::DoConstruct>(stmt)) {
-      parser::CharBlock source{parser::GetSource(stmt).value_or(x.source)};
-      context_.Say(source,
-          "OpenMP loop construct can only contain DO loops or loop-nest-generating OpenMP constructs"_err_en_US);
     }
   }
 
+  // The loop sequence will correspond to the nest associated with the
+  // loop-associated construct being visited.
   LoopSequence sequence(body, version, true);
+  auto assoc{llvm::omp::getDirectiveAssociation(dir)};
+  auto needRange{GetAffectedLoopRangeWithReason(beginSpec, version)};
+  auto haveLength{sequence.length()};
 
-  // Check if a loop-nest-associated construct has only one top-level loop
-  // in it.
-  auto [needFirst, needCount, rangeReason]{
-      GetAffectedLoopRangeWithReason(beginSpec, version)};
+  const auto MsgShouldContainDoOr{
+      "This construct should contain a DO-loop or a loop-%s-generating construct"_err_en_US};
+  const auto MsgRequiresCanonical{
+      "This construct requires a canonical loop %s"_err_en_US};
 
-  if (std::optional<int64_t> numLoops{sequence.length()}) {
-    if (*numLoops == 0) {
-      context_.Say(beginSpec.DirName().source,
-          "This construct should contain a DO-loop or a loop-nest-generating OpenMP construct"_err_en_US);
-    } else {
-      auto assoc{llvm::omp::getDirectiveAssociation(dir)};
-      if (*numLoops > 1 && assoc == llvm::omp::Association::LoopNest) {
-        context_.Say(beginSpec.DirName().source,
-            "This construct applies to a loop nest, but has a loop sequence of "
-            "length %" PRId64 ""_err_en_US,
-            *numLoops);
-      }
-      if (assoc == llvm::omp::Association::LoopSeq) {
-        if (auto requiredCount{GetRequiredCount(needFirst, needCount)}) {
-          if (*requiredCount > 0 && *numLoops < *requiredCount) {
-            auto &msg{context_.Say(beginSpec.DirName().source,
-                "This construct requires a sequence of %" PRId64
-                " loops, but the loop sequence has a length of %" PRId64
-                ""_err_en_US,
-                *requiredCount, *numLoops)};
-            rangeReason.AttachTo(msg);
-          }
-        }
+  if (assoc == llvm::omp::Association::LoopNest) {
+    if (sequence.children().size() == 0) {
+      context_.Say(beginSource, MsgShouldContainDoOr, "nest");
+    } else if (haveLength.value > 1) {
+      auto &msg{context_.Say(beginSource,
+          "This construct applies to a loop nest, but has a loop sequence of "
+          "length %" PRId64 ""_err_en_US,
+          *haveLength.value)};
+      haveLength.reason.AttachTo(msg);
+    }
+    auto [isWellFormed, whyNot]{sequence.isWellFormedNest()};
+    if (isWellFormed && !*isWellFormed) {
+      auto &msg{context_.Say(beginSource, MsgRequiresCanonical, "nest")};
+      whyNot.AttachTo(msg);
+    }
+
+    // Check requirements on nest depth.
+    auto [needDepth, needPerfect]{
+        GetAffectedNestDepthWithReason(beginSpec, version)};
+
+    // Perfect nesting for doacross loop nests is handled differently across
+    // versions. Only in 6.0+ is the requirement keyed off the body
+    // actually containing an ORDERED directive with a doacross dependence
+    // rather than the ORDERED clause, so the body scan applies only to those
+    // later versions.
+    if (!needPerfect && version > 52 && IsDoacrossAffected(x)) {
+      needPerfect = true;
+    }
+
+    auto &[haveSema, havePerf]{sequence.depth()};
+
+    auto haveDepth{needPerfect ? havePerf : haveSema};
+    std::string_view perfectTxt{needPerfect ? " perfect" : ""};
+
+    if (needDepth.value > 1 && IsDoConcurrentLegal(version)) {
+      if (auto *conc{sequence.getNestedDoConcurrent()}) {
+        auto &msg{context_.Say(*parser::GetSource(*conc->owner()),
+            "DO CONCURRENT must be the only affected loop in a loop nest"_err_en_US)};
+        needDepth.reason.AttachTo(msg);
       }
     }
-  }
 
-  // Check requirements on nest depth.
-  auto [needDepth, needPerfect, depthReason]{
-      GetAffectedNestDepthWithReason(beginSpec, version)};
-  auto [haveSema, havePerf]{sequence.depth()};
-
-  if (dir != llvm::omp::Directive::OMPD_fuse) {
-    auto haveDepth = needPerfect ? havePerf : haveSema;
     // If the present depth is 0, it's likely that the construct doesn't
     // have any loops in it, which would be diagnosed above.
-    if (needDepth && haveDepth && *haveDepth > 0) {
-      if (*needDepth > *haveDepth) {
-        if (needPerfect) {
-          auto &msg{context_.Say(beginSpec.DirName().source,
-              "This construct requires a perfect nest of depth %" PRId64
-              ", but the associated nest is a perfect nest of depth %" PRId64
+    if (needDepth && haveDepth.value > 0) {
+      if (*needDepth.value > *haveDepth.value) {
+        auto &msg{context_.Say(beginSource,
+            "This construct requires a%s nest of depth %" PRId64
+            ", but the associated nest is a%s nest of depth %" PRId64
+            ""_err_en_US,
+            perfectTxt, *needDepth.value, perfectTxt, *haveDepth.value)};
+        haveDepth.reason.AttachTo(msg);
+        needDepth.reason.AttachTo(msg);
+      } else {
+        CheckRectangularNest(beginSpec, sequence);
+      }
+    }
+
+  } else if (assoc == llvm::omp::Association::LoopSequence) {
+    if (haveLength.value == 0) {
+      context_.Say(beginSource, MsgShouldContainDoOr, "sequence");
+    } else {
+      auto [isWellFormed, whyNot]{sequence.isWellFormedSequence()};
+      if (isWellFormed && !*isWellFormed) {
+        auto &msg{context_.Say(beginSource, MsgRequiresCanonical, "sequence")};
+        whyNot.AttachTo(msg);
+      }
+      if (auto requiredCount{GetMinimumSequenceCount(needRange.value)}) {
+        if (*requiredCount > 0 && haveLength.value < *requiredCount) {
+          auto &msg{context_.Say(beginSource,
+              "This construct requires a sequence of at least %" PRId64
+              " loops, but the loop sequence has a length of %" PRId64
               ""_err_en_US,
-              *needDepth, *haveDepth)};
-          depthReason.AttachTo(msg);
-        } else {
-          auto &msg{context_.Say(beginSpec.DirName().source,
-              "This construct requires a nest of depth %" PRId64
-              ", but the associated nest has a depth of %" PRId64 ""_err_en_US,
-              *needDepth, *haveDepth)};
-          depthReason.AttachTo(msg);
+              *requiredCount, *haveLength.value)};
+          haveLength.reason.AttachTo(msg);
+          needRange.reason.AttachTo(msg);
         }
       }
     }
-  } else {
-    // FUSE requires a sequence of perfect nests.
-    // TODO: Defer this check for now.
   }
 }
 
 void OmpStructureChecker::Enter(const parser::OpenMPLoopConstruct &x) {
-  loopStack_.push_back(&x);
-
   const parser::OmpDirectiveName &beginName{x.BeginDir().DirName()};
-  PushContextAndClauseSets(beginName.source, beginName.v);
 
   // Check matching, end directive is optional
   if (auto &endSpec{x.EndDir()}) {
@@ -389,19 +421,9 @@ void OmpStructureChecker::Enter(const parser::OpenMPLoopConstruct &x) {
   }
 
   if (beginName.v == llvm::omp::Directive::OMPD_do) {
-    // 2.7.1 do-clause -> private-clause |
-    //                    firstprivate-clause |
-    //                    lastprivate-clause |
-    //                    linear-clause |
-    //                    reduction-clause |
-    //                    schedule-clause |
-    //                    collapse-clause |
-    //                    ordered-clause
-
     // nesting check
     HasInvalidWorksharingNesting(beginName, llvm::omp::nestedWorkshareErrSet);
   }
-  SetLoopInfo(x);
 
   for (auto &construct : std::get<parser::Block>(x.t)) {
     if (const auto *doConstruct{parser::omp::GetDoConstruct(construct)}) {
@@ -409,7 +431,7 @@ void OmpStructureChecker::Enter(const parser::OpenMPLoopConstruct &x) {
       CheckNoBranching(doBlock, beginName.v, beginName.source);
     }
   }
-  CheckIterationVariableType(x);
+  CheckIterationVariables(x);
   CheckNestedConstruct(x);
   CheckAssociatedLoopConstraints(x);
   HasInvalidDistributeNesting(x);
@@ -422,6 +444,41 @@ void OmpStructureChecker::Enter(const parser::OpenMPLoopConstruct &x) {
       beginName.v == llvm::omp::Directive::OMPD_distribute_simd) {
     CheckDistLinear(x);
   }
+  if (beginName.v == llvm::omp::Directive::OMPD_unroll) {
+    CheckUnrollFullTripCount(x);
+  }
+}
+
+// A loop that is fully unrolled must have a trip count that is known at compile
+// time, so its bounds and step have to be constant expressions.
+void OmpStructureChecker::CheckUnrollFullTripCount(
+    const parser::OpenMPLoopConstruct &x) {
+  const parser::OmpDirectiveSpecification &beginSpec{x.BeginDir()};
+  const parser::OmpClause *full{
+      parser::omp::FindClause(beginSpec, llvm::omp::Clause::OMPC_full)};
+  if (!full) {
+    return;
+  }
+
+  const parser::DoConstruct *doConstruct{x.GetNestedLoop()};
+  if (!doConstruct) {
+    return;
+  }
+  const auto &control{doConstruct->GetLoopControl()};
+  if (!control) {
+    return;
+  }
+  const auto *bounds{std::get_if<parser::LoopControl::Bounds>(&control->u)};
+  if (!bounds) {
+    return;
+  }
+  bool isConstant{GetIntValue(bounds->Lower()).has_value() &&
+      GetIntValue(bounds->Upper()).has_value() &&
+      (!bounds->Step() || GetIntValue(*bounds->Step()).has_value())};
+  if (!isConstant) {
+    context_.Say(full->source,
+        "The loop associated with an UNROLL directive with a FULL clause must have a constant trip count"_err_en_US);
+  }
 }
 
 const parser::Name OmpStructureChecker::GetLoopIndex(
@@ -430,30 +487,109 @@ const parser::Name OmpStructureChecker::GetLoopIndex(
   return std::get<Bounds>(x->GetLoopControl()->u).Name().thing;
 }
 
-void OmpStructureChecker::SetLoopInfo(const parser::OpenMPLoopConstruct &x) {
-  if (const auto *loop{x.GetNestedLoop()}) {
-    if (loop->IsDoNormal()) {
-      const parser::Name &itrVal{GetLoopIndex(loop)};
-      SetLoopIv(itrVal.symbol);
+void OmpStructureChecker::CheckIterationVariables(
+    const parser::OpenMPLoopConstruct &x) {
+  llvm::omp::Version version{context_.langOptions().getOpenMPVersion()};
+  auto doLoops{CollectAffectedDoLoops(x, version, &context_)};
+  if (!doLoops) {
+    return;
+  }
+  const parser::OmpDirectiveSpecification &spec{x.BeginDir()};
+  llvm::omp::Directive dirId{spec.DirId()};
+
+  // Collect symbols from DSA clauses on the construct. These symbols
+  // are the "host" versions of symbols inside the construct. The flags
+  // of interest are on the associated symbols.
+  struct ClauseAppearance {
+    llvm::omp::Clause clauseId;
+    parser::CharBlock source;
+  };
+  std::multimap<const Symbol *, ClauseAppearance> dsa;
+  for (const parser::OmpClause &clause : spec.Clauses().v) {
+    llvm::omp::Clause clauseId{clause.Id()};
+    if (llvm::omp::isDataSharingAttributeClause(clauseId, version)) {
+      // Not every data-sharing attribute clause takes an object list, e.g.
+      // USES_ALLOCATORS takes allocator specifications instead.
+      const parser::OmpObjectList *objects{
+          parser::omp::GetOmpObjectList(clause)};
+      if (!objects) {
+        continue;
+      }
+      for (const parser::OmpObject &object : objects->v) {
+        if (const Symbol *symbol{GetObjectSymbol(object, /*ultimate=*/true)}) {
+          auto maybeSource{parser::omp::GetObjectSource(object)};
+          assert(maybeSource && "Expecting object source");
+          dsa.insert(
+              std::make_pair(symbol, ClauseAppearance{clauseId, *maybeSource}));
+        }
+      }
     }
   }
-}
 
-void OmpStructureChecker::CheckIterationVariableType(
-    const parser::OpenMPLoopConstruct &x) {
-  auto &body{std::get<parser::Block>(x.t)};
-  for (auto &construct : LoopRange(body, LoopRange::Step::Into)) {
-    // 'construct' can also be OpenMPLoopConstruct
-    if (auto *loop{parser::Unwrap<parser::DoConstruct>(construct)}) {
-      if (loop->IsDoNormal()) {
-        if (const parser::Name &iv{GetLoopIndex(loop)}; iv.symbol) {
-          const auto *type{iv.symbol->GetType()};
-          if (!type->IsNumeric(TypeCategory::Integer)) {
-            context_.Say(iv.source,
-                "The DO loop iteration variable must be of integer type"_err_en_US,
-                iv.ToString());
-          }
+  auto [depth, _]{GetAffectedNestDepthWithReason(spec, version)};
+  bool isLinearAllowed{false};
+  if (!depth || depth.value == 1) {
+    auto leafs{llvm::omp::getLeafConstructsOrSelf(dirId)};
+    isLinearAllowed = leafs.back() == llvm::omp::Directive::OMPD_simd;
+  }
+
+  std::vector<parser::Name> ivs;
+  for (const parser::DoConstruct *loop : *doLoops) {
+    // Skip DO CONCURRENT, since their iteration variables are local.
+    if (loop->IsDoConcurrent()) {
+      continue;
+    }
+    for (auto &control : GetLoopControls(*loop)) {
+      if (control.iv.symbol) {
+        ivs.push_back(control.iv);
+      }
+    }
+  }
+
+  for (const parser::Name &iv : ivs) {
+    const auto *type{iv.symbol->GetType()};
+    if (!type->IsNumeric(TypeCategory::Integer)) {
+      context_.Say(iv.source,
+          "The DO loop iteration variable must be of integer type"_err_en_US,
+          iv.ToString());
+    }
+    if (iv.symbol->GetUltimate().test(Symbol::Flag::OmpThreadprivate)) {
+      context_.Say(iv.source,
+          "Loop iteration variable of an affected loop cannot be THREADPRIVATE"_err_en_US,
+          iv.ToString());
+    }
+    // Get the symbol from the variable that was listed in a DSA clause.
+    const Symbol *host{iv.symbol};
+    while (host && !dsa.count(host)) {
+      host = GetHostSymbol(*host);
+    }
+    if (!host) {
+      continue;
+    }
+    // Check conflict between a predetermined DSA and explicit DSA.
+    assert(iv.symbol->test(Symbol::Flag::OmpPreDetermined) &&
+        "Expecting affected iteration variable to have predetermined DSA");
+    if (iv.symbol->test(Symbol::Flag::OmpExplicit)) {
+      auto range{dsa.equal_range(host)};
+      for (auto found{range.first}; found != range.second; ++found) {
+        llvm::omp::Clause id{found->second.clauseId};
+        if (!IsClauseAllowedOnDirective(id, dirId, version, &context_)) {
+          continue;
         }
+        if (id == llvm::omp::Clause::OMPC_private ||
+            id == llvm::omp::Clause::OMPC_lastprivate) {
+          continue;
+        }
+        if (id == llvm::omp::Clause::OMPC_linear && isLinearAllowed) {
+          continue;
+        }
+        context_
+            .Say(found->second.source,
+                "Loop iteration variable with a predetermined data sharing attribute cannot appear in a %s clause"_err_en_US,
+                parser::omp::GetUpperName(id, version))
+            .Attach(iv.source,
+                "'%s' is an iteration variable of an affected loop"_because_en_US,
+                iv.ToString());
       }
     }
   }
@@ -581,7 +717,7 @@ void OmpStructureChecker::CheckScanModifier(
               [&](const parser::Name &name) {
                 checkReductionSymbolInScan(name);
               },
-              [&](const parser::OmpObject::Invalid &invalid) {},
+              [&](const auto &) {},
           },
           ompObj.u);
     }
@@ -603,141 +739,214 @@ void OmpStructureChecker::Leave(const parser::OpenMPLoopConstruct &x) {
   if (llvm::omp::allSimdSet.test(beginSpec.DirName().v)) {
     ExitDirectiveNest(SIMDNest);
   }
-  dirContext_.pop_back();
-
-  assert(!loopStack_.empty() && "Expecting non-empty loop stack");
-#ifndef NDEBUG
-  const LoopConstruct &top{loopStack_.back()};
-  auto *loopc{std::get_if<const parser::OpenMPLoopConstruct *>(&top)};
-  assert(loopc != nullptr && *loopc == &x && "Mismatched loop constructs");
-#endif
-  loopStack_.pop_back();
 }
 
-void OmpStructureChecker::Enter(const parser::OmpEndLoopDirective &x) {
-  const parser::OmpDirectiveName &dir{x.DirName()};
-  ResetPartialContext(dir.source);
-  switch (dir.v) {
-  // 2.7.1 end-do -> END DO [nowait-clause]
-  // 2.8.3 end-do-simd -> END DO SIMD [nowait-clause]
-  case llvm::omp::Directive::OMPD_do:
-    PushContextAndClauseSets(dir.source, llvm::omp::Directive::OMPD_end_do);
-    break;
-  case llvm::omp::Directive::OMPD_do_simd:
-    PushContextAndClauseSets(
-        dir.source, llvm::omp::Directive::OMPD_end_do_simd);
-    break;
-  default:
-    // no clauses are allowed
-    break;
-  }
-}
-
-void OmpStructureChecker::Leave(const parser::OmpEndLoopDirective &x) {
-  if ((GetContext().directive == llvm::omp::Directive::OMPD_end_do) ||
-      (GetContext().directive == llvm::omp::Directive::OMPD_end_do_simd)) {
-    dirContext_.pop_back();
-  }
+void OmpStructureChecker::Enter(const parser::OmpClause::Collapse &x) {
+  RequiresConstantPositiveParameter(llvm::omp::Clause::OMPC_collapse, x.v);
 }
 
 void OmpStructureChecker::Enter(const parser::OmpClause::Depth &x) {
-  CheckAllowedClause(llvm::omp::Clause::OMPC_depth);
-
   RequiresConstantPositiveParameter(llvm::omp::Clause::OMPC_depth, x.v);
 }
 
+void OmpStructureChecker::Enter(const parser::OmpClause::Doacross &x) {
+  CheckDoacross(x.v.v, llvm::omp::Clause::OMPC_doacross);
+}
+
+void OmpStructureChecker::CheckDoacross(
+    const parser::OmpDoacross &doa, llvm::omp::Clause clauseId) {
+  auto &iterVec{std::get<std::optional<parser::OmpIterationVector>>(doa.t)};
+
+  auto &modifiers{OmpGetModifiers(doa)};
+  auto &depType{*OmpGetUniqueModifier<parser::OmpDependenceType>(modifiers)};
+  if (depType.v == parser::OmpDependenceType::Value::Source) {
+    if (iterVec) {
+      context_.Say(OmpGetModifierSource(modifiers, &depType),
+          "Iteration vector may not be specified with SOURCE dependence type"_err_en_US);
+    }
+    return;
+  }
+  assert(depType.v == parser::OmpDependenceType::Value::Sink &&
+      "Unexpected dependence-type");
+  if (!iterVec) {
+    context_.Say(OmpGetModifierSource(modifiers, &depType),
+        "Iteration vector must be specified with SINK dependence type"_err_en_US);
+    return;
+  }
+
+  // Process SINK dependence type. SINK may only appear in an ORDER construct,
+  // which references a prior ORDERED(n) clause on a DO or SIMD construct
+  // that marks the top of the loop nest.
+
+  const std::list<parser::OmpIteration> &vec{iterVec->v};
+
+  // Check if the variables in the iteration vector are unique.
+  struct Less {
+    using Iterator = std::list<parser::OmpIteration>::const_iterator;
+    bool operator()(Iterator a, Iterator b) const {
+      auto namea{std::get<parser::Name>(a->t)};
+      auto nameb{std::get<parser::Name>(b->t)};
+      assert(namea.symbol && nameb.symbol && "Unresolved symbols");
+      // The non-determinism of the "<" doesn't matter, we only care about
+      // equality, i.e.  a == b  <=>  !(a < b) && !(b < a)
+      return reinterpret_cast<uintptr_t>(namea.symbol) <
+          reinterpret_cast<uintptr_t>(nameb.symbol);
+    }
+  };
+  if (auto maybeIter{FindDuplicate<Less>(vec)}) {
+    auto name{std::get<parser::Name>((*maybeIter)->t)};
+    context_.Say(name.source,
+        "Duplicate variable '%s' in the iteration vector"_err_en_US,
+        name.ToString());
+  }
+
+  // Check if the variables in the iteration vector are induction variables.
+  // Ignore any mismatch between the size of the iteration vector and the
+  // number of DO constructs on the stack. This is checked elsewhere.
+
+  std::set<const Symbol *> inductionVars;
+  for (const LoopOrConstruct &c : llvm::reverse(constructStack_)) {
+    if (auto *doc{std::get_if<const parser::DoConstruct *>(&c)}) {
+      // Do-construct, collect the induction variable.
+      if (auto &control{(*doc)->GetLoopControl()}) {
+        if (auto *b{std::get_if<parser::LoopControl::Bounds>(&control->u)}) {
+          inductionVars.insert(b->Name().thing.symbol);
+        }
+      }
+    } else {
+      // Omp-loop-construct, check if it's do/simd with an ORDERED clause.
+      auto *omp{std::get_if<const parser::OpenMPConstruct *>(&c)};
+      assert(omp && "Expecting OpenMPConstruct");
+      if (auto *loop{parser::Unwrap<parser::OpenMPLoopConstruct>(*omp)}) {
+        const parser::OmpDirectiveSpecification &beginSpec{loop->BeginDir()};
+        llvm::omp::Directive loopDir{beginSpec.DirId()};
+        if (loopDir == llvm::omp::OMPD_do || loopDir == llvm::omp::OMPD_simd) {
+          // If it has ORDERED clause, stop the traversal.
+          if (parser::omp::FindClause(
+                  beginSpec, llvm::omp::Clause::OMPC_ordered)) {
+            break;
+          }
+        }
+      }
+    }
+  }
+  for (const parser::OmpIteration &iter : vec) {
+    auto &name{std::get<parser::Name>(iter.t)};
+    if (!inductionVars.count(name.symbol)) {
+      context_.Say(name.source,
+          "The iteration vector element '%s' is not an induction variable within the ORDERED loop nest"_err_en_US,
+          name.ToString());
+    }
+  }
+}
+
 void OmpStructureChecker::Enter(const parser::OmpClause::Ordered &x) {
-  CheckAllowedClause(llvm::omp::Clause::OMPC_ordered);
+  llvm::omp::Version version{context_.langOptions().getOpenMPVersion()};
+  parser::CharBlock source{GetContext().clauseSource};
+  std::string clauseName{
+      parser::omp::GetUpperName(llvm::omp::Clause::OMPC_ordered, version)};
 
   // the parameter of ordered clause is optional
   if (const auto &expr{x.v}) {
     RequiresConstantPositiveParameter(llvm::omp::Clause::OMPC_ordered, *expr);
-    // 2.8.3 Loop SIMD Construct Restriction
+
+    // ORDERED(n) cannot be present on composite directive with SIMD.
+    // Ref: [5.1:139:21]
     if (llvm::omp::allDoSimdSet.test(GetContext().directive)) {
-      context_.Say(GetContext().clauseSource,
-          "No ORDERED clause with a parameter can be specified "
-          "on the %s directive"_err_en_US,
-          ContextDirectiveAsFortran());
+      context_.Say(source,
+          "%s clause with an argument is not allowed on a compound directive with %s as a constituent"_err_en_US,
+          clauseName,
+          parser::omp::GetUpperName(llvm::omp::Directive::OMPD_simd, version));
+    }
+
+    // If ORDERED(n) is present no LINEAR may be present.
+    // Ref: [5.2:94:28], [6.0:514:7-8] (expressed in a different way).
+    for (const parser::OmpClause &clause : dirStack_.back()->Clauses().v) {
+      llvm::omp::Clause clauseId{clause.Id()};
+      if (clauseId == llvm::omp::Clause::OMPC_linear) {
+        context_
+            .Say(clause.source,
+                "%s clause is not allowed when %s clause with an argument is present"_err_en_US,
+                parser::omp::GetUpperName(clauseId, version), clauseName)
+            .Attach(source, "%s clause specified here"_en_US, clauseName);
+      }
     }
   }
 }
 
 void OmpStructureChecker::Enter(const parser::OmpClause::Linear &x) {
-  CheckAllowedClause(llvm::omp::Clause::OMPC_linear);
-  unsigned version{context_.langOptions().OpenMPVersion};
+  llvm::omp::Version version{context_.langOptions().getOpenMPVersion()};
   llvm::omp::Directive dir{GetContext().directive};
-  parser::CharBlock clauseSource{GetContext().clauseSource};
   const parser::OmpLinearModifier *linearMod{nullptr};
 
   SymbolSourceMap symbols;
   auto &objects{std::get<parser::OmpObjectList>(x.v.t)};
+  CheckVarIsNotPartOfAnotherVar(GetContext().clauseSource, objects, "LINEAR");
   CheckCrayPointee(objects, "LINEAR", false);
   GetSymbolsInObjectList(objects, symbols);
 
   auto CheckIntegerNoRef{[&](const Symbol *symbol, parser::CharBlock source) {
     if (!symbol->GetType()->IsNumeric(TypeCategory::Integer)) {
-      auto &desc{OmpGetDescriptor<parser::OmpLinearModifier>()};
+      auto &desc{llvm::omp::getDescriptor(llvm::omp::Modifier::LinearModifier)};
       context_.Say(source,
           "The list item '%s' specified without the REF '%s' must be of INTEGER type"_err_en_US,
-          symbol->name(), desc.name.str());
+          symbol->name(), desc.getName());
     }
   }};
 
-  if (OmpVerifyModifiers(x.v, llvm::omp::OMPC_linear, clauseSource, context_)) {
-    auto &modifiers{OmpGetModifiers(x.v)};
-    linearMod = OmpGetUniqueModifier<parser::OmpLinearModifier>(modifiers);
-    if (linearMod) {
-      auto &desc{OmpGetDescriptor<parser::OmpLinearModifier>()};
-      parser::CharBlock modSource{OmpGetModifierSource(modifiers, linearMod)};
-      bool valid{true};
+  auto &modifiers{OmpGetModifiers(x.v)};
+  linearMod = OmpGetUniqueModifier<parser::OmpLinearModifier>(modifiers);
+  if (linearMod) {
+    auto &desc{llvm::omp::getDescriptor(llvm::omp::Modifier::LinearModifier)};
+    parser::CharBlock modSource{OmpGetModifierSource(modifiers, linearMod)};
+    bool valid{true};
 
-      if (version < 52) {
-        // Modifiers on LINEAR are only allowed on DECLARE SIMD
+    if (version < 52) {
+      // Modifiers on LINEAR are only allowed on DECLARE SIMD
+      if (dir != llvm::omp::Directive::OMPD_declare_simd) {
+        context_.Say(modSource,
+            "A modifier may not be specified in a LINEAR clause on the %s directive"_err_en_US,
+            parser::omp::GetUpperName(dir, version));
+        valid = false;
+      }
+    } else {
+      if (linearMod->v == parser::OmpLinearModifier::Value::Ref ||
+          linearMod->v == parser::OmpLinearModifier::Value::Uval) {
         if (dir != llvm::omp::Directive::OMPD_declare_simd) {
           context_.Say(modSource,
-              "A modifier may not be specified in a LINEAR clause on the %s directive"_err_en_US,
-              parser::omp::GetUpperName(dir, version));
+              "A REF or UVAL '%s' may not be specified in a LINEAR clause on the %s directive"_err_en_US,
+              desc.getName(), parser::omp::GetUpperName(dir, version));
           valid = false;
         }
-      } else {
+      }
+      if (!std::get</*PostModified=*/bool>(x.v.t)) {
+        context_.Say(modSource,
+            "The 'modifier(<list>)' syntax is deprecated in %s, use '<list> : modifier' instead"_warn_en_US,
+            ThisVersion(version));
+      }
+    }
+
+    if (valid) {
+      for (auto &[symbol, source] : symbols) {
+        if (linearMod->v != parser::OmpLinearModifier::Value::Ref) {
+          CheckIntegerNoRef(symbol, source);
+        } else {
+          if (!IsAllocatable(*symbol) && !IsAssumedShape(*symbol) &&
+              !IsPolymorphic(*symbol)) {
+            context_.Say(source,
+                "The list item `%s` specified with the REF '%s' must be polymorphic variable, assumed-shape array, or a variable with the `ALLOCATABLE` attribute"_err_en_US,
+                symbol->name(), desc.getName());
+          }
+        }
         if (linearMod->v == parser::OmpLinearModifier::Value::Ref ||
             linearMod->v == parser::OmpLinearModifier::Value::Uval) {
-          if (dir != llvm::omp::Directive::OMPD_declare_simd) {
-            context_.Say(modSource,
-                "A REF or UVAL '%s' may not be specified in a LINEAR clause on the %s directive"_err_en_US,
-                desc.name.str(), parser::omp::GetUpperName(dir, version));
-            valid = false;
+          if (!IsDummy(*symbol) || IsValue(*symbol)) {
+            context_.Say(source,
+                "If the `%s` is REF or UVAL, the list item '%s' must be a dummy argument without the VALUE attribute"_err_en_US,
+                desc.getName(), symbol->name());
           }
         }
-        if (!std::get</*PostModified=*/bool>(x.v.t)) {
-          context_.Say(modSource,
-              "The 'modifier(<list>)' syntax is deprecated in %s, use '<list> : modifier' instead"_warn_en_US,
-              ThisVersion(version));
-        }
-      }
-
-      if (valid) {
-        for (auto &[symbol, source] : symbols) {
-          if (linearMod->v != parser::OmpLinearModifier::Value::Ref) {
-            CheckIntegerNoRef(symbol, source);
-          } else {
-            if (!IsAllocatable(*symbol) && !IsAssumedShape(*symbol) &&
-                !IsPolymorphic(*symbol)) {
-              context_.Say(source,
-                  "The list item `%s` specified with the REF '%s' must be polymorphic variable, assumed-shape array, or a variable with the `ALLOCATABLE` attribute"_err_en_US,
-                  symbol->name(), desc.name.str());
-            }
-          }
-          if (linearMod->v == parser::OmpLinearModifier::Value::Ref ||
-              linearMod->v == parser::OmpLinearModifier::Value::Uval) {
-            if (!IsDummy(*symbol) || IsValue(*symbol)) {
-              context_.Say(source,
-                  "If the `%s` is REF or UVAL, the list item '%s' must be a dummy argument without the VALUE attribute"_err_en_US,
-                  desc.name.str(), symbol->name());
-            }
-          }
-        } // for (symbol, source)
-      }
+      } // for (symbol, source)
     }
   }
 
@@ -766,25 +975,70 @@ void OmpStructureChecker::Enter(const parser::OmpClause::Linear &x) {
           "The list item `%s` in a LINEAR clause must not be Cray Pointer or a variable with POINTER attribute"_err_en_US,
           symbol->name());
     }
-    if (FindCommonBlockContaining(*symbol)) {
+    if (symbol->has<CommonBlockDetails>()) {
       context_.Say(source,
-          "'%s' is a common block name and must not appear in an LINEAR clause"_err_en_US,
+          "'%s' is a common block name and must not appear in a LINEAR clause"_err_en_US,
           symbol->name());
     }
   }
 }
 
+void OmpStructureChecker::Enter(const parser::OmpClause::Safelen &x) {
+  RequiresConstantPositiveParameter(llvm::omp::Clause::OMPC_safelen, x.v);
+}
+
+void OmpStructureChecker::Enter(const parser::OmpClause::Schedule &x) {
+  const parser::OmpScheduleClause &scheduleClause = x.v;
+
+  // 2.7 Loop Construct Restriction
+  if (llvm::omp::allDoSet.test(GetContext().directive)) {
+    auto &modifiers{OmpGetModifiers(scheduleClause)};
+    auto kind{std::get<parser::OmpScheduleClause::Kind>(scheduleClause.t)};
+    auto &chunk{
+        std::get<std::optional<parser::ScalarIntExpr>>(scheduleClause.t)};
+    if (chunk) {
+      if (kind == parser::OmpScheduleClause::Kind::Runtime ||
+          kind == parser::OmpScheduleClause::Kind::Auto) {
+        context_.Say(GetContext().clauseSource,
+            "When SCHEDULE clause has %s specified, "
+            "it must not have chunk size specified"_err_en_US,
+            parser::ToUpperCaseLetters(
+                parser::OmpScheduleClause::EnumToString(kind)));
+      }
+      if (const auto &chunkExpr{std::get<std::optional<parser::ScalarIntExpr>>(
+              scheduleClause.t)}) {
+        RequiresPositiveParameter(
+            llvm::omp::Clause::OMPC_schedule, *chunkExpr, "chunk size");
+      }
+    }
+
+    auto *ordering{
+        OmpGetUniqueModifier<parser::OmpOrderingModifier>(modifiers)};
+    if (ordering &&
+        ordering->v == parser::OmpOrderingModifier::Value::Nonmonotonic) {
+      if (kind != parser::OmpScheduleClause::Kind::Dynamic &&
+          kind != parser::OmpScheduleClause::Kind::Guided) {
+        context_.Say(GetContext().clauseSource,
+            "The NONMONOTONIC modifier can only be specified with "
+            "SCHEDULE(DYNAMIC) or SCHEDULE(GUIDED)"_err_en_US);
+      }
+    }
+  }
+}
+
+void OmpStructureChecker::Enter(const parser::OmpClause::Simdlen &x) {
+  RequiresConstantPositiveParameter(llvm::omp::Clause::OMPC_simdlen, x.v);
+}
+
 void OmpStructureChecker::Enter(const parser::OmpClause::Sizes &c) {
-  CheckAllowedClause(llvm::omp::Clause::OMPC_sizes);
   for (const parser::Cosubscript &v : c.v)
     RequiresPositiveParameter(llvm::omp::Clause::OMPC_sizes, v,
         /*paramName=*/"parameter", /*allowZero=*/false);
 }
 
 void OmpStructureChecker::Enter(const parser::OmpClause::Permutation &c) {
-  unsigned version{context_.langOptions().OpenMPVersion};
+  llvm::omp::Version version{context_.langOptions().getOpenMPVersion()};
   llvm::omp::Clause clause = llvm::omp::Clause::OMPC_permutation;
-  CheckAllowedClause(clause);
   if (c.v.size() < 2)
     context_.Say(GetContext().clauseSource,
         "The %s clause must have a length of at least two"_err_en_US,
@@ -816,7 +1070,6 @@ void OmpStructureChecker::Enter(const parser::OmpClause::Permutation &c) {
 }
 
 void OmpStructureChecker::Enter(const parser::OmpClause::Looprange &x) {
-  CheckAllowedClause(llvm::omp::Clause::OMPC_looprange);
   auto &[first, count]{x.v.t};
   RequiresConstantPositiveParameter(llvm::omp::Clause::OMPC_looprange, first);
   RequiresConstantPositiveParameter(llvm::omp::Clause::OMPC_looprange, count);
@@ -824,17 +1077,61 @@ void OmpStructureChecker::Enter(const parser::OmpClause::Looprange &x) {
 
 void OmpStructureChecker::Enter(const parser::DoConstruct &x) {
   Base::Enter(x);
-  loopStack_.push_back(&x);
+  constructStack_.push_back(&x);
+}
+
+void OmpStructureChecker::Enter(const parser::OmpLoopModifier &x) {
+  DirectiveContext &dirCtx = GetContext();
+  llvm::omp::Directive dir{dirCtx.directive};
+  llvm::omp::Version version{context_.langOptions().getOpenMPVersion()};
+  auto &m{std::get<llvm::omp::LoopModifier>(x.t)};
+  if (!llvm::omp::isAllowedLoopModifier(dir, m)) {
+    llvm::StringRef name = llvm::omp::getLoopModifierName(m);
+    context_.Say(x.source,
+        "%s modifier is not allowed on %s directive"_err_en_US,
+        parser::ToUpperCaseLetters(name),
+        parser::omp::GetUpperName(dir, version));
+  }
+  if (const auto &il{
+          std::get<std::optional<std::list<parser::ScalarIntConstantExpr>>>(
+              x.t)}) {
+    int64_t last = -1;
+    for (auto &i : il.value()) {
+      if (const auto v{GetIntValue(i)}) {
+        if (*v <= 0) {
+          context_.Say(x.source,
+              "The loop modifier indexes of the %s clause must be constant positive integer expressions"_err_en_US,
+              parser::ToUpperCaseLetters(
+                  getClauseName(llvm::omp::Clause::OMPC_apply).str()));
+        } else if (*v <= last) {
+          context_.Say(x.source,
+              "The loop modifier indexes of the %s clause must be in ascending order"_err_en_US,
+              parser::ToUpperCaseLetters(
+                  getClauseName(llvm::omp::Clause::OMPC_apply).str()));
+        } else {
+          last = *v;
+        }
+      }
+    }
+  }
+}
+
+void OmpStructureChecker::Enter(const parser::OmpClause::Apply &x) {
+  EnterDirectiveNest(ApplyNest);
+}
+
+void OmpStructureChecker::Leave(const parser::OmpClause::Apply &x) {
+  ExitDirectiveNest(ApplyNest);
 }
 
 void OmpStructureChecker::Leave(const parser::DoConstruct &x) {
-  assert(!loopStack_.empty() && "Expecting non-empty loop stack");
+  assert(!constructStack_.empty() && "Expecting non-empty construct stack");
 #ifndef NDEBUG
-  const LoopConstruct &top = loopStack_.back();
+  const LoopOrConstruct &top = constructStack_.back();
   auto *doc{std::get_if<const parser::DoConstruct *>(&top)};
-  assert(doc != nullptr && *doc == &x && "Mismatched loop constructs");
+  assert(doc != nullptr && *doc == &x && "Mismatched constructs");
 #endif
-  loopStack_.pop_back();
+  constructStack_.pop_back();
   Base::Leave(x);
 }
 

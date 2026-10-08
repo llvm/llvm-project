@@ -1,6 +1,6 @@
 # REQUIRES: aarch64
 # RUN: llvm-mc -filetype=obj -triple=aarch64-linux-android %s -o %t.o
-# RUN: ld.lld --shared --android-memtag-mode=sync %t.o -o %t
+# RUN: ld.lld --shared -z memtag-mode=sync --android-memtag-note %t.o -o %t
 # RUN: llvm-readobj -r %t | FileCheck %s --check-prefix=RELA
 # RUN: llvm-readelf -x.data %t | FileCheck %s --check-prefix=DATA
 

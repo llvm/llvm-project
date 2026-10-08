@@ -43,7 +43,6 @@
 #include "llvm/Support/ErrorHandling.h"
 #include "llvm/Support/raw_ostream.h"
 #include "llvm/Target/TargetMachine.h"
-#include "llvm/Target/TargetOptions.h"
 #include <cassert>
 #include <utility>
 
@@ -311,11 +310,6 @@ ARMBaseRegisterInfo::getLargestLegalSuperClass(const TargetRegisterClass *RC,
 }
 
 const TargetRegisterClass *
-ARMBaseRegisterInfo::getPointerRegClass(unsigned Kind) const {
-  return &ARM::GPRRegClass;
-}
-
-const TargetRegisterClass *
 ARMBaseRegisterInfo::getCrossCopyRegClass(const TargetRegisterClass *RC) const {
   if (RC == &ARM::CCRRegClass)
     return &ARM::rGPRRegClass;  // Can't copy CCR registers.
@@ -364,7 +358,7 @@ static MCRegister getPairedGPR(MCRegister Reg, bool Odd,
 // Resolve the RegPairEven / RegPairOdd register allocator hints.
 bool ARMBaseRegisterInfo::getRegAllocationHints(
     Register VirtReg, ArrayRef<MCPhysReg> Order,
-    SmallVectorImpl<MCPhysReg> &Hints, const MachineFunction &MF,
+    SmallSetVector<MCPhysReg, 16> &Hints, const MachineFunction &MF,
     const VirtRegMap *VRM, const LiveRegMatrix *Matrix) const {
   const MachineRegisterInfo &MRI = MF.getRegInfo();
   std::pair<unsigned, Register> Hint = MRI.getRegAllocationHint(VirtReg);
@@ -380,7 +374,7 @@ bool ARMBaseRegisterInfo::getRegAllocationHints(
   case ARMRI::RegLR:
     TargetRegisterInfo::getRegAllocationHints(VirtReg, Order, Hints, MF, VRM);
     if (MRI.getRegClass(VirtReg)->contains(ARM::LR))
-      Hints.push_back(ARM::LR);
+      Hints.insert(ARM::LR);
     return false;
   default:
     return TargetRegisterInfo::getRegAllocationHints(VirtReg, Order, Hints, MF, VRM);
@@ -402,7 +396,7 @@ bool ARMBaseRegisterInfo::getRegAllocationHints(
 
   // First prefer the paired physreg.
   if (PairedPhys && is_contained(Order, PairedPhys))
-    Hints.push_back(PairedPhys);
+    Hints.insert(PairedPhys);
 
   // Then prefer even or odd registers.
   for (MCPhysReg Reg : Order) {
@@ -412,7 +406,7 @@ bool ARMBaseRegisterInfo::getRegAllocationHints(
     MCRegister Paired = getPairedGPR(Reg, !Odd, this);
     if (!Paired || MRI.isReserved(Paired))
       continue;
-    Hints.push_back(Reg);
+    Hints.insert(Reg);
   }
   return false;
 }
@@ -446,6 +440,12 @@ bool ARMBaseRegisterInfo::hasBasePointer(const MachineFunction &MF) const {
   const MachineFrameInfo &MFI = MF.getFrameInfo();
   const ARMFunctionInfo *AFI = MF.getInfo<ARMFunctionInfo>();
   const ARMFrameLowering *TFI = getFrameLowering(MF);
+
+  // For Windows SEH, the runtime does not preserve SP or R11 for EH funclets.
+  // Fortunately, R4-R10 are always preserved.
+  // Therefore, we force these functions to set up a base pointer.
+  if (MF.hasEHFunclets())
+    return true;
 
   // If we have stack realignment and VLAs, we have no pointer to use to
   // access the stack. If we have stack realignment, and a large call frame,
@@ -504,7 +504,7 @@ bool ARMBaseRegisterInfo::canRealignStack(const MachineFunction &MF) const {
 bool ARMBaseRegisterInfo::
 cannotEliminateFrame(const MachineFunction &MF) const {
   const MachineFrameInfo &MFI = MF.getFrameInfo();
-  if (MF.getTarget().Options.DisableFramePointerElim(MF) && MFI.adjustsStack())
+  if (MF.disableFramePointerElim() && MFI.adjustsStack())
     return true;
   return MFI.hasVarSizedObjects() || MFI.isFrameAddressTaken() ||
          hasStackRealignment(MF);
@@ -518,6 +518,16 @@ ARMBaseRegisterInfo::getFrameRegister(const MachineFunction &MF) const {
   if (TFI->hasFP(MF))
     return STI.getFramePointerReg();
   return ARM::SP;
+}
+
+unsigned
+ARMBaseRegisterInfo::getLocalAddressRegister(const MachineFunction &MF) const {
+  const auto &MFI = MF.getFrameInfo();
+  if (!MF.hasEHFunclets() && !MFI.hasVarSizedObjects())
+    return ARM::SP;
+  else if (MF.hasEHFunclets() || hasStackRealignment(MF))
+    return getBaseRegister();
+  return getFrameRegister(MF);
 }
 
 /// emitLoadConstPool - Emits a load from constpool to materialize the
@@ -832,6 +842,13 @@ ARMBaseRegisterInfo::eliminateFrameIndex(MachineBasicBlock::iterator II,
   Register FrameReg;
 
   int Offset = TFI->ResolveFrameIndexReference(MF, FrameIndex, FrameReg, SPAdj);
+
+  if (MI.getOpcode() == TargetOpcode::LOCAL_ESCAPE) {
+    MachineOperand &FI = MI.getOperand(FIOperandNum);
+    StackOffset Offset = TFI->getNonLocalFrameIndexReference(MF, FrameIndex);
+    FI.ChangeToImmediate(Offset.getFixed());
+    return false;
+  }
 
   // PEI::scavengeFrameVirtualRegs() cannot accurately track SPAdj because the
   // call frame setup/destroy instructions have already been eliminated.  That

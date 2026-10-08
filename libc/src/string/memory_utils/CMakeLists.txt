@@ -40,6 +40,7 @@ add_header_library(
     libc.src.__support.CPP.cstddef
     libc.src.__support.CPP.type_traits
     libc.src.__support.macros.config
+    libc.src.__support.macros.is_defined
     libc.src.__support.macros.optimization
     libc.src.__support.macros.properties.architectures
     libc.src.__support.macros.properties.compiler

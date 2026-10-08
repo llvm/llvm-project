@@ -24,20 +24,20 @@ body:             |
     ; CHECK-LABEL: name: test_v8f16.sqrt
     ; CHECK: liveins: $q0
     ; CHECK-NEXT: {{  $}}
-    ; CHECK-NEXT: [[COPY:%[0-9]+]]:_(<8 x s16>) = COPY $q0
-    ; CHECK-NEXT: [[UV:%[0-9]+]]:_(<4 x s16>), [[UV1:%[0-9]+]]:_(<4 x s16>) = G_UNMERGE_VALUES [[COPY]](<8 x s16>)
-    ; CHECK-NEXT: [[FPEXT:%[0-9]+]]:_(<4 x s32>) = G_FPEXT [[UV]](<4 x s16>)
-    ; CHECK-NEXT: [[FPEXT1:%[0-9]+]]:_(<4 x s32>) = G_FPEXT [[UV1]](<4 x s16>)
-    ; CHECK-NEXT: [[FSQRT:%[0-9]+]]:_(<4 x s32>) = G_FSQRT [[FPEXT]]
-    ; CHECK-NEXT: [[FSQRT1:%[0-9]+]]:_(<4 x s32>) = G_FSQRT [[FPEXT1]]
-    ; CHECK-NEXT: [[FPTRUNC:%[0-9]+]]:_(<4 x s16>) = G_FPTRUNC [[FSQRT]](<4 x s32>)
-    ; CHECK-NEXT: [[FPTRUNC1:%[0-9]+]]:_(<4 x s16>) = G_FPTRUNC [[FSQRT1]](<4 x s32>)
-    ; CHECK-NEXT: [[CONCAT_VECTORS:%[0-9]+]]:_(<8 x s16>) = G_CONCAT_VECTORS [[FPTRUNC]](<4 x s16>), [[FPTRUNC1]](<4 x s16>)
-    ; CHECK-NEXT: $q0 = COPY [[CONCAT_VECTORS]](<8 x s16>)
+    ; CHECK-NEXT: [[COPY:%[0-9]+]]:_(<8 x f16>) = COPY $q0
+    ; CHECK-NEXT: [[UV:%[0-9]+]]:_(<4 x f16>), [[UV1:%[0-9]+]]:_(<4 x f16>) = G_UNMERGE_VALUES [[COPY]](<8 x f16>)
+    ; CHECK-NEXT: [[FPEXT:%[0-9]+]]:_(<4 x f32>) = G_FPEXT [[UV]](<4 x f16>)
+    ; CHECK-NEXT: [[FPEXT1:%[0-9]+]]:_(<4 x f32>) = G_FPEXT [[UV1]](<4 x f16>)
+    ; CHECK-NEXT: [[FSQRT:%[0-9]+]]:_(<4 x f32>) = G_FSQRT [[FPEXT]]
+    ; CHECK-NEXT: [[FSQRT1:%[0-9]+]]:_(<4 x f32>) = G_FSQRT [[FPEXT1]]
+    ; CHECK-NEXT: [[FPTRUNC:%[0-9]+]]:_(<4 x f16>) = G_FPTRUNC [[FSQRT]](<4 x f32>)
+    ; CHECK-NEXT: [[FPTRUNC1:%[0-9]+]]:_(<4 x f16>) = G_FPTRUNC [[FSQRT1]](<4 x f32>)
+    ; CHECK-NEXT: [[CONCAT_VECTORS:%[0-9]+]]:_(<8 x f16>) = G_CONCAT_VECTORS [[FPTRUNC]](<4 x f16>), [[FPTRUNC1]](<4 x f16>)
+    ; CHECK-NEXT: $q0 = COPY [[CONCAT_VECTORS]](<8 x f16>)
     ; CHECK-NEXT: RET_ReallyLR implicit $q0
-    %0:_(<8 x s16>) = COPY $q0
-    %1:_(<8 x s16>) = G_FSQRT %0
-    $q0 = COPY %1(<8 x s16>)
+    %0:_(<8 x f16>) = COPY $q0
+    %1:_(<8 x f16>) = G_FSQRT %0
+    $q0 = COPY %1(<8 x f16>)
     RET_ReallyLR implicit $q0
 
 ...
@@ -54,15 +54,15 @@ body:             |
     ; CHECK-LABEL: name: test_v4f16.sqrt
     ; CHECK: liveins: $d0
     ; CHECK-NEXT: {{  $}}
-    ; CHECK-NEXT: [[COPY:%[0-9]+]]:_(<4 x s16>) = COPY $d0
-    ; CHECK-NEXT: [[FPEXT:%[0-9]+]]:_(<4 x s32>) = G_FPEXT [[COPY]](<4 x s16>)
-    ; CHECK-NEXT: [[FSQRT:%[0-9]+]]:_(<4 x s32>) = G_FSQRT [[FPEXT]]
-    ; CHECK-NEXT: [[FPTRUNC:%[0-9]+]]:_(<4 x s16>) = G_FPTRUNC [[FSQRT]](<4 x s32>)
-    ; CHECK-NEXT: $d0 = COPY [[FPTRUNC]](<4 x s16>)
+    ; CHECK-NEXT: [[COPY:%[0-9]+]]:_(<4 x f16>) = COPY $d0
+    ; CHECK-NEXT: [[FPEXT:%[0-9]+]]:_(<4 x f32>) = G_FPEXT [[COPY]](<4 x f16>)
+    ; CHECK-NEXT: [[FSQRT:%[0-9]+]]:_(<4 x f32>) = G_FSQRT [[FPEXT]]
+    ; CHECK-NEXT: [[FPTRUNC:%[0-9]+]]:_(<4 x f16>) = G_FPTRUNC [[FSQRT]](<4 x f32>)
+    ; CHECK-NEXT: $d0 = COPY [[FPTRUNC]](<4 x f16>)
     ; CHECK-NEXT: RET_ReallyLR implicit $d0
-    %0:_(<4 x s16>) = COPY $d0
-    %1:_(<4 x s16>) = G_FSQRT %0
-    $d0 = COPY %1(<4 x s16>)
+    %0:_(<4 x f16>) = COPY $d0
+    %1:_(<4 x f16>) = G_FSQRT %0
+    $d0 = COPY %1(<4 x f16>)
     RET_ReallyLR implicit $d0
 
 ...

@@ -81,6 +81,14 @@ static S s3(get_i());
 // CHECK-MESSAGES: [[@LINE-1]]:1: warning: static objects are disallowed; if possible, use a constexpr constructor instead [fuchsia-statically-constructed-objects]
 // CHECK-MESSAGES-NEXT:  static S s3(get_i());
 
+template <typename T, int Val>
+struct ClassTemplateWithStaticMember {
+  static S StaticMember;
+};
+
+template <typename T, int Val>
+S ClassTemplateWithStaticMember<T, Val>::StaticMember(Val);
+
 void f() {
   // Locally static is fine
   static int i;

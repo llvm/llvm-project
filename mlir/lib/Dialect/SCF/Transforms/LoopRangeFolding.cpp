@@ -16,6 +16,7 @@
 #include "mlir/Dialect/SCF/IR/SCF.h"
 #include "mlir/Dialect/SCF/Transforms/Transforms.h"
 #include "mlir/Dialect/SCF/Utils/Utils.h"
+#include "mlir/Dialect/Utils/StaticValueUtils.h"
 #include "mlir/IR/IRMapping.h"
 
 namespace mlir {
@@ -44,12 +45,18 @@ void ForLoopRangeFolding::runOnOperation() {
     // Fold until a fixed point is reached
     while (true) {
 
-      // If the induction variable is used more than once, we can't fold its
-      // arith ops into the loop range
-      if (!indVar.hasOneUse())
+      // If the induction variable is used by more than one operation, we can't
+      // fold its arith ops into the loop range. Note that a single operation
+      // may use the induction variable several times (e.g. `arith.addi %i,
+      // %i`), so check for a single user rather than a single use.
+      if (indVar.use_empty())
         break;
 
       Operation *user = *indVar.getUsers().begin();
+      if (!llvm::all_of(indVar.getUsers(),
+                        [&](Operation *u) { return u == user; }))
+        break;
+
       if (!isa<arith::AddIOp, arith::MulIOp>(user))
         break;
 
@@ -64,14 +71,29 @@ void ForLoopRangeFolding::runOnOperation() {
       IRMapping stepMap;
       stepMap.map(indVar, op.getStep());
 
-      if (isa<arith::AddIOp>(user)) {
+      if (auto addOp = dyn_cast<arith::AddIOp>(user)) {
         Operation *lbFold = b.clone(*user, lbMap);
         Operation *ubFold = b.clone(*user, ubMap);
 
         op.setLowerBound(lbFold->getResult(0));
         op.setUpperBound(ubFold->getResult(0));
 
-      } else if (isa<arith::MulIOp>(user)) {
+        // `arith.addi %i, %i` is `2 * %i`, so the step has to be doubled too.
+        if (addOp.getLhs() == indVar && addOp.getRhs() == indVar) {
+          Operation *stepFold = b.clone(*user, stepMap);
+          op.setStep(stepFold->getResult(0));
+        }
+
+      } else if (auto mulOp = dyn_cast<arith::MulIOp>(user)) {
+        // Only fold if the multiplier is a known strictly positive constant.
+        // Multiplying by zero or a negative value would produce an invalid
+        // step (scf.for requires a strictly positive step).
+        Value multiplier =
+            (mulOp.getLhs() == indVar) ? mulOp.getRhs() : mulOp.getLhs();
+        std::optional<int64_t> multiplierVal = getConstantIntValue(multiplier);
+        if (!multiplierVal || *multiplierVal <= 0)
+          break;
+
         Operation *lbFold = b.clone(*user, lbMap);
         Operation *ubFold = b.clone(*user, ubMap);
         Operation *stepFold = b.clone(*user, stepMap);

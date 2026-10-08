@@ -5,8 +5,6 @@
 program omp
   integer i, j, k
 
-  !ERROR: This construct requires a perfect nest of depth 3, but the associated nest is a perfect nest of depth 1
-  !BECAUSE: COLLAPSE clause was specified with argument 3
   !$omp do  collapse(3)
   do i = 0, 10
     if (i .lt. 1) then
@@ -21,8 +19,6 @@ program omp
   end do
   !$omp end do
 
-  !ERROR: This construct requires a perfect nest of depth 3, but the associated nest is a perfect nest of depth 2
-  !BECAUSE: COLLAPSE clause was specified with argument 3
   !$omp do  collapse(3)
   do i = 0, 10
     do j = 0, 10
@@ -54,8 +50,6 @@ program omp
   !$omp end do
 
 
-  !ERROR: This construct requires a perfect nest of depth 3, but the associated nest is a perfect nest of depth 2
-  !BECAUSE: COLLAPSE clause was specified with argument 3
   !$omp do  collapse(3)
   foo: do i = 0, 10
     foo1: do j = 0, 10

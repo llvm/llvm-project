@@ -222,3 +222,14 @@
 // RUN:     --offload-arch=znver4 %s 2>&1 | FileCheck -check-prefix=CHK-CPU-ARCH-X %s
 // CHK-CPU-ARCH-X: "-cc1" "-triple" "x86_64-unknown-linux-gnu" {{.*}} "-target-cpu" "x86-64"
 // CHK-CPU-ARCH-X: "-cc1" "-triple" "x86_64-unknown-linux-gnu" {{.*}} "-target-cpu" "znver4"
+
+/// ###########################################################################
+
+/// Check thumbv7 triples are considered compatible with armv7 triples, thus forwarding -mcpu=cortex-a7
+/// FIXME: If these triples are swapped, there is an assert
+// RUN:   %clang -### -no-canonical-prefixes -fopenmp=libomp -fopenmp-targets=thumbv7-pc-linux-gnu -Xopenmp-target=armv7-pc-linux-gnu -mcpu=cortex-a7 %s 2>&1 \
+// RUN:   | FileCheck -check-prefix=CHK-COMPAT-TRIPLE %s
+
+// CHK-COMPAT-TRIPLE: clang{{.*}} "-cc1" "-triple" "armv7-pc-linux-gnu"
+// CHK-COMPAT-TRIPLE-SAME: "-target-cpu" "cortex-a7"
+// CHK-COMPAT-TRIPLE-SAME: "-fopenmp-is-target-device"

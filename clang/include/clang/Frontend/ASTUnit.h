@@ -39,6 +39,7 @@
 #include "llvm/ADT/StringRef.h"
 #include "llvm/ADT/iterator_range.h"
 #include "llvm/Bitstream/BitstreamWriter.h"
+#include "llvm/Support/VirtualFileSystemFwd.h"
 #include <cassert>
 #include <cstddef>
 #include <cstdint>
@@ -52,11 +53,6 @@ namespace llvm {
 
 class MemoryBuffer;
 
-namespace vfs {
-
-class FileSystem;
-
-} // namespace vfs
 } // namespace llvm
 
 namespace clang {
@@ -679,7 +675,7 @@ public:
   bool visitLocalTopLevelDecls(void *context, DeclVisitorFn Fn);
 
   /// Get the PCH file if one was included.
-  OptionalFileEntryRef getPCHFile();
+  std::optional<StringRef> getPCHFile();
 
   /// Returns true if the ASTUnit was constructed from a serialized
   /// module file.

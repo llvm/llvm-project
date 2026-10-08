@@ -10,11 +10,11 @@ concept C = sizeof(T) % 2 == 0;
 
 void concept_specialization() { bool a = C<int>; }
 
-// CIR: %[[A_ADDR:.*]] = cir.alloca !cir.bool, !cir.ptr<!cir.bool>, ["a", init]
+// CIR: %[[A_ADDR:.*]] = cir.alloca "a" {{.*}} init : !cir.ptr<!cir.bool>
 // CIR: %[[CONST_TRUE:.*]] = cir.const #true
 // CIR: cir.store {{.*}} %[[CONST_TRUE]], %[[A_ADDR]] : !cir.bool, !cir.ptr<!cir.bool>
 
-// LLVM: %[[A_ADDR:.*]] = alloca i8, i64 1, align 1
+// LLVM: %[[A_ADDR:.*]] = alloca i8, align 1
 // LLVM: store i8 1, ptr %[[A_ADDR]], align 1
 
 // OGCG: %[[A_ADDR:.*]] = alloca i8, align 1

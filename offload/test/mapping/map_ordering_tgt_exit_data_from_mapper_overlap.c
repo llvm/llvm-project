@@ -4,7 +4,6 @@
 // RUN: env LIBOMPTARGET_DEBUG=1 %libomptarget-run-generic 2>&1 \
 // RUN: | %fcheck-generic -check-prefix=DEBUG
 // REQUIRES: libomptarget-debug
-// XFAIL: intelgpu
 
 // The test ensures that the FROM transfer for the full "s1" is performed, and
 // not just the FROM done via the mapper of s1.s2.
@@ -38,10 +37,10 @@ int main() {
   }
 
   // clang-format off
-  // DEBUG: omptarget --> Tracking released entry: HstPtr=0x[[#%x,HOST_ADDR:]], Size=[[#%u,SIZE:]], ForceDelete=0
-  // DEBUG: omptarget --> Moving {{.*}} bytes (tgt:0x{{.*}}) -> (hst:0x{{.*}})
-  // DEBUG: omptarget --> Pointer HstPtr=0x{{0*}}[[#HOST_ADDR]] falls within a range previously released
-  // DEBUG: omptarget --> Moving [[#SIZE]] bytes (tgt:0x{{.*}}) -> (hst:0x{{0*}}[[#HOST_ADDR]])
+  // DEBUG: --> Tracking released entry: HstPtr=0x[[#%x,HOST_ADDR:]], Size=[[#%u,SIZE:]], ForceDelete=0
+  // DEBUG: --> Moving {{.*}} bytes (tgt:0x{{.*}}) -> (hst:0x{{.*}})
+  // DEBUG: --> Pointer HstPtr=0x{{0*}}[[#HOST_ADDR]] falls within a range previously released
+  // DEBUG: --> Moving [[#SIZE]] bytes (tgt:0x{{.*}}) -> (hst:0x{{0*}}[[#HOST_ADDR]])
   // clang-format on
 #pragma omp target exit data map(from : s1) map(mapper(my_mapper), from : s1.s2)
 

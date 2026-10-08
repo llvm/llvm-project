@@ -152,7 +152,7 @@ def : InstRW<[M55WriteDX_SI], (instregex "t2CS(EL|INC|INV|NEG)")>;
 // Thumb 2 instructions that could be reduced to a thumb 1 instruction and can
 // be dual issued with one of the above. This list is optimistic.
 def : InstRW<[M55WriteDX_DI], (instregex "t2ADDC?rr$", "t2ADDrr$",
-           "t2ADDSrr$", "t2ANDrr$", "t2ASRr[ir]$", "t2BICrr$", "t2CMNzrr$",
+           "t2ADDSrr$", "t2ANDrr$", "t2ASRr[ir]$", "t2BICrr$", "t2CMNrr$",
            "t2CMPr[ir]$", "t2EORrr$", "t2LSLr[ir]$", "t2LSRr[ir]$", "t2MVNr$",
            "t2ORRrr$", "t2REV(16|SH)?$", "t2RORrr$", "t2RSBr[ir]$", "t2RSBSri$",
            "t2SBCrr$", "t2SUBS?rr$", "t2TEQrr$", "t2TSTrr$", "t2STRi12$",
@@ -161,7 +161,7 @@ def : InstRW<[M55WriteDX_DI], (instregex "t2ADDC?rr$", "t2ADDrr$",
 def : InstRW<[M55WriteDX_DI], (instregex "t2SETPAN$", "tADC$", "tADDhirr$",
            "tADDrSP$", "tADDrSPi$", "tADDrr$", "tADDspi$", "tADDspr$", "tADR$",
            "tAND$", "tASRri$", "tASRrr$", "tBIC$", "tBKPT$", "tCBNZ$", "tCBZ$",
-           "tCMNz$", "tCMPhir$", "tCMPi8$", "tCMPr$", "tCPS$", "tEOR$", "tHINT$",
+           "tCMN$","tCMPhir$", "tCMPi8$", "tCMPr$", "tCPS$", "tEOR$", "tHINT$",
            "tHLT$", "tLSLri$", "tLSLrr$", "tLSRri$", "tLSRrr$", "tMOVSr$",
            "tMUL$", "tMVN$", "tORR$", "tPICADD$", "tPOP$", "tPUSH$", "tREV$",
            "tREV16$", "tREVSH$", "tROR$", "tRSB$", "tSBC$", "tSETEND$",

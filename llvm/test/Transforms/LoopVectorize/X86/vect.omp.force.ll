@@ -49,7 +49,7 @@ for.end:
 }
 
 !1 = !{!1, !2, !{!"llvm.loop.parallel_accesses", !11}}
-!2 = !{!"llvm.loop.vectorize.enable", i1 true}
+!2 = !{!"llvm.loop.vectorize.enable"}
 !11 = distinct !{}
 
 ;
@@ -79,7 +79,6 @@ for.end:
   ret void
 }
 
-declare float @llvm.sin.f32(float) nounwind readnone
 
 ; Dummy metadata
 !3 = !{!3, !{!"llvm.loop.parallel_accesses", !13}}

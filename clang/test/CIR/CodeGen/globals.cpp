@@ -38,6 +38,12 @@ int *constArrAddr = &arr[2][1];
 
 bool bool_global = true;
 
-// CIR: cir.global external @bool_global = #true {alignment = 1 : i64}
+// CIR: cir.global external @bool_global = #true align(1)
 // LLVM: @bool_global = global i8 1, align 1
 // OGCG: @bool_global = global i8 1, align 1
+
+bool boolArr_global[4] = {true, false, true, false};
+
+// CIR: cir.global external @boolArr_global = #cir.const_array<[#true, #false, #true], trailing_zeros> : !cir.array<!cir.bool x 4>
+// LLVM: @boolArr_global = global [4 x i8] c"\01\00\01\00", align 1
+// OGCG: @boolArr_global = global [4 x i8] c"\01\00\01\00", align 1

@@ -33,6 +33,8 @@
 #include "lldb/Utility/StreamString.h"
 #include "lldb/ValueObject/ValueObject.h"
 #include "llvm/ADT/ScopeExit.h"
+#include "llvm/Support/Error.h"
+#include "llvm/Support/FormatAdapters.h"
 #include <optional>
 
 using namespace lldb;
@@ -255,10 +257,12 @@ lldb_private::Status PlatformPOSIX::GetFile(
         offset += n_read;
       }
     }
-    // Ignore the close error of src.
-    if (fd_src != UINT64_MAX)
-      CloseFile(fd_src, error);
-    // And close the dst file descriptot.
+    if (fd_src != UINT64_MAX) {
+      // Ignore the close error of src.
+      Status close_error;
+      CloseFile(fd_src, close_error);
+    }
+    // And close the dst file descriptor.
     if (fd_dst != UINT64_MAX &&
         !FileCache::GetInstance().CloseFile(fd_dst, error)) {
       if (!error.Fail())
@@ -549,9 +553,8 @@ Status PlatformPOSIX::EvaluateLibdlExpression(
   return Status();
 }
 
-std::unique_ptr<UtilityFunction>
-PlatformPOSIX::MakeLoadImageUtilityFunction(ExecutionContext &exe_ctx,
-                                            Status &error) {
+llvm::Expected<std::unique_ptr<UtilityFunction>>
+PlatformPOSIX::MakeLoadImageUtilityFunction(ExecutionContext &exe_ctx) {
   // Remember to prepend this with the prefix from
   // GetLibdlFunctionDeclarations. The returned values are all in
   // __lldb_dlopen_result for consistency. The wrapper returns a void * but
@@ -626,23 +629,21 @@ PlatformPOSIX::MakeLoadImageUtilityFunction(ExecutionContext &exe_ctx,
       std::move(expr), dlopen_wrapper_name, eLanguageTypeC_plus_plus, exe_ctx);
   if (!utility_fn_or_error) {
     std::string error_str = llvm::toString(utility_fn_or_error.takeError());
-    error = Status::FromErrorStringWithFormat(
+    return llvm::createStringError(
         "dlopen error: could not create utility function: %s",
         error_str.c_str());
-    return nullptr;
   }
   std::unique_ptr<UtilityFunction> dlopen_utility_func_up =
       std::move(*utility_fn_or_error);
 
   Value value;
   ValueList arguments;
-  FunctionCaller *do_dlopen_function = nullptr;
 
   // Fetch the clang types we will need:
   TypeSystemClangSP scratch_ts_sp =
       ScratchTypeSystemClang::GetForTarget(process->GetTarget());
   if (!scratch_ts_sp)
-    return nullptr;
+    return llvm::createStringError("dlopen error: no scratch type system");
 
   CompilerType clang_void_pointer_type =
       scratch_ts_sp->GetBasicType(eBasicTypeVoid).GetPointerType();
@@ -659,24 +660,18 @@ PlatformPOSIX::MakeLoadImageUtilityFunction(ExecutionContext &exe_ctx,
   arguments.PushValue(value);
   arguments.PushValue(value);
   arguments.PushValue(value);
-  
-  do_dlopen_function = dlopen_utility_func_up->MakeFunctionCaller(
+
+  dlopen_utility_func_up->MakeFunctionCaller(
       clang_void_pointer_type, arguments, exe_ctx.GetThreadSP(), utility_error);
-  if (utility_error.Fail()) {
-    error = Status::FromErrorStringWithFormat(
+  if (utility_error.Fail())
+    return llvm::createStringError(
         "dlopen error: could not make function caller: %s",
         utility_error.AsCString());
-    return nullptr;
-  }
-  
-  do_dlopen_function = dlopen_utility_func_up->GetFunctionCaller();
-  if (!do_dlopen_function) {
-    error =
-        Status::FromErrorString("dlopen error: could not get function caller.");
-    return nullptr;
-  }
-  
-  // We made a good utility function, so cache it in the process:
+
+  if (!dlopen_utility_func_up->GetFunctionCaller())
+    return llvm::createStringError(
+        "dlopen error: could not get function caller.");
+
   return dlopen_utility_func_up;
 }
 
@@ -704,21 +699,20 @@ uint32_t PlatformPOSIX::DoLoadImage(lldb_private::Process *process,
   thread_sp->CalculateExecutionContext(exe_ctx);
 
   Status utility_error;
-  UtilityFunction *dlopen_utility_func;
   ValueList arguments;
-  FunctionCaller *do_dlopen_function = nullptr;
 
   // The UtilityFunction is held in the Process.  Platforms don't track the
   // lifespan of the Targets that use them, we can't put this in the Platform.
-  dlopen_utility_func = process->GetLoadImageUtilityFunction(
-      this, [&]() -> std::unique_ptr<UtilityFunction> {
-        return MakeLoadImageUtilityFunction(exe_ctx, error);
-      });
-  // If we couldn't make it, the error will be in error, so we can exit here.
-  if (!dlopen_utility_func)
+  llvm::Expected<UtilityFunction &> dlopen_utility_func_or_err =
+      process->GetLoadImageUtilityFunction(
+          this, [&]() { return MakeLoadImageUtilityFunction(exe_ctx); });
+  if (!dlopen_utility_func_or_err) {
+    error = Status::FromError(dlopen_utility_func_or_err.takeError());
     return LLDB_INVALID_IMAGE_TOKEN;
-    
-  do_dlopen_function = dlopen_utility_func->GetFunctionCaller();
+  }
+
+  FunctionCaller *do_dlopen_function =
+      dlopen_utility_func_or_err->GetFunctionCaller();
   if (!do_dlopen_function) {
     error =
         Status::FromErrorString("dlopen error: could not get function caller.");
@@ -786,8 +780,8 @@ uint32_t PlatformPOSIX::DoLoadImage(lldb_private::Process *process,
 
   // Set the values into our args and write them to the target:
   if (paths != nullptr) {
-    // First insert the paths into the target.  This is expected to be a 
-    // continuous buffer with the strings laid out null terminated and
+    // First insert the paths into the target.  This is expected to be a
+    // continuous buffer with the strings laid out null-terminated and
     // end to end with an empty string terminating the buffer.
     // We also compute the buffer's required size as we go.
     size_t buffer_size = 0;
@@ -912,17 +906,17 @@ uint32_t PlatformPOSIX::DoLoadImage(lldb_private::Process *process,
   }
   
   // Read the dlopen token from the return area:
-  lldb::addr_t token = process->ReadPointerFromMemory(return_addr, 
-                                                      utility_error);
-  if (utility_error.Fail()) {
-    error = Status::FromErrorStringWithFormat(
-        "dlopen error: could not read the return struct: %s",
-        utility_error.AsCString());
+  llvm::Expected<lldb::addr_t> token =
+      process->ReadPointerFromMemory(return_addr);
+  if (!token) {
+    error = Status::FromErrorStringWithFormatv(
+        "dlopen error: could not read the return struct: {0}",
+        llvm::fmt_consume(token.takeError()));
     return LLDB_INVALID_IMAGE_TOKEN;
   }
-  
+
   // The dlopen succeeded!
-  if (token != 0x0) {
+  if (*token != 0x0) {
     if (loaded_image && buffer_addr != 0x0)
     {
       // Capture the image which was loaded.  We leave it in the buffer on
@@ -932,23 +926,22 @@ uint32_t PlatformPOSIX::DoLoadImage(lldb_private::Process *process,
       if (utility_error.Success())
         loaded_image->SetFile(name_string, llvm::sys::path::Style::posix);
     }
-    return process->AddImageToken(token);
+    return process->AddImageToken(*token);
   }
-    
+
   // We got an error, lets read in the error string:
   std::string dlopen_error_str;
-  lldb::addr_t error_addr 
-    = process->ReadPointerFromMemory(return_addr + addr_size, utility_error);
-  if (utility_error.Fail()) {
-    error = Status::FromErrorStringWithFormat(
-        "dlopen error: could not read error string: %s",
-        utility_error.AsCString());
+  llvm::Expected<lldb::addr_t> error_addr =
+      process->ReadPointerFromMemory(return_addr + addr_size);
+  if (!error_addr) {
+    error = Status::FromErrorStringWithFormatv(
+        "dlopen error: could not read error string: {0}",
+        llvm::fmt_consume(error_addr.takeError()));
     return LLDB_INVALID_IMAGE_TOKEN;
   }
-  
-  size_t num_chars = process->ReadCStringFromMemory(error_addr + addr_size, 
-                                                    dlopen_error_str, 
-                                                    utility_error);
+
+  size_t num_chars = process->ReadCStringFromMemory(
+      *error_addr + addr_size, dlopen_error_str, utility_error);
   if (utility_error.Success() && num_chars > 0)
     error = Status::FromErrorStringWithFormat("dlopen error: %s",
                                               dlopen_error_str.c_str());
@@ -962,7 +955,7 @@ uint32_t PlatformPOSIX::DoLoadImage(lldb_private::Process *process,
 Status PlatformPOSIX::UnloadImage(lldb_private::Process *process,
                                   uint32_t image_token) {
   const addr_t image_addr = process->GetImagePtrFromToken(image_token);
-  if (image_addr == LLDB_INVALID_IMAGE_TOKEN)
+  if (image_addr == LLDB_INVALID_ADDRESS)
     return Status::FromErrorString("Invalid image token");
 
   StreamString expr;
@@ -997,11 +990,9 @@ PlatformPOSIX::GetLibdlFunctionDeclarations(lldb_private::Process *process) {
              )";
 }
 
-ConstString PlatformPOSIX::GetFullNameForDylib(ConstString basename) {
-  if (basename.IsEmpty())
-    return basename;
+std::string PlatformPOSIX::GetFullNameForDylib(llvm::StringRef basename) {
+  if (basename.empty())
+    return basename.str();
 
-  StreamString stream;
-  stream.Printf("lib%s.so", basename.GetCString());
-  return ConstString(stream.GetString());
+  return llvm::formatv("lib{0}.so", basename).str();
 }

@@ -19,19 +19,19 @@
 //===----------------------------------------------------------------------===//
 
 #include "llvm/CodeGen/BasicBlockMatchingAndInference.h"
+#include "llvm/ADT/DenseMap.h"
 #include "llvm/CodeGen/BasicBlockSectionsProfileReader.h"
 #include "llvm/CodeGen/MachineBlockHashInfo.h"
 #include "llvm/CodeGen/Passes.h"
 #include "llvm/InitializePasses.h"
 #include <llvm/Support/CommandLine.h>
-#include <unordered_map>
 
 using namespace llvm;
 
 static cl::opt<float>
     PropellerInferThreshold("propeller-infer-threshold",
                             cl::desc("Threshold for infer stale profile"),
-                            cl::init(0.6), cl::Optional);
+                            cl::init(0.6));
 
 /// The object is used to identify and match basic blocks given their hashes.
 class StaleMatcher {
@@ -70,7 +70,7 @@ public:
 
 private:
   using HashBlockPairType = std::pair<BlendedBlockHash, MachineBasicBlock *>;
-  std::unordered_map<uint16_t, std::vector<HashBlockPairType>> OpHashToBlocks;
+  DenseMap<uint16_t, std::vector<HashBlockPairType>> OpHashToBlocks;
 };
 
 INITIALIZE_PASS_BEGIN(BasicBlockMatchingAndInference,

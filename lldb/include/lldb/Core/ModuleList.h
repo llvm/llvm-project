@@ -497,7 +497,8 @@ public:
   static Status
   GetSharedModule(const ModuleSpec &module_spec, lldb::ModuleSP &module_sp,
                   llvm::SmallVectorImpl<lldb::ModuleSP> *old_modules,
-                  bool *did_create_ptr, bool invoke_locate_callback = true);
+                  bool *did_create_ptr, bool invoke_locate_callback = true,
+                  bool invoke_symbol_locators = true);
 
   static bool RemoveSharedModule(lldb::ModuleSP &module_sp);
 
@@ -558,6 +559,11 @@ protected:
 
   /// An orphaned module that lives only in the ModuleList has a count of 1.
   static constexpr long kUseCountModuleListOrphaned = 1;
+
+private:
+  static bool LoadScriptingResourceInTargetForModule(Module &module,
+                                                     Target &target,
+                                                     Status &error);
 
 public:
   typedef LockingAdaptedIterable<std::recursive_mutex, collection>

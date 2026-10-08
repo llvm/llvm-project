@@ -27,13 +27,20 @@ def SingleElementVecFP64SchedPred : FeatureSchedPredicate<TuneHasSingleElementVe
 // is not enabled).
 def RV32SchedPred : NotSchedPred<FeatureSchedPredicate<Feature64Bit>>;
 
+// Generates a switch statement over a list of opcodes. More efficient
+// than CheckOpcode with longer opcode lists.
+class OpcodeSwitchPredicate<string Name, list<Instruction> Opcodes>
+    : TIIPredicate<Name,
+                   MCOpcodeSwitchStatement<
+                     [MCOpcodeSwitchCase<Opcodes, MCReturnStatement<TruePred>>],
+                     MCReturnStatement<FalsePred>>>;
+
 // Returns true if this is the sext.w pattern, addiw rd, rs1, 0.
 def isSEXT_W
     : TIIPredicate<"isSEXT_W",
                    MCReturnStatement<CheckAll<[
                      CheckOpcode<[ADDIW]>,
                      CheckIsRegOperand<1>,
-                     CheckIsImmOperand<2>,
                      CheckImmOperand<2, 0>
                    ]>>>;
 
@@ -43,7 +50,6 @@ def isZEXT_W
                    MCReturnStatement<CheckAll<[
                      CheckOpcode<[ADD_UW]>,
                      CheckIsRegOperand<1>,
-                     CheckIsRegOperand<2>,
                      CheckRegOperand<2, X0>
                    ]>>>;
 
@@ -53,45 +59,42 @@ def isZEXT_B
                    MCReturnStatement<CheckAll<[
                      CheckOpcode<[ANDI]>,
                      CheckIsRegOperand<1>,
-                     CheckIsImmOperand<2>,
                      CheckImmOperand<2, 255>
                    ]>>>;
 
 def isSelectPseudo
-    : TIIPredicate<"isSelectPseudo",
-                   MCReturnStatement<
-                     CheckOpcode<[
-                       Select_GPR_Using_CC_GPR,
-                       Select_GPR_Using_CC_Imm5_Zibi,
-                       Select_GPR_Using_CC_SImm5_CV,
-                       Select_GPRNoX0_Using_CC_SImm5NonZero_QC,
-                       Select_GPRNoX0_Using_CC_UImm5NonZero_QC,
-                       Select_GPRNoX0_Using_CC_SImm16NonZero_QC,
-                       Select_GPRNoX0_Using_CC_UImm16NonZero_QC,
-                       Select_GPR_Using_CC_UImmLog2XLen_NDS,
-                       Select_GPR_Using_CC_UImm7_NDS,
-                       Select_FPR16_Using_CC_GPR,
-                       Select_FPR16INX_Using_CC_GPR,
-                       Select_FPR32_Using_CC_GPR,
-                       Select_FPR32INX_Using_CC_GPR,
-                       Select_FPR64_Using_CC_GPR,
-                       Select_FPR64INX_Using_CC_GPR,
-                       Select_FPR64IN32X_Using_CC_GPR
-                     ]>>>;
+    : OpcodeSwitchPredicate<"isSelectPseudo",
+                            [
+                              Select_GPR_Using_CC_GPR,
+                              Select_GPR_Using_CC_Imm5_Zibi,
+                              Select_GPR_Using_CC_SImm5_CV,
+                              Select_GPRNoX0_Using_CC_SImm5NonZero_QC,
+                              Select_GPRNoX0_Using_CC_UImm5NonZero_QC,
+                              Select_GPRNoX0_Using_CC_SImm16NonZero_QC,
+                              Select_GPRNoX0_Using_CC_UImm16NonZero_QC,
+                              Select_GPR_Using_CC_UImmLog2XLen_NDS,
+                              Select_GPR_Using_CC_UImm7_NDS,
+                              Select_FPR16_Using_CC_GPR,
+                              Select_FPR16INX_Using_CC_GPR,
+                              Select_FPR32_Using_CC_GPR,
+                              Select_FPR32INX_Using_CC_GPR,
+                              Select_FPR64_Using_CC_GPR,
+                              Select_FPR64INX_Using_CC_GPR,
+                              Select_FPR64IN32X_Using_CC_GPR
+                            ]>;
 
 // Returns true if this is a vector configuration instruction.
 def isVectorConfigInstr
-    : TIIPredicate<"isVectorConfigInstr",
-                   MCReturnStatement<
-                     CheckOpcode<[
-                       PseudoVSETVLI,
-                       PseudoVSETVLIX0,
-                       PseudoVSETVLIX0X0,
-                       PseudoVSETIVLI,
-                       PseudoSF_VSETTNT,
-                       PseudoSF_VSETTNTX0,
-                       PseudoSF_VSETTNTX0X0
-                     ]>>>;
+    : OpcodeSwitchPredicate<"isVectorConfigInstr",
+                            [
+                              PseudoVSETVLI,
+                              PseudoVSETVLIX0,
+                              PseudoVSETVLIX0X0,
+                              PseudoVSETIVLI,
+                              PseudoSF_VSETTNT,
+                              PseudoSF_VSETTNTX0,
+                              PseudoSF_VSETTNTX0X0
+                            ]>;
 
 // Returns true if this is a PseudoSF_VSETTNT* instructions.
 def isXSfmmVectorConfigTNInstr
@@ -114,15 +117,14 @@ def isXSfmmVectorConfigTMTKInstr
 
 // Returns true if this is a XSfmm vector configuration instruction.
 def isXSfmmVectorConfigInstr
-    : TIIPredicate<"isXSfmmVectorConfigInstr",
-                   MCReturnStatement<
-                     CheckOpcode<[
-                       PseudoSF_VSETTNT,
-                       PseudoSF_VSETTNTX0,
-                       PseudoSF_VSETTNTX0X0,
-                       PseudoSF_VSETTM,
-                       PseudoSF_VSETTK
-                     ]>>>;
+    : OpcodeSwitchPredicate<"isXSfmmVectorConfigInstr",
+                            [
+                              PseudoSF_VSETTNT,
+                              PseudoSF_VSETTNTX0,
+                              PseudoSF_VSETTNTX0X0,
+                              PseudoSF_VSETTM,
+                              PseudoSF_VSETTK
+                            ]>;
 
 // Return true if this is 'vsetvli x0, x0, vtype' which preserves
 // VL and only sets VTYPE.
@@ -131,66 +133,70 @@ def isVLPreservingConfig
                    MCReturnStatement<CheckOpcode<[PseudoVSETVLIX0X0]>>>;
 
 def isFloatScalarMoveOrScalarSplatInstr
-    : TIIPredicate<"isFloatScalarMoveOrScalarSplatInstr",
-                   MCReturnStatement<
-                     CheckOpcode<!listflatten([
-                      !instances<Pseudo>("^PseudoVFMV_S_F.*"),
-                      !instances<Pseudo>("^PseudoVFMV_V_F.*")
-                     ])>>>;
+    : OpcodeSwitchPredicate<"isFloatScalarMoveOrScalarSplatInstr",
+                            !listflatten([
+                              !instances<Pseudo>("^PseudoVFMV_S_F.*"),
+                              !instances<Pseudo>("^PseudoVFMV_V_F.*")
+                            ])>;
 
 def isScalarExtractInstr
-    : TIIPredicate<"isScalarExtractInstr",
-                   MCReturnStatement<
-                     CheckOpcode<!listflatten([
-                      !instances<Pseudo>("^PseudoVMV_X_S.*"),
-                      !instances<Pseudo>("^PseudoVFMV_F.*_S.*")
-                     ])>>>;
-
-def isVExtractInstr
-    : TIIPredicate<"isVExtractInstr",
-                   MCReturnStatement<
-                     CheckOpcode<
-                      !instances<Instruction>("^PseudoRI_VEXTRACT.*")>>>;
+    : OpcodeSwitchPredicate<"isScalarExtractInstr",
+                            !listflatten([
+                              !instances<Pseudo>("^PseudoVMV_X_S.*"),
+                              !instances<Pseudo>("^PseudoVFMV_F.*_S.*")
+                            ])>;
 
 def isScalarInsertInstr
-    : TIIPredicate<"isScalarInsertInstr",
-                   MCReturnStatement<
-                     CheckOpcode<!listflatten([
-                      !instances<Pseudo>("^PseudoVMV_S_X.*"),
-                      !instances<Pseudo>("^PseudoVFMV_S_F.*")
-                     ])>>>;
+    : OpcodeSwitchPredicate<"isScalarInsertInstr",
+                            !listflatten([
+                              !instances<Pseudo>("^PseudoVMV_S_X.*"),
+                              !instances<Pseudo>("^PseudoVFMV_S_F.*")
+                            ])>;
 
 def isScalarSplatInstr
-    : TIIPredicate<"isScalarSplatInstr",
-                   MCReturnStatement<
-                     CheckOpcode<!listflatten([
-                      !instances<Pseudo>("^PseudoVMV_V_I.*"),
-                      !instances<Pseudo>("^PseudoVMV_V_X.*"),
-                      !instances<Pseudo>("^PseudoVFMV_V_F.*")
-                     ])>>>;
+    : OpcodeSwitchPredicate<"isScalarSplatInstr",
+                            !listflatten([
+                              !instances<Pseudo>("^PseudoVMV_V_I.*"),
+                              !instances<Pseudo>("^PseudoVMV_V_X.*"),
+                              !instances<Pseudo>("^PseudoVFMV_V_F.*")
+                            ])>;
 
 def isVSlideInstr
-    : TIIPredicate<"isVSlideInstr",
-                   MCReturnStatement<
-                     CheckOpcode<!listflatten([
-                      !instances<Pseudo>("^PseudoVSLIDEDOWN_VX.*"),
-                      !instances<Pseudo>("^PseudoVSLIDEDOWN_VI.*"),
-                      !instances<Pseudo>("^PseudoVSLIDEUP_VX.*"),
-                      !instances<Pseudo>("^PseudoVSLIDEUP_VI.*")
-                     ])>>>;
+    : OpcodeSwitchPredicate<"isVSlideInstr",
+                            !listflatten([
+                              !instances<Pseudo>("^PseudoVSLIDEDOWN_VX.*"),
+                              !instances<Pseudo>("^PseudoVSLIDEDOWN_VI.*"),
+                              !instances<Pseudo>("^PseudoVSLIDEUP_VX.*"),
+                              !instances<Pseudo>("^PseudoVSLIDEUP_VI.*")
+                            ])>;
+
+// Returns true if this is an integer or floating-point vector comparison.
+def isRVVCompare
+    : OpcodeSwitchPredicate<"isRVVCompare",
+                            !listflatten([
+                              !instances<Pseudo>(
+                                  "^PseudoVMS(EQ|NE|LTU?|LEU?|GTU?)_.*"),
+                              !instances<Pseudo>(
+                                  "^PseudoVMF(EQ|NE|LT|LE|GT|GE)(_ALT)?_.*")
+                            ])>;
 
 def isFaultOnlyFirstLoad
-    : TIIPredicate<"isFaultOnlyFirstLoad",
-                    MCReturnStatement<
-                      CheckOpcode<
-                       !instances<Pseudo>(
-                          "^PseudoVL(SEG[2-8])?E(8|16|32|64)FF_V.*")>>>;
+    : OpcodeSwitchPredicate<"isFaultOnlyFirstLoad",
+                            !instances<Pseudo>(
+                                "^PseudoVL(SEG[2-8])?E(8|16|32|64)FF_V.*")>;
+
+def isLoadImmediate
+    : TIIPredicate<"isLoadImmediate",
+                   MCReturnStatement<CheckAll<[
+                     CheckOpcode<[ADDI]>,
+                     CheckRegOperand<1, X0>,
+                     CheckIsImmOperand<2>
+                   ]>>>;
 
 def isNonZeroLoadImmediate
     : TIIPredicate<"isNonZeroLoadImmediate",
                    MCReturnStatement<CheckAll<[
                      CheckOpcode<[ADDI]>,
-                     CheckIsRegOperand<1>,
                      CheckRegOperand<1, X0>,
                      CheckIsImmOperand<2>,
                      CheckNot<CheckImmOperand<2, 0>>
@@ -200,7 +206,6 @@ def isLPAD
     : TIIPredicate<"isLPAD",
                    MCReturnStatement<CheckAll<[
                      CheckOpcode<[AUIPC]>,
-                     CheckIsRegOperand<0>,
                      CheckRegOperand<0, X0>,
                    ]>>>;
 
@@ -214,3 +219,46 @@ def ignoresVXRM
                         ]),
                         MCReturnStatement<CheckImmOperand<3, 0>>>],
                       MCReturnStatement<FalsePred>>>;
+
+// RVI Base Loads, only those using simm12(reg) for addressing
+def isBaseLoad
+    : OpcodeSwitchPredicate<"isBaseLoad",
+                            [
+                              LD,
+                              LW,
+                              LWU,
+                              LH,
+                              LHU,
+                              LB,
+                              LBU
+                            ]>;
+
+// RVI Base Stores, only those using simm12(reg) for addressing
+def isBaseStore
+    : OpcodeSwitchPredicate<"isBaseStore",
+                            [
+                              SD,
+                              SW,
+                              SH,
+                              SB,
+                            ]>;
+
+// Xqcilo 26-bit offset Loads (qc.e.lb, qc.e.lbu, qc.e.lh, qc.e.lhu, qc.e.lw)
+def isBaseQCLoad
+    : OpcodeSwitchPredicate<"isBaseQCLoad",
+                            [
+                              QC_E_LB,
+                              QC_E_LBU,
+                              QC_E_LH,
+                              QC_E_LHU,
+                              QC_E_LW
+                            ]>;
+
+// Xqcilo 26-bit offset Stores (qc.e.sb, qc.e.sh, qc.e.sw)
+def isBaseQCStore
+    : OpcodeSwitchPredicate<"isBaseQCStore",
+                            [
+                              QC_E_SB,
+                              QC_E_SH,
+                              QC_E_SW
+                            ]>;

@@ -10,7 +10,7 @@
 #include "src/__support/OSUtil/io.h"
 #include "src/__support/libc_assert.h"
 #include "src/__support/macros/config.h"
-#include "src/stdlib/abort.h"
+#include "src/stdlib/abort_utils.h"
 
 namespace LIBC_NAMESPACE_DECL {
 
@@ -18,7 +18,7 @@ LLVM_LIBC_FUNCTION(void, __assert_fail,
                    (const char *assertion, const char *file, unsigned line,
                     const char *function)) {
   LIBC_NAMESPACE::report_assertion_failure(assertion, file, line, function);
-  LIBC_NAMESPACE::abort();
+  LIBC_NAMESPACE::abort_utils::abort();
 }
 
 } // namespace LIBC_NAMESPACE_DECL

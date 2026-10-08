@@ -69,6 +69,34 @@ namespace Outer { template<class T> struct Bar {}; }
 auto y = Outer::Bar<int>(); y
 // CHECK-NEXT: (Outer::Bar<int> &) @0x{{[0-9a-f]+}}
 
+// Check that const is preserved
+const auto z = Outer::Foo(); z
+// CHECK-NEXT: (const Outer::Foo &) @0x{{[0-9a-f]+}}
+
+// Check printing of DecltypeTypes (this used to assert)
+namespace N { struct D {}; }
+decltype(N::D()) decl1; decl1
+// CHECK-NEXT: (N::D &) @0x{{[0-9a-f]+}}
+
+// double-nested DecltypeType
+decltype(decl1) decl2; decl2
+// CHECK-NEXT: (N::D &) @0x{{[0-9a-f]+}}
+
+const decltype(N::D()) decl3; decl3
+// CHECK-NEXT: (const N::D &) @0x{{[0-9a-f]+}}
+
+// Check printing of UnaryTransformType (this used to assert)
+__remove_extent(N::D)* decl4; decl4
+// CHECK-NEXT: (N::D *)
+
+// A call to a void function without a semicolon must still be executed.
+// https://github.com/llvm/llvm-project/issues/219800
+int void_x = 10;
+void set_void_x() { void_x = 100; }
+set_void_x()
+void_x
+// CHECK-NEXT: (int) 100
+
 // int i = 12;
 // int &iref = i;
 // iref

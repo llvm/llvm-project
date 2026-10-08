@@ -7,7 +7,7 @@
 //===----------------------------------------------------------------------===//
 
 #include "NVPTXTargetTransformInfo.h"
-#include "NVPTXUtilities.h"
+#include "NVVMProperties.h"
 #include "llvm/ADT/STLExtras.h"
 #include "llvm/Analysis/LoopInfo.h"
 #include "llvm/Analysis/TargetTransformInfo.h"
@@ -43,37 +43,6 @@ static bool readsLaneId(const IntrinsicInst *II) {
   return II->getIntrinsicID() == Intrinsic::nvvm_read_ptx_sreg_laneid;
 }
 
-// Whether the given intrinsic is an atomic instruction in PTX.
-static bool isNVVMAtomic(const IntrinsicInst *II) {
-  switch (II->getIntrinsicID()) {
-  default:
-    return false;
-  case Intrinsic::nvvm_atomic_add_gen_f_cta:
-  case Intrinsic::nvvm_atomic_add_gen_f_sys:
-  case Intrinsic::nvvm_atomic_add_gen_i_cta:
-  case Intrinsic::nvvm_atomic_add_gen_i_sys:
-  case Intrinsic::nvvm_atomic_and_gen_i_cta:
-  case Intrinsic::nvvm_atomic_and_gen_i_sys:
-  case Intrinsic::nvvm_atomic_cas_gen_i_cta:
-  case Intrinsic::nvvm_atomic_cas_gen_i_sys:
-  case Intrinsic::nvvm_atomic_dec_gen_i_cta:
-  case Intrinsic::nvvm_atomic_dec_gen_i_sys:
-  case Intrinsic::nvvm_atomic_inc_gen_i_cta:
-  case Intrinsic::nvvm_atomic_inc_gen_i_sys:
-  case Intrinsic::nvvm_atomic_max_gen_i_cta:
-  case Intrinsic::nvvm_atomic_max_gen_i_sys:
-  case Intrinsic::nvvm_atomic_min_gen_i_cta:
-  case Intrinsic::nvvm_atomic_min_gen_i_sys:
-  case Intrinsic::nvvm_atomic_or_gen_i_cta:
-  case Intrinsic::nvvm_atomic_or_gen_i_sys:
-  case Intrinsic::nvvm_atomic_exch_gen_i_cta:
-  case Intrinsic::nvvm_atomic_exch_gen_i_sys:
-  case Intrinsic::nvvm_atomic_xor_gen_i_cta:
-  case Intrinsic::nvvm_atomic_xor_gen_i_sys:
-    return true;
-  }
-}
-
 bool NVPTXTTIImpl::isSourceOfDivergence(const Value *V) const {
   // Without inter-procedural analysis, we conservatively assume that arguments
   // to __device__ functions are divergent.
@@ -101,10 +70,6 @@ bool NVPTXTTIImpl::isSourceOfDivergence(const Value *V) const {
     if (const IntrinsicInst *II = dyn_cast<IntrinsicInst>(I)) {
       // Instructions that read threadIdx are obviously divergent.
       if (readsThreadIndex(II) || readsLaneId(II))
-        return true;
-      // Handle the NVPTX atomic intrinsics that cannot be represented as an
-      // atomic IR instruction.
-      if (isNVVMAtomic(II))
         return true;
     }
     // Conservatively consider the return value of function calls as divergent.
@@ -210,23 +175,23 @@ static Instruction *convertNvvmIntrinsicToLlvm(InstCombiner &IC,
     case Intrinsic::nvvm_fma_rn_bf16x2:
       return {Intrinsic::fma, FTZ_MustBeOff, true};
     case Intrinsic::nvvm_fmax_d:
-      return {Intrinsic::maxnum, FTZ_Any};
+      return {Intrinsic::maximumnum, FTZ_Any};
     case Intrinsic::nvvm_fmax_f:
-      return {Intrinsic::maxnum, FTZ_MustBeOff};
+      return {Intrinsic::maximumnum, FTZ_MustBeOff};
     case Intrinsic::nvvm_fmax_ftz_f:
-      return {Intrinsic::maxnum, FTZ_MustBeOn};
+      return {Intrinsic::maximumnum, FTZ_MustBeOn};
     case Intrinsic::nvvm_fmax_nan_f:
       return {Intrinsic::maximum, FTZ_MustBeOff};
     case Intrinsic::nvvm_fmax_ftz_nan_f:
       return {Intrinsic::maximum, FTZ_MustBeOn};
     case Intrinsic::nvvm_fmax_f16:
-      return {Intrinsic::maxnum, FTZ_MustBeOff, true};
+      return {Intrinsic::maximumnum, FTZ_MustBeOff, true};
     case Intrinsic::nvvm_fmax_ftz_f16:
-      return {Intrinsic::maxnum, FTZ_MustBeOn, true};
+      return {Intrinsic::maximumnum, FTZ_MustBeOn, true};
     case Intrinsic::nvvm_fmax_f16x2:
-      return {Intrinsic::maxnum, FTZ_MustBeOff, true};
+      return {Intrinsic::maximumnum, FTZ_MustBeOff, true};
     case Intrinsic::nvvm_fmax_ftz_f16x2:
-      return {Intrinsic::maxnum, FTZ_MustBeOn, true};
+      return {Intrinsic::maximumnum, FTZ_MustBeOn, true};
     case Intrinsic::nvvm_fmax_nan_f16:
       return {Intrinsic::maximum, FTZ_MustBeOff, true};
     case Intrinsic::nvvm_fmax_ftz_nan_f16:
@@ -236,23 +201,23 @@ static Instruction *convertNvvmIntrinsicToLlvm(InstCombiner &IC,
     case Intrinsic::nvvm_fmax_ftz_nan_f16x2:
       return {Intrinsic::maximum, FTZ_MustBeOn, true};
     case Intrinsic::nvvm_fmin_d:
-      return {Intrinsic::minnum, FTZ_Any};
+      return {Intrinsic::minimumnum, FTZ_Any};
     case Intrinsic::nvvm_fmin_f:
-      return {Intrinsic::minnum, FTZ_MustBeOff};
+      return {Intrinsic::minimumnum, FTZ_MustBeOff};
     case Intrinsic::nvvm_fmin_ftz_f:
-      return {Intrinsic::minnum, FTZ_MustBeOn};
+      return {Intrinsic::minimumnum, FTZ_MustBeOn};
     case Intrinsic::nvvm_fmin_nan_f:
       return {Intrinsic::minimum, FTZ_MustBeOff};
     case Intrinsic::nvvm_fmin_ftz_nan_f:
       return {Intrinsic::minimum, FTZ_MustBeOn};
     case Intrinsic::nvvm_fmin_f16:
-      return {Intrinsic::minnum, FTZ_MustBeOff, true};
+      return {Intrinsic::minimumnum, FTZ_MustBeOff, true};
     case Intrinsic::nvvm_fmin_ftz_f16:
-      return {Intrinsic::minnum, FTZ_MustBeOn, true};
+      return {Intrinsic::minimumnum, FTZ_MustBeOn, true};
     case Intrinsic::nvvm_fmin_f16x2:
-      return {Intrinsic::minnum, FTZ_MustBeOff, true};
+      return {Intrinsic::minimumnum, FTZ_MustBeOff, true};
     case Intrinsic::nvvm_fmin_ftz_f16x2:
-      return {Intrinsic::minnum, FTZ_MustBeOn, true};
+      return {Intrinsic::minimumnum, FTZ_MustBeOn, true};
     case Intrinsic::nvvm_fmin_nan_f16:
       return {Intrinsic::minimum, FTZ_MustBeOff, true};
     case Intrinsic::nvvm_fmin_ftz_nan_f16:
@@ -400,26 +365,33 @@ static Instruction *convertNvvmIntrinsicToLlvm(InstCombiner &IC,
   llvm_unreachable("All SpecialCase enumerators should be handled in switch.");
 }
 
-// Returns true/false when we know the answer, nullopt otherwise.
-static std::optional<bool> evaluateIsSpace(Intrinsic::ID IID, unsigned AS) {
+// Returns whether a pointer in AS is in the given specific address space, or
+// nullopt when this cannot be determined at compile time.
+static std::optional<bool> isInAddressSpace(unsigned AS, unsigned SpecificAS) {
   if (AS == NVPTXAS::ADDRESS_SPACE_GENERIC ||
       AS == NVPTXAS::ADDRESS_SPACE_ENTRY_PARAM)
     return std::nullopt; // Got to check at run-time.
+  if (AS == NVPTXAS::ADDRESS_SPACE_SHARED_CLUSTER &&
+      SpecificAS == NVPTXAS::ADDRESS_SPACE_SHARED)
+    return std::nullopt;
+  return AS == SpecificAS ||
+         (AS == NVPTXAS::ADDRESS_SPACE_SHARED &&
+          SpecificAS == NVPTXAS::ADDRESS_SPACE_SHARED_CLUSTER);
+}
+
+// Returns true/false when we know the answer, nullopt otherwise.
+static std::optional<bool> evaluateIsSpace(Intrinsic::ID IID, unsigned AS) {
   switch (IID) {
   case Intrinsic::nvvm_isspacep_global:
-    return AS == NVPTXAS::ADDRESS_SPACE_GLOBAL;
+    return isInAddressSpace(AS, NVPTXAS::ADDRESS_SPACE_GLOBAL);
   case Intrinsic::nvvm_isspacep_local:
-    return AS == NVPTXAS::ADDRESS_SPACE_LOCAL;
+    return isInAddressSpace(AS, NVPTXAS::ADDRESS_SPACE_LOCAL);
   case Intrinsic::nvvm_isspacep_shared:
-    // If shared cluster this can't be evaluated at compile time.
-    if (AS == NVPTXAS::ADDRESS_SPACE_SHARED_CLUSTER)
-      return std::nullopt;
-    return AS == NVPTXAS::ADDRESS_SPACE_SHARED;
+    return isInAddressSpace(AS, NVPTXAS::ADDRESS_SPACE_SHARED);
   case Intrinsic::nvvm_isspacep_shared_cluster:
-    return AS == NVPTXAS::ADDRESS_SPACE_SHARED_CLUSTER ||
-           AS == NVPTXAS::ADDRESS_SPACE_SHARED;
+    return isInAddressSpace(AS, NVPTXAS::ADDRESS_SPACE_SHARED_CLUSTER);
   case Intrinsic::nvvm_isspacep_const:
-    return AS == NVPTXAS::ADDRESS_SPACE_CONST;
+    return isInAddressSpace(AS, NVPTXAS::ADDRESS_SPACE_CONST);
   default:
     llvm_unreachable("Unexpected intrinsic");
   }
@@ -458,13 +430,49 @@ handleSpaceCheckIntrinsics(InstCombiner &IC, IntrinsicInst &II) {
   }
 }
 
+static Instruction *foldAbsIntoRedux(InstCombiner &IC, IntrinsicInst &II) {
+  Intrinsic::ID AbsIID;
+  switch (II.getIntrinsicID()) {
+  case Intrinsic::nvvm_redux_sync_fmin:
+  case Intrinsic::nvvm_redux_sync_fmin_abs:
+    AbsIID = Intrinsic::nvvm_redux_sync_fmin_abs;
+    break;
+  case Intrinsic::nvvm_redux_sync_fmax:
+  case Intrinsic::nvvm_redux_sync_fmax_abs:
+    AbsIID = Intrinsic::nvvm_redux_sync_fmax_abs;
+    break;
+  case Intrinsic::nvvm_redux_sync_fmin_NaN:
+  case Intrinsic::nvvm_redux_sync_fmin_abs_NaN:
+    AbsIID = Intrinsic::nvvm_redux_sync_fmin_abs_NaN;
+    break;
+  case Intrinsic::nvvm_redux_sync_fmax_NaN:
+  case Intrinsic::nvvm_redux_sync_fmax_abs_NaN:
+    AbsIID = Intrinsic::nvvm_redux_sync_fmax_abs_NaN;
+    break;
+  default:
+    return nullptr;
+  }
+
+  auto *Abs = dyn_cast<IntrinsicInst>(II.getArgOperand(0));
+  if (!Abs || Abs->getIntrinsicID() != Intrinsic::fabs)
+    return nullptr;
+
+  II.setCalledFunction(
+      Intrinsic::getOrInsertDeclaration(II.getModule(), AbsIID));
+  // These attributes described the absolute value, not its source.
+  II.removeParamAttr(0, Attribute::NoFPClass);
+  II.removeParamAttr(0, Attribute::Returned);
+  return IC.replaceOperand(II, 0, Abs->getArgOperand(0));
+}
+
 std::optional<Instruction *>
 NVPTXTTIImpl::instCombineIntrinsic(InstCombiner &IC, IntrinsicInst &II) const {
   if (std::optional<Instruction *> I = handleSpaceCheckIntrinsics(IC, II))
     return *I;
   if (Instruction *I = convertNvvmIntrinsicToLlvm(IC, &II))
     return I;
-
+  if (Instruction *I = foldAbsIntoRedux(IC, II))
+    return I;
   return std::nullopt;
 }
 
@@ -500,7 +508,7 @@ NVPTXTTIImpl::getInstructionCost(const User *U,
 InstructionCost NVPTXTTIImpl::getArithmeticInstrCost(
     unsigned Opcode, Type *Ty, TTI::TargetCostKind CostKind,
     TTI::OperandValueInfo Op1Info, TTI::OperandValueInfo Op2Info,
-    ArrayRef<const Value *> Args, const Instruction *CxtI) const {
+    ArrayRef<const Value *> Args, const Instruction *CtxI) const {
   // Legalize the type.
   std::pair<InstructionCost, MVT> LT = getTypeLegalizationCost(Ty);
 
@@ -671,10 +679,21 @@ void NVPTXTTIImpl::collectKernelLaunchBounds(
     LB.push_back({"maxntidz", MaxNTID[2]});
 }
 
-InstructionUniformity
-NVPTXTTIImpl::getInstructionUniformity(const Value *V) const {
-  if (isSourceOfDivergence(V))
-    return InstructionUniformity::NeverUniform;
+// Global addresses can only be materialized if they are in generic global or
+// constant space.
+bool NVPTXTTIImpl::shouldBuildLookupTablesForConstant(Constant *C) const {
+  if (const auto *GV = dyn_cast<GlobalValue>(C)) {
+    const unsigned AS = GV->getAddressSpace();
+    return AS == NVPTXAS::ADDRESS_SPACE_GENERIC ||
+           AS == NVPTXAS::ADDRESS_SPACE_GLOBAL ||
+           AS == NVPTXAS::ADDRESS_SPACE_CONST;
+  }
+  return true;
+}
 
-  return InstructionUniformity::Default;
+ValueUniformity NVPTXTTIImpl::getValueUniformity(const Value *V) const {
+  if (isSourceOfDivergence(V))
+    return ValueUniformity::NeverUniform;
+
+  return ValueUniformity::Default;
 }

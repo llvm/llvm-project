@@ -1,5 +1,5 @@
 // RUN: %clang_cc1 -triple x86_64 -emit-llvm -o - %s | FileCheck %s '-D$CONST_AS='
-// RUN: %clang_cc1 -triple amdgcn -emit-llvm -o - %s | FileCheck %s '-D$CONST_AS= addrspace(4)'
+// RUN: %clang_cc1 -triple amdgpu -emit-llvm -o - %s | FileCheck %s '-D$CONST_AS= addrspace(4)'
 // END.
 # 1 "t.c"
 # 1 "<built-in>"

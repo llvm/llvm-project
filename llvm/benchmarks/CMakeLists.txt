@@ -14,8 +14,13 @@ add_benchmark(SandboxIRBench SandboxIRBench.cpp PARTIAL_SOURCES_INTENDED)
 add_benchmark(MustacheBench Mustache.cpp PARTIAL_SOURCES_INTENDED)
 add_benchmark(SpecialCaseListBM SpecialCaseListBM.cpp PARTIAL_SOURCES_INTENDED)
 add_benchmark(DWARFVerifierBM DWARFVerifierBM.cpp PARTIAL_SOURCES_INTENDED)
+add_benchmark(PointerUnionBM PointerUnionBM.cpp PARTIAL_SOURCES_INTENDED)
+add_benchmark(ImmutableSetIteratorBM ImmutableSetIteratorBM.cpp PARTIAL_SOURCES_INTENDED)
+add_benchmark(ImmutableSetBuildBM ImmutableSetBuildBM.cpp PARTIAL_SOURCES_INTENDED)
+add_benchmark(ImmutableMergeBM ImmutableMergeBM.cpp PARTIAL_SOURCES_INTENDED)
 
 add_benchmark(RuntimeLibcallsBench RuntimeLibcalls.cpp PARTIAL_SOURCES_INTENDED)
+add_benchmark(writeToOutputInParallelBench writeToOutputInParallel.cpp PARTIAL_SOURCES_INTENDED)
 
 if(NOT LLVM_TOOL_LLVM_DRIVER_BUILD)
   # TODO: Check if the tools are in LLVM_DISTRIBUTION_COMPONENTS with

@@ -1179,3 +1179,5 @@ bool ento::shouldRegisterDeprecatedOrUnsafeBufferHandling(
 }
 
 REGISTER_CHECKER(decodeValueOfObjCType)
+
+#undef REGISTER_CHECKER

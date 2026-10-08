@@ -652,6 +652,7 @@ multiclass 8LS_DForm_R_SI34_XT6_RA5_MEM_p<bits<5> opcode, dag OOL, dag IOL,
 def RCCp {
   dag AToVSRC = (COPY_TO_REGCLASS $XA, VSRC);
   dag BToVSRC = (COPY_TO_REGCLASS $XB, VSRC);
+  dag CToVSRC = (COPY_TO_REGCLASS $XC, VSRC);
 }
 
 let Predicates = [PrefixInstrs] in {

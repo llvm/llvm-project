@@ -729,24 +729,33 @@ RISCVLoadStoreOpt::mergePairedInsns(MachineBasicBlock::iterator I,
     }
   }
 
+  // Remember the original position of the instruction we're moving so we can
+  // restore it if we fail to form a pair.
+  MachineBasicBlock::iterator OrigNext = std::next(DeletionPoint);
+
   MachineInstr *ToInsert = DeletionPoint->removeFromParent();
   MachineBasicBlock &MBB = *InsertionPoint->getParent();
-  MachineBasicBlock::iterator First, Second;
+  MachineBasicBlock::iterator First, Second, Moved;
 
   if (!InsertAfter) {
     First = MBB.insert(InsertionPoint, ToInsert);
     Second = InsertionPoint;
+    Moved = First;
   } else {
     Second = MBB.insertAfter(InsertionPoint, ToInsert);
     First = InsertionPoint;
+    Moved = Second;
   }
 
   if (tryConvertToLdStPair(First, Second)) {
     LLVM_DEBUG(dbgs() << "Pairing load/store:\n    ");
     LLVM_DEBUG(prev_nodbg(NextI, MBB.begin())->print(dbgs()));
   } else if (!STI->is64Bit() && STI->hasVendorXqcilsm()) {
-    // We were unable to form the pair, so use the next non-debug instruction
-    // after the first instruction we had wanted to merge.
+    // We were unable to form the pair, so move the instruction back to it's
+    // original place. Point NextI to the next non-debug instruction after the
+    // first instruction we had wanted to merge.
+    MachineInstr *MovedMI = Moved->removeFromParent();
+    MBB.insert(OrigNext, MovedMI);
     NextI = next_nodbg(I, E);
   }
 
@@ -813,23 +822,19 @@ void RISCVLoadStoreOpt::splitLdSdIntoTwo(MachineBasicBlock &MBB,
     // X10 = LW killed X10, 0
     if (FirstReg == BaseReg) {
       MIB2 = BuildMI(MBB, MBBI, DL, TII->get(Opc))
-                 .addReg(SecondReg,
-                         RegState::Define | getDeadRegState(SecondOp.isDead()))
+                 .addDef(SecondReg, getDeadRegState(SecondOp.isDead()))
                  .addReg(BaseReg);
       MIB1 = BuildMI(MBB, MBBI, DL, TII->get(Opc))
-                 .addReg(FirstReg,
-                         RegState::Define | getDeadRegState(FirstOp.isDead()))
+                 .addDef(FirstReg, getDeadRegState(FirstOp.isDead()))
                  .addReg(BaseReg, getKillRegState(BaseOp.isKill()));
 
     } else {
       MIB1 = BuildMI(MBB, MBBI, DL, TII->get(Opc))
-                 .addReg(FirstReg,
-                         RegState::Define | getDeadRegState(FirstOp.isDead()))
+                 .addDef(FirstReg, getDeadRegState(FirstOp.isDead()))
                  .addReg(BaseReg);
 
       MIB2 = BuildMI(MBB, MBBI, DL, TII->get(Opc))
-                 .addReg(SecondReg,
-                         RegState::Define | getDeadRegState(SecondOp.isDead()))
+                 .addDef(SecondReg, getDeadRegState(SecondOp.isDead()))
                  .addReg(BaseReg, getKillRegState(BaseOp.isKill()));
     }
 
@@ -907,15 +912,14 @@ bool RISCVLoadStoreOpt::fixInvalidRegPairOp(MachineBasicBlock &MBB,
   unsigned RealOpc = IsLoad ? RISCV::LD_RV32 : RISCV::SD_RV32;
 
   // Create register pair from the two individual registers
-  unsigned RegPair = TRI->getMatchingSuperReg(FirstReg, RISCV::sub_gpr_even,
-                                              &RISCV::GPRPairRegClass);
+  MCRegister RegPair = TRI->getMatchingSuperReg(FirstReg, RISCV::sub_gpr_even,
+                                                &RISCV::GPRPairRegClass);
   // Create the real LD/SD instruction with register pair
   MachineInstrBuilder MIB = BuildMI(MBB, MBBI, DL, TII->get(RealOpc));
 
   if (IsLoad) {
     // For LD, the register pair is the destination
-    MIB.addReg(RegPair, RegState::Define | getDeadRegState(FirstOp.isDead() &&
-                                                           SecondOp.isDead()));
+    MIB.addDef(RegPair, getDeadRegState(FirstOp.isDead() && SecondOp.isDead()));
   } else {
     // For SD, the register pair is the source
     MIB.addReg(RegPair, getKillRegState(FirstOp.isKill() && SecondOp.isKill()));

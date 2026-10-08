@@ -29,7 +29,7 @@ AST_MATCHER_P(Stmt, forEachPrevStmt, ast_matchers::internal::Matcher<Stmt>,
   DynTypedNode P;
   bool IsHostile = false;
   for (const Stmt *Child = &Node; Child; Child = P.get<Stmt>()) {
-    auto Parents = Finder->getASTContext().getParents(*Child);
+    const auto Parents = Finder->getASTContext().getParents(*Child);
     if (Parents.empty())
       break;
     P = *Parents.begin();
@@ -68,7 +68,7 @@ static auto typeWithNameIn(const std::vector<StringRef> &Names) {
 }
 
 static auto functionWithNameIn(const std::vector<StringRef> &Names) {
-  auto Call = callExpr(callee(functionDecl(hasAnyName(Names))));
+  const auto Call = callExpr(callee(functionDecl(hasAnyName(Names))));
   return anyOf(expr(cxxBindTemporaryExpr(has(Call))), expr(Call));
 }
 

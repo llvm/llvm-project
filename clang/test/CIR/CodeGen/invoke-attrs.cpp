@@ -44,13 +44,13 @@ void test_ref_param_attrs(S &s, int &i) {
 }
 
 // CIR-LABEL: cir.func {{.*}}@_Z20test_ref_param_attrsR1SRi
-// CIR:         cir.call @_ZN1S9ref_paramERi({{%.*}}, {{%.*}}) : (!cir.ptr<!rec_S> {llvm.align = 4 : i64, llvm.dereferenceable = 20 : i64, llvm.nonnull, llvm.noundef}, !cir.ptr<!s32i> {llvm.align = 8 : i64, llvm.dereferenceable = 4 : i64, llvm.nonnull, llvm.noundef}) -> ()
+// CIR:         cir.call @_ZN1S9ref_paramERi({{%.*}}, {{%.*}}) : (!cir.ptr<!rec_S> {llvm.align = 4 : i64, llvm.dereferenceable = 20 : i64, llvm.nonnull, llvm.noundef}, !cir.ptr<!s32i> {llvm.align = 4 : i64, llvm.dereferenceable = 4 : i64, llvm.nonnull, llvm.noundef}) -> ()
 
 // CIR-FLAT-LABEL: cir.func {{.*}}@_Z20test_ref_param_attrsR1SRi
-// CIR-FLAT:         cir.try_call @_ZN1S9ref_paramERi({{%.*}}, {{%.*}}) ^{{bb[0-9]+}}, ^{{bb[0-9]+}} : (!cir.ptr<!rec_S> {llvm.align = 4 : i64, llvm.dereferenceable = 20 : i64, llvm.nonnull, llvm.noundef}, !cir.ptr<!s32i> {llvm.align = 8 : i64, llvm.dereferenceable = 4 : i64, llvm.nonnull, llvm.noundef}) -> ()
+// CIR-FLAT:         cir.try_call @_ZN1S9ref_paramERi({{%.*}}, {{%.*}}) ^{{bb[0-9]+}}, ^{{bb[0-9]+}} : (!cir.ptr<!rec_S> {llvm.align = 4 : i64, llvm.dereferenceable = 20 : i64, llvm.nonnull, llvm.noundef}, !cir.ptr<!s32i> {llvm.align = 4 : i64, llvm.dereferenceable = 4 : i64, llvm.nonnull, llvm.noundef}) -> ()
 
 // LLVM-LABEL: define {{.*}} void @_Z20test_ref_param_attrsR1SRi
-// LLVM:         invoke void @_ZN1S9ref_paramERi(ptr noundef nonnull align 4 dereferenceable(20) {{%.*}}, ptr noundef nonnull align 8 dereferenceable(4) {{%.*}})
+// LLVM:         invoke void @_ZN1S9ref_paramERi(ptr noundef nonnull align 4 dereferenceable(20) {{%.*}}, ptr noundef nonnull align 4 dereferenceable(4) {{%.*}})
 
 // OGCG-LABEL: define {{.*}} void @_Z20test_ref_param_attrsR1SRi
 // OGCG:         invoke void @_ZN1S9ref_paramERi(ptr noundef nonnull align 4 dereferenceable(20) {{%.*}}, ptr noundef nonnull align 4 dereferenceable(4) {{%.*}})

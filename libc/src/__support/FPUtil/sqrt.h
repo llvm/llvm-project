@@ -15,8 +15,8 @@
 #include "src/__support/FPUtil/generic/sqrt.h"
 
 // Generic instruction specializations with __builtin_elementwise_sqrt.
-#if defined(LIBC_TARGET_CPU_HAS_FPU_FLOAT) ||                                  \
-    defined(LIBC_TARGET_CPU_HAS_FPU_DOUBLE)
+#if !defined(LIBC_USE_CONSTEXPR) && (defined(LIBC_TARGET_CPU_HAS_FPU_FLOAT) || \
+                                     defined(LIBC_TARGET_CPU_HAS_FPU_DOUBLE))
 
 #if __has_builtin(__builtin_elementwise_sqrt)
 
@@ -48,7 +48,7 @@ template <> LIBC_INLINE long double sqrt<long double>(long double x) {
 
 #else // __builtin_elementwise_sqrt
 // Use inline assembly when __builtin_elementwise_sqrt is not available.
-#if defined(LIBC_TARGET_CPU_HAS_SSE2)
+#if defined(LIBC_TARGET_CPU_HAS_SSE2) && defined(LIBC_TARGET_ARCH_IS_X86_64)
 #include "x86_64/sqrt.h"
 #elif defined(LIBC_TARGET_ARCH_IS_AARCH64) && defined(__ARM_FP)
 #include "aarch64/sqrt.h"

@@ -5,7 +5,6 @@ Test process attach.
 
 import os
 import lldb
-import shutil
 from lldbsuite.test.decorators import *
 from lldbsuite.test.lldbtest import *
 from lldbsuite.test import lldbutil
@@ -13,7 +12,9 @@ from lldbsuite.test import lldbutil
 exe_name = "ProcessAttach"  # Must match Makefile
 
 
+@requireNotWasm("attaching requires launching the inferior as a host process")
 class ProcessAttachTestCase(TestBase):
+    SHARED_BUILD_TESTCASE = False
     NO_DEBUG_INFO_TESTCASE = True
 
     def setUp(self):
@@ -47,15 +48,37 @@ class ProcessAttachTestCase(TestBase):
         # Spawn a new process
         popen = self.spawnSubprocess(exe)
 
+        # Don't wait for the continue to finish.
+        self.setAsync(True)
         self.runCmd("process attach -c -p " + str(popen.pid))
 
         target = self.dbg.GetSelectedTarget()
 
+        # Start listening to process events.
         process = target.GetProcess()
         self.assertTrue(process, PROCESS_IS_VALID)
-        self.assertTrue(process.GetState(), lldb.eStateRunning)
+        broadcaster = process.GetBroadcaster()
+        listener = self.dbg.GetListener()
+        state = process.GetState()
+        self.assertEqual(
+            state, lldb.eStateStopped, "The attach stopped before continuing"
+        )
 
-    @skipIfWindows  # This is flakey on Windows AND when it fails, it hangs: llvm.org/pr48806
+        # Listen for events until we see the process continue.
+        event = lldb.SBEvent()
+        got_running = False
+        got_event = False
+        timeout = 180
+        while listener.WaitForEventForBroadcaster(timeout, broadcaster, event):
+            state = process.GetState()
+            got_event = True
+            if state == lldb.eStateRunning:
+                got_running = True
+                break
+
+        self.assertTrue(got_event, "Didn't receive any events after attaching")
+        self.assertTrue(got_running, "Process didn't auto-continue")
+
     def test_attach_to_process_from_different_dir_by_id(self):
         """Test attach by process id"""
         newdir = self.getBuildArtifact("newdir")
@@ -63,7 +86,6 @@ class ProcessAttachTestCase(TestBase):
         testdir = self.getBuildDir()
         exe = os.path.join(newdir, "proc_attach")
         self.buildProgram("main.cpp", exe)
-        self.addTearDownHook(lambda: shutil.rmtree(newdir))
 
         # Spawn a new process
         popen = self.spawnSubprocess(exe)
@@ -93,7 +115,6 @@ class ProcessAttachTestCase(TestBase):
         process = target.GetProcess()
         self.assertTrue(process, PROCESS_IS_VALID)
 
-    @skipIfWindows  # This test is flaky on Windows
     @expectedFailureNetBSD
     def test_attach_to_process_by_id_correct_executable_offset(self):
         """
@@ -117,10 +138,3 @@ class ProcessAttachTestCase(TestBase):
         )
         self.runCmd("process continue")
         self.expect("v g_val", substrs=["12345"])
-
-    def tearDown(self):
-        # Destroy process before TestBase.tearDown()
-        self.dbg.GetSelectedTarget().GetProcess().Destroy()
-
-        # Call super's tearDown().
-        TestBase.tearDown(self)

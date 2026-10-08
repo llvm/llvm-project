@@ -30,6 +30,59 @@ func.func @cast_unranked(%t: tensor<*xf32>) -> index {
 
 // -----
 
+//       CHECK: #[[$MAP:.+]] = affine_map<()[s0, s1] -> (s0 + s1)>
+// CHECK-LABEL: func @concat(
+//  CHECK-SAME:     %[[t0:[a-zA-Z0-9]+]]: tensor<?x4xf32>, %[[t1:[a-zA-Z0-9]+]]: tensor<?x4xf32>
+//       CHECK:   %[[dim0:.*]] = tensor.dim %[[t0]]
+//       CHECK:   %[[dim1:.*]] = tensor.dim %[[t1]]
+//       CHECK:   %[[sum:.*]] = affine.apply #[[$MAP]]()[%[[dim0]], %[[dim1]]]
+//       CHECK:   return %[[sum]]
+func.func @concat(%t0: tensor<?x4xf32>, %t1: tensor<?x4xf32>) -> index {
+  %0 = tensor.concat dim(0) %t0, %t1
+      : (tensor<?x4xf32>, tensor<?x4xf32>) -> tensor<?x4xf32>
+  %1 = "test.reify_bound"(%0) {dim = 0} : (tensor<?x4xf32>) -> (index)
+  return %1 : index
+}
+
+// -----
+
+// The size of a dimension that is not concatenated is the same in the result
+// and in every input. The first input is dynamic in dimension 1, so the
+// constant size can only come from the second one.
+
+// CHECK-LABEL: func @concat_non_concatenated_dim(
+//       CHECK:   %[[c4:.*]] = arith.constant 4 : index
+//       CHECK:   return %[[c4]]
+func.func @concat_non_concatenated_dim(%t0: tensor<?x?xf32>,
+                                       %t1: tensor<?x4xf32>) -> index {
+  %0 = tensor.concat dim(0) %t0, %t1
+      : (tensor<?x?xf32>, tensor<?x4xf32>) -> tensor<?x?xf32>
+  %1 = "test.reify_bound"(%0) {dim = 1, constant} : (tensor<?x?xf32>) -> (index)
+  return %1 : index
+}
+
+// -----
+
+// Every input is dynamic in a dimension that is not concatenated, so the size
+// of the result is the size of any of them. The bound is reified in terms of
+// the first input.
+
+// CHECK-LABEL: func @concat_non_concatenated_dim_dynamic(
+//  CHECK-SAME:     %[[t0:[a-zA-Z0-9]+]]: tensor<?x?xf32>
+//       CHECK:   %[[c1:.*]] = arith.constant 1 : index
+//       CHECK:   %[[dim:.*]] = tensor.dim %[[t0]], %[[c1]]
+//       CHECK:   return %[[dim]]
+func.func @concat_non_concatenated_dim_dynamic(%t0: tensor<?x?xf32>,
+                                               %t1: tensor<?x?xf32>,
+                                               %t2: tensor<?x?xf32>) -> index {
+  %0 = tensor.concat dim(0) %t0, %t1, %t2
+      : (tensor<?x?xf32>, tensor<?x?xf32>, tensor<?x?xf32>) -> tensor<?x?xf32>
+  %1 = "test.reify_bound"(%0) {dim = 1} : (tensor<?x?xf32>) -> (index)
+  return %1 : index
+}
+
+// -----
+
 // CHECK-LABEL: func @dim(
 //  CHECK-SAME:     %[[t:.*]]: tensor<?xf32>
 //       CHECK:   %[[dim:.*]] = tensor.dim %[[t]]
@@ -123,6 +176,85 @@ func.func @extract_slice_rank_reduce(%t: tensor<?x?xf32>, %sz: index) -> index {
 
 // -----
 
+// An in-bounds extract_slice cannot exceed ceil((src - offset) / stride).
+// Default constant upper bounds are open, so size <= 8 reifies as 9.
+
+// CHECK-LABEL: func @extract_slice_in_bounds_constant_ub(
+//       CHECK:   %[[c9:.*]] = arith.constant 9 : index
+//       CHECK:   return %[[c9]]
+func.func @extract_slice_in_bounds_constant_ub(%t: tensor<10xf32>, %sz: index) -> index {
+  %0 = tensor.extract_slice %t[2][%sz][1] : tensor<10xf32> to tensor<?xf32>
+  %1 = "test.reify_bound"(%0) {dim = 0, type = "UB", constant} : (tensor<?xf32>) -> (index)
+  return %1 : index
+}
+
+// -----
+
+func.func @extract_slice_in_bounds_compare(%t: tensor<10xf32>, %sz: index) {
+  %c0 = arith.constant 0 : index
+  %c8 = arith.constant 8 : index
+  %0 = tensor.extract_slice %t[2][%sz][1] : tensor<10xf32> to tensor<?xf32>
+  %d = tensor.dim %0, %c0 : tensor<?xf32>
+  // expected-remark @below{{true}}
+  "test.compare"(%d, %c8) {cmp = "LE"} : (index, index) -> ()
+  return
+}
+
+// -----
+
+// src=10, stride=3 allows indices {0,3,6,9}, so size <= 4 = ceil(10/3).
+// floor(10/3) = 3 would be too tight.
+
+func.func @extract_slice_strided_in_bounds(%t: tensor<10xf32>, %sz: index) {
+  %c0 = arith.constant 0 : index
+  %c3 = arith.constant 3 : index
+  %c4 = arith.constant 4 : index
+  %0 = tensor.extract_slice %t[0][%sz][3] : tensor<10xf32> to tensor<?xf32>
+  %d = tensor.dim %0, %c0 : tensor<?xf32>
+  // expected-remark @below{{true}}
+  "test.compare"(%d, %c4) {cmp = "LE"} : (index, index) -> ()
+  // expected-error @below{{unknown}}
+  "test.compare"(%d, %c3) {cmp = "LE"} : (index, index) -> ()
+  return
+}
+
+// -----
+
+// A dynamic offset is non-negative, so size <= src - 0.
+
+func.func @extract_slice_dynamic_offset_in_bounds(%t: tensor<10xf32>, %off: index, %sz: index) {
+  %c0 = arith.constant 0 : index
+  %c10 = arith.constant 10 : index
+  %0 = tensor.extract_slice %t[%off][%sz][1] : tensor<10xf32> to tensor<?xf32>
+  %d = tensor.dim %0, %c0 : tensor<?xf32>
+  // expected-remark @below{{true}}
+  "test.compare"(%d, %c10) {cmp = "LE"} : (index, index) -> ()
+  return
+}
+
+// -----
+
+func.func @extract_slice_rank_reduce_in_bounds(%t: tensor<8x16xf32>, %sz: index) {
+  %c0 = arith.constant 0 : index
+  %c14 = arith.constant 14 : index
+  %0 = tensor.extract_slice %t[0, 2][1, %sz][1, 1] : tensor<8x16xf32> to tensor<?xf32>
+  %d = tensor.dim %0, %c0 : tensor<?xf32>
+  // expected-remark @below{{true}}
+  "test.compare"(%d, %c14) {cmp = "LE"} : (index, index) -> ()
+  return
+}
+
+// -----
+
+func.func @extract_slice_dynamic_stride_no_constant_ub(%t: tensor<10xf32>, %sz: index, %st: index) -> index {
+  %0 = tensor.extract_slice %t[0][%sz][%st] : tensor<10xf32> to tensor<?xf32>
+  // expected-error @below{{could not reify bound}}
+  %1 = "test.reify_bound"(%0) {dim = 0, type = "UB", constant} : (tensor<?xf32>) -> (index)
+  return %1 : index
+}
+
+// -----
+
 // CHECK-LABEL: func @insert(
 //  CHECK-SAME:     %[[t:.*]]: tensor<?xf32>
 //       CHECK:   %[[c0:.*]] = arith.constant 0 : index
@@ -165,6 +297,34 @@ func.func @pad(%t: tensor<?x7xf32>, %a: index, %b: index) -> (index, index) {
 func.func @rank(%t: tensor<5xf32>) -> index {
   %0 = tensor.rank %t : tensor<5xf32>
   %1 = "test.reify_bound"(%0) : (index) -> (index)
+  return %1 : index
+}
+
+// -----
+
+// CHECK-LABEL: func @splat(
+//  CHECK-SAME:     %[[sz:[a-zA-Z0-9]+]]: index
+//       CHECK:   %[[c17:.*]] = arith.constant 17 : index
+//       CHECK:   return %[[sz]], %[[c17]]
+func.func @splat(%f: f32, %sz: index) -> (index, index) {
+  %0 = tensor.splat %f[%sz] : tensor<?x17xf32>
+  %1 = "test.reify_bound"(%0) {dim = 0} : (tensor<?x17xf32>) -> (index)
+  %2 = "test.reify_bound"(%0) {dim = 1} : (tensor<?x17xf32>) -> (index)
+  return %1, %2 : index, index
+}
+
+// -----
+
+// A dimension that is dynamic in the result type is mapped to its own size
+// operand, and not to the first one.
+
+// CHECK-LABEL: func @splat_multiple_dynamic_dims(
+//  CHECK-SAME:     %[[sz1:[a-zA-Z0-9]+]]: index, %[[sz2:[a-zA-Z0-9]+]]: index
+//       CHECK:   return %[[sz2]]
+func.func @splat_multiple_dynamic_dims(%f: f32, %sz1: index,
+                                       %sz2: index) -> index {
+  %0 = tensor.splat %f[%sz1, %sz2] : tensor<?x20x?xf32>
+  %1 = "test.reify_bound"(%0) {dim = 2} : (tensor<?x20x?xf32>) -> (index)
   return %1 : index
 }
 

@@ -33,6 +33,7 @@
 #include "llvm/IR/BasicBlock.h"
 #include "llvm/IR/Constant.h"
 #include "llvm/IR/Constants.h"
+#include "llvm/IR/CycleInfo.h"
 #include "llvm/IR/Dominators.h"
 #include "llvm/IR/Function.h"
 #include "llvm/IR/GlobalAlias.h"
@@ -40,6 +41,7 @@
 #include "llvm/IR/GlobalVariable.h"
 #include "llvm/IR/Instructions.h"
 #include "llvm/IR/IntrinsicInst.h"
+#include "llvm/IR/LLVMContext.h"
 #include "llvm/IR/Metadata.h"
 #include "llvm/IR/Module.h"
 #include "llvm/IR/ModuleSummaryIndex.h"
@@ -175,6 +177,27 @@ findRefEdges(ModuleSummaryIndex &Index, const User *CurUser,
                                                  V.Value));
   }
   return HasBlockAddress;
+}
+
+/// Collect globals referenced via !implicit.ref metadata on a function
+/// and add them as reference edges in the module summary. This ensures
+/// ThinLTO liveness analysis treats them as live when the function is
+/// live, and imports them alongside the function during cross-module
+/// importing.
+static void findImplicitRefEdges(
+    ModuleSummaryIndex &Index, const Function &F,
+    SetVector<ValueInfo, SmallVector<ValueInfo, 0>> &RefEdges) {
+  if (!F.hasMetadata(LLVMContext::MD_implicit_ref))
+    return;
+  SmallVector<MDNode *, 4> MDs;
+  F.getMetadata(LLVMContext::MD_implicit_ref, MDs);
+  for (MDNode *MD : MDs) {
+    for (const MDOperand &Op : MD->operands()) {
+      if (auto *VAM = dyn_cast_or_null<ValueAsMetadata>(Op.get()))
+        if (auto *GV = dyn_cast<GlobalValue>(VAM->getValue()))
+          RefEdges.insert(Index.getOrInsertValueInfo(GV));
+    }
+  }
 }
 
 static CalleeInfo::HotnessType getHotness(uint64_t ProfileCount,
@@ -346,6 +369,8 @@ static void computeFunctionSummary(
   // list.
   bool HasLocalIFuncCallOrRef = false;
   findRefEdges(Index, &F, RefEdges, Visited, HasLocalIFuncCallOrRef);
+  findImplicitRefEdges(Index, F, RefEdges);
+
   std::vector<const Instruction *> NonVolatileLoads;
   std::vector<const Instruction *> NonVolatileStores;
 
@@ -766,7 +791,7 @@ static void findFuncPointers(const Constant *I, uint64_t StartingOffset,
   // look for virtual function pointers.
   const DataLayout &DL = M.getDataLayout();
   if (auto *C = dyn_cast<ConstantStruct>(I)) {
-    StructType *STy = dyn_cast<StructType>(C->getType());
+    StructType *STy = C->getType();
     assert(STy);
     const StructLayout *SL = DL.getStructLayout(C->getType());
 
@@ -1056,13 +1081,16 @@ ModuleSummaryIndex llvm::buildModuleSummaryIndex(
     DominatorTree DT(const_cast<Function &>(F));
     BlockFrequencyInfo *BFI = nullptr;
     std::unique_ptr<BlockFrequencyInfo> BFIPtr;
-    if (GetBFICallback)
-      BFI = GetBFICallback(F);
-    else if (F.hasProfileData()) {
-      LoopInfo LI{DT};
-      BranchProbabilityInfo BPI{F, LI};
-      BFIPtr = std::make_unique<BlockFrequencyInfo>(F, BPI, LI);
-      BFI = BFIPtr.get();
+    if (F.hasProfileData()) {
+      if (GetBFICallback) {
+        BFI = GetBFICallback(F);
+      } else {
+        CycleInfo CI;
+        CI.compute(const_cast<Function &>(F));
+        BranchProbabilityInfo BPI{F, CI};
+        BFIPtr = std::make_unique<BlockFrequencyInfo>(F, BPI, CI);
+        BFI = BFIPtr.get();
+      }
     }
 
     computeFunctionSummary(Index, M, F, BFI, PSI, DT,
@@ -1151,6 +1179,7 @@ ModuleSummaryIndex llvm::buildModuleSummaryIndex(
 }
 
 AnalysisKey ModuleSummaryIndexAnalysis::Key;
+AnalysisKey ImmutableModuleSummaryIndexAnalysis::Key;
 
 ModuleSummaryIndex
 ModuleSummaryIndexAnalysis::run(Module &M, ModuleAnalysisManager &AM) {

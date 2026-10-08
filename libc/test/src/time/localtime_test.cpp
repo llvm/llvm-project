@@ -6,6 +6,7 @@
 //
 //===----------------------------------------------------------------------===//
 
+#include "hdr/signal_macros.h"
 #include "src/time/localtime.h"
 #include "test/UnitTest/Test.h"
 
@@ -25,7 +26,7 @@ TEST(LlvmLibcLocaltime, ValidUnixTimestamp0) {
 }
 
 TEST(LlvmLibcLocaltime, NullPtr) {
-  EXPECT_DEATH([] { LIBC_NAMESPACE::localtime(nullptr); }, WITH_SIGNAL(4));
+  EXPECT_DEATH([] { LIBC_NAMESPACE::localtime(nullptr); }, WITH_SIGNAL(-1));
 }
 
 // TODO(zimirza): These tests does not expect the correct output of localtime as

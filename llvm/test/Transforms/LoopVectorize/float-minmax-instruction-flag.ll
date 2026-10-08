@@ -27,7 +27,7 @@ top:
   %t = load float, ptr %arg
   br label %loop
 
-loop:                                             ; preds = %loop, %top
+loop:
   %t1 = phi i64 [ %t7, %loop ], [ 1, %top ]
   %t2 = phi float [ %t6, %loop ], [ %t, %top ]
   %t3 = getelementptr float, ptr %arg, i64 %t1
@@ -38,7 +38,7 @@ loop:                                             ; preds = %loop, %top
   %t8 = icmp eq i64 %t7, 65537
   br i1 %t8, label %out, label %loop
 
-out:                                              ; preds = %loop
+out:
   ret float %t6
 }
 
@@ -67,7 +67,7 @@ top:
   %t = load float, ptr %arg
   br label %loop
 
-loop:                                             ; preds = %loop, %top
+loop:
   %t1 = phi i64 [ %t7, %loop ], [ 1, %top ]
   %t2 = phi float [ %t6, %loop ], [ %t, %top ]
   %t3 = getelementptr float, ptr %arg, i64 %t1
@@ -78,7 +78,7 @@ loop:                                             ; preds = %loop, %top
   %t8 = icmp eq i64 %t7, 65537
   br i1 %t8, label %out, label %loop
 
-out:                                              ; preds = %loop
+out:
   ret float %t6
 }
 
@@ -107,7 +107,7 @@ top:
   %t = load float, ptr %arg
   br label %loop
 
-loop:                                             ; preds = %loop, %top
+loop:
   %t1 = phi i64 [ %t7, %loop ], [ 1, %top ]
   %t2 = phi float [ %t6, %loop ], [ %t, %top ]
   %t3 = getelementptr float, ptr %arg, i64 %t1
@@ -118,7 +118,7 @@ loop:                                             ; preds = %loop, %top
   %t8 = icmp eq i64 %t7, 65537
   br i1 %t8, label %out, label %loop
 
-out:                                              ; preds = %loop
+out:
   ret float %t6
 }
 
@@ -147,7 +147,7 @@ top:
   %t = load float, ptr %arg
   br label %loop
 
-loop:                                             ; preds = %loop, %top
+loop:
   %t1 = phi i64 [ %t7, %loop ], [ 1, %top ]
   %t2 = phi float [ %t6, %loop ], [ %t, %top ]
   %t3 = getelementptr float, ptr %arg, i64 %t1
@@ -158,7 +158,7 @@ loop:                                             ; preds = %loop, %top
   %t8 = icmp eq i64 %t7, 65537
   br i1 %t8, label %out, label %loop
 
-out:                                              ; preds = %loop
+out:
   ret float %t6
 }
 
@@ -171,7 +171,7 @@ define void @not_a_min_max() {
 ; CHECK:       loop:
 ; CHECK-NEXT:    [[F9_S0_V0:%.*]] = phi i32 [ 0, [[ENTRY:%.*]] ], [ [[ADD:%.*]], [[LOOP]] ]
 ; CHECK-NEXT:    [[T14:%.*]] = icmp eq i32 [[F9_S0_V0]], 5
-; CHECK-NEXT:    [[T15:%.*]] = select reassoc nnan ninf nsz contract afn i1 [[T14]], float 0x36A0000000000000, float 0.000000e+00
+; CHECK-NEXT:    [[T15:%.*]] = select reassoc nnan ninf nsz contract afn i1 [[T14]], float 1.401300e-45, float 0.000000e+00
 ; CHECK-NEXT:    [[ADD]] = add nuw nsw i32 [[F9_S0_V0]], 1
 ; CHECK-NEXT:    br i1 false, label [[END:%.*]], label [[LOOP]]
 ; CHECK:       end:

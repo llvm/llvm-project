@@ -1,5 +1,5 @@
-// RUN: dsymutil -f -oso-prepend-path=%p/.. %p/../Inputs/thumb.armv7m -o - | llvm-dwarfdump - | FileCheck %s
-// RUN: dsymutil -arch armv7m -f -oso-prepend-path=%p/.. %p/../Inputs/thumb.armv7m -o - | llvm-dwarfdump - | FileCheck %s
+// RUN: dsymutil --linker classic -f -oso-prepend-path=%p/.. %p/../Inputs/thumb.armv7m -o - | llvm-dwarfdump - | FileCheck %s
+// RUN: dsymutil --linker classic -arch armv7m -f -oso-prepend-path=%p/.. %p/../Inputs/thumb.armv7m -o - | llvm-dwarfdump - | FileCheck %s
 
 // RUN: dsymutil --linker parallel -f -oso-prepend-path=%p/.. \
 // RUN:  %p/../Inputs/thumb.armv7m -o - | llvm-dwarfdump - | FileCheck %s

@@ -20,7 +20,7 @@ func.func private @unknown_cf_in_loop(%arg0: f32) -> (i32, i32) {
     spirv.Branch ^bb1(%cst0_i32, %cst-1_i32 : i32, i32)
   ^bb1(%3: i32, %4: i32):  // 2 preds: ^bb0, ^bb2
     %5 = spirv.SLessThan %3, %cst-1_i32 : i32
-    // expected-error@below {{'spirv.BranchConditional' op Cannot convert unknown control flow op to structured control flow}}
+    // expected-error@below {{'spirv.BranchConditional' op cannot convert unknown control flow op to structured control flow}}
     spirv.BranchConditional %5, ^bb2, ^bb3
   ^bb2:  // pred: ^bb1
     %6 = spirv.IAdd %3, %4 : i32

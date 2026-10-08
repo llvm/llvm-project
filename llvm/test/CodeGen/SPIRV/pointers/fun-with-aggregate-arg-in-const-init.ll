@@ -1,5 +1,5 @@
 ; RUN: llc -verify-machineinstrs -O0 -mtriple=spirv64-unknown-unknown --spirv-ext=+SPV_INTEL_function_pointers %s -o - | FileCheck %s
-; TODO: %if spirv-tools %{ llc -O0 -mtriple=spirv64-unknown-unknown --spirv-ext=+SPV_INTEL_function_pointers %s -o - -filetype=obj | spirv-val %}
+; RUN: %if spirv-tools %{ llc -O0 -mtriple=spirv64-unknown-unknown --spirv-ext=+SPV_INTEL_function_pointers %s -o - -filetype=obj | spirv-val %}
 
 ; CHECK: OpCapability Kernel
 ; CHECK-DAG: OpCapability FunctionPointersINTEL
@@ -45,8 +45,8 @@
 ; CHECK-DAG: %[[#f1Cast_1:]] = OpSpecConstantOp %[[#FnPtrTy]] Bitcast %[[#f1Pfn]]
 ; CHECK-DAG: %[[#f2Cast_1:]] = OpSpecConstantOp %[[#FnPtrTy]] Bitcast %[[#f2Pfn]]
 
-; CHECK-DAG: %[[#fnptrTy:]] = OpConstantComposite %[[#ArrayOfPfnTy]] %[[#f0Cast_0]] %[[#f1Cast_0]] %[[#f2Cast_0]]
-; CHECK-DAG: %[[#fnstructTy:]] = OpConstantComposite %[[#StructWithPfnTy]] %[[#f0Cast_1]] %[[#f1Cast_1]] %[[#f2Cast_1]]
+; CHECK-DAG: %[[#fnptrTy:]] = OpSpecConstantComposite %[[#ArrayOfPfnTy]] %[[#f0Cast_0]] %[[#f1Cast_0]] %[[#f2Cast_0]]
+; CHECK-DAG: %[[#fnstructTy:]] = OpSpecConstantComposite %[[#StructWithPfnTy]] %[[#f0Cast_1]] %[[#f1Cast_1]] %[[#f2Cast_1]]
 
 ; CHECK-DAG: %[[#fnptr:]] = OpVariable %[[#GlobalArrOfPfnPtrTy]] CrossWorkgroup %[[#fnptrTy]]
 ; CHECK-DAG: %[[#fnstruct:]] = OpVariable %[[#GlobalStructWithPfnPtrTy:]] CrossWorkgroup %[[#fnstructTy]]
@@ -56,7 +56,7 @@
 ; CHECK-DAG: %[[#I32Const2:]] = OpConstant %[[#Int32Ty]] 2
 ; CHECK-DAG: %[[#I32Const1:]] = OpConstant %[[#Int32Ty]] 1
 ; CHECK-DAG: %[[#I32Const0:]] = OpConstantNull %[[#Int32Ty]]
-; CHECK-DAG: %[[#GlobalFnPtrPtrTy:]] = OpTypePointer CrossWorkgroup %[[#FnPtrTy]]
+; CHECK-DAG: %[[#GlobalFnPtrPtrTy:]] = OpTypePointer CrossWorkgroup %[[#IntelFnPtrTy]]
 %t_half = type { half }
 %struct.anon = type { ptr, ptr, ptr }
 
@@ -93,14 +93,14 @@ entry:
 ; CHECK-DAG: %[[#fStruct]] = OpFunction %[[#VoidTy]] None %[[#TestFnTy]]
 ; CHECK-DAG: %[[#fnStructCast0:]] = OpBitcast %[[#GlobalInt8PtrPtrTy]] %[[#fnstruct]]
 ; CHECK: %[[#fnStructCast1:]] = OpBitcast %[[#GlobalFnPtrPtrTy]] %[[#fnStructCast0]]
-; CHECK: %[[#f0Load:]] = OpLoad %[[#FnPtrTy]] %[[#fnStructCast1]]
+; CHECK: %[[#f0Load:]] = OpLoad %[[#IntelFnPtrTy]] %[[#fnStructCast1]]
 ; CHECK: %[[#fnStructCast2:]] = OpBitcast %[[#GlobalStructWithPtrPtrTy]] %[[#fnstruct]]
 ; CHECK: %[[#f1GEP:]] = OpInBoundsPtrAccessChain %[[#GlobalInt8PtrPtrTy]] %[[#fnStructCast2]] %[[#I32Const0]] %[[#I32Const1]]
 ; CHECK: %[[#f1GEPCast:]] = OpBitcast %[[#GlobalFnPtrPtrTy]] %[[#f1GEP]]
-; CHECK: %[[#f1Load:]] = OpLoad %[[#FnPtrTy]] %[[#f1GEPCast]]
+; CHECK: %[[#f1Load:]] = OpLoad %[[#IntelFnPtrTy]] %[[#f1GEPCast]]
 ; CHECK: %[[#f2GEP:]] = OpInBoundsPtrAccessChain %[[#GlobalInt8PtrPtrTy]] %[[#fnStructCast2]] %[[#I32Const0]] %[[#I32Const2]]
 ; CHECK: %[[#f2GEPCast:]] = OpBitcast %[[#GlobalFnPtrPtrTy]] %[[#f2GEP]]
-; CHECK: %[[#f2Load:]] = OpLoad %[[#FnPtrTy]] %[[#f2GEPCast]]
+; CHECK: %[[#f2Load:]] = OpLoad %[[#IntelFnPtrTy]] %[[#f2GEPCast]]
 ; CHECK: %{{.*}} = OpFunctionPointerCallINTEL %[[#t_halfTy]] %[[#f0Load]]
 ; CHECK: %{{.*}} = OpFunctionPointerCallINTEL %[[#t_halfTy]] %[[#f1Load]]
 ; CHECK: %{{.*}} = OpFunctionPointerCallINTEL %[[#t_halfTy]] %[[#f2Load]]

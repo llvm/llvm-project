@@ -19,7 +19,6 @@
 
 namespace llvm {
 
-class GCNSubtarget;
 class MachineMemOperand;
 class MachineInstr;
 
@@ -40,12 +39,6 @@ struct RsrcIntrinsic {
   bool IsImage;
 };
 const RsrcIntrinsic *lookupRsrcIntrinsic(unsigned Intr);
-
-struct D16ImageDimIntrinsic {
-  unsigned Intr;
-  unsigned D16HelperIntr;
-};
-const D16ImageDimIntrinsic *lookupD16ImageDimIntrinsic(unsigned Intr);
 
 struct ImageDimIntrinsicInfo {
   unsigned Intr;

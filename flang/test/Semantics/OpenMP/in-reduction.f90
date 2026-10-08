@@ -66,7 +66,7 @@ end
 
 subroutine f08
   integer :: x
-!ERROR: Type parameter inquiry is not permitted in IN_REDUCTION clause
+!ERROR: Type parameter inquiry is not allowed as a list item on IN_REDUCTION clause
 !$omp target in_reduction(+: x%kind)
 !$omp end target
 end

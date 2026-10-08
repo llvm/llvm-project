@@ -40,7 +40,7 @@ define <2 x float> @fdiv_constant_op0(<2 x double> %x) {
 
 define <2 x half> @fmul_constant_op1(<2 x float> %x) {
 ; CHECK-LABEL: @fmul_constant_op1(
-; CHECK-NEXT:    [[BO:%.*]] = fmul reassoc <2 x float> [[X:%.*]], <float 0x47EFFFFFE0000000, float 5.000000e-01>
+; CHECK-NEXT:    [[BO:%.*]] = fmul reassoc <2 x float> [[X:%.*]], <float f0x7F7FFFFF, float 5.000000e-01>
 ; CHECK-NEXT:    [[R:%.*]] = fptrunc <2 x float> [[BO]] to <2 x half>
 ; CHECK-NEXT:    ret <2 x half> [[R]]
 ;
@@ -116,8 +116,8 @@ define half @fptrunc_select_true_val_extra_use(half %x, float %y, i1 %cond) {
 
 define half @fptrunc_max(half %arg) {
 ; CHECK-LABEL: @fptrunc_max(
-; CHECK-NEXT:    [[CMP:%.*]] = fcmp olt half [[ARG:%.*]], 0xH0000
-; CHECK-NEXT:    [[NARROW_SEL:%.*]] = select i1 [[CMP]], half 0xH0000, half [[ARG]]
+; CHECK-NEXT:    [[CMP:%.*]] = fcmp olt half [[ARG:%.*]], 0.000000e+00
+; CHECK-NEXT:    [[NARROW_SEL:%.*]] = select i1 [[CMP]], half 0.000000e+00, half [[ARG]]
 ; CHECK-NEXT:    ret half [[NARROW_SEL]]
 ;
   %ext = fpext half %arg to double
@@ -239,4 +239,194 @@ define half @fptrunc_to_bfloat_bitcast_to_half(float %src) {
   %trunc = fptrunc float %src to bfloat
   %cast = bitcast bfloat %trunc to half
   ret half %cast
+}
+
+; Convert from integer is exact, so cast to float even if fpext is simplified.
+
+define float @fptrunc_narrow_sitofp_with_fpext(i64 %x) {
+; CHECK-LABEL: @fptrunc_narrow_sitofp_with_fpext(
+; CHECK-NEXT:    [[TMP1:%.*]] = urem i64 [[X:%.*]], 74383
+; CHECK-NEXT:    [[TMP2:%.*]] = uitofp nneg i64 [[TMP1]] to float
+; CHECK-NEXT:    [[CONV4:%.*]] = fdiv float [[TMP2]], 7.438300e+04
+; CHECK-NEXT:    ret float [[CONV4]]
+;
+  %1 = urem i64 %x, 74383
+  %conv  = sitofp i64 %1 to float
+  %conv2 = fpext float %conv to double
+  %div3  = fdiv double %conv2, 7.438300e+04
+  %conv4 = fptrunc double %div3 to float
+  ret float %conv4
+}
+
+; Convert from integer is exact, so cast to float.
+
+define float @fptrunc_narrow_urem_within_float_range(i64 %x) {
+; CHECK-LABEL: @fptrunc_narrow_urem_within_float_range(
+; CHECK-NEXT:    [[TMP1:%.*]] = urem i64 [[X:%.*]], 74383
+; CHECK-NEXT:    [[TMP2:%.*]] = uitofp nneg i64 [[TMP1]] to float
+; CHECK-NEXT:    [[CONV4:%.*]] = fdiv float [[TMP2]], 7.438300e+04
+; CHECK-NEXT:    ret float [[CONV4]]
+;
+  %1 = urem i64 %x,74383
+  %conv = sitofp i64 %1 to double
+  %div3 = fdiv double %conv, 7.438300e+04
+  %conv4 = fptrunc double %div3 to float
+  ret float %conv4
+}
+
+; Negative test - input is not known, so cast cannot be narrowed to float.
+
+define float @fptrunc_narrow_outside_float_range(i64 %x) {
+; CHECK-LABEL: @fptrunc_narrow_outside_float_range(
+; CHECK-NEXT:    [[CONV:%.*]] = sitofp i64 [[X:%.*]] to double
+; CHECK-NEXT:    [[DIV3:%.*]] = fdiv double [[CONV]], 7.438300e+04
+; CHECK-NEXT:    [[CONV4:%.*]] = fptrunc double [[DIV3]] to float
+; CHECK-NEXT:    ret float [[CONV4]]
+;
+  %conv = sitofp i64 %x to double
+  %div3 = fdiv double %conv, 7.438300e+04
+  %conv4 = fptrunc double %div3 to float
+  ret float %conv4
+}
+
+; Narrowing fptrunc(binop(fpext,fpext)) recomputes the binop in a smaller type,
+; which can overflow to inf where the wide op was finite, so the binop's ninf
+; alone must NOT be copied to the narrowed op (it would make that inf poison:
+; miscompile). nnan is value-based and stays sound, so it is preserved. ninf
+; survives only when both the binop and the fptrunc have it: the binop's ninf
+; covers the narrowed op's operands, the fptrunc's covers its result.
+
+define half @fmul_narrow_drop_ninf(half %x, half %y) {
+; CHECK-LABEL: @fmul_narrow_drop_ninf(
+; CHECK-NEXT:    [[R:%.*]] = fmul half [[X:%.*]], [[Y:%.*]]
+; CHECK-NEXT:    ret half [[R]]
+;
+  %wx = fpext half %x to float
+  %wy = fpext half %y to float
+  %m = fmul ninf float %wx, %wy
+  %r = fptrunc float %m to half
+  ret half %r
+}
+
+define half @fadd_narrow_drop_ninf(half %x, half %y) {
+; CHECK-LABEL: @fadd_narrow_drop_ninf(
+; CHECK-NEXT:    [[R:%.*]] = fadd half [[X:%.*]], [[Y:%.*]]
+; CHECK-NEXT:    ret half [[R]]
+;
+  %wx = fpext half %x to float
+  %wy = fpext half %y to float
+  %m = fadd ninf float %wx, %wy
+  %r = fptrunc float %m to half
+  ret half %r
+}
+
+define half @fsub_narrow_drop_ninf(half %x, half %y) {
+; CHECK-LABEL: @fsub_narrow_drop_ninf(
+; CHECK-NEXT:    [[R:%.*]] = fsub half [[X:%.*]], [[Y:%.*]]
+; CHECK-NEXT:    ret half [[R]]
+;
+  %wx = fpext half %x to float
+  %wy = fpext half %y to float
+  %m = fsub ninf float %wx, %wy
+  %r = fptrunc float %m to half
+  ret half %r
+}
+
+define half @fdiv_narrow_drop_ninf(half %x, half %y) {
+; CHECK-LABEL: @fdiv_narrow_drop_ninf(
+; CHECK-NEXT:    [[R:%.*]] = fdiv half [[X:%.*]], [[Y:%.*]]
+; CHECK-NEXT:    ret half [[R]]
+;
+  %wx = fpext half %x to float
+  %wy = fpext half %y to float
+  %m = fdiv ninf float %wx, %wy
+  %r = fptrunc float %m to half
+  ret half %r
+}
+
+; nnan is sound to keep; ninf is still dropped.
+
+define half @fmul_narrow_keep_nnan_drop_ninf(half %x, half %y) {
+; CHECK-LABEL: @fmul_narrow_keep_nnan_drop_ninf(
+; CHECK-NEXT:    [[R:%.*]] = fmul nnan half [[X:%.*]], [[Y:%.*]]
+; CHECK-NEXT:    ret half [[R]]
+;
+  %wx = fpext half %x to float
+  %wy = fpext half %y to float
+  %m = fmul nnan ninf float %wx, %wy
+  %r = fptrunc float %m to half
+  ret half %r
+}
+
+; Other flags (reassoc) are preserved; only ninf is cleared.
+
+define half @fmul_narrow_keep_reassoc_drop_ninf(half %x, half %y) {
+; CHECK-LABEL: @fmul_narrow_keep_reassoc_drop_ninf(
+; CHECK-NEXT:    [[R:%.*]] = fmul reassoc half [[X:%.*]], [[Y:%.*]]
+; CHECK-NEXT:    ret half [[R]]
+;
+  %wx = fpext half %x to float
+  %wy = fpext half %y to float
+  %m = fmul reassoc ninf float %wx, %wy
+  %r = fptrunc float %m to half
+  ret half %r
+}
+
+; ninf on the fptrunc alone must NOT transfer to the narrowed binop either:
+; ninf also constrains the operands. With x = inf, y = 0.0, the wide fmul is
+; nan and fptrunc ninf of nan is well-defined, but fmul ninf half inf, 0.0
+; would be poison.
+
+define half @fmul_narrow_ninf_only_on_fptrunc(half %x, half %y) {
+; CHECK-LABEL: @fmul_narrow_ninf_only_on_fptrunc(
+; CHECK-NEXT:    [[R:%.*]] = fmul half [[X:%.*]], [[Y:%.*]]
+; CHECK-NEXT:    ret half [[R]]
+;
+  %wx = fpext half %x to float
+  %wy = fpext half %y to float
+  %m = fmul float %wx, %wy
+  %r = fptrunc ninf float %m to half
+  ret half %r
+}
+
+; ninf on both the binop and the fptrunc is kept.
+
+define half @fmul_narrow_ninf_on_both(half %x, half %y) {
+; CHECK-LABEL: @fmul_narrow_ninf_on_both(
+; CHECK-NEXT:    [[R:%.*]] = fmul ninf half [[X:%.*]], [[Y:%.*]]
+; CHECK-NEXT:    ret half [[R]]
+;
+  %wx = fpext half %x to float
+  %wy = fpext half %y to float
+  %m = fmul ninf float %wx, %wy
+  %r = fptrunc ninf float %m to half
+  ret half %r
+}
+
+; Same for fdiv, where even a finite result shows it: with x = 1.0, y = inf,
+; the wide fdiv is 0.0 and the fptrunc ninf is fully defined, but
+; fdiv ninf half 1.0, inf would be poison.
+
+define half @fdiv_narrow_ninf_only_on_fptrunc(half %x, half %y) {
+; CHECK-LABEL: @fdiv_narrow_ninf_only_on_fptrunc(
+; CHECK-NEXT:    [[R:%.*]] = fdiv half [[X:%.*]], [[Y:%.*]]
+; CHECK-NEXT:    ret half [[R]]
+;
+  %wx = fpext half %x to float
+  %wy = fpext half %y to float
+  %m = fdiv float %wx, %wy
+  %r = fptrunc ninf float %m to half
+  ret half %r
+}
+
+define half @fdiv_narrow_ninf_on_both(half %x, half %y) {
+; CHECK-LABEL: @fdiv_narrow_ninf_on_both(
+; CHECK-NEXT:    [[R:%.*]] = fdiv ninf half [[X:%.*]], [[Y:%.*]]
+; CHECK-NEXT:    ret half [[R]]
+;
+  %wx = fpext half %x to float
+  %wy = fpext half %y to float
+  %m = fdiv ninf float %wx, %wy
+  %r = fptrunc ninf float %m to half
+  ret half %r
 }

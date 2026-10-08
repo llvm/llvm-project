@@ -1,4 +1,3 @@
-
 if (DOXYGEN_FOUND)
 if (LLVM_ENABLE_DOXYGEN)
   set(abs_srcdir ${CMAKE_CURRENT_SOURCE_DIR})
@@ -47,8 +46,7 @@ if (LLVM_ENABLE_DOXYGEN)
     set(openmp_doxygen_qhp_cust_filter_attrs "")
   endif()
 
-  configure_file(${CMAKE_CURRENT_SOURCE_DIR}/doxygen.cfg.in
-    ${CMAKE_CURRENT_BINARY_DIR}/doxygen.cfg @ONLY)
+  llvm_configure_doxygen()
 
   set(abs_top_srcdir)
   set(abs_top_builddir)
@@ -77,7 +75,8 @@ if (LLVM_ENABLE_DOXYGEN)
 
   if (NOT LLVM_INSTALL_TOOLCHAIN_ONLY)
     install(DIRECTORY ${CMAKE_CURRENT_BINARY_DIR}/doxygen/html
-      DESTINATION docs/html)
+      DESTINATION docs/html
+      COMPONENT openmp)
   endif()
 endif()
 endif()

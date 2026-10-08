@@ -18,10 +18,13 @@
 //
 //===----------------------------------------------------------------------===//
 
-#include "NVPTXUtilities.h"
+#include "NVPTX.h"
+#include "NVVMProperties.h"
 #include "llvm/Analysis/ValueTracking.h"
+#include "llvm/IR/GlobalVariable.h"
 #include "llvm/IR/InstIterator.h"
 #include "llvm/IR/Instructions.h"
+#include "llvm/IR/IntrinsicInst.h"
 #include "llvm/IR/Metadata.h"
 #include "llvm/Support/NVPTXAddrSpace.h"
 
@@ -105,6 +108,7 @@ FunctionPass *llvm::createNVPTXTagInvariantLoadsPass() {
 
 PreservedAnalyses NVPTXTagInvariantLoadsPass::run(Function &F,
                                                   FunctionAnalysisManager &) {
-  return tagInvariantLoads(F) ? PreservedAnalyses::none()
-                              : PreservedAnalyses::all();
+  if (!tagInvariantLoads(F))
+    return PreservedAnalyses::all();
+  return PreservedAnalyses::none().preserveSet<CFGAnalyses>();
 }

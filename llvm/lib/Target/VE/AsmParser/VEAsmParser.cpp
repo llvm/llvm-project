@@ -67,8 +67,6 @@ class VEAsmParser : public MCTargetAsmParser {
   // Custom parse functions for VE specific operands.
   ParseStatus parseMEMOperand(OperandVector &Operands);
   ParseStatus parseMEMAsOperand(OperandVector &Operands);
-  ParseStatus parseCCOpOperand(OperandVector &Operands);
-  ParseStatus parseRDOpOperand(OperandVector &Operands);
   ParseStatus parseMImmOperand(OperandVector &Operands);
   ParseStatus parseOperand(OperandVector &Operands, StringRef Name);
   ParseStatus parseVEAsmOperand(std::unique_ptr<VEOperand> &Operand);
@@ -85,8 +83,8 @@ class VEAsmParser : public MCTargetAsmParser {
 
 public:
   VEAsmParser(const MCSubtargetInfo &sti, MCAsmParser &parser,
-              const MCInstrInfo &MII, const MCTargetOptions &Options)
-      : MCTargetAsmParser(Options, sti, MII), Parser(parser) {
+              const MCInstrInfo &MII)
+      : MCTargetAsmParser(sti, MII), Parser(parser) {
     // Initialize the set of available features.
     setAvailableFeatures(ComputeAvailableFeatures(getSTI().getFeatureBits()));
   }

@@ -9,7 +9,7 @@ define { <2 x float>, <2 x float> } @foo(float %arg, <2 x float> %arg1, <2 x flo
 ; CHECK-NOFOLD-LABEL: define { <2 x float>, <2 x float> } @foo(
 ; CHECK-NOFOLD-SAME: float [[ARG:%.*]], <2 x float> [[ARG1:%.*]], <2 x float> [[ARG2:%.*]]) #[[ATTR0:[0-9]+]] {
 ; CHECK-NOFOLD-NEXT:  [[BB:.*]]:
-; CHECK-NOFOLD-NEXT:    [[I:%.*]] = fcmp fast ogt float [[ARG]], 0x3F747AE140000000
+; CHECK-NOFOLD-NEXT:    [[I:%.*]] = fcmp fast ogt float [[ARG]], 5.000000e-03
 ; CHECK-NOFOLD-NEXT:    br i1 [[I]], label %[[BB3:.*]], label %[[BB20:.*]], !unpredictable [[META0:![0-9]+]]
 ; CHECK-NOFOLD:       [[BB3]]:
 ; CHECK-NOFOLD-NEXT:    [[I4:%.*]] = extractelement <2 x float> [[ARG1]], i64 0
@@ -21,7 +21,7 @@ define { <2 x float>, <2 x float> } @foo(float %arg, <2 x float> %arg1, <2 x flo
 ; CHECK-NOFOLD-NEXT:    [[I10:%.*]] = fmul fast float [[I9]], [[I9]]
 ; CHECK-NOFOLD-NEXT:    [[I11:%.*]] = fadd fast float [[I8]], [[I10]]
 ; CHECK-NOFOLD-NEXT:    [[I12:%.*]] = tail call fast noundef float @llvm.sqrt.f32(float [[I11]])
-; CHECK-NOFOLD-NEXT:    [[I13:%.*]] = fdiv fast float 0x3FEFD70A40000000, [[I12]]
+; CHECK-NOFOLD-NEXT:    [[I13:%.*]] = fdiv fast float 9.950000e-01, [[I12]]
 ; CHECK-NOFOLD-NEXT:    [[I14:%.*]] = fmul fast float [[I13]], [[I4]]
 ; CHECK-NOFOLD-NEXT:    [[I15:%.*]] = insertelement <2 x float> poison, float [[I14]], i64 0
 ; CHECK-NOFOLD-NEXT:    [[I16:%.*]] = fmul fast float [[I13]], [[I6]]
@@ -39,7 +39,7 @@ define { <2 x float>, <2 x float> } @foo(float %arg, <2 x float> %arg1, <2 x flo
 ; CHECK-FOLD-LABEL: define { <2 x float>, <2 x float> } @foo(
 ; CHECK-FOLD-SAME: float [[ARG:%.*]], <2 x float> [[ARG1:%.*]], <2 x float> [[ARG2:%.*]]) #[[ATTR0:[0-9]+]] {
 ; CHECK-FOLD-NEXT:  [[BB:.*:]]
-; CHECK-FOLD-NEXT:    [[I:%.*]] = fcmp fast ogt float [[ARG]], 0x3F747AE140000000
+; CHECK-FOLD-NEXT:    [[I:%.*]] = fcmp fast ogt float [[ARG]], 5.000000e-03
 ; CHECK-FOLD-NEXT:    [[I4:%.*]] = extractelement <2 x float> [[ARG1]], i64 0
 ; CHECK-FOLD-NEXT:    [[I5:%.*]] = fmul fast float [[I4]], [[I4]]
 ; CHECK-FOLD-NEXT:    [[I6:%.*]] = extractelement <2 x float> [[ARG1]], i64 1
@@ -49,7 +49,7 @@ define { <2 x float>, <2 x float> } @foo(float %arg, <2 x float> %arg1, <2 x flo
 ; CHECK-FOLD-NEXT:    [[I10:%.*]] = fmul fast float [[I9]], [[I9]]
 ; CHECK-FOLD-NEXT:    [[I11:%.*]] = fadd fast float [[I8]], [[I10]]
 ; CHECK-FOLD-NEXT:    [[I12:%.*]] = tail call fast float @llvm.sqrt.f32(float [[I11]])
-; CHECK-FOLD-NEXT:    [[I13:%.*]] = fdiv fast float 0x3FEFD70A40000000, [[I12]]
+; CHECK-FOLD-NEXT:    [[I13:%.*]] = fdiv fast float 9.950000e-01, [[I12]]
 ; CHECK-FOLD-NEXT:    [[I14:%.*]] = fmul fast float [[I13]], [[I4]]
 ; CHECK-FOLD-NEXT:    [[I15:%.*]] = insertelement <2 x float> poison, float [[I14]], i64 0
 ; CHECK-FOLD-NEXT:    [[I16:%.*]] = fmul fast float [[I13]], [[I6]]

@@ -15,7 +15,6 @@
 #include "src/__support/uint128.h"
 
 namespace LIBC_NAMESPACE_DECL {
-
 namespace math {
 namespace log_range_reduction_internal {
 
@@ -36,12 +35,12 @@ struct LogRR {
 //   sum: adding -log(r1) - log(r2) - log(r3) - log(r4) to the resulted sum.
 //   return value: the reduced argument v satisfying:
 //                 -0x1.0002143p-29 <= v < 0x1p-29,  and  ulp(v) >= 2^(-125).
-LIBC_INLINE fputil::DyadicFloat<128>
+LIBC_INLINE constexpr fputil::DyadicFloat<128>
 log_range_reduction(double m_x, const LogRR &log_table,
                     fputil::DyadicFloat<128> &sum) {
   using namespace common_constants_internal;
-  using Float128 = typename fputil::DyadicFloat<128>;
-  using MType = typename Float128::MantissaType;
+  using DFloat128 = typename fputil::DyadicFloat<128>;
+  using MType = typename DFloat128::MantissaType;
 
   int64_t v = static_cast<int64_t>(m_x * 0x1.0p60); // ulp = 2^-60
 
@@ -84,13 +83,14 @@ log_range_reduction(double m_x, const LogRR &log_table,
   // |vv4| < 2^-28, ulp = 2^-125
   Int128 vv4 = (spv4 << 28) + sv4;
 
-  return (vv4 < 0) ? Float128(Sign::NEG, -125,
-                              MType({static_cast<uint64_t>(-vv4),
-                                     static_cast<uint64_t>((-vv4) >> 64)}))
-                   : Float128(Sign::POS, -125,
-                              MType({static_cast<uint64_t>(vv4),
-                                     static_cast<uint64_t>(vv4 >> 64)}));
+  return (vv4 < 0) ? DFloat128(Sign::NEG, -125,
+                               MType({static_cast<uint64_t>(-vv4),
+                                      static_cast<uint64_t>((-vv4) >> 64)}))
+                   : DFloat128(Sign::POS, -125,
+                               MType({static_cast<uint64_t>(vv4),
+                                      static_cast<uint64_t>(vv4 >> 64)}));
 }
+
 } // namespace log_range_reduction_internal
 } // namespace math
 } // namespace LIBC_NAMESPACE_DECL

@@ -11,5 +11,9 @@ _CLC_OVERLOAD _CLC_CONST _CLC_DEF __CLC_GENTYPE __clc_nextup(__CLC_GENTYPE x) {
   __CLC_S_GENTYPE ix =
       y + (y >= (__CLC_S_GENTYPE)0 ? (__CLC_S_GENTYPE)1 : (__CLC_S_GENTYPE)-1);
   __CLC_GENTYPE converted = __CLC_AS_GENTYPE(ix);
+
+  if (__CLC_GENTYPE_DENORMS_ARE_ZERO)
+    converted = x == __CLC_FP_LIT(0.0) ? __CLC_GENTYPE_MIN : converted;
+
   return __clc_isnan(x) || x == __CLC_GENTYPE_INF ? x : converted;
 }

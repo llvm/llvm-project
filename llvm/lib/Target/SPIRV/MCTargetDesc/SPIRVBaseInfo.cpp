@@ -15,13 +15,14 @@
 #include "SPIRVBaseInfo.h"
 #include "llvm/ADT/ArrayRef.h"
 #include "llvm/ADT/StringRef.h"
+#include "llvm/ADT/StringTable.h"
 
 namespace llvm {
 namespace SPIRV {
 struct SymbolicOperand {
   OperandCategory::OperandCategory Category;
   uint32_t Value;
-  StringRef Mnemonic;
+  StringTable::Offset Mnemonic;
   uint32_t MinVersion;
   uint32_t MaxVersion;
 };
@@ -69,7 +70,7 @@ getSymbolicOperandMnemonic(SPIRV::OperandCategory::OperandCategory Category,
       SPIRV::lookupSymbolicOperandByCategoryAndValue(Category, Value);
   // Value that encodes just one enum value.
   if (Lookup)
-    return Lookup->Mnemonic.str();
+    return SPIRV::getSymbolicOperandStr(Lookup->Mnemonic).str();
   if (Category != SPIRV::OperandCategory::ImageOperandOperand &&
       Category != SPIRV::OperandCategory::FPFastMathModeOperand &&
       Category != SPIRV::OperandCategory::SelectionControlOperand &&
@@ -90,7 +91,8 @@ getSymbolicOperandMnemonic(SPIRV::OperandCategory::OperandCategory Category,
   while (EnumValueInCategory && EnumValueInCategory->Category == Category) {
     if ((EnumValueInCategory->Value != 0) &&
         (Value & EnumValueInCategory->Value)) {
-      Name += Separator + EnumValueInCategory->Mnemonic.str();
+      Name += Separator +
+              SPIRV::getSymbolicOperandStr(EnumValueInCategory->Mnemonic).str();
       Separator = "|";
     }
     if (++EnumValueInCategory == TableEnd)
@@ -205,7 +207,8 @@ std::string getLinkStringForBuiltIn(SPIRV::BuiltIn::BuiltIn BuiltInValue) {
           SPIRV::OperandCategory::BuiltInOperand, BuiltInValue);
 
   if (Lookup)
-    return "__spirv_BuiltIn" + Lookup->Mnemonic.str();
+    return "__spirv_BuiltIn" +
+           SPIRV::getSymbolicOperandStr(Lookup->Mnemonic).str();
   return "UNKNOWN_BUILTIN";
 }
 
@@ -235,6 +238,8 @@ std::string getExtInstSetName(SPIRV::InstructionSet::InstructionSet Set) {
     return "GLSL.std.450";
   case SPIRV::InstructionSet::NonSemantic_Shader_DebugInfo_100:
     return "NonSemantic.Shader.DebugInfo.100";
+  case SPIRV::InstructionSet::NonSemantic_AuxData:
+    return "NonSemantic.AuxData";
   case SPIRV::InstructionSet::SPV_AMD_shader_trinary_minmax:
     return "SPV_AMD_shader_trinary_minmax";
   }
@@ -245,7 +250,8 @@ SPIRV::InstructionSet::InstructionSet
 getExtInstSetFromString(std::string SetName) {
   for (auto Set :
        {SPIRV::InstructionSet::GLSL_std_450, SPIRV::InstructionSet::OpenCL_std,
-        SPIRV::InstructionSet::NonSemantic_Shader_DebugInfo_100}) {
+        SPIRV::InstructionSet::NonSemantic_Shader_DebugInfo_100,
+        SPIRV::InstructionSet::NonSemantic_AuxData}) {
     if (SetName == getExtInstSetName(Set))
       return Set;
   }
@@ -260,6 +266,6 @@ std::string getExtInstName(SPIRV::InstructionSet::InstructionSet Set,
   if (!Lookup)
     return "UNKNOWN_EXT_INST";
 
-  return Lookup->Name.str();
+  return SPIRV::getExtendedBuiltinStr(Lookup->Name).str();
 }
 } // namespace llvm

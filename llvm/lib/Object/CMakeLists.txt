@@ -1,6 +1,7 @@
 add_llvm_component_library(LLVMObject
   Archive.cpp
   ArchiveWriter.cpp
+  BBAddrMap.cpp
   Binary.cpp
   BuildID.cpp
   COFFImportFile.cpp

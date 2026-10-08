@@ -16,6 +16,7 @@
 
 #include "llvm/ADT/iterator.h"
 
+#include <algorithm>
 #include <cassert>
 #include <cstddef>
 #include <utility>
@@ -72,21 +73,19 @@ public:
 ///
 /// `Repeated<T>` is also a proper random-access range: `begin()`/`end()`
 /// return iterators that always dereference to the same stored value.
-template <typename T> struct [[nodiscard]] Repeated {
-  /// Wrapper for the stored value used as a PointerUnion target in range
-  /// types (e.g., TypeRange, ValueRange).
-  struct Storage {
-    T value;
-  };
-
-  Storage storage;
+// At least 16-byte aligned so that Repeated<T>* has more low bits available
+// than a plain pointer. The primary use case is pointer-like types (e.g. MLIR
+// Type, Value) where Repeated<T>* appears in a PointerUnion alongside them.
+template <typename T>
+struct [[nodiscard]] alignas(std::max(size_t{16}, alignof(T))) Repeated {
+  T storage;
   size_t count;
 
   /// Create a `value` repeated `count` times.
-  /// Uses the same argument order like STD container constructors.
+  /// Uses the same argument order like std container constructors.
   template <typename U>
   Repeated(size_t count, U &&value)
-      : storage{std::forward<U>(value)}, count(count) {}
+      : storage(std::forward<U>(value)), count(count) {}
 
   using iterator = RepeatedIterator<T>;
   using const_iterator = iterator;
@@ -95,21 +94,19 @@ template <typename T> struct [[nodiscard]] Repeated {
   using value_type = T;
   using size_type = size_t;
 
-  iterator begin() const { return {&storage.value, 0}; }
-  iterator end() const {
-    return {&storage.value, static_cast<ptrdiff_t>(count)};
-  }
+  iterator begin() const { return {&storage, 0}; }
+  iterator end() const { return {&storage, static_cast<ptrdiff_t>(count)}; }
   reverse_iterator rbegin() const { return reverse_iterator(end()); }
   reverse_iterator rend() const { return reverse_iterator(begin()); }
 
   size_t size() const { return count; }
   bool empty() const { return count == 0; }
 
-  const T &value() const { return storage.value; }
+  const T &value() const { return storage; }
   const T &operator[](size_t idx) const {
     assert(idx < size() && "Out of bounds");
     (void)idx;
-    return storage.value;
+    return storage;
   }
 };
 

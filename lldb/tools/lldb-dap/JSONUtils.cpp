@@ -9,6 +9,7 @@
 #include "JSONUtils.h"
 #include "DAP.h"
 #include "ExceptionBreakpoint.h"
+#include "LLDBUtils.h"
 #include "Protocol/ProtocolBase.h"
 #include "Protocol/ProtocolRequests.h"
 #include "lldb/API/SBAddress.h"
@@ -345,22 +346,17 @@ std::string VariableDescription::GetResult(protocol::EvaluateContext context) {
 }
 
 bool ValuePointsToCode(lldb::SBValue v) {
-  if (!v.GetType().GetPointeeType().IsFunctionType())
+  lldb::SBType type = v.GetType();
+  if (!type.GetPointeeType().IsFunctionType())
     return false;
 
-  lldb::addr_t addr = v.GetValueAsAddress();
+  lldb::SBError error;
+  lldb::addr_t addr = v.GetData().GetAddress(error, 0);
+  addr = v.GetProcess().FixAddress(addr);
   lldb::SBLineEntry line_entry =
       v.GetTarget().ResolveLoadAddress(addr).GetLineEntry();
 
   return line_entry.IsValid();
-}
-
-int64_t PackLocation(int64_t var_ref, bool is_value_location) {
-  return var_ref << 1 | is_value_location;
-}
-
-std::pair<int64_t, bool> UnpackLocation(int64_t location_id) {
-  return std::pair{location_id >> 1, location_id & 1};
 }
 
 /// See
@@ -393,7 +389,11 @@ llvm::json::Object CreateRunInTerminalReverseRequest(
     std::stringstream ss;
     std::string_view delimiter;
     for (const std::optional<protocol::String> &file : stdio) {
+#ifdef _WIN32
+      ss << std::exchange(delimiter, ";");
+#else
       ss << std::exchange(delimiter, ":");
+#endif
       if (file)
         ss << file->str();
     }
@@ -437,10 +437,10 @@ static void FilterAndGetValueForKey(const lldb::SBStructuredData data,
     out.try_emplace(key_utf8, value.GetFloatValue());
     break;
   case lldb::eStructuredDataTypeUnsignedInteger:
-    out.try_emplace(key_utf8, value.GetIntegerValue((uint64_t)0));
+    out.try_emplace(key_utf8, value.GetUnsignedIntegerValue());
     break;
   case lldb::eStructuredDataTypeSignedInteger:
-    out.try_emplace(key_utf8, value.GetIntegerValue((int64_t)0));
+    out.try_emplace(key_utf8, value.GetSignedIntegerValue());
     break;
   case lldb::eStructuredDataTypeArray: {
     lldb::SBStream contents;
@@ -450,13 +450,9 @@ static void FilterAndGetValueForKey(const lldb::SBStructuredData data,
   case lldb::eStructuredDataTypeBoolean:
     out.try_emplace(key_utf8, value.GetBooleanValue());
     break;
-  case lldb::eStructuredDataTypeString: {
-    // Get the string size before reading
-    const size_t str_length = value.GetStringValue(nullptr, 0);
-    std::string str(str_length + 1, 0);
-    value.GetStringValue(&str[0], str_length);
-    out.try_emplace(key_utf8, llvm::json::fixUTF8(str));
-  } break;
+  case lldb::eStructuredDataTypeString:
+    out.try_emplace(key_utf8, llvm::json::fixUTF8(GetStringValue(value)));
+    break;
   case lldb::eStructuredDataTypeDictionary: {
     lldb::SBStream contents;
     value.GetAsJSON(contents);

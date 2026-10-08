@@ -14,4 +14,7 @@ spirv.module Logical GLSL450 requires #spirv.vce<v1.0, [Shader, Sampled1D, Sampl
 
   // CHECK: !spirv.ptr<!spirv.sampled_image<!spirv.image<i32, Rect, DepthUnknown, Arrayed, MultiSampled, NeedSampler, R8ui>>, UniformConstant>
   spirv.GlobalVariable @var2 bind(0, 0) : !spirv.ptr<!spirv.sampled_image<!spirv.image<i32, Rect, DepthUnknown, Arrayed, MultiSampled, NeedSampler, R8ui>>, UniformConstant>
+
+  // CHECK: !spirv.ptr<!spirv.sampler, UniformConstant>
+  spirv.GlobalVariable @var3 bind(0, 2) : !spirv.ptr<!spirv.sampler, UniformConstant>
 }

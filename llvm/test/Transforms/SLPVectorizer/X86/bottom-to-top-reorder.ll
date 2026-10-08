@@ -10,9 +10,9 @@ define void @test(ptr %0, ptr %1, ptr %2) {
 ; CHECK-NEXT:    [[TMP11:%.*]] = sub <4 x i32> <i32 0, i32 0, i32 undef, i32 0>, [[TMP8]]
 ; CHECK-NEXT:    [[TMP12:%.*]] = sub <4 x i32> [[TMP11]], [[TMP10]]
 ; CHECK-NEXT:    [[TMP13:%.*]] = add <4 x i32> [[TMP12]], [[TMP6]]
-; CHECK-NEXT:    [[TMP16:%.*]] = add <4 x i32> <i32 0, i32 0, i32 1, i32 0>, [[TMP13]]
-; CHECK-NEXT:    [[TMP17:%.*]] = add <4 x i32> [[TMP16]], zeroinitializer
-; CHECK-NEXT:    [[TMP14:%.*]] = add <4 x i32> [[TMP17]], zeroinitializer
+; CHECK-NEXT:    [[TMP16:%.*]] = add <4 x i32> [[TMP13]], <i32 0, i32 0, i32 1, i32 0>
+; CHECK-NEXT:    [[TMP17:%.*]] = sub <4 x i32> [[TMP16]], zeroinitializer
+; CHECK-NEXT:    [[TMP14:%.*]] = sub <4 x i32> [[TMP17]], zeroinitializer
 ; CHECK-NEXT:    [[TMP22:%.*]] = shufflevector <4 x i32> [[TMP14]], <4 x i32> poison, <4 x i32> <i32 2, i32 0, i32 1, i32 3>
 ; CHECK-NEXT:    store <4 x i32> [[TMP22]], ptr [[TMP2:%.*]], align 4
 ; CHECK-NEXT:    ret void

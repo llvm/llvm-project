@@ -40,16 +40,10 @@ _start:
 
 #      CHECK:   - Type:            GLOBAL
 # CHECK-NEXT:     Globals:
-# CHECK-NEXT:       - Index:           0
-# CHECK-NEXT:         Type:            I32
-# CHECK-NEXT:         Mutable:         true
-# CHECK-NEXT:         InitExpr:
-# CHECK-NEXT:           Opcode:          I32_CONST
-# CHECK-NEXT:           Value:           65536
 # Global 'undefined_weak:foo' representing the GOT entry for foo
 # Unlike other internal GOT entries that need to be mutable this one
 # is immutable and not updated by `__wasm_apply_global_relocs`
-# CHECK-NEXT:       - Index:           1
+# CHECK-NEXT:       - Index:           0
 # CHECK-NEXT:         Type:            I32
 # CHECK-NEXT:         Mutable:         false
 # CHECK-NEXT:         InitExpr:
@@ -67,14 +61,12 @@ _start:
 # CHECK-NEXT:        Name:            _start
 # CHECK-NEXT:    GlobalNames:
 # CHECK-NEXT:      - Index:           0
-# CHECK-NEXT:        Name:            __stack_pointer
-# CHECK-NEXT:      - Index:           1
 # CHECK-NEXT:        Name:            'GOT.func.internal.undefined_weak:foo'
 
 # With `-pie` or `-shared` the resolution should be deferred to the dynamic
 # linker and the function address should be imported as GOT.func.foo.
 #
-# RUN: wasm-ld --experimental-pic -pie %t.o -o %t3.wasm
+# RUN: wasm-ld -pie %t.o -o %t3.wasm
 # RUN: obj2yaml %t3.wasm | FileCheck %s --check-prefix=IMPORT
 
 #      IMPORT:  - Type:            IMPORT

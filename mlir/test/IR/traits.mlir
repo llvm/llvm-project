@@ -303,6 +303,85 @@ func.func @failedParentOneOf_wrong_parent1() {
    }) : () -> ()
 }
 
+// -----
+
+// CHECK: succeededHasAncestor_direct_parent
+func.func @succeededHasAncestor_direct_parent() {
+  "test.parent"() ({
+    "test.child_with_ancestor"() : () -> ()
+    "test.finish"() : () -> ()
+  }) : () -> ()
+  return
+}
+
+// -----
+
+// CHECK: succeededHasAncestor_indirect
+func.func @succeededHasAncestor_indirect() {
+  "test.parent"() ({
+    "some.intermediate_op"() ({
+      "test.child_with_ancestor"() : () -> ()
+      "test.finish"() : () -> ()
+    }) : () -> ()
+    "test.finish"() : () -> ()
+  }) : () -> ()
+  return
+}
+
+// -----
+
+func.func @failedHasAncestor_wrong_ancestor() {
+  "some.op"() ({
+    // expected-error@+1 {{'test.child_with_ancestor' op expects ancestor op 'test.parent'}}
+    "test.child_with_ancestor"() : () -> ()
+  }) : () -> ()
+}
+
+// -----
+
+// CHECK: succeededAncestorOneOf
+func.func @succeededAncestorOneOf() {
+  "test.parent"() ({
+    "test.child_with_ancestor_one_of"() : () -> ()
+    "test.finish"() : () -> ()
+  }) : () -> ()
+  return
+}
+
+// -----
+
+// CHECK: succeededAncestor1OneOf
+func.func @succeededAncestor1OneOf() {
+  "test.parent1"() ({
+    "test.child_with_ancestor_one_of"() : () -> ()
+    "test.finish"() : () -> ()
+  }) : () -> ()
+  return
+}
+
+// -----
+
+// CHECK: succeededAncestorOneOf_indirect
+func.func @succeededAncestorOneOf_indirect() {
+  "test.parent1"() ({
+    "some.intermediate_op"() ({
+      "test.child_with_ancestor_one_of"() : () -> ()
+      "test.finish"() : () -> ()
+    }) : () -> ()
+    "test.finish"() : () -> ()
+  }) : () -> ()
+  return
+}
+
+// -----
+
+func.func @failedAncestorOneOf_wrong_ancestor() {
+  "some.otherop"() ({
+    // expected-error@+1 {{'test.child_with_ancestor_one_of' op expects ancestor op to be one of 'test.parent, test.parent1'}}
+    "test.child_with_ancestor_one_of"() : () -> ()
+    "test.finish"() : () -> ()
+  }) : () -> ()
+}
 
 // -----
 
@@ -521,6 +600,17 @@ func.func @succeededOilistTrivialProperties() {
 
 // -----
 
+// CHECK-LABEL: @succeededOilistOptionalAttr
+func.func @succeededOilistOptionalAttr() {
+  // CHECK: test.oilist_optional_attr keyword nested <nested = <1, !test.smpla, [5, 6]>>
+  test.oilist_optional_attr nested <nested = <1, !test.smpla, [5, 6]>> keyword
+  // CHECK: test.oilist_optional_attr nested <nested = <1, !test.smpla, [5, 6]>>
+  test.oilist_optional_attr nested #test.cmpnd_nested<nested = <1, !test.smpla, [5, 6]>>
+  return
+}
+
+// -----
+
 // CHECK-LABEL: @succeededOilistSimple
 func.func @succeededOilistSimple(%arg0 : i32, %arg1 : i32, %arg2 : i32) {
   // CHECK: test.oilist_with_simple_args keyword %{{.*}} : i32
@@ -571,6 +661,49 @@ func.func @succeededOilistCustom(%arg0: i32, %arg1: i32, %arg2: i32) {
   // CHECK: test.oilist_custom private(%arg0, %arg1 : i32, i32) reduction (%arg1) nowait
   test.oilist_custom nowait reduction (%arg1) private (%arg0, %arg1 : i32, i32)
   return
+}
+
+// -----
+
+// CHECK-LABEL: @succeededOilistWithSeparator
+func.func @succeededOilistWithSeparator() {
+  // CHECK: test.oilist_with_separator
+  test.oilist_with_separator
+  // CHECK: test.oilist_with_separator keyword
+  test.oilist_with_separator keyword
+  // CHECK: test.oilist_with_separator keyword, otherKeyword
+  test.oilist_with_separator otherKeyword, keyword
+  // CHECK: test.oilist_with_separator keyword, otherKeyword, thirdKeyword
+  test.oilist_with_separator thirdKeyword, keyword, otherKeyword
+  return
+}
+
+// -----
+
+func.func @failedOilistWithDuplicateSeparatedClause() {
+  // expected-error@+1 {{`keyword` clause can appear at most once in the expansion of the oilist directive}}
+  test.oilist_with_separator keyword, keyword
+}
+
+// -----
+
+func.func @failedOilistWithMissingSeparator() {
+  // expected-error@+1 {{expected ',' between oilist clauses}}
+  test.oilist_with_separator keyword otherKeyword
+}
+
+// -----
+
+func.func @failedOilistWithTrailingSeparator() {
+  // expected-error@+1 {{expected oilist clause after separator}}
+  test.oilist_with_separator keyword,
+}
+
+// -----
+
+func.func @failedOilistOptionalAttrMissingValue() {
+  // expected-error@+1 {{expected '<'}}
+  test.oilist_optional_attr nested
 }
 
 // -----

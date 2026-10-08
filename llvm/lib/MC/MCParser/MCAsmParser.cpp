@@ -24,7 +24,7 @@ using namespace llvm;
 
 namespace llvm {
 cl::opt<unsigned> AsmMacroMaxNestingDepth(
-    "asm-macro-max-nesting-depth", cl::init(20), cl::Hidden,
+    "asm-macro-max-nesting-depth", cl::init(100), cl::Hidden,
     cl::desc("The maximum nesting depth allowed for assembly macros."));
 }
 
@@ -175,7 +175,8 @@ bool MCAsmParser::parseSymbol(MCSymbol *&Res) {
 void MCParsedAsmOperand::dump() const {
   // Cannot completely remove virtual function even in release mode.
 #if !defined(NDEBUG) || defined(LLVM_ENABLE_DUMP)
+  MCTargetOptions Opts;
   dbgs() << "  ";
-  print(dbgs(), MCAsmInfo());
+  print(dbgs(), MCAsmInfo(Opts));
 #endif
 }

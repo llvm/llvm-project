@@ -15,6 +15,7 @@
 #ifndef LLVM_LIB_TRANSFORMS_INSTCOMBINE_INSTCOMBINEINTERNAL_H
 #define LLVM_LIB_TRANSFORMS_INSTCOMBINE_INSTCOMBINEINTERNAL_H
 
+#include "InstCombineCLOptions.h"
 #include "llvm/ADT/PostOrderIterator.h"
 #include "llvm/ADT/Statistic.h"
 #include "llvm/Analysis/InstructionSimplify.h"
@@ -35,10 +36,6 @@
 #define DEBUG_TYPE "instcombine"
 #include "llvm/Transforms/Utils/InstructionWorklist.h"
 
-// As a default, let's assume that we want to be aggressive,
-// and attempt to traverse with no limits in attempt to sink negation.
-static constexpr unsigned NegatorDefaultMaxDepth = ~0U;
-
 // Let's guesstimate that most often we will end up visiting/producing
 // fairly small number of new instructions.
 static constexpr unsigned NegatorMaxNodesSSO = 16;
@@ -58,21 +55,34 @@ class ProfileSummaryInfo;
 class TargetLibraryInfo;
 class User;
 
+/// Enum to specify how shift operations should be evaluated in
+/// canEvaluateShifted.
+/// Lossy: Allows lossy transformations
+/// Signed: Requires lossless transformation, using ashr to restore for shl,
+///         or represents ashr handling for right shifts
+/// Unsigned: Requires lossless transformation, using lshr to restore for shl,
+///           or represents lshr handling for right shifts
+enum class ShiftSemantics { Lossy, Signed, Unsigned };
+
 class LLVM_LIBRARY_VISIBILITY InstCombinerImpl final
     : public InstCombiner,
       public InstVisitor<InstCombinerImpl, Instruction *> {
 public:
-  InstCombinerImpl(InstructionWorklist &Worklist, BuilderTy &Builder,
-                   Function &F, AAResults *AA, AssumptionCache &AC,
-                   TargetLibraryInfo &TLI, TargetTransformInfo &TTI,
-                   DominatorTree &DT, OptimizationRemarkEmitter &ORE,
-                   BlockFrequencyInfo *BFI, BranchProbabilityInfo *BPI,
-                   ProfileSummaryInfo *PSI, const DataLayout &DL,
-                   ReversePostOrderTraversal<BasicBlock *> &RPOT)
-      : InstCombiner(Worklist, Builder, F, AA, AC, TLI, TTI, DT, ORE, BFI, BPI,
-                     PSI, DL, RPOT) {}
+  InstCombinerImpl(InstructionWorklist &Worklist, Function &F, AAResults *AA,
+                   AssumptionCache &AC, TargetLibraryInfo &TLI,
+                   TargetTransformInfo &TTI, DominatorTree &DT,
+                   OptimizationRemarkEmitter &ORE, BlockFrequencyInfo *BFI,
+                   BranchProbabilityInfo *BPI, ProfileSummaryInfo *PSI,
+                   const DataLayout &DL,
+                   ReversePostOrderTraversal<BasicBlock *> &RPOT,
+                   const InstCombineCLOptions &CLOpts)
+      : InstCombiner(Worklist, F, AA, AC, TLI, TTI, DT, ORE, BFI, BPI, PSI, DL,
+                     RPOT),
+        CLOpts(CLOpts) {}
 
   ~InstCombinerImpl() override = default;
+
+  const InstCombineCLOptions &CLOpts;
 
   /// Perform early cleanup and prepare the InstCombine worklist.
   bool prepareWorklist(Function &F);
@@ -110,7 +120,9 @@ public:
   Instruction *visitUDiv(BinaryOperator &I);
   Instruction *visitSDiv(BinaryOperator &I);
   Instruction *visitFDiv(BinaryOperator &I);
-  Value *simplifyRangeCheck(ICmpInst *Cmp0, ICmpInst *Cmp1, bool Inverted);
+  Value *simplifyRangeCheck(CmpPredicate PredL, Value *LHS0, Value *LHS1,
+                            CmpPredicate PredR, Value *RHS0, Value *RHS1,
+                            Instruction *CtxI, bool Inverted);
   Instruction *FoldOrOfLogicalAnds(Value *Op0, Value *Op1);
   Instruction *visitAnd(BinaryOperator &I);
   Instruction *visitOr(BinaryOperator &I);
@@ -148,7 +160,7 @@ public:
   Instruction *visitIntToPtr(IntToPtrInst &CI);
   Instruction *visitBitCast(BitCastInst &CI);
   Instruction *visitAddrSpaceCast(AddrSpaceCastInst &CI);
-  Instruction *foldItoFPtoI(CastInst &FI);
+  template <typename FPToIntTy> Instruction *foldItoFPtoI(FPToIntTy &FI);
   Instruction *visitSelectInst(SelectInst &SI);
   Instruction *foldShuffledIntrinsicOperands(IntrinsicInst *II);
   Value *foldReversedIntrinsicOperands(IntrinsicInst *II);
@@ -294,68 +306,68 @@ private:
 
   bool willNotOverflowSignedAdd(const WithCache<const Value *> &LHS,
                                 const WithCache<const Value *> &RHS,
-                                const Instruction &CxtI) const {
-    return computeOverflowForSignedAdd(LHS, RHS, &CxtI) ==
+                                const Instruction &CtxI) const {
+    return computeOverflowForSignedAdd(LHS, RHS, &CtxI) ==
            OverflowResult::NeverOverflows;
   }
 
   bool willNotOverflowUnsignedAdd(const WithCache<const Value *> &LHS,
                                   const WithCache<const Value *> &RHS,
-                                  const Instruction &CxtI) const {
-    return computeOverflowForUnsignedAdd(LHS, RHS, &CxtI) ==
+                                  const Instruction &CtxI) const {
+    return computeOverflowForUnsignedAdd(LHS, RHS, &CtxI) ==
            OverflowResult::NeverOverflows;
   }
 
   bool willNotOverflowAdd(const Value *LHS, const Value *RHS,
-                          const Instruction &CxtI, bool IsSigned) const {
-    return IsSigned ? willNotOverflowSignedAdd(LHS, RHS, CxtI)
-                    : willNotOverflowUnsignedAdd(LHS, RHS, CxtI);
+                          const Instruction &CtxI, bool IsSigned) const {
+    return IsSigned ? willNotOverflowSignedAdd(LHS, RHS, CtxI)
+                    : willNotOverflowUnsignedAdd(LHS, RHS, CtxI);
   }
 
   bool willNotOverflowSignedSub(const Value *LHS, const Value *RHS,
-                                const Instruction &CxtI) const {
-    return computeOverflowForSignedSub(LHS, RHS, &CxtI) ==
+                                const Instruction &CtxI) const {
+    return computeOverflowForSignedSub(LHS, RHS, &CtxI) ==
            OverflowResult::NeverOverflows;
   }
 
   bool willNotOverflowUnsignedSub(const Value *LHS, const Value *RHS,
-                                  const Instruction &CxtI) const {
-    return computeOverflowForUnsignedSub(LHS, RHS, &CxtI) ==
+                                  const Instruction &CtxI) const {
+    return computeOverflowForUnsignedSub(LHS, RHS, &CtxI) ==
            OverflowResult::NeverOverflows;
   }
 
   bool willNotOverflowSub(const Value *LHS, const Value *RHS,
-                          const Instruction &CxtI, bool IsSigned) const {
-    return IsSigned ? willNotOverflowSignedSub(LHS, RHS, CxtI)
-                    : willNotOverflowUnsignedSub(LHS, RHS, CxtI);
+                          const Instruction &CtxI, bool IsSigned) const {
+    return IsSigned ? willNotOverflowSignedSub(LHS, RHS, CtxI)
+                    : willNotOverflowUnsignedSub(LHS, RHS, CtxI);
   }
 
   bool willNotOverflowSignedMul(const Value *LHS, const Value *RHS,
-                                const Instruction &CxtI) const {
-    return computeOverflowForSignedMul(LHS, RHS, &CxtI) ==
+                                const Instruction &CtxI) const {
+    return computeOverflowForSignedMul(LHS, RHS, &CtxI) ==
            OverflowResult::NeverOverflows;
   }
 
   bool willNotOverflowUnsignedMul(const Value *LHS, const Value *RHS,
-                                  const Instruction &CxtI,
+                                  const Instruction &CtxI,
                                   bool IsNSW = false) const {
-    return computeOverflowForUnsignedMul(LHS, RHS, &CxtI, IsNSW) ==
+    return computeOverflowForUnsignedMul(LHS, RHS, &CtxI, IsNSW) ==
            OverflowResult::NeverOverflows;
   }
 
   bool willNotOverflowMul(const Value *LHS, const Value *RHS,
-                          const Instruction &CxtI, bool IsSigned) const {
-    return IsSigned ? willNotOverflowSignedMul(LHS, RHS, CxtI)
-                    : willNotOverflowUnsignedMul(LHS, RHS, CxtI);
+                          const Instruction &CtxI, bool IsSigned) const {
+    return IsSigned ? willNotOverflowSignedMul(LHS, RHS, CtxI)
+                    : willNotOverflowUnsignedMul(LHS, RHS, CtxI);
   }
 
   bool willNotOverflow(BinaryOperator::BinaryOps Opcode, const Value *LHS,
-                       const Value *RHS, const Instruction &CxtI,
+                       const Value *RHS, const Instruction &CtxI,
                        bool IsSigned) const {
     switch (Opcode) {
-    case Instruction::Add: return willNotOverflowAdd(LHS, RHS, CxtI, IsSigned);
-    case Instruction::Sub: return willNotOverflowSub(LHS, RHS, CxtI, IsSigned);
-    case Instruction::Mul: return willNotOverflowMul(LHS, RHS, CxtI, IsSigned);
+    case Instruction::Add: return willNotOverflowAdd(LHS, RHS, CtxI, IsSigned);
+    case Instruction::Sub: return willNotOverflowSub(LHS, RHS, CtxI, IsSigned);
+    case Instruction::Mul: return willNotOverflowMul(LHS, RHS, CtxI, IsSigned);
     default: llvm_unreachable("Unexpected opcode for overflow query");
     }
   }
@@ -397,14 +409,16 @@ private:
                                             const CastInst *CI2);
   Value *simplifyIntToPtrRoundTripCast(Value *Val);
 
-  Value *foldAndOrOfICmps(ICmpInst *LHS, ICmpInst *RHS, Instruction &I,
-                          bool IsAnd, bool IsLogical = false);
+  Value *foldAndOrOfICmps(Value *LHS, Value *RHS, Instruction &I, bool IsAnd,
+                          bool IsLogical = false);
   Value *foldXorOfICmps(ICmpInst *LHS, ICmpInst *RHS, BinaryOperator &Xor);
 
   Value *foldEqOfParts(Value *Cmp0, Value *Cmp1, bool IsAnd);
 
-  Value *foldAndOrOfICmpsUsingRanges(ICmpInst *ICmp1, ICmpInst *ICmp2,
-                                     bool IsAnd);
+  Value *foldAndOrOfICmpsUsingRanges(CmpPredicate PredL, Value *LHS0,
+                                     Value *LHS1, bool LHSOneUse,
+                                     CmpPredicate PredR, Value *RHS0,
+                                     Value *RHS1, bool RHSOneUse, bool IsAnd);
 
   /// Optimize (fcmp)&(fcmp) or (fcmp)|(fcmp).
   /// NOTE: Unlike most of instcombine, this returns a Value which should
@@ -432,6 +446,11 @@ private:
                               bool InvertFalseVal = false);
   Value *getSelectCondition(Value *A, Value *B, bool ABIsTheSame);
 
+  bool canEvaluateShifted(Value *V, unsigned NumBits, bool IsLeftShift,
+                          ShiftSemantics Semantics, Instruction *CtxI);
+  Value *getShiftedValue(Value *V, unsigned NumBits, bool IsLeftShift,
+                         ShiftSemantics Semantics);
+
   Instruction *foldLShrOverflowBit(BinaryOperator &I);
   Instruction *foldExtractOfOverflowIntrinsic(ExtractValueInst &EV);
   Instruction *foldIntrinsicWithOverflowCommon(IntrinsicInst *II);
@@ -450,9 +469,10 @@ private:
 
   /// Simplify \p V given that it is known to be non-null.
   /// Returns the simplified value if possible, otherwise returns nullptr.
-  /// If \p HasDereferenceable is true, the simplification will not perform
-  /// same object checks.
-  Value *simplifyNonNullOperand(Value *V, bool HasDereferenceable,
+  /// If \p UseProvenance is true, the simplification will use provenance-based
+  /// reasoning (if the pointer is known to be dereferenceable in an
+  /// address-space where null is not defined).
+  Value *simplifyNonNullOperand(Value *V, bool UseProvenance,
                                 unsigned Depth = 0);
 
   /// Create `select C, S1, S2`. Use only when the profile cannot be calculated
@@ -502,7 +522,7 @@ public:
 
   OverflowResult computeOverflow(
       Instruction::BinaryOps BinaryOp, bool IsSigned,
-      Value *LHS, Value *RHS, Instruction *CxtI) const;
+      Value *LHS, Value *RHS, Instruction *CtxI) const;
 
   /// Performs a few simplifications for operators which are associative
   /// or commutative.
@@ -544,6 +564,12 @@ public:
   /// (Binop (cast C), (select C, T, F))
   ///    -> (select C, C0, C1)
   Instruction *foldBinOpOfSelectAndCastOfSelectCondition(BinaryOperator &I);
+  /// Fold both forms of the div_ceil idiom:
+  ///   (add (udiv X, Y), (zext (icmp ne (urem X, Y), 0)))
+  ///     -> (udiv (add nuw X, Y-1), Y)
+  ///   (add (zext (udiv X, Y)), (zext (icmp ne (urem X, Y), 0)))
+  ///     -> (zext (udiv (add nuw X, Y-1), Y))
+  Instruction *foldDivCeil(BinaryOperator &I);
 
   /// This tries to simplify binary operations by factorizing out common terms
   /// (e. g. "(A*B)+(A*C)" -> "A*(B+C)").
@@ -707,6 +733,7 @@ public:
   Instruction *foldFCmpIntToFPConst(FCmpInst &I, Instruction *LHSI,
                                     Constant *RHSC);
   Instruction *foldICmpAddOpConst(Value *X, const APInt &C, CmpPredicate Pred);
+  Instruction *foldCmpSelectOfConstants(CmpInst &I);
   Instruction *foldICmpWithCastOp(ICmpInst &ICmp);
   Instruction *foldICmpWithZextOrSext(ICmpInst &ICmp);
 
@@ -784,7 +811,7 @@ public:
   Instruction *foldICmpBitCast(ICmpInst &Cmp);
   Instruction *foldICmpWithTrunc(ICmpInst &Cmp);
   Instruction *foldICmpCommutative(CmpPredicate Pred, Value *Op0, Value *Op1,
-                                   ICmpInst &CxtI);
+                                   ICmpInst &CtxI);
 
   // Helpers of visitSelectInst().
   Instruction *foldSelectOfBools(SelectInst &SI);
@@ -801,6 +828,9 @@ public:
   Value *foldSelectWithConstOpToBinOp(ICmpInst *Cmp, Value *TrueVal,
                                       Value *FalseVal);
   Instruction *foldSelectValueEquivalence(SelectInst &SI, CmpInst &CI);
+
+  Instruction *foldExtractionOfVectorDeinterleave(ZExtInst &RootZExt);
+
   bool replaceInInstruction(Value *V, Value *Old, Value *New,
                             unsigned Depth = 0);
 
@@ -857,10 +887,12 @@ class Negator final {
 
   const bool IsTrulyNegation;
 
+  const unsigned MaxDepth;
+
   SmallDenseMap<Value *, Value *> NegationsCache;
 
   Negator(LLVMContext &C, const DataLayout &DL, const DominatorTree &DT,
-          bool IsTrulyNegation);
+          bool IsTrulyNegation, unsigned MaxDepth);
 
 #if LLVM_ENABLE_STATS
   unsigned NumValuesVisitedInThisNegator = 0;

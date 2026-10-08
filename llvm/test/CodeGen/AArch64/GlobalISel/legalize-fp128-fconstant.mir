@@ -15,8 +15,8 @@ body:             |
     ; CHECK-NEXT: [[LDRQui:%[0-9]+]]:fpr128 = LDRQui [[ADRP]], target-flags(aarch64-pageoff, aarch64-nc) %const.0 :: (load (s128) from constant-pool)
     ; CHECK-NEXT: $q0 = COPY [[LDRQui]]
     ; CHECK-NEXT: RET_ReallyLR implicit $q0
-    %0:fpr(s128) = G_FCONSTANT fp128 0xL00000000000000004000000000000000
-    $q0 = COPY %0:fpr(s128)
+    %0:fpr(f128) = G_FCONSTANT fp128 0xL00000000000000004000000000000000
+    $q0 = COPY %0:fpr(f128)
     RET_ReallyLR implicit $q0
 ...
 

@@ -38,14 +38,6 @@ struct CAPIDenseMap {};
 template<typename T>
 struct CAPIDenseMap<T*> {
   struct CAPIDenseMapInfo {
-    static inline T* getEmptyKey() {
-      uintptr_t Val = static_cast<uintptr_t>(-1);
-      return reinterpret_cast<T*>(Val);
-    }
-    static inline T* getTombstoneKey() {
-      uintptr_t Val = static_cast<uintptr_t>(-2);
-      return reinterpret_cast<T*>(Val);
-    }
     static unsigned getHashValue(const T *PtrVal) {
       return hash_value(PtrVal);
     }
@@ -430,8 +422,9 @@ static LLVMValueRef clone_constant_impl(LLVMValueRef Cst, LLVMModuleRef M) {
       for (int i = 1; i <= NumIdx; i++)
         Idx.push_back(clone_constant(LLVMGetOperand(Cst, i), M));
 
-      return LLVMConstGEPWithNoWrapFlags(ElemTy, Ptr, Idx.data(), NumIdx,
-                                         LLVMGEPGetNoWrapFlags(Cst));
+      return LLVMConstPtrAddFromIndices(LLVMGetModuleDataLayout(M), ElemTy, Ptr,
+                                        Idx.data(), NumIdx,
+                                        LLVMGEPGetNoWrapFlags(Cst));
     }
     default:
       fprintf(stderr, "%d is not a supported opcode for constant expressions\n",
@@ -1002,6 +995,20 @@ struct FunCloner {
         Dst = LLVMBuildFreeze(Builder, Arg, Name);
         break;
       }
+      case LLVMBitInsert: {
+        LLVMValueRef Base = CloneValue(LLVMGetOperand(Src, 0));
+        LLVMValueRef Val = CloneValue(LLVMGetOperand(Src, 1));
+        LLVMValueRef Offset = CloneValue(LLVMGetOperand(Src, 2));
+        Dst = LLVMBuildBitInsert(Builder, Base, Val, Offset, Name);
+        break;
+      }
+      case LLVMBitExtract: {
+        LLVMTypeRef Type = CloneType(LLVMTypeOf(Src));
+        LLVMValueRef SrcV = CloneValue(LLVMGetOperand(Src, 0));
+        LLVMValueRef Offset = CloneValue(LLVMGetOperand(Src, 1));
+        Dst = LLVMBuildBitExtract(Builder, Type, SrcV, Offset, Name);
+        break;
+      }
       case LLVMFence: {
         LLVMAtomicOrdering Ordering = LLVMGetOrdering(Src);
         Dst = LLVMBuildFenceSyncScope(Builder, Ordering,
@@ -1119,6 +1126,8 @@ struct FunCloner {
 
     LLVMContextRef Ctx = LLVMGetModuleContext(M);
     LLVMBasicBlockRef BB = LLVMAppendBasicBlockInContext(Ctx, Fun, Name);
+    if (LLVMGetBasicBlockTerminator(BB) != nullptr)
+      report_fatal_error("Basic block must not have terminator");
     return BBMap[Src] = BB;
   }
 
@@ -1160,6 +1169,9 @@ struct FunCloner {
 
       Cur = Next;
     }
+
+    if (LLVMGetBasicBlockTerminator(BB) != LLVMGetLastInstruction(BB))
+      report_fatal_error("Basic block terminator mismatch");
 
     LLVMDisposeBuilder(Builder);
     return BB;

@@ -590,3 +590,20 @@ namespace ToPrimPtrs {
                                                                                 // both-note {{bit_cast to a member pointer type is not allowed in a constant expression}}
 #endif
 }
+
+namespace NonNumbers {
+#define fold(x) (__builtin_constant_p(x) ? (x) : (x))
+  constexpr intptr_t fn(void) {
+    return __builtin_bit_cast(intptr_t, fold((intptr_t)&fn)); // ref-note {{constexpr bit cast involving type}}
+  }
+  static_assert(fn() == 1); // both-error {{not an integral constant expression}} \
+                            // ref-note {{in call to}}
+}
+
+namespace InvalidRecordDecl {
+ struct a :; // both-error {{expected class name}} \
+             // both-error {{expected '{' after base class list}}
+  constexpr struct {
+  } b;
+  a c = __builtin_bit_cast(a, b);
+}

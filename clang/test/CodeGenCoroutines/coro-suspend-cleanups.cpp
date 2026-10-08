@@ -39,8 +39,6 @@ coroutine ArrayInitCoro() {
   //  - We activate the cleanup after the first element and deactivate it in await.ready (see cleanup.isactive).
 
   // CHECK-LABEL: define dso_local void @_Z13ArrayInitCorov
-  // CHECK: %arrayinit.endOfInit = alloca ptr, align 8
-  // CHECK: %cleanup.isactive = alloca i1, align 1
   Printy arr[2] = {
     Printy("a"),
     // CHECK:       store i1 true, ptr %cleanup.isactive.reload.addr, align 1
@@ -52,7 +50,7 @@ coroutine ArrayInitCoro() {
     // CHECK-NEXT:  store ptr %arrayinit.element, ptr %arrayinit.endOfInit.reload.addr, align 8
     co_await Awaiter{}
     // CHECK-NEXT:  @_ZNSt14suspend_always11await_readyEv
-    // CHECK-NEXT:  br i1 %{{.+}}, label %await.ready, label %CoroSave30
+    // CHECK-NEXT:  br i1 %{{.+}}, label %await.ready, label %{{CoroSave[0-9]+}}
   };
   // CHECK:       await.cleanup:                                    ; preds = %AfterCoroSuspend{{.*}}
   // CHECK-NEXT:    br label %cleanup{{.*}}.from.await.cleanup

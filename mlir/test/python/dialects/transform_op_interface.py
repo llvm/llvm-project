@@ -25,7 +25,7 @@ def run(emit_schedule):
     with ir.Context() as ctx, ir.Location.unknown():
         payload = emit_payload()
 
-        MyTransform.load(reload=True)
+        MyTransform.load()
 
         GetNamedAttributeOp.attach_interface_impls(ctx)
         PrintParamOp.attach_interface_impls(ctx)
@@ -77,10 +77,12 @@ def schedule_boilerplate():
 # Used by most ops defined below.
 class MemoryEffectsOpInterfaceFallbackModel(ir.MemoryEffectsOpInterface):
     @staticmethod
-    def get_effects(op: ir.Operation, effects):
-        transform.only_reads_handle(op.op_operands, effects)
-        transform.produces_handle(op.results, effects)
-        transform.only_reads_payload(effects)
+    def get_effects(op: ir.Operation):
+        return (
+            transform.only_reads_handle(op.op_operands)
+            + transform.produces_handle(op.results)
+            + transform.only_reads_payload()
+        )
 
 
 # Demonstration of a TransformOpInterface-implementing op that gets named attributes
@@ -88,7 +90,7 @@ class MemoryEffectsOpInterfaceFallbackModel(ir.MemoryEffectsOpInterface):
 class GetNamedAttributeOp(MyTransform.Operation, name="get_named_attribute"):
     target: ext.Operand[transform.AnyOpType]
     attr_name: ir.StringAttr
-    attr_as_param: ext.Result[transform.AnyParamType[()]]
+    attr_as_param: ext.Result[transform.AnyParamType[()]] = ext.infer_result()
 
     @classmethod
     def attach_interface_impls(cls, ctx=None):
@@ -149,7 +151,7 @@ class PrintParamOp(MyTransform.Operation, name="print_param"):
 # Syntax for an op with one op handle operand and one op handle result.
 class OneOpInOneOpOut(MyTransform.Operation, name="one_op_in_one_op_out"):
     target: ext.Operand[transform.AnyOpType]
-    res: ext.Result[transform.AnyOpType[()]]
+    res: ext.Result[transform.AnyOpType[()]] = ext.infer_result()
 
 
 # CHECK-LABEL: Test: OneOpInOneOpOutTransformOpInterface
@@ -235,10 +237,12 @@ def OneOpInOneOpOutTransformOpInterfaceRewriterImpl():
     # TransformOpInterface-implementing ops are also required to implement MemoryEffectsOpInterface. The above defined fallback model works for this op.
     class MemoryEffectsOpInterfaceFallbackModel(ir.MemoryEffectsOpInterface):
         @staticmethod
-        def get_effects(op: ir.Operation, effects):
-            transform.consumes_handle(op.op_operands, effects)
-            transform.produces_handle(op.results, effects)
-            transform.modifies_payload(effects)
+        def get_effects(op: ir.Operation):
+            return (
+                transform.consumes_handle(op.op_operands)
+                + transform.produces_handle(op.results)
+                + transform.modifies_payload()
+            )
 
     MemoryEffectsOpInterfaceFallbackModel.attach(OneOpInOneOpOut.OPERATION_NAME)
 
@@ -277,9 +281,9 @@ class OpValParamInParamOpValOut(
     val_arg: ext.Operand[transform.AnyValueType]
     param_arg: ext.Operand[transform.AnyParamType]
     # results
-    param_res: ext.Result[transform.AnyParamType[()]]
-    op_res: ext.Result[transform.AnyOpType[()]]
-    value_res: ext.Result[transform.AnyValueType[()]]
+    param_res: ext.Result[transform.AnyParamType[()]] = ext.infer_result()
+    op_res: ext.Result[transform.AnyOpType[()]] = ext.infer_result()
+    value_res: ext.Result[transform.AnyValueType[()]] = ext.infer_result()
 
 
 # CHECK-LABEL: Test: OpValParamInParamOpValOutTransformOpInterface
@@ -376,12 +380,12 @@ def OpValParamInParamOpValOutTransformOpInterface():
 class OpsParamsInValuesParamOut(
     MyTransform.Operation, name="ops_params_in_values_param_out"
 ):
-    # operands
-    ops: Sequence[ext.Operand[transform.AnyOpType]]
-    params: Sequence[ext.Operand[transform.AnyParamType]]
     # results
     values: Sequence[ext.Result[transform.AnyValueType]]
     param: ext.Result[transform.AnyParamType]
+    # operands
+    ops: Sequence[ext.Operand[transform.AnyOpType]]
+    params: Sequence[ext.Operand[transform.AnyParamType]]
 
 
 # CHECK-LABEL: Test: OpsParamsInValuesParamOutTransformOpInterface

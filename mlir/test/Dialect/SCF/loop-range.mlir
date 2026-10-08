@@ -131,3 +131,163 @@ func.func @fold_only_first_add(%arg0: memref<?xi32>, %arg1: index, %arg2: index)
 // CHECK:         %[[I4:.*]] = memref.load %[[ARG0]]{{\[}}%[[I3]]
 // CHECK:         %[[I5:.*]] = arith.muli %[[I4]], %[[I4]] : i32
 // CHECK:         memref.store %[[I5]], %[[ARG0]]{{\[}}%[[I3]]
+
+// Do not fold arith.muli with a negative multiplier: the resulting loop step
+// would be negative, which is invalid for scf.for.
+func.func @no_fold_negative_mul() {
+  %cm1 = arith.constant -1 : index
+  %c0 = arith.constant 0 : index
+  %c10 = arith.constant 10 : index
+  %c1 = arith.constant 1 : index
+  scf.for %i = %c0 to %c10 step %c1 {
+    %0 = arith.muli %i, %cm1 : index
+    "test.sink"(%0) : (index) -> ()
+  }
+  return
+}
+
+// CHECK-LABEL: func @no_fold_negative_mul
+// CHECK:       %[[CM1:.*]] = arith.constant -1 : index
+// CHECK:       %[[C0:.*]] = arith.constant 0 : index
+// CHECK:       %[[C10:.*]] = arith.constant 10 : index
+// CHECK:       %[[C1:.*]] = arith.constant 1 : index
+// CHECK:       scf.for %[[I:.*]] = %[[C0]] to %[[C10]] step %[[C1]] {
+// CHECK:         %[[R:.*]] = arith.muli %[[I]], %[[CM1]] : index
+// CHECK:         "test.sink"(%[[R]])
+
+// Do not fold arith.muli with a negative multiplier when the induction variable
+// is on the RHS.
+func.func @no_fold_negative_mul_indvar_rhs() {
+  %cm1 = arith.constant -1 : index
+  %c0 = arith.constant 0 : index
+  %c10 = arith.constant 10 : index
+  %c1 = arith.constant 1 : index
+  scf.for %i = %c0 to %c10 step %c1 {
+    %0 = arith.muli %cm1, %i : index
+    "test.sink"(%0) : (index) -> ()
+  }
+  return
+}
+
+// CHECK-LABEL: func @no_fold_negative_mul_indvar_rhs
+// CHECK:       %[[CM1:.*]] = arith.constant -1 : index
+// CHECK:       %[[C0:.*]] = arith.constant 0 : index
+// CHECK:       %[[C10:.*]] = arith.constant 10 : index
+// CHECK:       %[[C1:.*]] = arith.constant 1 : index
+// CHECK:       scf.for %[[I:.*]] = %[[C0]] to %[[C10]] step %[[C1]] {
+// CHECK:         %[[R:.*]] = arith.muli %[[CM1]], %[[I]] : index
+// CHECK:         "test.sink"(%[[R]])
+
+// Do not fold arith.muli with a zero multiplier.
+func.func @no_fold_zero_mul() {
+  %c0 = arith.constant 0 : index
+  %c10 = arith.constant 10 : index
+  %c1 = arith.constant 1 : index
+  scf.for %i = %c0 to %c10 step %c1 {
+    %0 = arith.muli %i, %c0 : index
+    "test.sink"(%0) : (index) -> ()
+  }
+  return
+}
+
+// CHECK-LABEL: func @no_fold_zero_mul
+// CHECK:       %[[C0:.*]] = arith.constant 0 : index
+// CHECK:       %[[C10:.*]] = arith.constant 10 : index
+// CHECK:       %[[C1:.*]] = arith.constant 1 : index
+// CHECK:       scf.for %[[I:.*]] = %[[C0]] to %[[C10]] step %[[C1]] {
+// CHECK:         %[[R:.*]] = arith.muli %[[I]], %[[C0]] : index
+// CHECK:         "test.sink"(%[[R]])
+
+// Do not fold arith.muli when the multiplier is a non-constant loop-invariant
+// value, since its sign is unknown at compile time.
+func.func @no_fold_runtime_mul(%multiplier: index) {
+  %c0 = arith.constant 0 : index
+  %c10 = arith.constant 10 : index
+  %c1 = arith.constant 1 : index
+  scf.for %i = %c0 to %c10 step %c1 {
+    %0 = arith.muli %i, %multiplier : index
+    "test.sink"(%0) : (index) -> ()
+  }
+  return
+}
+
+// CHECK-LABEL: func @no_fold_runtime_mul
+// CHECK:       %[[C0:.*]] = arith.constant 0 : index
+// CHECK:       %[[C10:.*]] = arith.constant 10 : index
+// CHECK:       %[[C1:.*]] = arith.constant 1 : index
+// CHECK:       scf.for %[[I:.*]] = %[[C0]] to %[[C10]] step %[[C1]] {
+// CHECK:         %[[R:.*]] = arith.muli %[[I]], {{.*}} : index
+// CHECK:         "test.sink"(%[[R]])
+
+// `arith.addi %i, %i` is `2 * %i`, so it can be folded into the loop range like
+// a multiplication by 2: the lower bound, the upper bound and the step are all
+// doubled. The step has to be doubled too, otherwise the folded loop would visit
+// every index instead of every second one.
+func.func @fold_self_add(%arg0: memref<16xi32>, %arg1: i32) {
+  %c0 = arith.constant 0 : index
+  %c1 = arith.constant 1 : index
+  %c8 = arith.constant 8 : index
+  scf.for %i = %c0 to %c8 step %c1 {
+    %0 = arith.addi %i, %i : index
+    memref.store %arg1, %arg0[%0] : memref<16xi32>
+  }
+  return
+}
+
+// CHECK-LABEL: func @fold_self_add
+// CHECK-SAME:  (%[[ARG0:[a-z0-9]+]]: {{.*}}, %[[ARG1:[a-z0-9]+]]: {{.*}})
+// CHECK:       %[[C0:.*]] = arith.constant 0 : index
+// CHECK:       %[[C1:.*]] = arith.constant 1 : index
+// CHECK:       %[[C8:.*]] = arith.constant 8 : index
+// CHECK:       %[[LB:.*]] = arith.addi %[[C0]], %[[C0]] : index
+// CHECK:       %[[UB:.*]] = arith.addi %[[C8]], %[[C8]] : index
+// CHECK:       %[[STEP:.*]] = arith.addi %[[C1]], %[[C1]] : index
+// CHECK:       scf.for %[[I:.*]] = %[[LB]] to %[[UB]] step %[[STEP]] {
+// CHECK-NEXT:    memref.store %[[ARG1]], %[[ARG0]]{{\[}}%[[I]]
+
+// The induction variable has a user other than the `arith.addi`. Folding would
+// change what that user sees (`2 * %i` instead of `%i`), so the loop must be
+// left unchanged.
+func.func @no_fold_self_add_extra_user() {
+  %c0 = arith.constant 0 : index
+  %c8 = arith.constant 8 : index
+  %c1 = arith.constant 1 : index
+  scf.for %i = %c0 to %c8 step %c1 {
+    %0 = arith.addi %i, %i : index
+    "test.sink"(%0) : (index) -> ()
+    "test.sink"(%i) : (index) -> ()
+  }
+  return
+}
+
+// CHECK-LABEL: func @no_fold_self_add_extra_user
+// CHECK:       %[[C0:.*]] = arith.constant 0 : index
+// CHECK:       %[[C8:.*]] = arith.constant 8 : index
+// CHECK:       %[[C1:.*]] = arith.constant 1 : index
+// CHECK:       scf.for %[[I:.*]] = %[[C0]] to %[[C8]] step %[[C1]] {
+// CHECK:         %[[R:.*]] = arith.addi %[[I]], %[[I]] : index
+// CHECK:         "test.sink"(%[[R]])
+// CHECK:         "test.sink"(%[[I]])
+
+// `arith.muli %i, %i` is not a scaling of the induction variable by a constant,
+// so it cannot be expressed as a new loop range. The pass only folds a
+// multiplication by a known positive constant, so the loop must be left
+// unchanged.
+func.func @no_fold_self_mul() {
+  %c0 = arith.constant 0 : index
+  %c8 = arith.constant 8 : index
+  %c1 = arith.constant 1 : index
+  scf.for %i = %c0 to %c8 step %c1 {
+    %0 = arith.muli %i, %i : index
+    "test.sink"(%0) : (index) -> ()
+  }
+  return
+}
+
+// CHECK-LABEL: func @no_fold_self_mul
+// CHECK:       %[[C0:.*]] = arith.constant 0 : index
+// CHECK:       %[[C8:.*]] = arith.constant 8 : index
+// CHECK:       %[[C1:.*]] = arith.constant 1 : index
+// CHECK:       scf.for %[[I:.*]] = %[[C0]] to %[[C8]] step %[[C1]] {
+// CHECK:         %[[R:.*]] = arith.muli %[[I]], %[[I]] : index
+// CHECK:         "test.sink"(%[[R]])

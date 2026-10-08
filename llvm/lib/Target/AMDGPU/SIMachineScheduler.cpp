@@ -12,7 +12,6 @@
 //===----------------------------------------------------------------------===//
 
 #include "SIMachineScheduler.h"
-#include "MCTargetDesc/AMDGPUMCTargetDesc.h"
 #include "SIInstrInfo.h"
 #include "llvm/CodeGen/LiveIntervals.h"
 #include "llvm/CodeGen/MachineRegisterInfo.h"
@@ -181,7 +180,7 @@ void SIScheduleBlock::addUnit(SUnit *SU) {
 #ifndef NDEBUG
 void SIScheduleBlock::traceCandidate(const SISchedCandidate &Cand) {
 
-  dbgs() << "  SU(" << Cand.SU->NodeNum << ") " << getReasonStr(Cand.Reason);
+  dbgs() << "  " << *Cand.SU << " " << getReasonStr(Cand.Reason);
   dbgs() << '\n';
 }
 #endif
@@ -971,7 +970,7 @@ void SIScheduleBlockCreator::colorMergeConstantLoadsNextGroup() {
 
     // No predecessor: Vgpr constant loading.
     // Low latency instructions usually have a predecessor (the address)
-    if (SU->Preds.size() > 0 && !DAG->IsLowLatencySU[SU->NodeNum])
+    if (!SU->Preds.empty() && !DAG->IsLowLatencySU[SU->NodeNum])
       continue;
 
     for (SDep& SuccDep : SU->Succs) {
@@ -1976,8 +1975,7 @@ void SIScheduleDAGMI::schedule()
 
     scheduleMI(SU, true);
 
-    LLVM_DEBUG(dbgs() << "Scheduling SU(" << SU->NodeNum << ") "
-                      << *SU->getInstr());
+    LLVM_DEBUG(dbgs() << "Scheduling " << *SU << " " << *SU->getInstr());
   }
 
   assert(CurrentTop == CurrentBottom && "Nonempty unscheduled zone.");

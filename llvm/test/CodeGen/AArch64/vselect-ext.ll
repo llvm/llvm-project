@@ -516,14 +516,14 @@ define <16 x i32> @same_sext_used_in_cmp_unsigned_pred_and_select(<16 x i8> %a) 
 ; CHECK:       ; %bb.0: ; %entry
 ; CHECK-NEXT:    movi.16b v1, #10
 ; CHECK-NEXT:    sshll.8h v2, v0, #0
-; CHECK-NEXT:    ext.16b v4, v2, v2, #8
+; CHECK-NEXT:    mov d4, v2[1]
 ; CHECK-NEXT:    cmhi.16b v1, v0, v1
 ; CHECK-NEXT:    sshll2.8h v0, v0, #0
 ; CHECK-NEXT:    sshll.8h v3, v1, #0
 ; CHECK-NEXT:    sshll2.8h v1, v1, #0
-; CHECK-NEXT:    ext.16b v5, v0, v0, #8
-; CHECK-NEXT:    ext.16b v6, v3, v3, #8
-; CHECK-NEXT:    ext.16b v7, v1, v1, #8
+; CHECK-NEXT:    mov d5, v0[1]
+; CHECK-NEXT:    mov d6, v3[1]
+; CHECK-NEXT:    mov d7, v1[1]
 ; CHECK-NEXT:    and.8b v2, v3, v2
 ; CHECK-NEXT:    and.8b v1, v1, v0
 ; CHECK-NEXT:    sshll.4s v0, v2, #0

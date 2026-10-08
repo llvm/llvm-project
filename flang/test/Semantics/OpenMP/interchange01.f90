@@ -6,8 +6,9 @@ subroutine on_unroll
   implicit none
   integer i, j
 
-  !ERROR: OpenMP loop construct cannot apply to a fully unrolled loop
+  !ERROR: This construct requires a canonical loop nest
   !$omp interchange
+  !BECAUSE: Fully unrolled loop does not result in a loop nest
   !$omp unroll
   do i = 1, 5
     do j = 1, 5
@@ -20,8 +21,9 @@ subroutine loop_assoc
   implicit none
   integer :: i, j
 
+  !ERROR: This construct requires a canonical loop nest
   !$omp interchange
-  !ERROR: The associated loop of a loop-associated directive cannot be a DO WHILE.
+  !BECAUSE: DO WHILE loop is not a valid affected loop
   do while (i <= 10)
     do j = 1, 5
       i = i + 1
@@ -35,7 +37,7 @@ subroutine insufficient_loops
   integer i
 
   !ERROR: This construct requires a perfect nest of depth 2, but the associated nest is a perfect nest of depth 1
-  !BECAUSE: PERMUTATION clause was not specified, PERMUTATION(2, 1) was assumed
+  !BECAUSE: PERMUTATION clause was not specified, a permutation (2, 1) is assumed
   !$omp interchange 
   do i = 1, 5
     print *, i

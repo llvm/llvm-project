@@ -22,17 +22,16 @@ namespace llvm {
 class ModulePass;
 
 /// Pass for printing the call graph to a dot file
-class CallGraphDOTPrinterPass : public PassInfoMixin<CallGraphDOTPrinterPass> {
+class CallGraphDOTPrinterPass
+    : public RequiredPassInfoMixin<CallGraphDOTPrinterPass> {
 public:
   LLVM_ABI PreservedAnalyses run(Module &M, ModuleAnalysisManager &AM);
-  static bool isRequired() { return true; }
 };
 
 /// Pass for viewing the call graph
-class CallGraphViewerPass : public PassInfoMixin<CallGraphViewerPass> {
+class CallGraphViewerPass : public RequiredPassInfoMixin<CallGraphViewerPass> {
 public:
   LLVM_ABI PreservedAnalyses run(Module &M, ModuleAnalysisManager &AM);
-  static bool isRequired() { return true; }
 };
 
 LLVM_ABI ModulePass *createCallGraphViewerPass();

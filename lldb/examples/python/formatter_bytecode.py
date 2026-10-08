@@ -19,6 +19,7 @@ import re
 import io
 import ast
 import enum
+import shlex
 import textwrap
 from copy import copy
 from dataclasses import dataclass
@@ -60,6 +61,8 @@ define_opcode(0x20, None, "lit_uint")
 define_opcode(0x21, None, "lit_int")
 define_opcode(0x22, None, "lit_string")
 define_opcode(0x23, None, "lit_selector")
+define_opcode(0x24, None, "lit_integer")
+define_opcode(0x25, "null", "lit_null")
 
 define_opcode(0x2A, "as_int", "as_int")
 define_opcode(0x2B, "as_uint", "as_uint")
@@ -87,13 +90,19 @@ define_opcode(0x55, ">=", "ge")
 
 define_opcode(0x60, "call", "call")
 
+define_opcode(0x70, "dict", "dict")
+define_opcode(0x71, "dict_set", "dict_set")
+define_opcode(0x72, "dict_get", "dict_get")
+define_opcode(0x73, "dict_has", "dict_has")
+
 # Function signatures
 sig_summary = 0
 sig_init = 1
 sig_get_num_children = 2
 sig_get_child_index = 3
 sig_get_child_at_index = 4
-sig_update = 5
+sig_get_value = 5
+sig_update = 6
 
 SIGNATURES = {
     "summary": sig_summary,
@@ -101,6 +110,7 @@ SIGNATURES = {
     "get_num_children": sig_get_num_children,
     "get_child_index": sig_get_child_index,
     "get_child_at_index": sig_get_child_at_index,
+    "get_value": sig_get_value,
     "update": sig_update,
 }
 
@@ -125,6 +135,7 @@ define_selector(0x11, "get_child_at_index")
 define_selector(0x12, "get_child_with_name")
 define_selector(0x13, "get_child_index")
 define_selector(0x15, "get_type")
+define_selector(0x14, "get_parent")
 define_selector(0x16, "get_template_argument_type")
 define_selector(0x17, "cast")
 define_selector(0x18, "get_synthetic_value")
@@ -133,6 +144,10 @@ define_selector(0x20, "get_value")
 define_selector(0x21, "get_value_as_unsigned")
 define_selector(0x22, "get_value_as_signed")
 define_selector(0x23, "get_value_as_address")
+define_selector(0x24, "clone")
+define_selector(0x25, "get_pointee_type")
+define_selector(0x26, "get_byte_size")
+define_selector(0x27, "create_child_at_offset")
 
 define_selector(0x40, "read_memory_byte")
 define_selector(0x41, "read_memory_uint32")
@@ -210,7 +225,7 @@ class BytecodeSection:
         bin = bytearray()
         bin.extend(_to_uleb(len(self.type_name)))
         bin.extend(bytes(self.type_name, encoding="utf-8"))
-        bin.extend(_to_byte(self.flags))
+        bin.extend(_to_uleb(self.flags))
         for sig, bc in self.signatures:
             bin.extend(_to_byte(SIGNATURES[sig]))
             bin.extend(_to_uleb(len(bc)))
@@ -286,16 +301,11 @@ class BytecodeSection:
         builder.emit_uleb(size, "remaining record size")
         builder.emit_uleb(len(self.type_name), "type name size")
         builder.emit_string(self.type_name, "type name")
-        builder.emit_byte(self.flags, "flags")
+        builder.emit_uleb(self.flags, "flags")
         for sig, bc in self.signatures:
             builder.emit_byte(SIGNATURES[sig], f"sig_{sig}")
             builder.emit_uleb(len(bc), "program size")
             builder.emit_bytes(bc, "program")
-
-    @property
-    def _var_name(self):
-        var_name = re.sub(r"\W", "_", self.type_name)
-        return f"_{var_name}_formatter"
 
     def write_c(self, output: TextIO) -> None:
         self.validate()
@@ -319,7 +329,8 @@ class BytecodeSection:
             "__attribute__((used, section(FORMATTER_SECTION)))",
             file=output,
         )
-        print(f"unsigned char {self._var_name}[] =", file=output)
+        var_name = re.sub(r"\W", "_", self.type_name)
+        print(f"unsigned char _{var_name}_formatter[] =", file=output)
         indent = "    "
         for string, comment in builder.entries:
             print(f"{indent}// {comment}", file=output)
@@ -335,7 +346,8 @@ class BytecodeSection:
         print(
             textwrap.dedent(
                 """\
-                #if os(macOS) || os(iOS) || os(watchOS) || os(tvOS) || os(visionOS)
+                #if swift(>=6.3) && !objectFormat(Wasm)
+                #if objectFormat(MachO)
                 @section("__DATA_CONST,__lldbformatters")
                 #else
                 @section(".lldbformatters")
@@ -345,7 +357,7 @@ class BytecodeSection:
             file=output,
         )
         print(
-            f"let {self._var_name}: {builder.type_decl} = (",
+            f"let `{self.type_name} formatter`: {builder.type_decl} = (",
             file=output,
         )
         indent = "    "
@@ -354,6 +366,7 @@ class BytecodeSection:
             byte_list = ", ".join(f"0x{b:02x}" for b in bs)
             print(f"{indent}{byte_list},", file=output)
         print(")", file=output)
+        print("#endif", file=output)  # swift(>=6.3)
 
 
 def assemble_file(type_name: str, input: TextIO) -> BytecodeSection:
@@ -395,7 +408,9 @@ def assemble_tokens(tokens: list[str]) -> bytes:
                 emit(op_lit_uint)
                 emit(int(tok[:-1]))  # FIXME
             else:
-                emit(op_lit_int)
+                # With the introduction of op_lit_integer, op_lit_int is no
+                # longer emitted by the assembler.
+                emit(op_lit_integer)
                 emit(int(tok))  # FIXME
         elif tok[0] == "@":
             emit(op_lit_selector)
@@ -429,7 +444,7 @@ def disassemble_file(input: BinaryIO, output: TextIO) -> None:
 
     name_size = _from_uleb(stream)
     _type_name = stream.read(name_size).decode()
-    _flags = stream.read(1)[0]
+    _flags = _from_uleb(stream)
 
     while True:
         sig_byte = stream.read(1)
@@ -469,6 +484,9 @@ def disassemble(bytecode: bytes) -> Tuple[str, list[int]]:
             asm += str(b)  # FIXME uleb
             asm += "u"
         elif b == op_lit_int:
+            b = next_byte()
+            asm += str(b)
+        elif b == op_lit_integer:
             b = next_byte()
             asm += str(b)
         elif b == op_lit_selector:
@@ -614,6 +632,9 @@ def interpret(bytecode: bytes, control: list, data: list, tracing: bool = False)
         elif b == op_lit_int:
             b = next_byte()  # FIXME uleb
             data.append(int(b))
+        elif b == op_lit_integer:
+            b = next_byte()  # FIXME sleb
+            data.append(int(b))
         elif b == op_lit_selector:
             b = next_byte()
             data.append(b)
@@ -624,6 +645,8 @@ def interpret(bytecode: bytes, control: list, data: list, tracing: bool = False)
                 s += chr(next_byte())
                 length -= 1
             data.append(s)
+        elif b == op_lit_null:
+            data.append(None)
 
         elif b == op_as_uint:
             pass
@@ -693,6 +716,9 @@ def interpret(bytecode: bytes, control: list, data: list, tracing: bool = False)
                 data.append(valobj.GetIndexOfChildWithName(name))
             elif sel == sel_get_type:
                 data.append(data.pop().GetType())
+            elif sel == sel_get_parent:
+                valobj = data.pop()
+                data.append(valobj.GetParent())
             elif sel == sel_get_template_argument_type:
                 n = data.pop()
                 valobj = data.pop()
@@ -713,6 +739,22 @@ def interpret(bytecode: bytes, control: list, data: list, tracing: bool = False)
                 sbtype = data.pop()
                 valobj = data.pop()
                 data.append(valobj.Cast(sbtype))
+            elif sel == sel_clone:
+                new_name = data.pop()
+                valobj = data.pop()
+                data.append(valobj.Clone(new_name))
+            elif sel == sel_get_pointee_type:
+                sbtype = data.pop()
+                data.append(sbtype.GetPointeeType())
+            elif sel == sel_get_byte_size:
+                sbtype = data.pop()
+                data.append(sbtype.GetByteSize())
+            elif sel == sel_create_child_at_offset:
+                sbtype = data.pop()
+                offset = data.pop()
+                name = data.pop()
+                valobj = data.pop()
+                data.append(valobj.CreateChildAtOffset(name, offset, sbtype))
             elif sel == sel_strlen:
                 s = data.pop()
                 data.append(len(s) if s else 0)
@@ -726,6 +768,24 @@ def interpret(bytecode: bytes, control: list, data: list, tracing: bool = False)
             else:
                 print("not implemented: " + selector[sel])
                 assert False
+
+        # Dictionary operations.
+        elif b == op_dict:
+            data.append(dict())
+        elif b == op_dict_set:
+            value = data.pop()
+            key = data.pop()
+            d = data.pop()
+            d[key] = value
+            data.append(d)
+        elif b == op_dict_get:
+            key = data.pop()
+            d = data.pop()
+            data.append(d[key])
+        elif b == op_dict_has:
+            key = data.pop()
+            d = data.pop()
+            data.append(int(key in d))
     return data[-1]
 
 
@@ -735,12 +795,23 @@ def interpret(bytecode: bytes, control: list, data: list, tracing: bool = False)
 
 _BUILTINS = {
     "Cast": "@cast",
+    "Clone": "@clone",
+    "CreateChildAtOffset": "@create_child_at_offset",
+    "GetByteSize": "@get_byte_size",
     "GetChildAtIndex": "@get_child_at_index",
     "GetChildMemberWithName": "@get_child_with_name",
+    "GetIndexOfChildWithName": "@get_child_index",
+    "GetNonSyntheticValue": "@get_non_synthetic_value",
+    "GetNumChildren": "@get_num_children",
+    "GetParent": "@get_parent",
+    "GetPointeeType": "@get_pointee_type",
     "GetSummary": "@summary",
     "GetSyntheticValue": "@get_synthetic_value",
     "GetTemplateArgumentType": "@get_template_argument_type",
     "GetType": "@get_type",
+    "GetValue": "@get_value",
+    "GetValueAsAddress": "@get_value_as_address",
+    "GetValueAsSigned": "@get_value_as_signed",
     "GetValueAsUnsigned": "@get_value_as_unsigned",
 }
 
@@ -750,7 +821,7 @@ _COMPS = {
     ast.Lt: "<",
     ast.LtE: "=<",
     ast.Gt: ">",
-    ast.GtE: "=>",
+    ast.GtE: ">=",
 }
 
 # Maps Python method names in a formatter class to their bytecode signatures.
@@ -844,10 +915,6 @@ class Compiler(ast.NodeVisitor):
     # methods are compiled.
     attrs: list[str]
 
-    # Temporaries currently on the stack above the locals/attrs frame.
-    # Always 0 at statement boundaries.
-    num_temps: int
-
     # Bytecode signature of the method being compiled, or None for top-level
     # functions.
     current_sig: Optional[str]
@@ -857,7 +924,6 @@ class Compiler(ast.NodeVisitor):
     def __init__(self) -> None:
         self.locals = []
         self.attrs = []
-        self.num_temps = 0
         self.current_sig = None
         self.buffer = io.StringIO()
 
@@ -891,7 +957,13 @@ class Compiler(ast.NodeVisitor):
 
     def _compile_method(self, node: ast.FunctionDef) -> None:
         self.current_sig = _METHOD_SIGS[node.name]
-        self.num_temps = 0
+
+        return_type = node.returns.id if isinstance(node.returns, ast.Name) else None
+        if node.name == "update" and return_type != "bool":
+            raise CompilerError(
+                "update must be declared to return bool: def update(self) -> bool:",
+                node,
+            )
 
         # Strip 'self' (and 'internal_dict' for __init__) from the arg list;
         # the remaining args become the initial locals.
@@ -930,18 +1002,13 @@ class Compiler(ast.NodeVisitor):
         # XXX: Does not handle multiple comparisons, ex: `0 < x < 10`
         self.visit(node.comparators[0])
         self._output(_COMPS[type(node.ops[0])])
-        # The comparison consumes two values and produces one.
-        self.num_temps -= 1
 
     def visit_If(self, node: ast.If) -> None:
         self.visit(node.test)
-        # `if`/`ifelse` consumes the condition.
-        self.num_temps = 0
 
         self._output("{")
         self._visit_each(node.body)
         if node.orelse:
-            self.num_temps = 0
             self._output("} {")
             self._visit_each(node.orelse)
             self._output("} ifelse")
@@ -949,7 +1016,6 @@ class Compiler(ast.NodeVisitor):
             self._output("} if")
 
     def visit_Return(self, node: ast.Return) -> None:
-        self.num_temps = 0
         if node.value:
             self.visit(node.value)
         self._output("return")
@@ -959,9 +1025,10 @@ class Compiler(ast.NodeVisitor):
             self._output(f'"{node.value}"')
         elif isinstance(node.value, bool):
             self._output(int(node.value))
+        elif node.value is None:
+            self._output("null")
         else:
             self._output(node.value)
-        self.num_temps += 1
 
     def visit_Call(self, node: ast.Call) -> None:
         func = node.func
@@ -978,8 +1045,6 @@ class Compiler(ast.NodeVisitor):
                 self.visit(receiver)
                 self._visit_each(node.args)
                 self._output(f"{selector} call")
-                # `call` pops the receiver and all args, and pushes one result.
-                self.num_temps -= len(node.args)
                 return
             raise CompilerError(f"unsupported method: {method}", node)
 
@@ -989,8 +1054,6 @@ class Compiler(ast.NodeVisitor):
         raise CompilerError("unsupported function call expression", node)
 
     def visit_Assign(self, node: ast.Assign) -> None:
-        self.num_temps = 0
-
         target = node.targets[0]
 
         # Handle self.attr = expr (attribute assignment).
@@ -1057,17 +1120,14 @@ class Compiler(ast.NodeVisitor):
             raise CompilerError(
                 "unsupported attribute access (only self.attr is supported)", node
             )
-        attr_idx = self._attr_index(node.attr, node)
-        pick_idx = self.num_temps + attr_idx
+        pick_idx = self._attr_index(node.attr, node)
         self._output(f"{pick_idx} pick")  # "# self.{node.attr}"
-        self.num_temps += 1
 
     def visit_Name(self, node: ast.Name) -> None:
-        idx = self._stack_index(node)
+        idx = self._local_index(node)
         if idx is None:
             raise CompilerError(f"unknown local variable: {node.id}", node)
         self._output(f"{idx} pick")  # "# {node.id}"
-        self.num_temps += 1
 
     def _visit_each(self, nodes: Sequence[ast.AST]) -> None:
         for child in nodes:
@@ -1081,16 +1141,11 @@ class Compiler(ast.NodeVisitor):
         except ValueError:
             raise CompilerError(f"unknown attribute: {name}", node)
 
-    def _stack_index(self, name: ast.Name) -> Optional[int]:
-        # Offset past all attrs and any in-flight temporaries.
-        idx = self._local_index(name)
-        if idx is None:
-            return None
-        return len(self.attrs) + idx + self.num_temps
-
     def _local_index(self, name: ast.Name) -> Optional[int]:
         try:
-            return self.locals.index(name.id)
+            idx = self.locals.index(name.id)
+            # Offset past all attrs.
+            return len(self.attrs) + idx
         except ValueError:
             return None
 
@@ -1175,6 +1230,9 @@ def _main():
         help="output file (required for --assemble)",
     )
     parser.add_argument(
+        "--append", action="store_true", help="append to existing output file"
+    )
+    parser.add_argument(
         "-f",
         "--format",
         choices=("binary", "c", "swift"),
@@ -1184,6 +1242,10 @@ def _main():
     parser.add_argument("-t", "--test", action="store_true", help="run unit tests")
 
     args = parser.parse_args()
+
+    if args.append and not args.compile:
+        parser.error("--append is valid only with --compile")
+
     if args.compile:
         if not args.type_name:
             parser.error("--type-name is required with --compile")
@@ -1201,7 +1263,8 @@ def _main():
             with open(args.output, "wb") as output:
                 section.write_binary(output)
         else:
-            with open(args.output, "w") as output:
+            mode = "a" if args.append else "w"
+            with open(args.output, mode) as output:
                 section.write_source(output, language=args.format)
     elif args.assemble:
         if not args.type_name:
@@ -1243,7 +1306,7 @@ if __name__ == "__main__":
         def test_assemble(self):
             self.assertEqual(assemble("1u dup").hex(), "200101")
             self.assertEqual(assemble('"1u dup"').hex(), "2206317520647570")
-            self.assertEqual(assemble("16 < { dup } if").hex(), "21105210010111")
+            self.assertEqual(assemble("16 < { dup } if").hex(), "24105210010111")
             self.assertEqual(assemble('{ { " } " } }').hex(), "100710052203207d20")
 
             def roundtrip(asm):
@@ -1257,6 +1320,11 @@ if __name__ == "__main__":
             roundtrip('1u "2u 3u"')
             roundtrip('"a  b"')
             roundtrip('"a \\" b"')
+
+            # Null literal.
+            roundtrip("null")
+            self.assertEqual(interpret(assemble("null is_null"), [], []), 1)
+            self.assertIsNone(interpret(assemble("null"), [], []))
 
             self.assertEqual(interpret(assemble("1 1 +"), [], []), 2)
             self.assertEqual(interpret(assemble("2 1 1 + *"), [], []), 4)
@@ -1334,5 +1402,19 @@ if __name__ == "__main__":
             out2 = io.StringIO()
             BytecodeSection("std::vector<int>", 0, []).write_source(out2, language="c")
             self.assertIn("_std__vector_int__formatter[] =", out2.getvalue())
+
+            # Flags are ULEB128 encoded to allow values wider than 7 bits.
+            flags = 1 << 10
+            wide = BytecodeSection("T", flags, [("summary", bytes([0x13]))])
+            out3 = io.StringIO()
+            wide.write_source(out3, language="c")
+            expected = "".join(f"\\x{b:02x}" for b in _to_uleb(flags))
+            self.assertIn(f'"{expected}"', out3.getvalue())
+            binary = io.BytesIO()
+            wide.write_binary(binary)
+            binary.seek(0)
+            dis = io.StringIO()
+            disassemble_file(binary, dis)
+            self.assertEqual(dis.getvalue(), "@summary: return\n")
 
     unittest.main(argv=[__file__])

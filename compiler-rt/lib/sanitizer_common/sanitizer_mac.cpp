@@ -170,6 +170,10 @@ uptr internal_close(fd_t fd) {
   return close(fd);
 }
 
+uptr internal_close_range(fd_t lowfd, fd_t highfd, int flags) {
+  return -1;  // Not supported.
+}
+
 uptr internal_open(const char *filename, int flags) {
   return open(filename, flags);
 }
@@ -609,7 +613,13 @@ static uptr ApproximateOSVersionViaKernelVersion(VersStr vers) {
   u16 os_major = kernel_major - offset;
 
   const char *format = "%d.0";
-  if (TARGET_OS_OSX) {
+  if (kernel_major >= 27) {
+    // with kernel major 27 <=> OSes 27.0, OS versions are aligned with kernel
+    os_major = kernel_major;
+  } else if (kernel_major >= 25) {
+    // with kernel_major 25 <=> OSes 26.0, OS versions are aligned
+    os_major = kernel_major + 1;
+  } else if (TARGET_OS_OSX) {
     if (os_major >= 16) {  // macOS 11+
       os_major -= 5;
     } else {  // macOS 10.15 and below
@@ -666,6 +676,24 @@ static void MapToMacos(u16 *major, u16 *minor) {
   if (TARGET_OS_OSX)
     return;
 
+  // All supported platforms (including DriverKit) have
+  // aligned version numbers in macOS 27+
+  if (*major >= 27)
+    return;
+
+#  if TARGET_OS_DRIVERKIT
+  // Driverkit 25.0+ aligns with macOS 26+
+  if (*major >= 25) {
+    *major += 1;
+    return;
+  }
+#  else
+  // macOS 26 and later have aligned version strings.
+  if (*major >= 26)
+    return;
+#  endif
+
+  // Below are mappings for pre-macOS-25-aligned releases
   if (TARGET_OS_IOS || TARGET_OS_TV)
     *major += 2;
   else if (TARGET_OS_WATCH)
@@ -1288,6 +1316,25 @@ uptr MapDynamicShadow(uptr shadow_size_bytes, uptr shadow_scale,
   return shadow_start;
 }
 
+// Returns a list of ranges which must be covered by shadow memory,
+// and cannot overlap with any fixed mappings made by a sanitizer.
+// This can ensure that the sanitizer runtime does not map over
+// platform-reserved regions.
+void GetAppReservedRanges(InternalMmapVector<ReservedRange>& ranges) {
+  ranges.clear();
+
+#  if SANITIZER_OSX
+  // On macOS, the first 512GB are platform-reserved (some of which
+  // may also be available to applications).
+  ranges.push_back({0x1000UL, 0x8000000000UL});
+#  endif
+
+  VReport(2, "App ranges:\n");
+  for (auto& [range_start, range_end] : ranges) {
+    VReport(2, "  [%p, %p]\n", range_start, range_end);
+  }
+}
+
 uptr MapDynamicShadowAndAliases(uptr shadow_size, uptr alias_size,
                                 uptr num_aliases, uptr ring_buffer_size) {
   CHECK(false && "HWASan aliasing is unimplemented on Mac");
@@ -1300,6 +1347,16 @@ uptr FindAvailableMemoryRange(uptr size, uptr alignment, uptr left_padding,
   const mach_vm_address_t max_vm_address = GetMaxVirtualAddress() + 1;
   mach_vm_address_t address = GAP_SEARCH_START_ADDRESS;
   mach_vm_address_t free_begin = GAP_SEARCH_START_ADDRESS;
+
+  // Restrict the search to be after any reserved ranges
+  InternalMmapVector<ReservedRange> app_ranges;
+  GetAppReservedRanges(app_ranges);
+
+  for (auto& [range_start, range_end] : app_ranges) {
+    address = Max(address, (mach_vm_address_t)range_end);
+    free_begin = Max(free_begin, (mach_vm_address_t)range_end);
+  }
+
   kern_return_t kr = KERN_SUCCESS;
   if (largest_gap_found) *largest_gap_found = 0;
   if (max_occupied_addr) *max_occupied_addr = 0;
@@ -1500,7 +1557,7 @@ void DumpProcessMap() {
   Printf("End of module map.\n");
 }
 
-void CheckNoDeepBind(const char *filename, int flag) {
+void OnDlOpen(const char* filename, int flag) {
   // Do nothing.
 }
 

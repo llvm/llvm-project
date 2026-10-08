@@ -370,6 +370,22 @@ int lock_free(struct Incomplete *incomplete) {
   return __c11_atomic_is_lock_free(sizeof(_Atomic(int)));
 }
 
+int gh170139(void) {
+  // CHECK-LABEL: @gh170139
+
+  // CHECK: call zeroext i1 @__atomic_is_lock_free(i32 noundef 0, ptr noundef null)
+  __atomic_is_lock_free(0, 0);
+
+  // CHECK: call zeroext i1 @__atomic_is_lock_free(i32 noundef 0, ptr noundef null)
+  __c11_atomic_is_lock_free(0);
+
+  // CHECK-NOT: call
+  __atomic_always_lock_free(0, 0);
+
+  // CHECK: ret i32 0
+  return __atomic_always_lock_free(0, 0);
+}
+
 // Tests for atomic operations on big values.  These should call the functions
 // defined here:
 // http://gcc.gnu.org/wiki/Atomic/GCCMM/LIbrary#The_Library_interface
@@ -423,7 +439,7 @@ int structAtomicCmpExchange(void) {
   // CHECK: %[[zext1:.*]] = zext i1 %[[call1]] to i8
   // CHECK: store i8 %[[zext1]], ptr %[[x_mem]], align 1
   // CHECK: %[[x:.*]] = load i8, ptr %[[x_mem]]
-  // CHECK: %[[x_bool:.*]] = trunc i8 %[[x]] to i1
+  // CHECK: %[[x_bool:.*]] = icmp ne i8 %[[x]], 0
   // CHECK: %[[conv1:.*]] = zext i1 %[[x_bool]] to i32
 
   struct foo f = {0};

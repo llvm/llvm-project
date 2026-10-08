@@ -1038,3 +1038,180 @@ declare void @inalloca_i64(ptr inalloca(i64))
 declare void @inalloca_i32(ptr inalloca(i32))
 declare ptr @llvm.stacksave()
 declare void @llvm.stackrestore(ptr)
+
+declare ptr @callee(ptr, i32)
+
+define ptr @dont_hoist_musttail_past_skip(ptr %a, i32 %b) {
+; CHECK-LABEL: @dont_hoist_musttail_past_skip(
+; CHECK-NEXT:  entry:
+; CHECK-NEXT:    [[C:%.*]] = icmp eq i32 [[B:%.*]], 0
+; CHECK-NEXT:    br i1 [[C]], label [[T:%.*]], label [[E:%.*]]
+; CHECK:       t:
+; CHECK-NEXT:    [[X:%.*]] = add i32 [[B]], 1
+; CHECK-NEXT:    [[CALL:%.*]] = musttail call ptr @callee(ptr [[A:%.*]], i32 [[B]])
+; CHECK-NEXT:    ret ptr [[CALL]]
+; CHECK:       e:
+; CHECK-NEXT:    [[Y:%.*]] = add i32 [[B]], 2
+; CHECK-NEXT:    [[CALL2:%.*]] = musttail call ptr @callee(ptr [[A]], i32 [[B]])
+; CHECK-NEXT:    ret ptr [[CALL2]]
+;
+entry:
+  %c = icmp eq i32 %b, 0
+  br i1 %c, label %t, label %e
+
+t:
+  %x = add i32 %b, 1
+  %call = musttail call ptr @callee(ptr %a, i32 %b)
+  ret ptr %call
+
+e:
+  %y = add i32 %b, 2
+  %call2 = musttail call ptr @callee(ptr %a, i32 %b)
+  ret ptr %call2
+}
+
+;; Positive: identical musttail calls at the block heads, nothing skipped and
+;; each directly followed by a return, so they ARE hoisted and the blocks are
+;; merged into the predecessor.
+define ptr @hoist_musttail_no_skip(ptr %a, i32 %b) {
+; CHECK-LABEL: @hoist_musttail_no_skip(
+; CHECK-NEXT:  entry:
+; CHECK-NEXT:    [[CALL:%.*]] = musttail call ptr @callee(ptr [[A:%.*]], i32 [[B:%.*]])
+; CHECK-NEXT:    ret ptr [[CALL]]
+;
+entry:
+  %c = icmp eq i32 %b, 0
+  br i1 %c, label %t, label %e
+
+t:
+  %call = musttail call ptr @callee(ptr %a, i32 %b)
+  ret ptr %call
+
+e:
+  %call2 = musttail call ptr @callee(ptr %a, i32 %b)
+  ret ptr %call2
+}
+
+define ptr @no_hoist_musttail_tail(ptr %a, i32 %b) {
+; CHECK-LABEL: @no_hoist_musttail_tail(
+; CHECK-NEXT:  entry:
+; CHECK-NEXT:    [[C:%.*]] = icmp eq i32 [[B:%.*]], 0
+; CHECK-NEXT:    br i1 [[C]], label [[T:%.*]], label [[E:%.*]]
+; CHECK:       t:
+; CHECK-NEXT:    [[CALL:%.*]] = musttail call ptr @callee(ptr [[A:%.*]], i32 [[B]])
+; CHECK-NEXT:    ret ptr [[CALL]]
+; CHECK:       e:
+; CHECK-NEXT:    [[CALL2:%.*]] = tail call ptr @callee(ptr [[A]], i32 [[B]])
+; CHECK-NEXT:    ret ptr [[CALL2]]
+;
+entry:
+  %c = icmp eq i32 %b, 0
+  br i1 %c, label %t, label %e
+
+t:
+  %call = musttail call ptr @callee(ptr %a, i32 %b)
+  ret ptr %call
+
+e:
+  %call2 = tail call ptr @callee(ptr %a, i32 %b)
+  ret ptr %call2
+}
+
+define ptr @hoist_tail_past_skipped(ptr %a, i32 %b) {
+; CHECK-LABEL: @hoist_tail_past_skipped(
+; CHECK-NEXT:  entry:
+; CHECK-NEXT:    [[C:%.*]] = icmp eq i32 [[B:%.*]], 0
+; CHECK-NEXT:    [[CALL:%.*]] = tail call ptr @callee(ptr [[A:%.*]], i32 [[B]])
+; CHECK-NEXT:    br i1 [[C]], label [[T:%.*]], label [[E:%.*]]
+; CHECK:       t:
+; CHECK-NEXT:    [[X:%.*]] = add i32 [[B]], 1
+; CHECK-NEXT:    br label [[J:%.*]]
+; CHECK:       e:
+; CHECK-NEXT:    [[Y:%.*]] = add i32 [[B]], 2
+; CHECK-NEXT:    br label [[J]]
+; CHECK:       j:
+; CHECK-NEXT:    ret ptr [[CALL]]
+;
+entry:
+  %c = icmp eq i32 %b, 0
+  br i1 %c, label %t, label %e
+
+t:
+  %x = add i32 %b, 1
+  %call = tail call ptr @callee(ptr %a, i32 %b)
+  br label %j
+
+e:
+  %y = add i32 %b, 2
+  %call2 = tail call ptr @callee(ptr %a, i32 %b)
+  br label %j
+
+j:
+  %p = phi ptr [ %call, %t ], [ %call2, %e ]
+  ret ptr %p
+}
+
+declare void @map(i64) nounwind willreturn
+declare i32 @pure(i32) memory(none) nounwind willreturn
+declare i32 @pure_speculatable(i32) memory(none) nounwind willreturn speculatable
+
+; The skipped calls may write memory, but noundef does not depend on it.
+define i32 @hoist_noundef_past_call(i1 %c, i64 %i, i32 %x) {
+; CHECK-LABEL: @hoist_noundef_past_call(
+; CHECK-NEXT:  entry:
+; CHECK-NEXT:    [[A:%.*]] = call noundef i32 @pure(i32 noundef [[X:%.*]])
+; CHECK-NEXT:    br i1 [[C:%.*]], label [[IF:%.*]], label [[ELSE:%.*]]
+; CHECK:       if:
+; CHECK-NEXT:    call void @map(i64 [[I:%.*]])
+; CHECK-NEXT:    br label [[END:%.*]]
+; CHECK:       else:
+; CHECK-NEXT:    call void @map(i64 0)
+; CHECK-NEXT:    br label [[END]]
+; CHECK:       end:
+; CHECK-NEXT:    ret i32 [[A]]
+;
+entry:
+  br i1 %c, label %if, label %else
+if:
+  call void @map(i64 %i)
+  %a = call noundef i32 @pure(i32 noundef %x)
+  br label %end
+else:
+  call void @map(i64 0)
+  %b = call noundef i32 @pure(i32 noundef %x)
+  br label %end
+end:
+  %r = phi i32 [ %a, %if ], [ %b, %else ]
+  ret i32 %r
+}
+
+; The skipped calls may throw, so the hoisted call is speculated and noundef
+; may not hold.
+define i32 @hoist_noundef_past_throwing_call(i1 %c, i32 %x) {
+; CHECK-LABEL: @hoist_noundef_past_throwing_call(
+; CHECK-NEXT:  entry:
+; CHECK-NEXT:    [[A:%.*]] = call i32 @pure_speculatable(i32 [[X:%.*]])
+; CHECK-NEXT:    br i1 [[C:%.*]], label [[IF:%.*]], label [[ELSE:%.*]]
+; CHECK:       if:
+; CHECK-NEXT:    call void @side_effects0()
+; CHECK-NEXT:    br label [[END:%.*]]
+; CHECK:       else:
+; CHECK-NEXT:    call void @side_effects1()
+; CHECK-NEXT:    br label [[END]]
+; CHECK:       end:
+; CHECK-NEXT:    ret i32 [[A]]
+;
+entry:
+  br i1 %c, label %if, label %else
+if:
+  call void @side_effects0()
+  %a = call noundef i32 @pure_speculatable(i32 noundef %x)
+  br label %end
+else:
+  call void @side_effects1()
+  %b = call noundef i32 @pure_speculatable(i32 noundef %x)
+  br label %end
+end:
+  %r = phi i32 [ %a, %if ], [ %b, %else ]
+  ret i32 %r
+}

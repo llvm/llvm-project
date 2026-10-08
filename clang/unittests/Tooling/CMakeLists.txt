@@ -42,6 +42,7 @@ add_clang_unittest(ToolingTests
   RecursiveASTVisitorTests/LambdaTemplateParams.cpp
   RecursiveASTVisitorTests/MemberPointerTypeLoc.cpp
   RecursiveASTVisitorTests/NestedNameSpecifiers.cpp
+  RecursiveASTVisitorTests/OffsetOfExpr.cpp
   RecursiveASTVisitorTests/ParenExpr.cpp
   RecursiveASTVisitorTests/TemplateArgumentLocTraverser.cpp
   RecursiveASTVisitorTests/TraversalScope.cpp

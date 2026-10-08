@@ -13,7 +13,6 @@
 #include "mlir/Conversion/GPUToNVVM/GPUToNVVMPass.h"
 #include "mlir/Conversion/GPUToROCDL/GPUToROCDLPass.h"
 #include "mlir/Conversion/LLVMCommon/TypeConverter.h"
-#include "mlir/Conversion/NVGPUToNVVM/NVGPUToNVVM.h"
 #include "mlir/Dialect/AMDGPU/IR/AMDGPUDialect.h"
 #include "mlir/Dialect/AMDGPU/Utils/Chipset.h"
 #include "mlir/Dialect/Arith/IR/Arith.h"
@@ -63,11 +62,7 @@ using namespace mlir::transform::gpu;
 void transform::ApplyGPUToNVVMConversionPatternsOp::populatePatterns(
     TypeConverter &typeConverter, RewritePatternSet &patterns) {
   auto &llvmTypeConverter = static_cast<LLVMTypeConverter &>(typeConverter);
-  nvgpu::populateCommonGPUTypeAndAttributeConversions(llvmTypeConverter);
-  // Used in GPUToNVVM/WmmaOpsToNvvm.cpp so attaching here for now.
-  // TODO: We should have a single to_nvvm_type_converter.
-  llvmTypeConverter.addConversion(
-      [&](MMAMatrixType type) -> Type { return convertMMAToLLVMType(type); });
+  configureGpuToNVVMTypeConverter(llvmTypeConverter);
   // Set higher benefit, so patterns will run before generic LLVM lowering.
   populateGpuToNVVMConversionPatterns(llvmTypeConverter, patterns,
                                       getBenefit());

@@ -19,13 +19,13 @@ namespace lldb_private {
 class OperatingSystemPythonInterface
     : virtual public OperatingSystemInterface,
       virtual public ScriptedThreadPythonInterface,
-      public PluginInterface {
+      virtual public PluginInterface {
 public:
   OperatingSystemPythonInterface(ScriptInterpreterPythonImpl &interpreter);
 
   llvm::Expected<StructuredData::GenericSP>
-  CreatePluginObject(llvm::StringRef class_name, ExecutionContext &exe_ctx,
-                     StructuredData::DictionarySP args_sp,
+  CreatePluginObject(const ScriptedMetadata &scripted_metadata,
+                     ExecutionContext &exe_ctx,
                      StructuredData::Generic *script_obj = nullptr) override;
 
   llvm::SmallVector<AbstractMethodRequirement>

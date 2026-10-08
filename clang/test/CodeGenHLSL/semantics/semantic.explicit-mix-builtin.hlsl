@@ -22,14 +22,14 @@ struct S1 {
 float4 main(S1 p) : SV_Target {
   return p.position + p.color0;
 }
-// CHECK-SPIRV:    %[[#SV_POS:]] = load <4 x float>, ptr addrspace(7) @SV_Position, align 16
+// CHECK-SPIRV:    %[[#SV_POS:]] = load <4 x float>, ptr addrspace(7) @SV_Position, align 4
 // CHECK:            %[[#TMP1:]] = insertvalue %struct.S1 poison, <4 x float> %[[#SV_POS]], 0
-// CHECK-SPIRV:        %[[#A0:]] = load <4 x float>, ptr addrspace(7) @COLOR0, align 16
+// CHECK-SPIRV:        %[[#A0:]] = load <4 x float>, ptr addrspace(7) @COLOR0, align 4
 // CHECK:            %[[#TMP2:]] = insertvalue %struct.S1 %[[#TMP1]], <4 x float> %[[#A0]], 1
-// CHECK:               %[[#P:]] = alloca %struct.S1, align 16
-// CHECK:                          store %struct.S1 %[[#TMP2]], ptr %[[#P]], align 16
+// CHECK:               %[[#P:]] = alloca %struct.S1, align 8
+// CHECK:                          store %struct.S1 %[[#TMP2]], ptr %[[#P]], align 4
 // CHECK-SPIRV:         %[[#R:]] = call spir_func <4 x float> @_Z4main2S1(ptr %[[#P]])
-// CHECK-SPIRV:                    store <4 x float> %[[#R]], ptr addrspace(8) @SV_Target0, align 16
+// CHECK-SPIRV:                    store <4 x float> %[[#R]], ptr addrspace(8) @SV_Target0, align 4
 
 // CHECK-SPIRV: ![[#MD_0]] = !{![[#MD_1:]]}
 // CHECK-SPIRV: ![[#MD_1]] = !{i32 11, i32 15}

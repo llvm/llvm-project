@@ -1,27 +1,28 @@
-; RUN: llc -global-isel=0 -mtriple=amdgcn--amdhsa < %s | FileCheck -check-prefix=GCN -check-prefix=HSA-TRAP %s
-; RUN: llc -global-isel=1 -new-reg-bank-select -mtriple=amdgcn--amdhsa < %s | FileCheck -check-prefix=GCN -check-prefix=HSA-TRAP %s
+; RUN: llc -global-isel=0 -mtriple=amdgpu7.00--amdhsa < %s | FileCheck -check-prefix=GCN -check-prefix=HSA-TRAP %s
+; RUN: llc -global-isel=1 -mtriple=amdgpu7.00--amdhsa < %s | FileCheck -check-prefix=GCN -check-prefix=HSA-TRAP %s
+; RUN: llc -global-isel=1 -mtriple=amdgpu9.00-unknown-mesa3d -mattr=-trap-handler < %s | FileCheck -check-prefix=GISEL-TRAP %s
 
-; RUN: llc -global-isel=0 -mtriple=amdgcn--amdhsa -mattr=+trap-handler < %s | FileCheck -check-prefix=GCN -check-prefix=HSA-TRAP %s
-; RUN: llc -global-isel=1 -new-reg-bank-select -mtriple=amdgcn--amdhsa -mattr=+trap-handler < %s | FileCheck -check-prefix=GCN -check-prefix=HSA-TRAP %s
-; RUN: llc -global-isel=0 -mtriple=amdgcn--amdhsa -mattr=-trap-handler < %s | FileCheck -check-prefix=GCN -check-prefix=NO-HSA-TRAP %s
-; RUN: llc -global-isel=1 -new-reg-bank-select -mtriple=amdgcn--amdhsa -mattr=-trap-handler < %s | FileCheck -check-prefix=GCN -check-prefix=NO-HSA-TRAP %s
-; RUN: llc -global-isel=0 -mtriple=amdgcn--amdhsa -mattr=-trap-handler < %s 2>&1 | FileCheck -check-prefix=GCN -check-prefix=GCN-WARNING %s
-; RUN: llc -global-isel=1 -new-reg-bank-select -mtriple=amdgcn--amdhsa -mattr=-trap-handler < %s 2>&1 | FileCheck -check-prefix=GCN -check-prefix=GCN-WARNING %s
+; RUN: llc -global-isel=0 -mtriple=amdgpu7.00--amdhsa -mattr=+trap-handler < %s | FileCheck -check-prefix=GCN -check-prefix=HSA-TRAP %s
+; RUN: llc -global-isel=1 -mtriple=amdgpu7.00--amdhsa -mattr=+trap-handler < %s | FileCheck -check-prefix=GCN -check-prefix=HSA-TRAP %s
+; RUN: llc -global-isel=0 -mtriple=amdgpu7.00--amdhsa -mattr=-trap-handler < %s | FileCheck -check-prefix=GCN -check-prefix=NO-HSA-TRAP %s
+; RUN: llc -global-isel=1 -mtriple=amdgpu7.00--amdhsa -mattr=-trap-handler < %s | FileCheck -check-prefix=GCN -check-prefix=NO-HSA-TRAP %s
+; RUN: llc -global-isel=0 -mtriple=amdgpu7.00--amdhsa -mattr=-trap-handler < %s 2>&1 | FileCheck -check-prefix=GCN -check-prefix=GCN-WARNING %s
+; RUN: llc -global-isel=1 -mtriple=amdgpu7.00--amdhsa -mattr=-trap-handler < %s 2>&1 | FileCheck -check-prefix=GCN -check-prefix=GCN-WARNING %s
 
 ; enable trap handler feature
-; RUN: llc -global-isel=0 -mtriple=amdgcn-unknown-mesa3d -mattr=+trap-handler < %s | FileCheck -check-prefix=GCN -check-prefix=NO-MESA-TRAP -check-prefix=TRAP-BIT -check-prefix=MESA-TRAP %s
-; RUN: llc -global-isel=1 -new-reg-bank-select -mtriple=amdgcn-unknown-mesa3d -mattr=+trap-handler < %s | FileCheck -check-prefix=GCN -check-prefix=NO-MESA-TRAP -check-prefix=TRAP-BIT -check-prefix=MESA-TRAP %s
-; RUN: llc -global-isel=0 -mtriple=amdgcn-unknown-mesa3d -mattr=+trap-handler < %s 2>&1 | FileCheck -check-prefix=GCN -check-prefix=GCN-WARNING -check-prefix=TRAP-BIT %s
-; RUN: llc -global-isel=1 -new-reg-bank-select -mtriple=amdgcn-unknown-mesa3d -mattr=+trap-handler < %s 2>&1 | FileCheck -check-prefix=GCN -check-prefix=GCN-WARNING -check-prefix=TRAP-BIT %s
+; RUN: llc -global-isel=0 -mtriple=amdgpu6.00-unknown-mesa3d -mattr=+trap-handler < %s | FileCheck -check-prefix=GCN -check-prefix=NO-MESA-TRAP -check-prefix=TRAP-BIT -check-prefix=MESA-TRAP %s
+; RUN: llc -global-isel=1 -mtriple=amdgpu6.00-unknown-mesa3d -mattr=+trap-handler < %s | FileCheck -check-prefix=GCN -check-prefix=NO-MESA-TRAP -check-prefix=TRAP-BIT -check-prefix=MESA-TRAP %s
+; RUN: llc -global-isel=0 -mtriple=amdgpu6.00-unknown-mesa3d -mattr=+trap-handler < %s 2>&1 | FileCheck -check-prefix=GCN -check-prefix=GCN-WARNING -check-prefix=TRAP-BIT %s
+; RUN: llc -global-isel=1 -mtriple=amdgpu6.00-unknown-mesa3d -mattr=+trap-handler < %s 2>&1 | FileCheck -check-prefix=GCN -check-prefix=GCN-WARNING -check-prefix=TRAP-BIT %s
 
 ; disable trap handler feature
-; RUN: llc -global-isel=0 -mtriple=amdgcn-unknown-mesa3d -mattr=-trap-handler < %s | FileCheck -check-prefix=GCN -check-prefix=NO-MESA-TRAP -check-prefix=NO-TRAP-BIT -check-prefix=NOMESA-TRAP %s
-; RUN: llc -global-isel=1 -new-reg-bank-select -mtriple=amdgcn-unknown-mesa3d -mattr=-trap-handler < %s | FileCheck -check-prefix=GCN -check-prefix=NO-MESA-TRAP -check-prefix=NO-TRAP-BIT -check-prefix=NOMESA-TRAP %s
-; RUN: llc -global-isel=0 -mtriple=amdgcn-unknown-mesa3d -mattr=-trap-handler < %s 2>&1 | FileCheck -check-prefix=GCN -check-prefix=GCN-WARNING -check-prefix=NO-TRAP-BIT %s
-; RUN: llc -global-isel=1 -new-reg-bank-select -mtriple=amdgcn-unknown-mesa3d -mattr=-trap-handler < %s 2>&1 | FileCheck -check-prefix=GCN -check-prefix=GCN-WARNING -check-prefix=NO-TRAP-BIT %s
+; RUN: llc -global-isel=0 -mtriple=amdgpu6.00-unknown-mesa3d -mattr=-trap-handler < %s | FileCheck -check-prefix=GCN -check-prefix=NO-MESA-TRAP -check-prefix=NO-TRAP-BIT -check-prefix=NOMESA-TRAP %s
+; RUN: llc -global-isel=1 -mtriple=amdgpu6.00-unknown-mesa3d -mattr=-trap-handler < %s | FileCheck -check-prefix=GCN -check-prefix=NO-MESA-TRAP -check-prefix=NO-TRAP-BIT -check-prefix=NOMESA-TRAP %s
+; RUN: llc -global-isel=0 -mtriple=amdgpu6.00-unknown-mesa3d -mattr=-trap-handler < %s 2>&1 | FileCheck -check-prefix=GCN -check-prefix=GCN-WARNING -check-prefix=NO-TRAP-BIT %s
+; RUN: llc -global-isel=1 -mtriple=amdgpu6.00-unknown-mesa3d -mattr=-trap-handler < %s 2>&1 | FileCheck -check-prefix=GCN -check-prefix=GCN-WARNING -check-prefix=NO-TRAP-BIT %s
 
-; RUN: llc -global-isel=0 -mtriple=amdgcn < %s 2>&1 | FileCheck -check-prefix=GCN -check-prefix=GCN-WARNING %s
-; RUN: llc -global-isel=1 -new-reg-bank-select -mtriple=amdgcn < %s 2>&1 | FileCheck -check-prefix=GCN -check-prefix=GCN-WARNING %s
+; RUN: llc -global-isel=0 -mtriple=amdgpu6.00 < %s 2>&1 | FileCheck -check-prefix=GCN -check-prefix=GCN-WARNING %s
+; RUN: llc -global-isel=1 -mtriple=amdgpu6.00 < %s 2>&1 | FileCheck -check-prefix=GCN -check-prefix=GCN-WARNING %s
 
 ; GCN-WARNING: warning: <unknown>:0:0: in function hsa_debugtrap void (ptr addrspace(1)): debugtrap handler not supported
 
@@ -122,6 +123,12 @@ ret:
 ; GCN-LABEL: {{^}}non_entry_trap_no_unreachable:
 ; TRAP-BIT: enable_trap_handler = 1
 ; NO-TRAP-BIT: enable_trap_handler = 0
+
+; GISEL-TRAP-LABEL: {{^}}non_entry_trap_no_unreachable:
+; GISEL-TRAP: [[ENDPGM:.LBB[0-9]+_[0-9]+]]:{{$}}
+; GISEL-TRAP-NEXT: s_endpgm
+; GISEL-TRAP: s_cbranch_execnz [[ENDPGM]]
+; GISEL-TRAP: ds_write_b32
 
 ; HSA-TRAP: BB{{[0-9]_[0-9]+}}: ; %trap
 ; HSA-TRAP: s_mov_b64 s[0:1], s[6:7]

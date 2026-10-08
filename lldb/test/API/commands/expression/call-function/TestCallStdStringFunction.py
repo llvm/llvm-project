@@ -8,7 +8,10 @@ from lldbsuite.test.lldbtest import *
 from lldbsuite.test import lldbutil
 
 
+@requireExpressionEvaluation
 class ExprCommandCallFunctionTestCase(TestBase):
+    TEST_WITH_PDB_DEBUG_INFO = True
+
     @expectedFailureAll(
         compiler="icc", bugnumber="llvm.org/pr14437, fails with ICC 13.1"
     )

@@ -27,10 +27,12 @@
   !2 = !{}
   !3 = !{i32 1, !"Debug Info Version", i32 3}
   !4 = !DILocalVariable(name: "x", scope: !5, file: !1, line: 16, type: !6)
-  !5 = distinct !DISubprogram(scope: null, isLocal: false, isDefinition: true, isOptimized: false, unit: !0)
+  !5 = distinct !DISubprogram(scope: null, isLocal: false, isDefinition: true, isOptimized: false, unit: !0, type: !10)
   !6 = !DIBasicType(name: "char", size: 8, align: 8, encoding: DW_ATE_signed_char)
   !7 = !DIExpression()
   !8 = !DILocation(line: 0, scope: !5)
+  !9 = !{null}
+  !10 = !DISubroutineType(types: !9)
 ...
 ---
 name:            foo

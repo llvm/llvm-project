@@ -42,10 +42,11 @@ static cl::opt<bool, true> DebugPrintingX(
     cl::desc("Add printf calls that show the values loaded/stored."),
     cl::location(PollyDebugPrinting), cl::Hidden, cl::cat(PollyCategory));
 
-static cl::opt<bool> TraceStmts(
+bool TraceStmts;
+static cl::opt<bool, true> TraceStmtsX(
     "polly-codegen-trace-stmts",
     cl::desc("Add printf calls that print the statement being executed"),
-    cl::Hidden, cl::cat(PollyCategory));
+    cl::location(TraceStmts), cl::Hidden, cl::cat(PollyCategory));
 
 static cl::opt<bool> TraceScalars(
     "polly-codegen-trace-scalars",
@@ -387,10 +388,7 @@ void BlockGenerator::removeDeadInstructions(BasicBlock *BB, ValueMapT &BBMap) {
     if (!isInstructionTriviallyDead(NewInst))
       continue;
 
-    for (auto Pair : BBMap)
-      if (Pair.second == NewInst) {
-        BBMap.erase(Pair.first);
-      }
+    BBMap.remove_if([&](const auto &Pair) { return Pair.second == NewInst; });
 
     NewInst->eraseFromParent();
     I = NewBB->rbegin();
@@ -420,7 +418,7 @@ BasicBlock *BlockGenerator::copyBB(ScopStmt &Stmt, BasicBlock *BB,
                                    ValueMapT &BBMap, LoopToScevMapT &LTS,
                                    isl_id_to_ast_expr *NewAccesses) {
   BasicBlock *CopyBB = splitBB(BB);
-  Builder.SetInsertPoint(CopyBB, CopyBB->begin());
+  Builder.SetInsertPoint(CopyBB->begin());
   generateScalarLoads(Stmt, LTS, BBMap, NewAccesses);
   generateBeginStmtTrace(Stmt, LTS, BBMap);
 
@@ -502,7 +500,7 @@ Value *BlockGenerator::getOrCreateAlloca(const ScopArrayInfo *Array) {
   else
     NameExt = ".s2a";
 
-  const DataLayout &DL = Builder.GetInsertBlock()->getDataLayout();
+  const DataLayout &DL = Builder.getDataLayout();
 
   Addr =
       new AllocaInst(Ty, DL.getAllocaAddrSpace(), nullptr,
@@ -557,6 +555,11 @@ void BlockGenerator::generateScalarLoads(
 #ifndef NDEBUG
     auto StmtDom =
         Stmt.getDomain().intersect_params(Stmt.getParent()->getContext());
+    // Restrict to defined behavior context to match DeLICM's contract:
+    // new read accesses are only required to cover the defined-behavior
+    // subset of the domain.
+    StmtDom = StmtDom.intersect_params(
+        Stmt.getParent()->getBestKnownDefinedBehaviorContext());
     auto AccDom = MA->getAccessRelation().domain();
     assert(!StmtDom.is_subset(AccDom).is_false() &&
            "Scalar must be loaded in all statement instances");
@@ -636,9 +639,9 @@ void BlockGenerator::generateConditionalExecution(
 
   // Put the client code into the conditional block and continue in the merge
   // block afterwards.
-  Builder.SetInsertPoint(ThenBlock, ThenBlock->getFirstInsertionPt());
+  Builder.SetInsertPoint(ThenBlock->getFirstInsertionPt());
   GenThenFunc();
-  Builder.SetInsertPoint(TailBlock, TailBlock->getFirstInsertionPt());
+  Builder.SetInsertPoint(TailBlock->getFirstInsertionPt());
 }
 
 static std::string getInstName(Value *Val) {
@@ -795,7 +798,7 @@ void BlockGenerator::createScalarInitialization(Scop &S) {
   BasicBlock *ExitBB = S.getExit();
   BasicBlock *PreEntryBB = S.getEnteringBlock();
 
-  Builder.SetInsertPoint(StartBlock, StartBlock->begin());
+  Builder.SetInsertPoint(StartBlock->begin());
 
   for (auto &Array : S.arrays()) {
     if (Array->getNumberOfDimensions() != 0)
@@ -850,7 +853,7 @@ void BlockGenerator::createScalarFinalization(Scop &S) {
   if (OptExitBB == ExitBB)
     OptExitBB = *(++pred_begin(MergeBB));
 
-  Builder.SetInsertPoint(OptExitBB, OptExitBB->getTerminator()->getIterator());
+  Builder.SetInsertPoint(OptExitBB->getTerminator()->getIterator());
   for (const auto &EscapeMapping : EscapeMap) {
     // Extract the escaping instruction and the escaping users as well as the
     // alloca the instruction was demoted to.
@@ -921,7 +924,7 @@ void BlockGenerator::createExitPHINodeMerges(Scop &S) {
   if (OptExitBB == ExitBB)
     OptExitBB = *(++pred_begin(MergeBB));
 
-  Builder.SetInsertPoint(OptExitBB, OptExitBB->getTerminator()->getIterator());
+  Builder.SetInsertPoint(OptExitBB->getTerminator()->getIterator());
 
   for (auto &SAI : S.arrays()) {
     auto *Val = SAI->getBasePtr();
@@ -1072,7 +1075,7 @@ void RegionGenerator::copyStmt(ScopStmt &Stmt, LoopToScevMapT &LTS,
   BasicBlock *EntryBBCopy = SplitBlock(Builder.GetInsertBlock(),
                                        Builder.GetInsertPoint(), GenDT, GenLI);
   EntryBBCopy->setName("polly.stmt." + EntryBB->getName() + ".entry");
-  Builder.SetInsertPoint(EntryBBCopy, EntryBBCopy->begin());
+  Builder.SetInsertPoint(EntryBBCopy->begin());
 
   ValueMapT &EntryBBMap = RegionMaps[EntryBBCopy];
   generateScalarLoads(Stmt, LTS, EntryBBMap, IdToAstExp);
@@ -1112,7 +1115,7 @@ void RegionGenerator::copyStmt(ScopStmt &Stmt, LoopToScevMapT &LTS,
     ValueMapT &RegionMap = Inserted.first->second;
 
     // Copy the block with the BlockGenerator.
-    Builder.SetInsertPoint(BBCopy, BBCopy->begin());
+    Builder.SetInsertPoint(BBCopy->begin());
     copyBB(Stmt, BB, BBCopy, RegionMap, LTS, IdToAstExp);
 
     // In order to remap PHI nodes we store also basic block mappings.
@@ -1166,7 +1169,7 @@ void RegionGenerator::copyStmt(ScopStmt &Stmt, LoopToScevMapT &LTS,
     ValueMapT &RegionMap = RegionMaps[BBCopyStart];
     RegionMap.insert_range(StartBlockMap);
 
-    Builder.SetInsertPoint(BBCopyEnd, BICopy->getIterator());
+    Builder.SetInsertPoint(BICopy->getIterator());
     copyInstScalar(Stmt, TI, RegionMap, LTS);
     BICopy->eraseFromParent();
   }
@@ -1204,7 +1207,7 @@ void RegionGenerator::copyStmt(ScopStmt &Stmt, LoopToScevMapT &LTS,
   }
 
   // Continue generating code in the exit block.
-  Builder.SetInsertPoint(ExitBBCopy, ExitBBCopy->getFirstInsertionPt());
+  Builder.SetInsertPoint(ExitBBCopy->getFirstInsertionPt());
 
   // Write values visible to other statements.
   generateScalarStores(Stmt, LTS, ValueMap, IdToAstExp);
@@ -1241,8 +1244,7 @@ PHINode *RegionGenerator::buildExitPHI(MemoryAccess *MA, LoopToScevMapT &LTS,
     BasicBlock *OrigIncomingBlock = Pair.first;
     BasicBlock *NewIncomingBlockStart = StartBlockMap.lookup(OrigIncomingBlock);
     BasicBlock *NewIncomingBlockEnd = EndBlockMap.lookup(OrigIncomingBlock);
-    Builder.SetInsertPoint(NewIncomingBlockEnd,
-                           NewIncomingBlockEnd->getTerminator()->getIterator());
+    Builder.SetInsertPoint(NewIncomingBlockEnd->getTerminator()->getIterator());
     assert(RegionMaps.count(NewIncomingBlockStart));
     assert(RegionMaps.count(NewIncomingBlockEnd));
     ValueMapT *LocalBBMap = &RegionMaps[NewIncomingBlockStart];
@@ -1359,8 +1361,7 @@ void RegionGenerator::addOperandToPHI(ScopStmt &Stmt, PHINode *PHI,
     // change it, otherwise do not.
     auto IP = Builder.GetInsertPoint();
     if (IP->getParent() != BBCopyEnd)
-      Builder.SetInsertPoint(BBCopyEnd,
-                             BBCopyEnd->getTerminator()->getIterator());
+      Builder.SetInsertPoint(BBCopyEnd->getTerminator()->getIterator());
     OpCopy = getNewValue(Stmt, Op, BBCopyMap, LTS, getLoopForStmt(Stmt));
     if (IP->getParent() != BBCopyEnd)
       Builder.SetInsertPoint(IP);

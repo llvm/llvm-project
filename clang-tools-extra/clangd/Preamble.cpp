@@ -90,9 +90,11 @@ class CppFilePreambleCallbacks : public PreambleCallbacks {
 public:
   CppFilePreambleCallbacks(
       PathRef File, PreambleBuildStats *Stats, bool ParseForwardingFunctions,
+      std::function<void(CompilerInstance &)> BeforePPCallbacks,
       std::function<void(CompilerInstance &)> BeforeExecuteCallback)
       : File(File), Stats(Stats),
         ParseForwardingFunctions(ParseForwardingFunctions),
+        BeforePPCallbacks(std::move(BeforePPCallbacks)),
         BeforeExecuteCallback(std::move(BeforeExecuteCallback)) {}
 
   IncludeStructure takeIncludes() { return std::move(Includes); }
@@ -152,6 +154,8 @@ public:
     LangOpts = &CI.getLangOpts();
     SourceMgr = &CI.getSourceManager();
     PP = &CI.getPreprocessor();
+    if (BeforePPCallbacks)
+      BeforePPCallbacks(CI);
     Includes.collect(CI);
     Pragmas.record(CI);
     if (BeforeExecuteCallback)
@@ -204,6 +208,7 @@ private:
   const Preprocessor *PP = nullptr;
   PreambleBuildStats *Stats;
   bool ParseForwardingFunctions;
+  std::function<void(CompilerInstance &)> BeforePPCallbacks;
   std::function<void(CompilerInstance &)> BeforeExecuteCallback;
   std::optional<CapturedASTCtx> CapturedCtx;
 };
@@ -320,8 +325,9 @@ struct ScannedPreamble {
 /// running preprocessor over \p Contents. Returned includes do not contain
 /// resolved paths. \p Cmd is used to build the compiler invocation, which might
 /// stat/read files.
-llvm::Expected<ScannedPreamble>
-scanPreamble(llvm::StringRef Contents, const tooling::CompileCommand &Cmd) {
+llvm::Expected<ScannedPreamble> scanPreamble(llvm::StringRef Contents,
+                                             const tooling::CompileCommand &Cmd,
+                                             bool SkipPreambleBuild) {
   class EmptyFS : public ThreadsafeFS {
   private:
     llvm::IntrusiveRefCntPtr<llvm::vfs::FileSystem> viewImpl() const override {
@@ -345,7 +351,8 @@ scanPreamble(llvm::StringRef Contents, const tooling::CompileCommand &Cmd) {
   // This means we're scanning (though not preprocessing) the preamble section
   // twice. However, it's important to precisely follow the preamble bounds used
   // elsewhere.
-  auto Bounds = ComputePreambleBounds(CI->getLangOpts(), *ContentsBuffer, 0);
+  auto Bounds = computePreambleBounds(CI->getLangOpts(), *ContentsBuffer,
+                                      SkipPreambleBuild);
   auto PreambleContents = llvm::MemoryBuffer::getMemBufferCopy(
       llvm::StringRef(PI.Contents).take_front(Bounds.Size));
   auto Clang = prepareCompilerInstance(
@@ -576,7 +583,8 @@ buildPreamble(PathRef FileName, CompilerInvocation CI,
   // without those.
   auto ContentsBuffer =
       llvm::MemoryBuffer::getMemBuffer(Inputs.Contents, FileName);
-  auto Bounds = ComputePreambleBounds(CI.getLangOpts(), *ContentsBuffer, 0);
+  auto Bounds = computePreambleBounds(CI.getLangOpts(), *ContentsBuffer,
+                                      Inputs.Opts.SkipPreambleBuild);
 
   trace::Span Tracer("BuildPreamble");
   SPAN_ATTACH(Tracer, "File", FileName);
@@ -593,6 +601,10 @@ buildPreamble(PathRef FileName, CompilerInvocation CI,
         for (const auto &L : ASTListeners)
           L->sawDiagnostic(D, Diag);
       });
+  PreambleDiagnostics.setDiagFinalizer([&ASTListeners](clangd::Diag &Diag) {
+    for (const auto &L : ASTListeners)
+      L->finalizeDiagnostic(Diag);
+  });
   auto VFS = Inputs.TFS->view(Inputs.CompileCommand.Directory);
   llvm::IntrusiveRefCntPtr<DiagnosticsEngine> PreambleDiagsEngine =
       CompilerInstance::createDiagnostics(*VFS, CI.getDiagnosticOpts(),
@@ -621,6 +633,10 @@ buildPreamble(PathRef FileName, CompilerInvocation CI,
 
   CppFilePreambleCallbacks CapturedInfo(
       FileName, Stats, Inputs.Opts.PreambleParseForwardingFunctions,
+      [&ASTListeners](CompilerInstance &CI) {
+        for (const auto &L : ASTListeners)
+          L->beforePPCallbacks(CI);
+      },
       [&ASTListeners](CompilerInstance &CI) {
         for (const auto &L : ASTListeners)
           L->beforeExecute(CI);
@@ -722,13 +738,29 @@ bool isPreambleCompatible(const PreambleData &Preamble,
                           const CompilerInvocation &CI) {
   auto ContentsBuffer =
       llvm::MemoryBuffer::getMemBuffer(Inputs.Contents, FileName);
-  auto Bounds = ComputePreambleBounds(CI.getLangOpts(), *ContentsBuffer, 0);
+  auto Bounds = computePreambleBounds(CI.getLangOpts(), *ContentsBuffer,
+                                      Inputs.Opts.SkipPreambleBuild);
   auto VFS = Inputs.TFS->view(Inputs.CompileCommand.Directory);
+
+  // Check that the set of required modules hasn't changed.
+  // Preamble.RequiredModules->canReuse only verifies that the previously
+  // built module files are still up-to-date, but it cannot detect when a new
+  // import has been introduced.
+  auto RequiredModulesMatch = [&]() -> bool {
+    if (!Inputs.ModulesManager || !Preamble.RequiredModules)
+      return true;
+    auto NewNames = Inputs.ModulesManager->getRequiredModuleNames(FileName);
+    llvm::StringSet<> NewNameSet;
+    NewNameSet.insert_range(NewNames);
+    return NewNameSet == Preamble.RequiredModules->getRequiredModuleNames();
+  };
+
   return compileCommandsAreEqual(Inputs.CompileCommand,
                                  Preamble.CompileCommand) &&
          Preamble.Preamble.CanReuse(CI, *ContentsBuffer, Bounds, *VFS) &&
          (!Preamble.RequiredModules ||
-          Preamble.RequiredModules->canReuse(CI, VFS));
+          Preamble.RequiredModules->canReuse(CI, VFS)) &&
+         RequiredModulesMatch();
 }
 
 void escapeBackslashAndQuotes(llvm::StringRef Text, llvm::raw_ostream &OS) {
@@ -785,13 +817,15 @@ PreamblePatch PreamblePatch::create(llvm::StringRef FileName,
   // - If scanning for Modified fails, cannot figure out newly added ones so
   //   there's nothing to do but generate an empty patch.
   auto BaselineScan =
-      scanPreamble(Baseline.Preamble.getContents(), Modified.CompileCommand);
+      scanPreamble(Baseline.Preamble.getContents(), Modified.CompileCommand,
+                   Modified.Opts.SkipPreambleBuild);
   if (!BaselineScan) {
     elog("Failed to scan baseline of {0}: {1}", FileName,
          BaselineScan.takeError());
     return PreamblePatch::unmodified(Baseline);
   }
-  auto ModifiedScan = scanPreamble(Modified.Contents, Modified.CompileCommand);
+  auto ModifiedScan = scanPreamble(Modified.Contents, Modified.CompileCommand,
+                                   Modified.Opts.SkipPreambleBuild);
   if (!ModifiedScan) {
     elog("Failed to scan modified contents of {0}: {1}", FileName,
          ModifiedScan.takeError());
@@ -956,6 +990,13 @@ OptionalFileEntryRef PreamblePatch::getPatchEntry(llvm::StringRef MainFilePath,
                                                   const SourceManager &SM) {
   auto PatchFilePath = getPatchName(MainFilePath);
   return SM.getFileManager().getOptionalFileRef(PatchFilePath);
+}
+
+PreambleBounds computePreambleBounds(const LangOptions &LangOpts,
+                                     const llvm::MemoryBufferRef &Buffer,
+                                     bool SkipPreambleBuild) {
+  return SkipPreambleBuild ? PreambleBounds(0, false)
+                           : ComputePreambleBounds(LangOpts, Buffer, 0);
 }
 } // namespace clangd
 } // namespace clang

@@ -54,6 +54,4 @@ class TestClearSBValueNonAddressableBits(TestBase):
 
         main_p = frame.FindVariable("main_p")
         main_invalid_p = frame.FindVariable("main_invalid_p")
-        self.assertEqual(
-            main_p.GetValueAsUnsigned(), main_invalid_p.GetValueAsAddress()
-        )
+        self.assertEqual(main_p.GetValueAsAddress(), main_invalid_p.GetValueAsAddress())

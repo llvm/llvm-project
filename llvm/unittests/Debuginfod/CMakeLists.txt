@@ -4,6 +4,6 @@ add_llvm_unittest(DebuginfodTests
 
 target_link_libraries(DebuginfodTests PRIVATE
   LLVMDebuginfod
-  LLVMSupportHTTP
+  LLVMHTTP
   LLVMTestingSupport
   )

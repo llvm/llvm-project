@@ -46,7 +46,7 @@ enum __tgt_target_return_t : int {
 };
 
 /// Data attributes for each data reference used in an OpenMP target region.
-enum tgt_map_type {
+enum tgt_map_type : uint64_t {
   // No flags
   OMP_TGT_MAPTYPE_NONE = 0x000,
   // copy data from host to device
@@ -291,6 +291,7 @@ const char *omp_get_uid_from_device(int DeviceNum);
 int omp_get_initial_device(void);
 size_t omp_get_gprivate_limit(int DeviceNum,
                               omp_access_t AccessGroup = omp_access_cgroup);
+void *omp_get_mapped_ptr(const void *Ptr, int DeviceNum);
 void *omp_target_alloc(size_t Size, int DeviceNum);
 void omp_target_free(void *DevicePtr, int DeviceNum);
 int omp_target_is_present(const void *Ptr, int DeviceNum);
@@ -426,11 +427,13 @@ void __tgt_target_nowait_query(void **AsyncHandle);
 
 /// Executes a target kernel by replaying recorded kernel arguments and
 /// device memory.
-int __tgt_target_kernel_replay(ident_t *Loc, int64_t DeviceId, void *HostPtr,
-                               void *DeviceMemory, int64_t DeviceMemorySize,
-                               void **TgtArgs, ptrdiff_t *TgtOffsets,
-                               int32_t NumArgs, int32_t NumTeams,
-                               int32_t ThreadLimit, uint64_t LoopTripCount);
+int __tgt_target_kernel_replay(
+    ident_t *Loc, int64_t DeviceId, void *HostPtr, void *DeviceMemory,
+    void *ReuseDeviceAlloc, int64_t DeviceMemorySize,
+    const llvm::offloading::EntryTy *Globals, int32_t NumGlobals,
+    void **TgtArgs, ptrdiff_t *TgtOffsets, int32_t NumArgs, int32_t NumTeams,
+    int32_t ThreadLimit, uint32_t SharedMemorySize, uint64_t LoopTripCount,
+    KernelReplayOutcomeTy *ReplayOutcome);
 
 void __tgt_set_info_flag(uint32_t);
 
@@ -438,8 +441,11 @@ int __tgt_print_device_info(int64_t DeviceId);
 
 int __tgt_activate_record_replay(int64_t DeviceId, uint64_t MemorySize,
                                  void *VAddr, bool IsRecord, bool SaveOutput,
-                                 uint64_t &ReqPtrArgOffset);
+                                 bool EmitReport, const char *OutputDirPath);
 
+// Gets mapped device pointer. If device pointer is not found, returns
+// host pointer
+void *__tgt_get_mapped_ptr(int64_t DeviceId, const void *HostPtr);
 // Registers a callback for the RPC server. Expects this function type.
 // unsigned callback(rpc::Server::Port *Port, unsigned NumLanes). See the RPC
 // code for details.

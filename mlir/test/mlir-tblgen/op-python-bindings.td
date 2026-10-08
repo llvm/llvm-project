@@ -3,6 +3,7 @@
 include "mlir/IR/OpBase.td"
 include "mlir/IR/AttrTypeBase.td"
 include "mlir/Interfaces/InferTypeOpInterface.td"
+include "mlir/Bindings/Python/PythonBindings.td"
 
 // CHECK: @_ods_cext.register_dialect
 // CHECK: class _Dialect(_ods_ir.Dialect):
@@ -15,13 +16,22 @@ def Test_Dialect : Dialect {
 class TestOp<string mnemonic, list<Trait> traits = []> :
     Op<Test_Dialect, mnemonic, traits>;
 
+def TestCustomAttr
+    : DialectAttr<Test_Dialect,
+                  CPred<"::llvm::isa<::test::CustomAttr>($_self)">,
+                  "custom attribute"> {
+  let storageType = "::test::CustomAttr";
+}
+
+def : PythonAttrType<"TestCustomAttr", "test.CustomType">;
+
 // CHECK: @_ods_cext.register_operation(_Dialect)
 // CHECK-LABEL: class AttrSizedOperandsOp(_ods_ir.OpView):
 // CHECK: OPERATION_NAME = "test.attr_sized_operands"
 // CHECK: _ODS_OPERAND_SEGMENTS = [-1,1,0,]
 def AttrSizedOperandsOp : TestOp<"attr_sized_operands",
                                  [AttrSizedOperandSegments]> {
-  // CHECK: def __init__(self, variadic1, non_variadic, *, variadic2=None, loc=None, ip=None):
+  // CHECK: def __init__(self, variadic1: _Sequence[_ods_ir.Value], non_variadic: _ods_ir.Value, *, variadic2: _Optional[_ods_ir.Value] = None, loc: _Optional[_ods_ir.Location] = None, ip: _Optional[_ods_ir.InsertionPoint] = None):
   // CHECK:   operands = []
   // CHECK:   attributes = {}
   // CHECK:   regions = None
@@ -60,7 +70,7 @@ def AttrSizedOperandsOp : TestOp<"attr_sized_operands",
                    Optional<AnyType>:$variadic2);
 }
 
-// CHECK: def attr_sized_operands(variadic1, non_variadic, *, variadic2=None, loc=None, ip=None) -> AttrSizedOperandsOp:
+// CHECK: def attr_sized_operands(variadic1: _Sequence[_ods_ir.Value], non_variadic: _ods_ir.Value, *, variadic2: _Optional[_ods_ir.Value] = None, loc: _Optional[_ods_ir.Location] = None, ip: _Optional[_ods_ir.InsertionPoint] = None) -> AttrSizedOperandsOp:
 // CHECK:   return AttrSizedOperandsOp(variadic1=variadic1, non_variadic=non_variadic, variadic2=variadic2, loc=loc, ip=ip)
 
 // CHECK: @_ods_cext.register_operation(_Dialect)
@@ -69,7 +79,7 @@ def AttrSizedOperandsOp : TestOp<"attr_sized_operands",
 // CHECK: _ODS_RESULT_SEGMENTS = [0,1,-1,]
 def AttrSizedResultsOp : TestOp<"attr_sized_results",
                                [AttrSizedResultSegments]> {
-  // CHECK: def __init__(self, variadic1, non_variadic, variadic2, *, loc=None, ip=None):
+  // CHECK: def __init__(self, variadic1: _Optional[_ods_ir.Type], non_variadic: _ods_ir.Type, variadic2: _Sequence[_ods_ir.Type], *, loc: _Optional[_ods_ir.Location] = None, ip: _Optional[_ods_ir.InsertionPoint] = None):
   // CHECK:   operands = []
   // CHECK:   attributes = {}
   // CHECK:   regions = None
@@ -108,7 +118,7 @@ def AttrSizedResultsOp : TestOp<"attr_sized_results",
                  Variadic<AnyType>:$variadic2);
 }
 
-// CHECK: def attr_sized_results(variadic1, non_variadic, variadic2, *, loc=None, ip=None) -> _Union[_ods_ir.OpResult, _ods_ir.OpResultList, AttrSizedResultsOp]:
+// CHECK: def attr_sized_results(variadic1: _Optional[_ods_ir.Type], non_variadic: _ods_ir.Type, variadic2: _Sequence[_ods_ir.Type], *, loc: _Optional[_ods_ir.Location] = None, ip: _Optional[_ods_ir.InsertionPoint] = None) -> _Union[_ods_ir.OpResult, _ods_ir.OpResultList, AttrSizedResultsOp]:
 // CHECK:   op = AttrSizedResultsOp(variadic1=variadic1, non_variadic=non_variadic, variadic2=variadic2, loc=loc, ip=ip); results = op.results
 // CHECK:   return results if len(results) > 1 else (results[0] if len(results) == 1 else op)
 
@@ -118,7 +128,7 @@ def AttrSizedResultsOp : TestOp<"attr_sized_results",
 // CHECK-NOT: _ODS_OPERAND_SEGMENTS
 // CHECK-NOT: _ODS_RESULT_SEGMENTS
 def AttributedOp : TestOp<"attributed_op"> {
-  // CHECK: def __init__(self, i32attr, in_, *, optionalF32Attr=None, unitAttr=None, loc=None, ip=None):
+  // CHECK: def __init__(self, i32attr: _Union[int, _ods_ir.IntegerAttr], in_: _Union[int, _ods_ir.IntegerAttr], *, optionalF32Attr: _Optional[_Union[float, _ods_ir.FloatAttr]] = None, unitAttr: _Optional[bool] = None, loc: _Optional[_ods_ir.Location] = None, ip: _Optional[_ods_ir.InsertionPoint] = None):
   // CHECK:   operands = []
   // CHECK:   attributes = {}
   // CHECK:   regions = None
@@ -176,7 +186,7 @@ def AttributedOp : TestOp<"attributed_op"> {
 // CHECK:   def in_(self) -> _ods_ir.IntegerAttr:
 // CHECK:     return self.attributes["in"]
 
-// CHECK: def attributed_op(i32attr, in_, *, optional_f32_attr=None, unit_attr=None, loc=None, ip=None) -> AttributedOp:
+// CHECK: def attributed_op(i32attr: _Union[int, _ods_ir.IntegerAttr], in_: _Union[int, _ods_ir.IntegerAttr], *, optional_f32_attr: _Optional[_Union[float, _ods_ir.FloatAttr]] = None, unit_attr: _Optional[bool] = None, loc: _Optional[_ods_ir.Location] = None, ip: _Optional[_ods_ir.InsertionPoint] = None) -> AttributedOp:
 // CHECK:     return AttributedOp(i32attr=i32attr, in_=in_, optionalF32Attr=optional_f32_attr, unitAttr=unit_attr, loc=loc, ip=ip)
 
 // CHECK: @_ods_cext.register_operation(_Dialect)
@@ -185,7 +195,7 @@ def AttributedOp : TestOp<"attributed_op"> {
 // CHECK-NOT: _ODS_OPERAND_SEGMENTS
 // CHECK-NOT: _ODS_RESULT_SEGMENTS
 def AttributedOpWithOperands : TestOp<"attributed_op_with_operands"> {
-  // CHECK: def __init__(self, _gen_arg_0, _gen_arg_2, *, in_=None, is_=None, loc=None, ip=None):
+  // CHECK: def __init__(self, _gen_arg_0: _ods_ir.Value[_ods_ir.IntegerType], _gen_arg_2: _ods_ir.Value[_ods_ir.FloatType], *, in_: _Optional[bool] = None, is_: _Optional[_Union[float, _ods_ir.FloatAttr]] = None, loc: _Optional[_ods_ir.Location] = None, ip: _Optional[_ods_ir.InsertionPoint] = None):
   // CHECK:   operands = []
   // CHECK:   attributes = {}
   // CHECK:   regions = None
@@ -213,14 +223,20 @@ def AttributedOpWithOperands : TestOp<"attributed_op_with_operands"> {
   let arguments = (ins I32, UnitAttr:$in, F32, OptionalAttr<F32Attr>:$is);
 }
 
-// CHECK: def attributed_op_with_operands(_gen_arg_0, _gen_arg_2, *, in_=None, is_=None, loc=None, ip=None) -> AttributedOpWithOperands
+// CHECK: def attributed_op_with_operands(_gen_arg_0: _ods_ir.Value[_ods_ir.IntegerType], _gen_arg_2: _ods_ir.Value[_ods_ir.FloatType], *, in_: _Optional[bool] = None, is_: _Optional[_Union[float, _ods_ir.FloatAttr]] = None, loc: _Optional[_ods_ir.Location] = None, ip: _Optional[_ods_ir.InsertionPoint] = None) -> AttributedOpWithOperands:
 // CHECK:   return AttributedOpWithOperands(_gen_arg_0=_gen_arg_0, _gen_arg_2=_gen_arg_2, in_=in_, is_=is_, loc=loc, ip=ip)
 
 // CHECK: @_ods_cext.register_operation(_Dialect)
+// CHECK-LABEL: class CustomAttrOp(_ods_ir.OpView):
+def CustomAttrOp : TestOp<"custom_attr"> {
+  // CHECK: def __init__(self, custom: _Union[test.CustomType, _ods_ir.Attribute], *, loc: _Optional[_ods_ir.Location] = None, ip: _Optional[_ods_ir.InsertionPoint] = None):
+  let arguments = (ins TestCustomAttr:$custom);
+}
+
 // CHECK-LABEL: class DefaultValuedAttrsOp(_ods_ir.OpView):
 // CHECK: OPERATION_NAME = "test.default_valued_attrs"
 def DefaultValuedAttrsOp : TestOp<"default_valued_attrs"> {
-  // CHECK: def __init__(self, *, arr=None, unsupported=None, loc=None, ip=None):
+  // CHECK: def __init__(self, *, arr: _Optional[_Union[_Sequence[int], _ods_ir.ArrayAttr]] = None, unsupported: _Optional[_Union[_Sequence[int], _ods_ir.ArrayAttr]] = None, loc: _Optional[_ods_ir.Location] = None, ip: _Optional[_ods_ir.InsertionPoint] = None):
   // CHECK:   operands = []
   // CHECK:   attributes = {}
   // CHECK:   regions = None
@@ -238,12 +254,12 @@ def DefaultValuedAttrsOp : TestOp<"default_valued_attrs"> {
   let results = (outs);
 }
 
-// CHECK: def default_valued_attrs(*, arr=None, unsupported=None, loc=None, ip=None) -> DefaultValuedAttrsOp:
+// CHECK: def default_valued_attrs(*, arr: _Optional[_Union[_Sequence[int], _ods_ir.ArrayAttr]] = None, unsupported: _Optional[_Union[_Sequence[int], _ods_ir.ArrayAttr]] = None, loc: _Optional[_ods_ir.Location] = None, ip: _Optional[_ods_ir.InsertionPoint] = None) -> DefaultValuedAttrsOp:
 // CHECK:   return DefaultValuedAttrsOp(arr=arr, unsupported=unsupported, loc=loc, ip=ip)
 
 // CHECK-LABEL: OPERATION_NAME = "test.derive_result_types_op"
 def DeriveResultTypesOp : TestOp<"derive_result_types_op", [FirstAttrDerivedResultType]> {
-  // CHECK: def __init__(self, type_, *, results=None, loc=None, ip=None):
+  // CHECK: def __init__(self, type_: _Union[_ods_ir.Type, _ods_ir.TypeAttr], *, results: _Optional[_Sequence[_ods_ir.Type]] = None, loc: _Optional[_ods_ir.Location] = None, ip: _Optional[_ods_ir.InsertionPoint] = None):
   // CHECK:   operands = []
   // CHECK:   if results is None:
   // CHECK:     _ods_result_type_source_attr = attributes["type"]
@@ -256,17 +272,17 @@ def DeriveResultTypesOp : TestOp<"derive_result_types_op", [FirstAttrDerivedResu
   let results = (outs AnyType:$res, AnyType);
 }
 
-// CHECK: def derive_result_types_op(type_, *, results=None, loc=None, ip=None) -> _ods_ir.OpResultList:
+// CHECK: def derive_result_types_op(type_: _Union[_ods_ir.Type, _ods_ir.TypeAttr], *, results: _Optional[_Sequence[_ods_ir.Type]] = None, loc: _Optional[_ods_ir.Location] = None, ip: _Optional[_ods_ir.InsertionPoint] = None) -> _ods_ir.OpResultList:
 // CHECK:   return DeriveResultTypesOp(type_=type_, results=results, loc=loc, ip=ip).results
 
 // CHECK-LABEL: OPERATION_NAME = "test.derive_result_types_variadic_op"
 def DeriveResultTypesVariadicOp : TestOp<"derive_result_types_variadic_op", [FirstAttrDerivedResultType]> {
-  // CHECK: def __init__(self, res, _gen_res_1, type_, *, loc=None, ip=None):
+  // CHECK: def __init__(self, res: _ods_ir.Type, _gen_res_1: _Sequence[_ods_ir.Type], type_: _Union[_ods_ir.Type, _ods_ir.TypeAttr], *, loc: _Optional[_ods_ir.Location] = None, ip: _Optional[_ods_ir.InsertionPoint] = None):
   let arguments = (ins TypeAttr:$type);
   let results = (outs AnyType:$res, Variadic<AnyType>);
 }
 
-// CHECK: def derive_result_types_variadic_op(res, _gen_res_1, type_, *, loc=None, ip=None) -> _Union[_ods_ir.OpResult, _ods_ir.OpResultList, DeriveResultTypesVariadicOp]:
+// CHECK: def derive_result_types_variadic_op(res: _ods_ir.Type, _gen_res_1: _Sequence[_ods_ir.Type], type_: _Union[_ods_ir.Type, _ods_ir.TypeAttr], *, loc: _Optional[_ods_ir.Location] = None, ip: _Optional[_ods_ir.InsertionPoint] = None) -> _Union[_ods_ir.OpResult, _ods_ir.OpResultList, DeriveResultTypesVariadicOp]:
 // CHECK:   op = DeriveResultTypesVariadicOp(res=res, _gen_res_1=_gen_res_1, type_=type_, loc=loc, ip=ip); results = op.results
 // CHECK:   return results if len(results) > 1 else (results[0] if len(results) == 1 else op)
 
@@ -302,7 +318,7 @@ def DescriptionOp : TestOp<"description"> {
 // CHECK-LABEL: class EmptyOp(_ods_ir.OpView):
 // CHECK: OPERATION_NAME = "test.empty"
 def EmptyOp : TestOp<"empty">;
-  // CHECK: def __init__(self, *, loc=None, ip=None):
+  // CHECK: def __init__(self, *, loc: _Optional[_ods_ir.Location] = None, ip: _Optional[_ods_ir.InsertionPoint] = None):
   // CHECK:   operands = []
   // CHECK:   attributes = {}
   // CHECK:   regions = None
@@ -313,12 +329,12 @@ def EmptyOp : TestOp<"empty">;
   // CHECK:     attributes=attributes, results=results, operands=operands,
   // CHECK:     successors=_ods_successors, regions=regions, loc=loc, ip=ip)
 
-// CHECK: def empty(*, loc=None, ip=None) -> EmptyOp:
+// CHECK: def empty(*, loc: _Optional[_ods_ir.Location] = None, ip: _Optional[_ods_ir.InsertionPoint] = None) -> EmptyOp:
 // CHECK:   return EmptyOp(loc=loc, ip=ip)
 
 // CHECK-LABEL: OPERATION_NAME = "test.infer_result_types_implied_op"
 def InferResultTypesImpliedOp : TestOp<"infer_result_types_implied_op"> {
-  // CHECK:  def __init__(self, *, results=None, loc=None, ip=None):
+  // CHECK:  def __init__(self, *, results: _Optional[_Sequence[_ods_ir.Type]] = None, loc: _Optional[_ods_ir.Location] = None, ip: _Optional[_ods_ir.InsertionPoint] = None):
   // CHECK:    _ods_context = _ods_get_default_loc_context(loc)
   // CHECK:   super().__init__(
   // CHECK:     self.OPERATION_NAME, self._ODS_REGIONS, self._ODS_OPERAND_SEGMENTS, self._ODS_RESULT_SEGMENTS,
@@ -327,12 +343,12 @@ def InferResultTypesImpliedOp : TestOp<"infer_result_types_implied_op"> {
   let results = (outs I32:$i32, F32:$f32);
 }
 
-// CHECK: def infer_result_types_implied_op(*, results=None, loc=None, ip=None) -> _ods_ir.OpResultList:
+// CHECK: def infer_result_types_implied_op(*, results: _Optional[_Sequence[_ods_ir.Type]] = None, loc: _Optional[_ods_ir.Location] = None, ip: _Optional[_ods_ir.InsertionPoint] = None) -> _ods_ir.OpResultList:
 // CHECK:   return InferResultTypesImpliedOp(results=results, loc=loc, ip=ip).results
 
 // CHECK-LABEL: OPERATION_NAME = "test.infer_result_types_op"
 def InferResultTypesOp : TestOp<"infer_result_types_op", [InferTypeOpInterface]> {
-  // CHECK:  def __init__(self, *, results=None, loc=None, ip=None):
+  // CHECK:  def __init__(self, *, results: _Optional[_Sequence[_ods_ir.Type]] = None, loc: _Optional[_ods_ir.Location] = None, ip: _Optional[_ods_ir.InsertionPoint] = None):
   // CHECK:    operands = []
   // CHECK:   super().__init__(
   // CHECK:     self.OPERATION_NAME, self._ODS_REGIONS, self._ODS_OPERAND_SEGMENTS, self._ODS_RESULT_SEGMENTS,
@@ -341,14 +357,14 @@ def InferResultTypesOp : TestOp<"infer_result_types_op", [InferTypeOpInterface]>
   let results = (outs AnyType, AnyType, AnyType);
 }
 
-// CHECK: def infer_result_types_op(*, results=None, loc=None, ip=None) -> _ods_ir.OpResultList:
+// CHECK: def infer_result_types_op(*, results: _Optional[_Sequence[_ods_ir.Type]] = None, loc: _Optional[_ods_ir.Location] = None, ip: _Optional[_ods_ir.InsertionPoint] = None) -> _ods_ir.OpResultList:
 // CHECK:   return InferResultTypesOp(results=results, loc=loc, ip=ip).results
 
 // CHECK: @_ods_cext.register_operation(_Dialect)
 // CHECK-LABEL: class MissingNamesOp(_ods_ir.OpView):
 // CHECK: OPERATION_NAME = "test.missing_names"
 def MissingNamesOp : TestOp<"missing_names"> {
-  // CHECK: def __init__(self, i32, _gen_res_1, i64, _gen_arg_0, f32, _gen_arg_2, *, loc=None, ip=None):
+  // CHECK: def __init__(self, i32: _ods_ir.Type, _gen_res_1: _ods_ir.Type, i64: _ods_ir.Type, _gen_arg_0: _ods_ir.Value[_ods_ir.IntegerType], f32: _ods_ir.Value[_ods_ir.FloatType], _gen_arg_2: _ods_ir.Value[_ods_ir.IntegerType], *, loc: _Optional[_ods_ir.Location] = None, ip: _Optional[_ods_ir.InsertionPoint] = None):
   // CHECK:   operands = []
   // CHECK:   attributes = {}
   // CHECK:   regions = None
@@ -380,7 +396,7 @@ def MissingNamesOp : TestOp<"missing_names"> {
   let results = (outs I32:$i32, AnyFloat, I64:$i64);
 }
 
-// CHECK: def missing_names(i32, _gen_res_1, i64, _gen_arg_0, f32, _gen_arg_2, *, loc=None, ip=None) -> _ods_ir.OpResultList:
+// CHECK: def missing_names(i32: _ods_ir.Type, _gen_res_1: _ods_ir.Type, i64: _ods_ir.Type, _gen_arg_0: _ods_ir.Value[_ods_ir.IntegerType], f32: _ods_ir.Value[_ods_ir.FloatType], _gen_arg_2: _ods_ir.Value[_ods_ir.IntegerType], *, loc: _Optional[_ods_ir.Location] = None, ip: _Optional[_ods_ir.InsertionPoint] = None) -> _ods_ir.OpResultList:
 // CHECK:   return MissingNamesOp(i32=i32, _gen_res_1=_gen_res_1, i64=i64, _gen_arg_0=_gen_arg_0, f32=f32, _gen_arg_2=_gen_arg_2, loc=loc, ip=ip).results
 
 // CHECK: @_ods_cext.register_operation(_Dialect)
@@ -390,7 +406,7 @@ def MissingNamesOp : TestOp<"missing_names"> {
 // CHECK-NOT: _ODS_RESULT_SEGMENTS
 def OneOptionalOperandOp : TestOp<"one_optional_operand"> {
   let arguments = (ins AnyType:$non_optional, Optional<AnyType>:$optional);
-  // CHECK: def __init__(self, non_optional, *, optional=None, loc=None, ip=None):
+  // CHECK: def __init__(self, non_optional: _ods_ir.Value, *, optional: _Optional[_ods_ir.Value] = None, loc: _Optional[_ods_ir.Location] = None, ip: _Optional[_ods_ir.InsertionPoint] = None):
   // CHECK:   operands = []
   // CHECK:   attributes = {}
   // CHECK:   regions = None
@@ -421,7 +437,7 @@ def OneOptionalOperandOp : TestOp<"one_optional_operand"> {
 // CHECK:   def optional(self) -> _Optional[_ods_ir.Value]:
 // CHECK:     return None if len(self.operands) < 2 else self.operands[1]
 
-// CHECK: def one_optional_operand(non_optional, *, optional=None, loc=None, ip=None) -> OneOptionalOperandOp:
+// CHECK: def one_optional_operand(non_optional: _ods_ir.Value, *, optional: _Optional[_ods_ir.Value] = None, loc: _Optional[_ods_ir.Location] = None, ip: _Optional[_ods_ir.InsertionPoint] = None) -> OneOptionalOperandOp:
 // CHECK:   return OneOptionalOperandOp(non_optional=non_optional, optional=optional, loc=loc, ip=ip)
 
 // CHECK: @_ods_cext.register_operation(_Dialect)
@@ -430,7 +446,7 @@ def OneOptionalOperandOp : TestOp<"one_optional_operand"> {
 // CHECK-NOT: _ODS_OPERAND_SEGMENTS
 // CHECK-NOT: _ODS_RESULT_SEGMENTS
 def OneVariadicOperandOp : TestOp<"one_variadic_operand"> {
-  // CHECK: def __init__(self, non_variadic, variadic, *, loc=None, ip=None):
+  // CHECK: def __init__(self, non_variadic: _ods_ir.Value, variadic: _Sequence[_ods_ir.Value], *, loc: _Optional[_ods_ir.Location] = None, ip: _Optional[_ods_ir.InsertionPoint] = None):
   // CHECK:   operands = []
   // CHECK:   attributes = {}
   // CHECK:   regions = None
@@ -464,7 +480,7 @@ def OneVariadicOperandOp : TestOp<"one_variadic_operand"> {
 // CHECK:     _ods_variadic_group_length = len(self.operands) - 2 + 1
 // CHECK:     return self.operands[1:1 + _ods_variadic_group_length]
 
-// CHECK: def one_variadic_operand(non_variadic, variadic, *, loc=None, ip=None) -> OneVariadicOperandOp:
+// CHECK: def one_variadic_operand(non_variadic: _ods_ir.Value, variadic: _Sequence[_ods_ir.Value], *, loc: _Optional[_ods_ir.Location] = None, ip: _Optional[_ods_ir.InsertionPoint] = None) -> OneVariadicOperandOp:
 // CHECK:   return OneVariadicOperandOp(non_variadic=non_variadic, variadic=variadic, loc=loc, ip=ip)
 
 // CHECK: @_ods_cext.register_operation(_Dialect)
@@ -473,7 +489,7 @@ def OneVariadicOperandOp : TestOp<"one_variadic_operand"> {
 // CHECK-NOT: _ODS_OPERAND_SEGMENTS
 // CHECK-NOT: _ODS_RESULT_SEGMENTS
 def OneVariadicResultOp : TestOp<"one_variadic_result"> {
-  // CHECK: def __init__(self, variadic, non_variadic, *, loc=None, ip=None):
+  // CHECK: def __init__(self, variadic: _Sequence[_ods_ir.Type], non_variadic: _ods_ir.Type, *, loc: _Optional[_ods_ir.Location] = None, ip: _Optional[_ods_ir.InsertionPoint] = None):
   // CHECK:   operands = []
   // CHECK:   attributes = {}
   // CHECK:   regions = None
@@ -498,7 +514,7 @@ def OneVariadicResultOp : TestOp<"one_variadic_result"> {
   let results = (outs Variadic<AnyType>:$variadic, AnyType:$non_variadic);
 }
 
-// CHECK: def one_variadic_result(variadic, non_variadic, *, loc=None, ip=None) -> _Union[_ods_ir.OpResult, _ods_ir.OpResultList, OneVariadicResultOp]:
+// CHECK: def one_variadic_result(variadic: _Sequence[_ods_ir.Type], non_variadic: _ods_ir.Type, *, loc: _Optional[_ods_ir.Location] = None, ip: _Optional[_ods_ir.InsertionPoint] = None) -> _Union[_ods_ir.OpResult, _ods_ir.OpResultList, OneVariadicResultOp]:
 // CHECK:   op = OneVariadicResultOp(variadic=variadic, non_variadic=non_variadic, loc=loc, ip=ip); results = op.results
 // CHECK:   return results if len(results) > 1 else (results[0] if len(results) == 1 else op)
 
@@ -506,7 +522,7 @@ def OneVariadicResultOp : TestOp<"one_variadic_result"> {
 // CHECK-LABEL: class PythonKeywordOp(_ods_ir.OpView):
 // CHECK: OPERATION_NAME = "test.python_keyword"
 def PythonKeywordOp : TestOp<"python_keyword"> {
-  // CHECK: def __init__(self, in_, *, loc=None, ip=None):
+  // CHECK: def __init__(self, in_: _ods_ir.Value, *, loc: _Optional[_ods_ir.Location] = None, ip: _Optional[_ods_ir.InsertionPoint] = None):
   // CHECK:   operands = []
   // CHECK:   attributes = {}
   // CHECK:   regions = None
@@ -524,12 +540,12 @@ def PythonKeywordOp : TestOp<"python_keyword"> {
   let arguments = (ins AnyType:$in);
 }
 
-// CHECK: def python_keyword(in_, *, loc=None, ip=None) -> PythonKeywordOp:
+// CHECK: def python_keyword(in_: _ods_ir.Value, *, loc: _Optional[_ods_ir.Location] = None, ip: _Optional[_ods_ir.InsertionPoint] = None) -> PythonKeywordOp:
 // CHECK:   return PythonKeywordOp(in_=in_, loc=loc, ip=ip)
 
 // CHECK-LABEL: OPERATION_NAME = "test.same_results"
 def SameResultsOp : TestOp<"same_results", [SameOperandsAndResultType]> {
-  // CHECK: def __init__(self, in1, in2, *, results=None, loc=None, ip=None):
+  // CHECK: def __init__(self, in1: _ods_ir.Value, in2: _ods_ir.Value, *, results: _Optional[_Sequence[_ods_ir.Type]] = None, loc: _Optional[_ods_ir.Location] = None, ip: _Optional[_ods_ir.InsertionPoint] = None):
   // CHECK: operands = []
   // CHECK: operands.append
   // CHECK: if results is None: results = [operands[0].type] * 1
@@ -537,17 +553,17 @@ def SameResultsOp : TestOp<"same_results", [SameOperandsAndResultType]> {
   let results = (outs AnyType:$res);
 }
 
-// CHECK: def same_results(in1, in2, *, results=None, loc=None, ip=None) -> _ods_ir.OpResult:
+// CHECK: def same_results(in1: _ods_ir.Value, in2: _ods_ir.Value, *, results: _Optional[_Sequence[_ods_ir.Type]] = None, loc: _Optional[_ods_ir.Location] = None, ip: _Optional[_ods_ir.InsertionPoint] = None) -> _ods_ir.OpResult:
 // CHECK:   return SameResultsOp(in1=in1, in2=in2, results=results, loc=loc, ip=ip).result
 
 // CHECK-LABEL: OPERATION_NAME = "test.same_results_variadic"
 def SameResultsVariadicOp : TestOp<"same_results_variadic", [SameOperandsAndResultType]> {
-  // CHECK: def __init__(self, res, in1, in2, *, loc=None, ip=None):
+  // CHECK: def __init__(self, res: _Sequence[_ods_ir.Type], in1: _ods_ir.Value, in2: _ods_ir.Value, *, loc: _Optional[_ods_ir.Location] = None, ip: _Optional[_ods_ir.InsertionPoint] = None):
   let arguments = (ins AnyType:$in1, AnyType:$in2);
   let results = (outs Variadic<AnyType>:$res);
 }
 
-// CHECK: def same_results_variadic(res, in1, in2, *, loc=None, ip=None) -> _Union[_ods_ir.OpResult, _ods_ir.OpResultList, SameResultsVariadicOp]:
+// CHECK: def same_results_variadic(res: _Sequence[_ods_ir.Type], in1: _ods_ir.Value, in2: _ods_ir.Value, *, loc: _Optional[_ods_ir.Location] = None, ip: _Optional[_ods_ir.InsertionPoint] = None) -> _Union[_ods_ir.OpResult, _ods_ir.OpResultList, SameResultsVariadicOp]:
 // CHECK:   op = SameResultsVariadicOp(res=res, in1=in1, in2=in2, loc=loc, ip=ip); results = op.results
 // CHECK:   return results if len(results) > 1 else (results[0] if len(results) == 1 else op)
 
@@ -575,7 +591,7 @@ def SameVariadicOperandSizeOp : TestOp<"same_variadic_operand",
                    Variadic<AnyType>:$variadic2);
 }
 
-// CHECK: def same_variadic_operand(variadic1, non_variadic, variadic2, *, loc=None, ip=None) -> SameVariadicOperandSizeOp:
+// CHECK: def same_variadic_operand(variadic1: _Sequence[_ods_ir.Value], non_variadic: _ods_ir.Value, variadic2: _Sequence[_ods_ir.Value], *, loc: _Optional[_ods_ir.Location] = None, ip: _Optional[_ods_ir.InsertionPoint] = None) -> SameVariadicOperandSizeOp:
 // CHECK:   return SameVariadicOperandSizeOp(variadic1=variadic1, non_variadic=non_variadic, variadic2=variadic2, loc=loc, ip=ip)
 
 // CHECK: @_ods_cext.register_operation(_Dialect)
@@ -601,7 +617,7 @@ def SameVariadicResultSizeOp : TestOp<"same_variadic_result",
                  Variadic<AnyType>:$variadic2);
 }
 
-// CHECK: def same_variadic_result(variadic1, non_variadic, variadic2, *, loc=None, ip=None) -> _Union[_ods_ir.OpResult, _ods_ir.OpResultList, SameVariadicResultSizeOp]:
+// CHECK: def same_variadic_result(variadic1: _Sequence[_ods_ir.Type], non_variadic: _ods_ir.Type, variadic2: _Sequence[_ods_ir.Type], *, loc: _Optional[_ods_ir.Location] = None, ip: _Optional[_ods_ir.InsertionPoint] = None) -> _Union[_ods_ir.OpResult, _ods_ir.OpResultList, SameVariadicResultSizeOp]:
 // CHECK:   op = SameVariadicResultSizeOp(variadic1=variadic1, non_variadic=non_variadic, variadic2=variadic2, loc=loc, ip=ip); results = op.results
 // CHECK:   return results if len(results) > 1 else (results[0] if len(results) == 1 else op)
 
@@ -609,7 +625,7 @@ def SameVariadicResultSizeOp : TestOp<"same_variadic_result",
 // CHECK-LABEL: class SimpleOp(_ods_ir.OpView):
 // CHECK: OPERATION_NAME = "test.simple"
 def SimpleOp : TestOp<"simple"> {
-  // CHECK: def __init__(self, i64, f64, i32, f32, *, loc=None, ip=None):
+  // CHECK: def __init__(self, i64: _ods_ir.Type, f64: _ods_ir.Type, i32: _ods_ir.Value[_ods_ir.IntegerType], f32: _ods_ir.Value[_ods_ir.FloatType], *, loc: _Optional[_ods_ir.Location] = None, ip: _Optional[_ods_ir.InsertionPoint] = None):
   // CHECK:   operands = []
   // CHECK:   attributes = {}
   // CHECK:   regions = None
@@ -643,13 +659,44 @@ def SimpleOp : TestOp<"simple"> {
   let results = (outs I64:$i64, AnyFloat:$f64);
 }
 
-// CHECK: def simple(i64, f64, i32, f32, *, loc=None, ip=None) -> _ods_ir.OpResultList:
+// CHECK: def simple(i64: _ods_ir.Type, f64: _ods_ir.Type, i32: _ods_ir.Value[_ods_ir.IntegerType], f32: _ods_ir.Value[_ods_ir.FloatType], *, loc: _Optional[_ods_ir.Location] = None, ip: _Optional[_ods_ir.InsertionPoint] = None) -> _ods_ir.OpResultList:
 // CHECK:   return SimpleOp(i64=i64, f64=f64, i32=i32, f32=f32, loc=loc, ip=ip).results
+
+// CHECK: @_ods_cext.register_operation(_Dialect)
+// CHECK-LABEL: class SingleTypedResultOp(_ods_ir.OpView):
+// CHECK: OPERATION_NAME = "test.single_typed_result"
+def SingleTypedResultOp : TestOp<"single_typed_result"> {
+  // CHECK: @builtins.property
+  // CHECK: def i64(self) -> _ods_ir.OpResult[_ods_ir.IntegerType]:
+  // CHECK:   return self.operation.results[0]
+  let arguments = (ins AnyType:$in);
+  let results = (outs I64:$i64);
+}
+
+// CHECK: def single_typed_result(in_: _ods_ir.Value, *, results: _Optional[_Sequence[_ods_ir.Type]] = None, loc: _Optional[_ods_ir.Location] = None, ip: _Optional[_ods_ir.InsertionPoint] = None) -> _ods_ir.OpResult[_ods_ir.IntegerType]:
+// CHECK:   return SingleTypedResultOp(in_=in_, results=results, loc=loc, ip=ip).result
+
+// CHECK: @_ods_cext.register_operation(_Dialect)
+// CHECK-LABEL: class TypedVariadicOperandOp(_ods_ir.OpView):
+// CHECK: OPERATION_NAME = "test.typed_variadic_operand"
+def TypedVariadicOperandOp : TestOp<"typed_variadic_operand"> {
+  // CHECK: def __init__(self, variadic: _Sequence[_ods_ir.Value[_ods_ir.IntegerType]], non_variadic: _ods_ir.Value[_ods_ir.FloatType], *, loc: _Optional[_ods_ir.Location] = None, ip: _Optional[_ods_ir.InsertionPoint] = None):
+
+  // CHECK: @builtins.property
+  // CHECK: def non_variadic(self) -> _ods_ir.Value[_ods_ir.FloatType]:
+  //
+  // CHECK: @builtins.property
+  // CHECK: def variadic(self) -> _ods_ir.OpOperandList[_ods_ir.IntegerType]:
+  let arguments = (ins Variadic<I32>:$variadic, F32:$non_variadic);
+}
+
+// CHECK: def typed_variadic_operand(variadic: _Sequence[_ods_ir.Value[_ods_ir.IntegerType]], non_variadic: _ods_ir.Value[_ods_ir.FloatType], *, loc: _Optional[_ods_ir.Location] = None, ip: _Optional[_ods_ir.InsertionPoint] = None) -> TypedVariadicOperandOp:
+// CHECK:   return TypedVariadicOperandOp(variadic=variadic, non_variadic=non_variadic, loc=loc, ip=ip)
 
 // CHECK-LABEL: class VariadicAndNormalRegionOp(_ods_ir.OpView):
 // CHECK: OPERATION_NAME = "test.variadic_and_normal_region"
 def VariadicAndNormalRegionOp : TestOp<"variadic_and_normal_region"> {
-  // CHECK:  def __init__(self, num_variadic, *, loc=None, ip=None):
+  // CHECK:  def __init__(self, num_variadic: int, *, loc: _Optional[_ods_ir.Location] = None, ip: _Optional[_ods_ir.InsertionPoint] = None):
   // CHECK:    operands = []
   // CHECK:    attributes = {}
   // CHECK:    regions = None
@@ -671,13 +718,13 @@ def VariadicAndNormalRegionOp : TestOp<"variadic_and_normal_region"> {
   // CHECK:    return self.regions[2:]
 }
 
-// CHECK: def variadic_and_normal_region(num_variadic, *, loc=None, ip=None) -> VariadicAndNormalRegionOp:
+// CHECK: def variadic_and_normal_region(num_variadic: int, *, loc: _Optional[_ods_ir.Location] = None, ip: _Optional[_ods_ir.InsertionPoint] = None) -> VariadicAndNormalRegionOp:
 // CHECK:   return VariadicAndNormalRegionOp(num_variadic=num_variadic, loc=loc, ip=ip)
 
 // CHECK-LABEL: class VariadicRegionOp(_ods_ir.OpView):
 // CHECK: OPERATION_NAME = "test.variadic_region"
 def VariadicRegionOp : TestOp<"variadic_region"> {
-  // CHECK:  def __init__(self, num_variadic, *, loc=None, ip=None):
+  // CHECK:  def __init__(self, num_variadic: int, *, loc: _Optional[_ods_ir.Location] = None, ip: _Optional[_ods_ir.InsertionPoint] = None):
   // CHECK:    operands = []
   // CHECK:    attributes = {}
   // CHECK:    regions = None
@@ -695,7 +742,7 @@ def VariadicRegionOp : TestOp<"variadic_region"> {
   // CHECK:    return self.regions[0:]
 }
 
-// CHECK: def variadic_region(num_variadic, *, loc=None, ip=None) -> VariadicRegionOp:
+// CHECK: def variadic_region(num_variadic: int, *, loc: _Optional[_ods_ir.Location] = None, ip: _Optional[_ods_ir.InsertionPoint] = None) -> VariadicRegionOp:
 // CHECK:   return VariadicRegionOp(num_variadic=num_variadic, loc=loc, ip=ip)
 
 // CHECK: @_ods_cext.register_operation(_Dialect)
@@ -704,7 +751,7 @@ def VariadicRegionOp : TestOp<"variadic_region"> {
 def WithSpecialCharactersOp : TestOp<"123with--special.characters"> {
 }
 
-// CHECK: def _123with__special_characters(*, loc=None, ip=None) -> WithSpecialCharactersOp:
+// CHECK: def _123with__special_characters(*, loc: _Optional[_ods_ir.Location] = None, ip: _Optional[_ods_ir.InsertionPoint] = None) -> WithSpecialCharactersOp:
 // CHECK:   return WithSpecialCharactersOp(loc=loc, ip=ip)
 
 // CHECK: @_ods_cext.register_operation(_Dialect)
@@ -719,11 +766,11 @@ def WithSuccessorsOp : TestOp<"with_successors"> {
                               VariadicSuccessor<AnySuccessor>:$successors);
 }
 
-// CHECK: def with_successors(successor, successors, *, loc=None, ip=None) -> WithSuccessorsOp:
+// CHECK: def with_successors(successor: _ods_ir.Block, successors: _Sequence[_ods_ir.Block], *, loc: _Optional[_ods_ir.Location] = None, ip: _Optional[_ods_ir.InsertionPoint] = None) -> WithSuccessorsOp:
 // CHECK:   return WithSuccessorsOp(successor=successor, successors=successors, loc=loc, ip=ip)
 
 // CHECK-LABEL: class snake_case(_ods_ir.OpView):
 // CHECK: OPERATION_NAME = "test.snake_case"
 def already_snake_case : TestOp<"snake_case"> {}
-// CHECK: def snake_case_(*, loc=None, ip=None) -> snake_case:
+// CHECK: def snake_case_(*, loc: _Optional[_ods_ir.Location] = None, ip: _Optional[_ods_ir.InsertionPoint] = None) -> snake_case:
 // CHECK:   return snake_case(loc=loc, ip=ip)

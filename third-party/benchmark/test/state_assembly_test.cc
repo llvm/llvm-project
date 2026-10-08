@@ -2,6 +2,7 @@
 
 #ifdef __clang__
 #pragma clang diagnostic ignored "-Wreturn-type"
+#pragma clang diagnostic ignored "-Wmissing-prototypes"
 #endif
 
 // clang-format off

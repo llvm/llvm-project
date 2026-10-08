@@ -81,4 +81,22 @@ defm RET_CALL_INDIRECT :
     0x13>,
   Requires<[HasTailCall]>;
 
+// Typed function references: call_ref / return_call_ref pop a funcref from the
+// stack and branch to it, using the given type index to describe the signature.
+// These were introduced with the function-references proposal, which was folded
+// into the GC proposal, so they are gated on HasGC.
+let variadicOpsAreDefs = 1 in
+defm CALL_REF :
+  I<(outs), (ins TypeIndex:$type, FUNCREF:$ref, variable_ops),
+    (outs), (ins TypeIndex:$type), [],
+    "call_ref\t$type, $ref", "call_ref\t$type", 0x14>,
+  Requires<[HasGC]>;
+
+let isReturn = 1, isTerminator = 1, hasCtrlDep = 1, isBarrier = 1 in
+defm RET_CALL_REF :
+  I<(outs), (ins TypeIndex:$type, FUNCREF:$ref, variable_ops),
+    (outs), (ins TypeIndex:$type), [],
+    "return_call_ref\t$type, $ref", "return_call_ref\t$type", 0x15>,
+  Requires<[HasTailCall, HasGC]>;
+
 } // Uses = [SP32,SP64], isCall = 1

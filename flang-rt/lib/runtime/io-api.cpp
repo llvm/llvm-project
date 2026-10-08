@@ -18,7 +18,6 @@
 #include "edit-input.h"
 #include "edit-output.h"
 #include "io-api-common.h"
-#include "unit.h"
 #include "flang-rt/runtime/descriptor.h"
 #include "flang-rt/runtime/environment.h"
 #include "flang-rt/runtime/format.h"
@@ -26,6 +25,7 @@
 #include "flang-rt/runtime/memory.h"
 #include "flang-rt/runtime/terminator.h"
 #include "flang-rt/runtime/tools.h"
+#include "flang-rt/runtime/unit.h"
 #include "flang/Common/optional.h"
 #include <cstdlib>
 #include <memory>
@@ -242,6 +242,11 @@ RT_API_ATTRS Cookie BeginUnformattedIO(
   } else {
     if (iostat == IostatOk) {
       iostat = unit->SetDirection(DIR);
+    }
+    if (iostat == IostatOk) {
+      if (unit->IsAfterEndfile() && DIR == Direction::Output) {
+        iostat = IostatWriteAfterEndfile;
+      }
     }
     if (iostat == IostatOk) {
       IoStatementState &io{
@@ -684,6 +689,29 @@ bool IODEF(SetSign)(Cookie cookie, const char *keyword, std::size_t length) {
   default:
     io.GetIoErrorHandler().SignalError(IostatErrorInKeyword,
         "Invalid SIGN='%.*s'", static_cast<int>(length), keyword);
+    return false;
+  }
+}
+
+bool IODEF(SetLeadingZero)(
+    Cookie cookie, const char *keyword, std::size_t length) {
+  IoStatementState &io{*cookie};
+  if (auto *open{io.get_if<OpenStatementState>()}) {
+    open->set_mustBeFormatted();
+  }
+  static const char *keywords[]{
+      "PRINT", "PROCESSOR_DEFINED", "SUPPRESS", nullptr};
+  switch (IdentifyValue(keyword, length, keywords)) {
+  case 0: // LZP, print leading zero, if the field has room for it
+  case 1: // LZ, processor default, treated as LZP
+    io.mutableModes().editingFlags &= ~leadingZeroSuppress;
+    return true;
+  case 2:
+    io.mutableModes().editingFlags |= leadingZeroSuppress;
+    return true;
+  default:
+    io.GetIoErrorHandler().SignalError(IostatErrorInKeyword,
+        "Invalid LEADING_ZERO='%.*s'", static_cast<int>(length), keyword);
     return false;
   }
 }

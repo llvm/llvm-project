@@ -25,7 +25,7 @@ LogicalResult detail::verifyIndexedAccessOpInterface(Operation *op) {
 
   TypedValue<MemRefType> memref = iface.getAccessedMemref();
   if (!memref) {
-    // Some operations can carry tensors, this is fine.
+    // Some operations do not always access memory through a memref.
     return success();
   }
   if (memref.getType().getRank() !=
@@ -45,7 +45,7 @@ LogicalResult detail::verifyIndexedMemCopyOpInterface(Operation *op) {
   TypedValue<MemRefType> src = iface.getSrc();
   TypedValue<MemRefType> dst = iface.getDst();
   if (!src || !dst) {
-    // Allow operations to not always have memref arguments.
+    // Allow operations to not always copy between memref arguments.
     return success();
   }
   if (src.getType().getRank() !=

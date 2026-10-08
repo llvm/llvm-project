@@ -229,9 +229,26 @@ template <class T> static const T *chooseDefinitionRedecl(const T *Tmpl) {
 // attribute.
 //
 // The function handles specializations (and partial specializations) of
-// class templates. For any other decl, it returns the input unchagned.
+// class and function templates.
+// For any other decl, it returns the input unchagned.
 static const Decl *
 preferTemplateDefinitionForTemplateSpecializations(const Decl *D) {
+  // For function template specializations (including instantiated friend
+  // function templates), map back to the primary template's FunctionDecl so
+  // that the lexical parent chain walk reaches the class where the template
+  // was defined inline.
+  //
+  // This handles the case where a friend function template is defined inline
+  // inside a [[clang::suppress]]-annotated class but was pre-declared at
+  // namespace scope.  In that case the instantiation's lexical DC is the
+  // namespace (from the pre-declaration), not the class.  Walking back to the
+  // primary template FunctionDecl — whose lexical DC IS the class — lets the
+  // existing parent-chain walk find the suppression attribute.
+  if (const auto *FD = dyn_cast<FunctionDecl>(D)) {
+    if (const FunctionDecl *Pattern = FD->getTemplateInstantiationPattern())
+      return Pattern->getDefinition();
+  }
+
   const auto *SpecializationDecl = dyn_cast<ClassTemplateSpecializationDecl>(D);
   if (!SpecializationDecl)
     return D;
@@ -240,7 +257,7 @@ preferTemplateDefinitionForTemplateSpecializations(const Decl *D) {
   if (!InstantiatedFrom)
     return D;
 
-  if (const auto *Tmpl = InstantiatedFrom.dyn_cast<ClassTemplateDecl *>()) {
+  if (const auto *Tmpl = dyn_cast<ClassTemplateDecl *>(InstantiatedFrom)) {
     // Interestingly, the source template might be a forward declaration, so we
     // need to find the definition redeclaration.
     return chooseDefinitionRedecl(walkInstantiatedFromChain(Tmpl));

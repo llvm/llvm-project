@@ -403,9 +403,9 @@ define i128 @clz128(i128 %x) {
   ret i128 %a
 }
 
-define i128 @clz128_zero_undef(i128 %x) {
-; CHECK-LABEL: clz128_zero_undef:
-; CHECK:         .functype clz128_zero_undef (i32, i64, i64) -> ()
+define i128 @clz128_zero_poison(i128 %x) {
+; CHECK-LABEL: clz128_zero_poison:
+; CHECK:         .functype clz128_zero_poison (i32, i64, i64) -> ()
 ; CHECK-NEXT:  # %bb.0:
 ; CHECK-NEXT:    local.get $push8=, 0
 ; CHECK-NEXT:    i64.const $push0=, 0
@@ -451,9 +451,9 @@ define i128 @ctz128(i128 %x) {
   ret i128 %a
 }
 
-define i128 @ctz128_zero_undef(i128 %x) {
-; CHECK-LABEL: ctz128_zero_undef:
-; CHECK:         .functype ctz128_zero_undef (i32, i64, i64) -> ()
+define i128 @ctz128_zero_poison(i128 %x) {
+; CHECK-LABEL: ctz128_zero_poison:
+; CHECK:         .functype ctz128_zero_poison (i32, i64, i64) -> ()
 ; CHECK-NEXT:  # %bb.0:
 ; CHECK-NEXT:    local.get $push8=, 0
 ; CHECK-NEXT:    i64.const $push0=, 0

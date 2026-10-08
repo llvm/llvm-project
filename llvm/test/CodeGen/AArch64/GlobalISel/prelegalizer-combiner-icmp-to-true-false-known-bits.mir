@@ -45,15 +45,15 @@ body:             |
     ; CHECK-LABEL: name: eq_true
     ; CHECK: liveins: $x0
     ; CHECK-NEXT: {{  $}}
-    ; CHECK-NEXT: %cmp:_(s1) = G_CONSTANT i1 true
-    ; CHECK-NEXT: %cmp_ext:_(s32) = G_ZEXT %cmp(s1)
-    ; CHECK-NEXT: $w0 = COPY %cmp_ext(s32)
+    ; CHECK-NEXT: %cmp:_(i1) = G_CONSTANT i1 true
+    ; CHECK-NEXT: %cmp_ext:_(i32) = G_ZEXT %cmp(i1)
+    ; CHECK-NEXT: $w0 = COPY %cmp_ext(i32)
     ; CHECK-NEXT: RET_ReallyLR implicit $w0
     %ptr:_(p0) = COPY $x0
-    %cst:_(s32) = G_CONSTANT i32 1
-    %cmp:_(s1) = G_ICMP intpred(eq), %cst(s32), %cst
-    %cmp_ext:_(s32) = G_ZEXT %cmp(s1)
-    $w0 = COPY %cmp_ext(s32)
+    %cst:_(i32) = G_CONSTANT i32 1
+    %cmp:_(i1) = G_ICMP intpred(eq), %cst(i32), %cst
+    %cmp_ext:_(i32) = G_ZEXT %cmp(i1)
+    $w0 = COPY %cmp_ext(i32)
     RET_ReallyLR implicit $w0
 
 ...
@@ -67,16 +67,16 @@ body:             |
     ; CHECK-LABEL: name: ne_true
     ; CHECK: liveins: $x0
     ; CHECK-NEXT: {{  $}}
-    ; CHECK-NEXT: %cmp:_(s1) = G_CONSTANT i1 true
-    ; CHECK-NEXT: %cmp_ext:_(s32) = G_ZEXT %cmp(s1)
-    ; CHECK-NEXT: $w0 = COPY %cmp_ext(s32)
+    ; CHECK-NEXT: %cmp:_(i1) = G_CONSTANT i1 true
+    ; CHECK-NEXT: %cmp_ext:_(i32) = G_ZEXT %cmp(i1)
+    ; CHECK-NEXT: $w0 = COPY %cmp_ext(i32)
     ; CHECK-NEXT: RET_ReallyLR implicit $w0
     %ptr:_(p0) = COPY $x0
-    %cst_1:_(s32) = G_CONSTANT i32 1
-    %cst_2:_(s32) = G_CONSTANT i32 2
-    %cmp:_(s1) = G_ICMP intpred(ne), %cst_1(s32), %cst_2
-    %cmp_ext:_(s32) = G_ZEXT %cmp(s1)
-    $w0 = COPY %cmp_ext(s32)
+    %cst_1:_(i32) = G_CONSTANT i32 1
+    %cst_2:_(i32) = G_CONSTANT i32 2
+    %cmp:_(i1) = G_ICMP intpred(ne), %cst_1(i32), %cst_2
+    %cmp_ext:_(i32) = G_ZEXT %cmp(i1)
+    $w0 = COPY %cmp_ext(i32)
     RET_ReallyLR implicit $w0
 
 ...
@@ -90,16 +90,16 @@ body:             |
     ; CHECK-LABEL: name: sge_true
     ; CHECK: liveins: $x0
     ; CHECK-NEXT: {{  $}}
-    ; CHECK-NEXT: %cmp:_(s1) = G_CONSTANT i1 true
-    ; CHECK-NEXT: %cmp_ext:_(s32) = G_ZEXT %cmp(s1)
-    ; CHECK-NEXT: $w0 = COPY %cmp_ext(s32)
+    ; CHECK-NEXT: %cmp:_(i1) = G_CONSTANT i1 true
+    ; CHECK-NEXT: %cmp_ext:_(i32) = G_ZEXT %cmp(i1)
+    ; CHECK-NEXT: $w0 = COPY %cmp_ext(i32)
     ; CHECK-NEXT: RET_ReallyLR implicit $w0
     %ptr:_(p0) = COPY $x0
-    %cst:_(s32) = G_CONSTANT i32 2
-    %load_eq_1:_(s32) = G_LOAD %ptr(p0) :: (load (s32), !range !0)
-    %cmp:_(s1) = G_ICMP intpred(sge), %cst, %load_eq_1(s32)
-    %cmp_ext:_(s32) = G_ZEXT %cmp(s1)
-    $w0 = COPY %cmp_ext(s32)
+    %cst:_(i32) = G_CONSTANT i32 2
+    %load_eq_1:_(i32) = G_LOAD %ptr(p0) :: (load (i32), !range !0)
+    %cmp:_(i1) = G_ICMP intpred(sge), %cst, %load_eq_1(i32)
+    %cmp_ext:_(i32) = G_ZEXT %cmp(i1)
+    $w0 = COPY %cmp_ext(i32)
     RET_ReallyLR implicit $w0
 
 ...
@@ -113,16 +113,16 @@ body:             |
     ; CHECK-LABEL: name: sgt_true
     ; CHECK: liveins: $x0
     ; CHECK-NEXT: {{  $}}
-    ; CHECK-NEXT: %cmp:_(s1) = G_CONSTANT i1 true
-    ; CHECK-NEXT: %cmp_ext:_(s32) = G_ZEXT %cmp(s1)
-    ; CHECK-NEXT: $w0 = COPY %cmp_ext(s32)
+    ; CHECK-NEXT: %cmp:_(i1) = G_CONSTANT i1 true
+    ; CHECK-NEXT: %cmp_ext:_(i32) = G_ZEXT %cmp(i1)
+    ; CHECK-NEXT: $w0 = COPY %cmp_ext(i32)
     ; CHECK-NEXT: RET_ReallyLR implicit $w0
     %ptr:_(p0) = COPY $x0
-    %cst:_(s32) = G_CONSTANT i32 3
-    %load_eq_1:_(s32) = G_LOAD %ptr(p0) :: (load (s32), !range !0)
-    %cmp:_(s1) = G_ICMP intpred(sgt), %cst, %load_eq_1(s32)
-    %cmp_ext:_(s32) = G_ZEXT %cmp(s1)
-    $w0 = COPY %cmp_ext(s32)
+    %cst:_(i32) = G_CONSTANT i32 3
+    %load_eq_1:_(i32) = G_LOAD %ptr(p0) :: (load (i32), !range !0)
+    %cmp:_(i1) = G_ICMP intpred(sgt), %cst, %load_eq_1(i32)
+    %cmp_ext:_(i32) = G_ZEXT %cmp(i1)
+    $w0 = COPY %cmp_ext(i32)
     RET_ReallyLR implicit $w0
 
 ...
@@ -136,16 +136,16 @@ body:             |
     ; CHECK-LABEL: name: sle_true
     ; CHECK: liveins: $x0
     ; CHECK-NEXT: {{  $}}
-    ; CHECK-NEXT: %cmp:_(s1) = G_CONSTANT i1 true
-    ; CHECK-NEXT: %cmp_ext:_(s32) = G_ZEXT %cmp(s1)
-    ; CHECK-NEXT: $w0 = COPY %cmp_ext(s32)
+    ; CHECK-NEXT: %cmp:_(i1) = G_CONSTANT i1 true
+    ; CHECK-NEXT: %cmp_ext:_(i32) = G_ZEXT %cmp(i1)
+    ; CHECK-NEXT: $w0 = COPY %cmp_ext(i32)
     ; CHECK-NEXT: RET_ReallyLR implicit $w0
     %ptr:_(p0) = COPY $x0
-    %cst:_(s32) = G_CONSTANT i32 1
-    %load_eq_1:_(s32) = G_LOAD %ptr(p0) :: (load (s32), !range !0)
-    %cmp:_(s1) = G_ICMP intpred(sle), %cst, %load_eq_1(s32)
-    %cmp_ext:_(s32) = G_ZEXT %cmp(s1)
-    $w0 = COPY %cmp_ext(s32)
+    %cst:_(i32) = G_CONSTANT i32 1
+    %load_eq_1:_(i32) = G_LOAD %ptr(p0) :: (load (i32), !range !0)
+    %cmp:_(i1) = G_ICMP intpred(sle), %cst, %load_eq_1(i32)
+    %cmp_ext:_(i32) = G_ZEXT %cmp(i1)
+    $w0 = COPY %cmp_ext(i32)
     RET_ReallyLR implicit $w0
 
 
@@ -160,16 +160,16 @@ body:             |
     ; CHECK-LABEL: name: slt_true
     ; CHECK: liveins: $x0
     ; CHECK-NEXT: {{  $}}
-    ; CHECK-NEXT: %cmp:_(s1) = G_CONSTANT i1 true
-    ; CHECK-NEXT: %cmp_ext:_(s32) = G_ZEXT %cmp(s1)
-    ; CHECK-NEXT: $w0 = COPY %cmp_ext(s32)
+    ; CHECK-NEXT: %cmp:_(i1) = G_CONSTANT i1 true
+    ; CHECK-NEXT: %cmp_ext:_(i32) = G_ZEXT %cmp(i1)
+    ; CHECK-NEXT: $w0 = COPY %cmp_ext(i32)
     ; CHECK-NEXT: RET_ReallyLR implicit $w0
     %ptr:_(p0) = COPY $x0
-    %cst:_(s32) = G_CONSTANT i32 -1
-    %load_eq_1:_(s32) = G_LOAD %ptr(p0) :: (load (s32), !range !0)
-    %cmp:_(s1) = G_ICMP intpred(slt), %cst, %load_eq_1(s32)
-    %cmp_ext:_(s32) = G_ZEXT %cmp(s1)
-    $w0 = COPY %cmp_ext(s32)
+    %cst:_(i32) = G_CONSTANT i32 -1
+    %load_eq_1:_(i32) = G_LOAD %ptr(p0) :: (load (i32), !range !0)
+    %cmp:_(i1) = G_ICMP intpred(slt), %cst, %load_eq_1(i32)
+    %cmp_ext:_(i32) = G_ZEXT %cmp(i1)
+    $w0 = COPY %cmp_ext(i32)
     RET_ReallyLR implicit $w0
 
 ...
@@ -183,16 +183,16 @@ body:             |
     ; CHECK-LABEL: name: uge_true
     ; CHECK: liveins: $x0
     ; CHECK-NEXT: {{  $}}
-    ; CHECK-NEXT: %cmp:_(s1) = G_CONSTANT i1 true
-    ; CHECK-NEXT: %cmp_ext:_(s32) = G_ZEXT %cmp(s1)
-    ; CHECK-NEXT: $w0 = COPY %cmp_ext(s32)
+    ; CHECK-NEXT: %cmp:_(i1) = G_CONSTANT i1 true
+    ; CHECK-NEXT: %cmp_ext:_(i32) = G_ZEXT %cmp(i1)
+    ; CHECK-NEXT: $w0 = COPY %cmp_ext(i32)
     ; CHECK-NEXT: RET_ReallyLR implicit $w0
     %ptr:_(p0) = COPY $x0
-    %cst:_(s32) = G_CONSTANT i32 2
-    %load_eq_1:_(s32) = G_LOAD %ptr(p0) :: (load (s32), !range !0)
-    %cmp:_(s1) = G_ICMP intpred(uge), %cst, %load_eq_1(s32)
-    %cmp_ext:_(s32) = G_ZEXT %cmp(s1)
-    $w0 = COPY %cmp_ext(s32)
+    %cst:_(i32) = G_CONSTANT i32 2
+    %load_eq_1:_(i32) = G_LOAD %ptr(p0) :: (load (i32), !range !0)
+    %cmp:_(i1) = G_ICMP intpred(uge), %cst, %load_eq_1(i32)
+    %cmp_ext:_(i32) = G_ZEXT %cmp(i1)
+    $w0 = COPY %cmp_ext(i32)
     RET_ReallyLR implicit $w0
 
 ...
@@ -206,16 +206,16 @@ body:             |
     ; CHECK-LABEL: name: ugt_true
     ; CHECK: liveins: $x0
     ; CHECK-NEXT: {{  $}}
-    ; CHECK-NEXT: %cmp:_(s1) = G_CONSTANT i1 true
-    ; CHECK-NEXT: %cmp_ext:_(s32) = G_ZEXT %cmp(s1)
-    ; CHECK-NEXT: $w0 = COPY %cmp_ext(s32)
+    ; CHECK-NEXT: %cmp:_(i1) = G_CONSTANT i1 true
+    ; CHECK-NEXT: %cmp_ext:_(i32) = G_ZEXT %cmp(i1)
+    ; CHECK-NEXT: $w0 = COPY %cmp_ext(i32)
     ; CHECK-NEXT: RET_ReallyLR implicit $w0
     %ptr:_(p0) = COPY $x0
-    %cst:_(s32) = G_CONSTANT i32 -1
-    %load_eq_1:_(s32) = G_LOAD %ptr(p0) :: (load (s32), !range !0)
-    %cmp:_(s1) = G_ICMP intpred(ugt), %cst, %load_eq_1(s32)
-    %cmp_ext:_(s32) = G_ZEXT %cmp(s1)
-    $w0 = COPY %cmp_ext(s32)
+    %cst:_(i32) = G_CONSTANT i32 -1
+    %load_eq_1:_(i32) = G_LOAD %ptr(p0) :: (load (i32), !range !0)
+    %cmp:_(i1) = G_ICMP intpred(ugt), %cst, %load_eq_1(i32)
+    %cmp_ext:_(i32) = G_ZEXT %cmp(i1)
+    $w0 = COPY %cmp_ext(i32)
     RET_ReallyLR implicit $w0
 
 ...
@@ -229,16 +229,16 @@ body:             |
     ; CHECK-LABEL: name: ule_true
     ; CHECK: liveins: $x0
     ; CHECK-NEXT: {{  $}}
-    ; CHECK-NEXT: %cmp:_(s1) = G_CONSTANT i1 true
-    ; CHECK-NEXT: %cmp_ext:_(s32) = G_ZEXT %cmp(s1)
-    ; CHECK-NEXT: $w0 = COPY %cmp_ext(s32)
+    ; CHECK-NEXT: %cmp:_(i1) = G_CONSTANT i1 true
+    ; CHECK-NEXT: %cmp_ext:_(i32) = G_ZEXT %cmp(i1)
+    ; CHECK-NEXT: $w0 = COPY %cmp_ext(i32)
     ; CHECK-NEXT: RET_ReallyLR implicit $w0
     %ptr:_(p0) = COPY $x0
-    %cst:_(s32) = G_CONSTANT i32 1
-    %load_eq_1:_(s32) = G_LOAD %ptr(p0) :: (load (s32), !range !0)
-    %cmp:_(s1) = G_ICMP intpred(ule), %cst, %load_eq_1(s32)
-    %cmp_ext:_(s32) = G_ZEXT %cmp(s1)
-    $w0 = COPY %cmp_ext(s32)
+    %cst:_(i32) = G_CONSTANT i32 1
+    %load_eq_1:_(i32) = G_LOAD %ptr(p0) :: (load (i32), !range !0)
+    %cmp:_(i1) = G_ICMP intpred(ule), %cst, %load_eq_1(i32)
+    %cmp_ext:_(i32) = G_ZEXT %cmp(i1)
+    $w0 = COPY %cmp_ext(i32)
     RET_ReallyLR implicit $w0
 
 ...
@@ -252,16 +252,16 @@ body:             |
     ; CHECK-LABEL: name: ult_true
     ; CHECK: liveins: $x0
     ; CHECK-NEXT: {{  $}}
-    ; CHECK-NEXT: %cmp:_(s1) = G_CONSTANT i1 true
-    ; CHECK-NEXT: %cmp_ext:_(s32) = G_ZEXT %cmp(s1)
-    ; CHECK-NEXT: $w0 = COPY %cmp_ext(s32)
+    ; CHECK-NEXT: %cmp:_(i1) = G_CONSTANT i1 true
+    ; CHECK-NEXT: %cmp_ext:_(i32) = G_ZEXT %cmp(i1)
+    ; CHECK-NEXT: $w0 = COPY %cmp_ext(i32)
     ; CHECK-NEXT: RET_ReallyLR implicit $w0
     %ptr:_(p0) = COPY $x0
-    %cst:_(s32) = G_CONSTANT i32 0
-    %load_eq_1:_(s32) = G_LOAD %ptr(p0) :: (load (s32), !range !0)
-    %cmp:_(s1) = G_ICMP intpred(ule), %cst, %load_eq_1(s32)
-    %cmp_ext:_(s32) = G_ZEXT %cmp(s1)
-    $w0 = COPY %cmp_ext(s32)
+    %cst:_(i32) = G_CONSTANT i32 0
+    %load_eq_1:_(i32) = G_LOAD %ptr(p0) :: (load (i32), !range !0)
+    %cmp:_(i1) = G_ICMP intpred(ule), %cst, %load_eq_1(i32)
+    %cmp_ext:_(i32) = G_ZEXT %cmp(i1)
+    $w0 = COPY %cmp_ext(i32)
     RET_ReallyLR implicit $w0
 
 ...
@@ -275,16 +275,16 @@ body:             |
     ; CHECK-LABEL: name: eq_false
     ; CHECK: liveins: $x0
     ; CHECK-NEXT: {{  $}}
-    ; CHECK-NEXT: %cmp:_(s1) = G_CONSTANT i1 false
-    ; CHECK-NEXT: %cmp_ext:_(s32) = G_ZEXT %cmp(s1)
-    ; CHECK-NEXT: $w0 = COPY %cmp_ext(s32)
+    ; CHECK-NEXT: %cmp:_(i1) = G_CONSTANT i1 false
+    ; CHECK-NEXT: %cmp_ext:_(i32) = G_ZEXT %cmp(i1)
+    ; CHECK-NEXT: $w0 = COPY %cmp_ext(i32)
     ; CHECK-NEXT: RET_ReallyLR implicit $w0
     %ptr:_(p0) = COPY $x0
-    %cst:_(s32) = G_CONSTANT i32 0
-    %load_eq_1:_(s32) = G_LOAD %ptr(p0) :: (load (s32), !range !0)
-    %cmp:_(s1) = G_ICMP intpred(eq), %load_eq_1(s32), %cst
-    %cmp_ext:_(s32) = G_ZEXT %cmp(s1)
-    $w0 = COPY %cmp_ext(s32)
+    %cst:_(i32) = G_CONSTANT i32 0
+    %load_eq_1:_(i32) = G_LOAD %ptr(p0) :: (load (i32), !range !0)
+    %cmp:_(i1) = G_ICMP intpred(eq), %load_eq_1(i32), %cst
+    %cmp_ext:_(i32) = G_ZEXT %cmp(i1)
+    $w0 = COPY %cmp_ext(i32)
     RET_ReallyLR implicit $w0
 
 ...
@@ -298,16 +298,16 @@ body:             |
     ; CHECK-LABEL: name: ne_false
     ; CHECK: liveins: $x0
     ; CHECK-NEXT: {{  $}}
-    ; CHECK-NEXT: %cmp:_(s1) = G_CONSTANT i1 false
-    ; CHECK-NEXT: %cmp_ext:_(s32) = G_ZEXT %cmp(s1)
-    ; CHECK-NEXT: $w0 = COPY %cmp_ext(s32)
+    ; CHECK-NEXT: %cmp:_(i1) = G_CONSTANT i1 false
+    ; CHECK-NEXT: %cmp_ext:_(i32) = G_ZEXT %cmp(i1)
+    ; CHECK-NEXT: $w0 = COPY %cmp_ext(i32)
     ; CHECK-NEXT: RET_ReallyLR implicit $w0
     %ptr:_(p0) = COPY $x0
-    %cst_1:_(s32) = G_CONSTANT i32 1
-    %cst_2:_(s32) = G_CONSTANT i32 1
-    %cmp:_(s1) = G_ICMP intpred(ne), %cst_1(s32), %cst_2
-    %cmp_ext:_(s32) = G_ZEXT %cmp(s1)
-    $w0 = COPY %cmp_ext(s32)
+    %cst_1:_(i32) = G_CONSTANT i32 1
+    %cst_2:_(i32) = G_CONSTANT i32 1
+    %cmp:_(i1) = G_ICMP intpred(ne), %cst_1(i32), %cst_2
+    %cmp_ext:_(i32) = G_ZEXT %cmp(i1)
+    $w0 = COPY %cmp_ext(i32)
     RET_ReallyLR implicit $w0
 
 ...
@@ -321,16 +321,16 @@ body:             |
     ; CHECK-LABEL: name: sge_false
     ; CHECK: liveins: $x0
     ; CHECK-NEXT: {{  $}}
-    ; CHECK-NEXT: %cmp:_(s1) = G_CONSTANT i1 false
-    ; CHECK-NEXT: %cmp_ext:_(s32) = G_ZEXT %cmp(s1)
-    ; CHECK-NEXT: $w0 = COPY %cmp_ext(s32)
+    ; CHECK-NEXT: %cmp:_(i1) = G_CONSTANT i1 false
+    ; CHECK-NEXT: %cmp_ext:_(i32) = G_ZEXT %cmp(i1)
+    ; CHECK-NEXT: $w0 = COPY %cmp_ext(i32)
     ; CHECK-NEXT: RET_ReallyLR implicit $w0
     %ptr:_(p0) = COPY $x0
-    %cst:_(s32) = G_CONSTANT i32 -1
-    %load_eq_1:_(s32) = G_LOAD %ptr(p0) :: (load (s32), !range !0)
-    %cmp:_(s1) = G_ICMP intpred(sge), %cst, %load_eq_1(s32)
-    %cmp_ext:_(s32) = G_ZEXT %cmp(s1)
-    $w0 = COPY %cmp_ext(s32)
+    %cst:_(i32) = G_CONSTANT i32 -1
+    %load_eq_1:_(i32) = G_LOAD %ptr(p0) :: (load (i32), !range !0)
+    %cmp:_(i1) = G_ICMP intpred(sge), %cst, %load_eq_1(i32)
+    %cmp_ext:_(i32) = G_ZEXT %cmp(i1)
+    $w0 = COPY %cmp_ext(i32)
     RET_ReallyLR implicit $w0
 
 ...
@@ -344,16 +344,16 @@ body:             |
     ; CHECK-LABEL: name: sgt_false
     ; CHECK: liveins: $x0
     ; CHECK-NEXT: {{  $}}
-    ; CHECK-NEXT: %cmp:_(s1) = G_CONSTANT i1 false
-    ; CHECK-NEXT: %cmp_ext:_(s32) = G_ZEXT %cmp(s1)
-    ; CHECK-NEXT: $w0 = COPY %cmp_ext(s32)
+    ; CHECK-NEXT: %cmp:_(i1) = G_CONSTANT i1 false
+    ; CHECK-NEXT: %cmp_ext:_(i32) = G_ZEXT %cmp(i1)
+    ; CHECK-NEXT: $w0 = COPY %cmp_ext(i32)
     ; CHECK-NEXT: RET_ReallyLR implicit $w0
     %ptr:_(p0) = COPY $x0
-    %cst:_(s32) = G_CONSTANT i32 1
-    %load_eq_1:_(s32) = G_LOAD %ptr(p0) :: (load (s32), !range !0)
-    %cmp:_(s1) = G_ICMP intpred(sgt), %cst, %load_eq_1(s32)
-    %cmp_ext:_(s32) = G_ZEXT %cmp(s1)
-    $w0 = COPY %cmp_ext(s32)
+    %cst:_(i32) = G_CONSTANT i32 1
+    %load_eq_1:_(i32) = G_LOAD %ptr(p0) :: (load (i32), !range !0)
+    %cmp:_(i1) = G_ICMP intpred(sgt), %cst, %load_eq_1(i32)
+    %cmp_ext:_(i32) = G_ZEXT %cmp(i1)
+    $w0 = COPY %cmp_ext(i32)
     RET_ReallyLR implicit $w0
 
 ...
@@ -367,16 +367,16 @@ body:             |
     ; CHECK-LABEL: name: sle_false
     ; CHECK: liveins: $x0
     ; CHECK-NEXT: {{  $}}
-    ; CHECK-NEXT: %cmp:_(s1) = G_CONSTANT i1 false
-    ; CHECK-NEXT: %cmp_ext:_(s32) = G_ZEXT %cmp(s1)
-    ; CHECK-NEXT: $w0 = COPY %cmp_ext(s32)
+    ; CHECK-NEXT: %cmp:_(i1) = G_CONSTANT i1 false
+    ; CHECK-NEXT: %cmp_ext:_(i32) = G_ZEXT %cmp(i1)
+    ; CHECK-NEXT: $w0 = COPY %cmp_ext(i32)
     ; CHECK-NEXT: RET_ReallyLR implicit $w0
     %ptr:_(p0) = COPY $x0
-    %cst:_(s32) = G_CONSTANT i32 3
-    %load_eq_1:_(s32) = G_LOAD %ptr(p0) :: (load (s32), !range !0)
-    %cmp:_(s1) = G_ICMP intpred(sle), %cst, %load_eq_1(s32)
-    %cmp_ext:_(s32) = G_ZEXT %cmp(s1)
-    $w0 = COPY %cmp_ext(s32)
+    %cst:_(i32) = G_CONSTANT i32 3
+    %load_eq_1:_(i32) = G_LOAD %ptr(p0) :: (load (i32), !range !0)
+    %cmp:_(i1) = G_ICMP intpred(sle), %cst, %load_eq_1(i32)
+    %cmp_ext:_(i32) = G_ZEXT %cmp(i1)
+    $w0 = COPY %cmp_ext(i32)
     RET_ReallyLR implicit $w0
 
 
@@ -391,16 +391,16 @@ body:             |
     ; CHECK-LABEL: name: slt_false
     ; CHECK: liveins: $x0
     ; CHECK-NEXT: {{  $}}
-    ; CHECK-NEXT: %cmp:_(s1) = G_CONSTANT i1 false
-    ; CHECK-NEXT: %cmp_ext:_(s32) = G_ZEXT %cmp(s1)
-    ; CHECK-NEXT: $w0 = COPY %cmp_ext(s32)
+    ; CHECK-NEXT: %cmp:_(i1) = G_CONSTANT i1 false
+    ; CHECK-NEXT: %cmp_ext:_(i32) = G_ZEXT %cmp(i1)
+    ; CHECK-NEXT: $w0 = COPY %cmp_ext(i32)
     ; CHECK-NEXT: RET_ReallyLR implicit $w0
     %ptr:_(p0) = COPY $x0
-    %cst:_(s32) = G_CONSTANT i32 2
-    %load_eq_1:_(s32) = G_LOAD %ptr(p0) :: (load (s32), !range !0)
-    %cmp:_(s1) = G_ICMP intpred(slt), %cst, %load_eq_1(s32)
-    %cmp_ext:_(s32) = G_ZEXT %cmp(s1)
-    $w0 = COPY %cmp_ext(s32)
+    %cst:_(i32) = G_CONSTANT i32 2
+    %load_eq_1:_(i32) = G_LOAD %ptr(p0) :: (load (i32), !range !0)
+    %cmp:_(i1) = G_ICMP intpred(slt), %cst, %load_eq_1(i32)
+    %cmp_ext:_(i32) = G_ZEXT %cmp(i1)
+    $w0 = COPY %cmp_ext(i32)
     RET_ReallyLR implicit $w0
 
 ...
@@ -414,16 +414,16 @@ body:             |
     ; CHECK-LABEL: name: uge_false
     ; CHECK: liveins: $x0
     ; CHECK-NEXT: {{  $}}
-    ; CHECK-NEXT: %cmp:_(s1) = G_CONSTANT i1 false
-    ; CHECK-NEXT: %cmp_ext:_(s32) = G_ZEXT %cmp(s1)
-    ; CHECK-NEXT: $w0 = COPY %cmp_ext(s32)
+    ; CHECK-NEXT: %cmp:_(i1) = G_CONSTANT i1 false
+    ; CHECK-NEXT: %cmp_ext:_(i32) = G_ZEXT %cmp(i1)
+    ; CHECK-NEXT: $w0 = COPY %cmp_ext(i32)
     ; CHECK-NEXT: RET_ReallyLR implicit $w0
     %ptr:_(p0) = COPY $x0
-    %cst:_(s32) = G_CONSTANT i32 0
-    %load_eq_1:_(s32) = G_LOAD %ptr(p0) :: (load (s32), !range !0)
-    %cmp:_(s1) = G_ICMP intpred(uge), %cst, %load_eq_1(s32)
-    %cmp_ext:_(s32) = G_ZEXT %cmp(s1)
-    $w0 = COPY %cmp_ext(s32)
+    %cst:_(i32) = G_CONSTANT i32 0
+    %load_eq_1:_(i32) = G_LOAD %ptr(p0) :: (load (i32), !range !0)
+    %cmp:_(i1) = G_ICMP intpred(uge), %cst, %load_eq_1(i32)
+    %cmp_ext:_(i32) = G_ZEXT %cmp(i1)
+    $w0 = COPY %cmp_ext(i32)
     RET_ReallyLR implicit $w0
 
 ...
@@ -437,16 +437,16 @@ body:             |
     ; CHECK-LABEL: name: ugt_false
     ; CHECK: liveins: $x0
     ; CHECK-NEXT: {{  $}}
-    ; CHECK-NEXT: %cmp:_(s1) = G_CONSTANT i1 false
-    ; CHECK-NEXT: %cmp_ext:_(s32) = G_ZEXT %cmp(s1)
-    ; CHECK-NEXT: $w0 = COPY %cmp_ext(s32)
+    ; CHECK-NEXT: %cmp:_(i1) = G_CONSTANT i1 false
+    ; CHECK-NEXT: %cmp_ext:_(i32) = G_ZEXT %cmp(i1)
+    ; CHECK-NEXT: $w0 = COPY %cmp_ext(i32)
     ; CHECK-NEXT: RET_ReallyLR implicit $w0
     %ptr:_(p0) = COPY $x0
-    %cst:_(s32) = G_CONSTANT i32 1
-    %load_eq_1:_(s32) = G_LOAD %ptr(p0) :: (load (s32), !range !0)
-    %cmp:_(s1) = G_ICMP intpred(ugt), %cst, %load_eq_1(s32)
-    %cmp_ext:_(s32) = G_ZEXT %cmp(s1)
-    $w0 = COPY %cmp_ext(s32)
+    %cst:_(i32) = G_CONSTANT i32 1
+    %load_eq_1:_(i32) = G_LOAD %ptr(p0) :: (load (i32), !range !0)
+    %cmp:_(i1) = G_ICMP intpred(ugt), %cst, %load_eq_1(i32)
+    %cmp_ext:_(i32) = G_ZEXT %cmp(i1)
+    $w0 = COPY %cmp_ext(i32)
     RET_ReallyLR implicit $w0
 
 ...
@@ -460,16 +460,16 @@ body:             |
     ; CHECK-LABEL: name: ule_false
     ; CHECK: liveins: $x0
     ; CHECK-NEXT: {{  $}}
-    ; CHECK-NEXT: %cmp:_(s1) = G_CONSTANT i1 false
-    ; CHECK-NEXT: %cmp_ext:_(s32) = G_ZEXT %cmp(s1)
-    ; CHECK-NEXT: $w0 = COPY %cmp_ext(s32)
+    ; CHECK-NEXT: %cmp:_(i1) = G_CONSTANT i1 false
+    ; CHECK-NEXT: %cmp_ext:_(i32) = G_ZEXT %cmp(i1)
+    ; CHECK-NEXT: $w0 = COPY %cmp_ext(i32)
     ; CHECK-NEXT: RET_ReallyLR implicit $w0
     %ptr:_(p0) = COPY $x0
-    %cst:_(s32) = G_CONSTANT i32 -1
-    %load_eq_1:_(s32) = G_LOAD %ptr(p0) :: (load (s32), !range !0)
-    %cmp:_(s1) = G_ICMP intpred(ule), %cst, %load_eq_1(s32)
-    %cmp_ext:_(s32) = G_ZEXT %cmp(s1)
-    $w0 = COPY %cmp_ext(s32)
+    %cst:_(i32) = G_CONSTANT i32 -1
+    %load_eq_1:_(i32) = G_LOAD %ptr(p0) :: (load (i32), !range !0)
+    %cmp:_(i1) = G_ICMP intpred(ule), %cst, %load_eq_1(i32)
+    %cmp_ext:_(i32) = G_ZEXT %cmp(i1)
+    $w0 = COPY %cmp_ext(i32)
     RET_ReallyLR implicit $w0
 
 ...
@@ -483,16 +483,16 @@ body:             |
     ; CHECK-LABEL: name: ult_false
     ; CHECK: liveins: $x0
     ; CHECK-NEXT: {{  $}}
-    ; CHECK-NEXT: %cmp:_(s1) = G_CONSTANT i1 false
-    ; CHECK-NEXT: %cmp_ext:_(s32) = G_ZEXT %cmp(s1)
-    ; CHECK-NEXT: $w0 = COPY %cmp_ext(s32)
+    ; CHECK-NEXT: %cmp:_(i1) = G_CONSTANT i1 false
+    ; CHECK-NEXT: %cmp_ext:_(i32) = G_ZEXT %cmp(i1)
+    ; CHECK-NEXT: $w0 = COPY %cmp_ext(i32)
     ; CHECK-NEXT: RET_ReallyLR implicit $w0
     %ptr:_(p0) = COPY $x0
-    %cst:_(s32) = G_CONSTANT i32 2
-    %load_eq_1:_(s32) = G_LOAD %ptr(p0) :: (load (s32), !range !0)
-    %cmp:_(s1) = G_ICMP intpred(ule), %cst, %load_eq_1(s32)
-    %cmp_ext:_(s32) = G_ZEXT %cmp(s1)
-    $w0 = COPY %cmp_ext(s32)
+    %cst:_(i32) = G_CONSTANT i32 2
+    %load_eq_1:_(i32) = G_LOAD %ptr(p0) :: (load (i32), !range !0)
+    %cmp:_(i1) = G_ICMP intpred(ule), %cst, %load_eq_1(i32)
+    %cmp_ext:_(i32) = G_ZEXT %cmp(i1)
+    $w0 = COPY %cmp_ext(i32)
     RET_ReallyLR implicit $w0
 
 ...
@@ -507,18 +507,18 @@ body:             |
     ; CHECK: liveins: $x0
     ; CHECK-NEXT: {{  $}}
     ; CHECK-NEXT: %ptr:_(p0) = COPY $x0
-    ; CHECK-NEXT: %cst:_(s32) = G_CONSTANT i32 1
-    ; CHECK-NEXT: %load_between_1_2:_(s32) = G_LOAD %ptr(p0) :: (load (s32),
-    ; CHECK-NEXT: %cmp:_(s1) = G_ICMP intpred(eq), %load_between_1_2(s32), %cst
-    ; CHECK-NEXT: %cmp_ext:_(s32) = G_ZEXT %cmp(s1)
-    ; CHECK-NEXT: $w0 = COPY %cmp_ext(s32)
+    ; CHECK-NEXT: %cst:_(i32) = G_CONSTANT i32 1
+    ; CHECK-NEXT: %load_between_1_2:_(i32) = G_LOAD %ptr(p0) :: (load (i32),
+    ; CHECK-NEXT: %cmp:_(i1) = G_ICMP intpred(eq), %load_between_1_2(i32), %cst
+    ; CHECK-NEXT: %cmp_ext:_(i32) = G_ZEXT %cmp(i1)
+    ; CHECK-NEXT: $w0 = COPY %cmp_ext(i32)
     ; CHECK-NEXT: RET_ReallyLR implicit $w0
     %ptr:_(p0) = COPY $x0
-    %cst:_(s32) = G_CONSTANT i32 1
-    %load_between_1_2:_(s32) = G_LOAD %ptr(p0) :: (load (s32), !range !1)
-    %cmp:_(s1) = G_ICMP intpred(eq), %load_between_1_2(s32), %cst
-    %cmp_ext:_(s32) = G_ZEXT %cmp(s1)
-    $w0 = COPY %cmp_ext(s32)
+    %cst:_(i32) = G_CONSTANT i32 1
+    %load_between_1_2:_(i32) = G_LOAD %ptr(p0) :: (load (i32), !range !1)
+    %cmp:_(i1) = G_ICMP intpred(eq), %load_between_1_2(i32), %cst
+    %cmp_ext:_(i32) = G_ZEXT %cmp(i1)
+    $w0 = COPY %cmp_ext(i32)
     RET_ReallyLR implicit $w0
 
 ...
@@ -533,18 +533,18 @@ body:             |
     ; CHECK: liveins: $x0
     ; CHECK-NEXT: {{  $}}
     ; CHECK-NEXT: %ptr:_(p0) = COPY $x0
-    ; CHECK-NEXT: %cst:_(s32) = G_CONSTANT i32 1
-    ; CHECK-NEXT: %load_between_1_2:_(s32) = G_LOAD %ptr(p0) :: (load (s32),
-    ; CHECK-NEXT: %cmp:_(s1) = G_ICMP intpred(ne), %load_between_1_2(s32), %cst
-    ; CHECK-NEXT: %cmp_ext:_(s32) = G_ZEXT %cmp(s1)
-    ; CHECK-NEXT: $w0 = COPY %cmp_ext(s32)
+    ; CHECK-NEXT: %cst:_(i32) = G_CONSTANT i32 1
+    ; CHECK-NEXT: %load_between_1_2:_(i32) = G_LOAD %ptr(p0) :: (load (i32),
+    ; CHECK-NEXT: %cmp:_(i1) = G_ICMP intpred(ne), %load_between_1_2(i32), %cst
+    ; CHECK-NEXT: %cmp_ext:_(i32) = G_ZEXT %cmp(i1)
+    ; CHECK-NEXT: $w0 = COPY %cmp_ext(i32)
     ; CHECK-NEXT: RET_ReallyLR implicit $w0
     %ptr:_(p0) = COPY $x0
-    %cst:_(s32) = G_CONSTANT i32 1
-    %load_between_1_2:_(s32) = G_LOAD %ptr(p0) :: (load (s32), !range !1)
-    %cmp:_(s1) = G_ICMP intpred(ne), %load_between_1_2(s32), %cst
-    %cmp_ext:_(s32) = G_ZEXT %cmp(s1)
-    $w0 = COPY %cmp_ext(s32)
+    %cst:_(i32) = G_CONSTANT i32 1
+    %load_between_1_2:_(i32) = G_LOAD %ptr(p0) :: (load (i32), !range !1)
+    %cmp:_(i1) = G_ICMP intpred(ne), %load_between_1_2(i32), %cst
+    %cmp_ext:_(i32) = G_ZEXT %cmp(i1)
+    $w0 = COPY %cmp_ext(i32)
     RET_ReallyLR implicit $w0
 
 ...
@@ -557,21 +557,21 @@ body:             |
     ; CHECK-LABEL: name: vector_true
     ; CHECK: liveins: $x0
     ; CHECK-NEXT: {{  $}}
-    ; CHECK-NEXT: %cst64:_(s64) = G_CONSTANT i64 1
-    ; CHECK-NEXT: [[C:%[0-9]+]]:_(s1) = G_CONSTANT i1 true
-    ; CHECK-NEXT: %cmp:_(<2 x s1>) = G_BUILD_VECTOR [[C]](s1), [[C]](s1)
-    ; CHECK-NEXT: %extract:_(s1) = G_EXTRACT_VECTOR_ELT %cmp(<2 x s1>), %cst64(s64)
-    ; CHECK-NEXT: %extract_ext:_(s32) = G_ZEXT %extract(s1)
-    ; CHECK-NEXT: $w0 = COPY %extract_ext(s32)
+    ; CHECK-NEXT: %cst64:_(i64) = G_CONSTANT i64 1
+    ; CHECK-NEXT: [[C:%[0-9]+]]:_(i1) = G_CONSTANT i1 true
+    ; CHECK-NEXT: %cmp:_(<2 x i1>) = G_BUILD_VECTOR [[C]](i1), [[C]](i1)
+    ; CHECK-NEXT: %extract:_(i1) = G_EXTRACT_VECTOR_ELT %cmp(<2 x i1>), %cst64(i64)
+    ; CHECK-NEXT: %extract_ext:_(i32) = G_ZEXT %extract(i1)
+    ; CHECK-NEXT: $w0 = COPY %extract_ext(i32)
     ; CHECK-NEXT: RET_ReallyLR implicit $w0
     %ptr:_(p0) = COPY $x0
-    %cst:_(s32) = G_CONSTANT i32 1
-    %cst64:_(s64) = G_CONSTANT i64 1
-    %bv:_(<2 x s32>) = G_BUILD_VECTOR %cst, %cst
-    %cmp:_(<2 x s1>) = G_ICMP intpred(eq), %bv(<2 x s32>), %bv
-    %extract:_(s1) = G_EXTRACT_VECTOR_ELT %cmp(<2 x s1>), %cst64(s64)
-    %extract_ext:_(s32) = G_ZEXT %extract(s1)
-    $w0 = COPY %extract_ext(s32)
+    %cst:_(i32) = G_CONSTANT i32 1
+    %cst64:_(i64) = G_CONSTANT i64 1
+    %bv:_(<2 x i32>) = G_BUILD_VECTOR %cst, %cst
+    %cmp:_(<2 x i1>) = G_ICMP intpred(eq), %bv(<2 x i32>), %bv
+    %extract:_(i1) = G_EXTRACT_VECTOR_ELT %cmp(<2 x i1>), %cst64(i64)
+    %extract_ext:_(i32) = G_ZEXT %extract(i1)
+    $w0 = COPY %extract_ext(i32)
     RET_ReallyLR implicit $w0
 
 ...
@@ -584,19 +584,19 @@ body:             |
     ; CHECK-LABEL: name: vector_false
     ; CHECK: liveins: $x0
     ; CHECK-NEXT: {{  $}}
-    ; CHECK-NEXT: %cst64:_(s64) = G_CONSTANT i64 1
-    ; CHECK-NEXT: [[C:%[0-9]+]]:_(s1) = G_CONSTANT i1 false
-    ; CHECK-NEXT: %cmp:_(<2 x s1>) = G_BUILD_VECTOR [[C]](s1), [[C]](s1)
-    ; CHECK-NEXT: %extract:_(s1) = G_EXTRACT_VECTOR_ELT %cmp(<2 x s1>), %cst64(s64)
-    ; CHECK-NEXT: %extract_ext:_(s32) = G_ZEXT %extract(s1)
-    ; CHECK-NEXT: $w0 = COPY %extract_ext(s32)
+    ; CHECK-NEXT: %cst64:_(i64) = G_CONSTANT i64 1
+    ; CHECK-NEXT: [[C:%[0-9]+]]:_(i1) = G_CONSTANT i1 false
+    ; CHECK-NEXT: %cmp:_(<2 x i1>) = G_BUILD_VECTOR [[C]](i1), [[C]](i1)
+    ; CHECK-NEXT: %extract:_(i1) = G_EXTRACT_VECTOR_ELT %cmp(<2 x i1>), %cst64(i64)
+    ; CHECK-NEXT: %extract_ext:_(i32) = G_ZEXT %extract(i1)
+    ; CHECK-NEXT: $w0 = COPY %extract_ext(i32)
     ; CHECK-NEXT: RET_ReallyLR implicit $w0
     %ptr:_(p0) = COPY $x0
-    %cst:_(s32) = G_CONSTANT i32 1
-    %cst64:_(s64) = G_CONSTANT i64 1
-    %bv:_(<2 x s32>) = G_BUILD_VECTOR %cst, %cst
-    %cmp:_(<2 x s1>) = G_ICMP intpred(ne), %bv(<2 x s32>), %bv
-    %extract:_(s1) = G_EXTRACT_VECTOR_ELT %cmp(<2 x s1>), %cst64(s64)
-    %extract_ext:_(s32) = G_ZEXT %extract(s1)
-    $w0 = COPY %extract_ext(s32)
+    %cst:_(i32) = G_CONSTANT i32 1
+    %cst64:_(i64) = G_CONSTANT i64 1
+    %bv:_(<2 x i32>) = G_BUILD_VECTOR %cst, %cst
+    %cmp:_(<2 x i1>) = G_ICMP intpred(ne), %bv(<2 x i32>), %bv
+    %extract:_(i1) = G_EXTRACT_VECTOR_ELT %cmp(<2 x i1>), %cst64(i64)
+    %extract_ext:_(i32) = G_ZEXT %extract(i1)
+    $w0 = COPY %extract_ext(i32)
     RET_ReallyLR implicit $w0

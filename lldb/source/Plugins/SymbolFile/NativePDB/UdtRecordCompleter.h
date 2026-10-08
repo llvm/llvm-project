@@ -50,18 +50,16 @@ class UdtRecordCompleter : public llvm::codeview::TypeVisitorCallbacks {
   std::vector<IndexedBase> m_bases;
   ClangASTImporter::LayoutInfo m_layout;
   llvm::DenseMap<clang::Decl *, DeclStatus> &m_decl_to_status;
-  llvm::DenseMap<lldb::opaque_compiler_type_t,
-                 llvm::SmallSet<std::pair<llvm::StringRef, CompilerType>, 8>>
-      &m_cxx_record_map;
+  /// Index of the current member.
+  uint32_t m_member_index = 0;
 
 public:
-  UdtRecordCompleter(
-      PdbTypeSymId id, CompilerType &derived_ct, clang::TagDecl &tag_decl,
-      PdbAstBuilderClang &ast_builder, PdbIndex &index,
-      llvm::DenseMap<clang::Decl *, DeclStatus> &decl_to_status,
-      llvm::DenseMap<lldb::opaque_compiler_type_t,
-                     llvm::SmallSet<std::pair<llvm::StringRef, CompilerType>,
-                                    8>> &cxx_record_map);
+  UdtRecordCompleter(PdbTypeSymId id, CompilerType &derived_ct,
+                     clang::TagDecl &tag_decl, PdbAstBuilderClang &ast_builder,
+                     PdbIndex &index,
+                     llvm::DenseMap<clang::Decl *, DeclStatus> &decl_to_status);
+
+  llvm::Error visitMemberEnd(llvm::codeview::CVMemberRecord &Record) override;
 
 #define MEMBER_RECORD(EnumName, EnumVal, Name)                                 \
   llvm::Error visitKnownMember(llvm::codeview::CVMemberRecord &CVR,            \
@@ -81,6 +79,8 @@ public:
     clang::QualType qt;
     lldb::AccessType access;
     uint32_t bitfield_width;
+    /// Index of the member inside the LF_FIELDLIST.
+    uint32_t original_index = 0;
     // Following are Only used for struct or union.
     uint64_t base_offset;
     llvm::SmallVector<MemberUP, 1> fields;
@@ -90,20 +90,25 @@ public:
         : kind(kind), name(), bit_offset(0), bit_size(0), qt(),
           access(lldb::eAccessPublic), bitfield_width(0), base_offset(0) {}
     Member(llvm::StringRef name, uint64_t bit_offset, uint64_t bit_size,
-           clang::QualType qt, lldb::AccessType access, uint32_t bitfield_width)
+           clang::QualType qt, lldb::AccessType access, uint32_t bitfield_width,
+           uint32_t original_index)
         : kind(Field), name(name), bit_offset(bit_offset), bit_size(bit_size),
           qt(qt), access(access), bitfield_width(bitfield_width),
-          base_offset(0) {}
+          original_index(original_index), base_offset(0) {}
     void ConvertToStruct() {
       kind = Struct;
       base_offset = bit_offset;
       fields.push_back(std::make_unique<Member>(name, bit_offset, bit_size, qt,
-                                                access, bitfield_width));
+                                                access, bitfield_width,
+                                                original_index));
       name = llvm::StringRef();
       qt = clang::QualType();
       access = lldb::eAccessPublic;
       bit_offset = bit_size = bitfield_width = 0;
+      // Keep original_index.
     }
+
+    void RestoreOriginalOrder();
   };
 
   struct Record {
@@ -113,7 +118,8 @@ public:
     std::map<uint64_t, llvm::SmallVector<MemberUP, 1>> fields_map;
     void CollectMember(llvm::StringRef name, uint64_t offset,
                        uint64_t field_size, clang::QualType qt,
-                       lldb::AccessType access, uint64_t bitfield_width);
+                       lldb::AccessType access, uint64_t bitfield_width,
+                       uint32_t member_index);
     void ConstructRecord();
   };
   void complete();

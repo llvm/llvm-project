@@ -126,7 +126,7 @@ addq %rax, %rax
 # CHECK:            [0]    [1]    [2]    [3]
 # CHECK-NEXT: 0.     10    0.0    0.0    1.5       xorl	%eax, %eax
 # CHECK-NEXT: 1.     10    1.0    1.0    0.0       addl	%eax, %eax
-# CHECK-NEXT:        10    0.5    0.5    0.8       <total>
+# CHECK-NEXT:        20    0.5    0.5    0.8       <total>
 
 # CHECK:      [1] Code Region
 
@@ -233,7 +233,7 @@ addq %rax, %rax
 # CHECK:            [0]    [1]    [2]    [3]
 # CHECK-NEXT: 0.     10    0.0    0.0    1.5       xorq	%rax, %rax
 # CHECK-NEXT: 1.     10    1.0    1.0    0.0       addq	%rax, %rax
-# CHECK-NEXT:        10    0.5    0.5    0.8       <total>
+# CHECK-NEXT:        20    0.5    0.5    0.8       <total>
 
 # CHECK:      [2] Code Region
 
@@ -340,7 +340,7 @@ addq %rax, %rax
 # CHECK:            [0]    [1]    [2]    [3]
 # CHECK-NEXT: 0.     10    0.0    0.0    1.5       subl	%eax, %eax
 # CHECK-NEXT: 1.     10    1.0    1.0    0.0       addl	%eax, %eax
-# CHECK-NEXT:        10    0.5    0.5    0.8       <total>
+# CHECK-NEXT:        20    0.5    0.5    0.8       <total>
 
 # CHECK:      [3] Code Region
 
@@ -447,4 +447,4 @@ addq %rax, %rax
 # CHECK:            [0]    [1]    [2]    [3]
 # CHECK-NEXT: 0.     10    0.0    0.0    1.5       subq	%rax, %rax
 # CHECK-NEXT: 1.     10    1.0    1.0    0.0       addq	%rax, %rax
-# CHECK-NEXT:        10    0.5    0.5    0.8       <total>
+# CHECK-NEXT:        20    0.5    0.5    0.8       <total>

@@ -78,7 +78,7 @@ static std::string QualTypeToString(ASTContext &Ctx, QualType QT) {
       !NonRefTy->isMemberPointerType())
     return Canon.getAsString(Ctx.getPrintingPolicy());
 
-  if (const auto *TDTy = dyn_cast<TypedefType>(NonRefTy)) {
+  if (const auto *TDTy = dyn_cast<TypedefType>(Canon)) {
     // FIXME: TemplateSpecializationType & SubstTemplateTypeParmType checks
     // are predominately to get STL containers to print nicer and might be
     // better handled in GetFullyQualifiedName.
@@ -87,13 +87,12 @@ static std::string QualTypeToString(ASTContext &Ctx, QualType QT) {
     // std::vector<Type>::value_type is a SubstTemplateTypeParmType
     //
     QualType SSDesugar = TDTy->getLocallyUnqualifiedSingleStepDesugaredType();
-    if (llvm::isa<SubstTemplateTypeParmType>(SSDesugar))
+    if (llvm::isa<SubstTemplateTypeParmType>(SSDesugar) ||
+        llvm::isa<TemplateSpecializationType>(SSDesugar))
       return GetFullTypeName(Ctx, Canon);
-    else if (llvm::isa<TemplateSpecializationType>(SSDesugar))
-      return GetFullTypeName(Ctx, NonRefTy);
-    return DeclTypeToString(NonRefTy, TDTy->getDecl());
+    return DeclTypeToString(Canon, TDTy->getDecl());
   }
-  return GetFullTypeName(Ctx, NonRefTy);
+  return GetFullTypeName(Ctx, Canon);
 }
 
 static std::string EnumToString(const Value &V) {
@@ -205,7 +204,7 @@ std::string Interpreter::ValueDataToString(const Value &V) const {
       if (ElemTy->isBuiltinType()) {
         // Single dim arrays, advancing.
         uintptr_t Offset = (uintptr_t)V.getPtr() + Idx * ElemSize;
-        InnerV.setRawBits((void *)Offset, ElemSize * 8);
+        InnerV.setRawBits((void *)Offset, ElemSize);
       } else {
         // Multi dim arrays, position to the next dimension.
         size_t Stride = ElemCount / N;
@@ -425,9 +424,8 @@ public:
       Args.push_back(E);
     else if (Ty->isIntegralOrEnumerationType())
       HandleIntegralOrEnumType(Ty);
-    else if (Ty->isVoidType()) {
-      // Do we need to still run `E`?
-    }
+    // A void expression is not an argument of the call; convertExprToValue
+    // evaluates it before the call instead.
 
     return InterfaceKind::NoAlloc;
   }
@@ -619,6 +617,11 @@ llvm::Expected<Expr *> Interpreter::convertExprToValue(Expr *E) {
     SetValueE =
         S.ActOnCallExpr(Scope, ValuePrintingInfo[InterfaceKind::NoAlloc],
                         E->getBeginLoc(), AdjustedArgs, E->getEndLoc());
+    // A void expression must still be evaluated:
+    // `(E, __clang_Interpreter_SetValueNoAlloc(...))`.
+    if (DesugaredTy->isVoidType() && !SetValueE.isInvalid())
+      SetValueE =
+          S.CreateBuiltinBinOp(E->getEndLoc(), BO_Comma, E, SetValueE.get());
     break;
   }
   default:

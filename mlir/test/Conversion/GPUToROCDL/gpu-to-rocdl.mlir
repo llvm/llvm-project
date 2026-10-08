@@ -54,8 +54,8 @@ gpu.module @test_module {
     // CHECK-DAG: llvm.call @__ockl_get_num_groups(%[[GD_C2]]) : (i32) -> i64
     %gDimZ = gpu.grid_dim z
 
-    // CHECK: = rocdl.mbcnt.lo %{{.*}}, %{{.*}} {res_attrs = [{llvm.noundef, llvm.range = #llvm.constant_range<i32, 0, 32>}]} : (i32, i32) -> i32
-    // CHECK: = rocdl.mbcnt.hi %{{.*}}, %{{.*}} {res_attrs = [{llvm.noundef, llvm.range = #llvm.constant_range<i32, 0, 64>}]} : (i32, i32) -> i32
+    // CHECK: = rocdl.mbcnt.lo %{{.*}}, %{{.*}} <res_attrs = [{llvm.noundef, llvm.range = #llvm.constant_range<i32, 0, 32>}]> : (i32, i32) -> i32
+    // CHECK: = rocdl.mbcnt.hi %{{.*}}, %{{.*}} <res_attrs = [{llvm.noundef, llvm.range = #llvm.constant_range<i32, 0, 64>}]> : (i32, i32) -> i32
     // CHECK: = llvm.sext %{{.*}} : i32 to i64
     %laneId = gpu.lane_id
 
@@ -988,5 +988,15 @@ func.func @broadcast_3xi16(%arg0 : vector<3xi16>) -> vector<3xi16> {
 //       CHECK:   return %[[BCOUT]] : vector<3xi16>
   %0 = gpu.subgroup_broadcast %arg0, first_active_lane : vector<3xi16>
   func.return %0 : vector<3xi16>
+}
+
+// CHECK-LABEL: func @ballot
+//  CHECK-SAME: (%[[PRED:.*]]: i1)
+func.func @ballot(%pred: i1) -> (i32, i64) {
+  // CHECK: rocdl.ballot %[[PRED]] : i32
+  %0 = gpu.ballot %pred : i32
+  // CHECK: rocdl.ballot %[[PRED]] : i64
+  %1 = gpu.ballot %pred : i64
+  func.return %0, %1 : i32, i64
 }
 }

@@ -25,13 +25,13 @@
 // CHECK-LABEL: @test_svprfh(
 // CHECK-NEXT:  entry:
 // CHECK-NEXT:    [[TMP0:%.*]] = tail call <vscale x 8 x i1> @llvm.aarch64.sve.convert.from.svbool.nxv8i1(<vscale x 16 x i1> [[PG:%.*]])
-// CHECK-NEXT:    tail call void @llvm.aarch64.sve.prf.nxv8i1(<vscale x 8 x i1> [[TMP0]], ptr [[BASE:%.*]], i32 0)
+// CHECK-NEXT:    tail call void @llvm.aarch64.sve.prf.nxv8i1.p0(<vscale x 8 x i1> [[TMP0]], ptr [[BASE:%.*]], i32 0)
 // CHECK-NEXT:    ret void
 //
 // CPP-CHECK-LABEL: @_Z11test_svprfhu10__SVBool_tPKv(
 // CPP-CHECK-NEXT:  entry:
 // CPP-CHECK-NEXT:    [[TMP0:%.*]] = tail call <vscale x 8 x i1> @llvm.aarch64.sve.convert.from.svbool.nxv8i1(<vscale x 16 x i1> [[PG:%.*]])
-// CPP-CHECK-NEXT:    tail call void @llvm.aarch64.sve.prf.nxv8i1(<vscale x 8 x i1> [[TMP0]], ptr [[BASE:%.*]], i32 0)
+// CPP-CHECK-NEXT:    tail call void @llvm.aarch64.sve.prf.nxv8i1.p0(<vscale x 8 x i1> [[TMP0]], ptr [[BASE:%.*]], i32 0)
 // CPP-CHECK-NEXT:    ret void
 //
 void test_svprfh(svbool_t pg, const void *base) MODE_ATTR
@@ -42,13 +42,13 @@ void test_svprfh(svbool_t pg, const void *base) MODE_ATTR
 // CHECK-LABEL: @test_svprfh_1(
 // CHECK-NEXT:  entry:
 // CHECK-NEXT:    [[TMP0:%.*]] = tail call <vscale x 8 x i1> @llvm.aarch64.sve.convert.from.svbool.nxv8i1(<vscale x 16 x i1> [[PG:%.*]])
-// CHECK-NEXT:    tail call void @llvm.aarch64.sve.prf.nxv8i1(<vscale x 8 x i1> [[TMP0]], ptr [[BASE:%.*]], i32 1)
+// CHECK-NEXT:    tail call void @llvm.aarch64.sve.prf.nxv8i1.p0(<vscale x 8 x i1> [[TMP0]], ptr [[BASE:%.*]], i32 1)
 // CHECK-NEXT:    ret void
 //
 // CPP-CHECK-LABEL: @_Z13test_svprfh_1u10__SVBool_tPKv(
 // CPP-CHECK-NEXT:  entry:
 // CPP-CHECK-NEXT:    [[TMP0:%.*]] = tail call <vscale x 8 x i1> @llvm.aarch64.sve.convert.from.svbool.nxv8i1(<vscale x 16 x i1> [[PG:%.*]])
-// CPP-CHECK-NEXT:    tail call void @llvm.aarch64.sve.prf.nxv8i1(<vscale x 8 x i1> [[TMP0]], ptr [[BASE:%.*]], i32 1)
+// CPP-CHECK-NEXT:    tail call void @llvm.aarch64.sve.prf.nxv8i1.p0(<vscale x 8 x i1> [[TMP0]], ptr [[BASE:%.*]], i32 1)
 // CPP-CHECK-NEXT:    ret void
 //
 void test_svprfh_1(svbool_t pg, const void *base) MODE_ATTR
@@ -59,13 +59,13 @@ void test_svprfh_1(svbool_t pg, const void *base) MODE_ATTR
 // CHECK-LABEL: @test_svprfh_2(
 // CHECK-NEXT:  entry:
 // CHECK-NEXT:    [[TMP0:%.*]] = tail call <vscale x 8 x i1> @llvm.aarch64.sve.convert.from.svbool.nxv8i1(<vscale x 16 x i1> [[PG:%.*]])
-// CHECK-NEXT:    tail call void @llvm.aarch64.sve.prf.nxv8i1(<vscale x 8 x i1> [[TMP0]], ptr [[BASE:%.*]], i32 2)
+// CHECK-NEXT:    tail call void @llvm.aarch64.sve.prf.nxv8i1.p0(<vscale x 8 x i1> [[TMP0]], ptr [[BASE:%.*]], i32 2)
 // CHECK-NEXT:    ret void
 //
 // CPP-CHECK-LABEL: @_Z13test_svprfh_2u10__SVBool_tPKv(
 // CPP-CHECK-NEXT:  entry:
 // CPP-CHECK-NEXT:    [[TMP0:%.*]] = tail call <vscale x 8 x i1> @llvm.aarch64.sve.convert.from.svbool.nxv8i1(<vscale x 16 x i1> [[PG:%.*]])
-// CPP-CHECK-NEXT:    tail call void @llvm.aarch64.sve.prf.nxv8i1(<vscale x 8 x i1> [[TMP0]], ptr [[BASE:%.*]], i32 2)
+// CPP-CHECK-NEXT:    tail call void @llvm.aarch64.sve.prf.nxv8i1.p0(<vscale x 8 x i1> [[TMP0]], ptr [[BASE:%.*]], i32 2)
 // CPP-CHECK-NEXT:    ret void
 //
 void test_svprfh_2(svbool_t pg, const void *base) MODE_ATTR
@@ -76,13 +76,13 @@ void test_svprfh_2(svbool_t pg, const void *base) MODE_ATTR
 // CHECK-LABEL: @test_svprfh_3(
 // CHECK-NEXT:  entry:
 // CHECK-NEXT:    [[TMP0:%.*]] = tail call <vscale x 8 x i1> @llvm.aarch64.sve.convert.from.svbool.nxv8i1(<vscale x 16 x i1> [[PG:%.*]])
-// CHECK-NEXT:    tail call void @llvm.aarch64.sve.prf.nxv8i1(<vscale x 8 x i1> [[TMP0]], ptr [[BASE:%.*]], i32 3)
+// CHECK-NEXT:    tail call void @llvm.aarch64.sve.prf.nxv8i1.p0(<vscale x 8 x i1> [[TMP0]], ptr [[BASE:%.*]], i32 3)
 // CHECK-NEXT:    ret void
 //
 // CPP-CHECK-LABEL: @_Z13test_svprfh_3u10__SVBool_tPKv(
 // CPP-CHECK-NEXT:  entry:
 // CPP-CHECK-NEXT:    [[TMP0:%.*]] = tail call <vscale x 8 x i1> @llvm.aarch64.sve.convert.from.svbool.nxv8i1(<vscale x 16 x i1> [[PG:%.*]])
-// CPP-CHECK-NEXT:    tail call void @llvm.aarch64.sve.prf.nxv8i1(<vscale x 8 x i1> [[TMP0]], ptr [[BASE:%.*]], i32 3)
+// CPP-CHECK-NEXT:    tail call void @llvm.aarch64.sve.prf.nxv8i1.p0(<vscale x 8 x i1> [[TMP0]], ptr [[BASE:%.*]], i32 3)
 // CPP-CHECK-NEXT:    ret void
 //
 void test_svprfh_3(svbool_t pg, const void *base) MODE_ATTR
@@ -93,13 +93,13 @@ void test_svprfh_3(svbool_t pg, const void *base) MODE_ATTR
 // CHECK-LABEL: @test_svprfh_4(
 // CHECK-NEXT:  entry:
 // CHECK-NEXT:    [[TMP0:%.*]] = tail call <vscale x 8 x i1> @llvm.aarch64.sve.convert.from.svbool.nxv8i1(<vscale x 16 x i1> [[PG:%.*]])
-// CHECK-NEXT:    tail call void @llvm.aarch64.sve.prf.nxv8i1(<vscale x 8 x i1> [[TMP0]], ptr [[BASE:%.*]], i32 4)
+// CHECK-NEXT:    tail call void @llvm.aarch64.sve.prf.nxv8i1.p0(<vscale x 8 x i1> [[TMP0]], ptr [[BASE:%.*]], i32 4)
 // CHECK-NEXT:    ret void
 //
 // CPP-CHECK-LABEL: @_Z13test_svprfh_4u10__SVBool_tPKv(
 // CPP-CHECK-NEXT:  entry:
 // CPP-CHECK-NEXT:    [[TMP0:%.*]] = tail call <vscale x 8 x i1> @llvm.aarch64.sve.convert.from.svbool.nxv8i1(<vscale x 16 x i1> [[PG:%.*]])
-// CPP-CHECK-NEXT:    tail call void @llvm.aarch64.sve.prf.nxv8i1(<vscale x 8 x i1> [[TMP0]], ptr [[BASE:%.*]], i32 4)
+// CPP-CHECK-NEXT:    tail call void @llvm.aarch64.sve.prf.nxv8i1.p0(<vscale x 8 x i1> [[TMP0]], ptr [[BASE:%.*]], i32 4)
 // CPP-CHECK-NEXT:    ret void
 //
 void test_svprfh_4(svbool_t pg, const void *base) MODE_ATTR
@@ -110,13 +110,13 @@ void test_svprfh_4(svbool_t pg, const void *base) MODE_ATTR
 // CHECK-LABEL: @test_svprfh_5(
 // CHECK-NEXT:  entry:
 // CHECK-NEXT:    [[TMP0:%.*]] = tail call <vscale x 8 x i1> @llvm.aarch64.sve.convert.from.svbool.nxv8i1(<vscale x 16 x i1> [[PG:%.*]])
-// CHECK-NEXT:    tail call void @llvm.aarch64.sve.prf.nxv8i1(<vscale x 8 x i1> [[TMP0]], ptr [[BASE:%.*]], i32 5)
+// CHECK-NEXT:    tail call void @llvm.aarch64.sve.prf.nxv8i1.p0(<vscale x 8 x i1> [[TMP0]], ptr [[BASE:%.*]], i32 5)
 // CHECK-NEXT:    ret void
 //
 // CPP-CHECK-LABEL: @_Z13test_svprfh_5u10__SVBool_tPKv(
 // CPP-CHECK-NEXT:  entry:
 // CPP-CHECK-NEXT:    [[TMP0:%.*]] = tail call <vscale x 8 x i1> @llvm.aarch64.sve.convert.from.svbool.nxv8i1(<vscale x 16 x i1> [[PG:%.*]])
-// CPP-CHECK-NEXT:    tail call void @llvm.aarch64.sve.prf.nxv8i1(<vscale x 8 x i1> [[TMP0]], ptr [[BASE:%.*]], i32 5)
+// CPP-CHECK-NEXT:    tail call void @llvm.aarch64.sve.prf.nxv8i1.p0(<vscale x 8 x i1> [[TMP0]], ptr [[BASE:%.*]], i32 5)
 // CPP-CHECK-NEXT:    ret void
 //
 void test_svprfh_5(svbool_t pg, const void *base) MODE_ATTR
@@ -127,13 +127,13 @@ void test_svprfh_5(svbool_t pg, const void *base) MODE_ATTR
 // CHECK-LABEL: @test_svprfh_6(
 // CHECK-NEXT:  entry:
 // CHECK-NEXT:    [[TMP0:%.*]] = tail call <vscale x 8 x i1> @llvm.aarch64.sve.convert.from.svbool.nxv8i1(<vscale x 16 x i1> [[PG:%.*]])
-// CHECK-NEXT:    tail call void @llvm.aarch64.sve.prf.nxv8i1(<vscale x 8 x i1> [[TMP0]], ptr [[BASE:%.*]], i32 8)
+// CHECK-NEXT:    tail call void @llvm.aarch64.sve.prf.nxv8i1.p0(<vscale x 8 x i1> [[TMP0]], ptr [[BASE:%.*]], i32 8)
 // CHECK-NEXT:    ret void
 //
 // CPP-CHECK-LABEL: @_Z13test_svprfh_6u10__SVBool_tPKv(
 // CPP-CHECK-NEXT:  entry:
 // CPP-CHECK-NEXT:    [[TMP0:%.*]] = tail call <vscale x 8 x i1> @llvm.aarch64.sve.convert.from.svbool.nxv8i1(<vscale x 16 x i1> [[PG:%.*]])
-// CPP-CHECK-NEXT:    tail call void @llvm.aarch64.sve.prf.nxv8i1(<vscale x 8 x i1> [[TMP0]], ptr [[BASE:%.*]], i32 8)
+// CPP-CHECK-NEXT:    tail call void @llvm.aarch64.sve.prf.nxv8i1.p0(<vscale x 8 x i1> [[TMP0]], ptr [[BASE:%.*]], i32 8)
 // CPP-CHECK-NEXT:    ret void
 //
 void test_svprfh_6(svbool_t pg, const void *base) MODE_ATTR
@@ -144,13 +144,13 @@ void test_svprfh_6(svbool_t pg, const void *base) MODE_ATTR
 // CHECK-LABEL: @test_svprfh_7(
 // CHECK-NEXT:  entry:
 // CHECK-NEXT:    [[TMP0:%.*]] = tail call <vscale x 8 x i1> @llvm.aarch64.sve.convert.from.svbool.nxv8i1(<vscale x 16 x i1> [[PG:%.*]])
-// CHECK-NEXT:    tail call void @llvm.aarch64.sve.prf.nxv8i1(<vscale x 8 x i1> [[TMP0]], ptr [[BASE:%.*]], i32 9)
+// CHECK-NEXT:    tail call void @llvm.aarch64.sve.prf.nxv8i1.p0(<vscale x 8 x i1> [[TMP0]], ptr [[BASE:%.*]], i32 9)
 // CHECK-NEXT:    ret void
 //
 // CPP-CHECK-LABEL: @_Z13test_svprfh_7u10__SVBool_tPKv(
 // CPP-CHECK-NEXT:  entry:
 // CPP-CHECK-NEXT:    [[TMP0:%.*]] = tail call <vscale x 8 x i1> @llvm.aarch64.sve.convert.from.svbool.nxv8i1(<vscale x 16 x i1> [[PG:%.*]])
-// CPP-CHECK-NEXT:    tail call void @llvm.aarch64.sve.prf.nxv8i1(<vscale x 8 x i1> [[TMP0]], ptr [[BASE:%.*]], i32 9)
+// CPP-CHECK-NEXT:    tail call void @llvm.aarch64.sve.prf.nxv8i1.p0(<vscale x 8 x i1> [[TMP0]], ptr [[BASE:%.*]], i32 9)
 // CPP-CHECK-NEXT:    ret void
 //
 void test_svprfh_7(svbool_t pg, const void *base) MODE_ATTR
@@ -161,13 +161,13 @@ void test_svprfh_7(svbool_t pg, const void *base) MODE_ATTR
 // CHECK-LABEL: @test_svprfh_8(
 // CHECK-NEXT:  entry:
 // CHECK-NEXT:    [[TMP0:%.*]] = tail call <vscale x 8 x i1> @llvm.aarch64.sve.convert.from.svbool.nxv8i1(<vscale x 16 x i1> [[PG:%.*]])
-// CHECK-NEXT:    tail call void @llvm.aarch64.sve.prf.nxv8i1(<vscale x 8 x i1> [[TMP0]], ptr [[BASE:%.*]], i32 10)
+// CHECK-NEXT:    tail call void @llvm.aarch64.sve.prf.nxv8i1.p0(<vscale x 8 x i1> [[TMP0]], ptr [[BASE:%.*]], i32 10)
 // CHECK-NEXT:    ret void
 //
 // CPP-CHECK-LABEL: @_Z13test_svprfh_8u10__SVBool_tPKv(
 // CPP-CHECK-NEXT:  entry:
 // CPP-CHECK-NEXT:    [[TMP0:%.*]] = tail call <vscale x 8 x i1> @llvm.aarch64.sve.convert.from.svbool.nxv8i1(<vscale x 16 x i1> [[PG:%.*]])
-// CPP-CHECK-NEXT:    tail call void @llvm.aarch64.sve.prf.nxv8i1(<vscale x 8 x i1> [[TMP0]], ptr [[BASE:%.*]], i32 10)
+// CPP-CHECK-NEXT:    tail call void @llvm.aarch64.sve.prf.nxv8i1.p0(<vscale x 8 x i1> [[TMP0]], ptr [[BASE:%.*]], i32 10)
 // CPP-CHECK-NEXT:    ret void
 //
 void test_svprfh_8(svbool_t pg, const void *base) MODE_ATTR
@@ -178,13 +178,13 @@ void test_svprfh_8(svbool_t pg, const void *base) MODE_ATTR
 // CHECK-LABEL: @test_svprfh_9(
 // CHECK-NEXT:  entry:
 // CHECK-NEXT:    [[TMP0:%.*]] = tail call <vscale x 8 x i1> @llvm.aarch64.sve.convert.from.svbool.nxv8i1(<vscale x 16 x i1> [[PG:%.*]])
-// CHECK-NEXT:    tail call void @llvm.aarch64.sve.prf.nxv8i1(<vscale x 8 x i1> [[TMP0]], ptr [[BASE:%.*]], i32 11)
+// CHECK-NEXT:    tail call void @llvm.aarch64.sve.prf.nxv8i1.p0(<vscale x 8 x i1> [[TMP0]], ptr [[BASE:%.*]], i32 11)
 // CHECK-NEXT:    ret void
 //
 // CPP-CHECK-LABEL: @_Z13test_svprfh_9u10__SVBool_tPKv(
 // CPP-CHECK-NEXT:  entry:
 // CPP-CHECK-NEXT:    [[TMP0:%.*]] = tail call <vscale x 8 x i1> @llvm.aarch64.sve.convert.from.svbool.nxv8i1(<vscale x 16 x i1> [[PG:%.*]])
-// CPP-CHECK-NEXT:    tail call void @llvm.aarch64.sve.prf.nxv8i1(<vscale x 8 x i1> [[TMP0]], ptr [[BASE:%.*]], i32 11)
+// CPP-CHECK-NEXT:    tail call void @llvm.aarch64.sve.prf.nxv8i1.p0(<vscale x 8 x i1> [[TMP0]], ptr [[BASE:%.*]], i32 11)
 // CPP-CHECK-NEXT:    ret void
 //
 void test_svprfh_9(svbool_t pg, const void *base) MODE_ATTR
@@ -195,13 +195,13 @@ void test_svprfh_9(svbool_t pg, const void *base) MODE_ATTR
 // CHECK-LABEL: @test_svprfh_10(
 // CHECK-NEXT:  entry:
 // CHECK-NEXT:    [[TMP0:%.*]] = tail call <vscale x 8 x i1> @llvm.aarch64.sve.convert.from.svbool.nxv8i1(<vscale x 16 x i1> [[PG:%.*]])
-// CHECK-NEXT:    tail call void @llvm.aarch64.sve.prf.nxv8i1(<vscale x 8 x i1> [[TMP0]], ptr [[BASE:%.*]], i32 12)
+// CHECK-NEXT:    tail call void @llvm.aarch64.sve.prf.nxv8i1.p0(<vscale x 8 x i1> [[TMP0]], ptr [[BASE:%.*]], i32 12)
 // CHECK-NEXT:    ret void
 //
 // CPP-CHECK-LABEL: @_Z14test_svprfh_10u10__SVBool_tPKv(
 // CPP-CHECK-NEXT:  entry:
 // CPP-CHECK-NEXT:    [[TMP0:%.*]] = tail call <vscale x 8 x i1> @llvm.aarch64.sve.convert.from.svbool.nxv8i1(<vscale x 16 x i1> [[PG:%.*]])
-// CPP-CHECK-NEXT:    tail call void @llvm.aarch64.sve.prf.nxv8i1(<vscale x 8 x i1> [[TMP0]], ptr [[BASE:%.*]], i32 12)
+// CPP-CHECK-NEXT:    tail call void @llvm.aarch64.sve.prf.nxv8i1.p0(<vscale x 8 x i1> [[TMP0]], ptr [[BASE:%.*]], i32 12)
 // CPP-CHECK-NEXT:    ret void
 //
 void test_svprfh_10(svbool_t pg, const void *base) MODE_ATTR
@@ -212,13 +212,13 @@ void test_svprfh_10(svbool_t pg, const void *base) MODE_ATTR
 // CHECK-LABEL: @test_svprfh_11(
 // CHECK-NEXT:  entry:
 // CHECK-NEXT:    [[TMP0:%.*]] = tail call <vscale x 8 x i1> @llvm.aarch64.sve.convert.from.svbool.nxv8i1(<vscale x 16 x i1> [[PG:%.*]])
-// CHECK-NEXT:    tail call void @llvm.aarch64.sve.prf.nxv8i1(<vscale x 8 x i1> [[TMP0]], ptr [[BASE:%.*]], i32 13)
+// CHECK-NEXT:    tail call void @llvm.aarch64.sve.prf.nxv8i1.p0(<vscale x 8 x i1> [[TMP0]], ptr [[BASE:%.*]], i32 13)
 // CHECK-NEXT:    ret void
 //
 // CPP-CHECK-LABEL: @_Z14test_svprfh_11u10__SVBool_tPKv(
 // CPP-CHECK-NEXT:  entry:
 // CPP-CHECK-NEXT:    [[TMP0:%.*]] = tail call <vscale x 8 x i1> @llvm.aarch64.sve.convert.from.svbool.nxv8i1(<vscale x 16 x i1> [[PG:%.*]])
-// CPP-CHECK-NEXT:    tail call void @llvm.aarch64.sve.prf.nxv8i1(<vscale x 8 x i1> [[TMP0]], ptr [[BASE:%.*]], i32 13)
+// CPP-CHECK-NEXT:    tail call void @llvm.aarch64.sve.prf.nxv8i1.p0(<vscale x 8 x i1> [[TMP0]], ptr [[BASE:%.*]], i32 13)
 // CPP-CHECK-NEXT:    ret void
 //
 void test_svprfh_11(svbool_t pg, const void *base) MODE_ATTR
@@ -230,14 +230,14 @@ void test_svprfh_11(svbool_t pg, const void *base) MODE_ATTR
 // CHECK-NEXT:  entry:
 // CHECK-NEXT:    [[TMP0:%.*]] = tail call <vscale x 8 x i1> @llvm.aarch64.sve.convert.from.svbool.nxv8i1(<vscale x 16 x i1> [[PG:%.*]])
 // CHECK-NEXT:    [[TMP1:%.*]] = getelementptr <vscale x 8 x i16>, ptr [[BASE:%.*]], i64 [[VNUM:%.*]]
-// CHECK-NEXT:    tail call void @llvm.aarch64.sve.prf.nxv8i1(<vscale x 8 x i1> [[TMP0]], ptr [[TMP1]], i32 0)
+// CHECK-NEXT:    tail call void @llvm.aarch64.sve.prf.nxv8i1.p0(<vscale x 8 x i1> [[TMP0]], ptr [[TMP1]], i32 0)
 // CHECK-NEXT:    ret void
 //
 // CPP-CHECK-LABEL: @_Z16test_svprfh_vnumu10__SVBool_tPKvl(
 // CPP-CHECK-NEXT:  entry:
 // CPP-CHECK-NEXT:    [[TMP0:%.*]] = tail call <vscale x 8 x i1> @llvm.aarch64.sve.convert.from.svbool.nxv8i1(<vscale x 16 x i1> [[PG:%.*]])
 // CPP-CHECK-NEXT:    [[TMP1:%.*]] = getelementptr <vscale x 8 x i16>, ptr [[BASE:%.*]], i64 [[VNUM:%.*]]
-// CPP-CHECK-NEXT:    tail call void @llvm.aarch64.sve.prf.nxv8i1(<vscale x 8 x i1> [[TMP0]], ptr [[TMP1]], i32 0)
+// CPP-CHECK-NEXT:    tail call void @llvm.aarch64.sve.prf.nxv8i1.p0(<vscale x 8 x i1> [[TMP0]], ptr [[TMP1]], i32 0)
 // CPP-CHECK-NEXT:    ret void
 //
 void test_svprfh_vnum(svbool_t pg, const void *base, int64_t vnum) MODE_ATTR
@@ -284,13 +284,13 @@ void test_svprfh_gather_u64base(svbool_t pg, svuint64_t bases)
 // CHECK-LABEL: @test_svprfh_gather_s32index(
 // CHECK-NEXT:  entry:
 // CHECK-NEXT:    [[TMP0:%.*]] = tail call <vscale x 4 x i1> @llvm.aarch64.sve.convert.from.svbool.nxv4i1(<vscale x 16 x i1> [[PG:%.*]])
-// CHECK-NEXT:    tail call void @llvm.aarch64.sve.prfh.gather.sxtw.index.nxv4i32(<vscale x 4 x i1> [[TMP0]], ptr [[BASE:%.*]], <vscale x 4 x i32> [[INDICES:%.*]], i32 0)
+// CHECK-NEXT:    tail call void @llvm.aarch64.sve.prfh.gather.sxtw.index.p0.nxv4i32(<vscale x 4 x i1> [[TMP0]], ptr [[BASE:%.*]], <vscale x 4 x i32> [[INDICES:%.*]], i32 0)
 // CHECK-NEXT:    ret void
 //
 // CPP-CHECK-LABEL: @_Z27test_svprfh_gather_s32indexu10__SVBool_tPKvu11__SVInt32_t(
 // CPP-CHECK-NEXT:  entry:
 // CPP-CHECK-NEXT:    [[TMP0:%.*]] = tail call <vscale x 4 x i1> @llvm.aarch64.sve.convert.from.svbool.nxv4i1(<vscale x 16 x i1> [[PG:%.*]])
-// CPP-CHECK-NEXT:    tail call void @llvm.aarch64.sve.prfh.gather.sxtw.index.nxv4i32(<vscale x 4 x i1> [[TMP0]], ptr [[BASE:%.*]], <vscale x 4 x i32> [[INDICES:%.*]], i32 0)
+// CPP-CHECK-NEXT:    tail call void @llvm.aarch64.sve.prfh.gather.sxtw.index.p0.nxv4i32(<vscale x 4 x i1> [[TMP0]], ptr [[BASE:%.*]], <vscale x 4 x i32> [[INDICES:%.*]], i32 0)
 // CPP-CHECK-NEXT:    ret void
 //
 void test_svprfh_gather_s32index(svbool_t pg, const void *base, svint32_t indices)
@@ -301,13 +301,13 @@ void test_svprfh_gather_s32index(svbool_t pg, const void *base, svint32_t indice
 // CHECK-LABEL: @test_svprfh_gather_s64index(
 // CHECK-NEXT:  entry:
 // CHECK-NEXT:    [[TMP0:%.*]] = tail call <vscale x 2 x i1> @llvm.aarch64.sve.convert.from.svbool.nxv2i1(<vscale x 16 x i1> [[PG:%.*]])
-// CHECK-NEXT:    tail call void @llvm.aarch64.sve.prfh.gather.index.nxv2i64(<vscale x 2 x i1> [[TMP0]], ptr [[BASE:%.*]], <vscale x 2 x i64> [[INDICES:%.*]], i32 0)
+// CHECK-NEXT:    tail call void @llvm.aarch64.sve.prfh.gather.index.p0.nxv2i64(<vscale x 2 x i1> [[TMP0]], ptr [[BASE:%.*]], <vscale x 2 x i64> [[INDICES:%.*]], i32 0)
 // CHECK-NEXT:    ret void
 //
 // CPP-CHECK-LABEL: @_Z27test_svprfh_gather_s64indexu10__SVBool_tPKvu11__SVInt64_t(
 // CPP-CHECK-NEXT:  entry:
 // CPP-CHECK-NEXT:    [[TMP0:%.*]] = tail call <vscale x 2 x i1> @llvm.aarch64.sve.convert.from.svbool.nxv2i1(<vscale x 16 x i1> [[PG:%.*]])
-// CPP-CHECK-NEXT:    tail call void @llvm.aarch64.sve.prfh.gather.index.nxv2i64(<vscale x 2 x i1> [[TMP0]], ptr [[BASE:%.*]], <vscale x 2 x i64> [[INDICES:%.*]], i32 0)
+// CPP-CHECK-NEXT:    tail call void @llvm.aarch64.sve.prfh.gather.index.p0.nxv2i64(<vscale x 2 x i1> [[TMP0]], ptr [[BASE:%.*]], <vscale x 2 x i64> [[INDICES:%.*]], i32 0)
 // CPP-CHECK-NEXT:    ret void
 //
 void test_svprfh_gather_s64index(svbool_t pg, const void *base, svint64_t indices)
@@ -318,13 +318,13 @@ void test_svprfh_gather_s64index(svbool_t pg, const void *base, svint64_t indice
 // CHECK-LABEL: @test_svprfh_gather_u32index(
 // CHECK-NEXT:  entry:
 // CHECK-NEXT:    [[TMP0:%.*]] = tail call <vscale x 4 x i1> @llvm.aarch64.sve.convert.from.svbool.nxv4i1(<vscale x 16 x i1> [[PG:%.*]])
-// CHECK-NEXT:    tail call void @llvm.aarch64.sve.prfh.gather.uxtw.index.nxv4i32(<vscale x 4 x i1> [[TMP0]], ptr [[BASE:%.*]], <vscale x 4 x i32> [[INDICES:%.*]], i32 0)
+// CHECK-NEXT:    tail call void @llvm.aarch64.sve.prfh.gather.uxtw.index.p0.nxv4i32(<vscale x 4 x i1> [[TMP0]], ptr [[BASE:%.*]], <vscale x 4 x i32> [[INDICES:%.*]], i32 0)
 // CHECK-NEXT:    ret void
 //
 // CPP-CHECK-LABEL: @_Z27test_svprfh_gather_u32indexu10__SVBool_tPKvu12__SVUint32_t(
 // CPP-CHECK-NEXT:  entry:
 // CPP-CHECK-NEXT:    [[TMP0:%.*]] = tail call <vscale x 4 x i1> @llvm.aarch64.sve.convert.from.svbool.nxv4i1(<vscale x 16 x i1> [[PG:%.*]])
-// CPP-CHECK-NEXT:    tail call void @llvm.aarch64.sve.prfh.gather.uxtw.index.nxv4i32(<vscale x 4 x i1> [[TMP0]], ptr [[BASE:%.*]], <vscale x 4 x i32> [[INDICES:%.*]], i32 0)
+// CPP-CHECK-NEXT:    tail call void @llvm.aarch64.sve.prfh.gather.uxtw.index.p0.nxv4i32(<vscale x 4 x i1> [[TMP0]], ptr [[BASE:%.*]], <vscale x 4 x i32> [[INDICES:%.*]], i32 0)
 // CPP-CHECK-NEXT:    ret void
 //
 void test_svprfh_gather_u32index(svbool_t pg, const void *base, svuint32_t indices)
@@ -335,13 +335,13 @@ void test_svprfh_gather_u32index(svbool_t pg, const void *base, svuint32_t indic
 // CHECK-LABEL: @test_svprfh_gather_u64index(
 // CHECK-NEXT:  entry:
 // CHECK-NEXT:    [[TMP0:%.*]] = tail call <vscale x 2 x i1> @llvm.aarch64.sve.convert.from.svbool.nxv2i1(<vscale x 16 x i1> [[PG:%.*]])
-// CHECK-NEXT:    tail call void @llvm.aarch64.sve.prfh.gather.index.nxv2i64(<vscale x 2 x i1> [[TMP0]], ptr [[BASE:%.*]], <vscale x 2 x i64> [[INDICES:%.*]], i32 0)
+// CHECK-NEXT:    tail call void @llvm.aarch64.sve.prfh.gather.index.p0.nxv2i64(<vscale x 2 x i1> [[TMP0]], ptr [[BASE:%.*]], <vscale x 2 x i64> [[INDICES:%.*]], i32 0)
 // CHECK-NEXT:    ret void
 //
 // CPP-CHECK-LABEL: @_Z27test_svprfh_gather_u64indexu10__SVBool_tPKvu12__SVUint64_t(
 // CPP-CHECK-NEXT:  entry:
 // CPP-CHECK-NEXT:    [[TMP0:%.*]] = tail call <vscale x 2 x i1> @llvm.aarch64.sve.convert.from.svbool.nxv2i1(<vscale x 16 x i1> [[PG:%.*]])
-// CPP-CHECK-NEXT:    tail call void @llvm.aarch64.sve.prfh.gather.index.nxv2i64(<vscale x 2 x i1> [[TMP0]], ptr [[BASE:%.*]], <vscale x 2 x i64> [[INDICES:%.*]], i32 0)
+// CPP-CHECK-NEXT:    tail call void @llvm.aarch64.sve.prfh.gather.index.p0.nxv2i64(<vscale x 2 x i1> [[TMP0]], ptr [[BASE:%.*]], <vscale x 2 x i64> [[INDICES:%.*]], i32 0)
 // CPP-CHECK-NEXT:    ret void
 //
 void test_svprfh_gather_u64index(svbool_t pg, const void *base, svuint64_t indices)

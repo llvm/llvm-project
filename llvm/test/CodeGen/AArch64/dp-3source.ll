@@ -98,12 +98,11 @@ define i64 @test_smulh(i64 %lhs, i64 %rhs) {
 ;
 ; CHECK-GI-LABEL: test_smulh:
 ; CHECK-GI:       ; %bb.0:
-; CHECK-GI-NEXT:    asr x8, x1, #63
+; CHECK-GI-NEXT:    umulh x8, x0, x1
+; CHECK-GI-NEXT:    asr x9, x1, #63
+; CHECK-GI-NEXT:    madd x8, x0, x9, x8
 ; CHECK-GI-NEXT:    asr x9, x0, #63
-; CHECK-GI-NEXT:    umulh x10, x0, x1
-; CHECK-GI-NEXT:    mul x8, x0, x8
-; CHECK-GI-NEXT:    madd x8, x9, x1, x8
-; CHECK-GI-NEXT:    add x0, x8, x10
+; CHECK-GI-NEXT:    madd x0, x9, x1, x8
 ; CHECK-GI-NEXT:    ret
   %ext1 = sext i64 %lhs to i128
   %ext2 = sext i64 %rhs to i128

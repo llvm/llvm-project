@@ -197,7 +197,7 @@ ModuleSP DynamicLoaderHexagonDYLD::GetTargetExecutable() {
   if (executable.get() != target.GetExecutableModulePointer()) {
     // Don't load dependent images since we are in dyld where we will know and
     // find out about all images that are loaded
-    target.SetExecutableModule(executable, eLoadDependentsNo);
+    target.RebuildModuleListWithExecutable(executable, eLoadDependentsNo);
   }
 
   return executable;
@@ -289,7 +289,7 @@ bool DynamicLoaderHexagonDYLD::SetRendezvousBreakpoint() {
 
     // Make sure our breakpoint is at the right address.
     assert(target.GetBreakpointByID(m_dyld_bid)
-               ->FindLocationByAddress(break_addr)
+               ->FindLocationByAddress(Address(break_addr))
                ->GetBreakpoint()
                .GetID() == m_dyld_bid);
 
@@ -364,13 +364,11 @@ void DynamicLoaderHexagonDYLD::RefreshModules() {
         new_modules.Append(module_sp);
       }
 
-      if (log) {
-        LLDB_LOGF(log, "Target is loading '%s'", I->path.c_str());
-        if (!module_sp.get())
-          LLDB_LOGF(log, "LLDB failed to load '%s'", I->path.c_str());
-        else
-          LLDB_LOGF(log, "LLDB successfully loaded '%s'", I->path.c_str());
-      }
+      LLDB_LOGF(log, "Target is loading '%s'", I->path.c_str());
+      if (!module_sp.get())
+        LLDB_LOGF(log, "LLDB failed to load '%s'", I->path.c_str());
+      else
+        LLDB_LOGF(log, "LLDB successfully loaded '%s'", I->path.c_str());
     }
     m_process->GetTarget().ModulesDidLoad(new_modules);
   }

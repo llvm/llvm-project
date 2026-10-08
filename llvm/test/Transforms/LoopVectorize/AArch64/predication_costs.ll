@@ -19,7 +19,8 @@ target triple = "aarch64--linux-gnu"
 ;   (udiv(2) + extractelement(8) + insertelement(4)) / 2 = 7
 ;
 ; CHECK: Scalarizing and predicating: %tmp4 = udiv i32 %tmp2, %tmp3
-; CHECK: Cost of 7 for VF 2: profitable to scalarize   %tmp4 = udiv i32 %tmp2, %tmp3
+; CHECK: Cost of 7 for VF 2: REPLICATE ir<%tmp4> = udiv ir<%tmp2>, ir<%tmp3> (S->V)
+; CHECK: Precomputed costs for VF 2: 4
 ;
 define i32 @predicated_udiv(ptr %a, ptr %b, i1 %c, i64 %n) {
 entry:
@@ -61,6 +62,7 @@ for.end:
 ;
 ; CHECK: Scalarizing and predicating: store i32 %tmp2, ptr %tmp0, align 4
 ; CHECK: Cost of 4 for VF 2: profitable to scalarize   store i32 %tmp2, ptr %tmp0, align 4
+; CHECK: Precomputed costs for VF 2: 8
 ;
 define void @predicated_store(ptr %a, i1 %c, i32 %x, i64 %n) {
 entry:
@@ -93,8 +95,9 @@ for.end:
 ; CHECK: Found scalar instruction:   %addr = phi ptr [ %a, %entry ], [ %addr.next, %for.inc ]
 ; CHECK: Found scalar instruction:   %addr.next = getelementptr inbounds i32, ptr %addr, i64 1
 ; CHECK: Scalarizing and predicating: store i32 %tmp2, ptr %addr, align 4
-; CHECK: Cost of 0 for VF 2: induction instruction   %addr = phi ptr [ %a, %entry ], [ %addr.next, %for.inc ]
+; CHECK: Cost of 0 for VF 2: forced scalar   %addr = phi ptr [ %a, %entry ], [ %addr.next, %for.inc ]
 ; CHECK: Cost of 4 for VF 2: profitable to scalarize   store i32 %tmp2, ptr %addr, align 4
+; CHECK: Precomputed costs for VF 2: 8
 ;
 define void @predicated_store_phi(ptr %a, i1 %c, i32 %x, i64 %n) {
 entry:
@@ -135,8 +138,9 @@ for.end:
 ;
 ; CHECK: Scalarizing: %tmp3 = add nsw i32 %tmp2, %x
 ; CHECK: Scalarizing and predicating: %tmp4 = udiv i32 %tmp2, %tmp3
-; CHECK: Cost of 5 for VF 2: profitable to scalarize   %tmp4 = udiv i32 %tmp2, %tmp3
 ; CHECK: Cost of 3 for VF 2: profitable to scalarize   %tmp3 = add nsw i32 %tmp2, %x
+; CHECK: Cost of 5 for VF 2: REPLICATE ir<%tmp4> = udiv ir<%tmp2>, ir<%tmp3> (S->V)
+; CHECK: Precomputed costs for VF 2: 7
 ;
 
 define i32 @predicated_udiv_scalarized_operand(ptr %a, i1 %c, i32 %x, i64 %n) {
@@ -179,10 +183,11 @@ for.end:
 ; Cost of store:
 ;   store(4) / 2 = 2
 ;
-; CHECK: Scalarizing: %tmp2 = add nsw i32 %tmp1, %x
 ; CHECK: Scalarizing and predicating: store i32 %tmp2, ptr %tmp0, align 4
+; CHECK: Scalarizing: %tmp2 = add nsw i32 %tmp1, %x
 ; CHECK: Cost of 2 for VF 2: profitable to scalarize   store i32 %tmp2, ptr %tmp0, align 4
 ; CHECK: Cost of 3 for VF 2: profitable to scalarize   %tmp2 = add nsw i32 %tmp1, %x
+; CHECK: Precomputed costs for VF 2: 9
 ;
 define void @predicated_store_scalarized_operand(ptr %a, i1 %c, i32 %x, i64 %n) {
 entry:
@@ -222,22 +227,24 @@ for.end:
 ; Cost of sdiv:
 ;   (sdiv(2) + extractelement(8) + insertelement(4)) / 2 = 7
 ; Cost of udiv:
-;   (udiv(2) + extractelement(8) + insertelement(4)) / 2 = 7
+;   (udiv(2) + extractelement(4) + insertelement(4)) / 2 = 5
 ; Cost of sub:
 ;   (sub(2) + extractelement(4)) / 2 = 3
 ; Cost of store:
 ;   store(4) / 2 = 2
 ;
 ; CHECK-NOT: Scalarizing: %tmp2 = add i32 %tmp1, %x
+; CHECK:     Scalarizing and predicating: store i32 %tmp5, ptr %tmp0, align 4
+; CHECK-NOT: Scalarizing: %tmp2 = add i32 %tmp1, %x
 ; CHECK:     Scalarizing and predicating: %tmp3 = sdiv i32 %tmp1, %tmp2
 ; CHECK:     Scalarizing and predicating: %tmp4 = udiv i32 %tmp3, %tmp2
 ; CHECK:     Scalarizing: %tmp5 = sub i32 %tmp4, %x
-; CHECK:     Scalarizing and predicating: store i32 %tmp5, ptr %tmp0, align 4
-; CHECK: Cost of 7 for VF 2: profitable to scalarize   %tmp3 = sdiv i32 %tmp1, %tmp2
-; CHECK: Cost of 7 for VF 2: profitable to scalarize   %tmp4 = udiv i32 %tmp3, %tmp2
 ; CHECK: Cost of 2 for VF 2: profitable to scalarize   store i32 %tmp5, ptr %tmp0, align 4
 ; CHECK: Cost of 3 for VF 2: profitable to scalarize   %tmp5 = sub i32 %tmp4, %x
 ; CHECK: Cost of 1 for VF 2: WIDEN ir<%tmp2> = add ir<%tmp1>, ir<%x>
+; CHECK: Cost of 7 for VF 2: REPLICATE ir<%tmp3> = sdiv ir<%tmp1>, ir<%tmp2>
+; CHECK: Cost of 5 for VF 2: REPLICATE ir<%tmp4> = udiv ir<%tmp3>, ir<%tmp2>
+; CHECK: Precomputed costs for VF 2: 9
 ;
 define void @predication_multi_context(ptr %a, i1 %c, i32 %x, i64 %n) {
 entry:

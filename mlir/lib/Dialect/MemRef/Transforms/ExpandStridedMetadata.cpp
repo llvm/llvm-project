@@ -19,8 +19,8 @@
 #include "mlir/Dialect/MemRef/Transforms/Passes.h"
 #include "mlir/Dialect/MemRef/Transforms/Transforms.h"
 #include "mlir/Dialect/Utils/IndexingUtils.h"
+#include "mlir/Dialect/Utils/StaticValueUtils.h"
 #include "mlir/IR/AffineMap.h"
-#include "mlir/IR/BuiltinTypes.h"
 #include "mlir/Transforms/GreedyPatternRewriteDriver.h"
 #include "llvm/ADT/STLExtras.h"
 #include "llvm/ADT/SmallBitVector.h"
@@ -197,10 +197,20 @@ public:
                                          "failed to resolve subview metadata");
     }
 
-    rewriter.replaceOpWithNewOp<memref::ReinterpretCastOp>(
-        subview, subview.getType(), stridedMetadata->basePtr,
+    MemRefType resultType = updateTypeFromMetadata(
+        subview.getType(), stridedMetadata->offset, stridedMetadata->sizes,
+        stridedMetadata->strides);
+    auto foldedSubview = memref::ReinterpretCastOp::create(
+        rewriter, subview.getLoc(), resultType, stridedMetadata->basePtr,
         stridedMetadata->offset, stridedMetadata->sizes,
         stridedMetadata->strides);
+    if (resultType == subview.getType()) {
+      rewriter.replaceOp(subview, foldedSubview);
+      return success();
+    }
+    // Preserve the original result type expected by existing users.
+    rewriter.replaceOpWithNewOp<memref::CastOp>(subview, subview.getType(),
+                                                foldedSubview);
     return success();
   }
 };
@@ -255,10 +265,7 @@ struct ExtractStridedMetadataOpSubviewFolder
 /// \p origSizes hold the sizes of the source shape as values.
 /// This is used to compute the new sizes in cases of dynamic shapes.
 ///
-/// sizes#i =
-///     baseSizes#groupId / product(expandShapeSizes#j,
-///                                  for j in group excluding reassIdx#i)
-/// Where reassIdx#i is the reassociation index at index i in \p groupId.
+/// sizes#i = expandOutputShape#i
 ///
 /// \post result.size() == expandShape.getReassociationIndices()[groupId].size()
 ///
@@ -273,34 +280,10 @@ getExpandedSizes(memref::ExpandShapeOp expandShape, OpBuilder &builder,
   assert(!reassocGroup.empty() &&
          "Reassociation group should have at least one dimension");
 
-  unsigned groupSize = reassocGroup.size();
-  SmallVector<OpFoldResult> expandedSizes(groupSize);
-
-  uint64_t productOfAllStaticSizes = 1;
-  std::optional<unsigned> dynSizeIdx;
-  MemRefType expandShapeType = expandShape.getResultType();
-
-  // Fill up all the statically known sizes.
-  for (unsigned i = 0; i < groupSize; ++i) {
-    uint64_t dimSize = expandShapeType.getDimSize(reassocGroup[i]);
-    if (ShapedType::isDynamic(dimSize)) {
-      assert(!dynSizeIdx && "There must be at most one dynamic size per group");
-      dynSizeIdx = i;
-      continue;
-    }
-    productOfAllStaticSizes *= dimSize;
-    expandedSizes[i] = builder.getIndexAttr(dimSize);
-  }
-
-  // Compute the dynamic size using the original size and all the other known
-  // static sizes:
-  // expandSize = origSize / productOfAllStaticSizes.
-  if (dynSizeIdx) {
-    AffineExpr s0 = builder.getAffineSymbolExpr(0);
-    expandedSizes[*dynSizeIdx] = makeComposedFoldedAffineApply(
-        builder, expandShape.getLoc(), s0.floorDiv(productOfAllStaticSizes),
-        origSizes[groupId]);
-  }
+  SmallVector<OpFoldResult> outputShape = expandShape.getMixedOutputShape();
+  SmallVector<OpFoldResult> expandedSizes;
+  for (auto index : reassocGroup)
+    expandedSizes.push_back(outputShape[index]);
 
   return expandedSizes;
 }
@@ -313,16 +296,12 @@ getExpandedSizes(memref::ExpandShapeOp expandShape, OpBuilder &builder,
 /// dynamic stride for this reassociation group.
 ///
 /// strides#i =
-///     origStrides#reassDim * product(expandShapeSizes#j, for j in
+///     origStrides#reassDim * product(expandOutputShape#j, for j in
 ///                                    reassIdx#i+1..reassIdx#i+group.size-1)
 ///
 /// Where reassIdx#i is the reassociation index for at index i in \p groupId
-/// and expandShapeSizes#j is either:
-/// - The constant size at dimension j, derived directly from the result type of
-///   the expand_shape op, or
-/// - An affine expression: baseSizes#reassDim / product of all constant sizes
-///   in expandShapeSizes. (Remember expandShapeSizes has at most one dynamic
-///   element.)
+/// and expandOutputShape#j is taken directly from the mixed (static and
+/// dynamic) output shape
 ///
 /// \post result.size() == expandShape.getReassociationIndices()[groupId].size()
 ///
@@ -340,25 +319,13 @@ SmallVector<OpFoldResult> getExpandedStrides(memref::ExpandShapeOp expandShape,
          "Reassociation group should have at least one dimension");
 
   unsigned groupSize = reassocGroup.size();
-  MemRefType expandShapeType = expandShape.getResultType();
-
-  std::optional<int64_t> dynSizeIdx;
-
-  // Fill up the expanded strides, with the information we can deduce from the
-  // resulting shape.
-  uint64_t currentStride = 1;
-  SmallVector<OpFoldResult> expandedStrides(groupSize);
-  for (int i = groupSize - 1; i >= 0; --i) {
-    expandedStrides[i] = builder.getIndexAttr(currentStride);
-    uint64_t dimSize = expandShapeType.getDimSize(reassocGroup[i]);
-    if (ShapedType::isDynamic(dimSize)) {
-      assert(!dynSizeIdx && "There must be at most one dynamic size per group");
-      dynSizeIdx = i;
-      continue;
-    }
-
-    currentStride *= dimSize;
-  }
+  Location loc = expandShape.getLoc();
+  AffineExpr s0, s1;
+  bindSymbols(builder.getContext(), s0, s1);
+  auto mul = [&](OpFoldResult v1, OpFoldResult v2) {
+    return affine::makeComposedFoldedAffineApply(builder, loc, s0 * s1,
+                                                 {v1, v2});
+  };
 
   // Collect the statically known information about the original stride.
   Value source = expandShape.getSrc();
@@ -369,37 +336,13 @@ SmallVector<OpFoldResult> getExpandedStrides(memref::ExpandShapeOp expandShape,
                                 ? origStrides[groupId]
                                 : builder.getIndexAttr(strides[groupId]);
 
-  // Apply the original stride to all the strides.
-  int64_t doneStrideIdx = 0;
-  // If we saw a dynamic dimension, we need to fix-up all the strides up to
-  // that dimension with the dynamic size.
-  if (dynSizeIdx) {
-    int64_t productOfAllStaticSizes = currentStride;
-    assert(ShapedType::isDynamic(sourceType.getDimSize(groupId)) &&
-           "We shouldn't be able to change dynamicity");
-    OpFoldResult origSize = origSizes[groupId];
-
-    AffineExpr s0 = builder.getAffineSymbolExpr(0);
-    AffineExpr s1 = builder.getAffineSymbolExpr(1);
-    for (; doneStrideIdx < *dynSizeIdx; ++doneStrideIdx) {
-      int64_t baseExpandedStride =
-          cast<IntegerAttr>(cast<Attribute>(expandedStrides[doneStrideIdx]))
-              .getInt();
-      expandedStrides[doneStrideIdx] = makeComposedFoldedAffineApply(
-          builder, expandShape.getLoc(),
-          (s0 * baseExpandedStride).floorDiv(productOfAllStaticSizes) * s1,
-          {origSize, origStride});
-    }
-  }
-
-  // Now apply the origStride to the remaining dimensions.
-  AffineExpr s0 = builder.getAffineSymbolExpr(0);
-  for (; doneStrideIdx < groupSize; ++doneStrideIdx) {
-    int64_t baseExpandedStride =
-        cast<IntegerAttr>(cast<Attribute>(expandedStrides[doneStrideIdx]))
-            .getInt();
-    expandedStrides[doneStrideIdx] = makeComposedFoldedAffineApply(
-        builder, expandShape.getLoc(), s0 * baseExpandedStride, {origStride});
+  // Fill up the expanded strides.
+  OpFoldResult currentStride = origStride;
+  SmallVector<OpFoldResult> outputShape = expandShape.getMixedOutputShape();
+  SmallVector<OpFoldResult> expandedStrides(groupSize);
+  for (int i = groupSize - 1; i >= 0; --i) {
+    expandedStrides[i] = currentStride;
+    currentStride = mul(currentStride, outputShape[reassocGroup[i]]);
   }
 
   return expandedStrides;
@@ -667,10 +610,22 @@ public:
                                          "failed to resolve reshape metadata");
     }
 
-    rewriter.replaceOpWithNewOp<memref::ReinterpretCastOp>(
-        reshape, reshape.getType(), stridedMetadata->basePtr,
+    MemRefType resultType = reshape.getResultType();
+    if (isa<memref::CollapseShapeOp>(reshape.getOperation()))
+      resultType = updateTypeFromMetadata(resultType, stridedMetadata->offset,
+                                          stridedMetadata->sizes,
+                                          stridedMetadata->strides);
+    auto foldedReshape = memref::ReinterpretCastOp::create(
+        rewriter, reshape.getLoc(), resultType, stridedMetadata->basePtr,
         stridedMetadata->offset, stridedMetadata->sizes,
         stridedMetadata->strides);
+    if (resultType == reshape.getResultType()) {
+      rewriter.replaceOp(reshape, foldedReshape);
+      return success();
+    }
+    // Preserve the original result type expected by existing users.
+    rewriter.replaceOpWithNewOp<memref::CastOp>(
+        reshape, reshape.getResultType(), foldedReshape);
     return success();
   }
 };
@@ -1002,7 +957,7 @@ class ExtractStridedMetadataOpReinterpretCastFolder
     SmallVector<Type> inferredReturnTypes;
     if (failed(extractStridedMetadataOp.inferReturnTypes(
             rewriter.getContext(), loc, {reinterpretCastOp.getSource()},
-            /*attributes=*/{}, /*properties=*/nullptr, /*regions=*/{},
+            /*attributes=*/{}, /*properties=*/{}, /*regions=*/{},
             inferredReturnTypes)))
       return rewriter.notifyMatchFailure(
           reinterpretCastOp, "reinterpret_cast source's type is incompatible");

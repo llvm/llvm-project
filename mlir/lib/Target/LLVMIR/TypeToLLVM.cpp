@@ -58,9 +58,7 @@ public:
             .Case([this](LLVM::LLVMPPCFP128Type) {
               return llvm::Type::getPPC_FP128Ty(context);
             })
-            .Case([this](LLVM::LLVMTokenType) {
-              return llvm::Type::getTokenTy(context);
-            })
+            .Case([this](TokenType) { return llvm::Type::getTokenTy(context); })
             .Case([this](LLVM::LLVMLabelType) {
               return llvm::Type::getLabelTy(context);
             })
@@ -70,9 +68,10 @@ public:
             .Case([this](LLVM::LLVMX86AMXType) {
               return llvm::Type::getX86_AMXTy(context);
             })
-            .Case<LLVM::LLVMArrayType, IntegerType, LLVM::LLVMFunctionType,
-                  LLVM::LLVMPointerType, LLVM::LLVMStructType, VectorType,
-                  LLVM::LLVMTargetExtType, PtrLikeTypeInterface>(
+            .Case<LLVM::LLVMArrayType, LLVM::LLVMByteType, IntegerType,
+                  LLVM::LLVMFunctionType, LLVM::LLVMPointerType,
+                  LLVM::LLVMStructType, VectorType, LLVM::LLVMTargetExtType,
+                  PtrLikeTypeInterface>(
                 [this](auto type) { return this->translate(type); })
             .DefaultUnreachable("unknown LLVM dialect type");
 
@@ -94,6 +93,11 @@ private:
     translateTypes(type.getParams(), paramTypes);
     return llvm::FunctionType::get(translateType(type.getReturnType()),
                                    paramTypes, type.isVarArg());
+  }
+
+  /// Translates the given byte type.
+  llvm::Type *translate(LLVM::LLVMByteType type) {
+    return llvm::Type::getByteNTy(context, type.getBitWidth());
   }
 
   /// Translates the given integer type.

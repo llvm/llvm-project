@@ -37,7 +37,7 @@ struct Thread {
   std::vector<RegisterSet> regsets;
 };
 
-enum MemoryType { UInt8 = 0, UInt32, UInt64 };
+enum MemoryType { UInt8 = 0, UInt16, UInt32, UInt64 };
 
 struct MemoryRegion {
   uint64_t addr;
@@ -45,6 +45,7 @@ struct MemoryRegion {
   uint32_t size;
   // One of the following formats.
   std::vector<uint8_t> bytes;
+  std::vector<uint16_t> halfwords;
   std::vector<uint32_t> words;
   std::vector<uint64_t> doublewords;
 };

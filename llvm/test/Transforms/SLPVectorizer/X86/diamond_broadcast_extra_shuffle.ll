@@ -5,7 +5,7 @@ define i32 @diamond_broadcast(ptr noalias nocapture %B, ptr noalias nocapture %A
 ; CHECK-LABEL: @diamond_broadcast(
 ; CHECK-NEXT:  entry:
 ; CHECK-NEXT:    [[LD:%.*]] = load i32, ptr [[A:%.*]], align 4
-; CHECK-NEXT:    [[TMP0:%.*]] = insertelement <4 x i32> poison, i32 [[LD]], i32 0
+; CHECK-NEXT:    [[TMP0:%.*]] = insertelement <4 x i32> poison, i32 [[LD]], i64 0
 ; CHECK-NEXT:    [[SHUFFLE:%.*]] = shufflevector <4 x i32> [[TMP0]], <4 x i32> poison, <4 x i32> zeroinitializer
 ; CHECK-NEXT:    [[TMP1:%.*]] = mul <4 x i32> [[SHUFFLE]], [[SHUFFLE]]
 ; CHECK-NEXT:    store <4 x i32> [[TMP1]], ptr [[B:%.*]], align 4
@@ -31,7 +31,7 @@ define i32 @diamond_broadcast2(ptr noalias nocapture %B, ptr noalias nocapture %
 ; CHECK-LABEL: @diamond_broadcast2(
 ; CHECK-NEXT:  entry:
 ; CHECK-NEXT:    [[LD:%.*]] = load i32, ptr [[A:%.*]], align 4
-; CHECK-NEXT:    [[TMP0:%.*]] = insertelement <4 x i32> poison, i32 [[LD]], i32 0
+; CHECK-NEXT:    [[TMP0:%.*]] = insertelement <4 x i32> poison, i32 [[LD]], i64 0
 ; CHECK-NEXT:    [[SHUFFLE:%.*]] = shufflevector <4 x i32> [[TMP0]], <4 x i32> poison, <4 x i32> zeroinitializer
 ; CHECK-NEXT:    [[TMP1:%.*]] = mul <4 x i32> [[SHUFFLE]], [[SHUFFLE]]
 ; CHECK-NEXT:    store <4 x i32> [[TMP1]], ptr [[B:%.*]], align 4
@@ -57,7 +57,7 @@ define i32 @diamond_broadcast3(ptr noalias nocapture %B, ptr noalias nocapture %
 ; CHECK-LABEL: @diamond_broadcast3(
 ; CHECK-NEXT:  entry:
 ; CHECK-NEXT:    [[LD:%.*]] = load i32, ptr [[A:%.*]], align 4
-; CHECK-NEXT:    [[TMP0:%.*]] = insertelement <4 x i32> poison, i32 [[LD]], i32 0
+; CHECK-NEXT:    [[TMP0:%.*]] = insertelement <4 x i32> poison, i32 [[LD]], i64 0
 ; CHECK-NEXT:    [[SHUFFLE:%.*]] = shufflevector <4 x i32> [[TMP0]], <4 x i32> poison, <4 x i32> zeroinitializer
 ; CHECK-NEXT:    [[TMP1:%.*]] = mul <4 x i32> [[SHUFFLE]], [[SHUFFLE]]
 ; CHECK-NEXT:    store <4 x i32> [[TMP1]], ptr [[B:%.*]], align 4

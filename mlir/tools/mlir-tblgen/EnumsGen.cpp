@@ -89,6 +89,15 @@ static void emitParserPrinter(const EnumInfo &enumInfo, StringRef qualName,
                           caseListOs << name;
                         });
   caseListOs << "]";
+  std::string casesInitList;
+  llvm::raw_string_ostream casesInitListOs(casesInitList);
+  casesInitListOs << "{";
+  llvm::interleaveComma(llvm::enumerate(cases), casesInitListOs,
+                        [&](auto enumerant) {
+                          StringRef name = enumerant.value().getStr();
+                          casesInitListOs << "\"" << name << "\"";
+                        });
+  casesInitListOs << "}";
 
   // Generate the parser and the start of the printer for the enum, excluding
   // non-quoted bit enums.
@@ -120,12 +129,14 @@ struct FieldParser<{0}, {0}> {{
 ///    let parameters = (ins OptionalParameter<"std::optional<TheEnumName>">:$value);
 template<>
 struct FieldParser<std::optional<{0}>, std::optional<{0}>> {{
+  static constexpr bool isKeyValueCompositional = false;
+
   template <typename ParserT>
   static FailureOr<std::optional<{0}>> parse(ParserT &parser) {{
     // Parse the keyword/string containing the enum.
     std::string enumKeyword;
     auto loc = parser.getCurrentLocation();
-    if (failed(parser.parseOptionalKeywordOrString(&enumKeyword)))
+    if (failed(parser.parseOptionalKeywordOrString(&enumKeyword, {4})))
       return std::optional<{0}>{{};
 
     // Symbolize the keyword.
@@ -148,6 +159,8 @@ inline ::llvm::raw_ostream &operator<<(::llvm::raw_ostream &p, {0} value) {{
 
   template<>
   struct FieldParser<{0}, {0}> {{
+    static constexpr bool isKeyValueCompositional = {7};
+
     template <typename ParserT>
     static FailureOr<{0}> parse(ParserT &parser) {{
       {0} flags = {{};
@@ -176,6 +189,8 @@ inline ::llvm::raw_ostream &operator<<(::llvm::raw_ostream &p, {0} value) {{
   ///    let parameters = (ins OptionalParameter<"std::optional<TheEnumName>">:$value);
   template<>
   struct FieldParser<std::optional<{0}>, std::optional<{0}>> {{
+    static constexpr bool isKeyValueCompositional = false;
+
     template <typename ParserT>
     static FailureOr<std::optional<{0}>> parse(ParserT &parser) {{
       {0} flags = {{};
@@ -184,7 +199,7 @@ inline ::llvm::raw_ostream &operator<<(::llvm::raw_ostream &p, {0} value) {{
         // Parse the keyword containing a part of the enum.
         ::llvm::StringRef enumKeyword;
         auto loc = parser.getCurrentLocation();
-        if (failed(parser.parseOptionalKeyword(&enumKeyword))) {{
+        if (failed(parser.parseOptionalKeyword(&enumKeyword, {6}))) {{
           if (firstIter)
             return std::optional<{0}>{{};
           return parser.emitError(loc, "expected keyword for {2} after '{4}'");
@@ -223,11 +238,11 @@ inline ::llvm::raw_ostream &operator<<(::llvm::raw_ostream &p, {0} value) {{
             .Case(",", "parseOptionalComma")
             .Default("error, enum separator must be '|' or ','");
     os << formatv(parsedAndPrinterStartUnquotedBitEnum, qualName, cppNamespace,
-                  enumInfo.getSummary(), casesList, separator,
-                  parseSeparatorFn);
+                  enumInfo.getSummary(), casesList, separator, parseSeparatorFn,
+                  casesInitList, separator.trim() == "," ? "false" : "true");
   } else {
     os << formatv(parsedAndPrinterStart, qualName, cppNamespace,
-                  enumInfo.getSummary(), casesList);
+                  enumInfo.getSummary(), casesList, casesInitList);
   }
 
   // If all cases require a string, always wrap.
@@ -303,14 +318,6 @@ static void emitDenseMapInfo(StringRef qualName, std::string underlyingType,
 namespace llvm {
 template<> struct DenseMapInfo<{0}> {{
   using StorageInfo = ::llvm::DenseMapInfo<{1}>;
-
-  static inline {0} getEmptyKey() {{
-    return static_cast<{0}>(StorageInfo::getEmptyKey());
-  }
-
-  static inline {0} getTombstoneKey() {{
-    return static_cast<{0}>(StorageInfo::getTombstoneKey());
-  }
 
   static unsigned getHashValue(const {0} &val) {{
     return StorageInfo::getHashValue(static_cast<{1}>(val));

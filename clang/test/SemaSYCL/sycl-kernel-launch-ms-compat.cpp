@@ -1,5 +1,5 @@
 // RUN: %clang_cc1 -triple x86_64-pc-windows-msvc -std=c++20 -fsyntax-only -fsycl-is-host -fms-compatibility -fcxx-exceptions -verify=host,expected %s
-// RUN: %clang_cc1 -triple x86_64-pc-windows-msvc -std=c++20 -fsyntax-only -fsycl-is-device -fms-compatibility -verify=device,expected %s
+// RUN: %clang_cc1 -triple spirv64-unknown-unknown -std=c++20 -fsyntax-only -fsycl-is-device -fms-compatibility -verify=device,expected %s
 
 // Test Microsoft extensions for lookup of a sycl_kernel_launch member template
 // in a dependent base class.

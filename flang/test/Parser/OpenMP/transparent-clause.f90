@@ -69,7 +69,7 @@ end
 !UNPARSE: END SUBROUTINE
 
 !PARSE-TREE: ExecutionPartConstruct -> ExecutableConstruct -> OpenMPConstruct -> OpenMPLoopConstruct
-!PARSE-TREE: | OmpBeginLoopDirective
+!PARSE-TREE: | OmpBeginDirective
 !PARSE-TREE: | | OmpDirectiveName -> llvm::omp::Directive = taskloop
 !PARSE-TREE: | | OmpClauseList -> OmpClause -> Transparent -> OmpTransparentClause -> Scalar -> Integer -> Expr = '2_4'
 !PARSE-TREE: | | | LiteralConstant -> IntLiteralConstant = '2'

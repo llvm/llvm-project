@@ -1,4 +1,4 @@
-//===-- cpu_model_common.c - Utilities for cpu model detection ----*- C -*-===//
+//===-- cpu_model/cpu_model.h - Utilities for cpu model detection -*- C -*-===//
 //
 // Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
 // See https://llvm.org/LICENSE.txt for license information.
@@ -10,8 +10,8 @@
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef COMPILER_RT_LIB_BUILTINS_CPU_MODEL_COMMON_H
-#define COMPILER_RT_LIB_BUILTINS_CPU_MODEL_COMMON_H
+#ifndef COMPILER_RT_LIB_BUILTINS_CPU_MODEL_CPU_MODEL_H
+#define COMPILER_RT_LIB_BUILTINS_CPU_MODEL_CPU_MODEL_H
 
 #define bool int
 #define true 1
