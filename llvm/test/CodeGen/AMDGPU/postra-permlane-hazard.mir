@@ -1,0 +1,127 @@
+# RUN: llc -mtriple=amdgpu9.50-amd-amdhsa -run-pass=postmisched -verify-machineinstrs -verify-misched %s -o - | FileCheck %s
+# RUN: llc -mtriple=amdgpu9.50-amd-amdhsa -run-pass=postmisched,post-RA-hazard-rec -verify-machineinstrs -verify-misched %s -o - | FileCheck %s --check-prefixes=CHECK,FINAL
+
+# A permlane reading a VALU result needs two intervening wait states on gfx950.
+# The scheduler should use available independent instructions for these slots,
+# rather than leave them after the permlane for the hazard pass to insert NOPs.
+
+---
+name: valu_vdst0_two_fillers
+tracksRegLiveness: true
+body: |
+  ; CHECK-LABEL: name: valu_vdst0_two_fillers
+  ; CHECK: $vgpr0 = V_MOV_B32_e32 0, implicit $exec
+  ; CHECK-NEXT: $sgpr0 = S_MOV_B32 0
+  ; CHECK-NEXT: $sgpr1 = S_MOV_B32 1
+  ; CHECK-NEXT: renamable $vgpr0, renamable $vgpr1 = V_PERMLANE16_SWAP_B32_e32 killed $vgpr0, killed $vgpr1, implicit $exec
+  ; CHECK-NEXT: S_ENDPGM 0
+  bb.0:
+    liveins: $vgpr1
+
+    $vgpr0 = V_MOV_B32_e32 0, implicit $exec
+    renamable $vgpr0, renamable $vgpr1 = V_PERMLANE16_SWAP_B32_e32 killed $vgpr0, killed $vgpr1, implicit $exec
+    $sgpr0 = S_MOV_B32 0
+    $sgpr1 = S_MOV_B32 1
+    S_ENDPGM 0
+...
+
+# Check the other explicit source and a VOP3 permlane32 swap.
+
+---
+name: valu_vdst1_two_fillers
+tracksRegLiveness: true
+body: |
+  ; CHECK-LABEL: name: valu_vdst1_two_fillers
+  ; CHECK: $vgpr1 = V_MOV_B32_e32 0, implicit $exec
+  ; CHECK-NEXT: $sgpr0 = S_MOV_B32 0
+  ; CHECK-NEXT: $sgpr1 = S_MOV_B32 1
+  ; CHECK-NEXT: renamable $vgpr0, renamable $vgpr1 = V_PERMLANE32_SWAP_B32_e64 killed $vgpr0, killed $vgpr1, -1, 1, implicit $exec
+  ; CHECK-NEXT: S_ENDPGM 0
+  bb.0:
+    liveins: $vgpr0
+
+    $vgpr1 = V_MOV_B32_e32 0, implicit $exec
+    renamable $vgpr0, renamable $vgpr1 = V_PERMLANE32_SWAP_B32_e64 killed $vgpr0, killed $vgpr1, -1, 1, implicit $exec
+    $sgpr0 = S_MOV_B32 0
+    $sgpr1 = S_MOV_B32 1
+    S_ENDPGM 0
+...
+
+# A write to a register that the permlane does not read needs no spacing.
+
+---
+name: unrelated_valu_write
+tracksRegLiveness: true
+body: |
+  ; CHECK-LABEL: name: unrelated_valu_write
+  ; CHECK: $vgpr2 = V_MOV_B32_e32 0, implicit $exec
+  ; CHECK-NEXT: renamable $vgpr0, renamable $vgpr1 = V_PERMLANE16_SWAP_B32_e32 killed $vgpr0, killed $vgpr1, implicit $exec
+  ; CHECK-NEXT: S_ENDPGM 0
+  bb.0:
+    liveins: $vgpr0, $vgpr1
+
+    $vgpr2 = V_MOV_B32_e32 0, implicit $exec
+    renamable $vgpr0, renamable $vgpr1 = V_PERMLANE16_SWAP_B32_e32 killed $vgpr0, killed $vgpr1, implicit $exec
+    S_ENDPGM 0
+...
+
+# Scheduler stalls do not emit instructions. With no fillers, the hazard pass
+# must still insert the required NOPs in the final instruction stream.
+
+---
+name: valu_without_fillers
+tracksRegLiveness: true
+body: |
+  ; CHECK-LABEL: name: valu_without_fillers
+  ; CHECK: $vgpr0 = V_MOV_B32_e32 0, implicit $exec
+  ; FINAL-NEXT: S_NOP 1
+  ; CHECK-NEXT: renamable $vgpr0, renamable $vgpr1 = V_PERMLANE16_SWAP_B32_e32 killed $vgpr0, killed $vgpr1, implicit $exec
+  ; CHECK-NEXT: S_ENDPGM 0
+  bb.0:
+    liveins: $vgpr1
+
+    $vgpr0 = V_MOV_B32_e32 0, implicit $exec
+    renamable $vgpr0, renamable $vgpr1 = V_PERMLANE16_SWAP_B32_e32 killed $vgpr0, killed $vgpr1, implicit $exec
+    S_ENDPGM 0
+...
+
+# One independent instruction fills one wait state; one NOP remains necessary.
+
+---
+name: valu_with_one_filler
+tracksRegLiveness: true
+body: |
+  ; CHECK-LABEL: name: valu_with_one_filler
+  ; CHECK: $vgpr0 = V_MOV_B32_e32 0, implicit $exec
+  ; CHECK-NEXT: $sgpr0 = S_MOV_B32 0
+  ; FINAL-NEXT: S_NOP 0
+  ; CHECK-NEXT: renamable $vgpr0, renamable $vgpr1 = V_PERMLANE16_SWAP_B32_e32 killed $vgpr0, killed $vgpr1, implicit $exec
+  ; CHECK-NEXT: S_ENDPGM 0
+  bb.0:
+    liveins: $vgpr1
+
+    $vgpr0 = V_MOV_B32_e32 0, implicit $exec
+    renamable $vgpr0, renamable $vgpr1 = V_PERMLANE16_SWAP_B32_e32 killed $vgpr0, killed $vgpr1, implicit $exec
+    $sgpr0 = S_MOV_B32 0
+    S_ENDPGM 0
+...
+
+# VCMPX writes EXEC and forms a scheduling boundary. Its four-wait-state hazard
+# must still be handled by the final hazard pass across that boundary.
+
+---
+name: vcmpx_without_fillers
+tracksRegLiveness: true
+body: |
+  ; CHECK-LABEL: name: vcmpx_without_fillers
+  ; CHECK: V_CMPX_EQ_I32_e32 $vgpr0, $vgpr1, implicit-def $exec, implicit-def $vcc, implicit $exec
+  ; FINAL-NEXT: S_NOP 3
+  ; CHECK-NEXT: renamable $vgpr0, renamable $vgpr1 = V_PERMLANE16_SWAP_B32_e32 killed $vgpr0, killed $vgpr1, implicit $exec
+  ; CHECK-NEXT: S_ENDPGM 0
+  bb.0:
+    liveins: $vgpr0, $vgpr1
+
+    V_CMPX_EQ_I32_e32 $vgpr0, $vgpr1, implicit-def $exec, implicit-def $vcc, implicit $exec
+    renamable $vgpr0, renamable $vgpr1 = V_PERMLANE16_SWAP_B32_e32 killed $vgpr0, killed $vgpr1, implicit $exec
+    S_ENDPGM 0
+...

@@ -22,6 +22,7 @@
 #include "llvm/IR/DebugInfo.h"
 #include "llvm/IR/Instruction.h"
 #include "llvm/IR/PatternMatch.h"
+#include "llvm/IR/ProfDataUtils.h"
 #include "llvm/IR/Type.h"
 #include "llvm/IR/Value.h"
 #include "llvm/Support/KnownBits.h"
@@ -103,7 +104,8 @@ static Value *EvaluateInDifferentTypeImpl(Value *V, Type *Ty, bool isSigned,
                                               IC, Processed);
     Value *False = EvaluateInDifferentTypeImpl(I->getOperand(2), Ty, isSigned,
                                                IC, Processed);
-    Res = SelectInst::Create(I->getOperand(0), True, False);
+    Res = SelectInst::Create(I->getOperand(0), True, False, "", nullptr,
+                             ProfcheckDisableMetadataFixes ? nullptr : I);
     break;
   }
   case Instruction::PHI: {
@@ -754,7 +756,7 @@ static Instruction *foldVecExtTruncToExtElt(TruncInst &Trunc,
   // A badly fit destination size would result in an invalid cast.
   unsigned SrcBits = SrcType->getScalarSizeInBits();
   unsigned DstBits = DstType->getScalarSizeInBits();
-  unsigned TruncRatio = SrcBits / DstBits;
+  uint64_t TruncRatio = SrcBits / DstBits;
   if ((SrcBits % DstBits) != 0)
     return nullptr;
 
@@ -771,6 +773,11 @@ static Instruction *foldVecExtTruncToExtElt(TruncInst &Trunc,
   auto VecElts = VecOpTy->getElementCount();
 
   uint64_t BitCastNumElts = VecElts.getKnownMinValue() * TruncRatio;
+  // Computed in 64-bit above to avoid a 32-bit overflow. Bail out if the
+  // element count exceeds IntegerType::MAX_INT_BITS, as we cannot create a
+  // wider vector type.
+  if (BitCastNumElts > IntegerType::MAX_INT_BITS)
+    return nullptr;
   // Make sure we don't overflow in the calculation of the new index.
   // (VecOpIdx + 1) * TruncRatio should not overflow.
   if (Cst->uge(std::numeric_limits<uint64_t>::max() / TruncRatio))
@@ -795,9 +802,6 @@ static Instruction *foldVecExtTruncToExtElt(TruncInst &Trunc,
     NewIdx = IC.getDataLayout().isBigEndian() ? (NewIdx - IdxOfs)
                                               : (NewIdx + IdxOfs);
   }
-
-  assert(BitCastNumElts <= std::numeric_limits<uint32_t>::max() &&
-         "overflow 32-bits");
 
   auto *BitCastTo =
       VectorType::get(DstType, BitCastNumElts, VecElts.isScalable());
@@ -1253,18 +1257,26 @@ Instruction *InstCombinerImpl::visitTrunc(TruncInst &Trunc) {
 
   // trunc (select(icmp_ult(A, DestTy_umax+1), A, sext(icmp_sgt(A, 0)))) -->
   // trunc (smin(smax(0, A), DestTy_umax))
-  if (SrcTy->isIntegerTy() && isPowerOf2_64(SrcTy->getPrimitiveSizeInBits()) &&
-      isPowerOf2_64(DestTy->getPrimitiveSizeInBits()) &&
-      match(Src, m_OneUse(m_Select(
-                     m_OneUse(m_SpecificICmp(ICmpInst::ICMP_ULT, m_Value(A),
-                                             m_Constant(C))),
-                     m_Deferred(A),
-                     m_OneUse(m_SExt(m_OneUse(m_SpecificICmp(
-                         ICmpInst::ICMP_SGT, m_Deferred(A), m_Zero())))))))) {
-    APInt UpperBound = C->getUniqueInteger();
-    APInt TruncatedMax = APInt::getAllOnes(DestTy->getIntegerBitWidth());
-    TruncatedMax = TruncatedMax.zext(UpperBound.getBitWidth());
-    if (!UpperBound.isZero() && UpperBound - 1 == TruncatedMax) {
+  // Also handle the inverted form:
+  // trunc (select(icmp_ugt(A, DestTy_umax), sext(icmp_sgt(A, 0)), A))
+  CmpPredicate Pred;
+  const APInt *CmpC;
+  Value *TVal, *FVal;
+  if (SrcTy->isIntegerTy() && isPowerOf2_64(SrcWidth) &&
+      isPowerOf2_64(DestWidth) &&
+      match(Src,
+            m_OneUse(m_Select(m_OneUse(m_ICmp(Pred, m_Value(A), m_APInt(CmpC))),
+                              m_Value(TVal), m_Value(FVal))))) {
+    APInt TruncatedMax = APInt::getLowBitsSet(SrcWidth, DestWidth);
+    Value *SExtVal = nullptr;
+    // Check the select arm first so that A is known to have type SrcTy.
+    if (Pred == ICmpInst::ICMP_ULT && TVal == A && *CmpC == TruncatedMax + 1)
+      SExtVal = FVal;
+    else if (Pred == ICmpInst::ICMP_UGT && FVal == A && *CmpC == TruncatedMax)
+      SExtVal = TVal;
+    if (SExtVal &&
+        match(SExtVal, m_OneUse(m_SExt(m_OneUse(m_SpecificICmp(
+                           ICmpInst::ICMP_SGT, m_Specific(A), m_Zero())))))) {
       Value *SMax = Builder.CreateIntrinsic(Intrinsic::smax, {SrcTy},
                                             {ConstantInt::get(SrcTy, 0), A});
       Value *SMin = Builder.CreateIntrinsic(
@@ -1933,6 +1945,44 @@ Instruction *InstCombinerImpl::visitSExt(SExtInst &Sext) {
     return CI;
   }
 
+  Value *X;
+  if (match(Src, m_Trunc(m_Value(X)))) {
+    // If the input has more sign bits than bits truncated, then convert
+    // directly to final type.
+    unsigned XBitSize = X->getType()->getScalarSizeInBits();
+    unsigned TruncatedBits = XBitSize - SrcBitSize;
+    bool HasNSW = cast<TruncInst>(Src)->hasNoSignedWrap();
+    if (HasNSW || (ComputeNumSignBits(X, &Sext) > TruncatedBits)) {
+      auto *Res = CastInst::CreateIntegerCast(X, DestTy, /* isSigned */ true);
+      if (auto *ResTrunc = dyn_cast<TruncInst>(Res); ResTrunc && HasNSW)
+        ResTrunc->setHasNoSignedWrap(true);
+      return Res;
+    }
+
+    // If we are replacing shifted-in high zero bits with sign bits, convert
+    // the logic shift to arithmetic shift and eliminate the cast to
+    // intermediate type:
+    // sext (trunc (lshr Y, C)) --> sext/trunc (ashr Y, C)
+    // where C <= truncatedbits && signbits(Y) + C > truncatedbits
+    Value *Y;
+    const APInt *C;
+    if (Src->hasOneUse() &&
+        match(X, m_LShr(m_Value(Y), m_APIntAllowPoison(C))) &&
+        C->ule(TruncatedBits) &&
+        (*C == TruncatedBits ||
+         ComputeNumSignBits(Y, &Sext) + C->getZExtValue() > TruncatedBits)) {
+      Value *Ashr = Builder.CreateAShr(Y, C->getZExtValue());
+      return CastInst::CreateIntegerCast(Ashr, DestTy, /* isSigned */ true);
+    }
+
+    // If input is a trunc from the destination type, then convert into shifts.
+    if (Src->hasOneUse() && X->getType() == DestTy) {
+      // sext (trunc X) --> ashr (shl X, C), C
+      Constant *ShAmt = ConstantInt::get(DestTy, DestBitSize - SrcBitSize);
+      return BinaryOperator::CreateAShr(Builder.CreateShl(X, ShAmt), ShAmt);
+    }
+  }
+
   // Try to extend the entire expression tree to the wide destination type.
   bool ShouldExtendExpression = true;
   Value *TruncSrc = nullptr;
@@ -1960,39 +2010,6 @@ Instruction *InstCombinerImpl::visitSExt(SExtInst &Sext) {
     Value *ShAmt = ConstantInt::get(DestTy, DestBitSize - SrcBitSize);
     return BinaryOperator::CreateAShr(Builder.CreateShl(Res, ShAmt, "sext"),
                                       ShAmt);
-  }
-
-  Value *X = TruncSrc;
-  if (X) {
-    // If the input has more sign bits than bits truncated, then convert
-    // directly to final type.
-    unsigned XBitSize = X->getType()->getScalarSizeInBits();
-    bool HasNSW = cast<TruncInst>(Src)->hasNoSignedWrap();
-    if (HasNSW || (ComputeNumSignBits(X, &Sext) > XBitSize - SrcBitSize)) {
-      auto *Res = CastInst::CreateIntegerCast(X, DestTy, /* isSigned */ true);
-      if (auto *ResTrunc = dyn_cast<TruncInst>(Res); ResTrunc && HasNSW)
-        ResTrunc->setHasNoSignedWrap(true);
-      return Res;
-    }
-
-    // If input is a trunc from the destination type, then convert into shifts.
-    if (Src->hasOneUse() && X->getType() == DestTy) {
-      // sext (trunc X) --> ashr (shl X, C), C
-      Constant *ShAmt = ConstantInt::get(DestTy, DestBitSize - SrcBitSize);
-      return BinaryOperator::CreateAShr(Builder.CreateShl(X, ShAmt), ShAmt);
-    }
-
-    // If we are replacing shifted-in high zero bits with sign bits, convert
-    // the logic shift to arithmetic shift and eliminate the cast to
-    // intermediate type:
-    // sext (trunc (lshr Y, C)) --> sext/trunc (ashr Y, C)
-    Value *Y;
-    if (Src->hasOneUse() &&
-        match(X, m_LShr(m_Value(Y),
-                        m_SpecificIntAllowPoison(XBitSize - SrcBitSize)))) {
-      Value *Ashr = Builder.CreateAShr(Y, XBitSize - SrcBitSize);
-      return CastInst::CreateIntegerCast(Ashr, DestTy, /* isSigned */ true);
-    }
   }
 
   if (auto *Cmp = dyn_cast<ICmpInst>(Src))

@@ -4980,7 +4980,7 @@ Value *InstCombinerImpl::foldXorOfICmps(ICmpInst *LHS, ICmpInst *RHS,
           // users are freely-invertible, so that 'not' *will* get folded away.
           BuilderTy::InsertPointGuard Guard(Builder);
           // Set insertion point to right after the Y.
-          Builder.SetInsertPoint(Y->getParent(), ++(Y->getIterator()));
+          Builder.SetInsertPoint(++(Y->getIterator()));
           Value *NotY = Builder.CreateNot(Y, Y->getName() + ".not");
           // Replace all uses of Y (excluding the one in NotY!) with NotY.
           Worklist.pushUsersToWorkList(*Y);
@@ -5214,6 +5214,12 @@ bool InstCombinerImpl::sinkNotIntoOtherHandOfLogicalOp(Instruction &I) {
   } else
     return false;
 
+  // If the kept operand is defined as NOT(OpToInvert), freelyInvert(OpToInvert)
+  // will also flip the kept operand as a side effect of updating its uses,
+  // invalidating the assumption that it stays fixed while I is rewriten.
+  if (match(*OpToInvert == Op1 ? Op0 : Op1, m_Not(m_Specific(*OpToInvert))))
+    return false;
+
   // And can our users be adapted?
   if (!InstCombiner::canFreelyInvertAllUsersOf(&I, /*IgnoredUser=*/nullptr))
     return false;
@@ -5222,10 +5228,15 @@ bool InstCombinerImpl::sinkNotIntoOtherHandOfLogicalOp(Instruction &I) {
 
   Builder.SetInsertPoint(*I.getInsertionPointAfterDef());
   Value *NewBinOp;
-  if (IsBinaryOp)
+  if (IsBinaryOp) {
     NewBinOp = Builder.CreateBinOp(NewOpc, Op0, Op1, I.getName() + ".not");
-  else
-    NewBinOp = Builder.CreateLogicalOp(NewOpc, Op0, Op1, I.getName() + ".not");
+  } else {
+    NewBinOp =
+        Builder.CreateLogicalOp(NewOpc, Op0, Op1, I.getName() + ".not",
+                                ProfcheckDisableMetadataFixes ? nullptr : &I);
+    if (auto *NewSI = dyn_cast<SelectInst>(NewBinOp))
+      NewSI->swapProfMetadata();
+  }
   replaceInstUsesWith(I, NewBinOp);
   // We can not just create an outer `not`, it will most likely be immediately
   // folded back, reconstructing our initial pattern, and causing an
@@ -5742,10 +5753,8 @@ Instruction *InstCombinerImpl::visitXor(BinaryOperator &I) {
       match(&I, m_c_Xor(m_OneUse(m_LogicalAnd(m_Value(A), m_Value(B))),
                         m_OneUse(m_LogicalOr(m_Value(C), m_Value(D)))))) {
     bool NeedFreeze = isa<SelectInst>(Op0) && isa<SelectInst>(Op1) && B == D;
-    Instruction *MDFrom = cast<Instruction>(Op0);
     if (B == C || B == D) {
       std::swap(A, B);
-      MDFrom = B == C ? cast<Instruction>(Op1) : nullptr;
     }
     if (A == C)
       std::swap(C, D);
@@ -5753,7 +5762,19 @@ Instruction *InstCombinerImpl::visitXor(BinaryOperator &I) {
       if (NeedFreeze)
         A = Builder.CreateFreeze(A);
       Value *NotB = Builder.CreateNot(B);
-      return MDFrom == nullptr
+      Instruction *MDFrom = nullptr;
+      // If one of the operands has the same condition as we will use for the
+      // select we are going to create, pull the metadata from it (primarily the
+      // profile info).
+      if (auto *Op0SI = dyn_cast<SelectInst>(Op0)) {
+        if (Op0SI->getCondition() == A)
+          MDFrom = Op0SI;
+      }
+      if (auto *Op1SI = dyn_cast<SelectInst>(Op1)) {
+        if (Op1SI->getCondition() == A)
+          MDFrom = Op1SI;
+      }
+      return (MDFrom == nullptr || ProfcheckDisableMetadataFixes)
                  ? createSelectInstWithUnknownProfile(A, NotB, C)
                  : SelectInst::Create(A, NotB, C, "", nullptr, MDFrom);
     }
