@@ -3561,11 +3561,9 @@ bool CodeGenModule::GetCPUAndFeaturesAttributes(GlobalDecl GD,
     auto Arch = TC->getX86Architecture(GD.getMultiVersionIndex());
     // CPU-model checks cannot be represented by feature masks.
     if (!Arch || Arch->starts_with("x86-64")) {
-      llvm::SmallVector<StringRef, 8> Feats;
-      TC->getX86Feature(Feats, GD.getMultiVersionIndex());
-      if (Arch)
-        Feats.push_back(*Arch);
-      Attrs.addAttribute("fmv-features", llvm::join(Feats, ","));
+      StringRef Feature =
+          Arch.value_or(TC->getFeatureStr(GD.getMultiVersionIndex()));
+      Attrs.addAttribute("fmv-features", Feature == "default" ? "" : Feature);
       AddedAttr = true;
     }
   }

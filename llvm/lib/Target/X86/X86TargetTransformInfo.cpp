@@ -72,10 +72,9 @@ using namespace llvm;
 
 static SmallVector<StringRef, 8> getFMVFeatures(const Function &F) {
   SmallVector<StringRef, 8> Features;
-  if (F.hasFnAttribute("fmv-features"))
-    F.getFnAttribute("fmv-features")
-        .getValueAsString()
-        .split(Features, ",", -1, false);
+  F.getFnAttribute("fmv-features")
+      .getValueAsString()
+      .split(Features, ",", -1, false);
   return Features;
 }
 
