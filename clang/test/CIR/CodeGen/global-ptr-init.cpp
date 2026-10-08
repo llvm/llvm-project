@@ -11,7 +11,7 @@ struct B {
 };
 B x;
 
-// CIR: cir.global external @x = #cir.const_record<{#cir.global_view<@_ZTV1B, [0 : i32, 2 : i32], address_point> : !cir.vptr}> : !rec_B
+// CIR: cir.global external @x = #cir.const_record<{#cir.global_view<@_ZTV1B, [0 : i32, 2 : i32], address_point true> : !cir.vptr}> : !rec_B
 // LLVM: @x = global %struct.B { ptr getelementptr inbounds nuw inrange(-16, 24) (i8, ptr @_ZTV1B, i64 16) }, align 8
 // OGCG: @x = global %struct.B { ptr getelementptr inbounds inrange(-16, 24) (i8, ptr @_ZTV1B, i64 16) }, align 8
 
@@ -22,7 +22,7 @@ struct K {
 K k;
 
 // CIR: cir.global "private" constant external @_ZTV1K : !rec_anon_struct
-// CIR: cir.global external @k = #cir.const_record<{#cir.global_view<@_ZTV1K, [0 : i32, 2 : i32], address_point> : !cir.vptr}> : !rec_K
+// CIR: cir.global external @k = #cir.const_record<{#cir.global_view<@_ZTV1K, [0 : i32, 2 : i32], address_point true> : !cir.vptr}> : !rec_K
 // LLVM: @_ZTV1K = external constant { [3 x ptr] }, align 8
 // OGCG: @_ZTV1K = external constant { [3 x ptr] }, align 8
 // LLVM: @k = global %struct.K { ptr getelementptr inbounds nuw inrange(-16, 8) (i8, ptr @_ZTV1K, i64 16) }, align 8

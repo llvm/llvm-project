@@ -107,13 +107,13 @@ void D::y() {}
 // VTT for D
 
 // CIR-COMMON:      cir.global{{.*}} @_ZTT1D = #cir.const_array<[
-// CIR-COMMON-SAME:   #cir.global_view<@_ZTV1D, [0 : i32, 3 : i32], address_point> : !cir.ptr<!u8i>,
-// CIR-COMMON-SAME:   #cir.global_view<@_ZTC1D0_1B, [0 : i32, 3 : i32], address_point> : !cir.ptr<!u8i>,
-// CIR-COMMON-SAME:   #cir.global_view<@_ZTC1D0_1B, [1 : i32, 3 : i32], address_point> : !cir.ptr<!u8i>,
-// CIR-COMMON-SAME:   #cir.global_view<@_ZTC1D16_1C, [0 : i32, 3 : i32], address_point> : !cir.ptr<!u8i>,
-// CIR-COMMON-SAME:   #cir.global_view<@_ZTC1D16_1C, [1 : i32, 3 : i32], address_point> : !cir.ptr<!u8i>,
-// CIR-COMMON-SAME:   #cir.global_view<@_ZTV1D, [2 : i32, 3 : i32], address_point> : !cir.ptr<!u8i>,
-// CIR-COMMON-SAME:   #cir.global_view<@_ZTV1D, [1 : i32, 3 : i32], address_point> : !cir.ptr<!u8i>
+// CIR-COMMON-SAME:   #cir.global_view<@_ZTV1D, [0 : i32, 3 : i32], address_point true> : !cir.ptr<!u8i>,
+// CIR-COMMON-SAME:   #cir.global_view<@_ZTC1D0_1B, [0 : i32, 3 : i32], address_point true> : !cir.ptr<!u8i>,
+// CIR-COMMON-SAME:   #cir.global_view<@_ZTC1D0_1B, [1 : i32, 3 : i32], address_point true> : !cir.ptr<!u8i>,
+// CIR-COMMON-SAME:   #cir.global_view<@_ZTC1D16_1C, [0 : i32, 3 : i32], address_point true> : !cir.ptr<!u8i>,
+// CIR-COMMON-SAME:   #cir.global_view<@_ZTC1D16_1C, [1 : i32, 3 : i32], address_point true> : !cir.ptr<!u8i>,
+// CIR-COMMON-SAME:   #cir.global_view<@_ZTV1D, [2 : i32, 3 : i32], address_point true> : !cir.ptr<!u8i>,
+// CIR-COMMON-SAME:   #cir.global_view<@_ZTV1D, [1 : i32, 3 : i32], address_point true> : !cir.ptr<!u8i>
 // CIR-COMMON-SAME: ]> : !cir.array<!cir.ptr<!u8i> x 7> align(8)
 
 // LLVM-COMMON:      @_ZTT1D = constant [7 x ptr] [

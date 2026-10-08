@@ -57,11 +57,6 @@ parseDataMemberPath(mlir::AsmParser &parser,
 static void printDataMemberPath(mlir::AsmPrinter &p,
                                 mlir::DenseI32ArrayAttr memberPath);
 
-static mlir::ParseResult parseGlobalViewAddressPoint(mlir::AsmParser &parser,
-                                                     bool &addressPoint);
-
-static void printGlobalViewAddressPoint(mlir::AsmPrinter &p, bool addressPoint);
-
 #define GET_ATTRDEF_CLASSES
 #include "clang/CIR/Dialect/IR/CIROpsAttributes.cpp.inc"
 
@@ -356,19 +351,6 @@ static void printDataMemberPath(AsmPrinter &p,
     p << "null";
   else
     p.printStrippedAttrOrType(memberPath);
-}
-
-static ParseResult parseGlobalViewAddressPoint(AsmParser &parser,
-                                               bool &addressPoint) {
-  addressPoint = parser.parseOptionalComma().succeeded();
-  if (addressPoint)
-    return parser.parseKeyword("address_point");
-  return success();
-}
-
-static void printGlobalViewAddressPoint(AsmPrinter &p, bool addressPoint) {
-  if (addressPoint)
-    p << ", address_point";
 }
 
 //===----------------------------------------------------------------------===//

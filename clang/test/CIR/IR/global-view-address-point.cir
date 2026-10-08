@@ -8,17 +8,17 @@
 module attributes {cir.triple = "x86_64-unknown-linux-gnu"} {
   cir.global "private" constant external @_ZTV1D : !rec_anon_struct
 
-  // CHECK: #cir.global_view<@_ZTV1D, [0 : i32, 3 : i32], address_point> : !cir.ptr<!u8i>
-  // CHECK: #cir.global_view<@_ZTV1D, [1 : i32, 2 : i32], address_point> : !cir.ptr<!u8i>
+  // CHECK: #cir.global_view<@_ZTV1D, [0 : i32, 3 : i32], address_point true> : !cir.ptr<!u8i>
+  // CHECK: #cir.global_view<@_ZTV1D, [1 : i32, 2 : i32], address_point true> : !cir.ptr<!u8i>
   // CHECK: #cir.global_view<@_ZTV1D, [1 : i32, 2 : i32]> : !cir.ptr<!u8i>
   cir.global external @vtt = #cir.const_array<[
-    #cir.global_view<@_ZTV1D, [0 : i32, 3 : i32], address_point> : !cir.ptr<!u8i>,
-    #cir.global_view<@_ZTV1D, [1 : i32, 2 : i32], address_point> : !cir.ptr<!u8i>,
+    #cir.global_view<@_ZTV1D, [0 : i32, 3 : i32], address_point true> : !cir.ptr<!u8i>,
+    #cir.global_view<@_ZTV1D, [1 : i32, 2 : i32], address_point true> : !cir.ptr<!u8i>,
     #cir.global_view<@_ZTV1D, [1 : i32, 2 : i32]> : !cir.ptr<!u8i>
   ]> : !cir.array<!cir.ptr<!u8i> x 3>
 
-  // CHECK: #cir.global_view<@_ZTV1D, [0 : i32, 3 : i32], address_point> : !cir.vptr
-  cir.global external @b = #cir.const_record<{#cir.global_view<@_ZTV1D, [0 : i32, 3 : i32], address_point> : !cir.vptr}> : !rec_B
+  // CHECK: #cir.global_view<@_ZTV1D, [0 : i32, 3 : i32], address_point true> : !cir.vptr
+  cir.global external @b = #cir.const_record<{#cir.global_view<@_ZTV1D, [0 : i32, 3 : i32], address_point true> : !cir.vptr}> : !rec_B
 }
 
 // An address point is inbounds and can only reach the vtable it points into.

@@ -1070,7 +1070,7 @@ def CIR_GlobalViewAttr : CIR_ValueLikeAttr<"GlobalView", "global_view"> {
     `<`
       $symbol
       (`,` $indices^)?
-      `` custom<GlobalViewAddressPoint>($address_point)
+      (`,` `address_point` $address_point^)?
     `>`
   }];
 }

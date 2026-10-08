@@ -499,10 +499,9 @@ void CIRGenVTables::emitVTTDefinition(cir::GlobalOp vttOp,
     };
 
     auto indicesAttr = mlir::ArrayAttr::get(mlirContext, indices);
-    auto init = cir::GlobalViewAttr::get(
-        cgm.getBuilder().getUInt8PtrTy(),
-        mlir::FlatSymbolRefAttr::get(vtable.getSymNameAttr()), indicesAttr,
-        /*addressPoint=*/true);
+    CIRGenBuilderTy &bld = cgm.getBuilder();
+    auto init = bld.getGlobalViewAttr(bld.getUInt8PtrTy(), vtable, indicesAttr,
+                                      /*addressPoint=*/true);
 
     vttComponents.push_back(init);
   }
