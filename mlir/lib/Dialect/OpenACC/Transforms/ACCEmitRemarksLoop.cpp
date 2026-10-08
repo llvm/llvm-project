@@ -144,6 +144,16 @@ static void emitLoopMappingRemark(acc::ComputeRegionOp computeRegion,
       DEBUG_TYPE);
 }
 
+static void
+emitUnstructuredIndependentLoopRemark(Operation *op,
+                                      acc::OpenACCSupport &accSupport) {
+  accSupport.emitRemark(op,
+                        "Loop is not parallelized: unstructured control "
+                        "flow prevents representing this independent loop "
+                        "as a structured loop",
+                        DEBUG_TYPE);
+}
+
 class ACCEmitRemarksLoop
     : public acc::impl::ACCEmitRemarksLoopBase<ACCEmitRemarksLoop> {
 public:
@@ -160,9 +170,12 @@ public:
       if (!shouldEmitLoopRemarks(computeRegion))
         return;
 
-      computeRegion.getRegion().walk([&](LoopLikeOpInterface loopOp) {
-        emitLoopMappingRemark(computeRegion, loopOp, accSupport, policy,
-                              gpuDimSeparator);
+      computeRegion.getRegion().walk([&](Operation *op) {
+        if (auto loopOp = dyn_cast<LoopLikeOpInterface>(op))
+          emitLoopMappingRemark(computeRegion, loopOp, accSupport, policy,
+                                gpuDimSeparator);
+        else if (op->hasAttr(acc::getUnstructuredIndependentLoopAttrName()))
+          emitUnstructuredIndependentLoopRemark(op, accSupport);
       });
     });
   }
