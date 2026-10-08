@@ -183,7 +183,6 @@ private:
 #else
         llvm::sys::path::append(stable_abi_path, "python3.dll");
 #endif
-        RegisterDllSearchDirectory(stable_abi_path);
         std::string err;
         llvm::sys::DynamicLibrary::getPermanentLibrary(stable_abi_path.c_str(),
                                                        &err);
