@@ -41,6 +41,8 @@ define <vscale x 2 x i1> @nxv2i1(<vscale x 2 x i1> %m) {
   ret <vscale x 2 x i1> %x
 }
 
+; TODO: Use brkb for fixed length vectors.
+
 define <16 x i1> @v16i1(<16 x i1> %m) {
 ; CHECK-LABEL: v16i1:
 ; CHECK:       // %bb.0:
