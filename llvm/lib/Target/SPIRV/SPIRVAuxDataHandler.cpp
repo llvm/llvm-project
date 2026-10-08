@@ -182,18 +182,8 @@ void SPIRVAuxDataHandler::collectMetadataFor(const GlobalObject *GO,
 }
 
 void SPIRVAuxDataHandler::emitAuxDataStrings(SPIRV::ModuleAnalysisInfo &MAI) {
-  if (!spirvPreserveAuxData(Mod.getTargetTriple()))
-    return;
   if (!MAI.getExtInstSetReg(NonSemanticAuxDataSet).isValid())
     return;
-  SmallVector<StringRef> MDNames;
-  Mod.getContext().getMDKindNames(MDNames);
-  for (const GlobalObject &GO : Mod.global_objects()) {
-    if (GO.isDeclaration())
-      continue;
-    collectAttributesFor(&GO, MAI);
-    collectMetadataFor(&GO, MDNames, MAI);
-  }
   // Only a handful of distinct metadata names exist, one per AMDGPUAtomicMDKind
   // enumerator. Track which we've seen so we can stop once every name has been
   // emitted, instead of scanning potentially thousands of records with
@@ -212,6 +202,17 @@ void SPIRVAuxDataHandler::emitAuxDataStrings(SPIRV::ModuleAnalysisInfo &MAI) {
     getOrEmitString(MAI.getAMDGPUAtomicMDName(Rec.Kind), MAI);
     if (SeenMask == AllMDKindsSeen)
       break;
+  }
+  // Global object attributes and metadata stay behind the flag.
+  if (!SPVPreserveAuxData)
+    return;
+  SmallVector<StringRef> MDNames;
+  Mod.getContext().getMDKindNames(MDNames);
+  for (const GlobalObject &GO : Mod.global_objects()) {
+    if (GO.isDeclaration())
+      continue;
+    collectAttributesFor(&GO, MAI);
+    collectMetadataFor(&GO, MDNames, MAI);
   }
 }
 
