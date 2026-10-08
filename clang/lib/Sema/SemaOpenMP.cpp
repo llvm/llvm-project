@@ -17386,17 +17386,12 @@ SemaOpenMP::ActOnOpenMPFlattenDirective(ArrayRef<OMPClause *> Clauses,
     unsigned NewSize =
         UseVarWidth ? Context.getTypeSize(VarType) : Context.getTypeSize(Type);
     bool IsSigned = VarIsInt ? VarType->hasSignedIntegerRepresentation()
-                             : Type->hasSignedIntegerRepresentation() ||
-                                   Type->hasFloatingRepresentation();
-    QualType IntTy = Context.getIntTypeForBitwidth(NewSize, IsSigned);
-    if (IntTy.isNull())
+                             : Type->hasFloatingRepresentation();
+    QualType IntTy = getIntTypeForBitwidthOrBitInt(Context, NewSize, IsSigned);
+    N = SemaRef.PerformImplicitConversion(
+        N.get(), IntTy, AssignmentAction::Converting, /*AllowExplicit=*/true);
+    if (!N.isUsable())
       return ExprError();
-    if (!Context.hasSameType(Type, IntTy)) {
-      N = SemaRef.PerformImplicitConversion(
-          N.get(), IntTy, AssignmentAction::Converting, /*AllowExplicit=*/true);
-      if (!N.isUsable())
-        return ExprError();
-    }
     return N;
   };
 
