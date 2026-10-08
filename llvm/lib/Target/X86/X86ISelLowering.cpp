@@ -1965,11 +1965,6 @@ X86TargetLowering::X86TargetLowering(const X86TargetMachine &TM,
     setOperationAction(ISD::MUL, MVT::v32i16, HasBWI ? Legal : Custom);
     setOperationAction(ISD::MUL, MVT::v64i8,  Custom);
 
-    if (Subtarget.is64Bit()) {
-      setOperationAction(ISD::UMUL_LOHI, MVT::v8i64, Custom);
-      setOperationAction(ISD::SMUL_LOHI, MVT::v8i64, Custom);
-    }
-
     setOperationAction(ISD::MULHU, MVT::v8i64, Custom);
     setOperationAction(ISD::MULHS, MVT::v8i64, Custom);
     setOperationAction(ISD::MULHU, MVT::v16i32, Custom);
