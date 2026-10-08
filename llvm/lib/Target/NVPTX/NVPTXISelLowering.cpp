@@ -2258,42 +2258,51 @@ SDValue NVPTXTargetLowering::LowerFCOPYSIGN(SDValue Op,
   SDValue In2 = Op.getOperand(1);
   EVT SrcVT = In2.getValueType();
 
-  if (VT == MVT::f16 || VT == MVT::bf16 || VT == MVT::v2f16 ||
-      VT == MVT::v2bf16) {
-    // There is no native copysign, so expand to bitwise operations.
-    MVT IntVT = MVT::getIntegerVT(VT.getSizeInBits());
-    MVT SrcIntVT = MVT::getIntegerVT(SrcVT.getSizeInBits());
-    SDValue Mag = DAG.getBitcast(IntVT, In1);
-    SDValue Sign = DAG.getBitcast(SrcIntVT, In2);
+  // Native copysign instructions require matching f32 or f64 operands.
+  if ((VT == MVT::f32 || VT == MVT::f64) && SrcVT == VT)
+    return DAG.getNode(NVPTXISD::FCOPYSIGN, DL, VT, In1, In2);
 
-    // DAG combining can remove an FP_ROUND from a scalar sign operand.
-    assert((!VT.isVector() || SrcVT == VT) &&
-           "Unexpected mismatched vector copysign operands");
-    if (SrcVT.bitsGT(VT)) {
-      Sign = DAG.getNode(
-          ISD::SRL, DL, SrcIntVT, Sign,
-          DAG.getShiftAmountConstant(SrcVT.getSizeInBits() - 16, SrcIntVT, DL));
-      Sign = DAG.getNode(ISD::TRUNCATE, DL, IntVT, Sign);
-    }
-    uint32_t SignMask = VT.isVector() ? 0x80008000 : 0x8000;
-    // This is equivalent to:
-    //    (Mag & ~SignMask) | (Sign & SignMask)
-    // which uses 4 input values (including the 2 constants). We can instead
-    // write it as:
-    //    Mag ^ ((Mag ^ Sign) & SignMask)
-    // which only uses 3 inputs, so ptxas can fuse it into a single lop3
-    // instruction.
-    SDValue Diff = DAG.getNode(ISD::XOR, DL, IntVT, Mag, Sign);
-    Diff = DAG.getNode(ISD::AND, DL, IntVT, Diff,
-                       DAG.getConstant(SignMask, DL, IntVT));
-    return DAG.getBitcast(VT, DAG.getNode(ISD::XOR, DL, IntVT, Mag, Diff));
+  // There is no native copysign, so expand to bitwise operations.
+  MVT IntVT = MVT::getIntegerVT(VT.getSizeInBits());
+  MVT SrcIntVT = MVT::getIntegerVT(SrcVT.getSizeInBits());
+  SDValue Mag = DAG.getBitcast(IntVT, In1);
+  SDValue Sign = DAG.getBitcast(SrcIntVT, In2);
+  SDValue MagLo;
+  if (VT == MVT::f64) {
+    // Only the high word changes. Keep sign extension and bitwise operations
+    // 32-bit so ptxas can combine them without materializing a 64-bit sign.
+    IntVT = MVT::i32;
+    std::tie(MagLo, Mag) = DAG.SplitScalar(Mag, DL, IntVT, IntVT);
   }
 
-  // Native copysign instructions require matching operand types.
-  if (!SrcVT.bitsEq(VT))
-    return SDValue();
-
-  return DAG.getNode(NVPTXISD::FCOPYSIGN, DL, VT, In1, In2);
+  // DAG combining can remove FP_ROUND or FP_EXTEND from a scalar sign operand.
+  assert((!VT.isVector() || SrcVT == VT) &&
+         "Unexpected mismatched vector copysign operands");
+  if (SrcVT.bitsGT(IntVT)) {
+    Sign = DAG.getNode(ISD::SRL, DL, SrcIntVT, Sign,
+                       DAG.getShiftAmountConstant(SrcVT.getSizeInBits() -
+                                                      IntVT.getSizeInBits(),
+                                                  SrcIntVT, DL));
+    Sign = DAG.getNode(ISD::TRUNCATE, DL, IntVT, Sign);
+  } else if (SrcVT.bitsLT(IntVT)) {
+    Sign = DAG.getNode(ISD::SIGN_EXTEND, DL, IntVT, Sign);
+  }
+  APInt SignMask = VT.isVector() ? APInt(32, 0x80008000)
+                                 : APInt::getSignMask(IntVT.getSizeInBits());
+  // This is equivalent to:
+  //    (Mag & ~SignMask) | (Sign & SignMask)
+  // which uses 4 input values (including the 2 constants). We can instead
+  // write it as:
+  //    Mag ^ ((Mag ^ Sign) & SignMask)
+  // which only uses 3 inputs, so ptxas can fuse it into a single lop3
+  // instruction.
+  SDValue Diff = DAG.getNode(ISD::XOR, DL, IntVT, Mag, Sign);
+  Diff = DAG.getNode(ISD::AND, DL, IntVT, Diff,
+                     DAG.getConstant(SignMask, DL, IntVT));
+  SDValue Result = DAG.getNode(ISD::XOR, DL, IntVT, Mag, Diff);
+  if (VT == MVT::f64)
+    Result = DAG.getNode(NVPTXISD::BUILD_VECTOR, DL, MVT::i64, MagLo, Result);
+  return DAG.getBitcast(VT, Result);
 }
 
 SDValue NVPTXTargetLowering::LowerFROUND(SDValue Op, SelectionDAG &DAG) const {
