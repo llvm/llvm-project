@@ -33,12 +33,12 @@ endforeach()
 if (NOT WIN32 OR NOT LLVM_LINK_LLVM_DYLIB)
   llvm_add_library(
       ClangdFeatureModuleExample
-      MODULE FeatureModuleExample.cpp
+      MODULE Inputs/FeatureModuleExample.cpp
       PLUGIN_TOOL clangd
       PARTIAL_SOURCES_INTENDED)
   llvm_add_library(
       ClangdStandaloneTweakExample
-      MODULE StandaloneTweakExample.cpp
+      MODULE Inputs/StandaloneTweakExample.cpp
       PLUGIN_TOOL clangd
       PARTIAL_SOURCES_INTENDED)
 endif()
